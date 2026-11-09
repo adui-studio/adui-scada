@@ -24,6 +24,17 @@ pnpm run desktop:build:react
 pnpm run desktop:build:vue
 ```
 
+Windows 打包如果遇到 **NSIS 工具下载 HTTP 504 / 网络不可达**，可以只生成 MSI（不会触发 NSIS 打包依赖下载）：
+
+```powershell
+pnpm run desktop:build:react:msi
+pnpm run desktop:build:vue:msi
+```
+
+这里的 `--bundles msi` 只覆盖本次 CLI 打包目标，**不修改** `tauri.conf.json` 中默认的 `"targets": "all"`；原来的 `desktop:build:react` 和 `desktop:build:vue` 仍会尝试 MSI + NSIS。先复制或改名保存 React MSI，再构建 Vue，否则同一个 `ADui SCADA_0.1.0_x64_en-US.msi` 可能被覆盖。
+
+**2026-11-09 实测说明：** React Web 与 Rust Release 编译成功，日志显示已生成 `target/release/bundle/msi/ADui SCADA_0.1.0_x64_en-US.msi`；随后 NSIS 下载 `nsis_tauri_utils.dll` 时收到 HTTP 504，导致整体 `tauri build` 返回失败。这不表示 MSI 已实际安装验证，也不表示 Vue Release 已完成打包。
+
 - `tauri.conf.json` 默认嵌入 `apps/web-react/dist`，Vue 通过 `tauri.vue.conf.json` 叠加覆盖。
 - 图标沿用初始模板占位素材，后续统一换成 ADui SCADA 正式图标。
 - V0.1 不注册 `invoke` 命令，没有设备写入、文件系统或 shell 插件权限。

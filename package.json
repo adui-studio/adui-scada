@@ -27,7 +27,9 @@
     "desktop:dev:vue": "pnpm --filter @adui/scada-desktop run dev:vue",
     "desktop:build:react": "pnpm --filter @adui/scada-desktop run build:react",
     "desktop:build:vue": "pnpm --filter @adui/scada-desktop run build:vue",
-    "config:check": "node scripts/check-shared-config.mjs"
+    "config:check": "node scripts/check-shared-config.mjs",
+    "desktop:build:react:msi": "pnpm --filter @adui/scada-desktop run build:react:msi",
+    "desktop:build:vue:msi": "pnpm --filter @adui/scada-desktop run build:vue:msi"
   },
   "devDependencies": {
     "@adui/tooling": "workspace:*",

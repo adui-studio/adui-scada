@@ -8,7 +8,9 @@
     "dev:vue": "tauri dev --config src-tauri/tauri.vue.conf.json",
     "build:react": "tauri build",
     "build:vue": "tauri build --config src-tauri/tauri.vue.conf.json",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "build:react:msi": "tauri build --bundles msi",
+    "build:vue:msi": "tauri build --config src-tauri/tauri.vue.conf.json --bundles msi"
   },
   "devDependencies": {
     "@tauri-apps/cli": "catalog:"

@@ -59,3 +59,9 @@ Windows / pnpm 12.18 / TypeScript 6.0.3 实测 `pnpm install`、`deps:check`、`
 - Core/Runtime 单测统一使用 Vitest `expect`，NestJS E2E 使用显式断言。
 
 注意：本次修复提交后仍需重新执行 `vp check`、`pnpm run ready`，不得把源码修复视为实际测试通过。此前在本机执行 `vp check --fix` 可能格式化了大量文件；合并前应先检查 `git status`，避免覆盖未提交的本地格式修改。
+
+## 2026-11-09 · Windows Tauri Release 打包记录
+
+开发者在 Windows 运行 `pnpm run desktop:build:react`：React Web 构建、Rust release 构建成功，Tauri/WiX 输出 MSI 文件 `apps/desktop/src-tauri/target/release/bundle/msi/ADui SCADA_0.1.0_x64_en-US.msi`。随后的 NSIS 打包下载 `nsis_tauri_utils.dll` 时返回 HTTP 504，因此原命令整体失败；不能把该次结果标记为全部通过。
+
+针对外部下载故障新增 `pnpm run desktop:build:react:msi` 与 `pnpm run desktop:build:vue:msi`，单独执行 `tauri build --bundles msi`，保留原全量打包入口。上述新命令仍待本机复验，Vue release 包、MSI 安装后的实际运行、生产数据接入均尚未验收。

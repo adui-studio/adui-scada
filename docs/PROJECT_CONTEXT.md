@@ -37,3 +37,7 @@ Studio 编辑器、生产业务后端接口、真实网关、报警/历史、工
 
 `pnpm install`、`pnpm run deps:check`、`pnpm run config:check` 已由维护者运行成功。
 `pnpm run ready` 首先被格式差异阻断；`vp check --fix` 暴露 7 个类型错误与 1 个测试规则警告。已对源代码和共享格式忽略规则做针对性修复，**等待维护者本机复验**。
+
+## 2026-11-09 · Windows 桌面打包更新
+
+React Web 与 Rust Release 编译成功，Windows WiX 已输出 MSI 文件；NSIS 依赖文件 `nsis_tauri_utils.dll` 下载遇到 HTTP 504，导致原先的 all-targets 打包命令失败。已新增 React/Vue 单独构建 MSI 的命令以绕过非必需的 NSIS 下载，新命令和 Vue Release 均待本机验证。MSI 尚未完成独立安装及实时监控验收。
