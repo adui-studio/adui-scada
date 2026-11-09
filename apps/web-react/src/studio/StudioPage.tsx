@@ -1,13 +1,22 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, PointerEvent as ReactPointerEvent } from "react";
 import { WaterTreatmentSimulator, waterTreatmentDemoDocument } from "@adui/scada-core";
-import { DocumentEditor, withNodesTranslated } from "@adui/scada-core/editor";
+import { DocumentEditor, findNodesInRect, withNodesTranslated } from "@adui/scada-core/editor";
 import type { Alignment, EditableSymbol, EditorSnapshot, LayerAction } from "@adui/scada-core/editor";
 import { svgDataUrl } from "@adui/scada-runtime";
 import "./studio.css";
 
 const previewTags = new WaterTreatmentSimulator().next(new Date("2026-11-09T00:00:00Z"));
 const maxFileSize = 2 * 1024 * 1024;
+
+interface MarqueeState {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  x: number;
+  y: number;
+  additive: boolean;
+}
 
 interface DragState {
   pointerId: number;
@@ -24,11 +33,13 @@ export default function StudioPage() {
   const editor = useMemo(() => new DocumentEditor(waterTreatmentDemoDocument), []);
   const [state, setState] = useState<EditorSnapshot>(() => editor.snapshot());
   const [preview, setPreview] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [marquee, setMarquee] = useState<MarqueeState | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
   const [notice, setNotice] = useState("本地草稿 · 尚未连接工程保存 API");
   const [zoom, setZoom] = useState(1);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
+  const marqueeRef = useRef<MarqueeState | null>(null);
 
   const page = state.document.pages[0];
   const selected = page?.nodes.find((node) => node.id === state.selectedId);
@@ -52,6 +63,113 @@ export default function StudioPage() {
     setState(next);
     const node = next.document.pages[0]?.nodes.find((item) => item.id === next.selectedId);
     setLabelDraft(typeof node?.props.text === "string" ? node.props.text : "");
+  }
+
+
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        (event.target instanceof Element &&
+          event.target.closest('input, textarea, select, [contenteditable]'))
+      ) return;
+
+      const command = event.ctrlKey || event.metaKey;
+      const key = event.key.toLowerCase();
+      let handled = false;
+
+      if (command && !event.altKey) {
+        if (key === "z") handled = event.shiftKey ? editor.redo() : editor.undo();
+        else if (key === "y") handled = editor.redo();
+        else if (key === "a") {
+          editor.selectMany(editor.snapshot().document.pages[0]?.nodes.map((node) => node.id) ?? []);
+          handled = true;
+        }
+      } else if (!command && !event.altKey) {
+        if (key === "escape") {
+          dragRef.current = null;
+          marqueeRef.current = null;
+          setPreview(null);
+          setMarquee(null);
+          editor.select(null);
+          handled = true;
+        } else if (key === "delete" || key === "backspace") {
+          handled = editor.deleteSelected();
+        } else if (key.startsWith("arrow")) {
+          const step = event.shiftKey ? 10 : 1;
+          const moves: Record<string, [number, number]> = {
+            arrowleft: [-step, 0],
+            arrowright: [step, 0],
+            arrowup: [0, -step],
+            arrowdown: [0, step],
+          };
+          const move = moves[key];
+          if (move) handled = editor.moveBy(move[0], move[1]);
+        }
+      }
+
+      if (!handled) return;
+      event.preventDefault();
+      const next = editor.snapshot();
+      setState(next);
+      const selected = next.document.pages[0]?.nodes.find((node) => node.id === next.selectedId);
+      setLabelDraft(typeof selected?.props.text === "string" ? selected.props.text : "");
+    };
+
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [editor]);
+
+  function startMarquee(event: ReactPointerEvent<SVGSVGElement>) {
+    if (event.button !== 0 || event.target !== event.currentTarget) return;
+    const point = canvasPoint(event.clientX, event.clientY);
+    if (!point) return;
+    const next: MarqueeState = {
+      pointerId: event.pointerId,
+      startX: point.x,
+      startY: point.y,
+      x: point.x,
+      y: point.y,
+      additive: event.shiftKey,
+    };
+    marqueeRef.current = next;
+    setMarquee(next);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+
+  function updateMarquee(event: ReactPointerEvent<SVGSVGElement>) {
+    const current = marqueeRef.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    const point = canvasPoint(event.clientX, event.clientY);
+    if (!point) return;
+    const next = { ...current, x: point.x, y: point.y };
+    marqueeRef.current = next;
+    setMarquee(next);
+  }
+
+  function finishMarquee(event: ReactPointerEvent<SVGSVGElement>) {
+    const current = marqueeRef.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    const point = canvasPoint(event.clientX, event.clientY);
+    marqueeRef.current = null;
+    setMarquee(null);
+    const endX = point?.x ?? current.x;
+    const endY = point?.y ?? current.y;
+    if (Math.hypot(endX - current.startX, endY - current.startY) < 4) {
+      if (!current.additive) editor.select(null);
+    } else {
+      const ids = findNodesInRect(
+        editor.snapshot().document,
+        current.startX,
+        current.startY,
+        endX,
+        endY,
+      );
+      editor.selectMany(ids, current.additive);
+    }
+    refresh();
   }
 
   function select(id: string | null, additive = false) {
@@ -148,7 +266,9 @@ export default function StudioPage() {
 
   function cancelDrag() {
     dragRef.current = null;
+    marqueeRef.current = null;
     setPreview(null);
+    setMarquee(null);
   }
 
   function nudge(dx: number, dy: number) {
@@ -241,7 +361,7 @@ export default function StudioPage() {
       <div className="studio-workspace">
         <aside className="studio-panel" aria-label="图元列表">
           <h2>图元 · {page.nodes.length}</h2>
-          <p className="studio-tip">Shift + 点击可多选；图元从下到上绘制。</p>
+          <p className="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
           <div className="studio-add">
             <button type="button" onClick={() => addSymbol("tank")}>+ 水箱</button>
             <button type="button" onClick={() => addSymbol("pump")}>+ 水泵</button>
@@ -275,12 +395,16 @@ export default function StudioPage() {
             className="studio-svg"
             style={{ width: `${zoom * 100}%` }}
             viewBox={`0 0 ${page.size.width} ${page.size.height}`}
-            onPointerMove={updateDrag}
-            onPointerUp={finishDrag}
-            onPointerCancel={cancelDrag}
-            onPointerDown={(event) => {
-              if (event.target === event.currentTarget) select(null);
+            onPointerMove={(event) => {
+              updateDrag(event);
+              updateMarquee(event);
             }}
+            onPointerUp={(event) => {
+              finishDrag(event);
+              finishMarquee(event);
+            }}
+            onPointerCancel={cancelDrag}
+            onPointerDown={startMarquee}
             aria-label="可编辑 SVG 画布"
           >
             <image
@@ -322,6 +446,16 @@ export default function StudioPage() {
                 </g>
               );
             })}
+            {marquee !== null && (
+              <rect
+                className="studio-marquee"
+                x={Math.min(marquee.startX, marquee.x)}
+                y={Math.min(marquee.startY, marquee.y)}
+                width={Math.abs(marquee.x - marquee.startX)}
+                height={Math.abs(marquee.y - marquee.startY)}
+                pointerEvents="none"
+              />
+            )}
           </svg>
         </section>
         <aside className="studio-panel" aria-label="图元属性">
@@ -395,7 +529,7 @@ export default function StudioPage() {
           )}
         </aside>
       </div>
-      <footer>V0.2 编辑扩展 · 缩放 / 多选 / 图元 / 图层 / 对齐 · 仅本地 JSON 草稿 · 无设备写入</footer>
+      <footer>V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+Z 撤销，Ctrl+Shift+Z/Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 · 无设备写入</footer>
     </main>
   );
 }

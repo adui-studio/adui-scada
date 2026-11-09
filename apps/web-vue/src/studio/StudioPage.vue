@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { WaterTreatmentSimulator, waterTreatmentDemoDocument } from "@adui/scada-core";
-import { DocumentEditor, withNodesTranslated } from "@adui/scada-core/editor";
+import { DocumentEditor, findNodesInRect, withNodesTranslated } from "@adui/scada-core/editor";
 import type { Alignment, EditableSymbol, LayerAction } from "@adui/scada-core/editor";
 import { svgDataUrl } from "@adui/scada-runtime";
 import "./studio.css";
@@ -11,10 +11,20 @@ const maxFileSize = 2 * 1024 * 1024;
 const editor = new DocumentEditor(waterTreatmentDemoDocument);
 const state = shallowRef(editor.snapshot());
 const preview = shallowRef<{ id: string; x: number; y: number } | null>(null);
+const marquee = shallowRef<MarqueeState | null>(null);
 const labelDraft = ref("");
 const notice = ref("本地草稿 · 尚未连接工程保存 API");
 const zoom = ref(1);
 const svgRef = ref<SVGSVGElement | null>(null);
+
+interface MarqueeState {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  x: number;
+  y: number;
+  additive: boolean;
+}
 
 interface DragState {
   pointerId: number;
@@ -27,6 +37,7 @@ interface DragState {
   lastY: number;
 }
 let activeDrag: DragState | null = null;
+let activeMarquee: MarqueeState | null = null;
 
 const page = computed(() => {
   const result = state.value.document.pages[0];
@@ -62,6 +73,116 @@ watch(
 
 function refresh() {
   state.value = editor.snapshot();
+}
+
+
+function handleKey(event: KeyboardEvent) {
+  if (
+    event.defaultPrevented ||
+    event.isComposing ||
+    (event.target instanceof Element &&
+      event.target.closest("input, textarea, select, [contenteditable]"))
+  ) return;
+
+  const command = event.ctrlKey || event.metaKey;
+  const key = event.key.toLowerCase();
+  let handled = false;
+
+  if (command && !event.altKey) {
+    if (key === "z") handled = event.shiftKey ? editor.redo() : editor.undo();
+    else if (key === "y") handled = editor.redo();
+    else if (key === "a") {
+      editor.selectMany(page.value.nodes.map((node) => node.id));
+      handled = true;
+    }
+  } else if (!command && !event.altKey) {
+    if (key === "escape") {
+      activeDrag = null;
+      activeMarquee = null;
+      preview.value = null;
+      marquee.value = null;
+      editor.select(null);
+      handled = true;
+    } else if (key === "delete" || key === "backspace") {
+      handled = editor.deleteSelected();
+    } else if (key.startsWith("arrow")) {
+      const step = event.shiftKey ? 10 : 1;
+      const moves: Record<string, [number, number]> = {
+        arrowleft: [-step, 0],
+        arrowright: [step, 0],
+        arrowup: [0, -step],
+        arrowdown: [0, step],
+      };
+      const move = moves[key];
+      if (move) handled = editor.moveBy(move[0], move[1]);
+    }
+  }
+
+  if (!handled) return;
+  event.preventDefault();
+  refresh();
+}
+
+onMounted(() => window.addEventListener("keydown", handleKey));
+onUnmounted(() => window.removeEventListener("keydown", handleKey));
+
+function startMarquee(event: PointerEvent) {
+  if (event.button !== 0 || event.target !== event.currentTarget) return;
+  const point = canvasPoint(event.clientX, event.clientY);
+  if (!point) return;
+  const next: MarqueeState = {
+    pointerId: event.pointerId,
+    startX: point.x,
+    startY: point.y,
+    x: point.x,
+    y: point.y,
+    additive: event.shiftKey,
+  };
+  activeMarquee = next;
+  marquee.value = next;
+  svgRef.value?.setPointerCapture(event.pointerId);
+  event.preventDefault();
+}
+
+function updateMarquee(event: PointerEvent) {
+  if (!activeMarquee || activeMarquee.pointerId !== event.pointerId) return;
+  const point = canvasPoint(event.clientX, event.clientY);
+  if (!point) return;
+  activeMarquee = { ...activeMarquee, x: point.x, y: point.y };
+  marquee.value = activeMarquee;
+}
+
+function finishMarquee(event: PointerEvent) {
+  const current = activeMarquee;
+  if (!current || current.pointerId !== event.pointerId) return;
+  const point = canvasPoint(event.clientX, event.clientY);
+  activeMarquee = null;
+  marquee.value = null;
+  const endX = point?.x ?? current.x;
+  const endY = point?.y ?? current.y;
+  if (Math.hypot(endX - current.startX, endY - current.startY) < 4) {
+    if (!current.additive) editor.select(null);
+  } else {
+    const ids = findNodesInRect(
+      editor.snapshot().document,
+      current.startX,
+      current.startY,
+      endX,
+      endY,
+    );
+    editor.selectMany(ids, current.additive);
+  }
+  refresh();
+}
+
+function updatePointer(event: PointerEvent) {
+  updateDrag(event);
+  updateMarquee(event);
+}
+
+function finishPointer(event: PointerEvent) {
+  finishDrag(event);
+  finishMarquee(event);
 }
 
 function selectNode(id: string | null, additive = false) {
@@ -158,7 +279,9 @@ function finishDrag(event: PointerEvent) {
 
 function cancelDrag() {
   activeDrag = null;
+  activeMarquee = null;
   preview.value = null;
+  marquee.value = null;
 }
 
 function displayTransform(id: string) {
@@ -242,7 +365,7 @@ async function importJson(event: Event) {
     <div class="studio-workspace">
       <aside class="studio-panel" aria-label="图元列表">
         <h2>图元 · {{ page.nodes.length }}</h2>
-        <p class="studio-tip">Shift + 点击可多选；图元从下到上绘制。</p>
+        <p class="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
         <div class="studio-add">
           <button type="button" @click="addSymbol('tank')">+ 水箱</button>
           <button type="button" @click="addSymbol('pump')">+ 水泵</button>
@@ -276,10 +399,10 @@ async function importJson(event: Event) {
           :style="{ width: `${zoom * 100}%` }"
           :viewBox="`0 0 ${page.size.width} ${page.size.height}`"
           aria-label="可编辑 SVG 画布"
-          @pointermove="updateDrag"
-          @pointerup="finishDrag"
+          @pointermove="updatePointer"
+          @pointerup="finishPointer"
           @pointercancel="cancelDrag"
-          @pointerdown.self="selectNode(null)"
+          @pointerdown.self="startMarquee"
         >
           <image
             :href="imageUrl"
@@ -306,6 +429,15 @@ async function importJson(event: Event) {
               @keydown.space.prevent="selectNode(node.id, $event.shiftKey)"
             />
           </g>
+          <rect
+            v-if="marquee"
+            class="studio-marquee"
+            :x="Math.min(marquee.startX, marquee.x)"
+            :y="Math.min(marquee.startY, marquee.y)"
+            :width="Math.abs(marquee.x - marquee.startX)"
+            :height="Math.abs(marquee.y - marquee.startY)"
+            pointer-events="none"
+          />
         </svg>
       </section>
       <aside class="studio-panel" aria-label="图元属性">
@@ -358,6 +490,6 @@ async function importJson(event: Event) {
         <p v-else class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
       </aside>
     </div>
-    <footer>V0.2 编辑扩展 · 缩放 / 多选 / 图元 / 图层 / 对齐 · 仅本地 JSON 草稿 · 无设备写入</footer>
+    <footer>V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+Z 撤销，Ctrl+Shift+Z/Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 · 无设备写入</footer>
   </main>
 </template>

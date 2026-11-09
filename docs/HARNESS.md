@@ -203,3 +203,17 @@ pnpm run dev:vue
 React 和 Vue 各自打开 Studio 后检验缩放 50/100/200%；创建水箱/水泵/文本、撤销重做、删除；Shift 点击多选并拖动，在靠近画布边界时保持相对布局；选两个不同尺寸的图元执行水平/垂直对齐；层级置顶/置底并通过 JSON 验证节点顺序。新图元不自动关联任何 Tag；跨框架往返不丢失已有绑定。
 
 **截至提交时未在此协作环境执行完整 pnpm/Vite+/TS6/Vitest/浏览器或 Docker 回归。** 不继承之前单选版本的验收结果为本轮已通过。
+
+## 2026-11-09 · V0.2 框选和键盘交互待验证
+
+新增 5 个单元用例，`packages/core/test/editor.test.ts` 累计 **22 个用例**（未实际运行）。须在 Windows 运行：
+
+```powershell
+pnpm run ready
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+React/Vue 都需测试：从正向/反向拖动空白区域框选；Shift 框选追加、单击空白取消；框选后整体移动与撤销；缩放到 50%/200% 后框选坐标准确。Ctrl+A 全选、方向键 ±1、Shift+方向键 ±10、Ctrl+Z 撤销、Ctrl+Shift+Z/Ctrl+Y 重做、Delete 删除、Esc 清选。**在 Label 输入框聚焦时快捷键不得触发图元编辑命令**。还需跨框架 JSON 往返与 Runtime STALE/GOOD 回归。
+
+GitHub 结构检查不等于 Vite+、TS6、Vitest、双框架浏览器与 Docker 实测通过。

@@ -93,6 +93,44 @@ export function withNodesTranslated(
   });
 }
 
+/**
+ * Returns first-page node IDs whose axis-aligned bounds intersect the drag rectangle.
+ * Rotation is accounted for by the conservative axis-aligned bounding box.
+ * The caller keeps selection/zoom outside of persisted JSON.
+ */
+export function findNodesInRect(
+  document: ScadaDocument,
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+): string[] {
+  for (const coordinate of [startX, startY, endX, endY]) finite(coordinate, "Selection coordinate");
+  const left = Math.min(startX, endX);
+  const right = Math.max(startX, endX);
+  const top = Math.min(startY, endY);
+  const bottom = Math.max(startY, endY);
+  if (right === left || bottom === top) return [];
+  const page = firstPage(parseScadaDocument(document));
+
+  return page.nodes
+    .filter((node) => {
+      const t = node.transform;
+      const angle = (t.rotation * Math.PI) / 180;
+      const halfX = (Math.abs(Math.cos(angle)) * t.width + Math.abs(Math.sin(angle)) * t.height) / 2;
+      const halfY = (Math.abs(Math.sin(angle)) * t.width + Math.abs(Math.cos(angle)) * t.height) / 2;
+      const centerX = t.x + t.width / 2;
+      const centerY = t.y + t.height / 2;
+      return (
+        centerX + halfX >= left &&
+        centerX - halfX <= right &&
+        centerY + halfY >= top &&
+        centerY - halfY <= bottom
+      );
+    })
+    .map((node) => node.id);
+}
+
 /** Backwards-compatible single-node absolute positioning. */
 export function withNodePosition(
   document: ScadaDocument,
@@ -152,6 +190,18 @@ export class DocumentEditor {
     } else {
       this.selection = [...this.selection, nodeId];
     }
+  }
+
+  /** Atomically replace or extend selection; drawing order determines bulk selection order. */
+  selectMany(nodeIds: readonly string[], additive = false): void {
+    const valid = new Set(firstPage(this.current).nodes.map((node) => node.id));
+    if (nodeIds.some((id) => !valid.has(id))) {
+      throw new RangeError("Unknown selected node");
+    }
+    const unique = [...new Set(nodeIds)];
+    this.selection = additive
+      ? [...this.selection, ...unique.filter((id) => !this.selection.includes(id))]
+      : unique;
   }
 
   /** Legacy absolute move API; multi-selection translates as one bounded group. */

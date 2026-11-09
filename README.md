@@ -98,3 +98,9 @@ Vue / React 现在都可通过页面顶部「组态编辑」打开懒加载 Stud
 在现有 Studio 上扩展：画布 `50%–200%` 缩放、添加 `tank/pump/pipe/label` 图元、删除、`Shift` 多选及整体拖动、上移/下移层与置顶/置底、按最后选中的图元进行六方向对齐。全部文档修改经共享 `@adui/scada-core/editor` 校验并支持撤销/重做；React/Vue 使用同一工程 JSON。
 
 当前仍为**内存草稿**，离开 Studio 前须导出本地 JSON。视图缩放与选择状态不写入工程文件；新增图元没有绑定任何真实设备。详情与未完成项见 [V0.2 Studio 文档](docs/V0.2_STUDIO.md)。
+
+### V0.2 画布框选与键盘操作（开发中）
+
+拖动**空白画布**可框选与选择框相交的图元，支持反向拖动；Shift+拖框可追加选择。编辑器可用 Ctrl/Cmd+A 全选、Ctrl/Cmd+Z 撤销、Ctrl/Cmd+Shift+Z 或 Ctrl+Y 重做、Delete 删除、方向键微移（Shift+方向键 10 单位）、Esc 清除选择。输入框获得焦点时这些操作不会拦截正常输入。
+
+框选结果和缩放均为临时 UI 状态，不写入工程 JSON。详见 [Studio 使用文档](docs/V0.2_STUDIO.md)。

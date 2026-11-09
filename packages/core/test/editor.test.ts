@@ -1,6 +1,6 @@
 import { expect, test } from "vite-plus/test";
 import { waterTreatmentDemoDocument } from "../src/demo-document.ts";
-import { DocumentEditor, withNodePosition, withNodesTranslated } from "../src/editor.ts";
+import { DocumentEditor, findNodesInRect, withNodePosition, withNodesTranslated } from "../src/editor.ts";
 
 function editor() {
   return new DocumentEditor(waterTreatmentDemoDocument);
@@ -228,4 +228,65 @@ test("layer forward/backward swaps one position and no-ops at the edge", () => {
   ]);
   expect(e.reorderSelected("backward")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes[0]?.id).toBe("title");
+});
+
+test("marquee hit testing handles reversed corners, empty rectangles and whole canvas", () => {
+  const document = editor().snapshot().document;
+  expect(findNodesInRect(document, 70, 120, 225, 335)).toEqual(["tank"]);
+  expect(findNodesInRect(document, 225, 335, 70, 120)).toEqual(["tank"]);
+  expect(findNodesInRect(document, 100, 100, 100, 200)).toEqual([]);
+  expect(findNodesInRect(document, 0, 0, 880, 460)).toEqual([
+    "title",
+    "tank",
+    "pipe",
+    "pump",
+    "flow",
+  ]);
+});
+
+test("marquee uses rotated axis-aligned bounds rather than ignoring rotation", () => {
+  const document = editor().snapshot().document;
+  const tank = document.pages[0]?.nodes.find((node) => node.id === "tank");
+  if (!tank) throw new Error("Missing tank fixture");
+  tank.transform.rotation = 90;
+  expect(findNodesInRect(document, 50, 220, 60, 230)).toEqual(["tank"]);
+});
+
+test("marquee rejects non-finite coordinates without touching editor history", () => {
+  const e = editor();
+  const before = e.snapshot();
+  expect(() => findNodesInRect(before.document, Number.NaN, 0, 300, 300)).toThrow(/finite/);
+  expect(() => findNodesInRect(before.document, 0, Number.POSITIVE_INFINITY, 300, 300)).toThrow(
+    /finite/,
+  );
+  expect(e.snapshot()).toEqual(before);
+});
+
+test("bulk selection validates atomically, preserves order and never changes project JSON", () => {
+  const e = editor();
+  const original = e.snapshot().document;
+  e.selectMany(["tank", "pump"]);
+  expect(e.snapshot().selectedIds).toEqual(["tank", "pump"]);
+  e.selectMany(["pump", "title"], true);
+  expect(e.snapshot().selectedIds).toEqual(["tank", "pump", "title"]);
+  expect(e.snapshot().selectedId).toBe("title");
+  expect(() => e.selectMany(["flow", "does-not-exist"])).toThrow(/Unknown/);
+  expect(e.snapshot().selectedIds).toEqual(["tank", "pump", "title"]);
+  e.selectMany(["tank", "tank", "pipe"]);
+  expect(e.snapshot().selectedIds).toEqual(["tank", "pipe"]);
+  expect(e.snapshot().document).toEqual(original);
+  expect(e.snapshot().canUndo).toBe(false);
+});
+
+test("marquee selection can be used to move a group with one reversible command", () => {
+  const e = editor();
+  const original = e.snapshot().document;
+  e.selectMany(findNodesInRect(original, 0, 100, 620, 350));
+  const selected = e.snapshot().selectedIds;
+  expect(selected).toEqual(["tank", "pipe", "pump"]);
+  expect(e.moveBy(10, 0)).toBe(true);
+  expect(e.snapshot().canUndo).toBe(true);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(original);
+  expect(e.snapshot().selectedIds).toEqual(selected);
 });
