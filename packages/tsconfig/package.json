@@ -1,0 +1,23 @@
+{
+  "name": "@adui/tsconfig",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./base": "./base.json",
+    "./browser": "./browser.json",
+    "./react": "./react.json",
+    "./vue": "./vue.json",
+    "./node": "./node.json",
+    "./vue-node": "./vue-node.json",
+    "./nest": "./nest.json",
+    "./core": "./core.json"
+  },
+  "dependencies": {
+    "@tsconfig/node24": "catalog:",
+    "@vue/tsconfig": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}

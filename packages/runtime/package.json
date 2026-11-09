@@ -1,0 +1,18 @@
+{
+  "name": "@adui/scada-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/runtime.css"
+  },
+  "dependencies": {
+    "@adui/scada-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@adui/tsconfig": "workspace:*",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

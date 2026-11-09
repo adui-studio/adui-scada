@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { expect, test } from "vite-plus/test";
 import { parseScadaDocument, SCADA_SCHEMA_VERSION } from "../src/document.ts";
 
 function fixture() {
@@ -27,39 +26,39 @@ function fixture() {
   };
 }
 
-void test("validates and clones a portable document", () => {
+test("validates and clones a portable document", () => {
   const source = fixture();
   const parsed = parseScadaDocument(source);
-  assert.deepEqual(JSON.parse(JSON.stringify(parsed)), source);
+  expect(JSON.parse(JSON.stringify(parsed))).toEqual(source);
   source.pages[0].nodes[0].props.title = "Tampered";
-  assert.equal(parsed.pages[0].nodes[0].props.title, "Tank 1");
+  expect(parsed.pages[0].nodes[0].props.title).toBe("Tank 1");
 });
 
-void test("rejects unsupported schema and invalid geometry", () => {
+test("rejects unsupported schema and invalid geometry", () => {
   const unsupported = fixture() as any;
   unsupported.schemaVersion = "99";
-  assert.throws(() => parseScadaDocument(unsupported), /unsupported version/);
+  expect(() => parseScadaDocument(unsupported)).toThrow(/unsupported version/);
   const invalid = fixture();
   invalid.pages[0].nodes[0].transform.width = Number.POSITIVE_INFINITY;
-  assert.throws(() => parseScadaDocument(invalid), /finite number/);
+  expect(() => parseScadaDocument(invalid)).toThrow(/finite number/);
 });
 
-void test("rejects duplicate page/node ID and unsafe JSON keys", () => {
+test("rejects duplicate page/node ID and unsafe JSON keys", () => {
   const duplicated = fixture();
   duplicated.pages[0].nodes[0].id = "main";
-  assert.throws(() => parseScadaDocument(duplicated), /duplicate ID/);
+  expect(() => parseScadaDocument(duplicated)).toThrow(/duplicate ID/);
   const injected = fixture() as any;
   injected.pages[0].nodes[0].props = JSON.parse('{"__proto__": {"polluted": true}}');
-  assert.throws(() => parseScadaDocument(injected), /unsafe property key/);
+  expect(() => parseScadaDocument(injected)).toThrow(/unsafe property key/);
 });
 
-void test("rejects functions and cycles in user-defined rules", () => {
+test("rejects functions and cycles in user-defined rules", () => {
   const fn = fixture() as any;
   fn.pages[0].nodes[0].rules = [() => "unsafe"];
-  assert.throws(() => parseScadaDocument(fn), /not a JSON value/);
+  expect(() => parseScadaDocument(fn)).toThrow(/not a JSON value/);
   const cycle = fixture() as any;
   const recursive: unknown[] = [];
   recursive.push(recursive);
   cycle.pages[0].nodes[0].rules = recursive;
-  assert.throws(() => parseScadaDocument(cycle), /cyclic value/);
+  expect(() => parseScadaDocument(cycle)).toThrow(/cyclic value/);
 });

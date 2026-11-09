@@ -1,0 +1,27 @@
+{
+  "name": "@adui/scada-web-vue",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vp dev",
+    "build": "vp build",
+    "preview": "vp preview",
+    "typecheck": "vue-tsc --build",
+    "build:desktop": "vp build --mode desktop"
+  },
+  "dependencies": {
+    "@adui/scada-core": "workspace:*",
+    "@adui/scada-runtime": "workspace:*",
+    "vue": "catalog:"
+  },
+  "devDependencies": {
+    "@adui/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitejs/plugin-vue": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "vue-tsc": "catalog:"
+  }
+}

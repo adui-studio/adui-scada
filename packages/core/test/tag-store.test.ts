@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { expect, test } from "vite-plus/test";
 import { TagStore, validateTagValue } from "../src/tag-store.ts";
 import type { TagValue } from "../src/tag-store.ts";
 
@@ -13,7 +12,7 @@ const make = (sequence = 1, quality: TagValue["quality"] = "GOOD"): TagValue => 
   sequence,
 });
 
-void test("subscribers receive initial snapshot and incrementals; unsubscribe works", () => {
+test("subscribers receive initial snapshot and incrementals; unsubscribe works", () => {
   const store = new TagStore();
   const events: string[] = [];
   const unsubscribe = store.subscribe((event) =>
@@ -22,40 +21,39 @@ void test("subscribers receive initial snapshot and incrementals; unsubscribe wo
   store.apply([make()]);
   unsubscribe();
   store.apply([make(2)]);
-  assert.deepEqual(events, ["snapshot:0", "delta:1"]);
+  expect(events).toEqual(["snapshot:0", "delta:1"]);
 });
 
-void test("ignores out-of-order and duplicate sequence without mutating values", () => {
+test("ignores out-of-order and duplicate sequence without mutating values", () => {
   const store = new TagStore();
   store.apply([make(5)]);
-  assert.equal(store.apply([make(3)]).length, 0);
-  assert.equal(store.apply([make(5)]).length, 0);
-  assert.equal(store.get("water.level")?.sequence, 5);
+  expect(store.apply([make(3)]).length).toBe(0);
+  expect(store.apply([make(5)]).length).toBe(0);
+  expect(store.get("water.level")?.sequence).toBe(5);
 });
 
-void test("batch rejects invalid/duplicated data atomically", () => {
+test("batch rejects invalid/duplicated data atomically", () => {
   const store = new TagStore();
   const bad = { ...make(), value: Number.NaN };
-  assert.throws(() => store.apply([make(), bad]), /Duplicate update|Invalid number/);
-  assert.deepEqual(store.snapshot(), []);
-  assert.throws(() => store.apply([make(), make(2)]), /Duplicate update/);
-  assert.deepEqual(store.snapshot(), []);
-  assert.throws(
-    () => validateTagValue({ ...make(), quality: "UNKNOWN" as any }),
+  expect(() => store.apply([make(), bad])).toThrow(/Duplicate update|Invalid number/);
+  expect(store.snapshot()).toEqual([]);
+  expect(() => store.apply([make(), make(2)])).toThrow(/Duplicate update/);
+  expect(store.snapshot()).toEqual([]);
+  expect(() => validateTagValue({ ...make(), quality: "UNKNOWN" as any })).toThrow(
     /Invalid quality/,
   );
 });
 
-void test("stale is explicit, changes sequence, retains last reading, recovery is possible", () => {
+test("stale is explicit, changes sequence, retains last reading, recovery is possible", () => {
   const store = new TagStore();
   store.apply([make()]);
   const now = Date.parse(at) + 3000;
   const stale = store.markStale(now, 2500);
-  assert.equal(stale[0].quality, "STALE");
-  assert.equal(stale[0].value, 55);
-  assert.equal(stale[0].sequence, 2);
-  assert.equal(store.markStale(now + 3000, 2500).length, 0);
+  expect(stale[0].quality).toBe("STALE");
+  expect(stale[0].value).toBe(55);
+  expect(stale[0].sequence).toBe(2);
+  expect(store.markStale(now + 3000, 2500).length).toBe(0);
   store.apply([{ ...make(3), value: 65, serverTimestamp: new Date(now + 4000).toISOString() }]);
-  assert.equal(store.get("water.level")?.quality, "GOOD");
-  assert.equal(store.get("water.level")?.value, 65);
+  expect(store.get("water.level")?.quality).toBe("GOOD");
+  expect(store.get("water.level")?.value).toBe(65);
 });

@@ -1,0 +1,20 @@
+# syntax=docker/dockerfile:1
+# Minimal NestJS health-probe container, NOT a production SCADA API.
+FROM node:24.22.2-bookworm AS build
+WORKDIR /workspace
+RUN npm install --global pnpm@12.18.0
+COPY . .
+RUN pnpm install --frozen-lockfile \
+    && pnpm --filter @adui/scada-server run build
+
+FROM node:24.22.2-bookworm-slim
+ENV NODE_ENV=production
+WORKDIR /workspace
+# pnpm workspace symlinks point at the root .pnpm store: copy both levels.
+COPY --from=build --chown=node:node /workspace/node_modules/ /workspace/node_modules/
+COPY --from=build --chown=node:node /workspace/apps/server/node_modules/ /workspace/apps/server/node_modules/
+COPY --from=build --chown=node:node /workspace/apps/server/dist/ /workspace/apps/server/dist/
+COPY --from=build --chown=node:node /workspace/apps/server/package.json /workspace/apps/server/package.json
+USER node
+EXPOSE 3001
+CMD ["node", "apps/server/dist/main.js"]

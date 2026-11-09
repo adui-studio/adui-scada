@@ -4,7 +4,7 @@
 
 ## 1. 定位与事实
 
-ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**当前仅存在 Vite+ Starter 与第三方 Skills，不得将计划视为实现。**
+ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**当前 V0.1 开发分支已有共享 Core/Runtime、Vue/React Web、NestJS 进程探针及 Tauri 桌面壳；Studio 编辑器、工业 Gateway 和生产 API 仍未实现。不得将规划视为实现。**
 
 ## 2. 规则优先级
 
@@ -38,7 +38,7 @@ Skills 位于 `.agents/skills/`，索引见 [SKILLS](docs/SKILLS.md) 与 `skills
 
 按任务使用常规分支与 Conventional Commits；推荐中文 + gitmoji，如 `docs(project): 📝 完善工程文档`。未经授权不得强制覆盖、推送、合并、发布或部署；优先分支和 PR 审查。
 
-现有质量入口见 [HARNESS](docs/HARNESS.md)，文档检查使用 `pnpm run docs:check`，不能代替编译、E2E、工业安全测试。
+现有质量入口见 [HARNESS](docs/HARNESS.md)。编辑规范统一放在根 `.editorconfig`；各项目 TypeScript 继承 `@adui/tsconfig/*`，Format/Lint 从 `@adui/tooling` 经根 `vite.config.ts` 统一应用。新增第三方依赖统一写入 pnpm Catalog，避免子项目维护重复版本。文档检查使用 `pnpm run docs:check`，不能代替编译、E2E、工业安全测试。
 
 ## 7. 文档职责和同步
 

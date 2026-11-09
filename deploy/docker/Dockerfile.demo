@@ -1,0 +1,11 @@
+# syntax=docker/dockerfile:1
+# Temporary localhost-only V0.1 simulator, not a gateway or production data source.
+FROM node:24.22.2-bookworm-slim
+ENV NODE_ENV=production
+WORKDIR /workspace
+COPY --chown=node:node packages/core/package.json packages/core/package.json
+COPY --chown=node:node packages/core/src/ packages/core/src/
+COPY --chown=node:node examples/water-treatment/ examples/water-treatment/
+USER node
+EXPOSE 4178
+CMD ["node", "examples/water-treatment/server.mjs"]

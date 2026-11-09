@@ -110,6 +110,42 @@ export class TagStore {
     return this.apply(changes);
   }
 
+  /** A remote snapshot starts a new session; validate before replacing atomically. */
+  replaceSnapshot(updates: readonly TagValue[]): readonly TagValue[] {
+    const seen = new Set<string>();
+    const checked = updates.map((item) => {
+      const valid = validateTagValue(item);
+      if (seen.has(valid.tagId)) throw new TypeError("Duplicate snapshot Tag");
+      seen.add(valid.tagId);
+      return valid;
+    });
+    this.values.clear();
+    for (const item of checked) this.values.set(item.tagId, item);
+    this.emit({ kind: "snapshot", values: this.snapshot() });
+    return this.snapshot();
+  }
+
+  /** Mark disconnected readings as STALE without fabricating new sensor measurements. */
+  markDisconnected(nowMs: number): readonly TagValue[] {
+    if (!Number.isFinite(nowMs)) throw new TypeError("Invalid clock");
+    const timestamp = new Date(nowMs).toISOString();
+    const changed: TagValue[] = [];
+    for (const value of this.values.values()) {
+      if (
+        (value.quality === "GOOD" || value.quality === "UNCERTAIN") &&
+        value.sequence < Number.MAX_SAFE_INTEGER
+      ) {
+        changed.push({
+          ...value,
+          quality: "STALE",
+          serverTimestamp: timestamp,
+          sequence: value.sequence + 1,
+        });
+      }
+    }
+    return this.apply(changed);
+  }
+
   private emit(change: TagChange): void {
     for (const listener of this.listeners) listener(change);
   }

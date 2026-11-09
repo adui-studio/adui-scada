@@ -1,47 +1,75 @@
 # ADui SCADA
 
-**ADui Studio 出品的工业 SCADA / HMI 组态与实时监控平台。**
+ADui Studio 维护的工业 SCADA / HMI 开源项目。**当前 V0.1 是模拟数据与只读监控原型，不是可用于生产的 SCADA 系统。**
 
-> **状态：V0.1 核心原型（非生产版本）。** 当前已提供共享 TypeScript Core、模拟 Tag 和只读 SVG 演示。Vue/React 正式应用、NestJS、工业 Gateway、数据库及 2D 编辑器尚未实现；以下产品能力仍是目标。
+## 已实现（V0.1 开发分支）
 
-## 产品方向
+- **apps/web-react**：React 19 Web 应用，当前仅提供 Runtime 监控页面。
+- **apps/web-vue**：Vue 3 Web 应用，当前仅提供 Runtime 监控页面。
+- **packages/core**：框架无关的工程 Schema、TagStore、质量状态、SVG 序列化和水处理模拟器。
+- **packages/runtime**：浏览器 SSE 诊断客户端，带断线质量标记及自动重连。
+- **examples/water-treatment**：本机模拟数据服务器；不连接 PLC/DCS。
+- **apps/server**：NestJS 12 ESM 服务，当前只有 `GET /health`（进程存活探针）。
+- **apps/desktop**：Tauri 2 Windows 优先桌面壳，默认 React，可切换 Vue。
 
-- **Web 双版本**：Vue 3 与 React，共享工程 Schema、编辑器核心、Tag 数据模型与业务 API；两种框架的工程文件互通。
-- **2D 组态**：SVG 工业图元、画布编辑、变量绑定、独立运行时、版本化发布。
-- **工业数据**：NestJS 业务平台、独立 Gateway；目标支持 OPC UA、Modbus TCP、MQTT、报警和历史趋势。
-- **桌面端**：后续使用 Tauri 2 封装 Windows 版本。
-- **3D 扩展**：Three.js 自研独立引擎，Vue/React 适配。
-- **暂缓**：原生移动 App、未经评审的设备写入。
+Studio（组态编辑器）、真实工业网关、生产业务 API、数据库及 Three.js 尚未实现。NestJS 与 Tauri 目前仅完成最小工程。
 
-## V0.1 本地开发
+## 模板与依赖
 
-环境要求（原仓库声明）：Node.js >= 22.18.0、pnpm 12.18.0、Vite+ 1.5.0。本阶段没有引入新的第三方运行时依赖。原始锁文件是否与 `vite-plus` 及新增工作区一致，需运行 `pnpm install` 后检查差异并由维护者确认。
+对照用户提供的 React、Vue、NestJS、Tauri 四套默认模板；目前已建立 React/Vue、NestJS 本地进程探针与 Tauri 桌面工程；后端业务和工业网关暂不接入。
+根目录唯一 `.editorconfig` 约定 UTF-8 / LF / 2 空格。TypeScript 统一继承 `@adui/tsconfig/react`、`@adui/tsconfig/vue`、`@adui/tsconfig/nest` 等配置入口；Format / Lint 由 `@adui/tooling` 提供，并由根 `vite.config.ts` 统一生效。
+
+所有第三方依赖版本在 `pnpm-workspace.yaml` Catalog 中维护，包间使用 `workspace:*`。TypeScript 采用 6.0.3，测试统一使用 Vite+ 集成的 Vitest。
+
+环境按仓库 package.json：Node >= 22.18.0，pnpm 12.18.0，Vite+ 1.5.0。新依赖必须执行 `pnpm install` 后更新并审查锁文件。
 
 ```powershell
 pnpm install
-pnpm run test:core
+pnpm run deps:check
+pnpm run config:check
+pnpm run test:unit
+pnpm run typecheck:web
+pnpm run typecheck:server
+pnpm run test:e2e:server
+pnpm run build:web
+pnpm run build:server
+vp check
 pnpm run docs:check
-pnpm run dev
 ```
 
-打开 `http://127.0.0.1:4178`。演示为 **Node HTTP + SSE + SVG 诊断页**，只监听 loopback 地址，未接真实 PLC、NestJS 或 Vue/React。模拟 Tag 每秒更新；每 30 秒模拟约 8 秒的采集中断，超时后状态显示 `STALE`，不以旧读数假装实时状态。`Ctrl+C` 停止。`vp check` 用于检查现有 Vite+ 配置及新增代码；构建命令将在正式应用加入后提供。
+启动三个终端：
 
-当前核心模块：`packages/core/src/document.ts`（工程解析）、`tag-store.ts`（Tag 质量/快照/增量）、`svg.ts`（SVG 渲染）、`simulator.ts`（模拟数据）。以上模块均不依赖 Vue/React。`examples/water-treatment/` 仅用于快速验证端到端模拟链路，**不是**正式 Runtime 的网络/安全架构。
+```powershell
+pnpm run dev:demo
+pnpm run dev:react
+pnpm run dev:vue
+```
 
-## 文档与工程规则
+React: http://127.0.0.1:5173 · Vue: http://127.0.0.1:5174 · 模拟端: http://127.0.0.1:4178
 
-| 文档                                             | 作用                        |
-| ------------------------------------------------ | --------------------------- |
-| [AGENTS.md](AGENTS.md)                           | Agent 协作、安全与 Git 规则 |
-| [REQUIREMENTS](docs/REQUIREMENTS.md)             | 产品需求和验收条件          |
-| [ARCHITECTURE](docs/ARCHITECTURE.md)             | 目标架构                    |
-| [SDD](docs/SDD.md)                               | 数据契约及候选接口          |
-| [V0.1 实施记录](docs/V0.1_IMPLEMENTATION.md)     | 当前实现、实测与下一阶段    |
-| [PROJECT_CONTEXT](docs/PROJECT_CONTEXT.md)       | 当前真实进度与风险          |
-| [CODEBASE_MAP](docs/CODEBASE_MAP.md)             | 实际目录与规划目录          |
-| [SKILLS](docs/SKILLS.md)                         | 已安装 Agent Skills         |
-| [HARNESS](docs/HARNESS.md)                       | 质量入口与验证口径          |
-| [VALIDATION](docs/VALIDATION.md)                 | 文档检查说明                |
-| [ADR-0001](docs/adr/0001-dual-framework-core.md) | 双框架共享 Core             |
+NestJS 本地探针：`pnpm run dev:server`，访问 http://127.0.0.1:3001/health。
 
-当前仓库尚无 `LICENSE`；开源许可需另行明确，公开可见不等于授予再分发权。
+Tauri（Windows，需 Rust 和 WebView2 等前置环境）：先启动模拟服务，再运行 `pnpm run desktop:dev:react` 或 `pnpm run desktop:dev:vue`；打包执行 `pnpm run desktop:build:react` 或 `pnpm run desktop:build:vue`。打包产物不包含模拟 SSE 服务，当前不保证离线监控。
+
+模拟服务仅绑定 127.0.0.1。客户端通过 Web dev proxy 的 `/demo` 访问工程与 SSE，不直连工业设备。断线/失效质量不能展示为正常值。
+
+## 规范与状态
+
+[Agent 规则](AGENTS.md) · [需求](docs/REQUIREMENTS.md) · [架构](docs/ARCHITECTURE.md) · [详细设计](docs/SDD.md) · [代码地图](docs/CODEBASE_MAP.md) · [验证](docs/HARNESS.md) · [开发进度](docs/PROJECT_CONTEXT.md) · [工具链说明](docs/V0.1_TOOLCHAIN.md)
+
+当前没有 `LICENSE`；公开 GitHub 仓库不等于已授予开源许可证。
+
+## V0.1 桌面安装版
+
+Tauri MSI 构建（`desktop:build:react:msi` / `desktop:build:vue:msi`）使用独立的 `--mode desktop` Web 构建，内置**明确标注的离线模拟数据源**，无需运行 `pnpm run dev:demo`。Web 开发与桌面开发模式仍需本地 SSE 模拟服务。模拟数据不是 PLC/DCS 实际采集，不能用于生产控制。详情见 [桌面端说明](apps/desktop/README.md)。
+
+## Docker 本地演示部署（V0.1）
+
+已预留 Docker Compose 演示运行方式，分别构建 React / Vue 静态 Web、NestJS 健康检查服务和只读模拟 SSE。**仅绑定本机 127.0.0.1，不可视为生产 SCADA 部署。**
+
+```powershell
+docker compose -f deploy/docker/compose.demo.yaml config
+pnpm run docker:demo:up
+```
+
+访问 React：`http://127.0.0.1:8080`；Vue：`http://127.0.0.1:8081`。详情与安全边界见 [Docker 演示说明](deploy/docker/README.md)，部署决策见 [ADR-0007](docs/adr/0007-docker-demo-deployment.md)。当前环境尚未运行 Docker 构建/容器验证。
