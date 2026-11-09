@@ -270,3 +270,17 @@ footer {
     grid-template-columns: 1fr;
   }
 }
+
+/* Shared host navigation; Studio and Runtime stay independently lazy loaded. */
+.scada-app-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 22px;
+  background: #101f30;
+  border-bottom: 1px solid #294057;
+}
+.scada-app-brand { font-weight: 700; margin-right: 12px; }
+.scada-app-nav button[aria-current="page"] { color: #39c9ba; border-color: #39c9ba; }
+.scada-app-version { margin-left: auto; color: #8ea9bd; font-size: 12px; }

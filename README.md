@@ -83,3 +83,9 @@ pnpm run env:check
 ```
 
 **实际 `.env` 不入库；`SCADA_*` 仅供 Vite 配置端读取，不能放前端密钥。** 详见 [环境变量说明](docs/ENVIRONMENT.md) 与 [ADR-0008](docs/adr/0008-env-configuration.md)。
+
+## V0.2 组态编辑器首批功能（开发分支）
+
+Vue / React 现在都可通过页面顶部「组态编辑」打开懒加载 Studio，查看同一份水处理工程，选择并拖动画布图元、方向微调、修改 Label 文案、撤销/重做及本地 JSON 导入/导出。编辑内核通过 `@adui/scada-core/editor` 共享；原 `Runtime` 保持独立懒加载，Tag/SSE/工业安全边界不变。
+
+**当前仅浏览器会话内编辑**：不自动持久化、无服务端工程 CRUD、无发布、无实时设备控制。手动导出的 JSON 是草稿文件，不是正式发布工程。使用方式与首批验收见 [V0.2 Studio 说明](docs/V0.2_STUDIO.md)。

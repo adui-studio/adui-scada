@@ -29,7 +29,7 @@
 
 当前桌面 MSI 使用 `--mode desktop` 静态切换离线模拟；Web 开发仍使用 `/demo` 代理。两种模式共用一份演示工程，均不得被解释为现场生产数据。
 
-目标但**未创建**：`src/studio`、`apps/gateway`、生产 NestJS API、Tauri 生产离线数据能力、2D 编辑器与 3D 引擎。Studio 与 Runtime 共用一个 Web 应用，但 Runtime 不依赖编辑器代码。
+目标但**尚未完整实现**：完整 Studio 图元管理和编辑能力、`apps/gateway`、生产 NestJS API、Tauri 生产离线数据能力与 3D 引擎。V0.2 首批 `src/studio` 已建立，Studio 与 Runtime 共用一个 Web 应用，但 Runtime 不依赖编辑器代码。
 
 [架构](ARCHITECTURE.md) · [开发进度](PROJECT_CONTEXT.md) · [Harness](HARNESS.md)
 
@@ -51,3 +51,14 @@
 - `apps/server/.env.example` / `examples/water-treatment/.env.example`：Node 运行时服务端口与监听主机。
 - `scripts/check-env-config.mjs`：环境模板和隔离策略的静态检查。
 - 详细约定见 [环境变量说明](ENVIRONMENT.md)。
+
+## V0.2 Studio 第一阶段新增入口
+
+- `packages/core/src/editor.ts`：`@adui/scada-core/editor` 的框架无关 DocumentEditor / withNodePosition，验证及撤销重做。
+- `packages/core/test/editor.test.ts`：移动、回退、非法输入和 JSON 互通单测。
+- `apps/web-react/src/studio/StudioPage.tsx`：React 编辑器视图，原生 SVG 与 Pointer Events。
+- `apps/web-vue/src/studio/StudioPage.vue`：Vue 编辑器视图，消费相同 Command / Schema。
+- `apps/web-react/src/studio/studio.css`、`apps/web-vue/src/studio/studio.css`：各框架独立 UI 样式。
+- `apps/web-react/src/App.tsx`、`apps/web-vue/src/App.vue`：按需加载 Runtime 与 Studio 的视图导航。
+
+两套 Studio 功能以共享 Core 实现一致，不引入设备写入；当前只能导入导出本地 JSON 草稿，尚未实现正式工程持久化。详见 [Studio 使用与验收](V0.2_STUDIO.md)。

@@ -148,3 +148,22 @@ docker compose -f deploy/docker/compose.demo.yaml config
 从 `.env.example` 复制本地 `.env` 后验证：React/Vue 端口覆盖有效；NestJS `PORT`、模拟器 `DEMO_PORT` 生效；无效端口明确失败；Docker React/Vue 宿主机端口可变，但仍只绑定 `127.0.0.1`；Tauri MSI `desktop` 模式继续显式离线模拟。
 
 **本轮尚未在完整 Node24/Vite+/Docker 环境执行新增脚本及构建检查**。静态模板检查不能替代集成运行和安全评审。
+
+## V0.2 第一阶段 SVG Studio（待维护者验证）
+
+新增 `packages/core/test/editor.test.ts`，在 `pnpm run test:unit` 中覆盖选中移动、边界截断、无操作不入历史、撤销重做、文本安全、无效导入原子性和 JSON 文档往返。
+
+```powershell
+pnpm run ready
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+从 React 与 Vue 首页顶部选择「组态编辑」，分别验证：
+- 选中水箱后拖动到新位置、方向微调，执行撤销/重做；
+- 修改 Label 文案，撤销可恢复；输入类似 `<script>` 的文本必须被 SVG 转义，不得执行；
+- React 导出 JSON → Vue 导入 → 再导出 → React 导入，Schema、节点、Tag 绑定不丢失，反向也应一致；
+- 导入错误 JSON 时保留当前工程；Runtime 仍可访问模拟 SSE，切换页面不会发送 PLC/DCS 请求；
+- Windows Tauri MSI / Docker 两套 Web 的 Studio 可打开，不因此声称生产可用。
+
+**该 V0.2 代码的 TS6、Vite+、Vitest、双 Web 构建和手动交互尚待 Windows 本机执行，未宣称通过。**
