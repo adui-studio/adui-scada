@@ -51,7 +51,7 @@ curl.exe -N http://127.0.0.1:8080/demo/events
                                     └─ /api/health → NestJS (容器网络)
 ```
 
-只有两套 Nginx 绑定宿主机 loopback；`server` 与 `demo` 服务只配置容器内 `expose`，不发布宿主机端口。NestJS 的 `HOST=0.0.0.0` 与模拟服务的 `DEMO_HOST=0.0.0.0` **仅为容器网络可达**，不代表允许在真实主机或工业网络上公开监听。非容器开发仍默认绑定 `127.0.0.1`。
+只有两套 Nginx 绑定宿主机 loopback；`server` 与 `demo` 服务只配置容器内 `expose`，不发布宿主机端口。NestJS 的 `SCADA_SERVER_HOST=0.0.0.0` 与模拟服务的 `SCADA_DEMO_HOST=0.0.0.0` **仅为容器网络可达**，不代表允许在真实主机或工业网络上公开监听。非容器开发仍默认绑定 `127.0.0.1`。
 
 Nginx 专门代理 `/demo/project`、`/demo/events` 与 `/api/health`，对其他 `/demo/`、`/api/` 路径返回 404，避免把 SPA HTML 返回给 JSON 客户端。SSE 路由关闭代理缓冲，以便及时显示模拟中断状态。
 
@@ -69,10 +69,25 @@ Nginx 专门代理 `/demo/project`、`/demo/events` 与 `/api/health`，对其�
 
 ## 验证状态
 
-源文件已加入 GitHub 开发分支；**当前协作环境没有 Docker CLI，也不能实际构建或运行容器**。需开发者在具备 Docker Desktop 的 Windows 主机运行上述命令并提供输出，才可标记为“Docker 演示通过”。不将本次交付视为生产部署。
+维护者已确认原 V0.1 Docker 演示在 Windows 上运行成功。**本次唯一根 .env 与动态 Nginx 上游端口修改尚未重新 Docker 构建/运行验证**；当前协作环境没有 Docker CLI。即便新的容器回归通过，也不代表生产 SCADA 安全部署通过。
 
-## 自定义宿主机端口
+## 统一根 .env 与端口
 
-可选：将仓库根目录 [环境模板](../../.env.example) 复制为 `.env`，修改 `SCADA_REACT_PORT=8080`、`SCADA_VUE_PORT=8081`，然后重新执行 Compose。**宿主机地址仍限定为 127.0.0.1**；此示例并未增加生产网络的公开部署能力。
+从仓库根目录运行 Compose；它会读取同一个 `.env`（如不存在使用默认值）。只有一份提交的 [环境变量模板](../../.env.example)，不再为 Docker 单独维护第二份：
 
-更多变量及作用域见 [环境变量说明](../../docs/ENVIRONMENT.md)。
+```powershell
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+pnpm run env:check
+docker compose -f deploy/docker/compose.demo.yaml config
+pnpm run docker:demo:up
+```
+
+- `SCADA_REACT_PORT`、`SCADA_VUE_PORT`：映射到宿主机的本地 Web 端口（8080、8081），宿主机 IP **始终 127.0.0.1**。
+- `SCADA_SERVER_PORT`、`SCADA_DEMO_PORT`：容器内 NestJS、SSE 的监听端口（3001、4178），Compose 健康检查和 Nginx 上游使用相同变量。
+- Docker 容器内 `SCADA_SERVER_HOST` / `SCADA_DEMO_HOST` 会被 Compose **明确覆盖为** `0.0.0.0`，仅供隔离的容器网络使用；本机启动仍按根 `.env` 默认绑定 loopback。
+- Nginx 官方镜像会将 `/etc/nginx/templates/default.conf.template` 中的内部端口变量替换为实际值，避免更改端口后代理继续指向旧地址。
+- `SCADA_REACT_DEV_PORT`、`SCADA_VUE_DEV_PORT` 只用于本地 Vite+ 开发服务器，不影响 Docker 的 Nginx 8080 容器内部监听。
+
+改动任何端口后需要重新创建相关容器：`pnpm run docker:demo:up`（带 `--build`）。正式工业业务和公网部署仍未实现。
+
+详细变量见 [环境配置说明](../../docs/ENVIRONMENT.md)。

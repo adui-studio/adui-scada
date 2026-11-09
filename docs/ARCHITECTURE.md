@@ -48,7 +48,7 @@ Tauri 并非同时运行两种前端；将按构建目标分别选择。Server �
 | 工程     | Vite+ 1.5、pnpm workspace               | 已配置；原锁文件待目标环境复验           |
 | Web      | Vue 3、React 19、TypeScript             | 已创建两个最小 Web Runtime               |
 | UI       | TDesign Vue Next、Ant Design            | 候选                                     |
-| 2D       | SVG + 自研独立编辑/渲染核心             | V0.1 仅实现只读 SVG 图元和解析，无编辑器 |
+| 2D       | SVG + 自研独立编辑/渲染核心             | V0.1 只读；V0.2 首批本地 Studio 编辑命令 |
 | 共享数据 | Document / TagValue / 质量状态          | V0.1 已实现本地模拟核心，未持久化        |
 | 3D       | Three.js 自研 Core + Vue/React adapters | 后续，非 V1 前置                         |
 | 桌面     | Tauri 2                                 | 已创建 Windows 优先桌面壳；未验证打包    |
@@ -124,6 +124,14 @@ Tauri 2 安装包只嵌入 Web 静态资源，不自动提供 Vite 开发代理�
 
 当前是没有鉴权、数据库、生产 API、工业 Gateway 的**演示部署**。不得将此 Compose 暴露到公网/工业现场。生产架构计划独立实现 HTTPS/WSS、网关网络隔离、身份授权、存储与备份。Tauri 桌面发行版继续走 Windows MSI，不进入 Docker Web 部署。见 [ADR-0007](adr/0007-docker-demo-deployment.md)。
 
-## V0.1 环境变量隔离（ADR-0008）
+## 环境变量与检出换行符（ADR-0010）
 
-Vue/React 各自读取 `SCADA_*` Vite 服务器配置；NestJS 和 SSE 模拟器使用项目局部可选 `.env`；Docker Compose 使用仓库根 `.env` 参数化 Web 宿主机端口且维持 loopback 绑定。应用源码不携带密钥，`.env` 不纳入 Git。Tauri `desktop` 构建与工业网关安全边界保持不变，详见 [ADR-0008](adr/0008-env-configuration.md)。
+ADR-0008 的分散模板方案已被 [ADR-0010](adr/0010-root-env-lf.md) 取代。Vue/React Vite+ 配置通过同一个仓库根 `envDir` 加载 `SCADA_*`；Node 进程读取根 `.env`；Docker Compose 从工作目录根 `.env` 注入 Web 宿主机端口和容器内部服务端口，Nginx 在启动时把内部端口写入代理模板。容器仍只发布 loopback Web 端口，服务端/模拟器不对宿主机公开。
+
+根 `.gitattributes` 将文本检出规范为 LF，与 `.editorconfig` / Oxfmt 一致，减少 Windows 上 Git CRLF ↔ Oxfmt LF 的反复变更。设备、真实网关、生产凭据和控制写入未引入。
+
+## V0.2 Studio 第一阶段：编辑与运行隔离（ADR-0009）
+
+`packages/core/src/editor.ts` 以单独 `@adui/scada-core/editor` 子路径导出框架无关 Editor API。Vue/React 各自拥有 `src/studio/StudioPage`，App 入口按需加载 Studio 与 Runtime；Runtime 代码不 import Editor 入口。工程继续使用原有 `ScadaDocument`、`renderSvgPage` 与 Tag ID，不更改 Schema 版本，也不新增 Workspace 包或依赖。
+
+编辑命令本地不可变、校验、最多 100 步撤销历史；JSON 导入/导出只是本地草稿。服务端工程 CRUD、发布版本与真实工业运行仍未实现，不能把 Studio 的导出等同于安全发布。见 [ADR-0009](adr/0009-studio-editor-foundation.md)。

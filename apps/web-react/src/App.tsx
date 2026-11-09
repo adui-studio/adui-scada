@@ -1,12 +1,33 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 
-// Studio will become a lazily loaded route once implemented.
 const RuntimePage = lazy(() => import("./runtime/RuntimePage.tsx"));
+const StudioPage = lazy(() => import("./studio/StudioPage.tsx"));
 
 export default function App() {
+  const [view, setView] = useState<"runtime" | "studio">("runtime");
   return (
-    <Suspense fallback={<main role="status">正在加载监控页面...</main>}>
-      <RuntimePage />
-    </Suspense>
+    <>
+      <nav className="scada-app-nav" aria-label="功能导航">
+        <span className="scada-app-brand">ADui SCADA</span>
+        <button
+          type="button"
+          aria-current={view === "runtime" ? "page" : undefined}
+          onClick={() => setView("runtime")}
+        >
+          运行监控
+        </button>
+        <button
+          type="button"
+          aria-current={view === "studio" ? "page" : undefined}
+          onClick={() => setView("studio")}
+        >
+          组态编辑
+        </button>
+        <span className="scada-app-version">V0.2 本地原型</span>
+      </nav>
+      <Suspense fallback={<main role="status">正在加载页面...</main>}>
+        {view === "runtime" ? <RuntimePage /> : <StudioPage />}
+      </Suspense>
+    </>
   );
 }

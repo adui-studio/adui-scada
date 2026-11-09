@@ -7,6 +7,9 @@ services:
       dockerfile: deploy/docker/Dockerfile.web
       args:
         WEB_APP: web-react
+    environment:
+      SCADA_SERVER_PORT: "${SCADA_SERVER_PORT:-3001}"
+      SCADA_DEMO_PORT: "${SCADA_DEMO_PORT:-4178}"
     ports:
       - "127.0.0.1:${SCADA_REACT_PORT:-8080}:8080"
     depends_on:
@@ -24,6 +27,9 @@ services:
       dockerfile: deploy/docker/Dockerfile.web
       args:
         WEB_APP: web-vue
+    environment:
+      SCADA_SERVER_PORT: "${SCADA_SERVER_PORT:-3001}"
+      SCADA_DEMO_PORT: "${SCADA_DEMO_PORT:-4178}"
     ports:
       - "127.0.0.1:${SCADA_VUE_PORT:-8081}:8080"
     depends_on:
@@ -41,16 +47,16 @@ services:
       dockerfile: deploy/docker/Dockerfile.server
     environment:
       NODE_ENV: production
-      HOST: 0.0.0.0
-      PORT: "3001"
+      SCADA_SERVER_HOST: 0.0.0.0
+      SCADA_SERVER_PORT: "${SCADA_SERVER_PORT:-3001}"
     expose:
-      - "3001"
+      - "${SCADA_SERVER_PORT:-3001}"
     healthcheck:
       test:
         - CMD
         - node
         - -e
-        - "fetch('http://127.0.0.1:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        - "fetch('http://127.0.0.1:'+process.env.SCADA_SERVER_PORT+'/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       interval: 10s
       timeout: 5s
       retries: 5
@@ -64,15 +70,16 @@ services:
       context: ../..
       dockerfile: deploy/docker/Dockerfile.demo
     environment:
-      DEMO_HOST: 0.0.0.0
+      SCADA_DEMO_HOST: 0.0.0.0
+      SCADA_DEMO_PORT: "${SCADA_DEMO_PORT:-4178}"
     expose:
-      - "4178"
+      - "${SCADA_DEMO_PORT:-4178}"
     healthcheck:
       test:
         - CMD
         - node
         - -e
-        - "fetch('http://127.0.0.1:4178/project').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        - "fetch('http://127.0.0.1:'+process.env.SCADA_DEMO_PORT+'/project').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       interval: 10s
       timeout: 5s
       retries: 5

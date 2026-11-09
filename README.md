@@ -72,14 +72,23 @@ docker compose -f deploy/docker/compose.demo.yaml config
 pnpm run docker:demo:up
 ```
 
-访问 React：`http://127.0.0.1:8080`；Vue：`http://127.0.0.1:8081`。详情与安全边界见 [Docker 演示说明](deploy/docker/README.md)，部署决策见 [ADR-0007](docs/adr/0007-docker-demo-deployment.md)。当前环境尚未运行 Docker 构建/容器验证。
+访问 React：`http://127.0.0.1:8080`；Vue：`http://127.0.0.1:8081`。详情与安全边界见 [Docker 演示说明](deploy/docker/README.md)，部署决策见 [ADR-0007](docs/adr/0007-docker-demo-deployment.md)。维护者已确认原 V0.1 Docker 演示运行成功；本轮环境变量及 Nginx 动态端口改造尚待重新构建验收。
 
-## 环境变量配置
+## 统一环境变量（唯一根目录 .env）
 
-支持按作用域配置 Vue、React、NestJS、模拟 SSE 与 Docker。所有 `.env` 均可选，不创建时沿用安全默认值；从对应目录 `.env.example` 复制成 `.env` 后可覆盖开发地址及端口。Docker 宿主机端口在仓库根 `.env` 中配置。统一校验：
+React、Vue、NestJS、SSE 模拟器以及 Docker Compose 均从仓库根目录唯一 `.env` 取得可配置端口；不创建 `.env` 也保留默认值。先检查现有文件，缺失时再从 `.env.example` 复制：
 
 ```powershell
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 pnpm run env:check
 ```
 
-**实际 `.env` 不入库；`SCADA_*` 仅供 Vite 配置端读取，不能放前端密钥。** 详见 [环境变量说明](docs/ENVIRONMENT.md) 与 [ADR-0008](docs/adr/0008-env-configuration.md)。
+根模板包含开发端口 `SCADA_REACT_DEV_PORT=5173` / `SCADA_VUE_DEV_PORT=5174`、后端 `SCADA_SERVER_PORT=3001`、模拟数据 `SCADA_DEMO_PORT=4178`，以及 Docker Web 宿主机端口 `SCADA_REACT_PORT=8080` / `SCADA_VUE_PORT=8081`。旧的分散 `.env.example` 已移除；之前复制过的子目录 `.env` 不会被自动删除，但**不再读取**，请检查并手动迁移需要的值。
+
+仓库统一 LF：`.editorconfig` + `@adui/tooling/format` + `.gitattributes`；Windows 不再依赖用户全局 `core.autocrlf` 选择。具体使用和安全限制见 [环境配置规范](docs/ENVIRONMENT.md)、[ADR-0010](docs/adr/0010-root-env-lf.md)。真实 `.env` 不入库，不包含设备凭据。
+
+## V0.2 组态编辑器首批功能（开发分支）
+
+Vue / React 现在都可通过页面顶部「组态编辑」打开懒加载 Studio，查看同一份水处理工程，选择并拖动画布图元、方向微调、修改 Label 文案、撤销/重做及本地 JSON 导入/导出。编辑内核通过 `@adui/scada-core/editor` 共享；原 `Runtime` 保持独立懒加载，Tag/SSE/工业安全边界不变。
+
+**当前仅浏览器会话内编辑**：不自动持久化、无服务端工程 CRUD、无发布、无实时设备控制。手动导出的 JSON 是草稿文件，不是正式发布工程。使用方式与首批验收见 [V0.2 Studio 说明](docs/V0.2_STUDIO.md)。

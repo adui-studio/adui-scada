@@ -1,10 +1,30 @@
 <script setup lang="ts">
-import { defineAsyncComponent } from "vue";
+import { defineAsyncComponent, ref } from "vue";
 
-// Studio will become a separate lazy-loaded feature when implemented.
 const RuntimePage = defineAsyncComponent(() => import("./runtime/RuntimePage.vue"));
+const StudioPage = defineAsyncComponent(() => import("./studio/StudioPage.vue"));
+const view = ref<"runtime" | "studio">("runtime");
 </script>
 
 <template>
-  <RuntimePage />
+  <nav class="scada-app-nav" aria-label="功能导航">
+    <span class="scada-app-brand">ADui SCADA</span>
+    <button
+      type="button"
+      :aria-current="view === 'runtime' ? 'page' : undefined"
+      @click="view = 'runtime'"
+    >
+      运行监控
+    </button>
+    <button
+      type="button"
+      :aria-current="view === 'studio' ? 'page' : undefined"
+      @click="view = 'studio'"
+    >
+      组态编辑
+    </button>
+    <span class="scada-app-version">V0.2 本地原型</span>
+  </nav>
+  <RuntimePage v-if="view === 'runtime'" />
+  <StudioPage v-else />
 </template>
