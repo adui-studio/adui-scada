@@ -15,7 +15,7 @@
 | `packages/core/src/`                            | 工程文档、TagStore、模拟器、SVG                              |
 | `packages/core/src/demo-document.ts`            | HTTP 演示与离线 MSI 复用的水处理工程                         |
 | `packages/runtime/src/`                         | SSE 浏览器订阅、质量状态、样式                               |
-| `packages/runtime/src/offline.ts`               | MSI 专用离线模拟 Tag、模拟断线和定时器清理                  |
+| `packages/runtime/src/offline.ts`               | MSI 专用离线模拟 Tag、模拟断线和定时器清理                   |
 | `packages/core/test/`、`packages/runtime/test/` | Vitest 单元测试                                              |
 | `examples/water-treatment/`                     | 非生产模拟服务及诊断页面                                     |
 | `.editorconfig`                                 | 唯一编辑器格式基线（含 Rust 4 空格规则）                     |

@@ -45,10 +45,10 @@ pnpm run desktop:build:vue:msi
 
 此前安装 MSI 后直接请求 `/demo/project`。这个路径只有开发环境的 Vite 代理才能转发到 `127.0.0.1:4178`，安装版会得到 HTML 应用入口，导致 `Unexpected token '<'`（HTML 被当成 JSON）。已调整为**两种构建模式**：
 
-| 运行环境 | 构建入口 | 数据源 |
-| --- | --- | --- |
-| Web 开发 / Tauri `dev` | `vp dev` | `/demo/project` + `/demo/events`，需 `pnpm run dev:demo` |
-| Tauri MSI | `pnpm run desktop:build:react:msi` 或 `desktop:build:vue:msi` | `vp build --mode desktop`，浏览器内部复用 Core 的工程和模拟器，无网络请求 |
+| 运行环境               | 构建入口                                                      | 数据源                                                                    |
+| ---------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Web 开发 / Tauri `dev` | `vp dev`                                                      | `/demo/project` + `/demo/events`，需 `pnpm run dev:demo`                  |
+| Tauri MSI              | `pnpm run desktop:build:react:msi` 或 `desktop:build:vue:msi` | `vp build --mode desktop`，浏览器内部复用 Core 的工程和模拟器，无网络请求 |
 
 离线模拟每秒生成水位、泵与流量读数，并按原演示方案周期性标记 `STALE`；页面状态明确为 `SIMULATION`，提示值是本机生成。普通 Web 构建不会因此隐式切换为模拟模式。
 

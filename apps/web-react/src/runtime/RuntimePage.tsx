@@ -1,14 +1,20 @@
 import { useEffect, useState } from "react";
-import { DemoRuntime, OfflineDemoRuntime, initialRuntimeState, svgDataUrl } from "@adui/scada-runtime";
+import {
+  DemoRuntime,
+  OfflineDemoRuntime,
+  initialRuntimeState,
+  svgDataUrl,
+} from "@adui/scada-runtime";
 import type { RuntimeState } from "@adui/scada-runtime";
 
 export default function RuntimePage() {
   const [state, setState] = useState<RuntimeState>(initialRuntimeState);
 
   useEffect(() => {
-    const runtime = import.meta.env.MODE === "desktop"
-      ? new OfflineDemoRuntime(setState)
-      : new DemoRuntime(setState);
+    const runtime =
+      import.meta.env.MODE === "desktop"
+        ? new OfflineDemoRuntime(setState)
+        : new DemoRuntime(setState);
     void runtime.start();
     return () => runtime.stop();
   }, []);

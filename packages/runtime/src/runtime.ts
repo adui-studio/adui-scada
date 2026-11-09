@@ -1,7 +1,14 @@
 import { TagStore, parseScadaDocument, renderSvgPage, validateTagValue } from "@adui/scada-core";
 import type { ScadaDocument, TagChange, TagValue } from "@adui/scada-core";
 
-export type RuntimeStatus = "idle" | "loading" | "connecting" | "live" | "simulation" | "reconnecting" | "error";
+export type RuntimeStatus =
+  | "idle"
+  | "loading"
+  | "connecting"
+  | "live"
+  | "simulation"
+  | "reconnecting"
+  | "error";
 export interface RuntimeState {
   readonly status: RuntimeStatus;
   readonly document: ScadaDocument | null;

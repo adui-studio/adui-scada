@@ -70,10 +70,10 @@ Windows / pnpm 12.18 / TypeScript 6.0.3 实测 `pnpm install`、`deps:check`、`
 
 以下为维护者提供的真实 Windows PowerShell 构建日志结果，不代表当前协作环境重新运行了 Rust 工具链：
 
-| 构建入口 | Web 构建 | Rust release | Windows MSI | 文件大小 |
-| --- | --- | --- | --- | --- |
-| `pnpm run desktop:build:react:msi` | 通过 | 通过 | 通过 | 1.92 MiB |
-| `pnpm run desktop:build:vue:msi` | 通过 | 通过 | 通过 | 1.88 MiB |
+| 构建入口                           | Web 构建 | Rust release | Windows MSI | 文件大小 |
+| ---------------------------------- | -------- | ------------ | ----------- | -------- |
+| `pnpm run desktop:build:react:msi` | 通过     | 通过         | 通过        | 1.92 MiB |
+| `pnpm run desktop:build:vue:msi`   | 通过     | 通过         | 通过        | 1.88 MiB |
 
 两次构建都显示 `Finished 1 bundle`，产物文件名都是 `apps/desktop/src-tauri/target/release/bundle/msi/ADui SCADA_0.1.0_x64_en-US.msi`。共用产品 ID、版本号及输出目录，**后执行的 Vue 构建可能覆盖先前生成的 React MSI**；若要同时保存两种版本，应在构建 Vue 前备份/重命名 React MSI。上述成功不意味着 NSIS 全格式打包故障已解决，也不能证明 MSI 安装、首次启动、自动升级或离线运行成功。
 
@@ -84,6 +84,7 @@ Windows / pnpm 12.18 / TypeScript 6.0.3 实测 `pnpm install`、`deps:check`、`
 维护者已安装并启动 Vue MSI。页面显示 `Unexpected token '<'`，工程未加载；根因是发布版没有 Vite `/demo` 代理，`fetch('/demo/project')` 取得 HTML 而非 JSON。该情况表明安装启动成功、**运行时数据源验收失败**，不代表已完成桌面端验收。
 
 修复思路：
+
 - V0.1 React/Vue Tauri 的 `beforeBuildCommand` 使用 `vp build --mode desktop`；Web 开发模式仍走 SSE；
 - 共享 `OfflineDemoRuntime` 在桌面模式直接读取共享 Demo Document，按秒输出模拟 Tag，并演练中断与 `STALE`；页面明显标注 `SIMULATION`，绝不冒充生产设备实时值；
 - SSE 模式校验响应 `Content-Type: application/json`，避免将 HTML 错误内容直接交给 `response.json()`；

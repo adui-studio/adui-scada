@@ -44,9 +44,7 @@ export class OfflineDemoRuntime {
       if (this.tick % 30 >= 22) {
         this.store.markStale(Date.now(), 2500);
       } else {
-        const sequences = new Map(
-          this.store.snapshot().map((tag) => [tag.tagId, tag.sequence]),
-        );
+        const sequences = new Map(this.store.snapshot().map((tag) => [tag.tagId, tag.sequence]));
         this.simulator.resumeAfter(sequences);
         this.store.apply(this.simulator.next());
       }

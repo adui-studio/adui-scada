@@ -79,10 +79,11 @@ test("offline desktop mode displays explicitly simulated values and closes its t
 test("SSE mode reports HTML fallback instead of parsing it as JSON", async () => {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () =>
-      new Response("<!doctype html>", {
-        headers: { "content-type": "text/html; charset=utf-8" },
-      }),
+    vi.fn(
+      async () =>
+        new Response("<!doctype html>", {
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
     ),
   );
 
