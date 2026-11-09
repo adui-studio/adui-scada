@@ -217,3 +217,19 @@ pnpm run dev:vue
 React/Vue 都需测试：从正向/反向拖动空白区域框选；Shift 框选追加、单击空白取消；框选后整体移动与撤销；缩放到 50%/200% 后框选坐标准确。Ctrl+A 全选、方向键 ±1、Shift+方向键 ±10、Ctrl+Z 撤销、Ctrl+Shift+Z/Ctrl+Y 重做、Delete 删除、Esc 清选。**在 Label 输入框聚焦时快捷键不得触发图元编辑命令**。还需跨框架 JSON 往返与 Runtime STALE/GOOD 回归。
 
 GitHub 结构检查不等于 Vite+、TS6、Vitest、双框架浏览器与 Docker 实测通过。
+
+## 2026-11-10 · Windows `ready` 反馈：NestJS 单测超时修复待复验
+
+维护者在 Windows 执行 `pnpm run ready`：Catalog/共享配置/根 .env 与 LF、Vite+ 119 文件格式检查、46 文件 Lint/类型、双 Web/NestJS TypeScript 检查均通过；Core/Runtime/Editor 单测通过 **41 项**（编辑器 22 项）。`apps/server/src/app.controller.spec.ts` 的 1 个测试在 5 秒默认时限内未完成（`Test timed out in 5000ms`），导致 **42 项中 41 项通过、`ready` 失败**，之后的 Nest E2E、文档检查与构建**没有执行**。
+
+针对性处理：Controller 单测只验证 `getHealth()` 的业务返回值，直接实例化 `new AppController(new AppService())`，不再为简单同步调用在单个测试内执行 `Test.createTestingModule().compile()` 和 `close()`。原有 `apps/server/test/app.e2e-spec.ts` 不变，负责验证 Nest 依赖注入、HTTP `GET /health` 和工业写入路由 404。没有提高全局测试超时或改动产品 API。
+
+请维护者在 Windows 同步补丁后运行：
+
+```powershell
+pnpm run test:unit
+pnpm run test:e2e:server
+pnpm run ready
+```
+
+**本轮补丁尚未在 Windows/Vite+/Vitest 下实测；原始超时原因按测试初始化开销判断，待复验确认**。若仍超时，需结合系统并行负载、Vitest worker 数量和具体测试启动耗时进一步分析。
