@@ -1,42 +1,41 @@
 # ADui SCADA · 仓库代码索引
 
-> 基于 2026-11-09 `main` 仓库检查，文档及校验脚本为**本次新增**；规划目录与实际目录分开。
+> 基于 2026-11-09 `main` 仓库文档与 V0.1 本地增量包更新。新增文件应用到仓库后才实际存在；尚未推送到 GitHub。
 
-## 已存在与本次新增
+## 已有基础与 V0.1 新增
 
-| 路径 | 当前定位 |
-| --- | --- |
-| `package.json` | Node/pnpm 要求；Vite+ 根脚本；本次新增 docs:check |
-| `pnpm-workspace.yaml` | 匹配 apps/*、packages/*、tools/*，catalog |
-| `vite.config.ts` | 格式、lint 与 staged 规则 |
-| `tsconfig.json`、`pnpm-lock.yaml` | TypeScript 与依赖 |
-| `.vite-hooks/pre-commit` | `vp staged` |
-| `.agents/skills/`、`skills-lock.json` | 7 个已安装 Skills 与锁索引 |
-| `.vscode/` | Starter 自带编辑器配置 |
-| `README.md` / `AGENTS.md` | 项目说明和协作规则（本次完善） |
-| `docs/*.md`、`docs/adr/*.md` | 本次新增的工程文档及 ADR |
-| `scripts/validate-docs.mjs` | 本次新增文档静态校验 |
+| 路径                                  | 职责                                                         |
+| ------------------------------------- | ------------------------------------------------------------ |
+| `package.json`                        | Node/pnpm 约束、dev:demo、test:core、docs:check、ready       |
+| `pnpm-workspace.yaml`                 | apps/_、packages/_、tools/* 的 workspace glob、Vite+ catalog |
+| `vite.config.ts`                      | 格式化、lint、staged 规则；配置未改动                        |
+| `tsconfig.json`、`pnpm-lock.yaml`     | 原有 TypeScript 基座与锁文件；本次无依赖变化                 |
+| `.vite-hooks/pre-commit`              | 原有 `vp staged`                                             |
+| `.agents/skills/`、`skills-lock.json` | 7 个已安装 Skills；未改动                                    |
+| `packages/core/package.json`          | `@adui/scada-core` workspace 包（共享源码）                  |
+| `packages/core/src/document.ts`       | V0.1 ScadaDocument 结构与入参校验                            |
+| `packages/core/src/tag-store.ts`      | TagValue、质量、快照、增量、失联处理                         |
+| `packages/core/src/simulator.ts`      | 确定性水处理模拟数据                                         |
+| `packages/core/src/svg.ts`            | 无框架 SVG 序列化，只支持白名单图元                          |
+| `packages/core/test/`                 | 核心单元测试                                                 |
+| `examples/water-treatment/`           | 本地浏览器模拟联调入口（非正式客户端）                       |
+| `docs/*.md`、`docs/adr/*.md`          | 工程需求、设计、ADR 与进度                                   |
+| `scripts/validate-docs.mjs`           | 原有静态文档校验，未改动                                     |
 
-`pnpm-workspace.yaml` 的 glob 不代表目录存在。`apps/*`、`packages/*`、`tools/*` 目前没有业务模块。Starter `website#dev` 入口也不存在。
-
-## 规划结构（尚未创建）
+## 尚未创建的目标模块
 
 ```text
 apps/
-  studio-react/   studio-vue/
-  runtime-react/  runtime-vue/
-  console-react/  console-vue/
-  desktop/  server/  gateway/
+  studio-react/  studio-vue/
+  runtime-react/ runtime-vue/
+  console-react/ console-vue/
+  desktop/ server/ gateway/
 packages/
-  core/ document/ editor-core/ renderer-svg/
-  symbols/ tag-engine/ api-client/
-  adapter-react/ adapter-vue/
-  renderer-three/   # 后续 3D
-contracts/ database/ infra/ examples/
+  editor-core/ adapter-react/ adapter-vue/
+  api-client/ renderer-three/
+contracts/ database/ infra/
 ```
 
-只在相应功能真正实现时建立目录和包，不创建空模块充数。
+优先复用 `packages/core`，待边界与依赖稳定才拆细为 `document`、`renderer-svg`、`tag-engine` 等包，避免空包或过度抽象。Runtime 不反向依赖编辑器；网关只在独立服务进程中连接工业设备。
 
-## 任务索引
-
-需求与验收 → [REQUIREMENTS](REQUIREMENTS.md)；API/模型 → [SDD](SDD.md)；技术与模块边界 → [ARCHITECTURE](ARCHITECTURE.md)；状态 → [PROJECT_CONTEXT](PROJECT_CONTEXT.md)；Skills → [SKILLS](SKILLS.md)；质量检查 → [HARNESS](HARNESS.md) 和 [VALIDATION](VALIDATION.md)。
+[实施记录](V0.1_IMPLEMENTATION.md) · [需求](REQUIREMENTS.md) · [详细设计](SDD.md) · [Harness](HARNESS.md)

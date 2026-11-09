@@ -1,12 +1,14 @@
 {
   "name": "adui-scada",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "docs:check": "node scripts/validate-docs.mjs",
-    "ready": "vp check && vp run -r test && vp run -r build",
-    "dev": "vp run website#dev",
+    "test:core": "node --experimental-strip-types --test packages/core/test/document.test.ts packages/core/test/tag-store.test.ts packages/core/test/svg.test.ts",
+    "ready": "vp check && pnpm run test:core && pnpm run docs:check",
+    "dev": "pnpm run dev:demo",
+    "dev:demo": "node --experimental-strip-types examples/water-treatment/server.mjs",
     "prepare": "vp config"
   },
   "devDependencies": {

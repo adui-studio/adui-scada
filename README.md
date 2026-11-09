@@ -2,44 +2,46 @@
 
 **ADui Studio 出品的工业 SCADA / HMI 组态与实时监控平台。**
 
-> **状态：V0 架构与文档初始化。** 当前仓库仍是 Vite+ Monorepo Starter，尚无可运行的 SCADA 应用、工业采集网关或服务端。本文所有产品能力均为目标，不代表已经交付。
+> **状态：V0.1 核心原型（非生产版本）。** 当前已提供共享 TypeScript Core、模拟 Tag 和只读 SVG 演示。Vue/React 正式应用、NestJS、工业 Gateway、数据库及 2D 编辑器尚未实现；以下产品能力仍是目标。
 
 ## 产品方向
 
-- **Web 双版本**：Vue 3 与 React，共享工程 Schema、编辑器核心、Tag 数据模型与业务 API；两种框架的工程文件可互通。
+- **Web 双版本**：Vue 3 与 React，共享工程 Schema、编辑器核心、Tag 数据模型与业务 API；两种框架的工程文件互通。
 - **2D 组态**：SVG 工业图元、画布编辑、变量绑定、独立运行时、版本化发布。
-- **工业数据**：NestJS 业务平台、独立 Gateway；计划支持 OPC UA、Modbus TCP、MQTT、报警和历史趋势。
-- **桌面端**：后续使用 Tauri 2 封装 Windows 版本，Linux 按阶段支持。
-- **3D 扩展**：Three.js 自研通用引擎，Vue/React 适配，V1 优先完成 2D 闭环。
-- **暂缓**：Flutter、Android / iOS 原生 App、未经评审的设备控制写入。
+- **工业数据**：NestJS 业务平台、独立 Gateway；目标支持 OPC UA、Modbus TCP、MQTT、报警和历史趋势。
+- **桌面端**：后续使用 Tauri 2 封装 Windows 版本。
+- **3D 扩展**：Three.js 自研独立引擎，Vue/React 适配。
+- **暂缓**：原生移动 App、未经评审的设备写入。
 
-## 当前环境与进度
+## V0.1 本地开发
 
-已存在 `package.json`、`pnpm-workspace.yaml`、`vite.config.ts`、`tsconfig.json`、锁文件、Git Hooks 和 7 个第三方 Agent Skills。仓库**尚无** `apps/*` / `packages/*` 业务包、数据库迁移和工业设备适配代码。
-
-已声明基础要求：Node.js ≥ 22.18.0、pnpm 12.18.0、vite-plus 1.5.0（以仓库配置为准）。
+环境要求（原仓库声明）：Node.js >= 22.18.0、pnpm 12.18.0、Vite+ 1.5.0。本阶段没有引入新的第三方运行时依赖。原始锁文件是否与 `vite-plus` 及新增工作区一致，需运行 `pnpm install` 后检查差异并由维护者确认。
 
 ```powershell
 pnpm install
+pnpm run test:core
 pnpm run docs:check
-vp check
+pnpm run dev
 ```
 
-这些是配置中的执行入口，结果以本机实际输出为准。Starter 原 `pnpm run dev` 指向尚不存在的 `website`，当前不能作为 SCADA 启动命令。
+打开 `http://127.0.0.1:4178`。演示为 **Node HTTP + SSE + SVG 诊断页**，只监听 loopback 地址，未接真实 PLC、NestJS 或 Vue/React。模拟 Tag 每秒更新；每 30 秒模拟约 8 秒的采集中断，超时后状态显示 `STALE`，不以旧读数假装实时状态。`Ctrl+C` 停止。`vp check` 用于检查现有 Vite+ 配置及新增代码；构建命令将在正式应用加入后提供。
 
-## 项目文档
+当前核心模块：`packages/core/src/document.ts`（工程解析）、`tag-store.ts`（Tag 质量/快照/增量）、`svg.ts`（SVG 渲染）、`simulator.ts`（模拟数据）。以上模块均不依赖 Vue/React。`examples/water-treatment/` 仅用于快速验证端到端模拟链路，**不是**正式 Runtime 的网络/安全架构。
 
-| 入口 | 作用 |
-| --- | --- |
-| [AGENTS.md](AGENTS.md) | Agent 协作及安全规则 |
-| [REQUIREMENTS](docs/REQUIREMENTS.md) | 产品需求、编号、验收 |
-| [ARCHITECTURE](docs/ARCHITECTURE.md) | 整体设计、数据流、部署 |
-| [SDD](docs/SDD.md) | 模型、协议、状态机和接口草案 |
-| [PROJECT_CONTEXT](docs/PROJECT_CONTEXT.md) | 当前进度、决策、阻塞 |
-| [CODEBASE_MAP](docs/CODEBASE_MAP.md) | 实际文件与规划目录 |
-| [SKILLS](docs/SKILLS.md) | 已安装 Skills 与使用边界 |
-| [HARNESS](docs/HARNESS.md) | 执行、验证、反馈 |
-| [VALIDATION](docs/VALIDATION.md) | 文档静态校验说明 |
-| [ADR-0001](docs/adr/0001-dual-framework-core.md) | 双框架架构决策 |
+## 文档与工程规则
 
-产品由 **ADui Studio** 维护。尚未发现 `LICENSE` 文件；**公开仓库不意味着已授权他人开源再使用**，许可证需另行明确。
+| 文档                                             | 作用                        |
+| ------------------------------------------------ | --------------------------- |
+| [AGENTS.md](AGENTS.md)                           | Agent 协作、安全与 Git 规则 |
+| [REQUIREMENTS](docs/REQUIREMENTS.md)             | 产品需求和验收条件          |
+| [ARCHITECTURE](docs/ARCHITECTURE.md)             | 目标架构                    |
+| [SDD](docs/SDD.md)                               | 数据契约及候选接口          |
+| [V0.1 实施记录](docs/V0.1_IMPLEMENTATION.md)     | 当前实现、实测与下一阶段    |
+| [PROJECT_CONTEXT](docs/PROJECT_CONTEXT.md)       | 当前真实进度与风险          |
+| [CODEBASE_MAP](docs/CODEBASE_MAP.md)             | 实际目录与规划目录          |
+| [SKILLS](docs/SKILLS.md)                         | 已安装 Agent Skills         |
+| [HARNESS](docs/HARNESS.md)                       | 质量入口与验证口径          |
+| [VALIDATION](docs/VALIDATION.md)                 | 文档检查说明                |
+| [ADR-0001](docs/adr/0001-dual-framework-core.md) | 双框架共享 Core             |
+
+当前仓库尚无 `LICENSE`；开源许可需另行明确，公开可见不等于授予再分发权。

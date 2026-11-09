@@ -1,12 +1,12 @@
 # ADui SCADA · 系统架构（目标设计）
 
-> **规划设计，尚无对应业务代码。** 当前目录/依赖见 [CODEBASE_MAP](CODEBASE_MAP.md)，范围见 [REQUIREMENTS](REQUIREMENTS.md)。
+> **大部分为目标设计。** V0.1 目前只有框架无关 Core 和只读模拟诊断页；Vue/React、NestJS 与工业 Gateway 尚未创建。实际目录见 [CODEBASE_MAP](CODEBASE_MAP.md)，实现边界见 [V0.1 实施记录](V0.1_IMPLEMENTATION.md)，范围见 [REQUIREMENTS](REQUIREMENTS.md)。
 
 ## 1. 架构原则
 
 一份业务事实、一套版本化工程协议、两套 Vue/React 正式 UI；框架无关 Core；编辑与运行分离；独立工业网关；优先安全、可恢复和部署可维护性，不为微服务而拆分微服务。
 
-## 2. 逻辑架构
+## 2. 逻辑架构（目标）
 
 ```mermaid
 flowchart TB
@@ -39,31 +39,34 @@ flowchart TB
   GW --> DEV
 ```
 
-Tauri 并非同时运行两种前端；将按构建目标分别选择。Server 处理认证、工程、发布、报警、历史、审计，Gateway 独立管理工业通信。
+Tauri 并非同时运行两种前端；将按构建目标分别选择。Server 处理认证、工程、发布、报警、历史、审计，Gateway 独立管理工业通信。**以上图示不表示相关模块已建成。**
 
 ## 3. 选型与状态
 
-| 领域 | 目标方案 | 现状 |
-| --- | --- | --- |
-| 工程 | Vite+ 1.5、pnpm workspace | 已配置 |
-| Web | Vue 3、React 19、TypeScript | 已确定方向，未创建 |
-| UI | TDesign Vue Next、Ant Design | 候选 |
-| 2D | SVG + 自研独立编辑/渲染核心 | 规划 |
-| 3D | Three.js 自研 Core + Vue/React adapters | 后续，非 V1 前置 |
-| 桌面 | Tauri 2 | 规划 |
-| 业务 API | NestJS | 规划 |
-| 业务数据 | PostgreSQL + Prisma | 候选 |
-| 历史库 | TimescaleDB | 候选；时序迁移独立管理 |
-| 实时 | WebSocket + Redis | 候选 |
-| 协议 | OPC UA / Modbus TCP / MQTT | 目标；版本/驱动待 PoC |
+| 领域     | 目标方案                                | 现状                                     |
+| -------- | --------------------------------------- | ---------------------------------------- |
+| 工程     | Vite+ 1.5、pnpm workspace               | 已配置；原锁文件待目标环境复验           |
+| Web      | Vue 3、React 19、TypeScript             | 已确定方向，未创建                       |
+| UI       | TDesign Vue Next、Ant Design            | 候选                                     |
+| 2D       | SVG + 自研独立编辑/渲染核心             | V0.1 仅实现只读 SVG 图元和解析，无编辑器 |
+| 共享数据 | Document / TagValue / 质量状态          | V0.1 已实现本地模拟核心，未持久化        |
+| 3D       | Three.js 自研 Core + Vue/React adapters | 后续，非 V1 前置                         |
+| 桌面     | Tauri 2                                 | 规划                                     |
+| 业务 API | NestJS                                  | 规划                                     |
+| 业务数据 | PostgreSQL + Prisma                     | 候选                                     |
+| 历史库   | TimescaleDB                             | 候选；时序迁移独立管理                   |
+| 实时     | WebSocket + Redis                       | 候选；V0.1 仅 demo 使用 localhost SSE    |
+| 协议     | OPC UA / Modbus TCP / MQTT              | 目标；版本/驱动待 PoC                    |
 
 ## 4. 模块与依赖约束
 
-`core/document` 管 Schema/迁移；`editor-core` 管命令、撤销重做、几何；`renderer-svg` 管工业矢量图元；`tag-engine` 管类型、质量、快照和增量；`adapter-vue`、`adapter-react` 管框架生命周期及界面。运行时不得反向依赖编辑器；所有核心包不得依赖 Vue/React；前端不能直接连接 PLC。
+长期目标：`core/document` 管 Schema/迁移；`editor-core` 管命令、撤销重做、几何；`renderer-svg` 管工业矢量图元；`tag-engine` 管类型、质量、快照和增量；`adapter-vue`、`adapter-react` 管框架生命周期及界面。运行时不得反向依赖编辑器；所有核心包不得依赖 Vue/React；前端不能直接连接 PLC。
+
+V0.1 实际使用 `packages/core` 聚合 Document、TagStore、Simulator、SVG 的纯 TypeScript 实现，暂不为尚未稳定的接口建立多个空包。`examples/water-treatment` 是只监听 127.0.0.1 的模拟链路，用于检验工程 Schema、质量和只读可视化，不能直接视为生产 Runtime/API。两端适配组件、鉴权和工业通信都仍是未来工作。
 
 3D 使用独立的 Three.js 引擎抽象，未来经共享设备 ID、Tag ID 与场景协议接入，不要求与 SVG 共享底层 Renderer。
 
-## 5. 数据与发布流程
+## 5. 数据与发布流程（目标）
 
 ```mermaid
 sequenceDiagram
@@ -83,11 +86,13 @@ sequenceDiagram
   API-->>Runtime: WebSocket 增量
 ```
 
-Tag 值保留源时间、接收时间、质量；网络异常触发 STALE/BAD 状态。多个浏览器订阅不能造成重复 PLC 连接。草稿修改不影响发布中画面。
+Tag 值保留源时间、接收时间、质量；网络异常触发 STALE/BAD 状态。多个浏览器订阅不能造成重复 PLC 连接。草稿修改不影响发布中画面。这些生产性质尚未通过实际验收。
 
 ## 6. 部署、安全与恢复
 
 客户端 HTTPS/WSS → 平台网络 → 受控网关网络 → 现场 PLC；数据库、Redis 不对外开放。OPC UA 证书和访问策略、Modbus 受控网段、MQTT TLS/ACL 按现场要求配置。默认不开放通用写入；重要变更有审计。网关掉线、数据库暂不可用和 WebSocket 重连时，应提供质量与可恢复状态。V1 不声称 HA 或零数据丢失。
+
+V0.1 不建立工业网络连接；模拟服务不可暴露到公网。演示的 SSE 不包含身份/权限模型，不得直接移用于正式运行环境。
 
 ## 7. 风险与 ADR
 

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ADui SCADA | V0.1 模拟运行时</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/client.js"></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div><strong>ADui SCADA</strong> <span>V0.1 / 仅模拟</span></div>
+        <p id="status" role="status" aria-live="polite">连接中...</p>
+      </header>
+      <img id="monitor" src="/snapshot.svg" alt="水处理模拟设备 SVG 监控画面" />
+      <p class="footnote">
+        纯 TypeScript Core + SVG 诊断页面，非 Vue/React 正式客户端。每 30 秒内模拟一次断线，观察
+        STALE 质量。
+      </p>
+    </main>
+  </body>
+</html>
