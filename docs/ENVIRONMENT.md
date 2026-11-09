@@ -4,13 +4,13 @@
 
 ## 配置文件位置
 
-| 路径（提交到仓库） | 本地实际配置（Git 忽略） | 用途 |
-| --- | --- | --- |
-| `.env.example` | 根 `.env` | Docker Compose 的 React/Vue 宿主机端口 |
-| `apps/web-react/.env.example` | `apps/web-react/.env` | React Vite+ 开发服务器与代理 |
-| `apps/web-vue/.env.example` | `apps/web-vue/.env` | Vue Vite+ 开发服务器与代理 |
-| `apps/server/.env.example` | `apps/server/.env` | NestJS 健康检查进程监听 |
-| `examples/water-treatment/.env.example` | `examples/water-treatment/.env` | 本机模拟 SSE 服务监听 |
+| 路径（提交到仓库）                      | 本地实际配置（Git 忽略）        | 用途                                   |
+| --------------------------------------- | ------------------------------- | -------------------------------------- |
+| `.env.example`                          | 根 `.env`                       | Docker Compose 的 React/Vue 宿主机端口 |
+| `apps/web-react/.env.example`           | `apps/web-react/.env`           | React Vite+ 开发服务器与代理           |
+| `apps/web-vue/.env.example`             | `apps/web-vue/.env`             | Vue Vite+ 开发服务器与代理             |
+| `apps/server/.env.example`              | `apps/server/.env`              | NestJS 健康检查进程监听                |
+| `examples/water-treatment/.env.example` | `examples/water-treatment/.env` | 本机模拟 SSE 服务监听                  |
 
 所有 `.env` 文件均为**可选**：缺失时使用现有端口与安全默认值。直接复制模板后可按需修改（PowerShell）：
 
@@ -28,11 +28,11 @@ Copy-Item examples/water-treatment/.env.example examples/water-treatment/.env
 
 Vue/React 各自的 `vite.config.ts` 使用 Vite 的 `loadEnv(mode, process.cwd(), "SCADA_")`，读取当前应用目录下的配置，**不会**把 `SCADA_*` 暴露给浏览器。当前支持：
 
-| 变量 | React 默认 | Vue 默认 | 约束 |
-| --- | --- | --- | --- |
-| `SCADA_WEB_HOST` | `127.0.0.1` | `127.0.0.1` | 仅 `127.0.0.1`、`localhost` |
-| `SCADA_WEB_PORT` | `5173` | `5174` | 1–65535 的整数 |
-| `SCADA_DEMO_PROXY_TARGET` | `http://127.0.0.1:4178` | 同左 | 仅本机 HTTP Origin，无认证信息和路径 |
+| 变量                      | React 默认              | Vue 默认    | 约束                                 |
+| ------------------------- | ----------------------- | ----------- | ------------------------------------ |
+| `SCADA_WEB_HOST`          | `127.0.0.1`             | `127.0.0.1` | 仅 `127.0.0.1`、`localhost`          |
+| `SCADA_WEB_PORT`          | `5173`                  | `5174`      | 1–65535 的整数                       |
+| `SCADA_DEMO_PROXY_TARGET` | `http://127.0.0.1:4178` | 同左        | 仅本机 HTTP Origin，无认证信息和路径 |
 
 **注意：** Tauri 开发模式的 `devUrl` 目前仍固定为 React `5173`、Vue `5174`。如需运行 `desktop:dev:*`，应保持这两个默认端口；调整 `SCADA_WEB_PORT` 仅用于独立 Web 开发，除非同时调整对应 Tauri 配置。
 
@@ -46,13 +46,13 @@ Vite 还支持按模式覆盖的 `.env.development`、`.env.production`、`.env.
 
 NestJS 在入口 `apps/server/src/main.ts` 读取同级项目根目录的可选 `.env`，模拟器在 `examples/water-treatment/server.mjs` 读取自己的可选 `.env`。使用 Node 内置 `loadEnvFile`，**无额外 dotenv 依赖**。
 
-| 变量 | 默认值 | 说明 |
-| --- | --- | --- |
-| `NODE_ENV` | 未设置 | 示例为 `development`；Docker 指定 `production` |
-| `HOST` | `127.0.0.1` | NestJS 主机监听，允许 `0.0.0.0` 仅供容器内部网络使用 |
-| `PORT` | `3001` | NestJS HTTP 端口（整数 1–65535） |
+| 变量        | 默认值      | 说明                                                  |
+| ----------- | ----------- | ----------------------------------------------------- |
+| `NODE_ENV`  | 未设置      | 示例为 `development`；Docker 指定 `production`        |
+| `HOST`      | `127.0.0.1` | NestJS 主机监听，允许 `0.0.0.0` 仅供容器内部网络使用  |
+| `PORT`      | `3001`      | NestJS HTTP 端口（整数 1–65535）                      |
 | `DEMO_HOST` | `127.0.0.1` | 无鉴权 SSE 模拟器监听地址；同样仅 Docker 允许容器绑定 |
-| `DEMO_PORT` | `4178` | 模拟服务端口（整数 1–65535） |
+| `DEMO_PORT` | `4178`      | 模拟服务端口（整数 1–65535）                          |
 
 Node 已存在的进程环境变量优先，`.env` 主要用于本机开发；Docker 通过 Compose 的 `environment` 直接传值，不需要把密钥文件烘焙进镜像。
 
@@ -62,10 +62,10 @@ Node 已存在的进程环境变量优先，`.env` 主要用于本机开发；Do
 
 根目录 `.env` 由 Docker Compose 解析；并不等于 Vue/React 应用目录下的 `.env`。支持：
 
-| 变量 | 默认 | 用途 |
-| --- | --- | --- |
+| 变量               | 默认   | 用途                   |
+| ------------------ | ------ | ---------------------- |
 | `SCADA_REACT_PORT` | `8080` | 宿主机 React HTTP 端口 |
-| `SCADA_VUE_PORT` | `8081` | 宿主机 Vue HTTP 端口 |
+| `SCADA_VUE_PORT`   | `8081` | 宿主机 Vue HTTP 端口   |
 
 例如修改根 `.env` 为 `SCADA_REACT_PORT=9000`、`SCADA_VUE_PORT=9001`，使用 `docker compose -f deploy/docker/compose.demo.yaml up -d` 后从 `127.0.0.1:9000` 和 `127.0.0.1:9001` 访问。Compose 中宿主机监听地址仍**固定为 127.0.0.1**，不允许通过 `.env` 改成公网绑定。
 
