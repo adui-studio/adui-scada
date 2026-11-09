@@ -17,6 +17,8 @@ Studio（组态编辑器）、真实工业网关、生产业务 API、数据库�
 ## 模板与依赖
 
 对照用户提供的 React、Vue、NestJS、Tauri 四套默认模板；目前已建立 React/Vue、NestJS 本地进程探针与 Tauri 桌面工程；后端业务和工业网关暂不接入。
+根目录唯一 `.editorconfig` 约定 UTF-8 / LF / 2 空格。TypeScript 统一继承 `@adui/tsconfig/react`、`@adui/tsconfig/vue`、`@adui/tsconfig/nest` 等配置入口；Format / Lint 由 `@adui/tooling` 提供，并由根 `vite.config.ts` 统一生效。
+
 所有第三方依赖版本在 `pnpm-workspace.yaml` Catalog 中维护，包间使用 `workspace:*`。TypeScript 采用 6.0.3，测试统一使用 Vite+ 集成的 Vitest。
 
 环境按仓库 package.json：Node >= 22.18.0，pnpm 12.18.0，Vite+ 1.5.0。新依赖必须执行 `pnpm install` 后更新并审查锁文件。
@@ -24,6 +26,7 @@ Studio（组态编辑器）、真实工业网关、生产业务 API、数据库�
 ```powershell
 pnpm install
 pnpm run deps:check
+pnpm run config:check
 pnpm run test:unit
 pnpm run typecheck:web
 pnpm run typecheck:server

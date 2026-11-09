@@ -16,7 +16,7 @@
     "test:runtime": "vp test run packages/runtime/test",
     "deps:check": "node scripts/check-dependency-catalog.mjs",
     "docs:check": "node scripts/validate-docs.mjs",
-    "ready": "pnpm run deps:check && vp check && pnpm run typecheck:web && pnpm run typecheck:server && pnpm run test:unit && pnpm run test:e2e:server && pnpm run docs:check && pnpm run build:web && pnpm run build:server",
+    "ready": "pnpm run deps:check && pnpm run config:check && vp check && pnpm run typecheck:web && pnpm run typecheck:server && pnpm run test:unit && pnpm run test:e2e:server && pnpm run docs:check && pnpm run build:web && pnpm run build:server",
     "prepare": "vp config",
     "dev:server": "pnpm --filter @adui/scada-server run start:dev",
     "build:server": "pnpm --filter @adui/scada-server run build",
@@ -26,12 +26,15 @@
     "desktop:dev:react": "pnpm --filter @adui/scada-desktop run dev:react",
     "desktop:dev:vue": "pnpm --filter @adui/scada-desktop run dev:vue",
     "desktop:build:react": "pnpm --filter @adui/scada-desktop run build:react",
-    "desktop:build:vue": "pnpm --filter @adui/scada-desktop run build:vue"
+    "desktop:build:vue": "pnpm --filter @adui/scada-desktop run build:vue",
+    "config:check": "node scripts/check-shared-config.mjs"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "typescript": "catalog:",
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "@adui/tsconfig": "workspace:*",
+    "@adui/tooling": "workspace:*"
   },
   "devEngines": {
     "packageManager": {

@@ -1,16 +1,12 @@
 {
-  "extends": "@tsconfig/node24/tsconfig.json",
+  "extends": "@adui/tsconfig/vue-node",
   "include": [
     "vite.config.ts"
   ],
   "compilerOptions": {
-    "module": "preserve",
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
     "types": [
       "node"
     ],
-    "noEmit": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo"
   }
 }

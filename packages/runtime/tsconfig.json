@@ -1,0 +1,6 @@
+{
+  "extends": "@adui/tsconfig/browser",
+  "include": [
+    "src/**/*.ts"
+  ]
+}

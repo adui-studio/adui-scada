@@ -1,10 +1,6 @@
 {
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022"],
-    "strict": true,
-    "skipLibCheck": true
-  },
-  "include": ["src/**/*.ts"]
+  "extends": "@adui/tsconfig/core",
+  "include": [
+    "src/**/*.ts"
+  ]
 }

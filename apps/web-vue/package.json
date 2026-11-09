@@ -17,11 +17,10 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
-    "@vue/tsconfig": "catalog:",
-    "@tsconfig/node24": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:",
     "vite": "catalog:",
-    "vue-tsc": "catalog:"
+    "vue-tsc": "catalog:",
+    "@adui/tsconfig": "workspace:*"
   }
 }

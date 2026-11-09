@@ -96,11 +96,18 @@ Tag 值保留源时间、接收时间、质量；网络异常触发 STALE/BAD �
 
 V0.1 不建立工业网络连接；模拟服务不可暴露到公网。演示的 SSE 不包含身份/权限模型，不得直接移用于正式运行环境。
 
-## 7. 风险与 ADR
+## 7. 工具链与共享配置
+
+根 `.editorconfig` 统一格式；`@adui/tsconfig` 提供 React、Vue、NestJS、Node、Core 和浏览器运行时的 TS 基础配置。根 `vite.config.ts` 从 `@adui/tooling` 引入 Format / Lint / Git staged 配置，利用 lint.overrides 应用框架路径规则，避免子应用独立工具配置造成漂移。TSConfig 应用的 include、rootDir、outDir 和 tsBuildInfoFile 保留在各自应用目录，所有第三方版本仍由 pnpm Catalog 控制。
+
+## 8. 风险与 ADR
 
 风险：双框架 UI 维护成本、图元高频渲染、协议兼容、数据量与存储成本、证书、Tauri WebView 差异。性能指标见 [NFR](REQUIREMENTS.md)，待压测后固化。
 
 - [ADR-0001：双框架共享 Core](adr/0001-dual-framework-core.md) — Accepted
 - [ADR-0002：网关隔离和只读优先](adr/0002-industrial-io-security.md) — Proposed
+- [ADR-0003：pnpm Catalog / TypeScript / Vitest](adr/0003-toolchain-catalog-vitest.md) — Accepted
+- [ADR-0004：Web Studio 与 Runtime 合并](adr/0004-unified-web-apps.md) — Accepted
+- [ADR-0005：跨框架共享开发配置](adr/0005-shared-toolchain-config.md) — Accepted
 
 重大架构变更应新增 ADR，保留历史决策。

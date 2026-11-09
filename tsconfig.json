@@ -1,9 +1,12 @@
 {
+  "extends": "@adui/tsconfig/node",
   "compilerOptions": {
-    "noEmit": true,
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "allowImportingTsExtensions": true,
+    "types": [
+      "node"
+    ],
     "esModuleInterop": true
-  }
+  },
+  "include": [
+    "vite.config.ts"
+  ]
 }

@@ -12,6 +12,7 @@
 - `packages/runtime` 只读 SSE、快照/增量、STALE 质量、重连逻辑。
 - `apps/web-react` / `apps/web-vue` 两个最小 Web Runtime，分别参考各自默认模板。
 - 根 Catalog 管理 TypeScript 6.0.3、Vitest、Vue/React、NestJS 及 Tauri CLI 的 JS 依赖；Core/Runtime/Server 测试统一 Vitest。
+- 新增根目录唯一 `.editorconfig`，以及 `@adui/tsconfig`、`@adui/tooling` 两个共享规范包，Web/Server/Core/Runtime 通过各自入口继承配置。
 - `apps/server`：参考 NestJS 12 默认 ESM 模板创建模块化 Server，仅 GET /health 本地进程探针。
 - `apps/desktop`：参考 Tauri 2 模板创建 Rust 桌面壳，默认嵌入 React Web，支持 Vue 配置覆盖，未提供特权设备命令。
 
@@ -22,7 +23,8 @@ Studio 编辑器、生产业务后端接口、真实网关、报警/历史、工
 
 ## 当前阻塞
 
-- 执行 `pnpm install` 并审查更新后的 `pnpm-lock.yaml`。
+- 执行 `pnpm install` 并审查更新后的 `pnpm-lock.yaml`，确保共享配置包以 workspace 方式正确链接。
+- 运行 `pnpm run config:check` 和 `pnpm run deps:check`，以及根 `vp check` 校验框架对应 Lint overrides。
 - 在 Node >= 22.18、pnpm 12.18 环境运行 `pnpm run ready`，修复真实构建和类型问题。
 - 验证 Vue/React 连接同一模拟工程、断线时 STALE 显示一致。
 - 运行 NestJS `test:e2e`、`typecheck`、`build`，并检查服务仅监听本机地址。
