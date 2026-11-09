@@ -75,14 +75,14 @@ function refresh() {
   state.value = editor.snapshot();
 }
 
-
 function handleKey(event: KeyboardEvent) {
   if (
     event.defaultPrevented ||
     event.isComposing ||
     (event.target instanceof Element &&
       event.target.closest("input, textarea, select, [contenteditable]"))
-  ) return;
+  )
+    return;
 
   const command = event.ctrlKey || event.metaKey;
   const key = event.key.toLowerCase();
@@ -386,7 +386,9 @@ async function importJson(event: Event) {
       </aside>
       <section class="studio-stage" aria-label="组态画布">
         <div class="studio-stage-caption">
-          <span>{{ page.name }} · {{ page.size.width }} × {{ page.size.height }} · 静态模拟预览</span>
+          <span
+            >{{ page.name }} · {{ page.size.width }} × {{ page.size.height }} · 静态模拟预览</span
+          >
           <div class="studio-zoom" aria-label="画布缩放">
             <button type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</button>
             <button type="button" @click="zoom = 1">{{ Math.round(zoom * 100) }}%</button>
@@ -420,7 +422,13 @@ async function importJson(event: Event) {
               :width="node.transform.width"
               :height="node.transform.height"
               fill="transparent"
-              :stroke="state.selectedId === node.id ? '#f0ae4d' : state.selectedIds.includes(node.id) ? '#39c9ba' : 'transparent'"
+              :stroke="
+                state.selectedId === node.id
+                  ? '#f0ae4d'
+                  : state.selectedIds.includes(node.id)
+                    ? '#39c9ba'
+                    : 'transparent'
+              "
               stroke-width="2"
               stroke-dasharray="6 4"
               class="studio-hitbox"
@@ -443,7 +451,13 @@ async function importJson(event: Event) {
       <aside class="studio-panel" aria-label="图元属性">
         <h2>属性 · 已选 {{ state.selectedIds.length }}</h2>
         <div class="studio-toolbox">
-          <button type="button" :disabled="state.selectedIds.length === 0" @click="apply(() => editor.deleteSelected(), '已删除图元，可撤销')">删除所选</button>
+          <button
+            type="button"
+            :disabled="state.selectedIds.length === 0"
+            @click="apply(() => editor.deleteSelected(), '已删除图元，可撤销')"
+          >
+            删除所选
+          </button>
           <div class="studio-tool-group" aria-label="图层排序">
             <button type="button" :disabled="!selected" @click="layer('back')">置底</button>
             <button type="button" :disabled="!selected" @click="layer('backward')">下移层</button>
@@ -452,12 +466,32 @@ async function importJson(event: Event) {
           </div>
           <h3>多选对齐（以最后选中的图元为准）</h3>
           <div class="studio-tool-group" aria-label="图元对齐">
-            <button type="button" :disabled="state.selectedIds.length < 2" @click="align('left')">左</button>
-            <button type="button" :disabled="state.selectedIds.length < 2" @click="align('hcenter')">水平居中</button>
-            <button type="button" :disabled="state.selectedIds.length < 2" @click="align('right')">右</button>
-            <button type="button" :disabled="state.selectedIds.length < 2" @click="align('top')">上</button>
-            <button type="button" :disabled="state.selectedIds.length < 2" @click="align('vcenter')">垂直居中</button>
-            <button type="button" :disabled="state.selectedIds.length < 2" @click="align('bottom')">下</button>
+            <button type="button" :disabled="state.selectedIds.length < 2" @click="align('left')">
+              左
+            </button>
+            <button
+              type="button"
+              :disabled="state.selectedIds.length < 2"
+              @click="align('hcenter')"
+            >
+              水平居中
+            </button>
+            <button type="button" :disabled="state.selectedIds.length < 2" @click="align('right')">
+              右
+            </button>
+            <button type="button" :disabled="state.selectedIds.length < 2" @click="align('top')">
+              上
+            </button>
+            <button
+              type="button"
+              :disabled="state.selectedIds.length < 2"
+              @click="align('vcenter')"
+            >
+              垂直居中
+            </button>
+            <button type="button" :disabled="state.selectedIds.length < 2" @click="align('bottom')">
+              下
+            </button>
           </div>
         </div>
         <template v-if="selected">
@@ -490,6 +524,9 @@ async function importJson(event: Event) {
         <p v-else class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
       </aside>
     </div>
-    <footer>V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+Z 撤销，Ctrl+Shift+Z/Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 · 无设备写入</footer>
+    <footer>
+      V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+Z 撤销，Ctrl+Shift+Z/Ctrl+Y
+      重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 · 无设备写入
+    </footer>
   </main>
 </template>

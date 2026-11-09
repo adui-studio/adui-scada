@@ -117,8 +117,10 @@ export function findNodesInRect(
     .filter((node) => {
       const t = node.transform;
       const angle = (t.rotation * Math.PI) / 180;
-      const halfX = (Math.abs(Math.cos(angle)) * t.width + Math.abs(Math.sin(angle)) * t.height) / 2;
-      const halfY = (Math.abs(Math.sin(angle)) * t.width + Math.abs(Math.cos(angle)) * t.height) / 2;
+      const halfX =
+        (Math.abs(Math.cos(angle)) * t.width + Math.abs(Math.sin(angle)) * t.height) / 2;
+      const halfY =
+        (Math.abs(Math.sin(angle)) * t.width + Math.abs(Math.cos(angle)) * t.height) / 2;
       const centerX = t.x + t.width / 2;
       const centerY = t.y + t.height / 2;
       return (
@@ -215,9 +217,7 @@ export class DocumentEditor {
 
   moveBy(dx: number, dy: number): boolean {
     if (this.selection.length === 0) return false;
-    return this.commit(
-      withNodesTranslated(this.current, this.selection, dx, dy),
-    );
+    return this.commit(withNodesTranslated(this.current, this.selection, dx, dy));
   }
 
   addNode(type: EditableSymbol, x = 40, y = 40): string {
@@ -292,12 +292,24 @@ export class DocumentEditor {
       let x = t.x;
       let y = t.y;
       switch (alignment) {
-        case "left": x = a.x; break;
-        case "right": x = a.x + a.width - t.width; break;
-        case "hcenter": x = a.x + (a.width - t.width) / 2; break;
-        case "top": y = a.y; break;
-        case "bottom": y = a.y + a.height - t.height; break;
-        case "vcenter": y = a.y + (a.height - t.height) / 2; break;
+        case "left":
+          x = a.x;
+          break;
+        case "right":
+          x = a.x + a.width - t.width;
+          break;
+        case "hcenter":
+          x = a.x + (a.width - t.width) / 2;
+          break;
+        case "top":
+          y = a.y;
+          break;
+        case "bottom":
+          y = a.y + a.height - t.height;
+          break;
+        case "vcenter":
+          y = a.y + (a.height - t.height) / 2;
+          break;
       }
       return {
         ...node,
@@ -322,7 +334,9 @@ export class DocumentEditor {
     if (action === "front" || action === "back") {
       const picked = nodes.filter((node) => selected.has(node.id));
       const others = nodes.filter((node) => !selected.has(node.id));
-      return this.replaceFirstPageNodes(action === "front" ? [...others, ...picked] : [...picked, ...others]);
+      return this.replaceFirstPageNodes(
+        action === "front" ? [...others, ...picked] : [...picked, ...others],
+      );
     }
     if (action === "forward") {
       for (let i = nodes.length - 2; i >= 0; i--) {

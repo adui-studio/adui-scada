@@ -2,7 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, PointerEvent as ReactPointerEvent } from "react";
 import { WaterTreatmentSimulator, waterTreatmentDemoDocument } from "@adui/scada-core";
 import { DocumentEditor, findNodesInRect, withNodesTranslated } from "@adui/scada-core/editor";
-import type { Alignment, EditableSymbol, EditorSnapshot, LayerAction } from "@adui/scada-core/editor";
+import type {
+  Alignment,
+  EditableSymbol,
+  EditorSnapshot,
+  LayerAction,
+} from "@adui/scada-core/editor";
 import { svgDataUrl } from "@adui/scada-runtime";
 import "./studio.css";
 
@@ -65,15 +70,15 @@ export default function StudioPage() {
     setLabelDraft(typeof node?.props.text === "string" ? node.props.text : "");
   }
 
-
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if (
         event.defaultPrevented ||
         event.isComposing ||
         (event.target instanceof Element &&
-          event.target.closest('input, textarea, select, [contenteditable]'))
-      ) return;
+          event.target.closest("input, textarea, select, [contenteditable]"))
+      )
+        return;
 
       const command = event.ctrlKey || event.metaKey;
       const key = event.key.toLowerCase();
@@ -83,7 +88,9 @@ export default function StudioPage() {
         if (key === "z") handled = event.shiftKey ? editor.redo() : editor.undo();
         else if (key === "y") handled = editor.redo();
         else if (key === "a") {
-          editor.selectMany(editor.snapshot().document.pages[0]?.nodes.map((node) => node.id) ?? []);
+          editor.selectMany(
+            editor.snapshot().document.pages[0]?.nodes.map((node) => node.id) ?? [],
+          );
           handled = true;
         }
       } else if (!command && !event.altKey) {
@@ -363,10 +370,18 @@ export default function StudioPage() {
           <h2>图元 · {page.nodes.length}</h2>
           <p className="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
           <div className="studio-add">
-            <button type="button" onClick={() => addSymbol("tank")}>+ 水箱</button>
-            <button type="button" onClick={() => addSymbol("pump")}>+ 水泵</button>
-            <button type="button" onClick={() => addSymbol("pipe")}>+ 管道</button>
-            <button type="button" onClick={() => addSymbol("label")}>+ 文本</button>
+            <button type="button" onClick={() => addSymbol("tank")}>
+              + 水箱
+            </button>
+            <button type="button" onClick={() => addSymbol("pump")}>
+              + 水泵
+            </button>
+            <button type="button" onClick={() => addSymbol("pipe")}>
+              + 管道
+            </button>
+            <button type="button" onClick={() => addSymbol("label")}>
+              + 文本
+            </button>
           </div>
           {page.nodes.map((node) => (
             <button
@@ -383,11 +398,19 @@ export default function StudioPage() {
         </aside>
         <section className="studio-stage" aria-label="组态画布">
           <div className="studio-stage-caption">
-            <span>{page.name} · {page.size.width} × {page.size.height} · 静态模拟预览</span>
+            <span>
+              {page.name} · {page.size.width} × {page.size.height} · 静态模拟预览
+            </span>
             <div className="studio-zoom" aria-label="画布缩放">
-              <button type="button" onClick={() => changeZoom(-0.25)} disabled={zoom <= 0.5}>−</button>
-              <button type="button" onClick={() => setZoom(1)}>{Math.round(zoom * 100)}%</button>
-              <button type="button" onClick={() => changeZoom(0.25)} disabled={zoom >= 2}>+</button>
+              <button type="button" onClick={() => changeZoom(-0.25)} disabled={zoom <= 0.5}>
+                −
+              </button>
+              <button type="button" onClick={() => setZoom(1)}>
+                {Math.round(zoom * 100)}%
+              </button>
+              <button type="button" onClick={() => changeZoom(0.25)} disabled={zoom >= 2}>
+                +
+              </button>
             </div>
           </div>
           <svg
@@ -431,7 +454,13 @@ export default function StudioPage() {
                     width={t.width}
                     height={t.height}
                     fill="transparent"
-                    stroke={state.selectedId === node.id ? "#f0ae4d" : state.selectedIds.includes(node.id) ? "#39c9ba" : "transparent"}
+                    stroke={
+                      state.selectedId === node.id
+                        ? "#f0ae4d"
+                        : state.selectedIds.includes(node.id)
+                          ? "#39c9ba"
+                          : "transparent"
+                    }
                     strokeWidth={2}
                     strokeDasharray="6 4"
                     className="studio-hitbox"
@@ -461,20 +490,47 @@ export default function StudioPage() {
         <aside className="studio-panel" aria-label="图元属性">
           <h2>属性 · 已选 {state.selectedIds.length}</h2>
           <div className="studio-toolbox">
-            <button type="button" onClick={() => apply(() => editor.deleteSelected(), "已删除图元，可撤销")} disabled={state.selectedIds.length === 0}>删除所选</button>
+            <button
+              type="button"
+              onClick={() => apply(() => editor.deleteSelected(), "已删除图元，可撤销")}
+              disabled={state.selectedIds.length === 0}
+            >
+              删除所选
+            </button>
             <div className="studio-tool-group" aria-label="图层排序">
-              <button type="button" onClick={() => layer("back")} disabled={!selected}>置底</button>
-              <button type="button" onClick={() => layer("backward")} disabled={!selected}>下移层</button>
-              <button type="button" onClick={() => layer("forward")} disabled={!selected}>上移层</button>
-              <button type="button" onClick={() => layer("front")} disabled={!selected}>置顶</button>
+              <button type="button" onClick={() => layer("back")} disabled={!selected}>
+                置底
+              </button>
+              <button type="button" onClick={() => layer("backward")} disabled={!selected}>
+                下移层
+              </button>
+              <button type="button" onClick={() => layer("forward")} disabled={!selected}>
+                上移层
+              </button>
+              <button type="button" onClick={() => layer("front")} disabled={!selected}>
+                置顶
+              </button>
             </div>
             <h3>多选对齐（以最后选中的图元为准）</h3>
             <div className="studio-tool-group" aria-label="图元对齐">
-              {([
-                ["left", "左"], ["hcenter", "水平居中"], ["right", "右"],
-                ["top", "上"], ["vcenter", "垂直居中"], ["bottom", "下"],
-              ] as const).map(([mode, label]) => (
-                <button type="button" key={mode} onClick={() => align(mode)} disabled={state.selectedIds.length < 2}>{label}</button>
+              {(
+                [
+                  ["left", "左"],
+                  ["hcenter", "水平居中"],
+                  ["right", "右"],
+                  ["top", "上"],
+                  ["vcenter", "垂直居中"],
+                  ["bottom", "下"],
+                ] as const
+              ).map(([mode, label]) => (
+                <button
+                  type="button"
+                  key={mode}
+                  onClick={() => align(mode)}
+                  disabled={state.selectedIds.length < 2}
+                >
+                  {label}
+                </button>
               ))}
             </div>
           </div>
@@ -529,7 +585,10 @@ export default function StudioPage() {
           )}
         </aside>
       </div>
-      <footer>V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+Z 撤销，Ctrl+Shift+Z/Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 · 无设备写入</footer>
+      <footer>
+        V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+Z 撤销，Ctrl+Shift+Z/Ctrl+Y
+        重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 · 无设备写入
+      </footer>
     </main>
   );
 }

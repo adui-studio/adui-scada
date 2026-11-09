@@ -1,6 +1,11 @@
 import { expect, test } from "vite-plus/test";
 import { waterTreatmentDemoDocument } from "../src/demo-document.ts";
-import { DocumentEditor, findNodesInRect, withNodePosition, withNodesTranslated } from "../src/editor.ts";
+import {
+  DocumentEditor,
+  findNodesInRect,
+  withNodePosition,
+  withNodesTranslated,
+} from "../src/editor.ts";
 
 function editor() {
   return new DocumentEditor(waterTreatmentDemoDocument);
@@ -164,17 +169,28 @@ test("layer reordering preserves selected order and supports undo", () => {
   e.select("pipe", true);
   expect(e.reorderSelected("front")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((n) => n.id)).toEqual([
-    "title", "pump", "flow", "tank", "pipe",
+    "title",
+    "pump",
+    "flow",
+    "tank",
+    "pipe",
   ]);
   expect(e.reorderSelected("front")).toBe(false);
   expect(e.undo()).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((n) => n.id)).toEqual([
-    "title", "tank", "pipe", "pump", "flow",
+    "title",
+    "tank",
+    "pipe",
+    "pump",
+    "flow",
   ]);
   expect(e.reorderSelected("back")).toBe(true);
-  expect(e.snapshot().document.pages[0]?.nodes.slice(0, 2).map((n) => n.id)).toEqual([
-    "tank", "pipe",
-  ]);
+  expect(
+    e
+      .snapshot()
+      .document.pages[0]?.nodes.slice(0, 2)
+      .map((n) => n.id),
+  ).toEqual(["tank", "pipe"]);
 });
 
 test("delete selection is atomic, undo restores nodes, and export stays compatible", () => {
@@ -223,9 +239,12 @@ test("layer forward/backward swaps one position and no-ops at the edge", () => {
   e.select("title");
   expect(e.reorderSelected("backward")).toBe(false);
   expect(e.reorderSelected("forward")).toBe(true);
-  expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id).slice(0, 2)).toEqual([
-    "tank", "title",
-  ]);
+  expect(
+    e
+      .snapshot()
+      .document.pages[0]?.nodes.map((node) => node.id)
+      .slice(0, 2),
+  ).toEqual(["tank", "title"]);
   expect(e.reorderSelected("backward")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes[0]?.id).toBe("title");
 });
