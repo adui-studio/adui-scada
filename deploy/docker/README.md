@@ -70,3 +70,9 @@ Nginx 专门代理 `/demo/project`、`/demo/events` 与 `/api/health`，对其�
 ## 验证状态
 
 源文件已加入 GitHub 开发分支；**当前协作环境没有 Docker CLI，也不能实际构建或运行容器**。需开发者在具备 Docker Desktop 的 Windows 主机运行上述命令并提供输出，才可标记为“Docker 演示通过”。不将本次交付视为生产部署。
+
+## 自定义宿主机端口
+
+可选：将仓库根目录 [环境模板](../../.env.example) 复制为 `.env`，修改 `SCADA_REACT_PORT=8080`、`SCADA_VUE_PORT=8081`，然后重新执行 Compose。**宿主机地址仍限定为 127.0.0.1**；此示例并未增加生产网络的公开部署能力。
+
+更多变量及作用域见 [环境变量说明](../../docs/ENVIRONMENT.md)。

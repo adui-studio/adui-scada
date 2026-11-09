@@ -123,3 +123,7 @@ Tauri 2 安装包只嵌入 Web 静态资源，不自动提供 Vite 开发代理�
 新增 [Docker Compose 演示](../deploy/docker/README.md)，供未来 Docker 化部署演进：React/Vue 两套 Vite+ Web 构建以 Nginx 静态服务分别监听宿主机 `127.0.0.1:8080` 与 `127.0.0.1:8081`；NestJS 健康检查和模拟 Node SSE 仅对容器内部网络开放。Nginx 同源转发 `/demo/project`、`/demo/events`、`/api/health`，不将 HTML fallback 误用为接口响应。
 
 当前是没有鉴权、数据库、生产 API、工业 Gateway 的**演示部署**。不得将此 Compose 暴露到公网/工业现场。生产架构计划独立实现 HTTPS/WSS、网关网络隔离、身份授权、存储与备份。Tauri 桌面发行版继续走 Windows MSI，不进入 Docker Web 部署。见 [ADR-0007](adr/0007-docker-demo-deployment.md)。
+
+## V0.1 环境变量隔离（ADR-0008）
+
+Vue/React 各自读取 `SCADA_*` Vite 服务器配置；NestJS 和 SSE 模拟器使用项目局部可选 `.env`；Docker Compose 使用仓库根 `.env` 参数化 Web 宿主机端口且维持 loopback 绑定。应用源码不携带密钥，`.env` 不纳入 Git。Tauri `desktop` 构建与工业网关安全边界保持不变，详见 [ADR-0008](adr/0008-env-configuration.md)。

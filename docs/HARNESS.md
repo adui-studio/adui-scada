@@ -134,3 +134,17 @@ curl.exe -N http://127.0.0.1:8080/demo/events
 随后分别打开 `http://127.0.0.1:8080`（React）、`http://127.0.0.1:8081`（Vue），验证两端画面、数据质量和模拟 `STALE → GOOD`。结束运行使用 `pnpm run docker:demo:down`。
 
 **本轮未执行 Docker CLI/config/build/run**：当前协作环境无 Docker；不能据此声称容器部署已通过。V0.1 模拟 HTTP/SSE 未鉴权，仅限 loopback 测试，不构成工业现场验收。
+
+## 环境变量配置校验（待本机运行）
+
+新增 `pnpm run env:check`，校验根、React、Vue、NestJS、SSE 的五份环境模板、配置读取位置、默认值、Git 忽略和 Docker 端口限制；并将它纳入 `pnpm run ready`。
+
+```powershell
+pnpm run env:check
+pnpm run ready
+docker compose -f deploy/docker/compose.demo.yaml config
+```
+
+从 `.env.example` 复制本地 `.env` 后验证：React/Vue 端口覆盖有效；NestJS `PORT`、模拟器 `DEMO_PORT` 生效；无效端口明确失败；Docker React/Vue 宿主机端口可变，但仍只绑定 `127.0.0.1`；Tauri MSI `desktop` 模式继续显式离线模拟。
+
+**本轮尚未在完整 Node24/Vite+/Docker 环境执行新增脚本及构建检查**。静态模板检查不能替代集成运行和安全评审。
