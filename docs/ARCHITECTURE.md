@@ -124,9 +124,11 @@ Tauri 2 安装包只嵌入 Web 静态资源，不自动提供 Vite 开发代理�
 
 当前是没有鉴权、数据库、生产 API、工业 Gateway 的**演示部署**。不得将此 Compose 暴露到公网/工业现场。生产架构计划独立实现 HTTPS/WSS、网关网络隔离、身份授权、存储与备份。Tauri 桌面发行版继续走 Windows MSI，不进入 Docker Web 部署。见 [ADR-0007](adr/0007-docker-demo-deployment.md)。
 
-## V0.1 环境变量隔离（ADR-0008）
+## 环境变量与检出换行符（ADR-0010）
 
-Vue/React 各自读取 `SCADA_*` Vite 服务器配置；NestJS 和 SSE 模拟器使用项目局部可选 `.env`；Docker Compose 使用仓库根 `.env` 参数化 Web 宿主机端口且维持 loopback 绑定。应用源码不携带密钥，`.env` 不纳入 Git。Tauri `desktop` 构建与工业网关安全边界保持不变，详见 [ADR-0008](adr/0008-env-configuration.md)。
+ADR-0008 的分散模板方案已被 [ADR-0010](adr/0010-root-env-lf.md) 取代。Vue/React Vite+ 配置通过同一个仓库根 `envDir` 加载 `SCADA_*`；Node 进程读取根 `.env`；Docker Compose 从工作目录根 `.env` 注入 Web 宿主机端口和容器内部服务端口，Nginx 在启动时把内部端口写入代理模板。容器仍只发布 loopback Web 端口，服务端/模拟器不对宿主机公开。
+
+根 `.gitattributes` 将文本检出规范为 LF，与 `.editorconfig` / Oxfmt 一致，减少 Windows 上 Git CRLF ↔ Oxfmt LF 的反复变更。设备、真实网关、生产凭据和控制写入未引入。
 
 ## V0.2 Studio 第一阶段：编辑与运行隔离（ADR-0009）
 

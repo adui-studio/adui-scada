@@ -44,13 +44,17 @@
 
 见 [部署说明](../deploy/docker/README.md)。**尚未 Docker 运行验收**，不代表生产部署能力。
 
-## 环境变量
+## 统一环境变量与 LF
 
-- 根 `.env.example`：Docker Compose Web 入口的宿主机端口模板。
-- `apps/web-react/.env.example` / `apps/web-vue/.env.example`：Vite+ 开发监听、代理目标；只读取 `SCADA_*`，不会注入浏览器。
-- `apps/server/.env.example` / `examples/water-treatment/.env.example`：Node 运行时服务端口与监听主机。
-- `scripts/check-env-config.mjs`：环境模板和隔离策略的静态检查。
-- 详细约定见 [环境变量说明](ENVIRONMENT.md)。
+- `.env.example`：**唯一**根目录模板；本地配置为被 Git 忽略的根 `.env`。
+- `apps/web-react/vite.config.ts` / `apps/web-vue/vite.config.ts`：共享根 `envDir`，各自开发端口和本机模拟代理。
+- `apps/server/src/main.ts` / `examples/water-treatment/server.mjs`：Node `loadEnvFile` 读取根目录。
+- `deploy/docker/compose.demo.yaml`：读取同一根 `.env`；Nginx 模板与进程健康检查使用一致的容器内部端口。
+- `deploy/docker/nginx.conf` + `Dockerfile.web`：官方 Nginx 启动时执行 envsubst，不把 `.env` 打包进静态镜像。
+- `scripts/check-env-config.mjs`：唯一模板、端口与 Git LF 静态检查。
+- `.gitattributes` / `.editorconfig`：Git 工作区与编辑器统一 LF；`.bat/.cmd` 使用 CRLF。
+
+详见 [环境配置说明](ENVIRONMENT.md) 与 [ADR-0010](adr/0010-root-env-lf.md)。
 
 ## V0.2 Studio 第一阶段新增入口
 

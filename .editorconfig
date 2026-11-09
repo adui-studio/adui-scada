@@ -18,3 +18,7 @@ max_line_length = 100
 
 [*.md]
 trim_trailing_whitespace = false
+
+# Native Windows command scripts are the only intentional CRLF exception.
+[*.{bat,cmd}]
+end_of_line = crlf

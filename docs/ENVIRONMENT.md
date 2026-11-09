@@ -1,85 +1,73 @@
-# ADui SCADA · 环境变量规范（V0.1）
+# ADui SCADA · 唯一根目录环境配置（V0.2）
 
-> V0.1 只读模拟阶段。按照配置作用域分开管理，保持 Vue / React 对等；不将后端密钥写进前端构建产物。
+> 当前为 V0.2 本地 Studio 与 V0.1 只读模拟服务。**仅维护仓库根目录一份 `.env`**，Vue、React、NestJS、模拟服务和 Docker 都从这里读取。实际值不入 Git。
 
-## 配置文件位置
+## 一、创建配置
 
-| 路径（提交到仓库）                      | 本地实际配置（Git 忽略）        | 用途                                   |
-| --------------------------------------- | ------------------------------- | -------------------------------------- |
-| `.env.example`                          | 根 `.env`                       | Docker Compose 的 React/Vue 宿主机端口 |
-| `apps/web-react/.env.example`           | `apps/web-react/.env`           | React Vite+ 开发服务器与代理           |
-| `apps/web-vue/.env.example`             | `apps/web-vue/.env`             | Vue Vite+ 开发服务器与代理             |
-| `apps/server/.env.example`              | `apps/server/.env`              | NestJS 健康检查进程监听                |
-| `examples/water-treatment/.env.example` | `examples/water-treatment/.env` | 本机模拟 SSE 服务监听                  |
-
-所有 `.env` 文件均为**可选**：缺失时使用现有端口与安全默认值。直接复制模板后可按需修改（PowerShell）：
+在仓库根目录执行（不要强制覆盖已有配置）：
 
 ```powershell
-Copy-Item .env.example .env
-Copy-Item apps/web-react/.env.example apps/web-react/.env
-Copy-Item apps/web-vue/.env.example apps/web-vue/.env
-Copy-Item apps/server/.env.example apps/server/.env
-Copy-Item examples/water-treatment/.env.example examples/water-treatment/.env
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+pnpm run env:check
 ```
 
-不要提交实际 `.env`、密钥、认证令牌和设备网络地址。仓库 `.gitignore` 已忽略 `.env` 与 `.env.*`，只跟踪 `.env.example`。
+仓库只跟踪一个 `.env.example`。原先的四份子目录 `.env.example` 已删除；你先前复制在子目录中的 `.env` 仍是被忽略的本地文件，**新版代码不再读取这些文件**。如有自定义值，请合并到根 `.env`，确认后再手动删除旧文件。
 
-## 前端环境配置
+未创建根 `.env` 时，所有进程沿用表格中的安全默认值。
 
-Vue/React 各自的 `vite.config.ts` 使用 Vite 的 `loadEnv(mode, process.cwd(), "SCADA_")`，读取当前应用目录下的配置，**不会**把 `SCADA_*` 暴露给浏览器。当前支持：
+| 变量 | 默认值 | 用途 |
+| --- | --- | --- |
+| `SCADA_WEB_HOST` | `127.0.0.1` | React/Vue 本地开发监听，允许 `localhost` |
+| `SCADA_REACT_DEV_PORT` | `5173` | React 开发 Web |
+| `SCADA_VUE_DEV_PORT` | `5174` | Vue 开发 Web |
+| `SCADA_SERVER_HOST` | `127.0.0.1` | NestJS 本机监听 |
+| `SCADA_SERVER_PORT` | `3001` | NestJS HTTP 端口 |
+| `SCADA_DEMO_HOST` | `127.0.0.1` | 无鉴权 SSE 模拟服务监听 |
+| `SCADA_DEMO_PORT` | `4178` | SSE 模拟服务及两套 Web 开发代理目标 |
+| `SCADA_REACT_PORT` | `8080` | Docker React 宿主机 HTTP 端口 |
+| `SCADA_VUE_PORT` | `8081` | Docker Vue 宿主机 HTTP 端口 |
 
-| 变量                      | React 默认              | Vue 默认    | 约束                                 |
-| ------------------------- | ----------------------- | ----------- | ------------------------------------ |
-| `SCADA_WEB_HOST`          | `127.0.0.1`             | `127.0.0.1` | 仅 `127.0.0.1`、`localhost`          |
-| `SCADA_WEB_PORT`          | `5173`                  | `5174`      | 1–65535 的整数                       |
-| `SCADA_DEMO_PROXY_TARGET` | `http://127.0.0.1:4178` | 同左        | 仅本机 HTTP Origin，无认证信息和路径 |
+全部端口限制为 1–65535 的整数。开发 Web 只允许 loopback 主机；NestJS/SSE 允许 `0.0.0.0` 仅为了**不向宿主机发布端口**的隔离 Docker demo 网络，不能把无鉴权模拟服务放到工业网或公网。
 
-**注意：** Tauri 开发模式的 `devUrl` 目前仍固定为 React `5173`、Vue `5174`。如需运行 `desktop:dev:*`，应保持这两个默认端口；调整 `SCADA_WEB_PORT` 仅用于独立 Web 开发，除非同时调整对应 Tauri 配置。
+## 二、React / Vue / Tauri
 
-开发用 `/demo/project`、`/demo/events` 代理仍然遵循同源路径，浏览器无需直接访问其他域名。V0.1 演示接口未经认证，因此禁止将代理配置为公网/工业设备地址。
+两个 `vite.config.ts` 都以自身文件位置定位仓库根目录 `envDir`，从那里执行 `loadEnv(mode, envDir, "SCADA_")`。Vue、React 拥有独立的 `*_DEV_PORT`，共享 `SCADA_DEMO_PORT`，代理固定 `http://127.0.0.1:<模拟端口>`；不接受外部任意主机目标。实际进程环境中同名变量优先于文件值。
 
-Vite 还支持按模式覆盖的 `.env.development`、`.env.production`、`.env.desktop` 及其 `.local` 变体（均不提交）。本项目 Tauri MSI 的 `--mode desktop` 仍**强制使用共享 Core 的离线模拟**；环境配置不会切换为真实设备采集。
+`envDir` 同时让 Vite 按既定 mode 读取根目录环境文件；当前仅维护单个 `.env`。Vite 默认只向浏览器公开 `VITE_*`，不能将真实口令、Token、PLC 地址或其他秘密设为 `VITE_*`。`SCADA_*` 只用于构建/服务配置，不作为公开客户端变量。
 
-以后需要在前端展示的、非敏感的构建期变量，可专门使用 `VITE_*`；这类变量会进入打包的浏览器代码，因此**绝不能放密码、私钥、Token 或工业网络凭据**。当前没有新增任何需要公开给浏览器的环境变量。
+Tauri `desktop` 构建模式仍明确选择本机离线模拟。Tauri 开发 `devUrl` 目前固定为 React 5173 / Vue 5174；修改本地 Web 开发端口后若要运行 `desktop:dev`，必须另行同步其 Tauri 配置。此次没有变更 Tauri 发布或工业通信行为。
 
-## 后端与本地模拟服务
+## 三、NestJS / SSE / Docker
 
-NestJS 在入口 `apps/server/src/main.ts` 读取同级项目根目录的可选 `.env`，模拟器在 `examples/water-treatment/server.mjs` 读取自己的可选 `.env`。使用 Node 内置 `loadEnvFile`，**无额外 dotenv 依赖**。
+NestJS（源码 `src/main.ts` 与构建 `dist/main.js`）以及 `examples/water-treatment/server.mjs` 都采用 Node 内置 `loadEnvFile` 读取仓库根 `.env`。已有进程环境变量优先；兼容旧环境中 NestJS 的 `HOST` / `PORT`、模拟服务的 `DEMO_HOST` / `DEMO_PORT`，但新配置请只使用 `SCADA_*`。
 
-| 变量        | 默认值      | 说明                                                  |
-| ----------- | ----------- | ----------------------------------------------------- |
-| `NODE_ENV`  | 未设置      | 示例为 `development`；Docker 指定 `production`        |
-| `HOST`      | `127.0.0.1` | NestJS 主机监听，允许 `0.0.0.0` 仅供容器内部网络使用  |
-| `PORT`      | `3001`      | NestJS HTTP 端口（整数 1–65535）                      |
-| `DEMO_HOST` | `127.0.0.1` | 无鉴权 SSE 模拟器监听地址；同样仅 Docker 允许容器绑定 |
-| `DEMO_PORT` | `4178`      | 模拟服务端口（整数 1–65535）                          |
+从**仓库根目录**执行 Docker Compose，Compose 自动读取同一根 `.env`。它会将 `SCADA_SERVER_PORT`、`SCADA_DEMO_PORT` 注入各自 Node 容器、Web Nginx 容器与健康检查；官方 Nginx 镜像从 `/etc/nginx/templates/default.conf.template` 生成代理配置，避免端口漂移。Docker Web 容器内部仍监听 8080，宿主机 `SCADA_REACT_PORT` / `SCADA_VUE_PORT` 仅改变映射端口且固定绑定 `127.0.0.1`。
 
-Node 已存在的进程环境变量优先，`.env` 主要用于本机开发；Docker 通过 Compose 的 `environment` 直接传值，不需要把密钥文件烘焙进镜像。
+Docker 镜像通过 `.dockerignore` 排除实际 `.env`，只使用 Compose 明确传入的变量。容器内监听主机强制为 `0.0.0.0` 以供专用容器网络通信；NestJS/SSE **不对宿主机发布**。Docker demo 不具备正式生产权限、工业网关或秘密管理系统。
 
-如果改变 `DEMO_PORT`，须相应修改两个 Web 的 `SCADA_DEMO_PROXY_TARGET`。Docker 内部模拟服务固定 `4178`，**请勿仅修改本机 `DEMO_PORT` 却不修改容器代理**。
+## 四、LF / CRLF 防抖规则
 
-## Docker Compose 本地演示
+仓库使用 **LF 作为统一文本格式**，并在三个层级保持一致：
 
-根目录 `.env` 由 Docker Compose 解析；并不等于 Vue/React 应用目录下的 `.env`。支持：
+1. `.editorconfig`：`end_of_line = lf`；
+2. `@adui/tooling/format`（Oxfmt）：`endOfLine: "lf"`；
+3. `.gitattributes`：`* text=auto eol=lf`，强制 Git 在 Windows 上检出 LF 文本；只有原生 `.bat/.cmd` 明确保留 CRLF。
 
-| 变量               | 默认   | 用途                   |
-| ------------------ | ------ | ---------------------- |
-| `SCADA_REACT_PORT` | `8080` | 宿主机 React HTTP 端口 |
-| `SCADA_VUE_PORT`   | `8081` | 宿主机 Vue HTTP 端口   |
+因此不要把 Vite+ 改成 CRLF，否则会在开发机与 CI 来回修改。新规则不会自动重写已检出的所有旧文件：第一次同步后仍可能需要运行一次 `vp check --fix`。**不要为了规范换行符执行强制 checkout、reset 或批量覆盖未提交文件。**
 
-例如修改根 `.env` 为 `SCADA_REACT_PORT=9000`、`SCADA_VUE_PORT=9001`，使用 `docker compose -f deploy/docker/compose.demo.yaml up -d` 后从 `127.0.0.1:9000` 和 `127.0.0.1:9001` 访问。Compose 中宿主机监听地址仍**固定为 127.0.0.1**，不允许通过 `.env` 改成公网绑定。
+如 Windows Git 全局设置 `core.autocrlf=true`，仓库显式 `.gitattributes` 优先；也可以仅在仓库中设置 `git config --local core.autocrlf input`。先运行 `git status --short` 检查本地差异；需要批量规范化索引时使用 `git add --renormalize .` 前先了解其暂存效果。
 
-## 检查与安全边界
+## 五、验收命令
 
 ```powershell
 pnpm run env:check
 pnpm run ready
 
 docker compose -f deploy/docker/compose.demo.yaml config
+pnpm run docker:demo:up
+docker compose -f deploy/docker/compose.demo.yaml ps
 ```
 
-`env:check` 静态校验环境模板、默认端口、配置引用、Git 忽略和 Docker 监听配置；`ready` 包含它。项目尚未实现正式生产级配置管理、Secret Manager、设备网关、数据库或对外公开部署。
+改动 `SCADA_DEMO_PORT`、`SCADA_SERVER_PORT` 后，在 Docker 中验证对应容器健康和 Web 的 `/demo/project`、`/api/health`，并检查 SSE 断连质量。原 V0.1 Docker 实测结果不直接代表本轮动态端口改造通过。
 
-不要将 `--mode desktop` 误认为 Vite 的 `production` 模式，也不要将 Docker Compose 中的 `NODE_ENV=production` 误认为业务平台生产就绪。
-
-**本轮新增配置在 GitHub 开发分支，尚未在用户 Windows 上完成本轮 `pnpm run ready` / Docker 回归验证。**
+**验收状态**：维护者已确认 React → Vue → React JSON 往返保持图元与 Tag 绑定；本轮单一根 `.env`、Docker Nginx 模板及换行符变更需要新的本机回归测试。

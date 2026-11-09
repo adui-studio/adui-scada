@@ -168,3 +168,24 @@ pnpm run dev:vue
 - Windows Tauri MSI / Docker 两套 Web 的 Studio 可打开，不因此声称生产可用。
 
 **该 V0.2 代码的 TS6、Vite+、Vitest、双 Web 构建和手动交互尚待 Windows 本机执行，未宣称通过。**
+
+## 2026-11-09 · Studio JSON 跨框架往返人工验收
+
+维护者已在 Windows 上实际执行 **React 导出工程 JSON → Vue 导入 → Vue 再导出 → React 再导入**，确认图元和 Tag 绑定保持一致。这是用户完成的人工交互验证，不是自动化 E2E；相反方向 Vue → React → Vue、异常 JSON 和其他编辑操作仍需单独复验。
+
+## 2026-11-09 · 唯一根 .env / LF 规范待回归
+
+针对 Windows `vp check --fix` 将许多 CRLF 转为 LF 的问题，新增 `.gitattributes` 强制 Git 检出 LF，并与 Oxfmt / EditorConfig 保持一致（Windows `.bat/.cmd` 例外）。只保留根 `.env.example`；Vue/React/NestJS/SSE/Docker 读同一根 `.env`，Nginx 容器采用启动时模板以匹配内部端口。
+
+```powershell
+git status --short
+pnpm run env:check
+pnpm run ready
+docker compose -f deploy/docker/compose.demo.yaml config
+pnpm run docker:demo:up
+docker compose -f deploy/docker/compose.demo.yaml ps
+Invoke-RestMethod http://127.0.0.1:8080/api/health
+Invoke-RestMethod http://127.0.0.1:8080/demo/project
+```
+
+还应测试更改 `SCADA_DEMO_PORT` 和 `SCADA_SERVER_PORT` 后，容器健康探针、Nginx 代理与 SSE 可同步工作。现阶段 GitHub 仅提供代码和静态结构验证，**尚未在维护者 Windows 上执行本轮完整 `ready` / Docker 重新构建 / 换行符迁移**；已通过的 V0.1 Docker 运行不代表新的端口模板已验证。
