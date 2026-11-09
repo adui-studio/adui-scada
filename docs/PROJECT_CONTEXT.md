@@ -1,7 +1,7 @@
 # ADui SCADA · 长期项目上下文
 
 - 日期：2026-11-09
-- 版本阶段：V0.1，**Web/Server 工具链与 Windows React/Vue MSI 构建已通过维护者本机验证，安装与工业安全验收仍待完成**。
+- 版本阶段：V0.1，**Web/Server 工具链、React/Vue MSI 构建及桌面安装启动/离线模拟展示已通过维护者本机验证；工业安全及生产能力仍未验收**。
 - 品牌：ADui Studio。
 - 结构：React/Vue 两个正式 Web 应用，共享 Core 与 Runtime 业务逻辑。Studio 与 Runtime 位于同一个 Web 应用、不同功能模块。
 
@@ -23,8 +23,8 @@ Studio 编辑器、生产业务后端接口、真实网关、报警/历史、工
 
 ## 当前未完成的验收
 
-- 实测安装 React/Vue MSI 并在全新 Windows 环境验证启动、卸载及数据不可用时提示。两个构建共用安装包名称/产品标识，不支持默认并行安装。
-- 验证模拟 SSE 的连接/断线 STALE 质量表现和双框架一致性；打包 MSI 不内置该模拟服务。
+- React/Vue MSI 已在维护者 Windows 环境安装并启动成功；仍需在全新 Windows 环境验证卸载、升级、兼容性及长期运行。两个构建共用安装包名称/产品标识，不支持默认并行安装。
+- React 桌面离线模拟已截图验证 STALE 状态；仍需核验 STALE → GOOD 恢复全过程、Vue 相同阶段以及 Web 开发 SSE 的连接/断线语义。MSI 使用共享 Core 离线模拟，不内置 HTTP SSE 服务。
 - 核对 Cargo.lock 与 pnpm-lock.yaml 的实际提交状态，确保构建可重现。
 - 明确开源许可证、生产工业安全准入与真实网关的隔离边界。
 
@@ -48,3 +48,9 @@ React Web 与 Rust Release 编译成功，Windows WiX 已输出 MSI 文件；NSI
 维护者提供的截图确认 Vue MSI **可以安装并启动桌面窗口**，但监控页出现 `Unexpected token '<'`：Tauri 发布版不包含 Vite 的 `/demo` 开发代理，工程请求实际得到 HTML。故安装启动通过、Runtime 数据链路未通过。
 
 本轮在共享 Core/Runtime 添加显式离线模拟分支，并让两套 Tauri Web 构建使用 `--mode desktop`：共享水处理工程、模拟数据、`STALE` 状态，不访问 PLC/DCS，不注册额外 Tauri 权限。原浏览器开发 SSE 链路保持不变，网页正式后端连接仍未开发。本修复源代码已进入 PR，**Windows 重新构建、安装和实际数据演示待验证**。
+
+## 2026-11-09 · Vue / React MSI 安装运行验收
+
+维护者确认两套 MSI 均已完成安装并可启动桌面窗口。Vue 截图显示 `SIMULATION` 状态、水处理 SVG 和三项模拟数据（含 `GOOD` 品质）；React 截图显示同一水处理 SVG 在离线模拟中断阶段将数值及设备质量标为 `STALE`，旧值没有伪装为实时 `GOOD`。
+
+因此 V0.1 的**双框架桌面安装与模拟运行里程碑已达成**。截图没有涵盖完整断线恢复循环、卸载升级或干净环境复现；本轮不能认定现场工业协议、生产运行、设备安全或完整 SCADA 系统已经验收。

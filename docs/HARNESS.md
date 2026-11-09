@@ -45,7 +45,7 @@ pnpm run desktop:build:vue
 
 运行端必须从发布快照/只读订阅消费标准数据；当前 SSE 仅为本机诊断接口，不代表正式 WebSocket/API 协议。
 
-**验证状态（2026-11-09）**：维护者已在 Windows 运行通过 `pnpm run ready`（含 Vite+ 检查、TS6、18 个单测、2 个 NestJS E2E、文档检查与 React/Vue/NestJS 构建）。React/Vue 桌面开发运行已由维护者确认；两套 MSI 单独打包命令也均已成功。仍未进行 MSI 安装后验证或工业现场测试。
+**验证状态（2026-11-09）**：维护者已在 Windows 运行通过 `pnpm run ready`（含 Vite+ 检查、TS6、18 个单测、2 个 NestJS E2E、文档检查与 React/Vue/NestJS 构建）。React/Vue 桌面开发运行已由维护者确认；两套 MSI 单独打包命令也均已成功。维护者已完成 Vue/React MSI 安装启动及模拟画面显示验收；卸载/更新、自动恢复全过程和工业现场测试仍未完成。
 
 ## 2026-11-09 · 工具链初次集成反馈
 
@@ -99,3 +99,12 @@ pnpm run desktop:build:vue:msi
 ```
 
 分别安装两套 MSI，**无需启动 `dev:demo`**；确认进入 `SIMULATION`、加载相同水处理 SVG、三个 Tag 变化、模拟断线后 `STALE`、恢复 `GOOD`，并验证退出程序后定时器清理。原 `pnpm run ready` 通过记录属于修复前的版本，**修复后的打包与安装尚待实测**。
+
+## 2026-11-09 · Windows MSI 安装运行实测（用户截图）
+
+- **Vue MSI：安装及窗口启动通过**，离线 `SIMULATION` 标识、水处理 SVG、水位、泵状态与流量正常显示；之前的 HTML/JSON 解析错误未再出现。截图显示水位 70.8%、流量 17.7 m³/h、质量 `GOOD`（仅本地模拟值）。
+- **React MSI：维护者确认安装及窗口启动通过**。截图显示相同水处理组态进入模拟数据中断阶段，页面明确提示 `STALE`，水位、泵、流量不再显示旧值为正常实时值；顶部仍显示 `SIMULATION`。
+- 以上为两个框架安装版的**实际人工运行验收证据**；两张截图对应不同模拟时刻，尚不足以单独证明 React 的 `STALE → GOOD` 恢复全过程或两端严格逐帧对等。
+- 仍待验证：长时间运行及恢复循环、Windows 安装卸载/升级、干净环境复现、正式工业数据源与安全边界。上述示例均非真实 PLC/DCS 数据。
+
+结论：V0.1 React/Vue Windows MSI 的**安装启动、离线模拟展示与 React STALE 显示**已通过本轮人工验收；不是正式 SCADA 生产发布验收。
