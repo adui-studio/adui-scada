@@ -1,8 +1,5 @@
 {
-  "extends": [
-    "./base.json",
-    "@vue/tsconfig/tsconfig.dom.json"
-  ],
+  "extends": ["./base.json", "@vue/tsconfig/tsconfig.dom.json"],
   "compilerOptions": {
     "strict": true,
     "noUncheckedIndexedAccess": true,

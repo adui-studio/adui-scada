@@ -16,12 +16,23 @@ export default function RuntimePage() {
   return (
     <main className="scada-shell">
       <header className="scada-header">
-        <div><p className="scada-eyebrow">ADui SCADA · V0.1</p><h1>水处理实时监控</h1></div>
-        <span className="scada-status" data-status={state.status}>{state.status.toUpperCase()}</span>
+        <div>
+          <p className="scada-eyebrow">ADui SCADA · V0.1</p>
+          <h1>水处理实时监控</h1>
+        </div>
+        <span className="scada-status" data-status={state.status}>
+          {state.status.toUpperCase()}
+        </span>
       </header>
-      <p role="status" className="scada-message">{state.message}</p>
+      <p role="status" className="scada-message">
+        {state.message}
+      </p>
       <section className="scada-panel" aria-label="模拟工业监控画面">
-        {svg ? <img className="scada-svg" src={svg} alt="水箱、水泵与流量模拟监控"/> : <p>正在加载工程...</p>}
+        {svg ? (
+          <img className="scada-svg" src={svg} alt="水箱、水泵与流量模拟监控" />
+        ) : (
+          <p>正在加载工程...</p>
+        )}
       </section>
       <section className="scada-panel">
         <h2>Tag 质量与最近值</h2>

@@ -39,4 +39,4 @@ peerDependencyRules:
   allowAny:
     - vite
   allowedVersions:
-    vite: '*'
+    vite: "*"

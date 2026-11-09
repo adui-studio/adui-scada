@@ -46,13 +46,13 @@ Tauri 并非同时运行两种前端；将按构建目标分别选择。Server �
 | 领域     | 目标方案                                | 现状                                     |
 | -------- | --------------------------------------- | ---------------------------------------- |
 | 工程     | Vite+ 1.5、pnpm workspace               | 已配置；原锁文件待目标环境复验           |
-| Web      | Vue 3、React 19、TypeScript             | 已创建两个最小 Web Runtime                       |
+| Web      | Vue 3、React 19、TypeScript             | 已创建两个最小 Web Runtime               |
 | UI       | TDesign Vue Next、Ant Design            | 候选                                     |
 | 2D       | SVG + 自研独立编辑/渲染核心             | V0.1 仅实现只读 SVG 图元和解析，无编辑器 |
 | 共享数据 | Document / TagValue / 质量状态          | V0.1 已实现本地模拟核心，未持久化        |
 | 3D       | Three.js 自研 Core + Vue/React adapters | 后续，非 V1 前置                         |
-| 桌面     | Tauri 2                                 | 已创建 Windows 优先桌面壳；未验证打包                                     |
-| 业务 API | NestJS                                  | 已创建本地 /health；业务 API 尚未实现                                     |
+| 桌面     | Tauri 2                                 | 已创建 Windows 优先桌面壳；未验证打包    |
+| 业务 API | NestJS                                  | 已创建本地 /health；业务 API 尚未实现    |
 | 业务数据 | PostgreSQL + Prisma                     | 候选                                     |
 | 历史库   | TimescaleDB                             | 候选；时序迁移独立管理                   |
 | 实时     | WebSocket + Redis                       | 候选；V0.1 仅 demo 使用 localhost SSE    |

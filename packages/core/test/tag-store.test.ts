@@ -39,7 +39,9 @@ test("batch rejects invalid/duplicated data atomically", () => {
   expect(store.snapshot()).toEqual([]);
   expect(() => store.apply([make(), make(2)])).toThrow(/Duplicate update/);
   expect(store.snapshot()).toEqual([]);
-  expect(() => validateTagValue({ ...make(), quality: "UNKNOWN" as any })).toThrow(/Invalid quality/);
+  expect(() => validateTagValue({ ...make(), quality: "UNKNOWN" as any })).toThrow(
+    /Invalid quality/,
+  );
 });
 
 test("stale is explicit, changes sequence, retains last reading, recovery is possible", () => {

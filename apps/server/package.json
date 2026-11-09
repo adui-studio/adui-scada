@@ -21,6 +21,7 @@
     "rxjs": "catalog:"
   },
   "devDependencies": {
+    "@adui/tsconfig": "workspace:*",
     "@nestjs/cli": "catalog:",
     "@nestjs/schematics": "catalog:",
     "@nestjs/testing": "catalog:",
@@ -28,7 +29,6 @@
     "@types/supertest": "catalog:",
     "supertest": "catalog:",
     "typescript": "catalog:",
-    "vite-plus": "catalog:",
-    "@adui/tsconfig": "workspace:*"
+    "vite-plus": "catalog:"
   }
 }

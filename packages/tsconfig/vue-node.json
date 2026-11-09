@@ -1,8 +1,5 @@
 {
-  "extends": [
-    "./base.json",
-    "@tsconfig/node24/tsconfig.json"
-  ],
+  "extends": ["./base.json", "@tsconfig/node24/tsconfig.json"],
   "compilerOptions": {
     "module": "Preserve",
     "moduleResolution": "Bundler",

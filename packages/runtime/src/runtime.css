@@ -1,40 +1,268 @@
-:root{font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif;color:#e8f1ff;background:#0b1320;font-synthesis:none}
-*{box-sizing:border-box}body{margin:0;min-height:100vh}
-.shell{max-width:1480px;margin:auto;padding:24px}
-.top{display:flex;align-items:center;justify-content:space-between;gap:18px;border-bottom:1px solid #293a4d;padding:12px 0 24px}
-.brand{font-size:28px;font-weight:750;letter-spacing:.015em}.brand span{color:#39c9ba}
-.sub{color:#91a8bd;font-size:13px}.panel{background:#132236;border:1px solid #294057;border-radius:10px;padding:18px}
-.intro{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin:24px 0}
-.intro h1{margin:4px 0 8px;font-size:26px}.intro p{margin:0;color:#a6b8c9}
-.status{display:flex;align-items:center;gap:12px;max-width:560px}.dot{width:9px;height:9px;border-radius:50%;background:#f6b04d;flex:none}
-.status.live .dot{background:#30c5a0}.status.error .dot,.status.reconnecting .dot{background:#f16c75}
-button{border:1px solid #46667d;background:#1e3448;color:#ecf6ff;border-radius:6px;padding:8px 12px;cursor:pointer}
-button:hover{background:#2e475c}.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px}
-.metric small{color:#a5b8c7}.reading{font-size:30px;margin-top:12px;font-weight:700}
-.quality{font-size:11px;margin-left:8px;color:#91a8bd}.quality.good{color:#30c5a0}.quality.stale,.quality.bad{color:#f16c75}
-.dashboard{display:grid;grid-template-columns:minmax(0,3fr) minmax(240px,1fr);gap:16px}
-.diagram img{width:100%;height:auto;display:block;background:#0c1728;border-radius:6px}
-.detail{display:flex;justify-content:space-between;gap:12px;margin:16px 0;color:#adc2d4}
-.note{line-height:1.65;color:#8ea9bd;font-size:13px}
-footer{padding:32px 0 12px;color:#66869d;font-size:12px}
-@media(max-width:850px){.metrics{grid-template-columns:1fr}.dashboard{grid-template-columns:1fr}.shell{padding:14px}.top{flex-wrap:wrap}}
+:root {
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #e8f1ff;
+  background: #0b1320;
+  font-synthesis: none;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+.shell {
+  max-width: 1480px;
+  margin: auto;
+  padding: 24px;
+}
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid #293a4d;
+  padding: 12px 0 24px;
+}
+.brand {
+  font-size: 28px;
+  font-weight: 750;
+  letter-spacing: 0.015em;
+}
+.brand span {
+  color: #39c9ba;
+}
+.sub {
+  color: #91a8bd;
+  font-size: 13px;
+}
+.panel {
+  background: #132236;
+  border: 1px solid #294057;
+  border-radius: 10px;
+  padding: 18px;
+}
+.intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 24px 0;
+}
+.intro h1 {
+  margin: 4px 0 8px;
+  font-size: 26px;
+}
+.intro p {
+  margin: 0;
+  color: #a6b8c9;
+}
+.status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 560px;
+}
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f6b04d;
+  flex: none;
+}
+.status.live .dot {
+  background: #30c5a0;
+}
+.status.error .dot,
+.status.reconnecting .dot {
+  background: #f16c75;
+}
+button {
+  border: 1px solid #46667d;
+  background: #1e3448;
+  color: #ecf6ff;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+button:hover {
+  background: #2e475c;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.metric small {
+  color: #a5b8c7;
+}
+.reading {
+  font-size: 30px;
+  margin-top: 12px;
+  font-weight: 700;
+}
+.quality {
+  font-size: 11px;
+  margin-left: 8px;
+  color: #91a8bd;
+}
+.quality.good {
+  color: #30c5a0;
+}
+.quality.stale,
+.quality.bad {
+  color: #f16c75;
+}
+.dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(240px, 1fr);
+  gap: 16px;
+}
+.diagram img {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #0c1728;
+  border-radius: 6px;
+}
+.detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0;
+  color: #adc2d4;
+}
+.note {
+  line-height: 1.65;
+  color: #8ea9bd;
+  font-size: 13px;
+}
+footer {
+  padding: 32px 0 12px;
+  color: #66869d;
+  font-size: 12px;
+}
+@media (max-width: 850px) {
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+  .shell {
+    padding: 14px;
+  }
+  .top {
+    flex-wrap: wrap;
+  }
+}
 
 /* Shared minimal layout for Vue and React V0.1 runtime. */
-.scada-shell{max-width:1200px;margin:0 auto;padding:28px 22px}
-.scada-header{display:flex;align-items:center;justify-content:space-between;gap:18px;border-bottom:1px solid #293a4d;padding-bottom:20px}
-.scada-header h1{margin:5px 0;font-size:27px;font-weight:700}
-.scada-eyebrow{color:#91a8bd;margin:0;font-size:13px}
-.scada-status{border:1px solid #46667d;border-radius:6px;padding:7px 12px;font-size:12px;color:#f0ae4d}
-.scada-status[data-status="live"]{color:#30c5a0;border-color:#30c5a0}
-.scada-status[data-status="error"],.scada-status[data-status="reconnecting"]{color:#f16c75;border-color:#f16c75}
-.scada-message{min-height:24px;color:#adc2d4;margin:22px 0}
-.scada-panel{background:#132236;border:1px solid #294057;border-radius:8px;padding:16px;margin:14px 0;overflow:hidden}
-.scada-panel h2{font-size:16px;margin:0 0 16px}
-.scada-svg{width:100%;height:auto;display:block;background:#0c1728}
-.scada-tags{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.scada-tag{display:flex;flex-direction:column;gap:7px;padding:14px;border:1px solid #294057;border-radius:6px;min-width:0}
-.scada-tag strong{font-size:13px;overflow-wrap:anywhere}.scada-tag span{font-size:23px;font-weight:700}
-.scada-tag small{font-size:11px;color:#91a8bd}
-.scada-tag small[data-quality="GOOD"]{color:#30c5a0}
-.scada-tag small[data-quality="BAD"],.scada-tag small[data-quality="STALE"]{color:#f16c75}
-@media(max-width:800px){.scada-shell{padding:14px}.scada-header{flex-wrap:wrap}.scada-tags{grid-template-columns:1fr}}
+.scada-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 22px;
+}
+.scada-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid #293a4d;
+  padding-bottom: 20px;
+}
+.scada-header h1 {
+  margin: 5px 0;
+  font-size: 27px;
+  font-weight: 700;
+}
+.scada-eyebrow {
+  color: #91a8bd;
+  margin: 0;
+  font-size: 13px;
+}
+.scada-status {
+  border: 1px solid #46667d;
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: #f0ae4d;
+}
+.scada-status[data-status="live"] {
+  color: #30c5a0;
+  border-color: #30c5a0;
+}
+.scada-status[data-status="error"],
+.scada-status[data-status="reconnecting"] {
+  color: #f16c75;
+  border-color: #f16c75;
+}
+.scada-message {
+  min-height: 24px;
+  color: #adc2d4;
+  margin: 22px 0;
+}
+.scada-panel {
+  background: #132236;
+  border: 1px solid #294057;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 14px 0;
+  overflow: hidden;
+}
+.scada-panel h2 {
+  font-size: 16px;
+  margin: 0 0 16px;
+}
+.scada-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #0c1728;
+}
+.scada-tags {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.scada-tag {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 14px;
+  border: 1px solid #294057;
+  border-radius: 6px;
+  min-width: 0;
+}
+.scada-tag strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.scada-tag span {
+  font-size: 23px;
+  font-weight: 700;
+}
+.scada-tag small {
+  font-size: 11px;
+  color: #91a8bd;
+}
+.scada-tag small[data-quality="GOOD"] {
+  color: #30c5a0;
+}
+.scada-tag small[data-quality="BAD"],
+.scada-tag small[data-quality="STALE"] {
+  color: #f16c75;
+}
+@media (max-width: 800px) {
+  .scada-shell {
+    padding: 14px;
+  }
+  .scada-header {
+    flex-wrap: wrap;
+  }
+  .scada-tags {
+    grid-template-columns: 1fr;
+  }
+}

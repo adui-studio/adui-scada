@@ -11,8 +11,8 @@
     "@adui/scada-core": "workspace:*"
   },
   "devDependencies": {
+    "@adui/tsconfig": "workspace:*",
     "typescript": "catalog:",
-    "vite-plus": "catalog:",
-    "@adui/tsconfig": "workspace:*"
+    "vite-plus": "catalog:"
   }
 }

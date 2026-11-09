@@ -1,6 +1,4 @@
 {
   "extends": "@adui/tsconfig/core",
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }

@@ -52,6 +52,7 @@ pnpm run desktop:build:vue
 Windows / pnpm 12.18 / TypeScript 6.0.3 实测 `pnpm install`、`deps:check`、`config:check` 成功。
 首轮 `vp check` 因格式差异被阻断；`vp check --fix` 报告 Runtime TS1294、React CSS TS2882、Vue SFC TS2307、Node assert TS2591、Vitest expect-expect。
 本次针对性修复：
+
 - Format/Lint 忽略 `.agents/skills/**` 的外部 Skill 文档，避免自动重写供应方资料；
 - Runtime 构造函数取消 TS6 `erasableSyntaxOnly` 禁用的参数属性简写；
 - 给 React CSS 和 Vue SFC 提供入口声明；

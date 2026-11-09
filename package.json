@@ -30,11 +30,11 @@
     "config:check": "node scripts/check-shared-config.mjs"
   },
   "devDependencies": {
+    "@adui/tooling": "workspace:*",
+    "@adui/tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "catalog:",
-    "vite-plus": "catalog:",
-    "@adui/tsconfig": "workspace:*",
-    "@adui/tooling": "workspace:*"
+    "vite-plus": "catalog:"
   },
   "devEngines": {
     "packageManager": {

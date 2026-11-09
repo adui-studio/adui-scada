@@ -1,12 +1,8 @@
 {
   "extends": "@adui/tsconfig/node",
   "compilerOptions": {
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "esModuleInterop": true
   },
-  "include": [
-    "vite.config.ts"
-  ]
+  "include": ["vite.config.ts"]
 }

@@ -6,15 +6,22 @@ const state = shallowRef(initialRuntimeState);
 const svg = computed(() =>
   state.value.document ? svgDataUrl(state.value.document, state.value.values) : null,
 );
-const runtime = new DemoRuntime((next) => { state.value = next; });
-onMounted(() => { void runtime.start(); });
+const runtime = new DemoRuntime((next) => {
+  state.value = next;
+});
+onMounted(() => {
+  void runtime.start();
+});
 onUnmounted(() => runtime.stop());
 </script>
 
 <template>
   <main class="scada-shell">
     <header class="scada-header">
-      <div><p class="scada-eyebrow">ADui SCADA · V0.1</p><h1>水处理实时监控</h1></div>
+      <div>
+        <p class="scada-eyebrow">ADui SCADA · V0.1</p>
+        <h1>水处理实时监控</h1>
+      </div>
       <span class="scada-status" :data-status="state.status">{{ state.status.toUpperCase() }}</span>
     </header>
     <p role="status" class="scada-message">{{ state.message }}</p>

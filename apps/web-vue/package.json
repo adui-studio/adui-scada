@@ -15,12 +15,12 @@
     "vue": "catalog:"
   },
   "devDependencies": {
+    "@adui/tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "typescript": "catalog:",
-    "vite-plus": "catalog:",
     "vite": "catalog:",
-    "vue-tsc": "catalog:",
-    "@adui/tsconfig": "workspace:*"
+    "vite-plus": "catalog:",
+    "vue-tsc": "catalog:"
   }
 }

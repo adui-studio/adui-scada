@@ -5,4 +5,8 @@ import "@adui/scada-runtime/styles.css";
 
 const mount = document.getElementById("root");
 if (!mount) throw new Error("Missing #root mount point");
-createRoot(mount).render(<StrictMode><App /></StrictMode>);
+createRoot(mount).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

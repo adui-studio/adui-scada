@@ -38,6 +38,7 @@ pnpm run docs:check
 ```
 
 启动三个终端：
+
 ```powershell
 pnpm run dev:demo
 pnpm run dev:react
