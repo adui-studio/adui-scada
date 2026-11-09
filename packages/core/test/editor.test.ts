@@ -107,7 +107,7 @@ test("add symbol uses stable IDs, no device binding, and undo/redo preserves JSO
   const first = e.snapshot();
   const newNode = first.document.pages[0]?.nodes.at(-1);
   expect(newNode?.type).toBe("label");
-  expect(newNode?.bindings).toEqual({});
+  expect(Object.keys(newNode?.bindings ?? {})).toEqual([]);
   expect(first.selectedIds).toEqual(["label-1"]);
   expect(e.addNode("label")).toBe("label-2");
   expect(e.undo()).toBe(true);
@@ -204,4 +204,28 @@ test("new node IDs remain unique across delete and import and no-ops do not crea
   e.select(null);
   expect(e.alignSelected("top")).toBe(false);
   expect(e.deleteSelected()).toBe(false);
+});
+
+test("fractional positions never move outside the page when bounded displacement is fractional", () => {
+  const document = editor().snapshot().document;
+  const tank = document.pages[0]?.nodes.find((node) => node.id === "tank");
+  if (!tank) throw new Error("Missing tank fixture");
+  // Remaining permitted horizontal displacement is just 0.3 units.
+  tank.transform.x = 729.7;
+  const moved = withNodesTranslated(document, ["tank"], 1, 0);
+  const x = moved.pages[0]?.nodes.find((node) => node.id === "tank")?.transform.x;
+  expect(x).toBe(730);
+  expect(x! + tank.transform.width).toBeLessThanOrEqual(880);
+});
+
+test("layer forward/backward swaps one position and no-ops at the edge", () => {
+  const e = editor();
+  e.select("title");
+  expect(e.reorderSelected("backward")).toBe(false);
+  expect(e.reorderSelected("forward")).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id).slice(0, 2)).toEqual([
+    "tank", "title",
+  ]);
+  expect(e.reorderSelected("backward")).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes[0]?.id).toBe("title");
 });

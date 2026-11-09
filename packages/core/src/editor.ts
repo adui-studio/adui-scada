@@ -64,8 +64,10 @@ export function withNodesTranslated(
   if (minDx > maxDx || minDy > maxDy) {
     throw new RangeError("Selected nodes cannot fit within the page");
   }
-  const shiftX = Math.max(Math.ceil(minDx), Math.min(Math.round(dx), Math.floor(maxDx)));
-  const shiftY = Math.max(Math.ceil(minDy), Math.min(Math.round(dy), Math.floor(maxDy)));
+  // Fractional source coordinates may leave no integer displacement in range.
+  // Clamp the rounded request to the exact feasible interval instead of leaving the canvas.
+  const shiftX = Math.max(minDx, Math.min(Math.round(dx), maxDx));
+  const shiftY = Math.max(minDy, Math.min(Math.round(dy), maxDy));
 
   return parseScadaDocument({
     ...checked,
