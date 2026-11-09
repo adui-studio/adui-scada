@@ -46,3 +46,15 @@ pnpm run desktop:build:vue
 运行端必须从发布快照/只读订阅消费标准数据；当前 SSE 仅为本机诊断接口，不代表正式 WebSocket/API 协议。
 
 **验证状态**：开发分支的文件结构检查完成；缺少联网 pnpm/Vite+、Rust 和 Windows 工具链，故本轮未宣称 Vitest、TS6 类型检查、NestJS 构建、双 Web 构建或 Tauri 打包通过。
+
+## 2026-11-09 · 工具链初次集成反馈
+
+Windows / pnpm 12.18 / TypeScript 6.0.3 实测 `pnpm install`、`deps:check`、`config:check` 成功。
+首轮 `vp check` 因格式差异被阻断；`vp check --fix` 报告 Runtime TS1294、React CSS TS2882、Vue SFC TS2307、Node assert TS2591、Vitest expect-expect。
+本次针对性修复：
+- Format/Lint 忽略 `.agents/skills/**` 的外部 Skill 文档，避免自动重写供应方资料；
+- Runtime 构造函数取消 TS6 `erasableSyntaxOnly` 禁用的参数属性简写；
+- 给 React CSS 和 Vue SFC 提供入口声明；
+- Core/Runtime 单测统一使用 Vitest `expect`，NestJS E2E 使用显式断言。
+
+注意：本次修复提交后仍需重新执行 `vp check`、`pnpm run ready`，不得把源码修复视为实际测试通过。此前在本机执行 `vp check --fix` 可能格式化了大量文件；合并前应先检查 `git status`，避免覆盖未提交的本地格式修改。

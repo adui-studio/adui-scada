@@ -1,5 +1,6 @@
 /** Oxlint is configured once at the workspace root for vp check. */
 export const sharedLint = {
+  ignorePatterns: [".agents/skills/**"],
   jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
   rules: { "vite-plus/prefer-vite-plus-imports": "error" as const },
   options: { typeAware: true, typeCheck: true },

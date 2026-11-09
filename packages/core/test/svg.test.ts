@@ -1,5 +1,4 @@
-import { test } from "vite-plus/test";
-import assert from "node:assert/strict";
+import { expect, test } from "vite-plus/test";
 import { parseScadaDocument } from "../src/document.ts";
 import { renderSvgPage } from "../src/svg.ts";
 import type { TagValue } from "../src/tag-store.ts";
@@ -46,22 +45,22 @@ const tag = (quality: TagValue["quality"], value: TagValue["value"]): TagValue =
   serverTimestamp: "2026-11-09T00:00:00.000Z",
 });
 
-void test("SVG output escapes user strings and uses the explicit GOOD value", () => {
+test("SVG output escapes user strings and uses the explicit GOOD value", () => {
   const svg = renderSvgPage(document, "main", new Map([["water.level", tag("GOOD", 75)]]));
-  assert.match(svg, /75%/);
-  assert.match(svg, /Demo &lt;svg&gt;/);
-  assert.match(svg, /&lt;script&gt;/);
-  assert.doesNotMatch(svg, /<script>|onload=|onclick=/);
+  expect(svg).toMatch(/75%/);
+  expect(svg).toMatch(/Demo &lt;svg&gt;/);
+  expect(svg).toMatch(/&lt;script&gt;/);
+  expect(svg).not.toMatch(/<script>|onload=|onclick=/);
 });
 
-void test("STALE and missing values do not appear as live measurements", () => {
+test("STALE and missing values do not appear as live measurements", () => {
   const staleSvg = renderSvgPage(document, "main", new Map([["water.level", tag("STALE", 75)]]));
-  assert.match(staleSvg, /STALE/);
-  assert.doesNotMatch(staleSvg, /75%/);
+  expect(staleSvg).toMatch(/STALE/);
+  expect(staleSvg).not.toMatch(/75%/);
   const unknownSvg = renderSvgPage(document, "main", new Map());
-  assert.match(unknownSvg, /BAD/);
+  expect(unknownSvg).toMatch(/BAD/);
 });
 
-void test("unknown page fails visibly", () => {
-  assert.throws(() => renderSvgPage(document, "unknown", new Map()), /Unknown page/);
+test("unknown page fails visibly", () => {
+  expect(() => renderSvgPage(document, "unknown", new Map())).toThrow(/Unknown page/);
 });

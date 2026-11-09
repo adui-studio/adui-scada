@@ -58,4 +58,13 @@ for (const path of [
   assert.doesNotMatch(content, /\b(?:fmt|lint)\s*:/, `${path} must not override root format/lint`);
 }
 
+assert.ok(
+  text("packages/tooling/src/format.ts").includes('".agents/skills/**"'),
+  "Formatter must ignore third-party Skills",
+);
+assert.ok(
+  text("packages/tooling/src/lint.ts").includes('".agents/skills/**"'),
+  "Linter must ignore third-party Skills",
+);
+
 console.log(`Shared config OK: ${expected.size} TSConfig consumers + root format/lint`);

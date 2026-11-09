@@ -1,5 +1,7 @@
 /** Shared Oxfmt settings; the root .editorconfig is the editor baseline. */
 export const sharedFormat = {
+  // Third-party skill instructions are vendor-owned; keep formatting on project sources.
+  ignorePatterns: [".agents/skills/**"],
   printWidth: 100,
   tabWidth: 2,
   useTabs: false,

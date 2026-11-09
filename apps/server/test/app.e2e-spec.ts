@@ -26,6 +26,9 @@ describe("AppController (e2e)", () => {
   });
 
   it("does not expose an industrial write endpoint", async () => {
-    await request(app.getHttpServer()).post("/api/devices/write").send({ value: 1 }).expect(404);
+    const response = await request(app.getHttpServer())
+      .post("/api/devices/write")
+      .send({ value: 1 });
+    expect(response.status).toBe(404);
   });
 });

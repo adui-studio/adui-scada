@@ -42,7 +42,11 @@ export class DemoRuntime {
   private status: RuntimeStatus = 'idle';
   private message = initialRuntimeState.message;
   private active = false;
-  constructor(private readonly listener: RuntimeListener) {}
+  private readonly listener: RuntimeListener;
+
+  constructor(listener: RuntimeListener) {
+    this.listener = listener;
+  }
 
   private publish(): void {
     if (this.active) this.listener({ status: this.status, document: this.document, values: this.store.snapshot(), message: this.message });

@@ -32,3 +32,8 @@ Studio 编辑器、生产业务后端接口、真实网关、报警/历史、工
 - 明确开源许可证与工业安全现场验证条件。
 
 [工具链](V0.1_TOOLCHAIN.md) · [Harness](HARNESS.md) · [代码地图](CODEBASE_MAP.md)
+
+## 2026-11-09 · 首轮 Windows 质量检查反馈
+
+`pnpm install`、`pnpm run deps:check`、`pnpm run config:check` 已由维护者运行成功。
+`pnpm run ready` 首先被格式差异阻断；`vp check --fix` 暴露 7 个类型错误与 1 个测试规则警告。已对源代码和共享格式忽略规则做针对性修复，**等待维护者本机复验**。
