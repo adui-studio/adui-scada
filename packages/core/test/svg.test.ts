@@ -46,7 +46,7 @@ const tag = (quality: TagValue["quality"], value: TagValue["value"]): TagValue =
   serverTimestamp: "2026-11-09T00:00:00.000Z",
 });
 
-test("SVG output escapes user strings and uses the explicit GOOD value", () => {
+void test("SVG output escapes user strings and uses the explicit GOOD value", () => {
   const svg = renderSvgPage(document, "main", new Map([["water.level", tag("GOOD", 75)]]));
   assert.match(svg, /75%/);
   assert.match(svg, /Demo &lt;svg&gt;/);
@@ -54,7 +54,7 @@ test("SVG output escapes user strings and uses the explicit GOOD value", () => {
   assert.doesNotMatch(svg, /<script>|onload=|onclick=/);
 });
 
-test("STALE and missing values do not appear as live measurements", () => {
+void test("STALE and missing values do not appear as live measurements", () => {
   const staleSvg = renderSvgPage(document, "main", new Map([["water.level", tag("STALE", 75)]]));
   assert.match(staleSvg, /STALE/);
   assert.doesNotMatch(staleSvg, /75%/);
@@ -62,6 +62,6 @@ test("STALE and missing values do not appear as live measurements", () => {
   assert.match(unknownSvg, /BAD/);
 });
 
-test("unknown page fails visibly", () => {
+void test("unknown page fails visibly", () => {
   assert.throws(() => renderSvgPage(document, "unknown", new Map()), /Unknown page/);
 });

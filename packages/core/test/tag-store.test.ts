@@ -13,7 +13,7 @@ const make = (sequence = 1, quality: TagValue["quality"] = "GOOD"): TagValue => 
   sequence,
 });
 
-test("subscribers receive initial snapshot and incrementals; unsubscribe works", () => {
+void test("subscribers receive initial snapshot and incrementals; unsubscribe works", () => {
   const store = new TagStore();
   const events: string[] = [];
   const unsubscribe = store.subscribe((event) =>
@@ -25,7 +25,7 @@ test("subscribers receive initial snapshot and incrementals; unsubscribe works",
   assert.deepEqual(events, ["snapshot:0", "delta:1"]);
 });
 
-test("ignores out-of-order and duplicate sequence without mutating values", () => {
+void test("ignores out-of-order and duplicate sequence without mutating values", () => {
   const store = new TagStore();
   store.apply([make(5)]);
   assert.equal(store.apply([make(3)]).length, 0);
@@ -33,7 +33,7 @@ test("ignores out-of-order and duplicate sequence without mutating values", () =
   assert.equal(store.get("water.level")?.sequence, 5);
 });
 
-test("batch rejects invalid/duplicated data atomically", () => {
+void test("batch rejects invalid/duplicated data atomically", () => {
   const store = new TagStore();
   const bad = { ...make(), value: Number.NaN };
   assert.throws(() => store.apply([make(), bad]), /Duplicate update|Invalid number/);
@@ -46,7 +46,7 @@ test("batch rejects invalid/duplicated data atomically", () => {
   );
 });
 
-test("stale is explicit, changes sequence, retains last reading, recovery is possible", () => {
+void test("stale is explicit, changes sequence, retains last reading, recovery is possible", () => {
   const store = new TagStore();
   store.apply([make()]);
   const now = Date.parse(at) + 3000;

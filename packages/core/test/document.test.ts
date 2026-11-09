@@ -27,7 +27,7 @@ function fixture() {
   };
 }
 
-test("validates and clones a portable document", () => {
+void test("validates and clones a portable document", () => {
   const source = fixture();
   const parsed = parseScadaDocument(source);
   assert.deepEqual(JSON.parse(JSON.stringify(parsed)), source);
@@ -35,7 +35,7 @@ test("validates and clones a portable document", () => {
   assert.equal(parsed.pages[0].nodes[0].props.title, "Tank 1");
 });
 
-test("rejects unsupported schema and invalid geometry", () => {
+void test("rejects unsupported schema and invalid geometry", () => {
   const unsupported = fixture() as any;
   unsupported.schemaVersion = "99";
   assert.throws(() => parseScadaDocument(unsupported), /unsupported version/);
@@ -44,7 +44,7 @@ test("rejects unsupported schema and invalid geometry", () => {
   assert.throws(() => parseScadaDocument(invalid), /finite number/);
 });
 
-test("rejects duplicate page/node ID and unsafe JSON keys", () => {
+void test("rejects duplicate page/node ID and unsafe JSON keys", () => {
   const duplicated = fixture();
   duplicated.pages[0].nodes[0].id = "main";
   assert.throws(() => parseScadaDocument(duplicated), /duplicate ID/);
@@ -53,7 +53,7 @@ test("rejects duplicate page/node ID and unsafe JSON keys", () => {
   assert.throws(() => parseScadaDocument(injected), /unsafe property key/);
 });
 
-test("rejects functions and cycles in user-defined rules", () => {
+void test("rejects functions and cycles in user-defined rules", () => {
   const fn = fixture() as any;
   fn.pages[0].nodes[0].rules = [() => "unsafe"];
   assert.throws(() => parseScadaDocument(fn), /not a JSON value/);
