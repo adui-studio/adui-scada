@@ -43,3 +43,11 @@
 - `.dockerignore`：限制 Docker build context，不上传本地依赖、构建产物及私有环境文件。
 
 见 [部署说明](../deploy/docker/README.md)。**尚未 Docker 运行验收**，不代表生产部署能力。
+
+## 环境变量
+
+- 根 `.env.example`：Docker Compose Web 入口的宿主机端口模板。
+- `apps/web-react/.env.example` / `apps/web-vue/.env.example`：Vite+ 开发监听、代理目标；只读取 `SCADA_*`，不会注入浏览器。
+- `apps/server/.env.example` / `examples/water-treatment/.env.example`：Node 运行时服务端口与监听主机。
+- `scripts/check-env-config.mjs`：环境模板和隔离策略的静态检查。
+- 详细约定见 [环境变量说明](ENVIRONMENT.md)。

@@ -73,3 +73,13 @@ pnpm run docker:demo:up
 ```
 
 访问 React：`http://127.0.0.1:8080`；Vue：`http://127.0.0.1:8081`。详情与安全边界见 [Docker 演示说明](deploy/docker/README.md)，部署决策见 [ADR-0007](docs/adr/0007-docker-demo-deployment.md)。当前环境尚未运行 Docker 构建/容器验证。
+
+## 环境变量配置
+
+支持按作用域配置 Vue、React、NestJS、模拟 SSE 与 Docker。所有 `.env` 均可选，不创建时沿用安全默认值；从对应目录 `.env.example` 复制成 `.env` 后可覆盖开发地址及端口。Docker 宿主机端口在仓库根 `.env` 中配置。统一校验：
+
+```powershell
+pnpm run env:check
+```
+
+**实际 `.env` 不入库；`SCADA_*` 仅供 Vite 配置端读取，不能放前端密钥。** 详见 [环境变量说明](docs/ENVIRONMENT.md) 与 [ADR-0008](docs/adr/0008-env-configuration.md)。

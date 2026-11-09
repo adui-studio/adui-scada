@@ -1,7 +1,13 @@
 import { createServer } from "node:http";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { loadEnvFile } from "node:process";
+import { fileURLToPath } from "node:url";
 import { TagStore, WaterTreatmentSimulator, renderSvgPage } from "../../packages/core/src/index.ts";
 import { demoDocument } from "./project.mjs";
+
+// Optional, local-only .env; Docker supplies environment variables directly.
+const envPath = fileURLToPath(new URL("./.env", import.meta.url));
+if (existsSync(envPath)) loadEnvFile(envPath);
 
 // Diagnostic harness only. Default to localhost; 0.0.0.0 is allowed
 // solely for an isolated Docker demo bridge without host port publication.
@@ -9,7 +15,10 @@ const host = process.env.DEMO_HOST ?? "127.0.0.1";
 if (host !== "127.0.0.1" && host !== "0.0.0.0") {
   throw new Error("DEMO_HOST must be 127.0.0.1 or 0.0.0.0");
 }
-const port = 4178;
+const port = Number(process.env.DEMO_PORT ?? "4178");
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  throw new Error("DEMO_PORT must be an integer between 1 and 65535");
+}
 const index = readFileSync(new URL("./public/index.html", import.meta.url));
 const script = readFileSync(new URL("./public/client.js", import.meta.url));
 const style = readFileSync(new URL("./public/style.css", import.meta.url));
