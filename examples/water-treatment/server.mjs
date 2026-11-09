@@ -3,8 +3,12 @@ import { readFileSync } from "node:fs";
 import { TagStore, WaterTreatmentSimulator, renderSvgPage } from "../../packages/core/src/index.ts";
 import { demoDocument } from "./project.mjs";
 
-// This is a localhost-only diagnostic harness, not a production HTTP/API server.
-const host = "127.0.0.1";
+// Diagnostic harness only. Default to localhost; 0.0.0.0 is allowed
+// solely for an isolated Docker demo bridge without host port publication.
+const host = process.env.DEMO_HOST ?? "127.0.0.1";
+if (host !== "127.0.0.1" && host !== "0.0.0.0") {
+  throw new Error("DEMO_HOST must be 127.0.0.1 or 0.0.0.0");
+}
 const port = 4178;
 const index = readFileSync(new URL("./public/index.html", import.meta.url));
 const script = readFileSync(new URL("./public/client.js", import.meta.url));

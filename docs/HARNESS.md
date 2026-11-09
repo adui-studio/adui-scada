@@ -117,3 +117,20 @@ pnpm run desktop:build:vue:msi
 **V0.1 双框架桌面模拟验收小结**：React / Vue MSI 构建、安装启动、SVG 与模拟数据展示、`SIMULATION` 明确标识、`STALE` 标记及自动恢复均有维护者的实测反馈。证据来源分别是构建日志、运行截图与维护者后续确认；未把这次确认视为持续运行压力测试或自动化 E2E。
 
 仍待验证：全新 Windows 环境、MSI 卸载/升级、更多断连边界、NSIS 全目标打包、生产工业网关及安全性。V0.1 是模拟只读原型，不构成可投产 SCADA 的验收。
+
+## V0.1 Docker 演示验收（待 Windows/Docker Desktop 执行）
+
+已新增 `deploy/docker/compose.demo.yaml`、React/Vue 共享 Dockerfile、NestJS Dockerfile、模拟器 Dockerfile 与 Nginx 代理。质量验收步骤：
+
+```powershell
+docker compose -f deploy/docker/compose.demo.yaml config
+docker compose -f deploy/docker/compose.demo.yaml up --build -d
+docker compose -f deploy/docker/compose.demo.yaml ps
+Invoke-RestMethod http://127.0.0.1:8080/api/health
+Invoke-RestMethod http://127.0.0.1:8080/demo/project
+curl.exe -N http://127.0.0.1:8080/demo/events
+```
+
+随后分别打开 `http://127.0.0.1:8080`（React）、`http://127.0.0.1:8081`（Vue），验证两端画面、数据质量和模拟 `STALE → GOOD`。结束运行使用 `pnpm run docker:demo:down`。
+
+**本轮未执行 Docker CLI/config/build/run**：当前协作环境无 Docker；不能据此声称容器部署已通过。V0.1 模拟 HTTP/SSE 未鉴权，仅限 loopback 测试，不构成工业现场验收。

@@ -32,3 +32,14 @@
 目标但**未创建**：`src/studio`、`apps/gateway`、生产 NestJS API、Tauri 生产离线数据能力、2D 编辑器与 3D 引擎。Studio 与 Runtime 共用一个 Web 应用，但 Runtime 不依赖编辑器代码。
 
 [架构](ARCHITECTURE.md) · [开发进度](PROJECT_CONTEXT.md) · [Harness](HARNESS.md)
+
+## V0.1 Docker 本地演示
+
+- `deploy/docker/compose.demo.yaml`：双框架 Web + NestJS /health + SSE 模拟器的本地演示 Compose。
+- `deploy/docker/Dockerfile.web`：通过 `WEB_APP` 参数选择构建 React / Vue，Nginx 静态运行。
+- `deploy/docker/Dockerfile.server`：NestJS 多阶段构建、Node 24 运行时。
+- `deploy/docker/Dockerfile.demo`：独立模拟 SSE 服务；无工业设备权限。
+- `deploy/docker/nginx.conf`：同源代理固定演示接口，关闭 SSE 缓冲，避免 SPA 错误回退。
+- `.dockerignore`：限制 Docker build context，不上传本地依赖、构建产物及私有环境文件。
+
+见 [部署说明](../deploy/docker/README.md)。**尚未 Docker 运行验收**，不代表生产部署能力。

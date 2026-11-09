@@ -1,0 +1,16 @@
+# syntax=docker/dockerfile:1
+# Demo-only V0.1 static Web build; same Dockerfile for Vue and React.
+FROM node:24.22.2-bookworm AS build
+WORKDIR /workspace
+RUN npm install --global pnpm@12.18.0
+COPY . .
+RUN pnpm install --frozen-lockfile
+ARG WEB_APP=web-react
+RUN case "$WEB_APP" in web-react|web-vue) ;; *) exit 1 ;; esac \
+    && pnpm --filter "@adui/scada-${WEB_APP}" run build
+
+FROM nginx:stable-alpine
+ARG WEB_APP=web-react
+COPY --from=build /workspace/apps/${WEB_APP}/dist/ /usr/share/nginx/html/
+COPY deploy/docker/nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 8080

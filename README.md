@@ -62,3 +62,14 @@ Tauri（Windows，需 Rust 和 WebView2 等前置环境）：先启动模拟服�
 ## V0.1 桌面安装版
 
 Tauri MSI 构建（`desktop:build:react:msi` / `desktop:build:vue:msi`）使用独立的 `--mode desktop` Web 构建，内置**明确标注的离线模拟数据源**，无需运行 `pnpm run dev:demo`。Web 开发与桌面开发模式仍需本地 SSE 模拟服务。模拟数据不是 PLC/DCS 实际采集，不能用于生产控制。详情见 [桌面端说明](apps/desktop/README.md)。
+
+## Docker 本地演示部署（V0.1）
+
+已预留 Docker Compose 演示运行方式，分别构建 React / Vue 静态 Web、NestJS 健康检查服务和只读模拟 SSE。**仅绑定本机 127.0.0.1，不可视为生产 SCADA 部署。**
+
+```powershell
+docker compose -f deploy/docker/compose.demo.yaml config
+pnpm run docker:demo:up
+```
+
+访问 React：`http://127.0.0.1:8080`；Vue：`http://127.0.0.1:8081`。详情与安全边界见 [Docker 演示说明](deploy/docker/README.md)，部署决策见 [ADR-0007](docs/adr/0007-docker-demo-deployment.md)。当前环境尚未运行 Docker 构建/容器验证。

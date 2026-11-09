@@ -29,7 +29,10 @@
     "desktop:build:vue": "pnpm --filter @adui/scada-desktop run build:vue",
     "config:check": "node scripts/check-shared-config.mjs",
     "desktop:build:react:msi": "pnpm --filter @adui/scada-desktop run build:react:msi",
-    "desktop:build:vue:msi": "pnpm --filter @adui/scada-desktop run build:vue:msi"
+    "desktop:build:vue:msi": "pnpm --filter @adui/scada-desktop run build:vue:msi",
+    "docker:demo:up": "docker compose -f deploy/docker/compose.demo.yaml up --build -d",
+    "docker:demo:down": "docker compose -f deploy/docker/compose.demo.yaml down",
+    "docker:demo:logs": "docker compose -f deploy/docker/compose.demo.yaml logs -f"
   },
   "devDependencies": {
     "@adui/tooling": "workspace:*",

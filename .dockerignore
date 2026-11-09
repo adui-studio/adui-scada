@@ -1,0 +1,25 @@
+# V0.1 Docker build context: exclude local dependencies, artifacts and private files.
+.git
+.gitignore
+.agents
+.github
+node_modules
+**/node_modules
+**/dist
+**/target
+**/.tmp
+**/.cache
+*.log
+**/*.log
+.env
+.env.*
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+.coverage
+coverage
+*.msi
+*.exe
