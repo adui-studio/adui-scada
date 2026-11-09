@@ -1,47 +1,47 @@
 # ADui SCADA
 
-**ADui Studio 出品的工业 SCADA / HMI 组态与实时监控平台。**
+ADui Studio 维护的工业 SCADA / HMI 开源项目。**当前 V0.1 是模拟数据与只读监控原型，不是可用于生产的 SCADA 系统。**
 
-> **状态：V0.1 核心原型（非生产版本）。** 当前已提供共享 TypeScript Core、模拟 Tag 和只读 SVG 演示。Vue/React 正式应用、NestJS、工业 Gateway、数据库及 2D 编辑器尚未实现；以下产品能力仍是目标。
+## 已实现（V0.1 开发分支）
 
-## 产品方向
+- **apps/web-react**：React 19 Web 应用，当前仅提供 Runtime 监控页面。
+- **apps/web-vue**：Vue 3 Web 应用，当前仅提供 Runtime 监控页面。
+- **packages/core**：框架无关的工程 Schema、TagStore、质量状态、SVG 序列化和水处理模拟器。
+- **packages/runtime**：浏览器 SSE 诊断客户端，带断线质量标记及自动重连。
+- **examples/water-treatment**：本机模拟数据服务器；不连接 PLC/DCS。
 
-- **Web 双版本**：Vue 3 与 React，共享工程 Schema、编辑器核心、Tag 数据模型与业务 API；两种框架的工程文件互通。
-- **2D 组态**：SVG 工业图元、画布编辑、变量绑定、独立运行时、版本化发布。
-- **工业数据**：NestJS 业务平台、独立 Gateway；目标支持 OPC UA、Modbus TCP、MQTT、报警和历史趋势。
-- **桌面端**：后续使用 Tauri 2 封装 Windows 版本。
-- **3D 扩展**：Three.js 自研独立引擎，Vue/React 适配。
-- **暂缓**：原生移动 App、未经评审的设备写入。
+Studio（组态编辑器）、NestJS、工业网关、Tauri、Three.js 均尚未实现。
 
-## V0.1 本地开发
+## 模板与依赖
 
-环境要求（原仓库声明）：Node.js >= 22.18.0、pnpm 12.18.0、Vite+ 1.5.0。本阶段没有引入新的第三方运行时依赖。原始锁文件是否与 `vite-plus` 及新增工作区一致，需运行 `pnpm install` 后检查差异并由维护者确认。
+对照用户提供的 React、Vue、NestJS、Tauri 四套默认模板；当前只建立 React/Vue 应用，后端与桌面端不建空工程。
+所有第三方依赖版本在 `pnpm-workspace.yaml` Catalog 中维护，包间使用 `workspace:*`。TypeScript 采用 6.0.3，测试统一使用 Vite+ 集成的 Vitest。
+
+环境按仓库 package.json：Node >= 22.18.0，pnpm 12.18.0，Vite+ 1.5.0。新依赖必须执行 `pnpm install` 后更新并审查锁文件。
 
 ```powershell
 pnpm install
-pnpm run test:core
+pnpm run deps:check
+pnpm run test:unit
+pnpm run typecheck:web
+pnpm run build:web
+vp check
 pnpm run docs:check
-pnpm run dev
 ```
 
-打开 `http://127.0.0.1:4178`。演示为 **Node HTTP + SSE + SVG 诊断页**，只监听 loopback 地址，未接真实 PLC、NestJS 或 Vue/React。模拟 Tag 每秒更新；每 30 秒模拟约 8 秒的采集中断，超时后状态显示 `STALE`，不以旧读数假装实时状态。`Ctrl+C` 停止。`vp check` 用于检查现有 Vite+ 配置及新增代码；构建命令将在正式应用加入后提供。
+启动三个终端：
+```powershell
+pnpm run dev:demo
+pnpm run dev:react
+pnpm run dev:vue
+```
 
-当前核心模块：`packages/core/src/document.ts`（工程解析）、`tag-store.ts`（Tag 质量/快照/增量）、`svg.ts`（SVG 渲染）、`simulator.ts`（模拟数据）。以上模块均不依赖 Vue/React。`examples/water-treatment/` 仅用于快速验证端到端模拟链路，**不是**正式 Runtime 的网络/安全架构。
+React: http://127.0.0.1:5173 · Vue: http://127.0.0.1:5174 · 模拟端: http://127.0.0.1:4178
 
-## 文档与工程规则
+模拟服务仅绑定 127.0.0.1。客户端通过 Web dev proxy 的 `/demo` 访问工程与 SSE，不直连工业设备。断线/失效质量不能展示为正常值。
 
-| 文档                                             | 作用                        |
-| ------------------------------------------------ | --------------------------- |
-| [AGENTS.md](AGENTS.md)                           | Agent 协作、安全与 Git 规则 |
-| [REQUIREMENTS](docs/REQUIREMENTS.md)             | 产品需求和验收条件          |
-| [ARCHITECTURE](docs/ARCHITECTURE.md)             | 目标架构                    |
-| [SDD](docs/SDD.md)                               | 数据契约及候选接口          |
-| [V0.1 实施记录](docs/V0.1_IMPLEMENTATION.md)     | 当前实现、实测与下一阶段    |
-| [PROJECT_CONTEXT](docs/PROJECT_CONTEXT.md)       | 当前真实进度与风险          |
-| [CODEBASE_MAP](docs/CODEBASE_MAP.md)             | 实际目录与规划目录          |
-| [SKILLS](docs/SKILLS.md)                         | 已安装 Agent Skills         |
-| [HARNESS](docs/HARNESS.md)                       | 质量入口与验证口径          |
-| [VALIDATION](docs/VALIDATION.md)                 | 文档检查说明                |
-| [ADR-0001](docs/adr/0001-dual-framework-core.md) | 双框架共享 Core             |
+## 规范与状态
 
-当前仓库尚无 `LICENSE`；开源许可需另行明确，公开可见不等于授予再分发权。
+[Agent 规则](AGENTS.md) · [需求](docs/REQUIREMENTS.md) · [架构](docs/ARCHITECTURE.md) · [详细设计](docs/SDD.md) · [代码地图](docs/CODEBASE_MAP.md) · [验证](docs/HARNESS.md) · [开发进度](docs/PROJECT_CONTEXT.md) · [工具链说明](docs/V0.1_TOOLCHAIN.md)
+
+当前没有 `LICENSE`；公开 GitHub 仓库不等于已授予开源许可证。
