@@ -24,13 +24,13 @@ pnpm run docker:demo:logs
 pnpm run docker:demo:down
 ```
 
-| 入口 | 地址 | 用途 |
-| --- | --- | --- |
-| React | http://127.0.0.1:8080 | React 只读 Runtime，通过同源 `/demo` 获取模拟数据 |
-| Vue | http://127.0.0.1:8081 | Vue 只读 Runtime，共享工程与 Tag 契约 |
-| 健康检查 | http://127.0.0.1:8080/api/health | NestJS 进程存活探针，不代表网关健康 |
-| 演示工程 | http://127.0.0.1:8080/demo/project | 只供本地诊断，未经认证 |
-| 演示 SSE | http://127.0.0.1:8080/demo/events | 演练 `GOOD → STALE → GOOD` |
+| 入口     | 地址                               | 用途                                              |
+| -------- | ---------------------------------- | ------------------------------------------------- |
+| React    | http://127.0.0.1:8080              | React 只读 Runtime，通过同源 `/demo` 获取模拟数据 |
+| Vue      | http://127.0.0.1:8081              | Vue 只读 Runtime，共享工程与 Tag 契约             |
+| 健康检查 | http://127.0.0.1:8080/api/health   | NestJS 进程存活探针，不代表网关健康               |
+| 演示工程 | http://127.0.0.1:8080/demo/project | 只供本地诊断，未经认证                            |
+| 演示 SSE | http://127.0.0.1:8080/demo/events  | 演练 `GOOD → STALE → GOOD`                        |
 
 PowerShell 简单测试：
 
