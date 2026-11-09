@@ -1,0 +1,8 @@
+{
+  "build": {
+    "beforeDevCommand": "pnpm --dir ../web-vue dev",
+    "devUrl": "http://127.0.0.1:5174",
+    "beforeBuildCommand": "pnpm --dir ../web-vue build",
+    "frontendDist": "../../web-vue/dist"
+  }
+}

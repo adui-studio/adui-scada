@@ -8,6 +8,10 @@
 | `apps/web-react/src/runtime/RuntimePage.tsx` | React 只读水处理监控 |
 | `apps/web-vue/src/App.vue` | Vue Web 应用根，按需加载 Runtime |
 | `apps/web-vue/src/runtime/RuntimePage.vue` | Vue 只读水处理监控 |
+| `apps/server/src/` | NestJS 12 ESM 模块化启动和本地 GET /health |
+| `apps/server/test/` | Vitest + Supertest E2E 验证 |
+| `apps/desktop/src-tauri/` | Tauri 2 Rust 桌面壳及最小能力权限 |
+| `apps/desktop/src-tauri/tauri.vue.conf.json` | 选择 Vue Web 构建目标 |
 | `packages/core/src/` | 工程文档、TagStore、模拟器、SVG |
 | `packages/runtime/src/` | SSE 浏览器订阅、质量状态、样式 |
 | `packages/core/test/`、`packages/runtime/test/` | Vitest 单元测试 |
@@ -17,6 +21,6 @@
 | `scripts/check-dependency-catalog.mjs` | Catalog 依赖一致性检查 |
 | `scripts/validate-docs.mjs` | 文档静态检查 |
 
-目标但**未创建**：`src/studio`、`apps/server`（NestJS）、`apps/gateway`、`apps/desktop`（Tauri）、2D 编辑器与 3D 引擎。Studio 与 Runtime 共用一个 Web 应用，但 Runtime 不依赖编辑器代码。
+目标但**未创建**：`src/studio`、`apps/gateway`、生产 NestJS API、Tauri 生产离线数据能力、2D 编辑器与 3D 引擎。Studio 与 Runtime 共用一个 Web 应用，但 Runtime 不依赖编辑器代码。
 
 [架构](ARCHITECTURE.md) · [开发进度](PROJECT_CONTEXT.md) · [Harness](HARNESS.md)

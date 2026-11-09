@@ -1,6 +1,6 @@
 # ADui SCADA · 系统架构（目标设计）
 
-> **大部分为目标设计。** V0.1 目前只有框架无关 Core 和只读模拟诊断页；Vue/React、NestJS 与工业 Gateway 尚未创建。实际目录见 [CODEBASE_MAP](CODEBASE_MAP.md)，实现边界见 [V0.1 实施记录](V0.1_IMPLEMENTATION.md)，范围见 [REQUIREMENTS](REQUIREMENTS.md)。
+> **大部分为目标设计。** V0.1 已有共享 Core/Runtime、Vue/React 最小 Web、NestJS 本地进程探针和 Tauri 2 桌面壳；工业 Gateway 尚未创建。实际目录见 [CODEBASE_MAP](CODEBASE_MAP.md)，实现边界见 [V0.1 实施记录](V0.1_IMPLEMENTATION.md)，范围见 [REQUIREMENTS](REQUIREMENTS.md)。
 
 ## 1. 架构原则
 
@@ -46,13 +46,13 @@ Tauri 并非同时运行两种前端；将按构建目标分别选择。Server �
 | 领域     | 目标方案                                | 现状                                     |
 | -------- | --------------------------------------- | ---------------------------------------- |
 | 工程     | Vite+ 1.5、pnpm workspace               | 已配置；原锁文件待目标环境复验           |
-| Web      | Vue 3、React 19、TypeScript             | 已确定方向，未创建                       |
+| Web      | Vue 3、React 19、TypeScript             | 已创建两个最小 Web Runtime                       |
 | UI       | TDesign Vue Next、Ant Design            | 候选                                     |
 | 2D       | SVG + 自研独立编辑/渲染核心             | V0.1 仅实现只读 SVG 图元和解析，无编辑器 |
 | 共享数据 | Document / TagValue / 质量状态          | V0.1 已实现本地模拟核心，未持久化        |
 | 3D       | Three.js 自研 Core + Vue/React adapters | 后续，非 V1 前置                         |
-| 桌面     | Tauri 2                                 | 规划                                     |
-| 业务 API | NestJS                                  | 规划                                     |
+| 桌面     | Tauri 2                                 | 已创建 Windows 优先桌面壳；未验证打包                                     |
+| 业务 API | NestJS                                  | 已创建本地 /health；业务 API 尚未实现                                     |
 | 业务数据 | PostgreSQL + Prisma                     | 候选                                     |
 | 历史库   | TimescaleDB                             | 候选；时序迁移独立管理                   |
 | 实时     | WebSocket + Redis                       | 候选；V0.1 仅 demo 使用 localhost SSE    |
@@ -62,9 +62,11 @@ Tauri 并非同时运行两种前端；将按构建目标分别选择。Server �
 
 长期目标：`core/document` 管 Schema/迁移；`editor-core` 管命令、撤销重做、几何；`renderer-svg` 管工业矢量图元；`tag-engine` 管类型、质量、快照和增量；`adapter-vue`、`adapter-react` 管框架生命周期及界面。运行时不得反向依赖编辑器；所有核心包不得依赖 Vue/React；前端不能直接连接 PLC。
 
-V0.1 实际使用 `packages/core` 聚合 Document、TagStore、Simulator、SVG 的纯 TypeScript 实现，暂不为尚未稳定的接口建立多个空包。`examples/water-treatment` 是只监听 127.0.0.1 的模拟链路，用于检验工程 Schema、质量和只读可视化，不能直接视为生产 Runtime/API。两端适配组件、鉴权和工业通信都仍是未来工作。
+V0.1 实际使用 `packages/core` 聚合 Document、TagStore、Simulator、SVG 的纯 TypeScript 实现，暂不为尚未稳定的接口建立多个空包。`examples/water-treatment` 是只监听 127.0.0.1 的模拟链路，用于检验工程 Schema、质量和只读可视化，不能直接视为生产 Runtime/API。Vue/React 展示适配已创建；鉴权和工业通信仍是未来工作。
 
 3D 使用独立的 Three.js 引擎抽象，未来经共享设备 ID、Tag ID 与场景协议接入，不要求与 SVG 共享底层 Renderer。
+
+V0.1 的 Tauri 通过默认配置嵌入 React 构建，可通过附加配置选择 Vue。Rust 主程序仅初始化空权限桌面壳，不含工业命令。NestJS Server 与模拟 SSE 服务是两个独立本地进程，当前二者没有业务对接；打包后的桌面应用不内置模拟 SSE。
 
 ## 5. 数据与发布流程（目标）
 

@@ -10,7 +10,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["packages/core/test/**/*.test.ts", "packages/runtime/test/**/*.test.ts"],
+    include: ["packages/core/test/**/*.test.ts", "packages/runtime/test/**/*.test.ts", "apps/server/src/**/*.spec.ts"],
   },
   run: { cache: true },
 });

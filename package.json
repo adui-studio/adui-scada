@@ -16,8 +16,17 @@
     "test:runtime": "vp test run packages/runtime/test",
     "deps:check": "node scripts/check-dependency-catalog.mjs",
     "docs:check": "node scripts/validate-docs.mjs",
-    "ready": "pnpm run deps:check && vp check && pnpm run typecheck:web && pnpm run test:unit && pnpm run docs:check && pnpm run build:web",
-    "prepare": "vp config"
+    "ready": "pnpm run deps:check && vp check && pnpm run typecheck:web && pnpm run typecheck:server && pnpm run test:unit && pnpm run test:e2e:server && pnpm run docs:check && pnpm run build:web && pnpm run build:server",
+    "prepare": "vp config",
+    "dev:server": "pnpm --filter @adui/scada-server run start:dev",
+    "build:server": "pnpm --filter @adui/scada-server run build",
+    "typecheck:server": "pnpm --filter @adui/scada-server run typecheck",
+    "test:server": "pnpm --filter @adui/scada-server run test",
+    "test:e2e:server": "pnpm --filter @adui/scada-server run test:e2e",
+    "desktop:dev:react": "pnpm --filter @adui/scada-desktop run dev:react",
+    "desktop:dev:vue": "pnpm --filter @adui/scada-desktop run dev:vue",
+    "desktop:build:react": "pnpm --filter @adui/scada-desktop run build:react",
+    "desktop:build:vue": "pnpm --filter @adui/scada-desktop run build:vue"
   },
   "devDependencies": {
     "@types/node": "catalog:",

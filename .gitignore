@@ -37,3 +37,6 @@ dist-ssr
 
 *.zip
 *.patch
+# Tauri / Rust generated outputs
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/

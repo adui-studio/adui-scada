@@ -1,0 +1,37 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ADui SCADA",
+  "version": "0.1.0",
+  "identifier": "studio.adui.scada",
+  "build": {
+    "beforeDevCommand": "pnpm --dir ../web-react dev",
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeBuildCommand": "pnpm --dir ../web-react build",
+    "frontendDist": "../../web-react/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "ADui SCADA",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 600,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://127.0.0.1:5173 ws://127.0.0.1:5174; object-src 'none'; base-uri 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.ico"
+    ]
+  }
+}
