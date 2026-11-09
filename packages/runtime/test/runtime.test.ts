@@ -24,7 +24,7 @@ test('disconnect marks previously GOOD readings STALE', () => {
 test('bad snapshot is atomic', () => {
   const store = new TagStore();
   applyDemoChange(store, { kind: 'snapshot', values: [mk()] });
-  expect(() => applyDemoChange(store, { kind: 'snapshot', values: [mk(2), { ...mk(3), value: Infinity }] })).toThrow();
+  expect(() => applyDemoChange(store, { kind: 'snapshot', values: [mk(2), { ...mk(3), value: Infinity }] })).toThrow(/Invalid number/);
   expect(store.get('water.level')?.sequence).toBe(1);
 });
 test('unknown event kind is rejected', () => {
