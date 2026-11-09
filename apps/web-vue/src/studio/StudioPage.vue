@@ -37,12 +37,7 @@ const selected = computed(() =>
 const displayDocument = computed(() =>
   preview.value === null
     ? state.value.document
-    : withNodePosition(
-        state.value.document,
-        preview.value.id,
-        preview.value.x,
-        preview.value.y,
-      ),
+    : withNodePosition(state.value.document, preview.value.id, preview.value.x, preview.value.y),
 );
 const displayNodes = computed(() => displayDocument.value.pages[0]?.nodes ?? []);
 const imageUrl = computed(() => svgDataUrl(displayDocument.value, previewTags));
@@ -215,7 +210,8 @@ async function importJson(event: Event) {
           :data-selected="node.id === state.selectedId"
           @click="selectNode(node.id)"
         >
-          <span>{{ node.id }}</span><small>{{ node.type }}</small>
+          <span>{{ node.id }}</span
+          ><small>{{ node.type }}</small>
         </button>
       </aside>
       <section class="studio-stage" aria-label="组态画布">
@@ -238,11 +234,7 @@ async function importJson(event: Event) {
             :height="page.size.height"
             pointer-events="none"
           />
-          <g
-            v-for="node in displayNodes"
-            :key="node.id"
-            :transform="displayTransform(node.id)"
-          >
+          <g v-for="node in displayNodes" :key="node.id" :transform="displayTransform(node.id)">
             <rect
               role="button"
               tabindex="0"
@@ -266,7 +258,9 @@ async function importJson(event: Event) {
       <aside class="studio-panel" aria-label="图元属性">
         <h2>属性</h2>
         <template v-if="selected">
-          <p><strong>{{ selected.id }}</strong> · {{ selected.type }}</p>
+          <p>
+            <strong>{{ selected.id }}</strong> · {{ selected.type }}
+          </p>
           <div class="studio-fields">
             <span>X：{{ selected.transform.x }}</span>
             <span>Y：{{ selected.transform.y }}</span>
@@ -293,8 +287,6 @@ async function importJson(event: Event) {
         <p v-else class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
       </aside>
     </div>
-    <footer>
-      V0.2 第一阶段 · 本地 JSON 草稿 · 不连接 PLC/DCS · 暂无发布与服务端保存
-    </footer>
+    <footer>V0.2 第一阶段 · 本地 JSON 草稿 · 不连接 PLC/DCS · 暂无发布与服务端保存</footer>
   </main>
 </template>

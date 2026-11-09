@@ -9,8 +9,20 @@ export default function App() {
     <>
       <nav className="scada-app-nav" aria-label="功能导航">
         <span className="scada-app-brand">ADui SCADA</span>
-        <button type="button" aria-current={view === "runtime" ? "page" : undefined} onClick={() => setView("runtime")}>运行监控</button>
-        <button type="button" aria-current={view === "studio" ? "page" : undefined} onClick={() => setView("studio")}>组态编辑</button>
+        <button
+          type="button"
+          aria-current={view === "runtime" ? "page" : undefined}
+          onClick={() => setView("runtime")}
+        >
+          运行监控
+        </button>
+        <button
+          type="button"
+          aria-current={view === "studio" ? "page" : undefined}
+          onClick={() => setView("studio")}
+        >
+          组态编辑
+        </button>
         <span className="scada-app-version">V0.2 本地原型</span>
       </nav>
       <Suspense fallback={<main role="status">正在加载页面...</main>}>

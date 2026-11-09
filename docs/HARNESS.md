@@ -160,6 +160,7 @@ pnpm run dev:vue
 ```
 
 从 React 与 Vue 首页顶部选择「组态编辑」，分别验证：
+
 - 选中水箱后拖动到新位置、方向微调，执行撤销/重做；
 - 修改 Label 文案，撤销可恢复；输入类似 `<script>` 的文本必须被 SVG 转义，不得执行；
 - React 导出 JSON → Vue 导入 → 再导出 → React 导入，Schema、节点、Tag 绑定不丢失，反向也应一致；

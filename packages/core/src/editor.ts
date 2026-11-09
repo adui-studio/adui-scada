@@ -33,8 +33,12 @@ export function withNodePosition(
   const page = firstPage(checked);
   const selected = page.nodes.find((node) => node.id === nodeId);
   if (!selected) throw new RangeError(`Unknown node: ${nodeId}`);
-  const nextX = Math.round(Math.min(Math.max(x, 0), Math.max(0, page.size.width - selected.transform.width)));
-  const nextY = Math.round(Math.min(Math.max(y, 0), Math.max(0, page.size.height - selected.transform.height)));
+  const nextX = Math.round(
+    Math.min(Math.max(x, 0), Math.max(0, page.size.width - selected.transform.width)),
+  );
+  const nextY = Math.round(
+    Math.min(Math.max(y, 0), Math.max(0, page.size.height - selected.transform.height)),
+  );
   return parseScadaDocument({
     ...checked,
     pages: checked.pages.map((candidate) =>
@@ -85,7 +89,10 @@ export class DocumentEditor {
     if (!node) return false;
     const next = withNodePosition(this.current, node.id, x, y);
     const nextNode = firstPage(next).nodes.find((item) => item.id === node.id);
-    if (!nextNode || (nextNode.transform.x === node.transform.x && nextNode.transform.y === node.transform.y)) {
+    if (
+      !nextNode ||
+      (nextNode.transform.x === node.transform.x && nextNode.transform.y === node.transform.y)
+    ) {
       return false;
     }
     this.commit(next);
