@@ -1,7 +1,7 @@
 # ADui SCADA · 长期项目上下文
 
 - 日期：2026-11-09
-- 版本阶段：V0.1，**开发分支已写入源码，尚待本机完成完整验收**。
+- 版本阶段：V0.1，**Web/Server 工具链与 Windows React/Vue MSI 构建已通过维护者本机验证，安装与工业安全验收仍待完成**。
 - 品牌：ADui Studio。
 - 结构：React/Vue 两个正式 Web 应用，共享 Core 与 Runtime 业务逻辑。Studio 与 Runtime 位于同一个 Web 应用、不同功能模块。
 
@@ -21,15 +21,12 @@
 Studio 编辑器、生产业务后端接口、真实网关、报警/历史、工程发布、Tauri 生产离线运行能力、3D、数据库、认证授权、真实协议与现场性能/安全验证。
 当前两个 Web 应用不包含编辑器，亦不能作为现场 SCADA 使用。
 
-## 当前阻塞
+## 当前未完成的验收
 
-- 执行 `pnpm install` 并审查更新后的 `pnpm-lock.yaml`，确保共享配置包以 workspace 方式正确链接。
-- 运行 `pnpm run config:check` 和 `pnpm run deps:check`，以及根 `vp check` 校验框架对应 Lint overrides。
-- 在 Node >= 22.18、pnpm 12.18 环境运行 `pnpm run ready`，修复真实构建和类型问题。
-- 验证 Vue/React 连接同一模拟工程、断线时 STALE 显示一致。
-- 运行 NestJS `test:e2e`、`typecheck`、`build`，并检查服务仅监听本机地址。
-- Windows 安装 Rust / Tauri 前置工具，运行桌面 dev、Windows bundling；正式包当前不包含模拟 SSE 服务。
-- 明确开源许可证与工业安全现场验证条件。
+- 实测安装 React/Vue MSI 并在全新 Windows 环境验证启动、卸载及数据不可用时提示。两个构建共用安装包名称/产品标识，不支持默认并行安装。
+- 验证模拟 SSE 的连接/断线 STALE 质量表现和双框架一致性；打包 MSI 不内置该模拟服务。
+- 核对 Cargo.lock 与 pnpm-lock.yaml 的实际提交状态，确保构建可重现。
+- 明确开源许可证、生产工业安全准入与真实网关的隔离边界。
 
 [工具链](V0.1_TOOLCHAIN.md) · [Harness](HARNESS.md) · [代码地图](CODEBASE_MAP.md)
 
@@ -40,4 +37,8 @@ Studio 编辑器、生产业务后端接口、真实网关、报警/历史、工
 
 ## 2026-11-09 · Windows 桌面打包更新
 
-React Web 与 Rust Release 编译成功，Windows WiX 已输出 MSI 文件；NSIS 依赖文件 `nsis_tauri_utils.dll` 下载遇到 HTTP 504，导致原先的 all-targets 打包命令失败。已新增 React/Vue 单独构建 MSI 的命令以绕过非必需的 NSIS 下载，新命令和 Vue Release 均待本机验证。MSI 尚未完成独立安装及实时监控验收。
+React Web 与 Rust Release 编译成功，Windows WiX 已输出 MSI 文件；NSIS 依赖文件 `nsis_tauri_utils.dll` 下载遇到 HTTP 504，导致原先的 all-targets 打包命令失败。已新增 React/Vue 单独构建 MSI 的命令以绕过非必需的 NSIS 下载。维护者随后已成功构建两套 Release MSI；MSI 尚未完成独立安装及实时监控验收。
+
+## 2026-11-09 · 双框架 MSI 构建验收成功
+
+维护者已在 Windows 实际运行 `pnpm run desktop:build:react:msi` 和 `pnpm run desktop:build:vue:msi`，Tauri 日志均显示 Rust Release 编译成功以及 `Finished 1 bundle`。React MSI 1.92 MiB，Vue MSI 1.88 MiB，均使用 `ADui SCADA_0.1.0_x64_en-US.msi` 文件名；后构建可能覆盖前一个同名文件。此里程碑为**构建通过**，不等于安装测试、NSIS 打包或现场生产能力通过。

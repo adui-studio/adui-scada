@@ -45,7 +45,7 @@ pnpm run desktop:build:vue
 
 运行端必须从发布快照/只读订阅消费标准数据；当前 SSE 仅为本机诊断接口，不代表正式 WebSocket/API 协议。
 
-**验证状态**：开发分支的文件结构检查完成；缺少联网 pnpm/Vite+、Rust 和 Windows 工具链，故本轮未宣称 Vitest、TS6 类型检查、NestJS 构建、双 Web 构建或 Tauri 打包通过。
+**验证状态（2026-11-09）**：维护者已在 Windows 运行通过 `pnpm run ready`（含 Vite+ 检查、TS6、18 个单测、2 个 NestJS E2E、文档检查与 React/Vue/NestJS 构建）。React/Vue 桌面开发运行已由维护者确认；两套 MSI 单独打包命令也均已成功。仍未进行 MSI 安装后验证或工业现场测试。
 
 ## 2026-11-09 · 工具链初次集成反馈
 
@@ -64,4 +64,17 @@ Windows / pnpm 12.18 / TypeScript 6.0.3 实测 `pnpm install`、`deps:check`、`
 
 开发者在 Windows 运行 `pnpm run desktop:build:react`：React Web 构建、Rust release 构建成功，Tauri/WiX 输出 MSI 文件 `apps/desktop/src-tauri/target/release/bundle/msi/ADui SCADA_0.1.0_x64_en-US.msi`。随后的 NSIS 打包下载 `nsis_tauri_utils.dll` 时返回 HTTP 504，因此原命令整体失败；不能把该次结果标记为全部通过。
 
-针对外部下载故障新增 `pnpm run desktop:build:react:msi` 与 `pnpm run desktop:build:vue:msi`，单独执行 `tauri build --bundles msi`，保留原全量打包入口。上述新命令仍待本机复验，Vue release 包、MSI 安装后的实际运行、生产数据接入均尚未验收。
+针对外部下载故障新增 `pnpm run desktop:build:react:msi` 与 `pnpm run desktop:build:vue:msi`，单独执行 `tauri build --bundles msi`，保留原全量打包入口。两套 MSI 专用命令随后已由维护者在 Windows 实际执行成功；MSI 安装后的实际运行、生产数据接入仍尚未验收。
+
+## 2026-11-09 · React / Vue MSI 独立打包验收
+
+以下为维护者提供的真实 Windows PowerShell 构建日志结果，不代表当前协作环境重新运行了 Rust 工具链：
+
+| 构建入口 | Web 构建 | Rust release | Windows MSI | 文件大小 |
+| --- | --- | --- | --- | --- |
+| `pnpm run desktop:build:react:msi` | 通过 | 通过 | 通过 | 1.92 MiB |
+| `pnpm run desktop:build:vue:msi` | 通过 | 通过 | 通过 | 1.88 MiB |
+
+两次构建都显示 `Finished 1 bundle`，产物文件名都是 `apps/desktop/src-tauri/target/release/bundle/msi/ADui SCADA_0.1.0_x64_en-US.msi`。共用产品 ID、版本号及输出目录，**后执行的 Vue 构建可能覆盖先前生成的 React MSI**；若要同时保存两种版本，应在构建 Vue 前备份/重命名 React MSI。上述成功不意味着 NSIS 全格式打包故障已解决，也不能证明 MSI 安装、首次启动、自动升级或离线运行成功。
+
+下一步验收：在干净的 Windows 环境安装 MSI、检查桌面窗口与 WebView2、确认数据源不可用时提示准确且不会展示伪实时 GOOD 值。V0.1 仅有本地模拟 SSE，安装包**未包含**正式独立后台服务。生产设备通信、鉴权及安全认证仍属于后续工作。
