@@ -81,7 +81,8 @@ for (const [source, key] of [
   [nest, "SCADA_SERVER_PORT"],
   [demo, "SCADA_DEMO_HOST"],
   [demo, "SCADA_DEMO_PORT"],
-]) assert.ok(source.includes(key), `Missing runtime key: ${key}`);
+])
+  assert.ok(source.includes(key), `Missing runtime key: ${key}`);
 
 const compose = read("deploy/docker/compose.demo.yaml");
 for (const [key, fallback] of [
@@ -97,7 +98,9 @@ assert.ok(compose.includes("127.0.0.1:"));
 const nginx = read("deploy/docker/nginx.conf");
 assert.ok(nginx.includes("${SCADA_SERVER_PORT}"));
 assert.ok(nginx.includes("${SCADA_DEMO_PORT}"));
-assert.ok(read("deploy/docker/Dockerfile.web").includes("/etc/nginx/templates/default.conf.template"));
+assert.ok(
+  read("deploy/docker/Dockerfile.web").includes("/etc/nginx/templates/default.conf.template"),
+);
 
 const ignore = read(".gitignore");
 assert.match(ignore, /^\.env$/m);

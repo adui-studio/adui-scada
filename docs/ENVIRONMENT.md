@@ -15,17 +15,17 @@ pnpm run env:check
 
 未创建根 `.env` 时，所有进程沿用表格中的安全默认值。
 
-| 变量 | 默认值 | 用途 |
-| --- | --- | --- |
-| `SCADA_WEB_HOST` | `127.0.0.1` | React/Vue 本地开发监听，允许 `localhost` |
-| `SCADA_REACT_DEV_PORT` | `5173` | React 开发 Web |
-| `SCADA_VUE_DEV_PORT` | `5174` | Vue 开发 Web |
-| `SCADA_SERVER_HOST` | `127.0.0.1` | NestJS 本机监听 |
-| `SCADA_SERVER_PORT` | `3001` | NestJS HTTP 端口 |
-| `SCADA_DEMO_HOST` | `127.0.0.1` | 无鉴权 SSE 模拟服务监听 |
-| `SCADA_DEMO_PORT` | `4178` | SSE 模拟服务及两套 Web 开发代理目标 |
-| `SCADA_REACT_PORT` | `8080` | Docker React 宿主机 HTTP 端口 |
-| `SCADA_VUE_PORT` | `8081` | Docker Vue 宿主机 HTTP 端口 |
+| 变量                   | 默认值      | 用途                                     |
+| ---------------------- | ----------- | ---------------------------------------- |
+| `SCADA_WEB_HOST`       | `127.0.0.1` | React/Vue 本地开发监听，允许 `localhost` |
+| `SCADA_REACT_DEV_PORT` | `5173`      | React 开发 Web                           |
+| `SCADA_VUE_DEV_PORT`   | `5174`      | Vue 开发 Web                             |
+| `SCADA_SERVER_HOST`    | `127.0.0.1` | NestJS 本机监听                          |
+| `SCADA_SERVER_PORT`    | `3001`      | NestJS HTTP 端口                         |
+| `SCADA_DEMO_HOST`      | `127.0.0.1` | 无鉴权 SSE 模拟服务监听                  |
+| `SCADA_DEMO_PORT`      | `4178`      | SSE 模拟服务及两套 Web 开发代理目标      |
+| `SCADA_REACT_PORT`     | `8080`      | Docker React 宿主机 HTTP 端口            |
+| `SCADA_VUE_PORT`       | `8081`      | Docker Vue 宿主机 HTTP 端口              |
 
 全部端口限制为 1–65535 的整数。开发 Web 只允许 loopback 主机；NestJS/SSE 允许 `0.0.0.0` 仅为了**不向宿主机发布端口**的隔离 Docker demo 网络，不能把无鉴权模拟服务放到工业网或公网。
 
