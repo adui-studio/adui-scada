@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "skills": {
+    "conventional-branch": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/conventional-branch/SKILL.md",
+      "computedHash": "12238ae18d36e1f57007483a406dd2f3a427f42e23948344630ca0d45136ff7d"
+    },
+    "conventional-commit": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/conventional-commit/SKILL.md",
+      "computedHash": "f29c9486cede6c7b2df0cfb0a2e4aa67446552b991bcf17d1b309e903171f03d"
+    },
+    "create-readme": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/create-readme/SKILL.md",
+      "computedHash": "d0ece1b2164ce1376e4ab6e98d6ac079df3a2a94f5f02224362b6a1ce2516ae9"
+    },
+    "git-commit": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/git-commit/SKILL.md",
+      "computedHash": "8f5a47c99951ec09853abf3231c76f48caac5d6b84ea912dd4997e6996885c0b"
+    },
+    "github-issues": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/github-issues/SKILL.md",
+      "computedHash": "7c576643e9d3c622f18526a5554e8533410049dfc77e9bb10328081c4ea53d8c"
+    },
+    "github-release": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/github-release/SKILL.md",
+      "computedHash": "ffb2f9171bca9d806051154fdcddd14c95239c63d01e88d65efd7f167e374550"
+    },
+    "gitmoji": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/gitmoji/SKILL.md",
+      "computedHash": "1334f5169972f38ea0c6f8296f885902202e184e59c43db7bce08a01e83c7716"
+    }
+  }
+}
