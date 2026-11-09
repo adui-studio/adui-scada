@@ -1,5 +1,5 @@
 import react from "@vitejs/plugin-react";
-import { loadEnv } from "vite";
+import { loadEnv } from "vite-plus";
 import { defineConfig, lazyPlugins } from "vite-plus";
 
 export default defineConfig(({ mode }) => {

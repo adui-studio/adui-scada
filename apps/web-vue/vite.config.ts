@@ -1,5 +1,5 @@
 import vue from "@vitejs/plugin-vue";
-import { loadEnv } from "vite";
+import { loadEnv } from "vite-plus";
 import { defineConfig, lazyPlugins } from "vite-plus";
 
 export default defineConfig(({ mode }) => {

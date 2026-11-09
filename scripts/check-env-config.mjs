@@ -46,7 +46,7 @@ for (const framework of ["react", "vue"]) {
   assert.match(config, /SCADA_WEB_HOST/);
   assert.match(config, /SCADA_WEB_PORT/);
   assert.match(config, /SCADA_DEMO_PROXY_TARGET/);
-  assert.match(config, /import \{ loadEnv \} from "vite"/);
+  assert.match(config, /import \{ loadEnv \} from "vite-plus"/);
 }
 
 const nest = read("apps/server/src/main.ts");
