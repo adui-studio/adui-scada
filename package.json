@@ -4,14 +4,24 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "docs:check": "node scripts/validate-docs.mjs",
-    "test:core": "node --experimental-strip-types --test packages/core/test/document.test.ts packages/core/test/tag-store.test.ts packages/core/test/svg.test.ts",
-    "ready": "vp check && pnpm run test:core && pnpm run docs:check",
     "dev": "pnpm run dev:demo",
     "dev:demo": "node --experimental-strip-types examples/water-treatment/server.mjs",
+    "dev:react": "vp -C apps/web-react dev",
+    "dev:vue": "vp -C apps/web-vue dev",
+    "build:web": "vp -C apps/web-react build && vp -C apps/web-vue build",
+    "typecheck:web": "pnpm --filter @adui/scada-web-react run typecheck && pnpm --filter @adui/scada-web-vue run typecheck",
+    "test": "vp test run",
+    "test:unit": "vp test run",
+    "test:core": "vp test run packages/core/test",
+    "test:runtime": "vp test run packages/runtime/test",
+    "deps:check": "node scripts/check-dependency-catalog.mjs",
+    "docs:check": "node scripts/validate-docs.mjs",
+    "ready": "pnpm run deps:check && vp check && pnpm run typecheck:web && pnpm run test:unit && pnpm run docs:check && pnpm run build:web",
     "prepare": "vp config"
   },
   "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
     "vite-plus": "catalog:"
   },
   "devEngines": {

@@ -62,6 +62,9 @@ const server = createServer((request, response) => {
   } else if (route === "/style.css") {
     response.writeHead(200, headers("text/css; charset=utf-8"));
     response.end(style);
+  } else if (route === "/project") {
+    response.writeHead(200, headers("application/json; charset=utf-8"));
+    response.end(JSON.stringify(demoDocument));
   } else if (route === "/snapshot.svg") {
     const snapshot = new Map(tags.snapshot().map((tag) => [tag.tagId, tag]));
     response.writeHead(200, headers("image/svg+xml; charset=utf-8"));

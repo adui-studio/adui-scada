@@ -1,4 +1,4 @@
-import test from "node:test";
+import { test } from "vite-plus/test";
 import assert from "node:assert/strict";
 import { TagStore, validateTagValue } from "../src/tag-store.ts";
 import type { TagValue } from "../src/tag-store.ts";

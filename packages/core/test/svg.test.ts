@@ -1,4 +1,4 @@
-import test from "node:test";
+import { test } from "vite-plus/test";
 import assert from "node:assert/strict";
 import { parseScadaDocument } from "../src/document.ts";
 import { renderSvgPage } from "../src/svg.ts";
