@@ -165,3 +165,44 @@
     grid-column: auto;
   }
 }
+
+/* V0.2 canvas operations. Zoom is visual only; document coordinates stay unchanged. */
+.studio-stage {
+  overflow: auto;
+}
+.studio-stage-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.studio-zoom {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.studio-zoom button {
+  min-width: 35px;
+  padding: 4px 7px;
+}
+.studio-add,
+.studio-tool-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 10px 0 14px;
+}
+.studio-add button,
+.studio-tool-group button {
+  min-width: 0;
+  padding: 7px 4px;
+  font-size: 12px;
+}
+.studio-toolbox > button {
+  width: 100%;
+}
+.studio-toolbox button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}

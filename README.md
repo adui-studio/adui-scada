@@ -92,3 +92,9 @@ pnpm run env:check
 Vue / React 现在都可通过页面顶部「组态编辑」打开懒加载 Studio，查看同一份水处理工程，选择并拖动画布图元、方向微调、修改 Label 文案、撤销/重做及本地 JSON 导入/导出。编辑内核通过 `@adui/scada-core/editor` 共享；原 `Runtime` 保持独立懒加载，Tag/SSE/工业安全边界不变。
 
 **当前仅浏览器会话内编辑**：不自动持久化、无服务端工程 CRUD、无发布、无实时设备控制。手动导出的 JSON 是草稿文件，不是正式发布工程。使用方式与首批验收见 [V0.2 Studio 说明](docs/V0.2_STUDIO.md)。
+
+## V0.2 SVG 编辑器第二批操作（开发分支）
+
+在现有 Studio 上扩展：画布 `50%–200%` 缩放、添加 `tank/pump/pipe/label` 图元、删除、`Shift` 多选及整体拖动、上移/下移层与置顶/置底、按最后选中的图元进行六方向对齐。全部文档修改经共享 `@adui/scada-core/editor` 校验并支持撤销/重做；React/Vue 使用同一工程 JSON。
+
+当前仍为**内存草稿**，离开 Studio 前须导出本地 JSON。视图缩放与选择状态不写入工程文件；新增图元没有绑定任何真实设备。详情与未完成项见 [V0.2 Studio 文档](docs/V0.2_STUDIO.md)。

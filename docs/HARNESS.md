@@ -189,3 +189,17 @@ Invoke-RestMethod http://127.0.0.1:8080/demo/project
 ```
 
 还应测试更改 `SCADA_DEMO_PORT` 和 `SCADA_SERVER_PORT` 后，容器健康探针、Nginx 代理与 SSE 可同步工作。现阶段 GitHub 仅提供代码和静态结构验证，**尚未在维护者 Windows 上执行本轮完整 `ready` / Docker 重新构建 / 换行符迁移**；已通过的 V0.1 Docker 运行不代表新的端口模板已验证。
+
+## 2026-11-09 · V0.2 第二批画布操作待验收
+
+本轮 Core 增加对以下行为的单元覆盖：新图元全局 ID 唯一且没有 Tag 绑定、多选切换/整体移动/画布截断、非法节点/非有限坐标拦截、六方向对齐、图层排序及撤销、批量删除与 JSON 往返。
+
+```powershell
+pnpm run ready
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+React 和 Vue 各自打开 Studio 后检验缩放 50/100/200%；创建水箱/水泵/文本、撤销重做、删除；Shift 点击多选并拖动，在靠近画布边界时保持相对布局；选两个不同尺寸的图元执行水平/垂直对齐；层级置顶/置底并通过 JSON 验证节点顺序。新图元不自动关联任何 Tag；跨框架往返不丢失已有绑定。
+
+**截至提交时未在此协作环境执行完整 pnpm/Vite+/TS6/Vitest/浏览器或 Docker 回归。** 不继承之前单选版本的验收结果为本轮已通过。

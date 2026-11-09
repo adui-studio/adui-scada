@@ -1,14 +1,26 @@
 import { parseScadaDocument } from "./document.ts";
-import type { ScadaDocument, ScadaNode } from "./document.ts";
+import type { ScadaDocument, ScadaNode, ScadaNodeType } from "./document.ts";
 
 export interface EditorSnapshot {
   readonly document: ScadaDocument;
   readonly selectedId: string | null;
+  readonly selectedIds: readonly string[];
   readonly canUndo: boolean;
   readonly canRedo: boolean;
 }
 
+export type Alignment = "left" | "right" | "hcenter" | "top" | "bottom" | "vcenter";
+export type LayerAction = "front" | "back" | "forward" | "backward";
+export type EditableSymbol = "tank" | "pump" | "pipe" | "label";
+
 const HISTORY_LIMIT = 100;
+
+const DEFAULT_SYMBOLS: Record<EditableSymbol, { width: number; height: number }> = {
+  tank: { width: 140, height: 160 },
+  pump: { width: 110, height: 110 },
+  pipe: { width: 200, height: 24 },
+  label: { width: 200, height: 32 },
+};
 
 function firstPage(document: ScadaDocument) {
   const page = document.pages[0];
@@ -16,29 +28,45 @@ function firstPage(document: ScadaDocument) {
   return page;
 }
 
-/**
- * Immutable, validated node movement shared by Studio UIs.
- * Canvas coordinates are rounded and clamped to the page bounds.
- */
-export function withNodePosition(
+function finite(value: number, label: string): void {
+  if (!Number.isFinite(value)) throw new TypeError(`${label} must be finite`);
+}
+
+function clamp(value: number, maximum: number): number {
+  return Math.max(0, Math.min(Math.round(value), Math.max(0, Math.floor(maximum))));
+}
+
+/** Move a group by the same bounded integer displacement, preserving its arrangement. */
+export function withNodesTranslated(
   document: ScadaDocument,
-  nodeId: string,
-  x: number,
-  y: number,
+  nodeIds: readonly string[],
+  dx: number,
+  dy: number,
 ): ScadaDocument {
-  if (!Number.isFinite(x) || !Number.isFinite(y)) {
-    throw new TypeError("Node position must be finite");
-  }
+  finite(dx, "dx");
+  finite(dy, "dy");
   const checked = parseScadaDocument(document);
   const page = firstPage(checked);
-  const selected = page.nodes.find((node) => node.id === nodeId);
-  if (!selected) throw new RangeError(`Unknown node: ${nodeId}`);
-  const nextX = Math.round(
-    Math.min(Math.max(x, 0), Math.max(0, page.size.width - selected.transform.width)),
+  const selected = new Set(nodeIds);
+  if (selected.size !== nodeIds.length) throw new TypeError("Duplicate node selection");
+  const nodes = page.nodes.filter((node) => selected.has(node.id));
+  if (nodes.length !== selected.size) throw new RangeError("Unknown selected node");
+  if (nodes.length === 0) return checked;
+
+  const minDx = Math.max(...nodes.map((node) => -node.transform.x));
+  const maxDx = Math.min(
+    ...nodes.map((node) => page.size.width - node.transform.width - node.transform.x),
   );
-  const nextY = Math.round(
-    Math.min(Math.max(y, 0), Math.max(0, page.size.height - selected.transform.height)),
+  const minDy = Math.max(...nodes.map((node) => -node.transform.y));
+  const maxDy = Math.min(
+    ...nodes.map((node) => page.size.height - node.transform.height - node.transform.y),
   );
+  if (minDx > maxDx || minDy > maxDy) {
+    throw new RangeError("Selected nodes cannot fit within the page");
+  }
+  const shiftX = Math.max(Math.ceil(minDx), Math.min(Math.round(dx), Math.floor(maxDx)));
+  const shiftY = Math.max(Math.ceil(minDy), Math.min(Math.round(dy), Math.floor(maxDy)));
+
   return parseScadaDocument({
     ...checked,
     pages: checked.pages.map((candidate) =>
@@ -47,19 +75,48 @@ export function withNodePosition(
         : {
             ...candidate,
             nodes: candidate.nodes.map((node) =>
-              node.id !== nodeId
+              !selected.has(node.id)
                 ? node
-                : { ...node, transform: { ...node.transform, x: nextX, y: nextY } },
+                : {
+                    ...node,
+                    transform: {
+                      ...node.transform,
+                      x: node.transform.x + shiftX,
+                      y: node.transform.y + shiftY,
+                    },
+                  },
             ),
           },
     ),
   });
 }
 
-/** Framework-independent V0.2 editor: selection, reversible commands and JSON reloading. */
+/** Backwards-compatible single-node absolute positioning. */
+export function withNodePosition(
+  document: ScadaDocument,
+  nodeId: string,
+  x: number,
+  y: number,
+): ScadaDocument {
+  finite(x, "Node x");
+  finite(y, "Node y");
+  const page = firstPage(document);
+  const node = page.nodes.find((candidate) => candidate.id === nodeId);
+  if (!node) throw new RangeError(`Unknown node: ${nodeId}`);
+  return withNodesTranslated(document, [nodeId], x - node.transform.x, y - node.transform.y);
+}
+
+function equalDocuments(left: ScadaDocument, right: ScadaDocument): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+/**
+ * Framework-independent V0.2 editing session.
+ * Selection and view state never enter the portable ScadaDocument JSON.
+ */
 export class DocumentEditor {
   private current: ScadaDocument;
-  private selectedId: string | null = null;
+  private selection: string[] = [];
   private readonly past: ScadaDocument[] = [];
   private readonly future: ScadaDocument[] = [];
 
@@ -70,33 +127,165 @@ export class DocumentEditor {
   snapshot(): EditorSnapshot {
     return {
       document: parseScadaDocument(this.current),
-      selectedId: this.selectedId,
+      selectedId: this.selection.at(-1) ?? null,
+      selectedIds: [...this.selection],
       canUndo: this.past.length > 0,
       canRedo: this.future.length > 0,
     };
   }
 
-  select(nodeId: string | null): void {
-    if (nodeId !== null && !firstPage(this.current).nodes.some((node) => node.id === nodeId)) {
+  /** Additive selection uses Shift+click. The last selected node is the alignment anchor. */
+  select(nodeId: string | null, additive = false): void {
+    if (nodeId === null) {
+      this.selection = [];
+      return;
+    }
+    if (!firstPage(this.current).nodes.some((node) => node.id === nodeId)) {
       throw new RangeError(`Unknown node: ${nodeId}`);
     }
-    this.selectedId = nodeId;
+    if (!additive) {
+      this.selection = [nodeId];
+    } else if (this.selection.includes(nodeId)) {
+      this.selection = this.selection.filter((id) => id !== nodeId);
+    } else {
+      this.selection = [...this.selection, nodeId];
+    }
   }
 
+  /** Legacy absolute move API; multi-selection translates as one bounded group. */
   moveSelected(x: number, y: number): boolean {
-    if (this.selectedId === null) return false;
-    const node = this.getSelected();
-    if (!node) return false;
-    const next = withNodePosition(this.current, node.id, x, y);
-    const nextNode = firstPage(next).nodes.find((item) => item.id === node.id);
-    if (
-      !nextNode ||
-      (nextNode.transform.x === node.transform.x && nextNode.transform.y === node.transform.y)
-    ) {
-      return false;
-    }
+    const anchor = this.getSelected();
+    if (!anchor) return false;
+    finite(x, "Node x");
+    finite(y, "Node y");
+    return this.moveBy(x - anchor.transform.x, y - anchor.transform.y);
+  }
+
+  moveBy(dx: number, dy: number): boolean {
+    if (this.selection.length === 0) return false;
+    return this.commit(
+      withNodesTranslated(this.current, this.selection, dx, dy),
+    );
+  }
+
+  addNode(type: EditableSymbol, x = 40, y = 40): string {
+    if (!Object.hasOwn(DEFAULT_SYMBOLS, type)) throw new TypeError("Unsupported symbol type");
+    finite(x, "Node x");
+    finite(y, "Node y");
+    const page = firstPage(this.current);
+    const existing = new Set([
+      ...this.current.pages.map((candidate) => candidate.id),
+      ...this.current.pages.flatMap((candidate) => candidate.nodes.map((node) => node.id)),
+    ]);
+    let ordinal = 1;
+    while (existing.has(`${type}-${ordinal}`)) ordinal++;
+    const id = `${type}-${ordinal}`;
+    const size = DEFAULT_SYMBOLS[type];
+    const node: ScadaNode = {
+      id,
+      type: type as ScadaNodeType,
+      symbolVersion: "1",
+      transform: {
+        x: clamp(x, page.size.width - size.width),
+        y: clamp(y, page.size.height - size.height),
+        width: size.width,
+        height: size.height,
+        rotation: 0,
+      },
+      props: type === "label" ? { text: "新建文本" } : {},
+      bindings: {},
+      rules: [],
+    };
+    const next = parseScadaDocument({
+      ...this.current,
+      pages: this.current.pages.map((candidate) =>
+        candidate.id === page.id ? { ...candidate, nodes: [...candidate.nodes, node] } : candidate,
+      ),
+    });
     this.commit(next);
-    return true;
+    this.selection = [id];
+    return id;
+  }
+
+  deleteSelected(): boolean {
+    if (this.selection.length === 0) return false;
+    const page = firstPage(this.current);
+    const selected = new Set(this.selection);
+    const next = parseScadaDocument({
+      ...this.current,
+      pages: this.current.pages.map((candidate) =>
+        candidate.id === page.id
+          ? { ...candidate, nodes: candidate.nodes.filter((node) => !selected.has(node.id)) }
+          : candidate,
+      ),
+    });
+    const changed = this.commit(next);
+    if (changed) this.selection = [];
+    return changed;
+  }
+
+  /** Align selected nodes to the last selected node; position changes are one command. */
+  alignSelected(alignment: Alignment): boolean {
+    const page = firstPage(this.current);
+    const selected = new Set(this.selection);
+    const anchor = this.getSelected();
+    if (!anchor || selected.size < 2) return false;
+    if (!["left", "right", "hcenter", "top", "bottom", "vcenter"].includes(alignment)) {
+      throw new TypeError("Unsupported alignment");
+    }
+    const a = anchor.transform;
+    const nodes = page.nodes.map((node) => {
+      if (!selected.has(node.id) || node.id === anchor.id) return node;
+      const t = node.transform;
+      let x = t.x;
+      let y = t.y;
+      switch (alignment) {
+        case "left": x = a.x; break;
+        case "right": x = a.x + a.width - t.width; break;
+        case "hcenter": x = a.x + (a.width - t.width) / 2; break;
+        case "top": y = a.y; break;
+        case "bottom": y = a.y + a.height - t.height; break;
+        case "vcenter": y = a.y + (a.height - t.height) / 2; break;
+      }
+      return {
+        ...node,
+        transform: {
+          ...t,
+          x: clamp(x, page.size.width - t.width),
+          y: clamp(y, page.size.height - t.height),
+        },
+      };
+    });
+    return this.replaceFirstPageNodes(nodes);
+  }
+
+  /** Page order is the SVG paint order: later nodes render above earlier ones. */
+  reorderSelected(action: LayerAction): boolean {
+    if (!["front", "back", "forward", "backward"].includes(action)) {
+      throw new TypeError("Unsupported layer action");
+    }
+    if (this.selection.length === 0) return false;
+    const nodes = [...firstPage(this.current).nodes];
+    const selected = new Set(this.selection);
+    if (action === "front" || action === "back") {
+      const picked = nodes.filter((node) => selected.has(node.id));
+      const others = nodes.filter((node) => !selected.has(node.id));
+      return this.replaceFirstPageNodes(action === "front" ? [...others, ...picked] : [...picked, ...others]);
+    }
+    if (action === "forward") {
+      for (let i = nodes.length - 2; i >= 0; i--) {
+        if (selected.has(nodes[i]!.id) && !selected.has(nodes[i + 1]!.id)) {
+          [nodes[i], nodes[i + 1]] = [nodes[i + 1]!, nodes[i]!];
+        }
+      }
+    } else {
+      for (let i = 1; i < nodes.length; i++) {
+        if (selected.has(nodes[i]!.id) && !selected.has(nodes[i - 1]!.id)) {
+          [nodes[i - 1], nodes[i]] = [nodes[i]!, nodes[i - 1]!];
+        }
+      }
+    }
+    return this.replaceFirstPageNodes(nodes);
   }
 
   setSelectedLabel(text: string): boolean {
@@ -106,23 +295,10 @@ export class DocumentEditor {
     const node = this.getSelected();
     if (!node || node.type !== "label") throw new TypeError("Select a label node");
     if (node.props.text === text) return false;
-
-    const page = firstPage(this.current);
-    const next = parseScadaDocument({
-      ...this.current,
-      pages: this.current.pages.map((candidate) =>
-        candidate.id !== page.id
-          ? candidate
-          : {
-              ...candidate,
-              nodes: candidate.nodes.map((item) =>
-                item.id === node.id ? { ...item, props: { ...item.props, text } } : item,
-              ),
-            },
-      ),
-    });
-    this.commit(next);
-    return true;
+    const nodes = firstPage(this.current).nodes.map((item) =>
+      item.id === node.id ? { ...item, props: { ...item.props, text } } : item,
+    );
+    return this.replaceFirstPageNodes(nodes);
   }
 
   undo(): boolean {
@@ -130,6 +306,7 @@ export class DocumentEditor {
     if (!previous) return false;
     this.future.push(this.current);
     this.current = previous;
+    this.reconcileSelection();
     return true;
   }
 
@@ -138,26 +315,47 @@ export class DocumentEditor {
     if (!next) return false;
     this.past.push(this.current);
     this.current = next;
+    this.reconcileSelection();
     return true;
   }
 
-  /** Import is an explicit new session; invalid input leaves the current document unchanged. */
+  /** Import is atomic; a successful load starts a new editing history. */
   loadDocument(source: unknown): void {
     const next = parseScadaDocument(source);
     this.current = next;
-    this.selectedId = null;
+    this.selection = [];
     this.past.length = 0;
     this.future.length = 0;
   }
 
   private getSelected(): ScadaNode | undefined {
-    return firstPage(this.current).nodes.find((node) => node.id === this.selectedId);
+    const id = this.selection.at(-1);
+    return firstPage(this.current).nodes.find((node) => node.id === id);
   }
 
-  private commit(next: ScadaDocument): void {
+  private replaceFirstPageNodes(nodes: ScadaNode[]): boolean {
+    const page = firstPage(this.current);
+    return this.commit(
+      parseScadaDocument({
+        ...this.current,
+        pages: this.current.pages.map((candidate) =>
+          candidate.id === page.id ? { ...candidate, nodes } : candidate,
+        ),
+      }),
+    );
+  }
+
+  private commit(next: ScadaDocument): boolean {
+    if (equalDocuments(this.current, next)) return false;
     this.past.push(this.current);
     if (this.past.length > HISTORY_LIMIT) this.past.shift();
     this.current = next;
     this.future.length = 0;
+    return true;
+  }
+
+  private reconcileSelection(): void {
+    const valid = new Set(firstPage(this.current).nodes.map((node) => node.id));
+    this.selection = this.selection.filter((id) => valid.has(id));
   }
 }
