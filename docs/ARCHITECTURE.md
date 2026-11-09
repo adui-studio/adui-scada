@@ -111,3 +111,9 @@ V0.1 不建立工业网络连接；模拟服务不可暴露到公网。演示的
 - [ADR-0005：跨框架共享开发配置](adr/0005-shared-toolchain-config.md) — Accepted
 
 重大架构变更应新增 ADR，保留历史决策。
+
+## V0.1 桌面安装版诊断模拟（ADR-0006）
+
+Tauri 2 安装包只嵌入 Web 静态资源，不自动提供 Vite 开发代理或模拟 SSE HTTP 服务。为确保 V0.1 安装后演示可用，Tauri 的 Web 构建指定 `--mode desktop`，从共享 Core 加载水处理 Demo Document 和模拟器，`OfflineDemoRuntime` 在 JS 内存中生成模拟读数并演练 `STALE`，不打开网络连接或 Tauri 特权接口。Web 开发模式继续使用本地 SSE Harness，不能自动切换到离线模式掩盖服务器故障。
+
+数据源状态必须明确标注 `SIMULATION`，用户不能将模拟 `GOOD` 值误认为现场采集质量。正式桌面应用后续应通过具备鉴权与审计的 NestJS/网关服务访问设备，离线历史数据需要另行设计；以上实现仅用于 V0.1 演示验收。[ADR-0006](adr/0006-desktop-offline-simulation.md)。

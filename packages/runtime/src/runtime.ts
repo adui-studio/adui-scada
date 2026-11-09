@@ -1,7 +1,7 @@
 import { TagStore, parseScadaDocument, renderSvgPage, validateTagValue } from "@adui/scada-core";
 import type { ScadaDocument, TagChange, TagValue } from "@adui/scada-core";
 
-export type RuntimeStatus = "idle" | "loading" | "connecting" | "live" | "reconnecting" | "error";
+export type RuntimeStatus = "idle" | "loading" | "connecting" | "live" | "simulation" | "reconnecting" | "error";
 export interface RuntimeState {
   readonly status: RuntimeStatus;
   readonly document: ScadaDocument | null;
@@ -75,6 +75,9 @@ export class DemoRuntime {
     try {
       const response = await fetch("/demo/project", { cache: "no-store" });
       if (!response.ok) throw new Error("读取模拟工程失败: HTTP " + response.status);
+      if (!response.headers.get("content-type")?.toLowerCase().includes("application/json")) {
+        throw new Error("模拟工程接口未返回 JSON；请启动模拟服务或使用桌面离线模拟构建");
+      }
       const body: unknown = await response.json();
       const document = parseScadaDocument(body);
       if (!this.active) return;

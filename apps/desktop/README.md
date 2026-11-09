@@ -38,5 +38,26 @@ pnpm run desktop:build:vue:msi
 - `tauri.conf.json` 默认嵌入 `apps/web-react/dist`，Vue 通过 `tauri.vue.conf.json` 叠加覆盖。
 - 图标沿用初始模板占位素材，后续统一换成 ADui SCADA 正式图标。
 - V0.1 不注册 `invoke` 命令，没有设备写入、文件系统或 shell 插件权限。
-- **注意**：桌面打包产物只包含前端页面，不包含模拟 SSE 服务。生产运行环境尚无正式后端，因此打包后监控页会提示连接失败，不代表离线监控已经交付。
+- **注意**：桌面打包产物不内置模拟 SSE HTTP 服务或工业网关。V0.1 MSI 改为在前端内运行共享 Core 的**离线水处理模拟**，明确标识 `SIMULATION`；它不是现场实时采集、正式离线历史或生产 Runtime。
 - Rust crate 依赖由 Cargo.toml / Cargo.lock 管理，不能放入 pnpm Catalog；Node 依赖统一引用根 Catalog。
+
+## V0.1 安装版离线模拟数据修复
+
+此前安装 MSI 后直接请求 `/demo/project`。这个路径只有开发环境的 Vite 代理才能转发到 `127.0.0.1:4178`，安装版会得到 HTML 应用入口，导致 `Unexpected token '<'`（HTML 被当成 JSON）。已调整为**两种构建模式**：
+
+| 运行环境 | 构建入口 | 数据源 |
+| --- | --- | --- |
+| Web 开发 / Tauri `dev` | `vp dev` | `/demo/project` + `/demo/events`，需 `pnpm run dev:demo` |
+| Tauri MSI | `pnpm run desktop:build:react:msi` 或 `desktop:build:vue:msi` | `vp build --mode desktop`，浏览器内部复用 Core 的工程和模拟器，无网络请求 |
+
+离线模拟每秒生成水位、泵与流量读数，并按原演示方案周期性标记 `STALE`；页面状态明确为 `SIMULATION`，提示值是本机生成。普通 Web 构建不会因此隐式切换为模拟模式。
+
+重建并重新安装后验证（安装前可先卸载同版本旧 MSI）：
+
+```powershell
+pnpm run ready
+pnpm run desktop:build:vue:msi
+# 另行构建 React MSI 时，请先备份 Vue MSI；两套构建名称相同
+```
+
+**验收限制**：2026-11-09 Vue MSI 已验证可以安装及启动窗口，但旧构建因 `/demo/project` 返回 HTML 而失败；本修复尚待 Windows 上重新构建、安装及确认演示 SVG/Tag/STALE。生产网关、鉴权和正式设备数据仍未实现。

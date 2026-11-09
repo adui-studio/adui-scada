@@ -13,7 +13,9 @@
 | `apps/desktop/src-tauri/`                       | Tauri 2 Rust 桌面壳及最小能力权限                            |
 | `apps/desktop/src-tauri/tauri.vue.conf.json`    | 选择 Vue Web 构建目标                                        |
 | `packages/core/src/`                            | 工程文档、TagStore、模拟器、SVG                              |
+| `packages/core/src/demo-document.ts`            | HTTP 演示与离线 MSI 复用的水处理工程                         |
 | `packages/runtime/src/`                         | SSE 浏览器订阅、质量状态、样式                               |
+| `packages/runtime/src/offline.ts`               | MSI 专用离线模拟 Tag、模拟断线和定时器清理                  |
 | `packages/core/test/`、`packages/runtime/test/` | Vitest 单元测试                                              |
 | `examples/water-treatment/`                     | 非生产模拟服务及诊断页面                                     |
 | `.editorconfig`                                 | 唯一编辑器格式基线（含 Rust 4 空格规则）                     |
@@ -24,6 +26,8 @@
 | `scripts/check-dependency-catalog.mjs`          | Catalog 依赖一致性检查                                       |
 | `scripts/check-shared-config.mjs`               | 共享 TSConfig / Format / Lint 引用检查                       |
 | `scripts/validate-docs.mjs`                     | 文档静态检查                                                 |
+
+当前桌面 MSI 使用 `--mode desktop` 静态切换离线模拟；Web 开发仍使用 `/demo` 代理。两种模式共用一份演示工程，均不得被解释为现场生产数据。
 
 目标但**未创建**：`src/studio`、`apps/gateway`、生产 NestJS API、Tauri 生产离线数据能力、2D 编辑器与 3D 引擎。Studio 与 Runtime 共用一个 Web 应用，但 Runtime 不依赖编辑器代码。
 

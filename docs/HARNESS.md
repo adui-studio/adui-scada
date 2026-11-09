@@ -78,3 +78,24 @@ Windows / pnpm 12.18 / TypeScript 6.0.3 实测 `pnpm install`、`deps:check`、`
 两次构建都显示 `Finished 1 bundle`，产物文件名都是 `apps/desktop/src-tauri/target/release/bundle/msi/ADui SCADA_0.1.0_x64_en-US.msi`。共用产品 ID、版本号及输出目录，**后执行的 Vue 构建可能覆盖先前生成的 React MSI**；若要同时保存两种版本，应在构建 Vue 前备份/重命名 React MSI。上述成功不意味着 NSIS 全格式打包故障已解决，也不能证明 MSI 安装、首次启动、自动升级或离线运行成功。
 
 下一步验收：在干净的 Windows 环境安装 MSI、检查桌面窗口与 WebView2、确认数据源不可用时提示准确且不会展示伪实时 GOOD 值。V0.1 仅有本地模拟 SSE，安装包**未包含**正式独立后台服务。生产设备通信、鉴权及安全认证仍属于后续工作。
+
+## 2026-11-09 · MSI 安装后的 HTML/JSON 数据源问题与回归测试
+
+维护者已安装并启动 Vue MSI。页面显示 `Unexpected token '<'`，工程未加载；根因是发布版没有 Vite `/demo` 代理，`fetch('/demo/project')` 取得 HTML 而非 JSON。该情况表明安装启动成功、**运行时数据源验收失败**，不代表已完成桌面端验收。
+
+修复思路：
+- V0.1 React/Vue Tauri 的 `beforeBuildCommand` 使用 `vp build --mode desktop`；Web 开发模式仍走 SSE；
+- 共享 `OfflineDemoRuntime` 在桌面模式直接读取共享 Demo Document，按秒输出模拟 Tag，并演练中断与 `STALE`；页面明显标注 `SIMULATION`，绝不冒充生产设备实时值；
+- SSE 模式校验响应 `Content-Type: application/json`，避免将 HTML 错误内容直接交给 `response.json()`；
+- Vitest 增加离线模拟、定时器清理、STALE 演练、HTML 错误响应回归用例。
+
+验证方法（维护者 Windows）：
+
+```powershell
+pnpm run ready
+pnpm run desktop:build:react:msi
+# 备份 React MSI 产物
+pnpm run desktop:build:vue:msi
+```
+
+分别安装两套 MSI，**无需启动 `dev:demo`**；确认进入 `SIMULATION`、加载相同水处理 SVG、三个 Tag 变化、模拟断线后 `STALE`、恢复 `GOOD`，并验证退出程序后定时器清理。原 `pnpm run ready` 通过记录属于修复前的版本，**修复后的打包与安装尚待实测**。

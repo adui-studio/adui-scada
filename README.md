@@ -58,3 +58,7 @@ Tauri（Windows，需 Rust 和 WebView2 等前置环境）：先启动模拟服�
 [Agent 规则](AGENTS.md) · [需求](docs/REQUIREMENTS.md) · [架构](docs/ARCHITECTURE.md) · [详细设计](docs/SDD.md) · [代码地图](docs/CODEBASE_MAP.md) · [验证](docs/HARNESS.md) · [开发进度](docs/PROJECT_CONTEXT.md) · [工具链说明](docs/V0.1_TOOLCHAIN.md)
 
 当前没有 `LICENSE`；公开 GitHub 仓库不等于已授予开源许可证。
+
+## V0.1 桌面安装版
+
+Tauri MSI 构建（`desktop:build:react:msi` / `desktop:build:vue:msi`）使用独立的 `--mode desktop` Web 构建，内置**明确标注的离线模拟数据源**，无需运行 `pnpm run dev:demo`。Web 开发与桌面开发模式仍需本地 SSE 模拟服务。模拟数据不是 PLC/DCS 实际采集，不能用于生产控制。详情见 [桌面端说明](apps/desktop/README.md)。

@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, shallowRef } from "vue";
-import { DemoRuntime, initialRuntimeState, svgDataUrl } from "@adui/scada-runtime";
+import { DemoRuntime, OfflineDemoRuntime, initialRuntimeState, svgDataUrl } from "@adui/scada-runtime";
 
 const state = shallowRef(initialRuntimeState);
 const svg = computed(() =>
   state.value.document ? svgDataUrl(state.value.document, state.value.values) : null,
 );
-const runtime = new DemoRuntime((next) => {
+const onStateChange = (next: typeof initialRuntimeState) => {
   state.value = next;
-});
+};
+const runtime = import.meta.env.MODE === "desktop"
+  ? new OfflineDemoRuntime(onStateChange)
+  : new DemoRuntime(onStateChange);
 onMounted(() => {
   void runtime.start();
 });

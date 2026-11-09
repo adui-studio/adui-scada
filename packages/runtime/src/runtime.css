@@ -190,6 +190,10 @@ footer {
   font-size: 12px;
   color: #f0ae4d;
 }
+.scada-status[data-status="simulation"] {
+  color: #f0ae4d;
+  border-color: #f0ae4d;
+}
 .scada-status[data-status="live"] {
   color: #30c5a0;
   border-color: #30c5a0;

@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "pnpm --dir ../web-react dev",
     "devUrl": "http://127.0.0.1:5173",
-    "beforeBuildCommand": "pnpm --dir ../web-react build",
+    "beforeBuildCommand": "pnpm --dir ../web-react run build:desktop",
     "frontendDist": "../../web-react/dist"
   },
   "app": {
@@ -28,6 +28,10 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.ico"]
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.ico"
+    ]
   }
 }
