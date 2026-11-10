@@ -495,3 +495,14 @@ pnpm run dev:vue
 维护者执行 `pnpm run ready` 并提供原始日志：依赖 Catalog（9 清单、26 项）、共享配置、根环境与 LF、中文文案（73 个文件）、**133 个文件格式检查**、**52 个文件零警告静态检查**以及 React/Vue/NestJS TypeScript 类型检查通过。Vitest 阶段 **7 个测试文件成功，115 项测试通过**；`packages/core/test/svg.test.ts` 在模块加载时因测试工程仍写死 `schemaVersion: "0.1.0"`，被新 `parseScadaDocument` 按预期拒绝（预期 `0.2.0`），导致该文件 **3 项测试均未执行**，完整 `ready` 退出码为 **1**。因命令链在单测阶段终止，**E2E、文档检查、React/Vue 与 NestJS 构建没有执行**。
 
 已在当前特性分支提交修复 `a6e94a5`：仅更新 `packages/core/test/svg.test.ts`，导入 `SCADA_SCHEMA_VERSION` 并让测试 Fixture 使用当前 Schema 常量。生产解析、迁移和运行时代码保持不变，未为通过测试而放宽版本校验。**修复后尚未重新执行 `pnpm run ready`**，预计 118 项单测仍须维护者复验并给出最终退出码。
+
+## 2026-11-10 · 第十批 Schema 迁移修复后完整质量链通过
+
+维护者在测试 Fixture 修复 `a6e94a5` 和分支格式整理 `c0bb653` 后，于 Windows PowerShell 再次执行 `pnpm run ready` 并提供完整日志，最终 **退出码 0**：
+
+- 依赖 Catalog 检查（9 个清单、26 项依赖）、共享配置（8 个 TSConfig 消费端）、根环境及 LF 行尾检查均通过；自有中文文案检查 **73 个文件**。
+- Vite+ 格式检查 **133 个文件全部通过**；Lint/静态检查 **52 个文件零警告、零错误**；React `tsc --build`、Vue `vue-tsc --build` 和 NestJS `tsc --noEmit` 全部通过。
+- Vitest 单元测试 **8 个文件、118/118 项通过**；其中 `document.test.ts` **16 项**、`editor.test.ts` **43 项**、`svg.test.ts` **3 项**均通过；NestJS E2E **2/2 项通过**。
+- Markdown 静态文档检查 **33 个文件通过**；React、Vue 两套 Web 构建成功，NestJS `nest build` 完成，整个命令退出码 **0**。
+
+这一记录来自维护者实际终端日志，并非 Agent 独立执行。确认此前加载失败的 SVG 测试用例已恢复执行；**尚未提供 Vue/React 真实浏览器旧版工程迁移、双向 JSON 往返及只读 Runtime 的逐项人工验收结论**。记录这段文档之后，新增文档本身未重新运行 `docs:check`；PR #12 保持 Draft，不修改 `main`。

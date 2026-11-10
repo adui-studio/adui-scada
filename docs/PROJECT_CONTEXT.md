@@ -224,3 +224,9 @@ PR #11 已合并，最新 `main` 为 `3f20f10`，维护者确认该版 `pnpm run
 维护者 Windows `pnpm run ready` 在 Vitest 阶段失败：**115 项通过、1 个 SVG 测试文件加载失败，3 项 SVG 用例未运行**。原因是 `svg.test.ts` 测试 Fixture 固定写入 `schemaVersion: "0.1.0"`，与本批当前 Parser 仅接受 `0.2.0` 的契约冲突。依赖/配置/中文文案、133 文件格式、52 文件零警告 Lint、React/Vue/NestJS 类型检查已通过；E2E、文档检查和构建因早停未执行。
 
 已提交测试 Fixture 最小修复 `a6e94a5`，使用共享 `SCADA_SCHEMA_VERSION`，**未改生产校验规则**。等待修复后完整质量链与浏览器验收，不将此前 115 项通过当作 118 项全部通过。PR #12 保持 Draft，仍分配 `@adui-dev`。
+
+## 2026-11-10 · 第十批 Schema 迁移 ready 全部通过，交互验收待确认
+
+维护者在分支格式整理提交 `c0bb653` 后提供 `pnpm run ready` 完整 Windows 日志：**118/118 单测、2/2 NestJS E2E、133 文件格式、52 文件零警告 Lint/静态检查、React/Vue/NestJS 类型检查、33 份文档校验与三端构建均通过；退出码 0**。修复后的 `svg.test.ts` **3/3** 恢复运行。该结果属于维护者真实测试，并非 Agent 本地执行。
+
+本批自动化质量链验收完成，仍待 Vue/React 旧版工程导入升级提示、合法组合/Tag 保真、当前版双向互通、非法版本/未知字段回滚、只读 Runtime 与编辑器无回归等人工交互验收。仅记录已获证据的自动化项，不提前宣称浏览器交互通过或合并 PR #12。
