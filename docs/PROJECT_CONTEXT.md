@@ -304,3 +304,11 @@ PR #16 多页面编辑管理已根据维护者授权以 Squash Merge 合并 `mai
 本批在独立分支 `feat/v0.2-page-copy-order` 实现页面复制、相邻排序和跨页面选中图元复制。共享 Core 统一生成全工程唯一的页面、图元及组合 ID，保护 Tag/规则/几何，保留原内容；复制组合不会拆散，不同画布目标超限则原子拒绝。Vue/React Studio 同步新增操作入口，仍使用 `ScadaDocument 0.2.0` 与现有 Dexie IndexedDB 草稿。增加 [ADR-0023](adr/0023-page-copy-and-reordering.md)。
 
 新增 **15 项 Core 单元测试源码**，整仓预计 **194 项单元测试**，NestJS E2E 预计 **2 项**，Markdown 预计 **38 份**。这些均为源码静态计数，本批还未在维护者 Windows 运行 `pnpm run ready` 或完成双框架浏览器验收；不沿用先前 PR 的测试通过结论，也未获得本批合并授权。
+
+## 2026-11-10 · V0.2 第十六批会话图元剪贴板（待验收）
+
+第十五批 PR #17 已获得维护者完整 Windows `pnpm run ready` **194/194 单测、2/2 E2E、147 文件格式检查、零警告、38 份文档、三端构建成功、退出码 0** 验收，并经明确授权合并到 `main`，合并提交 `7bda1bb`。这些结果仅适用于第十五批。
+
+本批在新分支 `feat/v0.2-node-clipboard` 实现共享 `DocumentEditor` 会话内图元复制、剪切、重复粘贴，支持组合成员自动展开、ID 重映射、跨页粘贴、整体边界限制及撤销重做。Vue/React Studio 同步增加按钮与 `Ctrl/Cmd+C/X/V`，保持用户文本输入和系统剪贴板隔离，不新增依赖、不升级 Schema、不影响 Dexie 草稿与只读 Runtime。新增 [ADR-0024](adr/0024-session-node-clipboard.md)。
+
+本批新增 **13 项 Core 单测源码**，整仓预计 **207 项单元测试**、2 项 E2E、39 份 Markdown；**本轮没有运行完整 `pnpm run ready`，也没有在维护者 Windows 浏览器完成实际交互验收**。在获得本批日志与另行合并授权前，PR 保持 Draft，`main` 不变。

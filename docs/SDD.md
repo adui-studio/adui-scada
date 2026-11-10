@@ -308,3 +308,14 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - Vue/React Studio 均提供「复制页面」「页面前移」「页面后移」和明确目标页的「复制选中图元」入口；选择状态、当前页面 ID 不写入工程 Schema。默认 Runtime 继续读取 `pages[0]`，重排后默认显示的页面可能变化。
 
 关联决策：[ADR-0023](adr/0023-page-copy-and-reordering.md)。本批新增 15 项 Core 回归测试源码，整仓预计 194 项单元测试；未独立执行维护者 Windows `pnpm run ready`。
+
+## 27. V0.2 第十六批：会话图元剪贴板
+
+- `DocumentEditor` 增加 `copySelected(): boolean`、`cutSelected(): boolean`、`pasteClipboard(): string[]`；`EditorSnapshot.hasClipboard` 仅表示当前编辑会话可用粘贴内容，不属于 `ScadaDocument`。
+- 复制从严格 Parser 校验过的工程副本提取当前页面所选图元；组成员自动完整展开。复制不写撤销历史；剪切删除源图元并建立单条可撤销历史；粘贴生成新图元和组 ID，提交单条可撤销历史并选中新副本。
+- 剪贴板保存捕获时的图元、Tag 绑定、属性、规则、几何与层序。复用 `cloneNodes`/`occupiedIds` 保持全工程唯一 ID 和组完整性；导入/恢复工程成功后丢弃剪贴板。
+- 每次成功粘贴从原始坐标尝试增加 `(20n, 20n)` 整体偏移，目标页不足时对全部图元使用相同的边界限制，保持相对布局和尺寸；整组包围盒超过画布则原子拒绝，不增加粘贴计数。
+- 无选中复制/剪切返回 `false`，无剪贴板粘贴返回 `[]`，均不写文档或历史。Vue/React 统一拦截工作区非可编辑内容中的 `Ctrl/Cmd+C/X/V`，输入框/文本区域/选择控件/可编辑元素保持浏览器默认行为；系统剪贴板不读写。
+- 工程 JSON、IndexedDB Dexie 草稿版本与 `Runtime` 工业只读边界不变；复制不触发按需自动保存，剪切/粘贴沿用已实现的安全保存会话。
+
+关联决策：[ADR-0024](adr/0024-session-node-clipboard.md)。本批新增 13 项 Core 单测源码，整仓预计 207 项单测，仍须维护者 Windows `pnpm run ready` 和 Vue/React 浏览器验收。

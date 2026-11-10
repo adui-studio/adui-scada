@@ -642,3 +642,20 @@ Write-Host "退出码：$LASTEXITCODE"
 如 `ready` 全部通过，分别运行 `pnpm run dev:react` 和 `pnpm run dev:vue` 检查页面复制、排序、跨页面选择/复制及组合完整性，验证原工程不变和撤销重做；跨框架 JSON 双向互通、IndexedDB 手动/自动草稿与人工恢复，最后检查默认 Runtime `pages[0]`、STALE/GOOD 及设备写入禁用行为。
 
 **注意：** 页面排序会改变默认 Runtime 第一页显示内容；当页面完整复制导致工程超过 IndexedDB 草稿大小上限时，应提示保存失败并允许用户导出 JSON。当前环境未执行上述命令或浏览器实机验证，禁止把源码存在等同于检查通过。
+
+## 2026-11-10 · V0.2 第十六批会话图元剪贴板待验收
+
+Core 新增 13 项剪贴板回归测试，整仓源码预计 **207 项单测**、**2 项 NestJS E2E**，新增 ADR-0024 后 Markdown **预计 39 份**。这只是静态统计；当前环境无法拉取仓库执行 pnpm/Vite+，不作为测试通过证据。
+
+```powershell
+git status -sb
+git fetch origin
+git switch feat/v0.2-node-clipboard
+pnpm install --frozen-lockfile
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+在 React/Vue 浏览器进一步验证：剪贴板按钮和 `Ctrl/Cmd+C/X/V`；输入框不抢占系统复制粘贴；组合完整复制与剪切、重复偏移、撤销重做、跨页面粘贴与画布边界拒绝；JSON 双方向互通、IndexedDB 手动/自动保存和人工恢复。确认没有持久化剪贴板，也没有生产 PLC/DCS 设备连接或写入。
+
+等待维护者提供本批实际检查与人工验收记录，不沿用此前 194 项通过的结论。

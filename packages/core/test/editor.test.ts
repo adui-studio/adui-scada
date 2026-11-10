@@ -1175,3 +1175,226 @@ test("目标画布不足时拒绝整组复制，不产生孤立的组合成员",
   expect(() => e.copySelectedToPage("compact")).toThrow(/超过目标页面画布/);
   expect(e.snapshot()).toEqual(before);
 });
+
+test("空选择复制和剪切不会清空已有工程或产生历史", () => {
+  const e = editor();
+  const before = e.snapshot();
+  expect(e.copySelected()).toBe(false);
+  expect(e.cutSelected()).toBe(false);
+  expect(e.pasteClipboard()).toEqual([]);
+  expect(e.snapshot()).toEqual(before);
+});
+
+test("复制所选只修改会话剪贴板，不产生文档历史", () => {
+  const e = editor();
+  e.select("tank");
+  const before = e.snapshot();
+  expect(e.copySelected()).toBe(true);
+  expect(e.snapshot().hasClipboard).toBe(true);
+  expect(e.snapshot().document).toEqual(before.document);
+  expect(e.snapshot().canUndo).toBe(before.canUndo);
+  expect(e.snapshot().selectedIds).toEqual(["tank"]);
+});
+
+test("重复粘贴按 20 像素递增偏移并重新生成唯一图元 ID", () => {
+  const e = editor();
+  e.select("tank");
+  e.copySelected();
+  const first = e.pasteClipboard();
+  const second = e.pasteClipboard();
+  expect(first).toHaveLength(1);
+  expect(second).toHaveLength(1);
+  expect(first[0]).not.toBe(second[0]);
+  expect(e.snapshot().selectedIds).toEqual(second);
+  const nodes = e.snapshot().document.pages[0]!.nodes;
+  const one = nodes.find((node) => node.id === first[0]);
+  const two = nodes.find((node) => node.id === second[0]);
+  expect(one?.transform).toMatchObject({ x: 100, y: 145 });
+  expect(two?.transform).toMatchObject({ x: 120, y: 165 });
+  expect(one?.bindings.level?.tagId).toBe("water.level");
+  expect(two?.bindings.level?.tagId).toBe("water.level");
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.some((node) => node.id === second[0])).toBe(
+    false,
+  );
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.some((node) => node.id === second[0])).toBe(
+    true,
+  );
+});
+
+test("剪切所选产生一次删除历史，剪贴板可以继续粘贴", () => {
+  const e = editor();
+  e.select("pump");
+  const before = e.snapshot().document;
+  expect(e.cutSelected()).toBe(true);
+  expect(e.snapshot().selectedIds).toEqual([]);
+  expect(e.snapshot().hasClipboard).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.some((node) => node.id === "pump")).toBe(false);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(before);
+  expect(e.redo()).toBe(true);
+  const added = e.pasteClipboard();
+  expect(added).toHaveLength(1);
+  expect(added[0]).not.toBe("pump");
+  expect(
+    e.snapshot().document.pages[0]?.nodes.find((node) => node.id === added[0])?.bindings.running
+      ?.tagId,
+  ).toBe("water.pump.running");
+});
+
+test("复制与剪切组合均自动包含全部成员，粘贴生成新的完整组", () => {
+  const e = editor();
+  e.select("tank");
+  e.select("pump", true);
+  const group = e.groupSelected();
+  e.select("tank");
+  expect(e.snapshot().selectedIds).toHaveLength(2);
+  expect(e.copySelected()).toBe(true);
+  const copies = e.pasteClipboard();
+  expect(copies).toHaveLength(2);
+  const nodes = e.snapshot().document.pages[0]!.nodes;
+  const groupIds = copies.map((id) => nodes.find((node) => node.id === id)?.groupId);
+  expect(groupIds[0]).toBeDefined();
+  expect(groupIds[0]).toBe(groupIds[1]);
+  expect(groupIds[0]).not.toBe(group);
+  e.select("pump");
+  expect(e.cutSelected()).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.filter((node) => node.groupId === group)).toEqual(
+    [],
+  );
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.filter((node) => node.groupId === group)).toHaveLength(
+    2,
+  );
+});
+
+test("粘贴保留图元层级、文本属性、Tag 绑定和规则", () => {
+  const e = editor();
+  e.select("flow");
+  e.select("title", true);
+  const original = e.snapshot().document.pages[0]!.nodes.filter((node) =>
+    ["title", "flow"].includes(node.id),
+  );
+  e.copySelected();
+  const added = e.pasteClipboard();
+  expect(added).toHaveLength(2);
+  const appended = e.snapshot().document.pages[0]!.nodes.slice(-2);
+  expect(appended.map((node) => node.id)).toEqual(added);
+  expect(appended.map((node) => node.type)).toEqual(original.map((node) => node.type));
+  expect(appended.map((node) => node.props)).toEqual(original.map((node) => node.props));
+  expect(appended.map((node) => node.bindings)).toEqual(original.map((node) => node.bindings));
+  expect(appended.map((node) => node.rules)).toEqual(original.map((node) => node.rules));
+});
+
+test("切换页面不丢失剪贴板，粘贴仅改变当前目标页面", () => {
+  const e = editor();
+  e.select("tank");
+  e.copySelected();
+  const pageId = e.createPage("第二页");
+  const source = e.snapshot().document.pages[0];
+  const ids = e.pasteClipboard();
+  expect(ids).toHaveLength(1);
+  expect(e.snapshot().activePageId).toBe(pageId);
+  expect(e.snapshot().document.pages[0]).toEqual(source);
+  expect(e.snapshot().document.pages[1]?.nodes[0]?.id).toBe(ids[0]);
+  expect(e.snapshot().document.pages[1]?.nodes[0]?.bindings.level?.tagId).toBe("water.level");
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document.pages[1]?.nodes).toEqual([]);
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().document.pages[1]?.nodes[0]?.id).toBe(ids[0]);
+});
+
+test("粘贴到较小画布时整体调整位置并保留绑定", () => {
+  const source = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  source.pages.push({
+    id: "smaller",
+    name: "较小画布",
+    size: { width: 250, height: 250 },
+    nodes: [],
+  });
+  const e = new DocumentEditor(source);
+  e.select("tank");
+  e.copySelected();
+  e.switchPage("smaller");
+  const ids = e.pasteClipboard();
+  expect(ids).toHaveLength(1);
+  const node = e.snapshot().document.pages[1]?.nodes[0];
+  expect(node?.transform).toMatchObject({ x: 100, y: 45, width: 150, height: 205 });
+  expect(node?.bindings.level?.tagId).toBe("water.level");
+});
+
+test("剪贴板图元过大时粘贴原子拒绝，仍能到其他页成功粘贴", () => {
+  const source = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  source.pages.push({
+    id: "small",
+    name: "小画布",
+    size: { width: 200, height: 100 },
+    nodes: [],
+  });
+  const e = new DocumentEditor(source);
+  e.select("tank");
+  e.copySelected();
+  e.switchPage("small");
+  const before = e.snapshot();
+  expect(() => e.pasteClipboard()).toThrow(/超过当前页面画布/);
+  expect(e.snapshot()).toEqual(before);
+  e.switchPage("main");
+  const ids = e.pasteClipboard();
+  expect(ids).toHaveLength(1);
+  const pasted = e.snapshot().document.pages[0]?.nodes.find((node) => node.id === ids[0]);
+  expect(pasted?.transform).toMatchObject({ x: 100, y: 145 });
+});
+
+test("复制后修改源图元不会改变剪贴板快照", () => {
+  const e = editor();
+  e.select("title");
+  e.copySelected();
+  e.setSelectedLabel("源图元新文案");
+  const ids = e.pasteClipboard();
+  const page = e.snapshot().document.pages[0]!;
+  expect(page.nodes.find((node) => node.id === "title")?.props.text).toBe("源图元新文案");
+  expect(page.nodes.find((node) => node.id === ids[0])?.props.text).toBe("水处理系统 / V0.1");
+});
+
+test("重复粘贴到画布边缘仅限制整体偏移，不会越界或缩放", () => {
+  const e = editor();
+  e.select("flow");
+  e.copySelected();
+  let last = "";
+  for (let index = 0; index < 5; index++) {
+    const ids = e.pasteClipboard();
+    last = ids[0]!;
+  }
+  const node = e.snapshot().document.pages[0]?.nodes.find((item) => item.id === last);
+  expect(node?.transform).toMatchObject({ x: 680, y: 325, width: 200, height: 32 });
+  expect(node?.bindings.value?.tagId).toBe("water.flow");
+});
+
+test("合法工程重新加载清空剪贴板，失败导入保留已有剪贴板", () => {
+  const e = editor();
+  e.select("pump");
+  e.copySelected();
+  expect(e.snapshot().hasClipboard).toBe(true);
+  const before = e.snapshot();
+  expect(() => e.loadDocument({ invalid: true })).toThrow(/工程版本/);
+  expect(e.snapshot()).toEqual(before);
+  e.loadDocument(JSON.parse(JSON.stringify(before.document)));
+  expect(e.snapshot().hasClipboard).toBe(false);
+  expect(e.pasteClipboard()).toEqual([]);
+  expect(e.snapshot().canUndo).toBe(false);
+});
+
+test("图元剪贴板内容不会写入工程 JSON，双框架数据契约不变", () => {
+  const e = editor();
+  e.select("tank");
+  e.copySelected();
+  e.pasteClipboard();
+  const saved = JSON.parse(JSON.stringify(e.snapshot().document));
+  expect(JSON.stringify(saved)).not.toContain("clipboard");
+  expect(JSON.stringify(saved)).not.toContain("hasClipboard");
+  const other = editor();
+  other.loadDocument(saved);
+  expect(other.snapshot().document).toEqual(e.snapshot().document);
+  expect(other.snapshot().hasClipboard).toBe(false);
+});
