@@ -88,6 +88,12 @@ const page = computed(() => {
 const selected = computed(() =>
   page.value.nodes.find((node) => node.id === state.value.selectedId),
 );
+const hasGroupedSelection = computed(() =>
+  page.value.nodes.some(
+    (node) => node.groupId !== undefined && state.value.selectedIds.includes(node.id),
+  ),
+);
+const canGroup = computed(() => state.value.selectedIds.length >= 2 && !hasGroupedSelection.value);
 const snapResult = computed(() => {
   const dragging = preview.value;
   if (!dragging) return null;
@@ -548,7 +554,7 @@ async function importJson(event: Event) {
           @click="selectNode(node.id, $event.shiftKey)"
         >
           <span>{{ node.id }}</span
-          ><small>{{ node.type }}</small>
+          ><small>{{ node.type }}{{ node.groupId ? ` · 组合 ${node.groupId}` : "" }}</small>
         </button>
       </aside>
       <section class="studio-stage" aria-label="组态画布">
@@ -706,6 +712,22 @@ async function importJson(event: Event) {
       <aside class="studio-panel" aria-label="图元属性">
         <h2>属性 · 已选 {{ state.selectedIds.length }}</h2>
         <div class="studio-toolbox">
+          <div class="studio-tool-group" aria-label="图元组合">
+            <button
+              type="button"
+              :disabled="!canGroup"
+              @click="apply(() => editor.groupSelected(), '已组合所选图元，可撤销')"
+            >
+              组合所选
+            </button>
+            <button
+              type="button"
+              :disabled="!hasGroupedSelection"
+              @click="apply(() => editor.ungroupSelected(), '已解组，可撤销')"
+            >
+              解组
+            </button>
+          </div>
           <button
             type="button"
             :disabled="state.selectedIds.length === 0"
@@ -721,30 +743,46 @@ async function importJson(event: Event) {
           </div>
           <h3>多选对齐（以最后选中的图元为准）</h3>
           <div class="studio-tool-group" aria-label="图元对齐">
-            <button type="button" :disabled="state.selectedIds.length < 2" @click="align('left')">
+            <button
+              type="button"
+              :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+              @click="align('left')"
+            >
               左
             </button>
             <button
               type="button"
-              :disabled="state.selectedIds.length < 2"
+              :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
               @click="align('hcenter')"
             >
               水平居中
             </button>
-            <button type="button" :disabled="state.selectedIds.length < 2" @click="align('right')">
+            <button
+              type="button"
+              :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+              @click="align('right')"
+            >
               右
             </button>
-            <button type="button" :disabled="state.selectedIds.length < 2" @click="align('top')">
+            <button
+              type="button"
+              :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+              @click="align('top')"
+            >
               上
             </button>
             <button
               type="button"
-              :disabled="state.selectedIds.length < 2"
+              :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
               @click="align('vcenter')"
             >
               垂直居中
             </button>
-            <button type="button" :disabled="state.selectedIds.length < 2" @click="align('bottom')">
+            <button
+              type="button"
+              :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+              @click="align('bottom')"
+            >
               下
             </button>
           </div>
@@ -774,7 +812,10 @@ async function importJson(event: Event) {
             <button type="button" @click="nudge(0, 1)">↓</button>
             <button type="button" @click="nudge(1, 0)">→</button>
           </div>
-          <label v-if="selected.type === 'label'" class="studio-field">
+          <label
+            v-if="selected.type === 'label' && state.selectedIds.length === 1"
+            class="studio-field"
+          >
             显示文案
             <input v-model="labelDraft" maxlength="256" />
             <button type="button" @click="changeLabel">应用文案</button>

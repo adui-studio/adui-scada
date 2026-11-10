@@ -1,5 +1,6 @@
 import { expect, test } from "vite-plus/test";
 import { parseScadaDocument, SCADA_SCHEMA_VERSION } from "../src/document.ts";
+import { waterTreatmentDemoDocument } from "../src/demo-document.ts";
 
 function fixture() {
   return {
@@ -61,4 +62,57 @@ test("拒绝用户规则中的函数与循环引用", () => {
   recursive.push(recursive);
   cycle.pages[0].nodes[0].rules = recursive;
   expect(() => parseScadaDocument(cycle)).toThrow(/循环引用/);
+});
+
+test("平面组合标识在 JSON 往返中保留且不改变原有 Tag 绑定", () => {
+  const original = parseScadaDocument(waterTreatmentDemoDocument);
+  original.pages[0]!.nodes[0]!.groupId = "group-a";
+  original.pages[0]!.nodes[1]!.groupId = "group-a";
+  const parsed = parseScadaDocument(JSON.parse(JSON.stringify(original)));
+  expect(parsed.pages[0]?.nodes[0]?.groupId).toBe("group-a");
+  expect(parsed.pages[0]?.nodes[1]?.groupId).toBe("group-a");
+  expect(parsed.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level?.tagId).toBe(
+    "water.level",
+  );
+  expect(parsed.pages[0]?.nodes[2]?.groupId).toBeUndefined();
+  expect(parsed.schemaVersion).toBe(SCADA_SCHEMA_VERSION);
+  expect(parseScadaDocument(parsed)).toEqual(parsed);
+});
+
+test("组合标识为空、包含不安全字符或非字符串时拒绝导入", () => {
+  const document = parseScadaDocument(waterTreatmentDemoDocument);
+  document.pages[0]!.nodes[0]!.groupId = "";
+  expect(() => parseScadaDocument(document)).toThrow(/稳定 ASCII 标识符/);
+  document.pages[0]!.nodes[0]!.groupId = "group/../bad";
+  expect(() => parseScadaDocument(document)).toThrow(/稳定 ASCII 标识符/);
+  document.pages[0]!.nodes[0]!.groupId = 12 as never;
+  expect(() => parseScadaDocument(document)).toThrow(/稳定 ASCII 标识符/);
+});
+
+test("拒绝成员不足两个的组合与组合标识和图元 ID 冲突", () => {
+  const document = parseScadaDocument(waterTreatmentDemoDocument);
+  document.pages[0]!.nodes[0]!.groupId = "group-a";
+  expect(() => parseScadaDocument(document)).toThrow(/至少需要两个图元/);
+  document.pages[0]!.nodes[1]!.groupId = "group-a";
+  expect(parseScadaDocument(document).pages[0]?.nodes[1]?.groupId).toBe("group-a");
+  document.pages[0]!.nodes[1]!.groupId = "title";
+  document.pages[0]!.nodes[0]!.groupId = "title";
+  expect(() => parseScadaDocument(document)).toThrow(/组合 ID .*冲突/);
+});
+
+test("拒绝跨页面共用同一个组合 ID", () => {
+  const document = parseScadaDocument(waterTreatmentDemoDocument);
+  const first = document.pages[0]!;
+  first.nodes[0]!.groupId = "group-a";
+  first.nodes[1]!.groupId = "group-a";
+  document.pages.push({
+    id: "other",
+    name: "备用画面",
+    size: { ...first.size },
+    nodes: [
+      { ...first.nodes[0]!, id: "other-title", groupId: "group-a" },
+      { ...first.nodes[1]!, id: "other-tank", groupId: "group-a" },
+    ],
+  });
+  expect(() => parseScadaDocument(document)).toThrow(/不能跨页面/);
 });

@@ -1,5 +1,6 @@
 import { parseScadaDocument } from "./document.ts";
 import type { ScadaDocument, ScadaNode, ScadaNodeType } from "./document.ts";
+import { expandGroupedSelection } from "./grouping.ts";
 
 export interface EditorSnapshot {
   readonly document: ScadaDocument;
@@ -48,10 +49,8 @@ export function withNodesTranslated(
   finite(dy, "垂直位移");
   const checked = parseScadaDocument(document);
   const page = firstPage(checked);
-  const selected = new Set(nodeIds);
-  if (selected.size !== nodeIds.length) throw new TypeError("选择中包含重复图元");
+  const selected = expandGroupedSelection(page.nodes, nodeIds);
   const nodes = page.nodes.filter((node) => selected.has(node.id));
-  if (nodes.length !== selected.size) throw new RangeError("所选图元不存在");
   if (nodes.length === 0) return checked;
 
   const minDx = Math.max(...nodes.map((node) => -node.transform.x));
@@ -179,6 +178,7 @@ export function withNodeTransform(
   const page = firstPage(checked);
   const node = page.nodes.find((candidate) => candidate.id === nodeId);
   if (!node) throw new RangeError(`未找到图元：${nodeId}`);
+  if (node.groupId) throw new TypeError("已组合图元不能单独修改几何属性，请先解组");
 
   const transform = { ...node.transform, ...patch };
   if (
@@ -244,34 +244,83 @@ export class DocumentEditor {
     };
   }
 
-  /** 按住 Shift 点击可追加选择，最后选中的图元为对齐基准。 */
+  /** 点击组合成员时自动选中整个组合，Shift 再次点击则整体切换。 */
   select(nodeId: string | null, additive = false): void {
     if (nodeId === null) {
       this.selection = [];
       return;
     }
-    if (!firstPage(this.current).nodes.some((node) => node.id === nodeId)) {
-      throw new RangeError(`未找到图元：${nodeId}`);
+    const nodes = firstPage(this.current).nodes;
+    const node = nodes.find((item) => item.id === nodeId);
+    if (!node) throw new RangeError(`未找到图元：${nodeId}`);
+    const ids = node.groupId
+      ? nodes.filter((item) => item.groupId === node.groupId).map((item) => item.id)
+      : [nodeId];
+    if (additive && ids.every((id) => this.selection.includes(id))) {
+      const removed = new Set(ids);
+      this.selection = this.selection.filter((id) => !removed.has(id));
+      return;
     }
-    if (!additive) {
-      this.selection = [nodeId];
-    } else if (this.selection.includes(nodeId)) {
-      this.selection = this.selection.filter((id) => id !== nodeId);
-    } else {
-      this.selection = [...this.selection, nodeId];
-    }
+    const next = additive ? this.selection.filter((id) => !ids.includes(id)) : [];
+    // 保留点击成员作为最后选中的主选图元。
+    this.selection = [...next, ...ids.filter((id) => id !== nodeId), nodeId];
   }
 
-  /** 原子替换或追加所选图元；批量选择顺序遵循传入的图元顺序。 */
+  /** 框选与全选自动展开组合成员，选中状态不写入工程文档。 */
   selectMany(nodeIds: readonly string[], additive = false): void {
-    const valid = new Set(firstPage(this.current).nodes.map((node) => node.id));
-    if (nodeIds.some((id) => !valid.has(id))) {
-      throw new RangeError("所选图元不存在");
+    const nodes = firstPage(this.current).nodes;
+    const uniqueInput = [...new Set(nodeIds)];
+    const expanded = expandGroupedSelection(nodes, uniqueInput);
+    const unique = [
+      ...uniqueInput,
+      ...nodes.filter((node) => expanded.has(node.id)).map((node) => node.id),
+    ];
+    const next = additive ? [...this.selection, ...unique] : unique;
+    this.selection = [...new Set(next)];
+  }
+
+  /** 将两个以上未组合图元绑定为一个可持久化的平面组合。 */
+  groupSelected(): string {
+    if (this.selection.length < 2) throw new TypeError("请至少选择两个图元后组合");
+    const page = firstPage(this.current);
+    const selected = new Set(this.selection);
+    const nodes = page.nodes.filter((node) => selected.has(node.id));
+    if (nodes.length !== selected.size) throw new RangeError("所选图元不存在");
+    if (nodes.some((node) => node.groupId !== undefined)) {
+      throw new TypeError("所选图元已有组合，请先解组再重新组合");
     }
-    const unique = [...new Set(nodeIds)];
-    this.selection = additive
-      ? [...this.selection, ...unique.filter((id) => !this.selection.includes(id))]
-      : unique;
+    const used = new Set([
+      ...this.current.pages.map((item) => item.id),
+      ...this.current.pages.flatMap((item) =>
+        item.nodes.flatMap((node) => [
+          node.id,
+          ...(node.groupId === undefined ? [] : [node.groupId]),
+        ]),
+      ),
+    ]);
+    let index = 1;
+    while (used.has(`group-${index}`)) index++;
+    const groupId = `group-${index}`;
+    const next = page.nodes.map((node) => (selected.has(node.id) ? { ...node, groupId } : node));
+    this.replaceFirstPageNodes(next);
+    return groupId;
+  }
+
+  /** 将所选组合全部解散，保留原图元和 Tag 绑定。 */
+  ungroupSelected(): boolean {
+    const groups = new Set(
+      firstPage(this.current)
+        .nodes.filter((node) => this.selection.includes(node.id) && node.groupId !== undefined)
+        .map((node) => node.groupId),
+    );
+    if (groups.size === 0) return false;
+    const nodes = firstPage(this.current).nodes.map((node) => {
+      if (!node.groupId || !groups.has(node.groupId)) return node;
+      const copy = { ...node };
+      delete copy.groupId;
+      return copy;
+    });
+    return this.replaceFirstPageNodes(nodes);
   }
 
   /** 兼容旧版绝对移动接口；多选时按同一受限位移整体移动。 */
@@ -350,6 +399,9 @@ export class DocumentEditor {
     const selected = new Set(this.selection);
     const anchor = this.getSelected();
     if (!anchor || selected.size < 2) return false;
+    if (page.nodes.some((node) => selected.has(node.id) && node.groupId)) {
+      throw new TypeError("已组合图元不能逐个对齐，请先解组");
+    }
     if (!["left", "right", "hcenter", "top", "bottom", "vcenter"].includes(alignment)) {
       throw new TypeError("不支持的对齐方式");
     }
@@ -434,7 +486,7 @@ export class DocumentEditor {
     if (typeof text !== "string" || text.length > 256) {
       throw new TypeError("文本内容不能超过 256 个字符");
     }
-    const node = this.getSelected();
+    const node = this.selection.length === 1 ? this.getSelected() : undefined;
     if (!node || node.type !== "label") throw new TypeError("请先选择文本图元");
     if (node.props.text === text) return false;
     const nodes = firstPage(this.current).nodes.map((item) =>
@@ -498,7 +550,7 @@ export class DocumentEditor {
 
   private reconcileSelection(): void {
     const valid = new Set(firstPage(this.current).nodes.map((node) => node.id));
-    this.selection = this.selection.filter((id) => valid.has(id));
+    this.selectMany(this.selection.filter((id) => valid.has(id)));
   }
 }
 

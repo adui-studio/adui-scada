@@ -1,5 +1,6 @@
 import { parseScadaDocument } from "./document.ts";
 import type { ScadaDocument, ScadaNode } from "./document.ts";
+import { expandGroupedSelection } from "./grouping.ts";
 
 /** 画布网格默认间距：20 个工程坐标单位。 */
 export const DEFAULT_GRID_SIZE = 20;
@@ -143,10 +144,8 @@ export function resolveDragSnap(
 
   const page = parseScadaDocument(document).pages[0];
   if (!page) throw new RangeError("工程文档不包含页面");
-  const selected = new Set(selectedIds);
-  if (selected.size !== selectedIds.length) throw new TypeError("选择中包含重复图元");
+  const selected = expandGroupedSelection(page.nodes, selectedIds);
   const moving = page.nodes.filter((node) => selected.has(node.id));
-  if (moving.length !== selected.size) throw new RangeError("所选图元不存在");
   if (moving.length === 0) {
     return { dx: 0, dy: 0, verticalGuide: null, horizontalGuide: null };
   }

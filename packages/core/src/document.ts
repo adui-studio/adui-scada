@@ -6,6 +6,8 @@ export type ScadaNodeType = "tank" | "pump" | "pipe" | "label" | (string & {});
 
 export interface ScadaNode {
   id: string;
+  /** 编辑器的平面逻辑组合标识；未组合图元省略此字段。 */
+  groupId?: string;
   type: ScadaNodeType;
   symbolVersion: string;
   transform: { x: number; y: number; width: number; height: number; rotation: number };
@@ -117,6 +119,7 @@ export function parseScadaDocument(input: unknown): ScadaDocument {
     fail("pages", `页面数量必须在 1～${MAX_PAGES} 之间`);
   }
   const ids = new Set<string>();
+  const groups = new Map<string, { pageIndex: number; count: number }>();
   let nodeCount = 0;
   const pages = root.pages.map((raw, pageIndex): ScadaPage => {
     const pagePath = `pages[${pageIndex}]`;
@@ -137,6 +140,16 @@ export function parseScadaDocument(input: unknown): ScadaDocument {
       const nodeId = identifier(node.id, `${nodePath}.id`);
       if (ids.has(nodeId)) fail(`${nodePath}.id`, "ID 重复");
       ids.add(nodeId);
+      const groupId = Object.hasOwn(node, "groupId")
+        ? identifier(node.groupId, `${nodePath}.groupId`)
+        : undefined;
+      if (groupId !== undefined) {
+        const group = groups.get(groupId);
+        if (group && group.pageIndex !== pageIndex) {
+          fail(`${nodePath}.groupId`, "同一组合不能跨页面");
+        }
+        groups.set(groupId, { pageIndex, count: (group?.count ?? 0) + 1 });
+      }
       const type = nonemptyText(node.type, `${nodePath}.type`, 64);
       const symbolVersion = nonemptyText(node.symbolVersion, `${nodePath}.symbolVersion`, 32);
       const t = record(node.transform, `${nodePath}.transform`);
@@ -163,6 +176,7 @@ export function parseScadaDocument(input: unknown): ScadaDocument {
       const rules = jsonValue(node.rules, `${nodePath}.rules`, 0, new WeakSet()) as unknown[];
       return {
         id: nodeId,
+        ...(groupId === undefined ? {} : { groupId }),
         type,
         symbolVersion,
         transform,
@@ -173,5 +187,9 @@ export function parseScadaDocument(input: unknown): ScadaDocument {
     });
     return { id, name, size: { width, height }, nodes };
   });
+  for (const [groupId, group] of groups) {
+    if (ids.has(groupId)) fail("groupId", "组合 ID 与图元或页面 ID 冲突");
+    if (group.count < 2) fail("groupId", "组合至少需要两个图元");
+  }
   return { schemaVersion: SCADA_SCHEMA_VERSION, projectId, pages };
 }
