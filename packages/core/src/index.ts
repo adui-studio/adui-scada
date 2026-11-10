@@ -3,6 +3,9 @@ export {
   LEGACY_SCADA_SCHEMA_VERSION,
   parseScadaDocument,
   migrateScadaDocument,
+  STUDIO_NODE_STATE_KEY,
+  studioNodeLocked,
+  studioNodeVisible,
 } from "./document.ts";
 export type {
   ScadaDocument,
