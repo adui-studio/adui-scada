@@ -144,8 +144,8 @@ export default function StudioPage() {
       setHasSavedDraft((await drafts.get(projectId)) !== null);
       return "";
     } catch (error) {
-      setHasSavedDraft(false);
-      return "；本地草稿检测失败：" + (error instanceof Error ? error.message : String(error));
+      setHasSavedDraft(true);
+      return "；本地草稿检测异常，可手动清除：" + (error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -164,8 +164,11 @@ export default function StudioPage() {
       },
       (error: unknown) => {
         if (!active) return;
-        setHasSavedDraft(false);
-        setNotice("本地草稿读取失败：" + (error instanceof Error ? error.message : String(error)));
+        setHasSavedDraft(true);
+        setNotice(
+          "本地草稿读取异常，可确认清除损坏记录：" +
+            (error instanceof Error ? error.message : String(error)),
+        );
       },
     );
     const unsubscribe = drafts.subscribe(state.document.projectId, (revision) => {
@@ -634,7 +637,13 @@ export default function StudioPage() {
     draftActionRef.current = true;
     try {
       await pauseAutoSave();
-      const current = await drafts.get(state.document.projectId);
+      let current = null;
+      try {
+        current = await drafts.get(state.document.projectId);
+      } catch {
+        // 损坏的历史 localStorage 草稿可在用户确认后清理；
+        // 若 IndexedDB 中已有记录，修订号比较仍会拒绝误删。
+      }
       await drafts.remove(state.document.projectId, current?.revision ?? null);
       setHasSavedDraft(false);
       setNotice("数据库草稿已清除，当前编辑画面保持不变");

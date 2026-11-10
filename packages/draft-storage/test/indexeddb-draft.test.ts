@@ -185,3 +185,19 @@ test("不支持的工程版本无法通过 IndexedDB 保存写入", async () => 
     db.close();
   }
 });
+
+test("损坏的历史草稿可以由用户明确清除，且不会绕过数据库版本校验", async () => {
+  const old = new MemoryStorage();
+  const key = localDraftKey("water-demo");
+  old.setItem(key, "{损坏");
+  const db = repository(undefined, old);
+  try {
+    await expect(db.get("water-demo")).rejects.toThrow(/JSON 已损坏/);
+    expect(old.getItem(key)).toBe("{损坏");
+    await db.remove("water-demo", null);
+    expect(old.getItem(key)).toBeNull();
+    expect(await db.get("water-demo")).toBeNull();
+  } finally {
+    db.close();
+  }
+});

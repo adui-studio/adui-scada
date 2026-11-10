@@ -204,8 +204,10 @@ async function checkLocalDraft() {
   try {
     hasSavedDraft.value = (await drafts.get(state.value.document.projectId)) !== null;
   } catch (error) {
-    hasSavedDraft.value = false;
-    notice.value = "本地草稿读取失败：" + (error instanceof Error ? error.message : String(error));
+    hasSavedDraft.value = true;
+    notice.value =
+      "本地草稿读取异常，可确认清除损坏记录：" +
+      (error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -650,7 +652,13 @@ async function clearDraft() {
   draftActionInProgress = true;
   try {
     await pauseAutoSave();
-    const current = await drafts.get(state.value.document.projectId);
+    let current = null;
+    try {
+      current = await drafts.get(state.value.document.projectId);
+    } catch {
+      // 损坏的历史草稿只能经用户明确确认清理；
+      // 若数据库中已有记录，修订号比较仍会阻止误删。
+    }
     await drafts.remove(state.value.document.projectId, current?.revision ?? null);
     hasSavedDraft.value = false;
     notice.value = "数据库草稿已清除，当前编辑画面保持不变";
