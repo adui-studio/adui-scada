@@ -291,5 +291,9 @@
   fill: #f0ae4d;
   stroke: #0c1728;
   stroke-width: 1.5;
-  cursor: crosshair;
+}
+.studio-rotation-handle,
+.studio-svg[data-rotating="true"],
+.studio-svg[data-rotating="true"] * {
+  cursor: url("../../../../assets/cursors/rotate.svg") 16 16, grab;
 }

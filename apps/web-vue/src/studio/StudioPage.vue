@@ -36,6 +36,7 @@ const editor = new DocumentEditor(waterTreatmentDemoDocument);
 const state = shallowRef(editor.snapshot());
 const preview = shallowRef<{ id: string; x: number; y: number } | null>(null);
 const geometryPreview = shallowRef<ScadaDocument | null>(null);
+const rotating = ref(false);
 const marquee = shallowRef<MarqueeState | null>(null);
 const labelDraft = ref("");
 const notice = ref("本地草稿 · 尚未连接工程保存 API");
@@ -149,6 +150,7 @@ function handleKey(event: KeyboardEvent) {
       preview.value = null;
       marquee.value = null;
       geometryPreview.value = null;
+      rotating.value = false;
       editor.select(null);
       handled = true;
     } else if (key === "delete" || key === "backspace") {
@@ -347,6 +349,7 @@ function beginGeometry(event: PointerEvent, handle: ResizeHandle | "rotate") {
     startY: point.y,
     lastPatch: null,
   };
+  rotating.value = handle === "rotate";
   activeDrag = null;
   activeMarquee = null;
   preview.value = null;
@@ -398,6 +401,7 @@ function finishGeometry(event: PointerEvent) {
   updateGeometry(event);
   activeGeometry = null;
   geometryPreview.value = null;
+  rotating.value = false;
   if (gesture.lastPatch === null) return;
   try {
     if (editor.updateSelectedTransform(gesture.lastPatch)) {
@@ -416,6 +420,7 @@ function cancelDrag() {
   preview.value = null;
   marquee.value = null;
   geometryPreview.value = null;
+  rotating.value = false;
 }
 
 function displayTransform(id: string) {
@@ -571,6 +576,7 @@ async function importJson(event: Event) {
         <svg
           ref="svgRef"
           class="studio-svg"
+          :data-rotating="rotating ? 'true' : undefined"
           :style="{ width: `${zoom * 100}%` }"
           :viewBox="`0 0 ${page.size.width} ${page.size.height}`"
           aria-label="可编辑 SVG 画布"

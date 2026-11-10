@@ -68,6 +68,7 @@ export default function StudioPage() {
   const [state, setState] = useState<EditorSnapshot>(() => editor.snapshot());
   const [preview, setPreview] = useState<{ id: string; x: number; y: number } | null>(null);
   const [geometryPreview, setGeometryPreview] = useState<ScadaDocument | null>(null);
+  const [rotating, setRotating] = useState(false);
   const [marquee, setMarquee] = useState<MarqueeState | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
   const [notice, setNotice] = useState("本地草稿 · 尚未连接工程保存 API");
@@ -144,6 +145,7 @@ export default function StudioPage() {
           setPreview(null);
           setMarquee(null);
           setGeometryPreview(null);
+          setRotating(false);
           editor.select(null);
           handled = true;
         } else if (key === "delete" || key === "backspace") {
@@ -336,6 +338,7 @@ export default function StudioPage() {
       startY: point.y,
       lastPatch: null,
     };
+    setRotating(handle === "rotate");
     dragRef.current = null;
     marqueeRef.current = null;
     setPreview(null);
@@ -387,6 +390,7 @@ export default function StudioPage() {
     updateGeometry(event);
     geometryRef.current = null;
     setGeometryPreview(null);
+    setRotating(false);
     if (gesture.lastPatch === null) return;
     try {
       if (editor.updateSelectedTransform(gesture.lastPatch)) {
@@ -405,6 +409,7 @@ export default function StudioPage() {
     setPreview(null);
     setMarquee(null);
     setGeometryPreview(null);
+    setRotating(false);
   }
 
   function nudge(dx: number, dy: number) {
@@ -597,6 +602,7 @@ export default function StudioPage() {
           <svg
             ref={svgRef}
             className="studio-svg"
+            data-rotating={rotating ? "true" : undefined}
             style={{ width: `${zoom * 100}%` }}
             viewBox={`0 0 ${page.size.width} ${page.size.height}`}
             onPointerMove={(event) => {
