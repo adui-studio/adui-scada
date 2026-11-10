@@ -1414,14 +1414,17 @@ test("批量锁定、解锁共用一次历史并保持 Tag 和几何", () => {
   const initial = e.snapshot().document;
   expect(e.setSelectedLocked(true)).toBe(true);
   const locked = e.snapshot().document.pages[0]!.nodes;
-  expect(locked.filter((node) => ["tank", "pump"].includes(node.id)).every(studioNodeLocked)).toBe(true);
+  expect(locked.filter((node) => ["tank", "pump"].includes(node.id)).every(studioNodeLocked)).toBe(
+    true,
+  );
   expect(e.setSelectedLocked(true)).toBe(false);
   expect(e.undo()).toBe(true);
   expect(e.snapshot().document).toEqual(initial);
   expect(e.redo()).toBe(true);
   expect(
-    e.snapshot().document.pages[0]!.nodes
-      .filter((node) => ["tank", "pump"].includes(node.id))
+    e
+      .snapshot()
+      .document.pages[0]!.nodes.filter((node) => ["tank", "pump"].includes(node.id))
       .every(studioNodeLocked),
   ).toBe(true);
   expect(e.setSelectedLocked(false)).toBe(true);
@@ -1466,13 +1469,7 @@ test("锁定图元禁止移动、删除、剪切、复制、对齐及几何编�
   expect(() => withNodesTranslated(original.document, ["tank"], 10, 0)).toThrow(/锁定/);
   expect(() => withNodeTransform(original.document, "tank", { y: 140 })).toThrow(/锁定/);
   expect(() =>
-    resolveDragSnap(
-      original.document,
-      ["tank"],
-      5,
-      5,
-      { gridEnabled: true, nodeEnabled: true },
-    ),
+    resolveDragSnap(original.document, ["tank"], 5, 5, { gridEnabled: true, nodeEnabled: true }),
   ).toThrow(/锁定/);
   e.select("tank");
   e.select("pump", true);
@@ -1530,7 +1527,9 @@ test("锁定状态不阻止复制整页，原始和副本的图元保护仍有�
   const copyId = e.duplicatePage();
   const page = e.snapshot().document.pages.find((item) => item.id === copyId);
   expect(
-    page?.nodes.find((node) => node.bindings.level?.tagId === "water.level" && studioNodeLocked(node)),
+    page?.nodes.find(
+      (node) => node.bindings.level?.tagId === "water.level" && studioNodeLocked(node),
+    ),
   ).toBeDefined();
   e.switchPage("main");
   e.select("tank");
@@ -1566,13 +1565,10 @@ test("隐藏目标不参与图元吸附，但保留于工程节点列表", () =>
   e.select("pump");
   e.setSelectedVisible(false);
   e.select("tank");
-  const snap = resolveDragSnap(
-    e.snapshot().document,
-    ["tank"],
-    0,
-    0,
-    { gridEnabled: false, nodeEnabled: true },
-  );
+  const snap = resolveDragSnap(e.snapshot().document, ["tank"], 0, 0, {
+    gridEnabled: false,
+    nodeEnabled: true,
+  });
   expect(snap).toEqual({ dx: 0, dy: 0, verticalGuide: null, horizontalGuide: null });
   expect(e.snapshot().document.pages[0]!.nodes.some((node) => node.id === "pump")).toBe(true);
 });
@@ -1589,7 +1585,9 @@ test("锁定与隐藏状态经过 JSON 导入导出后保持一致且不会污�
     visible: false,
     locked: true,
   });
-  expect(json.pages[0].nodes.find((node: { id: string }) => node.id === "tank").locked).toBeUndefined();
+  expect(
+    json.pages[0].nodes.find((node: { id: string }) => node.id === "tank").locked,
+  ).toBeUndefined();
   const other = editor();
   other.loadDocument(json);
   const restored = other.snapshot().document.pages[0]!.nodes.find((node) => node.id === "tank")!;

@@ -131,7 +131,10 @@ export function renderSvgPage(
     `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${xml(page.name)}" ` +
     `viewBox="0 0 ${number(page.size.width)} ${number(page.size.height)}">` +
     `<rect width="100%" height="100%" fill="#0c1728"/>` +
-    page.nodes.filter(studioNodeVisible).map((node) => renderNode(node, values)).join("") +
+    page.nodes
+      .filter(studioNodeVisible)
+      .map((node) => renderNode(node, values))
+      .join("") +
     "</svg>"
   );
 }

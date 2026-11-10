@@ -123,7 +123,8 @@ const hasLockedSelection = computed(() =>
   ),
 );
 const canGroup = computed(
-  () => state.value.selectedIds.length >= 2 && !hasGroupedSelection.value && !hasLockedSelection.value,
+  () =>
+    state.value.selectedIds.length >= 2 && !hasGroupedSelection.value && !hasLockedSelection.value,
 );
 const activePageIndex = computed(() =>
   state.value.document.pages.findIndex((item) => item.id === state.value.activePageId),
@@ -626,7 +627,8 @@ function beginGeometry(event: PointerEvent, handle: ResizeHandle | "rotate") {
     state.value.selectedIds.length !== 1 ||
     !selected.value ||
     studioNodeLocked(selected.value)
-  ) return;
+  )
+    return;
   const point = canvasPoint(event.clientX, event.clientY);
   if (!point) return;
   activeGeometry = {

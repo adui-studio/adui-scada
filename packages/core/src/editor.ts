@@ -51,7 +51,6 @@ function withoutLockState(node: ScadaNode): string {
   return JSON.stringify({ ...node, props });
 }
 
-
 /** 当前 SVG 图元的可编辑绑定槽；不允许向其他图元添加未知槽。 */
 export function editableTagSlot(type: string): "level" | "running" | "value" | null {
   switch (type) {
@@ -635,8 +634,8 @@ export class DocumentEditor {
         .map((node) => node.groupId),
     );
     if (groups.size === 0) return false;
-    const chosen = firstPage(this.current, this.activePageId).nodes.filter((node) =>
-      node.groupId !== undefined && groups.has(node.groupId),
+    const chosen = firstPage(this.current, this.activePageId).nodes.filter(
+      (node) => node.groupId !== undefined && groups.has(node.groupId),
     );
     if (chosen.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
     const nodes = firstPage(this.current, this.activePageId).nodes.map((node) => {
@@ -946,7 +945,9 @@ export class DocumentEditor {
       this.selection,
     );
     const document = parseScadaDocument(this.current);
-    const nodes = firstPage(document, this.activePageId).nodes.filter((node) => selected.has(node.id));
+    const nodes = firstPage(document, this.activePageId).nodes.filter((node) =>
+      selected.has(node.id),
+    );
     if (nodes.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
     return nodes;
   }

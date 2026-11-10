@@ -597,7 +597,8 @@ export default function StudioPage() {
       state.selectedIds.length !== 1 ||
       !selected ||
       studioNodeLocked(selected)
-    ) return;
+    )
+      return;
     const point = canvasPoint(event.clientX, event.clientY);
     if (!point) return;
     geometryRef.current = {
@@ -1132,7 +1133,9 @@ export default function StudioPage() {
                   <rect
                     role="button"
                     tabIndex={0}
-                    aria-label={studioNodeLocked(node) ? `选择已锁定图元 ${node.id}` : `选择并拖动 ${node.id}`}
+                    aria-label={
+                      studioNodeLocked(node) ? `选择已锁定图元 ${node.id}` : `选择并拖动 ${node.id}`
+                    }
                     data-locked={studioNodeLocked(node)}
                     x={t.x}
                     y={t.y}
@@ -1160,43 +1163,43 @@ export default function StudioPage() {
                   {state.selectedIds.length === 1 &&
                     state.selectedId === node.id &&
                     !studioNodeLocked(node) && (
-                    <>
-                      {RESIZE_HANDLES.map((handle) => {
-                        const position = resizeHandlePosition(t, handle);
-                        return (
-                          <rect
-                            key={handle}
-                            className="studio-resize-handle"
-                            data-handle={handle}
-                            aria-label={`缩放图元${RESIZE_HANDLE_LABELS[handle]}`}
-                            x={position.x - 5}
-                            y={position.y - 5}
-                            width={10}
-                            height={10}
-                            onPointerDown={(event) => beginGeometry(event, handle)}
-                          >
-                            <title>按住 Shift 保持宽高比</title>
-                          </rect>
-                        );
-                      })}
-                      <line
-                        className="studio-rotation-stem"
-                        x1={t.x + t.width / 2}
-                        x2={t.x + t.width / 2}
-                        y1={t.y}
-                        y2={t.y - 26}
-                        pointerEvents="none"
-                      />
-                      <circle
-                        className="studio-rotation-handle"
-                        aria-label="旋转图元，按住 Shift 可按 15 度吸附"
-                        cx={t.x + t.width / 2}
-                        cy={t.y - 26}
-                        r={7}
-                        onPointerDown={(event) => beginGeometry(event, "rotate")}
-                      />
-                    </>
-                  )}
+                      <>
+                        {RESIZE_HANDLES.map((handle) => {
+                          const position = resizeHandlePosition(t, handle);
+                          return (
+                            <rect
+                              key={handle}
+                              className="studio-resize-handle"
+                              data-handle={handle}
+                              aria-label={`缩放图元${RESIZE_HANDLE_LABELS[handle]}`}
+                              x={position.x - 5}
+                              y={position.y - 5}
+                              width={10}
+                              height={10}
+                              onPointerDown={(event) => beginGeometry(event, handle)}
+                            >
+                              <title>按住 Shift 保持宽高比</title>
+                            </rect>
+                          );
+                        })}
+                        <line
+                          className="studio-rotation-stem"
+                          x1={t.x + t.width / 2}
+                          x2={t.x + t.width / 2}
+                          y1={t.y}
+                          y2={t.y - 26}
+                          pointerEvents="none"
+                        />
+                        <circle
+                          className="studio-rotation-handle"
+                          aria-label="旋转图元，按住 Shift 可按 15 度吸附"
+                          cx={t.x + t.width / 2}
+                          cy={t.y - 26}
+                          r={7}
+                          onPointerDown={(event) => beginGeometry(event, "rotate")}
+                        />
+                      </>
+                    )}
                 </g>
               );
             })}
