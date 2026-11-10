@@ -286,3 +286,14 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - 所有操作沿用 `ScadaDocument 0.2.0`、JSON 导入导出和 IndexedDB 草稿；不修改 Runtime 渲染器的质量语义，不涉及真实工业设备或写入接口。
 
 本批新增 6 项 Core 单测源码，尚需维护者 Windows `pnpm run ready`、两套浏览器交互和 JSON/草稿往返验收。
+
+## 25. V0.2 第十四批：多页面编辑与会话作用域
+
+- `EditorSnapshot.activePageId` 表示编辑器当前页面，不属于 `ScadaDocument`；构造、导入默认第一页，`switchPage` 不修改工程或撤销历史，并清除选择。
+- `createPage` 创建与当前画布同尺寸的空页，自动生成全工程无冲突的 `page-N` ID；`renamePage` 保留 ID、节点、Tag；`deletePage` 不允许删除最后一页，删除活动页时切至相邻页。
+- 页面的增删改与当前页图元修改共享最多 100 条文档历史。历史记录包含操作前后的 `pageId`，跨页面撤销/重做激活对应页面；从未修改过的页切换不会产生撤销项。
+- 公共几何、框选、吸附函数与 `svgDataUrl` 增加可选页面 ID，省略时仍操作第一页；现有旧单页调用、Runtime、Schema 版本继续兼容。
+- 画布图元选择、组合、对齐、几何手柄、模拟 Tag 绑定等 `DocumentEditor` 命令全部按当前页解析；Vue/React 的 `displayDocument`、SVG 预览、Pointer 手势和 Ctrl+A 同步切至当前页。
+- 工程 Schema 与 Dexie `DraftRepository` 完全保持原状；切换当前页面不触发自动保存，创建、重命名、删除及图元内容变化仍遵循之前的 1 秒防抖与乐观并发修订号校验。
+
+本批新增 12 项 Core 测试及 1 项 Runtime 测试源码，累计预计 179 项；维护者尚需执行 `pnpm run ready` 与双框架交互验收。
