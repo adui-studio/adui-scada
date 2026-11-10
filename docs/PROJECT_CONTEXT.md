@@ -268,3 +268,11 @@ PR #12 已具备全部七项验收结论，仍保留 Draft、分配 `@adui-dev`�
 本批在既有 `local-draft.ts` 扩展 `LocalDraftAutoSaveSession`，统一工程脏状态、同一存储记录冲突检测与人工保存基线；Vue/React 均增加默认关闭的自动保存开关、1000 ms 防抖、浏览器跨标签页停写，以及导入/恢复/清除时暂停。现有原子 `DocumentEditor.loadDocument`、`0.2.0` Schema 和工业只读 Runtime 不变。新增 **12 项** Core 单元测试，预计整仓 **140 项**，新增 ADR-0020 后文档预计 **35 份**。尚未在维护者 Windows 实测 `pnpm run ready`、浏览器并发及真实刷新恢复，不能声称功能已验收。
 
 `localStorage` 无原子 CAS，保存前冲突检测只是尽力而为；本批不实现严格跨标签页锁、服务端工程版本/发布、自动恢复或工业设备写入。开发分支应保持 Draft PR，按规则分配 `@adui-dev`，未经单独授权不合并 `main`。
+
+## 2026-11-10 · 第十二批改用 Dexie IndexedDB（待质量复验）
+
+维护者明确要求采用 IndexedDB 并核实当前最佳库。在比较 Dexie、idb 和 localForage、核对 npm 已发布版本与许可证之后，选择 `dexie@4.4.7` 作为浏览器持久化层，测试依赖 `fake-indexeddb@6.2.8`，均使用 Catalog。改动继续保留于既有 `feat/v0.2-safe-autosave` / PR #14 Draft，不改 `main`。
+
+本批新增 `@adui/scada-draft-storage` 包与独立的 Core 异步 `DraftRepository` 契约，Vue/React 改用共享 IndexedDB 数据仓储。保存时在读写事务内验证 `revision` 并写入，支持标签页冲突拒绝；旧 `localStorage` 合法草稿首次读取后受控迁移，数据库成功提交之前不删除原始草稿。Core 原同步函数仍保留支持历史迁移和单测。新增 **7 项异步 Core 用例与 9 项模拟 IndexedDB 用例**；加上已有第十二批 12 项，整仓单测源码预计 **156 项**、文档预计 **36 份**。该数字属于静态源码统计，**尚未完成新依赖安装及本批完整 `ready`**。
+
+新增存储包及 TSConfig 检查、两套 Web 对等适配未在维护者 Windows 浏览器验收；正式服务端持久化、历史快照、工业网关、PLC/DCS 写入仍未实现，不能因为引入 Dexie 视为正式工程数据库已经交付。

@@ -566,3 +566,23 @@ pnpm run dev:vue
 两端人工检查：初次打开默认关闭自动保存、已有草稿开启需确认、快速连续编辑等待 1 秒后保存最终工程、切换图元选中与预览不触发写入；刷新后只有恢复提醒并需要人工确认恢复。另一标签页同一 Origin 同项目修改或清除草稿，原页面停止自动保存、保留现有画面；存储损坏或格式不兼容时拒绝开启，非法工程 ID 和写入失败不破坏旧记录。人工保存同步自动保存基线、导入其他工程/恢复/清除立即暂停；继续检验双框架 JSON 往返、组合/Tag/撤销和只读 Runtime。自动保存不足 1 秒直接关闭可能丢失最后修改，跨标签页检测不是原子锁。
 
 本批未独立执行 Vite+ 格式、Lint、类型、Vitest、E2E、文档检查或三端构建；在维护者实际提供 Windows 结果前，PR 应继续 Draft。文档本身不构成生产级安全验证。
+
+## 2026-11-10 · 第十二批 Dexie IndexedDB 存储切换（待验证）
+
+在已有 V0.2 第十二批 PR #14 分支中，按维护者新要求调整 IndexedDB 正式存储方案。选型 `dexie@4.4.7`，测试使用 `fake-indexeddb@6.2.8`，新增 `packages/draft-storage`，`DraftRepository` 的 Core 异步接口及 IndexedDB 事务版本条件写入。历史 localStorage 草稿以校验+事务迁移，且**提交成功后才尝试清理旧数据**。本批未独立运行新依赖的安装、类型检查、Lint、单测或浏览器测试，所有质量指标保留待验证。
+
+现有 128 项已验收单元测试 + 第十二批旧新增 12 项 + 当前新增 **7 项 Core 异步仓储测试和 9 项 fake IndexedDB 测试**，合计源码预计 **156 项**；Markdown 新增 ADR-0021 后预计 **36 份**。新增 `packages/draft-storage/tsconfig.json` 后共享 TSConfig 消费端预计 **9 个**，Catalog 从 26 项增加到预计 **28 项**，依赖清单从 9 个增加到预计 **10 个**。这些仅为静态计算，不等于任何单项实际检查通过。
+
+```powershell
+git fetch origin
+git switch feat/v0.2-safe-autosave
+pnpm install
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+待核验：新依赖安装/冻结 Catalog、`vp check` 零警告、React/Vue/新存储包/NestJS 类型检查、Core/Vitest+fake-indexeddb 用例、NestJS E2E、36 份文档及三端构建；浏览器旧 `localStorage` 草稿迁移后恢复保真、同 Origin 双标签页事务冲突、清除后旧备份不复活、自动保存防抖、刷新后仍需明确恢复、现有手动 JSON 和 Runtime 只读行为无回归。
+
+本批未执行工程发布、工业现场安全检查或真实 PLC/DCS 采集；IndexedDB 不能替代服务器持久化和备份。完成质量链后再逐项登记测试结果，Draft PR #14 未获新的合并授权。

@@ -259,3 +259,15 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - Vue/React 默认 `autoSaveEnabled = false`，用户点击开启且确认原有草稿后才建立会话。两端均用 **1000 ms** 防抖，变更、暂停或卸载时取消待写定时器；收到同一 Origin 的 `storage` 事件后暂停并提示。成功导入其他工程、恢复或清除草稿时暂停会话，手动保存仍可用。
 - 进入页面时只显示本地草稿存在提醒，不自动调用 `DocumentEditor.loadDocument`。恢复需用户确认，加载成功才重置撤销历史；自动写入失败时当前画面不变、原记录不被删除，用户可导出 JSON 备份。
 - `localStorage` 没有跨标签页 CAS 原子操作，**写入前冲突核对不是严格事务锁**；页面立即关闭可能损失尚未到达 1 秒的待保存修改；均须在 UI 操作与文档中明确。严格并发、恢复快照、服务端发布和工业设备写入不在本批。参见 [ADR-0020](adr/0020-safe-local-autosave.md)。
+
+## 22. V0.2 第十二批 IndexedDB 草稿仓储（ADR-0021）
+
+- Core 新增异步 `DraftRepository` 契约：`get(projectId): Promise<DraftRecord | null>`、`save(document, expectedRevision)`、`remove(projectId, expectedRevision)` 和跨标签页通知 `subscribe`，其中 `DraftRecord` 独立携带整数 `revision`、`savedAt`、`projectId` 和严格 `ScadaDocument 0.2.0`。编辑器仍不依赖 Dexie。
+- 新建 `packages/draft-storage`，由 `DexieDraftRepository` 使用 `dexie@4.4.7`。数据库 `adui-scada-studio` 版本 1，`drafts` 主键为工程 ID，并有保存时间索引；`migrations` 记录旧草稿成功迁移或被清除的工程，防止历史备份重新复活。
+- `save` 在 `rw` 事务中读取最新记录，确认 `expectedRevision` 与最新版本一致后递增修订号并写入；`remove` 在事务中按版本条件清除并留下标记。两个标签页并发写入只有满足版本条件的事务能成功。广播通知仅用于提前刷新视图状态，不能替代版本条件校验。
+- 读取时优先采用已存在的 IndexedDB 工程。若无对应记录及迁移标记，再验证旧 `localStorage` 草稿，数据库草稿与标记同事务提交成功之后才尝试删除旧记录；损坏 JSON、不兼容 Schema 和其他非法字段一律拒绝载入并保留原始记录。
+- Vue/React 的人工保存/恢复/清除与自动保存统一改为异步仓储；人工操作前停止自动保存会话并等待已开始的写入结束。自动恢复仍禁止，必须通过现有 `DocumentEditor.loadDocument` 受控载入。保存使用修订号条件写入，拒绝较旧标签页覆盖新记录。
+- 依赖统一登记 pnpm Catalog，锁定 `dexie: 4.4.7` 与测试专用 `fake-indexeddb: 6.2.8`。新增存储包 TSConfig 使用 `@adui/tsconfig/browser`，类型检查接入 `typecheck:web`；模拟 IndexedDB 用例加入根 Vitest。
+- 旧同步 `LocalDraftStorage` 和 `LocalDraftAutoSaveSession` 暂保留为**历史迁移与原测试兼容代码**，Vue/React 不再用它们进行正式草稿读写。数据库 schemaVersion 和 SCADA 工程 Schema 版本独立，不能互相替代。
+
+本批 IndexedDB 只负责浏览器临时草稿；未实现历史版本列表、正式工程发布、服务器权限、工业设备直连或 PLC 写入。存储配额、禁止敏感凭据、跨 Origin 不互通和浏览器清理风险依旧存在。详见 [ADR-0021](adr/0021-indexeddb-dexie-storage.md)。

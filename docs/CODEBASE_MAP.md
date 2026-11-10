@@ -176,3 +176,13 @@
 - `apps/web-react/src/studio/StudioPage.tsx`：React 默认关闭、开启/暂停、1000 ms 防抖、跨标签页事件、恢复/清除/导入自动暂停。
 - `apps/web-vue/src/studio/StudioPage.vue`：Vue 等价的保存定时与存储事件处理，保留已有手动操作入口。
 - [ADR-0020](adr/0020-safe-local-autosave.md)：自动保存安全边界、竞态风险和未实现能力。
+
+## V0.2 第十二批 IndexedDB 存储实现调整
+
+- `packages/core/src/draft-repository.ts`：框架无关 `DraftRepository`、`DraftRecord`、`DraftAutoSaveSession`，异步保存会话按事务修订号串行提交、停止时等待已有写入。
+- `packages/draft-storage/src/index.ts`：唯一 Dexie.js IndexedDB 适配，版本 1 的 `drafts` / `migrations` 表、事务内修订号校验、历史 `localStorage` 迁移、`BroadcastChannel` 通知。
+- `packages/draft-storage/test/indexeddb-draft.test.ts`：通过 `fake-indexeddb` 验证首次保存、并发冲突、条件清除、历史组合/Tag 迁移与损坏数据保护。
+- `packages/core/test/draft-repository.test.ts`：通过内存异步仓储验证会话脏状态、串行保存、停止、跨工程和冲突拒绝。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：改用同一异步 `DexieDraftRepository`，保留按钮/1 秒防抖/人工恢复确认/冲突提示。
+- `pnpm-workspace.yaml` 与各相关 `package.json`：共享 Catalog 管理 `dexie`、`fake-indexeddb` 和 `@adui/scada-draft-storage`；`vite.config.ts` 加入存储测试，配置检查含新增 TSConfig。
+- [ADR-0021](adr/0021-indexeddb-dexie-storage.md)：2026 年浏览器数据库技术选型、版本条件写入及迁移安全。
