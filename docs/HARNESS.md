@@ -290,3 +290,21 @@ pnpm run dev:vue
 与此前维护者 Windows 日志结合：59/59 单元测试、2/2 NestJS E2E、中文文案、124 文件格式检查、49 文件 Lint/静态检查、Web/Server 类型检查、27 份文档检查、React/Vue 双 Web 构建已通过。此前日志末尾只显示启动 `nest build`，**未包含退出状态，服务端构建完成状态未独立确认**；Docker/Tauri/工业现场验收亦不在本次完成声明范围内。
 
 PR #6 的**本批双框架交互验收已完成**，仍维持 Draft 以待维护者明确决定何时发起正式合并流程；未经授权不合并 `main`。
+
+## 2026-11-10 · V0.2 第五批图元几何属性开发分支（待验收）
+
+新增 `packages/core/test/editor.test.ts` 6 项回归用例，现有已由维护者确认的 59 项基础单测加上本批新增测试共计**预计 65 项**。功能覆盖图元 X/Y/宽高/旋转单次原子修改、撤销/重做、无变化不入历史、非法输入防护、边界拒绝和多选保护。以上仅为源码用例数量，**本批尚未实际运行新测试**。
+
+维护者 Windows 验证命令：
+
+```powershell
+git fetch origin
+git switch feat/v0.2-node-transform-properties
+pnpm run ready
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+React 与 Vue 均需逐项核验：单选编辑五项几何参数；非法/空白输入中文报错；越界修改不污染 JSON；一次应用可一次撤销/重做；多选不误改；React→Vue→React 与 Vue→React→Vue 的 JSON 往返后位置、尺寸、旋转及 Tag 绑定不变；旧吸附/框选/运行时能力无回归。
+
+**当前只完成 GitHub 源码和静态检查，未实际执行本批 `pnpm run ready`、浏览器交互、Docker/Tauri 或工业现场测试**。历史 PR #6 的 59 项单测与 2 项 E2E 通过结论不得替代本分支重新执行测试。
