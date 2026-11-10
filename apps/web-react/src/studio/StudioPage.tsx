@@ -333,7 +333,21 @@ export default function StudioPage() {
       if (command && !event.altKey) {
         if (key === "z") handled = event.shiftKey ? editor.redo() : editor.undo();
         else if (key === "y") handled = editor.redo();
-        else if (key === "a") {
+        else if (key === "c") {
+          handled = editor.copySelected();
+          if (handled) setNotice("已复制所选图元到会话剪贴板");
+        } else if (key === "x") {
+          handled = editor.cutSelected();
+          if (handled) setNotice("已剪切所选图元，可撤销");
+        } else if (key === "v" && editor.snapshot().hasClipboard) {
+          event.preventDefault();
+          try {
+            handled = editor.pasteClipboard().length > 0;
+            if (handled) setNotice("已粘贴图元，可撤销");
+          } catch (error) {
+            setNotice("粘贴失败：" + (error instanceof Error ? error.message : String(error)));
+          }
+        } else if (key === "a") {
           const snapshot = editor.snapshot();
           editor.selectMany(
             snapshot.document.pages
@@ -1183,13 +1197,36 @@ export default function StudioPage() {
                 解组
               </button>
             </div>
-            <button
-              type="button"
-              onClick={() => apply(() => editor.deleteSelected(), "已删除图元，可撤销")}
-              disabled={state.selectedIds.length === 0}
-            >
-              删除所选
-            </button>
+            <div className="studio-tool-group" aria-label="图元剪贴板">
+              <button
+                type="button"
+                disabled={state.selectedIds.length === 0}
+                onClick={() => apply(() => editor.copySelected(), "已复制所选图元到会话剪贴板")}
+              >
+                复制所选
+              </button>
+              <button
+                type="button"
+                disabled={state.selectedIds.length === 0}
+                onClick={() => apply(() => editor.cutSelected(), "已剪切图元，可撤销")}
+              >
+                剪切所选
+              </button>
+              <button
+                type="button"
+                disabled={!state.hasClipboard}
+                onClick={() => apply(() => editor.pasteClipboard(), "已粘贴图元，可撤销")}
+              >
+                粘贴图元
+              </button>
+              <button
+                type="button"
+                onClick={() => apply(() => editor.deleteSelected(), "已删除图元，可撤销")}
+                disabled={state.selectedIds.length === 0}
+              >
+                删除所选
+              </button>
+            </div>
             <div className="studio-tool-group" aria-label="图层排序">
               <button type="button" onClick={() => layer("back")} disabled={!selected}>
                 置底
@@ -1322,7 +1359,7 @@ export default function StudioPage() {
         </aside>
       </div>
       <footer>
-        V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+Z 撤销，Ctrl+Shift+Z/Ctrl+Y
+        V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z 撤销，Ctrl+Shift+Z/Ctrl+Y
         重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 · 无设备写入
       </footer>
     </main>
