@@ -89,6 +89,7 @@ export default function StudioPage() {
   const [rotating, setRotating] = useState(false);
   const [marquee, setMarquee] = useState<MarqueeState | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
+  const [preferredCopyTargetPageId, setPreferredCopyTargetPageId] = useState("");
   const [notice, setNotice] = useState("可手动保存浏览器本地草稿 · 尚未连接工程保存服务");
   const [hasSavedDraft, setHasSavedDraft] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
@@ -145,6 +146,11 @@ export default function StudioPage() {
     (node) => node.groupId !== undefined && state.selectedIds.includes(node.id),
   );
   const canGroup = state.selectedIds.length >= 2 && !hasGroupedSelection;
+  const activePageIndex = state.document.pages.findIndex((item) => item.id === state.activePageId);
+  const copyTargetPages = state.document.pages.filter((item) => item.id !== state.activePageId);
+  const copyTargetPageId = copyTargetPages.some((item) => item.id === preferredCopyTargetPageId)
+    ? preferredCopyTargetPageId
+    : (copyTargetPages[0]?.id ?? "");
   const bindingSlot =
     state.selectedIds.length === 1 && selected && !selected.groupId
       ? editableTagSlot(selected.type)
@@ -192,6 +198,25 @@ export default function StudioPage() {
       editor.deletePage(page.id);
       cancelDrag();
     }, "页面已删除，可撤销");
+  }
+
+  function duplicatePage() {
+    apply(() => {
+      editor.duplicatePage();
+      cancelDrag();
+    }, "已复制页面及其图元和 Tag 绑定，可撤销");
+  }
+
+  function movePage(direction: "previous" | "next") {
+    apply(() => editor.movePage(state.activePageId, direction), "页面顺序已调整，可撤销");
+  }
+
+  function copySelectedToPage() {
+    if (!copyTargetPageId) return;
+    apply(
+      () => editor.copySelectedToPage(copyTargetPageId),
+      "已将所选图元复制到目标页面，可撤销；源页面保持不变",
+    );
   }
 
   function changeTagBinding(slot: string, tagId: string) {
@@ -845,6 +870,19 @@ export default function StudioPage() {
           <button type="button" onClick={createPage} disabled={state.document.pages.length >= 100}>
             + 新建页面
           </button>
+          <button type="button" onClick={duplicatePage} disabled={state.document.pages.length >= 100}>
+            复制页面
+          </button>
+          <button type="button" onClick={() => movePage("previous")} disabled={activePageIndex <= 0}>
+            页面前移
+          </button>
+          <button
+            type="button"
+            onClick={() => movePage("next")}
+            disabled={activePageIndex >= state.document.pages.length - 1}
+          >
+            页面后移
+          </button>
           <button type="button" onClick={renamePage}>
             重命名
           </button>
@@ -869,6 +907,31 @@ export default function StudioPage() {
             </button>
             <button type="button" onClick={() => addSymbol("label")}>
               + 文本
+            </button>
+          </div>
+          <div className="studio-copy-tools">
+            <label className="studio-field">
+              复制选中图元到
+              <select
+                aria-label="跨页面复制目标"
+                value={copyTargetPageId}
+                onChange={(event) => setPreferredCopyTargetPageId(event.target.value)}
+                disabled={copyTargetPages.length === 0}
+              >
+                {copyTargetPages.length === 0 && <option value="">暂无其他页面</option>}
+                {copyTargetPages.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={copySelectedToPage}
+              disabled={state.selectedIds.length === 0 || !copyTargetPageId}
+            >
+              复制选中图元
             </button>
           </div>
           {page.nodes.map((node) => (
