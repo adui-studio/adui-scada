@@ -1237,9 +1237,10 @@ test("剪切所选产生一次删除历史，剪贴板可以继续粘贴", () =>
   const added = e.pasteClipboard();
   expect(added).toHaveLength(1);
   expect(added[0]).not.toBe("pump");
-  expect(e.snapshot().document.pages[0]?.nodes.find((node) => node.id === added[0])?.bindings.running?.tagId).toBe(
-    "water.pump.running",
-  );
+  expect(
+    e.snapshot().document.pages[0]?.nodes.find((node) => node.id === added[0])?.bindings.running
+      ?.tagId,
+  ).toBe("water.pump.running");
 });
 
 test("复制与剪切组合均自动包含全部成员，粘贴生成新的完整组", () => {
@@ -1376,7 +1377,7 @@ test("合法工程重新加载清空剪贴板，失败导入保留已有剪贴�
   e.copySelected();
   expect(e.snapshot().hasClipboard).toBe(true);
   const before = e.snapshot();
-  expect(() => e.loadDocument({ invalid: true })).toThrow();
+  expect(() => e.loadDocument({ invalid: true })).toThrow(/文档/);
   expect(e.snapshot()).toEqual(before);
   e.loadDocument(JSON.parse(JSON.stringify(before.document)));
   expect(e.snapshot().hasClipboard).toBe(false);
