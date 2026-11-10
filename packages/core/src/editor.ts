@@ -783,13 +783,24 @@ export class DocumentEditor {
     if (nodes.some((node) => this.selection.includes(node.id) && studioNodeLocked(node))) {
       throw new TypeError(LOCKED_NODE_MESSAGE);
     }
+    const initialLockedIndices = nodes
+      .map((node, index) => (studioNodeLocked(node) ? { id: node.id, index } : null))
+      .filter((item): item is { id: string; index: number } => item !== null);
+    const applyOrder = (next: ScadaNode[]): boolean => {
+      if (
+        initialLockedIndices.some(
+          ({ id, index }) => next.findIndex((node) => node.id === id) !== index,
+        )
+      ) {
+        throw new TypeError("调整层级会移动已锁定图元，请先解锁");
+      }
+      return this.replaceActivePageNodes(next);
+    };
     const selected = new Set(this.selection);
     if (action === "front" || action === "back") {
       const picked = nodes.filter((node) => selected.has(node.id));
       const others = nodes.filter((node) => !selected.has(node.id));
-      return this.replaceActivePageNodes(
-        action === "front" ? [...others, ...picked] : [...picked, ...others],
-      );
+      return applyOrder(action === "front" ? [...others, ...picked] : [...picked, ...others]);
     }
     if (action === "forward") {
       for (let i = nodes.length - 2; i >= 0; i--) {
@@ -804,7 +815,7 @@ export class DocumentEditor {
         }
       }
     }
-    return this.replaceActivePageNodes(nodes);
+    return applyOrder(nodes);
   }
 
   /** 仅允许单选图元修改几何属性，一次应用只产生一条撤销记录。 */
