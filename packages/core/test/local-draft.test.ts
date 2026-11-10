@@ -152,7 +152,9 @@ test("浏览器存储拒绝读取或清除时提供中文错误", () => {
     getItem: () => {
       throw new Error("模拟拒绝读取");
     },
-    setItem: () => {},
+    setItem: () => {
+      throw new Error("模拟拒绝写入");
+    },
     removeItem: () => {
       throw new Error("模拟拒绝删除");
     },
