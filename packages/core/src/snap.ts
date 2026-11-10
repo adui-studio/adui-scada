@@ -149,6 +149,7 @@ export function resolveDragSnap(
     throw new RangeError(pageId === undefined ? "工程文档不包含页面" : "未找到页面：" + pageId);
   const selected = expandGroupedSelection(page.nodes, selectedIds);
   const moving = page.nodes.filter((node) => selected.has(node.id));
+  if (moving.some(studioNodeLocked)) throw new TypeError("所选图元包含已锁定图元，请先解锁");
   if (moving.length === 0) {
     return { dx: 0, dy: 0, verticalGuide: null, horizontalGuide: null };
   }
