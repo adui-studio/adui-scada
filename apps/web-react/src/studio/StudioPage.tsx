@@ -6,6 +6,8 @@ import {
   waterTreatmentDemoTagOptions,
   DraftAutoSaveSession,
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
+  studioNodeLocked,
+  studioNodeVisible,
 } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
@@ -145,14 +147,17 @@ export default function StudioPage() {
   const hasGroupedSelection = page.nodes.some(
     (node) => node.groupId !== undefined && state.selectedIds.includes(node.id),
   );
-  const canGroup = state.selectedIds.length >= 2 && !hasGroupedSelection;
+  const hasLockedSelection = page.nodes.some(
+    (node) => state.selectedIds.includes(node.id) && studioNodeLocked(node),
+  );
+  const canGroup = state.selectedIds.length >= 2 && !hasGroupedSelection && !hasLockedSelection;
   const activePageIndex = state.document.pages.findIndex((item) => item.id === state.activePageId);
   const copyTargetPages = state.document.pages.filter((item) => item.id !== state.activePageId);
   const copyTargetPageId = copyTargetPages.some((item) => item.id === preferredCopyTargetPageId)
     ? preferredCopyTargetPageId
     : (copyTargetPages[0]?.id ?? "");
   const bindingSlot =
-    state.selectedIds.length === 1 && selected && !selected.groupId
+    state.selectedIds.length === 1 && selected && !selected.groupId && !studioNodeLocked(selected)
       ? editableTagSlot(selected.type)
       : null;
   const demoTagCandidates =
@@ -472,6 +477,22 @@ export default function StudioPage() {
     apply(() => editor.alignSelected(mode), "所选图元已按主选图元对齐");
   }
 
+  function changeSelectedLocked(locked: boolean) {
+    apply(
+      () => editor.setSelectedLocked(locked),
+      locked ? "已批量锁定图元，可撤销" : "已批量解锁图元，可撤销",
+    );
+    cancelDrag();
+  }
+
+  function changeSelectedVisible(visible: boolean) {
+    apply(
+      () => editor.setSelectedVisible(visible),
+      visible ? "已批量显示图元，可撤销" : "已批量隐藏图元，可撤销",
+    );
+    cancelDrag();
+  }
+
   function layer(action: LayerAction) {
     apply(() => editor.reorderSelected(action), "已调整图元层级");
   }
@@ -492,6 +513,13 @@ export default function StudioPage() {
     if (!point) return;
     const node = page?.nodes.find((candidate) => candidate.id === id);
     if (!node) return;
+    if (studioNodeLocked(node)) {
+      editor.select(id, event.shiftKey);
+      refresh();
+      setNotice("该图元已锁定，请在图层列表中解锁后编辑");
+      event.preventDefault();
+      return;
+    }
     if (event.shiftKey) {
       editor.select(id, true);
       refresh();
@@ -499,6 +527,13 @@ export default function StudioPage() {
       return;
     }
     if (!editor.snapshot().selectedIds.includes(id)) editor.select(id);
+    const selectedIds = editor.snapshot().selectedIds;
+    if (page?.nodes.some((item) => selectedIds.includes(item.id) && studioNodeLocked(item))) {
+      refresh();
+      setNotice("所选内容包含已锁定图元，请先解锁");
+      event.preventDefault();
+      return;
+    }
     refresh();
     dragRef.current = {
       pointerId: event.pointerId,
@@ -550,7 +585,7 @@ export default function StudioPage() {
   }
 
   function beginGeometry(event: ReactPointerEvent<SVGElement>, handle: ResizeHandle | "rotate") {
-    if (event.button !== 0 || state.selectedIds.length !== 1 || !selected) return;
+    if (event.button !== 0 || state.selectedIds.length !== 1 || !selected || studioNodeLocked(selected)) return;
     const point = canvasPoint(event.clientX, event.clientY);
     if (!point) return;
     geometryRef.current = {
@@ -961,6 +996,8 @@ export default function StudioPage() {
               type="button"
               className="studio-layer"
               data-selected={state.selectedIds.includes(node.id)}
+              data-hidden={!studioNodeVisible(node)}
+              data-locked={studioNodeLocked(node)}
               key={node.id}
               onClick={(event) => select(node.id, event.shiftKey)}
             >
@@ -968,6 +1005,8 @@ export default function StudioPage() {
               <small>
                 {node.type}
                 {node.groupId ? ` · 组合 ${node.groupId}` : ""}
+                {studioNodeLocked(node) ? " · 已锁定" : ""}
+                {!studioNodeVisible(node) ? " · 已隐藏" : ""}
               </small>
             </button>
           ))}
@@ -1067,7 +1106,7 @@ export default function StudioPage() {
                 pointerEvents="none"
               />
             )}
-            {page.nodes.map((node) => {
+            {page.nodes.filter(studioNodeVisible).map((node) => {
               const displayNode =
                 displayDocument.pages
                   .find((item) => item.id === state.activePageId)
@@ -1105,7 +1144,7 @@ export default function StudioPage() {
                       }
                     }}
                   />
-                  {state.selectedIds.length === 1 && state.selectedId === node.id && (
+                  {state.selectedIds.length === 1 && state.selectedId === node.id && !studioNodeLocked(node) && (
                     <>
                       {RESIZE_HANDLES.map((handle) => {
                         const position = resizeHandlePosition(t, handle);
@@ -1181,6 +1220,20 @@ export default function StudioPage() {
         <aside className="studio-panel" aria-label="图元属性">
           <h2>属性 · 已选 {state.selectedIds.length}</h2>
           <div className="studio-toolbox">
+            <div className="studio-tool-group" aria-label="图层锁定与可见性">
+              <button type="button" disabled={state.selectedIds.length === 0} onClick={() => changeSelectedLocked(true)}>
+                锁定所选
+              </button>
+              <button type="button" disabled={state.selectedIds.length === 0} onClick={() => changeSelectedLocked(false)}>
+                解锁所选
+              </button>
+              <button type="button" disabled={state.selectedIds.length === 0 || hasLockedSelection} onClick={() => changeSelectedVisible(false)}>
+                隐藏所选
+              </button>
+              <button type="button" disabled={state.selectedIds.length === 0 || hasLockedSelection} onClick={() => changeSelectedVisible(true)}>
+                显示所选
+              </button>
+            </div>
             <div className="studio-tool-group" aria-label="图元组合">
               <button
                 type="button"
