@@ -64,10 +64,14 @@ export function withNodesTranslated(
   if (minDx > maxDx || minDy > maxDy) {
     throw new RangeError("所选图元无法完整放入当前页面");
   }
-  // 原始坐标包含小数时，可行位移区间内可能没有整数值。
-  // 将取整后的位移限制在精确可行区间内，避免图元越出画布。
-  const shiftX = Math.max(minDx, Math.min(Math.round(dx), maxDx));
-  const shiftY = Math.max(minDy, Math.min(Math.round(dy), maxDy));
+  // 吸附结果可能恰好落在小数边界上，不能再次取整。
+  // 其他位移仍先取整，再限制到精确可行区间。
+  function normalizeShift(value: number, minimum: number, maximum: number): number {
+    if (value === minimum || value === maximum) return value;
+    return Math.max(minimum, Math.min(Math.round(value), maximum));
+  }
+  const shiftX = normalizeShift(dx, minDx, maxDx);
+  const shiftY = normalizeShift(dy, minDy, maxDy);
 
   return parseScadaDocument({
     ...checked,
@@ -425,3 +429,6 @@ export class DocumentEditor {
     this.selection = this.selection.filter((id) => valid.has(id));
   }
 }
+
+export { DEFAULT_GRID_SIZE, resolveDragSnap } from "./snap.ts";
+export type { DragSnapOptions, DragSnapResult } from "./snap.ts";

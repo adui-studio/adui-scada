@@ -214,3 +214,28 @@
   stroke-width: 1.5;
   stroke-dasharray: 6 4;
 }
+
+/* 画布显示与吸附开关只影响当前编辑会话，不写入工程文件。 */
+.studio-canvas-settings {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.studio-canvas-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  color: #c5d7e5;
+  cursor: pointer;
+}
+.studio-canvas-option input {
+  margin: 0;
+  accent-color: #39c9ba;
+}
+.studio-alignment-guide {
+  stroke: #f7c66e;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 3;
+}

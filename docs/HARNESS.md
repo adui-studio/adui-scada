@@ -248,3 +248,45 @@ pnpm run ready
 ```
 
 **执行状态**：本次中文化补丁尚未在维护者 Windows 上执行 Vite+、Vitest、Vue/React 实际 UI、Docker 和 Tauri 回归。此前 `pnpm run ready` 的 NestJS Controller 单测超时已另作简化修复，但尚无完整复验结果。不能将静态源码审查标记为测试通过。
+
+## 2026-11-10 · V0.2 画布网格与吸附（待验收）
+
+新增 `packages/core/test/snap.test.ts`，覆盖网格吸附与关闭、单轴移动不误触另一轴、其他图元边缘参考线、多选组整体移动、不会对组内图元吸附、旋转外接框、画布边界、非法输入及不可变 JSON。
+
+```powershell
+pnpm run messages:check
+pnpm run test:core
+pnpm run ready
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+两端 Studio 均应分别确认：默认显示 20 单位网格、显示网格独立开关、网格吸附与图元吸附可独立切换；拖动水箱靠近管道左边沿时出现垂直参考线；拖动时不发生未经指针移动的另一轴跳动；吸附后撤销重做和单独移动一致；多选整体拖动保持相对位置；缩放 50%、100%、200% 时光标、网格和落点一致。
+
+导出 React 工程 JSON → Vue 导入，再从 Vue 导出 → React 导入，并反向验证图元位置及 Tag 绑定保持原值。切回 Runtime 验证模拟质量 `GOOD/STALE` 显示没有回归。当前仅为源代码开发成果，**Vite+、TS6、Vitest、Web 构建、浏览器与桌面回归尚未在本轮实际执行**。
+
+## 2026-11-10 · V0.2 网格吸附首次 Windows `ready` 失败及修复
+
+维护者运行 `pnpm run ready`：依赖目录、共享配置、根环境变量、LF 及中文文案检查通过，随后在 `vp check` 的格式化阶段停止。React `StudioPage.tsx` 第 504 行之前的网格条件渲染遗漏 JSX 结束符 `}`，引发解析失败；同时工具报告 Vue `StudioPage.vue` 和 Core `snap.test.ts` 存在格式差异。因格式化先失败，**没有执行后续 Lint、类型检查、测试、E2E、文档检查及构建**。
+
+已在 PR #6 原分支上最小修复 React JSX 语法、整理 React 三组网格开关属性格式及 Vue/单测的格式差异。此为源码修改，尚未在维护者的 Vite+ 环境实测；请重新运行 `pnpm run ready`，并在格式检查通过后按上节验收 React/Vue 交互。
+
+## 2026-11-10 · V0.2 小数边界单元测试反馈与修复
+
+维护者再次运行 `pnpm run ready`：中文文案、格式化（124 文件）、Lint/静态检查（49 文件）、Vue/React 与服务端类型检查均通过；执行 57 个单测时 55 通过、2 失败。失败均位于 `packages/core/test/snap.test.ts`，即吸附函数给出 0.3/-0.2 的精确边界位移，但 `withNodesTranslated` 在提交时重新取整至 0，导致最终图元坐标未到达边界。
+
+修复共享 Core：若传入位移恰为可行区间的精确端点，则保留小数；其他移动仍取整并限制边界。新增左右边界移动、撤销及普通小数取整回归测试。未触及 React/Vue UI、Schema 或工业设备通信。本轮运行在单测阶段结束，**NestJS E2E、文档检查与 Web/Server 构建没有执行**；修复后请重新运行 `pnpm run ready`，运行结果待维护者反馈。
+
+## 2026-11-10 · V0.2 小数边界修复后的 Windows 质量检查反馈
+
+维护者在分支上执行 `pnpm run ready` 并提供终端日志，确认以下阶段通过：依赖 Catalog（9 份清单、26 项依赖）、共享配置、根目录环境/LF、中文文案（70 个文件）、`vp check` 格式化（124 个文件）与 Lint/静态检查（49 个文件）、React/Vue/NestJS TypeScript 类型检查、`vp test run`（**59/59**）、NestJS E2E（**2/2**）、Markdown 文档检查（27 个文件）及 React/Vue 双版本 Web 构建。
+
+日志末尾显示已执行 `pnpm --filter @adui/scada-server run build` 并进入 `nest build`，**未提供最终退出码或命令返回提示，因此服务端构建的最终退出状态尚待确认**。本次只证明以上工具链检查和测试，**尚未完成 Vue/React 浏览器画布交互、双向 JSON 互通及 Runtime/Docker/Tauri 回归**。PR #6 保持 Draft，待交互验收后再评估是否合并。
+
+## 2026-11-10 · V0.2 双框架画布交互验收确认
+
+维护者回复「验收完成」，确认已完成上一轮列出的七项 Vue/React Studio 人工交互检查：默认 20 单位网格及三组开关、图元吸附辅助线与预览/提交一致、多选整体拖动、50%/200% 缩放拖动、边界及撤销重做、React → Vue → React 的本地 JSON 往返与 Tag 绑定、Runtime 模拟数据显示。此为**维护者人工验收声明**，并非当前 Agent 在浏览器重复执行的自动化测试结果。
+
+与此前维护者 Windows 日志结合：59/59 单元测试、2/2 NestJS E2E、中文文案、124 文件格式检查、49 文件 Lint/静态检查、Web/Server 类型检查、27 份文档检查、React/Vue 双 Web 构建已通过。此前日志末尾只显示启动 `nest build`，**未包含退出状态，服务端构建完成状态未独立确认**；Docker/Tauri/工业现场验收亦不在本次完成声明范围内。
+
+PR #6 的**本批双框架交互验收已完成**，仍维持 Draft 以待维护者明确决定何时发起正式合并流程；未经授权不合并 `main`。

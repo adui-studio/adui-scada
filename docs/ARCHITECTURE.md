@@ -141,3 +141,7 @@ ADR-0008 的分散模板方案已被 [ADR-0010](adr/0010-root-env-lf.md) 取代�
 仍沿用独立 `@adui/scada-core/editor` 子入口，增加多选、节点增删、批量平移、对齐、图层排序与可逆命令；React/Vue 分别承担指针交互和 UI，视图缩放不会污染共享 Schema。所有新增图元的 `bindings` 均为空，不能借编辑器操作接入真实 PLC/DCS；Runtime 不依赖 Editor。
 
 设计细则与取舍见 [ADR-0011](adr/0011-editor-canvas-operations.md)。
+
+## V0.2 画布网格与吸附几何（ADR-0012）
+
+共享 Core 的 `snap.ts` 负责可重复的网格/图元参考线吸附计算；React/Vue 分别呈现纯视图网格与辅助线，并使用相同位移结果调用共享的编辑命令。此能力不引入框架依赖、第三方包或新 Schema 字段；Runtime、模拟数据与工业安全边界不变。详见 [ADR-0012](adr/0012-grid-snap-guides.md)。
