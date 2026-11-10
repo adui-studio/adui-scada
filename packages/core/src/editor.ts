@@ -1,4 +1,10 @@
-import { migrateScadaDocument, parseScadaDocument } from "./document.ts";
+import {
+  migrateScadaDocument,
+  parseScadaDocument,
+  STUDIO_NODE_STATE_KEY,
+  studioNodeLocked,
+  studioNodeVisible,
+} from "./document.ts";
 import type { ScadaDocument, ScadaNode, ScadaNodeType } from "./document.ts";
 import { expandGroupedSelection } from "./grouping.ts";
 
@@ -18,6 +24,33 @@ export type EditableSymbol = "tank" | "pump" | "pipe" | "label";
 export type NodeTransformPatch = Partial<ScadaNode["transform"]>;
 
 const HISTORY_LIMIT = 100;
+const LOCKED_NODE_MESSAGE = "所选图元包含已锁定图元，请先解锁";
+
+/** 只更新共享 Schema 中受验证的 Studio 扩展状态，不修改业务属性。 */
+function withStudioState(node: ScadaNode, key: "locked" | "visible", enabled: boolean): ScadaNode {
+  const previous = node.props[STUDIO_NODE_STATE_KEY] as Record<string, boolean> | undefined;
+  const metadata = { ...previous };
+  if (key === "locked" ? enabled : !enabled) metadata[key] = enabled;
+  else delete metadata[key];
+  const props = { ...node.props };
+  if (Object.keys(metadata).length > 0) props[STUDIO_NODE_STATE_KEY] = metadata;
+  else delete props[STUDIO_NODE_STATE_KEY];
+  return { ...node, props };
+}
+
+/** 锁定状态变更本身可撤销，但不得同时修改受锁定保护的其他内容。 */
+function withoutLockState(node: ScadaNode): string {
+  const props = { ...node.props };
+  const raw = props[STUDIO_NODE_STATE_KEY];
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const flags = { ...(raw as Record<string, boolean>) };
+    delete flags.locked;
+    if (Object.keys(flags).length > 0) props[STUDIO_NODE_STATE_KEY] = flags;
+    else delete props[STUDIO_NODE_STATE_KEY];
+  }
+  return JSON.stringify({ ...node, props });
+}
+
 
 /** 当前 SVG 图元的可编辑绑定槽；不允许向其他图元添加未知槽。 */
 export function editableTagSlot(type: string): "level" | "running" | "value" | null {
@@ -72,6 +105,7 @@ export function withNodesTranslated(
   const selected = expandGroupedSelection(page.nodes, nodeIds);
   const nodes = page.nodes.filter((node) => selected.has(node.id));
   if (nodes.length === 0) return checked;
+  if (nodes.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
 
   const minDx = Math.max(...nodes.map((node) => -node.transform.x));
   const maxDx = Math.min(
@@ -140,6 +174,7 @@ export function findNodesInRect(
 
   return page.nodes
     .filter((node) => {
+      if (!studioNodeVisible(node)) return false;
       const t = node.transform;
       const angle = (t.rotation * Math.PI) / 180;
       const halfX =
@@ -207,6 +242,7 @@ export function withNodeTransform(
   const page = firstPage(checked, pageId);
   const node = page.nodes.find((candidate) => candidate.id === nodeId);
   if (!node) throw new RangeError(`未找到图元：${nodeId}`);
+  if (studioNodeLocked(node)) throw new TypeError(LOCKED_NODE_MESSAGE);
   if (node.groupId) throw new TypeError("已组合图元不能单独修改几何属性，请先解组");
 
   const transform = { ...node.transform, ...patch };
