@@ -19,10 +19,14 @@ export { waterTreatmentDemoDocument } from "./demo-document.ts";
 export {
   LOCAL_DRAFT_FORMAT_VERSION,
   LOCAL_DRAFT_MAX_BYTES,
+  LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
   localDraftKey,
   hasLocalDraft,
   saveLocalDraft,
   readLocalDraft,
   clearLocalDraft,
+  LocalDraftAutoSaveSession,
 } from "./local-draft.ts";
 export type { LocalDraft, LocalDraftStorage } from "./local-draft.ts";
+export { DraftAutoSaveSession } from "./draft-repository.ts";
+export type { DraftRepository, DraftRecord } from "./draft-repository.ts";

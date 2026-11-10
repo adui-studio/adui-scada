@@ -549,3 +549,48 @@ pnpm run dev:vue
 维护者补充此前同一次 Windows PowerShell `pnpm run ready` 的最终结果：`Write-Host "退出码：$LASTEXITCODE"` 返回 **退出码 0**。结合此前完整终端日志，本批依赖 Catalog、共享环境/LF、中文文案 **75 文件**、Vite+ 格式检查 **136 文件**、Lint/静态检查 **54 文件零警告**、React/Vue/NestJS 类型检查、单元测试 **128/128**、NestJS E2E **2/2**、Markdown 文档检查 **34 份**、React/Vue Web 构建与 NestJS `nest build` 全部完成，确认整条 `ready` 执行成功。
 
 维护者另明确回复「保存验证成功，同意合并」，据此**本地草稿保存功能已获人工验收及明确合并授权**。但未提供 Vue/React 各自刷新恢复、取消覆盖/恢复、损坏记录、跨工程隔离和 Runtime 全套人工步骤的逐项记录；这些场景已在设计、部分 Core 单测和现有校验中覆盖，不应声称所有浏览器手工场景已逐项执行。此次新增记录后**尚未再次运行 `docs:check`**；不能把文档追加后的新提交视为重新执行过质量链。正式工程持久化/发布、历史快照和工业现场验收不属于本批。
+
+## 2026-11-10 · V0.2 第十二批按需自动保存开发（待验证）
+
+本批基于 `main` 合并提交 `27a2229` 建立 `feat/v0.2-safe-autosave`。维护者上一批已在 Windows 执行通过完整 `pnpm run ready`（**128/128** 单测、**2/2** E2E、文档和三端构建，退出码 **0**），但**不继承该验收结果**给本批。新增 **12 项** Core 测试，源码预计 **140** 项单测、**35 份 Markdown**；这些数字尚未由本批真实测试证实。
+
+```powershell
+git fetch origin
+git switch feat/v0.2-safe-autosave
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+两端人工检查：初次打开默认关闭自动保存、已有草稿开启需确认、快速连续编辑等待 1 秒后保存最终工程、切换图元选中与预览不触发写入；刷新后只有恢复提醒并需要人工确认恢复。另一标签页同一 Origin 同项目修改或清除草稿，原页面停止自动保存、保留现有画面；存储损坏或格式不兼容时拒绝开启，非法工程 ID 和写入失败不破坏旧记录。人工保存同步自动保存基线、导入其他工程/恢复/清除立即暂停；继续检验双框架 JSON 往返、组合/Tag/撤销和只读 Runtime。自动保存不足 1 秒直接关闭可能丢失最后修改，跨标签页检测不是原子锁。
+
+本批未独立执行 Vite+ 格式、Lint、类型、Vitest、E2E、文档检查或三端构建；在维护者实际提供 Windows 结果前，PR 应继续 Draft。文档本身不构成生产级安全验证。
+
+## 2026-11-10 · 第十二批 Dexie IndexedDB 存储切换（待验证）
+
+在已有 V0.2 第十二批 PR #14 分支中，按维护者新要求调整 IndexedDB 正式存储方案。选型 `dexie@4.4.7`，测试使用 `fake-indexeddb@6.2.8`，新增 `packages/draft-storage`，`DraftRepository` 的 Core 异步接口及 IndexedDB 事务版本条件写入。历史 localStorage 草稿以校验+事务迁移，且**提交成功后才尝试清理旧数据**。本批未独立运行新依赖的安装、类型检查、Lint、单测或浏览器测试，所有质量指标保留待验证。
+
+现有 128 项已验收单元测试 + 第十二批旧新增 12 项 + 当前新增 **7 项 Core 异步仓储测试和 9 项 fake IndexedDB 测试**，合计源码预计 **156 项**；Markdown 新增 ADR-0021 后预计 **36 份**。新增 `packages/draft-storage/tsconfig.json` 后共享 TSConfig 消费端预计 **9 个**，Catalog 从 26 项增加到预计 **28 项**，依赖清单从 9 个增加到预计 **10 个**。这些仅为静态计算，不等于任何单项实际检查通过。
+
+```powershell
+git fetch origin
+git switch feat/v0.2-safe-autosave
+pnpm install
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+待核验：新依赖安装/冻结 Catalog、`vp check` 零警告、React/Vue/新存储包/NestJS 类型检查、Core/Vitest+fake-indexeddb 用例、NestJS E2E、36 份文档及三端构建；浏览器旧 `localStorage` 草稿迁移后恢复保真、同 Origin 双标签页事务冲突、清除后旧备份不复活、自动保存防抖、刷新后仍需明确恢复、现有手动 JSON 和 Runtime 只读行为无回归。
+
+本批未执行工程发布、工业现场安全检查或真实 PLC/DCS 采集；IndexedDB 不能替代服务器持久化和备份。完成质量链后再逐项登记测试结果，Draft PR #14 未获新的合并授权。
+
+## 2026-11-10 · PR #14 Dexie 存储边界修复（待完整质量检查）
+
+在维护者先前对 PR #14 提交 `2189eb4`（允许确认清理损坏历史草稿）之后，继续检查并修复三个风险：Core `DraftAutoSaveSession.saveIfDirty` 以 `async` 保证非法输入也按 Promise 拒绝；新增 `InvalidLegacyDraftError` 明确区分无效旧 localStorage 草稿与 IndexedDB/浏览器存储读取故障，Vue/React 仅对确定的损坏旧草稿放行用户确认清理；针对删除重建的 **ABA 修订号重复**，`migrations` 表保留每工程的 `lastRevision` 水位，后续新建始终单调递增，并在同一 IndexedDB 事务内写入草稿及水位。
+
+新增两项异常场景测试和一项删除重建冲突测试，并补充 1 项 Core Promise 拒绝测试；基于上一批 **128** 项和本批原始新增 **28** 项及新增 **4** 项，**源码预计总计 160 项单元测试**。其中旧存储读取权限故障不应误判为可清理的损坏草稿，删除重建后旧标签页持有的 `revision` 不能覆盖新工程。
+
+**本批仍未执行完整 `pnpm install`、`pnpm run ready`、真实浏览器迁移及双标签页验收**。源码计数不是实际通过结果，新的 Markdown 章节也尚未执行文档格式校验。特别注意 pnpm 12.18.0 新增 `dexie` / `fake-indexeddb` 的正确安装及**由 pnpm 生成的锁文件**；不要手动构造 lockfile。

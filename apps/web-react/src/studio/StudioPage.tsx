@@ -3,12 +3,11 @@ import type { ChangeEvent, FormEvent, PointerEvent as ReactPointerEvent } from "
 import {
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
-  hasLocalDraft,
-  saveLocalDraft,
-  readLocalDraft,
-  clearLocalDraft,
+  DraftAutoSaveSession,
+  LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
 } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
+import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
 import {
   DEFAULT_GRID_SIZE,
   DocumentEditor,
@@ -34,6 +33,14 @@ import { svgDataUrl } from "@adui/scada-runtime";
 import "./studio.css";
 
 const previewTags = new WaterTreatmentSimulator().next(new Date("2026-11-09T00:00:00Z"));
+function getLegacyStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+const drafts = new DexieDraftRepository({ legacyStorage: getLegacyStorage() });
 const maxFileSize = 2 * 1024 * 1024;
 const geometryFields = [
   ["x", "X 坐标"],
@@ -81,13 +88,10 @@ export default function StudioPage() {
   const [marquee, setMarquee] = useState<MarqueeState | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
   const [notice, setNotice] = useState("可手动保存浏览器本地草稿 · 尚未连接工程保存服务");
-  const [hasSavedDraft, setHasSavedDraft] = useState(() => {
-    try {
-      return hasLocalDraft(window.localStorage, waterTreatmentDemoDocument.projectId);
-    } catch {
-      return false;
-    }
-  });
+  const [hasSavedDraft, setHasSavedDraft] = useState(false);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
+  const autoSaveSessionRef = useRef<DraftAutoSaveSession | null>(null);
+  const draftActionRef = useRef(false);
   const [zoom, setZoom] = useState(1);
   const [gridVisible, setGridVisible] = useState(true);
   const [gridSnap, setGridSnap] = useState(true);
@@ -135,15 +139,86 @@ export default function StudioPage() {
     setLabelDraft(typeof node?.props.text === "string" ? node.props.text : "");
   }
 
-  function refreshDraftAvailability(projectId: string): string {
+  async function refreshDraftAvailability(projectId: string): Promise<string> {
     try {
-      setHasSavedDraft(hasLocalDraft(window.localStorage, projectId));
+      setHasSavedDraft((await drafts.get(projectId)) !== null);
       return "";
     } catch (error) {
-      setHasSavedDraft(false);
+      setHasSavedDraft(error instanceof InvalidLegacyDraftError);
       return "；本地草稿检测失败：" + (error instanceof Error ? error.message : String(error));
     }
   }
+
+  async function pauseAutoSave(): Promise<void> {
+    const session = autoSaveSessionRef.current;
+    autoSaveSessionRef.current = null;
+    setAutoSaveEnabled(false);
+    await session?.stop();
+  }
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void drafts.get(state.document.projectId).then(
+      (saved) => {
+        if (!controller.signal.aborted) setHasSavedDraft(saved !== null);
+      },
+      (error: unknown) => {
+        if (controller.signal.aborted) return;
+        setHasSavedDraft(error instanceof InvalidLegacyDraftError);
+        setNotice("本地草稿读取失败：" + (error instanceof Error ? error.message : String(error)));
+      },
+    );
+    const unsubscribe = drafts.subscribe(state.document.projectId, (revision) => {
+      if (controller.signal.aborted) return;
+      setHasSavedDraft(revision !== null);
+      const session = autoSaveSessionRef.current;
+      if (session && revision !== session.currentRevision) {
+        autoSaveSessionRef.current = null;
+        setAutoSaveEnabled(false);
+        void session.stop();
+        setNotice("其他标签页已修改草稿，自动保存已暂停，请先核对");
+      }
+    });
+    return () => {
+      controller.abort();
+      unsubscribe();
+    };
+  }, [state.document.projectId]);
+
+  useEffect(() => {
+    if (!autoSaveEnabled) return;
+    const session = autoSaveSessionRef.current;
+    if (!session) return;
+    const document = state.document;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      void session.saveIfDirty(document).then(
+        (saved) => {
+          if (controller.signal.aborted || autoSaveSessionRef.current !== session || !saved) return;
+          setHasSavedDraft(true);
+          setNotice(`本地草稿已自动保存（${saved.savedAt}）`);
+        },
+        (error: unknown) => {
+          if (controller.signal.aborted || autoSaveSessionRef.current !== session) return;
+          autoSaveSessionRef.current = null;
+          setAutoSaveEnabled(false);
+          void session.stop();
+          setNotice("自动保存已暂停：" + (error instanceof Error ? error.message : String(error)));
+        },
+      );
+    }, LOCAL_DRAFT_AUTO_SAVE_DELAY_MS);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [autoSaveEnabled, state.document]);
+
+  useEffect(() => {
+    return () => {
+      void autoSaveSessionRef.current?.stop();
+      autoSaveSessionRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -485,51 +560,94 @@ export default function StudioPage() {
     }
   }
 
-  function saveDraft() {
+  async function toggleAutoSave() {
+    if (draftActionRef.current) return;
+    draftActionRef.current = true;
     try {
-      const storage = window.localStorage;
-      const projectId = editor.snapshot().document.projectId;
+      if (autoSaveSessionRef.current) {
+        await pauseAutoSave();
+        setNotice("自动保存已暂停，当前工程不会被自动写入");
+        return;
+      }
+      const session = await DraftAutoSaveSession.open(drafts, editor.snapshot().document);
       if (
-        hasLocalDraft(storage, projectId) &&
-        !window.confirm("当前工程已有本地草稿，确认使用现有画面覆盖吗？")
+        session.hasExistingDraft &&
+        !window.confirm("数据库已有草稿，开启自动保存后新修改将覆盖该版本。确认开启吗？")
       ) {
         return;
       }
-      const saved = saveLocalDraft(storage, editor.snapshot().document);
-      setHasSavedDraft(true);
-      setNotice(`当前工程已保存到此浏览器（${saved.savedAt}），并非正式工程发布`);
+      autoSaveSessionRef.current = session;
+      setAutoSaveEnabled(true);
+      setNotice("IndexedDB 自动保存已开启：修改后约 1 秒保存，刷新后仍需手动恢复");
     } catch (error) {
-      setNotice("保存草稿失败：" + (error instanceof Error ? error.message : String(error)));
+      setNotice("开启自动保存失败：" + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      draftActionRef.current = false;
     }
   }
 
-  function restoreDraft() {
-    if (!window.confirm("恢复本地草稿将替换当前工程并清空撤销历史，确认恢复吗？")) return;
+  async function saveDraft() {
+    if (draftActionRef.current) return;
+    draftActionRef.current = true;
     try {
-      const saved = readLocalDraft(window.localStorage, state.document.projectId);
+      await pauseAutoSave();
+      const document = editor.snapshot().document;
+      const current = await drafts.get(document.projectId);
+      if (current && !window.confirm("数据库已有草稿，确认使用当前画面覆盖吗？")) return;
+      const saved = await drafts.save(document, current?.revision ?? null);
+      setHasSavedDraft(true);
+      setNotice(`已保存 IndexedDB 草稿（${saved.savedAt}），并非正式工程发布`);
+    } catch (error) {
+      setNotice("保存草稿失败：" + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      draftActionRef.current = false;
+    }
+  }
+
+  async function restoreDraft() {
+    if (!window.confirm("恢复数据库草稿将替换当前画面并清空撤销历史，确认吗？")) return;
+    if (draftActionRef.current) return;
+    draftActionRef.current = true;
+    try {
+      await pauseAutoSave();
+      const saved = await drafts.get(state.document.projectId);
       if (!saved) {
         setHasSavedDraft(false);
-        setNotice("当前工程没有可恢复的本地草稿");
+        setNotice("当前工程没有可恢复的数据库草稿");
         return;
       }
       editor.loadDocument(saved.document);
       cancelDrag();
       refresh();
       setHasSavedDraft(true);
-      setNotice(`已恢复浏览器本地草稿（保存于 ${saved.savedAt}）`);
+      setNotice(`已恢复 IndexedDB 草稿（保存于 ${saved.savedAt}）`);
     } catch (error) {
       setNotice("恢复草稿失败：" + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      draftActionRef.current = false;
     }
   }
 
-  function clearDraft() {
-    if (!window.confirm("确认永久清除当前工程的浏览器本地草稿吗？当前画面不会改变。")) return;
+  async function clearDraft() {
+    if (!window.confirm("确定清除当前工程的 IndexedDB 草稿吗？当前画面不会改变。")) return;
+    if (draftActionRef.current) return;
+    draftActionRef.current = true;
     try {
-      clearLocalDraft(window.localStorage, state.document.projectId);
+      await pauseAutoSave();
+      let current = null;
+      try {
+        current = await drafts.get(state.document.projectId);
+      } catch (error) {
+        if (!(error instanceof InvalidLegacyDraftError)) throw error;
+        // 已经获得用户确认，允许清理损坏旧草稿；事务版本核对继续保护数据库。
+      }
+      await drafts.remove(state.document.projectId, current?.revision ?? null);
       setHasSavedDraft(false);
-      setNotice("已清除当前工程的本地草稿，当前编辑画面保持不变");
+      setNotice("数据库草稿已清除，当前编辑画面保持不变");
     } catch (error) {
       setNotice("清除草稿失败：" + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      draftActionRef.current = false;
     }
   }
 
@@ -550,10 +668,12 @@ export default function StudioPage() {
     if (!file) return;
     try {
       if (file.size > maxFileSize) throw new RangeError("JSON 文件不能超过 2 MiB");
-      const migratedFrom = editor.loadDocument(JSON.parse(await file.text()) as unknown);
+      const parsed = JSON.parse(await file.text()) as unknown;
+      await pauseAutoSave();
+      const migratedFrom = editor.loadDocument(parsed);
       setPreview(null);
       refresh();
-      const draftWarning = refreshDraftAvailability(editor.snapshot().document.projectId);
+      const draftWarning = await refreshDraftAvailability(editor.snapshot().document.projectId);
       setNotice(
         (migratedFrom
           ? `已将工程从 ${migratedFrom} 迁移至当前版本，请重新导出 JSON 草稿`
@@ -608,6 +728,9 @@ export default function StudioPage() {
           <button type="button" onClick={saveDraft}>
             保存草稿
           </button>
+          <button type="button" onClick={toggleAutoSave} aria-pressed={autoSaveEnabled}>
+            {autoSaveEnabled ? "暂停自动保存" : "开启自动保存"}
+          </button>
           <button type="button" onClick={restoreDraft} disabled={!hasSavedDraft}>
             恢复草稿
           </button>
@@ -618,6 +741,7 @@ export default function StudioPage() {
       </header>
       <p role="status" className="studio-notice">
         {notice}
+        {hasSavedDraft && !autoSaveEnabled ? " · 已发现本地草稿，可点击「恢复草稿」确认加载" : ""}
       </p>
       <div className="studio-workspace">
         <aside className="studio-panel" aria-label="图元列表">

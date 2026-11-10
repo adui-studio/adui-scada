@@ -251,3 +251,29 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - 本地保存不代表工程发布、服务器备份、跨设备或跨端口同步；浏览器本地存储未加密，不应写入真实设备凭据。Runtime 继续只读，完全不访问 Studio 草稿。详细取舍参见 [ADR-0019](adr/0019-local-draft-persistence.md)。
 
 本批不实现自动保存、多标签页并发保护、历史快照、跨 Origin 同步或后端持久化。正式工程存储与发布仍须按 FR-002/008 单独设计和验收。
+
+## 21. V0.2 第十二批：安全的本地草稿自动保存
+
+- `LocalDraftAutoSaveSession(storage, source)` 为无框架依赖 Core 会话，记录当前 `projectId`、经过 `parseScadaDocument` 验证的工程 JSON 基线及存储原始字符串。初始化读取并验证已有草稿，损坏或不兼容格式拒绝开启，`hasExistingDraft` 供界面提示覆盖确认。
+- `isDirty(source)` 仅比较当前 `ScadaDocument` 内容，不将图元选择、光标、SVG 预览或组件状态写入工程；`saveIfDirty(source)` 在内容变化时检查存储原始字符串是否仍等于会话认知的记录，冲突明确拒绝并由 UI 停写；成功写入后刷新基线。`acceptSaved(saved)` 仅用于**人工保存成功后**同步会话基线与存储版本。
+- Vue/React 默认 `autoSaveEnabled = false`，用户点击开启且确认原有草稿后才建立会话。两端均用 **1000 ms** 防抖，变更、暂停或卸载时取消待写定时器；收到同一 Origin 的 `storage` 事件后暂停并提示。成功导入其他工程、恢复或清除草稿时暂停会话，手动保存仍可用。
+- 进入页面时只显示本地草稿存在提醒，不自动调用 `DocumentEditor.loadDocument`。恢复需用户确认，加载成功才重置撤销历史；自动写入失败时当前画面不变、原记录不被删除，用户可导出 JSON 备份。
+- `localStorage` 没有跨标签页 CAS 原子操作，**写入前冲突核对不是严格事务锁**；页面立即关闭可能损失尚未到达 1 秒的待保存修改；均须在 UI 操作与文档中明确。严格并发、恢复快照、服务端发布和工业设备写入不在本批。参见 [ADR-0020](adr/0020-safe-local-autosave.md)。
+
+## 22. V0.2 第十二批 IndexedDB 草稿仓储（ADR-0021）
+
+- Core 新增异步 `DraftRepository` 契约：`get(projectId): Promise<DraftRecord | null>`、`save(document, expectedRevision)`、`remove(projectId, expectedRevision)` 和跨标签页通知 `subscribe`，其中 `DraftRecord` 独立携带整数 `revision`、`savedAt`、`projectId` 和严格 `ScadaDocument 0.2.0`。编辑器仍不依赖 Dexie。
+- 新建 `packages/draft-storage`，由 `DexieDraftRepository` 使用 `dexie@4.4.7`。数据库 `adui-scada-studio` 版本 1，`drafts` 主键为工程 ID，并有保存时间索引；`migrations` 记录旧草稿成功迁移或被清除的工程，防止历史备份重新复活。
+- `save` 在 `rw` 事务中读取最新记录，确认 `expectedRevision` 与最新版本一致后递增修订号并写入；`remove` 在事务中按版本条件清除并留下标记。两个标签页并发写入只有满足版本条件的事务能成功。广播通知仅用于提前刷新视图状态，不能替代版本条件校验。
+- 读取时优先采用已存在的 IndexedDB 工程。若无对应记录及迁移标记，再验证旧 `localStorage` 草稿，数据库草稿与标记同事务提交成功之后才尝试删除旧记录；损坏 JSON、不兼容 Schema 和其他非法字段一律拒绝载入并保留原始记录。
+- Vue/React 的人工保存/恢复/清除与自动保存统一改为异步仓储；人工操作前停止自动保存会话并等待已开始的写入结束。自动恢复仍禁止，必须通过现有 `DocumentEditor.loadDocument` 受控载入。保存使用修订号条件写入，拒绝较旧标签页覆盖新记录。
+- 依赖统一登记 pnpm Catalog，锁定 `dexie: 4.4.7` 与测试专用 `fake-indexeddb: 6.2.8`。新增存储包 TSConfig 使用 `@adui/tsconfig/browser`，类型检查接入 `typecheck:web`；模拟 IndexedDB 用例加入根 Vitest。
+- 旧同步 `LocalDraftStorage` 和 `LocalDraftAutoSaveSession` 暂保留为**历史迁移与原测试兼容代码**，Vue/React 不再用它们进行正式草稿读写。数据库 schemaVersion 和 SCADA 工程 Schema 版本独立，不能互相替代。
+
+本批 IndexedDB 只负责浏览器临时草稿；未实现历史版本列表、正式工程发布、服务器权限、工业设备直连或 PLC 写入。存储配额、禁止敏感凭据、跨 Origin 不互通和浏览器清理风险依旧存在。详见 [ADR-0021](adr/0021-indexeddb-dexie-storage.md)。
+
+## 23. IndexedDB 事务安全补充（第十二批）
+
+- `migrations[projectId]` 除记录旧草稿迁移或删除标记，还保存可选 `lastRevision`。保存时计算 `max(当前草稿 revision, 标记 lastRevision) + 1`，与数据写入在同一 Dexie `rw` 事务完成；删除时保留水位，避免删除重建的 ABA 修订号复用。到达安全整数上限时拒绝保存。
+- 旧 `localStorage` 草稿的校验异常包装为 `InvalidLegacyDraftError`，与 IndexedDB 访问故障及浏览器权限故障区分。仅确定为损坏历史草稿时允许人工确认清除；版本条件删除仍不可绕过。
+- `DraftAutoSaveSession.saveIfDirty` 按 Promise 异步接口统一抛错语义，非法工程不会在 Promise 返回前同步抛错；对应回归测试与 Windows 全量检查仍待维护者执行。
