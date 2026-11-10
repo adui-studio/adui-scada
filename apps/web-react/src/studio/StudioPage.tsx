@@ -478,10 +478,14 @@ export default function StudioPage() {
     if (!file) return;
     try {
       if (file.size > maxFileSize) throw new RangeError("JSON 文件不能超过 2 MiB");
-      editor.loadDocument(JSON.parse(await file.text()) as unknown);
+      const migratedFrom = editor.loadDocument(JSON.parse(await file.text()) as unknown);
       setPreview(null);
       refresh();
-      setNotice("工程 JSON 已校验并载入本地编辑器");
+      setNotice(
+        migratedFrom
+          ? `已将工程从 ${migratedFrom} 迁移至当前版本，请重新导出 JSON 草稿`
+          : "工程 JSON 已校验并载入本地编辑器",
+      );
     } catch (error) {
       setNotice("导入失败：" + (error instanceof Error ? error.message : String(error)));
     }

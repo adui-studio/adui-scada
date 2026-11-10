@@ -1,4 +1,4 @@
-import { parseScadaDocument } from "./document.ts";
+import { migrateScadaDocument, parseScadaDocument } from "./document.ts";
 import type { ScadaDocument, ScadaNode, ScadaNodeType } from "./document.ts";
 import { expandGroupedSelection } from "./grouping.ts";
 
@@ -513,13 +513,14 @@ export class DocumentEditor {
     return true;
   }
 
-  /** 工程导入具备原子性；成功导入后重新开始编辑历史。 */
-  loadDocument(source: unknown): void {
-    const next = parseScadaDocument(source);
-    this.current = next;
+  /** 显式迁移历史 JSON，成功后重置编辑历史；失败时保留全部原有状态。 */
+  loadDocument(source: unknown): string | null {
+    const { document, migratedFrom } = migrateScadaDocument(source);
+    this.current = document;
     this.selection = [];
     this.past.length = 0;
     this.future.length = 0;
+    return migratedFrom;
   }
 
   private getSelected(): ScadaNode | undefined {
