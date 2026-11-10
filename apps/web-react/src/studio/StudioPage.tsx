@@ -705,7 +705,9 @@ export default function StudioPage() {
                             width={10}
                             height={10}
                             onPointerDown={(event) => beginGeometry(event, handle)}
-                          />
+                          >
+                            <title>按住 Shift 保持宽高比</title>
+                          </rect>
                         );
                       })}
                       <line

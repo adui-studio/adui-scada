@@ -119,9 +119,8 @@ test("等比例预览不改变工程，提交后撤销重做及 Tag 绑定一致
   expect(editor.snapshot().document).toEqual(before);
   expect(editor.updateSelectedTransform(patch)).toBe(true);
   expect(editor.snapshot().document).toEqual(preview);
-  expect(editor.snapshot().document.pages[0]?.nodes.find((n) => n.id === "tank")?.bindings.level?.tagId).toBe(
-    "water.level",
-  );
+  const tank = editor.snapshot().document.pages[0]?.nodes.find((n) => n.id === "tank");
+  expect(tank?.bindings.level?.tagId).toBe("water.level");
   expect(editor.undo()).toBe(true);
   expect(editor.snapshot().document).toEqual(before);
   expect(editor.redo()).toBe(true);
