@@ -625,3 +625,20 @@ pnpm run dev:vue
 人工验收覆盖：创建/重命名/切换/删除至少两页，删除最后一页拒绝；页面切换不产生工程脏状态，撤销/重做跨页准确；第 2 页框选、缩放、吸附、组合、模拟 Tag 绑定不得影响第 1 页；多页面 JSON 双向互通，IndexedDB 手动保存/按需自动保存及刷新后人工恢复正确；只读 Runtime `STALE/GOOD` 无回归。
 
 本批真实 `ready` 与双框架浏览器操作均待维护者提供结果，不可将源码存在或历史检查结果当作本批通过。
+
+## 2026-11-10 · V0.2 第十五批复制与排序待验收
+
+本批新增 15 项共享 Core 测试，整仓**预计 194 项单测**，另有 2 项 NestJS E2E。新 ADR-0023 后 Markdown **预计 38 份**；所有数值为静态统计，需维护者 Windows 实测确认。
+
+```powershell
+git status -sb
+git fetch origin
+git switch feat/v0.2-page-copy-order
+pnpm install --frozen-lockfile
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+如 `ready` 全部通过，分别运行 `pnpm run dev:react` 和 `pnpm run dev:vue` 检查页面复制、排序、跨页面选择/复制及组合完整性，验证原工程不变和撤销重做；跨框架 JSON 双向互通、IndexedDB 手动/自动草稿与人工恢复，最后检查默认 Runtime `pages[0]`、STALE/GOOD 及设备写入禁用行为。
+
+**注意：** 页面排序会改变默认 Runtime 第一页显示内容；当页面完整复制导致工程超过 IndexedDB 草稿大小上限时，应提示保存失败并允许用户导出 JSON。当前环境未执行上述命令或浏览器实机验证，禁止把源码存在等同于检查通过。

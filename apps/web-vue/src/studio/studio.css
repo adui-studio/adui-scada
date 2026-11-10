@@ -90,6 +90,22 @@
   margin: 18px 0 8px;
   font-size: 13px;
 }
+/* 跨页面复制明确显示目标页，避免误复制到当前页面。 */
+.studio-copy-tools {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 10px 0;
+  border-top: 1px solid #294057;
+  border-bottom: 1px solid #294057;
+}
+.studio-copy-tools .studio-field {
+  margin: 0;
+}
+.studio-copy-tools button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
 .studio-layer {
   display: flex;
   width: 100%;

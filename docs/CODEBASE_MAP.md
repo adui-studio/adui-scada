@@ -202,3 +202,11 @@
 - `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：页面导航与编辑作用域，保留双框架对等；两份 `studio.css` 增加导航样式。
 - `packages/core/test/editor.test.ts`、`packages/runtime/test/runtime.test.ts`：页面隔离、工程级 ID、边界、历史以及 SVG 选页回归。
 - `docs/adr/0022-multi-page-editor-scope.md`：解释会话态与 JSON 持久化的边界。
+
+## V0.2 第十五批：页面复制、排序与跨页面图元复制
+
+- `packages/core/src/editor.ts`：共享的工程级 ID 收集和重新分配、`cloneNodes` 组合重映射，以及 `DocumentEditor.duplicatePage/movePage/copySelectedToPage`。通过既有 Parser 和撤销历史原子提交。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：双框架页面复制、前移/后移按钮和跨页图元目标选择；相同中文错误与安全限制。
+- `apps/web-react/src/studio/studio.css`、`apps/web-vue/src/studio/studio.css`：复制目标选择区共用版式。
+- `packages/core/test/editor.test.ts`：新增 15 项页面副本、排序、复制选中、不同画布整体平移、组合保真和错误路径回归测试。
+- [ADR-0023](adr/0023-page-copy-and-reordering.md)：记录全工程 ID 重映射、复制布局、默认 Runtime 页面及保存边界。

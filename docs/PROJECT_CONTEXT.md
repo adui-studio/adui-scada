@@ -296,3 +296,11 @@ PR #15（模拟 Tag 绑定编辑）已获得维护者 Windows `pnpm run ready` *
 本批共享 `DocumentEditor` 支持页面创建、重命名、切换、删除与关联的撤销上下文；按页面扩展框选、移动、吸附和 SVG 预览，Vue/React 双端显示同样的页面管理导航。仍使用已存在的 `ScadaDocument 0.2.0` 的 `pages`，维持 Dexie 草稿存储、只读 Runtime 与设备隔离。
 
 新增 12 项 Core 编辑器用例及 1 项 Runtime SVG 选页用例，整仓**源码预计 179 项单元测试**，NestJS E2E 预期仍 2 项，增加 ADR-0022 后文档预计 37 份。以上为源码静态计数；**本轮没有执行 Windows `pnpm run ready`、浏览器多页面实际交互、Docker/Tauri 或工业现场验收**，不能沿用此前 166/166 通过结果。待用户验收后另行确认合并权限。
+
+## 2026-11-10 · V0.2 第十五批复制页面与跨页图元复制（待验收）
+
+PR #16 多页面编辑管理已根据维护者授权以 Squash Merge 合并 `main`（提交 `850b7cd`），其最新 Windows `pnpm run ready` 完整日志为 **179/179 单测、2/2 E2E、146 文件格式、零警告、37 份 Markdown、三端构建成功、退出码 0**。该结果不代表第十五批代码的实际质量检查。
+
+本批在独立分支 `feat/v0.2-page-copy-order` 实现页面复制、相邻排序和跨页面选中图元复制。共享 Core 统一生成全工程唯一的页面、图元及组合 ID，保护 Tag/规则/几何，保留原内容；复制组合不会拆散，不同画布目标超限则原子拒绝。Vue/React Studio 同步新增操作入口，仍使用 `ScadaDocument 0.2.0` 与现有 Dexie IndexedDB 草稿。增加 [ADR-0023](adr/0023-page-copy-and-reordering.md)。
+
+新增 **15 项 Core 单元测试源码**，整仓预计 **194 项单元测试**，NestJS E2E 预计 **2 项**，Markdown 预计 **38 份**。这些均为源码静态计数，本批还未在维护者 Windows 运行 `pnpm run ready` 或完成双框架浏览器验收；不沿用先前 PR 的测试通过结论，也未获得本批合并授权。
