@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Demo-only V0.1 static Web build; same Dockerfile for Vue and React.
+# 仅供 V0.1 演示的静态 Web 构建，Vue 和 React 共用此 Dockerfile。
 FROM node:24.22.2-bookworm AS build
 WORKDIR /workspace
 RUN npm install --global pnpm@12.18.0

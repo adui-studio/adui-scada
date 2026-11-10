@@ -159,7 +159,7 @@ footer {
   }
 }
 
-/* Shared minimal layout for Vue and React V0.1 runtime. */
+/* Vue 与 React V0.1 运行监控页共用的基础布局。 */
 .scada-shell {
   max-width: 1200px;
   margin: 0 auto;
@@ -271,7 +271,7 @@ footer {
   }
 }
 
-/* Shared host navigation; Studio and Runtime stay independently lazy loaded. */
+/* Studio 与 Runtime 独立懒加载的共享应用导航栏。 */
 .scada-app-nav {
   display: flex;
   align-items: center;

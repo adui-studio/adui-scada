@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Minimal NestJS health-probe container, NOT a production SCADA API.
+# 仅包含 NestJS 进程存活检查的最小容器，不是生产 SCADA API。
 FROM node:24.22.2-bookworm AS build
 WORKDIR /workspace
 RUN npm install --global pnpm@12.18.0
@@ -10,7 +10,7 @@ RUN pnpm install --frozen-lockfile \
 FROM node:24.22.2-bookworm-slim
 ENV NODE_ENV=production
 WORKDIR /workspace
-# pnpm workspace symlinks point at the root .pnpm store: copy both levels.
+# pnpm Workspace 符号链接指向根目录 .pnpm 存储，因此需要复制两级依赖。
 COPY --from=build --chown=node:node /workspace/node_modules/ /workspace/node_modules/
 COPY --from=build --chown=node:node /workspace/apps/server/node_modules/ /workspace/apps/server/node_modules/
 COPY --from=build --chown=node:node /workspace/apps/server/dist/ /workspace/apps/server/dist/

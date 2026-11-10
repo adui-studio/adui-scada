@@ -3,7 +3,7 @@ import { sharedFormat } from "@adui/tooling/format";
 import { sharedLint } from "@adui/tooling/lint";
 import { sharedStaged } from "@adui/tooling/staged";
 
-// Root config owns workspace-wide format/lint; framework Vite configs own plugins/dev servers.
+// 根配置统一管理工作区 Format/Lint，各框架的 Vite 配置仅负责插件和开发服务。
 export default defineConfig({
   staged: sharedStaged,
   fmt: sharedFormat,

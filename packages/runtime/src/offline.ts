@@ -2,8 +2,8 @@ import { TagStore, WaterTreatmentSimulator, waterTreatmentDemoDocument } from "@
 import type { RuntimeListener } from "./runtime.ts";
 
 /**
- * Explicitly simulated, offline-only V0.1 runtime for packaged Tauri builds.
- * No fetch, EventSource, PLC, Gateway, or device commands are used here.
+ * 为 Tauri 打包版本提供明确标识的 V0.1 离线模拟运行时。
+ * 不使用 fetch、EventSource、PLC、工业网关或设备控制命令。
  */
 export class OfflineDemoRuntime {
   private readonly listener: RuntimeListener;
@@ -40,7 +40,7 @@ export class OfflineDemoRuntime {
     this.timer = setInterval(() => {
       if (!this.active) return;
       this.tick++;
-      // Same intentional 8-second outage as the localhost SSE diagnostic server.
+      // 与本机 SSE 诊断服务一致，每 30 秒模拟 8 秒数据中断。
       if (this.tick % 30 >= 22) {
         this.store.markStale(Date.now(), 2500);
       } else {

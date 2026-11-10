@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Temporary localhost-only V0.1 simulator, not a gateway or production data source.
+# 临时 V0.1 本机模拟器，不属于工业网关或生产数据源。
 FROM node:24.22.2-bookworm-slim
 ENV NODE_ENV=production
 WORKDIR /workspace

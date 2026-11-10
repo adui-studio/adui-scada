@@ -9,7 +9,7 @@ const source = {
   pages: [
     {
       id: "main",
-      name: "Demo <svg>",
+      name: "演示 <svg>",
       size: { width: 500, height: 300 },
       nodes: [
         {
@@ -45,22 +45,22 @@ const tag = (quality: TagValue["quality"], value: TagValue["value"]): TagValue =
   serverTimestamp: "2026-11-09T00:00:00.000Z",
 });
 
-test("SVG output escapes user strings and uses the explicit GOOD value", () => {
+test("SVG 输出对用户文本进行转义并正确展示 GOOD 读数", () => {
   const svg = renderSvgPage(document, "main", new Map([["water.level", tag("GOOD", 75)]]));
   expect(svg).toMatch(/75%/);
-  expect(svg).toMatch(/Demo &lt;svg&gt;/);
+  expect(svg).toMatch(/演示 &lt;svg&gt;/);
   expect(svg).toMatch(/&lt;script&gt;/);
   expect(svg).not.toMatch(/<script>|onload=|onclick=/);
 });
 
-test("STALE and missing values do not appear as live measurements", () => {
+test("STALE 和缺失读数不展示为有效实时值", () => {
   const staleSvg = renderSvgPage(document, "main", new Map([["water.level", tag("STALE", 75)]]));
-  expect(staleSvg).toMatch(/STALE/);
+  expect(staleSvg).toMatch(/已过期/);
   expect(staleSvg).not.toMatch(/75%/);
   const unknownSvg = renderSvgPage(document, "main", new Map());
-  expect(unknownSvg).toMatch(/BAD/);
+  expect(unknownSvg).toMatch(/异常/);
 });
 
-test("unknown page fails visibly", () => {
-  expect(() => renderSvgPage(document, "unknown", new Map())).toThrow(/Unknown page/);
+test("未知页面会抛出明确错误", () => {
+  expect(() => renderSvgPage(document, "unknown", new Map())).toThrow(/未找到页面/);
 });

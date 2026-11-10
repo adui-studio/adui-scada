@@ -165,3 +165,52 @@
     grid-column: auto;
   }
 }
+
+/* V0.2 画布操作：缩放仅改变视图，不改变工程坐标。 */
+.studio-stage {
+  overflow: auto;
+}
+.studio-stage-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.studio-zoom {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.studio-zoom button {
+  min-width: 35px;
+  padding: 4px 7px;
+}
+.studio-add,
+.studio-tool-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 10px 0 14px;
+}
+.studio-add button,
+.studio-tool-group button {
+  min-width: 0;
+  padding: 7px 4px;
+  font-size: 12px;
+}
+.studio-toolbox > button {
+  width: 100%;
+}
+.studio-toolbox button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* 框选矩形仅是视图叠加层，不会写入工程 JSON。 */
+.studio-marquee {
+  fill: rgba(57, 201, 186, 0.14);
+  stroke: #39c9ba;
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}

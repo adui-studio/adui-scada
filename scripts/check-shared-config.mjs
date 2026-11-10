@@ -24,18 +24,18 @@ const packages = [
 ];
 
 for (const [path, base] of expected) {
-  assert.equal(json(path).extends, base, `${path} must inherit ${base}`);
+  assert.equal(json(path).extends, base, `${path} 必须继承 ${base}`);
 }
 for (const path of packages) {
   assert.equal(
     json(`${path}/package.json`).devDependencies?.["@adui/tsconfig"],
     "workspace:*",
-    `${path} must depend on the shared tsconfig package`,
+    `${path} 必须依赖共享 tsconfig 包`,
   );
 }
 const baseConfig = json("packages/tsconfig/package.json");
 for (const name of ["react", "vue", "nest", "node", "vue-node", "core", "browser"]) {
-  assert.ok(baseConfig.exports?.[`./${name}`], `Missing tsconfig subpath: ${name}`);
+  assert.ok(baseConfig.exports?.[`./${name}`], `缺少 tsconfig 子路径：${name}`);
 }
 
 const editor = text(".editorconfig");
@@ -55,16 +55,16 @@ for (const path of [
   "apps/server/vitest.config.e2e.ts",
 ]) {
   const content = text(path);
-  assert.doesNotMatch(content, /\b(?:fmt|lint)\s*:/, `${path} must not override root format/lint`);
+  assert.doesNotMatch(content, /\b(?:fmt|lint)\s*:/, `${path} 不得覆盖根目录的格式化或 Lint 配置`);
 }
 
 assert.ok(
   text("packages/tooling/src/format.ts").includes('".agents/skills/**"'),
-  "Formatter must ignore third-party Skills",
+  "格式化工具必须忽略第三方 Skill 文档",
 );
 assert.ok(
   text("packages/tooling/src/lint.ts").includes('".agents/skills/**"'),
-  "Linter must ignore third-party Skills",
+  "Lint 工具必须忽略第三方 Skill 文档",
 );
 
-console.log(`Shared config OK: ${expected.size} TSConfig consumers + root format/lint`);
+console.log(`共享配置检查通过：${expected.size} 个 TSConfig 消费端，根目录统一管理格式化与 Lint`);

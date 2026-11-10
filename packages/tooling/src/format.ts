@@ -1,6 +1,6 @@
-/** Shared Oxfmt settings; the root .editorconfig is the editor baseline. */
+/** 共享 Oxfmt 格式化配置；根目录 .editorconfig 是编辑器统一规范。 */
 export const sharedFormat = {
-  // Third-party skill instructions are vendor-owned; keep formatting on project sources.
+  // 第三方 Skill 文档由提供方维护，格式化范围仅包含项目自身代码。
   ignorePatterns: [".agents/skills/**"],
   printWidth: 100,
   tabWidth: 2,

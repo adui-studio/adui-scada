@@ -1,7 +1,7 @@
 [package]
 name = "adui-scada-desktop"
 version = "0.1.0"
-description = "ADui SCADA desktop shell"
+description = "ADui SCADA 桌面应用外壳"
 authors = ["ADui Studio"]
 edition = "2024"
 

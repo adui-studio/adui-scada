@@ -1,5 +1,5 @@
 import { expect, test } from "vite-plus/test";
-import { TagStore, validateTagValue } from "../src/tag-store.ts";
+import { TAG_QUALITY_LABELS, TagStore, validateTagValue } from "../src/tag-store.ts";
 import type { TagValue } from "../src/tag-store.ts";
 
 const at = "2026-11-09T00:00:00.000Z";
@@ -12,7 +12,7 @@ const make = (sequence = 1, quality: TagValue["quality"] = "GOOD"): TagValue => 
   sequence,
 });
 
-test("subscribers receive initial snapshot and incrementals; unsubscribe works", () => {
+test("订阅者可收到初始快照与增量，取消订阅后不再接收", () => {
   const store = new TagStore();
   const events: string[] = [];
   const unsubscribe = store.subscribe((event) =>
@@ -24,7 +24,7 @@ test("subscribers receive initial snapshot and incrementals; unsubscribe works",
   expect(events).toEqual(["snapshot:0", "delta:1"]);
 });
 
-test("ignores out-of-order and duplicate sequence without mutating values", () => {
+test("忽略乱序及重复序列号且不修改已有数据", () => {
   const store = new TagStore();
   store.apply([make(5)]);
   expect(store.apply([make(3)]).length).toBe(0);
@@ -32,19 +32,21 @@ test("ignores out-of-order and duplicate sequence without mutating values", () =
   expect(store.get("water.level")?.sequence).toBe(5);
 });
 
-test("batch rejects invalid/duplicated data atomically", () => {
+test("同一批次存在非法或重复 Tag 时原子拒绝", () => {
   const store = new TagStore();
   const bad = { ...make(), value: Number.NaN };
-  expect(() => store.apply([make(), bad])).toThrow(/Duplicate update|Invalid number/);
+  expect(() => store.apply([make(), bad])).toThrow(
+    /同一批次存在重复的 Tag 更新|Tag 数值必须为有限数/,
+  );
   expect(store.snapshot()).toEqual([]);
-  expect(() => store.apply([make(), make(2)])).toThrow(/Duplicate update/);
+  expect(() => store.apply([make(), make(2)])).toThrow(/同一批次存在重复的 Tag 更新/);
   expect(store.snapshot()).toEqual([]);
   expect(() => validateTagValue({ ...make(), quality: "UNKNOWN" as any })).toThrow(
-    /Invalid quality/,
+    /Tag 质量状态无效/,
   );
 });
 
-test("stale is explicit, changes sequence, retains last reading, recovery is possible", () => {
+test("数据过期后质量明确变为 STALE，保留末次值并支持恢复", () => {
   const store = new TagStore();
   store.apply([make()]);
   const now = Date.parse(at) + 3000;
@@ -56,4 +58,13 @@ test("stale is explicit, changes sequence, retains last reading, recovery is pos
   store.apply([{ ...make(3), value: 65, serverTimestamp: new Date(now + 4000).toISOString() }]);
   expect(store.get("water.level")?.quality).toBe("GOOD");
   expect(store.get("water.level")?.value).toBe(65);
+});
+
+test("质量状态中文显示名称完整且协议枚举不变", () => {
+  expect(TAG_QUALITY_LABELS).toEqual({
+    GOOD: "正常",
+    UNCERTAIN: "不确定",
+    BAD: "异常",
+    STALE: "已过期",
+  });
 });

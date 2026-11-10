@@ -1,4 +1,4 @@
-# ADui SCADA V0.1: localhost demonstration, NOT production deployment.
+# ADui SCADA V0.1：仅供本机演示，绝不能视为生产部署。
 name: adui-scada-v01-demo
 services:
   web-react:

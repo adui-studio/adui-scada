@@ -1,13 +1,27 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, PointerEvent as ReactPointerEvent } from "react";
 import { WaterTreatmentSimulator, waterTreatmentDemoDocument } from "@adui/scada-core";
-import { DocumentEditor, withNodePosition } from "@adui/scada-core/editor";
-import type { EditorSnapshot } from "@adui/scada-core/editor";
+import { DocumentEditor, findNodesInRect, withNodesTranslated } from "@adui/scada-core/editor";
+import type {
+  Alignment,
+  EditableSymbol,
+  EditorSnapshot,
+  LayerAction,
+} from "@adui/scada-core/editor";
 import { svgDataUrl } from "@adui/scada-runtime";
 import "./studio.css";
 
 const previewTags = new WaterTreatmentSimulator().next(new Date("2026-11-09T00:00:00Z"));
 const maxFileSize = 2 * 1024 * 1024;
+
+interface MarqueeState {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  x: number;
+  y: number;
+  additive: boolean;
+}
 
 interface DragState {
   pointerId: number;
@@ -24,23 +38,30 @@ export default function StudioPage() {
   const editor = useMemo(() => new DocumentEditor(waterTreatmentDemoDocument), []);
   const [state, setState] = useState<EditorSnapshot>(() => editor.snapshot());
   const [preview, setPreview] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [marquee, setMarquee] = useState<MarqueeState | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
   const [notice, setNotice] = useState("本地草稿 · 尚未连接工程保存 API");
+  const [zoom, setZoom] = useState(1);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
+  const marqueeRef = useRef<MarqueeState | null>(null);
 
   const page = state.document.pages[0];
   const selected = page?.nodes.find((node) => node.id === state.selectedId);
-  const displayDocument = useMemo(
-    () =>
-      preview === null
-        ? state.document
-        : withNodePosition(state.document, preview.id, preview.x, preview.y),
-    [preview, state.document],
-  );
+  const displayDocument = useMemo(() => {
+    if (preview === null) return state.document;
+    const anchor = state.document.pages[0]?.nodes.find((node) => node.id === preview.id);
+    if (!anchor) return state.document;
+    return withNodesTranslated(
+      state.document,
+      state.selectedIds,
+      preview.x - anchor.transform.x,
+      preview.y - anchor.transform.y,
+    );
+  }, [preview, state.document, state.selectedIds]);
   const image = useMemo(() => svgDataUrl(displayDocument, previewTags), [displayDocument]);
 
-  if (!page) throw new Error("No page in editor document");
+  if (!page) throw new Error("工程文档不包含页面");
 
   function refresh() {
     const next = editor.snapshot();
@@ -49,10 +70,145 @@ export default function StudioPage() {
     setLabelDraft(typeof node?.props.text === "string" ? node.props.text : "");
   }
 
-  function select(id: string | null) {
-    if (dragRef.current !== null) return;
-    editor.select(id);
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        (event.target instanceof Element &&
+          event.target.closest("input, textarea, select, [contenteditable]"))
+      )
+        return;
+
+      const command = event.ctrlKey || event.metaKey;
+      const key = event.key.toLowerCase();
+      let handled = false;
+
+      if (command && !event.altKey) {
+        if (key === "z") handled = event.shiftKey ? editor.redo() : editor.undo();
+        else if (key === "y") handled = editor.redo();
+        else if (key === "a") {
+          editor.selectMany(
+            editor.snapshot().document.pages[0]?.nodes.map((node) => node.id) ?? [],
+          );
+          handled = true;
+        }
+      } else if (!command && !event.altKey) {
+        if (key === "escape") {
+          dragRef.current = null;
+          marqueeRef.current = null;
+          setPreview(null);
+          setMarquee(null);
+          editor.select(null);
+          handled = true;
+        } else if (key === "delete" || key === "backspace") {
+          handled = editor.deleteSelected();
+        } else if (key.startsWith("arrow")) {
+          const step = event.shiftKey ? 10 : 1;
+          const moves: Record<string, [number, number]> = {
+            arrowleft: [-step, 0],
+            arrowright: [step, 0],
+            arrowup: [0, -step],
+            arrowdown: [0, step],
+          };
+          const move = moves[key];
+          if (move) handled = editor.moveBy(move[0], move[1]);
+        }
+      }
+
+      if (!handled) return;
+      event.preventDefault();
+      const next = editor.snapshot();
+      setState(next);
+      const selected = next.document.pages[0]?.nodes.find((node) => node.id === next.selectedId);
+      setLabelDraft(typeof selected?.props.text === "string" ? selected.props.text : "");
+    };
+
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [editor]);
+
+  function startMarquee(event: ReactPointerEvent<SVGSVGElement>) {
+    if (event.button !== 0 || event.target !== event.currentTarget) return;
+    const point = canvasPoint(event.clientX, event.clientY);
+    if (!point) return;
+    const next: MarqueeState = {
+      pointerId: event.pointerId,
+      startX: point.x,
+      startY: point.y,
+      x: point.x,
+      y: point.y,
+      additive: event.shiftKey,
+    };
+    marqueeRef.current = next;
+    setMarquee(next);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+
+  function updateMarquee(event: ReactPointerEvent<SVGSVGElement>) {
+    const current = marqueeRef.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    const point = canvasPoint(event.clientX, event.clientY);
+    if (!point) return;
+    const next = { ...current, x: point.x, y: point.y };
+    marqueeRef.current = next;
+    setMarquee(next);
+  }
+
+  function finishMarquee(event: ReactPointerEvent<SVGSVGElement>) {
+    const current = marqueeRef.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    const point = canvasPoint(event.clientX, event.clientY);
+    marqueeRef.current = null;
+    setMarquee(null);
+    const endX = point?.x ?? current.x;
+    const endY = point?.y ?? current.y;
+    if (Math.hypot(endX - current.startX, endY - current.startY) < 4) {
+      if (!current.additive) editor.select(null);
+    } else {
+      const ids = findNodesInRect(
+        editor.snapshot().document,
+        current.startX,
+        current.startY,
+        endX,
+        endY,
+      );
+      editor.selectMany(ids, current.additive);
+    }
     refresh();
+  }
+
+  function select(id: string | null, additive = false) {
+    if (dragRef.current !== null) return;
+    editor.select(id, additive);
+    refresh();
+  }
+
+  function apply(action: () => unknown, message: string) {
+    try {
+      action();
+      refresh();
+      setNotice(message);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  function addSymbol(type: EditableSymbol) {
+    apply(() => editor.addNode(type), "已新增图元（未绑定任何设备）");
+  }
+
+  function align(mode: Alignment) {
+    apply(() => editor.alignSelected(mode), "所选图元已按主选图元对齐");
+  }
+
+  function layer(action: LayerAction) {
+    apply(() => editor.reorderSelected(action), "已调整图元层级");
+  }
+
+  function changeZoom(delta: number) {
+    setZoom((current) => Math.max(0.5, Math.min(2, Math.round((current + delta) * 100) / 100)));
   }
 
   function canvasPoint(clientX: number, clientY: number) {
@@ -67,7 +223,13 @@ export default function StudioPage() {
     if (!point) return;
     const node = page.nodes.find((candidate) => candidate.id === id);
     if (!node) return;
-    editor.select(id);
+    if (event.shiftKey) {
+      editor.select(id, true);
+      refresh();
+      event.preventDefault();
+      return;
+    }
+    if (!editor.snapshot().selectedIds.includes(id)) editor.select(id);
     refresh();
     dragRef.current = {
       pointerId: event.pointerId,
@@ -102,7 +264,7 @@ export default function StudioPage() {
     dragRef.current = null;
     setPreview(null);
     try {
-      editor.moveSelected(x, y);
+      editor.moveBy(x - drag.originX, y - drag.originY);
       refresh();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error));
@@ -111,13 +273,14 @@ export default function StudioPage() {
 
   function cancelDrag() {
     dragRef.current = null;
+    marqueeRef.current = null;
     setPreview(null);
+    setMarquee(null);
   }
 
   function nudge(dx: number, dy: number) {
     if (!selected) return;
-    editor.moveSelected(selected.transform.x + dx, selected.transform.y + dy);
-    refresh();
+    apply(() => editor.moveBy(dx, dy), "已移动所选图元");
   }
 
   function changeLabel() {
@@ -205,13 +368,28 @@ export default function StudioPage() {
       <div className="studio-workspace">
         <aside className="studio-panel" aria-label="图元列表">
           <h2>图元 · {page.nodes.length}</h2>
+          <p className="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
+          <div className="studio-add">
+            <button type="button" onClick={() => addSymbol("tank")}>
+              + 水箱
+            </button>
+            <button type="button" onClick={() => addSymbol("pump")}>
+              + 水泵
+            </button>
+            <button type="button" onClick={() => addSymbol("pipe")}>
+              + 管道
+            </button>
+            <button type="button" onClick={() => addSymbol("label")}>
+              + 文本
+            </button>
+          </div>
           {page.nodes.map((node) => (
             <button
               type="button"
               className="studio-layer"
-              data-selected={node.id === state.selectedId}
+              data-selected={state.selectedIds.includes(node.id)}
               key={node.id}
-              onClick={() => select(node.id)}
+              onClick={(event) => select(node.id, event.shiftKey)}
             >
               <span>{node.id}</span>
               <small>{node.type}</small>
@@ -220,18 +398,36 @@ export default function StudioPage() {
         </aside>
         <section className="studio-stage" aria-label="组态画布">
           <div className="studio-stage-caption">
-            {page.name} · {page.size.width} × {page.size.height} · 静态模拟预览
+            <span>
+              {page.name} · {page.size.width} × {page.size.height} · 静态模拟预览
+            </span>
+            <div className="studio-zoom" aria-label="画布缩放">
+              <button type="button" onClick={() => changeZoom(-0.25)} disabled={zoom <= 0.5}>
+                −
+              </button>
+              <button type="button" onClick={() => setZoom(1)}>
+                {Math.round(zoom * 100)}%
+              </button>
+              <button type="button" onClick={() => changeZoom(0.25)} disabled={zoom >= 2}>
+                +
+              </button>
+            </div>
           </div>
           <svg
             ref={svgRef}
             className="studio-svg"
+            style={{ width: `${zoom * 100}%` }}
             viewBox={`0 0 ${page.size.width} ${page.size.height}`}
-            onPointerMove={updateDrag}
-            onPointerUp={finishDrag}
-            onPointerCancel={cancelDrag}
-            onPointerDown={(event) => {
-              if (event.target === event.currentTarget) select(null);
+            onPointerMove={(event) => {
+              updateDrag(event);
+              updateMarquee(event);
             }}
+            onPointerUp={(event) => {
+              finishDrag(event);
+              finishMarquee(event);
+            }}
+            onPointerCancel={cancelDrag}
+            onPointerDown={startMarquee}
             aria-label="可编辑 SVG 画布"
           >
             <image
@@ -258,7 +454,13 @@ export default function StudioPage() {
                     width={t.width}
                     height={t.height}
                     fill="transparent"
-                    stroke={state.selectedId === node.id ? "#f0ae4d" : "transparent"}
+                    stroke={
+                      state.selectedId === node.id
+                        ? "#f0ae4d"
+                        : state.selectedIds.includes(node.id)
+                          ? "#39c9ba"
+                          : "transparent"
+                    }
                     strokeWidth={2}
                     strokeDasharray="6 4"
                     className="studio-hitbox"
@@ -266,17 +468,72 @@ export default function StudioPage() {
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
-                        select(node.id);
+                        select(node.id, event.shiftKey);
                       }
                     }}
                   />
                 </g>
               );
             })}
+            {marquee !== null && (
+              <rect
+                className="studio-marquee"
+                x={Math.min(marquee.startX, marquee.x)}
+                y={Math.min(marquee.startY, marquee.y)}
+                width={Math.abs(marquee.x - marquee.startX)}
+                height={Math.abs(marquee.y - marquee.startY)}
+                pointerEvents="none"
+              />
+            )}
           </svg>
         </section>
         <aside className="studio-panel" aria-label="图元属性">
-          <h2>属性</h2>
+          <h2>属性 · 已选 {state.selectedIds.length}</h2>
+          <div className="studio-toolbox">
+            <button
+              type="button"
+              onClick={() => apply(() => editor.deleteSelected(), "已删除图元，可撤销")}
+              disabled={state.selectedIds.length === 0}
+            >
+              删除所选
+            </button>
+            <div className="studio-tool-group" aria-label="图层排序">
+              <button type="button" onClick={() => layer("back")} disabled={!selected}>
+                置底
+              </button>
+              <button type="button" onClick={() => layer("backward")} disabled={!selected}>
+                下移层
+              </button>
+              <button type="button" onClick={() => layer("forward")} disabled={!selected}>
+                上移层
+              </button>
+              <button type="button" onClick={() => layer("front")} disabled={!selected}>
+                置顶
+              </button>
+            </div>
+            <h3>多选对齐（以最后选中的图元为准）</h3>
+            <div className="studio-tool-group" aria-label="图元对齐">
+              {(
+                [
+                  ["left", "左"],
+                  ["hcenter", "水平居中"],
+                  ["right", "右"],
+                  ["top", "上"],
+                  ["vcenter", "垂直居中"],
+                  ["bottom", "下"],
+                ] as const
+              ).map(([mode, label]) => (
+                <button
+                  type="button"
+                  key={mode}
+                  onClick={() => align(mode)}
+                  disabled={state.selectedIds.length < 2}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           {selected ? (
             <>
               <p>
@@ -328,7 +585,10 @@ export default function StudioPage() {
           )}
         </aside>
       </div>
-      <footer>V0.2 第一阶段 · 本地 JSON 草稿 · 不连接 PLC/DCS · 暂无发布与服务端保存</footer>
+      <footer>
+        V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+Z 撤销，Ctrl+Shift+Z/Ctrl+Y
+        重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 · 无设备写入
+      </footer>
     </main>
   );
 }

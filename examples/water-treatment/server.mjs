@@ -5,19 +5,19 @@ import { fileURLToPath } from "node:url";
 import { TagStore, WaterTreatmentSimulator, renderSvgPage } from "../../packages/core/src/index.ts";
 import { demoDocument } from "./project.mjs";
 
-// One repository-root .env; Docker passes explicit process environment values.
+// 统一使用仓库根目录 .env；Docker 通过明确的进程环境变量传值。
 const envPath = fileURLToPath(new URL("../../.env", import.meta.url));
 if (existsSync(envPath)) loadEnvFile(envPath);
 
-// Diagnostic harness only. Default to localhost; 0.0.0.0 is allowed
-// solely for an isolated Docker demo bridge without host port publication.
+// 此服务仅用于诊断，默认监听本机回环地址；只有未向宿主机暴露端口的
+// Docker 演示隔离网络才能使用 0.0.0.0。
 const host = process.env.SCADA_DEMO_HOST ?? process.env.DEMO_HOST ?? "127.0.0.1";
 if (host !== "127.0.0.1" && host !== "0.0.0.0") {
-  throw new Error("SCADA_DEMO_HOST must be 127.0.0.1 or 0.0.0.0");
+  throw new Error("SCADA_DEMO_HOST 只能设置为 127.0.0.1 或 0.0.0.0");
 }
 const port = Number(process.env.SCADA_DEMO_PORT ?? process.env.DEMO_PORT ?? "4178");
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
-  throw new Error("SCADA_DEMO_PORT must be an integer between 1 and 65535");
+  throw new Error("SCADA_DEMO_PORT 必须是 1～65535 之间的整数");
 }
 const index = readFileSync(new URL("./public/index.html", import.meta.url));
 const script = readFileSync(new URL("./public/client.js", import.meta.url));
@@ -48,7 +48,7 @@ tags.apply(simulator.next());
 let tick = 0;
 const interval = setInterval(() => {
   tick++;
-  // Intentional outage 8 seconds out of every 30 to test STALE visibility.
+  // 每 30 秒故意模拟 8 秒数据中断，以验证 STALE 质量状态的显示。
   if (tick % 30 >= 22) {
     tags.markStale(Date.now(), 2500);
     return;
@@ -64,7 +64,7 @@ const server = createServer((request, response) => {
     response.end();
     return;
   }
-  // Fixed routes only: never turn an untrusted path into a filesystem path.
+  // 仅允许固定路由，绝不将不可信的请求路径作为文件系统路径。
   const route = (request.url ?? "/").split("?")[0];
   if (route === "/") {
     response.writeHead(200, headers("text/html; charset=utf-8"));
@@ -95,13 +95,13 @@ const server = createServer((request, response) => {
     });
   } else {
     response.writeHead(404, headers("text/plain; charset=utf-8"));
-    response.end("Not Found");
+    response.end("请求的资源不存在");
   }
 });
 
 server.listen(port, host, () => {
-  console.log(`V0.1 simulation: http://${host}:${port}`);
-  console.log("No PLC/gateway connection. Automatic disconnection simulates STALE quality.");
+  console.log(`V0.1 模拟服务已启动：http://${host}:${port}`);
+  console.log("当前未连接 PLC 或工业网关，将自动模拟断连以验证 STALE 数据质量。");
 });
 
 function shutdown() {

@@ -1,5 +1,5 @@
-# Force LF for text in both repository and Windows working trees.
-# Binary files are auto-detected; retain CRLF only for native Windows scripts.
+# 仓库索引与 Windows 工作区中的文本文件统一采用 LF。
+# 二进制文件自动识别；仅 Windows 原生批处理脚本保留 CRLF。
 * text=auto eol=lf
 *.bat text eol=crlf
 *.cmd text eol=crlf

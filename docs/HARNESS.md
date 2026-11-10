@@ -189,3 +189,62 @@ Invoke-RestMethod http://127.0.0.1:8080/demo/project
 ```
 
 还应测试更改 `SCADA_DEMO_PORT` 和 `SCADA_SERVER_PORT` 后，容器健康探针、Nginx 代理与 SSE 可同步工作。现阶段 GitHub 仅提供代码和静态结构验证，**尚未在维护者 Windows 上执行本轮完整 `ready` / Docker 重新构建 / 换行符迁移**；已通过的 V0.1 Docker 运行不代表新的端口模板已验证。
+
+## 2026-11-09 · V0.2 第二批画布操作待验收
+
+本轮 Core 增加对以下行为的单元覆盖：新图元全局 ID 唯一且没有 Tag 绑定、多选切换/整体移动/画布截断、非法节点/非有限坐标拦截、六方向对齐、图层排序及撤销、批量删除与 JSON 往返。
+
+```powershell
+pnpm run ready
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+React 和 Vue 各自打开 Studio 后检验缩放 50/100/200%；创建水箱/水泵/文本、撤销重做、删除；Shift 点击多选并拖动，在靠近画布边界时保持相对布局；选两个不同尺寸的图元执行水平/垂直对齐；层级置顶/置底并通过 JSON 验证节点顺序。新图元不自动关联任何 Tag；跨框架往返不丢失已有绑定。
+
+**截至提交时未在此协作环境执行完整 pnpm/Vite+/TS6/Vitest/浏览器或 Docker 回归。** 不继承之前单选版本的验收结果为本轮已通过。
+
+## 2026-11-09 · V0.2 框选和键盘交互待验证
+
+新增 5 个单元用例，`packages/core/test/editor.test.ts` 累计 **22 个用例**（未实际运行）。须在 Windows 运行：
+
+```powershell
+pnpm run ready
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+React/Vue 都需测试：从正向/反向拖动空白区域框选；Shift 框选追加、单击空白取消；框选后整体移动与撤销；缩放到 50%/200% 后框选坐标准确。Ctrl+A 全选、方向键 ±1、Shift+方向键 ±10、Ctrl+Z 撤销、Ctrl+Shift+Z/Ctrl+Y 重做、Delete 删除、Esc 清选。**在 Label 输入框聚焦时快捷键不得触发图元编辑命令**。还需跨框架 JSON 往返与 Runtime STALE/GOOD 回归。
+
+GitHub 结构检查不等于 Vite+、TS6、Vitest、双框架浏览器与 Docker 实测通过。
+
+## 2026-11-10 · Windows `ready` 反馈：NestJS 单测超时修复待复验
+
+维护者在 Windows 执行 `pnpm run ready`：Catalog/共享配置/根 .env 与 LF、Vite+ 119 文件格式检查、46 文件 Lint/类型、双 Web/NestJS TypeScript 检查均通过；Core/Runtime/Editor 单测通过 **41 项**（编辑器 22 项）。`apps/server/src/app.controller.spec.ts` 的 1 个测试在 5 秒默认时限内未完成（`Test timed out in 5000ms`），导致 **42 项中 41 项通过、`ready` 失败**，之后的 Nest E2E、文档检查与构建**没有执行**。
+
+针对性处理：Controller 单测只验证 `getHealth()` 的业务返回值，直接实例化 `new AppController(new AppService())`，不再为简单同步调用在单个测试内执行 `Test.createTestingModule().compile()` 和 `close()`。原有 `apps/server/test/app.e2e-spec.ts` 不变，负责验证 Nest 依赖注入、HTTP `GET /health` 和工业写入路由 404。没有提高全局测试超时或改动产品 API。
+
+请维护者在 Windows 同步补丁后运行：
+
+```powershell
+pnpm run test:unit
+pnpm run test:e2e:server
+pnpm run ready
+```
+
+**本轮补丁尚未在 Windows/Vite+/Vitest 下实测；原始超时原因按测试初始化开销判断，待复验确认**。若仍超时，需结合系统并行负载、Vitest worker 数量和具体测试启动耗时进一步分析。
+
+## 2026-11-10 · 自有提示统一中文及静态检查（待复验）
+
+应维护者要求，仓库自有的 `throw`、CLI 检查脚本、模拟服务日志、测试名称、注释/JSDoc、Rust 诊断信息、Vite/Docker 配置注释，以及 Vue/React 的 Runtime 可视状态全部统一为简体中文。**协议标识不变**：JSON 字段、Tag ID、`GOOD/UNCERTAIN/BAD/STALE` 枚举、内部 Runtime 状态、路径、命令和依赖版本均保持原样；通过 `TAG_QUALITY_LABELS` 和 `RUNTIME_STATUS_LABELS` 提供中文显示。
+
+新增 `scripts/check-chinese-messages.mjs`、`pnpm run messages:check` 并接入 `pnpm run ready`，检查自有文件的测试名称、异常文本、日志与注释，排除第三方 Skills 与生成产物；此脚本是静态启发式检查，不替代人工 UI 文案审查。部分原有测试根据中文异常断言同步调整，默认演示画面中的中文标题及 SVG 质量显示需人工回归。
+
+```powershell
+pnpm run messages:check
+pnpm run test:unit
+pnpm run test:e2e:server
+pnpm run ready
+```
+
+**执行状态**：本次中文化补丁尚未在维护者 Windows 上执行 Vite+、Vitest、Vue/React 实际 UI、Docker 和 Tauri 回归。此前 `pnpm run ready` 的 NestJS Controller 单测超时已另作简化修复，但尚无完整复验结果。不能将静态源码审查标记为测试通过。
