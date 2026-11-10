@@ -253,7 +253,7 @@ export class DocumentEditor {
 
   constructor(source: unknown) {
     this.current = parseScadaDocument(source);
-    this.activePageId = firstPage(this.current, this.activePageId).id;
+    this.activePageId = firstPage(this.current).id;
   }
 
   snapshot(): EditorSnapshot {
