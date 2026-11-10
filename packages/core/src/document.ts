@@ -3,6 +3,9 @@ export const SCADA_SCHEMA_VERSION = "0.2.0";
 /** 仅在显式导入时支持升级的历史工程版本。 */
 export const LEGACY_SCADA_SCHEMA_VERSION = "0.1.0";
 
+/** 通过现有 props 扩展承载 Studio 图层状态，不改变工程 0.2.0 的顶层结构。 */
+export const STUDIO_NODE_STATE_KEY = "__scadaStudio";
+
 export type TagId = string;
 export type ScadaNodeType = "tank" | "pump" | "pipe" | "label" | (string & {});
 
@@ -16,6 +19,21 @@ export interface ScadaNode {
   props: Record<string, unknown>;
   bindings: Record<string, { tagId: TagId }>;
   rules: unknown[];
+}
+
+/** 已校验节点的 Studio 编辑状态；未声明时默认未锁定且可见。 */
+export function studioNodeLocked(node: ScadaNode): boolean {
+  const value = node.props[STUDIO_NODE_STATE_KEY];
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>).locked === true
+    : false;
+}
+
+export function studioNodeVisible(node: ScadaNode): boolean {
+  const value = node.props[STUDIO_NODE_STATE_KEY];
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>).visible !== false
+    : true;
 }
 
 export interface ScadaPage {
@@ -185,6 +203,15 @@ function parseVersionedDocument(input: unknown, sourceVersion: string): ScadaDoc
       const props = jsonValue(node.props, `${nodePath}.props`, 0, new WeakSet());
       if (!props || Array.isArray(props) || typeof props !== "object") {
         fail(`${nodePath}.props`, "应为对象");
+      }
+      const studioState = (props as Record<string, unknown>)[STUDIO_NODE_STATE_KEY];
+      if (studioState !== undefined) {
+        const statePath = `${nodePath}.props.${STUDIO_NODE_STATE_KEY}`;
+        const state = record(studioState, statePath);
+        knownFields(state, ["locked", "visible"], statePath);
+        for (const [key, value] of Object.entries(state)) {
+          if (typeof value !== "boolean") fail(`${statePath}.${key}`, "必须为布尔值");
+        }
       }
       const bindingsRaw = record(node.bindings, `${nodePath}.bindings`);
       if (Object.keys(bindingsRaw).length > 64) fail(`${nodePath}.bindings`, "Tag 绑定数量过多");
