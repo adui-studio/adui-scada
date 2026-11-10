@@ -424,3 +424,16 @@ Write-Host "退出码：$LASTEXITCODE"
 ```
 
 以上均依据维护者本机日志，不代表 Agent 独立执行；Docker/Tauri、工业网关、设备现场安全及工程发布不在本批验证范围内。
+
+## 2026-11-10 · 第八批 Shift 等比例缩放零警告质量链复验通过
+
+维护者在两条 `vitest(require-to-throw-message)` 警告修复后，重新运行 `pnpm run ready` 并提供完整 Windows PowerShell 日志及最终 `Write-Host "退出码：$LASTEXITCODE"`，输出 **`退出码：0`**。这次日志明确确认：
+
+- 依赖 Catalog（9 个清单、26 项依赖）、统一配置、环境/LF、中文文案（72 个文件）均通过。
+- 格式检查 **130 个文件通过**，`vp check` 对 51 个文件显示 **零警告、零 Lint 错误、零类型错误**；React/Vue 与 NestJS TypeScript 类型检查通过。
+- 单元测试 **8 个文件、93/93 通过**，其中 `transform-gesture.test.ts` **28/28**；NestJS E2E **2/2 通过**。
+- 文档静态检查 **31 个 Markdown 文件通过**；React 与 Vue Web 构建均成功；NestJS `nest build` 完成且完整 `ready` 退出码为 **0**。
+
+这是维护者真实本机执行结果，**不是 Agent 独立运行**。此前 Lint 的两条警告已在此次复验中确认消除。当前尚未收到 Vue/React 的实际浏览器 Shift 等比例缩放交互及 JSON 双向往返的人工验收结论，不能把自动化检查成功当作全部交互验收完成。
+
+此记录提交后尚未再次运行文档检查；Docker/Tauri、真实设备、工业现场安全及工程发布仍不在本批范围内。PR #10 保持 Draft，不合并 `main`。
