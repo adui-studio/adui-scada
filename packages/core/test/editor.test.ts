@@ -11,7 +11,7 @@ function editor() {
   return new DocumentEditor(waterTreatmentDemoDocument);
 }
 
-test("select, drag, undo and redo preserve document and bindings", () => {
+test("选择、拖动、撤销和重做保持工程及 Tag 绑定一致", () => {
   const e = editor();
   e.select("tank");
   const original = e.snapshot();
@@ -28,7 +28,7 @@ test("select, drag, undo and redo preserve document and bindings", () => {
   expect(e.snapshot().document).toEqual(moved.document);
 });
 
-test("no-op movement does not create history; new command clears redo", () => {
+test("无效移动不产生历史，新命令会清空重做记录", () => {
   const e = editor();
   e.select("tank");
   expect(e.moveSelected(80, 125)).toBe(false);
@@ -40,29 +40,29 @@ test("no-op movement does not create history; new command clears redo", () => {
   expect(e.snapshot().canRedo).toBe(false);
 });
 
-test("movement validates coordinates and clamps to canvas", () => {
+test("移动坐标需合法且自动限制在画布边界内", () => {
   const e = editor();
   e.select("tank");
-  expect(() => e.moveSelected(Number.POSITIVE_INFINITY, 0)).toThrow(/finite/);
+  expect(() => e.moveSelected(Number.POSITIVE_INFINITY, 0)).toThrow(/有限数/);
   expect(e.snapshot().canUndo).toBe(false);
   expect(e.moveSelected(-999, 999)).toBe(true);
   const node = e.snapshot().document.pages[0]?.nodes.find((n) => n.id === "tank");
   expect(node?.transform.x).toBe(0);
   expect(node?.transform.y).toBe(255);
-  expect(() => e.select("missing")).toThrow(/Unknown node/);
+  expect(() => e.select("missing")).toThrow(/未找到图元/);
 });
 
-test("label changes are reversible and HTML-like text stays data", () => {
+test("文本修改可撤销，类似 HTML 的内容仅作为普通数据", () => {
   const e = editor();
   e.select("title");
   e.setSelectedLabel("<script>alert(1)</script>");
   expect(e.snapshot().document.pages[0]?.nodes[0]?.props.text).toBe("<script>alert(1)</script>");
   e.undo();
-  expect(e.snapshot().document.pages[0]?.nodes[0]?.props.text).toBe("Water Treatment / V0.1");
+  expect(e.snapshot().document.pages[0]?.nodes[0]?.props.text).toBe("水处理系统 / V0.1");
   expect(() => e.setSelectedLabel("x".repeat(257))).toThrow(/256/);
 });
 
-test("invalid import is atomic, valid JSON round-trips between sessions", () => {
+test("无效导入不破坏原工程，有效 JSON 可跨编辑会话往返", () => {
   const a = editor();
   a.select("pump");
   a.moveSelected(560, 170);
@@ -76,17 +76,17 @@ test("invalid import is atomic, valid JSON round-trips between sessions", () => 
   expect(b.snapshot()).toEqual(before);
 });
 
-test("editor snapshot is defensive and preview never changes history", () => {
+test("编辑快照为防御性副本，预览不会改变历史", () => {
   const e = editor();
   const copy = e.snapshot();
   copy.document.pages[0]!.nodes[0]!.props.text = "mutated";
-  expect(e.snapshot().document.pages[0]?.nodes[0]?.props.text).toBe("Water Treatment / V0.1");
+  expect(e.snapshot().document.pages[0]?.nodes[0]?.props.text).toBe("水处理系统 / V0.1");
   const preview = withNodePosition(e.snapshot().document, "pump", 550, 190);
   expect(preview.pages[0]?.nodes.find((n) => n.id === "pump")?.transform.x).toBe(550);
   expect(e.snapshot().canUndo).toBe(false);
 });
 
-test("history keeps at most 100 move commands", () => {
+test("移动操作历史最多保留 100 条", () => {
   const e = editor();
   e.select("tank");
   for (let i = 1; i <= 105; i++) {
@@ -99,14 +99,14 @@ test("history keeps at most 100 move commands", () => {
   expect(node?.transform.x).toBe(85);
 });
 
-test("only label nodes can update static text", () => {
+test("只有文本图元能更新静态文案", () => {
   const e = editor();
   e.select("pump");
-  expect(() => e.setSelectedLabel("unsafe")).toThrow(/Select a label/);
+  expect(() => e.setSelectedLabel("unsafe")).toThrow(/请先选择文本图元/);
   expect(e.snapshot().canUndo).toBe(false);
 });
 
-test("add symbol uses stable IDs, no device binding, and undo/redo preserves JSON", () => {
+test("新增图元 ID 稳定且不绑定设备，撤销重做保留 JSON", () => {
   const e = editor();
   expect(e.addNode("label")).toBe("label-1");
   const first = e.snapshot();
@@ -119,10 +119,10 @@ test("add symbol uses stable IDs, no device binding, and undo/redo preserves JSO
   expect(e.snapshot().document.pages[0]?.nodes.some((n) => n.id === "label-2")).toBe(false);
   expect(e.redo()).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.at(-1)?.id).toBe("label-2");
-  expect(() => e.addNode("html" as never)).toThrow(/Unsupported/);
+  expect(() => e.addNode("html" as never)).toThrow(/不支持的图元类型/);
 });
 
-test("multiselect toggles, group movement and bounded preview are coherent", () => {
+test("多选切换、整组移动与边界预览一致", () => {
   const e = editor();
   e.select("tank");
   e.select("pump", true);
@@ -141,18 +141,18 @@ test("multiselect toggles, group movement and bounded preview are coherent", () 
   expect(e.snapshot().selectedIds).toEqual([]);
 });
 
-test("group translation rejects invalid IDs, duplicate selection and invalid coordinates", () => {
+test("整组移动拒绝不存在或重复的图元及非法坐标", () => {
   const doc = editor().snapshot().document;
-  expect(() => withNodesTranslated(doc, ["missing"], 2, 2)).toThrow(/Unknown/);
-  expect(() => withNodesTranslated(doc, ["tank", "tank"], 2, 2)).toThrow(/Duplicate/);
-  expect(() => withNodesTranslated(doc, ["tank"], Number.NaN, 2)).toThrow(/finite/);
+  expect(() => withNodesTranslated(doc, ["missing"], 2, 2)).toThrow(/不存在/);
+  expect(() => withNodesTranslated(doc, ["tank", "tank"], 2, 2)).toThrow(/重复图元/);
+  expect(() => withNodesTranslated(doc, ["tank"], Number.NaN, 2)).toThrow(/有限数/);
   expect(doc.pages[0]?.nodes.find((n) => n.id === "tank")?.transform.x).toBe(80);
 });
 
-test("alignment applies one undoable command to selected nodes", () => {
+test("图元对齐仅生成一条可撤销命令", () => {
   const e = editor();
   e.select("tank");
-  e.select("pump", true); // Pump is alignment anchor.
+  e.select("pump", true); // 水泵是此次对齐的基准图元。
   expect(e.alignSelected("left")).toBe(true);
   const after = e.snapshot().document.pages[0]?.nodes ?? [];
   expect(after.find((n) => n.id === "tank")?.transform.x).toBe(500);
@@ -163,7 +163,7 @@ test("alignment applies one undoable command to selected nodes", () => {
   expect(e.snapshot().document.pages[0]?.nodes.find((n) => n.id === "tank")?.transform.x).toBe(480);
 });
 
-test("layer reordering preserves selected order and supports undo", () => {
+test("图层排序保留多选顺序并支持撤销", () => {
   const e = editor();
   e.select("tank");
   e.select("pipe", true);
@@ -193,7 +193,7 @@ test("layer reordering preserves selected order and supports undo", () => {
   ).toEqual(["tank", "pipe"]);
 });
 
-test("delete selection is atomic, undo restores nodes, and export stays compatible", () => {
+test("批量删除可撤销恢复，导出的工程仍兼容", () => {
   const e = editor();
   e.select("tank");
   e.select("pump", true);
@@ -208,7 +208,7 @@ test("delete selection is atomic, undo restores nodes, and export stays compatib
   expect(imported.snapshot().document).toEqual(before);
 });
 
-test("new node IDs remain unique across delete and import and no-ops do not create history", () => {
+test("新增图元 ID 在删除和导入后保持唯一，无效操作不入历史", () => {
   const e = editor();
   e.addNode("pump", -100, 10000);
   const node = e.snapshot().document.pages[0]?.nodes.at(-1);
@@ -222,11 +222,11 @@ test("new node IDs remain unique across delete and import and no-ops do not crea
   expect(e.deleteSelected()).toBe(false);
 });
 
-test("fractional positions never move outside the page when bounded displacement is fractional", () => {
+test("小数坐标的受限位移不会越出画布", () => {
   const document = editor().snapshot().document;
   const tank = document.pages[0]?.nodes.find((node) => node.id === "tank");
-  if (!tank) throw new Error("Missing tank fixture");
-  // Remaining permitted horizontal displacement is just 0.3 units.
+  if (!tank) throw new Error("测试数据缺少水箱图元");
+  // 水平方向仅剩 0.3 个单位的可移动空间。
   tank.transform.x = 729.7;
   const moved = withNodesTranslated(document, ["tank"], 1, 0);
   const x = moved.pages[0]?.nodes.find((node) => node.id === "tank")?.transform.x;
@@ -234,7 +234,7 @@ test("fractional positions never move outside the page when bounded displacement
   expect(x! + tank.transform.width).toBeLessThanOrEqual(880);
 });
 
-test("layer forward/backward swaps one position and no-ops at the edge", () => {
+test("图层逐级上移下移及边缘无效操作正确", () => {
   const e = editor();
   e.select("title");
   expect(e.reorderSelected("backward")).toBe(false);
@@ -249,7 +249,7 @@ test("layer forward/backward swaps one position and no-ops at the edge", () => {
   expect(e.snapshot().document.pages[0]?.nodes[0]?.id).toBe("title");
 });
 
-test("marquee hit testing handles reversed corners, empty rectangles and whole canvas", () => {
+test("框选命中支持反向拖动、空选框和完整画布", () => {
   const document = editor().snapshot().document;
   expect(findNodesInRect(document, 70, 120, 225, 335)).toEqual(["tank"]);
   expect(findNodesInRect(document, 225, 335, 70, 120)).toEqual(["tank"]);
@@ -263,25 +263,25 @@ test("marquee hit testing handles reversed corners, empty rectangles and whole c
   ]);
 });
 
-test("marquee uses rotated axis-aligned bounds rather than ignoring rotation", () => {
+test("框选按旋转后外接矩形命中", () => {
   const document = editor().snapshot().document;
   const tank = document.pages[0]?.nodes.find((node) => node.id === "tank");
-  if (!tank) throw new Error("Missing tank fixture");
+  if (!tank) throw new Error("测试数据缺少水箱图元");
   tank.transform.rotation = 90;
   expect(findNodesInRect(document, 50, 220, 60, 230)).toEqual(["tank"]);
 });
 
-test("marquee rejects non-finite coordinates without touching editor history", () => {
+test("框选拒绝非法坐标且不修改编辑历史", () => {
   const e = editor();
   const before = e.snapshot();
-  expect(() => findNodesInRect(before.document, Number.NaN, 0, 300, 300)).toThrow(/finite/);
+  expect(() => findNodesInRect(before.document, Number.NaN, 0, 300, 300)).toThrow(/有限数/);
   expect(() => findNodesInRect(before.document, 0, Number.POSITIVE_INFINITY, 300, 300)).toThrow(
-    /finite/,
+    /有限数/,
   );
   expect(e.snapshot()).toEqual(before);
 });
 
-test("bulk selection validates atomically, preserves order and never changes project JSON", () => {
+test("批量选择先验证再更新，保留顺序且不修改 JSON", () => {
   const e = editor();
   const original = e.snapshot().document;
   e.selectMany(["tank", "pump"]);
@@ -289,7 +289,7 @@ test("bulk selection validates atomically, preserves order and never changes pro
   e.selectMany(["pump", "title"], true);
   expect(e.snapshot().selectedIds).toEqual(["tank", "pump", "title"]);
   expect(e.snapshot().selectedId).toBe("title");
-  expect(() => e.selectMany(["flow", "does-not-exist"])).toThrow(/Unknown/);
+  expect(() => e.selectMany(["flow", "does-not-exist"])).toThrow(/不存在/);
   expect(e.snapshot().selectedIds).toEqual(["tank", "pump", "title"]);
   e.selectMany(["tank", "tank", "pipe"]);
   expect(e.snapshot().selectedIds).toEqual(["tank", "pipe"]);
@@ -297,7 +297,7 @@ test("bulk selection validates atomically, preserves order and never changes pro
   expect(e.snapshot().canUndo).toBe(false);
 });
 
-test("marquee selection can be used to move a group with one reversible command", () => {
+test("框选后的整组移动能作为单条命令撤销", () => {
   const e = editor();
   const original = e.snapshot().document;
   e.selectMany(findNodesInRect(original, 0, 100, 620, 350));

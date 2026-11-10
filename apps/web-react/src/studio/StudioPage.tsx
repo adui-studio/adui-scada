@@ -61,7 +61,7 @@ export default function StudioPage() {
   }, [preview, state.document, state.selectedIds]);
   const image = useMemo(() => svgDataUrl(displayDocument, previewTags), [displayDocument]);
 
-  if (!page) throw new Error("No page in editor document");
+  if (!page) throw new Error("工程文档不包含页面");
 
   function refresh() {
     const next = editor.snapshot();

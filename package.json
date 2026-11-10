@@ -16,7 +16,7 @@
     "test:runtime": "vp test run packages/runtime/test",
     "deps:check": "node scripts/check-dependency-catalog.mjs",
     "docs:check": "node scripts/validate-docs.mjs",
-    "ready": "pnpm run deps:check && pnpm run config:check && pnpm run env:check && vp check && pnpm run typecheck:web && pnpm run typecheck:server && pnpm run test:unit && pnpm run test:e2e:server && pnpm run docs:check && pnpm run build:web && pnpm run build:server",
+    "ready": "pnpm run deps:check && pnpm run config:check && pnpm run env:check && pnpm run messages:check && vp check && pnpm run typecheck:web && pnpm run typecheck:server && pnpm run test:unit && pnpm run test:e2e:server && pnpm run docs:check && pnpm run build:web && pnpm run build:server",
     "prepare": "vp config",
     "dev:server": "pnpm --filter @adui/scada-server run start:dev",
     "build:server": "pnpm --filter @adui/scada-server run build",
@@ -33,7 +33,8 @@
     "docker:demo:up": "docker compose -f deploy/docker/compose.demo.yaml up --build -d",
     "docker:demo:down": "docker compose -f deploy/docker/compose.demo.yaml down",
     "docker:demo:logs": "docker compose -f deploy/docker/compose.demo.yaml logs -f",
-    "env:check": "node scripts/check-env-config.mjs"
+    "env:check": "node scripts/check-env-config.mjs",
+    "messages:check": "node scripts/check-chinese-messages.mjs"
   },
   "devDependencies": {
     "@adui/tooling": "workspace:*",

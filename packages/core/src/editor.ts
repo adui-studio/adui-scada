@@ -24,33 +24,33 @@ const DEFAULT_SYMBOLS: Record<EditableSymbol, { width: number; height: number }>
 
 function firstPage(document: ScadaDocument) {
   const page = document.pages[0];
-  if (!page) throw new RangeError("Document has no pages");
+  if (!page) throw new RangeError("工程文档不包含页面");
   return page;
 }
 
 function finite(value: number, label: string): void {
-  if (!Number.isFinite(value)) throw new TypeError(`${label} must be finite`);
+  if (!Number.isFinite(value)) throw new TypeError(`${label} 必须为有限数`);
 }
 
 function clamp(value: number, maximum: number): number {
   return Math.max(0, Math.min(Math.round(value), Math.max(0, Math.floor(maximum))));
 }
 
-/** Move a group by the same bounded integer displacement, preserving its arrangement. */
+/** 以统一的受限位移移动整组图元，保持组内相对位置。 */
 export function withNodesTranslated(
   document: ScadaDocument,
   nodeIds: readonly string[],
   dx: number,
   dy: number,
 ): ScadaDocument {
-  finite(dx, "dx");
-  finite(dy, "dy");
+  finite(dx, "水平位移");
+  finite(dy, "垂直位移");
   const checked = parseScadaDocument(document);
   const page = firstPage(checked);
   const selected = new Set(nodeIds);
-  if (selected.size !== nodeIds.length) throw new TypeError("Duplicate node selection");
+  if (selected.size !== nodeIds.length) throw new TypeError("选择中包含重复图元");
   const nodes = page.nodes.filter((node) => selected.has(node.id));
-  if (nodes.length !== selected.size) throw new RangeError("Unknown selected node");
+  if (nodes.length !== selected.size) throw new RangeError("所选图元不存在");
   if (nodes.length === 0) return checked;
 
   const minDx = Math.max(...nodes.map((node) => -node.transform.x));
@@ -62,10 +62,10 @@ export function withNodesTranslated(
     ...nodes.map((node) => page.size.height - node.transform.height - node.transform.y),
   );
   if (minDx > maxDx || minDy > maxDy) {
-    throw new RangeError("Selected nodes cannot fit within the page");
+    throw new RangeError("所选图元无法完整放入当前页面");
   }
-  // Fractional source coordinates may leave no integer displacement in range.
-  // Clamp the rounded request to the exact feasible interval instead of leaving the canvas.
+  // 原始坐标包含小数时，可行位移区间内可能没有整数值。
+  // 将取整后的位移限制在精确可行区间内，避免图元越出画布。
   const shiftX = Math.max(minDx, Math.min(Math.round(dx), maxDx));
   const shiftY = Math.max(minDy, Math.min(Math.round(dy), maxDy));
 
@@ -94,9 +94,9 @@ export function withNodesTranslated(
 }
 
 /**
- * Returns first-page node IDs whose axis-aligned bounds intersect the drag rectangle.
- * Rotation is accounted for by the conservative axis-aligned bounding box.
- * The caller keeps selection/zoom outside of persisted JSON.
+ * 返回第一页中与拖动选框相交的图元 ID。
+ * 旋转图元采用保守的轴对齐外接矩形进行命中计算。
+ * 选择状态和画布缩放由调用方管理，不写入工程 JSON。
  */
 export function findNodesInRect(
   document: ScadaDocument,
@@ -105,7 +105,7 @@ export function findNodesInRect(
   endX: number,
   endY: number,
 ): string[] {
-  for (const coordinate of [startX, startY, endX, endY]) finite(coordinate, "Selection coordinate");
+  for (const coordinate of [startX, startY, endX, endY]) finite(coordinate, "框选坐标");
   const left = Math.min(startX, endX);
   const right = Math.max(startX, endX);
   const top = Math.min(startY, endY);
@@ -133,18 +133,18 @@ export function findNodesInRect(
     .map((node) => node.id);
 }
 
-/** Backwards-compatible single-node absolute positioning. */
+/** 保留兼容旧调用方式的单图元绝对定位方法。 */
 export function withNodePosition(
   document: ScadaDocument,
   nodeId: string,
   x: number,
   y: number,
 ): ScadaDocument {
-  finite(x, "Node x");
-  finite(y, "Node y");
+  finite(x, "图元 X 坐标");
+  finite(y, "图元 Y 坐标");
   const page = firstPage(document);
   const node = page.nodes.find((candidate) => candidate.id === nodeId);
-  if (!node) throw new RangeError(`Unknown node: ${nodeId}`);
+  if (!node) throw new RangeError(`未找到图元：${nodeId}`);
   return withNodesTranslated(document, [nodeId], x - node.transform.x, y - node.transform.y);
 }
 
@@ -153,8 +153,8 @@ function equalDocuments(left: ScadaDocument, right: ScadaDocument): boolean {
 }
 
 /**
- * Framework-independent V0.2 editing session.
- * Selection and view state never enter the portable ScadaDocument JSON.
+ * 框架无关的 V0.2 组态编辑会话。
+ * 图元选择和视图状态不会写入可跨框架交换的 ScadaDocument JSON。
  */
 export class DocumentEditor {
   private current: ScadaDocument;
@@ -176,14 +176,14 @@ export class DocumentEditor {
     };
   }
 
-  /** Additive selection uses Shift+click. The last selected node is the alignment anchor. */
+  /** 按住 Shift 点击可追加选择，最后选中的图元为对齐基准。 */
   select(nodeId: string | null, additive = false): void {
     if (nodeId === null) {
       this.selection = [];
       return;
     }
     if (!firstPage(this.current).nodes.some((node) => node.id === nodeId)) {
-      throw new RangeError(`Unknown node: ${nodeId}`);
+      throw new RangeError(`未找到图元：${nodeId}`);
     }
     if (!additive) {
       this.selection = [nodeId];
@@ -194,11 +194,11 @@ export class DocumentEditor {
     }
   }
 
-  /** Atomically replace or extend selection; drawing order determines bulk selection order. */
+  /** 原子替换或追加所选图元；批量选择顺序遵循传入的图元顺序。 */
   selectMany(nodeIds: readonly string[], additive = false): void {
     const valid = new Set(firstPage(this.current).nodes.map((node) => node.id));
     if (nodeIds.some((id) => !valid.has(id))) {
-      throw new RangeError("Unknown selected node");
+      throw new RangeError("所选图元不存在");
     }
     const unique = [...new Set(nodeIds)];
     this.selection = additive
@@ -206,12 +206,12 @@ export class DocumentEditor {
       : unique;
   }
 
-  /** Legacy absolute move API; multi-selection translates as one bounded group. */
+  /** 兼容旧版绝对移动接口；多选时按同一受限位移整体移动。 */
   moveSelected(x: number, y: number): boolean {
     const anchor = this.getSelected();
     if (!anchor) return false;
-    finite(x, "Node x");
-    finite(y, "Node y");
+    finite(x, "图元 X 坐标");
+    finite(y, "图元 Y 坐标");
     return this.moveBy(x - anchor.transform.x, y - anchor.transform.y);
   }
 
@@ -221,9 +221,9 @@ export class DocumentEditor {
   }
 
   addNode(type: EditableSymbol, x = 40, y = 40): string {
-    if (!Object.hasOwn(DEFAULT_SYMBOLS, type)) throw new TypeError("Unsupported symbol type");
-    finite(x, "Node x");
-    finite(y, "Node y");
+    if (!Object.hasOwn(DEFAULT_SYMBOLS, type)) throw new TypeError("不支持的图元类型");
+    finite(x, "图元 X 坐标");
+    finite(y, "图元 Y 坐标");
     const page = firstPage(this.current);
     const existing = new Set([
       ...this.current.pages.map((candidate) => candidate.id),
@@ -276,14 +276,14 @@ export class DocumentEditor {
     return changed;
   }
 
-  /** Align selected nodes to the last selected node; position changes are one command. */
+  /** 以最后选中的图元为基准对齐，每次位置修改记录为一条命令。 */
   alignSelected(alignment: Alignment): boolean {
     const page = firstPage(this.current);
     const selected = new Set(this.selection);
     const anchor = this.getSelected();
     if (!anchor || selected.size < 2) return false;
     if (!["left", "right", "hcenter", "top", "bottom", "vcenter"].includes(alignment)) {
-      throw new TypeError("Unsupported alignment");
+      throw new TypeError("不支持的对齐方式");
     }
     const a = anchor.transform;
     const nodes = page.nodes.map((node) => {
@@ -323,10 +323,10 @@ export class DocumentEditor {
     return this.replaceFirstPageNodes(nodes);
   }
 
-  /** Page order is the SVG paint order: later nodes render above earlier ones. */
+  /** 页面节点顺序即 SVG 绘制顺序，后面的图元显示在前面。 */
   reorderSelected(action: LayerAction): boolean {
     if (!["front", "back", "forward", "backward"].includes(action)) {
-      throw new TypeError("Unsupported layer action");
+      throw new TypeError("不支持的图层操作");
     }
     if (this.selection.length === 0) return false;
     const nodes = [...firstPage(this.current).nodes];
@@ -356,10 +356,10 @@ export class DocumentEditor {
 
   setSelectedLabel(text: string): boolean {
     if (typeof text !== "string" || text.length > 256) {
-      throw new TypeError("Label text must be at most 256 characters");
+      throw new TypeError("文本内容不能超过 256 个字符");
     }
     const node = this.getSelected();
-    if (!node || node.type !== "label") throw new TypeError("Select a label node");
+    if (!node || node.type !== "label") throw new TypeError("请先选择文本图元");
     if (node.props.text === text) return false;
     const nodes = firstPage(this.current).nodes.map((item) =>
       item.id === node.id ? { ...item, props: { ...item.props, text } } : item,
@@ -385,7 +385,7 @@ export class DocumentEditor {
     return true;
   }
 
-  /** Import is atomic; a successful load starts a new editing history. */
+  /** 工程导入具备原子性；成功导入后重新开始编辑历史。 */
   loadDocument(source: unknown): void {
     const next = parseScadaDocument(source);
     this.current = next;

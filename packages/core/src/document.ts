@@ -1,4 +1,4 @@
-/** V0.1 document contract. JSON data only: no expression evaluation or embedded scripts. */
+/** V0.1 工程文档契约：仅支持 JSON 数据，禁止执行表达式或嵌入脚本。 */
 export const SCADA_SCHEMA_VERSION = "0.1.0";
 
 export type TagId = string;
@@ -37,68 +37,68 @@ function fail(path: string, reason: string): never {
 
 function record(value: unknown, path: string): Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    fail(path, "expected object");
+    fail(path, "应为对象");
   }
   const prototype = Object.getPrototypeOf(value);
   if (prototype !== Object.prototype && prototype !== null) {
-    fail(path, "expected plain object");
+    fail(path, "应为普通对象");
   }
   return value as Record<string, unknown>;
 }
 
 function identifier(value: unknown, path: string): string {
   if (typeof value !== "string" || !ID_PATTERN.test(value)) {
-    fail(path, "expected stable ASCII identifier (1-128 chars)");
+    fail(path, "应为 1～128 个字符的稳定 ASCII 标识符");
   }
   return value;
 }
 
 function boundedNumber(value: unknown, path: string, min: number, max: number): number {
   if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
-    fail(path, `expected finite number in [${min}, ${max}]`);
+    fail(path, `应为 ${min}～${max} 之间的有限数值`);
   }
   return value;
 }
 
 function nonemptyText(value: unknown, path: string, max = 256): string {
   if (typeof value !== "string" || value.length === 0 || value.length > max) {
-    fail(path, `expected nonempty string of max ${max} chars`);
+    fail(path, `应为非空字符串，长度不能超过 ${max} 个字符`);
   }
   return value;
 }
 
-/** Recursively restrict external properties/rules to finite JSON values, with bounds. */
+/** 递归验证外部属性和规则，仅允许符合深度、长度及数值限制的 JSON 数据。 */
 function jsonValue(
   value: unknown,
   path: string,
   depth: number,
   visiting: WeakSet<object>,
 ): unknown {
-  if (depth > 12) fail(path, "nesting too deep");
+  if (depth > 12) fail(path, "嵌套层级过深");
   if (value === null || typeof value === "boolean" || typeof value === "string") {
-    if (typeof value === "string" && value.length > 8192) fail(path, "string too long");
+    if (typeof value === "string" && value.length > 8192) fail(path, "字符串过长");
     return value;
   }
   if (typeof value === "number") {
-    if (!Number.isFinite(value)) fail(path, "non-finite number");
+    if (!Number.isFinite(value)) fail(path, "数值必须为有限数");
     return value;
   }
-  if (typeof value !== "object") fail(path, "not a JSON value");
-  if (visiting.has(value)) fail(path, "cyclic value");
+  if (typeof value !== "object") fail(path, "不是合法的 JSON 值");
+  if (visiting.has(value)) fail(path, "存在循环引用");
   visiting.add(value);
   try {
     if (Array.isArray(value)) {
-      if (value.length > 256) fail(path, "array too long");
+      if (value.length > 256) fail(path, "数组长度超出限制");
       return value.map((item, i) => jsonValue(item, `${path}[${i}]`, depth + 1, visiting));
     }
     const source = record(value, path);
     const entries = Object.entries(source);
-    if (entries.length > 256) fail(path, "too many properties");
+    if (entries.length > 256) fail(path, "属性数量超出限制");
     const output: Record<string, unknown> = Object.create(null);
     for (const [key, item] of entries) {
       if (["__proto__", "prototype", "constructor"].includes(key))
-        fail(path, "unsafe property key");
-      if (key.length > 128) fail(path, "property key too long");
+        fail(path, "属性名称不安全");
+      if (key.length > 128) fail(path, "属性名称过长");
       output[key] = jsonValue(item, `${path}.${key}`, depth + 1, visiting);
     }
     return output;
@@ -107,15 +107,15 @@ function jsonValue(
   }
 }
 
-/** Validate and defensively copy an untrusted in-memory object / parsed JSON document. */
+/** 验证不可信的内存对象或解析后的 JSON 文档，并返回防御性副本。 */
 export function parseScadaDocument(input: unknown): ScadaDocument {
-  const root = record(input, "document");
+  const root = record(input, "文档");
   if (root.schemaVersion !== SCADA_SCHEMA_VERSION) {
-    fail("schemaVersion", `unsupported version (expected ${SCADA_SCHEMA_VERSION})`);
+    fail("schemaVersion", `不支持的版本，预期为 ${SCADA_SCHEMA_VERSION}`);
   }
   const projectId = identifier(root.projectId, "projectId");
   if (!Array.isArray(root.pages) || root.pages.length === 0 || root.pages.length > MAX_PAGES) {
-    fail("pages", `expected 1-${MAX_PAGES} pages`);
+    fail("pages", `页面数量必须在 1～${MAX_PAGES} 之间`);
   }
   const ids = new Set<string>();
   let nodeCount = 0;
@@ -123,20 +123,20 @@ export function parseScadaDocument(input: unknown): ScadaDocument {
     const pagePath = `pages[${pageIndex}]`;
     const page = record(raw, pagePath);
     const id = identifier(page.id, `${pagePath}.id`);
-    if (ids.has(id)) fail(`${pagePath}.id`, "duplicate ID");
+    if (ids.has(id)) fail(`${pagePath}.id`, "ID 重复");
     ids.add(id);
     const name = nonemptyText(page.name, `${pagePath}.name`);
     const size = record(page.size, `${pagePath}.size`);
     const width = boundedNumber(size.width, `${pagePath}.size.width`, 1, 16384);
     const height = boundedNumber(size.height, `${pagePath}.size.height`, 1, 16384);
-    if (!Array.isArray(page.nodes)) fail(`${pagePath}.nodes`, "expected array");
+    if (!Array.isArray(page.nodes)) fail(`${pagePath}.nodes`, "应为数组");
     nodeCount += page.nodes.length;
-    if (nodeCount > MAX_NODES) fail(`${pagePath}.nodes`, `too many nodes (max ${MAX_NODES})`);
+    if (nodeCount > MAX_NODES) fail(`${pagePath}.nodes`, `图元数量超过上限 ${MAX_NODES}`);
     const nodes = page.nodes.map((rawNode, nodeIndex): ScadaNode => {
       const nodePath = `${pagePath}.nodes[${nodeIndex}]`;
       const node = record(rawNode, nodePath);
       const nodeId = identifier(node.id, `${nodePath}.id`);
-      if (ids.has(nodeId)) fail(`${nodePath}.id`, "duplicate ID");
+      if (ids.has(nodeId)) fail(`${nodePath}.id`, "ID 重复");
       ids.add(nodeId);
       const type = nonemptyText(node.type, `${nodePath}.type`, 64);
       const symbolVersion = nonemptyText(node.symbolVersion, `${nodePath}.symbolVersion`, 32);
@@ -150,17 +150,17 @@ export function parseScadaDocument(input: unknown): ScadaDocument {
       };
       const props = jsonValue(node.props, `${nodePath}.props`, 0, new WeakSet());
       if (!props || Array.isArray(props) || typeof props !== "object") {
-        fail(`${nodePath}.props`, "expected object");
+        fail(`${nodePath}.props`, "应为对象");
       }
       const bindingsRaw = record(node.bindings, `${nodePath}.bindings`);
-      if (Object.keys(bindingsRaw).length > 64) fail(`${nodePath}.bindings`, "too many bindings");
+      if (Object.keys(bindingsRaw).length > 64) fail(`${nodePath}.bindings`, "Tag 绑定数量过多");
       const bindings: ScadaNode["bindings"] = Object.create(null);
       for (const [key, bindingValue] of Object.entries(bindingsRaw)) {
-        identifier(key, `${nodePath}.bindings key`);
+        identifier(key, `${nodePath}.绑定字段`);
         const binding = record(bindingValue, `${nodePath}.bindings.${key}`);
         bindings[key] = { tagId: identifier(binding.tagId, `${nodePath}.bindings.${key}.tagId`) };
       }
-      if (!Array.isArray(node.rules)) fail(`${nodePath}.rules`, "expected array");
+      if (!Array.isArray(node.rules)) fail(`${nodePath}.rules`, "应为数组");
       const rules = jsonValue(node.rules, `${nodePath}.rules`, 0, new WeakSet()) as unknown[];
       return {
         id: nodeId,

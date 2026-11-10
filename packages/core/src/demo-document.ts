@@ -1,7 +1,7 @@
 import { parseScadaDocument, SCADA_SCHEMA_VERSION } from "./document.ts";
 import type { ScadaNode } from "./document.ts";
 
-/** Shared water-treatment fixture for the HTTP diagnostic and packaged desktop simulation. */
+/** HTTP 诊断服务与桌面离线模拟共用的水处理演示工程。 */
 function node(
   id: string,
   type: string,
@@ -29,10 +29,10 @@ export const waterTreatmentDemoDocument = parseScadaDocument({
   pages: [
     {
       id: "main",
-      name: "Water Treatment - Simulation",
+      name: "水处理系统（模拟）",
       size: { width: 880, height: 460 },
       nodes: [
-        node("title", "label", 44, 30, 600, 36, { text: "Water Treatment / V0.1" }),
+        node("title", "label", 44, 30, 600, 36, { text: "水处理系统 / V0.1" }),
         node("tank", "tank", 80, 125, 150, 205, {}, { level: { tagId: "water.level" } }),
         node("pipe", "pipe", 232, 220, 265, 24),
         node(
@@ -54,7 +54,7 @@ export const waterTreatmentDemoDocument = parseScadaDocument({
           225,
           200,
           32,
-          { text: "Flow", unit: "m3/h" },
+          { text: "流量", unit: "m3/h" },
           { value: { tagId: "water.flow" } },
         ),
       ],

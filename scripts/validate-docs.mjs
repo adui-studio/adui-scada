@@ -22,7 +22,7 @@ const required = [
 const errors = [];
 const abs = (p) => resolve(root, p);
 for (const file of required) {
-  if (!existsSync(abs(file))) errors.push("Missing file: " + file);
+  if (!existsSync(abs(file))) errors.push("缺少必需文件：" + file);
 }
 function collect(dir) {
   if (!existsSync(dir)) return [];
@@ -45,14 +45,14 @@ for (const file of markdown) {
     try {
       decoded = decodeURIComponent(path);
     } catch {
-      errors.push("Malformed link: " + relative(root, file) + " -> " + href);
+      errors.push("文档链接格式错误：" + relative(root, file) + " -> " + href);
       continue;
     }
     const target = resolve(dirname(file), decoded);
     if (target !== root && !target.startsWith(root + sep)) {
-      errors.push("Link escapes repo: " + relative(root, file) + " -> " + href);
+      errors.push("文档链接指向仓库目录之外：" + relative(root, file) + " -> " + href);
     } else if (!existsSync(target)) {
-      errors.push("Missing link: " + relative(root, file) + " -> " + href);
+      errors.push("文档链接目标不存在：" + relative(root, file) + " -> " + href);
     }
   }
 }
@@ -60,17 +60,17 @@ if (existsSync(abs("docs/REQUIREMENTS.md"))) {
   const content = readFileSync(abs("docs/REQUIREMENTS.md"), "utf8");
   const ids = [...content.matchAll(/^\|\s*((?:FR|NFR)-\d{3})\s*\|/gm)].map((m) => m[1]);
   const duplicated = [...new Set(ids.filter((v, i) => ids.indexOf(v) !== i))];
-  if (duplicated.length) errors.push("Duplicate requirements: " + duplicated.join(", "));
-  if (!ids.some((x) => x.startsWith("FR-"))) errors.push("No FR IDs found");
-  if (!ids.some((x) => x.startsWith("NFR-"))) errors.push("No NFR IDs found");
+  if (duplicated.length) errors.push("需求编号重复：" + duplicated.join(", "));
+  if (!ids.some((x) => x.startsWith("FR-"))) errors.push("未找到 FR 功能需求编号");
+  if (!ids.some((x) => x.startsWith("NFR-"))) errors.push("未找到 NFR 非功能需求编号");
 }
 if (existsSync(abs("docs/adr"))) {
   for (const f of readdirSync(abs("docs/adr")).filter((n) => n.endsWith(".md"))) {
     const body = readFileSync(abs("docs/adr/" + f), "utf8");
     const id = f.match(/^(\d{4})-/)?.[1];
-    if (!id || !body.includes("ADR-" + id)) errors.push("ADR ID mismatch: " + f);
+    if (!id || !body.includes("ADR-" + id)) errors.push("ADR 编号与文件名不一致：" + f);
     if (!/^- 状态：(Proposed|Accepted|Rejected|Superseded|Deprecated)$/m.test(body)) {
-      errors.push("Invalid ADR status: " + f);
+      errors.push("ADR 状态无效：" + f);
     }
   }
 }
@@ -79,17 +79,17 @@ if (existsSync(abs("skills-lock.json"))) {
     const lock = JSON.parse(readFileSync(abs("skills-lock.json"), "utf8"));
     for (const name of Object.keys(lock.skills ?? {})) {
       if (!existsSync(abs(".agents/skills/" + name + "/SKILL.md"))) {
-        errors.push("Missing skill: " + name);
+        errors.push("缺少 Skill 文件：" + name);
       }
     }
   } catch (error) {
-    errors.push("Invalid skills-lock.json: " + error.message);
+    errors.push("skills-lock.json 内容无效：" + error.message);
   }
 }
 if (errors.length) {
-  errors.forEach((message) => console.error("ERROR:", message));
+  errors.forEach((message) => console.error("错误：", message));
   process.exitCode = 1;
 } else {
-  console.log("Doc check OK: " + markdown.length + " Markdown files.");
-  console.log("Static check only; no build, runtime, semantic, or industrial safety verification.");
+  console.log("文档检查通过：共 " + markdown.length + " 个 Markdown 文件。");
+  console.log("本次仅执行静态文档检查，不代表构建、运行、业务语义或工业安全验证通过。");
 }

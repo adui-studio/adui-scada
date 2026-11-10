@@ -9,6 +9,17 @@ export type RuntimeStatus =
   | "simulation"
   | "reconnecting"
   | "error";
+/** Runtime 内部状态对应的中文显示名称。 */
+export const RUNTIME_STATUS_LABELS: Record<RuntimeStatus, string> = {
+  idle: "未启动",
+  loading: "加载中",
+  connecting: "连接中",
+  live: "模拟数据正常",
+  simulation: "离线模拟",
+  reconnecting: "重新连接中",
+  error: "运行异常",
+};
+
 export interface RuntimeState {
   readonly status: RuntimeStatus;
   readonly document: ScadaDocument | null;
@@ -25,14 +36,14 @@ export const initialRuntimeState: RuntimeState = {
 
 export function applyDemoChange(store: TagStore, raw: unknown): TagChange {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw))
-    throw new TypeError("Invalid Tag event");
+    throw new TypeError("Tag 事件格式无效");
   const e = raw as Record<string, unknown>;
-  if (e.kind !== "snapshot" && e.kind !== "delta") throw new TypeError("Invalid event kind");
+  if (e.kind !== "snapshot" && e.kind !== "delta") throw new TypeError("事件类型无效");
   if (!Array.isArray(e.values) || e.values.length > 5000)
-    throw new TypeError("Invalid event values");
+    throw new TypeError("事件数据列表无效");
   const values = e.values.map((item: unknown) => {
     if (item === null || typeof item !== "object" || Array.isArray(item))
-      throw new TypeError("Invalid Tag value");
+      throw new TypeError("Tag 数据格式无效");
     return validateTagValue(item as TagValue);
   });
   if (e.kind === "snapshot") store.replaceSnapshot(values);
@@ -42,7 +53,7 @@ export function applyDemoChange(store: TagStore, raw: unknown): TagChange {
 
 export function svgDataUrl(document: ScadaDocument, values: readonly TagValue[]): string {
   const page = document.pages[0];
-  if (!page) throw new RangeError("Document has no page");
+  if (!page) throw new RangeError("工程文档不包含页面");
   const snapshot = new Map(values.map((v) => [v.tagId, v]));
   return (
     "data:image/svg+xml;charset=utf-8," +
@@ -50,7 +61,7 @@ export function svgDataUrl(document: ScadaDocument, values: readonly TagValue[])
   );
 }
 
-/** Diagnostic-only SSE adapter; never connects directly to industrial equipment. */
+/** 仅用于诊断的 SSE 适配器，不会直接连接任何工业设备。 */
 export class DemoRuntime {
   private source: EventSource | null = null;
   private readonly store = new TagStore();

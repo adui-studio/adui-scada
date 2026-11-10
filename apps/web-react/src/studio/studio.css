@@ -166,7 +166,7 @@
   }
 }
 
-/* V0.2 canvas operations. Zoom is visual only; document coordinates stay unchanged. */
+/* V0.2 画布操作：缩放仅改变视图，不改变工程坐标。 */
 .studio-stage {
   overflow: auto;
 }
@@ -207,7 +207,7 @@
   opacity: 0.4;
 }
 
-/* Selection rectangle is a view-only overlay; it never enters project JSON. */
+/* 框选矩形仅是视图叠加层，不会写入工程 JSON。 */
 .studio-marquee {
   fill: rgba(57, 201, 186, 0.14);
   stroke: #39c9ba;

@@ -1,4 +1,5 @@
 import type { ScadaDocument, ScadaNode } from "./document.ts";
+import { TAG_QUALITY_LABELS } from "./tag-store.ts";
 import type { TagValue, TagQuality } from "./tag-store.ts";
 
 const COLORS: Record<TagQuality, string> = {
@@ -43,7 +44,7 @@ function indicator(tag: TagValue | undefined): string {
 }
 
 function quality(tag: TagValue | undefined): string {
-  return tag?.quality ?? "BAD";
+  return TAG_QUALITY_LABELS[tag?.quality ?? "BAD"];
 }
 
 function renderTank(node: ScadaNode, tags: ReadonlyMap<string, TagValue>): string {
@@ -66,7 +67,7 @@ function renderPump(node: ScadaNode, tags: ReadonlyMap<string, TagValue>): strin
   const { width: w, height: h } = node.transform;
   const tag = tagFor(node, "running", tags);
   const running = tag?.quality === "GOOD" && tag.value === true;
-  const valueText = tag?.quality !== "GOOD" ? quality(tag) : running ? "RUNNING" : "STOPPED";
+  const valueText = tag?.quality !== "GOOD" ? quality(tag) : running ? "运行中" : "已停止";
   return (
     `<circle cx="${number(w / 2)}" cy="${number(h / 2)}" r="${number(Math.max(1, Math.min(w, h) / 2 - 4))}" fill="#17293d" stroke="${indicator(tag)}" stroke-width="4"/>` +
     `<path d="M ${number(w * 0.36)} ${number(h * 0.32)} L ${number(w * 0.7)} ${number(h * 0.5)} L ${number(w * 0.36)} ${number(h * 0.68)} Z" fill="${running ? indicator(tag) : "#61758e"}"/>` +
@@ -109,14 +110,14 @@ function renderNode(node: ScadaNode, tags: ReadonlyMap<string, TagValue>): strin
     default:
       body =
         `<rect width="${number(t.width)}" height="${number(t.height)}" fill="#43212c" stroke="#f16c75"/>` +
-        `<text x="4" y="20" fill="#fff" font-size="12">Unsupported: ${xml(node.type)}</text>`;
+        `<text x="4" y="20" fill="#fff" font-size="12">不支持的图元：${xml(node.type)}</text>`;
   }
   return `<g data-node-id="${xml(node.id)}" transform="translate(${number(t.x)} ${number(t.y)}) rotate(${number(t.rotation)} ${number(t.width / 2)} ${number(t.height / 2)})">${body}</g>`;
 }
 
 /**
- * Pure SVG serialization for a validated document. The renderer only produces
- * whitelisted shapes and escaped text; no raw props, scripts, or event handlers.
+ * 对已校验的工程文档进行纯 SVG 序列化。
+ * 只输出白名单图元与安全转义的文本，不输出原始属性、脚本或事件处理器。
  */
 export function renderSvgPage(
   document: ScadaDocument,
@@ -124,7 +125,7 @@ export function renderSvgPage(
   values: ReadonlyMap<string, TagValue>,
 ): string {
   const page = document.pages.find((candidate) => candidate.id === pageId);
-  if (!page) throw new RangeError(`Unknown page: ${pageId}`);
+  if (!page) throw new RangeError(`未找到页面：${pageId}`);
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${xml(page.name)}" ` +
     `viewBox="0 0 ${number(page.size.width)} ${number(page.size.height)}">` +

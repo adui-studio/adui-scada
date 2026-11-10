@@ -11,9 +11,9 @@ function parseEnv(path) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
     const match = trimmed.match(/^([A-Z][A-Z0-9_]*)=(.*)$/);
-    assert.ok(match, `Invalid env line in ${path}`);
+    assert.ok(match, `${path} 中存在无效的环境变量配置行`);
     const [, key, value] = match;
-    assert.ok(!(key in values), `Duplicate env key in ${path}: ${key}`);
+    assert.ok(!(key in values), `${path} 中环境变量键名重复：${key}`);
     values[key] = value;
   }
   return values;
@@ -31,7 +31,7 @@ const defaults = {
   SCADA_VUE_PORT: "8081",
 };
 const template = parseEnv(".env.example");
-assert.deepEqual({ ...template }, defaults, "Root .env.example defaults must match the contract");
+assert.deepEqual({ ...template }, defaults, "根目录 .env.example 的默认值必须与配置契约一致");
 
 for (const legacy of [
   "apps/web-react/.env.example",
@@ -39,7 +39,7 @@ for (const legacy of [
   "apps/server/.env.example",
   "examples/water-treatment/.env.example",
 ]) {
-  assert.ok(!existsSync(resolve(root, legacy)), `Remove legacy template: ${legacy}`);
+  assert.ok(!existsSync(resolve(root, legacy)), `请删除旧版子目录环境变量模板：${legacy}`);
 }
 
 if (existsSync(resolve(root, ".env"))) {
@@ -49,11 +49,11 @@ if (existsSync(resolve(root, ".env"))) {
     const value = configured[key];
     if (key.endsWith("_PORT")) {
       const port = Number(value);
-      assert.ok(Number.isInteger(port) && port >= 1 && port <= 65535, `${key}: invalid port`);
+      assert.ok(Number.isInteger(port) && port >= 1 && port <= 65535, `${key}：端口必须是 1～65535 之间的整数`);
     } else if (key === "SCADA_WEB_HOST") {
-      assert.ok(["127.0.0.1", "localhost"].includes(value), `${key}: not loopback`);
+      assert.ok(["127.0.0.1", "localhost"].includes(value), `${key}：必须使用本机回环地址`);
     } else {
-      assert.ok(["127.0.0.1", "0.0.0.0"].includes(value), `${key}: invalid host`);
+      assert.ok(["127.0.0.1", "0.0.0.0"].includes(value), `${key}：监听地址无效`);
     }
   }
 }
@@ -63,7 +63,7 @@ for (const [framework, key] of [
   ["vue", "SCADA_VUE_DEV_PORT"],
 ]) {
   const config = read(`apps/web-${framework}/vite.config.ts`);
-  assert.ok(config.includes('new URL("../../", import.meta.url)'), "Vite envDir must be root");
+  assert.ok(config.includes('new URL("../../", import.meta.url)'), "Vite 的 envDir 必须指向仓库根目录");
   assert.ok(config.includes('loadEnv(mode, envDir, "SCADA_")'));
   assert.match(config, /import\s*\{[^}]*\bloadEnv\b[^}]*\}\s*from\s*"vite-plus"/);
   assert.ok(config.includes(key));
@@ -82,7 +82,7 @@ for (const [source, key] of [
   [demo, "SCADA_DEMO_HOST"],
   [demo, "SCADA_DEMO_PORT"],
 ])
-  assert.ok(source.includes(key), `Missing runtime key: ${key}`);
+  assert.ok(source.includes(key), `运行时配置缺少变量：${key}`);
 
 const compose = read("deploy/docker/compose.demo.yaml");
 for (const [key, fallback] of [
@@ -92,7 +92,7 @@ for (const [key, fallback] of [
   ["SCADA_DEMO_PORT", "4178"],
 ]) {
   const substitution = "${" + key + ":-" + fallback + "}";
-  assert.ok(compose.includes(substitution), `Compose missing ${key}`);
+  assert.ok(compose.includes(substitution), `Docker Compose 缺少变量：${key}`);
 }
 assert.ok(compose.includes("127.0.0.1:"));
 const nginx = read("deploy/docker/nginx.conf");
@@ -111,5 +111,5 @@ assert.match(read(".editorconfig"), /^end_of_line = lf$/m);
 assert.ok(read("packages/tooling/src/format.ts").includes('endOfLine: "lf"'));
 assert.match(read(".gitattributes"), /^\* text=auto eol=lf$/m);
 
-console.log("Environment OK: one root .env; Vue/React, NestJS, SSE and Docker paths aligned.");
-console.log("Line endings OK: Git checkout, EditorConfig and Vite+ all use LF.");
+console.log("环境配置检查通过：统一使用根目录 .env，Vue、React、NestJS、SSE 与 Docker 配置一致。");
+console.log("换行符检查通过：Git 检出、EditorConfig 与 Vite+ 均统一使用 LF。");

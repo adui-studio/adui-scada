@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { TAG_QUALITY_LABELS } from "@adui/scada-core";
 import {
   DemoRuntime,
   OfflineDemoRuntime,
   initialRuntimeState,
+  RUNTIME_STATUS_LABELS,
   svgDataUrl,
 } from "@adui/scada-runtime";
 import type { RuntimeState } from "@adui/scada-runtime";
@@ -29,7 +31,7 @@ export default function RuntimePage() {
           <h1>水处理实时监控</h1>
         </div>
         <span className="scada-status" data-status={state.status}>
-          {state.status.toUpperCase()}
+          {RUNTIME_STATUS_LABELS[state.status]}
         </span>
       </header>
       <p role="status" className="scada-message">
@@ -49,7 +51,7 @@ export default function RuntimePage() {
             <div className="scada-tag" key={tag.tagId}>
               <strong>{tag.tagId}</strong>
               <span>{tag.quality === "GOOD" ? String(tag.value ?? "--") : "--"}</span>
-              <small data-quality={tag.quality}>{tag.quality}</small>
+              <small data-quality={tag.quality}>{TAG_QUALITY_LABELS[tag.quality]}</small>
             </div>
           ))}
         </div>

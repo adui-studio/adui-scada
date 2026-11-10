@@ -8,7 +8,7 @@ export interface HealthResponse {
 @Injectable()
 export class AppService {
   getHealth(): HealthResponse {
-    // Process liveness only. Not gateway/database readiness.
+    // 本接口仅表示进程存活，不代表网关或数据库已经就绪。
     return { status: "ok", service: "adui-scada-server" };
   }
 }

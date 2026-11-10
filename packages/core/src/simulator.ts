@@ -1,6 +1,6 @@
 import type { TagValue } from "./tag-store.ts";
 
-/** Deterministic simulated telemetry. Never opens a socket to industrial equipment. */
+/** 可复现的模拟遥测数据，不会向工业设备建立任何网络连接。 */
 export class WaterTreatmentSimulator {
   private tick = 0;
   private readonly sequence = new Map<string, number>();
@@ -30,7 +30,7 @@ export class WaterTreatmentSimulator {
     ];
   }
 
-  /** Resume after a simulated connection interruption with a sequence newer than the store. */
+  /** 模拟断线恢复后，从大于当前 TagStore 的序列号继续生成数据。 */
   resumeAfter(storeSequences: ReadonlyMap<string, number>): void {
     for (const [tagId, sequence] of storeSequences) {
       this.sequence.set(tagId, Math.max(this.sequence.get(tagId) ?? 0, sequence));

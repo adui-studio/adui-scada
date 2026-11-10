@@ -1,4 +1,4 @@
-/** Oxlint is configured once at the workspace root for vp check. */
+/** Oxlint 统一在工作区根目录配置，由 vp check 执行。 */
 export const sharedLint = {
   ignorePatterns: [".agents/skills/**"],
   jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],

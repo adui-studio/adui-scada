@@ -1,6 +1,6 @@
 import { expect, test, vi } from "vite-plus/test";
 import { TagStore } from "@adui/scada-core";
-import { applyDemoChange, DemoRuntime, initialRuntimeState } from "../src/runtime.ts";
+import { applyDemoChange, DemoRuntime, initialRuntimeState, RUNTIME_STATUS_LABELS } from "../src/runtime.ts";
 import { OfflineDemoRuntime } from "../src/offline.ts";
 import type { RuntimeState } from "../src/runtime.ts";
 const mk = (sequence = 1) => ({
@@ -11,43 +11,43 @@ const mk = (sequence = 1) => ({
   serverTimestamp: "2026-11-09T00:00:00Z",
   sequence,
 });
-test("initial state is idle", () => {
+test("运行时初始状态为未启动", () => {
   expect(initialRuntimeState.status).toBe("idle");
 });
-test("fresh snapshot resets sequence after reconnect", () => {
+test("重连后的新快照可重置 Tag 序列号", () => {
   const store = new TagStore();
   applyDemoChange(store, { kind: "snapshot", values: [mk(42)] });
   applyDemoChange(store, { kind: "snapshot", values: [mk(1)] });
   expect(store.get("water.level")?.sequence).toBe(1);
 });
-test("delta ignores old sequence", () => {
+test("增量数据忽略较旧的序列号", () => {
   const store = new TagStore();
   applyDemoChange(store, { kind: "snapshot", values: [mk(5)] });
   applyDemoChange(store, { kind: "delta", values: [mk(3)] });
   expect(store.get("water.level")?.sequence).toBe(5);
 });
-test("disconnect marks previously GOOD readings STALE", () => {
+test("连接中断后将此前正常的读数标记为 STALE", () => {
   const store = new TagStore();
   applyDemoChange(store, { kind: "snapshot", values: [mk()] });
   store.markDisconnected(Date.parse("2026-11-09T00:00:05Z"));
   expect(store.get("water.level")?.quality).toBe("STALE");
 });
-test("bad snapshot is atomic", () => {
+test("无效快照会整体拒绝且不破坏已有数据", () => {
   const store = new TagStore();
   applyDemoChange(store, { kind: "snapshot", values: [mk()] });
   expect(() =>
     applyDemoChange(store, { kind: "snapshot", values: [mk(2), { ...mk(3), value: Infinity }] }),
-  ).toThrow(/Invalid number/);
+  ).toThrow(/Tag 数值必须为有限数/);
   expect(store.get("water.level")?.sequence).toBe(1);
 });
-test("unknown event kind is rejected", () => {
+test("拒绝未知的事件类型", () => {
   const store = new TagStore();
   expect(() => applyDemoChange(store, { kind: "execute", values: [] })).toThrow(
-    /Invalid event kind/,
+    /事件类型无效/,
   );
 });
 
-test("offline desktop mode displays explicitly simulated values and closes its timer", () => {
+test("桌面离线模式明确显示模拟数据且停止时清理定时器", () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-11-09T00:00:00.000Z"));
   const states: RuntimeState[] = [];
@@ -76,7 +76,7 @@ test("offline desktop mode displays explicitly simulated values and closes its t
   }
 });
 
-test("SSE mode reports HTML fallback instead of parsing it as JSON", async () => {
+test("SSE 返回 HTML 时报告接口类型异常而非将其解析成 JSON", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(
@@ -98,4 +98,16 @@ test("SSE mode reports HTML fallback instead of parsing it as JSON", async () =>
     runtime.stop();
     vi.unstubAllGlobals();
   }
+});
+
+test("运行时状态有完整中文名称且内部状态标识保持不变", () => {
+  expect(RUNTIME_STATUS_LABELS).toEqual({
+    idle: "未启动",
+    loading: "加载中",
+    connecting: "连接中",
+    live: "模拟数据正常",
+    simulation: "离线模拟",
+    reconnecting: "重新连接中",
+    error: "运行异常",
+  });
 });

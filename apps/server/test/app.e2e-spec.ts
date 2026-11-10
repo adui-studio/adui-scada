@@ -4,7 +4,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { AppModule } from "../src/app.module.js";
 
-describe("AppController (e2e)", () => {
+describe("应用控制器（端到端）", () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -17,7 +17,7 @@ describe("AppController (e2e)", () => {
     await app?.close();
   });
 
-  it("GET /health returns liveness", async () => {
+  it("GET /health 仅返回进程存活状态", async () => {
     const response = await request(app.getHttpServer()).get("/health").expect(200);
     expect(response.body).toEqual({
       status: "ok",
@@ -25,7 +25,7 @@ describe("AppController (e2e)", () => {
     });
   });
 
-  it("does not expose an industrial write endpoint", async () => {
+  it("未实现的工业设备写入接口返回 404", async () => {
     const response = await request(app.getHttpServer())
       .post("/api/devices/write")
       .send({ value: 1 });

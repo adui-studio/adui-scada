@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, shallowRef } from "vue";
+import { TAG_QUALITY_LABELS } from "@adui/scada-core";
 import {
   DemoRuntime,
   OfflineDemoRuntime,
   initialRuntimeState,
+  RUNTIME_STATUS_LABELS,
   svgDataUrl,
 } from "@adui/scada-runtime";
 
@@ -31,7 +33,7 @@ onUnmounted(() => runtime.stop());
         <p class="scada-eyebrow">ADui SCADA · V0.1</p>
         <h1>水处理实时监控</h1>
       </div>
-      <span class="scada-status" :data-status="state.status">{{ state.status.toUpperCase() }}</span>
+      <span class="scada-status" :data-status="state.status">{{ RUNTIME_STATUS_LABELS[state.status] }}</span>
     </header>
     <p role="status" class="scada-message">{{ state.message }}</p>
     <section class="scada-panel" aria-label="模拟工业监控画面">
@@ -44,7 +46,7 @@ onUnmounted(() => runtime.stop());
         <div v-for="tag in state.values" :key="tag.tagId" class="scada-tag">
           <strong>{{ tag.tagId }}</strong>
           <span>{{ tag.quality === "GOOD" ? String(tag.value ?? "--") : "--" }}</span>
-          <small :data-quality="tag.quality">{{ tag.quality }}</small>
+          <small :data-quality="tag.quality">{{ TAG_QUALITY_LABELS[tag.quality] }}</small>
         </div>
       </div>
     </section>

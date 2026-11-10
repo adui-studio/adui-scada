@@ -23,23 +23,23 @@ for (const path of manifests) {
   ]) {
     for (const [name, value] of Object.entries(json[field] ?? {})) {
       if (value === "catalog:" && !catalog.has(name))
-        errors.push(path + ": missing catalog " + name);
+        errors.push(path + ": 缺少 Catalog 依赖 " + name);
       else if (
         typeof value !== "string" ||
         (!value.startsWith("workspace:") && value !== "catalog:")
       )
-        errors.push(path + ": not catalog/workspace " + name);
+        errors.push(path + ": 依赖必须使用 catalog: 或 workspace: " + name);
     }
   }
 }
-if (!yaml.includes('typescript: "6.0.3"')) errors.push("TypeScript 6.0.3 is not pinned");
-if (!yaml.includes('vitest: "5.1.0"')) errors.push("Vitest 5.1.0 not pinned");
+if (!yaml.includes('typescript: "6.0.3"')) errors.push("TypeScript 6.0.3 未锁定版本");
+if (!yaml.includes('vitest: "5.1.0"')) errors.push("Vitest 5.1.0 未锁定版本");
 for (const f of ["react", "vue"])
-  if (!existsSync(join(root, "apps", "web-" + f, "package.json"))) errors.push("Missing web-" + f);
+  if (!existsSync(join(root, "apps", "web-" + f, "package.json"))) errors.push("缺少 Web 应用 web-" + f);
 if (errors.length) {
   for (const err of errors) console.error(err);
   process.exitCode = 1;
 } else
   console.log(
-    "Catalog OK: " + manifests.length + " manifests, " + catalog.size + " catalog dependencies",
+    "依赖目录检查通过：共 " + manifests.length + " 个清单，" + catalog.size + " 项 Catalog 依赖",
   );

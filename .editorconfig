@@ -1,4 +1,4 @@
-# Single editor baseline for the ADui SCADA monorepo.
+# ADui SCADA Monorepo 唯一的编辑器规范基线。
 root = true
 
 [*]
@@ -19,6 +19,6 @@ max_line_length = 100
 [*.md]
 trim_trailing_whitespace = false
 
-# Native Windows command scripts are the only intentional CRLF exception.
+# 只有 Windows 原生命令脚本需要保留 CRLF。
 [*.{bat,cmd}]
 end_of_line = crlf

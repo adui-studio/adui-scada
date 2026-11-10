@@ -41,7 +41,7 @@ let activeMarquee: MarqueeState | null = null;
 
 const page = computed(() => {
   const result = state.value.document.pages[0];
-  if (!result) throw new Error("No page in editor document");
+  if (!result) throw new Error("工程文档不包含页面");
   return result;
 });
 const selected = computed(() =>
@@ -286,7 +286,7 @@ function cancelDrag() {
 
 function displayTransform(id: string) {
   const node = displayNodes.value.find((item) => item.id === id);
-  if (!node) throw new RangeError("Unknown node: " + id);
+  if (!node) throw new RangeError("未找到图元：" + id);
   const t = node.transform;
   return `rotate(${t.rotation} ${t.x + t.width / 2} ${t.y + t.height / 2})`;
 }

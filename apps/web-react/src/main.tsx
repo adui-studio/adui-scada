@@ -4,7 +4,7 @@ import App from "./App.tsx";
 import "@adui/scada-runtime/styles.css";
 
 const mount = document.getElementById("root");
-if (!mount) throw new Error("Missing #root mount point");
+if (!mount) throw new Error("未找到页面挂载节点 #root");
 createRoot(mount).render(
   <StrictMode>
     <App />

@@ -233,3 +233,18 @@ pnpm run ready
 ```
 
 **本轮补丁尚未在 Windows/Vite+/Vitest 下实测；原始超时原因按测试初始化开销判断，待复验确认**。若仍超时，需结合系统并行负载、Vitest worker 数量和具体测试启动耗时进一步分析。
+
+## 2026-11-10 · 自有提示统一中文及静态检查（待复验）
+
+应维护者要求，仓库自有的 `throw`、CLI 检查脚本、模拟服务日志、测试名称、注释/JSDoc、Rust 诊断信息、Vite/Docker 配置注释，以及 Vue/React 的 Runtime 可视状态全部统一为简体中文。**协议标识不变**：JSON 字段、Tag ID、`GOOD/UNCERTAIN/BAD/STALE` 枚举、内部 Runtime 状态、路径、命令和依赖版本均保持原样；通过 `TAG_QUALITY_LABELS` 和 `RUNTIME_STATUS_LABELS` 提供中文显示。
+
+新增 `scripts/check-chinese-messages.mjs`、`pnpm run messages:check` 并接入 `pnpm run ready`，检查自有文件的测试名称、异常文本、日志与注释，排除第三方 Skills 与生成产物；此脚本是静态启发式检查，不替代人工 UI 文案审查。部分原有测试根据中文异常断言同步调整，默认演示画面中的中文标题及 SVG 质量显示需人工回归。
+
+```powershell
+pnpm run messages:check
+pnpm run test:unit
+pnpm run test:e2e:server
+pnpm run ready
+```
+
+**执行状态**：本次中文化补丁尚未在维护者 Windows 上执行 Vite+、Vitest、Vue/React 实际 UI、Docker 和 Tauri 回归。此前 `pnpm run ready` 的 NestJS Controller 单测超时已另作简化修复，但尚无完整复验结果。不能将静态源码审查标记为测试通过。
