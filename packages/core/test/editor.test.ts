@@ -309,3 +309,43 @@ test("框选后的整组移动能作为单条命令撤销", () => {
   expect(e.snapshot().document).toEqual(original);
   expect(e.snapshot().selectedIds).toEqual(selected);
 });
+
+test("右侧小数边界吸附位移能够提交并撤销", () => {
+  const document = editor().snapshot().document;
+  const tank = document.pages[0]?.nodes.find((node) => node.id === "tank");
+  if (!tank) throw new Error("测试数据缺少水箱图元");
+  tank.transform.x = 729.7;
+  const e = new DocumentEditor(document);
+  e.select("tank");
+
+  expect(e.moveBy(730 - tank.transform.x, 0)).toBe(true);
+  expect(
+    e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.transform.x,
+  ).toBe(730);
+  expect(e.undo()).toBe(true);
+  expect(
+    e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.transform.x,
+  ).toBe(729.7);
+  expect(e.moveBy(-5.4, 0)).toBe(true);
+  expect(
+    e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.transform.x,
+  ).toBe(724.7);
+});
+
+test("左侧小数边界吸附位移能够提交并撤销", () => {
+  const document = editor().snapshot().document;
+  const tank = document.pages[0]?.nodes.find((node) => node.id === "tank");
+  if (!tank) throw new Error("测试数据缺少水箱图元");
+  tank.transform.x = 0.2;
+  const e = new DocumentEditor(document);
+  e.select("tank");
+
+  expect(e.moveBy(-0.2, 0)).toBe(true);
+  expect(
+    e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.transform.x,
+  ).toBe(0);
+  expect(e.undo()).toBe(true);
+  expect(
+    e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.transform.x,
+  ).toBe(0.2);
+});

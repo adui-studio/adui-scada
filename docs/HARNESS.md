@@ -270,3 +270,9 @@ pnpm run dev:vue
 维护者运行 `pnpm run ready`：依赖目录、共享配置、根环境变量、LF 及中文文案检查通过，随后在 `vp check` 的格式化阶段停止。React `StudioPage.tsx` 第 504 行之前的网格条件渲染遗漏 JSX 结束符 `}`，引发解析失败；同时工具报告 Vue `StudioPage.vue` 和 Core `snap.test.ts` 存在格式差异。因格式化先失败，**没有执行后续 Lint、类型检查、测试、E2E、文档检查及构建**。
 
 已在 PR #6 原分支上最小修复 React JSX 语法、整理 React 三组网格开关属性格式及 Vue/单测的格式差异。此为源码修改，尚未在维护者的 Vite+ 环境实测；请重新运行 `pnpm run ready`，并在格式检查通过后按上节验收 React/Vue 交互。
+
+## 2026-11-10 · V0.2 小数边界单元测试反馈与修复
+
+维护者再次运行 `pnpm run ready`：中文文案、格式化（124 文件）、Lint/静态检查（49 文件）、Vue/React 与服务端类型检查均通过；执行 57 个单测时 55 通过、2 失败。失败均位于 `packages/core/test/snap.test.ts`，即吸附函数给出 0.3/-0.2 的精确边界位移，但 `withNodesTranslated` 在提交时重新取整至 0，导致最终图元坐标未到达边界。
+
+修复共享 Core：若传入位移恰为可行区间的精确端点，则保留小数；其他移动仍取整并限制边界。新增左右边界移动、撤销及普通小数取整回归测试。未触及 React/Vue UI、Schema 或工业设备通信。本轮运行在单测阶段结束，**NestJS E2E、文档检查与 Web/Server 构建没有执行**；修复后请重新运行 `pnpm run ready`，运行结果待维护者反馈。
