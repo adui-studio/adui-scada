@@ -504,6 +504,8 @@ export class DocumentEditor {
 
 export {
   RESIZE_HANDLES,
+  RESIZE_HANDLE_LABELS,
+  resizeHandlePosition,
   resolveResizeTransform,
   resolveRotationTransform,
 } from "./transform-gesture.ts";
