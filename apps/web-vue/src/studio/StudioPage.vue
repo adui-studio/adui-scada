@@ -121,11 +121,12 @@ const bindingSlot = computed(() => {
     ? editableTagSlot(node.type)
     : null;
 });
-const demoTagCandidates = computed(() =>
-  bindingSlot.value === null
+const demoTagCandidates = computed(() => {
+  const slot = bindingSlot.value;
+  return slot === null
     ? []
-    : waterTreatmentDemoTagOptions.filter((option) => option.slots.includes(bindingSlot.value!)),
-);
+    : waterTreatmentDemoTagOptions.filter((option) => option.slots.includes(slot));
+});
 const selectedTagId = computed(() => {
   const node = selected.value;
   const slot = bindingSlot.value;
