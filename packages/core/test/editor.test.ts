@@ -642,3 +642,74 @@ test("未来版本或非法历史组合拒绝导入并保留当前工程", () =>
   expect(() => e.loadDocument(future)).toThrow(/至少需要两个图元/);
   expect(e.snapshot()).toEqual(before);
 });
+
+test("水箱 Tag 绑定可以清除、撤销和重做", () => {
+  const e = editor();
+  e.select("tank");
+  const before = e.snapshot().document;
+  expect(e.setSelectedBinding("level", null)).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings).toEqual(
+    {},
+  );
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(before);
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings).toEqual(
+    {},
+  );
+});
+
+test("文本图元绑定模拟流量后工程 JSON 往返保持一致", () => {
+  const e = editor();
+  e.select("title");
+  expect(e.setSelectedBinding("value", "water.flow")).toBe(true);
+  const after = e.snapshot().document;
+  const loaded = editor();
+  loaded.loadDocument(JSON.parse(JSON.stringify(after)));
+  expect(loaded.snapshot().document).toEqual(after);
+  expect(after.pages[0]?.nodes.find((node) => node.id === "title")?.bindings.value?.tagId).toBe(
+    "water.flow",
+  );
+});
+
+test("Tag 绑定相同值不生成撤销历史", () => {
+  const e = editor();
+  e.select("tank");
+  expect(e.setSelectedBinding("level", "water.level")).toBe(false);
+  expect(e.snapshot().canUndo).toBe(false);
+  expect(e.setSelectedBinding("level", null)).toBe(true);
+  expect(e.setSelectedBinding("level", null)).toBe(false);
+  expect(e.snapshot().canUndo).toBe(true);
+});
+
+test("Tag 绑定拒绝非法槽及非法标识符，不污染工程", () => {
+  const e = editor();
+  e.select("pump");
+  const before = e.snapshot();
+  expect(() => e.setSelectedBinding("level", "water.level")).toThrow(/不支持指定/);
+  expect(() => e.setSelectedBinding("running", "非法 Tag")).toThrow(/稳定 ASCII/);
+  expect(() => e.setSelectedBinding("running", "")).toThrow(/稳定 ASCII/);
+  expect(() => e.setSelectedBinding("running", 123 as never)).toThrow(/字符串或 null/);
+  expect(e.snapshot()).toEqual(before);
+});
+
+test("Tag 绑定只允许单选，组合图元不可单独修改", () => {
+  const e = editor();
+  expect(() => e.setSelectedBinding("level", null)).toThrow(/单选/);
+  e.select("tank");
+  e.select("pump", true);
+  expect(() => e.setSelectedBinding("level", null)).toThrow(/单选/);
+  e.groupSelected();
+  e.select("tank");
+  const before = e.snapshot();
+  expect(() => e.setSelectedBinding("level", null)).toThrow(/先解组/);
+  expect(e.snapshot()).toEqual(before);
+});
+
+test("管道图元不支持 Tag 绑定，原有绑定与图元属性保持不变", () => {
+  const e = editor();
+  e.select("pipe");
+  const before = e.snapshot();
+  expect(() => e.setSelectedBinding("value", "water.flow")).toThrow(/不支持指定/);
+  expect(e.snapshot()).toEqual(before);
+});
