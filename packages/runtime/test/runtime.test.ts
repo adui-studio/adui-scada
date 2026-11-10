@@ -1,6 +1,11 @@
 import { expect, test, vi } from "vite-plus/test";
 import { TagStore } from "@adui/scada-core";
-import { applyDemoChange, DemoRuntime, initialRuntimeState, RUNTIME_STATUS_LABELS } from "../src/runtime.ts";
+import {
+  applyDemoChange,
+  DemoRuntime,
+  initialRuntimeState,
+  RUNTIME_STATUS_LABELS,
+} from "../src/runtime.ts";
 import { OfflineDemoRuntime } from "../src/offline.ts";
 import type { RuntimeState } from "../src/runtime.ts";
 const mk = (sequence = 1) => ({
@@ -42,9 +47,7 @@ test("无效快照会整体拒绝且不破坏已有数据", () => {
 });
 test("拒绝未知的事件类型", () => {
   const store = new TagStore();
-  expect(() => applyDemoChange(store, { kind: "execute", values: [] })).toThrow(
-    /事件类型无效/,
-  );
+  expect(() => applyDemoChange(store, { kind: "execute", values: [] })).toThrow(/事件类型无效/);
 });
 
 test("桌面离线模式明确显示模拟数据且停止时清理定时器", () => {

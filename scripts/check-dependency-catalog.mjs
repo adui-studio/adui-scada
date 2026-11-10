@@ -35,7 +35,8 @@ for (const path of manifests) {
 if (!yaml.includes('typescript: "6.0.3"')) errors.push("TypeScript 6.0.3 未锁定版本");
 if (!yaml.includes('vitest: "5.1.0"')) errors.push("Vitest 5.1.0 未锁定版本");
 for (const f of ["react", "vue"])
-  if (!existsSync(join(root, "apps", "web-" + f, "package.json"))) errors.push("缺少 Web 应用 web-" + f);
+  if (!existsSync(join(root, "apps", "web-" + f, "package.json")))
+    errors.push("缺少 Web 应用 web-" + f);
 if (errors.length) {
   for (const err of errors) console.error(err);
   process.exitCode = 1;

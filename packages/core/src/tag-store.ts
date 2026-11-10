@@ -83,7 +83,8 @@ export class TagStore {
     const unique = new Set<string>();
     const checked = updates.map((update) => {
       const valid = validateTagValue(update);
-      if (unique.has(valid.tagId)) throw new TypeError(`同一批次存在重复的 Tag 更新：${valid.tagId}`);
+      if (unique.has(valid.tagId))
+        throw new TypeError(`同一批次存在重复的 Tag 更新：${valid.tagId}`);
       unique.add(valid.tagId);
       return valid;
     });

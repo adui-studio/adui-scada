@@ -3,13 +3,7 @@ import { join, relative, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const excluded = new Set(["node_modules", "dist", "target", "gen", ".git", ".agents", ".vite"]);
-const paths = [
-  ".env.example",
-  ".editorconfig",
-  ".gitattributes",
-  ".gitignore",
-  ".dockerignore",
-];
+const paths = [".env.example", ".editorconfig", ".gitattributes", ".gitignore", ".dockerignore"];
 const extensions = /\.(?:ts|tsx|js|mjs|vue|css|rs|toml|yaml|yml|html)$/;
 
 function collect(directory) {
@@ -21,7 +15,9 @@ function collect(directory) {
       collect(full);
     } else if (
       item.isFile() &&
-      (extensions.test(item.name) || item.name.startsWith("Dockerfile.") || item.name === "nginx.conf")
+      (extensions.test(item.name) ||
+        item.name.startsWith("Dockerfile.") ||
+        item.name === "nginx.conf")
     ) {
       paths.push(relative(root, full));
     }
@@ -48,7 +44,7 @@ for (const path of paths) {
     let text = "";
 
     // 仅检查自有文案，不检查接口标识、依赖、URL 和外部工具输出。
-    if (/^\/\/\//.test(trimmed) || /^#\s*syntax=/.test(trimmed)) continue;
+    if (trimmed.startsWith("///") || /^#\s*syntax=/.test(trimmed)) continue;
     // .gitattributes 的 "* text=..." 属于配置指令，不是 JSDoc 注释。
     if (path === ".gitattributes" && trimmed.startsWith("* text=")) continue;
     const comment = trimmed.match(/^(?:\/\/|\/\*+|\*\s+|#\s+)(.*)$/);

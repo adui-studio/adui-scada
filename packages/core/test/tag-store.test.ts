@@ -35,7 +35,9 @@ test("忽略乱序及重复序列号且不修改已有数据", () => {
 test("同一批次存在非法或重复 Tag 时原子拒绝", () => {
   const store = new TagStore();
   const bad = { ...make(), value: Number.NaN };
-  expect(() => store.apply([make(), bad])).toThrow(/同一批次存在重复的 Tag 更新|Tag 数值必须为有限数/);
+  expect(() => store.apply([make(), bad])).toThrow(
+    /同一批次存在重复的 Tag 更新|Tag 数值必须为有限数/,
+  );
   expect(store.snapshot()).toEqual([]);
   expect(() => store.apply([make(), make(2)])).toThrow(/同一批次存在重复的 Tag 更新/);
   expect(store.snapshot()).toEqual([]);

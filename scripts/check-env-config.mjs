@@ -49,7 +49,10 @@ if (existsSync(resolve(root, ".env"))) {
     const value = configured[key];
     if (key.endsWith("_PORT")) {
       const port = Number(value);
-      assert.ok(Number.isInteger(port) && port >= 1 && port <= 65535, `${key}：端口必须是 1～65535 之间的整数`);
+      assert.ok(
+        Number.isInteger(port) && port >= 1 && port <= 65535,
+        `${key}：端口必须是 1～65535 之间的整数`,
+      );
     } else if (key === "SCADA_WEB_HOST") {
       assert.ok(["127.0.0.1", "localhost"].includes(value), `${key}：必须使用本机回环地址`);
     } else {
@@ -63,7 +66,10 @@ for (const [framework, key] of [
   ["vue", "SCADA_VUE_DEV_PORT"],
 ]) {
   const config = read(`apps/web-${framework}/vite.config.ts`);
-  assert.ok(config.includes('new URL("../../", import.meta.url)'), "Vite 的 envDir 必须指向仓库根目录");
+  assert.ok(
+    config.includes('new URL("../../", import.meta.url)'),
+    "Vite 的 envDir 必须指向仓库根目录",
+  );
   assert.ok(config.includes('loadEnv(mode, envDir, "SCADA_")'));
   assert.match(config, /import\s*\{[^}]*\bloadEnv\b[^}]*\}\s*from\s*"vite-plus"/);
   assert.ok(config.includes(key));

@@ -33,7 +33,9 @@ onUnmounted(() => runtime.stop());
         <p class="scada-eyebrow">ADui SCADA · V0.1</p>
         <h1>水处理实时监控</h1>
       </div>
-      <span class="scada-status" :data-status="state.status">{{ RUNTIME_STATUS_LABELS[state.status] }}</span>
+      <span class="scada-status" :data-status="state.status">{{
+        RUNTIME_STATUS_LABELS[state.status]
+      }}</span>
     </header>
     <p role="status" class="scada-message">{{ state.message }}</p>
     <section class="scada-panel" aria-label="模拟工业监控画面">

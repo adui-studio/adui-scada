@@ -96,8 +96,7 @@ function jsonValue(
     if (entries.length > 256) fail(path, "属性数量超出限制");
     const output: Record<string, unknown> = Object.create(null);
     for (const [key, item] of entries) {
-      if (["__proto__", "prototype", "constructor"].includes(key))
-        fail(path, "属性名称不安全");
+      if (["__proto__", "prototype", "constructor"].includes(key)) fail(path, "属性名称不安全");
       if (key.length > 128) fail(path, "属性名称过长");
       output[key] = jsonValue(item, `${path}.${key}`, depth + 1, visiting);
     }

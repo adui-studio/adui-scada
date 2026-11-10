@@ -39,8 +39,7 @@ export function applyDemoChange(store: TagStore, raw: unknown): TagChange {
     throw new TypeError("Tag 事件格式无效");
   const e = raw as Record<string, unknown>;
   if (e.kind !== "snapshot" && e.kind !== "delta") throw new TypeError("事件类型无效");
-  if (!Array.isArray(e.values) || e.values.length > 5000)
-    throw new TypeError("事件数据列表无效");
+  if (!Array.isArray(e.values) || e.values.length > 5000) throw new TypeError("事件数据列表无效");
   const values = e.values.map((item: unknown) => {
     if (item === null || typeof item !== "object" || Array.isArray(item))
       throw new TypeError("Tag 数据格式无效");
