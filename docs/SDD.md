@@ -277,3 +277,12 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - `migrations[projectId]` 除记录旧草稿迁移或删除标记，还保存可选 `lastRevision`。保存时计算 `max(当前草稿 revision, 标记 lastRevision) + 1`，与数据写入在同一 Dexie `rw` 事务完成；删除时保留水位，避免删除重建的 ABA 修订号复用。到达安全整数上限时拒绝保存。
 - 旧 `localStorage` 草稿的校验异常包装为 `InvalidLegacyDraftError`，与 IndexedDB 访问故障及浏览器权限故障区分。仅确定为损坏历史草稿时允许人工确认清除；版本条件删除仍不可绕过。
 - `DraftAutoSaveSession.saveIfDirty` 按 Promise 异步接口统一抛错语义，非法工程不会在 Promise 返回前同步抛错；对应回归测试与 Windows 全量检查仍待维护者执行。
+
+## 24. V0.2 第十三批：模拟 Tag 绑定编辑
+
+- 共享 Core 提供 `editableTagSlot(type)` 和 `DocumentEditor.setSelectedBinding(slot, tagId | null)`。仅 `tank.level`、`pump.running`、`label.value` 可编辑。未单选、已组合及不支持的槽均拒绝。
+- `null` 删除选定槽；重复设置不增加历史；新 Tag ID 通过既有严格 `parseScadaDocument` 校验后才提交，失败不修改工程或撤销栈。
+- `waterTreatmentDemoTagOptions` 供双框架展示候选：`water.level` 支持 `level/value`，`water.pump.running` 支持 `running/value`，`water.flow` 支持 `value`。原有未知候选保留并提示不可选择。
+- 所有操作沿用 `ScadaDocument 0.2.0`、JSON 导入导出和 IndexedDB 草稿；不修改 Runtime 渲染器的质量语义，不涉及真实工业设备或写入接口。
+
+本批新增 6 项 Core 单测源码，尚需维护者 Windows `pnpm run ready`、两套浏览器交互和 JSON/草稿往返验收。
