@@ -870,10 +870,18 @@ export default function StudioPage() {
           <button type="button" onClick={createPage} disabled={state.document.pages.length >= 100}>
             + 新建页面
           </button>
-          <button type="button" onClick={duplicatePage} disabled={state.document.pages.length >= 100}>
+          <button
+            type="button"
+            onClick={duplicatePage}
+            disabled={state.document.pages.length >= 100}
+          >
             复制页面
           </button>
-          <button type="button" onClick={() => movePage("previous")} disabled={activePageIndex <= 0}>
+          <button
+            type="button"
+            onClick={() => movePage("previous")}
+            disabled={activePageIndex <= 0}
+          >
             页面前移
           </button>
           <button

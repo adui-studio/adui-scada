@@ -267,12 +267,7 @@ function allocateId(used: Set<string>, prefix: "page" | "node" | "group"): strin
 }
 
 /** 完整复制图元与组合关系，Tag ID 保持原值，原始节点不受影响。 */
-function cloneNodes(
-  source: readonly ScadaNode[],
-  used: Set<string>,
-  dx = 0,
-  dy = 0,
-): ScadaNode[] {
+function cloneNodes(source: readonly ScadaNode[], used: Set<string>, dx = 0, dy = 0): ScadaNode[] {
   const groups = new Map<string, string>();
   for (const node of source) {
     if (node.groupId && !groups.has(node.groupId)) {

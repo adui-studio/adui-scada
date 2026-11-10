@@ -972,11 +972,7 @@ test("复制指定的非当前页面不改变源页面和其他页面", () => {
   e.addNode("label");
   const original = e.snapshot().document;
   const copyId = e.duplicatePage("main");
-  expect(e.snapshot().document.pages.map((page) => page.id)).toEqual([
-    "main",
-    copyId,
-    second,
-  ]);
+  expect(e.snapshot().document.pages.map((page) => page.id)).toEqual(["main", copyId, second]);
   expect(e.snapshot().document.pages[0]).toEqual(original.pages[0]);
   expect(e.snapshot().document.pages[2]).toEqual(original.pages[1]);
   expect(e.snapshot().activePageId).toBe(copyId);
@@ -1129,9 +1125,9 @@ test("跨页面复制与页面排序经 JSON 往返仍保留所有 Tag 和 ID", 
   restored.loadDocument(JSON.parse(JSON.stringify(doc)));
   expect(restored.snapshot().document).toEqual(doc);
   expect(restored.snapshot().document.pages[0]?.id).toBe(target);
-  expect(
-    restored.snapshot().document.pages[0]?.nodes.some((node) => node.id === newNodes[0]),
-  ).toBe(true);
+  expect(restored.snapshot().document.pages[0]?.nodes.some((node) => node.id === newNodes[0])).toBe(
+    true,
+  );
   expect(restored.snapshot().document.pages[0]?.nodes.at(-1)?.bindings.value?.tagId).toBe(
     "water.flow",
   );
@@ -1148,9 +1144,9 @@ test("跨页面复制多个图元在较小画布内整体平移且相对布局�
   const e = new DocumentEditor(source);
   e.select("pump");
   e.select("flow", true);
-  const before = e.snapshot().document.pages[0]!.nodes.filter((node) =>
-    ["pump", "flow"].includes(node.id),
-  );
+  const before = e
+    .snapshot()
+    .document.pages[0]!.nodes.filter((node) => ["pump", "flow"].includes(node.id));
   const ids = e.copySelectedToPage("compact");
   const copies = e.snapshot().document.pages[1]!.nodes;
   expect(ids).toEqual(copies.map((node) => node.id));
