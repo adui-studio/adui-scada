@@ -659,3 +659,20 @@ Write-Host "退出码：$LASTEXITCODE"
 在 React/Vue 浏览器进一步验证：剪贴板按钮和 `Ctrl/Cmd+C/X/V`；输入框不抢占系统复制粘贴；组合完整复制与剪切、重复偏移、撤销重做、跨页面粘贴与画布边界拒绝；JSON 双方向互通、IndexedDB 手动/自动保存和人工恢复。确认没有持久化剪贴板，也没有生产 PLC/DCS 设备连接或写入。
 
 等待维护者提供本批实际检查与人工验收记录，不沿用此前 194 项通过的结论。
+
+## 2026-11-10 · V0.2 第十七批图元图层状态待验收
+
+Core 新增 19 项图层状态、锁定保护、隐藏渲染与兼容性测试源码，整仓**预计 226 项单测**、**2 项 E2E**，新增 ADR-0025 后 Markdown **预计 40 份**，所有数字均需维护者 Windows 实测确认。
+
+```powershell
+git status -sb
+git fetch origin
+git switch feat/v0.2-node-layer-state
+pnpm install --frozen-lockfile
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+人工检查 Vue/React 同步的锁定/解锁、隐藏/显示、批量命令历史、图层列表恢复隐藏、锁定拖动/几何/剪切/删除保护、旧工程兼容、JSON 双向互通和 Dexie 草稿恢复。最新 Runtime 必须过滤隐藏图元、保留锁定图元显示和 Tag 质量；工业写入接口仍不开放。静态代码检查不代表现场安全验收通过。
