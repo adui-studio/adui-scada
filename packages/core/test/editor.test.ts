@@ -1085,6 +1085,8 @@ test("跨页面复制不允许同页、无选中或未知目标，失败不污�
   const before = e.snapshot();
   expect(() => e.copySelectedToPage(dest)).toThrow(/请先选择/);
   expect(() => e.copySelectedToPage("missing")).toThrow(/未找到页面/);
+  expect(() => e.copySelectedToPage(undefined as never)).toThrow(/目标页面 ID/);
+  expect(() => e.copySelectedToPage("")).toThrow(/目标页面 ID/);
   e.select("tank");
   const chosen = e.snapshot();
   expect(() => e.copySelectedToPage("main")).toThrow(/其他页面/);
