@@ -484,6 +484,7 @@ export class DocumentEditor {
     }
     const selected = expandGroupedSelection(source.nodes, this.selection);
     const nodes = source.nodes.filter((node) => selected.has(node.id));
+    if (nodes.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
     if (nodes.length === 0) throw new TypeError("请先选择需要复制的图元");
 
     const left = Math.min(...nodes.map((node) => node.transform.x));
@@ -605,6 +606,7 @@ export class DocumentEditor {
     const selected = new Set(this.selection);
     const nodes = page.nodes.filter((node) => selected.has(node.id));
     if (nodes.length !== selected.size) throw new RangeError("所选图元不存在");
+    if (nodes.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
     if (nodes.some((node) => node.groupId !== undefined)) {
       throw new TypeError("所选图元已有组合，请先解组再重新组合");
     }
@@ -633,6 +635,10 @@ export class DocumentEditor {
         .map((node) => node.groupId),
     );
     if (groups.size === 0) return false;
+    const chosen = firstPage(this.current, this.activePageId).nodes.filter((node) =>
+      node.groupId !== undefined && groups.has(node.groupId),
+    );
+    if (chosen.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
     const nodes = firstPage(this.current, this.activePageId).nodes.map((node) => {
       if (!node.groupId || !groups.has(node.groupId)) return node;
       const copy = { ...node };
@@ -720,6 +726,9 @@ export class DocumentEditor {
     const selected = new Set(this.selection);
     const anchor = this.getSelected();
     if (!anchor || selected.size < 2) return false;
+    if (page.nodes.some((node) => selected.has(node.id) && studioNodeLocked(node))) {
+      throw new TypeError(LOCKED_NODE_MESSAGE);
+    }
     if (page.nodes.some((node) => selected.has(node.id) && node.groupId)) {
       throw new TypeError("已组合图元不能逐个对齐，请先解组");
     }
@@ -771,6 +780,9 @@ export class DocumentEditor {
     }
     if (this.selection.length === 0) return false;
     const nodes = [...firstPage(this.current, this.activePageId).nodes];
+    if (nodes.some((node) => this.selection.includes(node.id) && studioNodeLocked(node))) {
+      throw new TypeError(LOCKED_NODE_MESSAGE);
+    }
     const selected = new Set(this.selection);
     if (action === "front" || action === "back") {
       const picked = nodes.filter((node) => selected.has(node.id));
@@ -892,7 +904,9 @@ export class DocumentEditor {
       this.selection,
     );
     const document = parseScadaDocument(this.current);
-    return firstPage(document, this.activePageId).nodes.filter((node) => selected.has(node.id));
+    const nodes = firstPage(document, this.activePageId).nodes.filter((node) => selected.has(node.id));
+    if (nodes.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
+    return nodes;
   }
 
   private getSelected(): ScadaNode | undefined {
