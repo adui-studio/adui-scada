@@ -512,3 +512,18 @@ pnpm run dev:vue
 维护者明确反馈「验收通过」，按 PR #12 原定的剩余六项验收清单记录人工交互验收完成：双框架导入无组合的历史 `0.1.0` 工程及升级提示、含合法 `groupId` 的历史组合保真、当前 `0.2.0` 工程导入与 Vue/React 双向 JSON/Tag 往返、未知版本与结构字段拒绝及失败状态保留、只读 Runtime 的当前 Schema 和模拟画面，以及既有组合、缩放、吸附、撤销重做等编辑命令无回归。该结论**来源于维护者总体人工验收反馈，并非 Agent 独立浏览器逐项复测**。
 
 本批此前已有维护者提供的完整 Windows `pnpm run ready` 日志：**118/118 单元测试、2/2 NestJS E2E、133 文件格式检查、52 文件零警告静态检查、33 份 Markdown 检查、React/Vue/NestJS 类型检查与三端构建成功、退出码 0**。此条新增验收记录后**尚未重新执行** `docs:check` 或 `pnpm run ready`。PR #12 的七项验收清单据此全部完成，仍保留 Draft，**未经单独合并授权不修改 `main`**。正式工程持久化、生产发布、历史二进制客户端兼容、Tauri 与真实工业现场安全验收不在本批结论范围内。
+
+## 2026-11-10 · V0.2 第十一批浏览器工程草稿（待验证）
+
+从合并 PR #12 的 `main`（`fe6581c`）创建 `feat/v0.2-local-drafts`。此前维护者在上一批特性分支执行的 `pnpm run ready` **118/118 单元测试、2/2 NestJS E2E、33 份 Markdown、三端构建、退出码 0**，不得作为本批测试通过的证据。本批新增 10 项 Core 单元测试，整仓预计 **128 项**；增加 ADR-0019 后 Markdown 文档预计 **34 份**。**本批尚未运行** Vite+ 格式、Lint、类型检查、Vitest、E2E、文档校验、构建和浏览器交互。
+
+```powershell
+git fetch origin
+git switch feat/v0.2-local-drafts
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+人工测试需要核对双端的按钮一致性：修改图元→保存→刷新→恢复→JSON / Tag / 组合数据一致；保存覆盖与恢复取消后不丢数据；保存/读取失败或损坏草稿不改变当前画面与原始记录；清除后恢复按钮禁用且画面不变；不同 `projectId` 互不覆盖。验证旧版 JSON 导入升级、撤销重做、只读 Runtime 不受影响。浏览器本地数据可能在隐私模式或清理网站数据后丢失；本功能不提供正式工程备份或工业安全验收。此记录只是开发说明，等待本机质量链实测。
