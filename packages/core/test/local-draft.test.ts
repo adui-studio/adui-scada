@@ -128,6 +128,16 @@ test("超过 2 MiB 的本地记录无法恢复且原内容不被清空", () => {
   storage.setItem(key, large);
   expect(() => readLocalDraft(storage, "water-demo")).toThrow(/超过 2 MiB/);
   expect(storage.getItem(key)).toBe(large);
+
+  const document = parseScadaDocument(waterTreatmentDemoDocument);
+  const template = document.pages[0]!.nodes[0]!;
+  document.pages[0]!.nodes = Array.from({ length: 280 }, (_, index) => ({
+    ...template,
+    id: `node-${index}`,
+    props: { text: "x".repeat(8192) },
+  }));
+  expect(() => saveLocalDraft(storage, document, savedAt)).toThrow(/超过 2 MiB/);
+  expect(storage.getItem(key)).toBe(large);
 });
 
 test("浏览器存储拒绝写入时保留原草稿，不误报保存成功", () => {
