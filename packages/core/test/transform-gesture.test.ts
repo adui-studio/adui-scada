@@ -77,9 +77,7 @@ test("九十度旋转图元右中点缩放固定左侧边中点", () => {
   const east = resolveResizeTransform(t, "e", 30, 20);
   expect(east).toEqual({ x: 90, y: 110, width: 120, height: 80, rotation: 90 });
   expect(east.x + east.width / 2).toBe(t.x + t.width / 2);
-  expect(east.y + east.height / 2 - east.width / 2).toBe(
-    t.y + t.height / 2 - t.width / 2,
-  );
+  expect(east.y + east.height / 2 - east.width / 2).toBe(t.y + t.height / 2 - t.width / 2);
 });
 
 test("非直角旋转图元单轴缩放固定对侧旋转中点", () => {
@@ -103,9 +101,7 @@ test("单轴缩放经过共享命令后可撤销并拒绝越界及非法尺寸",
   expect(editor.updateSelectedTransform(valid)).toBe(true);
   expect(editor.undo()).toBe(true);
   expect(editor.snapshot().document).toEqual(before.document);
-  expect(() => resolveResizeTransform(original, "w", original.width + 10, 0)).toThrow(
-    /不能小于/,
-  );
+  expect(() => resolveResizeTransform(original, "w", original.width + 10, 0)).toThrow(/不能小于/);
   const boundary = resolveResizeTransform(original, "w", -100, 0);
   expect(() => withNodeTransform(before.document, "tank", boundary)).toThrow(/画布范围/);
   expect(editor.snapshot().document).toEqual(before.document);

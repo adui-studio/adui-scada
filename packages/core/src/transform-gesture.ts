@@ -1,16 +1,7 @@
 import type { ScadaNode } from "./document.ts";
 
 export type ResizeHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
-export const RESIZE_HANDLES: readonly ResizeHandle[] = [
-  "nw",
-  "n",
-  "ne",
-  "e",
-  "se",
-  "s",
-  "sw",
-  "w",
-];
+export const RESIZE_HANDLES: readonly ResizeHandle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 export const RESIZE_HANDLE_LABELS: Record<ResizeHandle, string> = {
   nw: "左上角",
   n: "上边中点",
@@ -88,8 +79,7 @@ export function resolveResizeTransform(
 
   const localCenterDx = (horizontal * (width - transform.width)) / 2;
   const localCenterDy = (vertical * (height - transform.height)) / 2;
-  const centerX =
-    transform.x + transform.width / 2 + cosine * localCenterDx - sine * localCenterDy;
+  const centerX = transform.x + transform.width / 2 + cosine * localCenterDx - sine * localCenterDy;
   const centerY =
     transform.y + transform.height / 2 + sine * localCenterDx + cosine * localCenterDy;
   return {
