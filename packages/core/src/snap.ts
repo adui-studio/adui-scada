@@ -58,10 +58,9 @@ function limit(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(value, max));
 }
 
-/** 与原移动命令的取整/边界处理保持一致，确保预览与提交结果相同。 */
+/** 先取整再按精确边界截断，避免小数边界再次取整导致预览与提交不一致。 */
 function normalizeMove(value: number, min: number, max: number): number {
-  const first = limit(Math.round(value), min, max);
-  return limit(Math.round(first), min, max);
+  return limit(Math.round(value), min, max);
 }
 
 /**

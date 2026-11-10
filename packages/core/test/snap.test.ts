@@ -179,6 +179,17 @@ test("小数边界处的吸附结果与实际命令位移一致", () => {
   const result = resolveDragSnap(document, ["tank"], 100, 0, noSnap);
   const moved = withNodesTranslated(document, ["tank"], result.dx, result.dy);
   const finalX = moved.pages[0]?.nodes.find((node) => node.id === "tank")?.transform.x;
-  expect(result.dx).toBe(0);
-  expect(finalX).toBe(729.7);
+  expect(result.dx).toBeCloseTo(0.3, 10);
+  expect(finalX).toBe(730);
+});
+
+test("移动至小数左边界时保留精确截断位移", () => {
+  const document = structuredClone(waterTreatmentDemoDocument);
+  const tank = document.pages[0]?.nodes.find((node) => node.id === "tank");
+  if (!tank) throw new Error("测试数据缺少水箱图元");
+  tank.transform.x = 0.2;
+  const result = resolveDragSnap(document, ["tank"], -100, 0, noSnap);
+  const moved = withNodesTranslated(document, ["tank"], result.dx, result.dy);
+  expect(result.dx).toBeCloseTo(-0.2, 10);
+  expect(moved.pages[0]?.nodes.find((node) => node.id === "tank")?.transform.x).toBe(0);
 });
