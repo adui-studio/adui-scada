@@ -271,3 +271,9 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - 旧同步 `LocalDraftStorage` 和 `LocalDraftAutoSaveSession` 暂保留为**历史迁移与原测试兼容代码**，Vue/React 不再用它们进行正式草稿读写。数据库 schemaVersion 和 SCADA 工程 Schema 版本独立，不能互相替代。
 
 本批 IndexedDB 只负责浏览器临时草稿；未实现历史版本列表、正式工程发布、服务器权限、工业设备直连或 PLC 写入。存储配额、禁止敏感凭据、跨 Origin 不互通和浏览器清理风险依旧存在。详见 [ADR-0021](adr/0021-indexeddb-dexie-storage.md)。
+
+## 23. IndexedDB 事务安全补充（第十二批）
+
+- `migrations[projectId]` 除记录旧草稿迁移或删除标记，还保存可选 `lastRevision`。保存时计算 `max(当前草稿 revision, 标记 lastRevision) + 1`，与数据写入在同一 Dexie `rw` 事务完成；删除时保留水位，避免删除重建的 ABA 修订号复用。到达安全整数上限时拒绝保存。
+- 旧 `localStorage` 草稿的校验异常包装为 `InvalidLegacyDraftError`，与 IndexedDB 访问故障及浏览器权限故障区分。仅确定为损坏历史草稿时允许人工确认清除；版本条件删除仍不可绕过。
+- `DraftAutoSaveSession.saveIfDirty` 按 Promise 异步接口统一抛错语义，非法工程不会在 Promise 返回前同步抛错；对应回归测试与 Windows 全量检查仍待维护者执行。

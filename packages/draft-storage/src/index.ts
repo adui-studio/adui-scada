@@ -1,7 +1,7 @@
 import Dexie from "dexie";
 import type { Table } from "dexie";
 import { localDraftKey, readLocalDraft, parseScadaDocument } from "@adui/scada-core";
-import type { DraftRecord, DraftRepository, LocalDraftStorage } from "@adui/scada-core";
+import type { DraftRecord, DraftRepository, LocalDraft, LocalDraftStorage } from "@adui/scada-core";
 
 interface MigrationMarker {
   projectId: string;
@@ -102,7 +102,7 @@ export class DexieDraftRepository implements DraftRepository {
     if (!this.legacyStorage || (await this.migrations.get(projectId))) return null;
 
     // 先完整验证历史 localStorage 记录，再在事务内迁入并留下迁移标记。
-    let legacy;
+    let legacy: LocalDraft | null;
     try {
       legacy = readLocalDraft(this.legacyStorage, projectId);
     } catch (error) {

@@ -38,3 +38,9 @@
 ## 质量与验收
 
 执行 Catalog/共享 TSConfig 检查、中文文案、格式/Lint、Core 和新浏览器存储包类型检查、Vitest+模拟 IndexedDB 测试、NestJS E2E、文档及三端构建。人工在 Vue/React 分别验证：既有 localStorage 草稿成功迁移、首次不自动覆盖、修改后自动保存、两个标签页并发写入修订号冲突、清除后旧副本不复活，以及异常数据/拒绝权限时不会污染当前工程。完整验证以维护者 Windows 实测为准。
+
+## 审查补充：历史清理与防止修订号 ABA
+
+- 确定为旧 `localStorage` 草稿无效时抛出 `InvalidLegacyDraftError`；无法访问 IndexedDB 或浏览器读取权限不足，不得当作“用户可清理的坏草稿”。Vue/React 显示错误并保留编辑器，不误删其他数据。
+- `migrations` 表兼作**修订号水位墓碑**：新增可选 `lastRevision` 字段，无需修改版本 1 的主键模式。写入与删除在同一 `rw` 事务内推进或保存该水位；删除后重新创建也不重置修订号，避免老标签页凭借重用的修订号覆盖新草稿（ABA）。
+- 本批新增对应模拟 IndexedDB、Promise 拒绝及存储权限场景回归源码，真实 Windows 工具链与浏览器验收仍待完成；不得将新增测试代码等同于已执行。

@@ -586,3 +586,11 @@ pnpm run dev:vue
 待核验：新依赖安装/冻结 Catalog、`vp check` 零警告、React/Vue/新存储包/NestJS 类型检查、Core/Vitest+fake-indexeddb 用例、NestJS E2E、36 份文档及三端构建；浏览器旧 `localStorage` 草稿迁移后恢复保真、同 Origin 双标签页事务冲突、清除后旧备份不复活、自动保存防抖、刷新后仍需明确恢复、现有手动 JSON 和 Runtime 只读行为无回归。
 
 本批未执行工程发布、工业现场安全检查或真实 PLC/DCS 采集；IndexedDB 不能替代服务器持久化和备份。完成质量链后再逐项登记测试结果，Draft PR #14 未获新的合并授权。
+
+## 2026-11-10 · PR #14 Dexie 存储边界修复（待完整质量检查）
+
+在维护者先前对 PR #14 提交 `2189eb4`（允许确认清理损坏历史草稿）之后，继续检查并修复三个风险：Core `DraftAutoSaveSession.saveIfDirty` 以 `async` 保证非法输入也按 Promise 拒绝；新增 `InvalidLegacyDraftError` 明确区分无效旧 localStorage 草稿与 IndexedDB/浏览器存储读取故障，Vue/React 仅对确定的损坏旧草稿放行用户确认清理；针对删除重建的 **ABA 修订号重复**，`migrations` 表保留每工程的 `lastRevision` 水位，后续新建始终单调递增，并在同一 IndexedDB 事务内写入草稿及水位。
+
+新增两项异常场景测试和一项删除重建冲突测试，并补充 1 项 Core Promise 拒绝测试；基于上一批 **128** 项和本批原始新增 **28** 项及新增 **4** 项，**源码预计总计 160 项单元测试**。其中旧存储读取权限故障不应误判为可清理的损坏草稿，删除重建后旧标签页持有的 `revision` 不能覆盖新工程。
+
+**本批仍未执行完整 `pnpm install`、`pnpm run ready`、真实浏览器迁移及双标签页验收**。源码计数不是实际通过结果，新的 Markdown 章节也尚未执行文档格式校验。特别注意 pnpm 12.18.0 新增 `dexie` / `fake-indexeddb` 的正确安装及**由 pnpm 生成的锁文件**；不要手动构造 lockfile。
