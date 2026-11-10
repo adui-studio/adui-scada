@@ -535,3 +535,11 @@ pnpm run dev:vue
 分支修复提交 `6ea0c00` 做最小调整：Core 改为无 DOM 类型依赖的纯 TypeScript UTF-8 字节计数；React 以 `useState` 惰性初值检测首次草稿，并在工程导入事件中同步可恢复状态，不再于 Effect 中直接更新该状态；Vitest 针对不同非法草稿分别断言中文错误信息，另补中文多字节数据的 **2 MiB 字节上限**回归。独立 Node 小范围验证已核对 ASCII、中文、Emoji、孤立代理项及大文本的字节计数与 `TextEncoder` 结果相同；**此检查不能代替仓库 `vp check`、Vitest 或完整 `pnpm run ready`**。
 
 新增本段验收记录后，尚未重新执行格式、Lint、TS、单测、E2E、文档检查或三端构建。请维护者将分支更新到修复提交及其后续文档提交后重新执行 `pnpm run ready` 并提供退出码。PR #13 继续保持 Draft，未得到合并授权。
+
+## 2026-11-10 · 第十一批修复后质量链复验（完整退出码待确认）
+
+维护者在 Windows PowerShell 执行 `pnpm run ready`，提供以下原始输出：Catalog **9 个清单/26 项依赖**、共享配置、根环境与 LF、中文文案 **75 个文件**通过；Vite+ **136 个文件格式检查通过**，**54 个文件零 Lint 警告、零错误**，React/Vue/NestJS TypeScript 类型检查全部通过；Vitest **9 个测试文件、128/128 项单测通过**（含新增 `local-draft.test.ts` **10/10**）；NestJS E2E **2/2**，Markdown 静态检查 **34 份**；React 和 Vue 两套 Web 构建均成功。
+
+**证据边界**：维护者日志最后仅显示开始运行 `nest build`，**尚未附最终 PowerShell `$LASTEXITCODE`**；因此不能断言整条 `ready` 已以退出码 0 完成。也未收到浏览器手动保存、刷新恢复、存储损坏/拒绝访问与跨 Origin 等人工验收结论。分支新增维护者格式整理提交 `ed6a857`，只改 `local-draft.ts`、`local-draft.test.ts` 的格式，无业务语义变化。
+
+本轮协作另在独立 Node 运行时执行纯函数 UTF-8 字节计数对照（空文本、ASCII、中文、Emoji、高/低孤立代理项、混合字符串和 70 万汉字），均与原生 `TextEncoder` 字节长度一致；**这只是单独函数的实测，不替代仓库 `pnpm run ready`**。新增此文档后未重新执行 `docs:check`。PR #13 保持 Draft，未获合并授权，工业现场安全、正式工程发布和多标签页一致性不在验收范围内。

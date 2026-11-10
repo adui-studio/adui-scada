@@ -248,3 +248,9 @@ PR #12 已具备全部七项验收结论，仍保留 Draft、分配 `@adui-dev`�
 ## 2026-11-10 · 第十一批 Vite+ 检查阻塞修复（待复验）
 
 维护者 `vp check --fix` 实际发现 Core `TextEncoder` 无类型定义 **2 处 TS2304 错误**，以及 React Effect 同步状态更新、Vitest 空 `toThrow()` **2 项 Lint 警告**；格式化完成不代表检查通过。已在 PR #13 分支提交 `6ea0c00` 修复这四项问题，并加强中文多字节的 2 MiB 容量测试，不修改生产 Schema、不新增依赖。Node 独立字节计数样例与原生 `TextEncoder` 输出一致，但尚未得到本分支全量 `ready` 实测结果。PR 保持 Draft，仍由 `@adui-dev` 验收。
+
+## 2026-11-10 · 第十一批自动化复验进展
+
+维护者已提供 Windows `pnpm run ready` 日志：依赖/配置/中文文案 **75 文件**、**136 文件格式**、**54 文件零警告静态检查**、React/Vue/NestJS 类型检查、**128/128 单测**、**2/2 E2E**、**34 份 Markdown** 校验和两套 Web 构建均通过。日志结尾开始执行 `nest build`，**缺少最后退出码**，暂不登记完整 `ready` 退出码 0。新增维护者格式提交 `ed6a857` 仅修改代码排版。
+
+单独 Node UTF-8 字节计数对照已验证 ASCII、中文、Emoji、孤立代理项与大文本结果同 `TextEncoder`，但不能替代仓库质量链；Vue/React 本地草稿交互验收仍未确认。PR #13 继续 Draft、分配给 `@adui-dev`，不自动合并。
