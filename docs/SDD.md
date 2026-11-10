@@ -319,3 +319,14 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - 工程 JSON、IndexedDB Dexie 草稿版本与 `Runtime` 工业只读边界不变；复制不触发按需自动保存，剪切/粘贴沿用已实现的安全保存会话。
 
 关联决策：[ADR-0024](adr/0024-session-node-clipboard.md)。本批新增 13 项 Core 单测源码，整仓预计 207 项单测，仍须维护者 Windows `pnpm run ready` 和 Vue/React 浏览器验收。
+
+## 28. V0.2 第十七批：图元状态、编辑保护和图层管理
+
+- 使用既有 `ScadaNode.props.__scadaStudio` 记录可选的 `locked: boolean`、`visible: boolean`。缺省为未锁定且可见；解锁/显示时移除缺省字段，状态对象空时删除。`parseScadaDocument` 严格拒绝未知子字段、非对象和非布尔值。
+- `studioNodeLocked/studioNodeVisible` 位于共享 `@adui/scada-core`。`DocumentEditor.setSelectedLocked(boolean)` / `setSelectedVisible(boolean)` 批量更新当前所选图元，每次修改最多一条撤销历史，未变化不入历史。
+- 中央提交校验保护锁定图元的节点内容，只有显式锁定状态命令允许更改 `locked` 字段；移动、几何、文本、Tag、组合、解组、删除、剪切、复制选中、跨页复制和删除包含锁定图元的页面均受保护。独立几何/吸附 API 同样检查锁定。图层排序不允许间接改变锁定图元序号。
+- Runtime `renderSvgPage` 和 Studio 画布仅渲染 `visible !== false` 图元；隐藏图元不参与框选或吸附目标，但仍可通过图层列表选中、恢复显示。`Ctrl+A` 仅选择可见未锁定图元。锁定不影响实时 Tag 展示、数据质量和只读属性。
+- Vue/React 共用命令语义和中文状态提示，图层列表标识「已锁定/已隐藏」，面板提供批量锁定/解锁、隐藏/显示。输入焦点下原快捷键屏蔽保持，锁定编辑异常会在事件处理器中转换为提示。
+- 保留工程 `schemaVersion: 0.2.0`、IndexedDB 草稿保存与 JSON 导入导出；早期 Runtime 对 `props` 可透传但不能正确隐藏图元，正式发布需独立版本兼容控制。
+
+详见 [ADR-0025](adr/0025-node-lock-visibility.md)。本批新增 19 项 Core 回归测试源码，整仓单测预计 226 项，实际验证待维护者 Windows 执行。
