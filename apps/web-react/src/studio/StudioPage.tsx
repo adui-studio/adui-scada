@@ -428,15 +428,27 @@ export default function StudioPage() {
             </span>
             <div className="studio-canvas-settings">
               <label className="studio-canvas-option">
-                <input type="checkbox" checked={gridVisible} onChange={(event) => setGridVisible(event.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={gridVisible}
+                  onChange={(event) => setGridVisible(event.target.checked)}
+                />
                 显示网格
               </label>
               <label className="studio-canvas-option">
-                <input type="checkbox" checked={gridSnap} onChange={(event) => setGridSnap(event.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={gridSnap}
+                  onChange={(event) => setGridSnap(event.target.checked)}
+                />
                 网格吸附
               </label>
               <label className="studio-canvas-option">
-                <input type="checkbox" checked={nodeSnap} onChange={(event) => setNodeSnap(event.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={nodeSnap}
+                  onChange={(event) => setNodeSnap(event.target.checked)}
+                />
                 图元吸附
               </label>
             </div>
@@ -500,7 +512,7 @@ export default function StudioPage() {
                 fill="url(#scada-studio-grid)"
                 pointerEvents="none"
               />
-            )
+            )}
             {page.nodes.map((node) => {
               const displayNode =
                 displayDocument.pages[0]?.nodes.find((entry) => entry.id === node.id) ?? node;
