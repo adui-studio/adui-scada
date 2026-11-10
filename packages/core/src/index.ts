@@ -24,5 +24,6 @@ export {
   saveLocalDraft,
   readLocalDraft,
   clearLocalDraft,
+  LocalDraftAutoSaveSession,
 } from "./local-draft.ts";
 export type { LocalDraft, LocalDraftStorage } from "./local-draft.ts";
