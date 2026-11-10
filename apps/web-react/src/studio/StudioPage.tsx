@@ -1127,7 +1127,8 @@ export default function StudioPage() {
                   <rect
                     role="button"
                     tabIndex={0}
-                    aria-label={`选择并拖动 ${node.id}`}
+                    aria-label={studioNodeLocked(node) ? `选择已锁定图元 ${node.id}` : `选择并拖动 ${node.id}`}
+                    data-locked={studioNodeLocked(node)}
                     x={t.x}
                     y={t.y}
                     width={t.width}
@@ -1344,10 +1345,11 @@ export default function StudioPage() {
                         name={key}
                         step="any"
                         defaultValue={selected.transform[key]}
+                        disabled={studioNodeLocked(selected)}
                       />
                     </label>
                   ))}
-                  <button type="submit">应用几何属性</button>
+                  <button type="submit" disabled={studioNodeLocked(selected)}>应用几何属性</button>
                 </form>
               ) : (
                 <p className="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
