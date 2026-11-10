@@ -103,11 +103,13 @@ export default function StudioPage() {
   const marqueeRef = useRef<MarqueeState | null>(null);
   const geometryRef = useRef<GeometryDragState | null>(null);
 
-  const page = state.document.pages[0];
+  const page = state.document.pages.find((item) => item.id === state.activePageId);
   const selected = page?.nodes.find((node) => node.id === state.selectedId);
   const snapResult = useMemo(() => {
     if (preview === null) return null;
-    const anchor = state.document.pages[0]?.nodes.find((node) => node.id === preview.id);
+    const anchor = state.document.pages
+      .find((item) => item.id === state.activePageId)
+      ?.nodes.find((node) => node.id === preview.id);
     if (!anchor) return null;
     return resolveDragSnap(
       state.document,
@@ -115,17 +117,27 @@ export default function StudioPage() {
       preview.x - anchor.transform.x,
       preview.y - anchor.transform.y,
       { gridEnabled: gridSnap, nodeEnabled: nodeSnap },
+      state.activePageId,
     );
-  }, [preview, state.document, state.selectedIds, gridSnap, nodeSnap]);
+  }, [preview, state.document, state.activePageId, state.selectedIds, gridSnap, nodeSnap]);
   const displayDocument = useMemo(
     () =>
       geometryPreview ??
       (snapResult === null
         ? state.document
-        : withNodesTranslated(state.document, state.selectedIds, snapResult.dx, snapResult.dy)),
-    [geometryPreview, snapResult, state.document, state.selectedIds],
+        : withNodesTranslated(
+            state.document,
+            state.selectedIds,
+            snapResult.dx,
+            snapResult.dy,
+            state.activePageId,
+          )),
+    [geometryPreview, snapResult, state.document, state.activePageId, state.selectedIds],
   );
-  const image = useMemo(() => svgDataUrl(displayDocument, previewTags), [displayDocument]);
+  const image = useMemo(
+    () => svgDataUrl(displayDocument, previewTags, state.activePageId),
+    [displayDocument, state.activePageId],
+  );
 
   if (!page) throw new Error("工程文档不包含页面");
 
@@ -146,6 +158,42 @@ export default function StudioPage() {
     currentBindingTag !== "" &&
     !demoTagCandidates.some((option) => option.tagId === currentBindingTag);
 
+  function switchPage(pageId: string) {
+    try {
+      if (!editor.switchPage(pageId)) return;
+      cancelDrag();
+      setZoom(1);
+      refresh();
+      setNotice("已切换编辑页面；页面切换不会修改工程草稿");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  function createPage() {
+    apply(() => {
+      editor.createPage();
+      cancelDrag();
+    }, "已创建空白页面，可撤销");
+  }
+
+  function renamePage() {
+    if (!page) return;
+    const name = window.prompt("请输入新的页面名称", page.name);
+    if (name === null) return;
+    apply(() => editor.renamePage(page.id, name), "页面已重命名，可撤销");
+  }
+
+  function deletePage() {
+    if (!page || !window.confirm("确定删除页面“" + page.name + "”及其图元吗？可撤销。")) {
+      return;
+    }
+    apply(() => {
+      editor.deletePage(page.id);
+      cancelDrag();
+    }, "页面已删除，可撤销");
+  }
+
   function changeTagBinding(slot: string, tagId: string) {
     apply(
       () => editor.setSelectedBinding(slot, tagId === "" ? null : tagId),
@@ -156,7 +204,9 @@ export default function StudioPage() {
   function refresh() {
     const next = editor.snapshot();
     setState(next);
-    const node = next.document.pages[0]?.nodes.find((item) => item.id === next.selectedId);
+    const node = next.document.pages
+      .find((item) => item.id === next.activePageId)
+      ?.nodes.find((item) => item.id === next.selectedId);
     setLabelDraft(typeof node?.props.text === "string" ? node.props.text : "");
   }
 
@@ -259,8 +309,11 @@ export default function StudioPage() {
         if (key === "z") handled = event.shiftKey ? editor.redo() : editor.undo();
         else if (key === "y") handled = editor.redo();
         else if (key === "a") {
+          const snapshot = editor.snapshot();
           editor.selectMany(
-            editor.snapshot().document.pages[0]?.nodes.map((node) => node.id) ?? [],
+            snapshot.document.pages
+              .find((item) => item.id === snapshot.activePageId)
+              ?.nodes.map((node) => node.id) ?? [],
           );
           handled = true;
         }
@@ -294,7 +347,9 @@ export default function StudioPage() {
       event.preventDefault();
       const next = editor.snapshot();
       setState(next);
-      const selected = next.document.pages[0]?.nodes.find((node) => node.id === next.selectedId);
+      const selected = next.document.pages
+        .find((item) => item.id === next.activePageId)
+        ?.nodes.find((node) => node.id === next.selectedId);
       setLabelDraft(typeof selected?.props.text === "string" ? selected.props.text : "");
     };
 
@@ -347,6 +402,7 @@ export default function StudioPage() {
         current.startY,
         endX,
         endY,
+        state.activePageId,
       );
       editor.selectMany(ids, current.additive);
     }
@@ -445,6 +501,7 @@ export default function StudioPage() {
         x - drag.originX,
         y - drag.originY,
         { gridEnabled: gridSnap, nodeEnabled: nodeSnap },
+        snapshot.activePageId,
       );
       editor.moveBy(movement.dx, movement.dy);
       refresh();
@@ -482,7 +539,9 @@ export default function StudioPage() {
     const point = canvasPoint(event.clientX, event.clientY);
     if (!point) return;
     const snapshot = editor.snapshot();
-    const node = snapshot.document.pages[0]?.nodes.find((item) => item.id === gesture.nodeId);
+    const node = snapshot.document.pages
+      .find((item) => item.id === snapshot.activePageId)
+      ?.nodes.find((item) => item.id === gesture.nodeId);
     if (!node) return;
     try {
       const patch: NodeTransformPatch =
@@ -504,7 +563,7 @@ export default function StudioPage() {
               point.y - gesture.startY,
               event.shiftKey,
             );
-      const next = withNodeTransform(snapshot.document, gesture.nodeId, patch);
+      const next = withNodeTransform(snapshot.document, gesture.nodeId, patch, snapshot.activePageId);
       gesture.lastPatch = patch;
       setGeometryPreview(next);
     } catch {
@@ -764,6 +823,31 @@ export default function StudioPage() {
         {notice}
         {hasSavedDraft && !autoSaveEnabled ? " · 已发现本地草稿，可点击「恢复草稿」确认加载" : ""}
       </p>
+      <div className="studio-page-bar" aria-label="工程页面管理">
+        <div className="studio-page-tabs" aria-label="工程页面">
+          {state.document.pages.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-current={item.id === state.activePageId ? "page" : undefined}
+              onClick={() => switchPage(item.id)}
+            >
+              {item.name}
+            </button>
+          ))}
+        </div>
+        <div className="studio-page-actions">
+          <button type="button" onClick={createPage} disabled={state.document.pages.length >= 100}>
+            + 新建页面
+          </button>
+          <button type="button" onClick={renamePage}>
+            重命名
+          </button>
+          <button type="button" onClick={deletePage} disabled={state.document.pages.length <= 1}>
+            删除当前页
+          </button>
+        </div>
+      </div>
       <div className="studio-workspace">
         <aside className="studio-panel" aria-label="图元列表">
           <h2>图元 · {page.nodes.length}</h2>
@@ -895,7 +979,9 @@ export default function StudioPage() {
             )}
             {page.nodes.map((node) => {
               const displayNode =
-                displayDocument.pages[0]?.nodes.find((entry) => entry.id === node.id) ?? node;
+                displayDocument.pages
+                  .find((item) => item.id === state.activePageId)
+                  ?.nodes.find((entry) => entry.id === node.id) ?? node;
               const t = displayNode.transform;
               return (
                 <g
