@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, PointerEvent as ReactPointerEvent } from "react";
-import { WaterTreatmentSimulator, waterTreatmentDemoDocument } from "@adui/scada-core";
+import {
+  WaterTreatmentSimulator,
+  waterTreatmentDemoDocument,
+  localDraftKey,
+  hasLocalDraft,
+  saveLocalDraft,
+  readLocalDraft,
+  clearLocalDraft,
+} from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import {
   DEFAULT_GRID_SIZE,
@@ -73,7 +81,8 @@ export default function StudioPage() {
   const [rotating, setRotating] = useState(false);
   const [marquee, setMarquee] = useState<MarqueeState | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
-  const [notice, setNotice] = useState("本地草稿 · 尚未连接工程保存 API");
+  const [notice, setNotice] = useState("可手动保存浏览器本地草稿 · 尚未连接工程保存服务");
+  const [hasSavedDraft, setHasSavedDraft] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [gridVisible, setGridVisible] = useState(true);
   const [gridSnap, setGridSnap] = useState(true);
@@ -120,6 +129,15 @@ export default function StudioPage() {
     const node = next.document.pages[0]?.nodes.find((item) => item.id === next.selectedId);
     setLabelDraft(typeof node?.props.text === "string" ? node.props.text : "");
   }
+
+  useEffect(() => {
+    try {
+      setHasSavedDraft(hasLocalDraft(window.localStorage, state.document.projectId));
+    } catch (error) {
+      setHasSavedDraft(false);
+      setNotice("本地草稿检测失败：" + (error instanceof Error ? error.message : String(error)));
+    }
+  }, [state.document.projectId]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -461,6 +479,54 @@ export default function StudioPage() {
     }
   }
 
+  function saveDraft() {
+    try {
+      const storage = window.localStorage;
+      const projectId = editor.snapshot().document.projectId;
+      if (
+        hasLocalDraft(storage, projectId) &&
+        !window.confirm("当前工程已有本地草稿，确认使用现有画面覆盖吗？")
+      ) {
+        return;
+      }
+      const saved = saveLocalDraft(storage, editor.snapshot().document);
+      setHasSavedDraft(true);
+      setNotice(`当前工程已保存到此浏览器（${saved.savedAt}），并非正式工程发布`);
+    } catch (error) {
+      setNotice("保存草稿失败：" + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  function restoreDraft() {
+    if (!window.confirm("恢复本地草稿将替换当前工程并清空撤销历史，确认恢复吗？")) return;
+    try {
+      const saved = readLocalDraft(window.localStorage, state.document.projectId);
+      if (!saved) {
+        setHasSavedDraft(false);
+        setNotice("当前工程没有可恢复的本地草稿");
+        return;
+      }
+      editor.loadDocument(saved.document);
+      cancelDrag();
+      refresh();
+      setHasSavedDraft(true);
+      setNotice(`已恢复浏览器本地草稿（保存于 ${saved.savedAt}）`);
+    } catch (error) {
+      setNotice("恢复草稿失败：" + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  function clearDraft() {
+    if (!window.confirm("确认永久清除当前工程的浏览器本地草稿吗？当前画面不会改变。")) return;
+    try {
+      clearLocalDraft(window.localStorage, state.document.projectId);
+      setHasSavedDraft(false);
+      setNotice("已清除当前工程的本地草稿，当前编辑画面保持不变");
+    } catch (error) {
+      setNotice("清除草稿失败：" + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
   function exportJson() {
     const json = JSON.stringify(state.document, null, 2);
     const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
@@ -531,6 +597,15 @@ export default function StudioPage() {
           </label>
           <button type="button" onClick={exportJson}>
             导出 JSON
+          </button>
+          <button type="button" onClick={saveDraft}>
+            保存草稿
+          </button>
+          <button type="button" onClick={restoreDraft} disabled={!hasSavedDraft}>
+            恢复草稿
+          </button>
+          <button type="button" onClick={clearDraft} disabled={!hasSavedDraft}>
+            清除草稿
           </button>
         </div>
       </header>
