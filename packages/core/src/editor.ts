@@ -1,5 +1,6 @@
 import { parseScadaDocument } from "./document.ts";
 import type { ScadaDocument, ScadaNode, ScadaNodeType } from "./document.ts";
+import { expandGroupedSelection } from "./grouping.ts";
 
 export interface EditorSnapshot {
   readonly document: ScadaDocument;
@@ -48,10 +49,8 @@ export function withNodesTranslated(
   finite(dy, "垂直位移");
   const checked = parseScadaDocument(document);
   const page = firstPage(checked);
-  const selected = new Set(nodeIds);
-  if (selected.size !== nodeIds.length) throw new TypeError("选择中包含重复图元");
+  const selected = expandGroupedSelection(page.nodes, nodeIds);
   const nodes = page.nodes.filter((node) => selected.has(node.id));
-  if (nodes.length !== selected.size) throw new RangeError("所选图元不存在");
   if (nodes.length === 0) return checked;
 
   const minDx = Math.max(...nodes.map((node) => -node.transform.x));
@@ -179,6 +178,7 @@ export function withNodeTransform(
   const page = firstPage(checked);
   const node = page.nodes.find((candidate) => candidate.id === nodeId);
   if (!node) throw new RangeError(`未找到图元：${nodeId}`);
+  if (node.groupId) throw new TypeError("已组合图元不能单独修改几何属性，请先解组");
 
   const transform = { ...node.transform, ...patch };
   if (
@@ -269,16 +269,9 @@ export class DocumentEditor {
   /** 框选与全选自动展开组合成员，选中状态不写入工程文档。 */
   selectMany(nodeIds: readonly string[], additive = false): void {
     const nodes = firstPage(this.current).nodes;
-    const lookup = new Map(nodes.map((node) => [node.id, node]));
-    if (nodeIds.some((id) => !lookup.has(id))) throw new RangeError("所选图元不存在");
-    const expanded = new Set(nodeIds);
-    for (const id of nodeIds) {
-      const groupId = lookup.get(id)?.groupId;
-      if (groupId) {
-        for (const node of nodes) if (node.groupId === groupId) expanded.add(node.id);
-      }
-    }
-    const unique = [...nodeIds, ...nodes.filter((node) => expanded.has(node.id)).map((n) => n.id)];
+    const uniqueInput = [...new Set(nodeIds)];
+    const expanded = expandGroupedSelection(nodes, uniqueInput);
+    const unique = [...uniqueInput, ...nodes.filter((node) => expanded.has(node.id)).map((n) => n.id)];
     const next = additive ? [...this.selection, ...unique] : unique;
     this.selection = [...new Set(next)];
   }
