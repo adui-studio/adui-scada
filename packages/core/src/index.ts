@@ -16,3 +16,13 @@ export type { TagChange, TagListener, TagQuality, TagScalar, TagValue } from "./
 export { WaterTreatmentSimulator } from "./simulator.ts";
 export { renderSvgPage } from "./svg.ts";
 export { waterTreatmentDemoDocument } from "./demo-document.ts";
+export {
+  LOCAL_DRAFT_FORMAT_VERSION,
+  LOCAL_DRAFT_MAX_BYTES,
+  localDraftKey,
+  hasLocalDraft,
+  saveLocalDraft,
+  readLocalDraft,
+  clearLocalDraft,
+} from "./local-draft.ts";
+export type { LocalDraft, LocalDraftStorage } from "./local-draft.ts";
