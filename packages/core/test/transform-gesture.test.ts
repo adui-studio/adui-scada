@@ -133,8 +133,8 @@ test("等比例尺寸超出画布时共享命令拒绝修改并保留历史", ()
   const before = editor.snapshot();
   const transform = tankTransform();
   const patch = resolveResizeTransform(transform, "e", 10000, 0, true);
-  expect(() => withNodeTransform(before.document, "tank", patch)).toThrow();
-  expect(() => editor.updateSelectedTransform(patch)).toThrow();
+  expect(() => withNodeTransform(before.document, "tank", patch)).toThrow(/画布范围/);
+  expect(() => editor.updateSelectedTransform(patch)).toThrow(/画布范围/);
   expect(editor.snapshot()).toEqual(before);
 });
 
