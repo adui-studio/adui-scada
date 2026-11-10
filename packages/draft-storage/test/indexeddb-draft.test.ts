@@ -103,6 +103,30 @@ test("清除草稿遵循修订号条件，不能删除另一页面的新版本",
   }
 });
 
+test("草稿删除后重建仍递增修订号，阻止旧标签页 ABA 覆盖", async () => {
+  const name = `scada-recreate-${++nextDatabase}`;
+  const oldTab = repository(name);
+  const newTab = repository(name);
+  try {
+    const original = await oldTab.save(document(), null);
+    expect(original.revision).toBe(1);
+    await newTab.remove("water-demo", 1);
+    const replacement = document();
+    replacement.pages[0]!.nodes[0]!.transform.x += 3;
+    const created = await newTab.save(replacement, null);
+    expect(created.revision).toBe(2);
+    await expect(oldTab.save(document(), 1)).rejects.toThrow(/其他页面修改了草稿/);
+    await expect(oldTab.remove("water-demo", 1)).rejects.toThrow(/拒绝清除/);
+    expect((await oldTab.get("water-demo"))?.revision).toBe(2);
+    expect((await oldTab.get("water-demo"))?.document.pages[0]?.nodes[0]?.transform.x).toBe(
+      replacement.pages[0]?.nodes[0]?.transform.x,
+    );
+  } finally {
+    oldTab.close();
+    newTab.close();
+  }
+});
+
 test("历史 localStorage 草稿校验并迁移到 IndexedDB 后才清除旧记录", async () => {
   const old = new MemoryStorage();
   const source = document();

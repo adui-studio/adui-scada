@@ -5,6 +5,8 @@ import type { DraftRecord, DraftRepository, LocalDraftStorage } from "@adui/scad
 
 interface MigrationMarker {
   projectId: string;
+  /** 删除草稿也不得重置版本水位，避免旧标签页修订号再次匹配。 */
+  lastRevision?: number;
 }
 
 /** 仅标记历史 localStorage 数据损坏或不兼容，不掩盖数据库访问异常。 */
@@ -124,7 +126,7 @@ export class DexieDraftRepository implements DraftRepository {
           document: legacy.document,
         };
         await this.drafts.put(record);
-        await this.migrations.put({ projectId });
+        await this.migrations.put({ projectId, lastRevision: record.revision });
         return record;
       },
     );
@@ -152,21 +154,28 @@ export class DexieDraftRepository implements DraftRepository {
     }
     // 在事务开始前完成非数据库运算，防止异步等待导致事务意外关闭。
     const savedAt = new Date().toISOString();
-    const record = await this.database.transaction("rw", this.drafts, async () => {
-      const existing = await this.drafts.get(projectId);
-      if ((existing?.revision ?? null) !== expectedRevision) {
-        throw new TypeError("检测到其他页面修改了草稿，请先恢复或核对最新版本");
-      }
-      if (existing) this.validate(existing, projectId);
-      const next: DraftRecord = {
-        projectId,
-        savedAt,
-        revision: (existing?.revision ?? 0) + 1,
-        document,
-      };
-      await this.drafts.put(next);
-      return next;
-    });
+    const record = await this.database.transaction(
+      "rw",
+      this.drafts,
+      this.migrations,
+      async () => {
+        const existing = await this.drafts.get(projectId);
+        if ((existing?.revision ?? null) !== expectedRevision) {
+          throw new TypeError("检测到其他页面修改了草稿，请先恢复或核对最新版本");
+        }
+        if (existing) this.validate(existing, projectId);
+        const marker = await this.migrations.get(projectId);
+        const lastRevision = Math.max(existing?.revision ?? 0, marker?.lastRevision ?? 0);
+        const revision = lastRevision + 1;
+        if (!Number.isSafeInteger(revision)) {
+          throw new RangeError("草稿修订号已达到安全整数上限，无法继续保存");
+        }
+        const next: DraftRecord = { projectId, savedAt, revision, document };
+        await this.drafts.put(next);
+        await this.migrations.put({ projectId, lastRevision: revision });
+        return next;
+      },
+    );
     this.notify(projectId, record.revision);
     return record;
   }
@@ -178,9 +187,11 @@ export class DexieDraftRepository implements DraftRepository {
       if ((existing?.revision ?? null) !== expectedRevision) {
         throw new TypeError("检测到其他页面修改了草稿，已拒绝清除");
       }
+      const marker = await this.migrations.get(projectId);
+      const lastRevision = Math.max(existing?.revision ?? 0, marker?.lastRevision ?? 0);
       await this.drafts.delete(projectId);
-      // 删除后保留迁移标记，避免残留 localStorage 备份再次复活。
-      await this.migrations.put({ projectId });
+      // 墓碑同时保留迁移状态和修订号水位，防止删除重建产生 ABA 冲突。
+      await this.migrations.put({ projectId, lastRevision });
     });
     if (this.legacyStorage) {
       try {
