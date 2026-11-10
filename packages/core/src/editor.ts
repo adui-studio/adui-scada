@@ -244,6 +244,53 @@ export function withNodeTransform(
   });
 }
 
+/** 整个工程内的页面、图元和组合共用同一个标识符命名空间。 */
+function occupiedIds(document: ScadaDocument): Set<string> {
+  const ids = new Set<string>();
+  for (const page of document.pages) {
+    ids.add(page.id);
+    for (const node of page.nodes) {
+      ids.add(node.id);
+      if (node.groupId) ids.add(node.groupId);
+    }
+  }
+  return ids;
+}
+
+/** 先保留新 ID，保证单次复制中的所有实体也不会发生冲突。 */
+function allocateId(used: Set<string>, prefix: "page" | "node" | "group"): string {
+  let ordinal = 1;
+  while (used.has(`${prefix}-${ordinal}`)) ordinal++;
+  const id = `${prefix}-${ordinal}`;
+  used.add(id);
+  return id;
+}
+
+/** 完整复制图元与组合关系，Tag ID 保持原值，原始节点不受影响。 */
+function cloneNodes(
+  source: readonly ScadaNode[],
+  used: Set<string>,
+  dx = 0,
+  dy = 0,
+): ScadaNode[] {
+  const groups = new Map<string, string>();
+  for (const node of source) {
+    if (node.groupId && !groups.has(node.groupId)) {
+      groups.set(node.groupId, allocateId(used, "group"));
+    }
+  }
+  return source.map((node) => ({
+    ...node,
+    id: allocateId(used, "node"),
+    ...(node.groupId ? { groupId: groups.get(node.groupId)! } : {}),
+    transform: {
+      ...node.transform,
+      x: node.transform.x + dx,
+      y: node.transform.y + dy,
+    },
+  }));
+}
+
 function equalDocuments(left: ScadaDocument, right: ScadaDocument): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
@@ -345,6 +392,78 @@ export class DocumentEditor {
       this.selection = [];
     }
     return true;
+  }
+
+  /** 复制指定页面并紧邻源页插入；全工程 ID 重映射，保留图元布局与 Tag 绑定。 */
+  duplicatePage(pageId = this.activePageId): string {
+    if (this.current.pages.length >= 100) {
+      throw new RangeError("页面数量不能超过 100");
+    }
+    const sourceIndex = this.current.pages.findIndex((page) => page.id === pageId);
+    if (sourceIndex < 0) throw new RangeError("未找到页面：" + pageId);
+    const source = this.current.pages[sourceIndex]!;
+    const used = occupiedIds(this.current);
+    const id = allocateId(used, "page");
+    const copy = {
+      id,
+      name: source.name.slice(0, 253) + " 副本",
+      size: { ...source.size },
+      nodes: cloneNodes(source.nodes, used),
+    };
+    const pages = [...this.current.pages];
+    pages.splice(sourceIndex + 1, 0, copy);
+    this.commit(parseScadaDocument({ ...this.current, pages }), id);
+    this.activePageId = id;
+    this.selection = [];
+    return id;
+  }
+
+  /** 将页面与相邻页面交换，边界移动不产生撤销历史。 */
+  movePage(pageId: string, direction: "previous" | "next"): boolean {
+    if (direction !== "previous" && direction !== "next") {
+      throw new TypeError("页面排序方向无效");
+    }
+    const index = this.current.pages.findIndex((page) => page.id === pageId);
+    if (index < 0) throw new RangeError("未找到页面：" + pageId);
+    const nextIndex = index + (direction === "previous" ? -1 : 1);
+    if (nextIndex < 0 || nextIndex >= this.current.pages.length) return false;
+    const pages = [...this.current.pages];
+    [pages[index], pages[nextIndex]] = [pages[nextIndex]!, pages[index]!];
+    return this.commit(parseScadaDocument({ ...this.current, pages }));
+  }
+
+  /**
+   * 将当前页选中图元完整复制到另一页面。
+   * 若整组几何范围超过目标画布则拒绝，不自动缩放或拆散组合。
+   */
+  copySelectedToPage(targetPageId: string): string[] {
+    const source = firstPage(this.current, this.activePageId);
+    const target = firstPage(this.current, targetPageId);
+    if (source.id === target.id) {
+      throw new TypeError("请选择其他页面作为复制目标");
+    }
+    if (this.selection.length === 0) {
+      throw new TypeError("请先选择需要复制的图元");
+    }
+    const selected = expandGroupedSelection(source.nodes, this.selection);
+    const nodes = source.nodes.filter((node) => selected.has(node.id));
+    if (nodes.length === 0) throw new TypeError("请先选择需要复制的图元");
+
+    const left = Math.min(...nodes.map((node) => node.transform.x));
+    const top = Math.min(...nodes.map((node) => node.transform.y));
+    const right = Math.max(...nodes.map((node) => node.transform.x + node.transform.width));
+    const bottom = Math.max(...nodes.map((node) => node.transform.y + node.transform.height));
+    if (right - left > target.size.width || bottom - top > target.size.height) {
+      throw new RangeError("所选图元整体尺寸超过目标页面画布，无法保持布局");
+    }
+    const dx = left < 0 ? -left : Math.min(0, target.size.width - right);
+    const dy = top < 0 ? -top : Math.min(0, target.size.height - bottom);
+    const copies = cloneNodes(nodes, occupiedIds(this.current), dx, dy);
+    const pages = this.current.pages.map((page) =>
+      page.id === targetPageId ? { ...page, nodes: [...page.nodes, ...copies] } : page,
+    );
+    this.commit(parseScadaDocument({ ...this.current, pages }));
+    return copies.map((node) => node.id);
   }
 
   /** 点击组合成员时自动选中整个组合，Shift 再次点击则整体切换。 */
