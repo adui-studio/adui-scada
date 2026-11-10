@@ -1530,7 +1530,7 @@ test("锁定状态不阻止复制整页，原始和副本的图元保护仍有�
   ).toBeDefined();
   e.switchPage("main");
   e.select("tank");
-  expect(() => e.copySelectedToPage("main")).toThrow(/锁定/);
+  expect(() => e.copySelectedToPage(copyId)).toThrow(/锁定/);
 });
 
 test("隐藏图元不能被画布框选，但仍可以从图层列表选中并重新显示", () => {
