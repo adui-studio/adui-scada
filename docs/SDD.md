@@ -180,3 +180,15 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - Runtime、工业网关、Tag 采集、设备写入、工程持久化及正式发布流程均不受本批影响。
 
 设计记录：[ADR-0013](adr/0013-node-transform-properties.md)。此批次为待本机测试的开发分支，不代表 V0.2 全部功能完成。
+
+## 15. V0.2 第六批：SVG 四角缩放与旋转手柄
+
+新增 `packages/core/src/transform-gesture.ts`，由已有 `@adui/scada-core/editor` 子入口导出 `RESIZE_HANDLES`、`resolveResizeTransform`、`resolveRotationTransform`，不依赖 Vue、React 或浏览器 DOM。
+
+- **四角缩放**：`nw/ne/se/sw` 手柄将世界坐标 Pointer 位移按图元当前角度转换至局部坐标，修改宽高和位置，使旋转后的对角锚点保持固定；几何输出保留两位小数。
+- **旋转手柄**：以图元中心为旋转轴，计算起点与当前位置的夹角变化；按住 Shift 时角度以 15 度为单位吸附。返回角度限制在 Schema 已允许的 -360～360 度范围内。
+- **边界及历史**：每次预览调用现有 `withNodeTransform` 做大小、页面边界及有限数校验，非法候选不会覆盖上一帧合法预览；松开 Pointer 后调用 `DocumentEditor.updateSelectedTransform` 一次，整次操作仅形成一条撤销历史。指针取消、Esc 清除临时预览。
+- **双框架一致**：React/Vue 各自使用 SVG 原生 `rect/circle` 展示四角缩放和旋转控制点，Pointer 坐标经 `getScreenCTM()` 统一转换；所有缩放和旋转数值由共享 Core 计算。单选才显示手柄，多选仍使用原来的整体移动及对齐。
+- **限制**：以未旋转布局矩形进行画布边界判断，旋转后外接框可能伸出画布；暂不含边中点手柄、任意非矩形路径变形、锁定宽高比或多图元批量缩放。原拖动网格吸附只应用于平移，不对手柄缩放做额外吸附。
+
+工程 Schema、Tag ID/绑定、Runtime、工业网关和设备写入通道均未改变。参见 [ADR-0014](adr/0014-svg-transform-handles.md)。

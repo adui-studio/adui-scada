@@ -320,3 +320,43 @@ React 与 Vue 均需逐项核验：单选编辑五项几何参数；非法/空�
 维护者继「测试完成」之后，进一步明确回复「全部通过」，确认本批 `feat/v0.2-node-transform-properties` 上的 **`pnpm run ready` 完整质量链和 Vue/React 交互测试均已通过、无报错**。按本批六项验收清单，涵盖两端单选几何属性提交、原子撤销/重做、非法/越界输入、原有多选和吸附交互回归、双方向 JSON/Tag 往返、只读 Runtime 模拟展示。验收来源为**维护者本机确认**，并非本 Agent 复现执行。
 
 此轮没有收到逐项终端日志、用例总数或独立构建输出，故不能仅根据此前预计数量写成“65/65 项已逐项核验”；完整 `ready` 通过由维护者明确确认。验收之后追加了这段文档，**文档补充本身尚未重新执行 `docs:check`**。Docker、Tauri、真实 PLC/DCS、工业网关、发布安全及生产运行不包含在本次验收中。PR #7 保持 Draft，等待维护者合并授权，依赖未合并的 PR #6。
+
+## 2026-11-10 · V0.2 第六批 SVG 控制手柄（待验证）
+
+新增 `packages/core/test/transform-gesture.test.ts` 共 **12 项**测试，涵盖四角缩放锚点、90° 旋转缩放、零位移保持、非法尺寸、旋转角、Shift 15° 吸附、跨 ±180° 角度、原子提交和撤销重做、越界拒绝。以维护者前次确认的第五批 65 项为参考，本分支单测预计 **77 项**；**本次没有实际运行**，不能宣称通过。
+
+维护者 Windows 验收：
+
+```powershell
+git fetch origin
+git switch feat/v0.2-transform-handles
+pnpm run ready
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+人工验收应分别在 Vue/React 完成：单选图元显示四角方形缩放手柄和顶部圆形旋转点；四角拖动改变位置与大小、对角锚点固定；旋转后的图元仍能按局部轴缩放；Shift 拖动旋转点以 15 度吸附；超出画布、尺寸不足 0.1 时不覆盖已合法的预览；松开一次仅产生一条撤销历史；Esc 取消；多选不显示单图元手柄；原有网格吸附、属性数值编辑、双向 JSON/Tag 互通和只读 Runtime 无回归。
+
+**测试来源区分**：本批完成 GitHub 源码提交及静态审查，未在维护者 Windows 环境真实执行格式/Lint/TS/单元/E2E、Web/Server 构建或交互测试；PR 先保持 Draft。
+
+## 2026-11-10 · 第六批维护者验收与旋转光标修改
+
+维护者回复「验收通过」，确认第六批 SVG 缩放/旋转功能已通过本机质量检查与 Vue/React 人工验收。该结论来自**维护者测试反馈**，未附原始测试统计，不把源码预计 77 项写成独立执行统计。
+
+针对随后提出的旋转鼠标样式需求，本轮将 `crosshair` 改为共享资源 `assets/cursors/rotate.svg` 的环形旋转箭头，且在旋转 Pointer 捕获期间维持该指针。PointerUp、Esc 和 PointerCancel 清除旋转状态；不支持 SVG 光标时回退 `grab`。
+
+**变更后仍需验证**：本批验收结论针对改光标之前的功能；修改后的 `pnpm run ready`、两端鼠标悬停/拖动/取消与共享 SVG 资源打包尚未重新实际执行。未涉及工业现场安全、Docker/Tauri 或设备写入。
+
+## 2026-11-10 · 旋转光标修改后的 Windows ready 复验
+
+维护者提供 `vp check --fix` 和 `pnpm run ready` 的 Windows PowerShell 日志。修复后再次运行的 `ready` 已明确通过：依赖 Catalog（9 个清单，26 项）、共享配置、根目录环境/LF、中文文案（72 个文件）、格式化（128 个文件）、Lint/静态检查（51 个文件）、React/Vue/NestJS 类型检查；`vp test run` **8 个测试文件、77/77 单元测试通过**（包含 `transform-gesture.test.ts` 的 **12/12**）；NestJS E2E **2/2 通过**；文档静态检查 **29 个 Markdown 文件通过**；React 和 Vue 的 Vite+ Web 构建均成功。
+
+日志最后只显示 `pnpm --filter @adui/scada-server run build` 进入 `nest build`，**未显示返回终态或退出码**，不得单独认定 NestJS 构建成功。用户尚未提供旋转 SVG 光标在浏览器中的悬停、Pointer 拖动、松开、Esc/PointerCancel 视觉反馈；这部分仍待确认。此前第六批其他画布交互已由维护者确认验收通过。
+
+此次记录依据维护者提供的终端日志，不代表 Agent 独立执行。记录文档之后尚未再次运行 `docs:check`；Docker/Tauri、工业网关和生产设备安全验收不在此次范围内。
+
+## 2026-11-10 · 旋转光标人工验收完成
+
+维护者在提交 `bcfad90` 的 77/77 单元测试、2/2 E2E 和 Vue/React Web 双构建复验结果之后，进一步回复「旋转光标正常」，确认本批新增环形旋转箭头鼠标样式的 Vue/React 浏览器交互符合要求，涵盖旋转点悬停、按住拖动、松开及取消恢复。以上为**维护者人工 UI 验收反馈**，不是 Agent 在浏览器独立复测。
+
+据此，PR #8 的缩放/旋转和旋转光标两类交互验收均记录为维护者确认通过。此前 Windows `ready` 日志仍缺少 `nest build` 的最终退出状态；本次验收文档补充后未重新执行 `docs:check`。不扩展为 Docker/Tauri 或真实工业现场安全验收，也不构成合并 PR 的授权。

@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, PointerEvent as ReactPointerEvent } from "react";
 import { WaterTreatmentSimulator, waterTreatmentDemoDocument } from "@adui/scada-core";
+import type { ScadaDocument } from "@adui/scada-core";
 import {
   DEFAULT_GRID_SIZE,
   DocumentEditor,
+  RESIZE_HANDLES,
   findNodesInRect,
   resolveDragSnap,
+  resolveResizeTransform,
+  resolveRotationTransform,
+  withNodeTransform,
   withNodesTranslated,
 } from "@adui/scada-core/editor";
 import type {
@@ -14,6 +19,7 @@ import type {
   EditorSnapshot,
   LayerAction,
   NodeTransformPatch,
+  ResizeHandle,
 } from "@adui/scada-core/editor";
 import { svgDataUrl } from "@adui/scada-runtime";
 import "./studio.css";
@@ -48,10 +54,21 @@ interface DragState {
   lastY: number;
 }
 
+interface GeometryDragState {
+  pointerId: number;
+  nodeId: string;
+  handle: ResizeHandle | "rotate";
+  startX: number;
+  startY: number;
+  lastPatch: NodeTransformPatch | null;
+}
+
 export default function StudioPage() {
   const editor = useMemo(() => new DocumentEditor(waterTreatmentDemoDocument), []);
   const [state, setState] = useState<EditorSnapshot>(() => editor.snapshot());
   const [preview, setPreview] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [geometryPreview, setGeometryPreview] = useState<ScadaDocument | null>(null);
+  const [rotating, setRotating] = useState(false);
   const [marquee, setMarquee] = useState<MarqueeState | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
   const [notice, setNotice] = useState("本地草稿 · 尚未连接工程保存 API");
@@ -62,6 +79,7 @@ export default function StudioPage() {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const marqueeRef = useRef<MarqueeState | null>(null);
+  const geometryRef = useRef<GeometryDragState | null>(null);
 
   const page = state.document.pages[0];
   const selected = page?.nodes.find((node) => node.id === state.selectedId);
@@ -79,10 +97,11 @@ export default function StudioPage() {
   }, [preview, state.document, state.selectedIds, gridSnap, nodeSnap]);
   const displayDocument = useMemo(
     () =>
-      snapResult === null
+      geometryPreview ??
+      (snapResult === null
         ? state.document
-        : withNodesTranslated(state.document, state.selectedIds, snapResult.dx, snapResult.dy),
-    [snapResult, state.document, state.selectedIds],
+        : withNodesTranslated(state.document, state.selectedIds, snapResult.dx, snapResult.dy)),
+    [geometryPreview, snapResult, state.document, state.selectedIds],
   );
   const image = useMemo(() => svgDataUrl(displayDocument, previewTags), [displayDocument]);
 
@@ -122,8 +141,11 @@ export default function StudioPage() {
         if (key === "escape") {
           dragRef.current = null;
           marqueeRef.current = null;
+          geometryRef.current = null;
           setPreview(null);
           setMarquee(null);
+          setGeometryPreview(null);
+          setRotating(false);
           editor.select(null);
           handled = true;
         } else if (key === "delete" || key === "backspace") {
@@ -304,11 +326,90 @@ export default function StudioPage() {
     }
   }
 
-  function cancelDrag() {
+  function beginGeometry(event: ReactPointerEvent<SVGElement>, handle: ResizeHandle | "rotate") {
+    if (event.button !== 0 || state.selectedIds.length !== 1 || !selected) return;
+    const point = canvasPoint(event.clientX, event.clientY);
+    if (!point) return;
+    geometryRef.current = {
+      pointerId: event.pointerId,
+      nodeId: selected.id,
+      handle,
+      startX: point.x,
+      startY: point.y,
+      lastPatch: null,
+    };
+    setRotating(handle === "rotate");
     dragRef.current = null;
     marqueeRef.current = null;
     setPreview(null);
     setMarquee(null);
+    setGeometryPreview(null);
+    svgRef.current?.setPointerCapture(event.pointerId);
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function updateGeometry(event: ReactPointerEvent<SVGSVGElement>) {
+    const gesture = geometryRef.current;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    const point = canvasPoint(event.clientX, event.clientY);
+    if (!point) return;
+    const snapshot = editor.snapshot();
+    const node = snapshot.document.pages[0]?.nodes.find((item) => item.id === gesture.nodeId);
+    if (!node) return;
+    try {
+      const patch: NodeTransformPatch =
+        gesture.handle === "rotate"
+          ? {
+              rotation: resolveRotationTransform(
+                node.transform,
+                gesture.startX,
+                gesture.startY,
+                point.x,
+                point.y,
+                event.shiftKey,
+              ).rotation,
+            }
+          : resolveResizeTransform(
+              node.transform,
+              gesture.handle,
+              point.x - gesture.startX,
+              point.y - gesture.startY,
+            );
+      const next = withNodeTransform(snapshot.document, gesture.nodeId, patch);
+      gesture.lastPatch = patch;
+      setGeometryPreview(next);
+    } catch {
+      // 越界或尺寸不合法时，保留最近一次合法预览。
+    }
+  }
+
+  function finishGeometry(event: ReactPointerEvent<SVGSVGElement>) {
+    const gesture = geometryRef.current;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    updateGeometry(event);
+    geometryRef.current = null;
+    setGeometryPreview(null);
+    setRotating(false);
+    if (gesture.lastPatch === null) return;
+    try {
+      if (editor.updateSelectedTransform(gesture.lastPatch)) {
+        refresh();
+        setNotice("图元缩放或旋转已应用，可撤销");
+      }
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  function cancelDrag() {
+    dragRef.current = null;
+    marqueeRef.current = null;
+    geometryRef.current = null;
+    setPreview(null);
+    setMarquee(null);
+    setGeometryPreview(null);
+    setRotating(false);
   }
 
   function nudge(dx: number, dy: number) {
@@ -501,15 +602,18 @@ export default function StudioPage() {
           <svg
             ref={svgRef}
             className="studio-svg"
+            data-rotating={rotating ? "true" : undefined}
             style={{ width: `${zoom * 100}%` }}
             viewBox={`0 0 ${page.size.width} ${page.size.height}`}
             onPointerMove={(event) => {
               updateDrag(event);
               updateMarquee(event);
+              updateGeometry(event);
             }}
             onPointerUp={(event) => {
               finishDrag(event);
               finishMarquee(event);
+              finishGeometry(event);
             }}
             onPointerCancel={cancelDrag}
             onPointerDown={startMarquee}
@@ -583,6 +687,39 @@ export default function StudioPage() {
                       }
                     }}
                   />
+                  {state.selectedIds.length === 1 && state.selectedId === node.id && (
+                    <>
+                      {RESIZE_HANDLES.map((handle) => (
+                        <rect
+                          key={handle}
+                          className="studio-resize-handle"
+                          data-handle={handle}
+                          aria-label={`缩放图元 ${handle}`}
+                          x={(handle.endsWith("e") ? t.x + t.width : t.x) - 5}
+                          y={(handle.startsWith("s") ? t.y + t.height : t.y) - 5}
+                          width={10}
+                          height={10}
+                          onPointerDown={(event) => beginGeometry(event, handle)}
+                        />
+                      ))}
+                      <line
+                        className="studio-rotation-stem"
+                        x1={t.x + t.width / 2}
+                        x2={t.x + t.width / 2}
+                        y1={t.y}
+                        y2={t.y - 26}
+                        pointerEvents="none"
+                      />
+                      <circle
+                        className="studio-rotation-handle"
+                        aria-label="旋转图元，按住 Shift 可按 15 度吸附"
+                        cx={t.x + t.width / 2}
+                        cy={t.y - 26}
+                        r={7}
+                        onPointerDown={(event) => beginGeometry(event, "rotate")}
+                      />
+                    </>
+                  )}
                 </g>
               );
             })}

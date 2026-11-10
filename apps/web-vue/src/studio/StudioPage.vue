@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { WaterTreatmentSimulator, waterTreatmentDemoDocument } from "@adui/scada-core";
+import type { ScadaDocument } from "@adui/scada-core";
 import {
   DEFAULT_GRID_SIZE,
   DocumentEditor,
+  RESIZE_HANDLES,
   findNodesInRect,
   resolveDragSnap,
+  resolveResizeTransform,
+  resolveRotationTransform,
+  withNodeTransform,
   withNodesTranslated,
 } from "@adui/scada-core/editor";
 import type {
@@ -13,6 +18,7 @@ import type {
   EditableSymbol,
   LayerAction,
   NodeTransformPatch,
+  ResizeHandle,
 } from "@adui/scada-core/editor";
 import { svgDataUrl } from "@adui/scada-runtime";
 import "./studio.css";
@@ -29,6 +35,8 @@ const geometryFields = [
 const editor = new DocumentEditor(waterTreatmentDemoDocument);
 const state = shallowRef(editor.snapshot());
 const preview = shallowRef<{ id: string; x: number; y: number } | null>(null);
+const geometryPreview = shallowRef<ScadaDocument | null>(null);
+const rotating = ref(false);
 const marquee = shallowRef<MarqueeState | null>(null);
 const labelDraft = ref("");
 const notice = ref("本地草稿 · 尚未连接工程保存 API");
@@ -57,8 +65,18 @@ interface DragState {
   lastX: number;
   lastY: number;
 }
+
+interface GeometryDragState {
+  pointerId: number;
+  nodeId: string;
+  handle: ResizeHandle | "rotate";
+  startX: number;
+  startY: number;
+  lastPatch: NodeTransformPatch | null;
+}
 let activeDrag: DragState | null = null;
 let activeMarquee: MarqueeState | null = null;
+let activeGeometry: GeometryDragState | null = null;
 
 const page = computed(() => {
   const result = state.value.document.pages[0];
@@ -82,6 +100,7 @@ const snapResult = computed(() => {
   );
 });
 const displayDocument = computed(() => {
+  if (geometryPreview.value !== null) return geometryPreview.value;
   const movement = snapResult.value;
   return movement === null
     ? state.value.document
@@ -127,8 +146,11 @@ function handleKey(event: KeyboardEvent) {
     if (key === "escape") {
       activeDrag = null;
       activeMarquee = null;
+      activeGeometry = null;
       preview.value = null;
       marquee.value = null;
+      geometryPreview.value = null;
+      rotating.value = false;
       editor.select(null);
       handled = true;
     } else if (key === "delete" || key === "backspace") {
@@ -206,15 +228,17 @@ function finishMarquee(event: PointerEvent) {
 function updatePointer(event: PointerEvent) {
   updateDrag(event);
   updateMarquee(event);
+  updateGeometry(event);
 }
 
 function finishPointer(event: PointerEvent) {
   finishDrag(event);
   finishMarquee(event);
+  finishGeometry(event);
 }
 
 function selectNode(id: string | null, additive = false) {
-  if (activeDrag !== null) return;
+  if (activeDrag !== null || activeGeometry !== null) return;
   editor.select(id, additive);
   refresh();
 }
@@ -313,11 +337,90 @@ function finishDrag(event: PointerEvent) {
   }
 }
 
-function cancelDrag() {
+function beginGeometry(event: PointerEvent, handle: ResizeHandle | "rotate") {
+  if (event.button !== 0 || state.value.selectedIds.length !== 1 || !selected.value) return;
+  const point = canvasPoint(event.clientX, event.clientY);
+  if (!point) return;
+  activeGeometry = {
+    pointerId: event.pointerId,
+    nodeId: selected.value.id,
+    handle,
+    startX: point.x,
+    startY: point.y,
+    lastPatch: null,
+  };
+  rotating.value = handle === "rotate";
   activeDrag = null;
   activeMarquee = null;
   preview.value = null;
   marquee.value = null;
+  geometryPreview.value = null;
+  svgRef.value?.setPointerCapture(event.pointerId);
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function updateGeometry(event: PointerEvent) {
+  const gesture = activeGeometry;
+  if (!gesture || gesture.pointerId !== event.pointerId) return;
+  const point = canvasPoint(event.clientX, event.clientY);
+  if (!point) return;
+  const snapshot = editor.snapshot();
+  const node = snapshot.document.pages[0]?.nodes.find((item) => item.id === gesture.nodeId);
+  if (!node) return;
+  try {
+    const patch: NodeTransformPatch =
+      gesture.handle === "rotate"
+        ? {
+            rotation: resolveRotationTransform(
+              node.transform,
+              gesture.startX,
+              gesture.startY,
+              point.x,
+              point.y,
+              event.shiftKey,
+            ).rotation,
+          }
+        : resolveResizeTransform(
+            node.transform,
+            gesture.handle,
+            point.x - gesture.startX,
+            point.y - gesture.startY,
+          );
+    const next = withNodeTransform(snapshot.document, gesture.nodeId, patch);
+    gesture.lastPatch = patch;
+    geometryPreview.value = next;
+  } catch {
+    // 越界或尺寸不合法时，保留最近一次合法预览。
+  }
+}
+
+function finishGeometry(event: PointerEvent) {
+  const gesture = activeGeometry;
+  if (!gesture || gesture.pointerId !== event.pointerId) return;
+  updateGeometry(event);
+  activeGeometry = null;
+  geometryPreview.value = null;
+  rotating.value = false;
+  if (gesture.lastPatch === null) return;
+  try {
+    if (editor.updateSelectedTransform(gesture.lastPatch)) {
+      refresh();
+      notice.value = "图元缩放或旋转已应用，可撤销";
+    }
+  } catch (error) {
+    notice.value = error instanceof Error ? error.message : String(error);
+  }
+}
+
+function cancelDrag() {
+  activeDrag = null;
+  activeMarquee = null;
+  activeGeometry = null;
+  preview.value = null;
+  marquee.value = null;
+  geometryPreview.value = null;
+  rotating.value = false;
 }
 
 function displayTransform(id: string) {
@@ -473,6 +576,7 @@ async function importJson(event: Event) {
         <svg
           ref="svgRef"
           class="studio-svg"
+          :data-rotating="rotating ? 'true' : undefined"
           :style="{ width: `${zoom * 100}%` }"
           :viewBox="`0 0 ${page.size.width} ${page.size.height}`"
           aria-label="可编辑 SVG 画布"
@@ -534,6 +638,36 @@ async function importJson(event: Event) {
               @keydown.enter.prevent="selectNode(node.id, $event.shiftKey)"
               @keydown.space.prevent="selectNode(node.id, $event.shiftKey)"
             />
+            <template v-if="state.selectedIds.length === 1 && state.selectedId === node.id">
+              <rect
+                v-for="handle in RESIZE_HANDLES"
+                :key="handle"
+                class="studio-resize-handle"
+                :data-handle="handle"
+                :aria-label="`缩放图元 ${handle}`"
+                :x="node.transform.x + (handle.endsWith('e') ? node.transform.width : 0) - 5"
+                :y="node.transform.y + (handle.startsWith('s') ? node.transform.height : 0) - 5"
+                :width="10"
+                :height="10"
+                @pointerdown.stop="beginGeometry($event, handle)"
+              />
+              <line
+                class="studio-rotation-stem"
+                :x1="node.transform.x + node.transform.width / 2"
+                :x2="node.transform.x + node.transform.width / 2"
+                :y1="node.transform.y"
+                :y2="node.transform.y - 26"
+                pointer-events="none"
+              />
+              <circle
+                class="studio-rotation-handle"
+                aria-label="旋转图元，按住 Shift 可按 15 度吸附"
+                :cx="node.transform.x + node.transform.width / 2"
+                :cy="node.transform.y - 26"
+                :r="7"
+                @pointerdown.stop="beginGeometry($event, 'rotate')"
+              />
+            </template>
           </g>
           <line
             v-if="snapResult?.verticalGuide != null"
