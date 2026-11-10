@@ -239,3 +239,31 @@
   stroke-width: 1.5;
   stroke-dasharray: 5 3;
 }
+
+/* 几何属性面板两列布局；只在确认提交后修改共享工程。 */
+.studio-geometry {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin: 12px 0 18px;
+}
+.studio-geometry label {
+  display: grid;
+  gap: 5px;
+  color: #c5d7e5;
+  font-size: 12px;
+}
+.studio-geometry input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 7px;
+  color: #e8f1ff;
+  background: #0c1728;
+  border: 1px solid #46667d;
+  border-radius: 4px;
+}
+.studio-geometry button {
+  grid-column: 1 / -1;
+  width: 100%;
+}
