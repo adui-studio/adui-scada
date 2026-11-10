@@ -91,9 +91,7 @@ test("旋转手柄跨过正负一百八十度时连续计算", () => {
   const transform = { x: 100, y: 100, width: 100, height: 80, rotation: 0 };
   const changed = resolveRotationTransform(transform, 100, 140, 100, 139);
   expect(Math.abs(changed.rotation)).toBeLessThan(2);
-  expect(() => resolveRotationTransform(transform, Infinity, 140, 100, 139)).toThrow(
-    /有限数/,
-  );
+  expect(() => resolveRotationTransform(transform, Infinity, 140, 100, 139)).toThrow(/有限数/);
 });
 
 test("拖拽缩放预览不改变工程，松开后仅生成一条可撤销命令", () => {
@@ -109,9 +107,7 @@ test("拖拽缩放预览不改变工程，松开后仅生成一条可撤销命�
   expect(editor.snapshot().canUndo).toBe(false);
   expect(editor.updateSelectedTransform(patch)).toBe(true);
   expect(editor.snapshot().document).toEqual(preview);
-  const updatedTank = editor
-    .snapshot()
-    .document.pages[0]?.nodes.find((node) => node.id === "tank");
+  const updatedTank = editor.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank");
   expect(updatedTank?.bindings.level?.tagId).toBe("water.level");
   expect(editor.undo()).toBe(true);
   expect(editor.snapshot().document).toEqual(before);

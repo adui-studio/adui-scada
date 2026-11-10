@@ -324,10 +324,7 @@ export default function StudioPage() {
     }
   }
 
-  function beginGeometry(
-    event: ReactPointerEvent<SVGElement>,
-    handle: ResizeHandle | "rotate",
-  ) {
+  function beginGeometry(event: ReactPointerEvent<SVGElement>, handle: ResizeHandle | "rotate") {
     if (event.button !== 0 || state.selectedIds.length !== 1 || !selected) return;
     const point = canvasPoint(event.clientX, event.clientY);
     if (!point) return;

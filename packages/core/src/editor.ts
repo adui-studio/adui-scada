@@ -502,7 +502,11 @@ export class DocumentEditor {
   }
 }
 
-export { RESIZE_HANDLES, resolveResizeTransform, resolveRotationTransform } from "./transform-gesture.ts";
+export {
+  RESIZE_HANDLES,
+  resolveResizeTransform,
+  resolveRotationTransform,
+} from "./transform-gesture.ts";
 export type { ResizeHandle } from "./transform-gesture.ts";
 
 export { DEFAULT_GRID_SIZE, resolveDragSnap } from "./snap.ts";
