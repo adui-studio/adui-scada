@@ -498,12 +498,12 @@ export class DocumentEditor {
 
   /** 单选图元的 Tag 绑定修改记录为一条可撤销命令。 */
   setSelectedBinding(slot: string, tagId: string | null): boolean {
+    const node = this.getSelected();
+    if (!node) throw new TypeError("请先单选一个图元再修改 Tag 绑定");
+    if (node.groupId) throw new TypeError("已组合图元不能单独修改 Tag 绑定，请先解组");
     if (this.selection.length !== 1) {
       throw new TypeError("请先单选一个图元再修改 Tag 绑定");
     }
-    const node = this.getSelected();
-    if (!node) throw new RangeError("所选图元不存在");
-    if (node.groupId) throw new TypeError("已组合图元不能单独修改 Tag 绑定，请先解组");
     if (editableTagSlot(node.type) !== slot) {
       throw new TypeError("该图元不支持指定的 Tag 绑定槽");
     }
