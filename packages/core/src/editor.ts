@@ -842,7 +842,7 @@ export class DocumentEditor {
       const otherNodes = nodes.filter((node) => node.groupId !== groupId);
       if (otherNodes.length === 0) return false;
       const first = nodes.findIndex((node) => node.groupId === groupId);
-      const last = nodes.findLastIndex((node) => node.groupId === groupId);
+      const last = nodes.map((node) => node.groupId).lastIndexOf(groupId);
       const destination =
         action === "front"
           ? otherNodes.at(-1)
