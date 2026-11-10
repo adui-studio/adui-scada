@@ -512,3 +512,40 @@ pnpm run dev:vue
 维护者明确反馈「验收通过」，按 PR #12 原定的剩余六项验收清单记录人工交互验收完成：双框架导入无组合的历史 `0.1.0` 工程及升级提示、含合法 `groupId` 的历史组合保真、当前 `0.2.0` 工程导入与 Vue/React 双向 JSON/Tag 往返、未知版本与结构字段拒绝及失败状态保留、只读 Runtime 的当前 Schema 和模拟画面，以及既有组合、缩放、吸附、撤销重做等编辑命令无回归。该结论**来源于维护者总体人工验收反馈，并非 Agent 独立浏览器逐项复测**。
 
 本批此前已有维护者提供的完整 Windows `pnpm run ready` 日志：**118/118 单元测试、2/2 NestJS E2E、133 文件格式检查、52 文件零警告静态检查、33 份 Markdown 检查、React/Vue/NestJS 类型检查与三端构建成功、退出码 0**。此条新增验收记录后**尚未重新执行** `docs:check` 或 `pnpm run ready`。PR #12 的七项验收清单据此全部完成，仍保留 Draft，**未经单独合并授权不修改 `main`**。正式工程持久化、生产发布、历史二进制客户端兼容、Tauri 与真实工业现场安全验收不在本批结论范围内。
+
+## 2026-11-10 · V0.2 第十一批浏览器工程草稿（待验证）
+
+从合并 PR #12 的 `main`（`fe6581c`）创建 `feat/v0.2-local-drafts`。此前维护者在上一批特性分支执行的 `pnpm run ready` **118/118 单元测试、2/2 NestJS E2E、33 份 Markdown、三端构建、退出码 0**，不得作为本批测试通过的证据。本批新增 10 项 Core 单元测试，整仓预计 **128 项**；增加 ADR-0019 后 Markdown 文档预计 **34 份**。**本批尚未运行** Vite+ 格式、Lint、类型检查、Vitest、E2E、文档校验、构建和浏览器交互。
+
+```powershell
+git fetch origin
+git switch feat/v0.2-local-drafts
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+人工测试需要核对双端的按钮一致性：修改图元→保存→刷新→恢复→JSON / Tag / 组合数据一致；保存覆盖与恢复取消后不丢数据；保存/读取失败或损坏草稿不改变当前画面与原始记录；清除后恢复按钮禁用且画面不变；不同 `projectId` 互不覆盖。验证旧版 JSON 导入升级、撤销重做、只读 Runtime 不受影响。浏览器本地数据可能在隐私模式或清理网站数据后丢失；本功能不提供正式工程备份或工业安全验收。此记录只是开发说明，等待本机质量链实测。
+
+## 2026-11-10 · 第十一批首次 Vite+ 检查失败与定点修复
+
+维护者在 Windows 执行 `vp check --fix` 后提供日志：**54 个文件检查出 2 个 TypeScript 错误及 2 个 Lint 警告**，同时格式化步骤显示完成。错误分别为 Core `local-draft.ts` 的两处 `TextEncoder` 缺少类型定义（TS2304）；警告分别为 React Studio 的 Effect 内同步 `setHasSavedDraft`（`react(set-state-in-effect)`）和 `local-draft.test.ts` 中空参数 `toThrow()`（`vitest(require-to-throw-message)`）。因此**不能将该轮 `vp check --fix` 记为通过**，也没有收到 `pnpm run ready` 执行结果。
+
+分支修复提交 `6ea0c00` 做最小调整：Core 改为无 DOM 类型依赖的纯 TypeScript UTF-8 字节计数；React 以 `useState` 惰性初值检测首次草稿，并在工程导入事件中同步可恢复状态，不再于 Effect 中直接更新该状态；Vitest 针对不同非法草稿分别断言中文错误信息，另补中文多字节数据的 **2 MiB 字节上限**回归。独立 Node 小范围验证已核对 ASCII、中文、Emoji、孤立代理项及大文本的字节计数与 `TextEncoder` 结果相同；**此检查不能代替仓库 `vp check`、Vitest 或完整 `pnpm run ready`**。
+
+新增本段验收记录后，尚未重新执行格式、Lint、TS、单测、E2E、文档检查或三端构建。请维护者将分支更新到修复提交及其后续文档提交后重新执行 `pnpm run ready` 并提供退出码。PR #13 继续保持 Draft，未得到合并授权。
+
+## 2026-11-10 · 第十一批修复后质量链复验（完整退出码待确认）
+
+维护者在 Windows PowerShell 执行 `pnpm run ready`，提供以下原始输出：Catalog **9 个清单/26 项依赖**、共享配置、根环境与 LF、中文文案 **75 个文件**通过；Vite+ **136 个文件格式检查通过**，**54 个文件零 Lint 警告、零错误**，React/Vue/NestJS TypeScript 类型检查全部通过；Vitest **9 个测试文件、128/128 项单测通过**（含新增 `local-draft.test.ts` **10/10**）；NestJS E2E **2/2**，Markdown 静态检查 **34 份**；React 和 Vue 两套 Web 构建均成功。
+
+**证据边界**：维护者日志最后仅显示开始运行 `nest build`，**尚未附最终 PowerShell `$LASTEXITCODE`**；因此不能断言整条 `ready` 已以退出码 0 完成。也未收到浏览器手动保存、刷新恢复、存储损坏/拒绝访问与跨 Origin 等人工验收结论。分支新增维护者格式整理提交 `ed6a857`，只改 `local-draft.ts`、`local-draft.test.ts` 的格式，无业务语义变化。
+
+本轮协作另在独立 Node 运行时执行纯函数 UTF-8 字节计数对照（空文本、ASCII、中文、Emoji、高/低孤立代理项、混合字符串和 70 万汉字），均与原生 `TextEncoder` 字节长度一致；**这只是单独函数的实测，不替代仓库 `pnpm run ready`**。新增此文档后未重新执行 `docs:check`。PR #13 保持 Draft，未获合并授权，工业现场安全、正式工程发布和多标签页一致性不在验收范围内。
+
+## 2026-11-10 · 第十一批本地草稿质量链完整通过与保存验收
+
+维护者补充此前同一次 Windows PowerShell `pnpm run ready` 的最终结果：`Write-Host "退出码：$LASTEXITCODE"` 返回 **退出码 0**。结合此前完整终端日志，本批依赖 Catalog、共享环境/LF、中文文案 **75 文件**、Vite+ 格式检查 **136 文件**、Lint/静态检查 **54 文件零警告**、React/Vue/NestJS 类型检查、单元测试 **128/128**、NestJS E2E **2/2**、Markdown 文档检查 **34 份**、React/Vue Web 构建与 NestJS `nest build` 全部完成，确认整条 `ready` 执行成功。
+
+维护者另明确回复「保存验证成功，同意合并」，据此**本地草稿保存功能已获人工验收及明确合并授权**。但未提供 Vue/React 各自刷新恢复、取消覆盖/恢复、损坏记录、跨工程隔离和 Runtime 全套人工步骤的逐项记录；这些场景已在设计、部分 Core 单测和现有校验中覆盖，不应声称所有浏览器手工场景已逐项执行。此次新增记录后**尚未再次运行 `docs:check`**；不能把文档追加后的新提交视为重新执行过质量链。正式工程持久化/发布、历史快照和工业现场验收不属于本批。

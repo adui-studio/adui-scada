@@ -241,3 +241,13 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - 旧版 Parser 在读取 `0.2.0` 工程时因版本不匹配而拒绝；**旧版客户端不能编辑新版工程**，历史二进制版本的行为仍须专项实测。
 
 兼容性只覆盖严格校验的 `0.1.0 → 0.2.0` 迁移。未实现多级迁移链、服务端发布/持久化、资源包或版本协商。Runtime/Tag/工业网关的只读安全边界不变。详见 [ADR-0018](adr/0018-schema-version-migration.md)。
+
+## 20. V0.2 第十一批：浏览器本地工程草稿
+
+- `@adui/scada-core` 增加 `local-draft.ts`：`LocalDraftStorage` 存储适配接口，以及 `localDraftKey`、`hasLocalDraft`、`saveLocalDraft`、`readLocalDraft`、`clearLocalDraft`。Core 不访问 `window` 或 `localStorage`，使用注入式接口便于 Node 单测。
+- 存储键 `adui-scada:studio:draft:<projectId>`；包裹层 `{ formatVersion: 1, savedAt: ISO8601, document: ScadaDocument }`，与工程 Schema 版本独立。限额 **2 MiB UTF-8 字节**，文档必须通过当前 `0.2.0` Parser 校验，未知包裹层结构或错误版本拒绝。
+- Vue/React 增加同义的「保存草稿」「恢复草稿」「清除草稿」。已有记录覆盖、恢复替换当前画面以及清除需用户明确确认；页面首次进入只检测可恢复记录，**不自动恢复、不自动保存**。导入其他工程时根据当前 `projectId` 重新检测。
+- 恢复调用现有 `DocumentEditor.loadDocument`，成功时重置选择和历史；错误文档、损坏存储、受限浏览器权限、容量不足均用中文提示，失败不能污染正在编辑的工程，也不得自动删除损坏草稿。清除只作用于对应工程的存储键。
+- 本地保存不代表工程发布、服务器备份、跨设备或跨端口同步；浏览器本地存储未加密，不应写入真实设备凭据。Runtime 继续只读，完全不访问 Studio 草稿。详细取舍参见 [ADR-0019](adr/0019-local-draft-persistence.md)。
+
+本批不实现自动保存、多标签页并发保护、历史快照、跨 Origin 同步或后端持久化。正式工程存储与发布仍须按 FR-002/008 单独设计和验收。

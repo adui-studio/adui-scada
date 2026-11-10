@@ -159,3 +159,11 @@
 - React/Vue 两套 `src/studio/StudioPage`：历史工程导入成功提示升级并建议重新导出，导出只写当前版本。
 - `packages/core/test/document.test.ts`、`packages/core/test/editor.test.ts`：新增 12 项版本、非法结构、组合保真和失败回滚用例。
 - [ADR-0018](adr/0018-schema-version-migration.md) 记录兼容范围、限制与风险。
+
+## V0.2 第十一批：本地工程草稿
+
+- `packages/core/src/local-draft.ts`：框架无关的浏览器草稿存储接口、2 MiB 上限、工程 ID 隔离、包裹层与 Schema 校验及中文错误。
+- `packages/core/src/index.ts`：导出本地草稿的公共 API 与类型。
+- `packages/core/test/local-draft.test.ts`：10 项单测覆盖写入读取、项目隔离、Tag/组合保真、损坏数据、版本、容量和存储异常。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：手动保存/恢复/清除、二次确认、工程切换检测及中文状态。
+- [ADR-0019](adr/0019-local-draft-persistence.md)：本地临时保存、Origin 隔离、风险和未实现的自动保存/正式发布边界。
