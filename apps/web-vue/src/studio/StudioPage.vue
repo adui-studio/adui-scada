@@ -3,15 +3,11 @@ import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import {
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
-  hasLocalDraft,
-  saveLocalDraft,
-  readLocalDraft,
-  clearLocalDraft,
-  localDraftKey,
-  LocalDraftAutoSaveSession,
+  DraftAutoSaveSession,
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
 } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
+import { DexieDraftRepository } from "@adui/scada-draft-storage";
 import {
   DEFAULT_GRID_SIZE,
   DocumentEditor,
@@ -36,6 +32,14 @@ import { svgDataUrl } from "@adui/scada-runtime";
 import "./studio.css";
 
 const previewTags = new WaterTreatmentSimulator().next(new Date("2026-11-09T00:00:00Z"));
+function getLegacyStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+const drafts = new DexieDraftRepository({ legacyStorage: getLegacyStorage() });
 const maxFileSize = 2 * 1024 * 1024;
 const geometryFields = [
   ["x", "X 坐标"],
@@ -54,7 +58,9 @@ const labelDraft = ref("");
 const notice = ref("可手动保存浏览器本地草稿 · 尚未连接工程保存服务");
 const hasSavedDraft = ref(false);
 const autoSaveEnabled = ref(false);
-let autoSaveSession: LocalDraftAutoSaveSession | null = null;
+let autoSaveSession: DraftAutoSaveSession | null = null;
+let draftActionInProgress = false;
+let unsubscribeDraft: (() => void) | null = null;
 const zoom = ref(1);
 const gridVisible = ref(true);
 const gridSnap = ref(true);
@@ -194,60 +200,74 @@ function handleKey(event: KeyboardEvent) {
   refresh();
 }
 
-function checkLocalDraft() {
+async function checkLocalDraft() {
   try {
-    hasSavedDraft.value = hasLocalDraft(window.localStorage, state.value.document.projectId);
+    hasSavedDraft.value = (await drafts.get(state.value.document.projectId)) !== null;
   } catch (error) {
     hasSavedDraft.value = false;
-    notice.value = "本地草稿检测失败：" + (error instanceof Error ? error.message : String(error));
+    notice.value = "本地草稿读取失败：" + (error instanceof Error ? error.message : String(error));
   }
 }
 
-function handleStorage(event: StorageEvent) {
-  if (
-    event.storageArea !== window.localStorage ||
-    event.key !== localDraftKey(state.value.document.projectId)
-  ) {
-    return;
-  }
-  hasSavedDraft.value = event.newValue !== null;
-  if (autoSaveSession) {
-    autoSaveSession = null;
-    autoSaveEnabled.value = false;
-    notice.value = "检测到其他标签页更新了本地草稿，自动保存已暂停，请先核对";
-  }
+async function pauseAutoSave() {
+  const session = autoSaveSession;
+  autoSaveSession = null;
+  autoSaveEnabled.value = false;
+  await session?.stop();
+}
+
+function subscribeDraft() {
+  unsubscribeDraft?.();
+  unsubscribeDraft = drafts.subscribe(state.value.document.projectId, (revision) => {
+    hasSavedDraft.value = revision !== null;
+    const session = autoSaveSession;
+    if (session && revision !== session.currentRevision) {
+      void pauseAutoSave();
+      notice.value = "其他标签页已修改草稿，自动保存已暂停，请先核对";
+    }
+  });
 }
 
 onMounted(() => {
   window.addEventListener("keydown", handleKey);
-  window.addEventListener("storage", handleStorage);
-  checkLocalDraft();
+  subscribeDraft();
+  void checkLocalDraft();
 });
 onUnmounted(() => {
   window.removeEventListener("keydown", handleKey);
-  window.removeEventListener("storage", handleStorage);
+  unsubscribeDraft?.();
+  void pauseAutoSave().then(() => drafts.close());
 });
-watch(() => state.value.document.projectId, checkLocalDraft);
+watch(() => state.value.document.projectId, () => {
+  subscribeDraft();
+  void checkLocalDraft();
+});
 
 watch(
   () => [state.value.document, autoSaveEnabled.value] as const,
   ([document, enabled], _previous, onCleanup) => {
-    if (!enabled) return;
+    if (!enabled || !autoSaveSession) return;
+    const session = autoSaveSession;
+    let active = true;
     const timer = window.setTimeout(() => {
-      try {
-        const saved = autoSaveSession?.saveIfDirty(document);
-        if (saved) {
+      void session.saveIfDirty(document).then(
+        (saved) => {
+          if (!active || autoSaveSession !== session || !saved) return;
           hasSavedDraft.value = true;
           notice.value = `本地草稿已自动保存（${saved.savedAt}）`;
-        }
-      } catch (error) {
-        autoSaveSession = null;
-        autoSaveEnabled.value = false;
-        notice.value =
-          "自动保存已暂停：" + (error instanceof Error ? error.message : String(error));
-      }
+        },
+        (error: unknown) => {
+          if (!active || autoSaveSession !== session) return;
+          void pauseAutoSave();
+          notice.value =
+            "自动保存已暂停：" + (error instanceof Error ? error.message : String(error));
+        },
+      );
     }, LOCAL_DRAFT_AUTO_SAVE_DELAY_MS);
-    onCleanup(() => window.clearTimeout(timer));
+    onCleanup(() => {
+      active = false;
+      window.clearTimeout(timer);
+    });
   },
 );
 
@@ -556,83 +576,88 @@ function changeGeometry(event: Event) {
   }
 }
 
-function toggleAutoSave() {
-  if (autoSaveSession) {
-    autoSaveSession = null;
-    autoSaveEnabled.value = false;
-    notice.value = "自动保存已暂停，当前工程不会被自动写入";
-    return;
-  }
+async function toggleAutoSave() {
+  if (draftActionInProgress) return;
+  draftActionInProgress = true;
   try {
-    const session = new LocalDraftAutoSaveSession(
-      window.localStorage,
-      editor.snapshot().document,
-    );
+    if (autoSaveSession) {
+      await pauseAutoSave();
+      notice.value = "自动保存已暂停，当前工程不会被自动写入";
+      return;
+    }
+    const session = await DraftAutoSaveSession.open(drafts, editor.snapshot().document);
     if (
       session.hasExistingDraft &&
-      !window.confirm("浏览器已有本地草稿，开启自动保存后新修改会覆盖该记录。确认开启吗？")
+      !window.confirm("数据库已有草稿，开启自动保存后新修改将覆盖该版本。确认开启吗？")
     ) {
       return;
     }
-    session.assertStorageUnchanged();
     autoSaveSession = session;
     autoSaveEnabled.value = true;
-    notice.value = "自动保存已开启：修改工程后约 1 秒写入本地草稿，刷新后仍需手动恢复";
+    notice.value = "IndexedDB 自动保存已开启：修改后约 1 秒保存，刷新后仍需手动恢复";
   } catch (error) {
     notice.value = "开启自动保存失败：" + (error instanceof Error ? error.message : String(error));
+  } finally {
+    draftActionInProgress = false;
   }
 }
 
-function saveDraft() {
+async function saveDraft() {
+  if (draftActionInProgress) return;
+  draftActionInProgress = true;
   try {
-    const storage = window.localStorage;
-    const projectId = editor.snapshot().document.projectId;
-    if (
-      hasLocalDraft(storage, projectId) &&
-      !window.confirm("当前工程已有本地草稿，确认使用现有画面覆盖吗？")
-    ) {
-      return;
-    }
-    const saved = saveLocalDraft(storage, editor.snapshot().document);
-    autoSaveSession?.acceptSaved(saved);
+    await pauseAutoSave();
+    const document = editor.snapshot().document;
+    const current = await drafts.get(document.projectId);
+    if (current && !window.confirm("数据库已有草稿，确认使用当前画面覆盖吗？")) return;
+    const saved = await drafts.save(document, current?.revision ?? null);
     hasSavedDraft.value = true;
-    notice.value = `当前工程已保存到此浏览器（${saved.savedAt}），并非正式工程发布`;
+    notice.value = `已保存 IndexedDB 草稿（${saved.savedAt}），并非正式工程发布`;
   } catch (error) {
     notice.value = "保存草稿失败：" + (error instanceof Error ? error.message : String(error));
+  } finally {
+    draftActionInProgress = false;
   }
 }
 
-function restoreDraft() {
-  if (!window.confirm("恢复本地草稿将替换当前工程并清空撤销历史，确认恢复吗？")) return;
+async function restoreDraft() {
+  if (!window.confirm("恢复数据库草稿将替换当前画面并清空撤销历史，确认吗？")) return;
+  if (draftActionInProgress) return;
+  draftActionInProgress = true;
   try {
-    const saved = readLocalDraft(window.localStorage, state.value.document.projectId);
+    await pauseAutoSave();
+    const saved = await drafts.get(state.value.document.projectId);
     if (!saved) {
       hasSavedDraft.value = false;
-      notice.value = "当前工程没有可恢复的本地草稿";
+      notice.value = "当前工程没有可恢复的数据库草稿";
       return;
     }
     editor.loadDocument(saved.document);
-    autoSaveSession = null;
-    autoSaveEnabled.value = false;
     cancelDrag();
     refresh();
     hasSavedDraft.value = true;
-    notice.value = `已恢复浏览器本地草稿（保存于 ${saved.savedAt}）`;
+    notice.value = `已恢复 IndexedDB 草稿（保存于 ${saved.savedAt}）`;
   } catch (error) {
     notice.value = "恢复草稿失败：" + (error instanceof Error ? error.message : String(error));
+  } finally {
+    draftActionInProgress = false;
   }
 }
 
-function clearDraft() {
-  if (!window.confirm("确认永久清除当前工程的浏览器本地草稿吗？当前画面不会改变。")) return;
+async function clearDraft() {
+  if (!window.confirm("确定清除当前工程的 IndexedDB 草稿吗？当前画面不会改变。")) return;
+  if (draftActionInProgress) return;
+  draftActionInProgress = true;
   try {
-    clearLocalDraft(window.localStorage, state.value.document.projectId);
-    autoSaveSession = null;
-    autoSaveEnabled.value = false;
+    await pauseAutoSave();
+    const current = await drafts.get(state.value.document.projectId);
+    await drafts.remove(state.value.document.projectId, current?.revision ?? null);
     hasSavedDraft.value = false;
-    notice.value = "已清除当前工程的本地草稿，当前编辑画面保持不变";
+    notice.value = "数据库草稿已清除，当前编辑画面保持不变";
   } catch (error) {
     notice.value = "清除草稿失败：" + (error instanceof Error ? error.message : String(error));
+  } finally {
+    draftActionInProgress = false;
   }
 }
 
@@ -654,9 +679,9 @@ async function importJson(event: Event) {
   if (!file) return;
   try {
     if (file.size > maxFileSize) throw new RangeError("JSON 文件不能超过 2 MiB");
-    const migratedFrom = editor.loadDocument(JSON.parse(await file.text()) as unknown);
-    autoSaveSession = null;
-    autoSaveEnabled.value = false;
+    const parsed = JSON.parse(await file.text()) as unknown;
+    await pauseAutoSave();
+    const migratedFrom = editor.loadDocument(parsed);
     preview.value = null;
     refresh();
     notice.value = migratedFrom
