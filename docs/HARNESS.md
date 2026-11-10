@@ -360,3 +360,21 @@ pnpm run dev:vue
 维护者在提交 `bcfad90` 的 77/77 单元测试、2/2 E2E 和 Vue/React Web 双构建复验结果之后，进一步回复「旋转光标正常」，确认本批新增环形旋转箭头鼠标样式的 Vue/React 浏览器交互符合要求，涵盖旋转点悬停、按住拖动、松开及取消恢复。以上为**维护者人工 UI 验收反馈**，不是 Agent 在浏览器独立复测。
 
 据此，PR #8 的缩放/旋转和旋转光标两类交互验收均记录为维护者确认通过。此前 Windows `ready` 日志仍缺少 `nest build` 的最终退出状态；本次验收文档补充后未重新执行 `docs:check`。不扩展为 Docker/Tauri 或真实工业现场安全验收，也不构成合并 PR 的授权。
+
+## 2026-11-10 · 第七批八方向缩放开发分支（待验收）
+
+在已完成维护者上一轮 `main` 验收（77/77 单元测试、2/2 E2E、React/Vue/NestJS 构建确认）的基础上，从合并提交 `cc442bf` 新建 `feat/v0.2-eight-direction-resize`。新分支新增 **7 项** Core 回归用例（`transform-gesture.test.ts` 从 12 扩为 19），整仓单测源码预计 **84 项**。尚未在本次分支实际运行 `pnpm run ready`、类型检查、Vitest/E2E、Web/Server 构建或浏览器交互，不将前一批验收结果当作本批通过。
+
+维护者 Windows 验证：
+
+```powershell
+git fetch origin
+git switch feat/v0.2-eight-direction-resize
+pnpm run ready
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+人工验收：Vue/React 单选均出现八个方形缩放手柄；四角双轴缩放无回归，上/下仅改高度、左/右仅改宽度；图元旋转 30°/90° 后拖动边中点，对侧锚点稳定，沿切线拖动不改变另一轴；50%/200% 缩放坐标准确；非法尺寸/越界不污染预览或历史；松开一次撤销/重做；高精度小数零位移保持；跨 Vue/React JSON 双向往返保留坐标、Tag；原旋转箭头、网格吸附、只读 Runtime 均不回归。
+
+独立数学等价算例曾检查 1007 个基础/抽样场景且未发现超过 0.015 单位的锚点漂移，但**不等于运行本仓库中的源码测试**；仍须维护者 Windows 质量链与浏览器验收。工业现场写入、Docker/Tauri、工程发布与持久化不在本批。
