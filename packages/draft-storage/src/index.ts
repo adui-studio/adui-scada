@@ -80,8 +80,9 @@ export class DexieDraftRepository implements DraftRepository {
   }
 
   private notify(projectId: string, revision: number | null): void {
+    // 广播只通知其他数据库实例；当前页面由操作结果更新状态，
+    // 避免自己的写入反过来触发“外部冲突”提示。
     this.channel?.postMessage({ projectId, revision });
-    for (const listener of this.listeners.get(projectId) ?? []) listener(revision);
   }
 
   async get(projectId: string): Promise<DraftRecord | null> {
