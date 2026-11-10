@@ -167,3 +167,12 @@
 - `packages/core/test/local-draft.test.ts`：10 项单测覆盖写入读取、项目隔离、Tag/组合保真、损坏数据、版本、容量和存储异常。
 - `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：手动保存/恢复/清除、二次确认、工程切换检测及中文状态。
 - [ADR-0019](adr/0019-local-draft-persistence.md)：本地临时保存、Origin 隔离、风险和未实现的自动保存/正式发布边界。
+
+## V0.2 第十二批：安全自动保存
+
+- `packages/core/src/local-draft.ts`：新增 `LocalDraftAutoSaveSession`，共享工程脏状态、存储原始记录冲突检测、自动写入及人工保存后的基线同步。
+- `packages/core/src/index.ts`：对外导出自动保存会话 API。
+- `packages/core/test/local-draft-autosave.test.ts`：新增 12 项未改不写、连续保存、撤销、Tag/组合保真、外部修改/删除、损坏记录、跨工程、写入失败及人工保存基线测试。
+- `apps/web-react/src/studio/StudioPage.tsx`：React 默认关闭、开启/暂停、1000 ms 防抖、跨标签页事件、恢复/清除/导入自动暂停。
+- `apps/web-vue/src/studio/StudioPage.vue`：Vue 等价的保存定时与存储事件处理，保留已有手动操作入口。
+- [ADR-0020](adr/0020-safe-local-autosave.md)：自动保存安全边界、竞态风险和未实现能力。

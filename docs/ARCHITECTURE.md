@@ -173,3 +173,7 @@ Vue/React 的 SVG 编辑层负责显示控制点、捕获 Pointer 和提供预�
 ## V0.2 本地草稿持久化与恢复（ADR-0019）
 
 共享 `packages/core/src/local-draft.ts` 只依赖已验证的 `ScadaDocument 0.2.0` 和注入式 `LocalDraftStorage` 接口，不直接依赖 DOM 或前端框架。Vue/React Studio 分别适配 `window.localStorage`，提供同样的手动保存、恢复和清除入口。记录按 `projectId` 与浏览器 Origin 隔离；恢复操作先验证记录，再调用 `DocumentEditor.loadDocument` 完成原子替换。只读 Runtime、NestJS 和工业网关均不依赖本地草稿。浏览器本地草稿不是加密存储或正式工程备份，见 [ADR-0019](adr/0019-local-draft-persistence.md)。
+
+## V0.2 本地草稿按需自动保存（ADR-0020）
+
+继续使用 `@adui/scada-core` 的共享 `LocalDraftStorage`/Schema 校验，在 `local-draft.ts` 封装框架无关的 `LocalDraftAutoSaveSession`：工程内容脏状态判定、原始存储记录比对与拒绝冲突覆盖。Vue/React 各自用生命周期实现相同的 1000 ms 延迟写入、显式开启/暂停与浏览器 `storage` 事件停写。恢复仍显式确认，`Runtime`、NestJS、工业网关及设备写入完全不参与。浏览器无法提供原子多标签页事务，属于尽力冲突检测而非严格排他锁。详见 [ADR-0020](adr/0020-safe-local-autosave.md)。
