@@ -181,3 +181,7 @@ Vue/React 的 SVG 编辑层负责显示控制点、捕获 Pointer 和提供预�
 ## V0.2 浏览器工程 IndexedDB 事务仓储（ADR-0021）
 
 在 Core 的框架无关编辑器与真实浏览器之间加入 `@adui/scada-draft-storage`，由 `DexieDraftRepository` 独占浏览器数据库适配与迁移，底层采用 IndexedDB、Dexie.js 和单事务修订号比较。Core 新增仅含 TypeScript 的 `DraftRepository` / `DraftAutoSaveSession` 异步接口，Vue 和 React 都消费该契约，跨框架不复制数据库规则。旧 `localStorage` 仅作一次性历史数据迁移来源。通过 `BroadcastChannel` 加速同 Origin 标签页状态通知，版本一致性由数据库事务负责。工业只读 Runtime、NestJS、Gateway 和工程发布边界不变。参考 [ADR-0021](adr/0021-indexeddb-dexie-storage.md)。
+
+## V0.2 多页面 Studio 编辑作用域（ADR-0022）
+
+共享 Core 负责当前页面会话状态、页面编辑命令与历史上下文。框架适配层只实现页面导航与指针生命周期，不复制文档规则；拖动吸附与 SVG 预览通过可选 `pageId` 明确作用于当前页，旧单页面调用默认第一页兼容。工程 JSON/IndexedDB 仍保存整份 `ScadaDocument 0.2.0`，不包含 `activePageId`；页面切换不产生保存写入。新增页面、重命名和删除按现有自动保存流程提交，删除最后一页被拒绝。详见 [ADR-0022](adr/0022-multi-page-editor-scope.md)。
