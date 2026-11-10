@@ -109,6 +109,11 @@ export default function StudioPage() {
 
   if (!page) throw new Error("工程文档不包含页面");
 
+  const hasGroupedSelection = page.nodes.some(
+    (node) => node.groupId !== undefined && state.selectedIds.includes(node.id),
+  );
+  const canGroup = state.selectedIds.length >= 2 && !hasGroupedSelection;
+
   function refresh() {
     const next = editor.snapshot();
     setState(next);
@@ -555,7 +560,10 @@ export default function StudioPage() {
               onClick={(event) => select(node.id, event.shiftKey)}
             >
               <span>{node.id}</span>
-              <small>{node.type}</small>
+              <small>
+                {node.type}
+                {node.groupId ? ` · 组合 ${node.groupId}` : ""}
+              </small>
             </button>
           ))}
         </aside>
@@ -766,6 +774,22 @@ export default function StudioPage() {
         <aside className="studio-panel" aria-label="图元属性">
           <h2>属性 · 已选 {state.selectedIds.length}</h2>
           <div className="studio-toolbox">
+            <div className="studio-tool-group" aria-label="图元组合">
+              <button
+                type="button"
+                disabled={!canGroup}
+                onClick={() => apply(() => editor.groupSelected(), "已组合所选图元，可撤销")}
+              >
+                组合所选
+              </button>
+              <button
+                type="button"
+                disabled={!hasGroupedSelection}
+                onClick={() => apply(() => editor.ungroupSelected(), "已解组，可撤销")}
+              >
+                解组
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => apply(() => editor.deleteSelected(), "已删除图元，可撤销")}
@@ -803,7 +827,7 @@ export default function StudioPage() {
                   type="button"
                   key={mode}
                   onClick={() => align(mode)}
-                  disabled={state.selectedIds.length < 2}
+                  disabled={state.selectedIds.length < 2 || hasGroupedSelection}
                 >
                   {label}
                 </button>
@@ -853,7 +877,7 @@ export default function StudioPage() {
                   →
                 </button>
               </div>
-              {selected.type === "label" && (
+              {selected.type === "label" && state.selectedIds.length === 1 && (
                 <label className="studio-field">
                   显示文案
                   <input
