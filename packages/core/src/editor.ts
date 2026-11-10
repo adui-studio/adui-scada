@@ -437,6 +437,9 @@ export class DocumentEditor {
    * 若整组几何范围超过目标画布则拒绝，不自动缩放或拆散组合。
    */
   copySelectedToPage(targetPageId: string): string[] {
+    if (typeof targetPageId !== "string" || targetPageId.length === 0) {
+      throw new TypeError("目标页面 ID 必须为非空字符串");
+    }
     const source = firstPage(this.current, this.activePageId);
     const target = firstPage(this.current, targetPageId);
     if (source.id === target.id) {
