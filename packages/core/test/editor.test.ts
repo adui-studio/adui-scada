@@ -648,26 +648,30 @@ test("水箱 Tag 绑定可以清除、撤销和重做", () => {
   e.select("tank");
   const before = e.snapshot().document;
   expect(e.setSelectedBinding("level", null)).toBe(true);
-  expect(e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings).toEqual(
-    {},
-  );
+  expect(
+    Object.keys(
+      e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings ?? {},
+    ),
+  ).toEqual([]);
   expect(e.undo()).toBe(true);
   expect(e.snapshot().document).toEqual(before);
   expect(e.redo()).toBe(true);
-  expect(e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings).toEqual(
-    {},
-  );
+  expect(
+    Object.keys(
+      e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings ?? {},
+    ),
+  ).toEqual([]);
 });
 
-test("文本图元绑定模拟流量后工程 JSON 往返保持一致", () => {
+test("新增文本图元绑定模拟流量后工程 JSON 往返保持一致", () => {
   const e = editor();
-  e.select("title");
+  expect(e.addNode("label")).toBe("label-1");
   expect(e.setSelectedBinding("value", "water.flow")).toBe(true);
   const after = e.snapshot().document;
   const loaded = editor();
   loaded.loadDocument(JSON.parse(JSON.stringify(after)));
   expect(loaded.snapshot().document).toEqual(after);
-  expect(after.pages[0]?.nodes.find((node) => node.id === "title")?.bindings.value?.tagId).toBe(
+  expect(after.pages[0]?.nodes.find((node) => node.id === "label-1")?.bindings.value?.tagId).toBe(
     "water.flow",
   );
 });
