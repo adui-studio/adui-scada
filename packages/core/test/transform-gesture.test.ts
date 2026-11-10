@@ -38,6 +38,13 @@ test("右下角缩放保持左上角固定", () => {
   expect(changed.height).toBe(original.height - 5);
 });
 
+test("手柄单击不应改变原有高精度小数属性", () => {
+  const transform = { x: 10.123, y: 20.456, width: 36.789, height: 50.123, rotation: 12.345 };
+  expect(resolveResizeTransform(transform, "nw", 0, 0)).toEqual(transform);
+  expect(resolveRotationTransform(transform, 28, 0, 28, 0)).toEqual(transform);
+  expect(resolveRotationTransform(transform, 28, 0, 28, 0, true)).toEqual(transform);
+});
+
 test("旋转图元的四角缩放按局部坐标计算并保持对角锚点", () => {
   const transform = { x: 100, y: 100, width: 100, height: 80, rotation: 90 };
   const changed = resolveResizeTransform(transform, "se", 0, 20);
@@ -102,9 +109,10 @@ test("拖拽缩放预览不改变工程，松开后仅生成一条可撤销命�
   expect(editor.snapshot().canUndo).toBe(false);
   expect(editor.updateSelectedTransform(patch)).toBe(true);
   expect(editor.snapshot().document).toEqual(preview);
-  expect(editor.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level?.tagId).toBe(
-    "water.level",
-  );
+  const updatedTank = editor
+    .snapshot()
+    .document.pages[0]?.nodes.find((node) => node.id === "tank");
+  expect(updatedTank?.bindings.level?.tagId).toBe("water.level");
   expect(editor.undo()).toBe(true);
   expect(editor.snapshot().document).toEqual(before);
   expect(editor.redo()).toBe(true);

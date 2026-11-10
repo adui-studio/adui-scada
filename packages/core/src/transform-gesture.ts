@@ -74,7 +74,7 @@ export function resolveRotationTransform(
   ] as const) {
     finite(value, label);
   }
-  if (startX === currentX && startY === currentY && !snapTo15Degrees) {
+  if (startX === currentX && startY === currentY) {
     return { ...transform };
   }
   const centerX = transform.x + transform.width / 2;
