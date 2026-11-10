@@ -115,7 +115,7 @@ function snapAxis(
 }
 
 /**
- * 根据第一页中的非选中图元和画布网格，计算整组图元的预览位移。
+ * 根据指定页面中的非选中图元和画布网格，计算整组图元的预览位移。
  * 拖动预览与松开提交都应使用本函数；不会产生撤销历史或改变 Tag 绑定。
  */
 export function resolveDragSnap(
@@ -124,6 +124,7 @@ export function resolveDragSnap(
   dx: number,
   dy: number,
   options: DragSnapOptions,
+  pageId?: string,
 ): DragSnapResult {
   if (
     !options ||
@@ -142,8 +143,9 @@ export function resolveDragSnap(
     throw new RangeError("吸附距离必须是 0～32 之间的有限数");
   }
 
-  const page = parseScadaDocument(document).pages[0];
-  if (!page) throw new RangeError("工程文档不包含页面");
+  const pages = parseScadaDocument(document).pages;
+  const page = pageId === undefined ? pages[0] : pages.find((item) => item.id === pageId);
+  if (!page) throw new RangeError(pageId === undefined ? "工程文档不包含页面" : "未找到页面：" + pageId);
   const selected = expandGroupedSelection(page.nodes, selectedIds);
   const moving = page.nodes.filter((node) => selected.has(node.id));
   if (moving.length === 0) {
