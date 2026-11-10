@@ -90,12 +90,7 @@ test("吸附不得使图元超出移动命令允许的画布范围", () => {
     nodeEnabled: true,
   });
   expect(result.dx).toBeLessThanOrEqual(50);
-  const moved = withNodesTranslated(
-    waterTreatmentDemoDocument,
-    ["flow"],
-    result.dx,
-    result.dy,
-  );
+  const moved = withNodesTranslated(waterTreatmentDemoDocument, ["flow"], result.dx, result.dy);
   const node = moved.pages[0]?.nodes.find((item) => item.id === "flow");
   expect(node?.transform.x).toBeLessThanOrEqual(680);
   expect(node?.transform.x).toBeGreaterThanOrEqual(0);
@@ -117,12 +112,12 @@ test("不合法坐标、网格参数、重复图元和未知图元均会被拒�
       tolerance: -1,
     }),
   ).toThrow(/吸附距离/);
-  expect(() =>
-    resolveDragSnap(waterTreatmentDemoDocument, ["tank", "tank"], 3, 0, noSnap),
-  ).toThrow(/重复图元/);
-  expect(() =>
-    resolveDragSnap(waterTreatmentDemoDocument, ["missing"], 3, 0, noSnap),
-  ).toThrow(/不存在/);
+  expect(() => resolveDragSnap(waterTreatmentDemoDocument, ["tank", "tank"], 3, 0, noSnap)).toThrow(
+    /重复图元/,
+  );
+  expect(() => resolveDragSnap(waterTreatmentDemoDocument, ["missing"], 3, 0, noSnap)).toThrow(
+    /不存在/,
+  );
 });
 
 test("没有选中图元时不移动也不显示辅助线", () => {
