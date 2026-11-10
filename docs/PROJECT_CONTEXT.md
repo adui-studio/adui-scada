@@ -218,3 +218,9 @@ PR #10 的自动化质量链可标记为通过；React/Vue 的 Shift 缩放、�
 PR #11 已合并，最新 `main` 为 `3f20f10`，维护者确认该版 `pnpm run ready` **106/106 单测、2/2 E2E、零警告、退出码 0**，本地工作区干净。新分支 `feat/v0.2-schema-migration` 将工程 Schema 升至 `0.2.0`，仅允许合法 `0.1.0` 草稿通过共享 `migrateScadaDocument` 迁移，拒绝未知版本/结构字段，并保留已有 `groupId` 和 Tag 绑定。Editor 导入失败保持原状态；Vue/React 使用相同中文升级提示。
 
 新增 **12 项**单测源码，整仓预计 **118 项**；本批**尚未执行完整质量链或双框架人工验收**。功能不改变 Runtime 工业只读边界、网关、后端持久化及工程发布。应在 Windows 验收通过后再讨论合并；Draft PR 默认分配 `@adui-dev`。
+
+## 2026-11-10 · 第十批首次测试发现旧 SVG Fixture 并已修复
+
+维护者 Windows `pnpm run ready` 在 Vitest 阶段失败：**115 项通过、1 个 SVG 测试文件加载失败，3 项 SVG 用例未运行**。原因是 `svg.test.ts` 测试 Fixture 固定写入 `schemaVersion: "0.1.0"`，与本批当前 Parser 仅接受 `0.2.0` 的契约冲突。依赖/配置/中文文案、133 文件格式、52 文件零警告 Lint、React/Vue/NestJS 类型检查已通过；E2E、文档检查和构建因早停未执行。
+
+已提交测试 Fixture 最小修复 `a6e94a5`，使用共享 `SCADA_SCHEMA_VERSION`，**未改生产校验规则**。等待修复后完整质量链与浏览器验收，不将此前 115 项通过当作 118 项全部通过。PR #12 保持 Draft，仍分配 `@adui-dev`。

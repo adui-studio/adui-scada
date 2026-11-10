@@ -489,3 +489,9 @@ pnpm run dev:vue
 人工验收：React、Vue 分别导入无组合及含合法 `groupId` 的 `0.1.0` 草稿，确认提示由旧版升级、导出 `0.2.0` 并跨框架双向往返保留页面、节点、位置、Tag 和组合；当前 `0.2.0` 导入仅显示常规提示。未知/未来版本、未知结构字段、非法组合和不安全 JSON 被拒绝，原文档、选择和撤销记录不改变。确认模拟 Runtime 只使用当前 Schema，不提供旧版自动升级；原 SVG、缩放、吸附、组合与只读模拟数据无回归。
 
 工业现场、Docker/Tauri、正式资源包/工程发布及所有历史旧客户端的二进制兼容测试不在本批。文档本身尚未经本批真实 `docs:check`。
+
+## 2026-11-10 · 第十批首次 Windows ready：SVG 测试数据版本失配及修复
+
+维护者执行 `pnpm run ready` 并提供原始日志：依赖 Catalog（9 清单、26 项）、共享配置、根环境与 LF、中文文案（73 个文件）、**133 个文件格式检查**、**52 个文件零警告静态检查**以及 React/Vue/NestJS TypeScript 类型检查通过。Vitest 阶段 **7 个测试文件成功，115 项测试通过**；`packages/core/test/svg.test.ts` 在模块加载时因测试工程仍写死 `schemaVersion: "0.1.0"`，被新 `parseScadaDocument` 按预期拒绝（预期 `0.2.0`），导致该文件 **3 项测试均未执行**，完整 `ready` 退出码为 **1**。因命令链在单测阶段终止，**E2E、文档检查、React/Vue 与 NestJS 构建没有执行**。
+
+已在当前特性分支提交修复 `a6e94a5`：仅更新 `packages/core/test/svg.test.ts`，导入 `SCADA_SCHEMA_VERSION` 并让测试 Fixture 使用当前 Schema 常量。生产解析、迁移和运行时代码保持不变，未为通过测试而放宽版本校验。**修复后尚未重新执行 `pnpm run ready`**，预计 118 项单测仍须维护者复验并给出最终退出码。
