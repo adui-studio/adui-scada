@@ -172,7 +172,9 @@ export function resolveDragSnap(
     top: Math.min(...bounds.map((item) => item.top)),
     bottom: Math.max(...bounds.map((item) => item.bottom)),
   };
-  const others = page.nodes.filter((node) => !selected.has(node.id)).map(nodeBounds);
+  const others = page.nodes
+    .filter((node) => !selected.has(node.id) && studioNodeVisible(node))
+    .map(nodeBounds);
   const config: Required<DragSnapOptions> = {
     gridEnabled: options.gridEnabled,
     nodeEnabled: options.nodeEnabled,
