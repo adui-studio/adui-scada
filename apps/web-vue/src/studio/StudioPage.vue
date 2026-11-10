@@ -185,10 +185,12 @@ const displayDocument = computed(() => {
         state.value.activePageId,
       );
 });
-const displayNodes = computed(
-  () =>
-    (displayDocument.value.pages.find((item) => item.id === state.value.activePageId)?.nodes ?? []).filter(studioNodeVisible),
-);
+const displayNodes = computed(() => {
+  const nodes = displayDocument.value.pages.find(
+    (item) => item.id === state.value.activePageId,
+  )?.nodes;
+  return (nodes ?? []).filter(studioNodeVisible);
+});
 const imageUrl = computed(() =>
   svgDataUrl(displayDocument.value, previewTags, state.value.activePageId),
 );
@@ -619,7 +621,12 @@ function finishDrag(event: PointerEvent) {
 }
 
 function beginGeometry(event: PointerEvent, handle: ResizeHandle | "rotate") {
-  if (event.button !== 0 || state.value.selectedIds.length !== 1 || !selected.value || studioNodeLocked(selected.value)) return;
+  if (
+    event.button !== 0 ||
+    state.value.selectedIds.length !== 1 ||
+    !selected.value ||
+    studioNodeLocked(selected.value)
+  ) return;
   const point = canvasPoint(event.clientX, event.clientY);
   if (!point) return;
   activeGeometry = {
@@ -994,8 +1001,12 @@ async function importJson(event: Event) {
           :data-locked="studioNodeLocked(node)"
           @click="selectNode(node.id, $event.shiftKey)"
         >
-          <span>{{ node.id }}</span
-          ><small>{{ node.type }}{{ node.groupId ? ` · 组合 ${node.groupId}` : "" }}{{ studioNodeLocked(node) ? " · 已锁定" : "" }}{{ !studioNodeVisible(node) ? " · 已隐藏" : "" }}</small>
+          <span>{{ node.id }}</span>
+          <small>
+            {{ node.type }}{{ node.groupId ? ` · 组合 ${node.groupId}` : "" }}
+            {{ studioNodeLocked(node) ? " · 已锁定" : "" }}
+            {{ !studioNodeVisible(node) ? " · 已隐藏" : "" }}
+          </small>
         </button>
       </aside>
       <section class="studio-stage" aria-label="组态画布">
@@ -1088,7 +1099,9 @@ async function importJson(event: Event) {
               @keydown.enter.prevent="selectNode(node.id, $event.shiftKey)"
               @keydown.space.prevent="selectNode(node.id, $event.shiftKey)"
             />
-            <template v-if="state.selectedIds.length === 1 && state.selectedId === node.id && !studioNodeLocked(node)">
+            <template
+              v-if="state.selectedIds.length === 1 && state.selectedId === node.id && !studioNodeLocked(node)"
+            >
               <rect
                 v-for="handle in RESIZE_HANDLES"
                 :key="handle"
@@ -1154,16 +1167,32 @@ async function importJson(event: Event) {
         <h2>属性 · 已选 {{ state.selectedIds.length }}</h2>
         <div class="studio-toolbox">
           <div class="studio-tool-group" aria-label="图层锁定与可见性">
-            <button type="button" :disabled="state.selectedIds.length === 0" @click="changeSelectedLocked(true)">
+            <button
+              type="button"
+              :disabled="state.selectedIds.length === 0"
+              @click="changeSelectedLocked(true)"
+            >
               锁定所选
             </button>
-            <button type="button" :disabled="state.selectedIds.length === 0" @click="changeSelectedLocked(false)">
+            <button
+              type="button"
+              :disabled="state.selectedIds.length === 0"
+              @click="changeSelectedLocked(false)"
+            >
               解锁所选
             </button>
-            <button type="button" :disabled="state.selectedIds.length === 0 || hasLockedSelection" @click="changeSelectedVisible(false)">
+            <button
+              type="button"
+              :disabled="state.selectedIds.length === 0 || hasLockedSelection"
+              @click="changeSelectedVisible(false)"
+            >
               隐藏所选
             </button>
-            <button type="button" :disabled="state.selectedIds.length === 0 || hasLockedSelection" @click="changeSelectedVisible(true)">
+            <button
+              type="button"
+              :disabled="state.selectedIds.length === 0 || hasLockedSelection"
+              @click="changeSelectedVisible(true)"
+            >
               显示所选
             </button>
           </div>
@@ -1278,7 +1307,13 @@ async function importJson(event: Event) {
           >
             <label v-for="[key, label] in geometryFields" :key="key">
               {{ label }}
-              <input type="number" :name="key" step="any" :value="selected.transform[key]" :disabled="studioNodeLocked(selected)" />
+              <input
+                type="number"
+                :name="key"
+                step="any"
+                :value="selected.transform[key]"
+                :disabled="studioNodeLocked(selected)"
+              />
             </label>
             <button type="submit" :disabled="studioNodeLocked(selected)">应用几何属性</button>
           </form>
@@ -1296,7 +1331,9 @@ async function importJson(event: Event) {
           >
             显示文案
             <input v-model="labelDraft" maxlength="256" :disabled="studioNodeLocked(selected)" />
-            <button type="button" :disabled="studioNodeLocked(selected)" @click="changeLabel">应用文案</button>
+            <button type="button" :disabled="studioNodeLocked(selected)" @click="changeLabel">
+              应用文案
+            </button>
           </label>
           <h3>Tag 绑定（模拟数据）</h3>
           <label v-if="bindingSlot" class="studio-field">
