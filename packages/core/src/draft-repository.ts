@@ -72,7 +72,7 @@ export class DraftAutoSaveSession {
   }
 
   /** 依次执行异步写入，避免较慢的事务覆盖较新的同会话编辑。 */
-  saveIfDirty(source: unknown): Promise<DraftRecord | null> {
+  async saveIfDirty(source: unknown): Promise<DraftRecord | null> {
     const document = this.checked(source);
     const task = this.pending.then(async () => {
       if (this.stopped || JSON.stringify(document) === this.baseline) return null;

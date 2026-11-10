@@ -3,7 +3,7 @@ import { indexedDB, IDBKeyRange } from "fake-indexeddb";
 import { parseScadaDocument, waterTreatmentDemoDocument } from "@adui/scada-core";
 import { localDraftKey, saveLocalDraft } from "@adui/scada-core";
 import type { LocalDraftStorage } from "@adui/scada-core";
-import { DexieDraftRepository } from "../src/index.ts";
+import { DexieDraftRepository, InvalidLegacyDraftError } from "../src/index.ts";
 
 let nextDatabase = 0;
 class MemoryStorage implements LocalDraftStorage {
@@ -127,6 +127,7 @@ test("历史 JSON 已损坏时迁移失败，不删除原始草稿", async () =>
   old.setItem(key, "{损坏");
   const db = repository(undefined, old);
   try {
+    await expect(db.get("water-demo")).rejects.toThrow(InvalidLegacyDraftError);
     await expect(db.get("water-demo")).rejects.toThrow(/JSON 已损坏/);
     expect(old.getItem(key)).toBe("{损坏");
   } finally {
@@ -192,11 +193,38 @@ test("损坏的历史草稿可以由用户明确清除，且不会绕过数据�
   old.setItem(key, "{损坏");
   const db = repository(undefined, old);
   try {
+    await expect(db.get("water-demo")).rejects.toThrow(InvalidLegacyDraftError);
     await expect(db.get("water-demo")).rejects.toThrow(/JSON 已损坏/);
     expect(old.getItem(key)).toBe("{损坏");
     await db.remove("water-demo", null);
     expect(old.getItem(key)).toBeNull();
     expect(await db.get("water-demo")).toBeNull();
+  } finally {
+    db.close();
+  }
+});
+
+test("旧存储权限故障不能误判为用户可清理的损坏草稿", async () => {
+  const denied: LocalDraftStorage = {
+    getItem: () => {
+      throw new Error("模拟读取权限被拒绝");
+    },
+    setItem: () => {
+      throw new Error("模拟写入权限被拒绝");
+    },
+    removeItem: () => {
+      throw new Error("模拟删除权限被拒绝");
+    },
+  };
+  const db = repository(undefined, denied);
+  try {
+    const error: unknown = await db.get("water-demo").then(
+      () => null,
+      (reason: unknown) => reason,
+    );
+    expect(error).toBeInstanceOf(TypeError);
+    expect(error).not.toBeInstanceOf(InvalidLegacyDraftError);
+    expect(error).toHaveProperty("message", expect.stringMatching(/读取失败/));
   } finally {
     db.close();
   }

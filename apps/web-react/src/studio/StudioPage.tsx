@@ -7,7 +7,7 @@ import {
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
 } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
-import { DexieDraftRepository } from "@adui/scada-draft-storage";
+import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
 import {
   DEFAULT_GRID_SIZE,
   DocumentEditor,
@@ -144,8 +144,8 @@ export default function StudioPage() {
       setHasSavedDraft((await drafts.get(projectId)) !== null);
       return "";
     } catch (error) {
-      setHasSavedDraft(true);
-      return "；本地草稿检测异常，可手动清除：" + (error instanceof Error ? error.message : String(error));
+      setHasSavedDraft(error instanceof InvalidLegacyDraftError);
+      return "；本地草稿检测失败：" + (error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -164,10 +164,9 @@ export default function StudioPage() {
       },
       (error: unknown) => {
         if (!active) return;
-        setHasSavedDraft(true);
+        setHasSavedDraft(error instanceof InvalidLegacyDraftError);
         setNotice(
-          "本地草稿读取异常，可确认清除损坏记录：" +
-            (error instanceof Error ? error.message : String(error)),
+          "本地草稿读取失败：" + (error instanceof Error ? error.message : String(error)),
         );
       },
     );
@@ -640,9 +639,9 @@ export default function StudioPage() {
       let current = null;
       try {
         current = await drafts.get(state.document.projectId);
-      } catch {
-        // 损坏的历史 localStorage 草稿可在用户确认后清理；
-        // 若 IndexedDB 中已有记录，修订号比较仍会拒绝误删。
+      } catch (error) {
+        if (!(error instanceof InvalidLegacyDraftError)) throw error;
+        // 已经获得用户确认，允许清理损坏旧草稿；事务版本核对继续保护数据库。
       }
       await drafts.remove(state.document.projectId, current?.revision ?? null);
       setHasSavedDraft(false);

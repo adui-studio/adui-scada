@@ -7,6 +7,14 @@ interface MigrationMarker {
   projectId: string;
 }
 
+/** 仅标记历史 localStorage 数据损坏或不兼容，不掩盖数据库访问异常。 */
+export class InvalidLegacyDraftError extends TypeError {
+  constructor(reason: string) {
+    super(`历史本地草稿无法迁移：${reason}`);
+    this.name = "InvalidLegacyDraftError";
+  }
+}
+
 interface RepositoryOptions {
   name?: string;
   legacyStorage?: LocalDraftStorage;
@@ -92,7 +100,14 @@ export class DexieDraftRepository implements DraftRepository {
     if (!this.legacyStorage || (await this.migrations.get(projectId))) return null;
 
     // 先完整验证历史 localStorage 记录，再在事务内迁入并留下迁移标记。
-    const legacy = readLocalDraft(this.legacyStorage, projectId);
+    let legacy;
+    try {
+      legacy = readLocalDraft(this.legacyStorage, projectId);
+    } catch (error) {
+      // 浏览器存储权限故障不应被视为草稿损坏，更不能自动放行删除。
+      if (error instanceof Error && error.message.startsWith("本地草稿读取失败")) throw error;
+      throw new InvalidLegacyDraftError(error instanceof Error ? error.message : String(error));
+    }
     if (!legacy) return null;
     const migrated = await this.database.transaction(
       "rw",

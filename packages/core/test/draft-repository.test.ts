@@ -101,6 +101,15 @@ test("人工保存后可以接收数据库修订号并继续后续编辑", async
   expect((await session.saveIfDirty(edited(2)))?.revision).toBe(2);
 });
 
+test("自动保存非法输入统一返回拒绝的 Promise", async () => {
+  const repo = new MemoryRepository();
+  const session = await DraftAutoSaveSession.open(repo, document());
+  const invalid = { ...document(), projectId: "another-project" };
+  const pending = session.saveIfDirty(invalid);
+  await expect(pending).rejects.toThrow(/工程 ID 不一致/);
+  expect(repo.writes).toBe(0);
+});
+
 test("禁止自动保存跨工程数据或接受跨工程保存结果", async () => {
   const repo = new MemoryRepository();
   const session = await DraftAutoSaveSession.open(repo, document());
