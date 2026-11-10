@@ -1305,7 +1305,7 @@ test("切换页面不丢失剪贴板，粘贴仅改变当前目标页面", () =>
   expect(e.snapshot().document.pages[1]?.nodes[0]?.id).toBe(ids[0]);
 });
 
-test("粘贴到较小画布时整体调整位置，不拆散组合", () => {
+test("粘贴到较小画布时整体调整位置并保留绑定", () => {
   const source = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
   source.pages.push({
     id: "smaller",
@@ -1377,7 +1377,7 @@ test("合法工程重新加载清空剪贴板，失败导入保留已有剪贴�
   e.copySelected();
   expect(e.snapshot().hasClipboard).toBe(true);
   const before = e.snapshot();
-  expect(() => e.loadDocument({ invalid: true })).toThrow(/文档/);
+  expect(() => e.loadDocument({ invalid: true })).toThrow(/工程版本/);
   expect(e.snapshot()).toEqual(before);
   e.loadDocument(JSON.parse(JSON.stringify(before.document)));
   expect(e.snapshot().hasClipboard).toBe(false);
