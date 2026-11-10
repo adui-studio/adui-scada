@@ -50,9 +50,15 @@ export function applyDemoChange(store: TagStore, raw: unknown): TagChange {
   return { kind: e.kind, values };
 }
 
-export function svgDataUrl(document: ScadaDocument, values: readonly TagValue[]): string {
-  const page = document.pages[0];
-  if (!page) throw new RangeError("工程文档不包含页面");
+export function svgDataUrl(
+  document: ScadaDocument,
+  values: readonly TagValue[],
+  pageId?: string,
+): string {
+  const page =
+    pageId === undefined ? document.pages[0] : document.pages.find((item) => item.id === pageId);
+  if (!page)
+    throw new RangeError(pageId === undefined ? "工程文档不包含页面" : "未找到页面：" + pageId);
   const snapshot = new Map(values.map((v) => [v.tagId, v]));
   return (
     "data:image/svg+xml;charset=utf-8," +

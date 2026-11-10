@@ -102,7 +102,7 @@ let activeMarquee: MarqueeState | null = null;
 let activeGeometry: GeometryDragState | null = null;
 
 const page = computed(() => {
-  const result = state.value.document.pages[0];
+  const result = state.value.document.pages.find((item) => item.id === state.value.activePageId);
   if (!result) throw new Error("工程文档不包含页面");
   return result;
 });
@@ -148,6 +148,7 @@ const snapResult = computed(() => {
     dragging.x - anchor.transform.x,
     dragging.y - anchor.transform.y,
     { gridEnabled: gridSnap.value, nodeEnabled: nodeSnap.value },
+    state.value.activePageId,
   );
 });
 const displayDocument = computed(() => {
@@ -155,10 +156,21 @@ const displayDocument = computed(() => {
   const movement = snapResult.value;
   return movement === null
     ? state.value.document
-    : withNodesTranslated(state.value.document, state.value.selectedIds, movement.dx, movement.dy);
+    : withNodesTranslated(
+        state.value.document,
+        state.value.selectedIds,
+        movement.dx,
+        movement.dy,
+        state.value.activePageId,
+      );
 });
-const displayNodes = computed(() => displayDocument.value.pages[0]?.nodes ?? []);
-const imageUrl = computed(() => svgDataUrl(displayDocument.value, previewTags));
+const displayNodes = computed(
+  () =>
+    displayDocument.value.pages.find((item) => item.id === state.value.activePageId)?.nodes ?? [],
+);
+const imageUrl = computed(() =>
+  svgDataUrl(displayDocument.value, previewTags, state.value.activePageId),
+);
 
 watch(
   () => [selected.value?.id, selected.value?.props.text],
@@ -341,6 +353,7 @@ function finishMarquee(event: PointerEvent) {
       current.startY,
       endX,
       endY,
+      state.value.activePageId,
     );
     editor.selectMany(ids, current.additive);
   }
@@ -373,6 +386,41 @@ function apply(action: () => unknown, message: string) {
   } catch (error) {
     notice.value = error instanceof Error ? error.message : String(error);
   }
+}
+
+function switchPage(pageId: string) {
+  try {
+    if (!editor.switchPage(pageId)) return;
+    cancelDrag();
+    zoom.value = 1;
+    refresh();
+    notice.value = "已切换编辑页面；页面切换不会修改工程草稿";
+  } catch (error) {
+    notice.value = error instanceof Error ? error.message : String(error);
+  }
+}
+
+function createPage() {
+  apply(() => {
+    editor.createPage();
+    cancelDrag();
+  }, "已创建空白页面，可撤销");
+}
+
+function renamePage() {
+  const name = window.prompt("请输入新的页面名称", page.value.name);
+  if (name === null) return;
+  apply(() => editor.renamePage(page.value.id, name), "页面已重命名，可撤销");
+}
+
+function deletePage() {
+  if (!window.confirm("确定删除页面“" + page.value.name + "”及其图元吗？可撤销。")) {
+    return;
+  }
+  apply(() => {
+    editor.deletePage(page.value.id);
+    cancelDrag();
+  }, "页面已删除，可撤销");
 }
 
 function changeTagBinding(event: Event) {
@@ -461,6 +509,7 @@ function finishDrag(event: PointerEvent) {
       x - drag.originX,
       y - drag.originY,
       { gridEnabled: gridSnap.value, nodeEnabled: nodeSnap.value },
+      snapshot.activePageId,
     );
     editor.moveBy(movement.dx, movement.dy);
     refresh();
@@ -498,7 +547,9 @@ function updateGeometry(event: PointerEvent) {
   const point = canvasPoint(event.clientX, event.clientY);
   if (!point) return;
   const snapshot = editor.snapshot();
-  const node = snapshot.document.pages[0]?.nodes.find((item) => item.id === gesture.nodeId);
+  const node = snapshot.document.pages
+    .find((item) => item.id === snapshot.activePageId)
+    ?.nodes.find((item) => item.id === gesture.nodeId);
   if (!node) return;
   try {
     const patch: NodeTransformPatch =
@@ -520,7 +571,7 @@ function updateGeometry(event: PointerEvent) {
             point.y - gesture.startY,
             event.shiftKey,
           );
-    const next = withNodeTransform(snapshot.document, gesture.nodeId, patch);
+    const next = withNodeTransform(snapshot.document, gesture.nodeId, patch, snapshot.activePageId);
     gesture.lastPatch = patch;
     geometryPreview.value = next;
   } catch {
@@ -765,6 +816,28 @@ async function importJson(event: Event) {
         · 已发现本地草稿，可点击「恢复草稿」确认加载
       </span>
     </p>
+    <div class="studio-page-bar" aria-label="工程页面管理">
+      <div class="studio-page-tabs" aria-label="工程页面">
+        <button
+          v-for="item in state.document.pages"
+          :key="item.id"
+          type="button"
+          :aria-current="item.id === state.activePageId ? 'page' : undefined"
+          @click="switchPage(item.id)"
+        >
+          {{ item.name }}
+        </button>
+      </div>
+      <div class="studio-page-actions">
+        <button type="button" :disabled="state.document.pages.length >= 100" @click="createPage">
+          + 新建页面
+        </button>
+        <button type="button" @click="renamePage">重命名</button>
+        <button type="button" :disabled="state.document.pages.length <= 1" @click="deletePage">
+          删除当前页
+        </button>
+      </div>
+    </div>
     <div class="studio-workspace">
       <aside class="studio-panel" aria-label="图元列表">
         <h2>图元 · {{ page.nodes.length }}</h2>

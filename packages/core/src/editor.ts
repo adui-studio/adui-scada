@@ -4,6 +4,7 @@ import { expandGroupedSelection } from "./grouping.ts";
 
 export interface EditorSnapshot {
   readonly document: ScadaDocument;
+  readonly activePageId: string;
   readonly selectedId: string | null;
   readonly selectedIds: readonly string[];
   readonly canUndo: boolean;
@@ -38,9 +39,12 @@ const DEFAULT_SYMBOLS: Record<EditableSymbol, { width: number; height: number }>
   label: { width: 200, height: 32 },
 };
 
-function firstPage(document: ScadaDocument) {
-  const page = document.pages[0];
-  if (!page) throw new RangeError("工程文档不包含页面");
+/** 省略页面 ID 时仍定位第一页，兼容现有单页面调用。 */
+function firstPage(document: ScadaDocument, pageId?: string) {
+  const page =
+    pageId === undefined ? document.pages[0] : document.pages.find((item) => item.id === pageId);
+  if (!page)
+    throw new RangeError(pageId === undefined ? "工程文档不包含页面" : "未找到页面：" + pageId);
   return page;
 }
 
@@ -58,11 +62,12 @@ export function withNodesTranslated(
   nodeIds: readonly string[],
   dx: number,
   dy: number,
+  pageId?: string,
 ): ScadaDocument {
   finite(dx, "水平位移");
   finite(dy, "垂直位移");
   const checked = parseScadaDocument(document);
-  const page = firstPage(checked);
+  const page = firstPage(checked, pageId);
   const selected = expandGroupedSelection(page.nodes, nodeIds);
   const nodes = page.nodes.filter((node) => selected.has(node.id));
   if (nodes.length === 0) return checked;
@@ -112,7 +117,7 @@ export function withNodesTranslated(
 }
 
 /**
- * 返回第一页中与拖动选框相交的图元 ID。
+ * 返回指定页面中与拖动选框相交的图元 ID。
  * 旋转图元采用保守的轴对齐外接矩形进行命中计算。
  * 选择状态和画布缩放由调用方管理，不写入工程 JSON。
  */
@@ -122,6 +127,7 @@ export function findNodesInRect(
   startY: number,
   endX: number,
   endY: number,
+  pageId?: string,
 ): string[] {
   for (const coordinate of [startX, startY, endX, endY]) finite(coordinate, "框选坐标");
   const left = Math.min(startX, endX);
@@ -129,7 +135,7 @@ export function findNodesInRect(
   const top = Math.min(startY, endY);
   const bottom = Math.max(startY, endY);
   if (right === left || bottom === top) return [];
-  const page = firstPage(parseScadaDocument(document));
+  const page = firstPage(parseScadaDocument(document), pageId);
 
   return page.nodes
     .filter((node) => {
@@ -157,13 +163,20 @@ export function withNodePosition(
   nodeId: string,
   x: number,
   y: number,
+  pageId?: string,
 ): ScadaDocument {
   finite(x, "图元 X 坐标");
   finite(y, "图元 Y 坐标");
-  const page = firstPage(document);
+  const page = firstPage(document, pageId);
   const node = page.nodes.find((candidate) => candidate.id === nodeId);
   if (!node) throw new RangeError(`未找到图元：${nodeId}`);
-  return withNodesTranslated(document, [nodeId], x - node.transform.x, y - node.transform.y);
+  return withNodesTranslated(
+    document,
+    [nodeId],
+    x - node.transform.x,
+    y - node.transform.y,
+    pageId,
+  );
 }
 
 /** 原子修改单个图元的几何属性；未旋转的布局矩形必须完整位于页面内。 */
@@ -171,6 +184,7 @@ export function withNodeTransform(
   document: ScadaDocument,
   nodeId: string,
   patch: NodeTransformPatch,
+  pageId?: string,
 ): ScadaDocument {
   if (patch === null || typeof patch !== "object" || Array.isArray(patch)) {
     throw new TypeError("图元几何属性必须为普通对象");
@@ -189,7 +203,7 @@ export function withNodeTransform(
   }
 
   const checked = parseScadaDocument(document);
-  const page = firstPage(checked);
+  const page = firstPage(checked, pageId);
   const node = page.nodes.find((candidate) => candidate.id === nodeId);
   if (!node) throw new RangeError(`未找到图元：${nodeId}`);
   if (node.groupId) throw new TypeError("已组合图元不能单独修改几何属性，请先解组");
@@ -240,22 +254,97 @@ function equalDocuments(left: ScadaDocument, right: ScadaDocument): boolean {
  */
 export class DocumentEditor {
   private current: ScadaDocument;
+  private activePageId: string;
   private selection: string[] = [];
-  private readonly past: ScadaDocument[] = [];
-  private readonly future: ScadaDocument[] = [];
+  private readonly past: { document: ScadaDocument; pageId: string; redoPageId: string }[] = [];
+  private readonly future: { document: ScadaDocument; pageId: string; redoPageId: string }[] = [];
 
   constructor(source: unknown) {
     this.current = parseScadaDocument(source);
+    this.activePageId = firstPage(this.current).id;
   }
 
   snapshot(): EditorSnapshot {
     return {
       document: parseScadaDocument(this.current),
+      activePageId: this.activePageId,
       selectedId: this.selection.at(-1) ?? null,
       selectedIds: [...this.selection],
       canUndo: this.past.length > 0,
       canRedo: this.future.length > 0,
     };
+  }
+
+  /** 切换页面只改变编辑会话的视图，不修改工程文件或撤销历史。 */
+  switchPage(pageId: string): boolean {
+    firstPage(this.current, pageId);
+    if (this.activePageId === pageId) return false;
+    this.activePageId = pageId;
+    this.selection = [];
+    return true;
+  }
+
+  /** 添加与当前页面尺寸一致的空白页，页面 ID 在工程内保持唯一。 */
+  createPage(name?: string): string {
+    if (this.current.pages.length >= 100) throw new RangeError("页面数量不能超过 100");
+    const used = new Set([
+      ...this.current.pages.map((page) => page.id),
+      ...this.current.pages.flatMap((page) =>
+        page.nodes.flatMap((node) => [node.id, ...(node.groupId ? [node.groupId] : [])]),
+      ),
+    ]);
+    let ordinal = 1;
+    while (used.has(`page-${ordinal}`)) ordinal++;
+    const id = `page-${ordinal}`;
+    const pageName = name ?? `新建页面 ${ordinal}`;
+    if (typeof pageName !== "string" || pageName.trim().length === 0) {
+      throw new TypeError("页面名称不能为空");
+    }
+    const size = { ...firstPage(this.current, this.activePageId).size };
+    this.commit(
+      parseScadaDocument({
+        ...this.current,
+        pages: [...this.current.pages, { id, name: pageName, size, nodes: [] }],
+      }),
+      id,
+    );
+    this.activePageId = id;
+    this.selection = [];
+    return id;
+  }
+
+  /** 重命名时保留页面 ID、图元、Tag 及顺序，可撤销。 */
+  renamePage(pageId: string, name: string): boolean {
+    firstPage(this.current, pageId);
+    if (typeof name !== "string" || name.trim().length === 0) {
+      throw new TypeError("页面名称不能为空");
+    }
+    return this.commit(
+      parseScadaDocument({
+        ...this.current,
+        pages: this.current.pages.map((page) =>
+          page.id === pageId ? { ...page, name: name.trim() } : page,
+        ),
+      }),
+    );
+  }
+
+  /** 至少保留一页；删除当前页后切换到相邻页，撤销可完整恢复内容。 */
+  deletePage(pageId: string): boolean {
+    const index = this.current.pages.findIndex((page) => page.id === pageId);
+    if (index < 0) throw new RangeError("未找到页面：" + pageId);
+    if (this.current.pages.length === 1) throw new TypeError("工程至少需要保留一个页面");
+    const pages = this.current.pages.filter((page) => page.id !== pageId);
+    const removedActive = this.activePageId === pageId;
+    const nextPageId = removedActive
+      ? pages[Math.min(index, pages.length - 1)]!.id
+      : this.activePageId;
+    this.commit(parseScadaDocument({ ...this.current, pages }), nextPageId);
+    if (removedActive) {
+      this.activePageId = nextPageId;
+      this.selection = [];
+    }
+    return true;
   }
 
   /** 点击组合成员时自动选中整个组合，Shift 再次点击则整体切换。 */
@@ -264,7 +353,7 @@ export class DocumentEditor {
       this.selection = [];
       return;
     }
-    const nodes = firstPage(this.current).nodes;
+    const nodes = firstPage(this.current, this.activePageId).nodes;
     const node = nodes.find((item) => item.id === nodeId);
     if (!node) throw new RangeError(`未找到图元：${nodeId}`);
     const ids = node.groupId
@@ -282,7 +371,7 @@ export class DocumentEditor {
 
   /** 框选与全选自动展开组合成员，选中状态不写入工程文档。 */
   selectMany(nodeIds: readonly string[], additive = false): void {
-    const nodes = firstPage(this.current).nodes;
+    const nodes = firstPage(this.current, this.activePageId).nodes;
     const uniqueInput = [...new Set(nodeIds)];
     const expanded = expandGroupedSelection(nodes, uniqueInput);
     const unique = [
@@ -296,7 +385,7 @@ export class DocumentEditor {
   /** 将两个以上未组合图元绑定为一个可持久化的平面组合。 */
   groupSelected(): string {
     if (this.selection.length < 2) throw new TypeError("请至少选择两个图元后组合");
-    const page = firstPage(this.current);
+    const page = firstPage(this.current, this.activePageId);
     const selected = new Set(this.selection);
     const nodes = page.nodes.filter((node) => selected.has(node.id));
     if (nodes.length !== selected.size) throw new RangeError("所选图元不存在");
@@ -316,25 +405,25 @@ export class DocumentEditor {
     while (used.has(`group-${index}`)) index++;
     const groupId = `group-${index}`;
     const next = page.nodes.map((node) => (selected.has(node.id) ? { ...node, groupId } : node));
-    this.replaceFirstPageNodes(next);
+    this.replaceActivePageNodes(next);
     return groupId;
   }
 
   /** 将所选组合全部解散，保留原图元和 Tag 绑定。 */
   ungroupSelected(): boolean {
     const groups = new Set(
-      firstPage(this.current)
+      firstPage(this.current, this.activePageId)
         .nodes.filter((node) => this.selection.includes(node.id) && node.groupId !== undefined)
         .map((node) => node.groupId),
     );
     if (groups.size === 0) return false;
-    const nodes = firstPage(this.current).nodes.map((node) => {
+    const nodes = firstPage(this.current, this.activePageId).nodes.map((node) => {
       if (!node.groupId || !groups.has(node.groupId)) return node;
       const copy = { ...node };
       delete copy.groupId;
       return copy;
     });
-    return this.replaceFirstPageNodes(nodes);
+    return this.replaceActivePageNodes(nodes);
   }
 
   /** 兼容旧版绝对移动接口；多选时按同一受限位移整体移动。 */
@@ -348,14 +437,16 @@ export class DocumentEditor {
 
   moveBy(dx: number, dy: number): boolean {
     if (this.selection.length === 0) return false;
-    return this.commit(withNodesTranslated(this.current, this.selection, dx, dy));
+    return this.commit(
+      withNodesTranslated(this.current, this.selection, dx, dy, this.activePageId),
+    );
   }
 
   addNode(type: EditableSymbol, x = 40, y = 40): string {
     if (!Object.hasOwn(DEFAULT_SYMBOLS, type)) throw new TypeError("不支持的图元类型");
     finite(x, "图元 X 坐标");
     finite(y, "图元 Y 坐标");
-    const page = firstPage(this.current);
+    const page = firstPage(this.current, this.activePageId);
     const existing = new Set([
       ...this.current.pages.map((candidate) => candidate.id),
       ...this.current.pages.flatMap((candidate) => candidate.nodes.map((node) => node.id)),
@@ -392,7 +483,7 @@ export class DocumentEditor {
 
   deleteSelected(): boolean {
     if (this.selection.length === 0) return false;
-    const page = firstPage(this.current);
+    const page = firstPage(this.current, this.activePageId);
     const selected = new Set(this.selection);
     const next = parseScadaDocument({
       ...this.current,
@@ -409,7 +500,7 @@ export class DocumentEditor {
 
   /** 以最后选中的图元为基准对齐，每次位置修改记录为一条命令。 */
   alignSelected(alignment: Alignment): boolean {
-    const page = firstPage(this.current);
+    const page = firstPage(this.current, this.activePageId);
     const selected = new Set(this.selection);
     const anchor = this.getSelected();
     if (!anchor || selected.size < 2) return false;
@@ -454,7 +545,7 @@ export class DocumentEditor {
         },
       };
     });
-    return this.replaceFirstPageNodes(nodes);
+    return this.replaceActivePageNodes(nodes);
   }
 
   /** 页面节点顺序即 SVG 绘制顺序，后面的图元显示在前面。 */
@@ -463,12 +554,12 @@ export class DocumentEditor {
       throw new TypeError("不支持的图层操作");
     }
     if (this.selection.length === 0) return false;
-    const nodes = [...firstPage(this.current).nodes];
+    const nodes = [...firstPage(this.current, this.activePageId).nodes];
     const selected = new Set(this.selection);
     if (action === "front" || action === "back") {
       const picked = nodes.filter((node) => selected.has(node.id));
       const others = nodes.filter((node) => !selected.has(node.id));
-      return this.replaceFirstPageNodes(
+      return this.replaceActivePageNodes(
         action === "front" ? [...others, ...picked] : [...picked, ...others],
       );
     }
@@ -485,7 +576,7 @@ export class DocumentEditor {
         }
       }
     }
-    return this.replaceFirstPageNodes(nodes);
+    return this.replaceActivePageNodes(nodes);
   }
 
   /** 仅允许单选图元修改几何属性，一次应用只产生一条撤销记录。 */
@@ -493,7 +584,9 @@ export class DocumentEditor {
     if (this.selection.length !== 1) {
       throw new TypeError("请先单选一个图元再编辑几何属性");
     }
-    return this.commit(withNodeTransform(this.current, this.selection[0]!, patch));
+    return this.commit(
+      withNodeTransform(this.current, this.selection[0]!, patch, this.activePageId),
+    );
   }
 
   /** 单选图元的 Tag 绑定修改记录为一条可撤销命令。 */
@@ -516,10 +609,10 @@ export class DocumentEditor {
     if (tagId === null) delete bindings[slot];
     else bindings[slot] = { tagId };
 
-    const nodes = firstPage(this.current).nodes.map((item) =>
+    const nodes = firstPage(this.current, this.activePageId).nodes.map((item) =>
       item.id === node.id ? { ...item, bindings } : item,
     );
-    return this.replaceFirstPageNodes(nodes);
+    return this.replaceActivePageNodes(nodes);
   }
 
   setSelectedLabel(text: string): boolean {
@@ -529,17 +622,22 @@ export class DocumentEditor {
     const node = this.selection.length === 1 ? this.getSelected() : undefined;
     if (!node || node.type !== "label") throw new TypeError("请先选择文本图元");
     if (node.props.text === text) return false;
-    const nodes = firstPage(this.current).nodes.map((item) =>
+    const nodes = firstPage(this.current, this.activePageId).nodes.map((item) =>
       item.id === node.id ? { ...item, props: { ...item.props, text } } : item,
     );
-    return this.replaceFirstPageNodes(nodes);
+    return this.replaceActivePageNodes(nodes);
   }
 
   undo(): boolean {
     const previous = this.past.pop();
     if (!previous) return false;
-    this.future.push(this.current);
-    this.current = previous;
+    this.future.push({
+      document: this.current,
+      pageId: previous.redoPageId,
+      redoPageId: previous.pageId,
+    });
+    this.current = previous.document;
+    this.activePageId = previous.pageId;
     this.reconcileSelection();
     return true;
   }
@@ -547,8 +645,13 @@ export class DocumentEditor {
   redo(): boolean {
     const next = this.future.pop();
     if (!next) return false;
-    this.past.push(this.current);
-    this.current = next;
+    this.past.push({
+      document: this.current,
+      pageId: next.redoPageId,
+      redoPageId: next.pageId,
+    });
+    this.current = next.document;
+    this.activePageId = next.pageId;
     this.reconcileSelection();
     return true;
   }
@@ -557,6 +660,7 @@ export class DocumentEditor {
   loadDocument(source: unknown): string | null {
     const { document, migratedFrom } = migrateScadaDocument(source);
     this.current = document;
+    this.activePageId = firstPage(document).id;
     this.selection = [];
     this.past.length = 0;
     this.future.length = 0;
@@ -565,11 +669,11 @@ export class DocumentEditor {
 
   private getSelected(): ScadaNode | undefined {
     const id = this.selection.at(-1);
-    return firstPage(this.current).nodes.find((node) => node.id === id);
+    return firstPage(this.current, this.activePageId).nodes.find((node) => node.id === id);
   }
 
-  private replaceFirstPageNodes(nodes: ScadaNode[]): boolean {
-    const page = firstPage(this.current);
+  private replaceActivePageNodes(nodes: ScadaNode[]): boolean {
+    const page = firstPage(this.current, this.activePageId);
     return this.commit(
       parseScadaDocument({
         ...this.current,
@@ -580,9 +684,9 @@ export class DocumentEditor {
     );
   }
 
-  private commit(next: ScadaDocument): boolean {
+  private commit(next: ScadaDocument, redoPageId = this.activePageId): boolean {
     if (equalDocuments(this.current, next)) return false;
-    this.past.push(this.current);
+    this.past.push({ document: this.current, pageId: this.activePageId, redoPageId });
     if (this.past.length > HISTORY_LIMIT) this.past.shift();
     this.current = next;
     this.future.length = 0;
@@ -590,7 +694,9 @@ export class DocumentEditor {
   }
 
   private reconcileSelection(): void {
-    const valid = new Set(firstPage(this.current).nodes.map((node) => node.id));
+    const page = this.current.pages.find((item) => item.id === this.activePageId);
+    if (!page) this.activePageId = firstPage(this.current).id;
+    const valid = new Set(firstPage(this.current, this.activePageId).nodes.map((node) => node.id));
     this.selectMany(this.selection.filter((id) => valid.has(id)));
   }
 }

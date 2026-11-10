@@ -607,3 +607,21 @@ pnpm run dev:vue
 ```
 
 之后人工检查 Vue/React 的模拟 Tag 绑定、解除、撤销/重做、组合拒绝、JSON 双向互通、IndexedDB 草稿恢复及只读 Runtime `STALE/GOOD` 回归。自动检查不替代浏览器操作。
+
+## 2026-11-10 · V0.2 第十四批多页面编辑验收待执行
+
+新增页面管理与按页面几何、吸附、SVG 预览，源码预计增加 13 项单测至 179 项；未经本批完整运行不得登记为通过。维护者在 Windows PowerShell 根目录执行：
+
+```powershell
+git fetch origin
+git switch feat/v0.2-multi-page-studio
+pnpm install --frozen-lockfile
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+人工验收覆盖：创建/重命名/切换/删除至少两页，删除最后一页拒绝；页面切换不产生工程脏状态，撤销/重做跨页准确；第 2 页框选、缩放、吸附、组合、模拟 Tag 绑定不得影响第 1 页；多页面 JSON 双向互通，IndexedDB 手动保存/按需自动保存及刷新后人工恢复正确；只读 Runtime `STALE/GOOD` 无回归。
+
+本批真实 `ready` 与双框架浏览器操作均待维护者提供结果，不可将源码存在或历史检查结果当作本批通过。

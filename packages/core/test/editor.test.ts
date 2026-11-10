@@ -717,3 +717,199 @@ test("管道图元不支持 Tag 绑定，原有绑定与图元属性保持不变
   expect(() => e.setSelectedBinding("value", "water.flow")).toThrow(/不支持指定/);
   expect(e.snapshot()).toEqual(before);
 });
+
+test("编辑器初始激活第一页，切换页面不修改工程或撤销历史", () => {
+  const e = editor();
+  expect(e.snapshot().activePageId).toBe("main");
+  const second = e.createPage();
+  const original = e.snapshot().document;
+  const canUndo = e.snapshot().canUndo;
+  expect(e.switchPage("main")).toBe(true);
+  e.select("tank");
+  expect(e.switchPage(second)).toBe(true);
+  expect(e.snapshot().selectedIds).toEqual([]);
+  expect(e.switchPage(second)).toBe(false);
+  expect(e.snapshot().document).toEqual(original);
+  expect(e.snapshot().canUndo).toBe(canUndo);
+});
+
+test("新建页面继承当前画布尺寸，撤销重做正确恢复激活页", () => {
+  const e = editor();
+  const original = e.snapshot().document;
+  const id = e.createPage("泵房监控");
+  expect(id).toBe("page-1");
+  expect(e.snapshot().activePageId).toBe(id);
+  expect(e.snapshot().document.pages[1]).toMatchObject({
+    id,
+    name: "泵房监控",
+    size: original.pages[0]?.size,
+    nodes: [],
+  });
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(original);
+  expect(e.snapshot().activePageId).toBe("main");
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().activePageId).toBe(id);
+  expect(e.snapshot().document.pages).toHaveLength(2);
+});
+
+test("页面重命名不改变 ID 与图元，未变化名称不写入历史", () => {
+  const e = editor();
+  const original = e.snapshot().document;
+  expect(e.renamePage("main", "水处理总览")).toBe(true);
+  expect(e.snapshot().document.pages[0]?.name).toBe("水处理总览");
+  expect(e.renamePage("main", " 水处理总览 ")).toBe(false);
+  expect(e.snapshot().document.pages[0]?.nodes).toEqual(original.pages[0]?.nodes);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(original);
+});
+
+test("删除当前页面后自动切换相邻页面，撤销恢复全部图元与绑定", () => {
+  const e = editor();
+  const pageId = e.createPage("临时监控");
+  const nodeId = e.addNode("label");
+  expect(e.setSelectedBinding("value", "water.flow")).toBe(true);
+  const beforeDelete = e.snapshot().document;
+  expect(e.deletePage(pageId)).toBe(true);
+  expect(e.snapshot().activePageId).toBe("main");
+  expect(e.snapshot().document.pages).toHaveLength(1);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().activePageId).toBe(pageId);
+  expect(e.snapshot().document).toEqual(beforeDelete);
+  const restoredNode = e.snapshot().document.pages[1]?.nodes.find((node) => node.id === nodeId);
+  expect(restoredNode?.bindings.value?.tagId).toBe("water.flow");
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().document.pages).toHaveLength(1);
+});
+
+test("删除非当前页保持当前页和选择，禁止删除最后一页", () => {
+  const e = editor();
+  expect(() => e.deletePage("main")).toThrow(/至少需要保留一个页面/);
+  const id = e.createPage();
+  const nodeId = e.addNode("label");
+  expect(e.deletePage("main")).toBe(true);
+  expect(e.snapshot().activePageId).toBe(id);
+  expect(e.snapshot().selectedIds).toEqual([nodeId]);
+  expect(e.snapshot().document.pages.map((page) => page.id)).toEqual([id]);
+  expect(() => e.deletePage(id)).toThrow(/至少需要保留一个页面/);
+});
+
+test("第二页新增、移动和标签绑定不改变第一页内容", () => {
+  const e = editor();
+  const firstNodes = e.snapshot().document.pages[0]?.nodes;
+  const second = e.createPage("第二页");
+  expect(e.addNode("tank")).toBe("tank-1");
+  expect(e.setSelectedBinding("level", "water.level")).toBe(true);
+  expect(e.moveBy(30, 30)).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes).toEqual(firstNodes);
+  expect(e.snapshot().document.pages[1]?.nodes[0]?.bindings.level?.tagId).toBe("water.level");
+  expect(e.snapshot().document.pages[1]?.nodes[0]?.transform.x).toBe(70);
+  expect(e.switchPage("main")).toBe(true);
+  expect(() => e.select("tank-1")).toThrow(/未找到图元/);
+  expect(e.switchPage(second)).toBe(true);
+  expect(e.snapshot().selectedIds).toEqual([]);
+});
+
+test("吸附、框选、位置和尺寸计算仅影响指定页面", () => {
+  const e = editor();
+  const id = e.createPage();
+  const nodeId = e.addNode("label");
+  const document = e.snapshot().document;
+  const originalFirst = document.pages[0];
+  const found = findNodesInRect(document, 0, 0, 260, 180, id);
+  expect(found).toEqual([nodeId]);
+  expect(findNodesInRect(document, 0, 0, 260, 180)).not.toContain(nodeId);
+  const snap = resolveDragSnap(
+    document,
+    [nodeId],
+    10,
+    5,
+    { gridEnabled: false, nodeEnabled: false },
+    id,
+  );
+  const moved = withNodesTranslated(document, [nodeId], snap.dx, snap.dy, id);
+  expect(moved.pages[0]).toEqual(originalFirst);
+  expect(moved.pages[1]?.nodes[0]?.transform.x).toBe(50);
+  const resized = withNodeTransform(moved, nodeId, { width: 250 }, id);
+  expect(resized.pages[1]?.nodes[0]?.transform.width).toBe(250);
+  const positioned = withNodePosition(resized, nodeId, 80, 90, id);
+  expect(positioned.pages[1]?.nodes[0]?.transform.x).toBe(80);
+  expect(positioned.pages[0]).toEqual(originalFirst);
+});
+
+test("多个页面的图元和组合共享工程级唯一标识符", () => {
+  const e = editor();
+  const pageId = e.createPage();
+  expect(e.addNode("label")).toBe("label-1");
+  expect(e.addNode("label")).toBe("label-2");
+  e.select("label-1");
+  e.select("label-2", true);
+  expect(e.groupSelected()).toBe("group-1");
+  expect(e.snapshot().document.pages[1]?.nodes.every((node) => node.groupId === "group-1")).toBe(
+    true,
+  );
+  expect(e.snapshot().document.pages[0]?.nodes.every((node) => node.groupId === undefined)).toBe(
+    true,
+  );
+  e.switchPage("main");
+  expect(e.addNode("label")).toBe("label-3");
+  expect(e.snapshot().activePageId).toBe("main");
+  expect(pageId).toBe("page-1");
+});
+
+test("页面 ID 避让图元与组合标识符，避免不同实体发生冲突", () => {
+  const source = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  source.pages[0].nodes[0].id = "page-1";
+  source.pages[0].nodes[1].groupId = "page-2";
+  source.pages[0].nodes[3].groupId = "page-2";
+  const e = new DocumentEditor(source);
+  expect(e.createPage()).toBe("page-3");
+});
+
+test("页面非法名称、未知 ID 与页面数量上限均原子拒绝", () => {
+  const e = editor();
+  const before = e.snapshot();
+  expect(() => e.switchPage("missing")).toThrow(/未找到页面/);
+  expect(() => e.renamePage("missing", "新名称")).toThrow(/未找到页面/);
+  expect(() => e.deletePage("missing")).toThrow(/未找到页面/);
+  expect(() => e.createPage("   ")).toThrow(/页面名称不能为空/);
+  expect(() => e.renamePage("main", "   ")).toThrow(/页面名称不能为空/);
+  expect(() => e.renamePage("main", "很".repeat(257))).toThrow(/256/);
+  expect(e.snapshot()).toEqual(before);
+  for (let i = 1; i < 100; i++) e.createPage();
+  expect(e.snapshot().document.pages).toHaveLength(100);
+  const full = e.snapshot();
+  expect(() => e.createPage()).toThrow(/不能超过 100/);
+  expect(e.snapshot()).toEqual(full);
+});
+
+test("多页面 JSON 导入后默认激活第一页且清空旧编辑历史", () => {
+  const e = editor();
+  const id = e.createPage("泵房");
+  e.addNode("pump");
+  const saved = JSON.parse(JSON.stringify(e.snapshot().document));
+  const other = editor();
+  other.select("tank");
+  other.moveBy(5, 5);
+  expect(other.loadDocument(saved)).toBeNull();
+  expect(other.snapshot().document).toEqual(e.snapshot().document);
+  expect(other.snapshot().activePageId).toBe("main");
+  expect(other.snapshot().selectedIds).toEqual([]);
+  expect(other.snapshot().canUndo).toBe(false);
+  expect(other.snapshot().canRedo).toBe(false);
+  expect(other.switchPage(id)).toBe(true);
+  expect(other.snapshot().document.pages[1]?.nodes[0]?.type).toBe("pump");
+});
+
+test("跨页面撤销编辑命令会回到发生修改的页面", () => {
+  const e = editor();
+  const id = e.createPage();
+  e.addNode("label");
+  expect(e.switchPage("main")).toBe(true);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().activePageId).toBe(id);
+  expect(e.snapshot().document.pages[1]?.nodes).toHaveLength(0);
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().activePageId).toBe(id);
+  expect(e.snapshot().document.pages[1]?.nodes).toHaveLength(1);
+});
