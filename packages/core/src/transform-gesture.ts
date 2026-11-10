@@ -27,6 +27,7 @@ export function resolveResizeTransform(
   finite(dx, "水平缩放位移");
   finite(dy, "垂直缩放位移");
   if (!RESIZE_HANDLES.includes(handle)) throw new TypeError("不支持的缩放手柄");
+  if (dx === 0 && dy === 0) return { ...transform };
 
   const angle = (transform.rotation * Math.PI) / 180;
   const cosine = Math.cos(angle);
@@ -72,6 +73,9 @@ export function resolveRotationTransform(
     [currentY, "旋转终点 Y"],
   ] as const) {
     finite(value, label);
+  }
+  if (startX === currentX && startY === currentY && !snapTo15Degrees) {
+    return { ...transform };
   }
   const centerX = transform.x + transform.width / 2;
   const centerY = transform.y + transform.height / 2;
