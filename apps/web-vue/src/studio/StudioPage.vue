@@ -388,6 +388,7 @@ function updateGeometry(event: PointerEvent) {
             gesture.handle,
             point.x - gesture.startX,
             point.y - gesture.startY,
+            event.shiftKey,
           );
     const next = withNodeTransform(snapshot.document, gesture.nodeId, patch);
     gesture.lastPatch = patch;
