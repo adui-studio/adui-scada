@@ -185,3 +185,7 @@ Vue/React 的 SVG 编辑层负责显示控制点、捕获 Pointer 和提供预�
 ## V0.2 多页面 Studio 编辑作用域（ADR-0022）
 
 共享 Core 负责当前页面会话状态、页面编辑命令与历史上下文。框架适配层只实现页面导航与指针生命周期，不复制文档规则；拖动吸附与 SVG 预览通过可选 `pageId` 明确作用于当前页，旧单页面调用默认第一页兼容。工程 JSON/IndexedDB 仍保存整份 `ScadaDocument 0.2.0`，不包含 `activePageId`；页面切换不产生保存写入。新增页面、重命名和删除按现有自动保存流程提交，删除最后一页被拒绝。详见 [ADR-0022](adr/0022-multi-page-editor-scope.md)。
+
+## V0.2 页面复制与工程 ID 命名空间（ADR-0023）
+
+页面复制和跨页选中图元复制由框架无关 `DocumentEditor` 统一执行：页面、图元、组合共享全工程唯一 ID 空间，新副本重映射 ID 并保留 Tag 绑定及组内关系。页面排序直接修改 `ScadaDocument.pages` 顺序，因此现有 Runtime 的默认第一页展示也会改变；不另设启动页，也不变更 Schema `0.2.0`。在目标画布较小时，跨页复制整体平移以保留相对布局，无法容纳则原子拒绝。Vue/React 仅提供导航与操作入口，Dexie IndexedDB 继续使用既有整工程版本事务，不涉及真实设备写入。详见 [ADR-0023](adr/0023-page-copy-and-reordering.md)。
