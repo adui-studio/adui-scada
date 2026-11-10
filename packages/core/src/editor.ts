@@ -17,6 +17,20 @@ export type NodeTransformPatch = Partial<ScadaNode["transform"]>;
 
 const HISTORY_LIMIT = 100;
 
+/** 当前 SVG 图元的可编辑绑定槽；不允许向其他图元添加未知槽。 */
+export function editableTagSlot(type: string): "level" | "running" | "value" | null {
+  switch (type) {
+    case "tank":
+      return "level";
+    case "pump":
+      return "running";
+    case "label":
+      return "value";
+    default:
+      return null;
+  }
+}
+
 const DEFAULT_SYMBOLS: Record<EditableSymbol, { width: number; height: number }> = {
   tank: { width: 140, height: 160 },
   pump: { width: 110, height: 110 },
@@ -480,6 +494,32 @@ export class DocumentEditor {
       throw new TypeError("请先单选一个图元再编辑几何属性");
     }
     return this.commit(withNodeTransform(this.current, this.selection[0]!, patch));
+  }
+
+  /** 单选图元的 Tag 绑定修改记录为一条可撤销命令。 */
+  setSelectedBinding(slot: string, tagId: string | null): boolean {
+    if (this.selection.length !== 1) {
+      throw new TypeError("请先单选一个图元再修改 Tag 绑定");
+    }
+    const node = this.getSelected();
+    if (!node) throw new RangeError("所选图元不存在");
+    if (node.groupId) throw new TypeError("已组合图元不能单独修改 Tag 绑定，请先解组");
+    if (editableTagSlot(node.type) !== slot) {
+      throw new TypeError("该图元不支持指定的 Tag 绑定槽");
+    }
+    if (tagId !== null && typeof tagId !== "string") {
+      throw new TypeError("Tag ID 必须为字符串或 null");
+    }
+    if ((node.bindings[slot]?.tagId ?? null) === tagId) return false;
+
+    const bindings = { ...node.bindings };
+    if (tagId === null) delete bindings[slot];
+    else bindings[slot] = { tagId };
+
+    const nodes = firstPage(this.current).nodes.map((item) =>
+      item.id === node.id ? { ...item, bindings } : item,
+    );
+    return this.replaceFirstPageNodes(nodes);
   }
 
   setSelectedLabel(text: string): boolean {
