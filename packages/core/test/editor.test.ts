@@ -1419,7 +1419,11 @@ test("批量锁定、解锁共用一次历史并保持 Tag 和几何", () => {
   expect(e.undo()).toBe(true);
   expect(e.snapshot().document).toEqual(initial);
   expect(e.redo()).toBe(true);
-  expect(e.snapshot().document.pages[0]!.nodes.filter((node) => ["tank", "pump"].includes(node.id)).every(studioNodeLocked)).toBe(true);
+  expect(
+    e.snapshot().document.pages[0]!.nodes
+      .filter((node) => ["tank", "pump"].includes(node.id))
+      .every(studioNodeLocked),
+  ).toBe(true);
   expect(e.setSelectedLocked(false)).toBe(true);
   expect(e.snapshot().document).toEqual(initial);
 });
@@ -1430,7 +1434,9 @@ test("批量显示和隐藏不删除图元、Tag 或规则，支持撤销", () =
   e.select("pump", true);
   const original = e.snapshot().document;
   expect(e.setSelectedVisible(false)).toBe(true);
-  const hidden = e.snapshot().document.pages[0]!.nodes.filter((node) => ["tank", "pump"].includes(node.id));
+  const hidden = e
+    .snapshot()
+    .document.pages[0]!.nodes.filter((node) => ["tank", "pump"].includes(node.id));
   expect(hidden.every((node) => !studioNodeVisible(node))).toBe(true);
   expect(hidden[0]?.bindings.level?.tagId).toBe("water.level");
   expect(hidden[1]?.bindings.running?.tagId).toBe("water.pump.running");
@@ -1455,7 +1461,15 @@ test("锁定图元禁止移动、删除、剪切、复制、对齐及几何编�
   expect(() => e.setSelectedBinding("level", "water.flow")).toThrow(/锁定/);
   expect(() => withNodesTranslated(original.document, ["tank"], 10, 0)).toThrow(/锁定/);
   expect(() => withNodeTransform(original.document, "tank", { y: 140 })).toThrow(/锁定/);
-  expect(() => resolveDragSnap(original.document, ["tank"], 5, 5, { gridEnabled: true, nodeEnabled: true })).toThrow(/锁定/);
+  expect(() =>
+    resolveDragSnap(
+      original.document,
+      ["tank"],
+      5,
+      5,
+      { gridEnabled: true, nodeEnabled: true },
+    ),
+  ).toThrow(/锁定/);
   e.select("tank");
   e.select("pump", true);
   expect(() => e.alignSelected("left")).toThrow(/锁定/);
@@ -1565,7 +1579,9 @@ test("锁定与隐藏状态经过 JSON 导入导出后保持一致且不会污�
   e.setSelectedVisible(false);
   e.setSelectedLocked(true);
   const json = JSON.parse(JSON.stringify(e.snapshot().document));
-  expect(json.pages[0].nodes.find((node: { id: string }) => node.id === "tank").props.__scadaStudio).toEqual({
+  expect(
+    json.pages[0].nodes.find((node: { id: string }) => node.id === "tank").props.__scadaStudio,
+  ).toEqual({
     visible: false,
     locked: true,
   });
@@ -1599,6 +1615,8 @@ test("隐藏状态可与复制剪贴板和跨页面编辑安全共存", () => {
   e.setSelectedVisible(true);
   expect(studioNodeVisible(e.snapshot().document.pages[1]!.nodes[0]!)).toBe(true);
   e.switchPage("main");
-  expect(studioNodeVisible(e.snapshot().document.pages[0]!.nodes.find((node) => node.id === "tank")!)).toBe(false);
+  expect(
+    studioNodeVisible(e.snapshot().document.pages[0]!.nodes.find((node) => node.id === "tank")!),
+  ).toBe(false);
   expect(second).toBe("page-1");
 });
