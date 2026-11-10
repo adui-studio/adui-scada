@@ -73,12 +73,7 @@ const displayDocument = computed(() => {
   const movement = snapResult.value;
   return movement === null
     ? state.value.document
-    : withNodesTranslated(
-        state.value.document,
-        state.value.selectedIds,
-        movement.dx,
-        movement.dy,
-      );
+    : withNodesTranslated(state.value.document, state.value.selectedIds, movement.dx, movement.dy);
 });
 const displayNodes = computed(() => displayDocument.value.pages[0]?.nodes ?? []);
 const imageUrl = computed(() => svgDataUrl(displayDocument.value, previewTags));
