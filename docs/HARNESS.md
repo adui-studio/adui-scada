@@ -276,3 +276,9 @@ pnpm run dev:vue
 维护者再次运行 `pnpm run ready`：中文文案、格式化（124 文件）、Lint/静态检查（49 文件）、Vue/React 与服务端类型检查均通过；执行 57 个单测时 55 通过、2 失败。失败均位于 `packages/core/test/snap.test.ts`，即吸附函数给出 0.3/-0.2 的精确边界位移，但 `withNodesTranslated` 在提交时重新取整至 0，导致最终图元坐标未到达边界。
 
 修复共享 Core：若传入位移恰为可行区间的精确端点，则保留小数；其他移动仍取整并限制边界。新增左右边界移动、撤销及普通小数取整回归测试。未触及 React/Vue UI、Schema 或工业设备通信。本轮运行在单测阶段结束，**NestJS E2E、文档检查与 Web/Server 构建没有执行**；修复后请重新运行 `pnpm run ready`，运行结果待维护者反馈。
+
+## 2026-11-10 · V0.2 小数边界修复后的 Windows 质量检查反馈
+
+维护者在分支上执行 `pnpm run ready` 并提供终端日志，确认以下阶段通过：依赖 Catalog（9 份清单、26 项依赖）、共享配置、根目录环境/LF、中文文案（70 个文件）、`vp check` 格式化（124 个文件）与 Lint/静态检查（49 个文件）、React/Vue/NestJS TypeScript 类型检查、`vp test run`（**59/59**）、NestJS E2E（**2/2**）、Markdown 文档检查（27 个文件）及 React/Vue 双版本 Web 构建。
+
+日志末尾显示已执行 `pnpm --filter @adui/scada-server run build` 并进入 `nest build`，**未提供最终退出码或命令返回提示，因此服务端构建的最终退出状态尚待确认**。本次只证明以上工具链检查和测试，**尚未完成 Vue/React 浏览器画布交互、双向 JSON 互通及 Runtime/Docker/Tauri 回归**。PR #6 保持 Draft，待交互验收后再评估是否合并。
