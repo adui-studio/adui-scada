@@ -3,7 +3,6 @@ import type { ChangeEvent, FormEvent, PointerEvent as ReactPointerEvent } from "
 import {
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
-  localDraftKey,
   hasLocalDraft,
   saveLocalDraft,
   readLocalDraft,
