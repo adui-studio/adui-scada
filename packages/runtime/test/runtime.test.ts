@@ -1,10 +1,11 @@
 import { expect, test, vi } from "vite-plus/test";
-import { TagStore } from "@adui/scada-core";
+import { TagStore, waterTreatmentDemoDocument, parseScadaDocument } from "@adui/scada-core";
 import {
   applyDemoChange,
   DemoRuntime,
   initialRuntimeState,
   RUNTIME_STATUS_LABELS,
+  svgDataUrl,
 } from "../src/runtime.ts";
 import { OfflineDemoRuntime } from "../src/offline.ts";
 import type { RuntimeState } from "../src/runtime.ts";
@@ -113,4 +114,25 @@ test("运行时状态有完整中文名称且内部状态标识保持不变", ()
     reconnecting: "重新连接中",
     error: "运行异常",
   });
+});
+
+test("SVG 预览可以指定第二页，默认仍保持第一页兼容", () => {
+  const document = parseScadaDocument({
+    ...waterTreatmentDemoDocument,
+    pages: [
+      ...waterTreatmentDemoDocument.pages,
+      {
+        id: "second",
+        name: "第二页",
+        size: { width: 640, height: 360 },
+        nodes: [],
+      },
+    ],
+  });
+  const original = decodeURIComponent(svgDataUrl(document, []).split(",")[1]!);
+  const second = decodeURIComponent(svgDataUrl(document, [], "second").split(",")[1]!);
+  expect(original).toContain('data-node-id="tank"');
+  expect(second).toContain('aria-label="第二页"');
+  expect(second).not.toContain('data-node-id="tank"');
+  expect(() => svgDataUrl(document, [], "missing")).toThrow(/未找到页面/);
 });
