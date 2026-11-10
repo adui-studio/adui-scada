@@ -1349,7 +1349,9 @@ export default function StudioPage() {
                       />
                     </label>
                   ))}
-                  <button type="submit" disabled={studioNodeLocked(selected)}>应用几何属性</button>
+                  <button type="submit" disabled={studioNodeLocked(selected)}>
+                    应用几何属性
+                  </button>
                 </form>
               ) : (
                 <p className="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
