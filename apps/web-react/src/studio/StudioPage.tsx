@@ -335,56 +335,63 @@ export default function StudioPage() {
       const key = event.key.toLowerCase();
       let handled = false;
 
-      if (command && !event.altKey) {
-        if (key === "z") handled = event.shiftKey ? editor.redo() : editor.undo();
-        else if (key === "y") handled = editor.redo();
-        else if (key === "c" && !event.shiftKey) {
-          handled = editor.copySelected();
-          if (handled) setNotice("已复制所选图元到会话剪贴板");
-        } else if (key === "x" && !event.shiftKey) {
-          handled = editor.cutSelected();
-          if (handled) setNotice("已剪切所选图元，可撤销");
-        } else if (key === "v" && !event.shiftKey && editor.snapshot().hasClipboard) {
-          event.preventDefault();
-          try {
-            handled = editor.pasteClipboard().length > 0;
-            if (handled) setNotice("已粘贴图元，可撤销");
-          } catch (error) {
-            setNotice("粘贴失败：" + (error instanceof Error ? error.message : String(error)));
+      try {
+        if (command && !event.altKey) {
+          if (key === "z") handled = event.shiftKey ? editor.redo() : editor.undo();
+          else if (key === "y") handled = editor.redo();
+          else if (key === "c" && !event.shiftKey) {
+            handled = editor.copySelected();
+            if (handled) setNotice("已复制所选图元到会话剪贴板");
+          } else if (key === "x" && !event.shiftKey) {
+            handled = editor.cutSelected();
+            if (handled) setNotice("已剪切所选图元，可撤销");
+          } else if (key === "v" && !event.shiftKey && editor.snapshot().hasClipboard) {
+            event.preventDefault();
+            try {
+              handled = editor.pasteClipboard().length > 0;
+              if (handled) setNotice("已粘贴图元，可撤销");
+            } catch (error) {
+              setNotice("粘贴失败：" + (error instanceof Error ? error.message : String(error)));
+            }
+          } else if (key === "a") {
+            const snapshot = editor.snapshot();
+            editor.selectMany(
+              snapshot.document.pages
+                .find((item) => item.id === snapshot.activePageId)
+                ?.nodes.filter((node) => studioNodeVisible(node) && !studioNodeLocked(node))
+                .map((node) => node.id) ?? [],
+            );
+            handled = true;
           }
-        } else if (key === "a") {
-          const snapshot = editor.snapshot();
-          editor.selectMany(
-            snapshot.document.pages
-              .find((item) => item.id === snapshot.activePageId)
-              ?.nodes.map((node) => node.id) ?? [],
-          );
-          handled = true;
+        } else if (!command && !event.altKey) {
+          if (key === "escape") {
+            dragRef.current = null;
+            marqueeRef.current = null;
+            geometryRef.current = null;
+            setPreview(null);
+            setMarquee(null);
+            setGeometryPreview(null);
+            setRotating(false);
+            editor.select(null);
+            handled = true;
+          } else if (key === "delete" || key === "backspace") {
+            handled = editor.deleteSelected();
+          } else if (key.startsWith("arrow")) {
+            const step = event.shiftKey ? 10 : 1;
+            const moves: Record<string, [number, number]> = {
+              arrowleft: [-step, 0],
+              arrowright: [step, 0],
+              arrowup: [0, -step],
+              arrowdown: [0, step],
+            };
+            const move = moves[key];
+            if (move) handled = editor.moveBy(move[0], move[1]);
+          }
         }
-      } else if (!command && !event.altKey) {
-        if (key === "escape") {
-          dragRef.current = null;
-          marqueeRef.current = null;
-          geometryRef.current = null;
-          setPreview(null);
-          setMarquee(null);
-          setGeometryPreview(null);
-          setRotating(false);
-          editor.select(null);
-          handled = true;
-        } else if (key === "delete" || key === "backspace") {
-          handled = editor.deleteSelected();
-        } else if (key.startsWith("arrow")) {
-          const step = event.shiftKey ? 10 : 1;
-          const moves: Record<string, [number, number]> = {
-            arrowleft: [-step, 0],
-            arrowright: [step, 0],
-            arrowup: [0, -step],
-            arrowdown: [0, step],
-          };
-          const move = moves[key];
-          if (move) handled = editor.moveBy(move[0], move[1]);
-        }
+      } catch (error) {
+        event.preventDefault();
+        setNotice(error instanceof Error ? error.message : String(error));
+        return;
       }
 
       if (!handled) return;
