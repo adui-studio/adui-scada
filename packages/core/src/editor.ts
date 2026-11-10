@@ -43,7 +43,8 @@ const DEFAULT_SYMBOLS: Record<EditableSymbol, { width: number; height: number }>
 function firstPage(document: ScadaDocument, pageId?: string) {
   const page =
     pageId === undefined ? document.pages[0] : document.pages.find((item) => item.id === pageId);
-  if (!page) throw new RangeError(pageId === undefined ? "工程文档不包含页面" : "未找到页面：" + pageId);
+  if (!page)
+    throw new RangeError(pageId === undefined ? "工程文档不包含页面" : "未找到页面：" + pageId);
   return page;
 }
 
@@ -695,9 +696,7 @@ export class DocumentEditor {
   private reconcileSelection(): void {
     const page = this.current.pages.find((item) => item.id === this.activePageId);
     if (!page) this.activePageId = firstPage(this.current).id;
-    const valid = new Set(
-      firstPage(this.current, this.activePageId).nodes.map((node) => node.id),
-    );
+    const valid = new Set(firstPage(this.current, this.activePageId).nodes.map((node) => node.id));
     this.selectMany(this.selection.filter((id) => valid.has(id)));
   }
 }

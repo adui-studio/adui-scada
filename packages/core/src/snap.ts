@@ -145,7 +145,8 @@ export function resolveDragSnap(
 
   const pages = parseScadaDocument(document).pages;
   const page = pageId === undefined ? pages[0] : pages.find((item) => item.id === pageId);
-  if (!page) throw new RangeError(pageId === undefined ? "工程文档不包含页面" : "未找到页面：" + pageId);
+  if (!page)
+    throw new RangeError(pageId === undefined ? "工程文档不包含页面" : "未找到页面：" + pageId);
   const selected = expandGroupedSelection(page.nodes, selectedIds);
   const moving = page.nodes.filter((node) => selected.has(node.id));
   if (moving.length === 0) {

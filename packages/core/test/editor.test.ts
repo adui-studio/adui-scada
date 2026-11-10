@@ -845,12 +845,12 @@ test("多个页面的图元和组合共享工程级唯一标识符", () => {
   e.select("label-1");
   e.select("label-2", true);
   expect(e.groupSelected()).toBe("group-1");
-  expect(
-    e.snapshot().document.pages[1]?.nodes.every((node) => node.groupId === "group-1"),
-  ).toBe(true);
-  expect(
-    e.snapshot().document.pages[0]?.nodes.every((node) => node.groupId === undefined),
-  ).toBe(true);
+  expect(e.snapshot().document.pages[1]?.nodes.every((node) => node.groupId === "group-1")).toBe(
+    true,
+  );
+  expect(e.snapshot().document.pages[0]?.nodes.every((node) => node.groupId === undefined)).toBe(
+    true,
+  );
   e.switchPage("main");
   expect(e.addNode("label")).toBe("label-3");
   expect(e.snapshot().activePageId).toBe("main");
