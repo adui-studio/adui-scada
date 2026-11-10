@@ -159,9 +159,7 @@ test("含旧版组合元数据的历史工程迁移后保留两个成员与 Tag"
   expect(document.pages[0]?.nodes[1]?.groupId).toBe("group-1");
   expect(document.pages[0]?.nodes[3]?.groupId).toBe("group-1");
   expect(document.pages[0]?.nodes[1]?.bindings.level?.tagId).toBe("water.level");
-  expect(document.pages[0]?.nodes[3]?.bindings.running?.tagId).toBe(
-    "water.pump.running",
-  );
+  expect(document.pages[0]?.nodes[3]?.bindings.running?.tagId).toBe("water.pump.running");
   expect(parseScadaDocument(JSON.parse(JSON.stringify(document)))).toEqual(document);
   expect(legacy.schemaVersion).toBe("0.1.0");
 });
