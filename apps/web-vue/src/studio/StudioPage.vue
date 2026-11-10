@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import {
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
+  waterTreatmentDemoTagOptions,
   DraftAutoSaveSession,
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
 } from "@adui/scada-core";
@@ -11,6 +12,7 @@ import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft
 import {
   DEFAULT_GRID_SIZE,
   DocumentEditor,
+  editableTagSlot,
   RESIZE_HANDLES,
   RESIZE_HANDLE_LABELS,
   resizeHandlePosition,
@@ -113,6 +115,28 @@ const hasGroupedSelection = computed(() =>
   ),
 );
 const canGroup = computed(() => state.value.selectedIds.length >= 2 && !hasGroupedSelection.value);
+const bindingSlot = computed(() => {
+  const node = selected.value;
+  return node && state.value.selectedIds.length === 1 && !node.groupId
+    ? editableTagSlot(node.type)
+    : null;
+});
+const demoTagCandidates = computed(() => {
+  const slot = bindingSlot.value;
+  return slot === null
+    ? []
+    : waterTreatmentDemoTagOptions.filter((option) => option.slots.includes(slot));
+});
+const selectedTagId = computed(() => {
+  const node = selected.value;
+  const slot = bindingSlot.value;
+  return node && slot ? (node.bindings[slot]?.tagId ?? "") : "";
+});
+const missingBindingTag = computed(
+  () =>
+    selectedTagId.value !== "" &&
+    !demoTagCandidates.value.some((option) => option.tagId === selectedTagId.value),
+);
 const snapResult = computed(() => {
   const dragging = preview.value;
   if (!dragging) return null;
@@ -349,6 +373,16 @@ function apply(action: () => unknown, message: string) {
   } catch (error) {
     notice.value = error instanceof Error ? error.message : String(error);
   }
+}
+
+function changeTagBinding(event: Event) {
+  const slot = bindingSlot.value;
+  if (slot === null || !(event.target instanceof HTMLSelectElement)) return;
+  const tagId = event.target.value;
+  apply(
+    () => editor.setSelectedBinding(slot, tagId === "" ? null : tagId),
+    "已修改模拟 Tag 绑定，可撤销",
+  );
 }
 
 function addSymbol(type: EditableSymbol) {
@@ -1016,7 +1050,26 @@ async function importJson(event: Event) {
             <input v-model="labelDraft" maxlength="256" />
             <button type="button" @click="changeLabel">应用文案</button>
           </label>
-          <h3>Tag 绑定（只读）</h3>
+          <h3>Tag 绑定（模拟数据）</h3>
+          <label v-if="bindingSlot" class="studio-field">
+            {{ bindingSlot }} · 选择模拟 Tag
+            <select
+              :value="selectedTagId"
+              :aria-label="selected.id + ' 的 ' + bindingSlot + ' Tag 绑定'"
+              @change="changeTagBinding"
+            >
+              <option value="">不绑定</option>
+              <option v-if="missingBindingTag" :value="selectedTagId" disabled>
+                {{ selectedTagId }}（不在当前模拟候选中）
+              </option>
+              <option v-for="option in demoTagCandidates" :key="option.tagId" :value="option.tagId">
+                {{ option.label }} · {{ option.tagId }}
+              </option>
+            </select>
+          </label>
+          <p v-else class="studio-tip">
+            请单选未组合的水箱、水泵或文本图元；管道暂不支持动态 Tag 绑定。
+          </p>
           <p v-for="(binding, slot) in selected.bindings" :key="slot" class="studio-binding">
             {{ slot }} → {{ binding.tagId }}
           </p>
