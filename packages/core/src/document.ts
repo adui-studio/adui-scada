@@ -237,8 +237,9 @@ export function migrateScadaDocument(input: unknown): ScadaDocumentMigration {
     return { document: parseScadaDocument(input), migratedFrom: null };
   }
   if (root.schemaVersion === LEGACY_SCADA_SCHEMA_VERSION) {
+    const legacy = parseVersionedDocument(input, LEGACY_SCADA_SCHEMA_VERSION);
     return {
-      document: parseVersionedDocument(input, LEGACY_SCADA_SCHEMA_VERSION),
+      document: parseScadaDocument(legacy),
       migratedFrom: LEGACY_SCADA_SCHEMA_VERSION,
     };
   }
