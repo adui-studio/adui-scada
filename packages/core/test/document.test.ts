@@ -185,10 +185,18 @@ test("未知根与页面字段一律拒绝且不会被静默丢弃", () => {
 
 test("未知画布尺寸、图元、变换及绑定字段一律拒绝导入", () => {
   const paths = [
-    (source: any) => { source.pages[0].size.unit = "px"; },
-    (source: any) => { source.pages[0].nodes[0].parentId = "unknown"; },
-    (source: any) => { source.pages[0].nodes[0].transform.skewX = 20; },
-    (source: any) => { source.pages[0].nodes[0].bindings.level.mode = "write"; },
+    (source: any) => {
+      source.pages[0].size.unit = "px";
+    },
+    (source: any) => {
+      source.pages[0].nodes[0].parentId = "unknown";
+    },
+    (source: any) => {
+      source.pages[0].nodes[0].transform.skewX = 20;
+    },
+    (source: any) => {
+      source.pages[0].nodes[0].bindings.level.mode = "write";
+    },
   ];
   for (const mutate of paths) {
     for (const version of [SCADA_SCHEMA_VERSION, LEGACY_SCADA_SCHEMA_VERSION]) {
@@ -208,8 +216,6 @@ test("历史工程即使版本正确也必须拒绝非法组合和危险属性",
 
   const malicious = JSON.parse(JSON.stringify(fixture()));
   malicious.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
-  malicious.pages[0].nodes[0].props = JSON.parse(
-    '{"__proto__":{"unsafe":true}}',
-  );
+  malicious.pages[0].nodes[0].props = JSON.parse('{"__proto__":{"unsafe":true}}');
   expect(() => migrateScadaDocument(malicious)).toThrow(/属性名称不安全/);
 });
