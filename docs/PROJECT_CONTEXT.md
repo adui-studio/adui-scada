@@ -288,3 +288,11 @@ PR #14 仍为 Draft。继维护者 `2189eb4` 修复历史草稿确认删除后�
 已合并 PR #14 的 `main` 为本批基线，分支 `feat/v0.2-demo-tag-bindings`。共享 Core 新增 Tag 绑定编辑命令与槽约束，Vue/React Studio 同步提供水处理模拟 Tag 候选选择与解除，工程 Schema `0.2.0`、JSON 互通、IndexedDB 草稿和只读 Runtime 不变。
 
 本批新增 6 项共享编辑器单元测试源码，整仓预计从此前维护者实测 **160 项增加到 166 项**。这只是静态统计，本轮还没有真实运行 `pnpm run ready` 或 Vue/React 交互验收。上批的 160/160 单测、2/2 E2E 和退出码 0 不得替代本轮结果。未经本批维护者验收与单独授权不合并 `main`。
+
+## 2026-11-10 · V0.2 第十四批多页面编辑开发（待验收）
+
+PR #15（模拟 Tag 绑定编辑）已获得维护者 Windows `pnpm run ready` **166/166 单测、2/2 E2E、三端构建成功、退出码 0** 验收，并合并至 `main`，合并提交 `a9d7aa6`。本轮从该基线新建 `feat/v0.2-multi-page-studio`，没有改变 `main`。
+
+本批共享 `DocumentEditor` 支持页面创建、重命名、切换、删除与关联的撤销上下文；按页面扩展框选、移动、吸附和 SVG 预览，Vue/React 双端显示同样的页面管理导航。仍使用已存在的 `ScadaDocument 0.2.0` 的 `pages`，维持 Dexie 草稿存储、只读 Runtime 与设备隔离。
+
+新增 12 项 Core 编辑器用例及 1 项 Runtime SVG 选页用例，整仓**源码预计 179 项单元测试**，NestJS E2E 预期仍 2 项，增加 ADR-0022 后文档预计 37 份。以上为源码静态计数；**本轮没有执行 Windows `pnpm run ready`、浏览器多页面实际交互、Docker/Tauri 或工业现场验收**，不能沿用此前 166/166 通过结果。待用户验收后另行确认合并权限。
