@@ -527,3 +527,11 @@ pnpm run dev:vue
 ```
 
 人工测试需要核对双端的按钮一致性：修改图元→保存→刷新→恢复→JSON / Tag / 组合数据一致；保存覆盖与恢复取消后不丢数据；保存/读取失败或损坏草稿不改变当前画面与原始记录；清除后恢复按钮禁用且画面不变；不同 `projectId` 互不覆盖。验证旧版 JSON 导入升级、撤销重做、只读 Runtime 不受影响。浏览器本地数据可能在隐私模式或清理网站数据后丢失；本功能不提供正式工程备份或工业安全验收。此记录只是开发说明，等待本机质量链实测。
+
+## 2026-11-10 · 第十一批首次 Vite+ 检查失败与定点修复
+
+维护者在 Windows 执行 `vp check --fix` 后提供日志：**54 个文件检查出 2 个 TypeScript 错误及 2 个 Lint 警告**，同时格式化步骤显示完成。错误分别为 Core `local-draft.ts` 的两处 `TextEncoder` 缺少类型定义（TS2304）；警告分别为 React Studio 的 Effect 内同步 `setHasSavedDraft`（`react(set-state-in-effect)`）和 `local-draft.test.ts` 中空参数 `toThrow()`（`vitest(require-to-throw-message)`）。因此**不能将该轮 `vp check --fix` 记为通过**，也没有收到 `pnpm run ready` 执行结果。
+
+分支修复提交 `6ea0c00` 做最小调整：Core 改为无 DOM 类型依赖的纯 TypeScript UTF-8 字节计数；React 以 `useState` 惰性初值检测首次草稿，并在工程导入事件中同步可恢复状态，不再于 Effect 中直接更新该状态；Vitest 针对不同非法草稿分别断言中文错误信息，另补中文多字节数据的 **2 MiB 字节上限**回归。独立 Node 小范围验证已核对 ASCII、中文、Emoji、孤立代理项及大文本的字节计数与 `TextEncoder` 结果相同；**此检查不能代替仓库 `vp check`、Vitest 或完整 `pnpm run ready`**。
+
+新增本段验收记录后，尚未重新执行格式、Lint、TS、单测、E2E、文档检查或三端构建。请维护者将分支更新到修复提交及其后续文档提交后重新执行 `pnpm run ready` 并提供退出码。PR #13 继续保持 Draft，未得到合并授权。

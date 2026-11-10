@@ -244,3 +244,7 @@ PR #12 已具备全部七项验收结论，仍保留 Draft、分配 `@adui-dev`�
 本批新增无框架依赖的 `local-draft.ts`，通过 `LocalDraftStorage` 注入支持按工程 ID 保存、读取、清除浏览器草稿及校验版本、容量、完整结构。Vue/React 均提供手动按钮与覆盖/恢复/删除确认，避免页面启动时自动覆盖工程。新增 **10 项** Core 单元测试，整仓单测入口预计 **128 项**；实际 `pnpm run ready`、浏览器刷新恢复、存储异常与双框架互通仍待维护者 Windows 验证。
 
 实现仍属浏览器临时草稿，不是服务端工程管理、正式持久化/发布、自动保存或工业网关。开发分支 Draft PR 应分配给 `@adui-dev`，未经授权不得合并 `main`。
+
+## 2026-11-10 · 第十一批 Vite+ 检查阻塞修复（待复验）
+
+维护者 `vp check --fix` 实际发现 Core `TextEncoder` 无类型定义 **2 处 TS2304 错误**，以及 React Effect 同步状态更新、Vitest 空 `toThrow()` **2 项 Lint 警告**；格式化完成不代表检查通过。已在 PR #13 分支提交 `6ea0c00` 修复这四项问题，并加强中文多字节的 2 MiB 容量测试，不修改生产 Schema、不新增依赖。Node 独立字节计数样例与原生 `TextEncoder` 输出一致，但尚未得到本分支全量 `ready` 实测结果。PR 保持 Draft，仍由 `@adui-dev` 验收。
