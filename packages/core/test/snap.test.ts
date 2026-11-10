@@ -17,52 +17,40 @@ test("未启用吸附时按原有规则取整位移且没有辅助线", () => {
 
 test("网格吸附可单独开启，默认网格间距为 20 单位", () => {
   expect(DEFAULT_GRID_SIZE).toBe(20);
-  const result = resolveDragSnap(
-    waterTreatmentDemoDocument,
-    ["tank"],
-    17,
-    0,
-    { gridEnabled: true, nodeEnabled: false },
-  );
+  const result = resolveDragSnap(waterTreatmentDemoDocument, ["tank"], 17, 0, {
+    gridEnabled: true,
+    nodeEnabled: false,
+  });
   expect(result.dx).toBe(20);
   expect(result.dy).toBe(0);
   expect(result.verticalGuide).toBeNull();
 });
 
 test("图元吸附对齐邻近边缘并输出垂直辅助线", () => {
-  const result = resolveDragSnap(
-    waterTreatmentDemoDocument,
-    ["tank"],
-    2,
-    0,
-    { gridEnabled: false, nodeEnabled: true },
-  );
+  const result = resolveDragSnap(waterTreatmentDemoDocument, ["tank"], 2, 0, {
+    gridEnabled: false,
+    nodeEnabled: true,
+  });
   expect(result.dx).toBe(2);
   expect(result.verticalGuide).toBe(232);
   expect(result.horizontalGuide).toBeNull();
 });
 
 test("只有水平位移时不引发意外的垂直跳动", () => {
-  const result = resolveDragSnap(
-    waterTreatmentDemoDocument,
-    ["tank"],
-    2,
-    0,
-    { gridEnabled: true, nodeEnabled: true },
-  );
+  const result = resolveDragSnap(waterTreatmentDemoDocument, ["tank"], 2, 0, {
+    gridEnabled: true,
+    nodeEnabled: true,
+  });
   expect(result.dy).toBe(0);
   expect(result.horizontalGuide).toBeNull();
 });
 
 test("拖动预览和提交可复用同一组吸附位移且保持 Tag 绑定", () => {
   const original = JSON.stringify(waterTreatmentDemoDocument);
-  const result = resolveDragSnap(
-    waterTreatmentDemoDocument,
-    ["tank", "pipe"],
-    3,
-    0,
-    { gridEnabled: false, nodeEnabled: true },
-  );
+  const result = resolveDragSnap(waterTreatmentDemoDocument, ["tank", "pipe"], 3, 0, {
+    gridEnabled: false,
+    nodeEnabled: true,
+  });
   expect(result.dx).toBe(3);
   expect(result.verticalGuide).toBe(500);
   const moved = withNodesTranslated(
@@ -161,8 +149,9 @@ test("旋转图元使用外接矩形参与吸附但不修改旋转属性", () =>
 });
 
 test("吸附配置缺失或开关类型错误时返回中文异常", () => {
-  expect(() => resolveDragSnap(waterTreatmentDemoDocument, ["tank"], 2, 0, undefined as never))
-    .toThrow(/开关必须为布尔值/);
+  expect(() =>
+    resolveDragSnap(waterTreatmentDemoDocument, ["tank"], 2, 0, undefined as never),
+  ).toThrow(/开关必须为布尔值/);
   expect(() =>
     resolveDragSnap(waterTreatmentDemoDocument, ["tank"], 2, 0, {
       gridEnabled: "是" as never,
