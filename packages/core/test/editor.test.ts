@@ -1214,13 +1214,9 @@ test("重复粘贴按 20 像素递增偏移并重新生成唯一图元 ID", () =
   expect(one?.bindings.level?.tagId).toBe("water.level");
   expect(two?.bindings.level?.tagId).toBe("water.level");
   expect(e.undo()).toBe(true);
-  expect(e.snapshot().document.pages[0]?.nodes.some((node) => node.id === second[0])).toBe(
-    false,
-  );
+  expect(e.snapshot().document.pages[0]?.nodes.some((node) => node.id === second[0])).toBe(false);
   expect(e.redo()).toBe(true);
-  expect(e.snapshot().document.pages[0]?.nodes.some((node) => node.id === second[0])).toBe(
-    true,
-  );
+  expect(e.snapshot().document.pages[0]?.nodes.some((node) => node.id === second[0])).toBe(true);
 });
 
 test("剪切所选产生一次删除历史，剪贴板可以继续粘贴", () => {
@@ -1264,18 +1260,18 @@ test("复制与剪切组合均自动包含全部成员，粘贴生成新的完�
     [],
   );
   expect(e.undo()).toBe(true);
-  expect(e.snapshot().document.pages[0]?.nodes.filter((node) => node.groupId === group)).toHaveLength(
-    2,
-  );
+  expect(
+    e.snapshot().document.pages[0]?.nodes.filter((node) => node.groupId === group),
+  ).toHaveLength(2);
 });
 
 test("粘贴保留图元层级、文本属性、Tag 绑定和规则", () => {
   const e = editor();
   e.select("flow");
   e.select("title", true);
-  const original = e.snapshot().document.pages[0]!.nodes.filter((node) =>
-    ["title", "flow"].includes(node.id),
-  );
+  const original = e
+    .snapshot()
+    .document.pages[0]!.nodes.filter((node) => ["title", "flow"].includes(node.id));
   e.copySelected();
   const added = e.pasteClipboard();
   expect(added).toHaveLength(2);

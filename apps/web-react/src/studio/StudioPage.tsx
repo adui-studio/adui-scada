@@ -1359,8 +1359,9 @@ export default function StudioPage() {
         </aside>
       </div>
       <footer>
-        V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z 撤销，Ctrl+Shift+Z/Ctrl+Y
-        重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 · 无设备写入
+        V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z
+        撤销，Ctrl+Shift+Z/Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 ·
+        无设备写入
       </footer>
     </main>
   );
