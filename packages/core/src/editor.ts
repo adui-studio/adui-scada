@@ -322,6 +322,16 @@ function cloneNodes(source: readonly ScadaNode[], used: Set<string>, dx = 0, dy 
   }));
 }
 
+/** 锁定图元的原始层序不可因其他图元排序而间接变化。 */
+function assertLockedLayerIndices(original: readonly ScadaNode[], next: readonly ScadaNode[]) {
+  for (let index = 0; index < original.length; index++) {
+    const node = original[index]!;
+    if (studioNodeLocked(node) && next.findIndex((item) => item.id === node.id) !== index) {
+      throw new TypeError("调整层级会移动已锁定图元，请先解锁");
+    }
+  }
+}
+
 function equalDocuments(left: ScadaDocument, right: ScadaDocument): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
@@ -772,6 +782,44 @@ export class DocumentEditor {
     return this.replaceActivePageNodes(nodes);
   }
 
+  /**
+   * 以指定图元或组合为锚点精确插入层级。
+   * 组合中的任一成员被拖动时，整组成员按原有相对顺序连续移动。
+   */
+  moveLayer(nodeId: string, targetId: string, position: "before" | "after"): boolean {
+    if (position !== "before" && position !== "after") {
+      throw new TypeError("图层插入方向必须为 before 或 after");
+    }
+    const page = firstPage(this.current, this.activePageId);
+    const source = page.nodes.find((node) => node.id === nodeId);
+    const target = page.nodes.find((node) => node.id === targetId);
+    if (!source) throw new RangeError("未找到待移动图元：" + nodeId);
+    if (!target) throw new RangeError("未找到目标图元：" + targetId);
+
+    const movingIds = new Set(
+      page.nodes
+        .filter((node) => (source.groupId ? node.groupId === source.groupId : node.id === source.id))
+        .map((node) => node.id),
+    );
+    const targetIds = new Set(
+      page.nodes
+        .filter((node) => (target.groupId ? node.groupId === target.groupId : node.id === target.id))
+        .map((node) => node.id),
+    );
+    if (movingIds.has(target.id)) return false;
+    const picked = page.nodes.filter((node) => movingIds.has(node.id));
+    if (picked.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
+
+    const others = page.nodes.filter((node) => !movingIds.has(node.id));
+    const targetIndices = others.flatMap((node, index) => (targetIds.has(node.id) ? [index] : []));
+    const insertion =
+      position === "before" ? Math.min(...targetIndices) : Math.max(...targetIndices) + 1;
+    const next = [...others.slice(0, insertion), ...picked, ...others.slice(insertion)];
+
+    assertLockedLayerIndices(page.nodes, next);
+    return this.replaceActivePageNodes(next);
+  }
+
   /** 页面节点顺序即 SVG 绘制顺序，后面的图元显示在前面。 */
   reorderSelected(action: LayerAction): boolean {
     if (!["front", "back", "forward", "backward"].includes(action)) {
@@ -782,20 +830,37 @@ export class DocumentEditor {
     if (nodes.some((node) => this.selection.includes(node.id) && studioNodeLocked(node))) {
       throw new TypeError(LOCKED_NODE_MESSAGE);
     }
-    const initialLockedIndices = nodes
-      .map((node, index) => (studioNodeLocked(node) ? { id: node.id, index } : null))
-      .filter((item): item is { id: string; index: number } => item !== null);
     const applyOrder = (next: ScadaNode[]): boolean => {
-      if (
-        initialLockedIndices.some(
-          ({ id, index }) => next.findIndex((node) => node.id === id) !== index,
-        )
-      ) {
-        throw new TypeError("调整层级会移动已锁定图元，请先解锁");
-      }
+      assertLockedLayerIndices(nodes, next);
       return this.replaceActivePageNodes(next);
     };
     const selected = new Set(this.selection);
+    const chosen = nodes.filter((node) => selected.has(node.id));
+    const groupId = chosen[0]?.groupId;
+    if (groupId && chosen.length > 1 && chosen.every((node) => node.groupId === groupId)) {
+      const source = chosen[0]!;
+      const otherNodes = nodes.filter((node) => node.groupId !== groupId);
+      if (otherNodes.length === 0) return false;
+      const first = nodes.findIndex((node) => node.groupId === groupId);
+      const last = nodes.findLastIndex((node) => node.groupId === groupId);
+      const destination =
+        action === "front"
+          ? otherNodes.at(-1)
+          : action === "back"
+            ? otherNodes[0]
+            : action === "forward"
+              ? nodes.slice(last + 1).find((node) => node.groupId !== groupId)
+              : nodes
+                  .slice(0, first)
+                  .reverse()
+                  .find((node) => node.groupId !== groupId);
+      if (!destination) return false;
+      return this.moveLayer(
+        source.id,
+        destination.id,
+        action === "front" || action === "forward" ? "after" : "before",
+      );
+    }
     if (action === "front" || action === "back") {
       const picked = nodes.filter((node) => selected.has(node.id));
       const others = nodes.filter((node) => !selected.has(node.id));
