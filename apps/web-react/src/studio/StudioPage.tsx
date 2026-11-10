@@ -592,7 +592,12 @@ export default function StudioPage() {
   }
 
   function beginGeometry(event: ReactPointerEvent<SVGElement>, handle: ResizeHandle | "rotate") {
-    if (event.button !== 0 || state.selectedIds.length !== 1 || !selected || studioNodeLocked(selected)) return;
+    if (
+      event.button !== 0 ||
+      state.selectedIds.length !== 1 ||
+      !selected ||
+      studioNodeLocked(selected)
+    ) return;
     const point = canvasPoint(event.clientX, event.clientY);
     if (!point) return;
     geometryRef.current = {
@@ -1152,7 +1157,9 @@ export default function StudioPage() {
                       }
                     }}
                   />
-                  {state.selectedIds.length === 1 && state.selectedId === node.id && !studioNodeLocked(node) && (
+                  {state.selectedIds.length === 1 &&
+                    state.selectedId === node.id &&
+                    !studioNodeLocked(node) && (
                     <>
                       {RESIZE_HANDLES.map((handle) => {
                         const position = resizeHandlePosition(t, handle);
@@ -1229,16 +1236,32 @@ export default function StudioPage() {
           <h2>属性 · 已选 {state.selectedIds.length}</h2>
           <div className="studio-toolbox">
             <div className="studio-tool-group" aria-label="图层锁定与可见性">
-              <button type="button" disabled={state.selectedIds.length === 0} onClick={() => changeSelectedLocked(true)}>
+              <button
+                type="button"
+                disabled={state.selectedIds.length === 0}
+                onClick={() => changeSelectedLocked(true)}
+              >
                 锁定所选
               </button>
-              <button type="button" disabled={state.selectedIds.length === 0} onClick={() => changeSelectedLocked(false)}>
+              <button
+                type="button"
+                disabled={state.selectedIds.length === 0}
+                onClick={() => changeSelectedLocked(false)}
+              >
                 解锁所选
               </button>
-              <button type="button" disabled={state.selectedIds.length === 0 || hasLockedSelection} onClick={() => changeSelectedVisible(false)}>
+              <button
+                type="button"
+                disabled={state.selectedIds.length === 0 || hasLockedSelection}
+                onClick={() => changeSelectedVisible(false)}
+              >
                 隐藏所选
               </button>
-              <button type="button" disabled={state.selectedIds.length === 0 || hasLockedSelection} onClick={() => changeSelectedVisible(true)}>
+              <button
+                type="button"
+                disabled={state.selectedIds.length === 0 || hasLockedSelection}
+                onClick={() => changeSelectedVisible(true)}
+              >
                 显示所选
               </button>
             </div>
@@ -1377,9 +1400,10 @@ export default function StudioPage() {
                   <input
                     value={labelDraft}
                     maxLength={256}
+                    disabled={studioNodeLocked(selected)}
                     onChange={(event) => setLabelDraft(event.target.value)}
                   />
-                  <button type="button" onClick={changeLabel}>
+                  <button type="button" onClick={changeLabel} disabled={studioNodeLocked(selected)}>
                     应用文案
                   </button>
                 </label>
