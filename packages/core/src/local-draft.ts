@@ -75,16 +75,10 @@ export function saveLocalDraft(
 }
 
 /** 恢复时不执行表达式，不修改或删除无效记录。 */
-export function readLocalDraft(
-  storage: LocalDraftStorage,
-  projectId: string,
-): LocalDraft | null {
+export function readLocalDraft(storage: LocalDraftStorage, projectId: string): LocalDraft | null {
   const raw = readRaw(storage, localDraftKey(projectId));
   if (raw === null) return null;
-  if (
-    raw.length > LOCAL_DRAFT_MAX_BYTES ||
-    utf8ByteLength(raw) > LOCAL_DRAFT_MAX_BYTES
-  ) {
+  if (raw.length > LOCAL_DRAFT_MAX_BYTES || utf8ByteLength(raw) > LOCAL_DRAFT_MAX_BYTES) {
     throw new RangeError("本地草稿超过 2 MiB 限制，已拒绝恢复");
   }
   let parsed: unknown;

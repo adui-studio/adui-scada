@@ -46,9 +46,7 @@ test("草稿保存和恢复保持节点、组合、Tag 及防御性副本", () =
   expect(restored?.document.schemaVersion).toBe("0.2.0");
 
   restored!.document.pages[0]!.nodes[1]!.transform.x = 100;
-  expect(readLocalDraft(storage, "water-demo")?.document.pages[0]?.nodes[1]?.transform.x).toBe(
-    80,
-  );
+  expect(readLocalDraft(storage, "water-demo")?.document.pages[0]?.nodes[1]?.transform.x).toBe(80);
 });
 
 test("工程草稿按项目 ID 隔离，清除不会影响其他工程", () => {
