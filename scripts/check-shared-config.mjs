@@ -13,6 +13,7 @@ const expected = new Map([
   ["apps/web-vue/tsconfig.node.json", "@adui/tsconfig/vue-node"],
   ["apps/server/tsconfig.json", "@adui/tsconfig/nest"],
   ["packages/core/tsconfig.json", "@adui/tsconfig/core"],
+  ["packages/draft-storage/tsconfig.json", "@adui/tsconfig/browser"],
   ["packages/runtime/tsconfig.json", "@adui/tsconfig/browser"],
 ]);
 const packages = [
@@ -20,6 +21,7 @@ const packages = [
   "apps/web-vue",
   "apps/server",
   "packages/core",
+  "packages/draft-storage",
   "packages/runtime",
 ];
 

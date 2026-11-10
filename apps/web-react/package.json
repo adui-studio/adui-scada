@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@adui/scada-core": "workspace:*",
+    "@adui/scada-draft-storage": "workspace:*",
     "@adui/scada-runtime": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:"

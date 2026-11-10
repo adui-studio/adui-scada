@@ -9,7 +9,7 @@
     "dev:react": "vp -C apps/web-react dev",
     "dev:vue": "vp -C apps/web-vue dev",
     "build:web": "vp -C apps/web-react build && vp -C apps/web-vue build",
-    "typecheck:web": "pnpm --filter @adui/scada-web-react run typecheck && pnpm --filter @adui/scada-web-vue run typecheck",
+    "typecheck:web": "pnpm --filter @adui/scada-web-react run typecheck && pnpm --filter @adui/scada-web-vue run typecheck && pnpm --filter @adui/scada-draft-storage run typecheck",
     "test": "vp test run",
     "test:unit": "vp test run",
     "test:core": "vp test run packages/core/test",
