@@ -81,7 +81,13 @@ export default function StudioPage() {
   const [marquee, setMarquee] = useState<MarqueeState | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
   const [notice, setNotice] = useState("可手动保存浏览器本地草稿 · 尚未连接工程保存服务");
-  const [hasSavedDraft, setHasSavedDraft] = useState(false);
+  const [hasSavedDraft, setHasSavedDraft] = useState(() => {
+    try {
+      return hasLocalDraft(window.localStorage, waterTreatmentDemoDocument.projectId);
+    } catch {
+      return false;
+    }
+  });
   const [zoom, setZoom] = useState(1);
   const [gridVisible, setGridVisible] = useState(true);
   const [gridSnap, setGridSnap] = useState(true);
@@ -129,14 +135,15 @@ export default function StudioPage() {
     setLabelDraft(typeof node?.props.text === "string" ? node.props.text : "");
   }
 
-  useEffect(() => {
+  function refreshDraftAvailability(projectId: string): string {
     try {
-      setHasSavedDraft(hasLocalDraft(window.localStorage, state.document.projectId));
+      setHasSavedDraft(hasLocalDraft(window.localStorage, projectId));
+      return "";
     } catch (error) {
       setHasSavedDraft(false);
-      setNotice("本地草稿检测失败：" + (error instanceof Error ? error.message : String(error)));
+      return "；本地草稿检测失败：" + (error instanceof Error ? error.message : String(error));
     }
-  }, [state.document.projectId]);
+  }
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -546,10 +553,11 @@ export default function StudioPage() {
       const migratedFrom = editor.loadDocument(JSON.parse(await file.text()) as unknown);
       setPreview(null);
       refresh();
+      const draftWarning = refreshDraftAvailability(editor.snapshot().document.projectId);
       setNotice(
-        migratedFrom
+        (migratedFrom
           ? `已将工程从 ${migratedFrom} 迁移至当前版本，请重新导出 JSON 草稿`
-          : "工程 JSON 已校验并载入本地编辑器",
+          : "工程 JSON 已校验并载入本地编辑器") + draftWarning,
       );
     } catch (error) {
       setNotice("导入失败：" + (error instanceof Error ? error.message : String(error)));

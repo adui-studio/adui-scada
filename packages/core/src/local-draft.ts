@@ -26,6 +26,16 @@ export function localDraftKey(projectId: string): string {
   return `${KEY_PREFIX}${projectId}`;
 }
 
+/** 统计 UTF-8 字节数，避免在无 DOM 类型的 Core 中依赖 TextEncoder。 */
+function utf8ByteLength(value: string): number {
+  let bytes = 0;
+  for (const character of value) {
+    const codePoint = character.codePointAt(0)!;
+    bytes += codePoint <= 0x7f ? 1 : codePoint <= 0x7ff ? 2 : codePoint <= 0xffff ? 3 : 4;
+  }
+  return bytes;
+}
+
 function readRaw(storage: LocalDraftStorage, key: string): string | null {
   try {
     return storage.getItem(key);
@@ -53,7 +63,7 @@ export function saveLocalDraft(
     savedAt,
     document,
   });
-  if (new TextEncoder().encode(json).byteLength > LOCAL_DRAFT_MAX_BYTES) {
+  if (utf8ByteLength(json) > LOCAL_DRAFT_MAX_BYTES) {
     throw new RangeError("本地草稿超过 2 MiB 限制，请导出 JSON 文件备份");
   }
   try {
@@ -73,7 +83,7 @@ export function readLocalDraft(
   if (raw === null) return null;
   if (
     raw.length > LOCAL_DRAFT_MAX_BYTES ||
-    new TextEncoder().encode(raw).byteLength > LOCAL_DRAFT_MAX_BYTES
+    utf8ByteLength(raw) > LOCAL_DRAFT_MAX_BYTES
   ) {
     throw new RangeError("本地草稿超过 2 MiB 限制，已拒绝恢复");
   }

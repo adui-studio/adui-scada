@@ -84,15 +84,27 @@ test("未知草稿格式和新增结构字段均拒绝恢复", () => {
   const key = localDraftKey("water-demo");
   saveLocalDraft(storage, waterTreatmentDemoDocument, savedAt);
   const base = JSON.parse(storage.getItem(key)!);
-  for (const record of [
-    { ...base, formatVersion: LOCAL_DRAFT_FORMAT_VERSION + 1 },
-    { ...base, additional: "unknown" },
-    { ...base, savedAt: "not-a-time" },
-    { ...base, document: { ...base.document, schemaVersion: "0.1.0" } },
+  for (const { record, message } of [
+    {
+      record: { ...base, formatVersion: LOCAL_DRAFT_FORMAT_VERSION + 1 },
+      message: /草稿格式版本或结构不受支持/,
+    },
+    {
+      record: { ...base, additional: "unknown" },
+      message: /草稿格式版本或结构不受支持/,
+    },
+    {
+      record: { ...base, savedAt: "not-a-time" },
+      message: /草稿保存时间无效/,
+    },
+    {
+      record: { ...base, document: { ...base.document, schemaVersion: "0.1.0" } },
+      message: /不支持的版本/,
+    },
   ]) {
     const raw = JSON.stringify(record);
     storage.setItem(key, raw);
-    expect(() => readLocalDraft(storage, "water-demo")).toThrow();
+    expect(() => readLocalDraft(storage, "water-demo")).toThrow(message);
     expect(storage.getItem(key)).toBe(raw);
   }
 });
@@ -138,6 +150,20 @@ test("超过 2 MiB 的本地记录无法恢复且原内容不被清空", () => {
   }));
   expect(() => saveLocalDraft(storage, document, savedAt)).toThrow(/超过 2 MiB/);
   expect(storage.getItem(key)).toBe(large);
+
+  const unicode = parseScadaDocument(waterTreatmentDemoDocument);
+  unicode.pages[0]!.nodes = Array.from({ length: 150 }, (_, index) => ({
+    ...unicode.pages[0]!.nodes[0]!,
+    id: `unicode-${index}`,
+    props: { text: "汉".repeat(5000) },
+  }));
+  expect(() => saveLocalDraft(storage, unicode, savedAt)).toThrow(/超过 2 MiB/);
+  expect(storage.getItem(key)).toBe(large);
+
+  const unicodeRaw = "汉".repeat(700_000);
+  storage.setItem(key, unicodeRaw);
+  expect(() => readLocalDraft(storage, "water-demo")).toThrow(/超过 2 MiB/);
+  expect(storage.getItem(key)).toBe(unicodeRaw);
 });
 
 test("浏览器存储拒绝写入时保留原草稿，不误报保存成功", () => {
