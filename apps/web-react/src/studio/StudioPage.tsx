@@ -563,7 +563,12 @@ export default function StudioPage() {
               point.y - gesture.startY,
               event.shiftKey,
             );
-      const next = withNodeTransform(snapshot.document, gesture.nodeId, patch, snapshot.activePageId);
+      const next = withNodeTransform(
+        snapshot.document,
+        gesture.nodeId,
+        patch,
+        snapshot.activePageId,
+      );
       gesture.lastPatch = patch;
       setGeometryPreview(next);
     } catch {
