@@ -133,7 +133,8 @@
   margin: 18px 0;
   font-size: 13px;
 }
-.studio-field input {
+.studio-field input,
+.studio-field select {
   min-width: 0;
   color: #e8f1ff;
   background: #0c1728;
