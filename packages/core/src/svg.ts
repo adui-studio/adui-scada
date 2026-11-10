@@ -1,3 +1,4 @@
+import { studioNodeVisible } from "./document.ts";
 import type { ScadaDocument, ScadaNode } from "./document.ts";
 import { TAG_QUALITY_LABELS } from "./tag-store.ts";
 import type { TagValue, TagQuality } from "./tag-store.ts";
