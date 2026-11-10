@@ -28,3 +28,5 @@ export {
   LocalDraftAutoSaveSession,
 } from "./local-draft.ts";
 export type { LocalDraft, LocalDraftStorage } from "./local-draft.ts";
+export { DraftAutoSaveSession } from "./draft-repository.ts";
+export type { DraftRepository, DraftRecord } from "./draft-repository.ts";
