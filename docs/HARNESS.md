@@ -346,3 +346,11 @@ pnpm run dev:vue
 针对随后提出的旋转鼠标样式需求，本轮将 `crosshair` 改为共享资源 `assets/cursors/rotate.svg` 的环形旋转箭头，且在旋转 Pointer 捕获期间维持该指针。PointerUp、Esc 和 PointerCancel 清除旋转状态；不支持 SVG 光标时回退 `grab`。
 
 **变更后仍需验证**：本批验收结论针对改光标之前的功能；修改后的 `pnpm run ready`、两端鼠标悬停/拖动/取消与共享 SVG 资源打包尚未重新实际执行。未涉及工业现场安全、Docker/Tauri 或设备写入。
+
+## 2026-11-10 · 旋转光标修改后的 Windows ready 复验
+
+维护者提供 `vp check --fix` 和 `pnpm run ready` 的 Windows PowerShell 日志。修复后再次运行的 `ready` 已明确通过：依赖 Catalog（9 个清单，26 项）、共享配置、根目录环境/LF、中文文案（72 个文件）、格式化（128 个文件）、Lint/静态检查（51 个文件）、React/Vue/NestJS 类型检查；`vp test run` **8 个测试文件、77/77 单元测试通过**（包含 `transform-gesture.test.ts` 的 **12/12**）；NestJS E2E **2/2 通过**；文档静态检查 **29 个 Markdown 文件通过**；React 和 Vue 的 Vite+ Web 构建均成功。
+
+日志最后只显示 `pnpm --filter @adui/scada-server run build` 进入 `nest build`，**未显示返回终态或退出码**，不得单独认定 NestJS 构建成功。用户尚未提供旋转 SVG 光标在浏览器中的悬停、Pointer 拖动、松开、Esc/PointerCancel 视觉反馈；这部分仍待确认。此前第六批其他画布交互已由维护者确认验收通过。
+
+此次记录依据维护者提供的终端日志，不代表 Agent 独立执行。记录文档之后尚未再次运行 `docs:check`；Docker/Tauri、工业网关和生产设备安全验收不在此次范围内。
