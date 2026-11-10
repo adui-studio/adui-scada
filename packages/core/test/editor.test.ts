@@ -776,9 +776,9 @@ test("删除当前页面后自动切换相邻页面，撤销恢复全部图元�
   expect(e.undo()).toBe(true);
   expect(e.snapshot().activePageId).toBe(pageId);
   expect(e.snapshot().document).toEqual(beforeDelete);
-  expect(e.snapshot().document.pages[1]?.nodes.find((node) => node.id === nodeId)?.bindings.value?.tagId).toBe(
-    "water.flow",
-  );
+  expect(
+    e.snapshot().document.pages[1]?.nodes.find((node) => node.id === nodeId)?.bindings.value?.tagId,
+  ).toBe("water.flow");
   expect(e.redo()).toBe(true);
   expect(e.snapshot().document.pages).toHaveLength(1);
 });
