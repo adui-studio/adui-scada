@@ -16,6 +16,8 @@ export interface LocalDraft {
 /** 本地草稿与工程 Schema 使用独立版本，避免误当作已发布工程。 */
 export const LOCAL_DRAFT_FORMAT_VERSION = 1;
 export const LOCAL_DRAFT_MAX_BYTES = 2 * 1024 * 1024;
+/** 两套 Studio 共享的自动保存延迟，单位毫秒。 */
+export const LOCAL_DRAFT_AUTO_SAVE_DELAY_MS = 1000;
 const KEY_PREFIX = "adui-scada:studio:draft:";
 const ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 

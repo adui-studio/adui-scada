@@ -9,6 +9,7 @@ import {
   clearLocalDraft,
   localDraftKey,
   LocalDraftAutoSaveSession,
+  LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
 } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import {
@@ -37,7 +38,6 @@ import "./studio.css";
 
 const previewTags = new WaterTreatmentSimulator().next(new Date("2026-11-09T00:00:00Z"));
 const maxFileSize = 2 * 1024 * 1024;
-const autoSaveDelayMs = 1000;
 const geometryFields = [
   ["x", "X 坐标"],
   ["y", "Y 坐标"],
@@ -165,7 +165,7 @@ export default function StudioPage() {
         setAutoSaveEnabled(false);
         setNotice("自动保存已暂停：" + (error instanceof Error ? error.message : String(error)));
       }
-    }, autoSaveDelayMs);
+    }, LOCAL_DRAFT_AUTO_SAVE_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [autoSaveEnabled, state.document]);
 

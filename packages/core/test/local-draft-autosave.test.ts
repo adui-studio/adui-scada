@@ -3,6 +3,7 @@ import { waterTreatmentDemoDocument } from "../src/demo-document.ts";
 import { parseScadaDocument } from "../src/document.ts";
 import {
   LocalDraftAutoSaveSession,
+  LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
   localDraftKey,
   readLocalDraft,
   saveLocalDraft,
@@ -35,6 +36,7 @@ function moved(x = 1) {
 }
 
 test("初始工程不脏，未修改时不创建任何草稿", () => {
+  expect(LOCAL_DRAFT_AUTO_SAVE_DELAY_MS).toBe(1000);
   const storage = new MemoryStorage();
   const session = new LocalDraftAutoSaveSession(storage, document());
   expect(session.hasExistingDraft).toBe(false);
