@@ -210,3 +210,10 @@
 - `apps/web-react/src/studio/studio.css`、`apps/web-vue/src/studio/studio.css`：复制目标选择区共用版式。
 - `packages/core/test/editor.test.ts`：新增 15 项页面副本、排序、复制选中、不同画布整体平移、组合保真和错误路径回归测试。
 - [ADR-0023](adr/0023-page-copy-and-reordering.md)：记录全工程 ID 重映射、复制布局、默认 Runtime 页面及保存边界。
+
+## V0.2 第十六批：Studio 会话图元剪贴板
+
+- `packages/core/src/editor.ts`：`DocumentEditor.copySelected/cutSelected/pasteClipboard`、`EditorSnapshot.hasClipboard`；复用 `cloneNodes` 与全工程占用 ID 收集，保证同页/跨页安全复制和撤销历史。`loadDocument` 成功后清空剪贴板。
+- `apps/web-react/src/studio/StudioPage.tsx` 与 `apps/web-vue/src/studio/StudioPage.vue`：剪贴板按钮和 `Ctrl/Cmd+C/X/V`，与现有输入控件及快捷键过滤兼容。
+- `packages/core/test/editor.test.ts`：13 项复制、剪切、重复偏移、组合保真、跨页与边界、失败原子性、导入清理和 JSON 无剪贴板状态回归。
+- [ADR-0024](adr/0024-session-node-clipboard.md)：会话边界、偏移策略和系统剪贴板隔离决策。
