@@ -140,10 +140,9 @@ export function parseScadaDocument(input: unknown): ScadaDocument {
       const nodeId = identifier(node.id, `${nodePath}.id`);
       if (ids.has(nodeId)) fail(`${nodePath}.id`, "ID 重复");
       ids.add(nodeId);
-      const groupId =
-        node.groupId === undefined && !Object.hasOwn(node, "groupId")
-          ? undefined
-          : identifier(node.groupId, `${nodePath}.groupId`);
+      const groupId = Object.hasOwn(node, "groupId")
+        ? identifier(node.groupId, `${nodePath}.groupId`)
+        : undefined;
       if (groupId !== undefined) {
         const group = groups.get(groupId);
         if (group && group.pageIndex !== pageIndex) {
