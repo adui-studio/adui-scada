@@ -3,6 +3,8 @@ import { waterTreatmentDemoDocument } from "../src/demo-document.ts";
 import {
   DocumentEditor,
   RESIZE_HANDLES,
+  RESIZE_HANDLE_LABELS,
+  resizeHandlePosition,
   resolveResizeTransform,
   resolveRotationTransform,
   withNodeTransform,
@@ -14,8 +16,95 @@ function tankTransform() {
   return node.transform;
 }
 
-test("四角缩放手柄的类型和顺序稳定", () => {
-  expect(RESIZE_HANDLES).toEqual(["nw", "ne", "se", "sw"]);
+test("八方向缩放手柄的类型、顺序和中文名称稳定", () => {
+  expect(RESIZE_HANDLES).toEqual(["nw", "n", "ne", "e", "se", "s", "sw", "w"]);
+  expect(RESIZE_HANDLES.map((handle) => RESIZE_HANDLE_LABELS[handle])).toEqual([
+    "左上角",
+    "上边中点",
+    "右上角",
+    "右边中点",
+    "右下角",
+    "下边中点",
+    "左下角",
+    "左边中点",
+  ]);
+});
+
+test("八方向控制点沿局部矩形边缘和中点分布", () => {
+  const transform = { x: 100, y: 120, width: 160, height: 80, rotation: 45 };
+  expect(RESIZE_HANDLES.map((handle) => resizeHandlePosition(transform, handle))).toEqual([
+    { x: 100, y: 120 },
+    { x: 180, y: 120 },
+    { x: 260, y: 120 },
+    { x: 260, y: 160 },
+    { x: 260, y: 200 },
+    { x: 180, y: 200 },
+    { x: 100, y: 200 },
+    { x: 100, y: 160 },
+  ]);
+  expect(() => resizeHandlePosition(transform, "unknown" as never)).toThrow(/缩放手柄/);
+});
+
+test("上下中点仅改变高度且对侧边沿不移动", () => {
+  const t = { x: 100, y: 100, width: 160, height: 80, rotation: 0 };
+  const north = resolveResizeTransform(t, "n", 25, -15);
+  expect(north).toEqual({ x: 100, y: 85, width: 160, height: 95, rotation: 0 });
+  expect(north.y + north.height).toBe(t.y + t.height);
+  const south = resolveResizeTransform(t, "s", 25, 20);
+  expect(south).toEqual({ x: 100, y: 100, width: 160, height: 100, rotation: 0 });
+});
+
+test("左右中点仅改变宽度且对侧边沿不移动", () => {
+  const t = { x: 100, y: 100, width: 160, height: 80, rotation: 0 };
+  const west = resolveResizeTransform(t, "w", -25, 18);
+  expect(west).toEqual({ x: 75, y: 100, width: 185, height: 80, rotation: 0 });
+  expect(west.x + west.width).toBe(t.x + t.width);
+  const east = resolveResizeTransform(t, "e", 25, 18);
+  expect(east).toEqual({ x: 100, y: 100, width: 185, height: 80, rotation: 0 });
+});
+
+test("单轴手柄沿切线移动时不改变高精度小数几何属性", () => {
+  const t = { x: 10.123, y: 20.456, width: 36.789, height: 50.123, rotation: 0 };
+  expect(resolveResizeTransform(t, "e", 0, 50)).toEqual(t);
+  expect(resolveResizeTransform(t, "n", 60, 0)).toEqual(t);
+  const rotated = { ...t, rotation: 90 };
+  expect(resolveResizeTransform(rotated, "e", 50, 0)).toEqual(rotated);
+  expect(resolveResizeTransform(rotated, "n", 0, 50)).toEqual(rotated);
+});
+
+test("九十度旋转图元右中点缩放固定左侧边中点", () => {
+  const t = { x: 100, y: 100, width: 100, height: 80, rotation: 90 };
+  const east = resolveResizeTransform(t, "e", 30, 20);
+  expect(east).toEqual({ x: 90, y: 110, width: 120, height: 80, rotation: 90 });
+  expect(east.x + east.width / 2).toBe(t.x + t.width / 2);
+  expect(east.y + east.height / 2 - east.width / 2).toBe(t.y + t.height / 2 - t.width / 2);
+});
+
+test("非直角旋转图元单轴缩放固定对侧旋转中点", () => {
+  const t = { x: 100, y: 120, width: 150, height: 80, rotation: 30 };
+  const changed = resolveResizeTransform(t, "n", 45, -25);
+  expect(changed.width).toBe(t.width);
+  const anchor = (node: typeof t) => ({
+    x: node.x + node.width / 2 - Math.sin((node.rotation * Math.PI) / 180) * (node.height / 2),
+    y: node.y + node.height / 2 + Math.cos((node.rotation * Math.PI) / 180) * (node.height / 2),
+  });
+  expect(anchor(changed).x).toBeCloseTo(anchor(t).x, 1);
+  expect(anchor(changed).y).toBeCloseTo(anchor(t).y, 1);
+});
+
+test("单轴缩放经过共享命令后可撤销并拒绝越界及非法尺寸", () => {
+  const editor = new DocumentEditor(waterTreatmentDemoDocument);
+  editor.select("tank");
+  const before = editor.snapshot();
+  const original = tankTransform();
+  const valid = resolveResizeTransform(original, "e", 25, 0);
+  expect(editor.updateSelectedTransform(valid)).toBe(true);
+  expect(editor.undo()).toBe(true);
+  expect(editor.snapshot().document).toEqual(before.document);
+  expect(() => resolveResizeTransform(original, "w", original.width + 10, 0)).toThrow(/不能小于/);
+  const boundary = resolveResizeTransform(original, "w", -100, 0);
+  expect(() => withNodeTransform(before.document, "tank", boundary)).toThrow(/画布范围/);
+  expect(editor.snapshot().document).toEqual(before.document);
 });
 
 test("左上角缩放保持右下角固定", () => {
