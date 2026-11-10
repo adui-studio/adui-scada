@@ -451,7 +451,7 @@ export default function StudioPage() {
     if (event.button !== 0) return;
     const point = canvasPoint(event.clientX, event.clientY);
     if (!point) return;
-    const node = page.nodes.find((candidate) => candidate.id === id);
+    const node = page?.nodes.find((candidate) => candidate.id === id);
     if (!node) return;
     if (event.shiftKey) {
       editor.select(id, true);
