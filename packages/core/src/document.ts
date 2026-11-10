@@ -1,5 +1,7 @@
-/** V0.1 工程文档契约：仅支持 JSON 数据，禁止执行表达式或嵌入脚本。 */
-export const SCADA_SCHEMA_VERSION = "0.1.0";
+/** 工程文档契约：仅支持受验证的 JSON 数据，禁止执行脚本。 */
+export const SCADA_SCHEMA_VERSION = "0.2.0";
+/** 仅在显式导入时支持升级的历史工程版本。 */
+export const LEGACY_SCADA_SCHEMA_VERSION = "0.1.0";
 
 export type TagId = string;
 export type ScadaNodeType = "tank" | "pump" | "pipe" | "label" | (string & {});
@@ -46,6 +48,17 @@ function record(value: unknown, path: string): Record<string, unknown> {
     fail(path, "应为普通对象");
   }
   return value as Record<string, unknown>;
+}
+
+/** 对工程结构实行字段白名单校验，阻止未知字段在导入时被静默剔除。 */
+function knownFields(
+  source: Record<string, unknown>,
+  allowed: readonly string[],
+  path: string,
+): void {
+  for (const key of Object.keys(source)) {
+    if (!allowed.includes(key)) fail(`${path}.${key}`, "包含不支持的结构字段，拒绝静默丢弃");
+  }
 }
 
 function identifier(value: unknown, path: string): string {
@@ -108,12 +121,13 @@ function jsonValue(
   }
 }
 
-/** 验证不可信的内存对象或解析后的 JSON 文档，并返回防御性副本。 */
-export function parseScadaDocument(input: unknown): ScadaDocument {
+/** 按指定来源版本验证所有字段，仅返回当前版本的防御性工程副本。 */
+function parseVersionedDocument(input: unknown, sourceVersion: string): ScadaDocument {
   const root = record(input, "文档");
-  if (root.schemaVersion !== SCADA_SCHEMA_VERSION) {
-    fail("schemaVersion", `不支持的版本，预期为 ${SCADA_SCHEMA_VERSION}`);
+  if (root.schemaVersion !== sourceVersion) {
+    fail("schemaVersion", `不支持的版本，预期为 ${sourceVersion}`);
   }
+  knownFields(root, ["schemaVersion", "projectId", "pages"], "文档");
   const projectId = identifier(root.projectId, "projectId");
   if (!Array.isArray(root.pages) || root.pages.length === 0 || root.pages.length > MAX_PAGES) {
     fail("pages", `页面数量必须在 1～${MAX_PAGES} 之间`);
@@ -124,11 +138,13 @@ export function parseScadaDocument(input: unknown): ScadaDocument {
   const pages = root.pages.map((raw, pageIndex): ScadaPage => {
     const pagePath = `pages[${pageIndex}]`;
     const page = record(raw, pagePath);
+    knownFields(page, ["id", "name", "size", "nodes"], pagePath);
     const id = identifier(page.id, `${pagePath}.id`);
     if (ids.has(id)) fail(`${pagePath}.id`, "ID 重复");
     ids.add(id);
     const name = nonemptyText(page.name, `${pagePath}.name`);
     const size = record(page.size, `${pagePath}.size`);
+    knownFields(size, ["width", "height"], `${pagePath}.size`);
     const width = boundedNumber(size.width, `${pagePath}.size.width`, 1, 16384);
     const height = boundedNumber(size.height, `${pagePath}.size.height`, 1, 16384);
     if (!Array.isArray(page.nodes)) fail(`${pagePath}.nodes`, "应为数组");
@@ -137,6 +153,11 @@ export function parseScadaDocument(input: unknown): ScadaDocument {
     const nodes = page.nodes.map((rawNode, nodeIndex): ScadaNode => {
       const nodePath = `${pagePath}.nodes[${nodeIndex}]`;
       const node = record(rawNode, nodePath);
+      knownFields(
+        node,
+        ["id", "groupId", "type", "symbolVersion", "transform", "props", "bindings", "rules"],
+        nodePath,
+      );
       const nodeId = identifier(node.id, `${nodePath}.id`);
       if (ids.has(nodeId)) fail(`${nodePath}.id`, "ID 重复");
       ids.add(nodeId);
@@ -153,6 +174,7 @@ export function parseScadaDocument(input: unknown): ScadaDocument {
       const type = nonemptyText(node.type, `${nodePath}.type`, 64);
       const symbolVersion = nonemptyText(node.symbolVersion, `${nodePath}.symbolVersion`, 32);
       const t = record(node.transform, `${nodePath}.transform`);
+      knownFields(t, ["x", "y", "width", "height", "rotation"], `${nodePath}.transform`);
       const transform = {
         x: boundedNumber(t.x, `${nodePath}.transform.x`, -1_000_000, 1_000_000),
         y: boundedNumber(t.y, `${nodePath}.transform.y`, -1_000_000, 1_000_000),
@@ -170,6 +192,7 @@ export function parseScadaDocument(input: unknown): ScadaDocument {
       for (const [key, bindingValue] of Object.entries(bindingsRaw)) {
         identifier(key, `${nodePath}.绑定字段`);
         const binding = record(bindingValue, `${nodePath}.bindings.${key}`);
+        knownFields(binding, ["tagId"], `${nodePath}.bindings.${key}`);
         bindings[key] = { tagId: identifier(binding.tagId, `${nodePath}.bindings.${key}.tagId`) };
       }
       if (!Array.isArray(node.rules)) fail(`${nodePath}.rules`, "应为数组");
@@ -192,4 +215,36 @@ export function parseScadaDocument(input: unknown): ScadaDocument {
     if (group.count < 2) fail("groupId", "组合至少需要两个图元");
   }
   return { schemaVersion: SCADA_SCHEMA_VERSION, projectId, pages };
+}
+
+/** 内部调用及 Runtime 只允许当前 Schema；旧版本必须走显式迁移入口。 */
+export function parseScadaDocument(input: unknown): ScadaDocument {
+  return parseVersionedDocument(input, SCADA_SCHEMA_VERSION);
+}
+
+export interface ScadaDocumentMigration {
+  readonly document: ScadaDocument;
+  readonly migratedFrom: typeof LEGACY_SCADA_SCHEMA_VERSION | null;
+}
+
+/**
+ * 专供 Studio 工程导入：校验并升级 0.1.0，当前版本直接严格校验。
+ * 不接受未来、未知版本；迁移过程中保留旧版组合 groupId。
+ */
+export function migrateScadaDocument(input: unknown): ScadaDocumentMigration {
+  const root = record(input, "文档");
+  if (root.schemaVersion === SCADA_SCHEMA_VERSION) {
+    return { document: parseScadaDocument(input), migratedFrom: null };
+  }
+  if (root.schemaVersion === LEGACY_SCADA_SCHEMA_VERSION) {
+    const legacy = parseVersionedDocument(input, LEGACY_SCADA_SCHEMA_VERSION);
+    return {
+      document: parseScadaDocument(legacy),
+      migratedFrom: LEGACY_SCADA_SCHEMA_VERSION,
+    };
+  }
+  fail(
+    "schemaVersion",
+    `不支持的工程版本，仅允许 ${LEGACY_SCADA_SCHEMA_VERSION} 或 ${SCADA_SCHEMA_VERSION}`,
+  );
 }

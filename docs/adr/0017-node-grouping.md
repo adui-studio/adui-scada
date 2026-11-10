@@ -31,3 +31,7 @@ Vue 和 React Studio 已有多选、整体拖动、八方向缩放与本地 JSON
 - 旧客户端往返或跨版本工程迁移及正式兼容性保证。
 
 待 `pnpm run ready` 与 React/Vue 双向工程/交互验收通过后再评估是否接受本 ADR 与合并分支。
+
+## 后续 Schema 演进
+
+第十批在 [ADR-0018](0018-schema-version-migration.md) 提议将新工程 Schema 升至 `0.2.0`，显式迁移严格校验的 `0.1.0` 草稿，以解决本 ADR 中旧客户端可能静默丢失 `groupId` 的风险。本段仅作历史决策的后续索引，方案仍需维护者验证。

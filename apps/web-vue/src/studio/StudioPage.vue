@@ -507,10 +507,12 @@ async function importJson(event: Event) {
   if (!file) return;
   try {
     if (file.size > maxFileSize) throw new RangeError("JSON 文件不能超过 2 MiB");
-    editor.loadDocument(JSON.parse(await file.text()) as unknown);
+    const migratedFrom = editor.loadDocument(JSON.parse(await file.text()) as unknown);
     preview.value = null;
     refresh();
-    notice.value = "工程 JSON 已校验并载入本地编辑器";
+    notice.value = migratedFrom
+      ? `已将工程从 ${migratedFrom} 迁移至当前版本，请重新导出 JSON 草稿`
+      : "工程 JSON 已校验并载入本地编辑器";
   } catch (error) {
     notice.value = "导入失败：" + (error instanceof Error ? error.message : String(error));
   }

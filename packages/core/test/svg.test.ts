@@ -1,10 +1,10 @@
 import { expect, test } from "vite-plus/test";
-import { parseScadaDocument } from "../src/document.ts";
+import { SCADA_SCHEMA_VERSION, parseScadaDocument } from "../src/document.ts";
 import { renderSvgPage } from "../src/svg.ts";
 import type { TagValue } from "../src/tag-store.ts";
 
 const source = {
-  schemaVersion: "0.1.0",
+  schemaVersion: SCADA_SCHEMA_VERSION,
   projectId: "demo",
   pages: [
     {

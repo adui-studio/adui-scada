@@ -1,5 +1,6 @@
 import { expect, test } from "vite-plus/test";
 import { waterTreatmentDemoDocument } from "../src/demo-document.ts";
+import { LEGACY_SCADA_SCHEMA_VERSION, SCADA_SCHEMA_VERSION } from "../src/document.ts";
 import {
   DocumentEditor,
   findNodesInRect,
@@ -583,4 +584,61 @@ test("组合关系可通过本地 JSON 跨编辑器往返并恢复组员选择",
   third.loadDocument(JSON.parse(JSON.stringify(other.snapshot().document)));
   third.select("tank");
   expect(third.snapshot().selectedIds).toEqual(["tank"]);
+});
+
+test("旧版工程显式导入后升级并重置旧编辑历史", () => {
+  const e = editor();
+  e.select("tank");
+  expect(e.moveBy(4, 0)).toBe(true);
+  const legacy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  legacy.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  legacy.pages[0].nodes[1].groupId = "group-1";
+  legacy.pages[0].nodes[3].groupId = "group-1";
+
+  expect(e.loadDocument(legacy)).toBe(LEGACY_SCADA_SCHEMA_VERSION);
+  const result = e.snapshot();
+  expect(result.document.schemaVersion).toBe(SCADA_SCHEMA_VERSION);
+  expect(result.selectedIds).toEqual([]);
+  expect(result.canUndo).toBe(false);
+  expect(result.canRedo).toBe(false);
+  e.select("tank");
+  expect(new Set(e.snapshot().selectedIds)).toEqual(new Set(["tank", "pump"]));
+  expect(result.document.pages[0]?.nodes[1]?.groupId).toBe("group-1");
+  expect(result.document.pages[0]?.nodes[3]?.groupId).toBe("group-1");
+});
+
+test("当前版本工程导入不触发迁移提示", () => {
+  const e = editor();
+  const current = e.snapshot().document;
+  expect(e.loadDocument(JSON.parse(JSON.stringify(current)))).toBeNull();
+  expect(e.snapshot().document).toEqual(current);
+});
+
+test("旧版工程存在未知字段时导入失败且保留选中和撤销历史", () => {
+  const e = editor();
+  e.select("tank");
+  expect(e.moveBy(5, 0)).toBe(true);
+  const before = e.snapshot();
+  const legacy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  legacy.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  legacy.pages[0].nodes[1].transform.futureScale = 2;
+  expect(() => e.loadDocument(legacy)).toThrow(/结构字段/);
+  expect(e.snapshot()).toEqual(before);
+  expect(e.undo()).toBe(true);
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().document).toEqual(before.document);
+});
+
+test("未来版本或非法历史组合拒绝导入并保留当前工程", () => {
+  const e = editor();
+  e.select("tank");
+  const before = e.snapshot();
+  const future = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  future.schemaVersion = "0.3.0";
+  expect(() => e.loadDocument(future)).toThrow(/不支持的工程版本/);
+  expect(e.snapshot()).toEqual(before);
+  future.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  future.pages[0].nodes[1].groupId = "group-1";
+  expect(() => e.loadDocument(future)).toThrow(/至少需要两个图元/);
+  expect(e.snapshot()).toEqual(before);
 });

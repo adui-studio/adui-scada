@@ -470,3 +470,45 @@ pnpm run dev:vue
 开发分支另有维护者提交 `9c06def`（「统一工程代码格式并通过 Vite+ 质量检查」），仅修改 Vue Studio 模板与共享编辑器格式。**证据边界**：本轮仅收到「验收通过」的总体结论及该格式整理提交，没有提供此批 `pnpm run ready` 完整日志、实测单元测试数量、各项构建输出或最后退出码。源码预估 **106 项**仅为开发期统计，不记为已独立核对的 **106/106**；不能将 Git 提交说明等同于完整质量链原始日志。本条验收来自维护者确认，非 Agent 独立运行。后续追加此记录也未重新运行 `docs:check`。
 
 PR #11 保持 Draft，**未经另行合并授权不修改 `main`**。新增的 `ScadaNode.groupId` 在现有 `0.1.0` 预发布 Schema 下可能被旧版本 Parser 丢弃，正式保存/发布前仍需确定 Schema 迁移方案；现场安全、PLC/DCS 真实写入与 Docker/Tauri 不属于本批验收。
+
+## 2026-11-10 · V0.2 第十批 Schema 升级与迁移开发分支（待验收）
+
+从 PR #11 合并后的 `main`（`3f20f10`）建立 `feat/v0.2-schema-migration`。上一批维护者 Windows 实测 `pnpm run ready` **106/106 单元测试、2/2 NestJS E2E、零 Lint 警告、三端构建通过且退出码 0**；该结果**不是**本批测试结果。
+
+新增文档验证 **8 项**及编辑器验证 **4 项**，整仓单元测试入口预计 **118 项**。本次尚未在维护者 Windows 运行 `pnpm run ready`、Vitest、类型检查、E2E、Web/Server 构建或浏览器验收；不能根据静态源码统计宣称测试通过。
+
+```powershell
+git fetch origin
+git switch feat/v0.2-schema-migration
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+人工验收：React、Vue 分别导入无组合及含合法 `groupId` 的 `0.1.0` 草稿，确认提示由旧版升级、导出 `0.2.0` 并跨框架双向往返保留页面、节点、位置、Tag 和组合；当前 `0.2.0` 导入仅显示常规提示。未知/未来版本、未知结构字段、非法组合和不安全 JSON 被拒绝，原文档、选择和撤销记录不改变。确认模拟 Runtime 只使用当前 Schema，不提供旧版自动升级；原 SVG、缩放、吸附、组合与只读模拟数据无回归。
+
+工业现场、Docker/Tauri、正式资源包/工程发布及所有历史旧客户端的二进制兼容测试不在本批。文档本身尚未经本批真实 `docs:check`。
+
+## 2026-11-10 · 第十批首次 Windows ready：SVG 测试数据版本失配及修复
+
+维护者执行 `pnpm run ready` 并提供原始日志：依赖 Catalog（9 清单、26 项）、共享配置、根环境与 LF、中文文案（73 个文件）、**133 个文件格式检查**、**52 个文件零警告静态检查**以及 React/Vue/NestJS TypeScript 类型检查通过。Vitest 阶段 **7 个测试文件成功，115 项测试通过**；`packages/core/test/svg.test.ts` 在模块加载时因测试工程仍写死 `schemaVersion: "0.1.0"`，被新 `parseScadaDocument` 按预期拒绝（预期 `0.2.0`），导致该文件 **3 项测试均未执行**，完整 `ready` 退出码为 **1**。因命令链在单测阶段终止，**E2E、文档检查、React/Vue 与 NestJS 构建没有执行**。
+
+已在当前特性分支提交修复 `a6e94a5`：仅更新 `packages/core/test/svg.test.ts`，导入 `SCADA_SCHEMA_VERSION` 并让测试 Fixture 使用当前 Schema 常量。生产解析、迁移和运行时代码保持不变，未为通过测试而放宽版本校验。**修复后尚未重新执行 `pnpm run ready`**，预计 118 项单测仍须维护者复验并给出最终退出码。
+
+## 2026-11-10 · 第十批 Schema 迁移修复后完整质量链通过
+
+维护者在测试 Fixture 修复 `a6e94a5` 和分支格式整理 `c0bb653` 后，于 Windows PowerShell 再次执行 `pnpm run ready` 并提供完整日志，最终 **退出码 0**：
+
+- 依赖 Catalog 检查（9 个清单、26 项依赖）、共享配置（8 个 TSConfig 消费端）、根环境及 LF 行尾检查均通过；自有中文文案检查 **73 个文件**。
+- Vite+ 格式检查 **133 个文件全部通过**；Lint/静态检查 **52 个文件零警告、零错误**；React `tsc --build`、Vue `vue-tsc --build` 和 NestJS `tsc --noEmit` 全部通过。
+- Vitest 单元测试 **8 个文件、118/118 项通过**；其中 `document.test.ts` **16 项**、`editor.test.ts` **43 项**、`svg.test.ts` **3 项**均通过；NestJS E2E **2/2 项通过**。
+- Markdown 静态文档检查 **33 个文件通过**；React、Vue 两套 Web 构建成功，NestJS `nest build` 完成，整个命令退出码 **0**。
+
+这一记录来自维护者实际终端日志，并非 Agent 独立执行。确认此前加载失败的 SVG 测试用例已恢复执行；**尚未提供 Vue/React 真实浏览器旧版工程迁移、双向 JSON 往返及只读 Runtime 的逐项人工验收结论**。记录这段文档之后，新增文档本身未重新运行 `docs:check`；PR #12 保持 Draft，不修改 `main`。
+
+## 2026-11-10 · 第十批 Schema 迁移 Vue/React 交互验收通过
+
+维护者明确反馈「验收通过」，按 PR #12 原定的剩余六项验收清单记录人工交互验收完成：双框架导入无组合的历史 `0.1.0` 工程及升级提示、含合法 `groupId` 的历史组合保真、当前 `0.2.0` 工程导入与 Vue/React 双向 JSON/Tag 往返、未知版本与结构字段拒绝及失败状态保留、只读 Runtime 的当前 Schema 和模拟画面，以及既有组合、缩放、吸附、撤销重做等编辑命令无回归。该结论**来源于维护者总体人工验收反馈，并非 Agent 独立浏览器逐项复测**。
+
+本批此前已有维护者提供的完整 Windows `pnpm run ready` 日志：**118/118 单元测试、2/2 NestJS E2E、133 文件格式检查、52 文件零警告静态检查、33 份 Markdown 检查、React/Vue/NestJS 类型检查与三端构建成功、退出码 0**。此条新增验收记录后**尚未重新执行** `docs:check` 或 `pnpm run ready`。PR #12 的七项验收清单据此全部完成，仍保留 Draft，**未经单独合并授权不修改 `main`**。正式工程持久化、生产发布、历史二进制客户端兼容、Tauri 与真实工业现场安全验收不在本批结论范围内。
