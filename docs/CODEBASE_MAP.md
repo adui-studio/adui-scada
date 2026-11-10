@@ -186,3 +186,10 @@
 - `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：改用同一异步 `DexieDraftRepository`，保留按钮/1 秒防抖/人工恢复确认/冲突提示。
 - `pnpm-workspace.yaml` 与各相关 `package.json`：共享 Catalog 管理 `dexie`、`fake-indexeddb` 和 `@adui/scada-draft-storage`；`vite.config.ts` 加入存储测试，配置检查含新增 TSConfig。
 - [ADR-0021](adr/0021-indexeddb-dexie-storage.md)：2026 年浏览器数据库技术选型、版本条件写入及迁移安全。
+
+## V0.2 第十三批：演示 Tag 绑定编辑
+
+- `packages/core/src/editor.ts`：`editableTagSlot` 与 `DocumentEditor.setSelectedBinding`，负责合法槽、单选、组合限制、原子历史。
+- `packages/core/src/demo-document.ts`：`waterTreatmentDemoTagOptions` 模拟候选目录，供双框架共享。
+- `apps/web-react/src/studio/StudioPage.tsx` / `apps/web-vue/src/studio/StudioPage.vue`：选取或清除模拟 Tag 绑定；两端 `studio.css` 新增选择控件样式。
+- `packages/core/test/editor.test.ts`：新增六项绑定编辑与错误路径回归用例。
