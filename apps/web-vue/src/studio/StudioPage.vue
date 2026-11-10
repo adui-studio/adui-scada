@@ -1278,9 +1278,9 @@ async function importJson(event: Event) {
           >
             <label v-for="[key, label] in geometryFields" :key="key">
               {{ label }}
-              <input type="number" :name="key" step="any" :value="selected.transform[key]" />
+              <input type="number" :name="key" step="any" :value="selected.transform[key]" :disabled="studioNodeLocked(selected)" />
             </label>
-            <button type="submit">应用几何属性</button>
+            <button type="submit" :disabled="studioNodeLocked(selected)">应用几何属性</button>
           </form>
           <p v-else class="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
           <p class="studio-tip">拖动画布中的虚线框，或使用方向按钮微调。每次操作可撤销。</p>
@@ -1295,8 +1295,8 @@ async function importJson(event: Event) {
             class="studio-field"
           >
             显示文案
-            <input v-model="labelDraft" maxlength="256" />
-            <button type="button" @click="changeLabel">应用文案</button>
+            <input v-model="labelDraft" maxlength="256" :disabled="studioNodeLocked(selected)" />
+            <button type="button" :disabled="studioNodeLocked(selected)" @click="changeLabel">应用文案</button>
           </label>
           <h3>Tag 绑定（模拟数据）</h3>
           <label v-if="bindingSlot" class="studio-field">
