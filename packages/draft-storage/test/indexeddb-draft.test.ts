@@ -202,9 +202,9 @@ test("旧存储清理失败时保留迁移标记，防止已删除草稿复活",
 test("不支持的工程版本无法通过 IndexedDB 保存写入", async () => {
   const db = repository();
   try {
-    await expect(
-      db.save({ ...document(), schemaVersion: "0.1.0" }, null),
-    ).rejects.toThrow(/不支持的版本/);
+    await expect(db.save({ ...document(), schemaVersion: "0.1.0" }, null)).rejects.toThrow(
+      /不支持的版本/,
+    );
     expect(await db.get("water-demo")).toBeNull();
   } finally {
     db.close();

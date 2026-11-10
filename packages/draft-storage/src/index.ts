@@ -154,28 +154,23 @@ export class DexieDraftRepository implements DraftRepository {
     }
     // 在事务开始前完成非数据库运算，防止异步等待导致事务意外关闭。
     const savedAt = new Date().toISOString();
-    const record = await this.database.transaction(
-      "rw",
-      this.drafts,
-      this.migrations,
-      async () => {
-        const existing = await this.drafts.get(projectId);
-        if ((existing?.revision ?? null) !== expectedRevision) {
-          throw new TypeError("检测到其他页面修改了草稿，请先恢复或核对最新版本");
-        }
-        if (existing) this.validate(existing, projectId);
-        const marker = await this.migrations.get(projectId);
-        const lastRevision = Math.max(existing?.revision ?? 0, marker?.lastRevision ?? 0);
-        const revision = lastRevision + 1;
-        if (!Number.isSafeInteger(revision)) {
-          throw new RangeError("草稿修订号已达到安全整数上限，无法继续保存");
-        }
-        const next: DraftRecord = { projectId, savedAt, revision, document };
-        await this.drafts.put(next);
-        await this.migrations.put({ projectId, lastRevision: revision });
-        return next;
-      },
-    );
+    const record = await this.database.transaction("rw", this.drafts, this.migrations, async () => {
+      const existing = await this.drafts.get(projectId);
+      if ((existing?.revision ?? null) !== expectedRevision) {
+        throw new TypeError("检测到其他页面修改了草稿，请先恢复或核对最新版本");
+      }
+      if (existing) this.validate(existing, projectId);
+      const marker = await this.migrations.get(projectId);
+      const lastRevision = Math.max(existing?.revision ?? 0, marker?.lastRevision ?? 0);
+      const revision = lastRevision + 1;
+      if (!Number.isSafeInteger(revision)) {
+        throw new RangeError("草稿修订号已达到安全整数上限，无法继续保存");
+      }
+      const next: DraftRecord = { projectId, savedAt, revision, document };
+      await this.drafts.put(next);
+      await this.migrations.put({ projectId, lastRevision: revision });
+      return next;
+    });
     this.notify(projectId, record.revision);
     return record;
   }

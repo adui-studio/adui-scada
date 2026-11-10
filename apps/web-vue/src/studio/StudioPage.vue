@@ -205,8 +205,7 @@ async function checkLocalDraft() {
     hasSavedDraft.value = (await drafts.get(state.value.document.projectId)) !== null;
   } catch (error) {
     hasSavedDraft.value = error instanceof InvalidLegacyDraftError;
-    notice.value =
-      "本地草稿读取失败：" + (error instanceof Error ? error.message : String(error));
+    notice.value = "本地草稿读取失败：" + (error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -239,10 +238,13 @@ onUnmounted(() => {
   unsubscribeDraft?.();
   void pauseAutoSave().then(() => drafts.close());
 });
-watch(() => state.value.document.projectId, () => {
-  subscribeDraft();
-  void checkLocalDraft();
-});
+watch(
+  () => state.value.document.projectId,
+  () => {
+    subscribeDraft();
+    void checkLocalDraft();
+  },
+);
 
 watch(
   () => [state.value.document, autoSaveEnabled.value] as const,

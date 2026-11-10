@@ -65,7 +65,10 @@ test("工程变更触发一次写入，重复相同工程不再次保存", async
 test("并发提交依次执行，较新工程不会被旧工程覆盖", async () => {
   const repo = new MemoryRepository();
   const session = await DraftAutoSaveSession.open(repo, document());
-  const result = await Promise.all([session.saveIfDirty(edited(2)), session.saveIfDirty(edited(3))]);
+  const result = await Promise.all([
+    session.saveIfDirty(edited(2)),
+    session.saveIfDirty(edited(3)),
+  ]);
   expect(result.map((item) => item?.revision)).toEqual([1, 2]);
   expect(repo.record?.document.pages[0]?.nodes[0]?.transform.x).toBe(
     edited(3).pages[0]?.nodes[0]?.transform.x,

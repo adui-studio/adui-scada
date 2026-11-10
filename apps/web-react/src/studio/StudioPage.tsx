@@ -165,9 +165,7 @@ export default function StudioPage() {
       (error: unknown) => {
         if (controller.signal.aborted) return;
         setHasSavedDraft(error instanceof InvalidLegacyDraftError);
-        setNotice(
-          "本地草稿读取失败：" + (error instanceof Error ? error.message : String(error)),
-        );
+        setNotice("本地草稿读取失败：" + (error instanceof Error ? error.message : String(error)));
       },
     );
     const unsubscribe = drafts.subscribe(state.document.projectId, (revision) => {
