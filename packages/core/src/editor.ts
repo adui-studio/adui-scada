@@ -39,6 +39,7 @@ const DEFAULT_SYMBOLS: Record<EditableSymbol, { width: number; height: number }>
   label: { width: 200, height: 32 },
 };
 
+/** 省略页面 ID 时仍定位第一页，兼容现有单页面调用。 */
 function firstPage(document: ScadaDocument, pageId?: string) {
   const page =
     pageId === undefined ? document.pages[0] : document.pages.find((item) => item.id === pageId);
@@ -115,7 +116,7 @@ export function withNodesTranslated(
 }
 
 /**
- * 返回第一页中与拖动选框相交的图元 ID。
+ * 返回指定页面中与拖动选框相交的图元 ID。
  * 旋转图元采用保守的轴对齐外接矩形进行命中计算。
  * 选择状态和画布缩放由调用方管理，不写入工程 JSON。
  */
@@ -168,7 +169,13 @@ export function withNodePosition(
   const page = firstPage(document, pageId);
   const node = page.nodes.find((candidate) => candidate.id === nodeId);
   if (!node) throw new RangeError(`未找到图元：${nodeId}`);
-  return withNodesTranslated(document, [nodeId], x - node.transform.x, y - node.transform.y, pageId);
+  return withNodesTranslated(
+    document,
+    [nodeId],
+    x - node.transform.x,
+    y - node.transform.y,
+    pageId,
+  );
 }
 
 /** 原子修改单个图元的几何属性；未旋转的布局矩形必须完整位于页面内。 */
@@ -429,7 +436,9 @@ export class DocumentEditor {
 
   moveBy(dx: number, dy: number): boolean {
     if (this.selection.length === 0) return false;
-    return this.commit(withNodesTranslated(this.current, this.selection, dx, dy, this.activePageId));
+    return this.commit(
+      withNodesTranslated(this.current, this.selection, dx, dy, this.activePageId),
+    );
   }
 
   addNode(type: EditableSymbol, x = 40, y = 40): string {
@@ -574,7 +583,9 @@ export class DocumentEditor {
     if (this.selection.length !== 1) {
       throw new TypeError("请先单选一个图元再编辑几何属性");
     }
-    return this.commit(withNodeTransform(this.current, this.selection[0]!, patch, this.activePageId));
+    return this.commit(
+      withNodeTransform(this.current, this.selection[0]!, patch, this.activePageId),
+    );
   }
 
   /** 单选图元的 Tag 绑定修改记录为一条可撤销命令。 */
