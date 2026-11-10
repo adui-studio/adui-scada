@@ -386,3 +386,23 @@ pnpm run dev:vue
 **证据边界**：本次仅收到维护者的验收结论，未附 `pnpm run ready` 最终退出码、单测总数及各构建输出；因此源码预计的 **84 项**不能写成已经逐项独立核实的 **84/84**。分支另含维护者提交 `82042df` 的代码格式调整，未由 Agent 在 Windows 独立执行本批测试。本次补充文档之后也尚未重新检查 `docs:check`。
 
 PR #9 继续保持 Draft，不合并 `main`；不扩大为工业设备现场安全、Docker/Tauri、服务端持久化或正式工程发布验收。
+
+## 2026-11-10 · V0.2 第八批等比例缩放（开发中，待验收）
+
+在第七批 PR #9 已合并到 `main` 后，从合并提交 `47ca2f4` 创建 `feat/v0.2-aspect-ratio-resize`。共享 Core 新增 `Shift` 锁定原始宽高比的功能，React/Vue 透传 `PointerEvent.shiftKey`；新增 **9 项** `transform-gesture.test.ts` 用例，该文件预计 28 项，整仓单元测试**预计 93 项**。本轮新代码**尚未运行** Vitest、`vp check`、类型检查、文档校验、E2E 或 Web/Server 构建；历史已合并 PR 的通过记录不能当作本批结果。
+
+已独立手算/复核的 10 组基本几何算例与预期一致，但这**不是**在本仓库内执行测试。当前执行环境无法访问 GitHub 远端 Git 地址且无 pnpm，故完整验证交由维护者 Windows 环境完成。
+
+维护者本机执行：
+
+```powershell
+git fetch origin
+git switch feat/v0.2-aspect-ratio-resize
+pnpm run ready
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+人工验收：Vue 和 React 选中图元后，普通八方向拖动行为不变；按住 Shift 拖动任意四角或边中点，宽高按原比例变化；松开 Shift 后恢复普通单轴/双轴缩放；30°/90° 旋转图元对侧固定锚点不漂移；50%/200% 视图缩放仍准确；非法尺寸/画布越界保留最后合法预览，Esc/PointerCancel 不提交；PointerUp 仅形成一条可撤销命令；JSON 双向往返时图元 ID、几何属性、Tag 绑定保持一致；Shift 旋转仍按 15° 吸附，模拟 Runtime 与工业设备只读边界不变。
+
+本批仅验证本地图元编辑，并非工业现场安全认证、Docker/Tauri 专项或正式工程保存/发布。
