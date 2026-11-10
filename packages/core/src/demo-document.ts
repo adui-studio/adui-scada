@@ -1,6 +1,20 @@
 import { parseScadaDocument, SCADA_SCHEMA_VERSION } from "./document.ts";
 import type { ScadaNode } from "./document.ts";
 
+/**
+ * 演示 Tag 候选与 SVG 绑定槽的映射，仅用于 V0.2 本地模拟预览。
+ * 不是正式 Tag 配置中心，也不创建设备通信连接。
+ */
+export const waterTreatmentDemoTagOptions: readonly {
+  readonly tagId: string;
+  readonly label: string;
+  readonly slots: readonly string[];
+}[] = [
+  { tagId: "water.level", label: "模拟水位", slots: ["level", "value"] },
+  { tagId: "water.pump.running", label: "模拟水泵运行", slots: ["running", "value"] },
+  { tagId: "water.flow", label: "模拟流量", slots: ["value"] },
+];
+
 /** HTTP 诊断服务与桌面离线模拟共用的水处理演示工程。 */
 function node(
   id: string,
