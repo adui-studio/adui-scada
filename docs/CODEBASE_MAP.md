@@ -217,3 +217,13 @@
 - `apps/web-react/src/studio/StudioPage.tsx` 与 `apps/web-vue/src/studio/StudioPage.vue`：剪贴板按钮和 `Ctrl/Cmd+C/X/V`，与现有输入控件及快捷键过滤兼容。
 - `packages/core/test/editor.test.ts`：13 项复制、剪切、重复偏移、组合保真、跨页与边界、失败原子性、导入清理和 JSON 无剪贴板状态回归。
 - [ADR-0024](adr/0024-session-node-clipboard.md)：会话边界、偏移策略和系统剪贴板隔离决策。
+
+## V0.2 第十七批：图元锁定与可见性
+
+- `packages/core/src/document.ts`：`STUDIO_NODE_STATE_KEY`、`studioNodeLocked/studioNodeVisible` 与共享 Parser 对 `props.__scadaStudio` 的严格校验。
+- `packages/core/src/editor.ts`：`setSelectedLocked/setSelectedVisible` 两项可撤销批量命令，锁定提交保护、几何/图层排序与复制删除限制，隐藏框选过滤。
+- `packages/core/src/snap.ts`：拖动吸附排除隐藏参考对象并拒绝移动锁定图元。
+- `packages/core/src/svg.ts`：SVG Runtime 仅渲染可见图元，锁定不影响可见图元的只读显示。
+- `apps/web-react/src/studio/StudioPage.tsx` 与 `apps/web-vue/src/studio/StudioPage.vue`：图层状态标记、锁定/可见性批量按钮及受保护的鼠标/键盘操作，两端样式文件同步状态呈现。
+- `packages/core/test/document.test.ts`、`editor.test.ts`、`svg.test.ts`：Schema、核心锁定保护、批量历史、隐藏 SVG 与兼容性测试，共增加 19 项单测源码。
+- [ADR-0025](adr/0025-node-lock-visibility.md)：描述状态放置、编辑安全与旧 Runtime 兼容性限制。
