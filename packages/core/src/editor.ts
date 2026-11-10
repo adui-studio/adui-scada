@@ -9,6 +9,7 @@ export interface EditorSnapshot {
   readonly selectedIds: readonly string[];
   readonly canUndo: boolean;
   readonly canRedo: boolean;
+  readonly hasClipboard: boolean;
 }
 
 export type Alignment = "left" | "right" | "hcenter" | "top" | "bottom" | "vcenter";
@@ -298,6 +299,7 @@ export class DocumentEditor {
   private current: ScadaDocument;
   private activePageId: string;
   private selection: string[] = [];
+  private clipboard: { nodes: ScadaNode[]; pasteCount: number } | null = null;
   private readonly past: { document: ScadaDocument; pageId: string; redoPageId: string }[] = [];
   private readonly future: { document: ScadaDocument; pageId: string; redoPageId: string }[] = [];
 
@@ -314,6 +316,7 @@ export class DocumentEditor {
       selectedIds: [...this.selection],
       canUndo: this.past.length > 0,
       canRedo: this.future.length > 0,
+      hasClipboard: this.clipboard !== null,
     };
   }
 
@@ -462,6 +465,66 @@ export class DocumentEditor {
     );
     this.commit(parseScadaDocument({ ...this.current, pages }));
     return copies.map((node) => node.id);
+  }
+
+  /** 复制当前页所选图元与完整组合到会话剪贴板，不修改工程。 */
+  copySelected(): boolean {
+    const nodes = this.captureSelectedNodes();
+    if (nodes.length === 0) return false;
+    this.clipboard = { nodes, pasteCount: 0 };
+    return true;
+  }
+
+  /** 剪切所选图元：先校验删除，再保存剪贴板；失败时原状态不变。 */
+  cutSelected(): boolean {
+    const nodes = this.captureSelectedNodes();
+    if (nodes.length === 0) return false;
+    const removed = new Set(nodes.map((node) => node.id));
+    const page = firstPage(this.current, this.activePageId);
+    const next = parseScadaDocument({
+      ...this.current,
+      pages: this.current.pages.map((item) =>
+        item.id === page.id
+          ? { ...item, nodes: item.nodes.filter((node) => !removed.has(node.id)) }
+          : item,
+      ),
+    });
+    if (!this.commit(next)) return false;
+    this.selection = [];
+    this.clipboard = { nodes, pasteCount: 0 };
+    return true;
+  }
+
+  /**
+   * 粘贴为当前页面中的新图元和新组合；每次成功粘贴尝试增加 20 像素偏移。
+   * 为保留完整布局，只整体平移；目标画布不足时拒绝且不修改任何状态。
+   */
+  pasteClipboard(): string[] {
+    const clipboard = this.clipboard;
+    if (!clipboard) return [];
+    const page = firstPage(this.current, this.activePageId);
+    const nodes = clipboard.nodes;
+    const left = Math.min(...nodes.map((node) => node.transform.x));
+    const top = Math.min(...nodes.map((node) => node.transform.y));
+    const right = Math.max(...nodes.map((node) => node.transform.x + node.transform.width));
+    const bottom = Math.max(...nodes.map((node) => node.transform.y + node.transform.height));
+    if (right - left > page.size.width || bottom - top > page.size.height) {
+      throw new RangeError("剪贴板图元整体尺寸超过当前页面画布，无法保持布局");
+    }
+    const offset = (clipboard.pasteCount + 1) * 20;
+    const dx = Math.max(-left, Math.min(offset, page.size.width - right));
+    const dy = Math.max(-top, Math.min(offset, page.size.height - bottom));
+    const copies = cloneNodes(nodes, occupiedIds(this.current), dx, dy);
+    const next = parseScadaDocument({
+      ...this.current,
+      pages: this.current.pages.map((item) =>
+        item.id === page.id ? { ...item, nodes: [...item.nodes, ...copies] } : item,
+      ),
+    });
+    if (!this.commit(next)) return [];
+    clipboard.pasteCount++;
+    this.selection = copies.map((node) => node.id);
+    return [...this.selection];
   }
 
   /** 点击组合成员时自动选中整个组合，Shift 再次点击则整体切换。 */
@@ -779,9 +842,21 @@ export class DocumentEditor {
     this.current = document;
     this.activePageId = firstPage(document).id;
     this.selection = [];
+    this.clipboard = null;
     this.past.length = 0;
     this.future.length = 0;
     return migratedFrom;
+  }
+
+  /** 从严格校验的工程副本取得选中内容，避免后续编辑影响剪贴板。 */
+  private captureSelectedNodes(): ScadaNode[] {
+    if (this.selection.length === 0) return [];
+    const selected = expandGroupedSelection(
+      firstPage(this.current, this.activePageId).nodes,
+      this.selection,
+    );
+    const document = parseScadaDocument(this.current);
+    return firstPage(document, this.activePageId).nodes.filter((node) => selected.has(node.id));
   }
 
   private getSelected(): ScadaNode | undefined {
