@@ -173,7 +173,9 @@ export default function StudioPage() {
       setHasSavedDraft(revision !== null);
       const session = autoSaveSessionRef.current;
       if (session && revision !== session.currentRevision) {
-        void pauseAutoSave();
+        autoSaveSessionRef.current = null;
+        setAutoSaveEnabled(false);
+        void session.stop();
         setNotice("其他标签页已修改草稿，自动保存已暂停，请先核对");
       }
     });
@@ -198,7 +200,9 @@ export default function StudioPage() {
         },
         (error: unknown) => {
           if (!active || autoSaveSessionRef.current !== session) return;
-          void pauseAutoSave();
+          autoSaveSessionRef.current = null;
+          setAutoSaveEnabled(false);
+          void session.stop();
           setNotice("自动保存已暂停：" + (error instanceof Error ? error.message : String(error)));
         },
       );
