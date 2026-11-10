@@ -213,13 +213,13 @@ function handleKey(event: KeyboardEvent) {
   if (command && !event.altKey) {
     if (key === "z") handled = event.shiftKey ? editor.redo() : editor.undo();
     else if (key === "y") handled = editor.redo();
-    else if (key === "c") {
+    else if (key === "c" && !event.shiftKey) {
       handled = editor.copySelected();
       if (handled) notice.value = "已复制所选图元到会话剪贴板";
-    } else if (key === "x") {
+    } else if (key === "x" && !event.shiftKey) {
       handled = editor.cutSelected();
       if (handled) notice.value = "已剪切所选图元，可撤销";
-    } else if (key === "v" && editor.snapshot().hasClipboard) {
+    } else if (key === "v" && !event.shiftKey && editor.snapshot().hasClipboard) {
       event.preventDefault();
       try {
         handled = editor.pasteClipboard().length > 0;
