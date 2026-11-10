@@ -57,6 +57,7 @@ const geometryPreview = shallowRef<ScadaDocument | null>(null);
 const rotating = ref(false);
 const marquee = shallowRef<MarqueeState | null>(null);
 const labelDraft = ref("");
+const preferredCopyTargetPageId = ref("");
 const notice = ref("可手动保存浏览器本地草稿 · 尚未连接工程保存服务");
 const hasSavedDraft = ref(false);
 const autoSaveEnabled = ref(false);
@@ -115,6 +116,17 @@ const hasGroupedSelection = computed(() =>
   ),
 );
 const canGroup = computed(() => state.value.selectedIds.length >= 2 && !hasGroupedSelection.value);
+const activePageIndex = computed(() =>
+  state.value.document.pages.findIndex((item) => item.id === state.value.activePageId),
+);
+const copyTargetPages = computed(() =>
+  state.value.document.pages.filter((item) => item.id !== state.value.activePageId),
+);
+const copyTargetPageId = computed(() =>
+  copyTargetPages.value.some((item) => item.id === preferredCopyTargetPageId.value)
+    ? preferredCopyTargetPageId.value
+    : (copyTargetPages.value[0]?.id ?? ""),
+);
 const bindingSlot = computed(() => {
   const node = selected.value;
   return node && state.value.selectedIds.length === 1 && !node.groupId
@@ -421,6 +433,31 @@ function deletePage() {
     editor.deletePage(page.value.id);
     cancelDrag();
   }, "页面已删除，可撤销");
+}
+
+function duplicatePage() {
+  apply(() => {
+    editor.duplicatePage();
+    cancelDrag();
+  }, "已复制页面及其图元和 Tag 绑定，可撤销");
+}
+
+function movePage(direction: "previous" | "next") {
+  apply(() => editor.movePage(state.value.activePageId, direction), "页面顺序已调整，可撤销");
+}
+
+function selectCopyTarget(event: Event) {
+  if (event.target instanceof HTMLSelectElement) {
+    preferredCopyTargetPageId.value = event.target.value;
+  }
+}
+
+function copySelectedToPage() {
+  if (!copyTargetPageId.value) return;
+  apply(
+    () => editor.copySelectedToPage(copyTargetPageId.value),
+    "已将所选图元复制到目标页面，可撤销；源页面保持不变",
+  );
 }
 
 function changeTagBinding(event: Event) {
@@ -832,6 +869,19 @@ async function importJson(event: Event) {
         <button type="button" :disabled="state.document.pages.length >= 100" @click="createPage">
           + 新建页面
         </button>
+        <button type="button" :disabled="state.document.pages.length >= 100" @click="duplicatePage">
+          复制页面
+        </button>
+        <button type="button" :disabled="activePageIndex <= 0" @click="movePage('previous')">
+          页面前移
+        </button>
+        <button
+          type="button"
+          :disabled="activePageIndex >= state.document.pages.length - 1"
+          @click="movePage('next')"
+        >
+          页面后移
+        </button>
         <button type="button" @click="renamePage">重命名</button>
         <button type="button" :disabled="state.document.pages.length <= 1" @click="deletePage">
           删除当前页
@@ -847,6 +897,29 @@ async function importJson(event: Event) {
           <button type="button" @click="addSymbol('pump')">+ 水泵</button>
           <button type="button" @click="addSymbol('pipe')">+ 管道</button>
           <button type="button" @click="addSymbol('label')">+ 文本</button>
+        </div>
+        <div class="studio-copy-tools">
+          <label class="studio-field">
+            复制选中图元到
+            <select
+              aria-label="跨页面复制目标"
+              :value="copyTargetPageId"
+              :disabled="copyTargetPages.length === 0"
+              @change="selectCopyTarget"
+            >
+              <option v-if="copyTargetPages.length === 0" value="">暂无其他页面</option>
+              <option v-for="item in copyTargetPages" :key="item.id" :value="item.id">
+                {{ item.name }}
+              </option>
+            </select>
+          </label>
+          <button
+            type="button"
+            :disabled="state.selectedIds.length === 0 || !copyTargetPageId"
+            @click="copySelectedToPage"
+          >
+            复制选中图元
+          </button>
         </div>
         <button
           v-for="node in page.nodes"
