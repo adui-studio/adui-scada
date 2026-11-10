@@ -1127,6 +1127,53 @@ test("跨页面复制与页面排序经 JSON 往返仍保留所有 Tag 和 ID", 
   restored.loadDocument(JSON.parse(JSON.stringify(doc)));
   expect(restored.snapshot().document).toEqual(doc);
   expect(restored.snapshot().document.pages[0]?.id).toBe(target);
-  expect(restored.snapshot().document.pages[0]?.nodes.some((node) => node.id === newNodes[0])).toBe(true);
-  expect(restored.snapshot().document.pages[0]?.nodes.at(-1)?.bindings.value?.tagId).toBe("water.flow");
+  expect(
+    restored.snapshot().document.pages[0]?.nodes.some((node) => node.id === newNodes[0]),
+  ).toBe(true);
+  expect(restored.snapshot().document.pages[0]?.nodes.at(-1)?.bindings.value?.tagId).toBe(
+    "water.flow",
+  );
+});
+
+test("跨页面复制多个图元在较小画布内整体平移且相对布局不变", () => {
+  const source = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  source.pages.push({
+    id: "compact",
+    name: "紧凑页面",
+    size: { width: 400, height: 250 },
+    nodes: [],
+  });
+  const e = new DocumentEditor(source);
+  e.select("pump");
+  e.select("flow", true);
+  const before = e.snapshot().document.pages[0]!.nodes.filter((node) =>
+    ["pump", "flow"].includes(node.id),
+  );
+  const ids = e.copySelectedToPage("compact");
+  const copies = e.snapshot().document.pages[1]!.nodes;
+  expect(ids).toEqual(copies.map((node) => node.id));
+  expect(copies).toHaveLength(2);
+  expect(copies[0]!.transform.x - before[0]!.transform.x).toBe(-430);
+  expect(copies[1]!.transform.x - before[1]!.transform.x).toBe(-430);
+  expect(copies[0]!.transform.y - before[0]!.transform.y).toBe(-47);
+  expect(copies[1]!.transform.y - before[1]!.transform.y).toBe(-47);
+  expect(copies[0]!.bindings.running?.tagId).toBe("water.pump.running");
+  expect(copies[1]!.bindings.value?.tagId).toBe("water.flow");
+});
+
+test("目标画布不足时拒绝整组复制，不产生孤立的组合成员", () => {
+  const source = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  source.pages.push({
+    id: "compact",
+    name: "紧凑页面",
+    size: { width: 200, height: 200 },
+    nodes: [],
+  });
+  const e = new DocumentEditor(source);
+  e.select("tank");
+  e.select("pump", true);
+  e.groupSelected();
+  const before = e.snapshot();
+  expect(() => e.copySelectedToPage("compact")).toThrow(/超过目标页面画布/);
+  expect(e.snapshot()).toEqual(before);
 });
