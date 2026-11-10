@@ -297,3 +297,14 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - 工程 Schema 与 Dexie `DraftRepository` 完全保持原状；切换当前页面不触发自动保存，创建、重命名、删除及图元内容变化仍遵循之前的 1 秒防抖与乐观并发修订号校验。
 
 本批新增 12 项 Core 测试及 1 项 Runtime 测试源码，累计预计 179 项；维护者尚需执行 `pnpm run ready` 与双框架交互验收。
+
+## 26. V0.2 第十五批：复制页面、调整顺序与跨页复制图元
+
+- 共享 `DocumentEditor.duplicatePage(pageId?)` 默认复制当前页，将副本插在源页之后并激活新页。沿用页面尺寸与图元顺序，默认名称追加「 副本」，保留 Tag/属性/规则与几何；新页面/图元/组合分别使用 `page-N`、`node-N`、`group-N`，按全工程 ID 空间避让。
+- `DocumentEditor.movePage(pageId, "previous" | "next")` 仅交换相邻页面顺序；边界操作返回 `false` 且不生成历史。实际页面顺序变更作为一条可撤销的文档命令。
+- `DocumentEditor.copySelectedToPage(targetPageId)` 必须指定不同的现有目标页，并要求当前页已选图元；选择包含组合成员时先扩展完整组合。复制结果追加到目标页，组 ID 完整映射，图元 ID 唯一，Tag ID 保留；源页面及当前选择状态不变。
+- 跨页复制对所选图元的非旋转矩形整体包围盒判断目标画布容量。可容纳时对全部副本施加相同的 X/Y 平移，使布局在目标范围内；不可容纳时拒绝，不静默缩放或拆组。
+- `parseScadaDocument` 仍负责 Schema 白名单、全工程 ID 唯一、组合至少两成员同页、最多 100 页和 2000 个图元的统一原子校验。成功命令保留当前既有撤销/重做、JSON 和 Dexie 自动保存语义，失败保留原文档。
+- Vue/React Studio 均提供「复制页面」「页面前移」「页面后移」和明确目标页的「复制选中图元」入口；选择状态、当前页面 ID 不写入工程 Schema。默认 Runtime 继续读取 `pages[0]`，重排后默认显示的页面可能变化。
+
+关联决策：[ADR-0023](adr/0023-page-copy-and-reordering.md)。本批新增 15 项 Core 回归测试源码，整仓预计 194 项单元测试；未独立执行维护者 Windows `pnpm run ready`。
