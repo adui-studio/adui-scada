@@ -1,4 +1,4 @@
-import { parseScadaDocument } from "./document.ts";
+import { parseScadaDocument, studioNodeLocked, studioNodeVisible } from "./document.ts";
 import type { ScadaDocument, ScadaNode } from "./document.ts";
 import { expandGroupedSelection } from "./grouping.ts";
 
