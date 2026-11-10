@@ -157,13 +157,13 @@ export default function StudioPage() {
   }
 
   useEffect(() => {
-    let active = true;
+    const controller = new AbortController();
     void drafts.get(state.document.projectId).then(
       (saved) => {
-        if (active) setHasSavedDraft(saved !== null);
+        if (!controller.signal.aborted) setHasSavedDraft(saved !== null);
       },
       (error: unknown) => {
-        if (!active) return;
+        if (controller.signal.aborted) return;
         setHasSavedDraft(error instanceof InvalidLegacyDraftError);
         setNotice(
           "本地草稿读取失败：" + (error instanceof Error ? error.message : String(error)),
@@ -171,7 +171,7 @@ export default function StudioPage() {
       },
     );
     const unsubscribe = drafts.subscribe(state.document.projectId, (revision) => {
-      if (!active) return;
+      if (controller.signal.aborted) return;
       setHasSavedDraft(revision !== null);
       const session = autoSaveSessionRef.current;
       if (session && revision !== session.currentRevision) {
@@ -182,7 +182,7 @@ export default function StudioPage() {
       }
     });
     return () => {
-      active = false;
+      controller.abort();
       unsubscribe();
     };
   }, [state.document.projectId]);
@@ -192,16 +192,16 @@ export default function StudioPage() {
     const session = autoSaveSessionRef.current;
     if (!session) return;
     const document = state.document;
-    let active = true;
+    const controller = new AbortController();
     const timer = window.setTimeout(() => {
       void session.saveIfDirty(document).then(
         (saved) => {
-          if (!active || autoSaveSessionRef.current !== session || !saved) return;
+          if (controller.signal.aborted || autoSaveSessionRef.current !== session || !saved) return;
           setHasSavedDraft(true);
           setNotice(`本地草稿已自动保存（${saved.savedAt}）`);
         },
         (error: unknown) => {
-          if (!active || autoSaveSessionRef.current !== session) return;
+          if (controller.signal.aborted || autoSaveSessionRef.current !== session) return;
           autoSaveSessionRef.current = null;
           setAutoSaveEnabled(false);
           void session.stop();
@@ -210,7 +210,7 @@ export default function StudioPage() {
       );
     }, LOCAL_DRAFT_AUTO_SAVE_DELAY_MS);
     return () => {
-      active = false;
+      controller.abort();
       window.clearTimeout(timer);
     };
   }, [autoSaveEnabled, state.document]);
