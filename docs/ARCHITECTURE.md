@@ -193,3 +193,7 @@ Vue/React 的 SVG 编辑层负责显示控制点、捕获 Pointer 和提供预�
 ## V0.2 会话图元剪贴板（ADR-0024）
 
 剪贴板状态仅由共享 `DocumentEditor` 管理，包含从受校验工程复制的节点与成功粘贴计数。Vue/React 只适配工作区按钮和快捷键，不读写系统剪贴板、没有新的外部依赖。粘贴复用现有全工程唯一 ID、组映射和 Parser 原子校验，允许不同页面复用但禁止导入新工程后残留旧剪贴板。只有剪切和粘贴改变文档并进入撤销历史及既有 Dexie 草稿机制；纯复制、页面切换、剪贴板快照不进入工程 Schema `0.2.0`。工业只读数据通路保持原状。详见 [ADR-0024](adr/0024-session-node-clipboard.md)。
+
+## V0.2 图元锁定与可见性（ADR-0025）
+
+图元锁定与隐藏语义统一在框架无关 SCADA Core 及 SVG Runtime。为避免在 `ScadaDocument 0.2.0` 增加会被旧版严格白名单拒绝的新顶层字段，使用 `props.__scadaStudio` 中经校验的 `locked`、`visible` 可选布尔值；Vue/React 只负责批量命令 UI、图层状态标记及画布手势适配。编辑命令与提交边界共同阻止锁定图元的误修改，Runtime 只渲染可见节点，不改变 Tag 数据质量或工业只读链路。**旧 Runtime 不解释隐藏状态**，后续发布链必须校验运行端能力，不可将此批视为正式版本协商。详见 [ADR-0025](adr/0025-node-lock-visibility.md)。
