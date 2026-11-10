@@ -1459,6 +1459,10 @@ test("锁定图元禁止移动、删除、剪切、复制、对齐及几何编�
   expect(() => e.copySelected()).toThrow(/锁定/);
   expect(() => e.updateSelectedTransform({ x: 150 })).toThrow(/锁定/);
   expect(() => e.setSelectedBinding("level", "water.flow")).toThrow(/锁定/);
+  const titleEditor = editor();
+  titleEditor.select("title");
+  titleEditor.setSelectedLocked(true);
+  expect(() => titleEditor.setSelectedLabel("新文案")).toThrow(/锁定/);
   expect(() => withNodesTranslated(original.document, ["tank"], 10, 0)).toThrow(/锁定/);
   expect(() => withNodeTransform(original.document, "tank", { y: 140 })).toThrow(/锁定/);
   expect(() =>
