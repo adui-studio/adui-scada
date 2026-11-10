@@ -3,6 +3,7 @@ import type { ChangeEvent, FormEvent, PointerEvent as ReactPointerEvent } from "
 import {
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
+  waterTreatmentDemoTagOptions,
   DraftAutoSaveSession,
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
 } from "@adui/scada-core";
@@ -11,6 +12,7 @@ import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft
 import {
   DEFAULT_GRID_SIZE,
   DocumentEditor,
+  editableTagSlot,
   RESIZE_HANDLES,
   RESIZE_HANDLE_LABELS,
   resizeHandlePosition,
@@ -131,6 +133,25 @@ export default function StudioPage() {
     (node) => node.groupId !== undefined && state.selectedIds.includes(node.id),
   );
   const canGroup = state.selectedIds.length >= 2 && !hasGroupedSelection;
+  const bindingSlot =
+    state.selectedIds.length === 1 && selected && !selected.groupId
+      ? editableTagSlot(selected.type)
+      : null;
+  const demoTagCandidates =
+    bindingSlot === null
+      ? []
+      : waterTreatmentDemoTagOptions.filter((option) => option.slots.includes(bindingSlot));
+  const currentBindingTag = bindingSlot ? (selected?.bindings[bindingSlot]?.tagId ?? "") : "";
+  const missingBindingTag =
+    currentBindingTag !== "" &&
+    !demoTagCandidates.some((option) => option.tagId === currentBindingTag);
+
+  function changeTagBinding(slot: string, tagId: string) {
+    apply(
+      () => editor.setSelectedBinding(slot, tagId === "" ? null : tagId),
+      "已修改模拟 Tag 绑定，可撤销",
+    );
+  }
 
   function refresh() {
     const next = editor.snapshot();
@@ -1100,7 +1121,33 @@ export default function StudioPage() {
                   </button>
                 </label>
               )}
-              <h3>Tag 绑定（只读）</h3>
+              <h3>Tag 绑定（模拟数据）</h3>
+              {bindingSlot ? (
+                <label className="studio-field">
+                  {bindingSlot} · 选择模拟 Tag
+                  <select
+                    aria-label={selected.id + " 的 " + bindingSlot + " Tag 绑定"}
+                    value={currentBindingTag}
+                    onChange={(event) => changeTagBinding(bindingSlot, event.target.value)}
+                  >
+                    <option value="">不绑定</option>
+                    {missingBindingTag && (
+                      <option value={currentBindingTag} disabled>
+                        {currentBindingTag}（不在当前模拟候选中）
+                      </option>
+                    )}
+                    {demoTagCandidates.map((option) => (
+                      <option key={option.tagId} value={option.tagId}>
+                        {option.label} · {option.tagId}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <p className="studio-tip">
+                  请单选未组合的水箱、水泵或文本图元；管道暂不支持动态 Tag 绑定。
+                </p>
+              )}
               {Object.entries(selected.bindings).map(([slot, binding]) => (
                 <p className="studio-binding" key={slot}>
                   {slot} → {binding.tagId}
