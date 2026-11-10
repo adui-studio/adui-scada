@@ -470,3 +470,22 @@ pnpm run dev:vue
 开发分支另有维护者提交 `9c06def`（「统一工程代码格式并通过 Vite+ 质量检查」），仅修改 Vue Studio 模板与共享编辑器格式。**证据边界**：本轮仅收到「验收通过」的总体结论及该格式整理提交，没有提供此批 `pnpm run ready` 完整日志、实测单元测试数量、各项构建输出或最后退出码。源码预估 **106 项**仅为开发期统计，不记为已独立核对的 **106/106**；不能将 Git 提交说明等同于完整质量链原始日志。本条验收来自维护者确认，非 Agent 独立运行。后续追加此记录也未重新运行 `docs:check`。
 
 PR #11 保持 Draft，**未经另行合并授权不修改 `main`**。新增的 `ScadaNode.groupId` 在现有 `0.1.0` 预发布 Schema 下可能被旧版本 Parser 丢弃，正式保存/发布前仍需确定 Schema 迁移方案；现场安全、PLC/DCS 真实写入与 Docker/Tauri 不属于本批验收。
+
+## 2026-11-10 · V0.2 第十批 Schema 升级与迁移开发分支（待验收）
+
+从 PR #11 合并后的 `main`（`3f20f10`）建立 `feat/v0.2-schema-migration`。上一批维护者 Windows 实测 `pnpm run ready` **106/106 单元测试、2/2 NestJS E2E、零 Lint 警告、三端构建通过且退出码 0**；该结果**不是**本批测试结果。
+
+新增文档验证 **8 项**及编辑器验证 **4 项**，整仓单元测试入口预计 **118 项**。本次尚未在维护者 Windows 运行 `pnpm run ready`、Vitest、类型检查、E2E、Web/Server 构建或浏览器验收；不能根据静态源码统计宣称测试通过。
+
+```powershell
+git fetch origin
+git switch feat/v0.2-schema-migration
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+人工验收：React、Vue 分别导入无组合及含合法 `groupId` 的 `0.1.0` 草稿，确认提示由旧版升级、导出 `0.2.0` 并跨框架双向往返保留页面、节点、位置、Tag 和组合；当前 `0.2.0` 导入仅显示常规提示。未知/未来版本、未知结构字段、非法组合和不安全 JSON 被拒绝，原文档、选择和撤销记录不改变。确认模拟 Runtime 只使用当前 Schema，不提供旧版自动升级；原 SVG、缩放、吸附、组合与只读模拟数据无回归。
+
+工业现场、Docker/Tauri、正式资源包/工程发布及所有历史旧客户端的二进制兼容测试不在本批。文档本身尚未经本批真实 `docs:check`。
