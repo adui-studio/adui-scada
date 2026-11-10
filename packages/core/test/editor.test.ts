@@ -441,9 +441,8 @@ test("组合至少两个图元并保留原始 Tag 和单次撤销重做", () => 
   expect(grouped.document.pages[0]?.nodes.find((node) => node.id === "pump")?.groupId).toBe(
     "group-1",
   );
-  expect(grouped.document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level?.tagId).toBe(
-    "water.level",
-  );
+  const tank = grouped.document.pages[0]?.nodes.find((node) => node.id === "tank");
+  expect(tank?.bindings.level?.tagId).toBe("water.level");
   expect(e.undo()).toBe(true);
   expect(e.snapshot().document).toEqual(original);
   expect(e.redo()).toBe(true);
@@ -494,9 +493,8 @@ test("已组合成员使用编辑器移动时整体移动，删除时整体删�
   e.groupSelected();
   e.select("tank");
   expect(e.moveBy(10, 20)).toBe(true);
-  expect(e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "pump")?.transform.x).toBe(
-    510,
-  );
+  const pump = e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "pump");
+  expect(pump?.transform.x).toBe(510);
   expect(e.deleteSelected()).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.some((node) => node.id === "tank")).toBe(false);
   expect(e.snapshot().document.pages[0]?.nodes.some((node) => node.id === "pump")).toBe(false);

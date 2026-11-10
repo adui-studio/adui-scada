@@ -271,7 +271,10 @@ export class DocumentEditor {
     const nodes = firstPage(this.current).nodes;
     const uniqueInput = [...new Set(nodeIds)];
     const expanded = expandGroupedSelection(nodes, uniqueInput);
-    const unique = [...uniqueInput, ...nodes.filter((node) => expanded.has(node.id)).map((n) => n.id)];
+    const unique = [
+      ...uniqueInput,
+      ...nodes.filter((node) => expanded.has(node.id)).map((node) => node.id),
+    ];
     const next = additive ? [...this.selection, ...unique] : unique;
     this.selection = [...new Set(next)];
   }
