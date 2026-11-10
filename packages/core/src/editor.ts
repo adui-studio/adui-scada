@@ -248,8 +248,8 @@ export class DocumentEditor {
   private current: ScadaDocument;
   private activePageId: string;
   private selection: string[] = [];
-  private readonly past: { document: ScadaDocument; pageId: string }[] = [];
-  private readonly future: { document: ScadaDocument; pageId: string }[] = [];
+  private readonly past: { document: ScadaDocument; pageId: string; redoPageId: string }[] = [];
+  private readonly future: { document: ScadaDocument; pageId: string; redoPageId: string }[] = [];
 
   constructor(source: unknown) {
     this.current = parseScadaDocument(source);
@@ -298,6 +298,7 @@ export class DocumentEditor {
         ...this.current,
         pages: [...this.current.pages, { id, name: pageName, size, nodes: [] }],
       }),
+      id,
     );
     this.activePageId = id;
     this.selection = [];
@@ -326,9 +327,13 @@ export class DocumentEditor {
     if (index < 0) throw new RangeError("未找到页面：" + pageId);
     if (this.current.pages.length === 1) throw new TypeError("工程至少需要保留一个页面");
     const pages = this.current.pages.filter((page) => page.id !== pageId);
-    this.commit(parseScadaDocument({ ...this.current, pages }));
-    if (this.activePageId === pageId) {
-      this.activePageId = pages[Math.min(index, pages.length - 1)]!.id;
+    const removedActive = this.activePageId === pageId;
+    const nextPageId = removedActive
+      ? pages[Math.min(index, pages.length - 1)]!.id
+      : this.activePageId;
+    this.commit(parseScadaDocument({ ...this.current, pages }), nextPageId);
+    if (removedActive) {
+      this.activePageId = nextPageId;
       this.selection = [];
     }
     return true;
@@ -614,7 +619,11 @@ export class DocumentEditor {
   undo(): boolean {
     const previous = this.past.pop();
     if (!previous) return false;
-    this.future.push({ document: this.current, pageId: this.activePageId });
+    this.future.push({
+      document: this.current,
+      pageId: previous.redoPageId,
+      redoPageId: previous.pageId,
+    });
     this.current = previous.document;
     this.activePageId = previous.pageId;
     this.reconcileSelection();
@@ -624,7 +633,11 @@ export class DocumentEditor {
   redo(): boolean {
     const next = this.future.pop();
     if (!next) return false;
-    this.past.push({ document: this.current, pageId: this.activePageId });
+    this.past.push({
+      document: this.current,
+      pageId: next.redoPageId,
+      redoPageId: next.pageId,
+    });
     this.current = next.document;
     this.activePageId = next.pageId;
     this.reconcileSelection();
@@ -659,9 +672,9 @@ export class DocumentEditor {
     );
   }
 
-  private commit(next: ScadaDocument): boolean {
+  private commit(next: ScadaDocument, redoPageId = this.activePageId): boolean {
     if (equalDocuments(this.current, next)) return false;
-    this.past.push({ document: this.current, pageId: this.activePageId });
+    this.past.push({ document: this.current, pageId: this.activePageId, redoPageId });
     if (this.past.length > HISTORY_LIMIT) this.past.shift();
     this.current = next;
     this.future.length = 0;
