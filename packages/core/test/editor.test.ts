@@ -1511,7 +1511,10 @@ test("锁定状态不阻止复制整页，原始和副本的图元保护仍有�
   e.setSelectedLocked(true);
   const copyId = e.duplicatePage();
   const page = e.snapshot().document.pages.find((item) => item.id === copyId);
-  expect(page?.nodes.find((node) => node.bindings.level?.tagId === "water.level" && studioNodeLocked(node))).toBeDefined();
+  expect(
+    page?.nodes.find((node) => node.bindings.level?.tagId === "water.level" && studioNodeLocked(node)),
+  ).toBeDefined();
+  e.switchPage("main");
   e.select("tank");
   expect(() => e.copySelectedToPage("main")).toThrow(/锁定/);
 });
