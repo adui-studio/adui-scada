@@ -267,3 +267,29 @@
   grid-column: 1 / -1;
   width: 100%;
 }
+
+/* 四角缩放与旋转手柄只属于 Studio 视图，不写入工程文件。 */
+.studio-resize-handle {
+  fill: #f1f7ff;
+  stroke: #f0ae4d;
+  stroke-width: 1.6;
+  cursor: nwse-resize;
+}
+.studio-resize-handle[data-handle="ne"],
+.studio-resize-handle[data-handle="sw"] {
+  cursor: nesw-resize;
+}
+.studio-resize-handle:hover,
+.studio-rotation-handle:hover {
+  fill: #39c9ba;
+}
+.studio-rotation-stem {
+  stroke: #f0ae4d;
+  stroke-width: 1.5;
+}
+.studio-rotation-handle {
+  fill: #f0ae4d;
+  stroke: #0c1728;
+  stroke-width: 1.5;
+  cursor: crosshair;
+}

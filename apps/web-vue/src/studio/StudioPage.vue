@@ -637,6 +637,7 @@ async function importJson(event: Event) {
                 v-for="handle in RESIZE_HANDLES"
                 :key="handle"
                 class="studio-resize-handle"
+                :data-handle="handle"
                 :aria-label="`缩放图元 ${handle}`"
                 :x="(handle.endsWith('e') ? node.transform.x + node.transform.width : node.transform.x) - 5"
                 :y="(handle.startsWith('s') ? node.transform.y + node.transform.height : node.transform.y) - 5"
