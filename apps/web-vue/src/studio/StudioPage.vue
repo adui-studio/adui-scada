@@ -1100,7 +1100,11 @@ async function importJson(event: Event) {
               @keydown.space.prevent="selectNode(node.id, $event.shiftKey)"
             />
             <template
-              v-if="state.selectedIds.length === 1 && state.selectedId === node.id && !studioNodeLocked(node)"
+              v-if="
+                state.selectedIds.length === 1 &&
+                state.selectedId === node.id &&
+                !studioNodeLocked(node)
+              "
             >
               <rect
                 v-for="handle in RESIZE_HANDLES"
