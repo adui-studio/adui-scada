@@ -282,3 +282,11 @@ pnpm run dev:vue
 维护者在分支上执行 `pnpm run ready` 并提供终端日志，确认以下阶段通过：依赖 Catalog（9 份清单、26 项依赖）、共享配置、根目录环境/LF、中文文案（70 个文件）、`vp check` 格式化（124 个文件）与 Lint/静态检查（49 个文件）、React/Vue/NestJS TypeScript 类型检查、`vp test run`（**59/59**）、NestJS E2E（**2/2**）、Markdown 文档检查（27 个文件）及 React/Vue 双版本 Web 构建。
 
 日志末尾显示已执行 `pnpm --filter @adui/scada-server run build` 并进入 `nest build`，**未提供最终退出码或命令返回提示，因此服务端构建的最终退出状态尚待确认**。本次只证明以上工具链检查和测试，**尚未完成 Vue/React 浏览器画布交互、双向 JSON 互通及 Runtime/Docker/Tauri 回归**。PR #6 保持 Draft，待交互验收后再评估是否合并。
+
+## 2026-11-10 · V0.2 双框架画布交互验收确认
+
+维护者回复「验收完成」，确认已完成上一轮列出的七项 Vue/React Studio 人工交互检查：默认 20 单位网格及三组开关、图元吸附辅助线与预览/提交一致、多选整体拖动、50%/200% 缩放拖动、边界及撤销重做、React → Vue → React 的本地 JSON 往返与 Tag 绑定、Runtime 模拟数据显示。此为**维护者人工验收声明**，并非当前 Agent 在浏览器重复执行的自动化测试结果。
+
+与此前维护者 Windows 日志结合：59/59 单元测试、2/2 NestJS E2E、中文文案、124 文件格式检查、49 文件 Lint/静态检查、Web/Server 类型检查、27 份文档检查、React/Vue 双 Web 构建已通过。此前日志末尾只显示启动 `nest build`，**未包含退出状态，服务端构建完成状态未独立确认**；Docker/Tauri/工业现场验收亦不在本次完成声明范围内。
+
+PR #6 的**本批双框架交互验收已完成**，仍维持 Draft 以待维护者明确决定何时发起正式合并流程；未经授权不合并 `main`。
