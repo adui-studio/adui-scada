@@ -106,9 +106,7 @@ test("草稿项目与当前工程不同或内部工程不合法时拒绝恢复",
   storage.setItem(key, JSON.stringify(record));
   expect(() => readLocalDraft(storage, "water-demo")).toThrow(/工程 ID 不一致/);
   record.document.projectId = "water-demo";
-  record.document.pages[0].nodes[0].props = JSON.parse(
-    '{"__proto__":{"unsafe":true}}',
-  );
+  record.document.pages[0].nodes[0].props = JSON.parse('{"__proto__":{"unsafe":true}}');
   storage.setItem(key, JSON.stringify(record));
   expect(() => readLocalDraft(storage, "water-demo")).toThrow(/属性名称不安全/);
 });
