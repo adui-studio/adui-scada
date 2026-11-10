@@ -268,7 +268,7 @@
   width: 100%;
 }
 
-/* 四角缩放与旋转手柄只属于 Studio 视图，不写入工程文件。 */
+/* 八方向缩放与旋转手柄只属于 Studio 视图，不写入工程文件。 */
 .studio-resize-handle {
   fill: #f1f7ff;
   stroke: #f0ae4d;
@@ -278,6 +278,14 @@
 .studio-resize-handle[data-handle="ne"],
 .studio-resize-handle[data-handle="sw"] {
   cursor: nesw-resize;
+}
+.studio-resize-handle[data-handle="n"],
+.studio-resize-handle[data-handle="s"] {
+  cursor: ns-resize;
+}
+.studio-resize-handle[data-handle="e"],
+.studio-resize-handle[data-handle="w"] {
+  cursor: ew-resize;
 }
 .studio-resize-handle:hover,
 .studio-rotation-handle:hover {

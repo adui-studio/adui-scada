@@ -6,6 +6,8 @@ import {
   DEFAULT_GRID_SIZE,
   DocumentEditor,
   RESIZE_HANDLES,
+  RESIZE_HANDLE_LABELS,
+  resizeHandlePosition,
   findNodesInRect,
   resolveDragSnap,
   resolveResizeTransform,
@@ -644,9 +646,9 @@ async function importJson(event: Event) {
                 :key="handle"
                 class="studio-resize-handle"
                 :data-handle="handle"
-                :aria-label="`缩放图元 ${handle}`"
-                :x="node.transform.x + (handle.endsWith('e') ? node.transform.width : 0) - 5"
-                :y="node.transform.y + (handle.startsWith('s') ? node.transform.height : 0) - 5"
+                :aria-label="`缩放图元${RESIZE_HANDLE_LABELS[handle]}`"
+                :x="resizeHandlePosition(node.transform, handle).x - 5"
+                :y="resizeHandlePosition(node.transform, handle).y - 5"
                 :width="10"
                 :height="10"
                 @pointerdown.stop="beginGeometry($event, handle)"

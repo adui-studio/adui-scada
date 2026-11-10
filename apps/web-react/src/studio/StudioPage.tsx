@@ -6,6 +6,8 @@ import {
   DEFAULT_GRID_SIZE,
   DocumentEditor,
   RESIZE_HANDLES,
+  RESIZE_HANDLE_LABELS,
+  resizeHandlePosition,
   findNodesInRect,
   resolveDragSnap,
   resolveResizeTransform,
@@ -689,19 +691,22 @@ export default function StudioPage() {
                   />
                   {state.selectedIds.length === 1 && state.selectedId === node.id && (
                     <>
-                      {RESIZE_HANDLES.map((handle) => (
-                        <rect
-                          key={handle}
-                          className="studio-resize-handle"
-                          data-handle={handle}
-                          aria-label={`缩放图元 ${handle}`}
-                          x={(handle.endsWith("e") ? t.x + t.width : t.x) - 5}
-                          y={(handle.startsWith("s") ? t.y + t.height : t.y) - 5}
-                          width={10}
-                          height={10}
-                          onPointerDown={(event) => beginGeometry(event, handle)}
-                        />
-                      ))}
+                      {RESIZE_HANDLES.map((handle) => {
+                        const position = resizeHandlePosition(t, handle);
+                        return (
+                          <rect
+                            key={handle}
+                            className="studio-resize-handle"
+                            data-handle={handle}
+                            aria-label={`缩放图元${RESIZE_HANDLE_LABELS[handle]}`}
+                            x={position.x - 5}
+                            y={position.y - 5}
+                            width={10}
+                            height={10}
+                            onPointerDown={(event) => beginGeometry(event, handle)}
+                          />
+                        );
+                      })}
                       <line
                         className="studio-rotation-stem"
                         x1={t.x + t.width / 2}
