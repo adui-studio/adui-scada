@@ -817,6 +817,37 @@ export class DocumentEditor {
     );
   }
 
+  /** 批量锁定或解锁所选图元：每次提交为一条可撤销命令。 */
+  setSelectedLocked(locked: boolean): boolean {
+    if (typeof locked !== "boolean") throw new TypeError("图元锁定状态必须为布尔值");
+    if (this.selection.length === 0) return false;
+    const selected = new Set(this.selection);
+    const page = firstPage(this.current, this.activePageId);
+    const changed = page.nodes.some(
+      (node) => selected.has(node.id) && studioNodeLocked(node) !== locked,
+    );
+    if (!changed) return false;
+    const nodes = page.nodes.map((node) =>
+      selected.has(node.id) ? withStudioState(node, "locked", locked) : node,
+    );
+    return this.replaceActivePageNodes(nodes, true);
+  }
+
+  /** 隐藏图元不会删除 Tag/规则；锁定中的图元须先解锁才能修改显示状态。 */
+  setSelectedVisible(visible: boolean): boolean {
+    if (typeof visible !== "boolean") throw new TypeError("图元可见状态必须为布尔值");
+    if (this.selection.length === 0) return false;
+    const selected = new Set(this.selection);
+    const page = firstPage(this.current, this.activePageId);
+    const chosen = page.nodes.filter((node) => selected.has(node.id));
+    if (chosen.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
+    if (chosen.every((node) => studioNodeVisible(node) === visible)) return false;
+    const nodes = page.nodes.map((node) =>
+      selected.has(node.id) ? withStudioState(node, "visible", visible) : node,
+    );
+    return this.replaceActivePageNodes(nodes);
+  }
+
   /** 单选图元的 Tag 绑定修改记录为一条可撤销命令。 */
   setSelectedBinding(slot: string, tagId: string | null): boolean {
     const node = this.getSelected();
@@ -914,7 +945,7 @@ export class DocumentEditor {
     return firstPage(this.current, this.activePageId).nodes.find((node) => node.id === id);
   }
 
-  private replaceActivePageNodes(nodes: ScadaNode[]): boolean {
+  private replaceActivePageNodes(nodes: ScadaNode[], allowLockStateChange = false): boolean {
     const page = firstPage(this.current, this.activePageId);
     return this.commit(
       parseScadaDocument({
@@ -923,11 +954,32 @@ export class DocumentEditor {
           candidate.id === page.id ? { ...candidate, nodes } : candidate,
         ),
       }),
+      this.activePageId,
+      allowLockStateChange,
     );
   }
 
-  private commit(next: ScadaDocument, redoPageId = this.activePageId): boolean {
+  private commit(
+    next: ScadaDocument,
+    redoPageId = this.activePageId,
+    allowLockStateChange = false,
+  ): boolean {
     if (equalDocuments(this.current, next)) return false;
+    for (const page of this.current.pages) {
+      const nextPage = next.pages.find((item) => item.id === page.id);
+      for (const node of page.nodes) {
+        if (!studioNodeLocked(node)) continue;
+        const nextNode = nextPage?.nodes.find((item) => item.id === node.id);
+        if (
+          !nextNode ||
+          (allowLockStateChange
+            ? withoutLockState(nextNode) !== withoutLockState(node)
+            : JSON.stringify(nextNode) !== JSON.stringify(node))
+        ) {
+          throw new TypeError(LOCKED_NODE_MESSAGE);
+        }
+      }
+    }
     this.past.push({ document: this.current, pageId: this.activePageId, redoPageId });
     if (this.past.length > HISTORY_LIMIT) this.past.shift();
     this.current = next;
