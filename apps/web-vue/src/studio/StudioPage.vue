@@ -93,9 +93,7 @@ const hasGroupedSelection = computed(() =>
     (node) => node.groupId !== undefined && state.value.selectedIds.includes(node.id),
   ),
 );
-const canGroup = computed(
-  () => state.value.selectedIds.length >= 2 && !hasGroupedSelection.value,
-);
+const canGroup = computed(() => state.value.selectedIds.length >= 2 && !hasGroupedSelection.value);
 const snapResult = computed(() => {
   const dragging = preview.value;
   if (!dragging) return null;

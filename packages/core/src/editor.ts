@@ -291,17 +291,17 @@ export class DocumentEditor {
     }
     const used = new Set([
       ...this.current.pages.map((item) => item.id),
-      ...this.current.pages.flatMap((item) => item.nodes.flatMap((node) => [
-        node.id,
-        ...(node.groupId === undefined ? [] : [node.groupId]),
-      ])),
+      ...this.current.pages.flatMap((item) =>
+        item.nodes.flatMap((node) => [
+          node.id,
+          ...(node.groupId === undefined ? [] : [node.groupId]),
+        ]),
+      ),
     ]);
     let index = 1;
     while (used.has(`group-${index}`)) index++;
     const groupId = `group-${index}`;
-    const next = page.nodes.map((node) =>
-      selected.has(node.id) ? { ...node, groupId } : node,
-    );
+    const next = page.nodes.map((node) => (selected.has(node.id) ? { ...node, groupId } : node));
     this.replaceFirstPageNodes(next);
     return groupId;
   }
@@ -309,8 +309,8 @@ export class DocumentEditor {
   /** 将所选组合全部解散，保留原图元和 Tag 绑定。 */
   ungroupSelected(): boolean {
     const groups = new Set(
-      firstPage(this.current).nodes
-        .filter((node) => this.selection.includes(node.id) && node.groupId !== undefined)
+      firstPage(this.current)
+        .nodes.filter((node) => this.selection.includes(node.id) && node.groupId !== undefined)
         .map((node) => node.groupId),
     );
     if (groups.size === 0) return false;
