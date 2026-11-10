@@ -776,9 +776,8 @@ test("删除当前页面后自动切换相邻页面，撤销恢复全部图元�
   expect(e.undo()).toBe(true);
   expect(e.snapshot().activePageId).toBe(pageId);
   expect(e.snapshot().document).toEqual(beforeDelete);
-  expect(
-    e.snapshot().document.pages[1]?.nodes.find((node) => node.id === nodeId)?.bindings.value?.tagId,
-  ).toBe("water.flow");
+  const restoredNode = e.snapshot().document.pages[1]?.nodes.find((node) => node.id === nodeId);
+  expect(restoredNode?.bindings.value?.tagId).toBe("water.flow");
   expect(e.redo()).toBe(true);
   expect(e.snapshot().document.pages).toHaveLength(1);
 });
@@ -846,8 +845,12 @@ test("多个页面的图元和组合共享工程级唯一标识符", () => {
   e.select("label-1");
   e.select("label-2", true);
   expect(e.groupSelected()).toBe("group-1");
-  expect(e.snapshot().document.pages[1]?.nodes.every((node) => node.groupId === "group-1")).toBe(true);
-  expect(e.snapshot().document.pages[0]?.nodes.every((node) => node.groupId === undefined)).toBe(true);
+  expect(
+    e.snapshot().document.pages[1]?.nodes.every((node) => node.groupId === "group-1"),
+  ).toBe(true);
+  expect(
+    e.snapshot().document.pages[0]?.nodes.every((node) => node.groupId === undefined),
+  ).toBe(true);
   e.switchPage("main");
   expect(e.addNode("label")).toBe("label-3");
   expect(e.snapshot().activePageId).toBe("main");
