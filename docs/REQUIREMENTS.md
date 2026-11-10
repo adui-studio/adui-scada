@@ -104,3 +104,11 @@ Vue/React Studio 增加「复制所选」「剪切所选」「粘贴图元」以
 剪贴板仅存活于当前编辑会话，不访问系统剪贴板、不保存到工程 JSON/IndexedDB；切换页面允许粘贴到其他页面，导入或恢复工程后清空。文本输入控件中的浏览器默认快捷键仍然有效。工程 Schema `0.2.0`、只读 Runtime、Dexie 草稿安全策略不变。详见 [ADR-0024](adr/0024-session-node-clipboard.md)。
 
 不包含跨 Origin / 跨应用剪贴板数据格式、粘贴外部 SVG/HTML、设备通信或写入权限。
+
+## V0.2 第十七批：图元锁定、显示隐藏和批量图层状态（FR-005 / FR-006 / FR-007 局部）
+
+共享 Core 为 SVG 图元提供持久化的编辑器锁定与可见性状态。Vue/React Studio 支持对单个或多个选中图元执行锁定、解锁、隐藏和显示；隐藏图元仍在图层列表中，可选中恢复。锁定阻止拖动、几何、组合、编辑绑定、剪切、删除、复制选中、图层排序等误操作，必须显式解锁。
+
+为避免改变 `ScadaDocument 0.2.0` 顶层字段和破坏旧版白名单工程结构，状态存放在已有 `node.props.__scadaStudio`，仅允许 `locked`、`visible` 两个可选布尔字段。Runtime 将隐藏图元从 SVG 中移除，锁定图元仍正常显示。批量变更各为一条可撤销命令，沿用 JSON 与 Dexie IndexedDB 草稿事务。
+
+**兼容限制：** 旧版 Runtime 不识别 `visible: false`，含隐藏图元的工程不得在旧版 Runtime 中使用；正式发布需要后续引入能力校验或版本协商。本批锁定只防误操作，不属于用户权限、PLC/DCS 设备授权或安全认证。详见 [ADR-0025](adr/0025-node-lock-visibility.md)。
