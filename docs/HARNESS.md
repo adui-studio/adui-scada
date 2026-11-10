@@ -248,3 +248,19 @@ pnpm run ready
 ```
 
 **执行状态**：本次中文化补丁尚未在维护者 Windows 上执行 Vite+、Vitest、Vue/React 实际 UI、Docker 和 Tauri 回归。此前 `pnpm run ready` 的 NestJS Controller 单测超时已另作简化修复，但尚无完整复验结果。不能将静态源码审查标记为测试通过。
+
+## 2026-11-10 · V0.2 画布网格与吸附（待验收）
+
+新增 `packages/core/test/snap.test.ts`，覆盖网格吸附与关闭、单轴移动不误触另一轴、其他图元边缘参考线、多选组整体移动、不会对组内图元吸附、旋转外接框、画布边界、非法输入及不可变 JSON。
+
+```powershell
+pnpm run messages:check
+pnpm run test:core
+pnpm run ready
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+两端 Studio 均应分别确认：默认显示 20 单位网格、显示网格独立开关、网格吸附与图元吸附可独立切换；拖动水箱靠近管道左边沿时出现垂直参考线；拖动时不发生未经指针移动的另一轴跳动；吸附后撤销重做和单独移动一致；多选整体拖动保持相对位置；缩放 50%、100%、200% 时光标、网格和落点一致。
+
+导出 React 工程 JSON → Vue 导入，再从 Vue 导出 → React 导入，并反向验证图元位置及 Tag 绑定保持原值。切回 Runtime 验证模拟质量 `GOOD/STALE` 显示没有回归。当前仅为源代码开发成果，**Vite+、TS6、Vitest、Web 构建、浏览器与桌面回归尚未在本轮实际执行**。

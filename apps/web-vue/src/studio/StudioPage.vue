@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { WaterTreatmentSimulator, waterTreatmentDemoDocument } from "@adui/scada-core";
-import { DocumentEditor, findNodesInRect, withNodesTranslated } from "@adui/scada-core/editor";
+import {
+  DEFAULT_GRID_SIZE,
+  DocumentEditor,
+  findNodesInRect,
+  resolveDragSnap,
+  withNodesTranslated,
+} from "@adui/scada-core/editor";
 import type { Alignment, EditableSymbol, LayerAction } from "@adui/scada-core/editor";
 import { svgDataUrl } from "@adui/scada-runtime";
 import "./studio.css";
@@ -15,6 +21,9 @@ const marquee = shallowRef<MarqueeState | null>(null);
 const labelDraft = ref("");
 const notice = ref("本地草稿 · 尚未连接工程保存 API");
 const zoom = ref(1);
+const gridVisible = ref(true);
+const gridSnap = ref(true);
+const nodeSnap = ref(true);
 const svgRef = ref<SVGSVGElement | null>(null);
 
 interface MarqueeState {
@@ -47,17 +56,29 @@ const page = computed(() => {
 const selected = computed(() =>
   page.value.nodes.find((node) => node.id === state.value.selectedId),
 );
-const displayDocument = computed(() => {
+const snapResult = computed(() => {
   const dragging = preview.value;
-  if (!dragging) return state.value.document;
+  if (!dragging) return null;
   const anchor = page.value.nodes.find((node) => node.id === dragging.id);
-  if (!anchor) return state.value.document;
-  return withNodesTranslated(
+  if (!anchor) return null;
+  return resolveDragSnap(
     state.value.document,
     state.value.selectedIds,
     dragging.x - anchor.transform.x,
     dragging.y - anchor.transform.y,
+    { gridEnabled: gridSnap.value, nodeEnabled: nodeSnap.value },
   );
+});
+const displayDocument = computed(() => {
+  const movement = snapResult.value;
+  return movement === null
+    ? state.value.document
+    : withNodesTranslated(
+        state.value.document,
+        state.value.selectedIds,
+        movement.dx,
+        movement.dy,
+      );
 });
 const displayNodes = computed(() => displayDocument.value.pages[0]?.nodes ?? []);
 const imageUrl = computed(() => svgDataUrl(displayDocument.value, previewTags));
@@ -270,7 +291,15 @@ function finishDrag(event: PointerEvent) {
   activeDrag = null;
   preview.value = null;
   try {
-    editor.moveBy(x - drag.originX, y - drag.originY);
+    const snapshot = editor.snapshot();
+    const movement = resolveDragSnap(
+      snapshot.document,
+      snapshot.selectedIds,
+      x - drag.originX,
+      y - drag.originY,
+      { gridEnabled: gridSnap.value, nodeEnabled: nodeSnap.value },
+    );
+    editor.moveBy(movement.dx, movement.dy);
     refresh();
   } catch (error) {
     notice.value = error instanceof Error ? error.message : String(error);
@@ -389,6 +418,20 @@ async function importJson(event: Event) {
           <span
             >{{ page.name }} · {{ page.size.width }} × {{ page.size.height }} · 静态模拟预览</span
           >
+          <div class="studio-canvas-settings">
+            <label class="studio-canvas-option">
+              <input v-model="gridVisible" type="checkbox" />
+              显示网格
+            </label>
+            <label class="studio-canvas-option">
+              <input v-model="gridSnap" type="checkbox" />
+              网格吸附
+            </label>
+            <label class="studio-canvas-option">
+              <input v-model="nodeSnap" type="checkbox" />
+              图元吸附
+            </label>
+          </div>
           <div class="studio-zoom" aria-label="画布缩放">
             <button type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</button>
             <button type="button" @click="zoom = 1">{{ Math.round(zoom * 100) }}%</button>
@@ -406,10 +449,33 @@ async function importJson(event: Event) {
           @pointercancel="cancelDrag"
           @pointerdown.self="startMarquee"
         >
+          <defs>
+            <pattern
+              id="scada-studio-grid"
+              :width="DEFAULT_GRID_SIZE"
+              :height="DEFAULT_GRID_SIZE"
+              patternUnits="userSpaceOnUse"
+            >
+              <path
+                :d="`M ${DEFAULT_GRID_SIZE} 0 L 0 0 0 ${DEFAULT_GRID_SIZE}`"
+                fill="none"
+                stroke="#8295ac"
+                stroke-width="0.8"
+                opacity="0.45"
+              />
+            </pattern>
+          </defs>
           <image
             :href="imageUrl"
             :width="page.size.width"
             :height="page.size.height"
+            pointer-events="none"
+          />
+          <rect
+            v-if="gridVisible"
+            :width="page.size.width"
+            :height="page.size.height"
+            fill="url(#scada-studio-grid)"
             pointer-events="none"
           />
           <g v-for="node in displayNodes" :key="node.id" :transform="displayTransform(node.id)">
@@ -437,6 +503,24 @@ async function importJson(event: Event) {
               @keydown.space.prevent="selectNode(node.id, $event.shiftKey)"
             />
           </g>
+          <line
+            v-if="snapResult?.verticalGuide != null"
+            class="studio-alignment-guide"
+            :x1="snapResult.verticalGuide"
+            :x2="snapResult.verticalGuide"
+            :y1="0"
+            :y2="page.size.height"
+            pointer-events="none"
+          />
+          <line
+            v-if="snapResult?.horizontalGuide != null"
+            class="studio-alignment-guide"
+            :x1="0"
+            :x2="page.size.width"
+            :y1="snapResult.horizontalGuide"
+            :y2="snapResult.horizontalGuide"
+            pointer-events="none"
+          />
           <rect
             v-if="marquee"
             class="studio-marquee"

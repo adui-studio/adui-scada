@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, PointerEvent as ReactPointerEvent } from "react";
 import { WaterTreatmentSimulator, waterTreatmentDemoDocument } from "@adui/scada-core";
-import { DocumentEditor, findNodesInRect, withNodesTranslated } from "@adui/scada-core/editor";
+import {
+  DEFAULT_GRID_SIZE,
+  DocumentEditor,
+  findNodesInRect,
+  resolveDragSnap,
+  withNodesTranslated,
+} from "@adui/scada-core/editor";
 import type {
   Alignment,
   EditableSymbol,
@@ -42,23 +48,34 @@ export default function StudioPage() {
   const [labelDraft, setLabelDraft] = useState("");
   const [notice, setNotice] = useState("本地草稿 · 尚未连接工程保存 API");
   const [zoom, setZoom] = useState(1);
+  const [gridVisible, setGridVisible] = useState(true);
+  const [gridSnap, setGridSnap] = useState(true);
+  const [nodeSnap, setNodeSnap] = useState(true);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const marqueeRef = useRef<MarqueeState | null>(null);
 
   const page = state.document.pages[0];
   const selected = page?.nodes.find((node) => node.id === state.selectedId);
-  const displayDocument = useMemo(() => {
-    if (preview === null) return state.document;
+  const snapResult = useMemo(() => {
+    if (preview === null) return null;
     const anchor = state.document.pages[0]?.nodes.find((node) => node.id === preview.id);
-    if (!anchor) return state.document;
-    return withNodesTranslated(
+    if (!anchor) return null;
+    return resolveDragSnap(
       state.document,
       state.selectedIds,
       preview.x - anchor.transform.x,
       preview.y - anchor.transform.y,
+      { gridEnabled: gridSnap, nodeEnabled: nodeSnap },
     );
-  }, [preview, state.document, state.selectedIds]);
+  }, [preview, state.document, state.selectedIds, gridSnap, nodeSnap]);
+  const displayDocument = useMemo(
+    () =>
+      snapResult === null
+        ? state.document
+        : withNodesTranslated(state.document, state.selectedIds, snapResult.dx, snapResult.dy),
+    [snapResult, state.document, state.selectedIds],
+  );
   const image = useMemo(() => svgDataUrl(displayDocument, previewTags), [displayDocument]);
 
   if (!page) throw new Error("工程文档不包含页面");
@@ -264,7 +281,15 @@ export default function StudioPage() {
     dragRef.current = null;
     setPreview(null);
     try {
-      editor.moveBy(x - drag.originX, y - drag.originY);
+      const snapshot = editor.snapshot();
+      const movement = resolveDragSnap(
+        snapshot.document,
+        snapshot.selectedIds,
+        x - drag.originX,
+        y - drag.originY,
+        { gridEnabled: gridSnap, nodeEnabled: nodeSnap },
+      );
+      editor.moveBy(movement.dx, movement.dy);
       refresh();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error));
@@ -401,6 +426,20 @@ export default function StudioPage() {
             <span>
               {page.name} · {page.size.width} × {page.size.height} · 静态模拟预览
             </span>
+            <div className="studio-canvas-settings">
+              <label className="studio-canvas-option">
+                <input type="checkbox" checked={gridVisible} onChange={(event) => setGridVisible(event.target.checked)} />
+                显示网格
+              </label>
+              <label className="studio-canvas-option">
+                <input type="checkbox" checked={gridSnap} onChange={(event) => setGridSnap(event.target.checked)} />
+                网格吸附
+              </label>
+              <label className="studio-canvas-option">
+                <input type="checkbox" checked={nodeSnap} onChange={(event) => setNodeSnap(event.target.checked)} />
+                图元吸附
+              </label>
+            </div>
             <div className="studio-zoom" aria-label="画布缩放">
               <button type="button" onClick={() => changeZoom(-0.25)} disabled={zoom <= 0.5}>
                 −
@@ -430,12 +469,38 @@ export default function StudioPage() {
             onPointerDown={startMarquee}
             aria-label="可编辑 SVG 画布"
           >
+            <defs>
+              <pattern
+                id="scada-studio-grid"
+                width={DEFAULT_GRID_SIZE}
+                height={DEFAULT_GRID_SIZE}
+                patternUnits="userSpaceOnUse"
+              >
+                <path
+                  d={`M ${DEFAULT_GRID_SIZE} 0 L 0 0 0 ${DEFAULT_GRID_SIZE}`}
+                  fill="none"
+                  stroke="#8295ac"
+                  strokeWidth="0.8"
+                  opacity="0.45"
+                />
+              </pattern>
+            </defs>
             <image
               href={image}
               width={page.size.width}
               height={page.size.height}
               pointerEvents="none"
             />
+            {gridVisible && (
+              <rect
+                x={0}
+                y={0}
+                width={page.size.width}
+                height={page.size.height}
+                fill="url(#scada-studio-grid)"
+                pointerEvents="none"
+              />
+            )
             {page.nodes.map((node) => {
               const displayNode =
                 displayDocument.pages[0]?.nodes.find((entry) => entry.id === node.id) ?? node;
@@ -475,6 +540,26 @@ export default function StudioPage() {
                 </g>
               );
             })}
+            {snapResult?.verticalGuide != null && (
+              <line
+                className="studio-alignment-guide"
+                x1={snapResult.verticalGuide}
+                x2={snapResult.verticalGuide}
+                y1={0}
+                y2={page.size.height}
+                pointerEvents="none"
+              />
+            )}
+            {snapResult?.horizontalGuide != null && (
+              <line
+                className="studio-alignment-guide"
+                x1={0}
+                x2={page.size.width}
+                y1={snapResult.horizontalGuide}
+                y2={snapResult.horizontalGuide}
+                pointerEvents="none"
+              />
+            )}
             {marquee !== null && (
               <rect
                 className="studio-marquee"

@@ -425,3 +425,6 @@ export class DocumentEditor {
     this.selection = this.selection.filter((id) => valid.has(id));
   }
 }
+
+export { DEFAULT_GRID_SIZE, resolveDragSnap } from "./snap.ts";
+export type { DragSnapOptions, DragSnapResult } from "./snap.ts";
