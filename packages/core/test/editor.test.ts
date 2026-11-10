@@ -5,6 +5,7 @@ import {
   findNodesInRect,
   withNodePosition,
   withNodesTranslated,
+  withNodeTransform,
 } from "../src/editor.ts";
 
 function editor() {
@@ -348,4 +349,80 @@ test("左侧小数边界吸附位移能够提交并撤销", () => {
   expect(
     e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.transform.x,
   ).toBe(0.2);
+});
+
+test("图元位置尺寸与旋转可一次修改并撤销重做且不改变 Tag 绑定", () => {
+  const e = editor();
+  e.select("tank");
+  const before = e.snapshot().document;
+  const transform = { x: 102.5, y: 140, width: 160, height: 180, rotation: -45 };
+  expect(e.updateSelectedTransform(transform)).toBe(true);
+  const after = e.snapshot();
+  const node = after.document.pages[0]?.nodes.find((item) => item.id === "tank");
+  expect(node?.transform).toEqual(transform);
+  expect(node?.bindings.level?.tagId).toBe("water.level");
+  expect(after.canUndo).toBe(true);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(before);
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().document).toEqual(after.document);
+});
+
+test("未变化的几何属性不会写入撤销历史", () => {
+  const e = editor();
+  e.select("tank");
+  expect(e.updateSelectedTransform({ x: 80, y: 125 })).toBe(false);
+  expect(e.updateSelectedTransform({})).toBe(false);
+  expect(e.snapshot().canUndo).toBe(false);
+});
+
+test("几何属性允许合法小数并保持原工程不变", () => {
+  const original = editor().snapshot().document;
+  const result = withNodeTransform(original, "tank", {
+    x: 0.25,
+    width: 0.1,
+    rotation: 360,
+  });
+  const transform = result.pages[0]?.nodes.find((node) => node.id === "tank")?.transform;
+  expect(transform?.x).toBe(0.25);
+  expect(transform?.width).toBe(0.1);
+  expect(transform?.rotation).toBe(360);
+  expect(original.pages[0]?.nodes.find((node) => node.id === "tank")?.transform.x).toBe(80);
+  const restored = new DocumentEditor(JSON.parse(JSON.stringify(result)) as unknown);
+  expect(restored.snapshot().document).toEqual(result);
+});
+
+test("几何属性拒绝无效数值、未知字段和非法对象", () => {
+  const document = editor().snapshot().document;
+  expect(() => withNodeTransform(document, "tank", { x: Number.NaN })).toThrow(/有限数/);
+  expect(() => withNodeTransform(document, "tank", { y: Infinity })).toThrow(/有限数/);
+  expect(() => withNodeTransform(document, "tank", { width: "20" as never })).toThrow(/有限数/);
+  expect(() => withNodeTransform(document, "tank", { opacity: 1 } as never)).toThrow(
+    /不支持的图元几何属性/,
+  );
+  expect(() => withNodeTransform(document, "tank", null as never)).toThrow(/普通对象/);
+  expect(() => withNodeTransform(document, "missing", { x: 20 })).toThrow(/未找到图元/);
+});
+
+test("几何属性拒绝越界与不合法尺寸旋转且失败不破坏历史", () => {
+  const e = editor();
+  e.select("tank");
+  const before = e.snapshot();
+  expect(() => e.updateSelectedTransform({ x: -1 })).toThrow(/画布范围/);
+  expect(() => e.updateSelectedTransform({ x: 800 })).toThrow(/画布范围/);
+  expect(() => e.updateSelectedTransform({ width: 0 })).toThrow(/宽度和高度/);
+  expect(() => e.updateSelectedTransform({ height: 16385 })).toThrow(/宽度和高度/);
+  expect(() => e.updateSelectedTransform({ rotation: -361 })).toThrow(/旋转角度/);
+  expect(() => e.updateSelectedTransform({ x: 740, width: 150 })).toThrow(/画布范围/);
+  expect(e.snapshot()).toEqual(before);
+});
+
+test("未选择或多选图元时不允许误改某个图元的几何属性", () => {
+  const e = editor();
+  const before = e.snapshot().document;
+  expect(() => e.updateSelectedTransform({ rotation: 30 })).toThrow(/单选/);
+  e.selectMany(["tank", "pump"]);
+  expect(() => e.updateSelectedTransform({ width: 180 })).toThrow(/单选/);
+  expect(e.snapshot().document).toEqual(before);
+  expect(e.snapshot().canUndo).toBe(false);
 });

@@ -167,3 +167,16 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 ### 小数边界位移的提交一致性
 
 当图元处于小数坐标且移动范围边缘为非整数时，`resolveDragSnap` 返回的 `dx/dy` 可能是精确边界小数。`withNodesTranslated` 在传入位移**恰好等于可行区间端点**时保留该值，避免吸附预览和 `DocumentEditor.moveBy` 的最终落点不同；普通非边界位移依旧按原有整数取整规则处理。此行为不更改工程 Schema、Tag 绑定及撤销历史结构。
+
+## 14. V0.2 第五批：图元几何属性面板
+
+在 `packages/core/src/editor.ts` 增加共享纯函数 `withNodeTransform(document, nodeId, patch)` 与 `DocumentEditor.updateSelectedTransform(patch)`，复用 `ScadaDocument 0.1.0` 的 `transform` 五个字段 `x/y/width/height/rotation`，**不新增 Schema 字段**。
+
+- 属性面板仅支持单选图元；一次“应用几何属性”提交五项数值，形成一条可撤销命令。位置和尺寸允许合法小数，手动数值编辑不应用拖动吸附算法。
+- `patch` 只接受普通对象及白名单字段，所有提供的字段必须是有限数；宽高按现有 Schema 限制为 0.1～16384，旋转角为 -360～360 度。
+- 修改后图元的**未旋转布局矩形**须完整位于第一页画布内，不能出现负坐标或超过页面尺寸的结果；错误必须拒绝整批提交且保留文档和撤销历史。对旋转后的视觉外接框尚不施加单独裁切约束。
+- 空修改、与原数据完全一致的修改不产生历史；文档校验与 Tag 绑定、防御性复制、最多 100 条历史记录仍由共享 Core 处理。
+- React/Vue 通过各自原生表单提交数值，输入尚未点击“应用”时只改变 UI；选中图元或其几何值发生变化时恢复显示最新值。多选时隐藏单图元几何编辑表单，仅保留已有移动、对齐和图层操作。
+- Runtime、工业网关、Tag 采集、设备写入、工程持久化及正式发布流程均不受本批影响。
+
+设计记录：[ADR-0013](adr/0013-node-transform-properties.md)。此批次为待本机测试的开发分支，不代表 V0.2 全部功能完成。

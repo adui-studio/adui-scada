@@ -12,6 +12,7 @@ export interface EditorSnapshot {
 export type Alignment = "left" | "right" | "hcenter" | "top" | "bottom" | "vcenter";
 export type LayerAction = "front" | "back" | "forward" | "backward";
 export type EditableSymbol = "tank" | "pump" | "pipe" | "label";
+export type NodeTransformPatch = Partial<ScadaNode["transform"]>;
 
 const HISTORY_LIMIT = 100;
 
@@ -150,6 +151,69 @@ export function withNodePosition(
   const node = page.nodes.find((candidate) => candidate.id === nodeId);
   if (!node) throw new RangeError(`未找到图元：${nodeId}`);
   return withNodesTranslated(document, [nodeId], x - node.transform.x, y - node.transform.y);
+}
+
+/** 原子修改单个图元的几何属性；未旋转的布局矩形必须完整位于页面内。 */
+export function withNodeTransform(
+  document: ScadaDocument,
+  nodeId: string,
+  patch: NodeTransformPatch,
+): ScadaDocument {
+  if (patch === null || typeof patch !== "object" || Array.isArray(patch)) {
+    throw new TypeError("图元几何属性必须为普通对象");
+  }
+  const prototype = Object.getPrototypeOf(patch);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new TypeError("图元几何属性必须为普通对象");
+  }
+  for (const [key, value] of Object.entries(patch)) {
+    if (!["x", "y", "width", "height", "rotation"].includes(key)) {
+      throw new TypeError(`不支持的图元几何属性：${key}`);
+    }
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      throw new TypeError(`图元几何属性 ${key} 必须为有限数`);
+    }
+  }
+
+  const checked = parseScadaDocument(document);
+  const page = firstPage(checked);
+  const node = page.nodes.find((candidate) => candidate.id === nodeId);
+  if (!node) throw new RangeError(`未找到图元：${nodeId}`);
+
+  const transform = { ...node.transform, ...patch };
+  if (
+    transform.width < 0.1 ||
+    transform.width > 16384 ||
+    transform.height < 0.1 ||
+    transform.height > 16384
+  ) {
+    throw new RangeError("图元宽度和高度必须在 0.1～16384 之间");
+  }
+  if (transform.rotation < -360 || transform.rotation > 360) {
+    throw new RangeError("图元旋转角度必须在 -360～360 度之间");
+  }
+  if (
+    transform.x < 0 ||
+    transform.y < 0 ||
+    transform.x + transform.width > page.size.width ||
+    transform.y + transform.height > page.size.height
+  ) {
+    throw new RangeError("图元位置或尺寸超出当前画布范围");
+  }
+
+  return parseScadaDocument({
+    ...checked,
+    pages: checked.pages.map((candidate) =>
+      candidate.id !== page.id
+        ? candidate
+        : {
+            ...candidate,
+            nodes: candidate.nodes.map((item) =>
+              item.id === nodeId ? { ...item, transform } : item,
+            ),
+          },
+    ),
+  });
 }
 
 function equalDocuments(left: ScadaDocument, right: ScadaDocument): boolean {
@@ -356,6 +420,14 @@ export class DocumentEditor {
       }
     }
     return this.replaceFirstPageNodes(nodes);
+  }
+
+  /** 仅允许单选图元修改几何属性，一次应用只产生一条撤销记录。 */
+  updateSelectedTransform(patch: NodeTransformPatch): boolean {
+    if (this.selection.length !== 1) {
+      throw new TypeError("请先单选一个图元再编辑几何属性");
+    }
+    return this.commit(withNodeTransform(this.current, this.selection[0]!, patch));
   }
 
   setSelectedLabel(text: string): boolean {

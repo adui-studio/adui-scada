@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent, PointerEvent as ReactPointerEvent } from "react";
+import type { ChangeEvent, FormEvent, PointerEvent as ReactPointerEvent } from "react";
 import { WaterTreatmentSimulator, waterTreatmentDemoDocument } from "@adui/scada-core";
 import {
   DEFAULT_GRID_SIZE,
@@ -13,12 +13,20 @@ import type {
   EditableSymbol,
   EditorSnapshot,
   LayerAction,
+  NodeTransformPatch,
 } from "@adui/scada-core/editor";
 import { svgDataUrl } from "@adui/scada-runtime";
 import "./studio.css";
 
 const previewTags = new WaterTreatmentSimulator().next(new Date("2026-11-09T00:00:00Z"));
 const maxFileSize = 2 * 1024 * 1024;
+const geometryFields = [
+  ["x", "X 坐标"],
+  ["y", "Y 坐标"],
+  ["width", "宽度"],
+  ["height", "高度"],
+  ["rotation", "旋转角度（度）"],
+] as const;
 
 interface MarqueeState {
   pointerId: number;
@@ -313,6 +321,32 @@ export default function StudioPage() {
       editor.setSelectedLabel(labelDraft);
       refresh();
       setNotice("文案已更新，可撤销");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  function changeGeometry(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const values = new FormData(event.currentTarget);
+    const patch: NodeTransformPatch = {};
+    for (const [key, label] of geometryFields) {
+      const raw = values.get(key);
+      if (typeof raw !== "string" || raw.trim() === "") {
+        setNotice(`请填写${label}`);
+        return;
+      }
+      const value = Number(raw);
+      if (!Number.isFinite(value)) {
+        setNotice(`${label}必须是有限数`);
+        return;
+      }
+      patch[key] = value;
+    }
+    try {
+      const changed = editor.updateSelectedTransform(patch);
+      refresh();
+      setNotice(changed ? "图元几何属性已更新，可撤销" : "图元几何属性未发生变化");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error));
     }
@@ -636,12 +670,29 @@ export default function StudioPage() {
               <p>
                 <strong>{selected.id}</strong> · {selected.type}
               </p>
-              <div className="studio-fields">
-                <span>X：{selected.transform.x}</span>
-                <span>Y：{selected.transform.y}</span>
-                <span>宽：{selected.transform.width}</span>
-                <span>高：{selected.transform.height}</span>
-              </div>
+              {state.selectedIds.length === 1 ? (
+                <form
+                  key={`${selected.id}:${JSON.stringify(selected.transform)}`}
+                  className="studio-geometry"
+                  onSubmit={changeGeometry}
+                  noValidate
+                >
+                  {geometryFields.map(([key, label]) => (
+                    <label key={key}>
+                      {label}
+                      <input
+                        type="number"
+                        name={key}
+                        step="any"
+                        defaultValue={selected.transform[key]}
+                      />
+                    </label>
+                  ))}
+                  <button type="submit">应用几何属性</button>
+                </form>
+              ) : (
+                <p className="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
+              )}
               <p className="studio-tip">拖动画布中的虚线框，或使用方向按钮微调。每次操作可撤销。</p>
               <div className="studio-nudge">
                 <button type="button" onClick={() => nudge(-1, 0)}>
