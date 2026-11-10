@@ -6,6 +6,8 @@ import {
   waterTreatmentDemoTagOptions,
   DraftAutoSaveSession,
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
+  studioNodeLocked,
+  studioNodeVisible,
 } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
@@ -115,7 +117,15 @@ const hasGroupedSelection = computed(() =>
     (node) => node.groupId !== undefined && state.value.selectedIds.includes(node.id),
   ),
 );
-const canGroup = computed(() => state.value.selectedIds.length >= 2 && !hasGroupedSelection.value);
+const hasLockedSelection = computed(() =>
+  page.value.nodes.some(
+    (node) => state.value.selectedIds.includes(node.id) && studioNodeLocked(node),
+  ),
+);
+const canGroup = computed(
+  () =>
+    state.value.selectedIds.length >= 2 && !hasGroupedSelection.value && !hasLockedSelection.value,
+);
 const activePageIndex = computed(() =>
   state.value.document.pages.findIndex((item) => item.id === state.value.activePageId),
 );
@@ -129,7 +139,7 @@ const copyTargetPageId = computed(() =>
 );
 const bindingSlot = computed(() => {
   const node = selected.value;
-  return node && state.value.selectedIds.length === 1 && !node.groupId
+  return node && state.value.selectedIds.length === 1 && !node.groupId && !studioNodeLocked(node)
     ? editableTagSlot(node.type)
     : null;
 });
@@ -176,10 +186,12 @@ const displayDocument = computed(() => {
         state.value.activePageId,
       );
 });
-const displayNodes = computed(
-  () =>
-    displayDocument.value.pages.find((item) => item.id === state.value.activePageId)?.nodes ?? [],
-);
+const displayNodes = computed(() => {
+  const nodes = displayDocument.value.pages.find(
+    (item) => item.id === state.value.activePageId,
+  )?.nodes;
+  return (nodes ?? []).filter(studioNodeVisible);
+});
 const imageUrl = computed(() =>
   svgDataUrl(displayDocument.value, previewTags, state.value.activePageId),
 );
@@ -210,51 +222,61 @@ function handleKey(event: KeyboardEvent) {
   const key = event.key.toLowerCase();
   let handled = false;
 
-  if (command && !event.altKey) {
-    if (key === "z") handled = event.shiftKey ? editor.redo() : editor.undo();
-    else if (key === "y") handled = editor.redo();
-    else if (key === "c" && !event.shiftKey) {
-      handled = editor.copySelected();
-      if (handled) notice.value = "已复制所选图元到会话剪贴板";
-    } else if (key === "x" && !event.shiftKey) {
-      handled = editor.cutSelected();
-      if (handled) notice.value = "已剪切所选图元，可撤销";
-    } else if (key === "v" && !event.shiftKey && editor.snapshot().hasClipboard) {
-      event.preventDefault();
-      try {
-        handled = editor.pasteClipboard().length > 0;
-        if (handled) notice.value = "已粘贴图元，可撤销";
-      } catch (error) {
-        notice.value = "粘贴失败：" + (error instanceof Error ? error.message : String(error));
+  try {
+    if (command && !event.altKey) {
+      if (key === "z") handled = event.shiftKey ? editor.redo() : editor.undo();
+      else if (key === "y") handled = editor.redo();
+      else if (key === "c" && !event.shiftKey) {
+        handled = editor.copySelected();
+        if (handled) notice.value = "已复制所选图元到会话剪贴板";
+      } else if (key === "x" && !event.shiftKey) {
+        handled = editor.cutSelected();
+        if (handled) notice.value = "已剪切所选图元，可撤销";
+      } else if (key === "v" && !event.shiftKey && editor.snapshot().hasClipboard) {
+        event.preventDefault();
+        try {
+          handled = editor.pasteClipboard().length > 0;
+          if (handled) notice.value = "已粘贴图元，可撤销";
+        } catch (error) {
+          notice.value = "粘贴失败：" + (error instanceof Error ? error.message : String(error));
+        }
+      } else if (key === "a") {
+        editor.selectMany(
+          page.value.nodes
+            .filter((node) => studioNodeVisible(node) && !studioNodeLocked(node))
+            .map((node) => node.id),
+        );
+        handled = true;
       }
-    } else if (key === "a") {
-      editor.selectMany(page.value.nodes.map((node) => node.id));
-      handled = true;
+    } else if (!command && !event.altKey) {
+      if (key === "escape") {
+        activeDrag = null;
+        activeMarquee = null;
+        activeGeometry = null;
+        preview.value = null;
+        marquee.value = null;
+        geometryPreview.value = null;
+        rotating.value = false;
+        editor.select(null);
+        handled = true;
+      } else if (key === "delete" || key === "backspace") {
+        handled = editor.deleteSelected();
+      } else if (key.startsWith("arrow")) {
+        const step = event.shiftKey ? 10 : 1;
+        const moves: Record<string, [number, number]> = {
+          arrowleft: [-step, 0],
+          arrowright: [step, 0],
+          arrowup: [0, -step],
+          arrowdown: [0, step],
+        };
+        const move = moves[key];
+        if (move) handled = editor.moveBy(move[0], move[1]);
+      }
     }
-  } else if (!command && !event.altKey) {
-    if (key === "escape") {
-      activeDrag = null;
-      activeMarquee = null;
-      activeGeometry = null;
-      preview.value = null;
-      marquee.value = null;
-      geometryPreview.value = null;
-      rotating.value = false;
-      editor.select(null);
-      handled = true;
-    } else if (key === "delete" || key === "backspace") {
-      handled = editor.deleteSelected();
-    } else if (key.startsWith("arrow")) {
-      const step = event.shiftKey ? 10 : 1;
-      const moves: Record<string, [number, number]> = {
-        arrowleft: [-step, 0],
-        arrowright: [step, 0],
-        arrowup: [0, -step],
-        arrowdown: [0, step],
-      };
-      const move = moves[key];
-      if (move) handled = editor.moveBy(move[0], move[1]);
-    }
+  } catch (error) {
+    event.preventDefault();
+    notice.value = error instanceof Error ? error.message : String(error);
+    return;
   }
 
   if (!handled) return;
@@ -492,6 +514,22 @@ function align(mode: Alignment) {
   apply(() => editor.alignSelected(mode), "所选图元已按主选图元对齐");
 }
 
+function changeSelectedLocked(locked: boolean) {
+  apply(
+    () => editor.setSelectedLocked(locked),
+    locked ? "已批量锁定图元，可撤销" : "已批量解锁图元，可撤销",
+  );
+  cancelDrag();
+}
+
+function changeSelectedVisible(visible: boolean) {
+  apply(
+    () => editor.setSelectedVisible(visible),
+    visible ? "已批量显示图元，可撤销" : "已批量隐藏图元，可撤销",
+  );
+  cancelDrag();
+}
+
 function layer(action: LayerAction) {
   apply(() => editor.reorderSelected(action), "已调整图元层级");
 }
@@ -512,6 +550,13 @@ function beginDrag(event: PointerEvent, id: string) {
   if (!point) return;
   const node = page.value.nodes.find((candidate) => candidate.id === id);
   if (!node) return;
+  if (studioNodeLocked(node)) {
+    editor.select(id, event.shiftKey);
+    refresh();
+    notice.value = "该图元已锁定，请在图层列表中解锁后编辑";
+    event.preventDefault();
+    return;
+  }
   if (event.shiftKey) {
     editor.select(id, true);
     refresh();
@@ -519,6 +564,13 @@ function beginDrag(event: PointerEvent, id: string) {
     return;
   }
   if (!editor.snapshot().selectedIds.includes(id)) editor.select(id);
+  const selectedIds = editor.snapshot().selectedIds;
+  if (page.value.nodes.some((item) => selectedIds.includes(item.id) && studioNodeLocked(item))) {
+    refresh();
+    notice.value = "所选内容包含已锁定图元，请先解锁";
+    event.preventDefault();
+    return;
+  }
   refresh();
   activeDrag = {
     pointerId: event.pointerId,
@@ -570,7 +622,13 @@ function finishDrag(event: PointerEvent) {
 }
 
 function beginGeometry(event: PointerEvent, handle: ResizeHandle | "rotate") {
-  if (event.button !== 0 || state.value.selectedIds.length !== 1 || !selected.value) return;
+  if (
+    event.button !== 0 ||
+    state.value.selectedIds.length !== 1 ||
+    !selected.value ||
+    studioNodeLocked(selected.value)
+  )
+    return;
   const point = canvasPoint(event.clientX, event.clientY);
   if (!point) return;
   activeGeometry = {
@@ -941,10 +999,16 @@ async function importJson(event: Event) {
           type="button"
           class="studio-layer"
           :data-selected="state.selectedIds.includes(node.id)"
+          :data-hidden="!studioNodeVisible(node)"
+          :data-locked="studioNodeLocked(node)"
           @click="selectNode(node.id, $event.shiftKey)"
         >
-          <span>{{ node.id }}</span
-          ><small>{{ node.type }}{{ node.groupId ? ` · 组合 ${node.groupId}` : "" }}</small>
+          <span>{{ node.id }}</span>
+          <small>
+            {{ node.type }}{{ node.groupId ? ` · 组合 ${node.groupId}` : "" }}
+            {{ studioNodeLocked(node) ? " · 已锁定" : "" }}
+            {{ !studioNodeVisible(node) ? " · 已隐藏" : "" }}
+          </small>
         </button>
       </aside>
       <section class="studio-stage" aria-label="组态画布">
@@ -1037,7 +1101,13 @@ async function importJson(event: Event) {
               @keydown.enter.prevent="selectNode(node.id, $event.shiftKey)"
               @keydown.space.prevent="selectNode(node.id, $event.shiftKey)"
             />
-            <template v-if="state.selectedIds.length === 1 && state.selectedId === node.id">
+            <template
+              v-if="
+                state.selectedIds.length === 1 &&
+                state.selectedId === node.id &&
+                !studioNodeLocked(node)
+              "
+            >
               <rect
                 v-for="handle in RESIZE_HANDLES"
                 :key="handle"
@@ -1102,6 +1172,36 @@ async function importJson(event: Event) {
       <aside class="studio-panel" aria-label="图元属性">
         <h2>属性 · 已选 {{ state.selectedIds.length }}</h2>
         <div class="studio-toolbox">
+          <div class="studio-tool-group" aria-label="图层锁定与可见性">
+            <button
+              type="button"
+              :disabled="state.selectedIds.length === 0"
+              @click="changeSelectedLocked(true)"
+            >
+              锁定所选
+            </button>
+            <button
+              type="button"
+              :disabled="state.selectedIds.length === 0"
+              @click="changeSelectedLocked(false)"
+            >
+              解锁所选
+            </button>
+            <button
+              type="button"
+              :disabled="state.selectedIds.length === 0 || hasLockedSelection"
+              @click="changeSelectedVisible(false)"
+            >
+              隐藏所选
+            </button>
+            <button
+              type="button"
+              :disabled="state.selectedIds.length === 0 || hasLockedSelection"
+              @click="changeSelectedVisible(true)"
+            >
+              显示所选
+            </button>
+          </div>
           <div class="studio-tool-group" aria-label="图元组合">
             <button
               type="button"
@@ -1213,9 +1313,15 @@ async function importJson(event: Event) {
           >
             <label v-for="[key, label] in geometryFields" :key="key">
               {{ label }}
-              <input type="number" :name="key" step="any" :value="selected.transform[key]" />
+              <input
+                type="number"
+                :name="key"
+                step="any"
+                :value="selected.transform[key]"
+                :disabled="studioNodeLocked(selected)"
+              />
             </label>
-            <button type="submit">应用几何属性</button>
+            <button type="submit" :disabled="studioNodeLocked(selected)">应用几何属性</button>
           </form>
           <p v-else class="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
           <p class="studio-tip">拖动画布中的虚线框，或使用方向按钮微调。每次操作可撤销。</p>
@@ -1230,8 +1336,10 @@ async function importJson(event: Event) {
             class="studio-field"
           >
             显示文案
-            <input v-model="labelDraft" maxlength="256" />
-            <button type="button" @click="changeLabel">应用文案</button>
+            <input v-model="labelDraft" maxlength="256" :disabled="studioNodeLocked(selected)" />
+            <button type="button" :disabled="studioNodeLocked(selected)" @click="changeLabel">
+              应用文案
+            </button>
           </label>
           <h3>Tag 绑定（模拟数据）</h3>
           <label v-if="bindingSlot" class="studio-field">

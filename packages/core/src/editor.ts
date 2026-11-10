@@ -1,4 +1,10 @@
-import { migrateScadaDocument, parseScadaDocument } from "./document.ts";
+import {
+  migrateScadaDocument,
+  parseScadaDocument,
+  STUDIO_NODE_STATE_KEY,
+  studioNodeLocked,
+  studioNodeVisible,
+} from "./document.ts";
 import type { ScadaDocument, ScadaNode, ScadaNodeType } from "./document.ts";
 import { expandGroupedSelection } from "./grouping.ts";
 
@@ -18,6 +24,32 @@ export type EditableSymbol = "tank" | "pump" | "pipe" | "label";
 export type NodeTransformPatch = Partial<ScadaNode["transform"]>;
 
 const HISTORY_LIMIT = 100;
+const LOCKED_NODE_MESSAGE = "所选图元包含已锁定图元，请先解锁";
+
+/** 只更新共享 Schema 中受验证的 Studio 扩展状态，不修改业务属性。 */
+function withStudioState(node: ScadaNode, key: "locked" | "visible", enabled: boolean): ScadaNode {
+  const previous = node.props[STUDIO_NODE_STATE_KEY] as Record<string, boolean> | undefined;
+  const metadata = { ...previous };
+  if (key === "locked" ? enabled : !enabled) metadata[key] = enabled;
+  else delete metadata[key];
+  const props = { ...node.props };
+  if (Object.keys(metadata).length > 0) props[STUDIO_NODE_STATE_KEY] = metadata;
+  else delete props[STUDIO_NODE_STATE_KEY];
+  return { ...node, props };
+}
+
+/** 锁定状态变更本身可撤销，但不得同时修改受锁定保护的其他内容。 */
+function withoutLockState(node: ScadaNode): string {
+  const props = { ...node.props };
+  const raw = props[STUDIO_NODE_STATE_KEY];
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    const flags = { ...(raw as Record<string, boolean>) };
+    delete flags.locked;
+    if (Object.keys(flags).length > 0) props[STUDIO_NODE_STATE_KEY] = flags;
+    else delete props[STUDIO_NODE_STATE_KEY];
+  }
+  return JSON.stringify({ ...node, props });
+}
 
 /** 当前 SVG 图元的可编辑绑定槽；不允许向其他图元添加未知槽。 */
 export function editableTagSlot(type: string): "level" | "running" | "value" | null {
@@ -72,6 +104,7 @@ export function withNodesTranslated(
   const selected = expandGroupedSelection(page.nodes, nodeIds);
   const nodes = page.nodes.filter((node) => selected.has(node.id));
   if (nodes.length === 0) return checked;
+  if (nodes.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
 
   const minDx = Math.max(...nodes.map((node) => -node.transform.x));
   const maxDx = Math.min(
@@ -140,6 +173,7 @@ export function findNodesInRect(
 
   return page.nodes
     .filter((node) => {
+      if (!studioNodeVisible(node)) return false;
       const t = node.transform;
       const angle = (t.rotation * Math.PI) / 180;
       const halfX =
@@ -207,6 +241,7 @@ export function withNodeTransform(
   const page = firstPage(checked, pageId);
   const node = page.nodes.find((candidate) => candidate.id === nodeId);
   if (!node) throw new RangeError(`未找到图元：${nodeId}`);
+  if (studioNodeLocked(node)) throw new TypeError(LOCKED_NODE_MESSAGE);
   if (node.groupId) throw new TypeError("已组合图元不能单独修改几何属性，请先解组");
 
   const transform = { ...node.transform, ...patch };
@@ -448,6 +483,7 @@ export class DocumentEditor {
     }
     const selected = expandGroupedSelection(source.nodes, this.selection);
     const nodes = source.nodes.filter((node) => selected.has(node.id));
+    if (nodes.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
     if (nodes.length === 0) throw new TypeError("请先选择需要复制的图元");
 
     const left = Math.min(...nodes.map((node) => node.transform.x));
@@ -569,6 +605,7 @@ export class DocumentEditor {
     const selected = new Set(this.selection);
     const nodes = page.nodes.filter((node) => selected.has(node.id));
     if (nodes.length !== selected.size) throw new RangeError("所选图元不存在");
+    if (nodes.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
     if (nodes.some((node) => node.groupId !== undefined)) {
       throw new TypeError("所选图元已有组合，请先解组再重新组合");
     }
@@ -597,6 +634,10 @@ export class DocumentEditor {
         .map((node) => node.groupId),
     );
     if (groups.size === 0) return false;
+    const chosen = firstPage(this.current, this.activePageId).nodes.filter(
+      (node) => node.groupId !== undefined && groups.has(node.groupId),
+    );
+    if (chosen.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
     const nodes = firstPage(this.current, this.activePageId).nodes.map((node) => {
       if (!node.groupId || !groups.has(node.groupId)) return node;
       const copy = { ...node };
@@ -684,6 +725,9 @@ export class DocumentEditor {
     const selected = new Set(this.selection);
     const anchor = this.getSelected();
     if (!anchor || selected.size < 2) return false;
+    if (page.nodes.some((node) => selected.has(node.id) && studioNodeLocked(node))) {
+      throw new TypeError(LOCKED_NODE_MESSAGE);
+    }
     if (page.nodes.some((node) => selected.has(node.id) && node.groupId)) {
       throw new TypeError("已组合图元不能逐个对齐，请先解组");
     }
@@ -735,13 +779,27 @@ export class DocumentEditor {
     }
     if (this.selection.length === 0) return false;
     const nodes = [...firstPage(this.current, this.activePageId).nodes];
+    if (nodes.some((node) => this.selection.includes(node.id) && studioNodeLocked(node))) {
+      throw new TypeError(LOCKED_NODE_MESSAGE);
+    }
+    const initialLockedIndices = nodes
+      .map((node, index) => (studioNodeLocked(node) ? { id: node.id, index } : null))
+      .filter((item): item is { id: string; index: number } => item !== null);
+    const applyOrder = (next: ScadaNode[]): boolean => {
+      if (
+        initialLockedIndices.some(
+          ({ id, index }) => next.findIndex((node) => node.id === id) !== index,
+        )
+      ) {
+        throw new TypeError("调整层级会移动已锁定图元，请先解锁");
+      }
+      return this.replaceActivePageNodes(next);
+    };
     const selected = new Set(this.selection);
     if (action === "front" || action === "back") {
       const picked = nodes.filter((node) => selected.has(node.id));
       const others = nodes.filter((node) => !selected.has(node.id));
-      return this.replaceActivePageNodes(
-        action === "front" ? [...others, ...picked] : [...picked, ...others],
-      );
+      return applyOrder(action === "front" ? [...others, ...picked] : [...picked, ...others]);
     }
     if (action === "forward") {
       for (let i = nodes.length - 2; i >= 0; i--) {
@@ -756,7 +814,7 @@ export class DocumentEditor {
         }
       }
     }
-    return this.replaceActivePageNodes(nodes);
+    return applyOrder(nodes);
   }
 
   /** 仅允许单选图元修改几何属性，一次应用只产生一条撤销记录。 */
@@ -767,6 +825,37 @@ export class DocumentEditor {
     return this.commit(
       withNodeTransform(this.current, this.selection[0]!, patch, this.activePageId),
     );
+  }
+
+  /** 批量锁定或解锁所选图元：每次提交为一条可撤销命令。 */
+  setSelectedLocked(locked: boolean): boolean {
+    if (typeof locked !== "boolean") throw new TypeError("图元锁定状态必须为布尔值");
+    if (this.selection.length === 0) return false;
+    const selected = new Set(this.selection);
+    const page = firstPage(this.current, this.activePageId);
+    const changed = page.nodes.some(
+      (node) => selected.has(node.id) && studioNodeLocked(node) !== locked,
+    );
+    if (!changed) return false;
+    const nodes = page.nodes.map((node) =>
+      selected.has(node.id) ? withStudioState(node, "locked", locked) : node,
+    );
+    return this.replaceActivePageNodes(nodes, true);
+  }
+
+  /** 隐藏图元不会删除 Tag/规则；锁定中的图元须先解锁才能修改显示状态。 */
+  setSelectedVisible(visible: boolean): boolean {
+    if (typeof visible !== "boolean") throw new TypeError("图元可见状态必须为布尔值");
+    if (this.selection.length === 0) return false;
+    const selected = new Set(this.selection);
+    const page = firstPage(this.current, this.activePageId);
+    const chosen = page.nodes.filter((node) => selected.has(node.id));
+    if (chosen.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
+    if (chosen.every((node) => studioNodeVisible(node) === visible)) return false;
+    const nodes = page.nodes.map((node) =>
+      selected.has(node.id) ? withStudioState(node, "visible", visible) : node,
+    );
+    return this.replaceActivePageNodes(nodes);
   }
 
   /** 单选图元的 Tag 绑定修改记录为一条可撤销命令。 */
@@ -856,7 +945,11 @@ export class DocumentEditor {
       this.selection,
     );
     const document = parseScadaDocument(this.current);
-    return firstPage(document, this.activePageId).nodes.filter((node) => selected.has(node.id));
+    const nodes = firstPage(document, this.activePageId).nodes.filter((node) =>
+      selected.has(node.id),
+    );
+    if (nodes.some(studioNodeLocked)) throw new TypeError(LOCKED_NODE_MESSAGE);
+    return nodes;
   }
 
   private getSelected(): ScadaNode | undefined {
@@ -864,7 +957,7 @@ export class DocumentEditor {
     return firstPage(this.current, this.activePageId).nodes.find((node) => node.id === id);
   }
 
-  private replaceActivePageNodes(nodes: ScadaNode[]): boolean {
+  private replaceActivePageNodes(nodes: ScadaNode[], allowLockStateChange = false): boolean {
     const page = firstPage(this.current, this.activePageId);
     return this.commit(
       parseScadaDocument({
@@ -873,11 +966,32 @@ export class DocumentEditor {
           candidate.id === page.id ? { ...candidate, nodes } : candidate,
         ),
       }),
+      this.activePageId,
+      allowLockStateChange,
     );
   }
 
-  private commit(next: ScadaDocument, redoPageId = this.activePageId): boolean {
+  private commit(
+    next: ScadaDocument,
+    redoPageId = this.activePageId,
+    allowLockStateChange = false,
+  ): boolean {
     if (equalDocuments(this.current, next)) return false;
+    for (const page of this.current.pages) {
+      const nextPage = next.pages.find((item) => item.id === page.id);
+      for (const node of page.nodes) {
+        if (!studioNodeLocked(node)) continue;
+        const nextNode = nextPage?.nodes.find((item) => item.id === node.id);
+        if (
+          !nextNode ||
+          (allowLockStateChange
+            ? withoutLockState(nextNode) !== withoutLockState(node)
+            : JSON.stringify(nextNode) !== JSON.stringify(node))
+        ) {
+          throw new TypeError(LOCKED_NODE_MESSAGE);
+        }
+      }
+    }
     this.past.push({ document: this.current, pageId: this.activePageId, redoPageId });
     if (this.past.length > HISTORY_LIMIT) this.past.shift();
     this.current = next;

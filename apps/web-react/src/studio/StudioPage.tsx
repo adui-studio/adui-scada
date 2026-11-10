@@ -6,6 +6,8 @@ import {
   waterTreatmentDemoTagOptions,
   DraftAutoSaveSession,
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
+  studioNodeLocked,
+  studioNodeVisible,
 } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
@@ -145,14 +147,17 @@ export default function StudioPage() {
   const hasGroupedSelection = page.nodes.some(
     (node) => node.groupId !== undefined && state.selectedIds.includes(node.id),
   );
-  const canGroup = state.selectedIds.length >= 2 && !hasGroupedSelection;
+  const hasLockedSelection = page.nodes.some(
+    (node) => state.selectedIds.includes(node.id) && studioNodeLocked(node),
+  );
+  const canGroup = state.selectedIds.length >= 2 && !hasGroupedSelection && !hasLockedSelection;
   const activePageIndex = state.document.pages.findIndex((item) => item.id === state.activePageId);
   const copyTargetPages = state.document.pages.filter((item) => item.id !== state.activePageId);
   const copyTargetPageId = copyTargetPages.some((item) => item.id === preferredCopyTargetPageId)
     ? preferredCopyTargetPageId
     : (copyTargetPages[0]?.id ?? "");
   const bindingSlot =
-    state.selectedIds.length === 1 && selected && !selected.groupId
+    state.selectedIds.length === 1 && selected && !selected.groupId && !studioNodeLocked(selected)
       ? editableTagSlot(selected.type)
       : null;
   const demoTagCandidates =
@@ -330,56 +335,63 @@ export default function StudioPage() {
       const key = event.key.toLowerCase();
       let handled = false;
 
-      if (command && !event.altKey) {
-        if (key === "z") handled = event.shiftKey ? editor.redo() : editor.undo();
-        else if (key === "y") handled = editor.redo();
-        else if (key === "c" && !event.shiftKey) {
-          handled = editor.copySelected();
-          if (handled) setNotice("已复制所选图元到会话剪贴板");
-        } else if (key === "x" && !event.shiftKey) {
-          handled = editor.cutSelected();
-          if (handled) setNotice("已剪切所选图元，可撤销");
-        } else if (key === "v" && !event.shiftKey && editor.snapshot().hasClipboard) {
-          event.preventDefault();
-          try {
-            handled = editor.pasteClipboard().length > 0;
-            if (handled) setNotice("已粘贴图元，可撤销");
-          } catch (error) {
-            setNotice("粘贴失败：" + (error instanceof Error ? error.message : String(error)));
+      try {
+        if (command && !event.altKey) {
+          if (key === "z") handled = event.shiftKey ? editor.redo() : editor.undo();
+          else if (key === "y") handled = editor.redo();
+          else if (key === "c" && !event.shiftKey) {
+            handled = editor.copySelected();
+            if (handled) setNotice("已复制所选图元到会话剪贴板");
+          } else if (key === "x" && !event.shiftKey) {
+            handled = editor.cutSelected();
+            if (handled) setNotice("已剪切所选图元，可撤销");
+          } else if (key === "v" && !event.shiftKey && editor.snapshot().hasClipboard) {
+            event.preventDefault();
+            try {
+              handled = editor.pasteClipboard().length > 0;
+              if (handled) setNotice("已粘贴图元，可撤销");
+            } catch (error) {
+              setNotice("粘贴失败：" + (error instanceof Error ? error.message : String(error)));
+            }
+          } else if (key === "a") {
+            const snapshot = editor.snapshot();
+            editor.selectMany(
+              snapshot.document.pages
+                .find((item) => item.id === snapshot.activePageId)
+                ?.nodes.filter((node) => studioNodeVisible(node) && !studioNodeLocked(node))
+                .map((node) => node.id) ?? [],
+            );
+            handled = true;
           }
-        } else if (key === "a") {
-          const snapshot = editor.snapshot();
-          editor.selectMany(
-            snapshot.document.pages
-              .find((item) => item.id === snapshot.activePageId)
-              ?.nodes.map((node) => node.id) ?? [],
-          );
-          handled = true;
+        } else if (!command && !event.altKey) {
+          if (key === "escape") {
+            dragRef.current = null;
+            marqueeRef.current = null;
+            geometryRef.current = null;
+            setPreview(null);
+            setMarquee(null);
+            setGeometryPreview(null);
+            setRotating(false);
+            editor.select(null);
+            handled = true;
+          } else if (key === "delete" || key === "backspace") {
+            handled = editor.deleteSelected();
+          } else if (key.startsWith("arrow")) {
+            const step = event.shiftKey ? 10 : 1;
+            const moves: Record<string, [number, number]> = {
+              arrowleft: [-step, 0],
+              arrowright: [step, 0],
+              arrowup: [0, -step],
+              arrowdown: [0, step],
+            };
+            const move = moves[key];
+            if (move) handled = editor.moveBy(move[0], move[1]);
+          }
         }
-      } else if (!command && !event.altKey) {
-        if (key === "escape") {
-          dragRef.current = null;
-          marqueeRef.current = null;
-          geometryRef.current = null;
-          setPreview(null);
-          setMarquee(null);
-          setGeometryPreview(null);
-          setRotating(false);
-          editor.select(null);
-          handled = true;
-        } else if (key === "delete" || key === "backspace") {
-          handled = editor.deleteSelected();
-        } else if (key.startsWith("arrow")) {
-          const step = event.shiftKey ? 10 : 1;
-          const moves: Record<string, [number, number]> = {
-            arrowleft: [-step, 0],
-            arrowright: [step, 0],
-            arrowup: [0, -step],
-            arrowdown: [0, step],
-          };
-          const move = moves[key];
-          if (move) handled = editor.moveBy(move[0], move[1]);
-        }
+      } catch (error) {
+        event.preventDefault();
+        setNotice(error instanceof Error ? error.message : String(error));
+        return;
       }
 
       if (!handled) return;
@@ -472,6 +484,22 @@ export default function StudioPage() {
     apply(() => editor.alignSelected(mode), "所选图元已按主选图元对齐");
   }
 
+  function changeSelectedLocked(locked: boolean) {
+    apply(
+      () => editor.setSelectedLocked(locked),
+      locked ? "已批量锁定图元，可撤销" : "已批量解锁图元，可撤销",
+    );
+    cancelDrag();
+  }
+
+  function changeSelectedVisible(visible: boolean) {
+    apply(
+      () => editor.setSelectedVisible(visible),
+      visible ? "已批量显示图元，可撤销" : "已批量隐藏图元，可撤销",
+    );
+    cancelDrag();
+  }
+
   function layer(action: LayerAction) {
     apply(() => editor.reorderSelected(action), "已调整图元层级");
   }
@@ -492,6 +520,13 @@ export default function StudioPage() {
     if (!point) return;
     const node = page?.nodes.find((candidate) => candidate.id === id);
     if (!node) return;
+    if (studioNodeLocked(node)) {
+      editor.select(id, event.shiftKey);
+      refresh();
+      setNotice("该图元已锁定，请在图层列表中解锁后编辑");
+      event.preventDefault();
+      return;
+    }
     if (event.shiftKey) {
       editor.select(id, true);
       refresh();
@@ -499,6 +534,13 @@ export default function StudioPage() {
       return;
     }
     if (!editor.snapshot().selectedIds.includes(id)) editor.select(id);
+    const selectedIds = editor.snapshot().selectedIds;
+    if (page?.nodes.some((item) => selectedIds.includes(item.id) && studioNodeLocked(item))) {
+      refresh();
+      setNotice("所选内容包含已锁定图元，请先解锁");
+      event.preventDefault();
+      return;
+    }
     refresh();
     dragRef.current = {
       pointerId: event.pointerId,
@@ -550,7 +592,13 @@ export default function StudioPage() {
   }
 
   function beginGeometry(event: ReactPointerEvent<SVGElement>, handle: ResizeHandle | "rotate") {
-    if (event.button !== 0 || state.selectedIds.length !== 1 || !selected) return;
+    if (
+      event.button !== 0 ||
+      state.selectedIds.length !== 1 ||
+      !selected ||
+      studioNodeLocked(selected)
+    )
+      return;
     const point = canvasPoint(event.clientX, event.clientY);
     if (!point) return;
     geometryRef.current = {
@@ -961,6 +1009,8 @@ export default function StudioPage() {
               type="button"
               className="studio-layer"
               data-selected={state.selectedIds.includes(node.id)}
+              data-hidden={!studioNodeVisible(node)}
+              data-locked={studioNodeLocked(node)}
               key={node.id}
               onClick={(event) => select(node.id, event.shiftKey)}
             >
@@ -968,6 +1018,8 @@ export default function StudioPage() {
               <small>
                 {node.type}
                 {node.groupId ? ` · 组合 ${node.groupId}` : ""}
+                {studioNodeLocked(node) ? " · 已锁定" : ""}
+                {!studioNodeVisible(node) ? " · 已隐藏" : ""}
               </small>
             </button>
           ))}
@@ -1067,7 +1119,7 @@ export default function StudioPage() {
                 pointerEvents="none"
               />
             )}
-            {page.nodes.map((node) => {
+            {page.nodes.filter(studioNodeVisible).map((node) => {
               const displayNode =
                 displayDocument.pages
                   .find((item) => item.id === state.activePageId)
@@ -1081,7 +1133,10 @@ export default function StudioPage() {
                   <rect
                     role="button"
                     tabIndex={0}
-                    aria-label={`选择并拖动 ${node.id}`}
+                    aria-label={
+                      studioNodeLocked(node) ? `选择已锁定图元 ${node.id}` : `选择并拖动 ${node.id}`
+                    }
+                    data-locked={studioNodeLocked(node)}
                     x={t.x}
                     y={t.y}
                     width={t.width}
@@ -1105,44 +1160,46 @@ export default function StudioPage() {
                       }
                     }}
                   />
-                  {state.selectedIds.length === 1 && state.selectedId === node.id && (
-                    <>
-                      {RESIZE_HANDLES.map((handle) => {
-                        const position = resizeHandlePosition(t, handle);
-                        return (
-                          <rect
-                            key={handle}
-                            className="studio-resize-handle"
-                            data-handle={handle}
-                            aria-label={`缩放图元${RESIZE_HANDLE_LABELS[handle]}`}
-                            x={position.x - 5}
-                            y={position.y - 5}
-                            width={10}
-                            height={10}
-                            onPointerDown={(event) => beginGeometry(event, handle)}
-                          >
-                            <title>按住 Shift 保持宽高比</title>
-                          </rect>
-                        );
-                      })}
-                      <line
-                        className="studio-rotation-stem"
-                        x1={t.x + t.width / 2}
-                        x2={t.x + t.width / 2}
-                        y1={t.y}
-                        y2={t.y - 26}
-                        pointerEvents="none"
-                      />
-                      <circle
-                        className="studio-rotation-handle"
-                        aria-label="旋转图元，按住 Shift 可按 15 度吸附"
-                        cx={t.x + t.width / 2}
-                        cy={t.y - 26}
-                        r={7}
-                        onPointerDown={(event) => beginGeometry(event, "rotate")}
-                      />
-                    </>
-                  )}
+                  {state.selectedIds.length === 1 &&
+                    state.selectedId === node.id &&
+                    !studioNodeLocked(node) && (
+                      <>
+                        {RESIZE_HANDLES.map((handle) => {
+                          const position = resizeHandlePosition(t, handle);
+                          return (
+                            <rect
+                              key={handle}
+                              className="studio-resize-handle"
+                              data-handle={handle}
+                              aria-label={`缩放图元${RESIZE_HANDLE_LABELS[handle]}`}
+                              x={position.x - 5}
+                              y={position.y - 5}
+                              width={10}
+                              height={10}
+                              onPointerDown={(event) => beginGeometry(event, handle)}
+                            >
+                              <title>按住 Shift 保持宽高比</title>
+                            </rect>
+                          );
+                        })}
+                        <line
+                          className="studio-rotation-stem"
+                          x1={t.x + t.width / 2}
+                          x2={t.x + t.width / 2}
+                          y1={t.y}
+                          y2={t.y - 26}
+                          pointerEvents="none"
+                        />
+                        <circle
+                          className="studio-rotation-handle"
+                          aria-label="旋转图元，按住 Shift 可按 15 度吸附"
+                          cx={t.x + t.width / 2}
+                          cy={t.y - 26}
+                          r={7}
+                          onPointerDown={(event) => beginGeometry(event, "rotate")}
+                        />
+                      </>
+                    )}
                 </g>
               );
             })}
@@ -1181,6 +1238,36 @@ export default function StudioPage() {
         <aside className="studio-panel" aria-label="图元属性">
           <h2>属性 · 已选 {state.selectedIds.length}</h2>
           <div className="studio-toolbox">
+            <div className="studio-tool-group" aria-label="图层锁定与可见性">
+              <button
+                type="button"
+                disabled={state.selectedIds.length === 0}
+                onClick={() => changeSelectedLocked(true)}
+              >
+                锁定所选
+              </button>
+              <button
+                type="button"
+                disabled={state.selectedIds.length === 0}
+                onClick={() => changeSelectedLocked(false)}
+              >
+                解锁所选
+              </button>
+              <button
+                type="button"
+                disabled={state.selectedIds.length === 0 || hasLockedSelection}
+                onClick={() => changeSelectedVisible(false)}
+              >
+                隐藏所选
+              </button>
+              <button
+                type="button"
+                disabled={state.selectedIds.length === 0 || hasLockedSelection}
+                onClick={() => changeSelectedVisible(true)}
+              >
+                显示所选
+              </button>
+            </div>
             <div className="studio-tool-group" aria-label="图元组合">
               <button
                 type="button"
@@ -1284,10 +1371,13 @@ export default function StudioPage() {
                         name={key}
                         step="any"
                         defaultValue={selected.transform[key]}
+                        disabled={studioNodeLocked(selected)}
                       />
                     </label>
                   ))}
-                  <button type="submit">应用几何属性</button>
+                  <button type="submit" disabled={studioNodeLocked(selected)}>
+                    应用几何属性
+                  </button>
                 </form>
               ) : (
                 <p className="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
@@ -1313,9 +1403,10 @@ export default function StudioPage() {
                   <input
                     value={labelDraft}
                     maxLength={256}
+                    disabled={studioNodeLocked(selected)}
                     onChange={(event) => setLabelDraft(event.target.value)}
                   />
-                  <button type="button" onClick={changeLabel}>
+                  <button type="button" onClick={changeLabel} disabled={studioNodeLocked(selected)}>
                     应用文案
                   </button>
                 </label>

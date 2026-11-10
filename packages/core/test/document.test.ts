@@ -217,3 +217,29 @@ test("历史工程即使版本正确也必须拒绝非法组合和危险属性",
   malicious.pages[0].nodes[0].props = JSON.parse('{"__proto__":{"unsafe":true}}');
   expect(() => migrateScadaDocument(malicious)).toThrow(/属性名称不安全/);
 });
+
+test("Studio 图层状态通过现有 props 扩展校验并保留布尔值", () => {
+  const source = JSON.parse(JSON.stringify(fixture()));
+  source.pages[0].nodes[0].props.__scadaStudio = { locked: true, visible: false };
+  const parsed = parseScadaDocument(source);
+  expect(parsed.pages[0]?.nodes[0]?.props.__scadaStudio).toEqual({ locked: true, visible: false });
+  expect(JSON.parse(JSON.stringify(parsed))).toEqual(source);
+});
+
+test("拒绝图层状态中的非布尔值及未知字段", () => {
+  const source = JSON.parse(JSON.stringify(fixture()));
+  source.pages[0].nodes[0].props.__scadaStudio = { locked: "true" };
+  expect(() => parseScadaDocument(source)).toThrow(/必须为布尔值/);
+  source.pages[0].nodes[0].props.__scadaStudio = { visible: 1 };
+  expect(() => parseScadaDocument(source)).toThrow(/必须为布尔值/);
+  source.pages[0].nodes[0].props.__scadaStudio = { visible: false, script: "alert(1)" };
+  expect(() => parseScadaDocument(source)).toThrow(/不支持的结构字段/);
+});
+
+test("旧工程无扩展状态仍可校验和迁移，不要求修改版本号", () => {
+  const source = fixture();
+  const parsed = parseScadaDocument(source);
+  expect(parsed.schemaVersion).toBe(SCADA_SCHEMA_VERSION);
+  expect(parsed.pages[0]?.nodes[0]?.props.__scadaStudio).toBeUndefined();
+  expect(migrateScadaDocument(source).document).toEqual(parsed);
+});

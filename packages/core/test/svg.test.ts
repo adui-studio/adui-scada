@@ -64,3 +64,25 @@ test("STALE 和缺失读数不展示为有效实时值", () => {
 test("未知页面会抛出明确错误", () => {
   expect(() => renderSvgPage(document, "unknown", new Map())).toThrow(/未找到页面/);
 });
+
+test("隐藏图元不输出到 SVG，但正常图元与页面仍保留", () => {
+  const source = JSON.parse(JSON.stringify(document));
+  source.pages[0].nodes.find((node: { id: string }) => node.id === "tank").props.__scadaStudio = {
+    visible: false,
+  };
+  const hidden = parseScadaDocument(source);
+  const svg = renderSvgPage(hidden, "main", new Map([["water.level", tag("GOOD", 90)]]));
+  expect(svg).toContain('data-node-id="label"');
+  expect(svg).not.toContain('data-node-id="tank"');
+  expect(svg).not.toContain("90%");
+  expect(svg).toContain('aria-label="演示 &lt;svg&gt;"');
+});
+
+test("锁定只作用于编辑器，Runtime 仍显示可见的锁定图元", () => {
+  const source = JSON.parse(JSON.stringify(document));
+  source.pages[0].nodes[1].props.__scadaStudio = { locked: true };
+  const locked = parseScadaDocument(source);
+  const svg = renderSvgPage(locked, "main", new Map([["water.level", tag("GOOD", 60)]]));
+  expect(svg).toContain('data-node-id="tank"');
+  expect(svg).toContain("60%");
+});

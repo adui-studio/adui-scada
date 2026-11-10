@@ -1,6 +1,11 @@
 import { expect, test } from "vite-plus/test";
 import { waterTreatmentDemoDocument } from "../src/demo-document.ts";
-import { LEGACY_SCADA_SCHEMA_VERSION, SCADA_SCHEMA_VERSION } from "../src/document.ts";
+import {
+  LEGACY_SCADA_SCHEMA_VERSION,
+  SCADA_SCHEMA_VERSION,
+  studioNodeLocked,
+  studioNodeVisible,
+} from "../src/document.ts";
 import {
   DocumentEditor,
   findNodesInRect,
@@ -1393,4 +1398,227 @@ test("图元剪贴板内容不会写入工程 JSON，双框架数据契约不变
   other.loadDocument(saved);
   expect(other.snapshot().document).toEqual(e.snapshot().document);
   expect(other.snapshot().hasClipboard).toBe(false);
+});
+
+test("旧工程未声明图层状态时图元默认未锁定且可见", () => {
+  const e = editor();
+  const nodes = e.snapshot().document.pages[0]!.nodes;
+  expect(nodes.every((node) => !studioNodeLocked(node))).toBe(true);
+  expect(nodes.every(studioNodeVisible)).toBe(true);
+});
+
+test("批量锁定、解锁共用一次历史并保持 Tag 和几何", () => {
+  const e = editor();
+  e.select("tank");
+  e.select("pump", true);
+  const initial = e.snapshot().document;
+  expect(e.setSelectedLocked(true)).toBe(true);
+  const locked = e.snapshot().document.pages[0]!.nodes;
+  expect(locked.filter((node) => ["tank", "pump"].includes(node.id)).every(studioNodeLocked)).toBe(
+    true,
+  );
+  expect(e.setSelectedLocked(true)).toBe(false);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(initial);
+  expect(e.redo()).toBe(true);
+  expect(
+    e
+      .snapshot()
+      .document.pages[0]!.nodes.filter((node) => ["tank", "pump"].includes(node.id))
+      .every(studioNodeLocked),
+  ).toBe(true);
+  expect(e.setSelectedLocked(false)).toBe(true);
+  expect(e.snapshot().document).toEqual(initial);
+});
+
+test("批量显示和隐藏不删除图元、Tag 或规则，支持撤销", () => {
+  const e = editor();
+  e.select("tank");
+  e.select("pump", true);
+  const original = e.snapshot().document;
+  expect(e.setSelectedVisible(false)).toBe(true);
+  const hidden = e
+    .snapshot()
+    .document.pages[0]!.nodes.filter((node) => ["tank", "pump"].includes(node.id));
+  expect(hidden.every((node) => !studioNodeVisible(node))).toBe(true);
+  expect(hidden[0]?.bindings.level?.tagId).toBe("water.level");
+  expect(hidden[1]?.bindings.running?.tagId).toBe("water.pump.running");
+  expect(e.setSelectedVisible(false)).toBe(false);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(original);
+  expect(e.redo()).toBe(true);
+  expect(e.setSelectedVisible(true)).toBe(true);
+  expect(e.snapshot().document).toEqual(original);
+});
+
+test("锁定图元禁止移动、删除、剪切、复制、对齐及几何编辑", () => {
+  const e = editor();
+  e.select("tank");
+  e.setSelectedLocked(true);
+  const original = e.snapshot();
+  expect(() => e.moveBy(10, 10)).toThrow(/锁定/);
+  expect(() => e.deleteSelected()).toThrow(/锁定/);
+  expect(() => e.cutSelected()).toThrow(/锁定/);
+  expect(() => e.copySelected()).toThrow(/锁定/);
+  expect(() => e.updateSelectedTransform({ x: 150 })).toThrow(/锁定/);
+  expect(() => e.setSelectedBinding("level", "water.flow")).toThrow(/锁定/);
+  const titleEditor = editor();
+  titleEditor.select("title");
+  titleEditor.setSelectedLocked(true);
+  expect(() => titleEditor.setSelectedLabel("新文案")).toThrow(/锁定/);
+  expect(() => withNodesTranslated(original.document, ["tank"], 10, 0)).toThrow(/锁定/);
+  expect(() => withNodeTransform(original.document, "tank", { y: 140 })).toThrow(/锁定/);
+  expect(() =>
+    resolveDragSnap(original.document, ["tank"], 5, 5, { gridEnabled: true, nodeEnabled: true }),
+  ).toThrow(/锁定/);
+  e.select("tank");
+  e.select("pump", true);
+  expect(() => e.alignSelected("left")).toThrow(/锁定/);
+  expect(e.snapshot().document).toEqual(original.document);
+});
+
+test("组合包含锁定成员时移动和解组均原子拒绝，解锁后可操作", () => {
+  const e = editor();
+  e.select("tank");
+  e.select("pump", true);
+  e.groupSelected();
+  e.select("tank");
+  e.setSelectedLocked(true);
+  const before = e.snapshot();
+  expect(() => e.moveBy(12, 12)).toThrow(/锁定/);
+  expect(() => e.ungroupSelected()).toThrow(/锁定/);
+  expect(e.snapshot()).toEqual(before);
+  expect(e.setSelectedLocked(false)).toBe(true);
+  expect(e.ungroupSelected()).toBe(true);
+});
+
+test("存在锁定成员时不能重新组合或通过选择其他图元间接修改", () => {
+  const e = editor();
+  e.select("tank");
+  e.setSelectedLocked(true);
+  e.select("pump", true);
+  const before = e.snapshot();
+  expect(() => e.groupSelected()).toThrow(/锁定/);
+  expect(() => e.deleteSelected()).toThrow(/锁定/);
+  expect(e.snapshot()).toEqual(before);
+});
+
+test("排序不得间接移动锁定图元，删除含锁定图元的页面需先解锁", () => {
+  const e = editor();
+  e.select("tank");
+  e.setSelectedLocked(true);
+  e.select("pump");
+  const before = e.snapshot();
+  expect(() => e.reorderSelected("back")).toThrow(/锁定/);
+  expect(e.snapshot()).toEqual(before);
+  const otherPageId = e.createPage();
+  expect(() => e.deletePage("main")).toThrow(/锁定/);
+  e.switchPage("main");
+  e.select("tank");
+  e.setSelectedLocked(false);
+  expect(e.deletePage("main")).toBe(true);
+  expect(e.snapshot().activePageId).toBe(otherPageId);
+});
+
+test("锁定状态不阻止复制整页，原始和副本的图元保护仍有效", () => {
+  const e = editor();
+  e.select("tank");
+  e.setSelectedLocked(true);
+  const copyId = e.duplicatePage();
+  const page = e.snapshot().document.pages.find((item) => item.id === copyId);
+  expect(
+    page?.nodes.find(
+      (node) => node.bindings.level?.tagId === "water.level" && studioNodeLocked(node),
+    ),
+  ).toBeDefined();
+  e.switchPage("main");
+  e.select("tank");
+  expect(() => e.copySelectedToPage(copyId)).toThrow(/锁定/);
+});
+
+test("隐藏图元不能被画布框选，但仍可以从图层列表选中并重新显示", () => {
+  const e = editor();
+  e.select("tank");
+  e.setSelectedVisible(false);
+  const document = e.snapshot().document;
+  expect(findNodesInRect(document, 0, 0, 400, 400)).not.toContain("tank");
+  e.select("tank");
+  expect(e.snapshot().selectedIds).toEqual(["tank"]);
+  expect(e.setSelectedVisible(true)).toBe(true);
+  expect(findNodesInRect(e.snapshot().document, 0, 0, 400, 400)).toContain("tank");
+});
+
+test("锁定图元不能隐藏，批量可见性操作遇到锁定成员原子拒绝", () => {
+  const e = editor();
+  e.select("tank");
+  e.setSelectedLocked(true);
+  e.select("pump", true);
+  const before = e.snapshot();
+  expect(() => e.setSelectedVisible(false)).toThrow(/锁定/);
+  expect(e.snapshot()).toEqual(before);
+  e.setSelectedLocked(false);
+  expect(e.setSelectedVisible(false)).toBe(true);
+});
+
+test("隐藏目标不参与图元吸附，但保留于工程节点列表", () => {
+  const e = editor();
+  e.select("pump");
+  e.setSelectedVisible(false);
+  e.select("tank");
+  const snap = resolveDragSnap(e.snapshot().document, ["tank"], 0, 0, {
+    gridEnabled: false,
+    nodeEnabled: true,
+  });
+  expect(snap).toEqual({ dx: 0, dy: 0, verticalGuide: null, horizontalGuide: null });
+  expect(e.snapshot().document.pages[0]!.nodes.some((node) => node.id === "pump")).toBe(true);
+});
+
+test("锁定与隐藏状态经过 JSON 导入导出后保持一致且不会污染新 Schema 字段", () => {
+  const e = editor();
+  e.select("tank");
+  e.setSelectedVisible(false);
+  e.setSelectedLocked(true);
+  const json = JSON.parse(JSON.stringify(e.snapshot().document));
+  expect(
+    json.pages[0].nodes.find((node: { id: string }) => node.id === "tank").props.__scadaStudio,
+  ).toEqual({
+    visible: false,
+    locked: true,
+  });
+  expect(
+    json.pages[0].nodes.find((node: { id: string }) => node.id === "tank").locked,
+  ).toBeUndefined();
+  const other = editor();
+  other.loadDocument(json);
+  const restored = other.snapshot().document.pages[0]!.nodes.find((node) => node.id === "tank")!;
+  expect(studioNodeLocked(restored)).toBe(true);
+  expect(studioNodeVisible(restored)).toBe(false);
+});
+
+test("状态命令拒绝非法布尔输入并保留完整工程及历史", () => {
+  const e = editor();
+  e.select("tank");
+  const before = e.snapshot();
+  expect(() => e.setSelectedLocked("true" as never)).toThrow(/布尔值/);
+  expect(() => e.setSelectedVisible(0 as never)).toThrow(/布尔值/);
+  expect(e.snapshot()).toEqual(before);
+});
+
+test("隐藏状态可与复制剪贴板和跨页面编辑安全共存", () => {
+  const e = editor();
+  e.select("tank");
+  e.setSelectedVisible(false);
+  e.copySelected();
+  const second = e.createPage();
+  const ids = e.pasteClipboard();
+  const pasted = e.snapshot().document.pages[1]!.nodes.find((node) => node.id === ids[0])!;
+  expect(studioNodeVisible(pasted)).toBe(false);
+  e.select(ids[0]!);
+  e.setSelectedVisible(true);
+  expect(studioNodeVisible(e.snapshot().document.pages[1]!.nodes[0]!)).toBe(true);
+  e.switchPage("main");
+  expect(
+    studioNodeVisible(e.snapshot().document.pages[0]!.nodes.find((node) => node.id === "tank")!),
+  ).toBe(false);
+  expect(second).toBe("page-1");
 });

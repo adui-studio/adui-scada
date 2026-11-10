@@ -120,6 +120,16 @@
 .studio-layer[data-selected="true"] {
   border-color: #f0ae4d;
 }
+.studio-layer[data-hidden="true"] {
+  opacity: 0.62;
+  border-style: dashed;
+}
+.studio-layer[data-locked="true"] small {
+  color: #f0bd77;
+}
+.studio-hitbox[data-locked="true"] {
+  cursor: not-allowed;
+}
 .studio-stage {
   min-width: 0;
   border: 1px solid #294057;
