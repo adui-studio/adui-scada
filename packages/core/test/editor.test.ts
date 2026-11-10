@@ -913,3 +913,220 @@ test("跨页面撤销编辑命令会回到发生修改的页面", () => {
   expect(e.snapshot().activePageId).toBe(id);
   expect(e.snapshot().document.pages[1]?.nodes).toHaveLength(1);
 });
+
+test("复制页面紧邻源页插入，并重新分配页面与图元 ID", () => {
+  const e = editor();
+  const before = e.snapshot().document;
+  const pageId = e.duplicatePage();
+  const after = e.snapshot();
+  expect(pageId).toBe("page-1");
+  expect(after.activePageId).toBe(pageId);
+  expect(after.selectedIds).toEqual([]);
+  expect(after.document.pages.map((page) => page.id)).toEqual(["main", pageId]);
+  expect(after.document.pages[0]).toEqual(before.pages[0]);
+  expect(after.document.pages[1]?.name).toBe("水处理系统（模拟） 副本");
+  expect(after.document.pages[1]?.size).toEqual(before.pages[0]?.size);
+  expect(after.document.pages[1]?.nodes).toHaveLength(before.pages[0]!.nodes.length);
+  expect(after.document.pages[1]?.nodes.map((node) => node.id)).not.toEqual(
+    before.pages[0]?.nodes.map((node) => node.id),
+  );
+  expect(after.document.pages[1]?.nodes[1]?.bindings.level?.tagId).toBe("water.level");
+});
+
+test("复制页面会完整重映射组合，原节点属性和 Tag 保真", () => {
+  const e = editor();
+  e.select("tank");
+  e.select("pump", true);
+  const originalGroup = e.groupSelected();
+  const before = e.snapshot().document;
+  const newId = e.duplicatePage();
+  const copy = e.snapshot().document.pages.find((page) => page.id === newId)!;
+  const source = before.pages[0]!;
+  const group = copy.nodes[1]?.groupId;
+  expect(group).toBeDefined();
+  expect(group).not.toBe(originalGroup);
+  expect(copy.nodes[3]?.groupId).toBe(group);
+  expect(copy.nodes[1]?.transform).toEqual(source.nodes[1]?.transform);
+  expect(copy.nodes[1]?.bindings).toEqual(source.nodes[1]?.bindings);
+  expect(copy.nodes[3]?.bindings).toEqual(source.nodes[3]?.bindings);
+  expect(copy.nodes[0]?.props).toEqual(source.nodes[0]?.props);
+  expect(e.snapshot().document.pages[0]).toEqual(source);
+});
+
+test("复制页面可撤销重做，历史恢复正确的当前页", () => {
+  const e = editor();
+  const original = e.snapshot().document;
+  const copyId = e.duplicatePage();
+  const copied = e.snapshot().document;
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(original);
+  expect(e.snapshot().activePageId).toBe("main");
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().document).toEqual(copied);
+  expect(e.snapshot().activePageId).toBe(copyId);
+});
+
+test("复制指定的非当前页面不改变源页面和其他页面", () => {
+  const e = editor();
+  const second = e.createPage();
+  e.addNode("label");
+  const original = e.snapshot().document;
+  const copyId = e.duplicatePage("main");
+  expect(e.snapshot().document.pages.map((page) => page.id)).toEqual([
+    "main",
+    copyId,
+    second,
+  ]);
+  expect(e.snapshot().document.pages[0]).toEqual(original.pages[0]);
+  expect(e.snapshot().document.pages[2]).toEqual(original.pages[1]);
+  expect(e.snapshot().activePageId).toBe(copyId);
+});
+
+test("重复复制不会产生全工程页面、图元和组合 ID 冲突", () => {
+  const e = editor();
+  e.select("tank");
+  e.select("pump", true);
+  e.groupSelected();
+  e.duplicatePage();
+  e.duplicatePage();
+  const doc = e.snapshot().document;
+  const ids = doc.pages.flatMap((page) => [
+    page.id,
+    ...page.nodes.map((node) => node.id),
+    ...new Set(page.nodes.flatMap((node) => (node.groupId ? [node.groupId] : []))),
+  ]);
+  expect(new Set(ids).size).toBe(ids.length);
+});
+
+test("复制页面的非法 ID 与最大页数限制不会改变工程", () => {
+  const e = editor();
+  const before = e.snapshot();
+  expect(() => e.duplicatePage("missing")).toThrow(/未找到页面/);
+  expect(e.snapshot()).toEqual(before);
+  for (let i = 1; i < 100; i++) e.createPage();
+  const full = e.snapshot();
+  expect(() => e.duplicatePage()).toThrow(/不能超过 100/);
+  expect(e.snapshot()).toEqual(full);
+});
+
+test("页面前移后移只改变顺序，且边界不写入撤销历史", () => {
+  const e = editor();
+  const second = e.createPage();
+  const third = e.createPage();
+  const before = e.snapshot().document;
+  expect(e.movePage("main", "previous")).toBe(false);
+  expect(e.movePage(third, "next")).toBe(false);
+  expect(e.snapshot().document).toEqual(before);
+  expect(e.movePage(third, "previous")).toBe(true);
+  expect(e.snapshot().document.pages.map((page) => page.id)).toEqual(["main", third, second]);
+  expect(e.snapshot().activePageId).toBe(third);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(before);
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().document.pages.map((page) => page.id)).toEqual(["main", third, second]);
+  expect(e.movePage(third, "next")).toBe(true);
+  expect(e.snapshot().document.pages.map((page) => page.id)).toEqual(["main", second, third]);
+});
+
+test("页面排序非法方向和未知页面原子拒绝", () => {
+  const e = editor();
+  const before = e.snapshot();
+  expect(() => e.movePage("missing", "previous")).toThrow(/未找到页面/);
+  expect(() => e.movePage("main", "wrong" as never)).toThrow(/排序方向无效/);
+  expect(e.snapshot()).toEqual(before);
+});
+
+test("跨页面复制选中图元保留源页、几何和 Tag 绑定", () => {
+  const e = editor();
+  const targetId = e.createPage("目标页面");
+  e.switchPage("main");
+  e.select("tank");
+  const before = e.snapshot().document;
+  const ids = e.copySelectedToPage(targetId);
+  expect(ids).toHaveLength(1);
+  expect(e.snapshot().activePageId).toBe("main");
+  expect(e.snapshot().selectedIds).toEqual(["tank"]);
+  const pages = e.snapshot().document.pages;
+  expect(pages[0]).toEqual(before.pages[0]);
+  const copied = pages[1]?.nodes[0];
+  expect(copied?.id).toBe(ids[0]);
+  expect(copied?.id).not.toBe("tank");
+  expect(copied?.transform).toEqual(before.pages[0]?.nodes[1]?.transform);
+  expect(copied?.bindings.level?.tagId).toBe("water.level");
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(before);
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().document.pages[1]?.nodes[0]?.id).toBe(ids[0]);
+});
+
+test("跨页面复制组合自动带齐成员，并生成新的组合 ID", () => {
+  const e = editor();
+  e.select("tank");
+  e.select("pump", true);
+  const originalGroup = e.groupSelected();
+  const dest = e.createPage("目标");
+  e.switchPage("main");
+  e.select("tank");
+  expect(e.snapshot().selectedIds).toHaveLength(2);
+  const ids = e.copySelectedToPage(dest);
+  expect(ids).toHaveLength(2);
+  const copies = e.snapshot().document.pages[1]?.nodes ?? [];
+  expect(copies.map((node) => node.id)).toEqual(ids);
+  expect(copies[0]?.groupId).toBe(copies[1]?.groupId);
+  expect(copies[0]?.groupId).not.toBe(originalGroup);
+  expect(copies[0]?.bindings.level?.tagId).toBe("water.level");
+  expect(copies[1]?.bindings.running?.tagId).toBe("water.pump.running");
+});
+
+test("跨页面复制不允许同页、无选中或未知目标，失败不污染工程", () => {
+  const e = editor();
+  const dest = e.createPage();
+  e.switchPage("main");
+  const before = e.snapshot();
+  expect(() => e.copySelectedToPage(dest)).toThrow(/请先选择/);
+  expect(() => e.copySelectedToPage("missing")).toThrow(/未找到页面/);
+  e.select("tank");
+  const chosen = e.snapshot();
+  expect(() => e.copySelectedToPage("main")).toThrow(/其他页面/);
+  expect(e.snapshot()).toEqual(chosen);
+  expect(before.document).toEqual(chosen.document);
+});
+
+test("跨页面复制遇到目标尺寸不足会拒绝，而不会破坏组合布局", () => {
+  const source = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  source.pages.push({
+    id: "small",
+    name: "小画布",
+    size: { width: 200, height: 200 },
+    nodes: [],
+  });
+  const e = new DocumentEditor(source);
+  e.select("tank");
+  const before = e.snapshot();
+  expect(() => e.copySelectedToPage("small")).toThrow(/超过目标页面画布/);
+  expect(e.snapshot()).toEqual(before);
+  e.select("flow");
+  const copied = e.copySelectedToPage("small");
+  expect(copied).toHaveLength(1);
+  const node = e.snapshot().document.pages[1]?.nodes[0];
+  expect(node?.transform.x).toBe(0);
+  expect(node?.transform.y).toBe(168);
+  expect(node?.transform.width).toBe(200);
+  expect(node?.bindings.value?.tagId).toBe("water.flow");
+});
+
+test("跨页面复制与页面排序经 JSON 往返仍保留所有 Tag 和 ID", () => {
+  const e = editor();
+  const target = e.duplicatePage();
+  e.switchPage("main");
+  e.select("flow");
+  const newNodes = e.copySelectedToPage(target);
+  e.movePage(target, "previous");
+  const doc = e.snapshot().document;
+  const restored = editor();
+  restored.loadDocument(JSON.parse(JSON.stringify(doc)));
+  expect(restored.snapshot().document).toEqual(doc);
+  expect(restored.snapshot().document.pages[0]?.id).toBe(target);
+  expect(restored.snapshot().document.pages[0]?.nodes.some((node) => node.id === newNodes[0])).toBe(true);
+  expect(restored.snapshot().document.pages[0]?.nodes.at(-1)?.bindings.value?.tagId).toBe("water.flow");
+});
