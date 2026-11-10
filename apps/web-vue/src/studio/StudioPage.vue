@@ -388,6 +388,7 @@ function updateGeometry(event: PointerEvent) {
             gesture.handle,
             point.x - gesture.startX,
             point.y - gesture.startY,
+            event.shiftKey,
           );
     const next = withNodeTransform(snapshot.document, gesture.nodeId, patch);
     gesture.lastPatch = patch;
@@ -652,7 +653,9 @@ async function importJson(event: Event) {
                 :width="10"
                 :height="10"
                 @pointerdown.stop="beginGeometry($event, handle)"
-              />
+              >
+                <title>按住 Shift 保持宽高比</title>
+              </rect>
               <line
                 class="studio-rotation-stem"
                 :x1="node.transform.x + node.transform.width / 2"

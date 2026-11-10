@@ -16,6 +16,128 @@ function tankTransform() {
   return node.transform;
 }
 
+test("四角按住 Shift 时锁定原始宽高比，普通拖动保持原行为", () => {
+  const transform = { x: 100, y: 100, width: 160, height: 80, rotation: 0 };
+  expect(resolveResizeTransform(transform, "se", 32, 0)).toEqual({
+    x: 100,
+    y: 100,
+    width: 192,
+    height: 80,
+    rotation: 0,
+  });
+  expect(resolveResizeTransform(transform, "se", 32, 0, true)).toEqual({
+    x: 100,
+    y: 100,
+    width: 192,
+    height: 96,
+    rotation: 0,
+  });
+});
+
+test("四角等比例缩放选择变化幅度较大的轴并固定对角点", () => {
+  const transform = { x: 100, y: 100, width: 160, height: 80, rotation: 0 };
+  const nw = resolveResizeTransform(transform, "nw", 5, 20, true);
+  expect(nw).toEqual({ x: 140, y: 120, width: 120, height: 60, rotation: 0 });
+  expect(nw.x + nw.width).toBe(transform.x + transform.width);
+  expect(nw.y + nw.height).toBe(transform.y + transform.height);
+
+  const se = resolveResizeTransform(transform, "se", 32, -25, true);
+  expect(se).toEqual({ x: 100, y: 100, width: 110, height: 55, rotation: 0 });
+  expect(se.width / se.height).toBe(2);
+});
+
+test("左右边中点等比例缩放时高度围绕原中心同步变化", () => {
+  const transform = { x: 100, y: 100, width: 160, height: 80, rotation: 0 };
+  const east = resolveResizeTransform(transform, "e", 32, 70, true);
+  expect(east).toEqual({ x: 100, y: 92, width: 192, height: 96, rotation: 0 });
+  const west = resolveResizeTransform(transform, "w", -32, -50, true);
+  expect(west).toEqual({ x: 68, y: 92, width: 192, height: 96, rotation: 0 });
+  expect(west.x + west.width).toBe(transform.x + transform.width);
+});
+
+test("上下边中点等比例缩放时宽度围绕原中心同步变化", () => {
+  const transform = { x: 100, y: 100, width: 160, height: 80, rotation: 0 };
+  const north = resolveResizeTransform(transform, "n", 30, -16, true);
+  expect(north).toEqual({ x: 84, y: 84, width: 192, height: 96, rotation: 0 });
+  const south = resolveResizeTransform(transform, "s", -30, 16, true);
+  expect(south).toEqual({ x: 84, y: 100, width: 192, height: 96, rotation: 0 });
+  expect(south.y).toBe(transform.y);
+});
+
+test("九十度旋转图元等比例缩放后固定对侧锚点", () => {
+  const transform = { x: 100, y: 100, width: 100, height: 80, rotation: 90 };
+  const east = resolveResizeTransform(transform, "e", 0, 20, true);
+  expect(east).toEqual({ x: 90, y: 102, width: 120, height: 96, rotation: 90 });
+  const se = resolveResizeTransform(transform, "se", 0, 20, true);
+  expect(se).toEqual({ x: 82, y: 102, width: 120, height: 96, rotation: 90 });
+
+  // 左侧中点的旋转后世界位置保持不变。
+  expect(east.y + east.height / 2 - east.width / 2).toBe(
+    transform.y + transform.height / 2 - transform.width / 2,
+  );
+  // 左上角的旋转后世界坐标保持不变。
+  expect(se.x + se.width / 2 + se.height / 2).toBe(
+    transform.x + transform.width / 2 + transform.height / 2,
+  );
+});
+
+test("任意角度等比例缩放保持原宽高比和对侧旋转锚点", () => {
+  const transform = { x: 100, y: 120, width: 150, height: 80, rotation: 30 };
+  const changed = resolveResizeTransform(transform, "ne", 28, -15, true);
+  expect(changed.width / changed.height).toBeCloseTo(transform.width / transform.height, 2);
+
+  const oppositeCorner = (node: typeof transform) => {
+    const angle = (node.rotation * Math.PI) / 180;
+    const centerX = node.x + node.width / 2;
+    const centerY = node.y + node.height / 2;
+    return {
+      x: centerX - (node.width / 2) * Math.cos(angle) - (node.height / 2) * Math.sin(angle),
+      y: centerY - (node.width / 2) * Math.sin(angle) + (node.height / 2) * Math.cos(angle),
+    };
+  };
+  expect(oppositeCorner(changed).x).toBeCloseTo(oppositeCorner(transform).x, 1);
+  expect(oppositeCorner(changed).y).toBeCloseTo(oppositeCorner(transform).y, 1);
+});
+
+test("等比例缩放拒绝非法尺寸，零位移和切线位移不污染高精度数据", () => {
+  const transform = { x: 10.123, y: 20.456, width: 160, height: 80, rotation: 0 };
+  expect(resolveResizeTransform(transform, "nw", 0, 0, true)).toEqual(transform);
+  expect(resolveResizeTransform(transform, "e", 0, 60, true)).toEqual(transform);
+  expect(() => resolveResizeTransform(transform, "e", -200, 0, true)).toThrow(/不能小于/);
+  expect(() => resolveResizeTransform(transform, "w", Number.POSITIVE_INFINITY, 0, true)).toThrow(
+    /有限数/,
+  );
+});
+
+test("等比例预览不改变工程，提交后撤销重做及 Tag 绑定一致", () => {
+  const editor = new DocumentEditor(waterTreatmentDemoDocument);
+  editor.select("tank");
+  const before = editor.snapshot().document;
+  const oldTransform = tankTransform();
+  const patch = resolveResizeTransform(oldTransform, "e", -10, 0, true);
+  const preview = withNodeTransform(before, "tank", patch);
+  expect(editor.snapshot().document).toEqual(before);
+  expect(editor.updateSelectedTransform(patch)).toBe(true);
+  expect(editor.snapshot().document).toEqual(preview);
+  const tank = editor.snapshot().document.pages[0]?.nodes.find((n) => n.id === "tank");
+  expect(tank?.bindings.level?.tagId).toBe("water.level");
+  expect(editor.undo()).toBe(true);
+  expect(editor.snapshot().document).toEqual(before);
+  expect(editor.redo()).toBe(true);
+  expect(editor.snapshot().document).toEqual(preview);
+});
+
+test("等比例尺寸超出画布时共享命令拒绝修改并保留历史", () => {
+  const editor = new DocumentEditor(waterTreatmentDemoDocument);
+  editor.select("tank");
+  const before = editor.snapshot();
+  const transform = tankTransform();
+  const patch = resolveResizeTransform(transform, "e", 10000, 0, true);
+  expect(() => withNodeTransform(before.document, "tank", patch)).toThrow(/画布范围/);
+  expect(() => editor.updateSelectedTransform(patch)).toThrow(/画布范围/);
+  expect(editor.snapshot()).toEqual(before);
+});
+
 test("八方向缩放手柄的类型、顺序和中文名称稳定", () => {
   expect(RESIZE_HANDLES).toEqual(["nw", "n", "ne", "e", "se", "s", "sw", "w"]);
   expect(RESIZE_HANDLES.map((handle) => RESIZE_HANDLE_LABELS[handle])).toEqual([

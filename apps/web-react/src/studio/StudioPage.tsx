@@ -377,6 +377,7 @@ export default function StudioPage() {
               gesture.handle,
               point.x - gesture.startX,
               point.y - gesture.startY,
+              event.shiftKey,
             );
       const next = withNodeTransform(snapshot.document, gesture.nodeId, patch);
       gesture.lastPatch = patch;
@@ -704,7 +705,9 @@ export default function StudioPage() {
                             width={10}
                             height={10}
                             onPointerDown={(event) => beginGeometry(event, handle)}
-                          />
+                          >
+                            <title>按住 Shift 保持宽高比</title>
+                          </rect>
                         );
                       })}
                       <line

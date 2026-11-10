@@ -386,3 +386,60 @@ pnpm run dev:vue
 **证据边界**：本次仅收到维护者的验收结论，未附 `pnpm run ready` 最终退出码、单测总数及各构建输出；因此源码预计的 **84 项**不能写成已经逐项独立核实的 **84/84**。分支另含维护者提交 `82042df` 的代码格式调整，未由 Agent 在 Windows 独立执行本批测试。本次补充文档之后也尚未重新检查 `docs:check`。
 
 PR #9 继续保持 Draft，不合并 `main`；不扩大为工业设备现场安全、Docker/Tauri、服务端持久化或正式工程发布验收。
+
+## 2026-11-10 · V0.2 第八批等比例缩放（开发中，待验收）
+
+在第七批 PR #9 已合并到 `main` 后，从合并提交 `47ca2f4` 创建 `feat/v0.2-aspect-ratio-resize`。共享 Core 新增 `Shift` 锁定原始宽高比的功能，React/Vue 透传 `PointerEvent.shiftKey`；新增 **9 项** `transform-gesture.test.ts` 用例，该文件预计 28 项，整仓单元测试**预计 93 项**。本轮新代码**尚未运行** Vitest、`vp check`、类型检查、文档校验、E2E 或 Web/Server 构建；历史已合并 PR 的通过记录不能当作本批结果。
+
+已独立手算/复核的 10 组基本几何算例与预期一致，但这**不是**在本仓库内执行测试。当前执行环境无法访问 GitHub 远端 Git 地址且无 pnpm，故完整验证交由维护者 Windows 环境完成。
+
+维护者本机执行：
+
+```powershell
+git fetch origin
+git switch feat/v0.2-aspect-ratio-resize
+pnpm run ready
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+人工验收：Vue 和 React 选中图元后，普通八方向拖动行为不变；按住 Shift 拖动任意四角或边中点，宽高按原比例变化；松开 Shift 后恢复普通单轴/双轴缩放；30°/90° 旋转图元对侧固定锚点不漂移；50%/200% 视图缩放仍准确；非法尺寸/画布越界保留最后合法预览，Esc/PointerCancel 不提交；PointerUp 仅形成一条可撤销命令；JSON 双向往返时图元 ID、几何属性、Tag 绑定保持一致；Shift 旋转仍按 15° 吸附，模拟 Runtime 与工业设备只读边界不变。
+
+本批仅验证本地图元编辑，并非工业现场安全认证、Docker/Tauri 专项或正式工程保存/发布。
+
+## 2026-11-10 · 第八批 Shift 等比例缩放 Windows 质量链首次执行
+
+维护者提供 `pnpm run ready` 的 PowerShell 日志：依赖目录 9 个清单/26 项、共享配置、根环境与 LF、中文文案 72 个文件通过；**130 个文件格式检查通过**；React/Vue 的 `tsc --build` / `vue-tsc --build` 与 NestJS `tsc --noEmit` 通过；**8 个测试文件、93/93 单元测试通过**（其中 `transform-gesture.test.ts` **28/28**）、**2/2 NestJS E2E 通过**；文档 **31 个 Markdown 文件通过**，React 和 Vue Web 构建均成功。
+
+但 `vp check` 在 51 个文件中报告 **0 错误、2 条警告**，均为 `packages/core/test/transform-gesture.test.ts` 的 `vitest(require-to-throw-message)`：两处 `toThrow()` 未提供期望错误；因此不能将该日志记为「零警告质量链完整通过」。本次在独立修复提交 `1c1279b` 中将两处断言改为 `toThrow(/画布范围/)`，同时使测试明确匹配共享 Core 的中文越界错误，**未修改业务逻辑**。
+
+原日志最后进入 `nest build`，未提供最终退出状态/退出码；服务端构建终态仍待单独确认。修复提交及本次文档更新后，**还没有维护者提供的最新 `vp check` / `pnpm run ready` 结果**；React/Vue 的 Shift 等比例缩放真实浏览器交互尚待逐项确认。
+
+建议重新运行：
+
+```powershell
+vp check
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+以上均依据维护者本机日志，不代表 Agent 独立执行；Docker/Tauri、工业网关、设备现场安全及工程发布不在本批验证范围内。
+
+## 2026-11-10 · 第八批 Shift 等比例缩放零警告质量链复验通过
+
+维护者在两条 `vitest(require-to-throw-message)` 警告修复后，重新运行 `pnpm run ready` 并提供完整 Windows PowerShell 日志及最终 `Write-Host "退出码：$LASTEXITCODE"`，输出 **`退出码：0`**。这次日志明确确认：
+
+- 依赖 Catalog（9 个清单、26 项依赖）、统一配置、环境/LF、中文文案（72 个文件）均通过。
+- 格式检查 **130 个文件通过**，`vp check` 对 51 个文件显示 **零警告、零 Lint 错误、零类型错误**；React/Vue 与 NestJS TypeScript 类型检查通过。
+- 单元测试 **8 个文件、93/93 通过**，其中 `transform-gesture.test.ts` **28/28**；NestJS E2E **2/2 通过**。
+- 文档静态检查 **31 个 Markdown 文件通过**；React 与 Vue Web 构建均成功；NestJS `nest build` 完成且完整 `ready` 退出码为 **0**。
+
+这是维护者真实本机执行结果，**不是 Agent 独立运行**。此前 Lint 的两条警告已在此次复验中确认消除。当前尚未收到 Vue/React 的实际浏览器 Shift 等比例缩放交互及 JSON 双向往返的人工验收结论，不能把自动化检查成功当作全部交互验收完成。
+
+此记录提交后尚未再次运行文档检查；Docker/Tauri、真实设备、工业现场安全及工程发布仍不在本批范围内。PR #10 保持 Draft，不合并 `main`。
+
+## 2026-11-10 · 第八批 Shift 等比例缩放人工交互验收通过
+
+维护者在最新 `pnpm run ready` **退出码 0**、**93/93 单测**、**2/2 NestJS E2E**、零警告静态检查及双 Web/NestJS 构建通过之后，进一步明确回复「交互验收通过」。按 PR #10 既定六项双框架人工验收清单记录确认：React/Vue 八方向缩放与悬停提示、四角保持原始宽高比、四边中点对应主轴及对侧锚点、30°/90° 旋转与 50%/200% 视图缩放、非法尺寸/取消/撤销重做及 Shift 旋转无回归、双向 JSON/Tag 互通和只读模拟 Runtime 展示均由维护者确认通过。
+
+**证据来源**：质量链来源于维护者提供的 Windows 终端日志；六项浏览器交互来源于维护者明确的人工验收结论，非 Agent 自行启动浏览器独立测试。本次仅新增文档记录，提交后尚未重新运行 `pnpm run ready` 或 `docs:check`，但不改动业务代码。PR #10 验收清单预计全 7 项完成，仍保持 Draft，未经额外授权不合并 `main`。工业现场安全、Docker/Tauri、设备写入和正式工程发布均不在此次验收范围内。

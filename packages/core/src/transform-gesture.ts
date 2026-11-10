@@ -44,8 +44,8 @@ export function resizeHandlePosition(
 }
 
 /**
- * 四角双轴、四边中点单轴缩放；旋转后的对侧角点或边中点保持固定。
- * 鼠标世界坐标位移先投影至图元局部坐标，再按实际宽高变化求中心移动。
+ * 四角双轴、边中点单轴缩放；按住 Shift 可锁定图元原始宽高比。
+ * 旋转后将指针位移投影至局部轴，并固定对侧角点或边中点。
  * 候选结果交由 withNodeTransform 统一校验画布范围与尺寸。
  */
 export function resolveResizeTransform(
@@ -53,6 +53,7 @@ export function resolveResizeTransform(
   handle: ResizeHandle,
   dx: number,
   dy: number,
+  lockAspectRatio = false,
 ): Transform {
   finite(dx, "水平缩放位移");
   finite(dy, "垂直缩放位移");
@@ -70,8 +71,27 @@ export function resolveResizeTransform(
   const yDelta = vertical === 0 || Math.abs(localDy) < 1e-9 ? 0 : localDy;
   if (xDelta === 0 && yDelta === 0) return { ...transform };
 
-  const width = xDelta === 0 ? transform.width : rounded(transform.width + horizontal * xDelta);
-  const height = yDelta === 0 ? transform.height : rounded(transform.height + vertical * yDelta);
+  let width = xDelta === 0 ? transform.width : rounded(transform.width + horizontal * xDelta);
+  let height = yDelta === 0 ? transform.height : rounded(transform.height + vertical * yDelta);
+
+  if (lockAspectRatio) {
+    // 四角选择相对变化更大的轴；边中点使用其主轴决定统一缩放比例。
+    const horizontalRatio = horizontal === 0 ? null : (horizontal * xDelta) / transform.width;
+    const verticalRatio = vertical === 0 ? null : (vertical * yDelta) / transform.height;
+    const ratio =
+      horizontalRatio === null
+        ? (verticalRatio ?? 0)
+        : verticalRatio === null || Math.abs(horizontalRatio) >= Math.abs(verticalRatio)
+          ? horizontalRatio
+          : verticalRatio;
+    const scale = 1 + ratio;
+    if (!Number.isFinite(scale) || scale <= 0) {
+      throw new RangeError("等比例缩放后的图元宽度和高度不能小于 0.1");
+    }
+    width = rounded(transform.width * scale);
+    height = rounded(transform.height * scale);
+  }
+
   if (width < 0.1 || height < 0.1) {
     throw new RangeError("缩放后的图元宽度和高度不能小于 0.1");
   }
