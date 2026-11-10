@@ -357,25 +357,25 @@ export default function StudioPage() {
     const snapshot = editor.snapshot();
     const node = snapshot.document.pages[0]?.nodes.find((item) => item.id === gesture.nodeId);
     if (!node) return;
-    const patch: NodeTransformPatch =
-      gesture.handle === "rotate"
-        ? {
-            rotation: resolveRotationTransform(
-              node.transform,
-              gesture.startX,
-              gesture.startY,
-              point.x,
-              point.y,
-              event.shiftKey,
-            ).rotation,
-          }
-        : resolveResizeTransform(
-            node.transform,
-            gesture.handle,
-            point.x - gesture.startX,
-            point.y - gesture.startY,
-          );
     try {
+      const patch: NodeTransformPatch =
+        gesture.handle === "rotate"
+          ? {
+              rotation: resolveRotationTransform(
+                node.transform,
+                gesture.startX,
+                gesture.startY,
+                point.x,
+                point.y,
+                event.shiftKey,
+              ).rotation,
+            }
+          : resolveResizeTransform(
+              node.transform,
+              gesture.handle,
+              point.x - gesture.startX,
+              point.y - gesture.startY,
+            );
       const next = withNodeTransform(snapshot.document, gesture.nodeId, patch);
       gesture.lastPatch = patch;
       setGeometryPreview(next);
@@ -690,6 +690,7 @@ export default function StudioPage() {
                         <rect
                           key={handle}
                           className="studio-resize-handle"
+                          data-handle={handle}
                           aria-label={`缩放图元 ${handle}`}
                           x={(handle.endsWith("e") ? t.x + t.width : t.x) - 5}
                           y={(handle.startsWith("s") ? t.y + t.height : t.y) - 5}
