@@ -3,6 +3,7 @@ import { waterTreatmentDemoDocument } from "../src/demo-document.ts";
 import {
   DocumentEditor,
   findNodesInRect,
+  resolveDragSnap,
   withNodePosition,
   withNodesTranslated,
   withNodeTransform,
@@ -425,4 +426,163 @@ test("未选择或多选图元时不允许误改某个图元的几何属性", ()
   expect(() => e.updateSelectedTransform({ width: 180 })).toThrow(/单选/);
   expect(e.snapshot().document).toEqual(before);
   expect(e.snapshot().canUndo).toBe(false);
+});
+
+test("组合至少两个图元并保留原始 Tag 和单次撤销重做", () => {
+  const e = editor();
+  const original = e.snapshot().document;
+  e.selectMany(["tank", "pump"]);
+  expect(e.groupSelected()).toBe("group-1");
+  const grouped = e.snapshot();
+  expect(grouped.selectedIds).toEqual(["tank", "pump"]);
+  expect(grouped.document.pages[0]?.nodes.find((node) => node.id === "tank")?.groupId).toBe(
+    "group-1",
+  );
+  expect(grouped.document.pages[0]?.nodes.find((node) => node.id === "pump")?.groupId).toBe(
+    "group-1",
+  );
+  expect(grouped.document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level?.tagId).toBe(
+    "water.level",
+  );
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(original);
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().document).toEqual(grouped.document);
+});
+
+test("点击组合任一成员自动选中整组，Shift 可整体取消选中", () => {
+  const e = editor();
+  e.selectMany(["tank", "pump"]);
+  e.groupSelected();
+  e.select(null);
+  e.select("tank");
+  expect(e.snapshot().selectedIds).toEqual(["pump", "tank"]);
+  expect(e.snapshot().selectedId).toBe("tank");
+  e.select("pump", true);
+  expect(e.snapshot().selectedIds).toEqual([]);
+  e.select("pump", true);
+  expect(e.snapshot().selectedIds).toEqual(["tank", "pump"]);
+  e.selectMany(["tank"]);
+  expect(e.snapshot().selectedIds).toEqual(["tank", "pump"]);
+  e.selectMany(["flow"], true);
+  expect(e.snapshot().selectedIds).toEqual(["tank", "pump", "flow"]);
+});
+
+test("只传入组合成员的纯移动和吸附计算均会展开全部组员", () => {
+  const e = editor();
+  e.selectMany(["tank", "pump"]);
+  e.groupSelected();
+  const document = e.snapshot().document;
+  const moved = withNodesTranslated(document, ["tank"], 10, 20);
+  expect(moved.pages[0]?.nodes.find((node) => node.id === "tank")?.transform.x).toBe(90);
+  expect(moved.pages[0]?.nodes.find((node) => node.id === "pump")?.transform.x).toBe(510);
+  expect(document.pages[0]?.nodes.find((node) => node.id === "tank")?.transform.x).toBe(80);
+  const snap = resolveDragSnap(document, ["tank"], 10000, 10000, {
+    gridEnabled: false,
+    nodeEnabled: false,
+  });
+  expect(snap.dx).toBe(270);
+  expect(snap.dy).toBe(130);
+  const atEdge = withNodesTranslated(document, ["tank"], snap.dx, snap.dy);
+  expect(atEdge.pages[0]?.nodes.find((node) => node.id === "tank")?.transform.x).toBe(350);
+  expect(atEdge.pages[0]?.nodes.find((node) => node.id === "pump")?.transform.x).toBe(770);
+});
+
+test("已组合成员使用编辑器移动时整体移动，删除时整体删除并支持撤销", () => {
+  const e = editor();
+  e.selectMany(["tank", "pump"]);
+  e.groupSelected();
+  e.select("tank");
+  expect(e.moveBy(10, 20)).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "pump")?.transform.x).toBe(
+    510,
+  );
+  expect(e.deleteSelected()).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.some((node) => node.id === "tank")).toBe(false);
+  expect(e.snapshot().document.pages[0]?.nodes.some((node) => node.id === "pump")).toBe(false);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.groupId).toBe(
+    "group-1",
+  );
+});
+
+test("解组后保留节点和 Tag，解组命令支持撤销重做", () => {
+  const e = editor();
+  expect(e.ungroupSelected()).toBe(false);
+  expect(e.snapshot().canUndo).toBe(false);
+  e.selectMany(["tank", "pump"]);
+  e.groupSelected();
+  const grouped = e.snapshot().document;
+  expect(e.ungroupSelected()).toBe(true);
+  const ungrouped = e.snapshot().document;
+  expect(ungrouped.pages[0]?.nodes.find((node) => node.id === "tank")?.groupId).toBeUndefined();
+  expect(ungrouped.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level?.tagId).toBe(
+    "water.level",
+  );
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(grouped);
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().document).toEqual(ungrouped);
+});
+
+test("多个组合独立维护 ID，解组只影响当前选中的组合", () => {
+  const e = editor();
+  e.selectMany(["tank", "pump"]);
+  expect(e.groupSelected()).toBe("group-1");
+  e.selectMany(["title", "flow"]);
+  expect(e.groupSelected()).toBe("group-2");
+  e.select("tank");
+  expect(e.ungroupSelected()).toBe(true);
+  const nodes = e.snapshot().document.pages[0]?.nodes ?? [];
+  expect(nodes.find((node) => node.id === "tank")?.groupId).toBeUndefined();
+  expect(nodes.find((node) => node.id === "pump")?.groupId).toBeUndefined();
+  expect(nodes.find((node) => node.id === "title")?.groupId).toBe("group-2");
+  expect(nodes.find((node) => node.id === "flow")?.groupId).toBe("group-2");
+  e.selectMany(["tank", "pump"]);
+  expect(e.groupSelected()).toBe("group-1");
+});
+
+test("禁止单节点组合、嵌套组合及混入其他组合，不污染历史", () => {
+  const e = editor();
+  e.select("tank");
+  expect(() => e.groupSelected()).toThrow(/至少选择两个/);
+  expect(e.snapshot().canUndo).toBe(false);
+  e.selectMany(["tank", "pump"]);
+  e.groupSelected();
+  const before = e.snapshot();
+  expect(() => e.groupSelected()).toThrow(/已有组合/);
+  e.selectMany(["tank", "flow"]);
+  expect(() => e.groupSelected()).toThrow(/已有组合/);
+  expect(e.snapshot().document).toEqual(before.document);
+});
+
+test("组内几何与文案单体编辑和对齐须先解组", () => {
+  const e = editor();
+  e.selectMany(["title", "tank"]);
+  e.groupSelected();
+  const before = e.snapshot().document;
+  e.select("title");
+  expect(() => e.updateSelectedTransform({ x: 120 })).toThrow(/单选/);
+  expect(() => withNodeTransform(before, "title", { width: 220 })).toThrow(/先解组/);
+  expect(() => e.setSelectedLabel("不能单改")).toThrow(/请先选择文本图元/);
+  expect(() => e.alignSelected("left")).toThrow(/先解组/);
+  expect(e.snapshot().document).toEqual(before);
+});
+
+test("组合关系可通过本地 JSON 跨编辑器往返并恢复组员选择", () => {
+  const e = editor();
+  e.selectMany(["tank", "pump"]);
+  e.groupSelected();
+  const data = JSON.stringify(e.snapshot().document);
+  const other = editor();
+  other.loadDocument(JSON.parse(data));
+  expect(other.snapshot().document).toEqual(e.snapshot().document);
+  expect(other.snapshot().selectedIds).toEqual([]);
+  other.select("pump");
+  expect(new Set(other.snapshot().selectedIds)).toEqual(new Set(["tank", "pump"]));
+  expect(other.ungroupSelected()).toBe(true);
+  const third = editor();
+  third.loadDocument(JSON.parse(JSON.stringify(other.snapshot().document)));
+  third.select("tank");
+  expect(third.snapshot().selectedIds).toEqual(["tank"]);
 });
