@@ -406,3 +406,21 @@ pnpm run dev:vue
 人工验收：Vue 和 React 选中图元后，普通八方向拖动行为不变；按住 Shift 拖动任意四角或边中点，宽高按原比例变化；松开 Shift 后恢复普通单轴/双轴缩放；30°/90° 旋转图元对侧固定锚点不漂移；50%/200% 视图缩放仍准确；非法尺寸/画布越界保留最后合法预览，Esc/PointerCancel 不提交；PointerUp 仅形成一条可撤销命令；JSON 双向往返时图元 ID、几何属性、Tag 绑定保持一致；Shift 旋转仍按 15° 吸附，模拟 Runtime 与工业设备只读边界不变。
 
 本批仅验证本地图元编辑，并非工业现场安全认证、Docker/Tauri 专项或正式工程保存/发布。
+
+## 2026-11-10 · 第八批 Shift 等比例缩放 Windows 质量链首次执行
+
+维护者提供 `pnpm run ready` 的 PowerShell 日志：依赖目录 9 个清单/26 项、共享配置、根环境与 LF、中文文案 72 个文件通过；**130 个文件格式检查通过**；React/Vue 的 `tsc --build` / `vue-tsc --build` 与 NestJS `tsc --noEmit` 通过；**8 个测试文件、93/93 单元测试通过**（其中 `transform-gesture.test.ts` **28/28**）、**2/2 NestJS E2E 通过**；文档 **31 个 Markdown 文件通过**，React 和 Vue Web 构建均成功。
+
+但 `vp check` 在 51 个文件中报告 **0 错误、2 条警告**，均为 `packages/core/test/transform-gesture.test.ts` 的 `vitest(require-to-throw-message)`：两处 `toThrow()` 未提供期望错误；因此不能将该日志记为「零警告质量链完整通过」。本次在独立修复提交 `1c1279b` 中将两处断言改为 `toThrow(/画布范围/)`，同时使测试明确匹配共享 Core 的中文越界错误，**未修改业务逻辑**。
+
+原日志最后进入 `nest build`，未提供最终退出状态/退出码；服务端构建终态仍待单独确认。修复提交及本次文档更新后，**还没有维护者提供的最新 `vp check` / `pnpm run ready` 结果**；React/Vue 的 Shift 等比例缩放真实浏览器交互尚待逐项确认。
+
+建议重新运行：
+
+```powershell
+vp check
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+以上均依据维护者本机日志，不代表 Agent 独立执行；Docker/Tauri、工业网关、设备现场安全及工程发布不在本批验证范围内。
