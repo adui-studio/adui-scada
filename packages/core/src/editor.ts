@@ -404,7 +404,7 @@ export class DocumentEditor {
     while (used.has(`group-${index}`)) index++;
     const groupId = `group-${index}`;
     const next = page.nodes.map((node) => (selected.has(node.id) ? { ...node, groupId } : node));
-    this.replaceFirstPageNodes(next);
+    this.replaceActivePageNodes(next);
     return groupId;
   }
 
@@ -422,7 +422,7 @@ export class DocumentEditor {
       delete copy.groupId;
       return copy;
     });
-    return this.replaceFirstPageNodes(nodes);
+    return this.replaceActivePageNodes(nodes);
   }
 
   /** 兼容旧版绝对移动接口；多选时按同一受限位移整体移动。 */
@@ -544,7 +544,7 @@ export class DocumentEditor {
         },
       };
     });
-    return this.replaceFirstPageNodes(nodes);
+    return this.replaceActivePageNodes(nodes);
   }
 
   /** 页面节点顺序即 SVG 绘制顺序，后面的图元显示在前面。 */
@@ -558,7 +558,7 @@ export class DocumentEditor {
     if (action === "front" || action === "back") {
       const picked = nodes.filter((node) => selected.has(node.id));
       const others = nodes.filter((node) => !selected.has(node.id));
-      return this.replaceFirstPageNodes(
+      return this.replaceActivePageNodes(
         action === "front" ? [...others, ...picked] : [...picked, ...others],
       );
     }
@@ -575,7 +575,7 @@ export class DocumentEditor {
         }
       }
     }
-    return this.replaceFirstPageNodes(nodes);
+    return this.replaceActivePageNodes(nodes);
   }
 
   /** 仅允许单选图元修改几何属性，一次应用只产生一条撤销记录。 */
@@ -611,7 +611,7 @@ export class DocumentEditor {
     const nodes = firstPage(this.current, this.activePageId).nodes.map((item) =>
       item.id === node.id ? { ...item, bindings } : item,
     );
-    return this.replaceFirstPageNodes(nodes);
+    return this.replaceActivePageNodes(nodes);
   }
 
   setSelectedLabel(text: string): boolean {
@@ -624,7 +624,7 @@ export class DocumentEditor {
     const nodes = firstPage(this.current, this.activePageId).nodes.map((item) =>
       item.id === node.id ? { ...item, props: { ...item.props, text } } : item,
     );
-    return this.replaceFirstPageNodes(nodes);
+    return this.replaceActivePageNodes(nodes);
   }
 
   undo(): boolean {
@@ -671,7 +671,7 @@ export class DocumentEditor {
     return firstPage(this.current, this.activePageId).nodes.find((node) => node.id === id);
   }
 
-  private replaceFirstPageNodes(nodes: ScadaNode[]): boolean {
+  private replaceActivePageNodes(nodes: ScadaNode[]): boolean {
     const page = firstPage(this.current, this.activePageId);
     return this.commit(
       parseScadaDocument({
