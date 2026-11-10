@@ -594,3 +594,16 @@ pnpm run dev:vue
 新增两项异常场景测试和一项删除重建冲突测试，并补充 1 项 Core Promise 拒绝测试；基于上一批 **128** 项和本批原始新增 **28** 项及新增 **4** 项，**源码预计总计 160 项单元测试**。其中旧存储读取权限故障不应误判为可清理的损坏草稿，删除重建后旧标签页持有的 `revision` 不能覆盖新工程。
 
 **本批仍未执行完整 `pnpm install`、`pnpm run ready`、真实浏览器迁移及双标签页验收**。源码计数不是实际通过结果，新的 Markdown 章节也尚未执行文档格式校验。特别注意 pnpm 12.18.0 新增 `dexie` / `fake-indexeddb` 的正确安装及**由 pnpm 生成的锁文件**；不要手动构造 lockfile。
+
+## 2026-11-10 · V0.2 第十三批模拟 Tag 绑定待验收
+
+本批共享编辑器单测新增六项源码用例，整仓预计 166 项，**没有在维护者 Windows 本机执行验证**。在项目根目录运行：
+
+```powershell
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+之后人工检查 Vue/React 的模拟 Tag 绑定、解除、撤销/重做、组合拒绝、JSON 双向互通、IndexedDB 草稿恢复及只读 Runtime `STALE/GOOD` 回归。自动检查不替代浏览器操作。
