@@ -193,3 +193,12 @@
 - `packages/core/src/demo-document.ts`：`waterTreatmentDemoTagOptions` 模拟候选目录，供双框架共享。
 - `apps/web-react/src/studio/StudioPage.tsx` / `apps/web-vue/src/studio/StudioPage.vue`：选取或清除模拟 Tag 绑定；两端 `studio.css` 新增选择控件样式。
 - `packages/core/test/editor.test.ts`：新增六项绑定编辑与错误路径回归用例。
+
+## V0.2 第十四批：多页面 Studio
+
+- `packages/core/src/editor.ts`：`EditorSnapshot.activePageId`、页面创建/重命名/切换/删除及跨页面文档撤销历史；几何与框选支持可选 `pageId`。
+- `packages/core/src/snap.ts`：`resolveDragSnap` 可以按 `pageId` 限定参考图元，旧调用仍默认第一页。
+- `packages/runtime/src/runtime.ts`：`svgDataUrl` 可指定要渲染的工程页面，Runtime 旧调用继续展示第一页。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：页面导航与编辑作用域，保留双框架对等；两份 `studio.css` 增加导航样式。
+- `packages/core/test/editor.test.ts`、`packages/runtime/test/runtime.test.ts`：页面隔离、工程级 ID、边界、历史以及 SVG 选页回归。
+- `docs/adr/0022-multi-page-editor-scope.md`：解释会话态与 JSON 持久化的边界。
