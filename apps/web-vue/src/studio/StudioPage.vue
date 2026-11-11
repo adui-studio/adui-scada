@@ -60,6 +60,10 @@ const rotating = ref(false);
 const marquee = shallowRef<MarqueeState | null>(null);
 const labelDraft = ref("");
 const preferredCopyTargetPageId = ref("");
+const preferredLayerTargetId = ref("");
+const layerInsertPosition = ref<"before" | "after">("after");
+const layerDrop = shallowRef<{ id: string; position: "before" | "after" } | null>(null);
+let layerDrag: { pageId: string; nodeId: string } | null = null;
 const notice = ref("可手动保存浏览器本地草稿 · 尚未连接工程保存服务");
 const hasSavedDraft = ref(false);
 const autoSaveEnabled = ref(false);
@@ -125,6 +129,39 @@ const hasLockedSelection = computed(() =>
 const canGroup = computed(
   () =>
     state.value.selectedIds.length >= 2 && !hasGroupedSelection.value && !hasLockedSelection.value,
+);
+const layerRows = computed(() => [...page.value.nodes].reverse());
+const lockedLayerGroups = computed(
+  () =>
+    new Set(
+      page.value.nodes
+        .filter(studioNodeLocked)
+        .flatMap((node) => (node.groupId ? [node.groupId] : [])),
+    ),
+);
+const canPreciselyMove = computed(() => {
+  const node = selected.value;
+  return (
+    node !== undefined &&
+    (state.value.selectedIds.length === 1 ||
+      (node.groupId !== undefined &&
+        state.value.selectedIds.every(
+          (id) => page.value.nodes.find((item) => item.id === id)?.groupId === node.groupId,
+        ))) &&
+    !hasLockedSelection.value
+  );
+});
+const layerTargetNodes = computed(() =>
+  page.value.nodes.filter(
+    (node) =>
+      node.id !== selected.value?.id &&
+      (selected.value?.groupId === undefined || node.groupId !== selected.value.groupId),
+  ),
+);
+const layerTargetId = computed(() =>
+  layerTargetNodes.value.some((node) => node.id === preferredLayerTargetId.value)
+    ? preferredLayerTargetId.value
+    : (layerTargetNodes.value[0]?.id ?? ""),
 );
 const activePageIndex = computed(() =>
   state.value.document.pages.findIndex((item) => item.id === state.value.activePageId),
