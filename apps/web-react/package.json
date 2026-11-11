@@ -15,7 +15,9 @@
     "@adui/scada-draft-storage": "workspace:*",
     "@adui/scada-runtime": "workspace:*",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "tdesign-react": "catalog:",
+    "tdesign-icons-react": "catalog:"
   },
   "devDependencies": {
     "@adui/tsconfig": "workspace:*",
