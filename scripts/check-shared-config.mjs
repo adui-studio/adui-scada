@@ -151,6 +151,24 @@ assert.match(
   /grid-template-columns: var\(--studio-left-width\) minmax\(0, 1fr\) var\(--studio-right-width\)/,
   "Studio 必须让画布优先使用剩余空间",
 );
+
+for (const [selector, column] of [
+  [".studio-panel-layers", 1],
+  [".studio-stage", 2],
+  [".studio-panel-properties", 3],
+]) {
+  const opening = sharedStudio.indexOf(`${selector} {`);
+  assert.ok(opening >= 0, `共享工作台缺少区域：${selector}`);
+  const closing = sharedStudio.indexOf("}", opening);
+  const rule = sharedStudio.slice(opening, closing);
+  assert.match(
+    rule,
+    new RegExp(`grid-column:\\s*${column};`),
+    `Studio 区域 ${selector} 必须固定在第 ${column} 列，避免隐藏面板后自动重排`,
+  );
+  assert.match(rule, /grid-row:\s*1;/, `${selector} 必须保持在工作区首行`);
+}
+
 for (const framework of ["react", "vue"]) {
   const editorPath = `apps/web-${framework}/src/studio/StudioPage.${framework === "react" ? "tsx" : "vue"}`;
   const editorSource = text(editorPath);
