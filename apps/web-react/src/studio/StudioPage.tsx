@@ -1122,7 +1122,9 @@ export default function StudioPage() {
               onDragEnd={clearLayerDrag}
               onClick={(event) => select(node.id, event.shiftKey)}
             >
-              <span className="studio-layer-identity"><span aria-hidden="true">⋮⋮</span> {node.id}</span>
+              <span className="studio-layer-identity">
+                <span aria-hidden="true">⋮⋮</span> {node.id}
+              </span>
               <small>
                 {node.type}
                 {node.groupId ? ` · 组合 ${node.groupId}` : ""}
