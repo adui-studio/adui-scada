@@ -148,6 +148,14 @@ async function hashSnapshotContent(source: {
   return Array.from(hash, (value) => value.toString(16).padStart(2, "0")).join("");
 }
 
+/** 最终快照容器本身也必须符合大小限制（包括摘要字段）。 */
+function requireSnapshotSize(value: ProjectSnapshot): void {
+  const bytes = utf8Bytes(JSON.stringify(stableValue(value)));
+  if (bytes.byteLength > PROJECT_SNAPSHOT_MAX_BYTES) {
+    throw new RangeError("工程版本快照超过 2 MiB 限制");
+  }
+}
+
 function deepFreeze<T>(value: T): DeepReadonly<T> {
   if (value !== null && typeof value === "object") {
     for (const child of Object.values(value)) deepFreeze(child);
@@ -175,7 +183,9 @@ export async function createProjectSnapshot(
     document: checked.document,
   };
   const contentHash = await hashSnapshotContent(payload);
-  return deepFreeze({ ...payload, contentHash });
+  const snapshot = { ...payload, contentHash };
+  requireSnapshotSize(snapshot);
+  return deepFreeze(snapshot);
 }
 
 /** 验证外部快照包裹层、Schema、摘要，返回防御性复制的冻结工程。 */
@@ -219,5 +229,7 @@ export async function readProjectSnapshot(input: unknown): Promise<ProjectSnapsh
   if (digest !== raw.contentHash) {
     throw new TypeError("工程版本快照摘要不匹配，内容可能已被修改");
   }
-  return deepFreeze({ ...payload, contentHash: digest });
+  const snapshot = { ...payload, contentHash: digest };
+  requireSnapshotSize(snapshot);
+  return deepFreeze(snapshot);
 }
