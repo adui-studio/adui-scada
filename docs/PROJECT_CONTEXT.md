@@ -400,3 +400,7 @@ PR #16 多页面编辑管理已根据维护者授权以 Squash Merge 合并 `mai
 ## 2026-11-11 · 修复隐藏图层导致画布不扩展（待本机复验）
 
 维护者运行 `pnpm run test:browser`：React/Vue 在 1440×900 和 1024×768 各完成 19 项检查，其中仅“隐藏图层后画布自动扩展”失败，共 4 项失败；其余各 18 项通过。仓库 CSS 检查显示：`data-left-collapsed="true"` 将左侧 Grid 轨道改为 `0px` 并隐藏左侧 DOM 元素，Grid 自动布局因此可能把中央舞台放进第 1 个 `0px` 轨道，属性面板移入中间轨道。修复仅在共享 `@adui/tailwind/studio.css` 为图层侧栏、中间舞台和属性侧栏指定固定 `grid-column: 1/2/3`、`grid-row: 1`，而非改动两个框架的状态逻辑；窄屏 Flex 布局不受 Grid 列属性影响。共享配置静态检查新增显式列锚定契约，以防再次回归。**本批没有重新运行 Windows 双端浏览器验收或完整 `ready`，需维护者后续复验。**
+
+## 2026-11-11 · V0.3 第一批：FR-013 双框架工程互通自动化
+
+此前 V0.2 PR #22 已经通过维护者 Windows `ready`（270/270 单测、2/2 服务端 E2E、双 Web/NestJS 构建）和 `test:browser`（76/76）验收，并以 Squash Merge 提交 `85a9f943` 合并至 `main`。新分支 `test/v0.3-dual-framework-interop` 在此基线上新增独立 `test:interop`：真实 React/Vue UI 导入/导出双向往返，分别在两端增加图元后核对完整 JSON，验证非法 JSON 原子拒绝。使用隔离浏览器，保持旧 `ready`、Schema、设备只读边界与生产源码不变。本批仅已提交测试源码；**尚未取得新增命令的 Windows 实测结果，不能认定 FR-013 自动化验收完成**。

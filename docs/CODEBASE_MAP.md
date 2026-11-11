@@ -305,3 +305,8 @@
 
 - `scripts/test-studio-browser.mjs`：使用 Node.js 原生 WebSocket 和 Chrome/Edge 调试协议启动隔离浏览器，自动检查 React/Vue 画布布局、网格、缩放、面板和图层选择。
 - `pnpm run test:browser`：独立运行入口，暂不强制纳入 `ready`，避免在无 GUI 浏览器的环境下阻塞原有构建质量链。
+
+## V0.3 双框架工程互通浏览器验收
+
+- `scripts/test-studio-browser.mjs --interop`：复用既有 Chrome/Edge 隔离浏览器、Vue/React Studio 导航与 CDP，实现真实文件导出 Blob 捕获、File/DataTransfer 导入、双端新增图元与双向 JSON 往返、非法 JSON 原子拒绝。
+- `pnpm run test:interop`：专门验证 FR-013，独立于 `pnpm run test:browser` 布局检查和 `pnpm run ready` 构建链路。
