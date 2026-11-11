@@ -151,13 +151,14 @@ const canPreciselyMove = computed(() => {
     !hasLockedSelection.value
   );
 });
-const layerTargetNodes = computed(() =>
-  page.value.nodes.filter(
+const layerTargetNodes = computed(() => {
+  const chosen = selected.value;
+  return page.value.nodes.filter(
     (node) =>
-      node.id !== selected.value?.id &&
-      (selected.value?.groupId === undefined || node.groupId !== selected.value.groupId),
-  ),
-);
+      node.id !== chosen?.id &&
+      (chosen?.groupId === undefined || node.groupId !== chosen.groupId),
+  );
+});
 const layerTargetId = computed(() =>
   layerTargetNodes.value.some((node) => node.id === preferredLayerTargetId.value)
     ? preferredLayerTargetId.value
@@ -476,6 +477,7 @@ function apply(action: () => unknown, message: string) {
 function switchPage(pageId: string) {
   try {
     if (!editor.switchPage(pageId)) return;
+    clearLayerDrag();
     cancelDrag();
     zoom.value = 1;
     refresh();
