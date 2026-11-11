@@ -11,10 +11,10 @@ ADui SCADA 正式产品包含 Vue 3 和 React 双版本，当前 V0.2 Studio 多
 
 ## 选型
 
-| 端 | UI 组件包 | 独立图标包 | 当前 Catalog 固定版本 |
-| --- | --- | --- | --- |
-| React | `tdesign-react` | `tdesign-icons-react` | `1.18.6` / `0.6.11` |
-| Vue 3 | `tdesign-vue-next` | `tdesign-icons-vue-next` | `1.20.11` / `0.4.11` |
+| 端    | UI 组件包          | 独立图标包               | 当前 Catalog 固定版本 |
+| ----- | ------------------ | ------------------------ | --------------------- |
+| React | `tdesign-react`    | `tdesign-icons-react`    | `1.18.6` / `0.6.11`   |
+| Vue 3 | `tdesign-vue-next` | `tdesign-icons-vue-next` | `1.20.11` / `0.4.11`  |
 
 采用维护者指定的 [React 组件文档](https://tdesign.tencent.com/react/overview)、[Vue Next 组件文档](https://tdesign.tencent.com/vue-next/overview)、[React 图标文档](https://tdesign.tencent.com/react/components/icon) 与 [Vue 图标文档](https://tdesign.tencent.com/vue-next/components/icon) 作为使用依据。以当期 npm 正式包为版本来源，不采用预发布、外部 CDN 或自行假设的组件 API。已核对发布标签 `tdesign-react@1.18.6` 的 React peer 要求 `>=16.13.1`，`tdesign-vue-next@1.20.11` 的 Vue peer 要求 `>=3.1.0`，与当前仓库 React 19 / Vue 3 选型范围兼容；完整包安装与构建仍以本地 pnpm 实测为准。
 

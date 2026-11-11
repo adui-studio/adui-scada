@@ -730,4 +730,3 @@ Write-Host "退出码：$LASTEXITCODE"
 ```
 
 要求将由 pnpm 自动生成的 `pnpm-lock.yaml` 变更审查并提交到当前功能分支，确认供应链依赖数量、TDesign 版本、重复图标包及 CSS 产物。检查 React/Vue TDesign 属性按钮/输入和搜索清除图标、几何字段一致性、原快捷键、Tag、组合、IndexedDB 草稿、只读 Runtime 与未实现设备写入返回 404。首次安装未完成前不能执行冻结安装、编译/验收，也不能批准合并。
-

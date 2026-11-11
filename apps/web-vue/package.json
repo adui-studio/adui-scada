@@ -14,9 +14,9 @@
     "@adui/scada-core": "workspace:*",
     "@adui/scada-draft-storage": "workspace:*",
     "@adui/scada-runtime": "workspace:*",
-    "vue": "catalog:",
+    "tdesign-icons-vue-next": "catalog:",
     "tdesign-vue-next": "catalog:",
-    "tdesign-icons-vue-next": "catalog:"
+    "vue": "catalog:"
   },
   "devDependencies": {
     "@adui/tsconfig": "workspace:*",
