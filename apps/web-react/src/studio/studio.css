@@ -114,6 +114,73 @@
   margin: 6px 0;
   text-align: left;
 }
+/* 平面组合的树形视图仅影响 Studio 会话，不改变 SVG 层序或工程 JSON。 */
+.studio-tree-controls {
+  display: grid;
+  gap: 7px;
+  margin: 12px 0 10px;
+}
+.studio-tree-controls .studio-field {
+  margin: 0;
+}
+.studio-tree-controls input[type="search"] {
+  width: 100%;
+  min-width: 0;
+}
+.studio-tree-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.studio-layer-tree {
+  max-height: min(62vh, 560px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 3px;
+}
+.studio-tree-group {
+  margin: 5px 0;
+}
+.studio-tree-group-heading {
+  display: flex;
+  align-items: stretch;
+  gap: 5px;
+}
+.studio-tree-group-heading .studio-layer {
+  min-width: 0;
+  flex: 1;
+  margin: 0;
+}
+.studio-tree-toggle {
+  width: 24px;
+  min-width: 24px;
+  padding: 0;
+  border: 1px solid #294057;
+  border-radius: 4px;
+  background: #172d40;
+  color: #d8e5ef;
+}
+.studio-tree-toggle:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+.studio-tree-members {
+  margin-left: 12px;
+  padding-left: 14px;
+  border-left: 1px solid #345269;
+}
+.studio-tree-members .studio-layer {
+  margin: 3px 0;
+}
+.studio-tree-empty {
+  margin: 12px 0;
+  color: #90a8bb;
+  font-size: 12px;
+}
+.studio-layer-tree .studio-layer {
+  flex-wrap: wrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .studio-layer[draggable="true"] {
   cursor: grab;
 }
