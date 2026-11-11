@@ -1115,16 +1115,26 @@ async function importJson(event: Event) {
           </button>
         </div>
         <button
-          v-for="node in page.nodes"
+          v-for="node in layerRows"
           :key="node.id"
           type="button"
           class="studio-layer"
           :data-selected="state.selectedIds.includes(node.id)"
           :data-hidden="!studioNodeVisible(node)"
           :data-locked="studioNodeLocked(node)"
+          :data-drop-position="layerDrop?.id === node.id ? layerDrop.position : undefined"
+          :draggable="
+            !studioNodeLocked(node) &&
+            (node.groupId === undefined || !lockedLayerGroups.has(node.groupId))
+          "
+          title="拖动调整图层，组合会整体移动"
+          @dragstart="startLayerDrag($event, node.id)"
+          @dragover="overLayer($event, node.id)"
+          @drop="dropLayer($event, node.id)"
+          @dragend="clearLayerDrag"
           @click="selectNode(node.id, $event.shiftKey)"
         >
-          <span>{{ node.id }}</span>
+          <span class="studio-layer-identity"><span aria-hidden="true">⋮⋮</span> {{ node.id }}</span>
           <small>
             {{ node.type }}{{ node.groupId ? ` · 组合 ${node.groupId}` : "" }}
             {{ studioNodeLocked(node) ? " · 已锁定" : "" }}
