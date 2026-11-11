@@ -982,6 +982,93 @@ export default function StudioPage() {
     }
   }
 
+  function toggleLayerGroup(groupId: string) {
+    setCollapsedGroupIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  }
+
+  function locateSelectedLayer() {
+    const node = page?.nodes.find((item) => item.id === state.selectedId);
+    if (!node) {
+      setNotice("请先选择需要定位的图元");
+      return;
+    }
+    setLayerSearch("");
+    if (node.groupId) {
+      setCollapsedGroupIds((previous) => {
+        if (!previous.has(node.groupId!)) return previous;
+        const next = new Set(previous);
+        next.delete(node.groupId!);
+        return next;
+      });
+    }
+    setLocateLayerKey(node.groupId ? `group:${node.groupId}` : `node:${node.id}`);
+    setNotice("已定位选中图元所在图层");
+  }
+
+  function renderLayerButton(
+    node: ScadaNode,
+    kind: "group" | "member" | "node",
+    group?: LayerTreeGroup,
+  ) {
+    const isGroupHeader = kind === "group" && group !== undefined;
+    const groupId = group?.groupId;
+    const rowKey = isGroupHeader ? `group:${groupId}` : `node:${node.id}`;
+    const selectedRow = isGroupHeader
+      ? page?.nodes.some(
+          (item) => item.groupId === groupId && state.selectedIds.includes(item.id),
+        )
+      : state.selectedIds.includes(node.id);
+    const lockedRow = isGroupHeader ? group.hasLockedMember : studioNodeLocked(node);
+    const hiddenRow = isGroupHeader
+      ? group.hiddenCount === group.totalCount
+      : !studioNodeVisible(node);
+    const draggable =
+      !studioNodeLocked(node) &&
+      (node.groupId === undefined || !lockedLayerGroups.has(node.groupId));
+
+    return (
+      <button
+        key={rowKey}
+        type="button"
+        className="studio-layer"
+        data-layer-key={rowKey}
+        data-selected={selectedRow}
+        data-hidden={hiddenRow}
+        data-locked={lockedRow}
+        data-drop-position={layerDrop?.id === node.id ? layerDrop.position : undefined}
+        draggable={draggable}
+        title={isGroupHeader ? "拖动整个组合调整图层" : "拖动调整图层，组合会整体移动"}
+        onDragStart={(event) => startLayerDrag(event, node.id)}
+        onDragOver={(event) => overLayer(event, node.id)}
+        onDrop={(event) => dropLayer(event, node.id)}
+        onDragEnd={clearLayerDrag}
+        onClick={(event) => select(node.id, event.shiftKey)}
+      >
+        <span className="studio-layer-identity">
+          <span aria-hidden="true">⋮⋮</span>{" "}
+          {isGroupHeader ? `组合 ${groupId}` : node.id}
+        </span>
+        <small>
+          {isGroupHeader
+            ? `${group.totalCount} 个成员`
+            : node.type}
+          {isGroupHeader && group.fragmented ? " · 层序不连续" : ""}
+          {isGroupHeader && group.hasLockedMember ? " · 有锁定成员" : ""}
+          {isGroupHeader && group.hiddenCount > 0
+            ? ` · 隐藏 ${group.hiddenCount}`
+            : ""}
+          {!isGroupHeader && studioNodeLocked(node) ? " · 已锁定" : ""}
+          {!isGroupHeader && !studioNodeVisible(node) ? " · 已隐藏" : ""}
+        </small>
+      </button>
+    );
+  }
+
   return (
     <main className="studio-shell">
       <header className="studio-toolbar">
@@ -1130,38 +1217,67 @@ export default function StudioPage() {
               复制选中图元
             </button>
           </div>
-          {layerRows.map((node) => (
+          <div className="studio-tree-controls">
+            <label className="studio-field">
+              搜索图元或组合
+              <input
+                type="search"
+                aria-label="搜索图层"
+                maxLength={128}
+                value={layerSearch}
+                placeholder="图元 ID、类型、文字或组合 ID"
+                onChange={(event) => setLayerSearch(event.target.value)}
+              />
+            </label>
             <button
               type="button"
-              className="studio-layer"
-              data-selected={state.selectedIds.includes(node.id)}
-              data-hidden={!studioNodeVisible(node)}
-              data-locked={studioNodeLocked(node)}
-              data-drop-position={layerDrop?.id === node.id ? layerDrop.position : undefined}
-              draggable={
-                !studioNodeLocked(node) &&
-                (node.groupId === undefined || !lockedLayerGroups.has(node.groupId))
-              }
-              key={node.id}
-              title="拖动调整图层，组合会整体移动"
-              onDragStart={(event) => startLayerDrag(event, node.id)}
-              onDragOver={(event) => overLayer(event, node.id)}
-              onDrop={(event) => dropLayer(event, node.id)}
-              onDragEnd={clearLayerDrag}
-              onClick={(event) => select(node.id, event.shiftKey)}
+              disabled={state.selectedIds.length === 0}
+              onClick={locateSelectedLayer}
             >
-              <span className="studio-layer-identity">
-                <span aria-hidden="true">⋮⋮</span> {node.id}
-              </span>
-              <small>
-                {node.type}
-                {node.groupId ? ` · 组合 ${node.groupId}` : ""}
-                {studioNodeLocked(node) ? " · 已锁定" : ""}
-                {!studioNodeVisible(node) ? " · 已隐藏" : ""}
-              </small>
+              定位选中图层
             </button>
-          ))}
-        </aside>
+          </div>
+          <div className="studio-layer-tree" ref={layerTreeRef} aria-label="图层树">
+            {layerEntries.length === 0 && (
+              <p className="studio-tree-empty">没有匹配的图元或组合</p>
+            )}
+            {layerEntries.map((entry) =>
+              entry.kind === "node" ? (
+                renderLayerButton(entry.node, "node")
+              ) : (
+                <div className="studio-tree-group" key={entry.groupId}>
+                  <div className="studio-tree-group-heading">
+                    <button
+                      type="button"
+                      className="studio-tree-toggle"
+                      aria-label={`${isLayerSearching || !collapsedGroupIds.has(entry.groupId) ? "折叠" : "展开"}组合 ${entry.groupId}`}
+                      aria-expanded={isLayerSearching || !collapsedGroupIds.has(entry.groupId)}
+                      disabled={isLayerSearching}
+                      onClick={() => toggleLayerGroup(entry.groupId)}
+                    >
+                      {isLayerSearching || !collapsedGroupIds.has(entry.groupId) ? "▾" : "▸"}
+                    </button>
+                    {renderLayerButton(
+                      page.nodes.find((node) => node.id === entry.anchorNodeId) ??
+                        entry.members[0]!,
+                      "group",
+                      entry,
+                    )}
+                  </div>
+                  {(isLayerSearching || !collapsedGroupIds.has(entry.groupId)) && (
+                    <div
+                      className="studio-tree-members"
+                      role="group"
+                      aria-label={`组合 ${entry.groupId} 的成员`}
+                    >
+                      {entry.members.map((node) => renderLayerButton(node, "member"))}
+                    </div>
+                  )}
+                </div>
+              ),
+            )}
+          </div>
+
         <section className="studio-stage" aria-label="组态画布">
           <div className="studio-stage-caption">
             <span>
