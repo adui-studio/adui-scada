@@ -50,7 +50,7 @@ test("不连续的平面组合只出现一次并按最上层成员定位", () =>
 test("组成员连续时不再报告层序分散，成员仍按上层优先排列", () => {
   const nodes = groupedNodes();
   const pump = nodes.find((node) => node.id === "pump")!;
-  const ordered = [...nodes.filter((node) => node.id !== "pump")];
+  const ordered = nodes.filter((node) => node.id !== "pump");
   ordered.splice(2, 0, pump);
   const tree = buildLayerTree(ordered);
   const group = tree.find((entry) => entry.kind === "group");
@@ -147,17 +147,23 @@ test("解组后树投影立即恢复独立图元，撤销时重新出现组合",
   const editor = new DocumentEditor(waterTreatmentDemoDocument);
   editor.selectMany(["tank", "pump"]);
   editor.groupSelected();
-  expect(buildLayerTree(editor.snapshot().document.pages[0]!.nodes).some(
-    (entry) => entry.kind === "group",
-  )).toBe(true);
+  expect(
+    buildLayerTree(editor.snapshot().document.pages[0]!.nodes).some(
+      (entry) => entry.kind === "group",
+    ),
+  ).toBe(true);
   editor.ungroupSelected();
-  expect(buildLayerTree(editor.snapshot().document.pages[0]!.nodes).every(
-    (entry) => entry.kind === "node",
-  )).toBe(true);
+  expect(
+    buildLayerTree(editor.snapshot().document.pages[0]!.nodes).every(
+      (entry) => entry.kind === "node",
+    ),
+  ).toBe(true);
   editor.undo();
-  expect(buildLayerTree(editor.snapshot().document.pages[0]!.nodes).some(
-    (entry) => entry.kind === "group",
-  )).toBe(true);
+  expect(
+    buildLayerTree(editor.snapshot().document.pages[0]!.nodes).some(
+      (entry) => entry.kind === "group",
+    ),
+  ).toBe(true);
 });
 
 test("只投影指定页面且搜索不会污染可撤销工程文档", () => {

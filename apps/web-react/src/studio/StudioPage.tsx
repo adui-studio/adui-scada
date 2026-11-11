@@ -1072,8 +1072,7 @@ export default function StudioPage() {
         onClick={(event) => select(node.id, event.shiftKey)}
       >
         <span className="studio-layer-identity">
-          <span aria-hidden="true">⋮⋮</span>{" "}
-          {groupHeader ? `组合 ${groupId}` : node.id}
+          <span aria-hidden="true">⋮⋮</span> {groupHeader ? `组合 ${groupId}` : node.id}
         </span>
         <small>
           {groupHeader ? `${groupHeader.totalCount} 个成员` : node.type}
@@ -1082,9 +1081,7 @@ export default function StudioPage() {
             : ""}
           {groupHeader?.fragmented ? " · 层序不连续" : ""}
           {groupHeader?.hasLockedMember ? " · 有锁定成员" : ""}
-          {groupHeader && groupHeader.hiddenCount > 0
-            ? ` · 隐藏 ${groupHeader.hiddenCount}`
-            : ""}
+          {groupHeader && groupHeader.hiddenCount > 0 ? ` · 隐藏 ${groupHeader.hiddenCount}` : ""}
           {!groupHeader && studioNodeLocked(node) ? " · 已锁定" : ""}
           {!groupHeader && !studioNodeVisible(node) ? " · 已隐藏" : ""}
         </small>

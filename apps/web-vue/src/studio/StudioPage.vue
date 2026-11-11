@@ -1238,7 +1238,11 @@ async function importJson(event: Event) {
                   </span>
                   <small>
                     {{ entry.totalCount }} 个成员
-                    {{ entry.members.length !== entry.totalCount ? ` · 匹配 ${entry.members.length}` : "" }}
+                    {{
+                      entry.members.length !== entry.totalCount
+                        ? ` · 匹配 ${entry.members.length}`
+                        : ""
+                    }}
                     {{ entry.fragmented ? " · 层序不连续" : "" }}
                     {{ entry.hasLockedMember ? " · 有锁定成员" : "" }}
                     {{ entry.hiddenCount > 0 ? ` · 隐藏 ${entry.hiddenCount}` : "" }}
@@ -1260,12 +1264,8 @@ async function importJson(event: Event) {
                   :data-selected="state.selectedIds.includes(node.id)"
                   :data-hidden="!studioNodeVisible(node)"
                   :data-locked="studioNodeLocked(node)"
-                  :data-drop-position="
-                    layerDrop?.id === node.id ? layerDrop.position : undefined
-                  "
-                  :draggable="
-                    !studioNodeLocked(node) && !lockedLayerGroups.has(entry.groupId)
-                  "
+                  :data-drop-position="layerDrop?.id === node.id ? layerDrop.position : undefined"
+                  :draggable="!studioNodeLocked(node) && !lockedLayerGroups.has(entry.groupId)"
                   title="拖动成员时移动整个组合"
                   @dragstart="startLayerDrag($event, node.id)"
                   @dragover="overLayer($event, node.id)"
@@ -1292,9 +1292,7 @@ async function importJson(event: Event) {
               :data-selected="state.selectedIds.includes(entry.node.id)"
               :data-hidden="!studioNodeVisible(entry.node)"
               :data-locked="studioNodeLocked(entry.node)"
-              :data-drop-position="
-                layerDrop?.id === entry.node.id ? layerDrop.position : undefined
-              "
+              :data-drop-position="layerDrop?.id === entry.node.id ? layerDrop.position : undefined"
               :draggable="!studioNodeLocked(entry.node)"
               title="拖动调整图层"
               @dragstart="startLayerDrag($event, entry.node.id)"
