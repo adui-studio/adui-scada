@@ -388,3 +388,9 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - React/Vue Studio “版本历史”菜单复用 `DexieProjectVersionRepository`：打开/刷新读 `list(projectId,{limit:10})`，分页读 `beforeRevision`，点击差异时调用 `get` 重新校验摘要；“创建快照”调用 `getHeadRevision` + `append`，CAS 冲突显示中文错误。
 - 历史载入再次校验快照，要求当前工程 ID 未切换且用户同意替换；确认之后等待 `pauseAutoSave` 完成，再通过共享 `DocumentEditor.loadDocument` 原子载入，清理图层/拖动会话与撤销重做。草稿数据库、历史列表和正式发布状态不被修改。取消/校验失败不修改编辑文档。
 - 版本历史仅保留本地快照，不新增正式服务端 API、角色权限或发布指针。
+
+## V0.3 第五批：恢复互斥与异常验收（ADR-0038）
+
+- JSON 导入在文件异步读取开始前取得现有草稿操作锁，并在成功/失败后通过 `finally` 释放；所有历史操作与正在进行的导入、草稿写入互斥。没有引入新的工程 JSON 字段。
+- 版本载入沿用既有确认 → `DraftAutoSaveSession.stop()` 等待事务 → `DocumentEditor.loadDocument` 的顺序；取消不停止原自动保存；确认不自动向草稿数据库写回历史内容。
+- `test:versions:safety` 通过独立浏览器 profile 读取真实草稿 object store，验证内容和修订号，模拟版本历史库不可访问后确认错误反馈、已保存记录保持可用；额外测试异步 JSON 读取过程中历史载入拒绝插入。Core 新增两个确定性异步停写测试。

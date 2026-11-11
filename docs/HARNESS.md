@@ -822,3 +822,22 @@ Write-Host "退出码：$LASTEXITCODE"
 此前主分支单测 293 项，本批新增 4 项，预计 **297 项**，以 Vitest 日志为准。新 `test:versions` 在单独隔离 Chrome/Edge 配置中，分别对 React 和 Vue 创建本地历史版本 #1、添加图元并比较内容、取消载入检查未覆盖、确认载入检查工程完整恢复、创建版本 #2 验证倒序历史，不会使用用户浏览器实际的 IndexedDB。
 
 额外人工验收：自动保存开启后载入历史必须先确认并暂停自动保存；手动保存草稿必须仍由用户触发；关闭/重新打开 Studio 后当前 Origin 历史应保留；另一 Origin 不应自动出现本地记录；WebCrypto 不可用和 IndexedDB 禁用时应显示中文错误、保留画面。浏览器测试不替代工业安全与 Tauri WebView2 现场验收。**新增命令及更新后的 `ready` 尚待维护者实际执行。**
+
+## V0.3 第五批：历史恢复可靠性自动化验收（ADR-0038）
+
+本批只修补双端异步 JSON 导入互斥并新增 Core/浏览器测试。维护者在新分支执行：
+
+```powershell
+pnpm run ready
+Write-Host "完整检查退出码：$LASTEXITCODE"
+# 两个终端分别保持 pnpm run dev:react 与 pnpm run dev:vue
+pnpm run test:browser
+pnpm run test:interop
+pnpm run test:versions
+pnpm run test:versions:safety
+Write-Host "浏览器验收退出码：$LASTEXITCODE"
+```
+
+此前 297 项单测，本批增加 2 项，预计为 **299 项**（以 Vitest 输出为准）。`test:versions:safety` 使用临时 Chrome/Edge profile，分别检查两端自动保存已持久化后取消/确认历史恢复、确认后的草稿不被覆盖、跨页面重载历史存在、不同 Origin 历史隔离、历史库访问故障保留画面及故障后继续追加，并测试异步 JSON 导入与历史载入互斥。测试绝不操作真实浏览器用户配置。此命令独立于 `ready`，避免机器缺少 Chrome/Edge 或两套开发服务时影响常规质量入口。
+
+**新命令和更新后的完整检查尚需维护者 Windows 实测。** 浏览器存储配额、Tauri WebView2、现场工业网络不在本批验证范围。
