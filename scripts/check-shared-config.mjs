@@ -199,9 +199,21 @@ assert.match(viewportCss, /--studio-right-width:\s*320px/, "右侧栏必须固�
 for (const framework of ["react", "vue"]) {
   const studioPath = `apps/web-${framework}/src/studio/StudioPage.${framework === "react" ? "tsx" : "vue"}`;
   const studioSource = text(studioPath);
-  assert.match(studioSource, /studioViewBox\(page\.size, zoom, pan\)/, `${studioPath} 必须使用共享 SVG 视区计算`);
-  assert.match(studioSource, /preserveAspectRatio="xMidYMid meet"/, `${studioPath} 不得拉伸原页面图元`);
-  assert.doesNotMatch(studioSource, /width:\s*`\$\{zoom\s*\*\s*100\}%`/, `${studioPath} 不得使用 DOM 宽度实现缩放`);
+  assert.match(
+    studioSource,
+    /studioViewBox\(page\.size, zoom, pan\)/,
+    `${studioPath} 必须使用共享 SVG 视区计算`,
+  );
+  assert.match(
+    studioSource,
+    /preserveAspectRatio="xMidYMid meet"/,
+    `${studioPath} 不得拉伸原页面图元`,
+  );
+  assert.doesNotMatch(
+    studioSource,
+    /width:\s*`\$\{zoom\s*\*\s*100\}%`/,
+    `${studioPath} 不得使用 DOM 宽度实现缩放`,
+  );
   assert.ok(studioSource.includes("studio-view-menu"), `${studioPath} 缺少合并后的视图设置入口`);
   assert.ok(studioSource.includes("resetCanvasView"), `${studioPath} 缺少适应视图功能`);
   assert.ok(studioSource.includes("beginCanvasPan"), `${studioPath} 缺少画布平移入口`);

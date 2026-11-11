@@ -1190,14 +1190,13 @@ export default function StudioPage() {
             <button type="button" onClick={saveDraft}>
               保存草稿
             </button>
-            
           </div>
           <details className="studio-file-menu">
             <summary>文件与草稿</summary>
             <div className="studio-file-popover">
               <button type="button" onClick={toggleAutoSave} aria-pressed={autoSaveEnabled}>
-              {autoSaveEnabled ? "暂停自动保存" : "开启自动保存"}
-            </button>
+                {autoSaveEnabled ? "暂停自动保存" : "开启自动保存"}
+              </button>
               <label className="studio-import">
                 导入 JSON
                 <input

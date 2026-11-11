@@ -741,9 +741,9 @@ function beginCanvasPan(event: PointerEvent): boolean {
   if (
     zoom.value <= 1 ||
     !(
-        event.button === 1 ||
-        (event.button === 0 && event.altKey && event.target === event.currentTarget)
-      )
+      event.button === 1 ||
+      (event.button === 0 && event.altKey && event.target === event.currentTarget)
+    )
   ) {
     return false;
   }
@@ -1161,14 +1161,13 @@ async function importJson(event: Event) {
         </div>
         <div class="studio-save-actions">
           <button type="button" @click="saveDraft">保存草稿</button>
-          
         </div>
         <details class="studio-file-menu">
           <summary>文件与草稿</summary>
           <div class="studio-file-popover">
-              <button type="button" :aria-pressed="autoSaveEnabled" @click="toggleAutoSave">
-            {{ autoSaveEnabled ? "暂停自动保存" : "开启自动保存" }}
-          </button>
+            <button type="button" :aria-pressed="autoSaveEnabled" @click="toggleAutoSave">
+              {{ autoSaveEnabled ? "暂停自动保存" : "开启自动保存" }}
+            </button>
             <label class="studio-import">
               导入 JSON
               <input type="file" accept=".json,application/json" @change="importJson" />
