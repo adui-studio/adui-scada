@@ -1416,49 +1416,51 @@ async function importJson(event: Event) {
             >{{ page.name }} · {{ page.size.width }} × {{ page.size.height }} · 静态模拟预览</span
           >
           <details class="studio-view-menu">
-              <summary aria-label="视图设置">视图设置</summary>
-              <div class="studio-view-popover">
-                <div class="studio-view-section">
-                  <p>网格与吸附</p>
-                  <div class="studio-canvas-settings">
-            <label class="studio-canvas-option">
-              <input v-model="gridVisible" type="checkbox" />
-              显示网格
-            </label>
-            <label class="studio-canvas-option">
-              <input v-model="gridSnap" type="checkbox" />
-              网格吸附
-            </label>
-            <label class="studio-canvas-option">
-              <input v-model="nodeSnap" type="checkbox" />
-              图元吸附
-            </label>
-          </div>
-                </div>
-                <div class="studio-view-section">
-                  <p>侧栏显示</p>
-                  <div class="studio-panel-toggles" aria-label="面板显示">
-            <button
-              type="button"
-              :aria-pressed="leftPanelVisible"
-              @click="leftPanelVisible = !leftPanelVisible"
-            >
-              {{ leftPanelVisible ? "隐藏图层" : "显示图层" }}
-            </button>
-            <button
-              type="button"
-              :aria-pressed="rightPanelVisible"
-              @click="rightPanelVisible = !rightPanelVisible"
-            >
-              {{ rightPanelVisible ? "隐藏属性" : "显示属性" }}
-            </button>
-          </div>
+            <summary aria-label="视图设置">视图设置</summary>
+            <div class="studio-view-popover">
+              <div class="studio-view-section">
+                <p>网格与吸附</p>
+                <div class="studio-canvas-settings">
+                    <label class="studio-canvas-option">
+                      <input v-model="gridVisible" type="checkbox" />
+                      显示网格
+                    </label>
+                    <label class="studio-canvas-option">
+                      <input v-model="gridSnap" type="checkbox" />
+                      网格吸附
+                    </label>
+                    <label class="studio-canvas-option">
+                      <input v-model="nodeSnap" type="checkbox" />
+                      图元吸附
+                    </label>
                 </div>
               </div>
-            </details>
+              <div class="studio-view-section">
+                <p>侧栏显示</p>
+                <div class="studio-panel-toggles" aria-label="面板显示">
+                    <button
+                      type="button"
+                      :aria-pressed="leftPanelVisible"
+                      @click="leftPanelVisible = !leftPanelVisible"
+                    >
+                      {{ leftPanelVisible ? "隐藏图层" : "显示图层" }}
+                    </button>
+                    <button
+                      type="button"
+                      :aria-pressed="rightPanelVisible"
+                      @click="rightPanelVisible = !rightPanelVisible"
+                    >
+                      {{ rightPanelVisible ? "隐藏属性" : "显示属性" }}
+                    </button>
+                </div>
+              </div>
+            </div>
+          </details>
           <div class="studio-zoom" aria-label="画布缩放">
             <button type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</button>
-            <button type="button" @click="resetCanvasView">{{ zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%` }}</button>
+            <button type="button" @click="resetCanvasView">
+              {{ zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%` }}
+            </button>
             <button type="button" :disabled="zoom >= 2" @click="changeZoom(0.25)">+</button>
           </div>
         </div>

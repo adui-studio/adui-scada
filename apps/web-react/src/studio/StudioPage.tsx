@@ -1406,50 +1406,50 @@ export default function StudioPage() {
                 <div className="studio-view-section">
                   <p>网格与吸附</p>
                   <div className="studio-canvas-settings">
-              <label className="studio-canvas-option">
-                <input
-                  type="checkbox"
-                  checked={gridVisible}
-                  onChange={(event) => setGridVisible(event.target.checked)}
-                />
-                显示网格
-              </label>
-              <label className="studio-canvas-option">
-                <input
-                  type="checkbox"
-                  checked={gridSnap}
-                  onChange={(event) => setGridSnap(event.target.checked)}
-                />
-                网格吸附
-              </label>
-              <label className="studio-canvas-option">
-                <input
-                  type="checkbox"
-                  checked={nodeSnap}
-                  onChange={(event) => setNodeSnap(event.target.checked)}
-                />
-                图元吸附
-              </label>
-            </div>
+                      <label className="studio-canvas-option">
+                        <input
+                          type="checkbox"
+                          checked={gridVisible}
+                          onChange={(event) => setGridVisible(event.target.checked)}
+                        />
+                        显示网格
+                      </label>
+                      <label className="studio-canvas-option">
+                        <input
+                          type="checkbox"
+                          checked={gridSnap}
+                          onChange={(event) => setGridSnap(event.target.checked)}
+                        />
+                        网格吸附
+                      </label>
+                      <label className="studio-canvas-option">
+                        <input
+                          type="checkbox"
+                          checked={nodeSnap}
+                          onChange={(event) => setNodeSnap(event.target.checked)}
+                        />
+                        图元吸附
+                      </label>
+                  </div>
                 </div>
                 <div className="studio-view-section">
                   <p>侧栏显示</p>
                   <div className="studio-panel-toggles" aria-label="面板显示">
-              <button
-                type="button"
-                aria-pressed={leftPanelVisible}
-                onClick={() => setLeftPanelVisible((value) => !value)}
-              >
-                {leftPanelVisible ? "隐藏图层" : "显示图层"}
-              </button>
-              <button
-                type="button"
-                aria-pressed={rightPanelVisible}
-                onClick={() => setRightPanelVisible((value) => !value)}
-              >
-                {rightPanelVisible ? "隐藏属性" : "显示属性"}
-              </button>
-            </div>
+                      <button
+                        type="button"
+                        aria-pressed={leftPanelVisible}
+                        onClick={() => setLeftPanelVisible((value) => !value)}
+                      >
+                        {leftPanelVisible ? "隐藏图层" : "显示图层"}
+                      </button>
+                      <button
+                        type="button"
+                        aria-pressed={rightPanelVisible}
+                        onClick={() => setRightPanelVisible((value) => !value)}
+                      >
+                        {rightPanelVisible ? "隐藏属性" : "显示属性"}
+                      </button>
+                  </div>
                 </div>
               </div>
             </details>

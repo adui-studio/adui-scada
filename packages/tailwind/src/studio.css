@@ -517,9 +517,6 @@
   background: var(--scada-canvas);
   touch-action: none;
 }
-.studio-canvas-board > .studio-svg[data-panning="true"] {
-  cursor: grabbing;
-}
 
 .studio-panel-properties {
   padding: 0 14px 16px;
