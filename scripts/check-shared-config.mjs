@@ -157,10 +157,10 @@ for (const [selector, column] of [
   [".studio-stage", 2],
   [".studio-panel-properties", 3],
 ]) {
-  const opening = sharedStudio.indexOf(`${selector} {`);
+  const opening = sharedStudio.indexOf(`\n${selector} {`);
   assert.ok(opening >= 0, `共享工作台缺少区域：${selector}`);
   const closing = sharedStudio.indexOf("}", opening);
-  const rule = sharedStudio.slice(opening, closing);
+  const rule = sharedStudio.slice(opening + 1, closing);
   assert.match(
     rule,
     new RegExp(`grid-column:\\s*${column};`),
