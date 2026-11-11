@@ -1238,6 +1238,7 @@ async function importJson(event: Event) {
                   </span>
                   <small>
                     {{ entry.totalCount }} 个成员
+                    {{ entry.members.length !== entry.totalCount ? ` · 匹配 ${entry.members.length}` : "" }}
                     {{ entry.fragmented ? " · 层序不连续" : "" }}
                     {{ entry.hasLockedMember ? " · 有锁定成员" : "" }}
                     {{ entry.hiddenCount > 0 ? ` · 隐藏 ${entry.hiddenCount}` : "" }}
