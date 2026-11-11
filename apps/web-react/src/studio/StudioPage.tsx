@@ -112,6 +112,8 @@ export default function StudioPage() {
   const [gridVisible, setGridVisible] = useState(true);
   const [gridSnap, setGridSnap] = useState(true);
   const [nodeSnap, setNodeSnap] = useState(true);
+  const [leftPanelVisible, setLeftPanelVisible] = useState(true);
+  const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const marqueeRef = useRef<MarqueeState | null>(null);
@@ -1087,66 +1089,72 @@ export default function StudioPage() {
   }
 
   return (
-    <main className="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3 overflow-hidden px-3 py-3 lg:px-5">
-      <header className="studio-toolbar flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-scada-border pb-3">
+    <main className="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
+      <header className="studio-toolbar">
         <div>
           <p className="scada-eyebrow">ADui SCADA · V0.2 Studio</p>
           <h1>SVG 组态编辑器</h1>
         </div>
         <div className="studio-actions">
-          <button
-            type="button"
-            onClick={() => {
-              editor.undo();
-              refresh();
-            }}
-            disabled={!state.canUndo}
-          >
-            撤销
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              editor.redo();
-              refresh();
-            }}
-            disabled={!state.canRedo}
-          >
-            重做
-          </button>
-          <label className="studio-import">
-            导入 JSON
-            <input
-              type="file"
-              accept=".json,application/json"
-              onChange={(event) => {
-                void importJson(event);
-              }}
-            />
-          </label>
-          <button type="button" onClick={exportJson}>
-            导出 JSON
-          </button>
-          <button type="button" onClick={saveDraft}>
-            保存草稿
-          </button>
-          <button type="button" onClick={toggleAutoSave} aria-pressed={autoSaveEnabled}>
-            {autoSaveEnabled ? "暂停自动保存" : "开启自动保存"}
-          </button>
-          <button type="button" onClick={restoreDraft} disabled={!hasSavedDraft}>
-            恢复草稿
-          </button>
-          <button type="button" onClick={clearDraft} disabled={!hasSavedDraft}>
-            清除草稿
-          </button>
-        </div>
+  <div className="studio-history-actions">
+    <button
+    type="button"
+    onClick={() => {
+    editor.undo();
+    refresh();
+    }}
+    disabled={!state.canUndo}
+    >
+    撤销
+    </button>
+    <button
+    type="button"
+    onClick={() => {
+    editor.redo();
+    refresh();
+    }}
+    disabled={!state.canRedo}
+    >
+    重做
+    </button>
+  </div>
+  <div className="studio-save-actions">
+    <button type="button" onClick={saveDraft}>
+    保存草稿
+    </button>
+    <button type="button" onClick={toggleAutoSave} aria-pressed={autoSaveEnabled}>
+    {autoSaveEnabled ? "暂停自动保存" : "开启自动保存"}
+    </button>
+  </div>
+  <details className="studio-file-menu">
+    <summary>文件与草稿</summary>
+    <div className="studio-file-popover">
+      <label className="studio-import">
+      导入 JSON
+      <input
+      type="file"
+      accept=".json,application/json"
+      onChange={(event) => {
+      void importJson(event);
+      }}
+      />
+      </label>
+      <button type="button" onClick={exportJson}>
+      导出 JSON
+      </button>
+      <button type="button" onClick={restoreDraft} disabled={!hasSavedDraft}>
+      恢复草稿
+      </button>
+      <button type="button" onClick={clearDraft} disabled={!hasSavedDraft}>
+      清除草稿
+      </button>
+    </div>
+  </details>
+</div>
       </header>
-      <p role="status" className="studio-notice">
-        {notice}
-        {hasSavedDraft && !autoSaveEnabled ? " · 已发现本地草稿，可点击「恢复草稿」确认加载" : ""}
-      </p>
+      
       <div
-        className="studio-page-bar flex shrink-0 flex-wrap items-center justify-between gap-2"
+        className="studio-page-bar"
         aria-label="工程页面管理"
       >
         <div className="studio-page-tabs" aria-label="工程页面">
@@ -1161,7 +1169,9 @@ export default function StudioPage() {
             </button>
           ))}
         </div>
-        <div className="studio-page-actions">
+        <details className="studio-page-menu">
+  <summary>页面管理</summary>
+  <div className="studio-page-actions">
           <button type="button" onClick={createPage} disabled={state.document.pages.length >= 100}>
             + 新建页面
           </button>
@@ -1193,15 +1203,19 @@ export default function StudioPage() {
             删除当前页
           </button>
         </div>
+</details>
       </div>
-      <div className="studio-workspace grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-3 lg:grid-cols-[clamp(200px,17vw,260px)_minmax(0,1fr)_clamp(260px,21vw,320px)] lg:grid-rows-1">
+      <div className="studio-workspace"
+ data-left-collapsed={!leftPanelVisible}
+ data-right-collapsed={!rightPanelVisible}>
         <aside
-          className="studio-panel min-h-0 min-w-0 overflow-y-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3"
+          className="studio-panel studio-panel-layers min-h-0 min-w-0"
           aria-label="图元列表"
         >
-          <h2>图元 · {page.nodes.length}</h2>
-          <p className="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
-          <div className="studio-add">
+          <div className="studio-pane-heading"><h2>资源与图层</h2><span className="studio-count">{page.nodes.length}</span></div>
+          
+          <div className="studio-library-label">图元库 · 点击添加</div>
+<div className="studio-add">
             <button type="button" onClick={() => addSymbol("tank")}>
               + 水箱
             </button>
@@ -1215,32 +1229,9 @@ export default function StudioPage() {
               + 文本
             </button>
           </div>
-          <div className="studio-copy-tools">
-            <label className="studio-field">
-              复制选中图元到
-              <select
-                aria-label="跨页面复制目标"
-                value={copyTargetPageId}
-                onChange={(event) => setPreferredCopyTargetPageId(event.target.value)}
-                disabled={copyTargetPages.length === 0}
-              >
-                {copyTargetPages.length === 0 && <option value="">暂无其他页面</option>}
-                {copyTargetPages.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              onClick={copySelectedToPage}
-              disabled={state.selectedIds.length === 0 || !copyTargetPageId}
-            >
-              复制选中图元
-            </button>
-          </div>
-          <div className="studio-tree-controls">
+          
+          <div className="studio-tree-section-title">图层列表</div>
+<div className="studio-tree-controls">
             <label className="studio-field">
               搜索图元或组合
               <Input
@@ -1311,9 +1302,38 @@ export default function StudioPage() {
               ),
             )}
           </div>
-        </aside>
+        <details className="studio-side-more">
+  <summary>跨页操作与使用帮助</summary>
+  <div className="studio-copy-tools">
+  <label className="studio-field">
+  复制选中图元到
+  <select
+  aria-label="跨页面复制目标"
+  value={copyTargetPageId}
+  onChange={(event) => setPreferredCopyTargetPageId(event.target.value)}
+  disabled={copyTargetPages.length === 0}
+  >
+  {copyTargetPages.length === 0 && <option value="">暂无其他页面</option>}
+  {copyTargetPages.map((item) => (
+  <option key={item.id} value={item.id}>
+  {item.name}
+  </option>
+  ))}
+  </select>
+  </label>
+  <button
+  type="button"
+  onClick={copySelectedToPage}
+  disabled={state.selectedIds.length === 0 || !copyTargetPageId}
+  >
+  复制选中图元
+  </button>
+  </div>
+  <p className="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
+</details>
+</aside>
         <section
-          className="studio-stage min-h-0 min-w-0 overflow-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3"
+          className="studio-stage min-h-0 min-w-0"
           aria-label="组态画布"
         >
           <div className="studio-stage-caption">
@@ -1346,7 +1366,15 @@ export default function StudioPage() {
                 图元吸附
               </label>
             </div>
-            <div className="studio-zoom" aria-label="画布缩放">
+            <div className="studio-panel-toggles" aria-label="面板显示">
+  <button type="button" aria-pressed={leftPanelVisible} onClick={() => setLeftPanelVisible((value) => !value)}>
+    {leftPanelVisible ? "隐藏图层" : "显示图层"}
+  </button>
+  <button type="button" aria-pressed={rightPanelVisible} onClick={() => setRightPanelVisible((value) => !value)}>
+    {rightPanelVisible ? "隐藏属性" : "显示属性"}
+  </button>
+</div>
+<div className="studio-zoom" aria-label="画布缩放">
               <button type="button" onClick={() => changeZoom(-0.25)} disabled={zoom <= 0.5}>
                 −
               </button>
@@ -1358,7 +1386,9 @@ export default function StudioPage() {
               </button>
             </div>
           </div>
-          <svg
+          <div className="studio-canvas-scroll" tabIndex={0} aria-label="画布滚动区域">
+  <div className="studio-canvas-board">
+    <svg
             ref={svgRef}
             className="studio-svg"
             data-rotating={rotating ? "true" : undefined}
@@ -1525,167 +1555,15 @@ export default function StudioPage() {
               />
             )}
           </svg>
+  </div>
+</div>
         </section>
         <aside
-          className="studio-panel min-h-0 min-w-0 overflow-y-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3"
+          className="studio-panel studio-panel-properties min-h-0 min-w-0"
           aria-label="图元属性"
         >
           <h2>属性 · 已选 {state.selectedIds.length}</h2>
-          <div className="studio-toolbox">
-            <div className="studio-tool-group" aria-label="图层锁定与可见性">
-              <Button
-                type="button"
-                disabled={state.selectedIds.length === 0}
-                onClick={() => changeSelectedLocked(true)}
-              >
-                锁定所选
-              </Button>
-              <Button
-                type="button"
-                disabled={state.selectedIds.length === 0}
-                onClick={() => changeSelectedLocked(false)}
-              >
-                解锁所选
-              </Button>
-              <Button
-                type="button"
-                disabled={state.selectedIds.length === 0 || hasLockedSelection}
-                onClick={() => changeSelectedVisible(false)}
-              >
-                隐藏所选
-              </Button>
-              <Button
-                type="button"
-                disabled={state.selectedIds.length === 0 || hasLockedSelection}
-                onClick={() => changeSelectedVisible(true)}
-              >
-                显示所选
-              </Button>
-            </div>
-            <div className="studio-tool-group" aria-label="图元组合">
-              <Button
-                type="button"
-                disabled={!canGroup}
-                onClick={() => apply(() => editor.groupSelected(), "已组合所选图元，可撤销")}
-              >
-                组合所选
-              </Button>
-              <Button
-                type="button"
-                disabled={!hasGroupedSelection}
-                onClick={() => apply(() => editor.ungroupSelected(), "已解组，可撤销")}
-              >
-                解组
-              </Button>
-            </div>
-            <div className="studio-tool-group" aria-label="图元剪贴板">
-              <Button
-                type="button"
-                disabled={state.selectedIds.length === 0}
-                onClick={() => apply(() => editor.copySelected(), "已复制所选图元到会话剪贴板")}
-              >
-                复制所选
-              </Button>
-              <Button
-                type="button"
-                disabled={state.selectedIds.length === 0}
-                onClick={() => apply(() => editor.cutSelected(), "已剪切图元，可撤销")}
-              >
-                剪切所选
-              </Button>
-              <Button
-                type="button"
-                disabled={!state.hasClipboard}
-                onClick={() => apply(() => editor.pasteClipboard(), "已粘贴图元，可撤销")}
-              >
-                粘贴图元
-              </Button>
-              <Button
-                type="button"
-                onClick={() => apply(() => editor.deleteSelected(), "已删除图元，可撤销")}
-                disabled={state.selectedIds.length === 0}
-              >
-                删除所选
-              </Button>
-            </div>
-            <div className="studio-exact-layer" aria-label="图层精确插入">
-              <label className="studio-field">
-                目标图元
-                <select
-                  aria-label="图层插入目标"
-                  value={layerTargetId}
-                  disabled={!canPreciselyMove || layerTargetNodes.length === 0}
-                  onChange={(event) => setPreferredLayerTargetId(event.target.value)}
-                >
-                  <option value="">请选择目标图元</option>
-                  {layerTargetNodes.map((node) => (
-                    <option key={node.id} value={node.id}>
-                      {node.id}
-                      {node.groupId ? "（组合）" : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="studio-field">
-                插入位置
-                <select
-                  aria-label="图层插入位置"
-                  value={layerInsertPosition}
-                  onChange={(event) =>
-                    setLayerInsertPosition(event.target.value as "before" | "after")
-                  }
-                >
-                  <option value="after">目标上方（更靠前）</option>
-                  <option value="before">目标下方（更靠后）</option>
-                </select>
-              </label>
-              <Button
-                type="button"
-                disabled={!canPreciselyMove || !layerTargetId || !selected}
-                onClick={() =>
-                  selected && moveLayerPrecisely(selected.id, layerTargetId, layerInsertPosition)
-                }
-              >
-                移动到指定层
-              </Button>
-            </div>
-            <div className="studio-tool-group" aria-label="图层排序">
-              <Button type="button" onClick={() => layer("back")} disabled={!selected}>
-                置底
-              </Button>
-              <Button type="button" onClick={() => layer("backward")} disabled={!selected}>
-                下移层
-              </Button>
-              <Button type="button" onClick={() => layer("forward")} disabled={!selected}>
-                上移层
-              </Button>
-              <Button type="button" onClick={() => layer("front")} disabled={!selected}>
-                置顶
-              </Button>
-            </div>
-            <h3>多选对齐（以最后选中的图元为准）</h3>
-            <div className="studio-tool-group" aria-label="图元对齐">
-              {(
-                [
-                  ["left", "左"],
-                  ["hcenter", "水平居中"],
-                  ["right", "右"],
-                  ["top", "上"],
-                  ["vcenter", "垂直居中"],
-                  ["bottom", "下"],
-                ] as const
-              ).map(([mode, label]) => (
-                <Button
-                  type="button"
-                  key={mode}
-                  onClick={() => align(mode)}
-                  disabled={state.selectedIds.length < 2 || hasGroupedSelection}
-                >
-                  {label}
-                </Button>
-              ))}
-            </div>
-          </div>
+          
           {selected ? (
             <>
               <p>
@@ -1782,13 +1660,182 @@ export default function StudioPage() {
           ) : (
             <p className="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
           )}
-        </aside>
+        <details className="studio-advanced">
+  <summary>高级图元与图层操作</summary>
+  <div className="studio-advanced-content">
+    <div className="studio-toolbox">
+    <div className="studio-tool-group" aria-label="图层锁定与可见性">
+    <Button
+    type="button"
+    disabled={state.selectedIds.length === 0}
+    onClick={() => changeSelectedLocked(true)}
+    >
+    锁定所选
+    </Button>
+    <Button
+    type="button"
+    disabled={state.selectedIds.length === 0}
+    onClick={() => changeSelectedLocked(false)}
+    >
+    解锁所选
+    </Button>
+    <Button
+    type="button"
+    disabled={state.selectedIds.length === 0 || hasLockedSelection}
+    onClick={() => changeSelectedVisible(false)}
+    >
+    隐藏所选
+    </Button>
+    <Button
+    type="button"
+    disabled={state.selectedIds.length === 0 || hasLockedSelection}
+    onClick={() => changeSelectedVisible(true)}
+    >
+    显示所选
+    </Button>
+    </div>
+    <div className="studio-tool-group" aria-label="图元组合">
+    <Button
+    type="button"
+    disabled={!canGroup}
+    onClick={() => apply(() => editor.groupSelected(), "已组合所选图元，可撤销")}
+    >
+    组合所选
+    </Button>
+    <Button
+    type="button"
+    disabled={!hasGroupedSelection}
+    onClick={() => apply(() => editor.ungroupSelected(), "已解组，可撤销")}
+    >
+    解组
+    </Button>
+    </div>
+    <div className="studio-tool-group" aria-label="图元剪贴板">
+    <Button
+    type="button"
+    disabled={state.selectedIds.length === 0}
+    onClick={() => apply(() => editor.copySelected(), "已复制所选图元到会话剪贴板")}
+    >
+    复制所选
+    </Button>
+    <Button
+    type="button"
+    disabled={state.selectedIds.length === 0}
+    onClick={() => apply(() => editor.cutSelected(), "已剪切图元，可撤销")}
+    >
+    剪切所选
+    </Button>
+    <Button
+    type="button"
+    disabled={!state.hasClipboard}
+    onClick={() => apply(() => editor.pasteClipboard(), "已粘贴图元，可撤销")}
+    >
+    粘贴图元
+    </Button>
+    <Button
+    type="button"
+    onClick={() => apply(() => editor.deleteSelected(), "已删除图元，可撤销")}
+    disabled={state.selectedIds.length === 0}
+    >
+    删除所选
+    </Button>
+    </div>
+    <div className="studio-exact-layer" aria-label="图层精确插入">
+    <label className="studio-field">
+    目标图元
+    <select
+    aria-label="图层插入目标"
+    value={layerTargetId}
+    disabled={!canPreciselyMove || layerTargetNodes.length === 0}
+    onChange={(event) => setPreferredLayerTargetId(event.target.value)}
+    >
+    <option value="">请选择目标图元</option>
+    {layerTargetNodes.map((node) => (
+    <option key={node.id} value={node.id}>
+    {node.id}
+    {node.groupId ? "（组合）" : ""}
+    </option>
+    ))}
+    </select>
+    </label>
+    <label className="studio-field">
+    插入位置
+    <select
+    aria-label="图层插入位置"
+    value={layerInsertPosition}
+    onChange={(event) =>
+    setLayerInsertPosition(event.target.value as "before" | "after")
+    }
+    >
+    <option value="after">目标上方（更靠前）</option>
+    <option value="before">目标下方（更靠后）</option>
+    </select>
+    </label>
+    <Button
+    type="button"
+    disabled={!canPreciselyMove || !layerTargetId || !selected}
+    onClick={() =>
+    selected && moveLayerPrecisely(selected.id, layerTargetId, layerInsertPosition)
+    }
+    >
+    移动到指定层
+    </Button>
+    </div>
+    <div className="studio-tool-group" aria-label="图层排序">
+    <Button type="button" onClick={() => layer("back")} disabled={!selected}>
+    置底
+    </Button>
+    <Button type="button" onClick={() => layer("backward")} disabled={!selected}>
+    下移层
+    </Button>
+    <Button type="button" onClick={() => layer("forward")} disabled={!selected}>
+    上移层
+    </Button>
+    <Button type="button" onClick={() => layer("front")} disabled={!selected}>
+    置顶
+    </Button>
+    </div>
+    <h3>多选对齐（以最后选中的图元为准）</h3>
+    <div className="studio-tool-group" aria-label="图元对齐">
+    {(
+    [
+    ["left", "左"],
+    ["hcenter", "水平居中"],
+    ["right", "右"],
+    ["top", "上"],
+    ["vcenter", "垂直居中"],
+    ["bottom", "下"],
+    ] as const
+    ).map(([mode, label]) => (
+    <Button
+    type="button"
+    key={mode}
+    onClick={() => align(mode)}
+    disabled={state.selectedIds.length < 2 || hasGroupedSelection}
+    >
+    {label}
+    </Button>
+    ))}
+    </div>
+    </div>
+  </div>
+</details>
+</aside>
       </div>
-      <footer className="shrink-0 truncate text-xs text-scada-muted" title="V0.2 组态快捷键说明">
-        V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z
-        撤销，Ctrl+Shift+Z/Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 ·
-        无设备写入
-      </footer>
+      <footer className="studio-statusbar">
+  <div className="studio-status-message">
+    <span className="studio-status-led" aria-hidden="true" />
+    <p role="status" className="studio-notice">
+        {notice}
+        {hasSavedDraft && !autoSaveEnabled ? " · 已发现本地草稿，可点击「恢复草稿」确认加载" : ""}
+      </p>
+  </div>
+  <div className="studio-status-meta">
+    <span>仅模拟数据 · 无设备写入</span>
+    <span>{page.nodes.length} 个图元 · 已选 {state.selectedIds.length}</span>
+    <span title="Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z 撤销，Ctrl+Shift+Z / Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择">快捷键 ⓘ</span>
+  </div>
+</footer>
     </main>
   );
 }
