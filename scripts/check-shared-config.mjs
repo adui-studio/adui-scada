@@ -75,10 +75,15 @@ assert.equal(tailwindPackage.name, "@adui/tailwind");
 assert.equal(tailwindPackage.exports?.["./styles.css"], "./src/styles.css");
 assert.equal(tailwindPackage.exports?.["./vite"], "./src/vite.ts");
 assert.equal(tailwindPackage.exports?.["./studio.css"], "./src/studio.css");
-assert.ok(text("packages/tailwind/src/studio.css").includes("studio-workspace"), "缺少共享工作台布局样式");
+assert.ok(
+  text("packages/tailwind/src/studio.css").includes("studio-workspace"),
+  "缺少共享工作台布局样式",
+);
 for (const name of ["react", "vue"]) {
   assert.ok(
-    text(`apps/web-${name}/src/studio/StudioPage.${name === "react" ? "tsx" : "vue"}`).includes('import "@adui/tailwind/studio.css";'),
+    text(`apps/web-${name}/src/studio/StudioPage.${name === "react" ? "tsx" : "vue"}`).includes(
+      'import "@adui/tailwind/studio.css";',
+    ),
     `web-${name} 必须引用共享 Studio 工作台布局样式`,
   );
 }
@@ -161,11 +166,11 @@ for (const framework of ["react", "vue"]) {
     assert.ok(editorSource.includes(role), `${editorPath} 缺少布局区域：${role}`);
   }
   assert.ok(
-    editorSource.indexOf('studio-geometry') < editorSource.indexOf('studio-advanced'),
+    editorSource.indexOf("studio-geometry") < editorSource.indexOf("studio-advanced"),
     `${editorPath} 几何属性应优先于高级操作显示`,
   );
   assert.ok(
-    editorSource.includes('data-left-collapsed') && editorSource.includes('data-right-collapsed'),
+    editorSource.includes("data-left-collapsed") && editorSource.includes("data-right-collapsed"),
     `${editorPath} 缺少左右面板显隐控制`,
   );
 }

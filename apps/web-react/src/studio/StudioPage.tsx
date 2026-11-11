@@ -1153,10 +1153,7 @@ export default function StudioPage() {
           </details>
         </div>
       </header>
-      <div
-        className="studio-page-bar"
-        aria-label="工程页面管理"
-      >
+      <div className="studio-page-bar" aria-label="工程页面管理">
         <div className="studio-page-tabs" aria-label="工程页面">
           {state.document.pages.map((item) => (
             <button
@@ -1172,7 +1169,11 @@ export default function StudioPage() {
         <details className="studio-page-menu">
           <summary>页面管理</summary>
           <div className="studio-page-actions">
-            <button type="button" onClick={createPage} disabled={state.document.pages.length >= 100}>
+            <button
+              type="button"
+              onClick={createPage}
+              disabled={state.document.pages.length >= 100}
+            >
               + 新建页面
             </button>
             <button
@@ -1210,10 +1211,7 @@ export default function StudioPage() {
         data-left-collapsed={!leftPanelVisible}
         data-right-collapsed={!rightPanelVisible}
       >
-        <aside
-          className="studio-panel studio-panel-layers min-h-0 min-w-0"
-          aria-label="图元列表"
-        >
+        <aside className="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
           <div className="studio-pane-heading">
             <h2>资源与图层</h2>
             <span className="studio-count">{page.nodes.length}</span>
@@ -1335,10 +1333,7 @@ export default function StudioPage() {
             <p className="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
           </details>
         </aside>
-        <section
-          className="studio-stage min-h-0 min-w-0"
-          aria-label="组态画布"
-        >
+        <section className="studio-stage min-h-0 min-w-0" aria-label="组态画布">
           <div className="studio-stage-caption">
             <span>
               {page.name} · {page.size.width} × {page.size.height} · 静态模拟预览
@@ -1370,14 +1365,22 @@ export default function StudioPage() {
               </label>
             </div>
             <div className="studio-panel-toggles" aria-label="面板显示">
-  <button type="button" aria-pressed={leftPanelVisible} onClick={() => setLeftPanelVisible((value) => !value)}>
-    {leftPanelVisible ? "隐藏图层" : "显示图层"}
-  </button>
-  <button type="button" aria-pressed={rightPanelVisible} onClick={() => setRightPanelVisible((value) => !value)}>
-    {rightPanelVisible ? "隐藏属性" : "显示属性"}
-  </button>
-</div>
-<div className="studio-zoom" aria-label="画布缩放">
+              <button
+                type="button"
+                aria-pressed={leftPanelVisible}
+                onClick={() => setLeftPanelVisible((value) => !value)}
+              >
+                {leftPanelVisible ? "隐藏图层" : "显示图层"}
+              </button>
+              <button
+                type="button"
+                aria-pressed={rightPanelVisible}
+                onClick={() => setRightPanelVisible((value) => !value)}
+              >
+                {rightPanelVisible ? "隐藏属性" : "显示属性"}
+              </button>
+            </div>
+            <div className="studio-zoom" aria-label="画布缩放">
               <button type="button" onClick={() => changeZoom(-0.25)} disabled={zoom <= 0.5}>
                 −
               </button>
@@ -1458,7 +1461,9 @@ export default function StudioPage() {
                         role="button"
                         tabIndex={0}
                         aria-label={
-                          studioNodeLocked(node) ? `选择已锁定图元 ${node.id}` : `选择并拖动 ${node.id}`
+                          studioNodeLocked(node)
+                            ? `选择已锁定图元 ${node.id}`
+                            : `选择并拖动 ${node.id}`
                         }
                         data-locked={studioNodeLocked(node)}
                         x={t.x}
@@ -1777,7 +1782,8 @@ export default function StudioPage() {
                     type="button"
                     disabled={!canPreciselyMove || !layerTargetId || !selected}
                     onClick={() =>
-                      selected && moveLayerPrecisely(selected.id, layerTargetId, layerInsertPosition)
+                      selected &&
+                      moveLayerPrecisely(selected.id, layerTargetId, layerInsertPosition)
                     }
                   >
                     移动到指定层
@@ -1829,13 +1835,19 @@ export default function StudioPage() {
           <span className="studio-status-led" aria-hidden="true" />
           <p role="status" className="studio-notice">
             {notice}
-            {hasSavedDraft && !autoSaveEnabled ? " · 已发现本地草稿，可点击「恢复草稿」确认加载" : ""}
+            {hasSavedDraft && !autoSaveEnabled
+              ? " · 已发现本地草稿，可点击「恢复草稿」确认加载"
+              : ""}
           </p>
         </div>
         <div className="studio-status-meta">
           <span>仅模拟数据 · 无设备写入</span>
-          <span>{page.nodes.length} 个图元 · 已选 {state.selectedIds.length}</span>
-          <span title="Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z 撤销，Ctrl+Shift+Z / Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择">快捷键 ⓘ</span>
+          <span>
+            {page.nodes.length} 个图元 · 已选 {state.selectedIds.length}
+          </span>
+          <span title="Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z 撤销，Ctrl+Shift+Z / Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择">
+            快捷键 ⓘ
+          </span>
         </div>
       </footer>
     </main>

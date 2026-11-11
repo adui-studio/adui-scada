@@ -1080,12 +1080,8 @@ async function importJson(event: Event) {
 </script>
 
 <template>
-  <main
-    class="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden"
-  >
-    <header
-      class="studio-toolbar"
-    >
+  <main class="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
+    <header class="studio-toolbar">
       <div>
         <p class="scada-eyebrow">ADui SCADA · V0.2 Studio</p>
         <h1>SVG 组态编辑器</h1>
@@ -1115,10 +1111,7 @@ async function importJson(event: Event) {
         </details>
       </div>
     </header>
-    <div
-      class="studio-page-bar"
-      aria-label="工程页面管理"
-    >
+    <div class="studio-page-bar" aria-label="工程页面管理">
       <div class="studio-page-tabs" aria-label="工程页面">
         <button
           v-for="item in state.document.pages"
@@ -1136,7 +1129,11 @@ async function importJson(event: Event) {
           <button type="button" :disabled="state.document.pages.length >= 100" @click="createPage">
             + 新建页面
           </button>
-          <button type="button" :disabled="state.document.pages.length >= 100" @click="duplicatePage">
+          <button
+            type="button"
+            :disabled="state.document.pages.length >= 100"
+            @click="duplicatePage"
+          >
             复制页面
           </button>
           <button type="button" :disabled="activePageIndex <= 0" @click="movePage('previous')">
@@ -1161,10 +1158,7 @@ async function importJson(event: Event) {
       :data-left-collapsed="!leftPanelVisible"
       :data-right-collapsed="!rightPanelVisible"
     >
-      <aside
-        class="studio-panel studio-panel-layers min-h-0 min-w-0"
-        aria-label="图元列表"
-      >
+      <aside class="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
         <div class="studio-pane-heading">
           <h2>资源与图层</h2>
           <span class="studio-count">{{ page.nodes.length }}</span>
@@ -1350,10 +1344,7 @@ async function importJson(event: Event) {
           <p class="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
         </details>
       </aside>
-      <section
-        class="studio-stage min-h-0 min-w-0"
-        aria-label="组态画布"
-      >
+      <section class="studio-stage min-h-0 min-w-0" aria-label="组态画布">
         <div class="studio-stage-caption">
           <span
             >{{ page.name }} · {{ page.size.width }} × {{ page.size.height }} · 静态模拟预览</span
@@ -1373,14 +1364,22 @@ async function importJson(event: Event) {
             </label>
           </div>
           <div class="studio-panel-toggles" aria-label="面板显示">
-  <button type="button" :aria-pressed="leftPanelVisible" @click="leftPanelVisible = !leftPanelVisible">
-    {{ leftPanelVisible ? "隐藏图层" : "显示图层" }}
-  </button>
-  <button type="button" :aria-pressed="rightPanelVisible" @click="rightPanelVisible = !rightPanelVisible">
-    {{ rightPanelVisible ? "隐藏属性" : "显示属性" }}
-  </button>
-</div>
-<div class="studio-zoom" aria-label="画布缩放">
+            <button
+              type="button"
+              :aria-pressed="leftPanelVisible"
+              @click="leftPanelVisible = !leftPanelVisible"
+            >
+              {{ leftPanelVisible ? "隐藏图层" : "显示图层" }}
+            </button>
+            <button
+              type="button"
+              :aria-pressed="rightPanelVisible"
+              @click="rightPanelVisible = !rightPanelVisible"
+            >
+              {{ rightPanelVisible ? "隐藏属性" : "显示属性" }}
+            </button>
+          </div>
+          <div class="studio-zoom" aria-label="画布缩放">
             <button type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</button>
             <button type="button" @click="zoom = 1">{{ Math.round(zoom * 100) }}%</button>
             <button type="button" :disabled="zoom >= 2" @click="changeZoom(0.25)">+</button>
@@ -1523,10 +1522,7 @@ async function importJson(event: Event) {
           </div>
         </div>
       </section>
-      <aside
-        class="studio-panel studio-panel-properties min-h-0 min-w-0"
-        aria-label="图元属性"
-      >
+      <aside class="studio-panel studio-panel-properties min-h-0 min-w-0" aria-label="图元属性">
         <h2>属性 · 已选 {{ state.selectedIds.length }}</h2>
         <template v-if="selected">
           <p>
@@ -1710,8 +1706,12 @@ async function importJson(event: Event) {
               </div>
               <div class="studio-tool-group" aria-label="图层排序">
                 <TButton type="button" :disabled="!selected" @click="layer('back')">置底</TButton>
-                <TButton type="button" :disabled="!selected" @click="layer('backward')">下移层</TButton>
-                <TButton type="button" :disabled="!selected" @click="layer('forward')">上移层</TButton>
+                <TButton type="button" :disabled="!selected" @click="layer('backward')"
+                  >下移层</TButton
+                >
+                <TButton type="button" :disabled="!selected" @click="layer('forward')"
+                  >上移层</TButton
+                >
                 <TButton type="button" :disabled="!selected" @click="layer('front')">置顶</TButton>
               </div>
               <h3>多选对齐（以最后选中的图元为准）</h3>
@@ -1777,7 +1777,10 @@ async function importJson(event: Event) {
       <div class="studio-status-meta">
         <span>仅模拟数据 · 无设备写入</span>
         <span>{{ page.nodes.length }} 个图元 · 已选 {{ state.selectedIds.length }}</span>
-        <span title="Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z 撤销，Ctrl+Shift+Z / Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择">快捷键 ⓘ</span>
+        <span
+          title="Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z 撤销，Ctrl+Shift+Z / Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择"
+          >快捷键 ⓘ</span
+        >
       </div>
     </footer>
   </main>

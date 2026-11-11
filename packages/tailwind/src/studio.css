@@ -398,8 +398,7 @@
   padding: 20px;
   overscroll-behavior: contain;
   background:
-    radial-gradient(circle at 50% 45%, rgb(15 49 82 / 32%) 0%, transparent 64%),
-    var(--scada-bg);
+    radial-gradient(circle at 50% 45%, rgb(15 49 82 / 32%) 0%, transparent 64%), var(--scada-bg);
 }
 .studio-canvas-board {
   display: flex;
