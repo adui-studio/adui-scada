@@ -203,15 +203,16 @@ assert.ok(
 for (const framework of ["react", "vue"]) {
   const studioPath = `apps/web-${framework}/src/studio/StudioPage.${framework === "react" ? "tsx" : "vue"}`;
   const studioSource = text(studioPath);
-  assert.match(
-    studioSource,
-    /studioViewportRect/,
-    `${studioPath} 必须使用共享工作区视区计算`,
-  );
+  assert.match(studioSource, /studioViewportRect/, `${studioPath} 必须使用共享工作区视区计算`);
   assert.ok(studioSource.includes("ResizeObserver"), `${studioPath} 必须响应实际画布尺寸变化`);
-  assert.ok(studioSource.includes("visibleRect.x") && studioSource.includes("visibleRect.width"),
-    `${studioPath} 必须让 SVG 网格覆盖全部可见视区`);
-  assert.ok(studioSource.includes("studio-page-boundary"), `${studioPath} 必须标明实际工程页面边界`);
+  assert.ok(
+    studioSource.includes("visibleRect.x") && studioSource.includes("visibleRect.width"),
+    `${studioPath} 必须让 SVG 网格覆盖全部可见视区`,
+  );
+  assert.ok(
+    studioSource.includes("studio-page-boundary"),
+    `${studioPath} 必须标明实际工程页面边界`,
+  );
   assert.match(
     studioSource,
     /preserveAspectRatio="xMidYMid meet"/,

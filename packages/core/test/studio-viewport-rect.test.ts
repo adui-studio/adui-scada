@@ -56,9 +56,9 @@ test("拒绝无效尺寸、缩放和平移参数", () => {
   expect(() => studioViewportRect(page, { width: 0, height: 900 }, 1, center)).toThrow(
     "编辑工作区宽高",
   );
-  expect(() => studioViewportRect({ width: 0, height: 460 }, { width: 800, height: 800 }, 1, center)).toThrow(
-    "工程页面宽高",
-  );
+  expect(() =>
+    studioViewportRect({ width: 0, height: 460 }, { width: 800, height: 800 }, 1, center),
+  ).toThrow("工程页面宽高");
   expect(() => studioViewportRect(page, { width: 800, height: 800 }, 0, center)).toThrow(
     "视图缩放比例",
   );
