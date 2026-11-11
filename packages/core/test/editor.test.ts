@@ -1622,3 +1622,231 @@ test("隐藏状态可与复制剪贴板和跨页面编辑安全共存", () => {
   ).toBe(false);
   expect(second).toBe("page-1");
 });
+
+test("精确图层插入允许将单图元移动到目标前后", () => {
+  const e = editor();
+  expect(e.moveLayer("title", "pump", "after")).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
+    "tank", "pipe", "pump", "title", "flow",
+  ]);
+  expect(e.moveLayer("title", "pipe", "before")).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
+    "tank", "title", "pipe", "pump", "flow",
+  ]);
+});
+
+test("精确排序保持图元几何、Tag、规则和工程 Schema 完全不变", () => {
+  const e = editor();
+  const before = e.snapshot().document;
+  expect(e.moveLayer("tank", "flow", "after")).toBe(true);
+  const sorted = e.snapshot().document;
+  expect(sorted.schemaVersion).toBe(before.schemaVersion);
+  expect(sorted.pages[0]?.nodes.map((node) => node.id)).toEqual([
+    "title", "pipe", "pump", "flow", "tank",
+  ]);
+  const originalNodes = new Map(before.pages[0]?.nodes.map((node) => [node.id, node]));
+  for (const node of sorted.pages[0]!.nodes) {
+    expect(node).toEqual(originalNodes.get(node.id));
+  }
+});
+
+test("图层精确插入无变化时不生成新的撤销历史", () => {
+  const e = editor();
+  expect(e.moveLayer("tank", "tank", "before")).toBe(false);
+  expect(e.moveLayer("tank", "pipe", "before")).toBe(false);
+  expect(e.moveLayer("tank", "title", "after")).toBe(false);
+  expect(e.snapshot().canUndo).toBe(false);
+});
+
+test("未知图元或非法插入位置原子拒绝，保留工程和撤销历史", () => {
+  const e = editor();
+  const before = e.snapshot();
+  expect(() => e.moveLayer("missing", "tank", "before")).toThrow(/待移动图元/);
+  expect(() => e.moveLayer("tank", "missing", "after")).toThrow(/目标图元/);
+  expect(() => e.moveLayer("tank", "pipe", "invalid" as never)).toThrow(/插入方向/);
+  expect(e.snapshot()).toEqual(before);
+});
+
+test("精确插入支持撤销重做，保留之前的选中图元", () => {
+  const e = editor();
+  e.select("tank");
+  const initial = e.snapshot();
+  expect(e.moveLayer("tank", "flow", "after")).toBe(true);
+  const changed = e.snapshot();
+  expect(changed.selectedIds).toEqual(["tank"]);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(initial.document);
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().document).toEqual(changed.document);
+});
+
+test("拖动非相邻组合成员时整组连续排列且组内相对顺序不变", () => {
+  const e = editor();
+  e.selectMany(["tank", "pump"]);
+  const groupId = e.groupSelected();
+  const oldNodes = e.snapshot().document.pages[0]!.nodes;
+  expect(oldNodes.map((node) => node.id)).toEqual([
+    "title", "tank", "pipe", "pump", "flow",
+  ]);
+  expect(e.moveLayer("tank", "title", "after")).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
+    "title", "tank", "pump", "pipe", "flow",
+  ]);
+  const nodes = e.snapshot().document.pages[0]!.nodes;
+  expect(nodes[1]?.groupId).toBe(groupId);
+  expect(nodes[2]?.groupId).toBe(groupId);
+  expect(nodes[1]?.bindings.level?.tagId).toBe("water.level");
+  expect(nodes[2]?.bindings.running?.tagId).toBe("water.pump.running");
+});
+
+test("从组合中任一成员开始移动都作用于完整组合", () => {
+  const e = editor();
+  e.selectMany(["tank", "pump"]);
+  e.groupSelected();
+  expect(e.moveLayer("pump", "flow", "after")).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
+    "title", "pipe", "flow", "tank", "pump",
+  ]);
+});
+
+test("目标是组合成员时，在组合边界之外插入，不拆散组员", () => {
+  const e = editor();
+  e.selectMany(["tank", "pump"]);
+  const group = e.groupSelected();
+  expect(e.moveLayer("flow", "tank", "after")).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
+    "title", "tank", "pipe", "pump", "flow",
+  ]);
+  expect(e.moveLayer("title", "pump", "after")).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
+    "tank", "pipe", "pump", "title", "flow",
+  ]);
+  const members = e.snapshot().document.pages[0]?.nodes.filter((node) => node.groupId === group);
+  expect(members?.map((node) => node.id)).toEqual(["tank", "pump"]);
+});
+
+test("同一组合成员之间不能互相插入，且不会产生新的历史", () => {
+  const e = editor();
+  e.selectMany(["tank", "pump"]);
+  e.groupSelected();
+  const before = e.snapshot();
+  expect(e.moveLayer("tank", "pump", "after")).toBe(false);
+  expect(e.moveLayer("pump", "tank", "before")).toBe(false);
+  expect(e.snapshot()).toEqual(before);
+});
+
+test("旧的组合上移层按钮也会连续移动整组并保留组员顺序", () => {
+  const e = editor();
+  e.selectMany(["tank", "pump"]);
+  e.groupSelected();
+  expect(e.reorderSelected("forward")).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
+    "title", "pipe", "flow", "tank", "pump",
+  ]);
+  expect(e.reorderSelected("forward")).toBe(false);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
+    "title", "tank", "pipe", "pump", "flow",
+  ]);
+});
+
+test("旧的组合下移层和置底按钮也会保持组合成员连续", () => {
+  const e = editor();
+  e.selectMany(["tank", "pump"]);
+  e.groupSelected();
+  expect(e.reorderSelected("backward")).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
+    "tank", "pump", "title", "pipe", "flow",
+  ]);
+  expect(e.reorderSelected("back")).toBe(false);
+  expect(e.reorderSelected("front")).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
+    "title", "pipe", "flow", "tank", "pump",
+  ]);
+});
+
+test("锁定图元本身与被锁定的组合不可精确排序", () => {
+  const e = editor();
+  e.select("tank");
+  e.setSelectedLocked(true);
+  const locked = e.snapshot();
+  expect(() => e.moveLayer("tank", "flow", "after")).toThrow(/锁定/);
+  expect(e.snapshot()).toEqual(locked);
+  e.select("tank");
+  e.setSelectedLocked(false);
+  e.selectMany(["tank", "pump"]);
+  e.groupSelected();
+  e.select("pump");
+  e.setSelectedLocked(true);
+  const grouped = e.snapshot();
+  expect(() => e.moveLayer("tank", "flow", "after")).toThrow(/锁定/);
+  expect(e.snapshot()).toEqual(grouped);
+});
+
+test("不能通过移动其他图元间接改变锁定图元的原始索引", () => {
+  const e = editor();
+  e.select("pipe");
+  e.setSelectedLocked(true);
+  const before = e.snapshot();
+  expect(() => e.moveLayer("title", "flow", "after")).toThrow(/已锁定图元/);
+  expect(() => e.moveLayer("tank", "flow", "after")).toThrow(/已锁定图元/);
+  expect(e.snapshot()).toEqual(before);
+  expect(e.moveLayer("flow", "pump", "after")).toBe(false);
+  expect(e.snapshot().document).toEqual(before.document);
+});
+
+test("不影响锁定图元原始层序的精确移动仍然允许", () => {
+  const e = editor();
+  e.select("flow");
+  e.setSelectedLocked(true);
+  const original = e.snapshot().document;
+  expect(e.moveLayer("title", "tank", "after")).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
+    "tank", "title", "pipe", "pump", "flow",
+  ]);
+  expect(e.snapshot().document.pages[0]?.nodes.at(-1)).toEqual(
+    original.pages[0]?.nodes.at(-1),
+  );
+});
+
+test("隐藏图元仍然参与持久层序，并在恢复显示后保留新位置", () => {
+  const e = editor();
+  e.select("tank");
+  e.setSelectedVisible(false);
+  expect(e.moveLayer("tank", "flow", "after")).toBe(true);
+  const hiddenNodes = e.snapshot().document.pages[0]!.nodes;
+  expect(hiddenNodes.at(-1)?.id).toBe("tank");
+  expect(studioNodeVisible(hiddenNodes.at(-1)!)).toBe(false);
+  e.select("tank");
+  expect(e.setSelectedVisible(true)).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.at(-1)?.id).toBe("tank");
+});
+
+test("跨页面排序只影响当前页且不能引用其他页面的图元", () => {
+  const e = editor();
+  const secondId = e.createPage("设备分区");
+  const nodeId = e.addNode("label");
+  expect(e.addNode("pump")).toBe("pump-1");
+  const source = e.snapshot().document.pages[0];
+  expect(e.moveLayer(nodeId, "pump-1", "after")).toBe(true);
+  expect(e.snapshot().document.pages[0]).toEqual(source);
+  expect(e.switchPage("main")).toBe(true);
+  const before = e.snapshot();
+  expect(() => e.moveLayer(nodeId, "tank", "before")).toThrow(/待移动图元/);
+  expect(e.snapshot()).toEqual(before);
+  expect(secondId).toBe("page-1");
+});
+
+test("精确层序变更经 JSON 导入导出后顺序与属性完全一致", () => {
+  const e = editor();
+  e.selectMany(["tank", "pump"]);
+  e.groupSelected();
+  e.moveLayer("tank", "flow", "after");
+  const data = JSON.parse(JSON.stringify(e.snapshot().document));
+  const other = editor();
+  other.loadDocument(data);
+  expect(other.snapshot().document).toEqual(e.snapshot().document);
+  expect(other.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
+    "title", "pipe", "flow", "tank", "pump",
+  ]);
+});
