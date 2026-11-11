@@ -1,0 +1,34 @@
+:root {
+  --adui-scada-blue: #0d63f3;
+  --adui-scada-cyan: #00c8ff;
+  --adui-scada-teal: #00d9a6;
+  --adui-scada-ink: #111827;
+  --adui-scada-paper: #edf2f7;
+  --adui-scada-app-bg: #061e4e;
+  --adui-scada-brand-text: #111b32;
+
+  --scada-primary: var(--adui-scada-blue);
+  --scada-primary-hover: #2c7cfb;
+  --scada-primary-active: #084dbb;
+  --scada-primary-focus: #0c2e62;
+  --scada-cyan: var(--adui-scada-cyan);
+  --scada-live: var(--adui-scada-teal);
+  --scada-bg: #0b1320;
+  --scada-nav: #101f30;
+  --scada-surface: #132236;
+  --scada-canvas: #0c1728;
+  --scada-active-bg: #0c2e62;
+  --scada-action-bg: #1e3448;
+  --scada-action-hover: #2e475c;
+  --scada-border-subtle: #293a4d;
+  --scada-border: #294057;
+  --scada-border-strong: #46667d;
+  --scada-text: #e8f1ff;
+  --scada-text-strong: #ecf6ff;
+  --scada-text-secondary: #adc2d4;
+  --scada-text-muted: #91a8bd;
+  --scada-text-dim: #66869d;
+  --scada-warning: #f0ae4d;
+  --scada-danger: #f16c75;
+  color-scheme: dark;
+}

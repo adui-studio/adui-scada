@@ -5,16 +5,16 @@
 }
 /* TDesign 仅在 Studio 内继承工业深色主题，不修改工程及 Runtime 样式。 */
 .studio-shell {
-  --td-brand-color: #39c9ba;
-  --td-brand-color-hover: #53daca;
-  --td-brand-color-active: #29a99d;
-  --td-brand-color-focus: #1a5c58;
-  --td-text-color-primary: #e8f1ff;
-  --td-text-color-secondary: #adc2d4;
-  --td-bg-color-container: #132236;
-  --td-bg-color-container-hover: #223b51;
-  --td-bg-color-container-active: #1b3548;
-  --td-component-border: #46667d;
+  --td-brand-color: var(--scada-primary);
+  --td-brand-color-hover: var(--scada-primary-hover);
+  --td-brand-color-active: var(--scada-primary-active);
+  --td-brand-color-focus: var(--scada-primary-focus);
+  --td-text-color-primary: var(--scada-text);
+  --td-text-color-secondary: var(--scada-text-secondary);
+  --td-bg-color-container: var(--scada-surface);
+  --td-bg-color-container-hover: var(--scada-action-hover);
+  --td-bg-color-container-active: var(--scada-action-bg);
+  --td-component-border: var(--scada-border-strong);
 }
 .studio-shell .t-button {
   white-space: normal;
@@ -27,10 +27,10 @@
 .studio-shell .t-input {
   width: 100%;
   min-width: 0;
-  border: 1px solid #46667d;
+  border: 1px solid var(--scada-border-strong);
   border-radius: 4px;
-  background: #0c1728;
-  color: #e8f1ff;
+  background: var(--scada-canvas);
+  color: var(--scada-text);
 }
 .studio-shell .studio-field .t-input input {
   border: 0;
@@ -39,7 +39,7 @@
   color: inherit;
 }
 .studio-shell .t-input--focused {
-  border-color: #39c9ba;
+  border-color: var(--scada-primary);
 }
 .studio-tree-controls .t-button {
   width: 100%;
@@ -51,7 +51,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 16px;
-  border-bottom: 1px solid #293a4d;
+  border-bottom: 1px solid var(--scada-border-subtle);
   padding-bottom: 14px;
 }
 .studio-toolbar h1 {
@@ -70,11 +70,11 @@
 }
 .studio-import {
   display: inline-block;
-  border: 1px solid #46667d;
+  border: 1px solid var(--scada-border-strong);
   border-radius: 6px;
-  background: #1e3448;
+  background: var(--scada-action-bg);
   padding: 8px 12px;
-  color: #ecf6ff;
+  color: var(--scada-text-strong);
   cursor: pointer;
   font-size: 14px;
 }
@@ -83,7 +83,7 @@
 }
 .studio-notice {
   min-height: 20px;
-  color: #90a8bb;
+  color: var(--scada-text-muted);
   font-size: 13px;
 }
 /* 页面管理仅修改 Studio 当前编辑视图，选中态不写入工程 JSON。 */
@@ -103,9 +103,9 @@
   gap: 6px;
 }
 .studio-page-tabs button[aria-current="page"] {
-  border-color: #39c9ba;
-  color: #d8fffa;
-  background: #18403f;
+  border-color: var(--scada-primary);
+  color: var(--scada-cyan);
+  background: var(--scada-active-bg);
 }
 .studio-page-actions button:disabled {
   cursor: not-allowed;
@@ -118,8 +118,8 @@
   align-items: start;
 }
 .studio-panel {
-  background: #132236;
-  border: 1px solid #294057;
+  background: var(--scada-surface);
+  border: 1px solid var(--scada-border);
   border-radius: 6px;
   padding: 14px;
   min-width: 0;
@@ -138,8 +138,8 @@
   gap: 8px;
   margin: 16px 0;
   padding: 10px 0;
-  border-top: 1px solid #294057;
-  border-bottom: 1px solid #294057;
+  border-top: 1px solid var(--scada-border);
+  border-bottom: 1px solid var(--scada-border);
 }
 .studio-copy-tools .studio-field {
   margin: 0;
@@ -196,10 +196,10 @@
   width: 24px;
   min-width: 24px;
   padding: 0;
-  border: 1px solid #294057;
+  border: 1px solid var(--scada-border);
   border-radius: 4px;
-  background: #172d40;
-  color: #d8e5ef;
+  background: var(--scada-action-bg);
+  color: var(--scada-text);
 }
 .studio-tree-toggle:disabled {
   cursor: default;
@@ -208,14 +208,14 @@
 .studio-tree-members {
   margin-left: 12px;
   padding-left: 14px;
-  border-left: 1px solid #345269;
+  border-left: 1px solid var(--scada-border-strong);
 }
 .studio-tree-members .studio-layer {
   margin: 3px 0;
 }
 .studio-tree-empty {
   margin: 12px 0;
-  color: #90a8bb;
+  color: var(--scada-text-muted);
   font-size: 12px;
 }
 .studio-layer-tree .studio-layer {
@@ -227,10 +227,10 @@
   cursor: grab;
 }
 .studio-layer[data-drop-position="after"] {
-  box-shadow: inset 0 3px #4ad5c5;
+  box-shadow: inset 0 3px var(--scada-cyan);
 }
 .studio-layer[data-drop-position="before"] {
-  box-shadow: inset 0 -3px #4ad5c5;
+  box-shadow: inset 0 -3px var(--scada-cyan);
 }
 .studio-layer-identity {
   display: inline-flex;
@@ -239,7 +239,7 @@
   min-width: 0;
 }
 .studio-layer-identity > span {
-  color: #7da8b8;
+  color: var(--scada-text-muted);
   font-size: 13px;
 }
 .studio-exact-layer {
@@ -247,37 +247,37 @@
   gap: 8px;
   margin: 10px 0;
   padding: 10px 0;
-  border-top: 1px solid #294057;
-  border-bottom: 1px solid #294057;
+  border-top: 1px solid var(--scada-border);
+  border-bottom: 1px solid var(--scada-border);
 }
 .studio-exact-layer .studio-field {
   margin: 0;
 }
 .studio-layer small {
-  color: #90a8bb;
+  color: var(--scada-text-muted);
 }
 .studio-layer[data-selected="true"] {
-  border-color: #f0ae4d;
+  border-color: var(--scada-primary);
 }
 .studio-layer[data-hidden="true"] {
   opacity: 0.62;
   border-style: dashed;
 }
 .studio-layer[data-locked="true"] small {
-  color: #f0bd77;
+  color: var(--scada-warning);
 }
 .studio-hitbox[data-locked="true"] {
   cursor: not-allowed;
 }
 .studio-stage {
   min-width: 0;
-  border: 1px solid #294057;
+  border: 1px solid var(--scada-border);
   border-radius: 6px;
-  background: #132236;
+  background: var(--scada-surface);
   padding: 12px;
 }
 .studio-stage-caption {
-  color: #a5b8c7;
+  color: var(--scada-text-secondary);
   margin: 2px 0 12px;
   font-size: 12px;
 }
@@ -285,8 +285,8 @@
   width: 100%;
   height: auto;
   display: block;
-  background: #0c1728;
-  border: 1px solid #34495f;
+  background: var(--scada-canvas);
+  border: 1px solid var(--scada-border-strong);
   border-radius: 4px;
   touch-action: none;
   user-select: none;
@@ -296,7 +296,7 @@
   outline: none;
 }
 .studio-hitbox:focus {
-  stroke: #39c9ba;
+  stroke: var(--scada-primary);
 }
 .studio-fields {
   display: grid;
@@ -305,7 +305,7 @@
   font-size: 12px;
 }
 .studio-tip {
-  color: #91a8bd;
+  color: var(--scada-text-muted);
   line-height: 1.6;
   font-size: 12px;
 }
@@ -326,16 +326,16 @@
 .studio-field input,
 .studio-field select {
   min-width: 0;
-  color: #e8f1ff;
-  background: #0c1728;
-  border: 1px solid #46667d;
+  color: var(--scada-text);
+  background: var(--scada-canvas);
+  border: 1px solid var(--scada-border-strong);
   padding: 8px;
   border-radius: 4px;
 }
 .studio-binding {
   overflow-wrap: anywhere;
   font-size: 12px;
-  color: #adc2d4;
+  color: var(--scada-text-secondary);
 }
 @media (max-width: 1050px) {
   .studio-workspace {
@@ -400,8 +400,8 @@
 
 /* 框选矩形仅是视图叠加层，不会写入工程 JSON。 */
 .studio-marquee {
-  fill: rgba(57, 201, 186, 0.14);
-  stroke: #39c9ba;
+  fill: rgb(13 99 243 / 14%);
+  stroke: var(--scada-primary);
   stroke-width: 1.5;
   stroke-dasharray: 6 4;
 }
@@ -418,15 +418,15 @@
   align-items: center;
   gap: 4px;
   white-space: nowrap;
-  color: #c5d7e5;
+  color: var(--scada-text-secondary);
   cursor: pointer;
 }
 .studio-canvas-option input {
   margin: 0;
-  accent-color: #39c9ba;
+  accent-color: var(--scada-primary);
 }
 .studio-alignment-guide {
-  stroke: #f7c66e;
+  stroke: var(--scada-cyan);
   stroke-width: 1.5;
   stroke-dasharray: 5 3;
 }
@@ -441,7 +441,7 @@
 .studio-geometry label {
   display: grid;
   gap: 5px;
-  color: #c5d7e5;
+  color: var(--scada-text-secondary);
   font-size: 12px;
 }
 .studio-geometry input {
@@ -449,9 +449,9 @@
   width: 100%;
   min-width: 0;
   padding: 7px;
-  color: #e8f1ff;
-  background: #0c1728;
-  border: 1px solid #46667d;
+  color: var(--scada-text);
+  background: var(--scada-canvas);
+  border: 1px solid var(--scada-border-strong);
   border-radius: 4px;
 }
 .studio-geometry button {
@@ -461,8 +461,8 @@
 
 /* 八方向缩放与旋转手柄只属于 Studio 视图，不写入工程文件。 */
 .studio-resize-handle {
-  fill: #f1f7ff;
-  stroke: #f0ae4d;
+  fill: var(--scada-text-strong);
+  stroke: var(--scada-primary);
   stroke-width: 1.6;
   cursor: nwse-resize;
 }
@@ -480,15 +480,15 @@
 }
 .studio-resize-handle:hover,
 .studio-rotation-handle:hover {
-  fill: #39c9ba;
+  fill: var(--scada-primary);
 }
 .studio-rotation-stem {
-  stroke: #f0ae4d;
+  stroke: var(--scada-primary);
   stroke-width: 1.5;
 }
 .studio-rotation-handle {
-  fill: #f0ae4d;
-  stroke: #0c1728;
+  fill: var(--scada-primary);
+  stroke: var(--scada-canvas);
   stroke-width: 1.5;
 }
 .studio-rotation-handle,
