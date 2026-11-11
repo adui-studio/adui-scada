@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent, FormEvent, PointerEvent as ReactPointerEvent } from "react";
+import type {
+  ChangeEvent,
+  DragEvent as ReactDragEvent,
+  FormEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import {
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
@@ -92,6 +97,11 @@ export default function StudioPage() {
   const [marquee, setMarquee] = useState<MarqueeState | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
   const [preferredCopyTargetPageId, setPreferredCopyTargetPageId] = useState("");
+  const [preferredLayerTargetId, setPreferredLayerTargetId] = useState("");
+  const [layerInsertPosition, setLayerInsertPosition] = useState<"before" | "after">("after");
+  const [layerDrop, setLayerDrop] = useState<{ id: string; position: "before" | "after" } | null>(
+    null,
+  );
   const [notice, setNotice] = useState("可手动保存浏览器本地草稿 · 尚未连接工程保存服务");
   const [hasSavedDraft, setHasSavedDraft] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
@@ -105,6 +115,7 @@ export default function StudioPage() {
   const dragRef = useRef<DragState | null>(null);
   const marqueeRef = useRef<MarqueeState | null>(null);
   const geometryRef = useRef<GeometryDragState | null>(null);
+  const layerDragRef = useRef<{ pageId: string; nodeId: string } | null>(null);
 
   const page = state.document.pages.find((item) => item.id === state.activePageId);
   const selected = page?.nodes.find((node) => node.id === state.selectedId);
@@ -151,6 +162,28 @@ export default function StudioPage() {
     (node) => state.selectedIds.includes(node.id) && studioNodeLocked(node),
   );
   const canGroup = state.selectedIds.length >= 2 && !hasGroupedSelection && !hasLockedSelection;
+  const layerRows = page ? [...page.nodes].reverse() : [];
+  const lockedLayerGroups = new Set(
+    page?.nodes.filter(studioNodeLocked).flatMap((node) => (node.groupId ? [node.groupId] : [])),
+  );
+  const canPreciselyMove =
+    selected !== undefined &&
+    (state.selectedIds.length === 1 ||
+      (selected.groupId !== undefined &&
+        state.selectedIds.every(
+          (id) => page?.nodes.find((node) => node.id === id)?.groupId === selected.groupId,
+        ))) &&
+    !hasLockedSelection;
+  const layerTargetNodes = page
+    ? page.nodes.filter(
+        (node) =>
+          node.id !== selected?.id &&
+          (selected?.groupId === undefined || node.groupId !== selected.groupId),
+      )
+    : [];
+  const layerTargetId = layerTargetNodes.some((node) => node.id === preferredLayerTargetId)
+    ? preferredLayerTargetId
+    : (layerTargetNodes[0]?.id ?? "");
   const activePageIndex = state.document.pages.findIndex((item) => item.id === state.activePageId);
   const copyTargetPages = state.document.pages.filter((item) => item.id !== state.activePageId);
   const copyTargetPageId = copyTargetPages.some((item) => item.id === preferredCopyTargetPageId)
