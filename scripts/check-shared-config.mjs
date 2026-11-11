@@ -175,19 +175,24 @@ for (const framework of ["react", "vue"]) {
   );
 }
 
-// 固定侧栏与 16:9 画布适应必须由共享包和双框架统一实现。
+// 固定侧栏之外的中央编辑区必须铺满，不允许居中小画板造成四周空白。
 const viewportCss = text("packages/tailwind/src/studio.css");
+for (const selector of [".studio-canvas-scroll", ".studio-canvas-board"]) {
+  const opening = viewportCss.indexOf(`${selector} {`);
+  const closing = viewportCss.indexOf("}", opening);
+  assert.ok(opening >= 0 && closing > opening, `缺少画布容器：${selector}`);
+  const body = viewportCss.slice(opening, closing);
+  assert.match(body, /width:\s*100%/, `${selector} 必须撑满宽度`);
+  assert.match(body, /height:\s*100%/, `${selector} 必须撑满高度`);
+  assert.match(body, /overflow:\s*hidden/, `${selector} 不允许出现滚动条`);
+  assert.doesNotMatch(body, /aspect-ratio|cqh/, `${selector} 不得限制外框比例`);
+}
+assert.match(viewportCss, /\.studio-canvas-scroll\s*\{[^}]*padding:\s*0;/, "画布不应留内边距");
 assert.match(
   viewportCss,
-  /\.studio-canvas-scroll\s*\{[^}]*overflow:\s*hidden;/,
-  "画布工作区不得产生滚动条",
+  /\.studio-canvas-board\s*>\s*\.studio-svg\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;[^}]*border:\s*0;/,
+  "SVG 必须满宽满高且无边框",
 );
-assert.match(
-  viewportCss,
-  /\.studio-canvas-board\s*\{[^}]*aspect-ratio:\s*16\s*\/\s*9;/,
-  "画板显示区域必须保持 16:9",
-);
-assert.match(viewportCss, /177\.7778cqh/, "画板必须依据工作区高度自动适配");
 assert.match(viewportCss, /--studio-left-width:\s*252px/, "左侧栏必须固定宽度");
 assert.match(viewportCss, /--studio-right-width:\s*320px/, "右侧栏必须固定宽度");
 
