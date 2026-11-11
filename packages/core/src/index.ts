@@ -35,3 +35,5 @@ export {
 export type { LocalDraft, LocalDraftStorage } from "./local-draft.ts";
 export { DraftAutoSaveSession } from "./draft-repository.ts";
 export type { DraftRepository, DraftRecord } from "./draft-repository.ts";
+export { clampStudioPan, studioViewBox } from "./studio-viewport.ts";
+export type { StudioPan, StudioPageSize } from "./studio-viewport.ts";
