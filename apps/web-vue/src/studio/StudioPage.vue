@@ -1379,6 +1379,40 @@ async function importJson(event: Event) {
               删除所选
             </button>
           </div>
+          <div class="studio-exact-layer" aria-label="图层精确插入">
+            <label class="studio-field">
+              目标图元
+              <select
+                aria-label="图层插入目标"
+                :value="layerTargetId"
+                :disabled="!canPreciselyMove || layerTargetNodes.length === 0"
+                @change="selectLayerTarget"
+              >
+                <option value="">请选择目标图元</option>
+                <option v-for="node in layerTargetNodes" :key="node.id" :value="node.id">
+                  {{ node.id }}{{ node.groupId ? "（组合）" : "" }}
+                </option>
+              </select>
+            </label>
+            <label class="studio-field">
+              插入位置
+              <select
+                aria-label="图层插入位置"
+                :value="layerInsertPosition"
+                @change="selectLayerPosition"
+              >
+                <option value="after">目标上方（更靠前）</option>
+                <option value="before">目标下方（更靠后）</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              :disabled="!canPreciselyMove || !layerTargetId"
+              @click="moveSelectedLayerPrecisely"
+            >
+              移动到指定层
+            </button>
+          </div>
           <div class="studio-tool-group" aria-label="图层排序">
             <button type="button" :disabled="!selected" @click="layer('back')">置底</button>
             <button type="button" :disabled="!selected" @click="layer('backward')">下移层</button>
