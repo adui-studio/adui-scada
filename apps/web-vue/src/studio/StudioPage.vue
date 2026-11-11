@@ -648,6 +648,43 @@ function dropLayer(event: DragEvent, targetId: string) {
   moveLayerPrecisely(dragging.nodeId, targetId, position);
 }
 
+function toggleLayerGroup(groupId: string) {
+  const next = new Set(collapsedGroupIds.value);
+  if (next.has(groupId)) next.delete(groupId);
+  else next.add(groupId);
+  collapsedGroupIds.value = next;
+}
+
+function groupExpanded(groupId: string): boolean {
+  return isLayerSearching.value || !collapsedGroupIds.value.has(groupId);
+}
+
+function layerGroupSelected(groupId: string): boolean {
+  return page.value.nodes.some(
+    (node) => node.groupId === groupId && state.value.selectedIds.includes(node.id),
+  );
+}
+
+async function locateSelectedLayer() {
+  const node = page.value.nodes.find((item) => item.id === state.value.selectedId);
+  if (!node) {
+    notice.value = "请先选择需要定位的图元";
+    return;
+  }
+  layerSearch.value = "";
+  if (node.groupId) {
+    const next = new Set(collapsedGroupIds.value);
+    next.delete(node.groupId);
+    collapsedGroupIds.value = next;
+  }
+  const key = node.groupId ? `group:${node.groupId}` : `node:${node.id}`;
+  await nextTick();
+  const rows = layerTreeRef.value?.querySelectorAll<HTMLButtonElement>("[data-layer-key]");
+  const row = [...(rows ?? [])].find((item) => item.dataset.layerKey === key);
+  row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  notice.value = "已定位选中图元所在图层";
+}
+
 function selectLayerTarget(event: Event) {
   if (event.target instanceof HTMLSelectElement) {
     preferredLayerTargetId.value = event.target.value;
