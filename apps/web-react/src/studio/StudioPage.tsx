@@ -168,8 +168,8 @@ export default function StudioPage() {
   );
   const canGroup = state.selectedIds.length >= 2 && !hasGroupedSelection && !hasLockedSelection;
   const layerEntries = useMemo(
-    () => buildLayerTree(page?.nodes ?? [], layerSearch),
-    [page?.nodes, layerSearch],
+    () => buildLayerTree(page.nodes, layerSearch),
+    [page.nodes, layerSearch],
   );
   const isLayerSearching = layerSearch.trim().length > 0;
   const lockedLayerGroups = new Set(
@@ -994,6 +994,10 @@ export default function StudioPage() {
     }
   }
 
+  function groupExpanded(groupId: string): boolean {
+    return isLayerSearching || !collapsedGroupIds.has(groupId);
+  }
+
   function toggleLayerGroup(groupId: string) {
     setCollapsedGroupIds((previous) => {
       const next = new Set(previous);
@@ -1027,17 +1031,17 @@ export default function StudioPage() {
     kind: "group" | "member" | "node",
     group?: LayerTreeGroup,
   ) {
-    const isGroupHeader = kind === "group" && group !== undefined;
-    const groupId = group?.groupId;
-    const rowKey = isGroupHeader ? `group:${groupId}` : `node:${node.id}`;
-    const selectedRow = isGroupHeader
-      ? page?.nodes.some(
+    const groupHeader = kind === "group" ? group : undefined;
+    const groupId = groupHeader?.groupId;
+    const rowKey = groupHeader ? `group:${groupId}` : `node:${node.id}`;
+    const selectedRow = groupHeader
+      ? page.nodes.some(
           (item) => item.groupId === groupId && state.selectedIds.includes(item.id),
         )
       : state.selectedIds.includes(node.id);
-    const lockedRow = isGroupHeader ? group.hasLockedMember : studioNodeLocked(node);
-    const hiddenRow = isGroupHeader
-      ? group.hiddenCount === group.totalCount
+    const lockedRow = groupHeader ? groupHeader.hasLockedMember : studioNodeLocked(node);
+    const hiddenRow = groupHeader
+      ? groupHeader.hiddenCount === groupHeader.totalCount
       : !studioNodeVisible(node);
     const draggable =
       !studioNodeLocked(node) &&
@@ -1054,7 +1058,7 @@ export default function StudioPage() {
         data-locked={lockedRow}
         data-drop-position={layerDrop?.id === node.id ? layerDrop.position : undefined}
         draggable={draggable}
-        title={isGroupHeader ? "拖动整个组合调整图层" : "拖动调整图层，组合会整体移动"}
+        title={groupHeader ? "拖动整个组合调整图层" : "拖动调整图层，组合会整体移动"}
         onDragStart={(event) => startLayerDrag(event, node.id)}
         onDragOver={(event) => overLayer(event, node.id)}
         onDrop={(event) => dropLayer(event, node.id)}
@@ -1063,19 +1067,17 @@ export default function StudioPage() {
       >
         <span className="studio-layer-identity">
           <span aria-hidden="true">⋮⋮</span>{" "}
-          {isGroupHeader ? `组合 ${groupId}` : node.id}
+          {groupHeader ? `组合 ${groupId}` : node.id}
         </span>
         <small>
-          {isGroupHeader
-            ? `${group.totalCount} 个成员`
-            : node.type}
-          {isGroupHeader && group.fragmented ? " · 层序不连续" : ""}
-          {isGroupHeader && group.hasLockedMember ? " · 有锁定成员" : ""}
-          {isGroupHeader && group.hiddenCount > 0
-            ? ` · 隐藏 ${group.hiddenCount}`
+          {groupHeader ? `${groupHeader.totalCount} 个成员` : node.type}
+          {groupHeader?.fragmented ? " · 层序不连续" : ""}
+          {groupHeader?.hasLockedMember ? " · 有锁定成员" : ""}
+          {groupHeader && groupHeader.hiddenCount > 0
+            ? ` · 隐藏 ${groupHeader.hiddenCount}`
             : ""}
-          {!isGroupHeader && studioNodeLocked(node) ? " · 已锁定" : ""}
-          {!isGroupHeader && !studioNodeVisible(node) ? " · 已隐藏" : ""}
+          {!groupHeader && studioNodeLocked(node) ? " · 已锁定" : ""}
+          {!groupHeader && !studioNodeVisible(node) ? " · 已隐藏" : ""}
         </small>
       </button>
     );
@@ -1251,7 +1253,9 @@ export default function StudioPage() {
           </div>
           <div className="studio-layer-tree" ref={layerTreeRef} aria-label="图层树">
             {layerEntries.length === 0 && (
-              <p className="studio-tree-empty">没有匹配的图元或组合</p>
+              <p className="studio-tree-empty">
+                {page.nodes.length === 0 ? "当前页面暂无图元" : "没有匹配的图元或组合"}
+              </p>
             )}
             {layerEntries.map((entry) =>
               entry.kind === "node" ? (
@@ -1262,12 +1266,12 @@ export default function StudioPage() {
                     <button
                       type="button"
                       className="studio-tree-toggle"
-                      aria-label={`${isLayerSearching || !collapsedGroupIds.has(entry.groupId) ? "折叠" : "展开"}组合 ${entry.groupId}`}
-                      aria-expanded={isLayerSearching || !collapsedGroupIds.has(entry.groupId)}
+                      aria-label={`${groupExpanded(entry.groupId) ? "折叠" : "展开"}组合 ${entry.groupId}`}
+                      aria-expanded={groupExpanded(entry.groupId)}
                       disabled={isLayerSearching}
                       onClick={() => toggleLayerGroup(entry.groupId)}
                     >
-                      {isLayerSearching || !collapsedGroupIds.has(entry.groupId) ? "▾" : "▸"}
+                      {groupExpanded(entry.groupId) ? "▾" : "▸"}
                     </button>
                     {renderLayerButton(
                       page.nodes.find((node) => node.id === entry.anchorNodeId) ??
@@ -1276,7 +1280,7 @@ export default function StudioPage() {
                       entry,
                     )}
                   </div>
-                  {(isLayerSearching || !collapsedGroupIds.has(entry.groupId)) && (
+                  {groupExpanded(entry.groupId) && (
                     <div
                       className="studio-tree-members"
                       role="group"
