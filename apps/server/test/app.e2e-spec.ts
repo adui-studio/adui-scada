@@ -31,4 +31,16 @@ describe("应用控制器（端到端）", () => {
       .send({ value: 1 });
     expect(response.status).toBe(404);
   });
+
+  it("尚未开放的服务端工程版本写入接口返回 404", async () => {
+    const response = await request(app.getHttpServer())
+      .post("/api/projects/water-demo/versions")
+      .send({ expectedRevision: null, document: {} });
+    expect(response.status).toBe(404);
+  });
+
+  it("尚未开放的服务端工程版本读取接口返回 404", async () => {
+    const response = await request(app.getHttpServer()).get("/api/projects/water-demo/versions");
+    expect(response.status).toBe(404);
+  });
 });
