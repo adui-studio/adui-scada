@@ -1167,36 +1167,144 @@ async function importJson(event: Event) {
             复制选中图元
           </button>
         </div>
-        <button
-          v-for="node in layerRows"
-          :key="node.id"
-          type="button"
-          class="studio-layer"
-          :data-selected="state.selectedIds.includes(node.id)"
-          :data-hidden="!studioNodeVisible(node)"
-          :data-locked="studioNodeLocked(node)"
-          :data-drop-position="layerDrop?.id === node.id ? layerDrop.position : undefined"
-          :draggable="
-            !studioNodeLocked(node) &&
-            (node.groupId === undefined || !lockedLayerGroups.has(node.groupId))
-          "
-          title="拖动调整图层，组合会整体移动"
-          @dragstart="startLayerDrag($event, node.id)"
-          @dragover="overLayer($event, node.id)"
-          @drop="dropLayer($event, node.id)"
-          @dragend="clearLayerDrag"
-          @click="selectNode(node.id, $event.shiftKey)"
-        >
-          <span class="studio-layer-identity"
-            ><span aria-hidden="true">⋮⋮</span> {{ node.id }}</span
+        <div class="studio-tree-controls">
+          <label class="studio-field">
+            搜索图元或组合
+            <input
+              v-model="layerSearch"
+              type="search"
+              aria-label="搜索图层"
+              maxlength="128"
+              placeholder="图元 ID、类型、文字或组合 ID"
+            />
+          </label>
+          <button
+            type="button"
+            :disabled="state.selectedIds.length === 0"
+            @click="locateSelectedLayer"
           >
-          <small>
-            {{ node.type }}{{ node.groupId ? ` · 组合 ${node.groupId}` : "" }}
-            {{ studioNodeLocked(node) ? " · 已锁定" : "" }}
-            {{ !studioNodeVisible(node) ? " · 已隐藏" : "" }}
-          </small>
-        </button>
-      </aside>
+            定位选中图层
+          </button>
+        </div>
+        <div ref="layerTreeRef" class="studio-layer-tree" aria-label="图层树">
+          <p v-if="layerEntries.length === 0" class="studio-tree-empty">
+            {{ page.nodes.length === 0 ? "当前页面暂无图元" : "没有匹配的图元或组合" }}
+          </p>
+          <template
+            v-for="entry in layerEntries"
+            :key="entry.kind === 'group' ? entry.groupId : entry.node.id"
+          >
+            <div v-if="entry.kind === 'group'" class="studio-tree-group">
+              <div class="studio-tree-group-heading">
+                <button
+                  type="button"
+                  class="studio-tree-toggle"
+                  :aria-label="`${groupExpanded(entry.groupId) ? '折叠' : '展开'}组合 ${entry.groupId}`"
+                  :aria-expanded="groupExpanded(entry.groupId)"
+                  :disabled="isLayerSearching"
+                  @click="toggleLayerGroup(entry.groupId)"
+                >
+                  {{ groupExpanded(entry.groupId) ? "▾" : "▸" }}
+                </button>
+                <button
+                  type="button"
+                  class="studio-layer"
+                  :data-layer-key="`group:${entry.groupId}`"
+                  :data-selected="layerGroupSelected(entry.groupId)"
+                  :data-hidden="entry.hiddenCount === entry.totalCount"
+                  :data-locked="entry.hasLockedMember"
+                  :data-drop-position="
+                    layerDrop?.id === entry.anchorNodeId ? layerDrop.position : undefined
+                  "
+                  :draggable="!entry.hasLockedMember"
+                  title="拖动整个组合调整图层"
+                  @dragstart="startLayerDrag($event, entry.anchorNodeId)"
+                  @dragover="overLayer($event, entry.anchorNodeId)"
+                  @drop="dropLayer($event, entry.anchorNodeId)"
+                  @dragend="clearLayerDrag"
+                  @click="selectNode(entry.anchorNodeId, $event.shiftKey)"
+                >
+                  <span class="studio-layer-identity">
+                    <span aria-hidden="true">⋮⋮</span> 组合 {{ entry.groupId }}
+                  </span>
+                  <small>
+                    {{ entry.totalCount }} 个成员
+                    {{ entry.fragmented ? " · 层序不连续" : "" }}
+                    {{ entry.hasLockedMember ? " · 有锁定成员" : "" }}
+                    {{ entry.hiddenCount > 0 ? ` · 隐藏 ${entry.hiddenCount}` : "" }}
+                  </small>
+                </button>
+              </div>
+              <div
+                v-if="groupExpanded(entry.groupId)"
+                class="studio-tree-members"
+                role="group"
+                :aria-label="`组合 ${entry.groupId} 的成员`"
+              >
+                <button
+                  v-for="node in entry.members"
+                  :key="node.id"
+                  type="button"
+                  class="studio-layer"
+                  :data-layer-key="`node:${node.id}`"
+                  :data-selected="state.selectedIds.includes(node.id)"
+                  :data-hidden="!studioNodeVisible(node)"
+                  :data-locked="studioNodeLocked(node)"
+                  :data-drop-position="
+                    layerDrop?.id === node.id ? layerDrop.position : undefined
+                  "
+                  :draggable="
+                    !studioNodeLocked(node) && !lockedLayerGroups.has(entry.groupId)
+                  "
+                  title="拖动成员时移动整个组合"
+                  @dragstart="startLayerDrag($event, node.id)"
+                  @dragover="overLayer($event, node.id)"
+                  @drop="dropLayer($event, node.id)"
+                  @dragend="clearLayerDrag"
+                  @click="selectNode(node.id, $event.shiftKey)"
+                >
+                  <span class="studio-layer-identity">
+                    <span aria-hidden="true">⋮⋮</span> {{ node.id }}
+                  </span>
+                  <small>
+                    {{ node.type }}
+                    {{ studioNodeLocked(node) ? " · 已锁定" : "" }}
+                    {{ !studioNodeVisible(node) ? " · 已隐藏" : "" }}
+                  </small>
+                </button>
+              </div>
+            </div>
+            <button
+              v-else
+              type="button"
+              class="studio-layer"
+              :data-layer-key="`node:${entry.node.id}`"
+              :data-selected="state.selectedIds.includes(entry.node.id)"
+              :data-hidden="!studioNodeVisible(entry.node)"
+              :data-locked="studioNodeLocked(entry.node)"
+              :data-drop-position="
+                layerDrop?.id === entry.node.id ? layerDrop.position : undefined
+              "
+              :draggable="!studioNodeLocked(entry.node)"
+              title="拖动调整图层"
+              @dragstart="startLayerDrag($event, entry.node.id)"
+              @dragover="overLayer($event, entry.node.id)"
+              @drop="dropLayer($event, entry.node.id)"
+              @dragend="clearLayerDrag"
+              @click="selectNode(entry.node.id, $event.shiftKey)"
+            >
+              <span class="studio-layer-identity">
+                <span aria-hidden="true">⋮⋮</span> {{ entry.node.id }}
+              </span>
+              <small>
+                {{ entry.node.type }}
+                {{ studioNodeLocked(entry.node) ? " · 已锁定" : "" }}
+                {{ !studioNodeVisible(entry.node) ? " · 已隐藏" : "" }}
+              </small>
+            </button>
+          </template>
+        </div>
+
       <section class="studio-stage" aria-label="组态画布">
         <div class="studio-stage-caption">
           <span
