@@ -101,7 +101,7 @@ export default function StudioPage() {
   const [preferredLayerTargetId, setPreferredLayerTargetId] = useState("");
   const [layerSearch, setLayerSearch] = useState("");
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(() => new Set());
-  const [locateLayerKey, setLocateLayerKey] = useState<string | null>(null);
+  const [locateLayerRequest, setLocateLayerRequest] = useState<{ key: string } | null>(null);
   const [layerInsertPosition, setLayerInsertPosition] = useState<"before" | "after">("after");
   const [layerDrop, setLayerDrop] = useState<{ id: string; position: "before" | "after" } | null>(
     null,
@@ -121,6 +121,10 @@ export default function StudioPage() {
   const geometryRef = useRef<GeometryDragState | null>(null);
   const layerDragRef = useRef<{ pageId: string; nodeId: string } | null>(null);
   const layerTreeRef = useRef<HTMLDivElement | null>(null);
+  const selectionSyncRef = useRef<{ pageId: string; nodeId: string | null }>({
+    pageId: state.activePageId,
+    nodeId: state.selectedId,
+  });
 
   const page = state.document.pages.find((item) => item.id === state.activePageId);
   const selected = page?.nodes.find((node) => node.id === state.selectedId);
@@ -183,24 +187,12 @@ export default function StudioPage() {
           (id) => page?.nodes.find((node) => node.id === id)?.groupId === selected.groupId,
         ))) &&
     !hasLockedSelection;
-  const selectedGroupId = selected?.groupId;
   useEffect(() => {
-    if (!selectedGroupId) return;
-    setCollapsedGroupIds((previous) => {
-      if (!previous.has(selectedGroupId)) return previous;
-      const next = new Set(previous);
-      next.delete(selectedGroupId);
-      return next;
-    });
-  }, [state.activePageId, state.selectedId, selectedGroupId]);
-
-  useEffect(() => {
-    if (!locateLayerKey) return;
+    if (!locateLayerRequest) return;
     const rows = layerTreeRef.current?.querySelectorAll<HTMLButtonElement>("[data-layer-key]");
-    const row = [...(rows ?? [])].find((item) => item.dataset.layerKey === locateLayerKey);
+    const row = [...(rows ?? [])].find((item) => item.dataset.layerKey === locateLayerRequest.key);
     row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    setLocateLayerKey(null);
-  }, [locateLayerKey, layerSearch, collapsedGroupIds, state.activePageId]);
+  }, [locateLayerRequest]);
 
   const layerTargetNodes = page
     ? page.nodes.filter(
@@ -235,7 +227,7 @@ export default function StudioPage() {
       if (!editor.switchPage(pageId)) return;
       clearLayerDrag();
       setLayerSearch("");
-      setLocateLayerKey(null);
+      setLocateLayerRequest(null);
       cancelDrag();
       setZoom(1);
       refresh();
@@ -299,10 +291,23 @@ export default function StudioPage() {
 
   function refresh() {
     const next = editor.snapshot();
-    setState(next);
+    const previous = selectionSyncRef.current;
     const node = next.document.pages
       .find((item) => item.id === next.activePageId)
       ?.nodes.find((item) => item.id === next.selectedId);
+    if (next.activePageId !== previous.pageId || next.selectedId !== previous.nodeId) {
+      if (node?.groupId) {
+        const groupId = node.groupId;
+        setCollapsedGroupIds((current) => {
+          if (!current.has(groupId)) return current;
+          const updated = new Set(current);
+          updated.delete(groupId);
+          return updated;
+        });
+      }
+    }
+    selectionSyncRef.current = { pageId: next.activePageId, nodeId: next.selectedId };
+    setState(next);
     setLabelDraft(typeof node?.props.text === "string" ? node.props.text : "");
   }
 
@@ -922,7 +927,7 @@ export default function StudioPage() {
       clearLayerDrag();
       setLayerSearch("");
       setCollapsedGroupIds(new Set());
-      setLocateLayerKey(null);
+      setLocateLayerRequest(null);
       cancelDrag();
       refresh();
       setHasSavedDraft(true);
@@ -980,7 +985,7 @@ export default function StudioPage() {
       clearLayerDrag();
       setLayerSearch("");
       setCollapsedGroupIds(new Set());
-      setLocateLayerKey(null);
+      setLocateLayerRequest(null);
       setPreview(null);
       refresh();
       const draftWarning = await refreshDraftAvailability(editor.snapshot().document.projectId);
@@ -1026,7 +1031,7 @@ export default function StudioPage() {
         return next;
       });
     }
-    setLocateLayerKey(node.groupId ? `group:${node.groupId}` : `node:${node.id}`);
+    setLocateLayerRequest({ key: node.groupId ? `group:${node.groupId}` : `node:${node.id}` });
     setNotice("已定位选中图元所在图层");
   }
 
