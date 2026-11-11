@@ -877,3 +877,15 @@ Write-Host "退出码：$LASTEXITCODE"
 ```
 
 本命令使用现有 Node.js + Chrome/Edge DevTools Protocol，不增加依赖，也不执行设备写入。始终通过隔离浏览器数据目录启动，关闭双标签页后清理临时 profile，不读取/清空用户日常浏览器数据。测试包含故障模拟，**不代表真实磁盘配额耗尽、断电、Tauri WebView2 或跨设备协同已验证**。本批脚本与完整质量链仍需维护者 Windows 实测后才能标记通过。
+
+## V0.3 第八批：服务端工程保存请求契约验收（ADR-0040）
+
+仅新增 Core 的纯输入校验及 9 项单测，不修改 NestJS 路由或引入数据库。维护者在第八批分支的仓库根目录执行：
+
+```powershell
+pnpm run test:core
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+上一批实际通过 **303 项**单测，本批预计增加 **9 项**，即 **312 项**，以本次 Vitest 实测为准。须确认 `vp check` 为零警告、两套 Web/NestJS 类型与构建正常、服务端 E2E 仍保持未实现工业设备写入返回 404。**本批完整质量链尚未在维护者 Windows 执行**，不可沿用此前日志宣称通过。

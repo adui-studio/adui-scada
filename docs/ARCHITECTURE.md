@@ -225,3 +225,7 @@ Vue/React Studio 通过共同的 `@adui/scada-core` 比较契约、`@adui/scada-
 ## V0.3 第五批：本地历史恢复可靠性（ADR-0038）
 
 继续复用 `DraftAutoSaveSession` 的队列化异步写入与 `stop()` 停写承诺，双框架只通过现有操作门闩防止 JSON 导入和历史恢复并发修改。安全回归在隔离 Chrome/Edge profile 内使用实际 IndexedDB，覆盖撤销确认、历史持久化、Origin 隔离和模拟 IndexedDB 拒绝打开。未修改共享 Schema、Runtime、数据库结构或工业服务；这仍是浏览器本地一致性保障，不是服务端发布事务或工业安全认证。
+
+## V0.3 第八批：受控服务端持久化边界（ADR-0040）
+
+共享 Core 新增无框架依赖的 `parseServerProjectSaveRequest` 作为**纯请求结构校验**，供未来 NestJS 服务复用；该函数不负责认证、授权、CAS、审计或写入。未来服务端调用顺序必须是：认证（可信主体）→ 工程级授权 → 请求体与 Schema 校验 → 数据库事务内修订号 CAS → 生成不可变快照与持久化 → 审计。未确定服务端信任模型、数据库和访问策略前，**NestJS 不注册工程保存、发布或回滚路由**；不改变只读工业边界。

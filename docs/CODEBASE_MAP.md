@@ -343,3 +343,10 @@
 - `scripts/test-studio-browser.mjs --multitab`：复用隔离 Chrome/Edge profile 创建第二个真实标签页，检查 Vue/React 自动保存的外部通知、IndexedDB CAS、删除重建与模拟故障恢复；临时替换浏览器接口会在测试后恢复。
 - `package.json`：增加 `pnpm run test:multitab` 作为独立浏览器验收入口；`ready` 不默认要求图形浏览器或两套开发服务器。
 - `docs/adr/0039-multitab-browser-safety.md`：记录验证范围、故障模拟方法与真实环境限制。
+
+## V0.3 第八批：服务端工程保存输入契约
+
+- `packages/core/src/server-project-contract.ts`：未来 NestJS 可共享的严格工程保存请求校验；仅 `expectedRevision` 与 `document`，校验路由 ID、Schema 和 UTF-8 容量，不执行权限判断或写库。
+- `packages/core/test/server-project-contract.test.ts`：覆盖首次/后续保存、字段白名单、伪造权限字段、无效修订号、路由不一致、旧 Schema、非法图元和超限内容。
+- `packages/core/src/index.ts`：导出共享请求契约，不新增 NestJS 路由、依赖或数据库。
+- [ADR-0040](adr/0040-server-project-contract.md)：记录候选 REST、可信身份来源、数据库 CAS 与后续实现门槛。
