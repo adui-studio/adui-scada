@@ -171,10 +171,7 @@ export default function StudioPage() {
     (node) => state.selectedIds.includes(node.id) && studioNodeLocked(node),
   );
   const canGroup = state.selectedIds.length >= 2 && !hasGroupedSelection && !hasLockedSelection;
-  const layerEntries = useMemo(
-    () => buildLayerTree(page.nodes, layerSearch),
-    [page.nodes, layerSearch],
-  );
+  const layerEntries = buildLayerTree(page.nodes, layerSearch);
   const isLayerSearching = layerSearch.trim().length > 0;
   const lockedLayerGroups = new Set(
     page?.nodes.filter(studioNodeLocked).flatMap((node) => (node.groupId ? [node.groupId] : [])),
@@ -1044,9 +1041,9 @@ export default function StudioPage() {
     const groupId = groupHeader?.groupId;
     const rowKey = groupHeader ? `group:${groupId}` : `node:${node.id}`;
     const selectedRow = groupHeader
-      ? page.nodes.some(
+      ? (page?.nodes.some(
           (item) => item.groupId === groupId && state.selectedIds.includes(item.id),
-        )
+        ) ?? false)
       : state.selectedIds.includes(node.id);
     const lockedRow = groupHeader ? groupHeader.hasLockedMember : studioNodeLocked(node);
     const hiddenRow = groupHeader
