@@ -1305,8 +1305,8 @@ export default function StudioPage() {
               ),
             )}
           </div>
-
-        <section className="studio-stage" aria-label="组态画布">
+      </aside>
+      <section className="studio-stage" aria-label="组态画布">
           <div className="studio-stage-caption">
             <span>
               {page.name} · {page.size.width} × {page.size.height} · 静态模拟预览
