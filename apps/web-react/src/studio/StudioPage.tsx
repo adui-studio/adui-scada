@@ -1145,7 +1145,10 @@ export default function StudioPage() {
         {notice}
         {hasSavedDraft && !autoSaveEnabled ? " · 已发现本地草稿，可点击「恢复草稿」确认加载" : ""}
       </p>
-      <div className="studio-page-bar flex shrink-0 flex-wrap items-center justify-between gap-2" aria-label="工程页面管理">
+      <div
+        className="studio-page-bar flex shrink-0 flex-wrap items-center justify-between gap-2"
+        aria-label="工程页面管理"
+      >
         <div className="studio-page-tabs" aria-label="工程页面">
           {state.document.pages.map((item) => (
             <button
@@ -1192,7 +1195,10 @@ export default function StudioPage() {
         </div>
       </div>
       <div className="studio-workspace grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-3 lg:grid-cols-[clamp(200px,17vw,260px)_minmax(0,1fr)_clamp(260px,21vw,320px)] lg:grid-rows-1">
-        <aside className="studio-panel min-h-0 min-w-0 overflow-y-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3" aria-label="图元列表">
+        <aside
+          className="studio-panel min-h-0 min-w-0 overflow-y-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3"
+          aria-label="图元列表"
+        >
           <h2>图元 · {page.nodes.length}</h2>
           <p className="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
           <div className="studio-add">
@@ -1306,7 +1312,10 @@ export default function StudioPage() {
             )}
           </div>
         </aside>
-        <section className="studio-stage min-h-0 min-w-0 overflow-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3" aria-label="组态画布">
+        <section
+          className="studio-stage min-h-0 min-w-0 overflow-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3"
+          aria-label="组态画布"
+        >
           <div className="studio-stage-caption">
             <span>
               {page.name} · {page.size.width} × {page.size.height} · 静态模拟预览
@@ -1517,7 +1526,10 @@ export default function StudioPage() {
             )}
           </svg>
         </section>
-        <aside className="studio-panel min-h-0 min-w-0 overflow-y-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3" aria-label="图元属性">
+        <aside
+          className="studio-panel min-h-0 min-w-0 overflow-y-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3"
+          aria-label="图元属性"
+        >
           <h2>属性 · 已选 {state.selectedIds.length}</h2>
           <div className="studio-toolbox">
             <div className="studio-tool-group" aria-label="图层锁定与可见性">

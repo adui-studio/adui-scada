@@ -34,7 +34,13 @@ export default function App() {
         </button>
         <span className="scada-app-version">V0.2 本地原型</span>
       </nav>
-      <Suspense fallback={<main className="min-h-0 flex-1 p-4" role="status">正在加载页面...</main>}>
+      <Suspense
+        fallback={
+          <main className="min-h-0 flex-1 p-4" role="status">
+            正在加载页面...
+          </main>
+        }
+      >
         {view === "runtime" ? <RuntimePage /> : <StudioPage />}
       </Suspense>
     </div>
