@@ -17,6 +17,8 @@ import {
   studioNodeLocked,
   studioNodeVisible,
   buildLayerTree,
+  clampStudioPan,
+  studioViewBox,
 } from "@adui/scada-core";
 import type { LayerTreeGroup, ScadaDocument, ScadaNode } from "@adui/scada-core";
 import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
@@ -110,12 +112,21 @@ export default function StudioPage() {
   const autoSaveSessionRef = useRef<DraftAutoSaveSession | null>(null);
   const draftActionRef = useRef(false);
   const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
   const [gridVisible, setGridVisible] = useState(true);
   const [gridSnap, setGridSnap] = useState(true);
   const [nodeSnap, setNodeSnap] = useState(true);
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const panDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    scale: number;
+  } | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const marqueeRef = useRef<MarqueeState | null>(null);
   const geometryRef = useRef<GeometryDragState | null>(null);
@@ -227,6 +238,7 @@ export default function StudioPage() {
       setLocateLayerRequest(null);
       cancelDrag();
       setZoom(1);
+      setPan({ x: 0, y: 0 });
       refresh();
       setNotice("已切换编辑页面；页面切换不会修改工程草稿");
     } catch (error) {
@@ -637,7 +649,55 @@ export default function StudioPage() {
   }
 
   function changeZoom(delta: number) {
-    setZoom((current) => Math.max(0.5, Math.min(2, Math.round((current + delta) * 100) / 100)));
+    const nextZoom = Math.max(0.5, Math.min(2, Math.round((zoom + delta) * 100) / 100));
+    setZoom(nextZoom);
+    setPan((current) => clampStudioPan(page.size, nextZoom, current));
+  }
+
+  function resetCanvasView() {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }
+
+  // 中键或 Alt + 画布空白处拖动，只修改视图区间。
+  function beginCanvasPan(event: ReactPointerEvent<SVGSVGElement>): boolean {
+    if (
+      zoom <= 1 ||
+      !(event.button === 1 || (event.button === 0 && event.altKey && event.target === event.currentTarget))
+    ) {
+      return false;
+    }
+    const matrix = svgRef.current?.getScreenCTM();
+    if (!matrix || matrix.a === 0) return false;
+    panDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: pan.x,
+      originY: pan.y,
+      scale: matrix.a,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+    return true;
+  }
+
+  function updateCanvasPan(event: ReactPointerEvent<SVGSVGElement>): boolean {
+    const dragging = panDragRef.current;
+    if (!dragging || dragging.pointerId !== event.pointerId) return false;
+    setPan(
+      clampStudioPan(page.size, zoom, {
+        x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
+        y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
+      }),
+    );
+    return true;
+  }
+
+  function finishCanvasPan(event: ReactPointerEvent<SVGSVGElement>): boolean {
+    if (!panDragRef.current || panDragRef.current.pointerId !== event.pointerId) return false;
+    panDragRef.current = null;
+    return true;
   }
 
   function canvasPoint(clientX: number, clientY: number) {
@@ -814,6 +874,7 @@ export default function StudioPage() {
   }
 
   function cancelDrag() {
+    panDragRef.current = null;
     dragRef.current = null;
     marqueeRef.current = null;
     geometryRef.current = null;
@@ -1384,8 +1445,8 @@ export default function StudioPage() {
               <button type="button" onClick={() => changeZoom(-0.25)} disabled={zoom <= 0.5}>
                 −
               </button>
-              <button type="button" onClick={() => setZoom(1)}>
-                {Math.round(zoom * 100)}%
+              <button type="button" onClick={resetCanvasView}>
+                {zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%`}
               </button>
               <button type="button" onClick={() => changeZoom(0.25)} disabled={zoom >= 2}>
                 +
@@ -1398,20 +1459,24 @@ export default function StudioPage() {
                 ref={svgRef}
                 className="studio-svg"
                 data-rotating={rotating ? "true" : undefined}
-                style={{ width: `${zoom * 100}%` }}
-                viewBox={`0 0 ${page.size.width} ${page.size.height}`}
+                viewBox={studioViewBox(page.size, zoom, pan)}
+                preserveAspectRatio="xMidYMid meet"
                 onPointerMove={(event) => {
+                  if (updateCanvasPan(event)) return;
                   updateDrag(event);
                   updateMarquee(event);
                   updateGeometry(event);
                 }}
                 onPointerUp={(event) => {
+                  if (finishCanvasPan(event)) return;
                   finishDrag(event);
                   finishMarquee(event);
                   finishGeometry(event);
                 }}
                 onPointerCancel={cancelDrag}
-                onPointerDown={startMarquee}
+                onPointerDown={(event) => {
+                  if (!beginCanvasPan(event)) startMarquee(event);
+                }}
                 aria-label="可编辑 SVG 画布"
               >
                 <defs>

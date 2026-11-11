@@ -12,6 +12,8 @@ import {
   studioNodeLocked,
   studioNodeVisible,
   buildLayerTree,
+  clampStudioPan,
+  studioViewBox,
 } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
@@ -73,12 +75,21 @@ let autoSaveSession: DraftAutoSaveSession | null = null;
 let draftActionInProgress = false;
 let unsubscribeDraft: (() => void) | null = null;
 const zoom = ref(1);
+const pan = ref({ x: 0, y: 0 });
 const gridVisible = ref(true);
 const gridSnap = ref(true);
 const nodeSnap = ref(true);
 const leftPanelVisible = ref(true);
 const rightPanelVisible = ref(true);
 const svgRef = ref<SVGSVGElement | null>(null);
+let activePan: {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  originX: number;
+  originY: number;
+  scale: number;
+} | null = null;
 
 interface MarqueeState {
   pointerId: number;
@@ -461,12 +472,14 @@ function finishMarquee(event: PointerEvent) {
 }
 
 function updatePointer(event: PointerEvent) {
+  if (updateCanvasPan(event)) return;
   updateDrag(event);
   updateMarquee(event);
   updateGeometry(event);
 }
 
 function finishPointer(event: PointerEvent) {
+  if (finishCanvasPan(event)) return;
   finishDrag(event);
   finishMarquee(event);
   finishGeometry(event);
@@ -495,6 +508,7 @@ function switchPage(pageId: string) {
     layerSearch.value = "";
     cancelDrag();
     zoom.value = 1;
+    pan.value = { x: 0, y: 0 };
     refresh();
     notice.value = "已切换编辑页面；页面切换不会修改工程草稿";
   } catch (error) {
@@ -712,7 +726,57 @@ function layer(action: LayerAction) {
 }
 
 function changeZoom(delta: number) {
-  zoom.value = Math.max(0.5, Math.min(2, Math.round((zoom.value + delta) * 100) / 100));
+  const nextZoom = Math.max(0.5, Math.min(2, Math.round((zoom.value + delta) * 100) / 100));
+  zoom.value = nextZoom;
+  pan.value = clampStudioPan(page.value.size, nextZoom, pan.value);
+}
+
+function resetCanvasView() {
+  zoom.value = 1;
+  pan.value = { x: 0, y: 0 };
+}
+
+// 中键或 Alt + 画布空白处拖动，避免改变工程图元坐标。
+function beginCanvasPan(event: PointerEvent): boolean {
+  if (
+    zoom.value <= 1 ||
+    !(event.button === 1 || (event.button === 0 && event.altKey && event.target === event.currentTarget))
+  ) {
+    return false;
+  }
+  const matrix = svgRef.value?.getScreenCTM();
+  if (!matrix || matrix.a === 0) return false;
+  activePan = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    originX: pan.value.x,
+    originY: pan.value.y,
+    scale: matrix.a,
+  };
+  svgRef.value?.setPointerCapture(event.pointerId);
+  event.preventDefault();
+  return true;
+}
+
+function updateCanvasPan(event: PointerEvent): boolean {
+  const dragging = activePan;
+  if (!dragging || dragging.pointerId !== event.pointerId) return false;
+  pan.value = clampStudioPan(page.value.size, zoom.value, {
+    x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
+    y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
+  });
+  return true;
+}
+
+function finishCanvasPan(event: PointerEvent): boolean {
+  if (!activePan || activePan.pointerId !== event.pointerId) return false;
+  activePan = null;
+  return true;
+}
+
+function startCanvasPointer(event: PointerEvent) {
+  if (!beginCanvasPan(event)) startMarquee(event);
 }
 
 function canvasPoint(clientX: number, clientY: number) {
@@ -884,6 +948,7 @@ function finishGeometry(event: PointerEvent) {
 }
 
 function cancelDrag() {
+  activePan = null;
   activeDrag = null;
   activeMarquee = null;
   activeGeometry = null;
@@ -1381,7 +1446,7 @@ async function importJson(event: Event) {
           </div>
           <div class="studio-zoom" aria-label="画布缩放">
             <button type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</button>
-            <button type="button" @click="zoom = 1">{{ Math.round(zoom * 100) }}%</button>
+            <button type="button" @click="resetCanvasView">{{ zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%` }}</button>
             <button type="button" :disabled="zoom >= 2" @click="changeZoom(0.25)">+</button>
           </div>
         </div>
@@ -1391,13 +1456,13 @@ async function importJson(event: Event) {
               ref="svgRef"
               class="studio-svg"
               :data-rotating="rotating ? 'true' : undefined"
-              :style="{ width: `${zoom * 100}%` }"
-              :viewBox="`0 0 ${page.size.width} ${page.size.height}`"
+              :viewBox="studioViewBox(page.size, zoom, pan)"
+              preserveAspectRatio="xMidYMid meet"
               aria-label="可编辑 SVG 画布"
               @pointermove="updatePointer"
               @pointerup="finishPointer"
               @pointercancel="cancelDrag"
-              @pointerdown.self="startMarquee"
+              @pointerdown="startCanvasPointer"
             >
               <defs>
                 <pattern
