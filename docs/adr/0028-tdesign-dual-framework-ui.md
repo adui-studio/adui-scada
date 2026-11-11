@@ -1,6 +1,7 @@
 # ADR-0028：Vue/React 双框架统一采用 TDesign 组件体系
 
-- 状态：已接受（技术选型已由维护者明确确认，组件迁移分批验收）
+- 状态：Accepted
+- 决策说明：技术选型已由维护者明确确认，组件迁移仍按批次验收。
 - 日期：2026-11-11
 - 关联需求：FR-005、FR-006、FR-013、NFR-004、NFR-006
 - 关联决策：[ADR-0027](0027-layer-group-tree-projection.md)、[V0.2 Studio](../V0.2_STUDIO.md)
