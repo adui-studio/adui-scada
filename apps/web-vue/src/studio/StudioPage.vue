@@ -567,6 +567,90 @@ function changeSelectedVisible(visible: boolean) {
   cancelDrag();
 }
 
+function moveLayerPrecisely(nodeId: string, targetId: string, position: "before" | "after") {
+  try {
+    const changed = editor.moveLayer(nodeId, targetId, position);
+    if (changed) {
+      refresh();
+      notice.value = "图层已精确排序，可撤销";
+    } else {
+      notice.value = "图层位置没有变化";
+    }
+  } catch (error) {
+    notice.value = error instanceof Error ? error.message : String(error);
+  }
+}
+
+function clearLayerDrag() {
+  layerDrag = null;
+  layerDrop.value = null;
+}
+
+function startLayerDrag(event: DragEvent, nodeId: string) {
+  const node = page.value.nodes.find((item) => item.id === nodeId);
+  if (
+    !node ||
+    studioNodeLocked(node) ||
+    (node.groupId !== undefined && lockedLayerGroups.value.has(node.groupId))
+  ) {
+    event.preventDefault();
+    return;
+  }
+  layerDrag = { pageId: page.value.id, nodeId };
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("application/x-adui-scada-layer", nodeId);
+  }
+}
+
+function overLayer(event: DragEvent, targetId: string) {
+  const dragging = layerDrag;
+  if (!dragging || dragging.pageId !== state.value.activePageId || dragging.nodeId === targetId) {
+    return;
+  }
+  const source = page.value.nodes.find((item) => item.id === dragging.nodeId);
+  const target = page.value.nodes.find((item) => item.id === targetId);
+  if (!source || !target || (source.groupId && source.groupId === target.groupId)) return;
+  if (!(event.currentTarget instanceof HTMLButtonElement)) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  const bounds = event.currentTarget.getBoundingClientRect();
+  const position = event.clientY < bounds.top + bounds.height / 2 ? "after" : "before";
+  if (layerDrop.value?.id !== targetId || layerDrop.value.position !== position) {
+    layerDrop.value = { id: targetId, position };
+  }
+}
+
+function dropLayer(event: DragEvent, targetId: string) {
+  const dragging = layerDrag;
+  if (!dragging || dragging.pageId !== state.value.activePageId) return;
+  if (!(event.currentTarget instanceof HTMLButtonElement)) return;
+  event.preventDefault();
+  const bounds = event.currentTarget.getBoundingClientRect();
+  const position = event.clientY < bounds.top + bounds.height / 2 ? "after" : "before";
+  clearLayerDrag();
+  moveLayerPrecisely(dragging.nodeId, targetId, position);
+}
+
+function selectLayerTarget(event: Event) {
+  if (event.target instanceof HTMLSelectElement) {
+    preferredLayerTargetId.value = event.target.value;
+  }
+}
+
+function selectLayerPosition(event: Event) {
+  if (!(event.target instanceof HTMLSelectElement)) return;
+  if (event.target.value === "before" || event.target.value === "after") {
+    layerInsertPosition.value = event.target.value;
+  }
+}
+
+function moveSelectedLayerPrecisely() {
+  const node = selected.value;
+  if (!node || !canPreciselyMove.value || !layerTargetId.value) return;
+  moveLayerPrecisely(node.id, layerTargetId.value, layerInsertPosition.value);
+}
+
 function layer(action: LayerAction) {
   apply(() => editor.reorderSelected(action), "已调整图元层级");
 }
