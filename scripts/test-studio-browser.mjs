@@ -430,6 +430,131 @@ async function runStudioInteroperability(session) {
   process.stdout.write("React → Vue → React → Vue：完整往返及双端非法导入保护成功\n");
 }
 
+/** 测试真实本地版本菜单，确认框只在隔离浏览器上下文中临时替换。 */
+async function studioVersionActionInPage(
+  label,
+  expectedNotice,
+  confirmChoice = null,
+  revision = 1,
+) {
+  const menu = document.querySelector(".studio-version-menu");
+  if (!menu) throw new Error("未找到本地工程版本历史菜单");
+  if (!menu.open) {
+    menu.open = true;
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const start = Date.now();
+    while (Date.now() - start < 12000) {
+      if (!menu.querySelector(".studio-version-tools button:disabled")) break;
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+  }
+  const candidates =
+    label === "载入" || label === "查看差异"
+      ? [...menu.querySelectorAll(".studio-version-item")]
+          .filter(
+            (item) => item.querySelector("strong")?.textContent.trim() === `版本 #${revision}`,
+          )
+          .flatMap((item) => [...item.querySelectorAll("button")])
+      : [...menu.querySelectorAll(".studio-version-panel button")];
+  const button = candidates.find((item) => item.textContent.trim() === label);
+  if (!button) throw new Error("找不到版本历史操作按钮：" + label);
+  if (button.disabled) throw new Error("版本历史操作尚未结束：" + label);
+  const originalConfirm = Reflect.get(window, "confirm");
+  let confirmInvoked;
+  const confirmCall = new Promise((resolve) => {
+    confirmInvoked = resolve;
+  });
+  try {
+    if (confirmChoice !== null) {
+      window.confirm = () => {
+        confirmInvoked();
+        return confirmChoice;
+      };
+    }
+    button.click();
+    if (expectedNotice) {
+      const start = Date.now();
+      while (Date.now() - start < 12000) {
+        const notice = document.querySelector(".studio-notice")?.textContent || "";
+        if (notice.includes(expectedNotice)) break;
+        const error = menu.querySelector(".studio-version-error")?.textContent || "";
+        if (error) throw new Error("版本历史操作失败：" + error);
+        await new Promise((resolve) => setTimeout(resolve, 80));
+      }
+      if (!(document.querySelector(".studio-notice")?.textContent || "").includes(expectedNotice)) {
+        throw new Error("等待版本历史操作结果超时：" + expectedNotice);
+      }
+    } else {
+      await Promise.race([
+        confirmCall,
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("未触发历史版本载入确认")), 12000);
+        }),
+      ]);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return {
+      versions: [...menu.querySelectorAll(".studio-version-item strong")].map((item) =>
+        item.textContent.trim(),
+      ),
+      comparison: menu.querySelector(".studio-version-comparison")?.textContent || "",
+    };
+  } finally {
+    if (confirmChoice !== null) window.confirm = originalConfirm;
+  }
+}
+
+async function runStudioVersionHistory(session) {
+  const evaluate = (fn, ...args) =>
+    session.evaluate(
+      "(" + fn.toString() + ")(" + args.map((arg) => JSON.stringify(arg)).join(",") + ")",
+    );
+  await session.send("Emulation.setDeviceMetricsOverride", {
+    width: 1440,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  for (const target of targets) {
+    await navigateStudioForInterop(session, target, "history-" + target.name);
+    const initial = JSON.parse(await evaluate(exportStudioJsonInPage));
+    const created = await evaluate(studioVersionActionInPage, "创建快照", "已创建本地历史版本 #1");
+    assert.deepStrictEqual(created.versions, ["版本 #1"], target.name + " 首次版本创建失败");
+
+    await evaluate(addStudioSymbolInPage, "+ 水箱");
+    const modified = JSON.parse(await evaluate(exportStudioJsonInPage));
+    assert.notDeepStrictEqual(modified, initial, target.name + " 图元新增失败");
+    const comparison = await evaluate(
+      studioVersionActionInPage,
+      "查看差异",
+      "已查看本地版本 #1",
+      null,
+      1,
+    );
+    assert.ok(
+      comparison.comparison.includes("与当前内容不同"),
+      target.name + " 未报告当前工程与历史版本的差异",
+    );
+
+    await evaluate(studioVersionActionInPage, "载入", null, false, 1);
+    const canceled = JSON.parse(await evaluate(exportStudioJsonInPage));
+    assert.deepStrictEqual(canceled, modified, target.name + " 取消载入却覆盖了工程");
+
+    await evaluate(studioVersionActionInPage, "载入", "已载入本地版本 #1", true, 1);
+    const restored = JSON.parse(await evaluate(exportStudioJsonInPage));
+    assert.deepStrictEqual(restored, initial, target.name + " 历史版本未完整恢复");
+
+    await evaluate(addStudioSymbolInPage, "+ 文本");
+    const second = await evaluate(studioVersionActionInPage, "创建快照", "已创建本地历史版本 #2");
+    assert.deepStrictEqual(
+      second.versions,
+      ["版本 #2", "版本 #1"],
+      target.name + " 历史版本未按最新修订号倒序排列",
+    );
+    process.stdout.write(target.name + " 历史版本创建、差异、取消载入、恢复及倒序列表通过\n");
+  }
+}
+
 async function main() {
   const browserPath = browserExecutable();
   assert.ok(browserPath, "未找到 Chrome/Edge，可设置 SCADA_BROWSER_PATH 指定浏览器路径");
@@ -474,6 +599,10 @@ async function main() {
     await session.send("Runtime.enable");
     if (process.argv.includes("--interop")) {
       await runStudioInteroperability(session);
+      return;
+    }
+    if (process.argv.includes("--versions")) {
+      await runStudioVersionHistory(session);
       return;
     }
     let failed = 0;

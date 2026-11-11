@@ -412,3 +412,7 @@ V0.3 首批 PR #23 已于 2026-11-11 Squash Merge 到 `main`（`ef18ec1`）；�
 ## 2026-11-11 · V0.3 第三批：本地工程历史快照仓储（待验收）
 
 V0.3 第二批 PR #24 已 Squash Merge 至 `main`（`9a42ed5`），维护者提供的 `ready` 退出码 0、280/280 单测、2/2 E2E、双 Web 和 NestJS 构建均通过。第三批从该提交新建 `feat/v0.3-local-version-history`：在 Core 增加 `ProjectVersionRepository`；在原有 Dexie 包中新增独立本地历史库，使用 CAS 事务分配递增修订号、只追加快照及倒序分页查询；复用 ADR-0035 SHA-256 真实回读。新增 13 项 fake-indexeddb 单测，不修改 UI、草稿数据库或 Runtime。**新增测试尚未在维护者 Windows 实际执行，预计总单测 293 项不能认定为通过。** 此处只是本地版本仓储，非正式服务端发布、回滚和工业权限控制。参见 [ADR-0036](adr/0036-local-version-history.md)。
+
+## 2026-11-11 · V0.3 第四批：双框架本地历史版本管理（待验收）
+
+V0.3 第三批 PR #25 已 Squash Merge 至 `main`（`3e264990`）。维护者 Windows 实测 `pnpm run ready` 退出码 0、293/293 单测、2/2 E2E、双 Web/NestJS 构建通过。第四批从该基线建立独立分支 `feat/v0.3-studio-version-history-ui`：React/Vue 两端增加同构历史菜单、创建快照、分页历史、共享 Core 差异比较、受确认载入；确认后停用自动保存且不覆盖草稿；新增 4 项 Core 比较单测及隔离浏览器命令 `test:versions`。既有草稿/历史数据库、工程 Schema、工业只读 Runtime 均不变。本批测试**尚未在维护者 Windows 执行**，不可沿用第三批通过结论。详见 [ADR-0037](adr/0037-studio-version-history-ui.md)。

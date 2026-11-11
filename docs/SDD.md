@@ -381,3 +381,10 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - `list(projectId,{limit?,beforeRevision?}): Promise<readonly ProjectVersionSummary[]>`：按修订号倒序且严格排除游标，缺省 20、最多 100 项，返回元数据摘要。
 
 `@adui/scada-draft-storage` 中的 `DexieProjectVersionRepository` 使用独立 IndexedDB `adui-scada-studio-versions`，模式 `heads: projectId`、`versions: [projectId+revision],projectId`。先在事务外使用 WebCrypto 创建快照，再在单一 `rw` 事务内重新比较当前版本、`add` 快照、更新 head，以保障并发写入只成功一次。历史快照不可修改或删除。**该 head 不得用于正式发布或 Runtime 加载**，跨 Origin 不共享；服务器事务、认证、发布指针及版本回滚均为后续独立功能。
+
+## V0.3 第四批：本地历史版本界面与结构差异（ADR-0037）
+
+- 新增纯 Core `compareProjectDocuments(current,historical)`：两份 `ScadaDocument 0.2.0` 经严格校验后检查同一 `projectId`，递归比较 JSON 内容；对象键顺序不计差异，数组顺序保真。返回 `{sameContent,current:{pageCount,nodeCount,bindingCount},historical:{...}}`。
+- React/Vue Studio “版本历史”菜单复用 `DexieProjectVersionRepository`：打开/刷新读 `list(projectId,{limit:10})`，分页读 `beforeRevision`，点击差异时调用 `get` 重新校验摘要；“创建快照”调用 `getHeadRevision` + `append`，CAS 冲突显示中文错误。
+- 历史载入再次校验快照，要求当前工程 ID 未切换且用户同意替换；确认之后等待 `pauseAutoSave` 完成，再通过共享 `DocumentEditor.loadDocument` 原子载入，清理图层/拖动会话与撤销重做。草稿数据库、历史列表和正式发布状态不被修改。取消/校验失败不修改编辑文档。
+- 版本历史仅保留本地快照，不新增正式服务端 API、角色权限或发布指针。
