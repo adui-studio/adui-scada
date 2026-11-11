@@ -1314,7 +1314,7 @@ async function importJson(event: Event) {
             </button>
           </template>
         </div>
-
+      </aside>
       <section class="studio-stage" aria-label="组态画布">
         <div class="studio-stage-caption">
           <span
