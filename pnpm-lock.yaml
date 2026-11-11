@@ -358,6 +358,9 @@ importers:
       '@adui/scada-runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
+      '@adui/tailwind':
+        specifier: workspace:*
+        version: link:../../packages/tailwind
       react:
         specifier: 'catalog:'
         version: 19.3.1
@@ -374,9 +377,6 @@ importers:
       '@adui/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
-      '@tailwindcss/vite':
-        specifier: 'catalog:'
-        version: 4.3.5(@voidzero-dev/vite-plus-core@1.5.0(@types/node@24.19.2)(@volar/typescript@2.4.28(typescript@6.0.3))(@vue/language-core@3.3.13)(jiti@2.7.0)(typescript@6.0.3)(vue-tsc@3.3.13(typescript@6.0.3)))
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
@@ -389,9 +389,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 6.2.1(@voidzero-dev/vite-plus-core@1.5.0(@types/node@24.19.2)(@volar/typescript@2.4.28(typescript@6.0.3))(@vue/language-core@3.3.13)(jiti@2.7.0)(typescript@6.0.3)(vue-tsc@3.3.13(typescript@6.0.3)))
-      tailwindcss:
-        specifier: 'catalog:'
-        version: 4.3.5
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -416,6 +413,9 @@ importers:
       '@adui/scada-runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
+      '@adui/tailwind':
+        specifier: workspace:*
+        version: link:../../packages/tailwind
       tdesign-icons-vue-next:
         specifier: 'catalog:'
         version: 0.4.11(vue@3.5.40(typescript@6.0.3))
@@ -429,18 +429,12 @@ importers:
       '@adui/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
-      '@tailwindcss/vite':
-        specifier: 'catalog:'
-        version: 4.3.5(@voidzero-dev/vite-plus-core@1.5.0(@types/node@24.19.2)(@volar/typescript@2.4.28(typescript@6.0.3))(@vue/language-core@3.3.13)(jiti@2.7.0)(typescript@6.0.3)(vue-tsc@3.3.13(typescript@6.0.3)))
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
         version: 6.0.10(@voidzero-dev/vite-plus-core@1.5.0(@types/node@24.19.2)(@volar/typescript@2.4.28(typescript@6.0.3))(@vue/language-core@3.3.13)(jiti@2.7.0)(typescript@6.0.3)(vue-tsc@3.3.13(typescript@6.0.3)))(vue@3.5.40(typescript@6.0.3))
-      tailwindcss:
-        specifier: 'catalog:'
-        version: 4.3.5
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -503,6 +497,19 @@ importers:
       vite-plus:
         specifier: 'catalog:'
         version: 1.5.0(@types/node@24.19.2)(@vitest/ui@5.1.0)(@volar/typescript@2.4.28(typescript@6.0.3))(@vue/language-core@3.3.13)(jiti@2.7.0)(typescript@6.0.3)(vue-tsc@3.3.13(typescript@6.0.3))
+
+  packages/tailwind:
+    dependencies:
+      '@tailwindcss/vite':
+        specifier: 'catalog:'
+        version: 4.3.5(@voidzero-dev/vite-plus-core@1.5.0(@types/node@24.19.2)(@volar/typescript@2.4.28(typescript@6.0.3))(@vue/language-core@3.3.13)(jiti@2.7.0)(typescript@6.0.3)(vue-tsc@3.3.13(typescript@6.0.3)))
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.3.5
+    devDependencies:
+      vite:
+        specifier: 'catalog:'
+        version: '@voidzero-dev/vite-plus-core@1.5.0(@types/node@24.19.2)(@volar/typescript@2.4.28(typescript@6.0.3))(@vue/language-core@3.3.13)(jiti@2.7.0)(typescript@6.0.3)(vue-tsc@3.3.13(typescript@6.0.3))'
 
   packages/tooling:
     devDependencies:
