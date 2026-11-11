@@ -75,7 +75,9 @@ class ChromeSession {
       returnByValue: true,
     });
     if (data.exceptionDetails) {
-      throw new Error(data.exceptionDetails.text + "：" + (data.exceptionDetails.exception?.description || ""));
+      throw new Error(
+        data.exceptionDetails.text + "：" + (data.exceptionDetails.exception?.description || ""),
+      );
     }
     return data.result.value;
   }
@@ -120,7 +122,10 @@ async function checkStudioInPage() {
   const boardRect = bounds(board);
   const svgRect = bounds(svg);
   verify("页面无外层滚动条", document.documentElement.scrollHeight <= window.innerHeight + 2);
-  verify("中央画布无滚动条", canvas.scrollHeight <= canvas.clientHeight + 2 && canvas.scrollWidth <= canvas.clientWidth + 2);
+  verify(
+    "中央画布无滚动条",
+    canvas.scrollHeight <= canvas.clientHeight + 2 && canvas.scrollWidth <= canvas.clientWidth + 2,
+  );
   verify("画板与画布四边对齐",
     near(canvasRect.left, boardRect.left) && near(canvasRect.right, boardRect.right) &&
     near(canvasRect.top, boardRect.top) && near(canvasRect.bottom, boardRect.bottom));
