@@ -205,6 +205,7 @@ export default function StudioPage() {
   function switchPage(pageId: string) {
     try {
       if (!editor.switchPage(pageId)) return;
+      clearLayerDrag();
       cancelDrag();
       setZoom(1);
       refresh();
