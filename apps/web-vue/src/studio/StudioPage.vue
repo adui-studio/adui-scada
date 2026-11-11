@@ -13,9 +13,14 @@ import {
   studioNodeVisible,
   buildLayerTree,
   studioViewportRect,
+  compareProjectDocuments,
 } from "@adui/scada-core";
-import type { ScadaDocument } from "@adui/scada-core";
-import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
+import type { ProjectSnapshot, ProjectVersionSummary, ScadaDocument } from "@adui/scada-core";
+import {
+  DexieDraftRepository,
+  DexieProjectVersionRepository,
+  InvalidLegacyDraftError,
+} from "@adui/scada-draft-storage";
 import {
   DEFAULT_GRID_SIZE,
   GEOMETRY_PROPERTY_FIELDS,
@@ -51,6 +56,8 @@ function getLegacyStorage() {
   }
 }
 const drafts = new DexieDraftRepository({ legacyStorage: getLegacyStorage() });
+const projectVersions = new DexieProjectVersionRepository();
+const HISTORY_PAGE_SIZE = 10;
 const maxFileSize = 2 * 1024 * 1024;
 const editor = new DocumentEditor(waterTreatmentDemoDocument);
 const state = shallowRef(editor.snapshot());
@@ -70,6 +77,13 @@ let layerDrag: { pageId: string; nodeId: string } | null = null;
 const notice = ref("可手动保存浏览器本地草稿 · 尚未连接工程保存服务");
 const hasSavedDraft = ref(false);
 const autoSaveEnabled = ref(false);
+const historyRows = shallowRef<readonly ProjectVersionSummary[]>([]);
+const historyProjectId = ref("");
+const historyHasMore = ref(false);
+const historyBusy = ref(false);
+const historyError = ref("");
+const inspectedVersion = shallowRef<ProjectSnapshot | null>(null);
+let historyActionInProgress = false;
 let autoSaveSession: DraftAutoSaveSession | null = null;
 let draftActionInProgress = false;
 let unsubscribeDraft: (() => void) | null = null;
@@ -123,6 +137,15 @@ interface GeometryDragState {
 let activeDrag: DragState | null = null;
 let activeMarquee: MarqueeState | null = null;
 let activeGeometry: GeometryDragState | null = null;
+
+const visibleHistoryRows = computed(() =>
+  historyProjectId.value === state.value.document.projectId ? historyRows.value : [],
+);
+const historyComparison = computed(() =>
+  inspectedVersion.value?.projectId === state.value.document.projectId
+    ? compareProjectDocuments(state.value.document, inspectedVersion.value.document)
+    : null,
+);
 
 const page = computed(() => {
   const result = state.value.document.pages.find((item) => item.id === state.value.activePageId);
@@ -405,6 +428,7 @@ onUnmounted(() => {
   window.removeEventListener("keydown", handleKey);
   unsubscribeDraft?.();
   void pauseAutoSave().then(() => drafts.close());
+  projectVersions.close();
 });
 watch(
   () => state.value.document.projectId,
@@ -1039,6 +1063,120 @@ function changeGeometry(event: Event) {
   }
 }
 
+async function runHistoryAction(
+  label: string,
+  action: () => Promise<void>,
+  lockDraft = false,
+): Promise<void> {
+  if (historyActionInProgress || (lockDraft && draftActionInProgress)) return;
+  historyActionInProgress = true;
+  if (lockDraft) draftActionInProgress = true;
+  historyBusy.value = true;
+  historyError.value = "";
+  try {
+    await action();
+  } catch (error) {
+    const message = label + "失败：" + (error instanceof Error ? error.message : String(error));
+    historyError.value = message;
+    notice.value = message;
+  } finally {
+    historyActionInProgress = false;
+    if (lockDraft) draftActionInProgress = false;
+    historyBusy.value = false;
+  }
+}
+
+async function refreshVersionHistory(): Promise<void> {
+  await runHistoryAction("读取历史版本", async () => {
+    const projectId = editor.snapshot().document.projectId;
+    const rows = await projectVersions.list(projectId, { limit: HISTORY_PAGE_SIZE });
+    if (editor.snapshot().document.projectId !== projectId) return;
+    historyProjectId.value = projectId;
+    historyRows.value = rows;
+    historyHasMore.value = rows.length === HISTORY_PAGE_SIZE;
+    inspectedVersion.value = null;
+  });
+}
+
+async function loadMoreVersions(): Promise<void> {
+  if (historyProjectId.value !== editor.snapshot().document.projectId) return;
+  const last = historyRows.value[historyRows.value.length - 1];
+  if (!last) return;
+  await runHistoryAction("读取更多历史版本", async () => {
+    const rows = await projectVersions.list(historyProjectId.value, {
+      limit: HISTORY_PAGE_SIZE,
+      beforeRevision: last.revision,
+    });
+    if (editor.snapshot().document.projectId !== historyProjectId.value) return;
+    historyRows.value = [...historyRows.value, ...rows];
+    historyHasMore.value = rows.length === HISTORY_PAGE_SIZE;
+  });
+}
+
+async function createHistoryVersion(): Promise<void> {
+  await runHistoryAction("创建历史快照", async () => {
+    const document = editor.snapshot().document;
+    const expectedRevision = await projectVersions.getHeadRevision(document.projectId);
+    const saved = await projectVersions.append(document, expectedRevision);
+    const rows = await projectVersions.list(document.projectId, { limit: HISTORY_PAGE_SIZE });
+    if (editor.snapshot().document.projectId !== document.projectId) return;
+    historyProjectId.value = document.projectId;
+    historyRows.value = rows;
+    historyHasMore.value = rows.length === HISTORY_PAGE_SIZE;
+    inspectedVersion.value = saved;
+    notice.value = `已创建本地历史版本 #${saved.revision}，不代表工程发布`;
+  });
+}
+
+async function inspectHistoryVersion(revision: number): Promise<void> {
+  await runHistoryAction("查看版本差异", async () => {
+    const projectId = editor.snapshot().document.projectId;
+    const saved = await projectVersions.get(projectId, revision);
+    if (!saved) throw new TypeError("指定的历史版本不存在");
+    if (editor.snapshot().document.projectId !== projectId) return;
+    inspectedVersion.value = saved;
+    notice.value = `已查看本地版本 #${revision} 的数据差异，当前画面未改变`;
+  });
+}
+
+async function loadHistoryVersion(revision: number): Promise<void> {
+  await runHistoryAction(
+    "载入历史版本",
+    async () => {
+      const projectId = editor.snapshot().document.projectId;
+      const saved = await projectVersions.get(projectId, revision);
+      if (!saved) throw new TypeError("指定的历史版本不存在");
+      if (editor.snapshot().document.projectId !== projectId) {
+        throw new TypeError("当前工程已切换，拒绝载入其他工程的历史版本");
+      }
+      if (
+        !window.confirm(
+          `载入本地历史版本 #${revision} 将替换当前画面并清空撤销历史，未保存的修改可能丢失。建议先导出 JSON 备份。确认继续吗？`,
+        )
+      ) {
+        return;
+      }
+      await pauseAutoSave();
+      editor.loadDocument(saved.document);
+      clearLayerDrag();
+      layerSearch.value = "";
+      collapsedGroupIds.value = new Set();
+      cancelDrag();
+      refresh();
+      inspectedVersion.value = null;
+      await checkLocalDraft();
+      notice.value =
+        `已载入本地版本 #${revision}，尚未保存草稿；自动保存已暂停，未进行正式发布`;
+    },
+    true,
+  );
+}
+
+function onVersionMenuToggle(event: Event): void {
+  const menu = event.currentTarget as HTMLDetailsElement;
+  if (menu.open) void refreshVersionHistory();
+}
+
 async function toggleAutoSave() {
   if (draftActionInProgress) return;
   draftActionInProgress = true;
@@ -1196,6 +1334,85 @@ async function importJson(event: Event) {
             <button type="button" @click="exportJson">导出 JSON</button>
             <button type="button" :disabled="!hasSavedDraft" @click="restoreDraft">恢复草稿</button>
             <button type="button" :disabled="!hasSavedDraft" @click="clearDraft">清除草稿</button>
+          </div>
+        </details>
+        <details class="studio-version-menu" @toggle="onVersionMenuToggle">
+          <summary>版本历史</summary>
+          <div class="studio-version-panel" aria-label="本地工程历史版本">
+            <p class="studio-version-help">
+              当前工程：{{ state.document.projectId }} · 浏览器本地历史，不是正式发布
+            </p>
+            <div class="studio-version-tools">
+              <button type="button" :disabled="historyBusy" @click="createHistoryVersion">
+                创建快照
+              </button>
+              <button type="button" :disabled="historyBusy" @click="refreshVersionHistory">
+                刷新
+              </button>
+            </div>
+            <p v-if="historyBusy" class="studio-version-help">正在处理历史版本…</p>
+            <p v-if="historyError" class="studio-version-error" role="alert">
+              {{ historyError }}
+            </p>
+            <p v-if="!historyBusy && visibleHistoryRows.length === 0" class="studio-version-help">
+              当前工程暂无本地历史版本。
+            </p>
+            <ol class="studio-version-list">
+              <li v-for="item in visibleHistoryRows" :key="item.revision" class="studio-version-item">
+                <div class="studio-version-heading">
+                  <strong>版本 #{{ item.revision }}</strong>
+                  <time :datetime="item.createdAt">
+                    {{ new Date(item.createdAt).toLocaleString("zh-CN") }}
+                  </time>
+                </div>
+                <code :title="item.contentHash">{{ item.contentHash.slice(0, 16) }}…</code>
+                <div class="studio-version-item-actions">
+                  <button
+                    type="button"
+                    :disabled="historyBusy"
+                    @click="inspectHistoryVersion(item.revision)"
+                  >
+                    查看差异
+                  </button>
+                  <button
+                    type="button"
+                    :disabled="historyBusy"
+                    @click="loadHistoryVersion(item.revision)"
+                  >
+                    载入
+                  </button>
+                </div>
+              </li>
+            </ol>
+            <div
+              v-if="historyComparison && inspectedVersion"
+              class="studio-version-comparison"
+              role="status"
+            >
+              <strong>
+                版本 #{{ inspectedVersion.revision }} ·
+                {{ historyComparison.sameContent ? "内容与当前一致" : "与当前内容不同" }}
+              </strong>
+              <p>
+                当前：{{ historyComparison.current.pageCount }} 页 /
+                {{ historyComparison.current.nodeCount }} 图元 /
+                {{ historyComparison.current.bindingCount }} 绑定
+              </p>
+              <p>
+                历史：{{ historyComparison.historical.pageCount }} 页 /
+                {{ historyComparison.historical.nodeCount }} 图元 /
+                {{ historyComparison.historical.bindingCount }} 绑定
+              </p>
+            </div>
+            <button
+              v-if="visibleHistoryRows.length > 0 && historyHasMore"
+              type="button"
+              class="studio-version-more"
+              :disabled="historyBusy"
+              @click="loadMoreVersions"
+            >
+              加载更早版本
+            </button>
           </div>
         </details>
       </div>
