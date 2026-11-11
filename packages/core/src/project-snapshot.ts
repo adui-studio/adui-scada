@@ -136,11 +136,13 @@ async function hashSnapshotContent(source: {
   if (bytes.byteLength > PROJECT_SNAPSHOT_MAX_BYTES) {
     throw new RangeError("工程版本快照超过 2 MiB 限制");
   }
-  const cryptoApi = (globalThis as unknown as {
-    crypto?: {
-      subtle?: { digest(algorithm: string, data: Uint8Array): Promise<ArrayBuffer> };
-    };
-  }).crypto;
+  const cryptoApi = (
+    globalThis as unknown as {
+      crypto?: {
+        subtle?: { digest(algorithm: string, data: Uint8Array): Promise<ArrayBuffer> };
+      };
+    }
+  ).crypto;
   if (!cryptoApi?.subtle) {
     throw new TypeError("当前运行环境不支持 SHA-256 摘要计算");
   }
