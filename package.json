@@ -14,6 +14,7 @@
     "test:unit": "vp test run",
     "test:browser": "node scripts/test-studio-browser.mjs",
     "test:interop": "node scripts/test-studio-browser.mjs --interop",
+    "test:versions": "node scripts/test-studio-browser.mjs --versions",
     "test:core": "vp test run packages/core/test",
     "test:runtime": "vp test run packages/runtime/test",
     "deps:check": "node scripts/check-dependency-catalog.mjs",
