@@ -254,3 +254,11 @@
 - `packages/core/src/editor.ts`：统一导出 `GEOMETRY_PROPERTY_FIELDS`，替换双端五项几何名称的重复定义；`packages/core/test/editor.test.ts` 增加共享属性字段契约测试。
 - `AGENTS.md` 与 [ADR-0028](adr/0028-tdesign-dual-framework-ui.md)：正式记录维护者新 UI 选型，避免未来误把 React Ant Design 当作已决定。
 - `pnpm-lock.yaml`：因当前 Agent 环境无法联网安装，需要维护者 Windows 首次安装生成并提交，正式冻结安装前的必要前置工作。
+
+## V7 品牌主题（ADR-0029）
+
+- `packages/runtime/src/theme.css`：统一品牌颜色和工业深色工作台语义变量。
+- `packages/runtime/src/runtime.css`：全局导航、监控页及公共交互引用共享主题变量。
+- `apps/web-react/src/studio/studio.css`、`apps/web-vue/src/studio/studio.css`：TDesign 深色主题、画布操作和几何交互颜色统一。
+- `apps/web-react/public/favicon.svg`、`apps/web-vue/public/favicon.svg`：V7 品牌包原版 SVG；同一图标也由各 Web 的 `public/brand/favicon.svg` 提供导航标志。
+- 两套 Web 的 `main.ts(x)`：先导入 `@adui/normalize.css` 默认 Normalize，再导入共享 Runtime CSS。

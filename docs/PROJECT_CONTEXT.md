@@ -344,3 +344,9 @@ PR #16 多页面编辑管理已根据维护者授权以 Squash Merge 合并 `mai
 维护者明确将双端 UI 选为 `tdesign-react` 与 `tdesign-vue-next`，图标使用 `tdesign-icons-react` 和 `tdesign-icons-vue-next`。本批从 `main` 创建 `feat/v0.2-tdesign-property-panel`，Catalog 固定版本，React/Vue Studio 首批迁移属性操作按钮与文案输入、图层搜索与清除图标；共享 Core 统一五项几何字段名称，Schema `0.2.0`、Runtime 和 IndexedDB 草稿不改。新增 [ADR-0028](adr/0028-tdesign-dual-framework-ui.md)，并在 AGENTS 固化新选型。
 
 本批新增加 1 项 Core 测试源码，预计 **257 项单测**、2 项 E2E、43 份 Markdown。当前远端工具环境无法访问 npm Registry，尚未提交新的 `pnpm-lock.yaml`；维护者需在联网 Windows 更新锁文件并加入功能分支后，执行冻结安装、`vp check --fix` 与完整 `pnpm run ready`。**本批未在当前 Agent 环境完成实际安装、类型检查、编译、浏览器或工业现场验收**。Draft PR 未获本批明确合并授权，不能改 `main`。
+
+## 2026-11-11 · 目标分支 V7 品牌主题统一（待维护者验收）
+
+在 `feat/v0.2-tdesign-property-panel` 中保留已确认的 React/Vue TDesign 技术选型，新增共享主题 Token，统一 V7 品牌蓝、科技青与实时绿的语义，接入品牌包原版 SVG Logo，并通过两端主入口加载 `@adui/normalize.css@0.1.1` 默认 Normalize。不改变 Core、工程 Schema、Tag、工业只读边界或 TDesign 控件业务行为。未将原生样式统一替换为 UI 组件；Tauri 桌面窗口图标未在本批更换。
+
+由于当前远端执行环境无法访问 npm Registry，本批未更新依赖解析锁文件；需要维护者在联网的 Windows 环境运行安装、`pnpm run ready` 与 React/Vue 浏览器手工回归，本次仅完成代码提交，不将未执行的检查标为通过。详见 [ADR-0029](adr/0029-brand-theme-v7.md)。
