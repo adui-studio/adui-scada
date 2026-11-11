@@ -17,8 +17,7 @@ import {
   studioNodeLocked,
   studioNodeVisible,
   buildLayerTree,
-  clampStudioPan,
-  studioViewBox,
+  studioViewportRect,
 } from "@adui/scada-core";
 import type { LayerTreeGroup, ScadaDocument, ScadaNode } from "@adui/scada-core";
 import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
@@ -113,6 +112,7 @@ export default function StudioPage() {
   const draftActionRef = useRef(false);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [gridVisible, setGridVisible] = useState(true);
   const [gridSnap, setGridSnap] = useState(true);
   const [nodeSnap, setNodeSnap] = useState(true);
@@ -174,6 +174,11 @@ export default function StudioPage() {
   );
 
   if (!page) throw new Error("工程文档不包含页面");
+  const canvasViewport = {
+    width: viewportSize.width || page.size.width,
+    height: viewportSize.height || page.size.height,
+  };
+  const visibleRect = studioViewportRect(page.size, canvasViewport, zoom, pan);
 
   const hasGroupedSelection = page.nodes.some(
     (node) => node.groupId !== undefined && state.selectedIds.includes(node.id),
@@ -195,6 +200,21 @@ export default function StudioPage() {
           (id) => page?.nodes.find((node) => node.id === id)?.groupId === selected.groupId,
         ))) &&
     !hasLockedSelection;
+  useEffect(() => {
+    const canvas = svgRef.current;
+    if (!canvas) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      if (width <= 0 || height <= 0) return;
+      setViewportSize((current) =>
+        current.width === width && current.height === height ? current : { width, height },
+      );
+    });
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     if (!locateLayerRequest) return;
     const rows = layerTreeRef.current?.querySelectorAll<HTMLButtonElement>("[data-layer-key]");
@@ -653,7 +673,7 @@ export default function StudioPage() {
     if (!pageSize) return;
     const nextZoom = Math.max(0.5, Math.min(2, Math.round((zoom + delta) * 100) / 100));
     setZoom(nextZoom);
-    setPan((current) => clampStudioPan(pageSize, nextZoom, current));
+    setPan((current) => studioViewportRect(pageSize, canvasViewport, nextZoom, current).pan);
   }
 
   function resetCanvasView() {
@@ -678,8 +698,8 @@ export default function StudioPage() {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      originX: pan.x,
-      originY: pan.y,
+      originX: visibleRect.pan.x,
+      originY: visibleRect.pan.y,
       scale: matrix.a,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -692,10 +712,15 @@ export default function StudioPage() {
     const pageSize = page?.size;
     if (!dragging || dragging.pointerId !== event.pointerId || !pageSize) return false;
     setPan(
-      clampStudioPan(pageSize, zoom, {
-        x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
-        y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
-      }),
+      studioViewportRect(
+        pageSize,
+        canvasViewport,
+        zoom,
+        {
+          x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
+          y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
+        },
+      ).pan,
     );
     return true;
   }
@@ -1470,13 +1495,13 @@ export default function StudioPage() {
               </button>
             </div>
           </div>
-          <div className="studio-canvas-scroll" tabIndex={0} aria-label="画布滚动区域">
+          <div className="studio-canvas-scroll" tabIndex={0} aria-label="组态网格工作区">
             <div className="studio-canvas-board">
               <svg
                 ref={svgRef}
                 className="studio-svg"
                 data-rotating={rotating ? "true" : undefined}
-                viewBox={studioViewBox(page.size, zoom, pan)}
+                viewBox={`${visibleRect.x} ${visibleRect.y} ${visibleRect.width} ${visibleRect.height}`}
                 preserveAspectRatio="xMidYMid meet"
                 onPointerMove={(event) => {
                   if (updateCanvasPan(event)) return;
@@ -1520,14 +1545,24 @@ export default function StudioPage() {
                 />
                 {gridVisible && (
                   <rect
-                    x={0}
-                    y={0}
-                    width={page.size.width}
-                    height={page.size.height}
+                    x={visibleRect.x}
+                    y={visibleRect.y}
+                    width={visibleRect.width}
+                    height={visibleRect.height}
                     fill="url(#scada-studio-grid)"
                     pointerEvents="none"
                   />
                 )}
+                <rect
+                  className="studio-page-boundary"
+                  x={0}
+                  y={0}
+                  width={page.size.width}
+                  height={page.size.height}
+                  fill="none"
+                  vectorEffect="non-scaling-stroke"
+                  pointerEvents="none"
+                />
                 {page.nodes.filter(studioNodeVisible).map((node) => {
                   const displayNode =
                     displayDocument.pages
