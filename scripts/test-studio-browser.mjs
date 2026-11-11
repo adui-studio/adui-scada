@@ -319,14 +319,17 @@ async function main() {
           deviceScaleFactor: 1,
           mobile: false,
         });
-        await session.send("Page.navigate", { url: target.url });
+        // 每个视口使用独立的本地验收 URL，避免读取到上一次导航的加载状态。
+        const navigationUrl = new URL(target.url);
+        navigationUrl.searchParams.set("scada_browser_check", `${target.name}-${viewport.width}x${viewport.height}`);
+        await session.send("Page.navigate", { url: navigationUrl.href });
         let loaded = false;
         for (let attempt = 0; attempt < 40; attempt += 1) {
           await pause(150);
           try {
             loaded = await session.evaluate(
-              "location.origin === " +
-                JSON.stringify(new URL(target.url).origin) +
+              "location.href === " +
+                JSON.stringify(navigationUrl.href) +
                 ' && document.readyState === "complete"',
             );
             if (loaded) break;
@@ -337,7 +340,7 @@ async function main() {
         if (!loaded) {
           const pageUrl = await session.evaluate("location.href");
           throw new Error(
-            target.name + " 页面导航失败：" + target.url + "；浏览器实际地址：" + pageUrl,
+            target.name + " 页面导航失败：" + navigationUrl.href + "；浏览器实际地址：" + pageUrl,
           );
         }
         await session.evaluate("(" + enterStudioInPage.toString() + ")()");
