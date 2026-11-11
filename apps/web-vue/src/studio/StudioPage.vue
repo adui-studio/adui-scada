@@ -1487,28 +1487,28 @@ async function importJson(event: Event) {
               @click="changeSelectedLocked(true)"
             >
               锁定所选
-            </TButton
+            </TButton>
             <TButton
               type="button"
               :disabled="state.selectedIds.length === 0"
               @click="changeSelectedLocked(false)"
             >
               解锁所选
-            </TButton
+            </TButton>
             <TButton
               type="button"
               :disabled="state.selectedIds.length === 0 || hasLockedSelection"
               @click="changeSelectedVisible(false)"
             >
               隐藏所选
-            </TButton
+            </TButton>
             <TButton
               type="button"
               :disabled="state.selectedIds.length === 0 || hasLockedSelection"
               @click="changeSelectedVisible(true)"
             >
               显示所选
-            </TButton
+            </TButton>
           </div>
           <div class="studio-tool-group" aria-label="图元组合">
             <TButton
@@ -1517,14 +1517,14 @@ async function importJson(event: Event) {
               @click="apply(() => editor.groupSelected(), '已组合所选图元，可撤销')"
             >
               组合所选
-            </TButton
+            </TButton>
             <TButton
               type="button"
               :disabled="!hasGroupedSelection"
               @click="apply(() => editor.ungroupSelected(), '已解组，可撤销')"
             >
               解组
-            </TButton
+            </TButton>
           </div>
           <div class="studio-tool-group" aria-label="图元剪贴板">
             <TButton
@@ -1533,28 +1533,28 @@ async function importJson(event: Event) {
               @click="apply(() => editor.copySelected(), '已复制所选图元到会话剪贴板')"
             >
               复制所选
-            </TButton
+            </TButton>
             <TButton
               type="button"
               :disabled="state.selectedIds.length === 0"
               @click="apply(() => editor.cutSelected(), '已剪切图元，可撤销')"
             >
               剪切所选
-            </TButton
+            </TButton>
             <TButton
               type="button"
               :disabled="!state.hasClipboard"
               @click="apply(() => editor.pasteClipboard(), '已粘贴图元，可撤销')"
             >
               粘贴图元
-            </TButton
+            </TButton>
             <TButton
               type="button"
               :disabled="state.selectedIds.length === 0"
               @click="apply(() => editor.deleteSelected(), '已删除图元，可撤销')"
             >
               删除所选
-            </TButton
+            </TButton>
           </div>
           <div class="studio-exact-layer" aria-label="图层精确插入">
             <label class="studio-field">
@@ -1588,13 +1588,13 @@ async function importJson(event: Event) {
               @click="moveSelectedLayerPrecisely"
             >
               移动到指定层
-            </TButton
+            </TButton>
           </div>
           <div class="studio-tool-group" aria-label="图层排序">
-            <TButton type="button" :disabled="!selected" @click="layer('back')">置底</TButton
-            <TButton type="button" :disabled="!selected" @click="layer('backward')">下移层</TButton
-            <TButton type="button" :disabled="!selected" @click="layer('forward')">上移层</TButton
-            <TButton type="button" :disabled="!selected" @click="layer('front')">置顶</TButton
+            <TButton type="button" :disabled="!selected" @click="layer('back')">置底</TButton>
+            <TButton type="button" :disabled="!selected" @click="layer('backward')">下移层</TButton>
+            <TButton type="button" :disabled="!selected" @click="layer('forward')">上移层</TButton>
+            <TButton type="button" :disabled="!selected" @click="layer('front')">置顶</TButton>
           </div>
           <h3>多选对齐（以最后选中的图元为准）</h3>
           <div class="studio-tool-group" aria-label="图元对齐">
@@ -1604,42 +1604,42 @@ async function importJson(event: Event) {
               @click="align('left')"
             >
               左
-            </TButton
+            </TButton>
             <TButton
               type="button"
               :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
               @click="align('hcenter')"
             >
               水平居中
-            </TButton
+            </TButton>
             <TButton
               type="button"
               :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
               @click="align('right')"
             >
               右
-            </TButton
+            </TButton>
             <TButton
               type="button"
               :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
               @click="align('top')"
             >
               上
-            </TButton
+            </TButton>
             <TButton
               type="button"
               :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
               @click="align('vcenter')"
             >
               垂直居中
-            </TButton
+            </TButton>
             <TButton
               type="button"
               :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
               @click="align('bottom')"
             >
               下
-            </TButton
+            </TButton>
           </div>
         </div>
         <template v-if="selected">
@@ -1663,15 +1663,15 @@ async function importJson(event: Event) {
                 :disabled="studioNodeLocked(selected)"
               />
             </label>
-            <TButton type="submit" :disabled="studioNodeLocked(selected)">应用几何属性</TButton
+            <TButton type="submit" :disabled="studioNodeLocked(selected)">应用几何属性</TButton>
           </form>
           <p v-else class="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
           <p class="studio-tip">拖动画布中的虚线框，或使用方向按钮微调。每次操作可撤销。</p>
           <div class="studio-nudge">
-            <TButton type="button" @click="nudge(-1, 0)">←</TButton
-            <TButton type="button" @click="nudge(0, -1)">↑</TButton
-            <TButton type="button" @click="nudge(0, 1)">↓</TButton
-            <TButton type="button" @click="nudge(1, 0)">→</TButton
+            <TButton type="button" @click="nudge(-1, 0)">←</TButton>
+            <TButton type="button" @click="nudge(0, -1)">↑</TButton>
+            <TButton type="button" @click="nudge(0, 1)">↓</TButton>
+            <TButton type="button" @click="nudge(1, 0)">→</TButton>
           </div>
           <label
             v-if="selected.type === 'label' && state.selectedIds.length === 1"
@@ -1681,7 +1681,7 @@ async function importJson(event: Event) {
             <TInput v-model="labelDraft" :maxlength="256" :disabled="studioNodeLocked(selected)" />
             <TButton type="button" :disabled="studioNodeLocked(selected)" @click="changeLabel">
               应用文案
-            </TButton
+            </TButton>
           </label>
           <h3>Tag 绑定（模拟数据）</h3>
           <label v-if="bindingSlot" class="studio-field">
