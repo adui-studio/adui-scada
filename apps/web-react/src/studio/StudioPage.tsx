@@ -1083,8 +1083,7 @@ export default function StudioPage() {
         setInspectedVersion(null);
         const warning = await refreshDraftAvailability(projectId);
         setNotice(
-          `已载入本地版本 #${revision}，尚未保存草稿；自动保存已暂停，未进行正式发布` +
-            warning,
+          `已载入本地版本 #${revision}，尚未保存草稿；自动保存已暂停，未进行正式发布` + warning,
         );
       },
       true,
@@ -1410,7 +1409,11 @@ export default function StudioPage() {
                 </button>
               </div>
               {historyBusy && <p className="studio-version-help">正在处理历史版本…</p>}
-              {historyError && <p className="studio-version-error" role="alert">{historyError}</p>}
+              {historyError && (
+                <p className="studio-version-error" role="alert">
+                  {historyError}
+                </p>
+              )}
               {!historyBusy && visibleHistoryRows.length === 0 && (
                 <p className="studio-version-help">当前工程暂无本地历史版本。</p>
               )}

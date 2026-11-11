@@ -1165,8 +1165,7 @@ async function loadHistoryVersion(revision: number): Promise<void> {
       refresh();
       inspectedVersion.value = null;
       await checkLocalDraft();
-      notice.value =
-        `已载入本地版本 #${revision}，尚未保存草稿；自动保存已暂停，未进行正式发布`;
+      notice.value = `已载入本地版本 #${revision}，尚未保存草稿；自动保存已暂停，未进行正式发布`;
     },
     true,
   );

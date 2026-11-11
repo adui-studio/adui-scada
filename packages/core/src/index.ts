@@ -59,4 +59,7 @@ export type {
   ProjectVersionSummary,
 } from "./project-version-repository.ts";
 export { compareProjectDocuments } from "./project-version-compare.ts";
-export type { ProjectDocumentMetrics, ProjectDocumentComparison } from "./project-version-compare.ts";
+export type {
+  ProjectDocumentMetrics,
+  ProjectDocumentComparison,
+} from "./project-version-compare.ts";

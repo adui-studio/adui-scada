@@ -448,11 +448,14 @@ async function studioVersionActionInPage(
       await new Promise((resolve) => setTimeout(resolve, 80));
     }
   }
-  const candidates = label === "载入" || label === "查看差异"
-    ? [...menu.querySelectorAll(".studio-version-item")].filter(
-        (item) => item.querySelector("strong")?.textContent.trim() === `版本 #${revision}`,
-      ).flatMap((item) => [...item.querySelectorAll("button")])
-    : [...menu.querySelectorAll(".studio-version-panel button")];
+  const candidates =
+    label === "载入" || label === "查看差异"
+      ? [...menu.querySelectorAll(".studio-version-item")]
+          .filter(
+            (item) => item.querySelector("strong")?.textContent.trim() === `版本 #${revision}`,
+          )
+          .flatMap((item) => [...item.querySelectorAll("button")])
+      : [...menu.querySelectorAll(".studio-version-panel button")];
   const button = candidates.find((item) => item.textContent.trim() === label);
   if (!button) throw new Error("找不到版本历史操作按钮：" + label);
   if (button.disabled) throw new Error("版本历史操作尚未结束：" + label);
@@ -491,8 +494,8 @@ async function studioVersionActionInPage(
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     return {
-      versions: [...menu.querySelectorAll(".studio-version-item strong")].map(
-        (item) => item.textContent.trim(),
+      versions: [...menu.querySelectorAll(".studio-version-item strong")].map((item) =>
+        item.textContent.trim(),
       ),
       comparison: menu.querySelector(".studio-version-comparison")?.textContent || "",
     };
@@ -515,11 +518,7 @@ async function runStudioVersionHistory(session) {
   for (const target of targets) {
     await navigateStudioForInterop(session, target, "history-" + target.name);
     const initial = JSON.parse(await evaluate(exportStudioJsonInPage));
-    const created = await evaluate(
-      studioVersionActionInPage,
-      "创建快照",
-      "已创建本地历史版本 #1",
-    );
+    const created = await evaluate(studioVersionActionInPage, "创建快照", "已创建本地历史版本 #1");
     assert.deepStrictEqual(created.versions, ["版本 #1"], target.name + " 首次版本创建失败");
 
     await evaluate(addStudioSymbolInPage, "+ 水箱");
@@ -546,11 +545,7 @@ async function runStudioVersionHistory(session) {
     assert.deepStrictEqual(restored, initial, target.name + " 历史版本未完整恢复");
 
     await evaluate(addStudioSymbolInPage, "+ 文本");
-    const second = await evaluate(
-      studioVersionActionInPage,
-      "创建快照",
-      "已创建本地历史版本 #2",
-    );
+    const second = await evaluate(studioVersionActionInPage, "创建快照", "已创建本地历史版本 #2");
     assert.deepStrictEqual(
       second.versions,
       ["版本 #2", "版本 #1"],
