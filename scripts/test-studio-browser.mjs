@@ -86,6 +86,29 @@ class ChromeSession {
   }
 }
 
+/** 同一隔离浏览器配置内再打开一个真实标签页，共享 Origin 和 IndexedDB。 */
+async function openCompanionChromeTab(port) {
+  const response = await fetch("http://127.0.0.1:" + port + "/json/new?about:blank", {
+    method: "PUT",
+  });
+  assert.ok(response.ok, "无法创建第二个浏览器调试标签页");
+  const tab = await response.json();
+  const socket = new WebSocket(tab.webSocketDebuggerUrl);
+  try {
+    await new Promise((resolve, reject) => {
+      socket.addEventListener("open", resolve, { once: true });
+      socket.addEventListener("error", reject, { once: true });
+    });
+    const session = new ChromeSession(socket);
+    await session.send("Page.enable");
+    await session.send("Runtime.enable");
+    return session;
+  } catch (error) {
+    socket.close();
+    throw error;
+  }
+}
+
 /** 按真实用户流程从默认运行监控切换到组态编辑，等待异步组件完成渲染。 */
 async function enterStudioInPage() {
   const waitFor = async (selector, limit) => {
@@ -577,7 +600,7 @@ async function studioVersionRowsInPage() {
 }
 
 /** 通过真实开关启动自动保存，不绕过 Studio 的确认和订阅逻辑。 */
-async function enableStudioAutoSaveInPage() {
+async function enableStudioAutoSaveInPage(confirmExisting = false) {
   const menu = document.querySelector(".studio-file-menu");
   if (!menu) throw new TypeError("没有找到文件与草稿菜单");
   menu.open = true;
@@ -585,6 +608,8 @@ async function enableStudioAutoSaveInPage() {
     (item) => item.textContent.trim() === "开启自动保存",
   );
   if (!button) throw new TypeError("自动保存开关不是关闭状态");
+  const originalConfirm = window.confirm;
+  if (confirmExisting) window.confirm = () => true;
   button.click();
   const start = Date.now();
   try {
@@ -597,6 +622,7 @@ async function enableStudioAutoSaveInPage() {
     }
     throw new TypeError("开启自动保存超时");
   } finally {
+    window.confirm = originalConfirm;
     menu.open = false;
   }
 }
@@ -808,6 +834,284 @@ async function runStudioVersionSafety(session) {
   process.stdout.write("React / Vue 不同 Origin 历史版本隔离通过\n");
 }
 
+/** 只用现有 DOM 与可序列化输入，在独立标签页中执行交互。 */
+function evaluateStudioPage(session, action, ...args) {
+  return session.evaluate(
+    "(" + action.toString() + ")(" + args.map((value) => JSON.stringify(value)).join(",") + ")",
+  );
+}
+
+/** 等待自动保存开关与页面中文通知同时符合预期，拒绝仅凭定时猜测。 */
+async function waitForStudioAutoSaveStateInPage(enabled, noticeText) {
+  const started = Date.now();
+  while (Date.now() - started < 12000) {
+    const button = document.querySelector(".studio-file-menu button[aria-pressed]");
+    const actual = button?.getAttribute("aria-pressed") === "true";
+    const notice = document.querySelector(".studio-notice")?.textContent || "";
+    if (button && actual === enabled && notice.includes(noticeText)) return notice;
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  }
+  throw new TypeError("等待自动保存状态超时：" + noticeText);
+}
+
+/** 手动保存/清除必须真正点击 UI，确认提示仅在隔离页面内替换。 */
+async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice = null) {
+  const menu = document.querySelector(".studio-file-menu");
+  if (!menu) throw new TypeError("未找到文件与草稿菜单");
+  menu.open = true;
+  const started = Date.now();
+  let button = null;
+  while (Date.now() - started < 12000) {
+    button =
+      label === "保存草稿"
+        ? document.querySelector(".studio-save-actions button")
+        : [...menu.querySelectorAll("button")].find(
+            (item) => item.textContent.trim() === label,
+          );
+    if (button && !button.disabled) break;
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  }
+  if (!button || button.disabled) throw new TypeError("草稿操作按钮不可用：" + label);
+  const originalConfirm = window.confirm;
+  if (confirmChoice !== null) window.confirm = () => confirmChoice;
+  try {
+    button.click();
+    const waiting = Date.now();
+    while (Date.now() - waiting < 12000) {
+      const notice = document.querySelector(".studio-notice")?.textContent || "";
+      if (notice.includes(expectedNotice)) return notice;
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+    throw new TypeError("草稿操作结果超时：" + label);
+  } finally {
+    window.confirm = originalConfirm;
+    menu.open = false;
+  }
+}
+
+/** 等待实际 IndexedDB 提交指定修订号，必要时校验完整工程内容。 */
+async function waitForStudioDraftRevision(session, projectId, revision, document = null) {
+  const started = Date.now();
+  let latest = null;
+  while (Date.now() - started < 12000) {
+    latest = await evaluateStudioPage(session, readStudioDraftFromDatabaseInPage, projectId);
+    if (
+      latest?.revision === revision &&
+      (document === null || JSON.stringify(latest.document) === JSON.stringify(document))
+    ) {
+      return latest;
+    }
+    await pause(120);
+  }
+  throw new TypeError("等待 IndexedDB 草稿修订号超时：" + revision);
+}
+
+/** 仅在第二个标签页禁用 BroadcastChannel，以验证 IndexedDB 事务兜底。 */
+async function navigateStudioWithoutBroadcast(session, target, marker) {
+  const injection = await session.send("Page.addScriptToEvaluateOnNewDocument", {
+    source: [
+      "window.BroadcastChannel = class {",
+      "  constructor() { this.onmessage = null; }",
+      "  postMessage() {}",
+      "  close() {}",
+      "};",
+    ].join("\n"),
+  });
+  try {
+    await navigateStudioForInterop(session, target, marker);
+  } finally {
+    await session.send("Page.removeScriptToEvaluateOnNewDocument", {
+      identifier: injection.identifier,
+    });
+  }
+}
+
+/** 模拟草稿 rw 事务无法创建，异常只作用于当前隔离标签页且始终还原。 */
+async function simulateStudioDraftWriteFailureInPage() {
+  const original = IDBDatabase.prototype.transaction;
+  let rejected = 0;
+  IDBDatabase.prototype.transaction = function (...args) {
+    const stores = typeof args[0] === "string" ? [args[0]] : Array.from(args[0] || []);
+    if (this.name === "adui-scada-studio" && args[1] === "readwrite" && stores.includes("drafts")) {
+      rejected += 1;
+      throw new DOMException("模拟本地草稿存储故障", "QuotaExceededError");
+    }
+    return Reflect.apply(original, this, args);
+  };
+  try {
+    const button = [...document.querySelectorAll(".studio-add button")].find(
+      (item) => item.textContent.trim() === "+ 水箱",
+    );
+    if (!button) throw new TypeError("未找到水箱图元添加按钮");
+    button.click();
+    const started = Date.now();
+    while (Date.now() - started < 12000) {
+      const notice = document.querySelector(".studio-notice")?.textContent || "";
+      const enabled =
+        document.querySelector(".studio-file-menu button[aria-pressed]")?.getAttribute(
+          "aria-pressed",
+        ) === "true";
+      if (notice.includes("自动保存已暂停：") && !enabled && rejected > 0) {
+        return { notice, rejected };
+      }
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+    throw new TypeError("模拟 IndexedDB 写入异常未触发自动保存暂停");
+  } finally {
+    IDBDatabase.prototype.transaction = original;
+  }
+}
+
+/** 两个真实标签页共用同一浏览器配置，分别验证 Vue/React 业务 UI。 */
+async function runStudioMultiTabSafety(first, second) {
+  const viewport = { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false };
+  await Promise.all([
+    first.send("Emulation.setDeviceMetricsOverride", viewport),
+    second.send("Emulation.setDeviceMetricsOverride", viewport),
+  ]);
+  for (const target of targets) {
+    await Promise.all([
+      navigateStudioForInterop(first, target, "multitab-first-" + target.name),
+      navigateStudioForInterop(second, target, "multitab-second-" + target.name),
+    ]);
+    const initial = JSON.parse(await evaluateStudioPage(first, exportStudioJsonInPage));
+    assert.deepStrictEqual(
+      JSON.parse(await evaluateStudioPage(second, exportStudioJsonInPage)),
+      initial,
+      target.name + " 两个标签页起始工程不一致",
+    );
+    assert.equal(
+      await evaluateStudioPage(first, readStudioDraftFromDatabaseInPage, initial.projectId),
+      null,
+      target.name + " 隔离浏览器初始草稿并非空库",
+    );
+
+    // 正常广播：后打开的会话接收外部修订号，应暂停自动保存但保留本地画面。
+    await evaluateStudioPage(second, enableStudioAutoSaveInPage);
+    await evaluateStudioPage(first, enableStudioAutoSaveInPage);
+    await evaluateStudioPage(first, addStudioSymbolInPage, "+ 水箱");
+    const changedFirst = JSON.parse(await evaluateStudioPage(first, exportStudioJsonInPage));
+    const firstSaved = await waitForStudioDraftRevision(
+      first,
+      initial.projectId,
+      1,
+      changedFirst,
+    );
+    await evaluateStudioPage(
+      second,
+      waitForStudioAutoSaveStateInPage,
+      false,
+      "其他标签页已修改草稿",
+    );
+    assert.deepStrictEqual(
+      JSON.parse(await evaluateStudioPage(second, exportStudioJsonInPage)),
+      initial,
+      target.name + " 广播修改了第二个标签页未保存的画面",
+    );
+    await evaluateStudioPage(second, addStudioSymbolInPage, "+ 文本");
+    await pause(1450);
+    assert.deepStrictEqual(
+      await evaluateStudioPage(second, readStudioDraftFromDatabaseInPage, initial.projectId),
+      firstSaved,
+      target.name + " 第二个标签页暂停后仍覆盖了草稿",
+    );
+    process.stdout.write(target.name + " 双标签页 BroadcastChannel 通知与停写保护通过\n");
+
+    // 模拟浏览器不支持 BroadcastChannel：最终安全性必须依赖 IndexedDB CAS。
+    await navigateStudioForInterop(first, target, "multitab-cas-first-" + target.name);
+    await navigateStudioWithoutBroadcast(second, target, "multitab-cas-second-" + target.name);
+    await evaluateStudioPage(second, enableStudioAutoSaveInPage, true);
+    await evaluateStudioPage(first, enableStudioAutoSaveInPage, true);
+    await evaluateStudioPage(first, addStudioSymbolInPage, "+ 水箱");
+    const newer = JSON.parse(await evaluateStudioPage(first, exportStudioJsonInPage));
+    const secondSaved = await waitForStudioDraftRevision(first, initial.projectId, 2, newer);
+    await evaluateStudioPage(
+      second,
+      waitForStudioAutoSaveStateInPage,
+      true,
+      "IndexedDB 自动保存已开启",
+    );
+    await evaluateStudioPage(second, addStudioSymbolInPage, "+ 文本");
+    await evaluateStudioPage(
+      second,
+      waitForStudioAutoSaveStateInPage,
+      false,
+      "自动保存已暂停：检测到其他页面修改了草稿",
+    );
+    assert.deepStrictEqual(
+      await evaluateStudioPage(first, readStudioDraftFromDatabaseInPage, initial.projectId),
+      secondSaved,
+      target.name + " 无广播时过期修订号错误覆盖了较新草稿",
+    );
+    process.stdout.write(target.name + " 无广播时 IndexedDB 过期修订号保护通过\n");
+
+    // 恢复正常广播后清除与重建，验证旧标签页停写及墓碑版本单调递增。
+    await navigateStudioForInterop(second, target, "multitab-recreate-" + target.name);
+    await evaluateStudioPage(second, studioDraftFileActionInPage, "清除草稿", "数据库草稿已清除", true);
+    await evaluateStudioPage(
+      first,
+      waitForStudioAutoSaveStateInPage,
+      false,
+      "其他标签页已修改草稿",
+    );
+    assert.equal(
+      await evaluateStudioPage(first, readStudioDraftFromDatabaseInPage, initial.projectId),
+      null,
+      target.name + " 跨标签页清除草稿失败",
+    );
+    await evaluateStudioPage(second, addStudioSymbolInPage, "+ 文本");
+    const recreatedDocument = JSON.parse(
+      await evaluateStudioPage(second, exportStudioJsonInPage),
+    );
+    await evaluateStudioPage(
+      second,
+      studioDraftFileActionInPage,
+      "保存草稿",
+      "已保存 IndexedDB 草稿",
+    );
+    const recreated = await waitForStudioDraftRevision(
+      second,
+      initial.projectId,
+      3,
+      recreatedDocument,
+    );
+    assert.deepStrictEqual(
+      JSON.parse(await evaluateStudioPage(first, exportStudioJsonInPage)),
+      newer,
+      target.name + " 草稿清除重建错误覆盖了另一个标签页画面",
+    );
+    process.stdout.write(target.name + " 跨标签页草稿清除、墓碑修订号与重建通过\n");
+
+    // 模拟写入权限异常，恢复正常事务后仍可由用户明确保存当前编辑画面。
+    await evaluateStudioPage(second, enableStudioAutoSaveInPage, true);
+    const failure = await evaluateStudioPage(second, simulateStudioDraftWriteFailureInPage);
+    assert.ok(
+      failure.notice.includes("自动保存已暂停：") && failure.rejected > 0,
+      target.name + " 草稿写入故障未提供可见错误",
+    );
+    assert.deepStrictEqual(
+      await evaluateStudioPage(first, readStudioDraftFromDatabaseInPage, initial.projectId),
+      recreated,
+      target.name + " 故障写入污染了已持久化草稿",
+    );
+    const unsaved = JSON.parse(await evaluateStudioPage(second, exportStudioJsonInPage));
+    assert.notDeepStrictEqual(
+      unsaved,
+      recreatedDocument,
+      target.name + " 故障后当前编辑画面意外丢失",
+    );
+    await evaluateStudioPage(
+      second,
+      studioDraftFileActionInPage,
+      "保存草稿",
+      "已保存 IndexedDB 草稿",
+      true,
+    );
+    await waitForStudioDraftRevision(second, initial.projectId, 4, unsaved);
+    process.stdout.write(target.name + " 模拟 IndexedDB 故障、编辑保护与恢复保存通过\n");
+  }
+}
+
 async function main() {
   const browserPath = browserExecutable();
   assert.ok(browserPath, "未找到 Chrome/Edge，可设置 SCADA_BROWSER_PATH 指定浏览器路径");
@@ -835,6 +1139,7 @@ async function main() {
   if (process.getuid?.() === 0) args.unshift("--no-sandbox");
   const child = spawn(browserPath, args, { stdio: "ignore" });
   let session;
+  let companionSession;
   try {
     const port = await waitForPort(userData, child);
     const response = await fetch("http://127.0.0.1:" + port + "/json/new?about:blank", {
@@ -860,6 +1165,11 @@ async function main() {
     }
     if (process.argv.includes("--versions-safety")) {
       await runStudioVersionSafety(session);
+      return;
+    }
+    if (process.argv.includes("--multitab")) {
+      companionSession = await openCompanionChromeTab(port);
+      await runStudioMultiTabSafety(session, companionSession);
       return;
     }
     let failed = 0;
@@ -921,6 +1231,7 @@ async function main() {
     }
     assert.equal(failed, 0, "浏览器回归项存在失败");
   } finally {
+    companionSession?.socket.close();
     session?.socket.close();
     child.kill();
     await pause(500);
