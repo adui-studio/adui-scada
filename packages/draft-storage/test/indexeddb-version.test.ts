@@ -100,9 +100,9 @@ test("版本列表按修订号倒序分页，游标不重复返回边界版本",
     expect(first.map((item) => item.revision)).toEqual([5, 4]);
     expect(second.map((item) => item.revision)).toEqual([3, 2]);
     expect(third.map((item) => item.revision)).toEqual([1]);
-    expect((await db.list("water-demo", { limit: 2, beforeRevision: 5 })).map(
-      (item) => item.revision,
-    )).toEqual([4, 3]);
+    expect(
+      (await db.list("water-demo", { limit: 2, beforeRevision: 5 })).map((item) => item.revision),
+    ).toEqual([4, 3]);
     expect(await db.list("water-demo", { beforeRevision: 1 })).toEqual([]);
     expect(first[0]).toEqual({
       projectId: "water-demo",
