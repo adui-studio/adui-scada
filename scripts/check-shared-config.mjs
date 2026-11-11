@@ -175,4 +175,31 @@ for (const framework of ["react", "vue"]) {
   );
 }
 
+// 固定侧栏与 16:9 画布适应必须由共享包和双框架统一实现。
+const viewportCss = text("packages/tailwind/src/studio.css");
+assert.match(
+  viewportCss,
+  /\.studio-canvas-scroll\s*\{[^}]*overflow:\s*hidden;/,
+  "画布工作区不得产生滚动条",
+);
+assert.match(
+  viewportCss,
+  /\.studio-canvas-board\s*\{[^}]*aspect-ratio:\s*16\s*\/\s*9;/,
+  "画板显示区域必须保持 16:9",
+);
+assert.match(viewportCss, /100cqh/, "画板必须依据工作区高度自动适配");
+assert.match(viewportCss, /--studio-left-width:\s*252px/, "左侧栏必须固定宽度");
+assert.match(viewportCss, /--studio-right-width:\s*320px/, "右侧栏必须固定宽度");
+
+for (const framework of ["react", "vue"]) {
+  const studioPath = `apps/web-${framework}/src/studio/StudioPage.${framework === "react" ? "tsx" : "vue"}`;
+  const studioSource = text(studioPath);
+  assert.match(studioSource, /studioViewBox\(page\.size, zoom, pan\)/, `${studioPath} 必须使用共享 SVG 视区计算`);
+  assert.match(studioSource, /preserveAspectRatio="xMidYMid meet"/, `${studioPath} 不得拉伸原页面图元`);
+  assert.doesNotMatch(studioSource, /width:\s*`\$\{zoom\s*\*\s*100\}%`/, `${studioPath} 不得使用 DOM 宽度实现缩放`);
+  assert.ok(studioSource.includes("studio-view-menu"), `${studioPath} 缺少合并后的视图设置入口`);
+  assert.ok(studioSource.includes("resetCanvasView"), `${studioPath} 缺少适应视图功能`);
+  assert.ok(studioSource.includes("beginCanvasPan"), `${studioPath} 缺少画布平移入口`);
+}
+
 console.log(`共享配置检查通过：${expected.size} 个 TSConfig 消费端，根目录统一管理格式化与 Lint`);

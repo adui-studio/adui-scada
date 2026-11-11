@@ -278,3 +278,11 @@
 - `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：分别接入工程/页面操作菜单、图层辅助区、独立画布滚动区、可折叠高级属性和左右面板显隐；保留原编辑命令与 SVG 图元行为。
 - 两份 `studio.css`：仅保留 TDesign 局部主题、图层行细节与 SVG 控制点；工作台布局统一使用共享样式。
 - `scripts/check-shared-config.mjs`：增加新布局区域及共享 CSS 入口静态约束。
+
+## V0.2 Studio 无滚动画板与操作分组（ADR-0032）
+
+- `packages/core/src/studio-viewport.ts`：框架无关的 `studioViewBox` 和 `clampStudioPan` 视图计算，不修改工程 Schema 与图元坐标。
+- `packages/core/test/studio-viewport.test.ts`：缩放、平移、边界限制和非法输入测试。
+- `packages/tailwind/src/studio.css`：左 252px、右 320px 固定侧栏与中央自适应布局；通过 CSS 容器查询让画板保持 16:9，禁止中央滚动。
+- Vue/React `StudioPage`：共享 Core SVG `viewBox` 缩放，中键或 Alt+空白处平移；合并视图设置菜单和自动保存入口。
+- `scripts/check-shared-config.mjs`：补充画板比例、固定栏宽和双端 SVG 视图处理静态契约。

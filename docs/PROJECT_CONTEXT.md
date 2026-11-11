@@ -366,3 +366,9 @@ PR #16 多页面编辑管理已根据维护者授权以 Squash Merge 合并 `mai
 基于 Penpot、Figma、diagrams.net 和 Ignition Designer 的工作区分工，维护者要求改进原编辑器过度平铺按钮、画布权重不足、左右面板混乱的问题。本批在 `feat/v0.2-tdesign-property-panel` 重排双框架 Studio：顶部工程/页面操作收进可访问的展开菜单，左侧固定图元库并独立滚动图层树，中部画布独立滚动且允许侧栏隐藏，右侧几何与 Tag 属性优先展示，高级编排操作折叠到底部；状态与模拟警告移至底栏。
 
 新增 `@adui/tailwind/studio.css` 作为 Vue/React 共享布局样式，未改变 Core、工程 Schema、Tag、SSE/模拟、Dexie 和 PLC/DCS 只读边界。已通过远端源码静态结构核对；**未运行改造后的 `pnpm run ready`、React/Vue 构建和浏览器交互测试，不能沿用上一轮 257/257 单测日志宣称本批通过。** 详见 [ADR-0031](adr/0031-canvas-first-studio-workspace.md)。
+
+## 2026-11-11 · 16:9 画板无滚动与视图按钮合并（待本机验收）
+
+维护者截图确认画布有纵向滚动条，要求 **画板 16:9、左右侧栏固定宽度、中部自适应，合并部分操作按钮**。本批在 `feat/v0.2-tdesign-property-panel` 中新增共享 Core 视区数学函数，将原 `zoom * 100%` DOM 宽度缩放改为 SVG `viewBox` 缩放和边界内平移；共享 `@adui/tailwind/studio.css` 使用 `container-type: size` 与 `100cqh` 让 16:9 画板等比适配中央可用空间，移除中间滚动条并保持桌面 252px / 320px 固定侧栏。网格、吸附和侧栏显隐折叠为“视图设置”；自动保存入口归入“文件与草稿”。
+
+不强制更改已有 880×460 工程页面，以避免图元变形或 Schema 兼容性问题。Vue/React 双端逻辑对应，新增六项共享 Core 单测源码及静态校验。**该批尚未执行本机实际构建、自动化测试、浏览器/桌面端视觉验收。** 以维护者后续 `pnpm run ready` 及截图回归为准。详见 [ADR-0032](adr/0032-studio-16x9-fit-viewport.md)。
