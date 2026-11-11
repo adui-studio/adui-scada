@@ -1176,11 +1176,11 @@ async function importJson(event: Event) {
         <div class="studio-tree-controls">
           <label class="studio-field">
             搜索图元或组合
-            <input
+            <TInput
               v-model="layerSearch"
               type="search"
               aria-label="搜索图层"
-              maxlength="128"
+              :maxlength="128"
               placeholder="图元 ID、类型、文字或组合 ID"
             />
           </label>
