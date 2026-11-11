@@ -1,10 +1,6 @@
 import Dexie from "dexie";
 import type { Table } from "dexie";
-import {
-  createProjectSnapshot,
-  parseScadaDocument,
-  readProjectSnapshot,
-} from "@adui/scada-core";
+import { createProjectSnapshot, parseScadaDocument, readProjectSnapshot } from "@adui/scada-core";
 import type {
   ProjectSnapshot,
   ProjectVersionQuery,

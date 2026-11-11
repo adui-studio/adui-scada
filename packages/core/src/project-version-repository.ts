@@ -25,8 +25,5 @@ export interface ProjectVersionRepository {
     createdAt?: string,
   ): Promise<ProjectSnapshot>;
   get(projectId: string, revision: number): Promise<ProjectSnapshot | null>;
-  list(
-    projectId: string,
-    query?: ProjectVersionQuery,
-  ): Promise<readonly ProjectVersionSummary[]>;
+  list(projectId: string, query?: ProjectVersionQuery): Promise<readonly ProjectVersionSummary[]>;
 }
