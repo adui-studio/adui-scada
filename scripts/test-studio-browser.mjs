@@ -271,6 +271,165 @@ async function checkStudioInPage() {
   return { findings, viewport: { width: innerWidth, height: innerHeight } };
 }
 
+/** 只在隔离浏览器中操作真实 Studio DOM，不修改正式应用代码。 */
+async function addStudioSymbolInPage(label) {
+  const button = [...document.querySelectorAll(".studio-add button")].find(
+    (item) => item.textContent.trim() === label,
+  );
+  if (!button) throw new Error("未找到添加图元按钮：" + label);
+  button.click();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const notice = document.querySelector(".studio-notice")?.textContent || "";
+  if (!notice.includes("已新增图元")) throw new Error("新增图元失败：" + notice);
+  return notice;
+}
+
+/** 通过点击导出按钮捕获真实 Blob，阻止临时浏览器写入无意义的下载文件。 */
+async function exportStudioJsonInPage() {
+  const menu = document.querySelector(".studio-file-menu");
+  if (!menu) throw new Error("未找到文件与草稿菜单");
+  menu.open = true;
+  const button = [...menu.querySelectorAll("button")].find(
+    (item) => item.textContent.trim() === "导出 JSON",
+  );
+  if (!button) throw new Error("未找到导出 JSON 按钮");
+  const originalCreate = Reflect.get(URL, "createObjectURL");
+  const originalClick = Reflect.get(HTMLAnchorElement.prototype, "click");
+  if (typeof originalCreate !== "function" || typeof originalClick !== "function") {
+    throw new TypeError("浏览器不支持工程 JSON 导出所需的方法");
+  }
+  let exportedBlob = null;
+  try {
+    URL.createObjectURL = function (value) {
+      exportedBlob = value;
+      return originalCreate.call(URL, value);
+    };
+    HTMLAnchorElement.prototype.click = function () {
+      if (this.download && this.href.startsWith("blob:")) return;
+      return originalClick.call(this);
+    };
+    button.click();
+    if (!(exportedBlob instanceof Blob)) throw new Error("导出按钮没有生成 JSON Blob");
+    const json = await exportedBlob.text();
+    JSON.parse(json);
+    return json;
+  } finally {
+    URL.createObjectURL = originalCreate;
+    HTMLAnchorElement.prototype.click = originalClick;
+    menu.open = false;
+  }
+}
+
+/** 模拟选择工程 JSON 文件，等待 Vue/React 异步导入和状态反馈。 */
+async function importStudioJsonInPage(json, expectSuccess) {
+  const menu = document.querySelector(".studio-file-menu");
+  if (!menu) throw new Error("未找到文件与草稿菜单");
+  menu.open = true;
+  const input = menu.querySelector(".studio-import input[type=file]");
+  if (!input) throw new Error("未找到工程 JSON 文件输入");
+  const transfer = new DataTransfer();
+  transfer.items.add(new File([json], "互通验收.json", { type: "application/json" }));
+  input.files = transfer.files;
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  const expectedNotice = expectSuccess ? "工程 JSON 已校验并载入本地编辑器" : "导入失败：";
+  const started = Date.now();
+  try {
+    while (Date.now() - started < 12000) {
+      const notice = document.querySelector(".studio-notice")?.textContent || "";
+      if (notice.includes(expectedNotice)) return notice;
+      if (expectSuccess && notice.includes("导入失败：")) {
+        throw new Error("工程导入异常：" + notice);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+    throw new Error(
+      "导入结果等待超时：" + (document.querySelector(".studio-notice")?.textContent || ""),
+    );
+  } finally {
+    menu.open = false;
+  }
+}
+
+/** 跨框架测试每次切换页面均执行真实导航和进入 Studio。 */
+async function navigateStudioForInterop(session, target, marker) {
+  const url = new URL(target.url);
+  url.searchParams.set("scada_interop_check", marker);
+  await session.send("Page.navigate", { url: url.href });
+  let loaded = false;
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    await pause(150);
+    try {
+      loaded = await session.evaluate(
+        "location.href === " + JSON.stringify(url.href) + ' && document.readyState === "complete"',
+      );
+      if (loaded) break;
+    } catch {
+      // 新页面导航时执行上下文暂不可用。
+    }
+  }
+  if (!loaded) {
+    const href = await session.evaluate("location.href");
+    throw new Error(target.name + " 页面导航失败：" + href);
+  }
+  await session.evaluate("(" + enterStudioInPage.toString() + ")()");
+}
+
+async function runStudioInteroperability(session) {
+  const react = targets[0];
+  const vue = targets[1];
+  const evaluate = (fn, ...args) =>
+    session.evaluate(
+      "(" + fn.toString() + ")(" + args.map((arg) => JSON.stringify(arg)).join(",") + ")",
+    );
+  await session.send("Emulation.setDeviceMetricsOverride", {
+    width: 1440,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+
+  await navigateStudioForInterop(session, react, "react-initial");
+  await evaluate(addStudioSymbolInPage, "+ 水箱");
+  const reactExport = JSON.parse(await evaluate(exportStudioJsonInPage));
+  assert.ok(
+    reactExport.pages[0]?.nodes.some((node) => node.type === "tank" && node.id !== "tank"),
+    "React 新增水箱未进入实际导出 JSON",
+  );
+
+  await navigateStudioForInterop(session, vue, "vue-import-react");
+  await evaluate(importStudioJsonInPage, JSON.stringify(reactExport), true);
+  const vueImported = JSON.parse(await evaluate(exportStudioJsonInPage));
+  assert.deepStrictEqual(vueImported, reactExport, "React → Vue 导入导出导致工程数据发生变化");
+  process.stdout.write("React → Vue：工程 JSON、页面、图元与 Tag 绑定一致\n");
+
+  await evaluate(addStudioSymbolInPage, "+ 文本");
+  const vueExport = JSON.parse(await evaluate(exportStudioJsonInPage));
+  assert.equal(
+    vueExport.pages[0].nodes.length,
+    reactExport.pages[0].nodes.length + 1,
+    "Vue 新增文本后图元数量未变化",
+  );
+  await navigateStudioForInterop(session, react, "react-import-vue");
+  await evaluate(importStudioJsonInPage, JSON.stringify(vueExport), true);
+  const reactImported = JSON.parse(await evaluate(exportStudioJsonInPage));
+  assert.deepStrictEqual(reactImported, vueExport, "Vue → React 导入导出导致工程数据发生变化");
+  process.stdout.write("Vue → React：工程 JSON、页面、图元与 Tag 绑定一致\n");
+
+  await evaluate(importStudioJsonInPage, '{"schemaVersion":', false);
+  const afterInvalidImport = JSON.parse(await evaluate(exportStudioJsonInPage));
+  assert.deepStrictEqual(afterInvalidImport, vueExport, "非法 JSON 导入覆盖了已有工程数据");
+  process.stdout.write("非法 JSON：正确拒绝导入，已有工程保持不变\n");
+
+  await navigateStudioForInterop(session, vue, "vue-return");
+  await evaluate(importStudioJsonInPage, JSON.stringify(reactImported), true);
+  const vueReturned = JSON.parse(await evaluate(exportStudioJsonInPage));
+  assert.deepStrictEqual(vueReturned, vueExport, "双向往返导致工程数据发生变化");
+  await evaluate(importStudioJsonInPage, '{"schemaVersion":', false);
+  const vueAfterInvalidImport = JSON.parse(await evaluate(exportStudioJsonInPage));
+  assert.deepStrictEqual(vueAfterInvalidImport, vueExport, "Vue 非法 JSON 导入覆盖了已有工程数据");
+  process.stdout.write("React → Vue → React → Vue：完整往返及双端非法导入保护成功\n");
+}
+
 async function main() {
   const browserPath = browserExecutable();
   assert.ok(browserPath, "未找到 Chrome/Edge，可设置 SCADA_BROWSER_PATH 指定浏览器路径");
@@ -313,6 +472,10 @@ async function main() {
     session = new ChromeSession(socket);
     await session.send("Page.enable");
     await session.send("Runtime.enable");
+    if (process.argv.includes("--interop")) {
+      await runStudioInteroperability(session);
+      return;
+    }
     let failed = 0;
     for (const target of targets) {
       for (const viewport of viewports) {

@@ -761,3 +761,18 @@ pnpm run test:browser
 React、Vue 均以“运行监控”为默认视图，而 Studio 由顶部“组态编辑”按钮异步切换。因此 `test:browser` **必须先模拟点击“组态编辑”**，等待工作台与 SVG 挂载后才检查画布。首次版本直接查询 `.studio-workspace`，导致运行监控页误报“元素不存在”；现已修复。每次尺寸测试使用独立的 `scada_browser_check` 本地查询参数，确保不会把上一页面的 `document.readyState` 当作新页面已加载。错误日志会携带地址、页面标题、导航状态及有限的页面文本，便于区分入口错误与应用加载失败。
 
 验收脚本只操作临时浏览器配置，不修改 Studio 默认入口、工程文件或用户草稿。本次远端修复未在维护者 Windows React/Vue 页面上执行完整浏览器验收，需重新运行 `pnpm run test:browser`。
+
+## V0.3 · Vue/React 工程文件双向浏览器互通验收
+
+在已完成的 `test:browser`（76 项布局交互断言）之外，新增独立命令：
+
+```powershell
+# 先在其他终端运行 pnpm run dev:react / pnpm run dev:vue
+pnpm run test:interop
+```
+
+沿用 `scripts/test-studio-browser.mjs` 的 Chrome/Edge 隔离浏览器、CDP 通信和 1440×900 视口，不新增依赖，**不会操作使用者现有的浏览器草稿或文件**。本命令先让 React Studio 通过真实界面新增水箱并导出 JSON，Vue 通过真实文件输入导入并重新导出，断言整个工程对象（包括 Schema、页面、图元顺序、几何属性、props、Tag bindings、rules）完全相等。再在 Vue 新增文本，执行 Vue → React → Vue 往返，证明两个方向都真实接受另一端导出的修改。额外用格式错误的 JSON 尝试导入，验证原工程未被覆盖。
+
+测试脚本只在临时隔离浏览器内拦截下载用的 `a.click`，读取应用真实生成的 Blob；导入模拟浏览器原生 File/DataTransfer，触发真实 change 处理。不会改变工程 Schema、编辑器生产代码、后台或设备通信行为。测试失败退出码非零。
+
+**实际 Windows 双框架测试尚未执行**。不要将历史 76/76 布局通过或 270/270 单测记录等同于新增互通命令通过。需先运行 `pnpm run test:interop`，再执行 `pnpm run ready`，验收后再考虑合并。
