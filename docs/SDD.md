@@ -330,3 +330,14 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - 保留工程 `schemaVersion: 0.2.0`、IndexedDB 草稿保存与 JSON 导入导出；早期 Runtime 对 `props` 可透传但不能正确隐藏图元，正式发布需独立版本兼容控制。
 
 详见 [ADR-0025](adr/0025-node-lock-visibility.md)。本批新增 19 项 Core 回归测试源码，整仓单测预计 226 项，实际验证待维护者 Windows 执行。
+
+## 29. V0.2 第十八批：精确图层插入和组合整体移动
+
+- 新增 `DocumentEditor.moveLayer(sourceNodeId, targetNodeId, "before" | "after"): boolean`，根据当前编辑页 `nodes[]` 操作。源节点所属组合全部成员按当前顺序提取为一段，目标属于组合时以其首/末成员为插入边界。自拖放、同组拖放或最终顺序未改变返回 `false`；非法 ID 和方向明确拒绝。
+- 锁定源图元或源组含锁定成员时立即拒绝；所有成功的候选顺序还必须满足原页面已锁定图元索引不变。失败不调用文档提交，不污染撤销/重做。
+- 既有 `reorderSelected` 在选中内容恰好为完整单组时，将前移/后移、置顶/置底转换为相对于相邻图元或页边界的 `moveLayer` 调用；普通多选沿用原有逐层与整体操作。
+- React/Vue 图层列表逆序显示 `nodes[]`（越靠上越在视觉顶层），支持 HTML5 会话内拖放，目标行上半部对应插入到目标上方（数组 after），下半部对应下方（数组 before），并显示临时插入线。
+- Vue/React 均提供目标图元与插入位置选择框以及显式提交按钮，允许不拖拽的精确排序。若选择了混合多图元且不属于单一组合，则禁用该按钮；组合成员拖动仍以整组为单位。切页时清理拖拽会话状态。
+- 只修改 `ScadaDocument 0.2.0` 的图元数组顺序，保留已有严格 Parser、历史上限、JSON、Dexie 草稿和只读 Runtime 行为；单纯悬停不修改文档。详见 [ADR-0026](adr/0026-precise-layer-order.md)。
+
+本批新增 17 项 Core 回归测试源码，整仓预计 **243 项单元测试**，需要维护者 Windows `pnpm run ready` 和双框架交互复验。

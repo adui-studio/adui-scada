@@ -60,6 +60,10 @@ const rotating = ref(false);
 const marquee = shallowRef<MarqueeState | null>(null);
 const labelDraft = ref("");
 const preferredCopyTargetPageId = ref("");
+const preferredLayerTargetId = ref("");
+const layerInsertPosition = ref<"before" | "after">("after");
+const layerDrop = shallowRef<{ id: string; position: "before" | "after" } | null>(null);
+let layerDrag: { pageId: string; nodeId: string } | null = null;
 const notice = ref("可手动保存浏览器本地草稿 · 尚未连接工程保存服务");
 const hasSavedDraft = ref(false);
 const autoSaveEnabled = ref(false);
@@ -125,6 +129,39 @@ const hasLockedSelection = computed(() =>
 const canGroup = computed(
   () =>
     state.value.selectedIds.length >= 2 && !hasGroupedSelection.value && !hasLockedSelection.value,
+);
+const layerRows = computed(() => [...page.value.nodes].reverse());
+const lockedLayerGroups = computed(
+  () =>
+    new Set(
+      page.value.nodes
+        .filter(studioNodeLocked)
+        .flatMap((node) => (node.groupId ? [node.groupId] : [])),
+    ),
+);
+const canPreciselyMove = computed(() => {
+  const node = selected.value;
+  return (
+    node !== undefined &&
+    (state.value.selectedIds.length === 1 ||
+      (node.groupId !== undefined &&
+        state.value.selectedIds.every(
+          (id) => page.value.nodes.find((item) => item.id === id)?.groupId === node.groupId,
+        ))) &&
+    !hasLockedSelection.value
+  );
+});
+const layerTargetNodes = computed(() => {
+  const chosen = selected.value;
+  return page.value.nodes.filter(
+    (node) =>
+      node.id !== chosen?.id && (chosen?.groupId === undefined || node.groupId !== chosen.groupId),
+  );
+});
+const layerTargetId = computed(() =>
+  layerTargetNodes.value.some((node) => node.id === preferredLayerTargetId.value)
+    ? preferredLayerTargetId.value
+    : (layerTargetNodes.value[0]?.id ?? ""),
 );
 const activePageIndex = computed(() =>
   state.value.document.pages.findIndex((item) => item.id === state.value.activePageId),
@@ -439,6 +476,7 @@ function apply(action: () => unknown, message: string) {
 function switchPage(pageId: string) {
   try {
     if (!editor.switchPage(pageId)) return;
+    clearLayerDrag();
     cancelDrag();
     zoom.value = 1;
     refresh();
@@ -528,6 +566,90 @@ function changeSelectedVisible(visible: boolean) {
     visible ? "已批量显示图元，可撤销" : "已批量隐藏图元，可撤销",
   );
   cancelDrag();
+}
+
+function moveLayerPrecisely(nodeId: string, targetId: string, position: "before" | "after") {
+  try {
+    const changed = editor.moveLayer(nodeId, targetId, position);
+    if (changed) {
+      refresh();
+      notice.value = "图层已精确排序，可撤销";
+    } else {
+      notice.value = "图层位置没有变化";
+    }
+  } catch (error) {
+    notice.value = error instanceof Error ? error.message : String(error);
+  }
+}
+
+function clearLayerDrag() {
+  layerDrag = null;
+  layerDrop.value = null;
+}
+
+function startLayerDrag(event: DragEvent, nodeId: string) {
+  const node = page.value.nodes.find((item) => item.id === nodeId);
+  if (
+    !node ||
+    studioNodeLocked(node) ||
+    (node.groupId !== undefined && lockedLayerGroups.value.has(node.groupId))
+  ) {
+    event.preventDefault();
+    return;
+  }
+  layerDrag = { pageId: page.value.id, nodeId };
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("application/x-adui-scada-layer", nodeId);
+  }
+}
+
+function overLayer(event: DragEvent, targetId: string) {
+  const dragging = layerDrag;
+  if (!dragging || dragging.pageId !== state.value.activePageId || dragging.nodeId === targetId) {
+    return;
+  }
+  const source = page.value.nodes.find((item) => item.id === dragging.nodeId);
+  const target = page.value.nodes.find((item) => item.id === targetId);
+  if (!source || !target || (source.groupId && source.groupId === target.groupId)) return;
+  if (!(event.currentTarget instanceof HTMLButtonElement)) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  const bounds = event.currentTarget.getBoundingClientRect();
+  const position = event.clientY < bounds.top + bounds.height / 2 ? "after" : "before";
+  if (layerDrop.value?.id !== targetId || layerDrop.value.position !== position) {
+    layerDrop.value = { id: targetId, position };
+  }
+}
+
+function dropLayer(event: DragEvent, targetId: string) {
+  const dragging = layerDrag;
+  if (!dragging || dragging.pageId !== state.value.activePageId) return;
+  if (!(event.currentTarget instanceof HTMLButtonElement)) return;
+  event.preventDefault();
+  const bounds = event.currentTarget.getBoundingClientRect();
+  const position = event.clientY < bounds.top + bounds.height / 2 ? "after" : "before";
+  clearLayerDrag();
+  moveLayerPrecisely(dragging.nodeId, targetId, position);
+}
+
+function selectLayerTarget(event: Event) {
+  if (event.target instanceof HTMLSelectElement) {
+    preferredLayerTargetId.value = event.target.value;
+  }
+}
+
+function selectLayerPosition(event: Event) {
+  if (!(event.target instanceof HTMLSelectElement)) return;
+  if (event.target.value === "before" || event.target.value === "after") {
+    layerInsertPosition.value = event.target.value;
+  }
+}
+
+function moveSelectedLayerPrecisely() {
+  const node = selected.value;
+  if (!node || !canPreciselyMove.value || !layerTargetId.value) return;
+  moveLayerPrecisely(node.id, layerTargetId.value, layerInsertPosition.value);
 }
 
 function layer(action: LayerAction) {
@@ -994,16 +1116,28 @@ async function importJson(event: Event) {
           </button>
         </div>
         <button
-          v-for="node in page.nodes"
+          v-for="node in layerRows"
           :key="node.id"
           type="button"
           class="studio-layer"
           :data-selected="state.selectedIds.includes(node.id)"
           :data-hidden="!studioNodeVisible(node)"
           :data-locked="studioNodeLocked(node)"
+          :data-drop-position="layerDrop?.id === node.id ? layerDrop.position : undefined"
+          :draggable="
+            !studioNodeLocked(node) &&
+            (node.groupId === undefined || !lockedLayerGroups.has(node.groupId))
+          "
+          title="拖动调整图层，组合会整体移动"
+          @dragstart="startLayerDrag($event, node.id)"
+          @dragover="overLayer($event, node.id)"
+          @drop="dropLayer($event, node.id)"
+          @dragend="clearLayerDrag"
           @click="selectNode(node.id, $event.shiftKey)"
         >
-          <span>{{ node.id }}</span>
+          <span class="studio-layer-identity"
+            ><span aria-hidden="true">⋮⋮</span> {{ node.id }}</span
+          >
           <small>
             {{ node.type }}{{ node.groupId ? ` · 组合 ${node.groupId}` : "" }}
             {{ studioNodeLocked(node) ? " · 已锁定" : "" }}
@@ -1246,6 +1380,40 @@ async function importJson(event: Event) {
               @click="apply(() => editor.deleteSelected(), '已删除图元，可撤销')"
             >
               删除所选
+            </button>
+          </div>
+          <div class="studio-exact-layer" aria-label="图层精确插入">
+            <label class="studio-field">
+              目标图元
+              <select
+                aria-label="图层插入目标"
+                :value="layerTargetId"
+                :disabled="!canPreciselyMove || layerTargetNodes.length === 0"
+                @change="selectLayerTarget"
+              >
+                <option value="">请选择目标图元</option>
+                <option v-for="node in layerTargetNodes" :key="node.id" :value="node.id">
+                  {{ node.id }}{{ node.groupId ? "（组合）" : "" }}
+                </option>
+              </select>
+            </label>
+            <label class="studio-field">
+              插入位置
+              <select
+                aria-label="图层插入位置"
+                :value="layerInsertPosition"
+                @change="selectLayerPosition"
+              >
+                <option value="after">目标上方（更靠前）</option>
+                <option value="before">目标下方（更靠后）</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              :disabled="!canPreciselyMove || !layerTargetId"
+              @click="moveSelectedLayerPrecisely"
+            >
+              移动到指定层
             </button>
           </div>
           <div class="studio-tool-group" aria-label="图层排序">
