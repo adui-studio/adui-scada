@@ -69,7 +69,6 @@ assert.ok(
   "Lint 工具必须忽略第三方 Skill 文档",
 );
 
-
 // Tailwind 主题与 Vite 插件仅由共享包提供，避免双框架配置漂移。
 const tailwindPackage = json("packages/tailwind/package.json");
 assert.equal(tailwindPackage.name, "@adui/tailwind");
