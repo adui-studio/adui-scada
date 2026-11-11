@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "@adui/normalize.css/all.css";
-import "./tailwind.css";
+import "@adui/tailwind/styles.css";
 import "@adui/scada-runtime/styles.css";
 
 const mount = document.getElementById("root");

@@ -69,4 +69,55 @@ assert.ok(
   "Lint 工具必须忽略第三方 Skill 文档",
 );
 
+
+// Tailwind 主题与 Vite 插件仅由共享包提供，避免双框架配置漂移。
+const tailwindPackage = json("packages/tailwind/package.json");
+assert.equal(tailwindPackage.name, "@adui/tailwind");
+assert.equal(tailwindPackage.exports?.["./styles.css"], "./src/styles.css");
+assert.equal(tailwindPackage.exports?.["./vite"], "./src/vite.ts");
+assert.equal(tailwindPackage.dependencies?.["@tailwindcss/vite"], "catalog:");
+assert.equal(tailwindPackage.dependencies?.tailwindcss, "catalog:");
+
+const tailwindCss = text("packages/tailwind/src/styles.css");
+assert.match(
+  tailwindCss,
+  /^@import "tailwindcss\/utilities\.css" layer\(utilities\) source\(none\);$/m,
+  "Tailwind utilities 必须先声明 CSS layer，再声明 source(none)",
+);
+assert.doesNotMatch(tailwindCss, /source\([^)]*\)\s+layer\(/, "禁止颠倒 Tailwind 导入顺序");
+assert.doesNotMatch(tailwindCss, /@import "[^"]*preflight/i, "不得叠加 Tailwind Preflight");
+
+for (const framework of ["react", "vue"]) {
+  const webRoot = `apps/web-${framework}`;
+  const entry = framework === "react" ? "main.tsx" : "main.ts";
+  const manifest = json(`${webRoot}/package.json`);
+  assert.equal(
+    manifest.dependencies?.["@adui/tailwind"],
+    "workspace:*",
+    `${webRoot} 必须依赖共享 Tailwind 包`,
+  );
+  assert.equal(
+    manifest.devDependencies?.["@tailwindcss/vite"],
+    undefined,
+    `${webRoot} 不应重复维护 Tailwind 插件`,
+  );
+  assert.equal(
+    manifest.devDependencies?.tailwindcss,
+    undefined,
+    `${webRoot} 不应重复维护 Tailwind 版本`,
+  );
+  assert.ok(
+    text(`${webRoot}/src/${entry}`).includes('import "@adui/tailwind/styles.css";'),
+    `${webRoot} 必须使用共享 Tailwind 样式`,
+  );
+  assert.ok(
+    text(`${webRoot}/vite.config.ts`).includes('from "@adui/tailwind/vite"'),
+    `${webRoot} 必须使用共享 Tailwind 插件入口`,
+  );
+  assert.ok(
+    tailwindCss.includes(`@source "../../../${webRoot}/src";`),
+    `${webRoot} 的组件路径未纳入 Tailwind 工具类扫描`,
+  );
+}
+
 console.log(`共享配置检查通过：${expected.size} 个 TSConfig 消费端，根目录统一管理格式化与 Lint`);

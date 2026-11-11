@@ -1,8 +1,12 @@
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" source("./") layer(utilities);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
 
-/* 不叠加 Preflight，保留 ADui Normalize 和 TDesign 的现有控件样式。 */
+/* 两套 Web 明确扫描，避免自动收集测试、Skill 或其他应用的无关类名。 */
+@source "../../../apps/web-react/src";
+@source "../../../apps/web-vue/src";
+
+/* 保留既有 Normalize/TDesign 样式，不引入 Tailwind Preflight。 */
 @theme inline {
   --color-scada-primary: var(--scada-primary);
   --color-scada-cyan: var(--scada-cyan);

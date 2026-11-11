@@ -354,3 +354,9 @@ PR #16 多页面编辑管理已根据维护者授权以 Squash Merge 合并 `mai
 ## 2026-11-11 · Tailwind CSS 与 Studio 全屏布局（待本机验收）
 
 用户反馈旧 Studio 居中限宽和浏览器外层滚动条。依据仓库 `ui-ux-pro-max` 布局/无障碍规则，在 `feat/v0.2-tdesign-property-panel` 继续实施：Vue/React 接入 Tailwind CSS 4.3.5（关闭 Preflight）、共享 V7 设计 Token、替换 Studio 布局为动态视口全屏和内部滚动，保留 TDesign 组件与独立 SVG 交互逻辑。尚未联网更新 `pnpm-lock.yaml`、未在 Windows 执行完整 `pnpm run ready`、未实测两端浏览器及桌面 MSI。技术决策见 [ADR-0030](adr/0030-tailwind-fullscreen-studio.md)。
+
+## 2026-11-11 · Tailwind 共享包与 React CSS 构建阻塞修复（待本机复验）
+
+维护者 Windows 日志确认当前功能分支完成 Catalog、共享配置、环境、中文文案、159 个文件格式检查、61 文件静态检查、双 Web/Server 类型检查、**257/257 项单元测试、2/2 项 NestJS E2E 及 45 份 Markdown 静态校验**。进入 React Web 生产构建后，Vite+/Lightning CSS 因 Tailwind CSS 的 `@import ... source("./") layer(utilities)` 顺序产生不合法的 `@media layer(utilities)`，构建失败；后续 Vue Web/NestJS 构建未运行，因此该次 `pnpm run ready` **未通过**。
+
+按维护者要求，抽取 `packages/tailwind` 作为内部 `@adui/tailwind` 包，两端应用统一引用共享 CSS 和 Vite 插件；从源头改正 `layer(utilities) source(none)` 顺序并通过显式 `@source` 扫描两套应用，避免组件样式漂移或意外引入 Tailwind Preflight。新增共享配置静态契约。此次修复在远端仓库直接提交，**尚未运行更新后的 pnpm 依赖安装、React/Vue 构建、完整 ready 或浏览器交互**，以维护者后续 Windows 复验为准。详见 [ADR-0030](adr/0030-tailwind-fullscreen-studio.md)。

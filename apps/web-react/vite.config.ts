@@ -1,4 +1,4 @@
-import tailwindcss from "@tailwindcss/vite";
+import tailwindcss from "@adui/tailwind/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, lazyPlugins, loadEnv } from "vite-plus";
 import { fileURLToPath } from "node:url";

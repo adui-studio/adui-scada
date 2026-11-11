@@ -15,16 +15,15 @@
     "@adui/scada-core": "workspace:*",
     "@adui/scada-draft-storage": "workspace:*",
     "@adui/scada-runtime": "workspace:*",
+    "@adui/tailwind": "workspace:*",
     "tdesign-icons-vue-next": "catalog:",
     "tdesign-vue-next": "catalog:",
     "vue": "catalog:"
   },
   "devDependencies": {
     "@adui/tsconfig": "workspace:*",
-    "@tailwindcss/vite": "catalog:",
     "@types/node": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
-    "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plus": "catalog:",

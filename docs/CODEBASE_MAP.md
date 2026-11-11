@@ -265,7 +265,9 @@
 
 ## Tailwind CSS 与全视口 Studio（ADR-0030）
 
-- `apps/web-react/src/tailwind.css`、`apps/web-vue/src/tailwind.css`：一致的 Tailwind v4 主题映射与工具类入口，禁用 Preflight。
-- 两端 `vite.config.ts`：注册 `@tailwindcss/vite` 插件；`pnpm-workspace.yaml`：统一固定依赖。
+- `packages/tailwind/package.json`、`src/styles.css`、`src/vite.ts`：共享 `@adui/tailwind` 包导出 Tailwind v4 无 Preflight 主题及 Vite 插件；显式收集 Vue/React 工具类。
+- 两端 `main.ts(x)` 和 `vite.config.ts`：分别导入 `@adui/tailwind/styles.css` 和 `@adui/tailwind/vite`，不保留重复的本地 Tailwind CSS。
+- `scripts/check-shared-config.mjs`：补充共享包导出、两端接入及 CSS 导入顺序静态契约。
+- `pnpm-workspace.yaml`：统一固定版本，工作区共享包集中声明依赖。
 - 两端 `App`：Studio 视口容器固定为动态视口高度；Runtime 保留可滚动页面。
 - 两端 `StudioPage`：使用 Tailwind 布置顶部工具栏、三栏工作区和各自滚动的侧栏/画布，特殊 SVG/TDesign 样式仍保留原 CSS。
