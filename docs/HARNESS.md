@@ -710,3 +710,24 @@ pnpm run dev:vue
 ```
 
 人工验收两套 Studio：组合树展开/折叠和成员选中同步、组名/成员/类型/中文文本搜索、定位选中图层、非连续组提示、锁定/隐藏状态、原生拖拽与精准插入；切换页面清空搜索、导入/恢复清空 UI 折叠状态。对比 Vue↔React JSON 双向导入与 IndexedDB 保存后人工恢复，确认不会持久化 UI 图层树；检查只读 Runtime 数据质量及 NestJS 未开放的设备写入接口无回归。静态文档检查不能代表已完成业务、工业现场安全验证。
+
+## 2026-11-11 · V0.2 第二十批 TDesign 双端依赖及 UI 迁移待验收
+
+新增四个 TDesign Catalog 依赖及 1 项 Core 几何属性元数据测试，源码预计 **257 项单测**、**2 项 E2E**、**43 份 Markdown**。当前执行环境无法访问 npm Registry，**没有完成锁文件生成或新依赖安装**，因此绝不将此前通过的 `ready` 结果复用到本批。
+
+联网维护者 Windows 首次操作：
+
+```powershell
+git status -sb
+git fetch origin
+git switch feat/v0.2-tdesign-property-panel
+pnpm install --no-frozen-lockfile
+git diff -- pnpm-lock.yaml
+pnpm install --frozen-lockfile
+vp check --fix
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+要求将由 pnpm 自动生成的 `pnpm-lock.yaml` 变更审查并提交到当前功能分支，确认供应链依赖数量、TDesign 版本、重复图标包及 CSS 产物。检查 React/Vue TDesign 属性按钮/输入和搜索清除图标、几何字段一致性、原快捷键、Tag、组合、IndexedDB 草稿、只读 Runtime 与未实现设备写入返回 404。首次安装未完成前不能执行冻结安装、编译/验收，也不能批准合并。
+
