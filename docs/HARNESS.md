@@ -776,3 +776,18 @@ pnpm run test:interop
 测试脚本只在临时隔离浏览器内拦截下载用的 `a.click`，读取应用真实生成的 Blob；导入模拟浏览器原生 File/DataTransfer，触发真实 change 处理。不会改变工程 Schema、编辑器生产代码、后台或设备通信行为。测试失败退出码非零。
 
 **实际 Windows 双框架测试尚未执行**。不要将历史 76/76 布局通过或 270/270 单测记录等同于新增互通命令通过。需先运行 `pnpm run test:interop`，再执行 `pnpm run ready`，验收后再考虑合并。
+
+## V0.3 工程快照基础验收（ADR-0035）
+
+本批只增加 `@adui/scada-core` 的新导出和单测，无应用生产 UI 改动，不要求启动外部服务。维护者在新功能分支运行：
+
+```powershell
+pnpm run test:unit
+pnpm run ready
+# 可选：两套 Web 开发服务器启动后复核此前互通与画布
+pnpm run test:interop
+pnpm run test:browser
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+此前主分支单测为 270 项，本批预期增加 10 项（以 Vitest 实际日志为准）。覆盖结构错误路径、JSON 往返、深冻结、稳定哈希、篡改、容器严格校验、非正修订号、非法 UTC 时间、2 MiB 容量边界。需运行环境提供 WebCrypto `crypto.subtle.digest`；不支持时明确失败而非降级。以上为验收计划，**新分支完整检查尚未执行，不可标记为通过**。

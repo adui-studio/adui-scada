@@ -136,3 +136,9 @@ Vue/React Studio 的图层面板增加一层平面组合树：同一 `groupId` �
 `GEOMETRY_PROPERTY_FIELDS` 统一放在共享 Core，为 React/Vue 几何属性表单提供完全相同的字段与中文标签。现阶段几何输入与 Tag 下拉继续使用原有受验证表单逻辑；颜色、边框、透明度须待工业 Tag 质量显示语义和共享 SVG 白名单定稿后再实现，不得把未完成能力写成已实现。设计与安装边界见 [ADR-0028](adr/0028-tdesign-dual-framework-ui.md)。
 
 本批依赖需要维护者在联网 Windows 先更新并提交锁文件，方可执行冻结锁文件安装和完整 `pnpm run ready`。
+
+## V0.3 第二批：工程校验结果与快照基础（FR-008 前置工作）
+
+共享 Core 增加 `validateProjectDocument`、`createProjectSnapshot`、`readProjectSnapshot`：沿用现有 `ScadaDocument 0.2.0` 严格校验，返回首错结构化结果；构建独立深冻结工程副本，并以涵盖修订号、创建时间和完整工程数据的 SHA-256 摘要校验跨 JSON 往返的完整性。无效工程、版本、摘要、时间与超限记录均拒绝，失败不修改任何现有工程状态。
+
+这仅交付 **FR-008 前置 Core 数据契约**；尚未形成正式发布（权限、审计、版本仓储、原子发布指针、Runtime 发布态加载、回滚），FR-008 表格状态保持“规划中”。快照摘要不是身份认证或可信数字签名。详见 [ADR-0035](adr/0035-project-validation-snapshot.md)。

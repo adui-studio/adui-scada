@@ -404,3 +404,7 @@ PR #16 多页面编辑管理已根据维护者授权以 Squash Merge 合并 `mai
 ## 2026-11-11 · V0.3 第一批：FR-013 双框架工程互通自动化
 
 此前 V0.2 PR #22 已经通过维护者 Windows `ready`（270/270 单测、2/2 服务端 E2E、双 Web/NestJS 构建）和 `test:browser`（76/76）验收，并以 Squash Merge 提交 `85a9f943` 合并至 `main`。新分支 `test/v0.3-dual-framework-interop` 在此基线上新增独立 `test:interop`：真实 React/Vue UI 导入/导出双向往返，分别在两端增加图元后核对完整 JSON，验证非法 JSON 原子拒绝。使用隔离浏览器，保持旧 `ready`、Schema、设备只读边界与生产源码不变。本批仅已提交测试源码；**尚未取得新增命令的 Windows 实测结果，不能认定 FR-013 自动化验收完成**。
+
+## 2026-11-11 · V0.3 第二批：工程校验与不可变版本快照基础（待验收）
+
+V0.3 首批 PR #23 已于 2026-11-11 Squash Merge 到 `main`（`ef18ec1`）；维护者提供的 `test:interop`、`test:browser`（76/76）和 `ready`（270/270 单测、2/2 E2E、构建全部成功）日志仅对应此前版本。本批从最新 `main` 新建 `feat/v0.3-project-snapshot-foundation`，增加共享 Core 结构化首错校验与不可变 SHA-256 版本快照，包含严格回读、深冻结、摘要篡改保护及容量上限，不涉及 UI、正式发布、服务器存储或工业写入；新增 10 项 Core 单测。独立环境 TypeScript 编译及模拟 Parser 算法冒烟检查通过；**新分支的完整 Vite+ 检查、实际 Core 单测和 Windows 构建尚未执行，不可沿用上批测试通过的结论。** 详见 [ADR-0035](adr/0035-project-validation-snapshot.md)。
