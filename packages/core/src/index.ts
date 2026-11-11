@@ -19,6 +19,8 @@ export type { TagChange, TagListener, TagQuality, TagScalar, TagValue } from "./
 export { WaterTreatmentSimulator } from "./simulator.ts";
 export { renderSvgPage } from "./svg.ts";
 export { waterTreatmentDemoDocument, waterTreatmentDemoTagOptions } from "./demo-document.ts";
+export { buildLayerTree } from "./layer-tree.ts";
+export type { LayerTreeEntry, LayerTreeGroup, LayerTreeNode } from "./layer-tree.ts";
 export {
   LOCAL_DRAFT_FORMAT_VERSION,
   LOCAL_DRAFT_MAX_BYTES,
