@@ -96,8 +96,12 @@ async function checkStudioInPage() {
   function bounds(found) {
     const rect = found.getBoundingClientRect();
     return {
-      left: rect.left, right: rect.right, top: rect.top,
-      bottom: rect.bottom, width: rect.width, height: rect.height,
+      left: rect.left,
+      right: rect.right,
+      top: rect.top,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height,
     };
   }
   const near = (a, b, tolerance = 2) => Math.abs(a - b) <= tolerance;
@@ -126,35 +130,53 @@ async function checkStudioInPage() {
     "中央画布无滚动条",
     canvas.scrollHeight <= canvas.clientHeight + 2 && canvas.scrollWidth <= canvas.clientWidth + 2,
   );
-  verify("画板与画布四边对齐",
-    near(canvasRect.left, boardRect.left) && near(canvasRect.right, boardRect.right) &&
-    near(canvasRect.top, boardRect.top) && near(canvasRect.bottom, boardRect.bottom));
-  verify("SVG 与画板四边对齐",
-    near(boardRect.left, svgRect.left) && near(boardRect.right, svgRect.right) &&
-    near(boardRect.top, svgRect.top) && near(boardRect.bottom, svgRect.bottom));
+  verify(
+    "画板与画布四边对齐",
+    near(canvasRect.left, boardRect.left) &&
+      near(canvasRect.right, boardRect.right) &&
+      near(canvasRect.top, boardRect.top) &&
+      near(canvasRect.bottom, boardRect.bottom),
+  );
+  verify(
+    "SVG 与画板四边对齐",
+    near(boardRect.left, svgRect.left) &&
+      near(boardRect.right, svgRect.right) &&
+      near(boardRect.top, svgRect.top) &&
+      near(boardRect.bottom, svgRect.bottom),
+  );
   verify("左侧栏固定 252px", near(bounds(layers).width, 252));
   verify("右侧栏固定 320px", near(bounds(properties).width, 320));
   verify("画布占据剩余宽度", near(bounds(workspace).width - 252 - 320, bounds(stage).width));
 
   const viewBox = svg.viewBox.baseVal;
   const grid = svg.querySelector('rect[fill="url(#scada-studio-grid)"]');
-  verify("工作区网格完整覆盖 viewBox",
-    Boolean(grid) && ["x", "y", "width", "height"].every(
-      (key) => near(Number(grid.getAttribute(key)), viewBox[key], 0.001),
-    ));
-  verify("SVG 世界坐标比例匹配视口",
-    near(viewBox.width / viewBox.height, svgRect.width / svgRect.height, 0.002));
+  verify(
+    "工作区网格完整覆盖 viewBox",
+    Boolean(grid) &&
+      ["x", "y", "width", "height"].every((key) =>
+        near(Number(grid.getAttribute(key)), viewBox[key], 0.001),
+      ),
+  );
+  verify(
+    "SVG 世界坐标比例匹配视口",
+    near(viewBox.width / viewBox.height, svgRect.width / svgRect.height, 0.002),
+  );
   const boundary = svg.querySelector(".studio-page-boundary");
-  verify("工程页面边界独立显示",
-    Boolean(boundary) && Number(boundary.getAttribute("width")) > 0 &&
-    Number(boundary.getAttribute("height")) > 0);
+  verify(
+    "工程页面边界独立显示",
+    Boolean(boundary) &&
+      Number(boundary.getAttribute("width")) > 0 &&
+      Number(boundary.getAttribute("height")) > 0,
+  );
 
   const zoomButtons = [...element(".studio-zoom").querySelectorAll("button")];
   const originalWidth = svg.viewBox.baseVal.width;
   zoomButtons[2]?.click();
   await settle();
-  verify("放大只改变视图，不改变 SVG DOM 尺寸",
-    svg.viewBox.baseVal.width < originalWidth && near(bounds(svg).width, svgRect.width));
+  verify(
+    "放大只改变视图，不改变 SVG DOM 尺寸",
+    svg.viewBox.baseVal.width < originalWidth && near(bounds(svg).width, svgRect.width),
+  );
   zoomButtons[1]?.click();
   await settle();
   verify("适应按钮恢复原始视图", near(svg.viewBox.baseVal.width, originalWidth, 0.01));
@@ -162,8 +184,8 @@ async function checkStudioInPage() {
   const menu = element(".studio-view-menu");
   menu.open = true;
   await settle();
-  const label = [...menu.querySelectorAll("label")].find(
-    (item) => item.textContent.includes("显示网格"),
+  const label = [...menu.querySelectorAll("label")].find((item) =>
+    item.textContent.includes("显示网格"),
   );
   const gridInput = label?.querySelector('input[type="checkbox"]');
   if (gridInput?.checked) {
@@ -177,9 +199,8 @@ async function checkStudioInPage() {
     verify("存在网格显示控制", Boolean(gridInput));
   }
 
-  const toggle = (name) => [...menu.querySelectorAll("button")].find(
-    (item) => item.textContent.trim() === name,
-  );
+  const toggle = (name) =>
+    [...menu.querySelectorAll("button")].find((item) => item.textContent.trim() === name);
   const initialWidth = bounds(stage).width;
   toggle("隐藏图层")?.click();
   await settle();
@@ -198,8 +219,7 @@ async function checkStudioInPage() {
   const firstLayer = document.querySelector(".studio-layer-tree .studio-layer");
   firstLayer?.click();
   await settle();
-  verify("点击图层可更新属性面板",
-    Boolean(firstLayer) && /已选\s*1/.test(properties.textContent));
+  verify("点击图层可更新属性面板", Boolean(firstLayer) && /已选\s*1/.test(properties.textContent));
 
   return { findings, viewport: { width: innerWidth, height: innerHeight } };
 }
@@ -218,19 +238,24 @@ async function main() {
 
   const userData = mkdtempSync(join(tmpdir(), "adui-scada-browser-check-"));
   const args = [
-    "--headless=new", "--disable-gpu", "--disable-dev-shm-usage",
-    "--no-first-run", "--no-default-browser-check", "--no-proxy-server",
+    "--headless=new",
+    "--disable-gpu",
+    "--disable-dev-shm-usage",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--no-proxy-server",
     "--remote-debugging-port=0",
-    "--user-data-dir=" + userData, "about:blank",
+    "--user-data-dir=" + userData,
+    "about:blank",
   ];
   if (process.getuid?.() === 0) args.unshift("--no-sandbox");
   const child = spawn(browserPath, args, { stdio: "ignore" });
   let session;
   try {
     const port = await waitForPort(userData, child);
-    const response = await fetch(
-      "http://127.0.0.1:" + port + "/json/new?about:blank", { method: "PUT" },
-    );
+    const response = await fetch("http://127.0.0.1:" + port + "/json/new?about:blank", {
+      method: "PUT",
+    });
     assert.ok(response.ok, "无法创建浏览器调试页面");
     const tab = await response.json();
     const socket = new WebSocket(tab.webSocketDebuggerUrl);
@@ -245,8 +270,10 @@ async function main() {
     for (const target of targets) {
       for (const viewport of viewports) {
         await session.send("Emulation.setDeviceMetricsOverride", {
-          width: viewport.width, height: viewport.height,
-          deviceScaleFactor: 1, mobile: false,
+          width: viewport.width,
+          height: viewport.height,
+          deviceScaleFactor: 1,
+          mobile: false,
         });
         await session.send("Page.navigate", { url: target.url });
         let loaded = false;
@@ -254,7 +281,8 @@ async function main() {
           await pause(150);
           try {
             loaded = await session.evaluate(
-              "location.origin === " + JSON.stringify(new URL(target.url).origin) +
+              "location.origin === " +
+                JSON.stringify(new URL(target.url).origin) +
                 ' && document.readyState === "complete"',
             );
             if (loaded) break;
@@ -272,9 +300,18 @@ async function main() {
         const errors = data.findings.filter((entry) => !entry.passed);
         failed += errors.length;
         process.stdout.write(
-          target.name + " " + viewport.width + "x" + viewport.height + " " +
-          (errors.length ? "未通过" : "通过") + " (" +
-          (data.findings.length - errors.length) + "/" + data.findings.length + ")\n",
+          target.name +
+            " " +
+            viewport.width +
+            "x" +
+            viewport.height +
+            " " +
+            (errors.length ? "未通过" : "通过") +
+            " (" +
+            (data.findings.length - errors.length) +
+            "/" +
+            data.findings.length +
+            ")\n",
         );
         for (const error of errors) process.stderr.write("  - " + error.name + "\n");
       }
