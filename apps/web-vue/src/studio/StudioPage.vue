@@ -39,6 +39,7 @@ import type {
 } from "@adui/scada-core/editor";
 import { svgDataUrl } from "@adui/scada-runtime";
 import "./studio.css";
+import "@adui/tailwind/studio.css";
 
 const previewTags = new WaterTreatmentSimulator().next(new Date("2026-11-09T00:00:00Z"));
 function getLegacyStorage() {

@@ -74,6 +74,14 @@ const tailwindPackage = json("packages/tailwind/package.json");
 assert.equal(tailwindPackage.name, "@adui/tailwind");
 assert.equal(tailwindPackage.exports?.["./styles.css"], "./src/styles.css");
 assert.equal(tailwindPackage.exports?.["./vite"], "./src/vite.ts");
+assert.equal(tailwindPackage.exports?.["./studio.css"], "./src/studio.css");
+assert.ok(text("packages/tailwind/src/studio.css").includes("studio-workspace"), "缺少共享工作台布局样式");
+for (const name of ["react", "vue"]) {
+  assert.ok(
+    text(`apps/web-${name}/src/studio/StudioPage.${name === "react" ? "tsx" : "vue"}`).includes('import "@adui/tailwind/studio.css";'),
+    `web-${name} 必须引用共享 Studio 工作台布局样式`,
+  );
+}
 assert.equal(tailwindPackage.dependencies?.["@tailwindcss/vite"], "catalog:");
 assert.equal(tailwindPackage.dependencies?.tailwindcss, "catalog:");
 
