@@ -492,6 +492,7 @@ function switchPage(pageId: string) {
   try {
     if (!editor.switchPage(pageId)) return;
     clearLayerDrag();
+    layerSearch.value = "";
     cancelDrag();
     zoom.value = 1;
     refresh();
@@ -504,6 +505,7 @@ function switchPage(pageId: string) {
 function createPage() {
   apply(() => {
     editor.createPage();
+    layerSearch.value = "";
     cancelDrag();
   }, "已创建空白页面，可撤销");
 }
@@ -527,6 +529,7 @@ function deletePage() {
 function duplicatePage() {
   apply(() => {
     editor.duplicatePage();
+    layerSearch.value = "";
     cancelDrag();
   }, "已复制页面及其图元和 Tag 绑定，可撤销");
 }
@@ -1004,6 +1007,9 @@ async function restoreDraft() {
       return;
     }
     editor.loadDocument(saved.document);
+    clearLayerDrag();
+    layerSearch.value = "";
+    collapsedGroupIds.value = new Set();
     cancelDrag();
     refresh();
     hasSavedDraft.value = true;
@@ -1059,6 +1065,9 @@ async function importJson(event: Event) {
     const parsed = JSON.parse(await file.text()) as unknown;
     await pauseAutoSave();
     const migratedFrom = editor.loadDocument(parsed);
+    clearLayerDrag();
+    layerSearch.value = "";
+    collapsedGroupIds.value = new Set();
     preview.value = null;
     refresh();
     notice.value = migratedFrom
