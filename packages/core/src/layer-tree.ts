@@ -32,7 +32,7 @@ function matchesNode(node: ScadaNode, keyword: string): boolean {
     typeof text === "string" ? text : "",
     typeof name === "string" ? name : "",
   ];
-  return values.some((value) => value.toLocaleLowerCase().includes(keyword));
+  return values.some((value) => value.toLowerCase().includes(keyword));
 }
 
 /**
@@ -41,7 +41,7 @@ function matchesNode(node: ScadaNode, keyword: string): boolean {
  */
 export function buildLayerTree(nodes: readonly ScadaNode[], query = ""): LayerTreeEntry[] {
   if (typeof query !== "string") throw new TypeError("图层搜索关键词必须为字符串");
-  const keyword = query.trim().toLocaleLowerCase();
+  const keyword = query.trim().toLowerCase();
   const groups = new Map<string, { members: ScadaNode[]; positions: number[] }>();
   nodes.forEach((node, index) => {
     if (!node.groupId) return;
@@ -65,7 +65,7 @@ export function buildLayerTree(nodes: readonly ScadaNode[], query = ""): LayerTr
     const group = groups.get(id)!;
     const allMembers = [...group.members].reverse();
     const visibleMembers =
-      keyword && !id.toLocaleLowerCase().includes(keyword)
+      keyword && !id.toLowerCase().includes(keyword)
         ? allMembers.filter((member) => matchesNode(member, keyword))
         : allMembers;
     if (visibleMembers.length === 0) continue;
