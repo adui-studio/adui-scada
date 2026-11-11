@@ -321,7 +321,10 @@ async function main() {
         });
         // 每个视口使用独立的本地验收 URL，避免读取到上一次导航的加载状态。
         const navigationUrl = new URL(target.url);
-        navigationUrl.searchParams.set("scada_browser_check", `${target.name}-${viewport.width}x${viewport.height}`);
+        navigationUrl.searchParams.set(
+          "scada_browser_check",
+          `${target.name}-${viewport.width}x${viewport.height}`,
+        );
         await session.send("Page.navigate", { url: navigationUrl.href });
         let loaded = false;
         for (let attempt = 0; attempt < 40; attempt += 1) {
