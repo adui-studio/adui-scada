@@ -1077,8 +1077,8 @@ async function importJson(event: Event) {
 </script>
 
 <template>
-  <main class="studio-shell">
-    <header class="studio-toolbar">
+  <main class="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3 overflow-hidden px-3 py-3 lg:px-5">
+    <header class="studio-toolbar flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-scada-border pb-3">
       <div>
         <p class="scada-eyebrow">ADui SCADA · V0.2 Studio</p>
         <h1>SVG 组态编辑器</h1>
@@ -1105,7 +1105,7 @@ async function importJson(event: Event) {
         · 已发现本地草稿，可点击「恢复草稿」确认加载
       </span>
     </p>
-    <div class="studio-page-bar" aria-label="工程页面管理">
+    <div class="studio-page-bar flex shrink-0 flex-wrap items-center justify-between gap-2" aria-label="工程页面管理">
       <div class="studio-page-tabs" aria-label="工程页面">
         <button
           v-for="item in state.document.pages"
@@ -1140,8 +1140,8 @@ async function importJson(event: Event) {
         </button>
       </div>
     </div>
-    <div class="studio-workspace">
-      <aside class="studio-panel" aria-label="图元列表">
+    <div class="studio-workspace grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-3 lg:grid-cols-[clamp(200px,17vw,260px)_minmax(0,1fr)_clamp(260px,21vw,320px)] lg:grid-rows-1">
+      <aside class="studio-panel min-h-0 min-w-0 overflow-y-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3" aria-label="图元列表">
         <h2>图元 · {{ page.nodes.length }}</h2>
         <p class="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
         <div class="studio-add">
@@ -1201,7 +1201,7 @@ async function importJson(event: Event) {
             <CloseIcon /> 清除搜索
           </TButton>
         </div>
-        <div ref="layerTreeRef" class="studio-layer-tree" aria-label="图层树">
+        <div ref="layerTreeRef" class="studio-layer-tree min-w-0" aria-label="图层树">
           <p v-if="layerEntries.length === 0" class="studio-tree-empty">
             {{ page.nodes.length === 0 ? "当前页面暂无图元" : "没有匹配的图元或组合" }}
           </p>
@@ -1319,7 +1319,7 @@ async function importJson(event: Event) {
           </template>
         </div>
       </aside>
-      <section class="studio-stage" aria-label="组态画布">
+      <section class="studio-stage min-h-0 min-w-0 overflow-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3" aria-label="组态画布">
         <div class="studio-stage-caption">
           <span
             >{{ page.name }} · {{ page.size.width }} × {{ page.size.height }} · 静态模拟预览</span
@@ -1477,7 +1477,7 @@ async function importJson(event: Event) {
           />
         </svg>
       </section>
-      <aside class="studio-panel" aria-label="图元属性">
+      <aside class="studio-panel min-h-0 min-w-0 overflow-y-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3" aria-label="图元属性">
         <h2>属性 · 已选 {{ state.selectedIds.length }}</h2>
         <div class="studio-toolbox">
           <div class="studio-tool-group" aria-label="图层锁定与可见性">
@@ -1710,7 +1710,7 @@ async function importJson(event: Event) {
         <p v-else class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
       </aside>
     </div>
-    <footer>
+    <footer class="shrink-0 truncate text-xs text-scada-muted" title="V0.2 组态快捷键说明">
       V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z
       撤销，Ctrl+Shift+Z/Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 · 无设备写入
     </footer>

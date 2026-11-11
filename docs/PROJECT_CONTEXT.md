@@ -350,3 +350,7 @@ PR #16 多页面编辑管理已根据维护者授权以 Squash Merge 合并 `mai
 在 `feat/v0.2-tdesign-property-panel` 中保留已确认的 React/Vue TDesign 技术选型，新增共享主题 Token，统一 V7 品牌蓝、科技青与实时绿的语义，接入品牌包原版 SVG Logo，并通过两端主入口加载 `@adui/normalize.css@0.1.1` 默认 Normalize。不改变 Core、工程 Schema、Tag、工业只读边界或 TDesign 控件业务行为。未将原生样式统一替换为 UI 组件；Tauri 桌面窗口图标未在本批更换。
 
 由于当前远端执行环境无法访问 npm Registry，本批未更新依赖解析锁文件；需要维护者在联网的 Windows 环境运行安装、`pnpm run ready` 与 React/Vue 浏览器手工回归，本次仅完成代码提交，不将未执行的检查标为通过。详见 [ADR-0029](adr/0029-brand-theme-v7.md)。
+
+## 2026-11-11 · Tailwind CSS 与 Studio 全屏布局（待本机验收）
+
+用户反馈旧 Studio 居中限宽和浏览器外层滚动条。依据仓库 `ui-ux-pro-max` 布局/无障碍规则，在 `feat/v0.2-tdesign-property-panel` 继续实施：Vue/React 接入 Tailwind CSS 4.3.5（关闭 Preflight）、共享 V7 设计 Token、替换 Studio 布局为动态视口全屏和内部滚动，保留 TDesign 组件与独立 SVG 交互逻辑。尚未联网更新 `pnpm-lock.yaml`、未在 Windows 执行完整 `pnpm run ready`、未实测两端浏览器及桌面 MSI。技术决策见 [ADR-0030](adr/0030-tailwind-fullscreen-studio.md)。

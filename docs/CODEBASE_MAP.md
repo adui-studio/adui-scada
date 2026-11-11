@@ -262,3 +262,10 @@
 - `apps/web-react/src/studio/studio.css`、`apps/web-vue/src/studio/studio.css`：TDesign 深色主题、画布操作和几何交互颜色统一。
 - `apps/web-react/public/favicon.svg`、`apps/web-vue/public/favicon.svg`：V7 品牌包原版 SVG；同一图标也由各 Web 的 `public/brand/favicon.svg` 提供导航标志。
 - 两套 Web 的 `main.ts(x)`：先导入 `@adui/normalize.css` 默认 Normalize，再导入共享 Runtime CSS。
+
+## Tailwind CSS 与全视口 Studio（ADR-0030）
+
+- `apps/web-react/src/tailwind.css`、`apps/web-vue/src/tailwind.css`：一致的 Tailwind v4 主题映射与工具类入口，禁用 Preflight。
+- 两端 `vite.config.ts`：注册 `@tailwindcss/vite` 插件；`pnpm-workspace.yaml`：统一固定依赖。
+- 两端 `App`：Studio 视口容器固定为动态视口高度；Runtime 保留可滚动页面。
+- 两端 `StudioPage`：使用 Tailwind 布置顶部工具栏、三栏工作区和各自滚动的侧栏/画布，特殊 SVG/TDesign 样式仍保留原 CSS。

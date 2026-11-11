@@ -1087,8 +1087,8 @@ export default function StudioPage() {
   }
 
   return (
-    <main className="studio-shell">
-      <header className="studio-toolbar">
+    <main className="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3 overflow-hidden px-3 py-3 lg:px-5">
+      <header className="studio-toolbar flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-scada-border pb-3">
         <div>
           <p className="scada-eyebrow">ADui SCADA · V0.2 Studio</p>
           <h1>SVG 组态编辑器</h1>
@@ -1145,7 +1145,7 @@ export default function StudioPage() {
         {notice}
         {hasSavedDraft && !autoSaveEnabled ? " · 已发现本地草稿，可点击「恢复草稿」确认加载" : ""}
       </p>
-      <div className="studio-page-bar" aria-label="工程页面管理">
+      <div className="studio-page-bar flex shrink-0 flex-wrap items-center justify-between gap-2" aria-label="工程页面管理">
         <div className="studio-page-tabs" aria-label="工程页面">
           {state.document.pages.map((item) => (
             <button
@@ -1191,8 +1191,8 @@ export default function StudioPage() {
           </button>
         </div>
       </div>
-      <div className="studio-workspace">
-        <aside className="studio-panel" aria-label="图元列表">
+      <div className="studio-workspace grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-3 lg:grid-cols-[clamp(200px,17vw,260px)_minmax(0,1fr)_clamp(260px,21vw,320px)] lg:grid-rows-1">
+        <aside className="studio-panel min-h-0 min-w-0 overflow-y-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3" aria-label="图元列表">
           <h2>图元 · {page.nodes.length}</h2>
           <p className="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
           <div className="studio-add">
@@ -1263,7 +1263,7 @@ export default function StudioPage() {
               <CloseIcon /> 清除搜索
             </Button>
           </div>
-          <div className="studio-layer-tree" ref={layerTreeRef} aria-label="图层树">
+          <div className="studio-layer-tree min-w-0" ref={layerTreeRef} aria-label="图层树">
             {layerEntries.length === 0 && (
               <p className="studio-tree-empty">
                 {page.nodes.length === 0 ? "当前页面暂无图元" : "没有匹配的图元或组合"}
@@ -1306,7 +1306,7 @@ export default function StudioPage() {
             )}
           </div>
         </aside>
-        <section className="studio-stage" aria-label="组态画布">
+        <section className="studio-stage min-h-0 min-w-0 overflow-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3" aria-label="组态画布">
           <div className="studio-stage-caption">
             <span>
               {page.name} · {page.size.width} × {page.size.height} · 静态模拟预览
@@ -1517,7 +1517,7 @@ export default function StudioPage() {
             )}
           </svg>
         </section>
-        <aside className="studio-panel" aria-label="图元属性">
+        <aside className="studio-panel min-h-0 min-w-0 overflow-y-auto overscroll-contain rounded-md border border-scada-border bg-scada-surface p-3" aria-label="图元属性">
           <h2>属性 · 已选 {state.selectedIds.length}</h2>
           <div className="studio-toolbox">
             <div className="studio-tool-group" aria-label="图层锁定与可见性">
@@ -1772,7 +1772,7 @@ export default function StudioPage() {
           )}
         </aside>
       </div>
-      <footer>
+      <footer className="shrink-0 truncate text-xs text-scada-muted" title="V0.2 组态快捷键说明">
         V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z
         撤销，Ctrl+Shift+Z/Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 ·
         无设备写入
