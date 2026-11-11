@@ -11,6 +11,7 @@
     "build:desktop": "vp build --mode desktop"
   },
   "dependencies": {
+    "@adui/normalize.css": "catalog:",
     "@adui/scada-core": "workspace:*",
     "@adui/scada-draft-storage": "workspace:*",
     "@adui/scada-runtime": "workspace:*",
