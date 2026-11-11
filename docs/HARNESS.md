@@ -841,3 +841,16 @@ Write-Host "浏览器验收退出码：$LASTEXITCODE"
 此前 297 项单测，本批增加 2 项，预计为 **299 项**（以 Vitest 输出为准）。`test:versions:safety` 使用临时 Chrome/Edge profile，分别检查两端自动保存已持久化后取消/确认历史恢复、确认后的草稿不被覆盖、跨页面重载历史存在、不同 Origin 历史隔离、历史库访问故障保留画面及故障后继续追加，并测试异步 JSON 导入与历史载入互斥。测试绝不操作真实浏览器用户配置。此命令独立于 `ready`，避免机器缺少 Chrome/Edge 或两套开发服务时影响常规质量入口。
 
 **新命令和更新后的完整检查尚需维护者 Windows 实测。** 浏览器存储配额、Tauri WebView2、现场工业网络不在本批验证范围。
+
+## V0.3 第六批：多标签页草稿并发与重试回归
+
+本批第一阶段仅扩充现有 Core 与 Dexie 行为的确定性单测，不修改工程 Schema、IndexedDB 版本、双框架 UI、Runtime、设备通信或外部依赖。测试覆盖自动保存停写时取消尚未开始的排队任务、临时写入失败后的同会话重试、两个仓储实例同时更新已有修订号，以及保存与清除竞争时的事务互斥和墓碑修订号。
+
+```powershell
+pnpm run test:core
+pnpm run test:unit
+pnpm run ready
+Write-Host "完整检查退出码：$LASTEXITCODE"
+```
+
+本批以第五批 PR #27 的源码为基线，在独立开发分支交付。第五批原计划 299 项单测，本批增加 4 项，预计为 **303 项**，以实际 Vitest 输出为准。**GitHub 提交和静态审查不代表已在维护者 Windows 环境执行测试。** 真实 Chrome/Edge 多标签页交互、浏览器配额耗尽、Tauri WebView2 与工业现场仍需专项验收。

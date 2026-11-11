@@ -177,3 +177,59 @@ test("存储写入失败后停止自动保存不悬挂且不产生额外写入",
   expect(repo.record).toBeNull();
   expect(repo.writes).toBe(0);
 });
+
+test("停止自动保存后，已在执行的写入完成而排队中的新写入被取消", async () => {
+  let releaseWrite: (() => void) | undefined;
+  let notifyStarted: (() => void) | undefined;
+  const writing = new Promise<void>((resolve) => {
+    releaseWrite = resolve;
+  });
+  const started = new Promise<void>((resolve) => {
+    notifyStarted = resolve;
+  });
+  class SlowRepository extends MemoryRepository {
+    override async save(source: unknown, revision: number | null): Promise<DraftRecord> {
+      notifyStarted?.();
+      await writing;
+      return super.save(source, revision);
+    }
+  }
+
+  const repo = new SlowRepository();
+  const session = await DraftAutoSaveSession.open(repo, document());
+  const first = session.saveIfDirty(edited(1));
+  await started;
+  const queued = session.saveIfDirty(edited(2));
+  const stopping = session.stop();
+  releaseWrite?.();
+
+  expect((await first)?.revision).toBe(1);
+  expect(await queued).toBeNull();
+  await stopping;
+  expect(repo.writes).toBe(1);
+  expect(repo.record?.document).toEqual(edited(1));
+  expect(await session.saveIfDirty(edited(3))).toBeNull();
+});
+
+test("短暂写入失败不会阻塞队列，下一次保存可以使用原修订号重试", async () => {
+  class FlakyRepository extends MemoryRepository {
+    private failNext = true;
+
+    override async save(source: unknown, revision: number | null): Promise<DraftRecord> {
+      if (this.failNext) {
+        this.failNext = false;
+        throw new TypeError("模拟 IndexedDB 临时写入失败");
+      }
+      return super.save(source, revision);
+    }
+  }
+
+  const repo = new FlakyRepository();
+  const session = await DraftAutoSaveSession.open(repo, document());
+  await expect(session.saveIfDirty(edited(4))).rejects.toThrow(/临时写入失败/);
+  expect(session.currentRevision).toBeNull();
+  expect(repo.writes).toBe(0);
+  expect((await session.saveIfDirty(edited(4)))?.revision).toBe(1);
+  expect(repo.record?.document).toEqual(edited(4));
+  await session.stop();
+});

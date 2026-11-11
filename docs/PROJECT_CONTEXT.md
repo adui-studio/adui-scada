@@ -420,3 +420,7 @@ V0.3 第三批 PR #25 已 Squash Merge 至 `main`（`3e264990`）。维护者 Wi
 ## 2026-11-11 · V0.3 第五批：本地版本恢复可靠性（待验收）
 
 V0.3 第四批 PR #26 已 Squash Merge 至 `main`（`6395c578`）。维护者的 Windows 日志确认 `pnpm run ready` 退出码 0、297/297 单测、2/2 服务端 E2E、双 Web/NestJS 构建通过，`test:browser` 76/76、`test:interop` 与 `test:versions` 双框架通过。第五批在独立 `test/v0.3-version-history-recovery-safety` 分支修复 JSON 导入未在异步等待期间持锁的竞态，补充自动保存队列停写/存储故障 2 项 Core 单测；新增隔离 Chrome/Edge 命令 `test:versions:safety` 覆盖真实 IndexedDB 草稿、载入取消与确认、刷新后历史、两 Origin 隔离、模拟权限异常与导入互斥。**本批新测试和 `ready` 尚未在 Windows 验证，不能沿用此前通过结论**；仍无正式服务器工程发布、回滚或设备写入。参见 [ADR-0038](adr/0038-version-recovery-safety.md)。
+
+## 2026-11-11 · V0.3 第六批：草稿并发与停写安全测试（待验收）
+
+第五批 PR #27 仍为 Draft；维护者已提供 `test:browser` 76/76、`test:interop`、`test:versions`、`test:versions:safety` 的实际通过日志与退出码 0，但第五批完整 `pnpm run ready` 尚无本批实测结果。第六批以第五批分支为基线，在独立分支新增 Core 排队停写与临时故障重试 2 项、Dexie 现有草稿并发更新与保存/清除竞争 2 项，总计 4 项测试。**预计总单测 303 项，尚未执行，不能标记已通过。** 不变更工程 Schema 0.2.0、数据库结构、Vue/React 功能、Runtime、服务端正式发布或设备写入。
