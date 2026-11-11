@@ -253,3 +253,61 @@ test("旧存储权限故障不能误判为用户可清理的损坏草稿", async
     db.close();
   }
 });
+
+test("两个标签页从相同已有修订号同时写入时，只允许一次成功提交", async () => {
+  const name = `scada-existing-race-${++nextDatabase}`;
+  const first = repository(name);
+  const second = repository(name);
+  try {
+    const initial = await first.save(document(), null);
+    const left = document();
+    left.pages[0]!.nodes[0]!.transform.x += 2;
+    const right = document();
+    right.pages[0]!.nodes[0]!.transform.x += 6;
+    const outcomes = await Promise.allSettled([
+      first.save(left, initial.revision),
+      second.save(right, initial.revision),
+    ]);
+    expect(outcomes.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(outcomes.filter((result) => result.status === "rejected")).toHaveLength(1);
+    const winner = outcomes.find((result) => result.status === "fulfilled");
+    if (!winner || winner.status !== "fulfilled") {
+      throw new TypeError("并发保存没有成功写入的记录");
+    }
+    const current = await second.get("water-demo");
+    expect(current?.revision).toBe(2);
+    expect(current?.document).toEqual(winner.value.document);
+  } finally {
+    first.close();
+    second.close();
+  }
+});
+
+test("保存与清除竞争时只允许一个事务成功，清除后的修订号不倒退", async () => {
+  const name = `scada-remove-race-${++nextDatabase}`;
+  const first = repository(name);
+  const second = repository(name);
+  try {
+    await first.save(document(), null);
+    const editedDocument = document();
+    editedDocument.pages[0]!.nodes[0]!.transform.x += 13;
+    const outcomes = await Promise.allSettled([
+      first.save(editedDocument, 1),
+      second.remove("water-demo", 1),
+    ]);
+    expect(outcomes.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(outcomes.filter((result) => result.status === "rejected")).toHaveLength(1);
+
+    const saveSucceeded = outcomes[0]!.status === "fulfilled";
+    const current = await first.get("water-demo");
+    expect(outcomes[1]!.status).toBe(saveSucceeded ? "rejected" : "fulfilled");
+    expect(current?.revision ?? null).toBe(saveSucceeded ? 2 : null);
+    expect(current?.document ?? null).toEqual(saveSucceeded ? editedDocument : null);
+
+    const recreatedRevision = saveSucceeded ? null : (await second.save(document(), null)).revision;
+    expect(recreatedRevision).toBe(saveSucceeded ? null : 2);
+  } finally {
+    first.close();
+    second.close();
+  }
+});

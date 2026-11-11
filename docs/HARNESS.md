@@ -841,3 +841,16 @@ Write-Host "浏览器验收退出码：$LASTEXITCODE"
 此前 297 项单测，本批增加 2 项，预计为 **299 项**（以 Vitest 输出为准）。`test:versions:safety` 使用临时 Chrome/Edge profile，分别检查两端自动保存已持久化后取消/确认历史恢复、确认后的草稿不被覆盖、跨页面重载历史存在、不同 Origin 历史隔离、历史库访问故障保留画面及故障后继续追加，并测试异步 JSON 导入与历史载入互斥。测试绝不操作真实浏览器用户配置。此命令独立于 `ready`，避免机器缺少 Chrome/Edge 或两套开发服务时影响常规质量入口。
 
 **新命令和更新后的完整检查尚需维护者 Windows 实测。** 浏览器存储配额、Tauri WebView2、现场工业网络不在本批验证范围。
+
+## V0.3 第六批：多标签页草稿并发与重试回归
+
+本批第一阶段仅扩充现有 Core 与 Dexie 行为的确定性单测，不修改工程 Schema、IndexedDB 版本、双框架 UI、Runtime、设备通信或外部依赖。测试覆盖自动保存停写时取消尚未开始的排队任务、临时写入失败后的同会话重试、两个仓储实例同时更新已有修订号，以及保存与清除竞争时的事务互斥和墓碑修订号。
+
+```powershell
+pnpm run test:core
+pnpm run test:unit
+pnpm run ready
+Write-Host "完整检查退出码：$LASTEXITCODE"
+```
+
+本批最初基于第五批 PR #27 的源码开发；第五批现已通过 Squash Merge 合并到 `main`（`0388bd3`），第六批分支已同步 `main` 并直接以其为 PR 目标。第五批原计划 299 项单测，本批增加 4 项。维护者于 2026-11-11 在 Windows 实际执行完整 `pnpm run ready`：**303/303 单测、2/2 NestJS E2E、181 个文件格式检查、React/Vue/NestJS 类型检查、53 个 Markdown 文档检查与双 Web/NestJS 构建均通过，退出码 0**。但 `vp check` 在 74 个受检文件中仍有 **5 条 `vitest(no-conditional-expect)` 警告、0 错误**，不能称作零警告验收。本批已将保存/清除竞争测试中的分支内断言改为分支外断言，保留两种事务结果的校验；**该修复提交后的 `ready` 尚需重新执行**。 真实 Chrome/Edge 多标签页交互、浏览器配额耗尽、Tauri WebView2 与工业现场仍需专项验收。
