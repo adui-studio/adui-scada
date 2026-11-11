@@ -62,7 +62,7 @@ class ChromeSession {
       const timeout = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error("浏览器指令超时：" + method));
-      }, 15000);
+      }, method === "Runtime.evaluate" ? 45000 : 15000);
       this.pending.set(id, { resolve, reject, timeout });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
@@ -81,6 +81,54 @@ class ChromeSession {
     }
     return data.result.value;
   }
+}
+
+/** 按真实用户流程从默认运行监控切换到组态编辑，等待异步组件完成渲染。 */
+async function enterStudioInPage() {
+  const waitFor = async (selector, limit) => {
+    const started = Date.now();
+    while (Date.now() - started < limit) {
+      const node = document.querySelector(selector);
+      if (node) return node;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return null;
+  };
+
+  const navigation = await waitFor(".scada-app-nav", 10000);
+  const editorButton = [...(navigation?.querySelectorAll("button") || [])].find(
+    (button) => button.textContent.trim() === "组态编辑",
+  );
+  if (!editorButton) {
+    throw new Error(
+      "未找到组态编辑导航入口；地址：" +
+        location.href +
+        "；标题：" +
+        document.title +
+        "；导航按钮：" +
+        [...(navigation?.querySelectorAll("button") || [])]
+          .map((button) => button.textContent.trim())
+          .join("、"),
+    );
+  }
+
+  if (!document.querySelector(".studio-workspace")) editorButton.click();
+  const workspace = await waitFor(".studio-workspace", 15000);
+  const svg = workspace && (await waitFor(".studio-svg", 5000));
+  if (!workspace || !svg) {
+    throw new Error(
+      "点击组态编辑后未能加载工作台；地址：" +
+        location.href +
+        "；标题：" +
+        document.title +
+        "；导航状态：" +
+        (editorButton.getAttribute("aria-current") || "未激活") +
+        "；页面文本：" +
+        (document.querySelector("#root, #app")?.textContent || "").trim().slice(0, 160),
+    );
+  }
+
+  return { title: document.title, url: location.href };
 }
 
 async function checkStudioInPage() {
@@ -109,10 +157,6 @@ async function checkStudioInPage() {
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     await new Promise((resolve) => setTimeout(resolve, 80));
   };
-  const started = Date.now();
-  while (!document.querySelector(".studio-svg") && Date.now() - started < 8000) {
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
   const workspace = element(".studio-workspace");
   const stage = element(".studio-stage");
   const canvas = element(".studio-canvas-scroll");
@@ -296,6 +340,7 @@ async function main() {
             target.name + " 页面导航失败：" + target.url + "；浏览器实际地址：" + pageUrl,
           );
         }
+        await session.evaluate("(" + enterStudioInPage.toString() + ")()");
         const data = await session.evaluate("(" + checkStudioInPage.toString() + ")()");
         const errors = data.findings.filter((entry) => !entry.passed);
         failed += errors.length;
