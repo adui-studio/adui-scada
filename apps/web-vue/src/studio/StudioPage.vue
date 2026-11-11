@@ -50,13 +50,6 @@ function getLegacyStorage() {
 }
 const drafts = new DexieDraftRepository({ legacyStorage: getLegacyStorage() });
 const maxFileSize = 2 * 1024 * 1024;
-const geometryFields = [
-  ["x", "X 坐标"],
-  ["y", "Y 坐标"],
-  ["width", "宽度"],
-  ["height", "高度"],
-  ["rotation", "旋转角度（度）"],
-] as const;
 const editor = new DocumentEditor(waterTreatmentDemoDocument);
 const state = shallowRef(editor.snapshot());
 const preview = shallowRef<{ id: string; x: number; y: number } | null>(null);
@@ -932,7 +925,7 @@ function redo() {
 function changeGeometry(event: Event) {
   const values = new FormData(event.currentTarget as HTMLFormElement);
   const patch: NodeTransformPatch = {};
-  for (const [key, label] of geometryFields) {
+  for (const [key, label] of GEOMETRY_PROPERTY_FIELDS) {
     const raw = values.get(key);
     if (typeof raw !== "string" || raw.trim() === "") {
       notice.value = `请填写${label}`;
@@ -1660,7 +1653,7 @@ async function importJson(event: Event) {
             novalidate
             @submit.prevent="changeGeometry"
           >
-            <label v-for="[key, label] in geometryFields" :key="key">
+            <label v-for="[key, label] in GEOMETRY_PROPERTY_FIELDS" :key="key">
               {{ label }}
               <input
                 type="number"
