@@ -45,6 +45,7 @@ ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双�
 - **React 正式使用** `tdesign-react`，图标使用 `tdesign-icons-react`；**Vue 3 正式使用** `tdesign-vue-next`，图标使用 `tdesign-icons-vue-next`。该选型为维护者 2026-11-11 明确确认，替代早期 React 优先 Ant Design 的规划。
 - 依赖版本以根 `pnpm-workspace.yaml` Catalog 为准，组件和图标使用各自官方 API，优先按需引入，不使用 CDN、臆造组件或混用 Vue 2 版本。
 - V0.2 采取小批次迁移，已迁移的 TDesign 控件与尚未迁移的原生表单可暂时共存；不得将“已选定组件库”描述为“全应用已完成组件替换”。Core、Runtime、工程 Schema 和工业只读边界不依赖 UI 框架。细节见 [ADR-0028](docs/adr/0028-tdesign-dual-framework-ui.md)。
+- **两套 Web 统一使用 Tailwind CSS v4** 处理页面结构、布局、间距及响应式工具类，品牌颜色继续使用共享 V7 主题 Token；TDesign 负责控件实现，不能以 Tailwind 替换业务 UI 组件契约。对 SVG 命中层、缩放手柄及 TDesign 覆盖等复杂样式允许保留受控的同构 CSS。Tailwind Preflight 不引入，避免与 `@adui/normalize.css` 及 TDesign 样式重复重置。见 [ADR-0030](docs/adr/0030-tailwind-fullscreen-studio.md)。
 
 ## 6. Skills / Git / Harness
 
