@@ -1201,6 +1201,10 @@ export default function StudioPage() {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = "";
     if (!file) return;
+    if (historyActionRef.current || draftActionRef.current) {
+      setNotice("已有工程操作正在进行，请完成后再导入 JSON");
+      return;
+    }
     try {
       if (file.size > maxFileSize) throw new RangeError("JSON 文件不能超过 2 MiB");
       const parsed = JSON.parse(await file.text()) as unknown;
@@ -1390,10 +1394,18 @@ export default function StudioPage() {
                 当前工程：{state.document.projectId} · 浏览器本地历史，不是正式发布
               </p>
               <div className="studio-version-tools">
-                <button type="button" disabled={historyBusy} onClick={() => void createHistoryVersion()}>
+                <button
+                  type="button"
+                  disabled={historyBusy}
+                  onClick={() => void createHistoryVersion()}
+                >
                   创建快照
                 </button>
-                <button type="button" disabled={historyBusy} onClick={() => void refreshVersionHistory()}>
+                <button
+                  type="button"
+                  disabled={historyBusy}
+                  onClick={() => void refreshVersionHistory()}
+                >
                   刷新
                 </button>
               </div>

@@ -1287,6 +1287,10 @@ async function importJson(event: Event) {
   const file = input.files?.[0];
   input.value = "";
   if (!file) return;
+  if (historyActionInProgress || draftActionInProgress) {
+    notice.value = "已有工程操作正在进行，请完成后再导入 JSON";
+    return;
+  }
   try {
     if (file.size > maxFileSize) throw new RangeError("JSON 文件不能超过 2 MiB");
     const parsed = JSON.parse(await file.text()) as unknown;
@@ -1358,7 +1362,11 @@ async function importJson(event: Event) {
               当前工程暂无本地历史版本。
             </p>
             <ol class="studio-version-list">
-              <li v-for="item in visibleHistoryRows" :key="item.revision" class="studio-version-item">
+              <li
+                v-for="item in visibleHistoryRows"
+                :key="item.revision"
+                class="studio-version-item"
+              >
                 <div class="studio-version-heading">
                   <strong>版本 #{{ item.revision }}</strong>
                   <time :datetime="item.createdAt">

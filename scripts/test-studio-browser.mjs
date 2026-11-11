@@ -431,12 +431,22 @@ async function runStudioInteroperability(session) {
 }
 
 /** 测试真实本地版本菜单，确认框只在隔离浏览器上下文中临时替换。 */
-async function studioVersionActionInPage(label, expectedNotice, confirmChoice = null, revision = 1) {
+async function studioVersionActionInPage(
+  label,
+  expectedNotice,
+  confirmChoice = null,
+  revision = 1,
+) {
   const menu = document.querySelector(".studio-version-menu");
   if (!menu) throw new Error("未找到本地工程版本历史菜单");
   if (!menu.open) {
     menu.open = true;
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const start = Date.now();
+    while (Date.now() - start < 12000) {
+      if (!menu.querySelector(".studio-version-tools button:disabled")) break;
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
   }
   const candidates = label === "载入" || label === "查看差异"
     ? [...menu.querySelectorAll(".studio-version-item")].filter(
@@ -447,8 +457,17 @@ async function studioVersionActionInPage(label, expectedNotice, confirmChoice = 
   if (!button) throw new Error("找不到版本历史操作按钮：" + label);
   if (button.disabled) throw new Error("版本历史操作尚未结束：" + label);
   const originalConfirm = Reflect.get(window, "confirm");
+  let confirmInvoked;
+  const confirmCall = new Promise((resolve) => {
+    confirmInvoked = resolve;
+  });
   try {
-    if (confirmChoice !== null) window.confirm = () => confirmChoice;
+    if (confirmChoice !== null) {
+      window.confirm = () => {
+        confirmInvoked();
+        return confirmChoice;
+      };
+    }
     button.click();
     if (expectedNotice) {
       const start = Date.now();
@@ -463,7 +482,13 @@ async function studioVersionActionInPage(label, expectedNotice, confirmChoice = 
         throw new Error("等待版本历史操作结果超时：" + expectedNotice);
       }
     } else {
-      await new Promise((resolve) => setTimeout(resolve, 450));
+      await Promise.race([
+        confirmCall,
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("未触发历史版本载入确认")), 12000);
+        }),
+      ]);
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
     return {
       versions: [...menu.querySelectorAll(".studio-version-item strong")].map(
