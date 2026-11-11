@@ -693,3 +693,20 @@ pnpm run dev:vue
 ```
 
 除自动检查外，人工在 React/Vue 分别验收：列表上层在上，图层拖放高亮与上/下插入正确；精确目标选择可用于非拖放排序；非连续组合整体移动，原有上/下层按钮兼容；锁定图元及锁定组合不能被直接或间接移动；切页清空拖动会话；撤销/重做及工程 JSON/IndexedDB 双框架往返不丢层序。Runtime 只读、STALE/GOOD 与设备写入禁用不回归。本批静态审查不能代替实际浏览器验收。
+
+## 2026-11-11 · V0.2 第十九批组合图层树待验收
+
+本批共享 Core 图层树投影新增 13 项测试源码，整仓静态预计 **256 项单测**、**2 项 NestJS E2E**，ADR-0027 后预计 **42 份 Markdown**；均以维护者 Windows 运行结果为准，当前没有本批完整质量链实测。
+
+```powershell
+git status -sb
+git fetch origin
+git switch feat/v0.2-layer-group-tree
+pnpm install --frozen-lockfile
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+人工验收两套 Studio：组合树展开/折叠和成员选中同步、组名/成员/类型/中文文本搜索、定位选中图层、非连续组提示、锁定/隐藏状态、原生拖拽与精准插入；切换页面清空搜索、导入/恢复清空 UI 折叠状态。对比 Vue↔React JSON 双向导入与 IndexedDB 保存后人工恢复，确认不会持久化 UI 图层树；检查只读 Runtime 数据质量及 NestJS 未开放的设备写入接口无回归。静态文档检查不能代表已完成业务、工业现场安全验证。
