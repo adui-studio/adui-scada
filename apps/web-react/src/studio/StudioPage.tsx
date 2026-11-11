@@ -13,8 +13,9 @@ import {
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
   studioNodeLocked,
   studioNodeVisible,
+  buildLayerTree,
 } from "@adui/scada-core";
-import type { ScadaDocument } from "@adui/scada-core";
+import type { LayerTreeGroup, ScadaDocument, ScadaNode } from "@adui/scada-core";
 import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
 import {
   DEFAULT_GRID_SIZE,
@@ -98,6 +99,9 @@ export default function StudioPage() {
   const [labelDraft, setLabelDraft] = useState("");
   const [preferredCopyTargetPageId, setPreferredCopyTargetPageId] = useState("");
   const [preferredLayerTargetId, setPreferredLayerTargetId] = useState("");
+  const [layerSearch, setLayerSearch] = useState("");
+  const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(() => new Set());
+  const [locateLayerRequest, setLocateLayerRequest] = useState<{ key: string } | null>(null);
   const [layerInsertPosition, setLayerInsertPosition] = useState<"before" | "after">("after");
   const [layerDrop, setLayerDrop] = useState<{ id: string; position: "before" | "after" } | null>(
     null,
@@ -116,6 +120,11 @@ export default function StudioPage() {
   const marqueeRef = useRef<MarqueeState | null>(null);
   const geometryRef = useRef<GeometryDragState | null>(null);
   const layerDragRef = useRef<{ pageId: string; nodeId: string } | null>(null);
+  const layerTreeRef = useRef<HTMLDivElement | null>(null);
+  const selectionSyncRef = useRef<{ pageId: string; nodeId: string | null }>({
+    pageId: state.activePageId,
+    nodeId: state.selectedId,
+  });
 
   const page = state.document.pages.find((item) => item.id === state.activePageId);
   const selected = page?.nodes.find((node) => node.id === state.selectedId);
@@ -162,7 +171,8 @@ export default function StudioPage() {
     (node) => state.selectedIds.includes(node.id) && studioNodeLocked(node),
   );
   const canGroup = state.selectedIds.length >= 2 && !hasGroupedSelection && !hasLockedSelection;
-  const layerRows = page ? [...page.nodes].reverse() : [];
+  const layerEntries = buildLayerTree(page.nodes, layerSearch);
+  const isLayerSearching = layerSearch.trim().length > 0;
   const lockedLayerGroups = new Set(
     page?.nodes.filter(studioNodeLocked).flatMap((node) => (node.groupId ? [node.groupId] : [])),
   );
@@ -174,6 +184,13 @@ export default function StudioPage() {
           (id) => page?.nodes.find((node) => node.id === id)?.groupId === selected.groupId,
         ))) &&
     !hasLockedSelection;
+  useEffect(() => {
+    if (!locateLayerRequest) return;
+    const rows = layerTreeRef.current?.querySelectorAll<HTMLButtonElement>("[data-layer-key]");
+    const row = [...(rows ?? [])].find((item) => item.dataset.layerKey === locateLayerRequest.key);
+    row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [locateLayerRequest]);
+
   const layerTargetNodes = page
     ? page.nodes.filter(
         (node) =>
@@ -206,6 +223,8 @@ export default function StudioPage() {
     try {
       if (!editor.switchPage(pageId)) return;
       clearLayerDrag();
+      setLayerSearch("");
+      setLocateLayerRequest(null);
       cancelDrag();
       setZoom(1);
       refresh();
@@ -218,6 +237,7 @@ export default function StudioPage() {
   function createPage() {
     apply(() => {
       editor.createPage();
+      setLayerSearch("");
       cancelDrag();
     }, "已创建空白页面，可撤销");
   }
@@ -242,6 +262,7 @@ export default function StudioPage() {
   function duplicatePage() {
     apply(() => {
       editor.duplicatePage();
+      setLayerSearch("");
       cancelDrag();
     }, "已复制页面及其图元和 Tag 绑定，可撤销");
   }
@@ -267,10 +288,23 @@ export default function StudioPage() {
 
   function refresh() {
     const next = editor.snapshot();
-    setState(next);
+    const previous = selectionSyncRef.current;
     const node = next.document.pages
       .find((item) => item.id === next.activePageId)
       ?.nodes.find((item) => item.id === next.selectedId);
+    if (next.activePageId !== previous.pageId || next.selectedId !== previous.nodeId) {
+      if (node?.groupId) {
+        const groupId = node.groupId;
+        setCollapsedGroupIds((current) => {
+          if (!current.has(groupId)) return current;
+          const updated = new Set(current);
+          updated.delete(groupId);
+          return updated;
+        });
+      }
+    }
+    selectionSyncRef.current = { pageId: next.activePageId, nodeId: next.selectedId };
+    setState(next);
     setLabelDraft(typeof node?.props.text === "string" ? node.props.text : "");
   }
 
@@ -887,6 +921,10 @@ export default function StudioPage() {
         return;
       }
       editor.loadDocument(saved.document);
+      clearLayerDrag();
+      setLayerSearch("");
+      setCollapsedGroupIds(new Set());
+      setLocateLayerRequest(null);
       cancelDrag();
       refresh();
       setHasSavedDraft(true);
@@ -941,6 +979,10 @@ export default function StudioPage() {
       const parsed = JSON.parse(await file.text()) as unknown;
       await pauseAutoSave();
       const migratedFrom = editor.loadDocument(parsed);
+      clearLayerDrag();
+      setLayerSearch("");
+      setCollapsedGroupIds(new Set());
+      setLocateLayerRequest(null);
       setPreview(null);
       refresh();
       const draftWarning = await refreshDraftAvailability(editor.snapshot().document.projectId);
@@ -952,6 +994,99 @@ export default function StudioPage() {
     } catch (error) {
       setNotice("导入失败：" + (error instanceof Error ? error.message : String(error)));
     }
+  }
+
+  function groupExpanded(groupId: string): boolean {
+    return isLayerSearching || !collapsedGroupIds.has(groupId);
+  }
+
+  function groupToggleLabel(groupId: string): string {
+    return `${groupExpanded(groupId) ? "折叠" : "展开"}组合 ${groupId}`;
+  }
+
+  function toggleLayerGroup(groupId: string) {
+    setCollapsedGroupIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  }
+
+  function locateSelectedLayer() {
+    const node = page?.nodes.find((item) => item.id === state.selectedId);
+    if (!node) {
+      setNotice("请先选择需要定位的图元");
+      return;
+    }
+    setLayerSearch("");
+    if (node.groupId) {
+      setCollapsedGroupIds((previous) => {
+        if (!previous.has(node.groupId!)) return previous;
+        const next = new Set(previous);
+        next.delete(node.groupId!);
+        return next;
+      });
+    }
+    setLocateLayerRequest({ key: node.groupId ? `group:${node.groupId}` : `node:${node.id}` });
+    setNotice("已定位选中图元所在图层");
+  }
+
+  function renderLayerButton(
+    node: ScadaNode,
+    kind: "group" | "member" | "node",
+    group?: LayerTreeGroup,
+  ) {
+    const groupHeader = kind === "group" ? group : undefined;
+    const groupId = groupHeader?.groupId;
+    const rowKey = groupHeader ? `group:${groupId}` : `node:${node.id}`;
+    const selectedRow = groupHeader
+      ? (page?.nodes.some(
+          (item) => item.groupId === groupId && state.selectedIds.includes(item.id),
+        ) ?? false)
+      : state.selectedIds.includes(node.id);
+    const lockedRow = groupHeader ? groupHeader.hasLockedMember : studioNodeLocked(node);
+    const hiddenRow = groupHeader
+      ? groupHeader.hiddenCount === groupHeader.totalCount
+      : !studioNodeVisible(node);
+    const draggable =
+      !studioNodeLocked(node) &&
+      (node.groupId === undefined || !lockedLayerGroups.has(node.groupId));
+
+    return (
+      <button
+        key={rowKey}
+        type="button"
+        className="studio-layer"
+        data-layer-key={rowKey}
+        data-selected={selectedRow}
+        data-hidden={hiddenRow}
+        data-locked={lockedRow}
+        data-drop-position={layerDrop?.id === node.id ? layerDrop.position : undefined}
+        draggable={draggable}
+        title={groupHeader ? "拖动整个组合调整图层" : "拖动调整图层，组合会整体移动"}
+        onDragStart={(event) => startLayerDrag(event, node.id)}
+        onDragOver={(event) => overLayer(event, node.id)}
+        onDrop={(event) => dropLayer(event, node.id)}
+        onDragEnd={clearLayerDrag}
+        onClick={(event) => select(node.id, event.shiftKey)}
+      >
+        <span className="studio-layer-identity">
+          <span aria-hidden="true">⋮⋮</span> {groupHeader ? `组合 ${groupId}` : node.id}
+        </span>
+        <small>
+          {groupHeader ? `${groupHeader.totalCount} 个成员` : node.type}
+          {groupHeader && groupHeader.members.length !== groupHeader.totalCount
+            ? ` · 匹配 ${groupHeader.members.length}`
+            : ""}
+          {groupHeader?.fragmented ? " · 层序不连续" : ""}
+          {groupHeader?.hasLockedMember ? " · 有锁定成员" : ""}
+          {groupHeader && groupHeader.hiddenCount > 0 ? ` · 隐藏 ${groupHeader.hiddenCount}` : ""}
+          {!groupHeader && studioNodeLocked(node) ? " · 已锁定" : ""}
+          {!groupHeader && !studioNodeVisible(node) ? " · 已隐藏" : ""}
+        </small>
+      </button>
+    );
   }
 
   return (
@@ -1102,37 +1237,68 @@ export default function StudioPage() {
               复制选中图元
             </button>
           </div>
-          {layerRows.map((node) => (
+          <div className="studio-tree-controls">
+            <label className="studio-field">
+              搜索图元或组合
+              <input
+                type="search"
+                aria-label="搜索图层"
+                maxLength={128}
+                value={layerSearch}
+                placeholder="图元 ID、类型、文字或组合 ID"
+                onChange={(event) => setLayerSearch(event.target.value)}
+              />
+            </label>
             <button
               type="button"
-              className="studio-layer"
-              data-selected={state.selectedIds.includes(node.id)}
-              data-hidden={!studioNodeVisible(node)}
-              data-locked={studioNodeLocked(node)}
-              data-drop-position={layerDrop?.id === node.id ? layerDrop.position : undefined}
-              draggable={
-                !studioNodeLocked(node) &&
-                (node.groupId === undefined || !lockedLayerGroups.has(node.groupId))
-              }
-              key={node.id}
-              title="拖动调整图层，组合会整体移动"
-              onDragStart={(event) => startLayerDrag(event, node.id)}
-              onDragOver={(event) => overLayer(event, node.id)}
-              onDrop={(event) => dropLayer(event, node.id)}
-              onDragEnd={clearLayerDrag}
-              onClick={(event) => select(node.id, event.shiftKey)}
+              disabled={state.selectedIds.length === 0}
+              onClick={locateSelectedLayer}
             >
-              <span className="studio-layer-identity">
-                <span aria-hidden="true">⋮⋮</span> {node.id}
-              </span>
-              <small>
-                {node.type}
-                {node.groupId ? ` · 组合 ${node.groupId}` : ""}
-                {studioNodeLocked(node) ? " · 已锁定" : ""}
-                {!studioNodeVisible(node) ? " · 已隐藏" : ""}
-              </small>
+              定位选中图层
             </button>
-          ))}
+          </div>
+          <div className="studio-layer-tree" ref={layerTreeRef} aria-label="图层树">
+            {layerEntries.length === 0 && (
+              <p className="studio-tree-empty">
+                {page.nodes.length === 0 ? "当前页面暂无图元" : "没有匹配的图元或组合"}
+              </p>
+            )}
+            {layerEntries.map((entry) =>
+              entry.kind === "node" ? (
+                renderLayerButton(entry.node, "node")
+              ) : (
+                <div className="studio-tree-group" key={entry.groupId}>
+                  <div className="studio-tree-group-heading">
+                    <button
+                      type="button"
+                      className="studio-tree-toggle"
+                      aria-label={groupToggleLabel(entry.groupId)}
+                      aria-expanded={groupExpanded(entry.groupId)}
+                      disabled={isLayerSearching}
+                      onClick={() => toggleLayerGroup(entry.groupId)}
+                    >
+                      {groupExpanded(entry.groupId) ? "▾" : "▸"}
+                    </button>
+                    {renderLayerButton(
+                      page.nodes.find((node) => node.id === entry.anchorNodeId) ??
+                        entry.members[0]!,
+                      "group",
+                      entry,
+                    )}
+                  </div>
+                  {groupExpanded(entry.groupId) && (
+                    <div
+                      className="studio-tree-members"
+                      role="group"
+                      aria-label={`组合 ${entry.groupId} 的成员`}
+                    >
+                      {entry.members.map((node) => renderLayerButton(node, "member"))}
+                    </div>
+                  )}
+                </div>
+              ),
+            )}
+          </div>
         </aside>
         <section className="studio-stage" aria-label="组态画布">
           <div className="studio-stage-caption">

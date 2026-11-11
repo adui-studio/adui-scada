@@ -201,3 +201,7 @@ Vue/React 的 SVG 编辑层负责显示控制点、捕获 Pointer 和提供预�
 ## V0.2 精确图层排序与组合连续性（ADR-0026）
 
 继续保持 `ScadaDocument 0.2.0` 中每页 `nodes[]` 为唯一 SVG 图层顺序来源，后项覆盖前项；不维护独立 `zIndex`。共享 `DocumentEditor.moveLayer` 按目标图元/组合边界插入原始节点，源组移动时完整连续搬运，中央 Core 检查锁定图元原始索引不受其他图元移动影响。React/Vue 仅负责逆序列表、HTML5 拖放位置和可访问的精确选择操作；未采用第三方拖拽库，也不解析外部拖拽数据。变更沿用 JSON、撤销历史和 Dexie 草稿，Runtime 只读语义不变。详见 [ADR-0026](adr/0026-precise-layer-order.md)。
+
+## V0.2 组合图层树投影（ADR-0027）
+
+为保持共享 `ScadaDocument 0.2.0` 的扁平图层与 `groupId` 契约，树形图层面板采用框架无关 `buildLayerTree` 纯函数进行**只读投影**，不引入新的组实体、嵌套组关系或 Runtime 依赖。投影按 `nodes[]` 的真实绘制层序生成组标题与成员、统一搜索过滤及锁定/隐藏统计，并明确标记历史非连续组合。Vue/React 分别维护折叠/搜索/定位会话状态，点击组和成员仍调用 `DocumentEditor.select`，拖拽仍调用 `moveLayer`，保持权限边界及撤销历史一致。JSON 与 Dexie IndexedDB 草稿不持久化这类 UI 视图状态；只读 Runtime 与生产设备写入安全约束不变。参见 [ADR-0027](adr/0027-layer-group-tree-projection.md)。

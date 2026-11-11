@@ -235,3 +235,12 @@
 - `apps/web-react/src/studio/studio.css`、`apps/web-vue/src/studio/studio.css`：图层插入线、拖动柄及排序目标表单样式。
 - `packages/core/test/editor.test.ts`：新增 17 项前后插入、组合源/目标、原四按钮兼容、锁定边界、隐藏节点、跨页隔离与 JSON 往返回归。
 - [ADR-0026](adr/0026-precise-layer-order.md)：定义同页层序、组合连续移动与工业安全边界。
+
+## V0.2 第十九批：组合树形图层管理
+
+- `packages/core/src/layer-tree.ts`：导出 `buildLayerTree` 与 `LayerTreeGroup/LayerTreeNode`，按真实绘制顺序构建非持久化的组合树、过滤搜索、成员统计和层序不连续提示。
+- `packages/core/src/index.ts`：公开图层树投影 API，供 Vue/React 适配层复用而不引入框架依赖。
+- `packages/core/test/layer-tree.test.ts`：13 项组合树顺序、搜索、状态聚合、无污染，以及与编辑器选择/解组/撤销、跨页编辑的回归测试。
+- `apps/web-react/src/studio/StudioPage.tsx` 与 `apps/web-vue/src/studio/StudioPage.vue`：可折叠组标题和成员行、搜索定位、组选中同步、临时会话清理及保留原有 HTML5 拖拽。
+- 两份 `apps/web-*/src/studio/studio.css`：组合缩进、搜索区、折叠控件与图层列表滚动样式。
+- [ADR-0027](adr/0027-layer-group-tree-projection.md)：说明树只做视图投影而非嵌套工程 Schema，并记录历史层序兼容性。
