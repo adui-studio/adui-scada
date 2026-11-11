@@ -3,6 +3,48 @@
   margin: auto;
   padding: 20px 22px;
 }
+/* TDesign 仅在 Studio 内继承工业深色主题，不修改工程及 Runtime 样式。 */
+.studio-shell {
+  --td-brand-color: #39c9ba;
+  --td-brand-color-hover: #53daca;
+  --td-brand-color-active: #29a99d;
+  --td-brand-color-focus: #1a5c58;
+  --td-text-color-primary: #e8f1ff;
+  --td-text-color-secondary: #adc2d4;
+  --td-bg-color-container: #132236;
+  --td-bg-color-container-hover: #223b51;
+  --td-bg-color-container-active: #1b3548;
+  --td-component-border: #46667d;
+}
+.studio-shell .t-button {
+  white-space: normal;
+  min-height: 30px;
+  height: auto;
+}
+.studio-shell .studio-tool-group .t-button {
+  width: 100%;
+}
+.studio-shell .t-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #46667d;
+  border-radius: 4px;
+  background: #0c1728;
+  color: #e8f1ff;
+}
+.studio-shell .studio-field .t-input input {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+.studio-shell .t-input--focused {
+  border-color: #39c9ba;
+}
+.studio-tree-controls .t-button {
+  width: 100%;
+  justify-content: center;
+}
 .studio-toolbar {
   display: flex;
   align-items: center;
