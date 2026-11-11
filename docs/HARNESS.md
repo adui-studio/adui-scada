@@ -805,3 +805,20 @@ Write-Host "退出码：$LASTEXITCODE"
 此前合并主分支单测为 **280 项**；本批新增 **13 项**，预计 293 项，以实际 Vitest 输出为准。本批特别检查两个 Dexie 实例同时追加同一工程版本只允许一方提交、旧历史不覆盖、关闭重开仍可恢复、分页游标不重复、损坏 SHA-256 快照拒绝读取。原 `pnpm run test:interop` / `pnpm run test:browser` 仍可单独回归验证；由于没有界面改动，本批不把它们加入 `ready`。
 
 真实 Windows 新增单测、`vp check`、类型和构建尚待维护者执行，不能沿用上批通过结论。此版本库仅为浏览器本地历史，**不是正式工程发布/回滚**。
+
+## V0.3 第四批：Vue/React 本地版本历史管理验收（ADR-0037）
+
+本批两套 Studio 增加本地版本历史菜单，并新增纯 Core 比较单测。维护者运行：
+
+```powershell
+pnpm run ready
+# 分别在两个终端保持 pnpm run dev:react 和 pnpm run dev:vue
+pnpm run test:browser
+pnpm run test:interop
+pnpm run test:versions
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+此前主分支单测 293 项，本批新增 4 项，预计 **297 项**，以 Vitest 日志为准。新 `test:versions` 在单独隔离 Chrome/Edge 配置中，分别对 React 和 Vue 创建本地历史版本 #1、添加图元并比较内容、取消载入检查未覆盖、确认载入检查工程完整恢复、创建版本 #2 验证倒序历史，不会使用用户浏览器实际的 IndexedDB。
+
+额外人工验收：自动保存开启后载入历史必须先确认并暂停自动保存；手动保存草稿必须仍由用户触发；关闭/重新打开 Studio 后当前 Origin 历史应保留；另一 Origin 不应自动出现本地记录；WebCrypto 不可用和 IndexedDB 禁用时应显示中文错误、保留画面。浏览器测试不替代工业安全与 Tauri WebView2 现场验收。**新增命令及更新后的 `ready` 尚待维护者实际执行。**

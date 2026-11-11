@@ -217,3 +217,7 @@ Vue/React 的 SVG 编辑层负责显示控制点、捕获 Pointer 和提供预�
 ## V0.3 第三批：浏览器本地历史仓储（ADR-0036）
 
 共享 Core 仅声明 `ProjectVersionRepository` 和历史摘要，WebCrypto SHA-256 快照继续复用现有 `project-snapshot.ts`。独立 `@adui/scada-draft-storage` 的 Dexie 适配提供浏览器同 Origin 内追加历史版本、事务 CAS 修订号及倒序分页。历史库 `adui-scada-studio-versions` 与已存在的草稿库 `adui-scada-studio` 分开，不改变任何已有数据库迁移。未来 PostgreSQL/NestJS 版本仓储应单独实现权限及审计；浏览器 head 不属于正式已发布版本指针，不能连接工业生产 Runtime。详见 [ADR-0036](adr/0036-local-version-history.md)。
+
+## V0.3 第四批：双框架版本历史管理 UI（ADR-0037）
+
+Vue/React Studio 通过共同的 `@adui/scada-core` 比较契约、`@adui/scada-draft-storage` 独立历史仓储访问各自浏览器 Origin 的本地版本，样式统一在 `@adui/tailwind/studio.css`。用户确认后调用现有编辑器载入入口，不接入 Runtime 发布指针、服务端 API、工业网关或设备写入。浏览器历史不保证跨 Origin/跨设备共享，正式工程仓储仍需服务端权限及事务设计。

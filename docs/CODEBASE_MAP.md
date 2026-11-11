@@ -323,3 +323,11 @@
 - `packages/draft-storage/src/version-repository.ts`：新 `DexieProjectVersionRepository`，独立 IndexedDB 存储历史与最新修订号，WebCrypto 事务外完成，事务内 CAS + 只追加；`ProjectVersionConflictError`。
 - `packages/draft-storage/test/indexeddb-version.test.ts`：13 项真实 fake-indexeddb 版本仓储单测，覆盖并发、跨实例重开、分页、数据隔离、篡改与故障边界。
 - `packages/core/src/index.ts` 和 `packages/draft-storage/src/index.ts`：统一导出新接口与实现；现有草稿仓储仍保持原来的导出与数据库。
+
+## V0.3 第四批：Studio 版本历史界面
+
+- `packages/core/src/project-version-compare.ts`：框架无关的同工程 JSON 内容比较与页面/图元/绑定数量摘要。
+- `packages/core/test/project-version-compare.test.ts`：4 项比较单测。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：双端版本创建、倒序列表、差异查看和确认载入；不改 Schema/草稿事务。
+- `packages/tailwind/src/studio.css`：两个框架共用的历史菜单布局及响应样式。
+- `scripts/test-studio-browser.mjs --versions`：隔离浏览器进行两套 Studio 的本地历史创建/取消/载入完整交互验收；`package.json` 公开 `pnpm run test:versions`。
