@@ -21,6 +21,8 @@
     "tdesign-react": "catalog:"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "catalog:",
+    "tailwindcss": "catalog:",
     "@adui/tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

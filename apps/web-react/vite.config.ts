@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, lazyPlugins, loadEnv } from "vite-plus";
 import { fileURLToPath } from "node:url";
@@ -25,7 +26,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     envDir,
-    plugins: lazyPlugins(() => [react()]),
+    plugins: lazyPlugins(() => [react(), tailwindcss()]),
     server: {
       host,
       port,
