@@ -1,6 +1,7 @@
 # ADR-0032：Studio 固定 16:9 画板、适应视口与无滚动缩放
 
-- 状态：Superseded（固定比例显示外框已由 [ADR-0033](0033-studio-full-bleed-canvas.md) 取代）
+- 状态：Superseded
+- 替代决策：固定比例显示外框已由 [ADR-0033](0033-studio-full-bleed-canvas.md) 取代
 - 日期：2026-11-11
 - 关联需求：FR-005、FR-006、NFR-004、NFR-006
 - 关联决策：[ADR-0031](0031-canvas-first-studio-workspace.md)
