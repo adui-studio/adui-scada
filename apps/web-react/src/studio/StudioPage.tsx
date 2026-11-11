@@ -533,6 +533,70 @@ export default function StudioPage() {
     cancelDrag();
   }
 
+  function moveLayerPrecisely(nodeId: string, targetId: string, position: "before" | "after") {
+    try {
+      const changed = editor.moveLayer(nodeId, targetId, position);
+      if (changed) {
+        refresh();
+        setNotice("图层已精确排序，可撤销");
+      } else {
+        setNotice("图层位置没有变化");
+      }
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  function clearLayerDrag() {
+    layerDragRef.current = null;
+    setLayerDrop(null);
+  }
+
+  function startLayerDrag(event: ReactDragEvent<HTMLButtonElement>, nodeId: string) {
+    const node = page?.nodes.find((item) => item.id === nodeId);
+    if (
+      !page ||
+      !node ||
+      studioNodeLocked(node) ||
+      (node.groupId !== undefined && lockedLayerGroups.has(node.groupId))
+    ) {
+      event.preventDefault();
+      return;
+    }
+    layerDragRef.current = { pageId: page.id, nodeId };
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("application/x-adui-scada-layer", nodeId);
+  }
+
+  function overLayer(event: ReactDragEvent<HTMLButtonElement>, targetId: string) {
+    const dragging = layerDragRef.current;
+    if (!dragging || dragging.pageId !== state.activePageId || dragging.nodeId === targetId) {
+      return;
+    }
+    const source = page?.nodes.find((item) => item.id === dragging.nodeId);
+    const target = page?.nodes.find((item) => item.id === targetId);
+    if (!source || !target || (source.groupId && source.groupId === target.groupId)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const position = event.clientY < bounds.top + bounds.height / 2 ? "after" : "before";
+    setLayerDrop((current) =>
+      current?.id === targetId && current.position === position
+        ? current
+        : { id: targetId, position },
+    );
+  }
+
+  function dropLayer(event: ReactDragEvent<HTMLButtonElement>, targetId: string) {
+    const dragging = layerDragRef.current;
+    if (!dragging || dragging.pageId !== state.activePageId) return;
+    event.preventDefault();
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const position = event.clientY < bounds.top + bounds.height / 2 ? "after" : "before";
+    clearLayerDrag();
+    moveLayerPrecisely(dragging.nodeId, targetId, position);
+  }
+
   function layer(action: LayerAction) {
     apply(() => editor.reorderSelected(action), "已调整图元层级");
   }
