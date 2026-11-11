@@ -244,3 +244,13 @@
 - `apps/web-react/src/studio/StudioPage.tsx` 与 `apps/web-vue/src/studio/StudioPage.vue`：可折叠组标题和成员行、搜索定位、组选中同步、临时会话清理及保留原有 HTML5 拖拽。
 - 两份 `apps/web-*/src/studio/studio.css`：组合缩进、搜索区、折叠控件与图层列表滚动样式。
 - [ADR-0027](adr/0027-layer-group-tree-projection.md)：说明树只做视图投影而非嵌套工程 Schema，并记录历史层序兼容性。
+
+## V0.2 第二十批：TDesign UI 选型与共享属性元数据
+
+- `pnpm-workspace.yaml`：新增四个 TDesign UI/图标包固定版本的 Catalog；`apps/web-react/package.json` 和 `apps/web-vue/package.json` 分别引用对应 UI 及图标包。
+- `apps/web-react/src/studio/StudioPage.tsx`：首批替换 TDesign React 属性按钮、受控文本与搜索 `Input`、清除 `CloseIcon`，仅在 Studio 导入官方 CSS。
+- `apps/web-vue/src/studio/StudioPage.vue`：对等使用 Vue Next `TButton/TInput`、Vue 版 `CloseIcon` 和官方 CSS；继续复用 Core 编辑命令和原几何/Tag 表单。
+- 两份 `apps/web-*/src/studio/studio.css`：Studio 局部工业深色 TDesign 主题变量与输入/按钮样式；不改变运行时 SVG 样式。
+- `packages/core/src/editor.ts`：统一导出 `GEOMETRY_PROPERTY_FIELDS`，替换双端五项几何名称的重复定义；`packages/core/test/editor.test.ts` 增加共享属性字段契约测试。
+- `AGENTS.md` 与 [ADR-0028](adr/0028-tdesign-dual-framework-ui.md)：正式记录维护者新 UI 选型，避免未来误把 React Ant Design 当作已决定。
+- `pnpm-lock.yaml`：因当前 Agent 环境无法联网安装，需要维护者 Windows 首次安装生成并提交，正式冻结安装前的必要前置工作。
