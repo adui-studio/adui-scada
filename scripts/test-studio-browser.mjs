@@ -376,7 +376,9 @@ async function runStudioInteroperability(session) {
   const react = targets[0];
   const vue = targets[1];
   const evaluate = (fn, ...args) =>
-    session.evaluate("(" + fn.toString() + ")(" + args.map((arg) => JSON.stringify(arg)).join(",") + ")");
+    session.evaluate(
+      "(" + fn.toString() + ")(" + args.map((arg) => JSON.stringify(arg)).join(",") + ")",
+    );
   await session.send("Emulation.setDeviceMetricsOverride", {
     width: 1440,
     height: 900,
@@ -420,7 +422,10 @@ async function runStudioInteroperability(session) {
   await evaluate(importStudioJsonInPage, JSON.stringify(reactImported), true);
   const vueReturned = JSON.parse(await evaluate(exportStudioJsonInPage));
   assert.deepStrictEqual(vueReturned, vueExport, "双向往返导致工程数据发生变化");
-  process.stdout.write("React → Vue → React → Vue：完整往返成功\n");
+  await evaluate(importStudioJsonInPage, '{"schemaVersion":', false);
+  const vueAfterInvalidImport = JSON.parse(await evaluate(exportStudioJsonInPage));
+  assert.deepStrictEqual(vueAfterInvalidImport, vueExport, "Vue 非法 JSON 导入覆盖了已有工程数据");
+  process.stdout.write("React → Vue → React → Vue：完整往返及双端非法导入保护成功\n");
 }
 
 async function main() {
