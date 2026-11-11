@@ -383,6 +383,95 @@
   border-color: var(--scada-primary);
   color: var(--scada-cyan);
 }
+/* 网格、吸附和侧栏显示统一收纳在视图设置菜单中。 */
+.studio-view-menu {
+  position: relative;
+  flex: none;
+}
+.studio-view-menu > summary {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid var(--scada-border-strong);
+  border-radius: 5px;
+  background: var(--scada-action-bg);
+  color: var(--scada-text);
+  cursor: pointer;
+  font-size: 11px;
+  white-space: nowrap;
+  list-style: none;
+}
+.studio-view-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.studio-view-menu > summary::after {
+  content: "▾";
+  color: var(--scada-text-muted);
+}
+.studio-view-menu[open] > summary {
+  border-color: var(--scada-primary);
+  color: var(--scada-cyan);
+}
+.studio-view-menu > summary:focus-visible {
+  outline: 2px solid var(--scada-cyan);
+  outline-offset: 2px;
+}
+.studio-view-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 7px);
+  z-index: 35;
+  display: grid;
+  width: 236px;
+  max-height: min(440px, 60dvh);
+  gap: 8px;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--scada-border-strong);
+  border-radius: 7px;
+  background: var(--scada-surface);
+  box-shadow: 0 16px 36px rgb(0 0 0 / 45%);
+}
+.studio-view-section {
+  display: grid;
+  gap: 8px;
+}
+.studio-view-section + .studio-view-section {
+  padding-top: 9px;
+  border-top: 1px solid var(--scada-border);
+}
+.studio-view-section > p {
+  margin: 0;
+  color: var(--scada-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.studio-view-popover .studio-canvas-settings {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin: 0;
+  justify-content: stretch;
+}
+.studio-view-popover .studio-canvas-option {
+  min-height: 26px;
+  gap: 8px;
+  color: var(--scada-text);
+  font-size: 12px;
+}
+.studio-view-popover .studio-panel-toggles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.studio-view-popover .studio-panel-toggles button {
+  min-width: 0;
+  white-space: normal;
+  padding: 7px 5px;
+}
+
 .studio-zoom {
   flex: none;
 }
