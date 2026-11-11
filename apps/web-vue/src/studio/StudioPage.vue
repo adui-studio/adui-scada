@@ -740,7 +740,10 @@ function resetCanvasView() {
 function beginCanvasPan(event: PointerEvent): boolean {
   if (
     zoom.value <= 1 ||
-    !(event.button === 1 || (event.button === 0 && event.altKey && event.target === event.currentTarget))
+    !(
+        event.button === 1 ||
+        (event.button === 0 && event.altKey && event.target === event.currentTarget)
+      )
   ) {
     return false;
   }
@@ -1421,37 +1424,37 @@ async function importJson(event: Event) {
               <div class="studio-view-section">
                 <p>网格与吸附</p>
                 <div class="studio-canvas-settings">
-                    <label class="studio-canvas-option">
-                      <input v-model="gridVisible" type="checkbox" />
-                      显示网格
-                    </label>
-                    <label class="studio-canvas-option">
-                      <input v-model="gridSnap" type="checkbox" />
-                      网格吸附
-                    </label>
-                    <label class="studio-canvas-option">
-                      <input v-model="nodeSnap" type="checkbox" />
-                      图元吸附
-                    </label>
+                  <label class="studio-canvas-option">
+                    <input v-model="gridVisible" type="checkbox" />
+                    显示网格
+                  </label>
+                  <label class="studio-canvas-option">
+                    <input v-model="gridSnap" type="checkbox" />
+                    网格吸附
+                  </label>
+                  <label class="studio-canvas-option">
+                    <input v-model="nodeSnap" type="checkbox" />
+                    图元吸附
+                  </label>
                 </div>
               </div>
               <div class="studio-view-section">
                 <p>侧栏显示</p>
                 <div class="studio-panel-toggles" aria-label="面板显示">
-                    <button
-                      type="button"
-                      :aria-pressed="leftPanelVisible"
-                      @click="leftPanelVisible = !leftPanelVisible"
-                    >
-                      {{ leftPanelVisible ? "隐藏图层" : "显示图层" }}
-                    </button>
-                    <button
-                      type="button"
-                      :aria-pressed="rightPanelVisible"
-                      @click="rightPanelVisible = !rightPanelVisible"
-                    >
-                      {{ rightPanelVisible ? "隐藏属性" : "显示属性" }}
-                    </button>
+                  <button
+                    type="button"
+                    :aria-pressed="leftPanelVisible"
+                    @click="leftPanelVisible = !leftPanelVisible"
+                  >
+                    {{ leftPanelVisible ? "隐藏图层" : "显示图层" }}
+                  </button>
+                  <button
+                    type="button"
+                    :aria-pressed="rightPanelVisible"
+                    @click="rightPanelVisible = !rightPanelVisible"
+                  >
+                    {{ rightPanelVisible ? "隐藏属性" : "显示属性" }}
+                  </button>
                 </div>
               </div>
             </div>

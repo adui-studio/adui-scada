@@ -9,7 +9,12 @@ export interface StudioPageSize {
 }
 
 function validateViewport(size: StudioPageSize, zoom: number, pan: StudioPan): void {
-  if (!Number.isFinite(size.width) || !Number.isFinite(size.height) || size.width <= 0 || size.height <= 0) {
+  if (
+    !Number.isFinite(size.width) ||
+    !Number.isFinite(size.height) ||
+    size.width <= 0 ||
+    size.height <= 0
+  ) {
     throw new RangeError("画布宽高必须为有效的正数");
   }
   if (!Number.isFinite(zoom) || zoom <= 0) {
