@@ -26,8 +26,13 @@ export type LayerTreeEntry = LayerTreeNode | LayerTreeGroup;
 function matchesNode(node: ScadaNode, keyword: string): boolean {
   const text = node.props.text;
   const name = node.props.name;
-  return [node.id, node.type, typeof text === "string" ? text : "", typeof name === "string" ? name : ""]
-    .some((value) => value.toLocaleLowerCase().includes(keyword));
+  const values = [
+    node.id,
+    node.type,
+    typeof text === "string" ? text : "",
+    typeof name === "string" ? name : "",
+  ];
+  return values.some((value) => value.toLocaleLowerCase().includes(keyword));
 }
 
 /**
