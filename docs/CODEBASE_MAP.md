@@ -337,3 +337,9 @@
 - `apps/web-react/src/studio/StudioPage.tsx` / `apps/web-vue/src/studio/StudioPage.vue`：在 JSON 异步读取阶段持有现有草稿操作锁，且历史操作不得与草稿/导入动作重叠。
 - `packages/core/test/draft-repository.test.ts`：新增 2 项确定性自动保存停写和故障处理单测。
 - `scripts/test-studio-browser.mjs --versions-safety`：真实浏览器双框架自动保存与历史恢复、持久化、Origin 隔离、存储权限异常、导入互斥验收；根 `test:versions:safety` 暴露命令。
+
+## V0.3 第七批：双标签页浏览器故障回归
+
+- `scripts/test-studio-browser.mjs --multitab`：复用隔离 Chrome/Edge profile 创建第二个真实标签页，检查 Vue/React 自动保存的外部通知、IndexedDB CAS、删除重建与模拟故障恢复；临时替换浏览器接口会在测试后恢复。
+- `package.json`：增加 `pnpm run test:multitab` 作为独立浏览器验收入口；`ready` 不默认要求图形浏览器或两套开发服务器。
+- `docs/adr/0039-multitab-browser-safety.md`：记录验证范围、故障模拟方法与真实环境限制。
