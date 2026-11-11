@@ -998,6 +998,10 @@ export default function StudioPage() {
     return isLayerSearching || !collapsedGroupIds.has(groupId);
   }
 
+  function groupToggleLabel(groupId: string): string {
+    return `${groupExpanded(groupId) ? "折叠" : "展开"}组合 ${groupId}`;
+  }
+
   function toggleLayerGroup(groupId: string) {
     setCollapsedGroupIds((previous) => {
       const next = new Set(previous);
@@ -1266,7 +1270,7 @@ export default function StudioPage() {
                     <button
                       type="button"
                       className="studio-tree-toggle"
-                      aria-label={`${groupExpanded(entry.groupId) ? "折叠" : "展开"}组合 ${entry.groupId}`}
+                      aria-label={groupToggleLabel(entry.groupId)}
                       aria-expanded={groupExpanded(entry.groupId)}
                       disabled={isLayerSearching}
                       onClick={() => toggleLayerGroup(entry.groupId)}
