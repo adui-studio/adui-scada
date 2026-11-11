@@ -20,7 +20,7 @@
 ## 决策
 
 1. 两端 Studio 使用 `packages/tailwind/src/studio.css` 的固定宽三栏：桌面端左 252px、右 320px，中间 `minmax(0, 1fr)`；左右侧栏仍可按需隐藏。小于 930px 的窄屏布局继续纵向分区，以确保可访问性。
-2. 画布工作区采用 `container-type: size`、`100cqh` 和 `aspect-ratio: 16 / 9`，按照当前中央区域宽高计算可容纳的最大 16:9 画板；画布容器始终 `overflow: hidden`，不允许竖向或横向滚动条。
+2. 画布工作区采用 `container-type: size`、`177.7778cqh` 和 `aspect-ratio: 16 / 9`，按照当前中央区域宽高计算可容纳的最大 16:9 画板；画布容器始终 `overflow: hidden`，不允许竖向或横向滚动条。
 3. **16:9 指画板显示窗口，不是工程 Schema 的页面尺寸。** 既有 880×460 工程不会强制变形或重设图元坐标。SVG `preserveAspectRatio="xMidYMid meet"` 等比适配，原始页面比例与 16:9 不同时可出现留边，不拉伸图元。
 4. 新增 `packages/core/src/studio-viewport.ts` 的共享 `studioViewBox`、`clampStudioPan`。默认为适应窗口（`zoom=1`）；点击加减后变更 `viewBox` 而非 SVG DOM 宽度，缩放倍率为相对适应视图的比例，不等于屏幕物理像素 100%。
 5. 放大后支持鼠标中键拖动，或 Alt + 左键拖动画布空白区域平移。平移不会越过工程页面边界，也不写入文档、撤销栈、草稿或远端设备。恢复适应视图重置缩放和平移。

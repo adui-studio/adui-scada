@@ -187,7 +187,7 @@ assert.match(
   /\.studio-canvas-board\s*\{[^}]*aspect-ratio:\s*16\s*\/\s*9;/,
   "画板显示区域必须保持 16:9",
 );
-assert.match(viewportCss, /100cqh/, "画板必须依据工作区高度自动适配");
+assert.match(viewportCss, /177\.7778cqh/, "画板必须依据工作区高度自动适配");
 assert.match(viewportCss, /--studio-left-width:\s*252px/, "左侧栏必须固定宽度");
 assert.match(viewportCss, /--studio-right-width:\s*320px/, "右侧栏必须固定宽度");
 
