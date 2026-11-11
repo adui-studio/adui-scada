@@ -59,10 +59,13 @@ class ChromeSession {
   send(method, params = {}) {
     const id = ++this.nextId;
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error("浏览器指令超时：" + method));
-      }, method === "Runtime.evaluate" ? 45000 : 15000);
+      const timeout = setTimeout(
+        () => {
+          this.pending.delete(id);
+          reject(new Error("浏览器指令超时：" + method));
+        },
+        method === "Runtime.evaluate" ? 45000 : 15000,
+      );
       this.pending.set(id, { resolve, reject, timeout });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
