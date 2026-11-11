@@ -1322,7 +1322,7 @@ async function importJson(event: Event) {
             </button>
           </template>
         </div>
-      <details class="studio-side-more">
+        <details class="studio-side-more">
           <summary>跨页操作与使用帮助</summary>
           <div class="studio-copy-tools">
             <label class="studio-field">
@@ -1349,7 +1349,7 @@ async function importJson(event: Event) {
           </div>
           <p class="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
         </details>
-</aside>
+      </aside>
       <section
         class="studio-stage min-h-0 min-w-0"
         aria-label="组态画布"
@@ -1594,7 +1594,7 @@ async function importJson(event: Event) {
           </p>
         </template>
         <p v-else class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
-      <details class="studio-advanced">
+        <details class="studio-advanced">
           <summary>高级图元与图层操作</summary>
           <div class="studio-advanced-content">
             <div class="studio-toolbox">
@@ -1762,7 +1762,7 @@ async function importJson(event: Event) {
             </div>
           </div>
         </details>
-</aside>
+      </aside>
     </div>
     <footer class="studio-statusbar">
       <div class="studio-status-message">

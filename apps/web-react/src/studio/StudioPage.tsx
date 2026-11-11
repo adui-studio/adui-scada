@@ -1305,7 +1305,7 @@ export default function StudioPage() {
               ),
             )}
           </div>
-        <details className="studio-side-more">
+          <details className="studio-side-more">
             <summary>跨页操作与使用帮助</summary>
             <div className="studio-copy-tools">
               <label className="studio-field">
@@ -1334,7 +1334,7 @@ export default function StudioPage() {
             </div>
             <p className="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
           </details>
-</aside>
+        </aside>
         <section
           className="studio-stage min-h-0 min-w-0"
           aria-label="组态画布"
@@ -1662,7 +1662,7 @@ export default function StudioPage() {
           ) : (
             <p className="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
           )}
-        <details className="studio-advanced">
+          <details className="studio-advanced">
             <summary>高级图元与图层操作</summary>
             <div className="studio-advanced-content">
               <div className="studio-toolbox">
@@ -1822,7 +1822,7 @@ export default function StudioPage() {
               </div>
             </div>
           </details>
-</aside>
+        </aside>
       </div>
       <footer className="studio-statusbar">
         <div className="studio-status-message">

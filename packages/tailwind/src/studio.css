@@ -78,6 +78,14 @@
 .studio-advanced > summary::-webkit-details-marker {
   display: none;
 }
+.studio-file-menu > summary:focus-visible,
+.studio-page-menu > summary:focus-visible,
+.studio-side-more > summary:focus-visible,
+.studio-advanced > summary:focus-visible,
+.studio-canvas-scroll:focus-visible {
+  outline: 2px solid var(--scada-cyan);
+  outline-offset: -2px;
+}
 .studio-file-menu > summary::after,
 .studio-page-menu > summary::after {
   content: "▾";
@@ -398,7 +406,7 @@
   width: 100%;
   min-height: 100%;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
 }
 .studio-canvas-board > .studio-svg {
   display: block;
@@ -528,11 +536,11 @@
     flex-direction: column;
   }
   .studio-stage {
-    order: 0;
+    order: 1;
     flex: 2 1 50%;
   }
   .studio-panel-layers {
-    order: 1;
+    order: 0;
     flex: 1 1 24%;
     border-top: 1px solid var(--scada-border);
     border-right: none;
