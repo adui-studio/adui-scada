@@ -865,9 +865,7 @@ async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice 
     button =
       label === "保存草稿"
         ? document.querySelector(".studio-save-actions button")
-        : [...menu.querySelectorAll("button")].find(
-            (item) => item.textContent.trim() === label,
-          );
+        : [...menu.querySelectorAll("button")].find((item) => item.textContent.trim() === label);
     if (button && !button.disabled) break;
     await new Promise((resolve) => setTimeout(resolve, 80));
   }
@@ -926,17 +924,19 @@ async function navigateStudioWithoutBroadcast(session, target, marker) {
   }
 }
 
-/** 模拟草稿 rw 事务无法创建，异常只作用于当前隔离标签页且始终还原。 */
+/** 在草稿对象仓库的真实 put 写入路径注入失败，且只影响隔离测试标签页。 */
 async function simulateStudioDraftWriteFailureInPage() {
-  const original = IDBDatabase.prototype.transaction;
+  const originalPut = Reflect.get(IDBObjectStore.prototype, "put");
+  if (typeof originalPut !== "function") {
+    throw new TypeError("浏览器不支持 IndexedDB 草稿写入测试");
+  }
   let rejected = 0;
-  IDBDatabase.prototype.transaction = function (...args) {
-    const stores = typeof args[0] === "string" ? [args[0]] : Array.from(args[0] || []);
-    if (this.name === "adui-scada-studio" && args[1] === "readwrite" && stores.includes("drafts")) {
+  IDBObjectStore.prototype.put = function (...args) {
+    if (this.name === "drafts" && this.transaction.mode === "readwrite") {
       rejected += 1;
       throw new DOMException("模拟本地草稿存储故障", "QuotaExceededError");
     }
-    return Reflect.apply(original, this, args);
+    return Reflect.apply(originalPut, this, args);
   };
   try {
     const button = [...document.querySelectorAll(".studio-add button")].find(
@@ -945,20 +945,29 @@ async function simulateStudioDraftWriteFailureInPage() {
     if (!button) throw new TypeError("未找到水箱图元添加按钮");
     button.click();
     const started = Date.now();
+    let lastNotice = "";
+    let lastEnabled = true;
     while (Date.now() - started < 12000) {
-      const notice = document.querySelector(".studio-notice")?.textContent || "";
-      const enabled =
+      lastNotice = document.querySelector(".studio-notice")?.textContent || "";
+      lastEnabled =
         document.querySelector(".studio-file-menu button[aria-pressed]")?.getAttribute(
           "aria-pressed",
         ) === "true";
-      if (notice.includes("自动保存已暂停：") && !enabled && rejected > 0) {
-        return { notice, rejected };
+      if (lastNotice.includes("自动保存已暂停：") && !lastEnabled && rejected > 0) {
+        return { notice: lastNotice, rejected };
       }
       await new Promise((resolve) => setTimeout(resolve, 80));
     }
-    throw new TypeError("模拟 IndexedDB 写入异常未触发自动保存暂停");
+    throw new TypeError(
+      "模拟 IndexedDB 写入异常未触发自动保存暂停；拦截次数：" +
+        rejected +
+        "；自动保存：" +
+        (lastEnabled ? "开启" : "关闭") +
+        "；界面提示：" +
+        lastNotice,
+    );
   } finally {
-    IDBDatabase.prototype.transaction = original;
+    IDBObjectStore.prototype.put = originalPut;
   }
 }
 
@@ -991,12 +1000,7 @@ async function runStudioMultiTabSafety(first, second) {
     await evaluateStudioPage(first, enableStudioAutoSaveInPage);
     await evaluateStudioPage(first, addStudioSymbolInPage, "+ 水箱");
     const changedFirst = JSON.parse(await evaluateStudioPage(first, exportStudioJsonInPage));
-    const firstSaved = await waitForStudioDraftRevision(
-      first,
-      initial.projectId,
-      1,
-      changedFirst,
-    );
+    const firstSaved = await waitForStudioDraftRevision(first, initial.projectId, 1, changedFirst);
     await evaluateStudioPage(
       second,
       waitForStudioAutoSaveStateInPage,
@@ -1047,7 +1051,13 @@ async function runStudioMultiTabSafety(first, second) {
 
     // 恢复正常广播后清除与重建，验证旧标签页停写及墓碑版本单调递增。
     await navigateStudioForInterop(second, target, "multitab-recreate-" + target.name);
-    await evaluateStudioPage(second, studioDraftFileActionInPage, "清除草稿", "数据库草稿已清除", true);
+    await evaluateStudioPage(
+      second,
+      studioDraftFileActionInPage,
+      "清除草稿",
+      "数据库草稿已清除",
+      true,
+    );
     await evaluateStudioPage(
       first,
       waitForStudioAutoSaveStateInPage,
@@ -1060,21 +1070,14 @@ async function runStudioMultiTabSafety(first, second) {
       target.name + " 跨标签页清除草稿失败",
     );
     await evaluateStudioPage(second, addStudioSymbolInPage, "+ 文本");
-    const recreatedDocument = JSON.parse(
-      await evaluateStudioPage(second, exportStudioJsonInPage),
-    );
+    const recreatedDocument = JSON.parse(await evaluateStudioPage(second, exportStudioJsonInPage));
     await evaluateStudioPage(
       second,
       studioDraftFileActionInPage,
       "保存草稿",
       "已保存 IndexedDB 草稿",
     );
-    const recreated = await waitForStudioDraftRevision(
-      second,
-      initial.projectId,
-      3,
-      recreatedDocument,
-    );
+    const recreated = await waitForStudioDraftRevision(second, initial.projectId, 3, recreatedDocument);
     assert.deepStrictEqual(
       JSON.parse(await evaluateStudioPage(first, exportStudioJsonInPage)),
       newer,

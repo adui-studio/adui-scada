@@ -854,6 +854,7 @@ Write-Host "完整检查退出码：$LASTEXITCODE"
 ```
 
 本批最初基于第五批 PR #27 的源码开发；第五批现已通过 Squash Merge 合并到 `main`（`0388bd3`），第六批分支已同步 `main` 并直接以其为 PR 目标。第五批原计划 299 项单测，本批增加 4 项。维护者于 2026-11-11 在 Windows 实际执行完整 `pnpm run ready`：**303/303 单测、2/2 NestJS E2E、181 个文件格式检查、React/Vue/NestJS 类型检查、53 个 Markdown 文档检查与双 Web/NestJS 构建均通过，退出码 0**。但 `vp check` 在 74 个受检文件中仍有 **5 条 `vitest(no-conditional-expect)` 警告、0 错误**，不能称作零警告验收。本批已将保存/清除竞争测试中的分支内断言改为分支外断言，保留两种事务结果的校验；**该修复提交后的 `ready` 尚需重新执行**。 真实 Chrome/Edge 多标签页交互、浏览器配额耗尽、Tauri WebView2 与工业现场仍需专项验收。
+
 ## V0.3 第七批：真实双标签页草稿并发安全验收（ADR-0039）
 
 在现有 `scripts/test-studio-browser.mjs` 增加独立 `--multitab` 模式，根命令为 `pnpm run test:multitab`。测试复用 Chrome/Edge 临时 profile，通过浏览器调试接口创建两个真实标签页并连接同一 Origin 的 IndexedDB。React、Vue 各独立执行：
@@ -861,7 +862,7 @@ Write-Host "完整检查退出码：$LASTEXITCODE"
 1. 两个标签页开启自动保存，其中一个写入后核对另一个通过 `BroadcastChannel` 收到外部修订号、暂停自动保存且不改变本地未保存画面。
 2. 仅在隔离的第二个标签页模拟缺失 `BroadcastChannel`，确认过期草稿修订号被 Dexie 事务校验拒绝，较新的数据库内容不被覆盖。
 3. 恢复正常通知后清除草稿、校验另一标签页停写，重建草稿修订号单调递增且不更改其他编辑画面。
-4. 在隔离页临时注入 `IndexedDB` 写事务异常，确认自动保存暂停、错误可见、原草稿不变、当前编辑不丢失；撤销故障注入后通过用户明确保存恢复。
+4. 在隔离页针对 `drafts` 对象仓库的原生 `IDBObjectStore.put()` 临时注入写入异常，确认自动保存暂停、错误可见、原草稿不变、当前编辑不丢失；撤销故障注入后通过用户明确保存恢复。
 
 在两个终端分别运行 `pnpm run dev:react` 和 `pnpm run dev:vue`，第三个终端执行：
 
