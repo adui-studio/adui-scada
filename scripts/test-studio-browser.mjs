@@ -765,11 +765,7 @@ async function runStudioVersionSafety(session) {
     assert.equal(paused, false, target.name + " 确认载入后自动保存未暂停");
     await pause(1400);
     const afterRestore = await evaluate(readStudioDraftFromDatabaseInPage, initial.projectId);
-    assert.deepStrictEqual(
-      afterRestore,
-      stored,
-      target.name + " 历史载入覆盖了已保存的本地草稿",
-    );
+    assert.deepStrictEqual(afterRestore, stored, target.name + " 历史载入覆盖了已保存的本地草稿");
 
     await navigateStudioForInterop(session, target, "safety-error-" + target.name);
     const unavailable = await evaluate(simulateHistoryDatabaseUnavailableInPage);
@@ -785,34 +781,21 @@ async function runStudioVersionSafety(session) {
 
     await navigateStudioForInterop(session, target, "safety-reload-" + target.name);
     const persisted = await evaluate(studioVersionRowsInPage);
-    assert.deepStrictEqual(
-      persisted,
-      ["版本 #1"],
-      target.name + " 浏览器刷新后丢失了本地历史版本",
-    );
-    const again = await evaluate(
-      studioVersionActionInPage,
-      "创建快照",
-      "已创建本地历史版本 #2",
-    );
+    assert.deepStrictEqual(persisted, ["版本 #1"], target.name + " 浏览器刷新后丢失了本地历史版本");
+    const again = await evaluate(studioVersionActionInPage, "创建快照", "已创建本地历史版本 #2");
     assert.deepStrictEqual(
       again.versions,
       ["版本 #2", "版本 #1"],
       target.name + " 存储异常恢复后无法继续追加版本",
     );
-    const isolation = await evaluate(
-      verifyImportHistoryIsolationInPage,
-      JSON.stringify(modified),
-    );
+    const isolation = await evaluate(verifyImportHistoryIsolationInPage, JSON.stringify(modified));
     assert.equal(isolation.confirmations, 0, target.name + " 导入时发生了历史载入");
     assert.deepStrictEqual(
       JSON.parse(await evaluate(exportStudioJsonInPage)),
       modified,
       target.name + " 异步 JSON 导入被并发历史载入覆盖",
     );
-    process.stdout.write(
-      target.name + " 自动保存取消/确认保护、跨刷新持久性和存储异常恢复通过\n",
-    );
+    process.stdout.write(target.name + " 自动保存取消/确认保护、跨刷新持久性和存储异常恢复通过\n");
   }
 
   await navigateStudioForInterop(session, targets[0], "safety-react-return");
