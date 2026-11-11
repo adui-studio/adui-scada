@@ -649,9 +649,11 @@ export default function StudioPage() {
   }
 
   function changeZoom(delta: number) {
+    const pageSize = page?.size;
+    if (!pageSize) return;
     const nextZoom = Math.max(0.5, Math.min(2, Math.round((zoom + delta) * 100) / 100));
     setZoom(nextZoom);
-    setPan((current) => clampStudioPan(page.size, nextZoom, current));
+    setPan((current) => clampStudioPan(pageSize, nextZoom, current));
   }
 
   function resetCanvasView() {
@@ -687,9 +689,10 @@ export default function StudioPage() {
 
   function updateCanvasPan(event: ReactPointerEvent<SVGSVGElement>): boolean {
     const dragging = panDragRef.current;
-    if (!dragging || dragging.pointerId !== event.pointerId) return false;
+    const pageSize = page?.size;
+    if (!dragging || dragging.pointerId !== event.pointerId || !pageSize) return false;
     setPan(
-      clampStudioPan(page.size, zoom, {
+      clampStudioPan(pageSize, zoom, {
         x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
         y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
       }),
