@@ -652,6 +652,67 @@ async function simulateHistoryDatabaseUnavailableInPage() {
   }
 }
 
+/** 异步 JSON 文件尚未读完时点击历史载入，不能插入执行或调用覆盖确认。 */
+async function verifyImportHistoryIsolationInPage(json) {
+  const fileMenu = document.querySelector(".studio-file-menu");
+  const versionMenu = document.querySelector(".studio-version-menu");
+  const input = fileMenu?.querySelector('.studio-import input[type="file"]');
+  if (!input || !versionMenu) throw new TypeError("没有找到版本或 JSON 导入入口");
+  const item = [...versionMenu.querySelectorAll(".studio-version-item")].find(
+    (entry) => entry.querySelector("strong")?.textContent.trim() === "版本 #1",
+  );
+  const load = [...(item?.querySelectorAll("button") || [])].find(
+    (button) => button.textContent.trim() === "载入",
+  );
+  if (!load) throw new TypeError("未找到历史版本 #1 的载入操作");
+  const originalText = Reflect.get(Blob.prototype, "text");
+  const originalConfirm = Reflect.get(window, "confirm");
+  let releaseText = null;
+  let confirmations = 0;
+  Blob.prototype.text = function () {
+    return new Promise((resolve) => {
+      releaseText = () => resolve(json);
+    });
+  };
+  window.confirm = () => {
+    confirmations += 1;
+    return true;
+  };
+  try {
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([json], "并发保护验收.json", { type: "application/json" }));
+    input.files = transfer.files;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    const started = Date.now();
+    while (!releaseText && Date.now() - started < 5000) {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    }
+    if (!releaseText) throw new TypeError("JSON 导入没有进入异步文件读取阶段");
+    load.click();
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    if (confirmations !== 0) {
+      throw new TypeError("JSON 导入期间错误地执行了历史覆盖确认");
+    }
+    releaseText();
+    const ready = Date.now();
+    while (Date.now() - ready < 12000) {
+      const notice = document.querySelector(".studio-notice")?.textContent || "";
+      if (notice.includes("工程 JSON 已校验并载入本地编辑器")) {
+        return { confirmations, notice };
+      }
+      if (notice.includes("导入失败：")) throw new TypeError(notice);
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+    throw new TypeError("释放文件读取后，工程导入未完成");
+  } finally {
+    releaseText?.();
+    Blob.prototype.text = originalText;
+    window.confirm = originalConfirm;
+    fileMenu.open = false;
+    versionMenu.open = false;
+  }
+}
+
 async function runStudioVersionSafety(session) {
   const evaluate = (fn, ...args) =>
     session.evaluate(
@@ -738,6 +799,16 @@ async function runStudioVersionSafety(session) {
       again.versions,
       ["版本 #2", "版本 #1"],
       target.name + " 存储异常恢复后无法继续追加版本",
+    );
+    const isolation = await evaluate(
+      verifyImportHistoryIsolationInPage,
+      JSON.stringify(modified),
+    );
+    assert.equal(isolation.confirmations, 0, target.name + " 导入时发生了历史载入");
+    assert.deepStrictEqual(
+      JSON.parse(await evaluate(exportStudioJsonInPage)),
+      modified,
+      target.name + " 异步 JSON 导入被并发历史载入覆盖",
     );
     process.stdout.write(
       target.name + " 自动保存取消/确认保护、跨刷新持久性和存储异常恢复通过\n",
