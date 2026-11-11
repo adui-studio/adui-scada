@@ -22,6 +22,7 @@ import type { LayerTreeGroup, ScadaDocument, ScadaNode } from "@adui/scada-core"
 import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
 import {
   DEFAULT_GRID_SIZE,
+  GEOMETRY_PROPERTY_FIELDS,
   DocumentEditor,
   editableTagSlot,
   RESIZE_HANDLES,
