@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Input } from "tdesign-react";
+import { CloseIcon } from "tdesign-icons-react";
+import "tdesign-react/es/style/index.css";
 import type {
   ChangeEvent,
   DragEvent as ReactDragEvent,
@@ -1249,13 +1252,22 @@ export default function StudioPage() {
                 onChange={(event) => setLayerSearch(event.target.value)}
               />
             </label>
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="small"
               disabled={state.selectedIds.length === 0}
               onClick={locateSelectedLayer}
             >
               定位选中图层
-            </button>
+            </Button>
+            <Button
+              variant="text"
+              size="small"
+              disabled={layerSearch.length === 0}
+              onClick={() => setLayerSearch("")}
+            >
+              <CloseIcon /> 清除搜索
+            </Button>
           </div>
           <div className="studio-layer-tree" ref={layerTreeRef} aria-label="图层树">
             {layerEntries.length === 0 && (
@@ -1515,80 +1527,80 @@ export default function StudioPage() {
           <h2>属性 · 已选 {state.selectedIds.length}</h2>
           <div className="studio-toolbox">
             <div className="studio-tool-group" aria-label="图层锁定与可见性">
-              <button
+              <Button
                 type="button"
                 disabled={state.selectedIds.length === 0}
                 onClick={() => changeSelectedLocked(true)}
               >
                 锁定所选
-              </button>
-              <button
+              </Button
+              <Button
                 type="button"
                 disabled={state.selectedIds.length === 0}
                 onClick={() => changeSelectedLocked(false)}
               >
                 解锁所选
-              </button>
-              <button
+              </Button
+              <Button
                 type="button"
                 disabled={state.selectedIds.length === 0 || hasLockedSelection}
                 onClick={() => changeSelectedVisible(false)}
               >
                 隐藏所选
-              </button>
-              <button
+              </Button
+              <Button
                 type="button"
                 disabled={state.selectedIds.length === 0 || hasLockedSelection}
                 onClick={() => changeSelectedVisible(true)}
               >
                 显示所选
-              </button>
+              </Button
             </div>
             <div className="studio-tool-group" aria-label="图元组合">
-              <button
+              <Button
                 type="button"
                 disabled={!canGroup}
                 onClick={() => apply(() => editor.groupSelected(), "已组合所选图元，可撤销")}
               >
                 组合所选
-              </button>
-              <button
+              </Button
+              <Button
                 type="button"
                 disabled={!hasGroupedSelection}
                 onClick={() => apply(() => editor.ungroupSelected(), "已解组，可撤销")}
               >
                 解组
-              </button>
+              </Button
             </div>
             <div className="studio-tool-group" aria-label="图元剪贴板">
-              <button
+              <Button
                 type="button"
                 disabled={state.selectedIds.length === 0}
                 onClick={() => apply(() => editor.copySelected(), "已复制所选图元到会话剪贴板")}
               >
                 复制所选
-              </button>
-              <button
+              </Button
+              <Button
                 type="button"
                 disabled={state.selectedIds.length === 0}
                 onClick={() => apply(() => editor.cutSelected(), "已剪切图元，可撤销")}
               >
                 剪切所选
-              </button>
-              <button
+              </Button
+              <Button
                 type="button"
                 disabled={!state.hasClipboard}
                 onClick={() => apply(() => editor.pasteClipboard(), "已粘贴图元，可撤销")}
               >
                 粘贴图元
-              </button>
-              <button
+              </Button
+              <Button
                 type="button"
                 onClick={() => apply(() => editor.deleteSelected(), "已删除图元，可撤销")}
                 disabled={state.selectedIds.length === 0}
               >
                 删除所选
-              </button>
+              </Button
             </div>
             <div className="studio-exact-layer" aria-label="图层精确插入">
               <label className="studio-field">
@@ -1621,7 +1633,7 @@ export default function StudioPage() {
                   <option value="before">目标下方（更靠后）</option>
                 </select>
               </label>
-              <button
+              <Button
                 type="button"
                 disabled={!canPreciselyMove || !layerTargetId || !selected}
                 onClick={() =>
@@ -1629,21 +1641,21 @@ export default function StudioPage() {
                 }
               >
                 移动到指定层
-              </button>
+              </Button
             </div>
             <div className="studio-tool-group" aria-label="图层排序">
-              <button type="button" onClick={() => layer("back")} disabled={!selected}>
+              <Button type="button" onClick={() => layer("back")} disabled={!selected}>
                 置底
-              </button>
-              <button type="button" onClick={() => layer("backward")} disabled={!selected}>
+              </Button
+              <Button type="button" onClick={() => layer("backward")} disabled={!selected}>
                 下移层
-              </button>
-              <button type="button" onClick={() => layer("forward")} disabled={!selected}>
+              </Button
+              <Button type="button" onClick={() => layer("forward")} disabled={!selected}>
                 上移层
-              </button>
-              <button type="button" onClick={() => layer("front")} disabled={!selected}>
+              </Button
+              <Button type="button" onClick={() => layer("front")} disabled={!selected}>
                 置顶
-              </button>
+              </Button
             </div>
             <h3>多选对齐（以最后选中的图元为准）</h3>
             <div className="studio-tool-group" aria-label="图元对齐">
@@ -1657,14 +1669,14 @@ export default function StudioPage() {
                   ["bottom", "下"],
                 ] as const
               ).map(([mode, label]) => (
-                <button
+                <Button
                   type="button"
                   key={mode}
                   onClick={() => align(mode)}
                   disabled={state.selectedIds.length < 2 || hasGroupedSelection}
                 >
                   {label}
-                </button>
+                </Button
               ))}
             </div>
           </div>
@@ -1692,40 +1704,40 @@ export default function StudioPage() {
                       />
                     </label>
                   ))}
-                  <button type="submit" disabled={studioNodeLocked(selected)}>
+                  <Button type="submit" disabled={studioNodeLocked(selected)}>
                     应用几何属性
-                  </button>
+                  </Button
                 </form>
               ) : (
                 <p className="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
               )}
               <p className="studio-tip">拖动画布中的虚线框，或使用方向按钮微调。每次操作可撤销。</p>
               <div className="studio-nudge">
-                <button type="button" onClick={() => nudge(-1, 0)}>
+                <Button type="button" onClick={() => nudge(-1, 0)}>
                   ←
-                </button>
-                <button type="button" onClick={() => nudge(0, -1)}>
+                </Button
+                <Button type="button" onClick={() => nudge(0, -1)}>
                   ↑
-                </button>
-                <button type="button" onClick={() => nudge(0, 1)}>
+                </Button
+                <Button type="button" onClick={() => nudge(0, 1)}>
                   ↓
-                </button>
-                <button type="button" onClick={() => nudge(1, 0)}>
+                </Button
+                <Button type="button" onClick={() => nudge(1, 0)}>
                   →
-                </button>
+                </Button
               </div>
               {selected.type === "label" && state.selectedIds.length === 1 && (
                 <label className="studio-field">
                   显示文案
-                  <input
+                  <Input
                     value={labelDraft}
-                    maxLength={256}
+                    maxlength={256}
                     disabled={studioNodeLocked(selected)}
-                    onChange={(event) => setLabelDraft(event.target.value)}
+                    onChange={(value) => setLabelDraft(value)}
                   />
-                  <button type="button" onClick={changeLabel} disabled={studioNodeLocked(selected)}>
+                  <Button type="button" onClick={changeLabel} disabled={studioNodeLocked(selected)}>
                     应用文案
-                  </button>
+                  </Button
                 </label>
               )}
               <h3>Tag 绑定（模拟数据）</h3>
