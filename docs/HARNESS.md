@@ -676,3 +676,20 @@ pnpm run dev:vue
 ```
 
 人工检查 Vue/React 同步的锁定/解锁、隐藏/显示、批量命令历史、图层列表恢复隐藏、锁定拖动/几何/剪切/删除保护、旧工程兼容、JSON 双向互通和 Dexie 草稿恢复。最新 Runtime 必须过滤隐藏图元、保留锁定图元显示和 Tag 质量；工业写入接口仍不开放。静态代码检查不代表现场安全验收通过。
+
+## 2026-11-11 · V0.2 第十八批精确图层排序待验收
+
+本批新增 17 项共享 Core 测试源码，整仓静态预计 **243 项单测**、**2 项 NestJS E2E**、**41 份 Markdown**。该数字需维护者 Windows 复核，当前尚未有本批 `pnpm run ready` 完整成功日志。
+
+```powershell
+git status -sb
+git fetch origin
+git switch feat/v0.2-precise-layer-order
+pnpm install --frozen-lockfile
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+除自动检查外，人工在 React/Vue 分别验收：列表上层在上，图层拖放高亮与上/下插入正确；精确目标选择可用于非拖放排序；非连续组合整体移动，原有上/下层按钮兼容；锁定图元及锁定组合不能被直接或间接移动；切页清空拖动会话；撤销/重做及工程 JSON/IndexedDB 双框架往返不丢层序。Runtime 只读、STALE/GOOD 与设备写入禁用不回归。本批静态审查不能代替实际浏览器验收。
