@@ -1627,11 +1627,19 @@ test("精确图层插入允许将单图元移动到目标前后", () => {
   const e = editor();
   expect(e.moveLayer("title", "pump", "after")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "tank", "pipe", "pump", "title", "flow",
+    "tank",
+    "pipe",
+    "pump",
+    "title",
+    "flow",
   ]);
   expect(e.moveLayer("title", "pipe", "before")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "tank", "title", "pipe", "pump", "flow",
+    "tank",
+    "title",
+    "pipe",
+    "pump",
+    "flow",
   ]);
 });
 
@@ -1642,7 +1650,11 @@ test("精确排序保持图元几何、Tag、规则和工程 Schema 完全不变
   const sorted = e.snapshot().document;
   expect(sorted.schemaVersion).toBe(before.schemaVersion);
   expect(sorted.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "title", "pipe", "pump", "flow", "tank",
+    "title",
+    "pipe",
+    "pump",
+    "flow",
+    "tank",
   ]);
   const originalNodes = new Map(before.pages[0]?.nodes.map((node) => [node.id, node]));
   for (const node of sorted.pages[0]!.nodes) {
@@ -1685,12 +1697,14 @@ test("拖动非相邻组合成员时整组连续排列且组内相对顺序不�
   e.selectMany(["tank", "pump"]);
   const groupId = e.groupSelected();
   const oldNodes = e.snapshot().document.pages[0]!.nodes;
-  expect(oldNodes.map((node) => node.id)).toEqual([
-    "title", "tank", "pipe", "pump", "flow",
-  ]);
+  expect(oldNodes.map((node) => node.id)).toEqual(["title", "tank", "pipe", "pump", "flow"]);
   expect(e.moveLayer("tank", "title", "after")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "title", "tank", "pump", "pipe", "flow",
+    "title",
+    "tank",
+    "pump",
+    "pipe",
+    "flow",
   ]);
   const nodes = e.snapshot().document.pages[0]!.nodes;
   expect(nodes[1]?.groupId).toBe(groupId);
@@ -1705,7 +1719,11 @@ test("从组合中任一成员开始移动都作用于完整组合", () => {
   e.groupSelected();
   expect(e.moveLayer("pump", "flow", "after")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "title", "pipe", "flow", "tank", "pump",
+    "title",
+    "pipe",
+    "flow",
+    "tank",
+    "pump",
   ]);
 });
 
@@ -1715,11 +1733,19 @@ test("目标是组合成员时，在组合边界之外插入，不拆散组员",
   const group = e.groupSelected();
   expect(e.moveLayer("flow", "tank", "before")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "title", "flow", "tank", "pipe", "pump",
+    "title",
+    "flow",
+    "tank",
+    "pipe",
+    "pump",
   ]);
   expect(e.moveLayer("title", "pump", "after")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "flow", "tank", "pipe", "pump", "title",
+    "flow",
+    "tank",
+    "pipe",
+    "pump",
+    "title",
   ]);
   const members = e.snapshot().document.pages[0]?.nodes.filter((node) => node.groupId === group);
   expect(members?.map((node) => node.id)).toEqual(["tank", "pump"]);
@@ -1741,12 +1767,20 @@ test("旧的组合上移层按钮也会连续移动整组并保留组员顺序",
   e.groupSelected();
   expect(e.reorderSelected("forward")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "title", "pipe", "flow", "tank", "pump",
+    "title",
+    "pipe",
+    "flow",
+    "tank",
+    "pump",
   ]);
   expect(e.reorderSelected("forward")).toBe(false);
   expect(e.undo()).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "title", "tank", "pipe", "pump", "flow",
+    "title",
+    "tank",
+    "pipe",
+    "pump",
+    "flow",
   ]);
 });
 
@@ -1756,12 +1790,20 @@ test("旧的组合下移层和置底按钮也会保持组合成员连续", () =>
   e.groupSelected();
   expect(e.reorderSelected("backward")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "tank", "pump", "title", "pipe", "flow",
+    "tank",
+    "pump",
+    "title",
+    "pipe",
+    "flow",
   ]);
   expect(e.reorderSelected("back")).toBe(false);
   expect(e.reorderSelected("front")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "title", "pipe", "flow", "tank", "pump",
+    "title",
+    "pipe",
+    "flow",
+    "tank",
+    "pump",
   ]);
 });
 
@@ -1802,11 +1844,13 @@ test("不影响锁定图元原始层序的精确移动仍然允许", () => {
   const original = e.snapshot().document;
   expect(e.moveLayer("title", "tank", "after")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "tank", "title", "pipe", "pump", "flow",
+    "tank",
+    "title",
+    "pipe",
+    "pump",
+    "flow",
   ]);
-  expect(e.snapshot().document.pages[0]?.nodes.at(-1)).toEqual(
-    original.pages[0]?.nodes.at(-1),
-  );
+  expect(e.snapshot().document.pages[0]?.nodes.at(-1)).toEqual(original.pages[0]?.nodes.at(-1));
 });
 
 test("隐藏图元仍然参与持久层序，并在恢复显示后保留新位置", () => {
@@ -1847,6 +1891,10 @@ test("精确层序变更经 JSON 导入导出后顺序与属性完全一致", ()
   other.loadDocument(data);
   expect(other.snapshot().document).toEqual(e.snapshot().document);
   expect(other.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "title", "pipe", "flow", "tank", "pump",
+    "title",
+    "pipe",
+    "flow",
+    "tank",
+    "pump",
   ]);
 });

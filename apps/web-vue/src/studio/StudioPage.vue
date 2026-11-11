@@ -155,8 +155,7 @@ const layerTargetNodes = computed(() => {
   const chosen = selected.value;
   return page.value.nodes.filter(
     (node) =>
-      node.id !== chosen?.id &&
-      (chosen?.groupId === undefined || node.groupId !== chosen.groupId),
+      node.id !== chosen?.id && (chosen?.groupId === undefined || node.groupId !== chosen.groupId),
   );
 });
 const layerTargetId = computed(() =>
@@ -1136,7 +1135,9 @@ async function importJson(event: Event) {
           @dragend="clearLayerDrag"
           @click="selectNode(node.id, $event.shiftKey)"
         >
-          <span class="studio-layer-identity"><span aria-hidden="true">⋮⋮</span> {{ node.id }}</span>
+          <span class="studio-layer-identity"
+            ><span aria-hidden="true">⋮⋮</span> {{ node.id }}</span
+          >
           <small>
             {{ node.type }}{{ node.groupId ? ` · 组合 ${node.groupId}` : "" }}
             {{ studioNodeLocked(node) ? " · 已锁定" : "" }}

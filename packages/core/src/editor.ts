@@ -798,12 +798,16 @@ export class DocumentEditor {
 
     const movingIds = new Set(
       page.nodes
-        .filter((node) => (source.groupId ? node.groupId === source.groupId : node.id === source.id))
+        .filter((node) =>
+          source.groupId ? node.groupId === source.groupId : node.id === source.id,
+        )
         .map((node) => node.id),
     );
     const targetIds = new Set(
       page.nodes
-        .filter((node) => (target.groupId ? node.groupId === target.groupId : node.id === target.id))
+        .filter((node) =>
+          target.groupId ? node.groupId === target.groupId : node.id === target.id,
+        )
         .map((node) => node.id),
     );
     if (movingIds.has(target.id)) return false;

@@ -1436,7 +1436,8 @@ export default function StudioPage() {
                   <option value="">请选择目标图元</option>
                   {layerTargetNodes.map((node) => (
                     <option key={node.id} value={node.id}>
-                      {node.id}{node.groupId ? "（组合）" : ""}
+                      {node.id}
+                      {node.groupId ? "（组合）" : ""}
                     </option>
                   ))}
                 </select>
