@@ -39,3 +39,17 @@ export { clampStudioPan, studioViewBox } from "./studio-viewport.ts";
 export type { StudioPan, StudioPageSize } from "./studio-viewport.ts";
 export { studioViewportRect } from "./studio-viewport-rect.ts";
 export type { StudioViewportRect, StudioViewportSize } from "./studio-viewport-rect.ts";
+export {
+  PROJECT_SNAPSHOT_FORMAT_VERSION,
+  PROJECT_SNAPSHOT_MAX_BYTES,
+  validateProjectDocument,
+  createProjectSnapshot,
+  readProjectSnapshot,
+} from "./project-snapshot.ts";
+export type {
+  DeepReadonly,
+  ProjectValidationIssue,
+  ProjectValidationResult,
+  ProjectSnapshot,
+  ProjectSnapshotOptions,
+} from "./project-snapshot.ts";

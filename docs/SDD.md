@@ -363,3 +363,10 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - TDesign 安装及版本应通过完整 pnpm lockfile 校验：当前 Agent 环境无法访问 npm Registry，须由维护者联网工作区生成 `pnpm-lock.yaml` 并经检查提交。详见 [ADR-0028](adr/0028-tdesign-dual-framework-ui.md)。
 
 本批新增 1 项共享几何字段回归测试源码，整仓预计 **257 项单测**、**2 项 E2E**、**43 份 Markdown**，所有数字仍需 Windows 实测确认。
+
+## V0.3 第二批：工程结构化校验与离线不可变快照（ADR-0035）
+
+- `validateProjectDocument(input:unknown): ProjectValidationResult` 复用当前严格 Parser，不自动迁移；成功返回防御性工程副本与空问题列表，失败返回 `DOCUMENT_INVALID`、`error`、字段路径与中文说明。仅返回 Parser 首错，暂不检查生产 Tag、规则可执行性或资源加载。
+- `createProjectSnapshot(source,{revision,createdAt}):Promise<ProjectSnapshot>` 在 Core 中校验并防御性复制工程，要求正安全整数修订号、UTC ISO 8601 毫秒时间、最多 2 MiB 规范化 JSON；调用原生 WebCrypto SHA-256，结果包含 `formatVersion:1`、`projectId`、`revision`、`createdAt`、`hashAlgorithm`、`contentHash` 和深冻结 `document`。
+- `readProjectSnapshot(input:unknown):Promise<ProjectSnapshot>` 严格验证容器字段、元数据、Schema 与完整内容摘要，并返回重新复制与深冻结的工程。哈希包括版本元数据及工程；排序对象键，数组保持原顺序。
+- 修订号分配及唯一性必须由未来受控存储层提供；发布记录和 Runtime 原子切换仍待服务端鉴权与事务设计。**本模块不是已发布工程或可信签名，也不控制工业设备。**

@@ -209,3 +209,7 @@ Vue/React 的 SVG 编辑层负责显示控制点、捕获 Pointer 和提供预�
 ## V0.2 双框架 TDesign UI 技术选型（ADR-0028）
 
 根据维护者 2026-11-11 的明确决策，React 与 Vue 3 Web Studio 均采用腾讯 TDesign：React 为 `tdesign-react` / `tdesign-icons-react`，Vue 为 `tdesign-vue-next` / `tdesign-icons-vue-next`。根 pnpm Catalog 统一固定依赖版本，Studio 按需导入组件与官方样式。框架相关 UI 状态不进入 Core 或 Runtime：共享 `GEOMETRY_PROPERTY_FIELDS`、`DocumentEditor`、ScadaDocument `0.2.0` 和 Dexie IndexedDB 草稿协议均保持框架无关。迁移从 Studio 属性面板和图层搜索开始，旧原生表单按批次替换，不引入 Ant Design，也不把 TDesign 视为工业设备数据或权限的来源。详见 [ADR-0028](adr/0028-tdesign-dual-framework-ui.md)。
+
+## V0.3 第二批：共享工程快照基础（ADR-0035）
+
+`@adui/scada-core` 新增框架无关 `project-snapshot.ts`，仅依赖现有 `ScadaDocument 0.2.0` Parser 与运行环境原生 WebCrypto。它提供结构校验结果、SHA-256 完整性摘要、带元数据的深冻结工程快照和严格回读；不依赖 Vue、React、NestJS、Dexie 或浏览器 DOM API。应用、存储、版本指针、身份权限与工业协议均不得进入 Core；后续发布服务必须独立解决并发、审计、存储事务和运行时版本切换。本批仍为离线能力，详见 [ADR-0035](adr/0035-project-validation-snapshot.md)。

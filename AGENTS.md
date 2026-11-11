@@ -4,7 +4,7 @@
 
 ## 1. 定位与事实
 
-ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已完成 V0.1 共享 Core/Runtime、Vue/React、NestJS 健康检查、Tauri 桌面与 Docker 演示；V0.2 开发分支开始增加 Studio 编辑器的第一批本地图元操作。工业 Gateway、生产 API、服务端工程持久化及发布仍未实现。不得将规划视为实现。**
+ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1 工程基础、V0.2 双框架 SVG Studio 与 V0.3 第一批 Vue/React 工程互通自动化测试。当前 V0.3 第二批在独立功能分支实现工程校验及不可变快照基础；工业 Gateway、生产 API、服务端工程持久化与正式发布仍未实现。不得将规划视为实现。**
 
 ## 2. 规则优先级
 

@@ -310,3 +310,9 @@
 
 - `scripts/test-studio-browser.mjs --interop`：复用既有 Chrome/Edge 隔离浏览器、Vue/React Studio 导航与 CDP，实现真实文件导出 Blob 捕获、File/DataTransfer 导入、双端新增图元与双向 JSON 往返、非法 JSON 原子拒绝。
 - `pnpm run test:interop`：专门验证 FR-013，独立于 `pnpm run test:browser` 布局检查和 `pnpm run ready` 构建链路。
+
+## V0.3 工程快照基础（ADR-0035）
+
+- `packages/core/src/project-snapshot.ts`：当前 Schema 严格校验的结构化结果，深冻结快照、稳定 SHA-256 摘要及外部快照严格回读；无 DOM、Vue/React 或服务端仓储依赖。
+- `packages/core/test/project-snapshot.test.ts`：新增加 10 项非法输入、快照只读、哈希一致性与篡改、时间/修订号/大小边界测试。
+- `packages/core/src/index.ts`：统一导出类型和函数，供未来 Vue/React 与 NestJS 共享，不改变现有 Runtime 行为。
