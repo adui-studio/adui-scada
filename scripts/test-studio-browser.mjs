@@ -555,6 +555,259 @@ async function runStudioVersionHistory(session) {
   }
 }
 
+/** 等待真实 Studio 历史菜单读取数据库完成，用于刷新后持久化及 Origin 隔离。 */
+async function studioVersionRowsInPage() {
+  const menu = document.querySelector(".studio-version-menu");
+  if (!menu) throw new TypeError("没有找到历史版本菜单");
+  menu.open = true;
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  const start = Date.now();
+  while (Date.now() - start < 12000) {
+    const busy = menu.querySelector(".studio-version-tools button:disabled");
+    const error = menu.querySelector(".studio-version-error")?.textContent;
+    if (error) throw new TypeError("历史版本查询失败：" + error);
+    if (!busy) {
+      return [...menu.querySelectorAll(".studio-version-item strong")].map((item) =>
+        item.textContent.trim(),
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  }
+  throw new TypeError("历史版本列表加载超时");
+}
+
+/** 通过真实开关启动自动保存，不绕过 Studio 的确认和订阅逻辑。 */
+async function enableStudioAutoSaveInPage() {
+  const menu = document.querySelector(".studio-file-menu");
+  if (!menu) throw new TypeError("没有找到文件与草稿菜单");
+  menu.open = true;
+  const button = [...menu.querySelectorAll("button")].find(
+    (item) => item.textContent.trim() === "开启自动保存",
+  );
+  if (!button) throw new TypeError("自动保存开关不是关闭状态");
+  button.click();
+  const start = Date.now();
+  try {
+    while (Date.now() - start < 12000) {
+      const pressed = menu.querySelector('button[aria-pressed="true"]');
+      if (pressed?.textContent.includes("暂停自动保存")) return true;
+      const notice = document.querySelector(".studio-notice")?.textContent || "";
+      if (notice.startsWith("开启自动保存失败")) throw new TypeError(notice);
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+    throw new TypeError("开启自动保存超时");
+  } finally {
+    menu.open = false;
+  }
+}
+
+/** 直接只读 IndexedDB 草稿，以区分当前编辑器工程和已持久化的数据。 */
+async function readStudioDraftFromDatabaseInPage(projectId) {
+  const database = await new Promise((resolve, reject) => {
+    const request = indexedDB.open("adui-scada-studio");
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("打开草稿数据库失败"));
+  });
+  try {
+    if (!database.objectStoreNames.contains("drafts")) {
+      throw new TypeError("草稿数据库缺少 drafts 数据表");
+    }
+    const record = await new Promise((resolve, reject) => {
+      const tx = database.transaction("drafts", "readonly");
+      const request = tx.objectStore("drafts").get(projectId);
+      request.onsuccess = () => resolve(request.result ?? null);
+      request.onerror = () => reject(request.error || new Error("读取草稿记录失败"));
+      tx.onabort = () => reject(tx.error || new Error("草稿只读事务中止"));
+    });
+    return record === null ? null : JSON.parse(JSON.stringify(record));
+  } finally {
+    database.close();
+  }
+}
+
+/** 版本菜单打开之前模拟浏览器拒绝打开历史库，不修改 IndexedDB 真实记录。 */
+async function simulateHistoryDatabaseUnavailableInPage() {
+  const menu = document.querySelector(".studio-version-menu");
+  if (!menu || menu.open) throw new TypeError("历史版本菜单必须在关闭状态下测试存储失败");
+  const originalOpen = Reflect.get(IDBFactory.prototype, "open");
+  if (typeof originalOpen !== "function") throw new TypeError("无法读取 IndexedDB 打开方法");
+  IDBFactory.prototype.open = function (...args) {
+    if (args[0] === "adui-scada-studio-versions") {
+      throw new DOMException("模拟本地历史库不可访问", "SecurityError");
+    }
+    return Reflect.apply(originalOpen, this, args);
+  };
+  try {
+    menu.open = true;
+    const start = Date.now();
+    while (Date.now() - start < 12000) {
+      const error = menu.querySelector(".studio-version-error")?.textContent || "";
+      if (error) return error;
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+    throw new TypeError("历史库权限异常未显示错误提示");
+  } finally {
+    IDBFactory.prototype.open = originalOpen;
+    menu.open = false;
+  }
+}
+
+/** 异步 JSON 文件尚未读完时点击历史载入，不能插入执行或调用覆盖确认。 */
+async function verifyImportHistoryIsolationInPage(json) {
+  const fileMenu = document.querySelector(".studio-file-menu");
+  const versionMenu = document.querySelector(".studio-version-menu");
+  const input = fileMenu?.querySelector('.studio-import input[type="file"]');
+  if (!input || !versionMenu) throw new TypeError("没有找到版本或 JSON 导入入口");
+  const item = [...versionMenu.querySelectorAll(".studio-version-item")].find(
+    (entry) => entry.querySelector("strong")?.textContent.trim() === "版本 #1",
+  );
+  const load = [...(item?.querySelectorAll("button") || [])].find(
+    (button) => button.textContent.trim() === "载入",
+  );
+  if (!load) throw new TypeError("未找到历史版本 #1 的载入操作");
+  const originalText = Reflect.get(Blob.prototype, "text");
+  const originalConfirm = Reflect.get(window, "confirm");
+  let releaseText = null;
+  let confirmations = 0;
+  Blob.prototype.text = function () {
+    return new Promise((resolve) => {
+      releaseText = () => resolve(json);
+    });
+  };
+  window.confirm = () => {
+    confirmations += 1;
+    return true;
+  };
+  try {
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([json], "并发保护验收.json", { type: "application/json" }));
+    input.files = transfer.files;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    const started = Date.now();
+    while (!releaseText && Date.now() - started < 5000) {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    }
+    if (!releaseText) throw new TypeError("JSON 导入没有进入异步文件读取阶段");
+    load.click();
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    if (confirmations !== 0) {
+      throw new TypeError("JSON 导入期间错误地执行了历史覆盖确认");
+    }
+    releaseText();
+    const ready = Date.now();
+    while (Date.now() - ready < 12000) {
+      const notice = document.querySelector(".studio-notice")?.textContent || "";
+      if (notice.includes("工程 JSON 已校验并载入本地编辑器")) {
+        return { confirmations, notice };
+      }
+      if (notice.includes("导入失败：")) throw new TypeError(notice);
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+    throw new TypeError("释放文件读取后，工程导入未完成");
+  } finally {
+    releaseText?.();
+    Blob.prototype.text = originalText;
+    window.confirm = originalConfirm;
+    fileMenu.open = false;
+    versionMenu.open = false;
+  }
+}
+
+async function runStudioVersionSafety(session) {
+  const evaluate = (fn, ...args) =>
+    session.evaluate(
+      "(" + fn.toString() + ")(" + args.map((arg) => JSON.stringify(arg)).join(",") + ")",
+    );
+  await session.send("Emulation.setDeviceMetricsOverride", {
+    width: 1440,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  for (const target of targets) {
+    await navigateStudioForInterop(session, target, "safety-first-" + target.name);
+    const initial = JSON.parse(await evaluate(exportStudioJsonInPage));
+    const empty = await evaluate(studioVersionRowsInPage);
+    assert.deepStrictEqual(empty, [], target.name + " 新 Origin 不应读取到其他框架的历史");
+
+    await evaluate(studioVersionActionInPage, "创建快照", "已创建本地历史版本 #1");
+    await evaluate(enableStudioAutoSaveInPage);
+    await evaluate(addStudioSymbolInPage, "+ 水箱");
+    const modified = JSON.parse(await evaluate(exportStudioJsonInPage));
+    assert.notDeepStrictEqual(initial, modified, target.name + " 编辑没有产生变更");
+
+    const started = Date.now();
+    let stored;
+    while (Date.now() - started < 12000) {
+      stored = await evaluate(readStudioDraftFromDatabaseInPage, modified.projectId);
+      if (stored?.document && JSON.stringify(stored.document) === JSON.stringify(modified)) {
+        break;
+      }
+      await pause(120);
+    }
+    assert.ok(stored?.revision >= 1, target.name + " 没有触发 IndexedDB 自动保存");
+    assert.deepStrictEqual(stored.document, modified, target.name + " 草稿自动保存内容错误");
+
+    await evaluate(studioVersionActionInPage, "载入", null, false, 1);
+    const canceled = JSON.parse(await evaluate(exportStudioJsonInPage));
+    assert.deepStrictEqual(canceled, modified, target.name + " 取消载入覆盖了当前工程");
+    const stillEnabled = await session.evaluate(
+      'Boolean(document.querySelector(".studio-file-menu button[aria-pressed=true]"))',
+    );
+    assert.equal(stillEnabled, true, target.name + " 取消载入不应关闭自动保存");
+
+    await evaluate(studioVersionActionInPage, "载入", "已载入本地版本 #1", true, 1);
+    const restored = JSON.parse(await evaluate(exportStudioJsonInPage));
+    assert.deepStrictEqual(restored, initial, target.name + " 确认载入未恢复历史工程");
+    const paused = await session.evaluate(
+      'Boolean(document.querySelector(".studio-file-menu button[aria-pressed=true]"))',
+    );
+    assert.equal(paused, false, target.name + " 确认载入后自动保存未暂停");
+    await pause(1400);
+    const afterRestore = await evaluate(readStudioDraftFromDatabaseInPage, initial.projectId);
+    assert.deepStrictEqual(afterRestore, stored, target.name + " 历史载入覆盖了已保存的本地草稿");
+
+    await navigateStudioForInterop(session, target, "safety-error-" + target.name);
+    const unavailable = await evaluate(simulateHistoryDatabaseUnavailableInPage);
+    assert.ok(
+      unavailable.includes("读取历史版本失败"),
+      target.name + " 没有向用户提示存储权限异常",
+    );
+    assert.deepStrictEqual(
+      JSON.parse(await evaluate(exportStudioJsonInPage)),
+      initial,
+      target.name + " 历史库读取错误污染了当前工程",
+    );
+
+    await navigateStudioForInterop(session, target, "safety-reload-" + target.name);
+    const persisted = await evaluate(studioVersionRowsInPage);
+    assert.deepStrictEqual(persisted, ["版本 #1"], target.name + " 浏览器刷新后丢失了本地历史版本");
+    const again = await evaluate(studioVersionActionInPage, "创建快照", "已创建本地历史版本 #2");
+    assert.deepStrictEqual(
+      again.versions,
+      ["版本 #2", "版本 #1"],
+      target.name + " 存储异常恢复后无法继续追加版本",
+    );
+    const isolation = await evaluate(verifyImportHistoryIsolationInPage, JSON.stringify(modified));
+    assert.equal(isolation.confirmations, 0, target.name + " 导入时发生了历史载入");
+    assert.deepStrictEqual(
+      JSON.parse(await evaluate(exportStudioJsonInPage)),
+      modified,
+      target.name + " 异步 JSON 导入被并发历史载入覆盖",
+    );
+    process.stdout.write(target.name + " 自动保存取消/确认保护、跨刷新持久性和存储异常恢复通过\n");
+  }
+
+  await navigateStudioForInterop(session, targets[0], "safety-react-return");
+  const reactVersions = await evaluate(studioVersionRowsInPage);
+  assert.deepStrictEqual(
+    reactVersions,
+    ["版本 #2", "版本 #1"],
+    "Vue 的历史操作不应覆盖另一个 Origin 的 React 版本",
+  );
+  process.stdout.write("React / Vue 不同 Origin 历史版本隔离通过\n");
+}
+
 async function main() {
   const browserPath = browserExecutable();
   assert.ok(browserPath, "未找到 Chrome/Edge，可设置 SCADA_BROWSER_PATH 指定浏览器路径");
@@ -603,6 +856,10 @@ async function main() {
     }
     if (process.argv.includes("--versions")) {
       await runStudioVersionHistory(session);
+      return;
+    }
+    if (process.argv.includes("--versions-safety")) {
+      await runStudioVersionSafety(session);
       return;
     }
     let failed = 0;

@@ -1068,7 +1068,7 @@ async function runHistoryAction(
   action: () => Promise<void>,
   lockDraft = false,
 ): Promise<void> {
-  if (historyActionInProgress || (lockDraft && draftActionInProgress)) return;
+  if (historyActionInProgress || draftActionInProgress) return;
   historyActionInProgress = true;
   if (lockDraft) draftActionInProgress = true;
   historyBusy.value = true;
@@ -1290,6 +1290,8 @@ async function importJson(event: Event) {
     notice.value = "已有工程操作正在进行，请完成后再导入 JSON";
     return;
   }
+  // 文件读取期间也持有互斥标记，避免历史载入与导入交错执行。
+  draftActionInProgress = true;
   try {
     if (file.size > maxFileSize) throw new RangeError("JSON 文件不能超过 2 MiB");
     const parsed = JSON.parse(await file.text()) as unknown;
@@ -1305,6 +1307,8 @@ async function importJson(event: Event) {
       : "工程 JSON 已校验并载入本地编辑器";
   } catch (error) {
     notice.value = "导入失败：" + (error instanceof Error ? error.message : String(error));
+  } finally {
+    draftActionInProgress = false;
   }
 }
 </script>

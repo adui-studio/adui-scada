@@ -984,7 +984,7 @@ export default function StudioPage() {
     action: () => Promise<void>,
     lockDraft = false,
   ): Promise<void> {
-    if (historyActionRef.current || (lockDraft && draftActionRef.current)) return;
+    if (historyActionRef.current || draftActionRef.current) return;
     historyActionRef.current = true;
     if (lockDraft) draftActionRef.current = true;
     setHistoryBusy(true);
@@ -1204,6 +1204,8 @@ export default function StudioPage() {
       setNotice("已有工程操作正在进行，请完成后再导入 JSON");
       return;
     }
+    // 文件读取是异步的，导入期间必须占用草稿操作门闩，禁止历史载入插入。
+    draftActionRef.current = true;
     try {
       if (file.size > maxFileSize) throw new RangeError("JSON 文件不能超过 2 MiB");
       const parsed = JSON.parse(await file.text()) as unknown;
@@ -1223,6 +1225,8 @@ export default function StudioPage() {
       );
     } catch (error) {
       setNotice("导入失败：" + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      draftActionRef.current = false;
     }
   }
 

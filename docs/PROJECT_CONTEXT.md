@@ -416,3 +416,7 @@ V0.3 第二批 PR #24 已 Squash Merge 至 `main`（`9a42ed5`），维护者提�
 ## 2026-11-11 · V0.3 第四批：双框架本地历史版本管理（待验收）
 
 V0.3 第三批 PR #25 已 Squash Merge 至 `main`（`3e264990`）。维护者 Windows 实测 `pnpm run ready` 退出码 0、293/293 单测、2/2 E2E、双 Web/NestJS 构建通过。第四批从该基线建立独立分支 `feat/v0.3-studio-version-history-ui`：React/Vue 两端增加同构历史菜单、创建快照、分页历史、共享 Core 差异比较、受确认载入；确认后停用自动保存且不覆盖草稿；新增 4 项 Core 比较单测及隔离浏览器命令 `test:versions`。既有草稿/历史数据库、工程 Schema、工业只读 Runtime 均不变。本批测试**尚未在维护者 Windows 执行**，不可沿用第三批通过结论。详见 [ADR-0037](adr/0037-studio-version-history-ui.md)。
+
+## 2026-11-11 · V0.3 第五批：本地版本恢复可靠性（待验收）
+
+V0.3 第四批 PR #26 已 Squash Merge 至 `main`（`6395c578`）。维护者的 Windows 日志确认 `pnpm run ready` 退出码 0、297/297 单测、2/2 服务端 E2E、双 Web/NestJS 构建通过，`test:browser` 76/76、`test:interop` 与 `test:versions` 双框架通过。第五批在独立 `test/v0.3-version-history-recovery-safety` 分支修复 JSON 导入未在异步等待期间持锁的竞态，补充自动保存队列停写/存储故障 2 项 Core 单测；新增隔离 Chrome/Edge 命令 `test:versions:safety` 覆盖真实 IndexedDB 草稿、载入取消与确认、刷新后历史、两 Origin 隔离、模拟权限异常与导入互斥。**本批新测试和 `ready` 尚未在 Windows 验证，不能沿用此前通过结论**；仍无正式服务器工程发布、回滚或设备写入。参见 [ADR-0038](adr/0038-version-recovery-safety.md)。

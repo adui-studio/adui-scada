@@ -331,3 +331,9 @@
 - `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：双端版本创建、倒序列表、差异查看和确认载入；不改 Schema/草稿事务。
 - `packages/tailwind/src/studio.css`：两个框架共用的历史菜单布局及响应样式。
 - `scripts/test-studio-browser.mjs --versions`：隔离浏览器进行两套 Studio 的本地历史创建/取消/载入完整交互验收；`package.json` 公开 `pnpm run test:versions`。
+
+## V0.3 第五批：历史恢复安全回归
+
+- `apps/web-react/src/studio/StudioPage.tsx` / `apps/web-vue/src/studio/StudioPage.vue`：在 JSON 异步读取阶段持有现有草稿操作锁，且历史操作不得与草稿/导入动作重叠。
+- `packages/core/test/draft-repository.test.ts`：新增 2 项确定性自动保存停写和故障处理单测。
+- `scripts/test-studio-browser.mjs --versions-safety`：真实浏览器双框架自动保存与历史恢复、持久化、Origin 隔离、存储权限异常、导入互斥验收；根 `test:versions:safety` 暴露命令。

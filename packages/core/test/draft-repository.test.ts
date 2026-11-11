@@ -128,3 +128,52 @@ test("禁止自动保存跨工程数据或接受跨工程保存结果", async ()
     }),
   ).toThrow(/工程 ID 不一致/);
 });
+
+test("停止自动保存时必须等待已经开始的事务完成", async () => {
+  let releaseWrite: (() => void) | undefined;
+  let notifyStarted: (() => void) | undefined;
+  const writing = new Promise<void>((resolve) => {
+    releaseWrite = resolve;
+  });
+  const started = new Promise<void>((resolve) => {
+    notifyStarted = resolve;
+  });
+  class SlowRepository extends MemoryRepository {
+    override async save(source: unknown, revision: number | null): Promise<DraftRecord> {
+      notifyStarted?.();
+      await writing;
+      return super.save(source, revision);
+    }
+  }
+  const repo = new SlowRepository();
+  const session = await DraftAutoSaveSession.open(repo, document());
+  const ongoing = session.saveIfDirty(edited(4));
+  await started;
+  let stopped = false;
+  const stopping = session.stop().then(() => {
+    stopped = true;
+  });
+  await Promise.resolve();
+  expect(stopped).toBe(false);
+  releaseWrite?.();
+  await Promise.all([ongoing, stopping]);
+  expect(stopped).toBe(true);
+  expect(repo.writes).toBe(1);
+  expect(await session.saveIfDirty(edited(9))).toBeNull();
+  expect(repo.record?.document).toEqual(edited(4));
+});
+
+test("存储写入失败后停止自动保存不悬挂且不产生额外写入", async () => {
+  class FailingRepository extends MemoryRepository {
+    override async save(_source: unknown, _revision: number | null): Promise<DraftRecord> {
+      throw new TypeError("模拟 IndexedDB 草稿写入失败");
+    }
+  }
+  const repo = new FailingRepository();
+  const session = await DraftAutoSaveSession.open(repo, document());
+  await expect(session.saveIfDirty(edited(3))).rejects.toThrow(/模拟 IndexedDB 草稿写入失败/);
+  await session.stop();
+  expect(await session.saveIfDirty(edited(7))).toBeNull();
+  expect(repo.record).toBeNull();
+  expect(repo.writes).toBe(0);
+});
