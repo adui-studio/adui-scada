@@ -52,12 +52,14 @@
   background: var(--scada-primary-hover);
 }
 .studio-file-menu,
-.studio-page-menu {
+.studio-page-menu,
+.studio-version-menu {
   position: relative;
   flex: none;
 }
 .studio-file-menu > summary,
-.studio-page-menu > summary {
+.studio-page-menu > summary,
+.studio-version-menu > summary {
   display: flex;
   min-height: 32px;
   align-items: center;
@@ -74,12 +76,14 @@
 }
 .studio-file-menu > summary::-webkit-details-marker,
 .studio-page-menu > summary::-webkit-details-marker,
+.studio-version-menu > summary::-webkit-details-marker,
 .studio-side-more > summary::-webkit-details-marker,
 .studio-advanced > summary::-webkit-details-marker {
   display: none;
 }
 .studio-file-menu > summary:focus-visible,
 .studio-page-menu > summary:focus-visible,
+.studio-version-menu > summary:focus-visible,
 .studio-side-more > summary:focus-visible,
 .studio-advanced > summary:focus-visible,
 .studio-canvas-scroll:focus-visible {
@@ -87,13 +91,15 @@
   outline-offset: -2px;
 }
 .studio-file-menu > summary::after,
-.studio-page-menu > summary::after {
+.studio-page-menu > summary::after,
+.studio-version-menu > summary::after {
   content: "▾";
   font-size: 10px;
   color: var(--scada-text-muted);
 }
 .studio-file-menu[open] > summary,
-.studio-page-menu[open] > summary {
+.studio-page-menu[open] > summary,
+.studio-version-menu[open] > summary {
   border-color: var(--scada-primary);
   color: var(--scada-cyan);
 }
@@ -688,4 +694,94 @@
   .studio-panel-toggles button {
     padding-inline: 5px;
   }
+}
+
+/* 浏览器本地工程历史。弹层独立于草稿菜单，不进入有限画布。 */
+.studio-version-panel {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  width: min(378px, calc(100vw - 24px));
+  max-height: min(70vh, 610px);
+  overflow-y: auto;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--scada-border-strong);
+  border-radius: 7px;
+  color: var(--scada-text);
+  background: var(--scada-surface);
+  box-shadow: 0 14px 36px rgb(0 0 0 / 38%);
+}
+
+.studio-version-help,
+.studio-version-error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.studio-version-help {
+  color: var(--scada-text-muted);
+}
+.studio-version-error {
+  color: var(--scada-danger, #f16c75);
+}
+.studio-version-tools,
+.studio-version-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.studio-version-tools button,
+.studio-version-item-actions button,
+.studio-version-more {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+.studio-version-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.studio-version-item,
+.studio-version-comparison {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid var(--scada-border);
+  border-radius: 5px;
+  background: var(--scada-bg);
+}
+.studio-version-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.studio-version-heading time,
+.studio-version-item code {
+  color: var(--scada-text-muted);
+  font-size: 11px;
+}
+.studio-version-item code {
+  overflow-wrap: anywhere;
+}
+.studio-version-comparison strong {
+  font-size: 12px;
+}
+.studio-version-comparison p {
+  margin: 0;
+  color: var(--scada-text-muted);
+  font-size: 11px;
+}
+.studio-version-more {
+  width: 100%;
 }

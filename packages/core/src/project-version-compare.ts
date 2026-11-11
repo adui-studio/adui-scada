@@ -40,7 +40,10 @@ function sameJson(left: unknown, right: unknown): boolean {
   const a = left as Record<string, unknown>;
   const b = right as Record<string, unknown>;
   const keys = Object.keys(a);
-  return keys.length === Object.keys(b).length && keys.every((key) => Object.hasOwn(b, key) && sameJson(a[key], b[key]));
+  return (
+    keys.length === Object.keys(b).length &&
+    keys.every((key) => Object.hasOwn(b, key) && sameJson(a[key], b[key]))
+  );
 }
 
 /** 同一工程当前编辑内容与历史版本的纯数据比较，不修改编辑历史。 */
