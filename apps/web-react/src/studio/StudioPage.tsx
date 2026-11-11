@@ -234,6 +234,8 @@ export default function StudioPage() {
     try {
       if (!editor.switchPage(pageId)) return;
       clearLayerDrag();
+      setLayerSearch("");
+      setLocateLayerKey(null);
       cancelDrag();
       setZoom(1);
       refresh();
@@ -246,6 +248,7 @@ export default function StudioPage() {
   function createPage() {
     apply(() => {
       editor.createPage();
+      setLayerSearch("");
       cancelDrag();
     }, "已创建空白页面，可撤销");
   }
@@ -270,6 +273,7 @@ export default function StudioPage() {
   function duplicatePage() {
     apply(() => {
       editor.duplicatePage();
+      setLayerSearch("");
       cancelDrag();
     }, "已复制页面及其图元和 Tag 绑定，可撤销");
   }
@@ -915,6 +919,10 @@ export default function StudioPage() {
         return;
       }
       editor.loadDocument(saved.document);
+      clearLayerDrag();
+      setLayerSearch("");
+      setCollapsedGroupIds(new Set());
+      setLocateLayerKey(null);
       cancelDrag();
       refresh();
       setHasSavedDraft(true);
@@ -969,6 +977,10 @@ export default function StudioPage() {
       const parsed = JSON.parse(await file.text()) as unknown;
       await pauseAutoSave();
       const migratedFrom = editor.loadDocument(parsed);
+      clearLayerDrag();
+      setLayerSearch("");
+      setCollapsedGroupIds(new Set());
+      setLocateLayerKey(null);
       setPreview(null);
       refresh();
       const draftWarning = await refreshDraftAvailability(editor.snapshot().document.projectId);
