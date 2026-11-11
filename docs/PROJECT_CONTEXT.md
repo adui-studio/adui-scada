@@ -320,3 +320,11 @@ PR #16 多页面编辑管理已根据维护者授权以 Squash Merge 合并 `mai
 当前从最新 `main` 新建 `feat/v0.2-node-layer-state`，新增 `props.__scadaStudio` 的严格布尔值校验、共享 Core 锁定和可见性批量命令、统一编辑提交保护、SVG Runtime 隐藏过滤、Vue/React 双端图层管理 UI。沿用 Schema `0.2.0` 与现有 Dexie 草稿；为防严格白名单兼容问题不增加顶层字段，新增 ADR-0025 明确旧 Runtime 无法识别隐藏的风险。
 
 本批新增 Core 编辑器 14 项、Schema 3 项、SVG 2 项回归测试源码，**预计 226 项单测**、2 项 E2E、40 份 Markdown。尚未执行维护者 Windows `pnpm run ready` 或双端浏览器人工验收；不得沿用第十六批结果。未经本批明确合并授权，保留 Draft PR 且不修改 `main`。
+
+## 2026-11-11 · V0.2 第十八批精确图层排序（待验收）
+
+第十七批 PR #19 已经维护者 Windows `pnpm run ready` 验收：**226/226 单测、2/2 E2E、149 文件格式、零告警、40 份 Markdown 及 React/Vue/NestJS 构建通过，退出码 0**，并获明确授权合并 `main`（Squash 合并提交 `5341986`）。该结论仅适用于第十七批。
+
+从当前 `main` 建立 `feat/v0.2-precise-layer-order`，共享 Core 新增 `moveLayer` 精确插入与源组合连续搬运；已有四个排序按钮对单一组合按整组移动，中央锁定图元索引约束继续生效。React/Vue 图层列表倒序展示并接入 HTML5 原生拖放与目标图元精确选择，不引入依赖、不升级 Schema、不修改 Runtime。新增 [ADR-0026](adr/0026-precise-layer-order.md)。
+
+本批新增 **17 项共享 Core 单元测试源码**，整仓静态预计 **243 项单测**、2 项 E2E，新增 ADR 后 Markdown 静态预计 **41 份**。**本批尚未在维护者 Windows 执行 `pnpm run ready`、浏览器图层拖拽或草稿恢复实测**；不能沿用 PR #19 的 226 项成功记录。Draft PR 未获单独合并授权，`main` 不变。
