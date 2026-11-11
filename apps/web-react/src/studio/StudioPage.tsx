@@ -1080,6 +1080,9 @@ export default function StudioPage() {
         </span>
         <small>
           {groupHeader ? `${groupHeader.totalCount} 个成员` : node.type}
+          {groupHeader && groupHeader.members.length !== groupHeader.totalCount
+            ? ` · 匹配 ${groupHeader.members.length}`
+            : ""}
           {groupHeader?.fragmented ? " · 层序不连续" : ""}
           {groupHeader?.hasLockedMember ? " · 有锁定成员" : ""}
           {groupHeader && groupHeader.hiddenCount > 0
