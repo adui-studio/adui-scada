@@ -53,9 +53,11 @@ export function studioViewportRect(
   const height = viewport.height / fitScale / zoom;
   const limitX = Math.max(0, (page.width - width) / 2);
   const limitY = Math.max(0, (page.height - height) / 2);
+  const clampedX = Math.max(-limitX, Math.min(limitX, pan.x));
+  const clampedY = Math.max(-limitY, Math.min(limitY, pan.y));
   const constrainedPan = {
-    x: Math.max(-limitX, Math.min(limitX, pan.x)),
-    y: Math.max(-limitY, Math.min(limitY, pan.y)),
+    x: clampedX === 0 ? 0 : clampedX,
+    y: clampedY === 0 ? 0 : clampedY,
   };
 
   return {

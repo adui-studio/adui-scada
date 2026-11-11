@@ -195,6 +195,16 @@ assert.match(
 );
 assert.match(viewportCss, /--studio-left-width:\s*252px/, "左侧栏必须固定宽度");
 assert.match(viewportCss, /--studio-right-width:\s*320px/, "右侧栏必须固定宽度");
+
+for (const framework of ["react", "vue"]) {
+  const localStudioCss = text(`apps/web-${framework}/src/studio/studio.css`);
+  assert.doesNotMatch(
+    localStudioCss,
+    /\.studio-panel,\s*\.studio-stage\s*\{[^}]*scrollbar-gutter\s*:/,
+    `web-${framework} 不得为中央画布预留滚动条槽位`,
+  );
+}
+
 assert.ok(
   viewportCss.includes(".studio-page-boundary"),
   "共享 Studio 样式必须包含工程页面边界辅助线",

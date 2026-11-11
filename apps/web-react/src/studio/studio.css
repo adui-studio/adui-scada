@@ -432,7 +432,3 @@
 .studio-shell > footer {
   padding: 0;
 }
-.studio-panel,
-.studio-stage {
-  scrollbar-gutter: stable;
-}

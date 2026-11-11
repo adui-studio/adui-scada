@@ -52,6 +52,22 @@ test("适应工作区时平移重置，网格仍覆盖整个视区", () => {
   expect(rect.y).toBeCloseTo(-210);
 });
 
+test("零边界与负零输入统一返回正零", () => {
+  const fitted = studioViewportRect(page, { width: 800, height: 800 }, 1, {
+    x: 100,
+    y: -100,
+  });
+  expect(fitted.pan).toEqual(center);
+  expect(Object.is(fitted.pan.x, -0)).toBe(false);
+  expect(Object.is(fitted.pan.y, -0)).toBe(false);
+
+  const zoomed = studioViewportRect(page, { width: 1600, height: 900 }, 2, {
+    x: -0,
+    y: -0,
+  });
+  expect(zoomed.pan).toEqual(center);
+});
+
 test("拒绝无效尺寸、缩放和平移参数", () => {
   expect(() => studioViewportRect(page, { width: 0, height: 900 }, 1, center)).toThrow(
     "编辑工作区宽高",
