@@ -1158,13 +1158,14 @@ async function importJson(event: Event) {
         </div>
         <div class="studio-save-actions">
           <button type="button" @click="saveDraft">保存草稿</button>
-          <button type="button" :aria-pressed="autoSaveEnabled" @click="toggleAutoSave">
-            {{ autoSaveEnabled ? "暂停自动保存" : "开启自动保存" }}
-          </button>
+          
         </div>
         <details class="studio-file-menu">
           <summary>文件与草稿</summary>
           <div class="studio-file-popover">
+              <button type="button" :aria-pressed="autoSaveEnabled" @click="toggleAutoSave">
+            {{ autoSaveEnabled ? "暂停自动保存" : "开启自动保存" }}
+          </button>
             <label class="studio-import">
               导入 JSON
               <input type="file" accept=".json,application/json" @change="importJson" />
@@ -1414,7 +1415,12 @@ async function importJson(event: Event) {
           <span
             >{{ page.name }} · {{ page.size.width }} × {{ page.size.height }} · 静态模拟预览</span
           >
-          <div class="studio-canvas-settings">
+          <details class="studio-view-menu">
+              <summary aria-label="视图设置">视图设置</summary>
+              <div class="studio-view-popover">
+                <div class="studio-view-section">
+                  <p>网格与吸附</p>
+                  <div class="studio-canvas-settings">
             <label class="studio-canvas-option">
               <input v-model="gridVisible" type="checkbox" />
               显示网格
@@ -1428,7 +1434,10 @@ async function importJson(event: Event) {
               图元吸附
             </label>
           </div>
-          <div class="studio-panel-toggles" aria-label="面板显示">
+                </div>
+                <div class="studio-view-section">
+                  <p>侧栏显示</p>
+                  <div class="studio-panel-toggles" aria-label="面板显示">
             <button
               type="button"
               :aria-pressed="leftPanelVisible"
@@ -1444,6 +1453,9 @@ async function importJson(event: Event) {
               {{ rightPanelVisible ? "隐藏属性" : "显示属性" }}
             </button>
           </div>
+                </div>
+              </div>
+            </details>
           <div class="studio-zoom" aria-label="画布缩放">
             <button type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</button>
             <button type="button" @click="resetCanvasView">{{ zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%` }}</button>
@@ -1458,7 +1470,7 @@ async function importJson(event: Event) {
               :data-rotating="rotating ? 'true' : undefined"
               :viewBox="studioViewBox(page.size, zoom, pan)"
               preserveAspectRatio="xMidYMid meet"
-              aria-label="可编辑 SVG 画布"
+              aria-label="可编辑 SVG 画布；放大后可用中键或 Alt 加空白处拖动平移"
               @pointermove="updatePointer"
               @pointerup="finishPointer"
               @pointercancel="cancelDrag"

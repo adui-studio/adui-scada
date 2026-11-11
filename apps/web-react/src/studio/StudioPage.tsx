@@ -1184,13 +1184,14 @@ export default function StudioPage() {
             <button type="button" onClick={saveDraft}>
               保存草稿
             </button>
-            <button type="button" onClick={toggleAutoSave} aria-pressed={autoSaveEnabled}>
-              {autoSaveEnabled ? "暂停自动保存" : "开启自动保存"}
-            </button>
+            
           </div>
           <details className="studio-file-menu">
             <summary>文件与草稿</summary>
             <div className="studio-file-popover">
+              <button type="button" onClick={toggleAutoSave} aria-pressed={autoSaveEnabled}>
+              {autoSaveEnabled ? "暂停自动保存" : "开启自动保存"}
+            </button>
               <label className="studio-import">
                 导入 JSON
                 <input
@@ -1399,7 +1400,12 @@ export default function StudioPage() {
             <span>
               {page.name} · {page.size.width} × {page.size.height} · 静态模拟预览
             </span>
-            <div className="studio-canvas-settings">
+            <details className="studio-view-menu">
+              <summary aria-label="视图设置">视图设置</summary>
+              <div className="studio-view-popover">
+                <div className="studio-view-section">
+                  <p>网格与吸附</p>
+                  <div className="studio-canvas-settings">
               <label className="studio-canvas-option">
                 <input
                   type="checkbox"
@@ -1425,7 +1431,10 @@ export default function StudioPage() {
                 图元吸附
               </label>
             </div>
-            <div className="studio-panel-toggles" aria-label="面板显示">
+                </div>
+                <div className="studio-view-section">
+                  <p>侧栏显示</p>
+                  <div className="studio-panel-toggles" aria-label="面板显示">
               <button
                 type="button"
                 aria-pressed={leftPanelVisible}
@@ -1441,6 +1450,9 @@ export default function StudioPage() {
                 {rightPanelVisible ? "隐藏属性" : "显示属性"}
               </button>
             </div>
+                </div>
+              </div>
+            </details>
             <div className="studio-zoom" aria-label="画布缩放">
               <button type="button" onClick={() => changeZoom(-0.25)} disabled={zoom <= 0.5}>
                 −
@@ -1477,7 +1489,7 @@ export default function StudioPage() {
                 onPointerDown={(event) => {
                   if (!beginCanvasPan(event)) startMarquee(event);
                 }}
-                aria-label="可编辑 SVG 画布"
+                aria-label="可编辑 SVG 画布；放大后可用中键或 Alt 加空白处拖动平移"
               >
                 <defs>
                   <pattern
