@@ -1,5 +1,6 @@
 import { expect, test } from "vite-plus/test";
 import { waterTreatmentDemoDocument } from "../src/demo-document.ts";
+import { DocumentEditor } from "../src/editor.ts";
 import { studioNodeLocked, studioNodeVisible } from "../src/document.ts";
 import type { ScadaNode } from "../src/document.ts";
 import { buildLayerTree } from "../src/layer-tree.ts";
@@ -124,4 +125,51 @@ test("同类型但未组合的图元不会被误合并成组", () => {
   const tree = buildLayerTree(nodes);
   expect(tree).toHaveLength(2);
   expect(tree.every((entry) => entry.kind === "node")).toBe(true);
+});
+
+test("组合成员的共享选中语义与图层树成员集合一致", () => {
+  const editor = new DocumentEditor(waterTreatmentDemoDocument);
+  editor.selectMany(["tank", "pump"]);
+  const groupId = editor.groupSelected();
+  editor.select("pump");
+  const snapshot = editor.snapshot();
+  const group = buildLayerTree(snapshot.document.pages[0]!.nodes).find(
+    (entry) => entry.kind === "group" && entry.groupId === groupId,
+  );
+  expect(group?.kind).toBe("group");
+  if (group?.kind !== "group") return;
+  const ids = new Set(group.members.map((node) => node.id));
+  expect(snapshot.selectedIds.every((id) => ids.has(id))).toBe(true);
+  expect(snapshot.selectedIds).toHaveLength(group.totalCount);
+});
+
+test("解组后树投影立即恢复独立图元，撤销时重新出现组合", () => {
+  const editor = new DocumentEditor(waterTreatmentDemoDocument);
+  editor.selectMany(["tank", "pump"]);
+  editor.groupSelected();
+  expect(buildLayerTree(editor.snapshot().document.pages[0]!.nodes).some(
+    (entry) => entry.kind === "group",
+  )).toBe(true);
+  editor.ungroupSelected();
+  expect(buildLayerTree(editor.snapshot().document.pages[0]!.nodes).every(
+    (entry) => entry.kind === "node",
+  )).toBe(true);
+  editor.undo();
+  expect(buildLayerTree(editor.snapshot().document.pages[0]!.nodes).some(
+    (entry) => entry.kind === "group",
+  )).toBe(true);
+});
+
+test("只投影指定页面且搜索不会污染可撤销工程文档", () => {
+  const editor = new DocumentEditor(waterTreatmentDemoDocument);
+  editor.createPage("新页面");
+  const id = editor.addNode("label");
+  const before = editor.snapshot();
+  const tree = buildLayerTree(before.document.pages[1]!.nodes, id);
+  expect(tree).toHaveLength(1);
+  expect(tree[0]?.kind).toBe("node");
+  expect(buildLayerTree(before.document.pages[1]!.nodes, "tank")).toEqual([]);
+  expect(editor.snapshot()).toEqual(before);
+  expect(JSON.stringify(before.document)).not.toContain("collapsedGroupIds");
+  expect(JSON.stringify(before.document)).not.toContain("layerSearch");
 });
