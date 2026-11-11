@@ -1237,13 +1237,13 @@ export default function StudioPage() {
           <div className="studio-tree-controls">
             <label className="studio-field">
               搜索图元或组合
-              <input
+              <Input
                 type="search"
                 aria-label="搜索图层"
-                maxLength={128}
+                maxlength={128}
                 value={layerSearch}
                 placeholder="图元 ID、类型、文字或组合 ID"
-                onChange={(event) => setLayerSearch(event.target.value)}
+                onChange={(value) => setLayerSearch(value)}
               />
             </label>
             <Button
