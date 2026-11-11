@@ -352,3 +352,14 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - 继承第十八批的同页原生拖拽和 `moveLayer` 精确排序，组标题用 `anchorNodeId`，成员用自身 ID；组内锁定成员禁用拖动，实际锁定校验仍由共享 Core 负责。搜索与折叠只改变图层呈现，不直接修改 Tag、组 ID、层序或其他业务数据。
 
 决策记录：[ADR-0027](adr/0027-layer-group-tree-projection.md)。本批新增 13 项共享 Core 测试源码，整仓预计 **256 项单元测试**，需维护者 Windows `pnpm run ready` 及双框架浏览器验收。
+
+## 31. V0.2 第二十批：TDesign 双端 UI 与共享几何字段
+
+- 根 `pnpm-workspace.yaml` Catalog 固定 React `tdesign-react@1.18.6`、`tdesign-icons-react@0.6.11`；Vue `tdesign-vue-next@1.20.11`、`tdesign-icons-vue-next@0.4.11`。两个 Web 应用各自依赖对应框架的 UI 与图标包，其他 Workspace 不添加 UI 依赖。
+- React Studio 从 TDesign 按需导入 `Button`/`Input` 及独立 SVG `CloseIcon`；Vue Studio 对等导入 `Button as TButton`、`Input as TInput` 与 Vue 图标组件。分别在 Studio 页面引入官方样式，并通过 `.studio-shell` CSS 变量配置工业深色主题。
+- 首轮将右侧属性面板按钮及显示文案 `Input`、左侧图层搜索和清空操作迁为 TDesign；保持既有 `editor.setSelectedLabel()`、图层过滤与定位、快捷键屏蔽、图元锁定和操作回退行为。
+- 几何表单的字段与中文名称由共享 `GEOMETRY_PROPERTY_FIELDS` 决定，原来的 `FormData` → `updateSelectedTransform()` 数值校验/撤销事务仍不改变；文件输入、Tag 绑定下拉和其他原生控件在后续独立批次迁移。
+- 本批不新增 `ScadaNode` 的外观字段，也不改变严格 JSON Parser、Runtime SVG 输出、Tag GOOD/STALE/BAD 语义或工业网关权限；需另行设计安全的颜色/边框/透明度 Schema。
+- TDesign 安装及版本应通过完整 pnpm lockfile 校验：当前 Agent 环境无法访问 npm Registry，须由维护者联网工作区生成 `pnpm-lock.yaml` 并经检查提交。详见 [ADR-0028](adr/0028-tdesign-dual-framework-ui.md)。
+
+本批新增 1 项共享几何字段回归测试源码，整仓预计 **257 项单测**、**2 项 E2E**、**43 份 Markdown**，所有数字仍需 Windows 实测确认。

@@ -1,0 +1,389 @@
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { setTimeout as pause } from "node:timers/promises";
+
+const targets = [
+  { name: "React", url: process.env.SCADA_REACT_URL || "http://127.0.0.1:5173/" },
+  { name: "Vue", url: process.env.SCADA_VUE_URL || "http://127.0.0.1:5174/" },
+];
+const viewports = [
+  { width: 1440, height: 900 },
+  { width: 1024, height: 768 },
+];
+
+function browserExecutable() {
+  const root = process.env.PROGRAMFILES || "C:\\Program Files";
+  const rootX86 = process.env["PROGRAMFILES(X86)"] || "C:\\Program Files (x86)";
+  const candidates = [
+    process.env.SCADA_BROWSER_PATH,
+    join(root, "Google", "Chrome", "Application", "chrome.exe"),
+    join(root, "Microsoft", "Edge", "Application", "msedge.exe"),
+    join(rootX86, "Google", "Chrome", "Application", "chrome.exe"),
+    join(rootX86, "Microsoft", "Edge", "Application", "msedge.exe"),
+    "/usr/bin/chromium",
+    "/usr/bin/google-chrome",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  ];
+  return candidates.find((candidate) => candidate && existsSync(candidate));
+}
+
+async function waitForPort(directory, child) {
+  const filename = join(directory, "DevToolsActivePort");
+  for (let index = 0; index < 150; index += 1) {
+    if (existsSync(filename)) return Number(readFileSync(filename, "utf8").split("\n")[0]);
+    if (child.exitCode !== null) break;
+    await pause(100);
+  }
+  throw new Error("浏览器调试端口未就绪，请检查 Chrome/Edge 是否可启动");
+}
+
+class ChromeSession {
+  constructor(socket) {
+    this.socket = socket;
+    this.nextId = 0;
+    this.pending = new Map();
+    socket.addEventListener("message", ({ data }) => {
+      const message = JSON.parse(String(data));
+      const task = this.pending.get(message.id);
+      if (!task) return;
+      clearTimeout(task.timeout);
+      this.pending.delete(message.id);
+      if (message.error) task.reject(new Error(message.error.message));
+      else task.resolve(message.result);
+    });
+  }
+
+  send(method, params = {}) {
+    const id = ++this.nextId;
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(
+        () => {
+          this.pending.delete(id);
+          reject(new Error("浏览器指令超时：" + method));
+        },
+        method === "Runtime.evaluate" ? 45000 : 15000,
+      );
+      this.pending.set(id, { resolve, reject, timeout });
+      this.socket.send(JSON.stringify({ id, method, params }));
+    });
+  }
+
+  async evaluate(source) {
+    const data = await this.send("Runtime.evaluate", {
+      expression: source,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (data.exceptionDetails) {
+      throw new Error(
+        data.exceptionDetails.text + "：" + (data.exceptionDetails.exception?.description || ""),
+      );
+    }
+    return data.result.value;
+  }
+}
+
+/** 按真实用户流程从默认运行监控切换到组态编辑，等待异步组件完成渲染。 */
+async function enterStudioInPage() {
+  const waitFor = async (selector, limit) => {
+    const started = Date.now();
+    while (Date.now() - started < limit) {
+      const node = document.querySelector(selector);
+      if (node) return node;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return null;
+  };
+
+  const navigation = await waitFor(".scada-app-nav", 10000);
+  const editorButton = [...(navigation?.querySelectorAll("button") || [])].find(
+    (button) => button.textContent.trim() === "组态编辑",
+  );
+  if (!editorButton) {
+    throw new Error(
+      "未找到组态编辑导航入口；地址：" +
+        location.href +
+        "；标题：" +
+        document.title +
+        "；导航按钮：" +
+        [...(navigation?.querySelectorAll("button") || [])]
+          .map((button) => button.textContent.trim())
+          .join("、"),
+    );
+  }
+
+  if (!document.querySelector(".studio-workspace")) editorButton.click();
+  const workspace = await waitFor(".studio-workspace", 15000);
+  const svg = workspace && (await waitFor(".studio-svg", 5000));
+  if (!workspace || !svg) {
+    throw new Error(
+      "点击组态编辑后未能加载工作台；地址：" +
+        location.href +
+        "；标题：" +
+        document.title +
+        "；导航状态：" +
+        (editorButton.getAttribute("aria-current") || "未激活") +
+        "；页面文本：" +
+        (document.querySelector("#root, #app")?.textContent || "").trim().slice(0, 160),
+    );
+  }
+
+  return { title: document.title, url: location.href };
+}
+
+async function checkStudioInPage() {
+  const findings = [];
+  function verify(name, passed) {
+    findings.push({ name, passed: Boolean(passed) });
+  }
+  function element(selector) {
+    const found = document.querySelector(selector);
+    if (!found) throw new Error("未找到元素：" + selector);
+    return found;
+  }
+  function bounds(found) {
+    const rect = found.getBoundingClientRect();
+    return {
+      left: rect.left,
+      right: rect.right,
+      top: rect.top,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height,
+    };
+  }
+  const near = (a, b, tolerance = 2) => Math.abs(a - b) <= tolerance;
+  const settle = async () => {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  };
+  const workspace = element(".studio-workspace");
+  const stage = element(".studio-stage");
+  const canvas = element(".studio-canvas-scroll");
+  const board = element(".studio-canvas-board");
+  const svg = element(".studio-svg");
+  const layers = element(".studio-panel-layers");
+  const properties = element(".studio-panel-properties");
+  await settle();
+
+  const canvasRect = bounds(canvas);
+  const boardRect = bounds(board);
+  const svgRect = bounds(svg);
+  verify("页面无外层滚动条", document.documentElement.scrollHeight <= window.innerHeight + 2);
+  verify(
+    "中央画布无滚动条",
+    canvas.scrollHeight <= canvas.clientHeight + 2 && canvas.scrollWidth <= canvas.clientWidth + 2,
+  );
+  verify(
+    "画板与画布四边对齐",
+    near(canvasRect.left, boardRect.left) &&
+      near(canvasRect.right, boardRect.right) &&
+      near(canvasRect.top, boardRect.top) &&
+      near(canvasRect.bottom, boardRect.bottom),
+  );
+  verify(
+    "SVG 与画板四边对齐",
+    near(boardRect.left, svgRect.left) &&
+      near(boardRect.right, svgRect.right) &&
+      near(boardRect.top, svgRect.top) &&
+      near(boardRect.bottom, svgRect.bottom),
+  );
+  verify("左侧栏固定 252px", near(bounds(layers).width, 252));
+  verify("右侧栏固定 320px", near(bounds(properties).width, 320));
+  verify("画布占据剩余宽度", near(bounds(workspace).width - 252 - 320, bounds(stage).width));
+
+  const viewBox = svg.viewBox.baseVal;
+  const grid = svg.querySelector('rect[fill="url(#scada-studio-grid)"]');
+  verify(
+    "工作区网格完整覆盖 viewBox",
+    Boolean(grid) &&
+      ["x", "y", "width", "height"].every((key) =>
+        near(Number(grid.getAttribute(key)), viewBox[key], 0.001),
+      ),
+  );
+  verify(
+    "SVG 世界坐标比例匹配视口",
+    near(viewBox.width / viewBox.height, svgRect.width / svgRect.height, 0.002),
+  );
+  const boundary = svg.querySelector(".studio-page-boundary");
+  verify(
+    "工程页面边界独立显示",
+    Boolean(boundary) &&
+      Number(boundary.getAttribute("width")) > 0 &&
+      Number(boundary.getAttribute("height")) > 0,
+  );
+
+  const zoomButtons = [...element(".studio-zoom").querySelectorAll("button")];
+  const originalWidth = svg.viewBox.baseVal.width;
+  zoomButtons[2]?.click();
+  await settle();
+  verify(
+    "放大只改变视图，不改变 SVG DOM 尺寸",
+    svg.viewBox.baseVal.width < originalWidth && near(bounds(svg).width, svgRect.width),
+  );
+  zoomButtons[1]?.click();
+  await settle();
+  verify("适应按钮恢复原始视图", near(svg.viewBox.baseVal.width, originalWidth, 0.01));
+
+  const menu = element(".studio-view-menu");
+  menu.open = true;
+  await settle();
+  const label = [...menu.querySelectorAll("label")].find((item) =>
+    item.textContent.includes("显示网格"),
+  );
+  const gridInput = label?.querySelector('input[type="checkbox"]');
+  if (gridInput?.checked) {
+    gridInput.click();
+    await settle();
+    verify("网格可关闭", !svg.querySelector('rect[fill="url(#scada-studio-grid)"]'));
+    gridInput.click();
+    await settle();
+    verify("网格可恢复", Boolean(svg.querySelector('rect[fill="url(#scada-studio-grid)"]')));
+  } else {
+    verify("存在网格显示控制", Boolean(gridInput));
+  }
+
+  const toggle = (name) =>
+    [...menu.querySelectorAll("button")].find((item) => item.textContent.trim() === name);
+  const initialWidth = bounds(stage).width;
+  toggle("隐藏图层")?.click();
+  await settle();
+  verify("隐藏图层后画布自动扩展", bounds(stage).width > initialWidth + 200);
+  toggle("显示图层")?.click();
+  await settle();
+  verify("恢复图层后画布宽度恢复", near(bounds(stage).width, initialWidth));
+  toggle("隐藏属性")?.click();
+  await settle();
+  verify("隐藏属性后画布自动扩展", bounds(stage).width > initialWidth + 260);
+  toggle("显示属性")?.click();
+  await settle();
+  verify("恢复属性后画布宽度恢复", near(bounds(stage).width, initialWidth));
+  menu.open = false;
+
+  const firstLayer = document.querySelector(".studio-layer-tree .studio-layer");
+  firstLayer?.click();
+  await settle();
+  verify("点击图层可更新属性面板", Boolean(firstLayer) && /已选\s*1/.test(properties.textContent));
+
+  return { findings, viewport: { width: innerWidth, height: innerHeight } };
+}
+
+async function main() {
+  const browserPath = browserExecutable();
+  assert.ok(browserPath, "未找到 Chrome/Edge，可设置 SCADA_BROWSER_PATH 指定浏览器路径");
+  for (const target of targets) {
+    try {
+      const response = await fetch(target.url, { signal: AbortSignal.timeout(3000) });
+      assert.ok(response.ok, "应用页面无法访问");
+    } catch (error) {
+      throw new Error(target.name + " 开发服务未启动：" + target.url, { cause: error });
+    }
+  }
+
+  const userData = mkdtempSync(join(tmpdir(), "adui-scada-browser-check-"));
+  const args = [
+    "--headless=new",
+    "--disable-gpu",
+    "--disable-dev-shm-usage",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--no-proxy-server",
+    "--remote-debugging-port=0",
+    "--user-data-dir=" + userData,
+    "about:blank",
+  ];
+  if (process.getuid?.() === 0) args.unshift("--no-sandbox");
+  const child = spawn(browserPath, args, { stdio: "ignore" });
+  let session;
+  try {
+    const port = await waitForPort(userData, child);
+    const response = await fetch("http://127.0.0.1:" + port + "/json/new?about:blank", {
+      method: "PUT",
+    });
+    assert.ok(response.ok, "无法创建浏览器调试页面");
+    const tab = await response.json();
+    const socket = new WebSocket(tab.webSocketDebuggerUrl);
+    await new Promise((resolve, reject) => {
+      socket.addEventListener("open", resolve, { once: true });
+      socket.addEventListener("error", reject, { once: true });
+    });
+    session = new ChromeSession(socket);
+    await session.send("Page.enable");
+    await session.send("Runtime.enable");
+    let failed = 0;
+    for (const target of targets) {
+      for (const viewport of viewports) {
+        await session.send("Emulation.setDeviceMetricsOverride", {
+          width: viewport.width,
+          height: viewport.height,
+          deviceScaleFactor: 1,
+          mobile: false,
+        });
+        // 每个视口使用独立的本地验收 URL，避免读取到上一次导航的加载状态。
+        const navigationUrl = new URL(target.url);
+        navigationUrl.searchParams.set(
+          "scada_browser_check",
+          `${target.name}-${viewport.width}x${viewport.height}`,
+        );
+        await session.send("Page.navigate", { url: navigationUrl.href });
+        let loaded = false;
+        for (let attempt = 0; attempt < 40; attempt += 1) {
+          await pause(150);
+          try {
+            loaded = await session.evaluate(
+              "location.href === " +
+                JSON.stringify(navigationUrl.href) +
+                ' && document.readyState === "complete"',
+            );
+            if (loaded) break;
+          } catch {
+            // 页面导航期间旧的执行上下文可能已销毁。
+          }
+        }
+        if (!loaded) {
+          const pageUrl = await session.evaluate("location.href");
+          throw new Error(
+            target.name + " 页面导航失败：" + navigationUrl.href + "；浏览器实际地址：" + pageUrl,
+          );
+        }
+        await session.evaluate("(" + enterStudioInPage.toString() + ")()");
+        const data = await session.evaluate("(" + checkStudioInPage.toString() + ")()");
+        const errors = data.findings.filter((entry) => !entry.passed);
+        failed += errors.length;
+        process.stdout.write(
+          target.name +
+            " " +
+            viewport.width +
+            "x" +
+            viewport.height +
+            " " +
+            (errors.length ? "未通过" : "通过") +
+            " (" +
+            (data.findings.length - errors.length) +
+            "/" +
+            data.findings.length +
+            ")\n",
+        );
+        for (const error of errors) process.stderr.write("  - " + error.name + "\n");
+      }
+    }
+    assert.equal(failed, 0, "浏览器回归项存在失败");
+  } finally {
+    session?.socket.close();
+    child.kill();
+    await pause(500);
+    try {
+      rmSync(userData, { recursive: true, force: true, maxRetries: 3, retryDelay: 150 });
+    } catch {
+      // 浏览器子进程可能仍在关闭临时用户目录。
+    }
+  }
+}
+
+main().catch((error) => {
+  process.stderr.write("错误：" + error.message + "\n");
+  process.exitCode = 1;
+});

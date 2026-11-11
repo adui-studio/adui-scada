@@ -11,9 +11,13 @@
     "build:desktop": "vp build --mode desktop"
   },
   "dependencies": {
+    "@adui/normalize.css": "catalog:",
     "@adui/scada-core": "workspace:*",
     "@adui/scada-draft-storage": "workspace:*",
     "@adui/scada-runtime": "workspace:*",
+    "@adui/tailwind": "workspace:*",
+    "tdesign-icons-vue-next": "catalog:",
+    "tdesign-vue-next": "catalog:",
     "vue": "catalog:"
   },
   "devDependencies": {

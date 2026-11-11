@@ -128,3 +128,11 @@ Vue/React Studio 的图层面板增加一层平面组合树：同一 `groupId` �
 树结构由共享 `buildLayerTree` 从当前页 `nodes[]` 动态派生，搜索和折叠只在 UI 会话中，不写工程 JSON、IndexedDB 或撤销历史。旧工程中成员非连续的组合标记「层序不连续」，不会因为展示树自动重排；拖动仍调用原精确排序命令并保护锁定组。保留 Schema `0.2.0`、Tag、几何、Runtime 及双框架工程互通。详见 [ADR-0027](adr/0027-layer-group-tree-projection.md)。
 
 本批不包含真实的嵌套组合、持久化组文件夹、独立图层名称、搜索结果在画布自动居中或工业设备控制。
+
+## V0.2 第二十批：双框架 TDesign 组件选型与属性面板基础迁移（FR-005 / FR-006 / FR-013 局部）
+
+维护者确认 React 端统一使用 `tdesign-react` + `tdesign-icons-react`，Vue 3 端统一使用 `tdesign-vue-next` + `tdesign-icons-vue-next`。两套 UI 组件库在当前工程中逐步替换现有原生控件，依赖版本由根 pnpm Catalog 管理，不新增 Ant Design。首先迁移 Studio 右侧属性操作按钮、显示文案输入和左侧图层搜索输入与清除图标，保留此前所有共享 Core 编辑命令、锁定/隐藏、撤销/重做、IndexedDB 草稿和 SVG Runtime。
+
+`GEOMETRY_PROPERTY_FIELDS` 统一放在共享 Core，为 React/Vue 几何属性表单提供完全相同的字段与中文标签。现阶段几何输入与 Tag 下拉继续使用原有受验证表单逻辑；颜色、边框、透明度须待工业 Tag 质量显示语义和共享 SVG 白名单定稿后再实现，不得把未完成能力写成已实现。设计与安装边界见 [ADR-0028](adr/0028-tdesign-dual-framework-ui.md)。
+
+本批依赖需要维护者在联网 Windows 先更新并提交锁文件，方可执行冻结锁文件安装和完整 `pnpm run ready`。

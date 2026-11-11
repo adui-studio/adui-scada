@@ -12,6 +12,7 @@
     "typecheck:web": "pnpm --filter @adui/scada-web-react run typecheck && pnpm --filter @adui/scada-web-vue run typecheck && pnpm --filter @adui/scada-draft-storage run typecheck",
     "test": "vp test run",
     "test:unit": "vp test run",
+    "test:browser": "node scripts/test-studio-browser.mjs",
     "test:core": "vp test run packages/core/test",
     "test:runtime": "vp test run packages/runtime/test",
     "deps:check": "node scripts/check-dependency-catalog.mjs",

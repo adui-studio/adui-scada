@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
+import { Button as TButton, Input as TInput } from "tdesign-vue-next";
+import { CloseIcon } from "tdesign-icons-vue-next";
+import "tdesign-vue-next/es/style/index.css";
 import {
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
@@ -9,11 +12,13 @@ import {
   studioNodeLocked,
   studioNodeVisible,
   buildLayerTree,
+  studioViewportRect,
 } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
 import {
   DEFAULT_GRID_SIZE,
+  GEOMETRY_PROPERTY_FIELDS,
   DocumentEditor,
   editableTagSlot,
   RESIZE_HANDLES,
@@ -35,6 +40,7 @@ import type {
 } from "@adui/scada-core/editor";
 import { svgDataUrl } from "@adui/scada-runtime";
 import "./studio.css";
+import "@adui/tailwind/studio.css";
 
 const previewTags = new WaterTreatmentSimulator().next(new Date("2026-11-09T00:00:00Z"));
 function getLegacyStorage() {
@@ -46,13 +52,6 @@ function getLegacyStorage() {
 }
 const drafts = new DexieDraftRepository({ legacyStorage: getLegacyStorage() });
 const maxFileSize = 2 * 1024 * 1024;
-const geometryFields = [
-  ["x", "X 坐标"],
-  ["y", "Y 坐标"],
-  ["width", "宽度"],
-  ["height", "高度"],
-  ["rotation", "旋转角度（度）"],
-] as const;
 const editor = new DocumentEditor(waterTreatmentDemoDocument);
 const state = shallowRef(editor.snapshot());
 const preview = shallowRef<{ id: string; x: number; y: number } | null>(null);
@@ -75,10 +74,23 @@ let autoSaveSession: DraftAutoSaveSession | null = null;
 let draftActionInProgress = false;
 let unsubscribeDraft: (() => void) | null = null;
 const zoom = ref(1);
+const pan = ref({ x: 0, y: 0 });
+const viewportSize = ref({ width: 0, height: 0 });
 const gridVisible = ref(true);
 const gridSnap = ref(true);
 const nodeSnap = ref(true);
+const leftPanelVisible = ref(true);
+const rightPanelVisible = ref(true);
 const svgRef = ref<SVGSVGElement | null>(null);
+let canvasResizeObserver: ResizeObserver | null = null;
+let activePan: {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  originX: number;
+  originY: number;
+  scale: number;
+} | null = null;
 
 interface MarqueeState {
   pointerId: number;
@@ -117,6 +129,13 @@ const page = computed(() => {
   if (!result) throw new Error("工程文档不包含页面");
   return result;
 });
+const canvasViewport = computed(() => ({
+  width: viewportSize.value.width || page.value.size.width,
+  height: viewportSize.value.height || page.value.size.height,
+}));
+const visibleRect = computed(() =>
+  studioViewportRect(page.value.size, canvasViewport.value, zoom.value, pan.value),
+);
 const selected = computed(() =>
   page.value.nodes.find((node) => node.id === state.value.selectedId),
 );
@@ -368,8 +387,21 @@ onMounted(() => {
   window.addEventListener("keydown", handleKey);
   subscribeDraft();
   void checkLocalDraft();
+
+  const canvas = svgRef.value;
+  if (!canvas) return;
+  canvasResizeObserver = new ResizeObserver(([entry]) => {
+    if (!entry) return;
+    const { width, height } = entry.contentRect;
+    if (width <= 0 || height <= 0) return;
+    if (viewportSize.value.width === width && viewportSize.value.height === height) return;
+    viewportSize.value = { width, height };
+  });
+  canvasResizeObserver.observe(canvas);
 });
 onUnmounted(() => {
+  canvasResizeObserver?.disconnect();
+  canvasResizeObserver = null;
   window.removeEventListener("keydown", handleKey);
   unsubscribeDraft?.();
   void pauseAutoSave().then(() => drafts.close());
@@ -461,12 +493,14 @@ function finishMarquee(event: PointerEvent) {
 }
 
 function updatePointer(event: PointerEvent) {
+  if (updateCanvasPan(event)) return;
   updateDrag(event);
   updateMarquee(event);
   updateGeometry(event);
 }
 
 function finishPointer(event: PointerEvent) {
+  if (finishCanvasPan(event)) return;
   finishDrag(event);
   finishMarquee(event);
   finishGeometry(event);
@@ -495,6 +529,7 @@ function switchPage(pageId: string) {
     layerSearch.value = "";
     cancelDrag();
     zoom.value = 1;
+    pan.value = { x: 0, y: 0 };
     refresh();
     notice.value = "已切换编辑页面；页面切换不会修改工程草稿";
   } catch (error) {
@@ -712,7 +747,60 @@ function layer(action: LayerAction) {
 }
 
 function changeZoom(delta: number) {
-  zoom.value = Math.max(0.5, Math.min(2, Math.round((zoom.value + delta) * 100) / 100));
+  const nextZoom = Math.max(0.5, Math.min(2, Math.round((zoom.value + delta) * 100) / 100));
+  zoom.value = nextZoom;
+  pan.value = studioViewportRect(page.value.size, canvasViewport.value, nextZoom, pan.value).pan;
+}
+
+function resetCanvasView() {
+  zoom.value = 1;
+  pan.value = { x: 0, y: 0 };
+}
+
+// 中键或 Alt + 画布空白处拖动，避免改变工程图元坐标。
+function beginCanvasPan(event: PointerEvent): boolean {
+  if (
+    zoom.value <= 1 ||
+    !(
+      event.button === 1 ||
+      (event.button === 0 && event.altKey && event.target === event.currentTarget)
+    )
+  ) {
+    return false;
+  }
+  const matrix = svgRef.value?.getScreenCTM();
+  if (!matrix || matrix.a === 0) return false;
+  activePan = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    originX: visibleRect.value.pan.x,
+    originY: visibleRect.value.pan.y,
+    scale: matrix.a,
+  };
+  svgRef.value?.setPointerCapture(event.pointerId);
+  event.preventDefault();
+  return true;
+}
+
+function updateCanvasPan(event: PointerEvent): boolean {
+  const dragging = activePan;
+  if (!dragging || dragging.pointerId !== event.pointerId) return false;
+  pan.value = studioViewportRect(page.value.size, canvasViewport.value, zoom.value, {
+    x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
+    y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
+  }).pan;
+  return true;
+}
+
+function finishCanvasPan(event: PointerEvent): boolean {
+  if (!activePan || activePan.pointerId !== event.pointerId) return false;
+  activePan = null;
+  return true;
+}
+
+function startCanvasPointer(event: PointerEvent) {
+  if (!beginCanvasPan(event)) startMarquee(event);
 }
 
 function canvasPoint(clientX: number, clientY: number) {
@@ -884,6 +972,7 @@ function finishGeometry(event: PointerEvent) {
 }
 
 function cancelDrag() {
+  activePan = null;
   activeDrag = null;
   activeMarquee = null;
   activeGeometry = null;
@@ -928,7 +1017,7 @@ function redo() {
 function changeGeometry(event: Event) {
   const values = new FormData(event.currentTarget as HTMLFormElement);
   const patch: NodeTransformPatch = {};
-  for (const [key, label] of geometryFields) {
+  for (const [key, label] of GEOMETRY_PROPERTY_FIELDS) {
     const raw = values.get(key);
     if (typeof raw !== "string" || raw.trim() === "") {
       notice.value = `请填写${label}`;
@@ -1080,34 +1169,37 @@ async function importJson(event: Event) {
 </script>
 
 <template>
-  <main class="studio-shell">
+  <main class="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
     <header class="studio-toolbar">
       <div>
         <p class="scada-eyebrow">ADui SCADA · V0.2 Studio</p>
         <h1>SVG 组态编辑器</h1>
       </div>
       <div class="studio-actions">
-        <button type="button" :disabled="!state.canUndo" @click="undo">撤销</button>
-        <button type="button" :disabled="!state.canRedo" @click="redo">重做</button>
-        <label class="studio-import">
-          导入 JSON
-          <input type="file" accept=".json,application/json" @change="importJson" />
-        </label>
-        <button type="button" @click="exportJson">导出 JSON</button>
-        <button type="button" @click="saveDraft">保存草稿</button>
-        <button type="button" :aria-pressed="autoSaveEnabled" @click="toggleAutoSave">
-          {{ autoSaveEnabled ? "暂停自动保存" : "开启自动保存" }}
-        </button>
-        <button type="button" :disabled="!hasSavedDraft" @click="restoreDraft">恢复草稿</button>
-        <button type="button" :disabled="!hasSavedDraft" @click="clearDraft">清除草稿</button>
+        <div class="studio-history-actions">
+          <button type="button" :disabled="!state.canUndo" @click="undo">撤销</button>
+          <button type="button" :disabled="!state.canRedo" @click="redo">重做</button>
+        </div>
+        <div class="studio-save-actions">
+          <button type="button" @click="saveDraft">保存草稿</button>
+        </div>
+        <details class="studio-file-menu">
+          <summary>文件与草稿</summary>
+          <div class="studio-file-popover">
+            <button type="button" :aria-pressed="autoSaveEnabled" @click="toggleAutoSave">
+              {{ autoSaveEnabled ? "暂停自动保存" : "开启自动保存" }}
+            </button>
+            <label class="studio-import">
+              导入 JSON
+              <input type="file" accept=".json,application/json" @change="importJson" />
+            </label>
+            <button type="button" @click="exportJson">导出 JSON</button>
+            <button type="button" :disabled="!hasSavedDraft" @click="restoreDraft">恢复草稿</button>
+            <button type="button" :disabled="!hasSavedDraft" @click="clearDraft">清除草稿</button>
+          </div>
+        </details>
       </div>
     </header>
-    <p role="status" class="studio-notice">
-      {{ notice }}
-      <span v-if="hasSavedDraft && !autoSaveEnabled">
-        · 已发现本地草稿，可点击「恢复草稿」确认加载
-      </span>
-    </p>
     <div class="studio-page-bar" aria-label="工程页面管理">
       <div class="studio-page-tabs" aria-label="工程页面">
         <button
@@ -1120,82 +1212,83 @@ async function importJson(event: Event) {
           {{ item.name }}
         </button>
       </div>
-      <div class="studio-page-actions">
-        <button type="button" :disabled="state.document.pages.length >= 100" @click="createPage">
-          + 新建页面
-        </button>
-        <button type="button" :disabled="state.document.pages.length >= 100" @click="duplicatePage">
-          复制页面
-        </button>
-        <button type="button" :disabled="activePageIndex <= 0" @click="movePage('previous')">
-          页面前移
-        </button>
-        <button
-          type="button"
-          :disabled="activePageIndex >= state.document.pages.length - 1"
-          @click="movePage('next')"
-        >
-          页面后移
-        </button>
-        <button type="button" @click="renamePage">重命名</button>
-        <button type="button" :disabled="state.document.pages.length <= 1" @click="deletePage">
-          删除当前页
-        </button>
-      </div>
+      <details class="studio-page-menu">
+        <summary>页面管理</summary>
+        <div class="studio-page-actions">
+          <button type="button" :disabled="state.document.pages.length >= 100" @click="createPage">
+            + 新建页面
+          </button>
+          <button
+            type="button"
+            :disabled="state.document.pages.length >= 100"
+            @click="duplicatePage"
+          >
+            复制页面
+          </button>
+          <button type="button" :disabled="activePageIndex <= 0" @click="movePage('previous')">
+            页面前移
+          </button>
+          <button
+            type="button"
+            :disabled="activePageIndex >= state.document.pages.length - 1"
+            @click="movePage('next')"
+          >
+            页面后移
+          </button>
+          <button type="button" @click="renamePage">重命名</button>
+          <button type="button" :disabled="state.document.pages.length <= 1" @click="deletePage">
+            删除当前页
+          </button>
+        </div>
+      </details>
     </div>
-    <div class="studio-workspace">
-      <aside class="studio-panel" aria-label="图元列表">
-        <h2>图元 · {{ page.nodes.length }}</h2>
-        <p class="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
+    <div
+      class="studio-workspace"
+      :data-left-collapsed="!leftPanelVisible"
+      :data-right-collapsed="!rightPanelVisible"
+    >
+      <aside class="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
+        <div class="studio-pane-heading">
+          <h2>资源与图层</h2>
+          <span class="studio-count">{{ page.nodes.length }}</span>
+        </div>
+        <div class="studio-library-label">图元库 · 点击添加</div>
         <div class="studio-add">
           <button type="button" @click="addSymbol('tank')">+ 水箱</button>
           <button type="button" @click="addSymbol('pump')">+ 水泵</button>
           <button type="button" @click="addSymbol('pipe')">+ 管道</button>
           <button type="button" @click="addSymbol('label')">+ 文本</button>
         </div>
-        <div class="studio-copy-tools">
-          <label class="studio-field">
-            复制选中图元到
-            <select
-              aria-label="跨页面复制目标"
-              :value="copyTargetPageId"
-              :disabled="copyTargetPages.length === 0"
-              @change="selectCopyTarget"
-            >
-              <option v-if="copyTargetPages.length === 0" value="">暂无其他页面</option>
-              <option v-for="item in copyTargetPages" :key="item.id" :value="item.id">
-                {{ item.name }}
-              </option>
-            </select>
-          </label>
-          <button
-            type="button"
-            :disabled="state.selectedIds.length === 0 || !copyTargetPageId"
-            @click="copySelectedToPage"
-          >
-            复制选中图元
-          </button>
-        </div>
+        <div class="studio-tree-section-title">图层列表</div>
         <div class="studio-tree-controls">
           <label class="studio-field">
             搜索图元或组合
-            <input
+            <TInput
               v-model="layerSearch"
               type="search"
               aria-label="搜索图层"
-              maxlength="128"
+              :maxlength="128"
               placeholder="图元 ID、类型、文字或组合 ID"
             />
           </label>
-          <button
-            type="button"
+          <TButton
+            variant="outline"
+            size="small"
             :disabled="state.selectedIds.length === 0"
             @click="locateSelectedLayer"
           >
             定位选中图层
-          </button>
+          </TButton>
+          <TButton
+            variant="text"
+            size="small"
+            :disabled="layerSearch.length === 0"
+            @click="layerSearch = ''"
+          >
+            <CloseIcon /> 清除搜索
+          </TButton>
         </div>
-        <div ref="layerTreeRef" class="studio-layer-tree" aria-label="图层树">
+        <div ref="layerTreeRef" class="studio-layer-tree min-w-0" aria-label="图层树">
           <p v-if="layerEntries.length === 0" class="studio-tree-empty">
             {{ page.nodes.length === 0 ? "当前页面暂无图元" : "没有匹配的图元或组合" }}
           </p>
@@ -1312,330 +1405,239 @@ async function importJson(event: Event) {
             </button>
           </template>
         </div>
+        <details class="studio-side-more">
+          <summary>跨页操作与使用帮助</summary>
+          <div class="studio-copy-tools">
+            <label class="studio-field">
+              复制选中图元到
+              <select
+                aria-label="跨页面复制目标"
+                :value="copyTargetPageId"
+                :disabled="copyTargetPages.length === 0"
+                @change="selectCopyTarget"
+              >
+                <option v-if="copyTargetPages.length === 0" value="">暂无其他页面</option>
+                <option v-for="item in copyTargetPages" :key="item.id" :value="item.id">
+                  {{ item.name }}
+                </option>
+              </select>
+            </label>
+            <button
+              type="button"
+              :disabled="state.selectedIds.length === 0 || !copyTargetPageId"
+              @click="copySelectedToPage"
+            >
+              复制选中图元
+            </button>
+          </div>
+          <p class="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
+        </details>
       </aside>
-      <section class="studio-stage" aria-label="组态画布">
+      <section class="studio-stage min-h-0 min-w-0" aria-label="组态画布">
         <div class="studio-stage-caption">
           <span
             >{{ page.name }} · {{ page.size.width }} × {{ page.size.height }} · 静态模拟预览</span
           >
-          <div class="studio-canvas-settings">
-            <label class="studio-canvas-option">
-              <input v-model="gridVisible" type="checkbox" />
-              显示网格
-            </label>
-            <label class="studio-canvas-option">
-              <input v-model="gridSnap" type="checkbox" />
-              网格吸附
-            </label>
-            <label class="studio-canvas-option">
-              <input v-model="nodeSnap" type="checkbox" />
-              图元吸附
-            </label>
-          </div>
+          <details class="studio-view-menu">
+            <summary aria-label="视图设置">视图设置</summary>
+            <div class="studio-view-popover">
+              <div class="studio-view-section">
+                <p>网格与吸附</p>
+                <div class="studio-canvas-settings">
+                  <label class="studio-canvas-option">
+                    <input v-model="gridVisible" type="checkbox" />
+                    显示网格
+                  </label>
+                  <label class="studio-canvas-option">
+                    <input v-model="gridSnap" type="checkbox" />
+                    网格吸附
+                  </label>
+                  <label class="studio-canvas-option">
+                    <input v-model="nodeSnap" type="checkbox" />
+                    图元吸附
+                  </label>
+                </div>
+              </div>
+              <div class="studio-view-section">
+                <p>侧栏显示</p>
+                <div class="studio-panel-toggles" aria-label="面板显示">
+                  <button
+                    type="button"
+                    :aria-pressed="leftPanelVisible"
+                    @click="leftPanelVisible = !leftPanelVisible"
+                  >
+                    {{ leftPanelVisible ? "隐藏图层" : "显示图层" }}
+                  </button>
+                  <button
+                    type="button"
+                    :aria-pressed="rightPanelVisible"
+                    @click="rightPanelVisible = !rightPanelVisible"
+                  >
+                    {{ rightPanelVisible ? "隐藏属性" : "显示属性" }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </details>
           <div class="studio-zoom" aria-label="画布缩放">
             <button type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</button>
-            <button type="button" @click="zoom = 1">{{ Math.round(zoom * 100) }}%</button>
+            <button type="button" @click="resetCanvasView">
+              {{ zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%` }}
+            </button>
             <button type="button" :disabled="zoom >= 2" @click="changeZoom(0.25)">+</button>
           </div>
         </div>
-        <svg
-          ref="svgRef"
-          class="studio-svg"
-          :data-rotating="rotating ? 'true' : undefined"
-          :style="{ width: `${zoom * 100}%` }"
-          :viewBox="`0 0 ${page.size.width} ${page.size.height}`"
-          aria-label="可编辑 SVG 画布"
-          @pointermove="updatePointer"
-          @pointerup="finishPointer"
-          @pointercancel="cancelDrag"
-          @pointerdown.self="startMarquee"
-        >
-          <defs>
-            <pattern
-              id="scada-studio-grid"
-              :width="DEFAULT_GRID_SIZE"
-              :height="DEFAULT_GRID_SIZE"
-              patternUnits="userSpaceOnUse"
+        <div class="studio-canvas-scroll" tabindex="0" aria-label="组态网格工作区">
+          <div class="studio-canvas-board">
+            <svg
+              ref="svgRef"
+              class="studio-svg"
+              :data-rotating="rotating ? 'true' : undefined"
+              :viewBox="`${visibleRect.x} ${visibleRect.y} ${visibleRect.width} ${visibleRect.height}`"
+              preserveAspectRatio="xMidYMid meet"
+              aria-label="可编辑 SVG 画布；放大后可用中键或 Alt 加空白处拖动平移"
+              @pointermove="updatePointer"
+              @pointerup="finishPointer"
+              @pointercancel="cancelDrag"
+              @pointerdown="startCanvasPointer"
             >
-              <path
-                :d="`M ${DEFAULT_GRID_SIZE} 0 L 0 0 0 ${DEFAULT_GRID_SIZE}`"
-                fill="none"
-                stroke="#8295ac"
-                stroke-width="0.8"
-                opacity="0.45"
-              />
-            </pattern>
-          </defs>
-          <image
-            :href="imageUrl"
-            :width="page.size.width"
-            :height="page.size.height"
-            pointer-events="none"
-          />
-          <rect
-            v-if="gridVisible"
-            :width="page.size.width"
-            :height="page.size.height"
-            fill="url(#scada-studio-grid)"
-            pointer-events="none"
-          />
-          <g v-for="node in displayNodes" :key="node.id" :transform="displayTransform(node.id)">
-            <rect
-              role="button"
-              tabindex="0"
-              :aria-label="`选择并拖动 ${node.id}`"
-              :x="node.transform.x"
-              :y="node.transform.y"
-              :width="node.transform.width"
-              :height="node.transform.height"
-              fill="transparent"
-              :stroke="
-                state.selectedId === node.id
-                  ? '#f0ae4d'
-                  : state.selectedIds.includes(node.id)
-                    ? '#39c9ba'
-                    : 'transparent'
-              "
-              stroke-width="2"
-              stroke-dasharray="6 4"
-              class="studio-hitbox"
-              @pointerdown="beginDrag($event, node.id)"
-              @keydown.enter.prevent="selectNode(node.id, $event.shiftKey)"
-              @keydown.space.prevent="selectNode(node.id, $event.shiftKey)"
-            />
-            <template
-              v-if="
-                state.selectedIds.length === 1 &&
-                state.selectedId === node.id &&
-                !studioNodeLocked(node)
-              "
-            >
-              <rect
-                v-for="handle in RESIZE_HANDLES"
-                :key="handle"
-                class="studio-resize-handle"
-                :data-handle="handle"
-                :aria-label="`缩放图元${RESIZE_HANDLE_LABELS[handle]}`"
-                :x="resizeHandlePosition(node.transform, handle).x - 5"
-                :y="resizeHandlePosition(node.transform, handle).y - 5"
-                :width="10"
-                :height="10"
-                @pointerdown.stop="beginGeometry($event, handle)"
-              >
-                <title>按住 Shift 保持宽高比</title>
-              </rect>
-              <line
-                class="studio-rotation-stem"
-                :x1="node.transform.x + node.transform.width / 2"
-                :x2="node.transform.x + node.transform.width / 2"
-                :y1="node.transform.y"
-                :y2="node.transform.y - 26"
+              <defs>
+                <pattern
+                  id="scada-studio-grid"
+                  :width="DEFAULT_GRID_SIZE"
+                  :height="DEFAULT_GRID_SIZE"
+                  patternUnits="userSpaceOnUse"
+                >
+                  <path
+                    :d="`M ${DEFAULT_GRID_SIZE} 0 L 0 0 0 ${DEFAULT_GRID_SIZE}`"
+                    fill="none"
+                    stroke="#8295ac"
+                    stroke-width="0.8"
+                    opacity="0.45"
+                  />
+                </pattern>
+              </defs>
+              <image
+                :href="imageUrl"
+                :width="page.size.width"
+                :height="page.size.height"
                 pointer-events="none"
               />
-              <circle
-                class="studio-rotation-handle"
-                aria-label="旋转图元，按住 Shift 可按 15 度吸附"
-                :cx="node.transform.x + node.transform.width / 2"
-                :cy="node.transform.y - 26"
-                :r="7"
-                @pointerdown.stop="beginGeometry($event, 'rotate')"
+              <rect
+                v-if="gridVisible"
+                :x="visibleRect.x"
+                :y="visibleRect.y"
+                :width="visibleRect.width"
+                :height="visibleRect.height"
+                fill="url(#scada-studio-grid)"
+                pointer-events="none"
               />
-            </template>
-          </g>
-          <line
-            v-if="snapResult?.verticalGuide != null"
-            class="studio-alignment-guide"
-            :x1="snapResult.verticalGuide"
-            :x2="snapResult.verticalGuide"
-            :y1="0"
-            :y2="page.size.height"
-            pointer-events="none"
-          />
-          <line
-            v-if="snapResult?.horizontalGuide != null"
-            class="studio-alignment-guide"
-            :x1="0"
-            :x2="page.size.width"
-            :y1="snapResult.horizontalGuide"
-            :y2="snapResult.horizontalGuide"
-            pointer-events="none"
-          />
-          <rect
-            v-if="marquee"
-            class="studio-marquee"
-            :x="Math.min(marquee.startX, marquee.x)"
-            :y="Math.min(marquee.startY, marquee.y)"
-            :width="Math.abs(marquee.x - marquee.startX)"
-            :height="Math.abs(marquee.y - marquee.startY)"
-            pointer-events="none"
-          />
-        </svg>
-      </section>
-      <aside class="studio-panel" aria-label="图元属性">
-        <h2>属性 · 已选 {{ state.selectedIds.length }}</h2>
-        <div class="studio-toolbox">
-          <div class="studio-tool-group" aria-label="图层锁定与可见性">
-            <button
-              type="button"
-              :disabled="state.selectedIds.length === 0"
-              @click="changeSelectedLocked(true)"
-            >
-              锁定所选
-            </button>
-            <button
-              type="button"
-              :disabled="state.selectedIds.length === 0"
-              @click="changeSelectedLocked(false)"
-            >
-              解锁所选
-            </button>
-            <button
-              type="button"
-              :disabled="state.selectedIds.length === 0 || hasLockedSelection"
-              @click="changeSelectedVisible(false)"
-            >
-              隐藏所选
-            </button>
-            <button
-              type="button"
-              :disabled="state.selectedIds.length === 0 || hasLockedSelection"
-              @click="changeSelectedVisible(true)"
-            >
-              显示所选
-            </button>
-          </div>
-          <div class="studio-tool-group" aria-label="图元组合">
-            <button
-              type="button"
-              :disabled="!canGroup"
-              @click="apply(() => editor.groupSelected(), '已组合所选图元，可撤销')"
-            >
-              组合所选
-            </button>
-            <button
-              type="button"
-              :disabled="!hasGroupedSelection"
-              @click="apply(() => editor.ungroupSelected(), '已解组，可撤销')"
-            >
-              解组
-            </button>
-          </div>
-          <div class="studio-tool-group" aria-label="图元剪贴板">
-            <button
-              type="button"
-              :disabled="state.selectedIds.length === 0"
-              @click="apply(() => editor.copySelected(), '已复制所选图元到会话剪贴板')"
-            >
-              复制所选
-            </button>
-            <button
-              type="button"
-              :disabled="state.selectedIds.length === 0"
-              @click="apply(() => editor.cutSelected(), '已剪切图元，可撤销')"
-            >
-              剪切所选
-            </button>
-            <button
-              type="button"
-              :disabled="!state.hasClipboard"
-              @click="apply(() => editor.pasteClipboard(), '已粘贴图元，可撤销')"
-            >
-              粘贴图元
-            </button>
-            <button
-              type="button"
-              :disabled="state.selectedIds.length === 0"
-              @click="apply(() => editor.deleteSelected(), '已删除图元，可撤销')"
-            >
-              删除所选
-            </button>
-          </div>
-          <div class="studio-exact-layer" aria-label="图层精确插入">
-            <label class="studio-field">
-              目标图元
-              <select
-                aria-label="图层插入目标"
-                :value="layerTargetId"
-                :disabled="!canPreciselyMove || layerTargetNodes.length === 0"
-                @change="selectLayerTarget"
-              >
-                <option value="">请选择目标图元</option>
-                <option v-for="node in layerTargetNodes" :key="node.id" :value="node.id">
-                  {{ node.id }}{{ node.groupId ? "（组合）" : "" }}
-                </option>
-              </select>
-            </label>
-            <label class="studio-field">
-              插入位置
-              <select
-                aria-label="图层插入位置"
-                :value="layerInsertPosition"
-                @change="selectLayerPosition"
-              >
-                <option value="after">目标上方（更靠前）</option>
-                <option value="before">目标下方（更靠后）</option>
-              </select>
-            </label>
-            <button
-              type="button"
-              :disabled="!canPreciselyMove || !layerTargetId"
-              @click="moveSelectedLayerPrecisely"
-            >
-              移动到指定层
-            </button>
-          </div>
-          <div class="studio-tool-group" aria-label="图层排序">
-            <button type="button" :disabled="!selected" @click="layer('back')">置底</button>
-            <button type="button" :disabled="!selected" @click="layer('backward')">下移层</button>
-            <button type="button" :disabled="!selected" @click="layer('forward')">上移层</button>
-            <button type="button" :disabled="!selected" @click="layer('front')">置顶</button>
-          </div>
-          <h3>多选对齐（以最后选中的图元为准）</h3>
-          <div class="studio-tool-group" aria-label="图元对齐">
-            <button
-              type="button"
-              :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-              @click="align('left')"
-            >
-              左
-            </button>
-            <button
-              type="button"
-              :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-              @click="align('hcenter')"
-            >
-              水平居中
-            </button>
-            <button
-              type="button"
-              :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-              @click="align('right')"
-            >
-              右
-            </button>
-            <button
-              type="button"
-              :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-              @click="align('top')"
-            >
-              上
-            </button>
-            <button
-              type="button"
-              :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-              @click="align('vcenter')"
-            >
-              垂直居中
-            </button>
-            <button
-              type="button"
-              :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-              @click="align('bottom')"
-            >
-              下
-            </button>
+              <rect
+                class="studio-page-boundary"
+                :x="0"
+                :y="0"
+                :width="page.size.width"
+                :height="page.size.height"
+                fill="none"
+                vector-effect="non-scaling-stroke"
+                pointer-events="none"
+              />
+              <g v-for="node in displayNodes" :key="node.id" :transform="displayTransform(node.id)">
+                <rect
+                  role="button"
+                  tabindex="0"
+                  :aria-label="`选择并拖动 ${node.id}`"
+                  :x="node.transform.x"
+                  :y="node.transform.y"
+                  :width="node.transform.width"
+                  :height="node.transform.height"
+                  fill="transparent"
+                  :stroke="
+                    state.selectedId === node.id
+                      ? '#f0ae4d'
+                      : state.selectedIds.includes(node.id)
+                        ? '#39c9ba'
+                        : 'transparent'
+                  "
+                  stroke-width="2"
+                  stroke-dasharray="6 4"
+                  class="studio-hitbox"
+                  @pointerdown="beginDrag($event, node.id)"
+                  @keydown.enter.prevent="selectNode(node.id, $event.shiftKey)"
+                  @keydown.space.prevent="selectNode(node.id, $event.shiftKey)"
+                />
+                <template
+                  v-if="
+                    state.selectedIds.length === 1 &&
+                    state.selectedId === node.id &&
+                    !studioNodeLocked(node)
+                  "
+                >
+                  <rect
+                    v-for="handle in RESIZE_HANDLES"
+                    :key="handle"
+                    class="studio-resize-handle"
+                    :data-handle="handle"
+                    :aria-label="`缩放图元${RESIZE_HANDLE_LABELS[handle]}`"
+                    :x="resizeHandlePosition(node.transform, handle).x - 5"
+                    :y="resizeHandlePosition(node.transform, handle).y - 5"
+                    :width="10"
+                    :height="10"
+                    @pointerdown.stop="beginGeometry($event, handle)"
+                  >
+                    <title>按住 Shift 保持宽高比</title>
+                  </rect>
+                  <line
+                    class="studio-rotation-stem"
+                    :x1="node.transform.x + node.transform.width / 2"
+                    :x2="node.transform.x + node.transform.width / 2"
+                    :y1="node.transform.y"
+                    :y2="node.transform.y - 26"
+                    pointer-events="none"
+                  />
+                  <circle
+                    class="studio-rotation-handle"
+                    aria-label="旋转图元，按住 Shift 可按 15 度吸附"
+                    :cx="node.transform.x + node.transform.width / 2"
+                    :cy="node.transform.y - 26"
+                    :r="7"
+                    @pointerdown.stop="beginGeometry($event, 'rotate')"
+                  />
+                </template>
+              </g>
+              <line
+                v-if="snapResult?.verticalGuide != null"
+                class="studio-alignment-guide"
+                :x1="snapResult.verticalGuide"
+                :x2="snapResult.verticalGuide"
+                :y1="0"
+                :y2="page.size.height"
+                pointer-events="none"
+              />
+              <line
+                v-if="snapResult?.horizontalGuide != null"
+                class="studio-alignment-guide"
+                :x1="0"
+                :x2="page.size.width"
+                :y1="snapResult.horizontalGuide"
+                :y2="snapResult.horizontalGuide"
+                pointer-events="none"
+              />
+              <rect
+                v-if="marquee"
+                class="studio-marquee"
+                :x="Math.min(marquee.startX, marquee.x)"
+                :y="Math.min(marquee.startY, marquee.y)"
+                :width="Math.abs(marquee.x - marquee.startX)"
+                :height="Math.abs(marquee.y - marquee.startY)"
+                pointer-events="none"
+              />
+            </svg>
           </div>
         </div>
+      </section>
+      <aside class="studio-panel studio-panel-properties min-h-0 min-w-0" aria-label="图元属性">
+        <h2>属性 · 已选 {{ state.selectedIds.length }}</h2>
         <template v-if="selected">
           <p>
             <strong>{{ selected.id }}</strong> · {{ selected.type }}
@@ -1647,7 +1649,7 @@ async function importJson(event: Event) {
             novalidate
             @submit.prevent="changeGeometry"
           >
-            <label v-for="[key, label] in geometryFields" :key="key">
+            <label v-for="[key, label] in GEOMETRY_PROPERTY_FIELDS" :key="key">
               {{ label }}
               <input
                 type="number"
@@ -1657,25 +1659,25 @@ async function importJson(event: Event) {
                 :disabled="studioNodeLocked(selected)"
               />
             </label>
-            <button type="submit" :disabled="studioNodeLocked(selected)">应用几何属性</button>
+            <TButton type="submit" :disabled="studioNodeLocked(selected)">应用几何属性</TButton>
           </form>
           <p v-else class="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
           <p class="studio-tip">拖动画布中的虚线框，或使用方向按钮微调。每次操作可撤销。</p>
           <div class="studio-nudge">
-            <button type="button" @click="nudge(-1, 0)">←</button>
-            <button type="button" @click="nudge(0, -1)">↑</button>
-            <button type="button" @click="nudge(0, 1)">↓</button>
-            <button type="button" @click="nudge(1, 0)">→</button>
+            <TButton type="button" @click="nudge(-1, 0)">←</TButton>
+            <TButton type="button" @click="nudge(0, -1)">↑</TButton>
+            <TButton type="button" @click="nudge(0, 1)">↓</TButton>
+            <TButton type="button" @click="nudge(1, 0)">→</TButton>
           </div>
           <label
             v-if="selected.type === 'label' && state.selectedIds.length === 1"
             class="studio-field"
           >
             显示文案
-            <input v-model="labelDraft" maxlength="256" :disabled="studioNodeLocked(selected)" />
-            <button type="button" :disabled="studioNodeLocked(selected)" @click="changeLabel">
+            <TInput v-model="labelDraft" :maxlength="256" :disabled="studioNodeLocked(selected)" />
+            <TButton type="button" :disabled="studioNodeLocked(selected)" @click="changeLabel">
               应用文案
-            </button>
+            </TButton>
           </label>
           <h3>Tag 绑定（模拟数据）</h3>
           <label v-if="bindingSlot" class="studio-field">
@@ -1702,11 +1704,198 @@ async function importJson(event: Event) {
           </p>
         </template>
         <p v-else class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
+        <details class="studio-advanced">
+          <summary>高级图元与图层操作</summary>
+          <div class="studio-advanced-content">
+            <div class="studio-toolbox">
+              <div class="studio-tool-group" aria-label="图层锁定与可见性">
+                <TButton
+                  type="button"
+                  :disabled="state.selectedIds.length === 0"
+                  @click="changeSelectedLocked(true)"
+                >
+                  锁定所选
+                </TButton>
+                <TButton
+                  type="button"
+                  :disabled="state.selectedIds.length === 0"
+                  @click="changeSelectedLocked(false)"
+                >
+                  解锁所选
+                </TButton>
+                <TButton
+                  type="button"
+                  :disabled="state.selectedIds.length === 0 || hasLockedSelection"
+                  @click="changeSelectedVisible(false)"
+                >
+                  隐藏所选
+                </TButton>
+                <TButton
+                  type="button"
+                  :disabled="state.selectedIds.length === 0 || hasLockedSelection"
+                  @click="changeSelectedVisible(true)"
+                >
+                  显示所选
+                </TButton>
+              </div>
+              <div class="studio-tool-group" aria-label="图元组合">
+                <TButton
+                  type="button"
+                  :disabled="!canGroup"
+                  @click="apply(() => editor.groupSelected(), '已组合所选图元，可撤销')"
+                >
+                  组合所选
+                </TButton>
+                <TButton
+                  type="button"
+                  :disabled="!hasGroupedSelection"
+                  @click="apply(() => editor.ungroupSelected(), '已解组，可撤销')"
+                >
+                  解组
+                </TButton>
+              </div>
+              <div class="studio-tool-group" aria-label="图元剪贴板">
+                <TButton
+                  type="button"
+                  :disabled="state.selectedIds.length === 0"
+                  @click="apply(() => editor.copySelected(), '已复制所选图元到会话剪贴板')"
+                >
+                  复制所选
+                </TButton>
+                <TButton
+                  type="button"
+                  :disabled="state.selectedIds.length === 0"
+                  @click="apply(() => editor.cutSelected(), '已剪切图元，可撤销')"
+                >
+                  剪切所选
+                </TButton>
+                <TButton
+                  type="button"
+                  :disabled="!state.hasClipboard"
+                  @click="apply(() => editor.pasteClipboard(), '已粘贴图元，可撤销')"
+                >
+                  粘贴图元
+                </TButton>
+                <TButton
+                  type="button"
+                  :disabled="state.selectedIds.length === 0"
+                  @click="apply(() => editor.deleteSelected(), '已删除图元，可撤销')"
+                >
+                  删除所选
+                </TButton>
+              </div>
+              <div class="studio-exact-layer" aria-label="图层精确插入">
+                <label class="studio-field">
+                  目标图元
+                  <select
+                    aria-label="图层插入目标"
+                    :value="layerTargetId"
+                    :disabled="!canPreciselyMove || layerTargetNodes.length === 0"
+                    @change="selectLayerTarget"
+                  >
+                    <option value="">请选择目标图元</option>
+                    <option v-for="node in layerTargetNodes" :key="node.id" :value="node.id">
+                      {{ node.id }}{{ node.groupId ? "（组合）" : "" }}
+                    </option>
+                  </select>
+                </label>
+                <label class="studio-field">
+                  插入位置
+                  <select
+                    aria-label="图层插入位置"
+                    :value="layerInsertPosition"
+                    @change="selectLayerPosition"
+                  >
+                    <option value="after">目标上方（更靠前）</option>
+                    <option value="before">目标下方（更靠后）</option>
+                  </select>
+                </label>
+                <TButton
+                  type="button"
+                  :disabled="!canPreciselyMove || !layerTargetId"
+                  @click="moveSelectedLayerPrecisely"
+                >
+                  移动到指定层
+                </TButton>
+              </div>
+              <div class="studio-tool-group" aria-label="图层排序">
+                <TButton type="button" :disabled="!selected" @click="layer('back')">置底</TButton>
+                <TButton type="button" :disabled="!selected" @click="layer('backward')"
+                  >下移层</TButton
+                >
+                <TButton type="button" :disabled="!selected" @click="layer('forward')"
+                  >上移层</TButton
+                >
+                <TButton type="button" :disabled="!selected" @click="layer('front')">置顶</TButton>
+              </div>
+              <h3>多选对齐（以最后选中的图元为准）</h3>
+              <div class="studio-tool-group" aria-label="图元对齐">
+                <TButton
+                  type="button"
+                  :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                  @click="align('left')"
+                >
+                  左
+                </TButton>
+                <TButton
+                  type="button"
+                  :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                  @click="align('hcenter')"
+                >
+                  水平居中
+                </TButton>
+                <TButton
+                  type="button"
+                  :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                  @click="align('right')"
+                >
+                  右
+                </TButton>
+                <TButton
+                  type="button"
+                  :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                  @click="align('top')"
+                >
+                  上
+                </TButton>
+                <TButton
+                  type="button"
+                  :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                  @click="align('vcenter')"
+                >
+                  垂直居中
+                </TButton>
+                <TButton
+                  type="button"
+                  :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                  @click="align('bottom')"
+                >
+                  下
+                </TButton>
+              </div>
+            </div>
+          </div>
+        </details>
       </aside>
     </div>
-    <footer>
-      V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z
-      撤销，Ctrl+Shift+Z/Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 · 无设备写入
+    <footer class="studio-statusbar">
+      <div class="studio-status-message">
+        <span class="studio-status-led" aria-hidden="true" />
+        <p role="status" class="studio-notice">
+          {{ notice }}
+          <span v-if="hasSavedDraft && !autoSaveEnabled">
+            · 已发现本地草稿，可点击「恢复草稿」确认加载
+          </span>
+        </p>
+      </div>
+      <div class="studio-status-meta">
+        <span>仅模拟数据 · 无设备写入</span>
+        <span>{{ page.nodes.length }} 个图元 · 已选 {{ state.selectedIds.length }}</span>
+        <span
+          title="Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z 撤销，Ctrl+Shift+Z / Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择"
+          >快捷键 ⓘ</span
+        >
+      </div>
     </footer>
   </main>
 </template>

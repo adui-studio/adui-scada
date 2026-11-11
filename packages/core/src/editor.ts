@@ -23,6 +23,15 @@ export type LayerAction = "front" | "back" | "forward" | "backward";
 export type EditableSymbol = "tank" | "pump" | "pipe" | "label";
 export type NodeTransformPatch = Partial<ScadaNode["transform"]>;
 
+/** 几何属性名称由共享 Core 统一提供，Vue/React 属性面板不再重复定义。 */
+export const GEOMETRY_PROPERTY_FIELDS = [
+  ["x", "X 坐标"],
+  ["y", "Y 坐标"],
+  ["width", "宽度"],
+  ["height", "高度"],
+  ["rotation", "旋转角度（度）"],
+] as const satisfies readonly (readonly [keyof NodeTransformPatch, string])[];
+
 const HISTORY_LIMIT = 100;
 const LOCKED_NODE_MESSAGE = "所选图元包含已锁定图元，请先解锁";
 

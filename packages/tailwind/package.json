@@ -1,0 +1,18 @@
+{
+  "name": "@adui/tailwind",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./styles.css": "./src/styles.css",
+    "./vite": "./src/vite.ts",
+    "./studio.css": "./src/studio.css"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "catalog:",
+    "tailwindcss": "catalog:"
+  },
+  "devDependencies": {
+    "vite": "catalog:"
+  }
+}

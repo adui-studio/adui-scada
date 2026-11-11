@@ -67,6 +67,12 @@
       "skillPath": "skills/pnpm/SKILL.md",
       "computedHash": "be0763bac8890e99e0eebbecedd90ebad6c3baf1ee5ab002f902da99834791c6"
     },
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "97892bbdba4c4aebac5b61b9519c0fa71eb8e5049946ead8202ce2e214d15c51"
+    },
     "unocss": {
       "source": "antfu/skills",
       "sourceType": "github",

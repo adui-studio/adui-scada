@@ -710,3 +710,54 @@ pnpm run dev:vue
 ```
 
 人工验收两套 Studio：组合树展开/折叠和成员选中同步、组名/成员/类型/中文文本搜索、定位选中图层、非连续组提示、锁定/隐藏状态、原生拖拽与精准插入；切换页面清空搜索、导入/恢复清空 UI 折叠状态。对比 Vue↔React JSON 双向导入与 IndexedDB 保存后人工恢复，确认不会持久化 UI 图层树；检查只读 Runtime 数据质量及 NestJS 未开放的设备写入接口无回归。静态文档检查不能代表已完成业务、工业现场安全验证。
+
+## 2026-11-11 · V0.2 第二十批 TDesign 双端依赖及 UI 迁移待验收
+
+新增四个 TDesign Catalog 依赖及 1 项 Core 几何属性元数据测试，源码预计 **257 项单测**、**2 项 E2E**、**43 份 Markdown**。当前执行环境无法访问 npm Registry，**没有完成锁文件生成或新依赖安装**，因此绝不将此前通过的 `ready` 结果复用到本批。
+
+联网维护者 Windows 首次操作：
+
+```powershell
+git status -sb
+git fetch origin
+git switch feat/v0.2-tdesign-property-panel
+pnpm install --no-frozen-lockfile
+git diff -- pnpm-lock.yaml
+pnpm install --frozen-lockfile
+vp check --fix
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+要求将由 pnpm 自动生成的 `pnpm-lock.yaml` 变更审查并提交到当前功能分支，确认供应链依赖数量、TDesign 版本、重复图标包及 CSS 产物。检查 React/Vue TDesign 属性按钮/输入和搜索清除图标、几何字段一致性、原快捷键、Tag、组合、IndexedDB 草稿、只读 Runtime 与未实现设备写入返回 404。首次安装未完成前不能执行冻结安装、编译/验收，也不能批准合并。
+
+## V0.2 · 浏览器交互回归（独立验收，不加入 ready）
+
+维护者已在 Windows 执行通过 `pnpm run ready`：包括 270 项单测、2 项 NestJS E2E、React/Vue Web 构建、NestJS 构建与文档检查；这与浏览器真实尺寸和事件交互验收是两项独立证据。
+
+在两个终端分别启动开发服务器：
+
+```powershell
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+随后在第三个终端执行：
+
+```powershell
+pnpm run test:browser
+```
+
+浏览器检查脚本为 `scripts/test-studio-browser.mjs`，使用 Node.js 内置 `WebSocket` 与 Chrome DevTools Protocol，无额外 npm 依赖；自动寻找 Chrome/Edge，创建**临时隔离浏览器配置文件**，结束后关闭浏览器并清理配置文件。
+
+默认检查 React `http://127.0.0.1:5173/` 与 Vue `http://127.0.0.1:5174/`，各测试 1440×900、1024×768。可以设置 `SCADA_REACT_URL`、`SCADA_VUE_URL`、`SCADA_BROWSER_PATH` 覆盖本地网址或浏览器路径。
+
+覆盖：应用无外层滚动条、中央画布无滚动条、SVG 与容器四边贴合、桌面侧栏固定宽度、视口世界比例、网格覆盖完整 viewBox、工程页面边界、放大与恢复适应、网格显隐、两侧栏显隐和图层点击后属性更新。脚本会输出每套框架每种尺寸的通过数量；任何断言失败退出码非零。
+
+**边界**：该命令不是 Vite+ 单测，也不是工业现场 E2E；浏览器需要安装且两个开发服务器必须启动。当前仅验证了 Node.js 脚本语法和浏览器调试通信，在维护者实际双框架页面中尚未运行。保留人工检查：拖放图层、图元旋转、吸附辅助线、浏览器 125% 缩放、Vue↔React JSON 互导、Dexie 草稿恢复和 Tauri WebView2。
+
+### 浏览器验收入口说明（2026-11-11）
+
+React、Vue 均以“运行监控”为默认视图，而 Studio 由顶部“组态编辑”按钮异步切换。因此 `test:browser` **必须先模拟点击“组态编辑”**，等待工作台与 SVG 挂载后才检查画布。首次版本直接查询 `.studio-workspace`，导致运行监控页误报“元素不存在”；现已修复。每次尺寸测试使用独立的 `scada_browser_check` 本地查询参数，确保不会把上一页面的 `document.readyState` 当作新页面已加载。错误日志会携带地址、页面标题、导航状态及有限的页面文本，便于区分入口错误与应用加载失败。
+
+验收脚本只操作临时浏览器配置，不修改 Studio 默认入口、工程文件或用户草稿。本次远端修复未在维护者 Windows React/Vue 页面上执行完整浏览器验收，需重新运行 `pnpm run test:browser`。

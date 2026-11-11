@@ -1,0 +1,691 @@
+/* 组态编辑工作台：界面分区优先，复杂绘图逻辑仍由共享 Core 负责。 */
+.studio-shell {
+  gap: 0;
+  padding: 0;
+  background: var(--scada-bg);
+}
+
+.studio-toolbar {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  flex: none;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--scada-border);
+  background: var(--scada-nav);
+}
+.studio-toolbar h1 {
+  margin: 2px 0 0;
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+.studio-toolbar .scada-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.035em;
+}
+.studio-actions,
+.studio-history-actions,
+.studio-save-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.studio-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
+}
+.studio-actions button {
+  white-space: nowrap;
+  font-size: 12px;
+}
+.studio-save-actions button:first-child {
+  background: var(--scada-primary);
+  border-color: var(--scada-primary);
+}
+.studio-save-actions button:first-child:hover {
+  background: var(--scada-primary-hover);
+}
+.studio-file-menu,
+.studio-page-menu {
+  position: relative;
+  flex: none;
+}
+.studio-file-menu > summary,
+.studio-page-menu > summary {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--scada-border-strong);
+  border-radius: 5px;
+  padding: 6px 10px;
+  color: var(--scada-text);
+  background: var(--scada-action-bg);
+  cursor: pointer;
+  font-size: 12px;
+  list-style: none;
+  user-select: none;
+}
+.studio-file-menu > summary::-webkit-details-marker,
+.studio-page-menu > summary::-webkit-details-marker,
+.studio-side-more > summary::-webkit-details-marker,
+.studio-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+.studio-file-menu > summary:focus-visible,
+.studio-page-menu > summary:focus-visible,
+.studio-side-more > summary:focus-visible,
+.studio-advanced > summary:focus-visible,
+.studio-canvas-scroll:focus-visible {
+  outline: 2px solid var(--scada-cyan);
+  outline-offset: -2px;
+}
+.studio-file-menu > summary::after,
+.studio-page-menu > summary::after {
+  content: "▾";
+  font-size: 10px;
+  color: var(--scada-text-muted);
+}
+.studio-file-menu[open] > summary,
+.studio-page-menu[open] > summary {
+  border-color: var(--scada-primary);
+  color: var(--scada-cyan);
+}
+.studio-file-popover,
+.studio-page-actions {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 50;
+  width: 200px;
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--scada-border-strong);
+  border-radius: 7px;
+  background: var(--scada-surface);
+  box-shadow: 0 14px 36px rgb(0 0 0 / 38%);
+}
+.studio-file-popover button,
+.studio-file-popover .studio-import,
+.studio-page-actions button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-size: 12px;
+  text-align: center;
+}
+.studio-page-actions {
+  width: 230px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.studio-page-bar {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  flex: none;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--scada-border-subtle);
+  background: var(--scada-bg);
+}
+.studio-page-tabs {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 5px;
+  scrollbar-width: thin;
+}
+.studio-page-tabs button {
+  flex: none;
+  padding: 6px 12px;
+  border-radius: 4px 4px 0 0;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.studio-workspace {
+  --studio-left-width: 252px;
+  --studio-right-width: 320px;
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  grid-template-columns: var(--studio-left-width) minmax(0, 1fr) var(--studio-right-width);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+  overflow: hidden;
+  background: var(--scada-bg);
+}
+.studio-workspace[data-left-collapsed="true"] {
+  --studio-left-width: 0px;
+}
+.studio-workspace[data-right-collapsed="true"] {
+  --studio-right-width: 0px;
+}
+.studio-workspace[data-left-collapsed="true"] > .studio-panel-layers,
+.studio-workspace[data-right-collapsed="true"] > .studio-panel-properties {
+  display: none;
+}
+.studio-panel {
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--scada-surface);
+}
+.studio-panel-layers {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--scada-border);
+}
+.studio-pane-heading {
+  display: flex;
+  flex: none;
+  min-height: 46px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--scada-border);
+}
+.studio-pane-heading h2,
+.studio-panel-properties > h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+.studio-count {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--scada-action-bg);
+  color: var(--scada-text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.studio-library-label,
+.studio-tree-section-title {
+  flex: none;
+  padding: 11px 14px 3px;
+  color: var(--scada-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.studio-add {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 8px 12px 14px;
+  border-bottom: 1px solid var(--scada-border);
+}
+.studio-add button {
+  min-height: 33px;
+  padding: 7px 6px;
+  border-radius: 5px;
+  border-color: var(--scada-border);
+  background: var(--scada-action-bg);
+  color: var(--scada-text);
+}
+.studio-add button:hover {
+  border-color: var(--scada-primary);
+}
+.studio-tree-controls {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 7px 12px 10px;
+  border-bottom: 1px solid var(--scada-border);
+}
+.studio-tree-controls .studio-field {
+  grid-column: 1 / -1;
+  gap: 6px;
+  margin: 0;
+}
+.studio-tree-controls .t-button {
+  min-width: 0;
+  width: 100%;
+  min-height: 28px;
+  padding: 5px 6px;
+  font-size: 11px;
+}
+.studio-layer-tree {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 9px 8px;
+  scrollbar-gutter: stable;
+}
+.studio-layer-tree .studio-layer {
+  min-height: 32px;
+  align-items: center;
+  margin: 2px 0;
+  padding: 7px 8px;
+  border-color: transparent;
+  border-radius: 5px;
+  background: transparent;
+  font-size: 12px;
+}
+.studio-layer-tree .studio-layer:hover {
+  background: var(--scada-action-hover);
+}
+.studio-layer-tree .studio-layer[data-selected="true"] {
+  border-color: var(--scada-primary);
+  background: var(--scada-active-bg);
+}
+.studio-layer-tree .studio-layer small {
+  color: var(--scada-text-muted);
+  font-size: 10px;
+}
+.studio-side-more {
+  flex: none;
+  max-height: 42%;
+  overflow-y: auto;
+  border-top: 1px solid var(--scada-border);
+}
+.studio-side-more > summary,
+.studio-advanced > summary {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 10px 14px;
+  color: var(--scada-text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  list-style: none;
+}
+.studio-side-more > summary::before,
+.studio-advanced > summary::before {
+  content: "▸";
+  display: inline-block;
+  width: 16px;
+  color: var(--scada-text-muted);
+}
+.studio-side-more[open] > summary::before,
+.studio-advanced[open] > summary::before {
+  content: "▾";
+}
+.studio-side-more .studio-tip {
+  margin: 0 12px 12px;
+}
+.studio-copy-tools {
+  margin: 0 12px 10px;
+  padding: 8px 0;
+}
+.studio-stage {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--scada-bg);
+}
+.studio-stage-caption {
+  display: flex;
+  min-height: 46px;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  margin: 0;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--scada-border);
+  background: var(--scada-surface);
+  font-size: 11px;
+}
+.studio-stage-caption > span {
+  min-width: 0;
+  color: var(--scada-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio-canvas-settings {
+  justify-content: flex-end;
+  margin-left: auto;
+  gap: 8px;
+}
+.studio-canvas-option {
+  font-size: 11px;
+}
+.studio-panel-toggles {
+  display: flex;
+  gap: 5px;
+}
+.studio-panel-toggles button {
+  min-height: 27px;
+  padding: 5px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.studio-panel-toggles button[aria-pressed="true"] {
+  border-color: var(--scada-primary);
+  color: var(--scada-cyan);
+}
+/* 网格、吸附和侧栏显示统一收纳在视图设置菜单中。 */
+.studio-view-menu {
+  position: relative;
+  flex: none;
+}
+.studio-view-menu > summary {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid var(--scada-border-strong);
+  border-radius: 5px;
+  background: var(--scada-action-bg);
+  color: var(--scada-text);
+  cursor: pointer;
+  font-size: 11px;
+  white-space: nowrap;
+  list-style: none;
+}
+.studio-view-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.studio-view-menu > summary::after {
+  content: "▾";
+  color: var(--scada-text-muted);
+}
+.studio-view-menu[open] > summary {
+  border-color: var(--scada-primary);
+  color: var(--scada-cyan);
+}
+.studio-view-menu > summary:focus-visible {
+  outline: 2px solid var(--scada-cyan);
+  outline-offset: 2px;
+}
+.studio-view-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 7px);
+  z-index: 35;
+  display: grid;
+  width: 236px;
+  max-height: min(440px, 60dvh);
+  gap: 8px;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--scada-border-strong);
+  border-radius: 7px;
+  background: var(--scada-surface);
+  box-shadow: 0 16px 36px rgb(0 0 0 / 45%);
+}
+.studio-view-section {
+  display: grid;
+  gap: 8px;
+}
+.studio-view-section + .studio-view-section {
+  padding-top: 9px;
+  border-top: 1px solid var(--scada-border);
+}
+.studio-view-section > p {
+  margin: 0;
+  color: var(--scada-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.studio-view-popover .studio-canvas-settings {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin: 0;
+  justify-content: stretch;
+}
+.studio-view-popover .studio-canvas-option {
+  min-height: 26px;
+  gap: 8px;
+  color: var(--scada-text);
+  font-size: 12px;
+}
+.studio-view-popover .studio-panel-toggles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.studio-view-popover .studio-panel-toggles button {
+  min-width: 0;
+  white-space: normal;
+  padding: 7px 5px;
+}
+
+.studio-zoom {
+  flex: none;
+}
+.studio-zoom button {
+  min-height: 27px;
+  padding: 4px 7px;
+}
+/* 工程页面边界只在编辑器可见，导出的 SVG 不携带这层辅助标记。 */
+.studio-page-boundary {
+  stroke: var(--scada-primary);
+  stroke-width: 1;
+  stroke-opacity: 0.8;
+  stroke-dasharray: 6 4;
+  pointer-events: none;
+}
+
+/* 中央编辑区域宽高完全撑满，工程图元比例由 SVG viewBox 保证。 */
+.studio-canvas-scroll {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  background: var(--scada-canvas);
+}
+.studio-canvas-board {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--scada-canvas);
+}
+.studio-canvas-board > .studio-svg {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--scada-canvas);
+  touch-action: none;
+}
+
+.studio-panel-properties {
+  grid-column: 3;
+  grid-row: 1;
+  padding: 0 14px 16px;
+  overflow-y: auto;
+  border-left: 1px solid var(--scada-border);
+  scrollbar-gutter: stable;
+}
+.studio-panel-properties > h2 {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0 -14px 12px;
+  padding: 15px 14px 13px;
+  border-bottom: 1px solid var(--scada-border);
+  background: var(--scada-surface);
+}
+.studio-panel-properties > p {
+  margin: 9px 0;
+  color: var(--scada-text-secondary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.studio-geometry {
+  gap: 10px;
+  padding: 12px;
+  margin: 12px 0;
+  border: 1px solid var(--scada-border);
+  border-radius: 7px;
+  background: var(--scada-canvas);
+}
+.studio-geometry input {
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+.studio-advanced {
+  margin-top: 18px;
+  border: 1px solid var(--scada-border);
+  border-radius: 6px;
+}
+.studio-advanced > summary {
+  min-height: 40px;
+  padding: 10px 12px;
+}
+.studio-advanced-content {
+  padding: 0 10px 10px;
+  border-top: 1px solid var(--scada-border);
+}
+.studio-advanced .studio-tool-group {
+  gap: 6px;
+  margin: 10px 0;
+}
+.studio-advanced .studio-tool-group .t-button {
+  min-height: 31px;
+}
+.studio-statusbar {
+  display: flex;
+  flex: none;
+  height: 35px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 14px;
+  border-top: 1px solid var(--scada-border);
+  background: var(--scada-nav);
+  color: var(--scada-text-muted);
+  font-size: 11px;
+}
+.studio-status-message,
+.studio-status-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+.studio-status-message {
+  flex: 1;
+}
+.studio-status-message .studio-notice {
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.studio-status-meta {
+  flex: none;
+  gap: 14px;
+  white-space: nowrap;
+}
+.studio-status-led {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--scada-live);
+}
+
+@media (max-width: 1250px) {
+  .studio-toolbar {
+    padding-inline: 12px;
+  }
+  .studio-toolbar h1 {
+    font-size: 15px;
+  }
+  .studio-stage-caption {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 930px) {
+  .studio-workspace {
+    display: flex;
+    flex-direction: column;
+  }
+  .studio-stage {
+    order: 1;
+    flex: 2 1 50%;
+  }
+  .studio-panel-layers {
+    order: 0;
+    flex: 1 1 24%;
+    border-top: 1px solid var(--scada-border);
+    border-right: none;
+  }
+  .studio-panel-properties {
+    order: 2;
+    flex: 1 1 25%;
+    border-top: 1px solid var(--scada-border);
+    border-left: none;
+  }
+  .studio-toolbar {
+    flex-wrap: wrap;
+  }
+  .studio-stage-caption > span {
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 630px) {
+  .studio-toolbar {
+    gap: 7px;
+    padding-block: 7px;
+  }
+  .studio-actions {
+    flex-wrap: wrap;
+  }
+  .studio-save-actions button:last-child,
+  .studio-status-meta > span:last-child {
+    display: none;
+  }
+  .studio-status-meta > span:first-child {
+    display: none;
+  }
+  .studio-page-bar {
+    padding-inline: 8px;
+  }
+  .studio-panel-toggles button {
+    padding-inline: 5px;
+  }
+}

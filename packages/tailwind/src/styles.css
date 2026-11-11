@@ -1,0 +1,22 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+/* 两套 Web 明确扫描，避免自动收集测试、Skill 或其他应用的无关类名。 */
+@source "../../../apps/web-react/src";
+@source "../../../apps/web-vue/src";
+
+/* 保留既有 Normalize/TDesign 样式，不引入 Tailwind Preflight。 */
+@theme inline {
+  --color-scada-primary: var(--scada-primary);
+  --color-scada-cyan: var(--scada-cyan);
+  --color-scada-live: var(--scada-live);
+  --color-scada-bg: var(--scada-bg);
+  --color-scada-nav: var(--scada-nav);
+  --color-scada-surface: var(--scada-surface);
+  --color-scada-canvas: var(--scada-canvas);
+  --color-scada-border: var(--scada-border);
+  --color-scada-border-strong: var(--scada-border-strong);
+  --color-scada-text: var(--scada-text);
+  --color-scada-muted: var(--scada-text-muted);
+}

@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Input } from "tdesign-react";
+import { CloseIcon } from "tdesign-icons-react";
+import "tdesign-react/es/style/index.css";
 import type {
   ChangeEvent,
   DragEvent as ReactDragEvent,
@@ -14,11 +17,13 @@ import {
   studioNodeLocked,
   studioNodeVisible,
   buildLayerTree,
+  studioViewportRect,
 } from "@adui/scada-core";
 import type { LayerTreeGroup, ScadaDocument, ScadaNode } from "@adui/scada-core";
 import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
 import {
   DEFAULT_GRID_SIZE,
+  GEOMETRY_PROPERTY_FIELDS,
   DocumentEditor,
   editableTagSlot,
   RESIZE_HANDLES,
@@ -41,6 +46,7 @@ import type {
 } from "@adui/scada-core/editor";
 import { svgDataUrl } from "@adui/scada-runtime";
 import "./studio.css";
+import "@adui/tailwind/studio.css";
 
 const previewTags = new WaterTreatmentSimulator().next(new Date("2026-11-09T00:00:00Z"));
 function getLegacyStorage() {
@@ -52,13 +58,6 @@ function getLegacyStorage() {
 }
 const drafts = new DexieDraftRepository({ legacyStorage: getLegacyStorage() });
 const maxFileSize = 2 * 1024 * 1024;
-const geometryFields = [
-  ["x", "X 坐标"],
-  ["y", "Y 坐标"],
-  ["width", "宽度"],
-  ["height", "高度"],
-  ["rotation", "旋转角度（度）"],
-] as const;
 
 interface MarqueeState {
   pointerId: number;
@@ -112,10 +111,22 @@ export default function StudioPage() {
   const autoSaveSessionRef = useRef<DraftAutoSaveSession | null>(null);
   const draftActionRef = useRef(false);
   const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [gridVisible, setGridVisible] = useState(true);
   const [gridSnap, setGridSnap] = useState(true);
   const [nodeSnap, setNodeSnap] = useState(true);
+  const [leftPanelVisible, setLeftPanelVisible] = useState(true);
+  const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const panDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    scale: number;
+  } | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const marqueeRef = useRef<MarqueeState | null>(null);
   const geometryRef = useRef<GeometryDragState | null>(null);
@@ -163,6 +174,11 @@ export default function StudioPage() {
   );
 
   if (!page) throw new Error("工程文档不包含页面");
+  const canvasViewport = {
+    width: viewportSize.width || page.size.width,
+    height: viewportSize.height || page.size.height,
+  };
+  const visibleRect = studioViewportRect(page.size, canvasViewport, zoom, pan);
 
   const hasGroupedSelection = page.nodes.some(
     (node) => node.groupId !== undefined && state.selectedIds.includes(node.id),
@@ -184,6 +200,21 @@ export default function StudioPage() {
           (id) => page?.nodes.find((node) => node.id === id)?.groupId === selected.groupId,
         ))) &&
     !hasLockedSelection;
+  useEffect(() => {
+    const canvas = svgRef.current;
+    if (!canvas) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      if (width <= 0 || height <= 0) return;
+      setViewportSize((current) =>
+        current.width === width && current.height === height ? current : { width, height },
+      );
+    });
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     if (!locateLayerRequest) return;
     const rows = layerTreeRef.current?.querySelectorAll<HTMLButtonElement>("[data-layer-key]");
@@ -227,6 +258,7 @@ export default function StudioPage() {
       setLocateLayerRequest(null);
       cancelDrag();
       setZoom(1);
+      setPan({ x: 0, y: 0 });
       refresh();
       setNotice("已切换编辑页面；页面切换不会修改工程草稿");
     } catch (error) {
@@ -637,7 +669,61 @@ export default function StudioPage() {
   }
 
   function changeZoom(delta: number) {
-    setZoom((current) => Math.max(0.5, Math.min(2, Math.round((current + delta) * 100) / 100)));
+    const pageSize = page?.size;
+    if (!pageSize) return;
+    const nextZoom = Math.max(0.5, Math.min(2, Math.round((zoom + delta) * 100) / 100));
+    setZoom(nextZoom);
+    setPan((current) => studioViewportRect(pageSize, canvasViewport, nextZoom, current).pan);
+  }
+
+  function resetCanvasView() {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }
+
+  // 中键或 Alt + 画布空白处拖动，只修改视图区间。
+  function beginCanvasPan(event: ReactPointerEvent<SVGSVGElement>): boolean {
+    if (
+      zoom <= 1 ||
+      !(
+        event.button === 1 ||
+        (event.button === 0 && event.altKey && event.target === event.currentTarget)
+      )
+    ) {
+      return false;
+    }
+    const matrix = svgRef.current?.getScreenCTM();
+    if (!matrix || matrix.a === 0) return false;
+    panDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: visibleRect.pan.x,
+      originY: visibleRect.pan.y,
+      scale: matrix.a,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+    return true;
+  }
+
+  function updateCanvasPan(event: ReactPointerEvent<SVGSVGElement>): boolean {
+    const dragging = panDragRef.current;
+    const pageSize = page?.size;
+    if (!dragging || dragging.pointerId !== event.pointerId || !pageSize) return false;
+    setPan(
+      studioViewportRect(pageSize, canvasViewport, zoom, {
+        x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
+        y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
+      }).pan,
+    );
+    return true;
+  }
+
+  function finishCanvasPan(event: ReactPointerEvent<SVGSVGElement>): boolean {
+    if (!panDragRef.current || panDragRef.current.pointerId !== event.pointerId) return false;
+    panDragRef.current = null;
+    return true;
   }
 
   function canvasPoint(clientX: number, clientY: number) {
@@ -814,6 +900,7 @@ export default function StudioPage() {
   }
 
   function cancelDrag() {
+    panDragRef.current = null;
     dragRef.current = null;
     marqueeRef.current = null;
     geometryRef.current = null;
@@ -842,7 +929,7 @@ export default function StudioPage() {
     event.preventDefault();
     const values = new FormData(event.currentTarget);
     const patch: NodeTransformPatch = {};
-    for (const [key, label] of geometryFields) {
+    for (const [key, label] of GEOMETRY_PROPERTY_FIELDS) {
       const raw = values.get(key);
       if (typeof raw !== "string" || raw.trim() === "") {
         setNotice(`请填写${label}`);
@@ -1090,64 +1177,69 @@ export default function StudioPage() {
   }
 
   return (
-    <main className="studio-shell">
+    <main className="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
       <header className="studio-toolbar">
         <div>
           <p className="scada-eyebrow">ADui SCADA · V0.2 Studio</p>
           <h1>SVG 组态编辑器</h1>
         </div>
         <div className="studio-actions">
-          <button
-            type="button"
-            onClick={() => {
-              editor.undo();
-              refresh();
-            }}
-            disabled={!state.canUndo}
-          >
-            撤销
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              editor.redo();
-              refresh();
-            }}
-            disabled={!state.canRedo}
-          >
-            重做
-          </button>
-          <label className="studio-import">
-            导入 JSON
-            <input
-              type="file"
-              accept=".json,application/json"
-              onChange={(event) => {
-                void importJson(event);
+          <div className="studio-history-actions">
+            <button
+              type="button"
+              onClick={() => {
+                editor.undo();
+                refresh();
               }}
-            />
-          </label>
-          <button type="button" onClick={exportJson}>
-            导出 JSON
-          </button>
-          <button type="button" onClick={saveDraft}>
-            保存草稿
-          </button>
-          <button type="button" onClick={toggleAutoSave} aria-pressed={autoSaveEnabled}>
-            {autoSaveEnabled ? "暂停自动保存" : "开启自动保存"}
-          </button>
-          <button type="button" onClick={restoreDraft} disabled={!hasSavedDraft}>
-            恢复草稿
-          </button>
-          <button type="button" onClick={clearDraft} disabled={!hasSavedDraft}>
-            清除草稿
-          </button>
+              disabled={!state.canUndo}
+            >
+              撤销
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                editor.redo();
+                refresh();
+              }}
+              disabled={!state.canRedo}
+            >
+              重做
+            </button>
+          </div>
+          <div className="studio-save-actions">
+            <button type="button" onClick={saveDraft}>
+              保存草稿
+            </button>
+          </div>
+          <details className="studio-file-menu">
+            <summary>文件与草稿</summary>
+            <div className="studio-file-popover">
+              <button type="button" onClick={toggleAutoSave} aria-pressed={autoSaveEnabled}>
+                {autoSaveEnabled ? "暂停自动保存" : "开启自动保存"}
+              </button>
+              <label className="studio-import">
+                导入 JSON
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={(event) => {
+                    void importJson(event);
+                  }}
+                />
+              </label>
+              <button type="button" onClick={exportJson}>
+                导出 JSON
+              </button>
+              <button type="button" onClick={restoreDraft} disabled={!hasSavedDraft}>
+                恢复草稿
+              </button>
+              <button type="button" onClick={clearDraft} disabled={!hasSavedDraft}>
+                清除草稿
+              </button>
+            </div>
+          </details>
         </div>
       </header>
-      <p role="status" className="studio-notice">
-        {notice}
-        {hasSavedDraft && !autoSaveEnabled ? " · 已发现本地草稿，可点击「恢复草稿」确认加载" : ""}
-      </p>
       <div className="studio-page-bar" aria-label="工程页面管理">
         <div className="studio-page-tabs" aria-label="工程页面">
           {state.document.pages.map((item) => (
@@ -1161,43 +1253,57 @@ export default function StudioPage() {
             </button>
           ))}
         </div>
-        <div className="studio-page-actions">
-          <button type="button" onClick={createPage} disabled={state.document.pages.length >= 100}>
-            + 新建页面
-          </button>
-          <button
-            type="button"
-            onClick={duplicatePage}
-            disabled={state.document.pages.length >= 100}
-          >
-            复制页面
-          </button>
-          <button
-            type="button"
-            onClick={() => movePage("previous")}
-            disabled={activePageIndex <= 0}
-          >
-            页面前移
-          </button>
-          <button
-            type="button"
-            onClick={() => movePage("next")}
-            disabled={activePageIndex >= state.document.pages.length - 1}
-          >
-            页面后移
-          </button>
-          <button type="button" onClick={renamePage}>
-            重命名
-          </button>
-          <button type="button" onClick={deletePage} disabled={state.document.pages.length <= 1}>
-            删除当前页
-          </button>
-        </div>
+        <details className="studio-page-menu">
+          <summary>页面管理</summary>
+          <div className="studio-page-actions">
+            <button
+              type="button"
+              onClick={createPage}
+              disabled={state.document.pages.length >= 100}
+            >
+              + 新建页面
+            </button>
+            <button
+              type="button"
+              onClick={duplicatePage}
+              disabled={state.document.pages.length >= 100}
+            >
+              复制页面
+            </button>
+            <button
+              type="button"
+              onClick={() => movePage("previous")}
+              disabled={activePageIndex <= 0}
+            >
+              页面前移
+            </button>
+            <button
+              type="button"
+              onClick={() => movePage("next")}
+              disabled={activePageIndex >= state.document.pages.length - 1}
+            >
+              页面后移
+            </button>
+            <button type="button" onClick={renamePage}>
+              重命名
+            </button>
+            <button type="button" onClick={deletePage} disabled={state.document.pages.length <= 1}>
+              删除当前页
+            </button>
+          </div>
+        </details>
       </div>
-      <div className="studio-workspace">
-        <aside className="studio-panel" aria-label="图元列表">
-          <h2>图元 · {page.nodes.length}</h2>
-          <p className="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
+      <div
+        className="studio-workspace"
+        data-left-collapsed={!leftPanelVisible}
+        data-right-collapsed={!rightPanelVisible}
+      >
+        <aside className="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
+          <div className="studio-pane-heading">
+            <h2>资源与图层</h2>
+            <span className="studio-count">{page.nodes.length}</span>
+          </div>
+          <div className="studio-library-label">图元库 · 点击添加</div>
           <div className="studio-add">
             <button type="button" onClick={() => addSymbol("tank")}>
               + 水箱
@@ -1212,52 +1318,37 @@ export default function StudioPage() {
               + 文本
             </button>
           </div>
-          <div className="studio-copy-tools">
-            <label className="studio-field">
-              复制选中图元到
-              <select
-                aria-label="跨页面复制目标"
-                value={copyTargetPageId}
-                onChange={(event) => setPreferredCopyTargetPageId(event.target.value)}
-                disabled={copyTargetPages.length === 0}
-              >
-                {copyTargetPages.length === 0 && <option value="">暂无其他页面</option>}
-                {copyTargetPages.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              onClick={copySelectedToPage}
-              disabled={state.selectedIds.length === 0 || !copyTargetPageId}
-            >
-              复制选中图元
-            </button>
-          </div>
+          <div className="studio-tree-section-title">图层列表</div>
           <div className="studio-tree-controls">
             <label className="studio-field">
               搜索图元或组合
-              <input
+              <Input
                 type="search"
                 aria-label="搜索图层"
-                maxLength={128}
+                maxlength={128}
                 value={layerSearch}
                 placeholder="图元 ID、类型、文字或组合 ID"
-                onChange={(event) => setLayerSearch(event.target.value)}
+                onChange={(value) => setLayerSearch(value)}
               />
             </label>
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="small"
               disabled={state.selectedIds.length === 0}
               onClick={locateSelectedLayer}
             >
               定位选中图层
-            </button>
+            </Button>
+            <Button
+              variant="text"
+              size="small"
+              disabled={layerSearch.length === 0}
+              onClick={() => setLayerSearch("")}
+            >
+              <CloseIcon /> 清除搜索
+            </Button>
           </div>
-          <div className="studio-layer-tree" ref={layerTreeRef} aria-label="图层树">
+          <div className="studio-layer-tree min-w-0" ref={layerTreeRef} aria-label="图层树">
             {layerEntries.length === 0 && (
               <p className="studio-tree-empty">
                 {page.nodes.length === 0 ? "当前页面暂无图元" : "没有匹配的图元或组合"}
@@ -1299,375 +1390,299 @@ export default function StudioPage() {
               ),
             )}
           </div>
+          <details className="studio-side-more">
+            <summary>跨页操作与使用帮助</summary>
+            <div className="studio-copy-tools">
+              <label className="studio-field">
+                复制选中图元到
+                <select
+                  aria-label="跨页面复制目标"
+                  value={copyTargetPageId}
+                  onChange={(event) => setPreferredCopyTargetPageId(event.target.value)}
+                  disabled={copyTargetPages.length === 0}
+                >
+                  {copyTargetPages.length === 0 && <option value="">暂无其他页面</option>}
+                  {copyTargetPages.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={copySelectedToPage}
+                disabled={state.selectedIds.length === 0 || !copyTargetPageId}
+              >
+                复制选中图元
+              </button>
+            </div>
+            <p className="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
+          </details>
         </aside>
-        <section className="studio-stage" aria-label="组态画布">
+        <section className="studio-stage min-h-0 min-w-0" aria-label="组态画布">
           <div className="studio-stage-caption">
             <span>
               {page.name} · {page.size.width} × {page.size.height} · 静态模拟预览
             </span>
-            <div className="studio-canvas-settings">
-              <label className="studio-canvas-option">
-                <input
-                  type="checkbox"
-                  checked={gridVisible}
-                  onChange={(event) => setGridVisible(event.target.checked)}
-                />
-                显示网格
-              </label>
-              <label className="studio-canvas-option">
-                <input
-                  type="checkbox"
-                  checked={gridSnap}
-                  onChange={(event) => setGridSnap(event.target.checked)}
-                />
-                网格吸附
-              </label>
-              <label className="studio-canvas-option">
-                <input
-                  type="checkbox"
-                  checked={nodeSnap}
-                  onChange={(event) => setNodeSnap(event.target.checked)}
-                />
-                图元吸附
-              </label>
-            </div>
+            <details className="studio-view-menu">
+              <summary aria-label="视图设置">视图设置</summary>
+              <div className="studio-view-popover">
+                <div className="studio-view-section">
+                  <p>网格与吸附</p>
+                  <div className="studio-canvas-settings">
+                    <label className="studio-canvas-option">
+                      <input
+                        type="checkbox"
+                        checked={gridVisible}
+                        onChange={(event) => setGridVisible(event.target.checked)}
+                      />
+                      显示网格
+                    </label>
+                    <label className="studio-canvas-option">
+                      <input
+                        type="checkbox"
+                        checked={gridSnap}
+                        onChange={(event) => setGridSnap(event.target.checked)}
+                      />
+                      网格吸附
+                    </label>
+                    <label className="studio-canvas-option">
+                      <input
+                        type="checkbox"
+                        checked={nodeSnap}
+                        onChange={(event) => setNodeSnap(event.target.checked)}
+                      />
+                      图元吸附
+                    </label>
+                  </div>
+                </div>
+                <div className="studio-view-section">
+                  <p>侧栏显示</p>
+                  <div className="studio-panel-toggles" aria-label="面板显示">
+                    <button
+                      type="button"
+                      aria-pressed={leftPanelVisible}
+                      onClick={() => setLeftPanelVisible((value) => !value)}
+                    >
+                      {leftPanelVisible ? "隐藏图层" : "显示图层"}
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={rightPanelVisible}
+                      onClick={() => setRightPanelVisible((value) => !value)}
+                    >
+                      {rightPanelVisible ? "隐藏属性" : "显示属性"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </details>
             <div className="studio-zoom" aria-label="画布缩放">
               <button type="button" onClick={() => changeZoom(-0.25)} disabled={zoom <= 0.5}>
                 −
               </button>
-              <button type="button" onClick={() => setZoom(1)}>
-                {Math.round(zoom * 100)}%
+              <button type="button" onClick={resetCanvasView}>
+                {zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%`}
               </button>
               <button type="button" onClick={() => changeZoom(0.25)} disabled={zoom >= 2}>
                 +
               </button>
             </div>
           </div>
-          <svg
-            ref={svgRef}
-            className="studio-svg"
-            data-rotating={rotating ? "true" : undefined}
-            style={{ width: `${zoom * 100}%` }}
-            viewBox={`0 0 ${page.size.width} ${page.size.height}`}
-            onPointerMove={(event) => {
-              updateDrag(event);
-              updateMarquee(event);
-              updateGeometry(event);
-            }}
-            onPointerUp={(event) => {
-              finishDrag(event);
-              finishMarquee(event);
-              finishGeometry(event);
-            }}
-            onPointerCancel={cancelDrag}
-            onPointerDown={startMarquee}
-            aria-label="可编辑 SVG 画布"
-          >
-            <defs>
-              <pattern
-                id="scada-studio-grid"
-                width={DEFAULT_GRID_SIZE}
-                height={DEFAULT_GRID_SIZE}
-                patternUnits="userSpaceOnUse"
+          <div className="studio-canvas-scroll" tabIndex={0} aria-label="组态网格工作区">
+            <div className="studio-canvas-board">
+              <svg
+                ref={svgRef}
+                className="studio-svg"
+                data-rotating={rotating ? "true" : undefined}
+                viewBox={`${visibleRect.x} ${visibleRect.y} ${visibleRect.width} ${visibleRect.height}`}
+                preserveAspectRatio="xMidYMid meet"
+                onPointerMove={(event) => {
+                  if (updateCanvasPan(event)) return;
+                  updateDrag(event);
+                  updateMarquee(event);
+                  updateGeometry(event);
+                }}
+                onPointerUp={(event) => {
+                  if (finishCanvasPan(event)) return;
+                  finishDrag(event);
+                  finishMarquee(event);
+                  finishGeometry(event);
+                }}
+                onPointerCancel={cancelDrag}
+                onPointerDown={(event) => {
+                  if (!beginCanvasPan(event)) startMarquee(event);
+                }}
+                aria-label="可编辑 SVG 画布；放大后可用中键或 Alt 加空白处拖动平移"
               >
-                <path
-                  d={`M ${DEFAULT_GRID_SIZE} 0 L 0 0 0 ${DEFAULT_GRID_SIZE}`}
-                  fill="none"
-                  stroke="#8295ac"
-                  strokeWidth="0.8"
-                  opacity="0.45"
+                <defs>
+                  <pattern
+                    id="scada-studio-grid"
+                    width={DEFAULT_GRID_SIZE}
+                    height={DEFAULT_GRID_SIZE}
+                    patternUnits="userSpaceOnUse"
+                  >
+                    <path
+                      d={`M ${DEFAULT_GRID_SIZE} 0 L 0 0 0 ${DEFAULT_GRID_SIZE}`}
+                      fill="none"
+                      stroke="#8295ac"
+                      strokeWidth="0.8"
+                      opacity="0.45"
+                    />
+                  </pattern>
+                </defs>
+                <image
+                  href={image}
+                  width={page.size.width}
+                  height={page.size.height}
+                  pointerEvents="none"
                 />
-              </pattern>
-            </defs>
-            <image
-              href={image}
-              width={page.size.width}
-              height={page.size.height}
-              pointerEvents="none"
-            />
-            {gridVisible && (
-              <rect
-                x={0}
-                y={0}
-                width={page.size.width}
-                height={page.size.height}
-                fill="url(#scada-studio-grid)"
-                pointerEvents="none"
-              />
-            )}
-            {page.nodes.filter(studioNodeVisible).map((node) => {
-              const displayNode =
-                displayDocument.pages
-                  .find((item) => item.id === state.activePageId)
-                  ?.nodes.find((entry) => entry.id === node.id) ?? node;
-              const t = displayNode.transform;
-              return (
-                <g
-                  key={node.id}
-                  transform={`rotate(${t.rotation} ${t.x + t.width / 2} ${t.y + t.height / 2})`}
-                >
+                {gridVisible && (
                   <rect
-                    role="button"
-                    tabIndex={0}
-                    aria-label={
-                      studioNodeLocked(node) ? `选择已锁定图元 ${node.id}` : `选择并拖动 ${node.id}`
-                    }
-                    data-locked={studioNodeLocked(node)}
-                    x={t.x}
-                    y={t.y}
-                    width={t.width}
-                    height={t.height}
-                    fill="transparent"
-                    stroke={
-                      state.selectedId === node.id
-                        ? "#f0ae4d"
-                        : state.selectedIds.includes(node.id)
-                          ? "#39c9ba"
-                          : "transparent"
-                    }
-                    strokeWidth={2}
-                    strokeDasharray="6 4"
-                    className="studio-hitbox"
-                    onPointerDown={(event) => beginDrag(event, node.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        select(node.id, event.shiftKey);
-                      }
-                    }}
+                    x={visibleRect.x}
+                    y={visibleRect.y}
+                    width={visibleRect.width}
+                    height={visibleRect.height}
+                    fill="url(#scada-studio-grid)"
+                    pointerEvents="none"
                   />
-                  {state.selectedIds.length === 1 &&
-                    state.selectedId === node.id &&
-                    !studioNodeLocked(node) && (
-                      <>
-                        {RESIZE_HANDLES.map((handle) => {
-                          const position = resizeHandlePosition(t, handle);
-                          return (
-                            <rect
-                              key={handle}
-                              className="studio-resize-handle"
-                              data-handle={handle}
-                              aria-label={`缩放图元${RESIZE_HANDLE_LABELS[handle]}`}
-                              x={position.x - 5}
-                              y={position.y - 5}
-                              width={10}
-                              height={10}
-                              onPointerDown={(event) => beginGeometry(event, handle)}
-                            >
-                              <title>按住 Shift 保持宽高比</title>
-                            </rect>
-                          );
-                        })}
-                        <line
-                          className="studio-rotation-stem"
-                          x1={t.x + t.width / 2}
-                          x2={t.x + t.width / 2}
-                          y1={t.y}
-                          y2={t.y - 26}
-                          pointerEvents="none"
-                        />
-                        <circle
-                          className="studio-rotation-handle"
-                          aria-label="旋转图元，按住 Shift 可按 15 度吸附"
-                          cx={t.x + t.width / 2}
-                          cy={t.y - 26}
-                          r={7}
-                          onPointerDown={(event) => beginGeometry(event, "rotate")}
-                        />
-                      </>
-                    )}
-                </g>
-              );
-            })}
-            {snapResult?.verticalGuide != null && (
-              <line
-                className="studio-alignment-guide"
-                x1={snapResult.verticalGuide}
-                x2={snapResult.verticalGuide}
-                y1={0}
-                y2={page.size.height}
-                pointerEvents="none"
-              />
-            )}
-            {snapResult?.horizontalGuide != null && (
-              <line
-                className="studio-alignment-guide"
-                x1={0}
-                x2={page.size.width}
-                y1={snapResult.horizontalGuide}
-                y2={snapResult.horizontalGuide}
-                pointerEvents="none"
-              />
-            )}
-            {marquee !== null && (
-              <rect
-                className="studio-marquee"
-                x={Math.min(marquee.startX, marquee.x)}
-                y={Math.min(marquee.startY, marquee.y)}
-                width={Math.abs(marquee.x - marquee.startX)}
-                height={Math.abs(marquee.y - marquee.startY)}
-                pointerEvents="none"
-              />
-            )}
-          </svg>
-        </section>
-        <aside className="studio-panel" aria-label="图元属性">
-          <h2>属性 · 已选 {state.selectedIds.length}</h2>
-          <div className="studio-toolbox">
-            <div className="studio-tool-group" aria-label="图层锁定与可见性">
-              <button
-                type="button"
-                disabled={state.selectedIds.length === 0}
-                onClick={() => changeSelectedLocked(true)}
-              >
-                锁定所选
-              </button>
-              <button
-                type="button"
-                disabled={state.selectedIds.length === 0}
-                onClick={() => changeSelectedLocked(false)}
-              >
-                解锁所选
-              </button>
-              <button
-                type="button"
-                disabled={state.selectedIds.length === 0 || hasLockedSelection}
-                onClick={() => changeSelectedVisible(false)}
-              >
-                隐藏所选
-              </button>
-              <button
-                type="button"
-                disabled={state.selectedIds.length === 0 || hasLockedSelection}
-                onClick={() => changeSelectedVisible(true)}
-              >
-                显示所选
-              </button>
-            </div>
-            <div className="studio-tool-group" aria-label="图元组合">
-              <button
-                type="button"
-                disabled={!canGroup}
-                onClick={() => apply(() => editor.groupSelected(), "已组合所选图元，可撤销")}
-              >
-                组合所选
-              </button>
-              <button
-                type="button"
-                disabled={!hasGroupedSelection}
-                onClick={() => apply(() => editor.ungroupSelected(), "已解组，可撤销")}
-              >
-                解组
-              </button>
-            </div>
-            <div className="studio-tool-group" aria-label="图元剪贴板">
-              <button
-                type="button"
-                disabled={state.selectedIds.length === 0}
-                onClick={() => apply(() => editor.copySelected(), "已复制所选图元到会话剪贴板")}
-              >
-                复制所选
-              </button>
-              <button
-                type="button"
-                disabled={state.selectedIds.length === 0}
-                onClick={() => apply(() => editor.cutSelected(), "已剪切图元，可撤销")}
-              >
-                剪切所选
-              </button>
-              <button
-                type="button"
-                disabled={!state.hasClipboard}
-                onClick={() => apply(() => editor.pasteClipboard(), "已粘贴图元，可撤销")}
-              >
-                粘贴图元
-              </button>
-              <button
-                type="button"
-                onClick={() => apply(() => editor.deleteSelected(), "已删除图元，可撤销")}
-                disabled={state.selectedIds.length === 0}
-              >
-                删除所选
-              </button>
-            </div>
-            <div className="studio-exact-layer" aria-label="图层精确插入">
-              <label className="studio-field">
-                目标图元
-                <select
-                  aria-label="图层插入目标"
-                  value={layerTargetId}
-                  disabled={!canPreciselyMove || layerTargetNodes.length === 0}
-                  onChange={(event) => setPreferredLayerTargetId(event.target.value)}
-                >
-                  <option value="">请选择目标图元</option>
-                  {layerTargetNodes.map((node) => (
-                    <option key={node.id} value={node.id}>
-                      {node.id}
-                      {node.groupId ? "（组合）" : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="studio-field">
-                插入位置
-                <select
-                  aria-label="图层插入位置"
-                  value={layerInsertPosition}
-                  onChange={(event) =>
-                    setLayerInsertPosition(event.target.value as "before" | "after")
-                  }
-                >
-                  <option value="after">目标上方（更靠前）</option>
-                  <option value="before">目标下方（更靠后）</option>
-                </select>
-              </label>
-              <button
-                type="button"
-                disabled={!canPreciselyMove || !layerTargetId || !selected}
-                onClick={() =>
-                  selected && moveLayerPrecisely(selected.id, layerTargetId, layerInsertPosition)
-                }
-              >
-                移动到指定层
-              </button>
-            </div>
-            <div className="studio-tool-group" aria-label="图层排序">
-              <button type="button" onClick={() => layer("back")} disabled={!selected}>
-                置底
-              </button>
-              <button type="button" onClick={() => layer("backward")} disabled={!selected}>
-                下移层
-              </button>
-              <button type="button" onClick={() => layer("forward")} disabled={!selected}>
-                上移层
-              </button>
-              <button type="button" onClick={() => layer("front")} disabled={!selected}>
-                置顶
-              </button>
-            </div>
-            <h3>多选对齐（以最后选中的图元为准）</h3>
-            <div className="studio-tool-group" aria-label="图元对齐">
-              {(
-                [
-                  ["left", "左"],
-                  ["hcenter", "水平居中"],
-                  ["right", "右"],
-                  ["top", "上"],
-                  ["vcenter", "垂直居中"],
-                  ["bottom", "下"],
-                ] as const
-              ).map(([mode, label]) => (
-                <button
-                  type="button"
-                  key={mode}
-                  onClick={() => align(mode)}
-                  disabled={state.selectedIds.length < 2 || hasGroupedSelection}
-                >
-                  {label}
-                </button>
-              ))}
+                )}
+                <rect
+                  className="studio-page-boundary"
+                  x={0}
+                  y={0}
+                  width={page.size.width}
+                  height={page.size.height}
+                  fill="none"
+                  vectorEffect="non-scaling-stroke"
+                  pointerEvents="none"
+                />
+                {page.nodes.filter(studioNodeVisible).map((node) => {
+                  const displayNode =
+                    displayDocument.pages
+                      .find((item) => item.id === state.activePageId)
+                      ?.nodes.find((entry) => entry.id === node.id) ?? node;
+                  const t = displayNode.transform;
+                  return (
+                    <g
+                      key={node.id}
+                      transform={`rotate(${t.rotation} ${t.x + t.width / 2} ${t.y + t.height / 2})`}
+                    >
+                      <rect
+                        role="button"
+                        tabIndex={0}
+                        aria-label={
+                          studioNodeLocked(node)
+                            ? `选择已锁定图元 ${node.id}`
+                            : `选择并拖动 ${node.id}`
+                        }
+                        data-locked={studioNodeLocked(node)}
+                        x={t.x}
+                        y={t.y}
+                        width={t.width}
+                        height={t.height}
+                        fill="transparent"
+                        stroke={
+                          state.selectedId === node.id
+                            ? "#f0ae4d"
+                            : state.selectedIds.includes(node.id)
+                              ? "#39c9ba"
+                              : "transparent"
+                        }
+                        strokeWidth={2}
+                        strokeDasharray="6 4"
+                        className="studio-hitbox"
+                        onPointerDown={(event) => beginDrag(event, node.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            select(node.id, event.shiftKey);
+                          }
+                        }}
+                      />
+                      {state.selectedIds.length === 1 &&
+                        state.selectedId === node.id &&
+                        !studioNodeLocked(node) && (
+                          <>
+                            {RESIZE_HANDLES.map((handle) => {
+                              const position = resizeHandlePosition(t, handle);
+                              return (
+                                <rect
+                                  key={handle}
+                                  className="studio-resize-handle"
+                                  data-handle={handle}
+                                  aria-label={`缩放图元${RESIZE_HANDLE_LABELS[handle]}`}
+                                  x={position.x - 5}
+                                  y={position.y - 5}
+                                  width={10}
+                                  height={10}
+                                  onPointerDown={(event) => beginGeometry(event, handle)}
+                                >
+                                  <title>按住 Shift 保持宽高比</title>
+                                </rect>
+                              );
+                            })}
+                            <line
+                              className="studio-rotation-stem"
+                              x1={t.x + t.width / 2}
+                              x2={t.x + t.width / 2}
+                              y1={t.y}
+                              y2={t.y - 26}
+                              pointerEvents="none"
+                            />
+                            <circle
+                              className="studio-rotation-handle"
+                              aria-label="旋转图元，按住 Shift 可按 15 度吸附"
+                              cx={t.x + t.width / 2}
+                              cy={t.y - 26}
+                              r={7}
+                              onPointerDown={(event) => beginGeometry(event, "rotate")}
+                            />
+                          </>
+                        )}
+                    </g>
+                  );
+                })}
+                {snapResult?.verticalGuide != null && (
+                  <line
+                    className="studio-alignment-guide"
+                    x1={snapResult.verticalGuide}
+                    x2={snapResult.verticalGuide}
+                    y1={0}
+                    y2={page.size.height}
+                    pointerEvents="none"
+                  />
+                )}
+                {snapResult?.horizontalGuide != null && (
+                  <line
+                    className="studio-alignment-guide"
+                    x1={0}
+                    x2={page.size.width}
+                    y1={snapResult.horizontalGuide}
+                    y2={snapResult.horizontalGuide}
+                    pointerEvents="none"
+                  />
+                )}
+                {marquee !== null && (
+                  <rect
+                    className="studio-marquee"
+                    x={Math.min(marquee.startX, marquee.x)}
+                    y={Math.min(marquee.startY, marquee.y)}
+                    width={Math.abs(marquee.x - marquee.startX)}
+                    height={Math.abs(marquee.y - marquee.startY)}
+                    pointerEvents="none"
+                  />
+                )}
+              </svg>
             </div>
           </div>
+        </section>
+        <aside
+          className="studio-panel studio-panel-properties min-h-0 min-w-0"
+          aria-label="图元属性"
+        >
+          <h2>属性 · 已选 {state.selectedIds.length}</h2>
           {selected ? (
             <>
               <p>
@@ -1680,7 +1695,7 @@ export default function StudioPage() {
                   onSubmit={changeGeometry}
                   noValidate
                 >
-                  {geometryFields.map(([key, label]) => (
+                  {GEOMETRY_PROPERTY_FIELDS.map(([key, label]) => (
                     <label key={key}>
                       {label}
                       <input
@@ -1692,40 +1707,40 @@ export default function StudioPage() {
                       />
                     </label>
                   ))}
-                  <button type="submit" disabled={studioNodeLocked(selected)}>
+                  <Button type="submit" disabled={studioNodeLocked(selected)}>
                     应用几何属性
-                  </button>
+                  </Button>
                 </form>
               ) : (
                 <p className="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
               )}
               <p className="studio-tip">拖动画布中的虚线框，或使用方向按钮微调。每次操作可撤销。</p>
               <div className="studio-nudge">
-                <button type="button" onClick={() => nudge(-1, 0)}>
+                <Button type="button" onClick={() => nudge(-1, 0)}>
                   ←
-                </button>
-                <button type="button" onClick={() => nudge(0, -1)}>
+                </Button>
+                <Button type="button" onClick={() => nudge(0, -1)}>
                   ↑
-                </button>
-                <button type="button" onClick={() => nudge(0, 1)}>
+                </Button>
+                <Button type="button" onClick={() => nudge(0, 1)}>
                   ↓
-                </button>
-                <button type="button" onClick={() => nudge(1, 0)}>
+                </Button>
+                <Button type="button" onClick={() => nudge(1, 0)}>
                   →
-                </button>
+                </Button>
               </div>
               {selected.type === "label" && state.selectedIds.length === 1 && (
                 <label className="studio-field">
                   显示文案
-                  <input
+                  <Input
                     value={labelDraft}
-                    maxLength={256}
+                    maxlength={256}
                     disabled={studioNodeLocked(selected)}
-                    onChange={(event) => setLabelDraft(event.target.value)}
+                    onChange={(value) => setLabelDraft(value)}
                   />
-                  <button type="button" onClick={changeLabel} disabled={studioNodeLocked(selected)}>
+                  <Button type="button" onClick={changeLabel} disabled={studioNodeLocked(selected)}>
                     应用文案
-                  </button>
+                  </Button>
                 </label>
               )}
               <h3>Tag 绑定（模拟数据）</h3>
@@ -1764,12 +1779,188 @@ export default function StudioPage() {
           ) : (
             <p className="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
           )}
+          <details className="studio-advanced">
+            <summary>高级图元与图层操作</summary>
+            <div className="studio-advanced-content">
+              <div className="studio-toolbox">
+                <div className="studio-tool-group" aria-label="图层锁定与可见性">
+                  <Button
+                    type="button"
+                    disabled={state.selectedIds.length === 0}
+                    onClick={() => changeSelectedLocked(true)}
+                  >
+                    锁定所选
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={state.selectedIds.length === 0}
+                    onClick={() => changeSelectedLocked(false)}
+                  >
+                    解锁所选
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={state.selectedIds.length === 0 || hasLockedSelection}
+                    onClick={() => changeSelectedVisible(false)}
+                  >
+                    隐藏所选
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={state.selectedIds.length === 0 || hasLockedSelection}
+                    onClick={() => changeSelectedVisible(true)}
+                  >
+                    显示所选
+                  </Button>
+                </div>
+                <div className="studio-tool-group" aria-label="图元组合">
+                  <Button
+                    type="button"
+                    disabled={!canGroup}
+                    onClick={() => apply(() => editor.groupSelected(), "已组合所选图元，可撤销")}
+                  >
+                    组合所选
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={!hasGroupedSelection}
+                    onClick={() => apply(() => editor.ungroupSelected(), "已解组，可撤销")}
+                  >
+                    解组
+                  </Button>
+                </div>
+                <div className="studio-tool-group" aria-label="图元剪贴板">
+                  <Button
+                    type="button"
+                    disabled={state.selectedIds.length === 0}
+                    onClick={() => apply(() => editor.copySelected(), "已复制所选图元到会话剪贴板")}
+                  >
+                    复制所选
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={state.selectedIds.length === 0}
+                    onClick={() => apply(() => editor.cutSelected(), "已剪切图元，可撤销")}
+                  >
+                    剪切所选
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={!state.hasClipboard}
+                    onClick={() => apply(() => editor.pasteClipboard(), "已粘贴图元，可撤销")}
+                  >
+                    粘贴图元
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => apply(() => editor.deleteSelected(), "已删除图元，可撤销")}
+                    disabled={state.selectedIds.length === 0}
+                  >
+                    删除所选
+                  </Button>
+                </div>
+                <div className="studio-exact-layer" aria-label="图层精确插入">
+                  <label className="studio-field">
+                    目标图元
+                    <select
+                      aria-label="图层插入目标"
+                      value={layerTargetId}
+                      disabled={!canPreciselyMove || layerTargetNodes.length === 0}
+                      onChange={(event) => setPreferredLayerTargetId(event.target.value)}
+                    >
+                      <option value="">请选择目标图元</option>
+                      {layerTargetNodes.map((node) => (
+                        <option key={node.id} value={node.id}>
+                          {node.id}
+                          {node.groupId ? "（组合）" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="studio-field">
+                    插入位置
+                    <select
+                      aria-label="图层插入位置"
+                      value={layerInsertPosition}
+                      onChange={(event) =>
+                        setLayerInsertPosition(event.target.value as "before" | "after")
+                      }
+                    >
+                      <option value="after">目标上方（更靠前）</option>
+                      <option value="before">目标下方（更靠后）</option>
+                    </select>
+                  </label>
+                  <Button
+                    type="button"
+                    disabled={!canPreciselyMove || !layerTargetId || !selected}
+                    onClick={() =>
+                      selected &&
+                      moveLayerPrecisely(selected.id, layerTargetId, layerInsertPosition)
+                    }
+                  >
+                    移动到指定层
+                  </Button>
+                </div>
+                <div className="studio-tool-group" aria-label="图层排序">
+                  <Button type="button" onClick={() => layer("back")} disabled={!selected}>
+                    置底
+                  </Button>
+                  <Button type="button" onClick={() => layer("backward")} disabled={!selected}>
+                    下移层
+                  </Button>
+                  <Button type="button" onClick={() => layer("forward")} disabled={!selected}>
+                    上移层
+                  </Button>
+                  <Button type="button" onClick={() => layer("front")} disabled={!selected}>
+                    置顶
+                  </Button>
+                </div>
+                <h3>多选对齐（以最后选中的图元为准）</h3>
+                <div className="studio-tool-group" aria-label="图元对齐">
+                  {(
+                    [
+                      ["left", "左"],
+                      ["hcenter", "水平居中"],
+                      ["right", "右"],
+                      ["top", "上"],
+                      ["vcenter", "垂直居中"],
+                      ["bottom", "下"],
+                    ] as const
+                  ).map(([mode, label]) => (
+                    <Button
+                      type="button"
+                      key={mode}
+                      onClick={() => align(mode)}
+                      disabled={state.selectedIds.length < 2 || hasGroupedSelection}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </details>
         </aside>
       </div>
-      <footer>
-        V0.2 · 框选/快捷键：Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z
-        撤销，Ctrl+Shift+Z/Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择 ·
-        无设备写入
+      <footer className="studio-statusbar">
+        <div className="studio-status-message">
+          <span className="studio-status-led" aria-hidden="true" />
+          <p role="status" className="studio-notice">
+            {notice}
+            {hasSavedDraft && !autoSaveEnabled
+              ? " · 已发现本地草稿，可点击「恢复草稿」确认加载"
+              : ""}
+          </p>
+        </div>
+        <div className="studio-status-meta">
+          <span>仅模拟数据 · 无设备写入</span>
+          <span>
+            {page.nodes.length} 个图元 · 已选 {state.selectedIds.length}
+          </span>
+          <span title="Ctrl+A 全选，Ctrl+C 复制，Ctrl+X 剪切，Ctrl+V 粘贴，Ctrl+Z 撤销，Ctrl+Shift+Z / Ctrl+Y 重做，方向键微移，Shift+方向键移动 10 格，Esc 取消选择">
+            快捷键 ⓘ
+          </span>
+        </div>
       </footer>
     </main>
   );

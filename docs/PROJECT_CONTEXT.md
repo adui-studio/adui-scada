@@ -336,3 +336,67 @@ PR #16 多页面编辑管理已根据维护者授权以 Squash Merge 合并 `mai
 本批从该 `main` 建立 `feat/v0.2-layer-group-tree`，在共享 Core 新增不持久化的 `buildLayerTree` 一层平面组合树投影，按真实 `nodes[]` 构建组和成员、搜索过滤、隐藏/锁定统计及非连续层序提示。Vue/React 图层面板同时增加组折叠、搜索、定位已选和画布选中同步；继续复用原 Core 的选择和拖拽命令，保持 Schema `0.2.0`、Dexie 草稿和只读 Runtime 边界。新建 [ADR-0027](adr/0027-layer-group-tree-projection.md)。
 
 本批新增 **13 项 Core 回归测试源码**，整仓静态预计 **256 项单测**，NestJS E2E 预计 **2 项**，Markdown 预计 **42 份**。当前仅有 GitHub 远端源码提交与静态核对，**尚未执行维护者 Windows 的 `pnpm run ready`、双框架浏览器交互、IndexedDB 恢复实测**；本批必须单独验收并另行授权才能合并。
+
+## 2026-11-11 · V0.2 第二十批 TDesign UI 选型与属性区首轮迁移（待验收）
+
+上一批 PR #21 组合图层树已获维护者 Windows `pnpm run ready` 成功日志：**256/256 单测、2/2 E2E、153 文件格式检查、42 份 Markdown 及 React/Vue/NestJS 构建通过、退出码 0**；经明确授权 Squash 合并到 `main`（提交 `c836ca2`）。这仅是上一批实测结果。
+
+维护者明确将双端 UI 选为 `tdesign-react` 与 `tdesign-vue-next`，图标使用 `tdesign-icons-react` 和 `tdesign-icons-vue-next`。本批从 `main` 创建 `feat/v0.2-tdesign-property-panel`，Catalog 固定版本，React/Vue Studio 首批迁移属性操作按钮与文案输入、图层搜索与清除图标；共享 Core 统一五项几何字段名称，Schema `0.2.0`、Runtime 和 IndexedDB 草稿不改。新增 [ADR-0028](adr/0028-tdesign-dual-framework-ui.md)，并在 AGENTS 固化新选型。
+
+本批新增加 1 项 Core 测试源码，预计 **257 项单测**、2 项 E2E、43 份 Markdown。当前远端工具环境无法访问 npm Registry，尚未提交新的 `pnpm-lock.yaml`；维护者需在联网 Windows 更新锁文件并加入功能分支后，执行冻结安装、`vp check --fix` 与完整 `pnpm run ready`。**本批未在当前 Agent 环境完成实际安装、类型检查、编译、浏览器或工业现场验收**。Draft PR 未获本批明确合并授权，不能改 `main`。
+
+## 2026-11-11 · 目标分支 V7 品牌主题统一（待维护者验收）
+
+在 `feat/v0.2-tdesign-property-panel` 中保留已确认的 React/Vue TDesign 技术选型，新增共享主题 Token，统一 V7 品牌蓝、科技青与实时绿的语义，接入品牌包原版 SVG Logo，并通过两端主入口加载 `@adui/normalize.css@0.1.1` 默认 Normalize。不改变 Core、工程 Schema、Tag、工业只读边界或 TDesign 控件业务行为。未将原生样式统一替换为 UI 组件；Tauri 桌面窗口图标未在本批更换。
+
+由于当前远端执行环境无法访问 npm Registry，本批未更新依赖解析锁文件；需要维护者在联网的 Windows 环境运行安装、`pnpm run ready` 与 React/Vue 浏览器手工回归，本次仅完成代码提交，不将未执行的检查标为通过。详见 [ADR-0029](adr/0029-brand-theme-v7.md)。
+
+## 2026-11-11 · Tailwind CSS 与 Studio 全屏布局（待本机验收）
+
+用户反馈旧 Studio 居中限宽和浏览器外层滚动条。依据仓库 `ui-ux-pro-max` 布局/无障碍规则，在 `feat/v0.2-tdesign-property-panel` 继续实施：Vue/React 接入 Tailwind CSS 4.3.5（关闭 Preflight）、共享 V7 设计 Token、替换 Studio 布局为动态视口全屏和内部滚动，保留 TDesign 组件与独立 SVG 交互逻辑。尚未联网更新 `pnpm-lock.yaml`、未在 Windows 执行完整 `pnpm run ready`、未实测两端浏览器及桌面 MSI。技术决策见 [ADR-0030](adr/0030-tailwind-fullscreen-studio.md)。
+
+## 2026-11-11 · Tailwind 共享包与 React CSS 构建阻塞修复（待本机复验）
+
+维护者 Windows 日志确认当前功能分支完成 Catalog、共享配置、环境、中文文案、159 个文件格式检查、61 文件静态检查、双 Web/Server 类型检查、**257/257 项单元测试、2/2 项 NestJS E2E 及 45 份 Markdown 静态校验**。进入 React Web 生产构建后，Vite+/Lightning CSS 因 Tailwind CSS 的 `@import ... source("./") layer(utilities)` 顺序产生不合法的 `@media layer(utilities)`，构建失败；后续 Vue Web/NestJS 构建未运行，因此该次 `pnpm run ready` **未通过**。
+
+按维护者要求，抽取 `packages/tailwind` 作为内部 `@adui/tailwind` 包，两端应用统一引用共享 CSS 和 Vite 插件；从源头改正 `layer(utilities) source(none)` 顺序并通过显式 `@source` 扫描两套应用，避免组件样式漂移或意外引入 Tailwind Preflight。新增共享配置静态契约。此次修复在远端仓库直接提交，**尚未运行更新后的 pnpm 依赖安装、React/Vue 构建、完整 ready 或浏览器交互**，以维护者后续 Windows 复验为准。详见 [ADR-0030](adr/0030-tailwind-fullscreen-studio.md)。
+
+## 2026-11-11 · V0.2 专业编辑器布局重排（待本机验收）
+
+基于 Penpot、Figma、diagrams.net 和 Ignition Designer 的工作区分工，维护者要求改进原编辑器过度平铺按钮、画布权重不足、左右面板混乱的问题。本批在 `feat/v0.2-tdesign-property-panel` 重排双框架 Studio：顶部工程/页面操作收进可访问的展开菜单，左侧固定图元库并独立滚动图层树，中部画布独立滚动且允许侧栏隐藏，右侧几何与 Tag 属性优先展示，高级编排操作折叠到底部；状态与模拟警告移至底栏。
+
+新增 `@adui/tailwind/studio.css` 作为 Vue/React 共享布局样式，未改变 Core、工程 Schema、Tag、SSE/模拟、Dexie 和 PLC/DCS 只读边界。已通过远端源码静态结构核对；**未运行改造后的 `pnpm run ready`、React/Vue 构建和浏览器交互测试，不能沿用上一轮 257/257 单测日志宣称本批通过。** 详见 [ADR-0031](adr/0031-canvas-first-studio-workspace.md)。
+
+## 2026-11-11 · 16:9 画板无滚动与视图按钮合并（待本机验收）
+
+维护者截图确认画布有纵向滚动条，要求 **画板 16:9、左右侧栏固定宽度、中部自适应，合并部分操作按钮**。本批在 `feat/v0.2-tdesign-property-panel` 中新增共享 Core 视区数学函数，将原 `zoom * 100%` DOM 宽度缩放改为 SVG `viewBox` 缩放和边界内平移；共享 `@adui/tailwind/studio.css` 使用 `container-type: size` 与 `100cqh` 让 16:9 画板等比适配中央可用空间，移除中间滚动条并保持桌面 252px / 320px 固定侧栏。网格、吸附和侧栏显隐折叠为“视图设置”；自动保存入口归入“文件与草稿”。
+
+不强制更改已有 880×460 工程页面，以避免图元变形或 Schema 兼容性问题。Vue/React 双端逻辑对应，新增六项共享 Core 单测源码及静态校验。**该批尚未执行本机实际构建、自动化测试、浏览器/桌面端视觉验收。** 以维护者后续 `pnpm run ready` 及截图回归为准。详见 [ADR-0032](adr/0032-studio-16x9-fit-viewport.md)。
+
+## 2026-11-11 · 修正画布四周留白（待本机验收）
+
+维护者截图明确指出外框周围存在留白，本次在 `feat/v0.2-tdesign-property-panel` 上直接删除共享 CSS 中的 16:9 画板外框约束和桌面/窄屏画布内边距，中间编辑区改为全宽全高、背景连续、不出现独立画板边框。仍保留 SVG viewBox 与 `preserveAspectRatio="xMidYMid meet"`，不改变存量工程 880×460 的数据和图元比例。固定外框决策由 ADR-0033 取代 ADR-0032。尚未实测 React/Vue 浏览器几何尺寸或运行完整 ready。
+
+## 2026-11-11 · 工作区网格铺满与工程页面分离（待本机验收）
+
+维护者最新截图表明 CSS 虽已撑满中央工作区，网格 `rect` 仍仅使用 `page.size`，且 SVG 的等比适配在工程页面与工作区比例不同时出现空白。本批依据仓库 `ui-ux-pro-max` 的滚动、布局、键盘交互原则以及 Penpot、draw.io、Figma、Ignition Designer 的官方工作区设计，新增共享 Core `studioViewportRect`，React/Vue 各通过 `ResizeObserver` 采集真实 SVG 宽高，计算与可见工作区同宽高比的 SVG `viewBox`，用 `visibleRect` 铺满世界坐标网格，并单独绘制工程页面边框。保留原 `ScadaDocument` 的尺寸、图元坐标、模拟数据和工业设备安全边界，网格与边框不进入运行时或导出内容。
+
+补充 6 项视区计算单测源码和双端静态配置检查。**这次远端提交后尚未执行本机 `pnpm run ready` 或浏览器真实 DOM 尺寸回归**；由维护者在 Windows 工作区验收。详见 [ADR-0034](adr/0034-studio-full-viewport-grid.md)。
+
+## 2026-11-11 · 中央画布滚动条槽位与视区负零修复（待本机复验）
+
+维护者浏览器截图中的画布右侧竖条来自双框架 `studio.css` 遗留的 `.studio-panel, .studio-stage { scrollbar-gutter: stable; }`：即使共享布局已设置 `overflow: hidden`，浏览器仍会为画布预留滚动条槽位。现仅移除该错误组合规则；真正可滚动的属性面板和图层树继续通过共享 `@adui/tailwind/studio.css` 独立预留滚动条空间，不修改 SVG 或页面布局。
+
+维护者本机 `pnpm run ready` 已通过代码规范、类型检查并运行到单测；269 项中 268 通过，唯一失败是 `studioViewportRect` 返回 `y: -0`，导致严格对象比较与正零不相等。现由共享 Core 统一将零平移规范为 `+0`，新增负零回归测试并在 `config:check` 增加 Vue/React 画布槽位静态约束。**更新后的 `ready`、Web 构建和浏览器右侧间距仍待本机复验。**
+
+## 2026-11-11 · V0.2 浏览器级回归入口（待 Windows 双端验收）
+
+维护者最新反馈 `pnpm run ready` **退出码 0**，且 270/270 项单测、2/2 项 NestJS E2E、React/Vue 构建、NestJS 构建和文档检查全部通过。为覆盖此前多次出现的“网格未铺满、画布留白、滚动槽位、侧栏挤压、缩放不一致”等静态检查无法确认的问题，新增 `pnpm run test:browser`。脚本在隔离的 Chrome/Edge 中对两套 Web 的 1440×900、1024×768 页面执行实际 DOM 边界测量与基本交互冒烟测试，失败退出非零；不改 Schema、Core、UI 组件业务逻辑或工业安全边界，不增加 npm 依赖，也不改变已通过的 `ready`。**该测试尚未在维护者真实应用中运行，不能宣称浏览器 E2E 已通过。** 详见 [HARNESS](HARNESS.md)。
+
+## 2026-11-11 · 修复浏览器验收默认入口与导航竞态（待本机复验）
+
+维护者提供的 `pnpm run ready` 再次退出码 0（270 项单测、2 项服务端 E2E、React/Vue/NestJS 构建及文档检查通过），但 `pnpm run test:browser` 报 `未找到元素：.studio-workspace`。审查双框架 `App` 后确认：React/Vue 默认显示运行监控，浏览器验收脚本却未点击“组态编辑”即开始查找 Studio。现仅修复 `scripts/test-studio-browser.mjs`：先找到顶部导航按钮并点击、等待异步编辑器和 SVG 挂载；为每个视口生成不同本地测试 URL 规避连续导航竞态；新增详细失败诊断。已在独立 DOM 模拟中检查从运行监控进入编辑器与已在编辑器时无需重复点击两种路径；**尚未得到维护者 Windows 真实浏览器重新验收结果**，原 270/270 单测通过仅属于修复前版本。
+
+## 2026-11-11 · 修复隐藏图层导致画布不扩展（待本机复验）
+
+维护者运行 `pnpm run test:browser`：React/Vue 在 1440×900 和 1024×768 各完成 19 项检查，其中仅“隐藏图层后画布自动扩展”失败，共 4 项失败；其余各 18 项通过。仓库 CSS 检查显示：`data-left-collapsed="true"` 将左侧 Grid 轨道改为 `0px` 并隐藏左侧 DOM 元素，Grid 自动布局因此可能把中央舞台放进第 1 个 `0px` 轨道，属性面板移入中间轨道。修复仅在共享 `@adui/tailwind/studio.css` 为图层侧栏、中间舞台和属性侧栏指定固定 `grid-column: 1/2/3`、`grid-row: 1`，而非改动两个框架的状态逻辑；窄屏 Flex 布局不受 Grid 列属性影响。共享配置静态检查新增显式列锚定契约，以防再次回归。**本批没有重新运行 Windows 双端浏览器验收或完整 `ready`，需维护者后续复验。**

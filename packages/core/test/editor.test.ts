@@ -8,6 +8,7 @@ import {
 } from "../src/document.ts";
 import {
   DocumentEditor,
+  GEOMETRY_PROPERTY_FIELDS,
   findNodesInRect,
   resolveDragSnap,
   withNodePosition,
@@ -1897,4 +1898,16 @@ test("精确层序变更经 JSON 导入导出后顺序与属性完全一致", ()
     "tank",
     "pump",
   ]);
+});
+
+test("几何属性面板字段由共享 Core 定义并保持双框架顺序一致", () => {
+  expect(GEOMETRY_PROPERTY_FIELDS).toEqual([
+    ["x", "X 坐标"],
+    ["y", "Y 坐标"],
+    ["width", "宽度"],
+    ["height", "高度"],
+    ["rotation", "旋转角度（度）"],
+  ]);
+  const keys = GEOMETRY_PROPERTY_FIELDS.map(([key]) => key);
+  expect(new Set(keys).size).toBe(keys.length);
 });

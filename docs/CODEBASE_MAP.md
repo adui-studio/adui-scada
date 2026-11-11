@@ -244,3 +244,64 @@
 - `apps/web-react/src/studio/StudioPage.tsx` 与 `apps/web-vue/src/studio/StudioPage.vue`：可折叠组标题和成员行、搜索定位、组选中同步、临时会话清理及保留原有 HTML5 拖拽。
 - 两份 `apps/web-*/src/studio/studio.css`：组合缩进、搜索区、折叠控件与图层列表滚动样式。
 - [ADR-0027](adr/0027-layer-group-tree-projection.md)：说明树只做视图投影而非嵌套工程 Schema，并记录历史层序兼容性。
+
+## V0.2 第二十批：TDesign UI 选型与共享属性元数据
+
+- `pnpm-workspace.yaml`：新增四个 TDesign UI/图标包固定版本的 Catalog；`apps/web-react/package.json` 和 `apps/web-vue/package.json` 分别引用对应 UI 及图标包。
+- `apps/web-react/src/studio/StudioPage.tsx`：首批替换 TDesign React 属性按钮、受控文本与搜索 `Input`、清除 `CloseIcon`，仅在 Studio 导入官方 CSS。
+- `apps/web-vue/src/studio/StudioPage.vue`：对等使用 Vue Next `TButton/TInput`、Vue 版 `CloseIcon` 和官方 CSS；继续复用 Core 编辑命令和原几何/Tag 表单。
+- 两份 `apps/web-*/src/studio/studio.css`：Studio 局部工业深色 TDesign 主题变量与输入/按钮样式；不改变运行时 SVG 样式。
+- `packages/core/src/editor.ts`：统一导出 `GEOMETRY_PROPERTY_FIELDS`，替换双端五项几何名称的重复定义；`packages/core/test/editor.test.ts` 增加共享属性字段契约测试。
+- `AGENTS.md` 与 [ADR-0028](adr/0028-tdesign-dual-framework-ui.md)：正式记录维护者新 UI 选型，避免未来误把 React Ant Design 当作已决定。
+- `pnpm-lock.yaml`：因当前 Agent 环境无法联网安装，需要维护者 Windows 首次安装生成并提交，正式冻结安装前的必要前置工作。
+
+## V7 品牌主题（ADR-0029）
+
+- `packages/runtime/src/theme.css`：统一品牌颜色和工业深色工作台语义变量。
+- `packages/runtime/src/runtime.css`：全局导航、监控页及公共交互引用共享主题变量。
+- `apps/web-react/src/studio/studio.css`、`apps/web-vue/src/studio/studio.css`：TDesign 深色主题、画布操作和几何交互颜色统一。
+- `apps/web-react/public/favicon.svg`、`apps/web-vue/public/favicon.svg`：V7 品牌包原版 SVG；同一图标也由各 Web 的 `public/brand/favicon.svg` 提供导航标志。
+- 两套 Web 的 `main.ts(x)`：先导入 `@adui/normalize.css` 默认 Normalize，再导入共享 Runtime CSS。
+
+## Tailwind CSS 与全视口 Studio（ADR-0030）
+
+- `packages/tailwind/package.json`、`src/styles.css`、`src/vite.ts`：共享 `@adui/tailwind` 包导出 Tailwind v4 无 Preflight 主题及 Vite 插件；显式收集 Vue/React 工具类。
+- 两端 `main.ts(x)` 和 `vite.config.ts`：分别导入 `@adui/tailwind/styles.css` 和 `@adui/tailwind/vite`，不保留重复的本地 Tailwind CSS。
+- `scripts/check-shared-config.mjs`：补充共享包导出、两端接入及 CSS 导入顺序静态契约。
+- `pnpm-workspace.yaml`：统一固定版本，工作区共享包集中声明依赖。
+- 两端 `App`：Studio 视口容器固定为动态视口高度；Runtime 保留可滚动页面。
+- 两端 `StudioPage`：使用 Tailwind 布置顶部工具栏、三栏工作区和各自滚动的侧栏/画布，特殊 SVG/TDesign 样式仍保留原 CSS。
+
+## V0.2 Studio 专业工作区重排（ADR-0031）
+
+- `packages/tailwind/src/studio.css`：共享画布优先的工作台布局、悬浮菜单、可滚动图层树、属性面板、底部状态栏及窄屏响应式；由 `@adui/tailwind/studio.css` 导出。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：分别接入工程/页面操作菜单、图层辅助区、独立画布滚动区、可折叠高级属性和左右面板显隐；保留原编辑命令与 SVG 图元行为。
+- 两份 `studio.css`：仅保留 TDesign 局部主题、图层行细节与 SVG 控制点；工作台布局统一使用共享样式。
+- `scripts/check-shared-config.mjs`：增加新布局区域及共享 CSS 入口静态约束。
+
+## V0.2 Studio 无滚动画板与操作分组（ADR-0032）
+
+- `packages/core/src/studio-viewport.ts`：框架无关的 `studioViewBox` 和 `clampStudioPan` 视图计算，不修改工程 Schema 与图元坐标。
+- `packages/core/test/studio-viewport.test.ts`：缩放、平移、边界限制和非法输入测试。
+- `packages/tailwind/src/studio.css`：左 252px、右 320px 固定侧栏与中央自适应布局；通过 CSS 容器查询让画板保持 16:9，禁止中央滚动。
+- Vue/React `StudioPage`：共享 Core SVG `viewBox` 缩放，中键或 Alt+空白处平移；合并视图设置菜单和自动保存入口。
+- `scripts/check-shared-config.mjs`：补充画板比例、固定栏宽和双端 SVG 视图处理静态契约。
+
+## V0.2 中央画布满尺寸修正（ADR-0033）
+
+- `packages/tailwind/src/studio.css`：中央画布容器与 SVG 宽高 100%，删除原 16:9 独立外框及内边距，保持背景连续。
+- `scripts/check-shared-config.mjs`：静态校验更新为满宽、满高、无滚动且不约束外框比例。
+- 原 SVG `viewBox`、工程页面比例和双端编辑逻辑保留，避免图元变形。
+
+## V0.2 全视口网格与工程页面分离（ADR-0034）
+
+- `packages/core/src/studio-viewport-rect.ts`：根据实际 SVG 工作区宽高、工程页面大小及缩放/平移，计算等比、完整的 `viewBox` 范围。
+- `packages/core/test/studio-viewport-rect.test.ts`：覆盖不同宽高比、缩放、平移和异常参数。
+- React `StudioPage.tsx`、Vue `StudioPage.vue`：使用 `ResizeObserver` 更新可见视区；工作区网格矩形跟随 `visibleRect` 而非 `page.size`。
+- `packages/tailwind/src/studio.css`：共享 `studio-page-boundary` 辅助线视觉，保留全屏画布与固定侧栏。
+- `scripts/check-shared-config.mjs`：检测两端实际视口监听、全工作区网格和工程边界。
+
+## 双框架 Studio 浏览器冒烟测试
+
+- `scripts/test-studio-browser.mjs`：使用 Node.js 原生 WebSocket 和 Chrome/Edge 调试协议启动隔离浏览器，自动检查 React/Vue 画布布局、网格、缩放、面板和图层选择。
+- `pnpm run test:browser`：独立运行入口，暂不强制纳入 `ready`，避免在无 GUI 浏览器的环境下阻塞原有构建质量链。
