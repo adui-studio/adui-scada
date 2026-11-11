@@ -950,9 +950,9 @@ async function simulateStudioDraftWriteFailureInPage() {
     while (Date.now() - started < 12000) {
       lastNotice = document.querySelector(".studio-notice")?.textContent || "";
       lastEnabled =
-        document.querySelector(".studio-file-menu button[aria-pressed]")?.getAttribute(
-          "aria-pressed",
-        ) === "true";
+        document
+          .querySelector(".studio-file-menu button[aria-pressed]")
+          ?.getAttribute("aria-pressed") === "true";
       if (lastNotice.includes("自动保存已暂停：") && !lastEnabled && rejected > 0) {
         return { notice: lastNotice, rejected };
       }
@@ -1077,7 +1077,12 @@ async function runStudioMultiTabSafety(first, second) {
       "保存草稿",
       "已保存 IndexedDB 草稿",
     );
-    const recreated = await waitForStudioDraftRevision(second, initial.projectId, 3, recreatedDocument);
+    const recreated = await waitForStudioDraftRevision(
+      second,
+      initial.projectId,
+      3,
+      recreatedDocument,
+    );
     assert.deepStrictEqual(
       JSON.parse(await evaluateStudioPage(first, exportStudioJsonInPage)),
       newer,
