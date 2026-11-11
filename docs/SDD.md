@@ -341,3 +341,14 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - 只修改 `ScadaDocument 0.2.0` 的图元数组顺序，保留已有严格 Parser、历史上限、JSON、Dexie 草稿和只读 Runtime 行为；单纯悬停不修改文档。详见 [ADR-0026](adr/0026-precise-layer-order.md)。
 
 本批新增 17 项 Core 回归测试源码，整仓预计 **243 项单元测试**，需要维护者 Windows `pnpm run ready` 和双框架交互复验。
+
+## 30. V0.2 第十九批：图层树投影与编辑会话视图
+
+- `packages/core/src/layer-tree.ts` 新增 `buildLayerTree(nodes, query?)`。输入为当前页 `readonly ScadaNode[]`，输出 `LayerTreeNode | LayerTreeGroup`；从 `nodes[]` 逆序投影，保证视觉最上层优先，组合首次在最上层组员处出现并包含全部成员，组员仍按原相对层序逆序展示。
+- 组标题保存 `groupId`、`anchorNodeId`、匹配的 `members`、`totalCount`、`hasLockedMember`、`hiddenCount`、`fragmented`。旧工程的非连续组只报告 `fragmented`，不改变原数组和 Runtime 绘制顺序。
+- 搜索统一在共享 Core 中进行大小写不敏感的字符串匹配：ID、类型、`props.text`、`props.name`、组 ID；组 ID 命中显示整组，成员命中只显示相关成员及组标题，空白关键字显示所有节点。非字符串搜索值显式拒绝，避免意外运行时类型。
+- Vue/React 框架 UI 各自维护搜索字符串与折叠组 ID 集合。搜索期间匹配组临时展开；未搜索时折叠/展开独立于工程修改，不产生撤销历史、草稿变更或 JSON 字段；切页清空搜索，成功导入/恢复清空所有图层树临时状态。
+- 组标题与成员按钮都调用既有 `editor.select(realNodeId, additive)`，由 `groupId` 语义扩展组合选中；从画布改变选中时自动展开当前组选中。定位按钮清空查询、展开当前组并滚动到图层面板行，不自动改变 SVG 视口与缩放。
+- 继承第十八批的同页原生拖拽和 `moveLayer` 精确排序，组标题用 `anchorNodeId`，成员用自身 ID；组内锁定成员禁用拖动，实际锁定校验仍由共享 Core 负责。搜索与折叠只改变图层呈现，不直接修改 Tag、组 ID、层序或其他业务数据。
+
+决策记录：[ADR-0027](adr/0027-layer-group-tree-projection.md)。本批新增 13 项共享 Core 测试源码，整仓预计 **256 项单元测试**，需维护者 Windows `pnpm run ready` 及双框架浏览器验收。
