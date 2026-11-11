@@ -271,7 +271,6 @@ async function checkStudioInPage() {
   return { findings, viewport: { width: innerWidth, height: innerHeight } };
 }
 
-
 /** 只在隔离浏览器中操作真实 Studio DOM，不修改正式应用代码。 */
 async function addStudioSymbolInPage(label) {
   const button = [...document.querySelectorAll(".studio-add button")].find(
@@ -343,7 +342,9 @@ async function importStudioJsonInPage(json, expectSuccess) {
       }
       await new Promise((resolve) => setTimeout(resolve, 80));
     }
-    throw new Error("导入结果等待超时：" + (document.querySelector(".studio-notice")?.textContent || ""));
+    throw new Error(
+      "导入结果等待超时：" + (document.querySelector(".studio-notice")?.textContent || ""),
+    );
   } finally {
     menu.open = false;
   }
@@ -359,9 +360,7 @@ async function navigateStudioForInterop(session, target, marker) {
     await pause(150);
     try {
       loaded = await session.evaluate(
-        "location.href === " +
-          JSON.stringify(url.href) +
-          ' && document.readyState === "complete"',
+        "location.href === " + JSON.stringify(url.href) + ' && document.readyState === "complete"',
       );
       if (loaded) break;
     } catch {
