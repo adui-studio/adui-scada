@@ -370,3 +370,14 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - `createProjectSnapshot(source,{revision,createdAt}):Promise<ProjectSnapshot>` 在 Core 中校验并防御性复制工程，要求正安全整数修订号、UTC ISO 8601 毫秒时间、最多 2 MiB 规范化 JSON；调用原生 WebCrypto SHA-256，结果包含 `formatVersion:1`、`projectId`、`revision`、`createdAt`、`hashAlgorithm`、`contentHash` 和深冻结 `document`。
 - `readProjectSnapshot(input:unknown):Promise<ProjectSnapshot>` 严格验证容器字段、元数据、Schema 与完整内容摘要，并返回重新复制与深冻结的工程。哈希包括版本元数据及工程；排序对象键，数组保持原顺序。
 - 修订号分配及唯一性必须由未来受控存储层提供；发布记录和 Runtime 原子切换仍待服务端鉴权与事务设计。**本模块不是已发布工程或可信签名，也不控制工业设备。**
+
+## V0.3 第三批：本地工程版本仓储数据契约（ADR-0036）
+
+`@adui/scada-core` 新增 `ProjectVersionRepository` 接口与 `ProjectVersionSummary/ProjectVersionQuery` 类型。接口定义：
+
+- `getHeadRevision(projectId): Promise<number|null>`：查询本地最新版本的安全修订号，缺少时为 `null`；
+- `append(document,expectedRevision,createdAt?): Promise<ProjectSnapshot>`：首次提交要求 `expectedRevision=null`，后续必须等于最后成功提交的正整数修订号；创建新快照只追加，冲突拒绝，不覆盖既有版本；
+- `get(projectId,revision): Promise<ProjectSnapshot|null>`：读取单版本并验证完整内容摘要，返回防御性冻结副本；
+- `list(projectId,{limit?,beforeRevision?}): Promise<readonly ProjectVersionSummary[]>`：按修订号倒序且严格排除游标，缺省 20、最多 100 项，返回元数据摘要。
+
+`@adui/scada-draft-storage` 中的 `DexieProjectVersionRepository` 使用独立 IndexedDB `adui-scada-studio-versions`，模式 `heads: projectId`、`versions: [projectId+revision],projectId`。先在事务外使用 WebCrypto 创建快照，再在单一 `rw` 事务内重新比较当前版本、`add` 快照、更新 head，以保障并发写入只成功一次。历史快照不可修改或删除。**该 head 不得用于正式发布或 Runtime 加载**，跨 Origin 不共享；服务器事务、认证、发布指针及版本回滚均为后续独立功能。

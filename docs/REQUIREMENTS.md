@@ -142,3 +142,9 @@ Vue/React Studio 的图层面板增加一层平面组合树：同一 `groupId` �
 共享 Core 增加 `validateProjectDocument`、`createProjectSnapshot`、`readProjectSnapshot`：沿用现有 `ScadaDocument 0.2.0` 严格校验，返回首错结构化结果；构建独立深冻结工程副本，并以涵盖修订号、创建时间和完整工程数据的 SHA-256 摘要校验跨 JSON 往返的完整性。无效工程、版本、摘要、时间与超限记录均拒绝，失败不修改任何现有工程状态。
 
 这仅交付 **FR-008 前置 Core 数据契约**；尚未形成正式发布（权限、审计、版本仓储、原子发布指针、Runtime 发布态加载、回滚），FR-008 表格状态保持“规划中”。快照摘要不是身份认证或可信数字签名。详见 [ADR-0035](adr/0035-project-validation-snapshot.md)。
+
+## V0.3 第三批：本地工程历史版本仓储（FR-002 / FR-008 前置工作）
+
+在已实现的结构化工程校验及不可变快照基础上，新增框架无关版本仓储接口和独立 Dexie 本地 IndexedDB 适配：按工程分配从 1 起的递增修订号，每次只追加快照；不同页面并发更新必须携带 `expectedRevision` 并在同一数据库事务里严格比较，过期写入拒绝；提供版本详情及倒序分页摘要查询，读取时必须再次校验 SHA-256。
+
+这是 **FR-002 本地历史管理能力与 FR-008 的前置数据契约**，不是正式服务端版本仓库、已发布版本、回滚、RBAC 或审计。正式 FR-008 的状态仍维持“规划中”。现有 Dexie 草稿库及 Vue/React 运行画面不变，见 [ADR-0036](adr/0036-local-version-history.md)。

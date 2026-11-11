@@ -316,3 +316,10 @@
 - `packages/core/src/project-snapshot.ts`：当前 Schema 严格校验的结构化结果，深冻结快照、稳定 SHA-256 摘要及外部快照严格回读；无 DOM、Vue/React 或服务端仓储依赖。
 - `packages/core/test/project-snapshot.test.ts`：新增加 10 项非法输入、快照只读、哈希一致性与篡改、时间/修订号/大小边界测试。
 - `packages/core/src/index.ts`：统一导出类型和函数，供未来 Vue/React 与 NestJS 共享，不改变现有 Runtime 行为。
+
+## V0.3 第三批：本地历史版本仓储
+
+- `packages/core/src/project-version-repository.ts`：项目级历史版本仓储接口、历史摘要及倒序分页参数；不引入数据库或框架依赖。
+- `packages/draft-storage/src/version-repository.ts`：新 `DexieProjectVersionRepository`，独立 IndexedDB 存储历史与最新修订号，WebCrypto 事务外完成，事务内 CAS + 只追加；`ProjectVersionConflictError`。
+- `packages/draft-storage/test/indexeddb-version.test.ts`：13 项真实 fake-indexeddb 版本仓储单测，覆盖并发、跨实例重开、分页、数据隔离、篡改与故障边界。
+- `packages/core/src/index.ts` 和 `packages/draft-storage/src/index.ts`：统一导出新接口与实现；现有草稿仓储仍保持原来的导出与数据库。

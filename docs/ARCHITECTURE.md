@@ -213,3 +213,7 @@ Vue/React 的 SVG 编辑层负责显示控制点、捕获 Pointer 和提供预�
 ## V0.3 第二批：共享工程快照基础（ADR-0035）
 
 `@adui/scada-core` 新增框架无关 `project-snapshot.ts`，仅依赖现有 `ScadaDocument 0.2.0` Parser 与运行环境原生 WebCrypto。它提供结构校验结果、SHA-256 完整性摘要、带元数据的深冻结工程快照和严格回读；不依赖 Vue、React、NestJS、Dexie 或浏览器 DOM API。应用、存储、版本指针、身份权限与工业协议均不得进入 Core；后续发布服务必须独立解决并发、审计、存储事务和运行时版本切换。本批仍为离线能力，详见 [ADR-0035](adr/0035-project-validation-snapshot.md)。
+
+## V0.3 第三批：浏览器本地历史仓储（ADR-0036）
+
+共享 Core 仅声明 `ProjectVersionRepository` 和历史摘要，WebCrypto SHA-256 快照继续复用现有 `project-snapshot.ts`。独立 `@adui/scada-draft-storage` 的 Dexie 适配提供浏览器同 Origin 内追加历史版本、事务 CAS 修订号及倒序分页。历史库 `adui-scada-studio-versions` 与已存在的草稿库 `adui-scada-studio` 分开，不改变任何已有数据库迁移。未来 PostgreSQL/NestJS 版本仓储应单独实现权限及审计；浏览器 head 不属于正式已发布版本指针，不能连接工业生产 Runtime。详见 [ADR-0036](adr/0036-local-version-history.md)。

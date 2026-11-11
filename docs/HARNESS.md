@@ -791,3 +791,17 @@ Write-Host "退出码：$LASTEXITCODE"
 ```
 
 此前主分支单测为 270 项，本批预期增加 10 项（以 Vitest 实际日志为准）。覆盖结构错误路径、JSON 往返、深冻结、稳定哈希、篡改、容器严格校验、非正修订号、非法 UTC 时间、2 MiB 容量边界。需运行环境提供 WebCrypto `crypto.subtle.digest`；不支持时明确失败而非降级。以上为验收计划，**新分支完整检查尚未执行，不可标记为通过**。
+
+## V0.3 第三批：IndexedDB 工程历史仓储验收（ADR-0036）
+
+本批只新增 Core 接口、现有草稿存储包中的独立历史库适配器、单测和文档；未修改 React/Vue 编辑器 UI、Runtime 或生产设备通信。维护者在功能分支根目录执行：
+
+```powershell
+pnpm run test:unit
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+此前合并主分支单测为 **280 项**；本批新增 **13 项**，预计 293 项，以实际 Vitest 输出为准。本批特别检查两个 Dexie 实例同时追加同一工程版本只允许一方提交、旧历史不覆盖、关闭重开仍可恢复、分页游标不重复、损坏 SHA-256 快照拒绝读取。原 `pnpm run test:interop` / `pnpm run test:browser` 仍可单独回归验证；由于没有界面改动，本批不把它们加入 `ready`。
+
+真实 Windows 新增单测、`vp check`、类型和构建尚待维护者执行，不能沿用上批通过结论。此版本库仅为浏览器本地历史，**不是正式工程发布/回滚**。
