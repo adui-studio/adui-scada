@@ -12,8 +12,7 @@ import {
   studioNodeLocked,
   studioNodeVisible,
   buildLayerTree,
-  clampStudioPan,
-  studioViewBox,
+  studioViewportRect,
 } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
@@ -76,12 +75,14 @@ let draftActionInProgress = false;
 let unsubscribeDraft: (() => void) | null = null;
 const zoom = ref(1);
 const pan = ref({ x: 0, y: 0 });
+const viewportSize = ref({ width: 0, height: 0 });
 const gridVisible = ref(true);
 const gridSnap = ref(true);
 const nodeSnap = ref(true);
 const leftPanelVisible = ref(true);
 const rightPanelVisible = ref(true);
 const svgRef = ref<SVGSVGElement | null>(null);
+let canvasResizeObserver: ResizeObserver | null = null;
 let activePan: {
   pointerId: number;
   startX: number;
@@ -128,6 +129,13 @@ const page = computed(() => {
   if (!result) throw new Error("工程文档不包含页面");
   return result;
 });
+const canvasViewport = computed(() => ({
+  width: viewportSize.value.width || page.value.size.width,
+  height: viewportSize.value.height || page.value.size.height,
+}));
+const visibleRect = computed(() =>
+  studioViewportRect(page.value.size, canvasViewport.value, zoom.value, pan.value),
+);
 const selected = computed(() =>
   page.value.nodes.find((node) => node.id === state.value.selectedId),
 );
@@ -379,8 +387,21 @@ onMounted(() => {
   window.addEventListener("keydown", handleKey);
   subscribeDraft();
   void checkLocalDraft();
+
+  const canvas = svgRef.value;
+  if (!canvas) return;
+  canvasResizeObserver = new ResizeObserver(([entry]) => {
+    if (!entry) return;
+    const { width, height } = entry.contentRect;
+    if (width <= 0 || height <= 0) return;
+    if (viewportSize.value.width === width && viewportSize.value.height === height) return;
+    viewportSize.value = { width, height };
+  });
+  canvasResizeObserver.observe(canvas);
 });
 onUnmounted(() => {
+  canvasResizeObserver?.disconnect();
+  canvasResizeObserver = null;
   window.removeEventListener("keydown", handleKey);
   unsubscribeDraft?.();
   void pauseAutoSave().then(() => drafts.close());
@@ -728,7 +749,7 @@ function layer(action: LayerAction) {
 function changeZoom(delta: number) {
   const nextZoom = Math.max(0.5, Math.min(2, Math.round((zoom.value + delta) * 100) / 100));
   zoom.value = nextZoom;
-  pan.value = clampStudioPan(page.value.size, nextZoom, pan.value);
+  pan.value = studioViewportRect(page.value.size, canvasViewport.value, nextZoom, pan.value).pan;
 }
 
 function resetCanvasView() {
@@ -753,8 +774,8 @@ function beginCanvasPan(event: PointerEvent): boolean {
     pointerId: event.pointerId,
     startX: event.clientX,
     startY: event.clientY,
-    originX: pan.value.x,
-    originY: pan.value.y,
+    originX: visibleRect.value.pan.x,
+    originY: visibleRect.value.pan.y,
     scale: matrix.a,
   };
   svgRef.value?.setPointerCapture(event.pointerId);
@@ -765,10 +786,10 @@ function beginCanvasPan(event: PointerEvent): boolean {
 function updateCanvasPan(event: PointerEvent): boolean {
   const dragging = activePan;
   if (!dragging || dragging.pointerId !== event.pointerId) return false;
-  pan.value = clampStudioPan(page.value.size, zoom.value, {
+  pan.value = studioViewportRect(page.value.size, canvasViewport.value, zoom.value, {
     x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
     y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
-  });
+  }).pan;
   return true;
 }
 
@@ -1466,13 +1487,13 @@ async function importJson(event: Event) {
             <button type="button" :disabled="zoom >= 2" @click="changeZoom(0.25)">+</button>
           </div>
         </div>
-        <div class="studio-canvas-scroll" tabindex="0" aria-label="画布滚动区域">
+        <div class="studio-canvas-scroll" tabindex="0" aria-label="组态网格工作区">
           <div class="studio-canvas-board">
             <svg
               ref="svgRef"
               class="studio-svg"
               :data-rotating="rotating ? 'true' : undefined"
-              :viewBox="studioViewBox(page.size, zoom, pan)"
+              :viewBox="`${visibleRect.x} ${visibleRect.y} ${visibleRect.width} ${visibleRect.height}`"
               preserveAspectRatio="xMidYMid meet"
               aria-label="可编辑 SVG 画布；放大后可用中键或 Alt 加空白处拖动平移"
               @pointermove="updatePointer"
@@ -1504,9 +1525,21 @@ async function importJson(event: Event) {
               />
               <rect
                 v-if="gridVisible"
+                :x="visibleRect.x"
+                :y="visibleRect.y"
+                :width="visibleRect.width"
+                :height="visibleRect.height"
+                fill="url(#scada-studio-grid)"
+                pointer-events="none"
+              />
+              <rect
+                class="studio-page-boundary"
+                :x="0"
+                :y="0"
                 :width="page.size.width"
                 :height="page.size.height"
-                fill="url(#scada-studio-grid)"
+                fill="none"
+                vector-effect="non-scaling-stroke"
                 pointer-events="none"
               />
               <g v-for="node in displayNodes" :key="node.id" :transform="displayTransform(node.id)">
