@@ -53,3 +53,8 @@ export type {
   ProjectSnapshot,
   ProjectSnapshotOptions,
 } from "./project-snapshot.ts";
+export type {
+  ProjectVersionRepository,
+  ProjectVersionQuery,
+  ProjectVersionSummary,
+} from "./project-version-repository.ts";

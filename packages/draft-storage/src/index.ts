@@ -216,3 +216,7 @@ export class DexieDraftRepository implements DraftRepository {
     this.listeners.clear();
   }
 }
+export {
+  DexieProjectVersionRepository,
+  ProjectVersionConflictError,
+} from "./version-repository.ts";

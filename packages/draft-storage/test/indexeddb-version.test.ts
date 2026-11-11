@@ -2,7 +2,10 @@ import Dexie from "dexie";
 import { indexedDB, IDBKeyRange } from "fake-indexeddb";
 import { expect, test } from "vite-plus/test";
 import { parseScadaDocument, waterTreatmentDemoDocument } from "@adui/scada-core";
-import { DexieProjectVersionRepository, ProjectVersionConflictError } from "../src/version-repository.ts";
+import {
+  DexieProjectVersionRepository,
+  ProjectVersionConflictError,
+} from "../src/version-repository.ts";
 
 let nextDatabase = 0;
 const newName = () => `scada-version-test-${++nextDatabase}`;

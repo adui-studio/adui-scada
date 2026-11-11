@@ -408,3 +408,7 @@ PR #16 多页面编辑管理已根据维护者授权以 Squash Merge 合并 `mai
 ## 2026-11-11 · V0.3 第二批：工程校验与不可变版本快照基础（待验收）
 
 V0.3 首批 PR #23 已于 2026-11-11 Squash Merge 到 `main`（`ef18ec1`）；维护者提供的 `test:interop`、`test:browser`（76/76）和 `ready`（270/270 单测、2/2 E2E、构建全部成功）日志仅对应此前版本。本批从最新 `main` 新建 `feat/v0.3-project-snapshot-foundation`，增加共享 Core 结构化首错校验与不可变 SHA-256 版本快照，包含严格回读、深冻结、摘要篡改保护及容量上限，不涉及 UI、正式发布、服务器存储或工业写入；新增 10 项 Core 单测。独立环境 TypeScript 编译及模拟 Parser 算法冒烟检查通过；**新分支的完整 Vite+ 检查、实际 Core 单测和 Windows 构建尚未执行，不可沿用上批测试通过的结论。** 详见 [ADR-0035](adr/0035-project-validation-snapshot.md)。
+
+## 2026-11-11 · V0.3 第三批：本地工程历史快照仓储（待验收）
+
+V0.3 第二批 PR #24 已 Squash Merge 至 `main`（`9a42ed5`），维护者提供的 `ready` 退出码 0、280/280 单测、2/2 E2E、双 Web 和 NestJS 构建均通过。第三批从该提交新建 `feat/v0.3-local-version-history`：在 Core 增加 `ProjectVersionRepository`；在原有 Dexie 包中新增独立本地历史库，使用 CAS 事务分配递增修订号、只追加快照及倒序分页查询；复用 ADR-0035 SHA-256 真实回读。新增 13 项 fake-indexeddb 单测，不修改 UI、草稿数据库或 Runtime。**新增测试尚未在维护者 Windows 实际执行，预计总单测 293 项不能认定为通过。** 此处只是本地版本仓储，非正式服务端发布、回滚和工业权限控制。参见 [ADR-0036](adr/0036-local-version-history.md)。
