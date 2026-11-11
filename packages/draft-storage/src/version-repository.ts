@@ -151,7 +151,7 @@ export class DexieProjectVersionRepository implements ProjectVersionRepository {
     const upper = beforeRevision ?? Number.MAX_SAFE_INTEGER;
     const records = await this.versions
       .where("[projectId+revision]")
-      .between([projectId, 1], [projectId, upper], true, beforeRevision !== undefined)
+      .between([projectId, 1], [projectId, upper], true, beforeRevision === undefined)
       .reverse()
       .limit(limit)
       .toArray();
