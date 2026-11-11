@@ -479,6 +479,15 @@
   min-height: 27px;
   padding: 4px 7px;
 }
+/* 工程页面边界只在编辑器可见，导出的 SVG 不携带这层辅助标记。 */
+.studio-page-boundary {
+  stroke: var(--scada-primary);
+  stroke-width: 1;
+  stroke-opacity: 0.8;
+  stroke-dasharray: 6 4;
+  pointer-events: none;
+}
+
 /* 中央编辑区域宽高完全撑满，工程图元比例由 SVG viewBox 保证。 */
 .studio-canvas-scroll {
   display: flex;
