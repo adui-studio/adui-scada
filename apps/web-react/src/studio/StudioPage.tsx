@@ -712,15 +712,10 @@ export default function StudioPage() {
     const pageSize = page?.size;
     if (!dragging || dragging.pointerId !== event.pointerId || !pageSize) return false;
     setPan(
-      studioViewportRect(
-        pageSize,
-        canvasViewport,
-        zoom,
-        {
-          x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
-          y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
-        },
-      ).pan,
+      studioViewportRect(pageSize, canvasViewport, zoom, {
+        x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
+        y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
+      }).pan,
     );
     return true;
   }
