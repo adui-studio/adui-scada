@@ -1101,17 +1101,27 @@ export default function StudioPage() {
               复制选中图元
             </button>
           </div>
-          {page.nodes.map((node) => (
+          {layerRows.map((node) => (
             <button
               type="button"
               className="studio-layer"
               data-selected={state.selectedIds.includes(node.id)}
               data-hidden={!studioNodeVisible(node)}
               data-locked={studioNodeLocked(node)}
+              data-drop-position={layerDrop?.id === node.id ? layerDrop.position : undefined}
+              draggable={
+                !studioNodeLocked(node) &&
+                (node.groupId === undefined || !lockedLayerGroups.has(node.groupId))
+              }
               key={node.id}
+              title="拖动调整图层，组合会整体移动"
+              onDragStart={(event) => startLayerDrag(event, node.id)}
+              onDragOver={(event) => overLayer(event, node.id)}
+              onDrop={(event) => dropLayer(event, node.id)}
+              onDragEnd={clearLayerDrag}
               onClick={(event) => select(node.id, event.shiftKey)}
             >
-              <span>{node.id}</span>
+              <span className="studio-layer-identity"><span aria-hidden="true">⋮⋮</span> {node.id}</span>
               <small>
                 {node.type}
                 {node.groupId ? ` · 组合 ${node.groupId}` : ""}
