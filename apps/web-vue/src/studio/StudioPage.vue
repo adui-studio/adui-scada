@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import {
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
@@ -8,6 +8,7 @@ import {
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
   studioNodeLocked,
   studioNodeVisible,
+  buildLayerTree,
 } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
@@ -61,6 +62,9 @@ const marquee = shallowRef<MarqueeState | null>(null);
 const labelDraft = ref("");
 const preferredCopyTargetPageId = ref("");
 const preferredLayerTargetId = ref("");
+const layerSearch = ref("");
+const collapsedGroupIds = shallowRef<Set<string>>(new Set());
+const layerTreeRef = ref<HTMLElement | null>(null);
 const layerInsertPosition = ref<"before" | "after">("after");
 const layerDrop = shallowRef<{ id: string; position: "before" | "after" } | null>(null);
 let layerDrag: { pageId: string; nodeId: string } | null = null;
@@ -130,7 +134,18 @@ const canGroup = computed(
   () =>
     state.value.selectedIds.length >= 2 && !hasGroupedSelection.value && !hasLockedSelection.value,
 );
-const layerRows = computed(() => [...page.value.nodes].reverse());
+const layerEntries = computed(() => buildLayerTree(page.value.nodes, layerSearch.value));
+const isLayerSearching = computed(() => layerSearch.value.trim().length > 0);
+watch(
+  () => [state.value.activePageId, state.value.selectedId],
+  () => {
+    const node = page.value.nodes.find((item) => item.id === state.value.selectedId);
+    if (!node?.groupId || !collapsedGroupIds.value.has(node.groupId)) return;
+    const next = new Set(collapsedGroupIds.value);
+    next.delete(node.groupId);
+    collapsedGroupIds.value = next;
+  },
+);
 const lockedLayerGroups = computed(
   () =>
     new Set(
