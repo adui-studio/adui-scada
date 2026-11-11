@@ -1421,6 +1421,46 @@ export default function StudioPage() {
                 删除所选
               </button>
             </div>
+            <div className="studio-exact-layer" aria-label="图层精确插入">
+              <label className="studio-field">
+                目标图元
+                <select
+                  aria-label="图层插入目标"
+                  value={layerTargetId}
+                  disabled={!canPreciselyMove || layerTargetNodes.length === 0}
+                  onChange={(event) => setPreferredLayerTargetId(event.target.value)}
+                >
+                  <option value="">请选择目标图元</option>
+                  {layerTargetNodes.map((node) => (
+                    <option key={node.id} value={node.id}>
+                      {node.id}{node.groupId ? "（组合）" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="studio-field">
+                插入位置
+                <select
+                  aria-label="图层插入位置"
+                  value={layerInsertPosition}
+                  onChange={(event) =>
+                    setLayerInsertPosition(event.target.value as "before" | "after")
+                  }
+                >
+                  <option value="after">目标上方（更靠前）</option>
+                  <option value="before">目标下方（更靠后）</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                disabled={!canPreciselyMove || !layerTargetId || !selected}
+                onClick={() =>
+                  selected && moveLayerPrecisely(selected.id, layerTargetId, layerInsertPosition)
+                }
+              >
+                移动到指定层
+              </button>
+            </div>
             <div className="studio-tool-group" aria-label="图层排序">
               <button type="button" onClick={() => layer("back")} disabled={!selected}>
                 置底
