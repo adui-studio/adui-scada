@@ -150,6 +150,8 @@ export class DexieProjectVersionRepository implements ProjectVersionRepository {
   ): Promise<readonly ProjectVersionSummary[]> {
     requireProjectId(projectId);
     const { limit, beforeRevision } = queryOptions(query);
+    // 查询 1 之前的历史必为空，避免构造空的排他性 IndexedDB 复合键范围。
+    if (beforeRevision === 1) return [];
     const upper = beforeRevision ?? Number.MAX_SAFE_INTEGER;
     const records = await this.versions
       .where("[projectId+revision]")
