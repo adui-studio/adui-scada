@@ -56,13 +56,6 @@ function getLegacyStorage() {
 }
 const drafts = new DexieDraftRepository({ legacyStorage: getLegacyStorage() });
 const maxFileSize = 2 * 1024 * 1024;
-const geometryFields = [
-  ["x", "X 坐标"],
-  ["y", "Y 坐标"],
-  ["width", "宽度"],
-  ["height", "高度"],
-  ["rotation", "旋转角度（度）"],
-] as const;
 
 interface MarqueeState {
   pointerId: number;
@@ -846,7 +839,7 @@ export default function StudioPage() {
     event.preventDefault();
     const values = new FormData(event.currentTarget);
     const patch: NodeTransformPatch = {};
-    for (const [key, label] of geometryFields) {
+    for (const [key, label] of GEOMETRY_PROPERTY_FIELDS) {
       const raw = values.get(key);
       if (typeof raw !== "string" || raw.trim() === "") {
         setNotice(`请填写${label}`);
@@ -1693,7 +1686,7 @@ export default function StudioPage() {
                   onSubmit={changeGeometry}
                   noValidate
                 >
-                  {geometryFields.map(([key, label]) => (
+                  {GEOMETRY_PROPERTY_FIELDS.map(([key, label]) => (
                     <label key={key}>
                       {label}
                       <input
