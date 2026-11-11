@@ -13,8 +13,9 @@ import {
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
   studioNodeLocked,
   studioNodeVisible,
+  buildLayerTree,
 } from "@adui/scada-core";
-import type { ScadaDocument } from "@adui/scada-core";
+import type { LayerTreeGroup, ScadaDocument, ScadaNode } from "@adui/scada-core";
 import { DexieDraftRepository, InvalidLegacyDraftError } from "@adui/scada-draft-storage";
 import {
   DEFAULT_GRID_SIZE,
@@ -98,6 +99,9 @@ export default function StudioPage() {
   const [labelDraft, setLabelDraft] = useState("");
   const [preferredCopyTargetPageId, setPreferredCopyTargetPageId] = useState("");
   const [preferredLayerTargetId, setPreferredLayerTargetId] = useState("");
+  const [layerSearch, setLayerSearch] = useState("");
+  const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(() => new Set());
+  const [locateLayerKey, setLocateLayerKey] = useState<string | null>(null);
   const [layerInsertPosition, setLayerInsertPosition] = useState<"before" | "after">("after");
   const [layerDrop, setLayerDrop] = useState<{ id: string; position: "before" | "after" } | null>(
     null,
@@ -116,6 +120,7 @@ export default function StudioPage() {
   const marqueeRef = useRef<MarqueeState | null>(null);
   const geometryRef = useRef<GeometryDragState | null>(null);
   const layerDragRef = useRef<{ pageId: string; nodeId: string } | null>(null);
+  const layerTreeRef = useRef<HTMLDivElement | null>(null);
 
   const page = state.document.pages.find((item) => item.id === state.activePageId);
   const selected = page?.nodes.find((node) => node.id === state.selectedId);
@@ -162,7 +167,11 @@ export default function StudioPage() {
     (node) => state.selectedIds.includes(node.id) && studioNodeLocked(node),
   );
   const canGroup = state.selectedIds.length >= 2 && !hasGroupedSelection && !hasLockedSelection;
-  const layerRows = page ? [...page.nodes].reverse() : [];
+  const layerEntries = useMemo(
+    () => buildLayerTree(page?.nodes ?? [], layerSearch),
+    [page?.nodes, layerSearch],
+  );
+  const isLayerSearching = layerSearch.trim().length > 0;
   const lockedLayerGroups = new Set(
     page?.nodes.filter(studioNodeLocked).flatMap((node) => (node.groupId ? [node.groupId] : [])),
   );
@@ -174,6 +183,25 @@ export default function StudioPage() {
           (id) => page?.nodes.find((node) => node.id === id)?.groupId === selected.groupId,
         ))) &&
     !hasLockedSelection;
+  const selectedGroupId = selected?.groupId;
+  useEffect(() => {
+    if (!selectedGroupId) return;
+    setCollapsedGroupIds((previous) => {
+      if (!previous.has(selectedGroupId)) return previous;
+      const next = new Set(previous);
+      next.delete(selectedGroupId);
+      return next;
+    });
+  }, [state.activePageId, state.selectedId, selectedGroupId]);
+
+  useEffect(() => {
+    if (!locateLayerKey) return;
+    const rows = layerTreeRef.current?.querySelectorAll<HTMLButtonElement>("[data-layer-key]");
+    const row = [...(rows ?? [])].find((item) => item.dataset.layerKey === locateLayerKey);
+    row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    setLocateLayerKey(null);
+  }, [locateLayerKey, layerSearch, collapsedGroupIds, state.activePageId]);
+
   const layerTargetNodes = page
     ? page.nodes.filter(
         (node) =>
