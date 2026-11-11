@@ -853,4 +853,4 @@ pnpm run ready
 Write-Host "完整检查退出码：$LASTEXITCODE"
 ```
 
-本批最初基于第五批 PR #27 的源码开发；第五批现已通过 Squash Merge 合并到 `main`（`0388bd3`），第六批分支已同步 `main` 并直接以其为 PR 目标。第五批原计划 299 项单测，本批增加 4 项，预计为 **303 项**，以实际 Vitest 输出为准。**GitHub 提交和静态审查不代表已在维护者 Windows 环境执行测试。** 真实 Chrome/Edge 多标签页交互、浏览器配额耗尽、Tauri WebView2 与工业现场仍需专项验收。
+本批最初基于第五批 PR #27 的源码开发；第五批现已通过 Squash Merge 合并到 `main`（`0388bd3`），第六批分支已同步 `main` 并直接以其为 PR 目标。第五批原计划 299 项单测，本批增加 4 项。维护者于 2026-11-11 在 Windows 实际执行完整 `pnpm run ready`：**303/303 单测、2/2 NestJS E2E、181 个文件格式检查、React/Vue/NestJS 类型检查、53 个 Markdown 文档检查与双 Web/NestJS 构建均通过，退出码 0**。但 `vp check` 在 74 个受检文件中仍有 **5 条 `vitest(no-conditional-expect)` 警告、0 错误**，不能称作零警告验收。本批已将保存/清除竞争测试中的分支内断言改为分支外断言，保留两种事务结果的校验；**该修复提交后的 `ready` 尚需重新执行**。 真实 Chrome/Edge 多标签页交互、浏览器配额耗尽、Tauri WebView2 与工业现场仍需专项验收。

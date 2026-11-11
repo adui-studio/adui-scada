@@ -298,16 +298,14 @@ test("保存与清除竞争时只允许一个事务成功，清除后的修订�
     expect(outcomes.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(outcomes.filter((result) => result.status === "rejected")).toHaveLength(1);
 
+    const saveSucceeded = outcomes[0]!.status === "fulfilled";
     const current = await first.get("water-demo");
-    if (outcomes[0]!.status === "fulfilled") {
-      expect(current?.revision).toBe(2);
-      expect(current?.document).toEqual(editedDocument);
-    } else {
-      expect(outcomes[1]!.status).toBe("fulfilled");
-      expect(current).toBeNull();
-      const recreated = await second.save(document(), null);
-      expect(recreated.revision).toBe(2);
-    }
+    expect(outcomes[1]!.status).toBe(saveSucceeded ? "rejected" : "fulfilled");
+    expect(current?.revision ?? null).toBe(saveSucceeded ? 2 : null);
+    expect(current?.document ?? null).toEqual(saveSucceeded ? editedDocument : null);
+
+    const recreatedRevision = saveSucceeded ? null : (await second.save(document(), null)).revision;
+    expect(recreatedRevision).toBe(saveSucceeded ? null : 2);
   } finally {
     first.close();
     second.close();
