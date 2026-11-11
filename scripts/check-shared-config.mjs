@@ -127,4 +127,47 @@ for (const framework of ["react", "vue"]) {
   );
 }
 
+// Studio 采用共享工作台布局，双框架各自维护交互逻辑。
+const sharedStudio = text("packages/tailwind/src/studio.css");
+for (const role of [
+  "studio-toolbar",
+  "studio-page-menu",
+  "studio-pane-heading",
+  "studio-layer-tree",
+  "studio-canvas-scroll",
+  "studio-panel-properties",
+  "studio-advanced",
+  "studio-statusbar",
+]) {
+  assert.ok(sharedStudio.includes(`.${role}`), `共享 Studio 缺少布局样式：${role}`);
+}
+assert.match(
+  sharedStudio,
+  /grid-template-columns: var\(--studio-left-width\) minmax\(0, 1fr\) var\(--studio-right-width\)/,
+  "Studio 必须让画布优先使用剩余空间",
+);
+for (const framework of ["react", "vue"]) {
+  const editorPath = `apps/web-${framework}/src/studio/StudioPage.${framework === "react" ? "tsx" : "vue"}`;
+  const editorSource = text(editorPath);
+  for (const role of [
+    "studio-file-menu",
+    "studio-page-menu",
+    "studio-panel-layers",
+    "studio-canvas-scroll",
+    "studio-panel-properties",
+    "studio-advanced",
+    "studio-statusbar",
+  ]) {
+    assert.ok(editorSource.includes(role), `${editorPath} 缺少布局区域：${role}`);
+  }
+  assert.ok(
+    editorSource.indexOf('studio-geometry') < editorSource.indexOf('studio-advanced'),
+    `${editorPath} 几何属性应优先于高级操作显示`,
+  );
+  assert.ok(
+    editorSource.includes('data-left-collapsed') && editorSource.includes('data-right-collapsed'),
+    `${editorPath} 缺少左右面板显隐控制`,
+  );
+}
+
 console.log(`共享配置检查通过：${expected.size} 个 TSConfig 消费端，根目录统一管理格式化与 Lint`);

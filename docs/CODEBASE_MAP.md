@@ -271,3 +271,10 @@
 - `pnpm-workspace.yaml`：统一固定版本，工作区共享包集中声明依赖。
 - 两端 `App`：Studio 视口容器固定为动态视口高度；Runtime 保留可滚动页面。
 - 两端 `StudioPage`：使用 Tailwind 布置顶部工具栏、三栏工作区和各自滚动的侧栏/画布，特殊 SVG/TDesign 样式仍保留原 CSS。
+
+## V0.2 Studio 专业工作区重排（ADR-0031）
+
+- `packages/tailwind/src/studio.css`：共享画布优先的工作台布局、悬浮菜单、可滚动图层树、属性面板、底部状态栏及窄屏响应式；由 `@adui/tailwind/studio.css` 导出。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：分别接入工程/页面操作菜单、图层辅助区、独立画布滚动区、可折叠高级属性和左右面板显隐；保留原编辑命令与 SVG 图元行为。
+- 两份 `studio.css`：仅保留 TDesign 局部主题、图层行细节与 SVG 控制点；工作台布局统一使用共享样式。
+- `scripts/check-shared-config.mjs`：增加新布局区域及共享 CSS 入口静态约束。
