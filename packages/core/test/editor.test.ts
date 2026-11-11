@@ -1713,13 +1713,13 @@ test("目标是组合成员时，在组合边界之外插入，不拆散组员",
   const e = editor();
   e.selectMany(["tank", "pump"]);
   const group = e.groupSelected();
-  expect(e.moveLayer("flow", "tank", "after")).toBe(true);
+  expect(e.moveLayer("flow", "tank", "before")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "title", "tank", "pipe", "pump", "flow",
+    "title", "flow", "tank", "pipe", "pump",
   ]);
   expect(e.moveLayer("title", "pump", "after")).toBe(true);
   expect(e.snapshot().document.pages[0]?.nodes.map((node) => node.id)).toEqual([
-    "tank", "pipe", "pump", "title", "flow",
+    "flow", "tank", "pipe", "pump", "title",
   ]);
   const members = e.snapshot().document.pages[0]?.nodes.filter((node) => node.groupId === group);
   expect(members?.map((node) => node.id)).toEqual(["tank", "pump"]);
