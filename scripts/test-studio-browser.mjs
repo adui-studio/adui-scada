@@ -294,8 +294,11 @@ async function exportStudioJsonInPage() {
     (item) => item.textContent.trim() === "导出 JSON",
   );
   if (!button) throw new Error("未找到导出 JSON 按钮");
-  const originalCreate = URL.createObjectURL;
-  const originalClick = HTMLAnchorElement.prototype.click;
+  const originalCreate = Reflect.get(URL, "createObjectURL");
+  const originalClick = Reflect.get(HTMLAnchorElement.prototype, "click");
+  if (typeof originalCreate !== "function" || typeof originalClick !== "function") {
+    throw new TypeError("浏览器不支持工程 JSON 导出所需的方法");
+  }
   let exportedBlob = null;
   try {
     URL.createObjectURL = function (value) {
