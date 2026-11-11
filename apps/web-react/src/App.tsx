@@ -8,7 +8,10 @@ export default function App() {
   return (
     <>
       <nav className="scada-app-nav" aria-label="功能导航">
-        <span className="scada-app-brand"><img src="/brand/favicon.svg" alt="" aria-hidden="true" />ADui SCADA</span>
+        <span className="scada-app-brand">
+          <img src="/brand/favicon.svg" alt="" aria-hidden="true" />
+          ADui SCADA
+        </span>
         <button
           type="button"
           aria-current={view === "runtime" ? "page" : undefined}

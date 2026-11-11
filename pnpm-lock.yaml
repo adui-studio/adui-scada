@@ -164,6 +164,9 @@ settings:
 
 catalogs:
   default:
+    '@adui/normalize.css':
+      specifier: 0.1.1
+      version: 0.1.1
     '@nestjs/cli':
       specifier: 12.0.3
       version: 12.0.3
@@ -337,6 +340,9 @@ importers:
 
   apps/web-react:
     dependencies:
+      '@adui/normalize.css':
+        specifier: 'catalog:'
+        version: 0.1.1
       '@adui/scada-core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -386,6 +392,9 @@ importers:
 
   apps/web-vue:
     dependencies:
+      '@adui/normalize.css':
+        specifier: 'catalog:'
+        version: 0.1.1
       '@adui/scada-core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -497,6 +506,10 @@ importers:
         version: 6.0.3
 
 packages:
+
+  '@adui/normalize.css@0.1.1':
+    resolution: {integrity: sha512-gatBtFti1u7ZlVz9tY7ZnC8Rz1/YIuN+zCPqp8xoUCw6is/ecPFmpOyYOJVdlrGqpeo0BKcGMuzW3MvsuTJTbA==}
+    engines: {node: ^22.18.0 || ^24.11.0 || >=26.0.0}
 
   '@angular-devkit/core@22.1.8':
     resolution: {integrity: sha512-34lsgg2FwMVBX7nR/ZqzRUcdvdYPvSB8XAEr2GudXAyZwLI9ehzfQlagAWR/gEb8p4uCFZW0r7uU0toxydq4Rw==}
@@ -2705,6 +2718,8 @@ packages:
     engines: {node: '>=14.18.0'}
 
 snapshots:
+
+  '@adui/normalize.css@0.1.1': {}
 
   '@angular-devkit/core@22.1.8(chokidar@5.0.0)':
     dependencies:
