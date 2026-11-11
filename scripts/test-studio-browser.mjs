@@ -219,7 +219,8 @@ async function main() {
   const userData = mkdtempSync(join(tmpdir(), "adui-scada-browser-check-"));
   const args = [
     "--headless=new", "--disable-gpu", "--disable-dev-shm-usage",
-    "--no-first-run", "--no-default-browser-check", "--remote-debugging-port=0",
+    "--no-first-run", "--no-default-browser-check", "--no-proxy-server",
+    "--remote-debugging-port=0",
     "--user-data-dir=" + userData, "about:blank",
   ];
   if (process.getuid?.() === 0) args.unshift("--no-sandbox");
@@ -248,17 +249,24 @@ async function main() {
           deviceScaleFactor: 1, mobile: false,
         });
         await session.send("Page.navigate", { url: target.url });
+        let loaded = false;
         for (let attempt = 0; attempt < 40; attempt += 1) {
           await pause(150);
           try {
-            const ready = await session.evaluate(
+            loaded = await session.evaluate(
               "location.origin === " + JSON.stringify(new URL(target.url).origin) +
-              ' && document.readyState === "complete"',
+                ' && document.readyState === "complete"',
             );
-            if (ready) break;
+            if (loaded) break;
           } catch {
             // 页面导航期间旧的执行上下文可能已销毁。
           }
+        }
+        if (!loaded) {
+          const pageUrl = await session.evaluate("location.href");
+          throw new Error(
+            target.name + " 页面导航失败：" + target.url + "；浏览器实际地址：" + pageUrl,
+          );
         }
         const data = await session.evaluate("(" + checkStudioInPage.toString() + ")()");
         const errors = data.findings.filter((entry) => !entry.passed);
