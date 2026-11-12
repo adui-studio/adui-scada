@@ -900,3 +900,27 @@ Write-Host "退出码：$LASTEXITCODE"
 ```
 
 第八批维护者实测 **312/312** 单测、**4/4** 服务端 E2E、零警告及 React/Vue/NestJS 构建通过；第九批预计单测总数为 **323 项**、E2E 仍 **4 项**，以新分支实际执行为准。检查新策略拒绝无身份、越租户、越工程、未知权限，确保服务端工程读写与工业写入路由仍返回 404。**新增测试和当前完整 `ready` 尚未经维护者 Windows 实测**；此阶段 PostgreSQL DDL 只供评审，不能标记数据库迁移已执行。
+
+## V0.3 第十批：PostgreSQL + Prisma 7 首次迁移验收（ADR-0042）
+
+先在本地分支运行 `pnpm install` 生成并核对新依赖的 `pnpm-lock.yaml`。第十批新增了 Prisma 依赖声明，但当前远端环境无法访问 npm 重新计算锁文件；**锁文件未更新前，不得视为可复现的完整交付**。
+
+```powershell
+pnpm install
+pnpm run deps:check
+pnpm run db:validate
+pnpm run db:generate
+pnpm run ready
+Write-Host "质量检查退出码：$LASTEXITCODE"
+```
+
+随后仅在已设置根 `.env` 中 `SCADA_DB_USER`、`SCADA_DB_PASSWORD`、`SCADA_DATABASE_URL` 且确认是独立开发数据库时执行：
+
+```powershell
+pnpm run db:dev:up
+pnpm run db:migrate:deploy
+pnpm run db:migrate:status
+pnpm run db:dev:down
+```
+
+`db:migrate:deploy` 会修改配置的目标数据库；本批绝不自动执行。当前 NestJS 仍只有 `/health`，工程版本接口与设备写入继续返回 404。**目前未实际执行 Prisma 生成、迁移或真实 PostgreSQL CAS 测试**，本批不声称数据库持久化已上线。

@@ -440,3 +440,9 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 第八批 PR #30 已在维护者 Windows 通过完整 `pnpm run ready`：312/312 单测、4/4 NestJS E2E、185 个文件格式检查、76 个文件零警告和类型错误、55 个 Markdown 检查以及 React/Vue/NestJS 构建，最终退出码 0。维护者授权后 PR #30 Squash Merge 至 `main`（`f1b67ea`）。
 
 第九批基于该 `main` 提出 ADR-0041：候选 PostgreSQL 工程/授权/版本/审计四表复合键、同一事务内 CAS 与成功审计、ACL 撤销和提交的锁顺序；并在 NestJS 目录添加默认拒绝的纯权限判断及 11 项单元测试，保证不从客户端推导身份或特权。**当前没有 PostgreSQL 数据库连接、实际迁移、可调用的 Guard、正式工程 API、项目发布或工业设备写入**。预计单测总数 323，实际 `pnpm run ready` 尚未运行，不能宣称验收通过。
+
+## 2026-11-12 · V0.3 第十批：采用 PostgreSQL + Prisma 7（待环境验证）
+
+第九批 PR #31 已由维护者 Windows 实测 `pnpm run ready` 退出码 0、323/323 单测、4/4 NestJS E2E、188 个文件格式正确、78 个文件零警告、56 份 Markdown 检查和 React/Vue/NestJS 构建成功，随后授权 Squash Merge 到 `main`（`bf2bef3`）。维护者此后在 `main` 新增多组 Prisma/PostgreSQL/NestJS 等仓库 Skills；第十批重新读取相关技能并明确选用稳定的 Prisma ORM 7.10.1，避免当前 Prisma 8 RC 的不兼容。
+
+第十批新增 NestJS 专用 Prisma Schema、初始迁移、根 `.env` 的可选数据库配置与本机 PostgreSQL Compose，以及根/服务端 CLI 命令。**本轮提交尚未在维护者 Windows 安装新依赖，`pnpm-lock.yaml` 需由 `pnpm install` 更新并提交；Prisma 校验、生成、SQL 迁移、真实事务和完整 `ready` 尚未执行。** 服务端没有接入 PrismaService 或新工程 API，工业设备写入与生产发布均保持关闭。

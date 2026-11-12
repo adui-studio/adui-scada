@@ -235,3 +235,9 @@ Vue/React Studio 通过共同的 `@adui/scada-core` 比较契约、`@adui/scada-
 候选 PostgreSQL 存储按 `(tenant_id, project_id)` 复合主键隔离工程，服务端维护工程 head 修订号、只追加版本快照、逐权限授权记录与提交成功的审计事件。写入事务必须对工程行加锁、以客户端 `expectedRevision` 对比真实 head，写入版本、更新 head 和审计记录在**同一事务**提交或全部回滚；撤销工程授权的流程也必须锁同一工程行，避免授权撤销与保存交叉执行。
 
 `apps/server/src/projects/project-access-policy.ts` 仅提供 NestJS 侧无副作用、默认拒绝的权限判定，不属于 Core 或可对外调用的认证服务。正式生产读写路径必须接入可信身份、工程 ACL 查询、受控数据源和持久审计；在这些能力交付之前继续只注册 `GET /health`，不新增 `/api/projects` 或工业写入路由。
+
+## V0.3 第十批：PostgreSQL + Prisma 7 持久化基础（ADR-0042）
+
+按用户确认采用 PostgreSQL + Prisma ORM，**不是 Prisma Postgres 云数据库**。Prisma 7 CLI、Client、`@prisma/adapter-pg` 统一通过根 pnpm Catalog 锁定，Schema 和 Migrate 配置仅位于 NestJS 服务端；生成客户端在 `apps/server/src/generated/prisma`，不进入共享 Core、Vue 或 React。根 `.env` 配置数据库连接，默认 NestJS 不初始化数据库连接且 `/health` 不被误用为数据库健康验证。
+
+ADR-0041 的工程/ACL/版本/审计复合隔离模型转为首次迁移草案，包含不能由 Prisma Schema 单独表达的 PostgreSQL CHECK 约束。独立本地开发 PostgreSQL 可用 Docker Compose 启动，迁移验证应在隔离实例完成；在可信身份、授权 Guard、PrismaService、事务仓储和完整审计实现前，工程版本读写接口继续保持 404。

@@ -1,0 +1,23 @@
+# 仅限本机开发数据库；绝不能与真实生产 PostgreSQL 共用数据卷或密码。
+name: adui-scada-postgres-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: "${SCADA_DB_USER:?请在根目录 .env 设置 SCADA_DB_USER}"
+      POSTGRES_PASSWORD: "${SCADA_DB_PASSWORD:?请在根目录 .env 设置 SCADA_DB_PASSWORD}"
+      POSTGRES_DB: adui_scada
+    ports:
+      - "127.0.0.1:${SCADA_DB_PORT:-5432}:5432"
+    volumes:
+      - scada-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: "no"
+
+volumes:
+  scada-postgres-data:

@@ -11,14 +11,22 @@
     "start:prod": "node dist/main.js",
     "test": "vp test run --config vitest.config.ts",
     "test:watch": "vp test --config vitest.config.ts",
-    "test:e2e": "vp test run --config vitest.config.e2e.ts"
+    "test:e2e": "vp test run --config vitest.config.e2e.ts",
+    "db:validate": "prisma validate --config prisma.config.ts",
+    "db:generate": "prisma generate --config prisma.config.ts",
+    "db:migrate:dev": "prisma migrate dev --config prisma.config.ts",
+    "db:migrate:deploy": "prisma migrate deploy --config prisma.config.ts",
+    "db:migrate:status": "prisma migrate status --config prisma.config.ts"
   },
   "dependencies": {
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
     "@nestjs/platform-express": "catalog:",
     "reflect-metadata": "catalog:",
-    "rxjs": "catalog:"
+    "rxjs": "catalog:",
+    "@prisma/client": "catalog:",
+    "@prisma/adapter-pg": "catalog:",
+    "pg": "catalog:"
   },
   "devDependencies": {
     "@adui/tsconfig": "workspace:*",
@@ -29,6 +37,8 @@
     "@types/supertest": "catalog:",
     "supertest": "catalog:",
     "typescript": "catalog:",
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "prisma": "catalog:",
+    "@types/pg": "catalog:"
   }
 }
