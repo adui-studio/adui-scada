@@ -49,5 +49,4 @@ describe("应用控制器（端到端）", () => {
       .send({ tenantId: "tenant-a", subjectId: "engineer-1" });
     expect(response.status).toBe(404);
   });
-
 });

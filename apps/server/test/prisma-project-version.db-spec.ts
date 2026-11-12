@@ -368,5 +368,4 @@ describe("PostgreSQL 真实工程版本事务", () => {
     });
     expect(await sessions.authenticate(issued.token)).toBeNull();
   });
-
 });

@@ -74,7 +74,9 @@ function makeSessionService() {
   return {
     service: new AuthSessionService({ client } as unknown as PrismaService),
     sessions,
-    disable: () => { status = "disabled"; },
+    disable: () => {
+      status = "disabled";
+    },
   };
 }
 
@@ -179,8 +181,9 @@ describe("可信会话与工程 Guard", () => {
     const db = { client: { scadaProjectGrant: { findMany: async () => [] } } };
     const guard = new ScadaProjectGuard(db as unknown as PrismaService, new Reflector());
     await expect(
-      guard.canActivate(context({ headers: {}, params: { projectId: "project-a" },
-        scadaPrincipal: principal })),
+      guard.canActivate(
+        context({ headers: {}, params: { projectId: "project-a" }, scadaPrincipal: principal }),
+      ),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
@@ -198,13 +201,24 @@ describe("可信会话与工程 Guard", () => {
     };
     const guard = new ScadaProjectGuard(db as unknown as PrismaService, new Reflector());
     await expect(
-      guard.canActivate(context({ headers: {}, params: { projectId: "project-a" } },
-        "version:read")),
+      guard.canActivate(
+        context({ headers: {}, params: { projectId: "project-a" } }, "version:read"),
+      ),
     ).rejects.toBeInstanceOf(UnauthorizedException);
     await expect(
-      guard.canActivate(context({ headers: {}, params: {
-        tenantId: "tenant-b", projectId: "project-a" }, scadaPrincipal: principal },
-      "version:read")),
+      guard.canActivate(
+        context(
+          {
+            headers: {},
+            params: {
+              tenantId: "tenant-b",
+              projectId: "project-a",
+            },
+            scadaPrincipal: principal,
+          },
+          "version:read",
+        ),
+      ),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(queries).toBe(0);
   });

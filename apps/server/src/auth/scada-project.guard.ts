@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from "@nestjs/common";
+import { Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import type { CanActivate, ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { PrismaService } from "../database/prisma.service.js";
@@ -25,10 +21,10 @@ export class ScadaProjectGuard implements CanActivate {
     if (context.getType() !== "http") {
       throw new UnauthorizedException("工程权限仅支持受保护的 HTTP 请求");
     }
-    const action = this.reflector.getAllAndOverride<ProjectAccessAction>(
-      SCADA_PROJECT_PERMISSION,
-      [context.getHandler(), context.getClass()],
-    );
+    const action = this.reflector.getAllAndOverride<ProjectAccessAction>(SCADA_PROJECT_PERMISSION, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     // 缺失元数据时必须拒绝，而不是默认允许访问未声明权限的路由。
     if (!action) throw new NotFoundException("工程资源不存在或无权访问");
     const request = context.switchToHttp().getRequest<ScadaAuthenticatedRequest>();

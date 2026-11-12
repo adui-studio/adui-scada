@@ -107,7 +107,10 @@ export class AuthSessionService {
     principal: AuthenticatedProjectPrincipal,
     sessionId: string,
   ): Promise<boolean> {
-    if (!validPrincipal(principal) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId)) {
+    if (
+      !validPrincipal(principal) ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId)
+    ) {
       throw new ForbiddenException("撤销会话的主体或标识无效");
     }
     const result = await this.database.client.scadaAuthSession.updateMany({
