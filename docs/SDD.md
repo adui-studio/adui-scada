@@ -410,3 +410,10 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - PostgreSQL 设计使用 `scada_projects`、`scada_project_grants`、`scada_project_versions` 和 `scada_project_audit`，以复合外键约束租户/工程范围；版本和审计只追加、修订号递增且服务端分配。工程项目必须在受控后台预先创建，不能把 `expectedRevision:null` 等价成匿名自动建项目。
 - 候选版本写入顺序：服务端身份认证 → 解析可信租户工程范围 → 读取 ACL 并拒绝未授权 → 校验第八批请求格式 → 在数据库事务内锁工程行并复核授权及当前 head → CAS 比较 → 写入严格快照、head 与成功审计 → 提交。权限撤销必须与提交使用相同锁顺序；失败回滚不得声称成功审计已持久化。该事务**尚未实现**。
 - 未授权或不存在的工程在最终 API 不得泄露存在性；冲突错误、幂等键、事务重试、审计失败保护、身份体系以及 ORM/迁移方案仍为待评审事项。
+
+## V0.3 第十批：Prisma 模型与迁移配置（ADR-0042）
+
+- `apps/server/prisma/schema.prisma` 包含 `ScadaProject`、`ScadaProjectGrant`、`ScadaProjectVersion`、`ScadaProjectAudit` 四模型，使用 `@@map`、`@map` 映射 ADR-0041 的 `snake_case` PostgreSQL 表字段，保持 `(tenantId,projectId)` 复合租户隔离。
+- 版本使用 PostgreSQL `BIGINT`（Prisma `BigInt`）存储，未来业务 API 转换时须显式限制到 JS 安全整数范围；快照 `Json @db.JsonB`、UTC 时间 `@db.Timestamptz(6)`。审计与每次成功版本写入一对一；不得复用浏览器 IndexedDB 的事务语义。
+- `apps/server/prisma.config.ts` 只从仓库根 `.env` 获取 `SCADA_DATABASE_URL`，生成和校验不要求生产数据库；`db:migrate:deploy` 必须在维护者配置了独立数据库后显式运行。原始 SQL 首次迁移含额外 CHECK，变更不得用无审查的 `db push` 覆盖历史。
+- 本批**不实例化 PrismaClient、不注册 NestJS 工程接口、不执行版本 CAS 或生产审计**。下一批增加服务端单实例 PrismaService、可信 Guard 和真实 PostgreSQL 事务测试，先完成授权后才能开放接口。

@@ -356,3 +356,12 @@
 - `apps/server/src/projects/project-access-policy.ts`：服务端纯权限判断，按租户、工程、主体和明确权限默认拒绝，不引入 NestJS 路由或 Core 依赖。
 - `apps/server/src/projects/project-access-policy.spec.ts`：11 项权限策略回归，覆盖授权读取/写入、只读、无身份、无授权、跨租户/工程/主体、未知权限与恶意标识符。
 - [ADR-0041](adr/0041-project-persistence-access-model.md)：候选 PostgreSQL 四表复合键、事务 CAS、授权撤销串行化与审计一致性；设计文件并非数据库迁移。
+
+## V0.3 第十批：Prisma + PostgreSQL 初始工程模型
+
+- `apps/server/prisma/schema.prisma`：工程、权限、版本快照和成功提交审计四个 PostgreSQL Prisma 模型。
+- `apps/server/prisma.config.ts`：按现有根 `.env` 读取 Prisma CLI 连接配置；未配置数据库不初始化连接。
+- `apps/server/prisma/migrations/`：首次迁移 SQL 和 provider 锁，包含由 PostgreSQL 执行的额外 CHECK 约束。
+- `deploy/docker/compose.postgres.dev.yaml`：本机隔离开发 PostgreSQL（loopback、独立命名卷、必须显式配置口令）。
+- 根 `db:validate` / `db:generate` / `db:migrate:deploy` / `db:migrate:status` / `db:dev:up` / `db:dev:down`：独立数据库运维入口，不默认执行数据库迁移。
+- [ADR-0042](adr/0042-postgresql-prisma-foundation.md)：版本选择、安全边界及验证依赖。

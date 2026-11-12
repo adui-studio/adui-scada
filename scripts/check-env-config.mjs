@@ -21,17 +21,54 @@ function parseEnv(path) {
 
 const defaults = {
   SCADA_WEB_HOST: "127.0.0.1",
-  SCADA_REACT_DEV_PORT: "5173",
-  SCADA_VUE_DEV_PORT: "5174",
+  SCADA_REACT_DEV_PORT: "15173",
+  SCADA_VUE_DEV_PORT: "15174",
   SCADA_SERVER_HOST: "127.0.0.1",
-  SCADA_SERVER_PORT: "3001",
+  SCADA_SERVER_PORT: "13001",
   SCADA_DEMO_HOST: "127.0.0.1",
-  SCADA_DEMO_PORT: "4178",
+  SCADA_DEMO_PORT: "14178",
   SCADA_REACT_PORT: "8080",
-  SCADA_VUE_PORT: "8081",
+  SCADA_VUE_PORT: "18081",
+  SCADA_DB_HOST: "127.0.0.1",
+  SCADA_DB_PORT: "15432",
+  SCADA_DB_NAME: "adui_scada",
+  SCADA_DB_USER: "adui_scada",
+  SCADA_DB_PASSWORD: "adui_scada_dev_only_2026",
+  SCADA_DATABASE_URL:
+    "postgresql://adui_scada:adui_scada_dev_only_2026@127.0.0.1:15432/adui_scada?schema=public",
 };
 const template = parseEnv(".env.example");
 assert.deepEqual({ ...template }, defaults, "根目录 .env.example 的默认值必须与配置契约一致");
+
+/** 校验本机开发数据库变量与 Prisma 连接字符串的目标一致，不回显账号密码。 */
+function checkDatabaseConnection(values, location) {
+  if (!values.SCADA_DATABASE_URL) return;
+  let connection;
+  try {
+    connection = new URL(values.SCADA_DATABASE_URL);
+  } catch {
+    assert.fail(`${location}：PostgreSQL 连接字符串格式无效`);
+  }
+  assert.ok(
+    ["postgresql:", "postgres:"].includes(connection.protocol),
+    `${location}：数据库连接字符串必须使用 PostgreSQL 协议`,
+  );
+  const expected = [
+    ["SCADA_DB_HOST", connection.hostname],
+    ["SCADA_DB_PORT", connection.port || "5432"],
+    ["SCADA_DB_NAME", decodeURIComponent(connection.pathname.slice(1))],
+    ["SCADA_DB_USER", decodeURIComponent(connection.username)],
+    ["SCADA_DB_PASSWORD", decodeURIComponent(connection.password)],
+  ];
+  for (const [key, actual] of expected) {
+    if (!(key in values)) continue;
+    assert.ok(
+      key === "SCADA_DB_PORT" ? Number(values[key]) === Number(actual) : values[key] === actual,
+      `${location}：${key} 与 SCADA_DATABASE_URL 不一致`,
+    );
+  }
+}
+checkDatabaseConnection(template, ".env.example");
 
 for (const legacy of [
   "apps/web-react/.env.example",
@@ -53,12 +90,17 @@ if (existsSync(resolve(root, ".env"))) {
         Number.isInteger(port) && port >= 1 && port <= 65535,
         `${key}：端口必须是 1～65535 之间的整数`,
       );
-    } else if (key === "SCADA_WEB_HOST") {
+    } else if (key === "SCADA_WEB_HOST" || key === "SCADA_DB_HOST") {
       assert.ok(["127.0.0.1", "localhost"].includes(value), `${key}：必须使用本机回环地址`);
+    } else if (key === "SCADA_DB_NAME" || key === "SCADA_DB_USER") {
+      assert.match(value, /^[A-Za-z][A-Za-z0-9_]{0,62}$/, `${key}：必须是有效的开发数据库标识符`);
+    } else if (key === "SCADA_DB_PASSWORD" || key === "SCADA_DATABASE_URL") {
+      // 数据库密码和 URL 由后续配套检查比较，不在报错时泄漏原值。
     } else {
       assert.ok(["127.0.0.1", "0.0.0.0"].includes(value), `${key}：监听地址无效`);
     }
   }
+  checkDatabaseConnection(configured, ".env");
 }
 
 for (const [framework, key] of [
@@ -89,6 +131,16 @@ for (const [source, key] of [
   [demo, "SCADA_DEMO_PORT"],
 ])
   assert.ok(source.includes(key), `运行时配置缺少变量：${key}`);
+
+const dbScripts = JSON.parse(read("package.json")).scripts;
+const postgresComposeCommand =
+  "docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml";
+for (const name of ["db:dev:up", "db:dev:down"]) {
+  assert.ok(
+    dbScripts[name]?.includes(postgresComposeCommand),
+    `${name}：必须显式从仓库根目录加载 .env`,
+  );
+}
 
 const compose = read("deploy/docker/compose.demo.yaml");
 for (const [key, fallback] of [

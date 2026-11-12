@@ -1,6 +1,6 @@
 /** Oxlint 统一在工作区根目录配置，由 vp check 执行。 */
 export const sharedLint = {
-  ignorePatterns: [".agents/skills/**"],
+  ignorePatterns: [".agents/skills/**", "apps/server/src/generated/prisma/**"],
   jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
   rules: { "vite-plus/prefer-vite-plus-imports": "error" as const },
   options: { typeAware: true, typeCheck: true },

@@ -13,3 +13,30 @@ pnpm --filter @adui/scada-server run build
 启动后访问 `http://127.0.0.1:3001/health`。这是进程存活检查，**不代表数据库、Gateway 或真实设备在线**。
 
 默认仅绑定 loopback、禁用跨域、没有认证/数据库/设备接口；接入业务 API 前必须完成身份验证与授权设计。TS6、NestJS 与测试依赖统一从根目录 `pnpm-workspace.yaml` Catalog 解析。
+
+## V0.3 第十批：PostgreSQL + Prisma 7 数据库基础
+
+数据库只为未来受控工程版本存储准备；目前不会在 NestJS 启动时连接数据库，也未注册业务读写接口。
+
+```powershell
+# 第一次切换本批分支后先同步依赖和锁文件
+pnpm install
+
+# 校验模型与生成客户端（无需运行 PostgreSQL）
+pnpm run db:validate
+pnpm run db:generate
+
+# 从根目录 .env.example 复制到 .env（如已存在，请勿覆盖）。
+# 开发库默认使用 127.0.0.1:15432 / adui_scada，模板已填写匹配的测试密码与 Prisma URL。
+# 这些凭据公开且仅适用于隔离本机环境，正式部署前必须更换。
+# Prisma 不会自动把 SCADA_DB_PASSWORD 拼进 URL，更改密码或端口后须同步更新 URL。
+# db:dev:up/down 会显式从仓库根目录加载 .env；请勿将其输出的数据库口令贴到公开日志。
+pnpm run db:dev:up
+pnpm run db:migrate:deploy
+pnpm run db:migrate:status
+
+# 仅停止容器，保留开发数据卷
+pnpm run db:dev:down
+```
+
+首次迁移文件由本批按 Prisma 模型手工编写，包含额外的 PostgreSQL CHECK 约束，必须使用隔离开发库核对实际 DDL；未通过真实迁移与回滚设计审查前不能用于生产。**严禁使用 `prisma migrate reset`、`db push --force-reset` 或 `db push --accept-data-loss` 清理现有数据库。**

@@ -168,3 +168,9 @@ Vue/React Studio 的图层面板增加一层平面组合树：同一 `groupId` �
 服务端新增独立的纯权限判断 `hasProjectPermission`，由未来受信认证层提供主体、经数据库查询的工程有效授权和服务器解析的工程范围。只有主体 ID、租户 ID、工程 ID 及显式操作权限全部匹配时才允许；空身份、空授权、越租户、越工程、越用户和未知权限均默认拒绝。权限判断不接入现有 Controller；数据库方案只提交 ADR 候选设计。
 
 本批为 PostgreSQL 的工程主表、工程级授权、不可变历史版本、成功提交审计设计复合主键与事务 CAS，不创建真实迁移或数据库连接，不提供工程 API、身份认证、可写发布指针、工业设备写入。**FR-001 和 FR-008 仍为规划中，FR-002 保持部分实现，FR-014 仍未交付。** 正式数据模型、ORM、身份来源、权限管理与失败审计持久化均需后续评审；参见 [ADR-0041](adr/0041-project-persistence-access-model.md)。
+
+## V0.3 第十批：确定 PostgreSQL + Prisma ORM（FR-001 / FR-002 / FR-008 / FR-014 前置）
+
+确定使用**独立部署 PostgreSQL + Prisma ORM 7 稳定版**，以 `apps/server/prisma/schema.prisma` 管理工程、授权、不可变版本和成功审计四个持久化模型；以 Prisma Migrate 管理数据库结构演进。初始迁移包含租户/工程复合外键、版本水位、SHA-256 格式、显式权限取值及成功审计动作约束。仅支持本地隔离数据库评估，不将本地 IndexedDB 草稿或 Runtime 直接接入数据库。
+
+**当前交付的是模型、迁移文件及配置，不是已经运行的生产数据库、NestJS PrismaService、身份认证、授权 Guard、正式发布或工业写入。** 维护者需在 Windows 安装依赖并确认锁文件、迁移及一致性；详见 [ADR-0042](adr/0042-postgresql-prisma-foundation.md)。

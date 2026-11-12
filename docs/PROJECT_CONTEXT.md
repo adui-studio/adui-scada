@@ -440,3 +440,21 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 第八批 PR #30 已在维护者 Windows 通过完整 `pnpm run ready`：312/312 单测、4/4 NestJS E2E、185 个文件格式检查、76 个文件零警告和类型错误、55 个 Markdown 检查以及 React/Vue/NestJS 构建，最终退出码 0。维护者授权后 PR #30 Squash Merge 至 `main`（`f1b67ea`）。
 
 第九批基于该 `main` 提出 ADR-0041：候选 PostgreSQL 工程/授权/版本/审计四表复合键、同一事务内 CAS 与成功审计、ACL 撤销和提交的锁顺序；并在 NestJS 目录添加默认拒绝的纯权限判断及 11 项单元测试，保证不从客户端推导身份或特权。**当前没有 PostgreSQL 数据库连接、实际迁移、可调用的 Guard、正式工程 API、项目发布或工业设备写入**。预计单测总数 323，实际 `pnpm run ready` 尚未运行，不能宣称验收通过。
+
+## 2026-11-12 · V0.3 第十批：采用 PostgreSQL + Prisma 7（待环境验证）
+
+第九批 PR #31 已由维护者 Windows 实测 `pnpm run ready` 退出码 0、323/323 单测、4/4 NestJS E2E、188 个文件格式正确、78 个文件零警告、56 份 Markdown 检查和 React/Vue/NestJS 构建成功，随后授权 Squash Merge 到 `main`（`bf2bef3`）。维护者此后在 `main` 新增多组 Prisma/PostgreSQL/NestJS 等仓库 Skills；第十批重新读取相关技能并明确选用稳定的 Prisma ORM 7.10.1，避免当前 Prisma 8 RC 的不兼容。
+
+第十批新增 NestJS 专用 Prisma Schema、初始迁移、根 `.env` 的可选数据库配置与本机 PostgreSQL Compose，以及根/服务端 CLI 命令。**本轮提交尚未在维护者 Windows 安装新依赖，`pnpm-lock.yaml` 需由 `pnpm install` 更新并提交；Prisma 校验、生成、SQL 迁移、真实事务和完整 `ready` 尚未执行。** 服务端没有接入 PrismaService 或新工程 API，工业设备写入与生产发布均保持关闭。
+
+## 2026-11-12 · V0.3 第十批：Prisma Client 生成后文案检查故障及修复（待复验）
+
+维护者已在第十批 PR #32 分支提交更新的 `pnpm-lock.yaml`（提交 `21cf6e0`），并执行 `pnpm run db:generate` 后的完整 `pnpm run ready`。依赖目录（41 项 Catalog）、共享配置和环境检查通过；`messages:check` 因第三方生成代码及 `.env.example` 配置示例共报告 1,379 处英文注释，退出码非零。经核对脚本此前递归扫描 `apps/server/src/generated/prisma/`，未按 AGENTS.md 排除 Prisma 生成产物。本批修复增加精确路径排除，并对 Vite+ Format/Lint 同步忽略；仍保留自有中文文案约束。**本次修复之后的完整质量链、Prisma Schema 校验与真实 PostgreSQL 迁移尚待维护者重新验证。**
+
+## 2026-11-12 · V0.3 第十批：根目录 PostgreSQL + Prisma 默认环境（待验收）
+
+按维护者要求，在 `.env.example` 中给出实际生效的本机 PostgreSQL 主机、端口、库名和用户名默认值；数据库密码及 Prisma 完整 URL 已按维护者最新要求提供可直接配套使用的**公开本地开发测试默认值**，正式部署必须更换，禁止将公开测试凭据用于生产。同步更新 `scripts/check-env-config.mjs` 默认项及类型化校验、`compose.postgres.dev.yaml` 数据库名插值和服务端 README/Harness。Prisma CLI 仍只读取完整 `SCADA_DATABASE_URL`，不会拼接其他数据库变量。**该配置修改后的 `pnpm run env:check`、`pnpm run ready` 和实际 PostgreSQL 迁移仍需维护者 Windows 验证。**
+
+## 2026-11-12 · V0.3 第十批：开发数据库 Compose 环境文件与端口修复（待 Windows 复验）
+
+维护者截图显示，在仓库根目录复制了 `.env.example` 为 `.env` 后，`pnpm run db:dev:up` 仍报告 `SCADA_DB_USER` 和 `SCADA_DB_PASSWORD` 缺失。根因是 Docker Compose 命令只指定 `deploy/docker/compose.postgres.dev.yaml`，未明确指定仓库根环境文件；另外维护者将 PostgreSQL 端口更改为 15432，但 Prisma URL 仍指向 5432，根环境检查脚本仍使用其他应用旧端口值。现已修改脚本使用 `--env-file .env`，同步 `.env.example`、端口默认契约和 URL 一致性校验，保留维护者自定义的 15xxx 端口。根目录 `.env` 需维护者手动同步 Prisma 连接 URL 的端口。**新的 `pnpm run env:check`、`db:dev:up`、`pnpm run ready` 与数据库迁移尚未在维护者 Windows 实测。**

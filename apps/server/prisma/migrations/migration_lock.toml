@@ -1,0 +1,2 @@
+# Prisma Migrate 数据库类型锁定；不要手动更改已应用的迁移历史。
+provider = "postgresql"
