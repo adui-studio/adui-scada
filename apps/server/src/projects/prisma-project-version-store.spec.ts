@@ -32,9 +32,10 @@ function mockStore(options: FakeOptions = {}) {
   const steps: string[] = [];
   const tx = {
     $queryRaw: vi.fn<
-      (parts: TemplateStringsArray, ...values: unknown[]) => Promise<
-        Array<{ head_revision: bigint }>
-      >
+      (
+        parts: TemplateStringsArray,
+        ...values: unknown[]
+      ) => Promise<Array<{ head_revision: bigint }>>
     >(async (parts, ...values) => {
       steps.push("工程行锁");
       const query = parts.join("?");
@@ -44,9 +45,7 @@ function mockStore(options: FakeOptions = {}) {
       return [{ head_revision: options.head ?? 0n }];
     }),
     scadaProjectGrant: {
-      findMany: vi.fn<
-        () => Promise<Array<{ permission: string }>>
-      >(async () => {
+      findMany: vi.fn<() => Promise<Array<{ permission: string }>>>(async () => {
         steps.push("权限复查");
         return (options.permissions ?? ["version:append", "version:read"]).map((permission) => ({
           permission,
@@ -54,11 +53,11 @@ function mockStore(options: FakeOptions = {}) {
       }),
     },
     scadaProjectVersion: {
-      create: vi.fn<
-        (_request: { data: Record<string, unknown> }) => Promise<void>
-      >(async (_request) => {
-        steps.push("写入版本");
-      }),
+      create: vi.fn<(_request: { data: Record<string, unknown> }) => Promise<void>>(
+        async (_request) => {
+          steps.push("写入版本");
+        },
+      ),
       findUnique: vi.fn<
         () => Promise<{ snapshot: ProjectSnapshot; contentHash: string; createdAt: Date } | null>
       >(async () => {
@@ -73,19 +72,19 @@ function mockStore(options: FakeOptions = {}) {
       }),
     },
     scadaProject: {
-      update: vi.fn<
-        (_request: { data: Record<string, unknown> }) => Promise<void>
-      >(async (_request) => {
-        steps.push("推进修订号");
-      }),
+      update: vi.fn<(_request: { data: Record<string, unknown> }) => Promise<void>>(
+        async (_request) => {
+          steps.push("推进修订号");
+        },
+      ),
     },
     scadaProjectAudit: {
-      create: vi.fn<
-        (_request: { data: Record<string, unknown> }) => Promise<void>
-      >(async (_request) => {
-        steps.push("写入审计");
-        if (options.failAudit) throw new Error("模拟审计数据库写入失败");
-      }),
+      create: vi.fn<(_request: { data: Record<string, unknown> }) => Promise<void>>(
+        async (_request) => {
+          steps.push("写入审计");
+          if (options.failAudit) throw new Error("模拟审计数据库写入失败");
+        },
+      ),
     },
   };
   const transaction = vi.fn<
@@ -114,7 +113,9 @@ describe("Prisma 工程版本事务仓储", () => {
     await expect(
       fake.store.append(principal, projectId, { ...save(), actorId: "another-user" }),
     ).rejects.toThrow(/只允许/);
-    await expect(fake.store.append(principal, "different-project", save())).rejects.toThrow(/不一致/);
+    await expect(fake.store.append(principal, "different-project", save())).rejects.toThrow(
+      /不一致/,
+    );
     expect(fake.transaction).not.toHaveBeenCalled();
   });
 

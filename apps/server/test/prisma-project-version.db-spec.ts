@@ -110,9 +110,9 @@ describe("PostgreSQL 真实工程版本事务", () => {
       where: { tenantId_projectId: { tenantId: tenantA, projectId } },
     });
     expect(project.headRevision).toBe(2n);
-    expect(
-      await service.client.scadaProjectVersion.count({ where: { tenantId: tenantA } }),
-    ).toBe(2);
+    expect(await service.client.scadaProjectVersion.count({ where: { tenantId: tenantA } })).toBe(
+      2,
+    );
     expect(await service.client.scadaProjectAudit.count({ where: { tenantId: tenantA } })).toBe(2);
   });
 
@@ -123,9 +123,9 @@ describe("PostgreSQL 真实工程版本事务", () => {
     await expect(
       store.append(principalB, projectId, { expectedRevision: null, document: document() }),
     ).rejects.toBeInstanceOf(ProjectVersionAccessDeniedError);
-    expect(
-      await service.client.scadaProjectVersion.count({ where: { tenantId: tenantB } }),
-    ).toBe(0);
+    expect(await service.client.scadaProjectVersion.count({ where: { tenantId: tenantB } })).toBe(
+      0,
+    );
   });
 
   it("授权读取重新验证快照摘要及版本元数据", async () => {
@@ -191,5 +191,4 @@ describe("PostgreSQL 真实工程版本事务", () => {
       expect(row.description).toMatch(/[一-龥]/);
     }
   });
-
 });

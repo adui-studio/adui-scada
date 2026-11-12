@@ -67,7 +67,10 @@ describe("Prisma 模型及 PostgreSQL 数据库中文注释约束", () => {
       expect(commentText("TABLE", `"${tableName}"`)).toMatch(chinese);
       for (const field of readModelFields(body)) {
         // 关联属性不对应 PostgreSQL 物理列，只要求 Prisma 中文说明。
-        const fieldType = field.line.trim().split(/\s+/)[1]?.replace(/[\[\]?]/g, "");
+        const fieldType = field.line
+          .trim()
+          .split(/\s+/)[1]
+          ?.replace(/[[\]?]/g, "");
         const modelTypes = new Set(models.map((entry) => entry[1]));
         if (field.line.includes("@relation(") || modelTypes.has(fieldType ?? "")) continue;
         const columnName = field.line.match(/@map\("([^"]+)"\)/)?.[1] ?? field.name;
