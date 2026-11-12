@@ -48,7 +48,8 @@
     "db:dev:up": "pnpm run env:check && docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml up -d",
     "db:dev:down": "docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml down",
     "test:db": "pnpm --filter @adui/scada-server run test:db",
-    "build:core": "pnpm --filter @adui/scada-core run build:node"
+    "build:core": "pnpm --filter @adui/scada-core run build:node",
+    "test:docker:server": "node scripts/test-server-container.mjs"
   },
   "devDependencies": {
     "@adui/tooling": "workspace:*",

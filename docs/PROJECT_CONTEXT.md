@@ -476,3 +476,9 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 维护者 Windows `pnpm run ready` 前置 Catalog、共享配置、环境、中文文案、Prisma Client 7.10.1 生成、`vp check`（200 格式文件、86 源文件零警告）和 Web/Draft 类型检查成功，但服务端 TypeScript 遇到 Core 源码显式 `.ts` 导入，共 23 处 `TS5097`，退出码 1。由于第十一批新增了服务端对 Core 的 workspace 依赖，原本针对浏览器源码的包导出成为 NestJS `NodeNext` 直接编译的边界问题。
 
 本批保留 Core 所有 `.ts` 源文件与 Vue/React 默认出口，使用 TypeScript 6 编译出 Node 专用 `.js` 和 `.d.ts` 条件产物，构建命令自动衔接根 `ready`、NestJS build/typecheck、安装 prepare，Docker 运行层复制 Core dist。未新增第三方依赖、未修改 Prisma 数据库和业务 API。**最新完整 Windows `pnpm run ready`、Docker 构建及真库事务测试尚待重新执行**。
+
+## 2026-11-12 · V0.3 第十二批：持久化事务安全回归与 Docker 容器烟测（待验收）
+
+前十一批已通过维护者 Windows 完整质量链（339 单元测试、4 NestJS E2E，退出码 0）、本机 PostgreSQL 隔离库 6/6 真库测试及两个迁移，随后 PR #33 获明确授权经 Squash Merge 合入 `main`，提交 `b1396c3`。第十二批继续在主分支基础上开发**安全验证**而非对外发布功能。
+
+本批不新增第三方依赖、不修改业务表/字段或 Prisma 迁移、不挂载 ProjectPersistenceModule。新增 1 项普通配置单测、3 项隔离 PostgreSQL 测试（审计 CHECK 失败真实回滚、授权锁竞争、连接拒绝），并提供 `test:docker:server` 独立 Docker 镜像健康和 404 边界验证。预期普通单测 340、真库测试 9、E2E 4。**本批尚未实测 Windows ready、真库回归及 Docker 构建；不能声称通过。**

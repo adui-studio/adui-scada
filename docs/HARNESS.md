@@ -1031,3 +1031,41 @@ Write-Host "退出码：$LASTEXITCODE"
 ```
 
 预期 `build:core` 生成 `packages/core/dist/index.js` 和 `index.d.ts`，NestJS 类型检查不再触发 `TS5097` 或工作区外 `TS6059`；Node 产物中的本地导入以 `.js` 结束。可额外在经过确认的 Docker 开发环境执行 `docker compose --env-file .env -f deploy/docker/compose.demo.yaml build server` 复核运行镜像。**修复后尚未在维护者 Windows 执行完整验证**，实际测试结果以新日志为准。
+
+## V0.3 第十二批：真实失败回滚、授权竞态及 Docker 服务端烟测（ADR-0044）
+
+第十一批维护者 Windows 已实测 `ready` 退出码 0（339/339 单测、4/4 NestJS E2E、零告警），独立 `adui_scada_test` 迁移成功且 6/6 项 PostgreSQL 回归通过。本批额外增加普通单测 1 项（预计 **340**）、隔离 PostgreSQL 回归 3 项（预计 **9**），E2E 仍预计 4 项；以上新计数在维护者 Windows 实测前均为**预期值**。
+
+```powershell
+git fetch origin
+git switch feat/v0.3-transaction-safety-regression
+git pull --ff-only
+pnpm install --frozen-lockfile
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+```
+
+### 显式隔离 PostgreSQL 测试库
+
+使用已经创建和迁移过的本机 `adui_scada_test`，先确认根 `.env` 的开发库 URL 指向 `127.0.0.1:15432/adui_scada`，再在 PowerShell 中**临时**设置 `SCADA_DATABASE_URL` 和 `SCADA_TEST_DATABASE_URL` 为对应 `adui_scada_test` 的连接地址。可按第十一批的 `try/finally` 模板操作，不把口令贴到终端日志。**不要直接运行缺少显式测试 URL 的 `pnpm run test:db`，更不能将测试 URL 指向 `adui_scada` 或生产库。**
+
+```powershell
+# 确认两个环境变量均指向本机独立数据库 adui_scada_test 后执行：
+pnpm run test:db
+Write-Host "真实数据库测试退出码：$LASTEXITCODE"
+```
+
+新增测试会在测试库的随机租户中验证审计 CHECK 约束失败后真实事务回滚、授权撤销事务与保存竞争，以及回环端口不可达时的连接失败与资源释放。不会增删数据库表、约束或迁移，也不操作现有开发业务数据。
+
+### 服务端 Docker 隔离烟测
+
+在 Docker Desktop 正常运行、可以拉取镜像依赖时，执行：
+
+```powershell
+pnpm run test:docker:server
+Write-Host "服务端容器测试退出码：$LASTEXITCODE"
+```
+
+该脚本构建 `adui-scada-server-smoke:local` 镜像并运行一次 `--rm --network none` 的容器，不使用端口映射、数据库 URL 或 Compose 服务。容器内部检查共享 Core 与 Prisma 仓储模块可加载、`GET /health` 为 200、未开放的工程版本读取及工业设备写入为 404，关闭临时 NestJS 实例后退出。**构建可能读取基础镜像和依赖网络**，但运行阶段禁止外部网络；不会关闭或修改你现有的 PostgreSQL 容器。该测试使用的 Docker 镜像标签会保留在本机，可自行清理。
+
+当前远端变更只属于独立 Draft PR。**本批代码质量、真实 PostgreSQL 回滚和 Docker 运行测试尚未在维护者 Windows 验证**，不得宣称通过。

@@ -437,3 +437,12 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 `@adui/scada-core` 保留 `exports["."].default="./src/index.ts"` 与 `exports["./editor"].default="./src/editor.ts"` 供 Vue/React（Bundler）使用；`exports.*.node.types` 指向相应 `dist/*.d.ts`，`exports.*.node.default` 指向 `dist/*.js`，由 `packages/core/tsconfig.build.json` 继承现有 Core tsconfig，显式覆盖 `noEmit=false` 并开启 `declaration` 与 `rewriteRelativeImportExtensions`。NestJS `NodeNext` 类型解析只读取声明，发射的服务端 JS 从 Node 条件导出加载 Core ESM 构建产物，而不会再次编译 Core 源码。
 
 `build:core` 应在根质量链 `vp check` 和 NestJS 独立 `typecheck/build/start` 之前执行，避免生成物缺失造成的偶发失败。Core JS 和声明均属于忽略的 `dist` 产物；容器运行层需复制对应 `packages/core/dist`。
+
+## V0.3 第十二批：事务原子性及数据库异常验证
+
+- **真实审计回滚**：测试库中经隔离 Prisma Client Query Extension 修改审计 `action`，触发 `scada_project_audit_action_check`，确认版本 `scada_project_versions`、工程 `head_revision` 与 `scada_project_audit` 都保持在失败前状态，随后相同 `expectedRevision=null` 可成功保存。仅测试扩展能够注入故障，正式仓储仍不可由请求体修改审计操作。
+- **授权撤销与版本保存竞态**：测试管理事务先在 `scada_projects` 取得 `FOR UPDATE` 锁，再删除同一工程的 `version:append` 授权；并发 `append` 等待锁释放后，必须因重新查询授权而拒绝，保持 head 为 0，不生成版本或成功审计。本批**不新增授权撤销路由或服务**；将锁顺序作为未来权限服务必须遵循的约束。
+- **连接异常**：普通单测验证缺失 `SCADA_DATABASE_URL` 时拒绝构建 `PrismaService`；隔离数据库集成测试验证指定不可达的本地回环端口时查询失败，随后释放 Prisma 资源。错误日志不得主动打印完整连接 URL/密码。
+- **容器验证**：以独立 Docker 镜像在 `--network none` 下加载编译后的 Prisma 仓储/共享 Core，并从容器内部验证回环 `/health` 和未开放路由；不影响当前工业安全边界。
+
+本批不修改 `schema.prisma` 或历史迁移，所有新增测试数据只归属于随机生成的测试租户，测试结束按 FK 顺序清理。
