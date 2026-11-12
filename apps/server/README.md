@@ -56,3 +56,9 @@ Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。�
 服务端事务仓储依赖 `@adui/scada-core`，而共享 Core 现有源码内部使用显式 `.ts` 扩展名。为避免 NestJS 的 `NodeNext` 类型检查报 `TS5097`、或服务端构建把工作区外的 Core 源码编进 `rootDir`，Core 为 Node 消费端增加 `dist/*.js` 和 `dist/*.d.ts` 条件导出，Vue/React 继续从原 `src/*.ts` 导入。
 
 `pnpm run build:core` 编译 Core 的 Node 产物；根 `ready`、安装 `prepare` 与服务端独立 `build/typecheck/start:dev` 会自动先构建。服务端 Docker 最终层携带 `packages/core/dist/`，不需要 Node 运行时擦除 TypeScript 源码。切换分支后请先 `pnpm run build:core` 再运行单独的 `vp check`。
+
+## V0.3 第十二批：真实事务安全和服务端容器验收
+
+本批延用现有 Prisma 7.10.1、PostgreSQL 17、NestJS、Vitest、Docker，不引入新依赖或修改数据库模型。独立 `pnpm run test:db` 新增真实 PostgreSQL 约束失败回滚、授权撤销与保存竞争、连接不可达测试，要求显式使用本机隔离 `adui_scada_test`，不允许回退到开发库或生产库。普通 `pnpm run ready` 新增一项无数据库的缺失 URL 单测。
+
+另有 `pnpm run test:docker:server`，只构建独立服务端测试镜像并使用 `docker run --network none` 在容器内验证事务仓储模块导入、`/health` 及工程/设备写入路由继续返回 404；该命令**不会启动现有 Compose 演示栈、不会映射宿主机端口、不会尝试连接 PostgreSQL 或工业设备**。Dockerfile 仅增加一份明确可执行的容器内烟测脚本，不改变 NestJS 正式入口。

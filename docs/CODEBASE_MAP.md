@@ -393,3 +393,13 @@
 - `apps/server/package.json`：独立 NestJS 类型检查、构建和开发启动前先编译 Core。
 - `deploy/docker/Dockerfile.server`：最终容器层改为复制 Core `dist`，避免 Node 在运行时加载 workspace TypeScript 源文件。
 - `scripts/check-shared-config.mjs`：检查 Core 条件出口、构建选项和服务端脚本的自动生成链，防止后续回退触发 `TS5097`。
+
+## V0.3 第十二批：真实事务与容器安全验收
+
+- `apps/server/src/database/prisma.service.spec.ts`：新增无数据库配置缺失单测。
+- `apps/server/test/prisma-project-version.db-spec.ts`：在原 6 项隔离 PostgreSQL 测试基础上新增 3 项：审计 CHECK 失败后的真实回滚、撤销授权与保存竞争、连接不可达及资源释放。使用独立随机租户，继续拒绝普通开发库。
+- `scripts/test-server-container.mjs`：根目录显式 Docker 服务端隔离验证命令的宿主机入口。
+- `apps/server/container-smoke.mjs`：仅供镜像内运行的健康/依赖/关闭路由烟测代码。
+- `deploy/docker/Dockerfile.server`：仅增加独立烟测脚本的运行时 COPY，不调整正式 CMD。
+- 根 `package.json` 的 `test:docker:server`：独立于 `ready` 和 `test:db`，无需数据库或工业网络。
+- [ADR-0044](adr/0044-prisma-transaction-security-regression.md)：本批设计与验收边界。

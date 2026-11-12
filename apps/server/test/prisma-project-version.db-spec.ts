@@ -27,10 +27,14 @@ if (
 
 const tenantA = `test-${randomUUID()}`;
 const tenantB = `test-${randomUUID()}`;
+const tenantRollback = `test-${randomUUID()}`;
+const tenantRevocation = `test-${randomUUID()}`;
 const projectId = waterTreatmentDemoDocument.projectId;
 const subjectId = "test-engineer";
 const principalA = { tenantId: tenantA, subjectId };
 const principalB = { tenantId: tenantB, subjectId };
+const principalRollback = { tenantId: tenantRollback, subjectId };
+const principalRevocation = { tenantId: tenantRevocation, subjectId };
 const document = () => JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
 
 let service: PrismaService;
@@ -42,7 +46,7 @@ beforeAll(async () => {
   service = new PrismaService();
   store = new PrismaProjectVersionStore(service);
   await service.onModuleInit();
-  for (const tenantId of [tenantA, tenantB]) {
+  for (const tenantId of [tenantA, tenantB, tenantRollback, tenantRevocation]) {
     await service.client.scadaProject.create({
       data: { tenantId, projectId },
     });
@@ -51,6 +55,8 @@ beforeAll(async () => {
     data: [
       { tenantId: tenantA, projectId, subjectId, permission: "version:append" },
       { tenantId: tenantA, projectId, subjectId, permission: "version:read" },
+      { tenantId: tenantRollback, projectId, subjectId, permission: "version:append" },
+      { tenantId: tenantRevocation, projectId, subjectId, permission: "version:append" },
     ],
   });
 });
@@ -58,7 +64,7 @@ beforeAll(async () => {
 afterAll(async () => {
   try {
     if (service) {
-      for (const tenantId of [tenantA, tenantB]) {
+      for (const tenantId of [tenantA, tenantB, tenantRollback, tenantRevocation]) {
         await service.client.scadaProjectAudit.deleteMany({ where: { tenantId } });
         await service.client.scadaProjectVersion.deleteMany({ where: { tenantId } });
         await service.client.scadaProjectGrant.deleteMany({ where: { tenantId } });
@@ -189,6 +195,126 @@ describe("PostgreSQL 真实工程版本事务", () => {
     for (const row of columns) {
       expect(businessTables).toContain(row.table_name);
       expect(row.description).toMatch(/[一-龥]/);
+    }
+  });
+  it("审计 INSERT 违反 PostgreSQL 约束时版本与水位同步回滚", async () => {
+    // 测试独立租户的审计操作被 PostgreSQL CHECK 约束拒绝，其他语句仍执行真实事务。
+    let auditQueryIntercepted = false;
+    const rejectedAuditClient = service.client.$extends({
+      query: {
+        scadaProjectAudit: {
+          create({ args, query }) {
+            auditQueryIntercepted = true;
+            return query({
+              ...args,
+              data: { ...args.data, action: "不支持的审计操作" },
+            });
+          },
+        },
+      },
+    });
+    const failingStore = new PrismaProjectVersionStore({
+      client: rejectedAuditClient,
+    } as unknown as PrismaService);
+
+    await expect(
+      failingStore.append(principalRollback, projectId, {
+        expectedRevision: null,
+        document: document(),
+      }),
+    ).rejects.toThrow();
+    expect(auditQueryIntercepted).toBe(true);
+
+    const project = await service.client.scadaProject.findUniqueOrThrow({
+      where: { tenantId_projectId: { tenantId: tenantRollback, projectId } },
+    });
+    expect(project.headRevision).toBe(0n);
+    expect(
+      await service.client.scadaProjectVersion.count({ where: { tenantId: tenantRollback } }),
+    ).toBe(0);
+    expect(
+      await service.client.scadaProjectAudit.count({ where: { tenantId: tenantRollback } }),
+    ).toBe(0);
+
+    // 相同修订号仍能写入并审计成功，证明失败事务未遗留部分提交。
+    const snapshot = await store.append(principalRollback, projectId, {
+      expectedRevision: null,
+      document: document(),
+    });
+    expect(snapshot.revision).toBe(1);
+    expect(
+      await service.client.scadaProjectAudit.count({ where: { tenantId: tenantRollback } }),
+    ).toBe(1);
+  });
+
+  it("授权事务先锁工程并撤销权限后，并发版本保存必须被拒绝", async () => {
+    let pendingAppend: Promise<unknown> | undefined;
+    await service.client.$transaction(
+      async (tx) => {
+        // 未来授权管理操作须采用与保存相同的工程行锁顺序。
+        const locked = await tx.$queryRaw<Array<{ project_id: string }>>`
+          SELECT project_id FROM scada_projects
+          WHERE tenant_id = ${tenantRevocation} AND project_id = ${projectId}
+          FOR UPDATE
+        `;
+        expect(locked).toHaveLength(1);
+        const removed = await tx.scadaProjectGrant.deleteMany({
+          where: {
+            tenantId: tenantRevocation,
+            projectId,
+            subjectId,
+            permission: "version:append",
+          },
+        });
+        expect(removed.count).toBe(1);
+        pendingAppend = store.append(principalRevocation, projectId, {
+          expectedRevision: null,
+          document: document(),
+        });
+        // 避免竞争保存的拒绝发生在外部 await 之前成为未处理异常。
+        let resolved = false;
+        void pendingAppend
+          .finally(() => {
+            resolved = true;
+          })
+          .catch(() => undefined);
+        await new Promise<void>((resolve) => setTimeout(resolve, 75));
+        expect(resolved).toBe(false);
+      },
+      { maxWait: 2000, timeout: 10000 },
+    );
+
+    expect(pendingAppend).toBeDefined();
+    await expect(pendingAppend).rejects.toBeInstanceOf(ProjectVersionAccessDeniedError);
+    const project = await service.client.scadaProject.findUniqueOrThrow({
+      where: { tenantId_projectId: { tenantId: tenantRevocation, projectId } },
+    });
+    expect(project.headRevision).toBe(0n);
+    expect(
+      await service.client.scadaProjectVersion.count({ where: { tenantId: tenantRevocation } }),
+    ).toBe(0);
+    expect(
+      await service.client.scadaProjectAudit.count({ where: { tenantId: tenantRevocation } }),
+    ).toBe(0);
+  });
+
+  it("本机测试数据库连接不可达时查询失败且连接资源可释放", async () => {
+    const original = process.env.SCADA_DATABASE_URL;
+    let unreachable: PrismaService | undefined;
+    try {
+      // 隔离本机端口 1，不会连接正常开发库或生产库。
+      process.env.SCADA_DATABASE_URL =
+        "postgresql://isolated_test:isolated_test@127.0.0.1:1/adui_scada_test";
+      unreachable = new PrismaService();
+    } finally {
+      if (original === undefined) delete process.env.SCADA_DATABASE_URL;
+      else process.env.SCADA_DATABASE_URL = original;
+    }
+    if (!unreachable) throw new Error("未创建本机异常连接测试客户端");
+    try {
+      await expect(unreachable.client.$queryRaw`SELECT 1`).rejects.toThrow();
+    } finally {
+      await unreachable.onModuleDestroy();
     }
   });
 });

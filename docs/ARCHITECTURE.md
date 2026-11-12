@@ -259,3 +259,9 @@ Prisma `schema.prisma` 的 `///` 为代码生成文档信息，**不会自动创
 维护者 Windows `pnpm run ready` 在服务端 `tsc --noEmit` 遇到 Core 源码的 23 处 `TS5097`。原因是 Core 源码直接导出 `*.ts`（适用于 Core/浏览器的 `allowImportingTsExtensions`），但 NestJS 使用 `NodeNext` 且当前包入口直接指向工作区外的源码。不能简单修改 Core 全部导入后缀或只给 NestJS 开启 `allowImportingTsExtensions`：后者会在实际带输出的构建中遇到工作区 `rootDir` 边界问题。
 
 本批让 **Core 的 Node 条件导出指向预先生成的 `dist/*.js` 与 `dist/*.d.ts`**，前端默认导出仍是原 `src/*.ts`。Core 使用 TypeScript 6 的 `rewriteRelativeImportExtensions` 生成真实 ESM 文件，不添加第三方依赖或改变共享 Schema；NestJS 在类型检查、编译和 Docker 运行层只引用 Core Node 产物。服务端、Core 和前端保持同一业务逻辑源文件，只是平台输出不同。
+
+## V0.3 第十二批：真实 PostgreSQL 回滚与容器隔离烟测（ADR-0044）
+
+继续复用已合并的 `ProjectPersistenceModule` 与 `PrismaProjectVersionStore`，本批不改变其正式对外接口和 Prisma 数据库模型。测试通过 Prisma 查询扩展**只对测试客户端**将审计 `action` 改为非法值，触发 PostgreSQL 已存在的 CHECK 约束；此前写入的版本和修订号必须由同一 Interactive Transaction 真正回滚。授权并发测试让管理侧事务先 `FOR UPDATE` 锁工程行、撤销授权，再校验等待保存因重新查询权限而失败。管理侧锁顺序只是未来授权服务的规范，本批不新增可用的授权管理 API。
+
+服务端镜像回归采用独立 `docker build` 与 `docker run --network none`，不开放宿主端口；容器内部使用临时回环端口验证 `/health` 返回值、Core/仓储模块可加载及未实现工程/工业写入路由保持 404。Docker 构建上下文遵守现有 `.dockerignore`，排除根 `.env`、密钥及本地凭据。Docker 构建需要本地镜像源，故不默认纳入普通 `ready`。
