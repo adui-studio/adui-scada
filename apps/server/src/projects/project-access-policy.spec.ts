@@ -51,13 +51,23 @@ describe("服务端工程级权限策略", () => {
 
   it("授权记录关联其他工程时必须拒绝", () => {
     expect(
-      hasProjectPermission(principal, scope, { ...grant, projectId: "other-project" }, "version:read"),
+      hasProjectPermission(
+        principal,
+        scope,
+        { ...grant, projectId: "other-project" },
+        "version:read",
+      ),
     ).toBe(false);
   });
 
   it("授权记录属于其他主体时必须拒绝", () => {
     expect(
-      hasProjectPermission(principal, scope, { ...grant, subjectId: "another-user" }, "version:read"),
+      hasProjectPermission(
+        principal,
+        scope,
+        { ...grant, subjectId: "another-user" },
+        "version:read",
+      ),
     ).toBe(false);
   });
 

@@ -19,11 +19,7 @@ export interface ProjectPermissionGrant extends ProjectAccessScope {
 /** 仅表示工程与版本操作权限，不包含正式发布或工业设备写入权限。 */
 export type ProjectAccessAction = "project:read" | "version:read" | "version:append";
 
-const ACTIONS: readonly ProjectAccessAction[] = [
-  "project:read",
-  "version:read",
-  "version:append",
-];
+const ACTIONS: readonly ProjectAccessAction[] = ["project:read", "version:read", "version:append"];
 const IDENTIFIER_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
 function validIdentifier(value: unknown): value is string {
@@ -61,7 +57,10 @@ export function hasProjectPermission(
   ) {
     return false;
   }
-  if (!Array.isArray(grant.permissions) || grant.permissions.some((item) => !ACTIONS.includes(item))) {
+  if (
+    !Array.isArray(grant.permissions) ||
+    grant.permissions.some((item) => !ACTIONS.includes(item))
+  ) {
     return false;
   }
   return grant.permissions.includes(action);
