@@ -249,3 +249,7 @@ NestJS 服务端增加 `PrismaService`（应用生命周期内单实例 Client +
 仓储在 PostgreSQL 事务内通过参数化 `$queryRaw` 获取工程行锁并复查 ACL；版本新增、head 和成功审计属于一个 Prisma Interactive Transaction，失败由 Prisma 自动回滚。真实并发竞争、跨租户访问等另设专用本地测试数据库，不默认纳入 `ready`。未上线可信认证或工程级 Guard 前，严禁注册工程版本 HTTP 路由。
 
 服务端 Docker 运行镜像需随工作区依赖一并复制 `packages/core` 的包清单和源码，才能让 Node 24 从编译后的 NestJS 模块按工作区导出加载共享 Core；本批补齐该依赖，仍不导入工程写入控制器。
+
+### PostgreSQL 中文元数据注释规范
+
+Prisma `schema.prisma` 的 `///` 为代码生成文档信息，**不会自动创建 PostgreSQL 的表/字段注释**。依据仓库 `postgresql-table-design` Skill，现以增量 Prisma Migration 的 `COMMENT ON TABLE/COLUMN/INDEX` 为数据库注释权威来源；对已应用的初始建表迁移不做历史修改。四张业务表、23 个物理字段及四个业务索引均补充中文说明；Prisma 自管理的 `_prisma_migrations` 不受业务注释规则约束。后续增表需在同批迁移中同步注释，静态测试与独立数据库查询负责验收。

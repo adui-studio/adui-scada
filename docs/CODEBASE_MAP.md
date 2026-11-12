@@ -376,3 +376,11 @@
 - 根 `test:db`、`ready` 和 server `db:generate`：保证 Prisma Client 在新工作区构建前生成；见 [ADR-0043](adr/0043-prisma-project-transaction-store.md)。
 
 - `deploy/docker/Dockerfile.server`：运行镜像增加共享 `packages/core` 包清单与源码，防止工作区依赖在生产运行层缺失。
+
+### 第十一批补充：数据库中文注释与 Lint Mock 修复
+
+- `apps/server/prisma/schema.prisma`：四个业务模型及其全部字段、关联属性的中文 `///` 文档说明。
+- `apps/server/prisma/migrations/20261112170000_add_chinese_table_comments/migration.sql`：新增不触及历史数据的中文 PostgreSQL 表、列、索引注释迁移。
+- `apps/server/src/database/prisma-schema-comments.spec.ts`：2 项无数据库静态单测，校验新旧业务模型属性的中文说明及迁移 `COMMENT ON` 覆盖。
+- `apps/server/test/prisma-project-version.db-spec.ts`：增加 PostgreSQL `pg_description` 查询，验证业务表/列注释在隔离真库中生效。
+- `apps/server/src/projects/prisma-project-version-store.spec.ts`：7 处 Vitest Mock 显式函数泛型，保留现有业务测试逻辑。

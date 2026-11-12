@@ -34,3 +34,7 @@
 不修改数据库已有迁移，不新增后端 HTTP Controller，不注册可信认证之前的写入入口，不打开跨域或工业设备写入，不自动部署，不修改 `main`。PR 需维护者 Windows 完整 `pnpm run ready` 与隔离 PostgreSQL 真实测试完成并授权后方可合并。
 
 运行镜像层目前不会导入持久化模块，但一旦服务端引用共享 Core，必须确保 Docker 最终阶段存在工作区 `packages/core` 的包清单及 TypeScript 源码；本批在 `Dockerfile.server` 增加对应 COPY，依赖 Node 24 对受控工作区 TypeScript 的加载能力。生产 Docker 构建与启动仍需维护者实测。
+
+## 第十一批补充：持久化元数据中文注释约束
+
+根据维护者 Navicat 检查，数据库中文说明必须以 PostgreSQL `COMMENT ON TABLE` 与 `COMMENT ON COLUMN` 持久化，不仅是 Prisma `///`。已独立新增中文注释增量迁移，保留历史迁移不变；并增加动态遍历模型的注释静态测试、隔离真库注释测试，防止未来新建表遗漏。同期修复 Vitest Mock 泛型警告共 7 处，原有事务逻辑不变。

@@ -464,3 +464,9 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 第十批 PR #32 经维护者 Windows 实测 PostgreSQL 17 容器启动、首次迁移 `20261112000000_init_scada_projects` 成功、迁移状态最新，以及完整 `pnpm run ready` 退出码 0（323/323 单测、4/4 NestJS E2E、192 个文件格式正确、79 个文件零警告、57 份文档通过、React/Vue/NestJS 构建通过）。维护者授权后 Squash Merge 至 `main`，提交 `b2c70d8`。
 
 第十一批决定**不增加新的第三方依赖**。复用 Prisma 7 Client、PostgreSQL Adapter、NestJS 与共享 Core，实现独立 `ProjectPersistenceModule`（未挂载现有 AppModule）、单实例 PrismaService 生命周期与服务端版本事务仓储，覆盖工程行锁、ACL 复查、CAS、不可变快照、成功审计、授权读取及 SHA-256 校验。新增 14 项模拟单测和 5 项需要显式隔离测试库的真实 PostgreSQL 回归，更新生成脚本与文档。**尚未运行本批 `pnpm run ready` 或真实 `test:db`，不能声称通过**。当前仍无认证 Guard、工程/设备写入路由、正式发布指针或工业 Gateway。
+
+## 2026-11-12 · V0.3 第十一批：Mock 泛型警告与中文数据库注释补齐（待验收）
+
+维护者 Windows 执行 `vp check --fix`，实际报告 0 错误、7 处 `vitest(require-mock-type-parameters)` 警告；并在 Navicat 发现工程、授权、版本和审计四张业务表的中文表/字段注释为空。本次修改按仓库 Vitest、PostgreSQL 表设计、Prisma Skills 修复七处模拟函数泛型，在 `schema.prisma` 的 29 个模型属性中补全中文文档注释，并新增纯注释迁移，覆盖四表、23 个实际字段、4 个索引；不回改已经执行的初始迁移。
+
+为防止以后新表/新列再遗漏，增加 2 项 Schema/SQL 注释静态测试和 1 项隔离 PostgreSQL 注释实测，且把强制中文注释纳入根 AGENTS.md 与项目设计/验收文档。预计普通单测 339、独立真库测试 6、NestJS E2E 4；**这些属于修改后预期，尚未经维护者 Windows 实际复验**。PR #33 仍为 Draft，不合并 `main`。

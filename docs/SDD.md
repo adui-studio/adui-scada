@@ -425,3 +425,9 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - `PrismaProjectVersionStore.read(principal,projectId,revision)`：事务内 `FOR SHARE` 锁工程行 → 校验 `version:read` → 读取复合主键的 JSONB 快照 → Core `readProjectSnapshot` SHA-256 验证 → 比较数据库摘要、修订号、时间及工程 ID。无授权或未知工程统一 `ProjectVersionAccessDeniedError`；版本冲突为 `ProjectRevisionConflictError`；已授权但版本不存在为 `ProjectRevisionNotFoundError`。上述错误当前**不映射到 HTTP**。
 - 仓储接收的 `AuthenticatedProjectPrincipal` 必须由未来受信认证层产生；当前纯类型不能证明身份已认证，也没有授权管理端点。授权撤销流程未来必须先锁同一工程行再修改授权，防止事务之间竞态。客户端无法指定成功审计主体或服务端修订号。
 - `pnpm run ready` 先执行 `db:generate`，避免未提交到 Git 的 Prisma Client 生成文件缺失；独立 server build/typecheck 也会生成客户端。真实数据库测试命令 `pnpm run test:db` 要求显式 `SCADA_TEST_DATABASE_URL` 指向本机 `adui_scada_test`，不允许直接对 `adui_scada` 或生产库运行。
+
+### PostgreSQL 业务表和模型注释契约
+
+- Prisma 模型 `ScadaProject`、`ScadaProjectGrant`、`ScadaProjectVersion`、`ScadaProjectAudit` 及全部 29 个模型属性（包含虚拟关联属性）均提供中文 `///` 说明，便于源码/Prisma Client 维护。
+- Prisma 迁移 `20261112170000_add_chinese_table_comments` 通过 PostgreSQL `COMMENT ON` 写入 **4 张业务表、23 个物理字段、4 个自有索引**的中文元数据说明，Navicat 展示取自这些 PostgreSQL 元数据，而不是 Prisma `///`。
+- 迁移仅更新描述信息，不更改表结构、主外键、现有数据或授权；已应用的初始迁移不可回改。静态单测覆盖后续新增模型/字段的注释要求；隔离 PostgreSQL 测试读取 `obj_description` 与 `col_description` 验证注释真实存在。

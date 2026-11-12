@@ -30,3 +30,7 @@
 ## 验收
 
 维护者在 Windows 完成 `pnpm install` 与锁文件提交后，执行 `pnpm run db:validate`、`pnpm run db:generate` 和 `pnpm run ready`；然后针对隔离 PostgreSQL 执行 `pnpm run db:dev:up`、`pnpm run db:migrate:deploy`、`pnpm run db:migrate:status` 并检查关键 CHECK/外键。未实际运行前只标记待验收。
+
+## 后续补充：中文数据库注释（第十一批）
+
+首次迁移 `20261112000000_init_scada_projects` 已在维护者 Windows 隔离 PostgreSQL 17 上实际应用，不能为补充中文注释而修改其历史文件或校验和。第十一批新增 `20261112170000_add_chinese_table_comments`，通过 PostgreSQL `COMMENT ON` 为四张业务表、23 个物理字段及四个自有索引提供中文注释；同时在 Prisma Schema 中使用中文 `///` 说明全部模型属性。新增注释迁移不改变已有数据和约束。该迁移是否在维护者数据库成功应用，仍以本次实际 `db:migrate:deploy` 输出为准。

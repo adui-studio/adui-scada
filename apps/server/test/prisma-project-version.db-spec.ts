@@ -142,4 +142,54 @@ describe("PostgreSQL 真实工程版本事务", () => {
     });
     await expect(store.read(principalA, projectId, 1)).rejects.toThrow(/元数据/);
   });
+  it("四张工程业务表及所有物理字段均已设置中文数据库注释", async () => {
+    const businessTables = [
+      "scada_projects",
+      "scada_project_grants",
+      "scada_project_versions",
+      "scada_project_audit",
+    ];
+    const tables = await service.client.$queryRaw<
+      Array<{ table_name: string; description: string | null }>
+    >`
+      SELECT c.relname AS table_name, obj_description(c.oid, 'pg_class') AS description
+      FROM pg_class AS c
+      JOIN pg_namespace AS n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public'
+        AND c.relkind = 'r'
+        AND c.relname IN (
+          'scada_projects', 'scada_project_grants',
+          'scada_project_versions', 'scada_project_audit'
+        )
+    `;
+    expect(tables).toHaveLength(businessTables.length);
+    for (const row of tables) {
+      expect(businessTables).toContain(row.table_name);
+      expect(row.description).toMatch(/[一-龥]/);
+    }
+
+    const columns = await service.client.$queryRaw<
+      Array<{ table_name: string; column_name: string; description: string | null }>
+    >`
+      SELECT c.relname AS table_name, a.attname AS column_name,
+             col_description(c.oid, a.attnum) AS description
+      FROM pg_class AS c
+      JOIN pg_namespace AS n ON n.oid = c.relnamespace
+      JOIN pg_attribute AS a ON a.attrelid = c.oid
+      WHERE n.nspname = 'public'
+        AND c.relkind = 'r'
+        AND c.relname IN (
+          'scada_projects', 'scada_project_grants',
+          'scada_project_versions', 'scada_project_audit'
+        )
+        AND a.attnum > 0
+        AND NOT a.attisdropped
+    `;
+    expect(columns.length).toBeGreaterThanOrEqual(23);
+    for (const row of columns) {
+      expect(businessTables).toContain(row.table_name);
+      expect(row.description).toMatch(/[一-龥]/);
+    }
+  });
+
 });

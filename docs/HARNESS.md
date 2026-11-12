@@ -984,3 +984,27 @@ Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
 专用测试对测试数据库采用随机租户 ID，完成后删除测试租户的审计、版本、授权、工程；只允许 `localhost/127.0.0.1` 与数据库名 `adui_scada_test`。此处创建数据库与执行迁移的命令可能改变目标环境，**必须先确认是隔离测试库**。真实事务 CAS、跨租户、篡改读取和审计落库验证状态以维护者实际输出为准，不能预先标记通过。
 
 补充容器验收：执行 `docker compose --env-file .env -f deploy/docker/compose.demo.yaml build server`（以现有 Compose 真实服务名为准）并检查容器运行镜像包含 `/workspace/packages/core/package.json` 与 `src/`。**当前环境未执行 Docker 构建**，不能宣称容器运行时已通过验证。
+
+### 第十一批补充：7 处 Vitest Mock 类型警告与 Navicat 中文注释验收
+
+维护者 Windows 执行 `vp check --fix` 时报告 `apps/server/src/projects/prisma-project-version-store.spec.ts` 有 **7 处** `vitest(require-mock-type-parameters)` 警告，0 错误；本分支对这些 `vi.fn` 增加明确函数泛型，不禁用规则或改变业务逻辑。
+
+维护者在 Navicat 查看发现四张业务表 `scada_projects`、`scada_project_grants`、`scada_project_versions`、`scada_project_audit` 的表和字段注释为空；新增独立迁移 `20261112170000_add_chinese_table_comments`，设置 **4 张业务表、23 个字段、4 个索引**的中文 PostgreSQL 元数据注释，并在 Prisma Schema 中为 **29 个模型属性**补充中文文档说明。**已执行的初始迁移不得回改**，新增迁移对数据和约束不做修改。
+
+```powershell
+git status --short
+git pull --ff-only
+pnpm run db:validate
+vp check
+pnpm run ready
+Write-Host "质量检查退出码：$LASTEXITCODE"
+```
+
+确认根 `.env` 指向**隔离开发库** `adui_scada`、而非生产库后，再显式执行：
+
+```powershell
+pnpm run db:migrate:deploy
+pnpm run db:migrate:status
+```
+
+Navicat 刷新连接及表结构后，四张业务表的“注释”和全部字段的“注释”应显示中文。独立 `adui_scada_test` 库也必须先应用**全部迁移**再运行 `pnpm run test:db`（含新增一项真实注释验证），不可在生产数据库运行测试。预期单元测试由 337 增至 **339**（新增 2 项注释静态测试），隔离数据库测试由 5 增至 **6**，NestJS E2E 仍为 4。以上为目标数量，**本修复后的完整 Windows 质量检查与迁移尚未实测**。
