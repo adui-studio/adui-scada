@@ -433,4 +433,4 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 
 第七批 PR #29 经维护者真实 Windows 验收：`pnpm run ready` 退出码 0、303/303 单测、2/2 NestJS E2E、182 个文件格式正确、74 个文件零警告、54 个 Markdown 文档检查以及三端构建通过；`pnpm run test:multitab` React/Vue 共 8/8 场景通过。随后 Squash Merge 至 `main`（`4e4a8d9`）。
 
-第八批从最新 `main` 建立新分支，在共享 Core 中新增 `parseServerProjectSaveRequest` 与 9 项单元测试，明确未来服务端工程保存请求的两字段白名单、修订号 CAS 预期、工程 ID 和 Schema 一致性及 2 MiB 容量限制；另新增 2 项 NestJS E2E，验证未开放的工程版本读/写路由继续返回 404；配套 ADR-0040 与文档。**尚未开放 NestJS 工程写入路由、用户认证、项目权限、数据库事务、发布或工业设备写入。** 当前分支完整 `pnpm run ready` 尚未经维护者 Windows 验收，不能标记通过。
+第八批从最新 `main` 建立新分支，在共享 Core 中新增 `parseServerProjectSaveRequest` 与 9 项单元测试，明确未来服务端工程保存请求的两字段白名单、修订号 CAS 预期、工程 ID 和 Schema 一致性及 2 MiB 容量限制；另新增 2 项 NestJS E2E，验证未开放的工程版本读/写路由继续返回 404；配套 ADR-0040 与文档。**尚未开放 NestJS 工程写入路由、用户认证、项目权限、数据库事务、发布或工业设备写入。** 维护者在 Windows 执行 `vp check --fix` 后，报告 Core 的 `server-project-contract.ts` 触发 `typescript(TS2304): Cannot find name 'TextEncoder'`（1 个错误、0 警告），格式化已完成。经检查 `@adui/tsconfig/core` 仅启用 ES2022 类型库，现改用现有 `project-snapshot.ts` 中无 DOM/Node 依赖的 UTF-8 编码函数，保持 2 MiB 校验语义及原有单测不变。**此修复提交后的 `vp check` 与完整 `pnpm run ready` 仍待维护者 Windows 实测，不得宣称通过。**

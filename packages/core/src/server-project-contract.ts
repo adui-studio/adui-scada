@@ -1,6 +1,6 @@
 import { parseScadaDocument } from "./document.ts";
 import type { ScadaDocument } from "./document.ts";
-import { PROJECT_SNAPSHOT_MAX_BYTES } from "./project-snapshot.ts";
+import { PROJECT_SNAPSHOT_MAX_BYTES, utf8Bytes } from "./project-snapshot.ts";
 
 /** 仅描述未来服务端保存版本的请求体；身份和授权信息不属于客户端契约。 */
 export interface ServerProjectSaveRequest {
@@ -48,7 +48,7 @@ export function parseServerProjectSaveRequest(
     throw new TypeError("请求工程 ID 与路由工程 ID 不一致");
   }
   const request = { expectedRevision: expectedRevision as number | null, document };
-  const bytes = new TextEncoder().encode(JSON.stringify(request)).byteLength;
+  const bytes = utf8Bytes(JSON.stringify(request)).byteLength;
   if (bytes > PROJECT_SNAPSHOT_MAX_BYTES) {
     throw new RangeError("工程保存请求超过 2 MiB 限制");
   }
