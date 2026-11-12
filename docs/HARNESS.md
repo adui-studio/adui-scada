@@ -1008,3 +1008,26 @@ pnpm run db:migrate:status
 ```
 
 Navicat 刷新连接及表结构后，四张业务表的“注释”和全部字段的“注释”应显示中文。独立 `adui_scada_test` 库也必须先应用**全部迁移**再运行 `pnpm run test:db`（含新增一项真实注释验证），不可在生产数据库运行测试。预期单元测试由 337 增至 **339**（新增 2 项注释静态测试），隔离数据库测试由 5 增至 **6**，NestJS E2E 仍为 4。以上为目标数量，**本修复后的完整 Windows 质量检查与迁移尚未实测**。
+
+### 第十一批补充：NestJS TypeScript TS5097 与 Core Node 条件构建验证
+
+维护者 Windows `pnpm run ready` 在 `pnpm run typecheck:server` 的 `tsc --noEmit` 阶段报告 Core 9 个源码文件共 **23 处 TS5097**；此前 Prisma Client 7.10.1 生成、200 文件格式、86 文件零 Lint/类型警告、Vue/React/Draft Storage 类型检查均已通过。完整 `ready` 最终退出码 1，**后续单测、E2E、文档和构建未执行**，不得记为通过。
+
+修复增加 Core `node` 条件 JS/声明构建，保留 Vue/React 的源码默认出口；没有改动 Core 业务源码及共享 Schema。切换到修复提交后执行：
+
+```powershell
+git status --short
+git pull --ff-only
+pnpm install --frozen-lockfile
+pnpm run build:core
+
+# 单独复核这次的阻断点
+pnpm run typecheck:server
+pnpm run build:server
+
+# 最后执行包含所有检查与构建的完整质量链
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+预期 `build:core` 生成 `packages/core/dist/index.js` 和 `index.d.ts`，NestJS 类型检查不再触发 `TS5097` 或工作区外 `TS6059`；Node 产物中的本地导入以 `.js` 结束。可额外在经过确认的 Docker 开发环境执行 `docker compose --env-file .env -f deploy/docker/compose.demo.yaml build server` 复核运行镜像。**修复后尚未在维护者 Windows 执行完整验证**，实际测试结果以新日志为准。

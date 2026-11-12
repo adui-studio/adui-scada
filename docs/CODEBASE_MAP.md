@@ -384,3 +384,12 @@
 - `apps/server/src/database/prisma-schema-comments.spec.ts`：2 项无数据库静态单测，校验新旧业务模型属性的中文说明及迁移 `COMMENT ON` 覆盖。
 - `apps/server/test/prisma-project-version.db-spec.ts`：增加 PostgreSQL `pg_description` 查询，验证业务表/列注释在隔离真库中生效。
 - `apps/server/src/projects/prisma-project-version-store.spec.ts`：7 处 Vitest Mock 显式函数泛型，保留现有业务测试逻辑。
+
+### 第十一批补充：Core Node 构建与 TS5097 修复
+
+- `packages/core/tsconfig.build.json`：复用 Core 原配置，生成 `dist/*.js` 和 `dist/*.d.ts`，显式重写相对导入的 `.ts` 扩展名。
+- `packages/core/package.json`：`node` 条件导出 Core 编译产物；默认条件保留前端原始 TypeScript 源码，两个公共子路径均保持语义兼容。
+- `package.json`：新增 `build:core`，`ready`、`prepare` 和常用测试脚本自动生成 Node 构建产物。
+- `apps/server/package.json`：独立 NestJS 类型检查、构建和开发启动前先编译 Core。
+- `deploy/docker/Dockerfile.server`：最终容器层改为复制 Core `dist`，避免 Node 在运行时加载 workspace TypeScript 源文件。
+- `scripts/check-shared-config.mjs`：检查 Core 条件出口、构建选项和服务端脚本的自动生成链，防止后续回退触发 `TS5097`。

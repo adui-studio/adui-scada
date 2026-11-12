@@ -253,3 +253,9 @@ NestJS 服务端增加 `PrismaService`（应用生命周期内单实例 Client +
 ### PostgreSQL 中文元数据注释规范
 
 Prisma `schema.prisma` 的 `///` 为代码生成文档信息，**不会自动创建 PostgreSQL 的表/字段注释**。依据仓库 `postgresql-table-design` Skill，现以增量 Prisma Migration 的 `COMMENT ON TABLE/COLUMN/INDEX` 为数据库注释权威来源；对已应用的初始建表迁移不做历史修改。四张业务表、23 个物理字段及四个业务索引均补充中文说明；Prisma 自管理的 `_prisma_migrations` 不受业务注释规则约束。后续增表需在同批迁移中同步注释，静态测试与独立数据库查询负责验收。
+
+### 第十一批补充：Core 双消费端条件导出及 NestJS TypeScript 兼容
+
+维护者 Windows `pnpm run ready` 在服务端 `tsc --noEmit` 遇到 Core 源码的 23 处 `TS5097`。原因是 Core 源码直接导出 `*.ts`（适用于 Core/浏览器的 `allowImportingTsExtensions`），但 NestJS 使用 `NodeNext` 且当前包入口直接指向工作区外的源码。不能简单修改 Core 全部导入后缀或只给 NestJS 开启 `allowImportingTsExtensions`：后者会在实际带输出的构建中遇到工作区 `rootDir` 边界问题。
+
+本批让 **Core 的 Node 条件导出指向预先生成的 `dist/*.js` 与 `dist/*.d.ts`**，前端默认导出仍是原 `src/*.ts`。Core 使用 TypeScript 6 的 `rewriteRelativeImportExtensions` 生成真实 ESM 文件，不添加第三方依赖或改变共享 Schema；NestJS 在类型检查、编译和 Docker 运行层只引用 Core Node 产物。服务端、Core 和前端保持同一业务逻辑源文件，只是平台输出不同。

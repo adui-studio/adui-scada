@@ -470,3 +470,9 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 维护者 Windows 执行 `vp check --fix`，实际报告 0 错误、7 处 `vitest(require-mock-type-parameters)` 警告；并在 Navicat 发现工程、授权、版本和审计四张业务表的中文表/字段注释为空。本次修改按仓库 Vitest、PostgreSQL 表设计、Prisma Skills 修复七处模拟函数泛型，在 `schema.prisma` 的 29 个模型属性中补全中文文档注释，并新增纯注释迁移，覆盖四表、23 个实际字段、4 个索引；不回改已经执行的初始迁移。
 
 为防止以后新表/新列再遗漏，增加 2 项 Schema/SQL 注释静态测试和 1 项隔离 PostgreSQL 注释实测，且把强制中文注释纳入根 AGENTS.md 与项目设计/验收文档。预计普通单测 339、独立真库测试 6、NestJS E2E 4；**这些属于修改后预期，尚未经维护者 Windows 实际复验**。PR #33 仍为 Draft，不合并 `main`。
+
+## 2026-11-12 · V0.3 第十一批：修复 NestJS NodeNext 消费 Core 源码的 TS5097（待实测）
+
+维护者 Windows `pnpm run ready` 前置 Catalog、共享配置、环境、中文文案、Prisma Client 7.10.1 生成、`vp check`（200 格式文件、86 源文件零警告）和 Web/Draft 类型检查成功，但服务端 TypeScript 遇到 Core 源码显式 `.ts` 导入，共 23 处 `TS5097`，退出码 1。由于第十一批新增了服务端对 Core 的 workspace 依赖，原本针对浏览器源码的包导出成为 NestJS `NodeNext` 直接编译的边界问题。
+
+本批保留 Core 所有 `.ts` 源文件与 Vue/React 默认出口，使用 TypeScript 6 编译出 Node 专用 `.js` 和 `.d.ts` 条件产物，构建命令自动衔接根 `ready`、NestJS build/typecheck、安装 prepare，Docker 运行层复制 Core dist。未新增第三方依赖、未修改 Prisma 数据库和业务 API。**最新完整 Windows `pnpm run ready`、Docker 构建及真库事务测试尚待重新执行**。

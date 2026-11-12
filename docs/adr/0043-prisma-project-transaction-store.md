@@ -38,3 +38,9 @@
 ## 第十一批补充：持久化元数据中文注释约束
 
 根据维护者 Navicat 检查，数据库中文说明必须以 PostgreSQL `COMMENT ON TABLE` 与 `COMMENT ON COLUMN` 持久化，不仅是 Prisma `///`。已独立新增中文注释增量迁移，保留历史迁移不变；并增加动态遍历模型的注释静态测试、隔离真库注释测试，防止未来新建表遗漏。同期修复 Vitest Mock 泛型警告共 7 处，原有事务逻辑不变。
+
+## 补充：NestJS NodeNext 与共享 Core 源码导出兼容
+
+第十一批最初直接让 NestJS 依赖 Core 的 `src/index.ts`，导致维护者 Windows `tsc --noEmit` 对 Core 源码报 23 处 `TS5097`（显式 `.ts` 扩展名）。仅在服务端启用 `allowImportingTsExtensions` 不足以确保带 JS 输出的 NestJS 正式构建能避开工作区 `rootDir` 边界。
+
+确定沿用已有 TypeScript 6 和 Workspace，不引入新构建依赖：Core 通过条件 `node` 导出 `dist/index.js`、`dist/index.d.ts`（`./editor` 子路径相同），供 NestJS NodeNext 使用；`default` 仍指向 `src/*.ts` 供 Vue/React 使用。Core `tsconfig.build.json` 开启相对导入扩展名重写、ESM 输出及声明生成，服务端构建和类型检查必须先生成 Core。Docker 最终层复制 Core `dist` 而不是旧源码。此策略维护共享 Core 单一实现、双框架工程兼容和工业只读安全约束；实际 NodeNext 编译与容器运行仍待维护者验收。

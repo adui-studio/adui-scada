@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "pnpm run db:generate && nest build",
-    "typecheck": "pnpm run db:generate && tsc --noEmit -p tsconfig.json",
-    "start": "nest start",
-    "start:dev": "pnpm run db:generate && nest start --watch",
+    "build": "pnpm --filter @adui/scada-core run build:node && pnpm run db:generate && nest build",
+    "typecheck": "pnpm --filter @adui/scada-core run build:node && pnpm run db:generate && tsc --noEmit -p tsconfig.json",
+    "start": "pnpm --filter @adui/scada-core run build:node && nest start",
+    "start:dev": "pnpm --filter @adui/scada-core run build:node && pnpm run db:generate && nest start --watch",
     "start:prod": "node dist/main.js",
     "test": "vp test run --config vitest.config.ts",
     "test:watch": "vp test --config vitest.config.ts",
@@ -17,7 +17,7 @@
     "db:migrate:dev": "prisma migrate dev --config prisma.config.ts",
     "db:migrate:deploy": "prisma migrate deploy --config prisma.config.ts",
     "db:migrate:status": "prisma migrate status --config prisma.config.ts",
-    "test:db": "pnpm run db:generate && vp test run --config vitest.config.db.ts"
+    "test:db": "pnpm --filter @adui/scada-core run build:node && pnpm run db:generate && vp test run --config vitest.config.db.ts"
   },
   "dependencies": {
     "@adui/scada-core": "workspace:*",

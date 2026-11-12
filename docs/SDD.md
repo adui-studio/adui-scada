@@ -431,3 +431,9 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - Prisma 模型 `ScadaProject`、`ScadaProjectGrant`、`ScadaProjectVersion`、`ScadaProjectAudit` 及全部 29 个模型属性（包含虚拟关联属性）均提供中文 `///` 说明，便于源码/Prisma Client 维护。
 - Prisma 迁移 `20261112170000_add_chinese_table_comments` 通过 PostgreSQL `COMMENT ON` 写入 **4 张业务表、23 个物理字段、4 个自有索引**的中文元数据说明，Navicat 展示取自这些 PostgreSQL 元数据，而不是 Prisma `///`。
 - 迁移仅更新描述信息，不更改表结构、主外键、现有数据或授权；已应用的初始迁移不可回改。静态单测覆盖后续新增模型/字段的注释要求；隔离 PostgreSQL 测试读取 `obj_description` 与 `col_description` 验证注释真实存在。
+
+### 第十一批补充：跨框架共享 Core 的 NodeNext 构建契约
+
+`@adui/scada-core` 保留 `exports["."].default="./src/index.ts"` 与 `exports["./editor"].default="./src/editor.ts"` 供 Vue/React（Bundler）使用；`exports.*.node.types` 指向相应 `dist/*.d.ts`，`exports.*.node.default` 指向 `dist/*.js`，由 `packages/core/tsconfig.build.json` 继承现有 Core tsconfig，显式覆盖 `noEmit=false` 并开启 `declaration` 与 `rewriteRelativeImportExtensions`。NestJS `NodeNext` 类型解析只读取声明，发射的服务端 JS 从 Node 条件导出加载 Core ESM 构建产物，而不会再次编译 Core 源码。
+
+`build:core` 应在根质量链 `vp check` 和 NestJS 独立 `typecheck/build/start` 之前执行，避免生成物缺失造成的偶发失败。Core JS 和声明均属于忽略的 `dist` 产物；容器运行层需复制对应 `packages/core/dist`。
