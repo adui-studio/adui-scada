@@ -39,13 +39,20 @@ test("拒绝缺少字段或携带额外字段的请求", () => {
   expect(() => parseServerProjectSaveRequest({ document: original.document }, projectId)).toThrow(
     /只允许/,
   );
-  expect(() =>
-    parseServerProjectSaveRequest({ expectedRevision: null }, projectId),
-  ).toThrow(/只允许/);
-  for (const extra of ["actorId", "tenantId", "permissions", "published", "revision", "contentHash"]) {
-    expect(() => parseServerProjectSaveRequest({ ...original, [extra]: "伪造" }, projectId)).toThrow(
-      /只允许/,
-    );
+  expect(() => parseServerProjectSaveRequest({ expectedRevision: null }, projectId)).toThrow(
+    /只允许/,
+  );
+  for (const extra of [
+    "actorId",
+    "tenantId",
+    "permissions",
+    "published",
+    "revision",
+    "contentHash",
+  ]) {
+    expect(() =>
+      parseServerProjectSaveRequest({ ...original, [extra]: "伪造" }, projectId),
+    ).toThrow(/只允许/);
   }
 });
 
