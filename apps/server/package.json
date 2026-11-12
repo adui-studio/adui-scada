@@ -22,11 +22,11 @@
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
     "@nestjs/platform-express": "catalog:",
-    "reflect-metadata": "catalog:",
-    "rxjs": "catalog:",
-    "@prisma/client": "catalog:",
     "@prisma/adapter-pg": "catalog:",
-    "pg": "catalog:"
+    "@prisma/client": "catalog:",
+    "pg": "catalog:",
+    "reflect-metadata": "catalog:",
+    "rxjs": "catalog:"
   },
   "devDependencies": {
     "@adui/tsconfig": "workspace:*",
@@ -34,11 +34,11 @@
     "@nestjs/schematics": "catalog:",
     "@nestjs/testing": "catalog:",
     "@types/node": "catalog:",
+    "@types/pg": "catalog:",
     "@types/supertest": "catalog:",
+    "prisma": "catalog:",
     "supertest": "catalog:",
     "typescript": "catalog:",
-    "vite-plus": "catalog:",
-    "prisma": "catalog:",
-    "@types/pg": "catalog:"
+    "vite-plus": "catalog:"
   }
 }
