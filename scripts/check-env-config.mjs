@@ -34,7 +34,8 @@ const defaults = {
   SCADA_DB_NAME: "adui_scada",
   SCADA_DB_USER: "adui_scada",
   SCADA_DB_PASSWORD: "adui_scada_dev_only_2026",
-  SCADA_DATABASE_URL: "postgresql://adui_scada:adui_scada_dev_only_2026@127.0.0.1:5432/adui_scada?schema=public",
+  SCADA_DATABASE_URL:
+    "postgresql://adui_scada:adui_scada_dev_only_2026@127.0.0.1:5432/adui_scada?schema=public",
 };
 const template = parseEnv(".env.example");
 assert.deepEqual({ ...template }, defaults, "根目录 .env.example 的默认值必须与配置契约一致");
