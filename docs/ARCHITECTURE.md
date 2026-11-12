@@ -265,3 +265,11 @@ Prisma `schema.prisma` 的 `///` 为代码生成文档信息，**不会自动创
 继续复用已合并的 `ProjectPersistenceModule` 与 `PrismaProjectVersionStore`，本批不改变其正式对外接口和 Prisma 数据库模型。测试通过 Prisma 查询扩展**只对测试客户端**将审计 `action` 改为非法值，触发 PostgreSQL 已存在的 CHECK 约束；此前写入的版本和修订号必须由同一 Interactive Transaction 真正回滚。授权并发测试让管理侧事务先 `FOR UPDATE` 锁工程行、撤销授权，再校验等待保存因重新查询权限而失败。管理侧锁顺序只是未来授权服务的规范，本批不新增可用的授权管理 API。
 
 服务端镜像回归采用独立 `docker build` 与 `docker run --network none`，不开放宿主端口；容器内部使用临时回环端口验证 `/health` 返回值、Core/仓储模块可加载及未实现工程/工业写入路由保持 404。Docker 构建上下文遵守现有 `.dockerignore`，排除根 `.env`、密钥及本地凭据。Docker 构建需要本地镜像源，故不默认纳入普通 `ready`。
+
+## V0.3 第十三批：可信身份与工程 Guard 基础（ADR-0045）
+
+为本地/私有化场景建立短期**可撤销不透明会话**，暂不依赖 JWT 自发行或临时模拟登录：`scada_identities` 记录租户内主体与 active/disabled 状态，`scada_auth_sessions` 仅存储不可逆 SHA-256 高熵令牌摘要、到期/撤销时间及 UUID 会话主键。32 字节令牌使用 Node 原生密码安全随机源生成，明文只在内部签发时返回一次；每次 HTTP 请求查 PostgreSQL 以便即时拒绝撤销/停用。
+
+`ScadaSessionGuard` 从唯一的 Authorization Bearer 请求头解析令牌并恢复服务端主体；`ScadaProjectGuard` 按请求路由的 `projectId` 和**已验证主体的 `tenantId`** 查询现有 `scada_project_grants`，复用 `hasProjectPermission` 严格授权，拒绝无元数据/跨租户/无权限。组合装饰器确保未来路由先认证后授权；事务写入仍必须在 `PrismaProjectVersionStore` 的工程行锁内再次复查 ACL，Guard 不替代锁内校验。当前所有模块**不挂载 AppModule**，无新业务端点。
+
+日志、Swagger、JWT/OIDC、密码散列、Nano ID、限流依赖按 [依赖选型](DEPENDENCY_SELECTION.md) 阶段化引入，先选最小可信基础，不让未经安装/实测的第三方依赖影响现有质量链。

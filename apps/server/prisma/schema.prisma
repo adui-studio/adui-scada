@@ -96,3 +96,45 @@ model ScadaProjectAudit {
   @@index([tenantId, actorId, createdAt], map: "scada_project_audit_actor_idx")
   @@map("scada_project_audit")
 }
+
+/// 已验证的租户内主体；不保存前端提供的角色、令牌明文或本地密码。
+model ScadaIdentity {
+  /// 主体所属租户的服务端标识。
+  tenantId  String             @map("tenant_id") @db.VarChar(128)
+  /// 主体唯一标识，由后续可信身份提供方关联。
+  subjectId String             @map("subject_id") @db.VarChar(128)
+  /// 主体状态，仅 active 可获得访问授权。
+  status    String             @default("active") @db.VarChar(16)
+  /// 主体创建时间。
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 主体记录最后更新时间。
+  updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  /// 该主体的短期服务端会话集合。
+  sessions  ScadaAuthSession[]
+
+  @@id([tenantId, subjectId])
+  @@map("scada_identities")
+}
+
+/// 短期服务端令牌会话，只存储高熵令牌 SHA-256 摘要，支持即时撤销。
+model ScadaAuthSession {
+  /// 会话主键，保留 PostgreSQL 原生 UUID 类型。
+  sessionId String        @id @default(uuid()) @map("session_id") @db.Uuid
+  /// 会话归属租户标识，必须与主体所属租户一致。
+  tenantId  String        @map("tenant_id") @db.VarChar(128)
+  /// 会话归属的可信主体标识。
+  subjectId String        @map("subject_id") @db.VarChar(128)
+  /// 不透明高熵令牌的 SHA-256 摘要，绝不存储令牌明文。
+  tokenHash String        @unique(map: "scada_auth_sessions_token_hash_key") @map("token_hash") @db.VarChar(64)
+  /// 会话创建时间。
+  issuedAt  DateTime      @default(now()) @map("issued_at") @db.Timestamptz(6)
+  /// 会话严格过期时间，不允许无限续期。
+  expiresAt DateTime      @map("expires_at") @db.Timestamptz(6)
+  /// 会话显式撤销时间；为空表示尚未撤销。
+  revokedAt DateTime?     @map("revoked_at") @db.Timestamptz(6)
+  /// 该会话关联的租户内可信主体。
+  identity  ScadaIdentity @relation(fields: [tenantId, subjectId], references: [tenantId, subjectId], onDelete: Restrict)
+
+  @@index([tenantId, subjectId, expiresAt], map: "scada_auth_sessions_subject_expiry_idx")
+  @@map("scada_auth_sessions")
+}

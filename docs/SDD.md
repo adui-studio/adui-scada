@@ -446,3 +446,14 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - **容器验证**：以独立 Docker 镜像在 `--network none` 下加载编译后的 Prisma 仓储/共享 Core，并从容器内部验证回环 `/health` 和未开放路由；不影响当前工业安全边界。
 
 本批不修改 `schema.prisma` 或历史迁移，所有新增测试数据只归属于随机生成的测试租户，测试结束按 FK 顺序清理。
+
+## V0.3 第十三批：会话与租户工程权限契约
+
+- `ScadaIdentity`：`(tenantId,subjectId)` 复合主键，状态仅允许 `active/disabled`，不保存密码或角色。
+- `ScadaAuthSession`：UUID 主键，租户+主体 FK，令牌 SHA-256 摘要唯一，令牌过期时间必须晚于签发时间，显式撤销时间可为空；数据库端有 CHECK、FK、索引及全字段中文注释。
+- `AuthSessionService.issueForVerifiedSubject(principal)`：仅未来受信身份提供者可调用；主体必须在 DB 存在且 active，使用 `randomBytes(32)` 签发高熵令牌，固定有效期 15 分钟，返回一次性明文与 UUID 会话标识；**当前无公开调用入口**。
+- `AuthSessionService.authenticate(token)`：仅接受格式正确的 `scada_s_` Bearer 密钥，SHA-256 查唯一索引，每次复核撤销、时间、身份状态，返回冻结的最小主体上下文，失败统一返回 null。
+- `AuthSessionService.revokeForVerifiedSubject(principal,sessionId)`：仅精确匹配当前主体与 UUID 会话，重复/跨租户撤销失败，不提供公开 API。
+- `ScadaSessionGuard`：仅 HTTP，拒绝空、过长、重复头和无效 Bearer，成功才写 `request.scadaPrincipal`；不会接受请求体中的主体字段。
+- `ScadaProjectGuard`：拒绝未声明 `RequireProjectPermission` 元数据的路由、无主体、非法工程 ID、URL 中跨租户、没有当前主体的精确工程授权；通过 `scada_project_grants` + 共享权限策略评估 `project:read/version:read/version:append`。缺少授权统一呈现为资源不可访问（404），无可信主体为 401。
+- **安全边界**：上述代码尚未挂入 `AppModule`、未注册 HTTP 路由，Guard 只作为未来保护路由的基础；读取/写入仍须按业务事务再复查权限，令牌撤销与进行中的写入之间的竞态、完整账号生命周期和真实身份提供者仍待独立安全评审。

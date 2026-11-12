@@ -403,3 +403,17 @@
 - `deploy/docker/Dockerfile.server`：仅增加独立烟测脚本的运行时 COPY，不调整正式 CMD。
 - 根 `package.json` 的 `test:docker:server`：独立于 `ready` 和 `test:db`，无需数据库或工业网络。
 - [ADR-0044](adr/0044-prisma-transaction-security-regression.md)：本批设计与验收边界。
+
+## V0.3 第十三批：服务端可信身份与工程 Guard
+
+- `apps/server/src/auth/auth-session.service.ts`：短期会话签发、服务端 SHA-256 摘要验证、撤销和主体禁用检查；没有公开签发路由。
+- `apps/server/src/auth/scada-session.guard.ts`：严格解析 HTTP Bearer，建立可信 `scadaPrincipal`。
+- `apps/server/src/auth/scada-project.guard.ts`：按租户/工程/主体查询数据库显式 ACL，缺失元数据/无授权默认拒绝。
+- `apps/server/src/auth/require-project-permission.decorator.ts`：确保受保护工程路由未来先 Session Guard，再 Project Guard。
+- `apps/server/src/auth/scada-identity.module.ts`：未导入 AppModule 的独立 NestJS 模块。
+- `apps/server/src/auth/scada-identity.spec.ts`：10 项无需数据库的会话及 Guard 单元测试。
+- `apps/server/prisma/schema.prisma`：新建两张有中文 `///` 属性注释的业务模型。
+- `apps/server/prisma/migrations/20261113000000_trusted_identity_sessions/migration.sql`：两张表、12 个实际字段、中文元数据、FK/CHECK/索引的独立增量迁移。
+- `apps/server/test/prisma-project-version.db-spec.ts`：新增 2 项独立 PostgreSQL 会话摘要、撤销、主体停用和过期验证。
+- `apps/server/test/app.e2e-spec.ts` 与 `apps/server/container-smoke.mjs`：验证会话签发 API 与既有工程/设备写入 API 继续保持关闭。
+- [ADR-0045](adr/0045-trusted-session-and-project-guard.md)、[依赖清单](DEPENDENCY_SELECTION.md) 记录阶段化安全选型。
