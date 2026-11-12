@@ -45,8 +45,8 @@
     "db:migrate:dev": "pnpm --filter @adui/scada-server run db:migrate:dev",
     "db:migrate:deploy": "pnpm --filter @adui/scada-server run db:migrate:deploy",
     "db:migrate:status": "pnpm --filter @adui/scada-server run db:migrate:status",
-    "db:dev:up": "docker compose -f deploy/docker/compose.postgres.dev.yaml up -d",
-    "db:dev:down": "docker compose -f deploy/docker/compose.postgres.dev.yaml down"
+    "db:dev:up": "pnpm run env:check && docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml up -d",
+    "db:dev:down": "docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml down"
   },
   "devDependencies": {
     "@adui/tooling": "workspace:*",

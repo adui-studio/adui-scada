@@ -934,3 +934,11 @@ pnpm run db:dev:down
 ### PostgreSQL + Prisma 默认环境配置
 
 仓库根目录 `.env.example` 默认提供 `SCADA_DB_HOST=127.0.0.1`、`SCADA_DB_PORT=5432`、`SCADA_DB_NAME=adui_scada`、`SCADA_DB_USER=adui_scada`，同时填入**公开、仅限本地隔离开发**的测试密码与相匹配的 Prisma URL。复制到本地 `.env` 即可用于独立开发数据库；正式部署前必须同时更换密码和 URL，且密码含特殊字符时须按 URL 规则编码。Prisma CLI 目前只读取完整的 `SCADA_DATABASE_URL`，**不会从其余字段自动生成连接串**；本地 PostgreSQL Compose 使用 `SCADA_DB_USER`、`SCADA_DB_PASSWORD`、`SCADA_DB_NAME`、`SCADA_DB_PORT`，始终仅绑定 `127.0.0.1`。根 `env:check` 已同步识别并核对新默认值；静态校验不会自动连接数据库。数据库迁移仍必须由维护者检查目标 URL 后显式执行。
+
+### 本地 PostgreSQL Compose 根环境文件与端口一致性
+
+维护者在 Windows 使用 `pnpm run db:dev:up` 报告 `SCADA_DB_USER` / `SCADA_DB_PASSWORD` 缺失；截图显示根目录 `.env` 实际已配置。根脚本此前使用 `docker compose -f deploy/docker/compose.postgres.dev.yaml up -d`，Compose 默认项目目录是首个 `-f` 文件所在的 `deploy/docker`，未读取仓库根 `.env`。现改为 `docker compose --env-file .env -f ...` 明确传入根环境文件（`db:dev:up` 先运行 `env:check`），`db:dev:down` 同样显式读取。
+
+维护者将本机 PostgreSQL 端口调整到 **15432**，但此前 Prisma URL 仍为 5432，根 `env:check` 的 Web/Server/SSE 端口默认值也未同步。现保留新默认端口（React 15173、Vue 15174、NestJS 13001、SSE 14178、Vue Docker 18081、PostgreSQL 15432），更新 `.env.example`、默认契约并新增 URL 与主机、端口、库名、用户、密码匹配的静态检查。**本地被 Git 忽略的 `.env` 不会被自动覆盖，维护者须手动将 `SCADA_DATABASE_URL` 端口改为 15432。**
+
+使用最新分支运行 `pnpm run env:check`，再运行 `pnpm run db:dev:up`；可用 `docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml ps` 查看状态。只有明确确认目标是隔离开发库时才执行 `pnpm run db:migrate:deploy`。当前仅完成配置修复提交，实际 Windows Docker 启动、质量链及真实 PostgreSQL 迁移尚待复验。
