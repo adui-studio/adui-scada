@@ -26,7 +26,9 @@ pnpm install
 pnpm run db:validate
 pnpm run db:generate
 
-# 配好根目录 .env 的 SCADA_DB_USER / SCADA_DB_PASSWORD / SCADA_DATABASE_URL 后：
+# 从根目录 .env.example 复制到 .env（如已存在，请勿覆盖）。
+# 默认使用 127.0.0.1:5432 / adui_scada；填写本地强密码和完整 SCADA_DATABASE_URL。
+# Prisma 不会自动把 SCADA_DB_PASSWORD 拼进 URL，必须保持两个配置一致。
 pnpm run db:dev:up
 pnpm run db:migrate:deploy
 pnpm run db:migrate:status

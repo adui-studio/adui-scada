@@ -930,3 +930,7 @@ pnpm run db:dev:down
 维护者本地 `pnpm run db:generate` 后，`pnpm run ready` 首次运行在 `messages:check` 阶段报告 1,379 处错误：包括 `.env.example` 中被注释的 `SCADA_DB_PORT=5432`，以及 `apps/server/src/generated/prisma/` 中 Prisma 自身生成的英文注释。检查脚本现在按跨平台路径排除**精确的 Prisma 生成目录**，同时将 `.env.example` 中被注释的变量赋值识别为技术配置指令；Vite+ Format 与 Lint 也排除同一生成目录。项目自有源码中的错误、日志、测试名称与注释依然必须使用中文，绝不批量翻译或手工修改生成代码。
 
 修复后先执行 `pnpm run messages:check` 和 `vp check`，再执行 `pnpm run ready`。该日志只证明前置依赖、共享配置和环境检查通过，**并没有证明本批后续类型检查、单测、E2E、构建或数据库迁移通过**。
+
+### PostgreSQL + Prisma 默认环境配置
+
+仓库根目录 `.env.example` 默认提供 `SCADA_DB_HOST=127.0.0.1`、`SCADA_DB_PORT=5432`、`SCADA_DB_NAME=adui_scada`、`SCADA_DB_USER=adui_scada`，并将 `SCADA_DB_PASSWORD` 与 `SCADA_DATABASE_URL` 留空以防公开仓库硬编码数据库凭据。复制到本地 `.env` 后必须填写强密码及 URL（其中密码需按 URL 规则编码）。Prisma CLI 目前只读取完整的 `SCADA_DATABASE_URL`，**不会从其余字段自动生成连接串**；本地 PostgreSQL Compose 使用 `SCADA_DB_USER`、`SCADA_DB_PASSWORD`、`SCADA_DB_NAME`、`SCADA_DB_PORT`，始终仅绑定 `127.0.0.1`。根 `env:check` 已同步识别新字段，允许不需要数据库的质量检查保留空凭据。数据库迁移仍必须由维护者检查目标 URL 后显式执行。

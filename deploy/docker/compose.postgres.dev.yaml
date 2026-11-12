@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_USER: "${SCADA_DB_USER:?请在根目录 .env 设置 SCADA_DB_USER}"
       POSTGRES_PASSWORD: "${SCADA_DB_PASSWORD:?请在根目录 .env 设置 SCADA_DB_PASSWORD}"
-      POSTGRES_DB: adui_scada
+      POSTGRES_DB: "${SCADA_DB_NAME:-adui_scada}"
     ports:
       - "127.0.0.1:${SCADA_DB_PORT:-5432}:5432"
     volumes:

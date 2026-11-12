@@ -29,6 +29,12 @@ const defaults = {
   SCADA_DEMO_PORT: "4178",
   SCADA_REACT_PORT: "8080",
   SCADA_VUE_PORT: "8081",
+  SCADA_DB_HOST: "127.0.0.1",
+  SCADA_DB_PORT: "5432",
+  SCADA_DB_NAME: "adui_scada",
+  SCADA_DB_USER: "adui_scada",
+  SCADA_DB_PASSWORD: "",
+  SCADA_DATABASE_URL: "",
 };
 const template = parseEnv(".env.example");
 assert.deepEqual({ ...template }, defaults, "根目录 .env.example 的默认值必须与配置契约一致");
@@ -53,8 +59,23 @@ if (existsSync(resolve(root, ".env"))) {
         Number.isInteger(port) && port >= 1 && port <= 65535,
         `${key}：端口必须是 1～65535 之间的整数`,
       );
-    } else if (key === "SCADA_WEB_HOST") {
+    } else if (key === "SCADA_WEB_HOST" || key === "SCADA_DB_HOST") {
       assert.ok(["127.0.0.1", "localhost"].includes(value), `${key}：必须使用本机回环地址`);
+    } else if (key === "SCADA_DB_NAME" || key === "SCADA_DB_USER") {
+      assert.match(value, /^[A-Za-z][A-Za-z0-9_]{0,62}$/, `${key}：必须是有效的开发数据库标识符`);
+    } else if (key === "SCADA_DATABASE_URL" && value) {
+      let url;
+      try {
+        url = new URL(value);
+      } catch {
+        assert.fail("SCADA_DATABASE_URL：连接字符串格式无效");
+      }
+      assert.ok(
+        ["postgresql:", "postgres:"].includes(url.protocol),
+        "SCADA_DATABASE_URL：必须使用 PostgreSQL 连接协议",
+      );
+    } else if (key === "SCADA_DB_PASSWORD" || key === "SCADA_DATABASE_URL") {
+      // 数据库密码和 URL 可在纯静态校验时留空，迁移前由开发者明确填写。
     } else {
       assert.ok(["127.0.0.1", "0.0.0.0"].includes(value), `${key}：监听地址无效`);
     }

@@ -450,3 +450,7 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 ## 2026-11-12 · V0.3 第十批：Prisma Client 生成后文案检查故障及修复（待复验）
 
 维护者已在第十批 PR #32 分支提交更新的 `pnpm-lock.yaml`（提交 `21cf6e0`），并执行 `pnpm run db:generate` 后的完整 `pnpm run ready`。依赖目录（41 项 Catalog）、共享配置和环境检查通过；`messages:check` 因第三方生成代码及 `.env.example` 配置示例共报告 1,379 处英文注释，退出码非零。经核对脚本此前递归扫描 `apps/server/src/generated/prisma/`，未按 AGENTS.md 排除 Prisma 生成产物。本批修复增加精确路径排除，并对 Vite+ Format/Lint 同步忽略；仍保留自有中文文案约束。**本次修复之后的完整质量链、Prisma Schema 校验与真实 PostgreSQL 迁移尚待维护者重新验证。**
+
+## 2026-11-12 · V0.3 第十批：根目录 PostgreSQL + Prisma 默认环境（待验收）
+
+按维护者要求，在 `.env.example` 中给出实际生效的本机 PostgreSQL 主机、端口、库名和用户名默认值；数据库密码及 Prisma 完整 URL 保留空值，避免公开仓库存放可直接利用的固定凭据。同步更新 `scripts/check-env-config.mjs` 默认项及类型化校验、`compose.postgres.dev.yaml` 数据库名插值和服务端 README/Harness。Prisma CLI 仍只读取完整 `SCADA_DATABASE_URL`，不会拼接其他数据库变量。**该配置修改后的 `pnpm run env:check`、`pnpm run ready` 和实际 PostgreSQL 迁移仍需维护者 Windows 验证。**
