@@ -40,3 +40,19 @@ pnpm run db:dev:down
 ```
 
 首次迁移文件由本批按 Prisma 模型手工编写，包含额外的 PostgreSQL CHECK 约束，必须使用隔离开发库核对实际 DDL；未通过真实迁移与回滚设计审查前不能用于生产。**严禁使用 `prisma migrate reset`、`db push --force-reset` 或 `db push --accept-data-loss` 清理现有数据库。**
+
+## V0.3 第十一批：工程版本事务仓储
+
+`ProjectPersistenceModule` 包含 `PrismaService` 和 `PrismaProjectVersionStore`，但**没有导入 AppModule**。数据库不会在现有健康接口启动时自动连接，任何工程版本 HTTP API 也尚未注册。未来必须先接入可信身份认证、工程级 Guard 与受控授权管理，再考虑导入模块和开放版本接口。
+
+`pnpm run ready`、独立服务端 `typecheck` 和 `build` 会在使用生成客户端前执行 `db:generate`。仓储单测由 `test:unit` 覆盖；实际 PostgreSQL 双写、权限和快照读取使用隔离测试库执行 `pnpm run test:db`，详细隔离测试步骤见 [Harness](../../docs/HARNESS.md)。
+
+### Navicat 中查看 PostgreSQL 中文表/字段注释
+
+Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。第十一批新增 Prisma 迁移 `20261112170000_add_chinese_table_comments`，为 4 张业务表、23 个物理字段及 4 个索引写入中文 `COMMENT ON`。请先确认连接的是隔离开发数据库，再运行 `pnpm run db:migrate:deploy` 与 `pnpm run db:migrate:status`；成功后刷新 Navicat 表列表/设计视图，中文说明会显示在“注释”列。Prisma 自管理的 `_prisma_migrations` 不属于业务表，不在该迁移中修改。
+
+### 共享 Core 的 Node.js 构建出口
+
+服务端事务仓储依赖 `@adui/scada-core`，而共享 Core 现有源码内部使用显式 `.ts` 扩展名。为避免 NestJS 的 `NodeNext` 类型检查报 `TS5097`、或服务端构建把工作区外的 Core 源码编进 `rootDir`，Core 为 Node 消费端增加 `dist/*.js` 和 `dist/*.d.ts` 条件导出，Vue/React 继续从原 `src/*.ts` 导入。
+
+`pnpm run build:core` 编译 Core 的 Node 产物；根 `ready`、安装 `prepare` 与服务端独立 `build/typecheck/start:dev` 会自动先构建。服务端 Docker 最终层携带 `packages/core/dist/`，不需要 Node 运行时擦除 TypeScript 源码。切换分支后请先 `pnpm run build:core` 再运行单独的 `vp check`。

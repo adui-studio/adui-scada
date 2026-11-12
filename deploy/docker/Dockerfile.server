@@ -15,6 +15,9 @@ COPY --from=build --chown=node:node /workspace/node_modules/ /workspace/node_mod
 COPY --from=build --chown=node:node /workspace/apps/server/node_modules/ /workspace/apps/server/node_modules/
 COPY --from=build --chown=node:node /workspace/apps/server/dist/ /workspace/apps/server/dist/
 COPY --from=build --chown=node:node /workspace/apps/server/package.json /workspace/apps/server/package.json
+# 服务端运行时引用 Core 编译后的 JS，不依赖对 TypeScript 源码的运行时类型擦除。
+COPY --from=build --chown=node:node /workspace/packages/core/package.json /workspace/packages/core/package.json
+COPY --from=build --chown=node:node /workspace/packages/core/dist/ /workspace/packages/core/dist/
 USER node
 EXPOSE 3001
 CMD ["node", "apps/server/dist/main.js"]

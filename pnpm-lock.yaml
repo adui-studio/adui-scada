@@ -315,6 +315,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@adui/scada-core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@nestjs/common':
         specifier: 'catalog:'
         version: 12.0.3(reflect-metadata@0.2.2)(rxjs@7.8.2)

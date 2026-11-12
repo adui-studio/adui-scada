@@ -10,12 +10,19 @@ datasource db {
 
 /// 服务端工程与其最新版本水位；0 表示该工程尚无版本。
 model ScadaProject {
+  /// 所属租户标识，与工程标识共同构成联合主键。
   tenantId     String                 @map("tenant_id") @db.VarChar(128)
+  /// 工程标识，在同一租户内唯一。
   projectId    String                 @map("project_id") @db.VarChar(128)
+  /// 最新历史版本修订号；0 表示尚无已保存版本。
   headRevision BigInt                 @default(0) @map("head_revision")
+  /// 工程创建时间，采用带时区时间戳。
   createdAt    DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 工程最近修改时间，版本更新时由 Prisma 维护。
   updatedAt    DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  /// 该工程的主体级操作授权列表。
   grants       ScadaProjectGrant[]
+  /// 该工程只追加的历史版本集合。
   versions     ScadaProjectVersion[]
 
   @@id([tenantId, projectId])
@@ -24,10 +31,15 @@ model ScadaProject {
 
 /// 逐主体逐操作授权，权限不从客户端请求体读取。
 model ScadaProjectGrant {
+  /// 授权记录所属租户标识。
   tenantId  String       @map("tenant_id") @db.VarChar(128)
+  /// 授权记录所属工程标识。
   projectId String       @map("project_id") @db.VarChar(128)
+  /// 被授权的可信身份主体标识。
   subjectId String       @map("subject_id") @db.VarChar(128)
+  /// 明确授予的工程读取、版本读取或版本追加权限。
   permission String      @db.Text
+  /// 该授权记录所属的工程主表记录。
   project   ScadaProject @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
 
   @@id([tenantId, projectId, subjectId, permission])
@@ -37,14 +49,23 @@ model ScadaProjectGrant {
 
 /// 只追加 SHA-256 工程版本快照，正式发布另有独立流程。
 model ScadaProjectVersion {
+  /// 历史版本所属租户标识。
   tenantId    String              @map("tenant_id") @db.VarChar(128)
+  /// 历史版本所属工程标识。
   projectId   String              @map("project_id") @db.VarChar(128)
+  /// 服务端分配的递增修订号，范围为正安全整数。
   revision    BigInt
+  /// 完整工程快照，包含格式、文档、修订号和内容摘要。
   snapshot    Json                @db.JsonB
+  /// 快照 SHA-256 小写十六进制摘要，用于校验完整性。
   contentHash String              @map("content_hash") @db.VarChar(64)
+  /// 本次版本保存的可信操作主体标识。
   createdBy   String              @map("created_by") @db.VarChar(128)
+  /// 工程版本创建时间，采用带时区时间戳。
   createdAt   DateTime            @map("created_at") @db.Timestamptz(6)
+  /// 此历史版本所属的工程。
   project     ScadaProject        @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
+  /// 该成功保存版本对应的审计事件。
   audit       ScadaProjectAudit?
 
   @@id([tenantId, projectId, revision])
@@ -54,13 +75,21 @@ model ScadaProjectVersion {
 
 /// 成功保存审计与版本一对一；失败尝试的独立安全审计暂未实现。
 model ScadaProjectAudit {
+  /// 审计事件全局唯一 UUID 标识。
   eventId   String              @id @default(uuid()) @map("event_id") @db.Uuid
+  /// 成功保存事件所属租户标识。
   tenantId  String              @map("tenant_id") @db.VarChar(128)
+  /// 成功保存事件所属工程标识。
   projectId String              @map("project_id") @db.VarChar(128)
+  /// 本次成功保存的工程修订号。
   revision  BigInt
+  /// 执行版本追加操作的可信主体标识。
   actorId   String              @map("actor_id") @db.VarChar(128)
+  /// 审计操作类型，当前仅允许版本追加。
   action    String              @db.Text
+  /// 成功提交审计事件创建时间。
   createdAt DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 该审计事件对应的不可变工程版本。
   version   ScadaProjectVersion @relation(fields: [tenantId, projectId, revision], references: [tenantId, projectId, revision], onDelete: Restrict)
 
   @@unique([tenantId, projectId, revision], map: "scada_project_audit_version_key")

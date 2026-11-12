@@ -365,3 +365,31 @@
 - `deploy/docker/compose.postgres.dev.yaml`：本机隔离开发 PostgreSQL（loopback、独立命名卷、必须显式配置口令）。
 - 根 `db:validate` / `db:generate` / `db:migrate:deploy` / `db:migrate:status` / `db:dev:up` / `db:dev:down`：独立数据库运维入口，不默认执行数据库迁移。
 - [ADR-0042](adr/0042-postgresql-prisma-foundation.md)：版本选择、安全边界及验证依赖。
+
+## V0.3 第十一批：PrismaService 与受控版本事务仓储
+
+- `apps/server/src/database/prisma.service.ts`：NestJS 单实例 Prisma 7 Client 的初始化与释放（使用现有 PostgreSQL Adapter）。
+- `apps/server/src/projects/prisma-project-version-store.ts`：工程行锁、ACL 复核、CAS、快照/水位/成功审计事务原子性，以及授权读取与摘要复核。
+- `apps/server/src/projects/project-persistence.module.ts`：未导入 AppModule 的独立模块，不开放业务 HTTP API。
+- `apps/server/src/projects/prisma-project-version-store.spec.ts`：14 项无需数据库的事务仓储模拟单测。
+- `apps/server/test/prisma-project-version.db-spec.ts`、`apps/server/vitest.config.db.ts`：5 项只针对显式隔离 PostgreSQL 测试库运行的真实 DB 回归。
+- 根 `test:db`、`ready` 和 server `db:generate`：保证 Prisma Client 在新工作区构建前生成；见 [ADR-0043](adr/0043-prisma-project-transaction-store.md)。
+
+- `deploy/docker/Dockerfile.server`：运行镜像增加共享 `packages/core` 包清单与源码，防止工作区依赖在生产运行层缺失。
+
+### 第十一批补充：数据库中文注释与 Lint Mock 修复
+
+- `apps/server/prisma/schema.prisma`：四个业务模型及其全部字段、关联属性的中文 `///` 文档说明。
+- `apps/server/prisma/migrations/20261112170000_add_chinese_table_comments/migration.sql`：新增不触及历史数据的中文 PostgreSQL 表、列、索引注释迁移。
+- `apps/server/src/database/prisma-schema-comments.spec.ts`：2 项无数据库静态单测，校验新旧业务模型属性的中文说明及迁移 `COMMENT ON` 覆盖。
+- `apps/server/test/prisma-project-version.db-spec.ts`：增加 PostgreSQL `pg_description` 查询，验证业务表/列注释在隔离真库中生效。
+- `apps/server/src/projects/prisma-project-version-store.spec.ts`：7 处 Vitest Mock 显式函数泛型，保留现有业务测试逻辑。
+
+### 第十一批补充：Core Node 构建与 TS5097 修复
+
+- `packages/core/tsconfig.build.json`：复用 Core 原配置，生成 `dist/*.js` 和 `dist/*.d.ts`，显式重写相对导入的 `.ts` 扩展名。
+- `packages/core/package.json`：`node` 条件导出 Core 编译产物；默认条件保留前端原始 TypeScript 源码，两个公共子路径均保持语义兼容。
+- `package.json`：新增 `build:core`，`ready`、`prepare` 和常用测试脚本自动生成 Node 构建产物。
+- `apps/server/package.json`：独立 NestJS 类型检查、构建和开发启动前先编译 Core。
+- `deploy/docker/Dockerfile.server`：最终容器层改为复制 Core `dist`，避免 Node 在运行时加载 workspace TypeScript 源文件。
+- `scripts/check-shared-config.mjs`：检查 Core 条件出口、构建选项和服务端脚本的自动生成链，防止后续回退触发 `TS5097`。

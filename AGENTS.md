@@ -4,7 +4,7 @@
 
 ## 1. 定位与事实
 
-ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1、V0.2 双框架 SVG Studio 和 V0.3 前九批（本地版本历史、双标签页安全、服务端保存请求校验及工程级权限策略）。当前第十批选定独立 PostgreSQL + Prisma 7 稳定版，提供数据库 Schema、首次迁移和本地开发配置；NestJS 仍只公开本地健康检查，尚无身份认证或正式工程 API。工业 Gateway、发布和设备写入均未实现。不得将规划视为实现。**
+ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1、V0.2 双框架 SVG Studio 和 V0.3 前十批（工程本地历史、并发安全、请求与权限契约、PostgreSQL + Prisma 7 初始迁移）。当前第十一批实现独立 PrismaService 和受控工程版本事务仓储，并提供隔离数据库并发回归；AppModule 仍只公开健康检查，尚无可信身份认证、工程 Guard 或正式业务 API。工业 Gateway、发布和设备写入均未实现，不得将规划视为实现。**
 
 ## 2. 规则优先级
 
@@ -46,6 +46,13 @@ ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双�
 - 依赖版本以根 `pnpm-workspace.yaml` Catalog 为准，组件和图标使用各自官方 API，优先按需引入，不使用 CDN、臆造组件或混用 Vue 2 版本。
 - V0.2 采取小批次迁移，已迁移的 TDesign 控件与尚未迁移的原生表单可暂时共存；不得将“已选定组件库”描述为“全应用已完成组件替换”。Core、Runtime、工程 Schema 和工业只读边界不依赖 UI 框架。细节见 [ADR-0028](docs/adr/0028-tdesign-dual-framework-ui.md)。
 - **两套 Web 统一使用 Tailwind CSS v4** 处理页面结构、布局、间距及响应式工具类，品牌颜色继续使用共享 V7 主题 Token；TDesign 负责控件实现，不能以 Tailwind 替换业务 UI 组件契约。对 SVG 命中层、缩放手柄及 TDesign 覆盖等复杂样式允许保留受控的同构 CSS。Tailwind Preflight 不引入，避免与 `@adui/normalize.css` 及 TDesign 样式重复重置。Tailwind CSS 的主题和 Vite 插件统一由工作区包 `@adui/tailwind` 提供，两套应用不得重复维护配置；见 [ADR-0030](docs/adr/0030-tailwind-fullscreen-studio.md)。
+
+## 5.3 PostgreSQL / Prisma 模型中文注释规范
+
+- **所有新建或修改的自有业务表必须拥有中文表注释，所有物理字段必须拥有中文字段注释。** 在 PostgreSQL 迁移中显式维护 `COMMENT ON TABLE` / `COMMENT ON COLUMN`，常用自有索引同步维护 `COMMENT ON INDEX`。不能只用 SQL 文件行注释或 Prisma `///` 替代数据库元数据注释。
+- `apps/server/prisma/schema.prisma` 中的每个业务 `model` 及其**全部字段和关联属性**均使用简体中文 `///` 文档注释；表和字段的英文标识符、Prisma 类型与数据库协议保持不变。
+- 已应用的 Prisma 迁移**严禁回改或重新生成覆盖**，中文注释补充必须使用新的增量迁移，维护迁移校验和与历史；`_prisma_migrations` 等 Prisma 自管理系统表不属于项目业务表，无需修改。
+- 建表、索引、约束和迁移遵循仓库 `postgresql-table-design`、`prisma-orm-setup` 与 `prisma-cli` Skills；新增表/字段必须同步更新 Prisma 模型文档、迁移 `COMMENT ON`、自动校验及数据库实测记录。完成修改后先校验 Schema，再在**确认的隔离数据库**执行 `prisma migrate deploy` 并核对 Navicat 中的表/字段注释。
 
 ## 6. Skills / Git / Harness
 

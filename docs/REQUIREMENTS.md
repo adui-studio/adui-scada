@@ -174,3 +174,13 @@ Vue/React Studio 的图层面板增加一层平面组合树：同一 `groupId` �
 确定使用**独立部署 PostgreSQL + Prisma ORM 7 稳定版**，以 `apps/server/prisma/schema.prisma` 管理工程、授权、不可变版本和成功审计四个持久化模型；以 Prisma Migrate 管理数据库结构演进。初始迁移包含租户/工程复合外键、版本水位、SHA-256 格式、显式权限取值及成功审计动作约束。仅支持本地隔离数据库评估，不将本地 IndexedDB 草稿或 Runtime 直接接入数据库。
 
 **当前交付的是模型、迁移文件及配置，不是已经运行的生产数据库、NestJS PrismaService、身份认证、授权 Guard、正式发布或工业写入。** 维护者需在 Windows 安装依赖并确认锁文件、迁移及一致性；详见 [ADR-0042](adr/0042-postgresql-prisma-foundation.md)。
+
+## V0.3 第十一批：PrismaService 与事务仓储（FR-002 / FR-008 / FR-014 前置）
+
+后端新增**未暴露 API 的**工程版本事务仓储。只有调用方传入受信身份上下文且在数据库中存在显式工程授权时才能追加/读取；事务中先锁工程行、复查权限、校验预期修订号，再以原子操作保存 Core SHA-256 不可变快照、推进 head 和写入成功审计。过期修订号不得覆盖，未知工程和无授权均使用统一拒绝语义，租户隔离由数据库复合键约束。
+
+本批实现 Prisma 7 Service 单例生命周期与可选 ProjectPersistenceModule（**不导入 AppModule**），提供常规仓储单测以及只在显式配置隔离 PostgreSQL 测试数据库后运行的真实并发集成测试。`FR-001`、身份认证、工程 Guard、对外 CRUD API、生产发布、工业设备写入仍未交付。详见 [ADR-0043](adr/0043-prisma-project-transaction-store.md)。
+
+## V0.3 第十一批补充：业务数据库中文注释质量要求
+
+本项目数据库业务表及其**所有持久化字段**必须在 PostgreSQL 系统目录内保有简体中文注释，保证 Navicat 等管理工具能直接展示语义；Prisma 模型及其字段/关系属性也需中文 `///` 文档注释。后续新增或修改数据库模型时，须提交实际 `COMMENT ON TABLE/COLUMN` 的可追溯增量迁移，不能仅补充源文件注释。Prisma 自管理系统表不属于业务模型，不擅自修改。新增静态检查和显式隔离数据库集成测试，未经迁移验证不得宣称数据库注释已实际生效。

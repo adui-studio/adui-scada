@@ -942,3 +942,92 @@ pnpm run db:dev:down
 维护者将本机 PostgreSQL 端口调整到 **15432**，但此前 Prisma URL 仍为 5432，根 `env:check` 的 Web/Server/SSE 端口默认值也未同步。现保留新默认端口（React 15173、Vue 15174、NestJS 13001、SSE 14178、Vue Docker 18081、PostgreSQL 15432），更新 `.env.example`、默认契约并新增 URL 与主机、端口、库名、用户、密码匹配的静态检查。**本地被 Git 忽略的 `.env` 不会被自动覆盖，维护者须手动将 `SCADA_DATABASE_URL` 端口改为 15432。**
 
 使用最新分支运行 `pnpm run env:check`，再运行 `pnpm run db:dev:up`；可用 `docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml ps` 查看状态。只有明确确认目标是隔离开发库时才执行 `pnpm run db:migrate:deploy`。当前仅完成配置修复提交，实际 Windows Docker 启动、质量链及真实 PostgreSQL 迁移尚待复验。
+
+## V0.3 第十一批：Prisma 工程版本事务仓储验证（ADR-0043）
+
+本批不增加第三方依赖，复用已有 `@prisma/client` 7.10.1、`@prisma/adapter-pg`、`pg`、NestJS 和 Vitest；仅给 NestJS 增加共享 Core workspace 依赖，并同步 pnpm 锁文件。Prisma 生成客户端被 Git 忽略，`ready` 与独立服务端构建/类型检查前必须运行 `db:generate`。
+
+```powershell
+git fetch origin
+git switch feat/v0.3-prisma-version-store
+git pull --ff-only
+pnpm install --frozen-lockfile
+pnpm run ready
+Write-Host "质量检查退出码：$LASTEXITCODE"
+```
+
+第十批维护者实测单测 **323** 项、NestJS E2E **4** 项；本批新增仓储**14 项单测**，预计共 **337** 项，E2E 仍为 4 项。新增 5 项 PostgreSQL 真实数据库测试**不包含在 `ready`** 内，不可用模拟单测替代真实事务并发验证。
+
+### PostgreSQL 隔离测试库（显式执行，不碰开发业务库）
+
+先确认本机 PostgreSQL 17 已启动、端口为 `15432`，并单独创建 `adui_scada_test`。只在第一次创建时执行：
+
+```powershell
+docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml exec -T postgres psql -U adui_scada -d postgres -c "CREATE DATABASE adui_scada_test"
+```
+
+再在当前 PowerShell 会话中设置**仅指向该测试库**的 URL（复制本地开发 URL 并把数据库名改为 `adui_scada_test`；不要粘贴真实口令到公开日志）：
+
+```powershell
+$originalDatabaseUrl = $env:SCADA_DATABASE_URL
+$env:SCADA_DATABASE_URL = (Get-Content .env | Where-Object { $_ -match '^SCADA_DATABASE_URL=' } | Select-Object -First 1).Substring(19).Replace('/adui_scada?', '/adui_scada_test?')
+$env:SCADA_TEST_DATABASE_URL = $env:SCADA_DATABASE_URL
+
+# 再次自行确认目标是本机 adui_scada_test；该命令将修改测试库 Schema。
+pnpm run db:migrate:deploy
+pnpm run test:db
+
+if ($null -eq $originalDatabaseUrl) { Remove-Item Env:SCADA_DATABASE_URL -ErrorAction SilentlyContinue } else { $env:SCADA_DATABASE_URL = $originalDatabaseUrl }
+Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+```
+
+专用测试对测试数据库采用随机租户 ID，完成后删除测试租户的审计、版本、授权、工程；只允许 `localhost/127.0.0.1` 与数据库名 `adui_scada_test`。此处创建数据库与执行迁移的命令可能改变目标环境，**必须先确认是隔离测试库**。真实事务 CAS、跨租户、篡改读取和审计落库验证状态以维护者实际输出为准，不能预先标记通过。
+
+补充容器验收：执行 `docker compose --env-file .env -f deploy/docker/compose.demo.yaml build server`（以现有 Compose 真实服务名为准）并检查容器运行镜像包含 `/workspace/packages/core/package.json` 与 `src/`。**当前环境未执行 Docker 构建**，不能宣称容器运行时已通过验证。
+
+### 第十一批补充：7 处 Vitest Mock 类型警告与 Navicat 中文注释验收
+
+维护者 Windows 执行 `vp check --fix` 时报告 `apps/server/src/projects/prisma-project-version-store.spec.ts` 有 **7 处** `vitest(require-mock-type-parameters)` 警告，0 错误；本分支对这些 `vi.fn` 增加明确函数泛型，不禁用规则或改变业务逻辑。
+
+维护者在 Navicat 查看发现四张业务表 `scada_projects`、`scada_project_grants`、`scada_project_versions`、`scada_project_audit` 的表和字段注释为空；新增独立迁移 `20261112170000_add_chinese_table_comments`，设置 **4 张业务表、23 个字段、4 个索引**的中文 PostgreSQL 元数据注释，并在 Prisma Schema 中为 **29 个模型属性**补充中文文档说明。**已执行的初始迁移不得回改**，新增迁移对数据和约束不做修改。
+
+```powershell
+git status --short
+git pull --ff-only
+pnpm run db:validate
+vp check
+pnpm run ready
+Write-Host "质量检查退出码：$LASTEXITCODE"
+```
+
+确认根 `.env` 指向**隔离开发库** `adui_scada`、而非生产库后，再显式执行：
+
+```powershell
+pnpm run db:migrate:deploy
+pnpm run db:migrate:status
+```
+
+Navicat 刷新连接及表结构后，四张业务表的“注释”和全部字段的“注释”应显示中文。独立 `adui_scada_test` 库也必须先应用**全部迁移**再运行 `pnpm run test:db`（含新增一项真实注释验证），不可在生产数据库运行测试。预期单元测试由 337 增至 **339**（新增 2 项注释静态测试），隔离数据库测试由 5 增至 **6**，NestJS E2E 仍为 4。以上为目标数量，**本修复后的完整 Windows 质量检查与迁移尚未实测**。
+
+### 第十一批补充：NestJS TypeScript TS5097 与 Core Node 条件构建验证
+
+维护者 Windows `pnpm run ready` 在 `pnpm run typecheck:server` 的 `tsc --noEmit` 阶段报告 Core 9 个源码文件共 **23 处 TS5097**；此前 Prisma Client 7.10.1 生成、200 文件格式、86 文件零 Lint/类型警告、Vue/React/Draft Storage 类型检查均已通过。完整 `ready` 最终退出码 1，**后续单测、E2E、文档和构建未执行**，不得记为通过。
+
+修复增加 Core `node` 条件 JS/声明构建，保留 Vue/React 的源码默认出口；没有改动 Core 业务源码及共享 Schema。切换到修复提交后执行：
+
+```powershell
+git status --short
+git pull --ff-only
+pnpm install --frozen-lockfile
+pnpm run build:core
+
+# 单独复核这次的阻断点
+pnpm run typecheck:server
+pnpm run build:server
+
+# 最后执行包含所有检查与构建的完整质量链
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+预期 `build:core` 生成 `packages/core/dist/index.js` 和 `index.d.ts`，NestJS 类型检查不再触发 `TS5097` 或工作区外 `TS6059`；Node 产物中的本地导入以 `.js` 结束。可额外在经过确认的 Docker 开发环境执行 `docker compose --env-file .env -f deploy/docker/compose.demo.yaml build server` 复核运行镜像。**修复后尚未在维护者 Windows 执行完整验证**，实际测试结果以新日志为准。

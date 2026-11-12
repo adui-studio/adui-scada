@@ -4,8 +4,23 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./editor": "./src/editor.ts"
+    ".": {
+      "node": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "default": "./src/index.ts"
+    },
+    "./editor": {
+      "node": {
+        "types": "./dist/editor.d.ts",
+        "default": "./dist/editor.js"
+      },
+      "default": "./src/editor.ts"
+    }
+  },
+  "scripts": {
+    "build:node": "tsc -p tsconfig.build.json"
   },
   "devDependencies": {
     "@adui/tsconfig": "workspace:*",

@@ -40,6 +40,32 @@ for (const name of ["react", "vue", "nest", "node", "vue-node", "core", "browser
   assert.ok(baseConfig.exports?.[`./${name}`], `缺少 tsconfig 子路径：${name}`);
 }
 
+/**
+ * Core 为浏览器保留 .ts 源码出口，为 NodeNext 消费端提供编译产物和类型声明。
+ * 防止 NestJS 直接将 Core 的 .ts 源码纳入自己的 rootDir，触发 TS5097 / TS6059。
+ */
+const corePackage = json("packages/core/package.json");
+const coreBuildConfig = json("packages/core/tsconfig.build.json");
+for (const entry of [".", "./editor"]) {
+  const pkg = corePackage.exports?.[entry];
+  assert.ok(pkg?.default?.endsWith(".ts"), `Core ${entry} 必须保留前端源码出口`);
+  assert.ok(pkg?.node?.types?.endsWith(".d.ts"), `Core ${entry} 必须提供 Node 类型声明`);
+  assert.ok(pkg?.node?.default?.endsWith(".js"), `Core ${entry} 必须提供 Node 编译产物`);
+}
+assert.equal(coreBuildConfig.extends, "./tsconfig.json", "Core Node 构建必须继承共享配置");
+assert.equal(coreBuildConfig.compilerOptions?.rewriteRelativeImportExtensions, true);
+assert.equal(coreBuildConfig.compilerOptions?.noEmit, false);
+const scripts = json("package.json").scripts;
+assert.ok(scripts.ready?.includes("pnpm run build:core && vp check"), "质量检查前必须构建 Core");
+for (const name of ["build", "typecheck", "start:dev"]) {
+  assert.ok(
+    json("apps/server/package.json").scripts?.[name]?.includes(
+      "pnpm --filter @adui/scada-core run build:node",
+    ),
+    `服务端 ${name} 必须先构建 Core 的 Node 产物`,
+  );
+}
+
 const editor = text(".editorconfig");
 assert.match(editor, /^root = true$/m);
 assert.match(editor, /^indent_size = 2$/m);

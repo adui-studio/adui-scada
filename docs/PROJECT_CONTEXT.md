@@ -458,3 +458,21 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 ## 2026-11-12 · V0.3 第十批：开发数据库 Compose 环境文件与端口修复（待 Windows 复验）
 
 维护者截图显示，在仓库根目录复制了 `.env.example` 为 `.env` 后，`pnpm run db:dev:up` 仍报告 `SCADA_DB_USER` 和 `SCADA_DB_PASSWORD` 缺失。根因是 Docker Compose 命令只指定 `deploy/docker/compose.postgres.dev.yaml`，未明确指定仓库根环境文件；另外维护者将 PostgreSQL 端口更改为 15432，但 Prisma URL 仍指向 5432，根环境检查脚本仍使用其他应用旧端口值。现已修改脚本使用 `--env-file .env`，同步 `.env.example`、端口默认契约和 URL 一致性校验，保留维护者自定义的 15xxx 端口。根目录 `.env` 需维护者手动同步 Prisma 连接 URL 的端口。**新的 `pnpm run env:check`、`db:dev:up`、`pnpm run ready` 与数据库迁移尚未在维护者 Windows 实测。**
+
+## 2026-11-12 · V0.3 第十一批：PrismaService 与事务版本仓储（待验收）
+
+第十批 PR #32 经维护者 Windows 实测 PostgreSQL 17 容器启动、首次迁移 `20261112000000_init_scada_projects` 成功、迁移状态最新，以及完整 `pnpm run ready` 退出码 0（323/323 单测、4/4 NestJS E2E、192 个文件格式正确、79 个文件零警告、57 份文档通过、React/Vue/NestJS 构建通过）。维护者授权后 Squash Merge 至 `main`，提交 `b2c70d8`。
+
+第十一批决定**不增加新的第三方依赖**。复用 Prisma 7 Client、PostgreSQL Adapter、NestJS 与共享 Core，实现独立 `ProjectPersistenceModule`（未挂载现有 AppModule）、单实例 PrismaService 生命周期与服务端版本事务仓储，覆盖工程行锁、ACL 复查、CAS、不可变快照、成功审计、授权读取及 SHA-256 校验。新增 14 项模拟单测和 5 项需要显式隔离测试库的真实 PostgreSQL 回归，更新生成脚本与文档。**尚未运行本批 `pnpm run ready` 或真实 `test:db`，不能声称通过**。当前仍无认证 Guard、工程/设备写入路由、正式发布指针或工业 Gateway。
+
+## 2026-11-12 · V0.3 第十一批：Mock 泛型警告与中文数据库注释补齐（待验收）
+
+维护者 Windows 执行 `vp check --fix`，实际报告 0 错误、7 处 `vitest(require-mock-type-parameters)` 警告；并在 Navicat 发现工程、授权、版本和审计四张业务表的中文表/字段注释为空。本次修改按仓库 Vitest、PostgreSQL 表设计、Prisma Skills 修复七处模拟函数泛型，在 `schema.prisma` 的 29 个模型属性中补全中文文档注释，并新增纯注释迁移，覆盖四表、23 个实际字段、4 个索引；不回改已经执行的初始迁移。
+
+为防止以后新表/新列再遗漏，增加 2 项 Schema/SQL 注释静态测试和 1 项隔离 PostgreSQL 注释实测，且把强制中文注释纳入根 AGENTS.md 与项目设计/验收文档。预计普通单测 339、独立真库测试 6、NestJS E2E 4；**这些属于修改后预期，尚未经维护者 Windows 实际复验**。PR #33 仍为 Draft，不合并 `main`。
+
+## 2026-11-12 · V0.3 第十一批：修复 NestJS NodeNext 消费 Core 源码的 TS5097（待实测）
+
+维护者 Windows `pnpm run ready` 前置 Catalog、共享配置、环境、中文文案、Prisma Client 7.10.1 生成、`vp check`（200 格式文件、86 源文件零警告）和 Web/Draft 类型检查成功，但服务端 TypeScript 遇到 Core 源码显式 `.ts` 导入，共 23 处 `TS5097`，退出码 1。由于第十一批新增了服务端对 Core 的 workspace 依赖，原本针对浏览器源码的包导出成为 NestJS `NodeNext` 直接编译的边界问题。
+
+本批保留 Core 所有 `.ts` 源文件与 Vue/React 默认出口，使用 TypeScript 6 编译出 Node 专用 `.js` 和 `.d.ts` 条件产物，构建命令自动衔接根 `ready`、NestJS build/typecheck、安装 prepare，Docker 运行层复制 Core dist。未新增第三方依赖、未修改 Prisma 数据库和业务 API。**最新完整 Windows `pnpm run ready`、Docker 构建及真库事务测试尚待重新执行**。
