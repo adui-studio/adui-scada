@@ -924,3 +924,9 @@ pnpm run db:dev:down
 ```
 
 `db:migrate:deploy` 会修改配置的目标数据库；本批绝不自动执行。当前 NestJS 仍只有 `/health`，工程版本接口与设备写入继续返回 404。**目前未实际执行 Prisma 生成、迁移或真实 PostgreSQL CAS 测试**，本批不声称数据库持久化已上线。
+
+### Prisma Client 生成后中文检查与代码质量范围
+
+维护者本地 `pnpm run db:generate` 后，`pnpm run ready` 首次运行在 `messages:check` 阶段报告 1,379 处错误：包括 `.env.example` 中被注释的 `SCADA_DB_PORT=5432`，以及 `apps/server/src/generated/prisma/` 中 Prisma 自身生成的英文注释。检查脚本现在按跨平台路径排除**精确的 Prisma 生成目录**，同时将 `.env.example` 中被注释的变量赋值识别为技术配置指令；Vite+ Format 与 Lint 也排除同一生成目录。项目自有源码中的错误、日志、测试名称与注释依然必须使用中文，绝不批量翻译或手工修改生成代码。
+
+修复后先执行 `pnpm run messages:check` 和 `vp check`，再执行 `pnpm run ready`。该日志只证明前置依赖、共享配置和环境检查通过，**并没有证明本批后续类型检查、单测、E2E、构建或数据库迁移通过**。

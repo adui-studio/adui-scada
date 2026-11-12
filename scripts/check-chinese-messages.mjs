@@ -3,6 +3,8 @@ import { join, relative, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const excluded = new Set(["node_modules", "dist", "target", "gen", ".git", ".agents", ".vite"]);
+// Prisma Client 由第三方生成，不能将它的英文注释视为本项目自有文案。
+const excludedPaths = new Set(["apps/server/src/generated/prisma"]);
 const paths = [".env.example", ".editorconfig", ".gitattributes", ".gitignore", ".dockerignore"];
 const extensions = /\.(?:ts|tsx|js|mjs|vue|css|rs|toml|yaml|yml|html)$/;
 
@@ -12,6 +14,8 @@ function collect(directory) {
     if (excluded.has(item.name)) continue;
     const full = join(directory, item.name);
     if (item.isDirectory()) {
+      // 归一化路径分隔符，确保 Windows 与其他平台排除规则一致。
+      if (excludedPaths.has(relative(root, full).replaceAll("\\", "/"))) continue;
       collect(full);
     } else if (
       item.isFile() &&
@@ -45,6 +49,8 @@ for (const path of paths) {
 
     // 仅检查自有文案，不检查接口标识、依赖、URL 和外部工具输出。
     if (trimmed.startsWith("///") || /^#\s*syntax=/.test(trimmed)) continue;
+    // 被注释的环境变量赋值是可复制的技术配置，不是面向用户的自然语言注释。
+    if (path === ".env.example" && /^#\s*[A-Z][A-Z0-9_]*=/.test(trimmed)) continue;
     // .gitattributes 的 "* text=..." 属于配置指令，不是 JSDoc 注释。
     if (path === ".gitattributes" && trimmed.startsWith("* text=")) continue;
     const comment = trimmed.match(/^(?:\/\/|\/\*+|\*\s+|#\s+)(.*)$/);
