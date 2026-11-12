@@ -933,4 +933,4 @@ pnpm run db:dev:down
 
 ### PostgreSQL + Prisma 默认环境配置
 
-仓库根目录 `.env.example` 默认提供 `SCADA_DB_HOST=127.0.0.1`、`SCADA_DB_PORT=5432`、`SCADA_DB_NAME=adui_scada`、`SCADA_DB_USER=adui_scada`，并将 `SCADA_DB_PASSWORD` 与 `SCADA_DATABASE_URL` 留空以防公开仓库硬编码数据库凭据。复制到本地 `.env` 后必须填写强密码及 URL（其中密码需按 URL 规则编码）。Prisma CLI 目前只读取完整的 `SCADA_DATABASE_URL`，**不会从其余字段自动生成连接串**；本地 PostgreSQL Compose 使用 `SCADA_DB_USER`、`SCADA_DB_PASSWORD`、`SCADA_DB_NAME`、`SCADA_DB_PORT`，始终仅绑定 `127.0.0.1`。根 `env:check` 已同步识别新字段，允许不需要数据库的质量检查保留空凭据。数据库迁移仍必须由维护者检查目标 URL 后显式执行。
+仓库根目录 `.env.example` 默认提供 `SCADA_DB_HOST=127.0.0.1`、`SCADA_DB_PORT=5432`、`SCADA_DB_NAME=adui_scada`、`SCADA_DB_USER=adui_scada`，同时填入**公开、仅限本地隔离开发**的测试密码与相匹配的 Prisma URL。复制到本地 `.env` 即可用于独立开发数据库；正式部署前必须同时更换密码和 URL，且密码含特殊字符时须按 URL 规则编码。Prisma CLI 目前只读取完整的 `SCADA_DATABASE_URL`，**不会从其余字段自动生成连接串**；本地 PostgreSQL Compose 使用 `SCADA_DB_USER`、`SCADA_DB_PASSWORD`、`SCADA_DB_NAME`、`SCADA_DB_PORT`，始终仅绑定 `127.0.0.1`。根 `env:check` 已同步识别并核对新默认值；静态校验不会自动连接数据库。数据库迁移仍必须由维护者检查目标 URL 后显式执行。

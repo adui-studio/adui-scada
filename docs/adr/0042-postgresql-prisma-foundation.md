@@ -12,12 +12,12 @@
 1. Prisma Schema 与初始迁移归属于 `apps/server/prisma/`；CLI 配置在 `apps/server/prisma.config.ts`，只读仓库根 `.env` 的 `SCADA_DATABASE_URL`。没有数据库 URL 时允许纯 Schema 校验和客户端生成，迁移必须提供实际 URL。
 2. 复用 ADR-0041 的租户/工程复合键四模型：工程、逐项权限授权、只追加版本快照、成功提交审计。版本采用 PG BIGINT，快照采用 JSONB；额外 SQL CHECK 保证修订号安全范围、摘要格式、权限枚举和审计动作取值。将来增加授权、版本写入和成功审计必须在同一事务内完成 CAS 与一致性校验。
 3. Prisma 7 客户端生成于服务端 `src/generated/prisma`，作为可再生成产物被 Git 忽略；共享 Core 和 Vue/React 不引入任何 Prisma 依赖。下一批才实现单实例 PrismaService、权限 Guard 与仓储适配，当前 NestJS 只公开 `GET /health`。
-4. 本地 PostgreSQL 可独立使用 `deploy/docker/compose.postgres.dev.yaml` 启动，端口仅映射到 127.0.0.1，用户名和口令必须由维护者在根 `.env` 显式配置。Compose 使用独立命名卷，`down` 不自动清理历史数据。
+4. 本地 PostgreSQL 可独立使用 `deploy/docker/compose.postgres.dev.yaml` 启动，端口仅映射到 127.0.0.1，仓库根 `.env.example` 中提供公开的本地开发用户名、测试口令和配套 Prisma URL；维护者须复制为受忽略的 `.env` 并在正式部署前全部替换。Compose 使用独立命名卷，`down` 不自动清理历史数据。
 5. 首次迁移文件是依据 Prisma Schema 和额外业务 CHECK **手工编写**，没有在实际数据库上执行。必须通过隔离开发库应用迁移、核对完整约束及 Prisma 漂移，在验证前不能当作已验收生产 DDL，更不能自动运行破坏性重置。
 
 ## 风险与后续
 
-- 数据库 URL、用户权限、SSL/TLS、网络策略、连接池、超时、备份恢复、生产迁移授权、数据保留及审计失败封闭机制仍需独立确定。数据库凭据不能进入仓库或任何 `VITE_*` 环境变量。
+- 数据库 URL、用户权限、SSL/TLS、网络策略、连接池、超时、备份恢复、生产迁移授权、数据保留及审计失败封闭机制仍需独立确定。**真实数据库凭据**不能进入仓库或任何 `VITE_*` 环境变量；`.env.example` 中的公开开发测试密码不具备保密性，绝不可复用为生产凭据。
 - Prisma 7 运行时将使用 `@prisma/adapter-pg`；**本批没有实例化 PrismaClient，也不建立连接池**。之后需设计 NestJS 单例生命周期并显式关闭连接。
 - `BIGINT` 超出 JS 安全整数范围必须拒绝或经受控序列化，不能无损假定为 number；现有 Core 快照的 CAS 范围由业务验证保证。
 - 当前 `pnpm-lock.yaml` 在仓库环境未能重新生成，维护者首次拉取分支后需要 `pnpm install` 生成并提交新的锁文件；在此之前 Docker `--frozen-lockfile` 也不会通过，不得宣称可复现构建。
