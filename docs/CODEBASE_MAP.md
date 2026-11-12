@@ -350,3 +350,9 @@
 - `packages/core/test/server-project-contract.test.ts`：覆盖首次/后续保存、字段白名单、伪造权限字段、无效修订号、路由不一致、旧 Schema、非法图元和超限内容。
 - `packages/core/src/index.ts`：导出共享请求契约，不新增 NestJS 路由、依赖或数据库。
 - [ADR-0040](adr/0040-server-project-contract.md)：记录候选 REST、可信身份来源、数据库 CAS 与后续实现门槛。
+
+## V0.3 第九批：工程级访问策略与数据库方案
+
+- `apps/server/src/projects/project-access-policy.ts`：服务端纯权限判断，按租户、工程、主体和明确权限默认拒绝，不引入 NestJS 路由或 Core 依赖。
+- `apps/server/src/projects/project-access-policy.spec.ts`：11 项权限策略回归，覆盖授权读取/写入、只读、无身份、无授权、跨租户/工程/主体、未知权限与恶意标识符。
+- [ADR-0041](adr/0041-project-persistence-access-model.md)：候选 PostgreSQL 四表复合键、事务 CAS、授权撤销串行化与审计一致性；设计文件并非数据库迁移。

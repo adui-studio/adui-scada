@@ -402,3 +402,11 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - 规划候选 REST：`POST /api/projects/:projectId/versions` 接收上述请求体；`GET /api/projects/:projectId/versions` 获取授权可见的历史摘要；`GET /api/projects/:projectId/versions/:revision` 取严格校验的快照。这些 URL **目前未注册**，响应码、分页、幂等键和部署认证方式仍需专门评审，不能据此联调生产接口。
 - 写入前必须从可信服务端认证层取得主体，在服务端检查工程级权限；不能从请求体、客户端 Tag、Origin 或由浏览器传入的角色推断权限。未授权不能泄露项目是否存在。版本提交和审计须具备明确的事务一致性设计；真实发布与回滚另走审批流程。
 - 不修改 `ProjectVersionRepository` 的浏览器本地历史语义、Dexie、NestJS 当前健康检查、Vue/React UI 或只读 Runtime。
+
+## V0.3 第九批：工程级访问判定与 PostgreSQL 候选事务（ADR-0041）
+
+- `AuthenticatedProjectPrincipal` 只能由未来受信 NestJS 身份层形成，包含 `tenantId` 与 `subjectId`；`ProjectPermissionGrant` 由服务端存储层加载，包含 `tenantId`、`projectId`、`subjectId` 与明确授权的 `permissions`。`hasProjectPermission(principal,scope,grant,action)` 在任一字段无效、缺失、未知或不一致时返回 `false`，不做管理员隐式越权或角色推断。
+- 当前只区分 `project:read`、`version:read`、`version:append`；不包含工程发布、设备写入、平台管理员或跨租户特权。权限判定纯函数**不是 Guard**，不能保证传入 principal 真正经过认证。
+- PostgreSQL 设计使用 `scada_projects`、`scada_project_grants`、`scada_project_versions` 和 `scada_project_audit`，以复合外键约束租户/工程范围；版本和审计只追加、修订号递增且服务端分配。工程项目必须在受控后台预先创建，不能把 `expectedRevision:null` 等价成匿名自动建项目。
+- 候选版本写入顺序：服务端身份认证 → 解析可信租户工程范围 → 读取 ACL 并拒绝未授权 → 校验第八批请求格式 → 在数据库事务内锁工程行并复核授权及当前 head → CAS 比较 → 写入严格快照、head 与成功审计 → 提交。权限撤销必须与提交使用相同锁顺序；失败回滚不得声称成功审计已持久化。该事务**尚未实现**。
+- 未授权或不存在的工程在最终 API 不得泄露存在性；冲突错误、幂等键、事务重试、审计失败保护、身份体系以及 ORM/迁移方案仍为待评审事项。
