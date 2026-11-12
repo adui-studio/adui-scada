@@ -40,7 +40,6 @@ for (const name of ["react", "vue", "nest", "node", "vue-node", "core", "browser
   assert.ok(baseConfig.exports?.[`./${name}`], `缺少 tsconfig 子路径：${name}`);
 }
 
-
 /**
  * Core 为浏览器保留 .ts 源码出口，为 NodeNext 消费端提供编译产物和类型声明。
  * 防止 NestJS 直接将 Core 的 .ts 源码纳入自己的 rootDir，触发 TS5097 / TS6059。
@@ -60,7 +59,9 @@ const scripts = json("package.json").scripts;
 assert.ok(scripts.ready?.includes("pnpm run build:core && vp check"), "质量检查前必须构建 Core");
 for (const name of ["build", "typecheck", "start:dev"]) {
   assert.ok(
-    json("apps/server/package.json").scripts?.[name]?.includes("pnpm --filter @adui/scada-core run build:node"),
+    json("apps/server/package.json").scripts?.[name]?.includes(
+      "pnpm --filter @adui/scada-core run build:node",
+    ),
     `服务端 ${name} 必须先构建 Core 的 Node 产物`,
   );
 }
