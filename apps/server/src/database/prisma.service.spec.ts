@@ -6,9 +6,7 @@ describe("Prisma 数据库连接配置", () => {
     const original = process.env.SCADA_DATABASE_URL;
     try {
       delete process.env.SCADA_DATABASE_URL;
-      expect(() => new PrismaService()).toThrow(
-        "未配置 SCADA_DATABASE_URL，禁止建立数据库连接",
-      );
+      expect(() => new PrismaService()).toThrow("未配置 SCADA_DATABASE_URL，禁止建立数据库连接");
     } finally {
       if (original === undefined) delete process.env.SCADA_DATABASE_URL;
       else process.env.SCADA_DATABASE_URL = original;

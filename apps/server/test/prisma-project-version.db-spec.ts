@@ -273,9 +273,11 @@ describe("PostgreSQL 真实工程版本事务", () => {
         });
         // 避免竞争保存的拒绝发生在外部 await 之前成为未处理异常。
         let resolved = false;
-        void pendingAppend.finally(() => {
-          resolved = true;
-        }).catch(() => undefined);
+        void pendingAppend
+          .finally(() => {
+            resolved = true;
+          })
+          .catch(() => undefined);
         await new Promise<void>((resolve) => setTimeout(resolve, 75));
         expect(resolved).toBe(false);
       },
@@ -315,5 +317,4 @@ describe("PostgreSQL 真实工程版本事务", () => {
       await unreachable.onModuleDestroy();
     }
   });
-
 });
