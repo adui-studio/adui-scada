@@ -102,7 +102,7 @@ function stableValue(source: unknown): unknown {
 }
 
 /** 仅对已校验的 JSON 编码为 UTF-8；Core 不引入 Node 或 DOM 依赖。 */
-function utf8Bytes(value: string): Uint8Array {
+export function utf8Bytes(value: string): Uint8Array {
   const bytes: number[] = [];
   for (const character of value) {
     const code = character.codePointAt(0)!;

@@ -394,3 +394,11 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - JSON 导入在文件异步读取开始前取得现有草稿操作锁，并在成功/失败后通过 `finally` 释放；所有历史操作与正在进行的导入、草稿写入互斥。没有引入新的工程 JSON 字段。
 - 版本载入沿用既有确认 → `DraftAutoSaveSession.stop()` 等待事务 → `DocumentEditor.loadDocument` 的顺序；取消不停止原自动保存；确认不自动向草稿数据库写回历史内容。
 - `test:versions:safety` 通过独立浏览器 profile 读取真实草稿 object store，验证内容和修订号，模拟版本历史库不可访问后确认错误反馈、已保存记录保持可用；额外测试异步 JSON 读取过程中历史载入拒绝插入。Core 新增两个确定性异步停写测试。
+
+## V0.3 第八批：服务端工程保存契约与信任边界（ADR-0040）
+
+- 共享 Core 的 `ServerProjectSaveRequest` 仅包含 `expectedRevision: number | null` 与 `document: ScadaDocument`；`parseServerProjectSaveRequest(input, routeProjectId)` 严格校验普通对象、两个字段白名单、正安全整数或 null、路由 ID 格式、工程 ID 一致性、现有 Schema 0.2.0 及 2 MiB UTF-8 请求容量。
+- `expectedRevision:null` 只表示客户端声明首次创建，**不代表无条件覆盖**；未来写入仍需服务端在同一数据库事务里读取并比较实际 head。版本修订号、`createdAt` 与 SHA-256 摘要由受控服务端生成，不接受客户端伪造的版本元数据。
+- 规划候选 REST：`POST /api/projects/:projectId/versions` 接收上述请求体；`GET /api/projects/:projectId/versions` 获取授权可见的历史摘要；`GET /api/projects/:projectId/versions/:revision` 取严格校验的快照。这些 URL **目前未注册**，响应码、分页、幂等键和部署认证方式仍需专门评审，不能据此联调生产接口。
+- 写入前必须从可信服务端认证层取得主体，在服务端检查工程级权限；不能从请求体、客户端 Tag、Origin 或由浏览器传入的角色推断权限。未授权不能泄露项目是否存在。版本提交和审计须具备明确的事务一致性设计；真实发布与回滚另走审批流程。
+- 不修改 `ProjectVersionRepository` 的浏览器本地历史语义、Dexie、NestJS 当前健康检查、Vue/React UI 或只读 Runtime。
