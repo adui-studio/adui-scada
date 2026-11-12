@@ -942,3 +942,45 @@ pnpm run db:dev:down
 维护者将本机 PostgreSQL 端口调整到 **15432**，但此前 Prisma URL 仍为 5432，根 `env:check` 的 Web/Server/SSE 端口默认值也未同步。现保留新默认端口（React 15173、Vue 15174、NestJS 13001、SSE 14178、Vue Docker 18081、PostgreSQL 15432），更新 `.env.example`、默认契约并新增 URL 与主机、端口、库名、用户、密码匹配的静态检查。**本地被 Git 忽略的 `.env` 不会被自动覆盖，维护者须手动将 `SCADA_DATABASE_URL` 端口改为 15432。**
 
 使用最新分支运行 `pnpm run env:check`，再运行 `pnpm run db:dev:up`；可用 `docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml ps` 查看状态。只有明确确认目标是隔离开发库时才执行 `pnpm run db:migrate:deploy`。当前仅完成配置修复提交，实际 Windows Docker 启动、质量链及真实 PostgreSQL 迁移尚待复验。
+
+## V0.3 第十一批：Prisma 工程版本事务仓储验证（ADR-0043）
+
+本批不增加第三方依赖，复用已有 `@prisma/client` 7.10.1、`@prisma/adapter-pg`、`pg`、NestJS 和 Vitest；仅给 NestJS 增加共享 Core workspace 依赖，并同步 pnpm 锁文件。Prisma 生成客户端被 Git 忽略，`ready` 与独立服务端构建/类型检查前必须运行 `db:generate`。
+
+```powershell
+git fetch origin
+git switch feat/v0.3-prisma-version-store
+git pull --ff-only
+pnpm install --frozen-lockfile
+pnpm run ready
+Write-Host "质量检查退出码：$LASTEXITCODE"
+```
+
+第十批维护者实测单测 **323** 项、NestJS E2E **4** 项；本批新增仓储**14 项单测**，预计共 **337** 项，E2E 仍为 4 项。新增 5 项 PostgreSQL 真实数据库测试**不包含在 `ready`** 内，不可用模拟单测替代真实事务并发验证。
+
+### PostgreSQL 隔离测试库（显式执行，不碰开发业务库）
+
+先确认本机 PostgreSQL 17 已启动、端口为 `15432`，并单独创建 `adui_scada_test`。只在第一次创建时执行：
+
+```powershell
+docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml exec -T postgres psql -U adui_scada -d postgres -c "CREATE DATABASE adui_scada_test"
+```
+
+再在当前 PowerShell 会话中设置**仅指向该测试库**的 URL（复制本地开发 URL 并把数据库名改为 `adui_scada_test`；不要粘贴真实口令到公开日志）：
+
+```powershell
+$originalDatabaseUrl = $env:SCADA_DATABASE_URL
+$env:SCADA_DATABASE_URL = (Get-Content .env | Where-Object { $_ -match '^SCADA_DATABASE_URL=' } | Select-Object -First 1).Substring(19).Replace('/adui_scada?', '/adui_scada_test?')
+$env:SCADA_TEST_DATABASE_URL = $env:SCADA_DATABASE_URL
+
+# 再次自行确认目标是本机 adui_scada_test；该命令将修改测试库 Schema。
+pnpm run db:migrate:deploy
+pnpm run test:db
+
+if ($null -eq $originalDatabaseUrl) { Remove-Item Env:SCADA_DATABASE_URL -ErrorAction SilentlyContinue } else { $env:SCADA_DATABASE_URL = $originalDatabaseUrl }
+Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+```
+
+专用测试对测试数据库采用随机租户 ID，完成后删除测试租户的审计、版本、授权、工程；只允许 `localhost/127.0.0.1` 与数据库名 `adui_scada_test`。此处创建数据库与执行迁移的命令可能改变目标环境，**必须先确认是隔离测试库**。真实事务 CAS、跨租户、篡改读取和审计落库验证状态以维护者实际输出为准，不能预先标记通过。
+
+补充容器验收：执行 `docker compose --env-file .env -f deploy/docker/compose.demo.yaml build server`（以现有 Compose 真实服务名为准）并检查容器运行镜像包含 `/workspace/packages/core/package.json` 与 `src/`。**当前环境未执行 Docker 构建**，不能宣称容器运行时已通过验证。

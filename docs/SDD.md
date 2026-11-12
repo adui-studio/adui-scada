@@ -417,3 +417,11 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - 版本使用 PostgreSQL `BIGINT`（Prisma `BigInt`）存储，未来业务 API 转换时须显式限制到 JS 安全整数范围；快照 `Json @db.JsonB`、UTC 时间 `@db.Timestamptz(6)`。审计与每次成功版本写入一对一；不得复用浏览器 IndexedDB 的事务语义。
 - `apps/server/prisma.config.ts` 只从仓库根 `.env` 获取 `SCADA_DATABASE_URL`，生成和校验不要求生产数据库；`db:migrate:deploy` 必须在维护者配置了独立数据库后显式运行。原始 SQL 首次迁移含额外 CHECK，变更不得用无审查的 `db push` 覆盖历史。
 - 本批**不实例化 PrismaClient、不注册 NestJS 工程接口、不执行版本 CAS 或生产审计**。下一批增加服务端单实例 PrismaService、可信 Guard 和真实 PostgreSQL 事务测试，先完成授权后才能开放接口。
+
+## V0.3 第十一批：事务仓储接口与错误语义（ADR-0043）
+
+- `PrismaService` 使用现有 `@prisma/adapter-pg` 构建单实例 `PrismaClient`，NestJS 模块初始化时 `$connect`，销毁时 `$disconnect`；缺少 `SCADA_DATABASE_URL` 直接拒绝实例化，但模块当前未挂载 `AppModule`。
+- `PrismaProjectVersionStore.append(principal,projectId,input)`：身份有效性预检 → Core 请求解析 → Prisma 事务 `SELECT head_revision ... FOR UPDATE`（参数化）→ 工程有效授权查询（`version:append`）→ `expectedRevision` CAS → `createProjectSnapshot` → `scada_project_versions` → 更新 `scada_projects.head_revision` → `scada_project_audit` → 原子提交。数据库 head 使用 bigint，只在 JS 安全整数范围内转为修订号。
+- `PrismaProjectVersionStore.read(principal,projectId,revision)`：事务内 `FOR SHARE` 锁工程行 → 校验 `version:read` → 读取复合主键的 JSONB 快照 → Core `readProjectSnapshot` SHA-256 验证 → 比较数据库摘要、修订号、时间及工程 ID。无授权或未知工程统一 `ProjectVersionAccessDeniedError`；版本冲突为 `ProjectRevisionConflictError`；已授权但版本不存在为 `ProjectRevisionNotFoundError`。上述错误当前**不映射到 HTTP**。
+- 仓储接收的 `AuthenticatedProjectPrincipal` 必须由未来受信认证层产生；当前纯类型不能证明身份已认证，也没有授权管理端点。授权撤销流程未来必须先锁同一工程行再修改授权，防止事务之间竞态。客户端无法指定成功审计主体或服务端修订号。
+- `pnpm run ready` 先执行 `db:generate`，避免未提交到 Git 的 Prisma Client 生成文件缺失；独立 server build/typecheck 也会生成客户端。真实数据库测试命令 `pnpm run test:db` 要求显式 `SCADA_TEST_DATABASE_URL` 指向本机 `adui_scada_test`，不允许直接对 `adui_scada` 或生产库运行。

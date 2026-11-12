@@ -15,6 +15,9 @@ COPY --from=build --chown=node:node /workspace/node_modules/ /workspace/node_mod
 COPY --from=build --chown=node:node /workspace/apps/server/node_modules/ /workspace/apps/server/node_modules/
 COPY --from=build --chown=node:node /workspace/apps/server/dist/ /workspace/apps/server/dist/
 COPY --from=build --chown=node:node /workspace/apps/server/package.json /workspace/apps/server/package.json
+# 服务端事务仓储复用共享 Core；运行镜像需保留工作区源码供 Node 24 加载。
+COPY --from=build --chown=node:node /workspace/packages/core/package.json /workspace/packages/core/package.json
+COPY --from=build --chown=node:node /workspace/packages/core/src/ /workspace/packages/core/src/
 USER node
 EXPOSE 3001
 CMD ["node", "apps/server/dist/main.js"]

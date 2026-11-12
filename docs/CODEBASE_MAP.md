@@ -365,3 +365,14 @@
 - `deploy/docker/compose.postgres.dev.yaml`：本机隔离开发 PostgreSQL（loopback、独立命名卷、必须显式配置口令）。
 - 根 `db:validate` / `db:generate` / `db:migrate:deploy` / `db:migrate:status` / `db:dev:up` / `db:dev:down`：独立数据库运维入口，不默认执行数据库迁移。
 - [ADR-0042](adr/0042-postgresql-prisma-foundation.md)：版本选择、安全边界及验证依赖。
+
+## V0.3 第十一批：PrismaService 与受控版本事务仓储
+
+- `apps/server/src/database/prisma.service.ts`：NestJS 单实例 Prisma 7 Client 的初始化与释放（使用现有 PostgreSQL Adapter）。
+- `apps/server/src/projects/prisma-project-version-store.ts`：工程行锁、ACL 复核、CAS、快照/水位/成功审计事务原子性，以及授权读取与摘要复核。
+- `apps/server/src/projects/project-persistence.module.ts`：未导入 AppModule 的独立模块，不开放业务 HTTP API。
+- `apps/server/src/projects/prisma-project-version-store.spec.ts`：14 项无需数据库的事务仓储模拟单测。
+- `apps/server/test/prisma-project-version.db-spec.ts`、`apps/server/vitest.config.db.ts`：5 项只针对显式隔离 PostgreSQL 测试库运行的真实 DB 回归。
+- 根 `test:db`、`ready` 和 server `db:generate`：保证 Prisma Client 在新工作区构建前生成；见 [ADR-0043](adr/0043-prisma-project-transaction-store.md)。
+
+- `deploy/docker/Dockerfile.server`：运行镜像增加共享 `packages/core` 包清单与源码，防止工作区依赖在生产运行层缺失。

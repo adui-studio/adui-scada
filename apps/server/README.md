@@ -40,3 +40,9 @@ pnpm run db:dev:down
 ```
 
 首次迁移文件由本批按 Prisma 模型手工编写，包含额外的 PostgreSQL CHECK 约束，必须使用隔离开发库核对实际 DDL；未通过真实迁移与回滚设计审查前不能用于生产。**严禁使用 `prisma migrate reset`、`db push --force-reset` 或 `db push --accept-data-loss` 清理现有数据库。**
+
+## V0.3 第十一批：工程版本事务仓储
+
+`ProjectPersistenceModule` 包含 `PrismaService` 和 `PrismaProjectVersionStore`，但**没有导入 AppModule**。数据库不会在现有健康接口启动时自动连接，任何工程版本 HTTP API 也尚未注册。未来必须先接入可信身份认证、工程级 Guard 与受控授权管理，再考虑导入模块和开放版本接口。
+
+`pnpm run ready`、独立服务端 `typecheck` 和 `build` 会在使用生成客户端前执行 `db:generate`。仓储单测由 `test:unit` 覆盖；实际 PostgreSQL 双写、权限和快照读取使用隔离测试库执行 `pnpm run test:db`，详细隔离测试步骤见 [Harness](../../docs/HARNESS.md)。
