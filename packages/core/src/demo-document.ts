@@ -1,19 +1,51 @@
 import { parseScadaDocument, SCADA_SCHEMA_VERSION } from "./document.ts";
 import type { ScadaNode } from "./document.ts";
+import { TagDefinitionCatalog } from "./tag-definition.ts";
+import type { TagDefinition } from "./tag-definition.ts";
+
+/** 水处理演示 Tag 元数据；质量由实时 TagValue 动态提供，不固定在定义中。 */
+export const waterTreatmentDemoTagDefinitions: readonly TagDefinition[] = [
+  {
+    tagId: "water.level",
+    displayName: "模拟水位",
+    dataType: "number",
+    unit: "%",
+    description: "水箱液位百分比，仅为本机模拟值",
+  },
+  {
+    tagId: "water.pump.running",
+    displayName: "模拟水泵运行",
+    dataType: "boolean",
+    unit: null,
+    description: "水泵运行状态，true 表示运行，false 表示停止",
+  },
+  {
+    tagId: "water.flow",
+    displayName: "模拟流量",
+    dataType: "number",
+    unit: "m3/h",
+    description: "水处理模拟流量",
+  },
+];
+
+export const waterTreatmentDemoTagCatalog = new TagDefinitionCatalog(
+  waterTreatmentDemoTagDefinitions,
+);
 
 /**
- * 演示 Tag 候选与 SVG 绑定槽的映射，仅用于 V0.2 本地模拟预览。
- * 不是正式 Tag 配置中心，也不创建设备通信连接。
+ * Studio 绑定候选在共享 Tag 定义上增加图元槽约束。
+ * 该列表只服务于本地模拟预览，不包含工业地址或连接参数。
  */
-export const waterTreatmentDemoTagOptions: readonly {
-  readonly tagId: string;
-  readonly label: string;
-  readonly slots: readonly string[];
-}[] = [
-  { tagId: "water.level", label: "模拟水位", slots: ["level", "value"] },
-  { tagId: "water.pump.running", label: "模拟水泵运行", slots: ["running", "value"] },
-  { tagId: "water.flow", label: "模拟流量", slots: ["value"] },
-];
+export const waterTreatmentDemoTagOptions = waterTreatmentDemoTagDefinitions.map((definition) => ({
+  ...definition,
+  label: definition.displayName,
+  slots:
+    definition.tagId === "water.level"
+      ? (["level", "value"] as const)
+      : definition.tagId === "water.pump.running"
+        ? (["running", "value"] as const)
+        : (["value"] as const),
+}));
 
 /** HTTP 诊断服务与桌面离线模拟共用的水处理演示工程。 */
 function node(
