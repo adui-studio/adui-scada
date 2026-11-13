@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { NestFactory } from "@nestjs/core";
 import { Logger } from "nestjs-pino";
 import { resolveServerStartupConfig } from "./config/server-startup.config.js";
+import { allowLocalDemoTelemetry } from "./demo/local-demo-access.js";
 import { getLocalOpenApiUrl, setupLocalOpenApi } from "./openapi/scada-openapi.js";
 import { applyHttpSecurityHeaders } from "./security/http-security.js";
 import { applyHttpServerPolicy, SCADA_NEST_HTTP_OPTIONS } from "./security/http-server-policy.js";
@@ -17,8 +18,16 @@ if (existsSync(envPath)) loadEnvFile(envPath);
 async function bootstrap(): Promise<void> {
   // AppModule 在模块求值时会创建 Pino 配置，必须在 .env 加载后再导入。
   const { port, host, localDocs } = resolveServerStartupConfig(process.env);
-  const { AppModule } = await import("./app.module.js");
-  const app = await NestFactory.create(AppModule, SCADA_NEST_HTTP_OPTIONS);
+  const allowDemo = allowLocalDemoTelemetry({
+    enabled: process.env.SCADA_LOCAL_DEMO_API_ENABLED,
+    nodeEnv: process.env.NODE_ENV,
+    host,
+  });
+  const { AppModule, LocalDemoAppModule } = await import("./app.module.js");
+  const app = await NestFactory.create(
+    allowDemo ? LocalDemoAppModule : AppModule,
+    SCADA_NEST_HTTP_OPTIONS,
+  );
   app.useLogger(app.get(Logger));
   applyHttpServerPolicy(app.getHttpServer());
   applyHttpSecurityHeaders(app, localDocs);
