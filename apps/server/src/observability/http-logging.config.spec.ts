@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createHttpLoggingOptions, resolveScadaLogLevel } from "./http-logging.config.js";
+import {
+  createHttpLoggingOptions,
+  resolveScadaLogLevel,
+  shouldUsePrettyTransport,
+} from "./http-logging.config.js";
 
 describe("服务端结构化 HTTP 日志", () => {
   it("日志等级使用安全白名单，无效输入回退 info", () => {
@@ -40,5 +44,22 @@ describe("服务端结构化 HTTP 日志", () => {
     expect(options.serializers.res({ statusCode: 404 })).toEqual({ statusCode: 404 });
     expect(options.redact.paths).toContain("*.token");
     expect(options.redact.paths).toContain("*.password");
+  });
+  it("开发交互式终端可美化日志，测试和生产均不得启动 Pretty 工作线程", () => {
+    expect(
+      shouldUsePrettyTransport({ nodeEnv: "development", isTty: true, isTestRunner: false }),
+    ).toBe(true);
+    expect(
+      shouldUsePrettyTransport({ nodeEnv: "test", isTty: true, isTestRunner: false }),
+    ).toBe(false);
+    expect(
+      shouldUsePrettyTransport({ nodeEnv: "development", isTty: true, isTestRunner: true }),
+    ).toBe(false);
+    expect(
+      shouldUsePrettyTransport({ nodeEnv: "production", isTty: true, isTestRunner: false }),
+    ).toBe(false);
+    expect(
+      shouldUsePrettyTransport({ nodeEnv: undefined, isTty: false, isTestRunner: false }),
+    ).toBe(false);
   });
 });
