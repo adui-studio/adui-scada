@@ -16,6 +16,15 @@ export function resolveScadaLogLevel(value: string | undefined): ScadaLogLevel {
 export function createHttpLoggingOptions() {
   return {
     level: resolveScadaLogLevel(process.env.SCADA_LOG_LEVEL),
+    // 仅交互式本机开发终端启用 Pretty；生产及重定向采集始终为 JSON。
+    ...(process.env.NODE_ENV !== "production" && process.stdout.isTTY
+      ? {
+          transport: {
+            target: "pino-pretty",
+            options: { colorize: true, translateTime: "SYS:standard", singleLine: true },
+          },
+        }
+      : {}),
     genReqId(_req: IncomingMessage, res: ServerResponse): string {
       const requestId = randomUUID();
       res.setHeader("x-request-id", requestId);
