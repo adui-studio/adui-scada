@@ -495,3 +495,10 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - `GET /health/ready` 仅在 NestJS `onApplicationBootstrap` 已完成且未进入 `beforeApplicationShutdown` 时返回 HTTP 200；其他状态通过 Terminus `HealthCheckService` 返回 HTTP 503。结果固定报告 `http` 指示器以及 `scope:"http"` 和 `dependencies:"not_checked"`；`Cache-Control` 禁止缓存。Swagger 在本机受控文档中包含就绪探针，不额外公开文档。
 - 本批没有注册数据库、网关与设备状态检查，不能据此判断 PLC 采集、Tag 实时质量或控制通道就绪。将来引入真正业务依赖就绪时须增设检查与安全评审，避免误用存活探针。
 - 现有 `ScadaSessionGuard`、工程 ACL、版本读写、工业设备写入路由仍未注册；暂不对健康探针引入 `@nestjs/throttler` 全局配额，未来受保护业务 API 的限流策略另行设计，见 [ADR-0050](adr/0050-http-readiness-terminus.md)。
+
+## V0.3 第十九批：HTTP 原生接收与连接策略
+
+- `SCADA_NEST_HTTP_OPTIONS`：`cors:false`、`bufferLogs:true` 延续原契约，增加 `return503OnClosing:true`；不设置 `forceCloseConnections`，使已进入处理阶段的请求有机会完成。
+- `applyHttpServerPolicy` 在 `app.listen` 前配置 Node HTTP Server：`headersTimeout=15000` ms、`requestTimeout=60000` ms、`keepAliveTimeout=5000` ms、`maxHeadersCount=100`、`maxRequestsPerSocket=1000`。`requestTimeout` 限制**请求接收**，不对业务 Handler 及 SSE 长期响应设置统一超时。
+- 应用进入关闭流程时，新请求可直接收到 NestJS 12 适配器生成的 503 / `Connection: close`，健康探针仍符合原语义，但在关闭过程中可能被入口统一拒绝。关闭测试通过 `app.close()` 与延迟销毁钩子模拟，不冒充 Windows SIGTERM 测试。
+- 不修改请求/响应 JSON、HTTP 安全响应头、Swagger 默认关闭、Pino 脱敏和 `/health`、`/health/ready` 正常期契约。未开放的登录、工程版本读写和工业设备写入继续为 404。详见 [ADR-0051](adr/0051-http-ingress-shutdown-policy.md)。
