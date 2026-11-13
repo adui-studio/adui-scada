@@ -29,8 +29,7 @@ export async function startSseFaultProxy(targetUrl) {
       id: ++nextId,
       upstream,
       downstream,
-      requestStart: "",
-      classified: false,
+      requestTail: "",
       isSse: false,
       blocked: false,
       suppressedBytes: 0,
@@ -46,18 +45,14 @@ export async function startSseFaultProxy(targetUrl) {
     };
 
     downstream.on("data", (chunk) => {
-      if (!session.classified) {
-        session.requestStart += chunk.toString("latin1");
-        const firstLineEnd = session.requestStart.indexOf("\r\n");
-        if (firstLineEnd !== -1) {
-          const line = session.requestStart.slice(0, firstLineEnd);
-          session.isSse = /^GET \/(?:demo\/)?events(?:\?[^ ]*)? HTTP\/1\.[01]$/.test(line);
-          session.classified = true;
-          session.requestStart = "";
-        } else if (session.requestStart.length > 8192) {
-          destroy();
-          return;
+      if (!session.isSse) {
+        // Chrome/Vue 可能复用 Keep-Alive socket：不能只检查首个 HTTP 请求。
+        // 保留尾部以识别跨 TCP 分块的 GET 请求行，不持续保存完整 HTTP 报文。
+        const requestBytes = session.requestTail + chunk.toString("latin1");
+        if (/(?:^|\r\n)GET \/(?:demo\/)?events(?:\?[^\r\n ]*)? HTTP\/1\.[01]\r\n/.test(requestBytes)) {
+          session.isSse = true;
         }
+        session.requestTail = requestBytes.slice(-256);
       }
       if (!upstream.destroyed && !upstream.write(chunk)) downstream.pause();
     });
