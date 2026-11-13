@@ -555,10 +555,10 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 
 新增访问策略 2 项单测、模拟服务 4 项单测、正式根模块默认 404 的 1 项 E2E，以及本机演示模块的 4 项 E2E（含 Swagger JSON、SSE 快照、断流清理），维护者 Windows 已实测 **389/389 单测（33 个文件）、17/17 E2E（3 个文件）**，完整 `ready` **退出码 0**，`vp check` **245 个格式文件通过、119 个受检文件零警告/错误**，69 个 Markdown 检查及 Web/Server 类型检查与构建成功。Docker 镜像冻结安装、原隔离烟测和正式 Linux SIGTERM / 退出码 0 回归通过，**Docker 退出码 0**；E2E 的 503 / Terminus 错误日志为预期关闭状态负面测试。无新依赖、锁文件、Prisma、Core、Vue/React 或工业接口修改。旧 `/demo` SSE 服务、双框架 Runtime 和 Docker 生产默认行为不变；这不是正式工业网关、真实认证、工程版本 API 或生产 Tag 流。本批未执行 PostgreSQL 真库回归、工业现场验证或手工 Swagger/SSE 浏览器交互验收；仅追加验收文档后建议复查格式和文档检查。PR #43 仍保持 Draft，未经明确授权不合并。参见 [ADR-0053](adr/0053-local-readonly-demo-telemetry.md)。
 
-## 2026-11-13 · V0.3 第二十二批：共享 Runtime 只读 Tag 数据源抽象（Draft 待验收）
+## 2026-11-13 · V0.3 第二十二批：共享 Runtime 只读 Tag 数据源抽象（Windows / Docker 已通过，Draft 待合并）
 
 第二十一批 PR #43 已依据维护者明确授权 Squash Merge 至 `main`（`9d592c4`）。其 Windows 基线为 **389/389 单测、17/17 E2E**，完整 `pnpm run ready` 与 Docker 冻结安装/隔离烟测/Linux SIGTERM 退出码均为 0；尚无手动浏览器 Swagger/SSE 交互记录，不能当作正式生产订阅验证。
 
 本批按照 [ADR-0054](adr/0054-readonly-tag-source-adapters.md) 将 `packages/runtime/src/runtime.ts` 内部的 `fetch("/demo/project")` 与 `EventSource("/demo/events")` 抽出为可注入 `ReadonlyTagSource`。同源固定预设 `standalone` 保持两套 Web 当前 `/demo` 行为不变，`nest-local` 仅指向上批已实现的受控 `/api/dev/demo` 路由；不新增任意 URL、自定义设备地址或浏览器代理。React/Vue 原有 Runtime 构造函数继续兼容；Tauri 离线模拟未修改。
 
-新契约为 `loadProject(AbortSignal)`、`subscribe({onMessage,onDisconnected})`、`close()`，原始消息仍由共享 Core `applyDemoChange`、`TagStore` 校验；首次订阅或每次断线后必须接收 snapshot，才允许 delta。重新启动按代次隔离，stop 中止挂起请求、清理订阅并将旧值标记 STALE，防止迟到回调覆盖新会话。新增 4 项固定 SSE 适配器测试、7 项 Runtime 生命周期及安全回归，预计 **400 项普通单测、17 项 E2E**，**尚未在维护者 Windows/Docker 实测**。无依赖、数据库、NestJS、Vue/React 页面或工业 Gateway 变更；本批不算真实工业订阅实现。
+新契约为 `loadProject(AbortSignal)`、`subscribe({onMessage,onDisconnected})`、`close()`，原始消息仍由共享 Core `applyDemoChange`、`TagStore` 校验；首次订阅或每次断线后必须接收 snapshot，才允许 delta。重新启动按代次隔离，stop 中止挂起请求、清理订阅并将旧值标记 STALE，防止迟到回调覆盖新会话。新增 4 项固定 SSE 适配器测试、7 项 Runtime 生命周期及安全回归。维护者于 2026-11-13 Windows 实测：**Runtime 专项 21/21（3 文件）**、**全量单测 400/400（35 文件）**、**NestJS E2E 17/17（3 文件）**，`vp check` **249 个文件格式正确、122 个文件零错误和零警告**；Prisma Client 7.10.1 生成、70 个 Markdown 检查、Core/双 Web/NestJS 类型检查及构建均通过，完整 `ready` **退出码 0**。Docker 镜像冻结安装、隔离烟测、正式 Linux PID 1 SIGTERM 进程正常退出 **退出码 0**，Docker 命令 **退出码 0**。E2E 中的 Terminus 503 是主动模拟关闭的预期负面用例。无依赖、数据库、NestJS、Vue/React 页面或工业 Gateway 变更；本批不算真实工业订阅实现，尚无手工页面断连演练、PostgreSQL 真库及工业现场测试。PR #44 保持 Draft，未经明确合并授权不合并；本次仅更新验收记录，建议复查格式与文档检查。
