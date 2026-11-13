@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { NestFactory } from "@nestjs/core";
 import { Logger } from "nestjs-pino";
 import { resolveServerStartupConfig } from "./config/server-startup.config.js";
-import { setupLocalOpenApi } from "./openapi/scada-openapi.js";
+import { getLocalOpenApiUrl, setupLocalOpenApi } from "./openapi/scada-openapi.js";
 import { applyHttpSecurityHeaders } from "./security/http-security.js";
 import { applyHttpServerPolicy, SCADA_NEST_HTTP_OPTIONS } from "./security/http-server-policy.js";
 
@@ -26,6 +26,10 @@ async function bootstrap(): Promise<void> {
   // NestJS 完成关闭钩子后以退出码 0 结束，便于容器判断正常 SIGTERM 关闭。
   app.enableShutdownHooks([], { useProcessExit: true });
   await app.listen(port, host);
+  const swaggerUrl = getLocalOpenApiUrl(localDocs, port);
+  if (swaggerUrl) {
+    app.get(Logger).log(`Swagger 文档地址：${swaggerUrl}`);
+  }
 }
 
 void bootstrap().catch((error: unknown) => {
