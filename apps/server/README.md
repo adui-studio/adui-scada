@@ -132,4 +132,27 @@ Node 24 原生 `http.Server` 在 `listen` 前配置固定 `headersTimeout:15s`�
 
 `pnpm run test:docker:server` 在既有模块加载烟测之后，使用 `--network none` 额外运行正式镜像 Node PID 1，利用 `docker exec` 在容器内回环验证就绪及未开放工业设备写入 404，再用 `docker stop --signal SIGTERM --timeout 10` 检查退出码 0；无论成功或失败都执行容器清理。整个过程不暴露宿主端口、不访问生产数据库或 PLC，也不触碰现有 Vue/React 和 SCADA Core。
 
-本批没有新增依赖、普通单测或 E2E，预计仍为 **381 单测、12 E2E**，尚待 Windows 与 Docker 实测；真实在途请求、SSE/WS、代理流量与工业网关关停仍不在本阶段验证范围。见 [ADR-0052](../../docs/adr/0052-linux-sigterm-container-shutdown.md)。
+第二十批 SIGTERM 核心改动已由维护者 Windows 实测 **381/381 单测、12/12 E2E**、`ready` 退出码 0，Docker 双阶段（含正式 Linux 容器 PID 1 SIGTERM）退出码 0。此后追加本机 Swagger 启动地址日志及 2 项单测，最新分支预计 **383 项单测、12 项 E2E**，**追加代码尚待重新验收**；真实在途请求、SSE/WS、代理流量与工业网关关停仍不在本阶段验证范围。见 [ADR-0052](../../docs/adr/0052-linux-sigterm-container-shutdown.md)。
+
+### 在本机查看 Swagger 文档
+
+从仓库根目录的 `.env` 显式开启文档：
+
+```dotenv
+SCADA_API_DOCS_ENABLED=true
+SCADA_SERVER_HOST=127.0.0.1
+```
+
+`NODE_ENV` 不得为 `production`，服务端监听地址也必须是 `127.0.0.1`；否则不会注册 Swagger 路由，也不会打印可访问地址。默认端口为 3001，`SCADA_SERVER_PORT` 或 `PORT` 修改端口时，启动日志将自动使用实际端口。
+
+```powershell
+pnpm run dev:server
+```
+
+NestJS 成功监听且 Swagger 允许注册后，由现有 Pino 日志输出：
+
+```text
+Swagger 文档地址：http://127.0.0.1:3001/api/docs
+```
+
+启动日志只记录固定本机回环地址和校验过的端口，不输出环境变量、数据库连接串、设备地址、请求 URL 或令牌。JSON 结构化日志与本机交互终端的 Pretty 日志均沿用现有 Pino 规则；若将 `SCADA_LOG_LEVEL` 设为 `warn` 或更高，`info` 级别的文档地址不会显示。此处仅新增启动提示，既有 Swagger 三重访问保护、默认关闭及工业接口 404 的安全边界不变。
