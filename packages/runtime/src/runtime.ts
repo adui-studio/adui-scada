@@ -70,6 +70,8 @@ export function svgDataUrl(
 
 /** 基于只读数据源契约的浏览器 Runtime，默认仍使用原独立水处理演示服务。 */
 export class DemoRuntime {
+  private readonly listener: RuntimeListener;
+  private readonly source: ReadonlyTagSource;
   private subscription: ReadonlyTagSubscription | null = null;
   private loading: AbortController | null = null;
   private readonly store = new TagStore();
@@ -79,10 +81,10 @@ export class DemoRuntime {
   private active = false;
   private generation = 0;
 
-  constructor(
-    private readonly listener: RuntimeListener,
-    private readonly source: ReadonlyTagSource = createSseTagSource(),
-  ) {}
+  constructor(listener: RuntimeListener, source: ReadonlyTagSource = createSseTagSource()) {
+    this.listener = listener;
+    this.source = source;
+  }
 
   private current(generation: number): boolean {
     return this.active && this.generation === generation;
