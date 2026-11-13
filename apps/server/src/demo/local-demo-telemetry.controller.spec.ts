@@ -1,11 +1,12 @@
 import { expect, test, vi } from "vite-plus/test";
+import type { MessageEvent } from "@nestjs/common";
 import type { TagChange, TagListener } from "@adui/scada-core";
 import { LocalDemoTelemetryController } from "./local-demo-telemetry.controller.js";
 import type { LocalDemoTelemetryService } from "./local-demo-telemetry.service.js";
 
 test("NestJS 本机 SSE 发送具名心跳且取消订阅后清理心跳与 Tag 监听", () => {
   vi.useFakeTimers();
-  const release = vi.fn();
+  const release = vi.fn<() => void>();
   const current = { listener: undefined as TagListener | undefined };
   const telemetry = {
     subscribe(listener: TagListener) {
@@ -14,7 +15,7 @@ test("NestJS 本机 SSE 发送具名心跳且取消订阅后清理心跳与 Tag 
       return release;
     },
   } as unknown as LocalDemoTelemetryService;
-  const messages: Array<{ type?: string; data: unknown }> = [];
+  const messages: MessageEvent[] = [];
   const subscription = new LocalDemoTelemetryController(telemetry)
     .events()
     .subscribe((event) => messages.push(event));
