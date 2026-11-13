@@ -9,13 +9,13 @@
 | JWT / JWKS 安全验证  | `jose` **6.2.17**                                                    | **建议后续引入**；当可信 IdP/JWT 场景确定后固定 `iss`、`aud`、`alg`、`exp`，避免自行实现 JWT 解析和签名                         |
 | OIDC / 企业 SSO      | `openid-client` **6.8.9**                                            | 建议在企业身份联邦/统一登录阶段引入；必须采用授权码 + PKCE、状态/nonce、防重放与固定受信提供方                                  |
 | 本地账号密码         | `argon2` **0.45.2**                                                  | 仅当正式实现本地账户时引入，使用 Argon2id 并规划成本校准、MFA 与凭据重置                                                        |
-| 结构化日志           | `nestjs-pino` **5.3.1** + `pino` **10.4.0** + `pino-http` **11.0.0** | **第十四批代码已接入，锁文件待生成与 Windows 实测**；JSON 结构化日志、请求关联 ID、敏感头和 token 脱敏；NestJS 12.0.2+ 兼容     |
+| 结构化日志           | `nestjs-pino` **5.3.1** + `pino` **10.4.0** + `pino-http` **11.0.0** | **第十四批代码已接入，锁文件已生成，Windows E2E 待复验**；JSON 结构化日志、请求关联 ID、敏感头和 token 脱敏；NestJS 12.0.2+ 兼容     |
 | 本地开发日志阅读     | `pino-pretty`（安装时核对稳定版本）                                  | 仅开发依赖，不用作生产日志引擎                                                                                                  |
-| OpenAPI / Swagger    | `@nestjs/swagger` **12.1.1**                                         | **第十四批代码已接入，锁文件待生成与 Windows 实测**；NestJS 12 官方模块。生产环境默认不开放可交互文档，内部接口安全审查后才暴露 |
+| OpenAPI / Swagger    | `@nestjs/swagger` **12.1.1**                                         | **第十四批代码已接入，锁文件已生成，Windows E2E 待复验**；NestJS 12 官方模块。生产环境默认不开放可交互文档，内部接口安全审查后才暴露 |
 | 不透明字符串 ID      | `nanoid` **6.0.2**                                                   | 推荐新工程字符串标识、请求关联 ID 等；不能直接代替 `@db.Uuid` 字段                                                              |
 | PostgreSQL UUID      | Node `crypto.randomUUID` 或 Prisma `uuid()`                          | 已有 UUID 数据类型继续保持，不因引入 Nano ID 做破坏性迁移                                                                       |
 | API 速率限制         | `@nestjs/throttler` **6.7.1**                                        | 登录/认证端点启用时引入；多实例生产需 Redis 等共享存储，默认内存仅适合单进程                                                    |
-| HTTP 安全响应头      | `helmet` **8.3.0**                                                   | 第十四批代码已接入，锁文件待生成与 Windows 实测；按 SPA 与 Swagger 的 CSP 单独配置，不能盲目全局放开                            |
+| HTTP 安全响应头      | `helmet` **8.3.0**                                                   | 第十四批代码已接入，锁文件已生成，Windows E2E 待复验；按 SPA 与 Swagger 的 CSP 单独配置，不能盲目全局放开                            |
 | 输入 Schema          | `zod` **4.6.7**                                                      | 新管理 DTO 可评估；共享 Core 已有解析契约，不重复维护组态 Schema                                                                |
 | Redis                | `redis` **6.3.1**                                                    | 后续统一会话缓存/分布式限流/状态同步；会话撤销权威状态仍以 PostgreSQL 为准                                                      |
 | 异步任务与报警处理   | `@nestjs/bullmq` **12.0.1** + BullMQ（安装时验证版本）               | 后续报警、历史导出、延迟任务；不允许异步队列代替工业控制安全联锁                                                                |
@@ -41,6 +41,6 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 
 ## 第十四批依赖补充
 
-- NestJS 配置注入：`@nestjs/config@12.0.1`（已声明于服务端依赖与 Catalog，待 pnpm 安装及锁文件验证）。根目录 `.env` 由 Node `loadEnvFile` 唯一加载，`ConfigModule` 设置 `ignoreEnvFile: true`，不直接增加 `dotenv`。
-- 开发日志美化：`pino-pretty@13.2.0`（仅服务端 devDependency）。只在非生产且 stdout 为 TTY 时启用；其它环境保持 JSON 输出。
-- 以上尚未在 Windows 验证，版本解析、锁文件和全量测试仍是合并前阻塞项。
+- NestJS 配置注入：`@nestjs/config@12.0.1`（已声明于服务端依赖与 Catalog，pnpm 锁文件已提交）。根目录 `.env` 由 Node `loadEnvFile` 唯一加载，`ConfigModule` 设置 `ignoreEnvFile: true`，不直接增加 `dotenv`。
+- 开发日志美化：`pino-pretty@13.2.0`（仅服务端 devDependency）。只在非生产、非测试且 stdout 为 TTY 时启用；其它环境保持 JSON 输出。
+- Windows 已安装并提交锁文件，静态检查与 355 项单测通过，Docker 隔离测试通过；E2E 初始化超时。Pretty 测试隔离补丁新增一项单测，预期 356 项，完整 ready 尚待复验。
