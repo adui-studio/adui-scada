@@ -1344,3 +1344,25 @@ Write-Host "Docker 退出码：$LASTEXITCODE"
 实测 `ready` 还包含 11 个依赖清单与 51 项 Catalog 依赖检查、149 个自有文件中文文案检查、Prisma Client 7.10.1 生成、71 份 Markdown 检查和 Core/双框架/NestJS 类型检查与构建。Docker 验证的是正式服务端镜像 HTTP 安全及 Linux SIGTERM，不代表 Vue/React 浏览器 SSE 断流端到端测试。E2E 中预期的 Terminus 503 负面测试仍全部通过。
 
 仍建议人工启动独立 SSE 与 Vue/React，在浏览器 Network 观察 5 秒 heartbeat、30 秒周期的 STALE 与恢复、完整静默后重新连接；NestJS 只在受控本机非生产环境显式允许时测试，结束还原开关。**尚无人工交互验收记录**；浏览器后台节流、Nginx 长连接、SSE 高并发背压、真实 Gateway 和工业现场仍未验收。本次仅同步验收文档后，建议复查 `vp check` 与 `pnpm run docs:check`。
+
+## 2026-11-13 · V0.3 第二十四批浏览器 SSE 回归入口（待本机实测）
+
+本批新增不依赖 Playwright 的本机 Chrome/Edge SSE 回归脚本。首先在三个独立终端启动：
+
+```powershell
+pnpm run dev:demo
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+随后在第四个终端运行：
+
+```powershell
+pnpm run test:sse:browser
+pnpm run test:runtime
+vp check
+pnpm run docs:check
+pnpm run ready
+```
+
+脚本只接受回环地址；使用真实浏览器、现有同源 Vite 代理和原生 EventSource。注入仅屏蔽页面接收的事件回调，验证心跳仍活跃但 Tag 超时、完整事件静默后的自动重连、Vue/React 数据恢复和页面离开后的连接释放。**这不是实际网络故障或 Nginx 半开连接的测试**，更不覆盖工业现场。前台恢复可见性检查另有两条新增 Vitest 用例；提交代码后仍需 Windows 质量链和 Chrome/Edge 执行日志，不得预先标记通过。参见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
