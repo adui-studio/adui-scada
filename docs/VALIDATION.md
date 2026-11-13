@@ -136,8 +136,12 @@ Core 新增两项自动保存会话回归：停写必须等待正在执行的事
 
 ## V0.3 第十七批：Zod 服务端运行时输入校验
 
-基线为第十六批 Windows **367/367 单测、8/8 NestJS E2E、完整 ready 退出码 0**，Docker 隔离镜像安全测试也通过。第十七批在原 5 项启动配置单测之外新增 4 项，**预计** 371 项普通单测与 8 项 E2E；此数字仅为预期，本批尚无 Windows 实测。
+基线为第十六批 Windows **367/367 单测、8/8 NestJS E2E、完整 ready 退出码 0**，Docker 隔离镜像安全测试也通过。第十七批在原 5 项启动配置单测之外新增 4 项，另为 nest-zod 的隔离测试 Controller 新增 4 项集成单测，**预计** 375 项普通单测与 8 项 E2E；此数字仅为预期，本批尚无 Windows 实测。
 
 新增测试验证 Zod 对非有限数、非法类型、无效端口、变量覆盖优先级、额外敏感环境变量和历史数字写法的处理，保持既有固定中文异常及 Swagger 安全访问策略。日志、SCADA Core 和数据库模型均不调整；必须确认 Docker 生产运行层包含 Zod 依赖，不因冻结安装缺少锁文件而误判质量链通过。
 
 **合并前阻塞**：已在 Catalog 和服务端 Manifest 声明 `zod@4.6.7`，但当前协作环境不能访问 npm Registry，尚未使用 pnpm 12 正式更新 `pnpm-lock.yaml`。在 Windows 审查并提交新锁文件后，运行 `pnpm install --frozen-lockfile`、`vp check`、`pnpm run ready` 和 `pnpm run test:docker:server`；未实际运行前不能声称通过。不执行生产数据库迁移或工业设备写入测试。
+
+### 第十七批补充：nest-zod 适配器测试（仅测试环境）
+
+`apps/server/src/validation/nest-zod-integration.spec.ts` 独立创建 NestJS 应用但不引入正式 `AppModule`，覆盖 `ZBody` 入参规范化、无效请求 400、`ZQuery` 字符串转数字、`ZSerialize` 响应输出字段过滤和 Swagger 路由描述。此测试 Controller 不得进入生产路由，不得与正式设备写入接口混淆。当前共预计 **375 单测/8 E2E**。新增 `nest-zod@2.1.0` 运行依赖仍须经 pnpm 实际解析、生成并提交锁文件，随后 Windows `ready` 与 Docker 复验；所有结果尚未实际取得。
