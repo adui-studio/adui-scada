@@ -21,11 +21,20 @@ function port(name, fallback) {
 
 const targets = proxyMode
   ? [
-      { name: "React Docker Nginx", url: "http://127.0.0.1:" + port("SCADA_REACT_PORT", "8080") + "/demo/events" },
-      { name: "Vue Docker Nginx", url: "http://127.0.0.1:" + port("SCADA_VUE_PORT", "8081") + "/demo/events" },
+      {
+        name: "React Docker Nginx",
+        url: "http://127.0.0.1:" + port("SCADA_REACT_PORT", "8080") + "/demo/events",
+      },
+      {
+        name: "Vue Docker Nginx",
+        url: "http://127.0.0.1:" + port("SCADA_VUE_PORT", "8081") + "/demo/events",
+      },
     ]
   : [
-      { name: "独立本机模拟服务", url: "http://127.0.0.1:" + port("SCADA_DEMO_PORT", "4178") + "/events" },
+      {
+        name: "独立本机模拟服务",
+        url: "http://127.0.0.1:" + port("SCADA_DEMO_PORT", "4178") + "/events",
+      },
     ];
 
 function parseFrame(source) {
@@ -57,7 +66,8 @@ async function connect(url) {
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    const cause = error instanceof Error && error.cause instanceof Error ? error.cause.message : "";
+    const cause =
+      error instanceof Error && error.cause instanceof Error ? error.cause.message : "";
     controller.abort();
     throw new Error("无法访问 " + url + "：" + reason + (cause ? "；" + cause : ""));
   } finally {
@@ -121,7 +131,11 @@ async function waitFor(clients, predicate, description, timeoutMs = 12_000) {
     if (clients.every(predicate)) return;
     await pause(100);
   }
-  throw new Error(description + " 超时：" + JSON.stringify(clients.map((client) => client.events.map((e) => e.kind).slice(-12))));
+  throw new Error(
+    description +
+      " 超时：" +
+      JSON.stringify(clients.map((client) => client.events.map((event) => event.kind).slice(-12))),
+  );
 }
 
 async function verifyTarget(target) {
@@ -185,6 +199,8 @@ async function main() {
 }
 
 main().catch((error) => {
-  process.stderr.write("SSE 网络验收失败：" + (error instanceof Error ? error.message : String(error)) + "\n");
+  process.stderr.write(
+    "SSE 网络验收失败：" + (error instanceof Error ? error.message : String(error)) + "\n",
+  );
   process.exitCode = 1;
 });
