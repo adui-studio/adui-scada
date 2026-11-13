@@ -146,3 +146,11 @@ Core 新增两项自动保存会话回归：停写必须等待正在执行的事
 **修复后已完成 Windows 验收**：保留 `zod@4.6.7`，新增 4 项启动配置回归及 4 项只在测试模块注册的 `standard-schema-integration.spec.ts`。维护者实测普通单测 **375/375 项**、NestJS E2E **8/8 项**，完整 `pnpm run ready` **退出码 0**。测试覆盖非法环境值、优先级、中文错误不泄密、`StandardSchemaValidationPipe` 请求体/查询转换、`StandardSchemaSerializerInterceptor` 响应字段过滤及 Swagger 12 文档。
 
 维护者已通过 pnpm 重新生成并推送 `pnpm-lock.yaml`，GitHub 核对确认锁文件不再包含 `nest-zod`，仅保留 Zod 4.6.7。修复后 Windows：依赖检查 11 个清单/50 项 Catalog、中文文案检查 131 个文件，`vp check` 格式 **227/227**、105 个受检源文件无告警/错误，29 个测试文件 **375/375 单测**、NestJS E2E **8/8**、65 份 Markdown 静态检查，React/Vue/NestJS 类型检查与构建全部通过，`ready` **退出码 0**。独立 `pnpm run test:docker:server` 构建通过，包含 `pnpm install --frozen-lockfile`，容器内健康接口为 200、未开放工程/设备接口保持 404，Docker **退出码 0**。本批未重新运行 PostgreSQL 真库回归，也未进行工业现场验证；记录性文档更新后建议复验 `vp check` 与 `pnpm run docs:check`。
+
+## V0.3 第十八批：HTTP 存活和就绪探针验收
+
+第十七批维护者 Windows 基线：**375/375 单测、8/8 NestJS E2E**、完整 `ready` 退出码 0，Docker 隔离镜像烟测退出码 0。本批新增 3 项 `HttpReadinessIndicator` 单测，NestJS E2E 新增 2 项；**2026-11-13 Windows 实测 378/378 单测（30 个文件）、10/10 E2E**，完整 `pnpm run ready` **退出码 0**。
+
+验证重点：`GET /health` 仍为 200 且响应完全不变；`GET /health/ready` 仅在 HTTP 应用完成初始化时返回 200、禁止缓存，返回 `http.status="up"`、`scope="http"`、`dependencies="not_checked"`；生命周期转入关闭时就绪接口返回 503，但存活接口不修改。Swagger 受控本机开发文档包含新探针，生产文档依然不可访问。Docker `--network none` 烟测验证服务端可加载 `@nestjs/terminus` 且探针可正常响应，未开放工程/登录/设备写入继续保持 404。
+
+**实际验收记录**：维护者已在 Windows 用 pnpm 正式更新并提交 `pnpm-lock.yaml`，远程 PR #40 已核实包含 `@nestjs/terminus@12.1.0`。Catalog 11 个清单/51 项依赖、中文文案检查 134 个文件、`vp check` 231 个文件格式正确且 108 个检查文件无告警/错误；Vue/React/NestJS 类型检查及构建通过、Prisma Client 7.10.1 生成正常、66 份 Markdown 静态检查通过。独立 Docker 镜像构建包含 `pnpm install --frozen-lockfile` 且成功，`--network none` 容器烟测确认 `/health`、`/health/ready` 均返回 200，未开放的 Swagger/工程/登录/设备接口仍返回 404，**Docker 退出码 0**。E2E 日志中的 Terminus `Health Check has failed!` / HTTP 503 来自**主动模拟关闭流程的负面测试**，10/10 均通过，不能误记为程序故障。PostgreSQL 真库、Redis 及工业现场设备仍未在本批验证；验收后只追加文档，建议最终复查 `vp check` 与 `pnpm run docs:check`。

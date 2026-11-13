@@ -297,3 +297,9 @@ Prisma `schema.prisma` 的 `///` 为代码生成文档信息，**不会自动创
 NestJS 12 自带 `StandardSchemaValidationPipe`、`StandardSchemaSerializerInterceptor`，Swagger 12 原生识别 Zod 4 Standard JSON Schema。维护者 Windows 实测发现此前选用的 `nest-zod@2.1.0` 的 Swagger `ZSerialize` 适配器在模块装饰器求值时失败，且上游 Peer 不包含 NestJS 12 / Swagger 12，因此撤销该依赖，复用已有 NestJS 原生设施。独立测试 Controller 验证请求体、查询转换、响应白名单和 OpenAPI；不在正式 AppModule 注册新业务路由、全局 Pipe 或 Serializer。
 
 Zod 不进入共享 Core，也不改组态工程/Tag/图元 Schema、Prisma、工业网关、Guard 或安全审计。上一次包含 `nest-zod` 的锁文件须由 pnpm 重算；新代码、类型与 Docker 安全边界尚待 Windows 完整复验。
+
+## V0.3 第十八批：HTTP 就绪与可运维边界（ADR-0050）
+
+新增 NestJS 官方 `@nestjs/terminus@12.1.0`，其已核对发行包 Peer 支持 NestJS 12 / Swagger 12 / Node 24。正式 `AppModule` 只增加 `TerminusModule`、`HttpReadinessController` 和 `HttpReadinessIndicator`，保留现有 `/health` 存活接口；`/health/ready` 使用应用生命周期与 Terminus `HealthCheckService` 表示 HTTP 子系统的启动/关闭状态，未就绪时返回 503、禁止缓存。结果固定标记外部依赖 `not_checked`。
+
+现阶段独立 Prisma 工程仓储和工业网关均未挂入正式 HTTP 模块，**不允许因为接入 Terminus 而隐式启用数据库连接或设备采集**。未来业务就绪检查必须单独定义依赖、超时与失败策略；登录/API 限流等真实受保护路由上线前再引入 `@nestjs/throttler` 和必要的多实例共享配额，不对探针应用通用限流。

@@ -46,6 +46,18 @@ try {
   ) {
     throw new Error("服务端容器未启用必要安全响应头或请求关联 ID");
   }
+  const readiness = await fetch(`${base}/health/ready`);
+  const readinessBody = await readiness.json();
+  if (
+    readiness.status !== 200 ||
+    readiness.headers.get("cache-control") !== "no-cache, no-store, must-revalidate" ||
+    readinessBody.status !== "ok" ||
+    readinessBody.details?.http?.status !== "up" ||
+    readinessBody.details?.http?.dependencies !== "not_checked"
+  ) {
+    throw new Error("服务端容器 HTTP 就绪探针异常，且不能将其当作数据库或网关就绪");
+  }
+
   const docs = await fetch(`${base}/api/docs-json`);
   if (docs.status !== 404) {
     throw new Error("服务端容器意外开放 Swagger JSON 文档");
@@ -75,7 +87,7 @@ try {
     throw new Error("服务端容器意外开放工业设备写入接口");
   }
 
-  console.log("容器校验通过：仓储依赖可加载、健康接口正常、工程及设备接口未开放");
+  console.log("容器校验通过：仓储依赖可加载、HTTP 存活与就绪探针正常、工程及设备接口未开放");
 } finally {
   await app.close();
 }

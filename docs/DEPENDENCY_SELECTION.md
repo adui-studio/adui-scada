@@ -67,3 +67,13 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 - 移除 `nest-zod` 的 Catalog 和服务端依赖声明，保留 `zod`，不降级 NestJS、不忽略 Peer、不引入第二套工程 Schema。原生校验在本批仅用于隔离测试 Controller，不对正式业务路由全局启用。
 - 第十七批首次 Windows `ready`：格式与 Lint/类型检查已通过；单测 **370 通过、1 失败**，另有适配器测试文件导入失败，完整质量链中断。修正代码后，Windows 已复验 **375/375 单测、8/8 E2E**、完整 `ready` **退出码 0**，Docker 隔离镜像烟测 **退出码 0**。
 - 上轮包含 `nest-zod` 的锁文件已由维护者使用 pnpm 正式重新生成并推送；新锁文件仅保留 Zod，GitHub 核对无 `nest-zod`。Docker 构建中冻结安装成功，未绕过 Peer 校验，不手写包完整性数据。
+
+## 第十八批：优先选择 HTTP 就绪检查，推迟全局限流
+
+经核对 `@nestjs/terminus@12.1.0` 官方发行包 `package.json` 的 Peer 版本覆盖 NestJS 12、Swagger 12、RxJS 7 和 Node 24，且该版本使用原生 ESM；选为正式 HTTP 就绪探针依赖。仅在 `apps/server` 生产依赖及根 Catalog 声明，不引入旧 `@godaddy/terminus`、数据库健康探针的新连接或额外日志引擎。
+
+与之相比，`@nestjs/throttler@6.7.1` 虽然已核对 Peer 支持 NestJS 12，但当前正式服务没有已开放的登录、会话签发、工程版本或工业设备控制 API。此时全局启用进程内限流无法实现生产反暴力破解，反而可能误伤 `/health`、`/health/ready` 容器探针。**暂不安装 Throttler**，待正式身份/API 实施时再做分路由限流、受信代理 IP 解析及 Redis 共享计数器审查。
+
+当前 `GET /health/ready` 只证明 HTTP 应用初始化并接受请求，响应明确 `dependencies: "not_checked"`，不能替代真正的 PostgreSQL、Redis、工业网关与 Tag 数据质量健康。正式数据库/网关接入后再扩展 Readiness 指标及超时策略。以上见 [ADR-0050](adr/0050-http-readiness-terminus.md)。
+
+第十八批维护者已在 Windows 通过 pnpm 正式更新并提交 `pnpm-lock.yaml`，远程 GitHub 核对确认包含 `@nestjs/terminus@12.1.0`；完整 `ready` **378/378 单测、10/10 E2E、退出码 0**，Docker 隔离构建内冻结安装与健康探针烟测 **退出码 0**。E2E 中预期 503 对应模拟关闭状态，并非非预期故障。当前 HTTP 就绪仍不代表 PostgreSQL、Redis 或工业网关就绪。记录性文档更新后建议复查 `vp check` 与 `pnpm run docs:check`。

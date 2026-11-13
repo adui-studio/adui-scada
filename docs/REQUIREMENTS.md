@@ -212,3 +212,7 @@ Vue/React Studio 的图层面板增加一层平面组合树：同一 `groupId` �
 ## V0.3 第十七批：服务端运行时配置输入校验（NFR-003 / NFR-007 / NFR-008 前置）
 
 采用 Zod 对服务端启动端口和监听地址进行运行时校验，防止无效进程配置进入 NestJS 启动流程。维持原有默认值、变量优先级、固定中文错误和 Swagger 关闭策略，不打印原始环境值或数据库连接串。此批不创建公开 HTTP DTO，不改变 SCADA Core 工程 Schema 或工业设备安全边界；NFR-003 / NFR-007 / NFR-008 仍属阶段性实现而非全部完成。参见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
+
+## V0.3 第十八批：HTTP 存活/就绪区分（NFR-006 / NFR-007 / NFR-008 局部）
+
+保持现有 `GET /health` 仅反映 NestJS 进程存活的契约不变；新增 `GET /health/ready` 仅反映 HTTP 应用初始化完成且尚未进入关闭流程。通过独立状态指示器在启动完成前及关闭中返回不可用，禁止缓存结果；返回值不得暴露密钥、内部设备地址或错误堆栈。**就绪不包含 PostgreSQL、Redis、工业网关、PLC 或报警业务依赖的验证**，不得将此接口解释为 SCADA 生产可用性。现阶段登录及受保护业务 API 未上线，暂不启用全局限流，正式认证端点上线前需另行定义路由分级与多实例共享限流。参见 [ADR-0050](adr/0050-http-readiness-terminus.md)。

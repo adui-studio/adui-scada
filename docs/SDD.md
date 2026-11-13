@@ -488,3 +488,10 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - HTTP DTO 采用 NestJS 12 原生 `@Body({ schema })`、`@Query(..., { schema })` 和 `StandardSchemaValidationPipe`；响应允许使用 `StandardSchemaSerializerInterceptor` 与 `@SerializeOptions({ schema })`，Swagger 12 从 Zod 4 Standard JSON Schema 生成请求文档。
 - 本阶段仅通过 `standard-schema-integration.spec.ts` 的独立测试 Controller 验证该技术契约，正式 `AppModule` 不挂载任何新业务 API 或全局 Pipe。之前的 `nest-zod@2.1.0` 因 Windows 实测 Swagger 装饰器故障及 Peer 版本声明不满足 NestJS 12，已移除。
 - 输入校验不能代替 Session/ACL Guard、事务复核或敏感日志白名单。共享 Core 工程 Schema、Pino、Prisma、Vue/React 均保持不变。参见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
+
+## V0.3 第十八批：HTTP 就绪探针契约
+
+- `GET /health` 继续返回 HTTP 200 以及原有 `{status:"ok",service:"adui-scada-server"}`，仅用于 Liveness，不检查任何外部依赖。
+- `GET /health/ready` 仅在 NestJS `onApplicationBootstrap` 已完成且未进入 `beforeApplicationShutdown` 时返回 HTTP 200；其他状态通过 Terminus `HealthCheckService` 返回 HTTP 503。结果固定报告 `http` 指示器以及 `scope:"http"` 和 `dependencies:"not_checked"`；`Cache-Control` 禁止缓存。Swagger 在本机受控文档中包含就绪探针，不额外公开文档。
+- 本批没有注册数据库、网关与设备状态检查，不能据此判断 PLC 采集、Tag 实时质量或控制通道就绪。将来引入真正业务依赖就绪时须增设检查与安全评审，避免误用存活探针。
+- 现有 `ScadaSessionGuard`、工程 ACL、版本读写、工业设备写入路由仍未注册；暂不对健康探针引入 `@nestjs/throttler` 全局配额，未来受保护业务 API 的限流策略另行设计，见 [ADR-0050](adr/0050-http-readiness-terminus.md)。
