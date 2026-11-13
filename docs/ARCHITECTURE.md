@@ -309,3 +309,9 @@ Zod 不进入共享 Core，也不改组态工程/Tag/图元 Schema、Prisma、�
 NestJS 12.0.3 Express 适配器本身支持 `return503OnClosing`；与已有 `app.enableShutdownHooks()` 组合后，在关闭流程一开始就拒绝新到 HTTP 请求，避免新请求继续进入即将停止的模块。该能力不配置强制断连，也不代表可以保障所有长连接或工业网关事务的生产级排空。
 
 Node 24 原生 HTTP Server 在 `app.listen` 之前由 `apps/server/src/security/http-server-policy.ts` 统一配置有限的头/请求接收时限、Keep-Alive 空闲时限及请求数量限制。**只约束传入请求接收，不限制响应时长**，避免损坏规划中的长期 SSE 订阅。生产与隔离测试均使用同一配置常量，不增加依赖、环境变量、数据库连接或业务路由。未来反向代理、WebSocket/SSE 排空、多实例流量摘除与强制停止上限应独立评审。
+
+## V0.3 第二十批：Linux 容器关闭信号与运维退出语义（ADR-0052）
+
+正式 NestJS 应用从 `enableShutdownHooks()` 切换为 NestJS 12 自带的 `enableShutdownHooks([], { useProcessExit: true })`。根据上游 12.0.3 源码，默认完成关闭后重发信号可能使 SIGTERM 退出码为 143；选择在关闭钩子完成后主动正常退出（0），便于隔离容器验证，并为同步 JSON Pino 日志提供明确退出生命周期。该选项会改变 Unix 退出码语义且可能影响未来其它信号监听器，正式运维接入时须复审。
+
+不增加应用路由、持久化连接或网关实例。Docker 测试继续以 `--network none` 隔离正式服务进程，容器内部回环验证就绪，发送真实 Linux SIGTERM 并检查正常退出。该能力不代表已完成负载均衡摘流、SSE/WS 长连接排空和工业网关状态恢复。参见 [ADR-0052](adr/0052-linux-sigterm-container-shutdown.md)。
