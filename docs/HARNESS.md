@@ -1389,4 +1389,4 @@ pnpm run docker:demo:up
 pnpm run test:sse:proxy
 ```
 
-两个网络脚本都只访问根 `.env` 给定端口下的 `127.0.0.1`，每条代理做 6 路真实 SSE 流、snapshot、heartbeat、单路 abort 后其余流保活、重新订阅快照及所有测试客户端关闭。它们**不会重启容器或模拟真实半开 TCP**。然后运行 `vp check`、`pnpm run docs:check`、`pnpm run ready` 并记录退出码。当前仅协作容器内隔离版资源测试 6/6 通过，网络/格式/完整项目质量链待维护者 Windows/Docker 实测。参见 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md)。
+两个网络脚本都只访问根 `.env` 给定端口下的 `127.0.0.1`，每条代理做 6 路真实 SSE 流、snapshot、heartbeat、单路 abort 后其余流保活、重新订阅快照及所有测试客户端关闭。它们**不会重启容器或模拟真实半开 TCP**。然后运行 `vp check`、`pnpm run docs:check`、`pnpm run ready` 并记录退出码。当前协作容器内隔离版资源测试 8/8 通过（含真实回环 HTTP 容量检查），网络/格式/完整项目质量链待维护者 Windows/Docker 实测。参见 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md)。
