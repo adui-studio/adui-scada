@@ -34,7 +34,7 @@ export class DemoSseClients {
     const release = () => this.clients.delete(response);
     // 监听响应的关闭而非请求完成；GET 请求结束不代表 SSE 订阅结束。
     response.once("close", release);
-    response.once("error", release);
+    response.once("error", () => this.drop(response));
     return true;
   }
 
