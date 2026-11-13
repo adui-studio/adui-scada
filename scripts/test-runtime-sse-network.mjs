@@ -80,7 +80,9 @@ async function connect(url) {
       while (!controller.signal.aborted) {
         const { value, done } = await reader.read();
         if (done) break;
-        pending += decoder.decode(value, { stream: true }).replaceAll("\r\n", "\n");
+        pending += decoder.decode(value, { stream: true });
+        // 跨网络分块的 CRLF 也必须被正确归一化。
+        pending = pending.replaceAll("\r\n", "\n");
         if (pending.length > 256 * 1024) throw new Error("SSE 单个事件超过 256 KiB 上限");
         let boundary;
         while ((boundary = pending.indexOf("\n\n")) >= 0) {
