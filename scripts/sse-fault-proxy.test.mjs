@@ -115,7 +115,9 @@ await test("复用 Keep-Alive TCP 连接的后续 SSE 请求仍被准确识别�
         const request = httpRequest(new URL("health", proxy.url), { agent }, (response) => {
           const chunks = [];
           response.on("data", (chunk) => chunks.push(chunk));
-          response.once("end", () => resolve({ status: response.statusCode, body: Buffer.concat(chunks).toString() }));
+          response.once("end", () =>
+            resolve({ status: response.statusCode, body: Buffer.concat(chunks).toString() }),
+          );
         });
         request.once("socket", (socket) => {
           healthSocket = socket;
