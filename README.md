@@ -146,3 +146,9 @@ Runtime 新增框架无关的 `ReadonlyTagSource` 契约与 `createSseTagSource(
 本批只新增测试能力，不改变产品协议和工业控制安全边界。新命令 `pnpm run test:sse:fault:unit` 使用 Node 真实 HTTP/TCP 检查临时故障代理的回环访问限制、字节阻断和关闭回收，已纳入 `pnpm run ready`。浏览器端的 `pnpm run test:sse:fault:browser` 需要先启动 `dev:demo`、`dev:react`、`dev:vue`；`pnpm run test:sse:fault:proxy` 需要本机 Docker 演示栈运行。二者均通过测试代理暂停 SSE 下行字节，而不关闭真实浏览器与模拟服务之间的 TCP 连接，以检查 15 秒断流恢复。
 
 额外的 `pnpm run test:sse:soak` 和 `pnpm run test:sse:soak:proxy` 分别验证独立 Demo 和 Docker Nginx 的六路持续 SSE 心跳及 Tag 增量（每路至少 12 次新增心跳）；仅按需执行，不加入日常 ready。上述命令不会重启或停止现有 Docker 容器，目标仅为 127.0.0.1。功能与验收边界详见 [ADR-0058](docs/adr/0058-tcp-sse-fault-and-soak-tests.md)。
+
+## V0.3 第二十七批 · 本机实时数据链路诊断
+
+Vue/React 运行监控页面新增共享的**实时链路诊断**：连接状态、每次 Runtime 启动会话的断连过程次数、最近一次被 Core 接受的 Tag 的本地接收时间、状态快照生成时的数据年龄以及 GOOD/UNCERTAIN/BAD/STALE 的数量。桌面离线模拟也复用相同模型，但不把本地模拟计作网络重连。数据年龄不是 PLC 或网络 RTT，既不向服务器报告，也不存入数据库。具体边界见 [ADR-0059](docs/adr/0059-runtime-local-diagnostics.md)。
+
+验收在项目根目录执行 `pnpm run test:runtime`、`vp check`、`pnpm run docs:check` 和 `pnpm run ready`，并分别通过 React/Vue 浏览器检查诊断面板以及旧有 SSE 故障恢复；本批测试结果仍待维护者 Windows 实测。
