@@ -37,9 +37,9 @@
 
 ## 实施状态与验收约束
 
-分支代码与 Catalog/Manifest 已准备，但本协作环境无法访问 npm Registry，**目前尚未由 pnpm 更新 `pnpm-lock.yaml`**。这属于明确的交付阻塞，而不是可以忽略的差异。
+Windows 已通过 pnpm 12.18.0 生成并提交锁文件，七项新增依赖在 Catalog、Manifest 与 pnpm-lock.yaml 中一致。
 
-维护者应在 Windows 上先运行 `pnpm install`、检查并提交 pnpm 12 生成的锁文件，再执行 `pnpm install --frozen-lockfile`、`pnpm run ready`、`pnpm run test:docker:server`。预计普通单测 355、NestJS E2E 8、原隔离 PostgreSQL 11；数字均为新增后预期，未经运行不能宣称通过。PR 在锁文件和验收记录齐全前保持 Draft 且禁止合并。
+Windows 首轮已实测：静态检查无警告、单测 355/355、Docker 隔离构建及烟测通过；E2E 的 beforeAll 触发 10 秒超时，导致 ready 失败。新增测试隔离补丁后单测预期为 356；必须重新验证 E2E 和 ready，PR 继续保持 Draft。
 
 ## 未来工作
 
@@ -50,4 +50,8 @@
 - `@nestjs/config@12.0.1` 通过全局 `ConfigModule` 提供后续统一的配置注入入口。现阶段仍由 `apps/server/src/main.ts` 唯一读取仓库根目录 `.env`，`ignoreEnvFile: true` 防止重复装载，不新增直接 `dotenv` 依赖。注意现有配置使用仍以 `process.env` 为主，后续模块按需迁移到 `ConfigService`，不宣称已完成类型化配置校验。
 - `pino-pretty@13.2.0` 仅为服务端开发依赖；只有 `NODE_ENV` 非 `production` 且 stdout 是交互式终端时启用 transport，否则保留结构化 JSON 输出。Pretty 只修改可读性，不放宽日志白名单与凭据脱敏。
 - `apps/server/test/app.e2e-spec.ts` 中 Swagger 404 检查改为显式 Vitest `expect`，消除 `vitest(expect-expect)` 静态检查警告。
-- 上述依赖尚需 pnpm 12 实际生成锁文件、安装并运行全部测试；不得将静态修改视为构建通过。
+- 锁文件已由 pnpm 12.18.0 生成并提交；完整 E2E 与 ready 仍待修复复验。
+
+## E2E 日志 Transport 隔离补丁
+
+原有 Pretty 条件未排除测试运行器。现在显式排除 NODE_ENV=test、VITEST=true，即使测试运行在交互终端也不启动 Pretty 工作线程；生产与非 TTY 输出继续保持 JSON。新增纯函数选择策略的单元测试，并断言当前 Vitest 进程的实际日志配置不存在 transport。此前 E2E 在 beforeAll 超时，是否由此解决仍须 Windows 复验；没有提高 hook 超时掩盖现象。
