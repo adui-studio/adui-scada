@@ -1,4 +1,6 @@
 import { EventEmitter } from "node:events";
+import { createServer } from "node:http";
+import { setTimeout as pause } from "node:timers/promises";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { DemoSseClients, DEMO_SSE_MAX_CLIENTS } from "./sse-clients.mjs";
@@ -112,4 +114,51 @@ test("客户端容量和字节限制拒绝非法参数", () => {
   assert.throws(() => new DemoSseClients(0), /SSE 客户端上限/);
   assert.throws(() => new DemoSseClients(1, 0), /SSE 待发送字节上限/);
   assert.throws(() => new DemoSseClients(1.2), /SSE 客户端上限/);
+});
+
+test("真实回环 HTTP 同时容纳 32 路 SSE，超额返回 503 且断开后可恢复容量", async () => {
+  const clients = new DemoSseClients();
+  const server = createServer((_request, response) => {
+    if (!clients.hasCapacity()) {
+      response.writeHead(503, { "Retry-After": "5", "Content-Type": "text/plain" });
+      response.end("本机 SSE 模拟订阅数量已达到上限");
+      return;
+    }
+    response.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8" });
+    if (clients.add(response)) {
+      clients.send(response, 'data: {"kind":"snapshot","values":[]}\\n\\n');
+    }
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = "http://127.0.0.1:" + server.address().port + "/events";
+  const controllers = [];
+
+  try {
+    for (let index = 0; index < 32; index++) {
+      const controller = new AbortController();
+      const response = await fetch(address, { signal: controller.signal });
+      assert.equal(response.status, 200);
+      controllers.push(controller);
+    }
+    assert.equal(clients.size, 32);
+    const rejected = await fetch(address);
+    assert.equal(rejected.status, 503);
+    assert.equal(rejected.headers.get("retry-after"), "5");
+
+    controllers[0].abort();
+    for (let attempt = 0; attempt < 40 && clients.size !== 31; attempt++) {
+      await pause(50);
+    }
+    assert.equal(clients.size, 31);
+
+    const nextController = new AbortController();
+    const resumed = await fetch(address, { signal: nextController.signal });
+    controllers.push(nextController);
+    assert.equal(resumed.status, 200);
+    assert.equal(clients.size, 32);
+  } finally {
+    for (const controller of controllers) controller.abort();
+    clients.closeAll();
+    await new Promise((resolve) => server.close(resolve));
+  }
 });
