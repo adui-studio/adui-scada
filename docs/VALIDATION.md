@@ -206,6 +206,6 @@ Docker 隔离测试应依次验证：
 
 本批从维护者已实测的第二十二批 **400 单测、17 NestJS E2E** 基线出发，新增 4 项 SSE 适配器测试、3 项 Runtime 数据质量测试、1 项 NestJS SSE 心跳资源测试，预计 **408 项普通单测、17 项 NestJS E2E**。**尚未实际运行新增代码**，不得标记验收通过。
 
-验证范围：原独立 SSE 与 NestJS 本机受控 SSE 具名 heartbeat 每 5 秒发送、停机/取消订阅清理；适配器保持固定同源路由和既有 EventSource 原生重连，15 秒完全静默后强制新建流，禁止旧流消息；Runtime 只有收到通过 Core 校验的有效非空 Tag 数据才刷新 12 秒数据时钟，上游 STALE、空 delta、断线及数据沉默不能展示伪造 GOOD，恢复后按序列号和新会话快照重新计算状态。原 8 秒数据暂停保留，正常心跳不会错误取消过期质量。
+验证范围：原独立 SSE 与 NestJS 本机受控 SSE 具名 heartbeat 每 5 秒发送、停机/取消订阅清理；适配器保持固定同源路由和既有 EventSource 原生重连，15 秒完全静默后强制新建流，禁止旧流消息；Runtime 只有收到通过 Core 校验的非空快照或被 TagStore 接受的新序列增量才刷新 12 秒数据时钟，上游 STALE、空 delta、重复旧序列、断线及数据沉默不能展示伪造 GOOD，恢复后按序列号和新会话快照重新计算状态。原 8 秒数据暂停保留，正常心跳不会错误取消过期质量。
 
 必须在 Windows 实际执行 `pnpm run test:runtime`、`vp check`、`pnpm run ready`、`pnpm run test:docker:server` 并提交输出与退出码。预期 Docker 冻结依赖安装、隔离镜像健康/就绪及工业写入 404、正式 Linux SIGTERM 退出码 0 均不回退。用户手工浏览器心跳可见性、断线恢复、SSE 长连压力、PostgreSQL 真库和现场工业数据属于单独验收；未运行不能声称通过。
