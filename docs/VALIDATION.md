@@ -401,3 +401,16 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **仍待 Windows 实测**：`pnpm run test:runtime`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`；以及手工 UI 和 Tauri 桌面验证。上述浏览器测试不能证明 Node/Vitest、Lint、类型、全量构建、真实工业网络、生产报警持久化已完成。
 
 本次仅补充验收文档与 PR 说明，无业务代码变更。新增文档提交后的格式及文档静态检查仍待执行；PR #50 保持 Draft，需维护者明确授权方能合并。
+
+## 2026-11-14 · V0.3 第二十九批 Tag 定义目录验收清单（待执行）
+
+- [ ] `pnpm run test:unit`：Tag 定义白名单、稳定 ID、重命名不改变绑定、类型/单位、目录快照隔离、TagValue 类型匹配与不匹配、未知 Tag、原子批量拒绝、质量动态独立。
+- [ ] `pnpm run test:runtime`：在线 DemoRuntime 使用目录；收到与定义类型不匹配的有效 JSON Tag 时进入 error，旧值不得被错误类型覆盖；离线模拟与既有数据恢复不回归。
+- [ ] `vp check`：格式、Lint、类型检查零警告零错误。
+- [ ] `pnpm run docs:check`：Markdown 文档检查通过。
+- [ ] `pnpm run ready`：全量单测、Runtime、SSE、NestJS E2E、Vue/React/NestJS 类型检查和构建通过。
+- [ ] React/Vue Studio 人工检查三项演示 Tag 的数据类型、单位、描述与稳定 ID 显示一致，绑定/撤销/导入导出不变。
+- [ ] `pnpm run test:sse:browser` 与 `pnpm run test:sse:fault:browser`：在线 Runtime 类型校验没有破坏心跳、断流恢复和质量显示。
+- [ ] 项目级 Tag 元数据持久化、Schema 迁移、地址映射、驱动配置、PLC/DCS、工业现场：不属于本批交付。
+
+本批 FR-004 仅部分实现；代码内演示目录的重命名不持久化，TagQuality 仍属于动态 TagValue，不得把元数据校验宣传为生产 Tag 配置中心。详见 [ADR-0061](adr/0061-tag-definition-catalog.md)。
