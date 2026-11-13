@@ -329,3 +329,11 @@ Node 24 原生 HTTP Server 在 `app.listen` 之前由 `apps/server/src/security/
 Vue/React 两套 Web 仍用共享 `DemoRuntime` 默认预设，没有新增环境开关、路由代理或生产业务接口。Nest 开发模拟模块及 Swagger 非生产回环访问限制保持原样；如果未来希望从浏览器切换到 Nest，本地同源路由映射和部署访问边界必须单独评审，不得直接跨域连接或暴露无鉴权诊断接口。Tauri 离线模拟维持现状。
 
 Runtime 生命周期按连接代次隔离：停止时中止 fetch、关闭 SSE、旧值标记 STALE，断线后等待新 snapshot 才恢复接收 delta；有害消息关闭当前订阅。此基础不涵盖正式鉴权、工业采集、发布版本加载、背压与多客户端在线容量。详见 [ADR-0054](adr/0054-readonly-tag-source-adapters.md)。
+
+## V0.3 第二十三批：模拟 SSE 心跳和 Tag 数据双时钟
+
+本机独立水处理 HTTP SSE 与显式开启的 NestJS 本机模拟 SSE 均增加每 5 秒一个 `event: heartbeat` 具名事件，保持共享 `TagChange` 的 `snapshot/delta` 结构不变，事件不承载工业设备读数。浏览器 `createSseTagSource` 独立维护 15 秒传输空闲看门狗：收到 Tag 事件或具名 heartbeat 即重置，超时后只重建原固定同源 EventSource，旧流回调失效，订阅关闭时释放定时器。
+
+`DemoRuntime` 独立维护 12 秒有效 Tag 值接收看门狗：只有经过共享 Core 校验且有值的 TagChange 能刷新数据新鲜度；持续停止更新时借助 `TagStore.markDisconnected` 将旧读数标记 STALE，`RuntimeStatus.stale` 与中文显示名称为 Vue/React 共用。网络报错继续显示 reconnecting 并等待新的 snapshot；Heartbeat 不向 TagStore 注入假读数。两套看门狗都需要在停止、非法事件和断连切换中清理/屏蔽旧会话；本机原有 8 秒停采样演练不应触发 12 秒误判。见 [ADR-0055](adr/0055-sse-heartbeat-and-tag-silence.md)。
+
+以上均为模拟链路原型，不代表经过现场评审的心跳 SLA、认证的 Gateway、生产 SSE 背压、工控网络部署或真实设备质量处理。
