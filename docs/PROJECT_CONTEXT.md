@@ -570,3 +570,19 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 本批依照 [ADR-0055](adr/0055-sse-heartbeat-and-tag-silence.md)，在原水处理 SSE 与本机受控 NestJS SSE 中每 5 秒发送一次**具名 heartbeat 事件**，不混入共享 `TagChange`；浏览器源适配器将任何 SSE 活动视为传输存活，连续 15 秒完全静默才关闭旧 EventSource 并以原固定同源 URL 重建；共享 Runtime 另以 12 秒无有效 Tag 值检测数据过期，降级旧读数为 STALE，增加中文 `stale` 状态，不允许心跳或空增量伪造正常更新。既有 30 秒模拟周期中的 8 秒停采样与质量演练保留，断连后仍要求先 snapshot 再 delta。
 
 新增 5 项适配器心跳/重连单测、3 项 Runtime 数据质量单测及 1 项 NestJS SSE 控制器单测。维护者 2026-11-13 Windows 实测 **Runtime 专项 29/29、Server 专项 79/79、全量单测 409/409（36 个文件）、NestJS E2E 17/17（3 个文件）**；`vp check` **251 个文件格式正确、123 个受检文件零警告/错误**，Prisma Client 7.10.1 生成、71 份 Markdown 文档检查、Core/双框架/NestJS 类型检查及构建均成功，完整 `ready` **退出码 0**。Docker 镜像冻结安装、隔离 HTTP 烟测、正式 Linux PID 1 SIGTERM 退出码 0，**Docker 命令退出码 0**。E2E 的 HTTP 503 / Terminus 错误为预期关闭负面测试。无新依赖、锁文件、Prisma、Core Schema、Vue/React 页面、工业 Gateway 或生产 API 修改。Tauri 离线运行时和浏览器默认 `/demo` 保持不变；5/12/15 秒阈值仅为本机模拟参数。尚无人工浏览器断流演练、SSE 并发压测、PostgreSQL 真库和工业现场验证。本次仅追加验收文档后建议复查格式和文档检查。PR #45 保持 Draft，未经明确授权不得合并。
+
+## 2026-11-13 · V0.3 第二十四批：浏览器 SSE 回归与前台恢复时效
+
+基于已合并第二十三批的 `main`（`e9c2516`），在分支 `feat/v0.3-sse-browser-recovery` 开展本批工作。新增真实 Chrome/Edge 的 React/Vue SSE 浏览器回归脚本，模拟“具名心跳继续但 Tag 停更”和“整个 SSE 事件回调静默”两种独立故障，检查断流自动重建与退出页面后的资源释放。共享 Runtime 在后台标签页恢复前台时立即复查 15 秒传输静默与 12 秒 Tag 数据时效，并注销可见性监听，不修改双框架页面及真实工业接口。
+
+当前仅实现源码与测试方案。新增浏览器脚本已在协作容器做 Node 语法检查，**Windows Vite+ 全链、真实 Chrome/Edge 浏览器执行、代理半开及多客户端负载仍待维护者实测**。具体设计见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)，验收项见 [VALIDATION](VALIDATION.md)。本批 Draft PR 未获验收授权前不合并。
+
+## 2026-11-13 · V0.3 第二十四批首轮 Windows 验收阻塞及修复
+
+维护者提供首轮实际日志：`pnpm run test:sse:browser` 因 `fetch failed` 退出码 1（尚无三项服务的运行日志，原因未确认）；`pnpm run test:runtime` 结果为 **30/31**，新版前台唤醒用例在本地 `STALE` 后收到 `sequence=2` 不能恢复。复核发现将本地显示过期写回共享 TagStore 会占用远端序列号，存在真实新值被错拒风险。已在本批分支改为按 Tag 的 Runtime 展示层过期覆盖，不修改共享序列校验，补充旧序列仍被拒绝、下一条真实新序列恢复及多 Tag 独立恢复的回归。浏览器脚本同时读取根 `.env` 开发端口并补充可定位失败 URL 的前置检查。**修复后 Windows 专项和完整质量链尚未重新实测**；Draft PR #46 仍不合并。
+
+## 2026-11-13 · V0.3 第二十四批：第二轮 Windows 自动化验收通过
+
+维护者继第一轮失败后同步最新分支并重新执行了本机质量链，现已提供日志证明：**React / Vue SSE 浏览器回归均通过（`test:sse:browser` 退出码 0）、Runtime 专项 32/32（3 文件）、全量单测 412/412（36 文件）、NestJS E2E 17/17（3 文件）**；`vp check` 检查 253 个文件格式正确、124 个受检文件零错误零警告；72 份 Markdown 检查通过。完整 `pnpm run ready` 退出码 **0**，包含 Catalog/配置/中文文案、Prisma Client 7.10.1、双 Web 与 NestJS 类型检查和构建。此前 `fetch failed` 源于浏览器预检查服务/端口未与实际运行环境对齐，现脚本读取根 `.env` 并能确认两端本机地址；此前 STALE 与 sequence 冲突已通过 Runtime 展示层过期质量覆盖修复。
+
+这证明本机浏览器接收/重连生命周期自动化成功，不等于真实网络丢包、Nginx 半开或工业现场可靠性已确认；本批未执行 Docker 增量回归、人工后台标签页节流、SSE 高并发、生产身份权限或 PostgreSQL 真库验证。**PR #46 仍保持 Draft、Assignee 为 `@adui-dev`，等待维护者明确合并授权**。上述实测发生在本次验收文档追加之前，文档最新提交需按需复查 `vp check` 和 `pnpm run docs:check`。

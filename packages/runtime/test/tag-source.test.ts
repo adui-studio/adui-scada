@@ -263,3 +263,49 @@ test("超时断连回调同步关闭订阅后不得再次建立 EventSource", ()
   expect(FakeEventSource.instances[0]?.closeCount).toBe(1);
   expect(vi.getTimerCount()).toBe(0);
 });
+
+test("后台标签页恢复前台后按真实事件时间重建静默 SSE，关闭后清理监听", () => {
+  vi.useFakeTimers();
+  const started = Date.parse("2026-11-13T00:00:00.000Z");
+  vi.setSystemTime(started);
+  const listeners = new Set<() => void>();
+  const fakeDocument = {
+    visibilityState: "hidden",
+    addEventListener(type: string, callback: () => void) {
+      if (type === "visibilitychange") listeners.add(callback);
+    },
+    removeEventListener(type: string, callback: () => void) {
+      if (type === "visibilitychange") listeners.delete(callback);
+    },
+  };
+  vi.stubGlobal("document", fakeDocument);
+  vi.stubGlobal("EventSource", FakeEventSource);
+  let disconnected = 0;
+  const connection = createSseTagSource().subscribe({
+    onMessage: () => {},
+    onDisconnected: () => {
+      disconnected++;
+    },
+  });
+
+  try {
+    expect(listeners.size).toBe(1);
+    vi.setSystemTime(started + 7000);
+    FakeEventSource.instances[0]?.emitHeartbeat();
+    vi.setSystemTime(started + 20_000);
+    fakeDocument.visibilityState = "visible";
+    for (const listener of listeners) listener();
+    expect(FakeEventSource.instances).toHaveLength(1);
+    expect(disconnected).toBe(0);
+
+    vi.setSystemTime(started + 23_000);
+    for (const listener of listeners) listener();
+    expect(disconnected).toBe(1);
+    expect(FakeEventSource.instances).toHaveLength(2);
+    expect(FakeEventSource.instances[0]?.closeCount).toBe(1);
+  } finally {
+    connection.close();
+  }
+  expect(listeners.size).toBe(0);
+  expect(vi.getTimerCount()).toBe(0);
+});

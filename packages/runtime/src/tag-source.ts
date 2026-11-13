@@ -55,22 +55,32 @@ export function createSseTagSource(preset: DemoTagSourcePreset = "standalone"): 
       let closed = false;
       let stream: EventSource | null = null;
       let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+      let lastActivityAt = Date.now();
+      const visibilityDocument = typeof document === "undefined" ? null : document;
 
       const clearSilenceTimer = (): void => {
         if (silenceTimer !== null) clearTimeout(silenceTimer);
         silenceTimer = null;
       };
+      const checkSilence = (): void => {
+        if (closed) return;
+        // 后台标签页可能冻结计时器，以最后一次真实 SSE 事件时间判断传输是否静默。
+        const remaining = SSE_TRANSPORT_TIMEOUT_MS - (Date.now() - lastActivityAt);
+        if (remaining > 0) {
+          clearSilenceTimer();
+          silenceTimer = setTimeout(checkSilence, remaining);
+          return;
+        }
+        handlers.onDisconnected();
+        // 断连回调可能同步关闭 Runtime，不得在关闭后重建连接。
+        if (closed) return;
+        stream?.close();
+        connect();
+      };
       const armSilenceTimer = (): void => {
+        lastActivityAt = Date.now();
         clearSilenceTimer();
-        silenceTimer = setTimeout(() => {
-          if (closed) return;
-          // 浏览器 EventSource 可能保持 OPEN 却不再收到字节，需要主动重建。
-          handlers.onDisconnected();
-          // 断连回调可能同步停止 Runtime；回调后必须再次核对关闭状态。
-          if (closed) return;
-          stream?.close();
-          connect();
-        }, SSE_TRANSPORT_TIMEOUT_MS);
+        silenceTimer = setTimeout(checkSilence, SSE_TRANSPORT_TIMEOUT_MS);
       };
       const connect = (): void => {
         const next = new EventSource(routes.events);
@@ -93,11 +103,16 @@ export function createSseTagSource(preset: DemoTagSourcePreset = "standalone"): 
         armSilenceTimer();
       };
 
+      const onVisibilityChange = (): void => {
+        if (visibilityDocument?.visibilityState === "visible") checkSilence();
+      };
       connect();
+      visibilityDocument?.addEventListener("visibilitychange", onVisibilityChange);
       return {
         close(): void {
           closed = true;
           clearSilenceTimer();
+          visibilityDocument?.removeEventListener("visibilitychange", onVisibilityChange);
           stream?.close();
           stream = null;
         },

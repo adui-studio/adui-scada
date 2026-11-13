@@ -211,3 +211,33 @@ Docker 隔离测试应依次验证：
 维护者 Windows **完整 `pnpm run ready` 退出码 0**：11 个 Manifest、51 项 Catalog 依赖检查通过；中文文案检查 149 个自有文件；Prisma Client 7.10.1 生成成功；Core、Vue、React、Draft Storage、NestJS 类型检查与构建均通过；**71 个 Markdown** 文档静态检查通过。独立 Docker 构建执行 `pnpm install --frozen-lockfile` 与 NestJS 构建，隔离烟测验证存活/就绪接口 200、工程及设备写入等未开放接口 404；正式 Linux Node PID 1 接收 SIGTERM 后正常退出码 **0**，`pnpm run test:docker:server` **退出码 0**。E2E 中 Terminus `Health Check has failed!` / HTTP 503 是主动模拟关闭的预期负面用例，并非失败。Docker 验证的是服务端容器隔离与退出机制，**不等同于浏览器 Runtime 的真实 SSE 长连接测试**。
 
 尚未收到人工浏览器心跳可见性、异常断线恢复演练记录；SSE 长时间压力、浏览器后台定时器节流、Nginx 反向代理、生产身份权限、PostgreSQL 真库和现场工业设备仍未验证。本次验收记录在上述实测后更新，建议最新 HEAD 复查 `vp check` 与 `pnpm run docs:check`；不能将记录性文档变更视为已重复执行全量质量链。
+
+## 2026-11-13 · V0.3 第二十四批验证清单（Windows 自动化已通过）
+
+- [x] 独立环境验证新增 `scripts/test-runtime-sse-browser.mjs` 可以通过 `node --check`；此检查只覆盖 JavaScript 语法。
+- [x] `pnpm run test:runtime`：维护者 Windows 实测 32/32 通过（3 个文件），退出码 0；包含后台标签页恢复前台和多 Tag 独立质量恢复。
+- [x] `pnpm run test:sse:browser`：维护者 Windows 实测 React（127.0.0.1:15173）和 Vue（127.0.0.1:15174）均输出心跳保活、Tag 过期、静默重连、资源清理通过；退出码 0。需保持本机 Demo、React、Vue 服务运行。
+- [x] `vp check`：253 个文件格式正确、124 个受检文件零警告/零错误；`pnpm run docs:check`：72 份 Markdown 通过；完整 `pnpm run ready` 退出码 0，包含全量单测 412/412（36 文件）、NestJS E2E 17/17（3 文件）、双 Web/NestJS 类型检查与构建。
+- [ ] Windows Chrome/Edge 人工后台标签页恢复以及 Nginx 代理断流现场演练。
+- [ ] 真实高并发 SSE、生产鉴权、PostgreSQL 真库与工业网关现场验收；均不属当前原型完成范围。
+
+本批测试脚本的故障注入只屏蔽 EventSource 回调而非真实网络报文；不能把浏览器脚本通过解释为代理断流、半开 TCP 和工业现场稳定性已经验收。详见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
+
+### 第二十四批首轮 Windows 反馈与定向修复（2026-11-13）
+
+维护者实际执行 `pnpm run test:runtime`：**30/31 通过（3 个文件），退出码 1**，新增“后台标签页返回前台”用例在本地过期后收到 `sequence=2` 仍为 `stale`。经代码检查，原 Runtime 调用 `TagStore.markDisconnected()` 生成合成过期事件并递增序列，导致上游下一条真实递增序列与合成序列冲突。现修正为 **仅在 Runtime 展示层逐 Tag 标记过期**，旧上游序列不恢复、实际接受的新序列仅恢复对应 Tag，新增多 Tag 部分恢复回归；保留网络断连必须新 snapshot 的规则。
+
+维护者实际执行 `pnpm run test:sse:browser`：预检查报告 `fetch failed`，**退出码 1**；未提供三项本机服务的运行日志，不能推定具体端口或代理根因。脚本现按根 `.env` 解析开发端口，分别检查页面和模拟工程接口，报错包含 URL、底层错误及必要启动命令。上述两项修复提交后 **尚未收到重新执行结果**，不得标记通过。维护者下次需分别在三个终端启动 Demo、React、Vue 后，再运行浏览器回归及 Runtime 单测，最后执行 `vp check`、`pnpm run docs:check` 和 `pnpm run ready`。
+
+### 第二十四批第二轮 Windows 自动化复验（2026-11-13）
+
+维护者上传的 15:32 左右实际测试日志确认：**本批原先两处阻塞均已消除**。
+
+- `pnpm run test:sse:browser`：先检查 React `http://127.0.0.1:15173` 与 Vue `http://127.0.0.1:15174`，两端分别报告 SSE 心跳保活、Tag 过期、静默重连和资源清理通过；**退出码 0**。
+- `pnpm run test:runtime`：**32/32 通过（3 文件），退出码 0**。此前 STALE 与上游 sequence 冲突已由共享 Runtime 展示层隔离解决，补充的多 Tag 独立恢复用例通过。
+- `vp check`：**253 个文件格式正确**，124 个受检文件**无警告、Lint 或类型错误**。
+- `pnpm run docs:check`：**72 份 Markdown 文件通过**。
+- `pnpm run ready`：**退出码 0**。全量单元测试 **412/412（36 文件）**，NestJS E2E **17/17（3 文件）**；11 个清单/51 项 Catalog 依赖检查、9 个 TSConfig 共享配置检查、根环境和 LF 检查、150 个自有文件中文文案检查、Prisma Client 7.10.1 生成、Vue/React/NestJS 类型检查及构建成功。
+- E2E 中 Terminus 的预期 HTTP 503 / `Health Check has failed!` 是故意模拟服务关闭的负面测试，**不是未通过项**；构建中的 Rolldown 性能分析提示也不是失败。
+
+**边界：** 本次浏览器脚本在真实 Chrome/Edge 与原生 SSE 上运行，但故障注入仅屏蔽 EventSource 回调；没有验证真实 TCP 断网、Nginx 半开连接、高并发/背压、人工后台标签页节流、生产鉴权、PostgreSQL 真库、Docker 本批增量回归或工业现场。该次日志对应文档记录性更新前的已验收代码；本次更新文档本身尚未重新执行 `vp check` 和 `pnpm run docs:check`。PR #46 继续 Draft，等待维护者明确合并授权。

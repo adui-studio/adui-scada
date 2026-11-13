@@ -337,3 +337,7 @@ Runtime 生命周期按连接代次隔离：停止时中止 fetch、关闭 SSE�
 `DemoRuntime` 独立维护 12 秒有效 Tag 值接收看门狗：只有经过共享 Core 校验且有值的 TagChange 能刷新数据新鲜度；持续停止更新时借助 `TagStore.markDisconnected` 将旧读数标记 STALE，`RuntimeStatus.stale` 与中文显示名称为 Vue/React 共用。网络报错继续显示 reconnecting 并等待新的 snapshot；Heartbeat 不向 TagStore 注入假读数。两套看门狗都需要在停止、非法事件和断连切换中清理/屏蔽旧会话；本机原有 8 秒停采样演练不应触发 12 秒误判。见 [ADR-0055](adr/0055-sse-heartbeat-and-tag-silence.md)。
 
 以上均为模拟链路原型，不代表经过现场评审的心跳 SLA、认证的 Gateway、生产 SSE 背压、工控网络部署或真实设备质量处理。
+
+## 2026-11-13 · V0.3 第二十四批：浏览器 SSE 时效回归
+
+浏览器仍经 React/Vue 两个正式 Web 入口、共享 Runtime 和现有同源开发代理访问本地模拟 SSE。后台页可见性恢复复查由共享 Runtime/TagSource 实现，避免双框架重复实现或额外的工业协议入口；测试使用真实浏览器的原生 EventSource 包装层，保留前后端实际 HTTP/SSE 路径。故障注入局限于浏览器回调层，不视为网络或工业网关可靠性测试。详见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
