@@ -612,3 +612,17 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 继旧 Compose 命令遗漏根 `.env` 造成端口漂移后，维护者已重新运行 `pnpm run env:check`、`pnpm run docker:demo:up`、`pnpm run docker:demo:ps` 和 `pnpm run test:sse:proxy`：环境/LF 检查通过，四镜像构建并启动，Demo/Server Healthy；Docker 真实宿主机映射为 React `18080->8080`、Vue `18081->8080`，两条 Nginx SSE 代理均通过六路 snapshot、具名 heartbeat、单路断开隔离和重订阅，**代理测试退出码 0**。结合上一份日志，独立 SSE 客户端单测 **8/8**、直连网络六路回归 **退出码 0**。
 
 本批 Windows Docker 代理验收确认已完成，但 **最新 `vp check`、`docs:check` 和完整 `ready` 尚未提供**，真实 Nginx 半开故障、持续高并发、生产身份权限、真库和工业现场仍未验证。只追加验收记录，不修改已验收业务代码；PR #47 Draft 待最终验收与明确合并授权。
+
+### 第二十五批 Windows 完整质量链最终复验（2026-11-13）
+
+维护者上传 PowerShell 实测日志，针对本批已修复代码确认：
+
+- `vp check`：**257 个文件格式正确**，127 个受检文件**无警告、Lint 错误或类型错误**，命令退出码 **0**。此前 9 条类型感知 Lint 警告均已消除。
+- `pnpm run docs:check`：**73 份 Markdown 文档通过**，退出码 **0**。
+- `pnpm run ready`：**退出码 0**。依赖检查 **11 个清单、51 项 Catalog**，共享配置 9 个 TSConfig 消费端，中文文案 153 个自有文件，根环境与 LF 检查通过；Prisma Client **7.10.1** 生成成功。
+- 全量 Vitest **412/412 通过（36 个文件）**；纳入 ready 的 SSE Node 专项 **8/8 通过**，含真实回环 HTTP 32 路容量、第 33 路 HTTP 503 和释放后重新订阅。
+- NestJS E2E **17/17 通过（3 个文件）**，包含预期的服务关闭负面检查；日志中的 HTTP 503 / `Health Check has failed!` 属于通过的故障场景，不是失败。
+- Vue、React、NestJS 类型检查与构建全部通过。
+- 结合此前维护者独立网络日志：`test:sse:network` 实际六路 HTTP SSE 通过、退出码 0；`test:sse:proxy` 在 React `18080` 与 Vue `18081` 的 Docker Nginx 双入口通过、退出码 0，Demo 与 Server 为 Healthy。
+
+**自动化验收结论：第二十五批 Windows 完整质量链及 Docker Nginx SSE 代理专项均通过。** 注意本段验收记录追加后尚未再次执行最新文档的格式与静态检查，建议合并审查前运行 `vp check`、`pnpm run docs:check`。仍未验证真实 Nginx 半开连接、持续高并发/慢消费者长期负载、生产认证、PostgreSQL 真库和工业现场设备；不能把本机 Demo 资源上限视为工业 SLA。PR #47 继续 Draft，待维护者明确同意后才能合并。
