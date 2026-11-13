@@ -1400,3 +1400,9 @@ pnpm run test:sse:proxy
 本批补丁仅修复 Docker 配置读取：演示栈 `up/down/logs` 与新增 `ps` 命令统一显式加载仓库根 `.env`；Compose 四组端口回退值同步为根 `.env.example` 默认值；`env:check` 强制验证脚本及四组默认值，防止再次静默降级到旧端口。**没有修改 SSE 服务、NestJS 或 Vue/React 业务代码，也未执行 Docker 或重启维护者计算机上的容器。**
 
 维护者同步分支后，建议在仓库根目录执行 `pnpm run env:check`、`pnpm run docker:demo:up`、`pnpm run docker:demo:ps` 和 `pnpm run test:sse:proxy`；`docker:demo:ps` 的宿主机端口应分别显示 `127.0.0.1:18080->8080/tcp` 和 `127.0.0.1:18081->8080/tcp`。如仍不一致，需检查 PowerShell 是否存在 `SCADA_REACT_PORT`/`SCADA_VUE_PORT` 同名进程环境变量覆盖；切勿粘贴完整 `docker compose config --environment`，其中可能包含凭据。修复后的 Windows Docker Nginx 代理烟测、`vp check`、`docs:check` 和完整 `ready` 尚未实测。
+
+### 第二十五批 Windows Docker 代理复验结果（2026-11-13）
+
+维护者已使用 `docker compose --env-file .env -f deploy/docker/compose.demo.yaml` 完成四个镜像构建和容器启动，`docker:demo:ps` 验证 React `127.0.0.1:18080->8080/tcp`、Vue `127.0.0.1:18081->8080/tcp` 端口映射准确。Demo/Server 均 Healthy。React/Vue 两条 Nginx `/demo/events` 的各六路 SSE 测试均包含 snapshot、heartbeat、断开隔离和重订阅快照，`pnpm run test:sse:proxy` **退出码 0**。此前已确认 `pnpm run test:sse:clients` **8/8 通过**、`pnpm run test:sse:network` **退出码 0**。
+
+本轮 `pnpm run env:check` 已通过；**尚缺本批最新提交的 `vp check`、`pnpm run docs:check`、`pnpm run ready` 验收结果**。仍不代表已覆盖真实代理半开或生产环境安全。
