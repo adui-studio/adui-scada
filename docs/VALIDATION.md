@@ -202,10 +202,12 @@ Docker 隔离测试应依次验证：
 
 本批**未验证** PostgreSQL 真库、工业现场、生产鉴权、SSE 并发背压、浏览器切换到 Nest 数据源，也没有收到人工 Vue/React 页面断连演练记录。验收文档补写后建议重新执行 `vp check` 和 `pnpm run docs:check`，不能把本次记录性提交当作已重跑质量链。
 
-## V0.3 第二十三批：SSE 具名心跳与 Tag 数据静默回归（待执行）
+## V0.3 第二十三批：SSE 具名心跳与 Tag 数据静默回归（Windows / Docker 已通过）
 
-本批从维护者已实测的第二十二批 **400 单测、17 NestJS E2E** 基线出发，新增 5 项 SSE 适配器测试、3 项 Runtime 数据质量测试、1 项 NestJS SSE 心跳资源测试，预计 **409 项普通单测、17 项 NestJS E2E**。**尚未实际运行新增代码**，不得标记验收通过。
+本批从维护者已实测的第二十二批 **400 单测、17 NestJS E2E** 基线出发，新增 5 项 SSE 适配器测试、3 项 Runtime 数据质量测试、1 项 NestJS SSE 心跳资源测试。维护者 2026-11-13 Windows 实测：**Runtime 专项 29/29（3 个文件）、Server 专项 79/79（16 个文件）、全量单测 409/409（36 个文件）、NestJS E2E 17/17（3 个文件）**。此前新增的 SSE 控制器测试中 Vitest Mock 泛型和 NestJS MessageEvent 类型问题已修复；`vp check` 检查 **251 个文件格式正确、123 个受检文件零警告、零错误**。
 
 验证范围：原独立 SSE 与 NestJS 本机受控 SSE 具名 heartbeat 每 5 秒发送、停机/取消订阅清理；适配器保持固定同源路由和既有 EventSource 原生重连，15 秒完全静默后强制新建流，禁止旧流消息；Runtime 只有收到通过 Core 校验的非空快照或被 TagStore 接受的新序列增量才刷新 12 秒数据时钟，上游 STALE、空 delta、重复旧序列、断线及数据沉默不能展示伪造 GOOD，恢复后按序列号和新会话快照重新计算状态。原 8 秒数据暂停保留，正常心跳不会错误取消过期质量。
 
-必须在 Windows 实际执行 `pnpm run test:runtime`、`vp check`、`pnpm run ready`、`pnpm run test:docker:server` 并提交输出与退出码。预期 Docker 冻结依赖安装、隔离镜像健康/就绪及工业写入 404、正式 Linux SIGTERM 退出码 0 均不回退。用户手工浏览器心跳可见性、断线恢复、SSE 长连压力、PostgreSQL 真库和现场工业数据属于单独验收；未运行不能声称通过。
+维护者 Windows **完整 `pnpm run ready` 退出码 0**：11 个 Manifest、51 项 Catalog 依赖检查通过；中文文案检查 149 个自有文件；Prisma Client 7.10.1 生成成功；Core、Vue、React、Draft Storage、NestJS 类型检查与构建均通过；**71 个 Markdown** 文档静态检查通过。独立 Docker 构建执行 `pnpm install --frozen-lockfile` 与 NestJS 构建，隔离烟测验证存活/就绪接口 200、工程及设备写入等未开放接口 404；正式 Linux Node PID 1 接收 SIGTERM 后正常退出码 **0**，`pnpm run test:docker:server` **退出码 0**。E2E 中 Terminus `Health Check has failed!` / HTTP 503 是主动模拟关闭的预期负面用例，并非失败。Docker 验证的是服务端容器隔离与退出机制，**不等同于浏览器 Runtime 的真实 SSE 长连接测试**。
+
+尚未收到人工浏览器心跳可见性、异常断线恢复演练记录；SSE 长时间压力、浏览器后台定时器节流、Nginx 反向代理、生产身份权限、PostgreSQL 真库和现场工业设备仍未验证。本次验收记录在上述实测后更新，建议最新 HEAD 复查 `vp check` 与 `pnpm run docs:check`；不能将记录性文档变更视为已重复执行全量质量链。
