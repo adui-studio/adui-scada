@@ -502,3 +502,10 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - `applyHttpServerPolicy` 在 `app.listen` 前配置 Node HTTP Server：`headersTimeout=15000` ms、`requestTimeout=60000` ms、`keepAliveTimeout=5000` ms、`maxHeadersCount=100`、`maxRequestsPerSocket=1000`。`requestTimeout` 限制**请求接收**，不对业务 Handler 及 SSE 长期响应设置统一超时。
 - 应用进入关闭流程时，新请求可直接收到 NestJS 12 适配器生成的 503 / `Connection: close`，健康探针仍符合原语义，但在关闭过程中可能被入口统一拒绝。关闭测试通过 `app.close()` 与延迟销毁钩子模拟，不冒充 Windows SIGTERM 测试。
 - 不修改请求/响应 JSON、HTTP 安全响应头、Swagger 默认关闭、Pino 脱敏和 `/health`、`/health/ready` 正常期契约。未开放的登录、工程版本读写和工业设备写入继续为 404。详见 [ADR-0051](adr/0051-http-ingress-shutdown-policy.md)。
+
+## V0.3 第二十批：Linux SIGTERM 与退出码契约
+
+- `main.ts` 使用 NestJS 12 `enableShutdownHooks([], { useProcessExit: true })`，保持默认信号集合；关闭钩子成功完成后进程退出码为 0（不同于默认清理后重发 SIGTERM 的 143），异常清理仍按 Nest 实现返回失败。
+- Docker 第二阶段以 Node 作为正式容器 PID 1，不映射宿主端口、`--network none`；探针必须在回环地址验证 `GET /health`、`GET /health/ready` 为 200，未开放 `POST /api/devices/write` 为 404。
+- `docker stop --signal SIGTERM --timeout 10` 结束服务，`inspect` 校验退出码 0，非零或超时必须失败；`finally` 清理独立容器，正常 E2E 与第一阶段烟测保持不变。
+- 本批验证正式镜像的 Linux 信号，不验证实际在途请求持续时间、SSE/WS/网关断线、业务审计一致性或 PostgreSQL 连接收尾；参见 [ADR-0052](adr/0052-linux-sigterm-container-shutdown.md)。
