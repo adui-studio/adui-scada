@@ -1112,3 +1112,26 @@ Write-Host "容器烟测退出码：$LASTEXITCODE"
 ```
 
 容器运行阶段仍为 `--network none`，不映射宿主机端口、不连接数据库或工业网关。该批维护者已在 Windows 验证 Docker 隔离镜像构建与烟测，退出码 0；最新 Pretty 测试隔离补丁仅影响非生产/测试日志选项，Docker 烟测未在该补丁后单独再次执行。安全审计持久化、生产 IAM、登录/MFA、分布式日志保留、RLS 仍待后续批次。
+
+## V0.3 第十五批：服务器根环境变量加载顺序回归（ADR-0047）
+
+本批从已合并第十四批的 `main` 提取服务器启动配置纯函数，并在根 `.env` 加载后动态导入 AppModule，避免 Pino 初始化过早读取日志等级。无需新增 npm 包，也无需重新生成 `pnpm-lock.yaml`；禁止因为这个小修复扩大到认证接口或数据库迁移。
+
+```powershell
+git fetch origin
+git switch feat/v0.3-server-startup-config
+git pull --ff-only
+pnpm install --frozen-lockfile
+
+pnpm run env:check
+vp check
+pnpm run test:e2e:server
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+
+# 可选：在 Docker Desktop 就绪时验证镜像启动边界。
+pnpm run test:docker:server
+Write-Host "Docker 隔离烟测退出码：$LASTEXITCODE"
+```
+
+验收重点：`env:check` 验证 `loadEnvFile` 在 `AppModule` 动态导入前执行，配置单测共 5 项，非法端口与监听地址仅返回不包含原始值的中文错误。预计 361 项普通单测及 8 项 NestJS E2E；仅以维护者实际 Windows 输出为准。默认 Swagger、工程版本读写、登录和工业设备写入接口仍关闭。测试运行前不要在终端输出数据库连接串或生产令牌；本批不要求真实数据库连接。
