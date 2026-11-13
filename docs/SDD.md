@@ -547,3 +547,7 @@ type DemoTagSourcePreset = "standalone" | "nest-local";
 - `packages/runtime/src/runtime.ts` 仅统计 Core 校验成功的非空 snapshot 或被 TagStore 按序列号接受的 delta；空增量和重复旧序列不能更新数据时钟，以 12 秒作为 Tag 数据静默窗口。达到窗口后对旧值 `markDisconnected`，进入 `stale` 中文提示；当上游发送含 STALE 的 Tag 时也展示 stale，之后收到有效 GOOD 数据可恢复 live。心跳和空 delta 不是有效数据更新。网络断连维持 reconnecting，新的 SSE 会话必须先收到 snapshot。
 - 水处理既有 30 秒模拟周期含 8 秒停采样不变；服务端心跳计时器和 Runtime 数据计时器必须在关闭或非法事件时清理。以上 5/12/15 秒仅为本机模拟参数，不可直接推广为生产设备采样 SLA。
 - 不修改工程文档、TagValue/TagChange 正式字段，Vue/React/桌面 API 保持兼容，禁止新增设备写入和任意 PLC 地址。见 [ADR-0055](adr/0055-sse-heartbeat-and-tag-silence.md)。
+
+## 2026-11-13 · V0.3 第二十四批：页面可见性恢复复查
+
+仅在现有模拟只读 SSE 数据源和共享 DemoRuntime 增加 `visibilitychange` 前台恢复处理：SSE 看门狗保存最近一次有效网络事件接收时间，回到前台时若已连续超过 15 秒没有 Tag/SSE 心跳则先通知断连、关闭旧连接并创建同源新 EventSource；Runtime 回到前台时若已连续 12 秒没有被 TagStore 接受的新 Tag 则显示 `stale`，不得借心跳伪造数据新鲜度。监听在 `close()`、`stop()` 和无效数据会话失败时清理。没有增加外部订阅接口、工程 Schema 字段、Tag 协议类型和设备写入能力。见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
