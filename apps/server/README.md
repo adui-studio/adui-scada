@@ -92,3 +92,9 @@ Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。�
 根 `.env` 仍由 `main.ts` 使用 Node.js 原生 `loadEnvFile` 统一加载。此前静态导入 `AppModule` 导致其 Pino Logger 配置可能早于根环境变量生效；现改为先解析环境变量，再动态导入模块。纯函数 `resolveServerStartupConfig` 对主机、端口及本机 Swagger 开关进行集中校验，保留 `SCADA_SERVER_PORT` 优先于 `PORT`、`SCADA_SERVER_HOST` 优先于 `HOST` 的规则。生产不开放 Swagger，不新增任何业务 HTTP 入口。
 
 维护者 Windows 已执行 `pnpm run env:check`、`vp check` 与 `pnpm run ready`：**361/361** 单测、**8/8** NestJS E2E、React/Vue/NestJS 构建及 63 份文档检查全部通过，完整 `ready` 退出码 **0**。独立 `pnpm run test:docker:server` 也已通过，退出码 **0**。本批未单独进行 PostgreSQL 真库回归，记录性文档提交后可复核 `vp check` 与 `pnpm run docs:check`。详见 [ADR-0047](../../docs/adr/0047-server-configuration-startup.md)。
+
+## V0.3 第十六批：会话与工程权限安全事件边界
+
+新增 `ScadaSecurityAuditService`，用于尚未挂入正式 AppModule 的 `ScadaIdentityModule`、`ScadaSessionGuard` 与 `ScadaProjectGuard`。所有允许/拒绝事件只输出固定操作、结果和原因码，由白名单构造字段后使用 NestJS Logger 记录，**不会附带 Bearer、Cookie、查询参数、请求体、工程路径或身份标识**。这属于运维诊断记录，不具备安全审计持久化、归责、事务一致性或日志丢失补偿能力；真实登录和业务写入接口仍关闭。
+
+单元测试覆盖敏感字段过滤、非法事件组合、会话撤销和工程越权拒绝；预计本批常规单测 367 项、E2E 8 项，须由维护者 Windows 执行 `pnpm run ready` 与可选 Docker 隔离烟测后确认。详见 [ADR-0048](../../docs/adr/0048-security-audit-event-boundary.md)。
