@@ -252,3 +252,12 @@ Docker 隔离测试应依次验证：
 - [ ] 真实代理断网、慢客户端流量压力、32 路真实 HTTP 上限实测、Windows 长时间后台页恢复、生产认证、PostgreSQL 真库和工业现场：均未验证。
 
 本批固定 32 路/64 KiB 仅为本机模拟服务防护；直接网络烟测和 Docker Nginx 代理烟测不代表工业现场连接容量或生产容灾性能。参见 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md)。
+
+### 第二十五批首轮 Windows 格式/Lint 反馈与修复（2026-11-13）
+
+维护者执行 `vp check --fix` 后报告 **0 个错误、9 个警告（127 个受检文件）**，同时提示格式修复已完成。警告均出自本批新增的两个测试文件：
+
+- `examples/water-treatment/sse-clients.test.mjs`：8 次 `node:test` 顶层 `test(...)` 返回 `Promise<void>` 未显式处理，触发 `typescript(no-floating-promises)`；已统一修改为顶层 `await test(...)`，逐项等待测试完成，并保留全部断言和连接清理。
+- `scripts/test-runtime-sse-network.mjs`：测试客户端对象的 `task: null` 使类型分析无法确认它是 Promise，触发 `typescript(await-thenable)`；现以 `Promise.resolve()` 初始化，随后赋值实际异步读取任务，`close()` 继续等待任务退出。
+
+两个文件的修改后源码已做静态 JavaScript 语法解析；隔离环境也确认 `node:test` 返回可等待的 Promise，顶层 `await test` 会继续运行后续测试并准确报告失败。**修复后的 Windows `vp check`、`test:sse:clients`、`test:sse:network`、`test:sse:proxy` 和完整 `ready` 尚待维护者执行，不得将本轮 Lint 报告视为修复后通过。**
