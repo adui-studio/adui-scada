@@ -244,8 +244,8 @@ Docker 隔离测试应依次验证：
 
 ## 2026-11-13 · V0.3 第二十五批验收清单（待维护者执行）
 
-- [x] 协作容器内 Node 内置测试器对隔离代码副本执行六项连接资源单测：**6/6 通过**；这不是 Windows 仓库全量质量链结果。
-- [ ] `pnpm run test:sse:clients`：在实际仓库工作区确认容量、断开、广播、背压、缓冲上限和非法参数回归。
+- [x] 协作容器内 Node 内置测试器对隔离代码副本执行八项连接资源单测：**8/8 通过**（包括真实本机 HTTP 32 路、超额 503 与释放后重连）；这不是 Windows 仓库全量质量链结果。
+- [ ] `pnpm run test:sse:clients`：在实际仓库工作区确认 8 项容量、真实回环 HTTP 503、断开重入、广播背压、缓冲上限、响应异常及参数边界回归。
 - [ ] `pnpm run test:sse:network`：保持 `pnpm run dev:demo` 运行，确认六路 HTTP SSE 快照、heartbeat、单路断连后其余订阅继续、恢复后先 snapshot。
 - [ ] `pnpm run test:sse:proxy`：本机 `pnpm run docker:demo:up` 启动后，分别检查 React/Vue Docker Nginx 固定同源代理 SSE；不自动重启或停止容器。
 - [ ] `vp check`、`pnpm run docs:check`、`pnpm run ready` 全部通过，记录 Node 测试与全量 Vitest、E2E、构建结果和实际退出码。
