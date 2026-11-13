@@ -1156,3 +1156,33 @@ Write-Host "Docker 验证退出码：$LASTEXITCODE"
 ```
 
 Windows 已实测普通单测 **367/367** 项、NestJS E2E **8/8** 项，完整 `ready` **退出码 0**；`vp check` 覆盖 225 个格式文件与 104 个受检文件，64 份 Markdown 检查及全部 Web/Server 构建通过。独立 Docker 镜像构建和隔离烟测也已通过，**退出码 0**。重点查看恶意/伪造 Bearer、已撤销会话、无权限及跨租户的审计结果是否只包含枚举，不含令牌或路径。独立 Docker 烟测仍应确认健康路由、未开放登录/工程版本/设备写入保持原有访问边界。本批未执行 PostgreSQL 真库回归；记录性文档提交发生在 Windows 测试之后，合并前可复验 `vp check` 和 `pnpm run docs:check`。未来接入 Zod 等运行时 Schema 工具时，须先更新 Catalog、通过 pnpm 正式生成锁文件并重新执行质量链；不得静默更改已验收的白名单接口。
+
+## V0.3 第十七批：Zod 运行时配置 Schema 与可复现依赖（ADR-0049）
+
+只对服务端端口和监听地址引入 Zod 4.6.7，保留根 `.env` 的唯一加载入口、Swagger 默认关闭、Pino 日志脱敏和已验收的安全审计白名单。新增 4 项单测，预期总计 **371 项**普通单测和 **8 项** NestJS E2E。该批新增生产依赖，**锁文件尚未生成，不能直接执行第一次冻结安装**。
+
+```powershell
+git fetch origin
+git switch feat/v0.3-zod-runtime-config
+git pull --ff-only
+
+# 首次必须由 pnpm 正式生成锁文件，确认依赖版本后提交。
+pnpm install
+git status --short
+git diff -- pnpm-lock.yaml
+
+git add pnpm-lock.yaml
+git commit -m "chore(deps): 🔒 同步 Zod 运行时校验锁文件"
+git push origin feat/v0.3-zod-runtime-config
+
+# 此后才能验证冻结安装与完整质量链。
+pnpm install --frozen-lockfile
+vp check
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+
+pnpm run test:docker:server
+Write-Host "Docker 验证退出码：$LASTEXITCODE"
+```
+
+锁文件必须由 pnpm 12 正式生成，不得人工填写包哈希或使用 `--no-frozen-lockfile` 掩盖不一致。提交前确认 `git status --short` 没有 `.env`、密钥或本地数据库文件。Docker 验证仍为隔离运行，不映射宿主机端口、不写工业设备。以上命令尚未在本批执行，不得宣称验收通过。
