@@ -8,6 +8,7 @@ export type RuntimeStatus =
   | "loading"
   | "connecting"
   | "live"
+  | "stale"
   | "simulation"
   | "reconnecting"
   | "error";
@@ -17,6 +18,7 @@ export const RUNTIME_STATUS_LABELS: Record<RuntimeStatus, string> = {
   loading: "加载中",
   connecting: "连接中",
   live: "模拟数据正常",
+  stale: "Tag 数据已过期",
   simulation: "离线模拟",
   reconnecting: "重新连接中",
   error: "运行异常",
@@ -68,12 +70,16 @@ export function svgDataUrl(
   );
 }
 
+/** 连续 12 秒无有效 Tag 值时，将显示数据超时，但 SSE 心跳不会重置这个计时。 */
+export const TAG_DATA_TIMEOUT_MS = 12_000;
+
 /** 基于只读数据源契约的浏览器 Runtime，默认仍使用原独立水处理演示服务。 */
 export class DemoRuntime {
   private readonly listener: RuntimeListener;
   private readonly source: ReadonlyTagSource;
   private subscription: ReadonlyTagSubscription | null = null;
   private loading: AbortController | null = null;
+  private dataTimer: ReturnType<typeof setInterval> | null = null;
   private readonly store = new TagStore();
   private document: ScadaDocument | null = null;
   private status: RuntimeStatus = "idle";
@@ -84,6 +90,11 @@ export class DemoRuntime {
   constructor(listener: RuntimeListener, source: ReadonlyTagSource = createSseTagSource()) {
     this.listener = listener;
     this.source = source;
+  }
+
+  private clearDataTimer(): void {
+    if (this.dataTimer !== null) clearInterval(this.dataTimer);
+    this.dataTimer = null;
   }
 
   private current(generation: number): boolean {
@@ -122,6 +133,7 @@ export class DemoRuntime {
       this.publish();
 
       let awaitingSnapshot = true;
+      let lastDataAt = Date.now();
       const subscription = this.source.subscribe({
         onMessage: (raw) => {
           if (!this.current(generation)) return;
@@ -137,13 +149,25 @@ export class DemoRuntime {
             ) {
               throw new TypeError("新订阅必须先收到 Tag 快照");
             }
+            const previous = new Map(this.store.snapshot().map((tag) => [tag.tagId, tag.sequence]));
             const change = applyDemoChange(this.store, event);
             if (change.kind === "snapshot") awaitingSnapshot = false;
-            this.status = "live";
-            this.message = "模拟数据连接正常";
+            // 空增量或已经被 TagStore 拒绝的旧序列不能刷新数据新鲜度。
+            const hasNewData =
+              change.kind === "snapshot"
+                ? change.values.length > 0
+                : change.values.some((tag) => tag.sequence > (previous.get(tag.tagId) ?? -1));
+            if (change.kind === "delta" && !hasNewData) return;
+            if (hasNewData) lastDataAt = Date.now();
+            const hasStale = this.store.snapshot().some((tag) => tag.quality === "STALE");
+            this.status = hasStale ? "stale" : "live";
+            this.message = hasStale
+              ? "模拟数据存在已过期的 Tag，心跳不能恢复数据质量"
+              : "模拟数据连接正常";
           } catch (error) {
             // 拒绝并关闭无效消息源，禁止之后的事件覆盖错误状态。
             this.generation++;
+            this.clearDataTimer();
             this.subscription?.close();
             this.subscription = null;
             this.store.markDisconnected(Date.now());
@@ -156,6 +180,7 @@ export class DemoRuntime {
         onDisconnected: () => {
           if (!this.current(generation)) return;
           awaitingSnapshot = true;
+          lastDataAt = Date.now();
           this.store.markDisconnected(Date.now());
           this.status = "reconnecting";
           this.message = "连接中断，旧值已标记 STALE，等待重连";
@@ -168,6 +193,23 @@ export class DemoRuntime {
         return;
       }
       this.subscription = subscription;
+      this.dataTimer = setInterval(() => {
+        if (
+          !this.current(generation) ||
+          this.status === "error" ||
+          this.status === "reconnecting"
+        ) {
+          return;
+        }
+        if (Date.now() - lastDataAt < TAG_DATA_TIMEOUT_MS) return;
+        this.store.markDisconnected(Date.now());
+        const message = "Tag 数据持续超时，现有读数已标记 STALE，等待新数据";
+        if (this.status !== "stale" || this.message !== message) {
+          this.status = "stale";
+          this.message = message;
+          this.publish();
+        }
+      }, 1000);
     } catch (error) {
       if (!this.current(generation)) return;
       this.store.markDisconnected(Date.now());
@@ -184,6 +226,7 @@ export class DemoRuntime {
     this.generation++;
     this.loading?.abort();
     this.loading = null;
+    this.clearDataTimer();
     this.subscription?.close();
     this.subscription = null;
     this.store.markDisconnected(Date.now());

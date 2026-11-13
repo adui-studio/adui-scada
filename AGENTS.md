@@ -4,7 +4,7 @@
 
 ## 1. 定位与事实
 
-ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1、V0.2 双框架 SVG Studio 和 V0.3 前二十一批（包含工程事务、可信会话前置能力、HTTP 安全与关闭验证、受控本机模拟 Tag/SSE 接口）。当前第二十二批仅抽取框架无关 Runtime 的只读 Tag 数据源接口，保持 Vue/React 默认 `/demo` 模拟路径与桌面离线模拟不变，新增受控 NestJS 同源固定路径适配预设；不增加第三方依赖、不启用新的网关代理或工业接口。认证、工程版本写入和工业设备控制 API 继续保持关闭。工业 Gateway、正式发布及完整账号认证尚未实现，不得将规划视为实现。**
+ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1、V0.2 双框架 SVG Studio 和 V0.3 前二十二批（包含工程事务、可信会话前置能力、HTTP 安全与关闭验证、受控模拟 Tag/SSE 与共享 Runtime 只读数据源抽象）。当前第二十三批仅为本机开发用的独立模拟 SSE 与 NestJS 本机 SSE 增加具名心跳，并在共享 Runtime 中分别检测传输静默和 Tag 数据过期；Vue/React 默认 `/demo`、Tauri 离线模拟及工业访问边界不变，不增加依赖或开放新的代理、设备读写接口。认证、工程版本写入和工业设备控制 API 继续保持关闭。工业 Gateway、正式发布及完整账号认证尚未实现，不得将规划视为实现。**
 
 ## 2. 规则优先级
 

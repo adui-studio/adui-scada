@@ -539,3 +539,11 @@ type DemoTagSourcePreset = "standalone" | "nest-local";
 `DemoRuntime(listener, source = createSseTagSource())` 保持现有单参调用兼容。每次 `start` 创建独立 `generation` 和 AbortController；`stop` 中止加载、关闭订阅、标记旧值 STALE 并使迟到消息失效。加载工程、连接 SSE 和 onMessage 过程中都要检查代次，尤其处理订阅回调可能在 subscribe 返回前同步发生的边界。首次连接和每次 onDisconnected 后必须先通过 snapshot 原子替换数据，后续 delta 才能通过原有 `TagStore.apply` 接受。无效事件进入 error 并关闭订阅，不允许之后的迟到数据将它改回 live。
 
 桌面 `OfflineDemoRuntime` 仍用原本纯本机模拟，不被新的浏览器网络接口取代。Vue 与 React Runtime 继续共享相同实例化代码路径，未新增 UI 切换选项；真实发布快照与经过鉴权的在线订阅属于后续范围。参见 [ADR-0054](adr/0054-readonly-tag-source-adapters.md)。
+
+## V0.3 第二十三批：心跳和静默超时的协议细节
+
+- 模拟 SSE 每 5 秒额外发送：`event: heartbeat`、`data: {}` 和 SSE 事件间隔空行；原默认 `data: {"kind":"snapshot"|"delta","values":[...]}` 不变。具名 heartbeat 不进入 `TagChange` 校验链，不能更新 Tag 时间戳、序列号或质量。
+- `packages/runtime/src/tag-source.ts` 的 transport watchdog 为 15 秒：EventSource 的默认 onmessage 或具名 heartbeat 都表示传输活动，原生 `onerror` 保留自动重连；连续 15 秒无事件时调用 `onDisconnected`、关闭旧 EventSource 并重建相同固定同源路由。旧实例事件按对象身份阻断，close 后不得重建。
+- `packages/runtime/src/runtime.ts` 仅统计 Core 校验成功的非空 snapshot 或被 TagStore 按序列号接受的 delta；空增量和重复旧序列不能更新数据时钟，以 12 秒作为 Tag 数据静默窗口。达到窗口后对旧值 `markDisconnected`，进入 `stale` 中文提示；当上游发送含 STALE 的 Tag 时也展示 stale，之后收到有效 GOOD 数据可恢复 live。心跳和空 delta 不是有效数据更新。网络断连维持 reconnecting，新的 SSE 会话必须先收到 snapshot。
+- 水处理既有 30 秒模拟周期含 8 秒停采样不变；服务端心跳计时器和 Runtime 数据计时器必须在关闭或非法事件时清理。以上 5/12/15 秒仅为本机模拟参数，不可直接推广为生产设备采样 SLA。
+- 不修改工程文档、TagValue/TagChange 正式字段，Vue/React/桌面 API 保持兼容，禁止新增设备写入和任意 PLC 地址。见 [ADR-0055](adr/0055-sse-heartbeat-and-tag-silence.md)。
