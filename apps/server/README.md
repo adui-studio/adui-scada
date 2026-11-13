@@ -156,3 +156,22 @@ Swagger 文档地址：http://127.0.0.1:3001/api/docs
 ```
 
 启动日志只记录固定本机回环地址和校验过的端口，不输出环境变量、数据库连接串、设备地址、请求 URL 或令牌。JSON 结构化日志与本机交互终端的 Pretty 日志均沿用现有 Pino 规则；若将 `SCADA_LOG_LEVEL` 设为 `warn` 或更高，`info` 级别的文档地址不会显示。此处仅新增启动提示，既有 Swagger 三重访问保护、默认关闭及工业接口 404 的安全边界不变。
+
+### Windows PowerShell 终端中文日志乱码
+
+如果启动日志中的英文和 `http://127.0.0.1:<端口>/api/docs` 正常，但「文档地址」出现乱码，优先检查终端是否将 Node/Pino 输出的 UTF-8 误按本机 GBK/系统代码页解码。不要删除中文文案、把日志改成英文或关闭结构化日志来规避显示问题。
+
+请在**启动服务的同一个 PowerShell 终端**设置 UTF-8，并先验证 Node 原生命令输出：
+
+```powershell
+chcp 65001 > $null
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+[Console]::InputEncoding = $utf8
+[Console]::OutputEncoding = $utf8
+$OutputEncoding = $utf8
+
+node -e "console.log('中文日志测试：Swagger 文档地址')"
+pnpm run dev:server
+```
+
+这只影响当前终端会话及其新启动的子进程；若使用 JetBrains Run/Debug 面板而不是同一 PowerShell 终端，应分别检查该运行配置的控制台编码。上述步骤只处理**终端显示**，不放宽 Swagger 的非生产/本机监听/显式启用三重限制，也不修改 Pino JSON 日志内容。
