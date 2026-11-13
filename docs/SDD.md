@@ -480,3 +480,11 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - `action` 仅为 `session.authenticate` 和 `project.authorize`，`outcome` 仅为 `allowed` 与 `denied`。会话允许原因只能是 `verified`，拒绝原因仅有 `unsupported_context`、`malformed_authorization`、`invalid_session`；工程允许原因只能是 `permission_granted`，拒绝原因仅有 `unsupported_context`、`missing_policy`、`missing_principal`、`invalid_scope`、`permission_denied`。
 - 未定义事件、无效结果或错误搭配必须拒绝且不在异常提示中回显输入值。Guard 在已有授权语义中记录固定决策，不得改变授权结果或异常 HTTP 状态码。
 - `ScadaSecurityAuditService` 通过 NestJS `Logger` 发送仅含白名单字段的 JSON 消息；**不是强一致、可回放、可归责的持久化安全审计系统**，不替代工程版本事务审计或未来工业控制审计。模块仍未挂载正式 AppModule，详见 [ADR-0048](adr/0048-security-audit-event-boundary.md)。
+
+## V0.3 第十七批：Zod 与 NestJS 12 原生 Schema 契约
+
+- `serverPortSchema` 仅接受字符串或数字，转换为有限整数并限制在 1～65535；`serverHostSchema` 仅允许 `127.0.0.1` 和 `0.0.0.0`。仅在值为 `undefined` 时应用通用变量或默认值，非法 `null`、布尔值及其它非字符串环境值必须拒绝。
+- `SCADA_SERVER_PORT` 高于 `PORT`、`SCADA_SERVER_HOST` 高于 `HOST`；默认 3001 / 127.0.0.1。校验失败只抛固定中文消息，不记录原始值或 `ZodError`。Swagger 仍遵守显式开启、非生产、回环地址三重条件。
+- HTTP DTO 采用 NestJS 12 原生 `@Body({ schema })`、`@Query(..., { schema })` 和 `StandardSchemaValidationPipe`；响应允许使用 `StandardSchemaSerializerInterceptor` 与 `@SerializeOptions({ schema })`，Swagger 12 从 Zod 4 Standard JSON Schema 生成请求文档。
+- 本阶段仅通过 `standard-schema-integration.spec.ts` 的独立测试 Controller 验证该技术契约，正式 `AppModule` 不挂载任何新业务 API 或全局 Pipe。之前的 `nest-zod@2.1.0` 因 Windows 实测 Swagger 装饰器故障及 Peer 版本声明不满足 NestJS 12，已移除。
+- 输入校验不能代替 Session/ACL Guard、事务复核或敏感日志白名单。共享 Core 工程 Schema、Pino、Prisma、Vue/React 均保持不变。参见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。

@@ -289,3 +289,11 @@ Prisma `schema.prisma` 的 `///` 为代码生成文档信息，**不会自动创
 ## V0.3 第十六批：安全事件审计边界（ADR-0048）
 
 在未挂载 `AppModule` 的 `ScadaIdentityModule` 中注册独立 `ScadaSecurityAuditService`，并通过 `SecurityAuditReporter` 接口及 NestJS 注入令牌供 `ScadaSessionGuard` 和 `ScadaProjectGuard` 使用。Guard 记录允许/拒绝决策，但不发送请求头、令牌、路径、租户/主体/工程标识或异常对象；日志层对枚举做运行时白名单检查并只构造固定四字段对象。现阶段借助 NestJS Logger 与已经引入的 Pino 运行日志链输出，**仅用于诊断而非生产持久化审计**。未增加外部依赖、数据库迁移、HTTP 路由或工业写入能力；未来必须在上线身份 API 前独立评审可信主体关联、持久化审计、丢失处理、保留/删除及限流。
+
+## V0.3 第十七批：NestJS 12 原生 Standard Schema 与 Zod（ADR-0049）
+
+服务端根 `.env` 加载流程及 `AppModule` 动态导入时序不变。运行时端口和监听地址由 `zod@4.6.7` 校验，优先级与错误提示不变；仅 `undefined` 属于未配置，非法 `null` 不得回退为默认监听参数。
+
+NestJS 12 自带 `StandardSchemaValidationPipe`、`StandardSchemaSerializerInterceptor`，Swagger 12 原生识别 Zod 4 Standard JSON Schema。维护者 Windows 实测发现此前选用的 `nest-zod@2.1.0` 的 Swagger `ZSerialize` 适配器在模块装饰器求值时失败，且上游 Peer 不包含 NestJS 12 / Swagger 12，因此撤销该依赖，复用已有 NestJS 原生设施。独立测试 Controller 验证请求体、查询转换、响应白名单和 OpenAPI；不在正式 AppModule 注册新业务路由、全局 Pipe 或 Serializer。
+
+Zod 不进入共享 Core，也不改组态工程/Tag/图元 Schema、Prisma、工业网关、Guard 或安全审计。上一次包含 `nest-zod` 的锁文件须由 pnpm 重算；新代码、类型与 Docker 安全边界尚待 Windows 完整复验。

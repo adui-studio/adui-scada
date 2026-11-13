@@ -98,3 +98,13 @@ Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。�
 新增 `ScadaSecurityAuditService`，用于尚未挂入正式 AppModule 的 `ScadaIdentityModule`、`ScadaSessionGuard` 与 `ScadaProjectGuard`。所有允许/拒绝事件只输出固定操作、结果和原因码，由白名单构造字段后使用 NestJS Logger 记录，**不会附带 Bearer、Cookie、查询参数、请求体、工程路径或身份标识**。这属于运维诊断记录，不具备安全审计持久化、归责、事务一致性或日志丢失补偿能力；真实登录和业务写入接口仍关闭。
 
 单元测试覆盖敏感字段过滤、非法事件组合、会话撤销和工程越权拒绝；维护者已在 Windows 实测 **367/367 常规单测、8/8 E2E**，完整 `pnpm run ready` 及独立 Docker 隔离烟测均 **退出码 0**。记录性文档变更后仍建议运行 `vp check` 与 `pnpm run docs:check`。后续如使用 Zod 检查外部输入，必须保留当前审计输出字段白名单，不直接记录原始对象或包含敏感输入的校验错误。详见 [ADR-0048](../../docs/adr/0048-security-audit-event-boundary.md)。
+
+## V0.3 第十七批：Zod 与 NestJS 12 原生 Standard Schema
+
+正式服务仍从根 `.env` 加载环境配置，使用 `zod@4.6.7` 的 `safeParse` 校验端口和监听地址；默认 3001 / 127.0.0.1，专用变量优先，非法 `null` 不再被 `??` 当作未配置。失败固定中文提示，不输出 Zod 错误对象、令牌或环境敏感值。Swagger 仍仅限显式开启、本机回环和非生产。
+
+NestJS 12 已原生提供 Standard Schema 校验 Pipe、响应序列化拦截器以及 Swagger 12 的 Zod 4 Schema 转换，因此无需第三方 NestJS Zod 适配器。此前尝试的 `nest-zod@2.1.0` 在维护者 Windows `ready` 测试时，其 `ZSerialize` 生成 OpenAPI Schema 报 `TypeError: Property description must be an object: undefined`；且包元数据 Peer 未包含 NestJS 12 / Swagger 12，已从 Catalog 和 Manifest 移除。
+
+改用 `src/validation/standard-schema-integration.spec.ts` 的测试专用 Controller 验证 `@Body({ schema })`、`@Query(..., { schema })`、`StandardSchemaValidationPipe`、`StandardSchemaSerializerInterceptor` 和 OpenAPI。正式 `AppModule` 不更改，不开放登录、工程写入或工业设备写入。
+
+本批原有 5 项配置测试之外新增 4 项配置测试与 4 项原生集成测试，维护者 Windows 已实测 **375/375 单测、8/8 E2E**、完整 `pnpm run ready` **退出码 0**。维护者首次 `ready` 曾在单测阶段中断（370 通过、1 失败，另有一个适配器套件导入失败），随后已修复并通过复验。此前包含 `nest-zod` 的锁文件已通过 pnpm 正式重新生成并提交，GitHub 核对已移除该依赖；Docker 冻结安装、镜像构建与隔离烟测均通过，**退出码 0**。本批未重新执行 PostgreSQL 真库回归，记录性文档更新后建议复验 `vp check` 与 `pnpm run docs:check`。详见 [ADR-0049](../../docs/adr/0049-zod-server-runtime-validation.md)。

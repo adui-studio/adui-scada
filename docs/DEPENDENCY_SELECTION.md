@@ -52,3 +52,18 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 经核对 npm 官方版本列表，`zod@4.6.7` 为当前稳定版本；建议优先用于**未来不可信数据入口**：NestJS HTTP DTO、环境配置、外部设备/网关数据和安全审计事件输入 Schema。现有共享 Core 工程文档已经有解析校验契约，不能建立第二套相互矛盾的 Schema。即便启用 Zod，安全审计仍须从可信字段白名单重新构造输出，**不得直接记录 `safeParse` 失败对象、原始输入或包含令牌的校验上下文**。
 
 第十六批 PR #38 未安装 Zod，也未修改 pnpm Catalog / 锁文件；正式引入时应单独明确消费包、固定版本、由 pnpm 12 正式更新锁文件，并重新执行类型检查、单测、E2E、`ready` 及 Docker 回归。
+
+## 第十七批：Zod 运行时启动配置校验
+
+- npm 官方稳定版 `zod@4.6.7`；只将其作为 `apps/server` 生产依赖加入 Catalog 和 Manifest，不扩展到 Vue/React 或共享 Core。采用 Zod 的 `safeParse` 校验端口与监听地址，保持现有优先级、默认值、Swagger 访问条件和固定中文错误提示。
+- 原始输入、`ZodError`、环境密钥和数据库连接串不得被写入诊断日志或安全审计。第十六批固定四字段事件记录不做自动对象序列化替换。
+- 当前执行环境无法访问 npm Registry，**第十七批移除 nest-zod 后的锁文件已经由维护者正式重新同步**；Windows 全量质量链与 Docker 冻结安装已实测通过，仍需保持合并授权边界；参见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
+
+### 第十七批 NestJS 集成方案复核与实测修订（2026-11-13）
+
+- `nestjs-zod@5.6.0` 的发行包 Peer 仅声明 NestJS 10/11；`nest-zod@2.1.0` 虽在官网文档宣称支持 NestJS 12 / Swagger 12，但其 [发行包元数据](https://github.com/taugr/nest-zod/blob/v2.1.0/package.json) 同样只声明 NestJS 10/11 / Swagger 8/11。因此**不能以官方文档的兼容性表替代实际包约束**。
+- 维护者 Windows 实测 `nest-zod/swagger` 的 `ZSerialize` 在测试类加载阶段抛出 `TypeError: Property description must be an object: undefined`；[上游源码](https://github.com/taugr/nest-zod/blob/v2.1.0/src/openapi-schema.ts) 显示 Schema 的 `safeParse` 属性描述符可能为 `undefined`，而恢复逻辑没有防护。
+- **最终选择 `NestJS 12 原生 Standard Schema + zod@4.6.7`**。使用官方 `StandardSchemaValidationPipe`、`StandardSchemaSerializerInterceptor` 与 `@Body({ schema })`、`@Query(..., { schema })`，Swagger 12 原生转换 Zod 4.2+ JSON Schema；相关文档见 [官方验证](https://docs.nestjs.com/application/validation)、[序列化](https://docs.nestjs.com/application/serialization) 和 [OpenAPI](https://docs.nestjs.com/openapi/introduction)。
+- 移除 `nest-zod` 的 Catalog 和服务端依赖声明，保留 `zod`，不降级 NestJS、不忽略 Peer、不引入第二套工程 Schema。原生校验在本批仅用于隔离测试 Controller，不对正式业务路由全局启用。
+- 第十七批首次 Windows `ready`：格式与 Lint/类型检查已通过；单测 **370 通过、1 失败**，另有适配器测试文件导入失败，完整质量链中断。修正代码后，Windows 已复验 **375/375 单测、8/8 E2E**、完整 `ready` **退出码 0**，Docker 隔离镜像烟测 **退出码 0**。
+- 上轮包含 `nest-zod` 的锁文件已由维护者使用 pnpm 正式重新生成并推送；新锁文件仅保留 Zod，GitHub 核对无 `nest-zod`。Docker 构建中冻结安装成功，未绕过 Peer 校验，不手写包完整性数据。
