@@ -421,7 +421,7 @@
 ## V0.3 第十四批：日志、OpenAPI 与安全头
 
 - `apps/server/src/observability/http-logging.config.ts`：Pino HTTP 配置、日志等级白名单、服务端请求 ID、白名单日志字段与敏感字段脱敏。
-- `apps/server/src/observability/http-logging.config.spec.ts`：3 项日志配置测试，不记录 URL 查询、令牌、Cookie 与请求体。
+- `apps/server/src/observability/http-logging.config.spec.ts`：4 项日志配置测试，涵盖 Pretty 测试线程隔离及请求日志白名单。
 - `apps/server/src/openapi/scada-openapi.ts`：Swagger 本机受控开关与动态文档注册。
 - `apps/server/src/openapi/scada-openapi.spec.ts`：2 项文档访问策略测试，拒绝生产环境和非回环监听。
 - `apps/server/src/security/http-security.ts`：Helmet 安全头，开发 Swagger UI 局部 CSP 兼容。
@@ -429,5 +429,13 @@
 - `apps/server/test/app.e2e-spec.ts`：新增响应安全头、请求关联 ID、Swagger 默认拒绝与本机显式启用检查。
 - `apps/server/container-smoke.mjs`：隔离容器复查安全头、请求 ID 与 Swagger JSON 路由关闭。
 - 根 `.env.example`、`scripts/check-env-config.mjs`：增加日志级别和 API 文档开关的统一配置与校验。
-- `pnpm-workspace.yaml`、`apps/server/package.json`：精确 Catalog 声明新增的五个 npm 包；**pnpm-lock.yaml 尚待维护者环境生成**。
+- `pnpm-workspace.yaml`、`apps/server/package.json`：服务端新增七项依赖均使用 Catalog，已由维护者 Windows pnpm 12 生成并提交锁文件。
 - [ADR-0046](adr/0046-pino-openapi-http-security.md) 记录依赖和安全边界。
+
+## V0.3 第十五批：服务端安全启动配置
+
+- `apps/server/src/config/server-startup.config.ts`：纯函数读取并校验监听端口、主机与本机 Swagger 策略；不直接加载环境文件。
+- `apps/server/src/config/server-startup.config.spec.ts`：5 项无数据库配置回归，覆盖默认、优先级、非法端口、非法主机及 Swagger 默认关闭。
+- `apps/server/src/main.ts`：先从根目录加载 `.env`，再动态导入 `AppModule`，修复 Pino 初始化配置读取时序。
+- `scripts/check-env-config.mjs`：静态检查根环境变量先于动态模块导入，并检查运行时配置入口。
+- [ADR-0047](adr/0047-server-configuration-startup.md)：说明启动时序和安全回归要求。
