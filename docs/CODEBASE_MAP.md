@@ -486,3 +486,15 @@
 - `scripts/test-server-container.mjs`：保留现有 `--network none` 隔离烟测，新增正式 Node PID 1 容器 SIGTERM/退出码 0 检查，并通过动态名称和 `finally` 清理容器。
 - `AGENTS.md`：强制所有由 AI 创建的 PR（包括 Draft）即时指派 GitHub `@adui-dev` 并核对 Assignee；PR 未经明确授权不得合并。
 - [ADR-0052](adr/0052-linux-sigterm-container-shutdown.md)：记录官方关闭选项、默认退出码变化及 Docker 信号验收范围。
+
+## V0.3 第二十一批：NestJS 本机只读模拟工程与 Tag SSE
+
+- `apps/server/src/demo/local-demo-access.ts`：严格限制独立环境开关、非生产与服务端回环监听。
+- `apps/server/src/demo/local-demo-telemetry.service.ts`：复用 Core 的水处理工程、模拟器和 TagStore；实现每秒模拟、8 秒数据中断、STALE 恢复以及 NestJS 关闭定时器清理。
+- `apps/server/src/demo/local-demo-telemetry.controller.ts`：只读模拟工程、Tag 快照、NestJS `@Sse` 实时事件；事件与 Core `TagChange` 格式一致。
+- `apps/server/src/demo/local-demo-telemetry.module.ts`：独立模拟模块，**不由默认正式 AppModule 注册**。
+- `apps/server/src/app.module.ts`：保留正式应用路由，额外声明只用于本机显式开启的 `LocalDemoAppModule`。
+- `apps/server/src/main.ts`：解析根 `.env` 后根据独立开关与实际监听主机选择根模块，保留 Swagger、日志、安全头和优雅关闭。
+- `apps/server/src/demo/*.spec.ts`：2 项开关策略与 4 项模拟生命周期测试；`apps/server/test/local-demo-telemetry.e2e-spec.ts`：4 项 REST/SSE/Swagger 集成测试；原 `app.e2e-spec.ts` 补 1 项默认路由 404。
+- `.env.example` 和 `scripts/check-env-config.mjs`：新增统一根配置及布尔校验，不修改其它用户配置。
+- [ADR-0053](adr/0053-local-readonly-demo-telemetry.md)：审查本机开发模式、数据质量及工业安全边界。
