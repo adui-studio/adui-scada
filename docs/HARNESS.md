@@ -1134,4 +1134,4 @@ pnpm run test:docker:server
 Write-Host "Docker 隔离烟测退出码：$LASTEXITCODE"
 ```
 
-验收重点：`env:check` 验证 `loadEnvFile` 在 `AppModule` 动态导入前执行，配置单测共 5 项，非法端口与监听地址仅返回不包含原始值的中文错误。预计 361 项普通单测及 8 项 NestJS E2E；仅以维护者实际 Windows 输出为准。默认 Swagger、工程版本读写、登录和工业设备写入接口仍关闭。测试运行前不要在终端输出数据库连接串或生产令牌；本批不要求真实数据库连接。
+2026-11-13 Windows 实测：`env:check` 通过；新增加的 5 项启动配置测试通过，普通单测 **361/361**、NestJS E2E **8/8**；`vp check` 检查 222 个格式文件、102 个受检文件均通过，63 份 Markdown 检查与 React/Vue/NestJS 构建完成，完整 `ready` **退出码 0**。独立 Docker 镜像隔离测试也已通过，**退出码 0**。未运行本批 PostgreSQL 真库回归；默认 Swagger、工程版本读写、登录和工业设备写入接口仍关闭。记录性文档更新后建议复核格式及文档检查。测试运行前不要在终端输出数据库连接串或生产令牌；本批不要求真实数据库连接。
