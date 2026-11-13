@@ -20,6 +20,9 @@ export interface ReadonlyTagSubscription {
 /** 当前仅认可两个同源的本机模拟接口预设，不接受任意外部 URL。 */
 export type DemoTagSourcePreset = "standalone" | "nest-local";
 
+/** 心跳每 5 秒发送一次；超过 15 秒完全收不到 SSE 活动时强制重建连接。 */
+export const SSE_TRANSPORT_TIMEOUT_MS = 15_000;
+
 const DEMO_ROUTES = {
   standalone: { project: "/demo/project", events: "/demo/events" },
   "nest-local": { project: "/api/dev/demo/project", events: "/api/dev/demo/events" },
@@ -49,16 +52,52 @@ export function createSseTagSource(preset: DemoTagSourcePreset = "standalone"): 
     },
 
     subscribe(handlers: ReadonlyTagSourceHandlers): ReadonlyTagSubscription {
-      const stream = new EventSource(routes.events);
-      stream.onmessage = (event) => {
-        handlers.onMessage(event.data);
+      let closed = false;
+      let stream: EventSource | null = null;
+      let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const clearSilenceTimer = (): void => {
+        if (silenceTimer !== null) clearTimeout(silenceTimer);
+        silenceTimer = null;
       };
-      stream.onerror = () => {
-        handlers.onDisconnected();
+      const armSilenceTimer = (): void => {
+        clearSilenceTimer();
+        silenceTimer = setTimeout(() => {
+          if (closed) return;
+          // 浏览器 EventSource 可能保持 OPEN 却不再收到字节，需要主动重建。
+          handlers.onDisconnected();
+          stream?.close();
+          connect();
+        }, SSE_TRANSPORT_TIMEOUT_MS);
       };
+      const connect = (): void => {
+        const next = new EventSource(routes.events);
+        stream = next;
+        next.onmessage = (event) => {
+          if (closed || stream !== next) return;
+          armSilenceTimer();
+          handlers.onMessage(event.data);
+        };
+        // 具名心跳仅证明传输存活，不转发成 Tag 数据或修改数据质量。
+        next.addEventListener("heartbeat", () => {
+          if (closed || stream !== next) return;
+          armSilenceTimer();
+        });
+        next.onerror = () => {
+          if (closed || stream !== next) return;
+          // 短暂网络错误交由 EventSource 原生重连，长期无响应交由定时器重建。
+          handlers.onDisconnected();
+        };
+        armSilenceTimer();
+      };
+
+      connect();
       return {
         close(): void {
-          stream.close();
+          closed = true;
+          clearSilenceTimer();
+          stream?.close();
+          stream = null;
         },
       };
     },
