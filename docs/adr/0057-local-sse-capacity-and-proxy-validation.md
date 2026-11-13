@@ -61,3 +61,17 @@ pnpm run ready
 修复演示栈对仓库根目录 `.env` 的显式读取后，维护者执行 `pnpm run env:check` 通过；`pnpm run docker:demo:up` 成功完成四镜像构建和四容器启动，Demo/Server Healthy。随后 `pnpm run docker:demo:ps` 确认宿主机发布端口为 React `127.0.0.1:18080->8080/tcp`、Vue `127.0.0.1:18081->8080/tcp`，与配置一致。
 
 `pnpm run test:sse:proxy` 通过 React/Vue 的真实 Docker Nginx 代理，每套六路并发 SSE 均收到 snapshot 与 heartbeat、单路断开不影响其他连接、恢复订阅先收到 snapshot，**退出码 0**。此前独立模拟服务 8 项 Node 单测及直接 HTTP SSE 六路回归亦已在 Windows 通过。以上验收证明本机 Docker SSE 代理能够工作，**不代表生产高并发、长期半开 TCP、工业网关或真实断网已经验证**。本批最新 `vp check`、文档检查及完整 `pnpm run ready` 仍待执行，PR 不经授权不合并。
+
+### 第二十五批 Windows 完整质量链最终复验（2026-11-13）
+
+维护者上传 PowerShell 实测日志，针对本批已修复代码确认：
+
+- `vp check`：**257 个文件格式正确**，127 个受检文件**无警告、Lint 错误或类型错误**，命令退出码 **0**。此前 9 条类型感知 Lint 警告均已消除。
+- `pnpm run docs:check`：**73 份 Markdown 文档通过**，退出码 **0**。
+- `pnpm run ready`：**退出码 0**。依赖检查 **11 个清单、51 项 Catalog**，共享配置 9 个 TSConfig 消费端，中文文案 153 个自有文件，根环境与 LF 检查通过；Prisma Client **7.10.1** 生成成功。
+- 全量 Vitest **412/412 通过（36 个文件）**；纳入 ready 的 SSE Node 专项 **8/8 通过**，含真实回环 HTTP 32 路容量、第 33 路 HTTP 503 和释放后重新订阅。
+- NestJS E2E **17/17 通过（3 个文件）**，包含预期的服务关闭负面检查；日志中的 HTTP 503 / `Health Check has failed!` 属于通过的故障场景，不是失败。
+- Vue、React、NestJS 类型检查与构建全部通过。
+- 结合此前维护者独立网络日志：`test:sse:network` 实际六路 HTTP SSE 通过、退出码 0；`test:sse:proxy` 在 React `18080` 与 Vue `18081` 的 Docker Nginx 双入口通过、退出码 0，Demo 与 Server 为 Healthy。
+
+**自动化验收结论：第二十五批 Windows 完整质量链及 Docker Nginx SSE 代理专项均通过。** 注意本段验收记录追加后尚未再次执行最新文档的格式与静态检查，建议合并审查前运行 `vp check`、`pnpm run docs:check`。仍未验证真实 Nginx 半开连接、持续高并发/慢消费者长期负载、生产认证、PostgreSQL 真库和工业现场设备；不能把本机 Demo 资源上限视为工业 SLA。PR #47 继续 Draft，待维护者明确同意后才能合并。
