@@ -331,19 +331,56 @@ test("后台标签页返回前台会立即判定 Tag 数据超时，停止后清
     expect(states.at(-1)?.status).toBe("stale");
     expect(states.at(-1)?.values[0]?.quality).toBe("STALE");
 
-    // STALE 质量变更会在 TagStore 内消耗一个序列号，相同序列的旧消息不能恢复。
-    controlled.handlers[0]?.onMessage({ kind: "delta", values: [makeTag(2)] });
+    // 本地 STALE 不消耗上游序列号，旧序列不能恢复，有效的下一条值可以恢复。
+    controlled.handlers[0]?.onMessage({ kind: "delta", values: [makeTag(1)] });
     expect(states.at(-1)?.status).toBe("stale");
     expect(states.at(-1)?.values[0]?.quality).toBe("STALE");
 
-    controlled.handlers[0]?.onMessage({ kind: "delta", values: [makeTag(3)] });
+    controlled.handlers[0]?.onMessage({ kind: "delta", values: [makeTag(2)] });
     expect(states.at(-1)?.status).toBe("live");
     expect(states.at(-1)?.values[0]?.quality).toBe("GOOD");
+    expect(states.at(-1)?.values[0]?.sequence).toBe(2);
   } finally {
     runtime.stop();
     expect(listeners.size).toBe(0);
     expect(vi.getTimerCount()).toBe(0);
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  }
+});
+
+test("多个 Tag 超时后只恢复实际收到新序列的 Tag，其他值继续保持 STALE", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-11-13T00:00:00.000Z"));
+  const controlled = controlledSource();
+  const states: RuntimeState[] = [];
+  const runtime = new DemoRuntime((state) => states.push(state), controlled.source);
+  try {
+    await runtime.start();
+    controlled.handlers[0]?.onMessage({
+      kind: "snapshot",
+      values: [makeTag(1), { ...makeTag(1, 18), tagId: "water.flow" }],
+    });
+    expect(states.at(-1)?.status).toBe("live");
+
+    vi.advanceTimersByTime(12_000);
+    expect(states.at(-1)?.status).toBe("stale");
+    expect(states.at(-1)?.values.map((tag) => tag.quality)).toEqual(["STALE", "STALE"]);
+
+    controlled.handlers[0]?.onMessage({ kind: "delta", values: [makeTag(2, 55)] });
+    expect(states.at(-1)?.status).toBe("stale");
+    expect(states.at(-1)?.values.find((tag) => tag.tagId === "water.level")?.quality).toBe("GOOD");
+    expect(states.at(-1)?.values.find((tag) => tag.tagId === "water.flow")?.quality).toBe("STALE");
+
+    controlled.handlers[0]?.onMessage({
+      kind: "delta",
+      values: [{ ...makeTag(2, 21), tagId: "water.flow" }],
+    });
+    expect(states.at(-1)?.status).toBe("live");
+    expect(states.at(-1)?.values.map((tag) => tag.quality)).toEqual(["GOOD", "GOOD"]);
+  } finally {
+    runtime.stop();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
   }
 });
