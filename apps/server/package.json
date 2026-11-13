@@ -29,14 +29,14 @@
     "@prisma/adapter-pg": "catalog:",
     "@prisma/client": "catalog:",
     "helmet": "catalog:",
+    "nest-zod": "catalog:",
     "nestjs-pino": "catalog:",
     "pg": "catalog:",
     "pino": "catalog:",
     "pino-http": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
-    "zod": "catalog:",
-    "nest-zod": "catalog:"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@adui/tsconfig": "workspace:*",
