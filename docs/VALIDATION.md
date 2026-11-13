@@ -298,11 +298,11 @@ Docker 隔离测试应依次验证：
 
 - [x] 协作环境 Node 原生 HTTP/TCP 故障代理模块隔离测试 **3/3 通过**：非法外部目标拒绝、普通 HTTP 透传、真实 SSE 下行字节阻断且 socket 保持开放、其他订阅继续接收、连接关闭后重订阅。
 - [x] 新增 JS 文件及修改后的网络/浏览器脚本完成静态 JavaScript 语法解析，根 `package.json` JSON 检查通过；**这不等同于 Vite+ Lint 或真实浏览器运行通过**。
-- [ ] `pnpm run test:sse:fault:unit`：在维护者 Windows 工作区确认 3/3 通过，已纳入根 ready。
-- [ ] `pnpm run test:sse:fault:browser`：启动 Demo、React、Vue 后检查真实 Chrome/Edge 下行阻断、STALE、15 秒主动重连、新快照与退出资源回收。
+- [x] `pnpm run test:sse:fault:unit`：维护者 Windows 通过完整 `ready` 执行，**4/4 通过**，包含真实 Keep-Alive 重用后 SSE 分类与阻断回归。
+- [x] `pnpm run test:sse:fault:browser`：维护者 Windows 实测 React、Vue 均打印真实 TCP 下行阻断、STALE、主动重连及连接回收通过，**退出码 0**。
 - [ ] `pnpm run test:sse:fault:proxy`：在本机 Docker 演示栈上，分别通过 React/Vue Nginx 固定同源入口执行相同故障恢复验证；测试进程不修改容器配置。
 - [ ] `pnpm run test:sse:soak` 和 `pnpm run test:sse:soak:proxy`：各入口六路流持续收到至少 12 次新增 heartbeat 和 delta，心跳最大间隔小于 15 秒，并在结束时释放连接。
-- [ ] `vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 全部通过，记录真实退出码与测试计数。
+- [x] `vp check`：**260 个文件格式正确、129 个受检文件零告警/错误，退出码 0**；`pnpm run docs:check`：**74 个 Markdown 文件通过**；完整 `pnpm run ready` **退出码 0**，包含全量 Vitest 412/412（36 文件）、Node SSE 资源 8/8、Node 故障代理 4/4、NestJS E2E 17/17（3 文件），Vue/React/NestJS 类型检查与构建通过。
 - [ ] 真实 Nginx 半开故障、长时间高并发与慢消费者压力、生产鉴权、PostgreSQL 真库及工业现场：不属于当前可证实交付范围。
 
 本批仅在本机 `127.0.0.1` 注入 TCP **下行静默样式**故障，不能声称已造成生产线路半开；临时测试代理可视为测量工具而不是 SCADA 部署组件。见 [ADR-0058](adr/0058-tcp-sse-fault-and-soak-tests.md)。
@@ -318,3 +318,15 @@ Docker 隔离测试应依次验证：
 **修复后验证状态：** 代码通过静态 JavaScript 语法解析，协作环境的独立 Node 22 Keep-Alive 实验复现成功，但**没有在完整仓库执行修改后的四项 Node 单测、双框架真实 Chrome/Edge、`vp check` 或 `pnpm run ready`**。维护者需同步分支后重跑 `pnpm run test:sse:fault:unit`、`pnpm run test:sse:fault:browser`、`vp check`、`pnpm run docs:check`、`pnpm run ready`；Docker 专项与持续长连接仍独立待测。
 
 只更新测试工具和验收文档，没有改动共享 Runtime、Core、Vue/React 页面或生产服务；PR #48 继续 Draft，不经明确授权不合并。
+
+### 第二十六批第二轮 Windows 双框架与完整质量链复验通过（2026-11-13）
+
+维护者上传最新 PowerShell 日志证实：`pnpm run test:sse:fault:browser` 分别打印 **React 和 Vue 真实 TCP 下行阻断、STALE、主动重连及连接回收通过**，浏览器测试退出码 **0**。此前 Vue 的 `0 !== 1` SSE socket 分类失败已由 Keep-Alive 复用识别及稳定就绪判断修复；本轮不再复现。
+
+`vp check` 实测 **260 个文件格式正确，129 个受检文件零警告、零错误，退出码 0**；此前 `recovered` 未使用变量告警已经消除。`pnpm run docs:check` **74 个 Markdown 文件通过**。`pnpm run ready` **退出码 0**，包括依赖检查 11 个清单/51 项 Catalog、9 个 TSConfig 消费端、155 个自有文件中文文案检查、根环境与 LF 检查、Prisma Client 7.10.1 生成、Vue/React/NestJS 类型检查和构建。全量 Vitest **412/412（36 文件）**、Node SSE 连接资源专项 **8/8**、Node TCP 故障代理专项 **4/4**（含同一 Keep-Alive socket 的后续 SSE 请求）、NestJS E2E **17/17（3 文件）**。
+
+E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可用的预期负面测试，不代表 E2E 失败。
+
+**仍待独立验收：** `pnpm run test:sse:fault:proxy`（Docker Nginx 双框架故障注入）、`pnpm run test:sse:soak` 与 `pnpm run test:sse:soak:proxy`（六路持续心跳及增量）。本批实际故障注入为本机测试代理阻断 TCP 下行字节，不等同真实 Nginx 半开、长时高并发、生产鉴权、PostgreSQL 真库或工业现场验收。
+
+本次仅提交验收文档，**文档提交后的 `vp check` 与 `docs:check` 尚未重新执行**。PR #48 保持 Draft、Assignee `@adui-dev`，没有收到明确合并授权。
