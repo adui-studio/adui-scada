@@ -46,7 +46,7 @@
 - 改用 `apps/server/src/validation/standard-schema-integration.spec.ts`，只在测试 NestJS 应用注册 `StandardSchemaValidationPipe` 与逐路由响应拦截器，沿用 4 项 DTO/查询/响应输出/Swagger 集成测试。正式 `AppModule` 不改动，不开放业务或工业设备接口。
 - 启动配置只在值确实为 `undefined` 时回退到通用环境变量或默认值；非法 `null` 必须交给 Zod 拒绝。避免 `??` 把非法类型误当成未配置。
 - 本批 Windows 失败记录：格式 227 个文件全部通过，105 个受检源文件无警告/错误；执行单测时 **370 通过、1 失败**，另有一个 `nest-zod` 测试套件在导入时失败，因此 `ready` **未完成**，后续 E2E 与构建未执行。不能将此记录标为成功。
-- 修改后预期普通单测 **375 项**（基线 367 + 启动配置 4 + 原生集成 4），NestJS E2E 仍为 8 项。该数字尚未获得本轮复验确认。
-- 维护者在上一次安装时已经生成并推送包含 `nest-zod` 的 `pnpm-lock.yaml`；此次从 Manifest/Catalog 移除该包后，必须**再次通过 pnpm 正式重算锁文件并提交**，不可手工修改或忽略冻结安装校验；之后完整执行 `vp check`、`pnpm run ready` 和 `pnpm run test:docker:server`。
+- 修改后 Windows 实测普通单测 **375/375 项**（基线 367 + 启动配置 4 + 原生集成 4），NestJS E2E **8/8**，完整 `pnpm run ready` **退出码 0**；`vp check` 227 个文件格式通过、105 个受检源文件无警告或错误，65 份 Markdown 检查与 React/Vue/NestJS 类型检查及构建通过。
+- 维护者已使用 pnpm 正式重新计算并推送 `pnpm-lock.yaml`，锁文件中不再包含 `nest-zod`。随后 Windows 完整 `ready` 实测通过；独立 Docker 镜像构建包含 `pnpm install --frozen-lockfile` 且隔离烟测 **退出码 0**，健康接口 200、未开放工程及设备写入接口保持 404。没有单独执行 PostgreSQL 真库回归，也不等于工业现场认证完成。记录性文档同步后建议复验 `vp check` 与 `pnpm run docs:check`。
 
 安全边界保持不变：根目录 `.env` 先加载、Swagger 默认关闭、Guard 未挂载、工程写入和工业设备接口未开放。正式使用原生 Standard Schema 处理敏感业务请求时仍需专项校验异常输出，不得将未经清洗的错误详情写入审计。
