@@ -80,7 +80,10 @@ async function connect(url) {
       "，类型：" + (response.headers.get("content-type") || "未提供"),
     );
   }
-  assert.ok(response.body, "SSE 响应不包含可读取流");
+  if (!response.body) {
+    controller.abort();
+    throw new Error("SSE 响应不包含可读取流：" + url);
+  }
   const client = { controller, events: [], error: null, closed: false, task: null };
   const reader = response.body.getReader();
   client.task = (async () => {
@@ -144,8 +147,10 @@ async function verifyTarget(target) {
     for (let index = 0; index < 6; index++) clients.push(await connect(target.url));
     await waitFor(
       clients,
-      (client) => client.events.some((event) => event.kind === "message" &&
-        event.payload?.kind === "snapshot" && Array.isArray(event.payload.values)),
+      (client) => {
+        const first = client.events.find((event) => event.kind === "message");
+        return first?.payload?.kind === "snapshot" && Array.isArray(first.payload.values);
+      },
       target.name + " 六路首次快照",
     );
 
@@ -175,8 +180,7 @@ async function verifyTarget(target) {
     clients.push(replacement);
     await waitFor(
       [replacement],
-      (client) => client.events.some((event) => event.kind === "message" &&
-        event.payload?.kind === "snapshot"),
+      (client) => client.events.find((event) => event.kind === "message")?.payload?.kind === "snapshot",
       target.name + " 新订阅先收到快照",
     );
     assert.equal(clients.slice(1).filter((client) => !client.closed).length, 6);
