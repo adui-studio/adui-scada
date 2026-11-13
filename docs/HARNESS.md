@@ -1318,3 +1318,27 @@ git status --short
 验收需核对：默认 Vue/React 仍访问同源 `/demo/project` 和 `/demo/events`，项目 JSON 与 Tag 序列/质量未改变；手工页面断线后质量不得维持 GOOD。新 `nest-local` 预设只是固定相对路径，**当前不增设 Vite 代理，不应在浏览器误认为它已可切换到另一台主机**；Nest 本机模拟 API 未显式允许时依然 404。测试新连接必须先 snapshot、禁止首包 delta、停机取消 HTTP 加载与订阅、旧回调不可污染新会话；Vue 与 React 编译成功、桌面离线模拟无网络访问。
 
 本批的自动测试已验证同源预设、安全拒绝、snapshot 首包约束、断连 STALE、请求取消、旧代次隔离和同步订阅失败回收；双 Web 与 NestJS 构建成功。Docker 验证的是正式 NestJS 容器的 HTTP 边界和 SIGTERM，不是浏览器 Runtime 的生产容器集成测试。**尚未收到人工 Vue/React 页面断线演练或 Nest 预设浏览器接入验收**。PostgreSQL 真库、正式发布快照、认证的 Gateway 数据流、SSE 容量/背压及工业现场未在本批验收。若仅文档记录提交后变更，建议复查 `vp check` 和 `pnpm run docs:check`。
+
+## V0.3 第二十三批：模拟 SSE 心跳、传输与 Tag 数据静默（ADR-0055）
+
+第二十二批维护者 Windows / Docker 基线 **400/400 单测、17/17 NestJS E2E**，完整 `ready` 与 Docker SIGTERM 退出码 0。本批新增模拟 SSE heartbeat 事件、客户端 15 秒传输空闲超时重建和 12 秒 Tag 数据超时 STALE 告警，预计新增 **8 项单测**，累计 **408 单测、17 E2E**。**本批尚未在维护者 Windows 与 Docker 实测**，所有数字是验收目标。
+
+```powershell
+git fetch origin
+git switch feat/v0.3-sse-heartbeat-silence-watchdog
+git status --short
+git pull --ff-only origin feat/v0.3-sse-heartbeat-silence-watchdog
+
+pnpm install --frozen-lockfile
+pnpm run test:runtime
+vp check
+pnpm run ready
+Write-Host "完整验收退出码：$LASTEXITCODE"
+
+pnpm run test:docker:server
+Write-Host "Docker 退出码：$LASTEXITCODE"
+```
+
+自动化重点检查：心跳只保活传输不更新 TagStore；具名事件与原 `snapshot/delta` 不混淆；连续 15 秒传输静默强制重建，已关闭连接不能重建；12 秒无有效 Tag 值会使旧 GOOD/UNCERTAIN 降为 STALE；空 delta 不刷新数据时间，服务端标记的 STALE 不应被转换成 GOOD；正常数据恢复和网络重连后 snapshot 恢复正确。还应检查 NestJS 订阅/独立模拟服务关闭时清除心跳 timer，旧连接回调失效，工业设备写入仍为 404。
+
+手工回归建议：分别启动独立模拟 SSE + Vue/React，在浏览器 Network 中观察 5 秒心跳、30 秒周期内 8 秒断采引发的 STALE，确认心跳继续到达但过期 Tag 不显示正常值。NestJS 仅在根 `.env` 显式开启本机模拟 API、非生产且绑定 `127.0.0.1` 时测试，同源代理未被扩展。测试结束还原开关。浏览器后台节流、Nginx 反向代理、SSE 高并发背压、真实 Gateway 和工业现场仍未验收。
