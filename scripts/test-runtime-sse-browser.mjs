@@ -279,8 +279,7 @@ async function checkService(target, path, command, expectedContentType) {
     response = await fetch(url, { signal: AbortSignal.timeout(5000) });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    const cause =
-      error instanceof Error && error.cause instanceof Error ? error.cause.message : "";
+    const cause = error instanceof Error && error.cause instanceof Error ? error.cause.message : "";
     throw new Error(
       `${target.name} 本机服务不可访问：${url.href}；${reason}` +
         (cause ? `（${cause}）` : "") +

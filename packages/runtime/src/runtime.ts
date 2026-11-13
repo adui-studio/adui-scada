@@ -110,12 +110,13 @@ export class DemoRuntime {
   }
 
   private visibleSnapshot(): readonly TagValue[] {
-    return this.store.snapshot().map((tag) =>
-      this.expiredTagIds.has(tag.tagId) &&
-      (tag.quality === "GOOD" || tag.quality === "UNCERTAIN")
-        ? { ...tag, quality: "STALE" as const }
-        : tag,
-    );
+    return this.store
+      .snapshot()
+      .map((tag) =>
+        this.expiredTagIds.has(tag.tagId) && (tag.quality === "GOOD" || tag.quality === "UNCERTAIN")
+          ? { ...tag, quality: "STALE" as const }
+          : tag,
+      );
   }
 
   private publish(): void {
