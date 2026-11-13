@@ -32,8 +32,7 @@ afterEach(() => {
 });
 
 test("默认模拟数据源只请求原有同源演示路径，并使用无缓存模式", async () => {
-  const fetched: Array<{ url: string; cache: RequestCache | undefined; signal?: AbortSignal }> =
-    [];
+  const fetched: Array<{ url: string; cache: RequestCache | undefined; signal?: AbortSignal }> = [];
   vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
     fetched.push({ url, cache: init?.cache, signal: init?.signal ?? undefined });
     return new Response(JSON.stringify(waterTreatmentDemoDocument), {
@@ -96,9 +95,9 @@ test("NestJS 本机预设固定使用相同源的受控只读接口，不接受�
   expect(disconnects).toBe(1);
   subscription.close();
 
-  expect(() =>
-    createSseTagSource("https://example.invalid/device" as DemoTagSourcePreset),
-  ).toThrow(/不支持的模拟 Tag 数据源预设/);
+  expect(() => createSseTagSource("https://example.invalid/device" as DemoTagSourcePreset)).toThrow(
+    /不支持的模拟 Tag 数据源预设/,
+  );
 });
 
 test("工程 HTTP 状态异常或返回 HTML 时拒绝当作工程 JSON 处理", async () => {

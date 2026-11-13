@@ -2,10 +2,7 @@ import { expect, test } from "vite-plus/test";
 import { waterTreatmentDemoDocument } from "@adui/scada-core";
 import { DemoRuntime } from "../src/runtime.ts";
 import type { RuntimeState } from "../src/runtime.ts";
-import type {
-  ReadonlyTagSource,
-  ReadonlyTagSourceHandlers,
-} from "../src/tag-source.ts";
+import type { ReadonlyTagSource, ReadonlyTagSourceHandlers } from "../src/tag-source.ts";
 
 const makeTag = (sequence: number, value = 42) => ({
   tagId: "water.level",
@@ -48,9 +45,7 @@ test("注入数据源可交付原始 Tag 对象和 SSE JSON 文本，统一 Core
     expect(states.at(-1)?.status).toBe("live");
     expect(states.at(-1)?.values[0]?.sequence).toBe(5);
 
-    controlled.handlers[0]?.onMessage(
-      JSON.stringify({ kind: "delta", values: [makeTag(6, 55)] }),
-    );
+    controlled.handlers[0]?.onMessage(JSON.stringify({ kind: "delta", values: [makeTag(6, 55)] }));
     expect(states.at(-1)?.values[0]?.value).toBe(55);
     expect(states.at(-1)?.values[0]?.sequence).toBe(6);
   } finally {

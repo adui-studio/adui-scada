@@ -30,9 +30,7 @@ const DEMO_ROUTES = {
  * nest-local 路由受 NestJS 自身非生产、回环监听及显式开关保护；
  * 本适配器不会解除这些限制，也不会更改现有 Vue/React 代理配置。
  */
-export function createSseTagSource(
-  preset: DemoTagSourcePreset = "standalone",
-): ReadonlyTagSource {
+export function createSseTagSource(preset: DemoTagSourcePreset = "standalone"): ReadonlyTagSource {
   if (preset !== "standalone" && preset !== "nest-local") {
     throw new TypeError("不支持的模拟 Tag 数据源预设");
   }

@@ -17,7 +17,7 @@ Vue/React Runtime 目前共用 `@adui/scada-runtime` 的 `DemoRuntime`，但其�
 2. SSE 工厂 `createSseTagSource` 只允许静态枚举 `"standalone"` 与 `"nest-local"`：
    - `standalone`：`/demo/project` + `/demo/events`，保持 Vue/React 现有默认 URL 不变。
    - `nest-local`：`/api/dev/demo/project` + `/api/dev/demo/events`，只表示**同源路径**契约；Nest 服务端的开关、非生产、回环监听约束继续生效。当前 Vite 两套 Web 的开发代理只代理 `/demo`，本批**不开放** `/api/dev/demo` 代理，不承诺浏览器可直接切到此预设。只有未来经过专项评审配置受控同源入口后才能实际选择它。
-   工厂不接收任意主机、绝对 URL、设备地址或动态路由配置；非法预设立即抛出中文异常。
+     工厂不接收任意主机、绝对 URL、设备地址或动态路由配置；非法预设立即抛出中文异常。
 3. 工程请求继续禁用缓存、检查 HTTP 状态及 JSON Content-Type，并直接透传 `AbortSignal`；EventSource 保持浏览器原生自动重连能力。没有添加依赖、全局响应超时、后台轮询或多余的重试机制。
 4. `DemoRuntime(listener)` 构造参数和默认行为保持不变，第二个可选参数可注入 `ReadonlyTagSource`。两套 Web 仍按原路径实例化；Tauri `OfflineDemoRuntime` 继续纯本机模拟、不访问网络，不被强制重构。
 5. `DemoRuntime.start()` 为每次启动分配独立代次 `generation`，并为加载工程建立 `AbortController`。在 `stop()` 中取消挂起的 HTTP 请求、关闭订阅、使旧代次回调失效，并标记已缓存读数 STALE；停机后迟到的 Promise、SSE 消息或错误事件不能刷新 UI。同步订阅回调在 `subscribe()` 返回前发生时，也必须回收后来创建的句柄。
