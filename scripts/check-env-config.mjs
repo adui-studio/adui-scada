@@ -142,8 +142,10 @@ assert.ok(
 );
 assert.ok(nest.includes("loadEnvFile(envPath)"), "NestJS 必须加载根目录 .env");
 assert.ok(
-  nest.includes("allowLocalDemoTelemetry") && localDemoPolicy.includes("SCADA_LOCAL_DEMO_API_ENABLED") === false,
-  "NestJS 本机模拟接口必须使用独立的访问策略",
+  nest.includes("allowLocalDemoTelemetry") &&
+    localDemoPolicy.includes('nodeEnv !== "production"') &&
+    localDemoPolicy.includes('host === "127.0.0.1"'),
+  "NestJS 本机模拟接口必须使用非生产与回环监听约束",
 );
 assert.ok(
   nest.includes("SCADA_LOCAL_DEMO_API_ENABLED") && nest.includes("LocalDemoAppModule"),
