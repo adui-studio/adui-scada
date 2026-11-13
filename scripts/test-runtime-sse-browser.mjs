@@ -171,7 +171,10 @@ async function waitFor(session, description, predicate, timeoutMs) {
 async function checkTarget(session, target) {
   const url = validateLocalUrl(target.url);
   url.searchParams.set("scada_sse_browser_check", target.name.toLowerCase());
-  await session.send("Page.navigate", { url: url.href });
+  const navigation = await session.send("Page.navigate", { url: url.href });
+  if (navigation.errorText) {
+    throw new Error(target.name + " 浏览器导航失败：" + navigation.errorText);
+  }
   const ready = await waitFor(
     session,
     target.name + " 初始 SSE 快照",
