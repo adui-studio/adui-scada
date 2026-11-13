@@ -23,7 +23,8 @@ async function bootstrap(): Promise<void> {
   applyHttpServerPolicy(app.getHttpServer());
   applyHttpSecurityHeaders(app, localDocs);
   await setupLocalOpenApi(app, localDocs);
-  app.enableShutdownHooks();
+  // NestJS 完成关闭钩子后以退出码 0 结束，便于容器判断正常 SIGTERM 关闭。
+  app.enableShutdownHooks([], { useProcessExit: true });
   await app.listen(port, host);
 }
 
