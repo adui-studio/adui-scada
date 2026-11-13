@@ -473,3 +473,10 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - `resolveServerStartupConfig(env)` 是纯函数：专用 `SCADA_SERVER_PORT` / `SCADA_SERVER_HOST` 优先于通用 `PORT` / `HOST`；默认值仍为 3001 和 127.0.0.1。端口必须是 1～65535 的整数；监听主机仅允许 127.0.0.1 或 0.0.0.0，不回显非法原始输入。
 - Swagger 沿用 `allowLocalOpenApi` 的原有条件，`SCADA_API_DOCS_ENABLED=true`、非生产且本地回环三个条件必须同时成立；该配置不能绕过生产禁用策略。
 - 单独的配置测试和 `env:check` 静态顺序断言共同避免回归，见 [ADR-0047](adr/0047-server-configuration-startup.md)。
+
+## V0.3 第十六批：安全审计事件契约
+
+- `SecurityAuditDecision` 包含 `action`、`outcome`、`reason` 三项固定枚举；服务端 `createSafeSecurityAuditRecord` 只增加固定的 `category="scada_security"`，**不得复制任何外来属性**，也不允许将 Header、原始令牌、错误对象或租户/工程路径放入事件。
+- `action` 仅为 `session.authenticate` 和 `project.authorize`，`outcome` 仅为 `allowed` 与 `denied`。会话允许原因只能是 `verified`，拒绝原因仅有 `unsupported_context`、`malformed_authorization`、`invalid_session`；工程允许原因只能是 `permission_granted`，拒绝原因仅有 `unsupported_context`、`missing_policy`、`missing_principal`、`invalid_scope`、`permission_denied`。
+- 未定义事件、无效结果或错误搭配必须拒绝且不在异常提示中回显输入值。Guard 在已有授权语义中记录固定决策，不得改变授权结果或异常 HTTP 状态码。
+- `ScadaSecurityAuditService` 通过 NestJS `Logger` 发送仅含白名单字段的 JSON 消息；**不是强一致、可回放、可归责的持久化安全审计系统**，不替代工程版本事务审计或未来工业控制审计。模块仍未挂载正式 AppModule，详见 [ADR-0048](adr/0048-security-audit-event-boundary.md)。
