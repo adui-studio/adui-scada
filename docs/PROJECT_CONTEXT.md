@@ -546,3 +546,11 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 本批**无新 npm 依赖、Catalog、pnpm 锁文件、Prisma、Core、Vue/React 或业务 HTTP 路由变更**；维护者已在 Windows 实测 **381/381 单测、12/12 E2E**、完整 `ready` **退出码 0**，并通过 Docker 冻结安装、隔离烟测及正式 Linux Node PID 1 SIGTERM / 退出码 0 验证，Docker 退出码 0。此后追加仅在显式允许本机 Swagger 时打印实际文档地址的 Pino 启动日志，复用注册路由常量并增加 2 项单测；预计最新分支 **383 项单测、12 项 E2E**，新增改动仍待 Windows/Docker 复验。实际在途请求排空、SSE/WS、代理摘流与工业现场仍属于后续专项，见 [ADR-0052](adr/0052-linux-sigterm-container-shutdown.md)。
 
 按维护者 2026-11-10 已确认的规则，所有由 AI 创建的 GitHub PR（包含 Draft）创建后立即指派 `@adui-dev` 并核验。此前漏掉的 PR #39、#40、#41 已补充指派，本批 PR 也必须在创建后验证；未经授权不合并。
+
+## 2026-11-13 · V0.3 第二十一批：本机只读模拟工程与 Tag SSE（Draft 待验收）
+
+前第二十批 PR #42 已在维护者授权下通过 Squash Merge 合并至 `main`（`7e78de4`）。维护者曾实测 Swagger 日志增量前的 381/381 单测、12/12 E2E、完整 `ready` 与 Docker Linux SIGTERM 双阶段退出码 0；之后 2 项 Swagger URL 单测及终端编码说明仍缺最新合并提交的完整 Windows 验收，不能把 381 项当成 383 项已通过。
+
+第二十一批选择为更贴近 FR-004、FR-009 的**本机诊断型模拟数据接入**，而非继续增加无关服务端依赖。正式 `AppModule` 仍只挂载健康与就绪接口；另有 `LocalDemoAppModule` 只在 `SCADA_LOCAL_DEMO_API_ENABLED=true`、非生产、实际监听 `127.0.0.1` 时由 `main.ts` 显式选择。新增 `GET /api/dev/demo/project`、`GET /api/dev/demo/tags`、`GET /api/dev/demo/events`，复用 Core 水处理工程、TagStore、WaterTreatmentSimulator 和 snapshot/delta 质量协议；所有数据均为本机模拟，模拟中断产生 STALE，恢复后新序列号递增。
+
+新增访问策略 2 项单测、模拟服务 4 项单测、正式根模块默认 404 的 1 项 E2E，以及本机演示模块的 4 项 E2E（含 Swagger JSON、SSE 快照、断流清理）。预期最新版 **389 项普通单测、17 项 E2E**，均待维护者 Windows/Docker 实测。无新依赖、锁文件、Prisma、Core、Vue/React 或工业接口修改。旧 `/demo` SSE 服务、双框架 Runtime 和 Docker 生产默认行为不变；这不是正式工业网关、真实认证、工程版本 API 或生产 Tag 流。参见 [ADR-0053](adr/0053-local-readonly-demo-telemetry.md)。
