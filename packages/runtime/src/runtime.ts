@@ -82,6 +82,8 @@ export class DemoRuntime {
   private dataTimer: ReturnType<typeof setInterval> | null = null;
   private visibilityCleanup: (() => void) | null = null;
   private readonly store = new TagStore();
+  // 传输内的本地过期标记不占用上游序列号，按 Tag 独立恢复。
+  private readonly expiredTagIds = new Set<string>();
   private document: ScadaDocument | null = null;
   private status: RuntimeStatus = "idle";
   private message = initialRuntimeState.message;
@@ -107,12 +109,21 @@ export class DemoRuntime {
     return this.active && this.generation === generation;
   }
 
+  private visibleSnapshot(): readonly TagValue[] {
+    return this.store.snapshot().map((tag) =>
+      this.expiredTagIds.has(tag.tagId) &&
+      (tag.quality === "GOOD" || tag.quality === "UNCERTAIN")
+        ? { ...tag, quality: "STALE" as const }
+        : tag,
+    );
+  }
+
   private publish(): void {
     if (this.active) {
       this.listener({
         status: this.status,
         document: this.document,
-        values: this.store.snapshot(),
+        values: this.visibleSnapshot(),
         message: this.message,
       });
     }
@@ -125,6 +136,7 @@ export class DemoRuntime {
     const controller = new AbortController();
     this.loading = controller;
     // 重新开始订阅前，旧会话数据不得以 GOOD 质量显示。
+    this.expiredTagIds.clear();
     this.store.markDisconnected(Date.now());
     this.status = "loading";
     this.message = "正在加载模拟工程";
@@ -157,7 +169,17 @@ export class DemoRuntime {
             }
             const previous = new Map(this.store.snapshot().map((tag) => [tag.tagId, tag.sequence]));
             const change = applyDemoChange(this.store, event);
-            if (change.kind === "snapshot") awaitingSnapshot = false;
+            if (change.kind === "snapshot") {
+              awaitingSnapshot = false;
+              this.expiredTagIds.clear();
+            } else {
+              // 只有被 Store 接受的新序列才能恢复相应 Tag 的显示质量。
+              for (const tag of change.values) {
+                if (tag.sequence > (previous.get(tag.tagId) ?? -1)) {
+                  this.expiredTagIds.delete(tag.tagId);
+                }
+              }
+            }
             // 空增量或已经被 TagStore 拒绝的旧序列不能刷新数据新鲜度。
             const hasNewData =
               change.kind === "snapshot"
@@ -165,7 +187,7 @@ export class DemoRuntime {
                 : change.values.some((tag) => tag.sequence > (previous.get(tag.tagId) ?? -1));
             if (change.kind === "delta" && !hasNewData) return;
             if (hasNewData) lastDataAt = Date.now();
-            const hasStale = this.store.snapshot().some((tag) => tag.quality === "STALE");
+            const hasStale = this.visibleSnapshot().some((tag) => tag.quality === "STALE");
             this.status = hasStale ? "stale" : "live";
             this.message = hasStale
               ? "模拟数据存在已过期的 Tag，心跳不能恢复数据质量"
@@ -177,6 +199,7 @@ export class DemoRuntime {
             this.clearVisibilityListener();
             this.subscription?.close();
             this.subscription = null;
+            this.expiredTagIds.clear();
             this.store.markDisconnected(Date.now());
             this.status = "error";
             this.message =
@@ -188,6 +211,7 @@ export class DemoRuntime {
           if (!this.current(generation)) return;
           awaitingSnapshot = true;
           lastDataAt = Date.now();
+          this.expiredTagIds.clear();
           this.store.markDisconnected(Date.now());
           this.status = "reconnecting";
           this.message = "连接中断，旧值已标记 STALE，等待重连";
@@ -209,7 +233,12 @@ export class DemoRuntime {
           return;
         }
         if (Date.now() - lastDataAt < TAG_DATA_TIMEOUT_MS) return;
-        this.store.markDisconnected(Date.now());
+        // 仅在 Runtime 显示层降级，不调用会消耗上游序列号的 markDisconnected。
+        for (const tag of this.store.snapshot()) {
+          if (tag.quality === "GOOD" || tag.quality === "UNCERTAIN") {
+            this.expiredTagIds.add(tag.tagId);
+          }
+        }
         const message = "Tag 数据持续超时，现有读数已标记 STALE，等待新数据";
         if (this.status !== "stale" || this.message !== message) {
           this.status = "stale";
@@ -247,6 +276,7 @@ export class DemoRuntime {
     this.clearVisibilityListener();
     this.subscription?.close();
     this.subscription = null;
+    this.expiredTagIds.clear();
     this.store.markDisconnected(Date.now());
   }
 }
