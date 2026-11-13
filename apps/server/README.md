@@ -70,3 +70,13 @@ Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。�
 `AuthSessionService` 仅供未来经过可信登录/OIDC 身份验证的内部调用者使用：从 PostgreSQL 活跃主体记录签发一次性可见的 32 字节高熵不透明 Bearer 令牌；数据库仅保存 SHA-256 摘要、15 分钟过期时间和撤销状态，每次请求都重新核验主体是否停用。绝不能把浏览器提交的 `tenantId` / `subjectId` / `role` 直接用于调用内部签发方法。未来身份接入必须建立真实认证来源、发行者信任及安全审计。
 
 新增 Prisma `ScadaIdentity` 和 `ScadaAuthSession` 两个业务模型，字段均有中文文档与 PostgreSQL 中文元数据注释。迁移为 `20261113000000_trusted_identity_sessions`，**不会重写旧迁移**。服务端实际接入前必须由管理员在隔离数据库执行迁移并验证完整授权测试。`scada_auth_sessions.session_id` 继续为 PostgreSQL UUID；Nano ID 只适用于后续新建字符串型不透明标识，不能未经迁移写入 UUID 字段。技术依赖选型见 [依赖推荐清单](../../docs/DEPENDENCY_SELECTION.md)。
+
+## V0.3 第十四批：受控日志、OpenAPI 与 HTTP 安全基线
+
+本批对已存在的 NestJS `/health` 服务接入 `nestjs-pino@5.3.1` / Pino 10 / `pino-http@11`，使用**仅记录请求 ID、HTTP 方法、响应状态码**的白名单序列化；不记录查询字符串、Authorization、Cookie、请求体或令牌，另外对可能进入后续日志对象的凭据字段开启 Pino redact。请求关联 ID 由服务端 Node `randomUUID` 生成，作为 `x-request-id` 响应头返回，**不信任客户端传入的请求 ID**。
+
+`helmet@8.3.0` 默认提供安全响应头，Swagger UI 的 CSP 仅在本机开发且显式启用文档时做有限放宽。`@nestjs/swagger@12.1.1` 通过 NestJS 的 DocumentBuilder 注册文档，默认**根本不创建路由**；只有 `SCADA_API_DOCS_ENABLED=true`、`NODE_ENV` 非 production 且 `SCADA_SERVER_HOST=127.0.0.1` 时可访问本机 `/api/docs` 和 `/api/docs-json`。当前文档只包含已有 `GET /health`，不存在可以调用的登录、工程写入或工业设备写入 API。服务启动依旧不连接 PostgreSQL 或 PLC。
+
+依赖采用 Catalog 精确版本，**当前仓库在线执行环境不能访问 npm Registry，因此尚未生成 `pnpm-lock.yaml`**。在 Windows 检出本批分支后，必须执行一次 `pnpm install`、确认新锁文件由 pnpm 12 生成并提交，再执行 `pnpm install --frozen-lockfile` 和 `pnpm run ready`。锁文件提交前本批 PR 不能合并，亦不能声称可重复安装。
+
+日志与 HTTP 响应头属于运维可观测性，不是不可篡改的认证安全审计或工业操作审计。身份颁发、权限管理端点和真实设备写入仍保持关闭。详见 [ADR-0046](../../docs/adr/0046-pino-openapi-http-security.md)。

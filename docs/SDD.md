@@ -457,3 +457,12 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - `ScadaSessionGuard`：仅 HTTP，拒绝空、过长、重复头和无效 Bearer，成功才写 `request.scadaPrincipal`；不会接受请求体中的主体字段。
 - `ScadaProjectGuard`：拒绝未声明 `RequireProjectPermission` 元数据的路由、无主体、非法工程 ID、URL 中跨租户、没有当前主体的精确工程授权；通过 `scada_project_grants` + 共享权限策略评估 `project:read/version:read/version:append`。缺少授权统一呈现为资源不可访问（404），无可信主体为 401。
 - **安全边界**：上述代码尚未挂入 `AppModule`、未注册 HTTP 路由，Guard 只作为未来保护路由的基础；读取/写入仍须按业务事务再复查权限，令牌撤销与进行中的写入之间的竞态、完整账号生命周期和真实身份提供者仍待独立安全评审。
+
+## V0.3 第十四批：日志与 API 文档契约
+
+- `SCADA_LOG_LEVEL` 仅接受 `fatal/error/warn/info/debug/trace/silent`，默认 `info`。非法等级在服务端兜底为 `info`，环境检查对明确设置的无效值直接报错。
+- 每个 HTTP 请求通过 Node `randomUUID()` 产生新的请求关联 ID，并写入 `x-request-id` 响应头。**不直接信任用户提交的关联 ID**。日志仅允许请求 ID / 方法和响应状态码，URL 查询、Header、Body 不进入常规日志；Pino 的 `redact` 对常见敏感字段再次防护。
+- `SCADA_API_DOCS_ENABLED` 默认 `false`，仅值 `true` 可启用；且要求 `NODE_ENV !== production`、NestJS 监听 `127.0.0.1`。任何条件不满足时不注册 `/api/docs` 与 `/api/docs-json`。开发 Swagger 开启时禁用 CSP 仅为交互 UI 兼容，正式部署仍使用 Helmet 默认 CSP。
+- `GET /health` 在 OpenAPI 中只包含 `status='ok'` 与 `service='adui-scada-server'`；**不能视为数据库就绪/工业网关可用的证明**。OpenAPI 中没有登录、会话签发、工程版本读写或工业设备写入方法。
+- 生产 Pino 运行时使用 `nestjs-pino` v5 + Pino v10 + `pino-http` v11；Swagger 使用 `@nestjs/swagger` v12、HTTP 安全头使用 `helmet` v8。本批不升级现有 NestJS 12 / Prisma 7 / Vite+ / TypeScript 6。
+- 这些业务依赖需在受控 Windows 环境由 pnpm 12 生成 `pnpm-lock.yaml`。**在锁文件完整和测试通过前，此契约仅是待验收实现**。

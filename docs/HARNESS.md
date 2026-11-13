@@ -1086,3 +1086,39 @@ Write-Host "退出码：$LASTEXITCODE"
 Prisma 新增迁移 `20261113000000_trusted_identity_sessions`，首次应用必须先确认当前 `.env` 指向本机隔离开发库 `127.0.0.1:15432/adui_scada`，然后显式执行 `pnpm run db:migrate:deploy` 与 `pnpm run db:migrate:status`；不能修改或重用旧迁移文件。**真实数据库测试仍仅允许本机 `adui_scada_test`**，通过 PowerShell `try/finally` 形式临时设置 `SCADA_DATABASE_URL` 和 `SCADA_TEST_DATABASE_URL` 为测试库 URL，先将新迁移应用到测试库再执行 `pnpm run test:db`，结束恢复两变量，不把真实口令写入 Git。该测试从随机租户创建临时主体/会话并在结束时删除，不会修改开发业务库。
 
 可独立执行 `pnpm run test:docker:server`，验证镜像仍可加载 NestJS/共享 Core，认证会话签发及工程/设备写入 API 均保持关闭。现有容器烟测不导入身份模块，因此不连接数据库。真实 OIDC 登录、会话发行端点、生产 HTTPS、身份撤销并发与审计待后续专项验收。
+
+## V0.3 第十四批：Pino / Swagger / Helmet 验收与锁文件完成步骤（ADR-0046）
+
+此批新增 `nestjs-pino@5.3.1`、`pino@10.4.0`、`pino-http@11.0.0`、`@nestjs/swagger@12.1.1`、`helmet@8.3.0`，统一写入根 `pnpm-workspace.yaml` Catalog、服务端 `package.json`。远端协作环境**无法访问 npm Registry**，因此未尝试人工编造 `pnpm-lock.yaml`。维护者第一次拉取本批分支时，必须使用能够访问 npm Registry 的 Windows 环境执行一次解锁安装，审查实际变更后补交锁文件；此事完成之前**不可合并**。
+
+```powershell
+git fetch origin
+git switch feat/v0.3-pino-swagger-security
+git pull --ff-only
+
+# 此处首次必须让 pnpm 正式生成锁文件，不使用 --frozen-lockfile。
+pnpm install
+git status --short
+git diff -- pnpm-lock.yaml
+
+# 经确认锁文件中新增依赖与 Catalog 一致后，提交锁文件（不包含 .env 或私钥）。
+git add pnpm-lock.yaml
+git commit -m "chore(deps): 🔒 同步服务端日志与文档依赖锁文件"
+git push origin feat/v0.3-pino-swagger-security
+
+# 检验锁文件可以复现安装。
+pnpm install --frozen-lockfile
+pnpm run ready
+Write-Host "质量链退出码：$LASTEXITCODE"
+```
+
+如安装或 Peer Dependencies 报错，请提供真实输出再调整，不允许将 `ignorePeerDeps` 或覆盖包版本作为默认修复。文档测试预计 355 项单测、8 项 NestJS E2E，React/Vue/Core 和旧数据库安全链不能回退。
+
+可在本机测试 Swagger：在 PowerShell 临时设置 `$env:NODE_ENV="development"`、`$env:SCADA_API_DOCS_ENABLED="true"` 并确认 `SCADA_SERVER_HOST=127.0.0.1` 后执行 `pnpm run dev:server`，打开 `http://127.0.0.1:13001/api/docs`（端口以实际 `.env` 为准）。恢复 `SCADA_API_DOCS_ENABLED=false` 或在 `NODE_ENV=production` 启动后文档必须返回 404。文档仅描述 `GET /health`，不要通过 Swagger 测试未开放的工程/设备接口。非回环绑定禁止启用文档。
+
+```powershell
+pnpm run test:docker:server
+Write-Host "容器烟测退出码：$LASTEXITCODE"
+```
+
+容器运行阶段仍为 `--network none`，不映射宿主机端口、不连接数据库或工业网关。新增 Pino/Swagger/Helmet 运行依赖必须随 server 镜像复制正确；构建阶段拉取依赖需要正常访问 npm Registry。安全审计持久化、生产 IAM、登录/MFA、分布式日志保留、RLS 仍待后续批次。

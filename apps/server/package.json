@@ -28,7 +28,12 @@
     "@prisma/client": "catalog:",
     "pg": "catalog:",
     "reflect-metadata": "catalog:",
-    "rxjs": "catalog:"
+    "rxjs": "catalog:",
+    "nestjs-pino": "catalog:",
+    "pino": "catalog:",
+    "pino-http": "catalog:",
+    "@nestjs/swagger": "catalog:",
+    "helmet": "catalog:"
   },
   "devDependencies": {
     "@adui/tsconfig": "workspace:*",

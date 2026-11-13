@@ -25,6 +25,8 @@ const defaults = {
   SCADA_VUE_DEV_PORT: "15174",
   SCADA_SERVER_HOST: "127.0.0.1",
   SCADA_SERVER_PORT: "13001",
+  SCADA_LOG_LEVEL: "info",
+  SCADA_API_DOCS_ENABLED: "false",
   SCADA_DEMO_HOST: "127.0.0.1",
   SCADA_DEMO_PORT: "14178",
   SCADA_REACT_PORT: "8080",
@@ -94,6 +96,13 @@ if (existsSync(resolve(root, ".env"))) {
       assert.ok(["127.0.0.1", "localhost"].includes(value), `${key}：必须使用本机回环地址`);
     } else if (key === "SCADA_DB_NAME" || key === "SCADA_DB_USER") {
       assert.match(value, /^[A-Za-z][A-Za-z0-9_]{0,62}$/, `${key}：必须是有效的开发数据库标识符`);
+    } else if (key === "SCADA_LOG_LEVEL") {
+      assert.ok(
+        ["fatal", "error", "warn", "info", "debug", "trace", "silent"].includes(value),
+        "SCADA_LOG_LEVEL：必须是已支持的日志级别",
+      );
+    } else if (key === "SCADA_API_DOCS_ENABLED") {
+      assert.ok(["true", "false"].includes(value), "SCADA_API_DOCS_ENABLED：必须是 true 或 false");
     } else if (key === "SCADA_DB_PASSWORD" || key === "SCADA_DATABASE_URL") {
       // 数据库密码和 URL 由后续配套检查比较，不在报错时泄漏原值。
     } else {
