@@ -520,3 +520,8 @@
 - `packages/runtime/test/tag-source.test.ts`：新增 5 项具名心跳、传输静默、原生错误、同步停止及清理回归。
 - `packages/runtime/test/tag-source-runtime.test.ts`：新增 3 项数据静默、空增量/STALE、网络重连与定时器回归。
 - `packages/runtime/test/runtime.test.ts`：补充中文 `stale` 状态映射断言。详见 [ADR-0055](adr/0055-sse-heartbeat-and-tag-silence.md)。
+
+## V0.3 第二十四批 · 浏览器 SSE 回归入口
+
+- `scripts/test-runtime-sse-browser.mjs`：使用本机 Chrome/Edge 原生 EventSource 和 DevTools Protocol，对 Vue/React 两套运行时进行心跳保活、Tag 静默、传输静默重连及页面退出资源回收的浏览器自动化验证；仅在本机回环地址执行，不增加应用或服务端测试专用 API。
+- `packages/runtime/src/tag-source.ts` 与 `packages/runtime/src/runtime.ts`：后台标签页恢复可见时分别复查 SSE 传输时间与 Tag 数据新鲜度，并在停止/关闭时回收 `visibilitychange` 监听。见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
