@@ -13,8 +13,8 @@
 
 1. 浏览器与桌面模式的工程 Schema、TagChange 契约和原有同源预设 URL 不变。仅修改共享 `packages/runtime` 的 SSE 看门狗和数据时效检查，不分别改写 Vue/React 页面。
 2. SSE 适配器记录最后一次收到 **真实 Tag 或 heartbeat 事件** 的墙上时间。定时器触发时重新计算持续静默时长，尚未达到 15 秒则只调度剩余时间；页面恢复为 `visible` 时立即复查。如果真正超时，则沿用先通知断连、确认未关闭、关闭旧流、重建固定同源 EventSource 的流程。
-3. DemoRuntime 抽取既有 12 秒数据静默检查函数，在浏览器文档恢复为 `visible` 时立即执行。只有接受的新 Tag 才更新时间；具名心跳不能恢复旧值的 GOOD 质量。非法消息、停止和重启必须注销新的 `visibilitychange` 监听，避免泄漏。
-4. 新增 `pnpm run test:sse:browser`，复用现有 Chrome/Edge DevTools Protocol 的无依赖启动方式，以真实前端页面和原生 SSE 通道运行 React、Vue 两端。测试脚本只允许目标 URL 为本机回环地址。
+3. DemoRuntime 抽取既有 12 秒数据静默检查函数，在浏览器文档恢复为 `visible` 时立即执行。只有接受的新 Tag 才更新时间；具名心跳不能恢复旧值的 GOOD 质量。**修正 ADR-0055 的本地数据超时处理**：超时仅在 Runtime 展示层按 Tag ID 覆盖 `STALE` 质量，不调用会递增本地序列号的 `TagStore.markDisconnected()`，使上游下一条合法递增数据得以恢复对应 Tag；未收到有效新值的其他 Tag 继续显示过期。真正网络断连仍沿用 `markDisconnected()` 与新会话必须先 snapshot 的约束。非法消息、停止和重启必须注销新的 `visibilitychange` 监听，避免泄漏。
+4. 新增 `pnpm run test:sse:browser`，复用现有 Chrome/Edge DevTools Protocol 的无依赖启动方式，以真实前端页面和原生 SSE 通道运行 React、Vue 两端。测试脚本只允许目标 URL 为本机回环地址；读取根目录 `.env` 的开发端口，按页面和 `/demo/project` 分别做显式预检查，失败时显示 URL、底层网络异常及启动命令。
 5. 浏览器故障注入通过包装原生 EventSource **屏蔽应用层回调**，分别模拟“仅 Tag 停更、心跳仍在”和“Tag 与心跳完全静默”；测试检查 `stale`、重连后 `live`、同源路径不变、旧流关闭以及离开 Runtime 资源清理。此方法不会停止底层 HTTP 网络字节，不能宣称覆盖真实路由器断网或代理半开连接。
 6. 不增加第三方依赖、不修改 Vue/React 业务页、NestJS/Prisma、Docker 代理或工业 Gateway；维持模拟接口非生产、同源、只读及回环访问边界。
 
@@ -27,5 +27,5 @@
 ## 当前验证状态
 
 - 新增脚本在本次协作容器使用 `node --check` 做了语法检查；**尚未完成基于仓库全部依赖的本机测试和 Chrome/Edge 运行验收**。
-- 新增两条 Vitest 回归用例针对前台恢复、最近事件时间和监听回收；实际测试结果以维护者 Windows 日志为准，不将用例提交等同于通过。
+- 首轮维护者 Windows 运行：Runtime 专项 **30/31**，因本地 STALE 标记占用序列号导致恢复断言失败；浏览器脚本预检查直接返回 `fetch failed`，尚不能确定是哪一条服务未启动或不可达。后续修正过期展示层和浏览器诊断，并新增双 Tag 独立恢复回归；**修复后的测试结果尚未得到 Windows 复验**。
 - 本次改动通过 Draft PR 交付，维护者验收并明确授权前不合并、部署或发布。
