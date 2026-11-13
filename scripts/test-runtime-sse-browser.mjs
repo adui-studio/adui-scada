@@ -191,6 +191,14 @@ async function snapshot(session) {
       "url: location.href, " +
       "status: document.querySelector('.scada-status')?.getAttribute('data-status') ?? null, " +
       "streams: probe?.streams.map((source) => ({ ...source })) ?? [], " +
+      "diagnostics: { " +
+      "present: !!document.querySelector('.scada-diagnostics'), " +
+      "tagCount: document.querySelectorAll('.scada-tag').length, " +
+      "reconnectCount: Number(document.querySelector(" +
+      "'.scada-diagnostics-grid > div:nth-child(2) dd')?.textContent), " +
+      "qualities: [...document.querySelectorAll('.scada-quality-item')].map((node) => ({ " +
+      "quality: node.getAttribute('data-quality'), " +
+      "count: Number(node.querySelector('strong')?.textContent) })) }, " +
       "statuses: [...(probe?.statuses ?? [])] }; })()",
   );
 }
@@ -227,6 +235,13 @@ async function checkTarget(session, target) {
       state.streams.some((stream) => !stream.closed),
     20000,
   );
+  assert.equal(ready.diagnostics.present, true, "双框架应显示共享链路诊断面板");
+  assert.equal(ready.diagnostics.qualities.length, 4, "诊断必须包含四种 Tag 质量");
+  assert.equal(
+    ready.diagnostics.qualities.reduce((total, quality) => total + quality.count, 0),
+    ready.diagnostics.tagCount,
+    "质量分布数量必须与可见 Tag 数量一致",
+  );
   let activeIndex = ready.streams.findLastIndex((source) => !source.closed);
   assert.ok(activeIndex >= 0, "没有有效 SSE 流");
 
@@ -242,6 +257,10 @@ async function checkTarget(session, target) {
     stale.streams.filter((stream) => !stream.closed).length,
     1,
     "仅 Tag 静默时不得重建仍有心跳的 SSE 流",
+  );
+  assert.ok(
+    stale.diagnostics.qualities.some((item) => item.quality === "STALE" && item.count > 0),
+    "数据过期时诊断质量分布必须包含 STALE",
   );
   await session.evaluate("window.__scadaSseProbe.streams[" + activeIndex + "].mode = 'normal'");
   const resumed = await waitFor(
@@ -268,6 +287,7 @@ async function checkTarget(session, target) {
     recovered.streams.every((stream) => stream.url === recovered.streams[0].url),
     "重建连接必须保留原固定同源路径",
   );
+  assert.ok(recovered.diagnostics.reconnectCount >= 1, "静默重连必须累计断连过程");
   await waitFor(
     session,
     target.name + " 断流后快照恢复",

@@ -344,3 +344,36 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 结合前轮维护者实测，双框架开发环境 `test:sse:fault:browser` **退出码 0**，完整 `pnpm run ready` **退出码 0**：全量 Vitest **412/412（36 文件）**、Node SSE 资源 **8/8**、Node TCP 故障代理 **4/4**、NestJS E2E **17/17（3 文件）**，双框架和 NestJS 类型检查、构建通过。**第二十六批本机 Windows/Docker 自动化验收项已全部通过。**
 
 **范围限制：** 真实被阻断的是本机测试代理内的 TCP SSE 下行字节，未直接模拟真实 Nginx 宕机、物理断网、工业网关故障。有限六路持续观测不是长期高并发/慢消费内存背压或生产 SLA，生产鉴权、PostgreSQL 真库与现场设备仍未验收。本次仅追加验收记录，**最新文档提交后的 `vp check` 与 `docs:check` 尚未重新执行**；建议合并前再做一次静态复查。PR #48 继续 Draft，未经维护者明确授权不得合并。
+
+## 2026-11-13 · V0.3 第二十七批共享 Runtime 诊断验收清单（待执行）
+
+- [x] `pnpm run test:runtime`：维护者 Windows 实测退出码 0；新增 `diagnostics.test.ts` **5/5 通过**，并覆盖共享 Runtime、TagSource 与离线 Runtime。
+- [x] `vp check`：维护者 Windows 实测 **263 个文件格式正确、131 个受检文件零警告/错误，退出码 0**。
+- [x] `pnpm run docs:check`：维护者 Windows 实测 **75 个 Markdown 文件通过，退出码 0**。
+- [x] `pnpm run ready`：维护者 Windows 实测 **退出码 0**；全量 Vitest **417/417（37 文件）**、Node SSE 资源 **8/8**、TCP 故障代理 **4/4**、NestJS E2E **17/17（3 文件）**，Vue/React/NestJS 类型检查与构建通过。
+- [x] `pnpm run test:sse:browser` 与 `pnpm run test:sse:fault:browser`：维护者 Windows 实测 React、Vue 均通过，两个命令退出码均为 0；浏览器自动化检查诊断面板存在、四种质量数量之和与可见 Tag 数一致、STALE 质量统计及重连计数。**手工视觉验收仍未单独报告。**
+- [ ] Tauri 桌面端离线页面人工确认；当前仅安排 OfflineDemoRuntime 单元测试，不宣称 MSI 或桌面安装包已验收。
+- [ ] 真实 PLC/DCS 采集延时、经校时的端到端 RTT、生产鉴权、PostgreSQL 真库、长期高并发与工业现场：不属于本批交付范围。
+
+本批只新增浏览器本地内存的实时诊断快照。测试通过不得据此推断工业网关、生产可用性、故障报警历史、数据持久化或设备写入已完成。详见 [ADR-0059](adr/0059-runtime-local-diagnostics.md)。
+
+### 第二十七批 Windows 完整质量链与双框架浏览器复验通过（2026-11-13）
+
+维护者上传 PowerShell 日志，确认本批新增诊断与既有 SSE 能力在 Windows 仓库工作区通过：
+
+- `pnpm run test:runtime`：**退出码 0**；其中新增 `packages/runtime/test/diagnostics.test.ts` **5/5 通过**，共享 Runtime、TagSource 与离线 Runtime 测试通过。
+- `vp check`：**263 个文件格式正确，131 个受检文件零警告、Lint 错误与类型错误，退出码 0**。
+- `pnpm run docs:check`：**75 个 Markdown 文件通过，退出码 0**。
+- `pnpm run ready`：**退出码 0**；依赖 11 个清单/51 项 Catalog、9 个 TSConfig 消费端、157 个自有代码或配置文件中文文案检查、根 `.env` 与 LF 检查通过；Prisma Client **7.10.1** 生成成功。
+- 全量 Vitest：**417/417（37 个文件）**；其中 Runtime 诊断测试 5/5。
+- Node SSE 连接资源专项：**8/8**；TCP 故障代理专项：**4/4**。
+- NestJS E2E：**17/17（3 个文件）**。其中主动模拟关闭的 HTTP 503 / Terminus Health Check 失败日志属于预期负面测试，不是失败。
+- Vue、React、NestJS 类型检查及构建全部通过；日志显示 React 3899 个模块、Vue 3844 个模块完成构建，NestJS 服务端构建完成。
+- `pnpm run test:sse:browser`：React、Vue 的 SSE 心跳、Tag 过期、静默重连和资源清理通过，**退出码 0**。
+- `pnpm run test:sse:fault:browser`：React、Vue 的真实 TCP 下行阻断、STALE、主动重连和连接回收通过，**退出码 0**。该浏览器脚本同时检查诊断面板存在、四档质量总数与可见 Tag 数一致、STALE 统计和重连过程计数。
+
+**本批 Windows 自动化质量链与双框架浏览器回归通过。** 浏览器自动化断言已覆盖诊断面板的数据一致性；维护者尚未单独报告手工视觉验收或 Tauri 桌面人工验收，因此不将两项标记为完成。
+
+诊断的 `dataAgeMs` 仍只代表本机接受有效 Tag 后经过的时间，不是 PLC 采样延迟或网络 RTT；`reconnectCount` 是去重后的连续断连过程数，不是实际 TCP 重建计数。生产认证、真实工业网关、PostgreSQL 真库、历史诊断持久化及工业现场尚未验收。
+
+本段为验收记录追加后，**尚未重新执行最新文档的 `vp check` / `docs:check`**；建议合并审查前再运行一次。PR #49 继续保持 Draft，Assignee `@adui-dev`，未经明确授权不得合并。

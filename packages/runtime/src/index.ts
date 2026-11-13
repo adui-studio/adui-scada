@@ -14,3 +14,10 @@ export type {
   ReadonlyTagSourceHandlers,
   ReadonlyTagSubscription,
 } from "./tag-source.ts";
+export {
+  createRuntimeDiagnostics,
+  formatRuntimeDataAge,
+  formatRuntimeUpdateTime,
+  initialRuntimeDiagnostics,
+} from "./diagnostics.ts";
+export type { RuntimeDiagnostics } from "./diagnostics.ts";

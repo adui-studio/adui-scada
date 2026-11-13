@@ -349,3 +349,7 @@ Runtime 生命周期按连接代次隔离：停止时中止 fetch、关闭 SSE�
 ## 2026-11-13 · V0.3 第二十六批：回环 TCP SSE 故障代理仅位于测试工具链
 
 在现有 Vue/React → Vite 或 Docker Nginx → 独立 Demo 只读 SSE 链路外，增加独立 Node TCP 回环透明代理作为浏览器自动化的临时入口。代理只识别固定 `GET /demo/events` 或 `GET /events` 的会话，允许对单路下行字节进行暂停，且不向用户应用、工业 Gateway、NestJS、Core 或 Docker 正式配置注入网络控制 API。原有浏览器测试缺省入口和固定同源 `/demo` 路径均保持不变。可选六路长连接持续观测直接复用既有 Node SSE HTTP 脚本；见 [ADR-0058](adr/0058-tcp-sse-fault-and-soak-tests.md)。
+
+## 2026-11-13 · V0.3 第二十七批：框架无关的只读诊断
+
+共享 `@adui/scada-runtime` 新增纯诊断构建器和类型，用于将单个 Runtime 会话中的 TagStore 接受事件与可见值分布转换为不可直接修改数据源的状态快照。Vue 与 React 通过各自响应式生命周期消费同一 `RuntimeState.diagnostics`，共用 `runtime.css` 的网格布局；Tauri 离线模拟由现有 OfflineDemoRuntime 构造相同快照。没有外部日志采集器、HTTP 诊断 API、数据库迁移、设备 URL、依赖或网关接入。详见 [ADR-0059](adr/0059-runtime-local-diagnostics.md)。

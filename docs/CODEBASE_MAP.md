@@ -539,3 +539,11 @@
 - `scripts/sse-fault-proxy.test.mjs`：Node 原生测试器回归 HTTP 透传、TCP SSE 下行阻断、其他连接隔离、关闭重入和非法目标拒绝；由 `test:sse:fault:unit` 执行并纳入根 ready。
 - `scripts/test-runtime-sse-browser.mjs`：新增显式 `--transport-fault` 与 `--docker` 模式，分别运行真实 Vue/React 开发入口和 Docker Nginx 入口的半开样式浏览器恢复回归。
 - `scripts/test-runtime-sse-network.mjs`：新增可选 `--soak` 六路 SSE 持续心跳/Tag 增量观测；默认网络烟测逻辑不变。详情见 [ADR-0058](adr/0058-tcp-sse-fault-and-soak-tests.md)。
+
+## V0.3 第二十七批 · 本地实时链路诊断
+
+- `packages/runtime/src/diagnostics.ts`：框架无关诊断类型、四质量统计、本地有效更新时间/年龄和中文格式化函数，不接触外部网络。
+- `packages/runtime/src/runtime.ts`：单会话断连过程计数与接受有效 Tag 的本机时钟，按 `visibleSnapshot()` 输出含本地 STALE 的质量分布。
+- `packages/runtime/src/offline.ts`：本机离线模拟复用诊断结构但无网络断连计数。
+- `packages/runtime/test/diagnostics.test.ts`：纯诊断、数据年龄、断连阶段去重、旧序列、局部 STALE 和离线模式回归。
+- `apps/web-react/src/runtime/RuntimePage.tsx`、`apps/web-vue/src/runtime/RuntimePage.vue`：双框架对等只读诊断面板；共用 `packages/runtime/src/runtime.css`。详见 [ADR-0059](adr/0059-runtime-local-diagnostics.md)。
