@@ -245,9 +245,9 @@ Docker 隔离测试应依次验证：
 ## 2026-11-13 · V0.3 第二十五批验收清单（待维护者执行）
 
 - [x] 协作容器内 Node 内置测试器对隔离代码副本执行八项连接资源单测：**8/8 通过**（包括真实本机 HTTP 32 路、超额 503 与释放后重连）；这不是 Windows 仓库全量质量链结果。
-- [ ] `pnpm run test:sse:clients`：在实际仓库工作区确认 8 项容量、真实回环 HTTP 503、断开重入、广播背压、缓冲上限、响应异常及参数边界回归。
-- [ ] `pnpm run test:sse:network`：保持 `pnpm run dev:demo` 运行，确认六路 HTTP SSE 快照、heartbeat、单路断连后其余订阅继续、恢复后先 snapshot。
-- [ ] `pnpm run test:sse:proxy`：本机 `pnpm run docker:demo:up` 启动后，分别检查 React/Vue Docker Nginx 固定同源代理 SSE；不自动重启或停止容器。
+- [x] `pnpm run test:sse:clients`：维护者 Windows 仓库实测 **8/8 通过，0 失败**，包含真实回环 HTTP 32 路上限、第 33 路 503、断开重入、背压及响应异常。
+- [x] `pnpm run test:sse:network`：维护者 Windows 实测独立模拟服务 `127.0.0.1:14178/events`，六路快照、heartbeat、单路断开隔离与重新订阅通过，**退出码 0**。
+- [x] `pnpm run test:sse:proxy`：修正 Docker Compose 根 `.env` 读取后，维护者 Windows 实测 React `127.0.0.1:18080/demo/events` 与 Vue `127.0.0.1:18081/demo/events` 均通过六路快照、heartbeat、断开隔离与重新订阅，**退出码 0**；Docker Demo/Server 为 Healthy。
 - [ ] `vp check`、`pnpm run docs:check`、`pnpm run ready` 全部通过，记录 Node 测试与全量 Vitest、E2E、构建结果和实际退出码。
 - [ ] 真实代理断网、慢客户端流量压力、32 路真实 HTTP 上限实测、Windows 长时间后台页恢复、生产认证、PostgreSQL 真库和工业现场：均未验证。
 
@@ -271,3 +271,11 @@ Docker 隔离测试应依次验证：
 本批补丁仅修复 Docker 配置读取：演示栈 `up/down/logs` 与新增 `ps` 命令统一显式加载仓库根 `.env`；Compose 四组端口回退值同步为根 `.env.example` 默认值；`env:check` 强制验证脚本及四组默认值，防止再次静默降级到旧端口。**没有修改 SSE 服务、NestJS 或 Vue/React 业务代码，也未执行 Docker 或重启维护者计算机上的容器。**
 
 维护者同步分支后，建议在仓库根目录执行 `pnpm run env:check`、`pnpm run docker:demo:up`、`pnpm run docker:demo:ps` 和 `pnpm run test:sse:proxy`；`docker:demo:ps` 的宿主机端口应分别显示 `127.0.0.1:18080->8080/tcp` 和 `127.0.0.1:18081->8080/tcp`。如仍不一致，需检查 PowerShell 是否存在 `SCADA_REACT_PORT`/`SCADA_VUE_PORT` 同名进程环境变量覆盖；切勿粘贴完整 `docker compose config --environment`，其中可能包含凭据。修复后的 Windows Docker Nginx 代理烟测、`vp check`、`docs:check` 和完整 `ready` 尚未实测。
+
+### 第二十五批 Docker Nginx 双框架第二轮验收通过（2026-11-13）
+
+维护者上传 PowerShell 实测：`pnpm run env:check` 检查根目录环境配置、LF 均通过；`pnpm run docker:demo:up` **四个镜像构建完成、四个容器启动**，其中 Demo/Server 为 Healthy。`pnpm run docker:demo:ps` 显示宿主机真实端口为 React `127.0.0.1:18080->8080/tcp`、Vue `127.0.0.1:18081->8080/tcp`，与根 `.env` 一致。
+
+`pnpm run test:sse:proxy` 先访问 React `18080/demo/events` 再访问 Vue `18081/demo/events`，**两端均验证六路 snapshot、具名 heartbeat、单路断开不影响其他连接与重订阅，退出码 0**。这证实前一轮 `ECONNREFUSED` 的端口漂移问题已在本机修复；该实测验证的是运行中的 Docker Nginx 代理，未模拟真实网卡断开、代理半开或长时间高并发压测。
+
+上一份 Windows 实测还确认 `test:sse:clients` **8/8** 与 `test:sse:network` **退出码 0**。**本次附件没有给出最新 `vp check`、`pnpm run docs:check` 或完整 `pnpm run ready` 日志，仍保持待验收状态**。本段验收记录提交后的文档/格式检查亦尚未执行；PR #47 继续保持 Draft，未经明确授权不合并。
