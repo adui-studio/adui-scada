@@ -1,5 +1,4 @@
 import "reflect-metadata";
-import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { Injectable } from "@nestjs/common";
 import type { OnModuleDestroy } from "@nestjs/common";
