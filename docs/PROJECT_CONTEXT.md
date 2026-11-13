@@ -714,3 +714,9 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **仍待 Windows 实测**：`pnpm run test:runtime`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`；以及手工 UI 和 Tauri 桌面验证。上述浏览器测试不能证明 Node/Vitest、Lint、类型、全量构建、真实工业网络、生产报警持久化已完成。
 
 本次仅补充验收文档与 PR 说明，无业务代码变更。新增文档提交后的格式及文档静态检查仍待执行；PR #50 保持 Draft，需维护者明确授权方能合并。
+
+## 2026-11-14 · V0.3 第二十九批：共享 Tag 定义目录与类型校验（待 Windows 验收）
+
+第二十八批 PR #50 已合并，`main` 当前提交 `b018518`。基于此创建 `feat/v0.3-tag-definition-catalog`，开始 FR-004 的本机演示子集：Core 定义稳定 Tag ID、可变展示名称、数据类型、单位与描述；TagStore 可选注入目录并在 `apply/replaceSnapshot` 前验证非空值类型，整批失败保持原状态。水处理三项 Tag 定义由在线 Runtime、Tauri 离线模拟、独立 SSE 服务共用；Vue/React Studio 的模拟绑定候选展示类型、单位和描述。质量仍由实时 TagValue 动态表达。
+
+本批没有升级工程 Schema 0.2.0、没有持久化项目级 Tag 定义、没有设备地址或协议映射；目录内存重命名不代表已保存。新增 Core/Runtime 测试与 ADR-0061 已提交分支，**Windows `test:unit`、`test:runtime`、`vp check`、`docs:check`、`ready` 和双框架浏览器尚待验收**，不得继承第二十八批成绩。FR-004 继续部分实现，详见 [VALIDATION](VALIDATION.md) 和 [ADR-0061](adr/0061-tag-definition-catalog.md)。
