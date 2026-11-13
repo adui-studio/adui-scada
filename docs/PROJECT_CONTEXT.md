@@ -570,3 +570,9 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 本批依照 [ADR-0055](adr/0055-sse-heartbeat-and-tag-silence.md)，在原水处理 SSE 与本机受控 NestJS SSE 中每 5 秒发送一次**具名 heartbeat 事件**，不混入共享 `TagChange`；浏览器源适配器将任何 SSE 活动视为传输存活，连续 15 秒完全静默才关闭旧 EventSource 并以原固定同源 URL 重建；共享 Runtime 另以 12 秒无有效 Tag 值检测数据过期，降级旧读数为 STALE，增加中文 `stale` 状态，不允许心跳或空增量伪造正常更新。既有 30 秒模拟周期中的 8 秒停采样与质量演练保留，断连后仍要求先 snapshot 再 delta。
 
 新增 5 项适配器心跳/重连单测、3 项 Runtime 数据质量单测及 1 项 NestJS SSE 控制器单测。维护者 2026-11-13 Windows 实测 **Runtime 专项 29/29、Server 专项 79/79、全量单测 409/409（36 个文件）、NestJS E2E 17/17（3 个文件）**；`vp check` **251 个文件格式正确、123 个受检文件零警告/错误**，Prisma Client 7.10.1 生成、71 份 Markdown 文档检查、Core/双框架/NestJS 类型检查及构建均成功，完整 `ready` **退出码 0**。Docker 镜像冻结安装、隔离 HTTP 烟测、正式 Linux PID 1 SIGTERM 退出码 0，**Docker 命令退出码 0**。E2E 的 HTTP 503 / Terminus 错误为预期关闭负面测试。无新依赖、锁文件、Prisma、Core Schema、Vue/React 页面、工业 Gateway 或生产 API 修改。Tauri 离线运行时和浏览器默认 `/demo` 保持不变；5/12/15 秒阈值仅为本机模拟参数。尚无人工浏览器断流演练、SSE 并发压测、PostgreSQL 真库和工业现场验证。本次仅追加验收文档后建议复查格式和文档检查。PR #45 保持 Draft，未经明确授权不得合并。
+
+## 2026-11-13 · V0.3 第二十四批：浏览器 SSE 回归与前台恢复时效
+
+基于已合并第二十三批的 `main`（`e9c2516`），在分支 `feat/v0.3-sse-browser-recovery` 开展本批工作。新增真实 Chrome/Edge 的 React/Vue SSE 浏览器回归脚本，模拟“具名心跳继续但 Tag 停更”和“整个 SSE 事件回调静默”两种独立故障，检查断流自动重建与退出页面后的资源释放。共享 Runtime 在后台标签页恢复前台时立即复查 15 秒传输静默与 12 秒 Tag 数据时效，并注销可见性监听，不修改双框架页面及真实工业接口。
+
+当前仅实现源码与测试方案。新增浏览器脚本已在协作容器做 Node 语法检查，**Windows Vite+ 全链、真实 Chrome/Edge 浏览器执行、代理半开及多客户端负载仍待维护者实测**。具体设计见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)，验收项见 [VALIDATION](VALIDATION.md)。本批 Draft PR 未获验收授权前不合并。
