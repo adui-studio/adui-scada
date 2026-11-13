@@ -480,3 +480,10 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - `action` 仅为 `session.authenticate` 和 `project.authorize`，`outcome` 仅为 `allowed` 与 `denied`。会话允许原因只能是 `verified`，拒绝原因仅有 `unsupported_context`、`malformed_authorization`、`invalid_session`；工程允许原因只能是 `permission_granted`，拒绝原因仅有 `unsupported_context`、`missing_policy`、`missing_principal`、`invalid_scope`、`permission_denied`。
 - 未定义事件、无效结果或错误搭配必须拒绝且不在异常提示中回显输入值。Guard 在已有授权语义中记录固定决策，不得改变授权结果或异常 HTTP 状态码。
 - `ScadaSecurityAuditService` 通过 NestJS `Logger` 发送仅含白名单字段的 JSON 消息；**不是强一致、可回放、可归责的持久化安全审计系统**，不替代工程版本事务审计或未来工业控制审计。模块仍未挂载正式 AppModule，详见 [ADR-0048](adr/0048-security-audit-event-boundary.md)。
+
+## V0.3 第十七批：Zod 启动配置 Schema 契约
+
+- `serverPortSchema` 仅接受字符串和数字输入，沿用 `Number` 的转换语义，并强制校验有限整数及 1～65535 的范围。空字符串、非数字、无穷大、数组/对象/布尔值均拒绝。
+- `serverHostSchema` 仅接受 `127.0.0.1`、`0.0.0.0`；保持 `SCADA_SERVER_PORT` / `SCADA_SERVER_HOST` 的优先级，显式无效配置不得回退。默认端口 3001，默认主机 127.0.0.1。
+- `safeParse` 校验失败时只返回已有固定中文错误，不回显原始值或 Zod 错误对象。运行时只输出 `port`、`host`、`localDocs` 三项，Swagger 策略仍由已验收的 `allowLocalOpenApi` 决定。
+- 根目录 `.env` 加载次序、Pino 日志级别处理、现有安全审计白名单和 Core 工程 Schema 均不变。未来请求 DTO / 外部数据在正式功能阶段逐项建立 Schema，不能将本次描述为全量输入校验已完成。见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
