@@ -1924,7 +1924,8 @@ async function importJson(event: Event) {
                 {{ selectedTagId }}（不在当前模拟候选中）
               </option>
               <option v-for="option in demoTagCandidates" :key="option.tagId" :value="option.tagId">
-                {{ option.label }} · {{ option.tagId }} · {{ TAG_DATA_TYPE_LABELS[option.dataType] }}{{ option.unit ? " · " + option.unit : "" }}
+                {{ option.label }} · {{ option.tagId }} ·
+                {{ TAG_DATA_TYPE_LABELS[option.dataType] }}{{ option.unit ? " · " + option.unit : "" }}
               </option>
             </select>
           </label>
