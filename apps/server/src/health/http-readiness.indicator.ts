@@ -10,7 +10,9 @@ import { HealthIndicatorService } from "@nestjs/terminus";
 export class HttpReadinessIndicator implements OnApplicationBootstrap, BeforeApplicationShutdown {
   private acceptingRequests = false;
 
-  constructor(@Inject(HealthIndicatorService) private readonly indicators: HealthIndicatorService) {}
+  constructor(
+    @Inject(HealthIndicatorService) private readonly indicators: HealthIndicatorService,
+  ) {}
 
   onApplicationBootstrap(): void {
     this.acceptingRequests = true;
