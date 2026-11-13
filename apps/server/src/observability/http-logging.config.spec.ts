@@ -61,5 +61,6 @@ describe("服务端结构化 HTTP 日志", () => {
     expect(
       shouldUsePrettyTransport({ nodeEnv: undefined, isTty: false, isTestRunner: false }),
     ).toBe(false);
+    expect(createHttpLoggingOptions()).not.toHaveProperty("transport");
   });
 });
