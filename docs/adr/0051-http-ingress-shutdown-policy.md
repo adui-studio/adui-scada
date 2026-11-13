@@ -25,8 +25,8 @@
 - 新增 `http-server-policy.spec.ts` 三项单测：固定非零接收限制、不会设置应用响应超时、重复配置幂等及关闭选项固定。
 - 新增 `http-server-policy.e2e-spec.ts` 两项测试：真实 Nest HTTP Server 接收策略和探针回归；`onModuleDestroy` 的测试屏障模拟已开始但尚未完成的关闭流程，验证新请求返回 503 且 `Connection: close`，然后释放屏障使程序正常关闭，避免泄漏端口及句柄。
 - Docker `--network none` 镜像烟测复用正式配置函数和启动选项，检查 Node 原生 Server 限制确实生效，并回归健康接口 200、未开放业务接口 404。
-- 不改 Prisma / PostgreSQL、Redis、Gateway、Vue/React、共享 Core 或业务协议；第十八批 Windows 实测基线为 **378/378 普通单测、10/10 E2E**、`ready` 和 Docker 退出码 0。第十九批预计 **381 项单测、12 项 E2E**，属于待运行数字，未经 Windows 实测不得标为通过。
-- 由于本批无新依赖，`pnpm-workspace.yaml`、`apps/server/package.json` 与 `pnpm-lock.yaml` 均不应变化；仍必须执行冻结安装、静态检查、完整 `ready`、Docker 隔离烟测。**Windows 平台不支持像 Linux 一样可靠拦截 SIGTERM**，因此 E2E 使用 Nest 官方 `app.close()` 触发真实关闭钩子与服务器关闭保护；不能将它表述为实际部署中接收 SIGTERM 的验证。
+- 不改 Prisma / PostgreSQL、Redis、Gateway、Vue/React、共享 Core 或业务协议；第十八批 Windows 实测基线为 **378/378 普通单测、10/10 E2E**、`ready` 和 Docker 退出码 0。第十九批维护者 Windows 实测 **381/381 项单测（31 个文件）、12/12 项 E2E（2 个文件）**，完整 `ready` **退出码 0**，Docker 隔离构建与烟测 **退出码 0**。
+- 由于本批无新依赖，`pnpm-workspace.yaml`、`apps/server/package.json` 与 `pnpm-lock.yaml` 均不应变化；维护者已完成冻结安装、`vp check`、完整 `ready` 与 Docker 隔离烟测：235 个格式文件通过、111 个源文件零错误警告、67 份 Markdown 静态检查以及双 Web/NestJS 构建通过。**Windows 平台不支持像 Linux 一样可靠拦截 SIGTERM**，因此 E2E 使用 Nest 官方 `app.close()` 触发真实关闭钩子与服务器关闭保护；不能将它表述为实际部署中接收 SIGTERM 的验证。测试日志里已有 Terminus 就绪检查的预期 HTTP 503 与错误输出，12/12 E2E 全部通过。验收后记录性文档变更建议复查格式和文档检查。
 
 ## 待后续专项
 
