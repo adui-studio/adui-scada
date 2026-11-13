@@ -222,3 +222,9 @@ Docker 隔离测试应依次验证：
 - [ ] 真实高并发 SSE、生产鉴权、PostgreSQL 真库与工业网关现场验收；均不属当前原型完成范围。
 
 本批测试脚本的故障注入只屏蔽 EventSource 回调而非真实网络报文；不能把浏览器脚本通过解释为代理断流、半开 TCP 和工业现场稳定性已经验收。详见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
+
+### 第二十四批首轮 Windows 反馈与定向修复（2026-11-13）
+
+维护者实际执行 `pnpm run test:runtime`：**30/31 通过（3 个文件），退出码 1**，新增“后台标签页返回前台”用例在本地过期后收到 `sequence=2` 仍为 `stale`。经代码检查，原 Runtime 调用 `TagStore.markDisconnected()` 生成合成过期事件并递增序列，导致上游下一条真实递增序列与合成序列冲突。现修正为 **仅在 Runtime 展示层逐 Tag 标记过期**，旧上游序列不恢复、实际接受的新序列仅恢复对应 Tag，新增多 Tag 部分恢复回归；保留网络断连必须新 snapshot 的规则。
+
+维护者实际执行 `pnpm run test:sse:browser`：预检查报告 `fetch failed`，**退出码 1**；未提供三项本机服务的运行日志，不能推定具体端口或代理根因。脚本现按根 `.env` 解析开发端口，分别检查页面和模拟工程接口，报错包含 URL、底层错误及必要启动命令。上述两项修复提交后 **尚未收到重新执行结果**，不得标记通过。维护者下次需分别在三个终端启动 Demo、React、Vue 后，再运行浏览器回归及 Runtime 单测，最后执行 `vp check`、`pnpm run docs:check` 和 `pnpm run ready`。
