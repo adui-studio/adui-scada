@@ -157,10 +157,10 @@ Core 新增两项自动保存会话回归：停写必须等待正在执行的事
 
 ## V0.3 第十九批：HTTP 请求接收边界与关闭阶段防护
 
-基线：第十八批 Windows `ready` **378/378 单测、10/10 NestJS E2E、退出码 0**，Docker 镜像冻结安装及 `--network none` 隔离烟测退出码 0。本批新增 3 项 `http-server-policy.spec.ts` 单测、2 项 `http-server-policy.e2e-spec.ts`，**预计 381 单测、12 E2E**；目前均未在本执行环境运行，不能声称通过。
+基线：第十八批 Windows `ready` **378/378 单测、10/10 NestJS E2E、退出码 0**，Docker 镜像冻结安装及 `--network none` 隔离烟测退出码 0。本批新增 3 项 `http-server-policy.spec.ts` 单测、2 项 `http-server-policy.e2e-spec.ts`；维护者 Windows 实测 **381/381 单测（31 个文件）、12/12 E2E（2 个文件）**，完整 `pnpm run ready` **退出码 0**。
 
 验收关注：Node `Server` 请求头/完整请求接收时限、Keep-Alive 空闲和 Header/Socket 请求数量确实固定且非零；`server.timeout` 未被配置成全局响应超时。NestJS 启动选项明确 `return503OnClosing:true`、不启用强制销毁连接。E2E 使用 `ShutdownBarrier.onModuleDestroy()` 持有关闭过程，验证新请求收到 503、`Connection: close`；`finally` 必须释放屏障并等待应用关闭，不能残留端口或句柄。Docker 使用相同的正式配置验证 Server 属性，原健康接口 200、Swagger 默认不可见、未开放业务接口 404。
 
-仅检查 HTTP 入口保护，不表示生产网络的反 DDoS、限流、Nginx 摘流、Linux SIGTERM 超时排空、SSE/WS 断线重连或工业网关事务已验证。Windows 对 SIGTERM 的限制使本批采用 `app.close()` 验证原生关闭生命周期；真实 Linux 容器信号回归和 PostgreSQL 真库测试均未在本批执行。
+仅检查 HTTP 入口保护，不表示生产网络的反 DDoS、限流、Nginx 摘流、Linux SIGTERM 超时排空、SSE/WS 断线重连或工业网关事务已验证。Windows 对 SIGTERM 的限制使本批采用 `app.close()` 验证原生关闭生命周期；真实 Linux 容器信号回归和 PostgreSQL 真库测试均未在本批执行。E2E 中 Terminus 的 `Health Check has failed!` 与 HTTP 503 是此前就绪探针主动模拟关闭的**预期负面测试**，12/12 E2E 全部通过。
 
-第十九批没有新增依赖，`pnpm-lock.yaml` 和 Catalog 不应发生修改。维护者需在 Windows 运行 `pnpm install --frozen-lockfile`、`vp check`、`pnpm run ready`、`pnpm run test:docker:server`，提供真实通过记录，文档记录时不得把预期数字写为实测。
+第十九批没有新增依赖，`pnpm-lock.yaml` 和 Catalog 不发生修改。维护者 Windows 已完成依赖/配置/环境/中文文案检查（11 个 Manifest、51 项 Catalog、137 个自有文件），`vp check` **235/235 文件格式正确、111 个受检文件零警告或错误**，Core 构建与 React/Vue/服务端 TypeScript 检查通过，Prisma Client 7.10.1 正常生成、67 份 Markdown 静态检查通过、Web 双端及 NestJS 均构建通过，完整 `ready` **退出码 0**。独立 Docker 镜像冻结安装及服务端构建成功，隔离烟测验证 HTTP 资源与关闭策略已加载、健康/就绪返回 200、未开放工程/设备接口仍为 404，**Docker 退出码 0**。本轮没有真正验证 Linux SIGTERM 或工业现场。记录性文档更新后建议仅复查 `vp check` 与 `pnpm run docs:check`。
