@@ -62,7 +62,7 @@ export default function RuntimePage() {
             <dd>{formatRuntimeDataAge(state.diagnostics.dataAgeMs)}</dd>
           </div>
         </dl>
-        <div className="scada-quality-summary" aria-label="Tag 质量分布">
+        <div className="scada-quality-summary" role="group" aria-label="Tag 质量分布">
           {TAG_QUALITIES.map((quality) => (
             <div key={quality} className="scada-quality-item" data-quality={quality}>
               <span>{TAG_QUALITY_LABELS[quality]}</span>
