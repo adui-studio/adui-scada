@@ -289,3 +289,9 @@ Prisma `schema.prisma` 的 `///` 为代码生成文档信息，**不会自动创
 ## V0.3 第十六批：安全事件审计边界（ADR-0048）
 
 在未挂载 `AppModule` 的 `ScadaIdentityModule` 中注册独立 `ScadaSecurityAuditService`，并通过 `SecurityAuditReporter` 接口及 NestJS 注入令牌供 `ScadaSessionGuard` 和 `ScadaProjectGuard` 使用。Guard 记录允许/拒绝决策，但不发送请求头、令牌、路径、租户/主体/工程标识或异常对象；日志层对枚举做运行时白名单检查并只构造固定四字段对象。现阶段借助 NestJS Logger 与已经引入的 Pino 运行日志链输出，**仅用于诊断而非生产持久化审计**。未增加外部依赖、数据库迁移、HTTP 路由或工业写入能力；未来必须在上线身份 API 前独立评审可信主体关联、持久化审计、丢失处理、保留/删除及限流。
+
+## V0.3 第十七批：服务端启动配置 Zod 校验（ADR-0049）
+
+NestJS 正式启动继续从根目录 `.env` 加载进程配置，随后使用 `resolveServerStartupConfig` 解析，并在 `AppModule` 动态导入前完成校验。本批仅在 `apps/server` 引入 `zod@4.6.7`，使用其组合 Schema 和 `safeParse` 将端口与监听地址限制在既有契约内；异常只包含固定中文消息。原有 Swagger 回环限制、Pino 脱敏、独立身份 Guard、Prisma/数据库、工业只读边界均不改变。
+
+Zod 不进入共享 Core / Vue / React，也不重新定义现有组态工程、Tag 或图元 Schema。服务端环境变量的全面 Schema 化及 HTTP DTO、设备采集报文的运行时校验需独立评审与逐步交付。此次新增依赖的 pnpm 锁文件和 Windows/Docker 实测尚待维护者完成。
