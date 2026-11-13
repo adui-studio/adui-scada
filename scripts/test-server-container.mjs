@@ -59,10 +59,7 @@ try {
   docker(["exec", containerName, "node", "apps/server/container-signal-probe.mjs"]);
   docker(["stop", "--signal", "SIGTERM", "--timeout", "10", containerName]);
 
-  const exitCode = docker(
-    ["inspect", "--format", "{{.State.ExitCode}}", containerName],
-    true,
-  );
+  const exitCode = docker(["inspect", "--format", "{{.State.ExitCode}}", containerName], true);
   if (exitCode !== "0") {
     throw new Error(`正式 NestJS 容器收到 SIGTERM 后未正常退出，退出码：${exitCode}`);
   }
