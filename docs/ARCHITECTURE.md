@@ -345,3 +345,7 @@ Runtime 生命周期按连接代次隔离：停止时中止 fetch、关闭 SSE�
 ## 2026-11-13 · V0.3 第二十五批本机 SSE 容量保护
 
 只读开发演示拓扑保持“浏览器 Vue/React → 固定同源 Nginx/Vite 代理 → Node 独立模拟 SSE”。仅在 `examples/water-treatment/sse-clients.mjs` 为 Node 模拟器加入内存连接管理，32 路连接上限、每路 64 KiB 待发送缓冲上限及背压快速断开。客户端重新连接必须重新获取 snapshot，服务不维护离线消息队列。新 `test-runtime-sse-network.mjs` 的直连和 Docker 模式只访问 loopback；不修改 NestJS 正式模块、工业网关与数据库。见 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md)。
+
+## 2026-11-13 · V0.3 第二十六批：回环 TCP SSE 故障代理仅位于测试工具链
+
+在现有 Vue/React → Vite 或 Docker Nginx → 独立 Demo 只读 SSE 链路外，增加独立 Node TCP 回环透明代理作为浏览器自动化的临时入口。代理只识别固定 `GET /demo/events` 或 `GET /events` 的会话，允许对单路下行字节进行暂停，且不向用户应用、工业 Gateway、NestJS、Core 或 Docker 正式配置注入网络控制 API。原有浏览器测试缺省入口和固定同源 `/demo` 路径均保持不变。可选六路长连接持续观测直接复用既有 Node SSE HTTP 脚本；见 [ADR-0058](adr/0058-tcp-sse-fault-and-soak-tests.md)。
