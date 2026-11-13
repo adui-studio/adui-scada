@@ -256,6 +256,8 @@ test("空增量与上游 STALE 质量不能伪装成新的正常 Tag 数据", as
     controlled.handlers[0]?.onMessage({ kind: "snapshot", values: [makeTag(1)] });
     vi.advanceTimersByTime(10_000);
     controlled.handlers[0]?.onMessage({ kind: "delta", values: [] });
+    // 相同序列号虽有网络流量，但已经被 TagStore 忽略，不应重置数据时钟。
+    controlled.handlers[0]?.onMessage({ kind: "delta", values: [makeTag(1)] });
     vi.advanceTimersByTime(2_000);
     expect(states.at(-1)?.status).toBe("stale");
     expect(states.at(-1)?.values[0]?.quality).toBe("STALE");
