@@ -99,13 +99,15 @@ test("TagStore 按定义校验类型并在整批失败时保持原数据不变",
   expect(store.get("water.pump.running")?.value).toBe(true);
 });
 
-test("TagStore 快照同样校验类型且不接受未定义 Tag", () => {
+test("TagStore 快照同样校验类型且失败时保留原快照", () => {
   const store = new TagStore(waterTreatmentDemoTagCatalog);
+  store.replaceSnapshot([value("water.level", 55)]);
+  const before = store.snapshot();
   expect(() => store.replaceSnapshot([value("water.level", "55")])).toThrow(
     /Tag 数据类型不匹配/,
   );
   expect(() => store.apply([value("water.unknown", 1)])).toThrow(/未定义的 Tag/);
-  expect(store.snapshot()).toEqual([]);
+  expect(store.snapshot()).toEqual(before);
 });
 
 test("空值可表示尚无有效读数，质量状态仍由 TagValue 动态维护", () => {
