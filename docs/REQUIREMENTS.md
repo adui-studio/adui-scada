@@ -244,3 +244,7 @@ FR-007、FR-009 与 NFR-001/NFR-002/NFR-003/NFR-006 对应的本机模拟数据�
 ## V0.3 第二十五批 · 本机 SSE 连接资源安全验收
 
 FR-007、FR-009 和 NFR-001/NFR-002/NFR-003/NFR-006 在当前本机演示范围补充：独立模拟 SSE 订阅必须有明确连接容量边界，慢客户端写入遇到背压或缓冲超限时应断开自身而不影响正常订阅；超额连接返回可辨认的失败状态；响应关闭、服务退出应清理订阅资源。通过固定本机 HTTP 和 Docker Nginx 代理测试 6 路并发初始快照、heartbeat、单路断开隔离及重新订阅。这些限制不形成生产网关容量承诺，不增加设备控制、匿名生产访问或持久消息回放。见 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md)。
+
+## V0.3 第二十六批：SSE 传输静默与有限持续连接回归
+
+在 FR-007、FR-009、NFR-001/NFR-002/NFR-003/NFR-006 的本机模拟可靠性验证范围内，新增测试用回环 TCP 代理模拟 socket 保持打开但 SSE 下行字节停止的情形，要求 Vue/React 共享 Runtime 在数据超时后显示 STALE、传输静默达到既有阈值后释放旧连接并恢复快照。另需对固定本机独立 Demo 和 Docker Nginx 入口观察六路 SSE 的连续 heartbeat 与有效 delta，并最终清理订阅资源。此处不是新生产 API、故障注入平台、持续压测标准或生产网关 SLA；详见 [ADR-0058](adr/0058-tcp-sse-fault-and-soak-tests.md)。

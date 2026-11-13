@@ -108,3 +108,7 @@ pnpm run test:sse:proxy
 ```
 
 默认发布映射应为 React `127.0.0.1:18080->8080/tcp`、Vue `127.0.0.1:18081->8080/tcp`。如仍显示旧 `8080/8081`，检查 PowerShell 的同名环境变量是否覆盖根 `.env`；不要分享含数据库密码的完整配置转储。此修正是本地 Docker 演示端口一致性保护，尚未证明网络代理或工业生产环境通过验收。
+
+### 第二十六批 · Docker Nginx SSE 下行静默与持续流回归
+
+本机已启动的 Docker Demo 演示栈无需重新配置，即可在仓库根目录使用 `pnpm run test:sse:fault:proxy` 对 React `18080`、Vue `18081` 的 SSE 入口分别进行临时 TCP 代理下行静默测试；通过真实浏览器观察共享 Runtime 的 STALE、15 秒重建和 socket 回收。运行 `pnpm run test:sse:soak:proxy` 可按端口分别观测六路连接的持续 12 次心跳及 Tag 增量。测试只访问固定本机回环地址，不停止现有容器、修改 Nginx 或开放新服务端路由。短时 TCP 字节屏蔽不代表 Nginx 自身宕机或真实工业网络已验收；详见 [ADR-0058](../../docs/adr/0058-tcp-sse-fault-and-soak-tests.md)。

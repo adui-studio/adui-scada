@@ -6,27 +6,50 @@ import { join } from "node:path";
 import { setTimeout as pause } from "node:timers/promises";
 import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
+import { startSseFaultProxy } from "./sse-fault-proxy.mjs";
 
 // 读取仓库根目录的统一 .env；显式传入的进程环境变量优先。
 const envPath = fileURLToPath(new URL("../.env", import.meta.url));
 if (existsSync(envPath)) loadEnvFile(envPath);
 
-const targets = [
-  {
-    name: "React",
-    url:
-      process.env.SCADA_REACT_URL ||
-      `http://${process.env.SCADA_WEB_HOST || "127.0.0.1"}:${process.env.SCADA_REACT_DEV_PORT || "5173"}/`,
-    command: "pnpm run dev:react",
-  },
-  {
-    name: "Vue",
-    url:
-      process.env.SCADA_VUE_URL ||
-      `http://${process.env.SCADA_WEB_HOST || "127.0.0.1"}:${process.env.SCADA_VUE_DEV_PORT || "5174"}/`,
-    command: "pnpm run dev:vue",
-  },
-];
+const options = process.argv.slice(2);
+const transportFaultMode = options.includes("--transport-fault");
+const dockerMode = options.includes("--docker");
+assert.ok(
+  options.every((option) => option === "--transport-fault" || option === "--docker"),
+  "不支持的浏览器 SSE 验收参数",
+);
+assert.ok(!dockerMode || transportFaultMode, "Docker 浏览器故障模式必须同时启用 --transport-fault");
+
+const targets = dockerMode
+  ? [
+      {
+        name: "React Docker Nginx",
+        url: `http://127.0.0.1:${process.env.SCADA_REACT_PORT || "18080"}/`,
+        command: "pnpm run docker:demo:up",
+      },
+      {
+        name: "Vue Docker Nginx",
+        url: `http://127.0.0.1:${process.env.SCADA_VUE_PORT || "18081"}/`,
+        command: "pnpm run docker:demo:up",
+      },
+    ]
+  : [
+      {
+        name: "React",
+        url:
+          process.env.SCADA_REACT_URL ||
+          `http://${process.env.SCADA_WEB_HOST || "127.0.0.1"}:${process.env.SCADA_REACT_DEV_PORT || "15173"}/`,
+        command: "pnpm run dev:react",
+      },
+      {
+        name: "Vue",
+        url:
+          process.env.SCADA_VUE_URL ||
+          `http://${process.env.SCADA_WEB_HOST || "127.0.0.1"}:${process.env.SCADA_VUE_DEV_PORT || "15174"}/`,
+        command: "pnpm run dev:vue",
+      },
+    ];
 
 function validateLocalUrl(value) {
   const url = new URL(value);
@@ -272,6 +295,92 @@ async function checkTarget(session, target) {
   process.stdout.write(target.name + " 浏览器 SSE 心跳保活、Tag 过期、静默重连、资源清理通过\n");
 }
 
+async function checkTransportFaultTarget(session, target, proxy) {
+  const url = validateLocalUrl(proxy.url);
+  url.searchParams.set("scada_sse_transport_fault", target.name.toLowerCase());
+  const navigation = await session.send("Page.navigate", { url: url.href });
+  if (navigation.errorText)
+    throw new Error(target.name + " 浏览器导航失败：" + navigation.errorText);
+
+  let stableSince = 0;
+  const ready = await waitFor(
+    session,
+    target.name + " TCP 故障测试的页面与代理 SSE 连接就绪",
+    (state) => {
+      // Vue 首次依赖优化或 HMR 导航可能短暂重建 SSE，不能只凭页面 live 注入。
+      state.proxySseConnections = proxy.activeSseCount();
+      const aligned =
+        state.url === url.href &&
+        state.status === "live" &&
+        state.streams.filter((stream) => !stream.closed).length === 1 &&
+        state.proxySseConnections === 1;
+      if (!aligned) {
+        stableSince = 0;
+        return false;
+      }
+      if (!stableSince) stableSince = Date.now();
+      return Date.now() - stableSince >= 400;
+    },
+    25000,
+  );
+  const previousCount = ready.streams.length;
+  const frozen = proxy.freezeActiveSse();
+
+  // 只阻断一条 TCP 下行数据，不注入 EventSource 回调，也不关闭 socket。
+  const stale = await waitFor(
+    session,
+    target.name + " 半开 TCP 造成的 Tag 过期降级",
+    (state) => state.status === "stale",
+    16000,
+  );
+  assert.equal(stale.streams.length, previousCount, "Tag 过期不应提前重建 SSE");
+  assert.equal(proxy.stats(frozen).closed, false, "传输静默期间底层 TCP 不应由代理主动关闭");
+
+  const recovered = await waitFor(
+    session,
+    target.name + " 15 秒无字节后主动重建 SSE",
+    (state) =>
+      state.streams.length > previousCount &&
+      state.streams[previousCount - 1]?.closed &&
+      state.streams.some((stream, index) => index >= previousCount && !stream.closed),
+    23000,
+  );
+  assert.ok(proxy.stats(frozen).suppressedBytes > 0, "代理必须真正拦截上游 SSE 字节");
+  assert.ok(
+    recovered.streams.every((stream) => stream.url === recovered.streams[0]?.url),
+    "TCP 故障前后 SSE 事件订阅路径必须保持同源一致",
+  );
+  await waitFor(
+    session,
+    target.name + " TCP 故障重订阅快照恢复",
+    (state) => state.status === "live",
+    20000,
+  );
+  const releaseStarted = Date.now();
+  while (!proxy.stats(frozen).closed && Date.now() - releaseStarted < 5000) {
+    await pause(100);
+  }
+  assert.equal(proxy.stats(frozen).closed, true, "旧的半开 SSE socket 必须由客户端关闭");
+
+  await session.evaluate(
+    "(() => { const button = [...document.querySelectorAll('.scada-app-nav button')].find(" +
+      "(node) => node.textContent.trim() === '组态编辑'); " +
+      "if (!button) throw new Error('未找到组态编辑导航按钮'); button.click(); })()",
+  );
+  await waitFor(
+    session,
+    target.name + " 离开 Runtime 后 EventSource 回收",
+    (state) => state.streams.every((stream) => stream.closed),
+    10000,
+  );
+  const started = Date.now();
+  while (proxy.activeSseCount() !== 0 && Date.now() - started < 5000) {
+    await pause(100);
+  }
+  assert.equal(proxy.activeSseCount(), 0, "离开 Runtime 后代理端仍保留 SSE socket");
+  process.stdout.write(target.name + " 真实 TCP 下行阻断、STALE、主动重连及连接回收通过\n");
+}
+
 async function checkService(target, path, command, expectedContentType) {
   const url = new URL(path, validateLocalUrl(target.url));
   let response;
@@ -324,6 +433,7 @@ async function main() {
   ];
   if (process.getuid?.() === 0) args.unshift("--no-sandbox");
   const child = spawn(browserPath, args, { stdio: "ignore" });
+  const proxies = [];
   let socket;
   try {
     const port = await waitForPort(directory, child);
@@ -343,11 +453,21 @@ async function main() {
     await session.send("Page.addScriptToEvaluateOnNewDocument", {
       source: "(" + installSseProbe.toString() + ")()",
     });
-    for (const target of targets) await checkTarget(session, target);
+    for (const target of targets) {
+      if (transportFaultMode) {
+        const origin = validateLocalUrl(target.url);
+        const proxy = await startSseFaultProxy(origin.origin + "/");
+        proxies.push(proxy);
+        await checkTransportFaultTarget(session, target, proxy);
+      } else {
+        await checkTarget(session, target);
+      }
+    }
   } finally {
     socket?.close();
     child.kill();
     await pause(500);
+    for (const proxy of proxies) await proxy.close();
     rmSync(directory, { recursive: true, force: true, maxRetries: 3, retryDelay: 150 });
   }
 }

@@ -557,3 +557,7 @@ type DemoTagSourcePreset = "standalone" | "nest-local";
 独立本机 `GET /events` 保留现有 `text/event-stream`、默认 `snapshot/delta` 及具名 `heartbeat` 格式。最多 32 个连接，超过时返回 HTTP 503、`Retry-After: 5` 与中文错误说明；不发送 SSE 成功头。每路响应在写入前检查 `writableLength + UTF-8 字节数 <= 64 * 1024`；写入出现 `false` 背压、异常或超限则立刻删除并销毁该慢客户端，剩余连接正常广播。断开检测基于响应 `close` 事件，Node 进程收到终止信号时结束所有响应和计时器。
 
 本批无协议字段变更、不重试或缓冲旧增量；恢复使用新的 snapshot。固定本机代理测试通过 `test:sse:network`/`test:sse:proxy` 完成，不包含真实网关或生产级消息可靠性。见 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md)。
+
+## 2026-11-13 · V0.3 第二十六批：TCP SSE 半开样式测试行为
+
+仅在测试进程执行 `startSseFaultProxy`：接受 loopback HTTP 根地址，分配回环随机端口，将普通 HTTP/TCP 流直接透传；对已确认 snapshot 的唯一 SSE 会话设置下行字节丢弃，不主动发送 FIN/RST，新连接正常通过。Chrome/Edge 真实浏览器使用既有 Runtime 展示状态进行验收：live → stale → 旧 EventSource 主动 close → 新 EventSource snapshot → live；离开 Runtime 后要求测试代理 SSE socket 数量归零。不修改 runtime 5/12/15 秒阈值、消息 Schema、Tag 序列、质量枚举或业务路由。长连接测试仅在显式 `--soak` 时对六路订阅追加至少 12 次心跳、增量到达及最大间隔检查，正常测试运行不增加等待。见 [ADR-0058](adr/0058-tcp-sse-fault-and-soak-tests.md)。
