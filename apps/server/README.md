@@ -125,3 +125,11 @@ NestJS 12 已原生提供 Standard Schema 校验 Pipe、响应序列化拦截器
 Node 24 原生 `http.Server` 在 `listen` 前配置固定 `headersTimeout:15s`、`requestTimeout:60s`、`keepAliveTimeout:5s`、`maxHeadersCount:100`、`maxRequestsPerSocket:1000`；这些只限制请求接收和连接复用，**不会为 Handler 或 SSE 响应设置统一超时**。如果后续上线大文件上传、WebSocket/SSE 或经过多层反向代理访问，必须根据实际业务与生产链路重新评估限制。
 
 `apps/server/src/security/http-server-policy.ts` 统一维护正式入口、单测、E2E 和 Docker 烟测的限制常量；`GET /health`、`GET /health/ready`、Swagger 默认关闭及未注册业务接口均保持既有安全契约。新增 3 项单测及 2 项 E2E，维护者 Windows 已实测 **381/381 单测、12/12 E2E**，完整 `pnpm run ready` **退出码 0**，Docker 冻结安装与隔离烟测 **退出码 0**。已验证 HTTP 接收资源限制生效、关闭期间新请求返回 503、既有探针在正常状态下可访问；未开放的工程/设备接口仍保持 404。本批无第三方依赖或锁文件变化。E2E 中 Terminus 503 与错误日志是预期负面用例，真实 Linux SIGTERM、反向代理摘流、PostgreSQL 真库与工业现场尚未实测。记录性文档更新后建议复查 `vp check` 和 `pnpm run docs:check`。详见 [ADR-0051](../../docs/adr/0051-http-ingress-shutdown-policy.md)。
+
+## V0.3 第二十批：正式 Linux 容器 SIGTERM 关闭验证
+
+为证明上一批 Windows `app.close()` 用例之外的真实容器停机行为，正式 NestJS 入口采用上游原生 `enableShutdownHooks([], { useProcessExit: true })`，在关闭钩子完成后以退出码 0 正常终止；先前默认重发 SIGTERM 的退出码 143 不应被误认为业务清理失败。本次选择退出码 0 是明确的运维语义决定，后续添加第三方信号监听器时须复审。
+
+`pnpm run test:docker:server` 在既有模块加载烟测之后，使用 `--network none` 额外运行正式镜像 Node PID 1，利用 `docker exec` 在容器内回环验证就绪及未开放工业设备写入 404，再用 `docker stop --signal SIGTERM --timeout 10` 检查退出码 0；无论成功或失败都执行容器清理。整个过程不暴露宿主端口、不访问生产数据库或 PLC，也不触碰现有 Vue/React 和 SCADA Core。
+
+本批没有新增依赖、普通单测或 E2E，预计仍为 **381 单测、12 E2E**，尚待 Windows 与 Docker 实测；真实在途请求、SSE/WS、代理流量与工业网关关停仍不在本阶段验证范围。见 [ADR-0052](../../docs/adr/0052-linux-sigterm-container-shutdown.md)。
