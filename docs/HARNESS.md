@@ -1486,3 +1486,16 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 结合前轮维护者实测，双框架开发环境 `test:sse:fault:browser` **退出码 0**，完整 `pnpm run ready` **退出码 0**：全量 Vitest **412/412（36 文件）**、Node SSE 资源 **8/8**、Node TCP 故障代理 **4/4**、NestJS E2E **17/17（3 文件）**，双框架和 NestJS 类型检查、构建通过。**第二十六批本机 Windows/Docker 自动化验收项已全部通过。**
 
 **范围限制：** 真实被阻断的是本机测试代理内的 TCP SSE 下行字节，未直接模拟真实 Nginx 宕机、物理断网、工业网关故障。有限六路持续观测不是长期高并发/慢消费内存背压或生产 SLA，生产鉴权、PostgreSQL 真库与现场设备仍未验收。本次仅追加验收记录，**最新文档提交后的 `vp check` 与 `docs:check` 尚未重新执行**；建议合并前再做一次静态复查。PR #48 继续 Draft，未经维护者明确授权不得合并。
+
+## 2026-11-13 · V0.3 第二十七批共享 Runtime 诊断专项（待 Windows 实测）
+
+在项目根目录按下列顺序运行：
+
+```powershell
+pnpm run test:runtime
+vp check
+pnpm run docs:check
+pnpm run ready
+```
+
+单独保持 `pnpm run dev:demo`、`pnpm run dev:react`、`pnpm run dev:vue` 三个终端运行，再执行 `pnpm run test:sse:browser` 和 `pnpm run test:sse:fault:browser`，并手动分别查看 React/Vue 运行监控页“实时链路诊断”区域：状态、断连过程、最近有效更新时间、观测时数据年龄、四种质量数量须与 Tag 面板一致；部分 Tag 恢复不应错误清除其他 STALE。桌面离线模拟诊断应保持断连次数为零，不需要连接工业设备。本次没有新增生产网络/后端接口。上述测试结果等待维护者实测，不得预先标记通过。详见 [ADR-0059](adr/0059-runtime-local-diagnostics.md)。
