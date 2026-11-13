@@ -3,9 +3,9 @@ import type { CanActivate, ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { PrismaService } from "../database/prisma.service.js";
 import { hasProjectPermission } from "../projects/project-access-policy.js";
+import type { ProjectAccessAction } from "../projects/project-access-policy.js";
 import { ScadaSecurityAuditService } from "../security/scada-security-audit.js";
 import type { SecurityAuditReporter } from "../security/scada-security-audit.js";
-import type { ProjectAccessAction } from "../projects/project-access-policy.js";
 import type { ScadaAuthenticatedRequest } from "./scada-session.guard.js";
 
 export const SCADA_PROJECT_PERMISSION = "scada:project-permission";
