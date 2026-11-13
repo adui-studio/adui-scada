@@ -35,7 +35,8 @@
     "pino-http": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "nest-zod": "catalog:"
   },
   "devDependencies": {
     "@adui/tsconfig": "workspace:*",
