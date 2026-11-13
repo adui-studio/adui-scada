@@ -58,3 +58,9 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 - npm 官方稳定版 `zod@4.6.7`；只将其作为 `apps/server` 生产依赖加入 Catalog 和 Manifest，不扩展到 Vue/React 或共享 Core。采用 Zod 的 `safeParse` 校验端口与监听地址，保持现有优先级、默认值、Swagger 访问条件和固定中文错误提示。
 - 原始输入、`ZodError`、环境密钥和数据库连接串不得被写入诊断日志或安全审计。第十六批固定四字段事件记录不做自动对象序列化替换。
 - 当前执行环境无法访问 npm Registry，**第十七批的 `pnpm-lock.yaml` 尚未更新**；必须由维护者在 Windows 执行 `pnpm install`，审查并提交 pnpm 正式生成的锁文件后，才能执行冻结安装、全量测试并合并。未执行不能宣称通过；参见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
+
+### NestJS 12 与 Zod 集成包兼容性复核（2026-11-13）
+
+维护者提出采用 `nestjs-zod + zod`。经核对 `nestjs-zod@5.6.0` 的上游 `v5.6.0` 标签 [package.json](https://github.com/BenLorantfy/nestjs-zod/blob/v5.6.0/packages/nestjs-zod/package.json)，其 `peerDependencies` 为：`@nestjs/common: ^10.0.0 || ^11.0.0`、`@nestjs/swagger: ^7.4.2 || ^8.0.0 || ^11.0.0`（Swagger 可选）、`zod: ^3.25.0 || ^4.0.0`。**本项目已锁定 NestJS 12.0.3 和 Swagger 12.1.1，不满足该版本声明的 Nest Peer 约束**；不能靠 `ignorePeerDeps`、伪造 lockfile 或全局覆盖降级解决。
+
+[另一项目 `nest-zod`](https://nestzod.dev/guide/compatibility)（注意名称不同）在官方兼容性表明确列出 NestJS 12 / Swagger 12 / Zod 4，候选方向是 `nest-zod + zod`，但**未经维护者同意不能将指定的 `nestjs-zod` 静默替换成 `nest-zod`**。另外 NestJS 12 自带 Standard Schema 的校验支持，也能直接使用 `zod`。目前第十七批 PR #39 只保留已选定的 `zod` 入口校验，`nestjs-zod` 作为未解决兼容性阻塞，不将其添加到 Catalog 或依赖清单。
