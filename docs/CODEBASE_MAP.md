@@ -498,3 +498,13 @@
 - `apps/server/src/demo/*.spec.ts`：2 项开关策略与 4 项模拟生命周期测试；`apps/server/test/local-demo-telemetry.e2e-spec.ts`：4 项 REST/SSE/Swagger 集成测试；原 `app.e2e-spec.ts` 补 1 项默认路由 404。
 - `.env.example` 和 `scripts/check-env-config.mjs`：新增统一根配置及布尔校验，不修改其它用户配置。
 - [ADR-0053](adr/0053-local-readonly-demo-telemetry.md)：审查本机开发模式、数据质量及工业安全边界。
+
+## V0.3 第二十二批：Runtime 只读 Tag 数据源抽象
+
+- `packages/runtime/src/tag-source.ts`：只读数据源接口、可关闭订阅句柄和仅允许 `standalone` / `nest-local` 两个固定同源 SSE 路径预设；工程 fetch 禁缓存、可取消且拒绝 HTML。
+- `packages/runtime/src/runtime.ts`：原 DemoRuntime 改从注入的数据源读取工程与订阅事件，默认原 `/demo` 不变；Core TagStore 统一验证 snapshot/delta；按代次屏蔽旧回调，断线需先收到新 snapshot。
+- `packages/runtime/src/index.ts`：公开工厂和只读契约供 Vue/React 以及未来受控数据源适配使用。
+- `packages/runtime/test/tag-source.test.ts`：4 项测试验证两个固定路径、网络失败、不接受任意设备 URL 与 AbortSignal。
+- `packages/runtime/test/tag-source-runtime.test.ts`：7 项测试验证事件传递、断线恢复、坏消息关闭、加载中止、旧会话隔离、同步失败回收和 snapshot 门槛。
+- `apps/web-react/src/runtime/RuntimePage.tsx` / `apps/web-vue/src/runtime/RuntimePage.vue`：代码不变，继续默认调用 `new DemoRuntime(listener)`；`packages/runtime/src/offline.ts` 仍为 Tauri 离线模拟。
+- `apps/server/src/demo/*`：第二十一批受控本机模拟接口无变更，`nest-local` 预设不取消其服务端安全开关。详见 [ADR-0054](adr/0054-readonly-tag-source-adapters.md)。
