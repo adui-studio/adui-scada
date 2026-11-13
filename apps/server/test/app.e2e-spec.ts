@@ -60,8 +60,10 @@ describe("应用控制器（端到端）", () => {
   });
 
   it("未显式启用时 Swagger 文档和 JSON 契约均返回 404", async () => {
-    await request(app.getHttpServer()).get("/api/docs").expect(404);
-    await request(app.getHttpServer()).get("/api/docs-json").expect(404);
+    const docsResponse = await request(app.getHttpServer()).get("/api/docs");
+    const jsonResponse = await request(app.getHttpServer()).get("/api/docs-json");
+    expect(docsResponse.status).toBe(404);
+    expect(jsonResponse.status).toBe(404);
   });
 
   it("仅本机开发模式可生成只包含现有健康接口的 OpenAPI 文档", async () => {
@@ -86,5 +88,4 @@ describe("应用控制器（端到端）", () => {
       await localApp.close();
     }
   });
-
 });
