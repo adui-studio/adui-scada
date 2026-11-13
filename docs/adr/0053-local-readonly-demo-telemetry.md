@@ -30,8 +30,8 @@ Vue/React 的 `DemoRuntime` 已通过 `/demo/project` 和 `/demo/events` 消费�
 - 新增访问策略单测：严格开关、非生产、回环地址、错误大小写。
 - 新增服务单测：唯一模拟定时器、首次 snapshot、delta/取消订阅、STALE→GOOD 且序列号递增、停机清理。
 - 原应用 E2E 新增默认模拟路由均 404；受控本机模块 E2E 覆盖只读工程、Tag 快照、Swagger JSON 的只读路由白名单，以及首条 SSE snapshot 和关闭连接。
-- 第 20 批最后一轮 Windows/Docker 实测在新增 Swagger 日志前为 **381/381 单测、12/12 E2E**，后续新增 2 项 Swagger 地址单测后尚无新的全量实测。按当前代码预估第二十一批总计 **389 项单测、17 项 NestJS E2E**；**这些均是待验收数字**，不应在提供实际运行记录之前宣称通过。
-- 维护者 Windows 应运行 `pnpm install --frozen-lockfile`、`vp check`、`pnpm run ready`、`pnpm run test:docker:server`；额外以 `SCADA_LOCAL_DEMO_API_ENABLED=true` 与 `SCADA_API_DOCS_ENABLED=true`、本机监听验证 Swagger 和数据流，再设回 false，确保关闭后 404。生产/全网监听环境不能开放本机模拟 API。
+- 维护者 2026-11-13 Windows 现已实测第二十一批（包括此前 Swagger 地址单测与本批显式 404 断言修复）**389/389 单测（33 个文件）、17/17 NestJS E2E（3 个文件）**，完整 `pnpm run ready` **退出码 0**。`vp check` 245 个文件格式正确、119 个源文件零警告/错误；69 份 Markdown 文档静态检查及 React/Vue/NestJS 构建通过。
+- Windows 全量 `ready` 与独立 `pnpm run test:docker:server` 已实测退出码 **0**。Docker 冻结安装、隔离 HTTP 烟测、正式 Linux Node PID 1 的 SIGTERM 及正常退出码 0 均通过；未开放工程/工业设备接口保持 404。E2E 中的 Terminus 503 是主动模拟关闭的预期负面测试。额外的手工浏览器 Swagger/SSE 验证（在本机显式开启模拟及 Swagger 开关，结束后关闭并复验 404）**尚未收到结果**，不能将自动化 E2E 等同于手工交互或正式生产授权。生产/全网监听环境不可开放本机模拟 API。
 - 本批不增加依赖、不变更锁文件、不部署、不允许工业写入。PR 必须 Draft、Assignee 为 `@adui-dev` 且创建后核验；未经维护者明确授权不得合并。
 
 ## 不包括
