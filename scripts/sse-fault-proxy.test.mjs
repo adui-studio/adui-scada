@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
+import { Agent, createServer, request as httpRequest } from "node:http";
 import { setTimeout as pause } from "node:timers/promises";
 import { test } from "node:test";
 import { startSseFaultProxy } from "./sse-fault-proxy.mjs";
@@ -100,6 +100,58 @@ await test("代理保持一条 TCP SSE 连接但阻断真实下行字节，不�
     } finally {
       for (const controller of controllers) controller.abort();
       await waitUntil(() => proxy.activeSseCount() === 0, "所有 SSE 客户端关闭后仍留有连接");
+    }
+  });
+});
+
+await test("复用 Keep-Alive TCP 连接的后续 SSE 请求仍被准确识别并可以注入故障", async () => {
+  await withOrigin(async (proxy) => {
+    const agent = new Agent({ keepAlive: true, maxSockets: 1 });
+    let healthSocket;
+    let sseSocket;
+    let eventResponse;
+    try {
+      const health = await new Promise((resolve, reject) => {
+        const request = httpRequest(new URL("health", proxy.url), { agent }, (response) => {
+          const chunks = [];
+          response.on("data", (chunk) => chunks.push(chunk));
+          response.once("end", () => resolve({ status: response.statusCode, body: Buffer.concat(chunks).toString() }));
+        });
+        request.once("socket", (socket) => {
+          healthSocket = socket;
+        });
+        request.once("error", reject);
+        request.end();
+      });
+      assert.equal(health.status, 200);
+      assert.equal(health.body, "正常");
+      assert.equal(proxy.activeSseCount(), 0);
+
+      const snapshot = await new Promise((resolve, reject) => {
+        const request = httpRequest(new URL("demo/events", proxy.url), { agent }, (response) => {
+          eventResponse = response;
+          response.once("data", (chunk) => resolve(chunk.toString()));
+          response.once("error", reject);
+        });
+        request.once("socket", (socket) => {
+          sseSocket = socket;
+        });
+        request.once("error", reject);
+        request.end();
+      });
+      assert.equal(sseSocket, healthSocket, "本用例必须在同一 TCP socket 上依次发送两个请求");
+      assert.match(snapshot, /snapshot/);
+      assert.equal(proxy.activeSseCount(), 1);
+
+      const frozen = proxy.freezeActiveSse();
+      await waitUntil(() => proxy.stats(frozen).suppressedBytes > 0, "复用 socket 的 SSE 字节未被阻断");
+      assert.equal(proxy.stats(frozen).closed, false);
+      eventResponse.destroy();
+      await waitUntil(() => proxy.stats(frozen).closed, "复用 socket 的 SSE 关闭后未回收");
+      assert.equal(proxy.activeSseCount(), 0);
+    } finally {
+      eventResponse?.destroy();
+      agent.destroy();
     }
   });
 });
