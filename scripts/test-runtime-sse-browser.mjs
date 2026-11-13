@@ -197,7 +197,8 @@ async function snapshot(session) {
       "reconnectCount: Number(document.querySelector(" +
       "'.scada-diagnostics-grid > div:nth-child(2) dd')?.textContent), " +
       "qualities: [...document.querySelectorAll('.scada-quality-item')].map((node) => ({ " +
-      "quality: node.getAttribute('data-quality'), count: Number(node.querySelector('strong')?.textContent) })) }, " +
+      "quality: node.getAttribute('data-quality'), " +
+      "count: Number(node.querySelector('strong')?.textContent) })) }, " +
       "statuses: [...(probe?.statuses ?? [])] }; })()",
   );
 }
