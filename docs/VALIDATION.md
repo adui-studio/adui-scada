@@ -384,9 +384,20 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 - [ ] `vp check`：格式、Lint、类型检查零告警、零错误。
 - [ ] `pnpm run docs:check`：工程 Markdown 静态链接及结构检查通过。
 - [ ] `pnpm run ready`：全量 Vitest、Node SSE 资源和 TCP 故障代理、NestJS E2E、Vue/React/NestJS 类型检查与构建通过；记录实际退出码。
-- [ ] `pnpm run test:sse:browser`：React/Vue 都出现 live → stale → reconnecting → live 状态变化记录，原有 Tag 质量、连接资源回收不退化。
-- [ ] `pnpm run test:sse:fault:browser`：真实本机 TCP 字节屏蔽时双框架状态记录仍一致，并关闭旧 SSE。
+- [x] `pnpm run test:sse:browser`：维护者 Windows 实测 React/Vue 两端均输出心跳、Tag 过期、静默重连及资源清理通过，**命令退出码 0**；浏览器脚本包含 live → stale → reconnecting → live 与事件上限断言。
+- [x] `pnpm run test:sse:fault:browser`：维护者 Windows 日志显示 React/Vue 两端均输出 TCP 下行阻断、STALE、主动重连与连接回收通过；**未提供该命令的独立退出码**，待补充确认。
 - [ ] Tauri 桌面端人工视觉验收与实际部署；单元测试不等于 MSI 安装已验证。
 - [ ] 工业报警持久历史、生产身份鉴权、真库、PLC 时钟同步、长时高并发及工业现场：本批未验证。
 
 本次状态事件仅是当前本机会话内存中的有界观察结果；不得宣传为工业报警中心、生产审计记录或真实设备事件历史。见 [ADR-0060](adr/0060-runtime-session-status-history.md)。
+
+### 第二十八批 Windows 双框架 SSE 浏览器回归（2026-11-14）
+
+维护者提供 PowerShell 实测日志，当前分支针对第二十八批状态时间线功能执行：
+
+- `pnpm run test:sse:browser`：React `127.0.0.1:15173` 与 Vue `127.0.0.1:15174` 均输出“浏览器 SSE 心跳保活、Tag 过期、静默重连、资源清理通过”，**明确退出码 0**。脚本额外断言共享状态时间线初始 live、Tag 过期 stale、传输静默 reconnecting 与快照恢复 live，以及会话内事件上限。
+- `pnpm run test:sse:fault:browser`：React/Vue 两端均输出“真实 TCP 下行阻断、STALE、主动重连及连接回收通过”。提供的输出到此结束，**未附 `Write-Host "TCP 故障退出码：$LASTEXITCODE"`**，因此只确认两端成功信息及脚本未输出错误，**暂不记录该命令的实际退出码**。
+
+**仍待 Windows 实测**：`pnpm run test:runtime`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`；以及手工 UI 和 Tauri 桌面验证。上述浏览器测试不能证明 Node/Vitest、Lint、类型、全量构建、真实工业网络、生产报警持久化已完成。
+
+本次仅补充验收文档与 PR 说明，无业务代码变更。新增文档提交后的格式及文档静态检查仍待执行；PR #50 保持 Draft，需维护者明确授权方能合并。
