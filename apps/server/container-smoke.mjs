@@ -4,6 +4,8 @@ import { PrismaProjectVersionStore } from "./dist/projects/prisma-project-versio
 import { AuthSessionService } from "./dist/auth/auth-session.service.js";
 import { ScadaSessionGuard } from "./dist/auth/scada-session.guard.js";
 import { ScadaProjectGuard } from "./dist/auth/scada-project.guard.js";
+import { applyHttpSecurityHeaders } from "./dist/security/http-security.js";
+import { allowLocalOpenApi, setupLocalOpenApi } from "./dist/openapi/scada-openapi.js";
 
 /** 本文件只用于隔离容器内部的服务端烟测，不是正式 HTTP 服务入口。 */
 if (
@@ -19,6 +21,16 @@ if (typeof PrismaProjectVersionStore !== "function") {
 }
 
 const app = await NestFactory.create(AppModule, { logger: false });
+const docsEnabled = allowLocalOpenApi({
+  enabled: "true",
+  nodeEnv: "production",
+  host: "0.0.0.0",
+});
+if (docsEnabled) {
+  throw new Error("生产或非回环环境不应允许公开 Swagger");
+}
+applyHttpSecurityHeaders(app, false);
+await setupLocalOpenApi(app, docsEnabled);
 try {
   await app.listen(0, "127.0.0.1");
   const address = app.getHttpServer().address();
@@ -28,6 +40,16 @@ try {
   const base = `http://127.0.0.1:${address.port}`;
   const health = await fetch(`${base}/health`);
   const body = await health.json();
+  if (
+    health.headers.get("x-content-type-options") !== "nosniff" ||
+    !health.headers.get("x-request-id")
+  ) {
+    throw new Error("服务端容器未启用必要安全响应头或请求关联 ID");
+  }
+  const docs = await fetch(`${base}/api/docs-json`);
+  if (docs.status !== 404) {
+    throw new Error("服务端容器意外开放 Swagger JSON 文档");
+  }
   if (health.status !== 200 || body.status !== "ok" || body.service !== "adui-scada-server") {
     throw new Error("服务端容器健康接口返回异常");
   }

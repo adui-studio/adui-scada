@@ -273,3 +273,11 @@ Prisma `schema.prisma` 的 `///` 为代码生成文档信息，**不会自动创
 `ScadaSessionGuard` 从唯一的 Authorization Bearer 请求头解析令牌并恢复服务端主体；`ScadaProjectGuard` 按请求路由的 `projectId` 和**已验证主体的 `tenantId`** 查询现有 `scada_project_grants`，复用 `hasProjectPermission` 严格授权，拒绝无元数据/跨租户/无权限。组合装饰器确保未来路由先认证后授权；事务写入仍必须在 `PrismaProjectVersionStore` 的工程行锁内再次复查 ACL，Guard 不替代锁内校验。当前所有模块**不挂载 AppModule**，无新业务端点。
 
 日志、Swagger、JWT/OIDC、密码散列、Nano ID、限流依赖按 [依赖选型](DEPENDENCY_SELECTION.md) 阶段化引入，先选最小可信基础，不让未经安装/实测的第三方依赖影响现有质量链。
+
+## V0.3 第十四批：日志与 HTTP 安全入口（ADR-0046）
+
+本批在现有 NestJS 12 `AppModule` 引入 `LoggerModule.forRoot`，统一将 Nest 内部日志与 `pino-http` 关联，并在 `main.ts` 将 `nestjs-pino` Logger 设置为应用日志入口。`http-logging.config.ts` 约束可配置日志等级、由服务端生成 `x-request-id`，并使用白名单请求/响应序列化和 Pino 敏感字段遮蔽，避免把 `Authorization`、Cookie、查询参数、请求体或密码写进结构化日志。
+
+`http-security.ts` 默认启用 Helmet。文档入口使用 `allowLocalOpenApi` 执行显式开关 + 非生产 + 127.0.0.1 三重限制，不满足时**不加载 Swagger、也不注册文档路由**；开发本机有 Swagger UI 时局部调整 CSP，生产默认 Helmet 全部安全头。`/health` 通过 Swagger Decorator 声明只代表进程存活，未挂载 `ScadaIdentityModule` 或 `ProjectPersistenceModule`，不改变工业只读安全边界。
+
+新包版本与锁文件必须统一，当前仅完成 Catalog 与服务端依赖声明，锁文件须在可访问 npm Registry 的受控 Windows 环境由 pnpm 正式生成后加入 PR。

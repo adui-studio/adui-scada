@@ -3,6 +3,9 @@ import { existsSync } from "node:fs";
 import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 import { NestFactory } from "@nestjs/core";
+import { Logger } from "nestjs-pino";
+import { allowLocalOpenApi, setupLocalOpenApi } from "./openapi/scada-openapi.js";
+import { applyHttpSecurityHeaders } from "./security/http-security.js";
 import { AppModule } from "./app.module.js";
 
 // 本地环境变量仅从仓库根目录 .env 读取，构建后的 dist/main.js 也使用同一路径。
@@ -22,12 +25,22 @@ async function bootstrap(): Promise<void> {
   if (host !== "127.0.0.1" && host !== "0.0.0.0") {
     throw new Error("SCADA_SERVER_HOST 只能设置为 127.0.0.1 或 0.0.0.0");
   }
-  const app = await NestFactory.create(AppModule, { cors: false });
+  const localDocs = allowLocalOpenApi({
+    enabled: process.env.SCADA_API_DOCS_ENABLED,
+    nodeEnv: process.env.NODE_ENV,
+    host,
+  });
+  const app = await NestFactory.create(AppModule, { cors: false, bufferLogs: true });
+  app.useLogger(app.get(Logger));
+  applyHttpSecurityHeaders(app, localDocs);
+  await setupLocalOpenApi(app, localDocs);
   app.enableShutdownHooks();
   await app.listen(port, host);
 }
 
 void bootstrap().catch((error: unknown) => {
-  console.error("ADui SCADA 服务启动失败：", error);
+  // 不输出连接串、启动参数或异常堆栈，避免数据库凭据被日志采集。
+  const kind = error instanceof Error ? error.name : "未知异常";
+  console.error("ADui SCADA 服务启动失败：" + kind);
   process.exitCode = 1;
 });

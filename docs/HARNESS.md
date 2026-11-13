@@ -1086,3 +1086,29 @@ Write-Host "退出码：$LASTEXITCODE"
 Prisma 新增迁移 `20261113000000_trusted_identity_sessions`，首次应用必须先确认当前 `.env` 指向本机隔离开发库 `127.0.0.1:15432/adui_scada`，然后显式执行 `pnpm run db:migrate:deploy` 与 `pnpm run db:migrate:status`；不能修改或重用旧迁移文件。**真实数据库测试仍仅允许本机 `adui_scada_test`**，通过 PowerShell `try/finally` 形式临时设置 `SCADA_DATABASE_URL` 和 `SCADA_TEST_DATABASE_URL` 为测试库 URL，先将新迁移应用到测试库再执行 `pnpm run test:db`，结束恢复两变量，不把真实口令写入 Git。该测试从随机租户创建临时主体/会话并在结束时删除，不会修改开发业务库。
 
 可独立执行 `pnpm run test:docker:server`，验证镜像仍可加载 NestJS/共享 Core，认证会话签发及工程/设备写入 API 均保持关闭。现有容器烟测不导入身份模块，因此不连接数据库。真实 OIDC 登录、会话发行端点、生产 HTTPS、身份撤销并发与审计待后续专项验收。
+
+## V0.3 第十四批：Pino / Swagger / Helmet 验收（ADR-0046）
+
+本批接入 `nestjs-pino@5.3.1`、`pino@10.4.0`、`pino-http@11.0.0`、`@nestjs/swagger@12.1.1`、`helmet@8.3.0`、`@nestjs/config@12.0.1` 与开发依赖 `pino-pretty@13.2.0`。维护者已经用 Windows pnpm 12.18.0 正式生成并提交与 Catalog 一致的 `pnpm-lock.yaml`。Pino Pretty 在测试或生产环境均不启用，默认 Swagger 路由不注册；此批不引入对外登录、工程写入或工业控制接口。
+
+```powershell
+git fetch origin
+git switch feat/v0.3-pino-swagger-security
+git pull --ff-only
+
+# 锁文件已正式生成并提交；继续使用冻结安装复验。
+pnpm install --frozen-lockfile
+pnpm run ready
+Write-Host "质量链退出码：$LASTEXITCODE"
+```
+
+2026-11-13 Windows 复验：独立 E2E 8/8、退出码 0；完整 `ready` 356/356 单测、8/8 NestJS E2E、219 个文件格式正确、100 个受检文件零错误/警告、62 份 Markdown 检查，Vue/React/NestJS 构建通过，退出码 0。若安装或 Peer Dependencies 报错，仍须按真实输出调整，不允许默认忽略约束。
+
+可在本机测试 Swagger：在 PowerShell 临时设置 `$env:NODE_ENV="development"`、`$env:SCADA_API_DOCS_ENABLED="true"` 并确认 `SCADA_SERVER_HOST=127.0.0.1` 后执行 `pnpm run dev:server`，打开 `http://127.0.0.1:13001/api/docs`（端口以实际 `.env` 为准）。恢复 `SCADA_API_DOCS_ENABLED=false` 或在 `NODE_ENV=production` 启动后文档必须返回 404。文档仅描述 `GET /health`，不要通过 Swagger 测试未开放的工程/设备接口。非回环绑定禁止启用文档。
+
+```powershell
+pnpm run test:docker:server
+Write-Host "容器烟测退出码：$LASTEXITCODE"
+```
+
+容器运行阶段仍为 `--network none`，不映射宿主机端口、不连接数据库或工业网关。该批维护者已在 Windows 验证 Docker 隔离镜像构建与烟测，退出码 0；最新 Pretty 测试隔离补丁仅影响非生产/测试日志选项，Docker 烟测未在该补丁后单独再次执行。安全审计持久化、生产 IAM、登录/MFA、分布式日志保留、RLS 仍待后续批次。

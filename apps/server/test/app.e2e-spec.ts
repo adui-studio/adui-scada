@@ -3,6 +3,8 @@ import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { AppModule } from "../src/app.module.js";
+import { allowLocalOpenApi, setupLocalOpenApi } from "../src/openapi/scada-openapi.js";
+import { applyHttpSecurityHeaders } from "../src/security/http-security.js";
 
 describe("应用控制器（端到端）", () => {
   let app: INestApplication;
@@ -10,6 +12,7 @@ describe("应用控制器（端到端）", () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
+    applyHttpSecurityHeaders(app, false);
     await app.init();
   });
 
@@ -48,5 +51,41 @@ describe("应用控制器（端到端）", () => {
       .post("/api/auth/sessions")
       .send({ tenantId: "tenant-a", subjectId: "engineer-1" });
     expect(response.status).toBe(404);
+  });
+  it("HTTP 默认添加安全响应头和可信请求关联 ID", async () => {
+    const response = await request(app.getHttpServer()).get("/health").expect(200);
+    expect(response.headers["x-content-type-options"]).toBe("nosniff");
+    expect(response.headers["x-frame-options"]).toBe("SAMEORIGIN");
+    expect(response.headers["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it("未显式启用时 Swagger 文档和 JSON 契约均返回 404", async () => {
+    const docsResponse = await request(app.getHttpServer()).get("/api/docs");
+    const jsonResponse = await request(app.getHttpServer()).get("/api/docs-json");
+    expect(docsResponse.status).toBe(404);
+    expect(jsonResponse.status).toBe(404);
+  });
+
+  it("仅本机开发模式可生成只包含现有健康接口的 OpenAPI 文档", async () => {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const localApp = moduleRef.createNestApplication();
+    const allowed = allowLocalOpenApi({
+      enabled: "true",
+      nodeEnv: "development",
+      host: "127.0.0.1",
+    });
+    applyHttpSecurityHeaders(localApp, allowed);
+    await setupLocalOpenApi(localApp, allowed);
+    await localApp.init();
+    try {
+      const response = await request(localApp.getHttpServer()).get("/api/docs-json").expect(200);
+      expect(response.body.openapi).toMatch(/^3\./);
+      expect(response.body.paths["/health"]).toBeDefined();
+      expect(response.body.paths["/api/auth/sessions"]).toBeUndefined();
+      expect(response.body.paths["/api/devices/write"]).toBeUndefined();
+      expect(response.body.paths["/api/projects/{projectId}/versions"]).toBeUndefined();
+    } finally {
+      await localApp.close();
+    }
   });
 });

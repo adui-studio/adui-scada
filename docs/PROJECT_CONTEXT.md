@@ -488,3 +488,11 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 第十二批 PR #34 经维护者 Windows 实测 `pnpm run ready` 退出码 0（340 单测、4 NestJS E2E）、独立 PostgreSQL 9/9 和 Docker 隔离烟测成功，并经明确授权 Squash Merge 到 `main`，提交 `f1045ab`。第十三批选定**数据库支持即时撤销的短期不透明会话 + 两层受控工程 Guard**，优先使用已安装 NestJS/Prisma 与 Node `crypto`；暂不引入未安装的密码/JWT/日志/Swagger 包，整理阶段化 [依赖推荐清单](DEPENDENCY_SELECTION.md)。NestJS 新发布的 `@nestjs/authentication` / `@nestjs/authorization` 仍为 0.1.x，需经过成熟度与适配评审后再考虑。
 
 本批新增可信身份/会话两业务模型及含完整中文元数据的独立迁移，提供不透明会话的 15 分钟有效期、SHA-256 摘要、主体状态与撤销验证；新增 Session Guard、工程 ACL Guard 和组合装饰器，单独模块**未挂入 AppModule**，不注册任何登录或工程业务 HTTP API。新增 10 项常规单测、2 项隔离 PostgreSQL 会话测试及未开放认证接口的 E2E 安全检查；预计普通单测 350、E2E 5、真库 11。**本批未实际运行完整质量链、Docker 或 PostgreSQL 新迁移，不能宣称通过，也未进入认证生产阶段。**
+
+## 2026-11-13 · V0.3 第十四批：Pino、Swagger 与 HTTP 安全基线（Windows 质量链通过，Draft 待合并）
+
+第十三批 PR #35 已获维护者明确授权，通过 Squash Merge 合并至 `main`，提交 `0e1849e`。维护者 Windows 实测该批完整 `ready` 退出码 0（350 单元测试、5 NestJS E2E）、隔离 PostgreSQL 11/11、Docker 安全烟测通过。当前第十四批按已决定的技术路径建设 `nestjs-pino` / Pino 10 结构化日志、受控 `@nestjs/swagger` 12 文档与 Helmet 安全响应头。
+
+实现包含服务端随机请求 ID、URL 查询/头/体白名单日志脱敏，Swagger 文档仅允许显式本机非生产模式访问，默认不注册路由；健康响应和未开放的认证/工程/工业设备写入接口保持不变。另引入 `@nestjs/config` 与仅开发使用的 `pino-pretty`，并修复其在 Vitest 中创建日志工作线程的风险。现在共有六项日志/文档纯单测及三项新增 E2E，Windows 实测普通单测 356/356、E2E 8/8；本批未重测旧 PostgreSQL 真库 11 项。没有修改 PostgreSQL 表、迁移或 Prisma Client，也没有激活登录/工业设备控制。
+
+**验收记录**：维护者已使用 pnpm 12.18.0 更新并推送锁文件；2026-11-13 Windows 单独 `pnpm run test:e2e:server` 8/8、退出码 0，完整 `pnpm run ready` 退出码 0：356/356 单测、8/8 E2E、219 个文件格式检查、100 个受检文件零错误/警告、62 份 Markdown 检查及 React/Vue/NestJS 构建通过。此前 `beforeAll` 10 秒超时在排除测试环境 Pretty Worker 后未复现。Docker 隔离镜像构建与烟测也已在该批前一次实测通过、退出码 0。当前 PR #36 仍为 Draft、未合并，真库 11 项回归及生产级安全审计不属于此次 `ready` 的验证结果。

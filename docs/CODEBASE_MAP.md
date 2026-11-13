@@ -417,3 +417,17 @@
 - `apps/server/test/prisma-project-version.db-spec.ts`：新增 2 项独立 PostgreSQL 会话摘要、撤销、主体停用和过期验证。
 - `apps/server/test/app.e2e-spec.ts` 与 `apps/server/container-smoke.mjs`：验证会话签发 API 与既有工程/设备写入 API 继续保持关闭。
 - [ADR-0045](adr/0045-trusted-session-and-project-guard.md)、[依赖清单](DEPENDENCY_SELECTION.md) 记录阶段化安全选型。
+
+## V0.3 第十四批：日志、OpenAPI 与安全头
+
+- `apps/server/src/observability/http-logging.config.ts`：Pino HTTP 配置、日志等级白名单、服务端请求 ID、白名单日志字段与敏感字段脱敏。
+- `apps/server/src/observability/http-logging.config.spec.ts`：3 项日志配置测试，不记录 URL 查询、令牌、Cookie 与请求体。
+- `apps/server/src/openapi/scada-openapi.ts`：Swagger 本机受控开关与动态文档注册。
+- `apps/server/src/openapi/scada-openapi.spec.ts`：2 项文档访问策略测试，拒绝生产环境和非回环监听。
+- `apps/server/src/security/http-security.ts`：Helmet 安全头，开发 Swagger UI 局部 CSP 兼容。
+- `apps/server/src/main.ts`、`apps/server/src/app.module.ts`、`apps/server/src/app.controller.ts`：正式启动日志桥接、Helmet 与健康路由的 OpenAPI 说明。
+- `apps/server/test/app.e2e-spec.ts`：新增响应安全头、请求关联 ID、Swagger 默认拒绝与本机显式启用检查。
+- `apps/server/container-smoke.mjs`：隔离容器复查安全头、请求 ID 与 Swagger JSON 路由关闭。
+- 根 `.env.example`、`scripts/check-env-config.mjs`：增加日志级别和 API 文档开关的统一配置与校验。
+- `pnpm-workspace.yaml`、`apps/server/package.json`：精确 Catalog 声明新增的五个 npm 包；**pnpm-lock.yaml 尚待维护者环境生成**。
+- [ADR-0046](adr/0046-pino-openapi-http-security.md) 记录依赖和安全边界。
