@@ -327,11 +327,7 @@ describe("可信会话与工程 Guard", () => {
         },
       },
     };
-    const guard = new ScadaProjectGuard(
-      db as unknown as PrismaService,
-      new Reflector(),
-      audit,
-    );
+    const guard = new ScadaProjectGuard(db as unknown as PrismaService, new Reflector(), audit);
     const request: ScadaAuthenticatedRequest = {
       headers: { authorization: "Bearer 不应写入日志" },
       params: { projectId: "project-private" },
