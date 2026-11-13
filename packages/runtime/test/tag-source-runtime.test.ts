@@ -1,4 +1,4 @@
-import { expect, test } from "vite-plus/test";
+import { expect, test, vi } from "vite-plus/test";
 import { waterTreatmentDemoDocument } from "@adui/scada-core";
 import { DemoRuntime } from "../src/runtime.ts";
 import type { RuntimeState } from "../src/runtime.ts";
@@ -212,5 +212,89 @@ test("新会话不能以 delta 开始，断线后也必须重新收到 snapshot"
     expect(other.closed()).toBe(1);
   } finally {
     second.stop();
+  }
+});
+
+test("连接未报错但 12 秒没有 Tag 更新时标记 STALE，随后有效数据恢复", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-11-13T00:00:00.000Z"));
+  const controlled = controlledSource();
+  const states: RuntimeState[] = [];
+  const runtime = new DemoRuntime((state) => states.push(state), controlled.source);
+  try {
+    await runtime.start();
+    controlled.handlers[0]?.onMessage({ kind: "snapshot", values: [makeTag(1)] });
+    expect(states.at(-1)?.status).toBe("live");
+
+    vi.advanceTimersByTime(11_999);
+    expect(states.at(-1)?.status).toBe("live");
+    vi.advanceTimersByTime(1);
+    expect(states.at(-1)?.status).toBe("stale");
+    expect(states.at(-1)?.message).toMatch(/Tag 数据持续超时/);
+    expect(states.at(-1)?.values[0]?.quality).toBe("STALE");
+
+    controlled.handlers[0]?.onMessage({ kind: "delta", values: [makeTag(3, 66)] });
+    expect(states.at(-1)?.status).toBe("live");
+    expect(states.at(-1)?.values[0]?.value).toBe(66);
+    expect(states.at(-1)?.values[0]?.quality).toBe("GOOD");
+    expect(vi.getTimerCount()).toBe(1);
+  } finally {
+    runtime.stop();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  }
+});
+
+test("空增量与上游 STALE 质量不能伪装成新的正常 Tag 数据", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-11-13T00:00:00.000Z"));
+  const controlled = controlledSource();
+  const states: RuntimeState[] = [];
+  const runtime = new DemoRuntime((state) => states.push(state), controlled.source);
+  try {
+    await runtime.start();
+    controlled.handlers[0]?.onMessage({ kind: "snapshot", values: [makeTag(1)] });
+    vi.advanceTimersByTime(10_000);
+    controlled.handlers[0]?.onMessage({ kind: "delta", values: [] });
+    vi.advanceTimersByTime(2_000);
+    expect(states.at(-1)?.status).toBe("stale");
+    expect(states.at(-1)?.values[0]?.quality).toBe("STALE");
+
+    controlled.handlers[0]?.onMessage({
+      kind: "delta",
+      values: [{ ...makeTag(3), quality: "STALE" }],
+    });
+    expect(states.at(-1)?.status).toBe("stale");
+    expect(states.at(-1)?.message).toMatch(/存在已过期的 Tag/);
+    controlled.handlers[0]?.onMessage({ kind: "delta", values: [makeTag(4)] });
+    expect(states.at(-1)?.status).toBe("live");
+  } finally {
+    runtime.stop();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  }
+});
+
+test("网络断连优先维持重连状态，快照到来后恢复且不会遗留定时器", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-11-13T00:00:00.000Z"));
+  const controlled = controlledSource();
+  const states: RuntimeState[] = [];
+  const runtime = new DemoRuntime((state) => states.push(state), controlled.source);
+  try {
+    await runtime.start();
+    controlled.handlers[0]?.onMessage({ kind: "snapshot", values: [makeTag(9)] });
+    controlled.handlers[0]?.onDisconnected();
+    expect(states.at(-1)?.status).toBe("reconnecting");
+    vi.advanceTimersByTime(25_000);
+    expect(states.at(-1)?.status).toBe("reconnecting");
+
+    controlled.handlers[0]?.onMessage({ kind: "snapshot", values: [makeTag(1)] });
+    expect(states.at(-1)?.status).toBe("live");
+    expect(states.at(-1)?.values[0]?.quality).toBe("GOOD");
+  } finally {
+    runtime.stop();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
   }
 });
