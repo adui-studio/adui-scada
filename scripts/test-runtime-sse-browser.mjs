@@ -340,6 +340,11 @@ async function checkTransportFaultTarget(session, target, proxy) {
     (state) => state.status === "live",
     20000,
   );
+  const releaseStarted = Date.now();
+  while (!proxy.stats(frozen).closed && Date.now() - releaseStarted < 5000) {
+    await pause(100);
+  }
+  assert.equal(proxy.stats(frozen).closed, true, "旧的半开 SSE socket 必须由客户端关闭");
 
   await session.evaluate(
     "(() => { const button = [...document.querySelectorAll('.scada-app-nav button')].find(" +
@@ -358,7 +363,7 @@ async function checkTransportFaultTarget(session, target, proxy) {
   }
   assert.equal(proxy.activeSseCount(), 0, "离开 Runtime 后代理端仍保留 SSE socket");
   process.stdout.write(
-    target.name + " 真实 TCP 下行阻断、STALE、主动重连及连接回收通过\\n",
+    target.name + " 真实 TCP 下行阻断、STALE、主动重连及连接回收通过\n",
   );
 }
 
