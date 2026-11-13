@@ -50,9 +50,9 @@ describe("服务端结构化 HTTP 日志", () => {
     expect(
       shouldUsePrettyTransport({ nodeEnv: "development", isTty: true, isTestRunner: false }),
     ).toBe(true);
-    expect(
-      shouldUsePrettyTransport({ nodeEnv: "test", isTty: true, isTestRunner: false }),
-    ).toBe(false);
+    expect(shouldUsePrettyTransport({ nodeEnv: "test", isTty: true, isTestRunner: false })).toBe(
+      false,
+    );
     expect(
       shouldUsePrettyTransport({ nodeEnv: "development", isTty: true, isTestRunner: true }),
     ).toBe(false);
