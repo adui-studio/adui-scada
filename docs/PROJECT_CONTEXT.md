@@ -632,3 +632,15 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 从第二十五批已合并的 `main` 提交 `cf13808` 创建 `feat/v0.3-sse-transport-fault-soak`。本批只扩展本机 SSE 自动化：新增回环透明 TCP 代理，可让已建立的 SSE socket 保持连接、只暂停下行字节；基于现有 Chrome/Edge 检查 Vue/React Runtime 是否按 12/15 秒时效完成 STALE、主动重连、快照恢复与资源释放，并可通过 Docker Nginx 演示入口执行相同流程。另为已有 Node 六路 SSE 测试添加显式的至少 12 次心跳与增量持续观测。正常浏览器和网络烟测的默认行为不变，不增加依赖，不修改任何产品运行时或设备接口。
 
 协作环境的 Node 22 原生 HTTP/TCP 故障代理单测 **3/3 通过**，证明工具自身可阻断真实下行字节而保留连接，其他 SSE 仍可收消息。分支源码已通过静态 JavaScript 解析。**尚未在维护者 Windows 完整 pnpm 工作区执行新脚本、真实 Chrome/Edge 双框架恢复、Docker Nginx 故障模式或六路持续测试**；`vp check`、`pnpm run docs:check` 与 `pnpm run ready` 待维护者实测。验收计划详见 [ADR-0058](adr/0058-tcp-sse-fault-and-soak-tests.md) 和 [VALIDATION](VALIDATION.md)。PR 保持 Draft，未经明确授权不合并。
+
+### 第二十六批首轮 Windows 浏览器与 Lint 反馈（2026-11-13）
+
+维护者已启动 `dev:react`（`127.0.0.1:15173`）和 `dev:vue`（`127.0.0.1:15174`），均显示 Vite+ Ready。运行 `pnpm run test:sse:fault:browser` 后，**React 的真实 TCP 下行阻断、STALE、主动重连和连接回收通过**；Vue 在注入前断言失败：`故障注入前必须只有一条有效 SSE TCP 流`（实际 **0 !== 1**），因此整条命令退出码 1，**不能标记为双框架通过**。`vp check --fix` 反馈 129 个受检文件 **0 errors、1 warning**：浏览器脚本 `recovered` 变量未使用，并已运行格式修复。
+
+**已定位代码根因：** 测试专用 TCP 故障代理原先仅用 socket 的第一条 HTTP 请求行决定是否为 SSE；浏览器可能复用 Keep-Alive 连接，先获取 Vue 页面资源，再在同一 socket 上请求 `/demo/events`，从而出现 UI 已经 live、代理 `activeSseCount() === 0` 的分类遗漏。该结论来自代理实现缺陷；当前日志没有直接抓到 Vue 每个 socket 的请求顺序，故不将复用行为描述为已经抓包证实。
+
+**本分支定向修正：** TCP 代理对同一个下游连接持续识别后续的 `GET /demo/events`/`GET /events` 请求行，使用最多 256 字节尾部缓存跨 TCP 分块解析，不改变普通流的转发规则。新增第 4 条 Node 回归，用同一个 `http.Agent({ keepAlive: true, maxSockets: 1 })` 确认同一 socket 先访问 `/health`、再访问 `/demo/events`，随后可以冻结真实 SSE 字节且完成连接回收。浏览器脚本要求页面恰有一条有效 EventSource 且测试代理恰有一条 SSE socket，稳定 400ms 才故障注入，消除初次页面加载时的判断竞态；`recovered` 现参与同源订阅路径一致性断言，修复未使用变量警告。
+
+**修复后验证状态：** 代码通过静态 JavaScript 语法解析，协作环境的独立 Node 22 Keep-Alive 实验复现成功，但**没有在完整仓库执行修改后的四项 Node 单测、双框架真实 Chrome/Edge、`vp check` 或 `pnpm run ready`**。维护者需同步分支后重跑 `pnpm run test:sse:fault:unit`、`pnpm run test:sse:fault:browser`、`vp check`、`pnpm run docs:check`、`pnpm run ready`；Docker 专项与持续长连接仍独立待测。
+
+只更新测试工具和验收文档，没有改动共享 Runtime、Core、Vue/React 页面或生产服务；PR #48 继续 Draft，不经明确授权不合并。
