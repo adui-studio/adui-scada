@@ -97,4 +97,4 @@ Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。�
 
 新增 `ScadaSecurityAuditService`，用于尚未挂入正式 AppModule 的 `ScadaIdentityModule`、`ScadaSessionGuard` 与 `ScadaProjectGuard`。所有允许/拒绝事件只输出固定操作、结果和原因码，由白名单构造字段后使用 NestJS Logger 记录，**不会附带 Bearer、Cookie、查询参数、请求体、工程路径或身份标识**。这属于运维诊断记录，不具备安全审计持久化、归责、事务一致性或日志丢失补偿能力；真实登录和业务写入接口仍关闭。
 
-单元测试覆盖敏感字段过滤、非法事件组合、会话撤销和工程越权拒绝；预计本批常规单测 367 项、E2E 8 项，须由维护者 Windows 执行 `pnpm run ready` 与可选 Docker 隔离烟测后确认。详见 [ADR-0048](../../docs/adr/0048-security-audit-event-boundary.md)。
+单元测试覆盖敏感字段过滤、非法事件组合、会话撤销和工程越权拒绝；维护者已在 Windows 实测 **367/367 常规单测、8/8 E2E**，完整 `pnpm run ready` 及独立 Docker 隔离烟测均 **退出码 0**。记录性文档变更后仍建议运行 `vp check` 与 `pnpm run docs:check`。后续如使用 Zod 检查外部输入，必须保留当前审计输出字段白名单，不直接记录原始对象或包含敏感输入的校验错误。详见 [ADR-0048](../../docs/adr/0048-security-audit-event-boundary.md)。
