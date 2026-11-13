@@ -503,10 +503,10 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 
 实现改为根环境变量加载完成后才动态导入正式 AppModule，并抽取纯函数统一解析端口、监听主机和受控文档条件；根 `.env` 唯一加载入口、配置优先级、Swagger 生产关闭、日志凭据脱敏均不改变。新增 5 项启动配置测试，`scripts/check-env-config.mjs` 增加顺序回归约束。维护者 Windows 已实测常规单测 **361/361**、NestJS E2E **8/8**，`vp check` 222 个文件格式正确、102 个受检文件零告警，63 份 Markdown 检查通过，React/Vue/NestJS 构建通过，完整 `ready` 退出码 **0**。独立 Docker 隔离镜像构建及烟测也通过，退出码 **0**；本批未执行 PostgreSQL 真库回归。未新增依赖、未修改 pnpm 锁文件、Prisma 模型、正式认证或设备写入接口。配套 [ADR-0047](adr/0047-server-configuration-startup.md)；PR #37 仍保持 Draft，记录性文档更新后需最终格式复检，未经明确授权不合并。
 
-## 2026-11-13 · V0.3 第十六批：Guard 安全事件白名单（Draft 待 Windows 验收）
+## 2026-11-13 · V0.3 第十六批：Guard 安全事件白名单（Windows 质量链与 Docker 已通过，Draft 待合并）
 
 第十五批 PR #37 获维护者明确授权后通过 Squash Merge 合入 `main`（`c1e8096`）。Windows 实测 `ready` 361/361 单测、8/8 NestJS E2E，退出码 0；Docker 隔离镜像构建与安全烟测亦通过。
 
-本批基于该 `main` 创建 `feat/v0.3-security-audit-boundary`，为现有 `ScadaSessionGuard` 和 `ScadaProjectGuard` 增加可注入的安全事件记录服务。只写固定事件、允许/拒绝结果和原因码，不传 Header、Bearer、查询参数、工程路径、租户/主体标识或错误对象；允许/拒绝仍沿用现有 Guard 逻辑及 HTTP 异常语义。新增 4 项独立白名单单测和 2 项 Guard 审计单测，**预计**常规单测 367 项、NestJS E2E 8 项。模块未挂入正式 AppModule，当前事件不是可追溯的数据库持久化审计，也未开放任何认证、工程版本或工业写入接口。
+本批基于该 `main` 创建 `feat/v0.3-security-audit-boundary`，为现有 `ScadaSessionGuard` 和 `ScadaProjectGuard` 增加可注入的安全事件记录服务。只写固定事件、允许/拒绝结果和原因码，不传 Header、Bearer、查询参数、工程路径、租户/主体标识或错误对象；允许/拒绝仍沿用现有 Guard 逻辑及 HTTP 异常语义。新增 4 项独立白名单单测和 2 项 Guard 审计单测，Windows 实测常规单测 **367/367**、NestJS E2E **8/8**，完整 `ready` **退出码 0**。模块未挂入正式 AppModule，当前事件不是可追溯的数据库持久化审计，也未开放任何认证、工程版本或工业写入接口。
 
-本批未改 PostgreSQL/Prisma 模型和迁移、Vue/React、共享 Core、pnpm Catalog 及锁文件。仓库协作环境未实际执行完整 `pnpm run ready`、Docker 或隔离 PostgreSQL 测试；PR 保持 Draft，需维护者 Windows 验收与明确合并授权。详见 [ADR-0048](adr/0048-security-audit-event-boundary.md)。
+本批未改 PostgreSQL/Prisma 模型和迁移、Vue/React、共享 Core、pnpm Catalog 及锁文件。维护者已在 Windows 实测 `vp check` 225 个格式文件全部通过、104 个受检文件无警告或错误，64 份 Markdown 检查、Vue/React/NestJS 构建及独立 Docker 隔离烟测均通过（退出码 0）。本批未执行隔离 PostgreSQL 真库测试，PR #38 保持 Draft，未经明确授权不合并。详见 [ADR-0048](adr/0048-security-audit-event-boundary.md)。
