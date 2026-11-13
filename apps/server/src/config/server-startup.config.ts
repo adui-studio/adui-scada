@@ -1,6 +1,15 @@
+import { z } from "zod";
 import { allowLocalOpenApi } from "../openapi/scada-openapi.js";
 
 export type ServerListenHost = "127.0.0.1" | "0.0.0.0";
+
+/** 只校验服务端启动所需的原始环境值，不读取或输出其它环境变量。 */
+const serverPortSchema = z
+  .union([z.string(), z.number()])
+  .transform((value) => Number(value))
+  .pipe(z.number().int().min(1).max(65535));
+
+const serverHostSchema = z.enum(["127.0.0.1", "0.0.0.0"]);
 
 export interface ServerStartupConfig {
   readonly port: number;
@@ -15,16 +24,21 @@ export interface ServerStartupConfig {
 export function resolveServerStartupConfig(
   env: Readonly<Record<string, string | undefined>>,
 ): ServerStartupConfig {
-  const rawPort = env.SCADA_SERVER_PORT ?? env.PORT;
-  const port = rawPort === undefined ? 3001 : Number(rawPort);
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  const rawPort = env.SCADA_SERVER_PORT ?? env.PORT ?? 3001;
+  const portResult = serverPortSchema.safeParse(rawPort);
+  if (!portResult.success) {
+    // 不暴露 ZodError 或原始环境值，保持已有中文错误契约。
     throw new Error("SCADA_SERVER_PORT 必须是 1～65535 之间的整数");
   }
 
-  const host = env.SCADA_SERVER_HOST ?? env.HOST ?? "127.0.0.1";
-  if (host !== "127.0.0.1" && host !== "0.0.0.0") {
+  const rawHost = env.SCADA_SERVER_HOST ?? env.HOST ?? "127.0.0.1";
+  const hostResult = serverHostSchema.safeParse(rawHost);
+  if (!hostResult.success) {
     throw new Error("SCADA_SERVER_HOST 只能设置为 127.0.0.1 或 0.0.0.0");
   }
+
+  const port = portResult.data;
+  const host = hostResult.data;
 
   return {
     port,
