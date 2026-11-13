@@ -75,9 +75,7 @@ test("状态事件按变化追加，同毫秒可区分且最多保留二十条",
   expect(earlierSnapshot).toHaveLength(2);
   history.clear();
   history.record("simulation", 500);
-  expect(history.snapshot()).toEqual([
-    { sequence: 1, status: "simulation", occurredAt: 500 },
-  ]);
+  expect(history.snapshot()).toEqual([{ sequence: 1, status: "simulation", occurredAt: 500 }]);
 });
 
 test("状态事件诊断快照与内部历史隔离", () => {
@@ -85,9 +83,7 @@ test("状态事件诊断快照与内部历史隔离", () => {
   history.record("connecting", 1);
   const snapshot = createRuntimeDiagnostics([], null, 0, 2, history.snapshot());
   history.record("live", 3);
-  expect(snapshot.statusEvents).toEqual([
-    { sequence: 1, status: "connecting", occurredAt: 1 },
-  ]);
+  expect(snapshot.statusEvents).toEqual([{ sequence: 1, status: "connecting", occurredAt: 1 }]);
   expect(history.snapshot()).toHaveLength(2);
 });
 
@@ -188,9 +184,7 @@ test("桌面离线模拟复用诊断快照但不会伪造 SSE 重连", () => {
     vi.advanceTimersByTime(25_000);
     expect(states.at(-1)?.diagnostics.qualityCounts.STALE).toBe(3);
     expect(states.at(-1)?.diagnostics.reconnectCount).toBe(0);
-    expect(states.at(-1)?.diagnostics.statusEvents.map((e) => e.status)).toEqual([
-      "simulation",
-    ]);
+    expect(states.at(-1)?.diagnostics.statusEvents.map((e) => e.status)).toEqual(["simulation"]);
   } finally {
     runtime.stop();
     vi.useRealTimers();

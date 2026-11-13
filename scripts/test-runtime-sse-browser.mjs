@@ -299,11 +299,7 @@ async function checkTarget(session, target) {
     (state) => state.status === "live",
     15000,
   );
-  assert.equal(
-    resumedAfterFault.diagnostics.statusEvents[0],
-    "live",
-    "重连恢复后应记录 live 状态",
-  );
+  assert.equal(resumedAfterFault.diagnostics.statusEvents[0], "live", "重连恢复后应记录 live 状态");
   assert.ok(
     resumedAfterFault.diagnostics.statusEvents.includes("reconnecting"),
     "状态事件应保留断连过程",
