@@ -510,3 +510,11 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 本批基于该 `main` 创建 `feat/v0.3-security-audit-boundary`，为现有 `ScadaSessionGuard` 和 `ScadaProjectGuard` 增加可注入的安全事件记录服务。只写固定事件、允许/拒绝结果和原因码，不传 Header、Bearer、查询参数、工程路径、租户/主体标识或错误对象；允许/拒绝仍沿用现有 Guard 逻辑及 HTTP 异常语义。新增 4 项独立白名单单测和 2 项 Guard 审计单测，Windows 实测常规单测 **367/367**、NestJS E2E **8/8**，完整 `ready` **退出码 0**。模块未挂入正式 AppModule，当前事件不是可追溯的数据库持久化审计，也未开放任何认证、工程版本或工业写入接口。
 
 本批未改 PostgreSQL/Prisma 模型和迁移、Vue/React、共享 Core、pnpm Catalog 及锁文件。维护者已在 Windows 实测 `vp check` 225 个格式文件全部通过、104 个受检文件无警告或错误，64 份 Markdown 检查、Vue/React/NestJS 构建及独立 Docker 隔离烟测均通过（退出码 0）。本批未执行隔离 PostgreSQL 真库测试，PR #38 保持 Draft，未经明确授权不合并。详见 [ADR-0048](adr/0048-security-audit-event-boundary.md)。
+
+## 2026-11-13 · V0.3 第十七批：Zod 启动配置运行时校验（Draft 待锁文件及 Windows 验收）
+
+第十六批 PR #38 已经维护者授权并通过 Squash Merge 合并到 `main`（`099fe8e`）。该批 Windows 实测 `ready` 367/367 单测、8/8 NestJS E2E、退出码 0，独立 Docker 隔离烟测退出码 0；安全事件仍是非持久化诊断日志。
+
+本批从最新 `main` 创建 `feat/v0.3-zod-runtime-config`，根据 [ADR-0049](adr/0049-zod-server-runtime-validation.md) 在 NestJS 启动配置中引入 `zod@4.6.7`，校验端口和监听地址并保留既有错误消息、配置优先级、Swagger 限制及敏感信息不落日志。新增 4 项配置单测，**预计**常规单测 371、NestJS E2E 8；共享 Core 工程 Schema、Vue/React、数据库、身份会话和正式 HTTP 业务入口不变。
+
+新依赖已写入根 Catalog 与服务端 Manifest，但协作环境无法访问 npm Registry，**尚未生成 pnpm 锁文件或实际执行本批质量链**。需维护者 Windows `pnpm install` 生成并提交 `pnpm-lock.yaml`，再执行冻结安装、`pnpm run ready` 和 Docker 隔离烟测。PR 保持 Draft，未经授权不合并。
