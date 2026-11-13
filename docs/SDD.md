@@ -509,3 +509,10 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - Docker 第二阶段以 Node 作为正式容器 PID 1，不映射宿主端口、`--network none`；探针必须在回环地址验证 `GET /health`、`GET /health/ready` 为 200，未开放 `POST /api/devices/write` 为 404。
 - `docker stop --signal SIGTERM --timeout 10` 结束服务，`inspect` 校验退出码 0，非零或超时必须失败；`finally` 清理独立容器，正常 E2E 与第一阶段烟测保持不变。
 - 本批验证正式镜像的 Linux 信号，不验证实际在途请求持续时间、SSE/WS/网关断线、业务审计一致性或 PostgreSQL 连接收尾；参见 [ADR-0052](adr/0052-linux-sigterm-container-shutdown.md)。
+
+## V0.3 第二十一批：本机模拟工程与 Tag 只读接口
+
+- 根 `.env` 新增 `SCADA_LOCAL_DEMO_API_ENABLED=false`，只有严格 `true` + 非生产 + 有效服务端监听地址 `127.0.0.1` 才允许在主 Nest 入口选择 `LocalDemoAppModule`；否则仅挂载原正式 `AppModule`，演示接口实际不存在（404）。Swagger 使用独立的 `SCADA_API_DOCS_ENABLED` 白名单，二者不会相互启用。
+- `GET /api/dev/demo/project`：只读共享 `waterTreatmentDemoDocument`；`GET /api/dev/demo/tags`：只读共享 `TagStore.snapshot()`，固定 `{kind:"snapshot",values:[...]}`；`GET /api/dev/demo/events`：SSE 初次订阅输出 snapshot，此后输出 delta，事件数据结构直接使用 `TagChange`，不新增协议封装。
+- 模拟器每秒更新一批固定 Tag，30 秒循环的后 8 秒不再采样，旧值超过 2.5 秒标记为 STALE，恢复后通过 `resumeAfter` 保证新 sequence 严格递增。模块关闭释放定时器，SSE 断开取消 TagStore 订阅。
+- 本批没有真实工程版本 HTTP API、正式认证/ACL、工业写入、数据库/网关、现场设备与生产消息总线。Vue/React Web 仍使用既有独立模拟服务 `/demo`，只有本机 Nest Swagger 供新接口诊断。见 [ADR-0053](adr/0053-local-readonly-demo-telemetry.md)。

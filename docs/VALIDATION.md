@@ -181,3 +181,13 @@ Docker 隔离测试应依次验证：
 维护者首次 Windows 和 Docker 实测（本机 Swagger 启动日志追加之前）均已通过：Catalog 11 个清单、51 项依赖，`vp check` **237 个文件格式正确、112 个受检文件零告警/错误**；31 个测试文件 **381/381 单测**、2 个 E2E 文件 **12/12 E2E**，68 份 Markdown 检查及 Web/Server 类型检查与构建均成功，完整 `pnpm run ready` **退出码 0**。独立 Docker 构建冻结安装成功，原隔离烟测通过；新增正式 Node PID 1 Linux 容器接收 SIGTERM 并以退出码 **0** 正常结束，Docker 根命令 **退出码 0**。此前 Terminus 503 日志仍为故意模拟关闭的成功负面测试。
 
 **后续增量变更（待重新验证）**：根据维护者要求，在 Swagger 仅本机显式启用的情况下，NestJS 完成监听后使用 Pino 输出 `http://127.0.0.1:<port>/api/docs`。将 `api/docs` 路由路径复用为常量，新增 2 项普通单测，预期最新版普通单测 **383 项**、E2E **12 项**；新代码尚未实际重新运行。必须再次执行 `vp check`、`pnpm run ready`、`pnpm run test:docker:server` 并核对退出码，不能将上轮 381/381 结果当作最新 383 项测试已通过。文档默认关闭、生产与非回环禁用策略不变，禁止在日志输出密钥或设备信息。
+
+## V0.3 第二十一批：本机只读 Tag 演示接入验证（Windows / Docker 已通过）
+
+本批以已合并的第二十批为基线，保留 HTTP 安全头、Swagger 默认关闭、完整 `ready` 和 Linux Docker SIGTERM 测试。新增 2 项启用策略、4 项共享模拟服务测试、1 项正式默认模块 404 E2E、4 项本机演示模块 E2E。维护者 2026-11-13 Windows 实测：**389/389 单测（33 个测试文件）、17/17 NestJS E2E（3 个测试文件）**；此前 `vitest(expect-expect)` 警告修复后，`vp check` **245/245 个文件格式正确、119 个受检文件零警告/零错误**。
+
+应重点确认严格的三条件白名单（独立开关 true、非 production、127.0.0.1）；默认 AppModule 真实不存在 `/api/dev/demo/*` 路由；显式开发模块只含已标注为模拟的工程、Tag 快照和 SSE；Swagger 本机 OpenAPI 不出现身份签发、工程版本或设备写入能力；TagStore 初始快照及 delta、断线 STALE 与恢复时 sequence 单调递增、客户端取消订阅与模块关闭定时器清理。
+
+完整 Windows `pnpm run ready` **退出码 0**：11 个 Manifest / 51 项 Catalog 依赖检查成功，中文文案检查 145 个自有文件，Prisma Client 7.10.1 生成成功，Core、React/Vue、Draft Storage、NestJS 类型检查及构建通过，**69 个 Markdown 文件**静态检查成功。独立 Docker 镜像构建包含 `pnpm install --frozen-lockfile` 和服务端构建；隔离烟测中存活与 HTTP 就绪探针 200，未开放的工程/工业设备接口保持 404；正式 Node PID 1 容器接收 Linux SIGTERM 后退出码 **0**，`pnpm run test:docker:server` **退出码 0**。E2E 中 Terminus `Health Check has failed!` / HTTP 503 是模拟关闭状态的**预期负面测试**，17/17 E2E 通过，并非非预期故障。
+
+本批没有执行 PostgreSQL 真库回归、工业现场验证或手工交互式浏览器 Swagger/SSE 验证；自动化 E2E 已覆盖模拟工程、Tag 快照、只读 Swagger 路由、SSE 首条 snapshot 与关闭连接。记录性文档更新在上述实测之后，建议最新 HEAD 复查 `vp check` 和 `pnpm run docs:check`。

@@ -71,3 +71,16 @@ docker compose -f deploy/docker/compose.demo.yaml ps
 改动 `SCADA_DEMO_PORT`、`SCADA_SERVER_PORT` 后，在 Docker 中验证对应容器健康和 Web 的 `/demo/project`、`/api/health`，并检查 SSE 断连质量。原 V0.1 Docker 实测结果不直接代表本轮动态端口改造通过。
 
 **验收状态**：维护者已确认 React → Vue → React JSON 往返保持图元与 Tag 绑定；本轮单一根 `.env`、Docker Nginx 模板及换行符变更需要新的本机回归测试。
+
+## V0.3 第二十一批：NestJS 本机只读模拟 Tag 接口开关
+
+根目录唯一 `.env.example` 新增 `SCADA_LOCAL_DEMO_API_ENABLED=false`。它与 `SCADA_API_DOCS_ENABLED` 相互独立，仅用于开发诊断；正式启动时要求严格为 `true`、`NODE_ENV` 非 `production`、实际 `SCADA_SERVER_HOST` 解析为 `127.0.0.1`，否则不会注册模拟路由。Docker 示例为 `NODE_ENV=production`、绑定 `0.0.0.0`，始终不可开启。请勿通过端口映射或本机代理将无鉴权模拟接口转发给外部客户端。
+
+仅在确认本机隔离环境后，可以手动设置以下两项并重启 NestJS：
+
+```dotenv
+SCADA_LOCAL_DEMO_API_ENABLED=true
+SCADA_API_DOCS_ENABLED=true
+```
+
+Swagger 地址以启动日志实际端口为准（模板当前默认 `13001`）：`http://127.0.0.1:13001/api/docs`。只读示例端点分别为 `/api/dev/demo/project`、`/api/dev/demo/tags`、`/api/dev/demo/events`（SSE）。结束后将模拟接口开关设回 `false` 并重启服务，确保生产/正常开发默认不暴露新的模拟入口。该模拟模块不会访问数据库或工业设备，不是正式 Tag 数据服务。

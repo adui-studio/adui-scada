@@ -9,7 +9,7 @@ ADui Studio 维护的工业 SCADA / HMI 开源项目。**当前 V0.1 是模拟�
 - **packages/core**：框架无关的工程 Schema、TagStore、质量状态、SVG 序列化和水处理模拟器。
 - **packages/runtime**：浏览器 SSE 诊断客户端，带断线质量标记及自动重连。
 - **examples/water-treatment**：本机模拟数据服务器；不连接 PLC/DCS。
-- **apps/server**：NestJS 12 ESM 服务，当前只有 `GET /health`（进程存活探针）。
+- **apps/server**：NestJS 12 ESM 服务，正式默认仅提供 `GET /health` 与 `GET /health/ready`；本机开发可显式开启只读模拟 Tag/SSE 接口，生产不注册该路由。
 - **apps/desktop**：Tauri 2 Windows 优先桌面壳，默认 React，可切换 Vue。
 
 Studio（组态编辑器）、真实工业网关、生产业务 API、数据库及 Three.js 尚未实现。NestJS 与 Tauri 目前仅完成最小工程。
