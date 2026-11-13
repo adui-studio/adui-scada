@@ -522,3 +522,7 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 ### 第十七批补充：NestJS DTO 校验适配器兼容性
 
 维护者要求评估 `nestjs-zod + zod`。已确认 `nestjs-zod@5.6.0` 的上游 Peer 只涵盖 NestJS 10/11、Swagger 7/8/11，尚未覆盖本项目 NestJS 12.0.3 / Swagger 12.1.1。为保持依赖一致性，当前 PR 不强制加入 `nestjs-zod`、不绕过 Peer 校验；继续保留 Zod 4.6.7 的服务端启动配置实现和待生成锁文件。名称不同的 `nest-zod` 官方声明兼容 NestJS 12 / Swagger 12 / Zod 4，未来新 DTO 可按维护者确认的集成方案另行实施；详见 ADR-0049。
+
+### 第十七批选型确认：nest-zod + zod
+
+维护者已授权从 `nest-zod` / `nestjs-zod` 中选择更合适方案。经核对现有 NestJS 12 / Swagger 12 / Zod 4 版本与官方兼容矩阵，选择 `nest-zod@2.1.0`，而不强制安装尚未声明支持 NestJS 12 的 `nestjs-zod@5.6.0`。根 Catalog 和服务端 Manifest 已补充 `nest-zod`；另建不对外注册的 NestJS 测试 Controller，新增 4 项 DTO、查询、响应与 OpenAPI 集成测试。本批目前总新增 8 项单测，预计 **375 项普通单测、8 项 E2E**。仍待 Windows 由 pnpm 正式更新锁文件、冻结安装、`ready` 和 Docker 复验，不能宣称通过。详见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
