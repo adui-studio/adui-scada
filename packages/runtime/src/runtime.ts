@@ -161,6 +161,7 @@ export class DemoRuntime {
                 : change.values.some(
                     (tag) => tag.sequence > (previous.get(tag.tagId) ?? -1),
                   );
+            if (change.kind === "delta" && !hasNewData) return;
             if (hasNewData) lastDataAt = Date.now();
             const hasStale = this.store.snapshot().some((tag) => tag.quality === "STALE");
             this.status = hasStale ? "stale" : "live";
