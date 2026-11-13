@@ -1420,3 +1420,31 @@ pnpm run test:sse:proxy
 - 结合此前维护者独立网络日志：`test:sse:network` 实际六路 HTTP SSE 通过、退出码 0；`test:sse:proxy` 在 React `18080` 与 Vue `18081` 的 Docker Nginx 双入口通过、退出码 0，Demo 与 Server 为 Healthy。
 
 **自动化验收结论：第二十五批 Windows 完整质量链及 Docker Nginx SSE 代理专项均通过。** 注意本段验收记录追加后尚未再次执行最新文档的格式与静态检查，建议合并审查前运行 `vp check`、`pnpm run docs:check`。仍未验证真实 Nginx 半开连接、持续高并发/慢消费者长期负载、生产认证、PostgreSQL 真库和工业现场设备；不能把本机 Demo 资源上限视为工业 SLA。PR #47 继续 Draft，待维护者明确同意后才能合并。
+
+## 2026-11-13 · V0.3 第二十六批真实 TCP 字节静默与 SSE 持续测试（待验收）
+
+本批在根质量链新增 `pnpm run test:sse:fault:unit`，使用 Node 原生 HTTP/TCP 检查只监听 127.0.0.1 的测试代理。维护者 Windows 验收：
+
+```powershell
+pnpm run test:sse:fault:unit
+
+# 分别在独立终端保持运行：
+pnpm run dev:demo
+pnpm run dev:react
+pnpm run dev:vue
+
+# 浏览器必须安装 Chrome/Edge
+pnpm run test:sse:fault:browser
+pnpm run test:sse:soak
+
+# 本机 Docker 演示栈已运行后：
+pnpm run docker:demo:ps
+pnpm run test:sse:fault:proxy
+pnpm run test:sse:soak:proxy
+
+vp check
+pnpm run docs:check
+pnpm run ready
+```
+
+`test:sse:fault:browser` 与 `test:sse:fault:proxy` 启动临时 TCP 回环代理，阻断单个 SSE 的真实下行字节，但保持 socket 开放；要求 12 秒旧数据 STALE、15 秒传输静默后重新订阅恢复，退出页面后无遗留 SSE socket。两条 `soak` 命令以六路连接累计至少 12 次新心跳和真实 delta 进行有限时长观测，不进入根 ready。测试不停止或重启 Docker，也不访问远端/生产设备。协作容器仅完成故障代理模块 3/3 实测；Windows 双框架、Docker 和质量链未完成，详见 [ADR-0058](adr/0058-tcp-sse-fault-and-soak-tests.md)。
