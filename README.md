@@ -120,3 +120,9 @@ Studio 新增 **20 单位网格**和三个独立开关：「显示网格」「�
 Runtime 新增框架无关的 `ReadonlyTagSource` 契约与 `createSseTagSource()`：默认沿用原本 `/demo/project` + `/demo/events`；可显式构造 `createSseTagSource("nest-local")` 以描述第 21 批 Nest 开发接口的固定同源路径，但**不会修改 Vite 代理、绕过 Nest 本机安全开关或自动切换现有 Vue/React 页面**。`DemoRuntime` 单参数用法继续兼容，新增可选的只读数据源注入参数，并在停止/重连时严格管理取消订阅、AbortSignal、STALE 状态与快照优先级。Tauri 离线演示、工业设备接口和正式业务 API 均不变。
 
 此模块尚不是具有生产鉴权、Gateway 连接、发布版本加载或背压控制的完整实时订阅系统。技术决策与验收参见 [ADR-0054](docs/adr/0054-readonly-tag-source-adapters.md)。维护者 Windows 已实测 **Runtime 专项 21/21、单测 400/400、NestJS E2E 17/17**，`vp check` 零警告/错误，完整 `pnpm run ready` **退出码 0**；Docker 隔离烟测与 Linux SIGTERM 退出码均正常，Docker **退出码 0**。人工页面断连演练、真实工业网关与生产认证尚未验证。本次记录性文档更新后建议执行 `vp check` 与 `pnpm run docs:check`。
+
+## V0.3 第二十三批：模拟 SSE 心跳与数据超时（待验收）
+
+原水处理独立模拟 SSE 与 NestJS **仅本机非生产显式开启**的模拟 SSE 现在通过具名 `heartbeat` 每 5 秒保活通道，浏览器只读适配器连续 15 秒无任何 SSE 事件后会重建同源连接。Vue/React 共用 Runtime 独立以 12 秒无有效 Tag 更新识别数据静默，并通过 `stale` /「Tag 数据已过期」降级旧读数；心跳不会将旧值恢复为 GOOD。水处理原本每 30 秒停止采样 8 秒的 STALE 演练仍保持，桌面离线模式、Vue/React 默认 `/demo`、生产 API 与工业只读边界不变。详见 [ADR-0055](docs/adr/0055-sse-heartbeat-and-tag-silence.md)。
+
+本批新增 8 项单测，预计累计 **408 单测、17 NestJS E2E**，**尚待维护者 Windows 与 Docker 实际验收**。5/12/15 秒阈值均为开发演示预设，不是生产工业协议 SLA；尚无真实 PLC、网关认证、背压或多客户端并发验收。
