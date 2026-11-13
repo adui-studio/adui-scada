@@ -565,3 +565,7 @@ type DemoTagSourcePreset = "standalone" | "nest-local";
 ## 2026-11-13 · V0.3 第二十七批：共享 Runtime 诊断快照契约
 
 `RuntimeState` 新增必填字段 `diagnostics: RuntimeDiagnostics`，由 `packages/runtime/src/diagnostics.ts` 创建，字段为 `reconnectCount: number`、`lastTagReceivedAt: number | null`、`dataAgeMs: number | null`、`tagCount: number` 及 `qualityCounts: Readonly<Record<TagQuality, number>>`。计数器每次 start 归零，仅在状态进入 reconnecting 时增加；重复 onDisconnected 不重复计算。最近数据时间只取本机通过 Core 校验的非空 snapshot 或接受了新序列的 delta 到达时间，心跳与旧/空增量不刷新。年龄在 publish 时由本机时间差构造，不附加计时器或假定源端时钟准确。质量计数基于最终对外展示的 values，包括局部 STALE 覆盖；离线模拟继承该类型，断连次数固定为零。Vue/React 只绑定同一字段，不产生各自的诊断算法；见 [ADR-0059](adr/0059-runtime-local-diagnostics.md)。
+
+## 2026-11-13 · V0.3 第二十八批：Runtime 状态历史契约
+
+`RuntimeDiagnostics` 新增必填只读数组 `statusEvents: readonly RuntimeStatusEvent[]`。`RuntimeStatusEvent` 包含 `sequence: number`（会话内序号）、`status: RuntimeStatus` 与 `occurredAt: number`（本机毫秒时间）。共享 `RuntimeStatusHistory` 的 `record` 连续相同状态去重，`snapshot` 返回副本，`clear` 在新会话开始时复位，容量固定 20 条并保持最新在前。只有 Runtime 的 `publish` 会写入状态变化；不保存动态错误、Tag 值或原始网络帧，`stop` 不额外向已离开的页面发布 idle。Vue/React 展示组件共用 `runtime.css`，不实现独立状态判定。详见 [ADR-0060](adr/0060-runtime-session-status-history.md)。
