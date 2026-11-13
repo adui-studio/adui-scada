@@ -110,6 +110,7 @@ test("运行时状态有完整中文名称且内部状态标识保持不变", ()
     loading: "加载中",
     connecting: "连接中",
     live: "模拟数据正常",
+    stale: "Tag 数据已过期",
     simulation: "离线模拟",
     reconnecting: "重新连接中",
     error: "运行异常",
