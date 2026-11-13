@@ -63,7 +63,7 @@ onUnmounted(() => runtime.stop());
           <dd>{{ formatRuntimeDataAge(state.diagnostics.dataAgeMs) }}</dd>
         </div>
       </dl>
-      <div class="scada-quality-summary" aria-label="Tag 质量分布">
+      <div class="scada-quality-summary" role="group" aria-label="Tag 质量分布">
         <div
           v-for="quality in TAG_QUALITIES"
           :key="quality"
