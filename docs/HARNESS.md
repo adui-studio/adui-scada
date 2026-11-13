@@ -1551,3 +1551,22 @@ pnpm run test:sse:fault:browser
 **仍待 Windows 实测**：`pnpm run test:runtime`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`；以及手工 UI 和 Tauri 桌面验证。上述浏览器测试不能证明 Node/Vitest、Lint、类型、全量构建、真实工业网络、生产报警持久化已完成。
 
 本次仅补充验收文档与 PR 说明，无业务代码变更。新增文档提交后的格式及文档静态检查仍待执行；PR #50 保持 Draft，需维护者明确授权方能合并。
+
+## 2026-11-14 · V0.3 第二十九批 Tag 定义目录验收（待 Windows 实测）
+
+```powershell
+pnpm run test:unit
+pnpm run test:runtime
+vp check
+pnpm run docs:check
+pnpm run ready
+```
+
+保持 `dev:demo`、`dev:react`、`dev:vue` 在独立终端运行，分别打开两套 Studio，选择水箱、水泵和流量文本图元，检查 Tag 候选展示数据类型/单位/描述、绑定仍保存原有稳定 `tagId`。再执行：
+
+```powershell
+pnpm run test:sse:browser
+pnpm run test:sse:fault:browser
+```
+
+本批新增 Core 单测覆盖定义目录、重命名稳定 ID、类型错误原子拒绝、未定义 Tag 拒绝及质量独立；Runtime 测试覆盖在线消息类型不匹配时进入错误状态。**当前协作环境未执行 Windows pnpm 工作区，全部验收待维护者实测**。本机演示目录不含设备地址、持久化或工业网关。见 [ADR-0061](adr/0061-tag-definition-catalog.md)。
