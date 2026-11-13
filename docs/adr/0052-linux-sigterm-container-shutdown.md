@@ -31,6 +31,7 @@
 - `useProcessExit: true` 是有意识改变 Unix 退出码语义的决策，不可用于掩盖清理异常；正常退出必须依赖 NestJS 完成关闭阶段，测试仍应对超时、异常退出与容器残留报错。
 
 参考：
+
 - [NestJS 12.0.3 关闭信号源码](https://github.com/nestjs/nest/blob/v12.0.3/packages/core/nest-application-context.ts)
 - [NestJS 12.0.3 关闭选项](https://github.com/nestjs/nest/blob/v12.0.3/packages/common/interfaces/shutdown-hooks-options.interface.ts)
 - [Docker stop 文档](https://docs.docker.com/reference/cli/docker/container/stop/)
