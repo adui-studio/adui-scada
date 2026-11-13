@@ -84,7 +84,8 @@ async function connect(url) {
     controller.abort();
     throw new Error("SSE 响应不包含可读取流：" + url);
   }
-  const client = { controller, events: [], error: null, closed: false, task: null };
+  // 初始化为 Promise，确保异步读取任务的完成与关闭逻辑均为可等待值。
+  const client = { controller, events: [], error: null, closed: false, task: Promise.resolve() };
   const reader = response.body.getReader();
   client.task = (async () => {
     const decoder = new TextDecoder();
