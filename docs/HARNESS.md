@@ -1157,36 +1157,35 @@ Write-Host "Docker 验证退出码：$LASTEXITCODE"
 
 Windows 已实测普通单测 **367/367** 项、NestJS E2E **8/8** 项，完整 `ready` **退出码 0**；`vp check` 覆盖 225 个格式文件与 104 个受检文件，64 份 Markdown 检查及全部 Web/Server 构建通过。独立 Docker 镜像构建和隔离烟测也已通过，**退出码 0**。重点查看恶意/伪造 Bearer、已撤销会话、无权限及跨租户的审计结果是否只包含枚举，不含令牌或路径。独立 Docker 烟测仍应确认健康路由、未开放登录/工程版本/设备写入保持原有访问边界。本批未执行 PostgreSQL 真库回归；记录性文档提交发生在 Windows 测试之后，合并前可复验 `vp check` 和 `pnpm run docs:check`。未来接入 Zod 等运行时 Schema 工具时，须先更新 Catalog、通过 pnpm 正式生成锁文件并重新执行质量链；不得静默更改已验收的白名单接口。
 
-## V0.3 第十七批：Zod 运行时配置 Schema 与可复现依赖（ADR-0049）
+## V0.3 第十七批：NestJS 12 原生 Standard Schema 与 Zod（ADR-0049）
 
-只对服务端端口和监听地址引入 Zod 4.6.7，保留根 `.env` 的唯一加载入口、Swagger 默认关闭、Pino 日志脱敏和已验收的安全审计白名单。启动配置新增 4 项单测，隔离 NestJS 适配器再新增 4 项，预期总计 **375 项**普通单测和 **8 项** NestJS E2E。该批新增生产依赖，**锁文件尚未生成，不能直接执行第一次冻结安装**。
+本批明确使用 `zod@4.6.7`。维护者 Windows 首轮 `ready` 执行到单测阶段中断（370 通过、1 失败，另有一个测试套件在导入 `nest-zod/swagger` 时抛异常）；**该记录不是成功验收**。现已修复非法 `null` 默认回退，并将适配器测试改为 NestJS 12 自带 `StandardSchemaValidationPipe`、`StandardSchemaSerializerInterceptor` 与 Swagger 12 Standard JSON Schema。正式 AppModule 不引入任何测试路由或全局 Pipe。
 
 ```powershell
 git fetch origin
 git switch feat/v0.3-zod-runtime-config
+
+# 若此前运行 vp check --fix 留有本地修改，先检查并妥善保留。
+git status --short
 git pull --ff-only
 
-# 首次必须由 pnpm 正式生成锁文件，确认依赖版本后提交。
+# 上一次锁文件仍包含 nest-zod，本次移除后必须由 pnpm 重新计算。
 pnpm install
-git status --short
 git diff -- pnpm-lock.yaml
+git status --short
 
+# 只在审查锁文件变化后提交，不提交 .env 或本地密钥。
 git add pnpm-lock.yaml
-git commit -m "chore(deps): 🔒 同步 Zod 运行时校验锁文件"
+git commit -m "chore(deps): 🔒 移除不兼容适配器并同步 Zod 锁文件"
 git push origin feat/v0.3-zod-runtime-config
 
-# 此后才能验证冻结安装与完整质量链。
 pnpm install --frozen-lockfile
 vp check
 pnpm run ready
 Write-Host "完整质量链退出码：$LASTEXITCODE"
 
 pnpm run test:docker:server
-Write-Host "Docker 验证退出码：$LASTEXITCODE"
+Write-Host "Docker 隔离烟测退出码：$LASTEXITCODE"
 ```
 
-锁文件必须由 pnpm 12 正式生成，不得人工填写包哈希或使用 `--no-frozen-lockfile` 掩盖不一致。提交前确认 `git status --short` 没有 `.env`、密钥或本地数据库文件。Docker 验证仍为隔离运行，不映射宿主机端口、不写工业设备。以上命令尚未在本批执行，不得宣称验收通过。
-
-### 第十七批补充：NestJS DTO 集成校验
-
-维护者批准选择更兼容的 `nest-zod + zod`，现声明 `nest-zod@2.1.0`（仅 `apps/server`）；官方文档支持 NestJS 12 / Swagger 12 / Zod 4。严格保留既有 `pnpm install` 正式生成锁文件步骤，不手工写 integrity。新增 `nest-zod-integration.spec.ts` 仅在测试模块注册 Controller；验证 `ZBody`、`ZQuery`、`ZSerialize` 与 Swagger 元数据，**不得把测试专用路由加入 AppModule**。预期普通单测 **375** 项、E2E **8** 项。若安装出现 Peer 冲突，报告准确输出，不修改 NestJS/Swagger 版本、不忽略 Peer。测试日志不得输出真实令牌、连接串或完整校验原始值。
+新增 4 项配置测试和 4 项原生集成测试，**预计 375 项常规单测和 8 项 NestJS E2E**，以维护者实际输出为准。容器检查不得映射宿主端口、触碰工业设备或暴露数据库连接串；隔离 PostgreSQL 真库测试本批不要求运行。不得绕过 Peer、手工修改锁文件 integrity 或把未运行的全量测试标记为通过。见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
