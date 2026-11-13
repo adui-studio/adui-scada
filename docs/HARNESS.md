@@ -1366,3 +1366,27 @@ pnpm run ready
 ```
 
 脚本只接受回环地址；读取根目录 `.env` 中实际 Web 端口，启动前分别检查页面和 `/demo/project` 是否可用。`fetch failed` 时应先确认三个服务独立运行并检查代理及端口，改进后的脚本会输出失败 URL 与底层错误。使用真实浏览器、现有同源 Vite 代理和原生 EventSource。注入仅屏蔽页面接收的事件回调，验证心跳仍活跃但 Tag 超时、完整事件静默后的自动重连、Vue/React 数据恢复和页面离开后的连接释放。**这不是实际网络故障或 Nginx 半开连接的测试**，更不覆盖工业现场。前台恢复可见性及多 Tag 独立恢复已有 Vitest 回归。维护者 2026-11-13 Windows 实测：**双框架浏览器 SSE 回归退出码 0**、Runtime 32/32（3 文件）、全量单元测试 412/412（36 文件）、NestJS E2E 17/17（3 文件）；`vp check` 253 个文件格式正确、124 个文件无告警或错误，72 份 Markdown 通过，完整 `ready` **退出码 0**。本轮未运行 Docker 增量回归、Nginx 真实断网与多客户端负载；记录性文档提交后建议仅复查格式和文档，不把旧结果视为新文档提交后的重新执行。参见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
+
+## 2026-11-13 · V0.3 第二十五批 SSE 资源与真实代理回归（待实测）
+
+本批新增 Node 内置测试器的资源单测入口，并纳入根 `pnpm run ready`，无需额外依赖。Windows 上首先执行：
+
+```powershell
+pnpm run test:sse:clients
+pnpm run dev:demo
+```
+
+保持 Demo 在独立终端运行，在另一终端执行：
+
+```powershell
+pnpm run test:sse:network
+```
+
+如具备本机 Docker Desktop，可由维护者明确启动已有隔离演示栈后验证实际 Nginx 转发：
+
+```powershell
+pnpm run docker:demo:up
+pnpm run test:sse:proxy
+```
+
+两个网络脚本都只访问根 `.env` 给定端口下的 `127.0.0.1`，每条代理做 6 路真实 SSE 流、snapshot、heartbeat、单路 abort 后其余流保活、重新订阅快照及所有测试客户端关闭。它们**不会重启容器或模拟真实半开 TCP**。然后运行 `vp check`、`pnpm run docs:check`、`pnpm run ready` 并记录退出码。当前仅协作容器内隔离版资源测试 6/6 通过，网络/格式/完整项目质量链待维护者 Windows/Docker 实测。参见 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md)。
