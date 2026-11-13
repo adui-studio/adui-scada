@@ -1,7 +1,15 @@
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-export const SCADA_LOG_LEVELS = ["fatal", "error", "warn", "info", "debug", "trace", "silent"] as const;
+export const SCADA_LOG_LEVELS = [
+  "fatal",
+  "error",
+  "warn",
+  "info",
+  "debug",
+  "trace",
+  "silent",
+] as const;
 export type ScadaLogLevel = (typeof SCADA_LOG_LEVELS)[number];
 
 /** 拒绝任意外部等级，避免错误配置改变生产日志策略。 */

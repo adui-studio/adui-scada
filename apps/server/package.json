@@ -22,19 +22,19 @@
   "dependencies": {
     "@adui/scada-core": "workspace:*",
     "@nestjs/common": "catalog:",
+    "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",
     "@nestjs/platform-express": "catalog:",
+    "@nestjs/swagger": "catalog:",
     "@prisma/adapter-pg": "catalog:",
     "@prisma/client": "catalog:",
-    "pg": "catalog:",
-    "reflect-metadata": "catalog:",
-    "rxjs": "catalog:",
+    "helmet": "catalog:",
     "nestjs-pino": "catalog:",
+    "pg": "catalog:",
     "pino": "catalog:",
     "pino-http": "catalog:",
-    "@nestjs/swagger": "catalog:",
-    "helmet": "catalog:",
-    "@nestjs/config": "catalog:"
+    "reflect-metadata": "catalog:",
+    "rxjs": "catalog:"
   },
   "devDependencies": {
     "@adui/tsconfig": "workspace:*",
@@ -44,10 +44,10 @@
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "@types/supertest": "catalog:",
+    "pino-pretty": "catalog:",
     "prisma": "catalog:",
     "supertest": "catalog:",
     "typescript": "catalog:",
-    "vite-plus": "catalog:",
-    "pino-pretty": "catalog:"
+    "vite-plus": "catalog:"
   }
 }

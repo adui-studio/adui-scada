@@ -63,4 +63,5 @@ peerDependencyRules:
     vite: "*"
 allowBuilds:
   "@prisma/engines": true
+  "@scarf/scarf": true
   prisma: true

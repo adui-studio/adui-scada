@@ -12,17 +12,12 @@ export interface OpenApiAccessPolicy {
  */
 export function allowLocalOpenApi(policy: OpenApiAccessPolicy): boolean {
   return (
-    policy.enabled === "true" &&
-    policy.nodeEnv !== "production" &&
-    policy.host === "127.0.0.1"
+    policy.enabled === "true" && policy.nodeEnv !== "production" && policy.host === "127.0.0.1"
   );
 }
 
 /** 未通过访问策略时完全不注册文档路由，也不动态加载 Swagger。 */
-export async function setupLocalOpenApi(
-  app: INestApplication,
-  enabled: boolean,
-): Promise<void> {
+export async function setupLocalOpenApi(app: INestApplication, enabled: boolean): Promise<void> {
   if (!enabled) return;
   const { DocumentBuilder, SwaggerModule } = await import("@nestjs/swagger");
   const options = new DocumentBuilder()
