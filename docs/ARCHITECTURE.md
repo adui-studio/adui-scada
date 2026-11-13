@@ -295,3 +295,7 @@ Prisma `schema.prisma` 的 `///` 为代码生成文档信息，**不会自动创
 NestJS 正式启动继续从根目录 `.env` 加载进程配置，随后使用 `resolveServerStartupConfig` 解析，并在 `AppModule` 动态导入前完成校验。本批仅在 `apps/server` 引入 `zod@4.6.7`，使用其组合 Schema 和 `safeParse` 将端口与监听地址限制在既有契约内；异常只包含固定中文消息。原有 Swagger 回环限制、Pino 脱敏、独立身份 Guard、Prisma/数据库、工业只读边界均不改变。
 
 Zod 不进入共享 Core / Vue / React，也不重新定义现有组态工程、Tag 或图元 Schema。服务端环境变量的全面 Schema 化及 HTTP DTO、设备采集报文的运行时校验需独立评审与逐步交付。此次新增依赖的 pnpm 锁文件和 Windows/Docker 实测尚待维护者完成。
+
+### 第十七批补充：NestJS DTO Zod 适配器
+
+新增 `nest-zod@2.1.0` 作为仅服务端的 NestJS DTO 集成层，官方支持 NestJS 12 / Swagger 12 / Zod 4。只通过测试专用模块验证输入校验、输出过滤及 OpenAPI 元数据，避免全局注册拦截器或将测试 Controller 公开到正式 AppModule。未来受控 HTTP API 才逐路由使用相应装饰器；服务端启动配置仍直接使用 Zod，工业安全鉴权仍由原有 Guard 与事务复核共同完成。此批仍待依赖冻结锁文件与 Windows 真实运行验证。
