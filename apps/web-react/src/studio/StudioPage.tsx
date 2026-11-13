@@ -9,6 +9,7 @@ import type {
   PointerEvent as ReactPointerEvent,
 } from "react";
 import {
+  TAG_DATA_TYPE_LABELS,
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
   waterTreatmentDemoTagOptions,
@@ -277,6 +278,9 @@ export default function StudioPage() {
   const missingBindingTag =
     currentBindingTag !== "" &&
     !demoTagCandidates.some((option) => option.tagId === currentBindingTag);
+  const selectedTagDefinition = demoTagCandidates.find(
+    (option) => option.tagId === currentBindingTag,
+  );
 
   function switchPage(pageId: string) {
     try {
@@ -2002,11 +2006,17 @@ export default function StudioPage() {
                     )}
                     {demoTagCandidates.map((option) => (
                       <option key={option.tagId} value={option.tagId}>
-                        {option.label} · {option.tagId}
+                        {option.label} · {option.tagId} · {TAG_DATA_TYPE_LABELS[option.dataType]}
+                        {option.unit ? " · " + option.unit : ""}
                       </option>
                     ))}
                   </select>
                 </label>
+                {selectedTagDefinition && (
+                  <p className="studio-tip">
+                    {selectedTagDefinition.description}；质量由实时 Tag 数据动态提供
+                  </p>
+                )}
               ) : (
                 <p className="studio-tip">
                   请单选未组合的水箱、水泵或文本图元；管道暂不支持动态 Tag 绑定。
