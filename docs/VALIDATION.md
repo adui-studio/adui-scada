@@ -110,6 +110,10 @@ Core 新增两项自动保存会话回归：停写必须等待正在执行的事
 
 上一批维护者已在 Windows 实测 `ready` 350 项普通单测、5 项 E2E、隔离 PostgreSQL 11/11 和 Docker 服务端烟测通过。第十四批新增 3 项 Pino 日志配置单测、2 项 Swagger 访问策略单测以及 3 项 E2E（Helmet/请求 ID、Swagger 默认 404、仅本机显式开启且只描述健康接口），预计 **355 项常规单测、8 项 E2E**；真实数据库逻辑未修改，仍为原有 **11 项隔离回归**。
 
-`pnpm run ready`、`pnpm run test:docker:server` 与现有隔离 PostgreSQL 测试需在新增依赖经 pnpm 12 生成并提交锁文件、完成实际安装后复验。Docker 隔离验收还需检查服务端镜像中 Swagger JSON 仍为 404、Helmet `nosniff` 和 `x-request-id` 保持有效。**本批尚未在 Windows 运行，也没有生成可复现的锁文件，不能宣称测试或镜像构建通过。**
+2026-11-13 Windows 已通过 pnpm 12.18.0 生成并提交锁文件。首轮 ready 静态检查无警告、单测 355/355；E2E 的 beforeAll 在 10 秒超时，8 项未执行，导致 ready 中断。
 
 仍待开展的生产安全审计包括：真正登录事件持久化、异常访问告警、日志脱敏压力与攻击输入回归、跨节点请求追踪、日志保留与删除策略、CSP 针对前端的细化、生产 TLS 与真实身份提供方。
+
+### 第十四批 E2E 初始化修复补丁
+
+本次补丁排除 Vitest 测试环境的 pino-pretty 工作线程，并为实际日志选项补充测试断言。普通单测预期由 355 项增至 356 项。须复验 pnpm run test:e2e:server 和 pnpm run ready；若依然超时，再分别定位 TestingModule.compile 与 app.init 的耗时，不直接以扩大超时替代问题排查。
