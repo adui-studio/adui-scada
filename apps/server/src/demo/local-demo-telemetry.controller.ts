@@ -41,7 +41,12 @@ export class LocalDemoTelemetryController {
       const unsubscribe = this.telemetry.subscribe((change) => {
         observer.next({ data: change });
       });
+      // 具名心跳只证明 SSE 通道存活，不能更新 Tag 的时间戳、质量或序列号。
+      const heartbeat = setInterval(() => {
+        observer.next({ type: "heartbeat", data: {} });
+      }, 5000);
       return () => {
+        clearInterval(heartbeat);
         unsubscribe();
       };
     });
