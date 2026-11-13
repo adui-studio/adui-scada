@@ -3,9 +3,11 @@ import {
   TagDefinitionCatalog,
   TagStore,
   TAG_DATA_TYPE_LABELS,
+  WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
   waterTreatmentDemoTagCatalog,
   waterTreatmentDemoTagDefinitions,
+  waterTreatmentDemoTagOptions,
 } from "../src/index.ts";
 import type { TagValue } from "../src/tag-store.ts";
 
@@ -57,6 +59,17 @@ test("水处理演示 Tag 定义提供稳定 ID、类型和单位，质量保持
     string: "文本",
   });
   expect(waterTreatmentDemoTagCatalog.get("water.level")?.tagId).toBe("water.level");
+  expect(waterTreatmentDemoTagOptions.find((option) => option.tagId === "water.pump.running")?.slots)
+    .toEqual(["running", "value"]);
+
+  const generated = new WaterTreatmentSimulator().next(new Date(at));
+  const store = new TagStore(waterTreatmentDemoTagCatalog);
+  expect(() => store.replaceSnapshot(generated)).not.toThrow();
+  expect(store.snapshot()).toHaveLength(3);
+
+  const copy = waterTreatmentDemoTagCatalog.get("water.level");
+  if (copy) copy.displayName = "外部篡改";
+  expect(waterTreatmentDemoTagCatalog.get("water.level")?.displayName).toBe("模拟水位");
 });
 
 test("Tag 定义目录拒绝重复 ID、未知字段和非法元数据", () => {
