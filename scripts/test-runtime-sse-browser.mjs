@@ -145,11 +145,13 @@ function installSseProbe() {
 }
 
 async function snapshot(session) {
-  return session.evaluate("(() => { const probe = window.__scadaSseProbe; return { " +
-    "url: location.href, " +
-    "status: document.querySelector('.scada-status')?.getAttribute('data-status') ?? null, " +
-    "streams: probe?.streams.map((source) => ({ ...source })) ?? [], " +
-    "statuses: [...(probe?.statuses ?? [])] }; })()");
+  return session.evaluate(
+    "(() => { const probe = window.__scadaSseProbe; return { " +
+      "url: location.href, " +
+      "status: document.querySelector('.scada-status')?.getAttribute('data-status') ?? null, " +
+      "streams: probe?.streams.map((source) => ({ ...source })) ?? [], " +
+      "statuses: [...(probe?.statuses ?? [])] }; })()",
+  );
 }
 
 async function waitFor(session, description, predicate, timeoutMs) {
@@ -178,7 +180,9 @@ async function checkTarget(session, target) {
   const ready = await waitFor(
     session,
     target.name + " 初始 SSE 快照",
-    (state) => state.url === url.href && state.status === "live" &&
+    (state) =>
+      state.url === url.href &&
+      state.status === "live" &&
       state.streams.some((stream) => !stream.closed),
     20000,
   );
@@ -231,11 +235,13 @@ async function checkTarget(session, target) {
   );
 
   // 离开 Runtime 后全部 EventSource 必须关闭，且不能出现后台重建。
-  await session.evaluate("(() => { " +
-    "const button = [...document.querySelectorAll('.scada-app-nav button')].find(" +
-    "(node) => node.textContent.trim() === '组态编辑'); " +
-    "if (!button) throw new Error('未找到组态编辑导航按钮'); " +
-    "button.click(); })()");
+  await session.evaluate(
+    "(() => { " +
+      "const button = [...document.querySelectorAll('.scada-app-nav button')].find(" +
+      "(node) => node.textContent.trim() === '组态编辑'); " +
+      "if (!button) throw new Error('未找到组态编辑导航按钮'); " +
+      "button.click(); })()",
+  );
   const stopped = await waitFor(
     session,
     target.name + " 离开 Runtime 释放 SSE",
