@@ -1159,7 +1159,7 @@ Windows 已实测普通单测 **367/367** 项、NestJS E2E **8/8** 项，完整 
 
 ## V0.3 第十七批：NestJS 12 原生 Standard Schema 与 Zod（ADR-0049）
 
-本批明确使用 `zod@4.6.7`。维护者 Windows 首轮 `ready` 执行到单测阶段中断（370 通过、1 失败，另有一个测试套件在导入 `nest-zod/swagger` 时抛异常）；**该记录不是成功验收**。现已修复非法 `null` 默认回退，并将适配器测试改为 NestJS 12 自带 `StandardSchemaValidationPipe`、`StandardSchemaSerializerInterceptor` 与 Swagger 12 Standard JSON Schema。正式 AppModule 不引入任何测试路由或全局 Pipe。
+本批明确使用 `zod@4.6.7`。维护者 Windows 首轮 `ready` 执行到单测阶段中断（370 通过、1 失败，另有一个测试套件在导入 `nest-zod/swagger` 时抛异常）；**该历史记录不是成功验收，修复后完整验收已通过**。现已修复非法 `null` 默认回退，并将适配器测试改为 NestJS 12 自带 `StandardSchemaValidationPipe`、`StandardSchemaSerializerInterceptor` 与 Swagger 12 Standard JSON Schema。正式 AppModule 不引入任何测试路由或全局 Pipe。
 
 ```powershell
 git fetch origin
@@ -1169,7 +1169,7 @@ git switch feat/v0.3-zod-runtime-config
 git status --short
 git pull --ff-only
 
-# 上一次锁文件仍包含 nest-zod，本次移除后必须由 pnpm 重新计算。
+# 以下命令仅用于后续再次修改依赖时重新生成锁文件；本轮已提交正确锁文件。
 pnpm install
 git diff -- pnpm-lock.yaml
 git status --short
@@ -1188,4 +1188,4 @@ pnpm run test:docker:server
 Write-Host "Docker 隔离烟测退出码：$LASTEXITCODE"
 ```
 
-新增 4 项配置测试和 4 项原生集成测试，**预计 375 项常规单测和 8 项 NestJS E2E**，以维护者实际输出为准。容器检查不得映射宿主端口、触碰工业设备或暴露数据库连接串；隔离 PostgreSQL 真库测试本批不要求运行。不得绕过 Peer、手工修改锁文件 integrity 或把未运行的全量测试标记为通过。见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
+新增 4 项配置测试和 4 项原生集成测试，维护者 Windows 实测 **375/375 项常规单测和 8/8 项 NestJS E2E**，完整 `pnpm run ready` **退出码 0**；`vp check` 格式 227/227、105 个代码文件零告警或错误，65 份 Markdown 检查及全部应用构建通过。独立 Docker 隔离镜像构建与烟测 **退出码 0**，其冻结依赖安装成功；上轮已通过 pnpm 重新生成并推送删除 `nest-zod` 后的锁文件。记录性文档同步后建议复验 `vp check` 与 `pnpm run docs:check`。容器检查不得映射宿主端口、触碰工业设备或暴露数据库连接串；隔离 PostgreSQL 真库测试本批不要求运行。不得绕过 Peer、手工修改锁文件 integrity 或把未运行的全量测试标记为通过。见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
