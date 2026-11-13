@@ -198,7 +198,11 @@ export class DemoRuntime {
       }
       this.subscription = subscription;
       this.dataTimer = setInterval(() => {
-        if (!this.current(generation) || this.status === "error" || this.status === "reconnecting") {
+        if (
+          !this.current(generation) ||
+          this.status === "error" ||
+          this.status === "reconnecting"
+        ) {
           return;
         }
         if (Date.now() - lastDataAt < TAG_DATA_TIMEOUT_MS) return;
