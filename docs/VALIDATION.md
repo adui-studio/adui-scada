@@ -377,3 +377,16 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 诊断的 `dataAgeMs` 仍只代表本机接受有效 Tag 后经过的时间，不是 PLC 采样延迟或网络 RTT；`reconnectCount` 是去重后的连续断连过程数，不是实际 TCP 重建计数。生产认证、真实工业网关、PostgreSQL 真库、历史诊断持久化及工业现场尚未验收。
 
 本段为验收记录追加后，**尚未重新执行最新文档的 `vp check` / `docs:check`**；建议合并审查前再运行一次。PR #49 继续保持 Draft，Assignee `@adui-dev`，未经明确授权不得合并。
+
+## 2026-11-13 · V0.3 第二十八批状态事件时间线验收清单（待实测）
+
+- [ ] `pnpm run test:runtime`：`RuntimeStatusHistory` 相同状态去重、20 条容量、同毫秒唯一序号、状态快照隔离、重新启动清空及离线 simulation 回归。
+- [ ] `vp check`：格式、Lint、类型检查零告警、零错误。
+- [ ] `pnpm run docs:check`：工程 Markdown 静态链接及结构检查通过。
+- [ ] `pnpm run ready`：全量 Vitest、Node SSE 资源和 TCP 故障代理、NestJS E2E、Vue/React/NestJS 类型检查与构建通过；记录实际退出码。
+- [ ] `pnpm run test:sse:browser`：React/Vue 都出现 live → stale → reconnecting → live 状态变化记录，原有 Tag 质量、连接资源回收不退化。
+- [ ] `pnpm run test:sse:fault:browser`：真实本机 TCP 字节屏蔽时双框架状态记录仍一致，并关闭旧 SSE。
+- [ ] Tauri 桌面端人工视觉验收与实际部署；单元测试不等于 MSI 安装已验证。
+- [ ] 工业报警持久历史、生产身份鉴权、真库、PLC 时钟同步、长时高并发及工业现场：本批未验证。
+
+本次状态事件仅是当前本机会话内存中的有界观察结果；不得宣传为工业报警中心、生产审计记录或真实设备事件历史。见 [ADR-0060](adr/0060-runtime-session-status-history.md)。
