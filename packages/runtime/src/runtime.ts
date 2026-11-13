@@ -1,5 +1,7 @@
 import { TagStore, parseScadaDocument, renderSvgPage, validateTagValue } from "@adui/scada-core";
 import type { ScadaDocument, TagChange, TagValue } from "@adui/scada-core";
+import { createRuntimeDiagnostics, initialRuntimeDiagnostics } from "./diagnostics.ts";
+import type { RuntimeDiagnostics } from "./diagnostics.ts";
 import { createSseTagSource } from "./tag-source.ts";
 import type { ReadonlyTagSource, ReadonlyTagSubscription } from "./tag-source.ts";
 
@@ -29,6 +31,7 @@ export interface RuntimeState {
   readonly document: ScadaDocument | null;
   readonly values: readonly TagValue[];
   readonly message: string;
+  readonly diagnostics: RuntimeDiagnostics;
 }
 export type RuntimeListener = (state: RuntimeState) => void;
 export const initialRuntimeState: RuntimeState = {
@@ -36,6 +39,7 @@ export const initialRuntimeState: RuntimeState = {
   document: null,
   values: [],
   message: "尚未连接模拟数据源",
+  diagnostics: initialRuntimeDiagnostics,
 };
 
 export function applyDemoChange(store: TagStore, raw: unknown): TagChange {
@@ -89,6 +93,8 @@ export class DemoRuntime {
   private message = initialRuntimeState.message;
   private active = false;
   private generation = 0;
+  private reconnectCount = 0;
+  private lastTagReceivedAt: number | null = null;
 
   constructor(listener: RuntimeListener, source: ReadonlyTagSource = createSseTagSource()) {
     this.listener = listener;
@@ -121,11 +127,17 @@ export class DemoRuntime {
 
   private publish(): void {
     if (this.active) {
+      const values = this.visibleSnapshot();
       this.listener({
         status: this.status,
         document: this.document,
-        values: this.visibleSnapshot(),
+        values,
         message: this.message,
+        diagnostics: createRuntimeDiagnostics(
+          values,
+          this.lastTagReceivedAt,
+          this.reconnectCount,
+        ),
       });
     }
   }
@@ -133,6 +145,8 @@ export class DemoRuntime {
   async start(): Promise<void> {
     if (this.active) return;
     this.active = true;
+    this.reconnectCount = 0;
+    this.lastTagReceivedAt = null;
     const generation = ++this.generation;
     const controller = new AbortController();
     this.loading = controller;
@@ -187,7 +201,10 @@ export class DemoRuntime {
                 ? change.values.length > 0
                 : change.values.some((tag) => tag.sequence > (previous.get(tag.tagId) ?? -1));
             if (change.kind === "delta" && !hasNewData) return;
-            if (hasNewData) lastDataAt = Date.now();
+            if (hasNewData) {
+              lastDataAt = Date.now();
+              this.lastTagReceivedAt = lastDataAt;
+            }
             const hasStale = this.visibleSnapshot().some((tag) => tag.quality === "STALE");
             this.status = hasStale ? "stale" : "live";
             this.message = hasStale
@@ -210,6 +227,8 @@ export class DemoRuntime {
         },
         onDisconnected: () => {
           if (!this.current(generation)) return;
+          // 同一断连阶段的重复 EventSource 错误不应虚增重连事件数。
+          if (this.status !== "reconnecting") this.reconnectCount++;
           awaitingSnapshot = true;
           lastDataAt = Date.now();
           this.expiredTagIds.clear();
