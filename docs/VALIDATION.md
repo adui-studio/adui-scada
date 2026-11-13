@@ -211,3 +211,14 @@ Docker 隔离测试应依次验证：
 维护者 Windows **完整 `pnpm run ready` 退出码 0**：11 个 Manifest、51 项 Catalog 依赖检查通过；中文文案检查 149 个自有文件；Prisma Client 7.10.1 生成成功；Core、Vue、React、Draft Storage、NestJS 类型检查与构建均通过；**71 个 Markdown** 文档静态检查通过。独立 Docker 构建执行 `pnpm install --frozen-lockfile` 与 NestJS 构建，隔离烟测验证存活/就绪接口 200、工程及设备写入等未开放接口 404；正式 Linux Node PID 1 接收 SIGTERM 后正常退出码 **0**，`pnpm run test:docker:server` **退出码 0**。E2E 中 Terminus `Health Check has failed!` / HTTP 503 是主动模拟关闭的预期负面用例，并非失败。Docker 验证的是服务端容器隔离与退出机制，**不等同于浏览器 Runtime 的真实 SSE 长连接测试**。
 
 尚未收到人工浏览器心跳可见性、异常断线恢复演练记录；SSE 长时间压力、浏览器后台定时器节流、Nginx 反向代理、生产身份权限、PostgreSQL 真库和现场工业设备仍未验证。本次验收记录在上述实测后更新，建议最新 HEAD 复查 `vp check` 与 `pnpm run docs:check`；不能将记录性文档变更视为已重复执行全量质量链。
+
+## 2026-11-13 · V0.3 第二十四批验证清单（待维护者执行）
+
+- [x] 独立环境验证新增 `scripts/test-runtime-sse-browser.mjs` 可以通过 `node --check`；此检查只覆盖 JavaScript 语法。
+- [ ] `pnpm run test:runtime`：包含后台标签页恢复前台的 SSE/Tag 时效与监听释放新增用例。
+- [ ] `pnpm run test:sse:browser`：需事先启动本机 Demo、React 和 Vue；分别检查 Tag 静默降级、心跳保活、传输静默重连、恢复和离开页面后的连接清理。
+- [ ] `vp check`、`pnpm run docs:check` 和 `pnpm run ready` 通过，记录实际退出码与测试计数。
+- [ ] Windows Chrome/Edge 人工后台标签页恢复以及 Nginx 代理断流现场演练。
+- [ ] 真实高并发 SSE、生产鉴权、PostgreSQL 真库与工业网关现场验收；均不属当前原型完成范围。
+
+本批测试脚本的故障注入只屏蔽 EventSource 回调而非真实网络报文；不能把浏览器脚本通过解释为代理断流、半开 TCP 和工业现场稳定性已经验收。详见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
