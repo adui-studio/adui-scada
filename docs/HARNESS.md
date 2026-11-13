@@ -1321,7 +1321,7 @@ git status --short
 
 ## V0.3 第二十三批：模拟 SSE 心跳、传输与 Tag 数据静默（ADR-0055）
 
-第二十二批维护者 Windows / Docker 基线 **400/400 单测、17/17 NestJS E2E**，完整 `ready` 与 Docker SIGTERM 退出码 0。本批新增模拟 SSE heartbeat 事件、客户端 15 秒传输空闲超时重建和 12 秒 Tag 数据超时 STALE 告警，预计新增 **9 项单测**，累计 **409 单测、17 E2E**。**本批尚未在维护者 Windows 与 Docker 实测**，所有数字是验收目标。
+第二十二批维护者 Windows / Docker 基线 **400/400 单测、17/17 NestJS E2E**，完整 `ready` 与 Docker SIGTERM 退出码 0。本批新增模拟 SSE heartbeat、15 秒传输静默重建和 12 秒 Tag 数据超时 STALE，新增 **9 项单测**。维护者 2026-11-13 Windows 已实测 **Runtime 专项 29/29（3 文件）、Server 专项 79/79（16 文件）、全量单测 409/409（36 文件）、NestJS E2E 17/17（3 文件）**；`vp check` **251 个格式文件正确、123 个受检文件零警告/错误**，完整 `ready` **退出码 0**。Docker 冻结安装、隔离 HTTP 烟测和正式 Linux SIGTERM **退出码 0**，独立 Docker 测试命令 **退出码 0**。
 
 ```powershell
 git fetch origin
@@ -1341,4 +1341,6 @@ Write-Host "Docker 退出码：$LASTEXITCODE"
 
 自动化重点检查：心跳只保活传输不更新 TagStore；具名事件与原 `snapshot/delta` 不混淆；连续 15 秒传输静默强制重建，已关闭连接不能重建；12 秒无有效 Tag 值会使旧 GOOD/UNCERTAIN 降为 STALE；空 delta 与重复旧序列不刷新数据时间，服务端标记的 STALE 不应被转换成 GOOD；正常数据恢复和网络重连后 snapshot 恢复正确。还应检查 NestJS 订阅/独立模拟服务关闭时清除心跳 timer，旧连接回调失效，工业设备写入仍为 404。
 
-手工回归建议：分别启动独立模拟 SSE + Vue/React，在浏览器 Network 中观察 5 秒心跳、30 秒周期内 8 秒断采引发的 STALE，确认心跳继续到达但过期 Tag 不显示正常值。NestJS 仅在根 `.env` 显式开启本机模拟 API、非生产且绑定 `127.0.0.1` 时测试，同源代理未被扩展。测试结束还原开关。浏览器后台节流、Nginx 反向代理、SSE 高并发背压、真实 Gateway 和工业现场仍未验收。
+实测 `ready` 还包含 11 个依赖清单与 51 项 Catalog 依赖检查、149 个自有文件中文文案检查、Prisma Client 7.10.1 生成、71 份 Markdown 检查和 Core/双框架/NestJS 类型检查与构建。Docker 验证的是正式服务端镜像 HTTP 安全及 Linux SIGTERM，不代表 Vue/React 浏览器 SSE 断流端到端测试。E2E 中预期的 Terminus 503 负面测试仍全部通过。
+
+仍建议人工启动独立 SSE 与 Vue/React，在浏览器 Network 观察 5 秒 heartbeat、30 秒周期的 STALE 与恢复、完整静默后重新连接；NestJS 只在受控本机非生产环境显式允许时测试，结束还原开关。**尚无人工交互验收记录**；浏览器后台节流、Nginx 长连接、SSE 高并发背压、真实 Gateway 和工业现场仍未验收。本次仅同步验收文档后，建议复查 `vp check` 与 `pnpm run docs:check`。
