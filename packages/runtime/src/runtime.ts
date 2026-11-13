@@ -1,5 +1,7 @@
 import { TagStore, parseScadaDocument, renderSvgPage, validateTagValue } from "@adui/scada-core";
 import type { ScadaDocument, TagChange, TagValue } from "@adui/scada-core";
+import { createSseTagSource } from "./tag-source.ts";
+import type { ReadonlyTagSource, ReadonlyTagSubscription } from "./tag-source.ts";
 
 export type RuntimeStatus =
   | "idle"
@@ -66,85 +68,124 @@ export function svgDataUrl(
   );
 }
 
-/** 仅用于诊断的 SSE 适配器，不会直接连接任何工业设备。 */
+/** 基于只读数据源契约的浏览器 Runtime，默认仍使用原独立水处理演示服务。 */
 export class DemoRuntime {
-  private source: EventSource | null = null;
+  private readonly listener: RuntimeListener;
+  private readonly source: ReadonlyTagSource;
+  private subscription: ReadonlyTagSubscription | null = null;
+  private loading: AbortController | null = null;
   private readonly store = new TagStore();
   private document: ScadaDocument | null = null;
   private status: RuntimeStatus = "idle";
   private message = initialRuntimeState.message;
   private active = false;
-  private readonly listener: RuntimeListener;
+  private generation = 0;
 
-  constructor(listener: RuntimeListener) {
+  constructor(listener: RuntimeListener, source: ReadonlyTagSource = createSseTagSource()) {
     this.listener = listener;
+    this.source = source;
+  }
+
+  private current(generation: number): boolean {
+    return this.active && this.generation === generation;
   }
 
   private publish(): void {
-    if (this.active)
+    if (this.active) {
       this.listener({
         status: this.status,
         document: this.document,
         values: this.store.snapshot(),
         message: this.message,
       });
+    }
   }
+
   async start(): Promise<void> {
     if (this.active) return;
     this.active = true;
+    const generation = ++this.generation;
+    const controller = new AbortController();
+    this.loading = controller;
+    // 重新开始订阅前，旧会话数据不得以 GOOD 质量显示。
+    this.store.markDisconnected(Date.now());
     this.status = "loading";
     this.message = "正在加载模拟工程";
     this.publish();
+
     try {
-      const response = await fetch("/demo/project", { cache: "no-store" });
-      if (!response.ok) throw new Error("读取模拟工程失败: HTTP " + response.status);
-      if (!response.headers.get("content-type")?.toLowerCase().includes("application/json")) {
-        throw new Error("模拟工程接口未返回 JSON；请启动模拟服务或使用桌面离线模拟构建");
-      }
-      const body: unknown = await response.json();
-      const document = parseScadaDocument(body);
-      if (!this.active) return;
-      this.document = document;
+      const rawProject = await this.source.loadProject(controller.signal);
+      if (!this.current(generation)) return;
+      this.document = parseScadaDocument(rawProject);
       this.status = "connecting";
       this.message = "等待 Tag 快照";
       this.publish();
-      const source = new EventSource("/demo/events");
-      this.source = source;
-      source.onmessage = (event) => {
-        if (!this.active || this.source !== source) return;
-        try {
-          const raw: unknown = JSON.parse(event.data);
-          applyDemoChange(this.store, raw);
-          this.status = "live";
-          this.message = "模拟数据连接正常";
-        } catch (error) {
-          source.close();
-          this.source = null;
+
+      let awaitingSnapshot = true;
+      const subscription = this.source.subscribe({
+        onMessage: (raw) => {
+          if (!this.current(generation)) return;
+          try {
+            const event: unknown = typeof raw === "string" ? JSON.parse(raw) : raw;
+            // 新连接与重连的第一个消息必须是快照，禁止旧会话增量误标 GOOD。
+            if (
+              awaitingSnapshot &&
+              (event === null ||
+                typeof event !== "object" ||
+                Array.isArray(event) ||
+                (event as { kind?: unknown }).kind !== "snapshot")
+            ) {
+              throw new TypeError("新订阅必须先收到 Tag 快照");
+            }
+            const change = applyDemoChange(this.store, event);
+            if (change.kind === "snapshot") awaitingSnapshot = false;
+            this.status = "live";
+            this.message = "模拟数据连接正常";
+          } catch (error) {
+            // 拒绝并关闭无效消息源，禁止之后的事件覆盖错误状态。
+            this.generation++;
+            this.subscription?.close();
+            this.subscription = null;
+            this.store.markDisconnected(Date.now());
+            this.status = "error";
+            this.message =
+              "无效模拟数据：" + (error instanceof Error ? error.message : String(error));
+          }
+          this.publish();
+        },
+        onDisconnected: () => {
+          if (!this.current(generation)) return;
+          awaitingSnapshot = true;
           this.store.markDisconnected(Date.now());
-          this.status = "error";
-          this.message =
-            "无效模拟数据：" + (error instanceof Error ? error.message : String(error));
-        }
-        this.publish();
-      };
-      source.onerror = () => {
-        if (!this.active || this.source !== source) return;
-        this.store.markDisconnected(Date.now());
-        this.status = "reconnecting";
-        this.message = "连接中断，旧值已标记 STALE，等待重连";
-        this.publish();
-      };
+          this.status = "reconnecting";
+          this.message = "连接中断，旧值已标记 STALE，等待重连";
+          this.publish();
+        },
+      });
+      // 同步消息回调也可能在 subscribe 返回前执行；必须防止残留连接。
+      if (!this.current(generation)) {
+        subscription.close();
+        return;
+      }
+      this.subscription = subscription;
     } catch (error) {
-      if (!this.active) return;
+      if (!this.current(generation)) return;
       this.store.markDisconnected(Date.now());
       this.status = "error";
       this.message = error instanceof Error ? error.message : String(error);
       this.publish();
+    } finally {
+      if (this.loading === controller) this.loading = null;
     }
   }
+
   stop(): void {
     this.active = false;
-    this.source?.close();
-    this.source = null;
+    this.generation++;
+    this.loading?.abort();
+    this.loading = null;
+    this.subscription?.close();
+    this.subscription = null;
+    this.store.markDisconnected(Date.now());
   }
 }

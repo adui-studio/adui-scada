@@ -1293,3 +1293,28 @@ Write-Host "Docker 退出码：$LASTEXITCODE"
 本机交互验收：只有在**自行确认非生产、绑定 `127.0.0.1`** 时，才在根 `.env` 设置 `SCADA_LOCAL_DEMO_API_ENABLED=true`。需要查看 OpenAPI 时，再独立设置 `SCADA_API_DOCS_ENABLED=true`，运行 `pnpm run dev:server`；访问 `/api/dev/demo/project`、`/api/dev/demo/tags` 与 Swagger `/api/docs`，并用浏览器 `EventSource` 或同源网络面板观察 `/api/dev/demo/events` 的 snapshot/delta 和 STALE/GOOD。结束后将开关改回 false，重启确认上述模拟路由全部返回 404。
 
 实际自动验收：`vp check` 对 245 个格式文件、119 个代码文件检查通过，零告警；69 份 Markdown 文档检查通过。访问策略、默认根模块模拟路由 404、受控模拟工程/Tag/Swagger/SSE、STALE 恢复、订阅/定时器清理均由单测/E2E 覆盖。Docker 隔离模式验证正常 HTTP 探针、未开放工程/设备接口 404 与真实 Linux SIGTERM 退出码 0。E2E 中 Terminus 关闭负面用例产生的 HTTP 503 / 错误日志属于预期。仍未执行手工浏览器 Swagger/SSE 交互验证、PostgreSQL 真库、真实工业现场、生产身份授权与多客户端压测；这些不能标记为完成。记录性文档提交后建议复查 `vp check` 与 `pnpm run docs:check`。
+
+## V0.3 第二十二批：共享 Runtime 数据源生命周期回归（ADR-0054）
+
+以维护者已实测的第二十一批 **389 单测、17 E2E** 为基线，本批新增 **4 项固定同源 SSE 适配器测试与 7 项 Runtime 会话边界测试**。维护者 Windows 已实测：**`test:runtime` 21/21（3 个测试文件）**、**全部单测 400/400（35 个文件）**、**NestJS E2E 17/17（3 个文件）**，`vp check` **249 个文件格式正确、122 个源文件零警告/零错误**，完整 `ready` **退出码 0**。Docker 冻结安装、HTTP 安全烟测及正式 Linux PID 1 SIGTERM 退出码回归成功，**Docker 命令退出码 0**。没有新增依赖或锁文件变更，Vue/React、Tauri 与 Nest 正式路由均未改动。
+
+```powershell
+git fetch origin
+git switch feat/v0.3-runtime-tag-source-adapters
+git status --short
+git pull --ff-only origin feat/v0.3-runtime-tag-source-adapters
+
+pnpm install --frozen-lockfile
+pnpm run test:runtime
+vp check
+pnpm run ready
+Write-Host "完整验收退出码：$LASTEXITCODE"
+
+pnpm run test:docker:server
+Write-Host "Docker 退出码：$LASTEXITCODE"
+git status --short
+```
+
+验收需核对：默认 Vue/React 仍访问同源 `/demo/project` 和 `/demo/events`，项目 JSON 与 Tag 序列/质量未改变；手工页面断线后质量不得维持 GOOD。新 `nest-local` 预设只是固定相对路径，**当前不增设 Vite 代理，不应在浏览器误认为它已可切换到另一台主机**；Nest 本机模拟 API 未显式允许时依然 404。测试新连接必须先 snapshot、禁止首包 delta、停机取消 HTTP 加载与订阅、旧回调不可污染新会话；Vue 与 React 编译成功、桌面离线模拟无网络访问。
+
+本批的自动测试已验证同源预设、安全拒绝、snapshot 首包约束、断连 STALE、请求取消、旧代次隔离和同步订阅失败回收；双 Web 与 NestJS 构建成功。Docker 验证的是正式 NestJS 容器的 HTTP 边界和 SIGTERM，不是浏览器 Runtime 的生产容器集成测试。**尚未收到人工 Vue/React 页面断线演练或 Nest 预设浏览器接入验收**。PostgreSQL 真库、正式发布快照、认证的 Gateway 数据流、SSE 容量/背压及工业现场未在本批验收。若仅文档记录提交后变更，建议复查 `vp check` 和 `pnpm run docs:check`。

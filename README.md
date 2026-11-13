@@ -114,3 +114,9 @@ Vue / React 现在都可通过页面顶部「组态编辑」打开懒加载 Stud
 Studio 新增 **20 单位网格**和三个独立开关：「显示网格」「网格吸附」「图元吸附」。拖动图元时可吸附到网格，或吸附到其他图元的左/中/右、上/中/下参考线；对齐到其他图元时显示辅助线。Vue / React 使用相同的 `resolveDragSnap`，拖动预览与松开提交结果一致。只有真实图元位移写入工程与撤销历史；网格显示、吸附开关、辅助线本身不进入 JSON。
 
 详细设计及验收见 [Studio 使用说明](docs/V0.2_STUDIO.md) 与 [ADR-0012](docs/adr/0012-grid-snap-guides.md)。本阶段仍只支持本地模拟草稿，不能直接连接工业设备。
+
+## V0.3 第二十二批：共享只读 Tag 数据源适配层（Windows / Docker 自动化验收通过）
+
+Runtime 新增框架无关的 `ReadonlyTagSource` 契约与 `createSseTagSource()`：默认沿用原本 `/demo/project` + `/demo/events`；可显式构造 `createSseTagSource("nest-local")` 以描述第 21 批 Nest 开发接口的固定同源路径，但**不会修改 Vite 代理、绕过 Nest 本机安全开关或自动切换现有 Vue/React 页面**。`DemoRuntime` 单参数用法继续兼容，新增可选的只读数据源注入参数，并在停止/重连时严格管理取消订阅、AbortSignal、STALE 状态与快照优先级。Tauri 离线演示、工业设备接口和正式业务 API 均不变。
+
+此模块尚不是具有生产鉴权、Gateway 连接、发布版本加载或背压控制的完整实时订阅系统。技术决策与验收参见 [ADR-0054](docs/adr/0054-readonly-tag-source-adapters.md)。维护者 Windows 已实测 **Runtime 专项 21/21、单测 400/400、NestJS E2E 17/17**，`vp check` 零警告/错误，完整 `pnpm run ready` **退出码 0**；Docker 隔离烟测与 Linux SIGTERM 退出码均正常，Docker **退出码 0**。人工页面断连演练、真实工业网关与生产认证尚未验证。本次记录性文档更新后建议执行 `vp check` 与 `pnpm run docs:check`。
