@@ -198,4 +198,4 @@ SCADA_API_DOCS_ENABLED=true
 
 重启 `pnpm run dev:server`，打开启动日志中打印的本机 Swagger 地址。模拟接口与 Swagger 是两个独立开关，开启一个不会自动开启另一个。关闭测试后恢复 `SCADA_LOCAL_DEMO_API_ENABLED=false` 并重启。项目不提供任何模拟设备写入或将这些 API 用作真实工业采集的途径。见 [ADR-0053](../../docs/adr/0053-local-readonly-demo-telemetry.md)。
 
-本批新增代码尚未得到维护者 Windows `ready` 或 Docker 验收。预计 **389 单测、17 E2E**，应以实际输出为准。
+维护者 Windows 已完成本批完整 `ready` 验收：**389/389 单测、17/17 E2E，退出码 0**；`vp check` 245 个文件格式正确、119 个受检文件零警告/错误，69 份 Markdown 检查与 React/Vue/NestJS 构建通过。Docker 冻结依赖安装、隔离烟测和正式 Linux SIGTERM / 进程退出码 0 测试均通过，**Docker 退出码 0**。本轮 E2E 包含已修复的显式 404 断言以及 Swagger/模拟 SSE 检查。手工浏览器 Swagger/SSE 交互回归、PostgreSQL 真库、生产身份验证和工业现场尚未执行；本批仍默认关闭演示路由。验收记录更新后建议复验 `vp check` 与 `pnpm run docs:check`。
