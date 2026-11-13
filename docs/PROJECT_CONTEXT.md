@@ -580,3 +580,9 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 ## 2026-11-13 · V0.3 第二十四批首轮 Windows 验收阻塞及修复
 
 维护者提供首轮实际日志：`pnpm run test:sse:browser` 因 `fetch failed` 退出码 1（尚无三项服务的运行日志，原因未确认）；`pnpm run test:runtime` 结果为 **30/31**，新版前台唤醒用例在本地 `STALE` 后收到 `sequence=2` 不能恢复。复核发现将本地显示过期写回共享 TagStore 会占用远端序列号，存在真实新值被错拒风险。已在本批分支改为按 Tag 的 Runtime 展示层过期覆盖，不修改共享序列校验，补充旧序列仍被拒绝、下一条真实新序列恢复及多 Tag 独立恢复的回归。浏览器脚本同时读取根 `.env` 开发端口并补充可定位失败 URL 的前置检查。**修复后 Windows 专项和完整质量链尚未重新实测**；Draft PR #46 仍不合并。
+
+## 2026-11-13 · V0.3 第二十四批：第二轮 Windows 自动化验收通过
+
+维护者继第一轮失败后同步最新分支并重新执行了本机质量链，现已提供日志证明：**React / Vue SSE 浏览器回归均通过（`test:sse:browser` 退出码 0）、Runtime 专项 32/32（3 文件）、全量单测 412/412（36 文件）、NestJS E2E 17/17（3 文件）**；`vp check` 检查 253 个文件格式正确、124 个受检文件零错误零警告；72 份 Markdown 检查通过。完整 `pnpm run ready` 退出码 **0**，包含 Catalog/配置/中文文案、Prisma Client 7.10.1、双 Web 与 NestJS 类型检查和构建。此前 `fetch failed` 源于浏览器预检查服务/端口未与实际运行环境对齐，现脚本读取根 `.env` 并能确认两端本机地址；此前 STALE 与 sequence 冲突已通过 Runtime 展示层过期质量覆盖修复。
+
+这证明本机浏览器接收/重连生命周期自动化成功，不等于真实网络丢包、Nginx 半开或工业现场可靠性已确认；本批未执行 Docker 增量回归、人工后台标签页节流、SSE 高并发、生产身份权限或 PostgreSQL 真库验证。**PR #46 仍保持 Draft、Assignee 为 `@adui-dev`，等待维护者明确合并授权**。上述实测发生在本次验收文档追加之前，文档最新提交需按需复查 `vp check` 和 `pnpm run docs:check`。
