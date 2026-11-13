@@ -47,3 +47,11 @@ pnpm run ready
 - 协作容器中已使用 Node 自带测试器运行独立代码副本的 **8 项连接管理回归，8/8 通过**；其中包括真实回环 HTTP 32 路同时连接、第 33 路返回 503、客户端关闭后重入及响应错误回收。仓库中的完整 pnpm 工程未在当前协作容器执行。
 - 代码经静态 JavaScript 语法检查；真实独立服务连接、Docker Nginx SSE、Windows 全量 `ready`、Vue/React 构建、格式/Lint 和文档检查仍待维护者本机复验。
 - PR 保持 Draft，创建后指派并核验 `@adui-dev`；未获维护者明确合并授权前不合并、发布或部署。
+
+## 首轮 Windows Docker 代理烟测及环境加载修正（2026-11-13）
+
+维护者 Windows 实测：`pnpm run test:sse:clients` **8/8 通过**，`pnpm run test:sse:network` 真实直连独立 Demo 六路 SSE 测试**退出码 0**。Docker 演示栈四服务构建/启动成功，Demo/Server 健康检查通过；但首个 React Nginx 代理入口 `127.0.0.1:18080` 返回 `ECONNREFUSED`。Docker Desktop 显示已发布 `8080`/`8081`，根 `.env` 配置 `18080`/`18081`。
+
+根因定位为 Docker Demo Compose 命令未显式加载根目录 `.env`，导致未按用户设置进行端口插值，同时 Compose 和环境静态检查的回退值没有统一依照根 `.env.example`。修正 `docker:demo:up/down/logs` 命令为 `docker compose --env-file .env -f deploy/docker/compose.demo.yaml ...`，新增只输出容器/映射信息的 `docker:demo:ps`；同步 React/Vue、NestJS 和 Demo 的端口回退值（18080、18081、13001、14178），并在 `env:check` 中强制校验。此修正只改变本机 Docker 演示配置，不影响工业接口与正式部署架构。
+
+`--env-file` 指定的是 Compose 配置插值来源；**PowerShell 已定义的同名环境变量依然优先**。如端口仍不匹配，应检查同名进程环境变量和实际 `docker:demo:ps` 映射。真实修复后的 Nginx 代理六路验收、格式检查与全量质量链仍待维护者执行。
