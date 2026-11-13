@@ -1,5 +1,6 @@
 import { TagStore, WaterTreatmentSimulator, waterTreatmentDemoDocument } from "@adui/scada-core";
 import type { RuntimeListener } from "./runtime.ts";
+import { createRuntimeDiagnostics } from "./diagnostics.ts";
 
 /**
  * 为 Tauri 打包版本提供明确标识的 V0.1 离线模拟运行时。
@@ -12,6 +13,7 @@ export class OfflineDemoRuntime {
   private timer: ReturnType<typeof setInterval> | null = null;
   private active = false;
   private tick = 0;
+  private lastTagReceivedAt: number | null = null;
 
   constructor(listener: RuntimeListener) {
     this.listener = listener;
@@ -25,6 +27,7 @@ export class OfflineDemoRuntime {
       status: "simulation",
       document: waterTreatmentDemoDocument,
       values,
+      diagnostics: createRuntimeDiagnostics(values, this.lastTagReceivedAt, 0),
       message: stale
         ? "离线模拟｜正在演练数据中断，质量已标记 STALE（非真实设备数据）"
         : "离线模拟｜水位、泵和流量均为本机生成的演示数据，未连接任何设备",
@@ -34,6 +37,8 @@ export class OfflineDemoRuntime {
   start(): void {
     if (this.active) return;
     this.active = true;
+    this.tick = 0;
+    this.lastTagReceivedAt = Date.now();
     this.store.replaceSnapshot(this.simulator.next());
     this.publish();
 
@@ -46,7 +51,9 @@ export class OfflineDemoRuntime {
       } else {
         const sequences = new Map(this.store.snapshot().map((tag) => [tag.tagId, tag.sequence]));
         this.simulator.resumeAfter(sequences);
-        this.store.apply(this.simulator.next());
+        if (this.store.apply(this.simulator.next()).length > 0) {
+          this.lastTagReceivedAt = Date.now();
+        }
       }
       this.publish();
     }, 1000);
