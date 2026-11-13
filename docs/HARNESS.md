@@ -1520,3 +1520,23 @@ pnpm run ready
 诊断的 `dataAgeMs` 仍只代表本机接受有效 Tag 后经过的时间，不是 PLC 采样延迟或网络 RTT；`reconnectCount` 是去重后的连续断连过程数，不是实际 TCP 重建计数。生产认证、真实工业网关、PostgreSQL 真库、历史诊断持久化及工业现场尚未验收。
 
 本段为验收记录追加后，**尚未重新执行最新文档的 `vp check` / `docs:check`**；建议合并审查前再运行一次。PR #49 继续保持 Draft，Assignee `@adui-dev`，未经明确授权不得合并。
+
+## 2026-11-13 · V0.3 第二十八批状态事件时间线验收（待实测）
+
+保持共享 Runtime 只读与 Vue/React 对等，在 Windows 项目根目录依次执行：
+
+```powershell
+pnpm run test:runtime
+vp check
+pnpm run docs:check
+pnpm run ready
+```
+
+在其他终端运行 `pnpm run dev:demo`、`pnpm run dev:react`、`pnpm run dev:vue` 后执行：
+
+```powershell
+pnpm run test:sse:browser
+pnpm run test:sse:fault:browser
+```
+
+浏览器回归须在 React/Vue 同时检查首次 `live`、过期 `stale`、断连 `reconnecting` 和恢复 `live` 的状态事件顺序；页面最多显示 20 条。Tauri 模拟单元测试检查历史不随每秒刷新增长，重新启动会话清零。**本批尚未完成维护者 Windows 和浏览器实测**，自动化不能替代人工 UI 与真实工业现场。见 [ADR-0060](adr/0060-runtime-session-status-history.md)。
