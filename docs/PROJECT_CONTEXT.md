@@ -670,3 +670,9 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 结合前轮维护者实测，双框架开发环境 `test:sse:fault:browser` **退出码 0**，完整 `pnpm run ready` **退出码 0**：全量 Vitest **412/412（36 文件）**、Node SSE 资源 **8/8**、Node TCP 故障代理 **4/4**、NestJS E2E **17/17（3 文件）**，双框架和 NestJS 类型检查、构建通过。**第二十六批本机 Windows/Docker 自动化验收项已全部通过。**
 
 **范围限制：** 真实被阻断的是本机测试代理内的 TCP SSE 下行字节，未直接模拟真实 Nginx 宕机、物理断网、工业网关故障。有限六路持续观测不是长期高并发/慢消费内存背压或生产 SLA，生产鉴权、PostgreSQL 真库与现场设备仍未验收。本次仅追加验收记录，**最新文档提交后的 `vp check` 与 `docs:check` 尚未重新执行**；建议合并前再做一次静态复查。PR #48 继续 Draft，未经维护者明确授权不得合并。
+
+## 2026-11-13 · V0.3 第二十七批：共享 Runtime 链路诊断（待 Windows 验收）
+
+基于第二十六批已合并 `main`（`1ae6b29`），从 `feat/v0.3-runtime-diagnostics` 新增共享的本机运行时诊断快照，并在 Vue/React 两套运行监控页以相同字段展示：当前状态、断连过程累计次数、最后一次有效 Tag 被本机接受的时间、状态发布时的数据年龄、四档 Tag 质量分布。Tauri 离线模式复用快照但不虚构重连，且仅使用本机内存，不增加工业接口、数据库或新的依赖。诊断年龄是本机收到有效更新后的时长，不能解释为 PLC 采样或网络传输延迟。
+
+新增 Vitest 回归覆盖断连去重、12 秒过期后显示质量、按序列恢复和重启清零等。本批代码、测试、ADR-0059 已提交开发分支；**维护者 Windows `test:runtime`、`ready`、双框架浏览器/桌面 UI 验证尚未执行**，不能继承第二十六批已通过结果。进度和验收边界见 [VALIDATION](VALIDATION.md) 与 [ADR-0059](adr/0059-runtime-local-diagnostics.md)。PR 保持 Draft，需经明确授权后才能合并。
