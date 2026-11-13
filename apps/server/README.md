@@ -77,7 +77,7 @@ Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。�
 
 `helmet@8.3.0` 默认提供安全响应头，Swagger UI 的 CSP 仅在本机开发且显式启用文档时做有限放宽。`@nestjs/swagger@12.1.1` 通过 NestJS 的 DocumentBuilder 注册文档，默认**根本不创建路由**；只有 `SCADA_API_DOCS_ENABLED=true`、`NODE_ENV` 非 production 且 `SCADA_SERVER_HOST=127.0.0.1` 时可访问本机 `/api/docs` 和 `/api/docs-json`。当前文档只包含已有 `GET /health`，不存在可以调用的登录、工程写入或工业设备写入 API。服务启动依旧不连接 PostgreSQL 或 PLC。
 
-依赖已由 pnpm 12.18.0 生成并提交锁文件。Windows 首轮检查 0 警告、单测 355/355、Docker 隔离测试通过，但 NestJS E2E 在 beforeAll 发生 10 秒超时，使 ready 中断。Pretty 测试隔离补丁已提交，需重新验证。
+依赖已由 pnpm 12.18.0 生成并提交锁文件。Windows 首轮 E2E 曾在 `beforeAll` 超时；隔离 Vitest 中的 Pretty Transport 后再次实测，单独 E2E **8/8、退出码 0**，完整 `pnpm run ready` **退出码 0**（单测 356/356、E2E 8/8、React/Vue/NestJS 构建和文档检查通过）；Docker 隔离烟测在前一轮已通过。
 
 日志与 HTTP 响应头属于运维可观测性，不是不可篡改的认证安全审计或工业操作审计。身份颁发、权限管理端点和真实设备写入仍保持关闭。详见 [ADR-0046](../../docs/adr/0046-pino-openapi-http-security.md)。
 
@@ -85,4 +85,4 @@ Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。�
 
 `@nestjs/config@12.0.1` 在 `AppModule` 注册为全局配置模块，但根目录 `.env` 仍由 `main.ts` 使用 Node.js 原生 `loadEnvFile` 唯一加载；不直接依赖 `dotenv`。本阶段保留已有环境变量读取方式，不误称已完成配置 Schema 校验。
 
-本地交互式终端仅在非生产、非测试环境启用 `pino-pretty@13.2.0`，便于查看中文日志；Vitest、生产环境及非交互式日志管道保持 JSON。不要在日志记录 Authorization、Cookie、数据库连接字符串、请求体或写入数据。修改后运行 `vp check`、`pnpm run ready`、`pnpm run test:docker:server`，锁文件已同步，E2E 及完整质量链尚待复验。
+本地交互式终端仅在非生产、非测试环境启用 `pino-pretty@13.2.0`，便于查看中文日志；Vitest、生产环境及非交互式日志管道保持 JSON。不要在日志记录 Authorization、Cookie、数据库连接字符串、请求体或写入数据。锁文件、Windows E2E 和完整质量链均已通过本批验收；修改后仍应运行 `vp check`、`pnpm run ready`，并按变更影响复验 `pnpm run test:docker:server`。
