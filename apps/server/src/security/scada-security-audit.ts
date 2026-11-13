@@ -29,9 +29,11 @@ export interface SecurityAuditReporter {
   record(decision: SecurityAuditDecision): void;
 }
 
-const ALLOWED_REASONS: Readonly<
-  Record<SecurityAuditAction, Readonly<Record<SecurityAuditOutcome, readonly SecurityAuditReason[]>>>
-> = {
+type SecurityAuditReasonMap = Readonly<
+  Record<SecurityAuditOutcome, readonly SecurityAuditReason[]>
+>;
+
+const ALLOWED_REASONS: Readonly<Record<SecurityAuditAction, SecurityAuditReasonMap>> = {
   "session.authenticate": {
     allowed: ["verified"],
     denied: ["unsupported_context", "malformed_authorization", "invalid_session"],
