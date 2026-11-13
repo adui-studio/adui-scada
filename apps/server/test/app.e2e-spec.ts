@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
+import { HttpReadinessIndicator } from "../src/health/http-readiness.indicator.js";
 import request from "supertest";
 import { AppModule } from "../src/app.module.js";
 import { allowLocalOpenApi, setupLocalOpenApi } from "../src/openapi/scada-openapi.js";
@@ -81,6 +82,7 @@ describe("应用控制器（端到端）", () => {
       const response = await request(localApp.getHttpServer()).get("/api/docs-json").expect(200);
       expect(response.body.openapi).toMatch(/^3\./);
       expect(response.body.paths["/health"]).toBeDefined();
+      expect(response.body.paths["/health/ready"]).toBeDefined();
       expect(response.body.paths["/api/auth/sessions"]).toBeUndefined();
       expect(response.body.paths["/api/devices/write"]).toBeUndefined();
       expect(response.body.paths["/api/projects/{projectId}/versions"]).toBeUndefined();
@@ -88,4 +90,33 @@ describe("应用控制器（端到端）", () => {
       await localApp.close();
     }
   });
+
+  it("GET /health/ready 只报告 HTTP 子系统就绪且禁止缓存", async () => {
+    const response = await request(app.getHttpServer()).get("/health/ready").expect(200);
+    expect(response.headers["cache-control"]).toBe("no-cache, no-store, must-revalidate");
+    expect(response.body.status).toBe("ok");
+    expect(response.body.details.http).toEqual({
+      scope: "http",
+      dependencies: "not_checked",
+      status: "up",
+    });
+    expect(JSON.stringify(response.body)).not.toContain("DATABASE_URL");
+  });
+
+  it("HTTP 关闭状态返回 503，但原有存活探针仍维持原契约", async () => {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const closingApp = moduleRef.createNestApplication();
+    await closingApp.init();
+    try {
+      closingApp.get(HttpReadinessIndicator).beforeApplicationShutdown();
+      const response = await request(closingApp.getHttpServer()).get("/health/ready").expect(503);
+      expect(response.body.status).toBe("error");
+      expect(response.body.details.http.status).toBe("down");
+      const liveness = await request(closingApp.getHttpServer()).get("/health").expect(200);
+      expect(liveness.body).toEqual({ status: "ok", service: "adui-scada-server" });
+    } finally {
+      await closingApp.close();
+    }
+  });
+
 });
