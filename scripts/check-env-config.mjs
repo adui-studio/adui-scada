@@ -142,7 +142,7 @@ assert.ok(
   nest.indexOf("loadEnvFile(envPath)") < nest.indexOf('await import("./app.module.js")'),
   "NestJS 环境变量加载必须发生在 AppModule 初始化之前",
 );
-assert.doesNotMatch(nest, /import\\s+\\{\\s*AppModule\\s*\\}\\s+from/, "禁止提前静态导入 AppModule");
+assert.doesNotMatch(nest, /import\s+\{\s*AppModule\s*\}\s+from/, "禁止提前静态导入 AppModule");
 for (const [source, key] of [
   [serverConfig, "SCADA_SERVER_HOST"],
   [serverConfig, "SCADA_SERVER_PORT"],
