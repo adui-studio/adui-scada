@@ -46,3 +46,14 @@ pnpm run test:sse:fault:browser
 - 已基于第二十七批 Squash Merge 的 `main`（`ee996c0`）创建独立第二十八批分支并提交实现及测试。
 - **尚未在维护者 Windows 工作区执行本批 `test:runtime`、`vp check`、`docs:check`、`ready`、Vue/React 浏览器回归或 Tauri 人工测试。** 不得继承上一批的通过数字。
 - 此功能仅限演示诊断，不包含真正生产审计、报警记录、持续高并发和工业现场验收。Draft PR 必须立即指派并核验 `@adui-dev`，未经维护者明确合并授权不得合并。
+
+### 第二十八批 Windows 双框架 SSE 浏览器回归（2026-11-14）
+
+维护者提供 PowerShell 实测日志，当前分支针对第二十八批状态时间线功能执行：
+
+- `pnpm run test:sse:browser`：React `127.0.0.1:15173` 与 Vue `127.0.0.1:15174` 均输出“浏览器 SSE 心跳保活、Tag 过期、静默重连、资源清理通过”，**明确退出码 0**。脚本额外断言共享状态时间线初始 live、Tag 过期 stale、传输静默 reconnecting 与快照恢复 live，以及会话内事件上限。
+- `pnpm run test:sse:fault:browser`：React/Vue 两端均输出“真实 TCP 下行阻断、STALE、主动重连及连接回收通过”。提供的输出到此结束，**未附 `Write-Host "TCP 故障退出码：$LASTEXITCODE"`**，因此只确认两端成功信息及脚本未输出错误，**暂不记录该命令的实际退出码**。
+
+**仍待 Windows 实测**：`pnpm run test:runtime`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`；以及手工 UI 和 Tauri 桌面验证。上述浏览器测试不能证明 Node/Vitest、Lint、类型、全量构建、真实工业网络、生产报警持久化已完成。
+
+本次仅补充验收文档与 PR 说明，无业务代码变更。新增文档提交后的格式及文档静态检查仍待执行；PR #50 保持 Draft，需维护者明确授权方能合并。
