@@ -280,4 +280,8 @@ Prisma `schema.prisma` 的 `///` 为代码生成文档信息，**不会自动创
 
 `http-security.ts` 默认启用 Helmet。文档入口使用 `allowLocalOpenApi` 执行显式开关 + 非生产 + 127.0.0.1 三重限制，不满足时**不加载 Swagger、也不注册文档路由**；开发本机有 Swagger UI 时局部调整 CSP，生产默认 Helmet 全部安全头。`/health` 通过 Swagger Decorator 声明只代表进程存活，未挂载 `ScadaIdentityModule` 或 `ProjectPersistenceModule`，不改变工业只读安全边界。
 
-新包版本与锁文件必须统一，当前仅完成 Catalog 与服务端依赖声明，锁文件须在可访问 npm Registry 的受控 Windows 环境由 pnpm 正式生成后加入 PR。
+第十四批相关依赖已由维护者 Windows pnpm 12 正式生成锁文件并完成完整质量链及 Docker 隔离烟测，现已合并至 main。
+
+## V0.3 第十五批：NestJS 启动环境加载顺序（ADR-0047）
+
+根 `.env` 的本地加载入口仍是 `apps/server/src/main.ts`，并继续由宿主/容器进程环境变量承担部署覆盖。为了避免 `AppModule` 在模块求值期间构造 Pino 配置时过早读取 `SCADA_LOG_LEVEL`，正式入口改为在 `loadEnvFile` 完成后动态导入 `AppModule`。纯函数 `resolveServerStartupConfig` 集中读取和校验端口、监听地址及复用受控 OpenAPI 策略，保留已发布默认值与白名单，不暴露敏感配置。该纯模块不连接数据库、不加载工业网关、不注册业务路由。模块化类型配置注入和全部生产部署变量的 Schema 化校验仍待后续专项推进。
