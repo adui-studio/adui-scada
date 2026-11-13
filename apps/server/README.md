@@ -104,3 +104,9 @@ Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。�
 服务端从根 `.env` 及进程环境读取启动配置后，使用 `zod@4.6.7` 的 `safeParse` 验证端口、监听地址。保留 `SCADA_SERVER_PORT` / `SCADA_SERVER_HOST` 对通用环境变量的优先级、中文错误提示、默认端口 3001、默认监听 127.0.0.1；Swagger 仅允许非生产、本地回环、显式开启。错误中不输出原始环境变量或 `ZodError`。不接入新的登录、工程写入、工业设备写入接口，也不更改 Core Schema。
 
 新增 4 项配置回归测试，预计普通单测共 371 项、NestJS E2E 8 项。当前已更新 Manifest 和根 Catalog，但**没有正式生成新锁文件或完成 Windows 验收**。必须先在可访问 npm Registry 的 Windows 环境执行 `pnpm install` 并提交 `pnpm-lock.yaml`，再进行 `pnpm install --frozen-lockfile`、`pnpm run ready` 和 Docker 隔离烟测；详见 [ADR-0049](../../docs/adr/0049-zod-server-runtime-validation.md)。
+
+### NestJS DTO 集成：nest-zod + zod
+
+本批同时采用 `nest-zod@2.1.0` 与 `zod@4.6.7`，以 NestJS 12 / Swagger 12 兼容性为依据，不强行安装 Peer 范围未覆盖当前 NestJS 的 `nestjs-zod`。未来具体业务 Controller 可使用 `nest-zod/swagger` 的 `ZBody` / `ZQuery` / `ZSerialize`，而环境变量仍直接通过 Zod 的 `safeParse` 校验。
+
+新增 `src/validation/nest-zod-integration.spec.ts` 仅测试独立 Controller，不进入正式 `AppModule`、不开放业务路由。现共预计 375 项单测、8 项 E2E；新增依赖的锁文件、Windows `ready` 和容器测试尚待完成。若遇到新包安装或类型检查失败，应根据实际错误修复，不允许绕过安全检查。
