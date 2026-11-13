@@ -66,6 +66,8 @@ export function createSseTagSource(preset: DemoTagSourcePreset = "standalone"): 
           if (closed) return;
           // 浏览器 EventSource 可能保持 OPEN 却不再收到字节，需要主动重建。
           handlers.onDisconnected();
+          // 断连回调可能同步停止 Runtime；回调后必须再次核对关闭状态。
+          if (closed) return;
           stream?.close();
           connect();
         }, SSE_TRANSPORT_TIMEOUT_MS);
