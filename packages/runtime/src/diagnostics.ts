@@ -34,7 +34,12 @@ export function createRuntimeDiagnostics(
   };
 }
 
-export const initialRuntimeDiagnostics: RuntimeDiagnostics = createRuntimeDiagnostics([], null, 0, 0);
+export const initialRuntimeDiagnostics: RuntimeDiagnostics = createRuntimeDiagnostics(
+  [],
+  null,
+  0,
+  0,
+);
 
 /** 仅用于界面显示；秒数为状态快照时刻值，不会自行刷新。 */
 export function formatRuntimeDataAge(ageMs: number | null): string {
