@@ -107,4 +107,4 @@ NestJS 12 已原生提供 Standard Schema 校验 Pipe、响应序列化拦截器
 
 改用 `src/validation/standard-schema-integration.spec.ts` 的测试专用 Controller 验证 `@Body({ schema })`、`@Query(..., { schema })`、`StandardSchemaValidationPipe`、`StandardSchemaSerializerInterceptor` 和 OpenAPI。正式 `AppModule` 不更改，不开放登录、工程写入或工业设备写入。
 
-本批原有 5 项配置测试之外新增 4 项配置测试与 4 项原生集成测试，**预计 375 单测/8 E2E，尚待复验**。维护者首次 `ready` 在单测阶段中断（370 通过、1 失败，另有一个套件导入失败）；上次锁文件已提交但仍包含 `nest-zod`，应运行 `pnpm install` 并只提交正式生成的锁文件变化，再冻结安装并完成 `pnpm run ready` 和 `pnpm run test:docker:server`。详见 [ADR-0049](../../docs/adr/0049-zod-server-runtime-validation.md)。
+本批原有 5 项配置测试之外新增 4 项配置测试与 4 项原生集成测试，维护者 Windows 已实测 **375/375 单测、8/8 E2E**、完整 `pnpm run ready` **退出码 0**。维护者首次 `ready` 曾在单测阶段中断（370 通过、1 失败，另有一个适配器套件导入失败），随后已修复并通过复验。此前包含 `nest-zod` 的锁文件已通过 pnpm 正式重新生成并提交，GitHub 核对已移除该依赖；Docker 冻结安装、镜像构建与隔离烟测均通过，**退出码 0**。本批未重新执行 PostgreSQL 真库回归，记录性文档更新后建议复验 `vp check` 与 `pnpm run docs:check`。详见 [ADR-0049](../../docs/adr/0049-zod-server-runtime-validation.md)。
