@@ -119,12 +119,24 @@ export class DemoRuntime {
       this.message = "等待 Tag 快照";
       this.publish();
 
+      let awaitingSnapshot = true;
       const subscription = this.source.subscribe({
         onMessage: (raw) => {
           if (!this.current(generation)) return;
           try {
             const event: unknown = typeof raw === "string" ? JSON.parse(raw) : raw;
-            applyDemoChange(this.store, event);
+            // 新连接与重连的第一个消息必须是快照，禁止旧会话增量误标 GOOD。
+            if (
+              awaitingSnapshot &&
+              (event === null ||
+                typeof event !== "object" ||
+                Array.isArray(event) ||
+                (event as { kind?: unknown }).kind !== "snapshot")
+            ) {
+              throw new TypeError("新订阅必须先收到 Tag 快照");
+            }
+            const change = applyDemoChange(this.store, event);
+            if (change.kind === "snapshot") awaitingSnapshot = false;
             this.status = "live";
             this.message = "模拟数据连接正常";
           } catch (error) {
@@ -141,6 +153,7 @@ export class DemoRuntime {
         },
         onDisconnected: () => {
           if (!this.current(generation)) return;
+          awaitingSnapshot = true;
           this.store.markDisconnected(Date.now());
           this.status = "reconnecting";
           this.message = "连接中断，旧值已标记 STALE，等待重连";
