@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import {
-  createSafeSecurityAuditRecord,
-} from "./scada-security-audit.js";
+import { createSafeSecurityAuditRecord } from "./scada-security-audit.js";
 import type { SecurityAuditDecision } from "./scada-security-audit.js";
 
 describe("身份与工程安全审计白名单", () => {
