@@ -133,3 +133,11 @@ Core 新增两项自动保存会话回归：停写必须等待正在执行的事
 2026-11-13 Windows 验收：`vp check` 检查 **225 个文件格式正确**、104 个受检代码文件零警告、零 Lint 错误及类型错误；28 个单测文件 **367/367**、NestJS E2E **8/8**、Prisma Client 7.10.1 生成、Vue/React/NestJS 类型检查与构建、64 份 Markdown 静态检查完成；完整 `ready` 退出码 **0**。独立 Docker 构建成功，`pnpm install --frozen-lockfile` 和服务端构建正常；容器隔离烟测验证健康接口及未开放工程和设备接口，**退出码 0**。
 
 此阶段的事件只写安全白名单诊断日志，不含归责必需的可信主体，不依赖真实数据库；旧隔离 PostgreSQL 11 项测试与本批实现无直接数据模型关联，未重新执行不得称为通过。正式身份审计持久化、日志失败处置、保留和风险告警仍待后续专项验证。
+
+## V0.3 第十七批：Zod 服务端运行时输入校验
+
+基线为第十六批 Windows **367/367 单测、8/8 NestJS E2E、完整 ready 退出码 0**，Docker 隔离镜像安全测试也通过。第十七批在原 5 项启动配置单测之外新增 4 项，**预计** 371 项普通单测与 8 项 E2E；此数字仅为预期，本批尚无 Windows 实测。
+
+新增测试验证 Zod 对非有限数、非法类型、无效端口、变量覆盖优先级、额外敏感环境变量和历史数字写法的处理，保持既有固定中文异常及 Swagger 安全访问策略。日志、SCADA Core 和数据库模型均不调整；必须确认 Docker 生产运行层包含 Zod 依赖，不因冻结安装缺少锁文件而误判质量链通过。
+
+**合并前阻塞**：已在 Catalog 和服务端 Manifest 声明 `zod@4.6.7`，但当前协作环境不能访问 npm Registry，尚未使用 pnpm 12 正式更新 `pnpm-lock.yaml`。在 Windows 审查并提交新锁文件后，运行 `pnpm install --frozen-lockfile`、`vp check`、`pnpm run ready` 和 `pnpm run test:docker:server`；未实际运行前不能声称通过。不执行生产数据库迁移或工业设备写入测试。
