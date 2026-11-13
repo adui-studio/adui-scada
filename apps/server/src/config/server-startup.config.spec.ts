@@ -52,12 +52,12 @@ describe("服务端启动配置", () => {
       SCADA_SERVER_HOST: "127.0.0.1",
     };
     expect(resolveServerStartupConfig(enabled).localDocs).toBe(true);
-    expect(
-      resolveServerStartupConfig({ ...enabled, NODE_ENV: "production" }).localDocs,
-    ).toBe(false);
-    expect(
-      resolveServerStartupConfig({ ...enabled, SCADA_SERVER_HOST: "0.0.0.0" }).localDocs,
-    ).toBe(false);
+    expect(resolveServerStartupConfig({ ...enabled, NODE_ENV: "production" }).localDocs).toBe(
+      false,
+    );
+    expect(resolveServerStartupConfig({ ...enabled, SCADA_SERVER_HOST: "0.0.0.0" }).localDocs).toBe(
+      false,
+    );
     expect(
       resolveServerStartupConfig({ ...enabled, SCADA_API_DOCS_ENABLED: "TRUE" }).localDocs,
     ).toBe(false);
