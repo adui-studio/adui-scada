@@ -1321,7 +1321,7 @@ git status --short
 
 ## V0.3 第二十三批：模拟 SSE 心跳、传输与 Tag 数据静默（ADR-0055）
 
-第二十二批维护者 Windows / Docker 基线 **400/400 单测、17/17 NestJS E2E**，完整 `ready` 与 Docker SIGTERM 退出码 0。本批新增模拟 SSE heartbeat 事件、客户端 15 秒传输空闲超时重建和 12 秒 Tag 数据超时 STALE 告警，预计新增 **8 项单测**，累计 **408 单测、17 E2E**。**本批尚未在维护者 Windows 与 Docker 实测**，所有数字是验收目标。
+第二十二批维护者 Windows / Docker 基线 **400/400 单测、17/17 NestJS E2E**，完整 `ready` 与 Docker SIGTERM 退出码 0。本批新增模拟 SSE heartbeat 事件、客户端 15 秒传输空闲超时重建和 12 秒 Tag 数据超时 STALE 告警，预计新增 **9 项单测**，累计 **409 单测、17 E2E**。**本批尚未在维护者 Windows 与 Docker 实测**，所有数字是验收目标。
 
 ```powershell
 git fetch origin
