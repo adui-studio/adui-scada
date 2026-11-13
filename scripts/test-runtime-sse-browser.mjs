@@ -4,10 +4,28 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as pause } from "node:timers/promises";
+import { loadEnvFile } from "node:process";
+import { fileURLToPath } from "node:url";
+
+// 读取仓库根目录的统一 .env；显式传入的进程环境变量优先。
+const envPath = fileURLToPath(new URL("../.env", import.meta.url));
+if (existsSync(envPath)) loadEnvFile(envPath);
 
 const targets = [
-  { name: "React", url: process.env.SCADA_REACT_URL || "http://127.0.0.1:5173/" },
-  { name: "Vue", url: process.env.SCADA_VUE_URL || "http://127.0.0.1:5174/" },
+  {
+    name: "React",
+    url:
+      process.env.SCADA_REACT_URL ||
+      `http://${process.env.SCADA_WEB_HOST || "127.0.0.1"}:${process.env.SCADA_REACT_DEV_PORT || "5173"}/`,
+    command: "pnpm run dev:react",
+  },
+  {
+    name: "Vue",
+    url:
+      process.env.SCADA_VUE_URL ||
+      `http://${process.env.SCADA_WEB_HOST || "127.0.0.1"}:${process.env.SCADA_VUE_DEV_PORT || "5174"}/`,
+    command: "pnpm run dev:vue",
+  },
 ];
 
 function validateLocalUrl(value) {
@@ -254,20 +272,43 @@ async function checkTarget(session, target) {
   process.stdout.write(target.name + " 浏览器 SSE 心跳保活、Tag 过期、静默重连、资源清理通过\n");
 }
 
+async function checkService(target, path, command, expectedContentType) {
+  const url = new URL(path, validateLocalUrl(target.url));
+  let response;
+  try {
+    response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    const cause =
+      error instanceof Error && error.cause instanceof Error ? error.cause.message : "";
+    throw new Error(
+      `${target.name} 本机服务不可访问：${url.href}；${reason}` +
+        (cause ? `（${cause}）` : "") +
+        `。请在另一个终端执行 ${command}，确认端口未被占用并检查根目录 .env。`,
+    );
+  }
+  if (!response.ok) {
+    throw new Error(
+      `${target.name} 接口返回 HTTP ${response.status}：${url.href}。请检查 ${command} 的启动日志。`,
+    );
+  }
+  if (
+    expectedContentType &&
+    !response.headers.get("content-type")?.toLowerCase().includes(expectedContentType)
+  ) {
+    throw new Error(
+      `${target.name} 接口内容类型异常：${url.href}，预期 ${expectedContentType}，实际 ${response.headers.get("content-type") ?? "未提供"}。请检查模拟服务和 Vite 代理。`,
+    );
+  }
+}
+
 async function main() {
   const browserPath = browserExecutable();
   assert.ok(browserPath, "未找到 Chrome/Edge，可设置 SCADA_BROWSER_PATH");
   for (const target of targets) {
-    const url = validateLocalUrl(target.url);
-    const page = await fetch(url, { signal: AbortSignal.timeout(3000) });
-    assert.ok(page.ok, target.name + " Web 开发服务未启动");
-    const project = await fetch(new URL("/demo/project", url), {
-      signal: AbortSignal.timeout(3000),
-    });
-    assert.ok(
-      project.ok && project.headers.get("content-type")?.includes("application/json"),
-      target.name + " /demo/project 不可用，请启动 pnpm run dev:demo",
-    );
+    process.stdout.write(`正在检查 ${target.name}：${validateLocalUrl(target.url).origin}\n`);
+    await checkService(target, "/", target.command, "text/html");
+    await checkService(target, "/demo/project", "pnpm run dev:demo", "application/json");
   }
 
   const directory = mkdtempSync(join(tmpdir(), "adui-scada-sse-browser-"));
