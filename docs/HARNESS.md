@@ -1345,7 +1345,7 @@ Write-Host "Docker 退出码：$LASTEXITCODE"
 
 仍建议人工启动独立 SSE 与 Vue/React，在浏览器 Network 观察 5 秒 heartbeat、30 秒周期的 STALE 与恢复、完整静默后重新连接；NestJS 只在受控本机非生产环境显式允许时测试，结束还原开关。**尚无人工交互验收记录**；浏览器后台节流、Nginx 长连接、SSE 高并发背压、真实 Gateway 和工业现场仍未验收。本次仅同步验收文档后，建议复查 `vp check` 与 `pnpm run docs:check`。
 
-## 2026-11-13 · V0.3 第二十四批浏览器 SSE 回归入口（待本机实测）
+## 2026-11-13 · V0.3 第二十四批浏览器 SSE 回归入口（Windows 自动化已通过）
 
 本批新增不依赖 Playwright 的本机 Chrome/Edge SSE 回归脚本。首先在三个独立终端启动：
 
@@ -1365,4 +1365,4 @@ pnpm run docs:check
 pnpm run ready
 ```
 
-脚本只接受回环地址；读取根目录 `.env` 中实际 Web 端口，启动前分别检查页面和 `/demo/project` 是否可用。`fetch failed` 时应先确认三个服务独立运行并检查代理及端口，改进后的脚本会输出失败 URL 与底层错误。使用真实浏览器、现有同源 Vite 代理和原生 EventSource。注入仅屏蔽页面接收的事件回调，验证心跳仍活跃但 Tag 超时、完整事件静默后的自动重连、Vue/React 数据恢复和页面离开后的连接释放。**这不是实际网络故障或 Nginx 半开连接的测试**，更不覆盖工业现场。前台恢复可见性检查另有两条新增 Vitest 用例；提交代码后仍需 Windows 质量链和 Chrome/Edge 执行日志，不得预先标记通过。参见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
+脚本只接受回环地址；读取根目录 `.env` 中实际 Web 端口，启动前分别检查页面和 `/demo/project` 是否可用。`fetch failed` 时应先确认三个服务独立运行并检查代理及端口，改进后的脚本会输出失败 URL 与底层错误。使用真实浏览器、现有同源 Vite 代理和原生 EventSource。注入仅屏蔽页面接收的事件回调，验证心跳仍活跃但 Tag 超时、完整事件静默后的自动重连、Vue/React 数据恢复和页面离开后的连接释放。**这不是实际网络故障或 Nginx 半开连接的测试**，更不覆盖工业现场。前台恢复可见性及多 Tag 独立恢复已有 Vitest 回归。维护者 2026-11-13 Windows 实测：**双框架浏览器 SSE 回归退出码 0**、Runtime 32/32（3 文件）、全量单元测试 412/412（36 文件）、NestJS E2E 17/17（3 文件）；`vp check` 253 个文件格式正确、124 个文件无告警或错误，72 份 Markdown 通过，完整 `ready` **退出码 0**。本轮未运行 Docker 增量回归、Nginx 真实断网与多客户端负载；记录性文档提交后建议仅复查格式和文档，不把旧结果视为新文档提交后的重新执行。参见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
