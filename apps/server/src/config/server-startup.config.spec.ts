@@ -43,6 +43,12 @@ describe("服务端启动配置", () => {
         "SCADA_SERVER_HOST 只能设置为 127.0.0.1 或 0.0.0.0",
       );
     }
+    for (const value of [null, true, {}, []]) {
+      const env = { SCADA_SERVER_HOST: value } as unknown as Record<string, string | undefined>;
+      expect(() => resolveServerStartupConfig(env)).toThrow(
+        "SCADA_SERVER_HOST 只能设置为 127.0.0.1 或 0.0.0.0",
+      );
+    }
   });
 
   it("Swagger 仅在显式启用、非生产且绑定本机时开放", () => {
