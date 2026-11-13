@@ -99,14 +99,12 @@ Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。�
 
 单元测试覆盖敏感字段过滤、非法事件组合、会话撤销和工程越权拒绝；维护者已在 Windows 实测 **367/367 常规单测、8/8 E2E**，完整 `pnpm run ready` 及独立 Docker 隔离烟测均 **退出码 0**。记录性文档变更后仍建议运行 `vp check` 与 `pnpm run docs:check`。后续如使用 Zod 检查外部输入，必须保留当前审计输出字段白名单，不直接记录原始对象或包含敏感输入的校验错误。详见 [ADR-0048](../../docs/adr/0048-security-audit-event-boundary.md)。
 
-## V0.3 第十七批：Zod 运行时启动参数校验
+## V0.3 第十七批：Zod 与 NestJS 12 原生 Standard Schema
 
-服务端从根 `.env` 及进程环境读取启动配置后，使用 `zod@4.6.7` 的 `safeParse` 验证端口、监听地址。保留 `SCADA_SERVER_PORT` / `SCADA_SERVER_HOST` 对通用环境变量的优先级、中文错误提示、默认端口 3001、默认监听 127.0.0.1；Swagger 仅允许非生产、本地回环、显式开启。错误中不输出原始环境变量或 `ZodError`。不接入新的登录、工程写入、工业设备写入接口，也不更改 Core Schema。
+正式服务仍从根 `.env` 加载环境配置，使用 `zod@4.6.7` 的 `safeParse` 校验端口和监听地址；默认 3001 / 127.0.0.1，专用变量优先，非法 `null` 不再被 `??` 当作未配置。失败固定中文提示，不输出 Zod 错误对象、令牌或环境敏感值。Swagger 仍仅限显式开启、本机回环和非生产。
 
-新增 4 项配置回归测试，预计普通单测共 371 项、NestJS E2E 8 项。当前已更新 Manifest 和根 Catalog，但**没有正式生成新锁文件或完成 Windows 验收**。必须先在可访问 npm Registry 的 Windows 环境执行 `pnpm install` 并提交 `pnpm-lock.yaml`，再进行 `pnpm install --frozen-lockfile`、`pnpm run ready` 和 Docker 隔离烟测；详见 [ADR-0049](../../docs/adr/0049-zod-server-runtime-validation.md)。
+NestJS 12 已原生提供 Standard Schema 校验 Pipe、响应序列化拦截器以及 Swagger 12 的 Zod 4 Schema 转换，因此无需第三方 NestJS Zod 适配器。此前尝试的 `nest-zod@2.1.0` 在维护者 Windows `ready` 测试时，其 `ZSerialize` 生成 OpenAPI Schema 报 `TypeError: Property description must be an object: undefined`；且包元数据 Peer 未包含 NestJS 12 / Swagger 12，已从 Catalog 和 Manifest 移除。
 
-### NestJS DTO 集成：nest-zod + zod
+改用 `src/validation/standard-schema-integration.spec.ts` 的测试专用 Controller 验证 `@Body({ schema })`、`@Query(..., { schema })`、`StandardSchemaValidationPipe`、`StandardSchemaSerializerInterceptor` 和 OpenAPI。正式 `AppModule` 不更改，不开放登录、工程写入或工业设备写入。
 
-本批同时采用 `nest-zod@2.1.0` 与 `zod@4.6.7`，以 NestJS 12 / Swagger 12 兼容性为依据，不强行安装 Peer 范围未覆盖当前 NestJS 的 `nestjs-zod`。未来具体业务 Controller 可使用 `nest-zod/swagger` 的 `ZBody` / `ZQuery` / `ZSerialize`，而环境变量仍直接通过 Zod 的 `safeParse` 校验。
-
-新增 `src/validation/nest-zod-integration.spec.ts` 仅测试独立 Controller，不进入正式 `AppModule`、不开放业务路由。现共预计 375 项单测、8 项 E2E；新增依赖的锁文件、Windows `ready` 和容器测试尚待完成。若遇到新包安装或类型检查失败，应根据实际错误修复，不允许绕过安全检查。
+本批原有 5 项配置测试之外新增 4 项配置测试与 4 项原生集成测试，**预计 375 单测/8 E2E，尚待复验**。维护者首次 `ready` 在单测阶段中断（370 通过、1 失败，另有一个套件导入失败）；上次锁文件已提交但仍包含 `nest-zod`，应运行 `pnpm install` 并只提交正式生成的锁文件变化，再冻结安装并完成 `pnpm run ready` 和 `pnpm run test:docker:server`。详见 [ADR-0049](../../docs/adr/0049-zod-server-runtime-validation.md)。
