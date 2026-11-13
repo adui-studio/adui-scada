@@ -44,3 +44,10 @@
 ## 未来工作
 
 真实账号/OIDC 认证、授权和会话持久化审计、统一异常契约、权限撤销并发竞态、生产 TLS 与 HTTP 限流、日志存储与生命周期、OpenAPI 文档授权策略以及工业设备控制边界，均属于后续独立任务，不应因本批引入 Swagger 或 Logger 而提前开放。
+
+## 第十四批补充：NestJS 配置与本地日志格式
+
+- `@nestjs/config@12.0.1` 通过全局 `ConfigModule` 提供后续统一的配置注入入口。现阶段仍由 `apps/server/src/main.ts` 唯一读取仓库根目录 `.env`，`ignoreEnvFile: true` 防止重复装载，不新增直接 `dotenv` 依赖。注意现有配置使用仍以 `process.env` 为主，后续模块按需迁移到 `ConfigService`，不宣称已完成类型化配置校验。
+- `pino-pretty@13.2.0` 仅为服务端开发依赖；只有 `NODE_ENV` 非 `production` 且 stdout 是交互式终端时启用 transport，否则保留结构化 JSON 输出。Pretty 只修改可读性，不放宽日志白名单与凭据脱敏。
+- `apps/server/test/app.e2e-spec.ts` 中 Swagger 404 检查改为显式 Vitest `expect`，消除 `vitest(expect-expect)` 静态检查警告。
+- 上述依赖尚需 pnpm 12 实际生成锁文件、安装并运行全部测试；不得将静态修改视为构建通过。
