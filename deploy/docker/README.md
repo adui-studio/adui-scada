@@ -91,3 +91,7 @@ pnpm run docker:demo:up
 改动任何端口后需要重新创建相关容器：`pnpm run docker:demo:up`（带 `--build`）。正式工业业务和公网部署仍未实现。
 
 详细变量见 [环境配置说明](../../docs/ENVIRONMENT.md)。
+
+## V0.3 第二十五批 · SSE Nginx 多客户端烟测
+
+本机 Docker Demo 栈启动完成后，在根目录执行 `pnpm run test:sse:proxy`。脚本从根 `.env` 读取 `SCADA_REACT_PORT`、`SCADA_VUE_PORT`，仅通过宿主机的 `127.0.0.1` 访问 React/Vue Nginx 的 `/demo/events`，各验证 6 路真实 SSE 快照、heartbeat、单客户端断开隔离和重连先收到 snapshot。脚本不会重建容器、修改代理或执行生产网络故障注入。Docker 演示 SSE 共享同一个独立 Node 模拟服务，该服务本批增加 32 路连接上限和 64 KiB 单路背压保护；Nginx 路由与 Docker 暴露范围不变。**本批 Docker 实际网络烟测仍待维护者执行**。详见 [ADR-0057](../../docs/adr/0057-local-sse-capacity-and-proxy-validation.md)。
