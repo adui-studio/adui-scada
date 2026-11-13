@@ -439,3 +439,13 @@
 - `apps/server/src/main.ts`：先从根目录加载 `.env`，再动态导入 `AppModule`，修复 Pino 初始化配置读取时序。
 - `scripts/check-env-config.mjs`：静态检查根环境变量先于动态模块导入，并检查运行时配置入口。
 - [ADR-0047](adr/0047-server-configuration-startup.md)：说明启动时序和安全回归要求。
+
+## V0.3 第十六批：身份和工程安全事件白名单
+
+- `apps/server/src/security/scada-security-audit.ts`：固定枚举的安全事件契约、严格操作/结果/原因组合校验、四字段只读安全记录与 NestJS 日志适配；不记录请求或主体敏感字段。
+- `apps/server/src/security/scada-security-audit.spec.ts`：4 项白名单、非法枚举、结果组合及额外凭据字段过滤单测。
+- `apps/server/src/auth/scada-session.guard.ts`：会话凭据格式、失效和允许决策的固定审计原因；不传原始 Bearer。
+- `apps/server/src/auth/scada-project.guard.ts`：权限元数据缺失、无主体、无效范围、ACL 拒绝与允许结果的固定审计原因；不记录工程路径。
+- `apps/server/src/auth/scada-identity.module.ts`：仅在未挂载正式 HTTP 服务的身份模块中注入审计服务，不开放任何新接口。
+- `apps/server/src/auth/scada-identity.spec.ts`：新增 2 项 Guard 审计单测，覆盖脱敏、撤销令牌及跨租户拒绝；现有测试继续有效。
+- [ADR-0048](adr/0048-security-audit-event-boundary.md)：区分诊断事件与正式事务持久化安全审计。
