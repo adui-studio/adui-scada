@@ -1192,7 +1192,7 @@ Write-Host "Docker 隔离烟测退出码：$LASTEXITCODE"
 
 ## V0.3 第十八批：Terminus HTTP 就绪与容器安全烟测（ADR-0050）
 
-本批只添加 `@nestjs/terminus@12.1.0`，区分原有存活 `GET /health` 与新增 HTTP 就绪 `GET /health/ready`。不挂载数据库、不连接工业网关、不启用全局 `@nestjs/throttler`。新增 3 项单测和 2 项 E2E，预计总计 **378 单测 / 10 E2E**；尚待 Windows 验收。
+本批只添加 `@nestjs/terminus@12.1.0`，区分原有存活 `GET /health` 与新增 HTTP 就绪 `GET /health/ready`。不挂载数据库、不连接工业网关、不启用全局 `@nestjs/throttler`。新增 3 项单测和 2 项 E2E，维护者 Windows 已实测 **378/378 单测 / 10/10 E2E**，完整 `ready` **退出码 0**；Docker 隔离烟测也 **退出码 0**。
 
 ```powershell
 git fetch origin
@@ -1200,12 +1200,12 @@ git switch feat/v0.3-http-readiness-terminus
 git status --short
 git pull --ff-only
 
-# 新增生产依赖，首次必须由 pnpm 正式更新锁文件。
+# 新增生产依赖已由维护者通过 pnpm 正式更新锁文件；后续依赖变更仍按此流程。
 pnpm install
 git diff -- pnpm-lock.yaml
 git status --short
 
-# 审查锁文件后只提交 pnpm 生成的差异，不提交 .env 或密钥。
+# 锁文件已提交；下列示例仅用于后续再次调整依赖时，不要重复提交空更改。
 git add pnpm-lock.yaml
 git commit -m "chore(deps): 🔒 同步 Terminus HTTP 就绪探针锁文件"
 git push origin feat/v0.3-http-readiness-terminus
@@ -1219,4 +1219,4 @@ pnpm run test:docker:server
 Write-Host "Docker 隔离烟测退出码：$LASTEXITCODE"
 ```
 
-验收重点：单测验证启动前/启动后/关闭时就绪状态，E2E 验证 200/503 与禁止缓存，Docker `--network none` 确认新生产依赖可加载并保持未开放业务接口 404。当前 HTTP 就绪不能替代 PostgreSQL、报警、网关或 PLC 状态检查；不允许用虚假的依赖成功状态通过探针测试。以上命令尚未由维护者运行，本执行环境不能宣称新功能已测试通过。
+验收结果：30 个测试文件 378/378 单测、10/10 E2E；`vp check` 231 个文件格式正确、108 个文件零警告/错误，66 份 Markdown 检查和 React/Vue/NestJS 类型检查及构建完成。已由维护者 Windows pnpm 正式更新并提交锁文件；Docker 冻结安装、镜像构建、`--network none` 烟测通过，存活与 HTTP 就绪均为 200，未开放业务接口保持 404。模拟关闭过程触发的 HTTP 503 与 Terminus/Pino 失败日志是**预期负面用例**，测试 10/10 全部通过。当前 HTTP 就绪不能替代 PostgreSQL、报警、网关或 PLC 状态检查；不允许用虚假的依赖成功状态通过探针。后续只追加了验收文档，建议再执行 `vp check` 与 `pnpm run docs:check`。
