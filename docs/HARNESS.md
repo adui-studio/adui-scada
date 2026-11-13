@@ -1366,3 +1366,57 @@ pnpm run ready
 ```
 
 脚本只接受回环地址；读取根目录 `.env` 中实际 Web 端口，启动前分别检查页面和 `/demo/project` 是否可用。`fetch failed` 时应先确认三个服务独立运行并检查代理及端口，改进后的脚本会输出失败 URL 与底层错误。使用真实浏览器、现有同源 Vite 代理和原生 EventSource。注入仅屏蔽页面接收的事件回调，验证心跳仍活跃但 Tag 超时、完整事件静默后的自动重连、Vue/React 数据恢复和页面离开后的连接释放。**这不是实际网络故障或 Nginx 半开连接的测试**，更不覆盖工业现场。前台恢复可见性及多 Tag 独立恢复已有 Vitest 回归。维护者 2026-11-13 Windows 实测：**双框架浏览器 SSE 回归退出码 0**、Runtime 32/32（3 文件）、全量单元测试 412/412（36 文件）、NestJS E2E 17/17（3 文件）；`vp check` 253 个文件格式正确、124 个文件无告警或错误，72 份 Markdown 通过，完整 `ready` **退出码 0**。本轮未运行 Docker 增量回归、Nginx 真实断网与多客户端负载；记录性文档提交后建议仅复查格式和文档，不把旧结果视为新文档提交后的重新执行。参见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
+
+## 2026-11-13 · V0.3 第二十五批 SSE 资源与真实代理回归（待实测）
+
+本批新增 Node 内置测试器的资源单测入口，并纳入根 `pnpm run ready`，无需额外依赖。Windows 上首先执行：
+
+```powershell
+pnpm run test:sse:clients
+pnpm run dev:demo
+```
+
+保持 Demo 在独立终端运行，在另一终端执行：
+
+```powershell
+pnpm run test:sse:network
+```
+
+如具备本机 Docker Desktop，可由维护者明确启动已有隔离演示栈后验证实际 Nginx 转发：
+
+```powershell
+pnpm run docker:demo:up
+pnpm run test:sse:proxy
+```
+
+两个网络脚本都只访问根 `.env` 给定端口下的 `127.0.0.1`，每条代理做 6 路真实 SSE 流、snapshot、heartbeat、单路 abort 后其余流保活、重新订阅快照及所有测试客户端关闭。它们**不会重启容器或模拟真实半开 TCP**。然后运行 `vp check`、`pnpm run docs:check`、`pnpm run ready` 并记录退出码。当前协作容器内隔离版资源测试 8/8 通过（含真实回环 HTTP 容量检查），网络/格式/完整项目质量链待维护者 Windows/Docker 实测。参见 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md)。
+
+### 第二十五批 Windows Docker Nginx 代理端口漂移（2026-11-13）
+
+维护者实际执行了 `pnpm run test:sse:clients`：Node 资源测试 **8/8 通过**；`pnpm run test:sse:network`：本机 `127.0.0.1:14178/events` 六路快照、具名心跳、单路断开隔离及重订阅通过，**退出码 0**。`pnpm run docker:demo:up` 已完成四个镜像构建，Demo 和 NestJS 容器为 Healthy，React/Vue 容器已启动。
+
+但 `pnpm run test:sse:proxy` 在首个 React 代理入口 `127.0.0.1:18080/demo/events` 返回 **ECONNREFUSED，退出码 1**，没有运行到 Vue 代理。Docker Desktop 显示实际宿主机发布端口为 React `8080`、Vue `8081`；维护者根目录 `.env` 则配置 `18080`、`18081`。检查发现 Docker 演示脚本的 Compose 命令缺少显式 `--env-file .env`，且 `scripts/check-env-config.mjs` 与 Compose 内端口回退值同根模板存在漂移。
+
+本批补丁仅修复 Docker 配置读取：演示栈 `up/down/logs` 与新增 `ps` 命令统一显式加载仓库根 `.env`；Compose 四组端口回退值同步为根 `.env.example` 默认值；`env:check` 强制验证脚本及四组默认值，防止再次静默降级到旧端口。**没有修改 SSE 服务、NestJS 或 Vue/React 业务代码，也未执行 Docker 或重启维护者计算机上的容器。**
+
+维护者同步分支后，建议在仓库根目录执行 `pnpm run env:check`、`pnpm run docker:demo:up`、`pnpm run docker:demo:ps` 和 `pnpm run test:sse:proxy`；`docker:demo:ps` 的宿主机端口应分别显示 `127.0.0.1:18080->8080/tcp` 和 `127.0.0.1:18081->8080/tcp`。如仍不一致，需检查 PowerShell 是否存在 `SCADA_REACT_PORT`/`SCADA_VUE_PORT` 同名进程环境变量覆盖；切勿粘贴完整 `docker compose config --environment`，其中可能包含凭据。修复后的 Windows Docker Nginx 代理烟测、`vp check`、`docs:check` 和完整 `ready` 尚未实测。
+
+### 第二十五批 Windows Docker 代理复验结果（2026-11-13）
+
+维护者已使用 `docker compose --env-file .env -f deploy/docker/compose.demo.yaml` 完成四个镜像构建和容器启动，`docker:demo:ps` 验证 React `127.0.0.1:18080->8080/tcp`、Vue `127.0.0.1:18081->8080/tcp` 端口映射准确。Demo/Server 均 Healthy。React/Vue 两条 Nginx `/demo/events` 的各六路 SSE 测试均包含 snapshot、heartbeat、断开隔离和重订阅快照，`pnpm run test:sse:proxy` **退出码 0**。此前已确认 `pnpm run test:sse:clients` **8/8 通过**、`pnpm run test:sse:network` **退出码 0**。
+
+本轮 `pnpm run env:check` 已通过；**尚缺本批最新提交的 `vp check`、`pnpm run docs:check`、`pnpm run ready` 验收结果**。仍不代表已覆盖真实代理半开或生产环境安全。
+
+### 第二十五批 Windows 完整质量链最终复验（2026-11-13）
+
+维护者上传 PowerShell 实测日志，针对本批已修复代码确认：
+
+- `vp check`：**257 个文件格式正确**，127 个受检文件**无警告、Lint 错误或类型错误**，命令退出码 **0**。此前 9 条类型感知 Lint 警告均已消除。
+- `pnpm run docs:check`：**73 份 Markdown 文档通过**，退出码 **0**。
+- `pnpm run ready`：**退出码 0**。依赖检查 **11 个清单、51 项 Catalog**，共享配置 9 个 TSConfig 消费端，中文文案 153 个自有文件，根环境与 LF 检查通过；Prisma Client **7.10.1** 生成成功。
+- 全量 Vitest **412/412 通过（36 个文件）**；纳入 ready 的 SSE Node 专项 **8/8 通过**，含真实回环 HTTP 32 路容量、第 33 路 HTTP 503 和释放后重新订阅。
+- NestJS E2E **17/17 通过（3 个文件）**，包含预期的服务关闭负面检查；日志中的 HTTP 503 / `Health Check has failed!` 属于通过的故障场景，不是失败。
+- Vue、React、NestJS 类型检查与构建全部通过。
+- 结合此前维护者独立网络日志：`test:sse:network` 实际六路 HTTP SSE 通过、退出码 0；`test:sse:proxy` 在 React `18080` 与 Vue `18081` 的 Docker Nginx 双入口通过、退出码 0，Demo 与 Server 为 Healthy。
+
+**自动化验收结论：第二十五批 Windows 完整质量链及 Docker Nginx SSE 代理专项均通过。** 注意本段验收记录追加后尚未再次执行最新文档的格式与静态检查，建议合并审查前运行 `vp check`、`pnpm run docs:check`。仍未验证真实 Nginx 半开连接、持续高并发/慢消费者长期负载、生产认证、PostgreSQL 真库和工业现场设备；不能把本机 Demo 资源上限视为工业 SLA。PR #47 继续 Draft，待维护者明确同意后才能合并。

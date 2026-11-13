@@ -4,6 +4,7 @@ import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 import { TagStore, WaterTreatmentSimulator, renderSvgPage } from "../../packages/core/src/index.ts";
 import { demoDocument } from "./project.mjs";
+import { DemoSseClients } from "./sse-clients.mjs";
 
 // 统一使用仓库根目录 .env；Docker 通过明确的进程环境变量传值。
 const envPath = fileURLToPath(new URL("../../.env", import.meta.url));
@@ -24,7 +25,7 @@ const script = readFileSync(new URL("./public/client.js", import.meta.url));
 const style = readFileSync(new URL("./public/style.css", import.meta.url));
 const tags = new TagStore();
 const simulator = new WaterTreatmentSimulator();
-const clients = new Set();
+const clients = new DemoSseClients();
 
 function headers(type) {
   return {
@@ -37,22 +38,20 @@ function headers(type) {
 }
 
 function sendEvent(response, change) {
-  if (!response.destroyed) response.write(`data: ${JSON.stringify(change)}\n\n`);
+  clients.send(response, `data: ${JSON.stringify(change)}\n\n`);
 }
 
 /** 心跳使用独立 SSE event 名称，不混入 snapshot/delta 协议。 */
-function sendHeartbeat(response) {
-  if (!response.destroyed) response.write("event: heartbeat\ndata: {}\n\n");
+function sendHeartbeat() {
+  clients.broadcast("event: heartbeat\ndata: {}\n\n");
 }
 
 tags.subscribe((change) => {
-  for (const client of clients) sendEvent(client, change);
+  clients.broadcast(`data: ${JSON.stringify(change)}\n\n`);
 });
 
 tags.apply(simulator.next());
-const heartbeatInterval = setInterval(() => {
-  for (const client of clients) sendHeartbeat(client);
-}, 5000);
+const heartbeatInterval = setInterval(sendHeartbeat, 5000);
 let tick = 0;
 const interval = setInterval(() => {
   tick++;
@@ -91,16 +90,17 @@ const server = createServer((request, response) => {
     response.writeHead(200, headers("image/svg+xml; charset=utf-8"));
     response.end(renderSvgPage(demoDocument, "main", snapshot));
   } else if (route === "/events") {
+    if (!clients.hasCapacity()) {
+      response.writeHead(503, { ...headers("text/plain; charset=utf-8"), "Retry-After": "5" });
+      response.end("本机 SSE 模拟订阅数量已达到上限");
+      return;
+    }
     response.writeHead(200, {
       ...headers("text/event-stream; charset=utf-8"),
       Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     });
-    clients.add(response);
-    sendEvent(response, { kind: "snapshot", values: tags.snapshot() });
-    request.on("close", () => {
-      clients.delete(response);
-    });
+    if (clients.add(response)) sendEvent(response, { kind: "snapshot", values: tags.snapshot() });
   } else {
     response.writeHead(404, headers("text/plain; charset=utf-8"));
     response.end("请求的资源不存在");
@@ -115,7 +115,7 @@ server.listen(port, host, () => {
 function shutdown() {
   clearInterval(heartbeatInterval);
   clearInterval(interval);
-  for (const client of clients) client.end();
+  clients.closeAll();
   server.close();
 }
 process.once("SIGINT", shutdown);

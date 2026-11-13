@@ -30,7 +30,7 @@ const defaults = {
   SCADA_LOCAL_DEMO_API_ENABLED: "false",
   SCADA_DEMO_HOST: "127.0.0.1",
   SCADA_DEMO_PORT: "14178",
-  SCADA_REACT_PORT: "8080",
+  SCADA_REACT_PORT: "18080",
   SCADA_VUE_PORT: "18081",
   SCADA_DB_HOST: "127.0.0.1",
   SCADA_DB_PORT: "15432",
@@ -175,12 +175,20 @@ for (const name of ["db:dev:up", "db:dev:down"]) {
   );
 }
 
+const demoComposeCommand = "docker compose --env-file .env -f deploy/docker/compose.demo.yaml";
+for (const name of ["docker:demo:up", "docker:demo:down", "docker:demo:logs", "docker:demo:ps"]) {
+  assert.ok(
+    dbScripts[name]?.startsWith(demoComposeCommand + " "),
+    `${name}：必须显式从仓库根目录加载 .env`,
+  );
+}
+
 const compose = read("deploy/docker/compose.demo.yaml");
 for (const [key, fallback] of [
-  ["SCADA_REACT_PORT", "8080"],
-  ["SCADA_VUE_PORT", "8081"],
-  ["SCADA_SERVER_PORT", "3001"],
-  ["SCADA_DEMO_PORT", "4178"],
+  ["SCADA_REACT_PORT", defaults.SCADA_REACT_PORT],
+  ["SCADA_VUE_PORT", defaults.SCADA_VUE_PORT],
+  ["SCADA_SERVER_PORT", defaults.SCADA_SERVER_PORT],
+  ["SCADA_DEMO_PORT", defaults.SCADA_DEMO_PORT],
 ]) {
   const substitution = "${" + key + ":-" + fallback + "}";
   assert.ok(compose.includes(substitution), `Docker Compose 缺少变量：${key}`);

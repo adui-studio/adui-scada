@@ -341,3 +341,7 @@ Runtime 生命周期按连接代次隔离：停止时中止 fetch、关闭 SSE�
 ## 2026-11-13 · V0.3 第二十四批：浏览器 SSE 时效回归
 
 浏览器仍经 React/Vue 两个正式 Web 入口、共享 Runtime 和现有同源开发代理访问本地模拟 SSE。后台页可见性恢复复查由共享 Runtime/TagSource 实现，避免双框架重复实现或额外的工业协议入口；测试使用真实浏览器的原生 EventSource 包装层，保留前后端实际 HTTP/SSE 路径。故障注入局限于浏览器回调层，不视为网络或工业网关可靠性测试。详见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
+
+## 2026-11-13 · V0.3 第二十五批本机 SSE 容量保护
+
+只读开发演示拓扑保持“浏览器 Vue/React → 固定同源 Nginx/Vite 代理 → Node 独立模拟 SSE”。仅在 `examples/water-treatment/sse-clients.mjs` 为 Node 模拟器加入内存连接管理，32 路连接上限、每路 64 KiB 待发送缓冲上限及背压快速断开。客户端重新连接必须重新获取 snapshot，服务不维护离线消息队列。新 `test-runtime-sse-network.mjs` 的直连和 Docker 模式只访问 loopback；不修改 NestJS 正式模块、工业网关与数据库。见 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md)。

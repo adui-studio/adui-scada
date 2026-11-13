@@ -91,3 +91,20 @@ pnpm run docker:demo:up
 改动任何端口后需要重新创建相关容器：`pnpm run docker:demo:up`（带 `--build`）。正式工业业务和公网部署仍未实现。
 
 详细变量见 [环境配置说明](../../docs/ENVIRONMENT.md)。
+
+## V0.3 第二十五批 · SSE Nginx 多客户端烟测
+
+本机 Docker Demo 栈启动完成后，在根目录执行 `pnpm run test:sse:proxy`。脚本从根 `.env` 读取 `SCADA_REACT_PORT`、`SCADA_VUE_PORT`，仅通过宿主机的 `127.0.0.1` 访问 React/Vue Nginx 的 `/demo/events`，各验证 6 路真实 SSE 快照、heartbeat、单客户端断开隔离和重连先收到 snapshot。脚本不会重建容器、修改代理或执行生产网络故障注入。Docker 演示 SSE 共享同一个独立 Node 模拟服务，该服务本批增加 32 路连接上限和 64 KiB 单路背压保护；Nginx 路由与 Docker 暴露范围不变。**本批 Docker 实际网络烟测仍待维护者执行**。详见 [ADR-0057](../../docs/adr/0057-local-sse-capacity-and-proxy-validation.md)。
+
+### 统一读取根环境文件及端口检查
+
+Docker 演示栈由根目录命令 `pnpm run docker:demo:up/down/logs` 统一调用 `docker compose --env-file .env -f deploy/docker/compose.demo.yaml`，与本机 SSE 网络测试从根 `.env` 读取的端口一致；不要通过旧版省略 `--env-file` 的命令启动。端口更新后运行：
+
+```powershell
+pnpm run env:check
+pnpm run docker:demo:up
+pnpm run docker:demo:ps
+pnpm run test:sse:proxy
+```
+
+默认发布映射应为 React `127.0.0.1:18080->8080/tcp`、Vue `127.0.0.1:18081->8080/tcp`。如仍显示旧 `8080/8081`，检查 PowerShell 的同名环境变量是否覆盖根 `.env`；不要分享含数据库密码的完整配置转储。此修正是本地 Docker 演示端口一致性保护，尚未证明网络代理或工业生产环境通过验收。

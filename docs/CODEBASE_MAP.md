@@ -525,3 +525,10 @@
 
 - `scripts/test-runtime-sse-browser.mjs`：使用本机 Chrome/Edge 原生 EventSource 和 DevTools Protocol，对 Vue/React 两套运行时进行心跳保活、Tag 静默、传输静默重连及页面退出资源回收的浏览器自动化验证；仅在本机回环地址执行，不增加应用或服务端测试专用 API。
 - `packages/runtime/src/tag-source.ts` 与 `packages/runtime/src/runtime.ts`：后台标签页恢复可见时分别复查 SSE 传输时间与 Tag 数据新鲜度，并在停止/关闭时回收 `visibilitychange` 监听。见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
+
+## V0.3 第二十五批 · SSE 容量保护与网络烟测
+
+- `examples/water-treatment/sse-clients.mjs`：仅独立 Node 水处理模拟服务使用的客户端生命周期、32 路容量上限和 64 KiB 背压保护。
+- `examples/water-treatment/sse-clients.test.mjs`：Node 内置测试器覆盖连接容量、关闭、广播隔离、写缓冲和异常；由 `test:sse:clients` 执行且包含在根 `ready` 中。
+- `scripts/test-runtime-sse-network.mjs`：真实 HTTP SSE 六路订阅、心跳、断开隔离与新快照回归；默认直连本机模拟，`--proxy` 检查 Docker Nginx 的 React/Vue 两个代理。
+- `examples/water-treatment/server.mjs`：在固定 `/events` 路由启用资源保护；不改变其他静态资源、工程快照或工业安全边界。详见 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md)。

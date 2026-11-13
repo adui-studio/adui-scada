@@ -551,3 +551,9 @@ type DemoTagSourcePreset = "standalone" | "nest-local";
 ## 2026-11-13 · V0.3 第二十四批：页面可见性恢复复查
 
 仅在现有模拟只读 SSE 数据源和共享 DemoRuntime 增加 `visibilitychange` 前台恢复处理：SSE 看门狗保存最近一次有效网络事件接收时间，回到前台时若已连续超过 15 秒没有 Tag/SSE 心跳则先通知断连、关闭旧连接并创建同源新 EventSource；Runtime 回到前台时若已连续 12 秒没有被 TagStore 接受的新 Tag 则显示 `stale`，不得借心跳伪造数据新鲜度。监听在 `close()`、`stop()` 和无效数据会话失败时清理。本批修正数据超时处理：展示层按 Tag ID 标记过期，不改变 Core TagStore 的原始序列，单个 Tag 恢复不清除其他 Tag 的过期状态。没有增加外部订阅接口、工程 Schema 字段、Tag 协议类型和设备写入能力。见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
+
+## 2026-11-13 · V0.3 第二十五批 SSE 模拟写入与连接生命周期
+
+独立本机 `GET /events` 保留现有 `text/event-stream`、默认 `snapshot/delta` 及具名 `heartbeat` 格式。最多 32 个连接，超过时返回 HTTP 503、`Retry-After: 5` 与中文错误说明；不发送 SSE 成功头。每路响应在写入前检查 `writableLength + UTF-8 字节数 <= 64 * 1024`；写入出现 `false` 背压、异常或超限则立刻删除并销毁该慢客户端，剩余连接正常广播。断开检测基于响应 `close` 事件，Node 进程收到终止信号时结束所有响应和计时器。
+
+本批无协议字段变更、不重试或缓冲旧增量；恢复使用新的 snapshot。固定本机代理测试通过 `test:sse:network`/`test:sse:proxy` 完成，不包含真实网关或生产级消息可靠性。见 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md)。

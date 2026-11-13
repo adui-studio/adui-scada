@@ -586,3 +586,43 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 维护者继第一轮失败后同步最新分支并重新执行了本机质量链，现已提供日志证明：**React / Vue SSE 浏览器回归均通过（`test:sse:browser` 退出码 0）、Runtime 专项 32/32（3 文件）、全量单测 412/412（36 文件）、NestJS E2E 17/17（3 文件）**；`vp check` 检查 253 个文件格式正确、124 个受检文件零错误零警告；72 份 Markdown 检查通过。完整 `pnpm run ready` 退出码 **0**，包含 Catalog/配置/中文文案、Prisma Client 7.10.1、双 Web 与 NestJS 类型检查和构建。此前 `fetch failed` 源于浏览器预检查服务/端口未与实际运行环境对齐，现脚本读取根 `.env` 并能确认两端本机地址；此前 STALE 与 sequence 冲突已通过 Runtime 展示层过期质量覆盖修复。
 
 这证明本机浏览器接收/重连生命周期自动化成功，不等于真实网络丢包、Nginx 半开或工业现场可靠性已确认；本批未执行 Docker 增量回归、人工后台标签页节流、SSE 高并发、生产身份权限或 PostgreSQL 真库验证。**PR #46 仍保持 Draft、Assignee 为 `@adui-dev`，等待维护者明确合并授权**。上述实测发生在本次验收文档追加之前，文档最新提交需按需复查 `vp check` 和 `pnpm run docs:check`。
+
+## 2026-11-13 · V0.3 第二十五批：本机 SSE 多客户端与背压保护（待验收）
+
+以 PR #46 已合并的 `main` 提交 `a2b3685` 为基线，新建 `feat/v0.3-sse-backpressure-proxy-check`，针对独立 Node 水处理 SSE 模拟服务原先无连接数上限、无写缓冲背压处理的问题，增加 32 路上限、每路 64 KiB 待发送字节保护、慢客户端快速断开、响应关闭自动回收；新增六路并发真实 HTTP SSE 及 Docker Nginx 双框架代理独立烟测入口。共享 Core、Runtime、Vue/React 页面、NestJS、Tauri、工程 Schema、数据库与设备写入边界均未改变；不增加 npm 依赖。
+
+已在协作容器以 Node 内置测试器对隔离副本执行连接管理 8 项检查，8/8 通过，其中包含真实回环 HTTP 32 路连接、超额 HTTP 503 和释放后重入；源文件静态语法检查亦完成。本批尚未完成维护者 Windows `pnpm run ready`、独立模拟服务实际端到端、Docker Nginx 双代理烟测、真实半开代理、后台页计时器及高并发现场性能验证。应按 [VALIDATION](VALIDATION.md) 和 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md) 实测，Draft PR 未获授权前保持不合并。
+
+## 2026-11-13 · 第二十五批首轮 Windows Lint 警告修复
+
+维护者提供本批 `vp check --fix` 日志，发现 **9 条警告、0 个错误**：其中 8 条来自新 Node 原生测试未处理顶层 Promise，1 条来自 SSE 网络测试中的异步读取任务类型推断。仅对新增测试文件做最小必要修正：八项顶层 `await test(...)` 保持完整断言，网络客户端以 `Promise.resolve()` 声明可等待读取任务。没有修改 SSE 服务端容量、写缓冲、Tag 协议、Core 或双框架页面。最新修复完成静态语法检查，实际 Windows 质量链仍待重新执行；PR #47 继续 Draft、不合并。
+
+### 第二十五批 Windows Docker Nginx 代理端口漂移（2026-11-13）
+
+维护者实际执行了 `pnpm run test:sse:clients`：Node 资源测试 **8/8 通过**；`pnpm run test:sse:network`：本机 `127.0.0.1:14178/events` 六路快照、具名心跳、单路断开隔离及重订阅通过，**退出码 0**。`pnpm run docker:demo:up` 已完成四个镜像构建，Demo 和 NestJS 容器为 Healthy，React/Vue 容器已启动。
+
+但 `pnpm run test:sse:proxy` 在首个 React 代理入口 `127.0.0.1:18080/demo/events` 返回 **ECONNREFUSED，退出码 1**，没有运行到 Vue 代理。Docker Desktop 显示实际宿主机发布端口为 React `8080`、Vue `8081`；维护者根目录 `.env` 则配置 `18080`、`18081`。检查发现 Docker 演示脚本的 Compose 命令缺少显式 `--env-file .env`，且 `scripts/check-env-config.mjs` 与 Compose 内端口回退值同根模板存在漂移。
+
+本批补丁仅修复 Docker 配置读取：演示栈 `up/down/logs` 与新增 `ps` 命令统一显式加载仓库根 `.env`；Compose 四组端口回退值同步为根 `.env.example` 默认值；`env:check` 强制验证脚本及四组默认值，防止再次静默降级到旧端口。**没有修改 SSE 服务、NestJS 或 Vue/React 业务代码，也未执行 Docker 或重启维护者计算机上的容器。**
+
+维护者同步分支后，建议在仓库根目录执行 `pnpm run env:check`、`pnpm run docker:demo:up`、`pnpm run docker:demo:ps` 和 `pnpm run test:sse:proxy`；`docker:demo:ps` 的宿主机端口应分别显示 `127.0.0.1:18080->8080/tcp` 和 `127.0.0.1:18081->8080/tcp`。如仍不一致，需检查 PowerShell 是否存在 `SCADA_REACT_PORT`/`SCADA_VUE_PORT` 同名进程环境变量覆盖；切勿粘贴完整 `docker compose config --environment`，其中可能包含凭据。修复后的 Windows Docker Nginx 代理烟测、`vp check`、`docs:check` 和完整 `ready` 尚未实测。
+
+## 2026-11-13 · 第二十五批 Docker Nginx 代理复验通过
+
+继旧 Compose 命令遗漏根 `.env` 造成端口漂移后，维护者已重新运行 `pnpm run env:check`、`pnpm run docker:demo:up`、`pnpm run docker:demo:ps` 和 `pnpm run test:sse:proxy`：环境/LF 检查通过，四镜像构建并启动，Demo/Server Healthy；Docker 真实宿主机映射为 React `18080->8080`、Vue `18081->8080`，两条 Nginx SSE 代理均通过六路 snapshot、具名 heartbeat、单路断开隔离和重订阅，**代理测试退出码 0**。结合上一份日志，独立 SSE 客户端单测 **8/8**、直连网络六路回归 **退出码 0**。
+
+本批 Windows Docker 代理验收确认已完成，但 **最新 `vp check`、`docs:check` 和完整 `ready` 尚未提供**，真实 Nginx 半开故障、持续高并发、生产身份权限、真库和工业现场仍未验证。只追加验收记录，不修改已验收业务代码；PR #47 Draft 待最终验收与明确合并授权。
+
+### 第二十五批 Windows 完整质量链最终复验（2026-11-13）
+
+维护者上传 PowerShell 实测日志，针对本批已修复代码确认：
+
+- `vp check`：**257 个文件格式正确**，127 个受检文件**无警告、Lint 错误或类型错误**，命令退出码 **0**。此前 9 条类型感知 Lint 警告均已消除。
+- `pnpm run docs:check`：**73 份 Markdown 文档通过**，退出码 **0**。
+- `pnpm run ready`：**退出码 0**。依赖检查 **11 个清单、51 项 Catalog**，共享配置 9 个 TSConfig 消费端，中文文案 153 个自有文件，根环境与 LF 检查通过；Prisma Client **7.10.1** 生成成功。
+- 全量 Vitest **412/412 通过（36 个文件）**；纳入 ready 的 SSE Node 专项 **8/8 通过**，含真实回环 HTTP 32 路容量、第 33 路 HTTP 503 和释放后重新订阅。
+- NestJS E2E **17/17 通过（3 个文件）**，包含预期的服务关闭负面检查；日志中的 HTTP 503 / `Health Check has failed!` 属于通过的故障场景，不是失败。
+- Vue、React、NestJS 类型检查与构建全部通过。
+- 结合此前维护者独立网络日志：`test:sse:network` 实际六路 HTTP SSE 通过、退出码 0；`test:sse:proxy` 在 React `18080` 与 Vue `18081` 的 Docker Nginx 双入口通过、退出码 0，Demo 与 Server 为 Healthy。
+
+**自动化验收结论：第二十五批 Windows 完整质量链及 Docker Nginx SSE 代理专项均通过。** 注意本段验收记录追加后尚未再次执行最新文档的格式与静态检查，建议合并审查前运行 `vp check`、`pnpm run docs:check`。仍未验证真实 Nginx 半开连接、持续高并发/慢消费者长期负载、生产认证、PostgreSQL 真库和工业现场设备；不能把本机 Demo 资源上限视为工业 SLA。PR #47 继续 Draft，待维护者明确同意后才能合并。
