@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, shallowRef } from "vue";
-import { TAG_QUALITY_LABELS } from "@adui/scada-core";
+import { TAG_QUALITIES, TAG_QUALITY_LABELS } from "@adui/scada-core";
 import {
   DemoRuntime,
   OfflineDemoRuntime,
+  formatRuntimeDataAge,
+  formatRuntimeUpdateTime,
   initialRuntimeState,
   RUNTIME_STATUS_LABELS,
   svgDataUrl,
@@ -38,6 +40,42 @@ onUnmounted(() => runtime.stop());
       }}</span>
     </header>
     <p role="status" class="scada-message">{{ state.message }}</p>
+    <section class="scada-panel scada-diagnostics" aria-label="本地实时链路诊断">
+      <h2>实时链路诊断</h2>
+      <p class="scada-diagnostics-note">
+        本机只读观测 · 数据年龄为接受有效 Tag 后经过的时间，并非网络传输延迟
+      </p>
+      <dl class="scada-diagnostics-grid">
+        <div>
+          <dt>连接状态</dt>
+          <dd>{{ RUNTIME_STATUS_LABELS[state.status] }}</dd>
+        </div>
+        <div>
+          <dt>断连过程次数</dt>
+          <dd>{{ state.diagnostics.reconnectCount }}</dd>
+        </div>
+        <div>
+          <dt>最近有效更新</dt>
+          <dd>{{ formatRuntimeUpdateTime(state.diagnostics.lastTagReceivedAt) }}</dd>
+        </div>
+        <div>
+          <dt>观测时数据年龄</dt>
+          <dd>{{ formatRuntimeDataAge(state.diagnostics.dataAgeMs) }}</dd>
+        </div>
+      </dl>
+      <div class="scada-quality-summary" aria-label="Tag 质量分布">
+        <div
+          v-for="quality in TAG_QUALITIES"
+          :key="quality"
+          class="scada-quality-item"
+          :data-quality="quality"
+        >
+          <span>{{ TAG_QUALITY_LABELS[quality] }}</span>
+          <strong>{{ state.diagnostics.qualityCounts[quality] }}</strong>
+        </div>
+      </div>
+      <p class="scada-diagnostics-total">当前 Tag 总数：{{ state.diagnostics.tagCount }}</p>
+    </section>
     <section class="scada-panel" aria-label="模拟工业监控画面">
       <img v-if="svg" class="scada-svg" :src="svg" alt="水箱、水泵与流量模拟监控" />
       <p v-else>正在加载工程...</p>
