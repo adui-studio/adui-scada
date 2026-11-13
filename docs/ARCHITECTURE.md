@@ -315,3 +315,9 @@ Node 24 原生 HTTP Server 在 `app.listen` 之前由 `apps/server/src/security/
 正式 NestJS 应用从 `enableShutdownHooks()` 切换为 NestJS 12 自带的 `enableShutdownHooks([], { useProcessExit: true })`。根据上游 12.0.3 源码，默认完成关闭后重发信号可能使 SIGTERM 退出码为 143；选择在关闭钩子完成后主动正常退出（0），便于隔离容器验证，并为同步 JSON Pino 日志提供明确退出生命周期。该选项会改变 Unix 退出码语义且可能影响未来其它信号监听器，正式运维接入时须复审。
 
 不增加应用路由、持久化连接或网关实例。Docker 测试继续以 `--network none` 隔离正式服务进程，容器内部回环验证就绪，发送真实 Linux SIGTERM 并检查正常退出。该能力不代表已完成负载均衡摘流、SSE/WS 长连接排空和工业网关状态恢复。参见 [ADR-0052](adr/0052-linux-sigterm-container-shutdown.md)。
+
+## V0.3 第二十一批：本机模拟 Tag 接入 NestJS（ADR-0053）
+
+新增独立的 `LocalDemoTelemetryModule`，内部使用框架无关 `@adui/scada-core` 的 `TagStore`、`WaterTreatmentSimulator`、共享模拟工程。正式 `AppModule` 不注册演示路由；`LocalDemoAppModule` 仅在启动配置同时满足显式启用、非生产、回环监听时组合正式模块与模拟模块。NestJS 原生 `@Sse` 携带相同 `TagChange` 快照及增量协议，RxJS 取消订阅时移除事件监听器，模块销毁时清理模拟定时器。
+
+该数据源仅生成三个固定水处理模拟 Tag，不访问 PLC、工业网关、Redis 或 PostgreSQL。既有独立 `/demo` 代理与 Vue/React Runtime 不改动；将来真实工业 Tag 服务须另行定义受信身份、Tag ACL、连接配额、断线重同步及网关安全通信，不能直接将此开发模块部署为生产入口。
