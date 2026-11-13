@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from "vite-plus/test";
 import { waterTreatmentDemoDocument } from "@adui/scada-core";
 import { createSseTagSource } from "../src/tag-source.ts";
-import type { DemoTagSourcePreset } from "../src/tag-source.ts";
+import type { DemoTagSourcePreset, ReadonlyTagSubscription } from "../src/tag-source.ts";
 
 class FakeEventSource {
   static readonly instances: FakeEventSource[] = [];
@@ -246,7 +246,7 @@ test("超时断连回调同步关闭订阅后不得再次建立 EventSource", ()
   vi.useFakeTimers();
   vi.stubGlobal("EventSource", FakeEventSource);
   let disconnectCount = 0;
-  let connection: ReturnType<ReturnType<typeof createSseTagSource>["subscribe"]> | null = null;
+  let connection: ReadonlyTagSubscription | null = null;
   connection = createSseTagSource().subscribe({
     onMessage: () => {
       throw new Error("不应收到 Tag 消息");
