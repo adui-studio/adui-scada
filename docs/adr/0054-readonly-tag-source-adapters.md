@@ -27,8 +27,8 @@ Vue/React Runtime 目前共用 `@adui/scada-runtime` 的 `DemoRuntime`，但其�
 ## 验收计划
 
 - 单元测试覆盖：两个同源预设和禁止外部 URL、无缓存工程读取、异常 HTTP / HTML、AbortSignal 转发、raw JSON 与对象事件、断线 STALE/快照重同步、坏消息停止订阅、停止期间工程 Promise 回调、旧代次消息隔离、订阅同步失败回收、未先收到快照的增量拒绝。
-- 第 21 批维护者 Windows 基线：**389/389 普通单测、17/17 NestJS E2E**，完整 `ready` 与 Docker 隔离烟测退出码均为 0。第二十二批预计新增 **11 项单测**，目标普通单测 **400**，E2E 不变 **17**；这是待运行数字，当前**不得声明通过**。
-- 维护者执行 `pnpm install --frozen-lockfile`、`vp check`、`pnpm run ready`、`pnpm run test:docker:server`。重点回归 React/Vue Runtime 默认仍访问旧模拟路径；桌面离线构建仍不发网络请求；正式 NestJS API 未新增读写接口。
+- 第 21 批维护者 Windows 基线：**389/389 普通单测、17/17 NestJS E2E**。第二十二批新增 **11 项单测**，维护者于 2026-11-13 实测 **Runtime 专项 21/21（3 文件）、普通单测 400/400（35 文件）、NestJS E2E 17/17（3 文件）**，均通过。`vp check` 249 个文件格式正确、122 个文件零警告/类型错误；70 个 Markdown 静态检查、双 Web / NestJS 类型检查及构建通过，完整 `pnpm run ready` **退出码 0**。
+- 维护者已执行独立 `pnpm run test:runtime`、`vp check`、`pnpm run ready`、`pnpm run test:docker:server`，全部成功；Docker 镜像内的 `pnpm install --frozen-lockfile`、服务端构建及隔离烟测均成功，正式 Linux Node PID 1 SIGTERM 退出码 **0**，Docker 测试 **退出码 0**。E2E 的 Terminus 503 为预期关闭测试。双框架默认预设不变，已通过静态代码核对、共享单测以及构建回归；人工浏览器 Runtime 断连演练**尚无验收记录**。原有 Tauri 离线代码未变，不将 Web 构建等同于桌面 MSI 全量验收。
 - 没有运行多客户端长时间压测、异常高频数据背压、正式发布工程恢复、工业网关认证/ACL、生产数据订阅或现场 PLC。后续真实 Tag 服务须独立设计可信租户权限、连接容量、背压、心跳及断线重同步策略；本接口不能直接视为其生产实现。
 
 ## PR 约束
