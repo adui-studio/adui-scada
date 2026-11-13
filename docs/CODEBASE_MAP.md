@@ -450,15 +450,10 @@
 - `apps/server/src/auth/scada-identity.spec.ts`：新增 2 项 Guard 审计单测，覆盖脱敏、撤销令牌及跨租户拒绝；现有测试继续有效。
 - [ADR-0048](adr/0048-security-audit-event-boundary.md)：区分诊断事件与正式事务持久化安全审计。
 
-## V0.3 第十七批：Zod 服务端启动配置校验
+## V0.3 第十七批：Zod + NestJS 12 原生 Standard Schema
 
-- `pnpm-workspace.yaml`、`apps/server/package.json`：声明 Zod 4.6.7 服务端运行时依赖，统一使用 Catalog；`pnpm-lock.yaml` 由维护者 Windows pnpm 正式生成前保持未更新。
-- `apps/server/src/config/server-startup.config.ts`：Zod 端口及监听地址 Schema，保持原始 `Number` 转换与既有中文异常契约，使用 `safeParse` 不输出敏感输入。
-- `apps/server/src/config/server-startup.config.spec.ts`：原 5 项测试继续使用，新增 4 项非法值、优先级、敏感环境及兼容性回归。
-- [ADR-0049](adr/0049-zod-server-runtime-validation.md)：解释范围、Schema 与 pnpm 锁文件阻塞。
-
-### 第十七批补充：NestJS Zod 适配器
-
-- `pnpm-workspace.yaml`、`apps/server/package.json`：增加 `nest-zod@2.1.0` Catalog 和服务端运行时依赖，依旧等待 Windows pnpm 更新锁文件。
-- `apps/server/src/validation/nest-zod-integration.spec.ts`：测试专用 Controller 与 4 项 NestJS 12、Swagger 12、Zod 4 集成验证；不属于正式路由。
-- [ADR-0049](adr/0049-zod-server-runtime-validation.md)：记录已确认的 nest-zod 选型及未完成验收边界。
+- `pnpm-workspace.yaml` / `apps/server/package.json`：只保留 `zod@4.6.7` 的 Catalog/服务端运行依赖；`nest-zod` 因实际 Swagger 适配故障及 Peer 不兼容已移除，待维护者重新生成并提交锁文件。
+- `apps/server/src/config/server-startup.config.ts`：使用 Zod 校验端口和监听主机，仅当值为 `undefined` 时应用默认值；非法 `null` 必须拒绝，固定中文异常不回显输入。
+- `apps/server/src/config/server-startup.config.spec.ts`：原有 5 项测试 + 新增 4 项边界回归，涵盖非法输入类型、变量优先级、敏感值过滤和数字表示。
+- `apps/server/src/validation/standard-schema-integration.spec.ts`：测试专用 Controller + 4 项 NestJS 原生 Schema 请求校验、参数转换、响应过滤与 OpenAPI 测试；不属于正式路由。
+- [ADR-0049](adr/0049-zod-server-runtime-validation.md)：记录实测失败、移除不兼容适配器及后续锁文件和验收边界。
