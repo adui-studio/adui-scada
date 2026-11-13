@@ -30,7 +30,7 @@ class FakeResponse extends EventEmitter {
   }
 }
 
-test("模拟 SSE 客户端容量限制拒绝超额订阅，关闭连接后可再次接入", () => {
+await test("模拟 SSE 客户端容量限制拒绝超额订阅，关闭连接后可再次接入", () => {
   assert.equal(DEMO_SSE_MAX_CLIENTS, 32);
   const clients = new DemoSseClients(2);
   const first = new FakeResponse();
@@ -52,7 +52,7 @@ test("模拟 SSE 客户端容量限制拒绝超额订阅，关闭连接后可再
   assert.equal(third.writableEnded, true);
 });
 
-test("模拟 SSE 广播互不干扰，断开的客户端不再收到心跳和增量", () => {
+await test("模拟 SSE 广播互不干扰，断开的客户端不再收到心跳和增量", () => {
   const clients = new DemoSseClients(3);
   const first = new FakeResponse();
   const second = new FakeResponse();
@@ -68,7 +68,7 @@ test("模拟 SSE 广播互不干扰，断开的客户端不再收到心跳和增
   clients.closeAll();
 });
 
-test("写入返回背压信号后及时断开慢客户端，健康客户端继续接收数据", () => {
+await test("写入返回背压信号后及时断开慢客户端，健康客户端继续接收数据", () => {
   const clients = new DemoSseClients(3);
   const slow = new FakeResponse();
   const healthy = new FakeResponse();
@@ -84,7 +84,7 @@ test("写入返回背压信号后及时断开慢客户端，健康客户端继�
   clients.closeAll();
 });
 
-test("待写缓冲达到字节上限后直接终止，不再写入额外负载", () => {
+await test("待写缓冲达到字节上限后直接终止，不再写入额外负载", () => {
   const clients = new DemoSseClients(2, 12);
   const slow = new FakeResponse();
   slow.writableLength = 11;
@@ -95,7 +95,7 @@ test("待写缓冲达到字节上限后直接终止，不再写入额外负载",
   assert.equal(clients.size, 0);
 });
 
-test("断开的连接写入错误会被隔离，广播不影响其他客户端", () => {
+await test("断开的连接写入错误会被隔离，广播不影响其他客户端", () => {
   const clients = new DemoSseClients(2);
   const faulty = new FakeResponse();
   const healthy = new FakeResponse();
@@ -110,13 +110,13 @@ test("断开的连接写入错误会被隔离，广播不影响其他客户端",
   clients.closeAll();
 });
 
-test("客户端容量和字节限制拒绝非法参数", () => {
+await test("客户端容量和字节限制拒绝非法参数", () => {
   assert.throws(() => new DemoSseClients(0), /SSE 客户端上限/);
   assert.throws(() => new DemoSseClients(1, 0), /SSE 待发送字节上限/);
   assert.throws(() => new DemoSseClients(1.2), /SSE 客户端上限/);
 });
 
-test("真实回环 HTTP 同时容纳 32 路 SSE，超额返回 503 且断开后可恢复容量", async () => {
+await test("真实回环 HTTP 同时容纳 32 路 SSE，超额返回 503 且断开后可恢复容量", async () => {
   const clients = new DemoSseClients();
   const server = createServer((_request, response) => {
     if (!clients.hasCapacity()) {
@@ -163,7 +163,7 @@ test("真实回环 HTTP 同时容纳 32 路 SSE，超额返回 503 且断开后�
   }
 });
 
-test("响应主动触发 error 时销毁连接且不影响其他订阅", () => {
+await test("响应主动触发 error 时销毁连接且不影响其他订阅", () => {
   const clients = new DemoSseClients(2);
   const faulty = new FakeResponse();
   const healthy = new FakeResponse();
