@@ -136,3 +136,7 @@ Runtime 新增框架无关的 `ReadonlyTagSource` 契约与 `createSseTagSource(
 独立水处理模拟 SSE 现在仅允许最多 32 个同时在线订阅，并对每客户端待发送缓冲限定为 64 KiB；慢连接遇到背压时主动关闭以保护其他连接。这些数字仅为本地模拟防护边界，不是工业现场容量指标。
 
 在项目根目录运行 `pnpm run test:sse:clients`，使用 Node 内置测试器验证资源限制；另一个终端先启动 `pnpm run dev:demo`，再执行 `pnpm run test:sse:network` 验证实际 6 路 SSE 订阅。需要测试本机 Docker Nginx 两套 Web 代理时，先运行 `pnpm run docker:demo:up`，再执行 `pnpm run test:sse:proxy`。脚本从根 `.env` 读取端口，始终只连接 127.0.0.1，不会自动改动容器。详见 [ADR-0057](docs/adr/0057-local-sse-capacity-and-proxy-validation.md)。
+
+### 第二十五批：Docker 演示端口一致性修复
+
+根目录 `.env` 统一配置 Docker 对宿主机发布的端口（默认 React `18080`、Vue `18081`）。`docker:demo:up/down/logs` 现显式使用 `--env-file .env`，并提供 `pnpm run docker:demo:ps` 查看真实容器映射。执行 `pnpm run docker:demo:up` 后建议先核对映射，再运行 `pnpm run test:sse:proxy`；若仍不一致，还需排查同名 PowerShell 进程环境变量。真实 Nginx SSE 代理验收仍需在维护者 Windows/Docker 实测确认。
