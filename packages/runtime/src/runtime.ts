@@ -80,6 +80,7 @@ export class DemoRuntime {
   private subscription: ReadonlyTagSubscription | null = null;
   private loading: AbortController | null = null;
   private dataTimer: ReturnType<typeof setInterval> | null = null;
+  private visibilityCleanup: (() => void) | null = null;
   private readonly store = new TagStore();
   private document: ScadaDocument | null = null;
   private status: RuntimeStatus = "idle";
@@ -95,6 +96,11 @@ export class DemoRuntime {
   private clearDataTimer(): void {
     if (this.dataTimer !== null) clearInterval(this.dataTimer);
     this.dataTimer = null;
+  }
+
+  private clearVisibilityListener(): void {
+    this.visibilityCleanup?.();
+    this.visibilityCleanup = null;
   }
 
   private current(generation: number): boolean {
@@ -168,6 +174,7 @@ export class DemoRuntime {
             // 拒绝并关闭无效消息源，禁止之后的事件覆盖错误状态。
             this.generation++;
             this.clearDataTimer();
+            this.clearVisibilityListener();
             this.subscription?.close();
             this.subscription = null;
             this.store.markDisconnected(Date.now());
@@ -193,7 +200,7 @@ export class DemoRuntime {
         return;
       }
       this.subscription = subscription;
-      this.dataTimer = setInterval(() => {
+      const checkDataSilence = (): void => {
         if (
           !this.current(generation) ||
           this.status === "error" ||
@@ -209,7 +216,17 @@ export class DemoRuntime {
           this.message = message;
           this.publish();
         }
-      }, 1000);
+      };
+      this.dataTimer = setInterval(checkDataSilence, 1000);
+      if (typeof document !== "undefined") {
+        const visibilityDocument = document;
+        const onVisibilityChange = (): void => {
+          if (visibilityDocument.visibilityState === "visible") checkDataSilence();
+        };
+        visibilityDocument.addEventListener("visibilitychange", onVisibilityChange);
+        this.visibilityCleanup = () =>
+          visibilityDocument.removeEventListener("visibilitychange", onVisibilityChange);
+      }
     } catch (error) {
       if (!this.current(generation)) return;
       this.store.markDisconnected(Date.now());
@@ -227,6 +244,7 @@ export class DemoRuntime {
     this.loading?.abort();
     this.loading = null;
     this.clearDataTimer();
+    this.clearVisibilityListener();
     this.subscription?.close();
     this.subscription = null;
     this.store.markDisconnected(Date.now());
