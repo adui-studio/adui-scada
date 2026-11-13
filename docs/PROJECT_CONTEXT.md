@@ -511,7 +511,7 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 
 本批未改 PostgreSQL/Prisma 模型和迁移、Vue/React、共享 Core、pnpm Catalog 及锁文件。维护者已在 Windows 实测 `vp check` 225 个格式文件全部通过、104 个受检文件无警告或错误，64 份 Markdown 检查、Vue/React/NestJS 构建及独立 Docker 隔离烟测均通过（退出码 0）。本批未执行隔离 PostgreSQL 真库测试，PR #38 保持 Draft，未经明确授权不合并。详见 [ADR-0048](adr/0048-security-audit-event-boundary.md)。
 
-## 2026-11-13 · V0.3 第十七批：Zod 与 NestJS 原生 Standard Schema（Draft 修复待验收）
+## 2026-11-13 · V0.3 第十七批：Zod 与 NestJS 原生 Standard Schema（Windows / Docker 验收通过，Draft 待合并）
 
 第十六批 PR #38 已经 Squash Merge 至 `main`（`099fe8e`），基线 Windows `ready` 367/367 单测、8/8 E2E、退出码 0，Docker 隔离烟测通过。
 
@@ -519,4 +519,4 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 
 维护者 Windows 首次执行 `ready`：Catalog 51 项、格式文件 227/227、105 个受检文件零错误/警告，类型检查通过；普通单测 **370 通过、1 失败**，另一测试文件在模块导入时出错，整条链路在单测阶段中断，**并未完成 E2E、文档检查和构建**。根因一：使用 `??` 导致测试传入的非法 `null` 被识别为“未配置”；已调整为仅 `undefined` 才回退。根因二：`nest-zod@2.1.0` 的 `ZSerialize` OpenAPI 处理存在 `safeParse` 描述符恢复问题，且其实际 Peer 声明不包含 NestJS 12 / Swagger 12；已撤销第三方适配器并采用 NestJS 12 原生 Standard Schema Pipe、序列化与 OpenAPI 集成。
 
-当前 Catalog/Manifest 仅保留 `zod`，测试文件改为 `standard-schema-integration.spec.ts`；预计全量普通单测 **375**、E2E **8**，**尚未复验通过**。用户先前已提交的 `pnpm-lock.yaml` 仍包含被移除的 `nest-zod`，必须重新使用 pnpm 生成后提交；再进行冻结安装、`ready` 和 Docker 验收。配套 ADR-0049 已同步修订。PR #39 继续 Draft，未经明确授权不合并。
+当前 Catalog/Manifest 仅保留 `zod`，测试文件改为 `standard-schema-integration.spec.ts`。维护者已使用 pnpm 重新计算并推送锁文件（GitHub 核对不再包含 `nest-zod`）。修复后 Windows 完整 `ready` **退出码 0**：格式 227/227、105 个受检代码文件零告警/错误、**375/375 单测**、**8/8 E2E**、65 份 Markdown 文档检查以及 React/Vue/NestJS 类型检查与构建通过。独立 Docker 镜像构建、冻结安装和隔离烟测也已通过，**退出码 0**；容器健康接口正常，工程与设备写入接口未开放。本批未运行 PostgreSQL 真库回归或工业现场测试。配套 ADR-0049 已同步修订。PR #39 仍保持 Draft，未经明确授权不合并。
