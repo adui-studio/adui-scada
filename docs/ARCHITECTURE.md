@@ -321,3 +321,11 @@ Node 24 原生 HTTP Server 在 `app.listen` 之前由 `apps/server/src/security/
 新增独立的 `LocalDemoTelemetryModule`，内部使用框架无关 `@adui/scada-core` 的 `TagStore`、`WaterTreatmentSimulator`、共享模拟工程。正式 `AppModule` 不注册演示路由；`LocalDemoAppModule` 仅在启动配置同时满足显式启用、非生产、回环监听时组合正式模块与模拟模块。NestJS 原生 `@Sse` 携带相同 `TagChange` 快照及增量协议，RxJS 取消订阅时移除事件监听器，模块销毁时清理模拟定时器。
 
 该数据源仅生成三个固定水处理模拟 Tag，不访问 PLC、工业网关、Redis 或 PostgreSQL。既有独立 `/demo` 代理与 Vue/React Runtime 不改动；将来真实工业 Tag 服务须另行定义受信身份、Tag ACL、连接配额、断线重同步及网关安全通信，不能直接将此开发模块部署为生产入口。
+
+## V0.3 第二十二批：框架无关 Runtime 数据源接口
+
+`packages/runtime/src/tag-source.ts` 是只读数据源的浏览器传输适配边界：加载未知工程 JSON（由 Core 严格校验）、订阅未知实时事件（交由 `applyDemoChange` 和 TagStore 统一校验）、返回只读取消订阅句柄。固定同源 SSE 工厂只允许 `standalone` 的 `/demo/*` 和 `nest-local` 的 `/api/dev/demo/*`；不接受外部 URL、网关/PLC 地址或设备写入方法。
+
+Vue/React 两套 Web 仍用共享 `DemoRuntime` 默认预设，没有新增环境开关、路由代理或生产业务接口。Nest 开发模拟模块及 Swagger 非生产回环访问限制保持原样；如果未来希望从浏览器切换到 Nest，本地同源路由映射和部署访问边界必须单独评审，不得直接跨域连接或暴露无鉴权诊断接口。Tauri 离线模拟维持现状。
+
+Runtime 生命周期按连接代次隔离：停止时中止 fetch、关闭 SSE、旧值标记 STALE，断线后等待新 snapshot 才恢复接收 delta；有害消息关闭当前订阅。此基础不涵盖正式鉴权、工业采集、发布版本加载、背压与多客户端在线容量。详见 [ADR-0054](adr/0054-readonly-tag-source-adapters.md)。
