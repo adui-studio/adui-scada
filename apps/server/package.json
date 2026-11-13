@@ -33,7 +33,8 @@
     "pino": "catalog:",
     "pino-http": "catalog:",
     "@nestjs/swagger": "catalog:",
-    "helmet": "catalog:"
+    "helmet": "catalog:",
+    "@nestjs/config": "catalog:"
   },
   "devDependencies": {
     "@adui/tsconfig": "workspace:*",
@@ -46,6 +47,7 @@
     "prisma": "catalog:",
     "supertest": "catalog:",
     "typescript": "catalog:",
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "pino-pretty": "catalog:"
   }
 }
