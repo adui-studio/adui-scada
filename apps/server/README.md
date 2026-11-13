@@ -116,4 +116,4 @@ NestJS 12 已原生提供 Standard Schema 校验 Pipe、响应序列化拦截器
 - 采用 `@nestjs/terminus@12.1.0` 和生命周期指示器；受控本机开发 Swagger 包含就绪探针，但生产默认不开放文档。不新增登录、工程版本或设备写入接口。
 - 现阶段正式路由仅有探针，没有可用的受保护业务 API，暂不引入 `@nestjs/throttler` 全局限流。正式身份与业务路由上线前需独立设计分级配额和多实例限流存储，不能对探针实施普通业务流量配额。
 
-本批新增 3 项无数据库单测、2 项 E2E，预计普通单测共 **378 项**、E2E **10 项**，尚未实测。需在 Windows 用 pnpm 12 正式生成并提交锁文件，再执行 `pnpm install --frozen-lockfile`、`pnpm run ready` 和 `pnpm run test:docker:server`；详见 [ADR-0050](../../docs/adr/0050-http-readiness-terminus.md)。
+本批新增 3 项无数据库单测、2 项 E2E；维护者 Windows 已实测 **378/378 单测、10/10 E2E**、完整 `pnpm run ready` **退出码 0**。pnpm 12 已正式更新并提交锁文件，Docker 冻结安装与隔离镜像烟测 **退出码 0**。E2E 为模拟关闭状态故意触发的 HTTP 503 和 Terminus 失败日志属于成功验证的负面测试，不是服务故障。`/health/ready` 只报告 HTTP 子系统，不包含 PostgreSQL、Redis、工业网关或 PLC 检查。本批未运行真库回归，验收记录更新后建议复验 `vp check`、`pnpm run docs:check`；详见 [ADR-0050](../../docs/adr/0050-http-readiness-terminus.md)。
