@@ -1,4 +1,38 @@
 import type { TagQuality, TagValue } from "@adui/scada-core";
+import type { RuntimeStatus } from "./runtime.ts";
+
+/** 单次 Runtime 会话最多保留的本地状态变更条数。 */
+export const MAX_RUNTIME_STATUS_EVENTS = 20;
+
+export interface RuntimeStatusEvent {
+  /** 会话内单调递增的序号，避免同毫秒状态变化造成渲染键冲突。 */
+  readonly sequence: number;
+  readonly status: RuntimeStatus;
+  readonly occurredAt: number;
+}
+
+/** 仅在状态发生变化时记录，不存储动态消息、Tag 值或外部设备信息。 */
+export class RuntimeStatusHistory {
+  private readonly entries: RuntimeStatusEvent[] = [];
+  private nextSequence = 0;
+
+  record(status: RuntimeStatus, occurredAt = Date.now()): void {
+    if (this.entries[0]?.status === status) return;
+    this.entries.unshift({ sequence: ++this.nextSequence, status, occurredAt });
+    if (this.entries.length > MAX_RUNTIME_STATUS_EVENTS) {
+      this.entries.length = MAX_RUNTIME_STATUS_EVENTS;
+    }
+  }
+
+  snapshot(): readonly RuntimeStatusEvent[] {
+    return this.entries.map((event) => ({ ...event }));
+  }
+
+  clear(): void {
+    this.entries.length = 0;
+    this.nextSequence = 0;
+  }
+}
 
 /** 仅限本机运行时观测，不包含设备地址、鉴权、网络往返时延或持久化数据。 */
 export interface RuntimeDiagnostics {
@@ -10,6 +44,8 @@ export interface RuntimeDiagnostics {
   readonly dataAgeMs: number | null;
   readonly tagCount: number;
   readonly qualityCounts: Readonly<Record<TagQuality, number>>;
+  /** 最近状态变化，最新在前；不是服务器日志或工业报警历史。 */
+  readonly statusEvents: readonly RuntimeStatusEvent[];
 }
 
 export function createRuntimeDiagnostics(
@@ -17,6 +53,7 @@ export function createRuntimeDiagnostics(
   lastTagReceivedAt: number | null,
   reconnectCount: number,
   now = Date.now(),
+  statusEvents: readonly RuntimeStatusEvent[] = [],
 ): RuntimeDiagnostics {
   const qualityCounts: Record<TagQuality, number> = {
     GOOD: 0,
@@ -31,6 +68,7 @@ export function createRuntimeDiagnostics(
     dataAgeMs: lastTagReceivedAt === null ? null : Math.max(0, now - lastTagReceivedAt),
     tagCount: values.length,
     qualityCounts,
+    statusEvents: statusEvents.map((event) => ({ ...event })),
   };
 }
 
