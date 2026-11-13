@@ -48,11 +48,7 @@ describe("应用控制器（端到端）", () => {
     expect(response.status).toBe(404);
   });
   it("正式根模块不挂载无鉴权的本机模拟工程和 Tag 接口", async () => {
-    for (const route of [
-      "/api/dev/demo/project",
-      "/api/dev/demo/tags",
-      "/api/dev/demo/events",
-    ]) {
+    for (const route of ["/api/dev/demo/project", "/api/dev/demo/tags", "/api/dev/demo/events"]) {
       await request(app.getHttpServer()).get(route).expect(404);
     }
   });

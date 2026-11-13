@@ -180,10 +180,10 @@ pnpm run dev:server
 
 为在 NestJS Swagger 中诊断共享 Core 模拟数据，本批新增**默认关闭**的开发专用根模块。独立开关 `SCADA_LOCAL_DEMO_API_ENABLED` 默认 `false`；只有显式 `true`、非生产、服务器实际绑定 `127.0.0.1` 时才挂载以下 HTTP 路由：
 
-| 端点                       | 返回内容                                         |
-| -------------------------- | ------------------------------------------------ |
+| 端点                        | 返回内容                                        |
+| --------------------------- | ----------------------------------------------- |
 | `GET /api/dev/demo/project` | 固定水处理 `ScadaDocument` 演示工程             |
-| `GET /api/dev/demo/tags`    | `TagChange` 初始快照，包含质量与序列号            |
+| `GET /api/dev/demo/tags`    | `TagChange` 初始快照，包含质量与序列号          |
 | `GET /api/dev/demo/events`  | SSE：首条 snapshot，随后 delta，演练 STALE 恢复 |
 
 上述接口只访问 `@adui/scada-core` 模拟器和内存 `TagStore`；既有 Vue/React `/demo` 代理、Prisma 工程仓储、正式身份/ACL、工业设备接口均不受影响。正式默认 `AppModule` 不存在这些路由，返回 404；本机演示路由不允许通过 `0.0.0.0` 或生产模式开放。
