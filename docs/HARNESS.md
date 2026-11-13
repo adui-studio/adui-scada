@@ -1247,3 +1247,26 @@ git status --short
 新增 E2E 使用测试内屏障持有 `onModuleDestroy` 生命周期，在未关闭底层 Server 时验证新请求立即 503，然后释放屏障完成关闭；该用例不访问工业设备、不连接真实 PostgreSQL、不对外监听固定端口。重点检查关闭测试是否因未释放 Promise 而超时，禁止通过跳过测试或扩大超时掩盖资源泄漏。Node HTTP `requestTimeout` 只限制接收请求，不应把它误解为应用响应超时或 SSE 心跳限时。
 
 实际验收：Catalog 检查 11 个清单、51 项依赖，中文文案检查 137 个文件；`vp check` 检查 **235 个格式文件全部通过**、111 个受检代码文件无错误/警告，67 份 Markdown 静态检查通过，Core、React、Vue 和 NestJS 的类型检查与构建通过，完整 `ready` **退出码 0**。Docker 镜像执行冻结安装和服务端构建成功，隔离烟测确认 HTTP 接收策略、存活/就绪探针正常且未开放业务接口仍返回 404，**退出码 0**。E2E 中主动模拟关闭时的 Terminus 错误记录与 503 属于成功验证的预期负面用例。真实 Linux SIGTERM、反向代理摘流、PostgreSQL 真库和工业现场验证属于后续范围，不得把这些未验证事项写为已完成。验收后仅修改记录性文档，建议复查 `vp check` 与 `pnpm run docs:check`。
+
+## V0.3 第二十批：Linux 正式服务 PID 1 SIGTERM 回归（ADR-0052）
+
+本批只使用现有 Node 24、NestJS 12、pnpm 与 Docker Desktop Linux 模式，没有新增包、锁文件变更或数据库迁移。在保持现有 `--network none`、无宿主端口映射的第一阶段容器烟测后，第二阶段启动正式服务端 CMD，待回环 HTTP 就绪后发送真实 SIGTERM，并验证进程完成关闭后退出码 0；测试容器在 `finally` 中无条件清理。注意这是正式镜像进程的 Linux 信号测试，仍不等同于完整业务请求排空或工业现场停机验证。
+
+```powershell
+git fetch origin
+git switch test/v0.3-linux-sigterm-container
+git status --short
+git pull --ff-only origin test/v0.3-linux-sigterm-container
+
+pnpm install --frozen-lockfile
+vp check
+pnpm run ready
+Write-Host "完整验收退出码：$LASTEXITCODE"
+
+# 该命令现在有两阶段：原隔离烟测 + 正式容器 SIGTERM/退出码验证。
+pnpm run test:docker:server
+Write-Host "Linux SIGTERM 与 Docker 验收退出码：$LASTEXITCODE"
+git status --short
+```
+
+第十九批 Windows 已通过 381 项单测与 12 项 E2E；第二十批无新增普通单测/E2E，预计数量不变，本批实际结果尚待维护者验证。失败时优先检查 `docker exec` 回环就绪轮询、`docker stop` 超时或非零退出码，不要跳过第二阶段，不得将 Docker 命令成功与真实 SIGTERM 清理成功混淆。当前身份、工程版本和工业设备写入 API 均未注册，运行日志不得包含生产凭据或现场网络地址。参见 [ADR-0052](adr/0052-linux-sigterm-container-shutdown.md)。
