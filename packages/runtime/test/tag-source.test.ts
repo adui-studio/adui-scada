@@ -81,11 +81,19 @@ test("NestJS 本机预设固定使用相同源的受控只读接口，不接受�
   expect(project).toMatchObject({ projectId: "water-demo" });
   expect(urls).toEqual(["/api/dev/demo/project"]);
 
+  const events: unknown[] = [];
+  let disconnects = 0;
   const subscription = source.subscribe({
-    onMessage: () => {},
-    onDisconnected: () => {},
+    onMessage: (message) => events.push(message),
+    onDisconnected: () => {
+      disconnects++;
+    },
   });
   expect(FakeEventSource.instances[0]?.url).toBe("/api/dev/demo/events");
+  FakeEventSource.instances[0]?.emit('{"kind":"snapshot","values":[]}');
+  FakeEventSource.instances[0]?.disconnect();
+  expect(events).toHaveLength(1);
+  expect(disconnects).toBe(1);
   subscription.close();
 
   expect(() =>
