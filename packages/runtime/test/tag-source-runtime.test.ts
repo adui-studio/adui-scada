@@ -331,8 +331,14 @@ test("后台标签页返回前台会立即判定 Tag 数据超时，停止后清
     expect(states.at(-1)?.status).toBe("stale");
     expect(states.at(-1)?.values[0]?.quality).toBe("STALE");
 
+    // STALE 质量变更会在 TagStore 内消耗一个序列号，相同序列的旧消息不能恢复。
     controlled.handlers[0]?.onMessage({ kind: "delta", values: [makeTag(2)] });
+    expect(states.at(-1)?.status).toBe("stale");
+    expect(states.at(-1)?.values[0]?.quality).toBe("STALE");
+
+    controlled.handlers[0]?.onMessage({ kind: "delta", values: [makeTag(3)] });
     expect(states.at(-1)?.status).toBe("live");
+    expect(states.at(-1)?.values[0]?.quality).toBe("GOOD");
   } finally {
     runtime.stop();
     expect(listeners.size).toBe(0);
