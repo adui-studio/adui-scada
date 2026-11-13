@@ -178,4 +178,6 @@ Docker 隔离测试应依次验证：
 
 `enableShutdownHooks([], { useProcessExit: true })` 与原默认 143 退出码语义不同，已经在 ADR-0052 明确；不能通过放宽退出码断言取代真实测试。本批没有验证在途事务排空、Linux 编排滚动升级、SSE/WS 或工业网关联锁。
 
-维护者需执行 `pnpm install --frozen-lockfile`、`vp check`、`pnpm run ready`、`pnpm run test:docker:server` 并提供退出码。**尚无本批 Windows 或 Docker 实测通过记录**，不应在 PR 中勾选验收完成。
+维护者首次 Windows 和 Docker 实测（本机 Swagger 启动日志追加之前）均已通过：Catalog 11 个清单、51 项依赖，`vp check` **237 个文件格式正确、112 个受检文件零告警/错误**；31 个测试文件 **381/381 单测**、2 个 E2E 文件 **12/12 E2E**，68 份 Markdown 检查及 Web/Server 类型检查与构建均成功，完整 `pnpm run ready` **退出码 0**。独立 Docker 构建冻结安装成功，原隔离烟测通过；新增正式 Node PID 1 Linux 容器接收 SIGTERM 并以退出码 **0** 正常结束，Docker 根命令 **退出码 0**。此前 Terminus 503 日志仍为故意模拟关闭的成功负面测试。
+
+**后续增量变更（待重新验证）**：根据维护者要求，在 Swagger 仅本机显式启用的情况下，NestJS 完成监听后使用 Pino 输出 `http://127.0.0.1:<port>/api/docs`。将 `api/docs` 路由路径复用为常量，新增 2 项普通单测，预期最新版普通单测 **383 项**、E2E **12 项**；新代码尚未实际重新运行。必须再次执行 `vp check`、`pnpm run ready`、`pnpm run test:docker:server` 并核对退出码，不能将上轮 381/381 结果当作最新 383 项测试已通过。文档默认关闭、生产与非回环禁用策略不变，禁止在日志输出密钥或设备信息。
