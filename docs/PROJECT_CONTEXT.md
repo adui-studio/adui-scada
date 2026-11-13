@@ -528,3 +528,11 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 经核对已发布 `@nestjs/terminus@12.1.0` 发行包的 Peer 声明，支持仓库 NestJS 12 / Swagger 12 / Node 24。由于正式业务 HTTP 入口仅有健康接口，登录、工程版本和工业设备写入尚未开放，因此暂不引入 `@nestjs/throttler`，避免对容器健康探针造成全局限流误伤。本批只通过 Terminus 增加独立 `GET /health/ready`：HTTP 应用初始化后返回就绪，关闭时 503，禁止缓存，固定返回 `dependencies:"not_checked"`。保留 `GET /health` 进程存活契约及未开放业务 API 的 404。
 
 新增 3 项就绪指示器单测和 2 项 NestJS E2E，Docker 隔离烟测新增 HTTP 就绪验证。维护者已在 Windows 用 pnpm 正式生成并推送锁文件；GitHub 确认包含 Terminus 12.1.0。**完整 `ready` 退出码 0**：30 个测试文件 **378/378 单测**、NestJS E2E **10/10**、231 个文件格式正确/108 个受检源文件零告警、66 份 Markdown 检查及 Vue/React/NestJS 构建通过。Docker `pnpm install --frozen-lockfile`、服务端镜像构建与隔离烟测均通过，**退出码 0**，HTTP 存活与就绪探针均正常，未开放工程/登录/设备接口仍为 404。E2E 中 503 / Terminus 失败日志属于预期关闭状态负面测试。无数据库/Prisma 迁移或 Redis/工业设备实测，不代表真实业务就绪或生产认证。详见 [ADR-0050](adr/0050-http-readiness-terminus.md)。PR 保持 Draft，未经授权不合并；记录性文档更新后建议复查格式与文档检查。
+
+## 2026-11-13 · V0.3 第十九批：HTTP 连接资源保护与关闭拒绝（Draft 待 Windows 验收）
+
+第十八批 PR #40 已经维护者明确授权，经 Squash Merge 合入 `main`（`c67261e`）。Windows `ready` **378/378 单元测试、10/10 E2E、退出码 0**，Docker 冻结安装与隔离镜像烟测退出码 0。当前第十九批从该提交建立 `feat/v0.3-http-ingress-shutdown-guard`，继续补充服务端可靠性基础，不提前开放登录、工程版本或工业设备写入接口。
+
+核对 NestJS 12.0.3 官方 Express Adapter 源码确认 `return503OnClosing:true` 为已有功能，关闭一开始即可拒绝新请求，且不会主动销毁现有处理中请求。Node 24 原生 HTTP Server 提供请求接收/连接资源边界，无需额外依赖。正式 `main.ts` 继续先加载根 `.env` 后再导入 `AppModule`，仅调整已有 `NestFactory.create` 选项并在 `listen` 前配置 HTTP Server：请求头 15 秒、完整请求 60 秒、Keep-Alive 空闲 5 秒、请求头最多 100 个、单连接最多 1000 次请求。没有设置通用响应超时，以保留未来 SSE 长连接能力。
+
+新增 3 项纯单测和 2 项真实 Node HTTP E2E（包含关闭钩子屏障和拒绝新连接 503）；Docker 隔离烟测复用正式 HTTP 限制配置。**预计 381 项单测、12 项 E2E**，这是第十九批预期，当前**尚未进行 Windows 实测**。本批无新依赖、Catalog/锁文件不变，不修改 Prisma、Vue/React、Core、工业网关或正式 API。详见 [ADR-0051](adr/0051-http-ingress-shutdown-policy.md)。PR 保持 Draft，未经授权不合并。
