@@ -1159,7 +1159,7 @@ Windows 已实测普通单测 **367/367** 项、NestJS E2E **8/8** 项，完整 
 
 ## V0.3 第十七批：Zod 运行时配置 Schema 与可复现依赖（ADR-0049）
 
-只对服务端端口和监听地址引入 Zod 4.6.7，保留根 `.env` 的唯一加载入口、Swagger 默认关闭、Pino 日志脱敏和已验收的安全审计白名单。新增 4 项单测，预期总计 **371 项**普通单测和 **8 项** NestJS E2E。该批新增生产依赖，**锁文件尚未生成，不能直接执行第一次冻结安装**。
+只对服务端端口和监听地址引入 Zod 4.6.7，保留根 `.env` 的唯一加载入口、Swagger 默认关闭、Pino 日志脱敏和已验收的安全审计白名单。启动配置新增 4 项单测，隔离 NestJS 适配器再新增 4 项，预期总计 **375 项**普通单测和 **8 项** NestJS E2E。该批新增生产依赖，**锁文件尚未生成，不能直接执行第一次冻结安装**。
 
 ```powershell
 git fetch origin
@@ -1186,3 +1186,7 @@ Write-Host "Docker 验证退出码：$LASTEXITCODE"
 ```
 
 锁文件必须由 pnpm 12 正式生成，不得人工填写包哈希或使用 `--no-frozen-lockfile` 掩盖不一致。提交前确认 `git status --short` 没有 `.env`、密钥或本地数据库文件。Docker 验证仍为隔离运行，不映射宿主机端口、不写工业设备。以上命令尚未在本批执行，不得宣称验收通过。
+
+### 第十七批补充：NestJS DTO 集成校验
+
+维护者批准选择更兼容的 `nest-zod + zod`，现声明 `nest-zod@2.1.0`（仅 `apps/server`）；官方文档支持 NestJS 12 / Swagger 12 / Zod 4。严格保留既有 `pnpm install` 正式生成锁文件步骤，不手工写 integrity。新增 `nest-zod-integration.spec.ts` 仅在测试模块注册 Controller；验证 `ZBody`、`ZQuery`、`ZSerialize` 与 Swagger 元数据，**不得把测试专用路由加入 AppModule**。预期普通单测 **375** 项、E2E **8** 项。若安装出现 Peer 冲突，报告准确输出，不修改 NestJS/Swagger 版本、不忽略 Peer。测试日志不得输出真实令牌、连接串或完整校验原始值。
