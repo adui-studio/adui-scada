@@ -29,7 +29,6 @@
     "@prisma/adapter-pg": "catalog:",
     "@prisma/client": "catalog:",
     "helmet": "catalog:",
-    "nest-zod": "catalog:",
     "nestjs-pino": "catalog:",
     "pg": "catalog:",
     "pino": "catalog:",
