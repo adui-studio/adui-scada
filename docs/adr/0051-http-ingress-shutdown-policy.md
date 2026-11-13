@@ -33,6 +33,7 @@
 真正生产环境的 SIGTERM 时限、负载均衡流量摘除顺序、仍在执行的请求的完成/强制终止策略，以及后续 SSE/WebSocket/工业网关订阅的关闭和重连，需要在正式发布与部署阶段评估；不能以这次基础 HTTP 保护冒充端到端优雅停机认证。
 
 参考：
+
 - [NestJS 12.0.3 Express 适配器](https://github.com/nestjs/nest/blob/v12.0.3/packages/platform-express/adapters/express-adapter.ts)
 - [NestJS 生命周期](https://docs.nestjs.com/fundamentals/lifecycle-events)
 - [Node.js 24 HTTP Server](https://nodejs.org/download/release/latest-v24.x/docs/api/http.html)
