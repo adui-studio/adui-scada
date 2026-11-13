@@ -133,11 +133,7 @@ export class DemoRuntime {
         document: this.document,
         values,
         message: this.message,
-        diagnostics: createRuntimeDiagnostics(
-          values,
-          this.lastTagReceivedAt,
-          this.reconnectCount,
-        ),
+        diagnostics: createRuntimeDiagnostics(values, this.lastTagReceivedAt, this.reconnectCount),
       });
     }
   }
