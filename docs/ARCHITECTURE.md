@@ -285,3 +285,7 @@ Prisma `schema.prisma` 的 `///` 为代码生成文档信息，**不会自动创
 ## V0.3 第十五批：NestJS 启动环境加载顺序（ADR-0047）
 
 根 `.env` 的本地加载入口仍是 `apps/server/src/main.ts`，并继续由宿主/容器进程环境变量承担部署覆盖。为了避免 `AppModule` 在模块求值期间构造 Pino 配置时过早读取 `SCADA_LOG_LEVEL`，正式入口改为在 `loadEnvFile` 完成后动态导入 `AppModule`。纯函数 `resolveServerStartupConfig` 集中读取和校验端口、监听地址及复用受控 OpenAPI 策略，保留已发布默认值与白名单，不暴露敏感配置。该纯模块不连接数据库、不加载工业网关、不注册业务路由。模块化类型配置注入和全部生产部署变量的 Schema 化校验仍待后续专项推进。
+
+## V0.3 第十六批：安全事件审计边界（ADR-0048）
+
+在未挂载 `AppModule` 的 `ScadaIdentityModule` 中注册独立 `ScadaSecurityAuditService`，并通过 `SecurityAuditReporter` 接口及 NestJS 注入令牌供 `ScadaSessionGuard` 和 `ScadaProjectGuard` 使用。Guard 记录允许/拒绝决策，但不发送请求头、令牌、路径、租户/主体/工程标识或异常对象；日志层对枚举做运行时白名单检查并只构造固定四字段对象。现阶段借助 NestJS Logger 与已经引入的 Pino 运行日志链输出，**仅用于诊断而非生产持久化审计**。未增加外部依赖、数据库迁移、HTTP 路由或工业写入能力；未来必须在上线身份 API 前独立评审可信主体关联、持久化审计、丢失处理、保留/删除及限流。
