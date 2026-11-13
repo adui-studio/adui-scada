@@ -1270,3 +1270,26 @@ git status --short
 ```
 
 第十九批 Windows 已通过 381 项单测与 12 项 E2E；第二十批无新增普通单测/E2E，预计数量不变，本批实际结果尚待维护者验证。失败时优先检查 `docker exec` 回环就绪轮询、`docker stop` 超时或非零退出码，不要跳过第二阶段，不得将 Docker 命令成功与真实 SIGTERM 清理成功混淆。当前身份、工程版本和工业设备写入 API 均未注册，运行日志不得包含生产凭据或现场网络地址。参见 [ADR-0052](adr/0052-linux-sigterm-container-shutdown.md)。
+
+## V0.3 第二十一批：本机只读模拟 Tag、SSE 与访问边界（ADR-0053）
+
+第 20 批最新代码的 Windows 全量验收仍缺增量 Swagger 日志后的记录。本批新增 2 项访问策略和 4 项模拟服务单测、1 项默认模块 404 E2E、4 项本机模拟 E2E；预计最新版 **389/389 单测、17/17 NestJS E2E**，该数字为验收目标，**尚未实际执行**。不变更 pnpm Catalog、锁文件、数据库或 Core Schema。
+
+```powershell
+git fetch origin
+git switch feat/v0.3-local-readonly-demo-telemetry
+git status --short
+git pull --ff-only origin feat/v0.3-local-readonly-demo-telemetry
+
+pnpm install --frozen-lockfile
+vp check
+pnpm run ready
+Write-Host "完整验收退出码：$LASTEXITCODE"
+
+pnpm run test:docker:server
+Write-Host "Docker 退出码：$LASTEXITCODE"
+```
+
+本机交互验收：只有在**自行确认非生产、绑定 `127.0.0.1`** 时，才在根 `.env` 设置 `SCADA_LOCAL_DEMO_API_ENABLED=true`。需要查看 OpenAPI 时，再独立设置 `SCADA_API_DOCS_ENABLED=true`，运行 `pnpm run dev:server`；访问 `/api/dev/demo/project`、`/api/dev/demo/tags` 与 Swagger `/api/docs`，并用浏览器 `EventSource` 或同源网络面板观察 `/api/dev/demo/events` 的 snapshot/delta 和 STALE/GOOD。结束后将开关改回 false，重启确认上述模拟路由全部返回 404。
+
+必须验证：生产与 `0.0.0.0` 即使错误配置开关，也不会挂载无鉴权模拟路由；既有应用 E2E 继续验证身份、工程读写、设备写入 404；Docker 以生产模式运行且 SIGTERM 测试成功；SSE 断开不会残留订阅，服务关闭不会残留定时器。无工业现场、真库、真实设备写入或正式登录测试。
