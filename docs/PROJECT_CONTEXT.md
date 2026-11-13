@@ -543,6 +543,6 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 
 实查 NestJS 12.0.3 源码：原 `enableShutdownHooks()` 会在清理后重发 SIGTERM，可能以 143 退出；正式入口改用上游原生 `enableShutdownHooks([], { useProcessExit: true })`，在全部关闭钩子执行完成后退出 0。Docker 同一隔离镜像新增第二阶段：`--network none` 启动正式 `CMD`，容器内部用回环探针等待就绪并确认工业设备写入仍为 404，再通过 Docker 发送真实 SIGTERM，等待并检查退出码严格为 0；最后无论成功失败清理容器。原有第一阶段烟测保留。
 
-本批**无新 npm 依赖、Catalog、pnpm 锁文件、Prisma、Core、Vue/React 或业务 HTTP 路由变更**；普通单测/E2E 预计仍 **381 / 12**，新增 Linux 信号验证作为 `pnpm run test:docker:server` 的独立第二阶段，目前未在维护者环境实际执行。实际在途请求排空、SSE/WS、代理摘流与工业现场仍属于后续专项，见 [ADR-0052](adr/0052-linux-sigterm-container-shutdown.md)。
+本批**无新 npm 依赖、Catalog、pnpm 锁文件、Prisma、Core、Vue/React 或业务 HTTP 路由变更**；维护者已在 Windows 实测 **381/381 单测、12/12 E2E**、完整 `ready` **退出码 0**，并通过 Docker 冻结安装、隔离烟测及正式 Linux Node PID 1 SIGTERM / 退出码 0 验证，Docker 退出码 0。此后追加仅在显式允许本机 Swagger 时打印实际文档地址的 Pino 启动日志，复用注册路由常量并增加 2 项单测；预计最新分支 **383 项单测、12 项 E2E**，新增改动仍待 Windows/Docker 复验。实际在途请求排空、SSE/WS、代理摘流与工业现场仍属于后续专项，见 [ADR-0052](adr/0052-linux-sigterm-container-shutdown.md)。
 
 按维护者 2026-11-10 已确认的规则，所有由 AI 创建的 GitHub PR（包含 Draft）创建后立即指派 `@adui-dev` 并核验。此前漏掉的 PR #39、#40、#41 已补充指派，本批 PR 也必须在创建后验证；未经授权不合并。
