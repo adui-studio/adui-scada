@@ -293,3 +293,16 @@ Docker 隔离测试应依次验证：
 - 结合此前维护者独立网络日志：`test:sse:network` 实际六路 HTTP SSE 通过、退出码 0；`test:sse:proxy` 在 React `18080` 与 Vue `18081` 的 Docker Nginx 双入口通过、退出码 0，Demo 与 Server 为 Healthy。
 
 **自动化验收结论：第二十五批 Windows 完整质量链及 Docker Nginx SSE 代理专项均通过。** 注意本段验收记录追加后尚未再次执行最新文档的格式与静态检查，建议合并审查前运行 `vp check`、`pnpm run docs:check`。仍未验证真实 Nginx 半开连接、持续高并发/慢消费者长期负载、生产认证、PostgreSQL 真库和工业现场设备；不能把本机 Demo 资源上限视为工业 SLA。PR #47 继续 Draft，待维护者明确同意后才能合并。
+
+## 2026-11-13 · V0.3 第二十六批 TCP SSE 故障与长连接验收清单（待维护者执行）
+
+- [x] 协作环境 Node 原生 HTTP/TCP 故障代理模块隔离测试 **3/3 通过**：非法外部目标拒绝、普通 HTTP 透传、真实 SSE 下行字节阻断且 socket 保持开放、其他订阅继续接收、连接关闭后重订阅。
+- [x] 新增 JS 文件及修改后的网络/浏览器脚本完成静态 JavaScript 语法解析，根 `package.json` JSON 检查通过；**这不等同于 Vite+ Lint 或真实浏览器运行通过**。
+- [ ] `pnpm run test:sse:fault:unit`：在维护者 Windows 工作区确认 3/3 通过，已纳入根 ready。
+- [ ] `pnpm run test:sse:fault:browser`：启动 Demo、React、Vue 后检查真实 Chrome/Edge 下行阻断、STALE、15 秒主动重连、新快照与退出资源回收。
+- [ ] `pnpm run test:sse:fault:proxy`：在本机 Docker 演示栈上，分别通过 React/Vue Nginx 固定同源入口执行相同故障恢复验证；测试进程不修改容器配置。
+- [ ] `pnpm run test:sse:soak` 和 `pnpm run test:sse:soak:proxy`：各入口六路流持续收到至少 12 次新增 heartbeat 和 delta，心跳最大间隔小于 15 秒，并在结束时释放连接。
+- [ ] `vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 全部通过，记录真实退出码与测试计数。
+- [ ] 真实 Nginx 半开故障、长时间高并发与慢消费者压力、生产鉴权、PostgreSQL 真库及工业现场：不属于当前可证实交付范围。
+
+本批仅在本机 `127.0.0.1` 注入 TCP **下行静默样式**故障，不能声称已造成生产线路半开；临时测试代理可视为测量工具而不是 SCADA 部署组件。见 [ADR-0058](adr/0058-tcp-sse-fault-and-soak-tests.md)。
