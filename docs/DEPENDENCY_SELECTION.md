@@ -38,3 +38,9 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 - [NestJS Swagger](https://github.com/nestjs/swagger/releases) / [nestjs-pino](https://www.npmjs.com/package/nestjs-pino)
 - [jose](https://www.npmjs.com/package/jose) / [openid-client](https://www.npmjs.com/package/openid-client) / [Nano ID](https://www.npmjs.com/package/nanoid)
 - [@nestjs/throttler](https://www.npmjs.com/package/@nestjs/throttler) / [helmet](https://www.npmjs.com/package/helmet)
+
+## 第十四批依赖补充
+
+- NestJS 配置注入：`@nestjs/config@12.0.1`（已声明于服务端依赖与 Catalog，待 pnpm 安装及锁文件验证）。根目录 `.env` 由 Node `loadEnvFile` 唯一加载，`ConfigModule` 设置 `ignoreEnvFile: true`，不直接增加 `dotenv`。
+- 开发日志美化：`pino-pretty@13.2.0`（仅服务端 devDependency）。只在非生产且 stdout 为 TTY 时启用；其它环境保持 JSON 输出。
+- 以上尚未在 Windows 验证，版本解析、锁文件和全量测试仍是合并前阻塞项。
