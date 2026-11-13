@@ -108,3 +108,12 @@ NestJS 12 已原生提供 Standard Schema 校验 Pipe、响应序列化拦截器
 改用 `src/validation/standard-schema-integration.spec.ts` 的测试专用 Controller 验证 `@Body({ schema })`、`@Query(..., { schema })`、`StandardSchemaValidationPipe`、`StandardSchemaSerializerInterceptor` 和 OpenAPI。正式 `AppModule` 不更改，不开放登录、工程写入或工业设备写入。
 
 本批原有 5 项配置测试之外新增 4 项配置测试与 4 项原生集成测试，维护者 Windows 已实测 **375/375 单测、8/8 E2E**、完整 `pnpm run ready` **退出码 0**。维护者首次 `ready` 曾在单测阶段中断（370 通过、1 失败，另有一个适配器套件导入失败），随后已修复并通过复验。此前包含 `nest-zod` 的锁文件已通过 pnpm 正式重新生成并提交，GitHub 核对已移除该依赖；Docker 冻结安装、镜像构建与隔离烟测均通过，**退出码 0**。本批未重新执行 PostgreSQL 真库回归，记录性文档更新后建议复验 `vp check` 与 `pnpm run docs:check`。详见 [ADR-0049](../../docs/adr/0049-zod-server-runtime-validation.md)。
+
+## V0.3 第十八批：HTTP 就绪探针（Terminus 12）
+
+- `GET /health`：仅表示 NestJS 进程存活，返回原有 `status: "ok"`、`service: "adui-scada-server"`，不能证明数据库或工业网关健康。
+- `GET /health/ready`：仅表示 HTTP 应用初始化完成且未进入关闭流程。正常返回 HTTP 200，关闭过程中返回 HTTP 503；通过 `Cache-Control` 禁止缓存。响应中 `dependencies: "not_checked"` 明确表示未检测 PostgreSQL、Redis、工业设备或报警服务。
+- 采用 `@nestjs/terminus@12.1.0` 和生命周期指示器；受控本机开发 Swagger 包含就绪探针，但生产默认不开放文档。不新增登录、工程版本或设备写入接口。
+- 现阶段正式路由仅有探针，没有可用的受保护业务 API，暂不引入 `@nestjs/throttler` 全局限流。正式身份与业务路由上线前需独立设计分级配额和多实例限流存储，不能对探针实施普通业务流量配额。
+
+本批新增 3 项无数据库单测、2 项 E2E，预计普通单测共 **378 项**、E2E **10 项**，尚未实测。需在 Windows 用 pnpm 12 正式生成并提交锁文件，再执行 `pnpm install --frozen-lockfile`、`pnpm run ready` 和 `pnpm run test:docker:server`；详见 [ADR-0050](../../docs/adr/0050-http-readiness-terminus.md)。
