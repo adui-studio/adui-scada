@@ -518,3 +518,7 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 本批从最新 `main` 创建 `feat/v0.3-zod-runtime-config`，根据 [ADR-0049](adr/0049-zod-server-runtime-validation.md) 在 NestJS 启动配置中引入 `zod@4.6.7`，校验端口和监听地址并保留既有错误消息、配置优先级、Swagger 限制及敏感信息不落日志。新增 4 项配置单测，**预计**常规单测 371、NestJS E2E 8；共享 Core 工程 Schema、Vue/React、数据库、身份会话和正式 HTTP 业务入口不变。
 
 新依赖已写入根 Catalog 与服务端 Manifest，但协作环境无法访问 npm Registry，**尚未生成 pnpm 锁文件或实际执行本批质量链**。需维护者 Windows `pnpm install` 生成并提交 `pnpm-lock.yaml`，再执行冻结安装、`pnpm run ready` 和 Docker 隔离烟测。PR 保持 Draft，未经授权不合并。
+
+### 第十七批补充：NestJS DTO 校验适配器兼容性
+
+维护者要求评估 `nestjs-zod + zod`。已确认 `nestjs-zod@5.6.0` 的上游 Peer 只涵盖 NestJS 10/11、Swagger 7/8/11，尚未覆盖本项目 NestJS 12.0.3 / Swagger 12.1.1。为保持依赖一致性，当前 PR 不强制加入 `nestjs-zod`、不绕过 Peer 校验；继续保留 Zod 4.6.7 的服务端启动配置实现和待生成锁文件。名称不同的 `nest-zod` 官方声明兼容 NestJS 12 / Swagger 12 / Zod 4，未来新 DTO 可按维护者确认的集成方案另行实施；详见 ADR-0049。
