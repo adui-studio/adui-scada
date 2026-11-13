@@ -220,3 +220,7 @@ Vue/React Studio 的图层面板增加一层平面组合树：同一 `groupId` �
 ## V0.3 第十九批：HTTP 请求接收资源约束与关闭保护（NFR-003 / NFR-006 / NFR-007 局部）
 
 正式 NestJS HTTP 服务在启动时使用 Node 24 原生 `http.Server` 对请求头接收时限、请求体完整接收时限、Keep-Alive 空闲时限、请求头数量及单 Socket 最大请求数施加有界限制；不为 SSE/实时订阅统一设置响应超时。关闭流程开始后，NestJS 12 原生 `return503OnClosing` 拒绝新请求并返回 503，但不主动切断已经进入处理阶段的请求。已有 `GET /health`、`GET /health/ready` 响应契约和工业只读默认限制不变。此项属于 HTTP 层拒绝服务缓解与关闭阶段入口保护，不替代反向代理、流量调度、生产级优雅关闭或工业设备可用性评估。参见 [ADR-0051](adr/0051-http-ingress-shutdown-policy.md)。
+
+## V0.3 第二十批：Linux 服务端关闭信号安全回归（NFR-006 / NFR-007 / NFR-008 局部）
+
+在既有 Windows `app.close()` 生命周期测试之外，使用隔离 Linux Docker 容器的正式 NestJS 进程接收 SIGTERM，验证收到终止信号后执行关闭钩子、在规定时间内结束，并由容器退出码判断正常关闭；在信号之前仍须通过 HTTP 存活与就绪、未开放工业接口安全回归。不得为了测试映射宿主端口、连接生产数据库/PLC 或自动启用控制路由。验证仅覆盖当前 HTTP 服务，正式 SSE/WS、工业采集、业务在途事务与容器编排排空仍待专项。

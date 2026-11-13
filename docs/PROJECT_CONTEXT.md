@@ -536,3 +536,13 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 核对 NestJS 12.0.3 官方 Express Adapter 源码确认 `return503OnClosing:true` 为已有功能，关闭一开始即可拒绝新请求，且不会主动销毁现有处理中请求。Node 24 原生 HTTP Server 提供请求接收/连接资源边界，无需额外依赖。正式 `main.ts` 继续先加载根 `.env` 后再导入 `AppModule`，仅调整已有 `NestFactory.create` 选项并在 `listen` 前配置 HTTP Server：请求头 15 秒、完整请求 60 秒、Keep-Alive 空闲 5 秒、请求头最多 100 个、单连接最多 1000 次请求。没有设置通用响应超时，以保留未来 SSE 长连接能力。
 
 新增 3 项纯单测和 2 项真实 Node HTTP E2E（包含关闭钩子屏障和拒绝新连接 503）；Docker 隔离烟测复用正式 HTTP 限制配置。维护者 Windows 完整 `ready` **退出码 0**：31 个测试文件 **381/381 单测**、2 个 E2E 文件 **12/12 E2E**、`vp check` 235 个文件格式正确及 111 个文件零警告/错误、67 份 Markdown 检查、Vue/React/NestJS 类型检查及构建全部通过。Docker `pnpm install --frozen-lockfile`、服务端镜像构建和隔离烟测均通过，**退出码 0**；健康/就绪探针 200，未开放工程/设备接口 404。E2E 期间预期关闭状态 503 和 Terminus 错误日志不是非预期故障。本批无新依赖、Catalog/锁文件不变，不修改 Prisma、Vue/React、Core、工业网关或正式 API。真实 Linux SIGTERM、PostgreSQL 真库与工业现场仍未在本批验证。详见 [ADR-0051](adr/0051-http-ingress-shutdown-policy.md)。PR 保持 Draft，未经授权不合并；本次仅追加文档，建议复查 `vp check` 与 `pnpm run docs:check`。
+
+## 2026-11-13 · V0.3 第二十批：Linux 容器实际 SIGTERM 关闭验证（Draft 待 Windows/Docker 验收）
+
+第十九批 PR #41 已根据维护者明确授权通过 Squash Merge 合入 `main`（`711ef6c`），Windows 381/381 单测、12/12 NestJS E2E、完整 `ready` 退出码 0，Docker 冻结安装和隔离烟测退出码 0。本批在 `test/v0.3-linux-sigterm-container` 独立验证 Linux 正式 Node 进程作为容器 PID 1 收到 `SIGTERM` 后完成 NestJS 关闭钩子和正常退出。
+
+实查 NestJS 12.0.3 源码：原 `enableShutdownHooks()` 会在清理后重发 SIGTERM，可能以 143 退出；正式入口改用上游原生 `enableShutdownHooks([], { useProcessExit: true })`，在全部关闭钩子执行完成后退出 0。Docker 同一隔离镜像新增第二阶段：`--network none` 启动正式 `CMD`，容器内部用回环探针等待就绪并确认工业设备写入仍为 404，再通过 Docker 发送真实 SIGTERM，等待并检查退出码严格为 0；最后无论成功失败清理容器。原有第一阶段烟测保留。
+
+本批**无新 npm 依赖、Catalog、pnpm 锁文件、Prisma、Core、Vue/React 或业务 HTTP 路由变更**；维护者已在 Windows 实测 **381/381 单测、12/12 E2E**、完整 `ready` **退出码 0**，并通过 Docker 冻结安装、隔离烟测及正式 Linux Node PID 1 SIGTERM / 退出码 0 验证，Docker 退出码 0。此后追加仅在显式允许本机 Swagger 时打印实际文档地址的 Pino 启动日志，复用注册路由常量并增加 2 项单测；预计最新分支 **383 项单测、12 项 E2E**，新增改动仍待 Windows/Docker 复验。实际在途请求排空、SSE/WS、代理摘流与工业现场仍属于后续专项，见 [ADR-0052](adr/0052-linux-sigterm-container-shutdown.md)。
+
+按维护者 2026-11-10 已确认的规则，所有由 AI 创建的 GitHub PR（包含 Draft）创建后立即指派 `@adui-dev` 并核验。此前漏掉的 PR #39、#40、#41 已补充指派，本批 PR 也必须在创建后验证；未经授权不合并。

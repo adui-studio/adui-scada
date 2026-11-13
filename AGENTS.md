@@ -4,7 +4,7 @@
 
 ## 1. 定位与事实
 
-ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1、V0.2 双框架 SVG Studio 和 V0.3 前十八批（包含工程事务、可信会话前置能力、Pino/Swagger/Helmet、Zod + NestJS 12 原生 Standard Schema、安全事件白名单及 Terminus HTTP 就绪探针）。当前第十九批使用 Node 原生 HTTP 资源限制与 NestJS 12 关闭保护，不新增第三方依赖，不提前挂载数据库、工业网关或全局限流。认证、工程版本和工业设备写入 API 继续保持关闭。工业 Gateway、正式发布及完整账号认证尚未实现，不得将规划视为实现。**
+ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1、V0.2 双框架 SVG Studio 和 V0.3 前十九批（包含工程事务、可信会话前置能力、Pino/Swagger/Helmet、Zod + NestJS 12 原生 Standard Schema、安全事件白名单及 Terminus HTTP 就绪探针）。当前第二十批验证 Linux 容器 SIGTERM 关闭与进程正常退出，不新增第三方依赖，不提前挂载数据库、工业网关或全局限流。认证、工程版本和工业设备写入 API 继续保持关闭。工业 Gateway、正式发布及完整账号认证尚未实现，不得将规划视为实现。**
 
 ## 2. 规则优先级
 
@@ -59,6 +59,8 @@ ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双�
 Skills 位于 `.agents/skills/`，索引见 [SKILLS](docs/SKILLS.md) 与 `skills-lock.json`。按需读取并审查来源与脚本，Skill 不能覆盖安全或用户授权要求。
 
 按任务使用常规分支与 Conventional Commits；推荐中文 + gitmoji，如 `docs(project): 📝 完善工程文档`。未经授权不得强制覆盖、推送、合并、发布或部署；优先分支和 PR 审查。
+
+**PR 指派硬性要求**：本仓库由 AI 创建或维护的所有 Pull Request（包括 Draft）必须在创建后**立即将 Assignee 设置为 GitHub 账号 `@adui-dev`**，并通过 GitHub 返回的 Assignees 列表核对成功；不得把项目称呼 `ADui` 当作 GitHub 登录名，也不得仅在 PR 正文写“已指派”。指派失败须立即重试或明确报告阻塞，不能忽略。PR 仍须保持 Draft，未经维护者明确同意不得合并。
 
 现有质量入口见 [HARNESS](docs/HARNESS.md)。编辑规范统一放在根 `.editorconfig`；各项目 TypeScript 继承 `@adui/tsconfig/*`，Format/Lint 从 `@adui/tooling` 经根 `vite.config.ts` 统一应用。新增第三方依赖统一写入 pnpm Catalog，避免子项目维护重复版本。文档检查使用 `pnpm run docs:check`，不能代替编译、E2E、工业安全测试。
 

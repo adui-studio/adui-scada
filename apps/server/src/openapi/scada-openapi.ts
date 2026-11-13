@@ -1,5 +1,13 @@
 import type { INestApplication } from "@nestjs/common";
 
+/** 本机 Swagger UI 的唯一注册路径，启动日志也必须使用此常量。 */
+export const LOCAL_OPENAPI_PATH = "api/docs";
+
+/** 仅在 Swagger 实际允许注册时生成可打开的本机地址。 */
+export function getLocalOpenApiUrl(enabled: boolean, port: number): string | undefined {
+  return enabled ? `http://127.0.0.1:${port}/${LOCAL_OPENAPI_PATH}` : undefined;
+}
+
 export interface OpenApiAccessPolicy {
   readonly enabled: string | undefined;
   readonly nodeEnv: string | undefined;
@@ -26,7 +34,7 @@ export async function setupLocalOpenApi(app: INestApplication, enabled: boolean)
     .setVersion("0.3.0")
     .build();
   const document = SwaggerModule.createDocument(app, options);
-  SwaggerModule.setup("api/docs", app, document, {
+  SwaggerModule.setup(LOCAL_OPENAPI_PATH, app, document, {
     customSiteTitle: "ADui SCADA · 本机 API 文档",
     swaggerOptions: { persistAuthorization: false },
   });

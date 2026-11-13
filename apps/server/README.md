@@ -125,3 +125,53 @@ NestJS 12 已原生提供 Standard Schema 校验 Pipe、响应序列化拦截器
 Node 24 原生 `http.Server` 在 `listen` 前配置固定 `headersTimeout:15s`、`requestTimeout:60s`、`keepAliveTimeout:5s`、`maxHeadersCount:100`、`maxRequestsPerSocket:1000`；这些只限制请求接收和连接复用，**不会为 Handler 或 SSE 响应设置统一超时**。如果后续上线大文件上传、WebSocket/SSE 或经过多层反向代理访问，必须根据实际业务与生产链路重新评估限制。
 
 `apps/server/src/security/http-server-policy.ts` 统一维护正式入口、单测、E2E 和 Docker 烟测的限制常量；`GET /health`、`GET /health/ready`、Swagger 默认关闭及未注册业务接口均保持既有安全契约。新增 3 项单测及 2 项 E2E，维护者 Windows 已实测 **381/381 单测、12/12 E2E**，完整 `pnpm run ready` **退出码 0**，Docker 冻结安装与隔离烟测 **退出码 0**。已验证 HTTP 接收资源限制生效、关闭期间新请求返回 503、既有探针在正常状态下可访问；未开放的工程/设备接口仍保持 404。本批无第三方依赖或锁文件变化。E2E 中 Terminus 503 与错误日志是预期负面用例，真实 Linux SIGTERM、反向代理摘流、PostgreSQL 真库与工业现场尚未实测。记录性文档更新后建议复查 `vp check` 和 `pnpm run docs:check`。详见 [ADR-0051](../../docs/adr/0051-http-ingress-shutdown-policy.md)。
+
+## V0.3 第二十批：正式 Linux 容器 SIGTERM 关闭验证
+
+为证明上一批 Windows `app.close()` 用例之外的真实容器停机行为，正式 NestJS 入口采用上游原生 `enableShutdownHooks([], { useProcessExit: true })`，在关闭钩子完成后以退出码 0 正常终止；先前默认重发 SIGTERM 的退出码 143 不应被误认为业务清理失败。本次选择退出码 0 是明确的运维语义决定，后续添加第三方信号监听器时须复审。
+
+`pnpm run test:docker:server` 在既有模块加载烟测之后，使用 `--network none` 额外运行正式镜像 Node PID 1，利用 `docker exec` 在容器内回环验证就绪及未开放工业设备写入 404，再用 `docker stop --signal SIGTERM --timeout 10` 检查退出码 0；无论成功或失败都执行容器清理。整个过程不暴露宿主端口、不访问生产数据库或 PLC，也不触碰现有 Vue/React 和 SCADA Core。
+
+第二十批 SIGTERM 核心改动已由维护者 Windows 实测 **381/381 单测、12/12 E2E**、`ready` 退出码 0，Docker 双阶段（含正式 Linux 容器 PID 1 SIGTERM）退出码 0。此后追加本机 Swagger 启动地址日志及 2 项单测，最新分支预计 **383 项单测、12 项 E2E**，**追加代码尚待重新验收**；真实在途请求、SSE/WS、代理流量与工业网关关停仍不在本阶段验证范围。见 [ADR-0052](../../docs/adr/0052-linux-sigterm-container-shutdown.md)。
+
+### 在本机查看 Swagger 文档
+
+从仓库根目录的 `.env` 显式开启文档：
+
+```dotenv
+SCADA_API_DOCS_ENABLED=true
+SCADA_SERVER_HOST=127.0.0.1
+```
+
+`NODE_ENV` 不得为 `production`，服务端监听地址也必须是 `127.0.0.1`；否则不会注册 Swagger 路由，也不会打印可访问地址。默认端口为 3001，`SCADA_SERVER_PORT` 或 `PORT` 修改端口时，启动日志将自动使用实际端口。
+
+```powershell
+pnpm run dev:server
+```
+
+NestJS 成功监听且 Swagger 允许注册后，由现有 Pino 日志输出：
+
+```text
+Swagger 文档地址：http://127.0.0.1:3001/api/docs
+```
+
+启动日志只记录固定本机回环地址和校验过的端口，不输出环境变量、数据库连接串、设备地址、请求 URL 或令牌。JSON 结构化日志与本机交互终端的 Pretty 日志均沿用现有 Pino 规则；若将 `SCADA_LOG_LEVEL` 设为 `warn` 或更高，`info` 级别的文档地址不会显示。此处仅新增启动提示，既有 Swagger 三重访问保护、默认关闭及工业接口 404 的安全边界不变。
+
+### Windows PowerShell 终端中文日志乱码
+
+如果启动日志中的英文和 `http://127.0.0.1:<端口>/api/docs` 正常，但「文档地址」出现乱码，优先检查终端是否将 Node/Pino 输出的 UTF-8 误按本机 GBK/系统代码页解码。不要删除中文文案、把日志改成英文或关闭结构化日志来规避显示问题。
+
+请在**启动服务的同一个 PowerShell 终端**设置 UTF-8，并先验证 Node 原生命令输出：
+
+```powershell
+chcp 65001 > $null
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+[Console]::InputEncoding = $utf8
+[Console]::OutputEncoding = $utf8
+$OutputEncoding = $utf8
+
+node -e "console.log('中文日志测试：Swagger 文档地址')"
+pnpm run dev:server
+```
+
+这只影响当前终端会话及其新启动的子进程；若使用 JetBrains Run/Debug 面板而不是同一 PowerShell 终端，应分别检查该运行配置的控制台编码。上述步骤只处理**终端显示**，不放宽 Swagger 的非生产/本机监听/显式启用三重限制，也不修改 Pino JSON 日志内容。
