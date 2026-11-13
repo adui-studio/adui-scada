@@ -40,11 +40,19 @@ function sendEvent(response, change) {
   if (!response.destroyed) response.write(`data: ${JSON.stringify(change)}\n\n`);
 }
 
+/** 心跳使用独立 SSE event 名称，不混入 snapshot/delta 协议。 */
+function sendHeartbeat(response) {
+  if (!response.destroyed) response.write("event: heartbeat\ndata: {}\n\n");
+}
+
 tags.subscribe((change) => {
   for (const client of clients) sendEvent(client, change);
 });
 
 tags.apply(simulator.next());
+const heartbeatInterval = setInterval(() => {
+  for (const client of clients) sendHeartbeat(client);
+}, 5000);
 let tick = 0;
 const interval = setInterval(() => {
   tick++;
@@ -105,6 +113,7 @@ server.listen(port, host, () => {
 });
 
 function shutdown() {
+  clearInterval(heartbeatInterval);
   clearInterval(interval);
   for (const client of clients) client.end();
   server.close();
