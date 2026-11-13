@@ -66,8 +66,7 @@ async function connect(url) {
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    const cause =
-      error instanceof Error && error.cause instanceof Error ? error.cause.message : "";
+    const cause = error instanceof Error && error.cause instanceof Error ? error.cause.message : "";
     controller.abort();
     throw new Error("无法访问 " + url + "：" + reason + (cause ? "；" + cause : ""));
   } finally {
@@ -76,8 +75,11 @@ async function connect(url) {
   if (!response.ok || !response.headers.get("content-type")?.includes("text/event-stream")) {
     controller.abort();
     throw new Error(
-      url + " 响应异常：HTTP " + response.status +
-      "，类型：" + (response.headers.get("content-type") || "未提供"),
+      url +
+        " 响应异常：HTTP " +
+        response.status +
+        "，类型：" +
+        (response.headers.get("content-type") || "未提供"),
     );
   }
   if (!response.body) {
@@ -165,13 +167,14 @@ async function verifyTarget(target) {
     // 实际断开一条 HTTP 订阅，其他五路仍需继续接收心跳。
     const original = clients[0];
     const remaining = clients.slice(1);
-    const baselines = remaining.map((client) =>
-      client.events.filter((event) => event.kind === "heartbeat").length,
+    const baselines = remaining.map(
+      (client) => client.events.filter((event) => event.kind === "heartbeat").length,
     );
     await original.close();
     await waitFor(
       remaining,
-      (client) => client.events.filter((event) => event.kind === "heartbeat").length >
+      (client) =>
+        client.events.filter((event) => event.kind === "heartbeat").length >
         baselines[remaining.indexOf(client)],
       target.name + " 单路断开后其他客户端继续收到心跳",
       10_000,
@@ -194,7 +197,8 @@ async function verifyTarget(target) {
 
 async function main() {
   process.stdout.write(
-    proxyMode ? "开始验证本机 Docker Nginx SSE 代理（不停止或修改容器）\n"
+    proxyMode
+      ? "开始验证本机 Docker Nginx SSE 代理（不停止或修改容器）\n"
       : "开始验证本机独立 SSE 模拟服务（不自动启动服务）\n",
   );
   for (const target of targets) {
