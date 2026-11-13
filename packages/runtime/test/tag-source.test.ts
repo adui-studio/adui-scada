@@ -241,3 +241,25 @@ test("主动关闭订阅后不再触发断连通知或后台重连", () => {
   expect(disconnectCount).toBe(0);
   expect(vi.getTimerCount()).toBe(0);
 });
+
+test("超时断连回调同步关闭订阅后不得再次建立 EventSource", () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("EventSource", FakeEventSource);
+  let disconnectCount = 0;
+  let connection: ReturnType<ReturnType<typeof createSseTagSource>["subscribe"]> | null = null;
+  connection = createSseTagSource().subscribe({
+    onMessage: () => {
+      throw new Error("不应收到 Tag 消息");
+    },
+    onDisconnected: () => {
+      disconnectCount++;
+      connection?.close();
+    },
+  });
+
+  vi.advanceTimersByTime(15_000);
+  expect(disconnectCount).toBe(1);
+  expect(FakeEventSource.instances).toHaveLength(1);
+  expect(FakeEventSource.instances[0]?.closeCount).toBe(1);
+  expect(vi.getTimerCount()).toBe(0);
+});
