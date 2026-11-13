@@ -64,3 +64,9 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 维护者提出采用 `nestjs-zod + zod`。经核对 `nestjs-zod@5.6.0` 的上游 `v5.6.0` 标签 [package.json](https://github.com/BenLorantfy/nestjs-zod/blob/v5.6.0/packages/nestjs-zod/package.json)，其 `peerDependencies` 为：`@nestjs/common: ^10.0.0 || ^11.0.0`、`@nestjs/swagger: ^7.4.2 || ^8.0.0 || ^11.0.0`（Swagger 可选）、`zod: ^3.25.0 || ^4.0.0`。**本项目已锁定 NestJS 12.0.3 和 Swagger 12.1.1，不满足该版本声明的 Nest Peer 约束**；不能靠 `ignorePeerDeps`、伪造 lockfile 或全局覆盖降级解决。
 
 [另一项目 `nest-zod`](https://nestzod.dev/guide/compatibility)（注意名称不同）在官方兼容性表明确列出 NestJS 12 / Swagger 12 / Zod 4，候选方向是 `nest-zod + zod`，但**未经维护者同意不能将指定的 `nestjs-zod` 静默替换成 `nest-zod`**。另外 NestJS 12 自带 Standard Schema 的校验支持，也能直接使用 `zod`。目前第十七批 PR #39 只保留已选定的 `zod` 入口校验，`nestjs-zod` 作为未解决兼容性阻塞，不将其添加到 Catalog 或依赖清单。
+
+### 第十七批最终选型（维护者已授权）
+
+结论：选择 **`nest-zod@2.1.0` + `zod@4.6.7`**，不采用当前 Peer 范围未覆盖 NestJS 12 的 `nestjs-zod@5.6.0`，且不启用 `ignorePeerDeps` 或升级/降级 NestJS。二者包名不同，不应混用。官方 [NestJS 12 兼容说明](https://nestzod.dev/guide/compatibility) 和 [Swagger 集成](https://nestzod.dev/guide/swagger) 可用于审查。版本以 Windows pnpm 安装时返回的真实依赖树为准。
+
+`nest-zod/swagger` 的装饰器只用于未来明确受控的 NestJS DTO 路由。新增 4 项隔离 Controller 集成测试，不挂载正式 AppModule；当前只做 `zod` 启动配置与 NestJS 适配器验证。**两个新增 npm 依赖的锁文件尚未由 pnpm 正式生成，仍为 PR #39 合并阻塞。**
