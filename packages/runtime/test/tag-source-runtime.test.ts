@@ -300,3 +300,44 @@ test("网络断连优先维持重连状态，快照到来后恢复且不会遗�
     vi.useRealTimers();
   }
 });
+
+test("后台标签页返回前台会立即判定 Tag 数据超时，停止后清理监听", async () => {
+  vi.useFakeTimers();
+  const started = Date.parse("2026-11-13T00:00:00.000Z");
+  vi.setSystemTime(started);
+  const listeners = new Set<() => void>();
+  const fakeDocument = {
+    visibilityState: "hidden",
+    addEventListener(type: string, callback: () => void) {
+      if (type === "visibilitychange") listeners.add(callback);
+    },
+    removeEventListener(type: string, callback: () => void) {
+      if (type === "visibilitychange") listeners.delete(callback);
+    },
+  };
+  vi.stubGlobal("document", fakeDocument);
+  const controlled = controlledSource();
+  const states: RuntimeState[] = [];
+  const runtime = new DemoRuntime((state) => states.push(state), controlled.source);
+  try {
+    await runtime.start();
+    controlled.handlers[0]?.onMessage({ kind: "snapshot", values: [makeTag(1)] });
+    expect(states.at(-1)?.status).toBe("live");
+    expect(listeners.size).toBe(1);
+
+    vi.setSystemTime(started + 13_000);
+    fakeDocument.visibilityState = "visible";
+    for (const listener of listeners) listener();
+    expect(states.at(-1)?.status).toBe("stale");
+    expect(states.at(-1)?.values[0]?.quality).toBe("STALE");
+
+    controlled.handlers[0]?.onMessage({ kind: "delta", values: [makeTag(2)] });
+    expect(states.at(-1)?.status).toBe("live");
+  } finally {
+    runtime.stop();
+    expect(listeners.size).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  }
+});
