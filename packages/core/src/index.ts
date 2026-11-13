@@ -24,7 +24,13 @@ export { TAG_QUALITIES, TAG_QUALITY_LABELS, TagStore, validateTagValue } from ".
 export type { TagChange, TagListener, TagQuality, TagScalar, TagValue } from "./tag-store.ts";
 export { WaterTreatmentSimulator } from "./simulator.ts";
 export { renderSvgPage } from "./svg.ts";
-export { waterTreatmentDemoDocument, waterTreatmentDemoTagOptions } from "./demo-document.ts";
+export {
+  waterTreatmentDemoDocument,
+  waterTreatmentDemoTagDefinitions,
+  waterTreatmentDemoTagCatalog,
+  waterTreatmentDemoTagOptions,
+} from "./demo-document.ts";
+export type { WaterTreatmentDemoTagOption } from "./demo-document.ts";
 export { buildLayerTree } from "./layer-tree.ts";
 export type { LayerTreeEntry, LayerTreeGroup, LayerTreeNode } from "./layer-tree.ts";
 export {
