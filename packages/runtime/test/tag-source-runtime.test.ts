@@ -87,7 +87,9 @@ test("恶意或无效 Tag 事件使订阅关闭，旧数据不得继续标成正
   try {
     await runtime.start();
     controlled.handlers[0]?.onMessage({ kind: "snapshot", values: [makeTag(2)] });
-    controlled.handlers[0]?.onMessage('{"kind":"delta","values":[{"tagId":"water.level","value":null}]}');
+    controlled.handlers[0]?.onMessage(
+      '{"kind":"delta","values":[{"tagId":"water.level","value":null}]}',
+    );
     expect(states.at(-1)?.status).toBe("error");
     expect(states.at(-1)?.values[0]?.quality).toBe("STALE");
     expect(controlled.closed()).toBe(1);
