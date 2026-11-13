@@ -626,3 +626,9 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 - 结合此前维护者独立网络日志：`test:sse:network` 实际六路 HTTP SSE 通过、退出码 0；`test:sse:proxy` 在 React `18080` 与 Vue `18081` 的 Docker Nginx 双入口通过、退出码 0，Demo 与 Server 为 Healthy。
 
 **自动化验收结论：第二十五批 Windows 完整质量链及 Docker Nginx SSE 代理专项均通过。** 注意本段验收记录追加后尚未再次执行最新文档的格式与静态检查，建议合并审查前运行 `vp check`、`pnpm run docs:check`。仍未验证真实 Nginx 半开连接、持续高并发/慢消费者长期负载、生产认证、PostgreSQL 真库和工业现场设备；不能把本机 Demo 资源上限视为工业 SLA。PR #47 继续 Draft，待维护者明确同意后才能合并。
+
+## 2026-11-13 · V0.3 第二十六批：TCP 下行静默与持续多客户端回归（待维护者验收）
+
+从第二十五批已合并的 `main` 提交 `cf13808` 创建 `feat/v0.3-sse-transport-fault-soak`。本批只扩展本机 SSE 自动化：新增回环透明 TCP 代理，可让已建立的 SSE socket 保持连接、只暂停下行字节；基于现有 Chrome/Edge 检查 Vue/React Runtime 是否按 12/15 秒时效完成 STALE、主动重连、快照恢复与资源释放，并可通过 Docker Nginx 演示入口执行相同流程。另为已有 Node 六路 SSE 测试添加显式的至少 12 次心跳与增量持续观测。正常浏览器和网络烟测的默认行为不变，不增加依赖，不修改任何产品运行时或设备接口。
+
+协作环境的 Node 22 原生 HTTP/TCP 故障代理单测 **3/3 通过**，证明工具自身可阻断真实下行字节而保留连接，其他 SSE 仍可收消息。分支源码已通过静态 JavaScript 解析。**尚未在维护者 Windows 完整 pnpm 工作区执行新脚本、真实 Chrome/Edge 双框架恢复、Docker Nginx 故障模式或六路持续测试**；`vp check`、`pnpm run docs:check` 与 `pnpm run ready` 待维护者实测。验收计划详见 [ADR-0058](adr/0058-tcp-sse-fault-and-soak-tests.md) 和 [VALIDATION](VALIDATION.md)。PR 保持 Draft，未经明确授权不合并。
