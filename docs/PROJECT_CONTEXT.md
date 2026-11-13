@@ -606,3 +606,9 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 本批补丁仅修复 Docker 配置读取：演示栈 `up/down/logs` 与新增 `ps` 命令统一显式加载仓库根 `.env`；Compose 四组端口回退值同步为根 `.env.example` 默认值；`env:check` 强制验证脚本及四组默认值，防止再次静默降级到旧端口。**没有修改 SSE 服务、NestJS 或 Vue/React 业务代码，也未执行 Docker 或重启维护者计算机上的容器。**
 
 维护者同步分支后，建议在仓库根目录执行 `pnpm run env:check`、`pnpm run docker:demo:up`、`pnpm run docker:demo:ps` 和 `pnpm run test:sse:proxy`；`docker:demo:ps` 的宿主机端口应分别显示 `127.0.0.1:18080->8080/tcp` 和 `127.0.0.1:18081->8080/tcp`。如仍不一致，需检查 PowerShell 是否存在 `SCADA_REACT_PORT`/`SCADA_VUE_PORT` 同名进程环境变量覆盖；切勿粘贴完整 `docker compose config --environment`，其中可能包含凭据。修复后的 Windows Docker Nginx 代理烟测、`vp check`、`docs:check` 和完整 `ready` 尚未实测。
+
+## 2026-11-13 · 第二十五批 Docker Nginx 代理复验通过
+
+继旧 Compose 命令遗漏根 `.env` 造成端口漂移后，维护者已重新运行 `pnpm run env:check`、`pnpm run docker:demo:up`、`pnpm run docker:demo:ps` 和 `pnpm run test:sse:proxy`：环境/LF 检查通过，四镜像构建并启动，Demo/Server Healthy；Docker 真实宿主机映射为 React `18080->8080`、Vue `18081->8080`，两条 Nginx SSE 代理均通过六路 snapshot、具名 heartbeat、单路断开隔离和重订阅，**代理测试退出码 0**。结合上一份日志，独立 SSE 客户端单测 **8/8**、直连网络六路回归 **退出码 0**。
+
+本批 Windows Docker 代理验收确认已完成，但 **最新 `vp check`、`docs:check` 和完整 `ready` 尚未提供**，真实 Nginx 半开故障、持续高并发、生产身份权限、真库和工业现场仍未验证。只追加验收记录，不修改已验收业务代码；PR #47 Draft 待最终验收与明确合并授权。
