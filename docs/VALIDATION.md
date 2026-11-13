@@ -192,10 +192,12 @@ Docker 隔离测试应依次验证：
 
 本批没有执行 PostgreSQL 真库回归、工业现场验证或手工交互式浏览器 Swagger/SSE 验证；自动化 E2E 已覆盖模拟工程、Tag 快照、只读 Swagger 路由、SSE 首条 snapshot 与关闭连接。记录性文档更新在上述实测之后，建议最新 HEAD 复查 `vp check` 和 `pnpm run docs:check`。
 
-## V0.3 第二十二批：Runtime 数据源抽象与会话隔离（待验收）
+## V0.3 第二十二批：Runtime 数据源抽象与会话隔离（Windows / Docker 已通过）
 
-第二十一批维护者 Windows 实测 **389/389 单测（33 文件）**、**17/17 NestJS E2E（3 文件）**，完整 `ready` **退出码 0**，Docker 冻结安装、原隔离烟测和正式 Linux Node PID 1 SIGTERM / 退出码 0 回归均通过。第二十二批新增 4 项 `tag-source.test.ts` 与 7 项 `tag-source-runtime.test.ts`，预期普通单测 **400**、Nest E2E **17**，**尚未执行这些新增测试**。
+第二十一批维护者 Windows 基线为 **389/389 单测（33 文件）**、**17/17 NestJS E2E（3 文件）**。第二十二批新增 4 项 `tag-source.test.ts` 与 7 项 `tag-source-runtime.test.ts`，维护者在 Windows 已实测 **Runtime 专项 21/21（3 文件）、全量单测 400/400（35 文件）、NestJS E2E 17/17（3 文件）**，全部通过。此前 `erasableSyntaxOnly` 的 TS1294 参数属性报错已修复；独立 `vp check` 和完整 `ready` 内的检查均显示 **249 个文件格式正确、122 个源文件无类型/Lint 警告或错误**。
 
 重点验收固定同源路由预设与拒绝外部 URL、工程 HTTP/Content-Type/AbortSignal、snapshot→delta 共享协议校验、断线 STALE/新 snapshot 恢复、首次 delta 拒绝、非法消息关闭连接、stop 中止请求、旧代次回调隔离、同步订阅错误回收。生产默认 Nest API、Vue/React Web 默认 `/demo`、Tauri 离线模拟均保持不变；不新增设备写入、认证接口或外网接入。
 
-维护者应在 Windows 实际执行 `pnpm install --frozen-lockfile`、`pnpm run test:runtime`、`vp check`、`pnpm run ready`、`pnpm run test:docker:server`。未经实际输出，不得填写通过或复用上一批计数。本批 PostgreSQL 真库、工业现场、实际生产认证、SSE 并发压测以及浏览器切换到 Nest 数据源尚未验证。
+维护者 Windows **完整 `pnpm run ready` 退出码 0**：11 个 Manifest / 51 项 Catalog 依赖检查通过，中文文案检查 148 个自有文件，Prisma Client 7.10.1 生成成功，Core、Vue、React、Draft Storage、NestJS 类型检查与构建通过，**70 份 Markdown** 静态检查通过。独立 Docker 镜像执行 `pnpm install --frozen-lockfile` 和服务端构建，隔离 HTTP 烟测的健康/就绪接口正常，未开放工程及工业设备接口仍为 404；正式 Linux Node PID 1 接收 SIGTERM 后退出码 0，**`pnpm run test:docker:server` 退出码 0**。E2E 中 Terminus `Health Check has failed!` 和 HTTP 503 是预期关闭状态负面测试。Docker 验证的是既有服务端安全与关闭机制，不应当作 Runtime 本身的容器端到端测试。
+
+本批**未验证** PostgreSQL 真库、工业现场、生产鉴权、SSE 并发背压、浏览器切换到 Nest 数据源，也没有收到人工 Vue/React 页面断连演练记录。验收文档补写后建议重新执行 `vp check` 和 `pnpm run docs:check`，不能把本次记录性提交当作已重跑质量链。
