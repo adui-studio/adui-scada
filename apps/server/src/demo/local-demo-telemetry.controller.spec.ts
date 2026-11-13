@@ -6,10 +6,10 @@ import type { LocalDemoTelemetryService } from "./local-demo-telemetry.service.j
 test("NestJS 本机 SSE 发送具名心跳且取消订阅后清理心跳与 Tag 监听", () => {
   vi.useFakeTimers();
   const release = vi.fn();
-  let receiveChange: TagListener | null = null;
+  const current = { listener: undefined as TagListener | undefined };
   const telemetry = {
     subscribe(listener: TagListener) {
-      receiveChange = listener;
+      current.listener = listener;
       listener({ kind: "snapshot", values: [] });
       return release;
     },
@@ -23,8 +23,8 @@ test("NestJS 本机 SSE 发送具名心跳且取消订阅后清理心跳与 Tag 
     expect(messages).toEqual([{ data: { kind: "snapshot", values: [] } }]);
     vi.advanceTimersByTime(5_000);
     expect(messages.at(-1)).toEqual({ type: "heartbeat", data: {} });
-    expect(receiveChange).not.toBeNull();
-    receiveChange?.({ kind: "delta", values: [] } satisfies TagChange);
+    expect(current.listener).toBeDefined();
+    current.listener?.({ kind: "delta", values: [] } satisfies TagChange);
     expect(messages.at(-1)).toEqual({ data: { kind: "delta", values: [] } });
 
     vi.advanceTimersByTime(5_000);
