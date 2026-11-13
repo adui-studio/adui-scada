@@ -569,4 +569,4 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 
 本批依照 [ADR-0055](adr/0055-sse-heartbeat-and-tag-silence.md)，在原水处理 SSE 与本机受控 NestJS SSE 中每 5 秒发送一次**具名 heartbeat 事件**，不混入共享 `TagChange`；浏览器源适配器将任何 SSE 活动视为传输存活，连续 15 秒完全静默才关闭旧 EventSource 并以原固定同源 URL 重建；共享 Runtime 另以 12 秒无有效 Tag 值检测数据过期，降级旧读数为 STALE，增加中文 `stale` 状态，不允许心跳或空增量伪造正常更新。既有 30 秒模拟周期中的 8 秒停采样与质量演练保留，断连后仍要求先 snapshot 再 delta。
 
-新增 4 项适配器心跳/重连单测、3 项 Runtime 数据质量单测及 1 项 NestJS SSE 控制器单测，预计普通单测 **408 项**、NestJS E2E **17 项**，**均待维护者 Windows/Docker 实测**。无新依赖、锁文件、Prisma、Core Schema、Vue/React 页面、工业 Gateway 或生产 API 修改。Tauri 离线运行时和浏览器默认 `/demo` 保持不变；心跳、超时阈值仅为本机模拟参数，不代表生产现场 SLA、正式身份认证或工业网关接入。
+新增 5 项适配器心跳/重连单测、3 项 Runtime 数据质量单测及 1 项 NestJS SSE 控制器单测，预计普通单测 **409 项**、NestJS E2E **17 项**，**均待维护者 Windows/Docker 实测**。无新依赖、锁文件、Prisma、Core Schema、Vue/React 页面、工业 Gateway 或生产 API 修改。Tauri 离线运行时和浏览器默认 `/demo` 保持不变；心跳、超时阈值仅为本机模拟参数，不代表生产现场 SLA、正式身份认证或工业网关接入。
