@@ -477,3 +477,12 @@
 - `apps/server/test/http-server-policy.e2e-spec.ts`：2 项真实 Node HTTP Server 端到端用例，验证策略、探针及关闭流程内新请求 503 和 `Connection: close`，测试屏障在 `finally` 中释放。
 - `apps/server/container-smoke.mjs`：Docker `--network none` 隔离环境读取实际 Node Server 属性并复核健康/未开放接口，使用相同的启动选项。
 - [ADR-0051](adr/0051-http-ingress-shutdown-policy.md)：解释 Node 资源边界、Nest 原生关闭保护及生产级限制。
+
+## V0.3 第二十批：Linux 容器 SIGTERM 测试与 PR Assignee 规则
+
+- `apps/server/src/main.ts`：正式服务保留所有现有关闭钩子，改为 NestJS 12 原生 `enableShutdownHooks([], { useProcessExit: true })`，只有完成关闭生命周期后才以退出码 0 正常结束。
+- `apps/server/container-signal-probe.mjs`：第二阶段测试脚本，仅在容器网络内回环轮询 HTTP 存活与就绪，并验证未开放的设备写入接口为 404。
+- `deploy/docker/Dockerfile.server`：将测试专用回环探针带入隔离镜像，不改变正式服务默认 CMD 或生产监听地址。
+- `scripts/test-server-container.mjs`：保留现有 `--network none` 隔离烟测，新增正式 Node PID 1 容器 SIGTERM/退出码 0 检查，并通过动态名称和 `finally` 清理容器。
+- `AGENTS.md`：强制所有由 AI 创建的 PR（包括 Draft）即时指派 GitHub `@adui-dev` 并核对 Assignee；PR 未经明确授权不得合并。
+- [ADR-0052](adr/0052-linux-sigterm-container-shutdown.md)：记录官方关闭选项、默认退出码变化及 Docker 信号验收范围。
