@@ -98,3 +98,9 @@ Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。�
 新增 `ScadaSecurityAuditService`，用于尚未挂入正式 AppModule 的 `ScadaIdentityModule`、`ScadaSessionGuard` 与 `ScadaProjectGuard`。所有允许/拒绝事件只输出固定操作、结果和原因码，由白名单构造字段后使用 NestJS Logger 记录，**不会附带 Bearer、Cookie、查询参数、请求体、工程路径或身份标识**。这属于运维诊断记录，不具备安全审计持久化、归责、事务一致性或日志丢失补偿能力；真实登录和业务写入接口仍关闭。
 
 单元测试覆盖敏感字段过滤、非法事件组合、会话撤销和工程越权拒绝；维护者已在 Windows 实测 **367/367 常规单测、8/8 E2E**，完整 `pnpm run ready` 及独立 Docker 隔离烟测均 **退出码 0**。记录性文档变更后仍建议运行 `vp check` 与 `pnpm run docs:check`。后续如使用 Zod 检查外部输入，必须保留当前审计输出字段白名单，不直接记录原始对象或包含敏感输入的校验错误。详见 [ADR-0048](../../docs/adr/0048-security-audit-event-boundary.md)。
+
+## V0.3 第十七批：Zod 运行时启动参数校验
+
+服务端从根 `.env` 及进程环境读取启动配置后，使用 `zod@4.6.7` 的 `safeParse` 验证端口、监听地址。保留 `SCADA_SERVER_PORT` / `SCADA_SERVER_HOST` 对通用环境变量的优先级、中文错误提示、默认端口 3001、默认监听 127.0.0.1；Swagger 仅允许非生产、本地回环、显式开启。错误中不输出原始环境变量或 `ZodError`。不接入新的登录、工程写入、工业设备写入接口，也不更改 Core Schema。
+
+新增 4 项配置回归测试，预计普通单测共 371 项、NestJS E2E 8 项。当前已更新 Manifest 和根 Catalog，但**没有正式生成新锁文件或完成 Windows 验收**。必须先在可访问 npm Registry 的 Windows 环境执行 `pnpm install` 并提交 `pnpm-lock.yaml`，再进行 `pnpm install --frozen-lockfile`、`pnpm run ready` 和 Docker 隔离烟测；详见 [ADR-0049](../../docs/adr/0049-zod-server-runtime-validation.md)。
