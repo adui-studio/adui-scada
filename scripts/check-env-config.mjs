@@ -175,8 +175,7 @@ for (const name of ["db:dev:up", "db:dev:down"]) {
   );
 }
 
-const demoComposeCommand =
-  "docker compose --env-file .env -f deploy/docker/compose.demo.yaml";
+const demoComposeCommand = "docker compose --env-file .env -f deploy/docker/compose.demo.yaml";
 for (const name of ["docker:demo:up", "docker:demo:down", "docker:demo:logs", "docker:demo:ps"]) {
   assert.ok(
     dbScripts[name]?.startsWith(demoComposeCommand + " "),
