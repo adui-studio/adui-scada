@@ -158,3 +158,9 @@ Vue/React 运行监控页面新增共享的**实时链路诊断**：连接状态
 在 Vue/React 运行监控的“实时链路诊断”中新增 **最近状态变化**，由共享 `@adui/scada-runtime` 提供同一份只读数据。每次真正进入新状态时记录一次，只保留当前启动会话内最近 20 条；重复心跳、Tag 增量与相同状态不会刷满记录。包括 `live`、`stale`、`reconnecting`、`error` 等已存在的状态；离线模式只记录 `simulation`，不制造网络故障事件。本地时间戳并非设备时钟，时间线也不是报警/审计历史。
 
 运行 `pnpm run test:runtime`、`vp check`、`pnpm run docs:check`、`pnpm run ready`，并在三项本机开发服务启动后执行 `test:sse:browser` 和 `test:sse:fault:browser` 验证 React/Vue 同步显示。详见 [ADR-0060](docs/adr/0060-runtime-session-status-history.md)。本批 Windows 实测尚待执行。
+
+## V0.3 第二十九批 · 共享 Tag 定义目录（本机演示子集）
+
+Core 新增稳定 `tagId`、可变显示名称、数据类型、单位和描述的共享定义目录。TagStore 在显式注入目录时验证实时值类型，并保证整批失败不修改已有数据。水处理 Demo 的水位、泵运行和流量定义由 Web 在线 Runtime、Tauri 离线模拟和独立 SSE 服务共同使用；Studio Vue/React 的 Tag 绑定候选展示类型与单位。质量仍是每条实时 `TagValue` 的动态字段，不是静态定义。
+
+当前目录仅是代码内本机演示元数据，不改变 `ScadaDocument 0.2.0`，重命名不会自动持久化，也不含 OPC UA NodeId、Modbus 寄存器或 MQTT Topic。FR-004 仍为部分实现。见 [ADR-0061](docs/adr/0061-tag-definition-catalog.md)。本批 Windows 测试尚待维护者执行。
