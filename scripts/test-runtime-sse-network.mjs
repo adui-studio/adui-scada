@@ -180,7 +180,8 @@ async function verifyTarget(target) {
     clients.push(replacement);
     await waitFor(
       [replacement],
-      (client) => client.events.find((event) => event.kind === "message")?.payload?.kind === "snapshot",
+      (client) =>
+        client.events.find((event) => event.kind === "message")?.payload?.kind === "snapshot",
       target.name + " 新订阅先收到快照",
     );
     assert.equal(clients.slice(1).filter((client) => !client.closed).length, 6);
