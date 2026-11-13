@@ -198,7 +198,9 @@ async function snapshot(session) {
       "'.scada-diagnostics-grid > div:nth-child(2) dd')?.textContent), " +
       "qualities: [...document.querySelectorAll('.scada-quality-item')].map((node) => ({ " +
       "quality: node.getAttribute('data-quality'), " +
-      "count: Number(node.querySelector('strong')?.textContent) })) }, " +
+      "count: Number(node.querySelector('strong')?.textContent) })), " +
+      "statusEvents: [...document.querySelectorAll('.scada-status-events li')].map(" +
+      "(node) => node.getAttribute('data-status')) }, " +
       "statuses: [...(probe?.statuses ?? [])] }; })()",
   );
 }
@@ -242,6 +244,8 @@ async function checkTarget(session, target) {
     ready.diagnostics.tagCount,
     "质量分布数量必须与可见 Tag 数量一致",
   );
+  assert.equal(ready.diagnostics.statusEvents[0], "live", "首次有效数据应记录 live 状态");
+  assert.ok(ready.diagnostics.statusEvents.length <= 20, "状态事件不得超出二十条");
   let activeIndex = ready.streams.findLastIndex((source) => !source.closed);
   assert.ok(activeIndex >= 0, "没有有效 SSE 流");
 
@@ -262,6 +266,7 @@ async function checkTarget(session, target) {
     stale.diagnostics.qualities.some((item) => item.quality === "STALE" && item.count > 0),
     "数据过期时诊断质量分布必须包含 STALE",
   );
+  assert.equal(stale.diagnostics.statusEvents[0], "stale", "过期后应记录 stale 变化");
   await session.evaluate("window.__scadaSseProbe.streams[" + activeIndex + "].mode = 'normal'");
   const resumed = await waitFor(
     session,
@@ -288,11 +293,20 @@ async function checkTarget(session, target) {
     "重建连接必须保留原固定同源路径",
   );
   assert.ok(recovered.diagnostics.reconnectCount >= 1, "静默重连必须累计断连过程");
-  await waitFor(
+  const resumedAfterFault = await waitFor(
     session,
     target.name + " 断流后快照恢复",
     (state) => state.status === "live",
     15000,
+  );
+  assert.equal(
+    resumedAfterFault.diagnostics.statusEvents[0],
+    "live",
+    "重连恢复后应记录 live 状态",
+  );
+  assert.ok(
+    resumedAfterFault.diagnostics.statusEvents.includes("reconnecting"),
+    "状态事件应保留断连过程",
   );
 
   // 离开 Runtime 后全部 EventSource 必须关闭，且不能出现后台重建。
@@ -343,6 +357,7 @@ async function checkTransportFaultTarget(session, target, proxy) {
     },
     25000,
   );
+  assert.equal(ready.diagnostics.statusEvents[0], "live", "TCP 故障前应记录 live 状态");
   const previousCount = ready.streams.length;
   const frozen = proxy.freezeActiveSse();
 
@@ -354,6 +369,7 @@ async function checkTransportFaultTarget(session, target, proxy) {
     16000,
   );
   assert.equal(stale.streams.length, previousCount, "Tag 过期不应提前重建 SSE");
+  assert.equal(stale.diagnostics.statusEvents[0], "stale", "TCP 静默时应记录 stale 变化");
   assert.equal(proxy.stats(frozen).closed, false, "传输静默期间底层 TCP 不应由代理主动关闭");
 
   const recovered = await waitFor(
@@ -370,11 +386,16 @@ async function checkTransportFaultTarget(session, target, proxy) {
     recovered.streams.every((stream) => stream.url === recovered.streams[0]?.url),
     "TCP 故障前后 SSE 事件订阅路径必须保持同源一致",
   );
-  await waitFor(
+  const restored = await waitFor(
     session,
     target.name + " TCP 故障重订阅快照恢复",
     (state) => state.status === "live",
     20000,
+  );
+  assert.equal(restored.diagnostics.statusEvents[0], "live", "故障恢复应记录 live 状态");
+  assert.ok(
+    restored.diagnostics.statusEvents.includes("reconnecting"),
+    "故障恢复后的事件记录应包含 reconnecting",
   );
   const releaseStarted = Date.now();
   while (!proxy.stats(frozen).closed && Date.now() - releaseStarted < 5000) {
