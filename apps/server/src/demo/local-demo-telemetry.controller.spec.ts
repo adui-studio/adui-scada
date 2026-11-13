@@ -29,6 +29,8 @@ test("NestJS 本机 SSE 发送具名心跳且取消订阅后清理心跳与 Tag 
 
     vi.advanceTimersByTime(5_000);
     expect(messages.filter((event) => event.type === "heartbeat")).toHaveLength(2);
+    subscription.unsubscribe();
+    expect(vi.getTimerCount()).toBe(0);
   } finally {
     subscription.unsubscribe();
     vi.useRealTimers();
