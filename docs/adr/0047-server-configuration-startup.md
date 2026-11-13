@@ -26,9 +26,9 @@ V0.3 第十四批引入 Pino 日志后，`AppModule` 的 `LoggerModule.forRoot({
 
 ## 验收
 
-基线为第十四批 Windows `ready` 实测：356 项单测、8 项 NestJS E2E、完整质量链退出码 0。本批额外增加 5 项无数据库单测，**预期**普通单测 361 项，E2E 仍为 8 项；预期不等于实测。
+基线为第十四批 Windows `ready` 实测：356 项单测、8 项 NestJS E2E、完整质量链退出码 0。本批额外增加 5 项无数据库单测，维护者已在 Windows 实测普通单测 **361/361**、E2E **8/8**、完整 `ready` **退出码 0**。
 
-合并前执行 `pnpm run env:check`、`vp check`、`pnpm run ready`，按需执行 `pnpm run test:docker:server`。单独验证启动日志等级可在隔离本地环境临时设置 `SCADA_LOG_LEVEL=debug` 后启动，并确认不存在未经授权开放的 Swagger/业务接口。未获得 Windows 实测前 PR 保持 Draft，不合并。
+维护者 Windows 验证已覆盖 `env:check`、`vp check`、`ready` 及 Docker 隔离镜像构建和烟测，退出码均为 0；`vp check` 无警告/错误，Docker 中健康接口正常，工程及工业设备写入接口仍未开放。本批没有单独执行 `test:db`，亦没有提供通过实际启动日志对 `SCADA_LOG_LEVEL=debug` 进行端到端确认的记录；加载顺序由代码及 `env:check` 约束。记录性文档变更后仍建议执行 `vp check`、`pnpm run docs:check`；PR 保持 Draft，待维护者明确授权后才可合并。
 
 ## 后续演进
 
