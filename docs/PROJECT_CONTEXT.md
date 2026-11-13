@@ -521,10 +521,10 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 
 当前 Catalog/Manifest 仅保留 `zod`，测试文件改为 `standard-schema-integration.spec.ts`。维护者已使用 pnpm 重新计算并推送锁文件（GitHub 核对不再包含 `nest-zod`）。修复后 Windows 完整 `ready` **退出码 0**：格式 227/227、105 个受检代码文件零告警/错误、**375/375 单测**、**8/8 E2E**、65 份 Markdown 文档检查以及 React/Vue/NestJS 类型检查与构建通过。独立 Docker 镜像构建、冻结安装和隔离烟测也已通过，**退出码 0**；容器健康接口正常，工程与设备写入接口未开放。本批未运行 PostgreSQL 真库回归或工业现场测试。配套 ADR-0049 已同步修订。PR #39 仍保持 Draft，未经明确授权不合并。
 
-## 2026-11-13 · V0.3 第十八批：Terminus HTTP 就绪探针（Draft 待锁文件与 Windows 验收）
+## 2026-11-13 · V0.3 第十八批：Terminus HTTP 就绪探针（Windows / Docker 验收通过，Draft 待合并）
 
 第十七批 PR #39 已获维护者明确授权，以 Squash Merge 合入 `main`（`8bba4de`）。维护者 Windows 已实测 `ready` 单测 375/375、E2E 8/8、退出码 0，Docker 冻结依赖安装、隔离镜像烟测退出码 0。本批基于该主线建立 `feat/v0.3-http-readiness-terminus`。
 
 经核对已发布 `@nestjs/terminus@12.1.0` 发行包的 Peer 声明，支持仓库 NestJS 12 / Swagger 12 / Node 24。由于正式业务 HTTP 入口仅有健康接口，登录、工程版本和工业设备写入尚未开放，因此暂不引入 `@nestjs/throttler`，避免对容器健康探针造成全局限流误伤。本批只通过 Terminus 增加独立 `GET /health/ready`：HTTP 应用初始化后返回就绪，关闭时 503，禁止缓存，固定返回 `dependencies:"not_checked"`。保留 `GET /health` 进程存活契约及未开放业务 API 的 404。
 
-新增 3 项就绪指示器单测和 2 项 NestJS E2E，Docker 隔离烟测新增 HTTP 就绪验证；**预计 378 项普通单测、10 项 E2E**，未实际执行。本批仅更新生产依赖 Catalog/Manifest，协作环境无法访问 npm Registry，**尚未通过 pnpm 更新 `pnpm-lock.yaml`**；必须在维护者 Windows 正式生成锁文件、通过冻结安装和完整 `ready` / Docker 验证后再评审。无数据库/Prisma 迁移，不代表业务就绪、现场设备健康、报警数据质量或生产认证完成。详见 [ADR-0050](adr/0050-http-readiness-terminus.md)。PR 保持 Draft，未经授权不合并。
+新增 3 项就绪指示器单测和 2 项 NestJS E2E，Docker 隔离烟测新增 HTTP 就绪验证。维护者已在 Windows 用 pnpm 正式生成并推送锁文件；GitHub 确认包含 Terminus 12.1.0。**完整 `ready` 退出码 0**：30 个测试文件 **378/378 单测**、NestJS E2E **10/10**、231 个文件格式正确/108 个受检源文件零告警、66 份 Markdown 检查及 Vue/React/NestJS 构建通过。Docker `pnpm install --frozen-lockfile`、服务端镜像构建与隔离烟测均通过，**退出码 0**，HTTP 存活与就绪探针均正常，未开放工程/登录/设备接口仍为 404。E2E 中 503 / Terminus 失败日志属于预期关闭状态负面测试。无数据库/Prisma 迁移或 Redis/工业设备实测，不代表真实业务就绪或生产认证。详见 [ADR-0050](adr/0050-http-readiness-terminus.md)。PR 保持 Draft，未经授权不合并；记录性文档更新后建议复查格式与文档检查。
