@@ -17,6 +17,20 @@ export function resolveScadaLogLevel(value: string | undefined): ScadaLogLevel {
   return SCADA_LOG_LEVELS.find((item) => item === value) ?? "info";
 }
 
+/** 仅在交互式开发终端启用 Pretty；测试进程不得创建额外的日志工作线程。 */
+export function shouldUsePrettyTransport(options: {
+  nodeEnv: string | undefined;
+  isTty: boolean;
+  isTestRunner: boolean;
+}): boolean {
+  return (
+    options.nodeEnv !== "production" &&
+    options.nodeEnv !== "test" &&
+    !options.isTestRunner &&
+    options.isTty
+  );
+}
+
 /**
  * 日志只记录请求 ID、方法与响应状态；绝不序列化 HTTP 头、URL 查询、请求体。
  * 即使未来其他日志调用带入敏感对象，依然通过 Pino redact 进行第二层脱敏。
@@ -24,8 +38,12 @@ export function resolveScadaLogLevel(value: string | undefined): ScadaLogLevel {
 export function createHttpLoggingOptions() {
   return {
     level: resolveScadaLogLevel(process.env.SCADA_LOG_LEVEL),
-    // 仅交互式本机开发终端启用 Pretty；生产及重定向采集始终为 JSON。
-    ...(process.env.NODE_ENV !== "production" && process.stdout.isTTY
+    // 测试与生产环境保留同步 JSON 输出，避免 Vitest 进程创建 Pretty 工作线程。
+    ...(shouldUsePrettyTransport({
+      nodeEnv: process.env.NODE_ENV,
+      isTty: process.stdout.isTTY === true,
+      isTestRunner: process.env.VITEST === "true",
+    })
       ? {
           transport: {
             target: "pino-pretty",
