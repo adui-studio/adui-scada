@@ -5,7 +5,10 @@ import { AuthSessionService } from "./dist/auth/auth-session.service.js";
 import { ScadaSessionGuard } from "./dist/auth/scada-session.guard.js";
 import { ScadaProjectGuard } from "./dist/auth/scada-project.guard.js";
 import { applyHttpSecurityHeaders } from "./dist/security/http-security.js";
-import { applyHttpServerPolicy, SCADA_NEST_HTTP_OPTIONS } from "./dist/security/http-server-policy.js";
+import {
+  applyHttpServerPolicy,
+  SCADA_NEST_HTTP_OPTIONS,
+} from "./dist/security/http-server-policy.js";
 import { allowLocalOpenApi, setupLocalOpenApi } from "./dist/openapi/scada-openapi.js";
 
 /** 本文件只用于隔离容器内部的服务端烟测，不是正式 HTTP 服务入口。 */
