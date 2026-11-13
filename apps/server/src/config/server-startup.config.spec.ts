@@ -69,11 +69,22 @@ describe("服务端启动配置", () => {
       expect(() => resolveServerStartupConfig({ SCADA_SERVER_PORT: value })).toThrow(
         "SCADA_SERVER_PORT 必须是 1～65535 之间的整数",
       );
-      try {
-        resolveServerStartupConfig({ SCADA_SERVER_PORT: value });
-      } catch (error) {
-        expect((error as Error).message).not.toContain(value === " " ? "  " : secret);
-      }
+    }
+    try {
+      resolveServerStartupConfig({ SCADA_SERVER_PORT: secret });
+    } catch (error) {
+      expect((error as Error).message).toBe(
+        "SCADA_SERVER_PORT 必须是 1～65535 之间的整数",
+      );
+      expect((error as Error).message).not.toContain(secret);
+    }
+    for (const value of [true, null, {}, []]) {
+      const env = { SCADA_SERVER_PORT: value } as unknown as Readonly<
+        Record<string, string | undefined>
+      >;
+      expect(() => resolveServerStartupConfig(env)).toThrow(
+        "SCADA_SERVER_PORT 必须是 1～65535 之间的整数",
+      );
     }
   });
 
