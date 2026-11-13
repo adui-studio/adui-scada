@@ -175,3 +175,27 @@ pnpm run dev:server
 ```
 
 这只影响当前终端会话及其新启动的子进程；若使用 JetBrains Run/Debug 面板而不是同一 PowerShell 终端，应分别检查该运行配置的控制台编码。上述步骤只处理**终端显示**，不放宽 Swagger 的非生产/本机监听/显式启用三重限制，也不修改 Pino JSON 日志内容。
+
+## V0.3 第二十一批：本机开发只读模拟工程和 Tag SSE
+
+为在 NestJS Swagger 中诊断共享 Core 模拟数据，本批新增**默认关闭**的开发专用根模块。独立开关 `SCADA_LOCAL_DEMO_API_ENABLED` 默认 `false`；只有显式 `true`、非生产、服务器实际绑定 `127.0.0.1` 时才挂载以下 HTTP 路由：
+
+| 端点                       | 返回内容                                         |
+| -------------------------- | ------------------------------------------------ |
+| `GET /api/dev/demo/project` | 固定水处理 `ScadaDocument` 演示工程             |
+| `GET /api/dev/demo/tags`    | `TagChange` 初始快照，包含质量与序列号            |
+| `GET /api/dev/demo/events`  | SSE：首条 snapshot，随后 delta，演练 STALE 恢复 |
+
+上述接口只访问 `@adui/scada-core` 模拟器和内存 `TagStore`；既有 Vue/React `/demo` 代理、Prisma 工程仓储、正式身份/ACL、工业设备接口均不受影响。正式默认 `AppModule` 不存在这些路由，返回 404；本机演示路由不允许通过 `0.0.0.0` 或生产模式开放。
+
+需要自行测试时，在根目录 `.env` 中设置：
+
+```dotenv
+SCADA_SERVER_HOST=127.0.0.1
+SCADA_LOCAL_DEMO_API_ENABLED=true
+SCADA_API_DOCS_ENABLED=true
+```
+
+重启 `pnpm run dev:server`，打开启动日志中打印的本机 Swagger 地址。模拟接口与 Swagger 是两个独立开关，开启一个不会自动开启另一个。关闭测试后恢复 `SCADA_LOCAL_DEMO_API_ENABLED=false` 并重启。项目不提供任何模拟设备写入或将这些 API 用作真实工业采集的途径。见 [ADR-0053](../../docs/adr/0053-local-readonly-demo-telemetry.md)。
+
+本批新增代码尚未得到维护者 Windows `ready` 或 Docker 验收。预计 **389 单测、17 E2E**，应以实际输出为准。
