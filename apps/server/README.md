@@ -91,4 +91,4 @@ Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。�
 
 根 `.env` 仍由 `main.ts` 使用 Node.js 原生 `loadEnvFile` 统一加载。此前静态导入 `AppModule` 导致其 Pino Logger 配置可能早于根环境变量生效；现改为先解析环境变量，再动态导入模块。纯函数 `resolveServerStartupConfig` 对主机、端口及本机 Swagger 开关进行集中校验，保留 `SCADA_SERVER_PORT` 优先于 `PORT`、`SCADA_SERVER_HOST` 优先于 `HOST` 的规则。生产不开放 Swagger，不新增任何业务 HTTP 入口。
 
-在新分支运行 `pnpm run env:check`、`vp check`、`pnpm run ready`，必要时再执行 `pnpm run test:docker:server`。配置新增 5 项纯单测，预计总计 361 项普通单测、8 项 E2E；尚待 Windows 实测，见 [ADR-0047](../../docs/adr/0047-server-configuration-startup.md)。
+维护者 Windows 已执行 `pnpm run env:check`、`vp check` 与 `pnpm run ready`：**361/361** 单测、**8/8** NestJS E2E、React/Vue/NestJS 构建及 63 份文档检查全部通过，完整 `ready` 退出码 **0**。独立 `pnpm run test:docker:server` 也已通过，退出码 **0**。本批未单独进行 PostgreSQL 真库回归，记录性文档提交后可复核 `vp check` 与 `pnpm run docs:check`。详见 [ADR-0047](../../docs/adr/0047-server-configuration-startup.md)。
