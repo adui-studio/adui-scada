@@ -301,16 +301,27 @@ async function checkTransportFaultTarget(session, target, proxy) {
   const navigation = await session.send("Page.navigate", { url: url.href });
   if (navigation.errorText) throw new Error(target.name + " 浏览器导航失败：" + navigation.errorText);
 
+  let stableSince = 0;
   const ready = await waitFor(
     session,
-    target.name + " TCP 故障测试的首次快照",
-    (state) =>
-      state.url === url.href &&
-      state.status === "live" &&
-      state.streams.some((stream) => !stream.closed),
-    20000,
+    target.name + " TCP 故障测试的页面与代理 SSE 连接就绪",
+    (state) => {
+      // Vue 首次依赖优化或 HMR 导航可能短暂重建 SSE，不能只凭页面 live 注入。
+      state.proxySseConnections = proxy.activeSseCount();
+      const aligned =
+        state.url === url.href &&
+        state.status === "live" &&
+        state.streams.filter((stream) => !stream.closed).length === 1 &&
+        state.proxySseConnections === 1;
+      if (!aligned) {
+        stableSince = 0;
+        return false;
+      }
+      if (!stableSince) stableSince = Date.now();
+      return Date.now() - stableSince >= 400;
+    },
+    25000,
   );
-  assert.equal(proxy.activeSseCount(), 1, "故障注入前必须只有一条有效 SSE TCP 流");
   const previousCount = ready.streams.length;
   const frozen = proxy.freezeActiveSse();
 
@@ -334,6 +345,10 @@ async function checkTransportFaultTarget(session, target, proxy) {
     23000,
   );
   assert.ok(proxy.stats(frozen).suppressedBytes > 0, "代理必须真正拦截上游 SSE 字节");
+  assert.ok(
+    recovered.streams.every((stream) => stream.url === recovered.streams[0]?.url),
+    "TCP 故障前后 SSE 事件订阅路径必须保持同源一致",
+  );
   await waitFor(
     session,
     target.name + " TCP 故障重订阅快照恢复",
