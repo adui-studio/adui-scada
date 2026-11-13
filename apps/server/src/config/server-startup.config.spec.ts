@@ -62,4 +62,54 @@ describe("服务端启动配置", () => {
       resolveServerStartupConfig({ ...enabled, SCADA_API_DOCS_ENABLED: "TRUE" }).localDocs,
     ).toBe(false);
   });
+
+  it("拒绝非有限数、越界端口和伪造字符串，错误信息不暴露输入", () => {
+    const secret = "Bearer-private-token";
+    for (const value of ["Infinity", "NaN", "1e309", " ", "0", "65536", secret]) {
+      expect(() => resolveServerStartupConfig({ SCADA_SERVER_PORT: value })).toThrow(
+        "SCADA_SERVER_PORT 必须是 1～65535 之间的整数",
+      );
+      try {
+        resolveServerStartupConfig({ SCADA_SERVER_PORT: value });
+      } catch (error) {
+        expect((error as Error).message).not.toContain(value === " " ? "  " : secret);
+      }
+    }
+  });
+
+  it("专用配置无效时不得回退到通用 PORT 或 HOST", () => {
+    expect(() =>
+      resolveServerStartupConfig({
+        PORT: "13001",
+        SCADA_SERVER_PORT: "无效端口",
+      }),
+    ).toThrow("SCADA_SERVER_PORT 必须是 1～65535 之间的整数");
+
+    expect(() =>
+      resolveServerStartupConfig({
+        HOST: "127.0.0.1",
+        SCADA_SERVER_HOST: "外部地址",
+      }),
+    ).toThrow("SCADA_SERVER_HOST 只能设置为 127.0.0.1 或 0.0.0.0");
+  });
+
+  it("只输出启动配置白名单字段，不复制未知环境变量", () => {
+    const env = Object.freeze({
+      SCADA_SERVER_PORT: "13001",
+      SCADA_SERVER_HOST: "127.0.0.1",
+      SCADA_API_DOCS_ENABLED: "false",
+      SCADA_DATABASE_URL: "postgresql://敏感数据",
+      AUTHORIZATION: "Bearer-private-token",
+    });
+    const result = resolveServerStartupConfig(env);
+    expect(result).toEqual({ port: 13001, host: "127.0.0.1", localDocs: false });
+    expect(Object.keys(result).sort()).toEqual(["host", "localDocs", "port"]);
+    expect(JSON.stringify(result)).not.toContain("敏感数据");
+    expect(JSON.stringify(result)).not.toContain("Bearer-private-token");
+  });
+
+  it("接受原有 Number 可识别的数字表示，不扩大环境变量格式", () => {
+    expect(resolveServerStartupConfig({ SCADA_SERVER_PORT: "1e3" }).port).toBe(1000);
+    expect(resolveServerStartupConfig({ SCADA_SERVER_PORT: "65535" }).port).toBe(65535);
+  });
 });
