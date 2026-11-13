@@ -24,14 +24,24 @@ export interface ServerStartupConfig {
 export function resolveServerStartupConfig(
   env: Readonly<Record<string, string | undefined>>,
 ): ServerStartupConfig {
-  const rawPort = env.SCADA_SERVER_PORT ?? env.PORT ?? 3001;
+  const rawPort =
+    env.SCADA_SERVER_PORT === undefined
+      ? env.PORT === undefined
+        ? 3001
+        : env.PORT
+      : env.SCADA_SERVER_PORT;
   const portResult = serverPortSchema.safeParse(rawPort);
   if (!portResult.success) {
     // 不暴露 ZodError 或原始环境值，保持已有中文错误契约。
     throw new Error("SCADA_SERVER_PORT 必须是 1～65535 之间的整数");
   }
 
-  const rawHost = env.SCADA_SERVER_HOST ?? env.HOST ?? "127.0.0.1";
+  const rawHost =
+    env.SCADA_SERVER_HOST === undefined
+      ? env.HOST === undefined
+        ? "127.0.0.1"
+        : env.HOST
+      : env.SCADA_SERVER_HOST;
   const hostResult = serverHostSchema.safeParse(rawHost);
   if (!hostResult.success) {
     throw new Error("SCADA_SERVER_HOST 只能设置为 127.0.0.1 或 0.0.0.0");
