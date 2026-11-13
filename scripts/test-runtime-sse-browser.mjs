@@ -194,7 +194,8 @@ async function snapshot(session) {
       "diagnostics: { " +
       "present: !!document.querySelector('.scada-diagnostics'), " +
       "tagCount: document.querySelectorAll('.scada-tag').length, " +
-      "reconnectCount: Number(document.querySelector('.scada-diagnostics-grid > div:nth-child(2) dd')?.textContent), " +
+      "reconnectCount: Number(document.querySelector(" +
+      "'.scada-diagnostics-grid > div:nth-child(2) dd')?.textContent), " +
       "qualities: [...document.querySelectorAll('.scada-quality-item')].map((node) => ({ " +
       "quality: node.getAttribute('data-quality'), count: Number(node.querySelector('strong')?.textContent) })) }, " +
       "statuses: [...(probe?.statuses ?? [])] }; })()",
