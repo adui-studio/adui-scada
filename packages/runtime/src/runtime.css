@@ -383,3 +383,63 @@ button:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+/* 本地状态事件只在真正发生状态切换时更新，双框架共用。 */
+.scada-status-history {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--scada-border-subtle);
+}
+.scada-status-history h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.scada-status-history .scada-diagnostics-note {
+  margin: 0 0 10px;
+}
+.scada-diagnostics-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--scada-text-muted);
+}
+.scada-status-events {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.scada-status-events li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--scada-canvas);
+  border: 1px solid var(--scada-border);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.scada-status-events li[data-status="live"] span {
+  color: var(--scada-live);
+}
+.scada-status-events li[data-status="stale"] span,
+.scada-status-events li[data-status="reconnecting"] span,
+.scada-status-events li[data-status="error"] span {
+  color: var(--scada-danger);
+}
+.scada-status-events time {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  color: var(--scada-text-muted);
+}
+@media (max-width: 700px) {
+  .scada-status-events {
+    grid-template-columns: 1fr;
+  }
+}

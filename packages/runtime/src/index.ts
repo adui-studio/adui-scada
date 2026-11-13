@@ -19,5 +19,7 @@ export {
   formatRuntimeDataAge,
   formatRuntimeUpdateTime,
   initialRuntimeDiagnostics,
+  MAX_RUNTIME_STATUS_EVENTS,
+  RuntimeStatusHistory,
 } from "./diagnostics.ts";
-export type { RuntimeDiagnostics } from "./diagnostics.ts";
+export type { RuntimeDiagnostics, RuntimeStatusEvent } from "./diagnostics.ts";

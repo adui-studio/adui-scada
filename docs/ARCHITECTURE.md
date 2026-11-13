@@ -353,3 +353,7 @@ Runtime 生命周期按连接代次隔离：停止时中止 fetch、关闭 SSE�
 ## 2026-11-13 · V0.3 第二十七批：框架无关的只读诊断
 
 共享 `@adui/scada-runtime` 新增纯诊断构建器和类型，用于将单个 Runtime 会话中的 TagStore 接受事件与可见值分布转换为不可直接修改数据源的状态快照。Vue 与 React 通过各自响应式生命周期消费同一 `RuntimeState.diagnostics`，共用 `runtime.css` 的网格布局；Tauri 离线模拟由现有 OfflineDemoRuntime 构造相同快照。没有外部日志采集器、HTTP 诊断 API、数据库迁移、设备 URL、依赖或网关接入。详见 [ADR-0059](adr/0059-runtime-local-diagnostics.md)。
+
+## 2026-11-13 · V0.3 第二十八批：共享诊断状态事件时间线
+
+在既有 `@adui/scada-runtime` 的只读 `RuntimeDiagnostics` 内新增有限的 `statusEvents`，由 Runtime 统一管理状态转换及容量（最多 20 条），Vue/React 只渲染相同数据与中文状态映射。离线模式使用相同结构；没有额外定时器、网络连接、后台服务、数据库、文件或外部审计组件。历史序号按启动会话重新开始，事件时间来自本机。详见 [ADR-0060](adr/0060-runtime-session-status-history.md)。

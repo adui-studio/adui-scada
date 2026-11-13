@@ -1520,3 +1520,34 @@ pnpm run ready
 诊断的 `dataAgeMs` 仍只代表本机接受有效 Tag 后经过的时间，不是 PLC 采样延迟或网络 RTT；`reconnectCount` 是去重后的连续断连过程数，不是实际 TCP 重建计数。生产认证、真实工业网关、PostgreSQL 真库、历史诊断持久化及工业现场尚未验收。
 
 本段为验收记录追加后，**尚未重新执行最新文档的 `vp check` / `docs:check`**；建议合并审查前再运行一次。PR #49 继续保持 Draft，Assignee `@adui-dev`，未经明确授权不得合并。
+
+## 2026-11-13 · V0.3 第二十八批状态事件时间线验收（待实测）
+
+保持共享 Runtime 只读与 Vue/React 对等，在 Windows 项目根目录依次执行：
+
+```powershell
+pnpm run test:runtime
+vp check
+pnpm run docs:check
+pnpm run ready
+```
+
+在其他终端运行 `pnpm run dev:demo`、`pnpm run dev:react`、`pnpm run dev:vue` 后执行：
+
+```powershell
+pnpm run test:sse:browser
+pnpm run test:sse:fault:browser
+```
+
+浏览器回归须在 React/Vue 同时检查首次 `live`、过期 `stale`、断连 `reconnecting` 和恢复 `live` 的状态事件顺序；页面最多显示 20 条。Tauri 模拟单元测试检查历史不随每秒刷新增长，重新启动会话清零。**本批尚未完成维护者 Windows 和浏览器实测**，自动化不能替代人工 UI 与真实工业现场。见 [ADR-0060](adr/0060-runtime-session-status-history.md)。
+
+### 第二十八批 Windows 双框架 SSE 浏览器回归（2026-11-14）
+
+维护者提供 PowerShell 实测日志，当前分支针对第二十八批状态时间线功能执行：
+
+- `pnpm run test:sse:browser`：React `127.0.0.1:15173` 与 Vue `127.0.0.1:15174` 均输出“浏览器 SSE 心跳保活、Tag 过期、静默重连、资源清理通过”，**明确退出码 0**。脚本额外断言共享状态时间线初始 live、Tag 过期 stale、传输静默 reconnecting 与快照恢复 live，以及会话内事件上限。
+- `pnpm run test:sse:fault:browser`：React/Vue 两端均输出“真实 TCP 下行阻断、STALE、主动重连及连接回收通过”。提供的输出到此结束，**未附 `Write-Host "TCP 故障退出码：$LASTEXITCODE"`**，因此只确认两端成功信息及脚本未输出错误，**暂不记录该命令的实际退出码**。
+
+**仍待 Windows 实测**：`pnpm run test:runtime`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`；以及手工 UI 和 Tauri 桌面验证。上述浏览器测试不能证明 Node/Vitest、Lint、类型、全量构建、真实工业网络、生产报警持久化已完成。
+
+本次仅补充验收文档与 PR 说明，无业务代码变更。新增文档提交后的格式及文档静态检查仍待执行；PR #50 保持 Draft，需维护者明确授权方能合并。

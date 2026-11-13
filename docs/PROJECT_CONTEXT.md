@@ -697,3 +697,20 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 诊断的 `dataAgeMs` 仍只代表本机接受有效 Tag 后经过的时间，不是 PLC 采样延迟或网络 RTT；`reconnectCount` 是去重后的连续断连过程数，不是实际 TCP 重建计数。生产认证、真实工业网关、PostgreSQL 真库、历史诊断持久化及工业现场尚未验收。
 
 本段为验收记录追加后，**尚未重新执行最新文档的 `vp check` / `docs:check`**；建议合并审查前再运行一次。PR #49 继续保持 Draft，Assignee `@adui-dev`，未经明确授权不得合并。
+
+## 2026-11-13 · V0.3 第二十八批：本机 Runtime 状态事件时间线（开发分支，待验收）
+
+第二十七批 PR #49 已按维护者授权 Squash Merge，`main` 为 `ee996c0`。从该提交创建 `feat/v0.3-runtime-status-history`，仅扩展共享诊断快照：会话内最近 20 条状态变化，按连续状态去重，提供唯一序号与本机时间；React/Vue 共用字段、中文状态标签及样式，Tauri 离线模拟只记录 `simulation`。新增 Vitest 与浏览器 SSE 状态历史断言，不改变 Runtime 12/15 秒过期重连策略、TagStore、工业只读接口或 Schema。
+
+本批新增逻辑与 ADR-0060 均提交开发分支，**Windows 的 `pnpm run test:runtime`、`vp check`、`docs:check`、`ready` 和双框架浏览器检查尚待维护者执行**，不能继承第二十七批 417/417 的成绩。工业报警/日志历史、PLC 端时间同步、生产认证、工业网关与现场设备均不在本批范围。PR 保持 Draft，明确授权后才能合并。
+
+### 第二十八批 Windows 双框架 SSE 浏览器回归（2026-11-14）
+
+维护者提供 PowerShell 实测日志，当前分支针对第二十八批状态时间线功能执行：
+
+- `pnpm run test:sse:browser`：React `127.0.0.1:15173` 与 Vue `127.0.0.1:15174` 均输出“浏览器 SSE 心跳保活、Tag 过期、静默重连、资源清理通过”，**明确退出码 0**。脚本额外断言共享状态时间线初始 live、Tag 过期 stale、传输静默 reconnecting 与快照恢复 live，以及会话内事件上限。
+- `pnpm run test:sse:fault:browser`：React/Vue 两端均输出“真实 TCP 下行阻断、STALE、主动重连及连接回收通过”。提供的输出到此结束，**未附 `Write-Host "TCP 故障退出码：$LASTEXITCODE"`**，因此只确认两端成功信息及脚本未输出错误，**暂不记录该命令的实际退出码**。
+
+**仍待 Windows 实测**：`pnpm run test:runtime`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`；以及手工 UI 和 Tauri 桌面验证。上述浏览器测试不能证明 Node/Vitest、Lint、类型、全量构建、真实工业网络、生产报警持久化已完成。
+
+本次仅补充验收文档与 PR 说明，无业务代码变更。新增文档提交后的格式及文档静态检查仍待执行；PR #50 保持 Draft，需维护者明确授权方能合并。

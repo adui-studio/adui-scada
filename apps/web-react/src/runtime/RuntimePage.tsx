@@ -71,6 +71,24 @@ export default function RuntimePage() {
           ))}
         </div>
         <p className="scada-diagnostics-total">当前 Tag 总数：{state.diagnostics.tagCount}</p>
+        <section className="scada-status-history" aria-label="最近状态变化">
+          <h3>最近状态变化</h3>
+          <p className="scada-diagnostics-note">最多 20 条 · 仅当前会话 · 非报警历史</p>
+          {state.diagnostics.statusEvents.length === 0 ? (
+            <p className="scada-diagnostics-empty">暂无状态变化</p>
+          ) : (
+            <ol className="scada-status-events">
+              {state.diagnostics.statusEvents.map((event) => (
+                <li key={event.sequence} data-status={event.status}>
+                  <span>{RUNTIME_STATUS_LABELS[event.status]}</span>
+                  <time dateTime={new Date(event.occurredAt).toISOString()}>
+                    {formatRuntimeUpdateTime(event.occurredAt)}
+                  </time>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
       </section>
       <section className="scada-panel" aria-label="模拟工业监控画面">
         {svg ? (

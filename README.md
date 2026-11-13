@@ -152,3 +152,9 @@ Runtime 新增框架无关的 `ReadonlyTagSource` 契约与 `createSseTagSource(
 Vue/React 运行监控页面新增共享的**实时链路诊断**：连接状态、每次 Runtime 启动会话的断连过程次数、最近一次被 Core 接受的 Tag 的本地接收时间、状态快照生成时的数据年龄以及 GOOD/UNCERTAIN/BAD/STALE 的数量。桌面离线模拟也复用相同模型，但不把本地模拟计作网络重连。数据年龄不是 PLC 或网络 RTT，既不向服务器报告，也不存入数据库。具体边界见 [ADR-0059](docs/adr/0059-runtime-local-diagnostics.md)。
 
 验收在项目根目录执行 `pnpm run test:runtime`、`vp check`、`pnpm run docs:check` 和 `pnpm run ready`，并分别通过 React/Vue 浏览器检查诊断面板以及旧有 SSE 故障恢复；本批测试结果仍待维护者 Windows 实测。
+
+## V0.3 第二十八批 · 本机 Runtime 状态变化时间线
+
+在 Vue/React 运行监控的“实时链路诊断”中新增 **最近状态变化**，由共享 `@adui/scada-runtime` 提供同一份只读数据。每次真正进入新状态时记录一次，只保留当前启动会话内最近 20 条；重复心跳、Tag 增量与相同状态不会刷满记录。包括 `live`、`stale`、`reconnecting`、`error` 等已存在的状态；离线模式只记录 `simulation`，不制造网络故障事件。本地时间戳并非设备时钟，时间线也不是报警/审计历史。
+
+运行 `pnpm run test:runtime`、`vp check`、`pnpm run docs:check`、`pnpm run ready`，并在三项本机开发服务启动后执行 `test:sse:browser` 和 `test:sse:fault:browser` 验证 React/Vue 同步显示。详见 [ADR-0060](docs/adr/0060-runtime-session-status-history.md)。本批 Windows 实测尚待执行。

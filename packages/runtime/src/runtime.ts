@@ -1,6 +1,10 @@
 import { TagStore, parseScadaDocument, renderSvgPage, validateTagValue } from "@adui/scada-core";
 import type { ScadaDocument, TagChange, TagValue } from "@adui/scada-core";
-import { createRuntimeDiagnostics, initialRuntimeDiagnostics } from "./diagnostics.ts";
+import {
+  RuntimeStatusHistory,
+  createRuntimeDiagnostics,
+  initialRuntimeDiagnostics,
+} from "./diagnostics.ts";
 import type { RuntimeDiagnostics } from "./diagnostics.ts";
 import { createSseTagSource } from "./tag-source.ts";
 import type { ReadonlyTagSource, ReadonlyTagSubscription } from "./tag-source.ts";
@@ -95,6 +99,7 @@ export class DemoRuntime {
   private generation = 0;
   private reconnectCount = 0;
   private lastTagReceivedAt: number | null = null;
+  private readonly statusHistory = new RuntimeStatusHistory();
 
   constructor(listener: RuntimeListener, source: ReadonlyTagSource = createSseTagSource()) {
     this.listener = listener;
@@ -128,12 +133,19 @@ export class DemoRuntime {
   private publish(): void {
     if (this.active) {
       const values = this.visibleSnapshot();
+      this.statusHistory.record(this.status);
       this.listener({
         status: this.status,
         document: this.document,
         values,
         message: this.message,
-        diagnostics: createRuntimeDiagnostics(values, this.lastTagReceivedAt, this.reconnectCount),
+        diagnostics: createRuntimeDiagnostics(
+          values,
+          this.lastTagReceivedAt,
+          this.reconnectCount,
+          Date.now(),
+          this.statusHistory.snapshot(),
+        ),
       });
     }
   }
@@ -141,6 +153,7 @@ export class DemoRuntime {
   async start(): Promise<void> {
     if (this.active) return;
     this.active = true;
+    this.statusHistory.clear();
     this.reconnectCount = 0;
     this.lastTagReceivedAt = null;
     const generation = ++this.generation;
