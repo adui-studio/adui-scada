@@ -27,6 +27,7 @@ const defaults = {
   SCADA_SERVER_PORT: "13001",
   SCADA_LOG_LEVEL: "info",
   SCADA_API_DOCS_ENABLED: "false",
+  SCADA_LOCAL_DEMO_API_ENABLED: "false",
   SCADA_DEMO_HOST: "127.0.0.1",
   SCADA_DEMO_PORT: "14178",
   SCADA_REACT_PORT: "8080",
@@ -101,7 +102,7 @@ if (existsSync(resolve(root, ".env"))) {
         ["fatal", "error", "warn", "info", "debug", "trace", "silent"].includes(value),
         "SCADA_LOG_LEVEL：必须是已支持的日志级别",
       );
-    } else if (key === "SCADA_API_DOCS_ENABLED") {
+    } else if (key === "SCADA_API_DOCS_ENABLED" || key === "SCADA_LOCAL_DEMO_API_ENABLED") {
       assert.ok(["true", "false"].includes(value), "SCADA_API_DOCS_ENABLED：必须是 true 或 false");
     } else if (key === "SCADA_DB_PASSWORD" || key === "SCADA_DATABASE_URL") {
       // 数据库密码和 URL 由后续配套检查比较，不在报错时泄漏原值。
@@ -131,6 +132,7 @@ for (const [framework, key] of [
 
 const nest = read("apps/server/src/main.ts");
 const serverConfig = read("apps/server/src/config/server-startup.config.ts");
+const localDemoPolicy = read("apps/server/src/demo/local-demo-access.ts");
 const demo = read("examples/water-treatment/server.mjs");
 assert.ok(nest.includes('new URL("../../../.env", import.meta.url)'));
 assert.ok(demo.includes('new URL("../../.env", import.meta.url)'));
@@ -139,6 +141,14 @@ assert.ok(
   "NestJS 必须在加载根目录 .env 后动态导入 AppModule",
 );
 assert.ok(nest.includes("loadEnvFile(envPath)"), "NestJS 必须加载根目录 .env");
+assert.ok(
+  nest.includes("allowLocalDemoTelemetry") && localDemoPolicy.includes("SCADA_LOCAL_DEMO_API_ENABLED") === false,
+  "NestJS 本机模拟接口必须使用独立的访问策略",
+);
+assert.ok(
+  nest.includes("SCADA_LOCAL_DEMO_API_ENABLED") && nest.includes("LocalDemoAppModule"),
+  "本机模拟接口必须由启动入口显式启用",
+);
 assert.ok(
   nest.indexOf("loadEnvFile(envPath)") < nest.indexOf('await import("./app.module.js")'),
   "NestJS 环境变量加载必须发生在 AppModule 初始化之前",
