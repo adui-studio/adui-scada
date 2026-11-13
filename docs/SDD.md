@@ -487,3 +487,7 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - `serverHostSchema` 仅接受 `127.0.0.1`、`0.0.0.0`；保持 `SCADA_SERVER_PORT` / `SCADA_SERVER_HOST` 的优先级，显式无效配置不得回退。默认端口 3001，默认主机 127.0.0.1。
 - `safeParse` 校验失败时只返回已有固定中文错误，不回显原始值或 Zod 错误对象。运行时只输出 `port`、`host`、`localDocs` 三项，Swagger 策略仍由已验收的 `allowLocalOpenApi` 决定。
 - 根目录 `.env` 加载次序、Pino 日志级别处理、现有安全审计白名单和 Core 工程 Schema 均不变。未来请求 DTO / 外部数据在正式功能阶段逐项建立 Schema，不能将本次描述为全量输入校验已完成。见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
+
+### 第十七批补充：NestJS DTO 使用契约
+
+服务端的未来新 HTTP DTO 使用 `nest-zod/swagger` 导出的 `ZBody`、`ZQuery`、`ZSerialize` 及 Zod 4 Schema 进行路由级解析与响应约束。不要为无关路由全局注册校验 Pipe，也不得把测试专用 Controller 导入正式 `AppModule`。不使用 Zod 取代 Session/ACL Guard，不将带敏感输入的验证异常写入 Pino 或安全审计。参见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
