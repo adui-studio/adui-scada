@@ -45,6 +45,7 @@ describe("服务端结构化 HTTP 日志", () => {
     expect(options.redact.paths).toContain("*.token");
     expect(options.redact.paths).toContain("*.password");
   });
+
   it("开发交互式终端可美化日志，测试和生产均不得启动 Pretty 工作线程", () => {
     expect(
       shouldUsePrettyTransport({ nodeEnv: "development", isTty: true, isTestRunner: false }),
