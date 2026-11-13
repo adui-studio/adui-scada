@@ -32,20 +32,27 @@ export const waterTreatmentDemoTagCatalog = new TagDefinitionCatalog(
   waterTreatmentDemoTagDefinitions,
 );
 
+export interface WaterTreatmentDemoTagOption extends TagDefinition {
+  readonly label: string;
+  readonly slots: readonly string[];
+}
+
+const waterTreatmentDemoTagSlots: Readonly<Record<string, readonly string[]>> = {
+  "water.level": ["level", "value"],
+  "water.pump.running": ["running", "value"],
+  "water.flow": ["value"],
+};
+
 /**
  * Studio 绑定候选在共享 Tag 定义上增加图元槽约束。
  * 该列表只服务于本地模拟预览，不包含工业地址或连接参数。
  */
-export const waterTreatmentDemoTagOptions = waterTreatmentDemoTagDefinitions.map((definition) => ({
-  ...definition,
-  label: definition.displayName,
-  slots:
-    definition.tagId === "water.level"
-      ? (["level", "value"] as const)
-      : definition.tagId === "water.pump.running"
-        ? (["running", "value"] as const)
-        : (["value"] as const),
-}));
+export const waterTreatmentDemoTagOptions: readonly WaterTreatmentDemoTagOption[] =
+  waterTreatmentDemoTagDefinitions.map((definition) => ({
+    ...definition,
+    label: definition.displayName,
+    slots: waterTreatmentDemoTagSlots[definition.tagId] ?? [],
+  }));
 
 /** HTTP 诊断服务与桌面离线模拟共用的水处理演示工程。 */
 function node(
