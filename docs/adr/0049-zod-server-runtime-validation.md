@@ -38,4 +38,14 @@
 
 维护者提出将方案扩展为 `nestjs-zod + zod`。实际复核 `nestjs-zod@5.6.0` 的发行标签元数据发现，其 NestJS Peer 范围仅为 10 / 11、Swagger 仅包含 7 / 8 / 11；而本仓库为 NestJS 12.0.3 / Swagger 12.1.1。Zod 4 本身匹配，但**Nest 集成层尚不满足官方 Peer 范围**。根据最小改动与依赖安全规则，暂不在本 PR 中强行添加 `nestjs-zod` 或放宽依赖校验。
 
-已调研名称不同的 `nest-zod`，其文档明确声明支持 NestJS 12 + Swagger 12 + Zod 4，亦可考虑 NestJS 12 原生 `StandardSchemaValidationPipe`。两者都属于替代方案而不是 `nestjs-zod` 的同名升级，只有在维护者确认集成选型后才能实施；未来新建 DTO 时必须统一 Schema、关闭原始 Zod 错误明文、保持 OpenAPI 受控且不开放业务路由。详见 [上游包声明](https://github.com/BenLorantfy/nestjs-zod/blob/v5.6.0/packages/nestjs-zod/package.json) 和 [候选兼容矩阵](https://nestzod.dev/guide/compatibility)。
+已调研名称不同的 `nest-zod`，其文档明确声明支持 NestJS 12 + Swagger 12 + Zod 4，亦可考虑 NestJS 12 原生 `StandardSchemaValidationPipe`。两者都属于替代方案而不是 `nestjs-zod` 的同名升级，维护者现已明确授权选择更合适的实现，选用 `nest-zod`；未来新建 DTO 时必须统一 Schema、关闭原始 Zod 错误明文、保持 OpenAPI 受控且不开放业务路由。详见 [上游包声明](https://github.com/BenLorantfy/nestjs-zod/blob/v5.6.0/packages/nestjs-zod/package.json) 和 [候选兼容矩阵](https://nestzod.dev/guide/compatibility)。
+
+## 已确认的集成选型：nest-zod + zod
+
+在维护者明确授权“哪个好用哪个”后，选择 **`nest-zod@2.1.0` + `zod@4.6.7`**。其[官方兼容矩阵](https://nestzod.dev/guide/compatibility)覆盖 Node 22+、NestJS 12 和 `@nestjs/swagger` 12；相比 `nestjs-zod@5.6.0` 的 NestJS 10/11 Peer 声明，此方案不需要降低项目版本或忽略 Peer 约束。官方文档当前展示 v2.1.0，最终版本存在性和 Peer 解析仍须在维护者 Windows `pnpm install` 时验证。
+
+- 根 Catalog 和服务端生产依赖分别加入 `nest-zod: "2.1.0"` 与 `nest-zod: "catalog:"`；Zod 4.6.7 保持原定版本。
+- `nest-zod/swagger` 提供 `ZBody`、`ZQuery`、`ZSerialize` 等与 Swagger 集成的路由级装饰器；**无需全局注册 Pipe，也不对所有 Controller 自动启用**。
+- `apps/server/src/validation/nest-zod-integration.spec.ts` 中的测试 Controller 仅被独立 NestJS 测试模块引用；新增 4 项测试：请求体去空格/响应字段过滤、无效请求 400、查询参数数字转换与非法拒绝、受控 OpenAPI 元数据。正式 `AppModule` 及业务 Controller 不改动，测试 URL 不属于生产路由。
+- 运行时输入校验与授权/安全审计分离：未来受保护业务接口先经可信 Session/ACL Guard，之后解析 DTO；业务写入仍须事务级 ACL 复核。校验失败不得在日志打印原始凭据、URL、完整 `ZodError`。
+- 当前新集成测试尚未在 Windows 运行，`pnpm-lock.yaml` 也尚未更新；本批新增单测总数由 4 增至 **8 项**，预计常规单测 **375**，NestJS E2E **8**。此数为预期而非测试结果。
