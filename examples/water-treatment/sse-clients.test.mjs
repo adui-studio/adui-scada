@@ -172,7 +172,7 @@ test("响应主动触发 error 时销毁连接且不影响其他订阅", () => {
   faulty.emit("error", new Error("模拟底层 socket 写入异常"));
   assert.equal(faulty.destroyed, true);
   assert.equal(clients.size, 1);
-  clients.broadcast("event: heartbeat\\ndata: {}\\n\\n");
+  clients.broadcast("event: heartbeat\ndata: {}\n\n");
   assert.equal(healthy.messages.length, 1);
   clients.closeAll();
 });
