@@ -561,3 +561,7 @@ type DemoTagSourcePreset = "standalone" | "nest-local";
 ## 2026-11-13 · V0.3 第二十六批：TCP SSE 半开样式测试行为
 
 仅在测试进程执行 `startSseFaultProxy`：接受 loopback HTTP 根地址，分配回环随机端口，将普通 HTTP/TCP 流直接透传；对已确认 snapshot 的唯一 SSE 会话设置下行字节丢弃，不主动发送 FIN/RST，新连接正常通过。Chrome/Edge 真实浏览器使用既有 Runtime 展示状态进行验收：live → stale → 旧 EventSource 主动 close → 新 EventSource snapshot → live；离开 Runtime 后要求测试代理 SSE socket 数量归零。不修改 runtime 5/12/15 秒阈值、消息 Schema、Tag 序列、质量枚举或业务路由。长连接测试仅在显式 `--soak` 时对六路订阅追加至少 12 次心跳、增量到达及最大间隔检查，正常测试运行不增加等待。见 [ADR-0058](adr/0058-tcp-sse-fault-and-soak-tests.md)。
+
+## 2026-11-13 · V0.3 第二十七批：共享 Runtime 诊断快照契约
+
+`RuntimeState` 新增必填字段 `diagnostics: RuntimeDiagnostics`，由 `packages/runtime/src/diagnostics.ts` 创建，字段为 `reconnectCount: number`、`lastTagReceivedAt: number | null`、`dataAgeMs: number | null`、`tagCount: number` 及 `qualityCounts: Readonly<Record<TagQuality, number>>`。计数器每次 start 归零，仅在状态进入 reconnecting 时增加；重复 onDisconnected 不重复计算。最近数据时间只取本机通过 Core 校验的非空 snapshot 或接受了新序列的 delta 到达时间，心跳与旧/空增量不刷新。年龄在 publish 时由本机时间差构造，不附加计时器或假定源端时钟准确。质量计数基于最终对外展示的 values，包括局部 STALE 覆盖；离线模拟继承该类型，断连次数固定为零。Vue/React 只绑定同一字段，不产生各自的诊断算法；见 [ADR-0059](adr/0059-runtime-local-diagnostics.md)。
