@@ -2006,7 +2006,8 @@ export default function StudioPage() {
                     )}
                     {demoTagCandidates.map((option) => (
                       <option key={option.tagId} value={option.tagId}>
-                        {option.label} · {option.tagId} · {TAG_DATA_TYPE_LABELS[option.dataType]}
+                        {option.label} · {option.tagId} ·
+                        {TAG_DATA_TYPE_LABELS[option.dataType]}
                         {option.unit ? " · " + option.unit : ""}
                       </option>
                     ))}
