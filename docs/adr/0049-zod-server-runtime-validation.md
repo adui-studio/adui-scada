@@ -33,3 +33,9 @@
 第十六批 Windows 基线为 **367/367** 单测、**8/8** NestJS E2E、完整 `ready` 退出码 0，Docker 隔离烟测也通过。本批增加 4 项单测，**预期**普通单测 371、E2E 8；预期不代表本批已通过。
 
 维护者在 Windows 的第十七批开发分支执行 `pnpm install`，核对后提交 pnpm 12 正式生成的锁文件，再执行 `pnpm install --frozen-lockfile`、`pnpm run ready` 和 `pnpm run test:docker:server`。生产镜像必须包含 Zod 运行时依赖且默认接口安全边界保持不变。验收通过并获得明确授权前，PR 保持 Draft，不合并。
+
+## NestJS DTO 集成包兼容性复核补充（2026-11-13）
+
+维护者提出将方案扩展为 `nestjs-zod + zod`。实际复核 `nestjs-zod@5.6.0` 的发行标签元数据发现，其 NestJS Peer 范围仅为 10 / 11、Swagger 仅包含 7 / 8 / 11；而本仓库为 NestJS 12.0.3 / Swagger 12.1.1。Zod 4 本身匹配，但**Nest 集成层尚不满足官方 Peer 范围**。根据最小改动与依赖安全规则，暂不在本 PR 中强行添加 `nestjs-zod` 或放宽依赖校验。
+
+已调研名称不同的 `nest-zod`，其文档明确声明支持 NestJS 12 + Swagger 12 + Zod 4，亦可考虑 NestJS 12 原生 `StandardSchemaValidationPipe`。两者都属于替代方案而不是 `nestjs-zod` 的同名升级，只有在维护者确认集成选型后才能实施；未来新建 DTO 时必须统一 Schema、关闭原始 Zod 错误明文、保持 OpenAPI 受控且不开放业务路由。详见 [上游包声明](https://github.com/BenLorantfy/nestjs-zod/blob/v5.6.0/packages/nestjs-zod/package.json) 和 [候选兼容矩阵](https://nestzod.dev/guide/compatibility)。
