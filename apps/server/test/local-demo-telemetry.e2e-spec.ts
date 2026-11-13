@@ -5,6 +5,7 @@ import { Test } from "@nestjs/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import request from "supertest";
 import { LocalDemoAppModule } from "../src/app.module.js";
+import { setupLocalOpenApi } from "../src/openapi/scada-openapi.js";
 
 describe("本机只读模拟工程与 Tag 接口（端到端）", () => {
   let app: INestApplication;
@@ -15,6 +16,7 @@ describe("本机只读模拟工程与 Tag 接口（端到端）", () => {
       imports: [LocalDemoAppModule],
     }).compile();
     app = moduleRef.createNestApplication();
+    await setupLocalOpenApi(app, true);
     await app.listen(0, "127.0.0.1");
     const address = app.getHttpServer().address() as AddressInfo | null;
     if (!address) throw new Error("本机模拟测试服务未能获取回环监听端口");
@@ -41,6 +43,15 @@ describe("本机只读模拟工程与 Tag 接口（端到端）", () => {
       true,
     );
     expect(response.body.values[0].sequence).toBeGreaterThanOrEqual(1);
+  });
+
+  it("本机 Swagger 只列出模拟只读接口，不伪造工业写入能力", async () => {
+    const response = await request(app.getHttpServer()).get("/api/docs-json").expect(200);
+    expect(response.body.paths["/api/dev/demo/project"]).toBeDefined();
+    expect(response.body.paths["/api/dev/demo/tags"]).toBeDefined();
+    expect(response.body.paths["/api/dev/demo/events"]).toBeDefined();
+    expect(response.body.paths["/api/devices/write"]).toBeUndefined();
+    expect(response.body.paths["/api/auth/sessions"]).toBeUndefined();
   });
 
   it("SSE 首条事件为共享 snapshot 格式，关闭连接后正常释放资源", async () => {
