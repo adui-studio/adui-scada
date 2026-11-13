@@ -55,3 +55,9 @@ pnpm run ready
 根因定位为 Docker Demo Compose 命令未显式加载根目录 `.env`，导致未按用户设置进行端口插值，同时 Compose 和环境静态检查的回退值没有统一依照根 `.env.example`。修正 `docker:demo:up/down/logs` 命令为 `docker compose --env-file .env -f deploy/docker/compose.demo.yaml ...`，新增只输出容器/映射信息的 `docker:demo:ps`；同步 React/Vue、NestJS 和 Demo 的端口回退值（18080、18081、13001、14178），并在 `env:check` 中强制校验。此修正只改变本机 Docker 演示配置，不影响工业接口与正式部署架构。
 
 `--env-file` 指定的是 Compose 配置插值来源；**PowerShell 已定义的同名环境变量依然优先**。如端口仍不匹配，应检查同名进程环境变量和实际 `docker:demo:ps` 映射。真实修复后的 Nginx 代理六路验收、格式检查与全量质量链仍待维护者执行。
+
+## 第二轮 Windows Docker Nginx 多客户端复验（2026-11-13）
+
+修复演示栈对仓库根目录 `.env` 的显式读取后，维护者执行 `pnpm run env:check` 通过；`pnpm run docker:demo:up` 成功完成四镜像构建和四容器启动，Demo/Server Healthy。随后 `pnpm run docker:demo:ps` 确认宿主机发布端口为 React `127.0.0.1:18080->8080/tcp`、Vue `127.0.0.1:18081->8080/tcp`，与配置一致。
+
+`pnpm run test:sse:proxy` 通过 React/Vue 的真实 Docker Nginx 代理，每套六路并发 SSE 均收到 snapshot 与 heartbeat、单路断开不影响其他连接、恢复订阅先收到 snapshot，**退出码 0**。此前独立模拟服务 8 项 Node 单测及直接 HTTP SSE 六路回归亦已在 Windows 通过。以上验收证明本机 Docker SSE 代理能够工作，**不代表生产高并发、长期半开 TCP、工业网关或真实断网已经验证**。本批最新 `vp check`、文档检查及完整 `pnpm run ready` 仍待执行，PR 不经授权不合并。
