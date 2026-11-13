@@ -34,6 +34,6 @@
 
 新增 3 项指示器单测，涵盖启动前失败、应用初始化成功、关闭流程撤销；现有 NestJS E2E 增加 2 项分别测试 200/不缓存和关闭时 503，原 `/health` 仍为 200。Swagger 本机开发文档应该描述新探针。Docker 隔离烟测增加 HTTP 就绪检查，不依赖生产数据库，也不映射宿主机端口。
 
-第十七批 Windows 基线为 **375/375 单测、8/8 E2E**，完整 `ready` 和 Docker 隔离烟测均退出码 0。第十八批预计 **378 项单测、10 项 E2E**，仅为待验证预期。
+第十七批 Windows 基线为 **375/375 单测、8/8 E2E**，完整 `ready` 和 Docker 隔离烟测均退出码 0。第十八批 Windows 已实测 **378/378 项单测、10/10 项 E2E**，完整 `ready` **退出码 0**；Docker 冻结安装与隔离烟测也通过，**退出码 0**。
 
-**本批增加生产依赖**：GitHub 侧无法在维护者 Windows 环境执行 pnpm 冻结安装；合并前必须通过 pnpm 12 正式重算 `pnpm-lock.yaml`，审查提交，再执行 `pnpm install --frozen-lockfile`、`vp check`、`pnpm run ready`、`pnpm run test:docker:server`。未实际运行不能宣称通过。未经维护者明确授权，不合并 main，不部署，不开放工业设备写入。
+**本批新增生产依赖已经完成锁文件与实测验收**：维护者在 Windows 使用 pnpm 正式更新并提交 `pnpm-lock.yaml`，GitHub 核实其中包含 `@nestjs/terminus@12.1.0`；Docker 镜像构建时的 `pnpm install --frozen-lockfile` 成功。Windows `vp check` 231 个格式文件全部通过、108 个受检代码文件零告警、66 个 Markdown 文档检查成功；Vue/React/NestJS 类型检查与构建通过，完整 `pnpm run ready` **退出码 0**。Docker 独立镜像隔离烟测 **退出码 0**，存活/HTTP 就绪 200，未开放工程/登录/设备接口 404。主动模拟关闭过程的 HTTP 503 和 Terminus 错误日志属于预期负面测试，并非实际部署故障。PostgreSQL 真库、Redis 与工业现场测试未在本批执行；验收后仅追加记录性文档，建议复查 `vp check` 与 `pnpm run docs:check`。未经维护者明确授权，不合并 main，不部署，不开放工业设备写入。
