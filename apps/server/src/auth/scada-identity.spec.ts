@@ -304,9 +304,7 @@ describe("可信会话与工程 Guard", () => {
       reason: "verified",
     });
     expect(await fake.service.revokeForVerifiedSubject(principal, issued.sessionId)).toBe(true);
-    await expect(guard.canActivate(context(request))).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(guard.canActivate(context(request))).rejects.toBeInstanceOf(UnauthorizedException);
     expect(records[2]).toEqual({
       action: "session.authenticate",
       outcome: "denied",
@@ -334,9 +332,9 @@ describe("可信会话与工程 Guard", () => {
       scadaPrincipal: principal,
     };
     await expect(guard.canActivate(context(request))).rejects.toBeInstanceOf(NotFoundException);
-    await expect(
-      guard.canActivate(context(request, "version:append")),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(guard.canActivate(context(request, "version:append"))).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
     expect(await guard.canActivate(context(request, "version:read"))).toBe(true);
     const crossTenantRequest: ScadaAuthenticatedRequest = {
       ...request,

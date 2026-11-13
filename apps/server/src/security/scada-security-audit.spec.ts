@@ -45,17 +45,13 @@ describe("身份与工程安全审计白名单", () => {
       reason: "invalid_scope",
       token: "不要输出的令牌",
     } as unknown as SecurityAuditDecision;
-    expect(() => createSafeSecurityAuditRecord(invalid)).toThrow(
-      "安全审计事件类型或结果无效",
-    );
+    expect(() => createSafeSecurityAuditRecord(invalid)).toThrow("安全审计事件类型或结果无效");
     const badOutcome = {
       action: "session.authenticate",
       outcome: "trace_user_token",
       reason: "invalid_session",
     } as unknown as SecurityAuditDecision;
-    expect(() => createSafeSecurityAuditRecord(badOutcome)).toThrow(
-      "安全审计事件类型或结果无效",
-    );
+    expect(() => createSafeSecurityAuditRecord(badOutcome)).toThrow("安全审计事件类型或结果无效");
   });
 
   it("拒绝与操作或执行结果不匹配的原因代码", () => {
