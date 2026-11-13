@@ -126,7 +126,7 @@ test("真实回环 HTTP 同时容纳 32 路 SSE，超额返回 503 且断开后�
     }
     response.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8" });
     if (clients.add(response)) {
-      clients.send(response, 'data: {"kind":"snapshot","values":[]}\\n\\n');
+      clients.send(response, 'data: {"kind":"snapshot","values":[]}\n\n');
     }
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
