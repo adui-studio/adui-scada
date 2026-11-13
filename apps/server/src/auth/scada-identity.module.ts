@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { PrismaService } from "../database/prisma.service.js";
+import { ScadaSecurityAuditService } from "../security/scada-security-audit.js";
 import { AuthSessionService } from "./auth-session.service.js";
 import { ScadaProjectGuard } from "./scada-project.guard.js";
 import { ScadaSessionGuard } from "./scada-session.guard.js";
@@ -9,7 +10,13 @@ import { ScadaSessionGuard } from "./scada-session.guard.js";
  * 未来集成时必须将 PrismaService 调整为与工程事务仓储共享的单实例提供方。
  */
 @Module({
-  providers: [PrismaService, AuthSessionService, ScadaSessionGuard, ScadaProjectGuard],
+  providers: [
+    PrismaService,
+    AuthSessionService,
+    ScadaSecurityAuditService,
+    ScadaSessionGuard,
+    ScadaProjectGuard,
+  ],
   exports: [AuthSessionService, ScadaSessionGuard, ScadaProjectGuard],
 })
 export class ScadaIdentityModule {}
