@@ -9,7 +9,10 @@ const envPath = fileURLToPath(new URL("../.env", import.meta.url));
 if (existsSync(envPath)) loadEnvFile(envPath);
 
 const proxyMode = process.argv.includes("--proxy");
-const unknown = process.argv.slice(2).filter((argument) => argument !== "--proxy");
+const soakMode = process.argv.includes("--soak");
+const unknown = process.argv
+  .slice(2)
+  .filter((argument) => argument !== "--proxy" && argument !== "--soak");
 assert.equal(unknown.length, 0, "不支持的 SSE 验收参数");
 
 function port(name, fallback) {
@@ -87,7 +90,17 @@ async function connect(url) {
     throw new Error("SSE 响应不包含可读取流：" + url);
   }
   // 初始化为 Promise，确保异步读取任务的完成与关闭逻辑均为可等待值。
-  const client = { controller, events: [], error: null, closed: false, task: Promise.resolve() };
+  const client = {
+    controller,
+    events: [],
+    error: null,
+    closed: false,
+    task: Promise.resolve(),
+    heartbeats: 0,
+    deltas: 0,
+    lastHeartbeatAt: 0,
+    maxHeartbeatGapMs: 0,
+  };
   const reader = response.body.getReader();
   client.task = (async () => {
     const decoder = new TextDecoder();
@@ -106,6 +119,19 @@ async function connect(url) {
           pending = pending.slice(boundary + 2);
           const event = parseFrame(frame);
           if (event) {
+            if (event.kind === "heartbeat") {
+              const now = Date.now();
+              if (client.lastHeartbeatAt) {
+                client.maxHeartbeatGapMs = Math.max(
+                  client.maxHeartbeatGapMs,
+                  now - client.lastHeartbeatAt,
+                );
+              }
+              client.lastHeartbeatAt = now;
+              client.heartbeats++;
+            } else if (event.kind === "message" && event.payload?.kind === "delta") {
+              client.deltas++;
+            }
             client.events.push(event);
             if (client.events.length > 80) client.events.shift();
           }
@@ -190,6 +216,27 @@ async function verifyTarget(target) {
     );
     assert.equal(clients.slice(1).filter((client) => !client.closed).length, 6);
     process.stdout.write(target.name + "：6 路快照、具名心跳、单路断开隔离与重新订阅通过\n");
+
+    if (soakMode) {
+      const active = clients.slice(1);
+      const baselines = active.map((client) => ({
+        heartbeats: client.heartbeats,
+        deltas: client.deltas,
+      }));
+      await waitFor(
+        active,
+        (client) => {
+          const before = baselines[active.indexOf(client)];
+          return client.heartbeats - before.heartbeats >= 12 && client.deltas > before.deltas;
+        },
+        target.name + " 六路持续心跳及增量",
+        90_000,
+      );
+      for (const client of active) {
+        assert.ok(client.maxHeartbeatGapMs < 15_000, "持续测试中出现超过 15 秒的心跳间隔");
+      }
+      process.stdout.write(target.name + "：6 路连续至少 12 次心跳、增量及资源清理通过\n");
+    }
   } finally {
     await Promise.all(clients.map((client) => client.close?.()));
   }
