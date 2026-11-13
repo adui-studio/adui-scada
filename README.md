@@ -130,3 +130,9 @@ Runtime 新增框架无关的 `ReadonlyTagSource` 契约与 `createSseTagSource(
 ## V0.3 · SSE 浏览器回归（第二十四批）
 
 在项目根目录的三个终端分别执行 `pnpm run dev:demo`、`pnpm run dev:react` 和 `pnpm run dev:vue`，第四个终端运行 `pnpm run test:sse:browser`。该命令需要本机 Chrome/Edge，可通过 `SCADA_BROWSER_PATH` 指定浏览器路径。它同时检查 Vue/React Runtime 的 Tag 静默降级、具名心跳保活、15 秒全事件静默重建及切换 Studio 后的资源回收。只允许本机回环地址，不接入工业设备。用例提交不代表浏览器及生产环境验收通过，详见 [ADR-0056](docs/adr/0056-sse-browser-visibility-recovery.md)。
+
+## V0.3 · 第二十五批本机 SSE 多客户端验证
+
+独立水处理模拟 SSE 现在仅允许最多 32 个同时在线订阅，并对每客户端待发送缓冲限定为 64 KiB；慢连接遇到背压时主动关闭以保护其他连接。这些数字仅为本地模拟防护边界，不是工业现场容量指标。
+
+在项目根目录运行 `pnpm run test:sse:clients`，使用 Node 内置测试器验证资源限制；另一个终端先启动 `pnpm run dev:demo`，再执行 `pnpm run test:sse:network` 验证实际 6 路 SSE 订阅。需要测试本机 Docker Nginx 两套 Web 代理时，先运行 `pnpm run docker:demo:up`，再执行 `pnpm run test:sse:proxy`。脚本从根 `.env` 读取端口，始终只连接 127.0.0.1，不会自动改动容器。详见 [ADR-0057](docs/adr/0057-local-sse-capacity-and-proxy-validation.md)。
