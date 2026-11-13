@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { TAG_QUALITY_LABELS } from "@adui/scada-core";
+import { TAG_QUALITIES, TAG_QUALITY_LABELS } from "@adui/scada-core";
 import {
   DemoRuntime,
   OfflineDemoRuntime,
+  formatRuntimeDataAge,
+  formatRuntimeUpdateTime,
   initialRuntimeState,
   RUNTIME_STATUS_LABELS,
   svgDataUrl,
@@ -37,6 +39,39 @@ export default function RuntimePage() {
       <p role="status" className="scada-message">
         {state.message}
       </p>
+      <section className="scada-panel scada-diagnostics" aria-label="本地实时链路诊断">
+        <h2>实时链路诊断</h2>
+        <p className="scada-diagnostics-note">
+          本机只读观测 · 数据年龄为接受有效 Tag 后经过的时间，并非网络传输延迟
+        </p>
+        <dl className="scada-diagnostics-grid">
+          <div>
+            <dt>连接状态</dt>
+            <dd>{RUNTIME_STATUS_LABELS[state.status]}</dd>
+          </div>
+          <div>
+            <dt>断连过程次数</dt>
+            <dd>{state.diagnostics.reconnectCount}</dd>
+          </div>
+          <div>
+            <dt>最近有效更新</dt>
+            <dd>{formatRuntimeUpdateTime(state.diagnostics.lastTagReceivedAt)}</dd>
+          </div>
+          <div>
+            <dt>观测时数据年龄</dt>
+            <dd>{formatRuntimeDataAge(state.diagnostics.dataAgeMs)}</dd>
+          </div>
+        </dl>
+        <div className="scada-quality-summary" aria-label="Tag 质量分布">
+          {TAG_QUALITIES.map((quality) => (
+            <div key={quality} className="scada-quality-item" data-quality={quality}>
+              <span>{TAG_QUALITY_LABELS[quality]}</span>
+              <strong>{state.diagnostics.qualityCounts[quality]}</strong>
+            </div>
+          ))}
+        </div>
+        <p className="scada-diagnostics-total">当前 Tag 总数：{state.diagnostics.tagCount}</p>
+      </section>
       <section className="scada-panel" aria-label="模拟工业监控画面">
         {svg ? (
           <img className="scada-svg" src={svg} alt="水箱、水泵与流量模拟监控" />
