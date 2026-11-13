@@ -496,3 +496,9 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 实现包含服务端随机请求 ID、URL 查询/头/体白名单日志脱敏，Swagger 文档仅允许显式本机非生产模式访问，默认不注册路由；健康响应和未开放的认证/工程/工业设备写入接口保持不变。另引入 `@nestjs/config` 与仅开发使用的 `pino-pretty`，并修复其在 Vitest 中创建日志工作线程的风险。现在共有六项日志/文档纯单测及三项新增 E2E，Windows 实测普通单测 356/356、E2E 8/8；本批未重测旧 PostgreSQL 真库 11 项。没有修改 PostgreSQL 表、迁移或 Prisma Client，也没有激活登录/工业设备控制。
 
 **验收记录**：维护者已使用 pnpm 12.18.0 更新并推送锁文件；2026-11-13 Windows 单独 `pnpm run test:e2e:server` 8/8、退出码 0，完整 `pnpm run ready` 退出码 0：356/356 单测、8/8 E2E、219 个文件格式检查、100 个受检文件零错误/警告、62 份 Markdown 检查及 React/Vue/NestJS 构建通过。此前 `beforeAll` 10 秒超时在排除测试环境 Pretty Worker 后未复现。Docker 隔离镜像构建与烟测也已在该批前一次实测通过、退出码 0。当前 PR #36 仍为 Draft、未合并，真库 11 项回归及生产级安全审计不属于此次 `ready` 的验证结果。
+
+## 2026-11-13 · V0.3 第十五批：NestJS 启动配置时序修复（Windows 验收通过，Draft 待合并）
+
+第十四批 PR #36 已获维护者授权，以 Squash Merge 合入 `main`（`28f20c7`）。Windows 已实测单测 356/356、NestJS E2E 8/8、完整 `ready` 退出码 0，上一轮 Docker 隔离烟测也通过。本批以最新 main 为基线，在独立分支 `feat/v0.3-server-startup-config` 修复服务端先静态初始化 AppModule/Pino 后从根 `.env` 加载 `SCADA_LOG_LEVEL` 的时序风险。
+
+实现改为根环境变量加载完成后才动态导入正式 AppModule，并抽取纯函数统一解析端口、监听主机和受控文档条件；根 `.env` 唯一加载入口、配置优先级、Swagger 生产关闭、日志凭据脱敏均不改变。新增 5 项启动配置测试，`scripts/check-env-config.mjs` 增加顺序回归约束。维护者 Windows 已实测常规单测 **361/361**、NestJS E2E **8/8**，`vp check` 222 个文件格式正确、102 个受检文件零告警，63 份 Markdown 检查通过，React/Vue/NestJS 构建通过，完整 `ready` 退出码 **0**。独立 Docker 隔离镜像构建及烟测也通过，退出码 **0**；本批未执行 PostgreSQL 真库回归。未新增依赖、未修改 pnpm 锁文件、Prisma 模型、正式认证或设备写入接口。配套 [ADR-0047](adr/0047-server-configuration-startup.md)；PR #37 仍保持 Draft，记录性文档更新后需最终格式复检，未经明确授权不合并。

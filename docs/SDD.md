@@ -465,4 +465,11 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - `SCADA_API_DOCS_ENABLED` 默认 `false`，仅值 `true` 可启用；且要求 `NODE_ENV !== production`、NestJS 监听 `127.0.0.1`。任何条件不满足时不注册 `/api/docs` 与 `/api/docs-json`。开发 Swagger 开启时禁用 CSP 仅为交互 UI 兼容，正式部署仍使用 Helmet 默认 CSP。
 - `GET /health` 在 OpenAPI 中只包含 `status='ok'` 与 `service='adui-scada-server'`；**不能视为数据库就绪/工业网关可用的证明**。OpenAPI 中没有登录、会话签发、工程版本读写或工业设备写入方法。
 - 生产 Pino 运行时使用 `nestjs-pino` v5 + Pino v10 + `pino-http` v11；Swagger 使用 `@nestjs/swagger` v12、HTTP 安全头使用 `helmet` v8。本批不升级现有 NestJS 12 / Prisma 7 / Vite+ / TypeScript 6。
-- 这些业务依赖需在受控 Windows 环境由 pnpm 12 生成 `pnpm-lock.yaml`。**在锁文件完整和测试通过前，此契约仅是待验收实现**。
+- 相关依赖已由维护者使用 pnpm 12.18.0 更新锁文件，第十四批 Windows 已实测 `ready` 退出码 0（356 单测、8 E2E）；此时只属于健康 HTTP 基线而非生产认证发布。
+
+## V0.3 第十五批：安全启动配置与环境加载契约
+
+- `main.ts` 必须先通过 Node.js `loadEnvFile` 加载根目录 `.env`，**随后**动态导入正式 `AppModule`，以免 `LoggerModule.forRoot` 在根环境变量生效之前读取日志等级。
+- `resolveServerStartupConfig(env)` 是纯函数：专用 `SCADA_SERVER_PORT` / `SCADA_SERVER_HOST` 优先于通用 `PORT` / `HOST`；默认值仍为 3001 和 127.0.0.1。端口必须是 1～65535 的整数；监听主机仅允许 127.0.0.1 或 0.0.0.0，不回显非法原始输入。
+- Swagger 沿用 `allowLocalOpenApi` 的原有条件，`SCADA_API_DOCS_ENABLED=true`、非生产且本地回环三个条件必须同时成立；该配置不能绕过生产禁用策略。
+- 单独的配置测试和 `env:check` 静态顺序断言共同避免回归，见 [ADR-0047](adr/0047-server-configuration-startup.md)。

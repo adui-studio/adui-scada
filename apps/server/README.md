@@ -86,3 +86,9 @@ Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。�
 `@nestjs/config@12.0.1` 在 `AppModule` 注册为全局配置模块，但根目录 `.env` 仍由 `main.ts` 使用 Node.js 原生 `loadEnvFile` 唯一加载；不直接依赖 `dotenv`。本阶段保留已有环境变量读取方式，不误称已完成配置 Schema 校验。
 
 本地交互式终端仅在非生产、非测试环境启用 `pino-pretty@13.2.0`，便于查看中文日志；Vitest、生产环境及非交互式日志管道保持 JSON。不要在日志记录 Authorization、Cookie、数据库连接字符串、请求体或写入数据。锁文件、Windows E2E 和完整质量链均已通过本批验收；修改后仍应运行 `vp check`、`pnpm run ready`，并按变更影响复验 `pnpm run test:docker:server`。
+
+## V0.3 第十五批：启动配置加载顺序与校验
+
+根 `.env` 仍由 `main.ts` 使用 Node.js 原生 `loadEnvFile` 统一加载。此前静态导入 `AppModule` 导致其 Pino Logger 配置可能早于根环境变量生效；现改为先解析环境变量，再动态导入模块。纯函数 `resolveServerStartupConfig` 对主机、端口及本机 Swagger 开关进行集中校验，保留 `SCADA_SERVER_PORT` 优先于 `PORT`、`SCADA_SERVER_HOST` 优先于 `HOST` 的规则。生产不开放 Swagger，不新增任何业务 HTTP 入口。
+
+维护者 Windows 已执行 `pnpm run env:check`、`vp check` 与 `pnpm run ready`：**361/361** 单测、**8/8** NestJS E2E、React/Vue/NestJS 构建及 63 份文档检查全部通过，完整 `ready` 退出码 **0**。独立 `pnpm run test:docker:server` 也已通过，退出码 **0**。本批未单独进行 PostgreSQL 真库回归，记录性文档提交后可复核 `vp check` 与 `pnpm run docs:check`。详见 [ADR-0047](../../docs/adr/0047-server-configuration-startup.md)。
