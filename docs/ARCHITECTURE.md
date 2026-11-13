@@ -357,3 +357,7 @@ Runtime 生命周期按连接代次隔离：停止时中止 fetch、关闭 SSE�
 ## 2026-11-13 · V0.3 第二十八批：共享诊断状态事件时间线
 
 在既有 `@adui/scada-runtime` 的只读 `RuntimeDiagnostics` 内新增有限的 `statusEvents`，由 Runtime 统一管理状态转换及容量（最多 20 条），Vue/React 只渲染相同数据与中文状态映射。离线模式使用相同结构；没有额外定时器、网络连接、后台服务、数据库、文件或外部审计组件。历史序号按启动会话重新开始，事件时间来自本机。详见 [ADR-0060](adr/0060-runtime-session-status-history.md)。
+
+## 2026-11-14 · V0.3 第二十九批：共享 Tag 定义目录与值类型边界
+
+`@adui/scada-core` 新增 `TagDefinitionCatalog` 作为独立的只读元数据目录，可选注入 `TagStore`。目录定义稳定 Tag ID 与展示名称、静态数据类型/单位/描述；实时 `TagValue` 继续负责质量、值、时间戳与序列号。水处理 Demo 的在线 Runtime、Tauri 离线模拟和独立 Node SSE 共用相同目录；Studio 双框架只消费同一候选元数据，不实现各自的校验规则。未改变 `ScadaDocument 0.2.0`、Dexie、本地版本快照、NestJS 数据库及工业 Gateway。项目级 Tag 持久化和地址映射需另行 ADR 与 Schema 迁移。见 [ADR-0061](adr/0061-tag-definition-catalog.md)。
