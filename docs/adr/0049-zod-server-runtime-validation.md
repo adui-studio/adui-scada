@@ -28,24 +28,25 @@
 
 ## 依赖与验收状态
 
-项目协作执行环境不能解析 npm Registry，无法可靠地执行 `pnpm install` 或由 pnpm 正式更新 `pnpm-lock.yaml`。本批先提交 Catalog、Manifest、代码和测试到独立 Draft PR。**锁文件更新属于合并前阻塞，不得手工编造 integrity、跳过冻结安装或宣称新增依赖已实际测试通过。**
+项目协作执行环境不能解析 npm Registry，无法可靠地执行 `pnpm install` 或由 pnpm 正式更新 `pnpm-lock.yaml`。本批已声明 Catalog/Manifest 并由维护者首次安装提交锁文件；移除有问题的适配器后需再次同步。**锁文件更新属于合并前阻塞，不得手工编造 integrity、跳过冻结安装或宣称新增依赖已实际测试通过。**
 
-第十六批 Windows 基线为 **367/367** 单测、**8/8** NestJS E2E、完整 `ready` 退出码 0，Docker 隔离烟测也通过。本批增加 4 项单测，**预期**普通单测 371、E2E 8；预期不代表本批已通过。
+第十六批 Windows 基线为 **367/367** 单测、**8/8** NestJS E2E、完整 `ready` 退出码 0，Docker 隔离烟测也通过。本批新增启动配置 4 项及隔离 NestJS 原生集成 4 项单测，**预计**普通单测 375、E2E 8；预期不代表本批已通过。
 
 维护者在 Windows 的第十七批开发分支执行 `pnpm install`，核对后提交 pnpm 12 正式生成的锁文件，再执行 `pnpm install --frozen-lockfile`、`pnpm run ready` 和 `pnpm run test:docker:server`。生产镜像必须包含 Zod 运行时依赖且默认接口安全边界保持不变。验收通过并获得明确授权前，PR 保持 Draft，不合并。
 
-## NestJS DTO 集成包兼容性复核补充（2026-11-13）
+## 第十七批实测修订：改用 NestJS 12 原生 Standard Schema（2026-11-13）
 
-维护者提出将方案扩展为 `nestjs-zod + zod`。实际复核 `nestjs-zod@5.6.0` 的发行标签元数据发现，其 NestJS Peer 范围仅为 10 / 11、Swagger 仅包含 7 / 8 / 11；而本仓库为 NestJS 12.0.3 / Swagger 12.1.1。Zod 4 本身匹配，但**Nest 集成层尚不满足官方 Peer 范围**。根据最小改动与依赖安全规则，暂不在本 PR 中强行添加 `nestjs-zod` 或放宽依赖校验。
+维护者已授权选择实际更可靠的 NestJS + Zod 集成方案。此前曾评估 `nestjs-zod@5.6.0` 与 `nest-zod@2.1.0`：两者的已核对发行包 `peerDependencies` 均未明确包含本项目的 NestJS 12 / Swagger 12（即便 `nest-zod` 官网兼容性说明写有支持）。为了不忽略 Peer 校验，最初尝试了 `nest-zod + zod` 的隔离集成测试。
 
-已调研名称不同的 `nest-zod`，其文档明确声明支持 NestJS 12 + Swagger 12 + Zod 4，亦可考虑 NestJS 12 原生 `StandardSchemaValidationPipe`。两者都属于替代方案而不是 `nestjs-zod` 的同名升级，维护者现已明确授权选择更合适的实现，选用 `nest-zod`；未来新建 DTO 时必须统一 Schema、关闭原始 Zod 错误明文、保持 OpenAPI 受控且不开放业务路由。详见 [上游包声明](https://github.com/BenLorantfy/nestjs-zod/blob/v5.6.0/packages/nestjs-zod/package.json) 和 [候选兼容矩阵](https://nestzod.dev/guide/compatibility)。
+**实际失败已确认**：维护者 Windows 首次运行 `pnpm run ready`，`nest-zod/swagger` 的 `ZSerialize` 在装饰器求值时抛出 `TypeError: Property description must be an object: undefined`，整个测试套件没有执行。上游 `v2.1.0` 的 `src/openapi-schema.ts` 在 `withSynchronousOpenApiIntrospection` 中通过 `Reflect.getOwnPropertyDescriptor(schema, "safeParse")` 读取描述符，却不处理该方法继承于原型时返回 `undefined` 的情况，最终在 `Object.defineProperty` 恢复时出错。参见 [源代码](https://github.com/taugr/nest-zod/blob/v2.1.0/src/openapi-schema.ts) 和 [发行包 Peer 声明](https://github.com/taugr/nest-zod/blob/v2.1.0/package.json)。
 
-## 已确认的集成选型：nest-zod + zod
+**修订后的正式方案**：仅保留 `zod@4.6.7`。NestJS 12 已原生提供 `StandardSchemaValidationPipe`、`StandardSchemaSerializerInterceptor`、`@Body({ schema })`、`@Query(..., { schema })` 和 `@SerializeOptions({ schema })`。其 Swagger 12 可以直接从 Zod 4 的 Standard JSON Schema 生成 OpenAPI 请求体。该方案已由 [NestJS 12 官方文档](https://docs.nestjs.com/application/validation) 和 [OpenAPI 文档](https://docs.nestjs.com/openapi/introduction) 明确说明，不需要第三方 NestJS 适配器。
 
-在维护者明确授权“哪个好用哪个”后，选择 **`nest-zod@2.1.0` + `zod@4.6.7`**。其[官方兼容矩阵](https://nestzod.dev/guide/compatibility)覆盖 Node 22+、NestJS 12 和 `@nestjs/swagger` 12；相比 `nestjs-zod@5.6.0` 的 NestJS 10/11 Peer 声明，此方案不需要降低项目版本或忽略 Peer 约束。官方文档当前展示 v2.1.0，最终版本存在性和 Peer 解析仍须在维护者 Windows `pnpm install` 时验证。
+- 从根 Catalog 与 `apps/server/package.json` 移除 `nest-zod`。保留 Zod 4.6.7；不修改 NestJS、Swagger、Prisma 或 TypeScript 版本。
+- 改用 `apps/server/src/validation/standard-schema-integration.spec.ts`，只在测试 NestJS 应用注册 `StandardSchemaValidationPipe` 与逐路由响应拦截器，沿用 4 项 DTO/查询/响应输出/Swagger 集成测试。正式 `AppModule` 不改动，不开放业务或工业设备接口。
+- 启动配置只在值确实为 `undefined` 时回退到通用环境变量或默认值；非法 `null` 必须交给 Zod 拒绝。避免 `??` 把非法类型误当成未配置。
+- 本批 Windows 失败记录：格式 227 个文件全部通过，105 个受检源文件无警告/错误；执行单测时 **370 通过、1 失败**，另有一个 `nest-zod` 测试套件在导入时失败，因此 `ready` **未完成**，后续 E2E 与构建未执行。不能将此记录标为成功。
+- 修改后预期普通单测 **375 项**（基线 367 + 启动配置 4 + 原生集成 4），NestJS E2E 仍为 8 项。该数字尚未获得本轮复验确认。
+- 维护者在上一次安装时已经生成并推送包含 `nest-zod` 的 `pnpm-lock.yaml`；此次从 Manifest/Catalog 移除该包后，必须**再次通过 pnpm 正式重算锁文件并提交**，不可手工修改或忽略冻结安装校验；之后完整执行 `vp check`、`pnpm run ready` 和 `pnpm run test:docker:server`。
 
-- 根 Catalog 和服务端生产依赖分别加入 `nest-zod: "2.1.0"` 与 `nest-zod: "catalog:"`；Zod 4.6.7 保持原定版本。
-- `nest-zod/swagger` 提供 `ZBody`、`ZQuery`、`ZSerialize` 等与 Swagger 集成的路由级装饰器；**无需全局注册 Pipe，也不对所有 Controller 自动启用**。
-- `apps/server/src/validation/nest-zod-integration.spec.ts` 中的测试 Controller 仅被独立 NestJS 测试模块引用；新增 4 项测试：请求体去空格/响应字段过滤、无效请求 400、查询参数数字转换与非法拒绝、受控 OpenAPI 元数据。正式 `AppModule` 及业务 Controller 不改动，测试 URL 不属于生产路由。
-- 运行时输入校验与授权/安全审计分离：未来受保护业务接口先经可信 Session/ACL Guard，之后解析 DTO；业务写入仍须事务级 ACL 复核。校验失败不得在日志打印原始凭据、URL、完整 `ZodError`。
-- 当前新集成测试尚未在 Windows 运行，`pnpm-lock.yaml` 也尚未更新；本批新增单测总数由 4 增至 **8 项**，预计常规单测 **375**，NestJS E2E **8**。此数为预期而非测试结果。
+安全边界保持不变：根目录 `.env` 先加载、Swagger 默认关闭、Guard 未挂载、工程写入和工业设备接口未开放。正式使用原生 Standard Schema 处理敏感业务请求时仍需专项校验异常输出，不得将未经清洗的错误详情写入审计。
