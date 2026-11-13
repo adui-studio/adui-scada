@@ -193,7 +193,11 @@ describe("可信会话与工程 Guard", () => {
 
   it("工程 Guard 缺少权限元数据时默认拒绝", async () => {
     const db = { client: { scadaProjectGrant: { findMany: async () => [] } } };
-    const guard = new ScadaProjectGuard(db as unknown as PrismaService, new Reflector(), makeAuditRecorder().audit);
+    const guard = new ScadaProjectGuard(
+      db as unknown as PrismaService,
+      new Reflector(),
+      makeAuditRecorder().audit,
+    );
     await expect(
       guard.canActivate(
         context({ headers: {}, params: { projectId: "project-a" }, scadaPrincipal: principal }),
@@ -213,7 +217,11 @@ describe("可信会话与工程 Guard", () => {
         },
       },
     };
-    const guard = new ScadaProjectGuard(db as unknown as PrismaService, new Reflector(), makeAuditRecorder().audit);
+    const guard = new ScadaProjectGuard(
+      db as unknown as PrismaService,
+      new Reflector(),
+      makeAuditRecorder().audit,
+    );
     await expect(
       guard.canActivate(
         context({ headers: {}, params: { projectId: "project-a" } }, "version:read"),
@@ -249,7 +257,11 @@ describe("可信会话与工程 Guard", () => {
         },
       },
     };
-    const guard = new ScadaProjectGuard(db as unknown as PrismaService, new Reflector(), makeAuditRecorder().audit);
+    const guard = new ScadaProjectGuard(
+      db as unknown as PrismaService,
+      new Reflector(),
+      makeAuditRecorder().audit,
+    );
     const request: ScadaAuthenticatedRequest = {
       headers: {},
       params: { projectId: "project-a" },
@@ -291,6 +303,15 @@ describe("可信会话与工程 Guard", () => {
       outcome: "allowed",
       reason: "verified",
     });
+    expect(await fake.service.revokeForVerifiedSubject(principal, issued.sessionId)).toBe(true);
+    await expect(guard.canActivate(context(request))).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    expect(records[2]).toEqual({
+      action: "session.authenticate",
+      outcome: "denied",
+      reason: "invalid_session",
+    });
     const output = JSON.stringify(records);
     expect(output).not.toContain(issued.token);
     expect(output).not.toContain(fakeHeader);
@@ -306,7 +327,11 @@ describe("可信会话与工程 Guard", () => {
         },
       },
     };
-    const guard = new ScadaProjectGuard(db as unknown as PrismaService, new Reflector(), audit);
+    const guard = new ScadaProjectGuard(
+      db as unknown as PrismaService,
+      new Reflector(),
+      audit,
+    );
     const request: ScadaAuthenticatedRequest = {
       headers: { authorization: "Bearer 不应写入日志" },
       params: { projectId: "project-private" },
@@ -317,10 +342,18 @@ describe("可信会话与工程 Guard", () => {
       guard.canActivate(context(request, "version:append")),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(await guard.canActivate(context(request, "version:read"))).toBe(true);
+    const crossTenantRequest: ScadaAuthenticatedRequest = {
+      ...request,
+      params: { projectId: "project-private", tenantId: "tenant-other" },
+    };
+    await expect(
+      guard.canActivate(context(crossTenantRequest, "version:read")),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(records).toEqual([
       { action: "project.authorize", outcome: "denied", reason: "missing_policy" },
       { action: "project.authorize", outcome: "denied", reason: "permission_denied" },
       { action: "project.authorize", outcome: "allowed", reason: "permission_granted" },
+      { action: "project.authorize", outcome: "denied", reason: "invalid_scope" },
     ]);
     const output = JSON.stringify(records);
     expect(output).not.toContain("project-private");
@@ -328,5 +361,4 @@ describe("可信会话与工程 Guard", () => {
     expect(output).not.toContain(principal.subjectId);
     expect(output).not.toContain("Bearer");
   });
-
 });
