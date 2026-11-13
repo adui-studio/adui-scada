@@ -547,3 +547,11 @@
 - `packages/runtime/src/offline.ts`：本机离线模拟复用诊断结构但无网络断连计数。
 - `packages/runtime/test/diagnostics.test.ts`：纯诊断、数据年龄、断连阶段去重、旧序列、局部 STALE 和离线模式回归。
 - `apps/web-react/src/runtime/RuntimePage.tsx`、`apps/web-vue/src/runtime/RuntimePage.vue`：双框架对等只读诊断面板；共用 `packages/runtime/src/runtime.css`。详见 [ADR-0059](adr/0059-runtime-local-diagnostics.md)。
+
+## V0.3 第二十八批 · 会话状态时间线模块
+
+- `packages/runtime/src/diagnostics.ts`：扩展 `RuntimeDiagnostics.statusEvents`，新增 `RuntimeStatusEvent`、20 条有界 `RuntimeStatusHistory`，独立于 UI 框架及网络协议。
+- `packages/runtime/src/runtime.ts`：仅在状态发布时检查变化并记录本地时钟，新 `start` 清零，状态快照包含历史副本。
+- `packages/runtime/src/offline.ts`：仅 `simulation` 事件，不记录伪造的重连/断流。
+- `apps/web-react/src/runtime/RuntimePage.tsx` 和 `apps/web-vue/src/runtime/RuntimePage.vue`：对等渲染最近状态变化；`packages/runtime/src/runtime.css` 共享响应式时间线布局。
+- `packages/runtime/test/diagnostics.test.ts`：状态去重、20 条限制、同毫秒序号、快照不回溯修改、重启与离线回归；`scripts/test-runtime-sse-browser.mjs` 扩展双框架 SSE 路径的状态事件断言。见 [ADR-0060](adr/0060-runtime-session-status-history.md)。
