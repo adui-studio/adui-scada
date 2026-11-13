@@ -201,7 +201,8 @@ footer {
   border-color: var(--scada-live);
 }
 .scada-status[data-status="error"],
-.scada-status[data-status="reconnecting"] {
+.scada-status[data-status="reconnecting"],
+.scada-status[data-status="stale"] {
   color: var(--scada-danger);
   border-color: var(--scada-danger);
 }
