@@ -121,8 +121,8 @@ Runtime 新增框架无关的 `ReadonlyTagSource` 契约与 `createSseTagSource(
 
 此模块尚不是具有生产鉴权、Gateway 连接、发布版本加载或背压控制的完整实时订阅系统。技术决策与验收参见 [ADR-0054](docs/adr/0054-readonly-tag-source-adapters.md)。维护者 Windows 已实测 **Runtime 专项 21/21、单测 400/400、NestJS E2E 17/17**，`vp check` 零警告/错误，完整 `pnpm run ready` **退出码 0**；Docker 隔离烟测与 Linux SIGTERM 退出码均正常，Docker **退出码 0**。人工页面断连演练、真实工业网关与生产认证尚未验证。本次记录性文档更新后建议执行 `vp check` 与 `pnpm run docs:check`。
 
-## V0.3 第二十三批：模拟 SSE 心跳与数据超时（待验收）
+## V0.3 第二十三批：模拟 SSE 心跳与数据超时（Windows / Docker 自动化验收通过）
 
 原水处理独立模拟 SSE 与 NestJS **仅本机非生产显式开启**的模拟 SSE 现在通过具名 `heartbeat` 每 5 秒保活通道，浏览器只读适配器连续 15 秒无任何 SSE 事件后会重建同源连接。Vue/React 共用 Runtime 独立以 12 秒无有效 Tag 更新识别数据静默，并通过 `stale` /「Tag 数据已过期」降级旧读数；心跳不会将旧值恢复为 GOOD。水处理原本每 30 秒停止采样 8 秒的 STALE 演练仍保持，桌面离线模式、Vue/React 默认 `/demo`、生产 API 与工业只读边界不变。详见 [ADR-0055](docs/adr/0055-sse-heartbeat-and-tag-silence.md)。
 
-本批新增 9 项单测，预计累计 **409 单测、17 NestJS E2E**，**尚待维护者 Windows 与 Docker 实际验收**。5/12/15 秒阈值均为开发演示预设，不是生产工业协议 SLA；尚无真实 PLC、网关认证、背压或多客户端并发验收。
+本批新增 9 项单测，维护者 Windows 实测 **Runtime 专项 29/29、Server 专项 79/79、全量单测 409/409、NestJS E2E 17/17**；`vp check` 零警告/错误、251 个文件格式正确，71 份 Markdown 检查、Vue/React/NestJS 构建全部通过，完整 `pnpm run ready` **退出码 0**。Docker 冻结安装、隔离 HTTP 烟测与 Linux SIGTERM 正常退出，**Docker 退出码 0**。5/12/15 秒阈值均为开发演示预设，不是生产工业协议 SLA；尚无人工浏览器断流演练、真实 PLC、网关认证、背压或多客户端并发验收。验收文档更新后建议复查 `vp check` 与 `pnpm run docs:check`。
