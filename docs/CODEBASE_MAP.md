@@ -457,3 +457,14 @@
 - `apps/server/src/config/server-startup.config.spec.ts`：原有 5 项测试 + 新增 4 项边界回归，涵盖非法输入类型、变量优先级、敏感值过滤和数字表示。
 - `apps/server/src/validation/standard-schema-integration.spec.ts`：测试专用 Controller + 4 项 NestJS 原生 Schema 请求校验、参数转换、响应过滤与 OpenAPI 测试；不属于正式路由。
 - [ADR-0049](adr/0049-zod-server-runtime-validation.md)：记录实测失败、移除不兼容适配器及后续锁文件和验收边界。
+
+## V0.3 第十八批：NestJS HTTP 就绪探针
+
+- `apps/server/src/health/http-readiness.indicator.ts`：只跟踪 NestJS HTTP 子系统应用初始化与关闭生命周期；不访问数据库、Redis 或工业设备。
+- `apps/server/src/health/http-readiness.controller.ts`：新增 `GET /health/ready`，通过 `@nestjs/terminus` 返回标准就绪/不可用响应，禁止缓存。
+- `apps/server/src/health/http-readiness.indicator.spec.ts`：3 项启动前、启动完成、关闭流程状态测试。
+- `apps/server/src/app.module.ts`：只增加 `TerminusModule`、就绪探针及其 Controller；原 `/health` 不变。
+- `apps/server/test/app.e2e-spec.ts`：新增 2 项就绪/关闭端到端测试，受控 Swagger 增加探针契约；原 8 项持续回归。
+- `apps/server/container-smoke.mjs`：隔离容器验证存活与 HTTP 就绪及安全头；继续确认未开放接口返回 404。
+- `pnpm-workspace.yaml`、`apps/server/package.json`：声明 `@nestjs/terminus@12.1.0` Catalog 和生产依赖，锁文件待维护者 Windows 正式生成。
+- [ADR-0050](adr/0050-http-readiness-terminus.md)：区分 HTTP 就绪、数据库依赖和工业设备健康，解释暂缓全局限流的原因。
