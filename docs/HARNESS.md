@@ -1135,3 +1135,24 @@ Write-Host "Docker 隔离烟测退出码：$LASTEXITCODE"
 ```
 
 2026-11-13 Windows 实测：`env:check` 通过；新增加的 5 项启动配置测试通过，普通单测 **361/361**、NestJS E2E **8/8**；`vp check` 检查 222 个格式文件、102 个受检文件均通过，63 份 Markdown 检查与 React/Vue/NestJS 构建完成，完整 `ready` **退出码 0**。独立 Docker 镜像隔离测试也已通过，**退出码 0**。未运行本批 PostgreSQL 真库回归；默认 Swagger、工程版本读写、登录和工业设备写入接口仍关闭。记录性文档更新后建议复核格式及文档检查。测试运行前不要在终端输出数据库连接串或生产令牌；本批不要求真实数据库连接。
+
+## V0.3 第十六批：安全审计白名单与 Guard 拒绝事件（ADR-0048）
+
+从第十五批合并后的最新 `main` 分支建立独立安全事件 PR。本批不新增第三方依赖、不变更 `pnpm-lock.yaml`、不连接工业设备，也不执行数据库迁移。只针对当前尚未挂载正式 AppModule 的会话 Guard 与工程 ACL Guard 增加固定字段审计诊断记录。
+
+```powershell
+git fetch origin
+git switch feat/v0.3-security-audit-boundary
+git pull --ff-only
+pnpm install --frozen-lockfile
+
+vp check
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+
+# Docker Desktop 可用时执行隔离镜像烟测，不开放宿主机端口。
+pnpm run test:docker:server
+Write-Host "Docker 验证退出码：$LASTEXITCODE"
+```
+
+Windows 已实测普通单测 **367/367** 项、NestJS E2E **8/8** 项，完整 `ready` **退出码 0**；`vp check` 覆盖 225 个格式文件与 104 个受检文件，64 份 Markdown 检查及全部 Web/Server 构建通过。独立 Docker 镜像构建和隔离烟测也已通过，**退出码 0**。重点查看恶意/伪造 Bearer、已撤销会话、无权限及跨租户的审计结果是否只包含枚举，不含令牌或路径。独立 Docker 烟测仍应确认健康路由、未开放登录/工程版本/设备写入保持原有访问边界。本批未执行 PostgreSQL 真库回归；记录性文档提交发生在 Windows 测试之后，合并前可复验 `vp check` 和 `pnpm run docs:check`。未来接入 Zod 等运行时 Schema 工具时，须先更新 Catalog、通过 pnpm 正式生成锁文件并重新执行质量链；不得静默更改已验收的白名单接口。

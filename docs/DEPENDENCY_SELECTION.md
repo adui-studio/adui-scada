@@ -44,3 +44,11 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 - NestJS 配置注入：`@nestjs/config@12.0.1`（已声明于服务端依赖与 Catalog，pnpm 锁文件已提交）。根目录 `.env` 由 Node `loadEnvFile` 唯一加载，`ConfigModule` 设置 `ignoreEnvFile: true`，不直接增加 `dotenv`。
 - 开发日志美化：`pino-pretty@13.2.0`（仅服务端 devDependency）。只在非生产、非测试且 stdout 为 TTY 时启用；其它环境保持 JSON 输出。
 - Windows 已安装并提交锁文件，静态检查与 355 项单测通过，Docker 隔离测试通过；E2E 初始化超时。Pretty 测试隔离补丁新增一项单测，预期 356 项，完整 ready 尚待复验。
+
+## 第十六批验收与 Zod 引入边界
+
+2026-11-13，维护者 Windows 验证第十六批 `ready` **367/367 单测、8/8 NestJS E2E、退出码 0**，独立 Docker 服务端隔离构建与烟测 **退出码 0**。该批使用现有 TypeScript 固定枚举和运行时安全白名单，不添加新依赖。
+
+经核对 npm 官方版本列表，`zod@4.6.7` 为当前稳定版本；建议优先用于**未来不可信数据入口**：NestJS HTTP DTO、环境配置、外部设备/网关数据和安全审计事件输入 Schema。现有共享 Core 工程文档已经有解析校验契约，不能建立第二套相互矛盾的 Schema。即便启用 Zod，安全审计仍须从可信字段白名单重新构造输出，**不得直接记录 `safeParse` 失败对象、原始输入或包含令牌的校验上下文**。
+
+第十六批 PR #38 未安装 Zod，也未修改 pnpm Catalog / 锁文件；正式引入时应单独明确消费包、固定版本、由 pnpm 12 正式更新锁文件，并重新执行类型检查、单测、E2E、`ready` 及 Docker 回归。

@@ -5,12 +5,26 @@ import { ForbiddenException, NotFoundException, UnauthorizedException } from "@n
 import type { ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { PrismaService } from "../database/prisma.service.js";
+import type {
+  SecurityAuditDecision,
+  SecurityAuditReporter,
+} from "../security/scada-security-audit.js";
 import { AuthSessionService } from "./auth-session.service.js";
 import { SCADA_PROJECT_PERMISSION, ScadaProjectGuard } from "./scada-project.guard.js";
 import type { ScadaAuthenticatedRequest } from "./scada-session.guard.js";
 import { ScadaSessionGuard } from "./scada-session.guard.js";
 
 const principal = { tenantId: "tenant-a", subjectId: "engineer-1" };
+
+function makeAuditRecorder() {
+  const records: SecurityAuditDecision[] = [];
+  const audit: SecurityAuditReporter = {
+    record(decision) {
+      records.push(decision);
+    },
+  };
+  return { audit, records };
+}
 
 interface StoredSession {
   sessionId: string;
@@ -158,7 +172,7 @@ describe("可信会话与工程 Guard", () => {
 
   it("会话 Guard 拒绝缺失、重复或伪造的 Bearer 请求头", async () => {
     const fake = makeSessionService();
-    const guard = new ScadaSessionGuard(fake.service);
+    const guard = new ScadaSessionGuard(fake.service, makeAuditRecorder().audit);
     for (const header of [undefined, ["Bearer fake"], "Basic fake", "Bearer fake"]) {
       await expect(
         guard.canActivate(context({ headers: { authorization: header } })),
@@ -169,7 +183,7 @@ describe("可信会话与工程 Guard", () => {
   it("会话 Guard 将数据库验证后的租户和主体写入请求上下文", async () => {
     const fake = makeSessionService();
     const issued = await fake.service.issueForVerifiedSubject(principal);
-    const guard = new ScadaSessionGuard(fake.service);
+    const guard = new ScadaSessionGuard(fake.service, makeAuditRecorder().audit);
     const request: ScadaAuthenticatedRequest = {
       headers: { authorization: `Bearer ${issued.token}` },
     };
@@ -179,7 +193,11 @@ describe("可信会话与工程 Guard", () => {
 
   it("工程 Guard 缺少权限元数据时默认拒绝", async () => {
     const db = { client: { scadaProjectGrant: { findMany: async () => [] } } };
-    const guard = new ScadaProjectGuard(db as unknown as PrismaService, new Reflector());
+    const guard = new ScadaProjectGuard(
+      db as unknown as PrismaService,
+      new Reflector(),
+      makeAuditRecorder().audit,
+    );
     await expect(
       guard.canActivate(
         context({ headers: {}, params: { projectId: "project-a" }, scadaPrincipal: principal }),
@@ -199,7 +217,11 @@ describe("可信会话与工程 Guard", () => {
         },
       },
     };
-    const guard = new ScadaProjectGuard(db as unknown as PrismaService, new Reflector());
+    const guard = new ScadaProjectGuard(
+      db as unknown as PrismaService,
+      new Reflector(),
+      makeAuditRecorder().audit,
+    );
     await expect(
       guard.canActivate(
         context({ headers: {}, params: { projectId: "project-a" } }, "version:read"),
@@ -235,7 +257,11 @@ describe("可信会话与工程 Guard", () => {
         },
       },
     };
-    const guard = new ScadaProjectGuard(db as unknown as PrismaService, new Reflector());
+    const guard = new ScadaProjectGuard(
+      db as unknown as PrismaService,
+      new Reflector(),
+      makeAuditRecorder().audit,
+    );
     const request: ScadaAuthenticatedRequest = {
       headers: {},
       params: { projectId: "project-a" },
@@ -253,5 +279,80 @@ describe("可信会话与工程 Guard", () => {
       },
       select: { permission: true },
     });
+  });
+
+  it("会话 Guard 只发送固定审计原因码，不记录伪造凭据和有效令牌", async () => {
+    const fake = makeSessionService();
+    const { audit, records } = makeAuditRecorder();
+    const guard = new ScadaSessionGuard(fake.service, audit);
+    const fakeHeader = "Bearer 此处为恶意令牌";
+    await expect(
+      guard.canActivate(context({ headers: { authorization: fakeHeader } })),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(records).toEqual([
+      { action: "session.authenticate", outcome: "denied", reason: "malformed_authorization" },
+    ]);
+
+    const issued = await fake.service.issueForVerifiedSubject(principal);
+    const request: ScadaAuthenticatedRequest = {
+      headers: { authorization: `Bearer ${issued.token}` },
+    };
+    expect(await guard.canActivate(context(request))).toBe(true);
+    expect(records[1]).toEqual({
+      action: "session.authenticate",
+      outcome: "allowed",
+      reason: "verified",
+    });
+    expect(await fake.service.revokeForVerifiedSubject(principal, issued.sessionId)).toBe(true);
+    await expect(guard.canActivate(context(request))).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(records[2]).toEqual({
+      action: "session.authenticate",
+      outcome: "denied",
+      reason: "invalid_session",
+    });
+    const output = JSON.stringify(records);
+    expect(output).not.toContain(issued.token);
+    expect(output).not.toContain(fakeHeader);
+    expect(output).not.toContain(principal.subjectId);
+  });
+
+  it("工程 Guard 记录缺失权限与拒绝原因，不记录工程路径和主体标识", async () => {
+    const { audit, records } = makeAuditRecorder();
+    const db = {
+      client: {
+        scadaProjectGrant: {
+          findMany: async () => [{ permission: "version:read" }],
+        },
+      },
+    };
+    const guard = new ScadaProjectGuard(db as unknown as PrismaService, new Reflector(), audit);
+    const request: ScadaAuthenticatedRequest = {
+      headers: { authorization: "Bearer 不应写入日志" },
+      params: { projectId: "project-private" },
+      scadaPrincipal: principal,
+    };
+    await expect(guard.canActivate(context(request))).rejects.toBeInstanceOf(NotFoundException);
+    await expect(guard.canActivate(context(request, "version:append"))).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(await guard.canActivate(context(request, "version:read"))).toBe(true);
+    const crossTenantRequest: ScadaAuthenticatedRequest = {
+      ...request,
+      params: { projectId: "project-private", tenantId: "tenant-other" },
+    };
+    await expect(
+      guard.canActivate(context(crossTenantRequest, "version:read")),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(records).toEqual([
+      { action: "project.authorize", outcome: "denied", reason: "missing_policy" },
+      { action: "project.authorize", outcome: "denied", reason: "permission_denied" },
+      { action: "project.authorize", outcome: "allowed", reason: "permission_granted" },
+      { action: "project.authorize", outcome: "denied", reason: "invalid_scope" },
+    ]);
+    const output = JSON.stringify(records);
+    expect(output).not.toContain("project-private");
+    expect(output).not.toContain(principal.tenantId);
+    expect(output).not.toContain(principal.subjectId);
+    expect(output).not.toContain("Bearer");
   });
 });
