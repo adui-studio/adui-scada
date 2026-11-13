@@ -57,16 +57,13 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 
 - npm 官方稳定版 `zod@4.6.7`；只将其作为 `apps/server` 生产依赖加入 Catalog 和 Manifest，不扩展到 Vue/React 或共享 Core。采用 Zod 的 `safeParse` 校验端口与监听地址，保持现有优先级、默认值、Swagger 访问条件和固定中文错误提示。
 - 原始输入、`ZodError`、环境密钥和数据库连接串不得被写入诊断日志或安全审计。第十六批固定四字段事件记录不做自动对象序列化替换。
-- 当前执行环境无法访问 npm Registry，**第十七批的 `pnpm-lock.yaml` 尚未更新**；必须由维护者在 Windows 执行 `pnpm install`，审查并提交 pnpm 正式生成的锁文件后，才能执行冻结安装、全量测试并合并。未执行不能宣称通过；参见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
+- 当前执行环境无法访问 npm Registry，**第十七批移除 nest-zod 后的锁文件仍需重新同步**；必须由维护者在 Windows 执行 `pnpm install`，审查并提交 pnpm 正式生成的锁文件后，才能执行冻结安装、全量测试并合并。未执行不能宣称通过；参见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
 
-### NestJS 12 与 Zod 集成包兼容性复核（2026-11-13）
+### 第十七批 NestJS 集成方案复核与实测修订（2026-11-13）
 
-维护者提出采用 `nestjs-zod + zod`。经核对 `nestjs-zod@5.6.0` 的上游 `v5.6.0` 标签 [package.json](https://github.com/BenLorantfy/nestjs-zod/blob/v5.6.0/packages/nestjs-zod/package.json)，其 `peerDependencies` 为：`@nestjs/common: ^10.0.0 || ^11.0.0`、`@nestjs/swagger: ^7.4.2 || ^8.0.0 || ^11.0.0`（Swagger 可选）、`zod: ^3.25.0 || ^4.0.0`。**本项目已锁定 NestJS 12.0.3 和 Swagger 12.1.1，不满足该版本声明的 Nest Peer 约束**；不能靠 `ignorePeerDeps`、伪造 lockfile 或全局覆盖降级解决。
-
-[另一项目 `nest-zod`](https://nestzod.dev/guide/compatibility)（注意名称不同）在官方兼容性表明确列出 NestJS 12 / Swagger 12 / Zod 4，候选方向是 `nest-zod + zod`，但**未经维护者同意不能将指定的 `nestjs-zod` 静默替换成 `nest-zod`**。另外 NestJS 12 自带 Standard Schema 的校验支持，也能直接使用 `zod`。目前第十七批 PR #39 只保留已选定的 `zod` 入口校验，`nestjs-zod` 作为未解决兼容性阻塞，不将其添加到 Catalog 或依赖清单。
-
-### 第十七批最终选型（维护者已授权）
-
-结论：选择 **`nest-zod@2.1.0` + `zod@4.6.7`**，不采用当前 Peer 范围未覆盖 NestJS 12 的 `nestjs-zod@5.6.0`，且不启用 `ignorePeerDeps` 或升级/降级 NestJS。二者包名不同，不应混用。官方 [NestJS 12 兼容说明](https://nestzod.dev/guide/compatibility) 和 [Swagger 集成](https://nestzod.dev/guide/swagger) 可用于审查。版本以 Windows pnpm 安装时返回的真实依赖树为准。
-
-`nest-zod/swagger` 的装饰器只用于未来明确受控的 NestJS DTO 路由。新增 4 项隔离 Controller 集成测试，不挂载正式 AppModule；当前只做 `zod` 启动配置与 NestJS 适配器验证。**两个新增 npm 依赖的锁文件尚未由 pnpm 正式生成，仍为 PR #39 合并阻塞。**
+- `nestjs-zod@5.6.0` 的发行包 Peer 仅声明 NestJS 10/11；`nest-zod@2.1.0` 虽在官网文档宣称支持 NestJS 12 / Swagger 12，但其 [发行包元数据](https://github.com/taugr/nest-zod/blob/v2.1.0/package.json) 同样只声明 NestJS 10/11 / Swagger 8/11。因此**不能以官方文档的兼容性表替代实际包约束**。
+- 维护者 Windows 实测 `nest-zod/swagger` 的 `ZSerialize` 在测试类加载阶段抛出 `TypeError: Property description must be an object: undefined`；[上游源码](https://github.com/taugr/nest-zod/blob/v2.1.0/src/openapi-schema.ts) 显示 Schema 的 `safeParse` 属性描述符可能为 `undefined`，而恢复逻辑没有防护。
+- **最终选择 `NestJS 12 原生 Standard Schema + zod@4.6.7`**。使用官方 `StandardSchemaValidationPipe`、`StandardSchemaSerializerInterceptor` 与 `@Body({ schema })`、`@Query(..., { schema })`，Swagger 12 原生转换 Zod 4.2+ JSON Schema；相关文档见 [官方验证](https://docs.nestjs.com/application/validation)、[序列化](https://docs.nestjs.com/application/serialization) 和 [OpenAPI](https://docs.nestjs.com/openapi/introduction)。
+- 移除 `nest-zod` 的 Catalog 和服务端依赖声明，保留 `zod`，不降级 NestJS、不忽略 Peer、不引入第二套工程 Schema。原生校验在本批仅用于隔离测试 Controller，不对正式业务路由全局启用。
+- 第十七批首次 Windows `ready`：格式与 Lint/类型检查已通过；单测 **370 通过、1 失败**，另有适配器测试文件导入失败，完整质量链中断。已修正代码，**尚未重新获得通过记录**。
+- 上轮包含 `nest-zod` 的 `pnpm-lock.yaml` 已被维护者提交到 PR；必须由 pnpm 12 再次生成与最新 Manifest/Catalog 一致的锁文件，并通过冻结安装与完整验收，不手写包完整性数据。
