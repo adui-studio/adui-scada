@@ -299,7 +299,8 @@ async function checkTransportFaultTarget(session, target, proxy) {
   const url = validateLocalUrl(proxy.url);
   url.searchParams.set("scada_sse_transport_fault", target.name.toLowerCase());
   const navigation = await session.send("Page.navigate", { url: url.href });
-  if (navigation.errorText) throw new Error(target.name + " 浏览器导航失败：" + navigation.errorText);
+  if (navigation.errorText)
+    throw new Error(target.name + " 浏览器导航失败：" + navigation.errorText);
 
   let stableSince = 0;
   const ready = await waitFor(
@@ -377,9 +378,7 @@ async function checkTransportFaultTarget(session, target, proxy) {
     await pause(100);
   }
   assert.equal(proxy.activeSseCount(), 0, "离开 Runtime 后代理端仍保留 SSE socket");
-  process.stdout.write(
-    target.name + " 真实 TCP 下行阻断、STALE、主动重连及连接回收通过\n",
-  );
+  process.stdout.write(target.name + " 真实 TCP 下行阻断、STALE、主动重连及连接回收通过\n");
 }
 
 async function checkService(target, path, command, expectedContentType) {

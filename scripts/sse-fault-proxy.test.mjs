@@ -82,7 +82,10 @@ await test("代理保持一条 TCP SSE 连接但阻断真实下行字节，不�
       assert.match(new TextDecoder().decode((await secondReader.read()).value), /snapshot/);
       assert.equal(proxy.activeSseCount(), 2);
 
-      await waitUntil(() => proxy.stats(frozen).suppressedBytes > 0, "预期故障代理阻断真实 SSE 字节");
+      await waitUntil(
+        () => proxy.stats(frozen).suppressedBytes > 0,
+        "预期故障代理阻断真实 SSE 字节",
+      );
       assert.equal(proxy.stats(frozen).closed, false);
       assert.equal((await secondReader.read()).done, false);
 
@@ -146,7 +149,10 @@ await test("复用 Keep-Alive TCP 连接的后续 SSE 请求仍被准确识别�
       assert.equal(proxy.activeSseCount(), 1);
 
       const frozen = proxy.freezeActiveSse();
-      await waitUntil(() => proxy.stats(frozen).suppressedBytes > 0, "复用 socket 的 SSE 字节未被阻断");
+      await waitUntil(
+        () => proxy.stats(frozen).suppressedBytes > 0,
+        "复用 socket 的 SSE 字节未被阻断",
+      );
       assert.equal(proxy.stats(frozen).closed, false);
       eventResponse.destroy();
       await waitUntil(() => proxy.stats(frozen).closed, "复用 socket 的 SSE 关闭后未回收");

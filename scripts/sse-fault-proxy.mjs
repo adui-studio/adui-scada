@@ -49,8 +49,7 @@ export async function startSseFaultProxy(targetUrl) {
         // Chrome/Vue 可能复用 Keep-Alive socket：不能只检查首个 HTTP 请求。
         // 保留尾部以识别跨 TCP 分块的 GET 请求行，不持续保存完整 HTTP 报文。
         const requestBytes = session.requestTail + chunk.toString("latin1");
-        const isSseRequest =
-          /(?:^|\r\n)GET \/(?:demo\/)?events(?:\?[^\r\n ]*)? HTTP\/1\.[01]\r\n/;
+        const isSseRequest = /(?:^|\r\n)GET \/(?:demo\/)?events(?:\?[^\r\n ]*)? HTTP\/1\.[01]\r\n/;
         if (isSseRequest.test(requestBytes)) session.isSse = true;
         session.requestTail = requestBytes.slice(-256);
       }
