@@ -76,6 +76,7 @@ describe("NestJS 原生 HTTP 接收限制与关闭保护（端到端）", () => 
       });
       expect(response.status).toBe(503);
       expect(response.headers.get("connection")).toBe("close");
+      await response.text();
     } finally {
       barrier.release();
       await (closing ?? app.close());
