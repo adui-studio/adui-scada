@@ -34,20 +34,10 @@ export class ScadaSessionGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<ScadaAuthenticatedRequest>();
     const header = request.headers.authorization;
-    if (
-      typeof header !== "string" ||
-      header.length > 128 ||
-      !/^Bearer (scada_s_[A-Za-z0-9_-]{43})$/i.test(header)
-    ) {
-      this.audit.record({
-        action: "session.authenticate",
-        outcome: "denied",
-        reason: "malformed_authorization",
-      });
-      throw new UnauthorizedException("缺少有效的身份凭据");
-    }
-
-    const match = /^Bearer (scada_s_[A-Za-z0-9_-]{43})$/i.exec(header);
+    const match =
+      typeof header === "string" && header.length <= 128
+        ? /^Bearer (scada_s_[A-Za-z0-9_-]{43})$/i.exec(header)
+        : null;
     if (!match) {
       this.audit.record({
         action: "session.authenticate",
