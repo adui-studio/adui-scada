@@ -16,7 +16,7 @@
 | PostgreSQL UUID      | Node `crypto.randomUUID` 或 Prisma `uuid()`                          | 已有 UUID 数据类型继续保持，不因引入 Nano ID 做破坏性迁移                                                                            |
 | API 速率限制         | `@nestjs/throttler` **6.7.1**                                        | 登录/认证端点启用时引入；多实例生产需 Redis 等共享存储，默认内存仅适合单进程                                                         |
 | HTTP 安全响应头      | `helmet` **8.3.0**                                                   | 第十四批代码已接入，锁文件已生成，Windows E2E 待复验；按 SPA 与 Swagger 的 CSP 单独配置，不能盲目全局放开                            |
-| 输入 Schema          | `zod` **4.6.7**                                                      | 新管理 DTO 可评估；共享 Core 已有解析契约，不重复维护组态 Schema                                                                     |
+| 输入 Schema          | `zod` **4.6.7**                                                      | **第十七批服务端启动配置已声明 Catalog/Manifest，锁文件与 Windows 实测待完成**；未来新 DTO 再评估，不重复维护 Core Schema                                                                     |
 | Redis                | `redis` **6.3.1**                                                    | 后续统一会话缓存/分布式限流/状态同步；会话撤销权威状态仍以 PostgreSQL 为准                                                           |
 | 异步任务与报警处理   | `@nestjs/bullmq` **12.0.1** + BullMQ（安装时验证版本）               | 后续报警、历史导出、延迟任务；不允许异步队列代替工业控制安全联锁                                                                     |
 | 观测与指标           | OpenTelemetry SDK、`prom-client`（实施前验证版本）                   | 后续接入追踪、错误率、请求耗时、网关质量和业务健康指标，不记录令牌明文                                                               |
@@ -52,3 +52,9 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 经核对 npm 官方版本列表，`zod@4.6.7` 为当前稳定版本；建议优先用于**未来不可信数据入口**：NestJS HTTP DTO、环境配置、外部设备/网关数据和安全审计事件输入 Schema。现有共享 Core 工程文档已经有解析校验契约，不能建立第二套相互矛盾的 Schema。即便启用 Zod，安全审计仍须从可信字段白名单重新构造输出，**不得直接记录 `safeParse` 失败对象、原始输入或包含令牌的校验上下文**。
 
 第十六批 PR #38 未安装 Zod，也未修改 pnpm Catalog / 锁文件；正式引入时应单独明确消费包、固定版本、由 pnpm 12 正式更新锁文件，并重新执行类型检查、单测、E2E、`ready` 及 Docker 回归。
+
+## 第十七批：Zod 运行时启动配置校验
+
+- npm 官方稳定版 `zod@4.6.7`；只将其作为 `apps/server` 生产依赖加入 Catalog 和 Manifest，不扩展到 Vue/React 或共享 Core。采用 Zod 的 `safeParse` 校验端口与监听地址，保持现有优先级、默认值、Swagger 访问条件和固定中文错误提示。
+- 原始输入、`ZodError`、环境密钥和数据库连接串不得被写入诊断日志或安全审计。第十六批固定四字段事件记录不做自动对象序列化替换。
+- 当前执行环境无法访问 npm Registry，**第十七批的 `pnpm-lock.yaml` 尚未更新**；必须由维护者在 Windows 执行 `pnpm install`，审查并提交 pnpm 正式生成的锁文件后，才能执行冻结安装、全量测试并合并。未执行不能宣称通过；参见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
