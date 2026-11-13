@@ -76,4 +76,4 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 
 当前 `GET /health/ready` 只证明 HTTP 应用初始化并接受请求，响应明确 `dependencies: "not_checked"`，不能替代真正的 PostgreSQL、Redis、工业网关与 Tag 数据质量健康。正式数据库/网关接入后再扩展 Readiness 指标及超时策略。以上见 [ADR-0050](adr/0050-http-readiness-terminus.md)。
 
-第十八批新增依赖尚未通过 pnpm 正式生成锁文件，需维护者 Windows 执行 `pnpm install` 并提交 `pnpm-lock.yaml`，之后完成冻结安装、`ready` 和 Docker 隔离回归；此前一律不宣称通过。
+第十八批维护者已在 Windows 通过 pnpm 正式更新并提交 `pnpm-lock.yaml`，远程 GitHub 核对确认包含 `@nestjs/terminus@12.1.0`；完整 `ready` **378/378 单测、10/10 E2E、退出码 0**，Docker 隔离构建内冻结安装与健康探针烟测 **退出码 0**。E2E 中预期 503 对应模拟关闭状态，并非非预期故障。当前 HTTP 就绪仍不代表 PostgreSQL、Redis 或工业网关就绪。记录性文档更新后建议复查 `vp check` 与 `pnpm run docs:check`。
