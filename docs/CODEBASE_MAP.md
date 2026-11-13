@@ -516,6 +516,7 @@
 - `apps/server/src/demo/local-demo-telemetry.controller.spec.ts`：验证 NestJS SSE 快照、心跳、取消订阅时的 timer/监听器释放。
 - `packages/runtime/src/tag-source.ts`：EventSource 通过 heartbeat 事件刷新 15 秒传输静默窗口，超时重建原有同源连接，旧实例消息无效。
 - `packages/runtime/src/runtime.ts`：独立 12 秒 Tag 数据超时监测，数据质量为 STALE 时提供 `stale` 状态与中文提示，不将心跳视为 Tag 更新。
+- `packages/runtime/src/runtime.css`：Vue/React 共用的 `stale` 状态红色警示样式，避免 Tag 超时时沿用普通状态色。
 - `packages/runtime/test/tag-source.test.ts`：新增 5 项具名心跳、传输静默、原生错误、同步停止及清理回归。
 - `packages/runtime/test/tag-source-runtime.test.ts`：新增 3 项数据静默、空增量/STALE、网络重连与定时器回归。
 - `packages/runtime/test/runtime.test.ts`：补充中文 `stale` 状态映射断言。详见 [ADR-0055](adr/0055-sse-heartbeat-and-tag-silence.md)。
