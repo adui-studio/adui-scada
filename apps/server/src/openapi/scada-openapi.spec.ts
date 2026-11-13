@@ -64,5 +64,4 @@ describe("Swagger 本机访问策略", () => {
     expect(getLocalOpenApiUrl(false, 3001)).toBeUndefined();
     expect(getLocalOpenApiUrl(false, 13001)).toBeUndefined();
   });
-
 });
