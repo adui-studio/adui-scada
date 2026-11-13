@@ -482,3 +482,9 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 前十一批已通过维护者 Windows 完整质量链（339 单元测试、4 NestJS E2E，退出码 0）、本机 PostgreSQL 隔离库 6/6 真库测试及两个迁移，随后 PR #33 获明确授权经 Squash Merge 合入 `main`，提交 `b1396c3`。第十二批继续在主分支基础上开发**安全验证**而非对外发布功能。
 
 本批不新增第三方依赖、不修改业务表/字段或 Prisma 迁移、不挂载 ProjectPersistenceModule。新增 1 项普通配置单测、3 项隔离 PostgreSQL 测试（审计 CHECK 失败真实回滚、授权锁竞争、连接拒绝），并提供 `test:docker:server` 独立 Docker 镜像健康和 404 边界验证。预期普通单测 340、真库测试 9、E2E 4。**本批尚未实测 Windows ready、真库回归及 Docker 构建；不能声称通过。**
+
+## 2026-11-12 · V0.3 第十三批：可信会话与工程级 Guard 基础（待验收）
+
+第十二批 PR #34 经维护者 Windows 实测 `pnpm run ready` 退出码 0（340 单测、4 NestJS E2E）、独立 PostgreSQL 9/9 和 Docker 隔离烟测成功，并经明确授权 Squash Merge 到 `main`，提交 `f1045ab`。第十三批选定**数据库支持即时撤销的短期不透明会话 + 两层受控工程 Guard**，优先使用已安装 NestJS/Prisma 与 Node `crypto`；暂不引入未安装的密码/JWT/日志/Swagger 包，整理阶段化 [依赖推荐清单](DEPENDENCY_SELECTION.md)。NestJS 新发布的 `@nestjs/authentication` / `@nestjs/authorization` 仍为 0.1.x，需经过成熟度与适配评审后再考虑。
+
+本批新增可信身份/会话两业务模型及含完整中文元数据的独立迁移，提供不透明会话的 15 分钟有效期、SHA-256 摘要、主体状态与撤销验证；新增 Session Guard、工程 ACL Guard 和组合装饰器，单独模块**未挂入 AppModule**，不注册任何登录或工程业务 HTTP API。新增 10 项常规单测、2 项隔离 PostgreSQL 会话测试及未开放认证接口的 E2E 安全检查；预计普通单测 350、E2E 5、真库 11。**本批未实际运行完整质量链、Docker 或 PostgreSQL 新迁移，不能宣称通过，也未进入认证生产阶段。**

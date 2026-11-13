@@ -1,8 +1,19 @@
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./dist/app.module.js";
 import { PrismaProjectVersionStore } from "./dist/projects/prisma-project-version-store.js";
+import { AuthSessionService } from "./dist/auth/auth-session.service.js";
+import { ScadaSessionGuard } from "./dist/auth/scada-session.guard.js";
+import { ScadaProjectGuard } from "./dist/auth/scada-project.guard.js";
 
 /** 本文件只用于隔离容器内部的服务端烟测，不是正式 HTTP 服务入口。 */
+if (
+  typeof AuthSessionService !== "function" ||
+  typeof ScadaSessionGuard !== "function" ||
+  typeof ScadaProjectGuard !== "function"
+) {
+  throw new Error("服务端容器无法加载新的可信身份与工程 Guard 模块");
+}
+
 if (typeof PrismaProjectVersionStore !== "function") {
   throw new Error("服务端容器未能加载事务仓储及其共享 Core 依赖");
 }
@@ -24,6 +35,14 @@ try {
   const project = await fetch(`${base}/api/projects/water-demo/versions`);
   if (project.status !== 404) {
     throw new Error("服务端容器意外开放工程版本读取接口");
+  }
+  const auth = await fetch(`${base}/api/auth/sessions`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: '{"tenantId":"tenant-a","subjectId":"engineer-1"}',
+  });
+  if (auth.status !== 404) {
+    throw new Error("服务端容器意外开放身份会话签发接口");
   }
   const device = await fetch(`${base}/api/devices/write`, {
     method: "POST",

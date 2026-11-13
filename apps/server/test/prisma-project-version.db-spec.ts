@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { waterTreatmentDemoDocument } from "@adui/scada-core";
 import { PrismaService } from "../src/database/prisma.service.js";
+import { AuthSessionService } from "../src/auth/auth-session.service.js";
 import {
   PrismaProjectVersionStore,
   ProjectRevisionConflictError,
@@ -27,12 +28,14 @@ if (
 
 const tenantA = `test-${randomUUID()}`;
 const tenantB = `test-${randomUUID()}`;
+const tenantAuth = `test-${randomUUID()}`;
 const tenantRollback = `test-${randomUUID()}`;
 const tenantRevocation = `test-${randomUUID()}`;
 const projectId = waterTreatmentDemoDocument.projectId;
 const subjectId = "test-engineer";
 const principalA = { tenantId: tenantA, subjectId };
 const principalB = { tenantId: tenantB, subjectId };
+const principalAuth = { tenantId: tenantAuth, subjectId };
 const principalRollback = { tenantId: tenantRollback, subjectId };
 const principalRevocation = { tenantId: tenantRevocation, subjectId };
 const document = () => JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
@@ -51,6 +54,9 @@ beforeAll(async () => {
       data: { tenantId, projectId },
     });
   }
+  await service.client.scadaIdentity.create({
+    data: { tenantId: tenantAuth, subjectId, status: "active" },
+  });
   await service.client.scadaProjectGrant.createMany({
     data: [
       { tenantId: tenantA, projectId, subjectId, permission: "version:append" },
@@ -64,6 +70,8 @@ beforeAll(async () => {
 afterAll(async () => {
   try {
     if (service) {
+      await service.client.scadaAuthSession.deleteMany({ where: { tenantId: tenantAuth } });
+      await service.client.scadaIdentity.deleteMany({ where: { tenantId: tenantAuth } });
       for (const tenantId of [tenantA, tenantB, tenantRollback, tenantRevocation]) {
         await service.client.scadaProjectAudit.deleteMany({ where: { tenantId } });
         await service.client.scadaProjectVersion.deleteMany({ where: { tenantId } });
@@ -316,5 +324,48 @@ describe("PostgreSQL 真实工程版本事务", () => {
     } finally {
       await unreachable.onModuleDestroy();
     }
+  });
+  it("真实 PostgreSQL 仅保存令牌摘要并可即时撤销会话", async () => {
+    const sessions = new AuthSessionService(service);
+    const issued = await sessions.issueForVerifiedSubject(principalAuth);
+    expect(issued.token).toMatch(/^scada_s_[A-Za-z0-9_-]{43}$/);
+    const stored = await service.client.scadaAuthSession.findUniqueOrThrow({
+      where: { sessionId: issued.sessionId },
+    });
+    expect(stored.tenantId).toBe(tenantAuth);
+    expect(stored.tokenHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(stored.tokenHash).not.toBe(issued.token);
+    expect(await sessions.authenticate(issued.token)).toEqual(principalAuth);
+    expect(
+      await sessions.revokeForVerifiedSubject(
+        { tenantId: "other-tenant", subjectId },
+        issued.sessionId,
+      ),
+    ).toBe(false);
+    expect(await sessions.revokeForVerifiedSubject(principalAuth, issued.sessionId)).toBe(true);
+    expect(await sessions.authenticate(issued.token)).toBeNull();
+  });
+
+  it("主体禁用或会话过期后禁止认证，不读取前端角色", async () => {
+    const sessions = new AuthSessionService(service);
+    const issued = await sessions.issueForVerifiedSubject(principalAuth);
+    await service.client.scadaIdentity.update({
+      where: { tenantId_subjectId: { tenantId: tenantAuth, subjectId } },
+      data: { status: "disabled" },
+    });
+    expect(await sessions.authenticate(issued.token)).toBeNull();
+    await expect(sessions.issueForVerifiedSubject(principalAuth)).rejects.toThrow(/主体/);
+    await service.client.scadaIdentity.update({
+      where: { tenantId_subjectId: { tenantId: tenantAuth, subjectId } },
+      data: { status: "active" },
+    });
+    await service.client.scadaAuthSession.update({
+      where: { sessionId: issued.sessionId },
+      data: {
+        issuedAt: new Date(Date.now() - 300_000),
+        expiresAt: new Date(Date.now() - 120_000),
+      },
+    });
+    expect(await sessions.authenticate(issued.token)).toBeNull();
   });
 });

@@ -62,3 +62,11 @@ Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。�
 本批延用现有 Prisma 7.10.1、PostgreSQL 17、NestJS、Vitest、Docker，不引入新依赖或修改数据库模型。独立 `pnpm run test:db` 新增真实 PostgreSQL 约束失败回滚、授权撤销与保存竞争、连接不可达测试，要求显式使用本机隔离 `adui_scada_test`，不允许回退到开发库或生产库。普通 `pnpm run ready` 新增一项无数据库的缺失 URL 单测。
 
 另有 `pnpm run test:docker:server`，只构建独立服务端测试镜像并使用 `docker run --network none` 在容器内验证事务仓储模块导入、`/health` 及工程/设备写入路由继续返回 404；该命令**不会启动现有 Compose 演示栈、不会映射宿主机端口、不会尝试连接 PostgreSQL 或工业设备**。Dockerfile 仅增加一份明确可执行的容器内烟测脚本，不改变 NestJS 正式入口。
+
+## V0.3 第十三批：可信身份主体、可撤销会话与工程级 Guard
+
+当前新增 `ScadaIdentityModule`、`AuthSessionService`、`ScadaSessionGuard`、`ScadaProjectGuard` 和 `RequireProjectPermission` 装饰器，**均未导入 AppModule，也没有公开登录/签发或工程版本 HTTP 接口**。服务端已有 `/health` 不依赖数据库，未开放工程读写和工业设备写入仍为 404。
+
+`AuthSessionService` 仅供未来经过可信登录/OIDC 身份验证的内部调用者使用：从 PostgreSQL 活跃主体记录签发一次性可见的 32 字节高熵不透明 Bearer 令牌；数据库仅保存 SHA-256 摘要、15 分钟过期时间和撤销状态，每次请求都重新核验主体是否停用。绝不能把浏览器提交的 `tenantId` / `subjectId` / `role` 直接用于调用内部签发方法。未来身份接入必须建立真实认证来源、发行者信任及安全审计。
+
+新增 Prisma `ScadaIdentity` 和 `ScadaAuthSession` 两个业务模型，字段均有中文文档与 PostgreSQL 中文元数据注释。迁移为 `20261113000000_trusted_identity_sessions`，**不会重写旧迁移**。服务端实际接入前必须由管理员在隔离数据库执行迁移并验证完整授权测试。`scada_auth_sessions.session_id` 继续为 PostgreSQL UUID；Nano ID 只适用于后续新建字符串型不透明标识，不能未经迁移写入 UUID 字段。技术依赖选型见 [依赖推荐清单](../../docs/DEPENDENCY_SELECTION.md)。

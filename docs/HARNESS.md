@@ -1069,3 +1069,20 @@ Write-Host "服务端容器测试退出码：$LASTEXITCODE"
 该脚本构建 `adui-scada-server-smoke:local` 镜像并运行一次 `--rm --network none` 的容器，不使用端口映射、数据库 URL 或 Compose 服务。容器内部检查共享 Core 与 Prisma 仓储模块可加载、`GET /health` 为 200、未开放的工程版本读取及工业设备写入为 404，关闭临时 NestJS 实例后退出。**构建可能读取基础镜像和依赖网络**，但运行阶段禁止外部网络；不会关闭或修改你现有的 PostgreSQL 容器。该测试使用的 Docker 镜像标签会保留在本机，可自行清理。
 
 当前远端变更只属于独立 Draft PR。**本批代码质量、真实 PostgreSQL 回滚和 Docker 运行测试尚未在维护者 Windows 验证**，不得宣称通过。
+
+## V0.3 第十三批：可信会话与工程 Guard 验收（ADR-0045）
+
+第十二批已由维护者 Windows 实测 `ready` 退出码 0（340 项单测、4 项 E2E）、独立 PostgreSQL 9 项真库测试及 Docker 隔离烟测通过。第十三批新增 10 项无数据库会话/Guard 单测、2 项隔离 PostgreSQL 会话真实测试和 1 项未开放认证 API E2E；预计 **350 项单测、5 项 E2E、11 项真库测试**。**本批新结果尚未由维护者执行，不能声称通过。**
+
+```powershell
+git fetch origin
+git switch feat/v0.3-trusted-identity-guard
+git pull --ff-only
+pnpm install --frozen-lockfile
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+Prisma 新增迁移 `20261113000000_trusted_identity_sessions`，首次应用必须先确认当前 `.env` 指向本机隔离开发库 `127.0.0.1:15432/adui_scada`，然后显式执行 `pnpm run db:migrate:deploy` 与 `pnpm run db:migrate:status`；不能修改或重用旧迁移文件。**真实数据库测试仍仅允许本机 `adui_scada_test`**，通过 PowerShell `try/finally` 形式临时设置 `SCADA_DATABASE_URL` 和 `SCADA_TEST_DATABASE_URL` 为测试库 URL，先将新迁移应用到测试库再执行 `pnpm run test:db`，结束恢复两变量，不把真实口令写入 Git。该测试从随机租户创建临时主体/会话并在结束时删除，不会修改开发业务库。
+
+可独立执行 `pnpm run test:docker:server`，验证镜像仍可加载 NestJS/共享 Core，认证会话签发及工程/设备写入 API 均保持关闭。现有容器烟测不导入身份模块，因此不连接数据库。真实 OIDC 登录、会话发行端点、生产 HTTPS、身份撤销并发与审计待后续专项验收。
