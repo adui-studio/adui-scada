@@ -466,5 +466,5 @@
 - `apps/server/src/app.module.ts`：只增加 `TerminusModule`、就绪探针及其 Controller；原 `/health` 不变。
 - `apps/server/test/app.e2e-spec.ts`：新增 2 项就绪/关闭端到端测试，受控 Swagger 增加探针契约；原 8 项持续回归。
 - `apps/server/container-smoke.mjs`：隔离容器验证存活与 HTTP 就绪及安全头；继续确认未开放接口返回 404。
-- `pnpm-workspace.yaml`、`apps/server/package.json`：声明 `@nestjs/terminus@12.1.0` Catalog 和生产依赖，锁文件待维护者 Windows 正式生成。
+- `pnpm-workspace.yaml`、`apps/server/package.json`、`pnpm-lock.yaml`：声明 `@nestjs/terminus@12.1.0` Catalog 和生产依赖，维护者已通过 Windows pnpm 正式生成、提交锁文件，并经 Docker 冻结安装/隔离烟测验证。
 - [ADR-0050](adr/0050-http-readiness-terminus.md)：区分 HTTP 就绪、数据库依赖和工业设备健康，解释暂缓全局限流的原因。
