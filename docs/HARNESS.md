@@ -1273,7 +1273,7 @@ git status --short
 
 ## V0.3 第二十一批：本机只读模拟 Tag、SSE 与访问边界（ADR-0053）
 
-第 20 批最新代码的 Windows 全量验收仍缺增量 Swagger 日志后的记录。本批新增 2 项访问策略和 4 项模拟服务单测、1 项默认模块 404 E2E、4 项本机模拟 E2E；预计最新版 **389/389 单测、17/17 NestJS E2E**，该数字为验收目标，**尚未实际执行**。不变更 pnpm Catalog、锁文件、数据库或 Core Schema。
+本批新增 2 项访问策略和 4 项模拟服务单测、1 项默认模块 404 E2E、4 项本机模拟 E2E。维护者 Windows 已实测 **389/389 单测（33 个测试文件）、17/17 NestJS E2E（3 个测试文件）**，完整 `pnpm run ready` **退出码 0**；Docker 冻结安装、隔离镜像烟测与正式容器 Linux SIGTERM 测试 **退出码 0**。本轮完整质量链还覆盖了此前追加的 Swagger URL 单测与 `vitest(expect-expect)` 显式断言修复。不变更 pnpm Catalog、锁文件、数据库或 Core Schema。
 
 ```powershell
 git fetch origin
@@ -1292,4 +1292,4 @@ Write-Host "Docker 退出码：$LASTEXITCODE"
 
 本机交互验收：只有在**自行确认非生产、绑定 `127.0.0.1`** 时，才在根 `.env` 设置 `SCADA_LOCAL_DEMO_API_ENABLED=true`。需要查看 OpenAPI 时，再独立设置 `SCADA_API_DOCS_ENABLED=true`，运行 `pnpm run dev:server`；访问 `/api/dev/demo/project`、`/api/dev/demo/tags` 与 Swagger `/api/docs`，并用浏览器 `EventSource` 或同源网络面板观察 `/api/dev/demo/events` 的 snapshot/delta 和 STALE/GOOD。结束后将开关改回 false，重启确认上述模拟路由全部返回 404。
 
-必须验证：生产与 `0.0.0.0` 即使错误配置开关，也不会挂载无鉴权模拟路由；既有应用 E2E 继续验证身份、工程读写、设备写入 404；Docker 以生产模式运行且 SIGTERM 测试成功；SSE 断开不会残留订阅，服务关闭不会残留定时器。无工业现场、真库、真实设备写入或正式登录测试。
+实际自动验收：`vp check` 对 245 个格式文件、119 个代码文件检查通过，零告警；69 份 Markdown 文档检查通过。访问策略、默认根模块模拟路由 404、受控模拟工程/Tag/Swagger/SSE、STALE 恢复、订阅/定时器清理均由单测/E2E 覆盖。Docker 隔离模式验证正常 HTTP 探针、未开放工程/设备接口 404 与真实 Linux SIGTERM 退出码 0。E2E 中 Terminus 关闭负面用例产生的 HTTP 503 / 错误日志属于预期。仍未执行手工浏览器 Swagger/SSE 交互验证、PostgreSQL 真库、真实工业现场、生产身份授权与多客户端压测；这些不能标记为完成。记录性文档提交后建议复查 `vp check` 与 `pnpm run docs:check`。
