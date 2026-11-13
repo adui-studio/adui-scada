@@ -456,3 +456,9 @@
 - `apps/server/src/config/server-startup.config.ts`：Zod 端口及监听地址 Schema，保持原始 `Number` 转换与既有中文异常契约，使用 `safeParse` 不输出敏感输入。
 - `apps/server/src/config/server-startup.config.spec.ts`：原 5 项测试继续使用，新增 4 项非法值、优先级、敏感环境及兼容性回归。
 - [ADR-0049](adr/0049-zod-server-runtime-validation.md)：解释范围、Schema 与 pnpm 锁文件阻塞。
+
+### 第十七批补充：NestJS Zod 适配器
+
+- `pnpm-workspace.yaml`、`apps/server/package.json`：增加 `nest-zod@2.1.0` Catalog 和服务端运行时依赖，依旧等待 Windows pnpm 更新锁文件。
+- `apps/server/src/validation/nest-zod-integration.spec.ts`：测试专用 Controller 与 4 项 NestJS 12、Swagger 12、Zod 4 集成验证；不属于正式路由。
+- [ADR-0049](adr/0049-zod-server-runtime-validation.md)：记录已确认的 nest-zod 选型及未完成验收边界。
