@@ -468,3 +468,12 @@
 - `apps/server/container-smoke.mjs`：隔离容器验证存活与 HTTP 就绪及安全头；继续确认未开放接口返回 404。
 - `pnpm-workspace.yaml`、`apps/server/package.json`、`pnpm-lock.yaml`：声明 `@nestjs/terminus@12.1.0` Catalog 和生产依赖，维护者已通过 Windows pnpm 正式生成、提交锁文件，并经 Docker 冻结安装/隔离烟测验证。
 - [ADR-0050](adr/0050-http-readiness-terminus.md)：区分 HTTP 就绪、数据库依赖和工业设备健康，解释暂缓全局限流的原因。
+
+## V0.3 第十九批：Node HTTP 限制与 NestJS 关闭请求保护
+
+- `apps/server/src/security/http-server-policy.ts`：集中维护 `SCADA_NEST_HTTP_OPTIONS` 与 Node 原生 HTTP 接收/连接限制，应用启动前一次性设置，避免静默使用过大的默认上限。
+- `apps/server/src/security/http-server-policy.spec.ts`：3 项无数据库单测覆盖资源限制、SSE 不受响应超时影响和策略幂等。
+- `apps/server/src/main.ts`：在原根 `.env` / Pino / Swagger 启动流程中启用 `return503OnClosing`、调用 `applyHttpServerPolicy`，不注册新业务路由。
+- `apps/server/test/http-server-policy.e2e-spec.ts`：2 项真实 Node HTTP Server 端到端用例，验证策略、探针及关闭流程内新请求 503 和 `Connection: close`，测试屏障在 `finally` 中释放。
+- `apps/server/container-smoke.mjs`：Docker `--network none` 隔离环境读取实际 Node Server 属性并复核健康/未开放接口，使用相同的启动选项。
+- [ADR-0051](adr/0051-http-ingress-shutdown-policy.md)：解释 Node 资源边界、Nest 原生关闭保护及生产级限制。

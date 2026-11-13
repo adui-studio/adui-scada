@@ -77,3 +77,9 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 当前 `GET /health/ready` 只证明 HTTP 应用初始化并接受请求，响应明确 `dependencies: "not_checked"`，不能替代真正的 PostgreSQL、Redis、工业网关与 Tag 数据质量健康。正式数据库/网关接入后再扩展 Readiness 指标及超时策略。以上见 [ADR-0050](adr/0050-http-readiness-terminus.md)。
 
 第十八批维护者已在 Windows 通过 pnpm 正式更新并提交 `pnpm-lock.yaml`，远程 GitHub 核对确认包含 `@nestjs/terminus@12.1.0`；完整 `ready` **378/378 单测、10/10 E2E、退出码 0**，Docker 隔离构建内冻结安装与健康探针烟测 **退出码 0**。E2E 中预期 503 对应模拟关闭状态，并非非预期故障。当前 HTTP 就绪仍不代表 PostgreSQL、Redis 或工业网关就绪。记录性文档更新后建议复查 `vp check` 与 `pnpm run docs:check`。
+
+## 第十九批：原生 HTTP 安全能力，无新依赖
+
+经核对本仓库 NestJS 12.0.3 Express Adapter 的 `return503OnClosing` 选项和 Node 24 HTTP Server 的资源配置 API，本批直接使用现有 `@nestjs/core`、`@nestjs/platform-express` 与 Node `http`；不引入请求超时拦截器、第三方 Graceful Shutdown 包、`@nestjs/throttler`、Redis 或新 HTTP 客户端。原因是当前正式业务入口仅包括 HTTP 健康探针，增加外部依赖并不能替代部署阶段的真实连接排空或流量管理。
+
+通过 [ADR-0051](adr/0051-http-ingress-shutdown-policy.md) 约束：`headersTimeout=15s`、`requestTimeout=60s`、`keepAliveTimeout=5s`、请求头最多 100 个、单 Socket 最多 1000 个请求；这些数值在大文件上传、受信代理链路或高频订阅实现后需要重新压测。**不设置全局响应超时**，以免破坏规划中的 SSE。无第三方依赖/锁文件改动，仍须 Windows `ready` + Docker 隔离烟测验收。

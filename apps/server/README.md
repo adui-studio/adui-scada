@@ -117,3 +117,11 @@ NestJS 12 已原生提供 Standard Schema 校验 Pipe、响应序列化拦截器
 - 现阶段正式路由仅有探针，没有可用的受保护业务 API，暂不引入 `@nestjs/throttler` 全局限流。正式身份与业务路由上线前需独立设计分级配额和多实例限流存储，不能对探针实施普通业务流量配额。
 
 本批新增 3 项无数据库单测、2 项 E2E；维护者 Windows 已实测 **378/378 单测、10/10 E2E**、完整 `pnpm run ready` **退出码 0**。pnpm 12 已正式更新并提交锁文件，Docker 冻结安装与隔离镜像烟测 **退出码 0**。E2E 为模拟关闭状态故意触发的 HTTP 503 和 Terminus 失败日志属于成功验证的负面测试，不是服务故障。`/health/ready` 只报告 HTTP 子系统，不包含 PostgreSQL、Redis、工业网关或 PLC 检查。本批未运行真库回归，验收记录更新后建议复验 `vp check`、`pnpm run docs:check`；详见 [ADR-0050](../../docs/adr/0050-http-readiness-terminus.md)。
+
+## V0.3 第十九批：Node HTTP 资源限制与关闭新请求保护
+
+正式入口使用 NestJS 12 原生 `return503OnClosing:true`：当 NestJS 开始关闭后，Express 适配器将新的 HTTP 请求返回 503 和 `Connection: close`，不再允许新请求进入已开始清理的业务模块；**未启用 `forceCloseConnections`**，不主动强制销毁已在处理的请求。原有 `app.enableShutdownHooks()` 保持不变；Windows 上不能通过任务管理器 SIGTERM 可靠验证 Linux 信号行为。
+
+Node 24 原生 `http.Server` 在 `listen` 前配置固定 `headersTimeout:15s`、`requestTimeout:60s`、`keepAliveTimeout:5s`、`maxHeadersCount:100`、`maxRequestsPerSocket:1000`；这些只限制请求接收和连接复用，**不会为 Handler 或 SSE 响应设置统一超时**。如果后续上线大文件上传、WebSocket/SSE 或经过多层反向代理访问，必须根据实际业务与生产链路重新评估限制。
+
+`apps/server/src/security/http-server-policy.ts` 统一维护正式入口、单测、E2E 和 Docker 烟测的限制常量；`GET /health`、`GET /health/ready`、Swagger 默认关闭及未注册业务接口均保持既有安全契约。新增 3 项单测及 2 项 E2E，维护者 Windows 已实测 **381/381 单测、12/12 E2E**，完整 `pnpm run ready` **退出码 0**，Docker 冻结安装与隔离烟测 **退出码 0**。已验证 HTTP 接收资源限制生效、关闭期间新请求返回 503、既有探针在正常状态下可访问；未开放的工程/设备接口仍保持 404。本批无第三方依赖或锁文件变化。E2E 中 Terminus 503 与错误日志是预期负面用例，真实 Linux SIGTERM、反向代理摘流、PostgreSQL 真库与工业现场尚未实测。记录性文档更新后建议复查 `vp check` 和 `pnpm run docs:check`。详见 [ADR-0051](../../docs/adr/0051-http-ingress-shutdown-policy.md)。

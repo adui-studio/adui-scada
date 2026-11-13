@@ -4,7 +4,7 @@
 
 ## 1. 定位与事实
 
-ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1、V0.2 双框架 SVG Studio 和 V0.3 前十七批（包含工程事务、可信会话前置能力、Pino/Swagger/Helmet、Zod + NestJS 12 原生 Standard Schema 验证及安全事件白名单）。当前第十八批采用 Terminus 建立独立 HTTP 就绪探针；不提前挂载数据库/工业网关，也不为尚未开放的登录接口加入全局限流。认证、工程版本和工业设备写入 API 继续保持关闭。工业 Gateway、正式发布及完整账号认证尚未实现，不得将规划视为实现。**
+ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1、V0.2 双框架 SVG Studio 和 V0.3 前十八批（包含工程事务、可信会话前置能力、Pino/Swagger/Helmet、Zod + NestJS 12 原生 Standard Schema、安全事件白名单及 Terminus HTTP 就绪探针）。当前第十九批使用 Node 原生 HTTP 资源限制与 NestJS 12 关闭保护，不新增第三方依赖，不提前挂载数据库、工业网关或全局限流。认证、工程版本和工业设备写入 API 继续保持关闭。工业 Gateway、正式发布及完整账号认证尚未实现，不得将规划视为实现。**
 
 ## 2. 规则优先级
 

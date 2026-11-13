@@ -303,3 +303,9 @@ Zod 不进入共享 Core，也不改组态工程/Tag/图元 Schema、Prisma、�
 新增 NestJS 官方 `@nestjs/terminus@12.1.0`，其已核对发行包 Peer 支持 NestJS 12 / Swagger 12 / Node 24。正式 `AppModule` 只增加 `TerminusModule`、`HttpReadinessController` 和 `HttpReadinessIndicator`，保留现有 `/health` 存活接口；`/health/ready` 使用应用生命周期与 Terminus `HealthCheckService` 表示 HTTP 子系统的启动/关闭状态，未就绪时返回 503、禁止缓存。结果固定标记外部依赖 `not_checked`。
 
 现阶段独立 Prisma 工程仓储和工业网关均未挂入正式 HTTP 模块，**不允许因为接入 Terminus 而隐式启用数据库连接或设备采集**。未来业务就绪检查必须单独定义依赖、超时与失败策略；登录/API 限流等真实受保护路由上线前再引入 `@nestjs/throttler` 和必要的多实例共享配额，不对探针应用通用限流。
+
+## V0.3 第十九批：HTTP 资源边界与关闭入口安全（ADR-0051）
+
+NestJS 12.0.3 Express 适配器本身支持 `return503OnClosing`；与已有 `app.enableShutdownHooks()` 组合后，在关闭流程一开始就拒绝新到 HTTP 请求，避免新请求继续进入即将停止的模块。该能力不配置强制断连，也不代表可以保障所有长连接或工业网关事务的生产级排空。
+
+Node 24 原生 HTTP Server 在 `app.listen` 之前由 `apps/server/src/security/http-server-policy.ts` 统一配置有限的头/请求接收时限、Keep-Alive 空闲时限及请求数量限制。**只约束传入请求接收，不限制响应时长**，避免损坏规划中的长期 SSE 订阅。生产与隔离测试均使用同一配置常量，不增加依赖、环境变量、数据库连接或业务路由。未来反向代理、WebSocket/SSE 排空、多实例流量摘除与强制停止上限应独立评审。

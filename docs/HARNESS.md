@@ -1220,3 +1220,30 @@ Write-Host "Docker 隔离烟测退出码：$LASTEXITCODE"
 ```
 
 验收结果：30 个测试文件 378/378 单测、10/10 E2E；`vp check` 231 个文件格式正确、108 个文件零警告/错误，66 份 Markdown 检查和 React/Vue/NestJS 类型检查及构建完成。已由维护者 Windows pnpm 正式更新并提交锁文件；Docker 冻结安装、镜像构建、`--network none` 烟测通过，存活与 HTTP 就绪均为 200，未开放业务接口保持 404。模拟关闭过程触发的 HTTP 503 与 Terminus/Pino 失败日志是**预期负面用例**，测试 10/10 全部通过。当前 HTTP 就绪不能替代 PostgreSQL、报警、网关或 PLC 状态检查；不允许用虚假的依赖成功状态通过探针。后续只追加了验收文档，建议再执行 `vp check` 与 `pnpm run docs:check`。
+
+## V0.3 第十九批：HTTP 连接安全与关闭拒绝测试（ADR-0051）
+
+第十九批基于前十八批已验收基线，使用已有 NestJS 12.0.3 与 Node 24 自带 HTTP Server 选项，不安装第三方中间件、不修改 `pnpm-lock.yaml`。对接收完整请求的时间、请求头数量、Keep-Alive 和单连接最大请求数设定固定限制；启用关闭过程拒绝新请求 503，不启用 `forceCloseConnections`。未对 SSE 响应施加统一时间上限。新增 3 项普通单测和 2 项 E2E；维护者 Windows 已实测 **381/381 单测（31 个文件）、12/12 E2E（2 个文件）**，完整 `ready` **退出码 0**。独立 Docker 镜像构建与隔离烟测 **退出码 0**。
+
+```powershell
+git fetch origin
+git switch feat/v0.3-http-ingress-shutdown-guard
+git status --short
+git pull --ff-only origin feat/v0.3-http-ingress-shutdown-guard
+
+# 本批没有新增依赖，必须保持原有 pnpm 锁文件一致。
+pnpm install --frozen-lockfile
+
+vp check
+pnpm run ready
+Write-Host "完整验收退出码：$LASTEXITCODE"
+
+pnpm run test:docker:server
+Write-Host "Docker 隔离烟测退出码：$LASTEXITCODE"
+
+git status --short
+```
+
+新增 E2E 使用测试内屏障持有 `onModuleDestroy` 生命周期，在未关闭底层 Server 时验证新请求立即 503，然后释放屏障完成关闭；该用例不访问工业设备、不连接真实 PostgreSQL、不对外监听固定端口。重点检查关闭测试是否因未释放 Promise 而超时，禁止通过跳过测试或扩大超时掩盖资源泄漏。Node HTTP `requestTimeout` 只限制接收请求，不应把它误解为应用响应超时或 SSE 心跳限时。
+
+实际验收：Catalog 检查 11 个清单、51 项依赖，中文文案检查 137 个文件；`vp check` 检查 **235 个格式文件全部通过**、111 个受检代码文件无错误/警告，67 份 Markdown 静态检查通过，Core、React、Vue 和 NestJS 的类型检查与构建通过，完整 `ready` **退出码 0**。Docker 镜像执行冻结安装和服务端构建成功，隔离烟测确认 HTTP 接收策略、存活/就绪探针正常且未开放业务接口仍返回 404，**退出码 0**。E2E 中主动模拟关闭时的 Terminus 错误记录与 503 属于成功验证的预期负面用例。真实 Linux SIGTERM、反向代理摘流、PostgreSQL 真库和工业现场验证属于后续范围，不得把这些未验证事项写为已完成。验收后仅修改记录性文档，建议复查 `vp check` 与 `pnpm run docs:check`。

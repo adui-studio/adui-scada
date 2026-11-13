@@ -216,3 +216,7 @@ Vue/React Studio 的图层面板增加一层平面组合树：同一 `groupId` �
 ## V0.3 第十八批：HTTP 存活/就绪区分（NFR-006 / NFR-007 / NFR-008 局部）
 
 保持现有 `GET /health` 仅反映 NestJS 进程存活的契约不变；新增 `GET /health/ready` 仅反映 HTTP 应用初始化完成且尚未进入关闭流程。通过独立状态指示器在启动完成前及关闭中返回不可用，禁止缓存结果；返回值不得暴露密钥、内部设备地址或错误堆栈。**就绪不包含 PostgreSQL、Redis、工业网关、PLC 或报警业务依赖的验证**，不得将此接口解释为 SCADA 生产可用性。现阶段登录及受保护业务 API 未上线，暂不启用全局限流，正式认证端点上线前需另行定义路由分级与多实例共享限流。参见 [ADR-0050](adr/0050-http-readiness-terminus.md)。
+
+## V0.3 第十九批：HTTP 请求接收资源约束与关闭保护（NFR-003 / NFR-006 / NFR-007 局部）
+
+正式 NestJS HTTP 服务在启动时使用 Node 24 原生 `http.Server` 对请求头接收时限、请求体完整接收时限、Keep-Alive 空闲时限、请求头数量及单 Socket 最大请求数施加有界限制；不为 SSE/实时订阅统一设置响应超时。关闭流程开始后，NestJS 12 原生 `return503OnClosing` 拒绝新请求并返回 503，但不主动切断已经进入处理阶段的请求。已有 `GET /health`、`GET /health/ready` 响应契约和工业只读默认限制不变。此项属于 HTTP 层拒绝服务缓解与关闭阶段入口保护，不替代反向代理、流量调度、生产级优雅关闭或工业设备可用性评估。参见 [ADR-0051](adr/0051-http-ingress-shutdown-policy.md)。

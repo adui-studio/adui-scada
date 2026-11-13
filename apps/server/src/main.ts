@@ -7,6 +7,7 @@ import { Logger } from "nestjs-pino";
 import { resolveServerStartupConfig } from "./config/server-startup.config.js";
 import { setupLocalOpenApi } from "./openapi/scada-openapi.js";
 import { applyHttpSecurityHeaders } from "./security/http-security.js";
+import { applyHttpServerPolicy, SCADA_NEST_HTTP_OPTIONS } from "./security/http-server-policy.js";
 
 // 本地环境变量仅从仓库根目录 .env 读取，构建后的 dist/main.js 也使用同一路径。
 // Docker 通过进程环境变量注入隔离容器网络的监听地址。
@@ -17,8 +18,9 @@ async function bootstrap(): Promise<void> {
   // AppModule 在模块求值时会创建 Pino 配置，必须在 .env 加载后再导入。
   const { port, host, localDocs } = resolveServerStartupConfig(process.env);
   const { AppModule } = await import("./app.module.js");
-  const app = await NestFactory.create(AppModule, { cors: false, bufferLogs: true });
+  const app = await NestFactory.create(AppModule, SCADA_NEST_HTTP_OPTIONS);
   app.useLogger(app.get(Logger));
+  applyHttpServerPolicy(app.getHttpServer());
   applyHttpSecurityHeaders(app, localDocs);
   await setupLocalOpenApi(app, localDocs);
   app.enableShutdownHooks();
