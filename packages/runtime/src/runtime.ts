@@ -149,18 +149,14 @@ export class DemoRuntime {
             ) {
               throw new TypeError("新订阅必须先收到 Tag 快照");
             }
-            const previous = new Map(
-              this.store.snapshot().map((tag) => [tag.tagId, tag.sequence]),
-            );
+            const previous = new Map(this.store.snapshot().map((tag) => [tag.tagId, tag.sequence]));
             const change = applyDemoChange(this.store, event);
             if (change.kind === "snapshot") awaitingSnapshot = false;
             // 空增量或已经被 TagStore 拒绝的旧序列不能刷新数据新鲜度。
             const hasNewData =
               change.kind === "snapshot"
                 ? change.values.length > 0
-                : change.values.some(
-                    (tag) => tag.sequence > (previous.get(tag.tagId) ?? -1),
-                  );
+                : change.values.some((tag) => tag.sequence > (previous.get(tag.tagId) ?? -1));
             if (change.kind === "delta" && !hasNewData) return;
             if (hasNewData) lastDataAt = Date.now();
             const hasStale = this.store.snapshot().some((tag) => tag.quality === "STALE");
