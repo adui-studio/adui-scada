@@ -28,11 +28,11 @@
 
 ## 依赖与验收状态
 
-项目协作执行环境不能解析 npm Registry，无法可靠地执行 `pnpm install` 或由 pnpm 正式更新 `pnpm-lock.yaml`。本批已声明 Catalog/Manifest 并由维护者首次安装提交锁文件；移除有问题的适配器后需再次同步。**锁文件更新属于合并前阻塞，不得手工编造 integrity、跳过冻结安装或宣称新增依赖已实际测试通过。**
+项目协作执行环境不能解析 npm Registry，无法在该环境执行依赖安装；维护者已在 Windows 通过 pnpm 正式生成、重新同步并推送 `pnpm-lock.yaml`，远程检查确认不再包含 `nest-zod`。本批已完成冻结安装和完整 Windows/Docker 验收。锁文件不得手工编造 integrity，也不得跳过冻结安装。
 
-第十六批 Windows 基线为 **367/367** 单测、**8/8** NestJS E2E、完整 `ready` 退出码 0，Docker 隔离烟测也通过。本批新增启动配置 4 项及隔离 NestJS 原生集成 4 项单测，**预计**普通单测 375、E2E 8；预期不代表本批已通过。
+第十六批 Windows 基线为 **367/367** 单测、**8/8** NestJS E2E、完整 `ready` 退出码 0。本批新增启动配置 4 项及隔离 NestJS 原生集成 4 项单测，维护者 Windows 实测 **375/375** 普通单测、**8/8** E2E、完整 `ready` **退出码 0**；Docker 隔离烟测 **退出码 0**。
 
-维护者在 Windows 的第十七批开发分支执行 `pnpm install`，核对后提交 pnpm 12 正式生成的锁文件，再执行 `pnpm install --frozen-lockfile`、`pnpm run ready` 和 `pnpm run test:docker:server`。生产镜像必须包含 Zod 运行时依赖且默认接口安全边界保持不变。验收通过并获得明确授权前，PR 保持 Draft，不合并。
+维护者已在 Windows 第十七批开发分支正式更新锁文件，并完成 `pnpm run ready` 及包含冻结安装的 Docker 镜像构建与隔离烟测。生产镜像已通过本轮构建验证，默认未开放接口仍返回 404。记录性文档修改后可再次执行 `vp check` 与 `pnpm run docs:check`；PR 继续保持 Draft，未经明确授权不合并。
 
 ## 第十七批实测修订：改用 NestJS 12 原生 Standard Schema（2026-11-13）
 
