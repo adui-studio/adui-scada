@@ -1365,4 +1365,4 @@ pnpm run docs:check
 pnpm run ready
 ```
 
-脚本只接受回环地址；使用真实浏览器、现有同源 Vite 代理和原生 EventSource。注入仅屏蔽页面接收的事件回调，验证心跳仍活跃但 Tag 超时、完整事件静默后的自动重连、Vue/React 数据恢复和页面离开后的连接释放。**这不是实际网络故障或 Nginx 半开连接的测试**，更不覆盖工业现场。前台恢复可见性检查另有两条新增 Vitest 用例；提交代码后仍需 Windows 质量链和 Chrome/Edge 执行日志，不得预先标记通过。参见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
+脚本只接受回环地址；读取根目录 `.env` 中实际 Web 端口，启动前分别检查页面和 `/demo/project` 是否可用。`fetch failed` 时应先确认三个服务独立运行并检查代理及端口，改进后的脚本会输出失败 URL 与底层错误。使用真实浏览器、现有同源 Vite 代理和原生 EventSource。注入仅屏蔽页面接收的事件回调，验证心跳仍活跃但 Tag 超时、完整事件静默后的自动重连、Vue/React 数据恢复和页面离开后的连接释放。**这不是实际网络故障或 Nginx 半开连接的测试**，更不覆盖工业现场。前台恢复可见性检查另有两条新增 Vitest 用例；提交代码后仍需 Windows 质量链和 Chrome/Edge 执行日志，不得预先标记通过。参见 [ADR-0056](adr/0056-sse-browser-visibility-recovery.md)。
