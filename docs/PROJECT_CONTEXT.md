@@ -586,3 +586,9 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 维护者继第一轮失败后同步最新分支并重新执行了本机质量链，现已提供日志证明：**React / Vue SSE 浏览器回归均通过（`test:sse:browser` 退出码 0）、Runtime 专项 32/32（3 文件）、全量单测 412/412（36 文件）、NestJS E2E 17/17（3 文件）**；`vp check` 检查 253 个文件格式正确、124 个受检文件零错误零警告；72 份 Markdown 检查通过。完整 `pnpm run ready` 退出码 **0**，包含 Catalog/配置/中文文案、Prisma Client 7.10.1、双 Web 与 NestJS 类型检查和构建。此前 `fetch failed` 源于浏览器预检查服务/端口未与实际运行环境对齐，现脚本读取根 `.env` 并能确认两端本机地址；此前 STALE 与 sequence 冲突已通过 Runtime 展示层过期质量覆盖修复。
 
 这证明本机浏览器接收/重连生命周期自动化成功，不等于真实网络丢包、Nginx 半开或工业现场可靠性已确认；本批未执行 Docker 增量回归、人工后台标签页节流、SSE 高并发、生产身份权限或 PostgreSQL 真库验证。**PR #46 仍保持 Draft、Assignee 为 `@adui-dev`，等待维护者明确合并授权**。上述实测发生在本次验收文档追加之前，文档最新提交需按需复查 `vp check` 和 `pnpm run docs:check`。
+
+## 2026-11-13 · V0.3 第二十五批：本机 SSE 多客户端与背压保护（待验收）
+
+以 PR #46 已合并的 `main` 提交 `a2b3685` 为基线，新建 `feat/v0.3-sse-backpressure-proxy-check`，针对独立 Node 水处理 SSE 模拟服务原先无连接数上限、无写缓冲背压处理的问题，增加 32 路上限、每路 64 KiB 待发送字节保护、慢客户端快速断开、响应关闭自动回收；新增六路并发真实 HTTP SSE 及 Docker Nginx 双框架代理独立烟测入口。共享 Core、Runtime、Vue/React 页面、NestJS、Tauri、工程 Schema、数据库与设备写入边界均未改变；不增加 npm 依赖。
+
+已在协作容器以 Node 内置测试器对隔离副本执行连接管理 6 项检查，6/6 通过；源文件静态语法检查亦完成。本批尚未完成维护者 Windows `pnpm run ready`、独立模拟服务实际端到端、Docker Nginx 双代理烟测、真实半开代理、后台页计时器及高并发现场性能验证。应按 [VALIDATION](VALIDATION.md) 和 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md) 实测，Draft PR 未获授权前保持不合并。
