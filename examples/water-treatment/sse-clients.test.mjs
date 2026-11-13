@@ -162,3 +162,17 @@ test("真实回环 HTTP 同时容纳 32 路 SSE，超额返回 503 且断开后�
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test("响应主动触发 error 时销毁连接且不影响其他订阅", () => {
+  const clients = new DemoSseClients(2);
+  const faulty = new FakeResponse();
+  const healthy = new FakeResponse();
+  clients.add(faulty);
+  clients.add(healthy);
+  faulty.emit("error", new Error("模拟底层 socket 写入异常"));
+  assert.equal(faulty.destroyed, true);
+  assert.equal(clients.size, 1);
+  clients.broadcast("event: heartbeat\\ndata: {}\\n\\n");
+  assert.equal(healthy.messages.length, 1);
+  clients.closeAll();
+});
