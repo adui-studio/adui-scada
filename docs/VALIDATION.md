@@ -241,3 +241,14 @@ Docker 隔离测试应依次验证：
 - E2E 中 Terminus 的预期 HTTP 503 / `Health Check has failed!` 是故意模拟服务关闭的负面测试，**不是未通过项**；构建中的 Rolldown 性能分析提示也不是失败。
 
 **边界：** 本次浏览器脚本在真实 Chrome/Edge 与原生 SSE 上运行，但故障注入仅屏蔽 EventSource 回调；没有验证真实 TCP 断网、Nginx 半开连接、高并发/背压、人工后台标签页节流、生产鉴权、PostgreSQL 真库、Docker 本批增量回归或工业现场。该次日志对应文档记录性更新前的已验收代码；本次更新文档本身尚未重新执行 `vp check` 和 `pnpm run docs:check`。PR #46 继续 Draft，等待维护者明确合并授权。
+
+## 2026-11-13 · V0.3 第二十五批验收清单（待维护者执行）
+
+- [x] 协作容器内 Node 内置测试器对隔离代码副本执行六项连接资源单测：**6/6 通过**；这不是 Windows 仓库全量质量链结果。
+- [ ] `pnpm run test:sse:clients`：在实际仓库工作区确认容量、断开、广播、背压、缓冲上限和非法参数回归。
+- [ ] `pnpm run test:sse:network`：保持 `pnpm run dev:demo` 运行，确认六路 HTTP SSE 快照、heartbeat、单路断连后其余订阅继续、恢复后先 snapshot。
+- [ ] `pnpm run test:sse:proxy`：本机 `pnpm run docker:demo:up` 启动后，分别检查 React/Vue Docker Nginx 固定同源代理 SSE；不自动重启或停止容器。
+- [ ] `vp check`、`pnpm run docs:check`、`pnpm run ready` 全部通过，记录 Node 测试与全量 Vitest、E2E、构建结果和实际退出码。
+- [ ] 真实代理断网、慢客户端流量压力、32 路真实 HTTP 上限实测、Windows 长时间后台页恢复、生产认证、PostgreSQL 真库和工业现场：均未验证。
+
+本批固定 32 路/64 KiB 仅为本机模拟服务防护；直接网络烟测和 Docker Nginx 代理烟测不代表工业现场连接容量或生产容灾性能。参见 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md)。
