@@ -57,7 +57,7 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 
 - npm 官方稳定版 `zod@4.6.7`；只将其作为 `apps/server` 生产依赖加入 Catalog 和 Manifest，不扩展到 Vue/React 或共享 Core。采用 Zod 的 `safeParse` 校验端口与监听地址，保持现有优先级、默认值、Swagger 访问条件和固定中文错误提示。
 - 原始输入、`ZodError`、环境密钥和数据库连接串不得被写入诊断日志或安全审计。第十六批固定四字段事件记录不做自动对象序列化替换。
-- 当前执行环境无法访问 npm Registry，**第十七批移除 nest-zod 后的锁文件仍需重新同步**；必须由维护者在 Windows 执行 `pnpm install`，审查并提交 pnpm 正式生成的锁文件后，才能执行冻结安装、全量测试并合并。未执行不能宣称通过；参见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
+- 当前执行环境无法访问 npm Registry，**第十七批移除 nest-zod 后的锁文件已经由维护者正式重新同步**；Windows 全量质量链与 Docker 冻结安装已实测通过，仍需保持合并授权边界；参见 [ADR-0049](adr/0049-zod-server-runtime-validation.md)。
 
 ### 第十七批 NestJS 集成方案复核与实测修订（2026-11-13）
 
@@ -65,5 +65,5 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 - 维护者 Windows 实测 `nest-zod/swagger` 的 `ZSerialize` 在测试类加载阶段抛出 `TypeError: Property description must be an object: undefined`；[上游源码](https://github.com/taugr/nest-zod/blob/v2.1.0/src/openapi-schema.ts) 显示 Schema 的 `safeParse` 属性描述符可能为 `undefined`，而恢复逻辑没有防护。
 - **最终选择 `NestJS 12 原生 Standard Schema + zod@4.6.7`**。使用官方 `StandardSchemaValidationPipe`、`StandardSchemaSerializerInterceptor` 与 `@Body({ schema })`、`@Query(..., { schema })`，Swagger 12 原生转换 Zod 4.2+ JSON Schema；相关文档见 [官方验证](https://docs.nestjs.com/application/validation)、[序列化](https://docs.nestjs.com/application/serialization) 和 [OpenAPI](https://docs.nestjs.com/openapi/introduction)。
 - 移除 `nest-zod` 的 Catalog 和服务端依赖声明，保留 `zod`，不降级 NestJS、不忽略 Peer、不引入第二套工程 Schema。原生校验在本批仅用于隔离测试 Controller，不对正式业务路由全局启用。
-- 第十七批首次 Windows `ready`：格式与 Lint/类型检查已通过；单测 **370 通过、1 失败**，另有适配器测试文件导入失败，完整质量链中断。已修正代码，**尚未重新获得通过记录**。
-- 上轮包含 `nest-zod` 的 `pnpm-lock.yaml` 已被维护者提交到 PR；必须由 pnpm 12 再次生成与最新 Manifest/Catalog 一致的锁文件，并通过冻结安装与完整验收，不手写包完整性数据。
+- 第十七批首次 Windows `ready`：格式与 Lint/类型检查已通过；单测 **370 通过、1 失败**，另有适配器测试文件导入失败，完整质量链中断。修正代码后，Windows 已复验 **375/375 单测、8/8 E2E**、完整 `ready` **退出码 0**，Docker 隔离镜像烟测 **退出码 0**。
+- 上轮包含 `nest-zod` 的锁文件已由维护者使用 pnpm 正式重新生成并推送；新锁文件仅保留 Zod，GitHub 核对无 `nest-zod`。Docker 构建中冻结安装成功，未绕过 Peer 校验，不手写包完整性数据。
