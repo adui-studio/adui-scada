@@ -48,7 +48,7 @@ Windows 首轮已实测：静态检查无警告、单测 355/355、Docker 隔离
 ## 第十四批补充：NestJS 配置与本地日志格式
 
 - `@nestjs/config@12.0.1` 通过全局 `ConfigModule` 提供后续统一的配置注入入口。现阶段仍由 `apps/server/src/main.ts` 唯一读取仓库根目录 `.env`，`ignoreEnvFile: true` 防止重复装载，不新增直接 `dotenv` 依赖。注意现有配置使用仍以 `process.env` 为主，后续模块按需迁移到 `ConfigService`，不宣称已完成类型化配置校验。
-- `pino-pretty@13.2.0` 仅为服务端开发依赖；只有 `NODE_ENV` 非 `production` 且 stdout 是交互式终端时启用 transport，否则保留结构化 JSON 输出。Pretty 只修改可读性，不放宽日志白名单与凭据脱敏。
+- `pino-pretty@13.2.0` 仅为服务端开发依赖；只有 `NODE_ENV` 非 `production`、非 `test`、非 Vitest 运行器且 stdout 是交互式终端时启用 transport，否则保留结构化 JSON 输出。Pretty 只修改可读性，不放宽日志白名单与凭据脱敏。
 - `apps/server/test/app.e2e-spec.ts` 中 Swagger 404 检查改为显式 Vitest `expect`，消除 `vitest(expect-expect)` 静态检查警告。
 - 锁文件已由 pnpm 12.18.0 生成并提交；完整 E2E 与 ready 仍待修复复验。
 
