@@ -1339,6 +1339,6 @@ pnpm run test:docker:server
 Write-Host "Docker 退出码：$LASTEXITCODE"
 ```
 
-自动化重点检查：心跳只保活传输不更新 TagStore；具名事件与原 `snapshot/delta` 不混淆；连续 15 秒传输静默强制重建，已关闭连接不能重建；12 秒无有效 Tag 值会使旧 GOOD/UNCERTAIN 降为 STALE；空 delta 不刷新数据时间，服务端标记的 STALE 不应被转换成 GOOD；正常数据恢复和网络重连后 snapshot 恢复正确。还应检查 NestJS 订阅/独立模拟服务关闭时清除心跳 timer，旧连接回调失效，工业设备写入仍为 404。
+自动化重点检查：心跳只保活传输不更新 TagStore；具名事件与原 `snapshot/delta` 不混淆；连续 15 秒传输静默强制重建，已关闭连接不能重建；12 秒无有效 Tag 值会使旧 GOOD/UNCERTAIN 降为 STALE；空 delta 与重复旧序列不刷新数据时间，服务端标记的 STALE 不应被转换成 GOOD；正常数据恢复和网络重连后 snapshot 恢复正确。还应检查 NestJS 订阅/独立模拟服务关闭时清除心跳 timer，旧连接回调失效，工业设备写入仍为 404。
 
 手工回归建议：分别启动独立模拟 SSE + Vue/React，在浏览器 Network 中观察 5 秒心跳、30 秒周期内 8 秒断采引发的 STALE，确认心跳继续到达但过期 Tag 不显示正常值。NestJS 仅在根 `.env` 显式开启本机模拟 API、非生产且绑定 `127.0.0.1` 时测试，同源代理未被扩展。测试结束还原开关。浏览器后台节流、Nginx 反向代理、SSE 高并发背压、真实 Gateway 和工业现场仍未验收。
