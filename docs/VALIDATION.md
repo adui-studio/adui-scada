@@ -164,3 +164,17 @@ Core 新增两项自动保存会话回归：停写必须等待正在执行的事
 仅检查 HTTP 入口保护，不表示生产网络的反 DDoS、限流、Nginx 摘流、Linux SIGTERM 超时排空、SSE/WS 断线重连或工业网关事务已验证。Windows 对 SIGTERM 的限制使本批采用 `app.close()` 验证原生关闭生命周期；真实 Linux 容器信号回归和 PostgreSQL 真库测试均未在本批执行。E2E 中 Terminus 的 `Health Check has failed!` 与 HTTP 503 是此前就绪探针主动模拟关闭的**预期负面测试**，12/12 E2E 全部通过。
 
 第十九批没有新增依赖，`pnpm-lock.yaml` 和 Catalog 不发生修改。维护者 Windows 已完成依赖/配置/环境/中文文案检查（11 个 Manifest、51 项 Catalog、137 个自有文件），`vp check` **235/235 文件格式正确、111 个受检文件零警告或错误**，Core 构建与 React/Vue/服务端 TypeScript 检查通过，Prisma Client 7.10.1 正常生成、67 份 Markdown 静态检查通过、Web 双端及 NestJS 均构建通过，完整 `ready` **退出码 0**。独立 Docker 镜像冻结安装及服务端构建成功，隔离烟测验证 HTTP 资源与关闭策略已加载、健康/就绪返回 200、未开放工程/设备接口仍为 404，**Docker 退出码 0**。本轮没有真正验证 Linux SIGTERM 或工业现场。记录性文档更新后建议仅复查 `vp check` 与 `pnpm run docs:check`。
+
+## V0.3 第二十批：Linux Docker 正式进程 SIGTERM 退出验收
+
+第十九批基线：Windows `pnpm run ready` **381/381 单测、12/12 E2E、退出码 0**，独立 Docker `test:docker:server` 退出码 0。本批不增加 Vitest 测试文件、不新增依赖，预计普通单测 **381**、E2E **12**，待维护者实际复验。新增的信号回归位于 Docker 构建后的第二阶段，不能只执行 `ready` 就宣称第二十批全部通过。
+
+Docker 隔离测试应依次验证：
+1. 已有容器模块加载、HTTP 安全、健康/就绪 200、未开放 API 404，继续通过。
+2. `--network none`、无端口映射的正式服务端容器作为 Node PID 1 启动；`docker exec` 在容器回环接口等待 `/health/ready` 200，确认 `/health` 200、设备写入 404。
+3. `docker stop --signal SIGTERM --timeout 10` 向真正的 Linux PID 1 发送信号，`docker inspect` 核对退出码 **0**，排除超时 SIGKILL 或清理失败。
+4. `finally` 中强制移除测试容器，测试失败后也不得遗留后台容器；任何阶段失败必须使根脚本退出非零。
+
+`enableShutdownHooks([], { useProcessExit: true })` 与原默认 143 退出码语义不同，已经在 ADR-0052 明确；不能通过放宽退出码断言取代真实测试。本批没有验证在途事务排空、Linux 编排滚动升级、SSE/WS 或工业网关联锁。
+
+维护者需执行 `pnpm install --frozen-lockfile`、`vp check`、`pnpm run ready`、`pnpm run test:docker:server` 并提供退出码。**尚无本批 Windows 或 Docker 实测通过记录**，不应在 PR 中勾选验收完成。
