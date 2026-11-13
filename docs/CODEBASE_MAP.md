@@ -449,3 +449,10 @@
 - `apps/server/src/auth/scada-identity.module.ts`：仅在未挂载正式 HTTP 服务的身份模块中注入审计服务，不开放任何新接口。
 - `apps/server/src/auth/scada-identity.spec.ts`：新增 2 项 Guard 审计单测，覆盖脱敏、撤销令牌及跨租户拒绝；现有测试继续有效。
 - [ADR-0048](adr/0048-security-audit-event-boundary.md)：区分诊断事件与正式事务持久化安全审计。
+
+## V0.3 第十七批：Zod 服务端启动配置校验
+
+- `pnpm-workspace.yaml`、`apps/server/package.json`：声明 Zod 4.6.7 服务端运行时依赖，统一使用 Catalog；`pnpm-lock.yaml` 由维护者 Windows pnpm 正式生成前保持未更新。
+- `apps/server/src/config/server-startup.config.ts`：Zod 端口及监听地址 Schema，保持原始 `Number` 转换与既有中文异常契约，使用 `safeParse` 不输出敏感输入。
+- `apps/server/src/config/server-startup.config.spec.ts`：原 5 项测试继续使用，新增 4 项非法值、优先级、敏感环境及兼容性回归。
+- [ADR-0049](adr/0049-zod-server-runtime-validation.md)：解释范围、Schema 与 pnpm 锁文件阻塞。
