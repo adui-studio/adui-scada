@@ -80,3 +80,9 @@ Prisma `///` 为源码文档注释，不会自动写入 PostgreSQL 元数据。�
 依赖采用 Catalog 精确版本，**当前仓库在线执行环境不能访问 npm Registry，因此尚未生成 `pnpm-lock.yaml`**。在 Windows 检出本批分支后，必须执行一次 `pnpm install`、确认新锁文件由 pnpm 12 生成并提交，再执行 `pnpm install --frozen-lockfile` 和 `pnpm run ready`。锁文件提交前本批 PR 不能合并，亦不能声称可重复安装。
 
 日志与 HTTP 响应头属于运维可观测性，不是不可篡改的认证安全审计或工业操作审计。身份颁发、权限管理端点和真实设备写入仍保持关闭。详见 [ADR-0046](../../docs/adr/0046-pino-openapi-http-security.md)。
+
+### 第十四批补充：配置与开发日志
+
+`@nestjs/config@12.0.1` 在 `AppModule` 注册为全局配置模块，但根目录 `.env` 仍由 `main.ts` 使用 Node.js 原生 `loadEnvFile` 唯一加载；不直接依赖 `dotenv`。本阶段保留已有环境变量读取方式，不误称已完成配置 Schema 校验。
+
+本地交互式终端在非生产环境启用 `pino-pretty@13.2.0`，便于查看中文日志；生产环境及非交互式日志管道保持 JSON。不要在日志记录 Authorization、Cookie、数据库连接字符串、请求体或写入数据。修改后运行 `vp check`、`pnpm run ready`、`pnpm run test:docker:server`，须先同步 pnpm 锁文件。
