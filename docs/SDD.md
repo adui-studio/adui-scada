@@ -516,3 +516,26 @@ Vue / React 通过原生 SVG `pattern` 绘制网格，并以 `line` 显示图元
 - `GET /api/dev/demo/project`：只读共享 `waterTreatmentDemoDocument`；`GET /api/dev/demo/tags`：只读共享 `TagStore.snapshot()`，固定 `{kind:"snapshot",values:[...]}`；`GET /api/dev/demo/events`：SSE 初次订阅输出 snapshot，此后输出 delta，事件数据结构直接使用 `TagChange`，不新增协议封装。
 - 模拟器每秒更新一批固定 Tag，30 秒循环的后 8 秒不再采样，旧值超过 2.5 秒标记为 STALE，恢复后通过 `resumeAfter` 保证新 sequence 严格递增。模块关闭释放定时器，SSE 断开取消 TagStore 订阅。
 - 本批没有真实工程版本 HTTP API、正式认证/ACL、工业写入、数据库/网关、现场设备与生产消息总线。Vue/React Web 仍使用既有独立模拟服务 `/demo`，只有本机 Nest Swagger 供新接口诊断。见 [ADR-0053](adr/0053-local-readonly-demo-telemetry.md)。
+
+## V0.3 第二十二批：只读 Tag Source 契约与 Snapshot 门槛
+
+```ts
+interface ReadonlyTagSource {
+  loadProject(signal: AbortSignal): Promise<unknown>;
+  subscribe(handlers: ReadonlyTagSourceHandlers): ReadonlyTagSubscription;
+}
+interface ReadonlyTagSourceHandlers {
+  onMessage(raw: unknown): void;
+  onDisconnected(): void;
+}
+interface ReadonlyTagSubscription {
+  close(): void;
+}
+type DemoTagSourcePreset = "standalone" | "nest-local";
+```
+
+`createSseTagSource()` 默认使用 `/demo/project`、`/demo/events`，`createSseTagSource("nest-local")` 固定使用 `/api/dev/demo/project`、`/api/dev/demo/events`；禁止绝对 URL、用户输入地址或协议降级。工程加载使用 `fetch` 的 `cache:"no-store"` 与调用方 `AbortSignal`，非 2xx 或 HTML 响应明确失败。EventSource 保持原生重连；只向 Runtime 传递原始消息，不在适配器中绕过 Core 校验。
+
+`DemoRuntime(listener, source = createSseTagSource())` 保持现有单参调用兼容。每次 `start` 创建独立 `generation` 和 AbortController；`stop` 中止加载、关闭订阅、标记旧值 STALE 并使迟到消息失效。加载工程、连接 SSE 和 onMessage 过程中都要检查代次，尤其处理订阅回调可能在 subscribe 返回前同步发生的边界。首次连接和每次 onDisconnected 后必须先通过 snapshot 原子替换数据，后续 delta 才能通过原有 `TagStore.apply` 接受。无效事件进入 error 并关闭订阅，不允许之后的迟到数据将它改回 live。
+
+桌面 `OfflineDemoRuntime` 仍用原本纯本机模拟，不被新的浏览器网络接口取代。Vue 与 React Runtime 继续共享相同实例化代码路径，未新增 UI 切换选项；真实发布快照与经过鉴权的在线订阅属于后续范围。参见 [ADR-0054](adr/0054-readonly-tag-source-adapters.md)。
