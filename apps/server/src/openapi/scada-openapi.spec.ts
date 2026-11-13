@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import {
-  allowLocalOpenApi,
-  getLocalOpenApiUrl,
-  LOCAL_OPENAPI_PATH,
-} from "./scada-openapi.js";
+import { allowLocalOpenApi, getLocalOpenApiUrl, LOCAL_OPENAPI_PATH } from "./scada-openapi.js";
 
 describe("Swagger 本机访问策略", () => {
   it("默认或未显式开启时不注册文档", () => {
