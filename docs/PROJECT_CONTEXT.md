@@ -592,3 +592,7 @@ V0.3 第六批 PR #28 已经维护者授权、以 Squash Merge 合并到 `main`�
 以 PR #46 已合并的 `main` 提交 `a2b3685` 为基线，新建 `feat/v0.3-sse-backpressure-proxy-check`，针对独立 Node 水处理 SSE 模拟服务原先无连接数上限、无写缓冲背压处理的问题，增加 32 路上限、每路 64 KiB 待发送字节保护、慢客户端快速断开、响应关闭自动回收；新增六路并发真实 HTTP SSE 及 Docker Nginx 双框架代理独立烟测入口。共享 Core、Runtime、Vue/React 页面、NestJS、Tauri、工程 Schema、数据库与设备写入边界均未改变；不增加 npm 依赖。
 
 已在协作容器以 Node 内置测试器对隔离副本执行连接管理 8 项检查，8/8 通过，其中包含真实回环 HTTP 32 路连接、超额 HTTP 503 和释放后重入；源文件静态语法检查亦完成。本批尚未完成维护者 Windows `pnpm run ready`、独立模拟服务实际端到端、Docker Nginx 双代理烟测、真实半开代理、后台页计时器及高并发现场性能验证。应按 [VALIDATION](VALIDATION.md) 和 [ADR-0057](adr/0057-local-sse-capacity-and-proxy-validation.md) 实测，Draft PR 未获授权前保持不合并。
+
+## 2026-11-13 · 第二十五批首轮 Windows Lint 警告修复
+
+维护者提供本批 `vp check --fix` 日志，发现 **9 条警告、0 个错误**：其中 8 条来自新 Node 原生测试未处理顶层 Promise，1 条来自 SSE 网络测试中的异步读取任务类型推断。仅对新增测试文件做最小必要修正：八项顶层 `await test(...)` 保持完整断言，网络客户端以 `Promise.resolve()` 声明可等待读取任务。没有修改 SSE 服务端容量、写缓冲、Tag 协议、Core 或双框架页面。最新修复完成静态语法检查，实际 Windows 质量链仍待重新执行；PR #47 继续 Draft、不合并。
