@@ -271,4 +271,11 @@ Core 新增框架无关 Tag 定义模型，使用稳定 `tagId` 区分不可变�
 
 在第三十批 ScadaDocument 0.3.0 项目 Tag 持久化与共享 Editor 命令基础上，Vue/React Studio 右侧属性区增加项目 Tag 新增、编辑、删除表单。可维护稳定 ID、显示名称、数据类型、单位与描述；编辑时 ID 不可修改，新增不得使用历史 unknown 占位类型。已被图元绑定的 Tag 不允许删除，类型修改仍受共享槽位约束，错误统一以中文提示；成功变更走现有撤销重做、JSON 导入导出与草稿保存机制。
 
-本批只增加双框架 UI 与浏览器回归，不增加数据库表、生产保存 API、工业地址、连接参数、批量级联或设备写入。当前代码已提交开发分支，完整 Windows 质量链与实际浏览器验收待执行。见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md)。
+本批只增加双框架 UI 与浏览器回归，不增加数据库表、生产保存 API、工业地址、连接参数、批量级联或设备写入。PR #53 已合并至 main（提交 7fccc1e2）；维护者 Windows 实测 React/Vue Tag 新增、编辑、绑定删除保护、删除和 JSON 往返通过，test:tags:browser 退出码 0，vp check 271 文件/135 受检文件零错误，docs:check 79 份 Markdown 通过；此前 ready 与 test:interop 也已通过。键盘/视觉人工检查和旧浏览器持久化迁移体验留待后续验收。见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md)。
+
+
+## V0.3 第三十二批：旧工程、浏览器草稿与历史快照迁移端到端验收（FR-002 / FR-004 / FR-006 / FR-013 / NFR-002 局部）
+
+在第三十批 Schema 0.3.0 迁移和第三十一批双框架 Tag 管理基础上，补齐真实 Chrome/Edge 浏览器中旧数据的端到端迁移验收：分别覆盖旧 localStorage 草稿迁入 IndexedDB、已有 0.2.0 IndexedDB 草稿事务迁移与 revision 推进、旧 Project Snapshot 的原 SHA-256 校验及只读归一化。React/Vue 两端均通过真实 Studio UI 恢复并导出工程 JSON，确认历史 Tag 只生成 unknown 占位、原图元绑定不变，旧快照原记录不被改写。
+
+本批只扩展 CDP 浏览器测试，不更改 Core 迁移算法、LocalDraft 格式、Dexie 数据库版本、Project Snapshot 容器格式、Schema 或工业协议。真实浏览器运行尚待 Windows 验收。见 [ADR-0064](adr/0064-legacy-browser-migration-validation.md)。
