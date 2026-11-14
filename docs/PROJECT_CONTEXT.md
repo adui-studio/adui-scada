@@ -942,3 +942,14 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 维护者 Windows 实测确认：修复 `oidc-callback.service.spec.ts` 中 Mock 记录类型过窄导致的 TS2322 后，`vp check` 286 个文件格式正确、146 个受检文件零警告/Lint/TypeScript 错误；`pnpm run test:unit` 43/43 文件、477/477 测试通过（OIDC Discovery 7/7、登录事务 10/10、OIDC 回调 12/12）；`pnpm run docs:check` 83 个 Markdown 通过；完整 `pnpm run ready` 最终退出码 **0**，SSE 8/8、故障代理 4/4、NestJS E2E 17/17 及 React/Vue/NestJS 构建全部完成。
 
 本次 TS2322 的根因、类型派生修复和复验命令已记录为 `docs/AI_MISTAKES.md` E-011。阶段 B 第三小批服务层代码及 Mock 测试通过当前 Windows 工程质量链；真实 IdP/JWKS 联调、HTTP Controller、Cookie/CSRF 和工程 API仍未完成，`SCADA_OIDC_ENABLED=true` 继续 fail-closed。
+
+### 第三十三批阶段 B 第三小批最终 Windows 全链验收（2026-11-14）
+
+维护者最新日志确认，修复 OIDC 回调 Mock 类型 TS2322 后：
+
+- `vp check`：286 个文件格式正确，146 个受检文件零警告、Lint 错误和 TypeScript 错误。
+- `pnpm run test:unit`：43/43 文件、477/477 测试通过；OIDC Discovery 7/7、登录事务 10/10、回调 12/12。
+- `pnpm run docs:check`：83 个 Markdown 文件通过。
+- 完整 `pnpm run ready`：依赖 11 清单/52 Catalog、中文文案 172 个文件、SSE 客户端 8/8、故障代理 4/4、NestJS E2E 17/17、React/Vue/NestJS 构建全部通过，最终退出码 **0**。
+
+E-011 已在 `docs/AI_MISTAKES.md` 记录；其类型派生修复与第三小批代码现已通过 Windows 工程质量链。真实 IdP/JWKS 联调、HTTP Controller、Cookie/CSRF 和工程 API 仍未完成，OIDC 继续 fail-closed。

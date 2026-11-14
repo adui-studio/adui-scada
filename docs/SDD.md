@@ -690,4 +690,10 @@ OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client I
 - ID Token 的签名、Issuer、Audience、有效期和 Nonce 基础验证由 openid-client 完成；应用层再检查固定 Issuer、Client ID Audience、azp、多 Audience、Nonce、Subject 的 ASCII/长度约束及时间声明类型。
 - 只按精确 `(iss, sub)` 查询 `ScadaExternalIdentity`，要求关联 `ScadaIdentity.status = active`；未预绑定或已停用均拒绝，不按 email、用户名或 Claim 自动创建主体/租户。
 - 验证成功后复用 `AuthSessionService.issueForVerifiedSubject()` 签发本地 15 分钟不透明会话。IdP Access/Refresh/ID Token 仅在兑换调用内存中短暂存在，不保存、不写日志；服务返回的本地 sessionToken 仅供后续服务端 Controller 设置 HttpOnly Cookie，当前没有 HTTP 路由。
-- 新增 Mock 授权码兑换、Prisma 身份映射和会话服务测试；覆盖 State/浏览器绑定、OAuth 错误、`iss` 参数、PKCE/Nonce 检查参数、ID Token Claims、未绑定/停用身份、异常脱敏和 IdP Token 不进入结果。**代码与测试尚未在维护者 Windows 环境执行**；当前仍保持 OIDC fail-closed。
+- 新增 Mock 授权码兑换、Prisma 身份映射和会话服务测试；覆盖 State/浏览器绑定、OAuth 错误、`iss` 参数、PKCE/Nonce 检查参数、ID Token Claims、未绑定/停用身份、异常脱敏和 IdP Token 不进入结果。维护者 Windows 已通过 `vp check`（286 文件格式正确、146 个受检文件零警告/错误）、`test:unit`（43 文件/477 测试，回调 12/12）、`docs:check`（83 Markdown）和完整 `ready`（最终退出码 0）。真实 IdP/JWKS 联调与 HTTP Controller/Cookie/CSRF 仍未完成；当前保持 OIDC fail-closed。
+
+### 第三小批 Windows 全链验收结果（2026-11-14）
+
+维护者 Windows 已对 OIDC 回调服务和 Mock 测试完成验证：`vp check` 286 文件格式正确、146 个受检文件零警告/Lint/TypeScript 错误；`test:unit` 43/43 文件、477/477 测试（回调 12/12）；`docs:check` 83 Markdown 通过；完整 `ready` 最终退出码 0，SSE 8/8、故障代理 4/4、NestJS E2E 17/17、React/Vue/NestJS 构建通过。
+
+该验收只证明当前代码质量链和 Mock 测试通过，不代表真实 IdP/JWKS 联调、HTTP Cookie/CSRF 或工程 API 已完成。

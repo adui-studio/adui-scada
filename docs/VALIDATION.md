@@ -855,3 +855,26 @@ type OidcExpectedState = NonNullable<
 - `pnpm run ready`：重复执行 477/477 单测、SSE 客户端 8/8、故障代理 4/4、NestJS E2E 17/17，React/Vue 与 NestJS 构建通过；最终退出码 **0**。
 
 因此，原先本节记录的“待维护者复验”已由上述 Windows 实测结果关闭。该结果验证当前分支静态检查、单测和工程质量链，不代表真实 IdP/JWKS 联调、HTTP Cookie/CSRF 或 OIDC 生产启用已验收。
+
+## 2026-11-14 · 第三十三批阶段 B 第三小批 TS2322 修复后 Windows 全链验收通过
+
+维护者补充的 Windows PowerShell 日志确认，OIDC 回调 Mock 类型修复后的当前分支完整质量链通过：
+
+| 验收项 | 实测结果 |
+| --- | --- |
+| `vp check` | 286 个文件格式正确 |
+| Lint / TypeScript | 146 个受检文件，零警告、零错误 |
+| `pnpm run test:unit` | 43/43 文件、477/477 测试通过 |
+| OIDC Discovery | 7/7 |
+| OIDC 登录事务 | 10/10 |
+| OIDC 回调 | 12/12 |
+| `pnpm run docs:check` | 83 个 Markdown 文件通过 |
+| SSE 客户端 | 8/8 |
+| SSE 故障代理 | 4/4 |
+| NestJS E2E | 17/17 |
+| React / Vue 构建 | 均成功 |
+| NestJS 构建 | 成功 |
+
+完整 `pnpm run ready` 最终退出码 **0**。该日志同时再次运行了单测、SSE、故障代理、NestJS E2E 和双框架/服务端构建。
+
+**验收边界**：本结果覆盖第三小批 OIDC 回调服务、Mock 单测、E-011 类型修复及当前工程质量链；不代表真实 IdP/JWKS 轮换联调、HTTP Controller、浏览器 Cookie/CSRF 或工程 API 已完成，也不代表允许解除 `SCADA_OIDC_ENABLED=true` 的 fail-closed 保护。
