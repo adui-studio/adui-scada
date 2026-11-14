@@ -5,7 +5,10 @@ import { TAG_DATA_TYPE_LABELS } from "@adui/scada-core";
 import type { TagDefinition } from "@adui/scada-core";
 
 type TagDataType = TagDefinition["dataType"];
-type TagDefinitionChanges = Pick<TagDefinition, "displayName" | "dataType" | "unit" | "description">;
+type TagDefinitionChanges = Pick<
+  TagDefinition,
+  "displayName" | "dataType" | "unit" | "description"
+>;
 
 const props = defineProps<{
   readonly tags: readonly TagDefinition[];
