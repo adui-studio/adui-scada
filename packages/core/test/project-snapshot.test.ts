@@ -123,11 +123,9 @@ test("读取 0.2.0 历史快照时先验证原摘要，再返回可重复校验�
   expect(migrated.document.tags.every((tag) => tag.dataType === "unknown")).toBe(true);
   expect(await readProjectSnapshot(migrated)).toEqual(migrated);
 
-  const tampered = {
-    ...payload,
-    document: { ...legacy, projectId: "tampered-project" },
-    contentHash: sourceContentHash,
-  };
+  const tamperedDocument = JSON.parse(JSON.stringify(legacy));
+  tamperedDocument.pages[0].nodes[0].props.title = "被篡改";
+  const tampered = { ...payload, document: tamperedDocument, contentHash: sourceContentHash };
   await expect(readProjectSnapshot(tampered)).rejects.toThrow(/摘要不匹配/);
 });
 
