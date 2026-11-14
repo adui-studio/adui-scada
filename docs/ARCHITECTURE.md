@@ -361,3 +361,10 @@ Runtime 生命周期按连接代次隔离：停止时中止 fetch、关闭 SSE�
 ## 2026-11-14 · V0.3 第二十九批：共享 Tag 定义目录与值类型边界
 
 `@adui/scada-core` 新增 `TagDefinitionCatalog` 作为独立的只读元数据目录，可选注入 `TagStore`。目录定义稳定 Tag ID 与展示名称、静态数据类型/单位/描述；实时 `TagValue` 继续负责质量、值、时间戳与序列号。水处理 Demo 的在线 Runtime、Tauri 离线模拟和独立 Node SSE 共用相同目录；Studio 双框架只消费同一候选元数据，不实现各自的校验规则。未改变 `ScadaDocument 0.2.0`、Dexie、本地版本快照、NestJS 数据库及工业 Gateway。项目级 Tag 持久化和地址映射需另行 ADR 与 Schema 迁移。见 [ADR-0061](adr/0061-tag-definition-catalog.md)。
+
+
+## 2026-11-14 · V0.3 第三十至三十一批：项目 Tag 工程持久化与双框架管理
+
+第三十批将静态 Tag 定义归属于 ScadaDocument 0.3.0，采用同一 JSON/草稿/版本快照事实源，并显式迁移旧 Schema，Core 保留所有绑定规则；不新增工业设备地址、网关连接或写入。第三十一批只在 Vue/React Studio 属性面板增加各自的 TagManager 渲染和表单草稿，新增/编辑/删除统一调用共享 DocumentEditor。成功后继续经现有 EditorSnapshot、撤销重做及草稿存储链路，没有建立独立 Tag 数据库或框架私有目录。
+
+双框架管理入口和验收脚本详见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md)。当前第三十一批代码未经 Windows 全链与人工回归验收。
