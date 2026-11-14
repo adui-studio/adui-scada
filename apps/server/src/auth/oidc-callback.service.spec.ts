@@ -1,10 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vite-plus/test";
 import * as oidc from "openid-client";
-import {
-  ForbiddenException,
-  UnauthorizedException,
-} from "@nestjs/common";
+import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import type { PrismaService } from "../database/prisma.service.js";
@@ -14,10 +11,7 @@ import type {
   OidcLoginTransactionService,
 } from "./oidc-login-transaction.service.js";
 import type { OidcProviderDiscoveryService } from "./oidc-provider-discovery.service.js";
-import {
-  OidcCallbackService,
-  type OidcAuthorizationCodeGrant,
-} from "./oidc-callback.service.js";
+import { OidcCallbackService, type OidcAuthorizationCodeGrant } from "./oidc-callback.service.js";
 
 const VALID_STATE = "s".repeat(43);
 const VALID_BROWSER_BINDING = "scada_oidc_b_" + "b".repeat(43);
@@ -47,9 +41,7 @@ interface ExternalIdentityQuery {
   };
 }
 
-type OidcExpectedState = NonNullable<
-  Parameters<OidcAuthorizationCodeGrant>[2]
->["expectedState"];
+type OidcExpectedState = NonNullable<Parameters<OidcAuthorizationCodeGrant>[2]>["expectedState"];
 
 interface GrantCall {
   readonly callbackUrl: URL;
@@ -152,9 +144,7 @@ function createHarness() {
   const transactions = {
     consume: async (state: unknown, binding: unknown) => {
       transactionCalls.push({ state, binding });
-      return transactionAvailable &&
-        state === VALID_STATE &&
-        binding === VALID_BROWSER_BINDING
+      return transactionAvailable && state === VALID_STATE && binding === VALID_BROWSER_BINDING
         ? transaction
         : null;
     },
@@ -299,9 +289,7 @@ describe("OIDC 授权码回调与预绑定身份验证", () => {
         },
       },
     ]);
-    expect(harness.issuedPrincipals).toEqual([
-      { tenantId: "tenant-a", subjectId: "engineer-1" },
-    ]);
+    expect(harness.issuedPrincipals).toEqual([{ tenantId: "tenant-a", subjectId: "engineer-1" }]);
     const output = JSON.stringify(result);
     expect(output).not.toContain(ACCESS_TOKEN);
     expect(output).not.toContain(REFRESH_TOKEN);
@@ -351,7 +339,10 @@ describe("OIDC 授权码回调与预绑定身份验证", () => {
       harness.service.complete(validResponse({ code: undefined }), VALID_BROWSER_BINDING),
     ).rejects.toBeInstanceOf(UnauthorizedException);
     await expect(
-      harness.service.complete(validResponse({ code: ["code-a", "code-b"] }), VALID_BROWSER_BINDING),
+      harness.service.complete(
+        validResponse({ code: ["code-a", "code-b"] }),
+        VALID_BROWSER_BINDING,
+      ),
     ).rejects.toBeInstanceOf(UnauthorizedException);
     await expect(
       harness.service.complete(
@@ -419,38 +410,38 @@ describe("OIDC 授权码回调与预绑定身份验证", () => {
   it("拒绝 IdP 兑换失败且不泄漏 Token Endpoint 异常", async () => {
     const harness = createHarness();
     harness.grantFailure = true;
-    await expect(
-      harness.service.complete(validResponse(), VALID_BROWSER_BINDING),
-    ).rejects.toThrow("OIDC 登录验证失败，请重新发起登录");
+    await expect(harness.service.complete(validResponse(), VALID_BROWSER_BINDING)).rejects.toThrow(
+      "OIDC 登录验证失败，请重新发起登录",
+    );
   });
 
   it("Discovery 或身份映射数据库不可用时返回固定中文错误", async () => {
     const provider = createHarness();
     provider.providerFailure = true;
-    await expect(
-      provider.service.complete(validResponse(), VALID_BROWSER_BINDING),
-    ).rejects.toThrow("OIDC 身份提供方暂时不可用，请稍后重试");
+    await expect(provider.service.complete(validResponse(), VALID_BROWSER_BINDING)).rejects.toThrow(
+      "OIDC 身份提供方暂时不可用，请稍后重试",
+    );
 
     const database = createHarness();
     database.identityQueryFailure = true;
-    await expect(
-      database.service.complete(validResponse(), VALID_BROWSER_BINDING),
-    ).rejects.toThrow("本地身份映射暂时不可用，请稍后重试");
+    await expect(database.service.complete(validResponse(), VALID_BROWSER_BINDING)).rejects.toThrow(
+      "本地身份映射暂时不可用，请稍后重试",
+    );
   });
 
   it("本地身份在会话签发时停用则拒绝登录", async () => {
     const harness = createHarness();
     harness.sessionFailure = "forbidden";
-    await expect(
-      harness.service.complete(validResponse(), VALID_BROWSER_BINDING),
-    ).rejects.toThrow("OIDC 登录验证失败，请重新发起登录");
+    await expect(harness.service.complete(validResponse(), VALID_BROWSER_BINDING)).rejects.toThrow(
+      "OIDC 登录验证失败，请重新发起登录",
+    );
   });
 
   it("本地会话数据库不可用时不泄漏底层异常", async () => {
     const harness = createHarness();
     harness.sessionFailure = "database";
-    await expect(
-      harness.service.complete(validResponse(), VALID_BROWSER_BINDING),
-    ).rejects.toThrow("本地会话创建失败，请稍后重试");
+    await expect(harness.service.complete(validResponse(), VALID_BROWSER_BINDING)).rejects.toThrow(
+      "本地会话创建失败，请稍后重试",
+    );
   });
 });

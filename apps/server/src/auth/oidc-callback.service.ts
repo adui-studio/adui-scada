@@ -17,9 +17,7 @@ import {
   SCADA_OIDC_STARTUP_CONFIG,
 } from "./oidc-provider-discovery.service.js";
 
-export const SCADA_OIDC_AUTHORIZATION_CODE_GRANT = Symbol(
-  "SCADA_OIDC_AUTHORIZATION_CODE_GRANT",
-);
+export const SCADA_OIDC_AUTHORIZATION_CODE_GRANT = Symbol("SCADA_OIDC_AUTHORIZATION_CODE_GRANT");
 export type OidcAuthorizationCodeGrant = typeof oidc.authorizationCodeGrant;
 
 const STATE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
