@@ -18,6 +18,25 @@ describe("身份与工程安全审计白名单", () => {
     expect(Object.isFrozen(record)).toBe(true);
   });
 
+  it("只允许固定的 Cookie、CSRF、Origin 与 Fetch Metadata 拒绝原因", () => {
+    const reasons = [
+      "malformed_cookie",
+      "ambiguous_credentials",
+      "csrf_rejected",
+      "origin_rejected",
+      "fetch_metadata_rejected",
+    ] as const;
+    for (const reason of reasons) {
+      expect(
+        createSafeSecurityAuditRecord({
+          action: "session.authenticate",
+          outcome: "denied",
+          reason,
+        }).reason,
+      ).toBe(reason);
+    }
+  });
+
   it("忽略额外的敏感字段，绝不复制 Authorization 或请求体", () => {
     const unsafeInput = {
       action: "project.authorize" as const,

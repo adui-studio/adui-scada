@@ -4,6 +4,7 @@ import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 import { NestFactory } from "@nestjs/core";
 import { Logger } from "nestjs-pino";
+import { resolveOidcStartupConfig } from "./config/oidc-startup.config.js";
 import { resolveServerStartupConfig } from "./config/server-startup.config.js";
 import { allowLocalDemoTelemetry } from "./demo/local-demo-access.js";
 import { getLocalOpenApiUrl, setupLocalOpenApi } from "./openapi/scada-openapi.js";
@@ -18,16 +19,24 @@ if (existsSync(envPath)) loadEnvFile(envPath);
 async function bootstrap(): Promise<void> {
   // AppModule 在模块求值时会创建 Pino 配置，必须在 .env 加载后再导入。
   const { port, host, localDocs } = resolveServerStartupConfig(process.env);
+  const oidc = resolveOidcStartupConfig(process.env);
   const allowDemo = allowLocalDemoTelemetry({
     enabled: process.env.SCADA_LOCAL_DEMO_API_ENABLED,
     nodeEnv: process.env.NODE_ENV,
     host,
   });
-  const { AppModule, LocalDemoAppModule } = await import("./app.module.js");
-  const app = await NestFactory.create(
-    allowDemo ? LocalDemoAppModule : AppModule,
-    SCADA_NEST_HTTP_OPTIONS,
-  );
+  if (oidc.enabled && allowDemo) {
+    throw new Error("OIDC 身份接入与本机模拟 API 不能同时启用");
+  }
+
+  // 仅在 OIDC 完整配置通过校验后加载数据库与身份模块；默认根模块仍不连接数据库。
+  const { AppModule, LocalDemoAppModule, OidcEnabledAppModule } = await import("./app.module.js");
+  const rootModule = oidc.enabled
+    ? OidcEnabledAppModule
+    : allowDemo
+      ? LocalDemoAppModule
+      : AppModule;
+  const app = await NestFactory.create(rootModule, SCADA_NEST_HTTP_OPTIONS);
   app.useLogger(app.get(Logger));
   applyHttpServerPolicy(app.getHttpServer());
   applyHttpSecurityHeaders(app, localDocs);

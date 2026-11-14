@@ -6,7 +6,12 @@ export type SecurityAuditOutcome = "allowed" | "denied";
 export type SecurityAuditReason =
   | "unsupported_context"
   | "malformed_authorization"
+  | "malformed_cookie"
+  | "ambiguous_credentials"
   | "invalid_session"
+  | "csrf_rejected"
+  | "origin_rejected"
+  | "fetch_metadata_rejected"
   | "verified"
   | "missing_policy"
   | "missing_principal"
@@ -36,7 +41,16 @@ type SecurityAuditReasonMap = Readonly<
 const ALLOWED_REASONS: Readonly<Record<SecurityAuditAction, SecurityAuditReasonMap>> = {
   "session.authenticate": {
     allowed: ["verified"],
-    denied: ["unsupported_context", "malformed_authorization", "invalid_session"],
+    denied: [
+      "unsupported_context",
+      "malformed_authorization",
+      "malformed_cookie",
+      "ambiguous_credentials",
+      "invalid_session",
+      "csrf_rejected",
+      "origin_rejected",
+      "fetch_metadata_rejected",
+    ],
   },
   "project.authorize": {
     allowed: ["permission_granted"],
@@ -79,8 +93,8 @@ export function createSafeSecurityAuditRecord(
 }
 
 /**
- * 现阶段写入 NestJS 应用日志；生产持久化审计、失败处理与保留策略后续专项实现。
- * 本模块未挂入正式 AppModule，当前不会产生实际身份审计流量。
+ * 写入 NestJS 诊断日志；生产持久化审计、失败处理与保留策略后续专项实现。
+ * 只有显式加载身份模块后才会产生认证审计流量。
  */
 @Injectable()
 export class ScadaSecurityAuditService implements SecurityAuditReporter {

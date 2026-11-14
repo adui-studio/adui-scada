@@ -111,6 +111,8 @@ model ScadaIdentity {
   updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
   /// 该主体的短期服务端会话集合。
   sessions  ScadaAuthSession[]
+  /// 该主体预绑定的 OIDC 外部身份集合。
+  externalIdentities ScadaExternalIdentity[]
 
   @@id([tenantId, subjectId])
   @@map("scada_identities")
@@ -132,9 +134,58 @@ model ScadaAuthSession {
   expiresAt DateTime      @map("expires_at") @db.Timestamptz(6)
   /// 会话显式撤销时间；为空表示尚未撤销。
   revokedAt DateTime?     @map("revoked_at") @db.Timestamptz(6)
+  /// 浏览器 Cookie 会话的 CSRF 令牌摘要；旧 Bearer 会话允许为空。
+  csrfTokenHash String?  @map("csrf_token_hash") @db.VarChar(64)
   /// 该会话关联的租户内可信主体。
   identity  ScadaIdentity @relation(fields: [tenantId, subjectId], references: [tenantId, subjectId], onDelete: Restrict)
 
   @@index([tenantId, subjectId, expiresAt], map: "scada_auth_sessions_subject_expiry_idx")
   @@map("scada_auth_sessions")
+}
+
+
+/// 经过受信运维流程预绑定的外部 OIDC 身份；邮箱与角色声明不作为主体主键。
+model ScadaExternalIdentity {
+  /// 经过服务端配置和 Discovery 校验的固定 OIDC Issuer。
+  issuer String @db.VarChar(512)
+  /// OIDC Issuer 内唯一的 subject，不允许通过邮箱或用户名替代。
+  subject String @db.VarChar(256)
+  /// 该外部身份映射到的本地租户标识。
+  tenantId String @map("tenant_id") @db.VarChar(128)
+  /// 该外部身份映射到的租户内可信主体标识。
+  subjectId String @map("subject_id") @db.VarChar(128)
+  /// 预绑定记录创建时间。
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 只能映射到已经建立的本地可信主体。
+  identity ScadaIdentity @relation(fields: [tenantId, subjectId], references: [tenantId, subjectId], onDelete: Restrict)
+
+  @@id([issuer, subject])
+  @@index([tenantId, subjectId], map: "scada_external_identities_identity_idx")
+  @@map("scada_external_identities")
+}
+
+/// 一次性 OIDC 登录事务：不存储 PKCE verifier 明文、授权码或任何 IdP Token。
+model ScadaOidcTransaction {
+  /// 高熵 state 的 SHA-256 小写十六进制摘要，用作一次性主键。
+  stateHash String @id @map("state_hash") @db.VarChar(64)
+  /// 创建登录事务时固定的 OIDC Issuer。
+  issuer String @db.VarChar(512)
+  /// 仅用于验证回调 ID Token 的 nonce，不是账号身份。
+  nonce String @db.VarChar(128)
+  /// AES-256-GCM 加密后的 PKCE verifier 密文及所需解密参数。
+  verifierCiphertext String @map("verifier_ciphertext") @db.Text
+  /// 绑定发起登录浏览器的随机 Cookie SHA-256 摘要。
+  browserBindingHash String @map("browser_binding_hash") @db.VarChar(64)
+  /// 校验过的站内相对跳转路径，禁止外部重定向。
+  returnPath String @map("return_path") @db.VarChar(1024)
+  /// 登录事务创建时间。
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 登录事务绝对过期时间，默认应用层设为五分钟。
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  /// 原子消费时间；为空表示尚未消费。
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(6)
+
+  @@index([expiresAt, consumedAt], map: "scada_oidc_transactions_expiry_idx")
+  @@index([browserBindingHash, expiresAt], map: "scada_oidc_transactions_browser_idx")
+  @@map("scada_oidc_transactions")
 }

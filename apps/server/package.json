@@ -31,6 +31,7 @@
     "@prisma/client": "catalog:",
     "helmet": "catalog:",
     "nestjs-pino": "catalog:",
+    "openid-client": "catalog:",
     "pg": "catalog:",
     "pino": "catalog:",
     "pino-http": "catalog:",

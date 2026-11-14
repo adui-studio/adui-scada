@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { PrismaService } from "../database/prisma.service.js";
+import { DatabaseModule } from "../database/database.module.js";
 import { PrismaProjectVersionStore } from "./prisma-project-version-store.js";
 
 /**
@@ -7,7 +7,8 @@ import { PrismaProjectVersionStore } from "./prisma-project-version-store.js";
  * 当前 AppModule 不导入此模块，不能通过 HTTP 访问工程版本仓储。
  */
 @Module({
-  providers: [PrismaService, PrismaProjectVersionStore],
+  imports: [DatabaseModule],
+  providers: [PrismaProjectVersionStore],
   exports: [PrismaProjectVersionStore],
 })
 export class ProjectPersistenceModule {}

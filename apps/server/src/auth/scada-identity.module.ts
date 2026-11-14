@@ -1,22 +1,60 @@
 import { Module } from "@nestjs/common";
-import { PrismaService } from "../database/prisma.service.js";
+import * as oidc from "openid-client";
+import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
+import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
+import { DatabaseModule } from "../database/database.module.js";
 import { ScadaSecurityAuditService } from "../security/scada-security-audit.js";
 import { AuthSessionService } from "./auth-session.service.js";
+import { OidcLoginTransactionService } from "./oidc-login-transaction.service.js";
+import {
+  OidcCallbackService,
+  SCADA_OIDC_AUTHORIZATION_CODE_GRANT,
+} from "./oidc-callback.service.js";
+import { ScadaAuthController } from "./scada-auth.controller.js";
 import { ScadaProjectGuard } from "./scada-project.guard.js";
 import { ScadaSessionGuard } from "./scada-session.guard.js";
+import {
+  OidcProviderDiscoveryService,
+  SCADA_OIDC_STARTUP_CONFIG,
+} from "./oidc-provider-discovery.service.js";
 
 /**
- * 仅包含会话身份与工程 ACL 基础，当前不导入 AppModule，也不注册认证或写入 HTTP 路由。
- * 未来集成时必须将 PrismaService 调整为与工程事务仓储共享的单实例提供方。
+ * 仅在显式启用 OIDC 的根模块中加载身份路由与会话服务。
+ * PrismaService 由共享 DatabaseModule 提供，避免与工程仓储重复连接数据库。
  */
 @Module({
+  imports: [DatabaseModule],
+  controllers: [ScadaAuthController],
   providers: [
-    PrismaService,
+    {
+      provide: SCADA_OIDC_STARTUP_CONFIG,
+      useFactory: (): EnabledOidcConfig => {
+        const config = resolveOidcStartupConfig(process.env);
+        if (!config.enabled) {
+          throw new Error("OIDC 身份模块只能在显式启用后加载");
+        }
+        return config;
+      },
+    },
     AuthSessionService,
+    OidcProviderDiscoveryService,
+    OidcLoginTransactionService,
+    {
+      provide: SCADA_OIDC_AUTHORIZATION_CODE_GRANT,
+      useValue: oidc.authorizationCodeGrant,
+    },
+    OidcCallbackService,
     ScadaSecurityAuditService,
     ScadaSessionGuard,
     ScadaProjectGuard,
   ],
-  exports: [AuthSessionService, ScadaSessionGuard, ScadaProjectGuard],
+  exports: [
+    AuthSessionService,
+    OidcProviderDiscoveryService,
+    OidcLoginTransactionService,
+    OidcCallbackService,
+    ScadaSessionGuard,
+    ScadaProjectGuard,
+  ],
 })
 export class ScadaIdentityModule {}

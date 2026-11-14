@@ -1,5 +1,7 @@
 # ADui SCADA · 代码地图
 
+> **开始编码前**：按根目录 [AGENTS.md](../AGENTS.md) 的要求，先重读 [AI 编码错误复盘清单](AI_MISTAKES.md) 全文；本文件只用来定位代码与文档，不能替代复盘与仓库规范。
+
 > 2026-11-09，基于 V0.1 Web 整合开发分支；分支尚待完整本地依赖安装、类型检查及构建验收。
 
 | 路径                                            | 已实现职责                                                   |
@@ -580,3 +582,79 @@
 - scripts/test-studio-browser.mjs：新增 --legacy 模式，使用隔离浏览器分别测试 React/Vue 的 localStorage 旧草稿迁移、IndexedDB 旧 Schema 事务升级与 Project Snapshot 历史摘要校验。
 - package.json：新增 test:legacy:browser 入口。
 - docs/adr/0064-legacy-browser-migration-validation.md：记录三条真实浏览器迁移路径、SHA-256 与原记录保留边界。
+
+## 2026-11-14 · 第三十三批目标目录（规划，尚未落地）
+
+- apps/server/src/database/database.module.ts：计划统一导出 PrismaService 单例。
+- apps/server/src/auth/oidc/：计划实现固定 Issuer Discovery、OIDC 登录事务、外部身份映射和 BFF 回调。
+- apps/server/src/projects/：计划扩展工程创建/列表/摘要/历史版本 API，沿用现有事务仓储和 ACL。
+- packages/api-client/：计划提供 Vue/React 共用的同源 API、Cookie/CSRF 与响应错误适配。
+- docs/adr/0065-oidc-bff-and-project-api.md、docs/plans/v0.3-batch-33-oidc-project-api.md：本批架构决策和实施计划。以上代码路径均为计划，不代表当前 main 已存在。
+
+## 2026-11-14 · 第三十三批阶段 A 实际落地的文件
+
+- `apps/server/src/database/database.module.ts`：共享 PrismaService 单例提供方，只有显式引入的业务模块才可实例化。
+- `apps/server/src/auth/scada-identity.module.ts` 与 `apps/server/src/projects/project-persistence.module.ts`：改为导入 DatabaseModule。
+- `apps/server/src/config/oidc-startup.config.ts`：OIDC 默认关闭配置、HTTPS/开发回环地址、固定回调及加密密钥校验。
+- `apps/server/src/config/oidc-startup.config.spec.ts`：配置、密钥、URL、安全开关负面测试。
+- `apps/server/src/database/database.module.spec.ts`：共享 Prisma 模块与默认不挂载的安全装配检查。
+- `apps/server/src/main.ts`：认证流程未实现前的 OIDC enabled 显式拒绝启动。
+- `apps/server/prisma/schema.prisma`：外部身份预绑定、短期 OIDC 事务与会话可空 CSRF 摘要。
+- `apps/server/prisma/migrations/20261114000000_oidc_identity_transactions/migration.sql`：增量 PostgreSQL DDL、约束、索引及中文数据库元数据注释。
+- 根 `.env.example` 与 `scripts/check-env-config.mjs`：默认禁用的 OIDC 配置占位和环境检查。
+
+OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client 及第三方依赖锁文件仍未实现；上述路径不可被视作已开放的认证能力。
+
+### 第三十三批阶段 A 实际目录补充（2026-11-14）
+
+- `docs/AI_MISTAKES.md`：AI 每次编码前必读的真实错误复盘与防复发清单（9 项案例）。
+- `apps/server/src/database/database.module.ts`：共享 PrismaService 单例模块。
+- `apps/server/src/config/oidc-startup.config.ts`：默认关闭的 OIDC 启动配置校验。
+- `apps/server/prisma/migrations/20261114000000_oidc_identity_transactions/migration.sql`：外部身份、OIDC 事务和 CSRF 摘要的增量 SQL。
+- OIDC 依赖 `openid-client@6.8.9` 已加入 Catalog、Server Manifest 和锁文件；登录/回调、会话 Cookie/CSRF 及工程 Controller 仍未实现。
+
+### 第三十三批新增真实 PostgreSQL 测试
+
+- `apps/server/test/oidc-schema.db-spec.ts`：独立 `test:db` 入口，验证 OIDC 增量迁移真实落库、迁移登记、外键/约束/索引及中文数据库元数据；仅允许本机 `adui_scada_test`。
+
+### 第三十三批阶段 B 第一小批：OIDC Discovery
+
+- `apps/server/src/auth/oidc-provider-discovery.service.ts`：固定 Issuer Discovery、元数据能力校验、HTTPS/回环 HTTP 请求边界、惰性缓存与安全错误映射。
+- `apps/server/src/auth/oidc-provider-discovery.service.spec.ts`：Mock Fetch Discovery、元数据负例、端点协议边界、并发复用及失败重试测试。
+- `apps/server/src/auth/scada-identity.module.ts`：通过严格启动配置 Token 注册 Discovery 服务；该模块仍未由默认 AppModule 挂载。
+- `apps/server/src/config/oidc-startup.config.ts`：拒绝将 `/.well-known/` Discovery 文档路径误配为 Issuer。
+- `apps/server/src/main.ts`：继续在认证、CSRF 与工程 ACL 全部完成前拒绝启用 OIDC。
+
+### 第三十三批阶段 B 第二小批：OIDC 一次性登录事务
+
+- `apps/server/src/auth/oidc-login-transaction.service.ts`：生成 State/Nonce/PKCE、AES-256-GCM 加密 verifier、浏览器绑定摘要、站内回跳路径校验、PostgreSQL 一次性原子消费。
+- `apps/server/src/auth/oidc-login-transaction.service.spec.ts`：授权请求参数、密文往返、跨浏览器/过期/重复/并发消费、回跳路径和数据库异常测试。
+- `apps/server/src/auth/scada-identity.module.ts`：注册事务服务；模块仍未由默认 AppModule 挂载。
+
+### 第三十三批阶段 B 第三小批：OIDC 授权码回调
+
+- `apps/server/src/auth/oidc-callback.service.ts`：固定回调 URI、Authorization Code + PKCE 兑换、State/Nonce/Issuer/Audience/azp/Subject 校验、预绑定 `(iss, sub)` 身份查询与本地会话签发。
+- `apps/server/src/auth/oidc-callback.service.spec.ts`：Mock 授权码兑换、ID Token Claims、外部身份映射、会话签发与错误脱敏测试。
+- `apps/server/src/auth/scada-identity.module.ts`：注入 openid-client `authorizationCodeGrant` 并注册回调服务；模块仍未由默认 AppModule 挂载。
+- 当前尚无 OIDC Controller；回调服务的 sessionToken 仅供后续服务端 Controller 设置 HttpOnly Cookie。
+
+### 第三十三批阶段 B 第四小批：BFF Cookie 与 CSRF 会话保护
+
+- `apps/server/src/auth/auth-session.service.ts`：新会话同时签发独立 CSRF Token、只存摘要；提供 Cookie 会话验证和旧 Bearer 兼容。
+- `apps/server/src/auth/scada-auth-cookie.ts`：构造/清除 `__Host-` Session 与 CSRF Cookie，统一 Secure、HttpOnly、SameSite、Path 和有效期属性。
+- `apps/server/src/auth/scada-session.guard.ts`：显式 Bearer/Cookie 双路径、凭据混用拒绝、精确 Origin、Fetch Metadata、CSRF 双提交与数据库摘要验证。
+- `apps/server/src/auth/scada-auth-cookie.spec.ts`：Cookie 签发与清除属性测试。
+- `apps/server/src/auth/scada-session.guard.spec.ts`：Bearer 兼容、Cookie 请求、CSRF/Origin/Fetch Metadata 和审计脱敏测试。
+- `apps/server/src/auth/scada-identity.spec.ts`：会话 CSRF 摘要存储、Cookie 校验与旧 Bearer 会话兼容回归。
+- `apps/server/src/security/scada-security-audit.ts`：新增 Cookie/CSRF/Origin/Fetch Metadata 固定拒绝原因码。
+- 当前无 HTTP Controller；Identity 模块仍未由默认 AppModule 挂载。
+
+### 第三十三批阶段 B 第五小批：OIDC BFF HTTP 控制器与认证路由
+
+- `apps/server/src/auth/scada-auth.controller.ts`：OIDC 登录发起/回调、最小本地身份查询与当前会话注销；只编排既有服务，不重复实现 OIDC 协议。
+- `apps/server/src/auth/scada-auth-cookie.ts`：新增短时 `__Host-adui-scada-oidc-browser` Cookie 与严格 Cookie 读取函数，保留 Session/CSRF Cookie 签发和清除。
+- `apps/server/src/auth/scada-identity.module.ts`：仅在 OIDC 启用根模块中注册 `ScadaAuthController`。
+- `apps/server/src/app.module.ts`：新增 `OidcEnabledAppModule`，只组合基础 AppModule 和 ScadaIdentityModule，不加载工程持久化模块。
+- `apps/server/src/main.ts`：根据完整 OIDC 配置选择根模块；默认健康模块保持数据库隔离，OIDC 与本机模拟 API 冲突时拒绝启动。
+- `apps/server/test/oidc-auth.controller.e2e-spec.ts`：登录重定向、Cookie、回调、`me/logout`、CSRF 与 Bearer 兼容 HTTP E2E。
+- `apps/server/src/database/database.module.spec.ts`、`apps/server/test/app.e2e-spec.ts`：模块装配与默认根模块身份路由 404 回归。
