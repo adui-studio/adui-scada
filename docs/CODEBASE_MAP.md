@@ -580,3 +580,12 @@
 - scripts/test-studio-browser.mjs：新增 --legacy 模式，使用隔离浏览器分别测试 React/Vue 的 localStorage 旧草稿迁移、IndexedDB 旧 Schema 事务升级与 Project Snapshot 历史摘要校验。
 - package.json：新增 test:legacy:browser 入口。
 - docs/adr/0064-legacy-browser-migration-validation.md：记录三条真实浏览器迁移路径、SHA-256 与原记录保留边界。
+
+
+## 2026-11-14 · 第三十三批目标目录（规划，尚未落地）
+
+- apps/server/src/database/database.module.ts：计划统一导出 PrismaService 单例。
+- apps/server/src/auth/oidc/：计划实现固定 Issuer Discovery、OIDC 登录事务、外部身份映射和 BFF 回调。
+- apps/server/src/projects/：计划扩展工程创建/列表/摘要/历史版本 API，沿用现有事务仓储和 ACL。
+- packages/api-client/：计划提供 Vue/React 共用的同源 API、Cookie/CSRF 与响应错误适配。
+- docs/adr/0065-oidc-bff-and-project-api.md、docs/plans/v0.3-batch-33-oidc-project-api.md：本批架构决策和实施计划。以上代码路径均为计划，不代表当前 main 已存在。
