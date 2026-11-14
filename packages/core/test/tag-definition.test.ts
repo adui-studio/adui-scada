@@ -3,6 +3,7 @@ import {
   TagDefinitionCatalog,
   TagStore,
   TAG_DATA_TYPE_LABELS,
+  tagDefinitionSupportsSlot,
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
   waterTreatmentDemoTagCatalog,
@@ -54,6 +55,7 @@ test("水处理演示 Tag 定义提供稳定 ID、类型和单位，质量保持
     },
   ]);
   expect(TAG_DATA_TYPE_LABELS).toEqual({
+    unknown: "待确认",
     number: "数值",
     boolean: "布尔值",
     string: "文本",
@@ -71,6 +73,32 @@ test("水处理演示 Tag 定义提供稳定 ID、类型和单位，质量保持
   const copy = waterTreatmentDemoTagCatalog.get("water.level");
   if (copy) Object.assign(copy, { displayName: "外部篡改" });
   expect(waterTreatmentDemoTagCatalog.get("water.level")?.displayName).toBe("模拟水位");
+});
+
+test("历史待确认类型不猜测实时值类型，且绑定槽只接受明确兼容类型", () => {
+  const unknown = new TagDefinitionCatalog([
+    {
+      tagId: "legacy.level",
+      displayName: "历史水位",
+      dataType: "unknown",
+      unit: null,
+      description: "历史工程迁移占位",
+    },
+  ]);
+  expect(() =>
+    unknown.validateValueType({
+      tagId: "legacy.level",
+      value: "任意旧值",
+      quality: "GOOD",
+      sourceTimestamp: null,
+      serverTimestamp: "2026-11-14T00:00:00.000Z",
+      sequence: 1,
+    }),
+  ).not.toThrow();
+  expect(tagDefinitionSupportsSlot(unknown.get("legacy.level")!, "level")).toBe(false);
+  expect(tagDefinitionSupportsSlot(waterTreatmentDemoTagDefinitions[0]!, "level")).toBe(true);
+  expect(tagDefinitionSupportsSlot(waterTreatmentDemoTagDefinitions[1]!, "running")).toBe(true);
+  expect(tagDefinitionSupportsSlot(waterTreatmentDemoTagDefinitions[1]!, "level")).toBe(false);
 });
 
 test("Tag 定义目录拒绝重复 ID、未知字段和非法元数据", () => {
