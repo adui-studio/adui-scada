@@ -84,6 +84,20 @@ test("0.3.0 工程必须包含 Tag 目录且所有图元绑定必须引用已定
   expect(() => parseScadaDocument(dangling)).toThrow(/引用了未定义的 Tag：water.level/);
 });
 
+test("当前工程拒绝已知图元绑定槽的数据类型不兼容并保留历史待确认绑定", () => {
+  const invalid = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  const level = invalid.tags.find((tag: { tagId: string }) => tag.tagId === "water.level");
+  level.dataType = "boolean";
+  expect(() => parseScadaDocument(invalid)).toThrow(/Tag 数据类型与绑定槽不兼容/);
+
+  const legacy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  legacy.schemaVersion = "0.2.0";
+  delete legacy.tags;
+  const migrated = migrateScadaDocument(legacy).document;
+  expect(migrated.tags.every((tag) => tag.dataType === "unknown")).toBe(true);
+  expect(() => parseScadaDocument(migrated)).not.toThrow();
+});
+
 test("平面组合标识在 JSON 往返中保留且不改变原有 Tag 绑定", () => {
   const original = parseScadaDocument(waterTreatmentDemoDocument);
   original.pages[0]!.nodes[0]!.groupId = "group-a";
