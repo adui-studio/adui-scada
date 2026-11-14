@@ -588,3 +588,18 @@
 - apps/server/src/projects/：计划扩展工程创建/列表/摘要/历史版本 API，沿用现有事务仓储和 ACL。
 - packages/api-client/：计划提供 Vue/React 共用的同源 API、Cookie/CSRF 与响应错误适配。
 - docs/adr/0065-oidc-bff-and-project-api.md、docs/plans/v0.3-batch-33-oidc-project-api.md：本批架构决策和实施计划。以上代码路径均为计划，不代表当前 main 已存在。
+
+
+## 2026-11-14 · 第三十三批阶段 A 实际落地的文件
+
+- `apps/server/src/database/database.module.ts`：共享 PrismaService 单例提供方，只有显式引入的业务模块才可实例化。
+- `apps/server/src/auth/scada-identity.module.ts` 与 `apps/server/src/projects/project-persistence.module.ts`：改为导入 DatabaseModule。
+- `apps/server/src/config/oidc-startup.config.ts`：OIDC 默认关闭配置、HTTPS/开发回环地址、固定回调及加密密钥校验。
+- `apps/server/src/config/oidc-startup.config.spec.ts`：配置、密钥、URL、安全开关负面测试。
+- `apps/server/src/database/database.module.spec.ts`：共享 Prisma 模块与默认不挂载的安全装配检查。
+- `apps/server/src/main.ts`：认证流程未实现前的 OIDC enabled 显式拒绝启动。
+- `apps/server/prisma/schema.prisma`：外部身份预绑定、短期 OIDC 事务与会话可空 CSRF 摘要。
+- `apps/server/prisma/migrations/20261114000000_oidc_identity_transactions/migration.sql`：增量 PostgreSQL DDL、约束、索引及中文数据库元数据注释。
+- 根 `.env.example` 与 `scripts/check-env-config.mjs`：默认禁用的 OIDC 配置占位和环境检查。
+
+OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client 及第三方依赖锁文件仍未实现；上述路径不可被视作已开放的认证能力。
