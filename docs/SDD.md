@@ -629,6 +629,17 @@ React 的 TagManager.tsx 与 Vue 的 TagManager.vue 只保存用户正在填写�
 
 ### 浏览器验证
 
-新增 pnpm run test:tags:browser，使用当前已有 CDP 浏览器验收设施，在 React/Vue 两端验证新增、编辑、删除保护和删除，并读取实际导出的 JSON 做一致性断言。脚本端口从仓库根 .env 读取，避免旧进程错连。仍需真实 Windows 浏览器执行并补充可视、键盘和跨框架人工回归。
+新增 pnpm run test:tags:browser，使用当前已有 CDP 浏览器验收设施，在 React/Vue 两端验证新增、编辑、删除保护和删除，并读取实际导出的 JSON 做一致性断言。维护者 Windows 实测两端通过，退出码 0；ready 和 test:interop 同样通过。键盘/视觉人工检查仍可后续完善。
 
 见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md)。
+
+
+## 2026-11-14 · V0.3 第三十二批：历史工程与浏览器持久化迁移回归契约
+
+浏览器 CDP 测试新增 --legacy 模式，按 React、Vue 两个 Origin 分别执行三条真实迁移路径：
+
+1. localStorage：构造 LocalDraft 格式版本 1 包装和 0.2.0 工程，刷新 Studio 触发真实 DexieDraftRepository 读取迁移，验证写入 IndexedDB 后才清理旧键，并通过 UI 恢复草稿。
+2. IndexedDB：在既有 adui-scada-studio 数据库中写入 revision 4 的 0.2.0 草稿，刷新 Studio 触发事务迁移，验证 Schema 0.3.0、revision 5、unknown Tag 及原绑定，并通过 UI 恢复。
+3. Project Snapshot：在既有 adui-scada-studio-versions 数据库中构造 formatVersion 1 的 0.2.0 历史快照，按 Core 稳定键排序规则计算原 SHA-256；经 Studio 版本历史载入，验证当前文档副本迁移到 0.3.0、Tag 为 unknown、绑定保留，同时读取原记录确认原摘要与旧文档未被改写。
+
+三条路径在 Vue/React 两端独立执行；测试只使用隔离 Chrome/Edge 用户目录和本机开发服务，不触碰真实用户 Profile、生产数据库或工业设备。新增 pnpm run test:legacy:browser，详见 [ADR-0064](adr/0064-legacy-browser-migration-validation.md)。当前仅完成测试代码与静态审查，未在 Windows 实际运行。
