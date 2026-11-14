@@ -786,7 +786,6 @@ Vue/React Studio 均从当前工程 `state.document.tags` 读取目录与绑定�
 
 React SSE 浏览器和 TCP 故障测试均在进入 EventSource 订阅前报 `error`，并未进入 Vue 验收。已为浏览器脚本增加工程版本及 Tag 目录预检查和实际 Runtime 错误文案输出。当前仅怀疑旧模拟服务进程未重启或返回不匹配的工程版本，缺少实际响应记录，不能据此声称已修复 SSE 运行时故障。代码修复提交后仍需维护者执行 Windows 全链、双框架浏览器及人工验证，详见 [VALIDATION](VALIDATION.md)。PR #52 保持 Draft，未合并。
 
-
 ### 第三十批 Windows 完整质量链已跑通，模拟服务版本阻塞 SSE 浏览器（2026-11-14）
 
 维护者第二轮 PowerShell 实测确认：`test:unit` **438/438**（38 文件）、`test:runtime` **40/40**（4 文件）、`test:e2e:server` **17/17**（3 文件）通过；`vp check` **268 文件格式正确、133 文件零错误**，`docs:check` **78 份 Markdown 通过**。`pnpm run ready` 已执行完整单测、SSE 资源 8/8、TCP 故障代理 4/4、NestJS E2E 17/17、双框架类型检查和构建（React 3900、Vue 3845 模块）及 NestJS 构建，日志末尾没有报错；维护者未单独打印该命令的退出码。原有 SVG 测试夹具和历史工程迁移测试故障已被最新修复覆盖，不再复现。
