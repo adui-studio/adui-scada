@@ -371,3 +371,12 @@ Runtime 生命周期按连接代次隔离：停止时中止 fetch、关闭 SSE�
 ## 2026-11-14 · V0.3 第三十一至三十二批：项目 Tag 管理与历史数据迁移验收
 
 第三十一批已合并：Vue/React Studio 的项目 Tag 管理表单分别渲染，但统一调用共享 DocumentEditor，Tag 目录仍只存在于 ScadaDocument 0.3.0；浏览器验证覆盖新增、编辑、删除保护及 JSON 往返。第三十二批不改变业务迁移实现，仅扩展隔离 Chrome/Edge CDP 回归，分别从 localStorage、IndexedDB 旧草稿和旧 Project Snapshot 验证真实浏览器迁移、原绑定保留、unknown 类型占位与原快照摘要不变。详见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md) 和 [ADR-0064](adr/0064-legacy-browser-migration-validation.md)。
+
+
+## 2026-11-14 · V0.3 第三十三批：OIDC BFF 与服务端工程 API 架构
+
+认证边界为“浏览器 → 同源 NestJS BFF → 固定配置的 OIDC Issuer”。Vue/React 不直接访问 IdP Token Endpoint、不持有 IdP Token；NestJS 使用 openid-client 处理 Discovery 与 Authorization Code + PKCE，验证 ID Token 后将外部 (iss, sub) 映射到预先配置的本地 (tenantId, subjectId)。租户和工程 ACL 仍由 PostgreSQL 的 ScadaIdentity/ScadaProjectGrant 管理，不信任邮箱或角色 Claim 自动授权。
+
+OIDC 事务和会话均由 PostgreSQL 共享状态；短期事务使用 state 摘要、AES-256-GCM 加密 PKCE verifier、浏览器绑定与一次性消费。内部会话沿用 AuthSessionService，使用 HttpOnly Secure Cookie 与会话绑定 CSRF 保护。新增 DatabaseModule 统一 PrismaService，避免 Identity 与 Project Persistence 重复创建连接池。OIDC 默认关闭，健康探针默认不触发数据库连接。
+
+工程 API 通过同源 /api/v1 提供工程创建、读取、列表和历史版本操作；所有操作复用 Project ACL、工程行锁、CAS 和 SHA-256 ProjectSnapshot，不开放发布/回滚、工业地址或设备写入。React/Vue 共用框架无关 API Client。详细决策见 [ADR-0065](adr/0065-oidc-bff-and-project-api.md)。
