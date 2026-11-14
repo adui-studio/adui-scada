@@ -56,8 +56,11 @@ export function validateTagValue(input: TagValue): TagValue {
 export class TagStore {
   private readonly values = new Map<string, TagValue>();
   private readonly listeners = new Set<TagListener>();
+  private readonly catalog?: TagDefinitionCatalog;
 
-  constructor(private readonly catalog?: TagDefinitionCatalog) {}
+  constructor(catalog?: TagDefinitionCatalog) {
+    this.catalog = catalog;
+  }
 
   snapshot(): readonly TagValue[] {
     return [...this.values.values()].map((value) => ({ ...value }));
