@@ -683,3 +683,12 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 - [ ] 安装 `openid-client@6.8.9` 并通过 pnpm 原生命令同步 Catalog、Server manifest 和锁文件。
 
 本批目前没有 OIDC 登录、回调、会话 Cookie/CSRF 签发、工程 API 或真实 IdP 联调。当前启用 OIDC 会被服务端拒绝启动，这是阶段 A 的明确安全限制，不是已实现的登录功能。
+
+
+### 第三十三批 OIDC 配置测试警告修复（2026-11-14）
+
+维护者执行 `vp check --fix` 报告 **0 错误、7 警告**：其中 `oidc-startup.config.spec.ts` 有五处 `vitest(require-to-throw-message)`、一处 `vitest(no-conditional-expect)`，`oidc-startup.config.ts` 有一处 `typescript(no-misused-spread)`。格式修复已由维护者本机命令执行，但这不代表静态检查零警告。
+
+已在开发分支最小修复：为五处异常断言指定准确中文错误消息；使用锚定正则校验完整异常消息以验证敏感字符串不会泄露，并删除条件式 `expect`；使用索引和 `charCodeAt()` 检测 UTF-16 码元控制字符，不再展开字符串。未改变 OIDC 开关、验证策略、Prisma 模型、SQL 迁移或工程 API。
+
+当前仅完成远端代码修改和静态片段核对；尚未取得修复后的 Windows `vp check`、Vitest 或 `ready` 运行结果，**不得标记本次修复已通过完整验证**。
