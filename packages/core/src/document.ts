@@ -1,9 +1,14 @@
+import { TagDefinitionCatalog } from "./tag-definition.ts";
+import type { TagDefinition } from "./tag-definition.ts";
+
 /** 工程文档契约：仅支持受验证的 JSON 数据，禁止执行脚本。 */
-export const SCADA_SCHEMA_VERSION = "0.2.0";
-/** 仅在显式导入时支持升级的历史工程版本。 */
+export const SCADA_SCHEMA_VERSION = "0.3.0";
+/** 上一正式工程版本；仅允许通过显式迁移入口升级。 */
+export const PREVIOUS_SCADA_SCHEMA_VERSION = "0.2.0";
+/** 更早的历史工程版本；仅允许通过显式迁移入口升级。 */
 export const LEGACY_SCADA_SCHEMA_VERSION = "0.1.0";
 
-/** 通过现有 props 扩展承载 Studio 图层状态，不改变工程 0.2.0 的顶层结构。 */
+/** 通过现有 props 扩展承载 Studio 图层状态，不改变工程 Tag 目录结构。 */
 export const STUDIO_NODE_STATE_KEY = "__scadaStudio";
 
 export type TagId = string;
@@ -46,12 +51,15 @@ export interface ScadaPage {
 export interface ScadaDocument {
   schemaVersion: typeof SCADA_SCHEMA_VERSION;
   projectId: string;
+  /** 项目级 Tag 元数据随工程 JSON、草稿和历史快照一起持久化。 */
+  tags: TagDefinition[];
   pages: ScadaPage[];
 }
 
 const ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const MAX_PAGES = 100;
 const MAX_NODES = 2000;
+const MAX_TAGS = 4096;
 
 function fail(path: string, reason: string): never {
   throw new TypeError(`${path}: ${reason}`);
@@ -145,7 +153,13 @@ function parseVersionedDocument(input: unknown, sourceVersion: string): ScadaDoc
   if (root.schemaVersion !== sourceVersion) {
     fail("schemaVersion", `不支持的版本，预期为 ${sourceVersion}`);
   }
-  knownFields(root, ["schemaVersion", "projectId", "pages"], "文档");
+  knownFields(
+    root,
+    sourceVersion === SCADA_SCHEMA_VERSION
+      ? ["schemaVersion", "projectId", "tags", "pages"]
+      : ["schemaVersion", "projectId", "pages"],
+    "文档",
+  );
   const projectId = identifier(root.projectId, "projectId");
   if (!Array.isArray(root.pages) || root.pages.length === 0 || root.pages.length > MAX_PAGES) {
     fail("pages", `页面数量必须在 1～${MAX_PAGES} 之间`);
@@ -241,7 +255,48 @@ function parseVersionedDocument(input: unknown, sourceVersion: string): ScadaDoc
     if (ids.has(groupId)) fail("groupId", "组合 ID 与图元或页面 ID 冲突");
     if (group.count < 2) fail("groupId", "组合至少需要两个图元");
   }
-  return { schemaVersion: SCADA_SCHEMA_VERSION, projectId, pages };
+
+  let tags: TagDefinition[];
+  if (sourceVersion === SCADA_SCHEMA_VERSION) {
+    if (!Array.isArray(root.tags)) fail("tags", "当前工程必须包含 Tag 定义数组");
+    if (root.tags.length > MAX_TAGS) fail("tags", `Tag 定义数量超过上限 ${MAX_TAGS}`);
+    try {
+      tags = [...new TagDefinitionCatalog(root.tags as TagDefinition[]).snapshot()];
+    } catch (error) {
+      fail("tags", error instanceof Error ? error.message : "Tag 定义无效");
+    }
+  } else {
+    // 历史工程没有类型元数据；为每个已有绑定创建待确认占位定义，绝不猜测数据类型。
+    const legacyIds = new Set(
+      pages.flatMap((page) =>
+        page.nodes.flatMap((node) => Object.values(node.bindings).map((binding) => binding.tagId)),
+      ),
+    );
+    if (legacyIds.size > MAX_TAGS) fail("tags", `历史工程绑定的 Tag 数量超过上限 ${MAX_TAGS}`);
+    tags = [...legacyIds].sort().map((tagId) => ({
+      tagId,
+      displayName: tagId,
+      dataType: "unknown" as const,
+      unit: null,
+      description: "由历史工程迁移生成，数据类型与单位待维护者确认",
+    }));
+  }
+
+  const definedTagIds = new Set(tags.map((tag) => tag.tagId));
+  for (const [pageIndex, page] of pages.entries()) {
+    for (const [nodeIndex, node] of page.nodes.entries()) {
+      for (const [slot, binding] of Object.entries(node.bindings)) {
+        if (!definedTagIds.has(binding.tagId)) {
+          fail(
+            `pages[${pageIndex}].nodes[${nodeIndex}].bindings.${slot}.tagId`,
+            `引用了未定义的 Tag：${binding.tagId}`,
+          );
+        }
+      }
+    }
+  }
+
+  return { schemaVersion: SCADA_SCHEMA_VERSION, projectId, tags, pages };
 }
 
 /** 内部调用及 Runtime 只允许当前 Schema；旧版本必须走显式迁移入口。 */
@@ -249,29 +304,34 @@ export function parseScadaDocument(input: unknown): ScadaDocument {
   return parseVersionedDocument(input, SCADA_SCHEMA_VERSION);
 }
 
+export type LegacyScadaSchemaVersion =
+  | typeof LEGACY_SCADA_SCHEMA_VERSION
+  | typeof PREVIOUS_SCADA_SCHEMA_VERSION;
+
 export interface ScadaDocumentMigration {
   readonly document: ScadaDocument;
-  readonly migratedFrom: typeof LEGACY_SCADA_SCHEMA_VERSION | null;
+  readonly migratedFrom: LegacyScadaSchemaVersion | null;
 }
 
 /**
- * 专供 Studio 工程导入：校验并升级 0.1.0，当前版本直接严格校验。
- * 不接受未来、未知版本；迁移过程中保留旧版组合 groupId。
+ * 专供 Studio 导入、草稿恢复和历史快照读取：显式升级 0.1.0/0.2.0。
+ * 历史绑定会生成 dataType=unknown 的占位定义，必须由维护者确认后才能用于类型约束。
  */
 export function migrateScadaDocument(input: unknown): ScadaDocumentMigration {
   const root = record(input, "文档");
   if (root.schemaVersion === SCADA_SCHEMA_VERSION) {
     return { document: parseScadaDocument(input), migratedFrom: null };
   }
-  if (root.schemaVersion === LEGACY_SCADA_SCHEMA_VERSION) {
-    const legacy = parseVersionedDocument(input, LEGACY_SCADA_SCHEMA_VERSION);
-    return {
-      document: parseScadaDocument(legacy),
-      migratedFrom: LEGACY_SCADA_SCHEMA_VERSION,
-    };
+  if (
+    root.schemaVersion === LEGACY_SCADA_SCHEMA_VERSION ||
+    root.schemaVersion === PREVIOUS_SCADA_SCHEMA_VERSION
+  ) {
+    const sourceVersion = root.schemaVersion as LegacyScadaSchemaVersion;
+    const document = parseVersionedDocument(input, sourceVersion);
+    return { document, migratedFrom: sourceVersion };
   }
   fail(
     "schemaVersion",
-    `不支持的工程版本，仅允许 ${LEGACY_SCADA_SCHEMA_VERSION} 或 ${SCADA_SCHEMA_VERSION}`,
+    `不支持的工程版本，仅允许 ${LEGACY_SCADA_SCHEMA_VERSION}、${PREVIOUS_SCADA_SCHEMA_VERSION} 或 ${SCADA_SCHEMA_VERSION}`,
   );
 }
