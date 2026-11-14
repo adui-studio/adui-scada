@@ -1,7 +1,9 @@
 export {
   SCADA_SCHEMA_VERSION,
+  PREVIOUS_SCADA_SCHEMA_VERSION,
   LEGACY_SCADA_SCHEMA_VERSION,
   parseScadaDocument,
+  parseVersionedScadaDocument,
   migrateScadaDocument,
   STUDIO_NODE_STATE_KEY,
   studioNodeLocked,
@@ -9,6 +11,8 @@ export {
 } from "./document.ts";
 export type {
   ScadaDocument,
+  LegacyScadaDocument,
+  VersionedScadaDocument,
   ScadaDocumentMigration,
   ScadaNode,
   ScadaPage,
