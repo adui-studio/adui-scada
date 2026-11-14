@@ -4,7 +4,7 @@
 
 ## 1. 定位与事实
 
-ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1、V0.2 双框架 SVG Studio 及 V0.3 前三十一批，包含共享 Runtime、SSE 故障恢复、ScadaDocument 0.3.0 项目 Tag 持久化与 Vue/React Studio Tag 可视化 CRUD。历史 0.1.0/0.2.0 工程采用显式迁移，未知类型保留 `unknown` 占位、不推断单位。当前第三十二批已在 Windows 真实浏览器中通过 React/Vue 两端 localStorage 草稿、IndexedDB 草稿和历史 Project Snapshot 六条迁移路径，`test:legacy:browser` 退出码 0；跨框架 JSON 互通退出码 0，`vp check` 与 `docs:check` 通过。第三十二批已完成 Windows 六条历史迁移浏览器回归、跨框架互通、vp check、docs:check 与完整 ready（最终退出码 0），PR #54 已合并至 main（8a9dbf5b）。当前第三十三批已获维护者同意，采用厂商无关 OIDC、BFF Cookie 会话和同源工程 API；阶段 A 已在功能分支新增共享 Prisma DatabaseModule、默认关闭的 OIDC 严格配置、Prisma 外部身份/登录事务/CSRF 模型与增量迁移，但还未执行本批 Windows 检查或数据库迁移。OIDC enabled 在认证与 ACL 未完成前一律拒绝启动，尚未开放任何工程 API。禁止引入客户端 PLC 连接或设备写入。**
+ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1、V0.2 双框架 SVG Studio 及 V0.3 前三十一批，包含共享 Runtime、SSE 故障恢复、ScadaDocument 0.3.0 项目 Tag 持久化与 Vue/React Studio Tag 可视化 CRUD。历史 0.1.0/0.2.0 工程采用显式迁移，未知类型保留 `unknown` 占位、不推断单位。当前第三十二批已在 Windows 真实浏览器中通过 React/Vue 两端 localStorage 草稿、IndexedDB 草稿和历史 Project Snapshot 六条迁移路径，`test:legacy:browser` 退出码 0；跨框架 JSON 互通退出码 0，`vp check` 与 `docs:check` 通过。第三十二批已完成 Windows 六条历史迁移浏览器回归、跨框架互通、vp check、docs:check 与完整 ready（最终退出码 0），PR #54 已合并至 main（8a9dbf5b）。当前第三十三批已获维护者同意，采用厂商无关 OIDC、BFF Cookie 会话和同源工程 API；阶段 A 已在功能分支新增共享 Prisma DatabaseModule、默认关闭的 OIDC 严格配置、Prisma 外部身份/登录事务/CSRF 模型与增量迁移；维护者 Windows 已验证 vp check（278 文件、139 受检文件零错误）、448/448 单测、82 份文档和完整 ready（退出码 0）。新增 PostgreSQL 迁移尚未在隔离数据库执行，openid-client 依赖及锁文件尚未安装生成。OIDC enabled 在认证与 ACL 未完成前一律拒绝启动，尚未开放任何工程 API。禁止引入客户端 PLC 连接或设备写入。**
 
 ## 2. 规则优先级
 
