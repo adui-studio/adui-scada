@@ -821,3 +821,13 @@ OIDC 登录、BFF Cookie/CSRF、工程 HTTP API、真实 IdP 联调及工业现�
 新增 `apps/server/src/auth/oidc-callback.service.spec.ts`，使用 Mock 授权码兑换、Discovery、Prisma 身份映射和会话签发服务。覆盖固定 Redirect URI、State/Nonce/PKCE 检查参数、可选响应 `iss`、ID Token Claims 的 Issuer/Audience/azp/Subject/时间边界、无 ID Token、OAuth 错误、外部身份未绑定/停用、数据库/IdP 错误脱敏，以及 IdP Access/Refresh/ID Token 不进入服务结果。
 
 **待执行**：`vp check`、`pnpm run test:unit`、`pnpm run docs:check`、`pnpm run ready`。这些 Mock 测试不证明真实 IdP 的 RSA 签名/JWKS 轮换、真实 Token Endpoint、PostgreSQL 并发事务、Cookie/CSRF 或企业 SSO 联调已通过。OIDC HTTP Controller 尚未注册，`main.ts` 对 `SCADA_OIDC_ENABLED=true` 继续 fail-closed。
+
+### 第三十三批阶段 B 第三小批：OIDC 回调测试夹具类型修正（2026-11-14）
+
+维护者 Windows 执行 `vp check --fix` 时，`apps/server/src/auth/oidc-callback.service.spec.ts` 的 Mock 调用记录在 `expectedState` 处触发 TS2322：`string | symbol | undefined` 不能赋给 `string | undefined`。
+
+**原因**：测试夹具 `GrantCall.checks.expectedState` 被手工收窄为 `string`，但 `openid-client@6.8.9` 的 `authorizationCodeGrant` 第三个参数 `checks.expectedState` 还允许 `skipStateCheck` 符号。生产回调代码传入普通 State 字符串没有问题，错误仅发生在测试记录类型。
+
+**最小修复**：新增 `OidcExpectedState` 类型别名，从 `Parameters<OidcAuthorizationCodeGrant>[2]["expectedState"]` 对应的实际函数参数类型派生（通过 `NonNullable` 处理可选 checks 参数），让测试夹具与锁定版本 API 保持一致；不使用 `as string`、不修改第三方类型、不改变生产逻辑。
+
+**待维护者复验**：`vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和 `pnpm run ready`。当前远端代码已修正，但未在本协作环境执行 Windows Vite+，不得将本次修复标记为已通过。

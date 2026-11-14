@@ -47,10 +47,14 @@ interface ExternalIdentityQuery {
   };
 }
 
+type OidcExpectedState = NonNullable<
+  Parameters<OidcAuthorizationCodeGrant>[2]
+>["expectedState"];
+
 interface GrantCall {
   readonly callbackUrl: URL;
   readonly checks: {
-    readonly expectedState?: string;
+    readonly expectedState?: OidcExpectedState;
     readonly expectedNonce?: string;
     readonly pkceCodeVerifier?: string;
     readonly idTokenExpected?: boolean;
