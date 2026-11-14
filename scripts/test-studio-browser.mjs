@@ -570,16 +570,26 @@ async function runStudioTagManagement(session) {
     assert.equal(updated.tags.find((tag) => tag.tagId === tagId)?.dataType, "number");
 
     await evaluateStudioPage(session, clickTagRowActionInPage, "water.level", "删除", true);
-    await pause(150);
+    let guardNotice = "";
+    const guardStarted = Date.now();
+    while (Date.now() - guardStarted < 3000) {
+      guardNotice = await session.evaluate(
+        "document.querySelector('.studio-notice')?.textContent ?? ''",
+      );
+      if (guardNotice.includes("仍被")) break;
+      await pause(50);
+    }
+    assert.match(
+      guardNotice,
+      /仍被.*绑定/,
+      target.name + " 未显示已绑定 Tag 的删除保护提示：" + guardNotice,
+    );
+    // 必须先捕获删除失败提示，再导出工程；导出成功提示会覆盖状态栏文案。
     const guarded = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
     assert.ok(
       guarded.tags.some((tag) => tag.tagId === "water.level"),
       "已绑定水位 Tag 被意外删除",
     );
-    const notice = await session.evaluate(
-      "document.querySelector('.studio-notice')?.textContent ?? ''",
-    );
-    assert.match(notice, /仍被.*绑定/, target.name + " 未说明已绑定 Tag 的删除保护");
 
     await evaluateStudioPage(session, clickTagRowActionInPage, tagId, "删除", true);
     await pause(180);
