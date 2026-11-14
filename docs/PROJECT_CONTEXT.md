@@ -954,9 +954,9 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 
 E-011 已在 `docs/AI_MISTAKES.md` 记录；其类型派生修复与第三小批代码现已通过 Windows 工程质量链。真实 IdP/JWKS 联调、HTTP Controller、Cookie/CSRF 和工程 API 仍未完成，OIDC 继续 fail-closed。
 
-### 第三十三批阶段 B 第四小批当前状态补充（2026-11-14）
+### 第三十三批阶段 B 第四小批提交时状态记录（2026-11-14）
 
-Cookie/CSRF 会话服务、Cookie 头构造函数和 Bearer/Cookie 双路径 `ScadaSessionGuard` 已提交到 PR #55。`ScadaIdentityModule` 已提供 Guard 所需的 OIDC 配置 Token，但该模块仍未挂载默认 AppModule，未注册 Controller/路由，`main.ts` 对 `SCADA_OIDC_ENABLED=true` 继续 fail-closed。第四小批尚待维护者 Windows 执行 `vp check`、`test:unit`、`docs:check` 和完整 `ready`；真实浏览器 Cookie/HTTPS 代理行为待 Controller 联调后验收。
+第四小批提交时，Cookie/CSRF 会话服务、Cookie 头构造函数和 Bearer/Cookie 双路径 `ScadaSessionGuard` 已进入 PR #55；当时尚未注册 HTTP Controller，默认 AppModule 不加载身份模块，`main.ts` 仍 fail-closed。该状态已由第五小批更新：身份 Controller 仅在 OIDC 启用根模块中注册。第四、五小批仍待维护者 Windows 质量验收；真实浏览器 Cookie/HTTPS 代理行为待联调。
 
 ### 第三十三批阶段 B 第五小批：OIDC BFF HTTP 控制器与认证路由（代码已提交，待 Windows 验证）
 
