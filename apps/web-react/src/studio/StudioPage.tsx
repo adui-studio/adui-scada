@@ -2036,6 +2036,24 @@ export default function StudioPage() {
             <p className="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
           )}
           <details className="studio-advanced">
+            <summary>项目 Tag 定义（{state.document.tags.length}）</summary>
+            <div className="studio-advanced-content">
+              {state.document.tags.length === 0 ? (
+                <p className="studio-tip">当前工程尚未定义 Tag</p>
+              ) : (
+                state.document.tags.map((tag) => (
+                  <div className="studio-binding" key={tag.tagId}>
+                    <strong>{tag.displayName}</strong> · {tag.tagId} ·
+                    {TAG_DATA_TYPE_LABELS[tag.dataType]}
+                    {tag.unit ? " · " + tag.unit : ""}
+                    <p className="studio-tip">{tag.description}</p>
+                  </div>
+                ))
+              )}
+              <p className="studio-tip">定义随工程 JSON、草稿和本地历史版本保存；数据质量由实时 Tag 值提供。</p>
+            </div>
+          </details>
+          <details className="studio-advanced">
             <summary>高级图元与图层操作</summary>
             <div className="studio-advanced-content">
               <div className="studio-toolbox">
