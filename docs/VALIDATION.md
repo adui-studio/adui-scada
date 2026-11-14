@@ -651,3 +651,21 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 - `pnpm run ready`：维护者补充最终退出码 0；全量 438/438 单测、SSE 客户端 8/8、TCP 故障代理 4/4、NestJS E2E 17/17、React/Vue 类型检查与构建、NestJS 最终构建完成。
 
 第三十二批自动化验收通过，维护者已明确授权 PR #54 合并。历史 Tag 未知类型仍保持 unknown，旧绑定和历史快照原始记录均通过浏览器断言确认保留。本批不代表生产工业网关、现场 PLC/DCS 或设备写入能力已验收。
+
+
+## V0.3 第三十三批：厂商无关 OIDC 与服务端工程 API（待实施）
+
+分支：feat/v0.3-oidc-project-api；基线：PR #54 合并提交 8a9dbf5b。
+
+- [ ] ADR-0065 与实施计划经静态文档检查。
+- [ ] openid-client 6.8.9 加入 pnpm Catalog，pnpm-lock.yaml 由 pnpm 生成并冻结安装验证。
+- [ ] OIDC 配置默认关闭；缺失/非法 Issuer、Client、Redirect URI、Web Origin、加密密钥拒绝启动，且错误不回显密钥。
+- [ ] 外部身份映射、OIDC 登录事务、CSRF 摘要增量 Prisma 迁移及中文数据库注释。
+- [ ] OIDC Mock Issuer 验证 Discovery、PKCE、State、Nonce、Issuer/Audience/签名/过期、重复回调和浏览器绑定。
+- [ ] Cookie 会话、CSRF、Origin/Fetch Metadata、Bearer 兼容、撤销和过期安全测试。
+- [ ] 工程创建/ACL/首版快照/水位/成功审计原子事务；跨租户、无权限、CAS 并发与回滚负面测试。
+- [ ] React/Vue 共用 API Client、同源代理、工程 JSON 双向互通和浏览器登录/保存回归。
+- [ ] pnpm run deps:check、config:check、env:check、messages:check、db:validate、db:generate、vp check、typecheck:web、typecheck:server、test:unit、test:e2e:server、test:db（仅隔离库）、docs:check、build:web、build:server、ready。
+- [ ] 维护者配置真实 Issuer、TLS、Redirect URI 和预绑定身份后，完成实际 IdP 联调；Mock Issuer 通过不能代替此项。
+
+**当前状态**：本分支只包含 ADR-0065 与实施计划文档；未新增依赖、Prisma 模型/迁移、HTTP 路由或前端 API Client。所有实现和测试均待后续提交。
