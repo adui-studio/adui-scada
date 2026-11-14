@@ -613,3 +613,23 @@ type DemoTagSourcePreset = "standalone" | "nest-local";
 ### 验收边界
 
 项目级 Tag 定义现在随工程 JSON、草稿和本地历史快照持久化，但没有生产服务端项目 API、用户权限、工业地址映射、OPC UA/Modbus/MQTT 驱动、真实设备或写入接口。历史 unknown 定义需维护者确认；自动迁移不等于推测类型。
+
+
+## 2026-11-14 · V0.3 第三十一批：项目 Tag 可视化管理交互契约
+
+### 组件与命令边界
+
+React 的 TagManager.tsx 与 Vue 的 TagManager.vue 只保存用户正在填写的临时表单草稿，绑定候选和定义列表始终来自各自 Studio 当前工程的 tags。新建通过 DocumentEditor.addTagDefinition，编辑通过 updateTagDefinition，删除通过 removeTagDefinition，返回值和异常交由 Studio 更新快照和中文通知。所有数据校验、绑定关系与历史命令仍只由共享 Core 决定。
+
+### 字段、错误和持久化
+
+- 新建输入 tagId（稳定 ASCII 1～128 字符）、displayName（1～128 字符）、dataType（number/boolean/string）、可选 unit（空值转 null、非空 1～32 字符）和 description（最长 512 字符）。
+- 编辑显示只读稳定 ID；历史 unknown 可修改为明确类型。Core 阻止已确认类型退回 unknown、不兼容图元槽位的类型修改以及仍被绑定的 Tag 删除。
+- 删除需要明确确认，不隐式清理任何绑定。操作失败保持表单内容供修正，并将 Core 中文异常展示到 Studio 通知。
+- 操作成功由 DocumentEditor 生成新工程并纳入 undo/redo；工程 JSON、本地 IndexedDB 草稿和历史快照无需单独新增 Tag 存储路径。
+
+### 浏览器验证
+
+新增 pnpm run test:tags:browser，使用当前已有 CDP 浏览器验收设施，在 React/Vue 两端验证新增、编辑、删除保护和删除，并读取实际导出的 JSON 做一致性断言。脚本端口从仓库根 .env 读取，避免旧进程错连。仍需真实 Windows 浏览器执行并补充可视、键盘和跨框架人工回归。
+
+见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md)。
