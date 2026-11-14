@@ -565,3 +565,13 @@
 - `examples/water-treatment/server.mjs`：独立 SSE 模拟服务同样校验演示 Tag 类型。
 - `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：绑定候选展示类型、单位和描述；不增加独立目录逻辑。
 - `packages/core/test/tag-definition.test.ts`：定义结构、重命名稳定 ID、类型校验、质量独立与原子拒绝。详见 [ADR-0061](adr/0061-tag-definition-catalog.md)。
+
+
+## 2026-11-14 · 第三十一批项目 Tag 管理入口
+
+- apps/web-react/src/studio/TagManager.tsx：React 项目 Tag 新增、编辑、删除表单，仅维护未保存草稿。
+- apps/web-vue/src/studio/TagManager.vue：Vue 同等字段与命令入口，保持 Schema 与行为对等。
+- apps/web-react/src/studio/StudioPage.tsx、apps/web-vue/src/studio/StudioPage.vue：将 TagManager 与共享 DocumentEditor 的 add/update/remove 命令连接，成功刷新状态，失败提示中文错误。
+- scripts/test-studio-browser.mjs：新增 --tags 模式的真实浏览器表单回归，并从根 .env 读取开发端口。
+- package.json：新增 test:tags:browser 测试入口。
+- docs/adr/0063-studio-tag-management-dual-framework.md：记录第三十一批决策、兼容约束和验收边界。
