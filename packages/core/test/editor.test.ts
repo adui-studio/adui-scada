@@ -691,6 +691,21 @@ test("项目 Tag 定义新增、修改、删除均纳入撤销和重做", () => 
   expect(e.redo()).toBe(true);
 });
 
+test("新建项目 Tag 不允许使用历史待确认类型", () => {
+  const e = editor();
+  const before = e.snapshot();
+  expect(() =>
+    e.addTagDefinition({
+      tagId: "water.new",
+      displayName: "新建测试点",
+      dataType: "unknown",
+      unit: null,
+      description: "待确认类型不得直接创建",
+    }),
+  ).toThrow(/新建 Tag 必须指定/);
+  expect(e.snapshot()).toEqual(before);
+});
+
 test("项目 Tag 删除拒绝悬空绑定，稳定 ID 不允许通过更新修改", () => {
   const e = editor();
   const before = e.snapshot().document;
