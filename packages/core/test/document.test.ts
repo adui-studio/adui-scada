@@ -1,16 +1,21 @@
 import { expect, test } from "vite-plus/test";
 import {
   LEGACY_SCADA_SCHEMA_VERSION,
+  PREVIOUS_SCADA_SCHEMA_VERSION,
   SCADA_SCHEMA_VERSION,
   migrateScadaDocument,
   parseScadaDocument,
 } from "../src/document.ts";
-import { waterTreatmentDemoDocument } from "../src/demo-document.ts";
+import {
+  waterTreatmentDemoDocument,
+  waterTreatmentDemoTagDefinitions,
+} from "../src/demo-document.ts";
 
 function fixture() {
   return {
     schemaVersion: SCADA_SCHEMA_VERSION,
     projectId: "water-demo",
+    tags: waterTreatmentDemoTagDefinitions,
     pages: [
       {
         id: "main",
@@ -122,8 +127,9 @@ test("拒绝跨页面共用同一个组合 ID", () => {
   expect(() => parseScadaDocument(document)).toThrow(/不能跨页面/);
 });
 
-test("新版 Schema 为 0.2.0，历史 Schema 为 0.1.0", () => {
-  expect(SCADA_SCHEMA_VERSION).toBe("0.2.0");
+test("新版 Schema 为 0.3.0，并保留 0.2.0 与 0.1.0 两个迁移入口", () => {
+  expect(SCADA_SCHEMA_VERSION).toBe("0.3.0");
+  expect(PREVIOUS_SCADA_SCHEMA_VERSION).toBe("0.2.0");
   expect(LEGACY_SCADA_SCHEMA_VERSION).toBe("0.1.0");
 });
 
@@ -164,8 +170,44 @@ test("含旧版组合元数据的历史工程迁移后保留两个成员与 Tag"
   expect(legacy.schemaVersion).toBe("0.1.0");
 });
 
+test("0.2.0 工程迁移时为已有绑定生成待确认类型，保持 Tag ID", () => {
+  const previous = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  previous.schemaVersion = PREVIOUS_SCADA_SCHEMA_VERSION;
+  delete previous.tags;
+  const result = migrateScadaDocument(previous);
+  expect(result.migratedFrom).toBe("0.2.0");
+  expect(result.document.schemaVersion).toBe("0.3.0");
+  expect(result.document.tags).toEqual([
+    {
+      tagId: "water.flow",
+      displayName: "water.flow",
+      dataType: "unknown",
+      unit: null,
+      description: "由历史工程迁移生成，数据类型与单位待维护者确认",
+    },
+    {
+      tagId: "water.level",
+      displayName: "water.level",
+      dataType: "unknown",
+      unit: null,
+      description: "由历史工程迁移生成，数据类型与单位待维护者确认",
+    },
+    {
+      tagId: "water.pump.running",
+      displayName: "water.pump.running",
+      dataType: "unknown",
+      unit: null,
+      description: "由历史工程迁移生成，数据类型与单位待维护者确认",
+    },
+  ]);
+  expect(result.document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level?.tagId)
+    .toBe("water.level");
+  expect(previous.schemaVersion).toBe("0.2.0");
+  expect(previous.tags).toBeUndefined();
+});
+
 test("未来版本、未知版本及缺失版本均拒绝迁移", () => {
-  for (const version of ["0.3.0", "99.0.0", null, undefined]) {
+  for (const version of ["0.4.0", "99.0.0", null, undefined]) {
     const source = { ...fixture(), schemaVersion: version };
     expect(() => migrateScadaDocument(source)).toThrow(/不支持的工程版本/);
   }
