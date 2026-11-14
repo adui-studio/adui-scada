@@ -831,3 +831,8 @@ PR #53 已 Squash Merge 到 main，合并提交 7fccc1e2285d6ebb1190120142fcf998
 维护者第二轮实测：React localStorage 草稿迁移、旧副本清理与恢复通过；React IndexedDB 0.2.0 草稿事务迁移、revision 推进与恢复通过；Project Snapshot 注入报 `ReferenceError: stableLegacyValue is not defined`。根因是 CDP `evaluateStudioPage` 只序列化当前函数，不带 Node 作用域闭包。已把与 Core 相同的递归稳定排序函数内聚至 `seedLegacyProjectSnapshotInPage`，不更改 SHA-256 算法或快照格式。最新修复尚未由维护者 Windows 复验；Project Snapshot 和 Vue 路径仍待执行。
 
 已将稳定排序 helper 内聚到 CDP 页面函数，并删除不再使用的 Node 作用域 helper；最新提交为后续 Windows 复验准备，仍未报告 Project Snapshot 或 Vue 路径通过。
+
+
+### 第三十二批六条历史迁移路径与跨框架互通通过（2026-11-14）
+
+维护者最新 Windows 日志确认 `pnpm run test:legacy:browser` 退出码 0：React、Vue 两端 localStorage 0.2.0 草稿迁移、旧副本清理与 Studio 恢复，IndexedDB 0.2.0 草稿事务迁移与 revision 推进，Project Snapshot 原 SHA-256 校验、只读归一化和原记录保留共六条路径全部通过。`pnpm run test:interop` 双向及完整 React→Vue→React→Vue 往返、非法导入保护通过，退出码 0。`vp check` 272 文件格式正确、135 个受检文件零错误；`docs:check` 80 Markdown 通过。此前 `ready` 输出确认 438/438 单测、SSE 8/8、TCP 故障 4/4、NestJS E2E 17/17、React/Vue 类型检查和构建通过，但提供的日志截断在最终 NestJS build 的 Prisma Client 生成阶段，没有最终 build 结束或 `ready` 退出码，故不能据此宣称完整 ready 成功。PR #54 继续等待最后全链证据和维护者合并授权。
