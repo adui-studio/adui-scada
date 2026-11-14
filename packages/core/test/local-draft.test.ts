@@ -96,8 +96,8 @@ test("未知草稿格式和新增结构字段均拒绝恢复", () => {
       message: /草稿保存时间无效/,
     },
     {
-      record: { ...base, document: { ...base.document, schemaVersion: "0.1.0" } },
-      message: /不支持的版本/,
+      record: { ...base, document: { ...base.document, schemaVersion: "0.4.0" } },
+      message: /不支持的工程版本/,
     },
   ]) {
     const raw = JSON.stringify(record);
@@ -119,6 +119,32 @@ test("草稿项目与当前工程不同或内部工程不合法时拒绝恢复",
   record.document.pages[0].nodes[0].props = JSON.parse('{"__proto__":{"unsafe":true}}');
   storage.setItem(key, JSON.stringify(record));
   expect(() => readLocalDraft(storage, "water-demo")).toThrow(/属性名称不安全/);
+});
+
+test("读取 0.1.0 和 0.2.0 历史草稿时迁移 Tag 占位定义并保留绑定", () => {
+  for (const version of ["0.1.0", "0.2.0"]) {
+    const storage = new MemoryStorage();
+    const key = localDraftKey("water-demo");
+    const legacy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+    legacy.schemaVersion = version;
+    delete legacy.tags;
+    storage.setItem(
+      key,
+      JSON.stringify({
+        formatVersion: LOCAL_DRAFT_FORMAT_VERSION,
+        savedAt: savedAt.toISOString(),
+        document: legacy,
+      }),
+    );
+    const restored = readLocalDraft(storage, "water-demo");
+    expect(restored?.migratedFrom).toBe(version);
+    expect(restored?.document.schemaVersion).toBe("0.3.0");
+    expect(restored?.document.tags.every((tag) => tag.dataType === "unknown")).toBe(true);
+    expect(
+      restored?.document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level?.tagId,
+    ).toBe("water.level");
+    expect(storage.getItem(key)).not.toBeNull();
+  }
 });
 
 test("草稿保存前严格校验文档，拒绝旧版工程和非法时间", () => {
