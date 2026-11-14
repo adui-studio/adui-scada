@@ -618,20 +618,17 @@ function readLegacyLocalStorageDraftInPage(projectId) {
 /** 在真实 Dexie 数据库中写入旧 Schema 记录，保留原 revision 水位。 */
 async function seedLegacyIndexedDbDraftInPage(document, revision, savedAt) {
   const database = await new Promise((resolve, reject) => {
-    // Dexie 的逻辑版本 1 对应原生 IndexedDB 版本 10；这里必须读取现有版本，
-    // 不能把 Dexie 逻辑版本直接传给 indexedDB.open，否则会触发降级 VersionError。
-    const request = indexedDB.open("adui-scada-studio");
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains("drafts")) {
-        const drafts = db.createObjectStore("drafts", { keyPath: "projectId" });
-        drafts.createIndex("savedAt", "savedAt");
+    // 草稿库已由 Studio 的 DexieDraftRepository 初始化；只读取现有数据库，
+    // 不显式指定原生版本，也不在测试夹具中自行升级数据库结构。
+    void indexedDB.databases().then((databases) => {
+      if (!databases.some((database) => database.name === "adui-scada-studio")) {
+        reject(new TypeError("Studio 尚未初始化 IndexedDB 草稿数据库"));
+        return;
       }
-      if (!db.objectStoreNames.contains("migrations")) {
-        db.createObjectStore("migrations", { keyPath: "projectId" });
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
+      const request = indexedDB.open("adui-scada-studio");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error("打开草稿数据库失败"));
+    }, reject);
     request.onerror = () => reject(request.error || new Error("打开草稿数据库失败"));
   });
   try {
@@ -690,22 +687,16 @@ async function seedLegacyProjectSnapshotInPage(document, revision, createdAt) {
   ).join("");
   const snapshot = { ...payload, contentHash };
   const database = await new Promise((resolve, reject) => {
-    // Dexie 的逻辑版本 1 对应原生 IndexedDB 版本 10；复用现有版本库，
-    // 不得将 Dexie 逻辑版本传给原生 open()。
-    const request = indexedDB.open("adui-scada-studio-versions");
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains("heads")) {
-        db.createObjectStore("heads", { keyPath: "projectId" });
+    // 历史版本库必须先由 Studio 的 Dexie 仓储初始化；测试夹具只写入现有结构。
+    void indexedDB.databases().then((databases) => {
+      if (!databases.some((database) => database.name === "adui-scada-studio-versions")) {
+        reject(new TypeError("Studio 尚未初始化工程历史版本数据库"));
+        return;
       }
-      if (!db.objectStoreNames.contains("versions")) {
-        const versions = db.createObjectStore("versions", {
-          keyPath: ["projectId", "revision"],
-        });
-        versions.createIndex("projectId", "projectId");
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
+      const request = indexedDB.open("adui-scada-studio-versions");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error("打开历史版本数据库失败"));
+    }, reject);
     request.onerror = () => reject(request.error || new Error("打开历史版本数据库失败"));
   });
   try {
@@ -826,6 +817,10 @@ async function runStudioLegacyMigration(session) {
       target.name + " IndexedDB 历史草稿未能通过 Studio 恢复",
     );
     process.stdout.write(target.name + " IndexedDB 0.2.0 草稿事务迁移、修订号推进和恢复通过\n");
+
+    // 先由真实 Studio/Dexie 打开并初始化历史库，再写入旧快照测试数据。
+    const emptyVersions = await evaluateStudioPage(session, studioVersionRowsInPage);
+    assert.deepStrictEqual(emptyVersions, [], target.name + " 新建浏览器上下文的历史版本库应为空");
 
     // 历史 Project Snapshot：先验证原 SHA-256，再在只读返回值中归一化，不能改写原记录。
     const seededSnapshot = await evaluateStudioPage(
