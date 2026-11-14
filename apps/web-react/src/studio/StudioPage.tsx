@@ -1991,8 +1991,9 @@ export default function StudioPage() {
               )}
               <h3>Tag 绑定（模拟数据）</h3>
               {bindingSlot ? (
-                <label className="studio-field">
-                  {bindingSlot} · 选择模拟 Tag
+                <>
+                  <label className="studio-field">
+                    {bindingSlot} · 选择模拟 Tag
                   <select
                     aria-label={selected.id + " 的 " + bindingSlot + " Tag 绑定"}
                     value={currentBindingTag}
@@ -2012,12 +2013,13 @@ export default function StudioPage() {
                       </option>
                     ))}
                   </select>
-                </label>
-                {selectedTagDefinition && (
-                  <p className="studio-tip">
-                    {selectedTagDefinition.description}；质量由实时 Tag 数据动态提供
-                  </p>
-                )}
+                  </label>
+                  {selectedTagDefinition && (
+                    <p className="studio-tip">
+                      {selectedTagDefinition.description}；质量由实时 Tag 数据动态提供
+                    </p>
+                  )}
+                </>
               ) : (
                 <p className="studio-tip">
                   请单选未组合的水箱、水泵或文本图元；管道暂不支持动态 Tag 绑定。
