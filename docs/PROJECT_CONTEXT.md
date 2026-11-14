@@ -825,3 +825,8 @@ PR #53 已 Squash Merge 到 main，合并提交 7fccc1e2285d6ebb1190120142fcf998
 ### 第三十二批 IndexedDB 浏览器测试夹具版本冲突修复（2026-11-14）
 
 维护者首轮 `test:legacy:browser` 已通过 React localStorage 草稿迁移，随后报 `VersionError: requested version 1 < existing version 10`。原因是 Dexie `version(1)` 对应原生 IndexedDB version 10，而测试夹具把逻辑版本 1 传给原生 `indexedDB.open`。已修复两个测试夹具：先由 Studio/Dexie 初始化数据库，检查数据库存在后不带版本参数打开并校验现有 stores；历史快照路径也先通过 Studio 版本菜单初始化数据库并关闭菜单，再注入快照以触发后续刷新。此为浏览器测试夹具修复，不更改迁移业务实现。修复尚待 Windows 重新执行，IndexedDB 草稿、快照路径及 Vue 端仍未验证通过。
+
+
+### 第三十二批 Project Snapshot 浏览器测试函数作用域修复（2026-11-14）
+
+维护者第二轮实测：React localStorage 草稿迁移、旧副本清理与恢复通过；React IndexedDB 0.2.0 草稿事务迁移、revision 推进与恢复通过；Project Snapshot 注入报 `ReferenceError: stableLegacyValue is not defined`。根因是 CDP `evaluateStudioPage` 只序列化当前函数，不带 Node 作用域闭包。已把与 Core 相同的递归稳定排序函数内聚至 `seedLegacyProjectSnapshotInPage`，不更改 SHA-256 算法或快照格式。最新修复尚未由维护者 Windows 复验；Project Snapshot 和 Vue 路径仍待执行。
