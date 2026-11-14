@@ -816,3 +816,10 @@ React SSE 浏览器和 TCP 故障测试均在进入 EventSource 订阅前报 `er
 ### 第三十一批最终 Windows 验收通过（2026-11-14）
 
 维护者复验确认：`pnpm run test:tags:browser` 中 React、Vue 两端的 Tag 新增、编辑、绑定删除保护、删除与 JSON 往返均通过，退出码 0；`vp check` 271 文件格式正确、135 个受检文件零错误；`docs:check` 79 Markdown 通过。此前同一分支 `ready` 全链及 `test:interop` 已通过。浏览器测试断言时序修复已在双框架实际浏览器中验证。PR #53 达到合并条件，维护者已明确授权合并。仍保留键盘/视觉人工检查与真正历史浏览器草稿迁移体验的后续核验。
+
+
+### 第三十一批合并与第三十二批历史数据迁移浏览器验收启动（2026-11-14）
+
+PR #53 已 Squash Merge 到 main，合并提交 7fccc1e2285d6ebb1190120142fcf998181460e6，并核验 main 指向同一 SHA；Assignee @adui-dev 已核验。维护者 Windows 实测 React/Vue 项目 Tag 新增、编辑、已绑定删除保护、删除及 JSON 往返均通过，test:tags:browser 退出码 0；vp check 271 文件/135 受检文件零错误，docs:check 79 Markdown 通过；此前 ready、test:interop 通过。键盘/视觉人工检查及旧浏览器草稿迁移体验仍需后续核验。
+
+第三十二批基于该 main 提交创建 feat/v0.3-browser-legacy-project-migration。新增 pnpm run test:legacy:browser，准备在 React/Vue 两个真实浏览器 Origin 中分别验证旧 localStorage 草稿、已有 IndexedDB 0.2.0 草稿的事务迁移与 revision 推进、旧 Project Snapshot 的原 SHA-256 校验和只读归一化。测试不更改迁移业务代码、Schema、Dexie 版本或快照格式。当前只完成浏览器测试实现和 ADR-0064，尚未执行 Windows 浏览器测试与完整质量链，不得报告通过。
