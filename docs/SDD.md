@@ -665,7 +665,6 @@ API 使用同源 /api/v1 前缀。初始提供 OIDC start/callback、me、logout
 
 详见 [ADR-0065](adr/0065-oidc-bff-and-project-api.md) 与 [实施计划](plans/v0.3-batch-33-oidc-project-api.md)。
 
-
 ### 第三十三批阶段 A 已实施的配置与数据库结构
 
 OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client ID/Secret、Redirect URI、Origin 和 Base64URL 32 字节加密密钥；生产配置必须使用 HTTPS，非生产回环 HTTP 必须另行显式启用。所有错误均使用固定中文提示，不包含原始凭据。当前 main.ts 在 enabled 时拒绝启动，直到完整认证、Cookie/CSRF Guard 和工程 ACL HTTP 边界实施后才会移除此保护。

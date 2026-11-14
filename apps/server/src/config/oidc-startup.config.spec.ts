@@ -64,9 +64,9 @@ describe("OIDC 服务端启动安全配置", () => {
       ["javascript:alert(1)", secureIssuerMessage],
       ["not-a-url", "SCADA_OIDC_ISSUER 必须是有效的绝对 URL"],
     ]) {
-      expect(() =>
-        resolveOidcStartupConfig({ ...configured, SCADA_OIDC_ISSUER: issuer }),
-      ).toThrow(message);
+      expect(() => resolveOidcStartupConfig({ ...configured, SCADA_OIDC_ISSUER: issuer })).toThrow(
+        message,
+      );
     }
     for (const [redirect, message] of [
       ["https://scada.example.org/path", "SCADA_OIDC_REDIRECT_URI 必须指向固定 OIDC 回调路径"],
@@ -83,7 +83,10 @@ describe("OIDC 服务端启动安全配置", () => {
     for (const [origins, message] of [
       ["http://scada.example.org", secureOriginsMessage],
       ["https://scada.example.org/path", "SCADA_OIDC_WEB_ORIGINS 必须只包含 Origin，不允许路径"],
-      ["https://scada.example.org,https://scada.example.org", "SCADA_OIDC_WEB_ORIGINS 不允许重复的站点"],
+      [
+        "https://scada.example.org,https://scada.example.org",
+        "SCADA_OIDC_WEB_ORIGINS 不允许重复的站点",
+      ],
       ["https://scada.example.org,", "SCADA_OIDC_WEB_ORIGINS 未设置或格式无效"],
       ["https://scada.example.org/?a=1", secureOriginsMessage],
     ]) {
@@ -120,9 +123,9 @@ describe("OIDC 服务端启动安全配置", () => {
       SCADA_OIDC_WEB_ORIGINS: "http://127.0.0.1:15173,http://127.0.0.1:15174",
     };
     expect(resolveOidcStartupConfig(dev).enabled).toBe(true);
-    expect(() =>
-      resolveOidcStartupConfig({ ...dev, NODE_ENV: "production" }),
-    ).toThrow("生产环境禁止启用不安全的本机 HTTP OIDC 测试模式");
+    expect(() => resolveOidcStartupConfig({ ...dev, NODE_ENV: "production" })).toThrow(
+      "生产环境禁止启用不安全的本机 HTTP OIDC 测试模式",
+    );
     expect(() =>
       resolveOidcStartupConfig({ ...dev, SCADA_OIDC_ALLOW_INSECURE_LOOPBACK: "false" }),
     ).toThrow(secureIssuerMessage);

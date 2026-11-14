@@ -1613,7 +1613,6 @@ pnpm run test:sse:fault:browser
 
 实现后将新增 OIDC Mock Issuer、Cookie/CSRF 与工程 API 的 E2E/浏览器验收入口。真实 PostgreSQL 测试必须显式设置 SCADA_TEST_DATABASE_URL，且仅允许本机 adui_scada_test 隔离数据库。OIDC 默认关闭；未配置真实 Issuer 时只运行 Mock Issuer 自动化，不得宣称完成企业 IdP 联调。
 
-
 ### 第三十三批阶段 A 最小验证指令
 
 `pnpm run env:check`、`pnpm run db:validate`、`pnpm run db:generate`、`vp check`、`pnpm run test:unit`、`pnpm run docs:check`、`pnpm run ready`。验证实际增量迁移时仅允许本机隔离测试数据库，并检查 PostgreSQL COMMENT 元数据。当前不运行 OIDC 真实登录或外部工程接口，因为尚未开放。

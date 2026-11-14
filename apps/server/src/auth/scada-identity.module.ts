@@ -11,12 +11,7 @@ import { ScadaSessionGuard } from "./scada-session.guard.js";
  */
 @Module({
   imports: [DatabaseModule],
-  providers: [
-    AuthSessionService,
-    ScadaSecurityAuditService,
-    ScadaSessionGuard,
-    ScadaProjectGuard,
-  ],
+  providers: [AuthSessionService, ScadaSecurityAuditService, ScadaSessionGuard, ScadaProjectGuard],
   exports: [AuthSessionService, ScadaSessionGuard, ScadaProjectGuard],
 })
 export class ScadaIdentityModule {}
