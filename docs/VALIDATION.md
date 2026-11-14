@@ -517,3 +517,19 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 - 目前确定的是**当前 Vite 代理所连接的模拟服务返回旧版工程文档**，而不是 Core 解析器需要放宽校验；是否因旧 Node 进程、代理指向错误目录或端口不匹配仍需本机进程信息才能进一步确认。应先核对监听进程及当前 `/demo/project` 响应，停掉确认属于该工程的旧 Demo 进程并重启 `pnpm run dev:demo`。再次确认模拟接口 Schema 为 `0.3.0`、包含三项 Tag 定义后，分别重跑两项 SSE 浏览器脚本。
 
 **未完成**：React/Vue 双端 SSE 浏览器专项；Studio 人工查看、0.1/0.2 工程导入导出、真实旧 IndexedDB/localStorage 草稿与历史快照迁移体验、Tauri 人工验收。该日志不代表生产数据库、工业网关、现场设备或设备写入已验收。以上是维护者在文档更新前的 Windows 实测；此文档更新后的静态检查尚未重跑。PR #52 继续 Draft、Assignee `@adui-dev`，没有合并授权。
+
+
+### 第三十批 Windows 最终自动化验收通过（2026-11-14）
+
+维护者在本地 Windows 提供第三十批最新复验日志（先前 Schema `0.2.0` 的旧 Demo 服务已排除）。本节是**维护者执行记录**，并非 GitHub 文档提交后的自动化重新执行：
+
+- `pnpm run test:unit`：38 文件，**438/438 通过**；`pnpm run test:runtime`：4 文件，**40/40 通过**；`pnpm run test:e2e:server`：3 文件，**17/17 通过**。
+- `vp check`：268 个文件格式正确，133 个受检文件零格式、Lint、类型错误；`pnpm run docs:check`：78 个 Markdown 文件通过。
+- `pnpm run ready`：从依赖目录、共享配置、环境、中文文案、Prisma 生成、Core 构建与全栈类型检查，执行至单测（438/438）、SSE 客户端资源测试（8/8）、TCP 故障代理（4/4）、NestJS E2E（17/17）、React（3900 模块）和 Vue（3845 模块）构建及最后 NestJS build，日志无失败。此轮并未单独打印 `ready` 的退出码，不额外编造。
+- **`pnpm run test:sse:browser`**：React 和 Vue 都明确输出心跳保活、Tag 过期、静默重连、资源清理通过。
+- **`pnpm run test:sse:fault:browser`**：React 和 Vue 都明确输出真实 TCP 下行阻断、STALE、主动重连及连接回收通过，两个浏览器脚本最后的 `$LASTEXITCODE` 为 **0**。因此上一轮因模拟工程接口返回 0.2.0 导致的浏览器回归阻塞已在重启正确版本的服务后解除。
+- NestJS E2E 期间出现的预期 HTTP 503 / Health Check 失败属于负面测试分支，不是 E2E 总体失败。
+
+**仍需独立验收（不阻止维护者本次明确授权的代码合并）**：Vue/React Studio 手工目录与绑定交互、历史 Schema JSON 跨框架导入导出、真正旧浏览器 IndexedDB/localStorage 草稿和历史快照迁移体验。真实工业网关、生产采集、现场控制、设备写入不在第三十批范围。
+
+本节只更新验收事实与 PR 描述，不更改已通过测试的业务代码；文档更新后的 `vp check` / `docs:check` 未重新执行。
