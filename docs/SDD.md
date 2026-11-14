@@ -671,4 +671,13 @@ OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client I
 
 共享 DatabaseModule 持有唯一 PrismaService 提供方，ScadaIdentityModule 和 ProjectPersistenceModule 都只通过 imports 使用它；默认 AppModule 仍不导入上述模块。
 
-新增 ScadaExternalIdentity，以复合主键 (issuer, subject) 关联现有本地 ScadaIdentity；新增 ScadaOidcTransaction，使用 stateHash 主键、浏览器绑定摘要、nonce、AES-GCM 加密密文、到期/消费时间及站内路径；为 ScadaAuthSession 添加可空 csrfTokenHash，兼容既有 Bearer 会话。上述模型与迁移**尚未在 PostgreSQL 实测**，事务消费和加密逻辑尚未实现。
+新增 ScadaExternalIdentity，以复合主键 (issuer, subject) 关联现有本地 ScadaIdentity；新增 ScadaOidcTransaction，使用 stateHash 主键、浏览器绑定摘要、nonce、AES-GCM 加密密文、到期/消费时间及站内路径；为 ScadaAuthSession 添加可空 csrfTokenHash，兼容既有 Bearer 会话。上述模型与迁移已在维护者本机隔离 `adui_scada_test` 应用，`pnpm run test:db` 的 16/16 真库测试通过。阶段 B 第一、二小批已实现 Discovery、授权码登录发起、AES-256-GCM PKCE verifier 加密与一次性事务服务；对应 Mock 单测源码已提交，Windows 执行待维护者验收。真实 PostgreSQL 并发消费、真实 IdP 回调、Cookie/CSRF HTTP Controller 尚未实现或验收。
+
+### 第三十三批阶段 B 第一、二小批实际实现状态（2026-11-14）
+
+- `OidcProviderDiscoveryService.getConfiguration()`：固定 Issuer 的惰性 Discovery，10 秒超时，成功配置进程内缓存；校验授权码、主体标识、RS256、PKCE S256 和端点协议边界。
+- `OidcLoginTransactionService.start(returnPath, existingBrowserBinding?)`：生成独立 State/Nonce/PKCE verifier，计算 S256 challenge，构建固定 Redirect URI 的授权码请求；State 与浏览器绑定仅存 SHA-256 摘要，verifier 使用 AES-256-GCM 加密，登录事务有效期 5 分钟。
+- `OidcLoginTransactionService.consume(state, browserBindingCookie)`：在 PostgreSQL 交互事务中按固定 Issuer、State 摘要、浏览器绑定、创建/过期时间和未消费条件筛选，再通过条件 `updateMany` 原子消费；消费后重新校验 Nonce 与站内回跳路径，再解密 verifier。密文使用 State 摘要作为 GCM AAD。
+- 同一浏览器绑定 Cookie 可用于多个标签页，但每个事务独立生成 State/Nonce/verifier；无效、过期、跨浏览器、重复或并发失败均不返回 verifier。
+- 当前只实现服务层，尚未注册 Controller；`main.ts` 对 `SCADA_OIDC_ENABLED=true` 仍 fail-closed。Cookie 的 HttpOnly/Secure/SameSite 属性、回调 Token 交换、ID Token 校验、外部身份映射、CSRF 和工程 API 均未开放。
+- 单测采用 Mock Prisma 与本地 `openid-client.Configuration`，不代表真实 PostgreSQL 并发锁或真实 IdP 联调。维护者 Windows `vp check`、`pnpm run test:unit`、`pnpm run docs:check`、`pnpm run ready` 待执行。
