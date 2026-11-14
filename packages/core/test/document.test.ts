@@ -151,11 +151,12 @@ test("当前工程迁移入口只校验，不改变工程内容和版本", () =>
   expect(result.document).not.toBe(current);
 });
 
-test("无组合的历史工程显式迁移至 0.2.0 且不改 Tag 和图元", () => {
+test("0.1.0 历史工程显式迁移至 0.3.0 并保留 Tag 绑定", () => {
   const legacy = {
     ...fixture(),
     schemaVersion: LEGACY_SCADA_SCHEMA_VERSION,
   };
+  delete legacy.tags;
   expect(() => parseScadaDocument(legacy)).toThrow(/不支持的版本/);
   const result = migrateScadaDocument(legacy);
   expect(result.migratedFrom).toBe("0.1.0");
@@ -168,6 +169,7 @@ test("无组合的历史工程显式迁移至 0.2.0 且不改 Tag 和图元", ()
 test("含旧版组合元数据的历史工程迁移后保留两个成员与 Tag", () => {
   const legacy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
   legacy.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete legacy.tags;
   legacy.pages[0].nodes[1].groupId = "group-1";
   legacy.pages[0].nodes[3].groupId = "group-1";
   const { document, migratedFrom } = migrateScadaDocument(legacy);
