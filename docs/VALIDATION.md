@@ -831,3 +831,27 @@ OIDC 登录、BFF Cookie/CSRF、工程 HTTP API、真实 IdP 联调及工业现�
 **最小修复**：新增 `OidcExpectedState` 类型别名，从 `Parameters<OidcAuthorizationCodeGrant>[2]["expectedState"]` 对应的实际函数参数类型派生（通过 `NonNullable` 处理可选 checks 参数），让测试夹具与锁定版本 API 保持一致；不使用 `as string`、不修改第三方类型、不改变生产逻辑。
 
 **待维护者复验**：`vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和 `pnpm run ready`。当前远端代码已修正，但未在本协作环境执行 Windows Vite+，不得将本次修复标记为已通过。
+
+
+### 第三十三批阶段 B 第三小批：OIDC 回调测试夹具 TS2322 修复及 Windows 全链验收通过（2026-11-14）
+
+维护者最初执行 `vp check --fix` 时，`oidc-callback.service.spec.ts` 的 `GrantCall.checks.expectedState` 手工收窄为 `string`，与 openid-client 6.8.9 实际允许的 `string | symbol | undefined` 不一致，触发 TS2322。
+
+已修复为从真实函数签名派生：
+
+```ts
+type OidcExpectedState = NonNullable<
+  Parameters<OidcAuthorizationCodeGrant>[2]
+>["expectedState"];
+```
+
+没有使用强制类型断言，没有修改生产回调逻辑或第三方类型声明。
+
+**维护者随后提供的 Windows 验收日志确认修复已通过：**
+
+- `vp check`：286 个文件格式正确；146 个受检文件零警告、Lint 错误和 TypeScript 错误。
+- `pnpm run test:unit`：43/43 测试文件、477/477 测试通过；OIDC Discovery 7/7、登录事务 10/10、OIDC 回调 12/12。
+- `pnpm run docs:check`：83 个 Markdown 文件通过。
+- `pnpm run ready`：重复执行 477/477 单测、SSE 客户端 8/8、故障代理 4/4、NestJS E2E 17/17，React/Vue 与 NestJS 构建通过；最终退出码 **0**。
+
+因此，原先本节记录的“待维护者复验”已由上述 Windows 实测结果关闭。该结果验证当前分支静态检查、单测和工程质量链，不代表真实 IdP/JWKS 联调、HTTP Cookie/CSRF 或 OIDC 生产启用已验收。
