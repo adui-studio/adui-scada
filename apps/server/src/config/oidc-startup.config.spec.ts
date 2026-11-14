@@ -63,6 +63,10 @@ describe("OIDC 服务端启动安全配置", () => {
       ["https://id.example.org/?token=secret", secureIssuerMessage],
       ["javascript:alert(1)", secureIssuerMessage],
       ["not-a-url", "SCADA_OIDC_ISSUER 必须是有效的绝对 URL"],
+      [
+        "https://id.example.org/.well-known/openid-configuration",
+        "SCADA_OIDC_ISSUER 不允许包含 /.well-known/ 路径",
+      ],
     ]) {
       expect(() => resolveOidcStartupConfig({ ...configured, SCADA_OIDC_ISSUER: issuer })).toThrow(
         message,

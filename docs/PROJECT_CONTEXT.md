@@ -895,3 +895,17 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 本次真实数据库检查覆盖迁移登记、两张 OIDC 新表、15 个新增物理字段及中文注释、复合外键、检查约束、可空字段和三个新增索引及其中文注释。未执行数据库重置、删除或重建，没有覆盖既有数据库数据。
 
 **验收边界**：这是既有隔离测试库上的增量迁移与真库集成测试通过；尚未在另一全新隔离数据库从空库完整部署全部迁移，也尚未重复执行部署命令验证幂等。OIDC 协议流程、BFF Cookie/CSRF 和工程 HTTP API 仍未实现，`SCADA_OIDC_ENABLED` 必须保持默认关闭及服务端 fail-closed。PR #55 继续 Draft，Assignee 为 `@adui-dev`，未经维护者明确授权不得合并。
+
+## 2026-11-14 · V0.3 第三十三批阶段 B 第一小批：固定 Issuer OIDC Discovery（代码已提交，待 Windows 验证）
+
+在 PR #55 分支新增 `OidcProviderDiscoveryService`，使用仓库已锁定的 `openid-client@6.8.9`，不增加依赖：
+
+- 仅从服务端固定 Issuer Identifier 执行 Discovery；配置层拒绝 `/.well-known/` 路径，避免使用 Discovery 文档 URL 绕过库的 Issuer 匹配校验。
+- 10 秒超时、惰性发现、并发请求共享发现任务；成功配置进程内复用，失败后清理任务以便重试。
+- 严格检查授权码响应、主体标识类型、RS256、PKCE S256，以及声明的授权码许可、openid Scope 和 `client_secret_basic` 能力。
+- 必须提供 Authorization Endpoint、Token Endpoint、JWKS URI；端点只允许 HTTPS，显式非生产本机测试模式仅允许回环 HTTP。自定义 Fetch 不自动跟随重定向，错误不暴露 Issuer、端点、响应体或底层异常。
+- 客户端认证固定为 `client_secret_basic`，ID Token 签名算法固定为 RS256。服务注册在未挂载的 `ScadaIdentityModule`，不会改变默认 AppModule 或现有 Bearer 会话。
+
+新增 Mock Fetch 单测覆盖正常发现、并发复用、Issuer 不匹配、元数据能力拒绝、不安全端点、本机 HTTP 边界和失败重试。**这些测试代码尚未在维护者 Windows 环境执行**；当前仍需 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和完整 `pnpm run ready` 实测。测试不访问真实 IdP，不开放登录接口；`main.ts` 对 `SCADA_OIDC_ENABLED=true` 的 fail-closed 保护保持不变。
+
+下一小批再实现 Authorization Code + PKCE、State/Nonce 和数据库一次性事务；不得提前启用 OIDC。

@@ -774,3 +774,15 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **范围说明**：本次只在已有的隔离 `adui_scada_test` 上应用增量迁移并执行测试；未删除或重置数据库。尚未从全新隔离数据库验证全部迁移的空库部署，也未执行第二次 `migrate deploy` 的幂等性检查。以上数据库结果来自维护者提供的 Windows 终端日志，不代表当前协作环境自行运行。
 
 OIDC 登录、BFF Cookie/CSRF、工程 HTTP API、真实 IdP 联调及工业现场安全验证均未因此完成。开关继续默认关闭，未完成认证和 ACL 前服务端保持 fail-closed。
+
+## V0.3 第三十三批阶段 B 第一小批：固定 Issuer OIDC Discovery
+
+新增 `apps/server/src/auth/oidc-provider-discovery.service.spec.ts`，通过 Mock Fetch 验证 openid-client 6.8.9 的固定 Issuer Discovery，不调用真实 IdP。覆盖：
+
+- 固定 Issuer、标准 Discovery 文档路径、成功配置缓存及并发调用合并。
+- Issuer 不匹配、缺少授权码响应、PKCE S256、RS256 或受支持主体标识时拒绝。
+- 声明的授权码许可、openid Scope、Token Endpoint 客户端认证方法与当前策略冲突时拒绝。
+- 外部 HTTP、不安全端点、本机回环 HTTP 开关边界及失败重试。
+- 错误信息不包含底层网络异常、Issuer、端点或秘密。
+
+维护者需在当前分支执行 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和 `pnpm run ready`。本测试只使用 Mock Fetch；即使单测通过，也不代表真实 IdP 联调、OIDC 登录路由、PKCE 回调、会话 Cookie 或 CSRF 已实现。当前 `main.ts` 仍拒绝 `SCADA_OIDC_ENABLED=true`。

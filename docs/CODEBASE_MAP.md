@@ -616,3 +616,11 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 ### 第三十三批新增真实 PostgreSQL 测试
 
 - `apps/server/test/oidc-schema.db-spec.ts`：独立 `test:db` 入口，验证 OIDC 增量迁移真实落库、迁移登记、外键/约束/索引及中文数据库元数据；仅允许本机 `adui_scada_test`。
+
+### 第三十三批阶段 B 第一小批：OIDC Discovery
+
+- `apps/server/src/auth/oidc-provider-discovery.service.ts`：固定 Issuer Discovery、元数据能力校验、HTTPS/回环 HTTP 请求边界、惰性缓存与安全错误映射。
+- `apps/server/src/auth/oidc-provider-discovery.service.spec.ts`：Mock Fetch Discovery、元数据负例、端点协议边界、并发复用及失败重试测试。
+- `apps/server/src/auth/scada-identity.module.ts`：通过严格启动配置 Token 注册 Discovery 服务；该模块仍未由默认 AppModule 挂载。
+- `apps/server/src/config/oidc-startup.config.ts`：拒绝将 `/.well-known/` Discovery 文档路径误配为 Issuer。
+- `apps/server/src/main.ts`：继续在认证、CSRF 与工程 ACL 全部完成前拒绝启用 OIDC。

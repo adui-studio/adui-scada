@@ -82,6 +82,9 @@ export function resolveOidcStartupConfig(
   }
   const allowHttp = allowInsecureLoopback && env.NODE_ENV !== "production";
   const issuer = parseSecureUrl(env.SCADA_OIDC_ISSUER, "SCADA_OIDC_ISSUER", allowHttp);
+  if (issuer.href.includes("/.well-known/")) {
+    throw new Error("SCADA_OIDC_ISSUER 不允许包含 /.well-known/ 路径");
+  }
   const redirectUri = parseSecureUrl(
     env.SCADA_OIDC_REDIRECT_URI,
     "SCADA_OIDC_REDIRECT_URI",

@@ -16,11 +16,19 @@ Vue 与 React 是两个正式 Web 端，必须共用同源 API 契约、工程�
 ### 1. 身份协议与依赖
 
 - 使用厂商无关的 OpenID Connect 1.0，初始仅配置一个可信 Issuer；后续可扩展命名 Provider 注册表，不接受请求参数动态指定 Issuer。
-- 服务端使用 openid-client 6.8.9 作为 OIDC Relying Party 客户端。该库提供 Discovery、Authorization Code Grant、PKCE、Nonce、State 与 ID Token 验证；不再额外引入 Passport、手写 JWT 验签或第二套会话框架。
+- 服务端使用 openid-client 6.8.9 作为 OIDC Relying Party 客户端。该库提供 Discovery、Authorization Code Grant、PKCE、Nonce、State 与 ID Token 验证；不再额外引入 Passport、手写 JWT 验签或第二套会话框架。客户端认证固定使用 `client_secret_basic`，ID Token 签名算法固定为 `RS256`。
 - 当前工作区使用 NestJS 12.0.3、Node >=22.18.0、ESM；依赖版本写入根 pnpm Catalog，具体锁文件由 pnpm 生成。当前不升级 NestJS，不引入 @nestjs/authentication 0.x 与现有自有会话/Guard 重复的状态机。
 - 生产环境只允许 HTTPS Issuer、HTTPS Redirect URI 和可信 HTTPS Web Origin。Discovery 只读取服务端配置的固定 Issuer；不允许用户输入 URL、动态注册或从请求头推导回调地址，避免 SSRF、Issuer Mix-Up 和 Host Header 注入。
 - 使用 Authorization Code Flow + PKCE S256；每次登录独立生成不可预测的 state、nonce、code_verifier。即使客户端是 confidential client，也强制 PKCE，并校验 State、Nonce、Issuer、Audience、签名和时间声明。仅使用 openid 必需身份声明；不采用 Implicit Flow、Resource Owner Password Credentials 或前端持有 IdP Token。
 - redirect_uri 是服务端配置的固定精确地址。登录后的站内返回路径只允许经过校验的相对路径，不接受外部 URL、协议相对地址或反斜杠绕过。
+
+### 1.1 Discovery 与元数据校验（第三十三批阶段 B 第一小批）
+
+- Discovery 只能接收配置中的固定 Issuer Identifier，并调用 openid-client 6.8.9 的 `discovery()`；禁止把 Discovery 文档 URL 当作 Issuer。配置层拒绝包含 `/.well-known/` 的 Issuer 路径，避免触发库对直接 Discovery URL 的兼容分支并绕过 Issuer 一致性检查。
+- 使用 10 秒发现超时，成功配置在进程内惰性缓存，并发首次请求共享同一发现任务；发现失败清除缓存，允许后续重试。OIDC 关闭或身份模块未挂载时不发起网络请求。
+- 元数据必须声明授权码响应、主体标识类型、RS256、PKCE S256；若声明许可类型、Scope 或 Token Endpoint 认证方法，则必须包含 `authorization_code`、`openid` 和 `client_secret_basic`。缺省 Token Endpoint 认证方法按规范默认值使用 `client_secret_basic`。
+- 必须存在 Authorization Endpoint、Token Endpoint 与 JWKS URI。发现端点及这三个元数据端点只允许 HTTPS；仅非生产环境显式开启本机测试模式时允许回环 HTTP。自定义 Fetch 校验每个请求 URL，保留 `redirect: manual`，不自动跟随端点重定向。
+- Discovery 服务注册在尚未挂载的 `ScadaIdentityModule` 中，采用惰性调用；当前 `main.ts` 对 `SCADA_OIDC_ENABLED=true` 的 fail-closed 启动保护保持不变。该实现和 Mock Fetch 单测不代表真实 IdP 联调或认证 HTTP 路由已开放。
 
 ### 2. OIDC 事务与外部身份映射
 
