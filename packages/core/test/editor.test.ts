@@ -649,6 +649,66 @@ test("未来版本或非法历史组合拒绝导入并保留当前工程", () =>
   expect(e.snapshot()).toEqual(before);
 });
 
+test("项目 Tag 新增和元数据修改可撤销，稳定 ID 与图元绑定保持不变", () => {
+  const e = editor();
+  const definition = {
+    tagId: "custom.temperature",
+    displayName: "进水温度",
+    dataType: "number" as const,
+    unit: "°C",
+    description: "进水管道温度",
+  };
+  expect(e.addTagDefinition(definition)).toBe(true);
+  e.select("tank");
+  expect(e.setSelectedBinding("level", "custom.temperature")).toBe(true);
+  expect(
+    e.updateTagDefinition("custom.temperature", {
+      displayName: "原水温度",
+      dataType: "number",
+      unit: "℃",
+      description: "原水入口温度",
+    }),
+  ).toBe(true);
+  const saved = e.snapshot().document;
+  expect(saved.tags.find((tag) => tag.tagId === "custom.temperature")?.displayName).toBe("原水温度");
+  expect(saved.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level?.tagId).toBe(
+    "custom.temperature",
+  );
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document.tags.find((tag) => tag.tagId === "custom.temperature")?.displayName)
+    .toBe("进水温度");
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().document.tags.find((tag) => tag.tagId === "custom.temperature")?.unit).toBe(
+    "℃",
+  );
+});
+
+test("删除仍被图元引用的 Tag 会拒绝，解除绑定后删除可撤销", () => {
+  const e = editor();
+  expect(() => e.removeTagDefinition("water.level")).toThrow(/仍被图元引用/);
+  e.select("tank");
+  e.setSelectedBinding("level", null);
+  expect(e.removeTagDefinition("water.level")).toBe(true);
+  expect(e.snapshot().document.tags.some((tag) => tag.tagId === "water.level")).toBe(false);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document.tags.some((tag) => tag.tagId === "water.level")).toBe(true);
+});
+
+test("Tag 类型变更和绑定必须兼容图元槽位", () => {
+  const e = editor();
+  e.select("tank");
+  expect(() =>
+    e.updateTagDefinition("water.level", {
+      displayName: "模拟水位",
+      dataType: "boolean",
+      unit: "%",
+      description: "水箱液位百分比，仅为本机模拟值",
+    }),
+  ).toThrow(/不兼容/);
+  e.select("pump");
+  expect(() => e.setSelectedBinding("running", "water.level")).toThrow(/不兼容/);
+});
+
 test("水箱 Tag 绑定可以清除、撤销和重做", () => {
   const e = editor();
   e.select("tank");
