@@ -670,6 +670,19 @@ function stableLegacyValue(source) {
 
 /** 生成符合真实 Project Snapshot SHA-256 契约的 0.2.0 历史快照。 */
 async function seedLegacyProjectSnapshotInPage(document, revision, createdAt) {
+  // evaluateStudioPage 只序列化当前函数；摘要规范化逻辑必须在页面函数内部自包含。
+  function stableValue(source) {
+    if (Array.isArray(source)) return source.map(stableValue);
+    if (source !== null && typeof source === "object") {
+      const result = Object.create(null);
+      for (const key of Object.keys(source).sort()) {
+        result[key] = stableValue(source[key]);
+      }
+      return result;
+    }
+    return source;
+  }
+
   const payload = {
     formatVersion: 1,
     projectId: document.projectId,
@@ -678,7 +691,7 @@ async function seedLegacyProjectSnapshotInPage(document, revision, createdAt) {
     hashAlgorithm: "SHA-256",
     document,
   };
-  const canonical = JSON.stringify(stableLegacyValue(payload));
+  const canonical = JSON.stringify(stableValue(payload));
   const bytes = new TextEncoder().encode(canonical);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   const contentHash = Array.from(new Uint8Array(digest), (value) =>
