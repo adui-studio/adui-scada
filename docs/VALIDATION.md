@@ -591,7 +591,6 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 
 **当前验收状态**：本批只提交真实浏览器测试代码和文档，尚未在维护者 Windows 环境运行；不继承第三十、三十一批的测试结果。没有修改迁移业务实现、Schema、Dexie 数据库版本、快照格式或工业设备访问。
 
-
 ### 第三十二批首轮浏览器迁移测试阻塞与 IndexedDB 夹具修复（2026-11-14）
 
 维护者首轮执行 `pnpm run test:legacy:browser`：React 的 localStorage 0.2.0 草稿迁移、旧副本清理和 Studio 恢复已通过；随后在注入 IndexedDB 历史草稿时失败，退出码 1：

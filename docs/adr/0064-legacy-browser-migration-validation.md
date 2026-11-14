@@ -36,7 +36,6 @@
 
 **当前状态**：浏览器测试入口与用例已提交开发分支，尚未在维护者 Windows 环境运行。所有验收项保持待验证；本批不修改迁移业务实现。未经维护者明确授权，Draft PR 不合并。
 
-
 ## IndexedDB 测试夹具版本约束
 
 Dexie 的逻辑版本 `version(1)` 对应原生 IndexedDB 数据库版本 10；原生 `indexedDB.open(name, 1)` 不能用来打开该数据库，否则会请求从 10 降级到 1 并抛出 `VersionError`。测试夹具不得自行将 Dexie 逻辑版本传给原生 API，也不得在已存在的数据库上手动重建 stores。
