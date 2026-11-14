@@ -74,6 +74,16 @@ test("拒绝用户规则中的函数与循环引用", () => {
   expect(() => parseScadaDocument(cycle)).toThrow(/循环引用/);
 });
 
+test("0.3.0 工程必须包含 Tag 目录且所有图元绑定必须引用已定义 Tag", () => {
+  const missingCatalog = fixture() as Record<string, unknown>;
+  delete missingCatalog.tags;
+  expect(() => parseScadaDocument(missingCatalog)).toThrow(/必须包含 Tag 定义数组/);
+
+  const dangling = fixture();
+  dangling.tags = [];
+  expect(() => parseScadaDocument(dangling)).toThrow(/引用了未定义的 Tag：water.level/);
+});
+
 test("平面组合标识在 JSON 往返中保留且不改变原有 Tag 绑定", () => {
   const original = parseScadaDocument(waterTreatmentDemoDocument);
   original.pages[0]!.nodes[0]!.groupId = "group-a";
