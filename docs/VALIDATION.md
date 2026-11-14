@@ -590,3 +590,16 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 - [ ] 视改动情况复跑 pnpm run test:tags:browser，确保第三十一批 Tag CRUD 不回归。
 
 **当前验收状态**：本批只提交真实浏览器测试代码和文档，尚未在维护者 Windows 环境运行；不继承第三十、三十一批的测试结果。没有修改迁移业务实现、Schema、Dexie 数据库版本、快照格式或工业设备访问。
+
+
+### 第三十二批首轮浏览器迁移测试阻塞与 IndexedDB 夹具修复（2026-11-14）
+
+维护者首轮执行 `pnpm run test:legacy:browser`：React 的 localStorage 0.2.0 草稿迁移、旧副本清理和 Studio 恢复已通过；随后在注入 IndexedDB 历史草稿时失败，退出码 1：
+
+`VersionError: The requested version (1) is less than the existing version (10).`
+
+**根因**：Dexie 的 `database.version(1)` 逻辑版本映射为原生 IndexedDB 版本 10；测试夹具错误调用 `indexedDB.open("adui-scada-studio", 1)`，将 Dexie 逻辑版本误用为原生版本，触发降级请求。历史快照夹具也有同样的错误调用，必须一并修复。
+
+**已提交修复**：两个测试夹具现在先通过 `indexedDB.databases()` 确认数据库已由实际 Studio/Dexie 仓储初始化，再调用不带版本参数的 `indexedDB.open(name)`，并校验现有 object stores；不再在测试夹具中自行升级或创建已存在数据库的 stores。草稿库由 localStorage 迁移步骤初始化；历史快照库先通过 Studio 版本菜单初始化并确认为空，随后关闭菜单、注入旧快照，再重新打开菜单刷新列表。此改动只修正测试夹具，不改变 Dexie 数据库版本、迁移业务代码或 SHA-256 校验。
+
+**待维护者复验**：同步最新分支后重新执行 `pnpm run test:legacy:browser`。目前仅确认 localStorage 路径通过；IndexedDB 草稿和历史 Project Snapshot 路径尚未获得通过日志，Vue 端也尚未开始。不得把测试夹具修复提交等同于迁移验收通过。
