@@ -335,6 +335,22 @@ export interface ScadaDocumentMigration {
     | null;
 }
 
+/** 校验当前或受支持的历史工程 Schema，返回对应版本的防御性副本。 */
+export function parseVersionedScadaDocument(input: unknown): VersionedScadaDocument {
+  const root = record(input, "文档");
+  if (root.schemaVersion === SCADA_SCHEMA_VERSION) return parseScadaDocument(input);
+  if (
+    root.schemaVersion === PREVIOUS_SCADA_SCHEMA_VERSION ||
+    root.schemaVersion === LEGACY_SCADA_SCHEMA_VERSION
+  ) {
+    return parseVersionedDocument(input, root.schemaVersion) as LegacyScadaDocument;
+  }
+  fail(
+    "schemaVersion",
+    `不支持的工程版本，仅允许 ${LEGACY_SCADA_SCHEMA_VERSION}、${PREVIOUS_SCADA_SCHEMA_VERSION} 或 ${SCADA_SCHEMA_VERSION}`,
+  );
+}
+
 /** 历史工程缺少 Tag 元数据时只保留稳定 ID，不推测类型、单位或显示名称。 */
 function createLegacyTagDefinitions(pages: readonly ScadaPage[]): TagDefinition[] {
   const tagIds = new Set<string>();
@@ -357,26 +373,15 @@ function createLegacyTagDefinitions(pages: readonly ScadaPage[]): TagDefinition[
  * 历史绑定不变；缺少元数据的 Tag 生成未指定类型占位定义，不推测工艺含义。
  */
 export function migrateScadaDocument(input: unknown): ScadaDocumentMigration {
-  const root = record(input, "文档");
-  if (root.schemaVersion === SCADA_SCHEMA_VERSION) {
-    return { document: parseScadaDocument(input), migratedFrom: null };
+  const versioned = parseVersionedScadaDocument(input);
+  if (versioned.schemaVersion === SCADA_SCHEMA_VERSION) {
+    return { document: versioned, migratedFrom: null };
   }
-  if (
-    root.schemaVersion === PREVIOUS_SCADA_SCHEMA_VERSION ||
-    root.schemaVersion === LEGACY_SCADA_SCHEMA_VERSION
-  ) {
-    const sourceVersion = root.schemaVersion;
-    const legacy = parseVersionedDocument(input, sourceVersion);
-    const document = parseScadaDocument({
-      schemaVersion: SCADA_SCHEMA_VERSION,
-      projectId: legacy.projectId,
-      tags: createLegacyTagDefinitions(legacy.pages),
-      pages: legacy.pages,
-    });
-    return { document, migratedFrom: sourceVersion };
-  }
-  fail(
-    "schemaVersion",
-    `不支持的工程版本，仅允许 ${LEGACY_SCADA_SCHEMA_VERSION}、${PREVIOUS_SCADA_SCHEMA_VERSION} 或 ${SCADA_SCHEMA_VERSION}`,
-  );
+  const document = parseScadaDocument({
+    schemaVersion: SCADA_SCHEMA_VERSION,
+    projectId: versioned.projectId,
+    tags: createLegacyTagDefinitions(versioned.pages),
+    pages: versioned.pages,
+  });
+  return { document, migratedFrom: versioned.schemaVersion };
 }
