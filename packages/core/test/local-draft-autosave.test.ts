@@ -79,7 +79,7 @@ test("连续自动保存保持 Tag、组合及工程版本", () => {
   first.pages[0]!.nodes[0]!.transform.y += 1;
   expect(session.saveIfDirty(first, new Date("2026-11-10T07:01:00Z"))).not.toBeNull();
   const result = readLocalDraft(storage, "water-demo")!.document;
-  expect(result.schemaVersion).toBe("0.2.0");
+  expect(result.schemaVersion).toBe("0.3.0");
   expect(result.pages[0]?.nodes[1]?.groupId).toBe("group-1");
   expect(result.pages[0]?.nodes[3]?.groupId).toBe("group-1");
   expect(result.pages[0]?.nodes[1]?.bindings.level?.tagId).toBe("water.level");
