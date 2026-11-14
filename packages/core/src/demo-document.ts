@@ -79,6 +79,7 @@ function node(
 export const waterTreatmentDemoDocument = parseScadaDocument({
   schemaVersion: SCADA_SCHEMA_VERSION,
   projectId: "water-demo",
+  tags: waterTreatmentDemoTagDefinitions,
   pages: [
     {
       id: "main",
