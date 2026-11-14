@@ -35,3 +35,10 @@
 - 人工检查失败时的原记录保留、unknown 提示、Tag 管理 UI 与历史恢复提示。
 
 **当前状态**：浏览器测试入口与用例已提交开发分支，尚未在维护者 Windows 环境运行。所有验收项保持待验证；本批不修改迁移业务实现。未经维护者明确授权，Draft PR 不合并。
+
+
+## IndexedDB 测试夹具版本约束
+
+Dexie 的逻辑版本 `version(1)` 对应原生 IndexedDB 数据库版本 10；原生 `indexedDB.open(name, 1)` 不能用来打开该数据库，否则会请求从 10 降级到 1 并抛出 `VersionError`。测试夹具不得自行将 Dexie 逻辑版本传给原生 API，也不得在已存在的数据库上手动重建 stores。
+
+草稿数据库必须先由 localStorage 迁移流程经 `DexieDraftRepository` 初始化；历史版本数据库必须先由 Studio 版本菜单经 `DexieProjectVersionRepository` 初始化。测试脚本使用 `indexedDB.databases()` 确认数据库已存在，再调用不带版本参数的 `indexedDB.open(name)` 并核对所需 object stores，最后只在现有 stores 中注入旧记录。此操作不触发版本升级，不修改 Dexie 数据库结构。
