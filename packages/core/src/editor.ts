@@ -7,6 +7,8 @@ import {
 } from "./document.ts";
 import type { ScadaDocument, ScadaNode, ScadaNodeType } from "./document.ts";
 import { expandGroupedSelection } from "./grouping.ts";
+import { TagDefinitionCatalog, isTagDataTypeCompatibleWithBinding } from "./tag-definition.ts";
+import type { TagDefinition, TagDefinitionUpdate } from "./tag-definition.ts";
 
 export interface EditorSnapshot {
   readonly document: ScadaDocument;
@@ -936,6 +938,63 @@ export class DocumentEditor {
     return this.replaceActivePageNodes(nodes);
   }
 
+  /** 新增项目 Tag 定义，稳定 ID 在当前工程内唯一，并进入撤销历史。 */
+  addTagDefinition(definition: TagDefinition): boolean {
+    if (definition.dataType === "unknown") {
+      throw new TypeError("新建 Tag 必须指定数值、布尔值或文本类型");
+    }
+    const catalog = new TagDefinitionCatalog([...this.current.tags, definition]);
+    return this.commit(parseScadaDocument({ ...this.current, tags: catalog.snapshot() }));
+  }
+
+  /** 修改 Tag 展示元数据；稳定 ID 不可变，类型变更必须兼容所有现有绑定。 */
+  updateTagDefinition(tagId: string, update: TagDefinitionUpdate): boolean {
+    const current = this.current.tags.find((item) => item.tagId === tagId);
+    if (!current) throw new RangeError("未找到 Tag 定义：" + tagId);
+    if (update.dataType === "unknown" && current.dataType !== "unknown") {
+      throw new TypeError("不能将已指定类型的 Tag 改为未指定类型");
+    }
+    for (const page of this.current.pages) {
+      for (const node of page.nodes) {
+        for (const [slot, binding] of Object.entries(node.bindings)) {
+          if (
+            binding.tagId === tagId &&
+            !isTagDataTypeCompatibleWithBinding(node.type, slot, update.dataType)
+          ) {
+            throw new TypeError(
+              "Tag 类型与现有图元绑定不兼容，请先解除绑定或选择兼容类型：" + node.id,
+            );
+          }
+        }
+      }
+    }
+    const catalog = new TagDefinitionCatalog(
+      this.current.tags.map((item) => (item.tagId === tagId ? { tagId, ...update } : item)),
+    );
+    return this.commit(parseScadaDocument({ ...this.current, tags: catalog.snapshot() }));
+  }
+
+  /** 仅允许删除未被任何图元引用的 Tag，避免删除操作造成绑定数据丢失。 */
+  removeTagDefinition(tagId: string): boolean {
+    if (!this.current.tags.some((item) => item.tagId === tagId)) {
+      throw new RangeError("未找到 Tag 定义：" + tagId);
+    }
+    const references = this.current.pages.flatMap((page) =>
+      page.nodes
+        .filter((node) => Object.values(node.bindings).some((binding) => binding.tagId === tagId))
+        .map((node) => node.id),
+    );
+    if (references.length > 0) {
+      throw new TypeError("Tag 仍被图元引用，请先解除绑定：" + references.join("、"));
+    }
+    return this.commit(
+      parseScadaDocument({
+        ...this.current,
+        tags: this.current.tags.filter((item) => item.tagId !== tagId),
+      }),
+    );
+  }
+
   /** 单选图元的 Tag 绑定修改记录为一条可撤销命令。 */
   setSelectedBinding(slot: string, tagId: string | null): boolean {
     const node = this.getSelected();
@@ -949,6 +1008,13 @@ export class DocumentEditor {
     }
     if (tagId !== null && typeof tagId !== "string") {
       throw new TypeError("Tag ID 必须为字符串或 null");
+    }
+    if (tagId !== null) {
+      const definition = this.current.tags.find((item) => item.tagId === tagId);
+      if (!definition) throw new TypeError("不能绑定未定义的 Tag：" + tagId);
+      if (!isTagDataTypeCompatibleWithBinding(node.type, slot, definition.dataType)) {
+        throw new TypeError("Tag 数据类型与图元绑定槽不兼容");
+      }
     }
     if ((node.bindings[slot]?.tagId ?? null) === tagId) return false;
 
