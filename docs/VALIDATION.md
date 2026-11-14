@@ -533,3 +533,20 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **仍需独立验收（不阻止维护者本次明确授权的代码合并）**：Vue/React Studio 手工目录与绑定交互、历史 Schema JSON 跨框架导入导出、真正旧浏览器 IndexedDB/localStorage 草稿和历史快照迁移体验。真实工业网关、生产采集、现场控制、设备写入不在第三十批范围。
 
 本节只更新验收事实与 PR 描述，不更改已通过测试的业务代码；文档更新后的 `vp check` / `docs:check` 未重新执行。
+
+
+## 2026-11-14 · V0.3 第三十一批：项目 Tag 双框架可视化管理（待验收）
+
+基线：PR #52 已合并到 main（5781d690）；实施分支为 feat/v0.3-studio-project-tag-management。第三十批 438/438 等通过记录不能沿用为第三十一批新增 UI 的验证结果。
+
+- [ ] vp check：新建 React TSX、Vue SFC、Studio 接线、CSS 与脚本的格式、Lint、TypeScript 检查。
+- [ ] pnpm run docs:check：检查本批新增 ADR 与相关文档。
+- [ ] pnpm run test:unit：原有共享 Editor Tag CRUD 与 Schema 校验回归。
+- [ ] pnpm run ready：React/Vue/NestJS 类型检查、单测、E2E 和 Web/Server 构建全链。
+- [ ] pnpm run test:tags:browser：React/Vue 两端 Tag 新建、编辑、删除保护、删除及实际工程 JSON 断言。
+- [ ] pnpm run test:interop：React→Vue→React 项目 JSON 往返，包括 tags 稳定 ID 和元数据。
+- [ ] 人工 UI：表单控件、暗/亮主题、键盘焦点、ID 禁止修改、unknown 类型确认、非法字段/重复 ID/类型不兼容提示、删除确认。
+- [ ] 草稿与历史：Tag 变更撤销重做、浏览器草稿保存恢复、实际旧 0.1/0.2 工程与旧 IndexedDB/localStorage 草稿迁移。
+- [ ] 与第三十批 SSE 运行时互不干扰（按需要复跑 test:sse:browser 与 test:sse:fault:browser）。
+
+**验收状态**：本协作环境已经完成分支上的实现和静态代码审查，未运行本批 Windows Vite+ 测试或真实浏览器自动化，不报告测试通过。生产工业协议、现场设备与写入仍不在范围。Draft PR 未经授权不得合并。
