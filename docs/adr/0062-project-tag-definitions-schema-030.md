@@ -17,7 +17,7 @@
 2. **定义结构**：复用 ADR-0061 的 `tagId/displayName/dataType/unit/description`。稳定 ID 不可重命名，显示名称可变。质量、实时值、时间戳和序列号仍只存在于 `TagValue`，不进入静态目录。目录不含设备地址、连接参数、凭据、采样周期或写入能力。
 3. **历史迁移**：显式 `migrateScadaDocument` 同时支持 `0.1.0 → 0.3.0` 与 `0.2.0 → 0.3.0`；`parseScadaDocument` 只接受当前 0.3.0。历史工程没有类型/单位元数据，迁移器从现有图元绑定中收集 Tag ID，生成 `dataType: "unknown"`、`unit: null`、显示名称为原 ID 的占位定义，保留所有绑定，**不猜测数据类型或单位**。未来或未知 Schema 仍拒绝。
 4. **待确认类型**：`unknown` 仅表示历史迁移占位或尚未确认类型。TagStore 对其允许标量值通过，避免旧工程数据因迁移被误判；Studio 的绑定候选不把 unknown 作为新绑定候选，维护者必须先明确设置真实类型。明确类型后继续执行 number/boolean/string 严格校验。
-5. **绑定完整性**：当前 0.3.0 工程所有节点绑定必须引用目录中的 Tag。Tag 删除若仍有任一图元槽引用则拒绝；先解除绑定再删除。Tag 重命名只改 displayName，不改变稳定 tagId。共享 `DocumentEditor` 提供 add/update/remove 定义命令并纳入撤销/重做，稳定 ID 不能通过更新接口修改。
+5. **绑定完整性**：当前 0.3.0 工程所有节点绑定必须引用目录中的 Tag；已知内置绑定槽必须与 Tag 数据类型兼容，历史 `unknown` 占位只允许保留既有绑定，不能用于新绑定。已指定类型的 Tag 不得降级为 `unknown`，类型变更必须兼容所有现有已知绑定槽。Tag 删除若仍有任一图元槽引用则拒绝；先解除绑定再删除。Tag 重命名只改 displayName，不改变稳定 tagId。共享 `DocumentEditor` 提供 add/update/remove 定义命令并纳入撤销/重做，稳定 ID 不能通过更新接口修改。
 6. **实时运行**：DemoRuntime 加载项目文档后从该文档构建 TagDefinitionCatalog，再创建 TagStore；Tauri OfflineDemoRuntime 和独立水处理 SSE 服务使用同一演示工程目录。实时质量仍动态更新，类型不匹配沿用既有无效上游消息路径并关闭订阅。
 7. **持久化路径**：工程 JSON 导入/导出自然包含 tags；IndexedDB 草稿与 Project Snapshot 保存完整当前工程。读取既有 0.1/0.2 草稿时进行受控迁移；已有 IndexedDB 草稿在同一事务内写回 0.3.0 并推进 revision，通知其他标签页。旧 localStorage 草稿在读取/开启自动保存会话时升级后写回。历史 Project Snapshot 先按原始文档验证原 SHA-256，再返回带 `sourceContentHash` / `migratedFrom` 的 0.3.0 归一化查看副本；不原地改写原始历史记录。
 8. **框架对等**：Vue/React Studio 从 `state.document.tags` 读取绑定候选与目录展示，按共享槽位规则过滤类型；不再把代码常量当作工程 Tag 目录。当前批只展示项目目录与支持 Core 命令，完整 Tag 新增/编辑/删除 UI 交由下一批完成。
