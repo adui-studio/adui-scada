@@ -947,6 +947,9 @@ export class DocumentEditor {
 
   /** 新增项目 Tag 定义，写入工程文档并纳入撤销历史。 */
   addTagDefinition(definition: TagDefinition): boolean {
+    if (definition?.dataType === "unknown") {
+      throw new TypeError("新建 Tag 必须指定数值、布尔值或文本类型");
+    }
     const tags = new TagDefinitionCatalog([...this.current.tags, definition]).snapshot();
     return this.commit(parseScadaDocument({ ...this.current, tags }));
   }
