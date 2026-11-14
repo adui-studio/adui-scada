@@ -714,7 +714,6 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 
 **未在本次日志中验证**：真实 PostgreSQL 上应用新增 OIDC 增量迁移及数据库注释、OIDC Identity Provider 协议联调、Cookie/CSRF、工程 HTTP API。当前服务端 `SCADA_OIDC_ENABLED=true` 仍主动拒绝启动；这属于阶段 A 的安全边界。上述能力及迁移隔离测试待后续阶段完成。
 
-
 ### 第三十三批依赖安装与全链复验（2026-11-14，维护者 Windows 日志）
 
 维护者在 Windows / pnpm **12.18.0** 实际执行：
