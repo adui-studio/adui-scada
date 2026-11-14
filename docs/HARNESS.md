@@ -1618,3 +1618,17 @@ pnpm run test:sse:fault:browser
 ### 第三十三批阶段 A 最小验证指令
 
 `pnpm run env:check`、`pnpm run db:validate`、`pnpm run db:generate`、`vp check`、`pnpm run test:unit`、`pnpm run docs:check`、`pnpm run ready`。验证实际增量迁移时仅允许本机隔离测试数据库，并检查 PostgreSQL COMMENT 元数据。当前不运行 OIDC 真实登录或外部工程接口，因为尚未开放。
+
+
+## 第三十三批 · PostgreSQL OIDC 迁移隔离验收
+
+OIDC 迁移真实测试单独使用 `pnpm run test:db`，不纳入默认 `ready`。测试入口会拒绝非本机地址或数据库名不是 `adui_scada_test` 的 URL。运行前先由维护者创建该独立数据库，再在当前 PowerShell 进程中将 `SCADA_DATABASE_URL` 和 `SCADA_TEST_DATABASE_URL` 都显式设置为该测试库连接串，依次执行：
+
+```powershell
+pnpm run db:validate
+pnpm run db:migrate:deploy
+pnpm run db:migrate:status
+pnpm run test:db
+```
+
+迁移与测试均不得指向普通开发数据库 `adui_scada` 或生产数据库。测试结束后恢复/清理当前 PowerShell 的临时环境变量。OIDC Schema 测试核对迁移登记、外部身份及登录事务表、15 个字段、外键、约束、索引和中文 PostgreSQL COMMENT。真实迁移未执行前不得标记阶段 A 数据库验收通过。
