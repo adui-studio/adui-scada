@@ -41,3 +41,8 @@
 Dexie 的逻辑版本 `version(1)` 对应原生 IndexedDB 数据库版本 10；原生 `indexedDB.open(name, 1)` 不能用来打开该数据库，否则会请求从 10 降级到 1 并抛出 `VersionError`。测试夹具不得自行将 Dexie 逻辑版本传给原生 API，也不得在已存在的数据库上手动重建 stores。
 
 草稿数据库必须先由 localStorage 迁移流程经 `DexieDraftRepository` 初始化；历史版本数据库必须先由 Studio 版本菜单经 `DexieProjectVersionRepository` 初始化。测试脚本使用 `indexedDB.databases()` 确认数据库已存在，再调用不带版本参数的 `indexedDB.open(name)` 并核对所需 object stores，最后只在现有 stores 中注入旧记录。此操作不触发版本升级，不修改 Dexie 数据库结构。
+
+
+## 浏览器函数序列化与 SHA-256 规范化
+
+`evaluateStudioPage` 通过 `action.toString()` 将单个操作函数序列化后放入浏览器上下文执行，不携带 Node 作用域闭包。因此传入 CDP 的操作函数及其异步回调必须自包含，只可引用参数、函数内部声明和浏览器全局 API。Project Snapshot 注入函数在内部定义 `stableValue`，递归数组并按对象键排序，使用 `Object.create(null)` 构建规范化对象；其逻辑与 Core 的摘要规范化一致。禁止依赖外层 Node helper，以免在真实浏览器运行时发生 ReferenceError。
