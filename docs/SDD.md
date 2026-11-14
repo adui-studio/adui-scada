@@ -1,6 +1,6 @@
 # ADui SCADA · 详细设计（初稿）
 
-> 大部分数据结构和接口仍为 **候选契约**，不是已存在服务。V0.1 仅实现已标注的本地 Document/Tag/SVG 子集，见 [V0.1 实施记录](V0.1_IMPLEMENTATION.md)。范围编号见 [REQUIREMENTS](REQUIREMENTS.md)。
+> 大部分工业服务与协议接口仍为 **候选契约**，不是已存在服务。当前共享工程 Schema 为 0.3.0，已实现本地项目 Tag 定义目录、历史迁移与双框架 Studio 子集；生产保存、工业地址映射、Gateway、报警与历史仍未实现。范围编号见 [REQUIREMENTS](REQUIREMENTS.md)。
 
 ## 1. 需求追踪
 
@@ -17,9 +17,17 @@
 ```ts
 type TagId = string;
 interface ScadaDocument {
-  schemaVersion: string;
+  schemaVersion: "0.3.0";
   projectId: string;
+  tags: TagDefinition[];
   pages: ScadaPage[];
+}
+interface TagDefinition {
+  tagId: string;
+  displayName: string;
+  dataType: "unknown" | "number" | "boolean" | "string";
+  unit: string | null;
+  description: string;
 }
 interface ScadaPage {
   id: string;
@@ -577,3 +585,31 @@ type DemoTagSourcePreset = "standalone" | "nest-local";
 `TagStore(catalog?)` 保持可选目录：不传目录时维持通用标量契约；传入目录时，`apply` 与 `replaceSnapshot` 在状态修改前校验每个非空值的 JS 类型与定义一致，任何一项失败均不部分提交。空值 `null` 保留为无有效读数；质量不进入静态定义，仍由 `TagValue.quality` 动态表达。当前水处理目录为水位 number/%、水泵 boolean/无单位、流量 number/m3/h。DemoRuntime、OfflineDemoRuntime 与独立 SSE 服务共享目录，双框架绑定候选展示类型、单位及描述。
 
 此批未升级工程 Schema 0.2.0，Tag 目录未持久化，重命名不是保存操作；没有地址映射、协议 NodeId/寄存器/Topic、单位转换、设备连接或写入。见 [ADR-0061](adr/0061-tag-definition-catalog.md)。
+
+## 2026-11-14 · V0.3 第三十批：项目级 Tag 定义与 Schema 0.3.0
+
+### 工程根结构
+
+`ScadaDocument` 从 `0.2.0` 升级为 `0.3.0`，新增必填 `tags: TagDefinition[]`。定义字段为稳定 `tagId`、可变 `displayName`、`dataType`、`unit`、`description`。当前 `dataType` 包括 `unknown/number/boolean/string`；`unknown` 仅用于历史迁移占位，不能作为新的绑定候选。Tag 定义不存质量、值、设备地址、连接串或写入权限。
+
+### 解析与迁移
+
+- `parseScadaDocument` 仅接受当前 0.3.0，必须包含 Tag 定义数组，所有图元绑定必须引用已定义 Tag；Tag ID 全工程唯一，目录上限 4096。
+- `migrateScadaDocument` 显式接受 0.1.0 和 0.2.0，收集历史工程绑定的 Tag ID，为其创建 `unknown` 类型占位定义，保留原绑定。未知/未来版本拒绝。
+- 历史类型未知时不推断 number/boolean/string。TagStore 在定义为 unknown 时允许已有标量通过，Studio 不允许将 unknown 作为新绑定候选；维护者确认真实类型后启用严格类型校验。
+- 当前工程删除 Tag 前检查所有页面绑定，存在引用则拒绝；稳定 tagId 不允许更新。新增/修改/删除项目 Tag 定义通过共享 DocumentEditor 命令，支持撤销/重做。
+
+### 持久化与历史兼容
+
+- 工程 JSON 根结构直接携带 `tags`，跨 Vue/React 导入导出不依赖第二份本地目录。
+- LocalStorage 与 Dexie 草稿读取支持 0.1/0.2 → 0.3 迁移；Dexie 已存在草稿在同一事务内写入迁移结果并递增 revision，跨标签页收到更新通知。
+- Project Snapshot 仍使用容器 formatVersion 1。读取旧 Schema 时先验证原始文档的 SHA-256，再生成当前 Schema 查看副本，保存 `sourceContentHash` 和 `migratedFrom`，归一化视图自身也重新计算摘要；原始历史记录不被原地改写。
+- 现有数据库无需新增 Tag 表或 Dexie object store；Tag 定义与页面/绑定属于同一工程文档版本。
+
+### 编辑器与 UI
+
+`DocumentEditor.addTagDefinition/updateTagDefinition/removeTagDefinition` 修改工程根 tags 并纳入撤销/重做。更新接口不接受 tagId；删除被引用 Tag 时失败。Vue/React 绑定候选从当前工程 tags 派生，按 level:number、running:boolean、value:scalar 的共享槽位规则过滤；目录展示显示名称、ID、类型、单位与描述。当前批没有完成可视化新增/编辑/删除表单，后续批次继续。
+
+### 验收边界
+
+项目级 Tag 定义现在随工程 JSON、草稿和本地历史快照持久化，但没有生产服务端项目 API、用户权限、工业地址映射、OPC UA/Modbus/MQTT 驱动、真实设备或写入接口。历史 unknown 定义需维护者确认；自动迁移不等于推测类型。
