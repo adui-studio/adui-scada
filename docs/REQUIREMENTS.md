@@ -266,3 +266,10 @@ Core 新增框架无关 Tag 定义模型，使用稳定 `tagId` 区分不可变�
 `ScadaDocument 0.3.0` 新增必填 `tags: TagDefinition[]`，Tag 定义随工程 JSON、IndexedDB 草稿和本地历史快照保存；所有图元绑定必须引用目录中的稳定 Tag ID。历史 0.1.0/0.2.0 工程迁移时为已有绑定生成 `dataType: unknown` 占位定义，不猜测类型和单位；维护者确认类型后才允许作为新绑定候选。TagStore 按项目目录校验实时值类型，质量仍是动态 TagValue 属性。Dexie 草稿、LocalStorage 草稿和历史快照均有旧 Schema 迁移路径。Vue/React Studio 从工程目录读取候选并展示元数据。
 
 本批尚未提供完整 Tag 管理表单；Core 的新增/更新/删除命令已纳入撤销历史，删除仍被绑定的 Tag 会拒绝。工业地址映射、OPC UA NodeId、Modbus 寄存器、MQTT Topic、生产项目保存 API、认证与设备写入不属于本批交付。见 [ADR-0062](adr/0062-project-tag-definitions-schema-030.md)。
+
+
+## V0.3 第三十一批：Vue/React Studio 项目 Tag 可视化管理（FR-002 / FR-004 / FR-006 局部）
+
+在第三十批 ScadaDocument 0.3.0 项目 Tag 持久化与共享 Editor 命令基础上，Vue/React Studio 右侧属性区增加项目 Tag 新增、编辑、删除表单。可维护稳定 ID、显示名称、数据类型、单位与描述；编辑时 ID 不可修改，新增不得使用历史 unknown 占位类型。已被图元绑定的 Tag 不允许删除，类型修改仍受共享槽位约束，错误统一以中文提示；成功变更走现有撤销重做、JSON 导入导出与草稿保存机制。
+
+本批只增加双框架 UI 与浏览器回归，不增加数据库表、生产保存 API、工业地址、连接参数、批量级联或设备写入。当前代码已提交开发分支，完整 Windows 质量链与实际浏览器验收待执行。见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md)。
