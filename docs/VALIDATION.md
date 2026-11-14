@@ -461,3 +461,23 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **未验收内容**：React/Vue Studio 手工检查三项演示 Tag 的类型、单位、描述、稳定 ID、绑定撤销、工程导入导出；Tauri 桌面人工回归；项目级 Tag 持久化、真实工业协议和现场设备。浏览器 SSE 通过不等于 Studio Tag 管理 UI 已人工确认。
 
 本次仅更新验收文档及 PR 正文，不改变业务代码。**上述日志对应文档更新前的分支；最新验收文档提交后的 `vp check` / `docs:check` 尚未重跑**。PR #51 保持 Draft，指派 `@adui-dev`，未经维护者明确授权不得合并。
+
+
+## 2026-11-14 · V0.3 第三十批：项目级 Tag 定义持久化与 Schema 0.3.0（待 Windows 验收）
+
+实施分支：`feat/v0.3-project-tag-definitions`。基线为第二十九批 PR #51 合并提交 `69f36d6`。本批首次将项目 Tag 定义写入工程 Schema；**不得沿用第二十九批的 426/426、40/40、17/17 或 SSE 浏览器结果作为本批验收证据**。
+
+- [ ] `pnpm run test:unit`：验证 0.1.0/0.2.0 历史工程迁移、0.3.0 Tag 目录白名单、绑定引用完整性、Tag 编辑命令撤销/重做、历史快照摘要与本地草稿恢复。
+- [ ] `pnpm run test:runtime`：验证在线 Runtime、离线模拟和独立演示服务均使用当前工程 Tag 目录，实时值类型拒绝保持原子性，TagQuality 仍由 TagValue 动态表达。
+- [ ] `pnpm run test:e2e:server`：确认现有 NestJS 只读边界和健康检查无回归；不把 E2E 结果解释为生产数据库或工业网关已实现。
+- [ ] `vp check`：格式、Lint、TypeScript 检查通过。
+- [ ] `pnpm run docs:check`：Markdown 文档静态检查通过。
+- [ ] `pnpm run ready`：完整质量链执行至结束并记录真实退出码。
+- [ ] `pnpm run test:sse:browser`：React/Vue 心跳、Tag 过期、静默重连和连接回收通过。
+- [ ] `pnpm run test:sse:fault:browser`：React/Vue TCP 故障注入、STALE、主动重连和连接回收通过。
+- [ ] 人工检查 React/Vue Studio：绑定候选来自当前工程目录；按共享槽位类型筛选；展示名称、稳定 ID、类型、单位和描述一致；历史 unknown Tag 不作为新绑定候选；导入/导出往返保留 tags 与原绑定。
+- [ ] 历史兼容检查：0.1.0/0.2.0 工程升级后原绑定不变、unknown 占位不猜测类型；未来版本和非法结构明确拒绝；IndexedDB 迁移事务推进 revision；历史快照原始摘要校验不被绕过。
+
+**当前验收状态：** 本协作环境只完成 GitHub 分支、代码、测试用例和 ADR 的静态审查；没有执行本批仓库命令，也没有 Windows 浏览器人工验收。所有上述项目保持待验证，不能标记通过。
+
+**明确不属于本批：** 完整 Tag 管理表单、Prisma Tag 表、生产项目保存 API、身份认证/多人协作、OPC UA/Modbus/MQTT 地址映射、工业网关和设备写入；Tauri 安装包也不作为本批自动化验收结论。
