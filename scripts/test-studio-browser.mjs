@@ -14,11 +14,15 @@ const host = process.env.SCADA_WEB_HOST || "127.0.0.1";
 const targets = [
   {
     name: "React",
-    url: process.env.SCADA_REACT_URL || "http://" + host + ":" + (process.env.SCADA_REACT_DEV_PORT || "15173") + "/",
+    url:
+      process.env.SCADA_REACT_URL ||
+      "http://" + host + ":" + (process.env.SCADA_REACT_DEV_PORT || "15173") + "/",
   },
   {
     name: "Vue",
-    url: process.env.SCADA_VUE_URL || "http://" + host + ":" + (process.env.SCADA_VUE_DEV_PORT || "15174") + "/",
+    url:
+      process.env.SCADA_VUE_URL ||
+      "http://" + host + ":" + (process.env.SCADA_VUE_DEV_PORT || "15174") + "/",
   },
 ];
 const viewports = [
