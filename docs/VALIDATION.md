@@ -492,3 +492,16 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 已在 PR #52 中仅将该分支声明改为 `const payload: Omit<ProjectSnapshot, "contentHash"> = { ... }`，不改变历史源 SHA-256 校验、迁移元数据、快照大小约束或业务流程。修复提交为 `757d5012`。独立 TypeScript 5.8.3 严格编译最小复现确认原始类型拓宽报错与显式约束方案的编译行为，**不能替代完整仓库检查**。
 
 **待复验**：同步最新分支后重跑 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 与 `pnpm run ready`。本批所有完整质量链与浏览器验收仍保持待执行；不可将格式化完成视为类型检查通过。
+
+
+### 第三十批 Windows 完整质量链首次复验失败与修复（2026-11-14）
+
+维护者提供完整 PowerShell 日志；该轮执行发生在本节修复提交之前：
+
+- **通过**：`vp check` 显示 **268 个文件格式正确、133 个受检文件零警告/Lint/类型错误**；`pnpm run docs:check` **78 份 Markdown 通过**。`ready` 内依赖 Catalog 11 个清单 / 51 项、共享配置 9 个 TSConfig、环境与 LF、中文文案 159 个文件、Prisma Client 7.10.1、Core 构建、React/Vue/Draft Storage/NestJS 类型检查均已通过。
+- **`ready` 未通过**：全量 Vitest 报 **38 个文件中 36 通过、2 失败；433 个测试中 432 通过、1 失败**。其中 `packages/core/test/svg.test.ts` 在加载时因当前 0.3.0 测试文档缺少必填 `tags` 导致测试套件失败（0 项测试运行）；`packages/core/test/document.test.ts` 的历史工程测试将版本设为 0.1.0 但仍保留 0.3.0 的 `tags`，被严格根字段校验优先拒绝，未执行至预期的非法组合断言。后续 SSE 资源测试、NestJS E2E、Web/Server 构建没有运行到完成，不得标记通过。
+- **浏览器 SSE 未通过**：`test:sse:browser` 与 `test:sse:fault:browser` 都在 React 启动阶段进入 `error`，EventSource 连接列表为空且 Tag 数量为 0，两个命令均以失败结束，**未执行到 Vue 回归**。从未创建 EventSource 只能判断故障位于订阅启动之前；旧模拟进程返回上一版 Schema 只是可能原因，尚无接口内容证据，不能直接归因。
+- **已提交修复**：在 `svg.test.ts` 增加符合 Schema 0.3.0 的 Tag 定义；在 `document.test.ts` 正确移除旧工程不支持的根 `tags` 字段，同时调整其他旧版夹具，避免假阳性；在 `test-runtime-sse-browser.mjs` 校验 `/demo/project` 返回的版本和 Tag 目录，超时诊断附带实际 Runtime 错误消息。未放宽工程解析安全边界，也未更改生产 Tag 质量或设备访问。
+- **待复验**：维护者同步最新分支后重新执行 `pnpm run test:unit`、`vp check`、`pnpm run docs:check`、`pnpm run ready`；停止旧的 `dev:demo` 进程后重新启动当前分支模拟服务、React/Vue 开发服务，分别复测 `pnpm run test:sse:browser`、`pnpm run test:sse:fault:browser`。应记录 `/demo/project` 实际 Schema 和错误消息，不得在 SSE 故障未定位前称本批验收完成。
+
+本记录仅使用维护者日志描述修复前的结果；新增提交后的完整质量链尚未在本协作环境实测。PR #52 继续保持 Draft、指派 `@adui-dev`，未经授权不得合并。
