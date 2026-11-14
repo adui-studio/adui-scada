@@ -1,6 +1,6 @@
 # ADR-0064：旧版工程、浏览器草稿与历史快照的真实浏览器迁移验收
 
-- 状态：Proposed
+- 状态：Accepted
 - 日期：2026-11-14
 - 关联：FR-002、FR-004、FR-006、FR-013、NFR-002、NFR-004
 - 前置：[ADR-0062](0062-project-tag-definitions-schema-030.md)、[ADR-0063](0063-studio-tag-management-dual-framework.md)
@@ -34,7 +34,7 @@
 - vp check、pnpm run docs:check、pnpm run ready。
 - 人工检查失败时的原记录保留、unknown 提示、Tag 管理 UI 与历史恢复提示。
 
-**当前状态**：浏览器测试入口与用例已提交开发分支，尚未在维护者 Windows 环境运行。所有验收项保持待验证；本批不修改迁移业务实现。未经维护者明确授权，Draft PR 不合并。
+**实施与验收结果**：维护者 Windows 实测 `pnpm run test:legacy:browser` 六条路径全部通过，退出码 0；`pnpm run test:interop` 双框架互通通过，退出码 0。`vp check` 和 `docs:check` 通过。`ready` 日志中的最终 NestJS build 完成与退出码尚未出现在所提供片段中，需补充最终证据。
 
 ## IndexedDB 测试夹具版本约束
 
