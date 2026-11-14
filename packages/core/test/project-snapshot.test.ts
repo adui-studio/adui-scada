@@ -99,7 +99,7 @@ function stableValue(value: unknown): unknown {
 
 async function digest(value: unknown): Promise<string> {
   const bytes = new TextEncoder().encode(JSON.stringify(stableValue(value)));
-  const result = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  const result = new Uint8Array(await globalThis.crypto.subtle.digest("SHA-256", bytes));
   return Array.from(result, (item) => item.toString(16).padStart(2, "0")).join("");
 }
 
