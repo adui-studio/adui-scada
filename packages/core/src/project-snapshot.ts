@@ -1,5 +1,5 @@
-import { parseScadaDocument } from "./document.ts";
-import type { ScadaDocument } from "./document.ts";
+import { parseScadaDocument, parseVersionedScadaDocument } from "./document.ts";
+import type { ScadaDocument, VersionedScadaDocument } from "./document.ts";
 
 /** 校验范围仅为工程 Schema 与 JSON 安全规则，不代表具备正式发布条件。 */
 export interface ProjectValidationIssue {
@@ -51,7 +51,7 @@ export interface ProjectSnapshot {
   readonly createdAt: string;
   readonly hashAlgorithm: "SHA-256";
   readonly contentHash: string;
-  readonly document: DeepReadonly<ScadaDocument>;
+  readonly document: DeepReadonly<VersionedScadaDocument>;
 }
 
 export interface ProjectSnapshotOptions {
@@ -129,7 +129,7 @@ async function hashSnapshotContent(source: {
   revision: number;
   createdAt: string;
   hashAlgorithm: string;
-  document: ScadaDocument;
+  document: VersionedScadaDocument;
 }): Promise<string> {
   const canonical = JSON.stringify(stableValue(source));
   const bytes = utf8Bytes(canonical);
@@ -215,7 +215,7 @@ export async function readProjectSnapshot(input: unknown): Promise<ProjectSnapsh
   if (typeof raw.contentHash !== "string" || !/^[0-9a-f]{64}$/.test(raw.contentHash)) {
     throw new TypeError("工程快照摘要格式无效");
   }
-  const document = parseScadaDocument(raw.document);
+  const document = parseVersionedScadaDocument(raw.document);
   if (raw.projectId !== document.projectId) {
     throw new TypeError("快照与工程 ID 不一致");
   }
