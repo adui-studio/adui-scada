@@ -805,3 +805,10 @@ React SSE 浏览器和 TCP 故障测试均在进入 EventSource 订阅前报 `er
 维护者明确授权后，PR #52 已通过 Squash Merge 合并至 main，合并提交为 5781d6903de83ba25f4df8172538f6208c0b0c5d；合并前 GitHub 核验无冲突、未解决审查线程 0，Assignee 为 @adui-dev。第三十批 Windows 自动化验收记录显示全量单测 438/438、Runtime 40/40、NestJS E2E 17/17，以及 Vue/React 双端 SSE 和 TCP 故障回归通过；Studio 人工目录与历史旧草稿真实迁移体验仍需单独验收。
 
 第三十一批基于以上 main 提交创建 feat/v0.3-studio-project-tag-management。已在 Vue/React Studio 增加项目 Tag 新增、编辑、删除表单，保持稳定 Tag ID、unknown 历史占位及绑定保护，全部变更调用共享 Core Editor；另增加 test:tags:browser 双框架浏览器回归入口。本批不改工程 Schema 或工业协议，不提供设备写入。当前分支尚未执行 Windows ready 或完整浏览器验收，不得视为通过。详见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md)。
+
+
+### 第三十一批 Windows 首轮验收与浏览器断言时序修复（2026-11-14）
+
+维护者 Windows 日志确认第三十一批 `vp check`（271 文件、135 受检文件零错误）、`docs:check`（79 Markdown）及 `pnpm run ready` 完整执行至 NestJS build，438/438 单测、SSE 8/8、TCP 代理 4/4、NestJS E2E 17/17、React/Vue 类型检查和构建均通过。React/Vue 工程互通 `pnpm run test:interop` 通过，退出码 0。
+
+`pnpm run test:tags:browser` 在 React 的绑定删除保护断言处失败。代码审查发现测试在捕获删除拒绝状态栏消息前先触发 JSON 导出，导出成功提示覆盖了删除拒绝提示；Core 删除保护逻辑仍然有效。已调整浏览器脚本为先等待并断言“仍被…绑定”提示，再导出 JSON 验证绑定 Tag 仍存在。此为测试时序修复，最新脚本尚未由维护者 Windows 重新执行，不能记录为通过；Vue 测试尚未在首轮失败时执行。详见 [VALIDATION](VALIDATION.md)。
