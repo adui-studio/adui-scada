@@ -245,6 +245,7 @@ test("未知根与页面字段一律拒绝且不会被静默丢弃", () => {
   page.pages[0].reserved = 1;
   expect(() => migrateScadaDocument(page)).toThrow(/结构字段/);
   page.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete page.tags;
   expect(() => migrateScadaDocument(page)).toThrow(/结构字段/);
 });
 
@@ -267,6 +268,7 @@ test("未知画布尺寸、图元、变换及绑定字段一律拒绝导入", ()
     for (const version of [SCADA_SCHEMA_VERSION, LEGACY_SCADA_SCHEMA_VERSION]) {
       const source = JSON.parse(JSON.stringify(fixture()));
       source.schemaVersion = version;
+      if (version !== SCADA_SCHEMA_VERSION) delete source.tags;
       mutate(source);
       expect(() => migrateScadaDocument(source)).toThrow(/结构字段/);
     }
@@ -276,11 +278,13 @@ test("未知画布尺寸、图元、变换及绑定字段一律拒绝导入", ()
 test("历史工程即使版本正确也必须拒绝非法组合和危险属性", () => {
   const oneMember = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
   oneMember.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete oneMember.tags;
   oneMember.pages[0].nodes[1].groupId = "group-1";
   expect(() => migrateScadaDocument(oneMember)).toThrow(/至少需要两个图元/);
 
   const malicious = JSON.parse(JSON.stringify(fixture()));
   malicious.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete malicious.tags;
   malicious.pages[0].nodes[0].props = JSON.parse('{"__proto__":{"unsafe":true}}');
   expect(() => migrateScadaDocument(malicious)).toThrow(/属性名称不安全/);
 });
