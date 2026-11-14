@@ -39,6 +39,14 @@ const defaults = {
   SCADA_DB_PASSWORD: "adui_scada_dev_only_2026",
   SCADA_DATABASE_URL:
     "postgresql://adui_scada:adui_scada_dev_only_2026@127.0.0.1:15432/adui_scada?schema=public",
+  SCADA_OIDC_ENABLED: "false",
+  SCADA_OIDC_ALLOW_INSECURE_LOOPBACK: "false",
+  SCADA_OIDC_ISSUER: "",
+  SCADA_OIDC_CLIENT_ID: "",
+  SCADA_OIDC_CLIENT_SECRET: "",
+  SCADA_OIDC_REDIRECT_URI: "",
+  SCADA_OIDC_WEB_ORIGINS: "",
+  SCADA_OIDC_TRANSACTION_ENCRYPTION_KEY: "",
 };
 const template = parseEnv(".env.example");
 assert.deepEqual({ ...template }, defaults, "根目录 .env.example 的默认值必须与配置契约一致");
@@ -102,8 +110,16 @@ if (existsSync(resolve(root, ".env"))) {
         ["fatal", "error", "warn", "info", "debug", "trace", "silent"].includes(value),
         "SCADA_LOG_LEVEL：必须是已支持的日志级别",
       );
-    } else if (key === "SCADA_API_DOCS_ENABLED" || key === "SCADA_LOCAL_DEMO_API_ENABLED") {
-      assert.ok(["true", "false"].includes(value), "SCADA_API_DOCS_ENABLED：必须是 true 或 false");
+    } else if (
+      key === "SCADA_API_DOCS_ENABLED" ||
+      key === "SCADA_LOCAL_DEMO_API_ENABLED" ||
+      key === "SCADA_OIDC_ENABLED" ||
+      key === "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK"
+    ) {
+      assert.ok(["true", "false"].includes(value), `${key}：必须是 true 或 false`);
+    } else if (key.startsWith("SCADA_OIDC_")) {
+      // OIDC 地址和凭据仅在显式启用时由 NestJS Zod 启动配置严格校验；
+      // 不能在本机环境检查中输出任何敏感值。
     } else if (key === "SCADA_DB_PASSWORD" || key === "SCADA_DATABASE_URL") {
       // 数据库密码和 URL 由后续配套检查比较，不在报错时泄漏原值。
     } else {
