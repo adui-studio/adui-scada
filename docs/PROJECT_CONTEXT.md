@@ -724,3 +724,14 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 ### 第二十九批首轮 Windows `vp check --fix` 解析失败（2026-11-14）
 
 维护者首次执行本批格式修复时报告 `apps/web-react/src/studio/StudioPage.tsx:2016` 的 JSX 三元分支根节点数量错误，`vp check --fix` 在解析阶段失败。本轮已在 PR #51 中加入 Fragment 修复，并检查、修正了新增 Core readonly 字段测试与 Vue 未绑定 Tag 的提示。**代码修复已经提交，但尚无本批 Windows 复验通过证据**；后续仍需执行 `vp check`、`test:unit`、`test:runtime`、`docs:check`、`ready`、Vue/React SSE 回归和人工 UI 验证。
+
+### 第二十九批 Windows `ready` 检查 TS1294 阻塞与修复（2026-11-14）
+
+维护者本轮执行 `pnpm run ready` 的实际结果：
+
+- **已通过**：依赖 Catalog 检查（11 个清单、51 项）、共享配置（9 个 TSConfig 消费端）、统一环境和 LF、中文文案（159 个自有文件）、Prisma Client 7.10.1 生成、`@adui/scada-core` Node 构建（`tsc -p tsconfig.build.json`）、`vp check`（267 文件格式正确，133 个受检文件零警告、Lint 错误和类型错误）。
+- **首次失败**：`typecheck:web` 阶段的 `tsc --build` 报 `TS1294`，定位 `packages/core/src/tag-store.ts:60` 的 `constructor(private readonly catalog?: TagDefinitionCatalog) {}`。项目启用 `erasableSyntaxOnly`，不允许该参数属性语法。`ready` 因此中断，**不能宣称单测、E2E、文档检查或 Web/Server 构建通过**。
+- **已修复但尚待复验**：在同一 Draft PR #51 分支将上述参数属性替换为显式 `private readonly catalog?: TagDefinitionCatalog` 字段及 `constructor(catalog?: TagDefinitionCatalog) { this.catalog = catalog; }`。对外调用方式、目录可选行为及 TagStore 原子校验逻辑未改变；未升级依赖、修改 tsconfig、变更业务协议。
+- **后续验证**：维护者同步分支后重跑 `pnpm run ready`，记录真正执行到单测、NestJS E2E、docs 和双框架构建的结果；必要时分别执行 `pnpm run test:runtime` 和 React/Vue SSE 浏览器回归。
+
+本段仅记录实际日志与代码修复，不代表修复后的 `ready` 已通过。PR 继续保持 Draft 和 `@adui-dev` 指派，未经明确合并授权不合并。
