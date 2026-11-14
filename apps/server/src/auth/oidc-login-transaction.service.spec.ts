@@ -90,8 +90,7 @@ function createFakeService(config = createConfig()) {
   let consumeCalls = 0;
   let failCreate = false;
   let failTransaction = false;
-  let client: FakePrismaClient;
-  client = {
+  const transactionClient: FakeTransactionClient = {
     scadaOidcTransaction: {
       create: async (args: { readonly data: Omit<StoredTransaction, "consumedAt"> }) => {
         createCalls += 1;
@@ -140,11 +139,14 @@ function createFakeService(config = createConfig()) {
         return { count: 1 };
       },
     },
+  };
+  const client: FakePrismaClient = {
+    ...transactionClient,
     $transaction: async <T>(
       callback: (transaction: FakeTransactionClient) => Promise<T>,
     ): Promise<T> => {
       if (failTransaction) throw new Error("数据库事务异常不得泄漏");
-      return callback(client);
+      return callback(transactionClient);
     },
   };
   const discovery = {
