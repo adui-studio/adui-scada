@@ -54,35 +54,25 @@ CREATE INDEX "scada_oidc_transactions_expiry_idx"
 CREATE INDEX "scada_oidc_transactions_browser_idx"
   ON "scada_oidc_transactions" ("browser_binding_hash", "expires_at");
 
-COMMENT ON COLUMN "scada_auth_sessions"."csrf_token_hash" IS
-  'Cookie 会话的 CSRF 令牌 SHA-256 摘要；原有 Bearer 会话保持空值。';
+COMMENT ON COLUMN "scada_auth_sessions"."csrf_token_hash" IS 'Cookie 会话的 CSRF 令牌 SHA-256 摘要；原有 Bearer 会话保持空值。';
 
-COMMENT ON TABLE "scada_external_identities" IS
-  '可信 OIDC 外部身份预绑定表：仅以 Issuer 与 subject 映射本地租户主体。';
+COMMENT ON TABLE "scada_external_identities" IS '可信 OIDC 外部身份预绑定表：仅以 Issuer 与 subject 映射本地租户主体。';
 COMMENT ON COLUMN "scada_external_identities"."issuer" IS '已配置并验证的外部 OIDC Issuer。';
 COMMENT ON COLUMN "scada_external_identities"."subject" IS 'Issuer 范围内唯一的外部主体标识，不使用邮箱作为身份主键。';
 COMMENT ON COLUMN "scada_external_identities"."tenant_id" IS '预绑定的本地租户标识。';
 COMMENT ON COLUMN "scada_external_identities"."subject_id" IS '预绑定的租户内可信主体标识。';
 COMMENT ON COLUMN "scada_external_identities"."created_at" IS '外部身份映射记录创建时间。';
-COMMENT ON INDEX "scada_external_identities_identity_idx" IS
-  '按本地租户与主体查询预绑定的外部身份。';
+COMMENT ON INDEX "scada_external_identities_identity_idx" IS '按本地租户与主体查询预绑定的外部身份。';
 
-COMMENT ON TABLE "scada_oidc_transactions" IS
-  '短期一次性 OIDC 登录事务表：不存储授权码、PKCE 明文或 IdP Token。';
+COMMENT ON TABLE "scada_oidc_transactions" IS '短期一次性 OIDC 登录事务表：不存储授权码、PKCE 明文或 IdP Token。';
 COMMENT ON COLUMN "scada_oidc_transactions"."state_hash" IS '高熵 State 的 SHA-256 摘要和事务主键。';
 COMMENT ON COLUMN "scada_oidc_transactions"."issuer" IS '登录开始时已固定的可信 OIDC Issuer。';
 COMMENT ON COLUMN "scada_oidc_transactions"."nonce" IS '用于校验回调 ID Token 的一次性 Nonce。';
-COMMENT ON COLUMN "scada_oidc_transactions"."verifier_ciphertext" IS
-  'AES-256-GCM 加密的 PKCE verifier 及解密参数；禁止保存明文。';
-COMMENT ON COLUMN "scada_oidc_transactions"."browser_binding_hash" IS
-  '发起登录浏览器短期绑定 Cookie 的 SHA-256 摘要。';
-COMMENT ON COLUMN "scada_oidc_transactions"."return_path" IS
-  '已校验的站内相对回跳路径，不允许跳转外部站点。';
+COMMENT ON COLUMN "scada_oidc_transactions"."verifier_ciphertext" IS 'AES-256-GCM 加密的 PKCE verifier 及解密参数；禁止保存明文。';
+COMMENT ON COLUMN "scada_oidc_transactions"."browser_binding_hash" IS '发起登录浏览器短期绑定 Cookie 的 SHA-256 摘要。';
+COMMENT ON COLUMN "scada_oidc_transactions"."return_path" IS '已校验的站内相对回跳路径，不允许跳转外部站点。';
 COMMENT ON COLUMN "scada_oidc_transactions"."created_at" IS 'OIDC 登录事务创建时间。';
 COMMENT ON COLUMN "scada_oidc_transactions"."expires_at" IS 'OIDC 登录事务绝对过期时间。';
-COMMENT ON COLUMN "scada_oidc_transactions"."consumed_at" IS
-  '事务被原子消费的时间；空值代表未消费。';
-COMMENT ON INDEX "scada_oidc_transactions_expiry_idx" IS
-  '按过期时间和消费状态清理、查询短期 OIDC 事务。';
-COMMENT ON INDEX "scada_oidc_transactions_browser_idx" IS
-  '按浏览器绑定摘要及到期时间定位登录事务。';
+COMMENT ON COLUMN "scada_oidc_transactions"."consumed_at" IS '事务被原子消费的时间；空值代表未消费。';
+COMMENT ON INDEX "scada_oidc_transactions_expiry_idx" IS '按过期时间和消费状态清理、查询短期 OIDC 事务。';
+COMMENT ON INDEX "scada_oidc_transactions_browser_idx" IS '按浏览器绑定摘要及到期时间定位登录事务。';
