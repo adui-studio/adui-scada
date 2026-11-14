@@ -30,6 +30,17 @@ const BROWSER_BINDING = "scada_oidc_b_" + "b".repeat(43);
 const SESSION_ID = "9b0d8c2d-6d45-4f0f-8d5c-12e4a0d3a7a1";
 const RETURN_PATH = "/studio/projects?source=oidc";
 
+/**
+ * Supertest 类型将 Set-Cookie 声明为字符串；兼容运行时数组和合并字符串。
+ * 仅在下一个受控 Cookie 名称前拆分，避免误拆 Expires 属性中的逗号。
+ */
+function getSetCookieHeaders(
+  header: string | readonly string[] | undefined,
+): readonly string[] {
+  if (typeof header !== "string") return header ?? [];
+  return header.split(/,\s*(?=__Host-adui-scada-(?:session|csrf|oidc-browser)=)/);
+}
+
 function createConfig(): EnabledOidcConfig {
   const result = resolveOidcStartupConfig({
     NODE_ENV: "test",
@@ -144,7 +155,7 @@ describe("OIDC BFF 认证 HTTP 接口（端到端）", () => {
     );
     expect(response.headers["cache-control"]).toBe("no-store");
     expect(response.headers["referrer-policy"]).toBe("no-referrer");
-    const setCookies = response.headers["set-cookie"] ?? [];
+    const setCookies = getSetCookieHeaders(response.headers["set-cookie"]);
     expect(setCookies).toHaveLength(1);
     expect(setCookies[0]).toContain(
       `${SCADA_OIDC_BROWSER_COOKIE_NAME}=${BROWSER_BINDING}`,
@@ -194,7 +205,7 @@ describe("OIDC BFF 认证 HTTP 接口（端到端）", () => {
     expect(response.headers.location).toBe(RETURN_PATH);
     expect(response.headers["cache-control"]).toBe("no-store");
     expect(response.headers["referrer-policy"]).toBe("no-referrer");
-    const setCookies = response.headers["set-cookie"] ?? [];
+    const setCookies = getSetCookieHeaders(response.headers["set-cookie"]);
     expect(setCookies).toHaveLength(2);
     expect(setCookies[0]).toContain(
       `${SCADA_SESSION_COOKIE_NAME}=${SESSION_TOKEN}`,
@@ -225,7 +236,11 @@ describe("OIDC BFF 认证 HTTP 接口（端到端）", () => {
   });
 
   it("未认证请求不能读取当前身份", async () => {
-    await request(app.getHttpServer()).get("/api/v1/auth/me").expect(401);
+    const response = await request(app.getHttpServer())
+      .get("/api/v1/auth/me")
+      .expect(401);
+
+    expect(response.status).toBe(401);
   });
 
   it("Cookie 注销必须携带同源来源与 CSRF 双提交并撤销当前会话", async () => {
@@ -243,7 +258,7 @@ describe("OIDC BFF 认证 HTTP 接口（端到端）", () => {
     expect(revocations).toEqual([
       { tenantId: PRINCIPAL.tenantId, subjectId: PRINCIPAL.subjectId, sessionId: SESSION_ID },
     ]);
-    const setCookies = response.headers["set-cookie"] ?? [];
+    const setCookies = getSetCookieHeaders(response.headers["set-cookie"]);
     expect(setCookies).toHaveLength(2);
     expect(setCookies[0]).toContain("Max-Age=0");
     expect(setCookies[1]).toContain("Max-Age=0");
@@ -272,7 +287,7 @@ describe("OIDC BFF 认证 HTTP 接口（端到端）", () => {
       subjectId: PRINCIPAL.subjectId,
       sessionId: SESSION_ID,
     });
-    const setCookies = response.headers["set-cookie"] ?? [];
+    const setCookies = getSetCookieHeaders(response.headers["set-cookie"]);
     expect(setCookies).toHaveLength(2);
   });
 

@@ -13,6 +13,11 @@ describe("共享 Prisma 数据库模块装配边界", () => {
     expect(Reflect.getMetadata("exports", DatabaseModule)).toEqual([PrismaService]);
   });
 
+  it("身份模块只注册认证控制器", () => {
+    const controllers = Reflect.getMetadata("controllers", ScadaIdentityModule) as unknown[];
+    expect(controllers).toEqual([ScadaAuthController]);
+  });
+
   it("可信身份与工程持久化模块共用相同的数据库模块", () => {
     for (const moduleType of [ScadaIdentityModule, ProjectPersistenceModule]) {
       expect(Reflect.getMetadata("imports", moduleType)).toContain(DatabaseModule);

@@ -903,3 +903,13 @@ type OidcExpectedState = NonNullable<
 新增 Cookie helper 测试覆盖浏览器绑定 Cookie、重复 Cookie 名称/多值请求头拒绝。`database.module.spec.ts` 覆盖 OIDC 根模块只挂载身份模块，不挂载工程持久化模块。
 
 **待执行**：维护者 Windows `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run docs:check` 和完整 `pnpm run ready`，最终记录 PowerShell `$LASTEXITCODE`。这些 Mock E2E 不代表真实 IdP/JWKS、浏览器 Secure Cookie、生产 HTTPS 反向代理或企业身份映射已验收。
+
+## 第三十三批阶段 B 第五小批：首次 Windows 静态检查反馈与最小修复（2026-11-14）
+
+维护者首次执行 `vp check --fix`，发现以下问题：
+
+- `oidc-auth.controller.e2e-spec.ts` 的未认证身份测试只使用 Supertest `.expect(401)`，触发 `vitest(expect-expect)`；现已补充对 `response.status` 的显式 Vitest 断言。
+- 同一 E2E 将 `response.headers["set-cookie"]` 当作数组调用 `.join()`，但当前 Supertest 类型声明为 `string`，触发 TS2339；现新增 `getSetCookieHeaders()`，兼容字符串/数组，并仅在下一个受控 `__Host-adui-scada-*` Cookie 名称前拆分合并字符串，避免错误拆分 Expires 日期中的逗号。所有 Set-Cookie 数量与内容断言统一使用该函数。
+- `database.module.spec.ts` 导入 `ScadaAuthController` 后没有实际使用，触发 `no-unused-vars` 与 TS6133；现增加 `ScadaIdentityModule` Controller 元数据断言，确认认证 Controller 只注册在身份模块中。
+
+上述是代码修复记录，**尚未收到修复后的 Windows 复验日志**。需重新执行 `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run docs:check` 和完整 `pnpm run ready`，最终记录 PowerShell `$LASTEXITCODE`；不得将格式化完成或代码已推送描述为测试通过。对应错误防复发规则记录在 `docs/AI_MISTAKES.md` E-012。

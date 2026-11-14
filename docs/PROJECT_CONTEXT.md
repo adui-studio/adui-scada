@@ -965,3 +965,9 @@ E-011 已在 `docs/AI_MISTAKES.md` 记录；其类型派生修复与第三小批
 新增 `OidcEnabledAppModule`，`main.ts` 仅在 OIDC 配置完整且开关启用时选择该根模块；它只加载 `AppModule + ScadaIdentityModule`，没有加载 `ProjectPersistenceModule`。默认 `AppModule` 仍不注册身份路由、不连接 PostgreSQL；OIDC 与本机模拟 API 同时启用会拒绝启动。新增认证 Controller HTTP E2E 与默认根模块 404 回归。
 
 **验收状态**：代码已提交至 PR #55；第四、五小批的 Windows `vp check`、单测、E2E、文档检查和完整 `ready` 尚待维护者执行。Mock E2E 不代表真实 IdP/JWKS、HTTPS 浏览器 Cookie、反向代理或企业身份映射已验收。工程 API 仍未开放，工业设备写入仍未实现。
+
+### 第三十三批阶段 B 第五小批：Windows 首轮静态检查问题修复（待复验）
+
+维护者首次 `vp check --fix` 反馈：401 E2E 缺少 Vitest 显式断言、Supertest `set-cookie` 类型为字符串却被当数组调用 `.join()`、数据库模块测试导入 Controller 后未使用。已分别补充状态断言、兼容字符串/数组且避开 Expires 逗号的 Cookie 头解析函数，以及身份模块 Controller 元数据断言。防复发记录为 `docs/AI_MISTAKES.md` E-012。
+
+**状态**：修复已提交至 PR #55，尚待维护者重新执行 `vp check`、单测、NestJS E2E、文档检查和完整 `ready`；目前不宣称通过。
