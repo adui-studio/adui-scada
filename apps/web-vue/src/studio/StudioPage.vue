@@ -5,9 +5,9 @@ import { CloseIcon } from "tdesign-icons-vue-next";
 import "tdesign-vue-next/es/style/index.css";
 import {
   TAG_DATA_TYPE_LABELS,
+  tagDefinitionSupportsSlot,
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
-  waterTreatmentDemoTagOptions,
   DraftAutoSaveSession,
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
   studioNodeLocked,
@@ -238,11 +238,11 @@ const bindingSlot = computed(() => {
     ? editableTagSlot(node.type)
     : null;
 });
-const demoTagCandidates = computed(() => {
+const tagCandidates = computed(() => {
   const slot = bindingSlot.value;
   return slot === null
     ? []
-    : waterTreatmentDemoTagOptions.filter((option) => option.slots.includes(slot));
+    : state.value.document.tags.filter((definition) => tagDefinitionSupportsSlot(definition, slot));
 });
 const selectedTagId = computed(() => {
   const node = selected.value;
@@ -252,10 +252,10 @@ const selectedTagId = computed(() => {
 const missingBindingTag = computed(
   () =>
     selectedTagId.value !== "" &&
-    !demoTagCandidates.value.some((option) => option.tagId === selectedTagId.value),
+    !tagCandidates.value.some((option) => option.tagId === selectedTagId.value),
 );
 const selectedTagDefinition = computed(() =>
-  demoTagCandidates.value.find((option) => option.tagId === selectedTagId.value),
+  state.value.document.tags.find((definition) => definition.tagId === selectedTagId.value),
 );
 const snapResult = computed(() => {
   const dragging = preview.value;
@@ -1321,7 +1321,7 @@ async function importJson(event: Event) {
   <main class="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
     <header class="studio-toolbar">
       <div>
-        <p class="scada-eyebrow">ADui SCADA · V0.2 Studio</p>
+        <p class="scada-eyebrow">ADui SCADA · V0.3 Studio</p>
         <h1>SVG 组态编辑器</h1>
       </div>
       <div class="studio-actions">
@@ -1911,9 +1911,9 @@ async function importJson(event: Event) {
               应用文案
             </TButton>
           </label>
-          <h3>Tag 绑定（模拟数据）</h3>
+          <h3>Tag 绑定（项目数据）</h3>
           <label v-if="bindingSlot" class="studio-field">
-            {{ bindingSlot }} · 选择模拟 Tag
+            {{ bindingSlot }} · 选择项目 Tag
             <select
               :value="selectedTagId"
               :aria-label="selected.id + ' 的 ' + bindingSlot + ' Tag 绑定'"
@@ -1921,10 +1921,11 @@ async function importJson(event: Event) {
             >
               <option value="">不绑定</option>
               <option v-if="missingBindingTag" :value="selectedTagId" disabled>
-                {{ selectedTagId }}（不在当前模拟候选中）
+                {{ selectedTagId }}（当前工程未定义或类型待确认）
               </option>
-              <option v-for="option in demoTagCandidates" :key="option.tagId" :value="option.tagId">
-                {{ option.label }} · {{ option.tagId }} · {{ TAG_DATA_TYPE_LABELS[option.dataType]
+              <option v-for="option in tagCandidates" :key="option.tagId" :value="option.tagId">
+                {{ option.displayName }} · {{ option.tagId }} ·
+                {{ TAG_DATA_TYPE_LABELS[option.dataType]
                 }}{{ option.unit ? " · " + option.unit : "" }}
               </option>
             </select>
@@ -1940,6 +1941,20 @@ async function importJson(event: Event) {
           </p>
         </template>
         <p v-else class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
+        <details class="studio-advanced">
+          <summary>项目 Tag 定义（{{ state.document.tags.length }}）</summary>
+          <div class="studio-advanced-content">
+            <p v-if="state.document.tags.length === 0" class="studio-tip">当前工程尚未定义 Tag</p>
+            <div v-for="tag in state.document.tags" :key="tag.tagId" class="studio-binding">
+              <strong>{{ tag.displayName }}</strong> · {{ tag.tagId }} ·
+              {{ TAG_DATA_TYPE_LABELS[tag.dataType] }}{{ tag.unit ? " · " + tag.unit : "" }}
+              <p class="studio-tip">{{ tag.description }}</p>
+            </div>
+            <p class="studio-tip">
+              定义随工程 JSON、草稿和本地历史版本保存；数据质量由实时 Tag 值提供。
+            </p>
+          </div>
+        </details>
         <details class="studio-advanced">
           <summary>高级图元与图层操作</summary>
           <div class="studio-advanced-content">

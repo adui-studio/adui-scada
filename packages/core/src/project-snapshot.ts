@@ -1,4 +1,4 @@
-import { parseScadaDocument } from "./document.ts";
+import { migrateScadaDocument, parseScadaDocument } from "./document.ts";
 import type { ScadaDocument } from "./document.ts";
 
 /** 校验范围仅为工程 Schema 与 JSON 安全规则，不代表具备正式发布条件。 */
@@ -52,6 +52,10 @@ export interface ProjectSnapshot {
   readonly hashAlgorithm: "SHA-256";
   readonly contentHash: string;
   readonly document: DeepReadonly<ScadaDocument>;
+  /** 旧版历史快照归一化后的来源摘要；仅迁移视图存在。 */
+  readonly sourceContentHash?: string;
+  /** 旧版历史快照归一化来源；仅迁移视图存在。 */
+  readonly migratedFrom?: "0.1.0" | "0.2.0";
 }
 
 export interface ProjectSnapshotOptions {
@@ -129,7 +133,7 @@ async function hashSnapshotContent(source: {
   revision: number;
   createdAt: string;
   hashAlgorithm: string;
-  document: ScadaDocument;
+  document: unknown;
 }): Promise<string> {
   const canonical = JSON.stringify(stableValue(source));
   const bytes = utf8Bytes(canonical);
@@ -200,9 +204,14 @@ export async function readProjectSnapshot(input: unknown): Promise<ProjectSnapsh
     throw new TypeError("工程版本快照必须为普通对象");
   }
   const raw = input as Record<string, unknown>;
+  const hasMigrationMetadata =
+    raw.sourceContentHash !== undefined || raw.migratedFrom !== undefined;
+  const allowedFields = hasMigrationMetadata
+    ? [...SNAPSHOT_FIELDS, "sourceContentHash", "migratedFrom"]
+    : SNAPSHOT_FIELDS;
   if (
-    Object.keys(raw).length !== SNAPSHOT_FIELDS.length ||
-    Object.keys(raw).some((key) => !SNAPSHOT_FIELDS.includes(key))
+    Object.keys(raw).length !== allowedFields.length ||
+    Object.keys(raw).some((key) => !allowedFields.includes(key))
   ) {
     throw new TypeError("工程版本快照包含未知字段或缺少必需字段");
   }
@@ -215,23 +224,86 @@ export async function readProjectSnapshot(input: unknown): Promise<ProjectSnapsh
   if (typeof raw.contentHash !== "string" || !/^[0-9a-f]{64}$/.test(raw.contentHash)) {
     throw new TypeError("工程快照摘要格式无效");
   }
-  const document = parseScadaDocument(raw.document);
+
+  const revision = requireRevision(raw.revision);
+  const createdAt = requireCreatedAt(raw.createdAt);
+  const migration = migrateScadaDocument(raw.document);
+  const document = migration.document;
   if (raw.projectId !== document.projectId) {
     throw new TypeError("快照与工程 ID 不一致");
   }
-  const payload = {
+
+  if (hasMigrationMetadata) {
+    if (
+      typeof raw.sourceContentHash !== "string" ||
+      !/^[0-9a-f]{64}$/.test(raw.sourceContentHash) ||
+      (raw.migratedFrom !== "0.1.0" && raw.migratedFrom !== "0.2.0") ||
+      migration.migratedFrom !== null
+    ) {
+      throw new TypeError("历史快照迁移元数据无效");
+    }
+    const payload: Omit<ProjectSnapshot, "contentHash"> = {
+      formatVersion: PROJECT_SNAPSHOT_FORMAT_VERSION as 1,
+      projectId: document.projectId,
+      revision,
+      createdAt,
+      hashAlgorithm: "SHA-256" as const,
+      sourceContentHash: raw.sourceContentHash,
+      migratedFrom: raw.migratedFrom,
+      document,
+    };
+    const digest = await hashSnapshotContent(payload);
+    if (digest !== raw.contentHash) {
+      throw new TypeError("工程版本快照摘要不匹配，内容可能已被修改");
+    }
+    const snapshot = { ...payload, contentHash: digest };
+    requireSnapshotSize(snapshot);
+    return deepFreeze(snapshot);
+  }
+
+  if (migration.migratedFrom === null) {
+    const payload = {
+      formatVersion: PROJECT_SNAPSHOT_FORMAT_VERSION as 1,
+      projectId: document.projectId,
+      revision,
+      createdAt,
+      hashAlgorithm: "SHA-256" as const,
+      document,
+    };
+    const digest = await hashSnapshotContent(payload);
+    if (digest !== raw.contentHash) {
+      throw new TypeError("工程版本快照摘要不匹配，内容可能已被修改");
+    }
+    const snapshot = { ...payload, contentHash: digest };
+    requireSnapshotSize(snapshot);
+    return deepFreeze(snapshot);
+  }
+
+  // 旧快照先按原始字节内容验证，再生成带来源摘要的当前 Schema 查看副本。
+  const sourcePayload = {
     formatVersion: PROJECT_SNAPSHOT_FORMAT_VERSION as 1,
     projectId: document.projectId,
-    revision: requireRevision(raw.revision),
-    createdAt: requireCreatedAt(raw.createdAt),
+    revision,
+    createdAt,
     hashAlgorithm: "SHA-256" as const,
-    document,
+    document: raw.document,
   };
-  const digest = await hashSnapshotContent(payload);
-  if (digest !== raw.contentHash) {
+  const sourceDigest = await hashSnapshotContent(sourcePayload);
+  if (sourceDigest !== raw.contentHash) {
     throw new TypeError("工程版本快照摘要不匹配，内容可能已被修改");
   }
-  const snapshot = { ...payload, contentHash: digest };
+  const migratedPayload = {
+    formatVersion: PROJECT_SNAPSHOT_FORMAT_VERSION as 1,
+    projectId: document.projectId,
+    revision,
+    createdAt,
+    hashAlgorithm: "SHA-256" as const,
+    sourceContentHash: sourceDigest,
+    migratedFrom: migration.migratedFrom,
+    document,
+  };
+  const migratedDigest = await hashSnapshotContent(migratedPayload);
+  const snapshot = { ...migratedPayload, contentHash: migratedDigest };
   requireSnapshotSize(snapshot);
   return deepFreeze(snapshot);
 }

@@ -1,3 +1,4 @@
+import Dexie from "dexie";
 import { expect, test } from "vite-plus/test";
 import { indexedDB, IDBKeyRange } from "fake-indexeddb";
 import { parseScadaDocument, waterTreatmentDemoDocument } from "@adui/scada-core";
@@ -39,7 +40,7 @@ test("空数据库读取为空，首次保存生成单调递增的版本号", as
     expect(await db.get("water-demo")).toBeNull();
     const first = await db.save(document(), null);
     expect(first.revision).toBe(1);
-    expect(first.document.schemaVersion).toBe("0.2.0");
+    expect(first.document.schemaVersion).toBe("0.3.0");
     const edited = document();
     edited.pages[0]!.nodes[0]!.transform.x += 1;
     const second = await db.save(edited, 1);
@@ -194,6 +195,37 @@ test("旧存储清理失败时保留迁移标记，防止已删除草稿复活",
     await expect(db.remove("water-demo", 1)).rejects.toThrow(/历史|旧浏览器/);
     expect(await db.get("water-demo")).toBeNull();
     expect(old.getItem(localDraftKey("water-demo"))).not.toBeNull();
+  } finally {
+    db.close();
+  }
+});
+
+test("读取已存在的 0.2.0 IndexedDB 草稿时事务迁移并推进修订号", async () => {
+  const name = `scada-test-legacy-schema-${++nextDatabase}`;
+  const legacy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  legacy.schemaVersion = "0.2.0";
+  delete legacy.tags;
+  const seed = new Dexie(name, { indexedDB, IDBKeyRange });
+  seed.version(1).stores({ drafts: "projectId,savedAt", migrations: "projectId" });
+  await seed.open();
+  await seed.table("drafts").put({
+    projectId: "water-demo",
+    revision: 4,
+    savedAt: "2026-11-10T02:00:00.000Z",
+    document: legacy,
+  });
+  seed.close();
+
+  const db = repository(name);
+  try {
+    const restored = await db.get("water-demo");
+    expect(restored?.revision).toBe(5);
+    expect(restored?.document.schemaVersion).toBe("0.3.0");
+    expect(restored?.document.tags.every((tag) => tag.dataType === "unknown")).toBe(true);
+    expect(
+      restored?.document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level,
+    ).toEqual({ tagId: "water.level" });
+    expect(await db.get("water-demo")).toEqual(restored);
   } finally {
     db.close();
   }

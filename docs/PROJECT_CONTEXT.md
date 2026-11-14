@@ -765,3 +765,38 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **未验收内容**：React/Vue Studio 手工检查三项演示 Tag 的类型、单位、描述、稳定 ID、绑定撤销、工程导入导出；Tauri 桌面人工回归；项目级 Tag 持久化、真实工业协议和现场设备。浏览器 SSE 通过不等于 Studio Tag 管理 UI 已人工确认。
 
 本次仅更新验收文档及 PR 正文，不改变业务代码。**上述日志对应文档更新前的分支；最新验收文档提交后的 `vp check` / `docs:check` 尚未重跑**。PR #51 保持 Draft，指派 `@adui-dev`，未经维护者明确授权不得合并。
+
+## 2026-11-14 · V0.3 第三十批：项目级 Tag 定义持久化与工程 Schema 升级
+
+第二十九批 PR #51 已合并至 `main`，合并提交为 `69f36d64189ec0c4d6acda0dab6e142ae9eb6d2b`。第三十批实施基线为 `feat/v0.3-project-tag-definitions`，当前仍是开发分支，尚未合并。
+
+本批将项目 Tag 元数据纳入框架无关的 `ScadaDocument 0.3.0` 根字段 `tags`，沿用稳定 `tagId`、可变 `displayName`、`dataType`、`unit` 和 `description`。图元绑定继续只保存稳定 Tag ID；质量、实时值、时间戳和序列号仍属于动态 `TagValue`。
+
+显式迁移入口支持 `0.1.0/0.2.0 → 0.3.0`。历史工程按现存绑定生成 `unknown` 类型占位定义，不推断工艺类型或单位、不改写原绑定；未知类型不进入新的绑定候选，维护者确认类型后再使用。当前解析器只接受 0.3.0，未来或未知 Schema 拒绝。
+
+工程 JSON、IndexedDB 草稿、旧 localStorage 草稿和 Project Snapshot 共用迁移契约。IndexedDB 历史草稿在事务内升级并推进 revision；历史快照先验证原 SHA-256，再返回带来源元数据的 0.3.0 查看副本，不原地覆盖历史记录。Dexie 数据库版本和 Project Snapshot 容器格式保持不变。
+
+Vue/React Studio 均从当前工程 `state.document.tags` 读取目录与绑定候选，不再以代码常量作为项目目录。本批不包含完整 Tag 新增/编辑/删除表单；不新增 Prisma 表、项目保存 API、设备地址字段、工业协议映射或设备写入。完整 Tag 管理 UI 留待后续独立批次双框架对等实现。
+
+当前代码、迁移、草稿存储、快照和 Core 测试已提交开发分支；Windows `test:unit`、`test:runtime`、`test:e2e:server`、`vp check`、`docs:check`、`ready` 与双框架 SSE 浏览器回归尚未针对本批执行。不得继承第二十九批的验收结果。实施决策见 [ADR-0062](adr/0062-project-tag-definitions-schema-030.md)。
+
+### 第三十批 Windows 首轮质量链问题定位（2026-11-14）
+
+维护者在历史快照 TS2345/TS2322 修复后实测：`vp check`（268 文件、133 受检文件零错误）及 `docs:check`（78 份文档）通过；`ready` 已通过 Core 构建、Vue/React/Draft Storage/NestJS 类型检查，但在 Vitest 阶段出现一个 SVG 测试套件初始化失败与一个历史工程测试断言失败，未执行到完整 E2E/构建。原因均是 Schema 0.3.0 升级后测试夹具保留了错误版本结构，现已在第三十批功能分支调整。
+
+React SSE 浏览器和 TCP 故障测试均在进入 EventSource 订阅前报 `error`，并未进入 Vue 验收。已为浏览器脚本增加工程版本及 Tag 目录预检查和实际 Runtime 错误文案输出。当前仅怀疑旧模拟服务进程未重启或返回不匹配的工程版本，缺少实际响应记录，不能据此声称已修复 SSE 运行时故障。代码修复提交后仍需维护者执行 Windows 全链、双框架浏览器及人工验证，详见 [VALIDATION](VALIDATION.md)。PR #52 保持 Draft，未合并。
+
+### 第三十批 Windows 完整质量链已跑通，模拟服务版本阻塞 SSE 浏览器（2026-11-14）
+
+维护者第二轮 PowerShell 实测确认：`test:unit` **438/438**（38 文件）、`test:runtime` **40/40**（4 文件）、`test:e2e:server` **17/17**（3 文件）通过；`vp check` **268 文件格式正确、133 文件零错误**，`docs:check` **78 份 Markdown 通过**。`pnpm run ready` 已执行完整单测、SSE 资源 8/8、TCP 故障代理 4/4、NestJS E2E 17/17、双框架类型检查和构建（React 3900、Vue 3845 模块）及 NestJS 构建，日志末尾没有报错；维护者未单独打印该命令的退出码。原有 SVG 测试夹具和历史工程迁移测试故障已被最新修复覆盖，不再复现。
+
+`test:sse:browser` 和 `test:sse:fault:browser` **仍未通过**：React 入口经 Vite 代理读取 `/demo/project` 返回 **Schema 0.2.0、没有 tags**，而当前代码需要 0.3.0。两条测试均在 React 的工程预检查阶段终止，Vue 尚未执行。版本不一致已确认，但其具体进程原因仍须本机确认；不能把错误直接认定为已修复或宣称双框架浏览器回归通过。应确认实际监听端口的工程进程并停止旧 Demo，启动当前分支 `dev:demo`，确认两个 Web 入口代理都返回 0.3.0 与三项 Tag 后再回归 SSE。
+
+本批尚待真实跨框架 Studio 人工验证、旧浏览器草稿及历史快照实际迁移、Tauri/工业现场等限定范围验收。PR #52 继续 Draft，Assignee `@adui-dev`；最新验收文档提交后仍需静态复验。
+
+
+### 第三十批自动化质量链及双框架 SSE 浏览器回归通过（2026-11-14）
+
+维护者 Windows 最终复验：全量单测 438/438、Runtime 专项 40/40、NestJS E2E 17/17、SSE 资源 8/8、TCP 故障代理 4/4、`vp check` 268 文件/133 受检文件零错误、`docs:check` 78 文档通过，`ready` 全链执行到 NestJS 构建完毕；React/Vue 双端 SSE 和 TCP 故障浏览器回归均成功，最终浏览器测试退出码 0。之前 `/demo/project` 返回 0.2.0 的旧服务版本阻塞已被解除。维护者已明确授权合并 PR #52；合并后续进度另行记录。
+
+未人工验收的是 Studio 两框架目录操作、跨框架 JSON 历史导入导出、真实旧版 IndexedDB/localStorage 与历史快照迁移体验。工业网关、PLC/DCS、生产设备写入不在本次范围。详见 [VALIDATION](VALIDATION.md)。

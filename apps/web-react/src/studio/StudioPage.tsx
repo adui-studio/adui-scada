@@ -10,9 +10,9 @@ import type {
 } from "react";
 import {
   TAG_DATA_TYPE_LABELS,
+  tagDefinitionSupportsSlot,
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
-  waterTreatmentDemoTagOptions,
   DraftAutoSaveSession,
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
   studioNodeLocked,
@@ -270,16 +270,17 @@ export default function StudioPage() {
     state.selectedIds.length === 1 && selected && !selected.groupId && !studioNodeLocked(selected)
       ? editableTagSlot(selected.type)
       : null;
-  const demoTagCandidates =
+  const tagCandidates =
     bindingSlot === null
       ? []
-      : waterTreatmentDemoTagOptions.filter((option) => option.slots.includes(bindingSlot));
+      : state.document.tags.filter((definition) =>
+          tagDefinitionSupportsSlot(definition, bindingSlot),
+        );
   const currentBindingTag = bindingSlot ? (selected?.bindings[bindingSlot]?.tagId ?? "") : "";
   const missingBindingTag =
-    currentBindingTag !== "" &&
-    !demoTagCandidates.some((option) => option.tagId === currentBindingTag);
-  const selectedTagDefinition = demoTagCandidates.find(
-    (option) => option.tagId === currentBindingTag,
+    currentBindingTag !== "" && !tagCandidates.some((option) => option.tagId === currentBindingTag);
+  const selectedTagDefinition = state.document.tags.find(
+    (definition) => definition.tagId === currentBindingTag,
   );
 
   function switchPage(pageId: string) {
@@ -1331,7 +1332,7 @@ export default function StudioPage() {
     <main className="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
       <header className="studio-toolbar">
         <div>
-          <p className="scada-eyebrow">ADui SCADA · V0.2 Studio</p>
+          <p className="scada-eyebrow">ADui SCADA · V0.3 Studio</p>
           <h1>SVG 组态编辑器</h1>
         </div>
         <div className="studio-actions">
@@ -1989,11 +1990,11 @@ export default function StudioPage() {
                   </Button>
                 </label>
               )}
-              <h3>Tag 绑定（模拟数据）</h3>
+              <h3>Tag 绑定（项目数据）</h3>
               {bindingSlot ? (
                 <>
                   <label className="studio-field">
-                    {bindingSlot} · 选择模拟 Tag
+                    {bindingSlot} · 选择项目 Tag
                     <select
                       aria-label={selected.id + " 的 " + bindingSlot + " Tag 绑定"}
                       value={currentBindingTag}
@@ -2002,12 +2003,13 @@ export default function StudioPage() {
                       <option value="">不绑定</option>
                       {missingBindingTag && (
                         <option value={currentBindingTag} disabled>
-                          {currentBindingTag}（不在当前模拟候选中）
+                          {currentBindingTag}（当前工程未定义或类型待确认）
                         </option>
                       )}
-                      {demoTagCandidates.map((option) => (
+                      {tagCandidates.map((option) => (
                         <option key={option.tagId} value={option.tagId}>
-                          {option.label} · {option.tagId} ·{TAG_DATA_TYPE_LABELS[option.dataType]}
+                          {option.displayName} · {option.tagId} ·
+                          {TAG_DATA_TYPE_LABELS[option.dataType]}
                           {option.unit ? " · " + option.unit : ""}
                         </option>
                       ))}
@@ -2033,6 +2035,26 @@ export default function StudioPage() {
           ) : (
             <p className="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
           )}
+          <details className="studio-advanced">
+            <summary>项目 Tag 定义（{state.document.tags.length}）</summary>
+            <div className="studio-advanced-content">
+              {state.document.tags.length === 0 ? (
+                <p className="studio-tip">当前工程尚未定义 Tag</p>
+              ) : (
+                state.document.tags.map((tag) => (
+                  <div className="studio-binding" key={tag.tagId}>
+                    <strong>{tag.displayName}</strong> · {tag.tagId} ·
+                    {TAG_DATA_TYPE_LABELS[tag.dataType]}
+                    {tag.unit ? " · " + tag.unit : ""}
+                    <p className="studio-tip">{tag.description}</p>
+                  </div>
+                ))
+              )}
+              <p className="studio-tip">
+                定义随工程 JSON、草稿和本地历史版本保存；数据质量由实时 Tag 值提供。
+              </p>
+            </div>
+          </details>
           <details className="studio-advanced">
             <summary>高级图元与图层操作</summary>
             <div className="studio-advanced-content">

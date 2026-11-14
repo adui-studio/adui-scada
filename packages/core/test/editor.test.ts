@@ -598,6 +598,7 @@ test("旧版工程显式导入后升级并重置旧编辑历史", () => {
   expect(e.moveBy(4, 0)).toBe(true);
   const legacy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
   legacy.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete legacy.tags;
   legacy.pages[0].nodes[1].groupId = "group-1";
   legacy.pages[0].nodes[3].groupId = "group-1";
 
@@ -627,6 +628,7 @@ test("旧版工程存在未知字段时导入失败且保留选中和撤销历�
   const before = e.snapshot();
   const legacy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
   legacy.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete legacy.tags;
   legacy.pages[0].nodes[1].transform.futureScale = 2;
   expect(() => e.loadDocument(legacy)).toThrow(/结构字段/);
   expect(e.snapshot()).toEqual(before);
@@ -640,13 +642,108 @@ test("未来版本或非法历史组合拒绝导入并保留当前工程", () =>
   e.select("tank");
   const before = e.snapshot();
   const future = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
-  future.schemaVersion = "0.3.0";
+  future.schemaVersion = "0.4.0";
   expect(() => e.loadDocument(future)).toThrow(/不支持的工程版本/);
   expect(e.snapshot()).toEqual(before);
   future.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete future.tags;
   future.pages[0].nodes[1].groupId = "group-1";
   expect(() => e.loadDocument(future)).toThrow(/至少需要两个图元/);
   expect(e.snapshot()).toEqual(before);
+});
+
+test("项目 Tag 定义新增、修改、删除均纳入撤销和重做", () => {
+  const e = editor();
+  const added = {
+    tagId: "water.pressure",
+    displayName: "管网压力",
+    dataType: "number" as const,
+    unit: "kPa",
+    description: "本机工程定义的压力点",
+  };
+  const before = e.snapshot().document;
+  expect(e.addTagDefinition(added)).toBe(true);
+  expect(e.snapshot().document.tags.at(-1)).toEqual(added);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(before);
+  expect(e.redo()).toBe(true);
+
+  expect(
+    e.updateTagDefinition("water.pressure", {
+      displayName: "出水压力",
+      unit: "MPa",
+    }),
+  ).toBe(true);
+  expect(e.snapshot().document.tags.at(-1)).toMatchObject({
+    tagId: "water.pressure",
+    displayName: "出水压力",
+    dataType: "number",
+    unit: "MPa",
+  });
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document.tags.at(-1)).toEqual(added);
+  expect(e.redo()).toBe(true);
+
+  expect(e.removeTagDefinition("water.pressure")).toBe(true);
+  expect(e.snapshot().document.tags.some((tag) => tag.tagId === "water.pressure")).toBe(false);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document.tags.at(-1)?.tagId).toBe("water.pressure");
+  expect(e.redo()).toBe(true);
+});
+
+test("新建项目 Tag 不允许使用历史待确认类型", () => {
+  const e = editor();
+  const before = e.snapshot();
+  expect(() =>
+    e.addTagDefinition({
+      tagId: "water.new",
+      displayName: "新建测试点",
+      dataType: "unknown",
+      unit: null,
+      description: "待确认类型不得直接创建",
+    }),
+  ).toThrow(/新建 Tag 必须指定/);
+  expect(e.snapshot()).toEqual(before);
+});
+
+test("项目 Tag 删除拒绝悬空绑定，稳定 ID 不允许通过更新修改", () => {
+  const e = editor();
+  const before = e.snapshot().document;
+  expect(() => e.removeTagDefinition("water.level")).toThrow(/仍被 1 个图元槽绑定/);
+  expect(() => e.updateTagDefinition("water.level", { tagId: "water.renamed" } as never)).toThrow(
+    /只允许修改/,
+  );
+  expect(() => e.updateTagDefinition("water.level", { dataType: "float" as never })).toThrow(
+    /数据类型/,
+  );
+  expect(e.snapshot().document).toEqual(before);
+  e.select("tank");
+  e.setSelectedBinding("level", null);
+  expect(e.removeTagDefinition("water.level")).toBe(true);
+  expect(
+    e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level,
+  ).toBeUndefined();
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document.tags.some((tag) => tag.tagId === "water.level")).toBe(true);
+});
+
+test("Tag 类型变更与新绑定必须符合图元绑定槽类型", () => {
+  const e = editor();
+  const before = e.snapshot().document;
+
+  expect(() => e.updateTagDefinition("water.level", { dataType: "boolean" })).toThrow(
+    /Tag 数据类型与现有图元绑定不兼容/,
+  );
+  expect(() => e.updateTagDefinition("water.level", { dataType: "unknown" })).toThrow(
+    /不能将已指定类型的 Tag 改为待确认类型/,
+  );
+
+  e.select("tank");
+  expect(() => e.setSelectedBinding("level", "water.pump.running")).toThrow(
+    /Tag 数据类型与绑定槽不兼容/,
+  );
+  expect(() => e.setSelectedBinding("level", "missing.tag")).toThrow(/引用了未定义的 Tag/);
+  expect(e.snapshot().document).toEqual(before);
 });
 
 test("水箱 Tag 绑定可以清除、撤销和重做", () => {

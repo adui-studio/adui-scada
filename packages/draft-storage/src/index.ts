@@ -1,6 +1,11 @@
 import Dexie from "dexie";
 import type { Table } from "dexie";
-import { localDraftKey, readLocalDraft, parseScadaDocument } from "@adui/scada-core";
+import {
+  localDraftKey,
+  readLocalDraft,
+  migrateScadaDocument,
+  parseScadaDocument,
+} from "@adui/scada-core";
 import type { DraftRecord, DraftRepository, LocalDraft, LocalDraftStorage } from "@adui/scada-core";
 
 interface MigrationMarker {
@@ -72,7 +77,10 @@ export class DexieDraftRepository implements DraftRepository {
     }
   }
 
-  private validate(record: DraftRecord, projectId: string): DraftRecord {
+  private validate(
+    record: DraftRecord,
+    projectId: string,
+  ): { record: DraftRecord; migratedFrom: string | null } {
     if (
       record.projectId !== projectId ||
       !Number.isSafeInteger(record.revision) ||
@@ -82,11 +90,19 @@ export class DexieDraftRepository implements DraftRepository {
     ) {
       throw new TypeError("IndexedDB 草稿元数据不合法，已拒绝载入");
     }
-    const document = parseScadaDocument(record.document);
-    if (document.projectId !== projectId) {
+    const migration = migrateScadaDocument(record.document);
+    if (migration.document.projectId !== projectId) {
       throw new TypeError("IndexedDB 草稿工程 ID 不一致，已拒绝载入");
     }
-    return { projectId, revision: record.revision, savedAt: record.savedAt, document };
+    return {
+      record: {
+        projectId,
+        revision: record.revision,
+        savedAt: record.savedAt,
+        document: migration.document,
+      },
+      migratedFrom: migration.migratedFrom,
+    };
   }
 
   private notify(projectId: string, revision: number | null): void {
@@ -98,7 +114,40 @@ export class DexieDraftRepository implements DraftRepository {
   async get(projectId: string): Promise<DraftRecord | null> {
     localDraftKey(projectId);
     const current = await this.drafts.get(projectId);
-    if (current) return this.validate(current, projectId);
+    if (current) {
+      const checked = this.validate(current, projectId);
+      if (checked.migratedFrom === null) return checked.record;
+
+      // 旧 Schema 在读取时于同一事务内升级并推进 revision，其他标签页会收到通知。
+      const upgraded = await this.database.transaction(
+        "rw",
+        this.drafts,
+        this.migrations,
+        async () => {
+          const latest = await this.drafts.get(projectId);
+          if (!latest) return null;
+          const latestChecked = this.validate(latest, projectId);
+          if (latestChecked.migratedFrom === null) return latestChecked.record;
+          const marker = await this.migrations.get(projectId);
+          const revision = Math.max(latest.revision, marker?.lastRevision ?? 0) + 1;
+          if (!Number.isSafeInteger(revision)) {
+            throw new RangeError("工程草稿修订号已达到安全整数上限");
+          }
+          const next: DraftRecord = {
+            ...latestChecked.record,
+            revision,
+            savedAt: new Date().toISOString(),
+          };
+          await this.drafts.put(next);
+          await this.migrations.put({ projectId, lastRevision: revision });
+          return next;
+        },
+      );
+      if (upgraded && upgraded.revision !== current.revision) {
+        this.notify(projectId, upgraded.revision);
+      }
+      return upgraded;
+    }
     if (!this.legacyStorage || (await this.migrations.get(projectId))) return null;
 
     // 先完整验证历史 localStorage 记录，再在事务内迁入并留下迁移标记。
@@ -117,7 +166,7 @@ export class DexieDraftRepository implements DraftRepository {
       this.migrations,
       async () => {
         const latest = await this.drafts.get(projectId);
-        if (latest) return this.validate(latest, projectId);
+        if (latest) return this.validate(latest, projectId).record;
         if (await this.migrations.get(projectId)) return null;
         const record: DraftRecord = {
           projectId,

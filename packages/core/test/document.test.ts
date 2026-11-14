@@ -1,16 +1,21 @@
 import { expect, test } from "vite-plus/test";
 import {
   LEGACY_SCADA_SCHEMA_VERSION,
+  PREVIOUS_SCADA_SCHEMA_VERSION,
   SCADA_SCHEMA_VERSION,
   migrateScadaDocument,
   parseScadaDocument,
 } from "../src/document.ts";
-import { waterTreatmentDemoDocument } from "../src/demo-document.ts";
+import {
+  waterTreatmentDemoDocument,
+  waterTreatmentDemoTagDefinitions,
+} from "../src/demo-document.ts";
 
 function fixture() {
   return {
     schemaVersion: SCADA_SCHEMA_VERSION,
     projectId: "water-demo",
+    tags: waterTreatmentDemoTagDefinitions,
     pages: [
       {
         id: "main",
@@ -69,6 +74,30 @@ test("拒绝用户规则中的函数与循环引用", () => {
   expect(() => parseScadaDocument(cycle)).toThrow(/循环引用/);
 });
 
+test("0.3.0 工程必须包含 Tag 目录且所有图元绑定必须引用已定义 Tag", () => {
+  const missingCatalog = fixture() as Record<string, unknown>;
+  delete missingCatalog.tags;
+  expect(() => parseScadaDocument(missingCatalog)).toThrow(/必须包含 Tag 定义数组/);
+
+  const dangling = fixture();
+  dangling.tags = [];
+  expect(() => parseScadaDocument(dangling)).toThrow(/引用了未定义的 Tag：water.level/);
+});
+
+test("当前工程拒绝已知图元绑定槽的数据类型不兼容并保留历史待确认绑定", () => {
+  const invalid = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  const level = invalid.tags.find((tag: { tagId: string }) => tag.tagId === "water.level");
+  level.dataType = "boolean";
+  expect(() => parseScadaDocument(invalid)).toThrow(/Tag 数据类型与绑定槽不兼容/);
+
+  const legacy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  legacy.schemaVersion = "0.2.0";
+  delete legacy.tags;
+  const migrated = migrateScadaDocument(legacy).document;
+  expect(migrated.tags.every((tag) => tag.dataType === "unknown")).toBe(true);
+  expect(() => parseScadaDocument(migrated)).not.toThrow();
+});
+
 test("平面组合标识在 JSON 往返中保留且不改变原有 Tag 绑定", () => {
   const original = parseScadaDocument(waterTreatmentDemoDocument);
   original.pages[0]!.nodes[0]!.groupId = "group-a";
@@ -122,8 +151,9 @@ test("拒绝跨页面共用同一个组合 ID", () => {
   expect(() => parseScadaDocument(document)).toThrow(/不能跨页面/);
 });
 
-test("新版 Schema 为 0.2.0，历史 Schema 为 0.1.0", () => {
-  expect(SCADA_SCHEMA_VERSION).toBe("0.2.0");
+test("新版 Schema 为 0.3.0，并保留 0.2.0 与 0.1.0 两个迁移入口", () => {
+  expect(SCADA_SCHEMA_VERSION).toBe("0.3.0");
+  expect(PREVIOUS_SCADA_SCHEMA_VERSION).toBe("0.2.0");
   expect(LEGACY_SCADA_SCHEMA_VERSION).toBe("0.1.0");
 });
 
@@ -135,11 +165,10 @@ test("当前工程迁移入口只校验，不改变工程内容和版本", () =>
   expect(result.document).not.toBe(current);
 });
 
-test("无组合的历史工程显式迁移至 0.2.0 且不改 Tag 和图元", () => {
-  const legacy = {
-    ...fixture(),
-    schemaVersion: LEGACY_SCADA_SCHEMA_VERSION,
-  };
+test("0.1.0 历史工程显式迁移至 0.3.0 并保留 Tag 绑定", () => {
+  const legacy = JSON.parse(JSON.stringify(fixture()));
+  legacy.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete legacy.tags;
   expect(() => parseScadaDocument(legacy)).toThrow(/不支持的版本/);
   const result = migrateScadaDocument(legacy);
   expect(result.migratedFrom).toBe("0.1.0");
@@ -152,6 +181,7 @@ test("无组合的历史工程显式迁移至 0.2.0 且不改 Tag 和图元", ()
 test("含旧版组合元数据的历史工程迁移后保留两个成员与 Tag", () => {
   const legacy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
   legacy.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete legacy.tags;
   legacy.pages[0].nodes[1].groupId = "group-1";
   legacy.pages[0].nodes[3].groupId = "group-1";
   const { document, migratedFrom } = migrateScadaDocument(legacy);
@@ -164,8 +194,45 @@ test("含旧版组合元数据的历史工程迁移后保留两个成员与 Tag"
   expect(legacy.schemaVersion).toBe("0.1.0");
 });
 
+test("0.2.0 工程迁移时为已有绑定生成待确认类型，保持 Tag ID", () => {
+  const previous = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  previous.schemaVersion = PREVIOUS_SCADA_SCHEMA_VERSION;
+  delete previous.tags;
+  const result = migrateScadaDocument(previous);
+  expect(result.migratedFrom).toBe("0.2.0");
+  expect(result.document.schemaVersion).toBe("0.3.0");
+  expect(result.document.tags).toEqual([
+    {
+      tagId: "water.flow",
+      displayName: "water.flow",
+      dataType: "unknown",
+      unit: null,
+      description: "由历史工程迁移生成，数据类型与单位待维护者确认",
+    },
+    {
+      tagId: "water.level",
+      displayName: "water.level",
+      dataType: "unknown",
+      unit: null,
+      description: "由历史工程迁移生成，数据类型与单位待维护者确认",
+    },
+    {
+      tagId: "water.pump.running",
+      displayName: "water.pump.running",
+      dataType: "unknown",
+      unit: null,
+      description: "由历史工程迁移生成，数据类型与单位待维护者确认",
+    },
+  ]);
+  expect(
+    result.document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level?.tagId,
+  ).toBe("water.level");
+  expect(previous.schemaVersion).toBe("0.2.0");
+  expect(previous.tags).toBeUndefined();
+});
+
 test("未来版本、未知版本及缺失版本均拒绝迁移", () => {
-  for (const version of ["0.3.0", "99.0.0", null, undefined]) {
+  for (const version of ["0.4.0", "99.0.0", null, undefined]) {
     const source = { ...fixture(), schemaVersion: version };
     expect(() => migrateScadaDocument(source)).toThrow(/不支持的工程版本/);
   }
@@ -178,6 +245,7 @@ test("未知根与页面字段一律拒绝且不会被静默丢弃", () => {
   page.pages[0].reserved = 1;
   expect(() => migrateScadaDocument(page)).toThrow(/结构字段/);
   page.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete page.tags;
   expect(() => migrateScadaDocument(page)).toThrow(/结构字段/);
 });
 
@@ -200,6 +268,7 @@ test("未知画布尺寸、图元、变换及绑定字段一律拒绝导入", ()
     for (const version of [SCADA_SCHEMA_VERSION, LEGACY_SCADA_SCHEMA_VERSION]) {
       const source = JSON.parse(JSON.stringify(fixture()));
       source.schemaVersion = version;
+      if (version !== SCADA_SCHEMA_VERSION) delete source.tags;
       mutate(source);
       expect(() => migrateScadaDocument(source)).toThrow(/结构字段/);
     }
@@ -209,11 +278,13 @@ test("未知画布尺寸、图元、变换及绑定字段一律拒绝导入", ()
 test("历史工程即使版本正确也必须拒绝非法组合和危险属性", () => {
   const oneMember = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
   oneMember.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete oneMember.tags;
   oneMember.pages[0].nodes[1].groupId = "group-1";
   expect(() => migrateScadaDocument(oneMember)).toThrow(/至少需要两个图元/);
 
   const malicious = JSON.parse(JSON.stringify(fixture()));
   malicious.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete malicious.tags;
   malicious.pages[0].nodes[0].props = JSON.parse('{"__proto__":{"unsafe":true}}');
   expect(() => migrateScadaDocument(malicious)).toThrow(/属性名称不安全/);
 });

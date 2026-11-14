@@ -461,3 +461,75 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **未验收内容**：React/Vue Studio 手工检查三项演示 Tag 的类型、单位、描述、稳定 ID、绑定撤销、工程导入导出；Tauri 桌面人工回归；项目级 Tag 持久化、真实工业协议和现场设备。浏览器 SSE 通过不等于 Studio Tag 管理 UI 已人工确认。
 
 本次仅更新验收文档及 PR 正文，不改变业务代码。**上述日志对应文档更新前的分支；最新验收文档提交后的 `vp check` / `docs:check` 尚未重跑**。PR #51 保持 Draft，指派 `@adui-dev`，未经维护者明确授权不得合并。
+
+## 2026-11-14 · V0.3 第三十批：项目级 Tag 定义持久化与 Schema 0.3.0（待 Windows 验收）
+
+实施分支：`feat/v0.3-project-tag-definitions`。基线为第二十九批 PR #51 合并提交 `69f36d6`。本批首次将项目 Tag 定义写入工程 Schema；**不得沿用第二十九批的 426/426、40/40、17/17 或 SSE 浏览器结果作为本批验收证据**。
+
+- [x] `pnpm run test:unit`：Windows 单独实测 438/438 通过（38 文件），验证 0.1.0/0.2.0 历史工程迁移、0.3.0 Tag 目录白名单、绑定引用完整性、Tag 编辑命令撤销/重做、历史快照摘要与本地草稿恢复。
+- [x] `pnpm run test:runtime`：Windows 单独实测 40/40 通过（4 文件），验证在线 Runtime、离线模拟和独立演示服务均使用当前工程 Tag 目录，实时值类型拒绝保持原子性，TagQuality 仍由 TagValue 动态表达。
+- [x] `pnpm run test:e2e:server`：Windows 单独实测 17/17 通过（3 文件），确认现有 NestJS 只读边界和健康检查无回归；不把 E2E 结果解释为生产数据库或工业网关已实现。
+- [x] `vp check`：Windows 实测 268 个文件格式正确、133 个受检文件零警告、Lint 和 TypeScript 错误。
+- [x] `pnpm run docs:check`：Windows 实测 78 份 Markdown 文档静态检查通过（最新验收文档追加后尚未重跑）。
+- [x] `pnpm run ready`：Windows 日志已执行至最终 NestJS 构建完成，期间 438/438 Vitest、Node SSE 8/8、TCP 故障 4/4、NestJS E2E 17/17、React/Vue/NestJS 类型检查与构建全部完成；未单独打印最终退出码，不将其记作显式证据。
+- [ ] `pnpm run test:sse:browser`：React/Vue 心跳、Tag 过期、静默重连和连接回收通过。
+- [ ] `pnpm run test:sse:fault:browser`：React/Vue TCP 故障注入、STALE、主动重连和连接回收通过。
+- [ ] 人工检查 React/Vue Studio：绑定候选来自当前工程目录；按共享槽位类型筛选；展示名称、稳定 ID、类型、单位和描述一致；历史 unknown Tag 不作为新绑定候选；导入/导出往返保留 tags 与原绑定。
+- [ ] 历史兼容检查：0.1.0/0.2.0 工程升级后原绑定不变、unknown 占位不猜测类型；未来版本和非法结构明确拒绝；IndexedDB 迁移事务推进 revision；历史快照原始摘要校验不被绕过。
+
+**当前验收状态：** 维护者在 Windows 提供本批第三十批完整测试日志，单测、Runtime、E2E、Vite+ 检查、文档检查及完整 `ready` 已通过各自输出；浏览器 SSE 两条命令因旧的 0.2.0 模拟服务而在 React 预检查阶段失败，尚未运行至 Vue 回归。人工 UI、历史持久化实环境集成及本节新增文档的最终静态复验仍待执行。
+
+**明确不属于本批：** 完整 Tag 管理表单、Prisma Tag 表、生产项目保存 API、身份认证/多人协作、OPC UA/Modbus/MQTT 地址映射、工业网关和设备写入；Tauri 安装包也不作为本批自动化验收结论。
+
+### 第三十批首次 Windows `vp check --fix` 类型检查阻塞及修复（2026-11-14）
+
+维护者执行 `vp check --fix` 后，工具报告格式化处理已完成，但类型检查失败（**2 个错误、0 个警告**）：
+
+- `packages/core/src/project-snapshot.ts:260`：`TS2345`，历史快照迁移分支构造的 `snapshot` 与 `ProjectSnapshot` 参数类型不一致。
+- `packages/core/src/project-snapshot.ts:261`：`TS2322`，`deepFreeze(snapshot)` 的结果类型无法赋值给 `ProjectSnapshot`。
+- **共同根因**：原迁移分支的 `payload` 对象属性 `migratedFrom` 被拓宽推断为 `string`，而公共快照契约仅允许 `"0.1.0" | "0.2.0"`。
+
+已在 PR #52 中仅将该分支声明改为 `const payload: Omit<ProjectSnapshot, "contentHash"> = { ... }`，不改变历史源 SHA-256 校验、迁移元数据、快照大小约束或业务流程。修复提交为 `757d5012`。独立 TypeScript 5.8.3 严格编译最小复现确认原始类型拓宽报错与显式约束方案的编译行为，**不能替代完整仓库检查**。
+
+**待复验**：同步最新分支后重跑 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 与 `pnpm run ready`。本批所有完整质量链与浏览器验收仍保持待执行；不可将格式化完成视为类型检查通过。
+
+### 第三十批 Windows 完整质量链首次复验失败与修复（2026-11-14）
+
+维护者提供完整 PowerShell 日志；该轮执行发生在本节修复提交之前：
+
+- **通过**：`vp check` 显示 **268 个文件格式正确、133 个受检文件零警告/Lint/类型错误**；`pnpm run docs:check` **78 份 Markdown 通过**。`ready` 内依赖 Catalog 11 个清单 / 51 项、共享配置 9 个 TSConfig、环境与 LF、中文文案 159 个文件、Prisma Client 7.10.1、Core 构建、React/Vue/Draft Storage/NestJS 类型检查均已通过。
+- **`ready` 未通过**：全量 Vitest 报 **38 个文件中 36 通过、2 失败；433 个测试中 432 通过、1 失败**。其中 `packages/core/test/svg.test.ts` 在加载时因当前 0.3.0 测试文档缺少必填 `tags` 导致测试套件失败（0 项测试运行）；`packages/core/test/document.test.ts` 的历史工程测试将版本设为 0.1.0 但仍保留 0.3.0 的 `tags`，被严格根字段校验优先拒绝，未执行至预期的非法组合断言。后续 SSE 资源测试、NestJS E2E、Web/Server 构建没有运行到完成，不得标记通过。
+- **浏览器 SSE 未通过**：`test:sse:browser` 与 `test:sse:fault:browser` 都在 React 启动阶段进入 `error`，EventSource 连接列表为空且 Tag 数量为 0，两个命令均以失败结束，**未执行到 Vue 回归**。从未创建 EventSource 只能判断故障位于订阅启动之前；旧模拟进程返回上一版 Schema 只是可能原因，尚无接口内容证据，不能直接归因。
+- **已提交修复**：在 `svg.test.ts` 增加符合 Schema 0.3.0 的 Tag 定义；在 `document.test.ts` 正确移除旧工程不支持的根 `tags` 字段，同时调整其他旧版夹具，避免假阳性；在 `test-runtime-sse-browser.mjs` 校验 `/demo/project` 返回的版本和 Tag 目录，超时诊断附带实际 Runtime 错误消息。未放宽工程解析安全边界，也未更改生产 Tag 质量或设备访问。
+- **待复验**：维护者同步最新分支后重新执行 `pnpm run test:unit`、`vp check`、`pnpm run docs:check`、`pnpm run ready`；停止旧的 `dev:demo` 进程后重新启动当前分支模拟服务、React/Vue 开发服务，分别复测 `pnpm run test:sse:browser`、`pnpm run test:sse:fault:browser`。应记录 `/demo/project` 实际 Schema 和错误消息，不得在 SSE 故障未定位前称本批验收完成。
+
+本记录仅使用维护者日志描述修复前的结果；新增提交后的完整质量链尚未在本协作环境实测。PR #52 继续保持 Draft、指派 `@adui-dev`，未经授权不得合并。
+
+### 第三十批 Windows 第二轮质量链通过，SSE 旧服务版本已明确（2026-11-14）
+
+维护者在 `feat/v0.3-project-tag-definitions` 提供最新 PowerShell 实测日志：
+
+- `pnpm run test:unit`：**38 文件、438/438 测试通过**，之前 `svg.test.ts` 加载失败和 `document.test.ts` 历史夹具失败均已消除。
+- `pnpm run test:runtime`：**4 文件、40/40 通过**；单独 `pnpm run test:e2e:server`：**3 文件、17/17 通过**。E2E 日志中的 HTTP 503 和 Health Check 失败是主动模拟的负面用例，最终测试结果仍通过。
+- `vp check`：**268 文件格式正确，133 个受检文件零警告、Lint 或类型错误**。`pnpm run docs:check`：**78 份 Markdown 通过**。
+- `pnpm run ready` 从依赖 Catalog 11 个清单/51 项、配置 9 个 TSConfig、环境、中文文案、Prisma Client 7.10.1、Core/双端/NestJS 类型检查开始，完成全量 Vitest **438/438**、Node SSE 资源 **8/8**、TCP 故障代理 **4/4**、NestJS E2E **17/17**、React 构建 **3900 模块**、Vue 构建 **3845 模块**及最后的 NestJS 服务构建；日志未再报告失败。**此轮未附独立的 `ready` 退出码打印**，不把未展示的退出码记为实测数值。
+- `pnpm run test:sse:browser` 和 `pnpm run test:sse:fault:browser` **仍失败（退出码 1）**。新预检查直接读取 `http://127.0.0.1:15173/demo/project`，发现实际返回 **Schema `0.2.0` 且缺少 `tags`**，与当前 `0.3.0` 工程契约不一致。两项测试在 React 预检查即停止，**未进入 Vue 浏览器验收、故障注入和回收阶段**。
+- 目前确定的是**当前 Vite 代理所连接的模拟服务返回旧版工程文档**，而不是 Core 解析器需要放宽校验；是否因旧 Node 进程、代理指向错误目录或端口不匹配仍需本机进程信息才能进一步确认。应先核对监听进程及当前 `/demo/project` 响应，停掉确认属于该工程的旧 Demo 进程并重启 `pnpm run dev:demo`。再次确认模拟接口 Schema 为 `0.3.0`、包含三项 Tag 定义后，分别重跑两项 SSE 浏览器脚本。
+
+**未完成**：React/Vue 双端 SSE 浏览器专项；Studio 人工查看、0.1/0.2 工程导入导出、真实旧 IndexedDB/localStorage 草稿与历史快照迁移体验、Tauri 人工验收。该日志不代表生产数据库、工业网关、现场设备或设备写入已验收。以上是维护者在文档更新前的 Windows 实测；此文档更新后的静态检查尚未重跑。PR #52 继续 Draft、Assignee `@adui-dev`，没有合并授权。
+
+
+### 第三十批 Windows 最终自动化验收通过（2026-11-14）
+
+维护者在本地 Windows 提供第三十批最新复验日志（先前 Schema `0.2.0` 的旧 Demo 服务已排除）。本节是**维护者执行记录**，并非 GitHub 文档提交后的自动化重新执行：
+
+- `pnpm run test:unit`：38 文件，**438/438 通过**；`pnpm run test:runtime`：4 文件，**40/40 通过**；`pnpm run test:e2e:server`：3 文件，**17/17 通过**。
+- `vp check`：268 个文件格式正确，133 个受检文件零格式、Lint、类型错误；`pnpm run docs:check`：78 个 Markdown 文件通过。
+- `pnpm run ready`：从依赖目录、共享配置、环境、中文文案、Prisma 生成、Core 构建与全栈类型检查，执行至单测（438/438）、SSE 客户端资源测试（8/8）、TCP 故障代理（4/4）、NestJS E2E（17/17）、React（3900 模块）和 Vue（3845 模块）构建及最后 NestJS build，日志无失败。此轮并未单独打印 `ready` 的退出码，不额外编造。
+- **`pnpm run test:sse:browser`**：React 和 Vue 都明确输出心跳保活、Tag 过期、静默重连、资源清理通过。
+- **`pnpm run test:sse:fault:browser`**：React 和 Vue 都明确输出真实 TCP 下行阻断、STALE、主动重连及连接回收通过，两个浏览器脚本最后的 `$LASTEXITCODE` 为 **0**。因此上一轮因模拟工程接口返回 0.2.0 导致的浏览器回归阻塞已在重启正确版本的服务后解除。
+- NestJS E2E 期间出现的预期 HTTP 503 / Health Check 失败属于负面测试分支，不是 E2E 总体失败。
+
+**仍需独立验收（不阻止维护者本次明确授权的代码合并）**：Vue/React Studio 手工目录与绑定交互、历史 Schema JSON 跨框架导入导出、真正旧浏览器 IndexedDB/localStorage 草稿和历史快照迁移体验。真实工业网关、生产采集、现场控制、设备写入不在第三十批范围。
+
+本节只更新验收事实与 PR 描述，不更改已通过测试的业务代码；文档更新后的 `vp check` / `docs:check` 未重新执行。

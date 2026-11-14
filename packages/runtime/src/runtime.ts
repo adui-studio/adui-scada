@@ -1,11 +1,11 @@
 import {
+  TagDefinitionCatalog,
   TagStore,
   parseScadaDocument,
   renderSvgPage,
   validateTagValue,
-  waterTreatmentDemoTagCatalog,
 } from "@adui/scada-core";
-import type { ScadaDocument, TagChange, TagDefinitionCatalog, TagValue } from "@adui/scada-core";
+import type { ScadaDocument, TagChange, TagValue } from "@adui/scada-core";
 import {
   RuntimeStatusHistory,
   createRuntimeDiagnostics,
@@ -91,11 +91,12 @@ export const TAG_DATA_TIMEOUT_MS = 12_000;
 export class DemoRuntime {
   private readonly listener: RuntimeListener;
   private readonly source: ReadonlyTagSource;
+  private readonly tagCatalogOverride?: TagDefinitionCatalog;
   private subscription: ReadonlyTagSubscription | null = null;
   private loading: AbortController | null = null;
   private dataTimer: ReturnType<typeof setInterval> | null = null;
   private visibilityCleanup: (() => void) | null = null;
-  private readonly store: TagStore;
+  private store: TagStore;
   // 传输内的本地过期标记不占用上游序列号，按 Tag 独立恢复。
   private readonly expiredTagIds = new Set<string>();
   private document: ScadaDocument | null = null;
@@ -110,11 +111,12 @@ export class DemoRuntime {
   constructor(
     listener: RuntimeListener,
     source: ReadonlyTagSource = createSseTagSource(),
-    tagCatalog: TagDefinitionCatalog = waterTreatmentDemoTagCatalog,
+    tagCatalog?: TagDefinitionCatalog,
   ) {
     this.listener = listener;
     this.source = source;
-    this.store = new TagStore(tagCatalog);
+    this.tagCatalogOverride = tagCatalog;
+    this.store = new TagStore();
   }
 
   private clearDataTimer(): void {
@@ -181,6 +183,9 @@ export class DemoRuntime {
       const rawProject = await this.source.loadProject(controller.signal);
       if (!this.current(generation)) return;
       this.document = parseScadaDocument(rawProject);
+      this.store = new TagStore(
+        this.tagCatalogOverride ?? new TagDefinitionCatalog(this.document.tags),
+      );
       this.status = "connecting";
       this.message = "等待 Tag 快照";
       this.publish();

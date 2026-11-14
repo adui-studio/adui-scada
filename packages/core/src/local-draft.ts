@@ -1,4 +1,4 @@
-import { parseScadaDocument } from "./document.ts";
+import { migrateScadaDocument, parseScadaDocument } from "./document.ts";
 import type { ScadaDocument } from "./document.ts";
 
 /** 浏览器存储适配接口，便于脱离 DOM 执行单元测试。 */
@@ -11,6 +11,8 @@ export interface LocalDraftStorage {
 export interface LocalDraft {
   savedAt: string;
   document: ScadaDocument;
+  /** 读取历史工程草稿时记录来源版本；重新保存后该字段消失。 */
+  migratedFrom?: "0.1.0" | "0.2.0";
 }
 
 /** 本地草稿与工程 Schema 使用独立版本，避免误当作已发布工程。 */
@@ -108,11 +110,15 @@ export function readLocalDraft(storage: LocalDraftStorage, projectId: string): L
   if (!Number.isFinite(date.getTime()) || date.toISOString() !== data.savedAt) {
     throw new TypeError("本地草稿保存时间无效");
   }
-  const document = parseScadaDocument(data.document);
-  if (document.projectId !== projectId) {
+  const migration = migrateScadaDocument(data.document);
+  if (migration.document.projectId !== projectId) {
     throw new TypeError("本地草稿与当前工程 ID 不一致，已拒绝恢复");
   }
-  return { savedAt: data.savedAt, document };
+  return {
+    savedAt: data.savedAt,
+    document: migration.document,
+    ...(migration.migratedFrom === null ? {} : { migratedFrom: migration.migratedFrom }),
+  };
 }
 
 /** 只删除指定工程的浏览器草稿，不影响编辑器或其他工程。 */
@@ -142,10 +148,16 @@ export class LocalDraftAutoSaveSession {
     this.storage = storage;
     this.baselineJson = JSON.stringify(document);
     const key = localDraftKey(this.projectId);
-    const raw = readRaw(storage, key);
+    let raw = readRaw(storage, key);
     if (raw !== null) {
-      if (readLocalDraft(storage, this.projectId) === null || readRaw(storage, key) !== raw) {
+      const restored = readLocalDraft(storage, this.projectId);
+      if (restored === null || readRaw(storage, key) !== raw) {
         throw new TypeError("本地草稿在检查期间发生变化，请重新确认");
+      }
+      if (restored.migratedFrom !== undefined) {
+        // 将历史 Schema 迁移后的当前文档写回，避免下一次启动重复迁移。
+        saveLocalDraft(storage, restored.document);
+        raw = readRaw(storage, key);
       }
     }
     this.expectedRaw = raw;

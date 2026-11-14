@@ -190,6 +190,7 @@ async function snapshot(session) {
     "(() => { const probe = window.__scadaSseProbe; return { " +
       "url: location.href, " +
       "status: document.querySelector('.scada-status')?.getAttribute('data-status') ?? null, " +
+      "message: document.querySelector('.scada-message')?.textContent?.trim() ?? null, " +
       "streams: probe?.streams.map((source) => ({ ...source })) ?? [], " +
       "diagnostics: { " +
       "present: !!document.querySelector('.scada-diagnostics'), " +
@@ -444,6 +445,24 @@ async function checkService(target, path, command, expectedContentType) {
     throw new Error(
       `${target.name} 接口内容类型异常：${url.href}，预期 ${expectedContentType}，实际 ${response.headers.get("content-type") ?? "未提供"}。请检查模拟服务和 Vite 代理。`,
     );
+  }
+  if (path === "/demo/project") {
+    let project;
+    try {
+      project = await response.json();
+    } catch {
+      throw new Error(`${target.name} 模拟工程接口返回的 JSON 无法解析：${url.href}`);
+    }
+    if (
+      !project ||
+      typeof project !== "object" ||
+      project.schemaVersion !== "0.3.0" ||
+      !Array.isArray(project.tags)
+    ) {
+      throw new Error(
+        `${target.name} 模拟工程 Schema 与当前 0.3.0 不一致：${url.href}，实际版本 ${String(project?.schemaVersion ?? "未提供")}，Tag 目录 ${Array.isArray(project?.tags) ? "存在" : "缺失"}。请停止旧的 pnpm run dev:demo 进程，重新启动并确认 Vite 代理指向当前演示服务。`,
+      );
+    }
   }
 }
 
