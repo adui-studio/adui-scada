@@ -1,6 +1,6 @@
 # ADR-0065：厂商无关 OIDC、BFF 会话与服务端工程 API
 
-- 状态：Proposed
+- 状态：Accepted
 - 日期：2026-11-14
 - 关联需求：FR-001、FR-002、FR-008、FR-013、FR-014、NFR-001、NFR-002、NFR-003、NFR-004、NFR-006、NFR-008
 - 前置：[ADR-0040](0040-server-project-contract.md)、[ADR-0041](0041-project-persistence-access-model.md)、[ADR-0043](0043-prisma-project-transaction-store.md)、[ADR-0045](0045-trusted-session-and-project-guard.md)、[ADR-0062](0062-project-tag-definitions-schema-030.md)、[ADR-0064](0064-legacy-browser-migration-validation.md)
