@@ -88,7 +88,7 @@ describe("OIDC 服务端启动安全配置", () => {
     for (const key of [
       "",
       "invalid",
-      "0".repeat(43),
+      "*".repeat(43),
       randomBytes(31).toString("base64url"),
       randomBytes(33).toString("base64url"),
     ]) {
