@@ -59,8 +59,9 @@ test("水处理演示 Tag 定义提供稳定 ID、类型和单位，质量保持
     string: "文本",
   });
   expect(waterTreatmentDemoTagCatalog.get("water.level")?.tagId).toBe("water.level");
-  expect(waterTreatmentDemoTagOptions.find((option) => option.tagId === "water.pump.running")?.slots)
-    .toEqual(["running", "value"]);
+  expect(
+    waterTreatmentDemoTagOptions.find((option) => option.tagId === "water.pump.running")?.slots,
+  ).toEqual(["running", "value"]);
 
   const generated = new WaterTreatmentSimulator().next(new Date(at));
   const store = new TagStore(waterTreatmentDemoTagCatalog);
