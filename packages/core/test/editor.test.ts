@@ -711,6 +711,25 @@ test("项目 Tag 删除拒绝悬空绑定，稳定 ID 不允许通过更新修�
   expect(e.snapshot().document.tags.some((tag) => tag.tagId === "water.level")).toBe(true);
 });
 
+test("Tag 类型变更与新绑定必须符合图元绑定槽类型", () => {
+  const e = editor();
+  const before = e.snapshot().document;
+
+  expect(() =>
+    e.updateTagDefinition("water.level", { dataType: "boolean" }),
+  ).toThrow(/Tag 数据类型与现有图元绑定不兼容/);
+  expect(() =>
+    e.updateTagDefinition("water.level", { dataType: "unknown" }),
+  ).toThrow(/不能将已指定类型的 Tag 改为待确认类型/);
+
+  e.select("tank");
+  expect(() => e.setSelectedBinding("level", "water.pump.running")).toThrow(
+    /Tag 数据类型与绑定槽不兼容/,
+  );
+  expect(() => e.setSelectedBinding("level", "missing.tag")).toThrow(/未找到 Tag 定义/);
+  expect(e.snapshot().document).toEqual(before);
+});
+
 test("水箱 Tag 绑定可以清除、撤销和重做", () => {
   const e = editor();
   e.select("tank");
