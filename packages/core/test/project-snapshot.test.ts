@@ -85,6 +85,52 @@ test("校验 JSON 序列化后的快照时返回新的冻结工程副本", async
   expect(Object.isFrozen(imported.document.pages[0]?.nodes[0]?.transform)).toBe(true);
 });
 
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, stableValue((value as Record<string, unknown>)[key])]),
+    );
+  }
+  return value;
+}
+
+async function digest(value: unknown): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(stableValue(value)));
+  const result = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  return Array.from(result, (item) => item.toString(16).padStart(2, "0")).join("");
+}
+
+test("读取 0.2.0 历史快照时先验证原摘要，再返回可重复校验的 0.3.0 视图", async () => {
+  const legacy = source();
+  legacy.schemaVersion = "0.2.0";
+  delete legacy.tags;
+  const payload = {
+    formatVersion: PROJECT_SNAPSHOT_FORMAT_VERSION,
+    projectId: legacy.projectId,
+    revision: options.revision,
+    createdAt: options.createdAt,
+    hashAlgorithm: "SHA-256",
+    document: legacy,
+  };
+  const sourceContentHash = await digest(payload);
+  const migrated = await readProjectSnapshot({ ...payload, contentHash: sourceContentHash });
+  expect(migrated.migratedFrom).toBe("0.2.0");
+  expect(migrated.sourceContentHash).toBe(sourceContentHash);
+  expect(migrated.document.schemaVersion).toBe("0.3.0");
+  expect(migrated.document.tags.every((tag) => tag.dataType === "unknown")).toBe(true);
+  expect(await readProjectSnapshot(migrated)).toEqual(migrated);
+
+  const tampered = {
+    ...payload,
+    document: { ...legacy, projectId: "tampered-project" },
+    contentHash: sourceContentHash,
+  };
+  await expect(readProjectSnapshot(tampered)).rejects.toThrow(/摘要不匹配/);
+});
+
 test("拒绝快照内容被修改及元数据被修改", async () => {
   const original = await createProjectSnapshot(source(), options);
   const documentTamper = JSON.parse(JSON.stringify(original));
