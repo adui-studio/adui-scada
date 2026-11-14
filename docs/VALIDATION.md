@@ -617,3 +617,6 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **已提交修复**：将与 Core `project-snapshot.ts` 中 `stableValue` 一致的递归对象键排序函数内聚到 `seedLegacyProjectSnapshotInPage` 内部。它对数组递归映射、对对象按键排序并创建无原型对象，计算 SHA-256 前不再引用外部函数。Core 摘要算法、快照容器、迁移逻辑和持久化数据均未改变。
 
 **待复验**：同步最新提交后重新运行 `pnpm run test:legacy:browser`。当前仅 React 的 localStorage 和 IndexedDB 草稿路径获得通过日志；Project Snapshot 和 Vue 三条路径均未完成验收。不得将函数作用域修复视为浏览器测试通过。
+
+
+**补充清理**：稳定排序函数现仅保留在浏览器注入函数内部，已删除原 Node 模块作用域的未使用 helper，避免重复实现和未使用声明。函数片段已静态核对为自包含；仍需 Windows 实际执行确认。
