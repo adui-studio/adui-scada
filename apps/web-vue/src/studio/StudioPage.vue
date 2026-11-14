@@ -238,7 +238,7 @@ const bindingSlot = computed(() => {
     ? editableTagSlot(node.type)
     : null;
 });
-const demoTagCandidates = computed(() => {
+const tagCandidates = computed(() => {
   const slot = bindingSlot.value;
   return slot === null
     ? []
@@ -254,7 +254,7 @@ const selectedTagId = computed(() => {
 const missingBindingTag = computed(
   () =>
     selectedTagId.value !== "" &&
-    !demoTagCandidates.value.some((option) => option.tagId === selectedTagId.value),
+    !tagCandidates.value.some((option) => option.tagId === selectedTagId.value),
 );
 const selectedTagDefinition = computed(() =>
   state.value.document.tags.find((definition) => definition.tagId === selectedTagId.value),
@@ -1323,7 +1323,7 @@ async function importJson(event: Event) {
   <main class="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
     <header class="studio-toolbar">
       <div>
-        <p class="scada-eyebrow">ADui SCADA · V0.2 Studio</p>
+        <p class="scada-eyebrow">ADui SCADA · V0.3 Studio</p>
         <h1>SVG 组态编辑器</h1>
       </div>
       <div class="studio-actions">
@@ -1915,7 +1915,7 @@ async function importJson(event: Event) {
           </label>
           <h3>Tag 绑定（项目数据）</h3>
           <label v-if="bindingSlot" class="studio-field">
-            {{ bindingSlot }} · 选择模拟 Tag
+            {{ bindingSlot }} · 选择项目 Tag
             <select
               :value="selectedTagId"
               :aria-label="selected.id + ' 的 ' + bindingSlot + ' Tag 绑定'"
@@ -1923,9 +1923,9 @@ async function importJson(event: Event) {
             >
               <option value="">不绑定</option>
               <option v-if="missingBindingTag" :value="selectedTagId" disabled>
-                {{ selectedTagId }}（不在当前模拟候选中）
+                {{ selectedTagId }}（当前工程未定义或类型待确认）
               </option>
-              <option v-for="option in demoTagCandidates" :key="option.tagId" :value="option.tagId">
+              <option v-for="option in tagCandidates" :key="option.tagId" :value="option.tagId">
                 {{ option.displayName }} · {{ option.tagId }} · {{ TAG_DATA_TYPE_LABELS[option.dataType]
                 }}{{ option.unit ? " · " + option.unit : "" }}
               </option>
