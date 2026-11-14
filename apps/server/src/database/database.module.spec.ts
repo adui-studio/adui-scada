@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { describe, expect, it } from "vite-plus/test";
 import { AppModule } from "../app.module.js";
+import { ScadaAuthController } from "../auth/scada-auth.controller.js";
 import { ScadaIdentityModule } from "../auth/scada-identity.module.js";
 import { ProjectPersistenceModule } from "../projects/project-persistence.module.js";
 import { DatabaseModule } from "./database.module.js";

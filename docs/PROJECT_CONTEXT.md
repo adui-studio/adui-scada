@@ -957,3 +957,11 @@ E-011 已在 `docs/AI_MISTAKES.md` 记录；其类型派生修复与第三小批
 ### 第三十三批阶段 B 第四小批当前状态补充（2026-11-14）
 
 Cookie/CSRF 会话服务、Cookie 头构造函数和 Bearer/Cookie 双路径 `ScadaSessionGuard` 已提交到 PR #55。`ScadaIdentityModule` 已提供 Guard 所需的 OIDC 配置 Token，但该模块仍未挂载默认 AppModule，未注册 Controller/路由，`main.ts` 对 `SCADA_OIDC_ENABLED=true` 继续 fail-closed。第四小批尚待维护者 Windows 执行 `vp check`、`test:unit`、`docs:check` 和完整 `ready`；真实浏览器 Cookie/HTTPS 代理行为待 Controller 联调后验收。
+
+### 第三十三批阶段 B 第五小批：OIDC BFF HTTP 控制器与认证路由（代码已提交，待 Windows 验证）
+
+新增 `ScadaAuthController`，提供 `/api/v1/auth/oidc/start`、`/api/v1/auth/oidc/callback`、`/api/v1/auth/me` 和 `/api/v1/auth/logout`。Start/Callback 复用现有 OIDC 登录事务与回调服务；使用短时 HttpOnly 浏览器绑定 Cookie，成功回调后仅通过安全 Session/CSRF Cookie 建立浏览器会话，不在响应 JSON 暴露令牌。`/me` 只返回已验证的租户/主体上下文；`/logout` 撤销当前本地会话并清理 Cookie，Cookie 写请求继续受 CSRF Guard 保护。
+
+新增 `OidcEnabledAppModule`，`main.ts` 仅在 OIDC 配置完整且开关启用时选择该根模块；它只加载 `AppModule + ScadaIdentityModule`，没有加载 `ProjectPersistenceModule`。默认 `AppModule` 仍不注册身份路由、不连接 PostgreSQL；OIDC 与本机模拟 API 同时启用会拒绝启动。新增认证 Controller HTTP E2E 与默认根模块 404 回归。
+
+**验收状态**：代码已提交至 PR #55；第四、五小批的 Windows `vp check`、单测、E2E、文档检查和完整 `ready` 尚待维护者执行。Mock E2E 不代表真实 IdP/JWKS、HTTPS 浏览器 Cookie、反向代理或企业身份映射已验收。工程 API 仍未开放，工业设备写入仍未实现。

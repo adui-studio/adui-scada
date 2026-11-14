@@ -28,7 +28,7 @@ Vue 与 React 是两个正式 Web 端，必须共用同源 API 契约、工程�
 - 使用 10 秒发现超时，成功配置在进程内惰性缓存，并发首次请求共享同一发现任务；发现失败清除缓存，允许后续重试。OIDC 关闭或身份模块未挂载时不发起网络请求。
 - 元数据必须声明授权码响应、主体标识类型、RS256、PKCE S256；若声明许可类型、Scope 或 Token Endpoint 认证方法，则必须包含 `authorization_code`、`openid` 和 `client_secret_basic`。缺省 Token Endpoint 认证方法按规范默认值使用 `client_secret_basic`。
 - 必须存在 Authorization Endpoint、Token Endpoint 与 JWKS URI。发现端点及这三个元数据端点只允许 HTTPS；仅非生产环境显式开启本机测试模式时允许回环 HTTP。自定义 Fetch 校验每个请求 URL，保留 `redirect: manual`，不自动跟随端点重定向。
-- Discovery 服务注册在尚未挂载的 `ScadaIdentityModule` 中，采用惰性调用；当前 `main.ts` 对 `SCADA_OIDC_ENABLED=true` 的 fail-closed 启动保护保持不变。该实现和 Mock Fetch 单测不代表真实 IdP 联调或认证 HTTP 路由已开放。
+- Discovery 服务注册在 `ScadaIdentityModule` 中，采用惰性调用；第一小批提交时该模块尚未挂载。第五小批后，`main.ts` 仅在 `SCADA_OIDC_ENABLED=true` 且完整配置校验通过时挂载身份模块。Mock Fetch 单测不代表真实 IdP 联调已通过。
 
 ### 2. OIDC 事务与外部身份映射
 
@@ -153,3 +153,12 @@ Vue 与 React 是两个正式 Web 端，必须共用同源 API 契约、工程�
 - Cookie 安全方法仅允许 GET/HEAD/OPTIONS，不要求 CSRF Header；Cookie 非安全方法必须满足 Origin 与 `SCADA_OIDC_WEB_ORIGINS` 精确匹配、`Sec-Fetch-Site: same-origin`、CSRF Cookie 与 `X-SCADA-CSRF` 双提交一致，并再次与数据库会话 CSRF 摘要进行常量时间校验。
 - Guard 仅把验证后的 Principal、Cookie 会话 ID 与认证方式写入请求上下文；审计只记录固定原因码，不记录 Cookie、Token、Origin 或请求原文。
 - 本小批只实现会话服务、Cookie 构造函数和 Guard，不注册 Controller、不挂载到默认 AppModule，也不改变 `main.ts` 的 OIDC fail-closed 启动保护。真实浏览器 Cookie 行为和 HTTPS 部署验收仍待后续 HTTP Controller/浏览器回归。
+
+### 3.2 OIDC BFF HTTP 路由与模块启用边界（第三十三批阶段 B 第五小批）
+
+- `ScadaAuthController` 仅注册在 `ScadaIdentityModule`，路由固定为 `/api/v1/auth/oidc/start`、`/api/v1/auth/oidc/callback`、`/api/v1/auth/me` 和 `/api/v1/auth/logout`。Start/Callback 只负责 HTTP 参数与 Cookie/重定向编排，协议校验仍由既有登录事务和回调服务负责。
+- Start 的站内回跳参数仍由 `OidcLoginTransactionService` 严格规范化；授权 URL 来自固定 Issuer Discovery。短时浏览器绑定 Cookie 使用 `__Host-adui-scada-oidc-browser`、HttpOnly、Secure、SameSite=Lax、Path=/、不设置 Domain，确保 IdP 顶层 GET 回调携带且不暴露给脚本。
+- Callback 只把单值 State/Code/Error/`iss` 交给回调服务；服务成功后通过 `Set-Cookie` 写入本地 Session 与 CSRF Cookie，Location 只使用事务中已校验的站内相对路径。响应设置 `Cache-Control: no-store` 与 `Referrer-Policy: no-referrer`，不返回 Session/CSRF Token JSON。
+- `GET /me` 由 `ScadaSessionGuard` 保护，只返回服务端可信租户/主体标识；`POST /logout` 同样由 Guard 保护，Cookie 请求必须通过 Origin、Fetch Metadata 和 CSRF，Bearer 兼容请求使用已验证的当前会话 ID。撤销数据库失败时不清除 Cookie、不谎报注销成功。
+- 新增 `OidcEnabledAppModule` 仅组合基础 `AppModule` 和 `ScadaIdentityModule`；`main.ts` 只有在 OIDC 开关与完整配置校验通过时才选择该根模块。默认 `AppModule` 仍不导入身份/数据库模块；本机模拟 API 与 OIDC 同时开启时 fail-fast。工程持久化模块尚未挂载，因此当前没有工程 HTTP API。
+- HTTP Controller 和 Mock E2E 通过不等同于真实 IdP/JWKS、生产 HTTPS、反向代理、浏览器 SameSite Cookie 或企业身份映射已验收；维护者 Windows 完整质量链仍是启用前门禁。

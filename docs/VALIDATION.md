@@ -888,4 +888,18 @@ type OidcExpectedState = NonNullable<
 - `apps/server/src/auth/scada-identity.spec.ts`：验证新会话只保存 CSRF 摘要、有效 Cookie 会话认证、错误 CSRF 拒绝、旧 Bearer 会话不能升级为 Cookie 但仍可 Bearer 认证。
 - `apps/server/src/auth/oidc-callback.service.spec.ts`：验证回调服务向未来 Controller 提供本地 CSRF Token，不暴露 IdP Token。
 
-**待执行**：维护者 Windows `vp check`、`pnpm run test:unit`、`pnpm run docs:check`、`pnpm run ready`。本批无 Prisma Schema 或迁移变更；单测使用 Mock，不代表真实浏览器 Set-Cookie、HTTPS 终止代理、Cookie 域名/端口行为或真实 IdP 登录已验收。HTTP Controller 尚未注册，OIDC 保持 fail-closed。
+**待执行**：维护者 Windows `vp check`、`pnpm run test:unit`、`pnpm run docs:check`、`pnpm run ready`。本批无 Prisma Schema 或迁移变更；单测使用 Mock，不代表真实浏览器 Set-Cookie、HTTPS 终止代理、Cookie 域名/端口行为或真实 IdP 登录已验收。HTTP Controller 已由第五小批提交，OIDC 启用仍需维护者质量验收。
+
+## 第三十三批阶段 B 第五小批：OIDC BFF HTTP 控制器与认证路由（待维护者 Windows 验证）
+
+新增 `apps/server/test/oidc-auth.controller.e2e-spec.ts`，通过 NestJS TestingModule 与 Supertest 验证真实 HTTP 路由/Guard/响应头，外部 IdP、PostgreSQL 与真实浏览器均使用 Mock/不连接。覆盖：
+
+- OIDC 登录发起 302、固定授权地址、短时 HttpOnly/Secure/SameSite=Lax 浏览器绑定 Cookie、无缓存/无 Referer。
+- 同一浏览器多个标签页复用绑定 Cookie；回调转发 State/Code/`iss` 和绑定值，成功后设置 Session HttpOnly 与 CSRF 可读 Cookie，再跳转至站内路径。
+- `/me` 未认证拒绝，已认证只返回 tenantId/subjectId 且不缓存、不返回令牌。
+- Cookie `/logout` 必须通过 Origin、Fetch Metadata、CSRF 双提交并撤销当前会话；缺少 CSRF 不触发撤销；Bearer 注销继续兼容。
+- 审计记录不包含 Session/CSRF Token 或 Origin；默认 `AppModule` 的四条身份路由保持 404。
+
+新增 Cookie helper 测试覆盖浏览器绑定 Cookie、重复 Cookie 名称/多值请求头拒绝。`database.module.spec.ts` 覆盖 OIDC 根模块只挂载身份模块，不挂载工程持久化模块。
+
+**待执行**：维护者 Windows `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run docs:check` 和完整 `pnpm run ready`，最终记录 PowerShell `$LASTEXITCODE`。这些 Mock E2E 不代表真实 IdP/JWKS、浏览器 Secure Cookie、生产 HTTPS 反向代理或企业身份映射已验收。

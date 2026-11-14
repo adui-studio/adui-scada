@@ -80,7 +80,7 @@ function constantTimeHashMatches(expectedHash: string, actualHash: string): bool
 export class AuthSessionService {
   constructor(private readonly database: PrismaService) {}
 
-  /** 仅允许已通过可信身份认证的内部调用方签发，暂未向 HTTP 注册此能力。 */
+  /** 仅供已验证的服务端身份流程签发；不提供客户端可直接调用的会话签发路由。 */
   async issueForVerifiedSubject(
     principal: AuthenticatedProjectPrincipal,
   ): Promise<IssuedAuthSession> {

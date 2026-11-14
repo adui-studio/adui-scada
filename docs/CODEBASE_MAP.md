@@ -648,3 +648,13 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/server/src/auth/scada-identity.spec.ts`：会话 CSRF 摘要存储、Cookie 校验与旧 Bearer 会话兼容回归。
 - `apps/server/src/security/scada-security-audit.ts`：新增 Cookie/CSRF/Origin/Fetch Metadata 固定拒绝原因码。
 - 当前无 HTTP Controller；Identity 模块仍未由默认 AppModule 挂载。
+
+### 第三十三批阶段 B 第五小批：OIDC BFF HTTP 控制器与认证路由
+
+- `apps/server/src/auth/scada-auth.controller.ts`：OIDC 登录发起/回调、最小本地身份查询与当前会话注销；只编排既有服务，不重复实现 OIDC 协议。
+- `apps/server/src/auth/scada-auth-cookie.ts`：新增短时 `__Host-adui-scada-oidc-browser` Cookie 与严格 Cookie 读取函数，保留 Session/CSRF Cookie 签发和清除。
+- `apps/server/src/auth/scada-identity.module.ts`：仅在 OIDC 启用根模块中注册 `ScadaAuthController`。
+- `apps/server/src/app.module.ts`：新增 `OidcEnabledAppModule`，只组合基础 AppModule 和 ScadaIdentityModule，不加载工程持久化模块。
+- `apps/server/src/main.ts`：根据完整 OIDC 配置选择根模块；默认健康模块保持数据库隔离，OIDC 与本机模拟 API 冲突时拒绝启动。
+- `apps/server/test/oidc-auth.controller.e2e-spec.ts`：登录重定向、Cookie、回调、`me/logout`、CSRF 与 Bearer 兼容 HTTP E2E。
+- `apps/server/src/database/database.module.spec.ts`、`apps/server/test/app.e2e-spec.ts`：模块装配与默认根模块身份路由 404 回归。

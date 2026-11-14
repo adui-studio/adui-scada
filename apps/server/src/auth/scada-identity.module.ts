@@ -10,6 +10,7 @@ import {
   OidcCallbackService,
   SCADA_OIDC_AUTHORIZATION_CODE_GRANT,
 } from "./oidc-callback.service.js";
+import { ScadaAuthController } from "./scada-auth.controller.js";
 import { ScadaProjectGuard } from "./scada-project.guard.js";
 import { ScadaSessionGuard } from "./scada-session.guard.js";
 import {
@@ -18,11 +19,12 @@ import {
 } from "./oidc-provider-discovery.service.js";
 
 /**
- * 仅包含会话身份与工程 ACL 基础，当前不导入 AppModule，也不注册认证或写入 HTTP 路由。
+ * 仅在显式启用 OIDC 的根模块中加载身份路由与会话服务。
  * PrismaService 由共享 DatabaseModule 提供，避免与工程仓储重复连接数据库。
  */
 @Module({
   imports: [DatabaseModule],
+  controllers: [ScadaAuthController],
   providers: [
     {
       provide: SCADA_OIDC_STARTUP_CONFIG,
