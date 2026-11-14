@@ -598,6 +598,7 @@ test("旧版工程显式导入后升级并重置旧编辑历史", () => {
   expect(e.moveBy(4, 0)).toBe(true);
   const legacy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
   legacy.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete legacy.tags;
   legacy.pages[0].nodes[1].groupId = "group-1";
   legacy.pages[0].nodes[3].groupId = "group-1";
 
@@ -627,6 +628,7 @@ test("旧版工程存在未知字段时导入失败且保留选中和撤销历�
   const before = e.snapshot();
   const legacy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
   legacy.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete legacy.tags;
   legacy.pages[0].nodes[1].transform.futureScale = 2;
   expect(() => e.loadDocument(legacy)).toThrow(/结构字段/);
   expect(e.snapshot()).toEqual(before);
@@ -644,6 +646,7 @@ test("未来版本或非法历史组合拒绝导入并保留当前工程", () =>
   expect(() => e.loadDocument(future)).toThrow(/不支持的工程版本/);
   expect(e.snapshot()).toEqual(before);
   future.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
+  delete future.tags;
   future.pages[0].nodes[1].groupId = "group-1";
   expect(() => e.loadDocument(future)).toThrow(/至少需要两个图元/);
   expect(e.snapshot()).toEqual(before);
