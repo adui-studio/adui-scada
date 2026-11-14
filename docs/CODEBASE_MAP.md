@@ -613,3 +613,8 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/server/src/config/oidc-startup.config.ts`：默认关闭的 OIDC 启动配置校验。
 - `apps/server/prisma/migrations/20261114000000_oidc_identity_transactions/migration.sql`：外部身份、OIDC 事务和 CSRF 摘要的增量 SQL。
 - OIDC 依赖 `openid-client@6.8.9` 已加入 Catalog、Server Manifest 和锁文件；登录/回调、会话 Cookie/CSRF 及工程 Controller 仍未实现。
+
+
+### 第三十三批新增真实 PostgreSQL 测试
+
+- `apps/server/test/oidc-schema.db-spec.ts`：独立 `test:db` 入口，验证 OIDC 增量迁移真实落库、迁移登记、外键/约束/索引及中文数据库元数据；仅允许本机 `adui_scada_test`。
