@@ -691,7 +691,6 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 
 当前仅完成远端代码修改和静态片段核对；尚未取得修复后的 Windows `vp check`、Vitest 或 `ready` 运行结果，**不得标记本次修复已通过完整验证**。
 
-
 ### 第三十三批 Windows 单测：Prisma 中文注释跨行格式修复（2026-11-14）
 
 维护者运行 `pnpm run test:unit`：Core Node 构建通过、Prisma Client 7.10.1 生成成功；**40 个测试文件中 39 个通过、1 个失败，448 项测试中 447 通过、1 失败，退出码 1**。新增 OIDC 配置测试 7/7、共享数据库模块测试 3/3 均通过。

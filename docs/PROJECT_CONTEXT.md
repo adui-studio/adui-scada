@@ -858,7 +858,6 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 
 维护者 `vp check --fix` 报告 0 错误、7 警告（五处空 `toThrow()`、一处条件式 `expect`、一处字符串展开遍历）。本分支已将异常断言改为具体中文消息、完整异常正则校验，并将控制字符检测改为索引式 `charCodeAt` 遍历。仅更改 OIDC 配置及其单测，尚未收到修复后 Windows `vp check`、单测或完整质量链退出码；PR #55 仍为 Draft。
 
-
 ### 第三十三批 Prisma 注释单测失败及最小修复（2026-11-14）
 
 维护者 `test:unit` 实测 447/448 通过，仅 Prisma 中文数据库注释约束测试失败。根因是新增 OIDC 增量迁移文件中部分 COMMENT ON TABLE/COLUMN/INDEX 语句的 `IS` 与中文文本分行，而仓库测试按单行解析，导致 commentText 返回 null。仅将 10 处注释规范为单行，无 DDL 和 Prisma 模型语义变化。按现有逐行匹配规则静态核对 8 个模型、全部 4 份迁移、58 个表/物理字段注释，均能匹配中文内容。仍待 Windows 重跑 `test:unit`，不可据静态检查宣称单测通过。PR #55 保持 Draft。
