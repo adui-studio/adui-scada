@@ -133,12 +133,13 @@ export class ScadaSessionGuard implements CanActivate {
         this.reject("malformed_authorization", new UnauthorizedException("缺少有效的身份凭据"));
       }
 
-      const principal = await this.sessions.authenticate(token);
-      if (!principal) {
+      const session = await this.sessions.authenticateWithSession(token);
+      if (!session) {
         this.reject("invalid_session", new UnauthorizedException("身份凭据无效或已经失效"));
       }
 
-      request.scadaPrincipal = principal;
+      request.scadaPrincipal = session.principal;
+      request.scadaSessionId = session.sessionId;
       request.scadaAuthMethod = "bearer";
       this.allow();
       return true;

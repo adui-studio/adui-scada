@@ -679,7 +679,7 @@ OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client I
 - `OidcLoginTransactionService.start(returnPath, existingBrowserBinding?)`：生成独立 State/Nonce/PKCE verifier，计算 S256 challenge，构建固定 Redirect URI 的授权码请求；State 与浏览器绑定仅存 SHA-256 摘要，verifier 使用 AES-256-GCM 加密，登录事务有效期 5 分钟。
 - `OidcLoginTransactionService.consume(state, browserBindingCookie)`：在 PostgreSQL 交互事务中按固定 Issuer、State 摘要、浏览器绑定、创建/过期时间和未消费条件筛选，再通过条件 `updateMany` 原子消费；消费后重新校验 Nonce 与站内回跳路径，再解密 verifier。密文使用 State 摘要作为 GCM AAD。
 - 同一浏览器绑定 Cookie 可用于多个标签页，但每个事务独立生成 State/Nonce/verifier；无效、过期、跨浏览器、重复或并发失败均不返回 verifier。
-- 当前只实现服务层，尚未注册 Controller；`main.ts` 对 `SCADA_OIDC_ENABLED=true` 仍 fail-closed。Cookie 安全属性构造与 CSRF Guard 已在第四小批实现，但尚未挂载 HTTP 路由或完成浏览器验证；工程 API 未开放。
+- 当前只实现服务层，尚未注册 Controller；`main.ts` 对 `SCADA_OIDC_ENABLED=true` 仍 fail-closed。Cookie 的 HttpOnly/Secure/SameSite 属性、CSRF Guard 和工程 API 均未开放。
 - 第一、二小批维护者 Windows 已通过 `vp check`、`test:unit`、`docs:check` 和完整 `ready`；第三小批回调单测尚待维护者执行。Mock 测试不代表真实 PostgreSQL 并发锁或真实 IdP 联调。
 
 ### 第三十三批阶段 B 第三小批：授权码回调、ID Token 与预绑定身份（代码已提交，待 Windows 验证）
@@ -690,10 +690,18 @@ OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client I
 - ID Token 的签名、Issuer、Audience、有效期和 Nonce 基础验证由 openid-client 完成；应用层再检查固定 Issuer、Client ID Audience、azp、多 Audience、Nonce、Subject 的 ASCII/长度约束及时间声明类型。
 - 只按精确 `(iss, sub)` 查询 `ScadaExternalIdentity`，要求关联 `ScadaIdentity.status = active`；未预绑定或已停用均拒绝，不按 email、用户名或 Claim 自动创建主体/租户。
 - 验证成功后复用 `AuthSessionService.issueForVerifiedSubject()` 签发本地 15 分钟不透明会话。IdP Access/Refresh/ID Token 仅在兑换调用内存中短暂存在，不保存、不写日志；服务返回的本地 sessionToken 仅供后续服务端 Controller 设置 HttpOnly Cookie，当前没有 HTTP 路由。
-- 新增 Mock 授权码兑换、Prisma 身份映射和会话服务测试；覆盖 State/浏览器绑定、OAuth 错误、`iss` 参数、PKCE/Nonce 检查参数、ID Token Claims、未绑定/停用身份、异常脱敏和 IdP Token 不进入结果。维护者 Windows 已通过 `vp check`（286 文件格式正确、146 个受检文件零警告/错误）、`test:unit`（43 文件/477 测试，回调 12/12）、`docs:check`（83 Markdown）和完整 `ready`（最终退出码 0）。真实 IdP/JWKS 联调、HTTP Controller 和浏览器 Cookie/CSRF 集成仍未完成；第四小批服务层代码待 Windows 验证，当前保持 OIDC fail-closed。
+- 新增 Mock 授权码兑换、Prisma 身份映射和会话服务测试；覆盖 State/浏览器绑定、OAuth 错误、`iss` 参数、PKCE/Nonce 检查参数、ID Token Claims、未绑定/停用身份、异常脱敏和 IdP Token 不进入结果。维护者 Windows 已通过 `vp check`（286 文件格式正确、146 个受检文件零警告/错误）、`test:unit`（43 文件/477 测试，回调 12/12）、`docs:check`（83 Markdown）和完整 `ready`（最终退出码 0）。真实 IdP/JWKS 联调与 HTTP Controller/Cookie/CSRF 仍未完成；当前保持 OIDC fail-closed。
 
 ### 第三小批 Windows 全链验收结果（2026-11-14）
 
 维护者 Windows 已对 OIDC 回调服务和 Mock 测试完成验证：`vp check` 286 文件格式正确、146 个受检文件零警告/Lint/TypeScript 错误；`test:unit` 43/43 文件、477/477 测试（回调 12/12）；`docs:check` 83 Markdown 通过；完整 `ready` 最终退出码 0，SSE 8/8、故障代理 4/4、NestJS E2E 17/17、React/Vue/NestJS 构建通过。
 
 该验收只证明当前代码质量链和 Mock 测试通过，不代表真实 IdP/JWKS 联调、HTTP Cookie/CSRF 或工程 API 已完成。
+
+### 第三十三批阶段 B 第四小批：BFF Cookie 与 CSRF 会话保护（代码已提交，待 Windows 验证）
+
+- `AuthSessionService.issueForVerifiedSubject()` 为每个新会话生成独立 `scada_csrf_` 随机令牌，数据库只写入 SHA-256 摘要；`authenticateCookieSession()` 只接受有合法 CSRF 摘要的活动会话，并对请求 CSRF Token 摘要作常量时间比较。旧 Bearer 会话 `csrfTokenHash = null` 仍可走 Bearer，不允许升级为 Cookie。
+- `scada-auth-cookie.ts` 统一生成 `__Host-adui-scada-session`（HttpOnly）与 `__Host-adui-scada-csrf`（可读）Set-Cookie 头，均为 Secure、SameSite=Lax、Path=/、无 Domain；提供对称清除头。
+- `ScadaSessionGuard` 支持显式 Bearer 与 Cookie 两条路径；混合凭据、重复/格式错误认证 Cookie、孤立 CSRF Cookie 均拒绝。Cookie 非安全方法额外校验精确 Origin 白名单、`Sec-Fetch-Site: same-origin`、CSRF Cookie/Header 双提交和数据库 CSRF 摘要；只审计固定原因码。
+- Guard 将认证方式、当前会话 ID 和可信 Principal 写入请求上下文，Bearer/Cookie 两条路径均可供未来 Controller 精确撤销当前会话。没有注册 HTTP Controller，也没有把 Guard 挂到默认 AppModule；`main.ts` 对 `SCADA_OIDC_ENABLED=true` 仍 fail-closed。
+- 新增 Cookie 序列化测试与 Guard Mock 测试，覆盖 Cookie 属性、清除属性、Bearer 兼容、凭据混用、Cookie 安全读取、写请求 CSRF、Origin、Fetch Metadata、重复 Cookie、数据库 CSRF 摘要拒绝和审计脱敏。**需维护者 Windows 执行静态检查、单测和完整 ready；真实浏览器与 HTTPS 反向代理行为待后续 Controller 联调。**

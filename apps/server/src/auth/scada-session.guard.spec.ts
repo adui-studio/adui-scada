@@ -76,9 +76,11 @@ function createHarness() {
     },
   };
   const sessions = {
-    authenticate: async (token: unknown) => {
+    authenticateWithSession: async (token: unknown) => {
       bearerTokens.push(token);
-      return bearerPrincipal;
+      return bearerPrincipal
+        ? { sessionId: SESSION_ID, principal: bearerPrincipal }
+        : null;
     },
     authenticateCookieSession: async (token: unknown, csrfToken?: unknown) => {
       cookieCalls.push({ token, csrfToken });
@@ -117,7 +119,7 @@ describe("浏览器 Cookie 会话与 CSRF Guard", () => {
     expect(harness.bearerTokens).toEqual([SESSION_TOKEN]);
     expect(request.scadaPrincipal).toEqual(PRINCIPAL);
     expect(request.scadaAuthMethod).toBe("bearer");
-    expect(request.scadaSessionId).toBeUndefined();
+    expect(request.scadaSessionId).toBe(SESSION_ID);
   });
 
   it("Bearer 与 Session/CSRF Cookie 同时出现时拒绝混用且不回退", async () => {
