@@ -83,3 +83,12 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 经核对本仓库 NestJS 12.0.3 Express Adapter 的 `return503OnClosing` 选项和 Node 24 HTTP Server 的资源配置 API，本批直接使用现有 `@nestjs/core`、`@nestjs/platform-express` 与 Node `http`；不引入请求超时拦截器、第三方 Graceful Shutdown 包、`@nestjs/throttler`、Redis 或新 HTTP 客户端。原因是当前正式业务入口仅包括 HTTP 健康探针，增加外部依赖并不能替代部署阶段的真实连接排空或流量管理。
 
 通过 [ADR-0051](adr/0051-http-ingress-shutdown-policy.md) 约束：`headersTimeout=15s`、`requestTimeout=60s`、`keepAliveTimeout=5s`、请求头最多 100 个、单 Socket 最多 1000 个请求；这些数值在大文件上传、受信代理链路或高频订阅实现后需要重新压测。**不设置全局响应超时**，以免破坏规划中的 SSE。无第三方依赖/锁文件改动，仍须 Windows `ready` + Docker 隔离烟测验收。
+
+
+## 第三十三批：OIDC Relying Party 客户端（已选型，待加入依赖）
+
+选择 openid-client 6.8.9 作为服务端 OIDC Relying Party 库。官方 API 覆盖 Authorization Server Metadata Discovery、Authorization Code Grant、PKCE S256、State、Nonce、ID Token 验证及 Issuer Identification；当前 Node.js 最低要求低于仓库 Node >=22.18.0，ESM 与 TypeScript 声明符合现有服务端结构。
+
+不额外引入 Passport、独立 jose JWT 验证流程或第二套身份会话框架；继续复用仓库已有 AuthSessionService、ScadaSessionGuard、ScadaProjectGuard 和 PrismaProjectVersionStore。当前分支仅记录选型，尚未将 openid-client 写入 Catalog/Server manifest，也未生成锁文件。正式加入依赖时必须由 pnpm 更新 pnpm-lock.yaml 并通过 frozen-lockfile 安装检查。
+
+参考：[openid-client 官方仓库与 API](https://github.com/panva/openid-client)、[RFC 9700](https://www.rfc-editor.org/rfc/rfc9700.html)、[OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html)。
