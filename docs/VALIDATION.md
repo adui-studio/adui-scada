@@ -618,3 +618,16 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **待复验**：同步最新提交后重新运行 `pnpm run test:legacy:browser`。当前仅 React 的 localStorage 和 IndexedDB 草稿路径获得通过日志；Project Snapshot 和 Vue 三条路径均未完成验收。不得将函数作用域修复视为浏览器测试通过。
 
 **补充清理**：稳定排序函数现仅保留在浏览器注入函数内部，已删除原 Node 模块作用域的未使用 helper，避免重复实现和未使用声明。函数片段已静态核对为自包含；仍需 Windows 实际执行确认。
+
+
+### 第三十二批 Windows 历史迁移与互通最终浏览器回归通过（2026-11-14）
+
+维护者提供的最新 Windows PowerShell 日志确认：
+
+- `pnpm run test:legacy:browser`：**退出码 0**。React 与 Vue 两端分别通过 localStorage 0.2.0 草稿迁移、旧副本清理和 Studio 恢复；IndexedDB 0.2.0 草稿事务迁移、revision 推进和恢复；Project Snapshot 原 SHA-256 校验、只读归一化及原始记录保留。六条浏览器迁移路径全部通过。
+- `pnpm run test:interop`：React → Vue、Vue → React 工程 JSON、页面、图元和 Tag 绑定一致；非法 JSON 导入被拒绝且现有工程不变；完整 React → Vue → React → Vue 往返通过，**退出码 0**。
+- `vp check`：**272 个文件格式正确；135 个受检文件零警告、Lint 和 TypeScript 错误**。
+- `pnpm run docs:check`：**80 个 Markdown 文件通过**（本次验收记录追加后尚未重跑）。
+- `pnpm run ready`：日志已确认依赖 Catalog 11 清单/51 项、共享配置 9 TSConfig、环境/LF、中文文案 161 文件、Prisma Client 7.10.1、Core 构建、React/Vue/Draft Storage/Server 类型检查、Vitest **438/438**、SSE 客户端 **8/8**、TCP 故障代理 **4/4**、NestJS E2E **17/17**、React 构建 **3901 模块**、Vue 构建 **3847 模块**均通过。所提供日志最后到达 NestJS `build:server` 的 Prisma Client 生成，未包含 Nest build 完成输出或 `ready` 最终退出码，因此**完整 ready 的最终成功尚未由该片段单独证明**，不能记为全链明确通过。
+
+**结论**：第三十二批核心历史迁移浏览器专项与跨框架互通已通过；静态检查通过。尚需补齐 `ready` 的最终 NestJS build 完成/退出码证据，并在验收文档更新后复跑 `docs:check`。本批不更改迁移业务代码、Schema、Dexie 数据库版本或快照格式。
