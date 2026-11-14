@@ -32,8 +32,11 @@ function requiredString(raw: string | undefined, name: string, maximum = 2048): 
   if (typeof raw !== "string" || raw.length === 0 || raw.length > maximum || raw.trim() !== raw) {
     throw new Error(name + " 未设置或格式无效");
   }
-  if ([...raw].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) {
-    throw new Error(name + " 包含非法字符");
+  for (let index = 0; index < raw.length; index += 1) {
+    const codeUnit = raw.charCodeAt(index);
+    if (codeUnit < 32 || codeUnit === 127) {
+      throw new Error(name + " 包含非法字符");
+    }
   }
   return raw;
 }
