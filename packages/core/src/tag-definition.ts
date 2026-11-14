@@ -79,7 +79,7 @@ function parseDefinition(input: unknown): TagDefinition {
 
 /**
  * 不可变的 Tag 元数据目录。重命名只替换展示名称，绑定始终引用稳定 tagId。
- * 当前目录只承载本机演示定义，尚未持久化到 ScadaDocument 或服务端。
+ * 目录数据可持久化在 ScadaDocument.tags；目录实例本身不保存设备地址或连接信息。
  */
 export class TagDefinitionCatalog {
   private readonly definitions: ReadonlyMap<string, TagDefinition>;
