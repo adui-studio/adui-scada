@@ -841,3 +841,10 @@ PR #53 已 Squash Merge 到 main，合并提交 7fccc1e2285d6ebb1190120142fcf998
 ### 第三十二批完整 ready 质量链最终确认（2026-11-14）
 
 维护者补充确认 `pnpm run ready` 最终退出码为 **0**。结合此前日志，第三十二批完整质量链中的 438/438 单测、SSE 客户端 8/8、TCP 故障代理 4/4、NestJS E2E 17/17、React/Vue 类型检查与构建、NestJS 最终构建全部完成。历史迁移浏览器六路径及跨框架互通此前均退出码 0；本批自动化验收条件已满足。
+
+
+### 第三十三批 OIDC 与服务端工程 API 规划获维护者同意（2026-11-14）
+
+PR #54 已合并到 main，合并提交 8a9dbf5b37a14c3f46b00e28561abcedf5e92c96。第三十二批 Windows 实测六条历史迁移浏览器路径、test:interop、vp check、docs:check 和 pnpm run ready 全部通过，ready 最终退出码 0。
+
+维护者同意第三十三批采用厂商无关 OIDC 架构，具体 Issuer 通过服务端配置决定。当前实施分支 feat/v0.3-oidc-project-api 已创建，先固化 ADR-0065 与实施计划：openid-client 6.8.9、Authorization Code + PKCE、预绑定 (iss, sub) 身份映射、BFF HttpOnly Cookie、CSRF、统一 PrismaService、/api/v1 工程版本 API 和共享 API Client。OIDC 默认关闭，未完成身份认证和工程 ACL 不挂载工程路由。此时只完成设计文档，未增加依赖、数据库迁移或业务代码，不能声称 OIDC 或工程 API 已实现。
