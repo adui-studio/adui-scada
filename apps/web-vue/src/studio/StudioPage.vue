@@ -5,9 +5,9 @@ import { CloseIcon } from "tdesign-icons-vue-next";
 import "tdesign-vue-next/es/style/index.css";
 import {
   TAG_DATA_TYPE_LABELS,
+  tagDefinitionSupportsSlot,
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
-  waterTreatmentDemoTagOptions,
   DraftAutoSaveSession,
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
   studioNodeLocked,
@@ -242,7 +242,9 @@ const demoTagCandidates = computed(() => {
   const slot = bindingSlot.value;
   return slot === null
     ? []
-    : waterTreatmentDemoTagOptions.filter((option) => option.slots.includes(slot));
+    : state.value.document.tags.filter((definition) =>
+        tagDefinitionSupportsSlot(definition, slot),
+      );
 });
 const selectedTagId = computed(() => {
   const node = selected.value;
@@ -255,7 +257,7 @@ const missingBindingTag = computed(
     !demoTagCandidates.value.some((option) => option.tagId === selectedTagId.value),
 );
 const selectedTagDefinition = computed(() =>
-  demoTagCandidates.value.find((option) => option.tagId === selectedTagId.value),
+  state.value.document.tags.find((definition) => definition.tagId === selectedTagId.value),
 );
 const snapResult = computed(() => {
   const dragging = preview.value;
@@ -1911,7 +1913,7 @@ async function importJson(event: Event) {
               应用文案
             </TButton>
           </label>
-          <h3>Tag 绑定（模拟数据）</h3>
+          <h3>Tag 绑定（项目数据）</h3>
           <label v-if="bindingSlot" class="studio-field">
             {{ bindingSlot }} · 选择模拟 Tag
             <select
@@ -1924,7 +1926,7 @@ async function importJson(event: Event) {
                 {{ selectedTagId }}（不在当前模拟候选中）
               </option>
               <option v-for="option in demoTagCandidates" :key="option.tagId" :value="option.tagId">
-                {{ option.label }} · {{ option.tagId }} · {{ TAG_DATA_TYPE_LABELS[option.dataType]
+                {{ option.displayName }} · {{ option.tagId }} · {{ TAG_DATA_TYPE_LABELS[option.dataType]
                 }}{{ option.unit ? " · " + option.unit : "" }}
               </option>
             </select>
