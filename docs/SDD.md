@@ -642,3 +642,26 @@ React 的 TagManager.tsx 与 Vue 的 TagManager.vue 只保存用户正在填写�
 3. Project Snapshot：在既有 adui-scada-studio-versions 数据库中构造 formatVersion 1 的 0.2.0 历史快照，按 Core 稳定键排序规则计算原 SHA-256；经 Studio 版本历史载入，验证当前文档副本迁移到 0.3.0、Tag 为 unknown、绑定保留，同时读取原记录确认原摘要与旧文档未被改写。
 
 三条路径在 Vue/React 两端独立执行；测试只使用隔离 Chrome/Edge 用户目录和本机开发服务，不触碰真实用户 Profile、生产数据库或工业设备。新增 pnpm run test:legacy:browser，详见 [ADR-0064](adr/0064-legacy-browser-migration-validation.md)。当前仅完成测试代码与静态审查，未在 Windows 实际运行。
+
+
+## 2026-11-14 · V0.3 第三十三批：OIDC、BFF 会话与服务端工程 API 契约
+
+### 认证流程
+
+服务端固定 Issuer Discovery，使用 Authorization Code + PKCE S256；每次登录生成独立 state、nonce、code_verifier。OIDC 登录事务存 PostgreSQL，state 只存摘要，PKCE verifier 用 AES-256-GCM 加密，事务 5 分钟过期并通过条件更新一次性消费。短时 HttpOnly 浏览器绑定 Cookie 将登录事务绑定到发起浏览器，回调地址固定使用服务端配置，不信任 Host/Forwarded Header。
+
+ID Token 由 openid-client 验证签名、Issuer、Audience、时间声明和 Nonce。只用 iss/sub 查预先绑定的外部身份映射，必须关联 active 的 ScadaIdentity；不使用 email、用户名、groups、roles 或客户端提交的 tenant/subject 作为身份和 ACL 来源，不做 JIT 用户创建。
+
+### 内部会话与 CSRF
+
+认证成功后调用现有 AuthSessionService 签发 15 分钟内部不透明会话。浏览器只持有 HttpOnly/Secure/SameSite=Lax/Path=/ 的 Host Cookie，不存储 IdP Token 或内部令牌到 Web Storage。Cookie 写请求必须同时验证精确 Origin 白名单、Fetch Metadata 和绑定当前会话的 CSRF Cookie/Header；Bearer 与 Cookie 认证路径不可混用。退出只撤销 ADui SCADA 本地会话。
+
+### 工程 API
+
+API 使用同源 /api/v1 前缀。初始提供 OIDC start/callback、me、logout、工程创建/列表/摘要、版本列表/读取/追加。工程创建把工程行、创建者 ACL、首个 Project Snapshot、head revision 和成功审计放入同一 PostgreSQL 事务；追加沿用 CAS 与工程行锁；读取/列表在服务端重新校验 tenant/subject ACL。API DTO 不接受 actorId、tenantId、subjectId 或角色字段。当前不含发布指针、审批、回滚、删除或设备写入。
+
+### 模块和部署
+
+新增共享 DatabaseModule，保证身份模块和工程持久化模块复用同一个 PrismaService。OIDC 模块仅在 SCADA_OIDC_ENABLED=true 且配置完整时注册；默认 AppModule 仍只提供健康探针且不连接数据库。React/Vue Vite 与 Docker Nginx 使用同源 /api 代理，不开放宽泛 CORS。框架无关 API Client 统一 Cookie、CSRF、响应和错误契约。
+
+详见 [ADR-0065](adr/0065-oidc-bff-and-project-api.md) 与 [实施计划](plans/v0.3-batch-33-oidc-project-api.md)。
