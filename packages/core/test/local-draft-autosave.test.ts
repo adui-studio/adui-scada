@@ -35,6 +35,28 @@ function moved(x = 1) {
   return next;
 }
 
+test("开启自动保存会话时将旧 Schema 草稿迁移并写回当前版本", () => {
+  const storage = new MemoryStorage();
+  const legacy = document() as unknown as Record<string, unknown>;
+  legacy.schemaVersion = "0.2.0";
+  delete legacy.tags;
+  storage.setItem(
+    localDraftKey("water-demo"),
+    JSON.stringify({
+      formatVersion: 1,
+      savedAt: time.toISOString(),
+      document: legacy,
+    }),
+  );
+  const session = new LocalDraftAutoSaveSession(storage, document());
+  const raw = JSON.parse(storage.getItem(localDraftKey("water-demo"))!);
+  expect(session.hasExistingDraft).toBe(true);
+  expect(raw.document.schemaVersion).toBe("0.3.0");
+  expect(raw.document.tags[0].dataType).toBe("unknown");
+  expect(readLocalDraft(storage, "water-demo")?.migratedFrom).toBeUndefined();
+  expect(session.isDirty(document())).toBe(false);
+});
+
 test("初始工程不脏，未修改时不创建任何草稿", () => {
   expect(LOCAL_DRAFT_AUTO_SAVE_DELAY_MS).toBe(1000);
   const storage = new MemoryStorage();
