@@ -871,3 +871,10 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 维护者已在 Windows 使用 pnpm 12.18.0 将 `openid-client@6.8.9` 加入根 Catalog / Server Manifest 并生成 `pnpm-lock.yaml`；`pnpm install --frozen-lockfile` 成功，`deps:check` 确认 11 清单/52 Catalog，`vp check` 278 文件格式正确、139 受检文件零错误，`pnpm run ready` 最终退出码 0，448/448 单测、SSE 8/8、故障代理 4/4、NestJS E2E 17/17 和双框架/服务端构建通过。OIDC 仍默认关闭且 enabled 时 fail-closed；真实 PostgreSQL 增量迁移、OIDC Discovery/PKCE/CSRF、工程 HTTP API 尚未完成。
 
 按维护者新要求，新增 `docs/AI_MISTAKES.md` 记录 9 项真实编码错误及避坑/复验方法，在 `AGENTS.md` 强制每次写代码之前重新阅读全文，在 `HARNESS.md` 与 `CODEBASE_MAP.md` 加入入口，文档校验脚本要求该文件存在。新增文档和校验脚本的修改**尚未进行 Windows 复验**；先前 82 份 Markdown 检查不覆盖新增文件。
+
+
+### 第三十三批错误复盘文档后的最终静态检查（2026-11-14）
+
+维护者 Windows 最新日志确认：`pnpm run docs:check` **83 个 Markdown 通过、退出码 0**；`vp check` **279 个文件格式正确，139 个受检文件零警告、Lint 和 TypeScript 错误**。两项结果已覆盖新增 `docs/AI_MISTAKES.md`、AGENTS 必读门禁、Harness/代码地图入口和文档检查器必需文件校验。
+
+此前 pnpm 12.18.0 依赖安装、冻结安装、52 项 Catalog 检查、448/448 单测及完整 ready（退出码 0）已由维护者确认；完整 ready 当时的文档数是 82，最新 83 份则由本次单独 docs:check 确认。隔离 PostgreSQL 实际迁移仍待执行。
