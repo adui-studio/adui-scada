@@ -152,10 +152,8 @@ test("当前工程迁移入口只校验，不改变工程内容和版本", () =>
 });
 
 test("0.1.0 历史工程显式迁移至 0.3.0 并保留 Tag 绑定", () => {
-  const legacy = {
-    ...fixture(),
-    schemaVersion: LEGACY_SCADA_SCHEMA_VERSION,
-  };
+  const legacy = JSON.parse(JSON.stringify(fixture()));
+  legacy.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
   delete legacy.tags;
   expect(() => parseScadaDocument(legacy)).toThrow(/不支持的版本/);
   const result = migrateScadaDocument(legacy);
