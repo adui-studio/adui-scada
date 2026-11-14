@@ -1,5 +1,6 @@
 import { expect, test } from "vite-plus/test";
 import { waterTreatmentDemoDocument } from "../src/demo-document.ts";
+import { migrateScadaDocument } from "../src/document.ts";
 import {
   PROJECT_SNAPSHOT_FORMAT_VERSION,
   createProjectSnapshot,
@@ -9,6 +10,36 @@ import {
 
 const options = { revision: 1, createdAt: "2026-11-11T07:00:00.000Z" };
 const source = () => JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (value !== null && typeof value === "object") {
+    const result: Record<string, unknown> = {};
+    for (const key of Object.keys(value).sort()) {
+      result[key] = stableValue((value as Record<string, unknown>)[key]);
+    }
+    return result;
+  }
+  return value;
+}
+
+async function legacySnapshot() {
+  const document = source();
+  document.schemaVersion = "0.2.0";
+  delete document.tags;
+  const payload = {
+    formatVersion: PROJECT_SNAPSHOT_FORMAT_VERSION,
+    projectId: document.projectId,
+    revision: 3,
+    createdAt: "2026-11-11T07:00:00.000Z",
+    hashAlgorithm: "SHA-256",
+    document,
+  };
+  const bytes = new TextEncoder().encode(JSON.stringify(stableValue(payload)));
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  const contentHash = Array.from(digest, (value) => value.toString(16).padStart(2, "0")).join("");
+  return { ...payload, contentHash };
+}
 
 test("严格结构校验返回可独立编辑的工程副本", () => {
   const original = source();
@@ -83,6 +114,20 @@ test("校验 JSON 序列化后的快照时返回新的冻结工程副本", async
   expect(imported).not.toBe(original);
   expect(imported.document).not.toBe(original.document);
   expect(Object.isFrozen(imported.document.pages[0]?.nodes[0]?.transform)).toBe(true);
+});
+
+test("历史 0.2.0 工程快照保持原摘要并可在载入时显式迁移", async () => {
+  const old = await legacySnapshot();
+  const restored = await readProjectSnapshot(old);
+  expect(restored.document.schemaVersion).toBe("0.2.0");
+  expect(restored.contentHash).toBe(old.contentHash);
+  const migrated = migrateScadaDocument(restored.document);
+  expect(migrated.migratedFrom).toBe("0.2.0");
+  expect(migrated.document.schemaVersion).toBe("0.3.0");
+  expect(migrated.document.tags[0]).toMatchObject({
+    tagId: "water.level",
+    dataType: "unknown",
+  });
 });
 
 test("拒绝快照内容被修改及元数据被修改", async () => {
