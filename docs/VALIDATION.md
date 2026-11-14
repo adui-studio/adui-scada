@@ -420,3 +420,14 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 维护者运行 `vp check --fix` 时，React Studio `StudioPage.tsx:2016` 出现 JSX 解析错误：`bindingSlot` 三元表达式的分支中相邻的 `label` 和条件段落未使用单一根节点，导致格式检查在解析阶段失败。**本次检查未通过，也没有执行后续 Lint、类型或构建验收**。
 
 现已在 PR #51 分支用 React Fragment 包裹两段 JSX，并同步整理缩进。额外修正 Core 测试对 `readonly displayName` 的直接写入，以及 Vue 未选 Tag 时的错误提示。修复已提交 GitHub，**维护者尚未重新执行 `vp check --fix` / `vp check` / `pnpm run ready`**；不得宣称修复已经通过 Windows 实测。
+
+### 第二十九批 Windows `ready` 检查 TS1294 阻塞与修复（2026-11-14）
+
+维护者本轮执行 `pnpm run ready` 的实际结果：
+
+- **已通过**：依赖 Catalog 检查（11 个清单、51 项）、共享配置（9 个 TSConfig 消费端）、统一环境和 LF、中文文案（159 个自有文件）、Prisma Client 7.10.1 生成、`@adui/scada-core` Node 构建（`tsc -p tsconfig.build.json`）、`vp check`（267 文件格式正确，133 个受检文件零警告、Lint 错误和类型错误）。
+- **首次失败**：`typecheck:web` 阶段的 `tsc --build` 报 `TS1294`，定位 `packages/core/src/tag-store.ts:60` 的 `constructor(private readonly catalog?: TagDefinitionCatalog) {}`。项目启用 `erasableSyntaxOnly`，不允许该参数属性语法。`ready` 因此中断，**不能宣称单测、E2E、文档检查或 Web/Server 构建通过**。
+- **已修复但尚待复验**：在同一 Draft PR #51 分支将上述参数属性替换为显式 `private readonly catalog?: TagDefinitionCatalog` 字段及 `constructor(catalog?: TagDefinitionCatalog) { this.catalog = catalog; }`。对外调用方式、目录可选行为及 TagStore 原子校验逻辑未改变；未升级依赖、修改 tsconfig、变更业务协议。
+- **后续验证**：维护者同步分支后重跑 `pnpm run ready`，记录真正执行到单测、NestJS E2E、docs 和双框架构建的结果；必要时分别执行 `pnpm run test:runtime` 和 React/Vue SSE 浏览器回归。
+
+本段仅记录实际日志与代码修复，不代表修复后的 `ready` 已通过。PR 继续保持 Draft 和 `@adui-dev` 指派，未经明确合并授权不合并。
