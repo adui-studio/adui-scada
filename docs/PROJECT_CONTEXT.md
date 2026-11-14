@@ -793,3 +793,10 @@ React SSE 浏览器和 TCP 故障测试均在进入 EventSource 订阅前报 `er
 `test:sse:browser` 和 `test:sse:fault:browser` **仍未通过**：React 入口经 Vite 代理读取 `/demo/project` 返回 **Schema 0.2.0、没有 tags**，而当前代码需要 0.3.0。两条测试均在 React 的工程预检查阶段终止，Vue 尚未执行。版本不一致已确认，但其具体进程原因仍须本机确认；不能把错误直接认定为已修复或宣称双框架浏览器回归通过。应确认实际监听端口的工程进程并停止旧 Demo，启动当前分支 `dev:demo`，确认两个 Web 入口代理都返回 0.3.0 与三项 Tag 后再回归 SSE。
 
 本批尚待真实跨框架 Studio 人工验证、旧浏览器草稿及历史快照实际迁移、Tauri/工业现场等限定范围验收。PR #52 继续 Draft，Assignee `@adui-dev`；最新验收文档提交后仍需静态复验。
+
+
+### 第三十批自动化质量链及双框架 SSE 浏览器回归通过（2026-11-14）
+
+维护者 Windows 最终复验：全量单测 438/438、Runtime 专项 40/40、NestJS E2E 17/17、SSE 资源 8/8、TCP 故障代理 4/4、`vp check` 268 文件/133 受检文件零错误、`docs:check` 78 文档通过，`ready` 全链执行到 NestJS 构建完毕；React/Vue 双端 SSE 和 TCP 故障浏览器回归均成功，最终浏览器测试退出码 0。之前 `/demo/project` 返回 0.2.0 的旧服务版本阻塞已被解除。维护者已明确授权合并 PR #52；合并后续进度另行记录。
+
+未人工验收的是 Studio 两框架目录操作、跨框架 JSON 历史导入导出、真实旧版 IndexedDB/localStorage 与历史快照迁移体验。工业网关、PLC/DCS、生产设备写入不在本次范围。详见 [VALIDATION](VALIDATION.md)。
