@@ -633,7 +633,6 @@ React 的 TagManager.tsx 与 Vue 的 TagManager.vue 只保存用户正在填写�
 
 见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md)。
 
-
 ## 2026-11-14 · V0.3 第三十二批：历史工程与浏览器持久化迁移回归契约
 
 浏览器 CDP 测试新增 --legacy 模式，按 React、Vue 两个 Origin 分别执行三条真实迁移路径：

@@ -273,7 +273,6 @@ Core 新增框架无关 Tag 定义模型，使用稳定 `tagId` 区分不可变�
 
 本批只增加双框架 UI 与浏览器回归，不增加数据库表、生产保存 API、工业地址、连接参数、批量级联或设备写入。PR #53 已合并至 main（提交 7fccc1e2）；维护者 Windows 实测 React/Vue Tag 新增、编辑、绑定删除保护、删除和 JSON 往返通过，test:tags:browser 退出码 0，vp check 271 文件/135 受检文件零错误，docs:check 79 份 Markdown 通过；此前 ready 与 test:interop 也已通过。键盘/视觉人工检查和旧浏览器持久化迁移体验留待后续验收。见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md)。
 
-
 ## V0.3 第三十二批：旧工程、浏览器草稿与历史快照迁移端到端验收（FR-002 / FR-004 / FR-006 / FR-013 / NFR-002 局部）
 
 在第三十批 Schema 0.3.0 迁移和第三十一批双框架 Tag 管理基础上，补齐真实 Chrome/Edge 浏览器中旧数据的端到端迁移验收：分别覆盖旧 localStorage 草稿迁入 IndexedDB、已有 0.2.0 IndexedDB 草稿事务迁移与 revision 推进、旧 Project Snapshot 的原 SHA-256 校验及只读归一化。React/Vue 两端均通过真实 Studio UI 恢复并导出工程 JSON，确认历史 Tag 只生成 unknown 占位、原图元绑定不变，旧快照原记录不被改写。

@@ -607,10 +607,7 @@ async function runStudioTagManagement(session) {
 /** 写入与生产版本一致的旧版 localStorage 草稿包装，不绕过真实读取迁移逻辑。 */
 function seedLegacyLocalStorageDraftInPage(document, savedAt) {
   const key = "adui-scada:studio:draft:" + document.projectId;
-  localStorage.setItem(
-    key,
-    JSON.stringify({ formatVersion: 1, savedAt, document }),
-  );
+  localStorage.setItem(key, JSON.stringify({ formatVersion: 1, savedAt, document }));
   return key;
 }
 
@@ -753,9 +750,7 @@ async function runStudioLegacyMigration(session) {
     legacy.schemaVersion = "0.2.0";
     delete legacy.tags;
     assert.ok(
-      legacy.pages.some((page) =>
-        page.nodes.some((node) => Object.keys(node.bindings).length > 0),
-      ),
+      legacy.pages.some((page) => page.nodes.some((node) => Object.keys(node.bindings).length > 0)),
       target.name + " 历史迁移样本必须包含既有图元绑定",
     );
 

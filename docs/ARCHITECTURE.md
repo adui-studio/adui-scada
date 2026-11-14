@@ -368,7 +368,6 @@ Runtime 生命周期按连接代次隔离：停止时中止 fetch、关闭 SSE�
 
 双框架管理入口和验收脚本详见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md)。当前第三十一批代码未经 Windows 全链与人工回归验收。
 
-
 ## 2026-11-14 · V0.3 第三十一至三十二批：项目 Tag 管理与历史数据迁移验收
 
 第三十一批已合并：Vue/React Studio 的项目 Tag 管理表单分别渲染，但统一调用共享 DocumentEditor，Tag 目录仍只存在于 ScadaDocument 0.3.0；浏览器验证覆盖新增、编辑、删除保护及 JSON 往返。第三十二批不改变业务迁移实现，仅扩展隔离 Chrome/Edge CDP 回归，分别从 localStorage、IndexedDB 旧草稿和旧 Project Snapshot 验证真实浏览器迁移、原绑定保留、unknown 类型占位与原快照摘要不变。详见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md) 和 [ADR-0064](adr/0064-legacy-browser-migration-validation.md)。

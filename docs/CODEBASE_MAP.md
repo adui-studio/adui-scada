@@ -575,7 +575,6 @@
 - package.json：新增 test:tags:browser 测试入口。
 - docs/adr/0063-studio-tag-management-dual-framework.md：记录第三十一批决策、兼容约束和验收边界。
 
-
 ## 2026-11-14 · 第三十二批旧工程迁移浏览器验收
 
 - scripts/test-studio-browser.mjs：新增 --legacy 模式，使用隔离浏览器分别测试 React/Vue 的 localStorage 旧草稿迁移、IndexedDB 旧 Schema 事务升级与 Project Snapshot 历史摘要校验。
