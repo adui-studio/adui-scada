@@ -16,7 +16,12 @@ import {
   studioViewportRect,
   compareProjectDocuments,
 } from "@adui/scada-core";
-import type { ProjectSnapshot, ProjectVersionSummary, ScadaDocument, TagDefinition } from "@adui/scada-core";
+import type {
+  ProjectSnapshot,
+  ProjectVersionSummary,
+  ScadaDocument,
+  TagDefinition,
+} from "@adui/scada-core";
 import {
   DexieDraftRepository,
   DexieProjectVersionRepository,
