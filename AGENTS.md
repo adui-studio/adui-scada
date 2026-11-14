@@ -2,9 +2,17 @@
 
 项目遵循 [Agent Engineering Kit V1.1 初始化规范](https://github.com/adui-dev/agent-engineering-kit/blob/main/prompts/project-initialization.zh-CN.md)。本文件为统一入口，仓库事实以实际代码与配置为准。
 
+## 编码前强制必读（适用于每个 AI Agent）
+
+**每次开始编写或修改任何代码之前，必须先重新读取 [AI 编码错误复盘与防复发清单](docs/AI_MISTAKES.md) 全文**，并核对本次修改相关的错误编号。不得以对话记忆、摘要、之前已经读过或只浏览标题替代。配置、Prisma SQL、浏览器脚本、测试、依赖声明和锁文件同样适用。
+
+读取顺序：**本文件 → `docs/AI_MISTAKES.md` 全文 → 本次相关需求/设计/仓库 Skills → 当前目标代码和测试 → 最小改动 → 实际验证**。出现新的 AI 编码错误时，复验后追加编号、现象、根因、规避和验证证据；同步 `docs/VALIDATION.md`，使后续任务能在写代码前规避同类问题。文档更新不意味着测试已通过。
+
+
+
 ## 1. 定位与事实
 
-ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1、V0.2 双框架 SVG Studio 及 V0.3 前三十一批，包含共享 Runtime、SSE 故障恢复、ScadaDocument 0.3.0 项目 Tag 持久化与 Vue/React Studio Tag 可视化 CRUD。历史 0.1.0/0.2.0 工程采用显式迁移，未知类型保留 `unknown` 占位、不推断单位。当前第三十二批已在 Windows 真实浏览器中通过 React/Vue 两端 localStorage 草稿、IndexedDB 草稿和历史 Project Snapshot 六条迁移路径，`test:legacy:browser` 退出码 0；跨框架 JSON 互通退出码 0，`vp check` 与 `docs:check` 通过。第三十二批已完成 Windows 六条历史迁移浏览器回归、跨框架互通、vp check、docs:check 与完整 ready（最终退出码 0），PR #54 已合并至 main（8a9dbf5b）。当前第三十三批已获维护者同意，采用厂商无关 OIDC、BFF Cookie 会话和同源工程 API；阶段 A 已在功能分支新增共享 Prisma DatabaseModule、默认关闭的 OIDC 严格配置、Prisma 外部身份/登录事务/CSRF 模型与增量迁移；维护者 Windows 已验证 vp check（278 文件、139 受检文件零错误）、448/448 单测、82 份文档和完整 ready（退出码 0）。新增 PostgreSQL 迁移尚未在隔离数据库执行，openid-client 依赖及锁文件尚未安装生成。OIDC enabled 在认证与 ACL 未完成前一律拒绝启动，尚未开放任何工程 API。禁止引入客户端 PLC 连接或设备写入。**
+ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1、V0.2 双框架 SVG Studio 及 V0.3 前三十一批，包含共享 Runtime、SSE 故障恢复、ScadaDocument 0.3.0 项目 Tag 持久化与 Vue/React Studio Tag 可视化 CRUD。历史 0.1.0/0.2.0 工程采用显式迁移，未知类型保留 `unknown` 占位、不推断单位。当前第三十二批已在 Windows 真实浏览器中通过 React/Vue 两端 localStorage 草稿、IndexedDB 草稿和历史 Project Snapshot 六条迁移路径，`test:legacy:browser` 退出码 0；跨框架 JSON 互通退出码 0，`vp check` 与 `docs:check` 通过。第三十二批已完成 Windows 六条历史迁移浏览器回归、跨框架互通、vp check、docs:check 与完整 ready（最终退出码 0），PR #54 已合并至 main（8a9dbf5b）。当前第三十三批已获维护者同意，采用厂商无关 OIDC、BFF Cookie 会话和同源工程 API；阶段 A 已在功能分支新增共享 Prisma DatabaseModule、默认关闭的 OIDC 严格配置、Prisma 外部身份/登录事务/CSRF 模型与增量迁移；维护者 Windows 已验证 vp check（278 文件、139 受检文件零错误）、448/448 单测、82 份文档和完整 ready（退出码 0）。新增 PostgreSQL 迁移尚未在隔离数据库执行；维护者 Windows 已使用 pnpm 12.18.0 将 openid-client 6.8.9 加入 Catalog/Server Manifest 并更新锁文件，冻结安装、依赖检查和完整 ready 已通过（退出码 0）。OIDC enabled 在认证与 ACL 未完成前一律拒绝启动，尚未开放任何工程 API。禁止引入客户端 PLC 连接或设备写入。**
 
 ## 2. 规则优先级
 
@@ -12,7 +20,7 @@ ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双�
 
 ## 3. 工作流
 
-1. 读取相关文档、目标代码、配置，明确目标、输入输出、风险与验收。
+1. 每次编码前先重读 `docs/AI_MISTAKES.md` 全文，再读取相关文档、目标代码、配置，明确目标、输入输出、风险与验收；不能省略错误复盘。
 2. 定位最小改动范围；未确认的技术参数只标注提议，不擅自提升为已决定。
 3. 开发遵守共享核心不依赖 Vue/React、Runtime 不依赖 Editor、Gateway 独立的边界。
 4. 核心需求以 `FR-*` / `NFR-*` 追踪至设计和测试；重要架构调整记录 ADR。
@@ -73,3 +81,4 @@ Skills 位于 `.agents/skills/`，索引见 [SKILLS](docs/SKILLS.md) 与 `skills
 - [CODEBASE_MAP](docs/CODEBASE_MAP.md)：入口或实际目录变化更新。
 - [SKILLS](docs/SKILLS.md)：技能安装/更新时更新。
 - [HARNESS](docs/HARNESS.md) 与 [VALIDATION](docs/VALIDATION.md)：检查、测试和执行环境变化时更新。
+- [AI_MISTAKES](docs/AI_MISTAKES.md)：每次编码前强制阅读全文；发生并修复新错误后持续补充防复发记录。
