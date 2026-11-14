@@ -741,7 +741,7 @@ test("Tag 类型变更与新绑定必须符合图元绑定槽类型", () => {
   expect(() => e.setSelectedBinding("level", "water.pump.running")).toThrow(
     /Tag 数据类型与绑定槽不兼容/,
   );
-  expect(() => e.setSelectedBinding("level", "missing.tag")).toThrow(/未找到 Tag 定义/);
+  expect(() => e.setSelectedBinding("level", "missing.tag")).toThrow(/引用了未定义的 Tag/);
   expect(e.snapshot().document).toEqual(before);
 });
 
