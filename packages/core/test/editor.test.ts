@@ -640,13 +640,72 @@ test("未来版本或非法历史组合拒绝导入并保留当前工程", () =>
   e.select("tank");
   const before = e.snapshot();
   const future = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
-  future.schemaVersion = "0.3.0";
+  future.schemaVersion = "0.4.0";
   expect(() => e.loadDocument(future)).toThrow(/不支持的工程版本/);
   expect(e.snapshot()).toEqual(before);
   future.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
   future.pages[0].nodes[1].groupId = "group-1";
   expect(() => e.loadDocument(future)).toThrow(/至少需要两个图元/);
   expect(e.snapshot()).toEqual(before);
+});
+
+test("项目 Tag 定义新增、修改、删除均纳入撤销和重做", () => {
+  const e = editor();
+  const added = {
+    tagId: "water.pressure",
+    displayName: "管网压力",
+    dataType: "number" as const,
+    unit: "kPa",
+    description: "本机工程定义的压力点",
+  };
+  const before = e.snapshot().document;
+  expect(e.addTagDefinition(added)).toBe(true);
+  expect(e.snapshot().document.tags.at(-1)).toEqual(added);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(before);
+  expect(e.redo()).toBe(true);
+
+  expect(
+    e.updateTagDefinition("water.pressure", {
+      displayName: "出水压力",
+      unit: "MPa",
+    }),
+  ).toBe(true);
+  expect(e.snapshot().document.tags.at(-1)).toMatchObject({
+    tagId: "water.pressure",
+    displayName: "出水压力",
+    dataType: "number",
+    unit: "MPa",
+  });
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document.tags.at(-1)).toEqual(added);
+  expect(e.redo()).toBe(true);
+
+  expect(e.removeTagDefinition("water.pressure")).toBe(true);
+  expect(e.snapshot().document.tags.some((tag) => tag.tagId === "water.pressure")).toBe(false);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document.tags.at(-1)?.tagId).toBe("water.pressure");
+  expect(e.redo()).toBe(true);
+});
+
+test("项目 Tag 删除拒绝悬空绑定，稳定 ID 不允许通过更新修改", () => {
+  const e = editor();
+  const before = e.snapshot().document;
+  expect(() => e.removeTagDefinition("water.level")).toThrow(/仍被 1 个图元槽绑定/);
+  expect(() =>
+    e.updateTagDefinition("water.level", { tagId: "water.renamed" } as never),
+  ).toThrow(/只允许修改/);
+  expect(() =>
+    e.updateTagDefinition("water.level", { dataType: "float" as never }),
+  ).toThrow(/数据类型/);
+  expect(e.snapshot().document).toEqual(before);
+  e.select("tank");
+  e.setSelectedBinding("level", null);
+  expect(e.removeTagDefinition("water.level")).toBe(true);
+  expect(e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level)
+    .toBeUndefined();
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document.tags.some((tag) => tag.tagId === "water.level")).toBe(true);
 });
 
 test("水箱 Tag 绑定可以清除、撤销和重做", () => {
