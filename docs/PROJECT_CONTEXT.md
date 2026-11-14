@@ -720,3 +720,7 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 第二十八批 PR #50 已合并，`main` 当前提交 `b018518`。基于此创建 `feat/v0.3-tag-definition-catalog`，开始 FR-004 的本机演示子集：Core 定义稳定 Tag ID、可变展示名称、数据类型、单位与描述；TagStore 可选注入目录并在 `apply/replaceSnapshot` 前验证非空值类型，整批失败保持原状态。水处理三项 Tag 定义由在线 Runtime、Tauri 离线模拟、独立 SSE 服务共用；Vue/React Studio 的模拟绑定候选展示类型、单位和描述。质量仍由实时 TagValue 动态表达。
 
 本批没有升级工程 Schema 0.2.0、没有持久化项目级 Tag 定义、没有设备地址或协议映射；目录内存重命名不代表已保存。新增 Core/Runtime 测试与 ADR-0061 已提交分支，**Windows `test:unit`、`test:runtime`、`vp check`、`docs:check`、`ready` 和双框架浏览器尚待验收**，不得继承第二十八批成绩。FR-004 继续部分实现，详见 [VALIDATION](VALIDATION.md) 和 [ADR-0061](adr/0061-tag-definition-catalog.md)。
+
+### 第二十九批首轮 Windows `vp check --fix` 解析失败（2026-11-14）
+
+维护者首次执行本批格式修复时报告 `apps/web-react/src/studio/StudioPage.tsx:2016` 的 JSX 三元分支根节点数量错误，`vp check --fix` 在解析阶段失败。本轮已在 PR #51 中加入 Fragment 修复，并检查、修正了新增 Core readonly 字段测试与 Vue 未绑定 Tag 的提示。**代码修复已经提交，但尚无本批 Windows 复验通过证据**；后续仍需执行 `vp check`、`test:unit`、`test:runtime`、`docs:check`、`ready`、Vue/React SSE 回归和人工 UI 验证。
