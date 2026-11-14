@@ -604,6 +604,268 @@ async function runStudioTagManagement(session) {
   }
 }
 
+/** 写入与生产版本一致的旧版 localStorage 草稿包装，不绕过真实读取迁移逻辑。 */
+function seedLegacyLocalStorageDraftInPage(document, savedAt) {
+  const key = "adui-scada:studio:draft:" + document.projectId;
+  localStorage.setItem(key, JSON.stringify({ formatVersion: 1, savedAt, document }));
+  return key;
+}
+
+function readLegacyLocalStorageDraftInPage(projectId) {
+  return localStorage.getItem("adui-scada:studio:draft:" + projectId);
+}
+
+/** 在真实 Dexie 数据库中写入旧 Schema 记录，保留原 revision 水位。 */
+async function seedLegacyIndexedDbDraftInPage(document, revision, savedAt) {
+  const database = await new Promise((resolve, reject) => {
+    // 草稿库已由 Studio 的 DexieDraftRepository 初始化；只读取现有数据库，
+    // 不显式指定原生版本，也不在测试夹具中自行升级数据库结构。
+    void indexedDB.databases().then((databases) => {
+      if (!databases.some((database) => database.name === "adui-scada-studio")) {
+        reject(new TypeError("Studio 尚未初始化 IndexedDB 草稿数据库"));
+        return;
+      }
+      const request = indexedDB.open("adui-scada-studio");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error("打开草稿数据库失败"));
+    }, reject);
+  });
+  try {
+    if (!database.objectStoreNames.contains("drafts")) {
+      throw new TypeError("现有草稿数据库缺少 drafts 数据表");
+    }
+    if (!database.objectStoreNames.contains("migrations")) {
+      throw new TypeError("现有草稿数据库缺少 migrations 数据表");
+    }
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction(["drafts"], "readwrite");
+      transaction.objectStore("drafts").put({
+        projectId: document.projectId,
+        revision,
+        savedAt,
+        document,
+      });
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error || new Error("写入历史草稿失败"));
+      transaction.onabort = () => reject(transaction.error || new Error("历史草稿写入事务中止"));
+    });
+  } finally {
+    database.close();
+  }
+  return true;
+}
+
+/** 生成符合真实 Project Snapshot SHA-256 契约的 0.2.0 历史快照。 */
+async function seedLegacyProjectSnapshotInPage(document, revision, createdAt) {
+  // evaluateStudioPage 只序列化当前函数；摘要规范化逻辑必须在页面函数内部自包含。
+  function stableValue(source) {
+    if (Array.isArray(source)) return source.map(stableValue);
+    if (source !== null && typeof source === "object") {
+      const result = Object.create(null);
+      for (const key of Object.keys(source).sort()) {
+        result[key] = stableValue(source[key]);
+      }
+      return result;
+    }
+    return source;
+  }
+
+  const payload = {
+    formatVersion: 1,
+    projectId: document.projectId,
+    revision,
+    createdAt,
+    hashAlgorithm: "SHA-256",
+    document,
+  };
+  const canonical = JSON.stringify(stableValue(payload));
+  const bytes = new TextEncoder().encode(canonical);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const contentHash = Array.from(new Uint8Array(digest), (value) =>
+    value.toString(16).padStart(2, "0"),
+  ).join("");
+  const snapshot = { ...payload, contentHash };
+  const database = await new Promise((resolve, reject) => {
+    // 历史版本库必须先由 Studio 的 Dexie 仓储初始化；测试夹具只写入现有结构。
+    void indexedDB.databases().then((databases) => {
+      if (!databases.some((database) => database.name === "adui-scada-studio-versions")) {
+        reject(new TypeError("Studio 尚未初始化工程历史版本数据库"));
+        return;
+      }
+      const request = indexedDB.open("adui-scada-studio-versions");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error("打开历史版本数据库失败"));
+    }, reject);
+  });
+  try {
+    if (!database.objectStoreNames.contains("heads")) {
+      throw new TypeError("现有历史版本数据库缺少 heads 数据表");
+    }
+    if (!database.objectStoreNames.contains("versions")) {
+      throw new TypeError("现有历史版本数据库缺少 versions 数据表");
+    }
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction(["heads", "versions"], "readwrite");
+      transaction.objectStore("heads").put({ projectId: document.projectId, revision });
+      transaction.objectStore("versions").put(snapshot);
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error || new Error("写入历史快照失败"));
+      transaction.onabort = () => reject(transaction.error || new Error("历史快照写入事务中止"));
+    });
+  } finally {
+    database.close();
+  }
+  return { contentHash, revision };
+}
+
+async function readRawLegacyProjectSnapshotInPage(projectId, revision) {
+  const database = await new Promise((resolve, reject) => {
+    const request = indexedDB.open("adui-scada-studio-versions");
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("打开历史版本数据库失败"));
+  });
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = database.transaction(["versions"], "readonly");
+      const request = transaction.objectStore("versions").get([projectId, revision]);
+      request.onsuccess = () => resolve(request.result ?? null);
+      request.onerror = () => reject(request.error || new Error("读取原始历史快照失败"));
+      transaction.onabort = () => reject(transaction.error || new Error("历史快照只读事务中止"));
+    });
+  } finally {
+    database.close();
+  }
+}
+
+/** 三条真实浏览器迁移路径：localStorage、IndexedDB 草稿、历史 Project Snapshot。 */
+async function runStudioLegacyMigration(session) {
+  await session.send("Emulation.setDeviceMetricsOverride", {
+    width: 1440,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  const savedAt = "2026-11-14T02:00:00.000Z";
+  const createdAt = "2026-11-14T02:01:00.000Z";
+
+  for (const target of targets) {
+    await navigateStudioForInterop(session, target, "legacy-source-" + target.name);
+    const current = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
+    const legacy = JSON.parse(JSON.stringify(current));
+    legacy.schemaVersion = "0.2.0";
+    delete legacy.tags;
+    assert.ok(
+      legacy.pages.some((page) => page.nodes.some((node) => Object.keys(node.bindings).length > 0)),
+      target.name + " 历史迁移样本必须包含既有图元绑定",
+    );
+
+    // 旧 localStorage 草稿：启动时自动校验迁移，成功写入 IndexedDB 后清除旧副本。
+    await evaluateStudioPage(session, seedLegacyLocalStorageDraftInPage, legacy, savedAt);
+    await navigateStudioForInterop(session, target, "legacy-localstorage-" + target.name);
+    const localMigrated = await waitForStudioDraftRevision(session, legacy.projectId, 1);
+    assert.equal(localMigrated.document.schemaVersion, "0.3.0");
+    assert.ok(localMigrated.document.tags.length > 0);
+    assert.ok(localMigrated.document.tags.every((tag) => tag.dataType === "unknown"));
+    assert.equal(
+      await evaluateStudioPage(session, readLegacyLocalStorageDraftInPage, legacy.projectId),
+      null,
+      target.name + " localStorage 迁移成功后仍残留旧草稿副本",
+    );
+    const localTank = localMigrated.document.pages[0]?.nodes.find((node) => node.id === "tank");
+    assert.deepStrictEqual(
+      localTank?.bindings.level,
+      { tagId: "water.level" },
+      target.name + " localStorage 迁移改变了原有 Tag 绑定",
+    );
+    await evaluateStudioPage(
+      session,
+      studioDraftFileActionInPage,
+      "恢复草稿",
+      "已恢复 IndexedDB 草稿",
+      true,
+    );
+    assert.deepStrictEqual(
+      JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage)),
+      localMigrated.document,
+      target.name + " localStorage 历史草稿未能通过 Studio 恢复",
+    );
+    process.stdout.write(target.name + " localStorage 0.2.0 草稿迁移、旧副本清理和恢复通过\n");
+
+    // 已存在的 IndexedDB 旧记录：同一数据库事务内迁移，并将 revision 从 4 推进到 5。
+    await evaluateStudioPage(session, seedLegacyIndexedDbDraftInPage, legacy, 4, savedAt);
+    await navigateStudioForInterop(session, target, "legacy-indexeddb-" + target.name);
+    const indexedMigrated = await waitForStudioDraftRevision(session, legacy.projectId, 5);
+    assert.equal(indexedMigrated.document.schemaVersion, "0.3.0");
+    assert.ok(indexedMigrated.document.tags.every((tag) => tag.dataType === "unknown"));
+    assert.deepStrictEqual(
+      indexedMigrated.document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level,
+      { tagId: "water.level" },
+      target.name + " IndexedDB 迁移改变了原有 Tag 绑定",
+    );
+    await evaluateStudioPage(
+      session,
+      studioDraftFileActionInPage,
+      "恢复草稿",
+      "已恢复 IndexedDB 草稿",
+      true,
+    );
+    assert.deepStrictEqual(
+      JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage)),
+      indexedMigrated.document,
+      target.name + " IndexedDB 历史草稿未能通过 Studio 恢复",
+    );
+    process.stdout.write(target.name + " IndexedDB 0.2.0 草稿事务迁移、修订号推进和恢复通过\n");
+
+    // 先由真实 Studio/Dexie 打开并初始化历史库，再写入旧快照测试数据。
+    const emptyVersions = await evaluateStudioPage(session, studioVersionRowsInPage);
+    assert.deepStrictEqual(emptyVersions, [], target.name + " 新建浏览器上下文的历史版本库应为空");
+    await evaluateStudioPage(session, () => {
+      const menu = document.querySelector(".studio-version-menu");
+      if (!menu) throw new TypeError("未找到本地工程历史版本菜单");
+      menu.open = false;
+      return true;
+    });
+
+    // 历史 Project Snapshot：先验证原 SHA-256，再在只读返回值中归一化，不能改写原记录。
+    const seededSnapshot = await evaluateStudioPage(
+      session,
+      seedLegacyProjectSnapshotInPage,
+      legacy,
+      1,
+      createdAt,
+    );
+    const versions = await evaluateStudioPage(session, studioVersionRowsInPage);
+    assert.deepStrictEqual(versions, ["版本 #1"], target.name + " 未发现旧版历史快照");
+    await evaluateStudioPage(
+      session,
+      studioVersionActionInPage,
+      "载入",
+      "已载入本地版本 #1",
+      true,
+      1,
+    );
+    const snapshotDocument = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
+    assert.equal(snapshotDocument.schemaVersion, "0.3.0");
+    assert.ok(snapshotDocument.tags.length > 0);
+    assert.ok(snapshotDocument.tags.every((tag) => tag.dataType === "unknown"));
+    assert.deepStrictEqual(
+      snapshotDocument.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level,
+      { tagId: "water.level" },
+      target.name + " 历史快照迁移改变了原有 Tag 绑定",
+    );
+    const originalSnapshot = await evaluateStudioPage(
+      session,
+      readRawLegacyProjectSnapshotInPage,
+      legacy.projectId,
+      1,
+    );
+    assert.equal(originalSnapshot.contentHash, seededSnapshot.contentHash);
+    assert.equal(originalSnapshot.document.schemaVersion, "0.2.0");
+    assert.equal("tags" in originalSnapshot.document, false);
+    process.stdout.write(target.name + " 历史快照 SHA-256 校验、只读归一化和原记录保留通过\n");
+  }
+}
+
 /** 测试真实本地版本菜单，确认框只在隔离浏览器上下文中临时替换。 */
 async function studioVersionActionInPage(
   label,
@@ -1320,6 +1582,10 @@ async function main() {
     }
     if (process.argv.includes("--tags")) {
       await runStudioTagManagement(session);
+      return;
+    }
+    if (process.argv.includes("--legacy")) {
+      await runStudioLegacyMigration(session);
       return;
     }
     if (process.argv.includes("--versions")) {

@@ -1,0 +1,52 @@
+# ADR-0064：旧版工程、浏览器草稿与历史快照的真实浏览器迁移验收
+
+- 状态：Accepted
+- 日期：2026-11-14
+- 关联：FR-002、FR-004、FR-006、FR-013、NFR-002、NFR-004
+- 前置：[ADR-0062](0062-project-tag-definitions-schema-030.md)、[ADR-0063](0063-studio-tag-management-dual-framework.md)
+
+## 背景
+
+第三十批已将工程 Schema 升级到 0.3.0，并为 0.1.0/0.2.0 工程提供显式迁移。旧 localStorage 草稿、已有 IndexedDB 草稿以及 Project Snapshot 也具备各自迁移逻辑；Core 和 Dexie 单元测试已覆盖关键边界。但真实浏览器的持久化、页面启动读取、UI 恢复、IndexedDB revision 推进和历史快照只读归一化尚未形成一条端到端回归。
+
+第三十一批已完成 Vue/React 项目 Tag 可视化 CRUD。需要验证历史工程进入两套 Studio 后，未知类型不会被猜测、旧绑定不丢失，且旧持久化记录按既有事务与摘要契约迁移。
+
+## 决策
+
+1. **仅扩展现有浏览器验收设施**：在 scripts/test-studio-browser.mjs 增加 --legacy 模式，并新增 pnpm run test:legacy:browser。复用当前 Chrome/Edge CDP 会话、根 .env 端口和现有 Studio UI 操作，不新增测试专用应用 API。
+2. **localStorage 草稿路径**：真实写入原格式 { formatVersion: 1, savedAt, document }，其中工程为 0.2.0 且不包含根 tags；刷新 Studio 后等待现有 DexieDraftRepository.get 迁移，验证旧副本只在 IndexedDB 事务提交后清理，Tag 生成 unknown 占位且原绑定保持，再通过 UI 的“恢复草稿”载入并导出核对。
+3. **已有 IndexedDB 草稿路径**：使用真实数据库 adui-scada-studio 的既有 drafts/migrations stores，写入 0.2.0 历史记录和原 revision 4；重新启动 Studio，验证事务升级到 0.3.0、revision 推进到 5、Tag 类型为 unknown、绑定不变，并通过 UI 恢复。
+4. **Project Snapshot 路径**：使用真实数据库 adui-scada-studio-versions 的既有 heads/versions stores，构造包含 0.2.0 工程的 formatVersion 1 历史快照，并按 Core stableValue 规范计算原 SHA-256。通过 Studio 版本历史载入，验证返回的工程副本迁移到 0.3.0、Tag 为 unknown、绑定保留；随后重新读取 IndexedDB 原记录，确认原 Schema 与原摘要没有被改写。
+5. **双框架对等**：React 和 Vue 分别执行上述三条迁移路径，使用不同 Origin 的隔离存储；结果均从真实 UI 导出 JSON 并核对，不允许用模拟内存对象代替浏览器持久化。
+6. **失败即停止**：旧记录损坏、摘要不匹配、迁移失败或旧备份清理时序不符合契约，测试必须失败并保留可诊断错误；不得为通过测试而跳过 SHA-256 校验、降低 Schema 校验或静默清除历史数据。
+
+## 安全与兼容边界
+
+- 不更改 Schema 0.3.0、LocalDraft 格式版本 1、Dexie 数据库版本 1、Project Snapshot 容器 formatVersion 1、Core 迁移策略或工业协议。
+- 历史 Tag 类型继续使用 unknown，不推断 number/boolean/string 或单位。
+- 测试仅在 Chrome/Edge 临时用户目录和本机开发服务执行，不连接生产数据库、PLC/DCS、工业网关或现场设备。
+- 不清理用户真实浏览器 Profile；所有旧记录只写入脚本启动的隔离浏览器 Profile。
+
+## 验收
+
+- pnpm run test:legacy:browser：React/Vue 均完成 localStorage、IndexedDB 草稿与 Project Snapshot 迁移。
+- pnpm run test:interop：双框架工程 JSON 互通。
+- vp check、pnpm run docs:check、pnpm run ready。
+- 人工检查失败时的原记录保留、unknown 提示、Tag 管理 UI 与历史恢复提示。
+
+**实施与验收结果**：维护者 Windows 实测 `pnpm run test:legacy:browser` 六条路径全部通过，退出码 0；`pnpm run test:interop` 双框架互通通过，退出码 0。`vp check` 和 `docs:check` 通过。`ready` 日志中的最终 NestJS build 完成与退出码尚未出现在所提供片段中，需补充最终证据。
+
+## IndexedDB 测试夹具版本约束
+
+Dexie 的逻辑版本 `version(1)` 对应原生 IndexedDB 数据库版本 10；原生 `indexedDB.open(name, 1)` 不能用来打开该数据库，否则会请求从 10 降级到 1 并抛出 `VersionError`。测试夹具不得自行将 Dexie 逻辑版本传给原生 API，也不得在已存在的数据库上手动重建 stores。
+
+草稿数据库必须先由 localStorage 迁移流程经 `DexieDraftRepository` 初始化；历史版本数据库必须先由 Studio 版本菜单经 `DexieProjectVersionRepository` 初始化。测试脚本使用 `indexedDB.databases()` 确认数据库已存在，再调用不带版本参数的 `indexedDB.open(name)` 并核对所需 object stores，最后只在现有 stores 中注入旧记录。此操作不触发版本升级，不修改 Dexie 数据库结构。
+
+## 浏览器函数序列化与 SHA-256 规范化
+
+`evaluateStudioPage` 通过 `action.toString()` 将单个操作函数序列化后放入浏览器上下文执行，不携带 Node 作用域闭包。因此传入 CDP 的操作函数及其异步回调必须自包含，只可引用参数、函数内部声明和浏览器全局 API。Project Snapshot 注入函数在内部定义 `stableValue`，递归数组并按对象键排序，使用 `Object.create(null)` 构建规范化对象；其逻辑与 Core 的摘要规范化一致。禁止依赖外层 Node helper，以免在真实浏览器运行时发生 ReferenceError。
+
+
+## 最终实施与验收结果（2026-11-14）
+
+维护者 Windows 实测 React/Vue 两端六条历史迁移路径全部通过，`test:legacy:browser` 退出码 0；`test:interop` 双框架工程往返与非法导入保护通过，退出码 0；`vp check`（272 文件、135 受检文件零错误）、`docs:check`（80 Markdown）通过；`pnpm run ready` 最终退出码 0。Dexie 原生版本误用和 CDP 函数闭包问题均仅在测试夹具中修复，迁移业务契约、Schema、Dexie 数据库版本、快照格式及 SHA-256 算法未改变。PR #54 经维护者明确授权进入合并流程。

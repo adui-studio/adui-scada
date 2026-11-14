@@ -1604,3 +1604,7 @@ pnpm run test:sse:fault:browser
 ## V0.3 第三十一批 · 项目 Tag 管理浏览器回归
 
 在根目录 .env 配置的本机开发端口启动当前分支 dev:demo、dev:react 和 dev:vue 后，执行 pnpm run test:tags:browser。该命令通过现有 Chrome/Edge CDP 验收设施检查双框架项目 Tag 新建、编辑、绑定删除保护、删除及工程 JSON 导出，未涉及设备连接或写入。仍需执行 vp check、pnpm run ready 与 pnpm run test:interop；脚本通过不等于人工 UI 和历史草稿完整验收。
+
+## V0.3 第三十二批 · 旧工程迁移浏览器回归
+
+启动当前分支的 dev:demo、dev:react、dev:vue 后执行 pnpm run test:legacy:browser。该命令通过现有 Chrome/Edge CDP 测试设施，在两个 Web Origin 分别构造 0.2.0 localStorage 草稿、IndexedDB 草稿和 Project Snapshot，并通过真实 Studio UI 验证迁移结果。测试只使用临时浏览器用户目录，不访问用户真实 Profile。执行前需确保当前根 .env 的 React/Vue 端口对应当前分支服务。

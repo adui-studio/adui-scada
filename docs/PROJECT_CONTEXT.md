@@ -812,7 +812,32 @@ React SSE 浏览器和 TCP 故障测试均在进入 EventSource 订阅前报 `er
 
 `pnpm run test:tags:browser` 在 React 的绑定删除保护断言处失败。代码审查发现测试在捕获删除拒绝状态栏消息前先触发 JSON 导出，导出成功提示覆盖了删除拒绝提示；Core 删除保护逻辑仍然有效。已调整浏览器脚本为先等待并断言“仍被…绑定”提示，再导出 JSON 验证绑定 Tag 仍存在。此为测试时序修复，最新脚本尚未由维护者 Windows 重新执行，不能记录为通过；Vue 测试尚未在首轮失败时执行。详见 [VALIDATION](VALIDATION.md)。
 
-
 ### 第三十一批最终 Windows 验收通过（2026-11-14）
 
 维护者复验确认：`pnpm run test:tags:browser` 中 React、Vue 两端的 Tag 新增、编辑、绑定删除保护、删除与 JSON 往返均通过，退出码 0；`vp check` 271 文件格式正确、135 个受检文件零错误；`docs:check` 79 Markdown 通过。此前同一分支 `ready` 全链及 `test:interop` 已通过。浏览器测试断言时序修复已在双框架实际浏览器中验证。PR #53 达到合并条件，维护者已明确授权合并。仍保留键盘/视觉人工检查与真正历史浏览器草稿迁移体验的后续核验。
+
+### 第三十一批合并与第三十二批历史数据迁移浏览器验收启动（2026-11-14）
+
+PR #53 已 Squash Merge 到 main，合并提交 7fccc1e2285d6ebb1190120142fcf998181460e6，并核验 main 指向同一 SHA；Assignee @adui-dev 已核验。维护者 Windows 实测 React/Vue 项目 Tag 新增、编辑、已绑定删除保护、删除及 JSON 往返均通过，test:tags:browser 退出码 0；vp check 271 文件/135 受检文件零错误，docs:check 79 Markdown 通过；此前 ready、test:interop 通过。键盘/视觉人工检查及旧浏览器草稿迁移体验仍需后续核验。
+
+第三十二批基于该 main 提交创建 feat/v0.3-browser-legacy-project-migration。新增 pnpm run test:legacy:browser，准备在 React/Vue 两个真实浏览器 Origin 中分别验证旧 localStorage 草稿、已有 IndexedDB 0.2.0 草稿的事务迁移与 revision 推进、旧 Project Snapshot 的原 SHA-256 校验和只读归一化。测试不更改迁移业务代码、Schema、Dexie 版本或快照格式。当前只完成浏览器测试实现和 ADR-0064，尚未执行 Windows 浏览器测试与完整质量链，不得报告通过。
+
+### 第三十二批 IndexedDB 浏览器测试夹具版本冲突修复（2026-11-14）
+
+维护者首轮 `test:legacy:browser` 已通过 React localStorage 草稿迁移，随后报 `VersionError: requested version 1 < existing version 10`。原因是 Dexie `version(1)` 对应原生 IndexedDB version 10，而测试夹具把逻辑版本 1 传给原生 `indexedDB.open`。已修复两个测试夹具：先由 Studio/Dexie 初始化数据库，检查数据库存在后不带版本参数打开并校验现有 stores；历史快照路径也先通过 Studio 版本菜单初始化数据库并关闭菜单，再注入快照以触发后续刷新。此为浏览器测试夹具修复，不更改迁移业务实现。修复尚待 Windows 重新执行，IndexedDB 草稿、快照路径及 Vue 端仍未验证通过。
+
+### 第三十二批 Project Snapshot 浏览器测试函数作用域修复（2026-11-14）
+
+维护者第二轮实测：React localStorage 草稿迁移、旧副本清理与恢复通过；React IndexedDB 0.2.0 草稿事务迁移、revision 推进与恢复通过；Project Snapshot 注入报 `ReferenceError: stableLegacyValue is not defined`。根因是 CDP `evaluateStudioPage` 只序列化当前函数，不带 Node 作用域闭包。已把与 Core 相同的递归稳定排序函数内聚至 `seedLegacyProjectSnapshotInPage`，不更改 SHA-256 算法或快照格式。最新修复尚未由维护者 Windows 复验；Project Snapshot 和 Vue 路径仍待执行。
+
+已将稳定排序 helper 内聚到 CDP 页面函数，并删除不再使用的 Node 作用域 helper；最新提交为后续 Windows 复验准备，仍未报告 Project Snapshot 或 Vue 路径通过。
+
+
+### 第三十二批六条历史迁移路径与跨框架互通通过（2026-11-14）
+
+维护者最新 Windows 日志确认 `pnpm run test:legacy:browser` 退出码 0：React、Vue 两端 localStorage 0.2.0 草稿迁移、旧副本清理与 Studio 恢复，IndexedDB 0.2.0 草稿事务迁移与 revision 推进，Project Snapshot 原 SHA-256 校验、只读归一化和原记录保留共六条路径全部通过。`pnpm run test:interop` 双向及完整 React→Vue→React→Vue 往返、非法导入保护通过，退出码 0。`vp check` 272 文件格式正确、135 个受检文件零错误；`docs:check` 80 Markdown 通过。此前 `ready` 输出确认 438/438 单测、SSE 8/8、TCP 故障 4/4、NestJS E2E 17/17、React/Vue 类型检查和构建通过，但提供的日志截断在最终 NestJS build 的 Prisma Client 生成阶段，没有最终 build 结束或 `ready` 退出码，故不能据此宣称完整 ready 成功。PR #54 继续等待最后全链证据和维护者合并授权。
+
+
+### 第三十二批完整 ready 质量链最终确认（2026-11-14）
+
+维护者补充确认 `pnpm run ready` 最终退出码为 **0**。结合此前日志，第三十二批完整质量链中的 438/438 单测、SSE 客户端 8/8、TCP 故障代理 4/4、NestJS E2E 17/17、React/Vue 类型检查与构建、NestJS 最终构建全部完成。历史迁移浏览器六路径及跨框架互通此前均退出码 0；本批自动化验收条件已满足。
