@@ -43,6 +43,8 @@ export interface OidcAuthorizationResponse {
 export interface OidcCallbackCompletion {
   readonly sessionId: string;
   readonly sessionToken: string;
+  /** 仅供后续 Controller 设置可读 CSRF Cookie，不得返回给页面 JSON。 */
+  readonly csrfToken: string;
   readonly expiresAt: Date;
   readonly returnPath: string;
 }
@@ -255,6 +257,7 @@ export class OidcCallbackService {
     return Object.freeze({
       sessionId: issuedSession.sessionId,
       sessionToken: issuedSession.token,
+      csrfToken: issuedSession.csrfToken,
       expiresAt: issuedSession.expiresAt,
       returnPath: transaction.returnPath,
     });

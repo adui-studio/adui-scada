@@ -637,3 +637,14 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/server/src/auth/oidc-callback.service.spec.ts`：Mock 授权码兑换、ID Token Claims、外部身份映射、会话签发与错误脱敏测试。
 - `apps/server/src/auth/scada-identity.module.ts`：注入 openid-client `authorizationCodeGrant` 并注册回调服务；模块仍未由默认 AppModule 挂载。
 - 当前尚无 OIDC Controller；回调服务的 sessionToken 仅供后续服务端 Controller 设置 HttpOnly Cookie。
+
+### 第三十三批阶段 B 第四小批：BFF Cookie 与 CSRF 会话保护
+
+- `apps/server/src/auth/auth-session.service.ts`：新会话同时签发独立 CSRF Token、只存摘要；提供 Cookie 会话验证和旧 Bearer 兼容。
+- `apps/server/src/auth/scada-auth-cookie.ts`：构造/清除 `__Host-` Session 与 CSRF Cookie，统一 Secure、HttpOnly、SameSite、Path 和有效期属性。
+- `apps/server/src/auth/scada-session.guard.ts`：显式 Bearer/Cookie 双路径、凭据混用拒绝、精确 Origin、Fetch Metadata、CSRF 双提交与数据库摘要验证。
+- `apps/server/src/auth/scada-auth-cookie.spec.ts`：Cookie 签发与清除属性测试。
+- `apps/server/src/auth/scada-session.guard.spec.ts`：Bearer 兼容、Cookie 请求、CSRF/Origin/Fetch Metadata 和审计脱敏测试。
+- `apps/server/src/auth/scada-identity.spec.ts`：会话 CSRF 摘要存储、Cookie 校验与旧 Bearer 会话兼容回归。
+- `apps/server/src/security/scada-security-audit.ts`：新增 Cookie/CSRF/Origin/Fetch Metadata 固定拒绝原因码。
+- 当前无 HTTP Controller；Identity 模块仍未由默认 AppModule 挂载。

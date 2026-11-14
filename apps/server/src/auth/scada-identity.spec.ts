@@ -1,10 +1,12 @@
 import "reflect-metadata";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { describe, expect, it } from "vite-plus/test";
 import { ForbiddenException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import type { ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { PrismaService } from "../database/prisma.service.js";
+import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
+import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import type {
   SecurityAuditDecision,
   SecurityAuditReporter,
@@ -31,10 +33,26 @@ interface StoredSession {
   tenantId: string;
   subjectId: string;
   tokenHash: string;
+  csrfTokenHash: string | null;
   issuedAt: Date;
   expiresAt: Date;
   revokedAt: Date | null;
   identity: { status: string };
+}
+
+function makeOidcConfig(): EnabledOidcConfig {
+  const result = resolveOidcStartupConfig({
+    NODE_ENV: "test",
+    SCADA_OIDC_ENABLED: "true",
+    SCADA_OIDC_ISSUER: "https://id.example.org/realms/scada",
+    SCADA_OIDC_CLIENT_ID: "adui-scada",
+    SCADA_OIDC_CLIENT_SECRET: "identity-test-client-secret",
+    SCADA_OIDC_REDIRECT_URI: "https://scada.example.org/api/v1/auth/oidc/callback",
+    SCADA_OIDC_WEB_ORIGINS: "https://scada.example.org",
+    SCADA_OIDC_TRANSACTION_ENCRYPTION_KEY: randomBytes(32).toString("base64url"),
+  });
+  if (!result.enabled) throw new Error("测试 OIDC 配置未启用");
+  return result;
 }
 
 function makeSessionService() {
@@ -53,7 +71,13 @@ function makeSessionService() {
     },
     scadaAuthSession: {
       create: async (args: {
-        data: { tenantId: string; subjectId: string; tokenHash: string; expiresAt: Date };
+        data: {
+          tenantId: string;
+          subjectId: string;
+          tokenHash: string;
+          csrfTokenHash: string;
+          expiresAt: Date;
+        };
       }) => {
         const session: StoredSession = {
           ...args.data,
@@ -120,6 +144,42 @@ describe("可信会话与工程 Guard", () => {
     expect(await fake.service.authenticate(issued.token)).toEqual(principal);
   });
 
+  it("新会话只保存 CSRF 摘要，旧 Bearer 会话不能升级为 Cookie 会话", async () => {
+    const fake = makeSessionService();
+    const issued = await fake.service.issueForVerifiedSubject(principal);
+    const tokenHash = createHash("sha256").update(issued.token).digest("hex");
+    const csrfHash = createHash("sha256").update(issued.csrfToken).digest("hex");
+    const stored = fake.sessions.get(tokenHash);
+
+    expect(issued.csrfToken).toMatch(/^scada_csrf_[A-Za-z0-9_-]{43}$/);
+    expect(stored?.csrfTokenHash).toBe(csrfHash);
+    expect(stored?.csrfTokenHash).not.toBe(issued.csrfToken);
+    expect(await fake.service.authenticateCookieSession(issued.token)).toEqual({
+      authenticated: true,
+      sessionId: issued.sessionId,
+      principal,
+    });
+    expect(await fake.service.authenticateCookieSession(issued.token, issued.csrfToken)).toEqual({
+      authenticated: true,
+      sessionId: issued.sessionId,
+      principal,
+    });
+    expect(
+      await fake.service.authenticateCookieSession(
+        issued.token,
+        "scada_csrf_" + "x".repeat(43),
+      ),
+    ).toEqual({ authenticated: false, reason: "csrf_rejected" });
+
+    if (!stored) throw new Error("测试会话不存在");
+    stored.csrfTokenHash = null;
+    expect(await fake.service.authenticateCookieSession(issued.token)).toEqual({
+      authenticated: false,
+      reason: "invalid_session",
+    });
+    expect(await fake.service.authenticate(issued.token)).toEqual(principal);
+  });
+
   it("不存在的主体、无效主体和禁用主体均不能签发会话", async () => {
     const fake = makeSessionService();
     await expect(
@@ -172,7 +232,7 @@ describe("可信会话与工程 Guard", () => {
 
   it("会话 Guard 拒绝缺失、重复或伪造的 Bearer 请求头", async () => {
     const fake = makeSessionService();
-    const guard = new ScadaSessionGuard(fake.service, makeAuditRecorder().audit);
+    const guard = new ScadaSessionGuard(fake.service, makeAuditRecorder().audit, makeOidcConfig());
     for (const header of [undefined, ["Bearer fake"], "Basic fake", "Bearer fake"]) {
       await expect(
         guard.canActivate(context({ headers: { authorization: header } })),
@@ -183,7 +243,7 @@ describe("可信会话与工程 Guard", () => {
   it("会话 Guard 将数据库验证后的租户和主体写入请求上下文", async () => {
     const fake = makeSessionService();
     const issued = await fake.service.issueForVerifiedSubject(principal);
-    const guard = new ScadaSessionGuard(fake.service, makeAuditRecorder().audit);
+    const guard = new ScadaSessionGuard(fake.service, makeAuditRecorder().audit, makeOidcConfig());
     const request: ScadaAuthenticatedRequest = {
       headers: { authorization: `Bearer ${issued.token}` },
     };
@@ -284,7 +344,7 @@ describe("可信会话与工程 Guard", () => {
   it("会话 Guard 只发送固定审计原因码，不记录伪造凭据和有效令牌", async () => {
     const fake = makeSessionService();
     const { audit, records } = makeAuditRecorder();
-    const guard = new ScadaSessionGuard(fake.service, audit);
+    const guard = new ScadaSessionGuard(fake.service, audit, makeOidcConfig());
     const fakeHeader = "Bearer 此处为恶意令牌";
     await expect(
       guard.canActivate(context({ headers: { authorization: fakeHeader } })),

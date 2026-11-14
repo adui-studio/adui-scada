@@ -6,7 +6,12 @@ export type SecurityAuditOutcome = "allowed" | "denied";
 export type SecurityAuditReason =
   | "unsupported_context"
   | "malformed_authorization"
+  | "malformed_cookie"
+  | "ambiguous_credentials"
   | "invalid_session"
+  | "csrf_rejected"
+  | "origin_rejected"
+  | "fetch_metadata_rejected"
   | "verified"
   | "missing_policy"
   | "missing_principal"
@@ -36,7 +41,16 @@ type SecurityAuditReasonMap = Readonly<
 const ALLOWED_REASONS: Readonly<Record<SecurityAuditAction, SecurityAuditReasonMap>> = {
   "session.authenticate": {
     allowed: ["verified"],
-    denied: ["unsupported_context", "malformed_authorization", "invalid_session"],
+    denied: [
+      "unsupported_context",
+      "malformed_authorization",
+      "malformed_cookie",
+      "ambiguous_credentials",
+      "invalid_session",
+      "csrf_rejected",
+      "origin_rejected",
+      "fetch_metadata_rejected",
+    ],
   },
   "project.authorize": {
     allowed: ["permission_granted"],

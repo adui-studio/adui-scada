@@ -679,7 +679,7 @@ OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client I
 - `OidcLoginTransactionService.start(returnPath, existingBrowserBinding?)`：生成独立 State/Nonce/PKCE verifier，计算 S256 challenge，构建固定 Redirect URI 的授权码请求；State 与浏览器绑定仅存 SHA-256 摘要，verifier 使用 AES-256-GCM 加密，登录事务有效期 5 分钟。
 - `OidcLoginTransactionService.consume(state, browserBindingCookie)`：在 PostgreSQL 交互事务中按固定 Issuer、State 摘要、浏览器绑定、创建/过期时间和未消费条件筛选，再通过条件 `updateMany` 原子消费；消费后重新校验 Nonce 与站内回跳路径，再解密 verifier。密文使用 State 摘要作为 GCM AAD。
 - 同一浏览器绑定 Cookie 可用于多个标签页，但每个事务独立生成 State/Nonce/verifier；无效、过期、跨浏览器、重复或并发失败均不返回 verifier。
-- 当前只实现服务层，尚未注册 Controller；`main.ts` 对 `SCADA_OIDC_ENABLED=true` 仍 fail-closed。Cookie 的 HttpOnly/Secure/SameSite 属性、CSRF Guard 和工程 API 均未开放。
+- 当前只实现服务层，尚未注册 Controller；`main.ts` 对 `SCADA_OIDC_ENABLED=true` 仍 fail-closed。Cookie 安全属性构造与 CSRF Guard 已在第四小批实现，但尚未挂载 HTTP 路由或完成浏览器验证；工程 API 未开放。
 - 第一、二小批维护者 Windows 已通过 `vp check`、`test:unit`、`docs:check` 和完整 `ready`；第三小批回调单测尚待维护者执行。Mock 测试不代表真实 PostgreSQL 并发锁或真实 IdP 联调。
 
 ### 第三十三批阶段 B 第三小批：授权码回调、ID Token 与预绑定身份（代码已提交，待 Windows 验证）
@@ -690,7 +690,7 @@ OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client I
 - ID Token 的签名、Issuer、Audience、有效期和 Nonce 基础验证由 openid-client 完成；应用层再检查固定 Issuer、Client ID Audience、azp、多 Audience、Nonce、Subject 的 ASCII/长度约束及时间声明类型。
 - 只按精确 `(iss, sub)` 查询 `ScadaExternalIdentity`，要求关联 `ScadaIdentity.status = active`；未预绑定或已停用均拒绝，不按 email、用户名或 Claim 自动创建主体/租户。
 - 验证成功后复用 `AuthSessionService.issueForVerifiedSubject()` 签发本地 15 分钟不透明会话。IdP Access/Refresh/ID Token 仅在兑换调用内存中短暂存在，不保存、不写日志；服务返回的本地 sessionToken 仅供后续服务端 Controller 设置 HttpOnly Cookie，当前没有 HTTP 路由。
-- 新增 Mock 授权码兑换、Prisma 身份映射和会话服务测试；覆盖 State/浏览器绑定、OAuth 错误、`iss` 参数、PKCE/Nonce 检查参数、ID Token Claims、未绑定/停用身份、异常脱敏和 IdP Token 不进入结果。维护者 Windows 已通过 `vp check`（286 文件格式正确、146 个受检文件零警告/错误）、`test:unit`（43 文件/477 测试，回调 12/12）、`docs:check`（83 Markdown）和完整 `ready`（最终退出码 0）。真实 IdP/JWKS 联调与 HTTP Controller/Cookie/CSRF 仍未完成；当前保持 OIDC fail-closed。
+- 新增 Mock 授权码兑换、Prisma 身份映射和会话服务测试；覆盖 State/浏览器绑定、OAuth 错误、`iss` 参数、PKCE/Nonce 检查参数、ID Token Claims、未绑定/停用身份、异常脱敏和 IdP Token 不进入结果。维护者 Windows 已通过 `vp check`（286 文件格式正确、146 个受检文件零警告/错误）、`test:unit`（43 文件/477 测试，回调 12/12）、`docs:check`（83 Markdown）和完整 `ready`（最终退出码 0）。真实 IdP/JWKS 联调、HTTP Controller 和浏览器 Cookie/CSRF 集成仍未完成；第四小批服务层代码待 Windows 验证，当前保持 OIDC fail-closed。
 
 ### 第三小批 Windows 全链验收结果（2026-11-14）
 

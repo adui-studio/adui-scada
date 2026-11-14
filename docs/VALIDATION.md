@@ -878,3 +878,14 @@ type OidcExpectedState = NonNullable<
 完整 `pnpm run ready` 最终退出码 **0**。该日志同时再次运行了单测、SSE、故障代理、NestJS E2E 和双框架/服务端构建。
 
 **验收边界**：本结果覆盖第三小批 OIDC 回调服务、Mock 单测、E-011 类型修复及当前工程质量链；不代表真实 IdP/JWKS 轮换联调、HTTP Controller、浏览器 Cookie/CSRF 或工程 API 已完成，也不代表允许解除 `SCADA_OIDC_ENABLED=true` 的 fail-closed 保护。
+
+## 第三十三批阶段 B 第四小批：BFF Cookie 与 CSRF 会话保护（待维护者 Windows 验证）
+
+新增测试：
+
+- `apps/server/src/auth/scada-auth-cookie.spec.ts`：验证 Session Cookie 的 HttpOnly、CSRF Cookie 可读、Secure、SameSite=Lax、Path=/、不设置 Domain、有效期边界及对称清除。
+- `apps/server/src/auth/scada-session.guard.spec.ts`：验证 Bearer 兼容、Bearer/Cookie 混用拒绝、Cookie 安全读取、写请求精确 Origin、Fetch Metadata、CSRF 双提交、重复/孤立 Cookie、会话/CSRF 摘要拒绝和审计脱敏。
+- `apps/server/src/auth/scada-identity.spec.ts`：验证新会话只保存 CSRF 摘要、有效 Cookie 会话认证、错误 CSRF 拒绝、旧 Bearer 会话不能升级为 Cookie 但仍可 Bearer 认证。
+- `apps/server/src/auth/oidc-callback.service.spec.ts`：验证回调服务向未来 Controller 提供本地 CSRF Token，不暴露 IdP Token。
+
+**待执行**：维护者 Windows `vp check`、`pnpm run test:unit`、`pnpm run docs:check`、`pnpm run ready`。本批无 Prisma Schema 或迁移变更；单测使用 Mock，不代表真实浏览器 Set-Cookie、HTTPS 终止代理、Cookie 域名/端口行为或真实 IdP 登录已验收。HTTP Controller 尚未注册，OIDC 保持 fail-closed。

@@ -143,3 +143,13 @@ Vue 与 React 是两个正式 Web 端，必须共用同源 API 契约、工程�
 - 只使用已验证 ID Token 的精确 `(iss, sub)` 查询 `ScadaExternalIdentity`，关联 `ScadaIdentity` 必须为 active；没有预绑定或主体停用均拒绝，不使用 email、用户名、groups/roles Claim 自动创建或映射内部身份。
 - 验证成功后复用 `AuthSessionService.issueForVerifiedSubject()` 创建本地短期不透明会话。IdP Access/Refresh/ID Token 不保存、不记录；本地 sessionToken 仅作为服务层结果交给未来 Controller 设置 HttpOnly Cookie，不得作为 JSON 返回。当前尚未注册 Controller，`main.ts` 仍保持 OIDC fail-closed。
 - 代码与 Mock 单测已提交；维护者 Windows 验证待执行。Mock Token Endpoint/Claims 不代表真实 IdP 的签名验证、JWKS 轮换、网络故障或企业 SSO 联调已经验收。
+
+### 3.1 Cookie 会话与 CSRF Guard（第三十三批阶段 B 第四小批）
+
+- `AuthSessionService.issueForVerifiedSubject()` 在签发 15 分钟内部会话时同时生成独立 32 字节随机 CSRF Token；数据库只存储 `csrfTokenHash` 的 SHA-256 摘要。现有 `csrfTokenHash` 可空字段已存在，旧 Bearer 会话保持兼容，不新增迁移。
+- Cookie 名称固定为 `__Host-adui-scada-session` 与 `__Host-adui-scada-csrf`。两个 Cookie 均设置 `Secure; SameSite=Lax; Path=/` 且不设置 Domain；会话 Cookie 额外设置 HttpOnly，CSRF Cookie 保持可读供前端写入 `X-SCADA-CSRF`。
+- Cookie 序列化与清除由纯函数统一构造，严格校验会话/CSRF Token 格式和 15 分钟以内有效期；清除 Cookie 使用相同名称、Path 和安全属性。
+- `ScadaSessionGuard` 保留显式 Bearer 路径，新增 Cookie 路径。Bearer 与任一 ADui 认证 Cookie 同时出现时拒绝；无 Bearer 时不会从无效 Cookie 静默回退。旧 CSRF 摘要为空的 Bearer 会话不得升级为 Cookie 会话。
+- Cookie 安全方法仅允许 GET/HEAD/OPTIONS，不要求 CSRF Header；Cookie 非安全方法必须满足 Origin 与 `SCADA_OIDC_WEB_ORIGINS` 精确匹配、`Sec-Fetch-Site: same-origin`、CSRF Cookie 与 `X-SCADA-CSRF` 双提交一致，并再次与数据库会话 CSRF 摘要进行常量时间校验。
+- Guard 仅把验证后的 Principal、Cookie 会话 ID 与认证方式写入请求上下文；审计只记录固定原因码，不记录 Cookie、Token、Origin 或请求原文。
+- 本小批只实现会话服务、Cookie 构造函数和 Guard，不注册 Controller、不挂载到默认 AppModule，也不改变 `main.ts` 的 OIDC fail-closed 启动保护。真实浏览器 Cookie 行为和 HTTPS 部署验收仍待后续 HTTP Controller/浏览器回归。

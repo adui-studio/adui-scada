@@ -182,6 +182,7 @@ function createHarness() {
       return {
         sessionId: "9b0d8c2d-6d45-4f0f-8d5c-12e4a0d3a7a1",
         token: "scada_s_" + "t".repeat(43),
+        csrfToken: "scada_csrf_" + "c".repeat(43),
         expiresAt: new Date(Date.now() + 15 * 60 * 1000),
       };
     },
@@ -258,6 +259,7 @@ describe("OIDC 授权码回调与预绑定身份验证", () => {
 
     expect(result.sessionId).toBe("9b0d8c2d-6d45-4f0f-8d5c-12e4a0d3a7a1");
     expect(result.sessionToken).toMatch(/^scada_s_[A-Za-z0-9_-]{43}$/);
+    expect(result.csrfToken).toMatch(/^scada_csrf_[A-Za-z0-9_-]{43}$/);
     expect(result.returnPath).toBe("/studio/projects");
     expect(harness.transactionCalls).toEqual([
       { state: VALID_STATE, binding: VALID_BROWSER_BINDING },

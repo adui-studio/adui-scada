@@ -953,3 +953,7 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 - 完整 `pnpm run ready`：依赖 11 清单/52 Catalog、中文文案 172 个文件、SSE 客户端 8/8、故障代理 4/4、NestJS E2E 17/17、React/Vue/NestJS 构建全部通过，最终退出码 **0**。
 
 E-011 已在 `docs/AI_MISTAKES.md` 记录；其类型派生修复与第三小批代码现已通过 Windows 工程质量链。真实 IdP/JWKS 联调、HTTP Controller、Cookie/CSRF 和工程 API 仍未完成，OIDC 继续 fail-closed。
+
+### 第三十三批阶段 B 第四小批当前状态补充（2026-11-14）
+
+Cookie/CSRF 会话服务、Cookie 头构造函数和 Bearer/Cookie 双路径 `ScadaSessionGuard` 已提交到 PR #55。`ScadaIdentityModule` 已提供 Guard 所需的 OIDC 配置 Token，但该模块仍未挂载默认 AppModule，未注册 Controller/路由，`main.ts` 对 `SCADA_OIDC_ENABLED=true` 继续 fail-closed。第四小批尚待维护者 Windows 执行 `vp check`、`test:unit`、`docs:check` 和完整 `ready`；真实浏览器 Cookie/HTTPS 代理行为待 Controller 联调后验收。
