@@ -785,3 +785,12 @@ Vue/React Studio 均从当前工程 `state.document.tags` 读取目录与绑定�
 维护者在历史快照 TS2345/TS2322 修复后实测：`vp check`（268 文件、133 受检文件零错误）及 `docs:check`（78 份文档）通过；`ready` 已通过 Core 构建、Vue/React/Draft Storage/NestJS 类型检查，但在 Vitest 阶段出现一个 SVG 测试套件初始化失败与一个历史工程测试断言失败，未执行到完整 E2E/构建。原因均是 Schema 0.3.0 升级后测试夹具保留了错误版本结构，现已在第三十批功能分支调整。
 
 React SSE 浏览器和 TCP 故障测试均在进入 EventSource 订阅前报 `error`，并未进入 Vue 验收。已为浏览器脚本增加工程版本及 Tag 目录预检查和实际 Runtime 错误文案输出。当前仅怀疑旧模拟服务进程未重启或返回不匹配的工程版本，缺少实际响应记录，不能据此声称已修复 SSE 运行时故障。代码修复提交后仍需维护者执行 Windows 全链、双框架浏览器及人工验证，详见 [VALIDATION](VALIDATION.md)。PR #52 保持 Draft，未合并。
+
+
+### 第三十批 Windows 完整质量链已跑通，模拟服务版本阻塞 SSE 浏览器（2026-11-14）
+
+维护者第二轮 PowerShell 实测确认：`test:unit` **438/438**（38 文件）、`test:runtime` **40/40**（4 文件）、`test:e2e:server` **17/17**（3 文件）通过；`vp check` **268 文件格式正确、133 文件零错误**，`docs:check` **78 份 Markdown 通过**。`pnpm run ready` 已执行完整单测、SSE 资源 8/8、TCP 故障代理 4/4、NestJS E2E 17/17、双框架类型检查和构建（React 3900、Vue 3845 模块）及 NestJS 构建，日志末尾没有报错；维护者未单独打印该命令的退出码。原有 SVG 测试夹具和历史工程迁移测试故障已被最新修复覆盖，不再复现。
+
+`test:sse:browser` 和 `test:sse:fault:browser` **仍未通过**：React 入口经 Vite 代理读取 `/demo/project` 返回 **Schema 0.2.0、没有 tags**，而当前代码需要 0.3.0。两条测试均在 React 的工程预检查阶段终止，Vue 尚未执行。版本不一致已确认，但其具体进程原因仍须本机确认；不能把错误直接认定为已修复或宣称双框架浏览器回归通过。应确认实际监听端口的工程进程并停止旧 Demo，启动当前分支 `dev:demo`，确认两个 Web 入口代理都返回 0.3.0 与三项 Tag 后再回归 SSE。
+
+本批尚待真实跨框架 Studio 人工验证、旧浏览器草稿及历史快照实际迁移、Tauri/工业现场等限定范围验收。PR #52 继续 Draft，Assignee `@adui-dev`；最新验收文档提交后仍需静态复验。
