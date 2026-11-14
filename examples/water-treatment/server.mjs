@@ -3,10 +3,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 import {
+  TagDefinitionCatalog,
   TagStore,
   WaterTreatmentSimulator,
   renderSvgPage,
-  waterTreatmentDemoTagCatalog,
 } from "../../packages/core/src/index.ts";
 import { demoDocument } from "./project.mjs";
 import { DemoSseClients } from "./sse-clients.mjs";
@@ -28,7 +28,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 const index = readFileSync(new URL("./public/index.html", import.meta.url));
 const script = readFileSync(new URL("./public/client.js", import.meta.url));
 const style = readFileSync(new URL("./public/style.css", import.meta.url));
-const tags = new TagStore(waterTreatmentDemoTagCatalog);
+const tags = new TagStore(new TagDefinitionCatalog(demoDocument.tags));
 const simulator = new WaterTreatmentSimulator();
 const clients = new DemoSseClients();
 
