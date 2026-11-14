@@ -6,6 +6,15 @@ import type { TagValue } from "../src/tag-store.ts";
 const source = {
   schemaVersion: SCADA_SCHEMA_VERSION,
   projectId: "demo",
+  tags: [
+    {
+      tagId: "water.level",
+      displayName: "模拟水位",
+      dataType: "number",
+      unit: "%",
+      description: "SVG 测试读数",
+    },
+  ],
   pages: [
     {
       id: "main",
