@@ -66,12 +66,8 @@ describe("BFF 会话与 CSRF Cookie", () => {
         SCADA_OIDC_BROWSER_COOKIE_NAME,
       ),
     ).toBeUndefined();
-    expect(
-      readScadaCookieValue(["重复请求头"], SCADA_OIDC_BROWSER_COOKIE_NAME),
-    ).toBeUndefined();
-    expect(
-      readScadaCookieValue("x".repeat(4097), SCADA_OIDC_BROWSER_COOKIE_NAME),
-    ).toBeUndefined();
+    expect(readScadaCookieValue(["重复请求头"], SCADA_OIDC_BROWSER_COOKIE_NAME)).toBeUndefined();
+    expect(readScadaCookieValue("x".repeat(4097), SCADA_OIDC_BROWSER_COOKIE_NAME)).toBeUndefined();
     expect(readScadaCookieValue(undefined, SCADA_OIDC_BROWSER_COOKIE_NAME)).toBeUndefined();
   });
 

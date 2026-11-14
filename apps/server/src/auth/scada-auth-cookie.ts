@@ -53,10 +53,7 @@ export function readScadaCookieValue(
  * 构造 OIDC 登录浏览器绑定 Cookie。
  * 绑定 Cookie 需在 IdP 顶层 GET 回调时发送，因此使用 SameSite=Lax。
  */
-export function createScadaOidcBrowserBindingCookieHeader(
-  value: string,
-  expiresAt: Date,
-): string {
+export function createScadaOidcBrowserBindingCookieHeader(value: string, expiresAt: Date): string {
   if (
     !OIDC_BROWSER_BINDING_PATTERN.test(value) ||
     !(expiresAt instanceof Date) ||

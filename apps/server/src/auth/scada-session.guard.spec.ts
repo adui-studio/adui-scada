@@ -8,10 +8,7 @@ import type {
   AuthSessionService,
   CookieSessionAuthenticationResult,
 } from "./auth-session.service.js";
-import {
-  SCADA_CSRF_COOKIE_NAME,
-  SCADA_SESSION_COOKIE_NAME,
-} from "./scada-auth-cookie.js";
+import { SCADA_CSRF_COOKIE_NAME, SCADA_SESSION_COOKIE_NAME } from "./scada-auth-cookie.js";
 import { ScadaSessionGuard } from "./scada-session.guard.js";
 import type { ScadaAuthenticatedRequest } from "./scada-session.guard.js";
 import type {
@@ -46,10 +43,12 @@ function context(request: ScadaAuthenticatedRequest): ExecutionContext {
   } as unknown as ExecutionContext;
 }
 
-function cookieHeader(options: {
-  readonly session?: string;
-  readonly csrf?: string;
-} = {}): string {
+function cookieHeader(
+  options: {
+    readonly session?: string;
+    readonly csrf?: string;
+  } = {},
+): string {
   const values: string[] = [];
   if (options.session !== undefined) {
     values.push(`${SCADA_SESSION_COOKIE_NAME}=${options.session}`);
@@ -78,9 +77,7 @@ function createHarness() {
   const sessions = {
     authenticateWithSession: async (token: unknown) => {
       bearerTokens.push(token);
-      return bearerPrincipal
-        ? { sessionId: SESSION_ID, principal: bearerPrincipal }
-        : null;
+      return bearerPrincipal ? { sessionId: SESSION_ID, principal: bearerPrincipal } : null;
     },
     authenticateCookieSession: async (token: unknown, csrfToken?: unknown) => {
       cookieCalls.push({ token, csrfToken });

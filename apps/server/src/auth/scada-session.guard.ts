@@ -1,11 +1,6 @@
 import { Buffer } from "node:buffer";
 import { timingSafeEqual } from "node:crypto";
-import {
-  ForbiddenException,
-  Inject,
-  Injectable,
-  UnauthorizedException,
-} from "@nestjs/common";
+import { ForbiddenException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import type { CanActivate, ExecutionContext } from "@nestjs/common";
 import type { AuthenticatedProjectPrincipal } from "../projects/project-access-policy.js";
 import { ScadaSecurityAuditService } from "../security/scada-security-audit.js";
@@ -15,10 +10,7 @@ import type {
 } from "../security/scada-security-audit.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import { AuthSessionService } from "./auth-session.service.js";
-import {
-  SCADA_CSRF_COOKIE_NAME,
-  SCADA_SESSION_COOKIE_NAME,
-} from "./scada-auth-cookie.js";
+import { SCADA_CSRF_COOKIE_NAME, SCADA_SESSION_COOKIE_NAME } from "./scada-auth-cookie.js";
 import { SCADA_OIDC_STARTUP_CONFIG } from "./oidc-provider-discovery.service.js";
 
 const CSRF_TOKEN_PATTERN = /^scada_csrf_[A-Za-z0-9_-]{43}$/;
@@ -106,7 +98,10 @@ export class ScadaSessionGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     if (context.getType() !== "http") {
-      this.reject("unsupported_context", new UnauthorizedException("暂不接受非 HTTP 类型的身份凭据"));
+      this.reject(
+        "unsupported_context",
+        new UnauthorizedException("暂不接受非 HTTP 类型的身份凭据"),
+      );
     }
 
     const request = context.switchToHttp().getRequest<ScadaAuthenticatedRequest>();
@@ -147,7 +142,10 @@ export class ScadaSessionGuard implements CanActivate {
 
     if (!cookies.sessionPresent || typeof cookies.sessionToken !== "string") {
       if (cookies.csrfPresent) {
-        this.reject("malformed_cookie", new UnauthorizedException("浏览器 CSRF Cookie 缺少会话绑定"));
+        this.reject(
+          "malformed_cookie",
+          new UnauthorizedException("浏览器 CSRF Cookie 缺少会话绑定"),
+        );
       }
       this.reject("malformed_authorization", new UnauthorizedException("缺少有效的身份凭据"));
     }

@@ -30,8 +30,7 @@ async function bootstrap(): Promise<void> {
   }
 
   // 仅在 OIDC 完整配置通过校验后加载数据库与身份模块；默认根模块仍不连接数据库。
-  const { AppModule, LocalDemoAppModule, OidcEnabledAppModule } =
-    await import("./app.module.js");
+  const { AppModule, LocalDemoAppModule, OidcEnabledAppModule } = await import("./app.module.js");
   const rootModule = oidc.enabled
     ? OidcEnabledAppModule
     : allowDemo

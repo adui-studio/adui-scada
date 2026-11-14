@@ -165,10 +165,7 @@ describe("可信会话与工程 Guard", () => {
       principal,
     });
     expect(
-      await fake.service.authenticateCookieSession(
-        issued.token,
-        "scada_csrf_" + "x".repeat(43),
-      ),
+      await fake.service.authenticateCookieSession(issued.token, "scada_csrf_" + "x".repeat(43)),
     ).toEqual({ authenticated: false, reason: "csrf_rejected" });
 
     if (!stored) throw new Error("测试会话不存在");

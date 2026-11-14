@@ -832,7 +832,6 @@ OIDC 登录、BFF Cookie/CSRF、工程 HTTP API、真实 IdP 联调及工业现�
 
 **待维护者复验**：`vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和 `pnpm run ready`。当前远端代码已修正，但未在本协作环境执行 Windows Vite+，不得将本次修复标记为已通过。
 
-
 ### 第三十三批阶段 B 第三小批：OIDC 回调测试夹具 TS2322 修复及 Windows 全链验收通过（2026-11-14）
 
 维护者最初执行 `vp check --fix` 时，`oidc-callback.service.spec.ts` 的 `GrantCall.checks.expectedState` 手工收窄为 `string`，与 openid-client 6.8.9 实际允许的 `string | symbol | undefined` 不一致，触发 TS2322。
@@ -840,9 +839,7 @@ OIDC 登录、BFF Cookie/CSRF、工程 HTTP API、真实 IdP 联调及工业现�
 已修复为从真实函数签名派生：
 
 ```ts
-type OidcExpectedState = NonNullable<
-  Parameters<OidcAuthorizationCodeGrant>[2]
->["expectedState"];
+type OidcExpectedState = NonNullable<Parameters<OidcAuthorizationCodeGrant>[2]>["expectedState"];
 ```
 
 没有使用强制类型断言，没有修改生产回调逻辑或第三方类型声明。
@@ -860,20 +857,20 @@ type OidcExpectedState = NonNullable<
 
 维护者补充的 Windows PowerShell 日志确认，OIDC 回调 Mock 类型修复后的当前分支完整质量链通过：
 
-| 验收项 | 实测结果 |
-| --- | --- |
-| `vp check` | 286 个文件格式正确 |
-| Lint / TypeScript | 146 个受检文件，零警告、零错误 |
-| `pnpm run test:unit` | 43/43 文件、477/477 测试通过 |
-| OIDC Discovery | 7/7 |
-| OIDC 登录事务 | 10/10 |
-| OIDC 回调 | 12/12 |
-| `pnpm run docs:check` | 83 个 Markdown 文件通过 |
-| SSE 客户端 | 8/8 |
-| SSE 故障代理 | 4/4 |
-| NestJS E2E | 17/17 |
-| React / Vue 构建 | 均成功 |
-| NestJS 构建 | 成功 |
+| 验收项                | 实测结果                       |
+| --------------------- | ------------------------------ |
+| `vp check`            | 286 个文件格式正确             |
+| Lint / TypeScript     | 146 个受检文件，零警告、零错误 |
+| `pnpm run test:unit`  | 43/43 文件、477/477 测试通过   |
+| OIDC Discovery        | 7/7                            |
+| OIDC 登录事务         | 10/10                          |
+| OIDC 回调             | 12/12                          |
+| `pnpm run docs:check` | 83 个 Markdown 文件通过        |
+| SSE 客户端            | 8/8                            |
+| SSE 故障代理          | 4/4                            |
+| NestJS E2E            | 17/17                          |
+| React / Vue 构建      | 均成功                         |
+| NestJS 构建           | 成功                           |
 
 完整 `pnpm run ready` 最终退出码 **0**。该日志同时再次运行了单测、SSE、故障代理、NestJS E2E 和双框架/服务端构建。
 

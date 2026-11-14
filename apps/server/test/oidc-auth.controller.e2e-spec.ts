@@ -34,9 +34,7 @@ const RETURN_PATH = "/studio/projects?source=oidc";
  * Supertest 类型将 Set-Cookie 声明为字符串；兼容运行时数组和合并字符串。
  * 仅在下一个受控 Cookie 名称前拆分，避免误拆 Expires 属性中的逗号。
  */
-function getSetCookieHeaders(
-  header: string | readonly string[] | undefined,
-): readonly string[] {
+function getSetCookieHeaders(header: string | readonly string[] | undefined): readonly string[] {
   if (typeof header !== "string") return header ?? [];
   return header.split(/,\s*(?=__Host-adui-scada-(?:session|csrf|oidc-browser)=)/);
 }
@@ -157,9 +155,7 @@ describe("OIDC BFF 认证 HTTP 接口（端到端）", () => {
     expect(response.headers["referrer-policy"]).toBe("no-referrer");
     const setCookies = getSetCookieHeaders(response.headers["set-cookie"]);
     expect(setCookies).toHaveLength(1);
-    expect(setCookies[0]).toContain(
-      `${SCADA_OIDC_BROWSER_COOKIE_NAME}=${BROWSER_BINDING}`,
-    );
+    expect(setCookies[0]).toContain(`${SCADA_OIDC_BROWSER_COOKIE_NAME}=${BROWSER_BINDING}`);
     expect(setCookies[0]).toContain("HttpOnly");
     expect(setCookies[0]).toContain("Secure");
     expect(setCookies[0]).toContain("SameSite=Lax");
@@ -207,13 +203,9 @@ describe("OIDC BFF 认证 HTTP 接口（端到端）", () => {
     expect(response.headers["referrer-policy"]).toBe("no-referrer");
     const setCookies = getSetCookieHeaders(response.headers["set-cookie"]);
     expect(setCookies).toHaveLength(2);
-    expect(setCookies[0]).toContain(
-      `${SCADA_SESSION_COOKIE_NAME}=${SESSION_TOKEN}`,
-    );
+    expect(setCookies[0]).toContain(`${SCADA_SESSION_COOKIE_NAME}=${SESSION_TOKEN}`);
     expect(setCookies[0]).toContain("HttpOnly");
-    expect(setCookies[1]).toContain(
-      `${SCADA_CSRF_COOKIE_NAME}=${CSRF_TOKEN}`,
-    );
+    expect(setCookies[1]).toContain(`${SCADA_CSRF_COOKIE_NAME}=${CSRF_TOKEN}`);
     expect(setCookies[1]).not.toContain("HttpOnly");
     expect(setCookies.join(";")).not.toContain("Domain=");
     expect(JSON.stringify(response.body)).not.toContain(SESSION_TOKEN);
@@ -236,9 +228,7 @@ describe("OIDC BFF 认证 HTTP 接口（端到端）", () => {
   });
 
   it("未认证请求不能读取当前身份", async () => {
-    const response = await request(app.getHttpServer())
-      .get("/api/v1/auth/me")
-      .expect(401);
+    const response = await request(app.getHttpServer()).get("/api/v1/auth/me").expect(401);
 
     expect(response.status).toBe(401);
   });
