@@ -821,6 +821,12 @@ async function runStudioLegacyMigration(session) {
     // 先由真实 Studio/Dexie 打开并初始化历史库，再写入旧快照测试数据。
     const emptyVersions = await evaluateStudioPage(session, studioVersionRowsInPage);
     assert.deepStrictEqual(emptyVersions, [], target.name + " 新建浏览器上下文的历史版本库应为空");
+    await evaluateStudioPage(session, () => {
+      const menu = document.querySelector(".studio-version-menu");
+      if (!menu) throw new TypeError("未找到本地工程历史版本菜单");
+      menu.open = false;
+      return true;
+    });
 
     // 历史 Project Snapshot：先验证原 SHA-256，再在只读返回值中归一化，不能改写原记录。
     const seededSnapshot = await evaluateStudioPage(
