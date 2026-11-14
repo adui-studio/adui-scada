@@ -915,20 +915,20 @@ type OidcExpectedState = NonNullable<Parameters<OidcAuthorizationCodeGrant>[2]>[
 
 维护者提供的 Windows PowerShell 日志确认，修复 E-012 后，当前功能分支完成以下验证：
 
-| 验收项 | 实测结果 |
-| --- | --- |
-| `vp check` 格式检查 | 291 个文件正确 |
-| Lint / TypeScript | 151 个受检文件，零警告、零错误 |
-| `pnpm run test:unit` | 45/45 文件、494/494 测试通过 |
-| `pnpm run test:e2e:server` | 4/4 文件、26/26 测试通过 |
-| OIDC Controller E2E | 9/9 测试通过 |
-| `pnpm run docs:check` | 83 个 Markdown 文件通过 |
-| SSE 客户端测试 | 8/8 通过 |
-| SSE 故障代理测试 | 4/4 通过 |
-| React Web 构建 | 成功 |
-| Vue Web 构建 | 成功 |
-| NestJS Server 构建 | 成功 |
-| 完整 `pnpm run ready` | 最终退出码 **0** |
+| 验收项                     | 实测结果                       |
+| -------------------------- | ------------------------------ |
+| `vp check` 格式检查        | 291 个文件正确                 |
+| Lint / TypeScript          | 151 个受检文件，零警告、零错误 |
+| `pnpm run test:unit`       | 45/45 文件、494/494 测试通过   |
+| `pnpm run test:e2e:server` | 4/4 文件、26/26 测试通过       |
+| OIDC Controller E2E        | 9/9 测试通过                   |
+| `pnpm run docs:check`      | 83 个 Markdown 文件通过        |
+| SSE 客户端测试             | 8/8 通过                       |
+| SSE 故障代理测试           | 4/4 通过                       |
+| React Web 构建             | 成功                           |
+| Vue Web 构建               | 成功                           |
+| NestJS Server 构建         | 成功                           |
+| 完整 `pnpm run ready`      | 最终退出码 **0**               |
 
 本次完整 `ready` 实际执行依赖目录、共享配置、环境变量与换行符、中文文案、Prisma Client 生成、Core 构建、Vite+ 格式/Lint/TypeScript、React/Vue/Draft Storage 类型检查、Server 类型检查、494 项单测、SSE 客户端 8 项、SSE 故障代理 4 项、NestJS E2E 26 项、83 份 Markdown 检查、React/Vue Web 构建和 NestJS 构建。
 
