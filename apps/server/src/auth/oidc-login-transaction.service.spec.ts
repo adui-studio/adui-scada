@@ -255,6 +255,9 @@ describe("OIDC 一次性登录事务", () => {
       "/studio#external",
       "/studio/%5c%5cattacker.example.org",
       "/studio/%0d%0aLocation:%20https://attacker.example.org",
+      "/studio/\n非法路径",
+      "/studio/\u0000非法路径",
+      "/studio/\u007f非法路径",
       "studio",
     ];
 

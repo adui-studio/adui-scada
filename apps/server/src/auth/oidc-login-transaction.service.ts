@@ -40,6 +40,15 @@ export interface ConsumedOidcLoginTransaction {
   readonly returnPath: string;
 }
 
+/** 使用字符码检查控制字符，避免在正则中直接匹配控制字符。 */
+function hasControlCharacters(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit < 32 || codeUnit === 127) return true;
+  }
+  return false;
+}
+
 /** 对回跳路径作严格校验，只保存站内路径，不接受外部 URL、反斜杠或片段。 */
 function normalizeReturnPath(value: unknown): string {
   const candidate = value === undefined ? "/" : value;
@@ -51,7 +60,7 @@ function normalizeReturnPath(value: unknown): string {
     candidate.startsWith("//") ||
     candidate.includes("\\") ||
     candidate.includes("#") ||
-    /[\u0000-\u001f\u007f]/.test(candidate) ||
+    hasControlCharacters(candidate) ||
     /%(?:0a|0d|5c)/i.test(candidate)
   ) {
     throw new BadRequestException("OIDC 登录返回路径无效");
