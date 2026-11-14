@@ -1,6 +1,11 @@
 import Dexie from "dexie";
 import type { Table } from "dexie";
-import { localDraftKey, readLocalDraft, migrateScadaDocument } from "@adui/scada-core";
+import {
+  localDraftKey,
+  readLocalDraft,
+  migrateScadaDocument,
+  parseScadaDocument,
+} from "@adui/scada-core";
 import type { DraftRecord, DraftRepository, LocalDraft, LocalDraftStorage } from "@adui/scada-core";
 
 interface MigrationMarker {
