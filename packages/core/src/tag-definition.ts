@@ -20,6 +20,25 @@ export interface TagDefinition {
   readonly description: string;
 }
 
+/** Tag 定义编辑字段；稳定 tagId 不允许通过编辑操作修改。 */
+export type TagDefinitionUpdate = Pick<
+  TagDefinition,
+  "displayName" | "dataType" | "unit" | "description"
+>;
+
+/** 统一约束当前内置图元绑定槽可接收的数据类型。 */
+export function isTagDataTypeCompatibleWithBinding(
+  nodeType: string,
+  slot: string,
+  dataType: TagDataType,
+): boolean {
+  if (dataType === "unknown") return false;
+  if (nodeType === "tank" && slot === "level") return dataType === "number";
+  if (nodeType === "pump" && slot === "running") return dataType === "boolean";
+  if (nodeType === "label" && slot === "value") return true;
+  return false;
+}
+
 const TAG_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
 function displayName(value: unknown): string {
