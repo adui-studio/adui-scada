@@ -134,3 +134,12 @@ Vue 与 React 是两个正式 Web 端，必须共用同源 API 契约、工程�
 - 登录事务有效期为 5 分钟。回调使用固定 Issuer、State 摘要、浏览器绑定摘要、创建/过期时间和 `consumedAt IS NULL` 条件，在单个 PostgreSQL 交互事务中执行条件更新；并发回调只有一个能消费成功。成功消费后再次校验 Nonce 格式与回跳路径规范性，再在内存中解密 verifier；持久化数据被篡改、密文错误时均不返回 verifier。多实例部署必须共享同一事务加密密钥；密钥轮换需等待旧事务全部过期后再切换。
 - 回跳路径只接受站内以单斜杠开头的路径，拒绝外部 URL、协议相对地址、反斜杠、片段、控制字符及编码 CR/LF/反斜杠；不接受客户端指定回跳 Origin。
 - 本小批仅提供服务层，不注册 HTTP Controller，不解除 `main.ts` 的 OIDC fail-closed 保护。浏览器绑定 Cookie 的 HttpOnly/Secure/SameSite 属性由后续 Controller 负责设置。
+
+### 2.2 授权码回调、ID Token 与预绑定身份（第三十三批阶段 B 第三小批）
+
+- 回调先通过一次性事务服务验证并消费 State 与浏览器绑定；OAuth 错误响应也消费事务，避免重放。回调输入仅允许单值 State、Code 和可选 `iss`，拒绝数组/重复参数、控制字符及不符合格式的值。
+- 若 Discovery 元数据 `authorization_response_iss_parameter_supported` 为 true，回调必须携带 `iss`；只要携带就必须与服务端固定 Issuer 精确相等。Token Exchange 的回调 URL 从服务端固定 Redirect URI 构造，不使用请求 Host、Forwarded Header 或客户端传入的回调地址。
+- 使用 openid-client 6.8.9 `authorizationCodeGrant()`，传入 `expectedState`、`expectedNonce`、PKCE verifier 和 `idTokenExpected: true`。签名/JWKS、Issuer、Audience、有效期及 Nonce 的协议验证交由该库执行；应用层再检查固定 Issuer、Client ID Audience、`azp`、多 Audience 规则、Nonce、Subject 格式及时间声明类型。
+- 只使用已验证 ID Token 的精确 `(iss, sub)` 查询 `ScadaExternalIdentity`，关联 `ScadaIdentity` 必须为 active；没有预绑定或主体停用均拒绝，不使用 email、用户名、groups/roles Claim 自动创建或映射内部身份。
+- 验证成功后复用 `AuthSessionService.issueForVerifiedSubject()` 创建本地短期不透明会话。IdP Access/Refresh/ID Token 不保存、不记录；本地 sessionToken 仅作为服务层结果交给未来 Controller 设置 HttpOnly Cookie，不得作为 JSON 返回。当前尚未注册 Controller，`main.ts` 仍保持 OIDC fail-closed。
+- 代码与 Mock 单测已提交；维护者 Windows 验证待执行。Mock Token Endpoint/Claims 不代表真实 IdP 的签名验证、JWKS 轮换、网络故障或企业 SSO 联调已经验收。

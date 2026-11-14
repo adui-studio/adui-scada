@@ -925,3 +925,13 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 ### 第三十三批阶段 B 第二小批控制字符 Lint 警告修复（2026-11-14）
 
 维护者 Windows `vp check --fix` 报告 OIDC 回跳路径控制字符正则触发 `eslint(no-control-regex)`（0 错误、1 警告）。已改为逐字符 `charCodeAt()` 检查，继续拒绝 ASCII 控制字符，不关闭规则；增加原始换行、NUL、DEL 测试输入。**修复后尚未收到 Windows 复验结果**，需重新执行 `vp check` 与单测，不能将格式化完成等同于零警告通过。
+
+### 第三十三批阶段 B 第一、二小批 Windows 全链验收通过（2026-11-14）
+
+维护者 Windows 最新日志确认：`vp check` 284 个文件格式正确、144 个受检文件零警告/Lint/TypeScript 错误；`pnpm run test:unit` 42/42 文件、465/465 测试通过（OIDC Discovery 7/7、登录事务 10/10）；`pnpm run docs:check` 83 份 Markdown 通过；完整 `pnpm run ready` 最终退出码 **0**。该次 ready 同时通过依赖 11 清单/52 Catalog、中文文案 170 个文件、SSE 8/8、故障代理 4/4、NestJS E2E 17/17、React/Vue 与 NestJS 构建。
+
+### 第三十三批阶段 B 第三小批：OIDC 授权码回调与身份验证（代码已提交，待 Windows 验证）
+
+新增 `OidcCallbackService` 与 Mock 单测：先消费一次性 State/浏览器绑定事务，使用 openid-client 6.8.9 `authorizationCodeGrant()` 兑换授权码并验证 State、Nonce、PKCE；按 Discovery 元数据要求校验响应 `iss`；使用固定服务端 Redirect URI 构造 Token Exchange 回调地址，不信任请求 Host。ID Token 由 openid-client 验签并检查 Issuer/Audience/有效期/Nonce，应用层补充 `azp`、Subject 和时间声明边界。
+
+认证成功后只按 `(iss, sub)` 查询预绑定外部身份，要求本地身份 active，再复用 `AuthSessionService` 签发内部会话；不按邮箱/用户名自动创建主体，不保存或记录 IdP Token。当前服务仅在未挂载的 `ScadaIdentityModule` 中注册，没有 HTTP Controller；返回的内部 sessionToken 仅供未来 Controller 设置 HttpOnly Cookie。**本小批新增代码和 Mock 测试尚未在维护者 Windows 执行**；真实 IdP、JWKS 轮换、Cookie/CSRF 和工程 API仍未验收，OIDC 继续 fail-closed。

@@ -1,10 +1,15 @@
 import { Module } from "@nestjs/common";
+import * as oidc from "openid-client";
 import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import { DatabaseModule } from "../database/database.module.js";
 import { ScadaSecurityAuditService } from "../security/scada-security-audit.js";
 import { AuthSessionService } from "./auth-session.service.js";
 import { OidcLoginTransactionService } from "./oidc-login-transaction.service.js";
+import {
+  OidcCallbackService,
+  SCADA_OIDC_AUTHORIZATION_CODE_GRANT,
+} from "./oidc-callback.service.js";
 import { ScadaProjectGuard } from "./scada-project.guard.js";
 import { ScadaSessionGuard } from "./scada-session.guard.js";
 import {
@@ -32,6 +37,11 @@ import {
     AuthSessionService,
     OidcProviderDiscoveryService,
     OidcLoginTransactionService,
+    {
+      provide: SCADA_OIDC_AUTHORIZATION_CODE_GRANT,
+      useValue: oidc.authorizationCodeGrant,
+    },
+    OidcCallbackService,
     ScadaSecurityAuditService,
     ScadaSessionGuard,
     ScadaProjectGuard,
@@ -40,6 +50,7 @@ import {
     AuthSessionService,
     OidcProviderDiscoveryService,
     OidcLoginTransactionService,
+    OidcCallbackService,
     ScadaSessionGuard,
     ScadaProjectGuard,
   ],

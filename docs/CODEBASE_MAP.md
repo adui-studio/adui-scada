@@ -630,3 +630,10 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/server/src/auth/oidc-login-transaction.service.ts`：生成 State/Nonce/PKCE、AES-256-GCM 加密 verifier、浏览器绑定摘要、站内回跳路径校验、PostgreSQL 一次性原子消费。
 - `apps/server/src/auth/oidc-login-transaction.service.spec.ts`：授权请求参数、密文往返、跨浏览器/过期/重复/并发消费、回跳路径和数据库异常测试。
 - `apps/server/src/auth/scada-identity.module.ts`：注册事务服务；模块仍未由默认 AppModule 挂载。
+
+### 第三十三批阶段 B 第三小批：OIDC 授权码回调
+
+- `apps/server/src/auth/oidc-callback.service.ts`：固定回调 URI、Authorization Code + PKCE 兑换、State/Nonce/Issuer/Audience/azp/Subject 校验、预绑定 `(iss, sub)` 身份查询与本地会话签发。
+- `apps/server/src/auth/oidc-callback.service.spec.ts`：Mock 授权码兑换、ID Token Claims、外部身份映射、会话签发与错误脱敏测试。
+- `apps/server/src/auth/scada-identity.module.ts`：注入 openid-client `authorizationCodeGrant` 并注册回调服务；模块仍未由默认 AppModule 挂载。
+- 当前尚无 OIDC Controller；回调服务的 sessionToken 仅供后续服务端 Controller 设置 HttpOnly Cookie。

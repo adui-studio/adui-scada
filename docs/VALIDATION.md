@@ -804,3 +804,20 @@ OIDC 登录、BFF Cookie/CSRF、工程 HTTP API、真实 IdP 联调及工业现�
 维护者 Windows `vp check --fix` 报告 OIDC 回跳路径校验触发 `eslint(no-control-regex)`，结果为 0 错误、1 警告。已将正则控制字符检测替换为逐字符 `charCodeAt()` 检查，保留 U+0000–U+001F 与 U+007F 拒绝逻辑；新增原始换行、NUL、DEL 回归输入，未关闭 Lint 规则、未弱化安全校验。
 
 **待维护者复验**：`vp check`、OIDC 登录事务单测、`pnpm run test:unit`、`pnpm run docs:check` 与 `pnpm run ready`。本条记录的是已收到的警告与已提交修复，不代表修复后命令已经通过。
+
+### 第三十三批阶段 B 第一、二小批 Windows 全链验收（2026-11-14）
+
+维护者提供的 Windows PowerShell 日志确认：
+
+- `vp check`：284 个文件格式正确，144 个受检文件零警告、Lint 与 TypeScript 错误。
+- `pnpm run test:unit`：42/42 文件、465/465 测试通过；OIDC Discovery 7/7、登录事务 10/10。
+- `pnpm run docs:check`：83 个 Markdown 文件通过。
+- `pnpm run ready`：最终退出码 **0**；依赖 11 清单/52 Catalog、中文文案 170 文件、SSE 8/8、故障代理 4/4、NestJS E2E 17/17、React/Vue/NestJS 构建全部完成。
+
+该日志验证的是阶段 B 第一、二小批及当时分支代码。第三小批回调服务和测试在该次 Windows `ready` 之后加入，不能将 465/465 或 ready 退出码 0 延伸为第三小批已通过。
+
+### 第三十三批阶段 B 第三小批：OIDC 授权码回调与身份验证（待维护者 Windows 验证）
+
+新增 `apps/server/src/auth/oidc-callback.service.spec.ts`，使用 Mock 授权码兑换、Discovery、Prisma 身份映射和会话签发服务。覆盖固定 Redirect URI、State/Nonce/PKCE 检查参数、可选响应 `iss`、ID Token Claims 的 Issuer/Audience/azp/Subject/时间边界、无 ID Token、OAuth 错误、外部身份未绑定/停用、数据库/IdP 错误脱敏，以及 IdP Access/Refresh/ID Token 不进入服务结果。
+
+**待执行**：`vp check`、`pnpm run test:unit`、`pnpm run docs:check`、`pnpm run ready`。这些 Mock 测试不证明真实 IdP 的 RSA 签名/JWKS 轮换、真实 Token Endpoint、PostgreSQL 并发事务、Cookie/CSRF 或企业 SSO 联调已通过。OIDC HTTP Controller 尚未注册，`main.ts` 对 `SCADA_OIDC_ENABLED=true` 继续 fail-closed。
