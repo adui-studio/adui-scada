@@ -1994,25 +1994,25 @@ export default function StudioPage() {
                 <>
                   <label className="studio-field">
                     {bindingSlot} · 选择模拟 Tag
-                  <select
-                    aria-label={selected.id + " 的 " + bindingSlot + " Tag 绑定"}
-                    value={currentBindingTag}
-                    onChange={(event) => changeTagBinding(bindingSlot, event.target.value)}
-                  >
-                    <option value="">不绑定</option>
-                    {missingBindingTag && (
-                      <option value={currentBindingTag} disabled>
-                        {currentBindingTag}（不在当前模拟候选中）
-                      </option>
-                    )}
-                    {demoTagCandidates.map((option) => (
-                      <option key={option.tagId} value={option.tagId}>
-                        {option.label} · {option.tagId} ·
-                        {TAG_DATA_TYPE_LABELS[option.dataType]}
-                        {option.unit ? " · " + option.unit : ""}
-                      </option>
-                    ))}
-                  </select>
+                    <select
+                      aria-label={selected.id + " 的 " + bindingSlot + " Tag 绑定"}
+                      value={currentBindingTag}
+                      onChange={(event) => changeTagBinding(bindingSlot, event.target.value)}
+                    >
+                      <option value="">不绑定</option>
+                      {missingBindingTag && (
+                        <option value={currentBindingTag} disabled>
+                          {currentBindingTag}（不在当前模拟候选中）
+                        </option>
+                      )}
+                      {demoTagCandidates.map((option) => (
+                        <option key={option.tagId} value={option.tagId}>
+                          {option.label} · {option.tagId} ·
+                          {TAG_DATA_TYPE_LABELS[option.dataType]}
+                          {option.unit ? " · " + option.unit : ""}
+                        </option>
+                      ))}
+                    </select>
                   </label>
                   {selectedTagDefinition && (
                     <p className="studio-tip">
