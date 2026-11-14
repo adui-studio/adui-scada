@@ -743,3 +743,17 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 此前维护者已执行 `pnpm install --frozen-lockfile`、`deps:check`（11 清单、52 项 Catalog）、`pnpm run test:unit`（448/448）、完整 `pnpm run ready`（退出码 0）。其中完整 ready 的 `docs:check` 当时为 82 份 Markdown，不能将其计为新增文档后的 83 份；最新 83 份由本次单独 `docs:check` 确认。
 
 **仍待完成**：隔离 PostgreSQL 上真实执行 OIDC 增量迁移并核对外键/索引/中文 COMMENT；OIDC Discovery/PKCE/State/Nonce、Cookie/CSRF、工程 API 尚未实现/验收。当前服务端启用 OIDC 仍 fail-closed。
+
+
+### 第三十三批 OIDC PostgreSQL 迁移实测用例已增加（2026-11-14，待维护者运行）
+
+新增 `apps/server/test/oidc-schema.db-spec.ts`，由既有独立入口 `pnpm run test:db` 自动发现，**不加入不依赖 PostgreSQL 的 `pnpm run ready` / `test:unit`**。该测试在模块初始化时强制校验 `SCADA_TEST_DATABASE_URL` 只能指向本机 `127.0.0.1/localhost` 的 `adui_scada_test`，并在结束时释放 Prisma 连接、恢复原环境变量。
+
+实测断言覆盖：
+- Prisma `_prisma_migrations` 中 OIDC 迁移成功记录；
+- 两张 OIDC 新表及其中文表注释；
+- 15 个新增物理字段、中文字段注释和允许为空的 CSRF/消费时间字段；
+- 外部身份复合外键、OIDC 状态/过期/回跳路径约束及会话 CSRF 摘要约束；
+- 三个新增业务索引及其中文索引注释。
+
+**当前状态**：测试代码已提交，尚未在 Windows 或任何 PostgreSQL 实例运行。执行前必须先创建本机独立数据库 `adui_scada_test`，将迁移命令和测试进程的连接 URL 显式指向该数据库；禁止使用普通开发库 `adui_scada` 或生产数据库。完成后执行 `pnpm run db:migrate:deploy`、`pnpm run db:migrate:status`、`pnpm run test:db` 并提供各命令退出码。不得把 Prisma Client 生成、Schema 单测或静态 SQL 审查视为真实迁移通过。
