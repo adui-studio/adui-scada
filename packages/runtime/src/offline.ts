@@ -1,8 +1,8 @@
 import {
+  TagDefinitionCatalog,
   TagStore,
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
-  waterTreatmentDemoTagCatalog,
 } from "@adui/scada-core";
 import type { RuntimeListener } from "./runtime.ts";
 import { RuntimeStatusHistory, createRuntimeDiagnostics } from "./diagnostics.ts";
@@ -14,7 +14,7 @@ import { RuntimeStatusHistory, createRuntimeDiagnostics } from "./diagnostics.ts
 export class OfflineDemoRuntime {
   private readonly listener: RuntimeListener;
   private readonly simulator = new WaterTreatmentSimulator();
-  private readonly store = new TagStore(waterTreatmentDemoTagCatalog);
+  private readonly store = new TagStore(new TagDefinitionCatalog(waterTreatmentDemoDocument.tags));
   private timer: ReturnType<typeof setInterval> | null = null;
   private active = false;
   private tick = 0;
