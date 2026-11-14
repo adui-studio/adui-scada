@@ -31,6 +31,17 @@ test("图元 props 对象键顺序改变不应显示虚假版本差异", () => {
   expect(compareProjectDocuments(current, historical).sameContent).toBe(true);
 });
 
+test("比较历史 0.2.0 工程时先迁移 Tag 目录且保留绑定统计", () => {
+  const current = fixture();
+  const historical = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  historical.schemaVersion = "0.2.0";
+  delete historical.tags;
+  const compared = compareProjectDocuments(current, historical);
+  expect(compared.sameContent).toBe(false);
+  expect(compared.current).toEqual({ pageCount: 1, nodeCount: 5, bindingCount: 3 });
+  expect(compared.historical).toEqual(compared.current);
+});
+
 test("拒绝跨工程比较和不合法工程，且不修改传入工程", () => {
   const current = fixture();
   const historical = fixture();
