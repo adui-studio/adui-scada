@@ -850,7 +850,7 @@ PR #54 已合并到 main，合并提交 8a9dbf5b37a14c3f46b00e28561abcedf5e92c96
 
 维护者已在 Windows 执行本分支 `vp check`（274 个文件格式正确、135 个受检文件零错误）和 `pnpm run docs:check`（82 份 Markdown 通过，退出码 0）。以上均为本次代码新增**之前**的架构文档验收，不代表本次阶段 A 代码已经通过检查。
 
-阶段 A 已向 PR #55 功能分支提交：共享 DatabaseModule 统一提供 PrismaService，可信身份/工程持久化模块不再各自声明 PrismaService；OIDC Zod 启动配置默认关闭，严格验证固定 HTTPS Issuer、回调 URI、浏览器 Origin、客户端凭据和 32 字节 Base64URL 加密密钥。非生产回环 HTTP 测试必须显式开启。当前 main.ts 在 OIDC enabled 时主动拒绝启动，避免在认证与 ACL 路由未完成时误开启；默认 AppModule 未新增身份/工程 HTTP 路由。
+阶段 A 提交时：共享 DatabaseModule 统一提供 PrismaService，可信身份/工程持久化模块不再各自声明 PrismaService；OIDC Zod 启动配置默认关闭，严格验证固定 HTTPS Issuer、回调 URI、浏览器 Origin、客户端凭据和 32 字节 Base64URL 加密密钥。非生产回环 HTTP 测试必须显式开启。当时 `main.ts` 对 OIDC enabled 主动拒绝启动；第五小批后，完整配置通过且显式启用时会加载仅包含身份路由的 OidcEnabledAppModule，默认 AppModule 仍不连接数据库或注册身份/工程路由。
 
 Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcTransaction 一次性登录事务和 ScadaAuthSession 可空 CSRF 摘要，并新增带中文表/字段/索引注释的独立增量 SQL 迁移；**尚未在任何数据库执行迁移**。新增 OIDC 配置安全单测和 Nest 模块装配测试，尚未在 Windows 执行。openid-client 仍待下一次由 pnpm 原生安装并同步锁文件，当前不能声称 OIDC 流程或工程 API 已实现。
 
@@ -905,7 +905,7 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 - 必须提供 Authorization Endpoint、Token Endpoint、JWKS URI；端点只允许 HTTPS，显式非生产本机测试模式仅允许回环 HTTP。自定义 Fetch 不自动跟随重定向，错误不暴露 Issuer、端点、响应体或底层异常。
 - 客户端认证固定为 `client_secret_basic`，ID Token 签名算法固定为 RS256。服务注册在未挂载的 `ScadaIdentityModule`，不会改变默认 AppModule 或现有 Bearer 会话。
 
-新增 Mock Fetch 单测覆盖正常发现、并发复用、Issuer 不匹配、元数据能力拒绝、不安全端点、本机 HTTP 边界和失败重试。**这些测试代码尚未在维护者 Windows 环境执行**；当前仍需 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和完整 `pnpm run ready` 实测。测试不访问真实 IdP，不开放登录接口；`main.ts` 对 `SCADA_OIDC_ENABLED=true` 的 fail-closed 保护保持不变。
+新增 Mock Fetch 单测覆盖正常发现、并发复用、Issuer 不匹配、元数据能力拒绝、不安全端点、本机 HTTP 边界和失败重试。**这些测试代码尚未在维护者 Windows 环境执行**；当前仍需 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和完整 `pnpm run ready` 实测。测试不访问真实 IdP；当时未开放登录接口，`main.ts` 对 `SCADA_OIDC_ENABLED=true` 保持 fail-closed。该状态已由第五小批更新为仅在配置完整时挂载身份路由。
 
 下一小批再实现 Authorization Code + PKCE、State/Nonce 和数据库一次性事务；不得提前启用 OIDC。
 
@@ -918,7 +918,7 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 - 事务固定有效期 5 分钟；回调按固定 Issuer、浏览器绑定、创建/过期时间及未消费状态筛选，并通过数据库条件更新原子消费。
 - 同一浏览器可复用短时绑定 Cookie 支持多标签页；每次登录仍有独立 State/Nonce/Verifier。
 - 严格校验站内回跳路径，拒绝外部 URL、协议相对地址、反斜杠、片段和控制字符。
-- 服务仅注册在未挂载的 `ScadaIdentityModule`；当前没有 OIDC HTTP 路由，`main.ts` 仍拒绝启用 OIDC。
+- 第二小批提交时服务仅注册在尚未挂载的 `ScadaIdentityModule`，当时没有 OIDC HTTP 路由；第五小批已补充身份 Controller 和显式启用根模块。
 
 新增 Mock Prisma 单测覆盖授权请求、加密往返、重复/并发消费、跨浏览器、过期、回跳路径和异常脱敏。**尚未在维护者 Windows 环境执行**，需完成 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和 `pnpm run ready`。
 
@@ -934,7 +934,7 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 
 新增 `OidcCallbackService` 与 Mock 单测：先消费一次性 State/浏览器绑定事务，使用 openid-client 6.8.9 `authorizationCodeGrant()` 兑换授权码并验证 State、Nonce、PKCE；按 Discovery 元数据要求校验响应 `iss`；使用固定服务端 Redirect URI 构造 Token Exchange 回调地址，不信任请求 Host。ID Token 由 openid-client 验签并检查 Issuer/Audience/有效期/Nonce，应用层补充 `azp`、Subject 和时间声明边界。
 
-认证成功后只按 `(iss, sub)` 查询预绑定外部身份，要求本地身份 active，再复用 `AuthSessionService` 签发内部会话；不按邮箱/用户名自动创建主体，不保存或记录 IdP Token。当前服务仅在未挂载的 `ScadaIdentityModule` 中注册，没有 HTTP Controller；返回的内部 sessionToken 仅供未来 Controller 设置 HttpOnly Cookie。**本小批新增代码和 Mock 测试尚未在维护者 Windows 执行**；真实 IdP、JWKS 轮换、Cookie/CSRF 和工程 API仍未验收，OIDC 继续 fail-closed。
+认证成功后只按 `(iss, sub)` 查询预绑定外部身份，要求本地身份 active，再复用 `AuthSessionService` 签发内部会话；不按邮箱/用户名自动创建主体，不保存或记录 IdP Token。第三小批提交时服务仅在未挂载的 `ScadaIdentityModule` 中注册，尚无 HTTP Controller；第五小批已新增 Controller，将内部 sessionToken 仅写入 HttpOnly Cookie。**本小批新增代码和 Mock 测试尚未在维护者 Windows 执行**；真实 IdP、JWKS 轮换、Cookie/CSRF 和工程 API仍未验收，OIDC 继续 fail-closed。
 
 
 ### 第三十三批阶段 B 第三小批：OIDC 回调测试夹具修复及完整质量链通过（2026-11-14）
@@ -952,7 +952,7 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 - `pnpm run docs:check`：83 个 Markdown 文件通过。
 - 完整 `pnpm run ready`：依赖 11 清单/52 Catalog、中文文案 172 个文件、SSE 客户端 8/8、故障代理 4/4、NestJS E2E 17/17、React/Vue/NestJS 构建全部通过，最终退出码 **0**。
 
-E-011 已在 `docs/AI_MISTAKES.md` 记录；其类型派生修复与第三小批代码现已通过 Windows 工程质量链。真实 IdP/JWKS 联调、HTTP Controller、Cookie/CSRF 和工程 API 仍未完成，OIDC 继续 fail-closed。
+E-011 已在 `docs/AI_MISTAKES.md` 记录；其类型派生修复与第三小批代码现已通过 Windows 工程质量链。真实 IdP/JWKS 联调、生产 HTTPS Cookie 和工程 API仍未完成；第五小批已提交身份 HTTP Controller，启用仍需维护者质量验收。
 
 ### 第三十三批阶段 B 第四小批提交时状态记录（2026-11-14）
 

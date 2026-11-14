@@ -1087,7 +1087,7 @@ Write-Host "退出码：$LASTEXITCODE"
 
 Prisma 新增迁移 `20261113000000_trusted_identity_sessions`，首次应用必须先确认当前 `.env` 指向本机隔离开发库 `127.0.0.1:15432/adui_scada`，然后显式执行 `pnpm run db:migrate:deploy` 与 `pnpm run db:migrate:status`；不能修改或重用旧迁移文件。**真实数据库测试仍仅允许本机 `adui_scada_test`**，通过 PowerShell `try/finally` 形式临时设置 `SCADA_DATABASE_URL` 和 `SCADA_TEST_DATABASE_URL` 为测试库 URL，先将新迁移应用到测试库再执行 `pnpm run test:db`，结束恢复两变量，不把真实口令写入 Git。该测试从随机租户创建临时主体/会话并在结束时删除，不会修改开发业务库。
 
-可独立执行 `pnpm run test:docker:server`，验证镜像仍可加载 NestJS/共享 Core，认证会话签发及工程/设备写入 API 均保持关闭。现有容器烟测不导入身份模块，因此不连接数据库。真实 OIDC 登录、会话发行端点、生产 HTTPS、身份撤销并发与审计待后续专项验收。
+可独立执行 `pnpm run test:docker:server`，验证默认 OIDC 关闭时的镜像仍可加载 NestJS/共享 Core，身份路由、工程 API 和设备写入均不开放。该容器烟测不导入身份模块，因此不连接数据库；它不覆盖 OIDC 显式启用后的身份路由。真实 IdP、生产 HTTPS、身份撤销并发与持久化审计仍待专项验收。
 
 ## V0.3 第十四批：Pino / Swagger / Helmet 验收（ADR-0046）
 
@@ -1611,13 +1611,13 @@ pnpm run test:sse:fault:browser
 
 启动当前分支的 dev:demo、dev:react、dev:vue 后执行 pnpm run test:legacy:browser。该命令通过现有 Chrome/Edge CDP 测试设施，在两个 Web Origin 分别构造 0.2.0 localStorage 草稿、IndexedDB 草稿和 Project Snapshot，并通过真实 Studio UI 验证迁移结果。测试只使用临时浏览器用户目录，不访问用户真实 Profile。执行前需确保当前根 .env 的 React/Vue 端口对应当前分支服务。
 
-## V0.3 第三十三批 · OIDC 与工程 API（计划，尚未实现）
+## V0.3 第三十三批 · OIDC 身份路由与工程 API
 
-实现后将新增 OIDC Mock Issuer、Cookie/CSRF 与工程 API 的 E2E/浏览器验收入口。真实 PostgreSQL 测试必须显式设置 SCADA_TEST_DATABASE_URL，且仅允许本机 adui_scada_test 隔离数据库。OIDC 默认关闭；未配置真实 Issuer 时只运行 Mock Issuer 自动化，不得宣称完成企业 IdP 联调。
+阶段 B 已在功能分支实现固定 Issuer Discovery、登录事务、授权码回调、BFF Cookie/CSRF Guard，以及 start/callback/me/logout HTTP Controller；Controller E2E 使用 Mock 服务，不访问真实 IdP 或 PostgreSQL。OIDC 默认关闭，只有配置完整并显式启用时才挂载身份模块。工程 API 仍未实现。真实 PostgreSQL 测试必须显式设置 SCADA_TEST_DATABASE_URL，且仅允许本机 adui_scada_test 隔离数据库。未配置真实 Issuer 时只运行 Mock 自动化，不得宣称完成企业 IdP 联调。
 
 ### 第三十三批阶段 A 最小验证指令
 
-`pnpm run env:check`、`pnpm run db:validate`、`pnpm run db:generate`、`vp check`、`pnpm run test:unit`、`pnpm run docs:check`、`pnpm run ready`。验证实际增量迁移时仅允许本机隔离测试数据库，并检查 PostgreSQL COMMENT 元数据。当前不运行 OIDC 真实登录或外部工程接口，因为尚未开放。
+`pnpm run env:check`、`pnpm run db:validate`、`pnpm run db:generate`、`vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run docs:check`、`pnpm run ready`。验证实际增量迁移时仅允许本机隔离测试数据库，并检查 PostgreSQL COMMENT 元数据。认证 Controller 的 E2E 使用 Mock；真实 OIDC 登录需另配 Issuer、TLS、回调注册和身份映射，工程 API 当前仍未开放。
 
 ## 第三十三批 · PostgreSQL OIDC 迁移隔离验收
 
@@ -1631,3 +1631,10 @@ pnpm run test:db
 ```
 
 迁移与测试均不得指向普通开发数据库 `adui_scada` 或生产数据库。测试结束后恢复/清理当前 PowerShell 的临时环境变量。OIDC Schema 测试核对迁移登记、外部身份及登录事务表、15 个字段、外键、约束、索引和中文 PostgreSQL COMMENT。真实迁移未执行前不得标记阶段 A 数据库验收通过。
+
+### 第三十三批阶段 B · OIDC 身份 HTTP 路由验证边界
+
+- `pnpm run test:e2e:server` 已包含 `test/oidc-auth.controller.e2e-spec.ts`，验证 start/callback/me/logout 路由、浏览器绑定 Cookie、Session/CSRF Cookie、Origin/Fetch Metadata、Bearer 兼容与默认 AppModule 404。
+- 该 E2E 使用 Mock 登录事务、回调和会话服务，不会访问真实 IdP、PostgreSQL 或工业设备；通过只代表 HTTP 路由与 Guard 编排回归。
+- 默认 `SCADA_OIDC_ENABLED=false` 时启动原有 AppModule，不连接 PostgreSQL、不注册身份路由。显式启用 OIDC 时，必须提供完整 Issuer/Client/Redirect/Origin/事务密钥和数据库配置；启动后会加载 ScadaIdentityModule 并连接 PostgreSQL。
+- 真实启用前必须由维护者完成 Windows `vp check`、`test:unit`、`test:e2e:server`、`docs:check` 和完整 `ready`；随后另行验收真实 IdP/JWKS、HTTPS 终止代理、Secure/SameSite Cookie 与外部身份预绑定。当前工程 API 和工业设备写入仍未开放。
