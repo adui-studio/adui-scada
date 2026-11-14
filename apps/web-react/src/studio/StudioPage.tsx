@@ -270,7 +270,7 @@ export default function StudioPage() {
     state.selectedIds.length === 1 && selected && !selected.groupId && !studioNodeLocked(selected)
       ? editableTagSlot(selected.type)
       : null;
-  const demoTagCandidates =
+  const tagCandidates =
     bindingSlot === null
       ? []
       : state.document.tags.filter((definition) =>
@@ -279,7 +279,7 @@ export default function StudioPage() {
   const currentBindingTag = bindingSlot ? (selected?.bindings[bindingSlot]?.tagId ?? "") : "";
   const missingBindingTag =
     currentBindingTag !== "" &&
-    !demoTagCandidates.some((option) => option.tagId === currentBindingTag);
+    !tagCandidates.some((option) => option.tagId === currentBindingTag);
   const selectedTagDefinition = state.document.tags.find(
     (definition) => definition.tagId === currentBindingTag,
   );
@@ -1333,7 +1333,7 @@ export default function StudioPage() {
     <main className="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
       <header className="studio-toolbar">
         <div>
-          <p className="scada-eyebrow">ADui SCADA · V0.2 Studio</p>
+          <p className="scada-eyebrow">ADui SCADA · V0.3 Studio</p>
           <h1>SVG 组态编辑器</h1>
         </div>
         <div className="studio-actions">
@@ -1995,7 +1995,7 @@ export default function StudioPage() {
               {bindingSlot ? (
                 <>
                   <label className="studio-field">
-                    {bindingSlot} · 选择模拟 Tag
+                    {bindingSlot} · 选择项目 Tag
                     <select
                       aria-label={selected.id + " 的 " + bindingSlot + " Tag 绑定"}
                       value={currentBindingTag}
@@ -2004,10 +2004,10 @@ export default function StudioPage() {
                       <option value="">不绑定</option>
                       {missingBindingTag && (
                         <option value={currentBindingTag} disabled>
-                          {currentBindingTag}（不在当前模拟候选中）
+                          {currentBindingTag}（当前工程未定义或类型待确认）
                         </option>
                       )}
-                      {demoTagCandidates.map((option) => (
+                      {tagCandidates.map((option) => (
                         <option key={option.tagId} value={option.tagId}>
                           {option.displayName} · {option.tagId} ·{TAG_DATA_TYPE_LABELS[option.dataType]}
                           {option.unit ? " · " + option.unit : ""}
