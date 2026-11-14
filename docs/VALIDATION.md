@@ -576,3 +576,19 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 本批浏览器 CRUD 专项此前的失败是脚本先导出 JSON、再读取状态栏，导出提示覆盖删除拒绝提示；修复后已由 React、Vue 两端真实浏览器操作复验通过。Core 删除保护没有放宽。
 
 **尚未单独完成的人工验收**：键盘无障碍与视觉细节、真正旧 0.1/0.2 工程和历史 IndexedDB/localStorage 草稿迁移的用户体验复验。以上不改变本次已通过的自动化结果。工业现场设备、网关、设备写入不属于本批。
+
+
+## 2026-11-14 · V0.3 第三十二批：旧工程与浏览器持久化迁移（待 Windows 验收）
+
+实施分支：feat/v0.3-browser-legacy-project-migration，基线为 PR #53 合并提交 7fccc1e2。
+
+- [ ] vp check：新浏览器脚本格式、Lint、类型检查。
+- [ ] pnpm run docs:check：ADR-0064 与本批文档静态检查。
+- [ ] pnpm run test:unit：现有 Core 迁移、Project Snapshot 摘要和 Dexie 事务回归。
+- [ ] pnpm run ready：完整依赖、类型、单测、E2E 与双框架构建。
+- [ ] pnpm run test:legacy:browser：React/Vue 的 localStorage 0.2.0 草稿迁移、旧副本清理、IndexedDB revision 4→5 事务迁移、旧 Project Snapshot SHA-256 校验与只读归一化。
+- [ ] pnpm run test:interop：迁移后的工程 JSON 双向互通。
+- [ ] 人工确认历史 unknown Tag 明确显示待确认，不推断类型/单位；旧快照原记录保持不变；迁移失败保留原始数据。
+- [ ] 视改动情况复跑 pnpm run test:tags:browser，确保第三十一批 Tag CRUD 不回归。
+
+**当前验收状态**：本批只提交真实浏览器测试代码和文档，尚未在维护者 Windows 环境运行；不继承第三十、三十一批的测试结果。没有修改迁移业务实现、Schema、Dexie 数据库版本、快照格式或工业设备访问。
