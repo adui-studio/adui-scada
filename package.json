@@ -13,6 +13,7 @@
     "test": "pnpm run build:core && vp test run",
     "test:unit": "pnpm run build:core && pnpm run db:generate && vp test run",
     "test:browser": "node scripts/test-studio-browser.mjs",
+    "test:tags:browser": "node scripts/test-studio-browser.mjs --tags",
     "test:sse:browser": "node scripts/test-runtime-sse-browser.mjs",
     "test:sse:clients": "node --test examples/water-treatment/sse-clients.test.mjs",
     "test:sse:network": "node scripts/test-runtime-sse-network.mjs",
