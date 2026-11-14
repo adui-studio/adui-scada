@@ -127,14 +127,14 @@ describe("OIDC PostgreSQL 增量迁移", () => {
     for (const row of columns) {
       expect(row.description ?? "").toMatch(/[一-龥]/);
     }
-    expect(
-      columns.find((row) => row.table_name === "scada_auth_sessions" && row.column_name === "csrf_token_hash")
-        ?.is_nullable,
-    ).toBe("YES");
-    expect(
-      columns.find((row) => row.table_name === "scada_oidc_transactions" && row.column_name === "consumed_at")
-        ?.is_nullable,
-    ).toBe("YES");
+    const csrfColumn = columns.find(
+      (row) => row.table_name === "scada_auth_sessions" && row.column_name === "csrf_token_hash",
+    );
+    const consumedColumn = columns.find(
+      (row) => row.table_name === "scada_oidc_transactions" && row.column_name === "consumed_at",
+    );
+    expect(csrfColumn?.is_nullable).toBe("YES");
+    expect(consumedColumn?.is_nullable).toBe("YES");
   });
 
   it("外部身份复合外键与登录事务约束均已创建", async () => {
@@ -161,6 +161,18 @@ describe("OIDC PostgreSQL 增量迁移", () => {
         "scada_oidc_transactions_expiry_check",
         "scada_oidc_transactions_return_path_check",
       ]),
+    );
+
+    const sessionConstraints = await service!.client.$queryRaw<
+      Array<{ constraint_name: string }>
+    >`
+      SELECT conname AS constraint_name
+      FROM pg_constraint
+      WHERE conrelid = 'public.scada_auth_sessions'::regclass
+        AND contype = 'c'
+    `;
+    expect(sessionConstraints.map((row) => row.constraint_name)).toContain(
+      "scada_auth_sessions_csrf_token_hash_check",
     );
   });
 
