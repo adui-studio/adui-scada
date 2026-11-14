@@ -481,3 +481,15 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **当前验收状态：** 本协作环境只完成 GitHub 分支、代码、测试用例和 ADR 的静态审查；没有执行本批仓库命令，也没有 Windows 浏览器人工验收。所有上述项目保持待验证，不能标记通过。
 
 **明确不属于本批：** 完整 Tag 管理表单、Prisma Tag 表、生产项目保存 API、身份认证/多人协作、OPC UA/Modbus/MQTT 地址映射、工业网关和设备写入；Tauri 安装包也不作为本批自动化验收结论。
+
+### 第三十批首次 Windows `vp check --fix` 类型检查阻塞及修复（2026-11-14）
+
+维护者执行 `vp check --fix` 后，工具报告格式化处理已完成，但类型检查失败（**2 个错误、0 个警告**）：
+
+- `packages/core/src/project-snapshot.ts:260`：`TS2345`，历史快照迁移分支构造的 `snapshot` 与 `ProjectSnapshot` 参数类型不一致。
+- `packages/core/src/project-snapshot.ts:261`：`TS2322`，`deepFreeze(snapshot)` 的结果类型无法赋值给 `ProjectSnapshot`。
+- **共同根因**：原迁移分支的 `payload` 对象属性 `migratedFrom` 被拓宽推断为 `string`，而公共快照契约仅允许 `"0.1.0" | "0.2.0"`。
+
+已在 PR #52 中仅将该分支声明改为 `const payload: Omit<ProjectSnapshot, "contentHash"> = { ... }`，不改变历史源 SHA-256 校验、迁移元数据、快照大小约束或业务流程。修复提交为 `757d5012`。独立 TypeScript 5.8.3 严格编译最小复现确认原始类型拓宽报错与显式约束方案的编译行为，**不能替代完整仓库检查**。
+
+**待复验**：同步最新分支后重跑 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 与 `pnpm run ready`。本批所有完整质量链与浏览器验收仍保持待执行；不可将格式化完成视为类型检查通过。
