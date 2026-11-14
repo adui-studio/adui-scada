@@ -640,7 +640,7 @@ test("未来版本或非法历史组合拒绝导入并保留当前工程", () =>
   e.select("tank");
   const before = e.snapshot();
   const future = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
-  future.schemaVersion = "0.3.0";
+  future.schemaVersion = "0.4.0";
   expect(() => e.loadDocument(future)).toThrow(/不支持的工程版本/);
   expect(e.snapshot()).toEqual(before);
   future.schemaVersion = LEGACY_SCADA_SCHEMA_VERSION;
