@@ -43,7 +43,7 @@ test("草稿保存和恢复保持节点、组合、Tag 及防御性副本", () =
   expect(restored?.document.pages[0]?.nodes[1]?.groupId).toBe("group-1");
   expect(restored?.document.pages[0]?.nodes[3]?.groupId).toBe("group-1");
   expect(restored?.document.pages[0]?.nodes[1]?.bindings.level?.tagId).toBe("water.level");
-  expect(restored?.document.schemaVersion).toBe("0.2.0");
+  expect(restored?.document.schemaVersion).toBe("0.3.0");
 
   restored!.document.pages[0]!.nodes[1]!.transform.x = 100;
   expect(readLocalDraft(storage, "water-demo")?.document.pages[0]?.nodes[1]?.transform.x).toBe(80);
