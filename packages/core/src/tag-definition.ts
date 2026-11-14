@@ -1,13 +1,14 @@
 import type { TagValue } from "./tag-store.ts";
 
 /** Tag 定义的数据类型；质量是每条实时 TagValue 的动态属性，不在定义中固定。 */
-export const TAG_DATA_TYPES = ["number", "boolean", "string"] as const;
+export const TAG_DATA_TYPES = ["number", "boolean", "string", "unknown"] as const;
 export type TagDataType = (typeof TAG_DATA_TYPES)[number];
 
 export const TAG_DATA_TYPE_LABELS: Record<TagDataType, string> = {
   number: "数值",
   boolean: "布尔值",
   string: "文本",
+  unknown: "未指定",
 };
 
 /** 项目内稳定 Tag 标识与可变展示元数据；不包含尚未设计的工业地址字段。 */
@@ -28,7 +29,7 @@ function displayName(value: unknown): string {
   return value.trim();
 }
 
-function parseDefinition(input: unknown): TagDefinition {
+export function parseTagDefinition(input: unknown): TagDefinition {
   if (input === null || typeof input !== "object" || Array.isArray(input)) {
     throw new TypeError("Tag 定义必须为普通对象");
   }
@@ -76,7 +77,7 @@ export class TagDefinitionCatalog {
     if (!Array.isArray(definitions)) throw new TypeError("Tag 定义列表必须为数组");
     const entries = new Map<string, TagDefinition>();
     for (const raw of definitions) {
-      const definition = parseDefinition(raw);
+      const definition = parseTagDefinition(raw);
       if (entries.has(definition.tagId)) {
         throw new TypeError("Tag ID 重复：" + definition.tagId);
       }
@@ -110,7 +111,11 @@ export class TagDefinitionCatalog {
   validateValueType(value: TagValue): void {
     const definition = this.definitions.get(value.tagId);
     if (!definition) throw new TypeError("实时数据引用了未定义的 Tag：" + value.tagId);
-    if (value.value !== null && typeof value.value !== definition.dataType) {
+    if (
+      definition.dataType !== "unknown" &&
+      value.value !== null &&
+      typeof value.value !== definition.dataType
+    ) {
       throw new TypeError(
         "Tag 数据类型不匹配：" + value.tagId + "，预期" + TAG_DATA_TYPE_LABELS[definition.dataType],
       );
