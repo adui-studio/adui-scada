@@ -1943,6 +1943,20 @@ async function importJson(event: Event) {
         </template>
         <p v-else class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
         <details class="studio-advanced">
+          <summary>项目 Tag 定义（{{ state.document.tags.length }}）</summary>
+          <div class="studio-advanced-content">
+            <p v-if="state.document.tags.length === 0" class="studio-tip">
+              当前工程尚未定义 Tag
+            </p>
+            <div v-for="tag in state.document.tags" :key="tag.tagId" class="studio-binding">
+              <strong>{{ tag.displayName }}</strong> · {{ tag.tagId }} ·
+              {{ TAG_DATA_TYPE_LABELS[tag.dataType] }}{{ tag.unit ? " · " + tag.unit : "" }}
+              <p class="studio-tip">{{ tag.description }}</p>
+            </div>
+            <p class="studio-tip">定义随工程 JSON、草稿和本地历史版本保存；数据质量由实时 Tag 值提供。</p>
+          </div>
+        </details>
+        <details class="studio-advanced">
           <summary>高级图元与图层操作</summary>
           <div class="studio-advanced-content">
             <div class="studio-toolbox">
