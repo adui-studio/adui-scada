@@ -765,3 +765,18 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **未验收内容**：React/Vue Studio 手工检查三项演示 Tag 的类型、单位、描述、稳定 ID、绑定撤销、工程导入导出；Tauri 桌面人工回归；项目级 Tag 持久化、真实工业协议和现场设备。浏览器 SSE 通过不等于 Studio Tag 管理 UI 已人工确认。
 
 本次仅更新验收文档及 PR 正文，不改变业务代码。**上述日志对应文档更新前的分支；最新验收文档提交后的 `vp check` / `docs:check` 尚未重跑**。PR #51 保持 Draft，指派 `@adui-dev`，未经维护者明确授权不得合并。
+
+
+## 2026-11-14 · V0.3 第三十批：项目级 Tag 定义持久化与工程 Schema 升级
+
+第二十九批 PR #51 已合并至 `main`，合并提交为 `69f36d64189ec0c4d6acda0dab6e142ae9eb6d2b`。第三十批实施基线为 `feat/v0.3-project-tag-definitions`，当前仍是开发分支，尚未合并。
+
+本批将项目 Tag 元数据纳入框架无关的 `ScadaDocument 0.3.0` 根字段 `tags`，沿用稳定 `tagId`、可变 `displayName`、`dataType`、`unit` 和 `description`。图元绑定继续只保存稳定 Tag ID；质量、实时值、时间戳和序列号仍属于动态 `TagValue`。
+
+显式迁移入口支持 `0.1.0/0.2.0 → 0.3.0`。历史工程按现存绑定生成 `unknown` 类型占位定义，不推断工艺类型或单位、不改写原绑定；未知类型不进入新的绑定候选，维护者确认类型后再使用。当前解析器只接受 0.3.0，未来或未知 Schema 拒绝。
+
+工程 JSON、IndexedDB 草稿、旧 localStorage 草稿和 Project Snapshot 共用迁移契约。IndexedDB 历史草稿在事务内升级并推进 revision；历史快照先验证原 SHA-256，再返回带来源元数据的 0.3.0 查看副本，不原地覆盖历史记录。Dexie 数据库版本和 Project Snapshot 容器格式保持不变。
+
+Vue/React Studio 均从当前工程 `state.document.tags` 读取目录与绑定候选，不再以代码常量作为项目目录。本批不包含完整 Tag 新增/编辑/删除表单；不新增 Prisma 表、项目保存 API、设备地址字段、工业协议映射或设备写入。完整 Tag 管理 UI 留待后续独立批次双框架对等实现。
+
+当前代码、迁移、草稿存储、快照和 Core 测试已提交开发分支；Windows `test:unit`、`test:runtime`、`test:e2e:server`、`vp check`、`docs:check`、`ready` 与双框架 SSE 浏览器回归尚未针对本批执行。不得继承第二十九批的验收结果。实施决策见 [ADR-0062](adr/0062-project-tag-definitions-schema-030.md)。
