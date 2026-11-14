@@ -276,7 +276,8 @@
   font-size: 13px;
 }
 .studio-field input,
-.studio-field select {
+.studio-field select,
+.studio-field textarea {
   min-width: 0;
   color: var(--scada-text);
   background: var(--scada-canvas);
