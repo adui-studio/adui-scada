@@ -45,3 +45,8 @@ Dexie 的逻辑版本 `version(1)` 对应原生 IndexedDB 数据库版本 10；�
 ## 浏览器函数序列化与 SHA-256 规范化
 
 `evaluateStudioPage` 通过 `action.toString()` 将单个操作函数序列化后放入浏览器上下文执行，不携带 Node 作用域闭包。因此传入 CDP 的操作函数及其异步回调必须自包含，只可引用参数、函数内部声明和浏览器全局 API。Project Snapshot 注入函数在内部定义 `stableValue`，递归数组并按对象键排序，使用 `Object.create(null)` 构建规范化对象；其逻辑与 Core 的摘要规范化一致。禁止依赖外层 Node helper，以免在真实浏览器运行时发生 ReferenceError。
+
+
+## 最终实施与验收结果（2026-11-14）
+
+维护者 Windows 实测 React/Vue 两端六条历史迁移路径全部通过，`test:legacy:browser` 退出码 0；`test:interop` 双框架工程往返与非法导入保护通过，退出码 0；`vp check`（272 文件、135 受检文件零错误）、`docs:check`（80 Markdown）通过；`pnpm run ready` 最终退出码 0。Dexie 原生版本误用和 CDP 函数闭包问题均仅在测试夹具中修复，迁移业务契约、Schema、Dexie 数据库版本、快照格式及 SHA-256 算法未改变。PR #54 经维护者明确授权进入合并流程。
