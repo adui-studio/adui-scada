@@ -1932,7 +1932,7 @@ async function importJson(event: Event) {
           <p v-if="selectedTagDefinition" class="studio-tip">
             {{ selectedTagDefinition.description }}；质量由实时 Tag 数据动态提供
           </p>
-          <p v-else class="studio-tip">
+          <p v-else-if="!bindingSlot" class="studio-tip">
             请单选未组合的水箱、水泵或文本图元；管道暂不支持动态 Tag 绑定。
           </p>
           <p v-for="(binding, slot) in selected.bindings" :key="slot" class="studio-binding">
