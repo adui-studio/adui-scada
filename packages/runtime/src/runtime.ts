@@ -1,5 +1,11 @@
-import { TagStore, parseScadaDocument, renderSvgPage, validateTagValue } from "@adui/scada-core";
-import type { ScadaDocument, TagChange, TagValue } from "@adui/scada-core";
+import {
+  TagStore,
+  parseScadaDocument,
+  renderSvgPage,
+  validateTagValue,
+  waterTreatmentDemoTagCatalog,
+} from "@adui/scada-core";
+import type { ScadaDocument, TagChange, TagDefinitionCatalog, TagValue } from "@adui/scada-core";
 import {
   RuntimeStatusHistory,
   createRuntimeDiagnostics,
@@ -89,7 +95,7 @@ export class DemoRuntime {
   private loading: AbortController | null = null;
   private dataTimer: ReturnType<typeof setInterval> | null = null;
   private visibilityCleanup: (() => void) | null = null;
-  private readonly store = new TagStore();
+  private readonly store: TagStore;
   // 传输内的本地过期标记不占用上游序列号，按 Tag 独立恢复。
   private readonly expiredTagIds = new Set<string>();
   private document: ScadaDocument | null = null;
@@ -101,9 +107,14 @@ export class DemoRuntime {
   private lastTagReceivedAt: number | null = null;
   private readonly statusHistory = new RuntimeStatusHistory();
 
-  constructor(listener: RuntimeListener, source: ReadonlyTagSource = createSseTagSource()) {
+  constructor(
+    listener: RuntimeListener,
+    source: ReadonlyTagSource = createSseTagSource(),
+    tagCatalog: TagDefinitionCatalog = waterTreatmentDemoTagCatalog,
+  ) {
     this.listener = listener;
     this.source = source;
+    this.store = new TagStore(tagCatalog);
   }
 
   private clearDataTimer(): void {

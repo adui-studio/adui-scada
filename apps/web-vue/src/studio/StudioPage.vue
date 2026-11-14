@@ -4,6 +4,7 @@ import { Button as TButton, Input as TInput } from "tdesign-vue-next";
 import { CloseIcon } from "tdesign-icons-vue-next";
 import "tdesign-vue-next/es/style/index.css";
 import {
+  TAG_DATA_TYPE_LABELS,
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
   waterTreatmentDemoTagOptions,
@@ -252,6 +253,9 @@ const missingBindingTag = computed(
   () =>
     selectedTagId.value !== "" &&
     !demoTagCandidates.value.some((option) => option.tagId === selectedTagId.value),
+);
+const selectedTagDefinition = computed(() =>
+  demoTagCandidates.value.find((option) => option.tagId === selectedTagId.value),
 );
 const snapResult = computed(() => {
   const dragging = preview.value;
@@ -1920,11 +1924,15 @@ async function importJson(event: Event) {
                 {{ selectedTagId }}（不在当前模拟候选中）
               </option>
               <option v-for="option in demoTagCandidates" :key="option.tagId" :value="option.tagId">
-                {{ option.label }} · {{ option.tagId }}
+                {{ option.label }} · {{ option.tagId }} · {{ TAG_DATA_TYPE_LABELS[option.dataType]
+                }}{{ option.unit ? " · " + option.unit : "" }}
               </option>
             </select>
           </label>
-          <p v-else class="studio-tip">
+          <p v-if="selectedTagDefinition" class="studio-tip">
+            {{ selectedTagDefinition.description }}；质量由实时 Tag 数据动态提供
+          </p>
+          <p v-else-if="!bindingSlot" class="studio-tip">
             请单选未组合的水箱、水泵或文本图元；管道暂不支持动态 Tag 绑定。
           </p>
           <p v-for="(binding, slot) in selected.bindings" :key="slot" class="studio-binding">

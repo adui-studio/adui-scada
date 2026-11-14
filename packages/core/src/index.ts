@@ -14,11 +14,19 @@ export type {
   ScadaPage,
   TagId,
 } from "./document.ts";
+export { TAG_DATA_TYPES, TAG_DATA_TYPE_LABELS, TagDefinitionCatalog } from "./tag-definition.ts";
+export type { TagDataType, TagDefinition } from "./tag-definition.ts";
 export { TAG_QUALITIES, TAG_QUALITY_LABELS, TagStore, validateTagValue } from "./tag-store.ts";
 export type { TagChange, TagListener, TagQuality, TagScalar, TagValue } from "./tag-store.ts";
 export { WaterTreatmentSimulator } from "./simulator.ts";
 export { renderSvgPage } from "./svg.ts";
-export { waterTreatmentDemoDocument, waterTreatmentDemoTagOptions } from "./demo-document.ts";
+export {
+  waterTreatmentDemoDocument,
+  waterTreatmentDemoTagDefinitions,
+  waterTreatmentDemoTagCatalog,
+  waterTreatmentDemoTagOptions,
+} from "./demo-document.ts";
+export type { WaterTreatmentDemoTagOption } from "./demo-document.ts";
 export { buildLayerTree } from "./layer-tree.ts";
 export type { LayerTreeEntry, LayerTreeGroup, LayerTreeNode } from "./layer-tree.ts";
 export {

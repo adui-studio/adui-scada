@@ -569,3 +569,11 @@ type DemoTagSourcePreset = "standalone" | "nest-local";
 ## 2026-11-13 · V0.3 第二十八批：Runtime 状态历史契约
 
 `RuntimeDiagnostics` 新增必填只读数组 `statusEvents: readonly RuntimeStatusEvent[]`。`RuntimeStatusEvent` 包含 `sequence: number`（会话内序号）、`status: RuntimeStatus` 与 `occurredAt: number`（本机毫秒时间）。共享 `RuntimeStatusHistory` 的 `record` 连续相同状态去重，`snapshot` 返回副本，`clear` 在新会话开始时复位，容量固定 20 条并保持最新在前。只有 Runtime 的 `publish` 会写入状态变化；不保存动态错误、Tag 值或原始网络帧，`stop` 不额外向已离开的页面发布 idle。Vue/React 展示组件共用 `runtime.css`，不实现独立状态判定。详见 [ADR-0060](adr/0060-runtime-session-status-history.md)。
+
+## 2026-11-14 · V0.3 第二十九批：Tag 定义与 TagValue 类型边界
+
+`packages/core/src/tag-definition.ts` 定义 `TagDataType = number | boolean | string` 和 `TagDefinition`（`tagId/displayName/dataType/unit/description`）。`TagDefinitionCatalog` 对输入执行严格字段、ID、长度、类型及重复 ID 校验，返回防御性副本；`rename(tagId, displayName)` 返回新目录，仅更改可变显示名称，图元绑定仍按稳定 `tagId` 引用。
+
+`TagStore(catalog?)` 保持可选目录：不传目录时维持通用标量契约；传入目录时，`apply` 与 `replaceSnapshot` 在状态修改前校验每个非空值的 JS 类型与定义一致，任何一项失败均不部分提交。空值 `null` 保留为无有效读数；质量不进入静态定义，仍由 `TagValue.quality` 动态表达。当前水处理目录为水位 number/%、水泵 boolean/无单位、流量 number/m3/h。DemoRuntime、OfflineDemoRuntime 与独立 SSE 服务共享目录，双框架绑定候选展示类型、单位及描述。
+
+此批未升级工程 Schema 0.2.0，Tag 目录未持久化，重命名不是保存操作；没有地址映射、协议 NodeId/寄存器/Topic、单位转换、设备连接或写入。见 [ADR-0061](adr/0061-tag-definition-catalog.md)。

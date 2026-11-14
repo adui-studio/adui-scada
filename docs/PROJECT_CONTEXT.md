@@ -714,3 +714,54 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **仍待 Windows 实测**：`pnpm run test:runtime`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`；以及手工 UI 和 Tauri 桌面验证。上述浏览器测试不能证明 Node/Vitest、Lint、类型、全量构建、真实工业网络、生产报警持久化已完成。
 
 本次仅补充验收文档与 PR 说明，无业务代码变更。新增文档提交后的格式及文档静态检查仍待执行；PR #50 保持 Draft，需维护者明确授权方能合并。
+
+## 2026-11-14 · V0.3 第二十九批：共享 Tag 定义目录与类型校验（待 Windows 验收）
+
+第二十八批 PR #50 已合并，`main` 当前提交 `b018518`。基于此创建 `feat/v0.3-tag-definition-catalog`，开始 FR-004 的本机演示子集：Core 定义稳定 Tag ID、可变展示名称、数据类型、单位与描述；TagStore 可选注入目录并在 `apply/replaceSnapshot` 前验证非空值类型，整批失败保持原状态。水处理三项 Tag 定义由在线 Runtime、Tauri 离线模拟、独立 SSE 服务共用；Vue/React Studio 的模拟绑定候选展示类型、单位和描述。质量仍由实时 TagValue 动态表达。
+
+本批没有升级工程 Schema 0.2.0、没有持久化项目级 Tag 定义、没有设备地址或协议映射；目录内存重命名不代表已保存。新增 Core/Runtime 测试与 ADR-0061 已提交分支，**Windows `test:unit`、`test:runtime`、`vp check`、`docs:check`、`ready` 和双框架浏览器尚待验收**，不得继承第二十八批成绩。FR-004 继续部分实现，详见 [VALIDATION](VALIDATION.md) 和 [ADR-0061](adr/0061-tag-definition-catalog.md)。
+
+### 第二十九批首轮 Windows `vp check --fix` 解析失败（2026-11-14）
+
+维护者首次执行本批格式修复时报告 `apps/web-react/src/studio/StudioPage.tsx:2016` 的 JSX 三元分支根节点数量错误，`vp check --fix` 在解析阶段失败。本轮已在 PR #51 中加入 Fragment 修复，并检查、修正了新增 Core readonly 字段测试与 Vue 未绑定 Tag 的提示。**代码修复已经提交，但尚无本批 Windows 复验通过证据**；后续仍需执行 `vp check`、`test:unit`、`test:runtime`、`docs:check`、`ready`、Vue/React SSE 回归和人工 UI 验证。
+
+### 第二十九批 Windows `ready` 检查 TS1294 阻塞与修复（2026-11-14）
+
+维护者本轮执行 `pnpm run ready` 的实际结果：
+
+- **已通过**：依赖 Catalog 检查（11 个清单、51 项）、共享配置（9 个 TSConfig 消费端）、统一环境和 LF、中文文案（159 个自有文件）、Prisma Client 7.10.1 生成、`@adui/scada-core` Node 构建（`tsc -p tsconfig.build.json`）、`vp check`（267 文件格式正确，133 个受检文件零警告、Lint 错误和类型错误）。
+- **首次失败**：`typecheck:web` 阶段的 `tsc --build` 报 `TS1294`，定位 `packages/core/src/tag-store.ts:60` 的 `constructor(private readonly catalog?: TagDefinitionCatalog) {}`。项目启用 `erasableSyntaxOnly`，不允许该参数属性语法。`ready` 因此中断，**不能宣称单测、E2E、文档检查或 Web/Server 构建通过**。
+- **已修复但尚待复验**：在同一 Draft PR #51 分支将上述参数属性替换为显式 `private readonly catalog?: TagDefinitionCatalog` 字段及 `constructor(catalog?: TagDefinitionCatalog) { this.catalog = catalog; }`。对外调用方式、目录可选行为及 TagStore 原子校验逻辑未改变；未升级依赖、修改 tsconfig、变更业务协议。
+- **后续验证**：维护者同步分支后重跑 `pnpm run ready`，记录真正执行到单测、NestJS E2E、docs 和双框架构建的结果；必要时分别执行 `pnpm run test:runtime` 和 React/Vue SSE 浏览器回归。
+
+本段仅记录实际日志与代码修复，不代表修复后的 `ready` 已通过。PR 继续保持 Draft 和 `@adui-dev` 指派，未经明确合并授权不合并。
+
+### 第二十九批 Windows 完整质量链复验通过（2026-11-14）
+
+维护者上传最新完整 PowerShell 日志，确认此前 React JSX 分支解析错误与 `TagStore` 的 `TS1294` 参数属性错误已消除；`pnpm run ready` 已从头执行至最后的 NestJS 构建并返回 **退出码 0**：
+
+- 单独 `pnpm run test:unit`：**426/426 通过（38 个文件），明确退出码 0**。其中新增 `tag-definition.test.ts` **6/6**，包括定义校验、稳定 ID、重命名、原子拒绝及动态质量。
+- 单独 `pnpm run test:runtime`：**40/40 通过（4 个文件），明确退出码 0**。其中 `diagnostics.test.ts` **8/8**，包含错误值类型被 Runtime 拒绝的回归。
+- `vp check`：**267 个文件格式正确、133 个受检文件零警告、Lint 错误或类型错误**；`pnpm run docs:check`：**77 个 Markdown 文件检查通过**。
+- `pnpm run ready`：**退出码 0**；依赖 Catalog **11 个清单 / 51 项**、共享配置 **9 个 TSConfig 消费端**、环境/LF、中文文案 **159 个自有文件**、Prisma Client **7.10.1**、Core Node 构建、React/Vue/草稿存储与 NestJS 类型检查均通过。
+- `ready` 中全量 Vitest 再次 **426/426（38 文件）**，Node SSE 连接资源 **8/8**、TCP 故障代理 **4/4**、NestJS E2E **17/17（3 文件）**，React **3900 个模块**和 Vue **3845 个模块**完成构建，NestJS 服务端构建结束。
+- E2E 日志中预期的 HTTP 503、Health Check 失败由负面测试产生，不代表 E2E 失败；最终 **17/17 通过**。
+
+**尚待本批专项实测**：React/Vue Studio 手工检查水位/水泵/流量 Tag 的类型、单位、描述和绑定撤销/导入导出，以及 `pnpm run test:sse:browser` 与 `pnpm run test:sse:fault:browser`。本轮 `ready` 不包含浏览器测试。Tauri 桌面人工测试、项目级 Tag 持久化、工业驱动、真实设备和工业现场同样不在本批已验证范围。
+
+以上是**维护者 Windows 实测日志**，不是当前协作环境自行执行的结果。本次只新增验收文档记录；**最新文档提交后的 `vp check` / `docs:check` 尚未再次执行**。PR #51 保持 Draft，Assignee `@adui-dev`，未经明确授权不合并。
+
+### 第二十九批 Windows 双框架 SSE 浏览器与最新静态检查通过（2026-11-14）
+
+维护者在第二十九批 Tag 目录类型校验修复后再次执行本机检查，实际日志确认：
+
+- `vp check`：**267 个文件格式正确，133 个受检文件零警告、Lint 错误和类型错误**。
+- `pnpm run docs:check`：**77 个 Markdown 文件静态检查通过**。
+- `pnpm run test:sse:browser`：React `http://127.0.0.1:15173`、Vue `http://127.0.0.1:15174` 均输出 SSE 心跳保活、Tag 过期、静默重连和资源清理通过，**退出码 0**。
+- `pnpm run test:sse:fault:browser`：React/Vue 均输出真实本机 TCP 下行阻断、STALE、主动重连与连接回收通过，**退出码 0**。
+
+结合上一轮完整 `pnpm run ready` **退出码 0**、全量 Vitest **426/426**、Runtime **40/40**、NestJS E2E **17/17**，本批自动化质量链及双框架 SSE 专项已得到 Windows 实测通过。
+
+**未验收内容**：React/Vue Studio 手工检查三项演示 Tag 的类型、单位、描述、稳定 ID、绑定撤销、工程导入导出；Tauri 桌面人工回归；项目级 Tag 持久化、真实工业协议和现场设备。浏览器 SSE 通过不等于 Studio Tag 管理 UI 已人工确认。
+
+本次仅更新验收文档及 PR 正文，不改变业务代码。**上述日志对应文档更新前的分支；最新验收文档提交后的 `vp check` / `docs:check` 尚未重跑**。PR #51 保持 Draft，指派 `@adui-dev`，未经维护者明确授权不得合并。

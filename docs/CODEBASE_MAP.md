@@ -555,3 +555,13 @@
 - `packages/runtime/src/offline.ts`：仅 `simulation` 事件，不记录伪造的重连/断流。
 - `apps/web-react/src/runtime/RuntimePage.tsx` 和 `apps/web-vue/src/runtime/RuntimePage.vue`：对等渲染最近状态变化；`packages/runtime/src/runtime.css` 共享响应式时间线布局。
 - `packages/runtime/test/diagnostics.test.ts`：状态去重、20 条限制、同毫秒序号、快照不回溯修改、重启与离线回归；`scripts/test-runtime-sse-browser.mjs` 扩展双框架 SSE 路径的状态事件断言。见 [ADR-0060](adr/0060-runtime-session-status-history.md)。
+
+## V0.3 第二十九批 · Tag 定义目录
+
+- `packages/core/src/tag-definition.ts`：Tag 数据类型、定义契约、稳定 ID 目录、内存重命名及实时值类型校验。
+- `packages/core/src/tag-store.ts`：可选接入 `TagDefinitionCatalog`；`apply/replaceSnapshot` 在写入前校验类型，保持整批原子拒绝。
+- `packages/core/src/demo-document.ts`：水处理演示三项 Tag 元数据及图元绑定槽候选。
+- `packages/runtime/src/runtime.ts`、`offline.ts`：在线和离线模拟使用同一演示目录。
+- `examples/water-treatment/server.mjs`：独立 SSE 模拟服务同样校验演示 Tag 类型。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：绑定候选展示类型、单位和描述；不增加独立目录逻辑。
+- `packages/core/test/tag-definition.test.ts`：定义结构、重命名稳定 ID、类型校验、质量独立与原子拒绝。详见 [ADR-0061](adr/0061-tag-definition-catalog.md)。

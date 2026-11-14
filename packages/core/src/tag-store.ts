@@ -1,3 +1,5 @@
+import type { TagDefinitionCatalog } from "./tag-definition.ts";
+
 /** 只读实时 Tag 契约，不依赖 UI 框架或 PLC 驱动。 */
 export const TAG_QUALITIES = ["GOOD", "UNCERTAIN", "BAD", "STALE"] as const;
 export type TagQuality = (typeof TAG_QUALITIES)[number];
@@ -54,6 +56,11 @@ export function validateTagValue(input: TagValue): TagValue {
 export class TagStore {
   private readonly values = new Map<string, TagValue>();
   private readonly listeners = new Set<TagListener>();
+  private readonly catalog?: TagDefinitionCatalog;
+
+  constructor(catalog?: TagDefinitionCatalog) {
+    this.catalog = catalog;
+  }
 
   snapshot(): readonly TagValue[] {
     return [...this.values.values()].map((value) => ({ ...value }));
@@ -83,6 +90,7 @@ export class TagStore {
     const unique = new Set<string>();
     const checked = updates.map((update) => {
       const valid = validateTagValue(update);
+      this.catalog?.validateValueType(valid);
       if (unique.has(valid.tagId))
         throw new TypeError(`同一批次存在重复的 Tag 更新：${valid.tagId}`);
       unique.add(valid.tagId);
@@ -124,6 +132,7 @@ export class TagStore {
     const seen = new Set<string>();
     const checked = updates.map((item) => {
       const valid = validateTagValue(item);
+      this.catalog?.validateValueType(valid);
       if (seen.has(valid.tagId)) throw new TypeError("快照中存在重复的 Tag ID");
       seen.add(valid.tagId);
       return valid;

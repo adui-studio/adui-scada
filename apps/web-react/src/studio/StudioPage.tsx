@@ -9,6 +9,7 @@ import type {
   PointerEvent as ReactPointerEvent,
 } from "react";
 import {
+  TAG_DATA_TYPE_LABELS,
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
   waterTreatmentDemoTagOptions,
@@ -277,6 +278,9 @@ export default function StudioPage() {
   const missingBindingTag =
     currentBindingTag !== "" &&
     !demoTagCandidates.some((option) => option.tagId === currentBindingTag);
+  const selectedTagDefinition = demoTagCandidates.find(
+    (option) => option.tagId === currentBindingTag,
+  );
 
   function switchPage(pageId: string) {
     try {
@@ -1987,26 +1991,34 @@ export default function StudioPage() {
               )}
               <h3>Tag 绑定（模拟数据）</h3>
               {bindingSlot ? (
-                <label className="studio-field">
-                  {bindingSlot} · 选择模拟 Tag
-                  <select
-                    aria-label={selected.id + " 的 " + bindingSlot + " Tag 绑定"}
-                    value={currentBindingTag}
-                    onChange={(event) => changeTagBinding(bindingSlot, event.target.value)}
-                  >
-                    <option value="">不绑定</option>
-                    {missingBindingTag && (
-                      <option value={currentBindingTag} disabled>
-                        {currentBindingTag}（不在当前模拟候选中）
-                      </option>
-                    )}
-                    {demoTagCandidates.map((option) => (
-                      <option key={option.tagId} value={option.tagId}>
-                        {option.label} · {option.tagId}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <>
+                  <label className="studio-field">
+                    {bindingSlot} · 选择模拟 Tag
+                    <select
+                      aria-label={selected.id + " 的 " + bindingSlot + " Tag 绑定"}
+                      value={currentBindingTag}
+                      onChange={(event) => changeTagBinding(bindingSlot, event.target.value)}
+                    >
+                      <option value="">不绑定</option>
+                      {missingBindingTag && (
+                        <option value={currentBindingTag} disabled>
+                          {currentBindingTag}（不在当前模拟候选中）
+                        </option>
+                      )}
+                      {demoTagCandidates.map((option) => (
+                        <option key={option.tagId} value={option.tagId}>
+                          {option.label} · {option.tagId} ·{TAG_DATA_TYPE_LABELS[option.dataType]}
+                          {option.unit ? " · " + option.unit : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {selectedTagDefinition && (
+                    <p className="studio-tip">
+                      {selectedTagDefinition.description}；质量由实时 Tag 数据动态提供
+                    </p>
+                  )}
+                </>
               ) : (
                 <p className="studio-tip">
                   请单选未组合的水箱、水泵或文本图元；管道暂不支持动态 Tag 绑定。

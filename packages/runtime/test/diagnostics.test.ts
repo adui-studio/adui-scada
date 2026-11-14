@@ -170,6 +170,33 @@ test("共享 Runtime 统计有效 Tag、去重断连过程和本地 STALE，重�
   }
 });
 
+test("在线 Runtime 拒绝与共享 Tag 定义不匹配的实时值类型", async () => {
+  const handlers: ReadonlyTagSourceHandlers[] = [];
+  const source: ReadonlyTagSource = {
+    async loadProject() {
+      return waterTreatmentDemoDocument;
+    },
+    subscribe(next) {
+      handlers.push(next);
+      return { close() {} };
+    },
+  };
+  const states: RuntimeState[] = [];
+  const runtime = new DemoRuntime((state) => states.push(state), source);
+  try {
+    await runtime.start();
+    handlers[0]?.onMessage({
+      kind: "snapshot",
+      values: [{ ...tag("water.level", "GOOD"), value: "55" as unknown as number }],
+    });
+    expect(states.at(-1)?.status).toBe("error");
+    expect(states.at(-1)?.values).toEqual([]);
+    expect(states.at(-1)?.message).toContain("Tag 数据类型不匹配");
+  } finally {
+    runtime.stop();
+  }
+});
+
 test("桌面离线模拟复用诊断快照但不会伪造 SSE 重连", () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-11-13T00:00:00.000Z"));
