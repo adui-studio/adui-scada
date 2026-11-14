@@ -830,3 +830,6 @@ PR #53 已 Squash Merge 到 main，合并提交 7fccc1e2285d6ebb1190120142fcf998
 ### 第三十二批 Project Snapshot 浏览器测试函数作用域修复（2026-11-14）
 
 维护者第二轮实测：React localStorage 草稿迁移、旧副本清理与恢复通过；React IndexedDB 0.2.0 草稿事务迁移、revision 推进与恢复通过；Project Snapshot 注入报 `ReferenceError: stableLegacyValue is not defined`。根因是 CDP `evaluateStudioPage` 只序列化当前函数，不带 Node 作用域闭包。已把与 Core 相同的递归稳定排序函数内聚至 `seedLegacyProjectSnapshotInPage`，不更改 SHA-256 算法或快照格式。最新修复尚未由维护者 Windows 复验；Project Snapshot 和 Vue 路径仍待执行。
+
+
+已将稳定排序 helper 内聚到 CDP 页面函数，并删除不再使用的 Node 作用域 helper；最新提交为后续 Windows 复验准备，仍未报告 Project Snapshot 或 Vue 路径通过。
