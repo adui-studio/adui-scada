@@ -10,9 +10,9 @@ import type {
 } from "react";
 import {
   TAG_DATA_TYPE_LABELS,
+  tagDefinitionSupportsSlot,
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
-  waterTreatmentDemoTagOptions,
   DraftAutoSaveSession,
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
   studioNodeLocked,
@@ -273,13 +273,15 @@ export default function StudioPage() {
   const demoTagCandidates =
     bindingSlot === null
       ? []
-      : waterTreatmentDemoTagOptions.filter((option) => option.slots.includes(bindingSlot));
+      : state.document.tags.filter((definition) =>
+          tagDefinitionSupportsSlot(definition, bindingSlot),
+        );
   const currentBindingTag = bindingSlot ? (selected?.bindings[bindingSlot]?.tagId ?? "") : "";
   const missingBindingTag =
     currentBindingTag !== "" &&
     !demoTagCandidates.some((option) => option.tagId === currentBindingTag);
-  const selectedTagDefinition = demoTagCandidates.find(
-    (option) => option.tagId === currentBindingTag,
+  const selectedTagDefinition = state.document.tags.find(
+    (definition) => definition.tagId === currentBindingTag,
   );
 
   function switchPage(pageId: string) {
@@ -1989,7 +1991,7 @@ export default function StudioPage() {
                   </Button>
                 </label>
               )}
-              <h3>Tag 绑定（模拟数据）</h3>
+              <h3>Tag 绑定（项目数据）</h3>
               {bindingSlot ? (
                 <>
                   <label className="studio-field">
@@ -2007,7 +2009,7 @@ export default function StudioPage() {
                       )}
                       {demoTagCandidates.map((option) => (
                         <option key={option.tagId} value={option.tagId}>
-                          {option.label} · {option.tagId} ·{TAG_DATA_TYPE_LABELS[option.dataType]}
+                          {option.displayName} · {option.tagId} ·{TAG_DATA_TYPE_LABELS[option.dataType]}
                           {option.unit ? " · " + option.unit : ""}
                         </option>
                       ))}
