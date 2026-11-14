@@ -811,3 +811,8 @@ React SSE 浏览器和 TCP 故障测试均在进入 EventSource 订阅前报 `er
 维护者 Windows 日志确认第三十一批 `vp check`（271 文件、135 受检文件零错误）、`docs:check`（79 Markdown）及 `pnpm run ready` 完整执行至 NestJS build，438/438 单测、SSE 8/8、TCP 代理 4/4、NestJS E2E 17/17、React/Vue 类型检查和构建均通过。React/Vue 工程互通 `pnpm run test:interop` 通过，退出码 0。
 
 `pnpm run test:tags:browser` 在 React 的绑定删除保护断言处失败。代码审查发现测试在捕获删除拒绝状态栏消息前先触发 JSON 导出，导出成功提示覆盖了删除拒绝提示；Core 删除保护逻辑仍然有效。已调整浏览器脚本为先等待并断言“仍被…绑定”提示，再导出 JSON 验证绑定 Tag 仍存在。此为测试时序修复，最新脚本尚未由维护者 Windows 重新执行，不能记录为通过；Vue 测试尚未在首轮失败时执行。详见 [VALIDATION](VALIDATION.md)。
+
+
+### 第三十一批最终 Windows 验收通过（2026-11-14）
+
+维护者复验确认：`pnpm run test:tags:browser` 中 React、Vue 两端的 Tag 新增、编辑、绑定删除保护、删除与 JSON 往返均通过，退出码 0；`vp check` 271 文件格式正确、135 个受检文件零错误；`docs:check` 79 Markdown 通过。此前同一分支 `ready` 全链及 `test:interop` 已通过。浏览器测试断言时序修复已在双框架实际浏览器中验证。PR #53 达到合并条件，维护者已明确授权合并。仍保留键盘/视觉人工检查与真正历史浏览器草稿迁移体验的后续核验。
