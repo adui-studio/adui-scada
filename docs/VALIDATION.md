@@ -414,3 +414,9 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 - [ ] 项目级 Tag 元数据持久化、Schema 迁移、地址映射、驱动配置、PLC/DCS、工业现场：不属于本批交付。
 
 本批 FR-004 仅部分实现；代码内演示目录的重命名不持久化，TagQuality 仍属于动态 TagValue，不得把元数据校验宣传为生产 Tag 配置中心。详见 [ADR-0061](adr/0061-tag-definition-catalog.md)。
+
+### 第二十九批首轮 Windows 格式检查阻塞与修复（2026-11-14）
+
+维护者运行 `vp check --fix` 时，React Studio `StudioPage.tsx:2016` 出现 JSX 解析错误：`bindingSlot` 三元表达式的分支中相邻的 `label` 和条件段落未使用单一根节点，导致格式检查在解析阶段失败。**本次检查未通过，也没有执行后续 Lint、类型或构建验收**。
+
+现已在 PR #51 分支用 React Fragment 包裹两段 JSX，并同步整理缩进。额外修正 Core 测试对 `readonly displayName` 的直接写入，以及 Vue 未选 Tag 时的错误提示。修复已提交 GitHub，**维护者尚未重新执行 `vp check --fix` / `vp check` / `pnpm run ready`**；不得宣称修复已经通过 Windows 实测。
