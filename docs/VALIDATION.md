@@ -548,3 +548,18 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 - [ ] 与第三十批 SSE 运行时互不干扰（按需要复跑 test:sse:browser 与 test:sse:fault:browser）。
 
 **验收状态**：本协作环境已经完成分支上的实现和静态代码审查，未运行本批 Windows Vite+ 测试或真实浏览器自动化，不报告测试通过。生产工业协议、现场设备与写入仍不在范围。Draft PR 未经授权不得合并。
+
+
+### 第三十一批 Windows 首轮质量链通过与 Tag 浏览器测试时序修复（2026-11-14）
+
+维护者提供 Windows PowerShell 实测日志：
+
+- `vp check`：271 个文件格式正确，135 个受检文件零警告、Lint 或 TypeScript 错误。
+- `pnpm run docs:check`：79 份 Markdown 通过。
+- `pnpm run ready`：依赖目录 11 清单/51 项、共享配置 9 TSConfig、环境与 LF、中文文案 161 文件、Prisma Client 7.10.1、Core 构建、React/Vue/Draft Storage/Server 类型检查、Vitest **438/438**、SSE 客户端 **8/8**、TCP 故障代理 **4/4**、NestJS E2E **17/17**、React 构建 **3901 模块**、Vue 构建 **3847 模块**和 NestJS 构建均完成；日志末尾未报告失败。
+- `pnpm run test:interop`：React → Vue、Vue → React 的工程 JSON / 页面 / 图元 / Tag 绑定往返通过，双端非法 JSON 导入保护通过，退出码 **0**。
+- `pnpm run test:tags:browser`：React 新增、编辑、导出 JSON、绑定 Tag 删除保护检查中失败，输出 `React 未说明已绑定 Tag 的删除保护`，退出码 **1**。这不是完整 Tag UI 通过记录，也没有执行到 Vue。
+- **根因（测试断言时序）**：测试点击删除绑定中的 `water.level` 后先导出 JSON，再读取状态栏提示。导出操作会更新状态栏成功文案，覆盖之前的 Core 删除拒绝提示；测试因此读取到导出提示，而不是 `Tag water.level 仍被 1 个图元槽绑定`。Core `DocumentEditor.removeTagDefinition` 仍在删除前统计所有页面绑定并拒绝删除，业务逻辑无需放宽。
+- **已提交修复**：`scripts/test-studio-browser.mjs` 在点击删除后轮询并先断言状态栏包含“仍被…绑定”，捕获提示后再导出 JSON 检查 Tag 仍存在；失败信息附带实际状态栏文案。该修复仅调整浏览器测试时序，不改变 UI 或 Core 行为。
+
+**待复验**：维护者同步最新提交后重跑 `pnpm run test:tags:browser`，确认 React 与 Vue 两端均输出成功；随后重跑 `vp check`、`pnpm run docs:check`（本记录更新后）及必要的 `pnpm run ready`。本协作环境未执行本批本地命令，不把修复提交视为测试通过。第三十一批仍保持 Draft。
