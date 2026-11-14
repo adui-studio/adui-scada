@@ -861,3 +861,8 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 ### 第三十三批 Prisma 注释单测失败及最小修复（2026-11-14）
 
 维护者 `test:unit` 实测 447/448 通过，仅 Prisma 中文数据库注释约束测试失败。根因是新增 OIDC 增量迁移文件中部分 COMMENT ON TABLE/COLUMN/INDEX 语句的 `IS` 与中文文本分行，而仓库测试按单行解析，导致 commentText 返回 null。仅将 10 处注释规范为单行，无 DDL 和 Prisma 模型语义变化。按现有逐行匹配规则静态核对 8 个模型、全部 4 份迁移、58 个表/物理字段注释，均能匹配中文内容。仍待 Windows 重跑 `test:unit`，不可据静态检查宣称单测通过。PR #55 保持 Draft。
+
+
+### 第三十三批阶段 A Windows 全链实测通过（2026-11-14）
+
+维护者最新实测：`vp check` 278 文件格式正确、139 受检文件零错误；`test:unit` 40/40 文件、448/448 测试通过（OIDC 配置 7/7、共享数据库模块 3/3、Prisma 中文注释 2/2）；`docs:check` 82 Markdown 通过；完整 `pnpm run ready` 最终退出码 **0**，其中 SSE 8/8、TCP 故障代理 4/4、NestJS E2E 17/17、React/Vue 构建及 NestJS 构建成功。此前 SQL 单行中文注释测试失败已解决。PostgreSQL 实际增量迁移、OIDC 协议、Cookie/CSRF 和工程 API 尚未执行或实现；服务默认 fail-closed。
