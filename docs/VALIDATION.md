@@ -665,3 +665,21 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 - [ ] 维护者配置真实 Issuer、TLS、Redirect URI 和预绑定身份后，完成实际 IdP 联调；Mock Issuer 通过不能代替此项。
 
 **当前状态**：本分支只包含 ADR-0065 与实施计划文档；未新增依赖、Prisma 模型/迁移、HTTP 路由或前端 API Client。所有实现和测试均待后续提交。
+
+
+### 第三十三批阶段 A 本轮新增代码待验证（2026-11-14）
+
+维护者先前执行的 `vp check` 结果为 **274 文件格式正确、135 受检文件无警告/Lint/TypeScript 错误**，`docs:check` 为 **82 份 Markdown 通过、退出码 0**。这些结果发生在本轮新代码提交之前，不能作为阶段 A 的通过证据。
+
+本轮代码已提交：共享 DatabaseModule、NestJS 身份/持久化模块去重、OIDC 默认关闭/严格校验、启用时 fail-closed、Oidc 配置单测、数据库模块装配单测、Prisma Schema/增量迁移及中文注释。**尚未执行数据库迁移、Prisma validate/generate、TypeScript、Vitest 或完整 ready**。
+
+- [ ] `pnpm run env:check`：检查 OIDC 配置模板和本地根环境。
+- [ ] `pnpm run db:validate`、`pnpm run db:generate`：校验 Prisma 模型、生成更新后的 Client。
+- [ ] `vp check`：新配置、模块及测试的格式/Lint/类型检查。
+- [ ] `pnpm run test:unit`：OIDC 配置拒绝、共享数据库模块元数据及原有会话安全测试。
+- [ ] `pnpm run docs:check`：验证新增阶段 A 文档。
+- [ ] `pnpm run ready`：完整质量链与构建。
+- [ ] **仅隔离 PostgreSQL**：核对增量迁移的表/字段/索引/外键/中文注释；禁止使用生产或普通开发库进行验证。
+- [ ] 安装 `openid-client@6.8.9` 并通过 pnpm 原生命令同步 Catalog、Server manifest 和锁文件。
+
+本批目前没有 OIDC 登录、回调、会话 Cookie/CSRF 签发、工程 API 或真实 IdP 联调。当前启用 OIDC 会被服务端拒绝启动，这是阶段 A 的明确安全限制，不是已实现的登录功能。
