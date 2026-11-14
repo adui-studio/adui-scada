@@ -1,5 +1,7 @@
 # ADui SCADA · Harness
 
+> **AI 编码前必读门禁**：每次修改任何代码前，先阅读根目录 [AGENTS.md](../AGENTS.md) 与 [AI 编码错误复盘清单](AI_MISTAKES.md) 全文，再检查目标代码、适用 Skills 与测试。发现重复错误应先对照错误编号排查，复验后再将新案例写入清单；命令未实际执行不能登记为通过。
+
 V0.1 使用 Vite+ 1.5.0、pnpm workspace Catalog、TypeScript 6.0.3、Vite+ 内置 Vitest。编辑规范来自根 `.editorconfig`，`@adui/tooling` 导出 Format / Lint 供根 Vite+ 使用；应用 TypeScript 统一引用 `@adui/tsconfig/*`。
 命令必须在项目根目录执行，版本以 `pnpm-workspace.yaml` 和实际锁文件为准。
 
