@@ -39,7 +39,7 @@ test("空数据库读取为空，首次保存生成单调递增的版本号", as
     expect(await db.get("water-demo")).toBeNull();
     const first = await db.save(document(), null);
     expect(first.revision).toBe(1);
-    expect(first.document.schemaVersion).toBe("0.2.0");
+    expect(first.document.schemaVersion).toBe("0.3.0");
     const edited = document();
     edited.pages[0]!.nodes[0]!.transform.x += 1;
     const second = await db.save(edited, 1);
