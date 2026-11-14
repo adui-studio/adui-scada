@@ -655,19 +655,6 @@ async function seedLegacyIndexedDbDraftInPage(document, revision, savedAt) {
   return true;
 }
 
-/** 与 Core stableValue 相同：递归排序对象键，数组顺序保持不变。 */
-function stableLegacyValue(source) {
-  if (Array.isArray(source)) return source.map(stableLegacyValue);
-  if (source !== null && typeof source === "object") {
-    const result = Object.create(null);
-    for (const key of Object.keys(source).sort()) {
-      result[key] = stableLegacyValue(source[key]);
-    }
-    return result;
-  }
-  return source;
-}
-
 /** 生成符合真实 Project Snapshot SHA-256 契约的 0.2.0 历史快照。 */
 async function seedLegacyProjectSnapshotInPage(document, revision, createdAt) {
   // evaluateStudioPage 只序列化当前函数；摘要规范化逻辑必须在页面函数内部自包含。
