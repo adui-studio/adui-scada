@@ -410,7 +410,7 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 - [x] `pnpm run docs:check`：维护者 Windows 实测 **77 个 Markdown 文件通过**；完整 `ready` 内再次通过。
 - [x] `pnpm run ready`：维护者 Windows 实测 **退出码 0**；全量 Vitest **426/426**、SSE 资源 **8/8**、TCP 故障代理 **4/4**、NestJS E2E **17/17**，React/Vue/NestJS 类型检查与构建通过。
 - [ ] React/Vue Studio 人工检查三项演示 Tag 的数据类型、单位、描述与稳定 ID 显示一致，绑定/撤销/导入导出不变。
-- [ ] `pnpm run test:sse:browser` 与 `pnpm run test:sse:fault:browser`：在线 Runtime 类型校验没有破坏心跳、断流恢复和质量显示。
+- [x] `pnpm run test:sse:browser` 与 `pnpm run test:sse:fault:browser`：维护者 Windows 实测 React/Vue 均通过心跳、Tag 过期、静默重连、TCP 阻断、STALE 及连接回收，两项命令**退出码均为 0**。
 - [ ] 项目级 Tag 元数据持久化、Schema 迁移、地址映射、驱动配置、PLC/DCS、工业现场：不属于本批交付。
 
 本批 FR-004 仅部分实现；代码内演示目录的重命名不持久化，TagQuality 仍属于动态 TagValue，不得把元数据校验宣传为生产 Tag 配置中心。详见 [ADR-0061](adr/0061-tag-definition-catalog.md)。
@@ -446,3 +446,18 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **尚待本批专项实测**：React/Vue Studio 手工检查水位/水泵/流量 Tag 的类型、单位、描述和绑定撤销/导入导出，以及 `pnpm run test:sse:browser` 与 `pnpm run test:sse:fault:browser`。本轮 `ready` 不包含浏览器测试。Tauri 桌面人工测试、项目级 Tag 持久化、工业驱动、真实设备和工业现场同样不在本批已验证范围。
 
 以上是**维护者 Windows 实测日志**，不是当前协作环境自行执行的结果。本次只新增验收文档记录；**最新文档提交后的 `vp check` / `docs:check` 尚未再次执行**。PR #51 保持 Draft，Assignee `@adui-dev`，未经明确授权不合并。
+
+### 第二十九批 Windows 双框架 SSE 浏览器与最新静态检查通过（2026-11-14）
+
+维护者在第二十九批 Tag 目录类型校验修复后再次执行本机检查，实际日志确认：
+
+- `vp check`：**267 个文件格式正确，133 个受检文件零警告、Lint 错误和类型错误**。
+- `pnpm run docs:check`：**77 个 Markdown 文件静态检查通过**。
+- `pnpm run test:sse:browser`：React `http://127.0.0.1:15173`、Vue `http://127.0.0.1:15174` 均输出 SSE 心跳保活、Tag 过期、静默重连和资源清理通过，**退出码 0**。
+- `pnpm run test:sse:fault:browser`：React/Vue 均输出真实本机 TCP 下行阻断、STALE、主动重连与连接回收通过，**退出码 0**。
+
+结合上一轮完整 `pnpm run ready` **退出码 0**、全量 Vitest **426/426**、Runtime **40/40**、NestJS E2E **17/17**，本批自动化质量链及双框架 SSE 专项已得到 Windows 实测通过。
+
+**未验收内容**：React/Vue Studio 手工检查三项演示 Tag 的类型、单位、描述、稳定 ID、绑定撤销、工程导入导出；Tauri 桌面人工回归；项目级 Tag 持久化、真实工业协议和现场设备。浏览器 SSE 通过不等于 Studio Tag 管理 UI 已人工确认。
+
+本次仅更新验收文档及 PR 正文，不改变业务代码。**上述日志对应文档更新前的分支；最新验收文档提交后的 `vp check` / `docs:check` 尚未重跑**。PR #51 保持 Draft，指派 `@adui-dev`，未经维护者明确授权不得合并。
