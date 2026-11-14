@@ -779,3 +779,10 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 Vue/React Studio 均从当前工程 `state.document.tags` 读取目录与绑定候选，不再以代码常量作为项目目录。本批不包含完整 Tag 新增/编辑/删除表单；不新增 Prisma 表、项目保存 API、设备地址字段、工业协议映射或设备写入。完整 Tag 管理 UI 留待后续独立批次双框架对等实现。
 
 当前代码、迁移、草稿存储、快照和 Core 测试已提交开发分支；Windows `test:unit`、`test:runtime`、`test:e2e:server`、`vp check`、`docs:check`、`ready` 与双框架 SSE 浏览器回归尚未针对本批执行。不得继承第二十九批的验收结果。实施决策见 [ADR-0062](adr/0062-project-tag-definitions-schema-030.md)。
+
+
+### 第三十批 Windows 首轮质量链问题定位（2026-11-14）
+
+维护者在历史快照 TS2345/TS2322 修复后实测：`vp check`（268 文件、133 受检文件零错误）及 `docs:check`（78 份文档）通过；`ready` 已通过 Core 构建、Vue/React/Draft Storage/NestJS 类型检查，但在 Vitest 阶段出现一个 SVG 测试套件初始化失败与一个历史工程测试断言失败，未执行到完整 E2E/构建。原因均是 Schema 0.3.0 升级后测试夹具保留了错误版本结构，现已在第三十批功能分支调整。
+
+React SSE 浏览器和 TCP 故障测试均在进入 EventSource 订阅前报 `error`，并未进入 Vue 验收。已为浏览器脚本增加工程版本及 Tag 目录预检查和实际 Runtime 错误文案输出。当前仅怀疑旧模拟服务进程未重启或返回不匹配的工程版本，缺少实际响应记录，不能据此声称已修复 SSE 运行时故障。代码修复提交后仍需维护者执行 Windows 全链、双框架浏览器及人工验证，详见 [VALIDATION](VALIDATION.md)。PR #52 保持 Draft，未合并。
