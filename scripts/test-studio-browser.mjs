@@ -629,7 +629,6 @@ async function seedLegacyIndexedDbDraftInPage(document, revision, savedAt) {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error || new Error("打开草稿数据库失败"));
     }, reject);
-    request.onerror = () => reject(request.error || new Error("打开草稿数据库失败"));
   });
   try {
     if (!database.objectStoreNames.contains("drafts")) {
@@ -697,7 +696,6 @@ async function seedLegacyProjectSnapshotInPage(document, revision, createdAt) {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error || new Error("打开历史版本数据库失败"));
     }, reject);
-    request.onerror = () => reject(request.error || new Error("打开历史版本数据库失败"));
   });
   try {
     if (!database.objectStoreNames.contains("heads")) {
