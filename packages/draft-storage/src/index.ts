@@ -1,6 +1,6 @@
 import Dexie from "dexie";
 import type { Table } from "dexie";
-import { localDraftKey, readLocalDraft, parseScadaDocument } from "@adui/scada-core";
+import { localDraftKey, readLocalDraft, migrateScadaDocument, parseScadaDocument } from "@adui/scada-core";
 import type { DraftRecord, DraftRepository, LocalDraft, LocalDraftStorage } from "@adui/scada-core";
 
 interface MigrationMarker {
@@ -82,7 +82,7 @@ export class DexieDraftRepository implements DraftRepository {
     ) {
       throw new TypeError("IndexedDB 草稿元数据不合法，已拒绝载入");
     }
-    const document = parseScadaDocument(record.document);
+    const { document } = migrateScadaDocument(record.document);
     if (document.projectId !== projectId) {
       throw new TypeError("IndexedDB 草稿工程 ID 不一致，已拒绝载入");
     }
