@@ -278,3 +278,12 @@ Core 新增框架无关 Tag 定义模型，使用稳定 `tagId` 区分不可变�
 在第三十批 Schema 0.3.0 迁移和第三十一批双框架 Tag 管理基础上，补齐真实 Chrome/Edge 浏览器中旧数据的端到端迁移验收：分别覆盖旧 localStorage 草稿迁入 IndexedDB、已有 0.2.0 IndexedDB 草稿事务迁移与 revision 推进、旧 Project Snapshot 的原 SHA-256 校验及只读归一化。React/Vue 两端均通过真实 Studio UI 恢复并导出工程 JSON，确认历史 Tag 只生成 unknown 占位、原图元绑定不变，旧快照原记录不被改写。
 
 本批只扩展 CDP 浏览器测试，不更改 Core 迁移算法、LocalDraft 格式、Dexie 数据库版本、Project Snapshot 容器格式、Schema 或工业协议。真实浏览器运行尚待 Windows 验收。见 [ADR-0064](adr/0064-legacy-browser-migration-validation.md)。
+
+
+## V0.3 第三十三批：厂商无关 OIDC 与服务端工程 API（FR-001 / FR-002 / FR-008 / FR-013 / FR-014 / NFR-003 局部）
+
+在已有 ScadaIdentity、AuthSessionService、ScadaSessionGuard、ScadaProjectGuard 和 PrismaProjectVersionStore 基础上，采用厂商无关 OIDC Authorization Code + PKCE 接入可信身份。服务端通过配置固定 Issuer、Client、Redirect URI 和 Web Origin；使用外部 (iss, sub) 到本地租户/主体的预绑定映射，不按邮箱、客户端字段或角色 Claim 自动建用户/分配租户。认证后复用现有短期可撤销内部会话，以 HttpOnly/Secure/SameSite Cookie 提供 BFF，同源 CSRF 防护后向 Vue/React 提供统一工程创建、读取和版本追加 API。
+
+本批计划采用 openid-client 6.8.9；新增 OIDC 登录事务加密与一次性消费、外部身份映射、CSRF 会话摘要、共享 Prisma 单例模块、服务端工程 API 和框架无关 API Client。OIDC 默认关闭；默认 AppModule 继续只提供健康探针。只有完成 OIDC 配置、身份预绑定、数据库迁移和安全测试后才允许显式启用。
+
+不实现密码注册、MFA、自动租户/用户创建、IdP 角色自动映射、正式发布/回滚、设备配置、工业协议或设备写入。真实 IdP 联调需维护者提供 Issuer、回调注册、TLS 与身份映射；Mock Issuer 自动化测试不等于企业身份提供方现场验收。详见 [ADR-0065](adr/0065-oidc-bff-and-project-api.md) 和 [第三十三批实施计划](plans/v0.3-batch-33-oidc-project-api.md)。
