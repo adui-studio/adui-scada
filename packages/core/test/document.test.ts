@@ -68,6 +68,24 @@ test("拒绝重复的页面或图元 ID 以及不安全的 JSON 属性名", () =
   expect(() => parseScadaDocument(injected)).toThrow(/属性名称不安全/);
 });
 
+test("项目 Tag 目录必须唯一、结构合法且覆盖所有图元绑定", () => {
+  const missing = fixture();
+  missing.tags = [];
+  expect(() => parseScadaDocument(missing)).toThrow(/未定义的 Tag/);
+
+  const duplicate = fixture();
+  duplicate.tags.push({ ...duplicate.tags[0] });
+  expect(() => parseScadaDocument(duplicate)).toThrow(/Tag ID 重复/);
+
+  const extraField = fixture();
+  (extraField.tags[0] as Record<string, unknown>).address = "192.0.2.10";
+  expect(() => parseScadaDocument(extraField)).toThrow(/不支持的字段/);
+
+  const invalidType = fixture();
+  (invalidType.tags[0] as Record<string, unknown>).dataType = "float";
+  expect(() => parseScadaDocument(invalidType)).toThrow(/数据类型不受支持/);
+});
+
 test("拒绝用户规则中的函数与循环引用", () => {
   const fn = fixture() as any;
   fn.pages[0].nodes[0].rules = [() => "unsafe"];
