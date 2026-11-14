@@ -1619,7 +1619,6 @@ pnpm run test:sse:fault:browser
 
 `pnpm run env:check`、`pnpm run db:validate`、`pnpm run db:generate`、`vp check`、`pnpm run test:unit`、`pnpm run docs:check`、`pnpm run ready`。验证实际增量迁移时仅允许本机隔离测试数据库，并检查 PostgreSQL COMMENT 元数据。当前不运行 OIDC 真实登录或外部工程接口，因为尚未开放。
 
-
 ## 第三十三批 · PostgreSQL OIDC 迁移隔离验收
 
 OIDC 迁移真实测试单独使用 `pnpm run test:db`，不纳入默认 `ready`。测试入口会拒绝非本机地址或数据库名不是 `adui_scada_test` 的 URL。运行前先由维护者创建该独立数据库，再在当前 PowerShell 进程中将 `SCADA_DATABASE_URL` 和 `SCADA_TEST_DATABASE_URL` 都显式设置为该测试库连接串，依次执行：

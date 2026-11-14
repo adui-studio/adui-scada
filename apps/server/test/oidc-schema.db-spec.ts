@@ -163,9 +163,7 @@ describe("OIDC PostgreSQL 增量迁移", () => {
       ]),
     );
 
-    const sessionConstraints = await service!.client.$queryRaw<
-      Array<{ constraint_name: string }>
-    >`
+    const sessionConstraints = await service!.client.$queryRaw<Array<{ constraint_name: string }>>`
       SELECT conname AS constraint_name
       FROM pg_constraint
       WHERE conrelid = 'public.scada_auth_sessions'::regclass
