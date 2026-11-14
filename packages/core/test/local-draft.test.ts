@@ -43,7 +43,7 @@ test("草稿保存和恢复保持节点、组合、Tag 及防御性副本", () =
   expect(restored?.document.pages[0]?.nodes[1]?.groupId).toBe("group-1");
   expect(restored?.document.pages[0]?.nodes[3]?.groupId).toBe("group-1");
   expect(restored?.document.pages[0]?.nodes[1]?.bindings.level?.tagId).toBe("water.level");
-  expect(restored?.document.schemaVersion).toBe("0.2.0");
+  expect(restored?.document.schemaVersion).toBe("0.3.0");
 
   restored!.document.pages[0]!.nodes[1]!.transform.x = 100;
   expect(readLocalDraft(storage, "water-demo")?.document.pages[0]?.nodes[1]?.transform.x).toBe(80);
@@ -95,10 +95,6 @@ test("未知草稿格式和新增结构字段均拒绝恢复", () => {
       record: { ...base, savedAt: "not-a-time" },
       message: /草稿保存时间无效/,
     },
-    {
-      record: { ...base, document: { ...base.document, schemaVersion: "0.1.0" } },
-      message: /不支持的版本/,
-    },
   ]) {
     const raw = JSON.stringify(record);
     storage.setItem(key, raw);
@@ -119,6 +115,31 @@ test("草稿项目与当前工程不同或内部工程不合法时拒绝恢复",
   record.document.pages[0].nodes[0].props = JSON.parse('{"__proto__":{"unsafe":true}}');
   storage.setItem(key, JSON.stringify(record));
   expect(() => readLocalDraft(storage, "water-demo")).toThrow(/属性名称不安全/);
+});
+
+test("恢复旧版本地草稿时自动补齐未指定 Tag 定义且保留原始记录", () => {
+  const storage = new MemoryStorage();
+  const key = localDraftKey("water-demo");
+  const legacy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  legacy.schemaVersion = "0.2.0";
+  delete legacy.tags;
+  storage.setItem(
+    key,
+    JSON.stringify({
+      formatVersion: LOCAL_DRAFT_FORMAT_VERSION,
+      savedAt: savedAt.toISOString(),
+      document: legacy,
+    }),
+  );
+  const restored = readLocalDraft(storage, "water-demo");
+  expect(restored?.document.schemaVersion).toBe("0.3.0");
+  expect(restored?.document.tags[0]).toMatchObject({
+    tagId: "water.level",
+    displayName: "water.level",
+    dataType: "unknown",
+  });
+  expect(restored?.document.pages[0]?.nodes[1]?.bindings.level?.tagId).toBe("water.level");
+  expect(JSON.parse(storage.getItem(key)!).document.schemaVersion).toBe("0.2.0");
 });
 
 test("草稿保存前严格校验文档，拒绝旧版工程和非法时间", () => {
