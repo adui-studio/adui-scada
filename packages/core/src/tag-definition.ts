@@ -112,10 +112,7 @@ export class TagDefinitionCatalog {
     if (!definition) throw new TypeError("实时数据引用了未定义的 Tag：" + value.tagId);
     if (value.value !== null && typeof value.value !== definition.dataType) {
       throw new TypeError(
-        "Tag 数据类型不匹配：" +
-          value.tagId +
-          "，预期" +
-          TAG_DATA_TYPE_LABELS[definition.dataType],
+        "Tag 数据类型不匹配：" + value.tagId + "，预期" + TAG_DATA_TYPE_LABELS[definition.dataType],
       );
     }
   }

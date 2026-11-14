@@ -79,12 +79,10 @@ test("Tag 定义目录拒绝重复 ID、未知字段和非法元数据", () => {
   expect(
     () => new TagDefinitionCatalog([{ ...definition, address: "192.0.2.1" } as never]),
   ).toThrow(/不支持的字段/);
-  expect(
-    () => new TagDefinitionCatalog([{ ...definition, dataType: "float" } as never]),
-  ).toThrow(/数据类型不受支持/);
-  expect(
-    () => new TagDefinitionCatalog([{ ...definition, unit: "u".repeat(33) }]),
-  ).toThrow(/单位/);
+  expect(() => new TagDefinitionCatalog([{ ...definition, dataType: "float" } as never])).toThrow(
+    /数据类型不受支持/,
+  );
+  expect(() => new TagDefinitionCatalog([{ ...definition, unit: "u".repeat(33) }])).toThrow(/单位/);
 });
 
 test("重命名只改变显示名称，Tag ID 和工程图元绑定保持不变", () => {
@@ -104,10 +102,7 @@ test("TagStore 按定义校验类型并在整批失败时保持原数据不变",
   store.apply([value("water.level", 55), value("water.pump.running", true)]);
   expect(store.snapshot()).toHaveLength(2);
   expect(() =>
-    store.apply([
-      value("water.level", 66, 2),
-      value("water.pump.running", 1, 2),
-    ]),
+    store.apply([value("water.level", 66, 2), value("water.pump.running", 1, 2)]),
   ).toThrow(/Tag 数据类型不匹配/);
   expect(store.get("water.level")?.value).toBe(55);
   expect(store.get("water.pump.running")?.value).toBe(true);
@@ -117,9 +112,7 @@ test("TagStore 快照同样校验类型且失败时保留原快照", () => {
   const store = new TagStore(waterTreatmentDemoTagCatalog);
   store.replaceSnapshot([value("water.level", 55)]);
   const before = store.snapshot();
-  expect(() => store.replaceSnapshot([value("water.level", "55")])).toThrow(
-    /Tag 数据类型不匹配/,
-  );
+  expect(() => store.replaceSnapshot([value("water.level", "55")])).toThrow(/Tag 数据类型不匹配/);
   expect(() => store.apply([value("water.unknown", 1)])).toThrow(/未定义的 Tag/);
   expect(store.snapshot()).toEqual(before);
 });
