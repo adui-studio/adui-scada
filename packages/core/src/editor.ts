@@ -1037,8 +1037,7 @@ export class DocumentEditor {
     if ((node.bindings[slot]?.tagId ?? null) === tagId) return false;
     if (tagId !== null) {
       const definition = this.current.tags.find((tag) => tag.tagId === tagId);
-      if (!definition) throw new TypeError(`未找到 Tag 定义：${tagId}`);
-      if (!tagDefinitionSupportsSlot(definition, slot)) {
+      if (definition && !tagDefinitionSupportsSlot(definition, slot)) {
         throw new TypeError("Tag 数据类型与绑定槽不兼容，待确认类型不能用于新绑定");
       }
     }
