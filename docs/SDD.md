@@ -664,3 +664,12 @@ API 使用同源 /api/v1 前缀。初始提供 OIDC start/callback、me、logout
 新增共享 DatabaseModule，保证身份模块和工程持久化模块复用同一个 PrismaService。OIDC 模块仅在 SCADA_OIDC_ENABLED=true 且配置完整时注册；默认 AppModule 仍只提供健康探针且不连接数据库。React/Vue Vite 与 Docker Nginx 使用同源 /api 代理，不开放宽泛 CORS。框架无关 API Client 统一 Cookie、CSRF、响应和错误契约。
 
 详见 [ADR-0065](adr/0065-oidc-bff-and-project-api.md) 与 [实施计划](plans/v0.3-batch-33-oidc-project-api.md)。
+
+
+### 第三十三批阶段 A 已实施的配置与数据库结构
+
+OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client ID/Secret、Redirect URI、Origin 和 Base64URL 32 字节加密密钥；生产配置必须使用 HTTPS，非生产回环 HTTP 必须另行显式启用。所有错误均使用固定中文提示，不包含原始凭据。当前 main.ts 在 enabled 时拒绝启动，直到完整认证、Cookie/CSRF Guard 和工程 ACL HTTP 边界实施后才会移除此保护。
+
+共享 DatabaseModule 持有唯一 PrismaService 提供方，ScadaIdentityModule 和 ProjectPersistenceModule 都只通过 imports 使用它；默认 AppModule 仍不导入上述模块。
+
+新增 ScadaExternalIdentity，以复合主键 (issuer, subject) 关联现有本地 ScadaIdentity；新增 ScadaOidcTransaction，使用 stateHash 主键、浏览器绑定摘要、nonce、AES-GCM 加密密文、到期/消费时间及站内路径；为 ScadaAuthSession 添加可空 csrfTokenHash，兼容既有 Bearer 会话。上述模型与迁移**尚未在 PostgreSQL 实测**，事务消费和加密逻辑尚未实现。
