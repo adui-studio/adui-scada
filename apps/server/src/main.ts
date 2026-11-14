@@ -4,6 +4,7 @@ import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 import { NestFactory } from "@nestjs/core";
 import { Logger } from "nestjs-pino";
+import { resolveOidcStartupConfig } from "./config/oidc-startup.config.js";
 import { resolveServerStartupConfig } from "./config/server-startup.config.js";
 import { allowLocalDemoTelemetry } from "./demo/local-demo-access.js";
 import { getLocalOpenApiUrl, setupLocalOpenApi } from "./openapi/scada-openapi.js";
@@ -18,6 +19,11 @@ if (existsSync(envPath)) loadEnvFile(envPath);
 async function bootstrap(): Promise<void> {
   // AppModule 在模块求值时会创建 Pino 配置，必须在 .env 加载后再导入。
   const { port, host, localDocs } = resolveServerStartupConfig(process.env);
+  const oidc = resolveOidcStartupConfig(process.env);
+  // 阶段 A 仅提供配置与数据库模块；认证和 ACL 路由尚未完成时一律拒绝启用。
+  if (oidc.enabled) {
+    throw new Error("OIDC 身份接入尚未完成安全验收，禁止启用");
+  }
   const allowDemo = allowLocalDemoTelemetry({
     enabled: process.env.SCADA_LOCAL_DEMO_API_ENABLED,
     nodeEnv: process.env.NODE_ENV,
