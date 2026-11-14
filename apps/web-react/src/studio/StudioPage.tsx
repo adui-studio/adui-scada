@@ -2093,7 +2093,7 @@ export default function StudioPage() {
                       )}
                       {demoTagCandidates.map((option) => (
                         <option key={option.tagId} value={option.tagId}>
-                          {option.label} · {option.tagId} ·{TAG_DATA_TYPE_LABELS[option.dataType]}
+                          {option.displayName} · {option.tagId} ·{TAG_DATA_TYPE_LABELS[option.dataType]}
                           {option.unit ? " · " + option.unit : ""}
                         </option>
                       ))}
@@ -2119,6 +2119,164 @@ export default function StudioPage() {
           ) : (
             <p className="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
           )}
+          <details className="studio-advanced">
+            <summary>项目 Tag 管理（{state.document.tags.length}）</summary>
+            <div className="studio-advanced-content">
+              <p className="studio-tip">
+                Tag 定义保存在当前工程 JSON、草稿和历史快照中。稳定 ID 创建后不可修改；删除前必须解除所有图元绑定。
+              </p>
+              {state.document.tags.map((tag) => (
+                <div className="studio-tool-group" key={tag.tagId}>
+                  {editingTagId === tag.tagId && tagEditDraft ? (
+                    <>
+                      <label className="studio-field">
+                        显示名称
+                        <input
+                          value={tagEditDraft.displayName}
+                          maxLength={128}
+                          onChange={(event) =>
+                            setTagEditDraft({ ...tagEditDraft, displayName: event.target.value })
+                          }
+                        />
+                      </label>
+                      <label className="studio-field">
+                        数据类型
+                        <select
+                          value={tagEditDraft.dataType}
+                          onChange={(event) =>
+                            setTagEditDraft({
+                              ...tagEditDraft,
+                              dataType: event.target.value as TagDataType,
+                            })
+                          }
+                        >
+                          {TAG_DATA_TYPES.map((type) => (
+                            <option key={type} value={type}>{TAG_DATA_TYPE_LABELS[type]}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="studio-field">
+                        单位
+                        <input
+                          value={tagEditDraft.unit}
+                          maxLength={32}
+                          onChange={(event) =>
+                            setTagEditDraft({ ...tagEditDraft, unit: event.target.value })
+                          }
+                        />
+                      </label>
+                      <label className="studio-field">
+                        描述
+                        <input
+                          value={tagEditDraft.description}
+                          maxLength={512}
+                          onChange={(event) =>
+                            setTagEditDraft({ ...tagEditDraft, description: event.target.value })
+                          }
+                        />
+                      </label>
+                      <div className="studio-tool-group">
+                        <Button type="button" onClick={() => saveTagEdit(tag.tagId)}>保存</Button>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setEditingTagId(null);
+                            setTagEditDraft(null);
+                          }}
+                        >
+                          取消
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="studio-binding">{tag.displayName} · {tag.tagId}</p>
+                      <p className="studio-tip">
+                        {TAG_DATA_TYPE_LABELS[tag.dataType]}
+                        {tag.unit ? " · " + tag.unit : ""}
+                        {tag.description ? " · " + tag.description : ""}
+                      </p>
+                      <div className="studio-tool-group">
+                        <Button type="button" onClick={() => beginEditTag(tag)}>编辑</Button>
+                        <Button
+                          type="button"
+                          disabled={isProjectTagBound(tag.tagId)}
+                          onClick={() => removeProjectTag(tag.tagId)}
+                        >
+                          删除
+                        </Button>
+                      </div>
+                      {isProjectTagBound(tag.tagId) && (
+                        <p className="studio-tip">已有图元绑定，解除绑定后才能删除</p>
+                      )}
+                    </>
+                  )}
+                </div>
+              ))}
+              <form className="studio-toolbox" onSubmit={addProjectTag}>
+                <h4>新增 Tag</h4>
+                <label className="studio-field">
+                  稳定 Tag ID
+                  <input
+                    value={newTagDraft.tagId}
+                    maxLength={128}
+                    required
+                    onChange={(event) =>
+                      setNewTagDraft({ ...newTagDraft, tagId: event.target.value })
+                    }
+                  />
+                </label>
+                <label className="studio-field">
+                  显示名称
+                  <input
+                    value={newTagDraft.displayName}
+                    maxLength={128}
+                    required
+                    onChange={(event) =>
+                      setNewTagDraft({ ...newTagDraft, displayName: event.target.value })
+                    }
+                  />
+                </label>
+                <label className="studio-field">
+                  数据类型
+                  <select
+                    value={newTagDraft.dataType}
+                    onChange={(event) =>
+                      setNewTagDraft({
+                        ...newTagDraft,
+                        dataType: event.target.value as TagDataType,
+                      })
+                    }
+                  >
+                    {TAG_DATA_TYPES.filter((type) => type !== "unknown").map((type) => (
+                      <option key={type} value={type}>{TAG_DATA_TYPE_LABELS[type]}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="studio-field">
+                  单位
+                  <input
+                    value={newTagDraft.unit}
+                    maxLength={32}
+                    onChange={(event) =>
+                      setNewTagDraft({ ...newTagDraft, unit: event.target.value })
+                    }
+                  />
+                </label>
+                <label className="studio-field">
+                  描述
+                  <input
+                    value={newTagDraft.description}
+                    maxLength={512}
+                    onChange={(event) =>
+                      setNewTagDraft({ ...newTagDraft, description: event.target.value })
+                    }
+                  />
+                </label>
+                <Button type="submit">新增 Tag</Button>
+              </form>
+            </div>
+          </details>
           <details className="studio-advanced">
             <summary>高级图元与图层操作</summary>
             <div className="studio-advanced-content">
