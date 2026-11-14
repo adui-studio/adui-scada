@@ -379,3 +379,10 @@ Runtime 生命周期按连接代次隔离：停止时中止 fetch、关闭 SSE�
 OIDC 事务和会话均由 PostgreSQL 共享状态；短期事务使用 state 摘要、AES-256-GCM 加密 PKCE verifier、浏览器绑定与一次性消费。内部会话沿用 AuthSessionService，使用 HttpOnly Secure Cookie 与会话绑定 CSRF 保护。新增 DatabaseModule 统一 PrismaService，避免 Identity 与 Project Persistence 重复创建连接池。OIDC 默认关闭，健康探针默认不触发数据库连接。
 
 工程 API 通过同源 /api/v1 提供工程创建、读取、列表和历史版本操作；所有操作复用 Project ACL、工程行锁、CAS 和 SHA-256 ProjectSnapshot，不开放发布/回滚、工业地址或设备写入。React/Vue 共用框架无关 API Client。详细决策见 [ADR-0065](adr/0065-oidc-bff-and-project-api.md)。
+
+
+### 第三十三批阶段 A 数据库模块与默认禁用安全边界
+
+DatabaseModule 是 PrismaService 唯一 Nest 提供方；身份模块和工程仓储模块共享该模块，避免重复生命周期和连接池。默认 AppModule 不导入任何模块，因此继续仅暴露原有健康探针。OIDC 配置解析在根 .env 加载后、AppModule 动态导入前执行；本阶段只做校验并对 enabled 状态显式拒绝启动，待认证与权限验证完成后才注册路由。
+
+新外部身份映射、OIDC 临时事务及 CSRF 会话摘要只定义模型与 SQL 迁移，不自动创建用户或授予权限，也不改变工程 Schema、工业网关和 PLC/DCS 访问边界。
