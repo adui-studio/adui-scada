@@ -562,3 +562,17 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 - **已提交修复**：`scripts/test-studio-browser.mjs` 在点击删除后轮询并先断言状态栏包含“仍被…绑定”，捕获提示后再导出 JSON 检查 Tag 仍存在；失败信息附带实际状态栏文案。该修复仅调整浏览器测试时序，不改变 UI 或 Core 行为。
 
 **待复验**：维护者同步最新提交后重跑 `pnpm run test:tags:browser`，确认 React 与 Vue 两端均输出成功；随后重跑 `vp check`、`pnpm run docs:check`（本记录更新后）及必要的 `pnpm run ready`。本协作环境未执行本批本地命令，不把修复提交视为测试通过。第三十一批仍保持 Draft。
+
+
+### 第三十一批最终 Windows Tag 管理浏览器回归通过（2026-11-14）
+
+维护者在修复浏览器断言时序后重新执行并提供实测日志：
+
+- `pnpm run test:tags:browser`：React 项目 Tag 新增、编辑、绑定删除保护、删除与 JSON 往返通过；Vue 同样通过；命令退出码 **0**。
+- `vp check`：**271 个文件格式正确，135 个受检文件零警告、Lint 或 TypeScript 错误**。
+- `pnpm run docs:check`：**79 个 Markdown 文件通过**（本节验收记录追加后尚未重新执行）。
+- 此前同一分支的 `pnpm run ready` 已执行完成，Vitest 438/438、SSE 客户端 8/8、TCP 故障代理 4/4、NestJS E2E 17/17、React/Vue 类型检查和构建均通过；`pnpm run test:interop` 双框架工程 JSON 往返及非法导入保护通过，退出码 0。
+
+本批浏览器 CRUD 专项此前的失败是脚本先导出 JSON、再读取状态栏，导出提示覆盖删除拒绝提示；修复后已由 React、Vue 两端真实浏览器操作复验通过。Core 删除保护没有放宽。
+
+**尚未单独完成的人工验收**：键盘无障碍与视觉细节、真正旧 0.1/0.2 工程和历史 IndexedDB/localStorage 草稿迁移的用户体验复验。以上不改变本次已通过的自动化结果。工业现场设备、网关、设备写入不属于本批。
