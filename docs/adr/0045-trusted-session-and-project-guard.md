@@ -32,7 +32,6 @@
 
 根 `ready` 预期 350 项普通单测与 5 项 NestJS E2E；隔离 PostgreSQL 在应用独立新迁移后预期 11 项真实测试。Docker 隔离烟测继续验证未公开的登录、工程与工业设备路由保持 404。**提交前未实际执行新的 Windows 质量链或数据库迁移，所有数量均为预计。**
 
-
 ## 第三十三批扩展说明
 
 本 ADR 的不透明内部会话、可信 Principal 和工程 Guard 契约继续保留。厂商无关 OIDC 外部身份验证、(iss, sub) 到本地身份的预绑定映射、BFF Cookie 与 CSRF 由后续 [ADR-0065](0065-oidc-bff-and-project-api.md) 扩展；OIDC 不替代本 ADR 的本地租户身份和工程 ACL，也不把 IdP Claim 直接转换成工程权限。当前 OIDC 设计仍处于实施规划阶段，正式 AppModule 尚未开放认证或工程 API。

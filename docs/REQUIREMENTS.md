@@ -279,7 +279,6 @@ Core 新增框架无关 Tag 定义模型，使用稳定 `tagId` 区分不可变�
 
 本批只扩展 CDP 浏览器测试，不更改 Core 迁移算法、LocalDraft 格式、Dexie 数据库版本、Project Snapshot 容器格式、Schema 或工业协议。真实浏览器运行尚待 Windows 验收。见 [ADR-0064](adr/0064-legacy-browser-migration-validation.md)。
 
-
 ## V0.3 第三十三批：厂商无关 OIDC 与服务端工程 API（FR-001 / FR-002 / FR-008 / FR-013 / FR-014 / NFR-003 局部）
 
 在已有 ScadaIdentity、AuthSessionService、ScadaSessionGuard、ScadaProjectGuard 和 PrismaProjectVersionStore 基础上，采用厂商无关 OIDC Authorization Code + PKCE 接入可信身份。服务端通过配置固定 Issuer、Client、Redirect URI 和 Web Origin；使用外部 (iss, sub) 到本地租户/主体的预绑定映射，不按邮箱、客户端字段或角色 Claim 自动建用户/分配租户。认证后复用现有短期可撤销内部会话，以 HttpOnly/Secure/SameSite Cookie 提供 BFF，同源 CSRF 防护后向 Vue/React 提供统一工程创建、读取和版本追加 API。

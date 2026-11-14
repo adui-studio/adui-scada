@@ -1609,7 +1609,6 @@ pnpm run test:sse:fault:browser
 
 启动当前分支的 dev:demo、dev:react、dev:vue 后执行 pnpm run test:legacy:browser。该命令通过现有 Chrome/Edge CDP 测试设施，在两个 Web Origin 分别构造 0.2.0 localStorage 草稿、IndexedDB 草稿和 Project Snapshot，并通过真实 Studio UI 验证迁移结果。测试只使用临时浏览器用户目录，不访问用户真实 Profile。执行前需确保当前根 .env 的 React/Vue 端口对应当前分支服务。
 
-
 ## V0.3 第三十三批 · OIDC 与工程 API（计划，尚未实现）
 
 实现后将新增 OIDC Mock Issuer、Cookie/CSRF 与工程 API 的 E2E/浏览器验收入口。真实 PostgreSQL 测试必须显式设置 SCADA_TEST_DATABASE_URL，且仅允许本机 adui_scada_test 隔离数据库。OIDC 默认关闭；未配置真实 Issuer 时只运行 Mock Issuer 自动化，不得宣称完成企业 IdP 联调。

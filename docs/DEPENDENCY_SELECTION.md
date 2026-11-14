@@ -84,7 +84,6 @@ NestJS 官方 `@nestjs/authentication`（当前 **0.1.5**）与 `@nestjs/authori
 
 通过 [ADR-0051](adr/0051-http-ingress-shutdown-policy.md) 约束：`headersTimeout=15s`、`requestTimeout=60s`、`keepAliveTimeout=5s`、请求头最多 100 个、单 Socket 最多 1000 个请求；这些数值在大文件上传、受信代理链路或高频订阅实现后需要重新压测。**不设置全局响应超时**，以免破坏规划中的 SSE。无第三方依赖/锁文件改动，仍须 Windows `ready` + Docker 隔离烟测验收。
 
-
 ## 第三十三批：OIDC Relying Party 客户端（已选型，待加入依赖）
 
 选择 openid-client 6.8.9 作为服务端 OIDC Relying Party 库。官方 API 覆盖 Authorization Server Metadata Discovery、Authorization Code Grant、PKCE S256、State、Nonce、ID Token 验证及 Issuer Identification；当前 Node.js 最低要求低于仓库 Node >=22.18.0，ESM 与 TypeScript 声明符合现有服务端结构。

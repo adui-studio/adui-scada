@@ -643,7 +643,6 @@ React 的 TagManager.tsx 与 Vue 的 TagManager.vue 只保存用户正在填写�
 
 三条路径在 Vue/React 两端独立执行；测试只使用隔离 Chrome/Edge 用户目录和本机开发服务，不触碰真实用户 Profile、生产数据库或工业设备。新增 pnpm run test:legacy:browser，详见 [ADR-0064](adr/0064-legacy-browser-migration-validation.md)。当前仅完成测试代码与静态审查，未在 Windows 实际运行。
 
-
 ## 2026-11-14 · V0.3 第三十三批：OIDC、BFF 会话与服务端工程 API 契约
 
 ### 认证流程

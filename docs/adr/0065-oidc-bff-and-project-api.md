@@ -45,25 +45,25 @@ Vue 与 React 是两个正式 Web 端，必须共用同源 API 契约、工程�
 
 - 新增共享 DatabaseModule，统一导出单例 PrismaService。ScadaIdentityModule 与 ProjectPersistenceModule 从该模块注入同一实例，禁止在两个模块分别声明 PrismaService 造成多连接池/生命周期不一致。
 - 新增 ScadaExternalIdentity 与 ScadaOidcTransaction 表；为 ScadaAuthSession 增加可空 CSRF 摘要字段，保留已有 Bearer 会话记录兼容。所有新增表/字段/索引/约束必须在增量 Prisma 迁移中提供中文表、字段、索引注释；严禁修改已应用迁移。
-- OIDC 与工程持久化模块只在 SCADA_OIDC_ENABLED=true 且完整配置校验通过时挂载。默认 AppModule 仍只提供健康探针；OIDC 未启用时 /api/v1/auth/*、/api/v1/projects/* 不注册、不暴露，不能因为导入模块而隐式连接 PostgreSQL。
+- OIDC 与工程持久化模块只在 SCADA_OIDC_ENABLED=true 且完整配置校验通过时挂载。默认 AppModule 仍只提供健康探针；OIDC 未启用时 /api/v1/auth/_、/api/v1/projects/_ 不注册、不暴露，不能因为导入模块而隐式连接 PostgreSQL。
 - 根 .env 新增非敏感开关与配置说明；Client Secret、事务加密密钥和数据库凭据只由进程环境/秘密管理系统提供。任何启动错误不得回显原始密钥或连接串。
 
 ### 5. 服务端工程 API 与权限
 
 第一阶段提供以下最小 API，统一位于 /api/v1，React/Vue 通过同源 Vite/Nginx 代理访问：
 
-| 方法 | 路径 | 权限 | 语义 |
-|---|---|---|---|
-| GET | /api/v1/auth/oidc/start | 公开入口 | 建立登录事务并重定向至固定 Issuer |
-| GET | /api/v1/auth/oidc/callback | 公开回调 | 校验并消费事务，建立本地会话 |
-| GET | /api/v1/auth/me | 已认证 | 返回最小本地身份上下文，不返回令牌 |
-| POST | /api/v1/auth/logout | 已认证 + CSRF | 撤销当前本地会话并清除 Cookie |
-| POST | /api/v1/projects | 已认证 | 原子创建工程、初始版本、创建者 ACL 和成功审计 |
-| GET | /api/v1/projects | 已认证 | 仅列出当前租户/主体被明确授权的工程 |
-| GET | /api/v1/projects/:projectId | project:read | 读取工程当前修订摘要 |
-| GET | /api/v1/projects/:projectId/versions | version:read | 列出授权工程的历史版本摘要 |
-| GET | /api/v1/projects/:projectId/versions/:revision | version:read | 读取并校验不可变快照 |
-| POST | /api/v1/projects/:projectId/versions | version:append + CSRF | 携带 expectedRevision 追加版本，CAS 冲突明确返回 |
+| 方法 | 路径                                           | 权限                  | 语义                                             |
+| ---- | ---------------------------------------------- | --------------------- | ------------------------------------------------ |
+| GET  | /api/v1/auth/oidc/start                        | 公开入口              | 建立登录事务并重定向至固定 Issuer                |
+| GET  | /api/v1/auth/oidc/callback                     | 公开回调              | 校验并消费事务，建立本地会话                     |
+| GET  | /api/v1/auth/me                                | 已认证                | 返回最小本地身份上下文，不返回令牌               |
+| POST | /api/v1/auth/logout                            | 已认证 + CSRF         | 撤销当前本地会话并清除 Cookie                    |
+| POST | /api/v1/projects                               | 已认证                | 原子创建工程、初始版本、创建者 ACL 和成功审计    |
+| GET  | /api/v1/projects                               | 已认证                | 仅列出当前租户/主体被明确授权的工程              |
+| GET  | /api/v1/projects/:projectId                    | project:read          | 读取工程当前修订摘要                             |
+| GET  | /api/v1/projects/:projectId/versions           | version:read          | 列出授权工程的历史版本摘要                       |
+| GET  | /api/v1/projects/:projectId/versions/:revision | version:read          | 读取并校验不可变快照                             |
+| POST | /api/v1/projects/:projectId/versions           | version:append + CSRF | 携带 expectedRevision 追加版本，CAS 冲突明确返回 |
 
 - 权限只从服务端可信 Principal 和数据库 ACL 获取；请求体不接受 tenantId、subjectId、actorId、角色或权限字段。
 - 工程创建时在一个 PostgreSQL 事务中创建工程、创建者三项最小 ACL、首个不可变快照、修订水位和成功审计；任何一步失败全部回滚。

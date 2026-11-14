@@ -581,7 +581,6 @@
 - package.json：新增 test:legacy:browser 入口。
 - docs/adr/0064-legacy-browser-migration-validation.md：记录三条真实浏览器迁移路径、SHA-256 与原记录保留边界。
 
-
 ## 2026-11-14 · 第三十三批目标目录（规划，尚未落地）
 
 - apps/server/src/database/database.module.ts：计划统一导出 PrismaService 单例。
