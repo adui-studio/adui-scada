@@ -4,7 +4,7 @@
 
 ## 1. 定位与事实
 
-ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1、V0.2 双框架 SVG Studio 与 V0.3 前二十九批，包含共享 Runtime、SSE 故障恢复、诊断与 Tag 定义类型校验。当前第三十批将项目 Tag 定义纳入 `ScadaDocument 0.3.0` 的必填 `tags` 数组，支持 0.1.0/0.2.0 历史工程迁移、IndexedDB/LocalStorage 草稿升级、历史快照摘要校验，以及 Vue/React 从工程目录读取绑定候选。历史类型未知时必须保留为 `unknown` 占位，不得猜测；不增加工业地址、协议连接或设备写入。当前分支尚未完成 Windows 质量链和双框架实测。**
+ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双版本、框架无关 2D SVG 核心、NestJS、独立工业网关、可选 Tauri 与后续 Three.js 3D。**main 已合并 V0.1、V0.2 双框架 SVG Studio 及 V0.3 前三十批，包含共享 Runtime、SSE 故障恢复、Tag 定义目录与 ScadaDocument 0.3.0 工程持久化。历史 0.1.0/0.2.0 工程采用显式迁移，未知类型仍保留 `unknown` 占位、不推断单位。当前第三十一批在 Vue/React Studio 增加项目 Tag 新增、编辑、删除表单，所有写入仍经共享 DocumentEditor，并沿用草稿、快照和撤销重做。禁止引入客户端 PLC 连接或设备写入，当前分支的 Windows Vite+ 全链与浏览器回归尚未执行，不得冒充已通过。**
 
 ## 2. 规则优先级
 

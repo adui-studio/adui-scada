@@ -794,9 +794,25 @@ React SSE 浏览器和 TCP 故障测试均在进入 EventSource 订阅前报 `er
 
 本批尚待真实跨框架 Studio 人工验证、旧浏览器草稿及历史快照实际迁移、Tauri/工业现场等限定范围验收。PR #52 继续 Draft，Assignee `@adui-dev`；最新验收文档提交后仍需静态复验。
 
-
 ### 第三十批自动化质量链及双框架 SSE 浏览器回归通过（2026-11-14）
 
 维护者 Windows 最终复验：全量单测 438/438、Runtime 专项 40/40、NestJS E2E 17/17、SSE 资源 8/8、TCP 故障代理 4/4、`vp check` 268 文件/133 受检文件零错误、`docs:check` 78 文档通过，`ready` 全链执行到 NestJS 构建完毕；React/Vue 双端 SSE 和 TCP 故障浏览器回归均成功，最终浏览器测试退出码 0。之前 `/demo/project` 返回 0.2.0 的旧服务版本阻塞已被解除。维护者已明确授权合并 PR #52；合并后续进度另行记录。
 
 未人工验收的是 Studio 两框架目录操作、跨框架 JSON 历史导入导出、真实旧版 IndexedDB/localStorage 与历史快照迁移体验。工业网关、PLC/DCS、生产设备写入不在本次范围。详见 [VALIDATION](VALIDATION.md)。
+
+### V0.3 第三十批合并与第三十一批双框架 Tag 管理启动（2026-11-14）
+
+维护者明确授权后，PR #52 已通过 Squash Merge 合并至 main，合并提交为 5781d6903de83ba25f4df8172538f6208c0b0c5d；合并前 GitHub 核验无冲突、未解决审查线程 0，Assignee 为 @adui-dev。第三十批 Windows 自动化验收记录显示全量单测 438/438、Runtime 40/40、NestJS E2E 17/17，以及 Vue/React 双端 SSE 和 TCP 故障回归通过；Studio 人工目录与历史旧草稿真实迁移体验仍需单独验收。
+
+第三十一批基于以上 main 提交创建 feat/v0.3-studio-project-tag-management。已在 Vue/React Studio 增加项目 Tag 新增、编辑、删除表单，保持稳定 Tag ID、unknown 历史占位及绑定保护，全部变更调用共享 Core Editor；另增加 test:tags:browser 双框架浏览器回归入口。本批不改工程 Schema 或工业协议，不提供设备写入。当前分支尚未执行 Windows ready 或完整浏览器验收，不得视为通过。详见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md)。
+
+### 第三十一批 Windows 首轮验收与浏览器断言时序修复（2026-11-14）
+
+维护者 Windows 日志确认第三十一批 `vp check`（271 文件、135 受检文件零错误）、`docs:check`（79 Markdown）及 `pnpm run ready` 完整执行至 NestJS build，438/438 单测、SSE 8/8、TCP 代理 4/4、NestJS E2E 17/17、React/Vue 类型检查和构建均通过。React/Vue 工程互通 `pnpm run test:interop` 通过，退出码 0。
+
+`pnpm run test:tags:browser` 在 React 的绑定删除保护断言处失败。代码审查发现测试在捕获删除拒绝状态栏消息前先触发 JSON 导出，导出成功提示覆盖了删除拒绝提示；Core 删除保护逻辑仍然有效。已调整浏览器脚本为先等待并断言“仍被…绑定”提示，再导出 JSON 验证绑定 Tag 仍存在。此为测试时序修复，最新脚本尚未由维护者 Windows 重新执行，不能记录为通过；Vue 测试尚未在首轮失败时执行。详见 [VALIDATION](VALIDATION.md)。
+
+
+### 第三十一批最终 Windows 验收通过（2026-11-14）
+
+维护者复验确认：`pnpm run test:tags:browser` 中 React、Vue 两端的 Tag 新增、编辑、绑定删除保护、删除与 JSON 往返均通过，退出码 0；`vp check` 271 文件格式正确、135 个受检文件零错误；`docs:check` 79 Markdown 通过。此前同一分支 `ready` 全链及 `test:interop` 已通过。浏览器测试断言时序修复已在双框架实际浏览器中验证。PR #53 达到合并条件，维护者已明确授权合并。仍保留键盘/视觉人工检查与真正历史浏览器草稿迁移体验的后续核验。

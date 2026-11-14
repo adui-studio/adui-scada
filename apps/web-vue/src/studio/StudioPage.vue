@@ -16,7 +16,12 @@ import {
   studioViewportRect,
   compareProjectDocuments,
 } from "@adui/scada-core";
-import type { ProjectSnapshot, ProjectVersionSummary, ScadaDocument } from "@adui/scada-core";
+import type {
+  ProjectSnapshot,
+  ProjectVersionSummary,
+  ScadaDocument,
+  TagDefinition,
+} from "@adui/scada-core";
 import {
   DexieDraftRepository,
   DexieProjectVersionRepository,
@@ -45,6 +50,7 @@ import type {
   ResizeHandle,
 } from "@adui/scada-core/editor";
 import { svgDataUrl } from "@adui/scada-runtime";
+import TagManager from "./TagManager.vue";
 import "./studio.css";
 import "@adui/tailwind/studio.css";
 
@@ -623,6 +629,36 @@ function changeTagBinding(event: Event) {
     () => editor.setSelectedBinding(slot, tagId === "" ? null : tagId),
     "已修改模拟 Tag 绑定，可撤销",
   );
+}
+
+function changeProjectTag(action: () => boolean, message: string): boolean {
+  try {
+    const changed = action();
+    if (changed) refresh();
+    notice.value = changed ? message : "项目 Tag 定义未发生变化";
+    return true;
+  } catch (error) {
+    notice.value = error instanceof Error ? error.message : String(error);
+    return false;
+  }
+}
+
+function createProjectTag(definition: TagDefinition): boolean {
+  return changeProjectTag(() => editor.addTagDefinition(definition), "项目 Tag 已新增，可撤销");
+}
+
+function updateProjectTag(
+  tagId: string,
+  changes: Pick<TagDefinition, "displayName" | "dataType" | "unit" | "description">,
+): boolean {
+  return changeProjectTag(
+    () => editor.updateTagDefinition(tagId, changes),
+    "项目 Tag 已更新，可撤销",
+  );
+}
+
+function removeProjectTag(tagId: string): boolean {
+  return changeProjectTag(() => editor.removeTagDefinition(tagId), "项目 Tag 已删除，可撤销");
 }
 
 function addSymbol(type: EditableSymbol) {
@@ -1944,15 +1980,12 @@ async function importJson(event: Event) {
         <details class="studio-advanced">
           <summary>项目 Tag 定义（{{ state.document.tags.length }}）</summary>
           <div class="studio-advanced-content">
-            <p v-if="state.document.tags.length === 0" class="studio-tip">当前工程尚未定义 Tag</p>
-            <div v-for="tag in state.document.tags" :key="tag.tagId" class="studio-binding">
-              <strong>{{ tag.displayName }}</strong> · {{ tag.tagId }} ·
-              {{ TAG_DATA_TYPE_LABELS[tag.dataType] }}{{ tag.unit ? " · " + tag.unit : "" }}
-              <p class="studio-tip">{{ tag.description }}</p>
-            </div>
-            <p class="studio-tip">
-              定义随工程 JSON、草稿和本地历史版本保存；数据质量由实时 Tag 值提供。
-            </p>
+            <TagManager
+              :tags="state.document.tags"
+              :on-create="createProjectTag"
+              :on-update="updateProjectTag"
+              :on-remove="removeProjectTag"
+            />
           </div>
         </details>
         <details class="studio-advanced">

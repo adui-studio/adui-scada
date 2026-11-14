@@ -3,11 +3,27 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { loadEnvFile } from "node:process";
 import { setTimeout as pause } from "node:timers/promises";
+import { fileURLToPath } from "node:url";
 
+// 浏览器验证统一读取仓库根目录 .env，避免连接其他端口上的旧工程服务。
+const envPath = fileURLToPath(new URL("../.env", import.meta.url));
+if (existsSync(envPath)) loadEnvFile(envPath);
+const host = process.env.SCADA_WEB_HOST || "127.0.0.1";
 const targets = [
-  { name: "React", url: process.env.SCADA_REACT_URL || "http://127.0.0.1:5173/" },
-  { name: "Vue", url: process.env.SCADA_VUE_URL || "http://127.0.0.1:5174/" },
+  {
+    name: "React",
+    url:
+      process.env.SCADA_REACT_URL ||
+      "http://" + host + ":" + (process.env.SCADA_REACT_DEV_PORT || "15173") + "/",
+  },
+  {
+    name: "Vue",
+    url:
+      process.env.SCADA_VUE_URL ||
+      "http://" + host + ":" + (process.env.SCADA_VUE_DEV_PORT || "15174") + "/",
+  },
 ];
 const viewports = [
   { width: 1440, height: 900 },
@@ -451,6 +467,141 @@ async function runStudioInteroperability(session) {
   const vueAfterInvalidImport = JSON.parse(await evaluate(exportStudioJsonInPage));
   assert.deepStrictEqual(vueAfterInvalidImport, vueExport, "Vue 非法 JSON 导入覆盖了已有工程数据");
   process.stdout.write("React → Vue → React → Vue：完整往返及双端非法导入保护成功\n");
+}
+
+/** 在真实浏览器内定位项目 Tag 管理表单并打开详情区。 */
+function openTagManagerInPage() {
+  const menu = [...document.querySelectorAll("details.studio-advanced")].find((node) =>
+    node.querySelector("summary")?.textContent.includes("项目 Tag 定义"),
+  );
+  if (!menu) throw new Error("未找到项目 Tag 定义面板");
+  menu.open = true;
+  if (!menu.querySelector('form[aria-label="项目 Tag 编辑表单"]')) {
+    throw new Error("项目 Tag 管理表单未挂载");
+  }
+  return true;
+}
+
+function focusTagFieldInPage(index) {
+  const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
+  const field = form?.querySelectorAll("input, textarea")[index];
+  if (!field) throw new Error("项目 Tag 表单字段不存在：" + index);
+  field.focus();
+  field.select();
+  return true;
+}
+
+function submitTagFormInPage() {
+  const button = document.querySelector(
+    'form[aria-label="项目 Tag 编辑表单"] button[type="submit"]',
+  );
+  if (!button) throw new Error("未找到项目 Tag 保存按钮");
+  button.click();
+  return true;
+}
+
+function clickTagRowActionInPage(tagId, action, confirmChoice) {
+  const rows = document.querySelectorAll(
+    '[role="list"][aria-label="项目 Tag 目录"] [role="listitem"]',
+  );
+  const row = [...rows].find((node) =>
+    [...node.querySelectorAll("span")].some((span) => span.textContent.trim() === tagId),
+  );
+  const button = [...(row?.querySelectorAll("button") ?? [])].find(
+    (node) => node.textContent.trim() === action,
+  );
+  if (!button) throw new Error("未找到项目 Tag 操作：" + tagId + " · " + action);
+  const originalConfirm = window.confirm;
+  if (confirmChoice !== null) window.confirm = () => confirmChoice;
+  try {
+    button.click();
+  } finally {
+    window.confirm = originalConfirm;
+  }
+  return true;
+}
+
+/** 使用 Chrome 输入协议触发真正的框架输入事件，不直接篡改 DOM 值。 */
+async function fillTagField(session, index, value) {
+  await evaluateStudioPage(session, focusTagFieldInPage, index);
+  await session.send("Input.insertText", { text: value });
+  await pause(120);
+}
+
+async function runStudioTagManagement(session) {
+  await session.send("Emulation.setDeviceMetricsOverride", {
+    width: 1440,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+
+  for (const target of targets) {
+    await navigateStudioForInterop(session, target, "tag-management");
+    await evaluateStudioPage(session, openTagManagerInPage);
+    const tagId = "browser." + target.name.toLowerCase() + ".pressure";
+    await fillTagField(session, 0, tagId);
+    await fillTagField(session, 1, "浏览器新增压力");
+    await fillTagField(session, 2, "kPa");
+    await fillTagField(session, 3, "双框架 Tag 管理回归");
+    await evaluateStudioPage(session, submitTagFormInPage);
+    await pause(180);
+    const created = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
+    assert.deepStrictEqual(
+      created.tags.find((tag) => tag.tagId === tagId),
+      {
+        tagId,
+        displayName: "浏览器新增压力",
+        dataType: "number",
+        unit: "kPa",
+        description: "双框架 Tag 管理回归",
+      },
+      target.name + " 新建 Tag 未进入工程 JSON",
+    );
+
+    await evaluateStudioPage(session, clickTagRowActionInPage, tagId, "编辑", null);
+    await fillTagField(session, 1, "浏览器编辑压力");
+    await fillTagField(session, 2, "MPa");
+    await evaluateStudioPage(session, submitTagFormInPage);
+    await pause(180);
+    const updated = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
+    assert.equal(updated.tags.find((tag) => tag.tagId === tagId)?.displayName, "浏览器编辑压力");
+    assert.equal(updated.tags.find((tag) => tag.tagId === tagId)?.unit, "MPa");
+    assert.equal(updated.tags.find((tag) => tag.tagId === tagId)?.dataType, "number");
+
+    await evaluateStudioPage(session, clickTagRowActionInPage, "water.level", "删除", true);
+    let guardNotice = "";
+    const guardStarted = Date.now();
+    while (Date.now() - guardStarted < 3000) {
+      guardNotice = await session.evaluate(
+        "document.querySelector('.studio-notice')?.textContent ?? ''",
+      );
+      if (guardNotice.includes("仍被")) break;
+      await pause(50);
+    }
+    assert.match(
+      guardNotice,
+      /仍被.*绑定/,
+      target.name + " 未显示已绑定 Tag 的删除保护提示：" + guardNotice,
+    );
+    // 必须先捕获删除失败提示，再导出工程；导出成功提示会覆盖状态栏文案。
+    const guarded = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
+    assert.ok(
+      guarded.tags.some((tag) => tag.tagId === "water.level"),
+      "已绑定水位 Tag 被意外删除",
+    );
+
+    await evaluateStudioPage(session, clickTagRowActionInPage, tagId, "删除", true);
+    await pause(180);
+    const removed = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
+    assert.ok(
+      !removed.tags.some((tag) => tag.tagId === tagId),
+      target.name + " 删除 Tag 后工程仍包含该定义",
+    );
+    process.stdout.write(
+      target.name + " 项目 Tag 新增、编辑、绑定删除保护、删除与 JSON 往返通过\n",
+    );
+  }
 }
 
 /** 测试真实本地版本菜单，确认框只在隔离浏览器上下文中临时替换。 */
@@ -1165,6 +1316,10 @@ async function main() {
     await session.send("Runtime.enable");
     if (process.argv.includes("--interop")) {
       await runStudioInteroperability(session);
+      return;
+    }
+    if (process.argv.includes("--tags")) {
+      await runStudioTagManagement(session);
       return;
     }
     if (process.argv.includes("--versions")) {

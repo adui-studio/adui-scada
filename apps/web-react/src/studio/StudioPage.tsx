@@ -57,6 +57,7 @@ import type {
   ResizeHandle,
 } from "@adui/scada-core/editor";
 import { svgDataUrl } from "@adui/scada-runtime";
+import { TagManager } from "./TagManager.tsx";
 import "./studio.css";
 import "@adui/tailwind/studio.css";
 
@@ -349,6 +350,18 @@ export default function StudioPage() {
       () => editor.setSelectedBinding(slot, tagId === "" ? null : tagId),
       "已修改模拟 Tag 绑定，可撤销",
     );
+  }
+
+  function changeProjectTag(action: () => boolean, message: string): boolean {
+    try {
+      const changed = action();
+      if (changed) refresh();
+      setNotice(changed ? message : "项目 Tag 定义未发生变化");
+      return true;
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+      return false;
+    }
   }
 
   function refresh() {
@@ -2038,21 +2051,27 @@ export default function StudioPage() {
           <details className="studio-advanced">
             <summary>项目 Tag 定义（{state.document.tags.length}）</summary>
             <div className="studio-advanced-content">
-              {state.document.tags.length === 0 ? (
-                <p className="studio-tip">当前工程尚未定义 Tag</p>
-              ) : (
-                state.document.tags.map((tag) => (
-                  <div className="studio-binding" key={tag.tagId}>
-                    <strong>{tag.displayName}</strong> · {tag.tagId} ·
-                    {TAG_DATA_TYPE_LABELS[tag.dataType]}
-                    {tag.unit ? " · " + tag.unit : ""}
-                    <p className="studio-tip">{tag.description}</p>
-                  </div>
-                ))
-              )}
-              <p className="studio-tip">
-                定义随工程 JSON、草稿和本地历史版本保存；数据质量由实时 Tag 值提供。
-              </p>
+              <TagManager
+                tags={state.document.tags}
+                onCreate={(definition) =>
+                  changeProjectTag(
+                    () => editor.addTagDefinition(definition),
+                    "项目 Tag 已新增，可撤销",
+                  )
+                }
+                onUpdate={(tagId, changes) =>
+                  changeProjectTag(
+                    () => editor.updateTagDefinition(tagId, changes),
+                    "项目 Tag 已更新，可撤销",
+                  )
+                }
+                onRemove={(tagId) =>
+                  changeProjectTag(
+                    () => editor.removeTagDefinition(tagId),
+                    "项目 Tag 已删除，可撤销",
+                  )
+                }
+              />
             </div>
           </details>
           <details className="studio-advanced">

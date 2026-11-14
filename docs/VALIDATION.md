@@ -518,7 +518,6 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 
 **未完成**：React/Vue 双端 SSE 浏览器专项；Studio 人工查看、0.1/0.2 工程导入导出、真实旧 IndexedDB/localStorage 草稿与历史快照迁移体验、Tauri 人工验收。该日志不代表生产数据库、工业网关、现场设备或设备写入已验收。以上是维护者在文档更新前的 Windows 实测；此文档更新后的静态检查尚未重跑。PR #52 继续 Draft、Assignee `@adui-dev`，没有合并授权。
 
-
 ### 第三十批 Windows 最终自动化验收通过（2026-11-14）
 
 维护者在本地 Windows 提供第三十批最新复验日志（先前 Schema `0.2.0` 的旧 Demo 服务已排除）。本节是**维护者执行记录**，并非 GitHub 文档提交后的自动化重新执行：
@@ -533,3 +532,47 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **仍需独立验收（不阻止维护者本次明确授权的代码合并）**：Vue/React Studio 手工目录与绑定交互、历史 Schema JSON 跨框架导入导出、真正旧浏览器 IndexedDB/localStorage 草稿和历史快照迁移体验。真实工业网关、生产采集、现场控制、设备写入不在第三十批范围。
 
 本节只更新验收事实与 PR 描述，不更改已通过测试的业务代码；文档更新后的 `vp check` / `docs:check` 未重新执行。
+
+## 2026-11-14 · V0.3 第三十一批：项目 Tag 双框架可视化管理（待验收）
+
+基线：PR #52 已合并到 main（5781d690）；实施分支为 feat/v0.3-studio-project-tag-management。第三十批 438/438 等通过记录不能沿用为第三十一批新增 UI 的验证结果。
+
+- [ ] vp check：新建 React TSX、Vue SFC、Studio 接线、CSS 与脚本的格式、Lint、TypeScript 检查。
+- [ ] pnpm run docs:check：检查本批新增 ADR 与相关文档。
+- [ ] pnpm run test:unit：原有共享 Editor Tag CRUD 与 Schema 校验回归。
+- [ ] pnpm run ready：React/Vue/NestJS 类型检查、单测、E2E 和 Web/Server 构建全链。
+- [ ] pnpm run test:tags:browser：React/Vue 两端 Tag 新建、编辑、删除保护、删除及实际工程 JSON 断言。
+- [ ] pnpm run test:interop：React→Vue→React 项目 JSON 往返，包括 tags 稳定 ID 和元数据。
+- [ ] 人工 UI：表单控件、暗/亮主题、键盘焦点、ID 禁止修改、unknown 类型确认、非法字段/重复 ID/类型不兼容提示、删除确认。
+- [ ] 草稿与历史：Tag 变更撤销重做、浏览器草稿保存恢复、实际旧 0.1/0.2 工程与旧 IndexedDB/localStorage 草稿迁移。
+- [ ] 与第三十批 SSE 运行时互不干扰（按需要复跑 test:sse:browser 与 test:sse:fault:browser）。
+
+**验收状态**：本协作环境已经完成分支上的实现和静态代码审查，未运行本批 Windows Vite+ 测试或真实浏览器自动化，不报告测试通过。生产工业协议、现场设备与写入仍不在范围。Draft PR 未经授权不得合并。
+
+### 第三十一批 Windows 首轮质量链通过与 Tag 浏览器测试时序修复（2026-11-14）
+
+维护者提供 Windows PowerShell 实测日志：
+
+- `vp check`：271 个文件格式正确，135 个受检文件零警告、Lint 或 TypeScript 错误。
+- `pnpm run docs:check`：79 份 Markdown 通过。
+- `pnpm run ready`：依赖目录 11 清单/51 项、共享配置 9 TSConfig、环境与 LF、中文文案 161 文件、Prisma Client 7.10.1、Core 构建、React/Vue/Draft Storage/Server 类型检查、Vitest **438/438**、SSE 客户端 **8/8**、TCP 故障代理 **4/4**、NestJS E2E **17/17**、React 构建 **3901 模块**、Vue 构建 **3847 模块**和 NestJS 构建均完成；日志末尾未报告失败。
+- `pnpm run test:interop`：React → Vue、Vue → React 的工程 JSON / 页面 / 图元 / Tag 绑定往返通过，双端非法 JSON 导入保护通过，退出码 **0**。
+- `pnpm run test:tags:browser`：React 新增、编辑、导出 JSON、绑定 Tag 删除保护检查中失败，输出 `React 未说明已绑定 Tag 的删除保护`，退出码 **1**。这不是完整 Tag UI 通过记录，也没有执行到 Vue。
+- **根因（测试断言时序）**：测试点击删除绑定中的 `water.level` 后先导出 JSON，再读取状态栏提示。导出操作会更新状态栏成功文案，覆盖之前的 Core 删除拒绝提示；测试因此读取到导出提示，而不是 `Tag water.level 仍被 1 个图元槽绑定`。Core `DocumentEditor.removeTagDefinition` 仍在删除前统计所有页面绑定并拒绝删除，业务逻辑无需放宽。
+- **已提交修复**：`scripts/test-studio-browser.mjs` 在点击删除后轮询并先断言状态栏包含“仍被…绑定”，捕获提示后再导出 JSON 检查 Tag 仍存在；失败信息附带实际状态栏文案。该修复仅调整浏览器测试时序，不改变 UI 或 Core 行为。
+
+**待复验**：维护者同步最新提交后重跑 `pnpm run test:tags:browser`，确认 React 与 Vue 两端均输出成功；随后重跑 `vp check`、`pnpm run docs:check`（本记录更新后）及必要的 `pnpm run ready`。本协作环境未执行本批本地命令，不把修复提交视为测试通过。第三十一批仍保持 Draft。
+
+
+### 第三十一批最终 Windows Tag 管理浏览器回归通过（2026-11-14）
+
+维护者在修复浏览器断言时序后重新执行并提供实测日志：
+
+- `pnpm run test:tags:browser`：React 项目 Tag 新增、编辑、绑定删除保护、删除与 JSON 往返通过；Vue 同样通过；命令退出码 **0**。
+- `vp check`：**271 个文件格式正确，135 个受检文件零警告、Lint 或 TypeScript 错误**。
+- `pnpm run docs:check`：**79 个 Markdown 文件通过**（本节验收记录追加后尚未重新执行）。
+- 此前同一分支的 `pnpm run ready` 已执行完成，Vitest 438/438、SSE 客户端 8/8、TCP 故障代理 4/4、NestJS E2E 17/17、React/Vue 类型检查和构建均通过；`pnpm run test:interop` 双框架工程 JSON 往返及非法导入保护通过，退出码 0。
+
+本批浏览器 CRUD 专项此前的失败是脚本先导出 JSON、再读取状态栏，导出提示覆盖删除拒绝提示；修复后已由 React、Vue 两端真实浏览器操作复验通过。Core 删除保护没有放宽。
+
+**尚未单独完成的人工验收**：键盘无障碍与视觉细节、真正旧 0.1/0.2 工程和历史 IndexedDB/localStorage 草稿迁移的用户体验复验。以上不改变本次已通过的自动化结果。工业现场设备、网关、设备写入不属于本批。
