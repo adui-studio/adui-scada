@@ -881,3 +881,17 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 ### 第三十三批 OIDC 增量迁移真实数据库测试用例（2026-11-14）
 
 新增 `apps/server/test/oidc-schema.db-spec.ts`，纳入现有 `pnpm run test:db` 隔离数据库测试入口。测试严格限制连接目标为本机 `adui_scada_test`，核验迁移登记、OIDC 表/15 个字段/外键/约束/三个索引及中文数据库注释。该测试尚未执行；等待维护者创建独立数据库、应用迁移并提供 `db:migrate:deploy`、`db:migrate:status`、`test:db` 的退出码。不会使用普通开发库或生产库。
+
+
+## 2026-11-14 · V0.3 第三十三批：OIDC 隔离 PostgreSQL 增量迁移验收通过
+
+维护者在 Windows 本机对隔离数据库 `127.0.0.1:15432/adui_scada_test` 完成真实 PostgreSQL 验收，所有命令均有实际终端输出：
+
+- `pnpm run db:validate`：Prisma Schema 校验通过。
+- `pnpm run db:migrate:deploy`：成功应用 `20261114000000_oidc_identity_transactions` 增量迁移。
+- `pnpm run db:migrate:status`：4 项迁移均已登记，数据库 Schema 为最新状态。
+- `pnpm run test:db`：2 个测试文件、16/16 测试通过；OIDC Schema 5/5，既有工程版本数据库回归 11/11；最终退出码 **0**。
+
+本次真实数据库检查覆盖迁移登记、两张 OIDC 新表、15 个新增物理字段及中文注释、复合外键、检查约束、可空字段和三个新增索引及其中文注释。未执行数据库重置、删除或重建，没有覆盖既有数据库数据。
+
+**验收边界**：这是既有隔离测试库上的增量迁移与真库集成测试通过；尚未在另一全新隔离数据库从空库完整部署全部迁移，也尚未重复执行部署命令验证幂等。OIDC 协议流程、BFF Cookie/CSRF 和工程 HTTP API 仍未实现，`SCADA_OIDC_ENABLED` 必须保持默认关闭及服务端 fail-closed。PR #55 继续 Draft，Assignee 为 `@adui-dev`，未经维护者明确授权不得合并。
