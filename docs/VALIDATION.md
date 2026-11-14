@@ -757,17 +757,16 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 
 **当前状态**：测试代码已提交，尚未在 Windows 或任何 PostgreSQL 实例运行。执行前必须先创建本机独立数据库 `adui_scada_test`，将迁移命令和测试进程的连接 URL 显式指向该数据库；禁止使用普通开发库 `adui_scada` 或生产数据库。完成后执行 `pnpm run db:migrate:deploy`、`pnpm run db:migrate:status`、`pnpm run test:db` 并提供各命令退出码。不得把 Prisma Client 生成、Schema 单测或静态 SQL 审查视为真实迁移通过。
 
-
 ## V0.3 第三十三批：OIDC PostgreSQL 增量迁移真实验收（2026-11-14）
 
 维护者 Windows 实测目标为本机隔离数据库 `127.0.0.1:15432/adui_scada_test`，命令及结果如下：
 
-| 命令 | 实测结果 |
-| --- | --- |
-| `pnpm run db:validate` | Prisma Schema 有效 |
+| 命令                         | 实测结果                                             |
+| ---------------------------- | ---------------------------------------------------- |
+| `pnpm run db:validate`       | Prisma Schema 有效                                   |
 | `pnpm run db:migrate:deploy` | 成功应用 `20261114000000_oidc_identity_transactions` |
-| `pnpm run db:migrate:status` | 4 项迁移已登记，Schema 为最新 |
-| `pnpm run test:db` | 2 个文件、16/16 测试通过，退出码 0 |
+| `pnpm run db:migrate:status` | 4 项迁移已登记，Schema 为最新                        |
+| `pnpm run test:db`           | 2 个文件、16/16 测试通过，退出码 0                   |
 
 数据库测试包括 OIDC Schema 5/5 与既有工程版本数据库回归 11/11。OIDC 检查真实 PostgreSQL 中的迁移登记、两张表、15 个物理字段及中文表/字段注释、复合外键、检查约束、可空字段和三个业务索引及中文注释。
 

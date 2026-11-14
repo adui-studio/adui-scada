@@ -37,10 +37,7 @@ function createConfig(overrides: Readonly<Record<string, string>> = {}): Enabled
   return result;
 }
 
-function createMetadata(
-  issuer: string,
-  overrides: Partial<TestMetadata> = {},
-): TestMetadata {
+function createMetadata(issuer: string, overrides: Partial<TestMetadata> = {}): TestMetadata {
   return {
     issuer,
     authorization_endpoint: "https://id.example.org/realms/scada/authorize",
@@ -81,9 +78,7 @@ afterEach(() => {
 describe("OIDC 固定 Issuer Discovery", () => {
   it("按固定 Issuer 获取元数据并复用同一个客户端配置", async () => {
     const startupConfig = createConfig();
-    const { fetchMock, requests } = stubDiscoveryFetch(
-      createMetadata(startupConfig.issuer.href),
-    );
+    const { fetchMock, requests } = stubDiscoveryFetch(createMetadata(startupConfig.issuer.href));
     const service = new OidcProviderDiscoveryService(startupConfig);
 
     const [first, second] = await Promise.all([
@@ -114,7 +109,9 @@ describe("OIDC 固定 Issuer Discovery", () => {
     const invalidMetadata = [
       createMetadata(startupConfig.issuer.href, { response_types_supported: ["id_token"] }),
       createMetadata(startupConfig.issuer.href, { code_challenge_methods_supported: ["plain"] }),
-      createMetadata(startupConfig.issuer.href, { id_token_signing_alg_values_supported: ["ES256"] }),
+      createMetadata(startupConfig.issuer.href, {
+        id_token_signing_alg_values_supported: ["ES256"],
+      }),
       createMetadata(startupConfig.issuer.href, { subject_types_supported: ["unsupported"] }),
       createMetadata(startupConfig.issuer.href, {
         token_endpoint_auth_methods_supported: ["client_secret_post"],
@@ -127,7 +124,10 @@ describe("OIDC 固定 Issuer Discovery", () => {
     ];
 
     for (const metadata of invalidMetadata) {
-      vi.stubGlobal("fetch", vi.fn<CustomFetch>(async () => createResponse(metadata)));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn<CustomFetch>(async () => createResponse(metadata)),
+      );
       const service = new OidcProviderDiscoveryService(startupConfig);
       await expect(service.getConfiguration()).rejects.toThrow(DISCOVERY_FAILURE_MESSAGE);
       vi.unstubAllGlobals();

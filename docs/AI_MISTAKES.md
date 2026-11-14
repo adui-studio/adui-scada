@@ -89,7 +89,6 @@
 - **验证**：独立浏览器 Profile、React/Vue 双 Origin 的完整旧数据迁移与恢复。
 - **证据**：PR #54、[ADR-0064](adr/0064-legacy-browser-migration-validation.md)。
 
-
 ### E-010 · 使用控制字符正则触发 ESLint no-control-regex（第三十三批阶段 B）
 
 - **现象**：维护者 Windows 执行 `vp check --fix` 时，`oidc-login-transaction.service.ts` 的回跳路径校验触发 `eslint(no-control-regex)` 警告。

@@ -36,7 +36,10 @@ interface FakeTransactionClient {
     }): Promise<StoredTransaction>;
     findFirst(args: {
       readonly where: TransactionWhere;
-    }): Promise<Pick<StoredTransaction, "issuer" | "nonce" | "verifierCiphertext" | "returnPath"> | null>;
+    }): Promise<Pick<
+      StoredTransaction,
+      "issuer" | "nonce" | "verifierCiphertext" | "returnPath"
+    > | null>;
     updateMany(args: {
       readonly where: TransactionWhere;
       readonly data: { readonly consumedAt: Date };
@@ -205,7 +208,9 @@ describe("OIDC 一次性登录事务", () => {
     expect(record.stateHash).toBe(stateHash);
     expect(record.browserBindingHash).toBe(bindingHash);
     expect(record.returnPath).toBe("/studio/projects?tab=recent");
-    expect(record.verifierCiphertext).toMatch(/^v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+    expect(record.verifierCiphertext).toMatch(
+      /^v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/,
+    );
     expect(record.verifierCiphertext).not.toContain(state);
     expect(record.verifierCiphertext).not.toContain(result.browserBindingCookie);
     expect(record.expiresAt.getTime() - record.createdAt.getTime()).toBe(5 * 60 * 1000);
@@ -225,11 +230,13 @@ describe("OIDC 一次性登录事务", () => {
     expect(consumed.nonce).toBe(authorizationUrl.searchParams.get("nonce"));
     expect(consumed.returnPath).toBe("/studio");
     expect(consumed.codeVerifier).toMatch(/^[A-Za-z0-9._~-]{43,128}$/);
-    expect(
-      await oidc.calculatePKCECodeChallenge(consumed.codeVerifier),
-    ).toBe(authorizationUrl.searchParams.get("code_challenge"));
+    expect(await oidc.calculatePKCECodeChallenge(consumed.codeVerifier)).toBe(
+      authorizationUrl.searchParams.get("code_challenge"),
+    );
     expect(fake.records.get(sha256(state))?.consumedAt).toBeInstanceOf(Date);
-    expect(fake.records.get(sha256(state))?.verifierCiphertext).not.toContain(consumed.codeVerifier);
+    expect(fake.records.get(sha256(state))?.verifierCiphertext).not.toContain(
+      consumed.codeVerifier,
+    );
     expect(await fake.service.consume(state, result.browserBindingCookie)).toBeNull();
     expect(fake.consumeCalls).toBe(1);
   });
@@ -298,7 +305,6 @@ describe("OIDC 一次性登录事务", () => {
     futureRecord.createdAt = new Date(Date.now() + 60_000);
     expect(await fake.service.consume(futureState, future.browserBindingCookie)).toBeNull();
   });
-
 
   it("拒绝数据库中被篡改的 Nonce 与回跳路径", async () => {
     const invalidPath = createFakeService();

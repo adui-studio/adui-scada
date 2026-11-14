@@ -137,10 +137,9 @@ function decryptCodeVerifier(
     const decipher = createDecipheriv("aes-256-gcm", Buffer.from(key), iv);
     decipher.setAAD(Buffer.from(stateHash, "ascii"));
     decipher.setAuthTag(tag);
-    const verifier = Buffer.concat([
-      decipher.update(ciphertext),
-      decipher.final(),
-    ]).toString("utf8");
+    const verifier = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString(
+      "utf8",
+    );
     return CODE_VERIFIER_PATTERN.test(verifier) ? verifier : null;
   } catch {
     return null;

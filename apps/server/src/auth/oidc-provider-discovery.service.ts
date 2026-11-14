@@ -25,8 +25,7 @@ function assertAllowedOidcUrl(value: unknown, allowInsecureLoopback: boolean): U
 
   const loopback = LOOPBACK_HOSTS.has(url.hostname);
   const allowedProtocol =
-    url.protocol === "https:" ||
-    (allowInsecureLoopback && loopback && url.protocol === "http:");
+    url.protocol === "https:" || (allowInsecureLoopback && loopback && url.protocol === "http:");
 
   if (!allowedProtocol || url.username || url.password || url.hash) {
     throw new Error("OIDC 元数据端点必须使用可信 HTTPS 地址");
@@ -48,9 +47,7 @@ function validateDiscoveredMetadata(
     throw new Error("OIDC 身份提供方不支持授权码响应");
   }
   if (
-    !metadata.subject_types_supported?.some(
-      (value) => value === "public" || value === "pairwise",
-    )
+    !metadata.subject_types_supported?.some((value) => value === "public" || value === "pairwise")
   ) {
     throw new Error("OIDC 身份提供方未声明受支持的主体标识类型");
   }
