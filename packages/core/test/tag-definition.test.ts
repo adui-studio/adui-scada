@@ -68,7 +68,7 @@ test("水处理演示 Tag 定义提供稳定 ID、类型和单位，质量保持
   expect(store.snapshot()).toHaveLength(3);
 
   const copy = waterTreatmentDemoTagCatalog.get("water.level");
-  if (copy) copy.displayName = "外部篡改";
+  if (copy) Object.assign(copy, { displayName: "外部篡改" });
   expect(waterTreatmentDemoTagCatalog.get("water.level")?.displayName).toBe("模拟水位");
 });
 
