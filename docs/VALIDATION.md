@@ -690,3 +690,14 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 已在开发分支最小修复：为五处异常断言指定准确中文错误消息；使用锚定正则校验完整异常消息以验证敏感字符串不会泄露，并删除条件式 `expect`；使用索引和 `charCodeAt()` 检测 UTF-16 码元控制字符，不再展开字符串。未改变 OIDC 开关、验证策略、Prisma 模型、SQL 迁移或工程 API。
 
 当前仅完成远端代码修改和静态片段核对；尚未取得修复后的 Windows `vp check`、Vitest 或 `ready` 运行结果，**不得标记本次修复已通过完整验证**。
+
+
+### 第三十三批 Windows 单测：Prisma 中文注释跨行格式修复（2026-11-14）
+
+维护者运行 `pnpm run test:unit`：Core Node 构建通过、Prisma Client 7.10.1 生成成功；**40 个测试文件中 39 个通过、1 个失败，448 项测试中 447 通过、1 失败，退出码 1**。新增 OIDC 配置测试 7/7、共享数据库模块测试 3/3 均通过。
+
+唯一失败项：`apps/server/src/database/prisma-schema-comments.spec.ts` 的“所有 Prisma 业务表和实际持久化字段都有中文数据库注释”。该测试读取全部迁移 SQL，并逐行匹配 `COMMENT ON COLUMN "表"."列" IS '中文说明';`。第三十三批新增 SQL 迁移将部分 `COMMENT ON` 的 `IS` 和中文注释值拆分到两行，导致 `commentText` 返回 null，在 `.toMatch()` 处报 `TypeError: .toMatch() expects to receive a string, but got object`。
+
+**最小修复**：仅调整 `apps/server/prisma/migrations/20261114000000_oidc_identity_transactions/migration.sql` 中 10 处跨行的 COMMENT ON TABLE/COLUMN/INDEX 为一行，不修改 DDL、Prisma Schema、中文注释内容、约束、索引、身份逻辑，也不更改测试判定规则。通过模拟现有测试的逐行 `commentText` 匹配，对 4 份迁移 SQL 和 8 个 Prisma 业务模型进行静态核对：**58 个表/物理字段注释均存在中文内容，无缺失项**。
+
+**待维护者复验**：`pnpm run test:unit`、`vp check`、`pnpm run docs:check`。此前的 447/448 是失败的真实运行结果，本次代码修复尚未实际执行 Vitest，不得记录为通过。
