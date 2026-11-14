@@ -5,7 +5,7 @@ import {
   renderSvgPage,
   validateTagValue,
 } from "@adui/scada-core";
-import type { ScadaDocument, TagChange, TagDefinitionCatalog, TagValue } from "@adui/scada-core";
+import type { ScadaDocument, TagChange, TagValue } from "@adui/scada-core";
 import {
   RuntimeStatusHistory,
   createRuntimeDiagnostics,
