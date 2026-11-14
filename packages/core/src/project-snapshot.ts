@@ -1,4 +1,4 @@
-import { parseScadaDocument } from "./document.ts";
+import { migrateScadaDocument, parseScadaDocument } from "./document.ts";
 import type { ScadaDocument } from "./document.ts";
 
 /** 校验范围仅为工程 Schema 与 JSON 安全规则，不代表具备正式发布条件。 */
@@ -52,6 +52,8 @@ export interface ProjectSnapshot {
   readonly hashAlgorithm: "SHA-256";
   readonly contentHash: string;
   readonly document: DeepReadonly<ScadaDocument>;
+  /** 读取旧版历史快照时的内存迁移来源，不写入原始快照摘要。 */
+  readonly migratedFrom?: "0.1.0" | "0.2.0";
 }
 
 export interface ProjectSnapshotOptions {
@@ -129,7 +131,7 @@ async function hashSnapshotContent(source: {
   revision: number;
   createdAt: string;
   hashAlgorithm: string;
-  document: ScadaDocument;
+  document: unknown;
 }): Promise<string> {
   const canonical = JSON.stringify(stableValue(source));
   const bytes = utf8Bytes(canonical);
@@ -200,9 +202,11 @@ export async function readProjectSnapshot(input: unknown): Promise<ProjectSnapsh
     throw new TypeError("工程版本快照必须为普通对象");
   }
   const raw = input as Record<string, unknown>;
+  const allowedFields =
+    raw.migratedFrom === undefined ? SNAPSHOT_FIELDS : [...SNAPSHOT_FIELDS, "migratedFrom"];
   if (
-    Object.keys(raw).length !== SNAPSHOT_FIELDS.length ||
-    Object.keys(raw).some((key) => !SNAPSHOT_FIELDS.includes(key))
+    Object.keys(raw).length !== allowedFields.length ||
+    Object.keys(raw).some((key) => !allowedFields.includes(key))
   ) {
     throw new TypeError("工程版本快照包含未知字段或缺少必需字段");
   }
@@ -215,23 +219,46 @@ export async function readProjectSnapshot(input: unknown): Promise<ProjectSnapsh
   if (typeof raw.contentHash !== "string" || !/^[0-9a-f]{64}$/.test(raw.contentHash)) {
     throw new TypeError("工程快照摘要格式无效");
   }
-  const document = parseScadaDocument(raw.document);
+
+  // 先验证原始历史文档，再将其迁移为当前 Schema 的只读查看副本。
+  const migration = migrateScadaDocument(raw.document);
+  const document = migration.document;
   if (raw.projectId !== document.projectId) {
     throw new TypeError("快照与工程 ID 不一致");
   }
-  const payload = {
+  if (
+    raw.migratedFrom !== undefined &&
+    raw.migratedFrom !== migration.migratedFrom
+  ) {
+    throw new TypeError("历史快照迁移标记与原始工程版本不一致");
+  }
+
+  // 摘要必须对原始存储内容计算；迁移后的视图不覆盖历史快照的完整性证明。
+  const sourcePayload = {
     formatVersion: PROJECT_SNAPSHOT_FORMAT_VERSION as 1,
     projectId: document.projectId,
     revision: requireRevision(raw.revision),
     createdAt: requireCreatedAt(raw.createdAt),
     hashAlgorithm: "SHA-256" as const,
-    document,
+    document: raw.document,
   };
-  const digest = await hashSnapshotContent(payload);
+  const digest = await hashSnapshotContent(sourcePayload);
   if (digest !== raw.contentHash) {
     throw new TypeError("工程版本快照摘要不匹配，内容可能已被修改");
   }
-  const snapshot = { ...payload, contentHash: digest };
+  const payload = {
+    formatVersion: PROJECT_SNAPSHOT_FORMAT_VERSION as 1,
+    projectId: document.projectId,
+    revision: sourcePayload.revision,
+    createdAt: sourcePayload.createdAt,
+    hashAlgorithm: "SHA-256" as const,
+    document,
+  };
+  const snapshot = {
+    ...payload,
+    contentHash: digest,
+    ...(migration.migratedFrom === null ? {} : { migratedFrom: migration.migratedFrom }),
+  };
   requireSnapshotSize(snapshot);
   return deepFreeze(snapshot);
 }
