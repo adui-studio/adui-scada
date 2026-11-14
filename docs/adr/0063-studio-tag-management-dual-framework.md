@@ -1,6 +1,6 @@
 # ADR-0063：Vue/React Studio 项目 Tag 可视化管理与双框架对等
 
-- 状态：Proposed
+- 状态：Accepted
 - 日期：2026-11-14
 - 关联：FR-002、FR-004、FR-006、FR-013、NFR-002、NFR-004
 - 前置：[ADR-0061](0061-tag-definition-catalog.md)、[ADR-0062](0062-project-tag-definitions-schema-030.md)
@@ -37,4 +37,4 @@
 
 额外人工核对：Vue/React 表单可视布局、Tab/键盘访问、未知类型的编辑确认、不兼容类型或重复 ID 的中文错误、已绑定 Tag 删除保护、撤销重做、草稿保存和双框架工程 JSON 往返。
 
-**当前状态**：本批代码、文档和自动化入口已提交开发分支，但本协作环境没有可访问的完整 Windows Vite+ 浏览器运行环境；上述命令未针对本批执行，不能宣称测试已通过。未经维护者明确授权，不合并 Draft PR。
+**实施与验收结果**：PR #53 已合并到 main（7fccc1e2）。维护者 Windows 实测 ready、test:interop、test:tags:browser 通过；React/Vue 两端新增、编辑、绑定删除保护、删除及 JSON 往返均成功。键盘/视觉人工检查及真实旧草稿迁移体验继续由后续批次跟进。
