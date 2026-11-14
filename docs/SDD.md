@@ -671,7 +671,7 @@ OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client I
 
 共享 DatabaseModule 持有唯一 PrismaService 提供方，ScadaIdentityModule 和 ProjectPersistenceModule 都只通过 imports 使用它；默认 AppModule 仍不导入上述模块。
 
-新增 ScadaExternalIdentity，以复合主键 (issuer, subject) 关联现有本地 ScadaIdentity；新增 ScadaOidcTransaction，使用 stateHash 主键、浏览器绑定摘要、nonce、AES-GCM 加密密文、到期/消费时间及站内路径；为 ScadaAuthSession 添加可空 csrfTokenHash，兼容既有 Bearer 会话。上述模型与迁移已在维护者本机隔离 `adui_scada_test` 应用，`pnpm run test:db` 的 16/16 真库测试通过。阶段 B 第一、二小批已实现 Discovery、授权码登录发起、AES-256-GCM PKCE verifier 加密与一次性事务服务；维护者 Windows 已通过对应单测及完整 `ready`。第三小批授权码回调、ID Token 校验、预绑定身份查询和内部会话签发服务已提交，新增回调 Mock 单测待 Windows 验证。真实 IdP 联调、真实 PostgreSQL 并发消费、Cookie/CSRF HTTP Controller 尚未验收或实现。
+新增 ScadaExternalIdentity，以复合主键 (issuer, subject) 关联现有本地 ScadaIdentity；新增 ScadaOidcTransaction，使用 stateHash 主键、浏览器绑定摘要、nonce、AES-GCM 加密密文、到期/消费时间及站内路径；为 ScadaAuthSession 添加可空 csrfTokenHash，兼容既有 Bearer 会话。上述模型与迁移已在维护者本机隔离 `adui_scada_test` 应用，`pnpm run test:db` 的 16/16 真库测试通过。阶段 B 第一、二小批已实现 Discovery、授权码登录发起、AES-256-GCM PKCE verifier 加密与一次性事务服务；维护者 Windows 已通过对应单测及完整 `ready`。第三小批授权码回调、ID Token 校验、预绑定身份查询和内部会话签发服务已提交，新增回调 Mock 单测待 Windows 验证。真实 IdP/JWKS 联调、真实 PostgreSQL 并发消费和生产浏览器 Cookie/HTTPS 代理验收仍待完成；第四、五小批 HTTP Controller 与 Guard 已通过维护者 Windows Mock E2E 和完整工程质量链。
 
 ### 第三十三批阶段 B 第一、二小批实际实现状态（2026-11-14）
 
@@ -698,7 +698,7 @@ OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client I
 
 该验收只证明当前代码质量链和 Mock 测试通过，不代表真实 IdP/JWKS 联调、HTTP Cookie/CSRF 或工程 API 已完成。
 
-### 第三十三批阶段 B 第四小批：BFF Cookie 与 CSRF 会话保护（代码已提交，待 Windows 验证）
+### 第三十三批阶段 B 第四小批：BFF Cookie 与 CSRF 会话保护（Windows 工程质量验收通过）
 
 - `AuthSessionService.issueForVerifiedSubject()` 为每个新会话生成独立 `scada_csrf_` 随机令牌，数据库只写入 SHA-256 摘要；`authenticateCookieSession()` 只接受有合法 CSRF 摘要的活动会话，并对请求 CSRF Token 摘要作常量时间比较。旧 Bearer 会话 `csrfTokenHash = null` 仍可走 Bearer，不允许升级为 Cookie。
 - `scada-auth-cookie.ts` 统一生成 `__Host-adui-scada-session`（HttpOnly）与 `__Host-adui-scada-csrf`（可读）Set-Cookie 头，均为 Secure、SameSite=Lax、Path=/、无 Domain；提供对称清除头。
@@ -706,7 +706,7 @@ OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client I
 - Guard 将认证方式、当前会话 ID 和可信 Principal 写入请求上下文，Bearer/Cookie 两条路径均可供 Controller 精确撤销当前会话。第四小批提交时 Controller 尚未注册；第五小批将 Guard 与 Controller 仅挂载到 OIDC 启用根模块，默认 AppModule 不加载身份路由。
 - 新增 Cookie 序列化测试与 Guard Mock 测试，覆盖 Cookie 属性、清除属性、Bearer 兼容、凭据混用、Cookie 安全读取、写请求 CSRF、Origin、Fetch Metadata、重复 Cookie、数据库 CSRF 摘要拒绝和审计脱敏。**需维护者 Windows 执行静态检查、单测和完整 ready；真实浏览器与 HTTPS 反向代理行为待后续 Controller 联调。**
 
-### 第三十三批阶段 B 第五小批：OIDC BFF HTTP 控制器与认证路由（代码已提交，待 Windows 验证）
+### 第三十三批阶段 B 第五小批：OIDC BFF HTTP 控制器与认证路由（Windows 工程质量验收通过）
 
 - 新增 `ScadaAuthController`，只在 `ScadaIdentityModule` 中注册，提供 `GET /api/v1/auth/oidc/start`、`GET /api/v1/auth/oidc/callback`、`GET /api/v1/auth/me` 和 `POST /api/v1/auth/logout`。
 - 登录发起读取可选 `returnTo` 和现有浏览器绑定 Cookie，复用 `OidcLoginTransactionService.start()`；仅重定向至固定 Issuer 授权 URL，并设置短时 `__Host-adui-scada-oidc-browser` Cookie。
@@ -714,4 +714,8 @@ OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client I
 - `GET /me` 通过 `ScadaSessionGuard` 返回最小可信 `tenantId/subjectId`，响应禁止缓存且不返回会话令牌；`POST /logout` 通过 Guard 的 Cookie CSRF 或显式 Bearer 认证撤销当前本地会话，数据库撤销未确认时返回 503 且不清除 Cookie。
 - 新增 `OidcEnabledAppModule`，仅在启动配置 `SCADA_OIDC_ENABLED=true` 且完整校验通过时由 `main.ts` 选择；该根模块只组合 `AppModule + ScadaIdentityModule`，不挂载 `ProjectPersistenceModule`。默认 AppModule 保持健康接口，不连接 PostgreSQL、不注册身份路由；OIDC 与本机模拟 API 同时启用时启动拒绝。
 - 新增 Controller E2E 测试覆盖登录重定向、浏览器绑定 Cookie、多标签页复用、回调 Cookie 签发、`me` 最小身份返回、未认证拒绝、CSRF 注销、Bearer 注销和审计脱敏；默认 AppModule 继续验证四条身份路由均为 404。
-- **待维护者 Windows 执行** `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run docs:check` 和完整 `pnpm run ready`。Mock HTTP E2E 不代表真实 IdP、真实 HTTPS 浏览器 Cookie、反向代理或生产身份接入已经验收。
+- **维护者 Windows 已验收**：`vp check` 291 个文件格式正确、151 个受检文件零警告/Lint/TypeScript 错误；`test:unit` 45/45 文件、494/494 测试；`test:e2e:server` 4/4 文件、26/26 测试（OIDC Controller 9/9）；`docs:check` 83 Markdown；完整 `ready` 最终退出码 0。Mock HTTP E2E 不代表真实 IdP、真实 HTTPS 浏览器 Cookie、反向代理或生产身份接入已经验收。
+
+### 第三十三批阶段 B 第四、五小批 Windows 工程质量验收（2026-11-14）
+
+维护者 Windows 实测：`vp check` 291 个文件格式正确、151 个受检文件零警告/Lint/TypeScript 错误；`test:unit` 45/45 文件、494/494 测试；`test:e2e:server` 4/4 文件、26/26 测试（OIDC Controller 9/9）；`docs:check` 83 Markdown；SSE 客户端 8/8、故障代理 4/4；React/Vue/NestJS 构建成功；完整 `ready` 最终退出码 0。E-012 已复验关闭。真实 IdP/JWKS、生产 HTTPS/反向代理和企业身份映射不在本次 Mock E2E 验收范围。

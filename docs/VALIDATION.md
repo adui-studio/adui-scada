@@ -887,7 +887,7 @@ type OidcExpectedState = NonNullable<Parameters<OidcAuthorizationCodeGrant>[2]>[
 
 **待执行**：维护者 Windows `vp check`、`pnpm run test:unit`、`pnpm run docs:check`、`pnpm run ready`。本批无 Prisma Schema 或迁移变更；单测使用 Mock，不代表真实浏览器 Set-Cookie、HTTPS 终止代理、Cookie 域名/端口行为或真实 IdP 登录已验收。HTTP Controller 已由第五小批提交，OIDC 启用仍需维护者质量验收。
 
-## 第三十三批阶段 B 第五小批：OIDC BFF HTTP 控制器与认证路由（待维护者 Windows 验证）
+## 第三十三批阶段 B 第五小批：OIDC BFF HTTP 控制器与认证路由（Windows 验收通过）
 
 新增 `apps/server/test/oidc-auth.controller.e2e-spec.ts`，通过 NestJS TestingModule 与 Supertest 验证真实 HTTP 路由/Guard/响应头，外部 IdP、PostgreSQL 与真实浏览器均使用 Mock/不连接。覆盖：
 
@@ -910,3 +910,26 @@ type OidcExpectedState = NonNullable<Parameters<OidcAuthorizationCodeGrant>[2]>[
 - `database.module.spec.ts` 导入 `ScadaAuthController` 后没有实际使用，触发 `no-unused-vars` 与 TS6133；现增加 `ScadaIdentityModule` Controller 元数据断言，确认认证 Controller 只注册在身份模块中。
 
 上述是代码修复记录，**尚未收到修复后的 Windows 复验日志**。需重新执行 `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run docs:check` 和完整 `pnpm run ready`，最终记录 PowerShell `$LASTEXITCODE`；不得将格式化完成或代码已推送描述为测试通过。对应错误防复发规则记录在 `docs/AI_MISTAKES.md` E-012。
+
+## 2026-11-14 · 第三十三批阶段 B 第四、五小批 Windows 完整验收通过
+
+维护者提供的 Windows PowerShell 日志确认，修复 E-012 后，当前功能分支完成以下验证：
+
+| 验收项 | 实测结果 |
+| --- | --- |
+| `vp check` 格式检查 | 291 个文件正确 |
+| Lint / TypeScript | 151 个受检文件，零警告、零错误 |
+| `pnpm run test:unit` | 45/45 文件、494/494 测试通过 |
+| `pnpm run test:e2e:server` | 4/4 文件、26/26 测试通过 |
+| OIDC Controller E2E | 9/9 测试通过 |
+| `pnpm run docs:check` | 83 个 Markdown 文件通过 |
+| SSE 客户端测试 | 8/8 通过 |
+| SSE 故障代理测试 | 4/4 通过 |
+| React Web 构建 | 成功 |
+| Vue Web 构建 | 成功 |
+| NestJS Server 构建 | 成功 |
+| 完整 `pnpm run ready` | 最终退出码 **0** |
+
+本次完整 `ready` 实际执行依赖目录、共享配置、环境变量与换行符、中文文案、Prisma Client 生成、Core 构建、Vite+ 格式/Lint/TypeScript、React/Vue/Draft Storage 类型检查、Server 类型检查、494 项单测、SSE 客户端 8 项、SSE 故障代理 4 项、NestJS E2E 26 项、83 份 Markdown 检查、React/Vue Web 构建和 NestJS 构建。
+
+E-012 的三个问题均已由本次 Windows 复验关闭：401 E2E 存在显式 Vitest 断言；Supertest Set-Cookie 字符串类型已正确处理；身份模块 Controller 元数据断言已生效。上述结果记录的是 Mock OIDC HTTP 路由与工程质量链通过，**不代表真实 IdP/JWKS、生产 HTTPS/反向代理、真实浏览器 Cookie 或企业身份映射已经验收**。阶段 A 的真实 PostgreSQL 迁移测试 16/16 通过记录保持独立，不因本次 `ready` 而扩大其验证范围。

@@ -162,3 +162,9 @@ Vue 与 React 是两个正式 Web 端，必须共用同源 API 契约、工程�
 - `GET /me` 由 `ScadaSessionGuard` 保护，只返回服务端可信租户/主体标识；`POST /logout` 同样由 Guard 保护，Cookie 请求必须通过 Origin、Fetch Metadata 和 CSRF，Bearer 兼容请求使用已验证的当前会话 ID。撤销数据库失败时不清除 Cookie、不谎报注销成功。
 - 新增 `OidcEnabledAppModule` 仅组合基础 `AppModule` 和 `ScadaIdentityModule`；`main.ts` 只有在 OIDC 开关与完整配置校验通过时才选择该根模块。默认 `AppModule` 仍不导入身份/数据库模块；本机模拟 API 与 OIDC 同时开启时 fail-fast。工程持久化模块尚未挂载，因此当前没有工程 HTTP API。
 - HTTP Controller 和 Mock E2E 通过不等同于真实 IdP/JWKS、生产 HTTPS、反向代理、浏览器 SameSite Cookie 或企业身份映射已验收；维护者 Windows 完整质量链仍是启用前门禁。
+
+### 3.3 第四、五小批 Windows 工程质量验收记录（2026-11-14）
+
+维护者 Windows 已验证当前分支：`vp check` 291 个文件格式正确、151 个受检文件零警告/Lint/TypeScript 错误；单测 45/45 文件、494/494 测试；NestJS E2E 4/4 文件、26/26 测试（OIDC Controller 9/9）；`docs:check` 83 Markdown；完整 `ready` 最终退出码 0，React/Vue/NestJS 构建成功。
+
+该结果确认 HTTP Controller/Guard 的 Mock HTTP 集成回归与工程质量链通过；不代表真实 IdP/JWKS、浏览器 Secure Cookie、生产 TLS 反向代理或企业身份映射已经验收。OIDC 仍默认关闭，真实启用前仍须完成专项联调。

@@ -957,16 +957,22 @@ E-011 已在 `docs/AI_MISTAKES.md` 记录；其类型派生修复与第三小批
 
 第四小批提交时，Cookie/CSRF 会话服务、Cookie 头构造函数和 Bearer/Cookie 双路径 `ScadaSessionGuard` 已进入 PR #55；当时尚未注册 HTTP Controller，默认 AppModule 不加载身份模块，`main.ts` 仍 fail-closed。该状态已由第五小批更新：身份 Controller 仅在 OIDC 启用根模块中注册。第四、五小批仍待维护者 Windows 质量验收；真实浏览器 Cookie/HTTPS 代理行为待联调。
 
-### 第三十三批阶段 B 第五小批：OIDC BFF HTTP 控制器与认证路由（代码已提交，待 Windows 验证）
+### 第三十三批阶段 B 第五小批：OIDC BFF HTTP 控制器与认证路由（Windows 工程质量验收通过）
 
 新增 `ScadaAuthController`，提供 `/api/v1/auth/oidc/start`、`/api/v1/auth/oidc/callback`、`/api/v1/auth/me` 和 `/api/v1/auth/logout`。Start/Callback 复用现有 OIDC 登录事务与回调服务；使用短时 HttpOnly 浏览器绑定 Cookie，成功回调后仅通过安全 Session/CSRF Cookie 建立浏览器会话，不在响应 JSON 暴露令牌。`/me` 只返回已验证的租户/主体上下文；`/logout` 撤销当前本地会话并清理 Cookie，Cookie 写请求继续受 CSRF Guard 保护。
 
 新增 `OidcEnabledAppModule`，`main.ts` 仅在 OIDC 配置完整且开关启用时选择该根模块；它只加载 `AppModule + ScadaIdentityModule`，没有加载 `ProjectPersistenceModule`。默认 `AppModule` 仍不注册身份路由、不连接 PostgreSQL；OIDC 与本机模拟 API 同时启用会拒绝启动。新增认证 Controller HTTP E2E 与默认根模块 404 回归。
 
-**验收状态**：代码已提交至 PR #55；第四、五小批的 Windows `vp check`、单测、E2E、文档检查和完整 `ready` 尚待维护者执行。Mock E2E 不代表真实 IdP/JWKS、HTTPS 浏览器 Cookie、反向代理或企业身份映射已验收。工程 API 仍未开放，工业设备写入仍未实现。
+**验收状态**：维护者 2026-11-14 Windows 已完成第四、五小批完整质量验收：`vp check` 291 个文件格式正确、151 个受检文件零警告/Lint/TypeScript 错误；`test:unit` 45/45 文件、494/494 测试；`test:e2e:server` 4/4 文件、26/26 测试（OIDC Controller 9/9）；`docs:check` 83 Markdown；完整 `ready` 最终退出码 0，React/Vue/NestJS 构建成功。Mock E2E 不代表真实 IdP/JWKS、HTTPS 浏览器 Cookie、反向代理或企业身份映射已验收。工程 API 仍未开放，工业设备写入仍未实现。
 
-### 第三十三批阶段 B 第五小批：Windows 首轮静态检查问题修复（待复验）
+### 第三十三批阶段 B 第五小批：Windows 首轮静态检查问题修复（已复验通过）
 
 维护者首次 `vp check --fix` 反馈：401 E2E 缺少 Vitest 显式断言、Supertest `set-cookie` 类型为字符串却被当数组调用 `.join()`、数据库模块测试导入 Controller 后未使用。已分别补充状态断言、兼容字符串/数组且避开 Expires 逗号的 Cookie 头解析函数，以及身份模块 Controller 元数据断言。防复发记录为 `docs/AI_MISTAKES.md` E-012。
 
-**状态**：修复已提交至 PR #55，尚待维护者重新执行 `vp check`、单测、NestJS E2E、文档检查和完整 `ready`；目前不宣称通过。
+**状态**：修复已提交至 PR #55，并已由维护者 Windows 完整复验通过。`vp check` 291 文件/151 受检零警告错误；单测 494/494；NestJS E2E 26/26（OIDC Controller 9/9）；文档 83 Markdown；完整 `ready` 最终退出码 0。详细记录见 `docs/VALIDATION.md`。
+
+### 第三十三批阶段 B 第四、五小批最终 Windows 验收（2026-11-14）
+
+维护者提供的最新 Windows 日志确认：`vp check` 291 个文件格式正确、151 个受检文件零警告/Lint/TypeScript 错误；`pnpm run test:unit` 45/45 文件、494/494 测试通过；`pnpm run test:e2e:server` 4/4 文件、26/26 测试通过，其中 OIDC Controller E2E 9/9；`pnpm run docs:check` 83 个 Markdown 通过；SSE 客户端 8/8、故障代理 4/4；React、Vue、NestJS 构建成功；完整 `pnpm run ready` 最终退出码 **0**。
+
+E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数据导入问题已复验关闭。当前阶段 B 第四、五小批工程质量验收通过；真实 IdP/JWKS、真实浏览器 Secure Cookie、生产 HTTPS/反向代理和企业身份映射仍需专项验收。工程 HTTP API 尚未开放。
