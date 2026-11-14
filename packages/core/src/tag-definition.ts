@@ -33,6 +33,11 @@ export function tagDefinitionSupportsSlot(definition: TagDefinition, slot: strin
   return TAG_BINDING_SLOT_DATA_TYPES[slot]?.includes(definition.dataType) ?? false;
 }
 
+/** 判断绑定槽是否属于当前已定义类型契约；未知自定义槽保留扩展空间。 */
+export function isKnownTagBindingSlot(slot: string): boolean {
+  return Object.hasOwn(TAG_BINDING_SLOT_DATA_TYPES, slot);
+}
+
 function displayName(value: unknown): string {
   if (typeof value !== "string" || value.trim().length === 0 || value.length > 128) {
     throw new TypeError("Tag 显示名称必须为 1～128 个字符");
