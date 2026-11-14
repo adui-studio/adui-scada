@@ -614,7 +614,6 @@ type DemoTagSourcePreset = "standalone" | "nest-local";
 
 项目级 Tag 定义现在随工程 JSON、草稿和本地历史快照持久化，但没有生产服务端项目 API、用户权限、工业地址映射、OPC UA/Modbus/MQTT 驱动、真实设备或写入接口。历史 unknown 定义需维护者确认；自动迁移不等于推测类型。
 
-
 ## 2026-11-14 · V0.3 第三十一批：项目 Tag 可视化管理交互契约
 
 ### 组件与命令边界

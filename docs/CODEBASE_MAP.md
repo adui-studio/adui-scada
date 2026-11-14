@@ -566,7 +566,6 @@
 - `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：绑定候选展示类型、单位和描述；不增加独立目录逻辑。
 - `packages/core/test/tag-definition.test.ts`：定义结构、重命名稳定 ID、类型校验、质量独立与原子拒绝。详见 [ADR-0061](adr/0061-tag-definition-catalog.md)。
 
-
 ## 2026-11-14 · 第三十一批项目 Tag 管理入口
 
 - apps/web-react/src/studio/TagManager.tsx：React 项目 Tag 新增、编辑、删除表单，仅维护未保存草稿。

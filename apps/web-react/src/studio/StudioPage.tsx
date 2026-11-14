@@ -2054,7 +2054,10 @@ export default function StudioPage() {
               <TagManager
                 tags={state.document.tags}
                 onCreate={(definition) =>
-                  changeProjectTag(() => editor.addTagDefinition(definition), "项目 Tag 已新增，可撤销")
+                  changeProjectTag(
+                    () => editor.addTagDefinition(definition),
+                    "项目 Tag 已新增，可撤销",
+                  )
                 }
                 onUpdate={(tagId, changes) =>
                   changeProjectTag(
@@ -2063,7 +2066,10 @@ export default function StudioPage() {
                   )
                 }
                 onRemove={(tagId) =>
-                  changeProjectTag(() => editor.removeTagDefinition(tagId), "项目 Tag 已删除，可撤销")
+                  changeProjectTag(
+                    () => editor.removeTagDefinition(tagId),
+                    "项目 Tag 已删除，可撤销",
+                  )
                 }
               />
             </div>

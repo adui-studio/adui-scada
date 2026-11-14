@@ -518,7 +518,6 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 
 **未完成**：React/Vue 双端 SSE 浏览器专项；Studio 人工查看、0.1/0.2 工程导入导出、真实旧 IndexedDB/localStorage 草稿与历史快照迁移体验、Tauri 人工验收。该日志不代表生产数据库、工业网关、现场设备或设备写入已验收。以上是维护者在文档更新前的 Windows 实测；此文档更新后的静态检查尚未重跑。PR #52 继续 Draft、Assignee `@adui-dev`，没有合并授权。
 
-
 ### 第三十批 Windows 最终自动化验收通过（2026-11-14）
 
 维护者在本地 Windows 提供第三十批最新复验日志（先前 Schema `0.2.0` 的旧 Demo 服务已排除）。本节是**维护者执行记录**，并非 GitHub 文档提交后的自动化重新执行：
@@ -533,7 +532,6 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 **仍需独立验收（不阻止维护者本次明确授权的代码合并）**：Vue/React Studio 手工目录与绑定交互、历史 Schema JSON 跨框架导入导出、真正旧浏览器 IndexedDB/localStorage 草稿和历史快照迁移体验。真实工业网关、生产采集、现场控制、设备写入不在第三十批范围。
 
 本节只更新验收事实与 PR 描述，不更改已通过测试的业务代码；文档更新后的 `vp check` / `docs:check` 未重新执行。
-
 
 ## 2026-11-14 · V0.3 第三十一批：项目 Tag 双框架可视化管理（待验收）
 

@@ -794,13 +794,11 @@ React SSE 浏览器和 TCP 故障测试均在进入 EventSource 订阅前报 `er
 
 本批尚待真实跨框架 Studio 人工验证、旧浏览器草稿及历史快照实际迁移、Tauri/工业现场等限定范围验收。PR #52 继续 Draft，Assignee `@adui-dev`；最新验收文档提交后仍需静态复验。
 
-
 ### 第三十批自动化质量链及双框架 SSE 浏览器回归通过（2026-11-14）
 
 维护者 Windows 最终复验：全量单测 438/438、Runtime 专项 40/40、NestJS E2E 17/17、SSE 资源 8/8、TCP 故障代理 4/4、`vp check` 268 文件/133 受检文件零错误、`docs:check` 78 文档通过，`ready` 全链执行到 NestJS 构建完毕；React/Vue 双端 SSE 和 TCP 故障浏览器回归均成功，最终浏览器测试退出码 0。之前 `/demo/project` 返回 0.2.0 的旧服务版本阻塞已被解除。维护者已明确授权合并 PR #52；合并后续进度另行记录。
 
 未人工验收的是 Studio 两框架目录操作、跨框架 JSON 历史导入导出、真实旧版 IndexedDB/localStorage 与历史快照迁移体验。工业网关、PLC/DCS、生产设备写入不在本次范围。详见 [VALIDATION](VALIDATION.md)。
-
 
 ### V0.3 第三十批合并与第三十一批双框架 Tag 管理启动（2026-11-14）
 

@@ -92,7 +92,11 @@ function remove(definition: TagDefinition) {
         </div>
       </div>
     </div>
-    <form class="flex min-w-0 flex-col gap-2" aria-label="项目 Tag 编辑表单" @submit.prevent="submit">
+    <form
+      class="flex min-w-0 flex-col gap-2"
+      aria-label="项目 Tag 编辑表单"
+      @submit.prevent="submit"
+    >
       <strong>{{ editingId ? "编辑项目 Tag" : "新增项目 Tag" }}</strong>
       <label class="studio-field">
         稳定 Tag ID
@@ -132,8 +136,8 @@ function remove(definition: TagDefinition) {
       </div>
     </form>
     <p class="studio-tip">
-      Tag ID 创建后不可更改。定义随工程 JSON、草稿和本地历史版本保存，支持撤销和重做；
-      已绑定 Tag 不允许删除或改成不兼容类型。这里只管理元数据，不涉及设备连接或写入。
+      Tag ID 创建后不可更改。定义随工程 JSON、草稿和本地历史版本保存，支持撤销和重做； 已绑定 Tag
+      不允许删除或改成不兼容类型。这里只管理元数据，不涉及设备连接或写入。
     </p>
   </div>
 </template>

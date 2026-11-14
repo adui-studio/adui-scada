@@ -501,7 +501,9 @@ function submitTagFormInPage() {
 }
 
 function clickTagRowActionInPage(tagId, action, confirmChoice) {
-  const rows = document.querySelectorAll('[role="list"][aria-label="项目 Tag 目录"] [role="listitem"]');
+  const rows = document.querySelectorAll(
+    '[role="list"][aria-label="项目 Tag 目录"] [role="listitem"]',
+  );
   const row = [...rows].find((node) =>
     [...node.querySelectorAll("span")].some((span) => span.textContent.trim() === tagId),
   );
@@ -570,7 +572,10 @@ async function runStudioTagManagement(session) {
     await evaluateStudioPage(session, clickTagRowActionInPage, "water.level", "删除", true);
     await pause(150);
     const guarded = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
-    assert.ok(guarded.tags.some((tag) => tag.tagId === "water.level"), "已绑定水位 Tag 被意外删除");
+    assert.ok(
+      guarded.tags.some((tag) => tag.tagId === "water.level"),
+      "已绑定水位 Tag 被意外删除",
+    );
     const notice = await session.evaluate(
       "document.querySelector('.studio-notice')?.textContent ?? ''",
     );
@@ -579,8 +584,13 @@ async function runStudioTagManagement(session) {
     await evaluateStudioPage(session, clickTagRowActionInPage, tagId, "删除", true);
     await pause(180);
     const removed = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
-    assert.ok(!removed.tags.some((tag) => tag.tagId === tagId), target.name + " 删除 Tag 后工程仍包含该定义");
-    process.stdout.write(target.name + " 项目 Tag 新增、编辑、绑定删除保护、删除与 JSON 往返通过\n");
+    assert.ok(
+      !removed.tags.some((tag) => tag.tagId === tagId),
+      target.name + " 删除 Tag 后工程仍包含该定义",
+    );
+    process.stdout.write(
+      target.name + " 项目 Tag 新增、编辑、绑定删除保护、删除与 JSON 往返通过\n",
+    );
   }
 }
 

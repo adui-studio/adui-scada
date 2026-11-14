@@ -65,7 +65,11 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
   }
 
   function remove(definition: TagDefinition) {
-    if (!window.confirm("确定删除项目 Tag“" + definition.displayName + "”吗？被图元绑定的 Tag 不允许删除。")) {
+    if (
+      !window.confirm(
+        "确定删除项目 Tag“" + definition.displayName + "”吗？被图元绑定的 Tag 不允许删除。",
+      )
+    ) {
       return;
     }
     if (onRemove(definition.tagId) && editingId === definition.tagId) reset();
@@ -95,7 +99,11 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
           </div>
         ))}
       </div>
-      <form className="flex min-w-0 flex-col gap-2" onSubmit={submit} aria-label="项目 Tag 编辑表单">
+      <form
+        className="flex min-w-0 flex-col gap-2"
+        onSubmit={submit}
+        aria-label="项目 Tag 编辑表单"
+      >
         <strong>{editingId ? "编辑项目 Tag" : "新增项目 Tag"}</strong>
         <label className="studio-field">
           稳定 Tag ID
@@ -160,8 +168,8 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
         </div>
       </form>
       <p className="studio-tip">
-        Tag ID 创建后不可更改。定义随工程 JSON、草稿和本地历史版本保存，支持撤销和重做；
-        已绑定 Tag 不允许删除或改成不兼容类型。这里只管理元数据，不涉及设备连接或写入。
+        Tag ID 创建后不可更改。定义随工程 JSON、草稿和本地历史版本保存，支持撤销和重做； 已绑定 Tag
+        不允许删除或改成不兼容类型。这里只管理元数据，不涉及设备连接或写入。
       </p>
     </div>
   );

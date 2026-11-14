@@ -1601,7 +1601,6 @@ pnpm run test:sse:fault:browser
 
 本次仅更新验收文档及 PR 正文，不改变业务代码。**上述日志对应文档更新前的分支；最新验收文档提交后的 `vp check` / `docs:check` 尚未重跑**。PR #51 保持 Draft，指派 `@adui-dev`，未经维护者明确授权不得合并。
 
-
 ## V0.3 第三十一批 · 项目 Tag 管理浏览器回归
 
 在根目录 .env 配置的本机开发端口启动当前分支 dev:demo、dev:react 和 dev:vue 后，执行 pnpm run test:tags:browser。该命令通过现有 Chrome/Edge CDP 验收设施检查双框架项目 Tag 新建、编辑、绑定删除保护、删除及工程 JSON 导出，未涉及设备连接或写入。仍需执行 vp check、pnpm run ready 与 pnpm run test:interop；脚本通过不等于人工 UI 和历史草稿完整验收。

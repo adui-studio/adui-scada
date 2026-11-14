@@ -267,7 +267,6 @@ Core 新增框架无关 Tag 定义模型，使用稳定 `tagId` 区分不可变�
 
 本批尚未提供完整 Tag 管理表单；Core 的新增/更新/删除命令已纳入撤销历史，删除仍被绑定的 Tag 会拒绝。工业地址映射、OPC UA NodeId、Modbus 寄存器、MQTT Topic、生产项目保存 API、认证与设备写入不属于本批交付。见 [ADR-0062](adr/0062-project-tag-definitions-schema-030.md)。
 
-
 ## V0.3 第三十一批：Vue/React Studio 项目 Tag 可视化管理（FR-002 / FR-004 / FR-006 局部）
 
 在第三十批 ScadaDocument 0.3.0 项目 Tag 持久化与共享 Editor 命令基础上，Vue/React Studio 右侧属性区增加项目 Tag 新增、编辑、删除表单。可维护稳定 ID、显示名称、数据类型、单位与描述；编辑时 ID 不可修改，新增不得使用历史 unknown 占位类型。已被图元绑定的 Tag 不允许删除，类型修改仍受共享槽位约束，错误统一以中文提示；成功变更走现有撤销重做、JSON 导入导出与草稿保存机制。

@@ -651,7 +651,10 @@ function updateProjectTag(
   tagId: string,
   changes: Pick<TagDefinition, "displayName" | "dataType" | "unit" | "description">,
 ): boolean {
-  return changeProjectTag(() => editor.updateTagDefinition(tagId, changes), "项目 Tag 已更新，可撤销");
+  return changeProjectTag(
+    () => editor.updateTagDefinition(tagId, changes),
+    "项目 Tag 已更新，可撤销",
+  );
 }
 
 function removeProjectTag(tagId: string): boolean {
