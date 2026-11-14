@@ -1,4 +1,8 @@
-import { TagDefinitionCatalog } from "./tag-definition.ts";
+import {
+  isKnownTagBindingSlot,
+  tagDefinitionSupportsSlot,
+  TagDefinitionCatalog,
+} from "./tag-definition.ts";
 import type { TagDefinition } from "./tag-definition.ts";
 
 /** 工程文档契约：仅支持受验证的 JSON 数据，禁止执行脚本。 */
@@ -282,15 +286,22 @@ function parseVersionedDocument(input: unknown, sourceVersion: string): ScadaDoc
     }));
   }
 
-  const definedTagIds = new Set(tags.map((tag) => tag.tagId));
+  const tagDefinitionsById = new Map(tags.map((tag) => [tag.tagId, tag]));
   for (const [pageIndex, page] of pages.entries()) {
     for (const [nodeIndex, node] of page.nodes.entries()) {
       for (const [slot, binding] of Object.entries(node.bindings)) {
-        if (!definedTagIds.has(binding.tagId)) {
-          fail(
-            `pages[${pageIndex}].nodes[${nodeIndex}].bindings.${slot}.tagId`,
-            `引用了未定义的 Tag：${binding.tagId}`,
-          );
+        const path = `pages[${pageIndex}].nodes[${nodeIndex}].bindings.${slot}.tagId`;
+        const definition = tagDefinitionsById.get(binding.tagId);
+        if (!definition) {
+          fail(path, `引用了未定义的 Tag：${binding.tagId}`);
+        }
+        // 历史 unknown 占位允许保留既有绑定；已知内置槽必须匹配定义类型。
+        if (
+          definition.dataType !== "unknown" &&
+          isKnownTagBindingSlot(slot) &&
+          !tagDefinitionSupportsSlot(definition, slot)
+        ) {
+          fail(path, `Tag 数据类型与绑定槽不兼容：${binding.tagId}`);
         }
       }
     }
