@@ -604,3 +604,12 @@
 - 根 `.env.example` 与 `scripts/check-env-config.mjs`：默认禁用的 OIDC 配置占位和环境检查。
 
 OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client 及第三方依赖锁文件仍未实现；上述路径不可被视作已开放的认证能力。
+
+
+### 第三十三批阶段 A 实际目录补充（2026-11-14）
+
+- `docs/AI_MISTAKES.md`：AI 每次编码前必读的真实错误复盘与防复发清单（9 项案例）。
+- `apps/server/src/database/database.module.ts`：共享 PrismaService 单例模块。
+- `apps/server/src/config/oidc-startup.config.ts`：默认关闭的 OIDC 启动配置校验。
+- `apps/server/prisma/migrations/20261114000000_oidc_identity_transactions/migration.sql`：外部身份、OIDC 事务和 CSRF 摘要的增量 SQL。
+- OIDC 依赖 `openid-client@6.8.9` 已加入 Catalog、Server Manifest 和锁文件；登录/回调、会话 Cookie/CSRF 及工程 Controller 仍未实现。
