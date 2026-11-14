@@ -624,3 +624,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/server/src/auth/scada-identity.module.ts`：通过严格启动配置 Token 注册 Discovery 服务；该模块仍未由默认 AppModule 挂载。
 - `apps/server/src/config/oidc-startup.config.ts`：拒绝将 `/.well-known/` Discovery 文档路径误配为 Issuer。
 - `apps/server/src/main.ts`：继续在认证、CSRF 与工程 ACL 全部完成前拒绝启用 OIDC。
+
+### 第三十三批阶段 B 第二小批：OIDC 一次性登录事务
+
+- `apps/server/src/auth/oidc-login-transaction.service.ts`：生成 State/Nonce/PKCE、AES-256-GCM 加密 verifier、浏览器绑定摘要、站内回跳路径校验、PostgreSQL 一次性原子消费。
+- `apps/server/src/auth/oidc-login-transaction.service.spec.ts`：授权请求参数、密文往返、跨浏览器/过期/重复/并发消费、回跳路径和数据库异常测试。
+- `apps/server/src/auth/scada-identity.module.ts`：注册事务服务；模块仍未由默认 AppModule 挂载。

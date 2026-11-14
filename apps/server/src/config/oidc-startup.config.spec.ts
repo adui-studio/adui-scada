@@ -67,6 +67,10 @@ describe("OIDC 服务端启动安全配置", () => {
         "https://id.example.org/.well-known/openid-configuration",
         "SCADA_OIDC_ISSUER 不允许包含 /.well-known/ 路径",
       ],
+      [
+        "https://id.example.org/" + "a".repeat(500),
+        "SCADA_OIDC_ISSUER 超出数据库字段长度限制",
+      ],
     ]) {
       expect(() => resolveOidcStartupConfig({ ...configured, SCADA_OIDC_ISSUER: issuer })).toThrow(
         message,

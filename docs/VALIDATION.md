@@ -786,3 +786,16 @@ OIDC 登录、BFF Cookie/CSRF、工程 HTTP API、真实 IdP 联调及工业现�
 - 错误信息不包含底层网络异常、Issuer、端点或秘密。
 
 维护者需在当前分支执行 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和 `pnpm run ready`。本测试只使用 Mock Fetch；即使单测通过，也不代表真实 IdP 联调、OIDC 登录路由、PKCE 回调、会话 Cookie 或 CSRF 已实现。当前 `main.ts` 仍拒绝 `SCADA_OIDC_ENABLED=true`。
+
+## V0.3 第三十三批阶段 B 第二小批：OIDC 一次性登录事务
+
+新增 `apps/server/src/auth/oidc-login-transaction.service.spec.ts`，Mock Prisma 与 openid-client Configuration，不连接真实数据库或 IdP。覆盖：
+
+- 授权码请求固定 Redirect URI、`openid` Scope、State、Nonce 与 PKCE S256。
+- State 与浏览器绑定只保存 SHA-256 摘要；AES-256-GCM verifier 密文可正确解密并与 challenge 对应。
+- 同一浏览器多标签页绑定复用、不同 State 独立事务。
+- 站内回跳路径校验、外部/协议相对/反斜杠/片段/编码控制字符拒绝。
+- 跨浏览器、无效 State、过期、未来创建、重复及并发回调拒绝。
+- 密文篡改、数据库中的 Nonce/回跳路径篡改、数据库创建和事务异常的安全失败。
+
+当前代码尚未在维护者 Windows 环境执行。需运行 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 与 `pnpm run ready`；Mock 测试不代表真实 PostgreSQL 并发锁、真实 IdP 回调或 HTTP Cookie 行为已验收。

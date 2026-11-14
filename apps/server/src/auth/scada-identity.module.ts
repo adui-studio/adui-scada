@@ -4,6 +4,7 @@ import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import { DatabaseModule } from "../database/database.module.js";
 import { ScadaSecurityAuditService } from "../security/scada-security-audit.js";
 import { AuthSessionService } from "./auth-session.service.js";
+import { OidcLoginTransactionService } from "./oidc-login-transaction.service.js";
 import { ScadaProjectGuard } from "./scada-project.guard.js";
 import { ScadaSessionGuard } from "./scada-session.guard.js";
 import {
@@ -30,10 +31,17 @@ import {
     },
     AuthSessionService,
     OidcProviderDiscoveryService,
+    OidcLoginTransactionService,
     ScadaSecurityAuditService,
     ScadaSessionGuard,
     ScadaProjectGuard,
   ],
-  exports: [AuthSessionService, OidcProviderDiscoveryService, ScadaSessionGuard, ScadaProjectGuard],
+  exports: [
+    AuthSessionService,
+    OidcProviderDiscoveryService,
+    OidcLoginTransactionService,
+    ScadaSessionGuard,
+    ScadaProjectGuard,
+  ],
 })
 export class ScadaIdentityModule {}

@@ -85,6 +85,9 @@ export function resolveOidcStartupConfig(
   if (issuer.href.includes("/.well-known/")) {
     throw new Error("SCADA_OIDC_ISSUER 不允许包含 /.well-known/ 路径");
   }
+  if (issuer.href.length > 512) {
+    throw new Error("SCADA_OIDC_ISSUER 超出数据库字段长度限制");
+  }
   const redirectUri = parseSecureUrl(
     env.SCADA_OIDC_REDIRECT_URI,
     "SCADA_OIDC_REDIRECT_URI",

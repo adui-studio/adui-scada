@@ -909,3 +909,16 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 新增 Mock Fetch 单测覆盖正常发现、并发复用、Issuer 不匹配、元数据能力拒绝、不安全端点、本机 HTTP 边界和失败重试。**这些测试代码尚未在维护者 Windows 环境执行**；当前仍需 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和完整 `pnpm run ready` 实测。测试不访问真实 IdP，不开放登录接口；`main.ts` 对 `SCADA_OIDC_ENABLED=true` 的 fail-closed 保护保持不变。
 
 下一小批再实现 Authorization Code + PKCE、State/Nonce 和数据库一次性事务；不得提前启用 OIDC。
+
+## 2026-11-14 · V0.3 第三十三批阶段 B 第二小批：OIDC 一次性登录事务（代码已提交，待 Windows 验证）
+
+新增 `OidcLoginTransactionService`，在服务端生成授权码请求并保存短时事务：
+
+- 使用 openid-client 生成 State、Nonce、PKCE verifier 与 S256 challenge；授权请求使用固定 Redirect URI 和 `openid` Scope。
+- State 与浏览器绑定 Cookie 仅保存 SHA-256 摘要；PKCE verifier 使用 AES-256-GCM 加密，State 摘要作为 AAD。
+- 事务固定有效期 5 分钟；回调按固定 Issuer、浏览器绑定、创建/过期时间及未消费状态筛选，并通过数据库条件更新原子消费。
+- 同一浏览器可复用短时绑定 Cookie 支持多标签页；每次登录仍有独立 State/Nonce/Verifier。
+- 严格校验站内回跳路径，拒绝外部 URL、协议相对地址、反斜杠、片段和控制字符。
+- 服务仅注册在未挂载的 `ScadaIdentityModule`；当前没有 OIDC HTTP 路由，`main.ts` 仍拒绝启用 OIDC。
+
+新增 Mock Prisma 单测覆盖授权请求、加密往返、重复/并发消费、跨浏览器、过期、回跳路径和异常脱敏。**尚未在维护者 Windows 环境执行**，需完成 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和 `pnpm run ready`。

@@ -125,3 +125,12 @@ Vue 与 React 是两个正式 Web 端，必须共用同源 API 契约、工程�
 - [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html)
 - [RFC 9700 — Best Current Practice for OAuth 2.0 Security](https://www.rfc-editor.org/rfc/rfc9700.html)
 - [openid-client v6 API](https://github.com/panva/openid-client)
+
+### 2.1 State、Nonce 与 PKCE 一次性登录事务（第三十三批阶段 B 第二小批）
+
+- 每次登录由 openid-client 生成独立随机 State、Nonce 和 PKCE verifier，并计算 S256 challenge；授权请求只包含服务端固定 Redirect URI 与 `openid` Scope。
+- State 仅以 SHA-256 摘要作为数据库主键；浏览器绑定值使用独立 32 字节随机 Cookie，数据库只存其 SHA-256 摘要。有效绑定 Cookie 可供同一浏览器多个标签页复用，每次登录仍使用独立 State/Nonce/Verifier。
+- PKCE verifier 使用 AES-256-GCM 加密，随机 12 字节 IV、16 字节认证标签；State 摘要作为 AAD，密文使用带版本的 Base64URL 格式。解密严格校验版本、长度、规范编码和认证标签。
+- 登录事务有效期为 5 分钟。回调使用固定 Issuer、State 摘要、浏览器绑定摘要、创建/过期时间和 `consumedAt IS NULL` 条件，在单个 PostgreSQL 交互事务中执行条件更新；并发回调只有一个能消费成功。成功消费后再次校验 Nonce 格式与回跳路径规范性，再在内存中解密 verifier；持久化数据被篡改、密文错误时均不返回 verifier。多实例部署必须共享同一事务加密密钥；密钥轮换需等待旧事务全部过期后再切换。
+- 回跳路径只接受站内以单斜杠开头的路径，拒绝外部 URL、协议相对地址、反斜杠、片段、控制字符及编码 CR/LF/反斜杠；不接受客户端指定回跳 Origin。
+- 本小批仅提供服务层，不注册 HTTP Controller，不解除 `main.ts` 的 OIDC fail-closed 保护。浏览器绑定 Cookie 的 HttpOnly/Secure/SameSite 属性由后续 Controller 负责设置。
