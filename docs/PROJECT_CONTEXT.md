@@ -806,7 +806,6 @@ React SSE 浏览器和 TCP 故障测试均在进入 EventSource 订阅前报 `er
 
 第三十一批基于以上 main 提交创建 feat/v0.3-studio-project-tag-management。已在 Vue/React Studio 增加项目 Tag 新增、编辑、删除表单，保持稳定 Tag ID、unknown 历史占位及绑定保护，全部变更调用共享 Core Editor；另增加 test:tags:browser 双框架浏览器回归入口。本批不改工程 Schema 或工业协议，不提供设备写入。当前分支尚未执行 Windows ready 或完整浏览器验收，不得视为通过。详见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md)。
 
-
 ### 第三十一批 Windows 首轮验收与浏览器断言时序修复（2026-11-14）
 
 维护者 Windows 日志确认第三十一批 `vp check`（271 文件、135 受检文件零错误）、`docs:check`（79 Markdown）及 `pnpm run ready` 完整执行至 NestJS build，438/438 单测、SSE 8/8、TCP 代理 4/4、NestJS E2E 17/17、React/Vue 类型检查和构建均通过。React/Vue 工程互通 `pnpm run test:interop` 通过，退出码 0。
