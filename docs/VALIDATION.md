@@ -729,3 +729,17 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 ### AI 编码前错误复盘强制流程（2026-11-14）
 
 按维护者要求，新增 `docs/AI_MISTAKES.md`，从已核实错误中整理 Dexie 原生版本误用、CDP 函数闭包、Vitest/TypeScript Lint、Prisma 中文 SQL 注释、Mock 泛型、TS6 工具链、Tauri 发布代理误用、半程日志误报通过、浏览器测试初始化等 9 项反例与复验要求。根目录 `AGENTS.md` 要求所有 Agent **每次编码前全文复读**；`HARNESS.md` 与 `CODEBASE_MAP.md` 提供直达入口，`scripts/validate-docs.mjs` 将文件纳入必需文档。此流程是仓库协作规范，不能机械保证阅读行为；今后任务由 Agent 先执行读取，并在有新错误时追加案例。
+
+
+### 第三十三批 AI 错误复盘门禁新增后的 Windows 文档与静态检查（2026-11-14）
+
+维护者在包含 `docs/AI_MISTAKES.md` 和文档校验器必需文件检查的最新分支执行：
+
+- `pnpm run docs:check`：**83 个 Markdown 文件通过**，退出码 **0**。
+- `vp check`：**279 个文件格式正确；139 个受检文件零警告、Lint 错误和 TypeScript 错误**。
+
+以上日志是 AI 复盘文档、AGENTS 强制必读、HARNESS/CODEBASE_MAP 入口和 `validate-docs.mjs` 必需文件检查提交后的真实 Windows 验收，覆盖此前尚未复验的新增文档与校验脚本。
+
+此前维护者已执行 `pnpm install --frozen-lockfile`、`deps:check`（11 清单、52 项 Catalog）、`pnpm run test:unit`（448/448）、完整 `pnpm run ready`（退出码 0）。其中完整 ready 的 `docs:check` 当时为 82 份 Markdown，不能将其计为新增文档后的 83 份；最新 83 份由本次单独 `docs:check` 确认。
+
+**仍待完成**：隔离 PostgreSQL 上真实执行 OIDC 增量迁移并核对外键/索引/中文 COMMENT；OIDC Discovery/PKCE/State/Nonce、Cookie/CSRF、工程 API 尚未实现/验收。当前服务端启用 OIDC 仍 fail-closed。
