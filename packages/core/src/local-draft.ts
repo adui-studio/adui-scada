@@ -1,4 +1,4 @@
-import { parseScadaDocument } from "./document.ts";
+import { migrateScadaDocument, parseScadaDocument } from "./document.ts";
 import type { ScadaDocument } from "./document.ts";
 
 /** 浏览器存储适配接口，便于脱离 DOM 执行单元测试。 */
@@ -108,7 +108,7 @@ export function readLocalDraft(storage: LocalDraftStorage, projectId: string): L
   if (!Number.isFinite(date.getTime()) || date.toISOString() !== data.savedAt) {
     throw new TypeError("本地草稿保存时间无效");
   }
-  const document = parseScadaDocument(data.document);
+  const { document } = migrateScadaDocument(data.document);
   if (document.projectId !== projectId) {
     throw new TypeError("本地草稿与当前工程 ID 不一致，已拒绝恢复");
   }
