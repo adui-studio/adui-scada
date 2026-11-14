@@ -618,7 +618,9 @@ function readLegacyLocalStorageDraftInPage(projectId) {
 /** 在真实 Dexie 数据库中写入旧 Schema 记录，保留原 revision 水位。 */
 async function seedLegacyIndexedDbDraftInPage(document, revision, savedAt) {
   const database = await new Promise((resolve, reject) => {
-    const request = indexedDB.open("adui-scada-studio", 1);
+    // Dexie 的逻辑版本 1 对应原生 IndexedDB 版本 10；这里必须读取现有版本，
+    // 不能把 Dexie 逻辑版本直接传给 indexedDB.open，否则会触发降级 VersionError。
+    const request = indexedDB.open("adui-scada-studio");
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains("drafts")) {
@@ -633,6 +635,12 @@ async function seedLegacyIndexedDbDraftInPage(document, revision, savedAt) {
     request.onerror = () => reject(request.error || new Error("打开草稿数据库失败"));
   });
   try {
+    if (!database.objectStoreNames.contains("drafts")) {
+      throw new TypeError("现有草稿数据库缺少 drafts 数据表");
+    }
+    if (!database.objectStoreNames.contains("migrations")) {
+      throw new TypeError("现有草稿数据库缺少 migrations 数据表");
+    }
     await new Promise((resolve, reject) => {
       const transaction = database.transaction(["drafts"], "readwrite");
       transaction.objectStore("drafts").put({
@@ -682,7 +690,9 @@ async function seedLegacyProjectSnapshotInPage(document, revision, createdAt) {
   ).join("");
   const snapshot = { ...payload, contentHash };
   const database = await new Promise((resolve, reject) => {
-    const request = indexedDB.open("adui-scada-studio-versions", 1);
+    // Dexie 的逻辑版本 1 对应原生 IndexedDB 版本 10；复用现有版本库，
+    // 不得将 Dexie 逻辑版本传给原生 open()。
+    const request = indexedDB.open("adui-scada-studio-versions");
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains("heads")) {
@@ -699,6 +709,12 @@ async function seedLegacyProjectSnapshotInPage(document, revision, createdAt) {
     request.onerror = () => reject(request.error || new Error("打开历史版本数据库失败"));
   });
   try {
+    if (!database.objectStoreNames.contains("heads")) {
+      throw new TypeError("现有历史版本数据库缺少 heads 数据表");
+    }
+    if (!database.objectStoreNames.contains("versions")) {
+      throw new TypeError("现有历史版本数据库缺少 versions 数据表");
+    }
     await new Promise((resolve, reject) => {
       const transaction = database.transaction(["heads", "versions"], "readwrite");
       transaction.objectStore("heads").put({ projectId: document.projectId, revision });
