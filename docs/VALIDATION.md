@@ -493,7 +493,6 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 
 **待复验**：同步最新分支后重跑 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 与 `pnpm run ready`。本批所有完整质量链与浏览器验收仍保持待执行；不可将格式化完成视为类型检查通过。
 
-
 ### 第三十批 Windows 完整质量链首次复验失败与修复（2026-11-14）
 
 维护者提供完整 PowerShell 日志；该轮执行发生在本节修复提交之前：

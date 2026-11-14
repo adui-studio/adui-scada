@@ -780,7 +780,6 @@ Vue/React Studio 均从当前工程 `state.document.tags` 读取目录与绑定�
 
 当前代码、迁移、草稿存储、快照和 Core 测试已提交开发分支；Windows `test:unit`、`test:runtime`、`test:e2e:server`、`vp check`、`docs:check`、`ready` 与双框架 SSE 浏览器回归尚未针对本批执行。不得继承第二十九批的验收结果。实施决策见 [ADR-0062](adr/0062-project-tag-definitions-schema-030.md)。
 
-
 ### 第三十批 Windows 首轮质量链问题定位（2026-11-14）
 
 维护者在历史快照 TS2345/TS2322 修复后实测：`vp check`（268 文件、133 受检文件零错误）及 `docs:check`（78 份文档）通过；`ready` 已通过 Core 构建、Vue/React/Draft Storage/NestJS 类型检查，但在 Vitest 阶段出现一个 SVG 测试套件初始化失败与一个历史工程测试断言失败，未执行到完整 E2E/构建。原因均是 Schema 0.3.0 升级后测试夹具保留了错误版本结构，现已在第三十批功能分支调整。
