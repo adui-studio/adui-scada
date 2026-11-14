@@ -119,6 +119,9 @@ describe("OIDC 固定 Issuer Discovery", () => {
       createMetadata(startupConfig.issuer.href, {
         token_endpoint_auth_methods_supported: ["client_secret_post"],
       }),
+      createMetadata(startupConfig.issuer.href, {
+        token_endpoint: "https://client:secret@id.example.org/realms/scada/token",
+      }),
       createMetadata(startupConfig.issuer.href, { grant_types_supported: ["client_credentials"] }),
       createMetadata(startupConfig.issuer.href, { scopes_supported: ["profile"] }),
     ];
@@ -131,7 +134,7 @@ describe("OIDC 固定 Issuer Discovery", () => {
     }
   });
 
-  it("拒绝不安全或包含凭据的元数据端点", async () => {
+  it("拒绝非 HTTPS 或包含凭据的元数据端点", async () => {
     const startupConfig = createConfig();
     const metadata = createMetadata(startupConfig.issuer.href, {
       authorization_endpoint: "http://id.example.org/authorize",
