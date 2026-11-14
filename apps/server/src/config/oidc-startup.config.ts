@@ -3,7 +3,7 @@ import { z } from "zod";
 
 const booleanFlag = z.enum(["true", "false"]);
 const secretKeyPattern = /^[A-Za-z0-9_-]{43}$/;
-const clientIdPattern = /^[^\r\n\u0000-\u001f]{1,256}$/;
+const clientIdPattern = /^[^\s]{1,256}$/;
 const CALLBACK_PATH = "/api/v1/auth/oidc/callback";
 
 export interface DisabledOidcConfig {
@@ -32,7 +32,9 @@ function requiredString(raw: string | undefined, name: string, maximum = 2048): 
   if (typeof raw !== "string" || raw.length === 0 || raw.length > maximum || raw.trim() !== raw) {
     throw new Error(name + " 未设置或格式无效");
   }
-  if (/[\r\n\u0000-\u001f]/.test(raw)) throw new Error(name + " 包含非法字符");
+  if ([...raw].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) {
+    throw new Error(name + " 包含非法字符");
+  }
   return raw;
 }
 
