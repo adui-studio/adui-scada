@@ -981,9 +981,7 @@ export class DocumentEditor {
             isKnownTagBindingSlot(slot) &&
             !tagDefinitionSupportsSlot(nextDefinition, slot)
           ) {
-            throw new TypeError(
-              `Tag 数据类型与现有图元绑定不兼容：${node.id} · ${slot}`,
-            );
+            throw new TypeError(`Tag 数据类型与现有图元绑定不兼容：${node.id} · ${slot}`);
           }
         }
       }
@@ -1004,7 +1002,8 @@ export class DocumentEditor {
         count +
         page.nodes.reduce(
           (nodeCount, node) =>
-            nodeCount + Object.values(node.bindings).filter((binding) => binding.tagId === tagId).length,
+            nodeCount +
+            Object.values(node.bindings).filter((binding) => binding.tagId === tagId).length,
           0,
         ),
       0,

@@ -766,7 +766,6 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 
 本次仅更新验收文档及 PR 正文，不改变业务代码。**上述日志对应文档更新前的分支；最新验收文档提交后的 `vp check` / `docs:check` 尚未重跑**。PR #51 保持 Draft，指派 `@adui-dev`，未经维护者明确授权不得合并。
 
-
 ## 2026-11-14 · V0.3 第三十批：项目级 Tag 定义持久化与工程 Schema 升级
 
 第二十九批 PR #51 已合并至 `main`，合并提交为 `69f36d64189ec0c4d6acda0dab6e142ae9eb6d2b`。第三十批实施基线为 `feat/v0.3-project-tag-definitions`，当前仍是开发分支，尚未合并。

@@ -278,8 +278,7 @@ export default function StudioPage() {
         );
   const currentBindingTag = bindingSlot ? (selected?.bindings[bindingSlot]?.tagId ?? "") : "";
   const missingBindingTag =
-    currentBindingTag !== "" &&
-    !tagCandidates.some((option) => option.tagId === currentBindingTag);
+    currentBindingTag !== "" && !tagCandidates.some((option) => option.tagId === currentBindingTag);
   const selectedTagDefinition = state.document.tags.find(
     (definition) => definition.tagId === currentBindingTag,
   );
@@ -2009,7 +2008,8 @@ export default function StudioPage() {
                       )}
                       {tagCandidates.map((option) => (
                         <option key={option.tagId} value={option.tagId}>
-                          {option.displayName} · {option.tagId} ·{TAG_DATA_TYPE_LABELS[option.dataType]}
+                          {option.displayName} · {option.tagId} ·
+                          {TAG_DATA_TYPE_LABELS[option.dataType]}
                           {option.unit ? " · " + option.unit : ""}
                         </option>
                       ))}
@@ -2050,7 +2050,9 @@ export default function StudioPage() {
                   </div>
                 ))
               )}
-              <p className="studio-tip">定义随工程 JSON、草稿和本地历史版本保存；数据质量由实时 Tag 值提供。</p>
+              <p className="studio-tip">
+                定义随工程 JSON、草稿和本地历史版本保存；数据质量由实时 Tag 值提供。
+              </p>
             </div>
           </details>
           <details className="studio-advanced">

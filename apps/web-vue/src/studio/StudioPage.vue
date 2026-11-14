@@ -242,9 +242,7 @@ const tagCandidates = computed(() => {
   const slot = bindingSlot.value;
   return slot === null
     ? []
-    : state.value.document.tags.filter((definition) =>
-        tagDefinitionSupportsSlot(definition, slot),
-      );
+    : state.value.document.tags.filter((definition) => tagDefinitionSupportsSlot(definition, slot));
 });
 const selectedTagId = computed(() => {
   const node = selected.value;
@@ -1926,7 +1924,8 @@ async function importJson(event: Event) {
                 {{ selectedTagId }}（当前工程未定义或类型待确认）
               </option>
               <option v-for="option in tagCandidates" :key="option.tagId" :value="option.tagId">
-                {{ option.displayName }} · {{ option.tagId }} · {{ TAG_DATA_TYPE_LABELS[option.dataType]
+                {{ option.displayName }} · {{ option.tagId }} ·
+                {{ TAG_DATA_TYPE_LABELS[option.dataType]
                 }}{{ option.unit ? " · " + option.unit : "" }}
               </option>
             </select>
@@ -1945,15 +1944,15 @@ async function importJson(event: Event) {
         <details class="studio-advanced">
           <summary>项目 Tag 定义（{{ state.document.tags.length }}）</summary>
           <div class="studio-advanced-content">
-            <p v-if="state.document.tags.length === 0" class="studio-tip">
-              当前工程尚未定义 Tag
-            </p>
+            <p v-if="state.document.tags.length === 0" class="studio-tip">当前工程尚未定义 Tag</p>
             <div v-for="tag in state.document.tags" :key="tag.tagId" class="studio-binding">
               <strong>{{ tag.displayName }}</strong> · {{ tag.tagId }} ·
               {{ TAG_DATA_TYPE_LABELS[tag.dataType] }}{{ tag.unit ? " · " + tag.unit : "" }}
               <p class="studio-tip">{{ tag.description }}</p>
             </div>
-            <p class="studio-tip">定义随工程 JSON、草稿和本地历史版本保存；数据质量由实时 Tag 值提供。</p>
+            <p class="studio-tip">
+              定义随工程 JSON、草稿和本地历史版本保存；数据质量由实时 Tag 值提供。
+            </p>
           </div>
         </details>
         <details class="studio-advanced">

@@ -710,18 +710,19 @@ test("项目 Tag 删除拒绝悬空绑定，稳定 ID 不允许通过更新修�
   const e = editor();
   const before = e.snapshot().document;
   expect(() => e.removeTagDefinition("water.level")).toThrow(/仍被 1 个图元槽绑定/);
-  expect(() =>
-    e.updateTagDefinition("water.level", { tagId: "water.renamed" } as never),
-  ).toThrow(/只允许修改/);
-  expect(() =>
-    e.updateTagDefinition("water.level", { dataType: "float" as never }),
-  ).toThrow(/数据类型/);
+  expect(() => e.updateTagDefinition("water.level", { tagId: "water.renamed" } as never)).toThrow(
+    /只允许修改/,
+  );
+  expect(() => e.updateTagDefinition("water.level", { dataType: "float" as never })).toThrow(
+    /数据类型/,
+  );
   expect(e.snapshot().document).toEqual(before);
   e.select("tank");
   e.setSelectedBinding("level", null);
   expect(e.removeTagDefinition("water.level")).toBe(true);
-  expect(e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level)
-    .toBeUndefined();
+  expect(
+    e.snapshot().document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level,
+  ).toBeUndefined();
   expect(e.undo()).toBe(true);
   expect(e.snapshot().document.tags.some((tag) => tag.tagId === "water.level")).toBe(true);
 });
@@ -730,12 +731,12 @@ test("Tag 类型变更与新绑定必须符合图元绑定槽类型", () => {
   const e = editor();
   const before = e.snapshot().document;
 
-  expect(() =>
-    e.updateTagDefinition("water.level", { dataType: "boolean" }),
-  ).toThrow(/Tag 数据类型与现有图元绑定不兼容/);
-  expect(() =>
-    e.updateTagDefinition("water.level", { dataType: "unknown" }),
-  ).toThrow(/不能将已指定类型的 Tag 改为待确认类型/);
+  expect(() => e.updateTagDefinition("water.level", { dataType: "boolean" })).toThrow(
+    /Tag 数据类型与现有图元绑定不兼容/,
+  );
+  expect(() => e.updateTagDefinition("water.level", { dataType: "unknown" })).toThrow(
+    /不能将已指定类型的 Tag 改为待确认类型/,
+  );
 
   e.select("tank");
   expect(() => e.setSelectedBinding("level", "water.pump.running")).toThrow(

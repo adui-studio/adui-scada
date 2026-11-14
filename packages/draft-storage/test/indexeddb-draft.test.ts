@@ -222,8 +222,9 @@ test("读取已存在的 0.2.0 IndexedDB 草稿时事务迁移并推进修订号
     expect(restored?.revision).toBe(5);
     expect(restored?.document.schemaVersion).toBe("0.3.0");
     expect(restored?.document.tags.every((tag) => tag.dataType === "unknown")).toBe(true);
-    expect(restored?.document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level)
-      .toEqual({ tagId: "water.level" });
+    expect(
+      restored?.document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level,
+    ).toEqual({ tagId: "water.level" });
     expect(await db.get("water-demo")).toEqual(restored);
   } finally {
     db.close();

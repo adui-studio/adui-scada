@@ -224,8 +224,9 @@ test("0.2.0 工程迁移时为已有绑定生成待确认类型，保持 Tag ID"
       description: "由历史工程迁移生成，数据类型与单位待维护者确认",
     },
   ]);
-  expect(result.document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level?.tagId)
-    .toBe("water.level");
+  expect(
+    result.document.pages[0]?.nodes.find((node) => node.id === "tank")?.bindings.level?.tagId,
+  ).toBe("water.level");
   expect(previous.schemaVersion).toBe("0.2.0");
   expect(previous.tags).toBeUndefined();
 });
