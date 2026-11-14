@@ -242,7 +242,7 @@ export async function readProjectSnapshot(input: unknown): Promise<ProjectSnapsh
     ) {
       throw new TypeError("历史快照迁移元数据无效");
     }
-    const payload = {
+    const payload: Omit<ProjectSnapshot, "contentHash"> = {
       formatVersion: PROJECT_SNAPSHOT_FORMAT_VERSION as 1,
       projectId: document.projectId,
       revision,
