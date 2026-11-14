@@ -10,9 +10,10 @@ import type {
 } from "react";
 import {
   TAG_DATA_TYPE_LABELS,
+  TAG_DATA_TYPES,
+  isTagDataTypeCompatibleWithBinding,
   WaterTreatmentSimulator,
   waterTreatmentDemoDocument,
-  waterTreatmentDemoTagOptions,
   DraftAutoSaveSession,
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
   studioNodeLocked,
@@ -27,6 +28,8 @@ import type {
   ProjectVersionSummary,
   ScadaDocument,
   ScadaNode,
+  TagDataType,
+  TagDefinitionUpdate,
 } from "@adui/scada-core";
 import {
   DexieDraftRepository,
@@ -110,6 +113,20 @@ export default function StudioPage() {
   const [rotating, setRotating] = useState(false);
   const [marquee, setMarquee] = useState<MarqueeState | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
+  const [newTagDraft, setNewTagDraft] = useState({
+    tagId: "",
+    displayName: "",
+    dataType: "number" as TagDataType,
+    unit: "",
+    description: "",
+  });
+  const [editingTagId, setEditingTagId] = useState<string | null>(null);
+  const [tagEditDraft, setTagEditDraft] = useState<{
+    displayName: string;
+    dataType: TagDataType;
+    unit: string;
+    description: string;
+  } | null>(null);
   const [preferredCopyTargetPageId, setPreferredCopyTargetPageId] = useState("");
   const [preferredLayerTargetId, setPreferredLayerTargetId] = useState("");
   const [layerSearch, setLayerSearch] = useState("");
@@ -271,14 +288,16 @@ export default function StudioPage() {
       ? editableTagSlot(selected.type)
       : null;
   const demoTagCandidates =
-    bindingSlot === null
+    bindingSlot === null || !selected
       ? []
-      : waterTreatmentDemoTagOptions.filter((option) => option.slots.includes(bindingSlot));
+      : state.document.tags.filter((tag) =>
+          isTagDataTypeCompatibleWithBinding(selected.type, bindingSlot, tag.dataType),
+        );
   const currentBindingTag = bindingSlot ? (selected?.bindings[bindingSlot]?.tagId ?? "") : "";
   const missingBindingTag =
     currentBindingTag !== "" &&
     !demoTagCandidates.some((option) => option.tagId === currentBindingTag);
-  const selectedTagDefinition = demoTagCandidates.find(
+  const selectedTagDefinition = state.document.tags.find(
     (option) => option.tagId === currentBindingTag,
   );
 
@@ -347,6 +366,71 @@ export default function StudioPage() {
     apply(
       () => editor.setSelectedBinding(slot, tagId === "" ? null : tagId),
       "已修改模拟 Tag 绑定，可撤销",
+    );
+  }
+
+  function addProjectTag(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const saved = apply(
+      () =>
+        editor.addTagDefinition({
+          tagId: newTagDraft.tagId.trim(),
+          displayName: newTagDraft.displayName,
+          dataType: newTagDraft.dataType,
+          unit: newTagDraft.unit.trim() || null,
+          description: newTagDraft.description,
+        }),
+      "已新增项目 Tag 定义，可撤销",
+    );
+    if (saved) {
+      setNewTagDraft({
+        tagId: "",
+        displayName: "",
+        dataType: "number",
+        unit: "",
+        description: "",
+      });
+    }
+  }
+
+  function beginEditTag(tag: ScadaDocument["tags"][number]) {
+    setEditingTagId(tag.tagId);
+    setTagEditDraft({
+      displayName: tag.displayName,
+      dataType: tag.dataType,
+      unit: tag.unit ?? "",
+      description: tag.description,
+    });
+  }
+
+  function saveTagEdit(tagId: string) {
+    if (!tagEditDraft) return;
+    const saved = apply(
+      () =>
+        editor.updateTagDefinition(tagId, {
+          displayName: tagEditDraft.displayName,
+          dataType: tagEditDraft.dataType,
+          unit: tagEditDraft.unit.trim() || null,
+          description: tagEditDraft.description,
+        }),
+      "已更新项目 Tag 定义，可撤销",
+    );
+    if (saved) {
+      setEditingTagId(null);
+      setTagEditDraft(null);
+    }
+  }
+
+  function removeProjectTag(tagId: string) {
+    if (!window.confirm("确定删除 Tag 定义“" + tagId + "”？已绑定图元必须先解除绑定。")) return;
+    apply(() => editor.removeTagDefinition(tagId), "已删除项目 Tag 定义，可撤销");
+  }
+
+  function isProjectTagBound(tagId: string): boolean {
+    return state.document.pages.some((page) =>
+      page.nodes.some((node) =>
+        Object.values(node.bindings).some((binding) => binding.tagId === tagId),
+      ),
     );
   }
 
@@ -598,13 +682,15 @@ export default function StudioPage() {
     refresh();
   }
 
-  function apply(action: () => unknown, message: string) {
+  function apply(action: () => unknown, message: string): boolean {
     try {
       action();
       refresh();
       setNotice(message);
+      return true;
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error));
+      return false;
     }
   }
 
