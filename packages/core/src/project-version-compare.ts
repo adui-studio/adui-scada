@@ -1,4 +1,4 @@
-import { parseScadaDocument } from "./document.ts";
+import { migrateScadaDocument } from "./document.ts";
 import type { ScadaDocument } from "./document.ts";
 
 /** 工程概要不包含明细或 Tag 实时值，只统计本地组态结构。 */
@@ -51,8 +51,8 @@ export function compareProjectDocuments(
   current: unknown,
   historical: unknown,
 ): ProjectDocumentComparison {
-  const a = parseScadaDocument(current);
-  const b = parseScadaDocument(historical);
+  const a = migrateScadaDocument(current).document;
+  const b = migrateScadaDocument(historical).document;
   if (a.projectId !== b.projectId) {
     throw new TypeError("版本比较只能针对同一个工程");
   }
