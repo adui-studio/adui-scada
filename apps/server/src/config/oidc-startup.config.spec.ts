@@ -13,6 +13,13 @@ const configured = Object.freeze({
   SCADA_OIDC_TRANSACTION_ENCRYPTION_KEY: validKey,
 });
 
+const secureIssuerMessage =
+  "SCADA_OIDC_ISSUER 必须使用可信 HTTPS 地址或明确允许的本机测试 HTTP 地址";
+const secureRedirectMessage =
+  "SCADA_OIDC_REDIRECT_URI 必须使用可信 HTTPS 地址或明确允许的本机测试 HTTP 地址";
+const secureOriginsMessage =
+  "SCADA_OIDC_WEB_ORIGINS 必须使用可信 HTTPS 地址或明确允许的本机测试 HTTP 地址";
+
 describe("OIDC 服务端启动安全配置", () => {
   it("默认关闭且不读取缺失或无效的身份凭据", () => {
     expect(resolveOidcStartupConfig({})).toEqual({ enabled: false });
@@ -51,10 +58,10 @@ describe("OIDC 服务端启动安全配置", () => {
 
   it("拒绝 HTTP 外部地址、携带账号或查询参数的 Issuer 和 Redirect URI", () => {
     for (const [issuer, message] of [
-      ["http://id.example.org", "SCADA_OIDC_ISSUER 必须使用可信 HTTPS 地址或明确允许的本机测试 HTTP 地址"],
-      ["https://user:pass@id.example.org", "SCADA_OIDC_ISSUER 必须使用可信 HTTPS 地址或明确允许的本机测试 HTTP 地址"],
-      ["https://id.example.org/?token=secret", "SCADA_OIDC_ISSUER 必须使用可信 HTTPS 地址或明确允许的本机测试 HTTP 地址"],
-      ["javascript:alert(1)", "SCADA_OIDC_ISSUER 必须使用可信 HTTPS 地址或明确允许的本机测试 HTTP 地址"],
+      ["http://id.example.org", secureIssuerMessage],
+      ["https://user:pass@id.example.org", secureIssuerMessage],
+      ["https://id.example.org/?token=secret", secureIssuerMessage],
+      ["javascript:alert(1)", secureIssuerMessage],
       ["not-a-url", "SCADA_OIDC_ISSUER 必须是有效的绝对 URL"],
     ]) {
       expect(() =>
@@ -63,8 +70,8 @@ describe("OIDC 服务端启动安全配置", () => {
     }
     for (const [redirect, message] of [
       ["https://scada.example.org/path", "SCADA_OIDC_REDIRECT_URI 必须指向固定 OIDC 回调路径"],
-      ["https://scada.example.org/api/v1/auth/oidc/callback?next=/", "SCADA_OIDC_REDIRECT_URI 必须使用可信 HTTPS 地址或明确允许的本机测试 HTTP 地址"],
-      ["http://scada.example.org/api/v1/auth/oidc/callback", "SCADA_OIDC_REDIRECT_URI 必须使用可信 HTTPS 地址或明确允许的本机测试 HTTP 地址"],
+      ["https://scada.example.org/api/v1/auth/oidc/callback?next=/", secureRedirectMessage],
+      ["http://scada.example.org/api/v1/auth/oidc/callback", secureRedirectMessage],
     ]) {
       expect(() =>
         resolveOidcStartupConfig({ ...configured, SCADA_OIDC_REDIRECT_URI: redirect }),
@@ -74,11 +81,11 @@ describe("OIDC 服务端启动安全配置", () => {
 
   it("严格校验 Origin 的 HTTPS、路径和重复项", () => {
     for (const [origins, message] of [
-      ["http://scada.example.org", "SCADA_OIDC_WEB_ORIGINS 必须使用可信 HTTPS 地址或明确允许的本机测试 HTTP 地址"],
+      ["http://scada.example.org", secureOriginsMessage],
       ["https://scada.example.org/path", "SCADA_OIDC_WEB_ORIGINS 必须只包含 Origin，不允许路径"],
       ["https://scada.example.org,https://scada.example.org", "SCADA_OIDC_WEB_ORIGINS 不允许重复的站点"],
       ["https://scada.example.org,", "SCADA_OIDC_WEB_ORIGINS 未设置或格式无效"],
-      ["https://scada.example.org/?a=1", "SCADA_OIDC_WEB_ORIGINS 必须使用可信 HTTPS 地址或明确允许的本机测试 HTTP 地址"],
+      ["https://scada.example.org/?a=1", secureOriginsMessage],
     ]) {
       expect(() =>
         resolveOidcStartupConfig({ ...configured, SCADA_OIDC_WEB_ORIGINS: origins }),
@@ -118,9 +125,9 @@ describe("OIDC 服务端启动安全配置", () => {
     ).toThrow("生产环境禁止启用不安全的本机 HTTP OIDC 测试模式");
     expect(() =>
       resolveOidcStartupConfig({ ...dev, SCADA_OIDC_ALLOW_INSECURE_LOOPBACK: "false" }),
-    ).toThrow("SCADA_OIDC_ISSUER 必须使用可信 HTTPS 地址或明确允许的本机测试 HTTP 地址");
+    ).toThrow(secureIssuerMessage);
     expect(() =>
       resolveOidcStartupConfig({ ...dev, SCADA_OIDC_ISSUER: "http://192.168.0.1" }),
-    ).toThrow("SCADA_OIDC_ISSUER 必须使用可信 HTTPS 地址或明确允许的本机测试 HTTP 地址");
+    ).toThrow(secureIssuerMessage);
   });
 });
