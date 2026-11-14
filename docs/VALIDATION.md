@@ -631,3 +631,10 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 - `pnpm run ready`：日志已确认依赖 Catalog 11 清单/51 项、共享配置 9 TSConfig、环境/LF、中文文案 161 文件、Prisma Client 7.10.1、Core 构建、React/Vue/Draft Storage/Server 类型检查、Vitest **438/438**、SSE 客户端 **8/8**、TCP 故障代理 **4/4**、NestJS E2E **17/17**、React 构建 **3901 模块**、Vue 构建 **3847 模块**均通过。所提供日志最后到达 NestJS `build:server` 的 Prisma Client 生成，未包含 Nest build 完成输出或 `ready` 最终退出码，因此**完整 ready 的最终成功尚未由该片段单独证明**，不能记为全链明确通过。
 
 **结论**：第三十二批核心历史迁移浏览器专项与跨框架互通已通过；静态检查通过。尚需补齐 `ready` 的最终 NestJS build 完成/退出码证据，并在验收文档更新后复跑 `docs:check`。本批不更改迁移业务代码、Schema、Dexie 数据库版本或快照格式。
+
+
+### 第三十二批完整质量链最终退出码确认（2026-11-14）
+
+维护者补充提供 `pnpm run ready` 最终 PowerShell 退出码：**0**。结合前述同一轮完整日志，依赖 Catalog、共享配置、环境与中文文案检查、Prisma Client 生成、Core 构建、全栈类型检查、Vitest **438/438**、SSE 客户端 **8/8**、TCP 故障代理 **4/4**、NestJS E2E **17/17**、React/Vue 构建及 NestJS 最终构建均已完成，第三十二批完整 `ready` 质量链确认通过。
+
+结合前述 Windows 实测：`test:legacy:browser` 六条 React/Vue 历史迁移路径全部通过（退出码 0），`test:interop` 跨框架互通通过（退出码 0），`vp check` 272 文件格式正确/135 受检文件零错误，`docs:check` 80 Markdown 通过。此后追加的验收文档更新尚未再次执行 `docs:check`，故 80 份是维护者本轮执行时的实际数量，不表示新增记录后的数量。
