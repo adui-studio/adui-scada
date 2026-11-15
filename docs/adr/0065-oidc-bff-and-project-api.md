@@ -168,3 +168,24 @@ Vue 与 React 是两个正式 Web 端，必须共用同源 API 契约、工程�
 维护者 Windows 已验证当前分支：`vp check` 291 个文件格式正确、151 个受检文件零警告/Lint/TypeScript 错误；单测 45/45 文件、494/494 测试；NestJS E2E 4/4 文件、26/26 测试（OIDC Controller 9/9）；`docs:check` 83 Markdown；完整 `ready` 最终退出码 0，React/Vue/NestJS 构建成功。
 
 该结果确认 HTTP Controller/Guard 的 Mock HTTP 集成回归与工程质量链通过；不代表真实 IdP/JWKS、浏览器 Secure Cookie、生产 TLS 反向代理或企业身份映射已经验收。OIDC 仍默认关闭，真实启用前仍须完成专项联调。
+
+## 3.4 第六小批：受保护的服务端工程 API（实现草稿，待验证）
+
+- 新增独立 `ProjectApiModule`，仅由 `OidcEnabledAppModule` 显式导入；默认 `AppModule` 仍不注册工程 API，也不建立数据库连接。
+- `POST /api/v1/projects` 只接受 `{ "document": ScadaDocument }`，从已验证会话获取租户及主体；工程标识沿用文档 `projectId`，不新增工程名称字段。原子创建工程、三项创建者权限、revision 1 快照、工程水位及 `version:append` 成功审计。
+- `GET /api/v1/projects` 仅返回当前租户明确授予 `project:read` 的工程摘要；`GET /api/v1/projects/:projectId` 在事务共享锁内复核权限并返回 `projectId/headRevision/createdAt/updatedAt`。
+- `GET /api/v1/projects/:projectId/versions` 在事务内复核 `version:read`，仅返回修订号、创建时间及 SHA-256 摘要；`limit` 默认 20、上限 100，`beforeRevision` 查询更早的版本。
+- `GET /api/v1/projects/:projectId/versions/:revision` 复用 `readProjectSnapshot`，复核数据库元数据和快照完整性；`POST /api/v1/projects/:projectId/versions` 复用 Core 保存请求契约、工程行锁和 CAS 事务追加。
+- 未授权、跨租户和不存在工程统一为 404；重复创建及 CAS 冲突为 409；客户端输入错误为 400。Cookie 写请求继续由既有 Session Guard 强制执行 Origin、Fetch Metadata 与 CSRF。
+- HTTP JSON/表单请求体允许最大 2 MiB，并继续由共享 Core 对有效工程保存请求检查 2 MiB 限制。
+- 不新增 Prisma 模型、字段、迁移、第三方依赖及工业设备写入；创建首版使用现有数据库受约束的 `version:append` 审计类型。
+- 本小批拟包含事务仓储测试、NestJS HTTP E2E、真实隔离 PostgreSQL 创建与回滚测试，以及默认根模块六条路由 404 测试。**尚未执行质量命令与真实数据库验收，不得标记第六小批完成。**
+
+### 3.5 第六小批候选补充：禁止缓存与 API 文档
+
+- 六条工程 API 成功响应显式使用 `Cache-Control: no-store`，防止包含工程内容、历史摘要和 CAS 保存结果的 HTTP 响应被缓存。只涉及新的受保护 Controller，不修改旧健康探针或演示 SSE 的缓存行为。
+- SDD 列出六条路由的方法、权限、成功状态与错误边界。仍需实际运行验证后才能将代码描述为已交付；当前不推进 PR 分支，不认定真实数据库或浏览器部署通过。
+
+### 3.6 工程创建前的事务内可信主体状态复核（候选补充）
+
+即使 `ScadaSessionGuard` 已在请求入口检查本地会话与 `ScadaIdentity.status`，`PrismaProjectVersionStore.create` 仍须在同一 PostgreSQL 事务内 `SELECT status ... FOR SHARE`，确认 `tenantId/subjectId` 对应的本地主体依旧为 `active`，之后才允许创建工程、授权、首版快照及审计。此行锁与停用主体的 `UPDATE` 冲突，防止认证通过后主体被停用而工程创建继续提交的竞态。未新增权限、身份或租户来源；现有版本读取/追加保持既有 Session Guard 与工程行锁内 ACL 复核语义。此为待运行测试的候选安全增强。

@@ -933,3 +933,41 @@ type OidcExpectedState = NonNullable<Parameters<OidcAuthorizationCodeGrant>[2]>[
 本次完整 `ready` 实际执行依赖目录、共享配置、环境变量与换行符、中文文案、Prisma Client 生成、Core 构建、Vite+ 格式/Lint/TypeScript、React/Vue/Draft Storage 类型检查、Server 类型检查、494 项单测、SSE 客户端 8 项、SSE 故障代理 4 项、NestJS E2E 26 项、83 份 Markdown 检查、React/Vue Web 构建和 NestJS 构建。
 
 E-012 的三个问题均已由本次 Windows 复验关闭：401 E2E 存在显式 Vitest 断言；Supertest Set-Cookie 字符串类型已正确处理；身份模块 Controller 元数据断言已生效。上述结果记录的是 Mock OIDC HTTP 路由与工程质量链通过，**不代表真实 IdP/JWKS、生产 HTTPS/反向代理、真实浏览器 Cookie 或企业身份映射已经验收**。阶段 A 的真实 PostgreSQL 迁移测试 16/16 通过记录保持独立，不因本次 `ready` 而扩大其验证范围。
+
+## 第三十三批阶段 B 第六小批：服务端工程 API 待验证（2026-11-14）
+
+本小批准备新增六条工程 HTTP 接口、工程创建/ACL/版本事务、领域异常映射，以及新增仓储单元测试、HTTP E2E 和隔离 PostgreSQL 测试。默认 `AppModule` 继续要求六条工程路由 404；OIDC 启用根模块才挂载工程接口；所有数据库写入仍使用确认的测试隔离环境。
+
+**当前验证结果：未执行。** 当前执行环境没有本仓库依赖、pnpm 和本机隔离 PostgreSQL；不能以第五小批此前的 494/494 单测、26/26 E2E 或完整 ready 退出码 0 代替本小批验证。
+
+维护者 Windows 的必需命令按顺序为：
+
+```powershell
+vp check
+pnpm run test:unit
+pnpm run test:e2e:server
+pnpm run docs:check
+pnpm run ready
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+真实数据库验收只允许通过明确配置的本机 `adui_scada_test`：
+
+```powershell
+pnpm run db:migrate:status
+pnpm run test:db
+Write-Host "退出码：$LASTEXITCODE"
+```
+
+真实 IdP/JWKS、生产 HTTPS/Cookie 和双框架同源代理尚未验收。只有收到真实日志及最终退出码后，才可更新 PR #55 的第六小批勾选项。
+
+## 2026-11-15 · 第三十三批第六小批补充静态审查（非运行验收）
+
+- 已通过 GitHub 读取候选提交及 1059 个 Git Tree 文件条目，并逐一检查本批新增/变更的 13 个 TypeScript 文件的相对导入，未发现缺失的仓库内源码导入；`../generated/prisma/client.js` 属于按既有规则运行 `pnpm run db:generate` 后生成的 Git 忽略文件，不构成已验证的运行环境。
+- 新增工程接口六条成功响应的 `Cache-Control: no-store` 声明，并补充 Bearer HTTP E2E 的缓存响应头与重复工程/非法修订号负面测试。更新 SDD 与需求文件记录候选 API 协议。
+- 执行容器中 Node.js 22、TypeScript 5.8.3 可用，但本仓库要求 Node 24、TypeScript 6、pnpm 12 和 Vite+；Git 克隆实测 DNS 失败，错误为 `Could not resolve host: github.com`。因此**不能执行**仓库格式/Lint/类型检查、Vitest、E2E、Prisma 生成、PostgreSQL 事务测试或完整 ready。
+- 本次静态检查不能替代维护者 Windows 下 `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run docs:check`、`pnpm run ready`，以及明确隔离测试库内的 `pnpm run test:db`。候选提交未推送至当前 PR 分支，原第五小批验收结果不覆盖本批代码。
+
+## 2026-11-15 · 第六小批创建者状态复核补充（未执行真库验证）
+
+静态安全审查指出：仅在 HTTP Guard 入口验证身份状态，不能保证进入较长的工程创建事务后主体仍保持有效。候选仓储已增加参数化 `SELECT ... FOR SHARE` 与 `active` 检查，配套 Mock 单测与本机隔离 PostgreSQL 停用主体负面测试；真正的事务内身份状态锁定、创建竞争、审计回滚、Cookie 防护及默认 404 仍须执行真实测试并检查退出码。本条是预防性安全增强，不作为新增真实事故或已验收结论。

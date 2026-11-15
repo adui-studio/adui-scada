@@ -719,3 +719,28 @@ OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client I
 ### 第三十三批阶段 B 第四、五小批 Windows 工程质量验收（2026-11-14）
 
 维护者 Windows 实测：`vp check` 291 个文件格式正确、151 个受检文件零警告/Lint/TypeScript 错误；`test:unit` 45/45 文件、494/494 测试；`test:e2e:server` 4/4 文件、26/26 测试（OIDC Controller 9/9）；`docs:check` 83 Markdown；SSE 客户端 8/8、故障代理 4/4；React/Vue/NestJS 构建成功；完整 `ready` 最终退出码 0。E-012 已复验关闭。真实 IdP/JWKS、生产 HTTPS/反向代理和企业身份映射不在本次 Mock E2E 验收范围。
+
+## 2026-11-15 · 第三十三批第六小批：工程 HTTP API 候选契约（待验证）
+
+本节只描述候选提交中的代码，**尚未推送至 PR #55 功能分支，未运行 Vite+、NestJS E2E 或真实 PostgreSQL 验收**。不改变共享 ScadaDocument 0.3.0、ProjectSnapshot 和原有历史迁移规则。
+
+工程接口前缀固定为 `/api/v1/projects`。除登录入口之外，工程接口只在 OIDC 配置完整且显式启用的根模块中注册。默认 AppModule 下所有工程接口继续为 404。项目身份与租户来自已验证的 Session Guard，不接收前端声明的 `tenantId`、`subjectId` 或角色。
+
+| 方法 | 路径 | HTTP 成功状态 | 授权与返回值 |
+| --- | --- | --- | --- |
+| POST | `/api/v1/projects` | 201 | 已认证；仅接受 `{document}`，创建工程、三项创建者 ACL、revision=1 快照和成功审计；返回 ProjectSummary |
+| GET | `/api/v1/projects` | 200 | 已认证；仅列出当前主体有 `project:read` 的工程摘要 |
+| GET | `/api/v1/projects/:projectId` | 200 | `project:read`；事务共享锁内复核，返回 ProjectSummary |
+| GET | `/api/v1/projects/:projectId/versions` | 200 | `version:read`；返回按 revision 倒序的历史摘要数组 |
+| GET | `/api/v1/projects/:projectId/versions/:revision` | 200 | `version:read`；返回经内容 SHA-256、工程 ID、修订号和时间验证的 ProjectSnapshot |
+| POST | `/api/v1/projects/:projectId/versions` | 201 | `version:append`；使用共享 Core 的 `{expectedRevision,document}` 契约进行 CAS 追加，返回完整快照 |
+
+`ProjectSummary` 包括 `projectId: string`、`headRevision: number`、`createdAt: string` 与 `updatedAt: string`。历史摘要与 Core 的 `ProjectVersionSummary` 相同，包括 `projectId/revision/createdAt/contentHash`，不含完整文档。历史列表只接受 `limit`（默认 20，范围 1～100）与 `beforeRevision`（大于零的安全整数），采用小于指定修订号的倒序分页。
+
+工程未知或无权限时统一返回 404，客户端校验失败返回 400，重复工程 ID 与 CAS 冲突返回 409。Cookie 写请求除身份认证外必须通过 Origin 白名单、Fetch Metadata 与 CSRF Token 双提交。工程接口成功响应显式设置 `Cache-Control: no-store`；请求体统一使用 2 MiB 上限。客户端不得指定审计操作人、版本号、创建时间和快照摘要。
+
+候选测试范围包括 HTTP Bearer/Cookie 认证、ACL 404、CSRF 403、输入 400、冲突 409、事务回滚、租户隔离与默认根模块 404；当前不代表生产身份接入、真实浏览器 HTTPS Cookie 或 PostgreSQL 事务已验收。工程发布、回滚、删除、共享授权管理和 PLC/DCS 写入均不开放。
+
+### 第六小批工程创建者身份并发保护（候选补充）
+
+工程创建事务在写入工程记录前，通过参数化 SQL 对 `scada_identities(tenant_id,subject_id)` 执行 `FOR SHARE` 并验证 `status=active`。这补充了请求开始时的 Session Guard 检查，避免主体已被停用后依旧原子创建新工程及创建者授权。共享锁与并发主体状态更新的行锁冲突，保证创建事务内身份状态稳定。身份未知或已停用统一按不可枚举的工程无权访问语义拒绝，并且不写入工程、ACL、历史快照或成功审计。仍需真实隔离 PostgreSQL 测试和并发停用专项验证。

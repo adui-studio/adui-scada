@@ -976,3 +976,13 @@ E-011 已在 `docs/AI_MISTAKES.md` 记录；其类型派生修复与第三小批
 维护者提供的最新 Windows 日志确认：`vp check` 291 个文件格式正确、151 个受检文件零警告/Lint/TypeScript 错误；`pnpm run test:unit` 45/45 文件、494/494 测试通过；`pnpm run test:e2e:server` 4/4 文件、26/26 测试通过，其中 OIDC Controller E2E 9/9；`pnpm run docs:check` 83 个 Markdown 通过；SSE 客户端 8/8、故障代理 4/4；React、Vue、NestJS 构建成功；完整 `pnpm run ready` 最终退出码 **0**。
 
 E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数据导入问题已复验关闭。当前阶段 B 第四、五小批工程质量验收通过；真实 IdP/JWKS、真实浏览器 Secure Cookie、生产 HTTPS/反向代理和企业身份映射仍需专项验收。工程 HTTP API 尚未开放。
+
+## 2026-11-14 · 第三十三批第六小批工程 API 实施草稿
+
+本批在功能分支准备工程 API 事务仓储扩展、六条 NestJS 工程路由、明确的领域错误映射及单元/HTTP E2E/隔离 PostgreSQL 测试。工程列表只返回有权限的摘要；创建操作对工程、创建者 ACL、revision 1 快照、水位和成功审计执行原子事务。不新增数据库 Schema 与迁移、不开放删除/发布/回滚/工业写入。默认 AppModule 保持 API 404；OIDC 根模块在完整配置启用时才挂载工程接口。
+
+**重要**：该第六小批目前只是待验证的代码实施草稿。当前执行环境没有仓库 pnpm 依赖及本机隔离 PostgreSQL，不能声称 `vp check`、`ready`、真实数据库或 HTTP E2E 已通过；第五小批此前的 Windows 验收仍独立有效，不适用于本批新增代码。
+
+### 第三十三批第六小批候选安全复核（2026-11-15）
+
+候选工程 API 的六条成功响应新增 `Cache-Control: no-store`，防止工程文档和版本摘要被 HTTP 缓存。创建事务增加本地受信主体 `active` 状态的 `FOR SHARE` 共享锁内复核，避免 Guard 验证后主体被停用却继续写入工程、ACL 与审计。单元和隔离 PostgreSQL 用例已补充，但尚未执行。候选提交仍未进入 PR #55 功能分支，不得沿用第五小批质量验收结果。

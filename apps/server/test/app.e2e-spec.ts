@@ -47,6 +47,25 @@ describe("应用控制器（端到端）", () => {
     const response = await request(app.getHttpServer()).get("/api/projects/water-demo/versions");
     expect(response.status).toBe(404);
   });
+  it("默认根模块六条工程 API 路由仍然返回 404", async () => {
+    const routes = [
+      ["get", "/api/v1/projects"],
+      ["post", "/api/v1/projects"],
+      ["get", "/api/v1/projects/example-project"],
+      ["get", "/api/v1/projects/example-project/versions"],
+      ["get", "/api/v1/projects/example-project/versions/1"],
+      ["post", "/api/v1/projects/example-project/versions"],
+    ] as const;
+
+    for (const [method, path] of routes) {
+      const response =
+        method === "get"
+          ? await request(app.getHttpServer()).get(path)
+          : await request(app.getHttpServer()).post(path).send({});
+      expect(response.status).toBe(404);
+    }
+  });
+
   it("正式根模块不挂载无鉴权的本机模拟工程和 Tag 接口", async () => {
     for (const route of ["/api/dev/demo/project", "/api/dev/demo/tags", "/api/dev/demo/events"]) {
       const response = await request(app.getHttpServer()).get(route);

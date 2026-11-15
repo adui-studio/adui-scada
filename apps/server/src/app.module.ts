@@ -5,11 +5,11 @@ import { TerminusModule } from "@nestjs/terminus";
 import { LoggerModule } from "nestjs-pino";
 import { createHttpLoggingOptions } from "./observability/http-logging.config.js";
 import { AppController } from "./app.controller.js";
-import { ScadaIdentityModule } from "./auth/scada-identity.module.js";
 import { AppService } from "./app.service.js";
 import { LocalDemoTelemetryModule } from "./demo/local-demo-telemetry.module.js";
 import { HttpReadinessController } from "./health/http-readiness.controller.js";
 import { HttpReadinessIndicator } from "./health/http-readiness.indicator.js";
+import { ProjectApiModule } from "./projects/project-api.module.js";
 
 @Module({
   imports: [
@@ -29,7 +29,7 @@ export class LocalDemoAppModule {}
 
 /**
  * 仅在 OIDC 配置完整且显式启用时使用。
- * 工程持久化模块仍未挂载，当前只开放身份认证与本地会话接口。
+ * 同时挂载可信身份、工程 ACL 与工程持久化 API；默认 AppModule 仍保持数据库隔离。
  */
-@Module({ imports: [AppModule, ScadaIdentityModule] })
+@Module({ imports: [AppModule, ProjectApiModule] })
 export class OidcEnabledAppModule {}

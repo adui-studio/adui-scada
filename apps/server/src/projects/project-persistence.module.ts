@@ -3,8 +3,8 @@ import { DatabaseModule } from "../database/database.module.js";
 import { PrismaProjectVersionStore } from "./prisma-project-version-store.js";
 
 /**
- * 仅供未来完成认证与工程权限 Guard 后显式导入。
- * 当前 AppModule 不导入此模块，不能通过 HTTP 访问工程版本仓储。
+ * 工程持久化仓储只由 ProjectApiModule 显式导入。
+ * ProjectApiModule 仅由 OIDC 启用根模块挂载，默认 AppModule 不连接数据库。
  */
 @Module({
   imports: [DatabaseModule],

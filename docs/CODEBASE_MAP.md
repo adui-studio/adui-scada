@@ -658,3 +658,17 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/server/src/main.ts`：根据完整 OIDC 配置选择根模块；默认健康模块保持数据库隔离，OIDC 与本机模拟 API 冲突时拒绝启动。
 - `apps/server/test/oidc-auth.controller.e2e-spec.ts`：登录重定向、Cookie、回调、`me/logout`、CSRF 与 Bearer 兼容 HTTP E2E。
 - `apps/server/src/database/database.module.spec.ts`、`apps/server/test/app.e2e-spec.ts`：模块装配与默认根模块身份路由 404 回归。
+
+## 第三十三批第六小批：服务端工程 API（待验收草稿）
+
+- `apps/server/src/projects/prisma-project-version-store.ts`：扩展可信主体的工程创建、ACL 筛选列表、共享锁详情、历史摘要分页，继续保留事务 CAS 追加和历史快照读取。
+- `apps/server/src/projects/project-api.controller.ts`：六条 `/api/v1/projects` HTTP API，使用 Session Guard 与工程权限 Guard。
+- `apps/server/src/projects/project-api.exception-filter.ts`：明确 400/404/409 领域错误响应。
+- `apps/server/src/projects/project-api.module.ts`：OIDC 启用根模块专用工程 API 模块，复用身份模块与工程持久化模块。
+- `apps/server/src/projects/project-api.store.spec.ts`：Mock 事务仓储单元测试。
+- `apps/server/test/projects-api.e2e-spec.ts`：Supertest 工程 HTTP、Bearer、Cookie CSRF、授权与错误映射回归。
+- `apps/server/test/project-api.db-spec.ts`：只对本机隔离 `adui_scada_test` 测试库执行工程创建、租户、竞争与审计事务回滚回归。
+- `apps/server/src/main.ts`、`apps/server/src/security/http-server-policy.ts`：HTTP 2 MiB JSON 请求体限制。
+- `apps/server/src/database/database.module.spec.ts`、`apps/server/test/app.e2e-spec.ts`：模块挂载和默认根模块 404 边界测试。
+
+以上内容仍需实际运行 `vp check`、`ready` 与 `test:db`，不得当作已通过验收。

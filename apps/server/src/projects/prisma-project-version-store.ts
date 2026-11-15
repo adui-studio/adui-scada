@@ -1,5 +1,10 @@
 import { Injectable } from "@nestjs/common";
-import type { ProjectSnapshot } from "@adui/scada-core";
+import type {
+  ProjectSnapshot,
+  ProjectVersionQuery,
+  ProjectVersionSummary,
+  ScadaDocument,
+} from "@adui/scada-core";
 import {
   createProjectSnapshot,
   parseServerProjectSaveRequest,
@@ -13,10 +18,18 @@ import type {
   ProjectAccessAction,
 } from "./project-access-policy.js";
 
+/** 工程列表和详情共用的轻量摘要，不包含完整组态文档。 */
+export interface ProjectSummary {
+  readonly projectId: string;
+  readonly headRevision: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
 /** 未授权与工程不存在统一拒绝，不向外暴露工程是否存在。 */
 export class ProjectVersionAccessDeniedError extends Error {
   constructor() {
-    super("当前主体无权访问该工程版本");
+    super("工程资源不存在或无权访问");
     this.name = "ProjectVersionAccessDeniedError";
   }
 }
@@ -37,8 +50,49 @@ export class ProjectRevisionNotFoundError extends Error {
   }
 }
 
+/** 当前租户下已存在相同工程标识。 */
+export class ProjectAlreadyExistsError extends Error {
+  constructor() {
+    super("当前租户下已存在相同工程标识的工程");
+    this.name = "ProjectAlreadyExistsError";
+  }
+}
+
+/** 客户端工程请求不符合共享 Core 或服务端分页契约。 */
+export class ProjectRequestValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ProjectRequestValidationError";
+  }
+}
+
 const ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const TRANSACTION_OPTIONS = { maxWait: 2000, timeout: 10000 };
+const OWNER_PERMISSIONS: readonly ProjectAccessAction[] = [
+  "project:read",
+  "version:read",
+  "version:append",
+];
+
+type ProjectSummaryRow = {
+  readonly projectId: string;
+  readonly headRevision: bigint;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+};
+
+type ProjectVersionSummaryRow = {
+  readonly projectId: string;
+  readonly revision: bigint;
+  readonly createdAt: Date;
+  readonly contentHash: string;
+};
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
 
 function requirePrincipal(
   principal: AuthenticatedProjectPrincipal | null,
@@ -60,13 +114,361 @@ function requireProjectId(projectId: string): void {
   }
 }
 
+function parseSaveRequest(input: unknown, projectId: string) {
+  try {
+    return parseServerProjectSaveRequest(input, projectId);
+  } catch (error) {
+    if (error instanceof TypeError || error instanceof RangeError) {
+      throw new ProjectRequestValidationError(error.message);
+    }
+    throw error;
+  }
+}
+
+/** 创建工程只接受文档本身，租户、主体和审计信息一律来自可信会话。 */
+function parseProjectCreateDocument(input: unknown): ScadaDocument {
+  if (!isPlainRecord(input)) {
+    throw new ProjectRequestValidationError("工程创建请求必须为普通对象");
+  }
+  const fields = Object.keys(input);
+  if (fields.length !== 1 || fields[0] !== "document") {
+    throw new ProjectRequestValidationError("工程创建请求只允许 document 字段");
+  }
+  const document = input.document;
+  if (!isPlainRecord(document) || typeof document.projectId !== "string") {
+    throw new ProjectRequestValidationError("工程创建请求必须包含有效的工程文档");
+  }
+  return parseSaveRequest(
+    { expectedRevision: null, document },
+    document.projectId,
+  ).document;
+}
+
+function parsePositiveInteger(value: unknown, label: string): number {
+  let parsed = value;
+  if (typeof parsed === "string") {
+    if (!/^[1-9]\d*$/.test(parsed)) {
+      throw new ProjectRequestValidationError(label + "必须是正整数");
+    }
+    parsed = Number(parsed);
+  }
+  if (!Number.isSafeInteger(parsed) || (parsed as number) <= 0) {
+    throw new ProjectRequestValidationError(label + "必须是大于零的安全整数");
+  }
+  return parsed as number;
+}
+
+/** 分页只允许 limit 与 beforeRevision，拒绝重复参数、未知字段和越界值。 */
+function parseVersionQuery(input: unknown): Required<Pick<ProjectVersionQuery, "limit">> &
+  Pick<ProjectVersionQuery, "beforeRevision"> {
+  const source = input === undefined ? {} : input;
+  if (!isPlainRecord(source)) {
+    throw new ProjectRequestValidationError("工程版本分页参数必须为普通对象");
+  }
+  const fields = Object.keys(source);
+  if (fields.some((field) => field !== "limit" && field !== "beforeRevision")) {
+    throw new ProjectRequestValidationError("工程版本分页只允许 limit 与 beforeRevision 参数");
+  }
+
+  const limit = source.limit === undefined ? 20 : parsePositiveInteger(source.limit, "每页数量");
+  if (limit > 100) {
+    throw new ProjectRequestValidationError("每页数量不能超过 100 条");
+  }
+  const beforeRevision =
+    source.beforeRevision === undefined
+      ? undefined
+      : parsePositiveInteger(source.beforeRevision, "历史分页修订号");
+  return { limit, ...(beforeRevision === undefined ? {} : { beforeRevision }) };
+}
+
+function toProjectSummary(row: ProjectSummaryRow): ProjectSummary {
+  if (
+    typeof row.headRevision !== "bigint" ||
+    row.headRevision < 0n ||
+    row.headRevision > BigInt(Number.MAX_SAFE_INTEGER)
+  ) {
+    throw new TypeError("数据库工程修订号超出安全整数范围");
+  }
+  return {
+    projectId: row.projectId,
+    headRevision: Number(row.headRevision),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function toVersionSummary(row: ProjectVersionSummaryRow): ProjectVersionSummary {
+  if (
+    typeof row.revision !== "bigint" ||
+    row.revision <= 0n ||
+    row.revision > BigInt(Number.MAX_SAFE_INTEGER)
+  ) {
+    throw new TypeError("数据库历史版本修订号超出安全整数范围");
+  }
+  return {
+    projectId: row.projectId,
+    revision: Number(row.revision),
+    createdAt: row.createdAt.toISOString(),
+    contentHash: row.contentHash,
+  };
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    error !== null &&
+    typeof error === "object" &&
+    "code" in error &&
+    error.code === "P2002"
+  );
+}
+
+async function lockProject(
+  tx: Prisma.TransactionClient,
+  principal: AuthenticatedProjectPrincipal,
+  projectId: string,
+  mode: "SHARE" | "UPDATE",
+): Promise<bigint> {
+  const projects =
+    mode === "UPDATE"
+      ? await tx.$queryRaw<Array<{ head_revision: bigint }>>`
+          SELECT head_revision FROM scada_projects
+          WHERE tenant_id = ${principal.tenantId} AND project_id = ${projectId}
+          FOR UPDATE
+        `
+      : await tx.$queryRaw<Array<{ head_revision: bigint }>>`
+          SELECT head_revision FROM scada_projects
+          WHERE tenant_id = ${principal.tenantId} AND project_id = ${projectId}
+          FOR SHARE
+        `;
+  if (projects.length !== 1) throw new ProjectVersionAccessDeniedError();
+  const head = projects[0]?.head_revision;
+  if (typeof head !== "bigint" || head < 0n) {
+    throw new TypeError("数据库工程修订号异常");
+  }
+  return head;
+}
+
+async function requireProjectPermission(
+  tx: Prisma.TransactionClient,
+  principal: AuthenticatedProjectPrincipal,
+  projectId: string,
+  action: ProjectAccessAction,
+): Promise<void> {
+  const grants = await tx.scadaProjectGrant.findMany({
+    where: {
+      tenantId: principal.tenantId,
+      projectId,
+      subjectId: principal.subjectId,
+    },
+    select: { permission: true },
+  });
+  const allowed = hasProjectPermission(
+    principal,
+    { tenantId: principal.tenantId, projectId },
+    {
+      tenantId: principal.tenantId,
+      projectId,
+      subjectId: principal.subjectId,
+      permissions: grants.map((grant) => grant.permission as ProjectAccessAction),
+    },
+    action,
+  );
+  if (!allowed) throw new ProjectVersionAccessDeniedError();
+}
+
 /**
- * 服务端专用事务仓储，不是对外 API。
- * principal 必须由未来的受信身份层提供，不能来自客户端请求体。
+ * 服务端专用事务仓储。所有主体必须由可信身份 Guard 提供，
+ * 不允许从客户端请求体、角色字段或工程文档推导租户和操作人。
  */
 @Injectable()
 export class PrismaProjectVersionStore {
   constructor(private readonly database: PrismaService) {}
+
+  /**
+   * 创建工程、创建者三项权限、首个快照、工程水位和成功审计处于同一事务。
+   * 工程标识来自已通过共享 Core 严格校验的文档，不引入独立名称字段。
+   */
+  async create(
+    principal: AuthenticatedProjectPrincipal | null,
+    input: unknown,
+  ): Promise<ProjectSummary> {
+    requirePrincipal(principal);
+    const document = parseProjectCreateDocument(input);
+    const createdAt = new Date().toISOString();
+    const snapshot = await createProjectSnapshot(document, {
+      revision: 1,
+      createdAt,
+    });
+    const snapshotData = JSON.parse(JSON.stringify(snapshot)) as Prisma.InputJsonValue;
+
+    return this.database.client.$transaction(async (tx) => {
+      // Guard 的认证结果只是请求开始时的状态；创建权限必须在事务内再次复核。
+      // 共享锁保证并发停用主体的 UPDATE 不会与本次创建提交交错。
+      const identities = await tx.$queryRaw<Array<{ status: string }>>`
+        SELECT status FROM scada_identities
+        WHERE tenant_id = ${principal.tenantId} AND subject_id = ${principal.subjectId}
+        FOR SHARE
+      `;
+      if (identities.length !== 1 || identities[0]?.status !== "active") {
+        throw new ProjectVersionAccessDeniedError();
+      }
+      try {
+        await tx.scadaProject.create({
+          data: {
+            tenantId: principal.tenantId,
+            projectId: document.projectId,
+            headRevision: 0n,
+            createdAt: new Date(createdAt),
+          },
+        });
+      } catch (error) {
+        if (isUniqueConstraintError(error)) throw new ProjectAlreadyExistsError();
+        throw error;
+      }
+
+      await tx.scadaProjectGrant.createMany({
+        data: OWNER_PERMISSIONS.map((permission) => ({
+          tenantId: principal.tenantId,
+          projectId: document.projectId,
+          subjectId: principal.subjectId,
+          permission,
+        })),
+      });
+      await tx.scadaProjectVersion.create({
+        data: {
+          tenantId: principal.tenantId,
+          projectId: document.projectId,
+          revision: 1n,
+          snapshot: snapshotData,
+          contentHash: snapshot.contentHash,
+          createdBy: principal.subjectId,
+          createdAt: new Date(snapshot.createdAt),
+        },
+      });
+      await tx.scadaProject.update({
+        where: {
+          tenantId_projectId: {
+            tenantId: principal.tenantId,
+            projectId: document.projectId,
+          },
+        },
+        data: { headRevision: 1n },
+      });
+      // 现有数据库约束只允许 version:append；首个快照按一次版本追加审计。
+      await tx.scadaProjectAudit.create({
+        data: {
+          tenantId: principal.tenantId,
+          projectId: document.projectId,
+          revision: 1n,
+          actorId: principal.subjectId,
+          action: "version:append",
+        },
+      });
+
+      const project = await tx.scadaProject.findUnique({
+        where: {
+          tenantId_projectId: {
+            tenantId: principal.tenantId,
+            projectId: document.projectId,
+          },
+        },
+        select: {
+          projectId: true,
+          headRevision: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+      if (!project) throw new TypeError("工程创建事务无法读取刚写入的工程记录");
+      return toProjectSummary(project);
+    }, TRANSACTION_OPTIONS);
+  }
+
+  /** 只列出当前租户明确授予 project:read 的工程，不返回完整工程文档。 */
+  async list(
+    principal: AuthenticatedProjectPrincipal | null,
+  ): Promise<readonly ProjectSummary[]> {
+    requirePrincipal(principal);
+    const projects = await this.database.client.scadaProject.findMany({
+      where: {
+        tenantId: principal.tenantId,
+        grants: {
+          some: {
+            tenantId: principal.tenantId,
+            subjectId: principal.subjectId,
+            permission: "project:read",
+          },
+        },
+      },
+      select: {
+        projectId: true,
+        headRevision: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: [{ updatedAt: "desc" }, { projectId: "asc" }],
+    });
+    return projects.map(toProjectSummary);
+  }
+
+  /** 工程详情在共享锁内复核 project:read，避免授权撤销与读取竞态。 */
+  async getProject(
+    principal: AuthenticatedProjectPrincipal | null,
+    projectId: string,
+  ): Promise<ProjectSummary> {
+    requirePrincipal(principal);
+    requireProjectId(projectId);
+
+    return this.database.client.$transaction(async (tx) => {
+      await lockProject(tx, principal, projectId, "SHARE");
+      await requireProjectPermission(tx, principal, projectId, "project:read");
+      const project = await tx.scadaProject.findUnique({
+        where: { tenantId_projectId: { tenantId: principal.tenantId, projectId } },
+        select: {
+          projectId: true,
+          headRevision: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+      if (!project) throw new ProjectVersionAccessDeniedError();
+      return toProjectSummary(project);
+    }, TRANSACTION_OPTIONS);
+  }
+
+  /** 在工程共享锁内复核 version:read；列表只返回摘要，不读取 JSONB 快照。 */
+  async listVersions(
+    principal: AuthenticatedProjectPrincipal | null,
+    projectId: string,
+    input?: unknown,
+  ): Promise<readonly ProjectVersionSummary[]> {
+    requirePrincipal(principal);
+    requireProjectId(projectId);
+    const query = parseVersionQuery(input);
+
+    return this.database.client.$transaction(async (tx) => {
+      await lockProject(tx, principal, projectId, "SHARE");
+      await requireProjectPermission(tx, principal, projectId, "version:read");
+      const versions = await tx.scadaProjectVersion.findMany({
+        where: {
+          tenantId: principal.tenantId,
+          projectId,
+          ...(query.beforeRevision === undefined
+            ? {}
+            : { revision: { lt: BigInt(query.beforeRevision) } }),
+        },
+        select: {
+          projectId: true,
+          revision: true,
+          createdAt: true,
+          contentHash: true,
+        },
+        orderBy: { revision: "desc" },
+        take: query.limit,
+      });
+      return versions.map(toVersionSummary);
+    }, TRANSACTION_OPTIONS);
+  }
 
   /** 在同一数据库事务内校验授权、CAS、追加快照、推进水位并保存成功审计。 */
   async append(
@@ -76,46 +478,11 @@ export class PrismaProjectVersionStore {
   ): Promise<ProjectSnapshot> {
     requirePrincipal(principal);
     requireProjectId(projectId);
-    const request = parseServerProjectSaveRequest(input, projectId);
+    const request = parseSaveRequest(input, projectId);
 
     return this.database.client.$transaction(async (tx) => {
-      // 使用参数化查询锁住工程行；授权撤销也必须遵循相同锁顺序。
-      const projects = await tx.$queryRaw<Array<{ head_revision: bigint }>>`
-          SELECT head_revision FROM scada_projects
-          WHERE tenant_id = ${principal.tenantId} AND project_id = ${projectId}
-          FOR UPDATE
-        `;
-      if (projects.length !== 1) throw new ProjectVersionAccessDeniedError();
-
-      const grants = await tx.scadaProjectGrant.findMany({
-        where: {
-          tenantId: principal.tenantId,
-          projectId,
-          subjectId: principal.subjectId,
-        },
-        select: { permission: true },
-      });
-      const permissions = grants.map((grant) => grant.permission as ProjectAccessAction);
-      if (
-        !hasProjectPermission(
-          principal,
-          { tenantId: principal.tenantId, projectId },
-          {
-            tenantId: principal.tenantId,
-            projectId,
-            subjectId: principal.subjectId,
-            permissions,
-          },
-          "version:append",
-        )
-      ) {
-        throw new ProjectVersionAccessDeniedError();
-      }
-
-      const head = projects[0]?.head_revision;
-      if (typeof head !== "bigint" || head < 0n) {
-        throw new TypeError("数据库工程修订号异常");
-      }
+      const head = await lockProject(tx, principal, projectId, "UPDATE");
+      await requireProjectPermission(tx, principal, projectId, "version:append");
       if (head !== BigInt(request.expectedRevision ?? 0)) {
         throw new ProjectRevisionConflictError();
       }
@@ -167,41 +534,12 @@ export class PrismaProjectVersionStore {
     requirePrincipal(principal);
     requireProjectId(projectId);
     if (!Number.isSafeInteger(revision) || revision <= 0) {
-      throw new TypeError("查询修订号必须为大于零的安全整数");
+      throw new ProjectRequestValidationError("查询修订号必须为大于零的安全整数");
     }
 
     return this.database.client.$transaction(async (tx) => {
-      const projects = await tx.$queryRaw<Array<{ head_revision: bigint }>>`
-          SELECT head_revision FROM scada_projects
-          WHERE tenant_id = ${principal.tenantId} AND project_id = ${projectId}
-          FOR SHARE
-        `;
-      if (projects.length !== 1) throw new ProjectVersionAccessDeniedError();
-
-      const grants = await tx.scadaProjectGrant.findMany({
-        where: {
-          tenantId: principal.tenantId,
-          projectId,
-          subjectId: principal.subjectId,
-        },
-        select: { permission: true },
-      });
-      const permissions = grants.map((grant) => grant.permission as ProjectAccessAction);
-      if (
-        !hasProjectPermission(
-          principal,
-          { tenantId: principal.tenantId, projectId },
-          {
-            tenantId: principal.tenantId,
-            projectId,
-            subjectId: principal.subjectId,
-            permissions,
-          },
-          "version:read",
-        )
-      ) {
-        throw new ProjectVersionAccessDeniedError();
-      }
+      await lockProject(tx, principal, projectId, "SHARE");
+      await requireProjectPermission(tx, principal, projectId, "version:read");
 
       const row = await tx.scadaProjectVersion.findUnique({
         where: {
