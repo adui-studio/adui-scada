@@ -54,9 +54,7 @@ export function resolveReadonlyProbeOrigins(env) {
   }
 
   if (
-    !origins.some(
-      (origin) => env.SCADA_OIDC_REDIRECT_URI === `${origin}/api/v1/auth/oidc/callback`,
-    )
+    !origins.some((origin) => env.SCADA_OIDC_REDIRECT_URI === `${origin}/api/v1/auth/oidc/callback`)
   ) {
     throw new Error("OIDC 回调必须与已登记的 HTTPS Origin 一致");
   }
@@ -112,10 +110,7 @@ export function verifyAnonymousMeResponse(response) {
   if (response.status !== 401 || response.location !== undefined) {
     throw new Error("未认证身份接口必须返回 401，且不得发生重定向");
   }
-  if (
-    typeof response.type !== "string" ||
-    !/^application\/json(?:\s*;|$)/i.test(response.type)
-  ) {
+  if (typeof response.type !== "string" || !/^application\/json(?:\s*;|$)/i.test(response.type)) {
     throw new Error("未认证身份接口没有返回 JSON，可能命中了页面回退");
   }
 

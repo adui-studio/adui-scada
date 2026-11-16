@@ -57,10 +57,7 @@ void describe("真实 OIDC HTTPS 本机匿名只读探针", () => {
       { SCADA_OIDC_ALLOW_INSECURE_LOOPBACK: "true" },
       { SCADA_LOCAL_DEMO_API_ENABLED: "true" },
     ]) {
-      assert.throws(
-        () => resolveReadonlyProbeOrigins({ ...env(), ...difference }),
-        /安全的本机/,
-      );
+      assert.throws(() => resolveReadonlyProbeOrigins({ ...env(), ...difference }), /安全的本机/);
     }
   });
 
@@ -104,18 +101,12 @@ void describe("真实 OIDC HTTPS 本机匿名只读探针", () => {
       { ...unauthorized(), status: 200 },
       { ...unauthorized(), type: "text/html", body: "<html></html>" },
     ]) {
-      assert.throws(
-        () => verifyAnonymousMeResponse(response),
-        /必须返回 401|没有返回 JSON/,
-      );
+      assert.throws(() => verifyAnonymousMeResponse(response), /必须返回 401|没有返回 JSON/);
     }
   });
 
   void it("拒绝无效 JSON 与非预期的认证契约", () => {
-    assert.throws(
-      () => verifyAnonymousMeResponse({ ...unauthorized(), body: "{" }),
-      /无效 JSON/,
-    );
+    assert.throws(() => verifyAnonymousMeResponse({ ...unauthorized(), body: "{" }), /无效 JSON/);
     assert.throws(
       () =>
         verifyAnonymousMeResponse({
