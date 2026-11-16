@@ -1,114 +1,64 @@
-# ADui SCADA V0.1 · Docker 本地演示
+# ADui SCADA · Docker 本机全新安装
 
-这是 **只读模拟演示栈**，不是工业 SCADA 生产部署。已实现的 NestJS 仅有 `GET /health`；水处理模拟 SSE 无身份认证。Docker Compose 默认只在宿主机的 `127.0.0.1` 发布两个 Web 入口。
+只维护一份 `deploy/docker/compose.yaml`，项目名 **`adui-scada`**。共有七个独立服务：`web-react`、`web-vue`、`server`、`demo`、`postgres`、`redis`、`keycloak`。**只有一个 PostgreSQL 17 容器**，其中的 `adui_scada` 是业务数据库、`adui_scada_keycloak` 是 Keycloak 的独立逻辑数据库。
 
-## 运行前置
+## 第一次安装
 
-- Docker Engine / Docker Desktop，启用 Compose V2
-- 能拉取 Node 24 与 Nginx 镜像，构建时能访问 npm
-- 从仓库根目录执行命令
-
-首次启动（会构建两套 Web、NestJS 与模拟器镜像）：
+前提为 Docker Desktop 已启动、Node/pnpm 依赖已安装、`mkcert` 已安装及本机根证书已信任。本方案仅用于回环本机开发/演示，不可直接用于生产。
 
 ```powershell
-docker compose -f deploy/docker/compose.demo.yaml config
-docker compose -f deploy/docker/compose.demo.yaml up --build -d
-docker compose -f deploy/docker/compose.demo.yaml ps
+# 如果仓库根目录仍有旧 .env，先在本机保存备份，不输出其中的密钥。
+if (Test-Path .env) {
+    Copy-Item .env (".env.backup." + (Get-Date -Format yyyyMMddHHmmss))
+}
+Copy-Item .env.example .env -Force
+
+pnpm run docker:plan
+if ($LASTEXITCODE -ne 0) { throw "Docker 安装预检失败" }
+pnpm run docker:up
+if ($LASTEXITCODE -ne 0) { throw "Docker 全新安装或数据库初始化失败" }
+pnpm run docker:ps
 ```
 
-也可以通过根脚本启动：
+`docker:up` 会准备 `.local/docker/` 下 Git 忽略的 **随机密码与本机 TLS 证书**，验证唯一 Compose 配置并创建 **`adui-scada_postgres-data`**、**`adui-scada_redis-data`** 两个新卷，启动七个容器，随后将现有 Prisma 迁移部署到新业务库 `adui_scada`。已有本地秘密文件不会自动被覆盖；密码不会写入仓库模板。`docker:db:init` 可在服务已运行后重试幂等的 Prisma 迁移。
+
+**历史情况**：维护者已删除三个旧 Docker 项目与数据卷，且没有数据库备份。因此这是新安装，不是迁移或恢复。以前的 Keycloak 用户、SCADA 身份预绑定、工程历史和旧会话都不会自动回来。如果 Docker Desktop 实际仍有旧项目容器，预检会拒绝自动清理；请先自行确认。
+
+## 日常命令
 
 ```powershell
-pnpm run docker:demo:up
-pnpm run docker:demo:logs
-pnpm run docker:demo:down
+pnpm run docker:up
+pnpm run docker:ps
+pnpm run docker:logs
+pnpm run docker:down
+pnpm run docker:db:init
 ```
 
-| 入口     | 地址                               | 用途                                              |
-| -------- | ---------------------------------- | ------------------------------------------------- |
-| React    | http://127.0.0.1:8080              | React 只读 Runtime，通过同源 `/demo` 获取模拟数据 |
-| Vue      | http://127.0.0.1:8081              | Vue 只读 Runtime，共享工程与 Tag 契约             |
-| 健康检查 | http://127.0.0.1:8080/api/health   | NestJS 进程存活探针，不代表网关健康               |
-| 演示工程 | http://127.0.0.1:8080/demo/project | 只供本地诊断，未经认证                            |
-| 演示 SSE | http://127.0.0.1:8080/demo/events  | 演练 `GOOD → STALE → GOOD`                        |
+`docker:down` 不带 `-v`，保留新卷；第二次 `docker:up` 不会重置密码、Keycloak 账户或已部署的表。严禁为排错随意执行 `down -v` 或 `docker volume rm`。
 
-PowerShell 简单测试：
+| 服务                                      | 本机入口                  |
+| ----------------------------------------- | ------------------------- |
+| React Docker HTTP Demo                    | `http://127.0.0.1:18080`  |
+| Vue Docker HTTP Demo                      | `http://127.0.0.1:18081`  |
+| PostgreSQL（SCADA + Keycloak 两个逻辑库） | `127.0.0.1:15432`         |
+| Redis                                     | `127.0.0.1:16379`         |
+| Keycloak HTTPS                            | `https://127.0.0.1:18443` |
+
+**OIDC 安全边界**：根 `.env.example` 的 OIDC 默认关闭，HTTP Demo 不能替代 WebStorm Vite HTTPS 的受保护工程 API。Keycloak Realm 将重新导入，但普通用户和对应的本地可信身份映射需要重新创建；不会自动授予工程写权限。真实 OAuth 回调、Secure Cookie、CSRF、ACL 和 Vue/React 会话互通仍须在新空库上重新验收。
+
+Prisma 首次迁移是幂等的 `migrate deploy`，不是 `migrate reset`。单镜像生产交付不在本次范围内。
+
+## Docker 数据库迁移状态（本机随机凭据）
+
+`pnpm run docker:db:init` 使用 `.local/docker/secrets.env` 中首次安装的随机数据库密码，2026-11-16 维护者已在 `adui_scada`（`127.0.0.1:15432`）实际成功应用四项 Prisma 迁移，退出码 0；容器内 `pg_isready` 和 `SELECT 1` 也已通过。旧的通用 `pnpm run db:migrate:status` 从根目录 `.env` 读取手动填写的数据库 URL，若仍是历史测试密码会出现 **P1000**，这与已成功迁移的 Docker 数据库不矛盾。
+
+**Docker 本机实例应使用：**
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8080/api/health
-Invoke-RestMethod http://127.0.0.1:8080/demo/project
-curl.exe -N http://127.0.0.1:8080/demo/events
+pnpm run docker:db:status
+if ($LASTEXITCODE -ne 0) { throw "Docker 数据库迁移状态检查失败" }
 ```
 
-最后一条 SSE 会持续输出；使用 Ctrl+C 终止。
+该命令复用 `scripts/init-docker-db.mjs --status`，在子进程环境中优先使用已存在的本机 Docker 随机凭据，只运行**只读** `prisma migrate status`；不会显示密码、修改根 `.env`、重建容器、删除卷或重置数据库。通用 `db:migrate:status` 继续支持显式配置的其他数据库，但它的 `.env` 密码必须与目标数据库相同。
 
-## 数据流与安全边界
-
-```text
-本机浏览器
-  ├─ 127.0.0.1:8080 → React Nginx ─┐
-  └─ 127.0.0.1:8081 → Vue Nginx ────┼─ /demo/* → 模拟 Node SSE (容器网络)
-                                    └─ /api/health → NestJS (容器网络)
-```
-
-只有两套 Nginx 绑定宿主机 loopback；`server` 与 `demo` 服务只配置容器内 `expose`，不发布宿主机端口。NestJS 的 `SCADA_SERVER_HOST=0.0.0.0` 与模拟服务的 `SCADA_DEMO_HOST=0.0.0.0` **仅为容器网络可达**，不代表允许在真实主机或工业网络上公开监听。非容器开发仍默认绑定 `127.0.0.1`。
-
-Nginx 专门代理 `/demo/project`、`/demo/events` 与 `/api/health`，对其他 `/demo/`、`/api/` 路径返回 404，避免把 SPA HTML 返回给 JSON 客户端。SSE 路由关闭代理缓冲，以便及时显示模拟中断状态。
-
-**切勿直接映射 0.0.0.0:8080/8081 或部署到公网**：模拟接口没有鉴权、速率限制或生产级审计；`SIMULATION` / `GOOD` 均不是现场数据。Tauri 2 不需要 Docker，也不会放进 Linux Web 容器。
-
-## 后续生产部署（尚未实现）
-
-正式交付时应将该 demo Compose 与生产部署隔离，新增：
-
-1. 经安全评审的网关独立容器/进程；客户端不直连 PLC/DCS，且不提供默认写入；
-2. NestJS 认证授权与版本化发布/Tag API、WebSocket，删除 demo 代理；
-3. PostgreSQL / TimescaleDB / Redis 数据备份、持久卷和恢复演练（依实际实现再选定）；
-4. HTTPS/WSS 入口、证书管理、网络分区、服务健康检查、日志与审计；
-5. 镜像/依赖 digest 固定、供应链扫描、Linux amd64/arm64 测试、生产秘密管理。
-
-## 验证状态
-
-维护者已确认原 V0.1 Docker 演示在 Windows 上运行成功。**本次唯一根 .env 与动态 Nginx 上游端口修改尚未重新 Docker 构建/运行验证**；当前协作环境没有 Docker CLI。即便新的容器回归通过，也不代表生产 SCADA 安全部署通过。
-
-## 统一根 .env 与端口
-
-从仓库根目录运行 Compose；它会读取同一个 `.env`（如不存在使用默认值）。只有一份提交的 [环境变量模板](../../.env.example)，不再为 Docker 单独维护第二份：
-
-```powershell
-if (!(Test-Path .env)) { Copy-Item .env.example .env }
-pnpm run env:check
-docker compose -f deploy/docker/compose.demo.yaml config
-pnpm run docker:demo:up
-```
-
-- `SCADA_REACT_PORT`、`SCADA_VUE_PORT`：映射到宿主机的本地 Web 端口（8080、8081），宿主机 IP **始终 127.0.0.1**。
-- `SCADA_SERVER_PORT`、`SCADA_DEMO_PORT`：容器内 NestJS、SSE 的监听端口（3001、4178），Compose 健康检查和 Nginx 上游使用相同变量。
-- Docker 容器内 `SCADA_SERVER_HOST` / `SCADA_DEMO_HOST` 会被 Compose **明确覆盖为** `0.0.0.0`，仅供隔离的容器网络使用；本机启动仍按根 `.env` 默认绑定 loopback。
-- Nginx 官方镜像会将 `/etc/nginx/templates/default.conf.template` 中的内部端口变量替换为实际值，避免更改端口后代理继续指向旧地址。
-- `SCADA_REACT_DEV_PORT`、`SCADA_VUE_DEV_PORT` 只用于本地 Vite+ 开发服务器，不影响 Docker 的 Nginx 8080 容器内部监听。
-
-改动任何端口后需要重新创建相关容器：`pnpm run docker:demo:up`（带 `--build`）。正式工业业务和公网部署仍未实现。
-
-详细变量见 [环境配置说明](../../docs/ENVIRONMENT.md)。
-
-## V0.3 第二十五批 · SSE Nginx 多客户端烟测
-
-本机 Docker Demo 栈启动完成后，在根目录执行 `pnpm run test:sse:proxy`。脚本从根 `.env` 读取 `SCADA_REACT_PORT`、`SCADA_VUE_PORT`，仅通过宿主机的 `127.0.0.1` 访问 React/Vue Nginx 的 `/demo/events`，各验证 6 路真实 SSE 快照、heartbeat、单客户端断开隔离和重连先收到 snapshot。脚本不会重建容器、修改代理或执行生产网络故障注入。Docker 演示 SSE 共享同一个独立 Node 模拟服务，该服务本批增加 32 路连接上限和 64 KiB 单路背压保护；Nginx 路由与 Docker 暴露范围不变。**本批 Docker 实际网络烟测仍待维护者执行**。详见 [ADR-0057](../../docs/adr/0057-local-sse-capacity-and-proxy-validation.md)。
-
-### 统一读取根环境文件及端口检查
-
-Docker 演示栈由根目录命令 `pnpm run docker:demo:up/down/logs` 统一调用 `docker compose --env-file .env -f deploy/docker/compose.demo.yaml`，与本机 SSE 网络测试从根 `.env` 读取的端口一致；不要通过旧版省略 `--env-file` 的命令启动。端口更新后运行：
-
-```powershell
-pnpm run env:check
-pnpm run docker:demo:up
-pnpm run docker:demo:ps
-pnpm run test:sse:proxy
-```
-
-默认发布映射应为 React `127.0.0.1:18080->8080/tcp`、Vue `127.0.0.1:18081->8080/tcp`。如仍显示旧 `8080/8081`，检查 PowerShell 的同名环境变量是否覆盖根 `.env`；不要分享含数据库密码的完整配置转储。此修正是本地 Docker 演示端口一致性保护，尚未证明网络代理或工业生产环境通过验收。
-
-### 第二十六批 · Docker Nginx SSE 下行静默与持续流回归
-
-本机已启动的 Docker Demo 演示栈无需重新配置，即可在仓库根目录使用 `pnpm run test:sse:fault:proxy` 对 React `18080`、Vue `18081` 的 SSE 入口分别进行临时 TCP 代理下行静默测试；通过真实浏览器观察共享 Runtime 的 STALE、15 秒重建和 socket 回收。运行 `pnpm run test:sse:soak:proxy` 可按端口分别观测六路连接的持续 12 次心跳及 Tag 增量。测试只访问固定本机回环地址，不停止现有容器、修改 Nginx 或开放新服务端路由。短时 TCP 字节屏蔽不代表 Nginx 自身宕机或真实工业网络已验收；详见 [ADR-0058](../../docs/adr/0058-tcp-sse-fault-and-soak-tests.md)。
+如果要让宿主机 NestJS 的真实 OIDC 连接新 Docker 数据库，必须由维护者在本机**安全地同步** `SCADA_DB_PASSWORD`、`SCADA_DATABASE_URL` 与 `.local/docker/secrets.env` 的数据库凭据；Keycloak Client Secret、OIDC 事务密钥也应与新生成的本机凭据一致。HTTPS 证书从新的 `.local/docker/localhost.pem` 和 `localhost-key.pem` 读取，旧 `.local/oidc-lab` 路径不代表新部署。避免输出或提交任何秘密；已在对话中披露的历史密钥应受控轮换。新环境尚需重新创建 Keycloak 普通用户和预绑定可信身份，不得绕过认证或自动授予工程权限。

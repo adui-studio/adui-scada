@@ -12,6 +12,8 @@ node_modules
 *.log
 **/*.log
 .env
+.local/oidc-lab/
+.local/docker/
 .env.*
 **/.env
 **/.env.*

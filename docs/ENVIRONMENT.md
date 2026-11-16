@@ -18,14 +18,14 @@ pnpm run env:check
 | 变量                   | 默认值      | 用途                                     |
 | ---------------------- | ----------- | ---------------------------------------- |
 | `SCADA_WEB_HOST`       | `127.0.0.1` | React/Vue 本地开发监听，允许 `localhost` |
-| `SCADA_REACT_DEV_PORT` | `5173`      | React 开发 Web                           |
-| `SCADA_VUE_DEV_PORT`   | `5174`      | Vue 开发 Web                             |
+| `SCADA_REACT_DEV_PORT` | `15173`     | React 开发 Web                           |
+| `SCADA_VUE_DEV_PORT`   | `15174`     | Vue 开发 Web                             |
 | `SCADA_SERVER_HOST`    | `127.0.0.1` | NestJS 本机监听                          |
-| `SCADA_SERVER_PORT`    | `3001`      | NestJS HTTP 端口                         |
+| `SCADA_SERVER_PORT`    | `13001`     | NestJS HTTP 端口                         |
 | `SCADA_DEMO_HOST`      | `127.0.0.1` | 无鉴权 SSE 模拟服务监听                  |
-| `SCADA_DEMO_PORT`      | `4178`      | SSE 模拟服务及两套 Web 开发代理目标      |
-| `SCADA_REACT_PORT`     | `8080`      | Docker React 宿主机 HTTP 端口            |
-| `SCADA_VUE_PORT`       | `8081`      | Docker Vue 宿主机 HTTP 端口              |
+| `SCADA_DEMO_PORT`      | `14178`     | SSE 模拟服务及两套 Web 开发代理目标      |
+| `SCADA_REACT_PORT`     | `18080`     | Docker React 宿主机 HTTP 端口            |
+| `SCADA_VUE_PORT`       | `18081`     | Docker Vue 宿主机 HTTP 端口              |
 
 全部端口限制为 1–65535 的整数。开发 Web 只允许 loopback 主机；NestJS/SSE 允许 `0.0.0.0` 仅为了**不向宿主机发布端口**的隔离 Docker demo 网络，不能把无鉴权模拟服务放到工业网或公网。
 
@@ -63,9 +63,9 @@ Docker 镜像通过 `.dockerignore` 排除实际 `.env`，只使用 Compose 明�
 pnpm run env:check
 pnpm run ready
 
-docker compose -f deploy/docker/compose.demo.yaml config
-pnpm run docker:demo:up
-docker compose -f deploy/docker/compose.demo.yaml ps
+docker compose --env-file .env --env-file .local/docker/compose.env -f deploy/docker/compose.yaml config
+pnpm run docker:up
+docker compose --env-file .env --env-file .local/docker/compose.env -f deploy/docker/compose.yaml ps
 ```
 
 改动 `SCADA_DEMO_PORT`、`SCADA_SERVER_PORT` 后，在 Docker 中验证对应容器健康和 Web 的 `/demo/project`、`/api/health`，并检查 SSE 断连质量。原 V0.1 Docker 实测结果不直接代表本轮动态端口改造通过。
@@ -84,3 +84,25 @@ SCADA_API_DOCS_ENABLED=true
 ```
 
 Swagger 地址以启动日志实际端口为准（模板当前默认 `13001`）：`http://127.0.0.1:13001/api/docs`。只读示例端点分别为 `/api/dev/demo/project`、`/api/dev/demo/tags`、`/api/dev/demo/events`（SSE）。结束后将模拟接口开关设回 `false` 并重启服务，确保生产/正常开发默认不暴露新的模拟入口。该模拟模块不会访问数据库或工业设备，不是正式 Tag 数据服务。
+
+## V0.3 第三十三批 · 唯一 Docker 项目全新安装（最新）
+
+维护者已删除历史三个 Docker 项目与旧数据卷，没有数据库备份。因此首次运行**只创建全新数据库**，不再迁移旧卷或要求历史 Keycloak Realm、用户、SCADA 身份映射存在。
+
+只维护 `deploy/docker/compose.yaml` 的 `adui-scada` 项目、七个服务及一个 PostgreSQL 实例；业务数据库与数据库账号均为 `adui_scada`，Keycloak 逻辑数据库为 `adui_scada_keycloak`，宿主数据库端口 `127.0.0.1:15432`。全新持久化卷由 Compose 自动创建为 `adui-scada_postgres-data`、`adui-scada_redis-data`。不再挂载任何含 `adui-scada-oidc-lab` 前缀的旧卷。
+
+```powershell
+# 如原 .env 仍有私密测试配置，先在本机备份，备份同样受 .gitignore 保护。
+if (Test-Path .env) {
+    Copy-Item .env (".env.backup." + (Get-Date -Format yyyyMMddHHmmss))
+}
+Copy-Item .env.example .env -Force
+pnpm run env:check
+pnpm run docker:plan
+pnpm run docker:up
+pnpm run docker:ps
+```
+
+`docker:up` 自动创建本机 `.local/docker/` 下的随机密码和证书、创建新卷与 PostgreSQL/Keycloak、运行 Prisma `migrate deploy`。默认公开模板中的 `SCADA_DB_PASSWORD`、`SCADA_DATABASE_URL` 留空，因为真实密码从本机随机文件安全读取；开启宿主 NestJS OIDC 联调时，需使用同一凭据配置受控连接，不得将密码复制到 Git。已经成功生成的新密码不会因重复执行而重置。`docker:db:init` 提供迁移失败后的安全重试，`docker:down` 默认不删除新卷。
+
+OIDC 默认关闭，重新开展身份联调时需重新创建 Keycloak 普通用户与可信身份映射，不能用历史截图中曾认证成功的用户作为新安装的验收证据。Docker HTTP Demo 18080/18081 不是 OIDC HTTPS 写接口入口。详见 [Docker 安装说明](../deploy/docker/README.md)。

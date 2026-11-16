@@ -1,5 +1,7 @@
 # ADui SCADA · Harness
 
+> **AI 编码前必读门禁**：每次修改任何代码前，先阅读根目录 [AGENTS.md](../AGENTS.md) 与 [AI 编码错误复盘清单](AI_MISTAKES.md) 全文，再检查目标代码、适用 Skills 与测试。发现重复错误应先对照错误编号排查，复验后再将新案例写入清单；命令未实际执行不能登记为通过。
+
 V0.1 使用 Vite+ 1.5.0、pnpm workspace Catalog、TypeScript 6.0.3、Vite+ 内置 Vitest。编辑规范来自根 `.editorconfig`，`@adui/tooling` 导出 Format / Lint 供根 Vite+ 使用；应用 TypeScript 统一引用 `@adui/tsconfig/*`。
 命令必须在项目根目录执行，版本以 `pnpm-workspace.yaml` 和实际锁文件为准。
 
@@ -1085,7 +1087,7 @@ Write-Host "退出码：$LASTEXITCODE"
 
 Prisma 新增迁移 `20261113000000_trusted_identity_sessions`，首次应用必须先确认当前 `.env` 指向本机隔离开发库 `127.0.0.1:15432/adui_scada`，然后显式执行 `pnpm run db:migrate:deploy` 与 `pnpm run db:migrate:status`；不能修改或重用旧迁移文件。**真实数据库测试仍仅允许本机 `adui_scada_test`**，通过 PowerShell `try/finally` 形式临时设置 `SCADA_DATABASE_URL` 和 `SCADA_TEST_DATABASE_URL` 为测试库 URL，先将新迁移应用到测试库再执行 `pnpm run test:db`，结束恢复两变量，不把真实口令写入 Git。该测试从随机租户创建临时主体/会话并在结束时删除，不会修改开发业务库。
 
-可独立执行 `pnpm run test:docker:server`，验证镜像仍可加载 NestJS/共享 Core，认证会话签发及工程/设备写入 API 均保持关闭。现有容器烟测不导入身份模块，因此不连接数据库。真实 OIDC 登录、会话发行端点、生产 HTTPS、身份撤销并发与审计待后续专项验收。
+可独立执行 `pnpm run test:docker:server`，验证默认 OIDC 关闭时的镜像仍可加载 NestJS/共享 Core，身份路由、工程 API 和设备写入均不开放。该容器烟测不导入身份模块，因此不连接数据库；它不覆盖 OIDC 显式启用后的身份路由。真实 IdP、生产 HTTPS、身份撤销并发与持久化审计仍待专项验收。
 
 ## V0.3 第十四批：Pino / Swagger / Helmet 验收（ADR-0046）
 
@@ -1608,3 +1610,444 @@ pnpm run test:sse:fault:browser
 ## V0.3 第三十二批 · 旧工程迁移浏览器回归
 
 启动当前分支的 dev:demo、dev:react、dev:vue 后执行 pnpm run test:legacy:browser。该命令通过现有 Chrome/Edge CDP 测试设施，在两个 Web Origin 分别构造 0.2.0 localStorage 草稿、IndexedDB 草稿和 Project Snapshot，并通过真实 Studio UI 验证迁移结果。测试只使用临时浏览器用户目录，不访问用户真实 Profile。执行前需确保当前根 .env 的 React/Vue 端口对应当前分支服务。
+
+## V0.3 第三十三批 · OIDC 身份路由与工程 API
+
+阶段 B 已在功能分支实现固定 Issuer Discovery、登录事务、授权码回调、BFF Cookie/CSRF Guard，以及 start/callback/me/logout HTTP Controller；Controller E2E 使用 Mock 服务，不访问真实 IdP 或 PostgreSQL。OIDC 默认关闭，只有配置完整并显式启用时才挂载身份模块。工程 API 仍未实现。真实 PostgreSQL 测试必须显式设置 SCADA_TEST_DATABASE_URL，且仅允许本机 adui_scada_test 隔离数据库。未配置真实 Issuer 时只运行 Mock 自动化，不得宣称完成企业 IdP 联调。
+
+### 第三十三批阶段 A 最小验证指令
+
+`pnpm run env:check`、`pnpm run db:validate`、`pnpm run db:generate`、`vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run docs:check`、`pnpm run ready`。验证实际增量迁移时仅允许本机隔离测试数据库，并检查 PostgreSQL COMMENT 元数据。认证 Controller 的 E2E 使用 Mock；真实 OIDC 登录需另配 Issuer、TLS、回调注册和身份映射，工程 API 当前仍未开放。
+
+## 第三十三批 · PostgreSQL OIDC 迁移隔离验收
+
+OIDC 迁移真实测试单独使用 `pnpm run test:db`，不纳入默认 `ready`。测试入口会拒绝非本机地址或数据库名不是 `adui_scada_test` 的 URL。运行前先由维护者创建该独立数据库，再在当前 PowerShell 进程中将 `SCADA_DATABASE_URL` 和 `SCADA_TEST_DATABASE_URL` 都显式设置为该测试库连接串，依次执行：
+
+```powershell
+pnpm run db:validate
+pnpm run db:migrate:deploy
+pnpm run db:migrate:status
+pnpm run test:db
+```
+
+迁移与测试均不得指向普通开发数据库 `adui_scada` 或生产数据库。测试结束后恢复/清理当前 PowerShell 的临时环境变量。OIDC Schema 测试核对迁移登记、外部身份及登录事务表、15 个字段、外键、约束、索引和中文 PostgreSQL COMMENT。真实迁移未执行前不得标记阶段 A 数据库验收通过。
+
+### 第三十三批阶段 B · OIDC 身份 HTTP 路由验证边界
+
+- `pnpm run test:e2e:server` 已包含 `test/oidc-auth.controller.e2e-spec.ts`，验证 start/callback/me/logout 路由、浏览器绑定 Cookie、Session/CSRF Cookie、Origin/Fetch Metadata、Bearer 兼容与默认 AppModule 404。
+- 该 E2E 使用 Mock 登录事务、回调和会话服务，不会访问真实 IdP、PostgreSQL 或工业设备；通过只代表 HTTP 路由与 Guard 编排回归。
+- 默认 `SCADA_OIDC_ENABLED=false` 时启动原有 AppModule，不连接 PostgreSQL、不注册身份路由。显式启用 OIDC 时，必须提供完整 Issuer/Client/Redirect/Origin/事务密钥和数据库配置；启动后会加载 ScadaIdentityModule 并连接 PostgreSQL。
+- 真实启用前必须由维护者完成 Windows `vp check`、`test:unit`、`test:e2e:server`、`docs:check` 和完整 `ready`；随后另行验收真实 IdP/JWKS、HTTPS 终止代理、Secure/SameSite Cookie 与外部身份预绑定。当前工程 API 和工业设备写入仍未开放。
+
+### 第三十三批 · 全新隔离空库迁移与二次部署验证
+
+此专项与已通过 22/22 的 `adui_scada_test` 事务测试**相互独立**。使用 Navicat 在本机开发 PostgreSQL 中人工创建一个**此前从未使用过的空数据库**（例如 `adui_scada_fresh_20261116`），账号与根目录 `.env` 的本机开发连接相同。不允许使用原有 `adui_scada` 或 `adui_scada_test`，也不要删除/清空任何旧库；如果名称已存在、非空，改用新的受控名称。
+
+在仓库根目录 PowerShell 运行：
+
+```powershell
+node --test scripts/verify-fresh-postgres-migrations.cases.mjs
+if ($LASTEXITCODE -ne 0) { throw "全新空库目标校验单测失败" }
+node scripts/verify-fresh-postgres-migrations.mjs adui_scada_fresh_20261116
+Write-Host "全新空库迁移退出码：$LASTEXITCODE"
+```
+
+脚本不会修改根 `.env`，只在子进程中临时设置 `SCADA_DATABASE_URL`，且仅允许从本机 `adui_scada` 派生、名称以 `adui_scada_fresh_` 开头的隔离库。开始前必须连接目标库并证实不存在用户对象和自定义 Schema；发现非空、账号/地址/端口不匹配或迁移异常则立即失败。首次迁移应得到全部四项成功记录和预期业务表；第二次必须成功且迁移记录保持不变。脚本**不会创建、重置、删除数据库**，执行后保留空库供维护者在 Navicat 检查。已有库不能用于重新证明首次安装，复测需要另建新的空库。
+
+如果当前 PowerShell 曾临时将 `SCADA_DATABASE_URL` 指向 `adui_scada_test`，应先恢复到 `.env` 中的开发连接或清除临时变量；脚本会主动拒绝从测试库继续派生，不能为了通过检查而放宽地址或数据库名称限制。验证脚本通过也不能代替生产迁移评审、真实 IdP/HTTPS 或工业现场安全验收。补丁应用后运行 `vp check`、`pnpm run docs:check` 和 `pnpm run ready`，以实际退出码为准。
+
+#### 2026-11-16 真实空库验收与 E-015 子进程安全回归
+
+维护者已经在 `adui_scada_fresh_20261116` 完成四项迁移首次部署及二次部署验证，脚本退出码 0；该数据库目前**不再为空库**，不得重复用它运行全新空库验证。初次运行出现 Node.js `DEP0190`，旧版 Windows `pnpm.cmd` 配合 `shell: true` 传参存在安全隐患。新脚本直接使用当前已安装的 Prisma CLI JS 入口和 `process.execPath`（`shell: false` 为默认值），仅允许固定的 `migrate deploy/status` 子命令，保留本机地址、数据库名、Schema 和空库安全校验。
+
+合并前维护者需先在 Windows 执行 `vp check`、`node --test scripts/verify-fresh-postgres-migrations.cases.mjs`、`pnpm run docs:check` 和完整 `pnpm run ready`。如要验证新子进程调用行为，必须再人工创建一个**全新、未使用过**的 `adui_scada_fresh_*` 本机空库并运行脚本，确认两次迁移成功、退出码为 0、没有 `DEP0190`。不能清空、重置或覆盖现有已验收的空库；脚本继续不负责数据库创建或删除。
+
+#### E-015 Windows 修复复验结果（2026-11-16）
+
+维护者已在第二座独立空库 `adui_scada_fresh_20261116_b` 验证新启动方式：四项 `migrate deploy` 首次全部应用、第二次无待执行迁移、`migrate status` 最新、迁移元数据一致、脚本退出码 0，且**未再出现 Node.js DEP0190**。此前在 `adui_scada_fresh_20261116` 的首次迁移结果仍保留，两座库都不允许重复作为“全新空库”测试目标，复测应另建新名称。Windows 质量链 `vp check`、`docs:check`、`ready` 及目标校验 6/6 均已通过；新文档提交后的静态文档校验仍需另行复验。当前 Prisma 7.10.1 不因 8.0.0 RC 更新提示自动升级。
+
+### 第三十三批第七小批：共享 API Client 质量门禁
+
+新增 `packages/api-client/src/index.ts` 与 `packages/api-client/test/api-client.test.ts`。客户端与 Vue/React 无运行时耦合，也没有服务端 JWT 或密码。先验证真实工作区依赖与锁文件，再跑 Mock Fetch 测试和全量质量链：
+
+```powershell
+pnpm install --lockfile-only
+pnpm install --frozen-lockfile
+pnpm run deps:check
+pnpm run config:check
+vp check
+pnpm run typecheck:web
+pnpm run test:unit
+pnpm run docs:check
+pnpm run ready
+Write-Host "最终退出码：$LASTEXITCODE"
+```
+
+新增 Mock Fetch 测试由根 `vite.config.ts` 统一收集，根 `typecheck:web` 包含 `@adui/scada-api-client`。若安装重写了 `pnpm-lock.yaml`，应以 pnpm 12.18.0 实际生成的内容为准，并检查是否只产生预期的工作区链接变更。原有 Core、NestJS、React/Vue TypeScript 6、测试、中文文案及工业安全门禁不得降低。此测试**不调用真实工程 API，不更改数据库、不执行工业写入**；真实 HTTPS 浏览器 Cookie、Origin/CSRF、同源代理及 React/Vue 工程互通另行验证。
+
+### 第三十三批第八小批：双框架服务端工程保存与草稿保护验收
+
+两个 Studio 新增“服务端工程”独立入口，和已有“保存草稿”“版本历史”分离。提交前须在仓库根目录执行：
+
+```powershell
+pnpm install --frozen-lockfile
+vp check
+pnpm run typecheck:web
+pnpm run test:unit
+pnpm run test:browser
+pnpm run test:versions:safety
+pnpm run docs:check
+pnpm run ready
+Write-Host "最终退出码：$LASTEXITCODE"
+```
+
+单测应包含新增 `packages/api-client/test/studio-session.test.ts` 的 9 项：首次创建、存在工程但未载入最新修订号、CAS 冲突、身份切换、并发重复提交及旧基线清理。浏览器自动化原有 `test:browser`、`test:versions:safety` 只能证明本地画布和 IndexedDB 回归，**不能代替真实云端保存测试**。
+
+现场/开发联调前必须由维护者明确配置可信 IdP、回调与本机同源 HTTPS/代理，并在**独立测试租户、测试工程及非生产数据库**执行。验收顺序：React/Vue 各自检查登录；创建服务端工程（必须有有效 CSRF Cookie）；刷新服务端历史；显式载入最新版本；追加 CAS 历史；由另一会话推进修订号后验证 409；模拟 401、403、404、网络中断及代理 HTML 响应；验证操作失败时当前画布、IndexedDB 草稿、自动保存开关和 JSON 导入/恢复行为未被篡改。旧版云端历史载入只用于编辑与比较，不允许直接用旧修订号覆盖服务器最新版。两端互通必须比较同一 ScadaDocument 的内容、修订号及 SHA-256；未配置 IdP 时不开放匿名创建或写入。
+
+**当前尚无此真实 OIDC + HTTPS 浏览器专项结果**，不得将 Mock Fetch 或本地 IndexedDB E2E 记为服务端端到端成功。工业网关、PLC/DCS 写入、正式发布、回滚审批均不属于本批。
+
+### 第三十三批第九小批：受控本机 HTTPS /api/v1 代理与 OIDC 联调
+
+**默认模式完全不变**：SCADA_OIDC_DEV_HTTPS_ENABLED=false，React/Vue 仍为现有 HTTP Demo，/demo 代理与离线数据不改变。首先在默认模式执行：
+
+```powershell
+node --test scripts/oidc-https-dev-proxy.cases.mjs
+if ($LASTEXITCODE -ne 0) { throw "HTTPS 代理配置测试失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "仓库质量检查失败" }
+pnpm run env:check
+pnpm run docs:check
+pnpm run test:browser
+pnpm run ready
+Write-Host "最终退出码：$LASTEXITCODE"
+```
+
+真实 HTTPS 与 OIDC 联调前，维护者须先在**隔离的本机非生产环境**准备：可信 HTTPS IdP 和预注册的机密客户端、回调地址、本地已由可信流程预绑定且 active 的测试主体、独立的 PostgreSQL 测试数据，以及浏览器信任的 SAN 包含 127.0.0.1 的本机 TLS 证书。证书/私钥放在仓库外，绝不能提交、输出或放进 VITE_*；不使用浏览器忽略证书验证选项，也不自动创建身份/租户。
+
+根 .env 的**非秘密**联调示例（证书路径为占位符，真实凭据单独安全配置）：
+
+```dotenv
+SCADA_WEB_HOST=127.0.0.1
+SCADA_SERVER_HOST=127.0.0.1
+SCADA_SERVER_PORT=13001
+SCADA_REACT_DEV_PORT=15173
+SCADA_VUE_DEV_PORT=15174
+SCADA_OIDC_ENABLED=true
+SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false
+SCADA_LOCAL_DEMO_API_ENABLED=false
+SCADA_OIDC_DEV_HTTPS_ENABLED=true
+SCADA_OIDC_DEV_HTTPS_CERT_FILE=<本机证书绝对路径>
+SCADA_OIDC_DEV_HTTPS_KEY_FILE=<本机私钥绝对路径>
+SCADA_OIDC_WEB_ORIGINS=https://127.0.0.1:15173,https://127.0.0.1:15174
+SCADA_OIDC_REDIRECT_URI=https://127.0.0.1:15173/api/v1/auth/oidc/callback
+```
+
+SCADA_OIDC_ISSUER、SCADA_OIDC_CLIENT_ID、SCADA_OIDC_CLIENT_SECRET、SCADA_OIDC_TRANSACTION_ENCRYPTION_KEY 必须遵循现有 OIDC 严格配置，在本机秘密环境中正确填写。真实回调只能精确注册一个 Origin（上例选择 React 15173），登录先从 React 发起，再用相同 127.0.0.1 主机名打开 Vue 15174；Host-only Cookie 不按端口隔离，不能将一端改为 localhost。两个 HTTPS Origin 都必须在服务端白名单中。若需要将 Vue 作为回调端，须重新注册并审核固定回调 URI，不接受请求动态指定。
+
+运行既有 dev:server、dev:react、dev:vue 脚本，浏览器分别使用 https://127.0.0.1:15173/ 和 https://127.0.0.1:15174/。先验证未登录 /api/v1/auth/me 返回 401 且 Content-Type 不是 HTML，再经真实 IdP 完成回调；确认会话 Cookie 带 Secure/HttpOnly/SameSite=Lax/Path=/，CSRF Cookie 保持可读但同样 Secure，且均无 Domain。POST 应由浏览器自动附加精确 Origin、Sec-Fetch-Site: same-origin 与当前 CSRF Cookie 对应的 X-SCADA-CSRF。不要在截图、Git 提交、测试日志中暴露 Cookie、授权码或 Token。
+
+使用**非生产测试租户和工程**验证 React 创建首版 → Vue 查询版本并载入最新快照 → Vue CAS 追加 → React 显式载入最新版本 → 另一会话推进后的 409 拒写及 IndexedDB 草稿保护。另验证 401/403/404、无效 CSRF、网络断开、代理返回 HTML 的错误边界。比对 ScadaDocument、版本修订号和 SHA-256，不执行工业设备写入/正式发布。默认 Vite 浏览器自动化使用 HTTP URL；在专项 HTTPS 模式下不能把它当作真实登录/工程往返证据。测试后恢复默认关闭开关与普通 Demo 环境。
+
+**当前仅新增受控配置及其 10 项 Node 安全测试；真实 Windows Vite+、TLS、IdP、HTTPS Cookie 和双框架服务端往返仍待维护者执行。**
+
+### 第三十三批第十小批：OIDC HTTPS 同源匿名只读探针
+
+本专项先验证 React/Vue 两个独立 HTTPS Origin 是否将固定 `/api/v1/auth/me` 请求送达启用 OIDC 的 NestJS，并确认**未登录**时得到现有安全 Guard 返回的 `401 application/json`（受控中文错误），而不是 Vite 的 HTML 回退、302 跳转或连接失败。
+
+离线安全测试**无需证书、数据库或 IdP**，已经进入默认 `ready`：
+
+```powershell
+pnpm run test:oidc:https:readonly
+if ($LASTEXITCODE -ne 0) { throw "HTTPS 匿名只读探针安全测试失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码质量检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+Write-Host "最终退出码：$LASTEXITCODE"
+```
+
+真实网络检查**必须独立执行**。在仓库外准备受信任的本机 TLS 证书及私钥（证书 SAN 包含 IP `127.0.0.1`），按上一节配置可信 OIDC Issuer、精确注册回调、双 Origin 与隔离数据库；保留 `SCADA_OIDC_ENABLED=true`、`SCADA_OIDC_DEV_HTTPS_ENABLED=true`，关闭不安全回环及模拟 API 开关。分别启动：
+
+```powershell
+pnpm run dev:server
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+上述三条命令应在**三个终端**运行。然后在第四个终端执行：
+
+```powershell
+pnpm run verify:oidc:https:readonly
+if ($LASTEXITCODE -ne 0) { throw "真实本机 HTTPS 匿名只读检查失败" }
+```
+
+探针只对已登记的两套 `https://127.0.0.1:<端口>` 发起 GET，不发送 Cookie、不跟随重定向，不接受 HTTP/跨站地址，不访问工程写接口；Node.js 将正常验证 TLS 链和主机名。若证书未被 Node 信任，应修复本机信任链或在受控环境中配置 Node 的可信 CA，**禁止** `NODE_TLS_REJECT_UNAUTHORIZED=0`、`--insecure`、禁用身份 Guard 或为通过探针伪造 IdP。探针错误仅打印受控中文说明，不输出密钥、Cookie 或授权码。
+
+**判定范围**：两个来源均返回预期的匿名 401 JSON，仅说明本机 TLS 连接、Vite API 代理和 NestJS 未登录拒绝路径连通；不代表真实 OIDC 登录、Cookie/CSRF、权限与跨框架工程版本互通成功。完成后恢复默认关闭的联调开关，不对生产数据库运行测试。
+
+#### 第十小批真实探针失败：安全诊断和实际前置条件（2026-11-16）
+
+维护者 Windows 已完成离线质量链：HTTPS 探针 9/9、OIDC 代理配置 10/10、`vp check` 310/168 零警告、Vitest 529/529、NestJS E2E 40/40、完整 `ready` 退出码 0。但单独的 `pnpm run verify:oidc:https:readonly` **退出码 1**。该命令不是默认 `ready` 的一部分，不能在缺少 HTTPS/OIDC 配置或服务未启动时预期通过。
+
+修正后的 CLI 对已审核的配置错误、端口未监听、证书 SAN/证书链/过期和握手失败输出固定中文类别；未知错误只输出泛化描述，不展示原始异常、凭据、证书路径、Cookie 或 Token。**实际网络根因仍需根据复测消息判断**，不允许为完成联调禁用证书校验或认证。
+
+在运行真实探针前，由维护者自行确认根目录 `.env`（不要粘贴任何秘密值）：`SCADA_OIDC_ENABLED=true`、`SCADA_OIDC_DEV_HTTPS_ENABLED=true`、`SCADA_WEB_HOST=127.0.0.1`、`SCADA_SERVER_HOST=127.0.0.1`、React/Vue 独立端口、精确双 HTTPS Origin 白名单、固定预注册回调；`SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false` 与 `SCADA_LOCAL_DEMO_API_ENABLED=false`。提前从仓库外准备 SAN 包含 `127.0.0.1` 的可信证书，并确保 Node.js 信任签发 CA；真实 OIDC Issuer/机密客户端、事务密钥和隔离非生产 PostgreSQL 必须已配置，NestJS/React/Vue 三套服务须分别运行且启动成功。不假定 `ready` 会自动启动这些服务。
+
+```powershell
+git rev-parse --short HEAD
+pnpm run test:oidc:https:readonly
+if ($LASTEXITCODE -ne 0) { throw "HTTPS 探针安全单测失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码质量门禁失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+```
+
+之后在**另一个终端**对已启动的三个联调服务运行：
+
+```powershell
+pnpm run verify:oidc:https:readonly
+Write-Host "真实 HTTPS 探针退出码：$LASTEXITCODE"
+```
+
+如果提示配置或 TLS 故障，应修正本机可信配置后再测；如果是 `ECONNREFUSED` 映射的服务未监听，应检查三套进程是否正确启动及实际绑定端口；如果收到非 401 JSON，应检查同源反向代理和 NestJS OIDC 模块。**不得**通过 `NODE_TLS_REJECT_UNAUTHORIZED=0`、忽略证书、硬编码令牌或将 `SCADA_OIDC_ENABLED=false` 与匿名写入混合来规避故障。
+
+### 第三十三批 · 本机 OIDC Lab 单命令 Docker 依赖栈（候选，待 Windows 验证）
+
+为解决“复制根目录 .env 即可恢复日常开发”与“本机可信 OIDC 联调需要独立依赖”两种需求，现有 `.env.example` **仍默认关闭** `SCADA_OIDC_ENABLED` 和 `SCADA_OIDC_DEV_HTTPS_ENABLED`；复制即可继续运行普通 HTTP React/Vue/NestJS/Demo。新增三个仅本机使用的端口：`SCADA_LAB_KEYCLOAK_PORT=18443`、`SCADA_LAB_POSTGRES_PORT=15433` 和 `SCADA_LAB_REDIS_PORT=16379`。不要用这些示例值代替生产部署配置。
+
+在 Windows PowerShell 7 进入仓库根目录（仅首次没有 `.env` 时执行复制；已有自定义配置必须先备份，不覆盖）：
+
+```powershell
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+mkcert -install
+pnpm run docker:lab:up
+if ($LASTEXITCODE -ne 0) { throw "本机 OIDC Lab Docker 启动失败" }
+pnpm run docker:lab:ps
+```
+
+`docker:lab:up` 先运行 `scripts/prepare-oidc-lab.mjs`：检查根目录回环地址与端口、确认非生产模式；在被 Git 和 Docker 构建上下文忽略的 `.local/oidc-lab/` 生成本机 IP SAN 证书以及四个随机值（独立的 PostgreSQL 密码、Keycloak 管理员密码、OIDC 机密客户端 Secret、事务加密密钥），以只允许本机访问的文件保存，不打印秘密或私钥。脚本复用已有凭据，若出现不完整文件则拒绝自动覆盖。证书使用本机 `mkcert` 创建，不自动修改系统 CA 信任；首次需人为执行 `mkcert -install` 并批准系统信任。若已在其他目录生成证书，Lab 会维护自己的本机测试副本，不会修改或覆盖原证书。
+
+新 Compose：`deploy/docker/compose.oidc.lab.yaml`，项目名称固定为 `adui-scada-oidc-lab`；包含**独立的** PostgreSQL 17、Redis 7.4 与 Keycloak 26.8.2。PostgreSQL 创建 `adui_scada_oidc_lab` 和仅供 Keycloak 的 `adui_scada_keycloak_lab` 两个数据库；Keycloak 首次启动自动导入 `adui-scada` Realm 和机密 `adui-scada-bff` Client，固定 HTTPS 回调为 React `/api/v1/auth/oidc/callback`，启用标准授权码流与 PKCE S256，禁用隐式流、密码直授及用户自助注册。**不创建或自动授权业务测试用户**，也不修改现有 PostgreSQL/Demo 数据卷。Redis 此阶段只是可选后续依赖，NestJS 尚未使用它。Keycloak 的 `start-dev` 与 Redis 回环无认证端口仅供受控本机联调，不可直接用于生产。
+
+启动成功后访问 `https://127.0.0.1:18443/admin/`，管理用户名为 `admin`；首次管理员密码仅位于本机 `.local/oidc-lab/secrets.env` 的 `SCADA_LAB_KEYCLOAK_ADMIN_PASSWORD`。其值严禁提交、拍照或发到聊天。Keycloak 真实 Discovery 路径为 `https://127.0.0.1:18443/realms/adui-scada/.well-known/openid-configuration`。修改端口后以 `.env` 的实际数值为准。
+
+```powershell
+# 测试依赖与离线保护用例（不调用真实数据库）
+pnpm run test:oidc:lab
+pnpm run env:check
+pnpm run docs:check
+
+# 查看或关闭：保留所有数据卷
+pnpm run docker:lab:ps
+pnpm run docker:lab:logs
+pnpm run docker:lab:down
+```
+
+**重要边界**：本命令只负责启动身份认证及数据依赖，不能自动判定 SCADA 本地账户/租户或授权工程。要继续真实 OIDC，必须通过维护者受控流程将 `SCADA_DATABASE_URL` 指向已确认的独立 Lab 测试数据库并完成 Prisma 迁移；在根 `.env` 安全填写真实的 Keycloak Client Secret、随机事务密钥、实验室 Issuer、固定回调、证书绝对路径；确认外部 Keycloak `sub` 与服务端 `scada_external_identities` 的预绑定有效，再显式开启两个 OIDC/HTTPS 开关。不要为了“快速登录”直接写生产数据库、创建匿名权限、跳过 CSRF 或自动添加有写权限的主体。真实 OIDC/Cookie 与跨框架工程联调仍待验收。
+
+正式部署的目标为**一个 ADui SCADA 应用镜像**（前端双版本静态资源及 NestJS 统一交付），但数据库、Redis、IdP 与工业网关仍是可独立升级与持久化的外部服务；这份本机 Lab Compose 不是正式单镜像交付，也不是已经实现的生产方案。
+
+### 第三十三批 · E-018 OIDC 根模块启动和 HTTPS 匿名探针复验（2026-11-16）
+
+维护者在真实 Keycloak/独立 Lab PostgreSQL 准备完成后启动 NestJS，发现 `ProjectApiModule` 使用的 `ScadaSessionGuard` 无法注入 `ScadaSecurityAuditService`，导致服务端未监听 13001、双 Web 的 `/api/v1` 同源代理连接被拒绝。修复仅补齐身份模块对工程 Guard 的跨模块依赖导出，新增真实 OIDC 模块编译 E2E，不直接连接任何生产或 Lab 数据库。
+
+本地更新功能分支前请确认当前分支和工作树；不要因数据库已经完成四项迁移而重新创建、删除或重置任何 Docker 数据卷。维护者在 Windows 运行：
+
+```powershell
+git status --short
+git pull --ff-only
+pnpm run test:unit
+if ($LASTEXITCODE -ne 0) { throw "单元测试未通过" }
+pnpm run test:e2e:server
+if ($LASTEXITCODE -ne 0) { throw "OIDC 模块装配 E2E 未通过" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "格式、Lint 或类型检查未通过" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量链未通过" }
+```
+
+在 WebStorm 重启 `dev:server`（保留 `NODE_USE_SYSTEM_CA=1`、已配置的 Lab OIDC），确认不再报 `UnknownDependenciesException` 且监听回环 13001；随后重启 `dev:react`/`dev:vue` 并在**独立 PowerShell 终端**运行：
+
+```powershell
+Get-NetTCPConnection -LocalPort 13001 -State Listen
+$env:NODE_USE_SYSTEM_CA = "1"
+pnpm run verify:oidc:https:readonly
+Write-Host "真实 HTTPS 匿名探针退出码：$LASTEXITCODE"
+```
+
+两个 Web Origin 都必须得到未登录的 401 JSON，不能用禁用 Guard、跳过 CSRF、忽略 TLS 证书、匿名开写或修改现有 OIDC 事务密钥来让检查通过。该探针通过仍不代表真实 Keycloak 用户已预绑定或浏览器登录成功；身份绑定、Cookie 和 React↔Vue 工程 CAS 另行验收。维护者此前将本机 DB/OIDC 测试秘密粘贴到对话，需单独进行受控轮换，绝不能在 issue/commit/日志引用原值。
+
+### 第三十三批 · E-018 真实 HTTPS 匿名路径结项与后续身份专项
+
+2026-11-16 维护者 Windows 已完成以下事实验证：OIDC 根模块及全部身份/工程路由真实启动、`127.0.0.1:13001` 监听；`test:e2e:server` 42/42、`vp check` 315/171 零告警、完整 `ready` 530/530 单测及其余阶段通过；`verify:oidc:https:readonly` 从 React/Vue 两个 HTTPS Origin 检查到受控匿名 401 JSON，**退出码 0**。E-018 审计依赖注入失败已关闭，不得再将旧的 `ECONNREFUSED` 描述为当前阻塞。
+
+**下一专项：实际身份绑定与完整登录，仅在维护者明确选择的隔离 OIDC Lab 内操作。** 使用 Keycloak `adui-scada` Realm 创建独立、无管理权限的测试用户；保留真实 OIDC `iss` 与 `sub`，不得凭邮箱/用户名推断可信身份或自动提升工程 ACL。先按仓库当前 Prisma 表模型核对已存在的测试主体与租户，以受控管理流程显式建立 `issuer + sub` 对应的外部身份绑定，并确保业务主体状态为 active；联调应检验未绑定主体被拒绝。通过浏览器 `/api/v1/auth/oidc/start` 发起标准授权码 + PKCE 登录，不允许直接手动访问 callback 作为登录操作。再逐项验证 Secure/SameSite Cookie、Origin/Fetch Metadata/CSRF、未授权操作拒绝、React/Vue 双端工程历史与 CAS 409，不保留令牌/授权码/私钥日志。不对现有 Lab 数据卷使用 `down -v`，不操作生产数据库或设备写入。
+
+用户曾在对话贴出本机 Lab 的数据库与 OIDC 密钥，在后续受控联调前应轮换并同步依赖配置，避免只修改 `.env` 造成 Keycloak Client 或 PostgreSQL 凭据不一致。**本次仅归档证据，不自动轮换、不创建用户、不写入数据库、不将 302 误判为登录成功。**
+
+### 第三十三批第十三小批：真实 Keycloak 用户与 OIDC Lab 显式身份预绑定
+
+**前置条件**：已在维护者 Windows 实测 Keycloak `adui-scada` Realm Discovery 200、NestJS OIDC 根模块启动、隔离 Lab 数据库迁移成功及 React/Vue 匿名 HTTPS `401 JSON`（两个 Origin、退出码 0）。本小批提供**只在本机隔离 Lab 内可执行**的可信身份预绑定工具；默认仅预览，既不创建 Keycloak 用户也不自动授权工程，不修改 Prisma Schema/迁移。其他数据库、生产 OIDC 和外部主机均直接拒绝。
+
+**1. 在 Keycloak 管理后台人工创建普通测试用户**：登录 `https://127.0.0.1:18443/admin/`，选 `adui-scada` Realm → Users → Add user，建立独立无管理员角色的测试账号，设置自己的测试密码（不要与管理员或正式账号复用）。进入该用户详情页确认真实 `ID`（Keycloak 的 UUID / OIDC `sub`，不是用户名/邮箱）；确认用户启用，且不要给其添加管理角色。首次 `master` 临时管理员仅供初始化，不应给业务用户使用。绝不将 UUID、口令或任何密钥粘贴到 PR、日志或聊天。
+
+**2. 默认只读预览**：确保当前终端和 WebStorm 使用仓库根 `.env` 的可信 Lab 配置，`SCADA_DATABASE_URL` 精确指向 `127.0.0.1:${SCADA_LAB_POSTGRES_PORT}/adui_scada_oidc_lab`，OIDC Issuer 为 `https://127.0.0.1:${SCADA_LAB_KEYCLOAK_PORT}/realms/adui-scada`，双 Web HTTPS 及回调精确登记；不允许 `NODE_TLS_REJECT_UNAUTHORIZED=0` 或 `NODE_ENV=production`。先核对迁移状态，不要重新迁移或清库。
+
+```powershell
+pnpm run db:migrate:status
+pnpm run test:oidc:identity
+if ($LASTEXITCODE -ne 0) { throw "身份预绑定离线安全测试失败" }
+
+# 本机交互读取 Keycloak Users 详情页的 User ID，不写入脚本或 Git。
+$keycloakSub = Read-Host "输入已核对的 Keycloak 测试用户 UUID"
+$bindingArgs = @("--tenant", "lab-tenant", "--subject", "lab-engineer", "--keycloak-sub", $keycloakSub)
+
+node scripts/oidc-lab-identity.mjs @bindingArgs
+if ($LASTEXITCODE -ne 0) { throw "身份预绑定只读预览失败，禁止写入" }
+```
+
+预览将检查硬编码隔离数据库与 Issuer、已完成的 OIDC 迁移、Keycloak `issuer+sub` 是否已经绑定他人、本地主体是否停用、是否已有其他外部身份或工程 ACL；所有预览路径均回滚事务。**本命令不使用 Keycloak Admin API 验证用户存在，UUID 必须由维护者从实际用户详情页核对。**
+
+**3. 显式提交，绝不自动授予工程权限**：仅当维护者核实上述 UUID 与租户/主体的绑定意图后运行下列命令。工具将以可串行化的 PostgreSQL 事务创建（或复用）`scada_identities` 中的 `active` 测试主体，并插入唯一 `scada_external_identities(issuer,subject,tenant_id,subject_id)` 映射；不创建任何 `scada_projects` / `scada_project_grants`，重复相同映射不重复插入，已有其他 ACL/身份冲突或其他异常必须失败并回滚。此操作确实写入**隔离 Lab**，默认 `ready` 不会调用它。
+
+```powershell
+node scripts/oidc-lab-identity.mjs @bindingArgs --apply --confirm-lab adui_scada_oidc_lab
+if ($LASTEXITCODE -ne 0) { throw "本机测试主体预绑定失败" }
+```
+
+**4. 真实浏览器登录与会话检查（需人工验证，尚未自动化）**：在 React HTTPS 原点访问 `https://127.0.0.1:15173/api/v1/auth/oidc/start`（不能直接访问 callback），使用上述非管理员 Keycloak 测试用户登录。成功登录后，访问同源 `/api/v1/auth/me`，预期仅返回 `authenticated: true` 和核对过的 `lab-tenant / lab-engineer`，不包含会话明文。浏览器开发者工具仅核对 Cookie 属性，不复制值：`__Host-adui-scada-session` 应为 `Secure; HttpOnly; SameSite=Lax; Path=/`，`__Host-adui-scada-csrf` 应为 `Secure; SameSite=Lax; Path=/` 且可读；两者不应以明文进入业务响应 JSON 或持久存储。校验未绑定普通用户登录失败、会话失效、无 CSRF Header 的同源 POST 拒绝、跨站 Origin/Fetch Metadata 拒绝及合法同源注销。**仅 302 响应不代表完成这些验证。**
+
+**安全边界**：当前工具并不自动查验 Keycloak 用户或授予其工程读取、版本追加权限；`/api/v1/projects` 的访问结果还取决于既有 ACL，不应通过默认授予权限来使 UI 可见。此前用户曾把本机 Lab 密钥放入对话，需另行按 Keycloak Client/数据库密码、`.env` 与容器实际密码同步轮换，不使用 `docker compose down -v`。本小批只提供候选实现，Windows `vp check`、`ready`、真实数据库写入及完整登录都应独立验收，不接触生产或工业设备。
+
+### 第三十三批 · 唯一 ADui SCADA Docker 项目与安全迁移（最新配置）
+
+旧 `docker:demo:*`、`docker:lab:*`、`docker:all:*` 与 `db:dev:*` 命令已移除，旧 Compose 配置也不再维护。唯一配置为 `deploy/docker/compose.yaml`、名称为 `adui-scada`，**7 个服务、1 个 PostgreSQL 实例**。Keycloak 和 SCADA 仍分别保留现有两个逻辑数据库 `adui_scada_keycloak_lab` 与 `adui_scada_oidc_lab`，不会通过配置整合自动合并数据或重命名。
+
+旧的存储卷必须保留，直到有可核验的数据备份及单独迁移流程；卷中包含已经完成的 Keycloak 登录测试与 SCADA 身份映射。**统一项目名称并不需要改旧物理卷名**。历史开发库 `15432` 的卷不再挂载新服务，但不会自动删除。
+
+```powershell
+git status --short
+git pull --ff-only
+pnpm run test:docker
+if ($LASTEXITCODE -ne 0) { throw "Docker 安全回归失败" }
+pnpm run env:check
+if ($LASTEXITCODE -ne 0) { throw "环境检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量检查失败" }
+
+# 切换前必须确认 Keycloak/SCADA 的 PostgreSQL 逻辑备份可恢复
+pnpm run docker:plan
+if ($LASTEXITCODE -ne 0) { throw "数据卷或配置预检失败，禁止切换" }
+
+# 显式一次性删除旧 Compose 的已核验容器，不删除卷
+pnpm run docker:migrate
+if ($LASTEXITCODE -ne 0) { throw "统一项目迁移失败，勿删卷" }
+pnpm run docker:ps
+```
+
+之后统一使用 `pnpm run docker:up`、`docker:ps`、`docker:logs`、`docker:down`；`down` 不删除数据卷。若旧项目容器仍存在，普通 `docker:up` 必须拒绝，要求显式 `docker:migrate`。迁移过程中可能有短暂中断；若启动新栈失败，保留卷并排查，绝不通过 `down -v` 或删除卷来“修好”数据库。
+
+切换后应检查 Docker Desktop 只有 `adui-scada` 项目组，`docker:ps` 的七项服务、Keycloak Discovery 200、原 `adui` 业务主体仍可认证、Prisma 迁移最新、React/Vue 开发 HTTPS 会话一致与 Docker HTTP Demo SSE。生产单应用镜像、Secure Cookie/CSRF 和工业安全不因本次迁移自动通过验收。
+
+### 2026-11-16 · 最新 Docker 安装步骤（覆盖历史旧卷迁移说明）
+
+维护者已删除原有三个 Docker 项目及全部旧卷，且没有数据库备份。这次**不再执行 `docker:migrate`**，也不允许把旧项目/旧身份数据当成存在。唯一的新 Compose 项目为 `adui-scada`，一个 PostgreSQL 17 容器内有 `adui_scada` 和 `adui_scada_keycloak` 两个逻辑数据库。物理数据卷由最新项目自动创建，名称为 `adui-scada_postgres-data`、`adui-scada_redis-data`。
+
+在 Docker Desktop 已启动、mkcert 安装且受信任、pnpm 依赖已经安装的 Windows PowerShell 中执行：
+
+```powershell
+git status --short
+git pull --ff-only
+pnpm run test:docker
+if ($LASTEXITCODE -ne 0) { throw "Docker 安全测试失败" }
+pnpm run test:docker:db
+if ($LASTEXITCODE -ne 0) { throw "数据库初始化安全测试失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码质量检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "工程质量链失败" }
+
+# 原 .env 含曾经暴露的凭据，先在本机备份再覆盖；不要打印备份内容。
+if (Test-Path .env) {
+  Copy-Item .env (".env.backup." + (Get-Date -Format yyyyMMddHHmmss))
+}
+Copy-Item .env.example .env -Force
+pnpm run docker:plan
+if ($LASTEXITCODE -ne 0) { throw "本机新 Docker 预检失败" }
+pnpm run docker:up
+if ($LASTEXITCODE -ne 0) { throw "本机 Docker/Prisma 初始化失败" }
+pnpm run docker:ps
+```
+
+`docker:up` 使用新 `.local/docker/` 生成独立随机密码和 mkcert TLS，启动七容器、初始化 Keycloak 数据库及 Realm，然后将 Prisma 迁移部署到新 `adui_scada` 数据库。`docker:db:init` 可安全重复迁移（绝不调用 reset）。日常使用 `docker:up/ps/logs/down`，`down` 只停止容器不删卷。
+
+由于历史库无备份，原 Keycloak 普通用户、原 OIDC 可信主体、会话和工程数据不再自动有效。后续必须重建测试用户并显式预绑定，再重新做 OIDC HTTPS 登录、两框架会话、Cookie/CSRF 和工程版本回归。Docker HTTP Demo 18080/18081 不等同于受控 HTTPS 认证界面。
+
+### 2026-11-16 · 全新 Docker PostgreSQL 宿主端口统一为 15432（当前有效）
+
+唯一 `adui-scada` Compose 内部 PostgreSQL 仍监听 `5432`，仅将宿主发布端口从 `127.0.0.1:15433` 改为 **`127.0.0.1:15432`**。根 `.env.example` 的 `SCADA_DB_PORT` 与 `SCADA_LAB_POSTGRES_PORT` 同步为 `15432`；`scripts/docker-stack.mjs`、`scripts/init-docker-db.mjs` 和安全测试默认值同步，业务库及账号继续为 `adui_scada`。历史迁移验证所记录的旧端口不代表当前配置。
+
+```powershell
+git status --short
+git pull --ff-only
+pnpm run test:docker
+if ($LASTEXITCODE -ne 0) { throw "Docker 端口安全测试失败" }
+pnpm run test:docker:db
+if ($LASTEXITCODE -ne 0) { throw "数据库初始化安全测试失败" }
+pnpm run test:oidc:lab
+if ($LASTEXITCODE -ne 0) { throw "本机凭据和端口校验失败" }
+pnpm run test:oidc:identity
+if ($LASTEXITCODE -ne 0) { throw "OIDC 身份绑定校验失败" }
+pnpm run env:check
+if ($LASTEXITCODE -ne 0) { throw "环境配置检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+# 已有 .env 先在本机备份再复制新模板；不能提交本机密码。
+if (Test-Path .env) {
+    Copy-Item .env (".env.backup." + (Get-Date -Format yyyyMMddHHmmss))
+}
+Copy-Item .env.example .env -Force
+
+pnpm run docker:plan
+if ($LASTEXITCODE -ne 0) { throw "Docker 预检失败" }
+pnpm run docker:up
+if ($LASTEXITCODE -ne 0) { throw "Docker 启动或 Prisma 迁移失败" }
+pnpm run docker:ps
+```
+
+端口 `15432` 必须未被其他 PostgreSQL/服务占用；如果已占用，应先确认占用进程，不能直接结束其他项目的进程或删除卷。端口变化本身不会修改容器内数据库、密钥、Prisma Schema 或工业安全边界。此记录是代码修改与待执行的 Windows 验收步骤，不代表上述命令已经在维护者机器上运行。
+
+### 2026-11-16 · Docker Prisma 迁移成功后通用 status 报 P1000 的修复
+
+维护者 Windows 实测 `pnpm run docker:db:init` 已在 `127.0.0.1:15432/adui_scada` 成功部署全部四项历史迁移，最后退出码 **0**。容器内 `pg_isready` 接受连接，`psql -U adui_scada -d adui_scada -c "SELECT 1;"` 返回 1。随后通用 `pnpm run db:migrate:status` 返回 P1000，实际原因是该命令按 `apps/server/prisma.config.ts` 读取根 `.env` 的旧密码，和 `docker:db:init` 使用的 `.local/docker/secrets.env` 随机密码不一致。容器内部 Unix Socket `SELECT 1` 并不能证明宿主机 TCP 密码正确。
+
+修复在**不改变通用数据库命令**的前提下增加 `pnpm run docker:db:status`：从 `scripts/init-docker-db.mjs` 统一生成数据库 URL，以受控白名单 `--status` 启动只读 Prisma `migrate status`，环境变量覆盖旧 `.env` 值而不会输出、覆盖或保存密钥。拒绝 `reset`、`dev`、任意参数/远程库，保留 15432 回环约束。原 `docker:db:init` 仍为幂等 `migrate deploy`。
+
+```powershell
+git pull --ff-only
+pnpm run test:docker:db
+if ($LASTEXITCODE -ne 0) { throw "Docker 数据库凭据测试失败" }
+pnpm run env:check
+if ($LASTEXITCODE -ne 0) { throw "环境检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run docker:db:status
+if ($LASTEXITCODE -ne 0) { throw "本机 Docker Prisma 状态检查失败" }
+```
+
+`docker:db:status` 的真实 Windows 退出码与完整 `ready` 在补丁提交后仍待维护者复验。旧根 `.env` 还含曾经公开的数据库、OIDC Client/事务密钥与过期证书路径，宿主 NestJS 联调前必须在本机受控同步到新 Docker 凭据，并进行轮换；禁止将实际值复制到仓库、Issue、测试和日志中。

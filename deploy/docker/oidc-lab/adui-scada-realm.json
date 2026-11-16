@@ -1,0 +1,28 @@
+{
+  "realm": "adui-scada",
+  "enabled": true,
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "loginWithEmailAllowed": false,
+  "clients": [
+    {
+      "clientId": "adui-scada-bff",
+      "name": "ADui SCADA 本机联调",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${SCADA_LAB_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["https://127.0.0.1:${SCADA_REACT_DEV_PORT}/api/v1/auth/oidc/callback"],
+      "webOrigins": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "id.token.signed.response.alg": "RS256"
+      }
+    }
+  ]
+}

@@ -371,3 +371,29 @@ Runtime 生命周期按连接代次隔离：停止时中止 fetch、关闭 SSE�
 ## 2026-11-14 · V0.3 第三十一至三十二批：项目 Tag 管理与历史数据迁移验收
 
 第三十一批已合并：Vue/React Studio 的项目 Tag 管理表单分别渲染，但统一调用共享 DocumentEditor，Tag 目录仍只存在于 ScadaDocument 0.3.0；浏览器验证覆盖新增、编辑、删除保护及 JSON 往返。第三十二批不改变业务迁移实现，仅扩展隔离 Chrome/Edge CDP 回归，分别从 localStorage、IndexedDB 旧草稿和旧 Project Snapshot 验证真实浏览器迁移、原绑定保留、unknown 类型占位与原快照摘要不变。详见 [ADR-0063](adr/0063-studio-tag-management-dual-framework.md) 和 [ADR-0064](adr/0064-legacy-browser-migration-validation.md)。
+
+## 2026-11-14 · V0.3 第三十三批：OIDC BFF 与服务端工程 API 架构
+
+认证边界为“浏览器 → 同源 NestJS BFF → 固定配置的 OIDC Issuer”。Vue/React 不直接访问 IdP Token Endpoint、不持有 IdP Token；NestJS 使用 openid-client 处理 Discovery 与 Authorization Code + PKCE，验证 ID Token 后将外部 (iss, sub) 映射到预先配置的本地 (tenantId, subjectId)。租户和工程 ACL 仍由 PostgreSQL 的 ScadaIdentity/ScadaProjectGrant 管理，不信任邮箱或角色 Claim 自动授权。
+
+OIDC 事务和会话均由 PostgreSQL 共享状态；短期事务使用 state 摘要、AES-256-GCM 加密 PKCE verifier、浏览器绑定与一次性消费。内部会话沿用 AuthSessionService，使用 HttpOnly Secure Cookie 与会话绑定 CSRF 保护。新增 DatabaseModule 统一 PrismaService，避免 Identity 与 Project Persistence 重复创建连接池。OIDC 开关默认关闭；只有显式启用且完整配置通过时才加载身份模块，默认健康探针不触发数据库连接。
+
+工程 API 通过同源 /api/v1 提供工程创建、读取、列表和历史版本操作；所有操作复用 Project ACL、工程行锁、CAS 和 SHA-256 ProjectSnapshot，不开放发布/回滚、工业地址或设备写入。React/Vue 共用框架无关 API Client。详细决策见 [ADR-0065](adr/0065-oidc-bff-and-project-api.md)。
+
+### 第三十三批阶段 A 数据库模块与默认禁用安全边界
+
+DatabaseModule 是 PrismaService 唯一 Nest 提供方；身份模块和工程仓储模块共享该模块，避免重复生命周期和连接池。默认 AppModule 不导入 DatabaseModule 或 ScadaIdentityModule，因此继续仅暴露健康探针且不连接 PostgreSQL。OIDC 配置解析在根 .env 加载后、根模块动态导入前执行；第五小批后，配置完整且显式启用时选择 OidcEnabledAppModule，只挂载身份认证路由，不挂载工程持久化 API。
+
+新外部身份映射、OIDC 临时事务及 CSRF 会话摘要只定义模型与 SQL 迁移，不自动创建用户或授予权限，也不改变工程 Schema、工业网关和 PLC/DCS 访问边界。
+
+## 2026-11-16 · 本机唯一 Docker Compose 项目（ADR-0066）
+
+本机 Docker 仅保留一份 `deploy/docker/compose.yaml`（`name: adui-scada`）：React、Vue、NestJS Demo、模拟 SSE、单 PostgreSQL 17、Redis 和 Keycloak 共 7 个独立服务。旧开发 PostgreSQL 和重复 Compose 配置已从最新运行入口中移除；`postgres` 服务保留原 Lab PostgreSQL 数据卷，两个独立逻辑数据库承载 SCADA 与 Keycloak，不改 Prisma 迁移、OIDC Realm 和受控身份预绑定。
+
+已有 PostgreSQL/Redis 卷通过显式外部卷名复用，因此保留的旧卷名称仅是历史物理存储 ID，不会生成额外 Docker Desktop 项目组。第一次切换必须先备份，再通过白名单校验的 `docker:plan`、`docker:migrate` 移除旧组容器（不删除卷），后续仅用 `docker:up/ps/logs/down`。原 Docker HTTP Demo `18080/18081` 不具备真实 OIDC HTTPS；WebStorm `15173/15174` 的认证行为仍需独立验收。详见 [ADR-0066](adr/0066-single-local-compose-project.md)。
+
+## 2026-11-16 · Docker 全新安装收敛（ADR-0066）
+
+Docker 只维护 `deploy/docker/compose.yaml` 的 `adui-scada` 项目。七个独立服务包含 React/Vue HTTP Demo、NestJS、模拟器、唯一 PostgreSQL 17、Redis、Keycloak。PostgreSQL 业务库 `adui_scada` 与 Keycloak 专用逻辑库 `adui_scada_keycloak` 共享实例。新项目使用 `adui-scada_postgres-data`、`adui-scada_redis-data` 自管理持久卷，不挂载任何历史 OIDC Lab 数据卷；以前的 Keycloak 用户与 SCADA 身份绑定不再自动存在。
+
+`docker:up` 本机生成随机秘密和证书、启动七容器并执行现有 Prisma `migrate deploy`，不会自动开放未认证工程写入。旧数据卷迁移入口已经删除。WebStorm 的 React/Vue OIDC HTTPS 联调仍须在新数据库上另行重新验收。参见 [ADR-0066](adr/0066-single-local-compose-project.md)。

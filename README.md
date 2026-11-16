@@ -68,8 +68,8 @@ Tauri MSI 构建（`desktop:build:react:msi` / `desktop:build:vue:msi`）使用�
 已预留 Docker Compose 演示运行方式，分别构建 React / Vue 静态 Web、NestJS 健康检查服务和只读模拟 SSE。**仅绑定本机 127.0.0.1，不可视为生产 SCADA 部署。**
 
 ```powershell
-docker compose -f deploy/docker/compose.demo.yaml config
-pnpm run docker:demo:up
+pnpm run docker:plan
+pnpm run docker:up
 ```
 
 访问 React：`http://127.0.0.1:8080`；Vue：`http://127.0.0.1:8081`。详情与安全边界见 [Docker 演示说明](deploy/docker/README.md)，部署决策见 [ADR-0007](docs/adr/0007-docker-demo-deployment.md)。维护者已确认原 V0.1 Docker 演示运行成功；本轮环境变量及 Nginx 动态端口改造尚待重新构建验收。
@@ -135,11 +135,11 @@ Runtime 新增框架无关的 `ReadonlyTagSource` 契约与 `createSseTagSource(
 
 独立水处理模拟 SSE 现在仅允许最多 32 个同时在线订阅，并对每客户端待发送缓冲限定为 64 KiB；慢连接遇到背压时主动关闭以保护其他连接。这些数字仅为本地模拟防护边界，不是工业现场容量指标。
 
-在项目根目录运行 `pnpm run test:sse:clients`，使用 Node 内置测试器验证资源限制；另一个终端先启动 `pnpm run dev:demo`，再执行 `pnpm run test:sse:network` 验证实际 6 路 SSE 订阅。需要测试本机 Docker Nginx 两套 Web 代理时，先运行 `pnpm run docker:demo:up`，再执行 `pnpm run test:sse:proxy`。脚本从根 `.env` 读取端口，始终只连接 127.0.0.1，不会自动改动容器。详见 [ADR-0057](docs/adr/0057-local-sse-capacity-and-proxy-validation.md)。
+在项目根目录运行 `pnpm run test:sse:clients`，使用 Node 内置测试器验证资源限制；另一个终端先启动 `pnpm run dev:demo`，再执行 `pnpm run test:sse:network` 验证实际 6 路 SSE 订阅。需要测试本机 Docker Nginx 两套 Web 代理时，先运行 `pnpm run docker:up`，再执行 `pnpm run test:sse:proxy`。脚本从根 `.env` 读取端口，始终只连接 127.0.0.1，不会自动改动容器。详见 [ADR-0057](docs/adr/0057-local-sse-capacity-and-proxy-validation.md)。
 
 ### 第二十五批：Docker 演示端口一致性修复
 
-根目录 `.env` 统一配置 Docker 对宿主机发布的端口（默认 React `18080`、Vue `18081`）。`docker:demo:up/down/logs` 现显式使用 `--env-file .env`，并提供 `pnpm run docker:demo:ps` 查看真实容器映射。执行 `pnpm run docker:demo:up` 后建议先核对映射，再运行 `pnpm run test:sse:proxy`；若仍不一致，还需排查同名 PowerShell 进程环境变量。真实 Nginx SSE 代理验收仍需在维护者 Windows/Docker 实测确认。
+根目录 `.env` 统一配置 Docker 对宿主机发布的端口（默认 React `18080`、Vue `18081`）。`docker:up/down/logs` 统一管理唯一的 `adui-scada` Compose 项目，并提供 `pnpm run docker:ps` 查看真实容器映射。执行 `pnpm run docker:up` 后建议先核对映射，再运行 `pnpm run test:sse:proxy`；若仍不一致，还需排查同名 PowerShell 进程环境变量。Docker 包含七个服务且只有一个 PostgreSQL 容器；全新安装会创建独立的 PostgreSQL/Redis 持久化卷，不会复用或恢复已删除的历史数据。正式 HTTPS/OIDC 由本机开发服务另行联调，不能将 Docker HTTP Demo 当作生产认证入口。
 
 ## V0.3 第二十六批：TCP SSE 真实字节静默与持续连接回归
 

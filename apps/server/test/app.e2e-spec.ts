@@ -47,6 +47,25 @@ describe("应用控制器（端到端）", () => {
     const response = await request(app.getHttpServer()).get("/api/projects/water-demo/versions");
     expect(response.status).toBe(404);
   });
+  it("默认根模块六条工程 API 路由仍然返回 404", async () => {
+    const routes = [
+      ["get", "/api/v1/projects"],
+      ["post", "/api/v1/projects"],
+      ["get", "/api/v1/projects/example-project"],
+      ["get", "/api/v1/projects/example-project/versions"],
+      ["get", "/api/v1/projects/example-project/versions/1"],
+      ["post", "/api/v1/projects/example-project/versions"],
+    ] as const;
+
+    for (const [method, path] of routes) {
+      const response =
+        method === "get"
+          ? await request(app.getHttpServer()).get(path)
+          : await request(app.getHttpServer()).post(path).send({});
+      expect(response.status).toBe(404);
+    }
+  });
+
   it("正式根模块不挂载无鉴权的本机模拟工程和 Tag 接口", async () => {
     for (const route of ["/api/dev/demo/project", "/api/dev/demo/tags", "/api/dev/demo/events"]) {
       const response = await request(app.getHttpServer()).get(route);
@@ -54,11 +73,26 @@ describe("应用控制器（端到端）", () => {
     }
   });
 
-  it("未开放的身份登录与会话签发接口返回 404", async () => {
-    const response = await request(app.getHttpServer())
+  it("默认根模块不注册 OIDC 登录、身份查询或注销路由", async () => {
+    const routes = [
+      ["get", "/api/v1/auth/oidc/start"],
+      ["get", "/api/v1/auth/oidc/callback"],
+      ["get", "/api/v1/auth/me"],
+      ["post", "/api/v1/auth/logout"],
+    ] as const;
+
+    for (const [method, path] of routes) {
+      const response =
+        method === "get"
+          ? await request(app.getHttpServer()).get(path)
+          : await request(app.getHttpServer()).post(path);
+      expect(response.status).toBe(404);
+    }
+
+    const legacy = await request(app.getHttpServer())
       .post("/api/auth/sessions")
       .send({ tenantId: "tenant-a", subjectId: "engineer-1" });
-    expect(response.status).toBe(404);
+    expect(legacy.status).toBe(404);
   });
   it("HTTP 默认添加安全响应头和可信请求关联 ID", async () => {
     const response = await request(app.getHttpServer()).get("/health").expect(200);

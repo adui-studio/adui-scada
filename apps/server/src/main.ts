@@ -3,12 +3,18 @@ import { existsSync } from "node:fs";
 import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Logger } from "nestjs-pino";
+import { resolveOidcStartupConfig } from "./config/oidc-startup.config.js";
 import { resolveServerStartupConfig } from "./config/server-startup.config.js";
 import { allowLocalDemoTelemetry } from "./demo/local-demo-access.js";
 import { getLocalOpenApiUrl, setupLocalOpenApi } from "./openapi/scada-openapi.js";
 import { applyHttpSecurityHeaders } from "./security/http-security.js";
-import { applyHttpServerPolicy, SCADA_NEST_HTTP_OPTIONS } from "./security/http-server-policy.js";
+import {
+  applyHttpServerPolicy,
+  SCADA_HTTP_BODY_LIMIT_BYTES,
+  SCADA_NEST_HTTP_OPTIONS,
+} from "./security/http-server-policy.js";
 
 // 本地环境变量仅从仓库根目录 .env 读取，构建后的 dist/main.js 也使用同一路径。
 // Docker 通过进程环境变量注入隔离容器网络的监听地址。
@@ -18,16 +24,33 @@ if (existsSync(envPath)) loadEnvFile(envPath);
 async function bootstrap(): Promise<void> {
   // AppModule 在模块求值时会创建 Pino 配置，必须在 .env 加载后再导入。
   const { port, host, localDocs } = resolveServerStartupConfig(process.env);
+  const oidc = resolveOidcStartupConfig(process.env);
   const allowDemo = allowLocalDemoTelemetry({
     enabled: process.env.SCADA_LOCAL_DEMO_API_ENABLED,
     nodeEnv: process.env.NODE_ENV,
     host,
   });
-  const { AppModule, LocalDemoAppModule } = await import("./app.module.js");
-  const app = await NestFactory.create(
-    allowDemo ? LocalDemoAppModule : AppModule,
-    SCADA_NEST_HTTP_OPTIONS,
-  );
+  if (oidc.enabled && allowDemo) {
+    throw new Error("OIDC 身份接入与本机模拟 API 不能同时启用");
+  }
+
+  // 仅在 OIDC 完整配置通过校验后加载数据库、身份模块和受保护的工程 API。
+  const { AppModule, LocalDemoAppModule, OidcEnabledAppModule } = await import("./app.module.js");
+  const rootModule = oidc.enabled
+    ? OidcEnabledAppModule
+    : allowDemo
+      ? LocalDemoAppModule
+      : AppModule;
+  // 关闭默认 100 KiB 解析器，显式将 JSON 与表单请求体限制为 Core 的 2 MiB 上限。
+  const app = await NestFactory.create<NestExpressApplication>(rootModule, {
+    ...SCADA_NEST_HTTP_OPTIONS,
+    bodyParser: false,
+  });
+  app.useBodyParser("json", { limit: SCADA_HTTP_BODY_LIMIT_BYTES });
+  app.useBodyParser("urlencoded", {
+    limit: SCADA_HTTP_BODY_LIMIT_BYTES,
+    extended: true,
+  });
   app.useLogger(app.get(Logger));
   applyHttpServerPolicy(app.getHttpServer());
   applyHttpSecurityHeaders(app, localDocs);

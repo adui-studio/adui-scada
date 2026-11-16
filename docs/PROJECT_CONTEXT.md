@@ -832,12 +832,315 @@ PR #53 已 Squash Merge 到 main，合并提交 7fccc1e2285d6ebb1190120142fcf998
 
 已将稳定排序 helper 内聚到 CDP 页面函数，并删除不再使用的 Node 作用域 helper；最新提交为后续 Windows 复验准备，仍未报告 Project Snapshot 或 Vue 路径通过。
 
-
 ### 第三十二批六条历史迁移路径与跨框架互通通过（2026-11-14）
 
 维护者最新 Windows 日志确认 `pnpm run test:legacy:browser` 退出码 0：React、Vue 两端 localStorage 0.2.0 草稿迁移、旧副本清理与 Studio 恢复，IndexedDB 0.2.0 草稿事务迁移与 revision 推进，Project Snapshot 原 SHA-256 校验、只读归一化和原记录保留共六条路径全部通过。`pnpm run test:interop` 双向及完整 React→Vue→React→Vue 往返、非法导入保护通过，退出码 0。`vp check` 272 文件格式正确、135 个受检文件零错误；`docs:check` 80 Markdown 通过。此前 `ready` 输出确认 438/438 单测、SSE 8/8、TCP 故障 4/4、NestJS E2E 17/17、React/Vue 类型检查和构建通过，但提供的日志截断在最终 NestJS build 的 Prisma Client 生成阶段，没有最终 build 结束或 `ready` 退出码，故不能据此宣称完整 ready 成功。PR #54 继续等待最后全链证据和维护者合并授权。
 
-
 ### 第三十二批完整 ready 质量链最终确认（2026-11-14）
 
 维护者补充确认 `pnpm run ready` 最终退出码为 **0**。结合此前日志，第三十二批完整质量链中的 438/438 单测、SSE 客户端 8/8、TCP 故障代理 4/4、NestJS E2E 17/17、React/Vue 类型检查与构建、NestJS 最终构建全部完成。历史迁移浏览器六路径及跨框架互通此前均退出码 0；本批自动化验收条件已满足。
+
+### 第三十三批 OIDC 与服务端工程 API 规划获维护者同意（2026-11-14）
+
+PR #54 已合并到 main，合并提交 8a9dbf5b37a14c3f46b00e28561abcedf5e92c96。第三十二批 Windows 实测六条历史迁移浏览器路径、test:interop、vp check、docs:check 和 pnpm run ready 全部通过，ready 最终退出码 0。
+
+维护者同意第三十三批采用厂商无关 OIDC 架构，具体 Issuer 通过服务端配置决定。当前实施分支 feat/v0.3-oidc-project-api 已创建，先固化 ADR-0065 与实施计划：openid-client 6.8.9、Authorization Code + PKCE、预绑定 (iss, sub) 身份映射、BFF HttpOnly Cookie、CSRF、统一 PrismaService、/api/v1 工程版本 API 和共享 API Client。OIDC 默认关闭，未完成身份认证和工程 ACL 不挂载工程路由。此时只完成设计文档，未增加依赖、数据库迁移或业务代码，不能声称 OIDC 或工程 API 已实现。
+
+### 第三十三批阶段 A · OIDC 默认关闭配置与数据库模块（2026-11-14）
+
+维护者已在 Windows 执行本分支 `vp check`（274 个文件格式正确、135 个受检文件零错误）和 `pnpm run docs:check`（82 份 Markdown 通过，退出码 0）。以上均为本次代码新增**之前**的架构文档验收，不代表本次阶段 A 代码已经通过检查。
+
+阶段 A 提交时：共享 DatabaseModule 统一提供 PrismaService，可信身份/工程持久化模块不再各自声明 PrismaService；OIDC Zod 启动配置默认关闭，严格验证固定 HTTPS Issuer、回调 URI、浏览器 Origin、客户端凭据和 32 字节 Base64URL 加密密钥。非生产回环 HTTP 测试必须显式开启。当时 `main.ts` 对 OIDC enabled 主动拒绝启动；第五小批后，完整配置通过且显式启用时会加载仅包含身份路由的 OidcEnabledAppModule，默认 AppModule 仍不连接数据库或注册身份/工程路由。
+
+Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcTransaction 一次性登录事务和 ScadaAuthSession 可空 CSRF 摘要，并新增带中文表/字段/索引注释的独立增量 SQL 迁移；**尚未在任何数据库执行迁移**。新增 OIDC 配置安全单测和 Nest 模块装配测试，尚未在 Windows 执行。openid-client 仍待下一次由 pnpm 原生安装并同步锁文件，当前不能声称 OIDC 流程或工程 API 已实现。
+
+### 第三十三批 OIDC 单测规则警告修复（2026-11-14）
+
+维护者 `vp check --fix` 报告 0 错误、7 警告（五处空 `toThrow()`、一处条件式 `expect`、一处字符串展开遍历）。本分支已将异常断言改为具体中文消息、完整异常正则校验，并将控制字符检测改为索引式 `charCodeAt` 遍历。仅更改 OIDC 配置及其单测，尚未收到修复后 Windows `vp check`、单测或完整质量链退出码；PR #55 仍为 Draft。
+
+### 第三十三批 Prisma 注释单测失败及最小修复（2026-11-14）
+
+维护者 `test:unit` 实测 447/448 通过，仅 Prisma 中文数据库注释约束测试失败。根因是新增 OIDC 增量迁移文件中部分 COMMENT ON TABLE/COLUMN/INDEX 语句的 `IS` 与中文文本分行，而仓库测试按单行解析，导致 commentText 返回 null。仅将 10 处注释规范为单行，无 DDL 和 Prisma 模型语义变化。按现有逐行匹配规则静态核对 8 个模型、全部 4 份迁移、58 个表/物理字段注释，均能匹配中文内容。仍待 Windows 重跑 `test:unit`，不可据静态检查宣称单测通过。PR #55 保持 Draft。
+
+### 第三十三批阶段 A Windows 全链实测通过（2026-11-14）
+
+维护者最新实测：`vp check` 278 文件格式正确、139 受检文件零错误；`test:unit` 40/40 文件、448/448 测试通过（OIDC 配置 7/7、共享数据库模块 3/3、Prisma 中文注释 2/2）；`docs:check` 82 Markdown 通过；完整 `pnpm run ready` 最终退出码 **0**，其中 SSE 8/8、TCP 故障代理 4/4、NestJS E2E 17/17、React/Vue 构建及 NestJS 构建成功。此前 SQL 单行中文注释测试失败已解决。PostgreSQL 实际增量迁移、OIDC 协议、Cookie/CSRF 和工程 API 尚未执行或实现；服务默认 fail-closed。
+
+### 第三十三批 openid-client 依赖与 AI 复盘规范落地（2026-11-14）
+
+维护者已在 Windows 使用 pnpm 12.18.0 将 `openid-client@6.8.9` 加入根 Catalog / Server Manifest 并生成 `pnpm-lock.yaml`；`pnpm install --frozen-lockfile` 成功，`deps:check` 确认 11 清单/52 Catalog，`vp check` 278 文件格式正确、139 受检文件零错误，`pnpm run ready` 最终退出码 0，448/448 单测、SSE 8/8、故障代理 4/4、NestJS E2E 17/17 和双框架/服务端构建通过。OIDC 仍默认关闭且 enabled 时 fail-closed；真实 PostgreSQL 增量迁移、OIDC Discovery/PKCE/CSRF、工程 HTTP API 尚未完成。
+
+按维护者新要求，新增 `docs/AI_MISTAKES.md` 记录 9 项真实编码错误及避坑/复验方法，在 `AGENTS.md` 强制每次写代码之前重新阅读全文，在 `HARNESS.md` 与 `CODEBASE_MAP.md` 加入入口，文档校验脚本要求该文件存在。新增文档和校验脚本的修改**尚未进行 Windows 复验**；先前 82 份 Markdown 检查不覆盖新增文件。
+
+### 第三十三批错误复盘文档后的最终静态检查（2026-11-14）
+
+维护者 Windows 最新日志确认：`pnpm run docs:check` **83 个 Markdown 通过、退出码 0**；`vp check` **279 个文件格式正确，139 个受检文件零警告、Lint 和 TypeScript 错误**。两项结果已覆盖新增 `docs/AI_MISTAKES.md`、AGENTS 必读门禁、Harness/代码地图入口和文档检查器必需文件校验。
+
+此前 pnpm 12.18.0 依赖安装、冻结安装、52 项 Catalog 检查、448/448 单测及完整 ready（退出码 0）已由维护者确认；完整 ready 当时的文档数是 82，最新 83 份则由本次单独 docs:check 确认。隔离 PostgreSQL 实际迁移仍待执行。
+
+### 第三十三批 OIDC 增量迁移真实数据库测试用例（2026-11-14）
+
+新增 `apps/server/test/oidc-schema.db-spec.ts`，纳入现有 `pnpm run test:db` 隔离数据库测试入口。测试严格限制连接目标为本机 `adui_scada_test`，核验迁移登记、OIDC 表/15 个字段/外键/约束/三个索引及中文数据库注释。该测试尚未执行；等待维护者创建独立数据库、应用迁移并提供 `db:migrate:deploy`、`db:migrate:status`、`test:db` 的退出码。不会使用普通开发库或生产库。
+
+## 2026-11-14 · V0.3 第三十三批：OIDC 隔离 PostgreSQL 增量迁移验收通过
+
+维护者在 Windows 本机对隔离数据库 `127.0.0.1:15432/adui_scada_test` 完成真实 PostgreSQL 验收，所有命令均有实际终端输出：
+
+- `pnpm run db:validate`：Prisma Schema 校验通过。
+- `pnpm run db:migrate:deploy`：成功应用 `20261114000000_oidc_identity_transactions` 增量迁移。
+- `pnpm run db:migrate:status`：4 项迁移均已登记，数据库 Schema 为最新状态。
+- `pnpm run test:db`：2 个测试文件、17/17 测试通过；OIDC Schema 5/5，既有工程版本数据库回归 11/11；最终退出码 **0**。
+
+本次真实数据库检查覆盖迁移登记、两张 OIDC 新表、15 个新增物理字段及中文注释、复合外键、检查约束、可空字段和三个新增索引及其中文注释。未执行数据库重置、删除或重建，没有覆盖既有数据库数据。
+
+**验收边界**：这是既有隔离测试库上的增量迁移与真库集成测试通过；尚未在另一全新隔离数据库从空库完整部署全部迁移，也尚未重复执行部署命令验证幂等。OIDC 协议流程、BFF Cookie/CSRF 和工程 HTTP API 仍未实现，`SCADA_OIDC_ENABLED` 必须保持默认关闭及服务端 fail-closed。PR #55 继续 Draft，Assignee 为 `@adui-dev`，未经维护者明确授权不得合并。
+
+## 2026-11-14 · V0.3 第三十三批阶段 B 第一小批：固定 Issuer OIDC Discovery（代码已提交，待 Windows 验证）
+
+在 PR #55 分支新增 `OidcProviderDiscoveryService`，使用仓库已锁定的 `openid-client@6.8.9`，不增加依赖：
+
+- 仅从服务端固定 Issuer Identifier 执行 Discovery；配置层拒绝 `/.well-known/` 路径，避免使用 Discovery 文档 URL 绕过库的 Issuer 匹配校验。
+- 10 秒超时、惰性发现、并发请求共享发现任务；成功配置进程内复用，失败后清理任务以便重试。
+- 严格检查授权码响应、主体标识类型、RS256、PKCE S256，以及声明的授权码许可、openid Scope 和 `client_secret_basic` 能力。
+- 必须提供 Authorization Endpoint、Token Endpoint、JWKS URI；端点只允许 HTTPS，显式非生产本机测试模式仅允许回环 HTTP。自定义 Fetch 不自动跟随重定向，错误不暴露 Issuer、端点、响应体或底层异常。
+- 客户端认证固定为 `client_secret_basic`，ID Token 签名算法固定为 RS256。服务注册在未挂载的 `ScadaIdentityModule`，不会改变默认 AppModule 或现有 Bearer 会话。
+
+新增 Mock Fetch 单测覆盖正常发现、并发复用、Issuer 不匹配、元数据能力拒绝、不安全端点、本机 HTTP 边界和失败重试。**这些测试代码尚未在维护者 Windows 环境执行**；当前仍需 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和完整 `pnpm run ready` 实测。测试不访问真实 IdP；当时未开放登录接口，`main.ts` 对 `SCADA_OIDC_ENABLED=true` 保持 fail-closed。该状态已由第五小批更新为仅在配置完整时挂载身份路由。
+
+下一小批再实现 Authorization Code + PKCE、State/Nonce 和数据库一次性事务；不得提前启用 OIDC。
+
+## 2026-11-14 · V0.3 第三十三批阶段 B 第二小批：OIDC 一次性登录事务（代码已提交，待 Windows 验证）
+
+新增 `OidcLoginTransactionService`，在服务端生成授权码请求并保存短时事务：
+
+- 使用 openid-client 生成 State、Nonce、PKCE verifier 与 S256 challenge；授权请求使用固定 Redirect URI 和 `openid` Scope。
+- State 与浏览器绑定 Cookie 仅保存 SHA-256 摘要；PKCE verifier 使用 AES-256-GCM 加密，State 摘要作为 AAD。
+- 事务固定有效期 5 分钟；回调按固定 Issuer、浏览器绑定、创建/过期时间及未消费状态筛选，并通过数据库条件更新原子消费。
+- 同一浏览器可复用短时绑定 Cookie 支持多标签页；每次登录仍有独立 State/Nonce/Verifier。
+- 严格校验站内回跳路径，拒绝外部 URL、协议相对地址、反斜杠、片段和控制字符。
+- 第二小批提交时服务仅注册在尚未挂载的 `ScadaIdentityModule`，当时没有 OIDC HTTP 路由；第五小批已补充身份 Controller 和显式启用根模块。
+
+新增 Mock Prisma 单测覆盖授权请求、加密往返、重复/并发消费、跨浏览器、过期、回跳路径和异常脱敏。**尚未在维护者 Windows 环境执行**，需完成 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和 `pnpm run ready`。
+
+### 第三十三批阶段 B 第二小批控制字符 Lint 警告修复（2026-11-14）
+
+维护者 Windows `vp check --fix` 报告 OIDC 回跳路径控制字符正则触发 `eslint(no-control-regex)`（0 错误、1 警告）。已改为逐字符 `charCodeAt()` 检查，继续拒绝 ASCII 控制字符，不关闭规则；增加原始换行、NUL、DEL 测试输入。**修复后尚未收到 Windows 复验结果**，需重新执行 `vp check` 与单测，不能将格式化完成等同于零警告通过。
+
+### 第三十三批阶段 B 第一、二小批 Windows 全链验收通过（2026-11-14）
+
+维护者 Windows 最新日志确认：`vp check` 284 个文件格式正确、144 个受检文件零警告/Lint/TypeScript 错误；`pnpm run test:unit` 42/42 文件、465/465 测试通过（OIDC Discovery 7/7、登录事务 10/10）；`pnpm run docs:check` 83 份 Markdown 通过；完整 `pnpm run ready` 最终退出码 **0**。该次 ready 同时通过依赖 11 清单/52 Catalog、中文文案 170 个文件、SSE 8/8、故障代理 4/4、NestJS E2E 17/17、React/Vue 与 NestJS 构建。
+
+### 第三十三批阶段 B 第三小批：OIDC 授权码回调与身份验证（代码已提交，待 Windows 验证）
+
+新增 `OidcCallbackService` 与 Mock 单测：先消费一次性 State/浏览器绑定事务，使用 openid-client 6.8.9 `authorizationCodeGrant()` 兑换授权码并验证 State、Nonce、PKCE；按 Discovery 元数据要求校验响应 `iss`；使用固定服务端 Redirect URI 构造 Token Exchange 回调地址，不信任请求 Host。ID Token 由 openid-client 验签并检查 Issuer/Audience/有效期/Nonce，应用层补充 `azp`、Subject 和时间声明边界。
+
+认证成功后只按 `(iss, sub)` 查询预绑定外部身份，要求本地身份 active，再复用 `AuthSessionService` 签发内部会话；不按邮箱/用户名自动创建主体，不保存或记录 IdP Token。第三小批提交时服务仅在未挂载的 `ScadaIdentityModule` 中注册，尚无 HTTP Controller；第五小批已新增 Controller，将内部 sessionToken 仅写入 HttpOnly Cookie。**本小批新增代码和 Mock 测试尚未在维护者 Windows 执行**；真实 IdP、JWKS 轮换、Cookie/CSRF 和工程 API仍未验收，OIDC 继续 fail-closed。
+
+### 第三十三批阶段 B 第三小批：OIDC 回调测试夹具修复及完整质量链通过（2026-11-14）
+
+维护者 Windows 实测确认：修复 `oidc-callback.service.spec.ts` 中 Mock 记录类型过窄导致的 TS2322 后，`vp check` 286 个文件格式正确、146 个受检文件零警告/Lint/TypeScript 错误；`pnpm run test:unit` 43/43 文件、477/477 测试通过（OIDC Discovery 7/7、登录事务 10/10、OIDC 回调 12/12）；`pnpm run docs:check` 83 个 Markdown 通过；完整 `pnpm run ready` 最终退出码 **0**，SSE 8/8、故障代理 4/4、NestJS E2E 17/17 及 React/Vue/NestJS 构建全部完成。
+
+本次 TS2322 的根因、类型派生修复和复验命令已记录为 `docs/AI_MISTAKES.md` E-011。阶段 B 第三小批服务层代码及 Mock 测试通过当前 Windows 工程质量链；真实 IdP/JWKS 联调、HTTP Controller、Cookie/CSRF 和工程 API仍未完成，`SCADA_OIDC_ENABLED=true` 继续 fail-closed。
+
+### 第三十三批阶段 B 第三小批最终 Windows 全链验收（2026-11-14）
+
+维护者最新日志确认，修复 OIDC 回调 Mock 类型 TS2322 后：
+
+- `vp check`：286 个文件格式正确，146 个受检文件零警告、Lint 错误和 TypeScript 错误。
+- `pnpm run test:unit`：43/43 文件、477/477 测试通过；OIDC Discovery 7/7、登录事务 10/10、回调 12/12。
+- `pnpm run docs:check`：83 个 Markdown 文件通过。
+- 完整 `pnpm run ready`：依赖 11 清单/52 Catalog、中文文案 172 个文件、SSE 客户端 8/8、故障代理 4/4、NestJS E2E 17/17、React/Vue/NestJS 构建全部通过，最终退出码 **0**。
+
+E-011 已在 `docs/AI_MISTAKES.md` 记录；其类型派生修复与第三小批代码现已通过 Windows 工程质量链。真实 IdP/JWKS 联调、生产 HTTPS Cookie 和工程 API仍未完成；第五小批已提交身份 HTTP Controller，启用仍需维护者质量验收。
+
+### 第三十三批阶段 B 第四小批提交时状态记录（2026-11-14）
+
+第四小批提交时，Cookie/CSRF 会话服务、Cookie 头构造函数和 Bearer/Cookie 双路径 `ScadaSessionGuard` 已进入 PR #55；当时尚未注册 HTTP Controller，默认 AppModule 不加载身份模块，`main.ts` 仍 fail-closed。该状态已由第五小批更新：身份 Controller 仅在 OIDC 启用根模块中注册。第四、五小批仍待维护者 Windows 质量验收；真实浏览器 Cookie/HTTPS 代理行为待联调。
+
+### 第三十三批阶段 B 第五小批：OIDC BFF HTTP 控制器与认证路由（Windows 工程质量验收通过）
+
+新增 `ScadaAuthController`，提供 `/api/v1/auth/oidc/start`、`/api/v1/auth/oidc/callback`、`/api/v1/auth/me` 和 `/api/v1/auth/logout`。Start/Callback 复用现有 OIDC 登录事务与回调服务；使用短时 HttpOnly 浏览器绑定 Cookie，成功回调后仅通过安全 Session/CSRF Cookie 建立浏览器会话，不在响应 JSON 暴露令牌。`/me` 只返回已验证的租户/主体上下文；`/logout` 撤销当前本地会话并清理 Cookie，Cookie 写请求继续受 CSRF Guard 保护。
+
+新增 `OidcEnabledAppModule`，`main.ts` 仅在 OIDC 配置完整且开关启用时选择该根模块；它只加载 `AppModule + ScadaIdentityModule`，没有加载 `ProjectPersistenceModule`。默认 `AppModule` 仍不注册身份路由、不连接 PostgreSQL；OIDC 与本机模拟 API 同时启用会拒绝启动。新增认证 Controller HTTP E2E 与默认根模块 404 回归。
+
+**验收状态**：维护者 2026-11-14 Windows 已完成第四、五小批完整质量验收：`vp check` 291 个文件格式正确、151 个受检文件零警告/Lint/TypeScript 错误；`test:unit` 45/45 文件、494/494 测试；`test:e2e:server` 4/4 文件、26/26 测试（OIDC Controller 9/9）；`docs:check` 83 Markdown；完整 `ready` 最终退出码 0，React/Vue/NestJS 构建成功。Mock E2E 不代表真实 IdP/JWKS、HTTPS 浏览器 Cookie、反向代理或企业身份映射已验收。工程 API 仍未开放，工业设备写入仍未实现。
+
+### 第三十三批阶段 B 第五小批：Windows 首轮静态检查问题修复（已复验通过）
+
+维护者首次 `vp check --fix` 反馈：401 E2E 缺少 Vitest 显式断言、Supertest `set-cookie` 类型为字符串却被当数组调用 `.join()`、数据库模块测试导入 Controller 后未使用。已分别补充状态断言、兼容字符串/数组且避开 Expires 逗号的 Cookie 头解析函数，以及身份模块 Controller 元数据断言。防复发记录为 `docs/AI_MISTAKES.md` E-012。
+
+**状态**：修复已提交至 PR #55，并已由维护者 Windows 完整复验通过。`vp check` 291 文件/151 受检零警告错误；单测 494/494；NestJS E2E 26/26（OIDC Controller 9/9）；文档 83 Markdown；完整 `ready` 最终退出码 0。详细记录见 `docs/VALIDATION.md`。
+
+### 第三十三批阶段 B 第四、五小批最终 Windows 验收（2026-11-14）
+
+维护者提供的最新 Windows 日志确认：`vp check` 291 个文件格式正确、151 个受检文件零警告/Lint/TypeScript 错误；`pnpm run test:unit` 45/45 文件、494/494 测试通过；`pnpm run test:e2e:server` 4/4 文件、26/26 测试通过，其中 OIDC Controller E2E 9/9；`pnpm run docs:check` 83 个 Markdown 通过；SSE 客户端 8/8、故障代理 4/4；React、Vue、NestJS 构建成功；完整 `pnpm run ready` 最终退出码 **0**。
+
+E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数据导入问题已复验关闭。当前阶段 B 第四、五小批工程质量验收通过；真实 IdP/JWKS、真实浏览器 Secure Cookie、生产 HTTPS/反向代理和企业身份映射仍需专项验收。工程 HTTP API 尚未开放。
+
+## 2026-11-14 · 第三十三批第六小批工程 API 实施草稿
+
+本批在功能分支准备工程 API 事务仓储扩展、六条 NestJS 工程路由、明确的领域错误映射及单元/HTTP E2E/隔离 PostgreSQL 测试。工程列表只返回有权限的摘要；创建操作对工程、创建者 ACL、revision 1 快照、水位和成功审计执行原子事务。不新增数据库 Schema 与迁移、不开放删除/发布/回滚/工业写入。默认 AppModule 保持 API 404；OIDC 根模块在完整配置启用时才挂载工程接口。
+
+**重要**：该第六小批目前只是待验证的代码实施草稿。当前执行环境没有仓库 pnpm 依赖及本机隔离 PostgreSQL，不能声称 `vp check`、`ready`、真实数据库或 HTTP E2E 已通过；第五小批此前的 Windows 验收仍独立有效，不适用于本批新增代码。
+
+### 第三十三批第六小批候选安全复核（2026-11-15）
+
+候选工程 API 的六条成功响应新增 `Cache-Control: no-store`，防止工程文档和版本摘要被 HTTP 缓存。创建事务增加本地受信主体 `active` 状态的 `FOR SHARE` 共享锁内复核，避免 Guard 验证后主体被停用却继续写入工程、ACL 与审计。单元和隔离 PostgreSQL 用例已补充，但尚未执行。候选提交仍未进入 PR #55 功能分支，不得沿用第五小批质量验收结果。
+
+### 第三十三批第六小批 · 2026-11-16 启动入口语法修复
+
+维护者在已推送至 PR #55 的第六小批候选代码上运行 `vp check --fix`，于 `apps/server/src/main.ts:73` 遇到 EOF 缺少 `)` 的格式化解析错误。已定位为启动入口 `bootstrap().catch(...)` 结尾只写了 `}`，缺失 `);`，按最小改动修复为 `});`。修正后 Git Blob 内容与容器内完整文件 SHA 一致，TypeScript 5.8.3 语法解析 0 错误。记录为 `docs/AI_MISTAKES.md` E-013；当前未执行完整 Windows 工程质量链或真实 PostgreSQL 测试，第六小批继续保持 Draft 待验收。
+
+### 第三十三批第六小批 · 2026-11-16 Windows 工程质量验收结果
+
+维护者最新 PowerShell 日志确认：`vp check` 297 文件/157 受检零警告错误；单元测试 46/46 文件、505/505 项通过（新增工程 API 仓储单测 10/10）；NestJS HTTP E2E 5/5 文件、40/40 项通过（工程 API E2E 13/13）；SSE 客户端 8/8 和故障代理 4/4；83 份 Markdown 检查、React/Vue/NestJS 构建成功；完整 `pnpm run ready` 最终退出码 **0**。`main.ts` EOF 的 E-013 已由 Windows Vite+ 复验关闭。功能分支最新已检索到用户格式化提交 `e15f058b`；该日志没有独立输出 Git HEAD，不能强称日志包含精确提交指纹。
+
+第六小批**工程质量门禁通过、真实 PostgreSQL 与真实身份/代理专项仍待验收**。`project-api.db-spec.ts` 新增测试不属于通用 `ready`；未取得本批 `test:db` 结果，不标记事务竞争、租户隔离或审计失败回滚在真实数据库中通过。PR #55 保持 Draft，未经维护者明确授权不得合并。本记录同步后仍需执行最新文档提交的 `docs:check`。
+
+### 第三十三批第六小批 · 2026-11-16 PostgreSQL 真实事务验收补录
+
+维护者 Windows 在本机隔离库 `127.0.0.1:15432/adui_scada_test` 完成 Prisma Schema 校验、迁移状态检查及 `pnpm run test:db`。现有四项迁移均无待执行项；真实数据库测试 3/3 文件、22/22 项通过（OIDC 5/5、工程版本 11/11、工程 API 6/6）。与此前 `ready` 退出码 0、单测 505/505、E2E 40/40 的工程质量验收分别记录。首次漏配 `SCADA_TEST_DATABASE_URL` 引发的 0-test 拒绝为安全门禁生效，补充受控变量后成功完成全部测试。
+
+下一项“全新隔离空库首次迁移及重复部署”仅准备了受控 Node 脚本和目标校验单测（6/6 静态/纯逻辑验证）；尚未在 Windows 新建空库并运行真实 Prisma 迁移。此项与真实 IdP、HTTPS Cookie/代理和 Vue/React API Client 仍待验收。PR #55 继续保持 Draft，未经明确授权不得合并。
+
+### 2026-11-16 · 空库迁移专项测试的七条 Lint 警告修复
+
+维护者最新 `vp check --fix` 日志显示，新增 `node:test` 文件的一处 `describe()` 和六处 `it()` 因未显式处理 `Promise<void>` 触发 `typescript(no-floating-promises)` 七条警告，虽然格式化已经完成，但不满足零警告质量门禁。按 E-014 最小修复为 `void describe(...)` 与 `void it(...)`，不调整六个数据库目标保护测试的断言和空库安全策略。修复后 `vp check`、`node --test`、`docs:check`、`ready` 以及真实空库迁移尚待实测，PR #55 继续保持 Draft。
+
+### 2026-11-16 · E-014 与空库目标校验工具 Windows 全链验收通过
+
+维护者 PowerShell 完整日志确认，`node --test scripts/verify-fresh-postgres-migrations.cases.mjs` 6/6 通过，`vp check` 299 个格式正确文件、159 个受检文件零警告/错误，`docs:check` 83 份 Markdown 通过。完整 `ready` 中单测 505/505、NestJS HTTP E2E 40/40、SSE 客户端 8/8、故障代理 4/4、React/Vue/NestJS 构建均通过，最终退出码 0；E-014 的 7 条 Promise Lint 警告已经复验关闭。
+
+当前功能分支 GitHub 已有格式化提交 `7e5aac7`，该日志没有单独输出本地 Git HEAD，不强称已验证精确提交指纹。现有隔离 PostgreSQL 事务测试 22/22 已由此前维护者日志证实；**全新空库首次迁移及二次部署幂等性仍未运行**，实际数据库连接与真实 IdP、HTTPS Cookie、代理、React/Vue 互通继续待专项验收。PR #55 保持 Draft，未获合并授权。
+
+### 2026-11-16 · 空库迁移全链实测通过，E-015 子进程警告待复验
+
+维护者已在本机新建空库 `adui_scada_fresh_20261116` 实际完成四项 Prisma 迁移首次部署、第二次无待执行迁移以及 `migrate status`，八个预期业务表和迁移元数据均通过脚本检查，最终退出码 0；`docs:check` 同时通过 83 份 Markdown。阶段 A 的**全新空库及重复部署专项正式通过**，区别于先前 `adui_scada_test` 的 22/22 事务回归。
+
+本次日志同时暴露 Node.js `DEP0190`：Windows `pnpm.cmd` 配合 `shell: true` 传参。已按 E-015 最小改为当前 Prisma CLI 由 `process.execPath` 无 shell 调用，保留现有隔离和失败即停止策略；协作容器只验证了语法、目标保护 6/6 与模拟进程执行，**真实 Windows Prisma 调用及最新质量链仍待复验**。现有空库不得重置或用于再次执行“全新空库”的验证；实际复验必须另建新空库。PR #55 继续 Draft，不合并。
+
+### 2026-11-16 · E-015 Windows Prisma 无 shell 子进程专项验证通过
+
+维护者修复后 Windows `node --test` 6/6、`vp check` 299 格式文件/159 受检零警告错误、`docs:check` 83 Markdown、`ready` 505 单测、40 HTTP E2E、SSE 8/8、故障代理 4/4、React/Vue/NestJS 构建通过，最终退出码 0。随后在另一座全新空库 `adui_scada_fresh_20261116_b` 上运行无 shell Prisma 7.10.1 子进程：四项迁移全部首次成功，二次无待执行项、`migrate status` 最新、迁移元数据一致、退出码 0，**未再出现 DEP0190**。E-015 已关闭，原有 `adui_scada_fresh_20261116` 和本轮新空库均保留；不能用已部署的库冒充空库。Prisma 8 RC 更新提示无需升级。
+
+目前第三十三批数据库专项与工程 API 的单元/Mock E2E/隔离 PostgreSQL 事务均通过；真实 IdP/JWKS、生产 HTTPS 安全 Cookie/同源代理、React/Vue 双框架 API Client 及现场安全仍未验收。PR #55 继续保持 Draft，不合并。用户日志未单独输出本地 HEAD SHA，文档变更后的 `docs:check` 仍待复验。
+
+### 2026-11-16 · 第三十三批第七小批：共享工程 API Client 候选
+
+新增工作区 `@adui/scada-api-client`，将身份 `me/logout`、六条受保护工程 API 的请求/响应契约、同源 Fetch、CSRF Cookie 读取、中文错误映射与 Core SHA-256 快照验证封装为框架无关代码。React/Vue Manifest 引用同一个工作区包，但本小批不接入现有 Studio 保存按钮，不改变 IndexedDB 离线草稿或现有演示 SSE，不开启真实 OIDC，也不开放 PLC/DCS 写入。Core 和服务器业务接口保持不变。
+
+已在协作容器 Node 22/TypeScript 5.8.3 临时 Core 声明下完成源码类型检查和模拟 Core 的 Fetch 烟测；**尚未运行仓库 TypeScript 6 / Vite+ / Vitest / pnpm 12 完整检查**。新工作区仅引用既有 `@adui/scada-core`、`@adui/tsconfig`、TypeScript 和 Vite+，锁文件仅作已知 workspace 链接增量，必须在维护者 Windows 使用真实 pnpm 生成及验证。真实 IdP、HTTPS Cookie/同源代理、Vue/React Studio 接线和浏览器互通仍待后续专项，PR #55 保持 Draft。
+
+### 2026-11-16 · 第三十三批第七小批共享 API Client：Windows 全链通过
+
+维护者 Windows 日志确认独立工作区 `@adui/scada-api-client` 已通过 TypeScript 6 对应的根质量门禁：`vp check` 303 格式文件/161 受检零告警错误、`typecheck:web`（含新增客户端包）、单元测试 47 文件 **520/520**（新增 Mock Fetch **15/15**）、NestJS E2E **40/40**、SSE 客户端 8/8、故障代理 4/4、文档 83 个 Markdown 与 React/Vue/NestJS 全部构建；完整 `pnpm run ready` 最终退出码 **0**。仓库当前功能分支仅额外存在一次源码/测试格式提交 `d95bf224`；用户日志未显示本地 Git SHA，不冒充精确提交指纹证据。
+
+目前共享 API Client 的**工程质量门禁已通过**，但上传日志未证明 pnpm 12.18.0 `--lockfile-only` 和 `--frozen-lockfile` 安装专项通过；React/Vue UI 未接线，真实 OIDC/JWKS、HTTPS Cookie/同源代理及浏览器工程互通仍未验收。继续保持 PR #55 Draft，后续优先核对锁文件冻结安装，再分批接线 Vue/React，不改变 IndexedDB 草稿与设备只读安全边界。
+
+### 2026-11-16 · 第七小批 pnpm 冻结锁文件验收完成
+
+维护者 Windows 已实际执行 `pnpm install --frozen-lockfile`，覆盖 12 个 workspace，锁文件供应链策略通过，提示锁文件已是最新并跳过依赖解析，pnpm 版本 12.18.0；随后 `docs:check` 83 个 Markdown 通过、最终退出码 0。结合此前共享 API Client 15/15 Mock Fetch、全量 520/520 单测、40/40 E2E、`vp check` 303/161 零警告与 `ready` 退出码 0，第七小批的**工程质量及冻结锁文件安装验收完成**。
+
+仅有 `--frozen-lockfile` 的明确执行证据，没有 `--lockfile-only` 独立执行记录；此次文档更新后需重新执行 `docs:check`。React/Vue UI 接线、同源代理、真实 IdP/JWKS、HTTPS Cookie 与双框架浏览器互通仍待下一小批，PR #55 保持 Draft，不合并。
+
+### 2026-11-16 · 第三十三批第八小批：双框架 Studio 服务端工程操作候选代码
+
+在已验收的共享 `@adui/scada-api-client` 上新增 `StudioServerProjectSession`：必须由当前可信服务端身份与显式载入的最新修订号建立会话内 CAS 保存基线；本地 IndexedDB 修订号与服务端版本绝不混用，首次创建与版本追加失败不清理草稿、不静默覆盖画布。React/Vue 两端各新增独立“服务端工程”菜单，支持检查登录、保存服务端工程、查询分页历史、查看差异及确认后载入；保留原有本地草稿与本地版本功能。导入 JSON、恢复草稿、载入本地历史均撤销旧服务端基线，服务端载入先停止并等待本地自动保存会话结束。
+
+新增 9 项 Mock 测试候选；**尚未执行本批仓库真实 TS6 / Vite+ / 单测 / ready 与浏览器 E2E，不能把第七小批 520/520 验收当作本批通过**。真实 OIDC/JWKS、HTTPS Cookie/同源代理仍待联调，默认模块不暴露受保护路由，也没有工业写入或正式发布。PR #55 继续 Draft，不合并。
+
+### 2026-11-16 · 第八小批首次 Windows 检查与 E-016 修复候选
+
+`vp check --fix` 在新增 `studio-session.test.ts` 中发现 `typescript(unbound-method)` **19 条警告**（163 个受检文件零错误），第八小批质量门禁尚未通过。根因是 Mock 夹具被显式声明为 `ScadaApiClient` 后丢失各字段 Vitest Mock 类型。已准备最小测试夹具修复：使用 `satisfies ScadaApiClient` 保留方法 Mock 属性类型，去除 6 次冗余 `vi.mocked` 包裹，保留全部 9 项安全测试与 29 处断言。需维护者 Windows 重跑 `vp check`、单测、`ready`，成功后方可将 E-016 关闭。本次未改动 React/Vue、服务端权限或 IndexedDB 草稿逻辑，真实 OIDC/HTTPS 浏览器集成仍待验收，PR #55 保持 Draft。
+
+### 2026-11-16 · 第八小批 E-016 关闭、第九小批本机 HTTPS 联调准备
+
+维护者 Windows 已通过第八小批 vp check（305 格式文件、163 受检零警告）、529/529 单测（新增 CAS 9/9）、40/40 NestJS E2E、SSE 8/8、故障代理 4/4，React/Vue 双分辨率各 19/19 浏览器回归及历史安全回归；全部构建、83 Markdown、完整 ready 退出码 0。E-016 已关闭；尚未进行真正的 IdP/HTTPS 浏览器写入验收。
+
+第九小批准备共享的本机 Vite HTTPS 代理：默认关闭，开启时要求可信 OIDC、回环 Web/Nest、精确 React/Vue HTTPS Origin 和固定回调，代理 /api/v1 到回环 NestJS。协作容器 Node 22 的配置安全测试 10/10 通过，真实 Windows 全链和实际 TLS/IdP 仍待维护者执行。默认 AppModule 不开放未认证工程 API，工业设备写入仍禁止。PR #55 保持 Draft。
+
+### 2026-11-16 · 第九小批 Windows 验收归档与第十小批真实 HTTPS 前置检查
+
+维护者 Windows 复验第九小批：HTTPS 本机代理配置测试 10/10、`vp check` 308 文件格式/166 受检零警告、单元测试 529/529、NestJS HTTP E2E 40/40、SSE 客户端 8/8、故障代理 4/4、83 个 Markdown 与 React/Vue/NestJS 全部构建成功，完整 `pnpm run ready` 退出码 0。日志未包含本地 Git HEAD 的独立证据。
+
+第十小批仅新增本机 HTTPS **匿名只读** `/api/v1/auth/me` 诊断脚本和九项安全测试。离线测试属于默认 `ready`，实际 TLS 网络探针保持单独显式命令；不得将配置单测或匿名 401 响应解释为已完成 OIDC IdP、Cookie/CSRF 或服务端工程保存联调。无需改动 React/Vue Studio、NestJS Guard、Prisma、数据库迁移或共享 API Client。真实本机 TLS、IdP/JWKS、隔离测试租户与跨框架服务端往返仍待维护者单独验收。PR #55 保持 Draft，Assignee 继续指派 `@adui-dev`，未获授权不合并。
+
+### 2026-11-16 · 第十小批 Windows 工程质量通过，真实 HTTPS 专项继续受阻
+
+维护者上传的 Windows 日志确认：HTTPS 匿名只读离线测试 9/9、`vp check` 310 格式文件/168 受检零警告、`docs:check` 83、全量单测 529/529、OIDC 代理配置 10/10、HTTP E2E 40/40、SSE 8/8、故障代理 4/4 及 React/Vue/NestJS 构建均通过，完整 `ready` 退出码 0。随后真实 `verify:oidc:https:readonly` **退出码 1**，仅输出通用联调失败消息；不将之判定为 TLS 或 OIDC 实际通过。维护者本地 `.env`、启动服务和证书状态未随日志提供，失败根因待排查。
+
+针对反馈，脚本已增强脱敏失败分类并增加两项安全测试；Node.js 22 候选验证 11/11，通过但需要新提交后的 Windows `vp check`、`ready` 及真实探针专项复验。保持 OIDC 和 HTTPS 开关默认关闭，不创建伪造 IdP 或匿名工程写入，不访问生产数据库，PR #55 仍 Draft。
+
+### 2026-11-16 · OIDC Lab 一键依赖栈与复制即用的根环境模板
+
+在 PR #55 功能分支中为本机联调新增独立 `deploy/docker/compose.oidc.lab.yaml`，以单一 Compose 项目管理本机 PostgreSQL、Redis、Keycloak；新增 `scripts/prepare-oidc-lab.mjs`，自动生成并复用不会入库的随机凭据与 mkcert 回环 HTTPS 证书，默认不改写根 `.env` 和现有数据库。根 `.env.example` 增加三个 Lab 端口并维持 OIDC/HTTPS 默认关闭，因此直接复制可用于原有普通 HTTP 开发；真实 OIDC 需要可信 Client、预绑定身份和隔离测试数据库才能另行启用。
+
+已在隔离 Node.js 22 环境完成脚本语法、六项准备脚本离线安全测试及 Compose YAML/Realm JSON 静态解析；**Windows Docker 启动、Keycloak Discovery、PostgreSQL 实例、Redis 实例、React/Vue HTTPS/真实登录与生产单镜像交付尚未实测**。保留 PR #55 Draft，Assignee `@adui-dev`；不触及 Prisma 历史迁移或生产数据。
+
+### 2026-11-16 · OIDC Lab 联调真实启动被 E-018 阻断
+
+维护者 Windows 已通过 Keycloak OIDC Discovery HTTP 200、隔离 `adui_scada_oidc_lab` 四项 Prisma 迁移及 React HTTPS 15173 启动，首次真实启用 OIDC 根模块发现 `ProjectApiModule` 内 `ScadaSessionGuard` 的审计服务跨模块注入失败，NestJS 无法监听 13001，Vite 代理报 `ECONNREFUSED`，匿名 401 探针失败。修复候选仅向身份模块导出审计、OIDC 配置及共享数据库模块，增加真实根模块的 Mock 数据库 E2E，维持原 Guard、CSRF、ACL 与默认关闭策略。Windows 新提交的工程质量链和真实 NestJS 启动待验收。此前粘贴的本机秘密需受控轮换，不得写入仓库。
+
+### 2026-11-16 · 第十二小批 E-018 真实 Windows 复验关闭
+
+维护者 Windows 已验证：`test:e2e:server` 6 文件/42 项、`vp check` 315 格式/171 受检零告警；完整 `ready` 48 文件/530 单测、HTTP E2E 42、OIDC 代理 10、OIDC Lab 6、HTTPS 匿名离线 11、SSE 8、TCP 故障 4、83 Markdown 与双 Web/服务端构建均通过。真实 `OidcEnabledAppModule`、`ProjectApiModule`、`ScadaIdentityModule` 初始化成功，NestJS `127.0.0.1:13001` 实际监听；React/Vue 两端 HTTPS 同源 `/api/v1/auth/me` 匿名探针均为受控 401 JSON，退出码 **0**，**E-018 关闭**。原日志未独立打印本地 HEAD 和完整 `ready` 的数字退出码，依其连续执行和失败即停止分支确认本次质量链已完成。
+
+当前已具备真实 Keycloak OIDC 登录的网络前置条件，但服务端发出的 302 不等于真实用户成功登录；身份预绑定、Secure Cookie/CSRF 及双框架服务端工程历史/CAS 往返仍未验收。此前在对话暴露的本地 Lab 随机密钥需要受控轮换并同步配置，禁止在 PR/文档/日志中出现原值。PR #55 继续 Draft，未获授权不合并。
+
+### 2026-11-16 · 第十三小批 OIDC Lab 身份预绑定最小实现
+
+此前 Keycloak OIDC Discovery、NestJS 根模块及双框架匿名 HTTPS 401 已由维护者 Windows 实测（E-017/E-018 已关闭）。为开启真正的普通用户登录联调，在原 PR #55 中新增本机隔离 Lab 的**显式预绑定**工具：Keycloak 用户由人工创建并核对 UUID，工具默认只读、在严格回环数据库和 Issuer 校验通过后，仅经 `--apply --confirm-lab adui_scada_oidc_lab` 才创建 active 本地主体和一条外部映射。会阻止已有权限主体被错误绑定，不自动授予工程 ACL、创建工程或开放写接口，亦不改变现有 Prisma Schema/迁移。
+
+新增 14 项离线测试，使用隔离 V8 运行环境对原候选逻辑及 Mock PG 事务验证 **14/14**，但并非本机完整 Node/Vite+ 检查，Windows `ready`、真实隔离数据库写入、Keycloak 用户授权码回调、Secure Cookie/CSRF 与跨框架工程往返均待专门验收。此前粘贴的本机 Lab 测试密钥需后续安全轮换，不保存在仓库文档。
+
+### 2026-11-16 · 单 Compose 本机统一栈候选
+
+维护者 Chrome 已验证 React/Vue 共享同一 SCADA OIDC 本地身份 `lab-tenant/lab-engineer`，Docker Desktop 当前有 3 个项目组。第十三小批后续新增统一本机 `adui-scada` Compose 项目候选，包含 Demo 4 服务、OIDC Lab 3 服务及旧开发 PostgreSQL 1 服务（旧数据库单独 profile），继续绑定原 Keycloak/SCADA/Redis 三份数据卷，不自动迁移或清库、不更改原 `.env` 的数据库凭据，也不把 HTTP Demo 当成真正的 OIDC HTTPS 部署。
+
+新增显式预检/迁移/启动/关闭命令与 13 项 Node.js Mock 回归测试。当前协作环境 Node.js 22 的候选测试 13/13 通过，Python YAML 结构和回环端口校验通过；协作容器**没有 Docker CLI**，真实 `docker compose config`、老项目切换、新容器健康、Keycloak 现有主体与双框架认证仍待 Windows 验收。正式单应用镜像打包属于后续独立工作。
+
+### 2026-11-16 · 统一本机 Docker 最终收敛为一个 PostgreSQL
+
+维护者明确要求删除遗留开发数据库及重复 Docker 配置，只保留项目名 `adui-scada`。因此新版本仅保留 `deploy/docker/compose.yaml`，七个容器：React/Vue/NestJS Demo/模拟服务、单 PostgreSQL、Redis、Keycloak。旧开发库 `15432` 不再启动；现有 SCADA/Keycloak 数据所在的 PostgreSQL `15433` 继续挂原持久化卷，两套逻辑数据库保留原名避免重建或丢失 OIDC 预绑定。原物理卷名称虽然带历史 OIDC Lab 前缀，但 Docker Desktop 项目名将固定为 `adui-scada`，不再运行其他 Compose 项目。
+
+旧 `compose.demo.yaml`、`compose.postgres.dev.yaml`、`compose.oidc.lab.yaml`、`compose.all.dev.yaml` 和对应多套命令清理。新 `docker:plan` / `docker:migrate` 白名单识别历史容器，显式迁移不会删除卷；日常使用 `docker:up` 等单一入口。候选 17/17 隔离 V8 Mock 逻辑检查通过，Windows 真实 `vp check`/`ready`、Docker Compose 配置解析、备份和容器切换仍待维护者实测。
+
+### 2026-11-16 · Docker 单 Compose Windows 首次质量验收受文档规则阻断
+
+维护者的唯一 `adui-scada` 七服务、单 PostgreSQL 方案已完成 Windows `test:docker` 17/17、`env:check`、`vp check` 318/175 零告警、530/530 单测及 NestJS 42/42 E2E。首次 `docs:check` 在 ADR-0066 上发现状态行带额外括号说明，违反严格枚举；完整 `ready` 因此中断，不能记为通过。按 E-019 将 ADR 状态改成单独 `Proposed` 并分离验收说明；修复后 Windows `docs:check` / `ready` 和真实 Docker 迁移继续待验收，旧数据库及 Keycloak 数据卷未执行删除。
+
+### 2026-11-16 · 维护者删除旧三个 Docker 项目及旧数据卷，改用全新安装
+
+维护者确认旧的 Demo、旧开发 PostgreSQL、OIDC Lab 三组容器已全部删除，随后明确连其数据卷也删除且未留数据库备份。新方案因此不再保留“复用旧卷/迁移旧数据库”的假设：仅一份 `adui-scada` Compose，七服务、一个 PostgreSQL 容器；业务库与用户固定 `adui_scada`，Keycloak 逻辑库 `adui_scada_keycloak`；数据存储在新项目的两个持久化卷。根 `.env.example` 重新整理，默认不开启 OIDC，首次 `docker:up` 使用本机安全随机凭据、证书并运行 Prisma `migrate deploy`，无需旧卷。旧 Keycloak 用户、身份预绑定与项目历史**没有恢复**，后续需重新创建和验收。Windows Docker 实际执行尚待验收。
+
+### 2026-11-16 · 单 Docker 新安装 PostgreSQL 端口收敛为 15432
+
+维护者在已确认旧三个项目及数据卷均删除、无备份后，进一步要求 **PostgreSQL 端口统一为 15432**。最新 `adui-scada` 单 Compose 的 PostgreSQL 服务仍映射容器内 `5432`，宿主机端口改为 `127.0.0.1:15432`；根环境模板、默认检查、初始化、OIDC 身份绑定用例与端口拒绝测试按此同步。数据库名、用户 `adui_scada`，Keycloak 独立逻辑库 `adui_scada_keycloak`、数据卷及安全策略不变。此前旧 Lab `15433` 仅属于历史实施记录。Windows 实际 `ready`、新容器与 Prisma 迁移尚待验收。
+
+### 2026-11-16 · 唯一 Docker PostgreSQL 四项迁移成功，status 需匹配随机密码
+
+最新 `adui-scada` 单项目容器已由维护者启动。Windows 实测 `docker:db:init` 在业务库 `adui_scada`（回环 15432）成功部署 4 项 Prisma 迁移，退出码 0；容器内 PostgreSQL `pg_isready` 与 `SELECT 1` 均成功。通用 `db:migrate:status` 仍使用根目录 `.env` 里的旧固定密码，因与 `.local/docker/secrets.env` 中新 Docker 随机密码不同而报 P1000。新增 Docker 专用 `docker:db:status`，通过同一安全脚本调用只读 Prisma 状态查询，禁止回显/提交密码，不修改数据库、卷或通用命令；Windows 真实新命令与全量质量链待复验。宿主机 OIDC Client Secret、事务加密密钥和证书路径也需针对新 Keycloak 在本机安全同步并重新验收。
+
+### 2026-11-16 · Docker 数据库状态真实验收成功、ready 在中文日志门禁被阻断（E-022）
+
+维护者本机 `test:docker:db` 已 9/9 通过，`docker:db:status` 对 15432 端口的 `adui_scada` 业务库真实返回最新迁移状态（共 4 项），`vp check` 320/177 零警告，`docs:check` 84 个 Markdown 通过；但本轮 `ready` 在 `messages:check` 发现 `scripts/init-docker-db.mjs` 内包含英文 `"status"` 的单行 `console.log`，未进入本轮后续单元测试、E2E 或构建。E-022 最小修复只拆分分支计算与中文结果输出，复验后方可宣称完整 `ready` 通过。OIDC 全新 Keycloak 用户绑定与真正 HTTPS 认证尚未完成验收。
+
+### 2026-11-16 · 第三十三批主业务闭环通过，继续 HTTP 安全收尾
+
+维护者已提供 E-022 修复后完整 `ready` 退出码 0 的 Windows 日志，且实际通过新 Keycloak 用户身份绑定、React/Vue 双 HTTPS 认证、Cookie 安全属性、CSRF 拒绝和跨端注销浏览器检查；服务端工程创建/历史版本/CAS 409/IndexedDB 草稿保护六项也由维护者确认通过。详细实测与候选补测边界记录于 `docs/VALIDATION.md`。
+
+下一小批不修改 Guard 或数据库，仅向既有 NestJS OIDC HTTP E2E 增加跨 Origin、异常 Fetch Metadata、Bearer/Cookie 混用拒绝回归。候选必须先经 Windows `test:e2e:server`、`vp check`、`docs:check` 和 `ready` 复验；真实旧 Session 凭据持久化撤销、跨租户 ACL、过期及工业生产安全另行专项验收。
+
+### 2026-11-16 · 第三十三批 HTTP 安全回归 Windows 通过，数据库会话断言待复验
+
+维护者原始日志确认：`test:e2e:server` 45/45、`vp check` 320/177 零警告、`docs:check` 84 Markdown、完整 `ready` 530/530 单测与 45/45 HTTP E2E，React/Vue/NestJS 构建成功，最终退出码 0。已追加 PR #55 验收记录。原有真实 PostgreSQL 测试涵盖跨租户 ACL、并发 CAS、Session 撤销和到期拒绝；本轮只增补已存在用例中的 Cookie 旧凭据重放、CSRF 摘要、撤销持久化和主体停用覆盖。**新增真实数据库断言待 Windows 在专用 `adui_scada_test` 复验，绝不运行在开发业务库或生产库。**
+
+### 2026-11-16 · 第三十三批隔离 PostgreSQL 与全量质量链复验完成
+
+维护者已在 Windows 上创建独立 `adui_scada_test`（回环 15432），四项 Prisma 迁移首次应用全部成功，`migrate status` 为最新；`pnpm run test:db` **3/3 文件、22/22 项通过**，包括真实 PostgreSQL 下的 Session/CSRF 摘要、撤销时间持久化、旧 Bearer/Cookie 失效、主体停用/过期拒绝、跨租户 ACL 及并发 CAS。随后单独 `vp check` 320/177 零告警、`docs:check` 84 Markdown，通过完整 `ready` 的 530/530 单测、45/45 HTTP E2E、两套 Web 与 NestJS 构建；末尾退出码检查未触发异常，未额外显示 `ready` 数字退出码。**本机 V0.3 第三十三批主闭环与受控回归完成，生产安全/密钥轮换另行验收。** PR #55 仍应保持 Draft、Assignee `@adui-dev`，未经批准不得合并。
+
+### 2026-11-16 · 第三十三批最终 Review P1/P2 最小修复待复验
+
+在已有主业务与安全验收后，PR #55 审查发现匿名 OIDC 登录事务会持续累积，以及有效保存请求在追加快照元数据后可能超过 2 MiB 并返回 500。已补服务进程内速率/并发兜底、每 30 秒限量回收已过期事务、最终快照明确容量错误映射 400，并追加单元和 HTTP E2E 用例；不修改已应用迁移和工业设备接口。**本批补丁尚待 Windows Vite+ / 全量质量链 / 隔离 PostgreSQL 验收；多实例统一网关限流属生产上线前置条件。**
+
+补充真实 PostgreSQL 回收专项：在已有隔离 `adui_scada_test` 数据库测试中新增 1 项，对到期与有效 OIDC 登录事务进行真实创建、分批清理及状态核验，并在 `finally` 清理测试行；必须由维护者在 Windows 重新执行 `test:db`，且确认环境只指向隔离库。

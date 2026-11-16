@@ -36,9 +36,22 @@ const defaults = {
   SCADA_DB_PORT: "15432",
   SCADA_DB_NAME: "adui_scada",
   SCADA_DB_USER: "adui_scada",
-  SCADA_DB_PASSWORD: "adui_scada_dev_only_2026",
-  SCADA_DATABASE_URL:
-    "postgresql://adui_scada:adui_scada_dev_only_2026@127.0.0.1:15432/adui_scada?schema=public",
+  SCADA_DB_PASSWORD: "",
+  SCADA_DATABASE_URL: "",
+  SCADA_OIDC_ENABLED: "false",
+  SCADA_OIDC_ALLOW_INSECURE_LOOPBACK: "false",
+  SCADA_OIDC_ISSUER: "",
+  SCADA_OIDC_CLIENT_ID: "",
+  SCADA_OIDC_CLIENT_SECRET: "",
+  SCADA_OIDC_REDIRECT_URI: "",
+  SCADA_OIDC_WEB_ORIGINS: "",
+  SCADA_OIDC_TRANSACTION_ENCRYPTION_KEY: "",
+  SCADA_OIDC_DEV_HTTPS_ENABLED: "false",
+  SCADA_OIDC_DEV_HTTPS_CERT_FILE: "",
+  SCADA_OIDC_DEV_HTTPS_KEY_FILE: "",
+  SCADA_LAB_KEYCLOAK_PORT: "18443",
+  SCADA_LAB_POSTGRES_PORT: "15432",
+  SCADA_LAB_REDIS_PORT: "16379",
 };
 const template = parseEnv(".env.example");
 assert.deepEqual({ ...template }, defaults, "根目录 .env.example 的默认值必须与配置契约一致");
@@ -102,8 +115,17 @@ if (existsSync(resolve(root, ".env"))) {
         ["fatal", "error", "warn", "info", "debug", "trace", "silent"].includes(value),
         "SCADA_LOG_LEVEL：必须是已支持的日志级别",
       );
-    } else if (key === "SCADA_API_DOCS_ENABLED" || key === "SCADA_LOCAL_DEMO_API_ENABLED") {
-      assert.ok(["true", "false"].includes(value), "SCADA_API_DOCS_ENABLED：必须是 true 或 false");
+    } else if (
+      key === "SCADA_API_DOCS_ENABLED" ||
+      key === "SCADA_LOCAL_DEMO_API_ENABLED" ||
+      key === "SCADA_OIDC_ENABLED" ||
+      key === "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK" ||
+      key === "SCADA_OIDC_DEV_HTTPS_ENABLED"
+    ) {
+      assert.ok(["true", "false"].includes(value), `${key}：必须是 true 或 false`);
+    } else if (key.startsWith("SCADA_OIDC_")) {
+      // OIDC 地址和凭据仅在显式启用时由 NestJS Zod 启动配置严格校验；
+      // 不能在本机环境检查中输出任何敏感值。
     } else if (key === "SCADA_DB_PASSWORD" || key === "SCADA_DATABASE_URL") {
       // 数据库密码和 URL 由后续配套检查比较，不在报错时泄漏原值。
     } else {
@@ -126,6 +148,7 @@ for (const [framework, key] of [
   assert.match(config, /import\s*\{[^}]*\bloadEnv\b[^}]*\}\s*from\s*"vite-plus"/);
   assert.ok(config.includes(key));
   assert.ok(config.includes("SCADA_DEMO_PORT"));
+  assert.ok(config.includes("resolveLoopbackOidcHttpsProxy"), "双框架必须复用 HTTPS 本机代理策略");
   assert.ok(config.includes("envDir,"));
   assert.ok(!config.includes("SCADA_DEMO_PROXY_TARGET"));
 }
@@ -165,35 +188,92 @@ for (const [source, key] of [
 ])
   assert.ok(source.includes(key), `运行时配置缺少变量：${key}`);
 
-const dbScripts = JSON.parse(read("package.json")).scripts;
-const postgresComposeCommand =
-  "docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml";
-for (const name of ["db:dev:up", "db:dev:down"]) {
-  assert.ok(
-    dbScripts[name]?.includes(postgresComposeCommand),
-    `${name}：必须显式从仓库根目录加载 .env`,
-  );
-}
-
-const demoComposeCommand = "docker compose --env-file .env -f deploy/docker/compose.demo.yaml";
-for (const name of ["docker:demo:up", "docker:demo:down", "docker:demo:logs", "docker:demo:ps"]) {
-  assert.ok(
-    dbScripts[name]?.startsWith(demoComposeCommand + " "),
-    `${name}：必须显式从仓库根目录加载 .env`,
-  );
-}
-
-const compose = read("deploy/docker/compose.demo.yaml");
+const packageScripts = JSON.parse(read("package.json")).scripts;
+const compose = read("deploy/docker/compose.yaml");
+assert.ok(compose.includes("name: adui-scada\n"), "唯一 Docker Compose 项目名称必须为 adui-scada");
 for (const [key, fallback] of [
   ["SCADA_REACT_PORT", defaults.SCADA_REACT_PORT],
   ["SCADA_VUE_PORT", defaults.SCADA_VUE_PORT],
   ["SCADA_SERVER_PORT", defaults.SCADA_SERVER_PORT],
   ["SCADA_DEMO_PORT", defaults.SCADA_DEMO_PORT],
+  ["SCADA_LAB_POSTGRES_PORT", defaults.SCADA_LAB_POSTGRES_PORT],
+  ["SCADA_LAB_KEYCLOAK_PORT", defaults.SCADA_LAB_KEYCLOAK_PORT],
+  ["SCADA_LAB_REDIS_PORT", defaults.SCADA_LAB_REDIS_PORT],
 ]) {
-  const substitution = "${" + key + ":-" + fallback + "}";
-  assert.ok(compose.includes(substitution), `Docker Compose 缺少变量：${key}`);
+  assert.ok(compose.includes("${" + key + ":-" + fallback + "}"), "统一 Compose 缺少端口：" + key);
 }
-assert.ok(compose.includes("127.0.0.1:"));
+for (const service of ["web-react", "web-vue", "server", "demo", "postgres", "redis", "keycloak"]) {
+  assert.ok(compose.includes("  " + service + ":"), "统一 Compose 缺少服务：" + service);
+}
+assert.ok(!compose.includes("  postgres-dev:"), "不得保留第二个 PostgreSQL 服务");
+assert.ok(!compose.includes("legacy-db"), "不得保留旧开发数据库 Profile");
+assert.ok(compose.includes("127.0.0.1:"), "统一 Docker 只能发布本机回环端口");
+for (const oldVolume of [
+  "adui-scada-oidc-lab_lab-postgres-data",
+  "adui-scada-oidc-lab_lab-redis-data",
+  "adui-scada-postgres-dev_scada-postgres-data",
+]) {
+  assert.ok(!compose.includes(oldVolume), "新 Docker Compose 不得挂载历史数据卷");
+}
+assert.ok(!compose.includes("external: true"), "全新安装必须自行创建独立数据卷");
+assert.ok(compose.includes("  postgres-data:"), "缺少 PostgreSQL 持久化卷");
+assert.ok(compose.includes("  redis-data:"), "缺少 Redis 持久化卷");
+assert.ok(compose.includes("POSTGRES_DB: adui_scada"), "业务数据库必须为 adui_scada");
+assert.ok(compose.includes("POSTGRES_USER: adui_scada"), "业务数据库用户必须为 adui_scada");
+assert.ok(
+  compose.includes("jdbc:postgresql://postgres:5432/adui_scada_keycloak"),
+  "Keycloak 必须使用同一 PostgreSQL 的独立逻辑库",
+);
+
+for (const old of [
+  "deploy/docker/compose.demo.yaml",
+  "deploy/docker/compose.postgres.dev.yaml",
+  "deploy/docker/compose.oidc.lab.yaml",
+  "deploy/docker/compose.all.dev.yaml",
+  "scripts/docker-all-dev.mjs",
+  "scripts/docker-all-dev.cases.mjs",
+]) {
+  assert.ok(!existsSync(resolve(root, old)), "请移除旧版 Docker 入口：" + old);
+}
+for (const action of ["plan", "up", "down", "ps", "logs"]) {
+  assert.ok(
+    packageScripts["docker:" + action]?.includes("docker-stack.mjs " + action),
+    "缺少最新 Docker 命令：" + action,
+  );
+}
+assert.ok(!packageScripts["docker:migrate"], "全新安装不得保留旧容器迁移入口");
+assert.ok(
+  packageScripts["docker:up"]?.includes("node scripts/init-docker-db.mjs"),
+  "首次 Docker 启动必须执行 Prisma migrate deploy",
+);
+assert.ok(
+  packageScripts["docker:db:init"] === "node scripts/init-docker-db.mjs",
+  "缺少安全的数据库迁移重试命令",
+);
+assert.equal(
+  packageScripts["docker:db:status"],
+  "node scripts/init-docker-db.mjs --status",
+  "Docker 数据库状态查询必须复用本机随机凭据及只读 Prisma 命令",
+);
+assert.ok(
+  packageScripts["test:docker:db"]?.includes("init-docker-db.cases.mjs"),
+  "缺少首次数据库初始化安全测试",
+);
+assert.ok(
+  packageScripts.ready.includes("pnpm run test:docker:db"),
+  "首次数据库初始化安全测试必须加入 ready",
+);
+assert.ok(packageScripts.ready.includes("pnpm run test:docker"), "Docker 安全测试必须进入 ready");
+assert.ok(packageScripts["test:docker"].includes("scripts/docker-stack.cases.mjs"));
+for (const key of Object.keys(packageScripts)) {
+  assert.ok(
+    !/^docker:(demo|lab|all):/.test(key) && !key.startsWith("db:dev:"),
+    "旧版 Docker 命令必须删除：" + key,
+  );
+}
+assert.ok(read("deploy/docker/oidc-lab/adui-scada-realm.json").includes("adui-scada-bff"));
+assert.ok(read("scripts/prepare-oidc-lab.mjs").includes("randomBytes(32)"));
+assert.ok(read("scripts/prepare-oidc-lab.mjs").includes('resolve(root, ".local", "docker")'));
 const nginx = read("deploy/docker/nginx.conf");
 assert.ok(nginx.includes("${SCADA_SERVER_PORT}"));
 assert.ok(nginx.includes("${SCADA_DEMO_PORT}"));
@@ -204,8 +284,13 @@ assert.ok(
 const ignore = read(".gitignore");
 assert.match(ignore, /^\.env$/m);
 assert.match(ignore, /^\.env\.\*$/m);
+assert.ok(ignore.includes(".local/docker/"), "本机随机凭据必须被 Git 忽略");
 assert.match(ignore, /^!\.env\.example$/m);
 assert.match(read(".dockerignore"), /^\.env$/m);
+assert.ok(
+  read(".dockerignore").includes(".local/docker/"),
+  "本机随机凭据不能进入 Docker 构建上下文",
+);
 assert.match(read(".editorconfig"), /^end_of_line = lf$/m);
 assert.ok(read("packages/tooling/src/format.ts").includes('endOfLine: "lf"'));
 assert.match(read(".gitattributes"), /^\* text=auto eol=lf$/m);

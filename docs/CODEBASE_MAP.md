@@ -1,5 +1,7 @@
 # ADui SCADA · 代码地图
 
+> **开始编码前**：按根目录 [AGENTS.md](../AGENTS.md) 的要求，先重读 [AI 编码错误复盘清单](AI_MISTAKES.md) 全文；本文件只用来定位代码与文档，不能替代复盘与仓库规范。
+
 > 2026-11-09，基于 V0.1 Web 整合开发分支；分支尚待完整本地依赖安装、类型检查及构建验收。
 
 | 路径                                            | 已实现职责                                                   |
@@ -580,3 +582,168 @@
 - scripts/test-studio-browser.mjs：新增 --legacy 模式，使用隔离浏览器分别测试 React/Vue 的 localStorage 旧草稿迁移、IndexedDB 旧 Schema 事务升级与 Project Snapshot 历史摘要校验。
 - package.json：新增 test:legacy:browser 入口。
 - docs/adr/0064-legacy-browser-migration-validation.md：记录三条真实浏览器迁移路径、SHA-256 与原记录保留边界。
+
+## 2026-11-14 · 第三十三批目标目录（规划，尚未落地）
+
+- apps/server/src/database/database.module.ts：计划统一导出 PrismaService 单例。
+- apps/server/src/auth/oidc/：计划实现固定 Issuer Discovery、OIDC 登录事务、外部身份映射和 BFF 回调。
+- apps/server/src/projects/：计划扩展工程创建/列表/摘要/历史版本 API，沿用现有事务仓储和 ACL。
+- `packages/api-client/src/index.ts`：已新增独立共享工程 API Client，统一同源 Fetch、Cookie CSRF、中文错误、工程摘要/历史快照及 CAS 协议；不依赖 Vue/React UI。
+- `packages/api-client/test/api-client.test.ts`：Mock Fetch 覆盖安全请求、异常状态、请求字段白名单、SHA-256 读取与追加等。
+- `packages/api-client/package.json`、两端 Web Manifest、`pnpm-lock.yaml`、根 `vite.config.ts` 与共享质量入口：双框架引用同一包并纳入 Vitest/类型检查；真实 pnpm/TypeScript 6/Vite+ 验收仍待运行。
+- docs/adr/0065-oidc-bff-and-project-api.md、docs/plans/v0.3-batch-33-oidc-project-api.md：本批架构决策和实施计划。以上代码路径均为计划，不代表当前 main 已存在。
+
+## 2026-11-14 · 第三十三批阶段 A 实际落地的文件
+
+- `apps/server/src/database/database.module.ts`：共享 PrismaService 单例提供方，只有显式引入的业务模块才可实例化。
+- `apps/server/src/auth/scada-identity.module.ts` 与 `apps/server/src/projects/project-persistence.module.ts`：改为导入 DatabaseModule。
+- `apps/server/src/config/oidc-startup.config.ts`：OIDC 默认关闭配置、HTTPS/开发回环地址、固定回调及加密密钥校验。
+- `apps/server/src/config/oidc-startup.config.spec.ts`：配置、密钥、URL、安全开关负面测试。
+- `apps/server/src/database/database.module.spec.ts`：共享 Prisma 模块与默认不挂载的安全装配检查。
+- `apps/server/src/main.ts`：认证流程未实现前的 OIDC enabled 显式拒绝启动。
+- `apps/server/prisma/schema.prisma`：外部身份预绑定、短期 OIDC 事务与会话可空 CSRF 摘要。
+- `apps/server/prisma/migrations/20261114000000_oidc_identity_transactions/migration.sql`：增量 PostgreSQL DDL、约束、索引及中文数据库元数据注释。
+- 根 `.env.example` 与 `scripts/check-env-config.mjs`：默认禁用的 OIDC 配置占位和环境检查。
+
+OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client 及第三方依赖锁文件仍未实现；上述路径不可被视作已开放的认证能力。
+
+### 第三十三批阶段 A 实际目录补充（2026-11-14）
+
+- `docs/AI_MISTAKES.md`：AI 每次编码前必读的真实错误复盘与防复发清单（9 项案例）。
+- `apps/server/src/database/database.module.ts`：共享 PrismaService 单例模块。
+- `apps/server/src/config/oidc-startup.config.ts`：默认关闭的 OIDC 启动配置校验。
+- `apps/server/prisma/migrations/20261114000000_oidc_identity_transactions/migration.sql`：外部身份、OIDC 事务和 CSRF 摘要的增量 SQL。
+- OIDC 依赖 `openid-client@6.8.9` 已加入 Catalog、Server Manifest 和锁文件；登录/回调、会话 Cookie/CSRF 及工程 Controller 仍未实现。
+
+### 第三十三批新增真实 PostgreSQL 测试
+
+- `apps/server/test/oidc-schema.db-spec.ts`：独立 `test:db` 入口，验证 OIDC 增量迁移真实落库、迁移登记、外键/约束/索引及中文数据库元数据；仅允许本机 `adui_scada_test`。
+
+### 第三十三批阶段 B 第一小批：OIDC Discovery
+
+- `apps/server/src/auth/oidc-provider-discovery.service.ts`：固定 Issuer Discovery、元数据能力校验、HTTPS/回环 HTTP 请求边界、惰性缓存与安全错误映射。
+- `apps/server/src/auth/oidc-provider-discovery.service.spec.ts`：Mock Fetch Discovery、元数据负例、端点协议边界、并发复用及失败重试测试。
+- `apps/server/src/auth/scada-identity.module.ts`：通过严格启动配置 Token 注册 Discovery 服务；该模块仍未由默认 AppModule 挂载。
+- `apps/server/src/config/oidc-startup.config.ts`：拒绝将 `/.well-known/` Discovery 文档路径误配为 Issuer。
+- `apps/server/src/main.ts`：继续在认证、CSRF 与工程 ACL 全部完成前拒绝启用 OIDC。
+
+### 第三十三批阶段 B 第二小批：OIDC 一次性登录事务
+
+- `apps/server/src/auth/oidc-login-transaction.service.ts`：生成 State/Nonce/PKCE、AES-256-GCM 加密 verifier、浏览器绑定摘要、站内回跳路径校验、PostgreSQL 一次性原子消费。
+- `apps/server/src/auth/oidc-login-transaction.service.spec.ts`：授权请求参数、密文往返、跨浏览器/过期/重复/并发消费、回跳路径和数据库异常测试。
+- `apps/server/src/auth/scada-identity.module.ts`：注册事务服务；模块仍未由默认 AppModule 挂载。
+
+### 第三十三批阶段 B 第三小批：OIDC 授权码回调
+
+- `apps/server/src/auth/oidc-callback.service.ts`：固定回调 URI、Authorization Code + PKCE 兑换、State/Nonce/Issuer/Audience/azp/Subject 校验、预绑定 `(iss, sub)` 身份查询与本地会话签发。
+- `apps/server/src/auth/oidc-callback.service.spec.ts`：Mock 授权码兑换、ID Token Claims、外部身份映射、会话签发与错误脱敏测试。
+- `apps/server/src/auth/scada-identity.module.ts`：注入 openid-client `authorizationCodeGrant` 并注册回调服务；模块仍未由默认 AppModule 挂载。
+- 当前尚无 OIDC Controller；回调服务的 sessionToken 仅供后续服务端 Controller 设置 HttpOnly Cookie。
+
+### 第三十三批阶段 B 第四小批：BFF Cookie 与 CSRF 会话保护
+
+- `apps/server/src/auth/auth-session.service.ts`：新会话同时签发独立 CSRF Token、只存摘要；提供 Cookie 会话验证和旧 Bearer 兼容。
+- `apps/server/src/auth/scada-auth-cookie.ts`：构造/清除 `__Host-` Session 与 CSRF Cookie，统一 Secure、HttpOnly、SameSite、Path 和有效期属性。
+- `apps/server/src/auth/scada-session.guard.ts`：显式 Bearer/Cookie 双路径、凭据混用拒绝、精确 Origin、Fetch Metadata、CSRF 双提交与数据库摘要验证。
+- `apps/server/src/auth/scada-auth-cookie.spec.ts`：Cookie 签发与清除属性测试。
+- `apps/server/src/auth/scada-session.guard.spec.ts`：Bearer 兼容、Cookie 请求、CSRF/Origin/Fetch Metadata 和审计脱敏测试。
+- `apps/server/src/auth/scada-identity.spec.ts`：会话 CSRF 摘要存储、Cookie 校验与旧 Bearer 会话兼容回归。
+- `apps/server/src/security/scada-security-audit.ts`：新增 Cookie/CSRF/Origin/Fetch Metadata 固定拒绝原因码。
+- 当前无 HTTP Controller；Identity 模块仍未由默认 AppModule 挂载。
+
+### 第三十三批阶段 B 第五小批：OIDC BFF HTTP 控制器与认证路由
+
+- `apps/server/src/auth/scada-auth.controller.ts`：OIDC 登录发起/回调、最小本地身份查询与当前会话注销；只编排既有服务，不重复实现 OIDC 协议。
+- `apps/server/src/auth/scada-auth-cookie.ts`：新增短时 `__Host-adui-scada-oidc-browser` Cookie 与严格 Cookie 读取函数，保留 Session/CSRF Cookie 签发和清除。
+- `apps/server/src/auth/scada-identity.module.ts`：仅在 OIDC 启用根模块中注册 `ScadaAuthController`。
+- `apps/server/src/app.module.ts`：新增 `OidcEnabledAppModule`，只组合基础 AppModule 和 ScadaIdentityModule，不加载工程持久化模块。
+- `apps/server/src/main.ts`：根据完整 OIDC 配置选择根模块；默认健康模块保持数据库隔离，OIDC 与本机模拟 API 冲突时拒绝启动。
+- `apps/server/test/oidc-auth.controller.e2e-spec.ts`：登录重定向、Cookie、回调、`me/logout`、CSRF 与 Bearer 兼容 HTTP E2E。
+- `apps/server/src/database/database.module.spec.ts`、`apps/server/test/app.e2e-spec.ts`：模块装配与默认根模块身份路由 404 回归。
+
+## 第三十三批第六小批：服务端工程 API（待验收草稿）
+
+- `apps/server/src/projects/prisma-project-version-store.ts`：扩展可信主体的工程创建、ACL 筛选列表、共享锁详情、历史摘要分页，继续保留事务 CAS 追加和历史快照读取。
+- `apps/server/src/projects/project-api.controller.ts`：六条 `/api/v1/projects` HTTP API，使用 Session Guard 与工程权限 Guard。
+- `apps/server/src/projects/project-api.exception-filter.ts`：明确 400/404/409 领域错误响应。
+- `apps/server/src/projects/project-api.module.ts`：OIDC 启用根模块专用工程 API 模块，复用身份模块与工程持久化模块。
+- `apps/server/src/projects/project-api.store.spec.ts`：Mock 事务仓储单元测试。
+- `apps/server/test/projects-api.e2e-spec.ts`：Supertest 工程 HTTP、Bearer、Cookie CSRF、授权与错误映射回归。
+- `apps/server/test/project-api.db-spec.ts`：只对本机隔离 `adui_scada_test` 测试库执行工程创建、租户、竞争与审计事务回滚回归。
+- `apps/server/src/main.ts`、`apps/server/src/security/http-server-policy.ts`：HTTP 2 MiB JSON 请求体限制。
+- `apps/server/src/database/database.module.spec.ts`、`apps/server/test/app.e2e-spec.ts`：模块挂载和默认根模块 404 边界测试。
+
+以上内容仍需实际运行 `vp check`、`ready` 与 `test:db`，不得当作已通过验收。
+
+## 第三十三批 · 全新空库迁移专项工具（未完成真实空库验收）
+
+- `scripts/verify-fresh-postgres-migrations.mjs`：从根目录本机 `adui_scada` 连接推导人工创建的 `adui_scada_fresh_*` 隔离库；确认目标为空后执行两次 Prisma 迁移部署，核对迁移登记和业务表，不创建、删除或重置数据库。
+- `scripts/verify-fresh-postgres-migrations.cases.mjs`：使用 Node.js 内置 `node:test` 验证连接来源、数据库命名、地址、端口及 Schema 拒绝策略；与通用 Vitest 测试文件命名隔离。
+- 验收命令与注意事项见 `docs/HARNESS.md`；纯逻辑单测 6/6 通过不代表真实 PostgreSQL 空库迁移已经通过。
+
+## 第三十三批第八小批 · Studio 服务端工程 UI 与共享会话逻辑
+
+- `packages/api-client/src/studio-session.ts`：框架无关的服务端 CAS 保存基线；按工程、租户、主体和显式载入的修订号约束写入，冲突失效基线，无 IndexedDB 访问。
+- `packages/api-client/test/studio-session.test.ts`：9 项 Mock API Client 会话安全测试（候选，待真实 Vitest 验收）。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：新增对应的“服务端工程”菜单，提供身份检查、服务端保存、分页历史、内容对比及确认载入；本地草稿、浏览器历史入口与原持久化逻辑不变。
+- 旧版/本地草稿恢复、JSON 导入和本地历史载入显式清理云端 CAS 基线；真实 IdP、同源 HTTPS、双框架云端 E2E 未纳入本批已验收范围。
+
+## 第三十三批第九小批：本机 OIDC HTTPS 开发代理
+
+- scripts/oidc-https-dev-proxy.mjs、scripts/oidc-https-dev-proxy.d.mts：React/Vue 共用的默认关闭、仅本机 TLS 和精确 Origin/回调校验的开发代理策略。
+- scripts/oidc-https-dev-proxy.cases.mjs：10 项 Node 内置配置测试，覆盖生产/非回环/端口/Origin/回调/证书/固定代理目标。
+- apps/web-react/vite.config.ts、apps/web-vue/vite.config.ts：仅显式开启的 Vite serve 增加 HTTPS 与 /api/v1 同源代理，原 /demo 不变。
+- .env.example、scripts/check-env-config.mjs：新增关闭状态及证书文件空占位，并维持根目录唯一 .env 校验。
+- docs/HARNESS.md：维护者真实 HTTPS、IdP、同源 Cookie、React→服务端→Vue 往返验收步骤；尚未实际联调。
+
+### 第三十三批第十小批：OIDC 本机 HTTPS 匿名只读诊断
+
+- `scripts/verify-oidc-https-readonly.mjs`：从仓库根 `.env` 读取联调开关和已登记的两个 HTTPS Origin，仅向 `127.0.0.1` 发起无 Cookie 的 `GET /api/v1/auth/me`；使用 Node 原生证书校验，并拒绝重定向、HTML 回退或非预期 401 JSON。
+- `scripts/verify-oidc-https-readonly.cases.mjs`：九项本机目标、开关、证书前置契约对应的离线 Mock 请求测试；不访问真实 IdP、PostgreSQL 或工业设备。
+- 根 `package.json`：`test:oidc:https:readonly` 纳入 `ready`；`verify:oidc:https:readonly` 为显式人工真实网络检查，不纳入默认质量链。
+- `docs/HARNESS.md`：真实 TLS 只读联调的前置配置、Windows 操作和失败即停止规则。本批不更改 Vue/React 应用业务行为、NestJS 身份策略或数据库 Schema。
+
+### 本机 OIDC Lab 依赖栈（第三十三批）
+
+- `deploy/docker/compose.oidc.lab.yaml`：与演示和原有开发数据库互不共享命名卷的单一 Docker Compose 项目；提供回环绑定的 PostgreSQL、Redis 与 Keycloak。
+- `deploy/docker/oidc-lab/init-keycloak-db.sql`：只在新 PostgreSQL Lab 数据卷首次初始化时创建专用 Keycloak 数据库；不清空或重置现有库。
+- `deploy/docker/oidc-lab/adui-scada-realm.json`：Keycloak 首次启动导入的本机 Realm、机密客户端、严格 React 回调和 PKCE 配置，不含静态 Client Secret。
+- `scripts/prepare-oidc-lab.mjs`：显式 `docker:lab:up` 的本机 mkcert/秘密文件准备入口，不修改根 `.env`，不把随机凭据写进 Git 或 Docker 构建上下文。
+- `scripts/prepare-oidc-lab.cases.mjs`：六项离线启动安全测试。
+- `.local/oidc-lab/`：运行时生成的机密和本机证书目录，Git/Docker 忽略，不是仓库可提交文件；Redis 目前未接入 NestJS。
+
+### 第三十三批真实 OIDC 根模块 Guard 注入修复（E-018）
+
+- `apps/server/src/auth/scada-identity.module.ts`：向仅有 `ProjectApiModule` 消费的身份依赖导出共享 `DatabaseModule`、`ScadaSecurityAuditService` 和 `SCADA_OIDC_STARTUP_CONFIG`，供 Controller 上的 `@UseGuards` 在工程模块上下文解析；不改变 Guard 业务逻辑。
+- `apps/server/src/database/database.module.spec.ts`：新增完整导出契约检查，防止未来将 Guard 与其安全依赖拆开导出。
+- `apps/server/test/oidc-module-bootstrap.e2e-spec.ts`：以真实 `OidcEnabledAppModule` 进行 Nest 模块编译和 HTTP 初始化，但替换 Prisma 和测试 OIDC 配置；不访问真实数据库/IdP，检查未认证身份与工程 API 保持 401 JSON。
+
+### 第三十三批第十三小批：OIDC Lab 受控身份预绑定工具
+
+- `scripts/oidc-lab-identity.mjs`：显式运营工具，必须由维护者从 Keycloak Users 详情页提供 UUID；只允许已启用可信 HTTPS 的本机 Lab Realm 和独立 `adui_scada_oidc_lab` PostgreSQL，默认预览回滚；需 `--apply --confirm-lab adui_scada_oidc_lab` 才会在可串行化事务中创建可信本地主体与唯一外部映射，拒绝冲突、停用主体、已有工程 ACL 和未经迁移的数据库。通过服务端已有 `pg` 依赖执行参数化 SQL，不新增依赖或公开 API。
+- `scripts/oidc-lab-identity.cases.mjs`：14 项不连接数据库的命令参数、回环目标、幂等、事务提交/回滚与权限保护离线用例。
+- `package.json`：新增 `test:oidc:identity` 并纳入默认 `ready`；`oidc:lab:identity` 为显式手工绑定命令，绝不由 `ready`、`docker:lab:up` 自动执行。
+
+### 本机 Docker 唯一 Compose 入口（第三十三批）
+
+- `deploy/docker/compose.yaml`：唯一受维护的 `adui-scada` Compose；7 服务，单一 PostgreSQL 容器（SCADA + Keycloak 逻辑数据库），保留原 SCADA/Keycloak 与 Redis 持久化卷。
+- `scripts/docker-stack.mjs`：白名单历史容器迁移及最新 `plan/migrate/up/down/ps/logs` 命令；不运行旧开发 PostgreSQL，不删除已有卷。
+- `scripts/docker-stack.cases.mjs`：17 项受控配置、旧容器标签和持久化保护用例。
+- `scripts/prepare-oidc-lab.mjs`：仅用于本机 HTTPS 证书和随机凭据准备，并不再创建单独的 OIDC Lab Compose 项目。
+- `package.json`：`docker:*` 只保留新统一入口；`test:docker` 加入 `ready`，历史 `docker:demo/lab/all` 与 `db:dev` 命令删除。
+
+### 第三十三批 · 单一 Docker 全新安装最终入口
+
+- `deploy/docker/compose.yaml`：唯一 `adui-scada` Compose，7 容器、1 PostgreSQL，SCADA `adui_scada` 和 Keycloak `adui_scada_keycloak` 分为两个逻辑数据库，使用 Docker 新项目自有的 PostgreSQL/Redis 命名卷。
+- `scripts/docker-stack.mjs`：只提供本机 `plan/up/down/ps/logs`，旧项目容器若存在则拒绝启动，不读取/删除旧数据卷。
+- `scripts/docker-stack.cases.mjs`：14 项本机新库/新卷和历史项目隔离安全检查。
+- `scripts/prepare-oidc-lab.mjs`：在 `.local/docker/` 生成/复用本机随机凭据与 TLS 文件，保留原业务函数名称以最小化影响，不能自动覆盖已有秘密。
+- `scripts/init-docker-db.mjs`：从 Git 忽略的随机凭据构造固定回环数据库 URL，调用 Prisma `migrate deploy`；`scripts/init-docker-db.cases.mjs` 校验独立数据库和密码保护。
+- `deploy/docker/oidc-lab/init-keycloak-db.sql`：首次 PostgreSQL 初始化时创建 Keycloak 独立逻辑库。
+- `.env.example`、`scripts/check-env-config.mjs`：统一数据库名称 `adui_scada`、端口 `15432`，OIDC 默认关闭，密码不入 Git。
+
+### 本机 Docker 数据库状态查询（第三十三批 E-021）
+
+- `scripts/init-docker-db.mjs`：原 `docker:db:init` 继续幂等执行 `prisma migrate deploy`；新增白名单 `--status` 由 `docker:db:status` 调用，使用与 Docker 启动一致的 Git 忽略本机随机凭据执行只读 `prisma migrate status`，不修改通用 `db:migrate:status` 的根 `.env` 语义。
+- `scripts/init-docker-db.cases.mjs`：覆盖只读参数白名单、旧根 `.env`/进程密码覆盖、数据库地址精确回环及旧库拒绝。
+- `package.json`、`scripts/check-env-config.mjs`：注册并校验 `docker:db:status`，不得将新命令变为破坏性迁移或输出凭据。

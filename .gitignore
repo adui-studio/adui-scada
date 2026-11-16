@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# 旧 OIDC 凭据仅保留作历史恢复，不参与新安装
+# 最新 Docker 凭据与 TLS 私钥
+.local/oidc-lab/
+.local/docker/
+
 # 环境变量文件
 .env
 .env.*

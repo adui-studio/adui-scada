@@ -10,6 +10,9 @@ export const SCADA_NEST_HTTP_OPTIONS = {
   return503OnClosing: true,
 } as const;
 
+/** 工程文档与共享 Core 一致，HTTP JSON 请求体最大为 2 MiB。 */
+export const SCADA_HTTP_BODY_LIMIT_BYTES = 2 * 1024 * 1024;
+
 /**
  * 仅限制 HTTP 请求的接收阶段与连接复用，不设置应用响应超时。
  * 长期 SSE 响应不会因为 requestTimeout 被强制中断。
