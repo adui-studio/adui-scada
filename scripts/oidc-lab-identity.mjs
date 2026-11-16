@@ -106,9 +106,7 @@ export function resolveLabIdentityTarget(env) {
   }
   const port = env.SCADA_LAB_POSTGRES_PORT;
   const validPort =
-    typeof port === "string" &&
-    /^[1-9][0-9]{0,4}$/.test(port) &&
-    Number(port) <= 65535;
+    typeof port === "string" && /^[1-9][0-9]{0,4}$/.test(port) && Number(port) <= 65535;
   const options = [...url.searchParams];
   if (
     url.protocol !== "postgresql:" ||
@@ -184,7 +182,9 @@ export async function reconcileLabIdentity(client, target, binding) {
 
     if (!binding.apply) {
       await client.query("ROLLBACK");
-      return external.rows.length === 1 ? "已存在匹配的可信预绑定，仅完成只读核对" : "只读预览完成：未发现冲突，未写入数据库";
+      return external.rows.length === 1
+        ? "已存在匹配的可信预绑定，仅完成只读核对"
+        : "只读预览完成：未发现冲突，未写入数据库";
     }
 
     if (external.rows.length === 0) {
@@ -200,7 +200,9 @@ export async function reconcileLabIdentity(client, target, binding) {
       );
     }
     await client.query("COMMIT");
-    return external.rows.length === 1 ? "已有匹配的可信身份预绑定，未新增记录" : "本机测试身份预绑定已提交，未授予任何工程权限";
+    return external.rows.length === 1
+      ? "已有匹配的可信身份预绑定，未新增记录"
+      : "本机测试身份预绑定已提交，未授予任何工程权限";
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
