@@ -35,13 +35,17 @@ function safeDependencies() {
 
 void describe("OIDC 本机 HTTPS 同源代理安全策略", () => {
   void it("默认不开启 HTTPS 代理，不读取证书与密钥", () => {
-    assert.equal(resolveLoopbackOidcHttpsProxy({ SCADA_OIDC_DEV_HTTPS_ENABLED: "false" }, 15173), null);
+    assert.equal(
+      resolveLoopbackOidcHttpsProxy({ SCADA_OIDC_DEV_HTTPS_ENABLED: "false" }, 15173),
+      null,
+    );
     assert.equal(resolveLoopbackOidcHttpsProxy({}, 15174), null);
   });
 
   void it("拒绝错误的开关格式和生产环境", () => {
     assert.throws(
-      () => resolveLoopbackOidcHttpsProxy({ ...validEnv(), SCADA_OIDC_DEV_HTTPS_ENABLED: "1" }, 15173),
+      () =>
+        resolveLoopbackOidcHttpsProxy({ ...validEnv(), SCADA_OIDC_DEV_HTTPS_ENABLED: "1" }, 15173),
       /只能设置为 true 或 false/,
     );
     assert.throws(
@@ -64,10 +68,7 @@ void describe("OIDC 本机 HTTPS 同源代理安全策略", () => {
   });
 
   void it("拒绝 Web、NestJS 非回环地址", () => {
-    for (const difference of [
-      { SCADA_WEB_HOST: "0.0.0.0" },
-      { SCADA_SERVER_HOST: "localhost" },
-    ]) {
+    for (const difference of [{ SCADA_WEB_HOST: "0.0.0.0" }, { SCADA_SERVER_HOST: "localhost" }]) {
       assert.throws(
         () => resolveLoopbackOidcHttpsProxy({ ...validEnv(), ...difference }, 15173),
         /只允许 Web 与 NestJS 绑定/,
@@ -88,10 +89,7 @@ void describe("OIDC 本机 HTTPS 同源代理安全策略", () => {
         /端口|整数/,
       );
     }
-    assert.throws(
-      () => resolveLoopbackOidcHttpsProxy(validEnv(), 15175),
-      /端口必须各自独立/,
-    );
+    assert.throws(() => resolveLoopbackOidcHttpsProxy(validEnv(), 15175), /端口必须各自独立/);
   });
 
   void it("必须精确列出 React/Vue 两个 HTTPS Origin，拒绝外站与路径", () => {
@@ -103,7 +101,8 @@ void describe("OIDC 本机 HTTPS 同源代理安全策略", () => {
       "https://127.0.0.1:15173,https://127.0.0.1:15173",
     ]) {
       assert.throws(
-        () => resolveLoopbackOidcHttpsProxy({ ...validEnv(), SCADA_OIDC_WEB_ORIGINS: origins }, 15173),
+        () =>
+          resolveLoopbackOidcHttpsProxy({ ...validEnv(), SCADA_OIDC_WEB_ORIGINS: origins }, 15173),
         /必须精确配置/,
       );
     }
@@ -117,7 +116,11 @@ void describe("OIDC 本机 HTTPS 同源代理安全策略", () => {
       "https://127.0.0.1:15173/api/v1/auth/oidc/callback?next=/",
     ]) {
       assert.throws(
-        () => resolveLoopbackOidcHttpsProxy({ ...validEnv(), SCADA_OIDC_REDIRECT_URI: redirect }, 15173),
+        () =>
+          resolveLoopbackOidcHttpsProxy(
+            { ...validEnv(), SCADA_OIDC_REDIRECT_URI: redirect },
+            15173,
+          ),
         /OIDC 回调必须使用/,
       );
     }
@@ -138,18 +141,24 @@ void describe("OIDC 本机 HTTPS 同源代理安全策略", () => {
 
   void it("读取或 TLS 校验失败时拒绝启动，错误信息不泄露证书路径", () => {
     const readError = assert.throws(
-      () => resolveLoopbackOidcHttpsProxy(validEnv(), 15173, {
-        readFile: () => { throw new Error("私钥文件路径不得泄露"); },
-      }),
+      () =>
+        resolveLoopbackOidcHttpsProxy(validEnv(), 15173, {
+          readFile: () => {
+            throw new Error("私钥文件路径不得泄露");
+          },
+        }),
       /无法读取或校验/,
     );
     // Node 断言只检查受控异常消息；没有访问任何真实文件。
     assert.equal(readError, undefined);
     assert.throws(
-      () => resolveLoopbackOidcHttpsProxy(validEnv(), 15173, {
-        ...safeDependencies(),
-        verifyTls: () => { throw new Error("证书私钥不匹配"); },
-      }),
+      () =>
+        resolveLoopbackOidcHttpsProxy(validEnv(), 15173, {
+          ...safeDependencies(),
+          verifyTls: () => {
+            throw new Error("证书私钥不匹配");
+          },
+        }),
       /无法读取或校验/,
     );
   });

@@ -116,9 +116,11 @@ export function resolveLoopbackOidcHttpsProxy(env, webPort, deps = {}) {
     if (!Buffer.isBuffer(cert) || !Buffer.isBuffer(key) || cert.length === 0 || key.length === 0) {
       throw new TypeError("空证书");
     }
-    const verifyTls = deps.verifyTls ?? ((certificate, privateKey) => {
-      createSecureContext({ cert: certificate, key: privateKey });
-    });
+    const verifyTls =
+      deps.verifyTls ??
+      ((certificate, privateKey) => {
+        createSecureContext({ cert: certificate, key: privateKey });
+      });
     verifyTls(cert, key);
   } catch {
     throw new Error("本机 HTTPS 证书或私钥无法读取或校验");

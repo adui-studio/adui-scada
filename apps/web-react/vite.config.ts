@@ -28,7 +28,10 @@ export default defineConfig(({ mode, command }) => {
   // 仅在显式开启 OIDC 的本机 Vite serve 启用 HTTPS，同源代理不参与生产构建。
   const oidcHttps =
     command === "serve"
-      ? resolveLoopbackOidcHttpsProxy({ ...env, NODE_ENV: mode === "production" ? "production" : process.env.NODE_ENV }, port)
+      ? resolveLoopbackOidcHttpsProxy(
+          { ...env, NODE_ENV: mode === "production" ? "production" : process.env.NODE_ENV },
+          port,
+        )
       : null;
 
   return {
