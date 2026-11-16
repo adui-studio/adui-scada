@@ -126,6 +126,22 @@ function parseSaveRequest(input: unknown, projectId: string) {
 }
 
 /** 创建工程只接受文档本身，租户、主体和审计信息一律来自可信会话。 */
+/** 只映射最终快照容量超限；其他摘要、数据库或编程错误保持原样抛出。 */
+async function createCheckedSnapshot(
+  document: ScadaDocument,
+  revision: number,
+  createdAt: string,
+): Promise<ProjectSnapshot> {
+  try {
+    return await createProjectSnapshot(document, { revision, createdAt });
+  } catch (error) {
+    if (error instanceof RangeError && error.message === "工程版本快照超过 2 MiB 限制") {
+      throw new ProjectRequestValidationError("工程版本快照超过 2 MiB 限制");
+    }
+    throw error;
+  }
+}
+
 function parseProjectCreateDocument(input: unknown): ScadaDocument {
   if (!isPlainRecord(input)) {
     throw new ProjectRequestValidationError("工程创建请求必须为普通对象");
@@ -288,10 +304,7 @@ export class PrismaProjectVersionStore {
     requirePrincipal(principal);
     const document = parseProjectCreateDocument(input);
     const createdAt = new Date().toISOString();
-    const snapshot = await createProjectSnapshot(document, {
-      revision: 1,
-      createdAt,
-    });
+    const snapshot = await createCheckedSnapshot(document, 1, createdAt);
     const snapshotData = JSON.parse(JSON.stringify(snapshot)) as Prisma.InputJsonValue;
 
     return this.database.client.$transaction(async (tx) => {
@@ -482,10 +495,11 @@ export class PrismaProjectVersionStore {
       }
 
       const revision = Number(head + 1n);
-      const snapshot = await createProjectSnapshot(request.document, {
+      const snapshot = await createCheckedSnapshot(
+        request.document,
         revision,
-        createdAt: new Date().toISOString(),
-      });
+        new Date().toISOString(),
+      );
       // Prisma JSONB 需要可序列化的可写 JSON，不直接传入冻结的 Core 快照对象。
       const snapshotData = JSON.parse(JSON.stringify(snapshot)) as Prisma.InputJsonValue;
       await tx.scadaProjectVersion.create({

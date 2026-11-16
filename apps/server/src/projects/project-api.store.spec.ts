@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { waterTreatmentDemoDocument } from "@adui/scada-core";
+import { PROJECT_SNAPSHOT_MAX_BYTES, waterTreatmentDemoDocument } from "@adui/scada-core";
 import type { PrismaService } from "../database/prisma.service.js";
 import type {
   ProjectAccessAction,
@@ -215,6 +215,35 @@ describe("工程 API 事务仓储", () => {
     expect(harness.grants.createMany).not.toHaveBeenCalled();
     expect(harness.versions.create).not.toHaveBeenCalled();
     expect(harness.audits.create).not.toHaveBeenCalled();
+  });
+
+  it("接近 2 MiB 的合法请求若最终快照超限则受控拒绝且不写入", async () => {
+    const document = createDocument();
+    const props: Record<string, string> = {};
+    document.pages[0].nodes[0].props = props;
+    for (let index = 0; index < 256; index += 1) {
+      const field = "padding" + index;
+      props[field] = "";
+      const bytes = new TextEncoder().encode(
+        JSON.stringify({ expectedRevision: null, document }),
+      ).byteLength;
+      const remaining = PROJECT_SNAPSHOT_MAX_BYTES - bytes - 24;
+      if (remaining <= 0) break;
+      props[field] = "a".repeat(Math.min(8_192, remaining));
+      if (remaining <= 8_192) break;
+    }
+
+    const requestBytes = new TextEncoder().encode(
+      JSON.stringify({ expectedRevision: null, document }),
+    ).byteLength;
+    expect(requestBytes).toBe(PROJECT_SNAPSHOT_MAX_BYTES - 24);
+
+    const harness = createHarness();
+    await expect(harness.store.create(PRINCIPAL, { document })).rejects.toThrow(
+      "工程版本快照超过 2 MiB 限制",
+    );
+    expect(harness.transaction).not.toHaveBeenCalled();
+    expect(harness.project.create).not.toHaveBeenCalled();
   });
 
   it("工程列表只查询当前租户明确授予 project:read 的工程", async () => {

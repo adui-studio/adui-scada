@@ -1138,3 +1138,7 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 ### 2026-11-16 · 第三十三批隔离 PostgreSQL 与全量质量链复验完成
 
 维护者已在 Windows 上创建独立 `adui_scada_test`（回环 15432），四项 Prisma 迁移首次应用全部成功，`migrate status` 为最新；`pnpm run test:db` **3/3 文件、22/22 项通过**，包括真实 PostgreSQL 下的 Session/CSRF 摘要、撤销时间持久化、旧 Bearer/Cookie 失效、主体停用/过期拒绝、跨租户 ACL 及并发 CAS。随后单独 `vp check` 320/177 零告警、`docs:check` 84 Markdown，通过完整 `ready` 的 530/530 单测、45/45 HTTP E2E、两套 Web 与 NestJS 构建；末尾退出码检查未触发异常，未额外显示 `ready` 数字退出码。**本机 V0.3 第三十三批主闭环与受控回归完成，生产安全/密钥轮换另行验收。** PR #55 仍应保持 Draft、Assignee `@adui-dev`，未经批准不得合并。
+
+### 2026-11-16 · 第三十三批最终 Review P1/P2 最小修复待复验
+
+在已有主业务与安全验收后，PR #55 审查发现匿名 OIDC 登录事务会持续累积，以及有效保存请求在追加快照元数据后可能超过 2 MiB 并返回 500。已补服务进程内速率/并发兜底、每 30 秒限量回收已过期事务、最终快照明确容量错误映射 400，并追加单元和 HTTP E2E 用例；不修改已应用迁移和工业设备接口。**本批补丁尚待 Windows Vite+ / 全量质量链 / 隔离 PostgreSQL 验收；多实例统一网关限流属生产上线前置条件。**

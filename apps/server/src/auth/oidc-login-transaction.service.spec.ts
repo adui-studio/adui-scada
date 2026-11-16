@@ -193,6 +193,7 @@ function createFakeService(config = createConfig()) {
     service,
     records,
     config,
+    discovery,
     get createCalls() {
       return createCalls;
     },
@@ -399,6 +400,25 @@ describe("OIDC 一次性登录事务", () => {
     await expect(fake.service.start("/")).rejects.toMatchObject({ status: 429 });
     expect(fake.createCalls).toBe(60);
     expect(fake.records.size).toBe(60);
+  });
+
+  it("并发登录占位超过 8 个时拒绝第九个请求并在完成后释放", async () => {
+    const fake = createFakeService();
+    let unblock: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      unblock = resolve;
+    });
+    fake.discovery.getConfiguration = async () => {
+      await gate;
+      return createProviderConfiguration(fake.config);
+    };
+
+    const pending = Array.from({ length: 8 }, () => fake.service.start("/"));
+    await expect(fake.service.start("/")).rejects.toMatchObject({ status: 429 });
+    expect(fake.createCalls).toBe(0);
+    unblock?.();
+    await Promise.all(pending);
+    expect(fake.createCalls).toBe(8);
   });
 
   it("过期事务按每批 128 条回收且保留未过期记录", async () => {

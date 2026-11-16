@@ -1242,3 +1242,13 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 维护者随后重新执行 `vp check`：**320** 个文件格式正确，**177** 个文件零警告、Lint/类型错误；`pnpm run docs:check`：**84** 个 Markdown 通过；完整 `pnpm run ready` 顺利运行至 NestJS 构建完成，单测 **48/48 文件、530/530 项**、HTTP E2E **6/6 文件、45/45 项**，SSE 8/8、TCP 故障 4/4、OIDC HTTPS 代理 10/10、OIDC Lab 6/6、OIDC 身份预绑定 14/14、Docker 安全 14/14、Docker DB 9/9、HTTPS 匿名探针离线 11/11，React/Vue/NestJS 构建成功。日志中末尾 `if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }` 未触发；**未单独打印 `ready` 数值退出码**。健康检查负面用例产生预期 503 日志，不是 E2E 失败。
 
 **结论**：第三十三批本机 OIDC / 工程版本主业务链路、HTTP 拒绝及真实隔离 PostgreSQL 安全回归的本轮验收已完成。该结论不包括生产/现场部署安全评估、真实密钥暴露后的受控轮换证明、跨浏览器实际恶意站点演练，也不将离线 Mock 检查等同于生产安全审计。没有运行数据库 reset、删除数据卷或修改既有 Prisma 迁移。
+
+## 2026-11-16 · PR #55 静态审查 P1 / P2 资源边界修复候选
+
+根据提交 `7cafdbcc` 的正式 COMMENT Review，针对匿名 OIDC start 缺乏资源保护与快照 2 MiB 容量边界错误，实施**最小受控补丁**：
+
+- OIDC start 在每个进程中实行 60 秒固定窗口最多 60 次、同时最多 8 个未完成请求，超额返回受控 HTTP 429；使用单进程全局计数，不信任代理用户 IP。生产公网或多实例使用必须由可信反向代理追加统一限流和连接配额。每 30 秒批量查找并删除最多 128 条已过期登录事务，按过期时间排序，删除时重复核验 `expiresAt`，避免误删仍有效的 State；清理失败只输出固定中文告警并等待下一周期。没有新增依赖、Prisma 字段或迁移。
+- 工程请求解析仍使用 Core 的 2 MiB 校验；创建完整快照时额外的版本元数据可能使最终 JSON 超限，现将该确定的 `RangeError` 转为受控 `ProjectRequestValidationError` / HTTP 400，保留非容量异常、CAS 与事务回滚语义。新增生成靠近 2 MiB 容量边界的单元用例与 Mock HTTP 状态测试。
+- 增加 OIDC 60 次窗口限额、8 个并发拒绝、128 条批次回收用例。仅服务端及其测试修改，Vue/React 共用 API 协议和本地 IndexedDB 未变。
+
+**候选验证状态**：GitHub 已创建补丁，但尚未执行 Windows `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run test:db`、`pnpm run docs:check` 或完整 `pnpm run ready`；不能继续使用上轮的 530/530 和 45/45 作为新提交通过证据。实际通过前不改变 PR Draft 或合并状态。清理服务定时启动和 429 的真实 HTTP 行为还需独立测试环境校验。

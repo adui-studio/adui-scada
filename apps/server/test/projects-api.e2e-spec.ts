@@ -28,6 +28,7 @@ import {
   PrismaProjectVersionStore,
   ProjectRevisionConflictError,
   ProjectAlreadyExistsError,
+  ProjectRequestValidationError,
 } from "../src/projects/prisma-project-version-store.js";
 import type { ProjectSummary } from "../src/projects/prisma-project-version-store.js";
 import { ProjectApiController } from "../src/projects/project-api.controller.js";
@@ -335,6 +336,19 @@ describe("工程 API HTTP 接口（端到端）", () => {
 
     expect(response.status).toBe(409);
     expect(response.body.message).toBe("工程版本已变化，请重新获取最新修订号");
+  });
+
+  it("最终快照添加版本元数据后超限仍返回受控 HTTP 400", async () => {
+    store.create.mockRejectedValueOnce(new ProjectRequestValidationError("工程版本快照超过 2 MiB 限制"));
+    const response = await request(app.getHttpServer())
+      .post("/api/v1/projects")
+      .set("Authorization", "Bearer " + SESSION_TOKEN)
+      .send({ document: JSON.parse(JSON.stringify(waterTreatmentDemoDocument)) })
+      .expect(400);
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("工程版本快照超过 2 MiB 限制");
+    expect(JSON.stringify(response.body)).not.toContain("Prisma");
   });
 
   it("非法历史修订号返回 400，仓储不得读取", async () => {
