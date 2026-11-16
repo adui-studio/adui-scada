@@ -2,15 +2,15 @@
 
 项目名称固定为 `adui-scada`，配置文件只有 **`deploy/docker/compose.yaml`**。用于本机开发和演示，不是工业生产部署，也不是将所有组件合并成一个镜像。
 
-| 容器服务 | 职责 | 宿主机入口 |
-| --- | --- | --- |
-| web-react | React HTTP 模拟演示 | `127.0.0.1:18080` |
-| web-vue | Vue HTTP 模拟演示 | `127.0.0.1:18081` |
-| server | NestJS Docker Demo（不自动提供 OIDC 业务写入） | 容器内部 |
-| demo | 只读模拟数据和 SSE | 容器内部 |
-| postgres | 唯一 PostgreSQL 17 实例 | `127.0.0.1:15433` |
-| redis | Redis 7.4（尚未接入 NestJS） | `127.0.0.1:16379` |
-| keycloak | Keycloak 26.8.2 本机测试 IdP | `https://127.0.0.1:18443` |
+| 容器服务  | 职责                                           | 宿主机入口                |
+| --------- | ---------------------------------------------- | ------------------------- |
+| web-react | React HTTP 模拟演示                            | `127.0.0.1:18080`         |
+| web-vue   | Vue HTTP 模拟演示                              | `127.0.0.1:18081`         |
+| server    | NestJS Docker Demo（不自动提供 OIDC 业务写入） | 容器内部                  |
+| demo      | 只读模拟数据和 SSE                             | 容器内部                  |
+| postgres  | 唯一 PostgreSQL 17 实例                        | `127.0.0.1:15433`         |
+| redis     | Redis 7.4（尚未接入 NestJS）                   | `127.0.0.1:16379`         |
+| keycloak  | Keycloak 26.8.2 本机测试 IdP                   | `https://127.0.0.1:18443` |
 
 **注意**：一个 PostgreSQL 容器内仍有相互隔离的 `adui_scada_oidc_lab`（SCADA）与 `adui_scada_keycloak_lab`（Keycloak）两个逻辑数据库，属于同一 PostgreSQL 实例，不是两个 PostgreSQL 容器。名称暂不变更，避免丢失已经完成的 Prisma 迁移和身份绑定。
 

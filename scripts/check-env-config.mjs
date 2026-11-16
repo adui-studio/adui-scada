@@ -208,7 +208,10 @@ for (const service of ["web-react", "web-vue", "server", "demo", "postgres", "re
 assert.ok(!compose.includes("  postgres-dev:"), "不得保留第二个 PostgreSQL 服务");
 assert.ok(!compose.includes("legacy-db"), "不得保留旧开发数据库 Profile");
 assert.ok(compose.includes("127.0.0.1:"), "统一 Docker 只能发布本机回环端口");
-for (const name of ["adui-scada-oidc-lab_lab-postgres-data", "adui-scada-oidc-lab_lab-redis-data"]) {
+for (const name of [
+  "adui-scada-oidc-lab_lab-postgres-data",
+  "adui-scada-oidc-lab_lab-redis-data",
+]) {
   assert.ok(compose.includes("name: " + name), "必须复用原有持久化卷，避免遗失身份数据");
 }
 for (const old of [
@@ -222,19 +225,27 @@ for (const old of [
   assert.ok(!existsSync(resolve(root, old)), "请移除旧版 Docker 入口：" + old);
 }
 for (const action of ["plan", "migrate", "up", "down", "ps", "logs"]) {
-  assert.ok(packageScripts["docker:" + action]?.includes("docker-stack.mjs " + action), "缺少最新 Docker 命令：" + action);
+  assert.ok(
+    packageScripts["docker:" + action]?.includes("docker-stack.mjs " + action),
+    "缺少最新 Docker 命令：" + action,
+  );
 }
 assert.ok(packageScripts.ready.includes("pnpm run test:docker"), "Docker 安全测试必须进入 ready");
 assert.ok(packageScripts["test:docker"].includes("scripts/docker-stack.cases.mjs"));
 for (const key of Object.keys(packageScripts)) {
-  assert.ok(!/^docker:(demo|lab|all):/.test(key) && !/^db:dev:/.test(key), "旧版 Docker 命令必须删除：" + key);
+  assert.ok(
+    !/^docker:(demo|lab|all):/.test(key) && !key.startsWith("db:dev:"),
+    "旧版 Docker 命令必须删除：" + key,
+  );
 }
 assert.ok(read("deploy/docker/oidc-lab/adui-scada-realm.json").includes("adui-scada-bff"));
 assert.ok(read("scripts/prepare-oidc-lab.mjs").includes("randomBytes(32)"));
 const nginx = read("deploy/docker/nginx.conf");
 assert.ok(nginx.includes("${SCADA_SERVER_PORT}"));
 assert.ok(nginx.includes("${SCADA_DEMO_PORT}"));
-assert.ok(read("deploy/docker/Dockerfile.web").includes("/etc/nginx/templates/default.conf.template"));
+assert.ok(
+  read("deploy/docker/Dockerfile.web").includes("/etc/nginx/templates/default.conf.template"),
+);
 
 const ignore = read(".gitignore");
 assert.match(ignore, /^\.env$/m);

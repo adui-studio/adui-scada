@@ -5,9 +5,15 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const COMPOSE_ARGS = Object.freeze([
-  "compose", "-p", "adui-scada",
-  "--env-file", ".env", "--env-file", ".local/oidc-lab/compose.env",
-  "-f", "deploy/docker/compose.yaml",
+  "compose",
+  "-p",
+  "adui-scada",
+  "--env-file",
+  ".env",
+  "--env-file",
+  ".local/oidc-lab/compose.env",
+  "-f",
+  "deploy/docker/compose.yaml",
 ]);
 const OLD_PROJECTS = Object.freeze([
   { name: "adui-scada-v01-demo", services: ["web-react", "web-vue", "server", "demo"] },
@@ -77,10 +83,10 @@ export function validateDockerEnv(text) {
   }
   const dbPort = env.get("SCADA_LAB_POSTGRES_PORT") ?? "15433";
   if (
-    env.has("SCADA_DB_PORT") && env.get("SCADA_DB_PORT") !== dbPort ||
-    env.has("SCADA_DB_HOST") && env.get("SCADA_DB_HOST") !== "127.0.0.1" ||
-    env.has("SCADA_DB_NAME") && env.get("SCADA_DB_NAME") !== "adui_scada_oidc_lab" ||
-    env.has("SCADA_DB_USER") && env.get("SCADA_DB_USER") !== "adui_scada_oidc_lab"
+    (env.has("SCADA_DB_PORT") && env.get("SCADA_DB_PORT") !== dbPort) ||
+    (env.has("SCADA_DB_HOST") && env.get("SCADA_DB_HOST") !== "127.0.0.1") ||
+    (env.has("SCADA_DB_NAME") && env.get("SCADA_DB_NAME") !== "adui_scada_oidc_lab") ||
+    (env.has("SCADA_DB_USER") && env.get("SCADA_DB_USER") !== "adui_scada_oidc_lab")
   ) {
     throw new Error("SCADA 数据库配置必须指向唯一的本机 PostgreSQL 实例");
   }
@@ -111,9 +117,15 @@ export function validateDockerEnv(text) {
 
 function verifiedContainers(run, project) {
   const ids = checked(run, [
-    "ps", "-a", "--filter", `label=com.docker.compose.project=${project.name}`,
-    "--format", "{{.ID}}",
-  ]).split(/\r?\n/).filter(Boolean);
+    "ps",
+    "-a",
+    "--filter",
+    `label=com.docker.compose.project=${project.name}`,
+    "--format",
+    "{{.ID}}",
+  ])
+    .split(/\r?\n/)
+    .filter(Boolean);
   for (const id of ids) {
     const output = checked(run, ["inspect", "--format", "{{json .Config.Labels}}", id]);
     let labels;
@@ -211,9 +223,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       "不支持的 Docker 操作",
       "检测到历史 Docker 容器，请先执行一次 docker:migrate",
     ]);
-    console.error(error instanceof Error && messages.has(error.message)
-      ? error.message
-      : "统一 Docker 操作失败，已隐藏内部异常");
+    console.error(
+      error instanceof Error && messages.has(error.message)
+        ? error.message
+        : "统一 Docker 操作失败，已隐藏内部异常",
+    );
     process.exitCode = 1;
   }
 }
