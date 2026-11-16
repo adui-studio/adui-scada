@@ -294,3 +294,7 @@ Core 新增框架无关 Tag 定义模型，使用稳定 `tagId` 区分不可变�
 ## 2026-11-16 · 第三十三批第六小批工程 API 工程质量验收补录
 
 在已进入 PR #55 功能分支的六条受保护工程 API 基础上，维护者 Windows 日志确认 `vp check` 297 文件/157 受检零告警或错误、单元测试 505/505、HTTP E2E 40/40 和完整 `ready` 退出码 0。新增工程 API 仓储单测 10/10、Mock HTTP E2E 13/13 均计入本批实测。此结果只表示工程质量与 Mock 接口回归通过；FR-001/FR-002/FR-008/FR-013/FR-014 等整体需求仍有真实 PostgreSQL 事务、真实 IdP、HTTPS Cookie、同源代理与双框架互通未验收，不得视为完整交付。默认应用不开启工程路由，不开放发布、回滚、删除或 PLC/DCS 写入。
+
+## V0.3 第三十四批第一小批：工程摘要有界游标分页（FR-001 / FR-002 / NFR-005 局部）
+
+第三十三批已交付可信会话、工程 ACL 与服务端工程 API，但原 `GET /api/v1/projects` 会一次查询全部有权限的工程，可能超过共享 API Client 的 2 MiB 响应限制。本小批**保持原有工程摘要数组响应结构**，增加可选 `limit`（默认 20、最大 100）和 `afterProjectId`，按照稳定且不可变的工程 ID 升序查询；Next 页使用上一页最后一个 ID。所有记录仍必须同时满足服务端可信租户与 `project:read` 授权。React 和 Vue 共用 Core 与 API Client 的分页协议，不重复实现客户端规则。此批不包含工程中心 UI、工程发布/回滚、Schema/Prisma 迁移或设备写入；参见 [ADR-0067](adr/0067-bounded-project-list-pagination.md)。

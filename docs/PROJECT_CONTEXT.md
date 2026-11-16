@@ -1144,3 +1144,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 在已有主业务与安全验收后，PR #55 审查发现匿名 OIDC 登录事务会持续累积，以及有效保存请求在追加快照元数据后可能超过 2 MiB 并返回 500。已补服务进程内速率/并发兜底、每 30 秒限量回收已过期事务、最终快照明确容量错误映射 400，并追加单元和 HTTP E2E 用例；不修改已应用迁移和工业设备接口。**本批补丁尚待 Windows Vite+ / 全量质量链 / 隔离 PostgreSQL 验收；多实例统一网关限流属生产上线前置条件。**
 
 补充真实 PostgreSQL 回收专项：在已有隔离 `adui_scada_test` 数据库测试中新增 1 项，对到期与有效 OIDC 登录事务进行真实创建、分批清理及状态核验，并在 `finally` 清理测试行；必须由维护者在 Windows 重新执行 `test:db`，且确认环境只指向隔离库。
+
+### 2026-11-16 · 第三十三批合并完成，第三十四批工程分页候选
+
+PR #55 已由维护者授权 Squash 合并至 `main`，合并提交 `412a5475fd206e43e1f862b3c4d5a37cdd0e9d40` 已通过 GitHub 核验。维护者此前 Windows 运行完整 `ready`：534/534 单测、47/47 HTTP E2E、退出码 0；隔离 `adui_scada_test` 真库 `test:db` 23/23、退出码 0。这些结果仅属于**第三十三批已合并代码**，不代表本批代码通过。
+
+第三十四批第一小批新增按工程 ID 的有界列表、Core 共享查询类型、API Client 参数和响应验证，以及 Mock 单元/HTTP E2E/隔离 PostgreSQL 游标测试。原租户 ACL、OIDC 默认关闭、Vue/React 工程格式、浏览器草稿与工业只读边界保持不变。**候选尚未在 Windows 执行 Vite+、单测、真库与完整 ready**。参见 [ADR-0067](adr/0067-bounded-project-list-pagination.md)。
