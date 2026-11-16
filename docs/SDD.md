@@ -760,3 +760,11 @@ Vue/React Studio 使用同一个 `@adui/scada-api-client` 的 `StudioServerProje
 服务器保存先解析独立工程副本，再检查可信会话和远程水位，最后调用共享客户端的 `appendVersion(expectedRevision,document)`；任何失败都不得调用草稿仓储的 `save/remove`、不得改变当前编辑器或自动恢复草稿。服务端版本列表提供分页摘要；查看差异使用已通过 SHA-256 校验的服务器快照与当前画布做 Core 内容比较。确认载入服务端版本时先等待 `DraftAutoSaveSession.stop()`，再调用现有 `editor.loadDocument`；不会自动修改已保存草稿。用户执行 JSON 导入、IndexedDB 草稿恢复或本地历史载入后，旧服务器 CAS 基线必须立即失效；载入较早服务器版本也不能建立覆盖最新版本的保存基线。
 
 该接口只交付受保护的工程历史版本保存，不产生正式发布指针、发布审批、回滚或 PLC/DCS 控制请求。OIDC 默认关闭且两端尚未配置真实同源 HTTPS 代理；UI 只能在完成后续身份/代理联调后作为生产功能使用。第八小批新代码的 TS6/Vite+ 和浏览器双框架专项尚待实测。
+
+### 第三十三批第九小批：Vite 本机 HTTPS 同源代理边界
+
+共享脚本 scripts/oidc-https-dev-proxy.mjs 和其 .d.mts 声明只为 Vue/React Vite serve 提供配置。SCADA_OIDC_DEV_HTTPS_ENABLED 默认为 false；只有显式开启时才从本机绝对路径读取证书/私钥、验证 TLS 上下文并代理正则 ^/api/v1(?:/|$) 至固定回环 NestJS。生产构建和现有 /demo 代理路径保持不变。
+
+启动需满足非生产、Web/NestJS 均绑定 127.0.0.1、可信 OIDC 已开启且不安全 HTTP/模拟开关关闭、React/Vue/Server 独立端口、两个精确 HTTPS Web Origin 与唯一固定回调地址。代理 changeOrigin=false、xfwd=false、ws=false，不重写 Cookie/Origin/业务 API 路由、不引入 CORS 或客户端身份推断。Nest 仍由 OidcEnabledAppModule 与 Session Guard/ACL/CSRF 授权决定哪些接口可用；未启用或未认证时默认拒绝。
+
+此为**本机非生产开发代理**，不能代替受控生产 HTTPS 终止代理或真实 OIDC/JWKS/跨框架浏览器验收。证书/私钥、Issuer 和客户端密钥不进入 Git、日志、浏览器构建或 Docker 镜像。

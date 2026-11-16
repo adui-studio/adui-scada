@@ -1108,3 +1108,13 @@ React 的 `apps/web-react/src/studio/StudioPage.tsx` 与 Vue 的 `apps/web-vue/s
 已定位为 Mock 夹具 `const client: ScadaApiClient` 宽化后，`api.getMe/getProject/createProject/appendVersion` 被当成潜在依赖 `this` 的接口方法。候选最小修复改为 `const client = { ... } satisfies ScadaApiClient` 保留 Vitest Mock 类型，并将 6 处 `vi.mocked(api.*)` 改为 Mock 本身的 `.mock*` 调用，保留 9 个测试、29 个 `expect` 调用及业务断言。没有修改正式业务 API、认证或 CAS 规则，没有关闭 Lint。
 
 **本次仅核查 GitHub 仓库代码及上传日志，未能在维护者 Windows 环境执行修复后 `vp check` 或 `pnpm run ready`。** 请复验 `vp check`（零警告/错误）、`pnpm run test:unit`（新增 9 项运行通过）、`pnpm run ready`（完整退出码 0），再关闭 E-016。真实 OIDC/JWKS、HTTPS Cookie、代理及 React/Vue 服务端往返仍未验收。
+
+## 2026-11-16 · 第三十三批第八小批 Windows 最终验收、E-016 关闭
+
+维护者 Windows 实测：完整 ready 中 305 文件格式正确、163 文件零警告；单测 48/48 文件、529/529 项，其中共享 CAS 会话 9/9；HTTP E2E 40/40、SSE 客户端 8/8、故障代理 4/4、React/Vue/NestJS 类型检查及构建全部成功，ready 退出码 0。React 与 Vue 的 1440×900、1024×768 浏览器回归各 19/19，历史版本保存取消/确认、跨刷新持久化和跨 Origin 隔离均通过。E-016 原 19 条 unbound-method 警告经真实 Windows 复验关闭。此结果**不等于真实 OIDC/HTTPS 与服务器跨框架写入已通过**。
+
+## 2026-11-16 · 第三十三批第九小批：本机 OIDC HTTPS 代理候选（待 Windows 验收）
+
+新增 scripts/oidc-https-dev-proxy.mjs 与 .d.mts 类型声明，Vue/React Vite serve 仅在 SCADA_OIDC_DEV_HTTPS_ENABLED=true 时读取本机 TLS 文件，并代理精确的 /api/v1 路由到固定回环 NestJS。必须非生产、Web/NestJS 绑定 127.0.0.1、可信 OIDC 已启用、React/Vue 独立端口与双 HTTPS Origin 白名单精确匹配，回调使用预注册固定路径；不允许不安全 HTTP OIDC 或模拟 API 冲突。默认 HTTP /demo 模式和生产构建不变，无 CORS 开放或 PLC 写入。
+
+已执行：协作容器 Node 22 中两个脚本 node --check 通过，源文件 Git Blob 一致性核对通过，10/10 项 Node 内置配置安全测试通过。尚未执行仓库 TypeScript 6、Vite+、完整 ready、真实 TLS/IdP 登录、双框架工程 API 写入往返。由于本次仅新增候选代码，**不得声称真实身份或生产安全验收完成**。最新文档提交本身也需另外执行 docs:check。

@@ -47,6 +47,9 @@ const defaults = {
   SCADA_OIDC_REDIRECT_URI: "",
   SCADA_OIDC_WEB_ORIGINS: "",
   SCADA_OIDC_TRANSACTION_ENCRYPTION_KEY: "",
+  SCADA_OIDC_DEV_HTTPS_ENABLED: "false",
+  SCADA_OIDC_DEV_HTTPS_CERT_FILE: "",
+  SCADA_OIDC_DEV_HTTPS_KEY_FILE: "",
 };
 const template = parseEnv(".env.example");
 assert.deepEqual({ ...template }, defaults, "根目录 .env.example 的默认值必须与配置契约一致");
@@ -114,7 +117,8 @@ if (existsSync(resolve(root, ".env"))) {
       key === "SCADA_API_DOCS_ENABLED" ||
       key === "SCADA_LOCAL_DEMO_API_ENABLED" ||
       key === "SCADA_OIDC_ENABLED" ||
-      key === "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK"
+      key === "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK" ||
+      key === "SCADA_OIDC_DEV_HTTPS_ENABLED"
     ) {
       assert.ok(["true", "false"].includes(value), `${key}：必须是 true 或 false`);
     } else if (key.startsWith("SCADA_OIDC_")) {
@@ -142,6 +146,7 @@ for (const [framework, key] of [
   assert.match(config, /import\s*\{[^}]*\bloadEnv\b[^}]*\}\s*from\s*"vite-plus"/);
   assert.ok(config.includes(key));
   assert.ok(config.includes("SCADA_DEMO_PORT"));
+  assert.ok(config.includes("resolveLoopbackOidcHttpsProxy"), "双框架必须复用 HTTPS 本机代理策略");
   assert.ok(config.includes("envDir,"));
   assert.ok(!config.includes("SCADA_DEMO_PROXY_TARGET"));
 }

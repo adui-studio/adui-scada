@@ -1052,3 +1052,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 ### 2026-11-16 · 第八小批首次 Windows 检查与 E-016 修复候选
 
 `vp check --fix` 在新增 `studio-session.test.ts` 中发现 `typescript(unbound-method)` **19 条警告**（163 个受检文件零错误），第八小批质量门禁尚未通过。根因是 Mock 夹具被显式声明为 `ScadaApiClient` 后丢失各字段 Vitest Mock 类型。已准备最小测试夹具修复：使用 `satisfies ScadaApiClient` 保留方法 Mock 属性类型，去除 6 次冗余 `vi.mocked` 包裹，保留全部 9 项安全测试与 29 处断言。需维护者 Windows 重跑 `vp check`、单测、`ready`，成功后方可将 E-016 关闭。本次未改动 React/Vue、服务端权限或 IndexedDB 草稿逻辑，真实 OIDC/HTTPS 浏览器集成仍待验收，PR #55 保持 Draft。
+
+### 2026-11-16 · 第八小批 E-016 关闭、第九小批本机 HTTPS 联调准备
+
+维护者 Windows 已通过第八小批 vp check（305 格式文件、163 受检零警告）、529/529 单测（新增 CAS 9/9）、40/40 NestJS E2E、SSE 8/8、故障代理 4/4，React/Vue 双分辨率各 19/19 浏览器回归及历史安全回归；全部构建、83 Markdown、完整 ready 退出码 0。E-016 已关闭；尚未进行真正的 IdP/HTTPS 浏览器写入验收。
+
+第九小批准备共享的本机 Vite HTTPS 代理：默认关闭，开启时要求可信 OIDC、回环 Web/Nest、精确 React/Vue HTTPS Origin 和固定回调，代理 /api/v1 到回环 NestJS。协作容器 Node 22 的配置安全测试 10/10 通过，真实 Windows 全链和实际 TLS/IdP 仍待维护者执行。默认 AppModule 不开放未认证工程 API，工业设备写入仍禁止。PR #55 保持 Draft。

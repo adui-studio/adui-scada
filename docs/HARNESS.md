@@ -1706,3 +1706,47 @@ Write-Host "最终退出码：$LASTEXITCODE"
 现场/开发联调前必须由维护者明确配置可信 IdP、回调与本机同源 HTTPS/代理，并在**独立测试租户、测试工程及非生产数据库**执行。验收顺序：React/Vue 各自检查登录；创建服务端工程（必须有有效 CSRF Cookie）；刷新服务端历史；显式载入最新版本；追加 CAS 历史；由另一会话推进修订号后验证 409；模拟 401、403、404、网络中断及代理 HTML 响应；验证操作失败时当前画布、IndexedDB 草稿、自动保存开关和 JSON 导入/恢复行为未被篡改。旧版云端历史载入只用于编辑与比较，不允许直接用旧修订号覆盖服务器最新版。两端互通必须比较同一 ScadaDocument 的内容、修订号及 SHA-256；未配置 IdP 时不开放匿名创建或写入。
 
 **当前尚无此真实 OIDC + HTTPS 浏览器专项结果**，不得将 Mock Fetch 或本地 IndexedDB E2E 记为服务端端到端成功。工业网关、PLC/DCS 写入、正式发布、回滚审批均不属于本批。
+
+### 第三十三批第九小批：受控本机 HTTPS /api/v1 代理与 OIDC 联调
+
+**默认模式完全不变**：SCADA_OIDC_DEV_HTTPS_ENABLED=false，React/Vue 仍为现有 HTTP Demo，/demo 代理与离线数据不改变。首先在默认模式执行：
+
+```powershell
+node --test scripts/oidc-https-dev-proxy.cases.mjs
+if ($LASTEXITCODE -ne 0) { throw "HTTPS 代理配置测试失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "仓库质量检查失败" }
+pnpm run env:check
+pnpm run docs:check
+pnpm run test:browser
+pnpm run ready
+Write-Host "最终退出码：$LASTEXITCODE"
+```
+
+真实 HTTPS 与 OIDC 联调前，维护者须先在**隔离的本机非生产环境**准备：可信 HTTPS IdP 和预注册的机密客户端、回调地址、本地已由可信流程预绑定且 active 的测试主体、独立的 PostgreSQL 测试数据，以及浏览器信任的 SAN 包含 127.0.0.1 的本机 TLS 证书。证书/私钥放在仓库外，绝不能提交、输出或放进 VITE_*；不使用浏览器忽略证书验证选项，也不自动创建身份/租户。
+
+根 .env 的**非秘密**联调示例（证书路径为占位符，真实凭据单独安全配置）：
+
+```dotenv
+SCADA_WEB_HOST=127.0.0.1
+SCADA_SERVER_HOST=127.0.0.1
+SCADA_SERVER_PORT=13001
+SCADA_REACT_DEV_PORT=15173
+SCADA_VUE_DEV_PORT=15174
+SCADA_OIDC_ENABLED=true
+SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false
+SCADA_LOCAL_DEMO_API_ENABLED=false
+SCADA_OIDC_DEV_HTTPS_ENABLED=true
+SCADA_OIDC_DEV_HTTPS_CERT_FILE=<本机证书绝对路径>
+SCADA_OIDC_DEV_HTTPS_KEY_FILE=<本机私钥绝对路径>
+SCADA_OIDC_WEB_ORIGINS=https://127.0.0.1:15173,https://127.0.0.1:15174
+SCADA_OIDC_REDIRECT_URI=https://127.0.0.1:15173/api/v1/auth/oidc/callback
+```
+
+SCADA_OIDC_ISSUER、SCADA_OIDC_CLIENT_ID、SCADA_OIDC_CLIENT_SECRET、SCADA_OIDC_TRANSACTION_ENCRYPTION_KEY 必须遵循现有 OIDC 严格配置，在本机秘密环境中正确填写。真实回调只能精确注册一个 Origin（上例选择 React 15173），登录先从 React 发起，再用相同 127.0.0.1 主机名打开 Vue 15174；Host-only Cookie 不按端口隔离，不能将一端改为 localhost。两个 HTTPS Origin 都必须在服务端白名单中。若需要将 Vue 作为回调端，须重新注册并审核固定回调 URI，不接受请求动态指定。
+
+运行既有 dev:server、dev:react、dev:vue 脚本，浏览器分别使用 https://127.0.0.1:15173/ 和 https://127.0.0.1:15174/。先验证未登录 /api/v1/auth/me 返回 401 且 Content-Type 不是 HTML，再经真实 IdP 完成回调；确认会话 Cookie 带 Secure/HttpOnly/SameSite=Lax/Path=/，CSRF Cookie 保持可读但同样 Secure，且均无 Domain。POST 应由浏览器自动附加精确 Origin、Sec-Fetch-Site: same-origin 与当前 CSRF Cookie 对应的 X-SCADA-CSRF。不要在截图、Git 提交、测试日志中暴露 Cookie、授权码或 Token。
+
+使用**非生产测试租户和工程**验证 React 创建首版 → Vue 查询版本并载入最新快照 → Vue CAS 追加 → React 显式载入最新版本 → 另一会话推进后的 409 拒写及 IndexedDB 草稿保护。另验证 401/403/404、无效 CSRF、网络断开、代理返回 HTML 的错误边界。比对 ScadaDocument、版本修订号和 SHA-256，不执行工业设备写入/正式发布。默认 Vite 浏览器自动化使用 HTTP URL；在专项 HTTPS 模式下不能把它当作真实登录/工程往返证据。测试后恢复默认关闭开关与普通 Demo 环境。
+
+**当前仅新增受控配置及其 10 项 Node 安全测试；真实 Windows Vite+、TLS、IdP、HTTPS Cookie 和双框架服务端往返仍待维护者执行。**

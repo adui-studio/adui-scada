@@ -189,3 +189,9 @@ Vue 与 React 是两个正式 Web 端，必须共用同源 API 契约、工程�
 ### 3.6 工程创建前的事务内可信主体状态复核（候选补充）
 
 即使 `ScadaSessionGuard` 已在请求入口检查本地会话与 `ScadaIdentity.status`，`PrismaProjectVersionStore.create` 仍须在同一 PostgreSQL 事务内 `SELECT status ... FOR SHARE`，确认 `tenantId/subjectId` 对应的本地主体依旧为 `active`，之后才允许创建工程、授权、首版快照及审计。此行锁与停用主体的 `UPDATE` 冲突，防止认证通过后主体被停用而工程创建继续提交的竞态。未新增权限、身份或租户来源；现有版本读取/追加保持既有 Session Guard 与工程行锁内 ACL 复核语义。此为待运行测试的候选安全增强。
+
+### 6.1 第九小批：仅本机 HTTPS 开发代理落地
+
+继续执行 ADR-0065 的 OIDC、BFF Cookie 与双框架同源请求决策。新增 Vite serve 专用、默认关闭的共享开发 HTTPS 代理，只接受回环监听、可信 OIDC、两个精确 HTTPS Origin、单一固定注册回调以及本机证书；/api/v1 仅转发至受控回环 NestJS。默认 Demo、生产静态构建、NestJS 默认拒绝和会话/CSRF/ACL 规则保持不变。
+
+该能力**不是生产 TLS、真实 IdP 或现场安全交付**：真正的证书、Issuer、客户端注册和主体预绑定由维护者提供；真实 Cookie、CSRF、React/Vue 跨框架服务器读写与 CAS 409 须另行验收。不新增匿名登录、跨站 CORS 或工业设备写入。

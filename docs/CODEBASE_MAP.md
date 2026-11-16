@@ -687,3 +687,11 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `packages/api-client/test/studio-session.test.ts`：9 项 Mock API Client 会话安全测试（候选，待真实 Vitest 验收）。
 - `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：新增对应的“服务端工程”菜单，提供身份检查、服务端保存、分页历史、内容对比及确认载入；本地草稿、浏览器历史入口与原持久化逻辑不变。
 - 旧版/本地草稿恢复、JSON 导入和本地历史载入显式清理云端 CAS 基线；真实 IdP、同源 HTTPS、双框架云端 E2E 未纳入本批已验收范围。
+
+## 第三十三批第九小批：本机 OIDC HTTPS 开发代理
+
+- scripts/oidc-https-dev-proxy.mjs、scripts/oidc-https-dev-proxy.d.mts：React/Vue 共用的默认关闭、仅本机 TLS 和精确 Origin/回调校验的开发代理策略。
+- scripts/oidc-https-dev-proxy.cases.mjs：10 项 Node 内置配置测试，覆盖生产/非回环/端口/Origin/回调/证书/固定代理目标。
+- apps/web-react/vite.config.ts、apps/web-vue/vite.config.ts：仅显式开启的 Vite serve 增加 HTTPS 与 /api/v1 同源代理，原 /demo 不变。
+- .env.example、scripts/check-env-config.mjs：新增关闭状态及证书文件空占位，并维持根目录唯一 .env 校验。
+- docs/HARNESS.md：维护者真实 HTTPS、IdP、同源 Cookie、React→服务端→Vue 往返验收步骤；尚未实际联调。
