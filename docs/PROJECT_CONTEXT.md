@@ -1134,3 +1134,7 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 ### 2026-11-16 · 第三十三批 HTTP 安全回归 Windows 通过，数据库会话断言待复验
 
 维护者原始日志确认：`test:e2e:server` 45/45、`vp check` 320/177 零警告、`docs:check` 84 Markdown、完整 `ready` 530/530 单测与 45/45 HTTP E2E，React/Vue/NestJS 构建成功，最终退出码 0。已追加 PR #55 验收记录。原有真实 PostgreSQL 测试涵盖跨租户 ACL、并发 CAS、Session 撤销和到期拒绝；本轮只增补已存在用例中的 Cookie 旧凭据重放、CSRF 摘要、撤销持久化和主体停用覆盖。**新增真实数据库断言待 Windows 在专用 `adui_scada_test` 复验，绝不运行在开发业务库或生产库。**
+
+### 2026-11-16 · 第三十三批隔离 PostgreSQL 与全量质量链复验完成
+
+维护者已在 Windows 上创建独立 `adui_scada_test`（回环 15432），四项 Prisma 迁移首次应用全部成功，`migrate status` 为最新；`pnpm run test:db` **3/3 文件、22/22 项通过**，包括真实 PostgreSQL 下的 Session/CSRF 摘要、撤销时间持久化、旧 Bearer/Cookie 失效、主体停用/过期拒绝、跨租户 ACL 及并发 CAS。随后单独 `vp check` 320/177 零告警、`docs:check` 84 Markdown，通过完整 `ready` 的 530/530 单测、45/45 HTTP E2E、两套 Web 与 NestJS 构建；末尾退出码检查未触发异常，未额外显示 `ready` 数字退出码。**本机 V0.3 第三十三批主闭环与受控回归完成，生产安全/密钥轮换另行验收。** PR #55 仍应保持 Draft、Assignee `@adui-dev`，未经批准不得合并。

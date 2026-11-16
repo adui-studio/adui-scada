@@ -1232,3 +1232,13 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 维护者在 Windows PowerShell 对本批 HTTP 拒绝测试执行了独立 `pnpm run test:e2e:server`：**6/6 文件、45/45 项通过**（OIDC Controller 12/12）；`vp check` **320 个格式文件、177 个受检文件零警告/错误**，`docs:check` **84 个 Markdown 通过**。完整 `pnpm run ready` 实际完成：中文文案 201 文件、单测 **48/48 文件、530/530 项**、SSE 8/8、TCP 故障 4/4、OIDC 代理 10/10、凭据 6/6、身份预绑定 14/14、Docker 单栈 14/14、数据库保护 9/9、HTTPS 匿名探针离线 11/11、服务端 HTTP E2E **45/45**，React/Vue 与 NestJS 构建成功，最终打印 **“第三十三批安全回归退出码：0”**。健康检查测试中的预期 503 日志不代表 E2E 失败。此处为维护者提供的真实 Windows 日志，不代表部署或生产工控安全验收。
 
 本轮下一项只增强已有 `apps/server/test/prisma-project-version.db-spec.ts`：真实 PostgreSQL 下校验 Session/CSRF 的 SHA-256 持久化、外国租户撤销不生效、合法撤销将 `revokedAt` 落库、旧 Bearer/Cookie 失效、停用主体和过期会话的 Cookie 拒绝。现有隔离数据库测试已经覆盖跨租户 ACL 与真实并发 CAS，不再重复新建测试文件。**本次新增的数据库断言尚未在 Windows `adui_scada_test` 执行，必须单独运行 `pnpm run test:db`，不属于默认 `ready` 的覆盖范围。**
+
+## 2026-11-16 · 第三十三批独立 PostgreSQL 22/22 与最终质量链实测
+
+维护者在 Windows PowerShell 7 上明确将 `SCADA_DATABASE_URL` 和 `SCADA_TEST_DATABASE_URL` 临时指向本机回环 `127.0.0.1:15432/adui_scada_test`；该库与业务库 `adui_scada`、Keycloak 库 `adui_scada_keycloak` 逻辑隔离。执行 `pnpm run db:migrate:deploy` 首次成功应用四项原有 Prisma 迁移（`20261112000000_init_scada_projects`、`20261112170000_add_chinese_table_comments`、`20261113000000_trusted_identity_sessions`、`20261114000000_oidc_identity_transactions`），随后 `pnpm run db:migrate:status` 明确返回 `Database schema is up to date!`。
+
+在上述明确的隔离测试库中执行 `pnpm run test:db`，**3/3 文件、22/22 用例通过**：OIDC Schema 5/5、工程版本/Session 11/11、工程 API 6/6。此次覆盖新增的 CSRF/Session SHA-256 持久化检查、`revokedAt` 真实落库、旧 Bearer/Cookie 会话撤销后拒绝、主体停用/到期拒绝，以及既有跨租户 ACL 和 PostgreSQL 并发 CAS。测试命令完成后输出维护者自定义的中文成功提示；独立测试输出未额外打印数值退出码，不据此编造独立的退出码统计。
+
+维护者随后重新执行 `vp check`：**320** 个文件格式正确，**177** 个文件零警告、Lint/类型错误；`pnpm run docs:check`：**84** 个 Markdown 通过；完整 `pnpm run ready` 顺利运行至 NestJS 构建完成，单测 **48/48 文件、530/530 项**、HTTP E2E **6/6 文件、45/45 项**，SSE 8/8、TCP 故障 4/4、OIDC HTTPS 代理 10/10、OIDC Lab 6/6、OIDC 身份预绑定 14/14、Docker 安全 14/14、Docker DB 9/9、HTTPS 匿名探针离线 11/11，React/Vue/NestJS 构建成功。日志中末尾 `if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }` 未触发；**未单独打印 `ready` 数值退出码**。健康检查负面用例产生预期 503 日志，不是 E2E 失败。
+
+**结论**：第三十三批本机 OIDC / 工程版本主业务链路、HTTP 拒绝及真实隔离 PostgreSQL 安全回归的本轮验收已完成。该结论不包括生产/现场部署安全评估、真实密钥暴露后的受控轮换证明、跨浏览器实际恶意站点演练，也不将离线 Mock 检查等同于生产安全审计。没有运行数据库 reset、删除数据卷或修改既有 Prisma 迁移。
