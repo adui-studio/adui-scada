@@ -1,4 +1,8 @@
+import { randomBytes } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
+import { resolveOidcStartupConfig } from "../src/config/oidc-startup.config.js";
+import { OidcLoginTransactionService } from "../src/auth/oidc-login-transaction.service.js";
+import type { OidcProviderDiscoveryService } from "../src/auth/oidc-provider-discovery.service.js";
 import { PrismaService } from "../src/database/prisma.service.js";
 
 // OIDC 数据库结构测试只允许连接本机独立测试数据库，不得触碰开发库或生产库。
@@ -172,6 +176,65 @@ describe("OIDC PostgreSQL 增量迁移", () => {
     expect(sessionConstraints.map((row) => row.constraint_name)).toContain(
       "scada_auth_sessions_csrf_token_hash_check",
     );
+  });
+
+  it("真实 PostgreSQL 仅回收已过期登录事务并保留有效事务", async () => {
+    const config = resolveOidcStartupConfig({
+      NODE_ENV: "test",
+      SCADA_OIDC_ENABLED: "true",
+      SCADA_OIDC_ISSUER: "https://id.example.org/realms/scada",
+      SCADA_OIDC_CLIENT_ID: "adui-scada",
+      SCADA_OIDC_CLIENT_SECRET: "isolated-database-test-only-secret",
+      SCADA_OIDC_REDIRECT_URI: "https://scada.example.org/api/v1/auth/oidc/callback",
+      SCADA_OIDC_WEB_ORIGINS: "https://scada.example.org",
+      SCADA_OIDC_TRANSACTION_ENCRYPTION_KEY: randomBytes(32).toString("base64url"),
+    });
+    if (!config.enabled) throw new Error("测试 OIDC 配置未启用");
+    const expiredStateHash = randomBytes(32).toString("hex");
+    const validStateHash = randomBytes(32).toString("hex");
+    const expired = {
+      stateHash: expiredStateHash,
+      issuer: config.issuer.href,
+      nonce: randomBytes(32).toString("base64url"),
+      verifierCiphertext: "v1.test.test.test",
+      browserBindingHash: randomBytes(32).toString("hex"),
+      returnPath: "/",
+      createdAt: new Date("2000-01-01T00:00:00.000Z"),
+      expiresAt: new Date("2000-01-01T00:05:00.000Z"),
+    };
+    const valid = {
+      ...expired,
+      stateHash: validStateHash,
+      browserBindingHash: randomBytes(32).toString("hex"),
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 300_000),
+    };
+
+    await service!.client.scadaOidcTransaction.createMany({ data: [expired, valid] });
+    try {
+      const transactions = new OidcLoginTransactionService(
+        service!,
+        {} as unknown as OidcProviderDiscoveryService,
+        config,
+      );
+      const count = await transactions.cleanupExpiredTransactions();
+      const [expiredRecord, validRecord] = await Promise.all([
+        service!.client.scadaOidcTransaction.findUnique({
+          where: { stateHash: expiredStateHash },
+        }),
+        service!.client.scadaOidcTransaction.findUnique({
+          where: { stateHash: validStateHash },
+        }),
+      ]);
+
+      expect(count).toBeGreaterThanOrEqual(1);
+      expect(expiredRecord).toBeNull();
+      expect(validRecord?.stateHash).toBe(validStateHash);
+    } finally {
+      await service!.client.scadaOidcTransaction.deleteMany({
+        where: { stateHash: { in: [expiredStateHash, validStateHash] } },
+      });
+    }
   });
 
   it("三个新增业务索引均存在中文数据库注释", async () => {

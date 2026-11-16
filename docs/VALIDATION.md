@@ -1254,3 +1254,5 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 **候选验证状态**：GitHub 已创建补丁，但尚未执行 Windows `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run test:db`、`pnpm run docs:check` 或完整 `pnpm run ready`；不能继续使用上轮的 530/530 和 45/45 作为新提交通过证据。实际通过前不改变 PR Draft 或合并状态。清理服务定时启动和 429 的真实 HTTP 行为还需独立测试环境校验。
 
 补充：OIDC Controller HTTP E2E 使用受控 Mock 返回 429，验证匿名登录超额请求不再下发 Cookie；服务层单元测试独立验证限额计数和并发释放。此项是候选新增用例，尚未经 Windows 执行。
+
+本轮额外新增 `apps/server/test/oidc-schema.db-spec.ts` 的隔离 PostgreSQL 真库验证：使用本机强制白名单 `adui_scada_test`，插入 2000 年到期事务和当前有效事务，通过实际 Prisma 清理后分别核对删除与保留；`finally` 删除本用例创建的记录。原有 `test:db` 22 项预计增至 23 项，但**当前只是候选代码，尚未执行真实数据库**，不得称测试已通过。
