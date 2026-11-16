@@ -1,7 +1,4 @@
-import {
-  parseServerProjectSaveRequest,
-  readProjectSnapshot,
-} from "@adui/scada-core";
+import { parseServerProjectSaveRequest, readProjectSnapshot } from "@adui/scada-core";
 import type {
   ProjectSnapshot,
   ProjectVersionQuery,
@@ -224,7 +221,8 @@ export function createScadaApiClient(options: ScadaApiClientOptions = {}): Scada
   if (typeof fetcher !== "function") {
     throw new TypeError("当前运行环境不支持 Fetch 请求");
   }
-  const readCookie = options.readCookie ?? (() => (typeof document === "undefined" ? "" : document.cookie));
+  const readCookie =
+    options.readCookie ?? (() => (typeof document === "undefined" ? "" : document.cookie));
   if (typeof readCookie !== "function") {
     throw new TypeError("Cookie 读取函数必须是函数");
   }
@@ -283,7 +281,10 @@ export function createScadaApiClient(options: ScadaApiClientOptions = {}): Scada
     return "/projects/" + encodeURIComponent(requireProjectId(projectId));
   }
 
-  async function parseSnapshotResponse(value: unknown, projectId: string): Promise<ProjectSnapshot> {
+  async function parseSnapshotResponse(
+    value: unknown,
+    projectId: string,
+  ): Promise<ProjectSnapshot> {
     try {
       const snapshot = await readProjectSnapshot(value);
       if (snapshot.projectId !== projectId) {
@@ -335,7 +336,10 @@ export function createScadaApiClient(options: ScadaApiClientOptions = {}): Scada
         params.set("limit", String(limit));
       }
       if (query?.beforeRevision !== undefined) {
-        params.set("beforeRevision", String(requirePositiveNumber(query.beforeRevision, "分页修订号")));
+        params.set(
+          "beforeRevision",
+          String(requirePositiveNumber(query.beforeRevision, "分页修订号")),
+        );
       }
       const suffix = params.size === 0 ? "" : "?" + params.toString();
       const items = parseList(

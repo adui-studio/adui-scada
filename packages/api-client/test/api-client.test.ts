@@ -35,7 +35,10 @@ function documentCopy() {
 describe("框架无关工程 API Client", () => {
   it("身份查询只读取同源受保护路径和可信最小身份数据", async () => {
     const harness = createHarness(
-      jsonResponse({ authenticated: true, principal: { tenantId: "tenant-a", subjectId: "user-a" } }),
+      jsonResponse({
+        authenticated: true,
+        principal: { tenantId: "tenant-a", subjectId: "user-a" },
+      }),
     );
     expect(await harness.client.getMe()).toEqual({
       authenticated: true,
@@ -56,7 +59,11 @@ describe("框架无关工程 API Client", () => {
 
   it("拒绝包含内部会话令牌或额外权限信息的身份响应", async () => {
     const harness = createHarness(
-      jsonResponse({ authenticated: true, principal: { tenantId: "tenant-a", subjectId: "user-a" }, token: "伪造" }),
+      jsonResponse({
+        authenticated: true,
+        principal: { tenantId: "tenant-a", subjectId: "user-a" },
+        token: "伪造",
+      }),
     );
     await expect(harness.client.getMe()).rejects.toMatchObject({ kind: "invalid_response" });
   });
@@ -131,11 +138,16 @@ describe("框架无关工程 API Client", () => {
   });
 
   it("历史版本只拼接安全分页参数并验证摘要属于同一工程", async () => {
-    const version = { projectId: PROJECT_ID, revision: 2, createdAt: CREATED_AT, contentHash: "a".repeat(64) };
+    const version = {
+      projectId: PROJECT_ID,
+      revision: 2,
+      createdAt: CREATED_AT,
+      contentHash: "a".repeat(64),
+    };
     const harness = createHarness(jsonResponse([version]));
-    expect(await harness.client.listVersions(PROJECT_ID, { limit: 50, beforeRevision: 3 })).toEqual([
-      version,
-    ]);
+    expect(await harness.client.listVersions(PROJECT_ID, { limit: 50, beforeRevision: 3 })).toEqual(
+      [version],
+    );
     expect(harness.fetcher.mock.calls[0]?.[0]).toBe(
       "/api/v1/projects/" + PROJECT_ID + "/versions?limit=50&beforeRevision=3",
     );
@@ -144,16 +156,25 @@ describe("框架无关工程 API Client", () => {
   it("分页数量和修订号超界、非安全整数不会发送请求", async () => {
     const harness = createHarness(jsonResponse([]));
     await expect(harness.client.listVersions(PROJECT_ID, { limit: 101 })).rejects.toThrow(/100/);
-    await expect(harness.client.listVersions(PROJECT_ID, { beforeRevision: 0 })).rejects.toThrow(/正安全整数/);
-    await expect(harness.client.readVersion(PROJECT_ID, Number.MAX_SAFE_INTEGER + 1)).rejects.toThrow(/正安全整数/);
+    await expect(harness.client.listVersions(PROJECT_ID, { beforeRevision: 0 })).rejects.toThrow(
+      /正安全整数/,
+    );
+    await expect(
+      harness.client.readVersion(PROJECT_ID, Number.MAX_SAFE_INTEGER + 1),
+    ).rejects.toThrow(/正安全整数/);
     expect(harness.fetcher).not.toHaveBeenCalled();
   });
 
   it("读取历史版本调用 Core SHA-256 完整性校验", async () => {
-    const snapshot = await createProjectSnapshot(documentCopy(), { revision: 1, createdAt: CREATED_AT });
+    const snapshot = await createProjectSnapshot(documentCopy(), {
+      revision: 1,
+      createdAt: CREATED_AT,
+    });
     const harness = createHarness(jsonResponse(snapshot));
     expect(await harness.client.readVersion(PROJECT_ID, 1)).toEqual(snapshot);
-    expect(harness.fetcher.mock.calls[0]?.[0]).toBe("/api/v1/projects/" + PROJECT_ID + "/versions/1");
+    expect(harness.fetcher.mock.calls[0]?.[0]).toBe(
+      "/api/v1/projects/" + PROJECT_ID + "/versions/1",
+    );
     const tampered = { ...snapshot, contentHash: "f".repeat(64) };
     const invalid = createHarness(jsonResponse(tampered));
     await expect(invalid.client.readVersion(PROJECT_ID, 1)).rejects.toMatchObject({
@@ -162,7 +183,10 @@ describe("框架无关工程 API Client", () => {
   });
 
   it("CAS 追加只发送 Core 契约，检查返回修订号并拒绝静默覆盖", async () => {
-    const snapshot = await createProjectSnapshot(documentCopy(), { revision: 2, createdAt: CREATED_AT });
+    const snapshot = await createProjectSnapshot(documentCopy(), {
+      revision: 2,
+      createdAt: CREATED_AT,
+    });
     const harness = createHarness(jsonResponse(snapshot, 201));
     expect(await harness.client.appendVersion(PROJECT_ID, 1, documentCopy())).toEqual(snapshot);
     const body = JSON.parse(harness.fetcher.mock.calls[0]?.[1]?.body as string);
@@ -176,7 +200,10 @@ describe("框架无关工程 API Client", () => {
 
   it("CAS 冲突、身份失效、跨租户统一映射为受控中文错误", async () => {
     for (const [status, kind] of [
-      [401, "unauthenticated"], [403, "forbidden"], [404, "not_found"], [409, "conflict"],
+      [401, "unauthenticated"],
+      [403, "forbidden"],
+      [404, "not_found"],
+      [409, "conflict"],
     ] as const) {
       const harness = createHarness(jsonResponse({ message: "session-secret" }, status));
       const failure = await harness.client.getProject(PROJECT_ID).catch((error: unknown) => error);
@@ -187,12 +214,21 @@ describe("框架无关工程 API Client", () => {
   });
 
   it("服务端 HTML、非法 JSON 和错误成功状态均按协议异常拒绝", async () => {
-    const html = createHarness(new Response("<html>登录页</html>", { status: 200, headers: { "Content-Type": "text/html" } }));
+    const html = createHarness(
+      new Response("<html>登录页</html>", {
+        status: 200,
+        headers: { "Content-Type": "text/html" },
+      }),
+    );
     await expect(html.client.listProjects()).rejects.toMatchObject({ kind: "invalid_response" });
-    const broken = createHarness(new Response("{broken", { status: 200, headers: { "Content-Type": "application/json" } }));
+    const broken = createHarness(
+      new Response("{broken", { status: 200, headers: { "Content-Type": "application/json" } }),
+    );
     await expect(broken.client.listProjects()).rejects.toMatchObject({ kind: "invalid_response" });
     const mismatch = createHarness(jsonResponse([], 201));
-    await expect(mismatch.client.listProjects()).rejects.toMatchObject({ kind: "invalid_response" });
+    await expect(mismatch.client.listProjects()).rejects.toMatchObject({
+      kind: "invalid_response",
+    });
   });
 
   it("网络失败不会重试写入或暴露第三方异常信息", async () => {
