@@ -2098,3 +2098,9 @@ Write-Host "真实 OIDC 工程浏览器专项退出码：$LASTEXITCODE"
 维护者 Windows 在最新 OIDC 专项中成功完成 Keycloak 登录、React 授权工程列表和分页，但在临时 IndexedDB 草稿阶段遭遇 `ReferenceError`；排查发现原 `stateInPage` 经 `function.toString()` 发送到浏览器时，错误引用仅存在于 Node 中的 `readBrowserDraftsInPage`。目前已将画布状态/草稿哈希读取拆分为两次**各自自包含的浏览器 CDP 调用**，在 Node 层合并原有断言，不调整临时 Profile 自动清理。
 
 维护者同步 PR #58 最新提交后，先运行 `pnpm run test:projects:oidc:config`（新增一项序列化边界回归，预计共 11 项），`vp check`、`pnpm run docs:check`、`pnpm run ready`；随后在本机可信 OIDC HTTPS Lab 上手动登录测试窗口，运行 `pnpm run test:projects:oidc:browser`，继续检查 React 与 Vue 的取消打开、模拟水位冲突、确认载入、自动保存暂停与 IndexedDB 原草稿哈希一致。浏览器关闭仍是安全清理，失败退出码不属于通过。
+
+### 第三十四批第三小批 · 模拟冲突与确认载入连续执行时的测试状态门禁（E-026）
+
+真实浏览器的“模拟远端水位冲突”会让 Studio **有意显示**冲突错误；同一次测试的下一步“确认打开最新版本”不能将该历史错误作为本次失败证据。测试现在记录点击前错误，在观察到新操作的“正在处理工程版本”或错误变化后，才判断新请求的错误（且不能处于忙碌状态）。真正的失败仍应退出非零；真正的成功仍需确认提示与 CAS 基线建立，且不得覆盖 IndexedDB 原草稿。新增两项正反测试，离线预计共 **13** 项。
+
+请先同步 PR #58 最新 HEAD，运行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`，再在可信本机 Lab 中运行 `pnpm run test:projects:oidc:browser`，双端专项成功后再运行完整 `pnpm run ready`。浏览器关闭始终是安全清理行为，须以终端退出码和 React/Vue 每个阶段结果判断验收；当前补丁尚待实测。

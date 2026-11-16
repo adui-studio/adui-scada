@@ -1298,3 +1298,11 @@ E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CD
 检查 PR #58 源码后确定，`stateInPage()` 在 CDP 独立页面上下文执行时直接引用 Node 模块的 `readBrowserDraftsInPage()`，符合 E-002 的已知跨作用域失败；本次作为 **E-025** 回归。最小修复将页面 DOM 状态和 IndexedDB 草稿摘要分为两个独立的 `session.evaluate` 调用，在 Node 侧组合结果，保留原四处画布、自动保存、草稿哈希和 CAS 断言。同步新增 1 项离线动作序列化测试，离线预计由 **10 增至 11**，安全开关、登录、服务端 API、Prisma、生产数据和设备写入全部不变。
 
 **修复后尚无 Windows 运行结果**；需要重新执行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 和 `pnpm run test:projects:oidc:browser`，验证双端直到 CAS 和草稿保护全部通过。此前完整 `ready` 退出码 0 只对应修复前 HEAD，不能当作本提交质量链通过证据。
+
+## 2026-11-16 · 第三十四批第三小批 E-026：模拟冲突后旧错误提示导致确认载入误判
+
+维护者 Windows 最新真实日志：`test:projects:oidc:config` **11/11**、`vp check` **328 文件格式正确、183 受检文件零错误**、`docs:check` **86 Markdown**、完整 `pnpm run ready` **544/544 单测、49/49 HTTP E2E、React/Vue/NestJS 构建通过，退出码 0**。交互式 `test:projects:oidc:browser` 已通过真实 Keycloak 登录、React BFF、授权工程列表/分页、临时 IndexedDB 草稿、自动保存、取消载入和模拟远端水位冲突阶段；随后在“React：正在验证确认载入与 CAS 基线”阶段报告“服务器工程载入阶段返回受控错误”，退出码 **1**，尚未进入 Vue。
+
+结合真实代码分析，前一次模拟冲突**故意设置**服务端错误提示；测试 `openProjectInPage` 在下一次点击“打开”后直接读取同一错误节点并立即判错，没有等待新 `runServerAction` 清除旧错误与启动操作。这个测试竞态与症状吻合，**现有日志无法单独证明真实确认载入请求已失败或成功**。本次最小修复在页面测试动作中记录点击前错误，只有观察到新的忙碌状态或错误变化，且新操作不再进行中时，才允许对当前真实错误作失败判断；成功分支仍必须满足确认回调和“CAS 基线已建立”。补充两项正反回归，离线配置/测试预计由 **11 增至 13**。不修改 React/Vue、API Client、OIDC、数据库、Prisma、TLS、工业设备接口或任何现有真实安全断言。
+
+**当前 HEAD 尚未执行 Windows 修复后测试**。维护者应先执行 `pnpm run test:projects:oidc:config` 与 `vp check`、`pnpm run docs:check`，然后独立重跑 `pnpm run test:projects:oidc:browser`；双框架真实 OIDC 专项成功后再完成全链 `pnpm run ready` 确认。隔离浏览器在成功与失败后均按凭据安全策略自动关闭，不能以窗口关闭本身判定成功与否。
