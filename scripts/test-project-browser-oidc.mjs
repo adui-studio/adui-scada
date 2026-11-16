@@ -480,6 +480,8 @@ export function requireAuthorizedProjectPage(result) {
 }
 
 async function verifyStudio(session, origin, name) {
+  const report = (phase) => process.stdout.write(name + "：正在验证" + phase + "\n");
+  report("首页加载与组态入口");
   await session.send("Page.navigate", { url: origin + "/" });
   await waitFor(
     () =>
@@ -489,12 +491,14 @@ async function verifyStudio(session, origin, name) {
     name + " 首页加载",
   );
   assert.equal(await session.evaluate(enterStudioInPage), true, name + " 无法进入 Studio");
+  report("真实 BFF 会话与授权工程列表");
   assert.equal(await session.evaluate(authenticatedInPage, origin), true, name + " 会话未通过验证");
 
   const initial = requireAuthorizedProjectPage(await session.evaluate(projectsInPage));
   if (initial.length === 0) {
     throw new Error(name + " 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程");
   }
+  report("工程管理菜单与首页摘要");
   await session.evaluate(function () {
     const menu = document.querySelector(".studio-project-browser-menu");
     if (!menu) throw new Error("未找到工程管理入口");
@@ -517,6 +521,7 @@ async function verifyStudio(session, origin, name) {
   );
   assert.equal(first.pageNumber, 1);
   assert.equal(first.prevEnabled, false);
+  report("授权工程分页");
   let paginated = false;
   if (first.nextEnabled) {
     const next = requireAuthorizedProjectPage(
@@ -540,12 +545,14 @@ async function verifyStudio(session, origin, name) {
     }
   }
 
+  report("临时 IndexedDB 草稿保存与自动保存");
   assert.equal(await session.evaluate(saveDraftInPage), true);
   assert.equal(await session.evaluate(enableAutoSaveInPage), true);
   const baseline = await session.evaluate(stateInPage);
   assert.ok(baseline.drafts.count >= 1);
   assert.equal(baseline.autoSave, true);
 
+  report("取消载入与画布保护");
   const selected = initial[0];
   const canceled = await session.evaluate(
     openProjectInPage,
@@ -560,6 +567,7 @@ async function verifyStudio(session, origin, name) {
   assert.deepEqual(afterCancel.drafts, baseline.drafts, name + " 取消载入修改了 IndexedDB 草稿");
   assert.equal(afterCancel.autoSave, true, name + " 取消载入停止了自动保存");
 
+  report("模拟远端修订水位冲突");
   const conflict = await session.evaluate(
     openProjectInPage,
     selected.projectId,
@@ -573,6 +581,7 @@ async function verifyStudio(session, origin, name) {
   assert.deepEqual(afterConflict.drafts, baseline.drafts, name + " 模拟远端水位冲突修改了草稿");
   assert.equal(afterConflict.autoSave, true, name + " 模拟远端水位冲突停止了自动保存");
 
+  report("确认载入与 CAS 基线");
   const opened = await session.evaluate(
     openProjectInPage,
     selected.projectId,
