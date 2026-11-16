@@ -9,10 +9,10 @@ const env =
     "SCADA_SERVER_HOST=127.0.0.1",
     "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false",
     "SCADA_DB_HOST=127.0.0.1",
-    "SCADA_DB_PORT=15433",
+    "SCADA_DB_PORT=15432",
     "SCADA_DB_NAME=adui_scada",
     "SCADA_DB_USER=adui_scada",
-    "SCADA_LAB_POSTGRES_PORT=15433",
+    "SCADA_LAB_POSTGRES_PORT=15432",
     "SCADA_LAB_REDIS_PORT=16379",
     "SCADA_LAB_KEYCLOAK_PORT=18443",
   ].join("\n") + "\n";
@@ -25,7 +25,7 @@ void describe("本机 Docker 首次 Prisma 迁移连接保护", () => {
   void it("只生成新的本机 adui_scada 连接地址", () => {
     const url = new URL(createDockerDatabaseUrl(env, secrets));
     assert.equal(url.hostname, "127.0.0.1");
-    assert.equal(url.port, "15433");
+    assert.equal(url.port, "15432");
     assert.equal(url.pathname, "/adui_scada");
     assert.equal(url.username, "adui_scada");
     assert.equal(url.searchParams.get("schema"), "public");

@@ -89,7 +89,7 @@ Swagger 地址以启动日志实际端口为准（模板当前默认 `13001`）�
 
 维护者已删除历史三个 Docker 项目与旧数据卷，没有数据库备份。因此首次运行**只创建全新数据库**，不再迁移旧卷或要求历史 Keycloak Realm、用户、SCADA 身份映射存在。
 
-只维护 `deploy/docker/compose.yaml` 的 `adui-scada` 项目、七个服务及一个 PostgreSQL 实例；业务数据库与数据库账号均为 `adui_scada`，Keycloak 逻辑数据库为 `adui_scada_keycloak`，宿主数据库端口 `127.0.0.1:15433`。全新持久化卷由 Compose 自动创建为 `adui-scada_postgres-data`、`adui-scada_redis-data`。不再挂载任何含 `adui-scada-oidc-lab` 前缀的旧卷。
+只维护 `deploy/docker/compose.yaml` 的 `adui-scada` 项目、七个服务及一个 PostgreSQL 实例；业务数据库与数据库账号均为 `adui_scada`，Keycloak 逻辑数据库为 `adui_scada_keycloak`，宿主数据库端口 `127.0.0.1:15432`。全新持久化卷由 Compose 自动创建为 `adui-scada_postgres-data`、`adui-scada_redis-data`。不再挂载任何含 `adui-scada-oidc-lab` 前缀的旧卷。
 
 ```powershell
 # 如原 .env 仍有私密测试配置，先在本机备份，备份同样受 .gitignore 保护。

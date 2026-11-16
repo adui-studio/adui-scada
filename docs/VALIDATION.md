@@ -1198,3 +1198,9 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 新测试覆盖单项目/单 PostgreSQL/新存储卷、回环端口限制、拒绝旧数据库 URL、禁止自动清理历史容器、随机本机凭据及 Prisma URL 安全规则。原先 17 项旧卷迁移测试被全新安装测试替代；Windows `pnpm run test:docker`、`test:docker:db`、`test:oidc:lab`、`test:oidc:identity`、`vp check`、`docs:check`、`ready` 和实际 Docker/Prisma/Keycloak 联调均待实跑，不得声称旧数据库、会话或用户已恢复。
 
 当前改动不执行任何 Docker 删除操作，不触碰生产设备/数据库；不恢复、清空或重置历史数据。
+
+## 2026-11-16 · PostgreSQL 统一端口 15432 的配置与测试修订
+
+在唯一 `adui-scada` 新安装方案上，仅将 PostgreSQL 宿主机映射以及 `.env.example` 的 `SCADA_DB_PORT` / `SCADA_LAB_POSTGRES_PORT` 从 15433 统一改为 **15432**，Compose 内部保持 5432。同步调整 `scripts/check-env-config.mjs`、`docker-stack.mjs`、`init-docker-db.mjs` 与 Docker、OIDC、凭据相关测试默认值，并把测试里“错误端口”调整为已废弃的 15433；未修改数据库名称、Schema、Keycloak Issuer、数据卷与安全限制。最新部署说明以 `docs/HARNESS.md` 对应章节及 ADR-0066 为准；早期日志中的 15433 是历史记录，不代表当前预期。
+
+修改后必须在 Windows 实际运行 `pnpm run test:docker`、`test:docker:db`、`test:oidc:lab`、`test:oidc:identity`、`env:check`、`vp check`、`docs:check` 与完整 `ready`；随后确认 15432 空闲，使用新根 `.env` 实行 `docker:plan`、`docker:up` 和 `docker:ps`，再验证 Prisma 迁移与 Keycloak。未经实跑不能宣称任何一项 Windows 或 Docker 真实验证通过。

@@ -33,13 +33,13 @@ const env = () => ({
   SCADA_OIDC_WEB_ORIGINS: "https://127.0.0.1:15173,https://127.0.0.1:15174",
   SCADA_OIDC_ISSUER: "https://127.0.0.1:18443/realms/adui-scada",
   SCADA_LAB_KEYCLOAK_PORT: "18443",
-  SCADA_LAB_POSTGRES_PORT: "15433",
+  SCADA_LAB_POSTGRES_PORT: "15432",
   SCADA_DB_HOST: "127.0.0.1",
-  SCADA_DB_PORT: "15433",
+  SCADA_DB_PORT: "15432",
   SCADA_DB_NAME: "adui_scada",
   SCADA_DB_USER: "adui_scada",
   SCADA_DATABASE_URL:
-    "postgresql://adui_scada:temporary-test-only@127.0.0.1:15433/adui_scada?schema=public",
+    "postgresql://adui_scada:temporary-test-only@127.0.0.1:15432/adui_scada?schema=public",
 });
 
 function fakeDatabase(options = {}) {
@@ -154,9 +154,9 @@ void describe("OIDC Lab 手动身份预绑定安全门禁", () => {
       { NODE_TLS_REJECT_UNAUTHORIZED: "0" },
       { SCADA_OIDC_ALLOW_INSECURE_LOOPBACK: "true" },
       { SCADA_OIDC_ENABLED: "false" },
-      { SCADA_DATABASE_URL: "postgresql://user:pass@127.0.0.1:15433/adui_scada?schema=public" },
+      { SCADA_DATABASE_URL: "postgresql://user:pass@127.0.0.1:15432/adui_scada?schema=public" },
       {
-        SCADA_DATABASE_URL: "postgresql://user:pass@example.org:15433/adui_scada?schema=public",
+        SCADA_DATABASE_URL: "postgresql://user:pass@example.org:15432/adui_scada?schema=public",
       },
     ]) {
       assert.throws(() => resolveLabIdentityTarget({ ...env(), ...diff }), /仅允许|数据库连接/);
@@ -173,7 +173,7 @@ void describe("OIDC Lab 手动身份预绑定安全门禁", () => {
       /Issuer/,
     );
     assert.throws(
-      () => resolveLabIdentityTarget({ ...env(), SCADA_DB_PORT: "15432" }),
+      () => resolveLabIdentityTarget({ ...env(), SCADA_DB_PORT: "15433" }),
       /数据库连接/,
     );
   });

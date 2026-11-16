@@ -17,7 +17,7 @@ export function createDockerDatabaseUrl(envText, secretsText) {
     const found = /^([A-Z][A-Z0-9_]*)=(.*)$/.exec(line.trim());
     if (found) env.set(found[1], found[2]);
   }
-  const port = env.get("SCADA_LAB_POSTGRES_PORT") ?? "15433";
+  const port = env.get("SCADA_LAB_POSTGRES_PORT") ?? "15432";
   const url = new URL(`postgresql://127.0.0.1:${port}/adui_scada`);
   url.username = "adui_scada";
   url.password = secrets.SCADA_LAB_DB_PASSWORD;

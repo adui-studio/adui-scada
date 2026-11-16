@@ -1112,3 +1112,7 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 ### 2026-11-16 · 维护者删除旧三个 Docker 项目及旧数据卷，改用全新安装
 
 维护者确认旧的 Demo、旧开发 PostgreSQL、OIDC Lab 三组容器已全部删除，随后明确连其数据卷也删除且未留数据库备份。新方案因此不再保留“复用旧卷/迁移旧数据库”的假设：仅一份 `adui-scada` Compose，七服务、一个 PostgreSQL 容器；业务库与用户固定 `adui_scada`，Keycloak 逻辑库 `adui_scada_keycloak`；数据存储在新项目的两个持久化卷。根 `.env.example` 重新整理，默认不开启 OIDC，首次 `docker:up` 使用本机安全随机凭据、证书并运行 Prisma `migrate deploy`，无需旧卷。旧 Keycloak 用户、身份预绑定与项目历史**没有恢复**，后续需重新创建和验收。Windows Docker 实际执行尚待验收。
+
+### 2026-11-16 · 单 Docker 新安装 PostgreSQL 端口收敛为 15432
+
+维护者在已确认旧三个项目及数据卷均删除、无备份后，进一步要求 **PostgreSQL 端口统一为 15432**。最新 `adui-scada` 单 Compose 的 PostgreSQL 服务仍映射容器内 `5432`，宿主机端口改为 `127.0.0.1:15432`；根环境模板、默认检查、初始化、OIDC 身份绑定用例与端口拒绝测试按此同步。数据库名、用户 `adui_scada`，Keycloak 独立逻辑库 `adui_scada_keycloak`、数据卷及安全策略不变。此前旧 Lab `15433` 仅属于历史实施记录。Windows 实际 `ready`、新容器与 Prisma 迁移尚待验收。

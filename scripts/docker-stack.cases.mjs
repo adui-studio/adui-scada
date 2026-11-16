@@ -11,11 +11,11 @@ const env =
     "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false",
     "SCADA_REACT_PORT=18080",
     "SCADA_VUE_PORT=18081",
-    "SCADA_LAB_POSTGRES_PORT=15433",
+    "SCADA_LAB_POSTGRES_PORT=15432",
     "SCADA_LAB_REDIS_PORT=16379",
     "SCADA_LAB_KEYCLOAK_PORT=18443",
     "SCADA_DB_HOST=127.0.0.1",
-    "SCADA_DB_PORT=15433",
+    "SCADA_DB_PORT=15432",
     "SCADA_DB_NAME=adui_scada",
     "SCADA_DB_USER=adui_scada",
   ].join("\n") + "\n";
@@ -36,18 +36,18 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
     assert.equal(validateDockerEnv(env), true);
   });
 
-  void it("拒绝旧数据库、旧账号和旧数据库端口", () => {
+  void it("拒绝旧数据库、旧账号和非当前数据库端口", () => {
     for (const invalid of [
       env.replace("SCADA_DB_NAME=adui_scada", "SCADA_DB_NAME=adui_scada_oidc_lab"),
       env.replace("SCADA_DB_USER=adui_scada", "SCADA_DB_USER=adui_scada_oidc_lab"),
-      env.replace("SCADA_DB_PORT=15433", "SCADA_DB_PORT=15432"),
+      env.replace("SCADA_DB_PORT=15432", "SCADA_DB_PORT=15433"),
     ])
       assert.throws(() => validateDockerEnv(invalid), /禁止连接历史数据库/);
   });
 
   void it("拒绝重复环境变量及冲突端口", () => {
     assert.throws(() => validateDockerEnv(env + "SCADA_DB_NAME=adui_scada\n"), /重复/);
-    assert.throws(() => validateDockerEnv(env.replace("16379", "15433")), /端口/);
+    assert.throws(() => validateDockerEnv(env.replace("16379", "15432")), /端口/);
   });
 
   void it("拒绝公网监听及不安全 OIDC 模式", () => {
@@ -70,11 +70,11 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
   void it("正确的 Prisma URL 可使用且禁止远程或历史数据库", () => {
     const valid =
       env +
-      "SCADA_DATABASE_URL=postgresql://adui_scada:sample@127.0.0.1:15433/adui_scada?schema=public\n";
+      "SCADA_DATABASE_URL=postgresql://adui_scada:sample@127.0.0.1:15432/adui_scada?schema=public\n";
     assert.equal(validateDockerEnv(valid), true);
-    assert.throws(() => validateDockerEnv(valid.replace(":15433/", ":15432/")), /全新的本机/);
+    assert.throws(() => validateDockerEnv(valid.replace(":15432/", ":15433/")), /全新的本机/);
     assert.throws(
-      () => validateDockerEnv(valid.replace("127.0.0.1:15433", "remote.example:15433")),
+      () => validateDockerEnv(valid.replace("127.0.0.1:15432", "remote.example:15432")),
       /全新的本机/,
     );
   });

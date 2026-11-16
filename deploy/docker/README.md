@@ -40,7 +40,7 @@ pnpm run docker:db:init
 | ----------------------------------------- | ------------------------- |
 | React Docker HTTP Demo                    | `http://127.0.0.1:18080`  |
 | Vue Docker HTTP Demo                      | `http://127.0.0.1:18081`  |
-| PostgreSQL（SCADA + Keycloak 两个逻辑库） | `127.0.0.1:15433`         |
+| PostgreSQL（SCADA + Keycloak 两个逻辑库） | `127.0.0.1:15432`         |
 | Redis                                     | `127.0.0.1:16379`         |
 | Keycloak HTTPS                            | `https://127.0.0.1:18443` |
 

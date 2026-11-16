@@ -64,7 +64,7 @@ export function validateDockerEnv(text) {
   for (const [key, fallback] of [
     ["SCADA_REACT_PORT", "18080"],
     ["SCADA_VUE_PORT", "18081"],
-    ["SCADA_LAB_POSTGRES_PORT", "15433"],
+    ["SCADA_LAB_POSTGRES_PORT", "15432"],
     ["SCADA_LAB_REDIS_PORT", "16379"],
     ["SCADA_LAB_KEYCLOAK_PORT", "18443"],
   ]) {
@@ -74,7 +74,7 @@ export function validateDockerEnv(text) {
     }
     ports.add(Number(raw));
   }
-  const dbPort = env.get("SCADA_LAB_POSTGRES_PORT") ?? "15433";
+  const dbPort = env.get("SCADA_LAB_POSTGRES_PORT") ?? "15432";
   for (const [key, expected] of [
     ["SCADA_DB_HOST", "127.0.0.1"],
     ["SCADA_DB_PORT", dbPort],

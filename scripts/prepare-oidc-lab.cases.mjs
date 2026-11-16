@@ -11,7 +11,7 @@ const example =
     "SCADA_SERVER_HOST=127.0.0.1",
     "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false",
     "SCADA_LAB_KEYCLOAK_PORT=18443",
-    "SCADA_LAB_POSTGRES_PORT=15433",
+    "SCADA_LAB_POSTGRES_PORT=15432",
     "SCADA_LAB_REDIS_PORT=16379",
   ].join("\n") + "\n";
 
@@ -79,7 +79,7 @@ void describe("唯一 ADui SCADA Docker 首次安装准备", () => {
       "SCADA_WEB_HOST=0.0.0.0",
       "SCADA_SERVER_HOST=0.0.0.0",
       "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=true",
-      "SCADA_LAB_REDIS_PORT=15433",
+      "SCADA_LAB_REDIS_PORT=15432",
       "SCADA_LAB_KEYCLOAK_PORT=65536",
       "NODE_ENV=production",
     ]) {

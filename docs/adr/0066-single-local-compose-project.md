@@ -11,7 +11,7 @@ ADui SCADA 曾分别运行 Demo、独立开发 PostgreSQL、OIDC Lab 三个 Comp
 ## 决策
 
 1. 仅保留 `deploy/docker/compose.yaml`，顶层 `name: adui-scada`。七服务均在此项目内管理，PostgreSQL 只有一个容器，Keycloak 与 SCADA 使用同一实例内的不同逻辑数据库。
-2. PostgreSQL 初始化账号及业务库均为 `adui_scada`，Keycloak 独立逻辑库为 `adui_scada_keycloak`。宿主机数据库端口仅绑定 `127.0.0.1:15433`；所有对外端口均限回环，不接入真实 PLC/DCS。
+2. PostgreSQL 初始化账号及业务库均为 `adui_scada`，Keycloak 独立逻辑库为 `adui_scada_keycloak`。宿主机数据库端口仅绑定 `127.0.0.1:15432`；所有对外端口均限回环，不接入真实 PLC/DCS。
 3. 不再引用、挂载或自动操作旧数据卷。Compose 通过普通命名卷创建 `adui-scada_postgres-data` 和 `adui-scada_redis-data`，容器删除和默认 `docker:down` 不会删除新卷。
 4. 复制默认关闭 OIDC 的根 `.env.example` 为 `.env`；`docker:up` 首次生成 Git 忽略的 `.local/docker/` 本机随机凭据与 mkcert 证书，不将密码固化到公开模板。独立 PostgreSQL 初始建库脚本创建 Keycloak 逻辑库，完成容器启动后执行 Prisma `migrate deploy` 创建 SCADA 业务表。重复部署应幂等，不运行 `migrate reset`。
 5. 仅提供 `docker:plan/up/down/ps/logs/db:init` 等面向单栈的命令，不再提供旧数据卷预检或 `docker:migrate`；若仍检测到旧项目容器，一律提示人工处理而非自动停止、移除。

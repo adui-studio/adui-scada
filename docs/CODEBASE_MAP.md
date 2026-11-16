@@ -740,4 +740,4 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/prepare-oidc-lab.mjs`：在 `.local/docker/` 生成/复用本机随机凭据与 TLS 文件，保留原业务函数名称以最小化影响，不能自动覆盖已有秘密。
 - `scripts/init-docker-db.mjs`：从 Git 忽略的随机凭据构造固定回环数据库 URL，调用 Prisma `migrate deploy`；`scripts/init-docker-db.cases.mjs` 校验独立数据库和密码保护。
 - `deploy/docker/oidc-lab/init-keycloak-db.sql`：首次 PostgreSQL 初始化时创建 Keycloak 独立逻辑库。
-- `.env.example`、`scripts/check-env-config.mjs`：统一数据库名称 `adui_scada`、端口 `15433`，OIDC 默认关闭，密码不入 Git。
+- `.env.example`、`scripts/check-env-config.mjs`：统一数据库名称 `adui_scada`、端口 `15432`，OIDC 默认关闭，密码不入 Git。

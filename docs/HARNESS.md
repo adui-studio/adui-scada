@@ -1991,3 +1991,40 @@ pnpm run docker:ps
 `docker:up` 使用新 `.local/docker/` 生成独立随机密码和 mkcert TLS，启动七容器、初始化 Keycloak 数据库及 Realm，然后将 Prisma 迁移部署到新 `adui_scada` 数据库。`docker:db:init` 可安全重复迁移（绝不调用 reset）。日常使用 `docker:up/ps/logs/down`，`down` 只停止容器不删卷。
 
 由于历史库无备份，原 Keycloak 普通用户、原 OIDC 可信主体、会话和工程数据不再自动有效。后续必须重建测试用户并显式预绑定，再重新做 OIDC HTTPS 登录、两框架会话、Cookie/CSRF 和工程版本回归。Docker HTTP Demo 18080/18081 不等同于受控 HTTPS 认证界面。
+
+### 2026-11-16 · 全新 Docker PostgreSQL 宿主端口统一为 15432（当前有效）
+
+唯一 `adui-scada` Compose 内部 PostgreSQL 仍监听 `5432`，仅将宿主发布端口从 `127.0.0.1:15433` 改为 **`127.0.0.1:15432`**。根 `.env.example` 的 `SCADA_DB_PORT` 与 `SCADA_LAB_POSTGRES_PORT` 同步为 `15432`；`scripts/docker-stack.mjs`、`scripts/init-docker-db.mjs` 和安全测试默认值同步，业务库及账号继续为 `adui_scada`。历史迁移验证所记录的旧端口不代表当前配置。
+
+```powershell
+git status --short
+git pull --ff-only
+pnpm run test:docker
+if ($LASTEXITCODE -ne 0) { throw "Docker 端口安全测试失败" }
+pnpm run test:docker:db
+if ($LASTEXITCODE -ne 0) { throw "数据库初始化安全测试失败" }
+pnpm run test:oidc:lab
+if ($LASTEXITCODE -ne 0) { throw "本机凭据和端口校验失败" }
+pnpm run test:oidc:identity
+if ($LASTEXITCODE -ne 0) { throw "OIDC 身份绑定校验失败" }
+pnpm run env:check
+if ($LASTEXITCODE -ne 0) { throw "环境配置检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+# 已有 .env 先在本机备份再复制新模板；不能提交本机密码。
+if (Test-Path .env) {
+    Copy-Item .env (".env.backup." + (Get-Date -Format yyyyMMddHHmmss))
+}
+Copy-Item .env.example .env -Force
+
+pnpm run docker:plan
+if ($LASTEXITCODE -ne 0) { throw "Docker 预检失败" }
+pnpm run docker:up
+if ($LASTEXITCODE -ne 0) { throw "Docker 启动或 Prisma 迁移失败" }
+pnpm run docker:ps
+```
+
+端口 `15432` 必须未被其他 PostgreSQL/服务占用；如果已占用，应先确认占用进程，不能直接结束其他项目的进程或删除卷。端口变化本身不会修改容器内数据库、密钥、Prisma Schema 或工业安全边界。此记录是代码修改与待执行的 Windows 验收步骤，不代表上述命令已经在维护者机器上运行。
