@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   describeBrowserPageException,
   describeProjectBrowserFailure,
+  inspectStudioState,
   requireAuthorizedProjectPage,
   resolveProjectBrowserLab,
 } from "./test-project-browser-oidc.mjs";
@@ -156,6 +157,32 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     );
     error.pageDiagnostic = "页面脚本类型异常";
     assert.equal(describeProjectBrowserFailure(error), "浏览器页面操作失败：页面脚本类型异常");
+  });
+
+  void it("CDP 页面状态与 IndexedDB 读取分别序列化执行，防止跨作用域引用异常", async () => {
+    const actions = [];
+    const page = {
+      canvas: "<svg></svg>",
+      server: "当前工程：demo；CAS 基线：1",
+      autoSave: true,
+    };
+    const drafts = { count: 1, hash: "只供测试的摘要" };
+    const session = {
+      async evaluate(action) {
+        actions.push({ name: action.name, source: action.toString() });
+        if (action.name === "stateInPage") return page;
+        if (action.name === "readBrowserDraftsInPage") return drafts;
+        throw new Error("测试收到了意外的浏览器动作");
+      },
+    };
+
+    assert.deepEqual(await inspectStudioState(session), { ...page, drafts });
+    assert.deepEqual(
+      actions.map((action) => action.name),
+      ["stateInPage", "readBrowserDraftsInPage"],
+    );
+    assert.equal(actions[0].source.includes("readBrowserDraftsInPage"), false);
+    assert.equal(actions[1].source.includes("indexedDB.open"), true);
   });
 
   void it("不允许生产模式启动交互式本机测试", () => {

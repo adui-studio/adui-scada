@@ -348,13 +348,22 @@ async function readBrowserDraftsInPage() {
   };
 }
 
-async function stateInPage() {
+/** 此函数在浏览器的独立执行上下文中运行，不得引用 Node 模块作用域的 helper。 */
+function stateInPage() {
   return {
     canvas: document.querySelector(".studio-svg")?.innerHTML ?? "",
     server: document.querySelector('[aria-label="服务端工程版本"]')?.textContent ?? "",
     autoSave: document.querySelector('.studio-file-menu button[aria-pressed="true"]') !== null,
-    drafts: await readBrowserDraftsInPage(),
   };
+}
+
+/** 画布与 IndexedDB 各自在浏览器执行，Node 侧仅合并已脱敏的测试断言数据。 */
+export async function inspectStudioState(session) {
+  const [view, drafts] = await Promise.all([
+    session.evaluate(stateInPage),
+    session.evaluate(readBrowserDraftsInPage),
+  ]);
+  return { ...view, drafts };
 }
 
 async function saveDraftInPage() {
@@ -553,7 +562,7 @@ async function verifyStudio(session, origin, name) {
   report("临时 IndexedDB 草稿保存与自动保存");
   assert.equal(await session.evaluate(saveDraftInPage), true);
   assert.equal(await session.evaluate(enableAutoSaveInPage), true);
-  const baseline = await session.evaluate(stateInPage);
+  const baseline = await inspectStudioState(session);
   assert.ok(baseline.drafts.count >= 1);
   assert.equal(baseline.autoSave, true);
 
@@ -567,7 +576,7 @@ async function verifyStudio(session, origin, name) {
   );
   assert.deepEqual(canceled, { confirmCount: 1, intercepted: 0, outcome: "cancel" });
   assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
-  const afterCancel = await session.evaluate(stateInPage);
+  const afterCancel = await inspectStudioState(session);
   assert.equal(afterCancel.canvas, baseline.canvas, name + " 取消载入改变了画布");
   assert.deepEqual(afterCancel.drafts, baseline.drafts, name + " 取消载入修改了 IndexedDB 草稿");
   assert.equal(afterCancel.autoSave, true, name + " 取消载入停止了自动保存");
@@ -581,7 +590,7 @@ async function verifyStudio(session, origin, name) {
   );
   assert.deepEqual(conflict, { confirmCount: 0, intercepted: 1, outcome: "conflict" });
   assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
-  const afterConflict = await session.evaluate(stateInPage);
+  const afterConflict = await inspectStudioState(session);
   assert.equal(afterConflict.canvas, baseline.canvas, name + " 模拟远端水位冲突改变了画布");
   assert.deepEqual(afterConflict.drafts, baseline.drafts, name + " 模拟远端水位冲突修改了草稿");
   assert.equal(afterConflict.autoSave, true, name + " 模拟远端水位冲突停止了自动保存");
@@ -595,7 +604,7 @@ async function verifyStudio(session, origin, name) {
   );
   assert.deepEqual(opened, { confirmCount: 1, intercepted: 0, outcome: "confirm" });
   assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
-  const afterOpen = await session.evaluate(stateInPage);
+  const afterOpen = await inspectStudioState(session);
   assert.equal(afterOpen.autoSave, false, name + " 载入后未暂停自动保存");
   assert.deepEqual(afterOpen.drafts, baseline.drafts, name + " 服务端载入覆盖了 IndexedDB 草稿");
   assert.ok(afterOpen.server.includes("CAS 基线：" + selected.headRevision));
