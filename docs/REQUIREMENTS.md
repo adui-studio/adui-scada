@@ -310,3 +310,9 @@ Core 新增框架无关 Tag 定义模型，使用稳定 `tagId` 区分不可变�
 第二小批 PR #57 已经维护者授权合并至 `main@c426d268`。本小批只扩展**独立执行、真实 Chromium/Edge + 可信 HTTPS 的验收工具**，不修改 React/Vue 组件、SCADA Core、后端 API、数据库 Schema 或已有权限规则。必须使用已显式配置的本机 Keycloak 隔离 Realm、回环 Web/NestJS、可信 Node TLS 根证书和本机 Lab PostgreSQL，且必须由维护者在临时浏览器中通过标准 OIDC 发起入口手动登录普通预绑定测试用户，不接受自动生成 Cookie、伪造主体或在测试中输入测试密码。
 
 脚本验证 React/Vue 双端授权列表与工程版本摘要一致、可用时的分页翻转、取消载入画布/IndexedDB/自动保存不变、最新服务端版本经用户确认后建立可见 CAS 基线并停止自动保存、原有本地草稿 SHA-256 不变。远端版本已变化的拒绝路径只通过浏览器中预先安装的**单次只读 GET 响应故障模拟**覆盖，不修改数据库或服务端版本，不能据此称真实 PostgreSQL 并发冲突经过端到端验收；如隔离 Lab 授权工程不足 11 项，成功场景只覆盖首末页边界而不冒充实际两页数据翻转。此脚本不执行 POST 工程 API、不写工业设备、不删除本地 Docker 卷；见 [ADR-0068](adr/0068-dual-studio-project-browser.md)。
+
+## V0.3 第三十四批第四小批：真实多页分页与双主体 CAS 竞争验收（FR-001 / FR-002 / FR-013 / NFR-003 局部）
+
+在已合并的 PR #58 双框架真实 OIDC 工程浏览器专项基础上，本小批只增强现有验收，不变更公开 API、`StudioProjectBrowser`、React/Vue 业务组件、Prisma Schema/迁移和工业写入权限。隔离 `adui_scada_test` 的现有 `test:db` 新增**同租户 12 个获 `project:read` 授权工程、另外 1 个同租户无权工程**的真实 PostgreSQL 游标测试，核验每页 10 条的首页/第二页/空末页、升序、授权过滤、租户隔离及摘要白名单，并在随机测试租户中自动清理。另使用**两套独立 PrismaService 连接和不同授权主体**对同一工程的同一修订号同时调用 `append`，要求只有一次提交成功，数据库水位/不可变版本/成功审计精确对应获胜主体，竞争者返回 `ProjectRevisionConflictError`；不生成真实 OIDC Cookie，也不声称双会话 HTTP 409 已执行。
+
+为原 `test:projects:oidc:browser` 增加独立的 `test:projects:oidc:browser:pages` 严格模式：只允许可信本机 OIDC HTTPS Lab，React/Vue 都必须真正访问包含数据的第二页并返回上一页，否则失败；**不自动创建、授权、覆盖或清理正在运行的 Lab 工程**。运行严格模式前维护者须按受控流程准备至少 11 项已经授权的工程，且其具备 `project:read` 与所选择工程的 `version:read`。数据库集成测试和交互式严格模式均不纳入默认 `ready`；仅新增的离线模式保护用例会经 `ready` 执行。生产数据库、Keycloak 正式 Realm、跨站请求和工业设备均不属于本批验收。

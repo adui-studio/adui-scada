@@ -788,3 +788,10 @@ Studio 工具栏新增独立“工程管理”弹层，与原“服务端工程�
 新增 `scripts/test-project-browser-oidc.mjs`。配置先复用现有 `resolveReadonlyProbeOrigins` 约束，额外核对本机 Keycloak Issuer / `adui-scada` Realm、`SCADA_DATABASE_URL` 的精确本机 Lab 数据库白名单、可信 Node 根证书。只允许非生产、已显式启用 OIDC HTTPS 的两套 Vite Origin。登录由维护者在**临时隔离 Chrome/Edge Profile** 内访问真实 `/api/v1/auth/oidc/start` 手动完成，脚本从浏览器的同源 GET `/api/v1/auth/me` 确认可信主体，绝不输出 Cookie、Code、Token、密码或身份详情。
 
 React 和 Vue 在一个真实临时浏览器中分别进入 Studio：对比工程管理列表与服务端 `GET /api/v1/projects?limit=10` 摘要、检查 ID/修订号及分页按钮；若有下一页，使用 `afterProjectId` 对比 UI 上下页。通过真实 Studio“保存草稿”按钮只写当前**临时浏览器 IndexedDB** 并开启自动保存；点击“打开”时分别模拟取消、在 API Client 初始化前安装的受控 `GET /api/v1/projects/:id` 响应水位故障、最后确认打开当前最新服务端快照。前两条要求画布与草稿摘要不变、自动保存保持开启；确认后要求 CAS 基线与最新修订号相符、自动保存暂停且原草稿 SHA-256 不变。所有工程 HTTP API 请求均为 GET，水位冲突模拟不是实际数据库竞争写入。脚本不会自行创建、更新、发布或删除服务端工程；真实身份登录会产生隔离 Lab 正常的登录事务。无真实用户/授权工程则必须明确失败，不伪造自动化成功。
+
+## 2026-11-17 · 第三十四批第四小批：真实多页游标与独立连接 CAS 验收
+
+- 沿用 `PrismaProjectVersionStore.list` 的按 `projectId ASC`、`afterProjectId` 严格大于游标、精确租户与 `project:read` 的现有 PostgreSQL 查询。真库测试在随机测试租户中使用现有 `create` 事务准备 12 个获授权工程与 1 个同租户但无当前主体读取权限的工程，断言真实 `10 + 2 + 0`、完整 12 项只读摘要、修订号 1、无权工程不可枚举；测试退出时只清理该随机租户记录。
+- 沿用 `PrismaProjectVersionStore.append` 的工程行 `FOR UPDATE`、ACL 复查、`expectedRevision` 比较、版本追加/水位推进/成功审计同事务规则。两个不同 `subjectId` 分别通过两个独立 `PrismaService` 连接并发提交 `expectedRevision=1`：要求一成功、一 `ProjectRevisionConflictError`；数据库最终仅有修订 1/2 的两条历史与两条审计记录，修订 2 的审计操作者必须等于真实获胜主体。此验证在仓储层，不是两条 OIDC HTTP 请求，也不会测试新的发布或设备写入。
+- 交互式 `test:projects:oidc:browser:pages` 复用原真实 Keycloak/HTTPS/Chrome/Edge 临时浏览器专项，额外强制 React 与 Vue 都进行**有数据的第二页**前后翻页；普通 `test:projects:oidc:browser` 行为保持不变。命令不向 Lab 写入项目、ACL、版本或身份；授权工程不足 11 项时以中文固定错误和非零退出码停止，禁止伪造多页通过结论。
+- 独立 `pnpm run test:db` 仍必须显式配置 `SCADA_TEST_DATABASE_URL` 指向本机 `adui_scada_test`，与根环境业务库 `adui_scada` 严格隔离；不新增数据库表、字段、索引、迁移和依赖。

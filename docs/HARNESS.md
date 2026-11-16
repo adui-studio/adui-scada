@@ -2104,3 +2104,41 @@ Write-Host "真实 OIDC 工程浏览器专项退出码：$LASTEXITCODE"
 真实浏览器的“模拟远端水位冲突”会让 Studio **有意显示**冲突错误；同一次测试的下一步“确认打开最新版本”不能将该历史错误作为本次失败证据。测试现在记录点击前错误，在观察到新操作的“正在处理工程版本”或错误变化后，才判断新请求的错误（且不能处于忙碌状态）。真正的失败仍应退出非零；真正的成功仍需确认提示与 CAS 基线建立，且不得覆盖 IndexedDB 原草稿。新增两项正反测试，离线预计共 **13** 项。
 
 请先同步 PR #58 最新 HEAD，运行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`，再在可信本机 Lab 中运行 `pnpm run test:projects:oidc:browser`，双端专项成功后再运行完整 `pnpm run ready`。浏览器关闭始终是安全清理行为，须以终端退出码和 React/Vue 每个阶段结果判断验收；当前补丁尚待实测。
+
+## 第三十四批第四小批 · 真实多页与两主体 CAS 竞争专项（独立运行）
+
+本小批只补足 PR #58 已标明的两个验证空白，**不在 OIDC Lab 自动创建工程**。现有交互式测试保持不变；新增独立严格入口：
+
+```powershell
+# 在测试前，先核对当前 OIDC Lab 已按受控流程存在至少 11 项
+# 对当前普通测试主体授权的工程；不得在生产库或正在使用的开发库造数。
+$previousCa = $env:NODE_EXTRA_CA_CERTS
+try {
+  $caRoot = & mkcert -CAROOT
+  if ($LASTEXITCODE -ne 0 -or -not $caRoot) { throw "本机可信根证书目录不可读取" }
+  $env:NODE_EXTRA_CA_CERTS = Join-Path $caRoot "rootCA.pem"
+  if (-not (Test-Path -LiteralPath $env:NODE_EXTRA_CA_CERTS)) {
+    throw "本机可信根证书不存在"
+  }
+  pnpm run test:projects:oidc:browser:pages
+  if ($LASTEXITCODE -ne 0) { throw "真实双框架多页验收失败" }
+  Write-Host "真实双端多页验收退出码：$LASTEXITCODE"
+}
+finally {
+  [Environment]::SetEnvironmentVariable("NODE_EXTRA_CA_CERTS", $previousCa, "Process")
+}
+```
+
+严格模式仍通过 Keycloak 真人登录，验证 React/Vue 分别进入授权工程第二页再返回第一页，并继续执行取消、模拟冲突、确认载入、CAS/IndexedDB 保护。授权不足 11 项时**必须失败**，不是项目故障；本批不为达到数字私自授予 ACL 或创建工程。只有单页库存的场景仍应使用原 `test:projects:oidc:browser`（不能算严格多页通过）。
+
+真实 PostgreSQL 测试复用现有 `pnpm run test:db`，只连接**已迁移的本机独立 `adui_scada_test`**，且会在该库中向**随机 `test-<UUID>` 租户**写入/删除测试数据。维护者必须先通过现有流程核对 `SCADA_TEST_DATABASE_URL` 指向该库、具备有效本机测试连接和迁移，不得直接将开发库 `adui_scada`、Keycloak 数据库、远端数据库或生产库配置给测试命令：
+
+```powershell
+# 按现有本机安全流程，在当前 PowerShell 进程设置
+# SCADA_TEST_DATABASE_URL 指向 127.0.0.1 的 adui_scada_test
+# 密码只留在环境变量或本机受保护配置，不要贴到终端和 PR
+pnpm run test:db
+Write-Host "隔离 PostgreSQL 测试退出码：$LASTEXITCODE"
+```
+
+`test:db` 在现有 `vitest.config.db.ts` 中独立于 `ready`，并有 URL 主机与数据库名白名单；此次预计在旧的 **23 项**基础上新增 **2 项**、共 **25 项**（以实际测试报告为准）。新增离线环境安全检查由 13 增至 **14 项**，随默认 `ready` 执行；交互式多页严格检查仍不进入 `ready`。CAS 用例在仓储层使用独立 Prisma 连接和两位授权主体，不代表生产 HTTP 双 Cookie 会话、真实 OIDC 409、企业 IdP 或正式工业安全验收。所有新测试在当前候选分支下均待 Windows 真实运行。

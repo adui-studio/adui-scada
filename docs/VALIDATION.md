@@ -1306,3 +1306,11 @@ E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CD
 结合真实代码分析，前一次模拟冲突**故意设置**服务端错误提示；测试 `openProjectInPage` 在下一次点击“打开”后直接读取同一错误节点并立即判错，没有等待新 `runServerAction` 清除旧错误与启动操作。这个测试竞态与症状吻合，**现有日志无法单独证明真实确认载入请求已失败或成功**。本次最小修复在页面测试动作中记录点击前错误，只有观察到新的忙碌状态或错误变化，且新操作不再进行中时，才允许对当前真实错误作失败判断；成功分支仍必须满足确认回调和“CAS 基线已建立”。补充两项正反回归，离线配置/测试预计由 **11 增至 13**。不修改 React/Vue、API Client、OIDC、数据库、Prisma、TLS、工业设备接口或任何现有真实安全断言。
 
 **当前 HEAD 尚未执行 Windows 修复后测试**。维护者应先执行 `pnpm run test:projects:oidc:config` 与 `vp check`、`pnpm run docs:check`，然后独立重跑 `pnpm run test:projects:oidc:browser`；双框架真实 OIDC 专项成功后再完成全链 `pnpm run ready` 确认。隔离浏览器在成功与失败后均按凭据安全策略自动关闭，不能以窗口关闭本身判定成功与否。
+
+## 2026-11-17 · 第三十四批第四小批真实多页与双主体 CAS 候选验收
+
+基于 PR #58 合并提交 `d95ee4d15bec64a047c519fde7b5f98b837cca05`，新增隔离测试数据库 `apps/server/test/project-api.db-spec.ts` 的 12 项授权工程真实游标分页与同租户不可见工程验证，以及 `apps/server/test/prisma-project-version.db-spec.ts` 的两个独立 Prisma 连接/两个授权主体抢同一 `expectedRevision` 的真实 PostgreSQL CAS 原子性与审计操作者核验。只在已显式配置的本机独立 `adui_scada_test` 执行真实数据库读写，随机测试租户限定数据范围；预计真库独立用例从 23 增至 25。没有更改 NestJS API、数据库迁移或任何工业设备写入。
+
+`scripts/test-project-browser-oidc.mjs` 保留原成功的普通交互式模式，新增 `--require-multipage` 强制 React/Vue 均访问过真实有数据的第二页并返回；根命令为 `test:projects:oidc:browser:pages`。未人为准备当前主体至少 11 个已授权工程时严格测试必须非零退出；脚本不修改运行中 Lab 工程/授权。新增一项离线模式约束测试（预计 14 项）随 `ready` 执行。
+
+**当前仅为 GitHub 候选代码与静态差异**：新 `test:projects:oidc:config`、`vp check`、`docs:check`、`ready`、真实 `test:db` 和真人 `test:projects:oidc:browser:pages` 均待维护者 Windows 验收。此前 PR #58 的 13/13、544/544、49/49、真实双端 OIDC 专项退出码 0 不能替代本 HEAD 的测试结果。真实 BFF 两会话 HTTP CAS/409 与生产工业安全验收仍未覆盖。
