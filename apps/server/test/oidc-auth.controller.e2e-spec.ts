@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
+import { HttpException, HttpStatus } from "@nestjs/common";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { randomBytes } from "node:crypto";
@@ -64,11 +65,15 @@ describe("OIDC BFF 认证 HTTP 接口（端到端）", () => {
     readonly sessionId: string;
   }> = [];
   const auditRecords: SecurityAuditDecision[] = [];
+  let limitLoginStarts = false;
 
   beforeAll(async () => {
     const config = createConfig();
     const transactions = {
       start: async (returnPath: unknown, browserBinding?: unknown) => {
+        if (limitLoginStarts) {
+          throw new HttpException("OIDC 登录请求过于频繁，请稍后重试", HttpStatus.TOO_MANY_REQUESTS);
+        }
         startCalls.push({ returnPath, browserBinding });
         return {
           authorizationUrl: "https://id.example.org/realms/scada/authorize?state=" + "s".repeat(43),
@@ -164,6 +169,22 @@ describe("OIDC BFF 认证 HTTP 接口（端到端）", () => {
       returnPath: "/studio/projects",
       browserBinding: undefined,
     });
+  });
+
+  it("OIDC 登录触发受控限额时返回 429 且不签发 Cookie", async () => {
+    const before = startCalls.length;
+    limitLoginStarts = true;
+    try {
+      const response = await request(app.getHttpServer())
+        .get("/api/v1/auth/oidc/start")
+        .expect(429);
+
+      expect(response.status).toBe(429);
+      expect(response.headers["set-cookie"]).toBeUndefined();
+      expect(startCalls).toHaveLength(before);
+    } finally {
+      limitLoginStarts = false;
+    }
   });
 
   it("同一浏览器的多个标签页复用短时绑定 Cookie", async () => {

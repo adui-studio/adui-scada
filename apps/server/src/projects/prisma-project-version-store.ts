@@ -125,7 +125,6 @@ function parseSaveRequest(input: unknown, projectId: string) {
   }
 }
 
-/** 创建工程只接受文档本身，租户、主体和审计信息一律来自可信会话。 */
 /** 只映射最终快照容量超限；其他摘要、数据库或编程错误保持原样抛出。 */
 async function createCheckedSnapshot(
   document: ScadaDocument,
@@ -142,6 +141,7 @@ async function createCheckedSnapshot(
   }
 }
 
+/** 创建工程只接受文档本身，租户、主体和审计信息一律来自可信会话。 */
 function parseProjectCreateDocument(input: unknown): ScadaDocument {
   if (!isPlainRecord(input)) {
     throw new ProjectRequestValidationError("工程创建请求必须为普通对象");

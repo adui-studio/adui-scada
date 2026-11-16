@@ -339,7 +339,9 @@ describe("工程 API HTTP 接口（端到端）", () => {
   });
 
   it("最终快照添加版本元数据后超限仍返回受控 HTTP 400", async () => {
-    store.create.mockRejectedValueOnce(new ProjectRequestValidationError("工程版本快照超过 2 MiB 限制"));
+    store.create.mockRejectedValueOnce(
+      new ProjectRequestValidationError("工程版本快照超过 2 MiB 限制"),
+    );
     const response = await request(app.getHttpServer())
       .post("/api/v1/projects")
       .set("Authorization", "Bearer " + SESSION_TOKEN)
