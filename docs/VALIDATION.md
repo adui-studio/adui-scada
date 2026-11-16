@@ -1025,3 +1025,13 @@ Write-Host "退出码：$LASTEXITCODE"
 维护者在最新空库迁移工具提交上执行 `vp check --fix`，格式化成功，但 `scripts/verify-fresh-postgres-migrations.cases.mjs` 因 `node:test` 的 `describe` 和六个 `it` 调用返回 `Promise<void>`，触发 **7 条 `typescript(no-floating-promises)` 警告**。此日志的“格式化完成”不代表全仓零警告通过。
 
 采用最小修复：为测试注册添加一处 `void describe` 和六处 `void it`，不修改既有断言或安全校验；记录为 `docs/AI_MISTAKES.md` E-014。**修改后还没有维护者 Windows 的 `vp check`、6/6 `node --test`、`docs:check` 或完整 `ready` 复验结果**，不覆盖此前既有隔离数据库 `test:db` 22/22 的独立通过记录。全新空库首次迁移与二次部署仍未取得真实 PostgreSQL 日志。
+
+## 2026-11-16 · E-014 Windows 复验通过，空库迁移专项仍待执行
+
+维护者提供的 Windows PowerShell 完整日志确认：新增 Node 内置测试 `node --test scripts/verify-fresh-postgres-migrations.cases.mjs` **6/6 通过**；`vp check` **299 个文件格式正确、159 个文件零警告/零错误**，先前的 7 条 `typescript(no-floating-promises)` 警告已消失；`pnpm run docs:check` **83 个 Markdown 文件通过**。随后完整执行 `pnpm run ready`，包括依赖 Catalog 11 清单/52 项、环境配置/LF/中文文案、Prisma Client 7.10.1 生成、Core 构建、React/Vue/NestJS 类型检查、**46 文件 505/505 单测**、SSE 客户端 **8/8**、故障代理 **4/4**、**5 文件 40/40 NestJS HTTP E2E**（工程 API E2E 13/13）、83 份文档检查、React/Vue 与 NestJS 构建，最终 `$LASTEXITCODE` 为 **0**。E-014 经本次 Windows 实测关闭。
+
+HTTP E2E 中的 `Health Check has failed` 以及 HTTP 503 是预期负面测试，最终 E2E 40/40 通过，不属于运行失败。此次日志没有单独输出 `git rev-parse HEAD`；GitHub 查询当前 PR #55 分支的最新格式化提交是 `7e5aac77c6a322adc4893f7f38da202734d5282a`，**不能将其等同于测试日志独立证明的提交标识**。
+
+**验证边界**：本次 6/6 是隔离数据库目标校验的纯逻辑测试，**没有实际运行** `node scripts/verify-fresh-postgres-migrations.mjs <数据库名>`，没有证明全新空库首次部署和重复部署幂等性；此前已在 `adui_scada_test` 上通过的 22/22 真实 PostgreSQL 事务测试是另一项独立验收。真实 IdP/JWKS、HTTPS Cookie/反向代理、React/Vue 双框架 API Client 和工业现场安全仍未验收。
+
+本条是对维护者实际运行日志的归档。**此后文档提交未包含在该次 `docs:check` 和 `ready` 验收中**，须针对新文档提交再次执行 `pnpm run docs:check`。未更改依赖、迁移、设备连接或工业写入。

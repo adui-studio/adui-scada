@@ -1006,3 +1006,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 ### 2026-11-16 · 空库迁移专项测试的七条 Lint 警告修复
 
 维护者最新 `vp check --fix` 日志显示，新增 `node:test` 文件的一处 `describe()` 和六处 `it()` 因未显式处理 `Promise<void>` 触发 `typescript(no-floating-promises)` 七条警告，虽然格式化已经完成，但不满足零警告质量门禁。按 E-014 最小修复为 `void describe(...)` 与 `void it(...)`，不调整六个数据库目标保护测试的断言和空库安全策略。修复后 `vp check`、`node --test`、`docs:check`、`ready` 以及真实空库迁移尚待实测，PR #55 继续保持 Draft。
+
+### 2026-11-16 · E-014 与空库目标校验工具 Windows 全链验收通过
+
+维护者 PowerShell 完整日志确认，`node --test scripts/verify-fresh-postgres-migrations.cases.mjs` 6/6 通过，`vp check` 299 个格式正确文件、159 个受检文件零警告/错误，`docs:check` 83 份 Markdown 通过。完整 `ready` 中单测 505/505、NestJS HTTP E2E 40/40、SSE 客户端 8/8、故障代理 4/4、React/Vue/NestJS 构建均通过，最终退出码 0；E-014 的 7 条 Promise Lint 警告已经复验关闭。
+
+当前功能分支 GitHub 已有格式化提交 `7e5aac7`，该日志没有单独输出本地 Git HEAD，不强称已验证精确提交指纹。现有隔离 PostgreSQL 事务测试 22/22 已由此前维护者日志证实；**全新空库首次迁移及二次部署幂等性仍未运行**，实际数据库连接与真实 IdP、HTTPS Cookie、代理、React/Vue 互通继续待专项验收。PR #55 保持 Draft，未获合并授权。
