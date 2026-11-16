@@ -1051,4 +1051,3 @@ HTTP E2E 中的 `Health Check has failed` 以及 HTTP 503 是预期负面测试�
 随后维护者另建并检查本机新空库 `127.0.0.1:15432/adui_scada_fresh_20261116_b`，执行 `node scripts/verify-fresh-postgres-migrations.mjs adui_scada_fresh_20261116_b`：首次 `migrate deploy` **4/4 项迁移全部应用**，第二次报告 `No pending migrations to apply`，`migrate status` 显示 `Database schema is up to date!`；脚本确认迁移元数据在重复部署后不变，最终 `$LASTEXITCODE` 为 **0**。**本次真实 Windows Prisma 7.10.1 子进程未再出现 Node.js DEP0190**，E-015 已关闭；旧空库 `adui_scada_fresh_20261116` 与新空库 `adui_scada_fresh_20261116_b` 都保留，脚本未删除、重置或清理它们。
 
 日志中 Prisma 提示可升级至 `8.0.0-rc.33` 只是更新提醒，不是构建或迁移错误，本批仍使用已锁定的 **Prisma 7.10.1**，不升级依赖或变更迁移历史。当前工程质量、本机真实 PostgreSQL 事务 22/22、两座新空库首次部署与幂等性回归均具备独立证据，**真实 IdP/JWKS、生产 HTTPS Cookie/代理、React/Vue 同源工程 API Client 和工业现场安全仍未验收**。本次仅补录文档，文档提交后仍需要重新运行 `pnpm run docs:check`。
-
