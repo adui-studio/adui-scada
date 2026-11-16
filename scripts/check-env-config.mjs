@@ -234,6 +234,26 @@ assert.ok(labCompose.includes("adui-scada-oidc-lab"), "OIDC Lab 必须与其他�
 assert.ok(read("deploy/docker/oidc-lab/adui-scada-realm.json").includes("adui-scada-bff"));
 assert.ok(read("scripts/prepare-oidc-lab.mjs").includes("randomBytes(32)"));
 
+const unifiedCompose = read("deploy/docker/compose.all.dev.yaml");
+assert.ok(unifiedCompose.includes("name: adui-scada\n"), "统一栈必须固定单一 Compose 项目名");
+for (const name of [
+  "adui-scada-postgres-dev_scada-postgres-data",
+  "adui-scada-oidc-lab_lab-postgres-data",
+  "adui-scada-oidc-lab_lab-redis-data",
+]) {
+  assert.ok(unifiedCompose.includes("name: " + name), "统一栈必须复用旧数据库或 Redis 数据卷");
+}
+for (const service of ["postgres-lab", "postgres-dev", "redis", "keycloak", "web-react", "web-vue", "server", "demo"]) {
+  assert.ok(unifiedCompose.includes("  " + service + ":"), "统一栈缺少服务：" + service);
+}
+assert.ok(unifiedCompose.includes('profiles: ["legacy-db"]'), "旧开发库必须显式受控启动");
+assert.ok(unifiedCompose.includes("127.0.0.1:"), "统一栈宿主机服务必须绑定回环地址");
+const allScripts = JSON.parse(read("package.json")).scripts;
+assert.ok(allScripts.ready.includes("pnpm run test:docker:all"), "统一 Docker 安全测试必须进入 ready");
+for (const action of ["plan", "migrate", "up", "down", "ps", "logs"]) {
+  assert.ok(allScripts["docker:all:" + action]?.includes("docker-all-dev.mjs " + action), "缺少统一 Docker 操作脚本");
+}
+
 const ignore = read(".gitignore");
 assert.match(ignore, /^\.env$/m);
 assert.match(ignore, /^\.env\.\*$/m);

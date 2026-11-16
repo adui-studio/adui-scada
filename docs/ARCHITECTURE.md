@@ -385,3 +385,9 @@ OIDC 事务和会话均由 PostgreSQL 共享状态；短期事务使用 state �
 DatabaseModule 是 PrismaService 唯一 Nest 提供方；身份模块和工程仓储模块共享该模块，避免重复生命周期和连接池。默认 AppModule 不导入 DatabaseModule 或 ScadaIdentityModule，因此继续仅暴露健康探针且不连接 PostgreSQL。OIDC 配置解析在根 .env 加载后、根模块动态导入前执行；第五小批后，配置完整且显式启用时选择 OidcEnabledAppModule，只挂载身份认证路由，不挂载工程持久化 API。
 
 新外部身份映射、OIDC 临时事务及 CSRF 会话摘要只定义模型与 SQL 迁移，不自动创建用户或授予权限，也不改变工程 Schema、工业网关和 PLC/DCS 访问边界。
+
+## 2026-11-16 · 第三十三批：本机 Docker 单 Compose 管理与存量数据保护（ADR-0066）
+
+维护者的三个本机 Docker Desktop 项目（Demo、普通开发 PostgreSQL、OIDC Lab）增加统一 Compose 入口 `name: adui-scada`，整合 Demo React/Vue/Node/NestJS、OIDC Keycloak/Redis/独立 PostgreSQL 和旧开发 PostgreSQL Profile。原 Keycloak/SCADA Lab、Redis 与普通开发库三份持久化卷均用 `external: true` 显式复用；旧 PG 与 Lab PG 隔离、宿主机端口只绑定回环。首次归并需人工确认数据备份，再通过显式迁移命令停止旧项目容器但不删卷。原三套 Compose 配置保留为回退入口，具体决策见 [ADR-0066](adr/0066-single-local-compose-project.md)。
+
+统一的是**Docker Compose 项目分组和日常运行入口**，不是将多个基础设施进程合并为单镜像。原 Demo 的 `18080/18081` 仍为 HTTP 模拟，WebStorm OIDC HTTPS `15173/15174` 与 NestJS `13001` 的真实身份联调仍在宿主机运行；不能将本次归并视为正式单镜像应用交付或安全生产部署。Redis 尚未接入 NestJS，SCADA 工程 ACL/CSRF 与工业只读边界保持不变。

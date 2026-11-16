@@ -1168,3 +1168,11 @@ React 的 `apps/web-react/src/studio/StudioPage.tsx` 与 Vue 的 `apps/web-vue/s
 已对 GitHub 候选源码执行动态语法编译及测试逻辑模拟：在无 Node 文件系统/数据库网络的 V8 隔离环境载入原脚本主体和原测试回调，用 Mock PostgreSQL 和 URL/Node 断言适配运行，**14/14 通过**（命令参数与 UUID、非生产精确连接约束、只读回滚、事务提交、幂等、非法绑定和 SQL 错误脱敏）。**此结果不等同于 Node.js 22/24 的 `node --test`、仓库 `vp check`、`pnpm run ready` 或真实 PostgreSQL/OIDC 联调通过**。提交后 Windows 必须实跑 `pnpm run test:oidc:identity`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`，再经维护者明确选择的 Lab UUID 先预览后写入测试库；真实登录/CSRF/React-Vue 工程操作另行验收。
 
 本批不重新应用已完成的四项 Prisma 迁移，不执行 `down -v`，不轮换或打印本地秘密，不触碰生产数据库。
+
+## 2026-11-16 · 统一本机 Docker Compose 迁移候选验证
+
+新增 8 服务的统一 Compose 文件，项目名 `adui-scada`，3 个现有数据卷使用 `external: true` + 原完整卷名。旧 dev PostgreSQL 和 OIDC Lab PostgreSQL 分属不同服务与卷，不发生同名服务覆盖；Keycloak 数据库地址仅将 Compose 服务主机名从 `postgres` 改为 `postgres-lab`。本机 HTTP Demo 端口与真实 OIDC HTTPS 开发端口保留不同用途。
+
+已在协作环境 Node.js **22.16.0** 执行 `node --check` 与 `node --test`：新增 `scripts/docker-all-dev.cases.mjs` **13/13 通过**，覆盖端口/回环、旧容器检测、3 卷完整性、预检失败不停止旧服务、禁止 `down -v`、显式迁移顺序、统一项目名、Docker 命令白名单与只读状态操作。Python YAML 静态解析确认服务、依赖、外部卷、回环端口及旧数据库 profile 均存在。此为脚本候选的模拟 Docker 验证，**当前环境未安装 Docker CLI**，因此没有执行真正 `docker compose config`、实际容器切换、数据库恢复、Web 浏览器或身份登录复验，不能据此声称迁移已经成功。
+
+Windows 更新分支后应先执行 `pnpm run test:docker:all`、`pnpm run env:check`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`，再在人工确认备份与数据卷后显式 `pnpm run docker:all:plan` / `pnpm run docker:all:migrate`，最终 `pnpm run docker:all:ps` 与 Keycloak Discovery、已绑定普通身份、旧开发库和 React/Vue 两端回归。不要删除旧数据卷，不对生产环境执行该操作。

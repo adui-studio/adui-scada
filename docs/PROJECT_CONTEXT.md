@@ -1092,3 +1092,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 此前 Keycloak OIDC Discovery、NestJS 根模块及双框架匿名 HTTPS 401 已由维护者 Windows 实测（E-017/E-018 已关闭）。为开启真正的普通用户登录联调，在原 PR #55 中新增本机隔离 Lab 的**显式预绑定**工具：Keycloak 用户由人工创建并核对 UUID，工具默认只读、在严格回环数据库和 Issuer 校验通过后，仅经 `--apply --confirm-lab adui_scada_oidc_lab` 才创建 active 本地主体和一条外部映射。会阻止已有权限主体被错误绑定，不自动授予工程 ACL、创建工程或开放写接口，亦不改变现有 Prisma Schema/迁移。
 
 新增 14 项离线测试，使用隔离 V8 运行环境对原候选逻辑及 Mock PG 事务验证 **14/14**，但并非本机完整 Node/Vite+ 检查，Windows `ready`、真实隔离数据库写入、Keycloak 用户授权码回调、Secure Cookie/CSRF 与跨框架工程往返均待专门验收。此前粘贴的本机 Lab 测试密钥需后续安全轮换，不保存在仓库文档。
+
+### 2026-11-16 · 单 Compose 本机统一栈候选
+
+维护者 Chrome 已验证 React/Vue 共享同一 SCADA OIDC 本地身份 `lab-tenant/lab-engineer`，Docker Desktop 当前有 3 个项目组。第十三小批后续新增统一本机 `adui-scada` Compose 项目候选，包含 Demo 4 服务、OIDC Lab 3 服务及旧开发 PostgreSQL 1 服务（旧数据库单独 profile），继续绑定原 Keycloak/SCADA/Redis 三份数据卷，不自动迁移或清库、不更改原 `.env` 的数据库凭据，也不把 HTTP Demo 当成真正的 OIDC HTTPS 部署。
+
+新增显式预检/迁移/启动/关闭命令与 13 项 Node.js Mock 回归测试。当前协作环境 Node.js 22 的候选测试 13/13 通过，Python YAML 结构和回环端口校验通过；协作容器**没有 Docker CLI**，真实 `docker compose config`、老项目切换、新容器健康、Keycloak 现有主体与双框架认证仍待 Windows 验收。正式单应用镜像打包属于后续独立工作。

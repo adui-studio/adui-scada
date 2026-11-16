@@ -2,6 +2,21 @@
 
 这是 **只读模拟演示栈**，不是工业 SCADA 生产部署。已实现的 NestJS 仅有 `GET /health`；水处理模拟 SSE 无身份认证。Docker Compose 默认只在宿主机的 `127.0.0.1` 发布两个 Web 入口。
 
+## V0.3 · 统一 Docker Desktop 项目（第三十三批）
+
+三个历史 Compose 组 `adui-scada-v01-demo`、`adui-scada-postgres-dev`、`adui-scada-oidc-lab` 现提供统一管理入口：`adui-scada`。保留各服务独立容器和旧数据卷，**不是单镜像生产部署**。Keycloak、Redis、OIDC Lab PostgreSQL 及旧开发 PostgreSQL 的数据均不自动重建；HTTP Docker Demo 与真实 OIDC HTTPS WebStorm 开发服务仍是两套不同入口。
+
+首次迁移前请确认已对已绑定身份的 Keycloak/SCADA Lab 做独立可恢复备份：
+
+```powershell
+pnpm run docker:all:plan
+# 只在检查和备份完成后执行一次
+pnpm run docker:all:migrate
+pnpm run docker:all:ps
+```
+
+此后日常仅使用 `pnpm run docker:all:up`、`docker:all:ps`、`docker:all:logs` 和 `docker:all:down`。旧项目的容器会在明确迁移时经不带 `-v` 的 `down` 退出，新栈通过外部卷精确复用已有数据库文件；不要点击 Docker Desktop 的“删除数据卷”或执行 `down -v`。如某一旧卷缺失，预检将失败，而不是创建新的空白 Keycloak Realm。详见 [ADR-0066](../../docs/adr/0066-single-local-compose-project.md) 和 [验收手册](../../docs/HARNESS.md)。
+
 ## 运行前置
 
 - Docker Engine / Docker Desktop，启用 Compose V2

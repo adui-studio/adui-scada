@@ -723,3 +723,10 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/oidc-lab-identity.mjs`：显式运营工具，必须由维护者从 Keycloak Users 详情页提供 UUID；只允许已启用可信 HTTPS 的本机 Lab Realm 和独立 `adui_scada_oidc_lab` PostgreSQL，默认预览回滚；需 `--apply --confirm-lab adui_scada_oidc_lab` 才会在可串行化事务中创建可信本地主体与唯一外部映射，拒绝冲突、停用主体、已有工程 ACL 和未经迁移的数据库。通过服务端已有 `pg` 依赖执行参数化 SQL，不新增依赖或公开 API。
 - `scripts/oidc-lab-identity.cases.mjs`：14 项不连接数据库的命令参数、回环目标、幂等、事务提交/回滚与权限保护离线用例。
 - `package.json`：新增 `test:oidc:identity` 并纳入默认 `ready`；`oidc:lab:identity` 为显式手工绑定命令，绝不由 `ready`、`docker:lab:up` 自动执行。
+
+### 第三十三批 · 统一本机 Docker Desktop Compose 项目
+
+- `deploy/docker/compose.all.dev.yaml`：顶层 `name: adui-scada`，复用 Demo 的 React/Vue/Server/模拟服务、OIDC Lab 的 Keycloak/Redis/PostgreSQL、可选旧开发 PostgreSQL；通过 3 个外部命名卷继续持有真实本机数据，端口绑定回环。旧 Compose 文件保留用于回退。
+- `scripts/docker-all-dev.mjs`：显式模式 `plan/migrate/up/down/ps/logs`。迁移预检在停止旧容器前验证旧数据卷、重复端口和 Compose 配置；无 shell、不删除卷。
+- `scripts/docker-all-dev.cases.mjs`：13 项原生 Node.js 离线迁移保护回归，覆盖旧卷、端口、项目标签、无 `down -v`、配置失败和命令白名单。
+- 根 `package.json`：新增 `docker:all:*` 单项目命令及 `test:docker:all`，离线测试纳入默认 `ready`；不改变 `docker:demo:*`、`db:dev:*`、`docker:lab:*` 老命令，以便回退。详见 ADR-0066。

@@ -1,0 +1,192 @@
+# ADui SCADA 统一本机开发栈：一个 Compose 项目，8 个独立容器。
+# 仅供开发/演示；复用原有 PostgreSQL/Keycloak/Redis 数据卷，不使用 down -v。
+# Docker Demo 的 18080/18081 仍为 HTTP，不代表已实现生产 OIDC 部署。
+name: adui-scada
+
+services:
+  web-react:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.web
+      args:
+        WEB_APP: web-react
+    environment:
+      SCADA_SERVER_PORT: "${SCADA_SERVER_PORT:-13001}"
+      SCADA_DEMO_PORT: "${SCADA_DEMO_PORT:-14178}"
+    ports:
+      - "127.0.0.1:${SCADA_REACT_PORT:-18080}:8080"
+    depends_on:
+      demo:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app
+
+  web-vue:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.web
+      args:
+        WEB_APP: web-vue
+    environment:
+      SCADA_SERVER_PORT: "${SCADA_SERVER_PORT:-13001}"
+      SCADA_DEMO_PORT: "${SCADA_DEMO_PORT:-14178}"
+    ports:
+      - "127.0.0.1:${SCADA_VUE_PORT:-18081}:8080"
+    depends_on:
+      demo:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app
+
+  server:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.server
+    environment:
+      NODE_ENV: production
+      SCADA_SERVER_HOST: 0.0.0.0
+      SCADA_SERVER_PORT: "${SCADA_SERVER_PORT:-13001}"
+    expose:
+      - "${SCADA_SERVER_PORT:-13001}"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:'+process.env.SCADA_SERVER_PORT+'/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - app
+
+  demo:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.demo
+    environment:
+      SCADA_DEMO_HOST: 0.0.0.0
+      SCADA_DEMO_PORT: "${SCADA_DEMO_PORT:-14178}"
+    expose:
+      - "${SCADA_DEMO_PORT:-14178}"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:'+process.env.SCADA_DEMO_PORT+'/project').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - app
+
+  postgres-lab:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: adui_scada_oidc_lab
+      POSTGRES_PASSWORD: "${SCADA_LAB_DB_PASSWORD:?必须先执行 OIDC Lab 准备脚本}"
+      POSTGRES_DB: adui_scada_oidc_lab
+    ports:
+      - "127.0.0.1:${SCADA_LAB_POSTGRES_PORT:-15433}:5432"
+    volumes:
+      - lab-postgres-data:/var/lib/postgresql/data
+      - ./oidc-lab/init-keycloak-db.sql:/docker-entrypoint-initdb.d/01-keycloak.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    restart: "no"
+    networks: [lab]
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${SCADA_LAB_REDIS_PORT:-16379}:6379"
+    volumes:
+      - lab-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: "no"
+    networks: [lab]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.2
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-lab:5432/adui_scada_keycloak_lab
+      KC_DB_USERNAME: adui_scada_oidc_lab
+      KC_DB_PASSWORD: "${SCADA_LAB_DB_PASSWORD:?必须先执行 OIDC Lab 准备脚本}"
+      KC_HOSTNAME: "https://127.0.0.1:${SCADA_LAB_KEYCLOAK_PORT:-18443}"
+      KC_HTTP_ENABLED: "false"
+      KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/conf/lab-tls/localhost.pem
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/conf/lab-tls/localhost-key.pem
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: "${SCADA_LAB_KEYCLOAK_ADMIN_PASSWORD:?必须先执行 OIDC Lab 准备脚本}"
+      SCADA_LAB_CLIENT_SECRET: "${SCADA_LAB_CLIENT_SECRET:?必须先执行 OIDC Lab 准备脚本}"
+      SCADA_REACT_DEV_PORT: "${SCADA_REACT_DEV_PORT:-15173}"
+    ports:
+      - "127.0.0.1:${SCADA_LAB_KEYCLOAK_PORT:-18443}:8443"
+    volumes:
+      - "${SCADA_LAB_CERT_DIR:?必须先执行 OIDC Lab 准备脚本}:/opt/keycloak/conf/lab-tls:ro"
+      - ./oidc-lab:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres-lab:
+        condition: service_healthy
+    restart: "no"
+    networks: [lab]
+
+  postgres-dev:
+    # 旧开发数据库保留，避免与 OIDC Lab 数据库混用。
+    profiles: ["legacy-db"]
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: "${SCADA_LEGACY_DB_USER:-adui_scada}"
+      POSTGRES_PASSWORD: "${SCADA_LEGACY_DB_PASSWORD:-adui_scada_dev_only_2026}"
+      POSTGRES_DB: "${SCADA_LEGACY_DB_NAME:-adui_scada}"
+    ports:
+      - "127.0.0.1:${SCADA_LEGACY_DB_PORT:-15432}:5432"
+    volumes:
+      - legacy-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: "no"
+    networks: [legacy]
+
+volumes:
+  lab-postgres-data:
+    external: true
+    name: adui-scada-oidc-lab_lab-postgres-data
+  lab-redis-data:
+    external: true
+    name: adui-scada-oidc-lab_lab-redis-data
+  legacy-postgres-data:
+    external: true
+    name: adui-scada-postgres-dev_scada-postgres-data
+
+networks:
+  app:
+    driver: bridge
+  lab:
+    driver: bridge
+  legacy:
+    driver: bridge
