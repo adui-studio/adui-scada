@@ -6,6 +6,14 @@ export type ProjectVersionSummary = Pick<
   "projectId" | "revision" | "createdAt" | "contentHash"
 >;
 
+/** 服务端工程列表采用不可变工程 ID 的有界游标分页。 */
+export interface ProjectListQuery {
+  /** 缺省 20 条、最多 100 条。 */
+  readonly limit?: number;
+  /** 仅查询严格大于当前工程 ID 的后续授权工程。 */
+  readonly afterProjectId?: string;
+}
+
 export interface ProjectVersionQuery {
   /** 每页最多 100 条，缺省 20 条。 */
   readonly limit?: number;

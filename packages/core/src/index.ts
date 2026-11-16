@@ -69,6 +69,7 @@ export type {
 } from "./project-snapshot.ts";
 export type {
   ProjectVersionRepository,
+  ProjectListQuery,
   ProjectVersionQuery,
   ProjectVersionSummary,
 } from "./project-version-repository.ts";
