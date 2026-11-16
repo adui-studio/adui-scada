@@ -44,6 +44,18 @@ interface FakeTransactionClient {
       readonly where: TransactionWhere;
       readonly data: { readonly consumedAt: Date };
     }): Promise<{ readonly count: number }>;
+    findMany(args: {
+      readonly where: { readonly expiresAt: { readonly lte: Date } };
+      readonly orderBy: { readonly expiresAt: "asc" };
+      readonly take: number;
+      readonly select: { readonly stateHash: true };
+    }): Promise<Array<{ readonly stateHash: string }>>;
+    deleteMany(args: {
+      readonly where: {
+        readonly stateHash: { readonly in: readonly string[] };
+        readonly expiresAt: { readonly lte: Date };
+      };
+    }): Promise<{ readonly count: number }>;
   };
 }
 
@@ -140,6 +152,23 @@ function createFakeService(config = createConfig()) {
         record.consumedAt = args.data.consumedAt;
         consumeCalls += 1;
         return { count: 1 };
+      },
+      findMany: async (args) =>
+        [...records.values()]
+          .filter((item) => item.expiresAt <= args.where.expiresAt.lte)
+          .sort((left, right) => left.expiresAt.getTime() - right.expiresAt.getTime())
+          .slice(0, args.take)
+          .map((item) => ({ stateHash: item.stateHash })),
+      deleteMany: async (args) => {
+        let count = 0;
+        for (const stateHash of args.where.stateHash.in) {
+          const record = records.get(stateHash);
+          if (record && record.expiresAt <= args.where.expiresAt.lte) {
+            records.delete(stateHash);
+            count += 1;
+          }
+        }
+        return { count };
       },
     },
   };
@@ -360,6 +389,37 @@ describe("OIDC 一次性登录事务", () => {
 
     expect(await fake.service.consume(state, result.browserBindingCookie)).toBeNull();
     expect(record.consumedAt).toBeInstanceOf(Date);
+  });
+
+  it("匿名登录按每分钟 60 次限制创建额外事务", async () => {
+    const fake = createFakeService();
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+      await fake.service.start("/");
+    }
+    await expect(fake.service.start("/")).rejects.toMatchObject({ status: 429 });
+    expect(fake.createCalls).toBe(60);
+    expect(fake.records.size).toBe(60);
+  });
+
+  it("过期事务按每批 128 条回收且保留未过期记录", async () => {
+    const fake = createFakeService();
+    await fake.service.start("/");
+    const record = [...fake.records.values()][0];
+    if (!record) throw new Error("测试登录事务不存在");
+
+    for (let index = 0; index < 137; index += 1) {
+      const stateHash = "expired-" + index;
+      fake.records.set(stateHash, {
+        ...record,
+        stateHash,
+        expiresAt: new Date(Date.now() - 1_000),
+      });
+    }
+    expect(await fake.service.cleanupExpiredTransactions()).toBe(128);
+    expect(fake.records.size).toBe(10);
+    expect(await fake.service.cleanupExpiredTransactions()).toBe(9);
+    expect(fake.records.size).toBe(1);
+    expect([...fake.records.values()][0]?.expiresAt.getTime()).toBeGreaterThan(Date.now());
   });
 
   it("数据库写入或事务异常只返回固定中文错误", async () => {

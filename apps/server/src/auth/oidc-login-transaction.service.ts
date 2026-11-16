@@ -2,11 +2,15 @@ import { Buffer } from "node:buffer";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Inject,
   Injectable,
+  Logger,
   ServiceUnavailableException,
 } from "@nestjs/common";
 import * as oidc from "openid-client";
+import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { PrismaService } from "../database/prisma.service.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import {
@@ -16,6 +20,12 @@ import {
 
 const TRANSACTION_DURATION_MS = 5 * 60 * 1000;
 const TRANSACTION_DATABASE_TIMEOUT_MS = 5_000;
+/** 仅对当前进程兜底；多实例的总配额必须由可信网关控制。 */
+const START_WINDOW_MS = 60_000;
+const START_LIMIT = 60;
+const START_CONCURRENCY_LIMIT = 8;
+const CLEANUP_INTERVAL_MS = 30_000;
+const CLEANUP_BATCH_SIZE = 128;
 const STATE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const BROWSER_BINDING_PREFIX = "scada_oidc_b_";
 const BROWSER_BINDING_PATTERN = /^scada_oidc_b_[A-Za-z0-9_-]{43}$/;
@@ -151,7 +161,13 @@ function decryptCodeVerifier(
  * 数据库只保存 State/浏览器绑定摘要和 AES-GCM 加密的 PKCE verifier。
  */
 @Injectable()
-export class OidcLoginTransactionService {
+export class OidcLoginTransactionService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(OidcLoginTransactionService.name);
+  private windowStartedAt = 0;
+  private windowCount = 0;
+  private activeStarts = 0;
+  private cleanupTimer: ReturnType<typeof setInterval> | undefined;
+  private cleanupPending: Promise<number> | null = null;
   constructor(
     private readonly database: PrismaService,
     private readonly discovery: OidcProviderDiscoveryService,
@@ -159,71 +175,141 @@ export class OidcLoginTransactionService {
     private readonly startupConfig: EnabledOidcConfig,
   ) {}
 
+  onModuleInit(): void {
+    if (this.cleanupTimer) return;
+    this.cleanupTimer = setInterval(() => {
+      void this.cleanupExpiredTransactions().catch(() => {
+        this.logger.warn("OIDC 登录事务清理失败，将在下一周期重试");
+      });
+    }, CLEANUP_INTERVAL_MS);
+    this.cleanupTimer.unref();
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    if (this.cleanupTimer) clearInterval(this.cleanupTimer);
+    this.cleanupTimer = undefined;
+    if (this.cleanupPending) {
+      await this.cleanupPending.catch(() => {
+        // 清理失败不阻止应用安全关闭。
+      });
+    }
+  }
+
+  /** 不依赖未经认证的转发 IP；按服务进程限制匿名入口速率和并发。 */
+  private reserveStart(): () => void {
+    const now = Date.now();
+    if (now < this.windowStartedAt || now - this.windowStartedAt >= START_WINDOW_MS) {
+      this.windowStartedAt = now;
+      this.windowCount = 0;
+    }
+    if (this.windowCount >= START_LIMIT || this.activeStarts >= START_CONCURRENCY_LIMIT) {
+      throw new HttpException("OIDC 登录请求过于频繁，请稍后重试", HttpStatus.TOO_MANY_REQUESTS);
+    }
+    this.windowCount += 1;
+    this.activeStarts += 1;
+    return () => {
+      this.activeStarts -= 1;
+    };
+  }
+
+  /** 以固定批次清理已过期事务，不删除仍可消费的登录记录。 */
+  async cleanupExpiredTransactions(): Promise<number> {
+    if (this.cleanupPending) return this.cleanupPending;
+    const pending = (async () => {
+      const now = new Date();
+      const expired = await this.database.client.scadaOidcTransaction.findMany({
+        where: { expiresAt: { lte: now } },
+        orderBy: { expiresAt: "asc" },
+        take: CLEANUP_BATCH_SIZE,
+        select: { stateHash: true },
+      });
+      if (expired.length === 0) return 0;
+      const result = await this.database.client.scadaOidcTransaction.deleteMany({
+        where: {
+          stateHash: { in: expired.map((record) => record.stateHash) },
+          expiresAt: { lte: now },
+        },
+      });
+      return result.count;
+    })();
+    this.cleanupPending = pending;
+    try {
+      return await pending;
+    } finally {
+      if (this.cleanupPending === pending) this.cleanupPending = null;
+    }
+  }
+
   async start(
     returnPath: unknown = "/",
     existingBrowserBinding?: unknown,
   ): Promise<OidcLoginStartResult> {
     const safeReturnPath = normalizeReturnPath(returnPath);
-    const state = oidc.randomState();
-    const nonce = oidc.randomNonce();
-    const codeVerifier = oidc.randomPKCECodeVerifier();
-    if (
-      !STATE_PATTERN.test(state) ||
-      !STATE_PATTERN.test(nonce) ||
-      !CODE_VERIFIER_PATTERN.test(codeVerifier)
-    ) {
-      throw new ServiceUnavailableException("OIDC 登录随机数生成失败");
-    }
-
-    const browserBindingCookie =
-      typeof existingBrowserBinding === "string" &&
-      BROWSER_BINDING_PATTERN.test(existingBrowserBinding)
-        ? existingBrowserBinding
-        : BROWSER_BINDING_PREFIX + randomBytes(32).toString("base64url");
-
-    const stateHash = sha256(state);
-    const browserBindingHash = sha256(browserBindingCookie);
-    const createdAt = new Date();
-    const expiresAt = new Date(createdAt.getTime() + TRANSACTION_DURATION_MS);
-    const verifierCiphertext = encryptCodeVerifier(
-      codeVerifier,
-      stateHash,
-      this.startupConfig.transactionEncryptionKey,
-    );
-
+    const releaseStart = this.reserveStart();
     try {
-      const configuration = await this.discovery.getConfiguration();
-      const codeChallenge = await oidc.calculatePKCECodeChallenge(codeVerifier);
-      const authorizationUrl = oidc.buildAuthorizationUrl(configuration, {
-        redirect_uri: this.startupConfig.redirectUri.href,
-        scope: "openid",
-        state,
-        nonce,
-        code_challenge: codeChallenge,
-        code_challenge_method: "S256",
-      });
+      const state = oidc.randomState();
+      const nonce = oidc.randomNonce();
+      const codeVerifier = oidc.randomPKCECodeVerifier();
+      if (
+        !STATE_PATTERN.test(state) ||
+        !STATE_PATTERN.test(nonce) ||
+        !CODE_VERIFIER_PATTERN.test(codeVerifier)
+      ) {
+        throw new ServiceUnavailableException("OIDC 登录随机数生成失败");
+      }
 
-      await this.database.client.scadaOidcTransaction.create({
-        data: {
-          stateHash,
-          issuer: this.startupConfig.issuer.href,
+      const browserBindingCookie =
+        typeof existingBrowserBinding === "string" &&
+        BROWSER_BINDING_PATTERN.test(existingBrowserBinding)
+          ? existingBrowserBinding
+          : BROWSER_BINDING_PREFIX + randomBytes(32).toString("base64url");
+
+      const stateHash = sha256(state);
+      const browserBindingHash = sha256(browserBindingCookie);
+      const createdAt = new Date();
+      const expiresAt = new Date(createdAt.getTime() + TRANSACTION_DURATION_MS);
+      const verifierCiphertext = encryptCodeVerifier(
+        codeVerifier,
+        stateHash,
+        this.startupConfig.transactionEncryptionKey,
+      );
+
+      try {
+        const configuration = await this.discovery.getConfiguration();
+        const codeChallenge = await oidc.calculatePKCECodeChallenge(codeVerifier);
+        const authorizationUrl = oidc.buildAuthorizationUrl(configuration, {
+          redirect_uri: this.startupConfig.redirectUri.href,
+          scope: "openid",
+          state,
           nonce,
-          verifierCiphertext,
-          browserBindingHash,
-          returnPath: safeReturnPath,
-          createdAt,
-          expiresAt,
-        },
-      });
+          code_challenge: codeChallenge,
+          code_challenge_method: "S256",
+        });
 
-      return Object.freeze({
-        authorizationUrl: authorizationUrl.href,
-        browserBindingCookie,
-        expiresAt,
-      });
-    } catch {
-      // 不传播数据库异常、Issuer、回调地址、客户端秘密或授权请求参数。
-      throw new ServiceUnavailableException(TRANSACTION_CREATE_FAILURE);
+        await this.database.client.scadaOidcTransaction.create({
+          data: {
+            stateHash,
+            issuer: this.startupConfig.issuer.href,
+            nonce,
+            verifierCiphertext,
+            browserBindingHash,
+            returnPath: safeReturnPath,
+            createdAt,
+            expiresAt,
+          },
+        });
+
+        return Object.freeze({
+          authorizationUrl: authorizationUrl.href,
+          browserBindingCookie,
+          expiresAt,
+        });
+      } catch {
+        // 不传播数据库异常、Issuer、回调地址、客户端秘密或授权请求参数。
+        throw new ServiceUnavailableException(TRANSACTION_CREATE_FAILURE);
+      }
+    } finally {
+      releaseStart();
     }
   }
 
