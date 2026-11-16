@@ -337,9 +337,7 @@ describe("PostgreSQL 真实工程版本事务", () => {
     expect(stored.tokenHash).not.toBe(issued.token);
     expect(issued.csrfToken).toMatch(/^scada_csrf_[A-Za-z0-9_-]{43}$/);
     expect(stored.tokenHash).toBe(createHash("sha256").update(issued.token).digest("hex"));
-    expect(stored.csrfTokenHash).toBe(
-      createHash("sha256").update(issued.csrfToken).digest("hex"),
-    );
+    expect(stored.csrfTokenHash).toBe(createHash("sha256").update(issued.csrfToken).digest("hex"));
     expect(stored.csrfTokenHash).not.toBe(issued.csrfToken);
     expect(await sessions.authenticate(issued.token)).toEqual(principalAuth);
     expect(await sessions.authenticateCookieSession(issued.token, issued.csrfToken)).toEqual({
