@@ -163,9 +163,7 @@ async function main() {
   if (JSON.stringify(first.migrations) !== JSON.stringify(second.migrations)) {
     throw new Error("重复部署后迁移元数据发生变化，幂等性未通过");
   }
-  console.log(
-    "全新隔离库迁移及二次部署验证通过：" + expectedMigrations.length + " 项迁移",
-  );
+  console.log("全新隔离库迁移及二次部署验证通过：" + expectedMigrations.length + " 项迁移");
   console.log("测试库已保留用于核对；脚本未执行删除、重置或清理操作");
 }
 
