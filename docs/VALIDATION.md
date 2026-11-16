@@ -1262,3 +1262,11 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 本批基于已合并 `main@412a5475`。服务端 `GET /api/v1/projects` 保持摘要数组和同源认证，但查询默认 20、最大 100，`afterProjectId` 严格白名单且按工程 ID 升序，数据库依旧过滤可信租户与 `project:read`。Core 新增 `ProjectListQuery`，API Client 的 `listProjects(query?)` 与 React/Vue 共用请求、安全校验及响应顺序检查。
 
 新增回归：非法/额外查询字段、重复 Query 参数、页面大小与游标限制；客户端越界或乱序响应拒绝；HTTP 200 转发/400 领域错误；独立 `adui_scada_test` 真库跨租户、第一页/末页与耗尽条件。**所有新增代码与测试当前尚未在 Windows 执行 `vp check`、`pnpm run ready`、`pnpm run docs:check` 或隔离 `pnpm run test:db`，不以此前第三十三批通过结果冒充新代码已验收。** 真实 PostgreSQL 测试必须仅在已确认的本机 `adui_scada_test` 执行，绝不能连接业务库 `adui_scada` 或清理任何 Docker 持久卷。
+
+## 2026-11-16 · 第三十四批第二小批：Vue/React 授权工程列表和显式打开（候选）
+
+基于已合并的 `main@30aa9908` 新建功能分支。新增共享工程列表游标会话的单元覆盖、两个 Studio 工程管理入口及统一的分页样式。浏览器中的服务端工程列表只在用户展开面板时发请求，继续使用固定同源 `/api/v1/projects`、受保护会话和租户 ACL。打开工程复用既有 SHA-256、当前 headRevision 与主体校验，且必须经人工确认和自动保存停止；取消、401/403/404、工程在网络等待期间已被切换或服务端水位变化时，不应改变原画布与 IndexedDB 草稿。
+
+**待维护者 Windows 验证**：`vp check`、`pnpm run messages:check`、`pnpm run docs:check`、`pnpm run ready` 完整退出码；React/Vue 实际 OIDC 同源 HTTPS 业务浏览器流程需要分别验证 1440×900、1024×768：打开工程管理、授权列表前后翻页、未登录拒绝、远端版本变化拒绝、取消保持画布、确认打开且 CAS 基线正确、草稿原记录和修订号不变、自动保存停止、再按新工程重新查看本地草稿。无真实 OIDC 环境时允许只验收匿名拒绝，不得冒充真实登录、工程切换通过。数据库层沿用 PR #56 已验收的分页查询，无新增迁移或数据库写入专项，不能把第一小批测试结果宣称为本小批新测试通过。
+
+原第三十四批第一小批 Windows 本机结果：`vp check` 321/177 零告警，`ready` 537/537 单测、49/49 HTTP E2E、85 Markdown 和两 Web/NestJS 构建退出码 0；`test:db` 23/23 退出码 0。此为上一小批的事实基线。

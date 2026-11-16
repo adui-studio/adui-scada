@@ -774,3 +774,11 @@ Vue/React Studio 使用同一个 `@adui/scada-api-client` 的 `StudioServerProje
 受保护接口 `GET /api/v1/projects` 接收 `limit`（缺省 20、最大 100，严格正安全整数）和 `afterProjectId`（ASCII 工程 ID 白名单），其他 Query 字段、重复参数值和越界值返回受控 400。返回仍为 `ScadaProjectSummary[]`，包含 `projectId/headRevision/createdAt/updatedAt`，不包含工程 JSONB。服务端认证成功后使用可信主体的 `tenantId` 与 `project:read` 条件，按 `projectId ASC` 与 `projectId > afterProjectId` 执行有界 Prisma 查询。客户端 `ProjectListQuery` 来自共享 Core，Vue/React 同用 `@adui/scada-api-client.listProjects(query?)`，要求响应不超页长且工程 ID 严格递增；下一页以最后一个已返回项目 ID 继续。
 
 与第三十三批的 `updatedAt DESC` 不同，**本批明确改为稳定 ID 升序**；无参数访问保持相同路径和数组形状，但只返回首 20 项。按更新时间排序、一次读取全部工程、并发分页快照一致性不在本小批契约中；未来项目中心 UI 需要独立设计按更新时间检索。任何页面操作不能依靠客户端参数绕过 ACL；不新增工程发布、版本回滚或工业写入。
+
+## 2026-11-16 · 第三十四批第二小批：双框架 Studio 工程浏览与载入
+
+Studio 工具栏新增独立“工程管理”弹层，与原“服务端工程”历史版本工具分开。首次打开时调用 `@adui/scada-api-client` 的 `listProjects({ limit: 10 })`，在共享框架无关 `StudioProjectBrowser` 里管理页号、历史 ID 游标、空末页、刷新和并发排斥；React/Vue 仅分别实现交互和生命周期。列表只显示授权摘要字段 `projectId`、`headRevision`、`updatedAt`，在用户明确操作时才加载完整工程快照。失败信息仅显示 API Client 受控文案；401、403、404 后清空此前的授权列表与游标，避免展示过期权限的工程摘要。
+
+打开按钮调用既有 `StudioServerProjectSession.readVersion(projectId, headRevision)`，此流程会校验用户身份、通过 Core SHA-256 校验快照并重新读取服务端最新修订号。只有三者一致，且当前编辑工程未在等待时切换、用户确认覆盖当前画布之后，才执行 `DraftAutoSaveSession.stop()`，再由 `DocumentEditor.loadDocument` 替换工程并清空撤销记录，最后调用 `acceptLoadedVersion` 建立当前用户/租户的 CAS 保存基线。任何不一致或取消均不得变更编辑器及 IndexedDB 草稿。打开其他工程后历史列表与比较状态重置，Vue 重新订阅当前工程的 IndexedDB 草稿，避免之前工程的订阅继续影响页面。
+
+本批的“工程管理”仅是 Studio 内的只读浏览+显式打开入口，不等于独立工程管理中心，也不代表正式发布。OIDC 默认关闭时不会自动发起授权或写请求；生产使用仍需可信 OIDC 和 HTTPS 部署、真实双端浏览器确认。见 [ADR-0068](adr/0068-dual-studio-project-browser.md)。

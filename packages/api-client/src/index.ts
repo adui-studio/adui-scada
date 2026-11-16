@@ -402,6 +402,14 @@ export function createScadaApiClient(options: ScadaApiClientOptions = {}): Scada
   };
 }
 
+// 工程中心的分页游标会话，不依赖 UI 框架或浏览器持久化。
+export {
+  createStudioProjectBrowser,
+  StudioProjectBrowser,
+  STUDIO_PROJECT_PAGE_SIZE,
+} from "./project-browser.ts";
+export type { StudioProjectBrowserPage } from "./project-browser.ts";
+
 // 与 Vue/React 生命周期无关的服务端版本基线与 CAS 保存状态机。
 export { createStudioServerProjectSession, StudioServerProjectSession } from "./studio-session.ts";
 export type { ServerProjectSaveResult, ServerProjectVersion } from "./studio-session.ts";

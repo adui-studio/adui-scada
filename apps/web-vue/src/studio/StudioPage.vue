@@ -56,6 +56,7 @@ import {
   ScadaApiError,
 } from "@adui/scada-api-client";
 import TagManager from "./TagManager.vue";
+import ServerProjectBrowser from "./ServerProjectBrowser.vue";
 import "./studio.css";
 import "@adui/tailwind/studio.css";
 
@@ -415,9 +416,12 @@ function handleKey(event: KeyboardEvent) {
 }
 
 async function checkLocalDraft() {
+  const projectId = state.value.document.projectId;
   try {
-    hasSavedDraft.value = (await drafts.get(state.value.document.projectId)) !== null;
+    const saved = await drafts.get(projectId);
+    if (state.value.document.projectId === projectId) hasSavedDraft.value = saved !== null;
   } catch (error) {
+    if (state.value.document.projectId !== projectId) return;
     hasSavedDraft.value = error instanceof InvalidLegacyDraftError;
     notice.value = "本地草稿读取失败：" + (error instanceof Error ? error.message : String(error));
   }
@@ -441,6 +445,15 @@ function subscribeDraft() {
     }
   });
 }
+
+watch(
+  () => state.value.document.projectId,
+  (projectId, previousProjectId) => {
+    if (projectId === previousProjectId) return;
+    subscribeDraft();
+    void checkLocalDraft();
+  },
+);
 
 onMounted(() => {
   window.addEventListener("keydown", handleKey);
@@ -1289,6 +1302,54 @@ async function loadServerVersion(revision: number): Promise<void> {
   );
 }
 
+async function openServerProject(projectId: string, headRevision: number): Promise<void> {
+  await runServerAction(
+    "打开服务端工程",
+    async () => {
+      const originalProjectId = editor.snapshot().document.projectId;
+      const version = await serverSession.readVersion(projectId, headRevision);
+      if (editor.snapshot().document.projectId !== originalProjectId) {
+        throw new TypeError("当前编辑工程已发生变化，请重新选择服务端工程");
+      }
+      if (
+        version.headRevision !== headRevision ||
+        version.snapshot.revision !== version.headRevision
+      ) {
+        throw new ScadaApiError("服务端工程版本已更新，请刷新工程列表后重新选择", "conflict", 409);
+      }
+      if (
+        !window.confirm(
+          `打开工程“${projectId}”的最新版本 #${headRevision} 将替换当前画布、清空撤销历史并暂停自动保存。未保存的画布修改可能丢失；IndexedDB 草稿及本地历史不会被删除。请先保存需要保留的修改，确认打开吗？`,
+        )
+      ) {
+        return;
+      }
+      await pauseAutoSave();
+      editor.loadDocument(version.snapshot.document);
+      serverSession.acceptLoadedVersion(version);
+      serverBaselineRevision.value = serverSession.getBaselineRevision(projectId);
+      clearLayerDrag();
+      layerSearch.value = "";
+      collapsedGroupIds.value = new Set();
+      cancelDrag();
+      refresh();
+      historyProjectId.value = "";
+      historyRows.value = [];
+      historyHasMore.value = false;
+      inspectedVersion.value = null;
+      serverProjectId.value = projectId;
+      serverHeadRevision.value = version.headRevision;
+      serverRows.value = [];
+      serverHasMore.value = false;
+      serverInspectedVersion.value = null;
+      serverIdentity.value = "服务端身份已验证";
+      await checkLocalDraft();
+      notice.value = `已打开服务端工程“${projectId}”最新版本 #${version.headRevision}；CAS 基线已建立，自动保存已暂停，IndexedDB 草稿未删除`;
+    },
+    true,
+  );
+}
+
 async function refreshVersionHistory(): Promise<void> {
   await runHistoryAction("读取历史版本", async () => {
     const projectId = editor.snapshot().document.projectId;
@@ -1635,6 +1696,12 @@ async function importJson(event: Event) {
             </button>
           </div>
         </details>
+        <ServerProjectBrowser
+          :api="serverApi"
+          :current-project-id="state.document.projectId"
+          :disabled="historyBusy"
+          @open="openServerProject"
+        />
         <details class="studio-version-menu">
           <summary>服务端工程</summary>
           <div class="studio-version-panel" aria-label="服务端工程版本">

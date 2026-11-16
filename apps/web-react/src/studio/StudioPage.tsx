@@ -63,6 +63,7 @@ import {
   ScadaApiError,
 } from "@adui/scada-api-client";
 import { TagManager } from "./TagManager.tsx";
+import { ServerProjectBrowser } from "./ServerProjectBrowser.tsx";
 import "./studio.css";
 import "@adui/tailwind/studio.css";
 
@@ -1186,6 +1187,61 @@ export default function StudioPage() {
     );
   }
 
+  async function openServerProject(projectId: string, headRevision: number): Promise<void> {
+    await runServerAction(
+      "打开服务端工程",
+      async () => {
+        const originalProjectId = editor.snapshot().document.projectId;
+        const version = await serverSession.readVersion(projectId, headRevision);
+        if (editor.snapshot().document.projectId !== originalProjectId) {
+          throw new TypeError("当前编辑工程已发生变化，请重新选择服务端工程");
+        }
+        if (
+          version.headRevision !== headRevision ||
+          version.snapshot.revision !== version.headRevision
+        ) {
+          throw new ScadaApiError(
+            "服务端工程版本已更新，请刷新工程列表后重新选择",
+            "conflict",
+            409,
+          );
+        }
+        if (
+          !window.confirm(
+            `打开工程“${projectId}”的最新版本 #${headRevision} 将替换当前画布、清空撤销历史并暂停自动保存。未保存的画布修改可能丢失；IndexedDB 草稿及本地历史不会被删除。请先保存需要保留的修改，确认打开吗？`,
+          )
+        ) {
+          return;
+        }
+        await pauseAutoSave();
+        editor.loadDocument(version.snapshot.document);
+        serverSession.acceptLoadedVersion(version);
+        clearLayerDrag();
+        setLayerSearch("");
+        setCollapsedGroupIds(new Set());
+        setLocateLayerRequest(null);
+        cancelDrag();
+        refresh();
+        setHistoryProjectId("");
+        setHistoryRows([]);
+        setHistoryHasMore(false);
+        setInspectedVersion(null);
+        setServerProjectId(projectId);
+        setServerHeadRevision(version.headRevision);
+        setServerRows([]);
+        setServerHasMore(false);
+        setServerInspectedVersion(null);
+        setServerIdentity("服务端身份已验证");
+        const warning = await refreshDraftAvailability(projectId);
+        setNotice(
+          `已打开服务端工程“${projectId}”最新版本 #${version.headRevision}；CAS 基线已建立，自动保存已暂停，IndexedDB 草稿未删除` +
+            warning,
+        );
+      },
+      true,
+    );
+  }
+
   async function refreshVersionHistory(): Promise<void> {
     await runHistoryAction("读取历史版本", async () => {
       const projectId = editor.snapshot().document.projectId;
@@ -1667,6 +1723,12 @@ export default function StudioPage() {
               )}
             </div>
           </details>
+          <ServerProjectBrowser
+            api={serverApi}
+            currentProjectId={state.document.projectId}
+            disabled={historyBusy}
+            onOpen={openServerProject}
+          />
           <details className="studio-version-menu">
             <summary>服务端工程</summary>
             <div className="studio-version-panel" aria-label="服务端工程版本">

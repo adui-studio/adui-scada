@@ -747,3 +747,11 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/init-docker-db.mjs`：原 `docker:db:init` 继续幂等执行 `prisma migrate deploy`；新增白名单 `--status` 由 `docker:db:status` 调用，使用与 Docker 启动一致的 Git 忽略本机随机凭据执行只读 `prisma migrate status`，不修改通用 `db:migrate:status` 的根 `.env` 语义。
 - `scripts/init-docker-db.cases.mjs`：覆盖只读参数白名单、旧根 `.env`/进程密码覆盖、数据库地址精确回环及旧库拒绝。
 - `package.json`、`scripts/check-env-config.mjs`：注册并校验 `docker:db:status`，不得将新命令变为破坏性迁移或输出凭据。
+
+### 第三十四批第二小批：双框架 Studio 授权工程浏览器
+
+- `packages/api-client/src/project-browser.ts`：React/Vue 共用的十条一页工程列表游标、刷新/前后翻页、末页空响应保留、错误重试、并发互斥、登录失效清空摘要；不持久化主体/身份或工程快照。
+- `packages/api-client/test/project-browser.test.ts`：单测覆盖首页、上下页、最后一页、恰满空页、失败恢复、并发与清理列表。
+- `apps/web-react/src/studio/ServerProjectBrowser.tsx` 与 `apps/web-vue/src/studio/ServerProjectBrowser.vue`：双端对等的独立工具栏“工程管理”弹层，只读取授权工程摘要，提供打开前的显式操作；`packages/tailwind/src/studio.css` 共享工业品牌主题样式。
+- `apps/web-react/src/studio/StudioPage.tsx` 与 `apps/web-vue/src/studio/StudioPage.vue`：协调原有 `StudioServerProjectSession.readVersion`、用户确认、`pauseAutoSave`、`editor.loadDocument`、`acceptLoadedVersion` 和按工程重新读取草稿状态；取消与远端修订变化均不覆盖本地画布。
+- 未修改公共工程 Schema、NestJS 路由、OIDC 登录事务、Prisma Schema/迁移或任何工业设备写入。
