@@ -1100,3 +1100,11 @@ React 的 `apps/web-react/src/studio/StudioPage.tsx` 与 Vue 的 `apps/web-vue/s
 新增 `packages/api-client/test/studio-session.test.ts` 九个 Mock 测试，覆盖首次创建、缺少基线拒写、载入最新版本后 CAS、旧版本拒写、他端更新、身份变化、409 后失效基线、本地恢复重置和同一会话重复提交。测试目前是**已新增但未经仓库 Vite+ 实测的候选代码**；本次协作环境不能运行完整依赖与 Windows 本地浏览器，**没有执行新的 `vp check`、`pnpm run ready`、React/Vue 浏览器 E2E 或真实 OIDC 网络联调**。第七小批既有 520/520 单测、40/40 E2E 和冻结安装记录不能替代本批新增代码验收。
 
 服务端默认 `AppModule` 只挂健康检查，OIDC/工程 API 仍默认关闭，因而在默认开发服务器中点击服务端菜单可能得到 404；这属于既有 fail-closed 安全策略，并不代表当前已配置真实业务保存。两端 Vite 开发代理未在本批开放 `/api/v1`；真实 IdP/JWKS、HTTPS Cookie/CSRF/反向代理、双框架浏览器读写往返均待专项配置和验证。没有开放工业设备写入、发布或自动服务器保存。
+
+## 2026-11-16 · 第三十三批第八小批首次 Windows Lint：19 条 unbound-method 警告（E-016）
+
+维护者执行 `vp check --fix`：Vite+ 在 `packages/api-client/test/studio-session.test.ts` 中发现 **19 条 `typescript(unbound-method)`**，汇总为 `Found 0 errors and 19 warnings in 163 files`；格式化阶段报告成功。该结果**不是零警告验收通过**，也不能据此判断 9 项会话测试已经运行。
+
+已定位为 Mock 夹具 `const client: ScadaApiClient` 宽化后，`api.getMe/getProject/createProject/appendVersion` 被当成潜在依赖 `this` 的接口方法。候选最小修复改为 `const client = { ... } satisfies ScadaApiClient` 保留 Vitest Mock 类型，并将 6 处 `vi.mocked(api.*)` 改为 Mock 本身的 `.mock*` 调用，保留 9 个测试、29 个 `expect` 调用及业务断言。没有修改正式业务 API、认证或 CAS 规则，没有关闭 Lint。
+
+**本次仅核查 GitHub 仓库代码及上传日志，未能在维护者 Windows 环境执行修复后 `vp check` 或 `pnpm run ready`。** 请复验 `vp check`（零警告/错误）、`pnpm run test:unit`（新增 9 项运行通过）、`pnpm run ready`（完整退出码 0），再关闭 E-016。真实 OIDC/JWKS、HTTPS Cookie、代理及 React/Vue 服务端往返仍未验收。

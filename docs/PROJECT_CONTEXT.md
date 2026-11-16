@@ -1048,3 +1048,7 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 在已验收的共享 `@adui/scada-api-client` 上新增 `StudioServerProjectSession`：必须由当前可信服务端身份与显式载入的最新修订号建立会话内 CAS 保存基线；本地 IndexedDB 修订号与服务端版本绝不混用，首次创建与版本追加失败不清理草稿、不静默覆盖画布。React/Vue 两端各新增独立“服务端工程”菜单，支持检查登录、保存服务端工程、查询分页历史、查看差异及确认后载入；保留原有本地草稿与本地版本功能。导入 JSON、恢复草稿、载入本地历史均撤销旧服务端基线，服务端载入先停止并等待本地自动保存会话结束。
 
 新增 9 项 Mock 测试候选；**尚未执行本批仓库真实 TS6 / Vite+ / 单测 / ready 与浏览器 E2E，不能把第七小批 520/520 验收当作本批通过**。真实 OIDC/JWKS、HTTPS Cookie/同源代理仍待联调，默认模块不暴露受保护路由，也没有工业写入或正式发布。PR #55 继续 Draft，不合并。
+
+### 2026-11-16 · 第八小批首次 Windows 检查与 E-016 修复候选
+
+`vp check --fix` 在新增 `studio-session.test.ts` 中发现 `typescript(unbound-method)` **19 条警告**（163 个受检文件零错误），第八小批质量门禁尚未通过。根因是 Mock 夹具被显式声明为 `ScadaApiClient` 后丢失各字段 Vitest Mock 类型。已准备最小测试夹具修复：使用 `satisfies ScadaApiClient` 保留方法 Mock 属性类型，去除 6 次冗余 `vi.mocked` 包裹，保留全部 9 项安全测试与 29 处断言。需维护者 Windows 重跑 `vp check`、单测、`ready`，成功后方可将 E-016 关闭。本次未改动 React/Vue、服务端权限或 IndexedDB 草稿逻辑，真实 OIDC/HTTPS 浏览器集成仍待验收，PR #55 保持 Draft。

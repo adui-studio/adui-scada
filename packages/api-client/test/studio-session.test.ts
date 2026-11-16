@@ -9,7 +9,7 @@ const principal = { tenantId: "tenant-a", subjectId: "user-a" };
 const createdAt = "2026-11-16T00:00:00.000Z";
 
 function mockClient() {
-  const client: ScadaApiClient = {
+  const client = {
     getMe: vi.fn<ScadaApiClient["getMe"]>(async () => ({
       authenticated: true,
       principal,
@@ -38,7 +38,7 @@ function mockClient() {
         createdAt,
       }),
     ),
-  };
+  } satisfies ScadaApiClient;
   return client;
 }
 
@@ -49,7 +49,7 @@ function documentCopy(): ScadaDocument {
 describe("Studio 服务端工程 CAS 会话安全", () => {
   it("仅在服务端明确返回 404 后创建新工程，并记录首个修订号", async () => {
     const api = mockClient();
-    vi.mocked(api.getProject).mockRejectedValueOnce(
+    api.getProject.mockRejectedValueOnce(
       new ScadaApiError("工程不存在或无权访问", "not_found", 404),
     );
     const session = createStudioServerProjectSession(api);
@@ -94,7 +94,7 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
 
   it("载入的不是最新修订号时不允许用旧画布覆盖服务端", async () => {
     const api = mockClient();
-    vi.mocked(api.getProject).mockResolvedValue({
+    api.getProject.mockResolvedValue({
       projectId: waterTreatmentDemoDocument.projectId,
       headRevision: 3,
       createdAt,
@@ -111,7 +111,7 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     const api = mockClient();
     const session = createStudioServerProjectSession(api);
     session.acceptLoadedVersion(await session.readVersion(waterTreatmentDemoDocument.projectId, 1));
-    vi.mocked(api.getProject).mockResolvedValue({
+    api.getProject.mockResolvedValue({
       projectId: waterTreatmentDemoDocument.projectId,
       headRevision: 2,
       createdAt,
@@ -126,7 +126,7 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     const api = mockClient();
     const session = createStudioServerProjectSession(api);
     session.acceptLoadedVersion(await session.readVersion(waterTreatmentDemoDocument.projectId, 1));
-    vi.mocked(api.getMe).mockResolvedValue({
+    api.getMe.mockResolvedValue({
       authenticated: true,
       principal: { tenantId: "tenant-a", subjectId: "user-b" },
     });
@@ -138,7 +138,7 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     const api = mockClient();
     const session = createStudioServerProjectSession(api);
     session.acceptLoadedVersion(await session.readVersion(waterTreatmentDemoDocument.projectId, 1));
-    vi.mocked(api.appendVersion).mockRejectedValueOnce(
+    api.appendVersion.mockRejectedValueOnce(
       new ScadaApiError("工程版本冲突", "conflict", 409),
     );
     await expect(session.saveDocument(documentCopy())).rejects.toMatchObject({ kind: "conflict" });
@@ -158,7 +158,7 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
   it("同一会话保存中的重复提交不发送第二个网络写入", async () => {
     const api = mockClient();
     let release: (() => void) | undefined;
-    vi.mocked(api.getMe).mockImplementationOnce(
+    api.getMe.mockImplementationOnce(
       () =>
         new Promise<Awaited<ReturnType<ScadaApiClient["getMe"]>>>((resolve) => {
           release = () => resolve({ authenticated: true, principal });
