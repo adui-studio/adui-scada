@@ -433,7 +433,7 @@ function installRevisionConflictFaultInPage() {
   };
 }
 
-async function openProjectInPage(projectId, headRevision, mode) {
+export async function openProjectInPage(projectId, headRevision, mode) {
   const panel = document.querySelector(".studio-project-browser-panel");
   const item = [...(panel?.querySelectorAll(".studio-project-browser-item") || [])].find(
     (node) => node.querySelector("code")?.textContent?.trim() === projectId,
@@ -443,6 +443,9 @@ async function openProjectInPage(projectId, headRevision, mode) {
   let confirmCount = 0;
   const fault = { projectId, calls: 0 };
   const originalConfirm = window.confirm;
+  const versionPanel = document.querySelector('[aria-label="服务端工程版本"]');
+  const errorBeforeClick = versionPanel?.querySelector('[role="alert"]')?.textContent ?? "";
+  let newActionObserved = false;
   if (mode === "conflict") globalThis.__aduiTestProjectRevisionFault = fault;
   window.confirm = () => {
     confirmCount += 1;
@@ -453,8 +456,12 @@ async function openProjectInPage(projectId, headRevision, mode) {
     const until = Date.now() + 20000;
     while (Date.now() < until) {
       const notice = document.querySelector(".studio-notice")?.textContent ?? "";
-      const error =
-        document.querySelector('[aria-label="服务端工程版本"] [role="alert"]')?.textContent ?? "";
+      const error = versionPanel?.querySelector('[role="alert"]')?.textContent ?? "";
+      const busy = [...(versionPanel?.querySelectorAll(".studio-version-help") ?? [])].some(
+        (node) => node.textContent?.includes("正在处理工程版本"),
+      );
+      // 上一次模拟冲突留下的错误不能当作本次新请求的失败。
+      if (busy || error !== errorBeforeClick) newActionObserved = true;
       if (mode === "conflict" && fault.calls > 0 && error.includes("服务端工程版本已更新")) {
         return { confirmCount, intercepted: fault.calls, outcome: "conflict" };
       }
@@ -464,7 +471,9 @@ async function openProjectInPage(projectId, headRevision, mode) {
       if (mode === "confirm" && confirmCount > 0 && notice.includes("CAS 基线已建立")) {
         return { confirmCount, intercepted: fault.calls, outcome: "confirm" };
       }
-      if (error && mode !== "conflict") throw new Error("服务器工程载入阶段返回受控错误");
+      if (error && mode !== "conflict" && newActionObserved && !busy) {
+        throw new Error("服务器工程载入阶段返回受控错误");
+      }
       await new Promise((done) => setTimeout(done, 100));
     }
     throw new Error("工程安全载入流程超时");

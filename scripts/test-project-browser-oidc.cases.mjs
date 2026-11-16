@@ -4,6 +4,7 @@ import {
   describeBrowserPageException,
   describeProjectBrowserFailure,
   inspectStudioState,
+  openProjectInPage,
   requireAuthorizedProjectPage,
   resolveProjectBrowserLab,
 } from "./test-project-browser-oidc.mjs";
@@ -183,6 +184,125 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     );
     assert.equal(actions[0].source.includes("readBrowserDraftsInPage"), false);
     assert.equal(actions[1].source.includes("indexedDB.open"), true);
+  });
+
+  void it("上一轮版本冲突错误残留时，新一轮确认载入不能误报失败", async () => {
+    const originalDocument = globalThis.document;
+    const originalWindow = globalThis.window;
+    const state = { error: "服务端工程版本已更新", notice: "", busy: false };
+    const button = {
+      disabled: false,
+      click() {
+        setTimeout(() => {
+          state.error = "";
+          state.busy = true;
+        }, 10);
+        setTimeout(() => {
+          state.busy = false;
+          state.notice = "已打开最新服务端版本，CAS 基线已建立";
+          globalThis.window.confirm();
+        }, 30);
+      },
+    };
+    const versionPanel = {
+      querySelector(selector) {
+        return selector === '[role="alert"]' && state.error
+          ? { textContent: state.error }
+          : null;
+      },
+      querySelectorAll(selector) {
+        return selector === ".studio-version-help" && state.busy
+          ? [{ textContent: "正在处理工程版本…" }]
+          : [];
+      },
+    };
+    const item = {
+      querySelector(selector) {
+        return selector === "code" ? { textContent: "test-project" } : button;
+      },
+    };
+    globalThis.document = {
+      querySelector(selector) {
+        if (selector === ".studio-project-browser-panel") {
+          return { querySelectorAll: () => [item] };
+        }
+        if (selector === '[aria-label="服务端工程版本"]') return versionPanel;
+        if (selector === ".studio-notice") return { textContent: state.notice };
+        return null;
+      },
+    };
+    globalThis.window = { confirm: () => false };
+    try {
+      assert.deepEqual(await openProjectInPage("test-project", 1, "confirm"), {
+        confirmCount: 1,
+        intercepted: 0,
+        outcome: "confirm",
+      });
+      assert.equal(state.error, "");
+    } finally {
+      if (originalDocument === undefined) delete globalThis.document;
+      else globalThis.document = originalDocument;
+      if (originalWindow === undefined) delete globalThis.window;
+      else globalThis.window = originalWindow;
+    }
+  });
+
+  void it("新一轮确认载入真的失败时仍必须拒绝，不得误认为旧冲突", async () => {
+    const originalDocument = globalThis.document;
+    const originalWindow = globalThis.window;
+    const state = { error: "服务端工程版本已更新", notice: "", busy: false };
+    const button = {
+      disabled: false,
+      click() {
+        setTimeout(() => {
+          state.error = "";
+          state.busy = true;
+        }, 10);
+        setTimeout(() => {
+          state.busy = false;
+          state.error = "服务端工程版本读取被拒绝";
+        }, 30);
+      },
+    };
+    const versionPanel = {
+      querySelector(selector) {
+        return selector === '[role="alert"]' && state.error
+          ? { textContent: state.error }
+          : null;
+      },
+      querySelectorAll(selector) {
+        return selector === ".studio-version-help" && state.busy
+          ? [{ textContent: "正在处理工程版本…" }]
+          : [];
+      },
+    };
+    const item = {
+      querySelector(selector) {
+        return selector === "code" ? { textContent: "test-project" } : button;
+      },
+    };
+    globalThis.document = {
+      querySelector(selector) {
+        if (selector === ".studio-project-browser-panel") {
+          return { querySelectorAll: () => [item] };
+        }
+        if (selector === '[aria-label="服务端工程版本"]') return versionPanel;
+        if (selector === ".studio-notice") return { textContent: state.notice };
+        return null;
+      },
+    };
+    globalThis.window = { confirm: () => false };
+    try {
+      await assert.rejects(
+        openProjectInPage("test-project", 1, "confirm"),
+        /服务器工程载入阶段返回受控错误/,
+      );
+    } finally {
+      if (originalDocument === undefined) delete globalThis.document;
+      else globalThis.document = originalDocument;
+      if (originalWindow === undefined) delete globalThis.window;
+      else globalThis.window = originalWindow;
+    }
   });
 
   void it("不允许生产模式启动交互式本机测试", () => {
