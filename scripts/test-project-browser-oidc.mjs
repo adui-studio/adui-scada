@@ -11,6 +11,38 @@ import { resolveReadonlyProbeOrigins } from "./verify-oidc-https-readonly.mjs";
 const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const LOOPBACK = "127.0.0.1";
 
+const SAFE_FAILURES = new Set([
+  "工程浏览器测试仅允许本机 Keycloak 隔离 Realm",
+  "工程浏览器测试必须明确使用本机隔离数据库",
+  "工程浏览器测试拒绝非本机隔离数据库目标",
+  "配置的 Node.js 本机根证书无法读取",
+  "请预先设置 NODE_EXTRA_CA_CERTS 或 NODE_USE_SYSTEM_CA=1，保持 TLS 校验",
+  "未找到本机 Chrome/Edge 浏览器",
+  "本机可信 HTTPS Web 服务未就绪",
+  "隔离浏览器调试端口未就绪",
+  "浏览器调试标签页无法创建",
+  "浏览器调试命令执行失败",
+  "浏览器页面操作失败，请检查当前 Studio 状态",
+]);
+
+/** 仅输出固定的安全诊断，拒绝把异常中的 Cookie、URL 或页面数据写入终端。 */
+export function describeProjectBrowserFailure(error) {
+  const message = error instanceof Error ? error.message : "";
+  if (SAFE_FAILURES.has(message)) return message;
+  if (message.endsWith("未达到预期状态")) {
+    return "浏览器登录或 Studio 页面未达到预期状态，请检查隔离 Lab、登录与服务端工程";
+  }
+  const code = error && typeof error === "object" ? error.code : undefined;
+  if (code === "ECONNREFUSED") return "本机 Web 或浏览器调试端口未监听";
+  if (code === "CERT_HAS_EXPIRED" || code === "ERR_TLS_CERT_ALTNAME_INVALID") {
+    return "本机 HTTPS 证书不符合有效期或域名要求";
+  }
+  if (code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE" || code === "SELF_SIGNED_CERT_IN_CHAIN") {
+    return "本机 HTTPS 根证书未被 Node.js 信任";
+  }
+  return "浏览器安全回归断言失败，检查终端测试条件及真实页面状态";
+}
+
 /** 限定真实 OIDC 试验在本机隔离 Lab，不允许把浏览器脚本指向远端服务。 */
 export function resolveProjectBrowserLab(env) {
   const origins = resolveReadonlyProbeOrigins(env);
@@ -521,8 +553,8 @@ async function run() {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
-  run().catch(() => {
-    process.stderr.write("错误：OIDC 工程管理专项未通过；检查可信 HTTPS、隔离 Lab 与浏览器页面状态。\n");
+  run().catch((error) => {
+    process.stderr.write("错误：" + describeProjectBrowserFailure(error) + "\n");
     process.exitCode = 1;
   });
 }

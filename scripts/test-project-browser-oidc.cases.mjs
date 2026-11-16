@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { resolveProjectBrowserLab } from "./test-project-browser-oidc.mjs";
+import {
+  describeProjectBrowserFailure,
+  resolveProjectBrowserLab,
+} from "./test-project-browser-oidc.mjs";
 
 const sample = {
   NODE_ENV: "development",
@@ -81,6 +84,21 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
           NODE_EXTRA_CA_CERTS: "Z:/__adui_missing_ca__/rootCA.pem",
         }),
       /本机根证书无法读取/,
+    );
+  });
+
+  void it("错误诊断不得泄漏原始凭据、路径和堆栈", () => {
+    assert.equal(
+      describeProjectBrowserFailure(new Error("内部请求包含敏感 Cookie")),
+      "浏览器安全回归断言失败，检查终端测试条件及真实页面状态",
+    );
+    assert.equal(
+      describeProjectBrowserFailure(new Error("工程浏览器测试拒绝非本机隔离数据库目标")),
+      "工程浏览器测试拒绝非本机隔离数据库目标",
+    );
+    assert.equal(
+      describeProjectBrowserFailure({ code: "ECONNREFUSED" }),
+      "本机 Web 或浏览器调试端口未监听",
     );
   });
 
