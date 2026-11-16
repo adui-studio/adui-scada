@@ -431,9 +431,7 @@ export class PrismaProjectVersionStore {
     const projects = await this.database.client.scadaProject.findMany({
       where: {
         tenantId: principal.tenantId,
-        ...(query.afterProjectId === undefined
-          ? {}
-          : { projectId: { gt: query.afterProjectId } }),
+        ...(query.afterProjectId === undefined ? {} : { projectId: { gt: query.afterProjectId } }),
         grants: {
           some: {
             tenantId: principal.tenantId,

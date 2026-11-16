@@ -135,9 +135,7 @@ describe("框架无关工程 API Client", () => {
       summary,
       next,
     ]);
-    expect(valid.fetcher.mock.calls[0]?.[0]).toBe(
-      "/api/v1/projects?limit=2&afterProjectId=a",
-    );
+    expect(valid.fetcher.mock.calls[0]?.[0]).toBe("/api/v1/projects?limit=2&afterProjectId=a");
 
     const invalidQuery = createHarness(jsonResponse([]));
     await expect(invalidQuery.client.listProjects({ limit: 101 })).rejects.toThrow(
@@ -146,9 +144,9 @@ describe("框架无关工程 API Client", () => {
     await expect(invalidQuery.client.listProjects({ limit: 0 })).rejects.toThrow(
       "工程列表分页数量必须是正安全整数",
     );
-    await expect(
-      invalidQuery.client.listProjects({ afterProjectId: "../other" }),
-    ).rejects.toThrow("工程 ID 必须是合法的 1～128 字符 ASCII 标识符");
+    await expect(invalidQuery.client.listProjects({ afterProjectId: "../other" })).rejects.toThrow(
+      "工程 ID 必须是合法的 1～128 字符 ASCII 标识符",
+    );
     expect(invalidQuery.fetcher).not.toHaveBeenCalled();
 
     const duplicate = createHarness(jsonResponse([summary, summary]));

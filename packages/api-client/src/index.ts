@@ -325,9 +325,7 @@ export function createScadaApiClient(options: ScadaApiClientOptions = {}): Scada
       const params = new URLSearchParams();
       if (query?.limit !== undefined) params.set("limit", String(limit));
       const afterProjectId =
-        query?.afterProjectId === undefined
-          ? undefined
-          : requireProjectId(query.afterProjectId);
+        query?.afterProjectId === undefined ? undefined : requireProjectId(query.afterProjectId);
       if (afterProjectId !== undefined) params.set("afterProjectId", afterProjectId);
       const suffix = params.size === 0 ? "" : "?" + params.toString();
       const projects = parseList(
