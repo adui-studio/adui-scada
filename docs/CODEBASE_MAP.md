@@ -672,3 +672,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/server/src/database/database.module.spec.ts`、`apps/server/test/app.e2e-spec.ts`：模块挂载和默认根模块 404 边界测试。
 
 以上内容仍需实际运行 `vp check`、`ready` 与 `test:db`，不得当作已通过验收。
+
+## 第三十三批 · 全新空库迁移专项工具（未完成真实空库验收）
+
+- `scripts/verify-fresh-postgres-migrations.mjs`：从根目录本机 `adui_scada` 连接推导人工创建的 `adui_scada_fresh_*` 隔离库；确认目标为空后执行两次 Prisma 迁移部署，核对迁移登记和业务表，不创建、删除或重置数据库。
+- `scripts/verify-fresh-postgres-migrations.cases.mjs`：使用 Node.js 内置 `node:test` 验证连接来源、数据库命名、地址、端口及 Schema 拒绝策略；与通用 Vitest 测试文件命名隔离。
+- 验收命令与注意事项见 `docs/HARNESS.md`；纯逻辑单测 6/6 通过不代表真实 PostgreSQL 空库迁移已经通过。

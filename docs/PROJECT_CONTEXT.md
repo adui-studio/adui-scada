@@ -996,3 +996,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 维护者最新 PowerShell 日志确认：`vp check` 297 文件/157 受检零警告错误；单元测试 46/46 文件、505/505 项通过（新增工程 API 仓储单测 10/10）；NestJS HTTP E2E 5/5 文件、40/40 项通过（工程 API E2E 13/13）；SSE 客户端 8/8 和故障代理 4/4；83 份 Markdown 检查、React/Vue/NestJS 构建成功；完整 `pnpm run ready` 最终退出码 **0**。`main.ts` EOF 的 E-013 已由 Windows Vite+ 复验关闭。功能分支最新已检索到用户格式化提交 `e15f058b`；该日志没有独立输出 Git HEAD，不能强称日志包含精确提交指纹。
 
 第六小批**工程质量门禁通过、真实 PostgreSQL 与真实身份/代理专项仍待验收**。`project-api.db-spec.ts` 新增测试不属于通用 `ready`；未取得本批 `test:db` 结果，不标记事务竞争、租户隔离或审计失败回滚在真实数据库中通过。PR #55 保持 Draft，未经维护者明确授权不得合并。本记录同步后仍需执行最新文档提交的 `docs:check`。
+
+### 第三十三批第六小批 · 2026-11-16 PostgreSQL 真实事务验收补录
+
+维护者 Windows 在本机隔离库 `127.0.0.1:15432/adui_scada_test` 完成 Prisma Schema 校验、迁移状态检查及 `pnpm run test:db`。现有四项迁移均无待执行项；真实数据库测试 3/3 文件、22/22 项通过（OIDC 5/5、工程版本 11/11、工程 API 6/6）。与此前 `ready` 退出码 0、单测 505/505、E2E 40/40 的工程质量验收分别记录。首次漏配 `SCADA_TEST_DATABASE_URL` 引发的 0-test 拒绝为安全门禁生效，补充受控变量后成功完成全部测试。
+
+下一项“全新隔离空库首次迁移及重复部署”仅准备了受控 Node 脚本和目标校验单测（6/6 静态/纯逻辑验证）；尚未在 Windows 新建空库并运行真实 Prisma 迁移。此项与真实 IdP、HTTPS Cookie/代理和 Vue/React API Client 仍待验收。PR #55 继续保持 Draft，未经明确授权不得合并。

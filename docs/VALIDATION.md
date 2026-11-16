@@ -1005,3 +1005,17 @@ Write-Host "退出码：$LASTEXITCODE"
 **未完成的专项验证**：本次日志没有 `pnpm run test:db`，新增的 `project-api.db-spec.ts` 真实 PostgreSQL 场景（创建、隔离、并发、主体停用、审计失败回滚）仍需在确认的本机隔离 `adui_scada_test` 中执行；真实 IdP/JWKS、生产 HTTPS 终止代理及 React/Vue 同源 API Client 继续待验收。此前阶段 A 16/16 真实数据库通过记录不替代本次新数据库测试。
 
 本条为维护者日志的历史验收证据；**本次文档更新后的新提交未在该日志中运行 `docs:check` 或 `ready`**，需要独立复核。不对生产设备执行写入。
+
+## 2026-11-16 · 第三十三批第六小批 PostgreSQL 隔离事务验收通过
+
+维护者已在 Windows 以 `127.0.0.1:15432/adui_scada_test` 为目标运行真实数据库专项检查。`db:validate` 通过；`db:migrate:deploy` 检查到四项迁移且没有待应用项；`db:migrate:status` 显示数据库结构最新。`pnpm run test:db` 最终通过 **3/3 个测试文件、22/22 个用例**：OIDC Schema 5/5、工程版本事务 11/11、工程 API 事务 6/6。
+
+首次运行 `test:db` 时，因未显式设置 `SCADA_TEST_DATABASE_URL` 而被三个测试文件主动拒绝（0 个测试执行，退出码 1）；补充指向独立 `adui_scada_test` 的受控环境变量后，重新运行全部 22 项测试通过。原始失败属于安全门禁正常触发，不是业务断言失败，也没有放宽测试库检查。
+
+本次结果与先前 **505/505 单元测试、40/40 HTTP E2E、`ready` 退出码 0** 分别成立，不能把已有隔离库的“无待应用迁移”误认为验证过全新空库初始化。真实 IdP、HTTPS Cookie、反向代理和 React/Vue 同源 API Client 尚未验收。
+
+## 2026-11-16 · 全新空库首次迁移与重复部署：工具准备完成，真库待执行
+
+为独立验证空库初始化和迁移幂等性，新增 `scripts/verify-fresh-postgres-migrations.mjs`，**只连接人工新建且为空的 `adui_scada_fresh_*` 本机数据库**。脚本先检查用户对象和非系统 Schema，再首次执行 `db:migrate:deploy`，核对与仓库目录一致的迁移登记和八个预期业务表；第二次执行 `db:migrate:deploy`、`db:migrate:status` 后比较迁移元数据完全一致。脚本不执行数据库创建、删除、重置或清理，也不改变原 `.env` 文件。
+
+独立验证已完成：`node --check` 成功，`node --test scripts/verify-fresh-postgres-migrations.cases.mjs` **6/6 通过**（在当前协作容器 Node 22 环境）。**没有连接真实 PostgreSQL，也未运行两次 migrate deploy；空库迁移专项继续待维护者 Windows 实测**。此新增脚本的仓库 `vp check`、`ready`、`docs:check` 均需在应用补丁后复验。
