@@ -206,9 +206,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     };
     const versionPanel = {
       querySelector(selector) {
-        return selector === '[role="alert"]' && state.error
-          ? { textContent: state.error }
-          : null;
+        return selector === '[role="alert"]' && state.error ? { textContent: state.error } : null;
       },
       querySelectorAll(selector) {
         return selector === ".studio-version-help" && state.busy
@@ -266,9 +264,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     };
     const versionPanel = {
       querySelector(selector) {
-        return selector === '[role="alert"]' && state.error
-          ? { textContent: state.error }
-          : null;
+        return selector === '[role="alert"]' && state.error ? { textContent: state.error } : null;
       },
       querySelectorAll(selector) {
         return selector === ".studio-version-help" && state.busy
