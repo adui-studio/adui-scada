@@ -1126,3 +1126,13 @@ React 的 `apps/web-react/src/studio/StudioPage.tsx` 与 Vue 的 `apps/web-vue/s
 第十小批新增 `scripts/verify-oidc-https-readonly.mjs` 与同目录安全用例，只使用可信 TLS 发起两个回环 HTTPS Origin 的匿名 `GET /api/v1/auth/me`。拒绝非本机或不安全配置、证书校验失败、跳转、非 401、HTML 回退、无效 JSON 及不符合现有 NestJS 未认证响应契约。请求不带 Cookie、不会登录或写入数据库。新增独立离线测试命令 `pnpm run test:oidc:https:readonly` 并纳入 `ready`；真实网络检查 `pnpm run verify:oidc:https:readonly` 必须单独显式运行，**不纳入默认 ready**。
 
 协作容器 Node.js 22 对候选脚本执行了语法检查和 Node 内置测试，**9/9 通过**。本次新增文件入库后的 Windows `vp check`、完整 `ready`、实际 TLS 握手、真实 IdP 登录、Secure Cookie/CSRF 和 React/Vue 服务端工程版本往返**均待独立验收**。第九小批的工程质量链通过不等于第十小批或真实认证通过。默认 OIDC 关闭，PR #55 保持 Draft，不开放匿名写入或设备写入。
+
+## 2026-11-16 · 第三十三批第十小批 Windows 验收及真实探针失败诊断
+
+维护者上传原始 PowerShell 日志：`pnpm run test:oidc:https:readonly` **9/9 通过**；`vp check` **310 个文件格式正确、168 个受检文件零警告/Lint/类型错误**；`pnpm run docs:check` **83 份 Markdown 通过**；完整 `pnpm run ready` 包含 48/48 Vitest 文件、**529/529** 单测、SSE 8/8、TCP 故障代理 4/4、OIDC 代理配置 10/10、HTTPS 只读离线探针 9/9、HTTP E2E **40/40**、React/Vue/NestJS 构建完成，**最终退出码 0**。此前第九小批质量验收同样通过，但不能替代真实 TLS 和登录联调。日志未包含本地 `git rev-parse HEAD` 独立结果。
+
+随后维护者显式执行 `pnpm run verify:oidc:https:readonly`，输出通用“请检查本机证书信任、两端代理和服务端安全配置”并以 **退出码 1** 结束。**当前真实 HTTPS 探针未通过**；日志没有给出具体环境配置或 Node 网络错误码，不能认定是证书不可信、服务未启动、OIDC 未启用或其他某项的确定故障。默认 `.env.example` 的 `SCADA_OIDC_ENABLED=false` 和 `SCADA_OIDC_DEV_HTTPS_ENABLED=false` 将使该专项按设计失败；完整 `ready` 不会自动启动 HTTPS 开发服务。
+
+为改进定位而不泄露敏感内容，本次在匿名只读探针 CLI 入口增加固定中文失败类别和白名单 TLS/网络错误映射，并增加两项离线测试：配置缺失、安全 TLS 信任、IP SAN、端口未监听、异常契约和未知错误均不能输出原始秘密。协作环境 Node.js 22 语法检查及更新后的 **11/11** 项离线测试通过；在缺少 OIDC 联调配置时该 CLI 仍以失败退出。**本次新的代码尚未在 Windows 执行 `vp check`、`ready` 或真实 TLS 探针**，不能将 11/11 候选测试外推为本机或生产验收。
+
+仍待维护者在独立非生产环境准备可信 HTTPS 证书、真实 IdP、注册回调及预绑定测试主体，启动 NestJS/React/Vue 后执行真实匿名只读 401 验收；后续再验 Secure Cookie/CSRF 和 React↔NestJS↔Vue 服务端工程版本/CAS/IndexedDB 安全。不绕过鉴权，不接触生产库或设备写入。PR #55 继续 Draft，不合并。

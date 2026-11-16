@@ -1064,3 +1064,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 维护者 Windows 复验第九小批：HTTPS 本机代理配置测试 10/10、`vp check` 308 文件格式/166 受检零警告、单元测试 529/529、NestJS HTTP E2E 40/40、SSE 客户端 8/8、故障代理 4/4、83 个 Markdown 与 React/Vue/NestJS 全部构建成功，完整 `pnpm run ready` 退出码 0。日志未包含本地 Git HEAD 的独立证据。
 
 第十小批仅新增本机 HTTPS **匿名只读** `/api/v1/auth/me` 诊断脚本和九项安全测试。离线测试属于默认 `ready`，实际 TLS 网络探针保持单独显式命令；不得将配置单测或匿名 401 响应解释为已完成 OIDC IdP、Cookie/CSRF 或服务端工程保存联调。无需改动 React/Vue Studio、NestJS Guard、Prisma、数据库迁移或共享 API Client。真实本机 TLS、IdP/JWKS、隔离测试租户与跨框架服务端往返仍待维护者单独验收。PR #55 保持 Draft，Assignee 继续指派 `@adui-dev`，未获授权不合并。
+
+### 2026-11-16 · 第十小批 Windows 工程质量通过，真实 HTTPS 专项继续受阻
+
+维护者上传的 Windows 日志确认：HTTPS 匿名只读离线测试 9/9、`vp check` 310 格式文件/168 受检零警告、`docs:check` 83、全量单测 529/529、OIDC 代理配置 10/10、HTTP E2E 40/40、SSE 8/8、故障代理 4/4 及 React/Vue/NestJS 构建均通过，完整 `ready` 退出码 0。随后真实 `verify:oidc:https:readonly` **退出码 1**，仅输出通用联调失败消息；不将之判定为 TLS 或 OIDC 实际通过。维护者本地 `.env`、启动服务和证书状态未随日志提供，失败根因待排查。
+
+针对反馈，脚本已增强脱敏失败分类并增加两项安全测试；Node.js 22 候选验证 11/11，通过但需要新提交后的 Windows `vp check`、`ready` 及真实探针专项复验。保持 OIDC 和 HTTPS 开关默认关闭，不创建伪造 IdP 或匿名工程写入，不访问生产数据库，PR #55 仍 Draft。

@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
 import {
+  describeReadonlyProbeFailure,
   resolveReadonlyProbeOrigins,
   verifyAnonymousMeResponse,
   verifyReadonlyHttps,
@@ -129,6 +130,34 @@ void describe("真实 OIDC HTTPS 本机匿名只读探针", () => {
     await assert.rejects(
       () => verifyReadonlyHttps(env(), async () => ({ ...unauthorized(), status: 503 })),
       /必须返回 401/,
+    );
+  });
+
+  void it("只输出已审核的配置错误，未知异常不得泄漏秘密内容", () => {
+    assert.equal(
+      describeReadonlyProbeFailure(new Error("只读 HTTPS 探针要求显式启用可信 OIDC 开发代理")),
+      "只读 HTTPS 探针要求显式启用可信 OIDC 开发代理",
+    );
+    assert.equal(
+      describeReadonlyProbeFailure(new Error("私钥路径与真实 Cookie 不可出现在日志中")),
+      "未知故障，请检查本机 HTTPS 服务与 OIDC 配置",
+    );
+  });
+
+  void it("网络与 TLS 故障仅输出固定中文类别", () => {
+    for (const [code, expected] of [
+      ["ECONNREFUSED", "本机 HTTPS 端口未监听，请检查 React/Vue 服务是否启动"],
+      ["ERR_TLS_CERT_ALTNAME_INVALID", "HTTPS 证书未覆盖 127.0.0.1 的 IP SAN"],
+      ["DEPTH_ZERO_SELF_SIGNED_CERT", "HTTPS 证书链未被 Node.js 信任"],
+      ["CERT_HAS_EXPIRED", "HTTPS 证书已过期"],
+      ["EPROTO", "HTTPS 协议握手失败，请确认服务已启用 TLS"],
+    ]) {
+      const error = Object.assign(new Error("敏感原始错误，不得输出"), { code });
+      assert.equal(describeReadonlyProbeFailure(error), expected);
+    }
+    assert.equal(
+      describeReadonlyProbeFailure({ code: "UNEXPECTED_SECRET_ERROR", message: "Token秘密" }),
+      "未知故障，请检查本机 HTTPS 服务与 OIDC 配置",
     );
   });
 });

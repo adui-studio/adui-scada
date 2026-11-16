@@ -1786,3 +1786,30 @@ if ($LASTEXITCODE -ne 0) { throw "真实本机 HTTPS 匿名只读检查失败" }
 探针只对已登记的两套 `https://127.0.0.1:<端口>` 发起 GET，不发送 Cookie、不跟随重定向，不接受 HTTP/跨站地址，不访问工程写接口；Node.js 将正常验证 TLS 链和主机名。若证书未被 Node 信任，应修复本机信任链或在受控环境中配置 Node 的可信 CA，**禁止** `NODE_TLS_REJECT_UNAUTHORIZED=0`、`--insecure`、禁用身份 Guard 或为通过探针伪造 IdP。探针错误仅打印受控中文说明，不输出密钥、Cookie 或授权码。
 
 **判定范围**：两个来源均返回预期的匿名 401 JSON，仅说明本机 TLS 连接、Vite API 代理和 NestJS 未登录拒绝路径连通；不代表真实 OIDC 登录、Cookie/CSRF、权限与跨框架工程版本互通成功。完成后恢复默认关闭的联调开关，不对生产数据库运行测试。
+
+#### 第十小批真实探针失败：安全诊断和实际前置条件（2026-11-16）
+
+维护者 Windows 已完成离线质量链：HTTPS 探针 9/9、OIDC 代理配置 10/10、`vp check` 310/168 零警告、Vitest 529/529、NestJS E2E 40/40、完整 `ready` 退出码 0。但单独的 `pnpm run verify:oidc:https:readonly` **退出码 1**。该命令不是默认 `ready` 的一部分，不能在缺少 HTTPS/OIDC 配置或服务未启动时预期通过。
+
+修正后的 CLI 对已审核的配置错误、端口未监听、证书 SAN/证书链/过期和握手失败输出固定中文类别；未知错误只输出泛化描述，不展示原始异常、凭据、证书路径、Cookie 或 Token。**实际网络根因仍需根据复测消息判断**，不允许为完成联调禁用证书校验或认证。
+
+在运行真实探针前，由维护者自行确认根目录 `.env`（不要粘贴任何秘密值）：`SCADA_OIDC_ENABLED=true`、`SCADA_OIDC_DEV_HTTPS_ENABLED=true`、`SCADA_WEB_HOST=127.0.0.1`、`SCADA_SERVER_HOST=127.0.0.1`、React/Vue 独立端口、精确双 HTTPS Origin 白名单、固定预注册回调；`SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false` 与 `SCADA_LOCAL_DEMO_API_ENABLED=false`。提前从仓库外准备 SAN 包含 `127.0.0.1` 的可信证书，并确保 Node.js 信任签发 CA；真实 OIDC Issuer/机密客户端、事务密钥和隔离非生产 PostgreSQL 必须已配置，NestJS/React/Vue 三套服务须分别运行且启动成功。不假定 `ready` 会自动启动这些服务。
+
+```powershell
+git rev-parse --short HEAD
+pnpm run test:oidc:https:readonly
+if ($LASTEXITCODE -ne 0) { throw "HTTPS 探针安全单测失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码质量门禁失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+```
+
+之后在**另一个终端**对已启动的三个联调服务运行：
+
+```powershell
+pnpm run verify:oidc:https:readonly
+Write-Host "真实 HTTPS 探针退出码：$LASTEXITCODE"
+```
+
+如果提示配置或 TLS 故障，应修正本机可信配置后再测；如果是 `ECONNREFUSED` 映射的服务未监听，应检查三套进程是否正确启动及实际绑定端口；如果收到非 401 JSON，应检查同源反向代理和 NestJS OIDC 模块。**不得**通过 `NODE_TLS_REJECT_UNAUTHORIZED=0`、忽略证书、硬编码令牌或将 `SCADA_OIDC_ENABLED=false` 与匿名写入混合来规避故障。
