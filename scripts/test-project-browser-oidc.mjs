@@ -46,6 +46,8 @@ const SAFE_FAILURES = new Set([
   "浏览器页面操作失败，请检查当前 Studio 状态",
   "React 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
   "Vue 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
+  "真实多页验收要求至少十一项已授权工程，当前未覆盖有效的第二页",
+  "仅支持 --require-multipage 参数",
 ]);
 
 /** CDP 异常只按确定的脚本错误文案或异常类别公开，禁止泄漏脚本堆栈与 Cookie。 */
@@ -502,7 +504,17 @@ export function requireAuthorizedProjectPage(result) {
   return result.projects;
 }
 
-async function verifyStudio(session, origin, name) {
+/**
+ * 严格多页验收必须真正访问过包含授权工程的第二页。
+ * 仅用于隔离浏览器测试，不修改服务端或权限表。
+ */
+export function requireRealMultiPageCoverage(covered, required) {
+  if (required && !covered) {
+    throw new Error("真实多页验收要求至少十一项已授权工程，当前未覆盖有效的第二页");
+  }
+}
+
+async function verifyStudio(session, origin, name, requireMultiPage) {
   const report = (phase) => process.stdout.write(name + "：正在验证" + phase + "\n");
   report("首页加载与组态入口");
   await session.send("Page.navigate", { url: origin + "/" });
@@ -568,6 +580,7 @@ async function verifyStudio(session, origin, name) {
     }
   }
 
+  requireRealMultiPageCoverage(paginated, requireMultiPage);
   report("临时 IndexedDB 草稿保存与自动保存");
   assert.equal(await session.evaluate(saveDraftInPage), true);
   assert.equal(await session.evaluate(enableAutoSaveInPage), true);
@@ -627,6 +640,11 @@ async function verifyStudio(session, origin, name) {
 }
 
 async function run() {
+  const parameters = process.argv.slice(2);
+  if (parameters.some((value) => value !== "--require-multipage")) {
+    throw new Error("仅支持 --require-multipage 参数");
+  }
+  const requireMultiPage = parameters.includes("--require-multipage");
   if (existsSync(ROOT_ENV)) loadEnvFile(ROOT_ENV);
   const origins = resolveProjectBrowserLab(process.env);
   const executable = browserExecutable();
@@ -677,8 +695,8 @@ async function run() {
       source: "(" + installRevisionConflictFaultInPage.toString() + ")()",
     });
     process.stdout.write("真实 OIDC 会话已在 React Origin 验证，开始双框架只读工程验收。\n");
-    await verifyStudio(session, origins[0], "React");
-    await verifyStudio(session, origins[1], "Vue");
+    await verifyStudio(session, origins[0], "React", requireMultiPage);
+    await verifyStudio(session, origins[1], "Vue", requireMultiPage);
     process.stdout.write("双框架 OIDC 工程管理专项通过；服务端工程未新增、未覆盖、未发布。\n");
   } finally {
     session?.socket.close();

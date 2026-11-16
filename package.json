@@ -30,6 +30,7 @@
     "test:oidc:https:readonly": "node --test scripts/verify-oidc-https-readonly.cases.mjs",
     "test:projects:oidc:config": "node --test scripts/test-project-browser-oidc.cases.mjs",
     "test:projects:oidc:browser": "node scripts/test-project-browser-oidc.mjs",
+    "test:projects:oidc:browser:pages": "node scripts/test-project-browser-oidc.mjs --require-multipage",
     "verify:oidc:https:readonly": "node scripts/verify-oidc-https-readonly.mjs",
     "test:sse:fault:browser": "node scripts/test-runtime-sse-browser.mjs --transport-fault",
     "test:sse:fault:proxy": "node scripts/test-runtime-sse-browser.mjs --transport-fault --docker",

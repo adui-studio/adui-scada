@@ -6,6 +6,7 @@ import {
   inspectStudioState,
   openProjectInPage,
   requireAuthorizedProjectPage,
+  requireRealMultiPageCoverage,
   resolveProjectBrowserLab,
 } from "./test-project-browser-oidc.mjs";
 
@@ -299,6 +300,15 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       if (originalWindow === undefined) delete globalThis.window;
       else globalThis.window = originalWindow;
     }
+  });
+
+  void it("严格多页验收必须实际访问至少十一项授权工程的有效第二页", () => {
+    assert.doesNotThrow(() => requireRealMultiPageCoverage(true, true));
+    assert.doesNotThrow(() => requireRealMultiPageCoverage(false, false));
+    assert.throws(
+      () => requireRealMultiPageCoverage(false, true),
+      /真实多页验收要求至少十一项已授权工程，当前未覆盖有效的第二页/,
+    );
   });
 
   void it("不允许生产模式启动交互式本机测试", () => {
