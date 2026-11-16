@@ -1665,3 +1665,22 @@ Write-Host "全新空库迁移退出码：$LASTEXITCODE"
 #### E-015 Windows 修复复验结果（2026-11-16）
 
 维护者已在第二座独立空库 `adui_scada_fresh_20261116_b` 验证新启动方式：四项 `migrate deploy` 首次全部应用、第二次无待执行迁移、`migrate status` 最新、迁移元数据一致、脚本退出码 0，且**未再出现 Node.js DEP0190**。此前在 `adui_scada_fresh_20261116` 的首次迁移结果仍保留，两座库都不允许重复作为“全新空库”测试目标，复测应另建新名称。Windows 质量链 `vp check`、`docs:check`、`ready` 及目标校验 6/6 均已通过；新文档提交后的静态文档校验仍需另行复验。当前 Prisma 7.10.1 不因 8.0.0 RC 更新提示自动升级。
+
+### 第三十三批第七小批：共享 API Client 质量门禁
+
+新增 `packages/api-client/src/index.ts` 与 `packages/api-client/test/api-client.test.ts`。客户端与 Vue/React 无运行时耦合，也没有服务端 JWT 或密码。先验证真实工作区依赖与锁文件，再跑 Mock Fetch 测试和全量质量链：
+
+```powershell
+pnpm install --lockfile-only
+pnpm install --frozen-lockfile
+pnpm run deps:check
+pnpm run config:check
+vp check
+pnpm run typecheck:web
+pnpm run test:unit
+pnpm run docs:check
+pnpm run ready
+Write-Host "最终退出码：$LASTEXITCODE"
+```
+
+新增 Mock Fetch 测试由根 `vite.config.ts` 统一收集，根 `typecheck:web` 包含 `@adui/scada-api-client`。若安装重写了 `pnpm-lock.yaml`，应以 pnpm 12.18.0 实际生成的内容为准，并检查是否只产生预期的工作区链接变更。原有 Core、NestJS、React/Vue TypeScript 6、测试、中文文案及工业安全门禁不得降低。此测试**不调用真实工程 API，不更改数据库、不执行工业写入**；真实 HTTPS 浏览器 Cookie、Origin/CSRF、同源代理及 React/Vue 工程互通另行验证。

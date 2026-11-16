@@ -442,6 +442,9 @@ importers:
       '@adui/normalize.css':
         specifier: 'catalog:'
         version: 0.1.1
+      '@adui/scada-api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@adui/scada-core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -497,6 +500,9 @@ importers:
       '@adui/normalize.css':
         specifier: 'catalog:'
         version: 0.1.1
+      '@adui/scada-api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@adui/scada-core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -540,6 +546,22 @@ importers:
       vue-tsc:
         specifier: 'catalog:'
         version: 3.3.13(typescript@6.0.3)
+
+  packages/api-client:
+    dependencies:
+      '@adui/scada-core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@adui/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vite-plus:
+        specifier: 'catalog:'
+        version: 1.5.0(@types/node@24.19.2)(@vitest/ui@5.1.0)(@volar/typescript@2.4.28(typescript@6.0.3))(@vue/language-core@3.3.13)(jiti@2.7.0)(typescript@6.0.3)(vue-tsc@3.3.13(typescript@6.0.3))(yaml@2.9.1)
 
   packages/core:
     devDependencies:

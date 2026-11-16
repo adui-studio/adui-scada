@@ -1051,3 +1051,13 @@ HTTP E2E 中的 `Health Check has failed` 以及 HTTP 503 是预期负面测试�
 随后维护者另建并检查本机新空库 `127.0.0.1:15432/adui_scada_fresh_20261116_b`，执行 `node scripts/verify-fresh-postgres-migrations.mjs adui_scada_fresh_20261116_b`：首次 `migrate deploy` **4/4 项迁移全部应用**，第二次报告 `No pending migrations to apply`，`migrate status` 显示 `Database schema is up to date!`；脚本确认迁移元数据在重复部署后不变，最终 `$LASTEXITCODE` 为 **0**。**本次真实 Windows Prisma 7.10.1 子进程未再出现 Node.js DEP0190**，E-015 已关闭；旧空库 `adui_scada_fresh_20261116` 与新空库 `adui_scada_fresh_20261116_b` 都保留，脚本未删除、重置或清理它们。
 
 日志中 Prisma 提示可升级至 `8.0.0-rc.33` 只是更新提醒，不是构建或迁移错误，本批仍使用已锁定的 **Prisma 7.10.1**，不升级依赖或变更迁移历史。当前工程质量、本机真实 PostgreSQL 事务 22/22、两座新空库首次部署与幂等性回归均具备独立证据，**真实 IdP/JWKS、生产 HTTPS Cookie/代理、React/Vue 同源工程 API Client 和工业现场安全仍未验收**。本次仅补录文档，文档提交后仍需要重新运行 `pnpm run docs:check`。
+
+## 2026-11-16 · 第三十三批第七小批：框架无关工程 API Client（代码候选，待 Windows 全链）
+
+本批在已有六条受保护工程 API 与 ADR-0065 契约上新增独立工作区包 `@adui/scada-api-client`（`packages/api-client`）。统一封装同源 `/api/v1`、`credentials: same-origin`、`redirect: error`、`cache: no-store`、Cookie CSRF 双提交请求头、受控中文错误类型、响应字段与时间校验、调用 Core 的 `parseServerProjectSaveRequest` 和 `readProjectSnapshot` 完整性检查；只提供 `/auth/me`、`/auth/logout`、工程创建/列表/详情/版本列表/读取/CAS 追加。不提供可配置外站 URL、Bearer 凭据、Token 持久化、设备读写、自动重试或正式发布。
+
+新增 `packages/api-client/test/api-client.test.ts` Mock Fetch 测试，覆盖固定同源请求、身份响应字段白名单、CSRF 缺失/重复/伪造在发送前拒绝、工程创建字段白名单、路由 ID、摘要与分页、SHA-256 快照校验、CAS 冲突/修订号一致性、状态码映射、HTML/错误 JSON/异常响应和网络失败时不重试。React 与 Vue 各自在依赖中引用相同的工作区包；**当前尚未改写 Studio 的实际保存按钮、历史草稿或登录页面，也未配置开发代理和真实 IdP**。
+
+**已执行的有限验证**：协作容器 Node.js 22 / TypeScript 5.8.3 使用临时 Core 类型声明完成该包源代码类型检查（0 个诊断）；通过临时模拟 Core 的 Mock Fetch 烟测，核对创建工程、受控同源请求、CSRF、列表、409 错误和注销。以上不等价于仓库 TypeScript 6.0.3、Vite+、Vitest 全量测试，也不构成真实 HTTP、浏览器 Cookie 或 PostgreSQL 联调。新增工作区包的 `pnpm-lock.yaml` 仅由既有工作区依赖链接推导并作最小增量，协作环境无法联网运行 pnpm 12.18.0；**须由 Windows 维护者执行 `pnpm install --lockfile-only`、`pnpm install --frozen-lockfile` 和 `pnpm run ready` 实际复验锁文件**，如 pnpm 生成差异，以该命令的真实输出为准。
+
+未完成：新增 Mock Fetch 测试在仓库真实 Vite+ 下运行；两端 Studio UI 接线、同源代理、真实 OIDC/JWKS、HTTPS Cookie/Origin/Fetch Metadata 和浏览器双向工程互通。第六小批 505/505 单测、40/40 E2E 及 E-015 数据库验收仅针对先前代码；**不能冒充第七小批质量验收通过**。

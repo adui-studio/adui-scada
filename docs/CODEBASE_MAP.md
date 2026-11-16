@@ -588,7 +588,9 @@
 - apps/server/src/database/database.module.ts：计划统一导出 PrismaService 单例。
 - apps/server/src/auth/oidc/：计划实现固定 Issuer Discovery、OIDC 登录事务、外部身份映射和 BFF 回调。
 - apps/server/src/projects/：计划扩展工程创建/列表/摘要/历史版本 API，沿用现有事务仓储和 ACL。
-- packages/api-client/：计划提供 Vue/React 共用的同源 API、Cookie/CSRF 与响应错误适配。
+- `packages/api-client/src/index.ts`：已新增独立共享工程 API Client，统一同源 Fetch、Cookie CSRF、中文错误、工程摘要/历史快照及 CAS 协议；不依赖 Vue/React UI。
+- `packages/api-client/test/api-client.test.ts`：Mock Fetch 覆盖安全请求、异常状态、请求字段白名单、SHA-256 读取与追加等。
+- `packages/api-client/package.json`、两端 Web Manifest、`pnpm-lock.yaml`、根 `vite.config.ts` 与共享质量入口：双框架引用同一包并纳入 Vitest/类型检查；真实 pnpm/TypeScript 6/Vite+ 验收仍待运行。
 - docs/adr/0065-oidc-bff-and-project-api.md、docs/plans/v0.3-batch-33-oidc-project-api.md：本批架构决策和实施计划。以上代码路径均为计划，不代表当前 main 已存在。
 
 ## 2026-11-14 · 第三十三批阶段 A 实际落地的文件

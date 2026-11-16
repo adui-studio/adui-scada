@@ -1024,3 +1024,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 维护者修复后 Windows `node --test` 6/6、`vp check` 299 格式文件/159 受检零警告错误、`docs:check` 83 Markdown、`ready` 505 单测、40 HTTP E2E、SSE 8/8、故障代理 4/4、React/Vue/NestJS 构建通过，最终退出码 0。随后在另一座全新空库 `adui_scada_fresh_20261116_b` 上运行无 shell Prisma 7.10.1 子进程：四项迁移全部首次成功，二次无待执行项、`migrate status` 最新、迁移元数据一致、退出码 0，**未再出现 DEP0190**。E-015 已关闭，原有 `adui_scada_fresh_20261116` 和本轮新空库均保留；不能用已部署的库冒充空库。Prisma 8 RC 更新提示无需升级。
 
 目前第三十三批数据库专项与工程 API 的单元/Mock E2E/隔离 PostgreSQL 事务均通过；真实 IdP/JWKS、生产 HTTPS 安全 Cookie/同源代理、React/Vue 双框架 API Client 及现场安全仍未验收。PR #55 继续保持 Draft，不合并。用户日志未单独输出本地 HEAD SHA，文档变更后的 `docs:check` 仍待复验。
+
+### 2026-11-16 · 第三十三批第七小批：共享工程 API Client 候选
+
+新增工作区 `@adui/scada-api-client`，将身份 `me/logout`、六条受保护工程 API 的请求/响应契约、同源 Fetch、CSRF Cookie 读取、中文错误映射与 Core SHA-256 快照验证封装为框架无关代码。React/Vue Manifest 引用同一个工作区包，但本小批不接入现有 Studio 保存按钮，不改变 IndexedDB 离线草稿或现有演示 SSE，不开启真实 OIDC，也不开放 PLC/DCS 写入。Core 和服务器业务接口保持不变。
+
+已在协作容器 Node 22/TypeScript 5.8.3 临时 Core 声明下完成源码类型检查和模拟 Core 的 Fetch 烟测；**尚未运行仓库 TypeScript 6 / Vite+ / Vitest / pnpm 12 完整检查**。新工作区仅引用既有 `@adui/scada-core`、`@adui/tsconfig`、TypeScript 和 Vite+，锁文件仅作已知 workspace 链接增量，必须在维护者 Windows 使用真实 pnpm 生成及验证。真实 IdP、HTTPS Cookie/同源代理、Vue/React Studio 接线和浏览器互通仍待后续专项，PR #55 保持 Draft。

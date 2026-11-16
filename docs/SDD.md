@@ -744,3 +744,11 @@ OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client I
 ### 第六小批工程创建者身份并发保护（候选补充）
 
 工程创建事务在写入工程记录前，通过参数化 SQL 对 `scada_identities(tenant_id,subject_id)` 执行 `FOR SHARE` 并验证 `status=active`。这补充了请求开始时的 Session Guard 检查，避免主体已被停用后依旧原子创建新工程及创建者授权。共享锁与并发主体状态更新的行锁冲突，保证创建事务内身份状态稳定。身份未知或已停用统一按不可枚举的工程无权访问语义拒绝，并且不写入工程、ACL、历史快照或成功审计。仍需真实隔离 PostgreSQL 测试和并发停用专项验证。
+
+### 第三十三批第七小批：框架无关工程 API Client 初始边界
+
+独立工作区 `packages/api-client`（`@adui/scada-api-client`）只依赖共享 `@adui/scada-core`，不依赖 Vue、React、NestJS 或浏览器持久化组件。对外 `createScadaApiClient({ fetcher?, readCookie? })` 提供 `getMe/logout/createProject/listProjects/getProject/listVersions/readVersion/appendVersion`，固定服务端同源 `/api/v1` 路由。仅允许安全的工程 ID、正安全整数修订号、限制最大 100 条的分页和现有 Core `ScadaDocument/ProjectSnapshot` 契约；JSON 响应验证 Content-Type、字段白名单、时间与摘要格式，并在读取完整快照时再次用 Core 验证 SHA-256 与工程 ID/修订号一致性。
+
+浏览器 Cookie 请求固定 `credentials: same-origin`，Fetch 固定 `mode: same-origin`、`redirect: error`、`cache: no-store`、`referrerPolicy: no-referrer`。POST 请求每次从当前可读 `__Host-adui-scada-csrf` Cookie 获取格式正确且唯一的随机 CSRF Token，并写入 `X-SCADA-CSRF`；会话 Cookie 仍为 HttpOnly，不向客户端代码暴露。失败响应仅按状态返回中文领域错误，不展示任何原始上游异常、响应体或 Token。跨租户工程资源统一 404，CAS 冲突 409，网络异常不自动重试写入。
+
+本批客户端包只完成共享协议层和 Mock 测试，不改写现有 Vue/React Studio 交互，不开放工程发布/回滚、密码登录或 PLC/DCS 写入。真实 OIDC、HTTPS 同源代理、CSRF Cookie 兼容和离线草稿保留逻辑须待后续浏览器 E2E 实测；当前不能认为生产已启用服务端工程保存功能。
