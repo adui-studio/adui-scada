@@ -1226,3 +1226,9 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 本轮最小测试补丁只补充 `apps/server/test/oidc-auth.controller.e2e-spec.ts` 的三项 HTTP 层安全回归：不可信 Origin、缺失或非 `same-origin` 的 Fetch Metadata、Bearer 与浏览器 Cookie 混用。拒绝请求须为 403/401 且不得调用撤销服务，审计须输出固定失败原因码；不修改正式 Guard、会话、Cookie、数据库或工程 API。
 
 **尚待 Windows 验收**：本测试候选的 `pnpm run test:e2e:server`、`vp check`、`pnpm run docs:check` 和完整 `pnpm run ready` 均未在维护者机器执行。旧 Session 令牌持久化撤销、会话过期、跨租户 ACL 及生产反向代理属于独立专项；不得把 Mock E2E 当作真实数据库验收。
+
+## 2026-11-16 · 第三十三批 HTTP 安全回归 Windows 验收完成
+
+维护者在 Windows PowerShell 对本批 HTTP 拒绝测试执行了独立 `pnpm run test:e2e:server`：**6/6 文件、45/45 项通过**（OIDC Controller 12/12）；`vp check` **320 个格式文件、177 个受检文件零警告/错误**，`docs:check` **84 个 Markdown 通过**。完整 `pnpm run ready` 实际完成：中文文案 201 文件、单测 **48/48 文件、530/530 项**、SSE 8/8、TCP 故障 4/4、OIDC 代理 10/10、凭据 6/6、身份预绑定 14/14、Docker 单栈 14/14、数据库保护 9/9、HTTPS 匿名探针离线 11/11、服务端 HTTP E2E **45/45**，React/Vue 与 NestJS 构建成功，最终打印 **“第三十三批安全回归退出码：0”**。健康检查测试中的预期 503 日志不代表 E2E 失败。此处为维护者提供的真实 Windows 日志，不代表部署或生产工控安全验收。
+
+本轮下一项只增强已有 `apps/server/test/prisma-project-version.db-spec.ts`：真实 PostgreSQL 下校验 Session/CSRF 的 SHA-256 持久化、外国租户撤销不生效、合法撤销将 `revokedAt` 落库、旧 Bearer/Cookie 失效、停用主体和过期会话的 Cookie 拒绝。现有隔离数据库测试已经覆盖跨租户 ACL 与真实并发 CAS，不再重复新建测试文件。**本次新增的数据库断言尚未在 Windows `adui_scada_test` 执行，必须单独运行 `pnpm run test:db`，不属于默认 `ready` 的覆盖范围。**

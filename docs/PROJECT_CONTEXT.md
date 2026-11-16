@@ -1130,3 +1130,7 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 维护者已提供 E-022 修复后完整 `ready` 退出码 0 的 Windows 日志，且实际通过新 Keycloak 用户身份绑定、React/Vue 双 HTTPS 认证、Cookie 安全属性、CSRF 拒绝和跨端注销浏览器检查；服务端工程创建/历史版本/CAS 409/IndexedDB 草稿保护六项也由维护者确认通过。详细实测与候选补测边界记录于 `docs/VALIDATION.md`。
 
 下一小批不修改 Guard 或数据库，仅向既有 NestJS OIDC HTTP E2E 增加跨 Origin、异常 Fetch Metadata、Bearer/Cookie 混用拒绝回归。候选必须先经 Windows `test:e2e:server`、`vp check`、`docs:check` 和 `ready` 复验；真实旧 Session 凭据持久化撤销、跨租户 ACL、过期及工业生产安全另行专项验收。
+
+### 2026-11-16 · 第三十三批 HTTP 安全回归 Windows 通过，数据库会话断言待复验
+
+维护者原始日志确认：`test:e2e:server` 45/45、`vp check` 320/177 零警告、`docs:check` 84 Markdown、完整 `ready` 530/530 单测与 45/45 HTTP E2E，React/Vue/NestJS 构建成功，最终退出码 0。已追加 PR #55 验收记录。原有真实 PostgreSQL 测试涵盖跨租户 ACL、并发 CAS、Session 撤销和到期拒绝；本轮只增补已存在用例中的 Cookie 旧凭据重放、CSRF 摘要、撤销持久化和主体停用覆盖。**新增真实数据库断言待 Windows 在专用 `adui_scada_test` 复验，绝不运行在开发业务库或生产库。**

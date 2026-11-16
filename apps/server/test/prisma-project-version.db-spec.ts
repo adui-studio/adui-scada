@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { waterTreatmentDemoDocument } from "@adui/scada-core";
 import { PrismaService } from "../src/database/prisma.service.js";
@@ -335,15 +335,43 @@ describe("PostgreSQL 真实工程版本事务", () => {
     expect(stored.tenantId).toBe(tenantAuth);
     expect(stored.tokenHash).toMatch(/^[0-9a-f]{64}$/);
     expect(stored.tokenHash).not.toBe(issued.token);
+    expect(issued.csrfToken).toMatch(/^scada_csrf_[A-Za-z0-9_-]{43}$/);
+    expect(stored.tokenHash).toBe(createHash("sha256").update(issued.token).digest("hex"));
+    expect(stored.csrfTokenHash).toBe(
+      createHash("sha256").update(issued.csrfToken).digest("hex"),
+    );
+    expect(stored.csrfTokenHash).not.toBe(issued.csrfToken);
     expect(await sessions.authenticate(issued.token)).toEqual(principalAuth);
+    expect(await sessions.authenticateCookieSession(issued.token, issued.csrfToken)).toEqual({
+      authenticated: true,
+      sessionId: issued.sessionId,
+      principal: principalAuth,
+    });
     expect(
       await sessions.revokeForVerifiedSubject(
         { tenantId: "other-tenant", subjectId },
         issued.sessionId,
       ),
     ).toBe(false);
+    const beforeRevocation = await service.client.scadaAuthSession.findUniqueOrThrow({
+      where: { sessionId: issued.sessionId },
+      select: { revokedAt: true },
+    });
+    expect(beforeRevocation.revokedAt).toBeNull();
+
     expect(await sessions.revokeForVerifiedSubject(principalAuth, issued.sessionId)).toBe(true);
+    const afterRevocation = await service.client.scadaAuthSession.findUniqueOrThrow({
+      where: { sessionId: issued.sessionId },
+      select: { revokedAt: true },
+    });
+    expect(afterRevocation.revokedAt).toBeInstanceOf(Date);
     expect(await sessions.authenticate(issued.token)).toBeNull();
+    expect(await sessions.authenticateWithSession(issued.token)).toBeNull();
+    expect(await sessions.authenticateCookieSession(issued.token, issued.csrfToken)).toEqual({
+      authenticated: false,
+      reason: "invalid_session",
+    });
+    expect(await sessions.revokeForVerifiedSubject(principalAuth, issued.sessionId)).toBe(false);
   });
 
   it("主体禁用或会话过期后禁止认证，不读取前端角色", async () => {
@@ -354,6 +382,10 @@ describe("PostgreSQL 真实工程版本事务", () => {
       data: { status: "disabled" },
     });
     expect(await sessions.authenticate(issued.token)).toBeNull();
+    expect(await sessions.authenticateCookieSession(issued.token, issued.csrfToken)).toEqual({
+      authenticated: false,
+      reason: "invalid_session",
+    });
     await expect(sessions.issueForVerifiedSubject(principalAuth)).rejects.toThrow(/主体/);
     await service.client.scadaIdentity.update({
       where: { tenantId_subjectId: { tenantId: tenantAuth, subjectId } },
@@ -367,5 +399,9 @@ describe("PostgreSQL 真实工程版本事务", () => {
       },
     });
     expect(await sessions.authenticate(issued.token)).toBeNull();
+    expect(await sessions.authenticateCookieSession(issued.token, issued.csrfToken)).toEqual({
+      authenticated: false,
+      reason: "invalid_session",
+    });
   });
 });
