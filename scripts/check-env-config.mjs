@@ -50,6 +50,9 @@ const defaults = {
   SCADA_OIDC_DEV_HTTPS_ENABLED: "false",
   SCADA_OIDC_DEV_HTTPS_CERT_FILE: "",
   SCADA_OIDC_DEV_HTTPS_KEY_FILE: "",
+  SCADA_LAB_KEYCLOAK_PORT: "18443",
+  SCADA_LAB_POSTGRES_PORT: "15433",
+  SCADA_LAB_REDIS_PORT: "16379",
 };
 const template = parseEnv(".env.example");
 assert.deepEqual({ ...template }, defaults, "根目录 .env.example 的默认值必须与配置契约一致");
@@ -222,11 +225,22 @@ assert.ok(
   read("deploy/docker/Dockerfile.web").includes("/etc/nginx/templates/default.conf.template"),
 );
 
+const labCompose = read("deploy/docker/compose.oidc.lab.yaml");
+for (const key of ["SCADA_LAB_KEYCLOAK_PORT", "SCADA_LAB_POSTGRES_PORT", "SCADA_LAB_REDIS_PORT"]) {
+  assert.ok(labCompose.includes("${" + key + ":"), "OIDC Lab 必须使用统一的端口变量");
+}
+assert.ok(labCompose.includes("127.0.0.1:"), "OIDC Lab 不能公开绑定宿主机端口");
+assert.ok(labCompose.includes("adui-scada-oidc-lab"), "OIDC Lab 必须与其他开发栈分离");
+assert.ok(read("deploy/docker/oidc-lab/adui-scada-realm.json").includes("adui-scada-bff"));
+assert.ok(read("scripts/prepare-oidc-lab.mjs").includes("randomBytes(32)"));
+
 const ignore = read(".gitignore");
 assert.match(ignore, /^\.env$/m);
 assert.match(ignore, /^\.env\.\*$/m);
+assert.ok(ignore.includes(".local/oidc-lab/"), "本机随机凭据必须被 Git 忽略");
 assert.match(ignore, /^!\.env\.example$/m);
 assert.match(read(".dockerignore"), /^\.env$/m);
+assert.ok(read(".dockerignore").includes(".local/oidc-lab/"), "本机随机凭据不能进入 Docker 构建上下文");
 assert.match(read(".editorconfig"), /^end_of_line = lf$/m);
 assert.ok(read("packages/tooling/src/format.ts").includes('endOfLine: "lf"'));
 assert.match(read(".gitattributes"), /^\* text=auto eol=lf$/m);

@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# 本机 OIDC Lab 的随机凭据与 TLS 私钥
+.local/oidc-lab/
+
 # 环境变量文件
 .env
 .env.*

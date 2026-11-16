@@ -702,3 +702,12 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/verify-oidc-https-readonly.cases.mjs`：九项本机目标、开关、证书前置契约对应的离线 Mock 请求测试；不访问真实 IdP、PostgreSQL 或工业设备。
 - 根 `package.json`：`test:oidc:https:readonly` 纳入 `ready`；`verify:oidc:https:readonly` 为显式人工真实网络检查，不纳入默认质量链。
 - `docs/HARNESS.md`：真实 TLS 只读联调的前置配置、Windows 操作和失败即停止规则。本批不更改 Vue/React 应用业务行为、NestJS 身份策略或数据库 Schema。
+
+### 本机 OIDC Lab 依赖栈（第三十三批）
+
+- `deploy/docker/compose.oidc.lab.yaml`：与演示和原有开发数据库互不共享命名卷的单一 Docker Compose 项目；提供回环绑定的 PostgreSQL、Redis 与 Keycloak。
+- `deploy/docker/oidc-lab/init-keycloak-db.sql`：只在新 PostgreSQL Lab 数据卷首次初始化时创建专用 Keycloak 数据库；不清空或重置现有库。
+- `deploy/docker/oidc-lab/adui-scada-realm.json`：Keycloak 首次启动导入的本机 Realm、机密客户端、严格 React 回调和 PKCE 配置，不含静态 Client Secret。
+- `scripts/prepare-oidc-lab.mjs`：显式 `docker:lab:up` 的本机 mkcert/秘密文件准备入口，不修改根 `.env`，不把随机凭据写进 Git 或 Docker 构建上下文。
+- `scripts/prepare-oidc-lab.cases.mjs`：六项离线启动安全测试。
+- `.local/oidc-lab/`：运行时生成的机密和本机证书目录，Git/Docker 忽略，不是仓库可提交文件；Redis 目前未接入 NestJS。

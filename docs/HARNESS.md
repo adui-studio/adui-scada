@@ -1813,3 +1813,39 @@ Write-Host "真实 HTTPS 探针退出码：$LASTEXITCODE"
 ```
 
 如果提示配置或 TLS 故障，应修正本机可信配置后再测；如果是 `ECONNREFUSED` 映射的服务未监听，应检查三套进程是否正确启动及实际绑定端口；如果收到非 401 JSON，应检查同源反向代理和 NestJS OIDC 模块。**不得**通过 `NODE_TLS_REJECT_UNAUTHORIZED=0`、忽略证书、硬编码令牌或将 `SCADA_OIDC_ENABLED=false` 与匿名写入混合来规避故障。
+
+### 第三十三批 · 本机 OIDC Lab 单命令 Docker 依赖栈（候选，待 Windows 验证）
+
+为解决“复制根目录 .env 即可恢复日常开发”与“本机可信 OIDC 联调需要独立依赖”两种需求，现有 `.env.example` **仍默认关闭** `SCADA_OIDC_ENABLED` 和 `SCADA_OIDC_DEV_HTTPS_ENABLED`；复制即可继续运行普通 HTTP React/Vue/NestJS/Demo。新增三个仅本机使用的端口：`SCADA_LAB_KEYCLOAK_PORT=18443`、`SCADA_LAB_POSTGRES_PORT=15433` 和 `SCADA_LAB_REDIS_PORT=16379`。不要用这些示例值代替生产部署配置。
+
+在 Windows PowerShell 7 进入仓库根目录（仅首次没有 `.env` 时执行复制；已有自定义配置必须先备份，不覆盖）：
+
+```powershell
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+mkcert -install
+pnpm run docker:lab:up
+if ($LASTEXITCODE -ne 0) { throw "本机 OIDC Lab Docker 启动失败" }
+pnpm run docker:lab:ps
+```
+
+`docker:lab:up` 先运行 `scripts/prepare-oidc-lab.mjs`：检查根目录回环地址与端口、确认非生产模式；在被 Git 和 Docker 构建上下文忽略的 `.local/oidc-lab/` 生成本机 IP SAN 证书以及四个随机值（独立的 PostgreSQL 密码、Keycloak 管理员密码、OIDC 机密客户端 Secret、事务加密密钥），以只允许本机访问的文件保存，不打印秘密或私钥。脚本复用已有凭据，若出现不完整文件则拒绝自动覆盖。证书使用本机 `mkcert` 创建，不自动修改系统 CA 信任；首次需人为执行 `mkcert -install` 并批准系统信任。若已在其他目录生成证书，Lab 会维护自己的本机测试副本，不会修改或覆盖原证书。
+
+新 Compose：`deploy/docker/compose.oidc.lab.yaml`，项目名称固定为 `adui-scada-oidc-lab`；包含**独立的** PostgreSQL 17、Redis 7.4 与 Keycloak 26.8.2。PostgreSQL 创建 `adui_scada_oidc_lab` 和仅供 Keycloak 的 `adui_scada_keycloak_lab` 两个数据库；Keycloak 首次启动自动导入 `adui-scada` Realm 和机密 `adui-scada-bff` Client，固定 HTTPS 回调为 React `/api/v1/auth/oidc/callback`，启用标准授权码流与 PKCE S256，禁用隐式流、密码直授及用户自助注册。**不创建或自动授权业务测试用户**，也不修改现有 PostgreSQL/Demo 数据卷。Redis 此阶段只是可选后续依赖，NestJS 尚未使用它。Keycloak 的 `start-dev` 与 Redis 回环无认证端口仅供受控本机联调，不可直接用于生产。
+
+启动成功后访问 `https://127.0.0.1:18443/admin/`，管理用户名为 `admin`；首次管理员密码仅位于本机 `.local/oidc-lab/secrets.env` 的 `SCADA_LAB_KEYCLOAK_ADMIN_PASSWORD`。其值严禁提交、拍照或发到聊天。Keycloak 真实 Discovery 路径为 `https://127.0.0.1:18443/realms/adui-scada/.well-known/openid-configuration`。修改端口后以 `.env` 的实际数值为准。
+
+```powershell
+# 测试依赖与离线保护用例（不调用真实数据库）
+pnpm run test:oidc:lab
+pnpm run env:check
+pnpm run docs:check
+
+# 查看或关闭：保留所有数据卷
+pnpm run docker:lab:ps
+pnpm run docker:lab:logs
+pnpm run docker:lab:down
+```
+
+**重要边界**：本命令只负责启动身份认证及数据依赖，不能自动判定 SCADA 本地账户/租户或授权工程。要继续真实 OIDC，必须通过维护者受控流程将 `SCADA_DATABASE_URL` 指向已确认的独立 Lab 测试数据库并完成 Prisma 迁移；在根 `.env` 安全填写真实的 Keycloak Client Secret、随机事务密钥、实验室 Issuer、固定回调、证书绝对路径；确认外部 Keycloak `sub` 与服务端 `scada_external_identities` 的预绑定有效，再显式开启两个 OIDC/HTTPS 开关。不要为了“快速登录”直接写生产数据库、创建匿名权限、跳过 CSRF 或自动添加有写权限的主体。真实 OIDC/Cookie 与跨框架工程联调仍待验收。
+
+正式部署的目标为**一个 ADui SCADA 应用镜像**（前端双版本静态资源及 NestJS 统一交付），但数据库、Redis、IdP 与工业网关仍是可独立升级与持久化的外部服务；这份本机 Lab Compose 不是正式单镜像交付，也不是已经实现的生产方案。

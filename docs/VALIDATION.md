@@ -1136,3 +1136,9 @@ React 的 `apps/web-react/src/studio/StudioPage.tsx` 与 Vue 的 `apps/web-vue/s
 为改进定位而不泄露敏感内容，本次在匿名只读探针 CLI 入口增加固定中文失败类别和白名单 TLS/网络错误映射，并增加两项离线测试：配置缺失、安全 TLS 信任、IP SAN、端口未监听、异常契约和未知错误均不能输出原始秘密。协作环境 Node.js 22 语法检查及更新后的 **11/11** 项离线测试通过；在缺少 OIDC 联调配置时该 CLI 仍以失败退出。**本次新的代码尚未在 Windows 执行 `vp check`、`ready` 或真实 TLS 探针**，不能将 11/11 候选测试外推为本机或生产验收。
 
 仍待维护者在独立非生产环境准备可信 HTTPS 证书、真实 IdP、注册回调及预绑定测试主体，启动 NestJS/React/Vue 后执行真实匿名只读 401 验收；后续再验 Secure Cookie/CSRF 和 React↔NestJS↔Vue 服务端工程版本/CAS/IndexedDB 安全。不绕过鉴权，不接触生产库或设备写入。PR #55 继续 Draft，不合并。
+
+## 2026-11-16 · OIDC Lab Docker 依赖栈候选静态验证
+
+在隔离 Node.js **22.16.0** 环境中执行 `node --check scripts/prepare-oidc-lab.mjs`、`node --check scripts/prepare-oidc-lab.cases.mjs` 和 `node --test scripts/prepare-oidc-lab.cases.mjs`，新增准备逻辑的 **6/6** 项离线测试通过，覆盖高熵随机凭据、首次文件、重复执行保留秘密、缺少 `.env`、不安全监听与非法端口、既有机密文件损坏拒绝重置。使用 Python YAML/JSON 解析确认 Compose 结构包含 PostgreSQL、Redis、Keycloak 及 `adui-scada` Realm 的 `adui-scada-bff` Client。以上测试使用隔离临时目录和 Mock 证书准备，不曾启动 Docker、创建真实数据卷或登录身份提供方。
+
+根 `.env.example` 在保持现有默认值与 OIDC 禁用状态的前提下，增加 Lab 端口；根 `scripts/check-env-config.mjs` 同步校验新环境变量，依赖保护测试加入 `ready`。**候选入库后的 Windows `vp check`、`pnpm run env:check`、`pnpm run ready`、`docker:lab:up`、真实 Keycloak TLS/Discovery、数据库与 Redis 连通性、以及完整 OIDC 回调/Cookie/CSRF 均待维护者实测**；不将离线 YAML/JSON 解析记作真实容器正常运行。

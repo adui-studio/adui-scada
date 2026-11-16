@@ -1070,3 +1070,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 维护者上传的 Windows 日志确认：HTTPS 匿名只读离线测试 9/9、`vp check` 310 格式文件/168 受检零警告、`docs:check` 83、全量单测 529/529、OIDC 代理配置 10/10、HTTP E2E 40/40、SSE 8/8、故障代理 4/4 及 React/Vue/NestJS 构建均通过，完整 `ready` 退出码 0。随后真实 `verify:oidc:https:readonly` **退出码 1**，仅输出通用联调失败消息；不将之判定为 TLS 或 OIDC 实际通过。维护者本地 `.env`、启动服务和证书状态未随日志提供，失败根因待排查。
 
 针对反馈，脚本已增强脱敏失败分类并增加两项安全测试；Node.js 22 候选验证 11/11，通过但需要新提交后的 Windows `vp check`、`ready` 及真实探针专项复验。保持 OIDC 和 HTTPS 开关默认关闭，不创建伪造 IdP 或匿名工程写入，不访问生产数据库，PR #55 仍 Draft。
+
+### 2026-11-16 · OIDC Lab 一键依赖栈与复制即用的根环境模板
+
+在 PR #55 功能分支中为本机联调新增独立 `deploy/docker/compose.oidc.lab.yaml`，以单一 Compose 项目管理本机 PostgreSQL、Redis、Keycloak；新增 `scripts/prepare-oidc-lab.mjs`，自动生成并复用不会入库的随机凭据与 mkcert 回环 HTTPS 证书，默认不改写根 `.env` 和现有数据库。根 `.env.example` 增加三个 Lab 端口并维持 OIDC/HTTPS 默认关闭，因此直接复制可用于原有普通 HTTP 开发；真实 OIDC 需要可信 Client、预绑定身份和隔离测试数据库才能另行启用。
+
+已在隔离 Node.js 22 环境完成脚本语法、六项准备脚本离线安全测试及 Compose YAML/Realm JSON 静态解析；**Windows Docker 启动、Keycloak Discovery、PostgreSQL 实例、Redis 实例、React/Vue HTTPS/真实登录与生产单镜像交付尚未实测**。保留 PR #55 Draft，Assignee `@adui-dev`；不触及 Prisma 历史迁移或生产数据。
