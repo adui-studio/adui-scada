@@ -990,3 +990,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 ### 第三十三批第六小批 · 2026-11-16 启动入口语法修复
 
 维护者在已推送至 PR #55 的第六小批候选代码上运行 `vp check --fix`，于 `apps/server/src/main.ts:73` 遇到 EOF 缺少 `)` 的格式化解析错误。已定位为启动入口 `bootstrap().catch(...)` 结尾只写了 `}`，缺失 `);`，按最小改动修复为 `});`。修正后 Git Blob 内容与容器内完整文件 SHA 一致，TypeScript 5.8.3 语法解析 0 错误。记录为 `docs/AI_MISTAKES.md` E-013；当前未执行完整 Windows 工程质量链或真实 PostgreSQL 测试，第六小批继续保持 Draft 待验收。
+
+### 第三十三批第六小批 · 2026-11-16 Windows 工程质量验收结果
+
+维护者最新 PowerShell 日志确认：`vp check` 297 文件/157 受检零警告错误；单元测试 46/46 文件、505/505 项通过（新增工程 API 仓储单测 10/10）；NestJS HTTP E2E 5/5 文件、40/40 项通过（工程 API E2E 13/13）；SSE 客户端 8/8 和故障代理 4/4；83 份 Markdown 检查、React/Vue/NestJS 构建成功；完整 `pnpm run ready` 最终退出码 **0**。`main.ts` EOF 的 E-013 已由 Windows Vite+ 复验关闭。功能分支最新已检索到用户格式化提交 `e15f058b`；该日志没有独立输出 Git HEAD，不能强称日志包含精确提交指纹。
+
+第六小批**工程质量门禁通过、真实 PostgreSQL 与真实身份/代理专项仍待验收**。`project-api.db-spec.ts` 新增测试不属于通用 `ready`；未取得本批 `test:db` 结果，不标记事务竞争、租户隔离或审计失败回滚在真实数据库中通过。PR #55 保持 Draft，未经维护者明确授权不得合并。本记录同步后仍需执行最新文档提交的 `docs:check`。

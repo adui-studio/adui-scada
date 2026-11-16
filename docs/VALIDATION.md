@@ -983,3 +983,25 @@ Write-Host "退出码：$LASTEXITCODE"
 - **尚未执行**仓库 Node 24 / TypeScript 6 / Vite+ 的真实 `vp check`、单元测试、HTTP E2E、`pnpm run ready` 或隔离 PostgreSQL 测试，不能将语法恢复误记为第六小批验收通过。
 
 维护者须先同步本修复提交，再运行 `vp check`（不需要仅为修括号执行 `--fix`），按实际报错修复后执行 `pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run docs:check`、完整 `pnpm run ready` 与最后退出码。真实数据库回归只在已确认的本机 `adui_scada_test` 隔离库运行 `pnpm run test:db`。本条对应 `docs/AI_MISTAKES.md` E-013。
+
+## 2026-11-16 · 第三十三批第六小批：Windows 工程质量链验收通过
+
+维护者提供 Windows PowerShell 实测日志，涵盖第六小批修复后的工程 API 和新增测试。功能分支 `feat/v0.3-oidc-project-api` 已确认当前格式化提交为 `e15f058b7d557cd394184f8dec03bb2c7056f7a0`，它基于 EOF 修复提交 `79f7ed5a`。**本次日志未单独记录 `git rev-parse HEAD`，因此 GitHub HEAD 与测试时工作树的一致性仍以维护者本地 Git 记录为准。**
+
+| 验收项 | 2026-11-16 实测结果 |
+| --- | --- |
+| `vp check` | 297 个文件格式正确，157 个受检文件零警告、零 Lint/类型错误 |
+| `pnpm run test:unit` | 46/46 测试文件、505/505 项通过；`project-api.store.spec.ts` 10/10 |
+| `pnpm run test:e2e:server` | 5/5 测试文件、40/40 项通过；`projects-api.e2e-spec.ts` 13/13 |
+| `pnpm run ready` 中 SSE 客户端测试 | 8/8 通过 |
+| `pnpm run ready` 中 SSE 故障代理测试 | 4/4 通过 |
+| `pnpm run docs:check` | 83 个 Markdown 文件通过（在本次验收日志对应的工作树上） |
+| Web React/Vue 构建 | 两端成功 |
+| NestJS Server 构建 | 成功 |
+| 完整 `pnpm run ready` | **退出码 0** |
+
+这次 HTTP E2E 的 `Health Check has failed` 日志为模拟就绪检查失败并验证 HTTP 503 的预期场景；E2E 最终 40/40 通过。E-013 的 `main.ts` EOF 括号问题已在 Windows 实测 `vp check` 中复验关闭。新增工程 API 的单测、Mock HTTP E2E、默认 AppModule 路由 404 验证属于本次工程质量链；**并不代表实际 PostgreSQL 事务、真实 OIDC 提供方、浏览器安全 Cookie 或生产网络配置已通过验证**。
+
+**未完成的专项验证**：本次日志没有 `pnpm run test:db`，新增的 `project-api.db-spec.ts` 真实 PostgreSQL 场景（创建、隔离、并发、主体停用、审计失败回滚）仍需在确认的本机隔离 `adui_scada_test` 中执行；真实 IdP/JWKS、生产 HTTPS 终止代理及 React/Vue 同源 API Client 继续待验收。此前阶段 A 16/16 真实数据库通过记录不替代本次新数据库测试。
+
+本条为维护者日志的历史验收证据；**本次文档更新后的新提交未在该日志中运行 `docs:check` 或 `ready`**，需要独立复核。不对生产设备执行写入。
