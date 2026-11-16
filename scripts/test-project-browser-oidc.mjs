@@ -29,6 +29,17 @@ const SAFE_FAILURES = new Set([
 export function describeProjectBrowserFailure(error) {
   const message = error instanceof Error ? error.message : "";
   if (SAFE_FAILURES.has(message)) return message;
+  if (
+    [
+      "只读 HTTPS 探针要求显式启用可信 OIDC 开发代理",
+      "只读 HTTPS 探针只允许安全的本机非生产环境",
+      "HTTPS 联调端口必须互不相同",
+      "只读探针要求精确配置两个本机 HTTPS Origin",
+      "OIDC 回调必须与已登记的 HTTPS Origin 一致",
+    ].includes(message)
+  ) {
+    return message;
+  }
   if (message.endsWith("未达到预期状态")) {
     return "浏览器登录或 Studio 页面未达到预期状态，请检查隔离 Lab、登录与服务端工程";
   }
@@ -417,7 +428,9 @@ async function verifyStudio(session, origin, name) {
   const first = await waitFor(
     async () => {
       const state = await session.evaluate(pageStateInPage);
-      return state && (state.ids.length > 0 || state.empty || state.error) ? state : null;
+      return state && !state.busy && (state.ids.length > 0 || state.empty || state.error)
+        ? state
+        : null;
     },
     name + " 工程管理列表",
   );
@@ -433,8 +446,8 @@ async function verifyStudio(session, origin, name) {
     const second = await waitFor(
       async () => {
         const state = await session.evaluate(pageStateInPage);
-        if (next.length === 0) return state?.nextEnabled === false ? state : null;
-        return state?.pageNumber === 2 ? state : null;
+        if (next.length === 0) return state && !state.busy && !state.nextEnabled ? state : null;
+        return state?.pageNumber === 2 && !state.busy ? state : null;
       },
       name + " 下一页",
     );
@@ -444,7 +457,7 @@ async function verifyStudio(session, origin, name) {
       const back = await waitFor(
         async () => {
           const state = await session.evaluate(pageStateInPage);
-          return state?.pageNumber === 1 ? state : null;
+          return state?.pageNumber === 1 && !state.busy ? state : null;
         },
         name + " 上一页",
       );
