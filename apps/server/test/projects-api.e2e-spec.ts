@@ -6,10 +6,7 @@ import { Reflector } from "@nestjs/core";
 import { randomBytes } from "node:crypto";
 import request from "supertest";
 import { waterTreatmentDemoDocument, createProjectSnapshot } from "@adui/scada-core";
-import type {
-  ProjectSnapshot,
-  ProjectVersionSummary,
-} from "@adui/scada-core";
+import type { ProjectSnapshot, ProjectVersionSummary } from "@adui/scada-core";
 import { resolveOidcStartupConfig } from "../src/config/oidc-startup.config.js";
 import { AuthSessionService } from "../src/auth/auth-session.service.js";
 import type {
@@ -123,10 +120,9 @@ describe("工程 API HTTP 接口（端到端）", () => {
   };
 
   const sessions = {
-    authenticateWithSession: vi.fn<
-      (token: unknown) => Promise<AuthenticatedSession | null>
-    >(async (token) =>
-      token === SESSION_TOKEN ? { sessionId: SESSION_ID, principal: PRINCIPAL } : null,
+    authenticateWithSession: vi.fn<(token: unknown) => Promise<AuthenticatedSession | null>>(
+      async (token) =>
+        token === SESSION_TOKEN ? { sessionId: SESSION_ID, principal: PRINCIPAL } : null,
     ),
     authenticateCookieSession: vi.fn<
       (token: unknown, csrfToken?: unknown) => Promise<CookieSessionAuthenticationResult>
@@ -141,9 +137,9 @@ describe("工程 API HTTP 接口（端到端）", () => {
     }),
   };
 
-  const grantLookup = vi.fn<
-    (args: unknown) => Promise<Array<{ readonly permission: string }>>
-  >(async () => permissions.map((permission) => ({ permission })));
+  const grantLookup = vi.fn<(args: unknown) => Promise<Array<{ readonly permission: string }>>>(
+    async () => permissions.map((permission) => ({ permission })),
+  );
   const auditRecords: SecurityAuditDecision[] = [];
   const audit = {
     record(decision: SecurityAuditDecision) {
@@ -189,9 +185,7 @@ describe("工程 API HTTP 接口（端到端）", () => {
   });
 
   it("未认证请求不能读取工程列表", async () => {
-    const response = await request(app.getHttpServer())
-      .get("/api/v1/projects")
-      .expect(401);
+    const response = await request(app.getHttpServer()).get("/api/v1/projects").expect(401);
 
     expect(response.status).toBe(401);
     expect(store.list).not.toHaveBeenCalled();
@@ -287,8 +281,13 @@ describe("工程 API HTTP 接口（端到端）", () => {
 
   it("Cookie 写请求缺少 CSRF Header 时拒绝创建工程", async () => {
     const cookie =
-      SCADA_SESSION_COOKIE_NAME + "=" + SESSION_TOKEN + "; " +
-      SCADA_CSRF_COOKIE_NAME + "=" + CSRF_TOKEN;
+      SCADA_SESSION_COOKIE_NAME +
+      "=" +
+      SESSION_TOKEN +
+      "; " +
+      SCADA_CSRF_COOKIE_NAME +
+      "=" +
+      CSRF_TOKEN;
     const response = await request(app.getHttpServer())
       .post("/api/v1/projects")
       .set("Cookie", cookie)
@@ -303,8 +302,13 @@ describe("工程 API HTTP 接口（端到端）", () => {
 
   it("Cookie 写请求通过 CSRF 双提交后允许创建工程", async () => {
     const cookie =
-      SCADA_SESSION_COOKIE_NAME + "=" + SESSION_TOKEN + "; " +
-      SCADA_CSRF_COOKIE_NAME + "=" + CSRF_TOKEN;
+      SCADA_SESSION_COOKIE_NAME +
+      "=" +
+      SESSION_TOKEN +
+      "; " +
+      SCADA_CSRF_COOKIE_NAME +
+      "=" +
+      CSRF_TOKEN;
     const response = await request(app.getHttpServer())
       .post("/api/v1/projects")
       .set("Cookie", cookie)
@@ -356,5 +360,4 @@ describe("工程 API HTTP 接口（端到端）", () => {
     expect(response.body.message).toBe("当前租户下已存在相同工程标识的工程");
     expect(JSON.stringify(response.body)).not.toContain("Prisma");
   });
-
 });

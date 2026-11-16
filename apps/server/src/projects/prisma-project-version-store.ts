@@ -138,10 +138,7 @@ function parseProjectCreateDocument(input: unknown): ScadaDocument {
   if (!isPlainRecord(document) || typeof document.projectId !== "string") {
     throw new ProjectRequestValidationError("工程创建请求必须包含有效的工程文档");
   }
-  return parseSaveRequest(
-    { expectedRevision: null, document },
-    document.projectId,
-  ).document;
+  return parseSaveRequest({ expectedRevision: null, document }, document.projectId).document;
 }
 
 function parsePositiveInteger(value: unknown, label: string): number {
@@ -159,8 +156,9 @@ function parsePositiveInteger(value: unknown, label: string): number {
 }
 
 /** 分页只允许 limit 与 beforeRevision，拒绝重复参数、未知字段和越界值。 */
-function parseVersionQuery(input: unknown): Required<Pick<ProjectVersionQuery, "limit">> &
-  Pick<ProjectVersionQuery, "beforeRevision"> {
+function parseVersionQuery(
+  input: unknown,
+): Required<Pick<ProjectVersionQuery, "limit">> & Pick<ProjectVersionQuery, "beforeRevision"> {
   const source = input === undefined ? {} : input;
   if (!isPlainRecord(source)) {
     throw new ProjectRequestValidationError("工程版本分页参数必须为普通对象");
@@ -214,12 +212,7 @@ function toVersionSummary(row: ProjectVersionSummaryRow): ProjectVersionSummary 
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
-  return (
-    error !== null &&
-    typeof error === "object" &&
-    "code" in error &&
-    error.code === "P2002"
-  );
+  return error !== null && typeof error === "object" && "code" in error && error.code === "P2002";
 }
 
 async function lockProject(
@@ -385,9 +378,7 @@ export class PrismaProjectVersionStore {
   }
 
   /** 只列出当前租户明确授予 project:read 的工程，不返回完整工程文档。 */
-  async list(
-    principal: AuthenticatedProjectPrincipal | null,
-  ): Promise<readonly ProjectSummary[]> {
+  async list(principal: AuthenticatedProjectPrincipal | null): Promise<readonly ProjectSummary[]> {
     requirePrincipal(principal);
     const projects = await this.database.client.scadaProject.findMany({
       where: {

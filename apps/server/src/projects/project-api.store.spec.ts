@@ -70,9 +70,7 @@ function createHarness(options: HarnessOptions = {}) {
   ];
 
   const project = {
-    create: vi.fn<
-      (args: { readonly data: Record<string, unknown> }) => Promise<void>
-    >(async () => {
+    create: vi.fn<(args: { readonly data: Record<string, unknown> }) => Promise<void>>(async () => {
       steps.push("创建工程");
       if (options.duplicateProject) {
         throw Object.assign(new Error("模拟唯一约束冲突"), { code: "P2002" });
@@ -130,9 +128,7 @@ function createHarness(options: HarnessOptions = {}) {
         return options.identityActive === false ? [] : [{ head_revision: 0n, status: "active" }];
       }
       steps.push("锁定工程行");
-      return options.projectExists === false
-        ? []
-        : [{ head_revision: options.headRevision ?? 1n }];
+      return options.projectExists === false ? [] : [{ head_revision: options.headRevision ?? 1n }];
     }),
     scadaProject: project,
     scadaProjectGrant: grants,

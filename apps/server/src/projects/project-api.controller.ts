@@ -64,10 +64,7 @@ export class ProjectApiController {
   @ApiOperation({ summary: "读取工程详情与当前修订号" })
   @ApiOkResponse({ description: "返回工程摘要" })
   @ApiResponse({ status: 404, description: "工程不存在或无权访问" })
-  getProject(
-    @Req() request: ScadaAuthenticatedRequest,
-    @Param("projectId") projectId: string,
-  ) {
+  getProject(@Req() request: ScadaAuthenticatedRequest, @Param("projectId") projectId: string) {
     return this.projects.getProject(request.scadaPrincipal ?? null, projectId);
   }
 

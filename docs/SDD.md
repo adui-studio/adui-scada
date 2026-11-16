@@ -726,14 +726,14 @@ OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client I
 
 工程接口前缀固定为 `/api/v1/projects`。除登录入口之外，工程接口只在 OIDC 配置完整且显式启用的根模块中注册。默认 AppModule 下所有工程接口继续为 404。项目身份与租户来自已验证的 Session Guard，不接收前端声明的 `tenantId`、`subjectId` 或角色。
 
-| 方法 | 路径 | HTTP 成功状态 | 授权与返回值 |
-| --- | --- | --- | --- |
-| POST | `/api/v1/projects` | 201 | 已认证；仅接受 `{document}`，创建工程、三项创建者 ACL、revision=1 快照和成功审计；返回 ProjectSummary |
-| GET | `/api/v1/projects` | 200 | 已认证；仅列出当前主体有 `project:read` 的工程摘要 |
-| GET | `/api/v1/projects/:projectId` | 200 | `project:read`；事务共享锁内复核，返回 ProjectSummary |
-| GET | `/api/v1/projects/:projectId/versions` | 200 | `version:read`；返回按 revision 倒序的历史摘要数组 |
-| GET | `/api/v1/projects/:projectId/versions/:revision` | 200 | `version:read`；返回经内容 SHA-256、工程 ID、修订号和时间验证的 ProjectSnapshot |
-| POST | `/api/v1/projects/:projectId/versions` | 201 | `version:append`；使用共享 Core 的 `{expectedRevision,document}` 契约进行 CAS 追加，返回完整快照 |
+| 方法 | 路径                                             | HTTP 成功状态 | 授权与返回值                                                                                          |
+| ---- | ------------------------------------------------ | ------------- | ----------------------------------------------------------------------------------------------------- |
+| POST | `/api/v1/projects`                               | 201           | 已认证；仅接受 `{document}`，创建工程、三项创建者 ACL、revision=1 快照和成功审计；返回 ProjectSummary |
+| GET  | `/api/v1/projects`                               | 200           | 已认证；仅列出当前主体有 `project:read` 的工程摘要                                                    |
+| GET  | `/api/v1/projects/:projectId`                    | 200           | `project:read`；事务共享锁内复核，返回 ProjectSummary                                                 |
+| GET  | `/api/v1/projects/:projectId/versions`           | 200           | `version:read`；返回按 revision 倒序的历史摘要数组                                                    |
+| GET  | `/api/v1/projects/:projectId/versions/:revision` | 200           | `version:read`；返回经内容 SHA-256、工程 ID、修订号和时间验证的 ProjectSnapshot                       |
+| POST | `/api/v1/projects/:projectId/versions`           | 201           | `version:append`；使用共享 Core 的 `{expectedRevision,document}` 契约进行 CAS 追加，返回完整快照      |
 
 `ProjectSummary` 包括 `projectId: string`、`headRevision: number`、`createdAt: string` 与 `updatedAt: string`。历史摘要与 Core 的 `ProjectVersionSummary` 相同，包括 `projectId/revision/createdAt/contentHash`，不含完整文档。历史列表只接受 `limit`（默认 20，范围 1～100）与 `beforeRevision`（大于零的安全整数），采用小于指定修订号的倒序分页。
 

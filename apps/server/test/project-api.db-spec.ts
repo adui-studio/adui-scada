@@ -182,9 +182,9 @@ describe("PostgreSQL 真实工程 API 事务", () => {
     await expect(
       store.create(principalDisabled, { document: document(projectId) }),
     ).rejects.toBeInstanceOf(ProjectVersionAccessDeniedError);
-    expect(
-      await service.client.scadaProject.count({ where: { tenantId: tenantDisabled } }),
-    ).toBe(0);
+    expect(await service.client.scadaProject.count({ where: { tenantId: tenantDisabled } })).toBe(
+      0,
+    );
     expect(
       await service.client.scadaProjectGrant.count({ where: { tenantId: tenantDisabled } }),
     ).toBe(0);
