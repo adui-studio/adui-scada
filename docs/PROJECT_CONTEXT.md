@@ -1036,3 +1036,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 维护者 Windows 日志确认独立工作区 `@adui/scada-api-client` 已通过 TypeScript 6 对应的根质量门禁：`vp check` 303 格式文件/161 受检零告警错误、`typecheck:web`（含新增客户端包）、单元测试 47 文件 **520/520**（新增 Mock Fetch **15/15**）、NestJS E2E **40/40**、SSE 客户端 8/8、故障代理 4/4、文档 83 个 Markdown 与 React/Vue/NestJS 全部构建；完整 `pnpm run ready` 最终退出码 **0**。仓库当前功能分支仅额外存在一次源码/测试格式提交 `d95bf224`；用户日志未显示本地 Git SHA，不冒充精确提交指纹证据。
 
 目前共享 API Client 的**工程质量门禁已通过**，但上传日志未证明 pnpm 12.18.0 `--lockfile-only` 和 `--frozen-lockfile` 安装专项通过；React/Vue UI 未接线，真实 OIDC/JWKS、HTTPS Cookie/同源代理及浏览器工程互通仍未验收。继续保持 PR #55 Draft，后续优先核对锁文件冻结安装，再分批接线 Vue/React，不改变 IndexedDB 草稿与设备只读安全边界。
+
+### 2026-11-16 · 第七小批 pnpm 冻结锁文件验收完成
+
+维护者 Windows 已实际执行 `pnpm install --frozen-lockfile`，覆盖 12 个 workspace，锁文件供应链策略通过，提示锁文件已是最新并跳过依赖解析，pnpm 版本 12.18.0；随后 `docs:check` 83 个 Markdown 通过、最终退出码 0。结合此前共享 API Client 15/15 Mock Fetch、全量 520/520 单测、40/40 E2E、`vp check` 303/161 零警告与 `ready` 退出码 0，第七小批的**工程质量及冻结锁文件安装验收完成**。
+
+仅有 `--frozen-lockfile` 的明确执行证据，没有 `--lockfile-only` 独立执行记录；此次文档更新后需重新执行 `docs:check`。React/Vue UI 接线、同源代理、真实 IdP/JWKS、HTTPS Cookie 与双框架浏览器互通仍待下一小批，PR #55 保持 Draft，不合并。

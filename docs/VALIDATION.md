@@ -1082,3 +1082,11 @@ HTTP E2E 中的 `Health Check has failed` 以及 HTTP 503 是预期负面测试�
 `Health Check has failed` 与 HTTP 503 对应 NestJS 健康检查的预期负面 E2E 场景，本次 E2E 最终 40/40 通过。最新 GitHub 功能分支格式化提交为 `d95bf2244390597394850c939980e076c9bf2fbf`，该提交仅调整 API Client 源码与测试格式；**日志没有独立输出本地 `git rev-parse HEAD`，不能将远程 SHA 当作维护者运行时的 SHA 证明**。
 
 **尚未验收**：本次上传日志未列出 `pnpm install --lockfile-only`、`pnpm install --frozen-lockfile` 的独立执行与结果，故锁文件冻结安装专项仍待确认；运行 `ready` 并不替代该检查。React/Vue Studio 尚未实际调用共享客户端，浏览器同源代理、真实 IdP/JWKS、HTTPS Secure/SameSite Cookie 与 Origin/Fetch Metadata、双框架工程互通和生产工业安全均未验收。本次只是追加验证文档；**该文档提交本身尚未经过新的 `docs:check`**。
+
+## 2026-11-16 · 第三十三批第七小批：pnpm 冻结锁文件与最新文档复验通过
+
+维护者 Windows PowerShell 实测 `pnpm install --frozen-lockfile`：`Scope: all 12 workspace projects`；锁文件通过供应链策略校验；`Lockfile is up to date, resolution step is skipped`；使用 **pnpm 12.18.0**，命令成功结束。随后 `pnpm run docs:check` 静态检查 **83 个 Markdown 文件通过**，最终 `$LASTEXITCODE` 为 **0**。因此第七小批新增 `packages/api-client` 后，**冻结锁文件安装与当前文档静态检查门禁均已由 Windows 运行结果证实**。
+
+该验证与前一份 `vp check`（303 文件格式/161 受检零警告错误）、`pnpm run ready`（520/520 单测，新增 Mock Fetch 15/15；NestJS E2E 40/40；退出码 0）形成第七小批工程质量验收证据。**本次日志没有独立执行 `pnpm install --lockfile-only`**，不能写成已运行；`--frozen-lockfile` 校验通过不要求额外变更锁文件。日志未输出独立的本地 `git rev-parse HEAD`，不把远程 SHA 冒充本地测试 SHA。此次仅更新验收文档，**新文档提交后的 `docs:check` 尚未执行**。
+
+未完成：React/Vue Studio 调用共享 API Client、浏览器同源代理、真实 OIDC/JWKS 身份、HTTPS Secure/SameSite Cookie/Origin/Fetch Metadata、双框架工程互通及生产工业安全。OIDC 默认关闭，工程 API 仍只在完整配置下受控启用，不开放设备写入。
