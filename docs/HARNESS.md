@@ -1661,3 +1661,7 @@ Write-Host "全新空库迁移退出码：$LASTEXITCODE"
 维护者已经在 `adui_scada_fresh_20261116` 完成四项迁移首次部署及二次部署验证，脚本退出码 0；该数据库目前**不再为空库**，不得重复用它运行全新空库验证。初次运行出现 Node.js `DEP0190`，旧版 Windows `pnpm.cmd` 配合 `shell: true` 传参存在安全隐患。新脚本直接使用当前已安装的 Prisma CLI JS 入口和 `process.execPath`（`shell: false` 为默认值），仅允许固定的 `migrate deploy/status` 子命令，保留本机地址、数据库名、Schema 和空库安全校验。
 
 合并前维护者需先在 Windows 执行 `vp check`、`node --test scripts/verify-fresh-postgres-migrations.cases.mjs`、`pnpm run docs:check` 和完整 `pnpm run ready`。如要验证新子进程调用行为，必须再人工创建一个**全新、未使用过**的 `adui_scada_fresh_*` 本机空库并运行脚本，确认两次迁移成功、退出码为 0、没有 `DEP0190`。不能清空、重置或覆盖现有已验收的空库；脚本继续不负责数据库创建或删除。
+
+#### E-015 Windows 修复复验结果（2026-11-16）
+
+维护者已在第二座独立空库 `adui_scada_fresh_20261116_b` 验证新启动方式：四项 `migrate deploy` 首次全部应用、第二次无待执行迁移、`migrate status` 最新、迁移元数据一致、脚本退出码 0，且**未再出现 Node.js DEP0190**。此前在 `adui_scada_fresh_20261116` 的首次迁移结果仍保留，两座库都不允许重复作为“全新空库”测试目标，复测应另建新名称。Windows 质量链 `vp check`、`docs:check`、`ready` 及目标校验 6/6 均已通过；新文档提交后的静态文档校验仍需另行复验。当前 Prisma 7.10.1 不因 8.0.0 RC 更新提示自动升级。

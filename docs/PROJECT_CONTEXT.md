@@ -1018,3 +1018,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 维护者已在本机新建空库 `adui_scada_fresh_20261116` 实际完成四项 Prisma 迁移首次部署、第二次无待执行迁移以及 `migrate status`，八个预期业务表和迁移元数据均通过脚本检查，最终退出码 0；`docs:check` 同时通过 83 份 Markdown。阶段 A 的**全新空库及重复部署专项正式通过**，区别于先前 `adui_scada_test` 的 22/22 事务回归。
 
 本次日志同时暴露 Node.js `DEP0190`：Windows `pnpm.cmd` 配合 `shell: true` 传参。已按 E-015 最小改为当前 Prisma CLI 由 `process.execPath` 无 shell 调用，保留现有隔离和失败即停止策略；协作容器只验证了语法、目标保护 6/6 与模拟进程执行，**真实 Windows Prisma 调用及最新质量链仍待复验**。现有空库不得重置或用于再次执行“全新空库”的验证；实际复验必须另建新空库。PR #55 继续 Draft，不合并。
+
+### 2026-11-16 · E-015 Windows Prisma 无 shell 子进程专项验证通过
+
+维护者修复后 Windows `node --test` 6/6、`vp check` 299 格式文件/159 受检零警告错误、`docs:check` 83 Markdown、`ready` 505 单测、40 HTTP E2E、SSE 8/8、故障代理 4/4、React/Vue/NestJS 构建通过，最终退出码 0。随后在另一座全新空库 `adui_scada_fresh_20261116_b` 上运行无 shell Prisma 7.10.1 子进程：四项迁移全部首次成功，二次无待执行项、`migrate status` 最新、迁移元数据一致、退出码 0，**未再出现 DEP0190**。E-015 已关闭，原有 `adui_scada_fresh_20261116` 和本轮新空库均保留；不能用已部署的库冒充空库。Prisma 8 RC 更新提示无需升级。
+
+目前第三十三批数据库专项与工程 API 的单元/Mock E2E/隔离 PostgreSQL 事务均通过；真实 IdP/JWKS、生产 HTTPS 安全 Cookie/同源代理、React/Vue 双框架 API Client 及现场安全仍未验收。PR #55 继续保持 Draft，不合并。用户日志未单独输出本地 HEAD SHA，文档变更后的 `docs:check` 仍待复验。

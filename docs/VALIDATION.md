@@ -1043,3 +1043,12 @@ HTTP E2E 中的 `Health Check has failed` 以及 HTTP 503 是预期负面测试�
 日志在首次迁移后出现一次 Node.js `DEP0190` 警告：Windows 下 `spawnSync` 对 `pnpm.cmd` 使用 `shell: true` 及参数数组。**这不推翻本次迁移及幂等性验收，但属于已发生的进程安全问题，记录为 E-015。** 本批最小修复改为解析已安装的服务端 Prisma 7 CLI，并通过 `process.execPath` 无 shell 启动固定的 `migrate deploy/status`。协作容器 Node.js 22 已完成语法校验、既有空库目标保护 6/6 和模拟 Prisma CLI 子进程参数/环境传递测试；**Windows Prisma 7.10.1 的新调用路径与 `vp check`、`ready` 尚未实际复验**，不可将 E-015 提前标记为关闭。
 
 `adui_scada_fresh_20261116` 现已部署迁移，不再是空库。要专项验证新启动方式，须另建一个**从未使用过**的本机 `adui_scada_fresh_*` 空库；不得对已通过验收的开发库、现有测试库或本次空库执行清理、重置或删除。真实 OIDC/JWKS、HTTPS 浏览器 Cookie/反向代理、React/Vue 共享 API Client 与工业现场安全仍未验收。此验收日志没有单独输出 `git rev-parse HEAD`，不能把 GitHub 分支 SHA 当作本机执行证明；新文档提交后还须再次运行 `docs:check`。
+
+## 2026-11-16 · E-015 Windows 真实 Prisma 无 shell 子进程复验完成
+
+维护者在修复 `spawnSync` 无 shell 调用后，先执行 `node --test scripts/verify-fresh-postgres-migrations.cases.mjs` **6/6 通过**，`vp check` **299 个文件格式正确、159 个受检文件零警告/错误**，`pnpm run docs:check` **83 个 Markdown 文件通过**。完整 `pnpm run ready` 已执行，**505/505 单测**、**40/40 HTTP E2E**、SSE 客户端 8/8、故障代理 4/4、React/Vue/NestJS 构建均通过，最终退出码 **0**。以上结果来自维护者 2026-11-16 Windows PowerShell 日志；未单独记录本地 Git SHA，不把远程提交 SHA 冒充本机实测提交证明。
+
+随后维护者另建并检查本机新空库 `127.0.0.1:15432/adui_scada_fresh_20261116_b`，执行 `node scripts/verify-fresh-postgres-migrations.mjs adui_scada_fresh_20261116_b`：首次 `migrate deploy` **4/4 项迁移全部应用**，第二次报告 `No pending migrations to apply`，`migrate status` 显示 `Database schema is up to date!`；脚本确认迁移元数据在重复部署后不变，最终 `$LASTEXITCODE` 为 **0**。**本次真实 Windows Prisma 7.10.1 子进程未再出现 Node.js DEP0190**，E-015 已关闭；旧空库 `adui_scada_fresh_20261116` 与新空库 `adui_scada_fresh_20261116_b` 都保留，脚本未删除、重置或清理它们。
+
+日志中 Prisma 提示可升级至 `8.0.0-rc.33` 只是更新提醒，不是构建或迁移错误，本批仍使用已锁定的 **Prisma 7.10.1**，不升级依赖或变更迁移历史。当前工程质量、本机真实 PostgreSQL 事务 22/22、两座新空库首次部署与幂等性回归均具备独立证据，**真实 IdP/JWKS、生产 HTTPS Cookie/代理、React/Vue 同源工程 API Client 和工业现场安全仍未验收**。本次仅补录文档，文档提交后仍需要重新运行 `pnpm run docs:check`。
+
