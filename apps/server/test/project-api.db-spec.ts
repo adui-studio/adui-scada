@@ -30,6 +30,7 @@ const tenantRace = "test-" + randomUUID();
 const tenantRollback = "test-" + randomUUID();
 const tenantOther = "test-" + randomUUID();
 const tenantDisabled = "test-" + randomUUID();
+const tenantPaging = "test-" + randomUUID();
 const projectId = waterTreatmentDemoDocument.projectId;
 const secondProjectId = projectId + "-secondary";
 const otherProjectId = "other-tenant-project";
@@ -39,6 +40,9 @@ const principalRace = { tenantId: tenantRace, subjectId };
 const principalRollback = { tenantId: tenantRollback, subjectId };
 const principalOther = { tenantId: tenantOther, subjectId };
 const principalDisabled = { tenantId: tenantDisabled, subjectId };
+const principalPaging = { tenantId: tenantPaging, subjectId };
+const hiddenSubjectId = "test-hidden-engineer";
+const principalHidden = { tenantId: tenantPaging, subjectId: hiddenSubjectId };
 const document = (id: string) => {
   const source = JSON.parse(JSON.stringify(waterTreatmentDemoDocument)) as {
     projectId: string;
@@ -63,6 +67,8 @@ beforeAll(async () => {
       { tenantId: tenantRollback, subjectId, status: "active" },
       { tenantId: tenantOther, subjectId, status: "active" },
       { tenantId: tenantDisabled, subjectId, status: "disabled" },
+      { tenantId: tenantPaging, subjectId, status: "active" },
+      { tenantId: tenantPaging, subjectId: hiddenSubjectId, status: "active" },
     ],
   });
 });
@@ -76,6 +82,7 @@ afterAll(async () => {
         tenantRollback,
         tenantOther,
         tenantDisabled,
+        tenantPaging,
       ]) {
         await service.client.scadaProjectAudit.deleteMany({ where: { tenantId } });
         await service.client.scadaProjectVersion.deleteMany({ where: { tenantId } });
@@ -173,6 +180,50 @@ describe("PostgreSQL 真实工程 API 事务", () => {
     const snapshot = await store.read(principalCreate, projectId, 1);
     expect(snapshot.revision).toBe(1);
     expect(snapshot.projectId).toBe(projectId);
+  });
+
+  it("十二项真实授权工程按十条游标分页且同租户无权工程不泄漏", async () => {
+    const ids = Array.from({ length: 12 }, (_, index) =>
+      "page-" + String(index + 1).padStart(3, "0"),
+    );
+    // 只向随机测试租户执行现有创建事务，自动形成不可变首版和 ACL。
+    for (const id of ids) {
+      const created = await store.create(principalPaging, { document: document(id) });
+      expect(created.headRevision).toBe(1);
+    }
+    const hiddenId = "page-013-hidden";
+    await store.create(principalHidden, { document: document(hiddenId) });
+
+    const first = await store.list(principalPaging, { limit: 10 });
+    expect(first.map((item) => item.projectId)).toEqual(ids.slice(0, 10));
+    const second = await store.list(principalPaging, {
+      limit: 10,
+      afterProjectId: first.at(-1)?.projectId,
+    });
+    expect(second.map((item) => item.projectId)).toEqual(ids.slice(10));
+    expect(
+      await store.list(principalPaging, {
+        limit: 10,
+        afterProjectId: second.at(-1)?.projectId,
+      }),
+    ).toEqual([]);
+    expect((await store.list(principalPaging, { limit: 100 })).map((item) => item.projectId)).toEqual(
+      ids,
+    );
+    expect(first.every((item) => item.headRevision === 1)).toBe(true);
+    expect(second.every((item) => item.headRevision === 1)).toBe(true);
+    expect(Object.keys(first[0] ?? {}).sort()).toEqual([
+      "createdAt",
+      "headRevision",
+      "projectId",
+      "updatedAt",
+    ]);
+    expect((await store.list(principalHidden)).map((item) => item.projectId)).toEqual([hiddenId]);
+    await expect(store.getProject(principalPaging, hiddenId)).rejects.toBeInstanceOf(
+      ProjectVersionAccessDeniedError,
+    );
+    expect(await service.client.scadaProject.count({ where: { tenantId: tenantPaging } })).toBe(13);
+    expect(await service.client.scadaProjectAudit.count({ where: { tenantId: tenantPaging } })).toBe(13);
   });
 
   it("同一租户重复创建工程返回冲突且不会覆盖既有首版", async () => {

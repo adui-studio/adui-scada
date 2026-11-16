@@ -31,6 +31,7 @@ const tenantB = `test-${randomUUID()}`;
 const tenantAuth = `test-${randomUUID()}`;
 const tenantRollback = `test-${randomUUID()}`;
 const tenantRevocation = `test-${randomUUID()}`;
+const tenantTwoWriters = `test-${randomUUID()}`;
 const projectId = waterTreatmentDemoDocument.projectId;
 const subjectId = "test-engineer";
 const principalA = { tenantId: tenantA, subjectId };
@@ -38,6 +39,9 @@ const principalB = { tenantId: tenantB, subjectId };
 const principalAuth = { tenantId: tenantAuth, subjectId };
 const principalRollback = { tenantId: tenantRollback, subjectId };
 const principalRevocation = { tenantId: tenantRevocation, subjectId };
+const otherWriterSubjectId = "test-second-engineer";
+const principalWriterA = { tenantId: tenantTwoWriters, subjectId };
+const principalWriterB = { tenantId: tenantTwoWriters, subjectId: otherWriterSubjectId };
 const document = () => JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
 
 let service: PrismaService;
@@ -49,7 +53,7 @@ beforeAll(async () => {
   service = new PrismaService();
   store = new PrismaProjectVersionStore(service);
   await service.onModuleInit();
-  for (const tenantId of [tenantA, tenantB, tenantRollback, tenantRevocation]) {
+  for (const tenantId of [tenantA, tenantB, tenantRollback, tenantRevocation, tenantTwoWriters]) {
     await service.client.scadaProject.create({
       data: { tenantId, projectId },
     });
@@ -63,6 +67,13 @@ beforeAll(async () => {
       { tenantId: tenantA, projectId, subjectId, permission: "version:read" },
       { tenantId: tenantRollback, projectId, subjectId, permission: "version:append" },
       { tenantId: tenantRevocation, projectId, subjectId, permission: "version:append" },
+      { tenantId: tenantTwoWriters, projectId, subjectId, permission: "version:append" },
+      {
+        tenantId: tenantTwoWriters,
+        projectId,
+        subjectId: otherWriterSubjectId,
+        permission: "version:append",
+      },
     ],
   });
 });
@@ -72,7 +83,7 @@ afterAll(async () => {
     if (service) {
       await service.client.scadaAuthSession.deleteMany({ where: { tenantId: tenantAuth } });
       await service.client.scadaIdentity.deleteMany({ where: { tenantId: tenantAuth } });
-      for (const tenantId of [tenantA, tenantB, tenantRollback, tenantRevocation]) {
+      for (const tenantId of [tenantA, tenantB, tenantRollback, tenantRevocation, tenantTwoWriters]) {
         await service.client.scadaProjectAudit.deleteMany({ where: { tenantId } });
         await service.client.scadaProjectVersion.deleteMany({ where: { tenantId } });
         await service.client.scadaProjectGrant.deleteMany({ where: { tenantId } });
@@ -128,6 +139,61 @@ describe("PostgreSQL 真实工程版本事务", () => {
       2,
     );
     expect(await service.client.scadaProjectAudit.count({ where: { tenantId: tenantA } })).toBe(2);
+  });
+
+  it("两个独立 Prisma 连接与不同授权主体竞争同一 CAS 水位只允许一个提交", async () => {
+    const secondConnection = new PrismaService();
+    await secondConnection.onModuleInit();
+    try {
+      const secondStore = new PrismaProjectVersionStore(secondConnection);
+      const initial = await store.append(principalWriterA, projectId, {
+        expectedRevision: null,
+        document: document(),
+      });
+      expect(initial.revision).toBe(1);
+
+      const attempts = await Promise.allSettled([
+        store.append(principalWriterA, projectId, { expectedRevision: 1, document: document() }),
+        secondStore.append(principalWriterB, projectId, {
+          expectedRevision: 1,
+          document: document(),
+        }),
+      ]);
+      const successful = attempts.filter((item) => item.status === "fulfilled");
+      const rejected = attempts.filter((item) => item.status === "rejected");
+      expect(successful).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      const failed = rejected[0];
+      expect(failed?.status).toBe("rejected");
+      if (failed?.status === "rejected") {
+        expect(failed.reason).toBeInstanceOf(ProjectRevisionConflictError);
+      }
+
+      const winningSubjectId =
+        attempts[0]?.status === "fulfilled" ? subjectId : otherWriterSubjectId;
+      const [project, versions, audits] = await Promise.all([
+        service.client.scadaProject.findUniqueOrThrow({
+          where: { tenantId_projectId: { tenantId: tenantTwoWriters, projectId } },
+        }),
+        service.client.scadaProjectVersion.findMany({
+          where: { tenantId: tenantTwoWriters, projectId },
+          orderBy: { revision: "asc" },
+        }),
+        service.client.scadaProjectAudit.findMany({
+          where: { tenantId: tenantTwoWriters, projectId },
+          orderBy: { revision: "asc" },
+        }),
+      ]);
+      expect(project.headRevision).toBe(2n);
+      expect(versions.map((item) => item.revision)).toEqual([1n, 2n]);
+      expect(audits.map((item) => item.revision)).toEqual([1n, 2n]);
+      expect(audits.map((item) => item.actorId)).toEqual([subjectId, winningSubjectId]);
+      expect(versions[1]?.contentHash).toBe(
+        successful[0]?.status === "fulfilled" ? successful[0].value.contentHash : undefined,
+      );
+    } finally {
+      await secondConnection.onModuleDestroy();
+    }
   });
 
   it("相同工程 ID 不会跨租户读取或追加历史版本", async () => {
