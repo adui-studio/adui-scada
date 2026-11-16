@@ -986,3 +986,7 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 ### 第三十三批第六小批候选安全复核（2026-11-15）
 
 候选工程 API 的六条成功响应新增 `Cache-Control: no-store`，防止工程文档和版本摘要被 HTTP 缓存。创建事务增加本地受信主体 `active` 状态的 `FOR SHARE` 共享锁内复核，避免 Guard 验证后主体被停用却继续写入工程、ACL 与审计。单元和隔离 PostgreSQL 用例已补充，但尚未执行。候选提交仍未进入 PR #55 功能分支，不得沿用第五小批质量验收结果。
+
+### 第三十三批第六小批 · 2026-11-16 启动入口语法修复
+
+维护者在已推送至 PR #55 的第六小批候选代码上运行 `vp check --fix`，于 `apps/server/src/main.ts:73` 遇到 EOF 缺少 `)` 的格式化解析错误。已定位为启动入口 `bootstrap().catch(...)` 结尾只写了 `}`，缺失 `);`，按最小改动修复为 `});`。修正后 Git Blob 内容与容器内完整文件 SHA 一致，TypeScript 5.8.3 语法解析 0 错误。记录为 `docs/AI_MISTAKES.md` E-013；当前未执行完整 Windows 工程质量链或真实 PostgreSQL 测试，第六小批继续保持 Draft 待验收。

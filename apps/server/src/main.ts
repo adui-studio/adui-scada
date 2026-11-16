@@ -69,4 +69,4 @@ void bootstrap().catch((error: unknown) => {
   const kind = error instanceof Error ? error.name : "未知异常";
   console.error("ADui SCADA 服务启动失败：" + kind);
   process.exitCode = 1;
-}
+});

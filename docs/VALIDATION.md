@@ -971,3 +971,15 @@ Write-Host "退出码：$LASTEXITCODE"
 ## 2026-11-15 · 第六小批创建者状态复核补充（未执行真库验证）
 
 静态安全审查指出：仅在 HTTP Guard 入口验证身份状态，不能保证进入较长的工程创建事务后主体仍保持有效。候选仓储已增加参数化 `SELECT ... FOR SHARE` 与 `active` 检查，配套 Mock 单测与本机隔离 PostgreSQL 停用主体负面测试；真正的事务内身份状态锁定、创建竞争、审计回滚、Cookie 防护及默认 404 仍须执行真实测试并检查退出码。本条是预防性安全增强，不作为新增真实事故或已验收结论。
+
+## 2026-11-16 · 第三十三批第六小批：main.ts EOF 语法修复（待 Windows 回归）
+
+维护者在已推送的分支 `feat/v0.3-oidc-project-api` 上执行 `vp check --fix` 失败：`apps/server/src/main.ts:73:1` 报 `Expected ) but found EOF`。根因是 `void bootstrap().catch(...)` 末行缺少 `);`，导致格式化解析中止。此次代码仅将原末行 `}` 更正为 `});`，没有改变 OIDC 启用逻辑、HTTP 请求体限制或服务安全策略。
+
+已实施的验证：
+
+- 修复文件的 Git Blob SHA 为 `f7b575a927d51311c8a40d5688109e9ec7654e3b`；从仓库源文件重建得到相同 `git hash-object` 值，确认语法检查与提交内容相同。
+- 容器 Node.js 22 / TypeScript 5.8.3 `createSourceFile(..., ScriptKind.TS).parseDiagnostics` 报告 **0 个语法错误**。
+- **尚未执行**仓库 Node 24 / TypeScript 6 / Vite+ 的真实 `vp check`、单元测试、HTTP E2E、`pnpm run ready` 或隔离 PostgreSQL 测试，不能将语法恢复误记为第六小批验收通过。
+
+维护者须先同步本修复提交，再运行 `vp check`（不需要仅为修括号执行 `--fix`），按实际报错修复后执行 `pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run docs:check`、完整 `pnpm run ready` 与最后退出码。真实数据库回归只在已确认的本机 `adui_scada_test` 隔离库运行 `pnpm run test:db`。本条对应 `docs/AI_MISTAKES.md` E-013。
