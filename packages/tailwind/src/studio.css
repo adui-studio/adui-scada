@@ -785,3 +785,93 @@
 .studio-version-more {
   width: 100%;
 }
+
+/* 授权工程列表与历史版本分离；仅在 Studio 工具栏内展开，不影响画布尺寸。 */
+.studio-project-browser-panel {
+  width: min(460px, calc(100vw - 24px));
+  max-height: min(76vh, 660px);
+}
+.studio-project-browser-heading,
+.studio-project-browser-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.studio-project-browser-heading strong {
+  color: var(--scada-text-strong);
+  font-size: 14px;
+}
+.studio-project-browser-heading button,
+.studio-project-browser-pagination button {
+  flex: none;
+  padding: 7px 12px;
+}
+.studio-project-browser-list {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.studio-project-browser-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--scada-border);
+  border-radius: 5px;
+  background: var(--scada-bg);
+}
+.studio-project-browser-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 8px;
+}
+.studio-project-browser-info code {
+  min-width: 0;
+  max-width: 100%;
+  color: var(--scada-text-strong);
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.studio-project-browser-info small {
+  flex-basis: 100%;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--scada-text-muted);
+}
+.studio-project-browser-current {
+  padding: 1px 6px;
+  border: 1px solid var(--scada-primary);
+  border-radius: 3px;
+  color: var(--scada-cyan);
+  font-size: 10px;
+}
+.studio-project-browser-item > button {
+  flex: none;
+  padding: 7px 10px;
+}
+.studio-project-browser-pagination {
+  padding-top: 6px;
+  border-top: 1px solid var(--scada-border);
+}
+.studio-project-browser-pagination span {
+  color: var(--scada-text-secondary);
+  font-size: 11px;
+  text-align: center;
+}
+.studio-project-browser-empty {
+  margin: 0;
+  padding: 18px 10px;
+  color: var(--scada-text-muted);
+  text-align: center;
+  font-size: 12px;
+}
+.studio-project-browser-panel button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
