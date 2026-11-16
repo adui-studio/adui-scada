@@ -1270,3 +1270,9 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 **待维护者 Windows 验证**：`vp check`、`pnpm run messages:check`、`pnpm run docs:check`、`pnpm run ready` 完整退出码；React/Vue 实际 OIDC 同源 HTTPS 业务浏览器流程需要分别验证 1440×900、1024×768：打开工程管理、授权列表前后翻页、未登录拒绝、远端版本变化拒绝、取消保持画布、确认打开且 CAS 基线正确、草稿原记录和修订号不变、自动保存停止、再按新工程重新查看本地草稿。无真实 OIDC 环境时允许只验收匿名拒绝，不得冒充真实登录、工程切换通过。数据库层沿用 PR #56 已验收的分页查询，无新增迁移或数据库写入专项，不能把第一小批测试结果宣称为本小批新测试通过。
 
 原第三十四批第一小批 Windows 本机结果：`vp check` 321/177 零告警，`ready` 537/537 单测、49/49 HTTP E2E、85 Markdown 和两 Web/NestJS 构建退出码 0；`test:db` 23/23 退出码 0。此为上一小批的事实基线。
+
+## 2026-11-16 · 第三十四批第三小批：OIDC 工程管理真实浏览器专项（待验收）
+
+基于 PR #57 合并提交 `c426d26855d3d707a75869f8c770b65e8b55c82f` 新增 `test:projects:oidc:config`（7 项离线安全配置用例并纳入 `ready`）以及需人工完成可信 Keycloak 登录的 `test:projects:oidc:browser`。使用 Chrome/Edge 临时 Profile、Node 可信 CA、真实 React/Vue HTTPS Origin 和有权限的隔离 Lab 工程。测试读取列表与修订号，确认两套 Studio 前后页状态（有足量授权工程时），取消打开与模拟 GET 水位冲突时不得改画布、自动保存和已保存草稿；确认载入最新版本后须具有可见 CAS 基线，暂停自动保存且保存前后 IndexedDB 草稿摘要一致。另验证服务端工程不会被新增或覆盖，浏览器 Profile 结束后清理。
+
+**当前仅提交候选源代码与测试，并未在维护者 Windows 实际运行**：`pnpm run test:projects:oidc:config`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`、`pnpm run ready` 及交互式 `pnpm run test:projects:oidc:browser` 全部待执行。不得把 PR #57 的 544/544 单测、49/49 E2E、76/76 通用浏览器基础回归或维护者人工验收冒充为本次新增脚本已执行。配置检查与登录专项不能代替生产 TLS/IdP/数据库安全评估；水位竞争只在浏览器读取响应中模拟，不是实数据库事务冲突。

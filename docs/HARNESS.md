@@ -2051,3 +2051,29 @@ if ($LASTEXITCODE -ne 0) { throw "本机 Docker Prisma 状态检查失败" }
 ```
 
 `docker:db:status` 的真实 Windows 退出码与完整 `ready` 在补丁提交后仍待维护者复验。旧根 `.env` 还含曾经公开的数据库、OIDC Client/事务密钥与过期证书路径，宿主 NestJS 联调前必须在本机受控同步到新 Docker 凭据，并进行轮换；禁止将实际值复制到仓库、Issue、测试和日志中。
+
+## 第三十四批第三小批 · 真实 OIDC 双框架工程浏览器专项（需交互、独立于 ready）
+
+在 PR #57 双框架工程管理已合并的基础上，新增隔离浏览器专项：
+
+```powershell
+# 先运行纯离线配置保护；该命令已纳入 ready
+pnpm run test:projects:oidc:config
+if ($LASTEXITCODE -ne 0) { throw "OIDC 工程管理配置保护测试失败" }
+
+# 必须先在当前 PowerShell 进程启动 Node 之前建立可信证书路径
+$caDir = & mkcert -CAROOT
+if ($LASTEXITCODE -ne 0) { throw "未找到 mkcert 根证书目录" }
+$env:NODE_EXTRA_CA_CERTS = Join-Path $caDir "rootCA.pem"
+
+# 本机 dev:server、dev:react、dev:vue 均已启动 HTTPS OIDC 配置；
+# Keycloak 用户应为无管理员权限的已显式预绑定测试主体
+pnpm run test:projects:oidc:browser
+Write-Host "工程管理 OIDC 浏览器专项退出码：$LASTEXITCODE"
+```
+
+必须在运行之前人工核对根 `.env` 的 `SCADA_OIDC_ENABLED=true`、`SCADA_OIDC_DEV_HTTPS_ENABLED=true`、`SCADA_OIDC_ISSUER` 指向本机 `adui-scada` Realm、两套精确 HTTPS Origin 和唯一回调、`SCADA_DATABASE_URL` 仅指向本机隔离 `adui_scada` 或 `adui_scada_oidc_lab` 数据库。脚本内部再次执行目标白名单校验；真实服务端的进程配置仍需维护者独立核对，不能只凭根文件推断。禁止 `NODE_TLS_REJECT_UNAUTHORIZED=0`、忽略浏览器 TLS 错误、在命令行/PR 输入真实密钥、随意清理数据库卷或使用正式身份。
+
+执行后会启动全新的**非无头** Chrome/Edge 临时 Profile，并打开真实 OIDC 登录；维护者直接在浏览器界面用普通测试用户完成登录，脚本才会继续；无需在终端粘贴密码。要求隔离 Lab 内至少有 **1 个**当前主体获 `project:read` 权限的工程，超过 10 个才能真实覆盖有数据的上一页/下一页。验证 React/Vue 同源身份和授权列表、取消打开、模拟修订水位冲突、确认打开建立 CAS 可见基线、暂停自动保存及 IndexedDB 原草稿不变。只修改**临时测试浏览器的 IndexedDB**，不执行任何服务端工程写 API；OIDC 登录本身仍会在隔离 Lab 创建正常短期事务。成功与失败都尝试关闭浏览器并删除临时 Profile。
+
+**重要边界**：该浏览器脚本**不属于** `pnpm run ready`，后者仅自动运行 `test:projects:oidc:config` 的纯离线保护测试；真正的 Keycloak 登录需要操作者参与。版本冲突只通过浏览器 GET 响应故障模拟，不等于真实双会话并发 CAS 409 数据库验证。真实工业 PLC/DCS、生产 Keycloak、企业证书、生产数据库与正式发布 API 均不在本批验收范围。

@@ -782,3 +782,9 @@ Studio 工具栏新增独立“工程管理”弹层，与原“服务端工程�
 打开按钮调用既有 `StudioServerProjectSession.readVersion(projectId, headRevision)`，此流程会校验用户身份、通过 Core SHA-256 校验快照并重新读取服务端最新修订号。只有三者一致，且当前编辑工程未在等待时切换、用户确认覆盖当前画布之后，才执行 `DraftAutoSaveSession.stop()`，再由 `DocumentEditor.loadDocument` 替换工程并清空撤销记录，最后调用 `acceptLoadedVersion` 建立当前用户/租户的 CAS 保存基线。任何不一致或取消均不得变更编辑器及 IndexedDB 草稿。打开其他工程后历史列表与比较状态重置，Vue 重新订阅当前工程的 IndexedDB 草稿，避免之前工程的订阅继续影响页面。
 
 本批的“工程管理”仅是 Studio 内的只读浏览+显式打开入口，不等于独立工程管理中心，也不代表正式发布。OIDC 默认关闭时不会自动发起授权或写请求；生产使用仍需可信 OIDC 和 HTTPS 部署、真实双端浏览器确认。见 [ADR-0068](adr/0068-dual-studio-project-browser.md)。
+
+## 2026-11-16 · 第三十四批第三小批：真实 OIDC 工程管理浏览器专项
+
+新增 `scripts/test-project-browser-oidc.mjs`。配置先复用现有 `resolveReadonlyProbeOrigins` 约束，额外核对本机 Keycloak Issuer / `adui-scada` Realm、`SCADA_DATABASE_URL` 的精确本机 Lab 数据库白名单、可信 Node 根证书。只允许非生产、已显式启用 OIDC HTTPS 的两套 Vite Origin。登录由维护者在**临时隔离 Chrome/Edge Profile** 内访问真实 `/api/v1/auth/oidc/start` 手动完成，脚本从浏览器的同源 GET `/api/v1/auth/me` 确认可信主体，绝不输出 Cookie、Code、Token、密码或身份详情。
+
+React 和 Vue 在一个真实临时浏览器中分别进入 Studio：对比工程管理列表与服务端 `GET /api/v1/projects?limit=10` 摘要、检查 ID/修订号及分页按钮；若有下一页，使用 `afterProjectId` 对比 UI 上下页。通过真实 Studio“保存草稿”按钮只写当前**临时浏览器 IndexedDB** 并开启自动保存；点击“打开”时分别模拟取消、在 API Client 初始化前安装的受控 `GET /api/v1/projects/:id` 响应水位故障、最后确认打开当前最新服务端快照。前两条要求画布与草稿摘要不变、自动保存保持开启；确认后要求 CAS 基线与最新修订号相符、自动保存暂停且原草稿 SHA-256 不变。所有工程 HTTP API 请求均为 GET，水位冲突模拟不是实际数据库竞争写入。脚本不会自行创建、更新、发布或删除服务端工程；真实身份登录会产生隔离 Lab 正常的登录事务。无真实用户/授权工程则必须明确失败，不伪造自动化成功。
