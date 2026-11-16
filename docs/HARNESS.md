@@ -1684,3 +1684,25 @@ Write-Host "最终退出码：$LASTEXITCODE"
 ```
 
 新增 Mock Fetch 测试由根 `vite.config.ts` 统一收集，根 `typecheck:web` 包含 `@adui/scada-api-client`。若安装重写了 `pnpm-lock.yaml`，应以 pnpm 12.18.0 实际生成的内容为准，并检查是否只产生预期的工作区链接变更。原有 Core、NestJS、React/Vue TypeScript 6、测试、中文文案及工业安全门禁不得降低。此测试**不调用真实工程 API，不更改数据库、不执行工业写入**；真实 HTTPS 浏览器 Cookie、Origin/CSRF、同源代理及 React/Vue 工程互通另行验证。
+
+### 第三十三批第八小批：双框架服务端工程保存与草稿保护验收
+
+两个 Studio 新增“服务端工程”独立入口，和已有“保存草稿”“版本历史”分离。提交前须在仓库根目录执行：
+
+```powershell
+pnpm install --frozen-lockfile
+vp check
+pnpm run typecheck:web
+pnpm run test:unit
+pnpm run test:browser
+pnpm run test:versions:safety
+pnpm run docs:check
+pnpm run ready
+Write-Host "最终退出码：$LASTEXITCODE"
+```
+
+单测应包含新增 `packages/api-client/test/studio-session.test.ts` 的 9 项：首次创建、存在工程但未载入最新修订号、CAS 冲突、身份切换、并发重复提交及旧基线清理。浏览器自动化原有 `test:browser`、`test:versions:safety` 只能证明本地画布和 IndexedDB 回归，**不能代替真实云端保存测试**。
+
+现场/开发联调前必须由维护者明确配置可信 IdP、回调与本机同源 HTTPS/代理，并在**独立测试租户、测试工程及非生产数据库**执行。验收顺序：React/Vue 各自检查登录；创建服务端工程（必须有有效 CSRF Cookie）；刷新服务端历史；显式载入最新版本；追加 CAS 历史；由另一会话推进修订号后验证 409；模拟 401、403、404、网络中断及代理 HTML 响应；验证操作失败时当前画布、IndexedDB 草稿、自动保存开关和 JSON 导入/恢复行为未被篡改。旧版云端历史载入只用于编辑与比较，不允许直接用旧修订号覆盖服务器最新版。两端互通必须比较同一 ScadaDocument 的内容、修订号及 SHA-256；未配置 IdP 时不开放匿名创建或写入。
+
+**当前尚无此真实 OIDC + HTTPS 浏览器专项结果**，不得将 Mock Fetch 或本地 IndexedDB E2E 记为服务端端到端成功。工业网关、PLC/DCS 写入、正式发布、回滚审批均不属于本批。

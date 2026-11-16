@@ -57,6 +57,11 @@ import type {
   ResizeHandle,
 } from "@adui/scada-core/editor";
 import { svgDataUrl } from "@adui/scada-runtime";
+import {
+  createScadaApiClient,
+  createStudioServerProjectSession,
+  ScadaApiError,
+} from "@adui/scada-api-client";
 import { TagManager } from "./TagManager.tsx";
 import "./studio.css";
 import "@adui/tailwind/studio.css";
@@ -105,6 +110,8 @@ interface GeometryDragState {
 
 export default function StudioPage() {
   const editor = useMemo(() => new DocumentEditor(waterTreatmentDemoDocument), []);
+  const serverApi = useMemo(() => createScadaApiClient(), []);
+  const serverSession = useMemo(() => createStudioServerProjectSession(serverApi), [serverApi]);
   const [state, setState] = useState<EditorSnapshot>(() => editor.snapshot());
   const [preview, setPreview] = useState<{ id: string; x: number; y: number } | null>(null);
   const [geometryPreview, setGeometryPreview] = useState<ScadaDocument | null>(null);
@@ -120,7 +127,7 @@ export default function StudioPage() {
   const [layerDrop, setLayerDrop] = useState<{ id: string; position: "before" | "after" } | null>(
     null,
   );
-  const [notice, setNotice] = useState("可手动保存浏览器本地草稿 · 尚未连接工程保存服务");
+  const [notice, setNotice] = useState("可保存浏览器本地草稿 · 服务端工程需单独验证登录");
   const [hasSavedDraft, setHasSavedDraft] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
   const [historyRows, setHistoryRows] = useState<readonly ProjectVersionSummary[]>([]);
@@ -129,6 +136,13 @@ export default function StudioPage() {
   const [historyBusy, setHistoryBusy] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const [inspectedVersion, setInspectedVersion] = useState<ProjectSnapshot | null>(null);
+  const [serverIdentity, setServerIdentity] = useState("尚未检查服务端身份");
+  const [serverProjectId, setServerProjectId] = useState("");
+  const [serverHeadRevision, setServerHeadRevision] = useState<number | null>(null);
+  const [serverRows, setServerRows] = useState<readonly ProjectVersionSummary[]>([]);
+  const [serverHasMore, setServerHasMore] = useState(false);
+  const [serverError, setServerError] = useState("");
+  const [serverInspectedVersion, setServerInspectedVersion] = useState<ProjectSnapshot | null>(null);
   const historyActionRef = useRef(false);
   const autoSaveSessionRef = useRef<DraftAutoSaveSession | null>(null);
   const draftActionRef = useRef(false);
@@ -162,6 +176,15 @@ export default function StudioPage() {
   const page = state.document.pages.find((item) => item.id === state.activePageId);
   const selected = page?.nodes.find((node) => node.id === state.selectedId);
   const visibleHistoryRows = historyProjectId === state.document.projectId ? historyRows : [];
+  const visibleServerRows = serverProjectId === state.document.projectId ? serverRows : [];
+  const activeServerBaseline = serverSession.getBaselineRevision(state.document.projectId);
+  const serverComparison = useMemo(
+    () =>
+      serverInspectedVersion?.projectId === state.document.projectId
+        ? compareProjectDocuments(state.document, serverInspectedVersion.document)
+        : null,
+    [state.document, serverInspectedVersion],
+  );
   const historyComparison = useMemo(
     () =>
       inspectedVersion?.projectId === state.document.projectId
@@ -1020,6 +1043,145 @@ export default function StudioPage() {
     }
   }
 
+  async function runServerAction(
+    label: string,
+    action: () => Promise<void>,
+    lockDraft = false,
+  ): Promise<void> {
+    await runHistoryAction(
+      label,
+      async () => {
+        setServerError("");
+        try {
+          await action();
+        } catch (error) {
+          setServerError(error instanceof Error ? error.message : "服务端操作失败");
+          if (
+            error instanceof ScadaApiError &&
+            (error.kind === "unauthenticated" || (label === "检查服务端身份" && error.status === 404))
+          ) {
+            setServerIdentity("未登录或服务端尚未启用身份接口");
+          }
+          throw error;
+        }
+      },
+      lockDraft,
+    );
+  }
+
+  async function checkServerIdentity(): Promise<void> {
+    await runServerAction("检查服务端身份", async () => {
+      await serverApi.getMe();
+      setServerIdentity("服务端身份已验证");
+      setNotice("服务端身份已验证；仅允许经授权的工程版本操作");
+    });
+  }
+
+  async function saveServerProject(): Promise<void> {
+    await runServerAction(
+      "保存服务端工程",
+      async () => {
+        const document = editor.snapshot().document;
+        const result = await serverSession.saveDocument(document);
+        if (editor.snapshot().document.projectId !== document.projectId) return;
+        setServerIdentity("服务端身份已验证");
+        setServerProjectId(document.projectId);
+        setServerHeadRevision(result.revision);
+        setServerRows([]);
+        setServerHasMore(false);
+        setServerInspectedVersion(null);
+        setNotice(
+          result.created
+            ? `已创建服务端工程版本 #${result.revision}；IndexedDB 草稿保持不变`
+            : `已追加服务端版本 #${result.revision}；本地草稿未删除，不代表正式发布`,
+        );
+      },
+      true,
+    );
+  }
+
+  async function refreshServerHistory(): Promise<void> {
+    await runServerAction("查询服务端版本", async () => {
+      const projectId = editor.snapshot().document.projectId;
+      const [summary, rows] = await Promise.all([
+        serverApi.getProject(projectId),
+        serverApi.listVersions(projectId, { limit: HISTORY_PAGE_SIZE }),
+      ]);
+      if (editor.snapshot().document.projectId !== projectId) return;
+      setServerProjectId(projectId);
+      setServerHeadRevision(summary.headRevision);
+      setServerRows(rows);
+      setServerHasMore(rows.length === HISTORY_PAGE_SIZE);
+      setServerInspectedVersion(null);
+      setNotice("已读取服务端工程版本摘要；当前画布和 IndexedDB 草稿均未改变");
+    });
+  }
+
+  async function loadMoreServerVersions(): Promise<void> {
+    if (serverProjectId !== editor.snapshot().document.projectId) return;
+    const last = serverRows[serverRows.length - 1];
+    if (!last) return;
+    await runServerAction("查询更早服务端版本", async () => {
+      const rows = await serverApi.listVersions(serverProjectId, {
+        limit: HISTORY_PAGE_SIZE,
+        beforeRevision: last.revision,
+      });
+      if (editor.snapshot().document.projectId !== serverProjectId) return;
+      setServerRows((previous) => [...previous, ...rows]);
+      setServerHasMore(rows.length === HISTORY_PAGE_SIZE);
+    });
+  }
+
+  async function inspectServerVersion(revision: number): Promise<void> {
+    await runServerAction("查看服务端版本", async () => {
+      const projectId = editor.snapshot().document.projectId;
+      const result = await serverSession.readVersion(projectId, revision);
+      if (editor.snapshot().document.projectId !== projectId) return;
+      setServerInspectedVersion(result.snapshot);
+      setServerHeadRevision(result.headRevision);
+      setNotice(`已核验服务端版本 #${revision} 的 SHA-256，当前画布与草稿未改变`);
+    });
+  }
+
+  async function loadServerVersion(revision: number): Promise<void> {
+    await runServerAction(
+      "载入服务端版本",
+      async () => {
+        const projectId = editor.snapshot().document.projectId;
+        const result = await serverSession.readVersion(projectId, revision);
+        if (editor.snapshot().document.projectId !== projectId) {
+          throw new TypeError("当前工程已切换，拒绝载入其他工程的服务端历史");
+        }
+        if (
+          !window.confirm(
+            `载入服务端版本 #${revision} 将替换当前画布并清空撤销历史。IndexedDB 草稿不会被清除，未保存的画布修改可能丢失，建议先保存草稿。确认继续吗？`,
+          )
+        ) {
+          return;
+        }
+        await pauseAutoSave();
+        editor.loadDocument(result.snapshot.document);
+        serverSession.acceptLoadedVersion(result);
+        clearLayerDrag();
+        setLayerSearch("");
+        setCollapsedGroupIds(new Set());
+        setLocateLayerRequest(null);
+        cancelDrag();
+        refresh();
+        setServerProjectId(projectId);
+        setServerHeadRevision(result.headRevision);
+        setServerInspectedVersion(null);
+        const warning = await refreshDraftAvailability(projectId);
+        setNotice(
+          result.snapshot.revision === result.headRevision
+            ? `已载入服务端最新版本 #${revision}，可按此修订号 CAS 保存；自动保存已暂停，本地草稿未覆盖` + warning
+            : `已载入较早的服务端版本 #${revision}；不能直接覆盖最新版本，自动保存已暂停` + warning,
+        );
+      },
+      true,
+    );
+  }
+
   async function refreshVersionHistory(): Promise<void> {
     await runHistoryAction("读取历史版本", async () => {
       const projectId = editor.snapshot().document.projectId;
@@ -1092,6 +1254,7 @@ export default function StudioPage() {
         }
         await pauseAutoSave();
         editor.loadDocument(saved.document);
+        serverSession.reset();
         clearLayerDrag();
         setLayerSearch("");
         setCollapsedGroupIds(new Set());
@@ -1165,6 +1328,7 @@ export default function StudioPage() {
         return;
       }
       editor.loadDocument(saved.document);
+      serverSession.reset();
       clearLayerDrag();
       setLayerSearch("");
       setCollapsedGroupIds(new Set());
@@ -1229,6 +1393,7 @@ export default function StudioPage() {
       const parsed = JSON.parse(await file.text()) as unknown;
       await pauseAutoSave();
       const migratedFrom = editor.loadDocument(parsed);
+      serverSession.reset();
       clearLayerDrag();
       setLayerSearch("");
       setCollapsedGroupIds(new Set());
@@ -1494,6 +1659,76 @@ export default function StudioPage() {
                   onClick={() => void loadMoreVersions()}
                 >
                   加载更早版本
+                </button>
+              )}
+            </div>
+          </details>
+          <details className="studio-version-menu">
+            <summary>服务端工程</summary>
+            <div className="studio-version-panel" aria-label="服务端工程版本">
+              <p className="studio-version-help">
+                当前工程：{state.document.projectId} · 受保护的工程版本保存，不代表正式发布
+              </p>
+              <p className="studio-version-help" role="status">
+                {serverIdentity} · 服务端最新修订号：
+                {serverProjectId === state.document.projectId && serverHeadRevision !== null
+                  ? serverHeadRevision
+                  : "未查询"} · CAS 基线：
+                {activeServerBaseline ?? "未建立"}
+              </p>
+              <div className="studio-version-tools">
+                <button type="button" disabled={historyBusy} onClick={() => void checkServerIdentity()}>
+                  检查登录
+                </button>
+                <button type="button" disabled={historyBusy} onClick={() => void saveServerProject()}>
+                  保存至服务端
+                </button>
+                <button type="button" disabled={historyBusy} onClick={() => void refreshServerHistory()}>
+                  查询服务端历史
+                </button>
+              </div>
+              <p className="studio-version-help">
+                服务器已有工程时，请先显式载入最新服务端版本再保存；冲突不会自动重试，草稿始终保留。
+              </p>
+              {historyBusy && <p className="studio-version-help">正在处理工程版本…</p>}
+              {serverError && <p className="studio-version-error" role="alert">{serverError}</p>}
+              {!historyBusy && visibleServerRows.length === 0 && (
+                <p className="studio-version-help">尚无已查询的服务端历史版本。</p>
+              )}
+              <ol className="studio-version-list">
+                {visibleServerRows.map((item) => (
+                  <li key={item.revision} className="studio-version-item">
+                    <div className="studio-version-heading">
+                      <strong>服务端版本 #{item.revision}</strong>
+                      <time dateTime={item.createdAt}>
+                        {new Date(item.createdAt).toLocaleString("zh-CN")}
+                      </time>
+                    </div>
+                    <code title={item.contentHash}>{item.contentHash.slice(0, 16)}…</code>
+                    <div className="studio-version-item-actions">
+                      <button type="button" disabled={historyBusy} onClick={() => void inspectServerVersion(item.revision)}>
+                        查看差异
+                      </button>
+                      <button type="button" disabled={historyBusy} onClick={() => void loadServerVersion(item.revision)}>
+                        载入
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              {serverComparison && serverInspectedVersion && (
+                <div className="studio-version-comparison" role="status">
+                  <strong>
+                    服务端版本 #{serverInspectedVersion.revision} ·
+                    {serverComparison.sameContent ? " 内容与当前一致" : " 与当前内容不同"}
+                  </strong>
+                  <p>当前：{serverComparison.current.pageCount} 页 / {serverComparison.current.nodeCount} 图元</p>
+                  <p>历史：{serverComparison.historical.pageCount} 页 / {serverComparison.historical.nodeCount} 图元</p>
+                </div>
+              )}
+              {visibleServerRows.length > 0 && serverHasMore && (
+                <button type="button" className="studio-version-more" disabled={historyBusy} onClick={() => void loadMoreServerVersions()}>
+                  加载更早服务端版本
                 </button>
               )}
             </div>

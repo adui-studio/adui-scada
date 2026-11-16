@@ -752,3 +752,11 @@ OIDC 配置解析器只在 `SCADA_OIDC_ENABLED=true` 时验证 Issuer、Client I
 浏览器 Cookie 请求固定 `credentials: same-origin`，Fetch 固定 `mode: same-origin`、`redirect: error`、`cache: no-store`、`referrerPolicy: no-referrer`。POST 请求每次从当前可读 `__Host-adui-scada-csrf` Cookie 获取格式正确且唯一的随机 CSRF Token，并写入 `X-SCADA-CSRF`；会话 Cookie 仍为 HttpOnly，不向客户端代码暴露。失败响应仅按状态返回中文领域错误，不展示任何原始上游异常、响应体或 Token。跨租户工程资源统一 404，CAS 冲突 409，网络异常不自动重试写入。
 
 本批客户端包只完成共享协议层和 Mock 测试，不改写现有 Vue/React Studio 交互，不开放工程发布/回滚、密码登录或 PLC/DCS 写入。真实 OIDC、HTTPS 同源代理、CSRF Cookie 兼容和离线草稿保留逻辑须待后续浏览器 E2E 实测；当前不能认为生产已启用服务端工程保存功能。
+
+### 第三十三批第八小批：Studio 服务端工程 CAS 会话与本地草稿隔离
+
+Vue/React Studio 使用同一个 `@adui/scada-api-client` 的 `StudioServerProjectSession` 管理本次页面会话内的服务端版本水位；此基线只在用户**实际载入服务端最新快照**（且 Core 已完成 SHA-256 校验）后建立，按 `projectId/tenantId/subjectId/revision` 绑定，不保存至 localStorage、sessionStorage 或 IndexedDB。服务端不存在工程时可以尝试创建第一版，但 404 同时可能意味着无权访问，是否允许创建仍由服务端独立 ACL 和租户唯一键决定。若已有服务端工程却未载入、用户切换、读到更新的服务器水位或 CAS 409，均拒绝追加，不能用刚查询得到的 headRevision 替代显式载入基线。
+
+服务器保存先解析独立工程副本，再检查可信会话和远程水位，最后调用共享客户端的 `appendVersion(expectedRevision,document)`；任何失败都不得调用草稿仓储的 `save/remove`、不得改变当前编辑器或自动恢复草稿。服务端版本列表提供分页摘要；查看差异使用已通过 SHA-256 校验的服务器快照与当前画布做 Core 内容比较。确认载入服务端版本时先等待 `DraftAutoSaveSession.stop()`，再调用现有 `editor.loadDocument`；不会自动修改已保存草稿。用户执行 JSON 导入、IndexedDB 草稿恢复或本地历史载入后，旧服务器 CAS 基线必须立即失效；载入较早服务器版本也不能建立覆盖最新版本的保存基线。
+
+该接口只交付受保护的工程历史版本保存，不产生正式发布指针、发布审批、回滚或 PLC/DCS 控制请求。OIDC 默认关闭且两端尚未配置真实同源 HTTPS 代理；UI 只能在完成后续身份/代理联调后作为生产功能使用。第八小批新代码的 TS6/Vite+ 和浏览器双框架专项尚待实测。

@@ -1090,3 +1090,13 @@ HTTP E2E 中的 `Health Check has failed` 以及 HTTP 503 是预期负面测试�
 该验证与前一份 `vp check`（303 文件格式/161 受检零警告错误）、`pnpm run ready`（520/520 单测，新增 Mock Fetch 15/15；NestJS E2E 40/40；退出码 0）形成第七小批工程质量验收证据。**本次日志没有独立执行 `pnpm install --lockfile-only`**，不能写成已运行；`--frozen-lockfile` 校验通过不要求额外变更锁文件。日志未输出独立的本地 `git rev-parse HEAD`，不把远程 SHA 冒充本地测试 SHA。此次仅更新验收文档，**新文档提交后的 `docs:check` 尚未执行**。
 
 未完成：React/Vue Studio 调用共享 API Client、浏览器同源代理、真实 OIDC/JWKS 身份、HTTPS Secure/SameSite Cookie/Origin/Fetch Metadata、双框架工程互通及生产工业安全。OIDC 默认关闭，工程 API 仍只在完整配置下受控启用，不开放设备写入。
+
+## 2026-11-16 · 第三十三批第八小批：React/Vue 双端服务端工程操作接线（候选，待实测）
+
+本批在第七小批共享 API Client 上新增 `packages/api-client/src/studio-session.ts`，对服务端工程保存维护**仅在当前浏览器会话有效**的 CAS 基线。新工程在服务端明确返回 404 后尝试创建；已有工程必须由用户**显式载入服务端最新版本**建立基线后才可追加。保存前对照最新远程修订号、租户和主体，服务端版本推进、身份变化、409 冲突均拒绝覆盖；网络异常不自动重试，也不访问 IndexedDB。
+
+React 的 `apps/web-react/src/studio/StudioPage.tsx` 与 Vue 的 `apps/web-vue/src/studio/StudioPage.vue` 以一致的“服务端工程”独立菜单提供检查会话、创建/追加服务端工程、分页查询版本、查看 SHA-256 校验后的内容差异与**确认后载入服务端历史**。原来的“保存草稿”“本地版本历史”保持独立；服务端操作失败不得清除、覆盖或恢复本地草稿，也不得改变当前画布。载入远程版本需先显式确认，再停止并等待本地自动保存退出后替换当前编辑内容；本地历史载入、IndexedDB 草稿恢复、JSON 导入会失效旧的服务端 CAS 基线，避免使用非当前服务器内容进行误保存。
+
+新增 `packages/api-client/test/studio-session.test.ts` 九个 Mock 测试，覆盖首次创建、缺少基线拒写、载入最新版本后 CAS、旧版本拒写、他端更新、身份变化、409 后失效基线、本地恢复重置和同一会话重复提交。测试目前是**已新增但未经仓库 Vite+ 实测的候选代码**；本次协作环境不能运行完整依赖与 Windows 本地浏览器，**没有执行新的 `vp check`、`pnpm run ready`、React/Vue 浏览器 E2E 或真实 OIDC 网络联调**。第七小批既有 520/520 单测、40/40 E2E 和冻结安装记录不能替代本批新增代码验收。
+
+服务端默认 `AppModule` 只挂健康检查，OIDC/工程 API 仍默认关闭，因而在默认开发服务器中点击服务端菜单可能得到 404；这属于既有 fail-closed 安全策略，并不代表当前已配置真实业务保存。两端 Vite 开发代理未在本批开放 `/api/v1`；真实 IdP/JWKS、HTTPS Cookie/CSRF/反向代理、双框架浏览器读写往返均待专项配置和验证。没有开放工业设备写入、发布或自动服务器保存。

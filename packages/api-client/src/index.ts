@@ -377,3 +377,7 @@ export function createScadaApiClient(options: ScadaApiClientOptions = {}): Scada
     },
   };
 }
+
+// 与 Vue/React 生命周期无关的服务端版本基线与 CAS 保存状态机。
+export { createStudioServerProjectSession, StudioServerProjectSession } from "./studio-session.ts";
+export type { ServerProjectSaveResult, ServerProjectVersion } from "./studio-session.ts";

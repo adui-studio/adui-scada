@@ -680,3 +680,10 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/verify-fresh-postgres-migrations.mjs`：从根目录本机 `adui_scada` 连接推导人工创建的 `adui_scada_fresh_*` 隔离库；确认目标为空后执行两次 Prisma 迁移部署，核对迁移登记和业务表，不创建、删除或重置数据库。
 - `scripts/verify-fresh-postgres-migrations.cases.mjs`：使用 Node.js 内置 `node:test` 验证连接来源、数据库命名、地址、端口及 Schema 拒绝策略；与通用 Vitest 测试文件命名隔离。
 - 验收命令与注意事项见 `docs/HARNESS.md`；纯逻辑单测 6/6 通过不代表真实 PostgreSQL 空库迁移已经通过。
+
+## 第三十三批第八小批 · Studio 服务端工程 UI 与共享会话逻辑
+
+- `packages/api-client/src/studio-session.ts`：框架无关的服务端 CAS 保存基线；按工程、租户、主体和显式载入的修订号约束写入，冲突失效基线，无 IndexedDB 访问。
+- `packages/api-client/test/studio-session.test.ts`：9 项 Mock API Client 会话安全测试（候选，待真实 Vitest 验收）。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：新增对应的“服务端工程”菜单，提供身份检查、服务端保存、分页历史、内容对比及确认载入；本地草稿、浏览器历史入口与原持久化逻辑不变。
+- 旧版/本地草稿恢复、JSON 导入和本地历史载入显式清理云端 CAS 基线；真实 IdP、同源 HTTPS、双框架云端 E2E 未纳入本批已验收范围。

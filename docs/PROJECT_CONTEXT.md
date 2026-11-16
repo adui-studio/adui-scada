@@ -1042,3 +1042,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 维护者 Windows 已实际执行 `pnpm install --frozen-lockfile`，覆盖 12 个 workspace，锁文件供应链策略通过，提示锁文件已是最新并跳过依赖解析，pnpm 版本 12.18.0；随后 `docs:check` 83 个 Markdown 通过、最终退出码 0。结合此前共享 API Client 15/15 Mock Fetch、全量 520/520 单测、40/40 E2E、`vp check` 303/161 零警告与 `ready` 退出码 0，第七小批的**工程质量及冻结锁文件安装验收完成**。
 
 仅有 `--frozen-lockfile` 的明确执行证据，没有 `--lockfile-only` 独立执行记录；此次文档更新后需重新执行 `docs:check`。React/Vue UI 接线、同源代理、真实 IdP/JWKS、HTTPS Cookie 与双框架浏览器互通仍待下一小批，PR #55 保持 Draft，不合并。
+
+### 2026-11-16 · 第三十三批第八小批：双框架 Studio 服务端工程操作候选代码
+
+在已验收的共享 `@adui/scada-api-client` 上新增 `StudioServerProjectSession`：必须由当前可信服务端身份与显式载入的最新修订号建立会话内 CAS 保存基线；本地 IndexedDB 修订号与服务端版本绝不混用，首次创建与版本追加失败不清理草稿、不静默覆盖画布。React/Vue 两端各新增独立“服务端工程”菜单，支持检查登录、保存服务端工程、查询分页历史、查看差异及确认后载入；保留原有本地草稿与本地版本功能。导入 JSON、恢复草稿、载入本地历史均撤销旧服务端基线，服务端载入先停止并等待本地自动保存会话结束。
+
+新增 9 项 Mock 测试候选；**尚未执行本批仓库真实 TS6 / Vite+ / 单测 / ready 与浏览器 E2E，不能把第七小批 520/520 验收当作本批通过**。真实 OIDC/JWKS、HTTPS Cookie/同源代理仍待联调，默认模块不暴露受保护路由，也没有工业写入或正式发布。PR #55 继续 Draft，不合并。
