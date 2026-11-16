@@ -11,6 +11,27 @@ import { resolveReadonlyProbeOrigins } from "./verify-oidc-https-readonly.mjs";
 const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const LOOPBACK = "127.0.0.1";
 
+const SAFE_PAGE_ERRORS = new Set([
+  "未找到工程管理入口",
+  "未找到本地草稿保存按钮",
+  "没有找到草稿操作菜单",
+  "自动保存不是关闭状态",
+  "读取测试浏览器草稿数据库失败",
+  "读取测试浏览器草稿记录失败",
+  "隔离浏览器草稿保存失败",
+  "服务端列表分页契约不正确",
+  "工程打开按钮不可用",
+  "服务器工程载入阶段返回受控错误",
+  "工程安全载入流程超时",
+]);
+const PAGE_ERROR_TYPES = new Map([
+  ["ReferenceError", "页面脚本引用异常"],
+  ["TypeError", "页面脚本类型异常"],
+  ["SyntaxError", "页面脚本语法异常"],
+  ["DOMException", "浏览器存储或 DOM 异常"],
+  ["Error", "页面脚本断言异常"],
+]);
+
 const SAFE_FAILURES = new Set([
   "工程浏览器测试仅允许本机 Keycloak 隔离 Realm",
   "工程浏览器测试必须明确使用本机隔离数据库",
@@ -25,9 +46,33 @@ const SAFE_FAILURES = new Set([
   "浏览器页面操作失败，请检查当前 Studio 状态",
 ]);
 
+/** CDP 异常只按确定的脚本错误文案或异常类别公开，禁止泄漏脚本堆栈与 Cookie。 */
+export function describeBrowserPageException(details) {
+  const description = details?.exception?.description;
+  const firstLine = typeof description === "string" ? description.split("\n", 1)[0] : "";
+  for (const known of SAFE_PAGE_ERRORS) {
+    if (firstLine === "Error: " + known || firstLine === "TypeError: " + known) {
+      return known;
+    }
+  }
+  return PAGE_ERROR_TYPES.get(details?.exception?.className) ?? "页面脚本异常（已脱敏）";
+}
+
 /** 仅输出固定的安全诊断，拒绝把异常中的 Cookie、URL 或页面数据写入终端。 */
 export function describeProjectBrowserFailure(error) {
   const message = error instanceof Error ? error.message : "";
+  if (message === "浏览器页面操作失败，请检查当前 Studio 状态" && error?.pageDiagnostic) {
+    const reason = error.pageDiagnostic;
+    if (SAFE_PAGE_ERRORS.has(reason) || [...PAGE_ERROR_TYPES.values(), "页面脚本异常（已脱敏）"].includes(reason)) {
+      return "浏览器页面操作失败：" + reason;
+    }
+  }
+  if (message === "服务端工程列表状态异常") {
+    const status = error.httpStatus;
+    return Number.isInteger(status) && status >= 100 && status <= 599
+      ? "工程列表接口返回 HTTP " + status
+      : "工程列表接口状态异常";
+  }
   if (SAFE_FAILURES.has(message)) return message;
   if (
     [
@@ -152,7 +197,11 @@ class ChromeSession {
       awaitPromise: true,
       returnByValue: true,
     });
-    if (result.exceptionDetails) throw new Error("浏览器页面操作失败，请检查当前 Studio 状态");
+    if (result.exceptionDetails) {
+      const error = new Error("浏览器页面操作失败，请检查当前 Studio 状态");
+      error.pageDiagnostic = describeBrowserPageException(result.exceptionDetails);
+      throw error;
+    }
     return result.result.value;
   }
 }
@@ -221,10 +270,13 @@ async function projectsInPage(afterProjectId) {
     cache: "no-store",
     redirect: "error",
   });
-  if (!response.ok) throw new Error("授权工程列表接口拒绝读取");
+  if (!response.ok) return { status: response.status, projects: [] };
   const data = await response.json();
   if (!Array.isArray(data) || data.length > 10) throw new Error("服务端列表分页契约不正确");
-  return data.map(({ projectId, headRevision }) => ({ projectId, headRevision }));
+  return {
+    status: response.status,
+    projects: data.map(({ projectId, headRevision }) => ({ projectId, headRevision })),
+  };
 }
 
 function pageStateInPage() {
@@ -417,6 +469,16 @@ function clickBrowserControlInPage(kind) {
   return true;
 }
 
+/** 对工程授权列表的 HTTP 状态进行受控归类，拒绝向终端带回响应正文。 */
+export function requireAuthorizedProjectPage(result) {
+  if (!result || result.status !== 200) {
+    const error = new Error("服务端工程列表状态异常");
+    error.httpStatus = result?.status;
+    throw error;
+  }
+  return result.projects;
+}
+
 async function verifyStudio(session, origin, name) {
   await session.send("Page.navigate", { url: origin + "/" });
   await waitFor(
@@ -429,7 +491,7 @@ async function verifyStudio(session, origin, name) {
   assert.equal(await session.evaluate(enterStudioInPage), true, name + " 无法进入 Studio");
   assert.equal(await session.evaluate(authenticatedInPage, origin), true, name + " 会话未通过验证");
 
-  const initial = await session.evaluate(projectsInPage);
+  const initial = requireAuthorizedProjectPage(await session.evaluate(projectsInPage));
   if (initial.length === 0) {
     throw new Error(name + " 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程");
   }
@@ -457,7 +519,9 @@ async function verifyStudio(session, origin, name) {
   assert.equal(first.prevEnabled, false);
   let paginated = false;
   if (first.nextEnabled) {
-    const next = await session.evaluate(projectsInPage, initial.at(-1).projectId);
+    const next = requireAuthorizedProjectPage(
+      await session.evaluate(projectsInPage, initial.at(-1).projectId),
+    );
     assert.equal(await session.evaluate(clickBrowserControlInPage, "next"), true);
     const second = await waitFor(async () => {
       const state = await session.evaluate(pageStateInPage);
