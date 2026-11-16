@@ -1150,3 +1150,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 PR #55 已由维护者授权 Squash 合并至 `main`，合并提交 `412a5475fd206e43e1f862b3c4d5a37cdd0e9d40` 已通过 GitHub 核验。维护者此前 Windows 运行完整 `ready`：534/534 单测、47/47 HTTP E2E、退出码 0；隔离 `adui_scada_test` 真库 `test:db` 23/23、退出码 0。这些结果仅属于**第三十三批已合并代码**，不代表本批代码通过。
 
 第三十四批第一小批新增按工程 ID 的有界列表、Core 共享查询类型、API Client 参数和响应验证，以及 Mock 单元/HTTP E2E/隔离 PostgreSQL 游标测试。原租户 ACL、OIDC 默认关闭、Vue/React 工程格式、浏览器草稿与工业只读边界保持不变。**候选尚未在 Windows 执行 Vite+、单测、真库与完整 ready**。参见 [ADR-0067](adr/0067-bounded-project-list-pagination.md)。
+
+### 2026-11-16 · 第三十四批第一小批正式合并，第二小批 Studio 工程管理候选
+
+PR #56 经维护者授权已 Squash 合并到 `main`，提交 `30aa9908fdd43953df6ce1306cdadc2ac4f5c073`。前一小批维护者 Windows `ready` 537/537 单测、49/49 HTTP E2E、退出码 0，受控隔离 `test:db` 23/23、退出码 0；不把这些结果当作第二小批的验收。
+
+本小批创建新的工程浏览 UI，Vue/React 共用 `StudioProjectBrowser` 分页游标会话；用户显式选择服务端最新版本时复用现有 SHA-256、身份和 CAS 验证，暂停自动保存，保持 IndexedDB 草稿不变；服务端未启用、未登录或无权时失败关闭，绝不静默打开工程。Vue 工程切换后同步重订阅正确的草稿来源。当前只是 GitHub 功能分支**候选代码**，真实 Windows `vp check`、`ready`、双端浏览器/UI 互通还没有执行。未修改工业网关、Prisma Schema 或设备写入权限。
