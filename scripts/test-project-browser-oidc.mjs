@@ -40,7 +40,7 @@ export function resolveProjectBrowserLab(env) {
   }
   if (
     env.NODE_EXTRA_CA_CERTS !== undefined &&
-    (!existsSync(env.NODE_EXTRA_CA_CERTS) || !resolve(env.NODE_EXTRA_CA_CERTS))
+    !existsSync(env.NODE_EXTRA_CA_CERTS)
   ) {
     throw new Error("配置的 Node.js 本机根证书无法读取");
   }
@@ -271,6 +271,34 @@ async function enableAutoSaveInPage() {
   }
 }
 
+/**
+ * 只模拟一次服务端 HEAD 比摘要更新的响应；不伪造登录身份，也不触发数据库写入。
+ * 此钩子在页面重载之前通过 CDP 预先安装，先于 API Client 捕获 Fetch。
+ */
+function installRevisionConflictFaultInPage() {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const response = await originalFetch(input, init);
+    const fault = globalThis.__aduiTestProjectRevisionFault;
+    if (!fault || !response.ok) return response;
+    const url = new URL(typeof input === "string" ? input : input.url, location.href);
+    const method = init?.method ?? (typeof input === "string" ? "GET" : input.method);
+    if (
+      url.origin !== location.origin ||
+      url.pathname !== "/api/v1/projects/" + encodeURIComponent(fault.projectId) ||
+      method !== "GET"
+    ) {
+      return response;
+    }
+    const summary = await response.clone().json();
+    fault.calls += 1;
+    return new Response(JSON.stringify({ ...summary, headRevision: summary.headRevision + 1 }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+}
+
 async function openProjectInPage(projectId, headRevision, mode) {
   const panel = document.querySelector(".studio-project-browser-panel");
   const item = [...(panel?.querySelectorAll(".studio-project-browser-item") || [])].find(
@@ -279,27 +307,9 @@ async function openProjectInPage(projectId, headRevision, mode) {
   const button = item?.querySelector("button");
   if (!button || button.disabled) throw new Error("工程打开按钮不可用");
   let confirmCount = 0;
-  let intercepted = 0;
+  const fault = { projectId, calls: 0 };
   const originalConfirm = window.confirm;
-  const originalFetch = window.fetch;
-  const target = "/api/v1/projects/" + encodeURIComponent(projectId);
-  if (mode === "conflict") {
-    window.fetch = async (input, init) => {
-      const url = new URL(typeof input === "string" ? input : input.url, location.href);
-      const method = init?.method ?? (typeof input === "string" ? "GET" : input.method);
-      if (url.origin === location.origin && url.pathname === target && method === "GET") {
-        const response = await originalFetch(input, init);
-        if (!response.ok) return response;
-        const summary = await response.clone().json();
-        intercepted += 1;
-        return new Response(JSON.stringify({ ...summary, headRevision: summary.headRevision + 1 }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      return originalFetch(input, init);
-    };
-  }
+  if (mode === "conflict") globalThis.__aduiTestProjectRevisionFault = fault;
   window.confirm = () => {
     confirmCount += 1;
     return mode === "confirm";
@@ -310,14 +320,14 @@ async function openProjectInPage(projectId, headRevision, mode) {
     while (Date.now() < until) {
       const notice = document.querySelector(".studio-notice")?.textContent ?? "";
       const error = document.querySelector('[aria-label="服务端工程版本"] [role="alert"]')?.textContent ?? "";
-      if (mode === "conflict" && intercepted > 0 && error.includes("服务端工程版本已更新")) {
-        return { confirmCount, intercepted, outcome: "conflict" };
+      if (mode === "conflict" && fault.calls > 0 && error.includes("服务端工程版本已更新")) {
+        return { confirmCount, intercepted: fault.calls, outcome: "conflict" };
       }
       if (mode === "cancel" && confirmCount > 0) {
-        return { confirmCount, intercepted, outcome: "cancel" };
+        return { confirmCount, intercepted: fault.calls, outcome: "cancel" };
       }
       if (mode === "confirm" && confirmCount > 0 && notice.includes("CAS 基线已建立")) {
-        return { confirmCount, intercepted, outcome: "confirm" };
+        return { confirmCount, intercepted: fault.calls, outcome: "confirm" };
       }
       if (error && mode !== "conflict") throw new Error("服务器工程载入阶段返回受控错误");
       await new Promise((done) => setTimeout(done, 100));
@@ -325,7 +335,7 @@ async function openProjectInPage(projectId, headRevision, mode) {
     throw new Error("工程安全载入流程超时");
   } finally {
     window.confirm = originalConfirm;
-    window.fetch = originalFetch;
+    delete globalThis.__aduiTestProjectRevisionFault;
   }
 }
 
@@ -407,12 +417,16 @@ async function verifyStudio(session, origin, name) {
   const canceled = await session.evaluate(openProjectInPage, selected.projectId, selected.headRevision, "cancel");
   assert.deepEqual(canceled, { confirmCount: 1, intercepted: 0, outcome: "cancel" });
   const afterCancel = await session.evaluate(stateInPage);
-  assert.deepEqual(afterCancel, baseline, name + " 取消载入改变了画布、草稿或自动保存");
+  assert.equal(afterCancel.canvas, baseline.canvas, name + " 取消载入改变了画布");
+  assert.deepEqual(afterCancel.drafts, baseline.drafts, name + " 取消载入修改了 IndexedDB 草稿");
+  assert.equal(afterCancel.autoSave, true, name + " 取消载入停止了自动保存");
 
   const conflict = await session.evaluate(openProjectInPage, selected.projectId, selected.headRevision, "conflict");
   assert.deepEqual(conflict, { confirmCount: 0, intercepted: 1, outcome: "conflict" });
   const afterConflict = await session.evaluate(stateInPage);
-  assert.deepEqual(afterConflict, baseline, name + " 模拟远端版本冲突改变了画布或本地数据");
+  assert.equal(afterConflict.canvas, baseline.canvas, name + " 模拟远端水位冲突改变了画布");
+  assert.deepEqual(afterConflict.drafts, baseline.drafts, name + " 模拟远端水位冲突修改了草稿");
+  assert.equal(afterConflict.autoSave, true, name + " 模拟远端水位冲突停止了自动保存");
 
   const opened = await session.evaluate(openProjectInPage, selected.projectId, selected.headRevision, "confirm");
   assert.deepEqual(opened, { confirmCount: 1, intercepted: 0, outcome: "confirm" });
@@ -469,6 +483,10 @@ async function run() {
       "真实 OIDC 登录",
       180000,
     );
+    // 必须在 React/Vue Studio 加载前安装，API Client 构造时会捕获 Fetch 函数。
+    await session.send("Page.addScriptToEvaluateOnNewDocument", {
+      source: "(" + installRevisionConflictFaultInPage.toString() + ")()",
+    });
     process.stdout.write("真实 OIDC 会话已在 React Origin 验证，开始双框架只读工程验收。\n");
     await verifyStudio(session, origins[0], "React");
     await verifyStudio(session, origins[1], "Vue");
