@@ -1058,3 +1058,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 维护者 Windows 已通过第八小批 vp check（305 格式文件、163 受检零警告）、529/529 单测（新增 CAS 9/9）、40/40 NestJS E2E、SSE 8/8、故障代理 4/4，React/Vue 双分辨率各 19/19 浏览器回归及历史安全回归；全部构建、83 Markdown、完整 ready 退出码 0。E-016 已关闭；尚未进行真正的 IdP/HTTPS 浏览器写入验收。
 
 第九小批准备共享的本机 Vite HTTPS 代理：默认关闭，开启时要求可信 OIDC、回环 Web/Nest、精确 React/Vue HTTPS Origin 和固定回调，代理 /api/v1 到回环 NestJS。协作容器 Node 22 的配置安全测试 10/10 通过，真实 Windows 全链和实际 TLS/IdP 仍待维护者执行。默认 AppModule 不开放未认证工程 API，工业设备写入仍禁止。PR #55 保持 Draft。
+
+### 2026-11-16 · 第九小批 Windows 验收归档与第十小批真实 HTTPS 前置检查
+
+维护者 Windows 复验第九小批：HTTPS 本机代理配置测试 10/10、`vp check` 308 文件格式/166 受检零警告、单元测试 529/529、NestJS HTTP E2E 40/40、SSE 客户端 8/8、故障代理 4/4、83 个 Markdown 与 React/Vue/NestJS 全部构建成功，完整 `pnpm run ready` 退出码 0。日志未包含本地 Git HEAD 的独立证据。
+
+第十小批仅新增本机 HTTPS **匿名只读** `/api/v1/auth/me` 诊断脚本和九项安全测试。离线测试属于默认 `ready`，实际 TLS 网络探针保持单独显式命令；不得将配置单测或匿名 401 响应解释为已完成 OIDC IdP、Cookie/CSRF 或服务端工程保存联调。无需改动 React/Vue Studio、NestJS Guard、Prisma、数据库迁移或共享 API Client。真实本机 TLS、IdP/JWKS、隔离测试租户与跨框架服务端往返仍待维护者单独验收。PR #55 保持 Draft，Assignee 继续指派 `@adui-dev`，未获授权不合并。

@@ -1118,3 +1118,11 @@ React 的 `apps/web-react/src/studio/StudioPage.tsx` 与 Vue 的 `apps/web-vue/s
 新增 scripts/oidc-https-dev-proxy.mjs 与 .d.mts 类型声明，Vue/React Vite serve 仅在 SCADA_OIDC_DEV_HTTPS_ENABLED=true 时读取本机 TLS 文件，并代理精确的 /api/v1 路由到固定回环 NestJS。必须非生产、Web/NestJS 绑定 127.0.0.1、可信 OIDC 已启用、React/Vue 独立端口与双 HTTPS Origin 白名单精确匹配，回调使用预注册固定路径；不允许不安全 HTTP OIDC 或模拟 API 冲突。默认 HTTP /demo 模式和生产构建不变，无 CORS 开放或 PLC 写入。
 
 已执行：协作容器 Node 22 中两个脚本 node --check 通过，源文件 Git Blob 一致性核对通过，10/10 项 Node 内置配置安全测试通过。尚未执行仓库 TypeScript 6、Vite+、完整 ready、真实 TLS/IdP 登录、双框架工程 API 写入往返。由于本次仅新增候选代码，**不得声称真实身份或生产安全验收完成**。最新文档提交本身也需另外执行 docs:check。
+
+## 2026-11-16 · 第三十三批第九小批 Windows 验收与第十小批 HTTPS 只读探针
+
+维护者提交的 Windows PowerShell 完整日志确认：`pnpm run test:oidc:proxy` **10/10**，`vp check` **308 个文件格式正确、166 个受检文件零警告/错误**；完整 `pnpm run ready` 包含 Vitest **48/48 文件、529/529 项**、SSE 客户端 **8/8**、故障代理 **4/4**、HTTPS 配置安全测试 **10/10**、NestJS E2E **40/40**、83 个 Markdown 校验和 React/Vue/NestJS 构建，最终 `$LASTEXITCODE` **0**。日志未独立记录 `git rev-parse HEAD`，不将远程 SHA 冒充为 Windows 运行时提交指纹。
+
+第十小批新增 `scripts/verify-oidc-https-readonly.mjs` 与同目录安全用例，只使用可信 TLS 发起两个回环 HTTPS Origin 的匿名 `GET /api/v1/auth/me`。拒绝非本机或不安全配置、证书校验失败、跳转、非 401、HTML 回退、无效 JSON 及不符合现有 NestJS 未认证响应契约。请求不带 Cookie、不会登录或写入数据库。新增独立离线测试命令 `pnpm run test:oidc:https:readonly` 并纳入 `ready`；真实网络检查 `pnpm run verify:oidc:https:readonly` 必须单独显式运行，**不纳入默认 ready**。
+
+协作容器 Node.js 22 对候选脚本执行了语法检查和 Node 内置测试，**9/9 通过**。本次新增文件入库后的 Windows `vp check`、完整 `ready`、实际 TLS 握手、真实 IdP 登录、Secure Cookie/CSRF 和 React/Vue 服务端工程版本往返**均待独立验收**。第九小批的工程质量链通过不等于第十小批或真实认证通过。默认 OIDC 关闭，PR #55 保持 Draft，不开放匿名写入或设备写入。

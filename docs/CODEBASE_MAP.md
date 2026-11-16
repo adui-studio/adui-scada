@@ -695,3 +695,10 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - apps/web-react/vite.config.ts、apps/web-vue/vite.config.ts：仅显式开启的 Vite serve 增加 HTTPS 与 /api/v1 同源代理，原 /demo 不变。
 - .env.example、scripts/check-env-config.mjs：新增关闭状态及证书文件空占位，并维持根目录唯一 .env 校验。
 - docs/HARNESS.md：维护者真实 HTTPS、IdP、同源 Cookie、React→服务端→Vue 往返验收步骤；尚未实际联调。
+
+### 第三十三批第十小批：OIDC 本机 HTTPS 匿名只读诊断
+
+- `scripts/verify-oidc-https-readonly.mjs`：从仓库根 `.env` 读取联调开关和已登记的两个 HTTPS Origin，仅向 `127.0.0.1` 发起无 Cookie 的 `GET /api/v1/auth/me`；使用 Node 原生证书校验，并拒绝重定向、HTML 回退或非预期 401 JSON。
+- `scripts/verify-oidc-https-readonly.cases.mjs`：九项本机目标、开关、证书前置契约对应的离线 Mock 请求测试；不访问真实 IdP、PostgreSQL 或工业设备。
+- 根 `package.json`：`test:oidc:https:readonly` 纳入 `ready`；`verify:oidc:https:readonly` 为显式人工真实网络检查，不纳入默认质量链。
+- `docs/HARNESS.md`：真实 TLS 只读联调的前置配置、Windows 操作和失败即停止规则。本批不更改 Vue/React 应用业务行为、NestJS 身份策略或数据库 Schema。

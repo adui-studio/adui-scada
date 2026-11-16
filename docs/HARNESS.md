@@ -1750,3 +1750,39 @@ SCADA_OIDC_ISSUER、SCADA_OIDC_CLIENT_ID、SCADA_OIDC_CLIENT_SECRET、SCADA_OIDC
 使用**非生产测试租户和工程**验证 React 创建首版 → Vue 查询版本并载入最新快照 → Vue CAS 追加 → React 显式载入最新版本 → 另一会话推进后的 409 拒写及 IndexedDB 草稿保护。另验证 401/403/404、无效 CSRF、网络断开、代理返回 HTML 的错误边界。比对 ScadaDocument、版本修订号和 SHA-256，不执行工业设备写入/正式发布。默认 Vite 浏览器自动化使用 HTTP URL；在专项 HTTPS 模式下不能把它当作真实登录/工程往返证据。测试后恢复默认关闭开关与普通 Demo 环境。
 
 **当前仅新增受控配置及其 10 项 Node 安全测试；真实 Windows Vite+、TLS、IdP、HTTPS Cookie 和双框架服务端往返仍待维护者执行。**
+
+### 第三十三批第十小批：OIDC HTTPS 同源匿名只读探针
+
+本专项先验证 React/Vue 两个独立 HTTPS Origin 是否将固定 `/api/v1/auth/me` 请求送达启用 OIDC 的 NestJS，并确认**未登录**时得到现有安全 Guard 返回的 `401 application/json`（受控中文错误），而不是 Vite 的 HTML 回退、302 跳转或连接失败。
+
+离线安全测试**无需证书、数据库或 IdP**，已经进入默认 `ready`：
+
+```powershell
+pnpm run test:oidc:https:readonly
+if ($LASTEXITCODE -ne 0) { throw "HTTPS 匿名只读探针安全测试失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码质量检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+Write-Host "最终退出码：$LASTEXITCODE"
+```
+
+真实网络检查**必须独立执行**。在仓库外准备受信任的本机 TLS 证书及私钥（证书 SAN 包含 IP `127.0.0.1`），按上一节配置可信 OIDC Issuer、精确注册回调、双 Origin 与隔离数据库；保留 `SCADA_OIDC_ENABLED=true`、`SCADA_OIDC_DEV_HTTPS_ENABLED=true`，关闭不安全回环及模拟 API 开关。分别启动：
+
+```powershell
+pnpm run dev:server
+pnpm run dev:react
+pnpm run dev:vue
+```
+
+上述三条命令应在**三个终端**运行。然后在第四个终端执行：
+
+```powershell
+pnpm run verify:oidc:https:readonly
+if ($LASTEXITCODE -ne 0) { throw "真实本机 HTTPS 匿名只读检查失败" }
+```
+
+探针只对已登记的两套 `https://127.0.0.1:<端口>` 发起 GET，不发送 Cookie、不跟随重定向，不接受 HTTP/跨站地址，不访问工程写接口；Node.js 将正常验证 TLS 链和主机名。若证书未被 Node 信任，应修复本机信任链或在受控环境中配置 Node 的可信 CA，**禁止** `NODE_TLS_REJECT_UNAUTHORIZED=0`、`--insecure`、禁用身份 Guard 或为通过探针伪造 IdP。探针错误仅打印受控中文说明，不输出密钥、Cookie 或授权码。
+
+**判定范围**：两个来源均返回预期的匿名 401 JSON，仅说明本机 TLS 连接、Vite API 代理和 NestJS 未登录拒绝路径连通；不代表真实 OIDC 登录、Cookie/CSRF、权限与跨框架工程版本互通成功。完成后恢复默认关闭的联调开关，不对生产数据库运行测试。
