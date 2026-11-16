@@ -1218,3 +1218,11 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 维护者 Windows 真实运行 `pnpm run test:docker:db` **9/9 通过**；`pnpm run docker:db:status` 使用新 Docker 随机凭据连接 `127.0.0.1:15432/adui_scada`，Prisma 报 `Database schema is up to date!` 且成功输出中文完成消息。单独 `vp check`：320 个文件格式正确、177 个受检文件零警告/Lint/类型错误；单独 `pnpm run docs:check`：84 份 Markdown 通过。但本次 `pnpm run ready` 在依赖/共享配置/环境检查通过后，`pnpm run messages:check` 报 `scripts/init-docker-db.mjs:104：日志文案缺少中文`，整条 `ready` 退出码 1，**后续生成、单测、E2E 与构建没有在本次 ready 中执行**。
 
 检查仓库源码确认：原有静态检查器在日志调用所在行同时检出 `console.log`、英文 `"status"` 且没有中文，因此尽管分支函数实际返回中文，也被判为违规。E-022 仅将计算分支与 `console.log(result)` 分开，不修改检查器、测试用例、Prisma 凭据、数据库或 Docker。候选已用原检查器的日志行正则核对，不再触发该条规则；**Windows 修复后 `messages:check`、`vp check`、`docs:check`、完整 `ready` 仍待实际运行与退出码确认**。
+
+## 2026-11-16 · 第三十三批 HTTP 安全边界回归候选
+
+维护者提供的最新 Windows 日志确认 E-022 修复后完整 `ready` 退出码为 0，单测 530/530、NestJS E2E 42/42、两个 Web 及 NestJS 构建成功。后续由维护者在新 Docker 环境中成功提交并只读核对 OIDC 身份映射，在 React/Vue 两端实际读取相同可信主体，并完成 Cookie 属性、React CSRF 缺失/错误拒绝、合法注销及 Vue 跨端 401 验收；React/Vue 服务端工程历史、CAS 冲突与 IndexedDB 草稿保护六项流程亦得到维护者人工确认。以上不代表生产安全验收完成。
+
+本轮最小测试补丁只补充 `apps/server/test/oidc-auth.controller.e2e-spec.ts` 的三项 HTTP 层安全回归：不可信 Origin、缺失或非 `same-origin` 的 Fetch Metadata、Bearer 与浏览器 Cookie 混用。拒绝请求须为 403/401 且不得调用撤销服务，审计须输出固定失败原因码；不修改正式 Guard、会话、Cookie、数据库或工程 API。
+
+**尚待 Windows 验收**：本测试候选的 `pnpm run test:e2e:server`、`vp check`、`pnpm run docs:check` 和完整 `pnpm run ready` 均未在维护者机器执行。旧 Session 令牌持久化撤销、会话过期、跨租户 ACL 及生产反向代理属于独立专项；不得把 Mock E2E 当作真实数据库验收。

@@ -1124,3 +1124,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 ### 2026-11-16 · Docker 数据库状态真实验收成功、ready 在中文日志门禁被阻断（E-022）
 
 维护者本机 `test:docker:db` 已 9/9 通过，`docker:db:status` 对 15432 端口的 `adui_scada` 业务库真实返回最新迁移状态（共 4 项），`vp check` 320/177 零警告，`docs:check` 84 个 Markdown 通过；但本轮 `ready` 在 `messages:check` 发现 `scripts/init-docker-db.mjs` 内包含英文 `"status"` 的单行 `console.log`，未进入本轮后续单元测试、E2E 或构建。E-022 最小修复只拆分分支计算与中文结果输出，复验后方可宣称完整 `ready` 通过。OIDC 全新 Keycloak 用户绑定与真正 HTTPS 认证尚未完成验收。
+
+### 2026-11-16 · 第三十三批主业务闭环通过，继续 HTTP 安全收尾
+
+维护者已提供 E-022 修复后完整 `ready` 退出码 0 的 Windows 日志，且实际通过新 Keycloak 用户身份绑定、React/Vue 双 HTTPS 认证、Cookie 安全属性、CSRF 拒绝和跨端注销浏览器检查；服务端工程创建/历史版本/CAS 409/IndexedDB 草稿保护六项也由维护者确认通过。详细实测与候选补测边界记录于 `docs/VALIDATION.md`。
+
+下一小批不修改 Guard 或数据库，仅向既有 NestJS OIDC HTTP E2E 增加跨 Origin、异常 Fetch Metadata、Bearer/Cookie 混用拒绝回归。候选必须先经 Windows `test:e2e:server`、`vp check`、`docs:check` 和 `ready` 复验；真实旧 Session 凭据持久化撤销、跨租户 ACL、过期及工业生产安全另行专项验收。

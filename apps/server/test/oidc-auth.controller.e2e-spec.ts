@@ -266,6 +266,73 @@ describe("OIDC BFF 认证 HTTP 接口（端到端）", () => {
     expect(revocations).toHaveLength(before);
   });
 
+  it("真实 HTTP 拒绝不可信 Origin，即使具有正确的 CSRF 凭据", async () => {
+    const before = revocations.length;
+    const response = await request(app.getHttpServer())
+      .post("/api/v1/auth/logout")
+      .set(
+        "Cookie",
+        `${SCADA_SESSION_COOKIE_NAME}=${SESSION_TOKEN}; ${SCADA_CSRF_COOKIE_NAME}=${CSRF_TOKEN}`,
+      )
+      .set("Origin", "https://untrusted.example.org")
+      .set("Sec-Fetch-Site", "same-origin")
+      .set("X-SCADA-CSRF", CSRF_TOKEN)
+      .expect(403);
+
+    expect(response.status).toBe(403);
+    expect(revocations).toHaveLength(before);
+    expect(auditRecords.at(-1)).toMatchObject({
+      action: "session.authenticate",
+      outcome: "denied",
+      reason: "origin_rejected",
+    });
+  });
+
+  it("真实 HTTP 拒绝缺失、同站跨源或跨站 Fetch Metadata，且不撤销会话", async () => {
+    const cookie =
+      `${SCADA_SESSION_COOKIE_NAME}=${SESSION_TOKEN}; ${SCADA_CSRF_COOKIE_NAME}=${CSRF_TOKEN}`;
+    const before = revocations.length;
+    const sites: Array<string | null> = [null, "same-site", "cross-site"];
+
+    for (const site of sites) {
+      let probe = request(app.getHttpServer())
+        .post("/api/v1/auth/logout")
+        .set("Cookie", cookie)
+        .set("Origin", "https://scada.example.org")
+        .set("X-SCADA-CSRF", CSRF_TOKEN);
+
+      if (site !== null) {
+        probe = probe.set("Sec-Fetch-Site", site);
+      }
+
+      const response = await probe.expect(403);
+      expect(response.status).toBe(403);
+      expect(revocations).toHaveLength(before);
+      expect(auditRecords.at(-1)).toMatchObject({
+        action: "session.authenticate",
+        outcome: "denied",
+        reason: "fetch_metadata_rejected",
+      });
+    }
+  });
+
+  it("真实 HTTP 拒绝同时使用 Bearer 与 Session Cookie 的身份凭据", async () => {
+    const before = revocations.length;
+    const response = await request(app.getHttpServer())
+      .post("/api/v1/auth/logout")
+      .set("Authorization", `Bearer ${SESSION_TOKEN}`)
+      .set("Cookie", `${SCADA_SESSION_COOKIE_NAME}=${SESSION_TOKEN}`)
+      .expect(401);
+
+    expect(response.status).toBe(401);
+    expect(revocations).toHaveLength(before);
+    expect(auditRecords.at(-1)).toMatchObject({
+      action: "session.authenticate",
+      outcome: "denied",
+      reason: "ambiguous_credentials",
+    });
+  });
+
   it("Bearer 兼容路径可注销当前会话且不依赖 Cookie CSRF", async () => {
     const response = await request(app.getHttpServer())
       .post("/api/v1/auth/logout")
