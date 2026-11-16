@@ -64,7 +64,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
   void it("关闭可信 OIDC 或允许不安全回环时拒绝执行", () => {
     assert.throws(
       () => resolveProjectBrowserLab({ ...sample, SCADA_OIDC_ENABLED: "false" }),
-      /必须显式启用可信 OIDC 开发代理/,
+      /只读 HTTPS 探针要求显式启用可信 OIDC 开发代理/,
     );
     assert.throws(
       () => resolveProjectBrowserLab({ ...sample, SCADA_OIDC_ALLOW_INSECURE_LOOPBACK: "true" }),

@@ -199,6 +199,15 @@
 - **验证**：修复候选已按仓库原有单行扫描正则进行静态检查，未发现该文件触发相同规则的日志。**修复后的 Windows `messages:check`、`vp check`、`docs:check` 和完整 `ready` 尚待维护者重新执行**，不能宣称最终质量链已通过。
 - **证据**：维护者 Windows 原始 `ready` 失败日志、PR #55、`scripts/init-docker-db.mjs`、`scripts/check-chinese-messages.mjs`、`docs/VALIDATION.md`。
 
+### E-023 · OIDC 配置保护测试与共享校验的中文异常文案不一致（第三十四批第三小批）
+
+- **现象**：维护者 2026-11-16 在 Windows 执行 `pnpm run test:projects:oidc:config`，7 项中 6 项通过、1 项失败；`ready` 在相同测试处退出码 1。失败信息明确显示 `assert.throws` 的期望正则是 `/必须显式启用可信 OIDC 开发代理/`，但共享 `resolveReadonlyProbeOrigins` 实际抛出“只读 HTTPS 探针要求显式启用可信 OIDC 开发代理”。
+- **根因**：新增浏览器环境测试自行编写错误文案断言，没有以已存在且复用的 `scripts/verify-oidc-https-readonly.mjs` 为准；共享安全校验已经正确拒绝 `SCADA_OIDC_ENABLED=false`，失败只来自断言文本不匹配。
+- **修复候选**：只调整 `scripts/test-project-browser-oidc.cases.mjs` 中这一处 `assert.throws` 正则，匹配共享校验已有的完整中文文案。保留测试用例数、其他全部拒绝断言和真实安全校验逻辑，不修改 OIDC/TLS/数据库白名单或任何业务代码。
+- **避免**：测试复用共享验证函数时，先核对其当前抛错契约，不自行把“要求”改写为“必须”等近义词；涉及固定错误文案的检查应同时核对正反两种配置路径，并执行离线测试后再报告 `ready` 状态。
+- **验证**：维护者修复前原始日志确认 `vp check` 328 格式文件、183 受检零警告，544/544 单测通过，新增 OIDC 离线检查 6/7；`ready` 退出码 1，其后的 HTTP E2E、文档与构建阶段未运行。**修复后的 Windows `test:projects:oidc:config`、`vp check`、`docs:check` 与完整 `ready` 尚待重新验收，不得标为已通过**。
+- **证据**：维护者 2026-11-16 Windows 原始验收日志、PR #58、`scripts/test-project-browser-oidc.cases.mjs`、`scripts/verify-oidc-https-readonly.mjs` 及 `docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

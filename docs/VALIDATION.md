@@ -1276,3 +1276,9 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 基于 PR #57 合并提交 `c426d26855d3d707a75869f8c770b65e8b55c82f` 新增 `test:projects:oidc:config`（7 项离线安全配置用例并纳入 `ready`）以及需人工完成可信 Keycloak 登录的 `test:projects:oidc:browser`。使用 Chrome/Edge 临时 Profile、Node 可信 CA、真实 React/Vue HTTPS Origin 和有权限的隔离 Lab 工程。测试读取列表与修订号，确认两套 Studio 前后页状态（有足量授权工程时），取消打开与模拟 GET 水位冲突时不得改画布、自动保存和已保存草稿；确认载入最新版本后须具有可见 CAS 基线，暂停自动保存且保存前后 IndexedDB 草稿摘要一致。另验证服务端工程不会被新增或覆盖，浏览器 Profile 结束后清理。
 
 **当前仅提交候选源代码与测试，并未在维护者 Windows 实际运行**：`pnpm run test:projects:oidc:config`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`、`pnpm run ready` 及交互式 `pnpm run test:projects:oidc:browser` 全部待执行。不得把 PR #57 的 544/544 单测、49/49 E2E、76/76 通用浏览器基础回归或维护者人工验收冒充为本次新增脚本已执行。配置检查与登录专项不能代替生产 TLS/IdP/数据库安全评估；水位竞争只在浏览器读取响应中模拟，不是实数据库事务冲突。
+
+## 2026-11-16 · 第三十四批第三小批 Windows 首次质量链失败与 E-023 最小修复候选
+
+维护者本机原始日志：`pnpm run test:projects:oidc:config` **7 项中 6 通过、1 失败**，报 `assert.throws` 的正则 `/必须显式启用可信 OIDC 开发代理/` 与共享 HTTPS 探针真实异常“只读 HTTPS 探针要求显式启用可信 OIDC 开发代理”不一致。随后 `vp check` **328 个文件格式正确、183 个受检文件零警告零错误**；`pnpm run ready` 在相同新增离线安全测试处终止，退出码 **1**。其前置质量环节、单测 **49/49 文件、544/544 项**、SSE / OIDC / Docker 的其他离线检查均通过；**本次 `ready` 没有执行到后续 NestJS HTTP E2E、`docs:check` 和 React/Vue/NestJS 构建，不能声称完整通过**。
+
+排查确认拒绝非法配置的生产逻辑正常执行，问题仅在测试断言错用了“必须”而不是实际共享错误的“要求”。E-023 修复候选仅使 `scripts/test-project-browser-oidc.cases.mjs` 中该正则与真实共享异常一致，**不修改** `resolveReadonlyProbeOrigins`、业务接口、Keycloak、数据库或 TLS 安全策略。当前尚无修复后 Windows 命令退出码。维护者需依次重跑 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check` 和完整 `pnpm run ready`；交互式 `test:projects:oidc:browser` 仍属独立待执行验收，离线 7/7 不能替代真实 OIDC 登录。
