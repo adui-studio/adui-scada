@@ -755,3 +755,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/web-react/src/studio/ServerProjectBrowser.tsx` 与 `apps/web-vue/src/studio/ServerProjectBrowser.vue`：双端对等的独立工具栏“工程管理”弹层，只读取授权工程摘要，提供打开前的显式操作；`packages/tailwind/src/studio.css` 共享工业品牌主题样式。
 - `apps/web-react/src/studio/StudioPage.tsx` 与 `apps/web-vue/src/studio/StudioPage.vue`：协调原有 `StudioServerProjectSession.readVersion`、用户确认、`pauseAutoSave`、`editor.loadDocument`、`acceptLoadedVersion` 和按工程重新读取草稿状态；取消与远端修订变化均不覆盖本地画布。
 - 未修改公共工程 Schema、NestJS 路由、OIDC 登录事务、Prisma Schema/迁移或任何工业设备写入。
+
+### 第三十四批第三小批 · 双端工程管理 OIDC 浏览器测试
+
+- `scripts/test-project-browser-oidc.mjs`：仅在本机隔离 OIDC HTTPS Lab 下执行，维护者手动在临时 Chrome/Edge 完成真实 OIDC 登录。验证 React/Vue 授权工程列表、分页（足量时）、明确取消、预加载的只读 GET 水位故障注入、确认载入、可见 CAS 基线、自动保存停写与 IndexedDB 原草稿不变。无需第三方浏览器依赖，不访问正式工业设备，不执行服务端工程 POST；失败诊断固定白名单脱敏。
+- `scripts/test-project-browser-oidc.cases.mjs`：纯离线 Node 测试，验证两套固定 HTTPS Origin、本机 Keycloak Issuer、回环 Lab PostgreSQL、证书与生产/不安全选项拒绝；已纳入 `ready`。
+- 根 `package.json`：新增 `test:projects:oidc:config` 与交互式 `test:projects:oidc:browser`，后者永不加入默认质量链，避免 CI 自动登录或连接真实数据库。

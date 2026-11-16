@@ -2051,3 +2051,56 @@ if ($LASTEXITCODE -ne 0) { throw "本机 Docker Prisma 状态检查失败" }
 ```
 
 `docker:db:status` 的真实 Windows 退出码与完整 `ready` 在补丁提交后仍待维护者复验。旧根 `.env` 还含曾经公开的数据库、OIDC Client/事务密钥与过期证书路径，宿主 NestJS 联调前必须在本机受控同步到新 Docker 凭据，并进行轮换；禁止将实际值复制到仓库、Issue、测试和日志中。
+
+## 第三十四批第三小批 · 真实 OIDC 双框架工程浏览器专项（需交互、独立于 ready）
+
+在 PR #57 双框架工程管理已合并的基础上，新增隔离浏览器专项：
+
+```powershell
+# 先运行纯离线配置保护；该命令已纳入 ready
+pnpm run test:projects:oidc:config
+if ($LASTEXITCODE -ne 0) { throw "OIDC 工程管理配置保护测试失败" }
+
+# 必须先在当前 PowerShell 进程启动 Node 之前建立可信证书路径
+$caDir = & mkcert -CAROOT
+if ($LASTEXITCODE -ne 0) { throw "未找到 mkcert 根证书目录" }
+$env:NODE_EXTRA_CA_CERTS = Join-Path $caDir "rootCA.pem"
+
+# 本机 dev:server、dev:react、dev:vue 均已启动 HTTPS OIDC 配置；
+# Keycloak 用户应为无管理员权限的已显式预绑定测试主体
+pnpm run test:projects:oidc:browser
+Write-Host "工程管理 OIDC 浏览器专项退出码：$LASTEXITCODE"
+```
+
+必须在运行之前人工核对根 `.env` 的 `SCADA_OIDC_ENABLED=true`、`SCADA_OIDC_DEV_HTTPS_ENABLED=true`、`SCADA_OIDC_ISSUER` 指向本机 `adui-scada` Realm、两套精确 HTTPS Origin 和唯一回调、`SCADA_DATABASE_URL` 仅指向本机隔离 `adui_scada` 或 `adui_scada_oidc_lab` 数据库。脚本内部再次执行目标白名单校验；真实服务端的进程配置仍需维护者独立核对，不能只凭根文件推断。禁止 `NODE_TLS_REJECT_UNAUTHORIZED=0`、忽略浏览器 TLS 错误、在命令行/PR 输入真实密钥、随意清理数据库卷或使用正式身份。
+
+执行后会启动全新的**非无头** Chrome/Edge 临时 Profile，并打开真实 OIDC 登录；维护者直接在浏览器界面用普通测试用户完成登录，脚本才会继续；无需在终端粘贴密码。要求隔离 Lab 内至少有 **1 个**当前主体获 `project:read` 权限的工程，超过 10 个才能真实覆盖有数据的上一页/下一页。验证 React/Vue 同源身份和授权列表、取消打开、模拟修订水位冲突、确认打开建立 CAS 可见基线、暂停自动保存及 IndexedDB 原草稿不变。只修改**临时测试浏览器的 IndexedDB**，不执行任何服务端工程写 API；OIDC 登录本身仍会在隔离 Lab 创建正常短期事务。成功与失败都尝试关闭浏览器并删除临时 Profile。
+
+**重要边界**：该浏览器脚本**不属于** `pnpm run ready`，后者仅自动运行 `test:projects:oidc:config` 的纯离线保护测试；真正的 Keycloak 登录需要操作者参与。版本冲突只通过浏览器 GET 响应故障模拟，不等于真实双会话并发 CAS 409 数据库验证。真实工业 PLC/DCS、生产 Keycloak、企业证书、生产数据库与正式发布 API 均不在本批验收范围。
+
+### 第三十四批第三小批 · OIDC 登录后浏览器测试故障定位（E-024）
+
+`test:projects:oidc:browser` 中的浏览器使用临时隔离 Profile，测试失败后关闭 Chrome/Edge 并清理目录，这是保护短期 OIDC Cookie 的预期行为。确认日志已出现“真实 OIDC 会话已在 React Origin 验证”后，若进一步失败，应看**最后一个**“React/Vue：正在验证…”阶段及受控诊断，不应再次误判为登录失败或修改 Keycloak 凭据。脚本只会报告已知中文页面异常、JS 异常类别或工程列表 HTTP 状态码，不打印 CDP 堆栈、Cookie、Token、数据库凭据。
+
+在受控本机隔离 Lab 中，真实工程列表要求测试主体有至少一个 `project:read` 授权；确认打开历史快照还需要同一工程的 `version:read`。若没有相应授权，请先由维护者根据现有安全流程核对，不应从测试脚本新增工程、权限或数据库记录。建议在修复后先执行离线 10 项与 `ready`，然后在维护者实际浏览器重新运行：
+
+```powershell
+pnpm run test:projects:oidc:config
+if ($LASTEXITCODE -ne 0) { throw "工程浏览器离线配置回归失败" }
+pnpm run test:projects:oidc:browser
+Write-Host "真实 OIDC 工程浏览器专项退出码：$LASTEXITCODE"
+```
+
+真实登录窗口不保留；失败原因仍可能是缺少权限、API 响应、页面运行时或浏览器测试断言，需要使用最新**脱敏**阶段日志区分，不能仅凭质量链通过宣称 OIDC 端到端已通过。
+
+### 第三十四批第三小批 · CDP 页面状态作用域修复（E-025）
+
+维护者 Windows 在最新 OIDC 专项中成功完成 Keycloak 登录、React 授权工程列表和分页，但在临时 IndexedDB 草稿阶段遭遇 `ReferenceError`；排查发现原 `stateInPage` 经 `function.toString()` 发送到浏览器时，错误引用仅存在于 Node 中的 `readBrowserDraftsInPage`。目前已将画布状态/草稿哈希读取拆分为两次**各自自包含的浏览器 CDP 调用**，在 Node 层合并原有断言，不调整临时 Profile 自动清理。
+
+维护者同步 PR #58 最新提交后，先运行 `pnpm run test:projects:oidc:config`（新增一项序列化边界回归，预计共 11 项），`vp check`、`pnpm run docs:check`、`pnpm run ready`；随后在本机可信 OIDC HTTPS Lab 上手动登录测试窗口，运行 `pnpm run test:projects:oidc:browser`，继续检查 React 与 Vue 的取消打开、模拟水位冲突、确认载入、自动保存暂停与 IndexedDB 原草稿哈希一致。浏览器关闭仍是安全清理，失败退出码不属于通过。
+
+### 第三十四批第三小批 · 模拟冲突与确认载入连续执行时的测试状态门禁（E-026）
+
+真实浏览器的“模拟远端水位冲突”会让 Studio **有意显示**冲突错误；同一次测试的下一步“确认打开最新版本”不能将该历史错误作为本次失败证据。测试现在记录点击前错误，在观察到新操作的“正在处理工程版本”或错误变化后，才判断新请求的错误（且不能处于忙碌状态）。真正的失败仍应退出非零；真正的成功仍需确认提示与 CAS 基线建立，且不得覆盖 IndexedDB 原草稿。新增两项正反测试，离线预计共 **13** 项。
+
+请先同步 PR #58 最新 HEAD，运行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`，再在可信本机 Lab 中运行 `pnpm run test:projects:oidc:browser`，双端专项成功后再运行完整 `pnpm run ready`。浏览器关闭始终是安全清理行为，须以终端退出码和 React/Vue 每个阶段结果判断验收；当前补丁尚待实测。

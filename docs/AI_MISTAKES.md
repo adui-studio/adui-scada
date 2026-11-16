@@ -199,6 +199,42 @@
 - **验证**：修复候选已按仓库原有单行扫描正则进行静态检查，未发现该文件触发相同规则的日志。**修复后的 Windows `messages:check`、`vp check`、`docs:check` 和完整 `ready` 尚待维护者重新执行**，不能宣称最终质量链已通过。
 - **证据**：维护者 Windows 原始 `ready` 失败日志、PR #55、`scripts/init-docker-db.mjs`、`scripts/check-chinese-messages.mjs`、`docs/VALIDATION.md`。
 
+### E-023 · OIDC 配置保护测试与共享校验的中文异常文案不一致（第三十四批第三小批）
+
+- **现象**：维护者 2026-11-16 在 Windows 执行 `pnpm run test:projects:oidc:config`，7 项中 6 项通过、1 项失败；`ready` 在相同测试处退出码 1。失败信息明确显示 `assert.throws` 的期望正则是 `/必须显式启用可信 OIDC 开发代理/`，但共享 `resolveReadonlyProbeOrigins` 实际抛出“只读 HTTPS 探针要求显式启用可信 OIDC 开发代理”。
+- **根因**：新增浏览器环境测试自行编写错误文案断言，没有以已存在且复用的 `scripts/verify-oidc-https-readonly.mjs` 为准；共享安全校验已经正确拒绝 `SCADA_OIDC_ENABLED=false`，失败只来自断言文本不匹配。
+- **修复候选**：只调整 `scripts/test-project-browser-oidc.cases.mjs` 中这一处 `assert.throws` 正则，匹配共享校验已有的完整中文文案。保留测试用例数、其他全部拒绝断言和真实安全校验逻辑，不修改 OIDC/TLS/数据库白名单或任何业务代码。
+- **避免**：测试复用共享验证函数时，先核对其当前抛错契约，不自行把“要求”改写为“必须”等近义词；涉及固定错误文案的检查应同时核对正反两种配置路径，并执行离线测试后再报告 `ready` 状态。
+- **验证**：维护者修复前原始日志确认 `vp check` 328 格式文件、183 受检零警告，544/544 单测通过，新增 OIDC 离线检查 6/7；`ready` 退出码 1，其后的 HTTP E2E、文档与构建阶段未运行。**修复后的 Windows `test:projects:oidc:config`、`vp check`、`docs:check` 与完整 `ready` 尚待重新验收，不得标为已通过**。
+- **证据**：维护者 2026-11-16 Windows 原始验收日志、PR #58、`scripts/test-project-browser-oidc.cases.mjs`、`scripts/verify-oidc-https-readonly.mjs` 及 `docs/VALIDATION.md`。
+
+### E-024 · 真实 OIDC 登录后浏览器阶段异常被统一脱敏而不可定位（第三十四批第三小批）
+
+- **现象**：维护者在 Windows 执行交互式 `pnpm run test:projects:oidc:browser`，真实 Keycloak 登录后出现“真实 OIDC 会话已在 React Origin 验证”，紧接着报告“浏览器页面操作失败，请检查当前 Studio 状态”，退出码 **1**；浏览器窗口被测试的 `finally` 关闭，未进入 Vue 验收。
+- **已确认原因**：`ChromeSession.evaluate` 对所有 CDP `Runtime.evaluate.exceptionDetails` 都转换为同一个固定字符串，并且 `projectsInPage` 对任何非 2xx HTTP 直接抛出页面内部错误，终端既看不到所处测试阶段，也不能判断是否是工程列表的 401/403/404。**真实页面抛出的具体异常仍待新诊断日志确认**，不能猜测为认证失败、数据库故障或工程 ACL 问题。
+- **修复候选**：继续在失败后清理隔离临时浏览器 Profile，不保持含有有效 Cookie 的调试窗口；对 CDP 错误只识别已知固定中文页面异常或 JavaScript 错误**类别**（不转发异常原文/堆栈/URL），对列表 HTTP 只返回状态数字；React/Vue 分别输出静态步骤标记，缺少授权工程时显示固定可执行提示。增加离线测试确保未知错误、私密 Cookie 与 Token 不会出现在诊断中。
+- **避免**：新建需要真实登录的浏览器验收脚本时，必须在每个外部请求、页面导航和核心断言阶段提供可定位但脱敏的诊断；用户身份成功不能推导出已授予 `project:read` 和 `version:read`。操作开始前核对隔离 Lab 的工程 ACL；不得通过输出浏览器原始异常或关闭 TLS/认证规避故障。
+- **验证**：维护者此前 `test:projects:oidc:config` **7/7**、`ready` 全链 **退出码 0**，但交互式浏览器脚本**退出码 1**。本补丁的离线错误脱敏测试、`vp check`、`ready` 和双端真实 OIDC 浏览器专项**均待修复后 Windows 复验**。浏览器窗口自动关闭本身不是故障，不应修改为保留有效登录会话。
+- **证据**：维护者 2026-11-16 真实 OIDC 浏览器失败日志、PR #58、`scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`、`docs/VALIDATION.md`。
+
+### E-025 · CDP 页面快照再次引用 Node 模块作用域 helper（第三十四批第三小批）
+
+- **现象**：维护者 Windows 完成 `test:projects:oidc:config` **10/10**、`vp check` **328 文件格式正确/183 受检零错误** 和完整 `pnpm run ready` **544/544 单测、49/49 E2E、退出码 0**。在真实 `test:projects:oidc:browser` 中 Keycloak 登录、React 工程列表/分页及其 UI 比对已完成，随后在“React：正在验证临时 IndexedDB 草稿保存与自动保存”阶段报“浏览器页面操作失败：页面脚本引用异常”，专项退出码 **1**；Vue 尚未测试。
+- **已确认根因**：`ChromeSession.evaluate(action)` 只把 `action.toString()` 发送到浏览器环境；`stateInPage()` 调用了只在 Node.js 模块中定义的 `readBrowserDraftsInPage()`。浏览器执行该独立函数时查不到模块闭包中的 helper，必然触发 `ReferenceError`。这是 **E-002 跨执行上下文错误的再次发生**，不涉及 OIDC 登录、前端 IndexedDB 模型或实际授权工程数据。浏览器失败后自动关闭属于临时 Profile 安全清理。
+- **修复**：将 `stateInPage` 限定为自包含的 DOM/UI 状态函数；新增 `inspectStudioState(session)`，分别通过独立 CDP `evaluate` 执行 `stateInPage` 和 `readBrowserDraftsInPage`，仅在 Node 层合并已用于断言的画布/草稿摘要。四个状态快照断言均复用该入口，不改业务 API、Schema、OAuth、TLS、数据库或页面组件。
+- **避免**：使用 `function.toString()` 的 CDP 代码边界必须逐一审核函数引用，不允许引用 Node 模块 helper 或局部闭包；涉及多段页面执行时在 Node 层组合结果，并用模拟 `session.evaluate` 的单元用例检查被序列化的函数名称与独立性。
+- **验证**：补充 1 项离线回归，预计离线总数由 **10 增至 11**；修复前日志显示完整质量链通过但独立浏览器专项退出码 1。**修复后的 Windows `test:projects:oidc:config`、`vp check`、完整 `ready`、真实 React/Vue OIDC 浏览器专项尚未执行，不能宣称通过**。
+- **证据**：维护者 2026-11-16 浏览器专项原始日志、PR #58、`scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`、`docs/VALIDATION.md`。
+
+### E-026 · 模拟版本冲突的旧提示被当作后续确认载入失败（第三十四批第三小批）
+
+- **现象**：维护者 2026-11-16 Windows 完整 `ready` 再次通过：544/544 单元测试、49/49 HTTP E2E、离线工程浏览器安全检查 11/11、退出码 0。真实 OIDC 浏览器已通过 React 登录、授权工程摘要、分页、IndexedDB 草稿保存、自动保存、取消载入和模拟远端水位冲突；进入“React：正在验证确认载入与 CAS 基线”后，抛出“浏览器页面操作失败：服务器工程载入阶段返回受控错误”，退出码 1。Vue 尚未开始。
+- **根因分析**：`openProjectInPage` 每次点击后立即读取 `[aria-label="服务端工程版本"] [role="alert"]`，若存在错误便直接判失败；上一步模拟冲突故意产生的“服务端工程版本已更新”仍显示在页面中，而 React/Vue 的 `runServerAction` 只会在**下一次操作开始时**异步清空错误。故这一实现存在把前次错误误判成新请求结果的竞态。**这与实际症状吻合；由于原日志没有包含确认载入请求的最终结果，不能据此断言服务端确认载入必然成功。**
+- **修复**：在点击确认前记录现有错误文案；新操作开始后，只有观察到本次“正在处理工程版本”或错误内容变化，才允许将非冲突错误作为本次失败；上次残留错误不再立刻终止。成功仍必须经历真实确认提示并匹配“CAS 基线已建立”，遇到本次真实错误仍拒绝。新增 2 项离线测试，覆盖**旧错误残留后新操作成功**与**新请求确实失败时仍失败**；保留双框架和自动保存/草稿哈希原断言。
+- **避免**：E2E 连续执行“预期失败 → 成功”时，应区分前一操作 UI 错误与新请求的可观察状态。先等待业务操作开始/完成，不用“页面已有错误节点”直接判定新操作失败；须有反向回归证明真正失败不会被吞没。
+- **验证**：修复前维护者实测 `test:projects:oidc:config` **11/11**、`vp check` **328/183 零告警**、`docs:check` **86 Markdown**、完整 `ready` **退出码 0**，但交互式浏览器专项 **退出码 1**。本补丁离线测试预计 **13 项**；**修复后的 Windows 离线/浏览器与质量链尚未执行，不能声称已通过**。
+- **证据**：2026-11-16 维护者浏览器专项日志、PR #58、`scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs` 和本仓库 `StudioPage.tsx`、`StudioPage.vue` 的 `runServerAction`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

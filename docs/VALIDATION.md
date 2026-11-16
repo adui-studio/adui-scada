@@ -1270,3 +1270,39 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 **待维护者 Windows 验证**：`vp check`、`pnpm run messages:check`、`pnpm run docs:check`、`pnpm run ready` 完整退出码；React/Vue 实际 OIDC 同源 HTTPS 业务浏览器流程需要分别验证 1440×900、1024×768：打开工程管理、授权列表前后翻页、未登录拒绝、远端版本变化拒绝、取消保持画布、确认打开且 CAS 基线正确、草稿原记录和修订号不变、自动保存停止、再按新工程重新查看本地草稿。无真实 OIDC 环境时允许只验收匿名拒绝，不得冒充真实登录、工程切换通过。数据库层沿用 PR #56 已验收的分页查询，无新增迁移或数据库写入专项，不能把第一小批测试结果宣称为本小批新测试通过。
 
 原第三十四批第一小批 Windows 本机结果：`vp check` 321/177 零告警，`ready` 537/537 单测、49/49 HTTP E2E、85 Markdown 和两 Web/NestJS 构建退出码 0；`test:db` 23/23 退出码 0。此为上一小批的事实基线。
+
+## 2026-11-16 · 第三十四批第三小批：OIDC 工程管理真实浏览器专项（待验收）
+
+基于 PR #57 合并提交 `c426d26855d3d707a75869f8c770b65e8b55c82f` 新增 `test:projects:oidc:config`（7 项离线安全配置用例并纳入 `ready`）以及需人工完成可信 Keycloak 登录的 `test:projects:oidc:browser`。使用 Chrome/Edge 临时 Profile、Node 可信 CA、真实 React/Vue HTTPS Origin 和有权限的隔离 Lab 工程。测试读取列表与修订号，确认两套 Studio 前后页状态（有足量授权工程时），取消打开与模拟 GET 水位冲突时不得改画布、自动保存和已保存草稿；确认载入最新版本后须具有可见 CAS 基线，暂停自动保存且保存前后 IndexedDB 草稿摘要一致。另验证服务端工程不会被新增或覆盖，浏览器 Profile 结束后清理。
+
+**当前仅提交候选源代码与测试，并未在维护者 Windows 实际运行**：`pnpm run test:projects:oidc:config`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`、`pnpm run ready` 及交互式 `pnpm run test:projects:oidc:browser` 全部待执行。不得把 PR #57 的 544/544 单测、49/49 E2E、76/76 通用浏览器基础回归或维护者人工验收冒充为本次新增脚本已执行。配置检查与登录专项不能代替生产 TLS/IdP/数据库安全评估；水位竞争只在浏览器读取响应中模拟，不是实数据库事务冲突。
+
+## 2026-11-16 · 第三十四批第三小批 Windows 首次质量链失败与 E-023 最小修复候选
+
+维护者本机原始日志：`pnpm run test:projects:oidc:config` **7 项中 6 通过、1 失败**，报 `assert.throws` 的正则 `/必须显式启用可信 OIDC 开发代理/` 与共享 HTTPS 探针真实异常“只读 HTTPS 探针要求显式启用可信 OIDC 开发代理”不一致。随后 `vp check` **328 个文件格式正确、183 个受检文件零警告零错误**；`pnpm run ready` 在相同新增离线安全测试处终止，退出码 **1**。其前置质量环节、单测 **49/49 文件、544/544 项**、SSE / OIDC / Docker 的其他离线检查均通过；**本次 `ready` 没有执行到后续 NestJS HTTP E2E、`docs:check` 和 React/Vue/NestJS 构建，不能声称完整通过**。
+
+排查确认拒绝非法配置的生产逻辑正常执行，问题仅在测试断言错用了“必须”而不是实际共享错误的“要求”。E-023 修复候选仅使 `scripts/test-project-browser-oidc.cases.mjs` 中该正则与真实共享异常一致，**不修改** `resolveReadonlyProbeOrigins`、业务接口、Keycloak、数据库或 TLS 安全策略。当前尚无修复后 Windows 命令退出码。维护者需依次重跑 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check` 和完整 `pnpm run ready`；交互式 `test:projects:oidc:browser` 仍属独立待执行验收，离线 7/7 不能替代真实 OIDC 登录。
+
+## 2026-11-16 · 第三十四批第三小批真实 OIDC 登录成功后浏览器阶段故障（E-024）
+
+维护者 Windows `pnpm run test:projects:oidc:browser` 实际进入隔离 Chrome/Edge，Keycloak 登录成功，脚本输出“真实 OIDC 会话已在 React Origin 验证”，说明 React BFF `/api/v1/auth/me` 已返回可信身份；随后直接报告“浏览器页面操作失败，请检查当前 Studio 状态”，退出码 **1**，Vue 尚未开始专项验收。测试 `finally` 关闭临时浏览器是凭据安全清理行为，非 IdP 主动踢出。**真实后续页面异常的具体成因未被当前日志区分，不能认定为工程 API/ACL 已通过或失败。**
+
+E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CDP 异常白名单类别诊断、列表 API 的仅 HTTP 状态码反馈，且在没有已授权工程时保留固定中文引导；不输出浏览器堆栈、Cookie、Token、工程正文或数据库连接字符串，不更改认证/授权行为，不把测试 Browser Profile 保留给用户。新增 3 项离线异常分类/泄密防护用例，离线总数由 **7 增至 10**（待 Windows 实测）。已确认服务端载入快照还要求 `version:read`，仅拥有 `project:read` 不足以完成载入验收；请由维护者在隔离 Lab 受控核对现有权限，不自动执行任何 ACL 或数据库写入。
+
+**此刻仅有补丁代码与静态核对，没有修复后 Windows 实测**。待执行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`、`pnpm run ready`，以及完成真实 OIDC 登录后重跑 `pnpm run test:projects:oidc:browser`，记录最后显示的受控阶段、退出码与是否完成 Vue。新增异常诊断不能代替真实数据库 CAS 并发验收。
+
+## 2026-11-16 · 第三十四批第三小批：真实工程分页通过后 IndexedDB 状态快照触发 E-025
+
+维护者本机上传的完整 PowerShell 日志确认：`pnpm run test:projects:oidc:config` **10/10**、`vp check` **328 文件格式通过/183 受检零告警**，完整 `pnpm run ready` **544/544 单测、49/49 HTTP E2E、86 Markdown 及 React/Vue/NestJS 构建**成功、退出码 **0**。真实 `pnpm run test:projects:oidc:browser` 已完成 Keycloak / React BFF 会话、工程列表、工程管理摘要与分页步骤；在“React：正在验证临时 IndexedDB 草稿保存与自动保存”阶段报 **“浏览器页面操作失败：页面脚本引用异常”**，最终退出码 **1**；尚未执行 Vue 部分、取消保护、冲突注入与 CAS 基线。浏览器自动关闭是 `finally` 清理临时测试 Profile，不是 OAuth 会话丢失。
+
+检查 PR #58 源码后确定，`stateInPage()` 在 CDP 独立页面上下文执行时直接引用 Node 模块的 `readBrowserDraftsInPage()`，符合 E-002 的已知跨作用域失败；本次作为 **E-025** 回归。最小修复将页面 DOM 状态和 IndexedDB 草稿摘要分为两个独立的 `session.evaluate` 调用，在 Node 侧组合结果，保留原四处画布、自动保存、草稿哈希和 CAS 断言。同步新增 1 项离线动作序列化测试，离线预计由 **10 增至 11**，安全开关、登录、服务端 API、Prisma、生产数据和设备写入全部不变。
+
+**修复后尚无 Windows 运行结果**；需要重新执行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 和 `pnpm run test:projects:oidc:browser`，验证双端直到 CAS 和草稿保护全部通过。此前完整 `ready` 退出码 0 只对应修复前 HEAD，不能当作本提交质量链通过证据。
+
+## 2026-11-16 · 第三十四批第三小批 E-026：模拟冲突后旧错误提示导致确认载入误判
+
+维护者 Windows 最新真实日志：`test:projects:oidc:config` **11/11**、`vp check` **328 文件格式正确、183 受检文件零错误**、`docs:check` **86 Markdown**、完整 `pnpm run ready` **544/544 单测、49/49 HTTP E2E、React/Vue/NestJS 构建通过，退出码 0**。交互式 `test:projects:oidc:browser` 已通过真实 Keycloak 登录、React BFF、授权工程列表/分页、临时 IndexedDB 草稿、自动保存、取消载入和模拟远端水位冲突阶段；随后在“React：正在验证确认载入与 CAS 基线”阶段报告“服务器工程载入阶段返回受控错误”，退出码 **1**，尚未进入 Vue。
+
+结合真实代码分析，前一次模拟冲突**故意设置**服务端错误提示；测试 `openProjectInPage` 在下一次点击“打开”后直接读取同一错误节点并立即判错，没有等待新 `runServerAction` 清除旧错误与启动操作。这个测试竞态与症状吻合，**现有日志无法单独证明真实确认载入请求已失败或成功**。本次最小修复在页面测试动作中记录点击前错误，只有观察到新的忙碌状态或错误变化，且新操作不再进行中时，才允许对当前真实错误作失败判断；成功分支仍必须满足确认回调和“CAS 基线已建立”。补充两项正反回归，离线配置/测试预计由 **11 增至 13**。不修改 React/Vue、API Client、OIDC、数据库、Prisma、TLS、工业设备接口或任何现有真实安全断言。
+
+**当前 HEAD 尚未执行 Windows 修复后测试**。维护者应先执行 `pnpm run test:projects:oidc:config` 与 `vp check`、`pnpm run docs:check`，然后独立重跑 `pnpm run test:projects:oidc:browser`；双框架真实 OIDC 专项成功后再完成全链 `pnpm run ready` 确认。隔离浏览器在成功与失败后均按凭据安全策略自动关闭，不能以窗口关闭本身判定成功与否。
