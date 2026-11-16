@@ -1120,3 +1120,7 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 ### 2026-11-16 · 唯一 Docker PostgreSQL 四项迁移成功，status 需匹配随机密码
 
 最新 `adui-scada` 单项目容器已由维护者启动。Windows 实测 `docker:db:init` 在业务库 `adui_scada`（回环 15432）成功部署 4 项 Prisma 迁移，退出码 0；容器内 PostgreSQL `pg_isready` 与 `SELECT 1` 均成功。通用 `db:migrate:status` 仍使用根目录 `.env` 里的旧固定密码，因与 `.local/docker/secrets.env` 中新 Docker 随机密码不同而报 P1000。新增 Docker 专用 `docker:db:status`，通过同一安全脚本调用只读 Prisma 状态查询，禁止回显/提交密码，不修改数据库、卷或通用命令；Windows 真实新命令与全量质量链待复验。宿主机 OIDC Client Secret、事务加密密钥和证书路径也需针对新 Keycloak 在本机安全同步并重新验收。
+
+### 2026-11-16 · Docker 数据库状态真实验收成功、ready 在中文日志门禁被阻断（E-022）
+
+维护者本机 `test:docker:db` 已 9/9 通过，`docker:db:status` 对 15432 端口的 `adui_scada` 业务库真实返回最新迁移状态（共 4 项），`vp check` 320/177 零警告，`docs:check` 84 个 Markdown 通过；但本轮 `ready` 在 `messages:check` 发现 `scripts/init-docker-db.mjs` 内包含英文 `"status"` 的单行 `console.log`，未进入本轮后续单元测试、E2E 或构建。E-022 最小修复只拆分分支计算与中文结果输出，复验后方可宣称完整 `ready` 通过。OIDC 全新 Keycloak 用户绑定与真正 HTTPS 认证尚未完成验收。

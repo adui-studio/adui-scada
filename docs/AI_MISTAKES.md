@@ -190,6 +190,15 @@
 - **验证**：维护者原 `docker:db:init`、`pg_isready`、`SELECT 1` 已实测通过；新增命令及防回归测试为代码候选。提交后 Windows `pnpm run test:docker:db`、`env:check`、`vp check`、`docs:check`、`ready` 与新 `docker:db:status` **尚待复验**，不得声称新命令已经连接成功。
 - **证据**：维护者 2026-11-16 原始 P1000/Prisma 迁移/容器查询日志、PR #55、`scripts/init-docker-db.mjs`、`docs/VALIDATION.md`。
 
+### E-022 · Docker 数据库状态命令的条件日志触发中文文案门禁（第三十三批）
+
+- **现象**：2026-11-16 维护者 Windows 真实执行 `pnpm run test:docker:db` **9/9 通过**，`pnpm run docker:db:status` 成功检查 `127.0.0.1:15432/adui_scada` 的四项迁移为最新；`vp check` 320 个格式文件、177 个受检文件零告警；`docs:check` 84 个 Markdown 通过。但完整 `pnpm run ready` 在 `messages:check` 阶段报 `scripts/init-docker-db.mjs:104：日志文案缺少中文`，整体退出码 1，后续质量步骤尚未执行。
+- **根因**：新增 CLI 使用 `console.log(action === "status" ? inspectDockerDatabase() : initializeDockerDatabase())`；虽然两个函数返回的日志文本都为中文，仓库 `scripts/check-chinese-messages.mjs` 仍按单行正则检测到 `console.log` 和英文字符串 `"status"`，且这一行没有中文，于是标记失败。此前只执行 `vp check`、Node 测试和数据库状态查询，没有在提交前单独执行仓库的 `messages:check`。
+- **修复**：仅将分支计算与日志调用拆成两行，先计算 `result` 再 `console.log(result)`。输出内容、命令白名单、随机凭据及数据库操作完全不变；不放宽中文扫描规则。
+- **避免**：新增日志即使输出来自中文结果函数，也要检查 `console` 调用所在行是否同时含英文协议字面量；优先分离计算与输出。每次添加脚本日志后必须先执行 `pnpm run messages:check`，再执行完整 `ready`，不以 `vp check` 或单元测试代替。
+- **验证**：修复候选已按仓库原有单行扫描正则进行静态检查，未发现该文件触发相同规则的日志。**修复后的 Windows `messages:check`、`vp check`、`docs:check` 和完整 `ready` 尚待维护者重新执行**，不能宣称最终质量链已通过。
+- **证据**：维护者 Windows 原始 `ready` 失败日志、PR #55、`scripts/init-docker-db.mjs`、`scripts/check-chinese-messages.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

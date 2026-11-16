@@ -101,7 +101,8 @@ export function inspectDockerDatabase(root = ROOT, run = spawnSync) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const action = resolveDockerPrismaAction(process.argv.slice(2));
-    console.log(action === "status" ? inspectDockerDatabase() : initializeDockerDatabase());
+    const result = action === "status" ? inspectDockerDatabase() : initializeDockerDatabase();
+    console.log(result);
   } catch (error) {
     const safe = [
       "缺少本机 Docker 配置或随机凭据，请先执行 docker:up",

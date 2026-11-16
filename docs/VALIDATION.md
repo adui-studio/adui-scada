@@ -1212,3 +1212,9 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 新增专用只读 `docker:db:status`，复用 `init-docker-db.mjs` 已建立的随机凭据/数据库校验，通过 Node 直接启动 Prisma `migrate status`，覆盖旧进程环境变量而不输出/回写秘密；通用 `db:migrate:status` 语义不变。补充测试校验命令白名单、旧根 URL 和进程密码覆盖及旧数据库/远程连接拒绝；不修改 Prisma Schema、历史迁移、Docker 卷和 OIDC 权限。
 
 **补丁后的真实验证尚未完成**：Windows `test:docker:db`、`env:check`、`vp check`、`docs:check`、完整 `ready`、新命令 `docker:db:status` 均待运行。已成功的四项真实迁移无需重新部署或重置。
+
+## 2026-11-16 · E-022：Docker 状态查询后完整 ready 在中文日志检查阶段中止
+
+维护者 Windows 真实运行 `pnpm run test:docker:db` **9/9 通过**；`pnpm run docker:db:status` 使用新 Docker 随机凭据连接 `127.0.0.1:15432/adui_scada`，Prisma 报 `Database schema is up to date!` 且成功输出中文完成消息。单独 `vp check`：320 个文件格式正确、177 个受检文件零警告/Lint/类型错误；单独 `pnpm run docs:check`：84 份 Markdown 通过。但本次 `pnpm run ready` 在依赖/共享配置/环境检查通过后，`pnpm run messages:check` 报 `scripts/init-docker-db.mjs:104：日志文案缺少中文`，整条 `ready` 退出码 1，**后续生成、单测、E2E 与构建没有在本次 ready 中执行**。
+
+检查仓库源码确认：原有静态检查器在日志调用所在行同时检出 `console.log`、英文 `"status"` 且没有中文，因此尽管分支函数实际返回中文，也被判为违规。E-022 仅将计算分支与 `console.log(result)` 分开，不修改检查器、测试用例、Prisma 凭据、数据库或 Docker。候选已用原检查器的日志行正则核对，不再触发该条规则；**Windows 修复后 `messages:check`、`vp check`、`docs:check`、完整 `ready` 仍待实际运行与退出码确认**。
