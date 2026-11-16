@@ -1002,3 +1002,7 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 维护者 Windows 在本机隔离库 `127.0.0.1:15432/adui_scada_test` 完成 Prisma Schema 校验、迁移状态检查及 `pnpm run test:db`。现有四项迁移均无待执行项；真实数据库测试 3/3 文件、22/22 项通过（OIDC 5/5、工程版本 11/11、工程 API 6/6）。与此前 `ready` 退出码 0、单测 505/505、E2E 40/40 的工程质量验收分别记录。首次漏配 `SCADA_TEST_DATABASE_URL` 引发的 0-test 拒绝为安全门禁生效，补充受控变量后成功完成全部测试。
 
 下一项“全新隔离空库首次迁移及重复部署”仅准备了受控 Node 脚本和目标校验单测（6/6 静态/纯逻辑验证）；尚未在 Windows 新建空库并运行真实 Prisma 迁移。此项与真实 IdP、HTTPS Cookie/代理和 Vue/React API Client 仍待验收。PR #55 继续保持 Draft，未经明确授权不得合并。
+
+### 2026-11-16 · 空库迁移专项测试的七条 Lint 警告修复
+
+维护者最新 `vp check --fix` 日志显示，新增 `node:test` 文件的一处 `describe()` 和六处 `it()` 因未显式处理 `Promise<void>` 触发 `typescript(no-floating-promises)` 七条警告，虽然格式化已经完成，但不满足零警告质量门禁。按 E-014 最小修复为 `void describe(...)` 与 `void it(...)`，不调整六个数据库目标保护测试的断言和空库安全策略。修复后 `vp check`、`node --test`、`docs:check`、`ready` 以及真实空库迁移尚待实测，PR #55 继续保持 Draft。

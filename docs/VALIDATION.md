@@ -1019,3 +1019,9 @@ Write-Host "退出码：$LASTEXITCODE"
 为独立验证空库初始化和迁移幂等性，新增 `scripts/verify-fresh-postgres-migrations.mjs`，**只连接人工新建且为空的 `adui_scada_fresh_*` 本机数据库**。脚本先检查用户对象和非系统 Schema，再首次执行 `db:migrate:deploy`，核对与仓库目录一致的迁移登记和八个预期业务表；第二次执行 `db:migrate:deploy`、`db:migrate:status` 后比较迁移元数据完全一致。脚本不执行数据库创建、删除、重置或清理，也不改变原 `.env` 文件。
 
 独立验证已完成：`node --check` 成功，`node --test scripts/verify-fresh-postgres-migrations.cases.mjs` **6/6 通过**（在当前协作容器 Node 22 环境）。**没有连接真实 PostgreSQL，也未运行两次 migrate deploy；空库迁移专项继续待维护者 Windows 实测**。此新增脚本的仓库 `vp check`、`ready`、`docs:check` 均需在应用补丁后复验。
+
+## 2026-11-16 · 空库迁移测试文件 Node.js Promise Lint 修复（待复验）
+
+维护者在最新空库迁移工具提交上执行 `vp check --fix`，格式化成功，但 `scripts/verify-fresh-postgres-migrations.cases.mjs` 因 `node:test` 的 `describe` 和六个 `it` 调用返回 `Promise<void>`，触发 **7 条 `typescript(no-floating-promises)` 警告**。此日志的“格式化完成”不代表全仓零警告通过。
+
+采用最小修复：为测试注册添加一处 `void describe` 和六处 `void it`，不修改既有断言或安全校验；记录为 `docs/AI_MISTAKES.md` E-014。**修改后还没有维护者 Windows 的 `vp check`、6/6 `node --test`、`docs:check` 或完整 `ready` 复验结果**，不覆盖此前既有隔离数据库 `test:db` 22/22 的独立通过记录。全新空库首次迁移与二次部署仍未取得真实 PostgreSQL 日志。
