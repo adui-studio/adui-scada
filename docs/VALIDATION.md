@@ -1061,3 +1061,24 @@ HTTP E2E 中的 `Health Check has failed` 以及 HTTP 503 是预期负面测试�
 **已执行的有限验证**：协作容器 Node.js 22 / TypeScript 5.8.3 使用临时 Core 类型声明完成该包源代码类型检查（0 个诊断）；通过临时模拟 Core 的 Mock Fetch 烟测，核对创建工程、受控同源请求、CSRF、列表、409 错误和注销。以上不等价于仓库 TypeScript 6.0.3、Vite+、Vitest 全量测试，也不构成真实 HTTP、浏览器 Cookie 或 PostgreSQL 联调。新增工作区包的 `pnpm-lock.yaml` 仅由既有工作区依赖链接推导并作最小增量，协作环境无法联网运行 pnpm 12.18.0；**须由 Windows 维护者执行 `pnpm install --lockfile-only`、`pnpm install --frozen-lockfile` 和 `pnpm run ready` 实际复验锁文件**，如 pnpm 生成差异，以该命令的真实输出为准。
 
 未完成：新增 Mock Fetch 测试在仓库真实 Vite+ 下运行；两端 Studio UI 接线、同源代理、真实 OIDC/JWKS、HTTPS Cookie/Origin/Fetch Metadata 和浏览器双向工程互通。第六小批 505/505 单测、40/40 E2E 及 E-015 数据库验收仅针对先前代码；**不能冒充第七小批质量验收通过**。
+
+## 2026-11-16 · 第三十三批第七小批共享 API Client：Windows 质量验收通过
+
+维护者上传的 Windows PowerShell 完整日志证明，新增 `@adui/scada-api-client` 的工程质量链已完成本机验收：
+
+| 检查项 | 实测结果 |
+| --- | --- |
+| `vp check` | 303 个文件格式正确，161 个受检文件零警告、零 Lint/类型错误 |
+| `deps:check` / `config:check` | 12 个清单、52 项 Catalog；10 个 TSConfig 消费端 |
+| `env:check` / `messages:check` | 根 `.env` 与 LF 约束通过；187 个自有代码/配置文件中文文案检查通过 |
+| `typecheck:web` / `typecheck:server` | React、Vue、草稿仓储、共享 API Client、NestJS 类型检查通过 |
+| `pnpm run test:unit` | 47/47 个测试文件、**520/520 项通过**；`packages/api-client/test/api-client.test.ts` 新增 **15/15** |
+| SSE 客户端 / 故障代理 | 8/8、4/4 通过 |
+| `test:e2e:server` | 5/5 测试文件，40/40 项通过；工程 API HTTP E2E 13/13 |
+| `pnpm run docs:check` | 83 个 Markdown 文件通过 |
+| React / Vue / NestJS 构建 | 全部成功 |
+| 完整 `pnpm run ready` | **最终 `$LASTEXITCODE = 0`** |
+
+`Health Check has failed` 与 HTTP 503 对应 NestJS 健康检查的预期负面 E2E 场景，本次 E2E 最终 40/40 通过。最新 GitHub 功能分支格式化提交为 `d95bf2244390597394850c939980e076c9bf2fbf`，该提交仅调整 API Client 源码与测试格式；**日志没有独立输出本地 `git rev-parse HEAD`，不能将远程 SHA 当作维护者运行时的 SHA 证明**。
+
+**尚未验收**：本次上传日志未列出 `pnpm install --lockfile-only`、`pnpm install --frozen-lockfile` 的独立执行与结果，故锁文件冻结安装专项仍待确认；运行 `ready` 并不替代该检查。React/Vue Studio 尚未实际调用共享客户端，浏览器同源代理、真实 IdP/JWKS、HTTPS Secure/SameSite Cookie 与 Origin/Fetch Metadata、双框架工程互通和生产工业安全均未验收。本次只是追加验证文档；**该文档提交本身尚未经过新的 `docs:check`**。

@@ -1030,3 +1030,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 新增工作区 `@adui/scada-api-client`，将身份 `me/logout`、六条受保护工程 API 的请求/响应契约、同源 Fetch、CSRF Cookie 读取、中文错误映射与 Core SHA-256 快照验证封装为框架无关代码。React/Vue Manifest 引用同一个工作区包，但本小批不接入现有 Studio 保存按钮，不改变 IndexedDB 离线草稿或现有演示 SSE，不开启真实 OIDC，也不开放 PLC/DCS 写入。Core 和服务器业务接口保持不变。
 
 已在协作容器 Node 22/TypeScript 5.8.3 临时 Core 声明下完成源码类型检查和模拟 Core 的 Fetch 烟测；**尚未运行仓库 TypeScript 6 / Vite+ / Vitest / pnpm 12 完整检查**。新工作区仅引用既有 `@adui/scada-core`、`@adui/tsconfig`、TypeScript 和 Vite+，锁文件仅作已知 workspace 链接增量，必须在维护者 Windows 使用真实 pnpm 生成及验证。真实 IdP、HTTPS Cookie/同源代理、Vue/React Studio 接线和浏览器互通仍待后续专项，PR #55 保持 Draft。
+
+### 2026-11-16 · 第三十三批第七小批共享 API Client：Windows 全链通过
+
+维护者 Windows 日志确认独立工作区 `@adui/scada-api-client` 已通过 TypeScript 6 对应的根质量门禁：`vp check` 303 格式文件/161 受检零告警错误、`typecheck:web`（含新增客户端包）、单元测试 47 文件 **520/520**（新增 Mock Fetch **15/15**）、NestJS E2E **40/40**、SSE 客户端 8/8、故障代理 4/4、文档 83 个 Markdown 与 React/Vue/NestJS 全部构建；完整 `pnpm run ready` 最终退出码 **0**。仓库当前功能分支仅额外存在一次源码/测试格式提交 `d95bf224`；用户日志未显示本地 Git SHA，不冒充精确提交指纹证据。
+
+目前共享 API Client 的**工程质量门禁已通过**，但上传日志未证明 pnpm 12.18.0 `--lockfile-only` 和 `--frozen-lockfile` 安装专项通过；React/Vue UI 未接线，真实 OIDC/JWKS、HTTPS Cookie/同源代理及浏览器工程互通仍未验收。继续保持 PR #55 Draft，后续优先核对锁文件冻结安装，再分批接线 Vue/React，不改变 IndexedDB 草稿与设备只读安全边界。
