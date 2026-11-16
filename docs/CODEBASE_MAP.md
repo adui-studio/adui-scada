@@ -717,3 +717,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/server/src/auth/scada-identity.module.ts`：向仅有 `ProjectApiModule` 消费的身份依赖导出共享 `DatabaseModule`、`ScadaSecurityAuditService` 和 `SCADA_OIDC_STARTUP_CONFIG`，供 Controller 上的 `@UseGuards` 在工程模块上下文解析；不改变 Guard 业务逻辑。
 - `apps/server/src/database/database.module.spec.ts`：新增完整导出契约检查，防止未来将 Guard 与其安全依赖拆开导出。
 - `apps/server/test/oidc-module-bootstrap.e2e-spec.ts`：以真实 `OidcEnabledAppModule` 进行 Nest 模块编译和 HTTP 初始化，但替换 Prisma 和测试 OIDC 配置；不访问真实数据库/IdP，检查未认证身份与工程 API 保持 401 JSON。
+
+### 第三十三批第十三小批：OIDC Lab 受控身份预绑定工具
+
+- `scripts/oidc-lab-identity.mjs`：显式运营工具，必须由维护者从 Keycloak Users 详情页提供 UUID；只允许已启用可信 HTTPS 的本机 Lab Realm 和独立 `adui_scada_oidc_lab` PostgreSQL，默认预览回滚；需 `--apply --confirm-lab adui_scada_oidc_lab` 才会在可串行化事务中创建可信本地主体与唯一外部映射，拒绝冲突、停用主体、已有工程 ACL 和未经迁移的数据库。通过服务端已有 `pg` 依赖执行参数化 SQL，不新增依赖或公开 API。
+- `scripts/oidc-lab-identity.cases.mjs`：14 项不连接数据库的命令参数、回环目标、幂等、事务提交/回滚与权限保护离线用例。
+- `package.json`：新增 `test:oidc:identity` 并纳入默认 `ready`；`oidc:lab:identity` 为显式手工绑定命令，绝不由 `ready`、`docker:lab:up` 自动执行。

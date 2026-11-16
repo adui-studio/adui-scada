@@ -1086,3 +1086,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 维护者 Windows 已验证：`test:e2e:server` 6 文件/42 项、`vp check` 315 格式/171 受检零告警；完整 `ready` 48 文件/530 单测、HTTP E2E 42、OIDC 代理 10、OIDC Lab 6、HTTPS 匿名离线 11、SSE 8、TCP 故障 4、83 Markdown 与双 Web/服务端构建均通过。真实 `OidcEnabledAppModule`、`ProjectApiModule`、`ScadaIdentityModule` 初始化成功，NestJS `127.0.0.1:13001` 实际监听；React/Vue 两端 HTTPS 同源 `/api/v1/auth/me` 匿名探针均为受控 401 JSON，退出码 **0**，**E-018 关闭**。原日志未独立打印本地 HEAD 和完整 `ready` 的数字退出码，依其连续执行和失败即停止分支确认本次质量链已完成。
 
 当前已具备真实 Keycloak OIDC 登录的网络前置条件，但服务端发出的 302 不等于真实用户成功登录；身份预绑定、Secure Cookie/CSRF 及双框架服务端工程历史/CAS 往返仍未验收。此前在对话暴露的本地 Lab 随机密钥需要受控轮换并同步配置，禁止在 PR/文档/日志中出现原值。PR #55 继续 Draft，未获授权不合并。
+
+### 2026-11-16 · 第十三小批 OIDC Lab 身份预绑定最小实现
+
+此前 Keycloak OIDC Discovery、NestJS 根模块及双框架匿名 HTTPS 401 已由维护者 Windows 实测（E-017/E-018 已关闭）。为开启真正的普通用户登录联调，在原 PR #55 中新增本机隔离 Lab 的**显式预绑定**工具：Keycloak 用户由人工创建并核对 UUID，工具默认只读、在严格回环数据库和 Issuer 校验通过后，仅经 `--apply --confirm-lab adui_scada_oidc_lab` 才创建 active 本地主体和一条外部映射。会阻止已有权限主体被错误绑定，不自动授予工程 ACL、创建工程或开放写接口，亦不改变现有 Prisma Schema/迁移。
+
+新增 14 项离线测试，使用隔离 V8 运行环境对原候选逻辑及 Mock PG 事务验证 **14/14**，但并非本机完整 Node/Vite+ 检查，Windows `ready`、真实隔离数据库写入、Keycloak 用户授权码回调、Secure Cookie/CSRF 与跨框架工程往返均待专门验收。此前粘贴的本机 Lab 测试密钥需后续安全轮换，不保存在仓库文档。

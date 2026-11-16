@@ -1887,3 +1887,37 @@ Write-Host "真实 HTTPS 匿名探针退出码：$LASTEXITCODE"
 **下一专项：实际身份绑定与完整登录，仅在维护者明确选择的隔离 OIDC Lab 内操作。** 使用 Keycloak `adui-scada` Realm 创建独立、无管理权限的测试用户；保留真实 OIDC `iss` 与 `sub`，不得凭邮箱/用户名推断可信身份或自动提升工程 ACL。先按仓库当前 Prisma 表模型核对已存在的测试主体与租户，以受控管理流程显式建立 `issuer + sub` 对应的外部身份绑定，并确保业务主体状态为 active；联调应检验未绑定主体被拒绝。通过浏览器 `/api/v1/auth/oidc/start` 发起标准授权码 + PKCE 登录，不允许直接手动访问 callback 作为登录操作。再逐项验证 Secure/SameSite Cookie、Origin/Fetch Metadata/CSRF、未授权操作拒绝、React/Vue 双端工程历史与 CAS 409，不保留令牌/授权码/私钥日志。不对现有 Lab 数据卷使用 `down -v`，不操作生产数据库或设备写入。
 
 用户曾在对话贴出本机 Lab 的数据库与 OIDC 密钥，在后续受控联调前应轮换并同步依赖配置，避免只修改 `.env` 造成 Keycloak Client 或 PostgreSQL 凭据不一致。**本次仅归档证据，不自动轮换、不创建用户、不写入数据库、不将 302 误判为登录成功。**
+
+### 第三十三批第十三小批：真实 Keycloak 用户与 OIDC Lab 显式身份预绑定
+
+**前置条件**：已在维护者 Windows 实测 Keycloak `adui-scada` Realm Discovery 200、NestJS OIDC 根模块启动、隔离 Lab 数据库迁移成功及 React/Vue 匿名 HTTPS `401 JSON`（两个 Origin、退出码 0）。本小批提供**只在本机隔离 Lab 内可执行**的可信身份预绑定工具；默认仅预览，既不创建 Keycloak 用户也不自动授权工程，不修改 Prisma Schema/迁移。其他数据库、生产 OIDC 和外部主机均直接拒绝。
+
+**1. 在 Keycloak 管理后台人工创建普通测试用户**：登录 `https://127.0.0.1:18443/admin/`，选 `adui-scada` Realm → Users → Add user，建立独立无管理员角色的测试账号，设置自己的测试密码（不要与管理员或正式账号复用）。进入该用户详情页确认真实 `ID`（Keycloak 的 UUID / OIDC `sub`，不是用户名/邮箱）；确认用户启用，且不要给其添加管理角色。首次 `master` 临时管理员仅供初始化，不应给业务用户使用。绝不将 UUID、口令或任何密钥粘贴到 PR、日志或聊天。
+
+**2. 默认只读预览**：确保当前终端和 WebStorm 使用仓库根 `.env` 的可信 Lab 配置，`SCADA_DATABASE_URL` 精确指向 `127.0.0.1:${SCADA_LAB_POSTGRES_PORT}/adui_scada_oidc_lab`，OIDC Issuer 为 `https://127.0.0.1:${SCADA_LAB_KEYCLOAK_PORT}/realms/adui-scada`，双 Web HTTPS 及回调精确登记；不允许 `NODE_TLS_REJECT_UNAUTHORIZED=0` 或 `NODE_ENV=production`。先核对迁移状态，不要重新迁移或清库。
+
+```powershell
+pnpm run db:migrate:status
+pnpm run test:oidc:identity
+if ($LASTEXITCODE -ne 0) { throw "身份预绑定离线安全测试失败" }
+
+# 本机交互读取 Keycloak Users 详情页的 User ID，不写入脚本或 Git。
+$keycloakSub = Read-Host "输入已核对的 Keycloak 测试用户 UUID"
+$bindingArgs = @("--tenant", "lab-tenant", "--subject", "lab-engineer", "--keycloak-sub", $keycloakSub)
+
+node scripts/oidc-lab-identity.mjs @bindingArgs
+if ($LASTEXITCODE -ne 0) { throw "身份预绑定只读预览失败，禁止写入" }
+```
+
+预览将检查硬编码隔离数据库与 Issuer、已完成的 OIDC 迁移、Keycloak `issuer+sub` 是否已经绑定他人、本地主体是否停用、是否已有其他外部身份或工程 ACL；所有预览路径均回滚事务。**本命令不使用 Keycloak Admin API 验证用户存在，UUID 必须由维护者从实际用户详情页核对。**
+
+**3. 显式提交，绝不自动授予工程权限**：仅当维护者核实上述 UUID 与租户/主体的绑定意图后运行下列命令。工具将以可串行化的 PostgreSQL 事务创建（或复用）`scada_identities` 中的 `active` 测试主体，并插入唯一 `scada_external_identities(issuer,subject,tenant_id,subject_id)` 映射；不创建任何 `scada_projects` / `scada_project_grants`，重复相同映射不重复插入，已有其他 ACL/身份冲突或其他异常必须失败并回滚。此操作确实写入**隔离 Lab**，默认 `ready` 不会调用它。
+
+```powershell
+node scripts/oidc-lab-identity.mjs @bindingArgs --apply --confirm-lab adui_scada_oidc_lab
+if ($LASTEXITCODE -ne 0) { throw "本机测试主体预绑定失败" }
+```
+
+**4. 真实浏览器登录与会话检查（需人工验证，尚未自动化）**：在 React HTTPS 原点访问 `https://127.0.0.1:15173/api/v1/auth/oidc/start`（不能直接访问 callback），使用上述非管理员 Keycloak 测试用户登录。成功登录后，访问同源 `/api/v1/auth/me`，预期仅返回 `authenticated: true` 和核对过的 `lab-tenant / lab-engineer`，不包含会话明文。浏览器开发者工具仅核对 Cookie 属性，不复制值：`__Host-adui-scada-session` 应为 `Secure; HttpOnly; SameSite=Lax; Path=/`，`__Host-adui-scada-csrf` 应为 `Secure; SameSite=Lax; Path=/` 且可读；两者不应以明文进入业务响应 JSON 或持久存储。校验未绑定普通用户登录失败、会话失效、无 CSRF Header 的同源 POST 拒绝、跨站 Origin/Fetch Metadata 拒绝及合法同源注销。**仅 302 响应不代表完成这些验证。**
+
+**安全边界**：当前工具并不自动查验 Keycloak 用户或授予其工程读取、版本追加权限；`/api/v1/projects` 的访问结果还取决于既有 ACL，不应通过默认授予权限来使 UI 可见。此前用户曾把本机 Lab 密钥放入对话，需另行按 Keycloak Client/数据库密码、`.env` 与容器实际密码同步轮换，不使用 `docker compose down -v`。本小批只提供候选实现，Windows `vp check`、`ready`、真实数据库写入及完整登录都应独立验收，不接触生产或工业设备。

@@ -1160,3 +1160,11 @@ React 的 `apps/web-react/src/studio/StudioPage.tsx` 与 Vue 的 `apps/web-vue/s
 - `NODE_USE_SYSTEM_CA=1` 环境下独立执行 `pnpm run verify:oidc:https:readonly`：**React/Vue 共 2 个本机 HTTPS Origin 均返回受控 401 JSON，最终退出码 0**。先前 Vite `ECONNREFUSED` 是 NestJS 依赖注入失败后的连锁影响，现已复测解除；E-018 关闭。安全审计中 `malformed_authorization` 与 401 体现匿名拒绝；启动后观察到的 302 只能说明有重定向响应，**不能直接证明登录成功**。
 
 **验收范围与待办**：本次确认真实 TLS/同源转发/NestJS 匿名拒绝链路可达，以及实际根模块启动成功；没有收到浏览器 OIDC 完整登录、Keycloak `sub` 到隔离库可信主体预绑定、Secure/SameSite Cookie、CSRF 写请求、React ↔ NestJS ↔ Vue 工程版本历史/CAS 往返的实测通过证据。默认 OIDC 关闭策略、数据库隔离和工业只读边界不变。维护者此前在对话中粘贴的本机 Lab 密钥应受控轮换，不在仓库复制或回显。文档追记后新的 `docs:check` 尚未运行。
+
+## 2026-11-16 · 第三十三批第十三小批 OIDC 受控身份绑定候选验证
+
+新增 `scripts/oidc-lab-identity.mjs`，复用服务端现有 `pg` 依赖，严格限制本机 `adui_scada_oidc_lab`、已登记 Keycloak Issuer、HTTPS/Origin/OIDC 配置、用户名/主体标识模式与独立的数据库事务，不提供匿名注册、工程 ACL 授予或设备写入。默认只读预览统一回滚，显式 `--apply --confirm-lab adui_scada_oidc_lab` 才可能写入身份映射。新增 `scripts/oidc-lab-identity.cases.mjs` 的 14 项隔离测试。
+
+已对 GitHub 候选源码执行动态语法编译及测试逻辑模拟：在无 Node 文件系统/数据库网络的 V8 隔离环境载入原脚本主体和原测试回调，用 Mock PostgreSQL 和 URL/Node 断言适配运行，**14/14 通过**（命令参数与 UUID、非生产精确连接约束、只读回滚、事务提交、幂等、非法绑定和 SQL 错误脱敏）。**此结果不等同于 Node.js 22/24 的 `node --test`、仓库 `vp check`、`pnpm run ready` 或真实 PostgreSQL/OIDC 联调通过**。提交后 Windows 必须实跑 `pnpm run test:oidc:identity`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`，再经维护者明确选择的 Lab UUID 先预览后写入测试库；真实登录/CSRF/React-Vue 工程操作另行验收。
+
+本批不重新应用已完成的四项 Prisma 迁移，不执行 `down -v`，不轮换或打印本地秘密，不触碰生产数据库。
