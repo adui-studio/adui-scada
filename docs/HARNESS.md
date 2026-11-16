@@ -2092,3 +2092,9 @@ Write-Host "真实 OIDC 工程浏览器专项退出码：$LASTEXITCODE"
 ```
 
 真实登录窗口不保留；失败原因仍可能是缺少权限、API 响应、页面运行时或浏览器测试断言，需要使用最新**脱敏**阶段日志区分，不能仅凭质量链通过宣称 OIDC 端到端已通过。
+
+### 第三十四批第三小批 · CDP 页面状态作用域修复（E-025）
+
+维护者 Windows 在最新 OIDC 专项中成功完成 Keycloak 登录、React 授权工程列表和分页，但在临时 IndexedDB 草稿阶段遭遇 `ReferenceError`；排查发现原 `stateInPage` 经 `function.toString()` 发送到浏览器时，错误引用仅存在于 Node 中的 `readBrowserDraftsInPage`。目前已将画布状态/草稿哈希读取拆分为两次**各自自包含的浏览器 CDP 调用**，在 Node 层合并原有断言，不调整临时 Profile 自动清理。
+
+维护者同步 PR #58 最新提交后，先运行 `pnpm run test:projects:oidc:config`（新增一项序列化边界回归，预计共 11 项），`vp check`、`pnpm run docs:check`、`pnpm run ready`；随后在本机可信 OIDC HTTPS Lab 上手动登录测试窗口，运行 `pnpm run test:projects:oidc:browser`，继续检查 React 与 Vue 的取消打开、模拟水位冲突、确认载入、自动保存暂停与 IndexedDB 原草稿哈希一致。浏览器关闭仍是安全清理，失败退出码不属于通过。

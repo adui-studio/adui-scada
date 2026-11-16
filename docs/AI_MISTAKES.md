@@ -217,6 +217,15 @@
 - **验证**：维护者此前 `test:projects:oidc:config` **7/7**、`ready` 全链 **退出码 0**，但交互式浏览器脚本**退出码 1**。本补丁的离线错误脱敏测试、`vp check`、`ready` 和双端真实 OIDC 浏览器专项**均待修复后 Windows 复验**。浏览器窗口自动关闭本身不是故障，不应修改为保留有效登录会话。
 - **证据**：维护者 2026-11-16 真实 OIDC 浏览器失败日志、PR #58、`scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`、`docs/VALIDATION.md`。
 
+### E-025 · CDP 页面快照再次引用 Node 模块作用域 helper（第三十四批第三小批）
+
+- **现象**：维护者 Windows 完成 `test:projects:oidc:config` **10/10**、`vp check` **328 文件格式正确/183 受检零错误** 和完整 `pnpm run ready` **544/544 单测、49/49 E2E、退出码 0**。在真实 `test:projects:oidc:browser` 中 Keycloak 登录、React 工程列表/分页及其 UI 比对已完成，随后在“React：正在验证临时 IndexedDB 草稿保存与自动保存”阶段报“浏览器页面操作失败：页面脚本引用异常”，专项退出码 **1**；Vue 尚未测试。
+- **已确认根因**：`ChromeSession.evaluate(action)` 只把 `action.toString()` 发送到浏览器环境；`stateInPage()` 调用了只在 Node.js 模块中定义的 `readBrowserDraftsInPage()`。浏览器执行该独立函数时查不到模块闭包中的 helper，必然触发 `ReferenceError`。这是 **E-002 跨执行上下文错误的再次发生**，不涉及 OIDC 登录、前端 IndexedDB 模型或实际授权工程数据。浏览器失败后自动关闭属于临时 Profile 安全清理。
+- **修复**：将 `stateInPage` 限定为自包含的 DOM/UI 状态函数；新增 `inspectStudioState(session)`，分别通过独立 CDP `evaluate` 执行 `stateInPage` 和 `readBrowserDraftsInPage`，仅在 Node 层合并已用于断言的画布/草稿摘要。四个状态快照断言均复用该入口，不改业务 API、Schema、OAuth、TLS、数据库或页面组件。
+- **避免**：使用 `function.toString()` 的 CDP 代码边界必须逐一审核函数引用，不允许引用 Node 模块 helper 或局部闭包；涉及多段页面执行时在 Node 层组合结果，并用模拟 `session.evaluate` 的单元用例检查被序列化的函数名称与独立性。
+- **验证**：补充 1 项离线回归，预计离线总数由 **10 增至 11**；修复前日志显示完整质量链通过但独立浏览器专项退出码 1。**修复后的 Windows `test:projects:oidc:config`、`vp check`、完整 `ready`、真实 React/Vue OIDC 浏览器专项尚未执行，不能宣称通过**。
+- **证据**：维护者 2026-11-16 浏览器专项原始日志、PR #58、`scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

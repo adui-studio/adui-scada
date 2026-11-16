@@ -1166,3 +1166,7 @@ PR #57 经维护者人工验收和单独合并授权，以 Squash Commit `c426d2
 ### 2026-11-16 · 第三十四批第三小批真实 OIDC 登录后脚本失败、E-024 候选修复
 
 维护者已通过 Windows 全量 `ready`：544/544 单元测试、49/49 HTTP E2E、7/7 新 OIDC 离线配置用例及 React/Vue/NestJS 构建，退出码 0。但首次 `test:projects:oidc:browser` 实测仅证明 React Origin 的真实 Keycloak / BFF 登录成功，随后被不透明的 CDP 页面异常阻断，退出码 1；浏览器按安全清理流程关闭，不代表 Vue 或工程 CAS 实际完成。新补丁只改测试脚本的分阶段脱敏诊断、受控 HTTP 状态和离线回归测试，明确 `project:read` / `version:read` 验收前提；尚未执行最新 HEAD 质量链或真实双端 OIDC 浏览器复验。PR #58 继续保持 Draft，不能因登录成功而合并。
+
+### 2026-11-16 · 第三十四批第三小批 E-025：真实 OIDC 浏览器草稿快照跨上下文异常
+
+维护者已实测新诊断版本：`test:projects:oidc:config` 10/10、Windows `vp check` 328/183 零告警、完整 `ready` 544/544 单测、49/49 HTTP E2E 和两 Web/NestJS 构建退出码 0。Keycloak / React BFF 会话和工程管理授权摘要与分页已运行到草稿阶段，随后 CDP 页面脚本出现 `ReferenceError`，浏览器专项退出码 1、Vue 尚未测试。确认是 `stateInPage` 序列化后引用 Node 模块的 `readBrowserDraftsInPage`，重现旧 E-002 错误；已按 E-025 拆分独立页面调用并补离线回归，**新分支 HEAD 的完整质量链与真实浏览器验收仍待维护者 Windows 复验**。PR #58 保持 Draft，未获合并授权。

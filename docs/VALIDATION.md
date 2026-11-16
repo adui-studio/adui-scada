@@ -1290,3 +1290,11 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CDP 异常白名单类别诊断、列表 API 的仅 HTTP 状态码反馈，且在没有已授权工程时保留固定中文引导；不输出浏览器堆栈、Cookie、Token、工程正文或数据库连接字符串，不更改认证/授权行为，不把测试 Browser Profile 保留给用户。新增 3 项离线异常分类/泄密防护用例，离线总数由 **7 增至 10**（待 Windows 实测）。已确认服务端载入快照还要求 `version:read`，仅拥有 `project:read` 不足以完成载入验收；请由维护者在隔离 Lab 受控核对现有权限，不自动执行任何 ACL 或数据库写入。
 
 **此刻仅有补丁代码与静态核对，没有修复后 Windows 实测**。待执行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`、`pnpm run ready`，以及完成真实 OIDC 登录后重跑 `pnpm run test:projects:oidc:browser`，记录最后显示的受控阶段、退出码与是否完成 Vue。新增异常诊断不能代替真实数据库 CAS 并发验收。
+
+## 2026-11-16 · 第三十四批第三小批：真实工程分页通过后 IndexedDB 状态快照触发 E-025
+
+维护者本机上传的完整 PowerShell 日志确认：`pnpm run test:projects:oidc:config` **10/10**、`vp check` **328 文件格式通过/183 受检零告警**，完整 `pnpm run ready` **544/544 单测、49/49 HTTP E2E、86 Markdown 及 React/Vue/NestJS 构建**成功、退出码 **0**。真实 `pnpm run test:projects:oidc:browser` 已完成 Keycloak / React BFF 会话、工程列表、工程管理摘要与分页步骤；在“React：正在验证临时 IndexedDB 草稿保存与自动保存”阶段报 **“浏览器页面操作失败：页面脚本引用异常”**，最终退出码 **1**；尚未执行 Vue 部分、取消保护、冲突注入与 CAS 基线。浏览器自动关闭是 `finally` 清理临时测试 Profile，不是 OAuth 会话丢失。
+
+检查 PR #58 源码后确定，`stateInPage()` 在 CDP 独立页面上下文执行时直接引用 Node 模块的 `readBrowserDraftsInPage()`，符合 E-002 的已知跨作用域失败；本次作为 **E-025** 回归。最小修复将页面 DOM 状态和 IndexedDB 草稿摘要分为两个独立的 `session.evaluate` 调用，在 Node 侧组合结果，保留原四处画布、自动保存、草稿哈希和 CAS 断言。同步新增 1 项离线动作序列化测试，离线预计由 **10 增至 11**，安全开关、登录、服务端 API、Prisma、生产数据和设备写入全部不变。
+
+**修复后尚无 Windows 运行结果**；需要重新执行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 和 `pnpm run test:projects:oidc:browser`，验证双端直到 CAS 和草稿保护全部通过。此前完整 `ready` 退出码 0 只对应修复前 HEAD，不能当作本提交质量链通过证据。
