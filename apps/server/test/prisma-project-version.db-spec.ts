@@ -143,8 +143,8 @@ describe("PostgreSQL 真实工程版本事务", () => {
 
   it("两个独立 Prisma 连接与不同授权主体竞争同一 CAS 水位只允许一个提交", async () => {
     const secondConnection = new PrismaService();
-    await secondConnection.onModuleInit();
     try {
+      await secondConnection.onModuleInit();
       const secondStore = new PrismaProjectVersionStore(secondConnection);
       const initial = await store.append(principalWriterA, projectId, {
         expectedRevision: null,
