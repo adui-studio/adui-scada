@@ -1,6 +1,7 @@
 # ADR-0066 · 本机单一 Compose 项目与唯一 PostgreSQL 实例
 
-- 状态：Proposed（Windows 实际切换待验收）
+- 状态：Proposed
+- 验收：Windows 实际切换待执行
 - 日期：2026-11-16
 - 范围：本机开发/演示/OIDC 测试，不涉及生产正式部署
 

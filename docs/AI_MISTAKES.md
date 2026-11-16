@@ -163,6 +163,15 @@
 - **验证与关闭**：维护者 2026-11-16 Windows 实测 `test:e2e:server` **6/6 文件、42/42 项**（新增真实根模块装配 2/2）、`vp check` **315 格式文件/171 受检零警告**、`ready` **530/530 单测**且完整质量链已执行；真实 NestJS OIDC 根模块成功启动、`127.0.0.1:13001` 在监听，React/Vue 两端 HTTPS 匿名 `401 JSON` 专项 **退出码 0**。**E-018 已关闭**。未独立提供本地 HEAD 和 `ready` 数值退出码，亦未证明 Keycloak 完整用户登录、Secure Cookie/CSRF 或工程历史/CAS 互通；这些继续待验收。
 - **证据**：维护者 2026-11-16 Windows NestJS `UnknownDependenciesException` 与 Vite `ECONNREFUSED` 原始日志、PR #55、`apps/server/src/auth/scada-identity.module.ts`、`apps/server/src/database/database.module.spec.ts`、`apps/server/test/oidc-module-bootstrap.e2e-spec.ts`。
 
+### E-019 · ADR 状态混入验收说明导致文档门禁失败（第三十三批 Docker 单栈）
+
+- **现象**：2026-11-16 维护者在 Windows 执行 `pnpm run docs:check`，报告 `ADR 状态无效：0066-single-local-compose-project.md`，退出码 1；同次 `pnpm run ready` 在文档检查阶段中止。此前 `test:docker` 17/17、`vp check` 318 个格式文件/175 个受检零告警、单测 530/530、NestJS E2E 42/42 均已通过，但不能宣称完整 `ready` 通过。
+- **原因**：ADR-0066 写成 `- 状态：Proposed（Windows 实际切换待验收）`，而仓库 `scripts/validate-docs.mjs` 只接受严格的单行枚举值 `Proposed|Accepted|Rejected|Superseded|Deprecated`；额外中文括号说明使状态不匹配。
+- **修复**：仅将状态拆分为 `- 状态：Proposed` 和独立 `- 验收：Windows 实际切换待执行`，不放宽或修改文档校验器，不改 Docker、OIDC、数据库或测试逻辑。
+- **避免**：新增或修改 ADR 前检查 `scripts/validate-docs.mjs` 的状态枚举契约；业务状态和详细验收进度分行记录，提交前运行 `pnpm run docs:check`，并在 `ready` 执行到末尾后才报告其通过。
+- **验证**：已对修复候选应用仓库相同的 ADR 状态正则进行静态核对；Windows `pnpm run docs:check`、`vp check` 与完整 `pnpm run ready` **修复后尚待维护者复验**。真实 Docker 项目迁移、数据备份与回归未因本次文档修复执行。
+- **证据**：维护者 2026-11-16 Windows 验收日志、PR #55、`docs/adr/0066-single-local-compose-project.md`、`scripts/validate-docs.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

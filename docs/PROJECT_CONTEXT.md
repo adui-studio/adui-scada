@@ -1104,3 +1104,7 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 维护者明确要求删除遗留开发数据库及重复 Docker 配置，只保留项目名 `adui-scada`。因此新版本仅保留 `deploy/docker/compose.yaml`，七个容器：React/Vue/NestJS Demo/模拟服务、单 PostgreSQL、Redis、Keycloak。旧开发库 `15432` 不再启动；现有 SCADA/Keycloak 数据所在的 PostgreSQL `15433` 继续挂原持久化卷，两套逻辑数据库保留原名避免重建或丢失 OIDC 预绑定。原物理卷名称虽然带历史 OIDC Lab 前缀，但 Docker Desktop 项目名将固定为 `adui-scada`，不再运行其他 Compose 项目。
 
 旧 `compose.demo.yaml`、`compose.postgres.dev.yaml`、`compose.oidc.lab.yaml`、`compose.all.dev.yaml` 和对应多套命令清理。新 `docker:plan` / `docker:migrate` 白名单识别历史容器，显式迁移不会删除卷；日常使用 `docker:up` 等单一入口。候选 17/17 隔离 V8 Mock 逻辑检查通过，Windows 真实 `vp check`/`ready`、Docker Compose 配置解析、备份和容器切换仍待维护者实测。
+
+### 2026-11-16 · Docker 单 Compose Windows 首次质量验收受文档规则阻断
+
+维护者的唯一 `adui-scada` 七服务、单 PostgreSQL 方案已完成 Windows `test:docker` 17/17、`env:check`、`vp check` 318/175 零告警、530/530 单测及 NestJS 42/42 E2E。首次 `docs:check` 在 ADR-0066 上发现状态行带额外括号说明，违反严格枚举；完整 `ready` 因此中断，不能记为通过。按 E-019 将 ADR 状态改成单独 `Proposed` 并分离验收说明；修复后 Windows `docs:check` / `ready` 和真实 Docker 迁移继续待验收，旧数据库及 Keycloak 数据卷未执行删除。

@@ -1184,3 +1184,9 @@ Windows 更新分支后应先执行 `pnpm run test:docker:all`、`pnpm run env:c
 新增 `scripts/docker-stack.mjs` 和 17 项 Node 测试，用白名单核对三个旧项目的容器标签、两份必须存在的卷、唯一数据库与本机端口、完整 Compose 静态配置；默认普通 `up` 拒绝与旧容器并存，显式 `migrate` 仅 stop/rm 已核验旧容器，不调用 `down -v`、`volume rm`。更新 `.env.example` 与 `env:check`，不再公开固定数据库密码或默认指向旧 15432。17 项候选测试回调已在隔离 V8 / 模拟 Docker 环境 **17/17 通过**；这是脚本逻辑检查，**不是**实际 Node `node --test`、Windows `vp check`、`ready` 或真实 Docker 迁移。
 
 下一步需维护者 Windows 检查 `pnpm run test:docker`、`pnpm run env:check`、`vp check`、`pnpm run docs:check`、`pnpm run ready` 和 `docker:plan`，确认 Keycloak/SCADA 可恢复逻辑备份后再显式 `docker:migrate`。请在验收记录中核对两个卷、Keycloak Discovery、现存 SCADA 业务身份、SSE 与 Docker Desktop 仅一个项目组。不自动删除旧开发库卷、不触碰生产数据。
+
+## 2026-11-16 · 单 Compose Docker Windows 首轮验收与 ADR-0066 修复（E-019）
+
+维护者 Windows 实际运行 `pnpm run test:docker`：**17/17 通过**；`pnpm run env:check`：环境配置与 LF 检查通过；`vp check`：**318 个文件格式正确、175 个受检文件零告警/Lint/类型错误**；`pnpm run ready` 已完成 48 文件 **530/530 单元测试**、SSE 8/8、故障代理 4/4、OIDC HTTPS 代理 10/10、OIDC Lab 6/6、身份绑定 14/14、Docker 17/17、HTTPS 只读探针 11/11 和 NestJS **42/42 E2E**。其后 `docs:check` 报 `ADR 状态无效：0066-single-local-compose-project.md`，`ready` 因此中断；不能称完整 `ready` 通过，后续 `build:web` 与 `build:server` 在该次 `ready` 中未执行。
+
+E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.mjs` 的严格枚举状态契约。最小修复为将 `Proposed` 与 Windows 验收说明拆为两行，未修改校验器或 Docker/数据库。当前仅对新增 ADR 状态做同等正则静态核对，**修复后的 Windows `pnpm run docs:check`、完整 `ready` 尚待维护者执行**。后续进行一次性 `docker:migrate` 前，仍须确认现有 PostgreSQL 逻辑备份可恢复，绝不删现有数据卷。
