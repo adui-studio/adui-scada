@@ -198,6 +198,20 @@ function pageStateInPage() {
   };
 }
 
+async function waitForStudioActionIdleInPage() {
+  for (let retry = 0; retry < 120; retry += 1) {
+    const busy = [...document.querySelectorAll('[aria-label="服务端工程版本"] .studio-version-help')].some(
+      (node) => node.textContent?.includes("正在处理工程版本")
+    );
+    const blocked = [...document.querySelectorAll(".studio-project-browser-item button")].some(
+      (button) => button.disabled
+    );
+    if (!busy && !blocked) return true;
+    await new Promise((done) => setTimeout(done, 100));
+  }
+  return false;
+}
+
 async function readBrowserDraftsInPage() {
   const database = await new Promise((resolve, reject) => {
     const req = indexedDB.open("adui-scada-studio");
@@ -416,6 +430,7 @@ async function verifyStudio(session, origin, name) {
   const selected = initial[0];
   const canceled = await session.evaluate(openProjectInPage, selected.projectId, selected.headRevision, "cancel");
   assert.deepEqual(canceled, { confirmCount: 1, intercepted: 0, outcome: "cancel" });
+  assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
   const afterCancel = await session.evaluate(stateInPage);
   assert.equal(afterCancel.canvas, baseline.canvas, name + " 取消载入改变了画布");
   assert.deepEqual(afterCancel.drafts, baseline.drafts, name + " 取消载入修改了 IndexedDB 草稿");
@@ -423,6 +438,7 @@ async function verifyStudio(session, origin, name) {
 
   const conflict = await session.evaluate(openProjectInPage, selected.projectId, selected.headRevision, "conflict");
   assert.deepEqual(conflict, { confirmCount: 0, intercepted: 1, outcome: "conflict" });
+  assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
   const afterConflict = await session.evaluate(stateInPage);
   assert.equal(afterConflict.canvas, baseline.canvas, name + " 模拟远端水位冲突改变了画布");
   assert.deepEqual(afterConflict.drafts, baseline.drafts, name + " 模拟远端水位冲突修改了草稿");
@@ -430,6 +446,7 @@ async function verifyStudio(session, origin, name) {
 
   const opened = await session.evaluate(openProjectInPage, selected.projectId, selected.headRevision, "confirm");
   assert.deepEqual(opened, { confirmCount: 1, intercepted: 0, outcome: "confirm" });
+  assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
   const afterOpen = await session.evaluate(stateInPage);
   assert.equal(afterOpen.autoSave, false, name + " 载入后未暂停自动保存");
   assert.deepEqual(afterOpen.drafts, baseline.drafts, name + " 服务端载入覆盖了 IndexedDB 草稿");
