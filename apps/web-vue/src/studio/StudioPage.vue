@@ -1643,9 +1643,12 @@ async function importJson(event: Event) {
             </p>
             <p class="studio-version-help" role="status">
               {{ serverIdentity }} · 服务端最新修订号：
-              {{ serverProjectId === state.document.projectId && serverHeadRevision !== null
-                ? serverHeadRevision
-                : "未查询" }} · CAS 基线：{{ activeServerBaseline ?? "未建立" }}
+              {{
+                serverProjectId === state.document.projectId && serverHeadRevision !== null
+                  ? serverHeadRevision
+                  : "未查询"
+              }}
+              · CAS 基线：{{ activeServerBaseline ?? "未建立" }}
             </p>
             <div class="studio-version-tools">
               <button type="button" :disabled="historyBusy" @click="checkServerIdentity">
@@ -1682,10 +1685,18 @@ async function importJson(event: Event) {
                 </div>
                 <code :title="item.contentHash">{{ item.contentHash.slice(0, 16) }}…</code>
                 <div class="studio-version-item-actions">
-                  <button type="button" :disabled="historyBusy" @click="inspectServerVersion(item.revision)">
+                  <button
+                    type="button"
+                    :disabled="historyBusy"
+                    @click="inspectServerVersion(item.revision)"
+                  >
                     查看差异
                   </button>
-                  <button type="button" :disabled="historyBusy" @click="loadServerVersion(item.revision)">
+                  <button
+                    type="button"
+                    :disabled="historyBusy"
+                    @click="loadServerVersion(item.revision)"
+                  >
                     载入
                   </button>
                 </div>
@@ -1700,8 +1711,14 @@ async function importJson(event: Event) {
                 服务端版本 #{{ serverInspectedVersion.revision }} ·
                 {{ serverComparison.sameContent ? "内容与当前一致" : "与当前内容不同" }}
               </strong>
-              <p>当前：{{ serverComparison.current.pageCount }} 页 / {{ serverComparison.current.nodeCount }} 图元</p>
-              <p>历史：{{ serverComparison.historical.pageCount }} 页 / {{ serverComparison.historical.nodeCount }} 图元</p>
+              <p>
+                当前：{{ serverComparison.current.pageCount }} 页 /
+                {{ serverComparison.current.nodeCount }} 图元
+              </p>
+              <p>
+                历史：{{ serverComparison.historical.pageCount }} 页 /
+                {{ serverComparison.historical.nodeCount }} 图元
+              </p>
             </div>
             <button
               v-if="visibleServerRows.length > 0 && serverHasMore"

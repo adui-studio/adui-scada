@@ -104,11 +104,7 @@ export class StudioServerProjectSession {
       }
 
       try {
-        const saved = await this.api.appendVersion(
-          checked.projectId,
-          baseline.revision,
-          checked,
-        );
+        const saved = await this.api.appendVersion(checked.projectId, baseline.revision, checked);
         this.baseline = { projectId: checked.projectId, revision: saved.revision, principal };
         return { projectId: checked.projectId, revision: saved.revision, created: false };
       } catch (error) {

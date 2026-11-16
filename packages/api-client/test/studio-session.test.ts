@@ -138,9 +138,7 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     const api = mockClient();
     const session = createStudioServerProjectSession(api);
     session.acceptLoadedVersion(await session.readVersion(waterTreatmentDemoDocument.projectId, 1));
-    api.appendVersion.mockRejectedValueOnce(
-      new ScadaApiError("工程版本冲突", "conflict", 409),
-    );
+    api.appendVersion.mockRejectedValueOnce(new ScadaApiError("工程版本冲突", "conflict", 409));
     await expect(session.saveDocument(documentCopy())).rejects.toMatchObject({ kind: "conflict" });
     expect(api.appendVersion).toHaveBeenCalledTimes(1);
     expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBeNull();

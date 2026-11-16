@@ -142,7 +142,9 @@ export default function StudioPage() {
   const [serverRows, setServerRows] = useState<readonly ProjectVersionSummary[]>([]);
   const [serverHasMore, setServerHasMore] = useState(false);
   const [serverError, setServerError] = useState("");
-  const [serverInspectedVersion, setServerInspectedVersion] = useState<ProjectSnapshot | null>(null);
+  const [serverInspectedVersion, setServerInspectedVersion] = useState<ProjectSnapshot | null>(
+    null,
+  );
   const historyActionRef = useRef(false);
   const autoSaveSessionRef = useRef<DraftAutoSaveSession | null>(null);
   const draftActionRef = useRef(false);
@@ -1058,7 +1060,8 @@ export default function StudioPage() {
           setServerError(error instanceof Error ? error.message : "服务端操作失败");
           if (
             error instanceof ScadaApiError &&
-            (error.kind === "unauthenticated" || (label === "检查服务端身份" && error.status === 404))
+            (error.kind === "unauthenticated" ||
+              (label === "检查服务端身份" && error.status === 404))
           ) {
             setServerIdentity("未登录或服务端尚未启用身份接口");
           }
@@ -1174,7 +1177,8 @@ export default function StudioPage() {
         const warning = await refreshDraftAvailability(projectId);
         setNotice(
           result.snapshot.revision === result.headRevision
-            ? `已载入服务端最新版本 #${revision}，可按此修订号 CAS 保存；自动保存已暂停，本地草稿未覆盖` + warning
+            ? `已载入服务端最新版本 #${revision}，可按此修订号 CAS 保存；自动保存已暂停，本地草稿未覆盖` +
+                warning
             : `已载入较早的服务端版本 #${revision}；不能直接覆盖最新版本，自动保存已暂停` + warning,
         );
       },
@@ -1673,17 +1677,30 @@ export default function StudioPage() {
                 {serverIdentity} · 服务端最新修订号：
                 {serverProjectId === state.document.projectId && serverHeadRevision !== null
                   ? serverHeadRevision
-                  : "未查询"} · CAS 基线：
+                  : "未查询"}{" "}
+                · CAS 基线：
                 {activeServerBaseline ?? "未建立"}
               </p>
               <div className="studio-version-tools">
-                <button type="button" disabled={historyBusy} onClick={() => void checkServerIdentity()}>
+                <button
+                  type="button"
+                  disabled={historyBusy}
+                  onClick={() => void checkServerIdentity()}
+                >
                   检查登录
                 </button>
-                <button type="button" disabled={historyBusy} onClick={() => void saveServerProject()}>
+                <button
+                  type="button"
+                  disabled={historyBusy}
+                  onClick={() => void saveServerProject()}
+                >
                   保存至服务端
                 </button>
-                <button type="button" disabled={historyBusy} onClick={() => void refreshServerHistory()}>
+                <button
+                  type="button"
+                  disabled={historyBusy}
+                  onClick={() => void refreshServerHistory()}
+                >
                   查询服务端历史
                 </button>
               </div>
@@ -1691,7 +1708,11 @@ export default function StudioPage() {
                 服务器已有工程时，请先显式载入最新服务端版本再保存；冲突不会自动重试，草稿始终保留。
               </p>
               {historyBusy && <p className="studio-version-help">正在处理工程版本…</p>}
-              {serverError && <p className="studio-version-error" role="alert">{serverError}</p>}
+              {serverError && (
+                <p className="studio-version-error" role="alert">
+                  {serverError}
+                </p>
+              )}
               {!historyBusy && visibleServerRows.length === 0 && (
                 <p className="studio-version-help">尚无已查询的服务端历史版本。</p>
               )}
@@ -1706,10 +1727,18 @@ export default function StudioPage() {
                     </div>
                     <code title={item.contentHash}>{item.contentHash.slice(0, 16)}…</code>
                     <div className="studio-version-item-actions">
-                      <button type="button" disabled={historyBusy} onClick={() => void inspectServerVersion(item.revision)}>
+                      <button
+                        type="button"
+                        disabled={historyBusy}
+                        onClick={() => void inspectServerVersion(item.revision)}
+                      >
                         查看差异
                       </button>
-                      <button type="button" disabled={historyBusy} onClick={() => void loadServerVersion(item.revision)}>
+                      <button
+                        type="button"
+                        disabled={historyBusy}
+                        onClick={() => void loadServerVersion(item.revision)}
+                      >
                         载入
                       </button>
                     </div>
@@ -1722,12 +1751,23 @@ export default function StudioPage() {
                     服务端版本 #{serverInspectedVersion.revision} ·
                     {serverComparison.sameContent ? " 内容与当前一致" : " 与当前内容不同"}
                   </strong>
-                  <p>当前：{serverComparison.current.pageCount} 页 / {serverComparison.current.nodeCount} 图元</p>
-                  <p>历史：{serverComparison.historical.pageCount} 页 / {serverComparison.historical.nodeCount} 图元</p>
+                  <p>
+                    当前：{serverComparison.current.pageCount} 页 /{" "}
+                    {serverComparison.current.nodeCount} 图元
+                  </p>
+                  <p>
+                    历史：{serverComparison.historical.pageCount} 页 /{" "}
+                    {serverComparison.historical.nodeCount} 图元
+                  </p>
                 </div>
               )}
               {visibleServerRows.length > 0 && serverHasMore && (
-                <button type="button" className="studio-version-more" disabled={historyBusy} onClick={() => void loadMoreServerVersions()}>
+                <button
+                  type="button"
+                  className="studio-version-more"
+                  disabled={historyBusy}
+                  onClick={() => void loadMoreServerVersions()}
+                >
                   加载更早服务端版本
                 </button>
               )}
