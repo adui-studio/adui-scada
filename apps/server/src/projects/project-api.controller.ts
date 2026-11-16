@@ -51,10 +51,17 @@ export class ProjectApiController {
 
   @Get()
   @Header("Cache-Control", "no-store")
-  @ApiOperation({ summary: "列出当前主体有权读取的工程" })
-  @ApiOkResponse({ description: "返回工程摘要列表，不包含完整工程文档" })
-  list(@Req() request: ScadaAuthenticatedRequest) {
-    return this.projects.list(request.scadaPrincipal ?? null);
+  @ApiOperation({ summary: "按工程 ID 升序分页列出当前主体有权读取的工程" })
+  @ApiQuery({ name: "limit", required: false, description: "每页数量，默认 20，最大 100" })
+  @ApiQuery({
+    name: "afterProjectId",
+    required: false,
+    description: "仅返回工程 ID 严格大于该游标的授权工程",
+  })
+  @ApiOkResponse({ description: "返回工程摘要数组，不包含完整工程文档" })
+  @ApiResponse({ status: 400, description: "工程列表分页参数无效" })
+  list(@Req() request: ScadaAuthenticatedRequest, @Query() query: Record<string, unknown>) {
+    return this.projects.list(request.scadaPrincipal ?? null, query);
   }
 
   @Get(":projectId")

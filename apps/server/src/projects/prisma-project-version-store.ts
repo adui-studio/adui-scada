@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type {
   ProjectSnapshot,
+  ProjectListQuery,
   ProjectVersionQuery,
   ProjectVersionSummary,
   ScadaDocument,
@@ -169,6 +170,36 @@ function parsePositiveInteger(value: unknown, label: string): number {
     throw new ProjectRequestValidationError(label + "必须是大于零的安全整数");
   }
   return parsed as number;
+}
+
+/** 工程列表只允许数量和稳定 ID 游标，拒绝额外身份参数。 */
+function parseProjectListQuery(
+  input: unknown,
+): Required<Pick<ProjectListQuery, "limit">> & Pick<ProjectListQuery, "afterProjectId"> {
+  const source = input === undefined ? {} : input;
+  if (!isPlainRecord(source)) {
+    throw new ProjectRequestValidationError("工程列表分页参数必须为普通对象");
+  }
+  if (Object.keys(source).some((field) => field !== "limit" && field !== "afterProjectId")) {
+    throw new ProjectRequestValidationError("工程列表分页只允许 limit 与 afterProjectId 参数");
+  }
+
+  const limit =
+    source.limit === undefined ? 20 : parsePositiveInteger(source.limit, "工程列表每页数量");
+  if (limit > 100) {
+    throw new ProjectRequestValidationError("工程列表每页数量不能超过 100 条");
+  }
+  const afterProjectId = source.afterProjectId;
+  if (
+    afterProjectId !== undefined &&
+    (typeof afterProjectId !== "string" || !ID_PATTERN.test(afterProjectId))
+  ) {
+    throw new ProjectRequestValidationError("工程列表游标必须是合法的工程 ID");
+  }
+  return {
+    limit,
+    ...(afterProjectId === undefined ? {} : { afterProjectId }),
+  };
 }
 
 /** 分页只允许 limit 与 beforeRevision，拒绝重复参数、未知字段和越界值。 */
@@ -390,12 +421,17 @@ export class PrismaProjectVersionStore {
     }, TRANSACTION_OPTIONS);
   }
 
-  /** 只列出当前租户明确授予 project:read 的工程，不返回完整工程文档。 */
-  async list(principal: AuthenticatedProjectPrincipal | null): Promise<readonly ProjectSummary[]> {
+  /** 按不可变工程 ID 有界升序分页，每页重新核验当前租户与 project:read。 */
+  async list(
+    principal: AuthenticatedProjectPrincipal | null,
+    input?: unknown,
+  ): Promise<readonly ProjectSummary[]> {
     requirePrincipal(principal);
+    const query = parseProjectListQuery(input);
     const projects = await this.database.client.scadaProject.findMany({
       where: {
         tenantId: principal.tenantId,
+        ...(query.afterProjectId === undefined ? {} : { projectId: { gt: query.afterProjectId } }),
         grants: {
           some: {
             tenantId: principal.tenantId,
@@ -410,7 +446,8 @@ export class PrismaProjectVersionStore {
         createdAt: true,
         updatedAt: true,
       },
-      orderBy: [{ updatedAt: "desc" }, { projectId: "asc" }],
+      orderBy: { projectId: "asc" },
+      take: query.limit,
     });
     return projects.map(toProjectSummary);
   }

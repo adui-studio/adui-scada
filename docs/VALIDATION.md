@@ -1256,3 +1256,9 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 补充：OIDC Controller HTTP E2E 使用受控 Mock 返回 429，验证匿名登录超额请求不再下发 Cookie；服务层单元测试独立验证限额计数和并发释放。此项是候选新增用例，尚未经 Windows 执行。
 
 本轮额外新增 `apps/server/test/oidc-schema.db-spec.ts` 的隔离 PostgreSQL 真库验证：使用本机强制白名单 `adui_scada_test`，插入 2000 年到期事务和当前有效事务，通过实际 Prisma 清理后分别核对删除与保留；`finally` 删除本用例创建的记录。原有 `test:db` 22 项预计增至 23 项，但**当前只是候选代码，尚未执行真实数据库**，不得称测试已通过。
+
+## 2026-11-16 · 第三十四批第一小批工程列表有界分页（候选，待 Windows 验收）
+
+本批基于已合并 `main@412a5475`。服务端 `GET /api/v1/projects` 保持摘要数组和同源认证，但查询默认 20、最大 100，`afterProjectId` 严格白名单且按工程 ID 升序，数据库依旧过滤可信租户与 `project:read`。Core 新增 `ProjectListQuery`，API Client 的 `listProjects(query?)` 与 React/Vue 共用请求、安全校验及响应顺序检查。
+
+新增回归：非法/额外查询字段、重复 Query 参数、页面大小与游标限制；客户端越界或乱序响应拒绝；HTTP 200 转发/400 领域错误；独立 `adui_scada_test` 真库跨租户、第一页/末页与耗尽条件。**所有新增代码与测试当前尚未在 Windows 执行 `vp check`、`pnpm run ready`、`pnpm run docs:check` 或隔离 `pnpm run test:db`，不以此前第三十三批通过结果冒充新代码已验收。** 真实 PostgreSQL 测试必须仅在已确认的本机 `adui_scada_test` 执行，绝不能连接业务库 `adui_scada` 或清理任何 Docker 持久卷。

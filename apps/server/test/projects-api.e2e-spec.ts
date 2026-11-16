@@ -89,7 +89,10 @@ describe("工程 API HTTP 接口（端到端）", () => {
       (principal: AuthenticatedProjectPrincipal | null, input: unknown) => Promise<ProjectSummary>
     >(async () => PROJECT_SUMMARY),
     list: vi.fn<
-      (principal: AuthenticatedProjectPrincipal | null) => Promise<readonly ProjectSummary[]>
+      (
+        principal: AuthenticatedProjectPrincipal | null,
+        query?: unknown,
+      ) => Promise<readonly ProjectSummary[]>
     >(async () => [PROJECT_SUMMARY]),
     getProject: vi.fn<
       (
@@ -200,7 +203,35 @@ describe("工程 API HTTP 接口（端到端）", () => {
 
     expect(response.body).toEqual([PROJECT_SUMMARY]);
     expect(response.headers["cache-control"]).toBe("no-store");
-    expect(store.list).toHaveBeenCalledWith(PRINCIPAL);
+    expect(store.list).toHaveBeenCalledWith(PRINCIPAL, {});
+  });
+
+  it("工程列表 HTTP 转发分页数量与安全游标", async () => {
+    const response = await request(app.getHttpServer())
+      .get("/api/v1/projects")
+      .query({ limit: 5, afterProjectId: "previous-project" })
+      .set("Authorization", "Bearer " + SESSION_TOKEN)
+      .expect(200);
+
+    expect(response.status).toBe(200);
+    expect(store.list).toHaveBeenCalledWith(PRINCIPAL, {
+      limit: "5",
+      afterProjectId: "previous-project",
+    });
+  });
+
+  it("工程列表分页错误映射为受控 HTTP 400", async () => {
+    store.list.mockRejectedValueOnce(
+      new ProjectRequestValidationError("工程列表每页数量不能超过 100 条"),
+    );
+    const response = await request(app.getHttpServer())
+      .get("/api/v1/projects")
+      .query({ limit: 101 })
+      .set("Authorization", "Bearer " + SESSION_TOKEN)
+      .expect(400);
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("工程列表每页数量不能超过 100 条");
   });
 
   it("工程详情必须通过 project:read 权限", async () => {

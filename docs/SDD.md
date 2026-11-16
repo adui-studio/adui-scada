@@ -768,3 +768,9 @@ Vue/React Studio 使用同一个 `@adui/scada-api-client` 的 `StudioServerProje
 启动需满足非生产、Web/NestJS 均绑定 127.0.0.1、可信 OIDC 已开启且不安全 HTTP/模拟开关关闭、React/Vue/Server 独立端口、两个精确 HTTPS Web Origin 与唯一固定回调地址。代理 changeOrigin=false、xfwd=false、ws=false，不重写 Cookie/Origin/业务 API 路由、不引入 CORS 或客户端身份推断。Nest 仍由 OidcEnabledAppModule 与 Session Guard/ACL/CSRF 授权决定哪些接口可用；未启用或未认证时默认拒绝。
 
 此为**本机非生产开发代理**，不能代替受控生产 HTTPS 终止代理或真实 OIDC/JWKS/跨框架浏览器验收。证书/私钥、Issuer 和客户端密钥不进入 Git、日志、浏览器构建或 Docker 镜像。
+
+## 2026-11-16 · 第三十四批第一小批：工程摘要列表有界分页
+
+受保护接口 `GET /api/v1/projects` 接收 `limit`（缺省 20、最大 100，严格正安全整数）和 `afterProjectId`（ASCII 工程 ID 白名单），其他 Query 字段、重复参数值和越界值返回受控 400。返回仍为 `ScadaProjectSummary[]`，包含 `projectId/headRevision/createdAt/updatedAt`，不包含工程 JSONB。服务端认证成功后使用可信主体的 `tenantId` 与 `project:read` 条件，按 `projectId ASC` 与 `projectId > afterProjectId` 执行有界 Prisma 查询。客户端 `ProjectListQuery` 来自共享 Core，Vue/React 同用 `@adui/scada-api-client.listProjects(query?)`，要求响应不超页长且工程 ID 严格递增；下一页以最后一个已返回项目 ID 继续。
+
+与第三十三批的 `updatedAt DESC` 不同，**本批明确改为稳定 ID 升序**；无参数访问保持相同路径和数组形状，但只返回首 20 项。按更新时间排序、一次读取全部工程、并发分页快照一致性不在本小批契约中；未来项目中心 UI 需要独立设计按更新时间检索。任何页面操作不能依靠客户端参数绕过 ACL；不新增工程发布、版本回滚或工业写入。
