@@ -1116,3 +1116,7 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 ### 2026-11-16 · 单 Docker 新安装 PostgreSQL 端口收敛为 15432
 
 维护者在已确认旧三个项目及数据卷均删除、无备份后，进一步要求 **PostgreSQL 端口统一为 15432**。最新 `adui-scada` 单 Compose 的 PostgreSQL 服务仍映射容器内 `5432`，宿主机端口改为 `127.0.0.1:15432`；根环境模板、默认检查、初始化、OIDC 身份绑定用例与端口拒绝测试按此同步。数据库名、用户 `adui_scada`，Keycloak 独立逻辑库 `adui_scada_keycloak`、数据卷及安全策略不变。此前旧 Lab `15433` 仅属于历史实施记录。Windows 实际 `ready`、新容器与 Prisma 迁移尚待验收。
+
+### 2026-11-16 · 唯一 Docker PostgreSQL 四项迁移成功，status 需匹配随机密码
+
+最新 `adui-scada` 单项目容器已由维护者启动。Windows 实测 `docker:db:init` 在业务库 `adui_scada`（回环 15432）成功部署 4 项 Prisma 迁移，退出码 0；容器内 PostgreSQL `pg_isready` 与 `SELECT 1` 均成功。通用 `db:migrate:status` 仍使用根目录 `.env` 里的旧固定密码，因与 `.local/docker/secrets.env` 中新 Docker 随机密码不同而报 P1000。新增 Docker 专用 `docker:db:status`，通过同一安全脚本调用只读 Prisma 状态查询，禁止回显/提交密码，不修改数据库、卷或通用命令；Windows 真实新命令与全量质量链待复验。宿主机 OIDC Client Secret、事务加密密钥和证书路径也需针对新 Keycloak 在本机安全同步并重新验收。

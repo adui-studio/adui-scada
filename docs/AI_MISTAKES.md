@@ -181,6 +181,15 @@
 - **验证**：新增单项目/新卷/数据库命名/Prisma 迁移连接保护离线测试；提交后的 Windows `test:docker`、`test:docker:db`、`env:check`、`ready` 及真实 Docker 首次启动均须维护者验收，尚未完成。
 - **证据**：维护者最新 Docker Desktop 截图与“全部数据卷已删除、无备份”说明、PR #55、ADR-0066 与 `docs/VALIDATION.md`。
 
+### E-021 · Docker 随机数据库密码与根 .env 旧密码混用导致 Prisma P1000
+
+- **现象**：2026-11-16 维护者本机 Docker `postgres:17-alpine` 在 `127.0.0.1:15432` 正常运行，`pnpm run docker:db:init` 使用随机本机凭据实际完成全部 4 项 Prisma 迁移，退出码 0；但随后运行通用 `pnpm run db:migrate:status` 报 P1000 密码认证失败。容器内 `pg_isready` 和 Unix Socket `SELECT 1` 正常，并不能证明宿主机 TCP 密码一致。
+- **根因**：Docker 初始化脚本从 `.local/docker/secrets.env` 读取首次生成的强随机数据库密码，而通用 `db:migrate:status` 经 `apps/server/prisma.config.ts` 从根目录 `.env` 读取历史手工密码和 URL。两套独立配置被误认为相同。维护者的 `.env` 同时包含上一环境的 OIDC Client Secret、事务密钥和旧证书路径；这些不应直接用于全新 Keycloak 联调。
+- **修复**：为单项目 Docker 另增 `pnpm run docker:db:status`，复用 `scripts/init-docker-db.mjs` 的回环地址、随机凭据和受控 Prisma 子进程，通过唯一白名单 `--status` 执行只读 `prisma migrate status`。通用 `db:migrate:status` 不改动，以免影响外部受控数据库工作流；不自动修改 `.env`、密码、Keycloak、已有数据或 Prisma 迁移。
+- **避免**：每个 Docker 本机数据库命令必须明确同一凭据来源；不要把容器内 Peer/Unix Socket 查询当作宿主 TCP 密码验证。新环境启用 NestJS OIDC 前，在本机核对并安全同步真实密码、Client Secret、证书路径和用户身份绑定；不复制旧密钥到仓库，也不以静态固定密码代替随机凭据。配置发生真实暴露时必须受控轮换。
+- **验证**：维护者原 `docker:db:init`、`pg_isready`、`SELECT 1` 已实测通过；新增命令及防回归测试为代码候选。提交后 Windows `pnpm run test:docker:db`、`env:check`、`vp check`、`docs:check`、`ready` 与新 `docker:db:status` **尚待复验**，不得声称新命令已经连接成功。
+- **证据**：维护者 2026-11-16 原始 P1000/Prisma 迁移/容器查询日志、PR #55、`scripts/init-docker-db.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

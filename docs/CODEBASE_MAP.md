@@ -741,3 +741,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/init-docker-db.mjs`：从 Git 忽略的随机凭据构造固定回环数据库 URL，调用 Prisma `migrate deploy`；`scripts/init-docker-db.cases.mjs` 校验独立数据库和密码保护。
 - `deploy/docker/oidc-lab/init-keycloak-db.sql`：首次 PostgreSQL 初始化时创建 Keycloak 独立逻辑库。
 - `.env.example`、`scripts/check-env-config.mjs`：统一数据库名称 `adui_scada`、端口 `15432`，OIDC 默认关闭，密码不入 Git。
+
+### 本机 Docker 数据库状态查询（第三十三批 E-021）
+
+- `scripts/init-docker-db.mjs`：原 `docker:db:init` 继续幂等执行 `prisma migrate deploy`；新增白名单 `--status` 由 `docker:db:status` 调用，使用与 Docker 启动一致的 Git 忽略本机随机凭据执行只读 `prisma migrate status`，不修改通用 `db:migrate:status` 的根 `.env` 语义。
+- `scripts/init-docker-db.cases.mjs`：覆盖只读参数白名单、旧根 `.env`/进程密码覆盖、数据库地址精确回环及旧库拒绝。
+- `package.json`、`scripts/check-env-config.mjs`：注册并校验 `docker:db:status`，不得将新命令变为破坏性迁移或输出凭据。

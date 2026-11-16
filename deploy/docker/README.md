@@ -47,3 +47,18 @@ pnpm run docker:db:init
 **OIDC 安全边界**：根 `.env.example` 的 OIDC 默认关闭，HTTP Demo 不能替代 WebStorm Vite HTTPS 的受保护工程 API。Keycloak Realm 将重新导入，但普通用户和对应的本地可信身份映射需要重新创建；不会自动授予工程写权限。真实 OAuth 回调、Secure Cookie、CSRF、ACL 和 Vue/React 会话互通仍须在新空库上重新验收。
 
 Prisma 首次迁移是幂等的 `migrate deploy`，不是 `migrate reset`。单镜像生产交付不在本次范围内。
+
+## Docker 数据库迁移状态（本机随机凭据）
+
+`pnpm run docker:db:init` 使用 `.local/docker/secrets.env` 中首次安装的随机数据库密码，2026-11-16 维护者已在 `adui_scada`（`127.0.0.1:15432`）实际成功应用四项 Prisma 迁移，退出码 0；容器内 `pg_isready` 和 `SELECT 1` 也已通过。旧的通用 `pnpm run db:migrate:status` 从根目录 `.env` 读取手动填写的数据库 URL，若仍是历史测试密码会出现 **P1000**，这与已成功迁移的 Docker 数据库不矛盾。
+
+**Docker 本机实例应使用：**
+
+```powershell
+pnpm run docker:db:status
+if ($LASTEXITCODE -ne 0) { throw "Docker 数据库迁移状态检查失败" }
+```
+
+该命令复用 `scripts/init-docker-db.mjs --status`，在子进程环境中优先使用已存在的本机 Docker 随机凭据，只运行**只读** `prisma migrate status`；不会显示密码、修改根 `.env`、重建容器、删除卷或重置数据库。通用 `db:migrate:status` 继续支持显式配置的其他数据库，但它的 `.env` 密码必须与目标数据库相同。
+
+如果要让宿主机 NestJS 的真实 OIDC 连接新 Docker 数据库，必须由维护者在本机**安全地同步** `SCADA_DB_PASSWORD`、`SCADA_DATABASE_URL` 与 `.local/docker/secrets.env` 的数据库凭据；Keycloak Client Secret、OIDC 事务密钥也应与新生成的本机凭据一致。HTTPS 证书从新的 `.local/docker/localhost.pem` 和 `localhost-key.pem` 读取，旧 `.local/oidc-lab` 路径不代表新部署。避免输出或提交任何秘密；已在对话中披露的历史密钥应受控轮换。新环境尚需重新创建 Keycloak 普通用户和预绑定可信身份，不得绕过认证或自动授予工程权限。

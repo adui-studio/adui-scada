@@ -2028,3 +2028,26 @@ pnpm run docker:ps
 ```
 
 端口 `15432` 必须未被其他 PostgreSQL/服务占用；如果已占用，应先确认占用进程，不能直接结束其他项目的进程或删除卷。端口变化本身不会修改容器内数据库、密钥、Prisma Schema 或工业安全边界。此记录是代码修改与待执行的 Windows 验收步骤，不代表上述命令已经在维护者机器上运行。
+
+### 2026-11-16 · Docker Prisma 迁移成功后通用 status 报 P1000 的修复
+
+维护者 Windows 实测 `pnpm run docker:db:init` 已在 `127.0.0.1:15432/adui_scada` 成功部署全部四项历史迁移，最后退出码 **0**。容器内 `pg_isready` 接受连接，`psql -U adui_scada -d adui_scada -c "SELECT 1;"` 返回 1。随后通用 `pnpm run db:migrate:status` 返回 P1000，实际原因是该命令按 `apps/server/prisma.config.ts` 读取根 `.env` 的旧密码，和 `docker:db:init` 使用的 `.local/docker/secrets.env` 随机密码不一致。容器内部 Unix Socket `SELECT 1` 并不能证明宿主机 TCP 密码正确。
+
+修复在**不改变通用数据库命令**的前提下增加 `pnpm run docker:db:status`：从 `scripts/init-docker-db.mjs` 统一生成数据库 URL，以受控白名单 `--status` 启动只读 Prisma `migrate status`，环境变量覆盖旧 `.env` 值而不会输出、覆盖或保存密钥。拒绝 `reset`、`dev`、任意参数/远程库，保留 15432 回环约束。原 `docker:db:init` 仍为幂等 `migrate deploy`。
+
+```powershell
+git pull --ff-only
+pnpm run test:docker:db
+if ($LASTEXITCODE -ne 0) { throw "Docker 数据库凭据测试失败" }
+pnpm run env:check
+if ($LASTEXITCODE -ne 0) { throw "环境检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run docker:db:status
+if ($LASTEXITCODE -ne 0) { throw "本机 Docker Prisma 状态检查失败" }
+```
+
+`docker:db:status` 的真实 Windows 退出码与完整 `ready` 在补丁提交后仍待维护者复验。旧根 `.env` 还含曾经公开的数据库、OIDC Client/事务密钥与过期证书路径，宿主 NestJS 联调前必须在本机受控同步到新 Docker 凭据，并进行轮换；禁止将实际值复制到仓库、Issue、测试和日志中。

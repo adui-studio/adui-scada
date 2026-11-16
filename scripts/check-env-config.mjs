@@ -250,6 +250,11 @@ assert.ok(
   packageScripts["docker:db:init"] === "node scripts/init-docker-db.mjs",
   "缺少安全的数据库迁移重试命令",
 );
+assert.equal(
+  packageScripts["docker:db:status"],
+  "node scripts/init-docker-db.mjs --status",
+  "Docker 数据库状态查询必须复用本机随机凭据及只读 Prisma 命令",
+);
 assert.ok(
   packageScripts["test:docker:db"]?.includes("init-docker-db.cases.mjs"),
   "缺少首次数据库初始化安全测试",

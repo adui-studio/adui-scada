@@ -25,14 +25,39 @@ export function createDockerDatabaseUrl(envText, secretsText) {
   return url.toString();
 }
 
-/** 始终指向全新本机业务库，Prisma migrate deploy 可安全重复执行。 */
-export function initializeDockerDatabase(root = ROOT, run = spawnSync) {
+/** Docker Prisma 操作严格限制为幂等迁移与只读状态查询。 */
+export function resolveDockerPrismaAction(args) {
+  if (args.length === 0) return "deploy";
+  if (args.length === 1 && args[0] === "--status") return "status";
+  throw new Error("Docker 数据库命令仅支持迁移部署或只读状态查询");
+}
+
+/** 本机 Docker 随机凭据优先于根目录 .env 和终端残留的同名变量。 */
+export function createDockerPrismaEnvironment(envText, secretsText, inherited = process.env) {
+  const url = createDockerDatabaseUrl(envText, secretsText);
+  const connection = new URL(url);
+  return {
+    ...inherited,
+    NODE_ENV: "development",
+    SCADA_DATABASE_URL: url,
+    SCADA_DB_HOST: "127.0.0.1",
+    SCADA_DB_PORT: connection.port,
+    SCADA_DB_NAME: "adui_scada",
+    SCADA_DB_USER: "adui_scada",
+    SCADA_DB_PASSWORD: decodeURIComponent(connection.password),
+  };
+}
+
+function runDockerDatabasePrisma(action, root, run) {
+  if (action !== "deploy" && action !== "status") {
+    throw new Error("Docker 数据库命令仅支持迁移部署或只读状态查询");
+  }
   const envFile = join(root, ".env");
   const secretFile = join(root, ".local", "docker", "secrets.env");
   if (!existsSync(envFile) || !existsSync(secretFile)) {
     throw new Error("缺少本机 Docker 配置或随机凭据，请先执行 docker:up");
   }
-  const url = createDockerDatabaseUrl(
+  const environment = createDockerPrismaEnvironment(
     readFileSync(envFile, "utf8"),
     readFileSync(secretFile, "utf8"),
   );
@@ -41,19 +66,10 @@ export function initializeDockerDatabase(root = ROOT, run = spawnSync) {
   const prismaCli = serverRequire.resolve("prisma/build/index.js");
   const result = run(
     process.execPath,
-    [prismaCli, "migrate", "deploy", "--config", "prisma.config.ts"],
+    [prismaCli, "migrate", action, "--config", "prisma.config.ts"],
     {
       cwd: server,
-      env: {
-        ...process.env,
-        NODE_ENV: "development",
-        SCADA_DATABASE_URL: url,
-        SCADA_DB_HOST: "127.0.0.1",
-        SCADA_DB_PORT: new URL(url).port,
-        SCADA_DB_NAME: "adui_scada",
-        SCADA_DB_USER: "adui_scada",
-        SCADA_DB_PASSWORD: new URL(url).password,
-      },
+      env: environment,
       shell: false,
       windowsHide: true,
       stdio: "inherit",
@@ -61,18 +77,35 @@ export function initializeDockerDatabase(root = ROOT, run = spawnSync) {
     },
   );
   if (result.error || result.status !== 0) {
-    throw new Error("Docker 本机业务数据库 Prisma 迁移失败，请检查 PostgreSQL 状态");
+    throw new Error(
+      action === "status"
+        ? "Docker 业务数据库迁移状态查询失败，请检查 PostgreSQL 连接与迁移记录"
+        : "Docker 本机业务数据库 Prisma 迁移失败，请检查 PostgreSQL 状态",
+    );
   }
-  return "全新业务数据库 Prisma 迁移完成";
+  return action === "status" ? "Docker 业务数据库迁移状态检查完成" : "全新业务数据库 Prisma 迁移完成";
+}
+
+/** 在同一受控本机数据库上幂等执行 Prisma migrate deploy。 */
+export function initializeDockerDatabase(root = ROOT, run = spawnSync) {
+  return runDockerDatabasePrisma("deploy", root, run);
+}
+
+/** 只读查询 Docker 本机数据库迁移状态，不依赖 .env 中的过期密码。 */
+export function inspectDockerDatabase(root = ROOT, run = spawnSync) {
+  return runDockerDatabasePrisma("status", root, run);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    console.log(initializeDockerDatabase());
+    const action = resolveDockerPrismaAction(process.argv.slice(2));
+    console.log(action === "status" ? inspectDockerDatabase() : initializeDockerDatabase());
   } catch (error) {
     const safe = [
       "缺少本机 Docker 配置或随机凭据，请先执行 docker:up",
       "Docker 本机业务数据库 Prisma 迁移失败，请检查 PostgreSQL 状态",
+      "Docker 业务数据库迁移状态查询失败，请检查 PostgreSQL 连接与迁移记录",
+      "Docker 数据库命令仅支持迁移部署或只读状态查询",
     ];
     console.error(
       error instanceof Error && safe.includes(error.message)

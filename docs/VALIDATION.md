@@ -1204,3 +1204,11 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 在唯一 `adui-scada` 新安装方案上，仅将 PostgreSQL 宿主机映射以及 `.env.example` 的 `SCADA_DB_PORT` / `SCADA_LAB_POSTGRES_PORT` 从 15433 统一改为 **15432**，Compose 内部保持 5432。同步调整 `scripts/check-env-config.mjs`、`docker-stack.mjs`、`init-docker-db.mjs` 与 Docker、OIDC、凭据相关测试默认值，并把测试里“错误端口”调整为已废弃的 15433；未修改数据库名称、Schema、Keycloak Issuer、数据卷与安全限制。最新部署说明以 `docs/HARNESS.md` 对应章节及 ADR-0066 为准；早期日志中的 15433 是历史记录，不代表当前预期。
 
 修改后必须在 Windows 实际运行 `pnpm run test:docker`、`test:docker:db`、`test:oidc:lab`、`test:oidc:identity`、`env:check`、`vp check`、`docs:check` 与完整 `ready`；随后确认 15432 空闲，使用新根 `.env` 实行 `docker:plan`、`docker:up` 和 `docker:ps`，再验证 Prisma 迁移与 Keycloak。未经实跑不能宣称任何一项 Windows 或 Docker 真实验证通过。
+
+## 2026-11-16 · 新 Docker 数据库迁移实际成功、status 凭据不一致（E-021）
+
+维护者 Windows 已运行 `pnpm run docker:db:init`，Prisma 实际连接 `127.0.0.1:15432/adui_scada`，4 项迁移首次成功应用，输出 `All migrations have been successfully applied.` 和 `全新业务数据库 Prisma 迁移完成`，最终退出码 **0**。随后 `pnpm run db:migrate:status` 报 P1000（数据库用户密码认证失败）并退出 1；`docker exec adui-scada-postgres-1 pg_isready -U adui_scada -d adui_scada` 接受连接，容器内 `SELECT 1` 返回 1。根据当前仓库代码，前一个命令从 Git 忽略的 `.local/docker/secrets.env` 读取随机密码，后一命令从仓库根 `.env` 读取此前配置的历史静态密码；已检查维护者粘贴的 `.env` 确实存在旧固定密码及旧 OIDC Client Secret 与密钥。P1000 为凭据不匹配，不是迁移未应用，也不能因容器内 Unix Socket 查询成功推断宿主机密码有效。
+
+新增专用只读 `docker:db:status`，复用 `init-docker-db.mjs` 已建立的随机凭据/数据库校验，通过 Node 直接启动 Prisma `migrate status`，覆盖旧进程环境变量而不输出/回写秘密；通用 `db:migrate:status` 语义不变。补充测试校验命令白名单、旧根 URL 和进程密码覆盖及旧数据库/远程连接拒绝；不修改 Prisma Schema、历史迁移、Docker 卷和 OIDC 权限。
+
+**补丁后的真实验证尚未完成**：Windows `test:docker:db`、`env:check`、`vp check`、`docs:check`、完整 `ready`、新命令 `docker:db:status` 均待运行。已成功的四项真实迁移无需重新部署或重置。

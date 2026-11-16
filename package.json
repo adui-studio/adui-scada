@@ -69,7 +69,8 @@
     "docker:ps": "node scripts/docker-stack.mjs ps",
     "docker:logs": "node scripts/docker-stack.mjs logs",
     "test:docker:db": "node --test scripts/init-docker-db.cases.mjs",
-    "docker:db:init": "node scripts/init-docker-db.mjs"
+    "docker:db:init": "node scripts/init-docker-db.mjs",
+    "docker:db:status": "node scripts/init-docker-db.mjs --status"
   },
   "devDependencies": {
     "@adui/tooling": "workspace:*",
