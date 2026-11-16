@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  describeBrowserPageException,
   describeProjectBrowserFailure,
+  requireAuthorizedProjectPage,
   resolveProjectBrowserLab,
 } from "./test-project-browser-oidc.mjs";
 
@@ -100,6 +102,54 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       describeProjectBrowserFailure({ code: "ECONNREFUSED" }),
       "本机 Web 或浏览器调试端口未监听",
     );
+  });
+
+  void it("CDP 异常只返回白名单错误原因或安全类别，不泄漏原始堆栈", () => {
+    assert.equal(
+      describeBrowserPageException({
+        exception: {
+          className: "Error",
+          description: "Error: 未找到工程管理入口\n堆栈和私密内容不得展示",
+        },
+      }),
+      "未找到工程管理入口",
+    );
+    assert.equal(
+      describeBrowserPageException({
+        exception: {
+          className: "ReferenceError",
+          description: "ReferenceError: 包含私密 Cookie 的未知变量",
+        },
+      }),
+      "页面脚本引用异常",
+    );
+    assert.equal(
+      describeBrowserPageException({ exception: { className: "OtherError" } }),
+      "页面脚本异常（已脱敏）",
+    );
+  });
+
+  void it("授权工程列表 HTTP 拒绝只显示状态码，不能返回正文", () => {
+    assert.deepEqual(requireAuthorizedProjectPage({ status: 200, projects: [] }), []);
+    assert.throws(
+      () => requireAuthorizedProjectPage({ status: 403, projects: ["敏感工程"] }),
+      (error) => describeProjectBrowserFailure(error) === "工程列表接口返回 HTTP 403",
+    );
+    assert.throws(
+      () => requireAuthorizedProjectPage({ status: 0, projects: [] }),
+      (error) => describeProjectBrowserFailure(error) === "工程列表接口状态异常",
+    );
+  });
+
+  void it("页面安全诊断不得输出任意未知错误内容", () => {
+    const error = new Error("浏览器页面操作失败，请检查当前 Studio 状态");
+    error.pageDiagnostic = "包含 Token 的异常详情";
+    assert.equal(
+      describeProjectBrowserFailure(error),
+      "浏览器页面操作失败，请检查当前 Studio 状态",
+    );
+    error.pageDiagnostic = "页面脚本类型异常";
+    assert.equal(describeProjectBrowserFailure(error), "浏览器页面操作失败：页面脚本类型异常");
   });
 
   void it("不允许生产模式启动交互式本机测试", () => {

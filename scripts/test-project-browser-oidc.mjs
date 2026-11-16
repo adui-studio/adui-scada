@@ -63,7 +63,10 @@ export function describeProjectBrowserFailure(error) {
   const message = error instanceof Error ? error.message : "";
   if (message === "浏览器页面操作失败，请检查当前 Studio 状态" && error?.pageDiagnostic) {
     const reason = error.pageDiagnostic;
-    if (SAFE_PAGE_ERRORS.has(reason) || [...PAGE_ERROR_TYPES.values(), "页面脚本异常（已脱敏）"].includes(reason)) {
+    if (
+      SAFE_PAGE_ERRORS.has(reason) ||
+      [...PAGE_ERROR_TYPES.values(), "页面脚本异常（已脱敏）"].includes(reason)
+    ) {
       return "浏览器页面操作失败：" + reason;
     }
   }
