@@ -80,12 +80,16 @@ async function inspectEmptyDatabase(Client, connectionString) {
 }
 
 function runPrismaCommand(command, connectionString) {
-  const executable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-  const result = spawnSync(executable, ["--filter", "@adui/scada-server", "run", command], {
-    cwd: root,
+  const serverRequire = createRequire(join(server, "package.json"));
+  const prismaCli = serverRequire.resolve("prisma/build/index.js");
+  const action = command === "db:migrate:deploy" ? "deploy" : command === "db:migrate:status" ? "status" : null;
+  if (action === null) {
+    throw new Error("不支持的 Prisma 迁移验收命令");
+  }
+  const result = spawnSync(process.execPath, [prismaCli, "migrate", action, "--config", "prisma.config.ts"], {
+    cwd: server,
     env: { ...process.env, SCADA_DATABASE_URL: connectionString },
     stdio: "inherit",
-    shell: process.platform === "win32",
     timeout: 120000,
   });
   if (result.error || result.status !== 0) {

@@ -1639,7 +1639,7 @@ pnpm run test:db
 - 默认 `SCADA_OIDC_ENABLED=false` 时启动原有 AppModule，不连接 PostgreSQL、不注册身份路由。显式启用 OIDC 时，必须提供完整 Issuer/Client/Redirect/Origin/事务密钥和数据库配置；启动后会加载 ScadaIdentityModule 并连接 PostgreSQL。
 - 真实启用前必须由维护者完成 Windows `vp check`、`test:unit`、`test:e2e:server`、`docs:check` 和完整 `ready`；随后另行验收真实 IdP/JWKS、HTTPS 终止代理、Secure/SameSite Cookie 与外部身份预绑定。当前工程 API 和工业设备写入仍未开放。
 
-### 第三十三批 · 全新隔离空库迁移与二次部署验证（需 Windows 实测）
+### 第三十三批 · 全新隔离空库迁移与二次部署验证
 
 此专项与已通过 22/22 的 `adui_scada_test` 事务测试**相互独立**。使用 Navicat 在本机开发 PostgreSQL 中人工创建一个**此前从未使用过的空数据库**（例如 `adui_scada_fresh_20261116`），账号与根目录 `.env` 的本机开发连接相同。不允许使用原有 `adui_scada` 或 `adui_scada_test`，也不要删除/清空任何旧库；如果名称已存在、非空，改用新的受控名称。
 
@@ -1655,3 +1655,9 @@ Write-Host "全新空库迁移退出码：$LASTEXITCODE"
 脚本不会修改根 `.env`，只在子进程中临时设置 `SCADA_DATABASE_URL`，且仅允许从本机 `adui_scada` 派生、名称以 `adui_scada_fresh_` 开头的隔离库。开始前必须连接目标库并证实不存在用户对象和自定义 Schema；发现非空、账号/地址/端口不匹配或迁移异常则立即失败。首次迁移应得到全部四项成功记录和预期业务表；第二次必须成功且迁移记录保持不变。脚本**不会创建、重置、删除数据库**，执行后保留空库供维护者在 Navicat 检查。已有库不能用于重新证明首次安装，复测需要另建新的空库。
 
 如果当前 PowerShell 曾临时将 `SCADA_DATABASE_URL` 指向 `adui_scada_test`，应先恢复到 `.env` 中的开发连接或清除临时变量；脚本会主动拒绝从测试库继续派生，不能为了通过检查而放宽地址或数据库名称限制。验证脚本通过也不能代替生产迁移评审、真实 IdP/HTTPS 或工业现场安全验收。补丁应用后运行 `vp check`、`pnpm run docs:check` 和 `pnpm run ready`，以实际退出码为准。
+
+#### 2026-11-16 真实空库验收与 E-015 子进程安全回归
+
+维护者已经在 `adui_scada_fresh_20261116` 完成四项迁移首次部署及二次部署验证，脚本退出码 0；该数据库目前**不再为空库**，不得重复用它运行全新空库验证。初次运行出现 Node.js `DEP0190`，旧版 Windows `pnpm.cmd` 配合 `shell: true` 传参存在安全隐患。新脚本直接使用当前已安装的 Prisma CLI JS 入口和 `process.execPath`（`shell: false` 为默认值），仅允许固定的 `migrate deploy/status` 子命令，保留本机地址、数据库名、Schema 和空库安全校验。
+
+合并前维护者需先在 Windows 执行 `vp check`、`node --test scripts/verify-fresh-postgres-migrations.cases.mjs`、`pnpm run docs:check` 和完整 `pnpm run ready`。如要验证新子进程调用行为，必须再人工创建一个**全新、未使用过**的 `adui_scada_fresh_*` 本机空库并运行脚本，确认两次迁移成功、退出码为 0、没有 `DEP0190`。不能清空、重置或覆盖现有已验收的空库；脚本继续不负责数据库创建或删除。

@@ -1012,3 +1012,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 维护者 PowerShell 完整日志确认，`node --test scripts/verify-fresh-postgres-migrations.cases.mjs` 6/6 通过，`vp check` 299 个格式正确文件、159 个受检文件零警告/错误，`docs:check` 83 份 Markdown 通过。完整 `ready` 中单测 505/505、NestJS HTTP E2E 40/40、SSE 客户端 8/8、故障代理 4/4、React/Vue/NestJS 构建均通过，最终退出码 0；E-014 的 7 条 Promise Lint 警告已经复验关闭。
 
 当前功能分支 GitHub 已有格式化提交 `7e5aac7`，该日志没有单独输出本地 Git HEAD，不强称已验证精确提交指纹。现有隔离 PostgreSQL 事务测试 22/22 已由此前维护者日志证实；**全新空库首次迁移及二次部署幂等性仍未运行**，实际数据库连接与真实 IdP、HTTPS Cookie、代理、React/Vue 互通继续待专项验收。PR #55 保持 Draft，未获合并授权。
+
+### 2026-11-16 · 空库迁移全链实测通过，E-015 子进程警告待复验
+
+维护者已在本机新建空库 `adui_scada_fresh_20261116` 实际完成四项 Prisma 迁移首次部署、第二次无待执行迁移以及 `migrate status`，八个预期业务表和迁移元数据均通过脚本检查，最终退出码 0；`docs:check` 同时通过 83 份 Markdown。阶段 A 的**全新空库及重复部署专项正式通过**，区别于先前 `adui_scada_test` 的 22/22 事务回归。
+
+本次日志同时暴露 Node.js `DEP0190`：Windows `pnpm.cmd` 配合 `shell: true` 传参。已按 E-015 最小改为当前 Prisma CLI 由 `process.execPath` 无 shell 调用，保留现有隔离和失败即停止策略；协作容器只验证了语法、目标保护 6/6 与模拟进程执行，**真实 Windows Prisma 调用及最新质量链仍待复验**。现有空库不得重置或用于再次执行“全新空库”的验证；实际复验必须另建新空库。PR #55 继续 Draft，不合并。

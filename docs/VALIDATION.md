@@ -1035,3 +1035,11 @@ HTTP E2E 中的 `Health Check has failed` 以及 HTTP 503 是预期负面测试�
 **验证边界**：本次 6/6 是隔离数据库目标校验的纯逻辑测试，**没有实际运行** `node scripts/verify-fresh-postgres-migrations.mjs <数据库名>`，没有证明全新空库首次部署和重复部署幂等性；此前已在 `adui_scada_test` 上通过的 22/22 真实 PostgreSQL 事务测试是另一项独立验收。真实 IdP/JWKS、HTTPS Cookie/反向代理、React/Vue 双框架 API Client 和工业现场安全仍未验收。
 
 本条是对维护者实际运行日志的归档。**此后文档提交未包含在该次 `docs:check` 和 `ready` 验收中**，须针对新文档提交再次执行 `pnpm run docs:check`。未更改依赖、迁移、设备连接或工业写入。
+
+## 2026-11-16 · 本机全新隔离 PostgreSQL 空库首次迁移与重复部署通过
+
+维护者 Windows 实测执行 `pnpm run docs:check`，**83 份 Markdown 文件通过**；随后运行 `node scripts/verify-fresh-postgres-migrations.mjs adui_scada_fresh_20261116`，目标为本机 `127.0.0.1:15432/adui_scada_fresh_20261116`。脚本首先确认空库，首次执行 `prisma migrate deploy` 将现存四项迁移全部应用成功：`20261112000000_init_scada_projects`、`20261112170000_add_chinese_table_comments`、`20261113000000_trusted_identity_sessions`、`20261114000000_oidc_identity_transactions`。第二次 `prisma migrate deploy` 提示无待执行迁移，`prisma migrate status` 显示数据库结构最新；脚本确认四项登记、预期业务表及前后二次迁移元数据一致，最终退出码 **0**。脚本保留数据库，未创建、删除、重置或清理现有数据库。
+
+日志在首次迁移后出现一次 Node.js `DEP0190` 警告：Windows 下 `spawnSync` 对 `pnpm.cmd` 使用 `shell: true` 及参数数组。**这不推翻本次迁移及幂等性验收，但属于已发生的进程安全问题，记录为 E-015。** 本批最小修复改为解析已安装的服务端 Prisma 7 CLI，并通过 `process.execPath` 无 shell 启动固定的 `migrate deploy/status`。协作容器 Node.js 22 已完成语法校验、既有空库目标保护 6/6 和模拟 Prisma CLI 子进程参数/环境传递测试；**Windows Prisma 7.10.1 的新调用路径与 `vp check`、`ready` 尚未实际复验**，不可将 E-015 提前标记为关闭。
+
+`adui_scada_fresh_20261116` 现已部署迁移，不再是空库。要专项验证新启动方式，须另建一个**从未使用过**的本机 `adui_scada_fresh_*` 空库；不得对已通过验收的开发库、现有测试库或本次空库执行清理、重置或删除。真实 OIDC/JWKS、HTTPS 浏览器 Cookie/反向代理、React/Vue 共享 API Client 与工业现场安全仍未验收。此验收日志没有单独输出 `git rev-parse HEAD`，不能把 GitHub 分支 SHA 当作本机执行证明；新文档提交后还须再次运行 `docs:check`。
