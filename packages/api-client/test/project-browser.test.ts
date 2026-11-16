@@ -83,6 +83,19 @@ describe("双框架共享的服务端工程列表分页会话", () => {
     expect((await browser.next()).pageNumber).toBe(2);
   });
 
+  it("身份失效时可清空授权工程摘要及全部游标", async () => {
+    const { browser } = createHarness();
+    await browser.refresh();
+    await browser.next();
+    const cleared = browser.reset();
+    expect(cleared.loaded).toBe(false);
+    expect(cleared.projects).toEqual([]);
+    expect(cleared.pageNumber).toBe(1);
+    expect(cleared.hasPrevious).toBe(false);
+    expect(cleared.hasNext).toBe(false);
+    expect((await browser.refresh()).projects[0]?.projectId).toBe("project-001");
+  });
+
   it("分页请求进行时拒绝重复并发查询", async () => {
     let release: ((rows: readonly ScadaProjectSummary[]) => void) | undefined;
     const listProjects = vi.fn<ScadaApiClient["listProjects"]>(

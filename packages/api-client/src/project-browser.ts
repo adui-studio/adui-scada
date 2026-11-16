@@ -37,6 +37,17 @@ export class StudioProjectBrowser {
     };
   }
 
+  /** 登录状态变化或 ACL 拒绝时清除本次浏览会话的全部敏感摘要。 */
+  reset(): StudioProjectBrowserPage {
+    if (this.busy) throw new TypeError("工程列表正在读取，请勿重复提交");
+    this.cursors = [undefined];
+    this.pageIndex = 0;
+    this.projects = [];
+    this.loaded = false;
+    this.endReached = false;
+    return this.snapshot();
+  }
+
   /** 重新获取第一页，丢弃旧列表的全部游标。 */
   refresh(): Promise<StudioProjectBrowserPage> {
     return this.load(0, [undefined]);

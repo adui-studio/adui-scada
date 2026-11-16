@@ -44,6 +44,14 @@ export function ServerProjectBrowser({
       if (mounted.current) setPage(result);
     } catch (cause) {
       if (mounted.current) {
+        if (
+          cause instanceof ScadaApiError &&
+          (cause.kind === "unauthenticated" ||
+            cause.kind === "forbidden" ||
+            cause.kind === "not_found")
+        ) {
+          setPage(browser.reset());
+        }
         setError(
           cause instanceof ScadaApiError
             ? cause.message

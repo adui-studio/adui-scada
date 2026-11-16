@@ -38,6 +38,14 @@ async function loadPage(action: "refresh" | "next" | "previous"): Promise<void> 
     if (active) page.value = result;
   } catch (cause) {
     if (active) {
+      if (
+        cause instanceof ScadaApiError &&
+        (cause.kind === "unauthenticated" ||
+          cause.kind === "forbidden" ||
+          cause.kind === "not_found")
+      ) {
+        page.value = browser.reset();
+      }
       error.value =
         cause instanceof ScadaApiError
           ? cause.message
