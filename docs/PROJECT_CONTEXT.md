@@ -1080,3 +1080,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 ### 2026-11-16 · OIDC Lab 联调真实启动被 E-018 阻断
 
 维护者 Windows 已通过 Keycloak OIDC Discovery HTTP 200、隔离 `adui_scada_oidc_lab` 四项 Prisma 迁移及 React HTTPS 15173 启动，首次真实启用 OIDC 根模块发现 `ProjectApiModule` 内 `ScadaSessionGuard` 的审计服务跨模块注入失败，NestJS 无法监听 13001，Vite 代理报 `ECONNREFUSED`，匿名 401 探针失败。修复候选仅向身份模块导出审计、OIDC 配置及共享数据库模块，增加真实根模块的 Mock 数据库 E2E，维持原 Guard、CSRF、ACL 与默认关闭策略。Windows 新提交的工程质量链和真实 NestJS 启动待验收。此前粘贴的本机秘密需受控轮换，不得写入仓库。
+
+### 2026-11-16 · 第十二小批 E-018 真实 Windows 复验关闭
+
+维护者 Windows 已验证：`test:e2e:server` 6 文件/42 项、`vp check` 315 格式/171 受检零告警；完整 `ready` 48 文件/530 单测、HTTP E2E 42、OIDC 代理 10、OIDC Lab 6、HTTPS 匿名离线 11、SSE 8、TCP 故障 4、83 Markdown 与双 Web/服务端构建均通过。真实 `OidcEnabledAppModule`、`ProjectApiModule`、`ScadaIdentityModule` 初始化成功，NestJS `127.0.0.1:13001` 实际监听；React/Vue 两端 HTTPS 同源 `/api/v1/auth/me` 匿名探针均为受控 401 JSON，退出码 **0**，**E-018 关闭**。原日志未独立打印本地 HEAD 和完整 `ready` 的数字退出码，依其连续执行和失败即停止分支确认本次质量链已完成。
+
+当前已具备真实 Keycloak OIDC 登录的网络前置条件，但服务端发出的 302 不等于真实用户成功登录；身份预绑定、Secure Cookie/CSRF 及双框架服务端工程历史/CAS 往返仍未验收。此前在对话暴露的本地 Lab 随机密钥需要受控轮换并同步配置，禁止在 PR/文档/日志中出现原值。PR #55 继续 Draft，未获授权不合并。

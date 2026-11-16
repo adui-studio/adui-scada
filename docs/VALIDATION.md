@@ -1148,3 +1148,15 @@ React 的 `apps/web-react/src/studio/StudioPage.tsx` 与 Vue 的 `apps/web-vue/s
 维护者 Windows 实测：Keycloak 26.8.2 已完成 Realm 导入，可信 OIDC Discovery HTTP 200；独立 PostgreSQL `adui_scada_oidc_lab` 在回环 15433 上实际应用全部四项历史 Prisma 迁移，`migrate status` 报告 Schema 最新；React Vite HTTPS 15173 启动成功。**NestJS 未启动成功**：`OidcEnabledAppModule` 装配到 `ProjectApiModule` 时，`ScadaSessionGuard` 无法解析 `ScadaSecurityAuditService`（索引 1），因此前端 `/api/v1` 代理连接回环 13001 被拒绝，真实匿名只读探针退出码 **1**。本次失败不应归因于 Keycloak Realm、TLS 证书或数据库迁移；且未完成真正的登录、Cookie/CSRF 与跨框架工程往返。
 
 代码修复仅在 `ScadaIdentityModule` 导出共享 `DatabaseModule`、审计服务、OIDC 配置 Token；现有默认 AppModule 仍不加载受保护路由或数据库。新增一项模块导出契约单测及两项真实 OIDC 根模块装配 E2E；E2E 通过测试配置和 Prisma Mock 避免访问任何实际 IdP/数据库，并验证匿名 `/api/v1/auth/me` 和 `/api/v1/projects` 返回 401 JSON。**新提交尚未执行 Windows `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、完整 `ready` 或实际 NestJS 联调启动**，不得声称通过。恢复联调后先验证 13001 监听，再执行真正的 HTTPS 匿名只读探针；后续需受控轮换已在聊天粘贴的本机测试凭据，不在仓库记录值。
+
+## 2026-11-16 · 第三十三批第十二小批 Windows 实测结项：E-018 已关闭，双 Web HTTPS 匿名 401 通过
+
+维护者在 Windows / PowerShell / WebStorm 使用功能分支代码完成了实际验收（上传日志未单独提供 `git rev-parse HEAD`，本记录**不将远程 HEAD 误称为本机提交指纹**）：
+
+- `pnpm run test:e2e:server`：**6/6 文件、42/42 用例通过**；新增 `oidc-module-bootstrap.e2e-spec.ts` 的 2/2 真实 OIDC 根模块装配与未认证 401 检查通过。
+- `vp check`：**315 个文件格式正确、171 个受检文件零 warning/Lint/类型错误**；后续 `vp check --fix` 也显示 171 个受检文件零告警。
+- 完整 `pnpm run ready` 顺序执行完成且紧随其后的失败即停止检查未抛异常。包含 Vitest **48/48 文件、530/530 单测**；SSE 8/8、TCP 故障代理 4/4、OIDC 代理 10/10、Lab 准备 6/6、HTTPS 匿名探针离线 11/11、NestJS HTTP E2E 42/42、83 份 Markdown 文档检查及 React、Vue、NestJS 构建。原始日志没有单独打印 `ready` 的数值退出码，不能伪造该字段。
+- 真实 NestJS `OidcEnabledAppModule`、`ProjectApiModule` 与 `ScadaIdentityModule` 均已初始化，身份与工程路由已注册，并明确输出 `Nest application successfully started`；PowerShell `Get-NetTCPConnection -LocalPort 13001 -State Listen` 证实 **127.0.0.1:13001 在监听**。
+- `NODE_USE_SYSTEM_CA=1` 环境下独立执行 `pnpm run verify:oidc:https:readonly`：**React/Vue 共 2 个本机 HTTPS Origin 均返回受控 401 JSON，最终退出码 0**。先前 Vite `ECONNREFUSED` 是 NestJS 依赖注入失败后的连锁影响，现已复测解除；E-018 关闭。安全审计中 `malformed_authorization` 与 401 体现匿名拒绝；启动后观察到的 302 只能说明有重定向响应，**不能直接证明登录成功**。
+
+**验收范围与待办**：本次确认真实 TLS/同源转发/NestJS 匿名拒绝链路可达，以及实际根模块启动成功；没有收到浏览器 OIDC 完整登录、Keycloak `sub` 到隔离库可信主体预绑定、Secure/SameSite Cookie、CSRF 写请求、React ↔ NestJS ↔ Vue 工程版本历史/CAS 往返的实测通过证据。默认 OIDC 关闭策略、数据库隔离和工业只读边界不变。维护者此前在对话中粘贴的本机 Lab 密钥应受控轮换，不在仓库复制或回显。文档追记后新的 `docs:check` 尚未运行。

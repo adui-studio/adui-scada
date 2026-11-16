@@ -1879,3 +1879,11 @@ Write-Host "真实 HTTPS 匿名探针退出码：$LASTEXITCODE"
 ```
 
 两个 Web Origin 都必须得到未登录的 401 JSON，不能用禁用 Guard、跳过 CSRF、忽略 TLS 证书、匿名开写或修改现有 OIDC 事务密钥来让检查通过。该探针通过仍不代表真实 Keycloak 用户已预绑定或浏览器登录成功；身份绑定、Cookie 和 React↔Vue 工程 CAS 另行验收。维护者此前将本机 DB/OIDC 测试秘密粘贴到对话，需单独进行受控轮换，绝不能在 issue/commit/日志引用原值。
+
+### 第三十三批 · E-018 真实 HTTPS 匿名路径结项与后续身份专项
+
+2026-11-16 维护者 Windows 已完成以下事实验证：OIDC 根模块及全部身份/工程路由真实启动、`127.0.0.1:13001` 监听；`test:e2e:server` 42/42、`vp check` 315/171 零告警、完整 `ready` 530/530 单测及其余阶段通过；`verify:oidc:https:readonly` 从 React/Vue 两个 HTTPS Origin 检查到受控匿名 401 JSON，**退出码 0**。E-018 审计依赖注入失败已关闭，不得再将旧的 `ECONNREFUSED` 描述为当前阻塞。
+
+**下一专项：实际身份绑定与完整登录，仅在维护者明确选择的隔离 OIDC Lab 内操作。** 使用 Keycloak `adui-scada` Realm 创建独立、无管理权限的测试用户；保留真实 OIDC `iss` 与 `sub`，不得凭邮箱/用户名推断可信身份或自动提升工程 ACL。先按仓库当前 Prisma 表模型核对已存在的测试主体与租户，以受控管理流程显式建立 `issuer + sub` 对应的外部身份绑定，并确保业务主体状态为 active；联调应检验未绑定主体被拒绝。通过浏览器 `/api/v1/auth/oidc/start` 发起标准授权码 + PKCE 登录，不允许直接手动访问 callback 作为登录操作。再逐项验证 Secure/SameSite Cookie、Origin/Fetch Metadata/CSRF、未授权操作拒绝、React/Vue 双端工程历史与 CAS 409，不保留令牌/授权码/私钥日志。不对现有 Lab 数据卷使用 `down -v`，不操作生产数据库或设备写入。
+
+用户曾在对话贴出本机 Lab 的数据库与 OIDC 密钥，在后续受控联调前应轮换并同步依赖配置，避免只修改 `.env` 造成 Keycloak Client 或 PostgreSQL 凭据不一致。**本次仅归档证据，不自动轮换、不创建用户、不写入数据库、不将 302 误判为登录成功。**
