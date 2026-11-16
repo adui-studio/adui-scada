@@ -5,14 +5,15 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import { makeLabSecrets, prepareOidcLab, validateLabSecrets } from "./prepare-oidc-lab.mjs";
 
-const example = [
-  "SCADA_WEB_HOST=127.0.0.1",
-  "SCADA_SERVER_HOST=127.0.0.1",
-  "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false",
-  "SCADA_LAB_KEYCLOAK_PORT=18443",
-  "SCADA_LAB_POSTGRES_PORT=15433",
-  "SCADA_LAB_REDIS_PORT=16379",
-].join("\n") + "\n";
+const example =
+  [
+    "SCADA_WEB_HOST=127.0.0.1",
+    "SCADA_SERVER_HOST=127.0.0.1",
+    "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false",
+    "SCADA_LAB_KEYCLOAK_PORT=18443",
+    "SCADA_LAB_POSTGRES_PORT=15433",
+    "SCADA_LAB_REDIS_PORT=16379",
+  ].join("\n") + "\n";
 
 function withRoot(test) {
   const root = mkdtempSync(join(tmpdir(), "adui-scada-lab-"));
@@ -37,7 +38,11 @@ void describe("本机 OIDC Lab Docker 启动准备", () => {
       const result = prepareOidcLab(root, { ensureTls: () => {} });
       assert.equal(readFileSync(join(root, ".env"), "utf8"), example);
       assert.ok(existsSync(result.composeEnv));
-      assert.equal(validateLabSecrets(readFileSync(join(root, ".local/oidc-lab/secrets.env"), "utf8")).SCADA_LAB_CLIENT_SECRET.length, 43);
+      assert.equal(
+        validateLabSecrets(readFileSync(join(root, ".local/oidc-lab/secrets.env"), "utf8"))
+          .SCADA_LAB_CLIENT_SECRET.length,
+        43,
+      );
       assert.match(readFileSync(result.composeEnv, "utf8"), /SCADA_LAB_CERT_DIR=/);
     });
   });
@@ -47,7 +52,12 @@ void describe("本机 OIDC Lab Docker 启动准备", () => {
       prepareOidcLab(root, { ensureTls: () => {} });
       const file = join(root, ".local/oidc-lab/secrets.env");
       const before = readFileSync(file, "utf8");
-      prepareOidcLab(root, { ensureTls: () => {}, generateSecrets: () => { throw new Error("禁止重新生成凭据"); } });
+      prepareOidcLab(root, {
+        ensureTls: () => {},
+        generateSecrets: () => {
+          throw new Error("禁止重新生成凭据");
+        },
+      });
       assert.equal(readFileSync(file, "utf8"), before);
     });
   });
@@ -55,7 +65,10 @@ void describe("本机 OIDC Lab Docker 启动准备", () => {
   void it("根目录未创建 .env 时明确拒绝", () => {
     const root = mkdtempSync(join(tmpdir(), "adui-scada-lab-"));
     try {
-      assert.throws(() => prepareOidcLab(root, { ensureTls: () => {} }), /先将根目录 .env.example 复制为 .env/);
+      assert.throws(
+        () => prepareOidcLab(root, { ensureTls: () => {} }),
+        /先将根目录 .env.example 复制为 .env/,
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -72,9 +85,19 @@ void describe("本机 OIDC Lab Docker 启动准备", () => {
     ]) {
       withRoot((root) => {
         const replace = diff.split("=")[0];
-        const content = example.split("\n").filter((line) => !line.startsWith(`${replace}=`)).join("\n") + "\n" + diff + "\n";
+        const content =
+          example
+            .split("\n")
+            .filter((line) => !line.startsWith(`${replace}=`))
+            .join("\n") +
+          "\n" +
+          diff +
+          "\n";
         writeFileSync(join(root, ".env"), content);
-        assert.throws(() => prepareOidcLab(root, { ensureTls: () => {} }), /本机端口|端口不得重复|本机回环|禁止生产/);
+        assert.throws(
+          () => prepareOidcLab(root, { ensureTls: () => {} }),
+          /本机端口|端口不得重复|本机回环|禁止生产/,
+        );
       });
     }
   });

@@ -240,7 +240,10 @@ assert.match(ignore, /^\.env\.\*$/m);
 assert.ok(ignore.includes(".local/oidc-lab/"), "本机随机凭据必须被 Git 忽略");
 assert.match(ignore, /^!\.env\.example$/m);
 assert.match(read(".dockerignore"), /^\.env$/m);
-assert.ok(read(".dockerignore").includes(".local/oidc-lab/"), "本机随机凭据不能进入 Docker 构建上下文");
+assert.ok(
+  read(".dockerignore").includes(".local/oidc-lab/"),
+  "本机随机凭据不能进入 Docker 构建上下文",
+);
 assert.match(read(".editorconfig"), /^end_of_line = lf$/m);
 assert.ok(read("packages/tooling/src/format.ts").includes('endOfLine: "lf"'));
 assert.match(read(".gitattributes"), /^\* text=auto eol=lf$/m);

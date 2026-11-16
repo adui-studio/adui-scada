@@ -29,21 +29,34 @@ function parseSimpleEnv(content) {
 }
 
 function assertValidLabEnvironment(env) {
-  for (const key of ["SCADA_LAB_KEYCLOAK_PORT", "SCADA_LAB_POSTGRES_PORT", "SCADA_LAB_REDIS_PORT"]) {
+  for (const key of [
+    "SCADA_LAB_KEYCLOAK_PORT",
+    "SCADA_LAB_POSTGRES_PORT",
+    "SCADA_LAB_REDIS_PORT",
+  ]) {
     if (!LOCAL_ONLY.test(key) || !/^[1-9][0-9]{0,4}$/.test(env[key] ?? "")) {
       throw new Error("OIDC Lab 本机端口配置无效");
     }
     const port = Number(env[key]);
     if (port > 65535) throw new Error("OIDC Lab 本机端口配置无效");
   }
-  const ports = [env.SCADA_LAB_KEYCLOAK_PORT, env.SCADA_LAB_POSTGRES_PORT, env.SCADA_LAB_REDIS_PORT];
+  const ports = [
+    env.SCADA_LAB_KEYCLOAK_PORT,
+    env.SCADA_LAB_POSTGRES_PORT,
+    env.SCADA_LAB_REDIS_PORT,
+  ];
   if (new Set(ports).size !== ports.length) {
     throw new Error("OIDC Lab 三个本机端口不得重复");
   }
   if (env.SCADA_WEB_HOST !== "127.0.0.1" || env.SCADA_SERVER_HOST !== "127.0.0.1") {
     throw new Error("OIDC Lab 仅允许与本机回环 Web 和 NestJS 配合使用");
   }
-  if (env.SCADA_OIDC_ALLOW_INSECURE_LOOPBACK === "true" || env.NODE_ENV === "production" || process.env.NODE_ENV === "production" || process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
+  if (
+    env.SCADA_OIDC_ALLOW_INSECURE_LOOPBACK === "true" ||
+    env.NODE_ENV === "production" ||
+    process.env.NODE_ENV === "production" ||
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0"
+  ) {
     throw new Error("OIDC Lab 禁止生产和不安全的 OIDC 测试模式");
   }
 }
@@ -54,11 +67,11 @@ function ensureLocalTls(certFile, keyFile, runMkcert = spawnSync) {
   if (hasCert !== hasKey) throw new Error("本机证书文件不完整，请人工检查，不会自动覆盖已有私钥");
   if (!hasCert) {
     const program = process.platform === "win32" ? "mkcert.exe" : "mkcert";
-    const result = runMkcert(program, [
-      "-cert-file", certFile,
-      "-key-file", keyFile,
-      "127.0.0.1", "localhost", "::1",
-    ], { shell: false, encoding: "utf8", timeout: 60_000, windowsHide: true });
+    const result = runMkcert(
+      program,
+      ["-cert-file", certFile, "-key-file", keyFile, "127.0.0.1", "localhost", "::1"],
+      { shell: false, encoding: "utf8", timeout: 60_000, windowsHide: true },
+    );
     if (result.error || result.status !== 0) {
       throw new Error("无法创建本机 TLS 证书，请先安装 mkcert 并执行 mkcert -install");
     }
@@ -84,7 +97,10 @@ export function makeLabSecrets() {
 /** 严格检查现有秘密文件；损坏时拒绝重置，避免误断开已有数据卷。 */
 export function validateLabSecrets(raw) {
   const values = parseSimpleEnv(raw);
-  if (Object.keys(values).length !== SECRETS.length || SECRETS.some((name) => !/^[A-Za-z0-9_-]{43}$/.test(values[name] ?? ""))) {
+  if (
+    Object.keys(values).length !== SECRETS.length ||
+    SECRETS.some((name) => !/^[A-Za-z0-9_-]{43}$/.test(values[name] ?? ""))
+  ) {
     throw new Error("本机 OIDC Lab 凭据文件不完整，拒绝自动重置");
   }
   return values;
@@ -114,10 +130,10 @@ export function prepareOidcLab(root = DEFAULT_ROOT, dependencies = {}) {
   const secrets = validateLabSecrets(readFileSync(secretFile, "utf8"));
   const composeEnv = join(dir, "compose.env");
   const certDir = dir.replaceAll("\\", "/");
-  const value = [
-    ...SECRETS.map((key) => `${key}=${secrets[key]}`),
-    `SCADA_LAB_CERT_DIR=${certDir}`,
-  ].join("\n") + "\n";
+  const value =
+    [...SECRETS.map((key) => `${key}=${secrets[key]}`), `SCADA_LAB_CERT_DIR=${certDir}`].join(
+      "\n",
+    ) + "\n";
   writeFileSync(composeEnv, value, { encoding: "utf8", mode: 0o600 });
   return { composeEnv };
 }
@@ -127,12 +143,13 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
     prepareOidcLab();
     console.log("OIDC Lab 本机证书与独立随机凭据准备完成；不会改写仓库根目录 .env");
   } catch (error) {
-    const message = error instanceof Error && error.message.startsWith("本机 ") ||
-      error instanceof Error && error.message.startsWith("OIDC Lab ") ||
-      error instanceof Error && error.message.startsWith("请先将") ||
-      error instanceof Error && error.message.startsWith("无法创建")
-      ? error.message
-      : "本机 OIDC Lab 准备失败，请检查环境文件与文件权限";
+    const message =
+      (error instanceof Error && error.message.startsWith("本机 ")) ||
+      (error instanceof Error && error.message.startsWith("OIDC Lab ")) ||
+      (error instanceof Error && error.message.startsWith("请先将")) ||
+      (error instanceof Error && error.message.startsWith("无法创建"))
+        ? error.message
+        : "本机 OIDC Lab 准备失败，请检查环境文件与文件权限";
     console.error(message);
     process.exitCode = 1;
   }
