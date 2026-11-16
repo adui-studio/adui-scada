@@ -1282,3 +1282,11 @@ E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.
 维护者本机原始日志：`pnpm run test:projects:oidc:config` **7 项中 6 通过、1 失败**，报 `assert.throws` 的正则 `/必须显式启用可信 OIDC 开发代理/` 与共享 HTTPS 探针真实异常“只读 HTTPS 探针要求显式启用可信 OIDC 开发代理”不一致。随后 `vp check` **328 个文件格式正确、183 个受检文件零警告零错误**；`pnpm run ready` 在相同新增离线安全测试处终止，退出码 **1**。其前置质量环节、单测 **49/49 文件、544/544 项**、SSE / OIDC / Docker 的其他离线检查均通过；**本次 `ready` 没有执行到后续 NestJS HTTP E2E、`docs:check` 和 React/Vue/NestJS 构建，不能声称完整通过**。
 
 排查确认拒绝非法配置的生产逻辑正常执行，问题仅在测试断言错用了“必须”而不是实际共享错误的“要求”。E-023 修复候选仅使 `scripts/test-project-browser-oidc.cases.mjs` 中该正则与真实共享异常一致，**不修改** `resolveReadonlyProbeOrigins`、业务接口、Keycloak、数据库或 TLS 安全策略。当前尚无修复后 Windows 命令退出码。维护者需依次重跑 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check` 和完整 `pnpm run ready`；交互式 `test:projects:oidc:browser` 仍属独立待执行验收，离线 7/7 不能替代真实 OIDC 登录。
+
+## 2026-11-16 · 第三十四批第三小批真实 OIDC 登录成功后浏览器阶段故障（E-024）
+
+维护者 Windows `pnpm run test:projects:oidc:browser` 实际进入隔离 Chrome/Edge，Keycloak 登录成功，脚本输出“真实 OIDC 会话已在 React Origin 验证”，说明 React BFF `/api/v1/auth/me` 已返回可信身份；随后直接报告“浏览器页面操作失败，请检查当前 Studio 状态”，退出码 **1**，Vue 尚未开始专项验收。测试 `finally` 关闭临时浏览器是凭据安全清理行为，非 IdP 主动踢出。**真实后续页面异常的具体成因未被当前日志区分，不能认定为工程 API/ACL 已通过或失败。**
+
+E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CDP 异常白名单类别诊断、列表 API 的仅 HTTP 状态码反馈，且在没有已授权工程时保留固定中文引导；不输出浏览器堆栈、Cookie、Token、工程正文或数据库连接字符串，不更改认证/授权行为，不把测试 Browser Profile 保留给用户。新增 3 项离线异常分类/泄密防护用例，离线总数由 **7 增至 10**（待 Windows 实测）。已确认服务端载入快照还要求 `version:read`，仅拥有 `project:read` 不足以完成载入验收；请由维护者在隔离 Lab 受控核对现有权限，不自动执行任何 ACL 或数据库写入。
+
+**此刻仅有补丁代码与静态核对，没有修复后 Windows 实测**。待执行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`、`pnpm run ready`，以及完成真实 OIDC 登录后重跑 `pnpm run test:projects:oidc:browser`，记录最后显示的受控阶段、退出码与是否完成 Vue。新增异常诊断不能代替真实数据库 CAS 并发验收。

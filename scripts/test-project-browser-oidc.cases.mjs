@@ -102,6 +102,12 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       describeProjectBrowserFailure({ code: "ECONNREFUSED" }),
       "本机 Web 或浏览器调试端口未监听",
     );
+    assert.equal(
+      describeProjectBrowserFailure(
+        new Error("React 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程"),
+      ),
+      "React 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
+    );
   });
 
   void it("CDP 异常只返回白名单错误原因或安全类别，不泄漏原始堆栈", () => {

@@ -2077,3 +2077,18 @@ Write-Host "工程管理 OIDC 浏览器专项退出码：$LASTEXITCODE"
 执行后会启动全新的**非无头** Chrome/Edge 临时 Profile，并打开真实 OIDC 登录；维护者直接在浏览器界面用普通测试用户完成登录，脚本才会继续；无需在终端粘贴密码。要求隔离 Lab 内至少有 **1 个**当前主体获 `project:read` 权限的工程，超过 10 个才能真实覆盖有数据的上一页/下一页。验证 React/Vue 同源身份和授权列表、取消打开、模拟修订水位冲突、确认打开建立 CAS 可见基线、暂停自动保存及 IndexedDB 原草稿不变。只修改**临时测试浏览器的 IndexedDB**，不执行任何服务端工程写 API；OIDC 登录本身仍会在隔离 Lab 创建正常短期事务。成功与失败都尝试关闭浏览器并删除临时 Profile。
 
 **重要边界**：该浏览器脚本**不属于** `pnpm run ready`，后者仅自动运行 `test:projects:oidc:config` 的纯离线保护测试；真正的 Keycloak 登录需要操作者参与。版本冲突只通过浏览器 GET 响应故障模拟，不等于真实双会话并发 CAS 409 数据库验证。真实工业 PLC/DCS、生产 Keycloak、企业证书、生产数据库与正式发布 API 均不在本批验收范围。
+
+### 第三十四批第三小批 · OIDC 登录后浏览器测试故障定位（E-024）
+
+`test:projects:oidc:browser` 中的浏览器使用临时隔离 Profile，测试失败后关闭 Chrome/Edge 并清理目录，这是保护短期 OIDC Cookie 的预期行为。确认日志已出现“真实 OIDC 会话已在 React Origin 验证”后，若进一步失败，应看**最后一个**“React/Vue：正在验证…”阶段及受控诊断，不应再次误判为登录失败或修改 Keycloak 凭据。脚本只会报告已知中文页面异常、JS 异常类别或工程列表 HTTP 状态码，不打印 CDP 堆栈、Cookie、Token、数据库凭据。
+
+在受控本机隔离 Lab 中，真实工程列表要求测试主体有至少一个 `project:read` 授权；确认打开历史快照还需要同一工程的 `version:read`。若没有相应授权，请先由维护者根据现有安全流程核对，不应从测试脚本新增工程、权限或数据库记录。建议在修复后先执行离线 10 项与 `ready`，然后在维护者实际浏览器重新运行：
+
+```powershell
+pnpm run test:projects:oidc:config
+if ($LASTEXITCODE -ne 0) { throw "工程浏览器离线配置回归失败" }
+pnpm run test:projects:oidc:browser
+Write-Host "真实 OIDC 工程浏览器专项退出码：$LASTEXITCODE"
+```
+
+真实登录窗口不保留；失败原因仍可能是缺少权限、API 响应、页面运行时或浏览器测试断言，需要使用最新**脱敏**阶段日志区分，不能仅凭质量链通过宣称 OIDC 端到端已通过。

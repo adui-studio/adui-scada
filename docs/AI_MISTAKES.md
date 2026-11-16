@@ -208,6 +208,15 @@
 - **验证**：维护者修复前原始日志确认 `vp check` 328 格式文件、183 受检零警告，544/544 单测通过，新增 OIDC 离线检查 6/7；`ready` 退出码 1，其后的 HTTP E2E、文档与构建阶段未运行。**修复后的 Windows `test:projects:oidc:config`、`vp check`、`docs:check` 与完整 `ready` 尚待重新验收，不得标为已通过**。
 - **证据**：维护者 2026-11-16 Windows 原始验收日志、PR #58、`scripts/test-project-browser-oidc.cases.mjs`、`scripts/verify-oidc-https-readonly.mjs` 及 `docs/VALIDATION.md`。
 
+### E-024 · 真实 OIDC 登录后浏览器阶段异常被统一脱敏而不可定位（第三十四批第三小批）
+
+- **现象**：维护者在 Windows 执行交互式 `pnpm run test:projects:oidc:browser`，真实 Keycloak 登录后出现“真实 OIDC 会话已在 React Origin 验证”，紧接着报告“浏览器页面操作失败，请检查当前 Studio 状态”，退出码 **1**；浏览器窗口被测试的 `finally` 关闭，未进入 Vue 验收。
+- **已确认原因**：`ChromeSession.evaluate` 对所有 CDP `Runtime.evaluate.exceptionDetails` 都转换为同一个固定字符串，并且 `projectsInPage` 对任何非 2xx HTTP 直接抛出页面内部错误，终端既看不到所处测试阶段，也不能判断是否是工程列表的 401/403/404。**真实页面抛出的具体异常仍待新诊断日志确认**，不能猜测为认证失败、数据库故障或工程 ACL 问题。
+- **修复候选**：继续在失败后清理隔离临时浏览器 Profile，不保持含有有效 Cookie 的调试窗口；对 CDP 错误只识别已知固定中文页面异常或 JavaScript 错误**类别**（不转发异常原文/堆栈/URL），对列表 HTTP 只返回状态数字；React/Vue 分别输出静态步骤标记，缺少授权工程时显示固定可执行提示。增加离线测试确保未知错误、私密 Cookie 与 Token 不会出现在诊断中。
+- **避免**：新建需要真实登录的浏览器验收脚本时，必须在每个外部请求、页面导航和核心断言阶段提供可定位但脱敏的诊断；用户身份成功不能推导出已授予 `project:read` 和 `version:read`。操作开始前核对隔离 Lab 的工程 ACL；不得通过输出浏览器原始异常或关闭 TLS/认证规避故障。
+- **验证**：维护者此前 `test:projects:oidc:config` **7/7**、`ready` 全链 **退出码 0**，但交互式浏览器脚本**退出码 1**。本补丁的离线错误脱敏测试、`vp check`、`ready` 和双端真实 OIDC 浏览器专项**均待修复后 Windows 复验**。浏览器窗口自动关闭本身不是故障，不应修改为保留有效登录会话。
+- **证据**：维护者 2026-11-16 真实 OIDC 浏览器失败日志、PR #58、`scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
