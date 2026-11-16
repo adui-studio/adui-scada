@@ -1066,18 +1066,18 @@ HTTP E2E 中的 `Health Check has failed` 以及 HTTP 503 是预期负面测试�
 
 维护者上传的 Windows PowerShell 完整日志证明，新增 `@adui/scada-api-client` 的工程质量链已完成本机验收：
 
-| 检查项 | 实测结果 |
-| --- | --- |
-| `vp check` | 303 个文件格式正确，161 个受检文件零警告、零 Lint/类型错误 |
-| `deps:check` / `config:check` | 12 个清单、52 项 Catalog；10 个 TSConfig 消费端 |
-| `env:check` / `messages:check` | 根 `.env` 与 LF 约束通过；187 个自有代码/配置文件中文文案检查通过 |
-| `typecheck:web` / `typecheck:server` | React、Vue、草稿仓储、共享 API Client、NestJS 类型检查通过 |
-| `pnpm run test:unit` | 47/47 个测试文件、**520/520 项通过**；`packages/api-client/test/api-client.test.ts` 新增 **15/15** |
-| SSE 客户端 / 故障代理 | 8/8、4/4 通过 |
-| `test:e2e:server` | 5/5 测试文件，40/40 项通过；工程 API HTTP E2E 13/13 |
-| `pnpm run docs:check` | 83 个 Markdown 文件通过 |
-| React / Vue / NestJS 构建 | 全部成功 |
-| 完整 `pnpm run ready` | **最终 `$LASTEXITCODE = 0`** |
+| 检查项                               | 实测结果                                                                                           |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `vp check`                           | 303 个文件格式正确，161 个受检文件零警告、零 Lint/类型错误                                         |
+| `deps:check` / `config:check`        | 12 个清单、52 项 Catalog；10 个 TSConfig 消费端                                                    |
+| `env:check` / `messages:check`       | 根 `.env` 与 LF 约束通过；187 个自有代码/配置文件中文文案检查通过                                  |
+| `typecheck:web` / `typecheck:server` | React、Vue、草稿仓储、共享 API Client、NestJS 类型检查通过                                         |
+| `pnpm run test:unit`                 | 47/47 个测试文件、**520/520 项通过**；`packages/api-client/test/api-client.test.ts` 新增 **15/15** |
+| SSE 客户端 / 故障代理                | 8/8、4/4 通过                                                                                      |
+| `test:e2e:server`                    | 5/5 测试文件，40/40 项通过；工程 API HTTP E2E 13/13                                                |
+| `pnpm run docs:check`                | 83 个 Markdown 文件通过                                                                            |
+| React / Vue / NestJS 构建            | 全部成功                                                                                           |
+| 完整 `pnpm run ready`                | **最终 `$LASTEXITCODE = 0`**                                                                       |
 
 `Health Check has failed` 与 HTTP 503 对应 NestJS 健康检查的预期负面 E2E 场景，本次 E2E 最终 40/40 通过。最新 GitHub 功能分支格式化提交为 `d95bf2244390597394850c939980e076c9bf2fbf`，该提交仅调整 API Client 源码与测试格式；**日志没有独立输出本地 `git rev-parse HEAD`，不能将远程 SHA 当作维护者运行时的 SHA 证明**。
 
