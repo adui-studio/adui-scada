@@ -81,10 +81,7 @@ export function resolveProjectBrowserLab(env) {
   ) {
     throw new Error("工程浏览器测试拒绝非本机隔离数据库目标");
   }
-  if (
-    env.NODE_EXTRA_CA_CERTS !== undefined &&
-    !existsSync(env.NODE_EXTRA_CA_CERTS)
-  ) {
+  if (env.NODE_EXTRA_CA_CERTS !== undefined && !existsSync(env.NODE_EXTRA_CA_CERTS)) {
     throw new Error("配置的 Node.js 本机根证书无法读取");
   }
   if (!env.NODE_EXTRA_CA_CERTS && env.NODE_USE_SYSTEM_CA !== "1") {
@@ -135,17 +132,21 @@ class ChromeSession {
   send(method, params = {}) {
     const id = ++this.index;
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error("浏览器调试命令超时：" + method));
-      }, method === "Runtime.evaluate" ? 45000 : 15000);
+      const timeout = setTimeout(
+        () => {
+          this.pending.delete(id);
+          reject(new Error("浏览器调试命令超时：" + method));
+        },
+        method === "Runtime.evaluate" ? 45000 : 15000,
+      );
       this.pending.set(id, { resolve, reject, timeout });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
   }
 
   async evaluate(action, ...args) {
-    const expression = "(" + action.toString() + ")(" + args.map((a) => JSON.stringify(a)).join(",") + ")";
+    const expression =
+      "(" + action.toString() + ")(" + args.map((a) => JSON.stringify(a)).join(",") + ")";
     const result = await this.send("Runtime.evaluate", {
       expression,
       awaitPromise: true,
@@ -182,9 +183,11 @@ async function authenticatedInPage(origin) {
     });
     if (response.status !== 200) return false;
     const payload = await response.json();
-    return payload.authenticated === true &&
+    return (
+      payload.authenticated === true &&
       typeof payload.principal?.tenantId === "string" &&
-      typeof payload.principal?.subjectId === "string";
+      typeof payload.principal?.subjectId === "string"
+    );
   } catch {
     return false;
   }
@@ -194,8 +197,8 @@ async function enterStudioInPage() {
   const deadline = Date.now() + 15000;
   while (Date.now() < deadline) {
     const nav = document.querySelector(".scada-app-nav");
-    const button = [...(nav?.querySelectorAll("button") || [])].find((item) =>
-      item.textContent.trim() === "组态编辑"
+    const button = [...(nav?.querySelectorAll("button") || [])].find(
+      (item) => item.textContent.trim() === "组态编辑",
     );
     if (button) {
       if (!document.querySelector(".studio-workspace")) button.click();
@@ -231,23 +234,31 @@ function pageStateInPage() {
   const items = [...panel.querySelectorAll(".studio-project-browser-item")];
   return {
     ids: items.map((item) => item.querySelector("code")?.textContent?.trim()),
-    revisions: items.map((item) => Number(item.querySelector("small")?.textContent?.match(/#(\d+)/)?.[1])),
+    revisions: items.map((item) =>
+      Number(item.querySelector("small")?.textContent?.match(/#(\d+)/)?.[1]),
+    ),
     empty: Boolean(panel.querySelector(".studio-project-browser-empty")),
     error: Boolean(panel.querySelector('[role="alert"]')),
-    busy: [...panel.querySelectorAll('button')].some((item) => item.disabled && item.textContent.trim() === "刷新"),
+    busy: [...panel.querySelectorAll("button")].some(
+      (item) => item.disabled && item.textContent.trim() === "刷新",
+    ),
     prevEnabled: buttons[0] ? !buttons[0].disabled : false,
     nextEnabled: buttons[1] ? !buttons[1].disabled : false,
-    pageNumber: Number(panel.querySelector(".studio-project-browser-pagination span")?.textContent?.match(/第\s*(\d+)\s*页/)?.[1]),
+    pageNumber: Number(
+      panel
+        .querySelector(".studio-project-browser-pagination span")
+        ?.textContent?.match(/第\s*(\d+)\s*页/)?.[1],
+    ),
   };
 }
 
 async function waitForStudioActionIdleInPage() {
   for (let retry = 0; retry < 120; retry += 1) {
-    const busy = [...document.querySelectorAll('[aria-label="服务端工程版本"] .studio-version-help')].some(
-      (node) => node.textContent?.includes("正在处理工程版本")
-    );
+    const busy = [
+      ...document.querySelectorAll('[aria-label="服务端工程版本"] .studio-version-help'),
+    ].some((node) => node.textContent?.includes("正在处理工程版本"));
     const blocked = [...document.querySelectorAll(".studio-project-browser-item button")].some(
-      (button) => button.disabled
+      (button) => button.disabled,
     );
     if (!busy && !blocked) return true;
     await new Promise((done) => setTimeout(done, 100));
@@ -290,8 +301,8 @@ async function stateInPage() {
 }
 
 async function saveDraftInPage() {
-  const button = [...document.querySelectorAll("button")].find((item) =>
-    item.textContent.trim() === "保存草稿"
+  const button = [...document.querySelectorAll("button")].find(
+    (item) => item.textContent.trim() === "保存草稿",
   );
   if (!button) throw new Error("未找到本地草稿保存按钮");
   button.click();
@@ -309,8 +320,8 @@ async function enableAutoSaveInPage() {
   const menu = document.querySelector(".studio-file-menu");
   if (!menu) throw new Error("没有找到草稿操作菜单");
   menu.open = true;
-  const button = [...menu.querySelectorAll("button")].find((item) =>
-    item.textContent.trim() === "开启自动保存"
+  const button = [...menu.querySelectorAll("button")].find(
+    (item) => item.textContent.trim() === "开启自动保存",
   );
   if (!button) throw new Error("自动保存不是关闭状态");
   const originalConfirm = window.confirm;
@@ -359,7 +370,7 @@ function installRevisionConflictFaultInPage() {
 async function openProjectInPage(projectId, headRevision, mode) {
   const panel = document.querySelector(".studio-project-browser-panel");
   const item = [...(panel?.querySelectorAll(".studio-project-browser-item") || [])].find(
-    (node) => node.querySelector("code")?.textContent?.trim() === projectId
+    (node) => node.querySelector("code")?.textContent?.trim() === projectId,
   );
   const button = item?.querySelector("button");
   if (!button || button.disabled) throw new Error("工程打开按钮不可用");
@@ -376,7 +387,8 @@ async function openProjectInPage(projectId, headRevision, mode) {
     const until = Date.now() + 20000;
     while (Date.now() < until) {
       const notice = document.querySelector(".studio-notice")?.textContent ?? "";
-      const error = document.querySelector('[aria-label="服务端工程版本"] [role="alert"]')?.textContent ?? "";
+      const error =
+        document.querySelector('[aria-label="服务端工程版本"] [role="alert"]')?.textContent ?? "";
       if (mode === "conflict" && fault.calls > 0 && error.includes("服务端工程版本已更新")) {
         return { confirmCount, intercepted: fault.calls, outcome: "conflict" };
       }
@@ -408,9 +420,10 @@ function clickBrowserControlInPage(kind) {
 async function verifyStudio(session, origin, name) {
   await session.send("Page.navigate", { url: origin + "/" });
   await waitFor(
-    () => session.evaluate(async function (expected) {
-      return location.origin === expected && document.readyState === "complete";
-    }, origin),
+    () =>
+      session.evaluate(async function (expected) {
+        return location.origin === expected && document.readyState === "complete";
+      }, origin),
     name + " 首页加载",
   );
   assert.equal(await session.evaluate(enterStudioInPage), true, name + " 无法进入 Studio");
@@ -425,42 +438,39 @@ async function verifyStudio(session, origin, name) {
     if (!menu) throw new Error("未找到工程管理入口");
     menu.open = true;
   });
-  const first = await waitFor(
-    async () => {
-      const state = await session.evaluate(pageStateInPage);
-      return state && !state.busy && (state.ids.length > 0 || state.empty || state.error)
-        ? state
-        : null;
-    },
-    name + " 工程管理列表",
-  );
+  const first = await waitFor(async () => {
+    const state = await session.evaluate(pageStateInPage);
+    return state && !state.busy && (state.ids.length > 0 || state.empty || state.error)
+      ? state
+      : null;
+  }, name + " 工程管理列表");
   assert.equal(first.error, false, name + " 工程管理返回错误");
-  assert.deepEqual(first.ids, initial.map((p) => p.projectId));
-  assert.deepEqual(first.revisions, initial.map((p) => p.headRevision));
+  assert.deepEqual(
+    first.ids,
+    initial.map((p) => p.projectId),
+  );
+  assert.deepEqual(
+    first.revisions,
+    initial.map((p) => p.headRevision),
+  );
   assert.equal(first.pageNumber, 1);
   assert.equal(first.prevEnabled, false);
   let paginated = false;
   if (first.nextEnabled) {
     const next = await session.evaluate(projectsInPage, initial.at(-1).projectId);
     assert.equal(await session.evaluate(clickBrowserControlInPage, "next"), true);
-    const second = await waitFor(
-      async () => {
-        const state = await session.evaluate(pageStateInPage);
-        if (next.length === 0) return state && !state.busy && !state.nextEnabled ? state : null;
-        return state?.pageNumber === 2 && !state.busy ? state : null;
-      },
-      name + " 下一页",
-    );
+    const second = await waitFor(async () => {
+      const state = await session.evaluate(pageStateInPage);
+      if (next.length === 0) return state && !state.busy && !state.nextEnabled ? state : null;
+      return state?.pageNumber === 2 && !state.busy ? state : null;
+    }, name + " 下一页");
     assert.deepEqual(second.ids, next.length ? next.map((p) => p.projectId) : first.ids);
     if (next.length) {
       assert.equal(await session.evaluate(clickBrowserControlInPage, "previous"), true);
-      const back = await waitFor(
-        async () => {
-          const state = await session.evaluate(pageStateInPage);
-          return state?.pageNumber === 1 && !state.busy ? state : null;
-        },
-        name + " 上一页",
-      );
+      const back = await waitFor(async () => {
+        const state = await session.evaluate(pageStateInPage);
+        return state?.pageNumber === 1 && !state.busy ? state : null;
+      }, name + " 上一页");
       assert.deepEqual(back.ids, first.ids);
       paginated = true;
     }
@@ -473,7 +483,12 @@ async function verifyStudio(session, origin, name) {
   assert.equal(baseline.autoSave, true);
 
   const selected = initial[0];
-  const canceled = await session.evaluate(openProjectInPage, selected.projectId, selected.headRevision, "cancel");
+  const canceled = await session.evaluate(
+    openProjectInPage,
+    selected.projectId,
+    selected.headRevision,
+    "cancel",
+  );
   assert.deepEqual(canceled, { confirmCount: 1, intercepted: 0, outcome: "cancel" });
   assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
   const afterCancel = await session.evaluate(stateInPage);
@@ -481,7 +496,12 @@ async function verifyStudio(session, origin, name) {
   assert.deepEqual(afterCancel.drafts, baseline.drafts, name + " 取消载入修改了 IndexedDB 草稿");
   assert.equal(afterCancel.autoSave, true, name + " 取消载入停止了自动保存");
 
-  const conflict = await session.evaluate(openProjectInPage, selected.projectId, selected.headRevision, "conflict");
+  const conflict = await session.evaluate(
+    openProjectInPage,
+    selected.projectId,
+    selected.headRevision,
+    "conflict",
+  );
   assert.deepEqual(conflict, { confirmCount: 0, intercepted: 1, outcome: "conflict" });
   assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
   const afterConflict = await session.evaluate(stateInPage);
@@ -489,7 +509,12 @@ async function verifyStudio(session, origin, name) {
   assert.deepEqual(afterConflict.drafts, baseline.drafts, name + " 模拟远端水位冲突修改了草稿");
   assert.equal(afterConflict.autoSave, true, name + " 模拟远端水位冲突停止了自动保存");
 
-  const opened = await session.evaluate(openProjectInPage, selected.projectId, selected.headRevision, "confirm");
+  const opened = await session.evaluate(
+    openProjectInPage,
+    selected.projectId,
+    selected.headRevision,
+    "confirm",
+  );
   assert.deepEqual(opened, { confirmCount: 1, intercepted: 0, outcome: "confirm" });
   assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
   const afterOpen = await session.evaluate(stateInPage);
@@ -497,8 +522,12 @@ async function verifyStudio(session, origin, name) {
   assert.deepEqual(afterOpen.drafts, baseline.drafts, name + " 服务端载入覆盖了 IndexedDB 草稿");
   assert.ok(afterOpen.server.includes("CAS 基线：" + selected.headRevision));
   assert.ok(afterOpen.server.includes("当前工程：" + selected.projectId));
-  process.stdout.write(name + " 已验证可信身份、工程列表、取消保护、模拟水位冲突与确认载入；" +
-    (paginated ? "上一页/下一页通过" : "授权工程不足十一项，未覆盖有效的下一页") + "\n");
+  process.stdout.write(
+    name +
+      " 已验证可信身份、工程列表、取消保护、模拟水位冲突与确认载入；" +
+      (paginated ? "上一页/下一页通过" : "授权工程不足十一项，未覆盖有效的下一页") +
+      "\n",
+  );
 }
 
 async function run() {
@@ -539,7 +568,9 @@ async function run() {
     await session.send("Page.enable");
     await session.send("Runtime.enable");
     await session.send("Page.navigate", { url: origins[0] + "/api/v1/auth/oidc/start" });
-    process.stdout.write("请在新打开的隔离浏览器中使用已预绑定的普通 Keycloak 测试用户完成登录；不要在终端输入或粘贴密码。\n");
+    process.stdout.write(
+      "请在新打开的隔离浏览器中使用已预绑定的普通 Keycloak 测试用户完成登录；不要在终端输入或粘贴密码。\n",
+    );
     await waitFor(
       () => session.evaluate(authenticatedInPage, origins[0]),
       "真实 OIDC 登录",
