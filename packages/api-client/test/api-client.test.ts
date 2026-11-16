@@ -128,6 +128,43 @@ describe("框架无关工程 API Client", () => {
     expect(item.fetcher.mock.calls[0]?.[0]).toBe("/api/v1/projects/" + PROJECT_ID);
   });
 
+  it("工程列表使用安全游标分页并拒绝超限和异常排序", async () => {
+    const next = { ...summary, projectId: PROJECT_ID + "-2" };
+    const valid = createHarness(jsonResponse([summary, next]));
+    expect(await valid.client.listProjects({ limit: 2, afterProjectId: "a" })).toEqual([
+      summary,
+      next,
+    ]);
+    expect(valid.fetcher.mock.calls[0]?.[0]).toBe(
+      "/api/v1/projects?limit=2&afterProjectId=a",
+    );
+
+    const invalidQuery = createHarness(jsonResponse([]));
+    await expect(invalidQuery.client.listProjects({ limit: 101 })).rejects.toThrow(
+      "工程列表分页数量不能超过 100",
+    );
+    await expect(invalidQuery.client.listProjects({ limit: 0 })).rejects.toThrow(
+      "工程列表分页数量必须是正安全整数",
+    );
+    await expect(
+      invalidQuery.client.listProjects({ afterProjectId: "../other" }),
+    ).rejects.toThrow("工程 ID 必须是合法的 1～128 字符 ASCII 标识符");
+    expect(invalidQuery.fetcher).not.toHaveBeenCalled();
+
+    const duplicate = createHarness(jsonResponse([summary, summary]));
+    await expect(duplicate.client.listProjects()).rejects.toMatchObject({
+      kind: "invalid_response",
+    });
+    const reversed = createHarness(jsonResponse([next, summary]));
+    await expect(reversed.client.listProjects()).rejects.toMatchObject({
+      kind: "invalid_response",
+    });
+    const tooMany = createHarness(jsonResponse([summary, next]));
+    await expect(tooMany.client.listProjects({ limit: 1 })).rejects.toMatchObject({
+      kind: "invalid_response",
+    });
+  });
+
   it("拒绝非法工程路径及跨工程摘要", async () => {
     const harness = createHarness(jsonResponse({ ...summary, projectId: "wrong" }));
     await expect(harness.client.getProject(PROJECT_ID)).rejects.toMatchObject({

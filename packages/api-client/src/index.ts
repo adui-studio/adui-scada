@@ -1,6 +1,7 @@
 import { parseServerProjectSaveRequest, readProjectSnapshot } from "@adui/scada-core";
 import type {
   ProjectSnapshot,
+  ProjectListQuery,
   ProjectVersionQuery,
   ProjectVersionSummary,
   ScadaDocument,
@@ -64,7 +65,7 @@ export interface ScadaApiClient {
   getMe(): Promise<ScadaCurrentIdentity>;
   logout(): Promise<void>;
   createProject(document: ScadaDocument): Promise<ScadaProjectSummary>;
-  listProjects(): Promise<readonly ScadaProjectSummary[]>;
+  listProjects(query?: ProjectListQuery): Promise<readonly ScadaProjectSummary[]>;
   getProject(projectId: string): Promise<ScadaProjectSummary>;
   listVersions(
     projectId: string,
@@ -317,8 +318,33 @@ export function createScadaApiClient(options: ScadaApiClientOptions = {}): Scada
       }
       return summary;
     },
-    async listProjects() {
-      return parseList(await request("GET", "/projects", 200), parseProjectSummary);
+    async listProjects(query) {
+      const limit =
+        query?.limit === undefined ? 20 : requirePositiveNumber(query.limit, "工程列表分页数量");
+      if (limit > 100) throw new TypeError("工程列表分页数量不能超过 100");
+      const params = new URLSearchParams();
+      if (query?.limit !== undefined) params.set("limit", String(limit));
+      const afterProjectId =
+        query?.afterProjectId === undefined
+          ? undefined
+          : requireProjectId(query.afterProjectId);
+      if (afterProjectId !== undefined) params.set("afterProjectId", afterProjectId);
+      const suffix = params.size === 0 ? "" : "?" + params.toString();
+      const projects = parseList(
+        await request("GET", "/projects" + suffix, 200),
+        parseProjectSummary,
+      );
+      let lastId = afterProjectId ?? "";
+      for (const project of projects) {
+        if (project.projectId <= lastId) {
+          throw new ScadaApiError("服务端工程列表游标顺序无效", "invalid_response");
+        }
+        lastId = project.projectId;
+      }
+      if (projects.length > limit) {
+        throw new ScadaApiError("服务端工程列表数量超出分页上限", "invalid_response");
+      }
+      return projects;
     },
     async getProject(projectId) {
       const summary = parseProjectSummary(await request("GET", projectPath(projectId), 200));

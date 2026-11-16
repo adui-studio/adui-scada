@@ -132,6 +132,18 @@ describe("PostgreSQL 真实工程 API 事务", () => {
       [projectId, secondProjectId].sort(),
     );
     expect(projects.every((project) => project.headRevision === 1)).toBe(true);
+    const firstPage = await store.list(principalCreate, { limit: 1 });
+    const secondPage = await store.list(principalCreate, {
+      limit: 1,
+      afterProjectId: firstPage[0]?.projectId,
+    });
+    const exhausted = await store.list(principalCreate, {
+      limit: 1,
+      afterProjectId: secondPage[0]?.projectId,
+    });
+    expect(firstPage.map((item) => item.projectId)).toEqual([projectId]);
+    expect(secondPage.map((item) => item.projectId)).toEqual([secondProjectId]);
+    expect(exhausted).toEqual([]);
     await expect(store.getProject(principalCreate, otherProjectId)).rejects.toBeInstanceOf(
       ProjectVersionAccessDeniedError,
     );

@@ -250,16 +250,49 @@ describe("工程 API 事务仓储", () => {
     const harness = createHarness();
     const result = await harness.store.list(PRINCIPAL);
     const query = harness.project.findMany.mock.calls[0]?.[0] as {
+      take: number;
+      orderBy: { projectId: string };
       where: { tenantId: string; grants: { some: { subjectId: string; permission: string } } };
     };
 
     expect(result).toHaveLength(1);
     expect(query.where.tenantId).toBe(PRINCIPAL.tenantId);
+    expect(query.take).toBe(20);
+    expect(query.orderBy).toEqual({ projectId: "asc" });
     expect(query.where.grants.some).toEqual({
       tenantId: PRINCIPAL.tenantId,
       subjectId: PRINCIPAL.subjectId,
       permission: "project:read",
     });
+  });
+
+  it("工程列表游标仅向后查询并保持租户过滤", async () => {
+    const harness = createHarness();
+    await harness.store.list(PRINCIPAL, { limit: "5", afterProjectId: PROJECT_ID });
+    const query = harness.project.findMany.mock.calls[0]?.[0] as {
+      take: number;
+      where: { projectId: { gt: string }; tenantId: string };
+    };
+    expect(query.take).toBe(5);
+    expect(query.where.projectId.gt).toBe(PROJECT_ID);
+    expect(query.where.tenantId).toBe(PRINCIPAL.tenantId);
+  });
+
+  it("工程列表拒绝超限、非法游标及额外租户参数且不查询数据库", async () => {
+    const harness = createHarness();
+    for (const input of [
+      { limit: "0" },
+      { limit: "101" },
+      { limit: ["20", "30"] },
+      { afterProjectId: "../other" },
+      { afterProjectId: ["a", "b"] },
+      { tenantId: "attacker" },
+    ]) {
+      await expect(harness.store.list(PRINCIPAL, input)).rejects.toBeInstanceOf(
+        ProjectRequestValidationError,
+      );
+    }
+    expect(harness.project.findMany).not.toHaveBeenCalled();
   });
 
   it("读取工程详情在共享锁内复核 project:read", async () => {
