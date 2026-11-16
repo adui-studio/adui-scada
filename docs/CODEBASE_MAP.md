@@ -711,3 +711,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/prepare-oidc-lab.mjs`：显式 `docker:lab:up` 的本机 mkcert/秘密文件准备入口，不修改根 `.env`，不把随机凭据写进 Git 或 Docker 构建上下文。
 - `scripts/prepare-oidc-lab.cases.mjs`：六项离线启动安全测试。
 - `.local/oidc-lab/`：运行时生成的机密和本机证书目录，Git/Docker 忽略，不是仓库可提交文件；Redis 目前未接入 NestJS。
+
+### 第三十三批真实 OIDC 根模块 Guard 注入修复（E-018）
+
+- `apps/server/src/auth/scada-identity.module.ts`：向仅有 `ProjectApiModule` 消费的身份依赖导出共享 `DatabaseModule`、`ScadaSecurityAuditService` 和 `SCADA_OIDC_STARTUP_CONFIG`，供 Controller 上的 `@UseGuards` 在工程模块上下文解析；不改变 Guard 业务逻辑。
+- `apps/server/src/database/database.module.spec.ts`：新增完整导出契约检查，防止未来将 Guard 与其安全依赖拆开导出。
+- `apps/server/test/oidc-module-bootstrap.e2e-spec.ts`：以真实 `OidcEnabledAppModule` 进行 Nest 模块编译和 HTTP 初始化，但替换 Prisma 和测试 OIDC 配置；不访问真实数据库/IdP，检查未认证身份与工程 API 保持 401 JSON。

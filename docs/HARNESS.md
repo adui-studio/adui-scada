@@ -1849,3 +1849,33 @@ pnpm run docker:lab:down
 **重要边界**：本命令只负责启动身份认证及数据依赖，不能自动判定 SCADA 本地账户/租户或授权工程。要继续真实 OIDC，必须通过维护者受控流程将 `SCADA_DATABASE_URL` 指向已确认的独立 Lab 测试数据库并完成 Prisma 迁移；在根 `.env` 安全填写真实的 Keycloak Client Secret、随机事务密钥、实验室 Issuer、固定回调、证书绝对路径；确认外部 Keycloak `sub` 与服务端 `scada_external_identities` 的预绑定有效，再显式开启两个 OIDC/HTTPS 开关。不要为了“快速登录”直接写生产数据库、创建匿名权限、跳过 CSRF 或自动添加有写权限的主体。真实 OIDC/Cookie 与跨框架工程联调仍待验收。
 
 正式部署的目标为**一个 ADui SCADA 应用镜像**（前端双版本静态资源及 NestJS 统一交付），但数据库、Redis、IdP 与工业网关仍是可独立升级与持久化的外部服务；这份本机 Lab Compose 不是正式单镜像交付，也不是已经实现的生产方案。
+
+### 第三十三批 · E-018 OIDC 根模块启动和 HTTPS 匿名探针复验（2026-11-16）
+
+维护者在真实 Keycloak/独立 Lab PostgreSQL 准备完成后启动 NestJS，发现 `ProjectApiModule` 使用的 `ScadaSessionGuard` 无法注入 `ScadaSecurityAuditService`，导致服务端未监听 13001、双 Web 的 `/api/v1` 同源代理连接被拒绝。修复仅补齐身份模块对工程 Guard 的跨模块依赖导出，新增真实 OIDC 模块编译 E2E，不直接连接任何生产或 Lab 数据库。
+
+本地更新功能分支前请确认当前分支和工作树；不要因数据库已经完成四项迁移而重新创建、删除或重置任何 Docker 数据卷。维护者在 Windows 运行：
+
+```powershell
+git status --short
+git pull --ff-only
+pnpm run test:unit
+if ($LASTEXITCODE -ne 0) { throw "单元测试未通过" }
+pnpm run test:e2e:server
+if ($LASTEXITCODE -ne 0) { throw "OIDC 模块装配 E2E 未通过" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "格式、Lint 或类型检查未通过" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量链未通过" }
+```
+
+在 WebStorm 重启 `dev:server`（保留 `NODE_USE_SYSTEM_CA=1`、已配置的 Lab OIDC），确认不再报 `UnknownDependenciesException` 且监听回环 13001；随后重启 `dev:react`/`dev:vue` 并在**独立 PowerShell 终端**运行：
+
+```powershell
+Get-NetTCPConnection -LocalPort 13001 -State Listen
+$env:NODE_USE_SYSTEM_CA = "1"
+pnpm run verify:oidc:https:readonly
+Write-Host "真实 HTTPS 匿名探针退出码：$LASTEXITCODE"
+```
+
+两个 Web Origin 都必须得到未登录的 401 JSON，不能用禁用 Guard、跳过 CSRF、忽略 TLS 证书、匿名开写或修改现有 OIDC 事务密钥来让检查通过。该探针通过仍不代表真实 Keycloak 用户已预绑定或浏览器登录成功；身份绑定、Cookie 和 React↔Vue 工程 CAS 另行验收。维护者此前将本机 DB/OIDC 测试秘密粘贴到对话，需单独进行受控轮换，绝不能在 issue/commit/日志引用原值。

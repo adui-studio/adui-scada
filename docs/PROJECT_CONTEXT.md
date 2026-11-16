@@ -1076,3 +1076,7 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 在 PR #55 功能分支中为本机联调新增独立 `deploy/docker/compose.oidc.lab.yaml`，以单一 Compose 项目管理本机 PostgreSQL、Redis、Keycloak；新增 `scripts/prepare-oidc-lab.mjs`，自动生成并复用不会入库的随机凭据与 mkcert 回环 HTTPS 证书，默认不改写根 `.env` 和现有数据库。根 `.env.example` 增加三个 Lab 端口并维持 OIDC/HTTPS 默认关闭，因此直接复制可用于原有普通 HTTP 开发；真实 OIDC 需要可信 Client、预绑定身份和隔离测试数据库才能另行启用。
 
 已在隔离 Node.js 22 环境完成脚本语法、六项准备脚本离线安全测试及 Compose YAML/Realm JSON 静态解析；**Windows Docker 启动、Keycloak Discovery、PostgreSQL 实例、Redis 实例、React/Vue HTTPS/真实登录与生产单镜像交付尚未实测**。保留 PR #55 Draft，Assignee `@adui-dev`；不触及 Prisma 历史迁移或生产数据。
+
+### 2026-11-16 · OIDC Lab 联调真实启动被 E-018 阻断
+
+维护者 Windows 已通过 Keycloak OIDC Discovery HTTP 200、隔离 `adui_scada_oidc_lab` 四项 Prisma 迁移及 React HTTPS 15173 启动，首次真实启用 OIDC 根模块发现 `ProjectApiModule` 内 `ScadaSessionGuard` 的审计服务跨模块注入失败，NestJS 无法监听 13001，Vite 代理报 `ECONNREFUSED`，匿名 401 探针失败。修复候选仅向身份模块导出审计、OIDC 配置及共享数据库模块，增加真实根模块的 Mock 数据库 E2E，维持原 Guard、CSRF、ACL 与默认关闭策略。Windows 新提交的工程质量链和真实 NestJS 启动待验收。此前粘贴的本机秘密需受控轮换，不得写入仓库。

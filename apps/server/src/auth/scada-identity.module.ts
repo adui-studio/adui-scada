@@ -49,6 +49,11 @@ import {
     ScadaProjectGuard,
   ],
   exports: [
+    // 工程控制器声明 @UseGuards 后，Nest 会在 ProjectApiModule 上下文解析 Guard 的依赖。
+    // 除 Guard 类本身，还必须显式导出共享数据库、审计服务与可信 OIDC 配置。
+    DatabaseModule,
+    SCADA_OIDC_STARTUP_CONFIG,
+    ScadaSecurityAuditService,
     AuthSessionService,
     OidcProviderDiscoveryService,
     OidcLoginTransactionService,

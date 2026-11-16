@@ -1142,3 +1142,9 @@ React 的 `apps/web-react/src/studio/StudioPage.tsx` 与 Vue 的 `apps/web-vue/s
 在隔离 Node.js **22.16.0** 环境中执行 `node --check scripts/prepare-oidc-lab.mjs`、`node --check scripts/prepare-oidc-lab.cases.mjs` 和 `node --test scripts/prepare-oidc-lab.cases.mjs`，新增准备逻辑的 **6/6** 项离线测试通过，覆盖高熵随机凭据、首次文件、重复执行保留秘密、缺少 `.env`、不安全监听与非法端口、既有机密文件损坏拒绝重置。使用 Python YAML/JSON 解析确认 Compose 结构包含 PostgreSQL、Redis、Keycloak 及 `adui-scada` Realm 的 `adui-scada-bff` Client。以上测试使用隔离临时目录和 Mock 证书准备，不曾启动 Docker、创建真实数据卷或登录身份提供方。
 
 根 `.env.example` 在保持现有默认值与 OIDC 禁用状态的前提下，增加 Lab 端口；根 `scripts/check-env-config.mjs` 同步校验新环境变量，依赖保护测试加入 `ready`。**候选入库后的 Windows `vp check`、`pnpm run env:check`、`pnpm run ready`、`docker:lab:up`、真实 Keycloak TLS/Discovery、数据库与 Redis 连通性、以及完整 OIDC 回调/Cookie/CSRF 均待维护者实测**；不将离线 YAML/JSON 解析记作真实容器正常运行。
+
+## 2026-11-16 · 第三十三批真实 OIDC 联调定位跨模块 Guard 注入缺陷（E-018）
+
+维护者 Windows 实测：Keycloak 26.8.2 已完成 Realm 导入，可信 OIDC Discovery HTTP 200；独立 PostgreSQL `adui_scada_oidc_lab` 在回环 15433 上实际应用全部四项历史 Prisma 迁移，`migrate status` 报告 Schema 最新；React Vite HTTPS 15173 启动成功。**NestJS 未启动成功**：`OidcEnabledAppModule` 装配到 `ProjectApiModule` 时，`ScadaSessionGuard` 无法解析 `ScadaSecurityAuditService`（索引 1），因此前端 `/api/v1` 代理连接回环 13001 被拒绝，真实匿名只读探针退出码 **1**。本次失败不应归因于 Keycloak Realm、TLS 证书或数据库迁移；且未完成真正的登录、Cookie/CSRF 与跨框架工程往返。
+
+代码修复仅在 `ScadaIdentityModule` 导出共享 `DatabaseModule`、审计服务、OIDC 配置 Token；现有默认 AppModule 仍不加载受保护路由或数据库。新增一项模块导出契约单测及两项真实 OIDC 根模块装配 E2E；E2E 通过测试配置和 Prisma Mock 避免访问任何实际 IdP/数据库，并验证匿名 `/api/v1/auth/me` 和 `/api/v1/projects` 返回 401 JSON。**新提交尚未执行 Windows `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、完整 `ready` 或实际 NestJS 联调启动**，不得声称通过。恢复联调后先验证 13001 监听，再执行真正的 HTTPS 匿名只读探针；后续需受控轮换已在聊天粘贴的本机测试凭据，不在仓库记录值。

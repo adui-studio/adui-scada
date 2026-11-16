@@ -3,6 +3,11 @@ import { describe, expect, it } from "vite-plus/test";
 import { AppModule, OidcEnabledAppModule } from "../app.module.js";
 import { ScadaAuthController } from "../auth/scada-auth.controller.js";
 import { ScadaIdentityModule } from "../auth/scada-identity.module.js";
+import { AuthSessionService } from "../auth/auth-session.service.js";
+import { ScadaSessionGuard } from "../auth/scada-session.guard.js";
+import { ScadaProjectGuard } from "../auth/scada-project.guard.js";
+import { SCADA_OIDC_STARTUP_CONFIG } from "../auth/oidc-provider-discovery.service.js";
+import { ScadaSecurityAuditService } from "../security/scada-security-audit.js";
 import { ProjectPersistenceModule } from "../projects/project-persistence.module.js";
 import { ProjectApiModule } from "../projects/project-api.module.js";
 import { ProjectApiController } from "../projects/project-api.controller.js";
@@ -18,6 +23,20 @@ describe("共享 Prisma 数据库模块装配边界", () => {
   it("身份模块只注册认证控制器", () => {
     const controllers = Reflect.getMetadata("controllers", ScadaIdentityModule) as unknown[];
     expect(controllers).toEqual([ScadaAuthController]);
+  });
+
+  it("身份模块显式导出工程 Guard 的完整跨模块依赖", () => {
+    const exports = Reflect.getMetadata("exports", ScadaIdentityModule) as unknown[];
+    for (const provider of [
+      DatabaseModule,
+      SCADA_OIDC_STARTUP_CONFIG,
+      ScadaSecurityAuditService,
+      AuthSessionService,
+      ScadaSessionGuard,
+      ScadaProjectGuard,
+    ]) {
+      expect(exports).toContain(provider);
+    }
   });
 
   it("可信身份与工程持久化模块共用相同的数据库模块", () => {
