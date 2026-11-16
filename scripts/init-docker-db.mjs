@@ -83,7 +83,9 @@ function runDockerDatabasePrisma(action, root, run) {
         : "Docker 本机业务数据库 Prisma 迁移失败，请检查 PostgreSQL 状态",
     );
   }
-  return action === "status" ? "Docker 业务数据库迁移状态检查完成" : "全新业务数据库 Prisma 迁移完成";
+  return action === "status"
+    ? "Docker 业务数据库迁移状态检查完成"
+    : "全新业务数据库 Prisma 迁移完成";
 }
 
 /** 在同一受控本机数据库上幂等执行 Prisma migrate deploy。 */

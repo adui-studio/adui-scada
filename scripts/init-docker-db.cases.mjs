@@ -98,10 +98,7 @@ void describe("本机 Docker 首次 Prisma 迁移连接保护", () => {
       "SCADA_DB_PASSWORD=old_local_password\n" +
       "SCADA_DATABASE_URL=postgresql://adui_scada:old_local_password@127.0.0.1:15432/adui_scada?schema=public\n";
     const actual = createDockerPrismaEnvironment(configured, secrets);
-    assert.equal(
-      actual.SCADA_DATABASE_URL,
-      createDockerDatabaseUrl(configured, secrets),
-    );
+    assert.equal(actual.SCADA_DATABASE_URL, createDockerDatabaseUrl(configured, secrets));
     assert.notEqual(actual.SCADA_DB_PASSWORD, "old_local_password");
   });
 
