@@ -889,7 +889,7 @@ Prisma Schema 已增加 ScadaExternalIdentity 外部身份预绑定、ScadaOidcT
 - `pnpm run db:validate`：Prisma Schema 校验通过。
 - `pnpm run db:migrate:deploy`：成功应用 `20261114000000_oidc_identity_transactions` 增量迁移。
 - `pnpm run db:migrate:status`：4 项迁移均已登记，数据库 Schema 为最新状态。
-- `pnpm run test:db`：2 个测试文件、16/16 测试通过；OIDC Schema 5/5，既有工程版本数据库回归 11/11；最终退出码 **0**。
+- `pnpm run test:db`：2 个测试文件、17/17 测试通过；OIDC Schema 5/5，既有工程版本数据库回归 11/11；最终退出码 **0**。
 
 本次真实数据库检查覆盖迁移登记、两张 OIDC 新表、15 个新增物理字段及中文注释、复合外键、检查约束、可空字段和三个新增索引及其中文注释。未执行数据库重置、删除或重建，没有覆盖既有数据库数据。
 
@@ -1098,3 +1098,9 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 维护者 Chrome 已验证 React/Vue 共享同一 SCADA OIDC 本地身份 `lab-tenant/lab-engineer`，Docker Desktop 当前有 3 个项目组。第十三小批后续新增统一本机 `adui-scada` Compose 项目候选，包含 Demo 4 服务、OIDC Lab 3 服务及旧开发 PostgreSQL 1 服务（旧数据库单独 profile），继续绑定原 Keycloak/SCADA/Redis 三份数据卷，不自动迁移或清库、不更改原 `.env` 的数据库凭据，也不把 HTTP Demo 当成真正的 OIDC HTTPS 部署。
 
 新增显式预检/迁移/启动/关闭命令与 13 项 Node.js Mock 回归测试。当前协作环境 Node.js 22 的候选测试 13/13 通过，Python YAML 结构和回环端口校验通过；协作容器**没有 Docker CLI**，真实 `docker compose config`、老项目切换、新容器健康、Keycloak 现有主体与双框架认证仍待 Windows 验收。正式单应用镜像打包属于后续独立工作。
+
+### 2026-11-16 · 统一本机 Docker 最终收敛为一个 PostgreSQL
+
+维护者明确要求删除遗留开发数据库及重复 Docker 配置，只保留项目名 `adui-scada`。因此新版本仅保留 `deploy/docker/compose.yaml`，七个容器：React/Vue/NestJS Demo/模拟服务、单 PostgreSQL、Redis、Keycloak。旧开发库 `15432` 不再启动；现有 SCADA/Keycloak 数据所在的 PostgreSQL `15433` 继续挂原持久化卷，两套逻辑数据库保留原名避免重建或丢失 OIDC 预绑定。原物理卷名称虽然带历史 OIDC Lab 前缀，但 Docker Desktop 项目名将固定为 `adui-scada`，不再运行其他 Compose 项目。
+
+旧 `compose.demo.yaml`、`compose.postgres.dev.yaml`、`compose.oidc.lab.yaml`、`compose.all.dev.yaml` 和对应多套命令清理。新 `docker:plan` / `docker:migrate` 白名单识别历史容器，显式迁移不会删除卷；日常使用 `docker:up` 等单一入口。候选 17/17 隔离 V8 Mock 逻辑检查通过，Windows 真实 `vp check`/`ready`、Docker Compose 配置解析、备份和容器切换仍待维护者实测。

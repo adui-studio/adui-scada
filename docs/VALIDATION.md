@@ -766,7 +766,7 @@ E2E 中的 HTTP 503 / `Health Check has failed!` 属于主动模拟服务不可�
 | `pnpm run db:validate`       | Prisma Schema 有效                                   |
 | `pnpm run db:migrate:deploy` | 成功应用 `20261114000000_oidc_identity_transactions` |
 | `pnpm run db:migrate:status` | 4 项迁移已登记，Schema 为最新                        |
-| `pnpm run test:db`           | 2 个文件、16/16 测试通过，退出码 0                   |
+| `pnpm run test:db`           | 2 个文件、17/17 测试通过，退出码 0                   |
 
 数据库测试包括 OIDC Schema 5/5 与既有工程版本数据库回归 11/11。OIDC 检查真实 PostgreSQL 中的迁移登记、两张表、15 个物理字段及中文表/字段注释、复合外键、检查约束、可空字段和三个业务索引及中文注释。
 
@@ -932,7 +932,7 @@ type OidcExpectedState = NonNullable<Parameters<OidcAuthorizationCodeGrant>[2]>[
 
 本次完整 `ready` 实际执行依赖目录、共享配置、环境变量与换行符、中文文案、Prisma Client 生成、Core 构建、Vite+ 格式/Lint/TypeScript、React/Vue/Draft Storage 类型检查、Server 类型检查、494 项单测、SSE 客户端 8 项、SSE 故障代理 4 项、NestJS E2E 26 项、83 份 Markdown 检查、React/Vue Web 构建和 NestJS 构建。
 
-E-012 的三个问题均已由本次 Windows 复验关闭：401 E2E 存在显式 Vitest 断言；Supertest Set-Cookie 字符串类型已正确处理；身份模块 Controller 元数据断言已生效。上述结果记录的是 Mock OIDC HTTP 路由与工程质量链通过，**不代表真实 IdP/JWKS、生产 HTTPS/反向代理、真实浏览器 Cookie 或企业身份映射已经验收**。阶段 A 的真实 PostgreSQL 迁移测试 16/16 通过记录保持独立，不因本次 `ready` 而扩大其验证范围。
+E-012 的三个问题均已由本次 Windows 复验关闭：401 E2E 存在显式 Vitest 断言；Supertest Set-Cookie 字符串类型已正确处理；身份模块 Controller 元数据断言已生效。上述结果记录的是 Mock OIDC HTTP 路由与工程质量链通过，**不代表真实 IdP/JWKS、生产 HTTPS/反向代理、真实浏览器 Cookie 或企业身份映射已经验收**。阶段 A 的真实 PostgreSQL 迁移测试 17/17 通过记录保持独立，不因本次 `ready` 而扩大其验证范围。
 
 ## 第三十三批阶段 B 第六小批：服务端工程 API 待验证（2026-11-14）
 
@@ -1002,7 +1002,7 @@ Write-Host "退出码：$LASTEXITCODE"
 
 这次 HTTP E2E 的 `Health Check has failed` 日志为模拟就绪检查失败并验证 HTTP 503 的预期场景；E2E 最终 40/40 通过。E-013 的 `main.ts` EOF 括号问题已在 Windows 实测 `vp check` 中复验关闭。新增工程 API 的单测、Mock HTTP E2E、默认 AppModule 路由 404 验证属于本次工程质量链；**并不代表实际 PostgreSQL 事务、真实 OIDC 提供方、浏览器安全 Cookie 或生产网络配置已通过验证**。
 
-**未完成的专项验证**：本次日志没有 `pnpm run test:db`，新增的 `project-api.db-spec.ts` 真实 PostgreSQL 场景（创建、隔离、并发、主体停用、审计失败回滚）仍需在确认的本机隔离 `adui_scada_test` 中执行；真实 IdP/JWKS、生产 HTTPS 终止代理及 React/Vue 同源 API Client 继续待验收。此前阶段 A 16/16 真实数据库通过记录不替代本次新数据库测试。
+**未完成的专项验证**：本次日志没有 `pnpm run test:db`，新增的 `project-api.db-spec.ts` 真实 PostgreSQL 场景（创建、隔离、并发、主体停用、审计失败回滚）仍需在确认的本机隔离 `adui_scada_test` 中执行；真实 IdP/JWKS、生产 HTTPS 终止代理及 React/Vue 同源 API Client 继续待验收。此前阶段 A 17/17 真实数据库通过记录不替代本次新数据库测试。
 
 本条为维护者日志的历史验收证据；**本次文档更新后的新提交未在该日志中运行 `docs:check` 或 `ready`**，需要独立复核。不对生产设备执行写入。
 
@@ -1176,3 +1176,11 @@ React 的 `apps/web-react/src/studio/StudioPage.tsx` 与 Vue 的 `apps/web-vue/s
 已在协作环境 Node.js **22.16.0** 执行 `node --check` 与 `node --test`：新增 `scripts/docker-all-dev.cases.mjs` **13/13 通过**，覆盖端口/回环、旧容器检测、3 卷完整性、预检失败不停止旧服务、禁止 `down -v`、显式迁移顺序、统一项目名、Docker 命令白名单与只读状态操作。Python YAML 静态解析确认服务、依赖、外部卷、回环端口及旧数据库 profile 均存在。此为脚本候选的模拟 Docker 验证，**当前环境未安装 Docker CLI**，因此没有执行真正 `docker compose config`、实际容器切换、数据库恢复、Web 浏览器或身份登录复验，不能据此声称迁移已经成功。
 
 Windows 更新分支后应先执行 `pnpm run test:docker:all`、`pnpm run env:check`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`，再在人工确认备份与数据卷后显式 `pnpm run docker:all:plan` / `pnpm run docker:all:migrate`，最终 `pnpm run docker:all:ps` 与 Keycloak Discovery、已绑定普通身份、旧开发库和 React/Vue 两端回归。不要删除旧数据卷，不对生产环境执行该操作。
+
+## 2026-11-16 · 单一 PostgreSQL 与唯一 Docker Compose（最新候选）
+
+根据维护者要求，删除三套历史 Compose 和此前八服务临时整合配置，最终仅 `deploy/docker/compose.yaml`（`name: adui-scada`）含 7 项服务、**1 个 PostgreSQL 17 容器**。原 OIDC Lab 物理 PostgreSQL/Redis 卷以 `external: true` 复用，现有 Keycloak Realm、SCADA 身份预绑定以及迁移记录不需要重置；旧开发 PostgreSQL `15432` 不再作为新服务挂载，旧卷暂时保留。Keycloak 与 SCADA 的两个逻辑数据库依然共用同一个实例。
+
+新增 `scripts/docker-stack.mjs` 和 17 项 Node 测试，用白名单核对三个旧项目的容器标签、两份必须存在的卷、唯一数据库与本机端口、完整 Compose 静态配置；默认普通 `up` 拒绝与旧容器并存，显式 `migrate` 仅 stop/rm 已核验旧容器，不调用 `down -v`、`volume rm`。更新 `.env.example` 与 `env:check`，不再公开固定数据库密码或默认指向旧 15432。17 项候选测试回调已在隔离 V8 / 模拟 Docker 环境 **17/17 通过**；这是脚本逻辑检查，**不是**实际 Node `node --test`、Windows `vp check`、`ready` 或真实 Docker 迁移。
+
+下一步需维护者 Windows 检查 `pnpm run test:docker`、`pnpm run env:check`、`vp check`、`pnpm run docs:check`、`pnpm run ready` 和 `docker:plan`，确认 Keycloak/SCADA 可恢复逻辑备份后再显式 `docker:migrate`。请在验收记录中核对两个卷、Keycloak Discovery、现存 SCADA 业务身份、SSE 与 Docker Desktop 仅一个项目组。不自动删除旧开发库卷、不触碰生产数据。

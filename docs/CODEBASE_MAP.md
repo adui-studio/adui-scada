@@ -724,9 +724,10 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/oidc-lab-identity.cases.mjs`：14 项不连接数据库的命令参数、回环目标、幂等、事务提交/回滚与权限保护离线用例。
 - `package.json`：新增 `test:oidc:identity` 并纳入默认 `ready`；`oidc:lab:identity` 为显式手工绑定命令，绝不由 `ready`、`docker:lab:up` 自动执行。
 
-### 第三十三批 · 统一本机 Docker Desktop Compose 项目
+### 本机 Docker 唯一 Compose 入口（第三十三批）
 
-- `deploy/docker/compose.all.dev.yaml`：顶层 `name: adui-scada`，复用 Demo 的 React/Vue/Server/模拟服务、OIDC Lab 的 Keycloak/Redis/PostgreSQL、可选旧开发 PostgreSQL；通过 3 个外部命名卷继续持有真实本机数据，端口绑定回环。旧 Compose 文件保留用于回退。
-- `scripts/docker-all-dev.mjs`：显式模式 `plan/migrate/up/down/ps/logs`。迁移预检在停止旧容器前验证旧数据卷、重复端口和 Compose 配置；无 shell、不删除卷。
-- `scripts/docker-all-dev.cases.mjs`：13 项原生 Node.js 离线迁移保护回归，覆盖旧卷、端口、项目标签、无 `down -v`、配置失败和命令白名单。
-- 根 `package.json`：新增 `docker:all:*` 单项目命令及 `test:docker:all`，离线测试纳入默认 `ready`；不改变 `docker:demo:*`、`db:dev:*`、`docker:lab:*` 老命令，以便回退。详见 ADR-0066。
+- `deploy/docker/compose.yaml`：唯一受维护的 `adui-scada` Compose；7 服务，单一 PostgreSQL 容器（SCADA + Keycloak 逻辑数据库），保留原 SCADA/Keycloak 与 Redis 持久化卷。
+- `scripts/docker-stack.mjs`：白名单历史容器迁移及最新 `plan/migrate/up/down/ps/logs` 命令；不运行旧开发 PostgreSQL，不删除已有卷。
+- `scripts/docker-stack.cases.mjs`：17 项受控配置、旧容器标签和持久化保护用例。
+- `scripts/prepare-oidc-lab.mjs`：仅用于本机 HTTPS 证书和随机凭据准备，并不再创建单独的 OIDC Lab Compose 项目。
+- `package.json`：`docker:*` 只保留新统一入口；`test:docker` 加入 `ready`，历史 `docker:demo/lab/all` 与 `db:dev` 命令删除。

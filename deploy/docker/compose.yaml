@@ -1,5 +1,5 @@
-# ADui SCADA 统一本机开发栈：一个 Compose 项目，8 个独立容器。
-# 仅供开发/演示；复用原有 PostgreSQL/Keycloak/Redis 数据卷，不使用 down -v。
+# ADui SCADA 唯一本机 Docker Compose 项目：7 个独立容器，只有 1 个 PostgreSQL 实例。
+# 仅供本机开发/演示；原 OIDC 测试数据库与 Redis 数据卷保留原物理卷名，避免丢失身份数据。
 # Docker Demo 的 18080/18081 仍为 HTTP，不代表已实现生产 OIDC 部署。
 name: adui-scada
 
@@ -91,7 +91,7 @@ services:
     networks:
       - app
 
-  postgres-lab:
+  postgres:
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: adui_scada_oidc_lab
@@ -100,7 +100,7 @@ services:
     ports:
       - "127.0.0.1:${SCADA_LAB_POSTGRES_PORT:-15433}:5432"
     volumes:
-      - lab-postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
       - ./oidc-lab/init-keycloak-db.sql:/docker-entrypoint-initdb.d/01-keycloak.sql:ro
     healthcheck:
       test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
@@ -116,7 +116,7 @@ services:
     ports:
       - "127.0.0.1:${SCADA_LAB_REDIS_PORT:-16379}:6379"
     volumes:
-      - lab-redis-data:/data
+      - redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -130,7 +130,7 @@ services:
     command: ["start-dev", "--import-realm"]
     environment:
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres-lab:5432/adui_scada_keycloak_lab
+      KC_DB_URL: jdbc:postgresql://postgres:5432/adui_scada_keycloak_lab
       KC_DB_USERNAME: adui_scada_oidc_lab
       KC_DB_PASSWORD: "${SCADA_LAB_DB_PASSWORD:?必须先执行 OIDC Lab 准备脚本}"
       KC_HOSTNAME: "https://127.0.0.1:${SCADA_LAB_KEYCLOAK_PORT:-18443}"
@@ -147,46 +147,22 @@ services:
       - "${SCADA_LAB_CERT_DIR:?必须先执行 OIDC Lab 准备脚本}:/opt/keycloak/conf/lab-tls:ro"
       - ./oidc-lab:/opt/keycloak/data/import:ro
     depends_on:
-      postgres-lab:
+      postgres:
         condition: service_healthy
     restart: "no"
     networks: [lab]
 
-  postgres-dev:
-    # 旧开发数据库保留，避免与 OIDC Lab 数据库混用。
-    profiles: ["legacy-db"]
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_USER: "${SCADA_LEGACY_DB_USER:-adui_scada}"
-      POSTGRES_PASSWORD: "${SCADA_LEGACY_DB_PASSWORD:-adui_scada_dev_only_2026}"
-      POSTGRES_DB: "${SCADA_LEGACY_DB_NAME:-adui_scada}"
-    ports:
-      - "127.0.0.1:${SCADA_LEGACY_DB_PORT:-15432}:5432"
-    volumes:
-      - legacy-postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: "no"
-    networks: [legacy]
-
 volumes:
-  lab-postgres-data:
+  # 现有持久化数据直接复用；旧卷名仅是 Docker 存储标识，不是项目名。
+  postgres-data:
     external: true
     name: adui-scada-oidc-lab_lab-postgres-data
-  lab-redis-data:
+  redis-data:
     external: true
     name: adui-scada-oidc-lab_lab-redis-data
-  legacy-postgres-data:
-    external: true
-    name: adui-scada-postgres-dev_scada-postgres-data
 
 networks:
   app:
     driver: bridge
   lab:
-    driver: bridge
-  legacy:
     driver: bridge

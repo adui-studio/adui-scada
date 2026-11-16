@@ -1,129 +1,60 @@
-# ADui SCADA V0.1 · Docker 本地演示
+# ADui SCADA · 唯一本机 Docker Compose 项目
 
-这是 **只读模拟演示栈**，不是工业 SCADA 生产部署。已实现的 NestJS 仅有 `GET /health`；水处理模拟 SSE 无身份认证。Docker Compose 默认只在宿主机的 `127.0.0.1` 发布两个 Web 入口。
+项目名称固定为 `adui-scada`，配置文件只有 **`deploy/docker/compose.yaml`**。用于本机开发和演示，不是工业生产部署，也不是将所有组件合并成一个镜像。
 
-## V0.3 · 统一 Docker Desktop 项目（第三十三批）
+| 容器服务 | 职责 | 宿主机入口 |
+| --- | --- | --- |
+| web-react | React HTTP 模拟演示 | `127.0.0.1:18080` |
+| web-vue | Vue HTTP 模拟演示 | `127.0.0.1:18081` |
+| server | NestJS Docker Demo（不自动提供 OIDC 业务写入） | 容器内部 |
+| demo | 只读模拟数据和 SSE | 容器内部 |
+| postgres | 唯一 PostgreSQL 17 实例 | `127.0.0.1:15433` |
+| redis | Redis 7.4（尚未接入 NestJS） | `127.0.0.1:16379` |
+| keycloak | Keycloak 26.8.2 本机测试 IdP | `https://127.0.0.1:18443` |
 
-三个历史 Compose 组 `adui-scada-v01-demo`、`adui-scada-postgres-dev`、`adui-scada-oidc-lab` 现提供统一管理入口：`adui-scada`。保留各服务独立容器和旧数据卷，**不是单镜像生产部署**。Keycloak、Redis、OIDC Lab PostgreSQL 及旧开发 PostgreSQL 的数据均不自动重建；HTTP Docker Demo 与真实 OIDC HTTPS WebStorm 开发服务仍是两套不同入口。
+**注意**：一个 PostgreSQL 容器内仍有相互隔离的 `adui_scada_oidc_lab`（SCADA）与 `adui_scada_keycloak_lab`（Keycloak）两个逻辑数据库，属于同一 PostgreSQL 实例，不是两个 PostgreSQL 容器。名称暂不变更，避免丢失已经完成的 Prisma 迁移和身份绑定。
 
-首次迁移前请确认已对已绑定身份的 Keycloak/SCADA Lab 做独立可恢复备份：
+## 首次切换：只执行一次
 
-```powershell
-pnpm run docker:all:plan
-# 只在检查和备份完成后执行一次
-pnpm run docker:all:migrate
-pnpm run docker:all:ps
-```
-
-此后日常仅使用 `pnpm run docker:all:up`、`docker:all:ps`、`docker:all:logs` 和 `docker:all:down`。旧项目的容器会在明确迁移时经不带 `-v` 的 `down` 退出，新栈通过外部卷精确复用已有数据库文件；不要点击 Docker Desktop 的“删除数据卷”或执行 `down -v`。如某一旧卷缺失，预检将失败，而不是创建新的空白 Keycloak Realm。详见 [ADR-0066](../../docs/adr/0066-single-local-compose-project.md) 和 [验收手册](../../docs/HARNESS.md)。
-
-## 运行前置
-
-- Docker Engine / Docker Desktop，启用 Compose V2
-- 能拉取 Node 24 与 Nginx 镜像，构建时能访问 npm
-- 从仓库根目录执行命令
-
-首次启动（会构建两套 Web、NestJS 与模拟器镜像）：
+此前 Docker Desktop 显示三个项目组。更新代码后，先检查现有数据库和 Keycloak 的逻辑备份、卷与端口，再执行：
 
 ```powershell
-docker compose -f deploy/docker/compose.demo.yaml config
-docker compose -f deploy/docker/compose.demo.yaml up --build -d
-docker compose -f deploy/docker/compose.demo.yaml ps
-```
-
-也可以通过根脚本启动：
-
-```powershell
-pnpm run docker:demo:up
-pnpm run docker:demo:logs
-pnpm run docker:demo:down
-```
-
-| 入口     | 地址                               | 用途                                              |
-| -------- | ---------------------------------- | ------------------------------------------------- |
-| React    | http://127.0.0.1:8080              | React 只读 Runtime，通过同源 `/demo` 获取模拟数据 |
-| Vue      | http://127.0.0.1:8081              | Vue 只读 Runtime，共享工程与 Tag 契约             |
-| 健康检查 | http://127.0.0.1:8080/api/health   | NestJS 进程存活探针，不代表网关健康               |
-| 演示工程 | http://127.0.0.1:8080/demo/project | 只供本地诊断，未经认证                            |
-| 演示 SSE | http://127.0.0.1:8080/demo/events  | 演练 `GOOD → STALE → GOOD`                        |
-
-PowerShell 简单测试：
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8080/api/health
-Invoke-RestMethod http://127.0.0.1:8080/demo/project
-curl.exe -N http://127.0.0.1:8080/demo/events
-```
-
-最后一条 SSE 会持续输出；使用 Ctrl+C 终止。
-
-## 数据流与安全边界
-
-```text
-本机浏览器
-  ├─ 127.0.0.1:8080 → React Nginx ─┐
-  └─ 127.0.0.1:8081 → Vue Nginx ────┼─ /demo/* → 模拟 Node SSE (容器网络)
-                                    └─ /api/health → NestJS (容器网络)
-```
-
-只有两套 Nginx 绑定宿主机 loopback；`server` 与 `demo` 服务只配置容器内 `expose`，不发布宿主机端口。NestJS 的 `SCADA_SERVER_HOST=0.0.0.0` 与模拟服务的 `SCADA_DEMO_HOST=0.0.0.0` **仅为容器网络可达**，不代表允许在真实主机或工业网络上公开监听。非容器开发仍默认绑定 `127.0.0.1`。
-
-Nginx 专门代理 `/demo/project`、`/demo/events` 与 `/api/health`，对其他 `/demo/`、`/api/` 路径返回 404，避免把 SPA HTML 返回给 JSON 客户端。SSE 路由关闭代理缓冲，以便及时显示模拟中断状态。
-
-**切勿直接映射 0.0.0.0:8080/8081 或部署到公网**：模拟接口没有鉴权、速率限制或生产级审计；`SIMULATION` / `GOOD` 均不是现场数据。Tauri 2 不需要 Docker，也不会放进 Linux Web 容器。
-
-## 后续生产部署（尚未实现）
-
-正式交付时应将该 demo Compose 与生产部署隔离，新增：
-
-1. 经安全评审的网关独立容器/进程；客户端不直连 PLC/DCS，且不提供默认写入；
-2. NestJS 认证授权与版本化发布/Tag API、WebSocket，删除 demo 代理；
-3. PostgreSQL / TimescaleDB / Redis 数据备份、持久卷和恢复演练（依实际实现再选定）；
-4. HTTPS/WSS 入口、证书管理、网络分区、服务健康检查、日志与审计；
-5. 镜像/依赖 digest 固定、供应链扫描、Linux amd64/arm64 测试、生产秘密管理。
-
-## 验证状态
-
-维护者已确认原 V0.1 Docker 演示在 Windows 上运行成功。**本次唯一根 .env 与动态 Nginx 上游端口修改尚未重新 Docker 构建/运行验证**；当前协作环境没有 Docker CLI。即便新的容器回归通过，也不代表生产 SCADA 安全部署通过。
-
-## 统一根 .env 与端口
-
-从仓库根目录运行 Compose；它会读取同一个 `.env`（如不存在使用默认值）。只有一份提交的 [环境变量模板](../../.env.example)，不再为 Docker 单独维护第二份：
-
-```powershell
-if (!(Test-Path .env)) { Copy-Item .env.example .env }
+git status --short
+git pull --ff-only
+pnpm run test:docker
 pnpm run env:check
-docker compose -f deploy/docker/compose.demo.yaml config
-pnpm run docker:demo:up
+pnpm run docker:plan
+
+# 确认有可恢复的 PostgreSQL 逻辑备份后，显式切换
+pnpm run docker:migrate
+pnpm run docker:ps
 ```
 
-- `SCADA_REACT_PORT`、`SCADA_VUE_PORT`：映射到宿主机的本地 Web 端口（8080、8081），宿主机 IP **始终 127.0.0.1**。
-- `SCADA_SERVER_PORT`、`SCADA_DEMO_PORT`：容器内 NestJS、SSE 的监听端口（3001、4178），Compose 健康检查和 Nginx 上游使用相同变量。
-- Docker 容器内 `SCADA_SERVER_HOST` / `SCADA_DEMO_HOST` 会被 Compose **明确覆盖为** `0.0.0.0`，仅供隔离的容器网络使用；本机启动仍按根 `.env` 默认绑定 loopback。
-- Nginx 官方镜像会将 `/etc/nginx/templates/default.conf.template` 中的内部端口变量替换为实际值，避免更改端口后代理继续指向旧地址。
-- `SCADA_REACT_DEV_PORT`、`SCADA_VUE_DEV_PORT` 只用于本地 Vite+ 开发服务器，不影响 Docker 的 Nginx 8080 容器内部监听。
-
-改动任何端口后需要重新创建相关容器：`pnpm run docker:demo:up`（带 `--build`）。正式工业业务和公网部署仍未实现。
-
-详细变量见 [环境配置说明](../../docs/ENVIRONMENT.md)。
-
-## V0.3 第二十五批 · SSE Nginx 多客户端烟测
-
-本机 Docker Demo 栈启动完成后，在根目录执行 `pnpm run test:sse:proxy`。脚本从根 `.env` 读取 `SCADA_REACT_PORT`、`SCADA_VUE_PORT`，仅通过宿主机的 `127.0.0.1` 访问 React/Vue Nginx 的 `/demo/events`，各验证 6 路真实 SSE 快照、heartbeat、单客户端断开隔离和重连先收到 snapshot。脚本不会重建容器、修改代理或执行生产网络故障注入。Docker 演示 SSE 共享同一个独立 Node 模拟服务，该服务本批增加 32 路连接上限和 64 KiB 单路背压保护；Nginx 路由与 Docker 暴露范围不变。**本批 Docker 实际网络烟测仍待维护者执行**。详见 [ADR-0057](../../docs/adr/0057-local-sse-capacity-and-proxy-validation.md)。
-
-### 统一读取根环境文件及端口检查
-
-Docker 演示栈由根目录命令 `pnpm run docker:demo:up/down/logs` 统一调用 `docker compose --env-file .env -f deploy/docker/compose.demo.yaml`，与本机 SSE 网络测试从根 `.env` 读取的端口一致；不要通过旧版省略 `--env-file` 的命令启动。端口更新后运行：
+`docker:migrate` 只停止并删除三个**旧项目的已核验容器**，不删除 Docker 数据卷；然后以 `adui-scada` 启动最新的七服务 Compose。后续只需：
 
 ```powershell
-pnpm run env:check
-pnpm run docker:demo:up
-pnpm run docker:demo:ps
-pnpm run test:sse:proxy
+pnpm run docker:up
+pnpm run docker:ps
+pnpm run docker:logs
+pnpm run docker:down
 ```
 
-默认发布映射应为 React `127.0.0.1:18080->8080/tcp`、Vue `127.0.0.1:18081->8080/tcp`。如仍显示旧 `8080/8081`，检查 PowerShell 的同名环境变量是否覆盖根 `.env`；不要分享含数据库密码的完整配置转储。此修正是本地 Docker 演示端口一致性保护，尚未证明网络代理或工业生产环境通过验收。
+旧 `docker:demo:*`、`docker:lab:*`、`docker:all:*`、`db:dev:*` 命令及旧 Compose 文件已从仓库移除。旧开发库的 15432 容器不会在最新栈中启动；其原数据卷暂时**保留为历史备份**，未经维护者再次确认不能自动删除。
 
-### 第二十六批 · Docker Nginx SSE 下行静默与持续流回归
+## 数据保护与配置
 
-本机已启动的 Docker Demo 演示栈无需重新配置，即可在仓库根目录使用 `pnpm run test:sse:fault:proxy` 对 React `18080`、Vue `18081` 的 SSE 入口分别进行临时 TCP 代理下行静默测试；通过真实浏览器观察共享 Runtime 的 STALE、15 秒重建和 socket 回收。运行 `pnpm run test:sse:soak:proxy` 可按端口分别观测六路连接的持续 12 次心跳及 Tag 增量。测试只访问固定本机回环地址，不停止现有容器、修改 Nginx 或开放新服务端路由。短时 TCP 字节屏蔽不代表 Nginx 自身宕机或真实工业网络已验收；详见 [ADR-0058](../../docs/adr/0058-tcp-sse-fault-and-soak-tests.md)。
+SCADA 与 Keycloak 的现有身份、迁移和 Redis 数据仍在已创建的外部 Docker 数据卷中。为防止数据丢失，物理卷名暂保持原来的 `adui-scada-oidc-lab_lab-postgres-data` 和 `adui-scada-oidc-lab_lab-redis-data`。这些是 Docker 卷名称，**不会让 Docker Desktop 额外生成旧 Compose 项目组**。如果以后需要清理旧卷名，必须先做独立的数据迁移及恢复演练，不能直接改 `name:` 指向空卷。
+
+根目录 `.env.example` 可复制为 `.env`，默认关闭 OIDC/HTTPS，不预填数据库口令。需要真实登录联调时，沿用先前已核对的本机随机凭据，`.env` 中的数据库 URL 必须指向同一回环 PostgreSQL 15433；不要覆盖已经验证成功的自定义 `.env`。只有本机证书与凭据生成脚本会使用 `.local/oidc-lab/` 目录，该路径始终被 Git/Docker 忽略。
+
+## 验收
+
+先执行 `pnpm run test:docker`、`vp check`、`pnpm run docs:check`、`pnpm run ready`，再执行真实 `docker:plan` / `docker:migrate`。切换后检查：
+
+- `pnpm run docker:ps` 仅显示 7 个新服务；Docker Desktop 只有 `adui-scada` 项目组。
+- Keycloak Discovery 为 HTTP 200，Realm、Client、普通测试用户仍存在。
+- PostgreSQL 迁移仍为最新，SCADA 的 `issuer + sub` 身份预绑定未丢失。
+- HTTP Demo 的 React/Vue SSE 仍可正常访问；WebStorm 的 HTTPS 15173/15174 仍共享认证身份。
+- Cookie、CSRF、工程 ACL 和生产部署不因容器迁移自动判定通过。
+
+任何情况下都不要执行 `docker compose down -v`、`docker volume rm` 或 `docker system prune --volumes`。旧项目切换时会有短暂服务中断。参见 [ADR-0066](../../docs/adr/0066-single-local-compose-project.md) 和 [HARNESS](../../docs/HARNESS.md)。

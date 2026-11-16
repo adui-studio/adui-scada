@@ -1922,44 +1922,36 @@ if ($LASTEXITCODE -ne 0) { throw "本机测试主体预绑定失败" }
 
 **安全边界**：当前工具并不自动查验 Keycloak 用户或授予其工程读取、版本追加权限；`/api/v1/projects` 的访问结果还取决于既有 ACL，不应通过默认授予权限来使 UI 可见。此前用户曾把本机 Lab 密钥放入对话，需另行按 Keycloak Client/数据库密码、`.env` 与容器实际密码同步轮换，不使用 `docker compose down -v`。本小批只提供候选实现，Windows `vp check`、`ready`、真实数据库写入及完整登录都应独立验收，不接触生产或工业设备。
 
-### 第三十三批 · 统一 Docker Desktop 项目（一键启动、保留已有数据）
+### 第三十三批 · 唯一 ADui SCADA Docker 项目与安全迁移（最新配置）
 
-**目标**：由 `adui-scada-v01-demo`、`adui-scada-postgres-dev`、`adui-scada-oidc-lab` 三个项目组归并为一个 `adui-scada` Compose 项目；实际仍为八个独立容器，并非单 Docker 镜像或生产部署。底层身份认证 Web 联调仍由本机 WebStorm Vite HTTPS（15173/15174）和 NestJS（13001）承担；Docker 原 Demo Web（18080/18081）继续提供 HTTP 演示，不能代替生产身份认证。
+旧 `docker:demo:*`、`docker:lab:*`、`docker:all:*` 与 `db:dev:*` 命令已移除，旧 Compose 配置也不再维护。唯一配置为 `deploy/docker/compose.yaml`、名称为 `adui-scada`，**7 个服务、1 个 PostgreSQL 实例**。Keycloak 和 SCADA 仍分别保留现有两个逻辑数据库 `adui_scada_keycloak_lab` 与 `adui_scada_oidc_lab`，不会通过配置整合自动合并数据或重命名。
 
-**数据保护与端口**：Lab PostgreSQL 15433 含真实 Keycloak Realm/Client、SCADA 预绑定身份，Redis 16379 持久化；旧开发 PostgreSQL 15432 独立保留。全部以原 Docker 卷名外部挂载，迁移不会执行 `down -v`、清空数据库或修改本机 `.env`。旧开发库与 Lab 数据库凭据互不混用；`SCADA_LEGACY_DB_* `为仅供回环测试的可选覆盖变量，现有数据库数据目录不会因容器环境变化而改写。开始切换前推荐对 Lab 中 SCADA、Keycloak 数据库做可恢复的逻辑备份，确认当前无其他进程使用相同卷；不要通过对在线 PostgreSQL 数据目录做不一致的文件拷贝代替备份。
-
-**第一次切换：维护者人工授权执行一次，包含短暂容器停机**
+旧的存储卷必须保留，直到有可核验的数据备份及单独迁移流程；卷中包含已经完成的 Keycloak 登录测试与 SCADA 身份映射。**统一项目名称并不需要改旧物理卷名**。历史开发库 `15432` 的卷不再挂载新服务，但不会自动删除。
 
 ```powershell
 git status --short
 git pull --ff-only
-
-pnpm run test:docker:all
-if ($LASTEXITCODE -ne 0) { throw "统一 Docker 离线保护测试失败" }
+pnpm run test:docker
+if ($LASTEXITCODE -ne 0) { throw "Docker 安全回归失败" }
+pnpm run env:check
+if ($LASTEXITCODE -ne 0) { throw "环境检查失败" }
 vp check
-if ($LASTEXITCODE -ne 0) { throw "统一 Docker 代码检查失败" }
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
 pnpm run docs:check
 if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量检查失败" }
 
-pnpm run docker:all:plan
-if ($LASTEXITCODE -ne 0) { throw "旧卷或 Compose 迁移预检失败，禁止继续" }
+# 切换前必须确认 Keycloak/SCADA 的 PostgreSQL 逻辑备份可恢复
+pnpm run docker:plan
+if ($LASTEXITCODE -ne 0) { throw "数据卷或配置预检失败，禁止切换" }
 
-# 确认 Keycloak、SCADA Lab 和旧开发库数据已经备份后，显式迁移
-pnpm run docker:all:migrate
-if ($LASTEXITCODE -ne 0) { throw "统一 Docker 迁移未成功，禁止清理旧数据卷" }
-
-pnpm run docker:all:ps
+# 显式一次性删除旧 Compose 的已核验容器，不删除卷
+pnpm run docker:migrate
+if ($LASTEXITCODE -ne 0) { throw "统一项目迁移失败，勿删卷" }
+pnpm run docker:ps
 ```
 
-迁移将调用旧三套 Compose 的 **`down`（不带 `-v`）**，再以固定 `-p adui-scada` 启动新 Compose。执行前若任意外部卷缺失、端口冲突、配置无效会拒绝并保留旧容器；若旧服务已经停止后新镜像构建失败，旧卷仍存在，须先排障或用原有 Compose 命令进行回退，**不能** `docker system prune --volumes`。目前只做本机开发，不改变服务器正式部署。
+之后统一使用 `pnpm run docker:up`、`docker:ps`、`docker:logs`、`docker:down`；`down` 不删除数据卷。若旧项目容器仍存在，普通 `docker:up` 必须拒绝，要求显式 `docker:migrate`。迁移过程中可能有短暂中断；若启动新栈失败，保留卷并排查，绝不通过 `down -v` 或删除卷来“修好”数据库。
 
-**此后日常管理只使用一组命令**：
-
-```powershell
-pnpm run docker:all:up
-pnpm run docker:all:ps
-pnpm run docker:all:logs
-pnpm run docker:all:down
-```
-
-`docker:all:up` 会检查旧容器没有再次运行，否则要求先执行显式迁移，防止两个 PostgreSQL 同时挂载同一个卷。`docker:all:down` 默认保留所有外部卷。迁移前后应检查 `https://127.0.0.1:18443/realms/adui-scada/.well-known/openid-configuration`，确认 Keycloak 原有用户仍存在、React/Vue HTTPS 通过 `/api/v1/auth/me` 返回相同受控身份；还应检查旧开发库需要的端口。Cookie 及 CSRF 仍按各自真实专项验收，不能由容器状态推断通过。
+切换后应检查 Docker Desktop 只有 `adui-scada` 项目组，`docker:ps` 的七项服务、Keycloak Discovery 200、原 `adui` 业务主体仍可认证、Prisma 迁移最新、React/Vue 开发 HTTPS 会话一致与 Docker HTTP Demo SSE。生产单应用镜像、Secure Cookie/CSRF 和工业安全不因本次迁移自动通过验收。
