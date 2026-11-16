@@ -289,8 +289,7 @@ describe("OIDC BFF 认证 HTTP 接口（端到端）", () => {
   });
 
   it("真实 HTTP 拒绝缺失、同站跨源或跨站 Fetch Metadata，且不撤销会话", async () => {
-    const cookie =
-      `${SCADA_SESSION_COOKIE_NAME}=${SESSION_TOKEN}; ${SCADA_CSRF_COOKIE_NAME}=${CSRF_TOKEN}`;
+    const cookie = `${SCADA_SESSION_COOKIE_NAME}=${SESSION_TOKEN}; ${SCADA_CSRF_COOKIE_NAME}=${CSRF_TOKEN}`;
     const before = revocations.length;
     const sites: Array<string | null> = [null, "same-site", "cross-site"];
 
