@@ -72,7 +72,10 @@ describe("OIDC BFF 认证 HTTP 接口（端到端）", () => {
     const transactions = {
       start: async (returnPath: unknown, browserBinding?: unknown) => {
         if (limitLoginStarts) {
-          throw new HttpException("OIDC 登录请求过于频繁，请稍后重试", HttpStatus.TOO_MANY_REQUESTS);
+          throw new HttpException(
+            "OIDC 登录请求过于频繁，请稍后重试",
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
         }
         startCalls.push({ returnPath, browserBinding });
         return {
