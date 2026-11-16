@@ -1311,7 +1311,10 @@ async function openServerProject(projectId: string, headRevision: number): Promi
       if (editor.snapshot().document.projectId !== originalProjectId) {
         throw new TypeError("当前编辑工程已发生变化，请重新选择服务端工程");
       }
-      if (version.headRevision !== headRevision || version.snapshot.revision !== version.headRevision) {
+      if (
+        version.headRevision !== headRevision ||
+        version.snapshot.revision !== version.headRevision
+      ) {
         throw new ScadaApiError("服务端工程版本已更新，请刷新工程列表后重新选择", "conflict", 409);
       }
       if (

@@ -47,9 +47,7 @@ async function loadPage(action: "refresh" | "next" | "previous"): Promise<void> 
         page.value = browser.reset();
       }
       error.value =
-        cause instanceof ScadaApiError
-          ? cause.message
-          : "工程列表读取失败，请检查登录与服务端连接";
+        cause instanceof ScadaApiError ? cause.message : "工程列表读取失败，请检查登录与服务端连接";
     }
   } finally {
     inFlight = false;
@@ -71,11 +69,7 @@ function onToggle(event: Event): void {
           <strong>服务端工程</strong>
           <p class="studio-version-help">仅显示已授权工程，不包含完整组态文件</p>
         </div>
-        <button
-          type="button"
-          :disabled="disabled || loading"
-          @click="loadPage('refresh')"
-        >
+        <button type="button" :disabled="disabled || loading" @click="loadPage('refresh')">
           刷新
         </button>
       </div>
@@ -130,7 +124,9 @@ function onToggle(event: Event): void {
         >
           上一页
         </button>
-        <span role="status">第 {{ page.pageNumber }} 页 · 每页 {{ STUDIO_PROJECT_PAGE_SIZE }} 条</span>
+        <span role="status"
+          >第 {{ page.pageNumber }} 页 · 每页 {{ STUDIO_PROJECT_PAGE_SIZE }} 条</span
+        >
         <button
           type="button"
           :disabled="disabled || loading || !page.hasNext"

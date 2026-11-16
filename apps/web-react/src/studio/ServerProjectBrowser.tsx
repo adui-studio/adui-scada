@@ -72,23 +72,40 @@ export function ServerProjectBrowser({
       }}
     >
       <summary>工程管理</summary>
-      <section className="studio-version-panel studio-project-browser-panel" aria-label="授权工程管理">
+      <section
+        className="studio-version-panel studio-project-browser-panel"
+        aria-label="授权工程管理"
+      >
         <div className="studio-project-browser-heading">
           <div>
             <strong>服务端工程</strong>
             <p className="studio-version-help">仅显示已授权工程，不包含完整组态文件</p>
           </div>
-          <button type="button" disabled={disabled || loading} onClick={() => void loadPage("refresh")}>
+          <button
+            type="button"
+            disabled={disabled || loading}
+            onClick={() => void loadPage("refresh")}
+          >
             刷新
           </button>
         </div>
         <p className="studio-version-help">
           打开其他工程前会校验最新修订号；本地草稿不会删除，也不会自动发布。
         </p>
-        {loading && <p role="status" className="studio-version-help">正在读取授权工程…</p>}
-        {error && <p role="alert" className="studio-version-error">{error}</p>}
+        {loading && (
+          <p role="status" className="studio-version-help">
+            正在读取授权工程…
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="studio-version-error">
+            {error}
+          </p>
+        )}
         {page.loaded && !loading && page.projects.length === 0 && (
-          <p className="studio-project-browser-empty" role="status">当前页暂无可访问的工程。</p>
+          <p className="studio-project-browser-empty" role="status">
+            当前页暂无可访问的工程。
+          </p>
         )}
         <ul className="studio-project-browser-list">
           {page.projects.map((project) => (
