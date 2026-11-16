@@ -242,10 +242,22 @@ for (const action of ["plan", "up", "down", "ps", "logs"]) {
   );
 }
 assert.ok(!packageScripts["docker:migrate"], "全新安装不得保留旧容器迁移入口");
-assert.ok(packageScripts["docker:up"]?.includes("node scripts/init-docker-db.mjs"), "首次 Docker 启动必须执行 Prisma migrate deploy");
-assert.ok(packageScripts["docker:db:init"] === "node scripts/init-docker-db.mjs", "缺少安全的数据库迁移重试命令");
-assert.ok(packageScripts["test:docker:db"]?.includes("init-docker-db.cases.mjs"), "缺少首次数据库初始化安全测试");
-assert.ok(packageScripts.ready.includes("pnpm run test:docker:db"), "首次数据库初始化安全测试必须加入 ready");
+assert.ok(
+  packageScripts["docker:up"]?.includes("node scripts/init-docker-db.mjs"),
+  "首次 Docker 启动必须执行 Prisma migrate deploy",
+);
+assert.ok(
+  packageScripts["docker:db:init"] === "node scripts/init-docker-db.mjs",
+  "缺少安全的数据库迁移重试命令",
+);
+assert.ok(
+  packageScripts["test:docker:db"]?.includes("init-docker-db.cases.mjs"),
+  "缺少首次数据库初始化安全测试",
+);
+assert.ok(
+  packageScripts.ready.includes("pnpm run test:docker:db"),
+  "首次数据库初始化安全测试必须加入 ready",
+);
 assert.ok(packageScripts.ready.includes("pnpm run test:docker"), "Docker 安全测试必须进入 ready");
 assert.ok(packageScripts["test:docker"].includes("scripts/docker-stack.cases.mjs"));
 for (const key of Object.keys(packageScripts)) {

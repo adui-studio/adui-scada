@@ -156,8 +156,7 @@ void describe("OIDC Lab 手动身份预绑定安全门禁", () => {
       { SCADA_OIDC_ENABLED: "false" },
       { SCADA_DATABASE_URL: "postgresql://user:pass@127.0.0.1:15433/adui_scada?schema=public" },
       {
-        SCADA_DATABASE_URL:
-          "postgresql://user:pass@example.org:15433/adui_scada?schema=public",
+        SCADA_DATABASE_URL: "postgresql://user:pass@example.org:15433/adui_scada?schema=public",
       },
     ]) {
       assert.throws(() => resolveLabIdentityTarget({ ...env(), ...diff }), /仅允许|数据库连接/);

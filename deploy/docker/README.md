@@ -36,13 +36,13 @@ pnpm run docker:db:init
 
 `docker:down` 不带 `-v`，保留新卷；第二次 `docker:up` 不会重置密码、Keycloak 账户或已部署的表。严禁为排错随意执行 `down -v` 或 `docker volume rm`。
 
-| 服务 | 本机入口 |
-| --- | --- |
-| React Docker HTTP Demo | `http://127.0.0.1:18080` |
-| Vue Docker HTTP Demo | `http://127.0.0.1:18081` |
-| PostgreSQL（SCADA + Keycloak 两个逻辑库） | `127.0.0.1:15433` |
-| Redis | `127.0.0.1:16379` |
-| Keycloak HTTPS | `https://127.0.0.1:18443` |
+| 服务                                      | 本机入口                  |
+| ----------------------------------------- | ------------------------- |
+| React Docker HTTP Demo                    | `http://127.0.0.1:18080`  |
+| Vue Docker HTTP Demo                      | `http://127.0.0.1:18081`  |
+| PostgreSQL（SCADA + Keycloak 两个逻辑库） | `127.0.0.1:15433`         |
+| Redis                                     | `127.0.0.1:16379`         |
+| Keycloak HTTPS                            | `https://127.0.0.1:18443` |
 
 **OIDC 安全边界**：根 `.env.example` 的 OIDC 默认关闭，HTTP Demo 不能替代 WebStorm Vite HTTPS 的受保护工程 API。Keycloak Realm 将重新导入，但普通用户和对应的本地可信身份映射需要重新创建；不会自动授予工程写权限。真实 OAuth 回调、Secure Cookie、CSRF、ACL 和 Vue/React 会话互通仍须在新空库上重新验收。
 

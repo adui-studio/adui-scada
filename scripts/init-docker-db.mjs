@@ -74,8 +74,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       "缺少本机 Docker 配置或随机凭据，请先执行 docker:up",
       "Docker 本机业务数据库 Prisma 迁移失败，请检查 PostgreSQL 状态",
     ];
-    console.error(error instanceof Error && safe.includes(error.message)
-      ? error.message : "本机数据库迁移准备失败，不输出数据库密钥");
+    console.error(
+      error instanceof Error && safe.includes(error.message)
+        ? error.message
+        : "本机数据库迁移准备失败，不输出数据库密钥",
+    );
     process.exitCode = 1;
   }
 }

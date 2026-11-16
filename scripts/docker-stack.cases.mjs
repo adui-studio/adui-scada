@@ -4,20 +4,21 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { manageDockerStack, validateDockerEnv } from "./docker-stack.mjs";
 
-const env = [
-  "SCADA_WEB_HOST=127.0.0.1",
-  "SCADA_SERVER_HOST=127.0.0.1",
-  "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false",
-  "SCADA_REACT_PORT=18080",
-  "SCADA_VUE_PORT=18081",
-  "SCADA_LAB_POSTGRES_PORT=15433",
-  "SCADA_LAB_REDIS_PORT=16379",
-  "SCADA_LAB_KEYCLOAK_PORT=18443",
-  "SCADA_DB_HOST=127.0.0.1",
-  "SCADA_DB_PORT=15433",
-  "SCADA_DB_NAME=adui_scada",
-  "SCADA_DB_USER=adui_scada",
-].join("\n") + "\n";
+const env =
+  [
+    "SCADA_WEB_HOST=127.0.0.1",
+    "SCADA_SERVER_HOST=127.0.0.1",
+    "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false",
+    "SCADA_REACT_PORT=18080",
+    "SCADA_VUE_PORT=18081",
+    "SCADA_LAB_POSTGRES_PORT=15433",
+    "SCADA_LAB_REDIS_PORT=16379",
+    "SCADA_LAB_KEYCLOAK_PORT=18443",
+    "SCADA_DB_HOST=127.0.0.1",
+    "SCADA_DB_PORT=15433",
+    "SCADA_DB_NAME=adui_scada",
+    "SCADA_DB_USER=adui_scada",
+  ].join("\n") + "\n";
 
 function mockDocker(options = {}) {
   const calls = [];
@@ -40,7 +41,8 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
       env.replace("SCADA_DB_NAME=adui_scada", "SCADA_DB_NAME=adui_scada_oidc_lab"),
       env.replace("SCADA_DB_USER=adui_scada", "SCADA_DB_USER=adui_scada_oidc_lab"),
       env.replace("SCADA_DB_PORT=15433", "SCADA_DB_PORT=15432"),
-    ]) assert.throws(() => validateDockerEnv(invalid), /禁止连接历史数据库/);
+    ])
+      assert.throws(() => validateDockerEnv(invalid), /禁止连接历史数据库/);
   });
 
   void it("拒绝重复环境变量及冲突端口", () => {
@@ -54,35 +56,58 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
       /本机回环/,
     );
     assert.throws(
-      () => validateDockerEnv(env.replace("SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false", "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=true")),
+      () =>
+        validateDockerEnv(
+          env.replace(
+            "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false",
+            "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=true",
+          ),
+        ),
       /本机回环/,
     );
   });
 
   void it("正确的 Prisma URL 可使用且禁止远程或历史数据库", () => {
-    const valid = env + "SCADA_DATABASE_URL=postgresql://adui_scada:sample@127.0.0.1:15433/adui_scada?schema=public\n";
+    const valid =
+      env +
+      "SCADA_DATABASE_URL=postgresql://adui_scada:sample@127.0.0.1:15433/adui_scada?schema=public\n";
     assert.equal(validateDockerEnv(valid), true);
     assert.throws(() => validateDockerEnv(valid.replace(":15433/", ":15432/")), /全新的本机/);
-    assert.throws(() => validateDockerEnv(valid.replace("127.0.0.1:15433", "remote.example:15433")), /全新的本机/);
+    assert.throws(
+      () => validateDockerEnv(valid.replace("127.0.0.1:15433", "remote.example:15433")),
+      /全新的本机/,
+    );
   });
 
   void it("预检不依赖任何旧存储卷，也不执行删除", () => {
     const { run, calls } = mockDocker();
     assert.match(manageDockerStack("plan", env, run), /全新安装预检通过/);
-    assert.equal(calls.some((args) => args[0] === "volume"), false);
-    assert.equal(calls.some((args) => args.includes("rm") || args.includes("down")), false);
+    assert.equal(
+      calls.some((args) => args[0] === "volume"),
+      false,
+    );
+    assert.equal(
+      calls.some((args) => args.includes("rm") || args.includes("down")),
+      false,
+    );
   });
 
   void it("检测到残留旧容器时拒绝自动清理", () => {
     const { run, calls } = mockDocker({ legacy: true });
     assert.throws(() => manageDockerStack("up", env, run), /禁止自动清理/);
-    assert.equal(calls.some((args) => args.includes("up")), false);
+    assert.equal(
+      calls.some((args) => args.includes("up")),
+      false,
+    );
   });
 
   void it("Compose 无效时不启动服务", () => {
     const { run, calls } = mockDocker({ badConfig: true });
     assert.throws(() => manageDockerStack("up", env, run), /Docker 执行失败/);
-    assert.equal(calls.some((args) => args.includes("up")), false);
+    assert.equal(
+      calls.some((args) => args.includes("up")),
+      false,
+    );
   });
 
   void it("全新安装使用唯一项目及 Compose，不传入卷删除参数", () => {
@@ -120,7 +145,15 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
       "utf8",
     );
     assert.match(source, /^name: adui-scada$/m);
-    for (const service of ["web-react", "web-vue", "server", "demo", "postgres", "redis", "keycloak"]) {
+    for (const service of [
+      "web-react",
+      "web-vue",
+      "server",
+      "demo",
+      "postgres",
+      "redis",
+      "keycloak",
+    ]) {
       assert.ok(source.includes(`  ${service}:\n`));
     }
     assert.doesNotMatch(source, /postgres-dev:|legacy-db|external: true/);

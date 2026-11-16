@@ -5,18 +5,31 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const COMPOSE_ARGS = Object.freeze([
-  "compose", "-p", "adui-scada", "--env-file", ".env",
-  "--env-file", ".local/docker/compose.env", "-f", "deploy/docker/compose.yaml",
+  "compose",
+  "-p",
+  "adui-scada",
+  "--env-file",
+  ".env",
+  "--env-file",
+  ".local/docker/compose.env",
+  "-f",
+  "deploy/docker/compose.yaml",
 ]);
 const OLD_PROJECTS = Object.freeze([
-  "adui-scada-v01-demo", "adui-scada-postgres-dev", "adui-scada-oidc-lab",
+  "adui-scada-v01-demo",
+  "adui-scada-postgres-dev",
+  "adui-scada-oidc-lab",
 ]);
 const MODES = new Set(["plan", "up", "down", "ps", "logs"]);
 
 function docker(args, showOutput = false) {
   const result = spawnSync("docker", args, {
-    cwd: ROOT, shell: false, windowsHide: true, encoding: "utf8",
-    stdio: showOutput ? "inherit" : "pipe", maxBuffer: 1024 * 1024,
+    cwd: ROOT,
+    shell: false,
+    windowsHide: true,
+    encoding: "utf8",
+    stdio: showOutput ? "inherit" : "pipe",
+    maxBuffer: 1024 * 1024,
   });
   return { status: result.status ?? 1, stdout: result.stdout ?? "" };
 }
@@ -49,8 +62,10 @@ export function validateDockerEnv(text) {
   }
   const ports = new Set();
   for (const [key, fallback] of [
-    ["SCADA_REACT_PORT", "18080"], ["SCADA_VUE_PORT", "18081"],
-    ["SCADA_LAB_POSTGRES_PORT", "15433"], ["SCADA_LAB_REDIS_PORT", "16379"],
+    ["SCADA_REACT_PORT", "18080"],
+    ["SCADA_VUE_PORT", "18081"],
+    ["SCADA_LAB_POSTGRES_PORT", "15433"],
+    ["SCADA_LAB_REDIS_PORT", "16379"],
     ["SCADA_LAB_KEYCLOAK_PORT", "18443"],
   ]) {
     const raw = env.get(key) ?? fallback;
@@ -103,8 +118,12 @@ export function manageDockerStack(mode, envText, run = docker) {
     checked(run, [...COMPOSE_ARGS, "config", "--quiet"]);
     for (const name of OLD_PROJECTS) {
       const ids = checked(run, [
-        "ps", "-a", "--filter", `label=com.docker.compose.project=${name}`,
-        "--format", "{{.ID}}",
+        "ps",
+        "-a",
+        "--filter",
+        `label=com.docker.compose.project=${name}`,
+        "--format",
+        "{{.ID}}",
       ]);
       if (ids) throw new Error("仍检测到旧项目容器；请人工确认后处理，禁止自动清理");
     }
@@ -135,8 +154,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       "仍检测到旧项目容器；请人工确认后处理，禁止自动清理",
       "不支持的 Docker 操作",
     ]);
-    console.error(error instanceof Error && known.has(error.message)
-      ? error.message : "Docker 操作失败，已隐藏内部错误及敏感配置");
+    console.error(
+      error instanceof Error && known.has(error.message)
+        ? error.message
+        : "Docker 操作失败，已隐藏内部错误及敏感配置",
+    );
     process.exitCode = 1;
   }
 }
