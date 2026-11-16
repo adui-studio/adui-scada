@@ -1,5 +1,5 @@
-# ADui SCADA 唯一本机 Docker Compose 项目：7 个独立容器，只有 1 个 PostgreSQL 实例。
-# 仅供本机开发/演示；原 OIDC 测试数据库与 Redis 数据卷保留原物理卷名，避免丢失身份数据。
+# ADui SCADA 本机全新安装：单一 Compose 项目、七个容器、一个 PostgreSQL 实例。
+# 使用 adui-scada 新卷，不挂载、删除或重命名此前 Docker 项目的持久化数据。
 # Docker Demo 的 18080/18081 仍为 HTTP，不代表已实现生产 OIDC 部署。
 name: adui-scada
 
@@ -94,9 +94,9 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: adui_scada_oidc_lab
-      POSTGRES_PASSWORD: "${SCADA_LAB_DB_PASSWORD:?必须先执行 OIDC Lab 准备脚本}"
-      POSTGRES_DB: adui_scada_oidc_lab
+      POSTGRES_USER: adui_scada
+      POSTGRES_PASSWORD: "${SCADA_LAB_DB_PASSWORD:?必须先执行 Docker 本机准备脚本}"
+      POSTGRES_DB: adui_scada
     ports:
       - "127.0.0.1:${SCADA_LAB_POSTGRES_PORT:-15433}:5432"
     volumes:
@@ -130,21 +130,21 @@ services:
     command: ["start-dev", "--import-realm"]
     environment:
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/adui_scada_keycloak_lab
-      KC_DB_USERNAME: adui_scada_oidc_lab
-      KC_DB_PASSWORD: "${SCADA_LAB_DB_PASSWORD:?必须先执行 OIDC Lab 准备脚本}"
+      KC_DB_URL: jdbc:postgresql://postgres:5432/adui_scada_keycloak
+      KC_DB_USERNAME: adui_scada
+      KC_DB_PASSWORD: "${SCADA_LAB_DB_PASSWORD:?必须先执行 Docker 本机准备脚本}"
       KC_HOSTNAME: "https://127.0.0.1:${SCADA_LAB_KEYCLOAK_PORT:-18443}"
       KC_HTTP_ENABLED: "false"
       KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/conf/lab-tls/localhost.pem
       KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/conf/lab-tls/localhost-key.pem
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: "${SCADA_LAB_KEYCLOAK_ADMIN_PASSWORD:?必须先执行 OIDC Lab 准备脚本}"
-      SCADA_LAB_CLIENT_SECRET: "${SCADA_LAB_CLIENT_SECRET:?必须先执行 OIDC Lab 准备脚本}"
+      KC_BOOTSTRAP_ADMIN_PASSWORD: "${SCADA_LAB_KEYCLOAK_ADMIN_PASSWORD:?必须先执行 Docker 本机准备脚本}"
+      SCADA_LAB_CLIENT_SECRET: "${SCADA_LAB_CLIENT_SECRET:?必须先执行 Docker 本机准备脚本}"
       SCADA_REACT_DEV_PORT: "${SCADA_REACT_DEV_PORT:-15173}"
     ports:
       - "127.0.0.1:${SCADA_LAB_KEYCLOAK_PORT:-18443}:8443"
     volumes:
-      - "${SCADA_LAB_CERT_DIR:?必须先执行 OIDC Lab 准备脚本}:/opt/keycloak/conf/lab-tls:ro"
+      - "${SCADA_LAB_CERT_DIR:?必须先执行 Docker 本机准备脚本}:/opt/keycloak/conf/lab-tls:ro"
       - ./oidc-lab:/opt/keycloak/data/import:ro
     depends_on:
       postgres:
@@ -153,13 +153,10 @@ services:
     networks: [lab]
 
 volumes:
-  # 现有持久化数据直接复用；旧卷名仅是 Docker 存储标识，不是项目名。
+  # Docker Compose 创建 adui-scada_postgres-data / adui-scada_redis-data。
+  # 不读取历史卷，down 默认不会删除卷。
   postgres-data:
-    external: true
-    name: adui-scada-oidc-lab_lab-postgres-data
   redis-data:
-    external: true
-    name: adui-scada-oidc-lab_lab-redis-data
 
 networks:
   app:

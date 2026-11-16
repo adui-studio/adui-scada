@@ -139,7 +139,7 @@ Runtime 新增框架无关的 `ReadonlyTagSource` 契约与 `createSseTagSource(
 
 ### 第二十五批：Docker 演示端口一致性修复
 
-根目录 `.env` 统一配置 Docker 对宿主机发布的端口（默认 React `18080`、Vue `18081`）。`docker:up/down/logs` 统一管理唯一的 `adui-scada` Compose 项目，并提供 `pnpm run docker:ps` 查看真实容器映射。执行 `pnpm run docker:up` 后建议先核对映射，再运行 `pnpm run test:sse:proxy`；若仍不一致，还需排查同名 PowerShell 进程环境变量。Docker 目前包含七个服务且只有一个 PostgreSQL 容器；原有 Keycloak/SCADA 数据卷继续复用。正式 HTTPS/OIDC 由本机开发服务另行联调，不能将 Docker HTTP Demo 当作生产认证入口。
+根目录 `.env` 统一配置 Docker 对宿主机发布的端口（默认 React `18080`、Vue `18081`）。`docker:up/down/logs` 统一管理唯一的 `adui-scada` Compose 项目，并提供 `pnpm run docker:ps` 查看真实容器映射。执行 `pnpm run docker:up` 后建议先核对映射，再运行 `pnpm run test:sse:proxy`；若仍不一致，还需排查同名 PowerShell 进程环境变量。Docker 包含七个服务且只有一个 PostgreSQL 容器；全新安装会创建独立的 PostgreSQL/Redis 持久化卷，不会复用或恢复已删除的历史数据。正式 HTTPS/OIDC 由本机开发服务另行联调，不能将 Docker HTTP Demo 当作生产认证入口。
 
 ## V0.3 第二十六批：TCP SSE 真实字节静默与持续连接回归
 

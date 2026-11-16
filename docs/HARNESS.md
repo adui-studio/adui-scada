@@ -1955,3 +1955,39 @@ pnpm run docker:ps
 之后统一使用 `pnpm run docker:up`、`docker:ps`、`docker:logs`、`docker:down`；`down` 不删除数据卷。若旧项目容器仍存在，普通 `docker:up` 必须拒绝，要求显式 `docker:migrate`。迁移过程中可能有短暂中断；若启动新栈失败，保留卷并排查，绝不通过 `down -v` 或删除卷来“修好”数据库。
 
 切换后应检查 Docker Desktop 只有 `adui-scada` 项目组，`docker:ps` 的七项服务、Keycloak Discovery 200、原 `adui` 业务主体仍可认证、Prisma 迁移最新、React/Vue 开发 HTTPS 会话一致与 Docker HTTP Demo SSE。生产单应用镜像、Secure Cookie/CSRF 和工业安全不因本次迁移自动通过验收。
+
+### 2026-11-16 · 最新 Docker 安装步骤（覆盖历史旧卷迁移说明）
+
+维护者已删除原有三个 Docker 项目及全部旧卷，且没有数据库备份。这次**不再执行 `docker:migrate`**，也不允许把旧项目/旧身份数据当成存在。唯一的新 Compose 项目为 `adui-scada`，一个 PostgreSQL 17 容器内有 `adui_scada` 和 `adui_scada_keycloak` 两个逻辑数据库。物理数据卷由最新项目自动创建，名称为 `adui-scada_postgres-data`、`adui-scada_redis-data`。
+
+在 Docker Desktop 已启动、mkcert 安装且受信任、pnpm 依赖已经安装的 Windows PowerShell 中执行：
+
+```powershell
+git status --short
+git pull --ff-only
+pnpm run test:docker
+if ($LASTEXITCODE -ne 0) { throw "Docker 安全测试失败" }
+pnpm run test:docker:db
+if ($LASTEXITCODE -ne 0) { throw "数据库初始化安全测试失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码质量检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "工程质量链失败" }
+
+# 原 .env 含曾经暴露的凭据，先在本机备份再覆盖；不要打印备份内容。
+if (Test-Path .env) {
+  Copy-Item .env (".env.backup." + (Get-Date -Format yyyyMMddHHmmss))
+}
+Copy-Item .env.example .env -Force
+pnpm run docker:plan
+if ($LASTEXITCODE -ne 0) { throw "本机新 Docker 预检失败" }
+pnpm run docker:up
+if ($LASTEXITCODE -ne 0) { throw "本机 Docker/Prisma 初始化失败" }
+pnpm run docker:ps
+```
+
+`docker:up` 使用新 `.local/docker/` 生成独立随机密码和 mkcert TLS，启动七容器、初始化 Keycloak 数据库及 Realm，然后将 Prisma 迁移部署到新 `adui_scada` 数据库。`docker:db:init` 可安全重复迁移（绝不调用 reset）。日常使用 `docker:up/ps/logs/down`，`down` 只停止容器不删卷。
+
+由于历史库无备份，原 Keycloak 普通用户、原 OIDC 可信主体、会话和工程数据不再自动有效。后续必须重建测试用户并显式预绑定，再重新做 OIDC HTTPS 登录、两框架会话、Cookie/CSRF 和工程版本回归。Docker HTTP Demo 18080/18081 不等同于受控 HTTPS 认证界面。

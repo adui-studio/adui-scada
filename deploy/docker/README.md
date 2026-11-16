@@ -1,60 +1,49 @@
-# ADui SCADA · 唯一本机 Docker Compose 项目
+# ADui SCADA · Docker 本机全新安装
 
-项目名称固定为 `adui-scada`，配置文件只有 **`deploy/docker/compose.yaml`**。用于本机开发和演示，不是工业生产部署，也不是将所有组件合并成一个镜像。
+只维护一份 `deploy/docker/compose.yaml`，项目名 **`adui-scada`**。共有七个独立服务：`web-react`、`web-vue`、`server`、`demo`、`postgres`、`redis`、`keycloak`。**只有一个 PostgreSQL 17 容器**，其中的 `adui_scada` 是业务数据库、`adui_scada_keycloak` 是 Keycloak 的独立逻辑数据库。
 
-| 容器服务  | 职责                                           | 宿主机入口                |
-| --------- | ---------------------------------------------- | ------------------------- |
-| web-react | React HTTP 模拟演示                            | `127.0.0.1:18080`         |
-| web-vue   | Vue HTTP 模拟演示                              | `127.0.0.1:18081`         |
-| server    | NestJS Docker Demo（不自动提供 OIDC 业务写入） | 容器内部                  |
-| demo      | 只读模拟数据和 SSE                             | 容器内部                  |
-| postgres  | 唯一 PostgreSQL 17 实例                        | `127.0.0.1:15433`         |
-| redis     | Redis 7.4（尚未接入 NestJS）                   | `127.0.0.1:16379`         |
-| keycloak  | Keycloak 26.8.2 本机测试 IdP                   | `https://127.0.0.1:18443` |
+## 第一次安装
 
-**注意**：一个 PostgreSQL 容器内仍有相互隔离的 `adui_scada_oidc_lab`（SCADA）与 `adui_scada_keycloak_lab`（Keycloak）两个逻辑数据库，属于同一 PostgreSQL 实例，不是两个 PostgreSQL 容器。名称暂不变更，避免丢失已经完成的 Prisma 迁移和身份绑定。
-
-## 首次切换：只执行一次
-
-此前 Docker Desktop 显示三个项目组。更新代码后，先检查现有数据库和 Keycloak 的逻辑备份、卷与端口，再执行：
+前提为 Docker Desktop 已启动、Node/pnpm 依赖已安装、`mkcert` 已安装及本机根证书已信任。本方案仅用于回环本机开发/演示，不可直接用于生产。
 
 ```powershell
-git status --short
-git pull --ff-only
-pnpm run test:docker
-pnpm run env:check
-pnpm run docker:plan
+# 如果仓库根目录仍有旧 .env，先在本机保存备份，不输出其中的密钥。
+if (Test-Path .env) {
+    Copy-Item .env (".env.backup." + (Get-Date -Format yyyyMMddHHmmss))
+}
+Copy-Item .env.example .env -Force
 
-# 确认有可恢复的 PostgreSQL 逻辑备份后，显式切换
-pnpm run docker:migrate
+pnpm run docker:plan
+if ($LASTEXITCODE -ne 0) { throw "Docker 安装预检失败" }
+pnpm run docker:up
+if ($LASTEXITCODE -ne 0) { throw "Docker 全新安装或数据库初始化失败" }
 pnpm run docker:ps
 ```
 
-`docker:migrate` 只停止并删除三个**旧项目的已核验容器**，不删除 Docker 数据卷；然后以 `adui-scada` 启动最新的七服务 Compose。后续只需：
+`docker:up` 会准备 `.local/docker/` 下 Git 忽略的 **随机密码与本机 TLS 证书**，验证唯一 Compose 配置并创建 **`adui-scada_postgres-data`**、**`adui-scada_redis-data`** 两个新卷，启动七个容器，随后将现有 Prisma 迁移部署到新业务库 `adui_scada`。已有本地秘密文件不会自动被覆盖；密码不会写入仓库模板。`docker:db:init` 可在服务已运行后重试幂等的 Prisma 迁移。
+
+**历史情况**：维护者已删除三个旧 Docker 项目与数据卷，且没有数据库备份。因此这是新安装，不是迁移或恢复。以前的 Keycloak 用户、SCADA 身份预绑定、工程历史和旧会话都不会自动回来。如果 Docker Desktop 实际仍有旧项目容器，预检会拒绝自动清理；请先自行确认。
+
+## 日常命令
 
 ```powershell
 pnpm run docker:up
 pnpm run docker:ps
 pnpm run docker:logs
 pnpm run docker:down
+pnpm run docker:db:init
 ```
 
-旧 `docker:demo:*`、`docker:lab:*`、`docker:all:*`、`db:dev:*` 命令及旧 Compose 文件已从仓库移除。旧开发库的 15432 容器不会在最新栈中启动；其原数据卷暂时**保留为历史备份**，未经维护者再次确认不能自动删除。
+`docker:down` 不带 `-v`，保留新卷；第二次 `docker:up` 不会重置密码、Keycloak 账户或已部署的表。严禁为排错随意执行 `down -v` 或 `docker volume rm`。
 
-## 数据保护与配置
+| 服务 | 本机入口 |
+| --- | --- |
+| React Docker HTTP Demo | `http://127.0.0.1:18080` |
+| Vue Docker HTTP Demo | `http://127.0.0.1:18081` |
+| PostgreSQL（SCADA + Keycloak 两个逻辑库） | `127.0.0.1:15433` |
+| Redis | `127.0.0.1:16379` |
+| Keycloak HTTPS | `https://127.0.0.1:18443` |
 
-SCADA 与 Keycloak 的现有身份、迁移和 Redis 数据仍在已创建的外部 Docker 数据卷中。为防止数据丢失，物理卷名暂保持原来的 `adui-scada-oidc-lab_lab-postgres-data` 和 `adui-scada-oidc-lab_lab-redis-data`。这些是 Docker 卷名称，**不会让 Docker Desktop 额外生成旧 Compose 项目组**。如果以后需要清理旧卷名，必须先做独立的数据迁移及恢复演练，不能直接改 `name:` 指向空卷。
+**OIDC 安全边界**：根 `.env.example` 的 OIDC 默认关闭，HTTP Demo 不能替代 WebStorm Vite HTTPS 的受保护工程 API。Keycloak Realm 将重新导入，但普通用户和对应的本地可信身份映射需要重新创建；不会自动授予工程写权限。真实 OAuth 回调、Secure Cookie、CSRF、ACL 和 Vue/React 会话互通仍须在新空库上重新验收。
 
-根目录 `.env.example` 可复制为 `.env`，默认关闭 OIDC/HTTPS，不预填数据库口令。需要真实登录联调时，沿用先前已核对的本机随机凭据，`.env` 中的数据库 URL 必须指向同一回环 PostgreSQL 15433；不要覆盖已经验证成功的自定义 `.env`。只有本机证书与凭据生成脚本会使用 `.local/oidc-lab/` 目录，该路径始终被 Git/Docker 忽略。
-
-## 验收
-
-先执行 `pnpm run test:docker`、`vp check`、`pnpm run docs:check`、`pnpm run ready`，再执行真实 `docker:plan` / `docker:migrate`。切换后检查：
-
-- `pnpm run docker:ps` 仅显示 7 个新服务；Docker Desktop 只有 `adui-scada` 项目组。
-- Keycloak Discovery 为 HTTP 200，Realm、Client、普通测试用户仍存在。
-- PostgreSQL 迁移仍为最新，SCADA 的 `issuer + sub` 身份预绑定未丢失。
-- HTTP Demo 的 React/Vue SSE 仍可正常访问；WebStorm 的 HTTPS 15173/15174 仍共享认证身份。
-- Cookie、CSRF、工程 ACL 和生产部署不因容器迁移自动判定通过。
-
-任何情况下都不要执行 `docker compose down -v`、`docker volume rm` 或 `docker system prune --volumes`。旧项目切换时会有短暂服务中断。参见 [ADR-0066](../../docs/adr/0066-single-local-compose-project.md) 和 [HARNESS](../../docs/HARNESS.md)。
+Prisma 首次迁移是幂等的 `migrate deploy`，不是 `migrate reset`。单镜像生产交付不在本次范围内。

@@ -4,242 +4,146 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { manageDockerStack, validateDockerEnv } from "./docker-stack.mjs";
 
-const base =
-  [
-    "SCADA_WEB_HOST=127.0.0.1",
-    "SCADA_SERVER_HOST=127.0.0.1",
-    "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false",
-    "SCADA_REACT_PORT=18080",
-    "SCADA_VUE_PORT=18081",
-    "SCADA_LAB_POSTGRES_PORT=15433",
-    "SCADA_LAB_REDIS_PORT=16379",
-    "SCADA_LAB_KEYCLOAK_PORT=18443",
-    "SCADA_DB_HOST=127.0.0.1",
-    "SCADA_DB_PORT=15433",
-    "SCADA_DB_NAME=adui_scada_oidc_lab",
-    "SCADA_DB_USER=adui_scada_oidc_lab",
-  ].join("\n") + "\n";
+const env = [
+  "SCADA_WEB_HOST=127.0.0.1",
+  "SCADA_SERVER_HOST=127.0.0.1",
+  "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false",
+  "SCADA_REACT_PORT=18080",
+  "SCADA_VUE_PORT=18081",
+  "SCADA_LAB_POSTGRES_PORT=15433",
+  "SCADA_LAB_REDIS_PORT=16379",
+  "SCADA_LAB_KEYCLOAK_PORT=18443",
+  "SCADA_DB_HOST=127.0.0.1",
+  "SCADA_DB_PORT=15433",
+  "SCADA_DB_NAME=adui_scada",
+  "SCADA_DB_USER=adui_scada",
+].join("\n") + "\n";
 
-const legacy = [
-  ["adui-scada-v01-demo", "web-react"],
-  ["adui-scada-postgres-dev", "postgres"],
-  ["adui-scada-oidc-lab", "keycloak"],
-];
-
-function fakeDocker(settings = {}) {
+function mockDocker(options = {}) {
   const calls = [];
   const run = (args) => {
     calls.push(args);
-    if (args[0] === "volume" && settings.missingVolume) {
-      return { status: 1, stdout: "" };
-    }
-    if (args.includes("config") && settings.invalidCompose) {
-      return { status: 1, stdout: "" };
-    }
-    if (args[0] === "ps") {
-      const match = legacy.find(([project]) =>
-        args.includes(`label=com.docker.compose.project=${project}`),
-      );
-      return {
-        status: 0,
-        stdout: match && settings.legacy ? `id-${match[0]}\n` : "",
-      };
-    }
-    if (args[0] === "inspect" && args.includes("{{.State.Running}}")) {
-      return { status: 0, stdout: settings.stopped ? "false" : "true" };
-    }
-    if (args[0] === "inspect") {
-      const project = legacy.find(([p]) => args.at(-1) === `id-${p}`);
-      return {
-        status: 0,
-        stdout: JSON.stringify({
-          "com.docker.compose.project": settings.unknownLabel ? "not-adui-scada" : project?.[0],
-          "com.docker.compose.service": project?.[1],
-        }),
-      };
-    }
-    if (args[0] === "stop" && settings.stopFails) return { status: 1, stdout: "" };
+    if (args.includes("config") && options.badConfig) return { status: 1, stdout: "" };
+    if (args[0] === "ps" && options.legacy) return { status: 0, stdout: "old-id\n" };
     return { status: 0, stdout: "" };
   };
-  return { calls, run };
+  return { run, calls };
 }
 
-void describe("单一 ADui SCADA Docker 项目安全回归", () => {
-  void it("正常配置仅使用一个 PostgreSQL 端口", () => {
-    assert.equal(validateDockerEnv(base), true);
+void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
+  void it("允许受控本机业务数据库 adui_scada", () => {
+    assert.equal(validateDockerEnv(env), true);
   });
 
-  void it("拒绝重复环境变量、错误端口和端口冲突", () => {
-    assert.throws(() => validateDockerEnv(base + "SCADA_DB_PORT=15433\n"), /重复/);
-    assert.throws(() => validateDockerEnv(base.replace("18443", "65536")), /端口/);
-    assert.throws(() => validateDockerEnv(base.replace("16379", "15433")), /冲突/);
+  void it("拒绝旧数据库、旧账号和旧数据库端口", () => {
+    for (const invalid of [
+      env.replace("SCADA_DB_NAME=adui_scada", "SCADA_DB_NAME=adui_scada_oidc_lab"),
+      env.replace("SCADA_DB_USER=adui_scada", "SCADA_DB_USER=adui_scada_oidc_lab"),
+      env.replace("SCADA_DB_PORT=15433", "SCADA_DB_PORT=15432"),
+    ]) assert.throws(() => validateDockerEnv(invalid), /禁止连接历史数据库/);
   });
 
-  void it("拒绝公网监听与不安全 OIDC", () => {
-    assert.throws(
-      () => validateDockerEnv(base.replace("SCADA_WEB_HOST=127.0.0.1", "SCADA_WEB_HOST=0.0.0.0")),
-      /可信本机/,
-    );
-    assert.throws(
-      () =>
-        validateDockerEnv(
-          base.replace(
-            "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false",
-            "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=true",
-          ),
-        ),
-      /可信本机/,
-    );
+  void it("拒绝重复环境变量及冲突端口", () => {
+    assert.throws(() => validateDockerEnv(env + "SCADA_DB_NAME=adui_scada\n"), /重复/);
+    assert.throws(() => validateDockerEnv(env.replace("16379", "15433")), /端口/);
   });
 
-  void it("拒绝旧开发库端口与业务数据库名称漂移", () => {
+  void it("拒绝公网监听及不安全 OIDC 模式", () => {
     assert.throws(
-      () => validateDockerEnv(base.replace("SCADA_DB_PORT=15433", "SCADA_DB_PORT=15432")),
-      /唯一/,
+      () => validateDockerEnv(env.replace("SCADA_WEB_HOST=127.0.0.1", "SCADA_WEB_HOST=0.0.0.0")),
+      /本机回环/,
     );
     assert.throws(
-      () =>
-        validateDockerEnv(
-          base.replace("SCADA_DB_NAME=adui_scada_oidc_lab", "SCADA_DB_NAME=adui_scada"),
-        ),
-      /唯一/,
+      () => validateDockerEnv(env.replace("SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=false", "SCADA_OIDC_ALLOW_INSECURE_LOOPBACK=true")),
+      /本机回环/,
     );
   });
 
-  void it("已有 Prisma URL 必须精确指向现存隔离数据库", () => {
-    const good =
-      base +
-      "SCADA_DATABASE_URL=postgresql://adui_scada_oidc_lab:test@127.0.0.1:15433/adui_scada_oidc_lab?schema=public\n";
-    assert.equal(validateDockerEnv(good), true);
-    assert.throws(() => validateDockerEnv(good.replace(":15433/", ":15432/")), /连接目标/);
-    assert.throws(
-      () => validateDockerEnv(good.replace("127.0.0.1:15433", "db.example.org:15433")),
-      /连接目标/,
-    );
+  void it("正确的 Prisma URL 可使用且禁止远程或历史数据库", () => {
+    const valid = env + "SCADA_DATABASE_URL=postgresql://adui_scada:sample@127.0.0.1:15433/adui_scada?schema=public\n";
+    assert.equal(validateDockerEnv(valid), true);
+    assert.throws(() => validateDockerEnv(valid.replace(":15433/", ":15432/")), /全新的本机/);
+    assert.throws(() => validateDockerEnv(valid.replace("127.0.0.1:15433", "remote.example:15433")), /全新的本机/);
   });
 
-  void it("预检只读确认两份持久化卷与 Compose 配置", () => {
-    const mock = fakeDocker();
-    assert.match(manageDockerStack("plan", base, mock.run), /预检通过/);
-    assert.equal(mock.calls.filter((args) => args[0] === "volume").length, 2);
-    assert.equal(
-      mock.calls.some((args) => args.at(-1) === "stop"),
-      false,
-    );
+  void it("预检不依赖任何旧存储卷，也不执行删除", () => {
+    const { run, calls } = mockDocker();
+    assert.match(manageDockerStack("plan", env, run), /全新安装预检通过/);
+    assert.equal(calls.some((args) => args[0] === "volume"), false);
+    assert.equal(calls.some((args) => args.includes("rm") || args.includes("down")), false);
   });
 
-  void it("旧项目存在时普通启动拒绝挂载数据库卷", () => {
-    const mock = fakeDocker({ legacy: true });
-    assert.throws(() => manageDockerStack("up", base, mock.run), /docker:migrate/);
-    assert.equal(
-      mock.calls.some((args) => args.includes("up")),
-      false,
-    );
+  void it("检测到残留旧容器时拒绝自动清理", () => {
+    const { run, calls } = mockDocker({ legacy: true });
+    assert.throws(() => manageDockerStack("up", env, run), /禁止自动清理/);
+    assert.equal(calls.some((args) => args.includes("up")), false);
   });
 
-  void it("迁移只停止已核验的三个旧项目容器，不清除卷", () => {
-    const mock = fakeDocker({ legacy: true });
-    assert.match(manageDockerStack("migrate", base, mock.run), /单 Compose 项目/);
-    assert.equal(mock.calls.filter((args) => args[0] === "stop").length, 3);
-    assert.equal(mock.calls.filter((args) => args[0] === "rm").length, 3);
-    assert.equal(
-      mock.calls.some(
-        (args) => args.includes("-v") || (args.includes("volume") && args.includes("rm")),
-      ),
-      false,
-    );
-    assert.deepEqual(mock.calls.at(-1)?.slice(-4), ["up", "--build", "--remove-orphans", "-d"]);
+  void it("Compose 无效时不启动服务", () => {
+    const { run, calls } = mockDocker({ badConfig: true });
+    assert.throws(() => manageDockerStack("up", env, run), /Docker 执行失败/);
+    assert.equal(calls.some((args) => args.includes("up")), false);
   });
 
-  void it("已停止的旧容器直接删除，不重复执行 docker stop", () => {
-    const mock = fakeDocker({ legacy: true, stopped: true });
-    assert.match(manageDockerStack("migrate", base, mock.run), /已启动/);
-    assert.equal(mock.calls.filter((args) => args[0] === "stop").length, 0);
-    assert.equal(mock.calls.filter((args) => args[0] === "rm").length, 3);
+  void it("全新安装使用唯一项目及 Compose，不传入卷删除参数", () => {
+    const { run, calls } = mockDocker();
+    assert.match(manageDockerStack("up", env, run), /一个 PostgreSQL/);
+    const args = calls.at(-1);
+    assert.deepEqual(args.slice(-3), ["up", "--build", "-d"]);
+    assert.equal(args[2], "adui-scada");
+    assert.ok(args.includes("deploy/docker/compose.yaml"));
+    assert.equal(args.includes("--remove-orphans"), false);
+    assert.equal(args.includes("-v"), false);
   });
 
-  void it("旧容器标签不可信时立即阻止迁移", () => {
-    const mock = fakeDocker({ legacy: true, unknownLabel: true });
-    assert.throws(() => manageDockerStack("migrate", base, mock.run), /未知容器/);
-    assert.equal(
-      mock.calls.some((args) => args[0] === "stop"),
-      false,
-    );
-  });
-
-  void it("旧卷缺失时不能停止容器或初始化空白 Keycloak", () => {
-    const mock = fakeDocker({ legacy: true, missingVolume: true });
-    assert.throws(() => manageDockerStack("migrate", base, mock.run), /数据卷缺失/);
-    assert.equal(
-      mock.calls.some((args) => args[0] === "stop"),
-      false,
-    );
-  });
-
-  void it("Compose 配置无效时旧项目保持运行", () => {
-    const mock = fakeDocker({ legacy: true, invalidCompose: true });
-    assert.throws(() => manageDockerStack("migrate", base, mock.run), /Docker 命令执行失败/);
-    assert.equal(
-      mock.calls.some((args) => args[0] === "stop"),
-      false,
-    );
-  });
-
-  void it("旧容器停止失败时不删除容器也不启动新项目", () => {
-    const mock = fakeDocker({ legacy: true, stopFails: true });
-    assert.throws(() => manageDockerStack("migrate", base, mock.run), /Docker 命令执行失败/);
-    assert.equal(
-      mock.calls.some((args) => args[0] === "rm"),
-      false,
-    );
-    assert.equal(
-      mock.calls.some((args) => args.includes("up")),
-      false,
-    );
-  });
-
-  void it("日常启动仅使用最新 Compose 且清理同项目孤立容器", () => {
-    const mock = fakeDocker();
-    assert.match(manageDockerStack("up", base, mock.run), /已启动/);
-    assert.equal(mock.calls.at(-1)?.includes("deploy/docker/compose.yaml"), true);
-    assert.equal(mock.calls.at(-1)?.includes("--remove-orphans"), true);
-    assert.equal(mock.calls.at(-1)?.includes("--profile"), false);
-  });
-
-  void it("查询、日志和停止仅操作 adui-scada 项目", () => {
-    for (const action of ["down", "ps", "logs"]) {
-      const mock = fakeDocker();
-      assert.match(manageDockerStack(action, base, mock.run), /命令已执行/);
-      assert.equal(mock.calls.length, 1);
-      assert.equal(mock.calls[0]?.[2], "adui-scada");
-      assert.equal(mock.calls[0]?.includes("-v"), false);
+  void it("日常停止、状态及日志只管理 adui-scada", () => {
+    for (const mode of ["down", "ps", "logs"]) {
+      const { run, calls } = mockDocker();
+      assert.match(manageDockerStack(mode, env, run), /执行完成/);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0]?.[2], "adui-scada");
+      assert.equal(calls[0]?.includes("-v"), false);
     }
   });
 
-  void it("非法动作不会调用 Docker", () => {
-    const mock = fakeDocker();
-    assert.throws(() => manageDockerStack("prune", base, mock.run), /不支持/);
-    assert.equal(mock.calls.length, 0);
+  void it("不支持迁移、清空及其他危险操作", () => {
+    const { run, calls } = mockDocker();
+    for (const mode of ["migrate", "reset", "prune"]) {
+      assert.throws(() => manageDockerStack(mode, env, run), /不支持/);
+    }
+    assert.equal(calls.length, 0);
   });
 
-  void it("仓库只保留七服务的唯一 Compose 文件", () => {
-    const path = fileURLToPath(new URL("../deploy/docker/compose.yaml", import.meta.url));
-    const compose = readFileSync(path, "utf8");
-    assert.match(compose, /^name: adui-scada$/m);
-    for (const service of [
-      "web-react",
-      "web-vue",
-      "server",
-      "demo",
-      "postgres",
-      "redis",
-      "keycloak",
-    ]) {
-      assert.ok(compose.includes(`  ${service}:\n`));
+  void it("唯一 Compose 有七个服务且只有一个 PostgreSQL", () => {
+    const source = readFileSync(
+      fileURLToPath(new URL("../deploy/docker/compose.yaml", import.meta.url)),
+      "utf8",
+    );
+    assert.match(source, /^name: adui-scada$/m);
+    for (const service of ["web-react", "web-vue", "server", "demo", "postgres", "redis", "keycloak"]) {
+      assert.ok(source.includes(`  ${service}:\n`));
     }
-    assert.doesNotMatch(compose, /^  postgres-dev:/m);
-    assert.doesNotMatch(compose, /legacy-db/);
-    assert.ok(compose.includes("jdbc:postgresql://postgres:5432/adui_scada_keycloak_lab"));
-    assert.equal((compose.match(/^    external: true$/gm) || []).length, 2);
+    assert.doesNotMatch(source, /postgres-dev:|legacy-db|external: true/);
+    assert.equal((source.match(/^  postgres:$/gm) ?? []).length, 1);
+  });
+
+  void it("新存储卷由项目自身创建，不引用旧物理卷", () => {
+    const source = readFileSync(
+      fileURLToPath(new URL("../deploy/docker/compose.yaml", import.meta.url)),
+      "utf8",
+    );
+    assert.match(source, /^  postgres-data:$/m);
+    assert.match(source, /^  redis-data:$/m);
+    assert.doesNotMatch(source, /adui-scada-oidc-lab_lab-|adui-scada-postgres-dev_/);
+  });
+
+  void it("Keycloak 数据库与业务数据库在同一 PostgreSQL 实例中隔离", () => {
+    const source = readFileSync(
+      fileURLToPath(new URL("../deploy/docker/compose.yaml", import.meta.url)),
+      "utf8",
+    );
+    assert.ok(source.includes("POSTGRES_DB: adui_scada"));
+    assert.ok(source.includes("POSTGRES_USER: adui_scada"));
+    assert.ok(source.includes("jdbc:postgresql://postgres:5432/adui_scada_keycloak"));
   });
 });

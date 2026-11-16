@@ -1190,3 +1190,11 @@ Windows 更新分支后应先执行 `pnpm run test:docker:all`、`pnpm run env:c
 维护者 Windows 实际运行 `pnpm run test:docker`：**17/17 通过**；`pnpm run env:check`：环境配置与 LF 检查通过；`vp check`：**318 个文件格式正确、175 个受检文件零告警/Lint/类型错误**；`pnpm run ready` 已完成 48 文件 **530/530 单元测试**、SSE 8/8、故障代理 4/4、OIDC HTTPS 代理 10/10、OIDC Lab 6/6、身份绑定 14/14、Docker 17/17、HTTPS 只读探针 11/11 和 NestJS **42/42 E2E**。其后 `docs:check` 报 `ADR 状态无效：0066-single-local-compose-project.md`，`ready` 因此中断；不能称完整 `ready` 通过，后续 `build:web` 与 `build:server` 在该次 `ready` 中未执行。
 
 E-019 原因是 ADR 状态行包含验收说明，违反 `scripts/validate-docs.mjs` 的严格枚举状态契约。最小修复为将 `Proposed` 与 Windows 验收说明拆为两行，未修改校验器或 Docker/数据库。当前仅对新增 ADR 状态做同等正则静态核对，**修复后的 Windows `pnpm run docs:check`、完整 `ready` 尚待维护者执行**。后续进行一次性 `docker:migrate` 前，仍须确认现有 PostgreSQL 逻辑备份可恢复，绝不删现有数据卷。
+
+## 2026-11-16 · 唯一 Docker 项目全新安装候选（旧数据无备份）
+
+按维护者最新状态，旧 Docker 项目及旧数据卷都已删除且无数据库备份。Docker 现在只需建立 `adui-scada`，七个服务、一个 PostgreSQL 容器、两个新命名卷。业务库 `adui_scada` / Keycloak 逻辑库 `adui_scada_keycloak` 在同一 PostgreSQL 中隔离。取消旧卷强制检查和 `docker:migrate`，初次 `docker:up` 完成 Compose 启动后自动执行 Prisma `migrate deploy`；追加 `docker:db:init` 提供幂等手动重试。
+
+新测试覆盖单项目/单 PostgreSQL/新存储卷、回环端口限制、拒绝旧数据库 URL、禁止自动清理历史容器、随机本机凭据及 Prisma URL 安全规则。原先 17 项旧卷迁移测试被全新安装测试替代；Windows `pnpm run test:docker`、`test:docker:db`、`test:oidc:lab`、`test:oidc:identity`、`vp check`、`docs:check`、`ready` 和实际 Docker/Prisma/Keycloak 联调均待实跑，不得声称旧数据库、会话或用户已恢复。
+
+当前改动不执行任何 Docker 删除操作，不触碰生产设备/数据库；不恢复、清空或重置历史数据。

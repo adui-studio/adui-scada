@@ -17,7 +17,7 @@ const baseArguments = [
   "--keycloak-sub",
   KEYCLOAK_SUB,
 ];
-const applyArguments = [...baseArguments, "--apply", "--confirm-lab", "adui_scada_oidc_lab"];
+const applyArguments = [...baseArguments, "--apply", "--confirm-lab", "adui_scada"];
 const env = () => ({
   NODE_ENV: "development",
   SCADA_WEB_HOST: "127.0.0.1",
@@ -36,10 +36,10 @@ const env = () => ({
   SCADA_LAB_POSTGRES_PORT: "15433",
   SCADA_DB_HOST: "127.0.0.1",
   SCADA_DB_PORT: "15433",
-  SCADA_DB_NAME: "adui_scada_oidc_lab",
-  SCADA_DB_USER: "adui_scada_oidc_lab",
+  SCADA_DB_NAME: "adui_scada",
+  SCADA_DB_USER: "adui_scada",
   SCADA_DATABASE_URL:
-    "postgresql://adui_scada_oidc_lab:temporary-test-only@127.0.0.1:15433/adui_scada_oidc_lab?schema=public",
+    "postgresql://adui_scada:temporary-test-only@127.0.0.1:15433/adui_scada?schema=public",
 });
 
 function fakeDatabase(options = {}) {
@@ -104,7 +104,7 @@ void describe("OIDC Lab 手动身份预绑定安全门禁", () => {
     assert.equal(parseLabIdentityArgs(applyArguments).apply, true);
     assert.throws(() => parseLabIdentityArgs([...baseArguments, "--apply"]), /必须明确确认/);
     assert.throws(
-      () => parseLabIdentityArgs([...baseArguments, "--confirm-lab", "adui_scada_oidc_lab"]),
+      () => parseLabIdentityArgs([...baseArguments, "--confirm-lab", "adui_scada"]),
       /只读预览不能/,
     );
   });
@@ -145,7 +145,7 @@ void describe("OIDC Lab 手动身份预绑定安全门禁", () => {
   void it("只接受 HTTPS OIDC Lab 的固定本机数据库、Realm 和双 Web Origin", () => {
     const target = resolveLabIdentityTarget(env());
     assert.equal(target.issuer, "https://127.0.0.1:18443/realms/adui-scada");
-    assert.equal(new URL(target.connectionString).pathname, "/adui_scada_oidc_lab");
+    assert.equal(new URL(target.connectionString).pathname, "/adui_scada");
   });
 
   void it("拒绝生产、TLS 验证关闭、不安全模式与普通数据库", () => {
@@ -157,7 +157,7 @@ void describe("OIDC Lab 手动身份预绑定安全门禁", () => {
       { SCADA_DATABASE_URL: "postgresql://user:pass@127.0.0.1:15433/adui_scada?schema=public" },
       {
         SCADA_DATABASE_URL:
-          "postgresql://user:pass@example.org:15433/adui_scada_oidc_lab?schema=public",
+          "postgresql://user:pass@example.org:15433/adui_scada?schema=public",
       },
     ]) {
       assert.throws(() => resolveLabIdentityTarget({ ...env(), ...diff }), /仅允许|数据库连接/);

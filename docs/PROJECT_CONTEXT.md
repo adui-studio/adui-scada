@@ -1108,3 +1108,7 @@ E-012 的 HTTP 测试断言、Supertest Set-Cookie 类型和 Controller 元数�
 ### 2026-11-16 · Docker 单 Compose Windows 首次质量验收受文档规则阻断
 
 维护者的唯一 `adui-scada` 七服务、单 PostgreSQL 方案已完成 Windows `test:docker` 17/17、`env:check`、`vp check` 318/175 零告警、530/530 单测及 NestJS 42/42 E2E。首次 `docs:check` 在 ADR-0066 上发现状态行带额外括号说明，违反严格枚举；完整 `ready` 因此中断，不能记为通过。按 E-019 将 ADR 状态改成单独 `Proposed` 并分离验收说明；修复后 Windows `docs:check` / `ready` 和真实 Docker 迁移继续待验收，旧数据库及 Keycloak 数据卷未执行删除。
+
+### 2026-11-16 · 维护者删除旧三个 Docker 项目及旧数据卷，改用全新安装
+
+维护者确认旧的 Demo、旧开发 PostgreSQL、OIDC Lab 三组容器已全部删除，随后明确连其数据卷也删除且未留数据库备份。新方案因此不再保留“复用旧卷/迁移旧数据库”的假设：仅一份 `adui-scada` Compose，七服务、一个 PostgreSQL 容器；业务库与用户固定 `adui_scada`，Keycloak 逻辑库 `adui_scada_keycloak`；数据存储在新项目的两个持久化卷。根 `.env.example` 重新整理，默认不开启 OIDC，首次 `docker:up` 使用本机安全随机凭据、证书并运行 Prisma `migrate deploy`，无需旧卷。旧 Keycloak 用户、身份预绑定与项目历史**没有恢复**，后续需重新创建和验收。Windows Docker 实际执行尚待验收。

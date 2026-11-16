@@ -391,3 +391,9 @@ DatabaseModule 是 PrismaService 唯一 Nest 提供方；身份模块和工程�
 本机 Docker 仅保留一份 `deploy/docker/compose.yaml`（`name: adui-scada`）：React、Vue、NestJS Demo、模拟 SSE、单 PostgreSQL 17、Redis 和 Keycloak 共 7 个独立服务。旧开发 PostgreSQL 和重复 Compose 配置已从最新运行入口中移除；`postgres` 服务保留原 Lab PostgreSQL 数据卷，两个独立逻辑数据库承载 SCADA 与 Keycloak，不改 Prisma 迁移、OIDC Realm 和受控身份预绑定。
 
 已有 PostgreSQL/Redis 卷通过显式外部卷名复用，因此保留的旧卷名称仅是历史物理存储 ID，不会生成额外 Docker Desktop 项目组。第一次切换必须先备份，再通过白名单校验的 `docker:plan`、`docker:migrate` 移除旧组容器（不删除卷），后续仅用 `docker:up/ps/logs/down`。原 Docker HTTP Demo `18080/18081` 不具备真实 OIDC HTTPS；WebStorm `15173/15174` 的认证行为仍需独立验收。详见 [ADR-0066](adr/0066-single-local-compose-project.md)。
+
+## 2026-11-16 · Docker 全新安装收敛（ADR-0066）
+
+Docker 只维护 `deploy/docker/compose.yaml` 的 `adui-scada` 项目。七个独立服务包含 React/Vue HTTP Demo、NestJS、模拟器、唯一 PostgreSQL 17、Redis、Keycloak。PostgreSQL 业务库 `adui_scada` 与 Keycloak 专用逻辑库 `adui_scada_keycloak` 共享实例。新项目使用 `adui-scada_postgres-data`、`adui-scada_redis-data` 自管理持久卷，不挂载任何历史 OIDC Lab 数据卷；以前的 Keycloak 用户与 SCADA 身份绑定不再自动存在。
+
+`docker:up` 本机生成随机秘密和证书、启动七容器并执行现有 Prisma `migrate deploy`，不会自动开放未认证工程写入。旧数据卷迁移入口已经删除。WebStorm 的 React/Vue OIDC HTTPS 联调仍须在新数据库上另行重新验收。参见 [ADR-0066](adr/0066-single-local-compose-project.md)。

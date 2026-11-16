@@ -7,8 +7,8 @@ import { resolveReadonlyProbeOrigins } from "./verify-oidc-https-readonly.mjs";
 
 const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const SERVER_PACKAGE = fileURLToPath(new URL("../apps/server/package.json", import.meta.url));
-const LAB_DATABASE = "adui_scada_oidc_lab";
-const LAB_DATABASE_USER = "adui_scada_oidc_lab";
+const LAB_DATABASE = "adui_scada";
+const LAB_DATABASE_USER = "adui_scada";
 const REQUIRED_MIGRATION = "20261114000000_oidc_identity_transactions";
 const ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const KEYCLOAK_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -17,10 +17,10 @@ const SAFE_ERRORS = new Set([
   "身份绑定参数不允许重复或包含未知选项",
   "本地租户或主体标识格式无效",
   "Keycloak 用户标识必须是从管理后台核对的 UUID",
-  "执行写入必须明确确认独立 OIDC Lab 数据库",
+  "执行写入必须明确确认独立本机 SCADA 数据库",
   "只读预览不能携带写入确认参数",
   "身份绑定工具仅允许可信非生产回环 OIDC Lab",
-  "OIDC Lab 数据库连接配置与实际隔离目标不一致",
+  "本机 SCADA 数据库连接配置与实际隔离目标不一致",
   "Keycloak Issuer 与本机受控 Realm 不一致",
   "隔离数据库缺少已完成的 OIDC 身份迁移",
   "外部 Keycloak 主体已绑定其他本地身份，拒绝覆盖",
@@ -63,7 +63,7 @@ export function parseLabIdentityArgs(args) {
     throw new Error("Keycloak 用户标识必须是从管理后台核对的 UUID");
   }
   if (apply && fields.get("--confirm-lab") !== LAB_DATABASE) {
-    throw new Error("执行写入必须明确确认独立 OIDC Lab 数据库");
+    throw new Error("执行写入必须明确确认独立本机 SCADA 数据库");
   }
   if (!apply && fields.has("--confirm-lab")) {
     throw new Error("只读预览不能携带写入确认参数");
@@ -102,7 +102,7 @@ export function resolveLabIdentityTarget(env) {
   try {
     url = new URL(env.SCADA_DATABASE_URL);
   } catch {
-    throw new Error("OIDC Lab 数据库连接配置与实际隔离目标不一致");
+    throw new Error("本机 SCADA 数据库连接配置与实际隔离目标不一致");
   }
   const port = env.SCADA_LAB_POSTGRES_PORT;
   const validPort =
@@ -125,7 +125,7 @@ export function resolveLabIdentityTarget(env) {
     env.SCADA_DB_NAME !== LAB_DATABASE ||
     env.SCADA_DB_USER !== LAB_DATABASE_USER
   ) {
-    throw new Error("OIDC Lab 数据库连接配置与实际隔离目标不一致");
+    throw new Error("本机 SCADA 数据库连接配置与实际隔离目标不一致");
   }
   return Object.freeze({ connectionString: url.href, issuer: env.SCADA_OIDC_ISSUER });
 }

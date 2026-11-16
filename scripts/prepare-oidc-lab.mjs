@@ -21,7 +21,7 @@ function parseSimpleEnv(content) {
     if (!text || text.startsWith("#")) continue;
     const match = text.match(/^([A-Z][A-Z0-9_]*)=([^\r\n]*)$/);
     if (!match || Object.hasOwn(result, match[1])) {
-      throw new Error("本机 OIDC Lab 环境文件格式无效或存在重复配置");
+      throw new Error("本机 Docker 环境文件格式无效或存在重复配置");
     }
     result[match[1]] = match[2];
   }
@@ -35,10 +35,10 @@ function assertValidLabEnvironment(env) {
     "SCADA_LAB_REDIS_PORT",
   ]) {
     if (!LOCAL_ONLY.test(key) || !/^[1-9][0-9]{0,4}$/.test(env[key] ?? "")) {
-      throw new Error("OIDC Lab 本机端口配置无效");
+      throw new Error("Docker 本机端口配置无效");
     }
     const port = Number(env[key]);
-    if (port > 65535) throw new Error("OIDC Lab 本机端口配置无效");
+    if (port > 65535) throw new Error("Docker 本机端口配置无效");
   }
   const ports = [
     env.SCADA_LAB_KEYCLOAK_PORT,
@@ -57,7 +57,7 @@ function assertValidLabEnvironment(env) {
     process.env.NODE_ENV === "production" ||
     process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0"
   ) {
-    throw new Error("OIDC Lab 禁止生产和不安全的 OIDC 测试模式");
+    throw new Error("Docker 禁止生产和不安全的 OIDC 测试模式");
   }
 }
 
@@ -89,7 +89,7 @@ function ensureLocalTls(certFile, keyFile, runMkcert = spawnSync) {
   }
 }
 
-/** 首次生成本机随机凭据；已有数据卷对应的凭据始终保持不变。 */
+/** 首次生成本机随机凭据；旧 OIDC 凭据文件保持原状，绝不覆盖。 */
 export function makeLabSecrets() {
   return Object.fromEntries(SECRETS.map((name) => [name, randomBytes(32).toString("base64url")]));
 }
@@ -101,7 +101,7 @@ export function validateLabSecrets(raw) {
     Object.keys(values).length !== SECRETS.length ||
     SECRETS.some((name) => !/^[A-Za-z0-9_-]{43}$/.test(values[name] ?? ""))
   ) {
-    throw new Error("本机 OIDC Lab 凭据文件不完整，拒绝自动重置");
+    throw new Error("本机 Docker 凭据文件不完整，拒绝自动重置");
   }
   return values;
 }
@@ -111,7 +111,7 @@ export function prepareOidcLab(root = DEFAULT_ROOT, dependencies = {}) {
   if (!existsSync(input)) throw new Error("请先将根目录 .env.example 复制为 .env");
   const env = parseSimpleEnv(readFileSync(input, "utf8"));
   assertValidLabEnvironment(env);
-  const dir = resolve(root, ".local", "oidc-lab");
+  const dir = resolve(root, ".local", "docker");
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   const certFile = join(dir, "localhost.pem");
   const keyFile = join(dir, "localhost-key.pem");
@@ -141,15 +141,15 @@ export function prepareOidcLab(root = DEFAULT_ROOT, dependencies = {}) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   try {
     prepareOidcLab();
-    console.log("OIDC Lab 本机证书与独立随机凭据准备完成；不会改写仓库根目录 .env");
+    console.log("Docker 本机证书与独立随机凭据准备完成；不会改写仓库根目录 .env");
   } catch (error) {
     const message =
       (error instanceof Error && error.message.startsWith("本机 ")) ||
-      (error instanceof Error && error.message.startsWith("OIDC Lab ")) ||
+      (error instanceof Error && error.message.startsWith("Docker ")) ||
       (error instanceof Error && error.message.startsWith("请先将")) ||
       (error instanceof Error && error.message.startsWith("无法创建"))
         ? error.message
-        : "本机 OIDC Lab 准备失败，请检查环境文件与文件权限";
+        : "本机 Docker 准备失败，请检查环境文件与文件权限";
     console.error(message);
     process.exitCode = 1;
   }

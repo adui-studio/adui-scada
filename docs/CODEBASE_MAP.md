@@ -731,3 +731,13 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/docker-stack.cases.mjs`：17 项受控配置、旧容器标签和持久化保护用例。
 - `scripts/prepare-oidc-lab.mjs`：仅用于本机 HTTPS 证书和随机凭据准备，并不再创建单独的 OIDC Lab Compose 项目。
 - `package.json`：`docker:*` 只保留新统一入口；`test:docker` 加入 `ready`，历史 `docker:demo/lab/all` 与 `db:dev` 命令删除。
+
+### 第三十三批 · 单一 Docker 全新安装最终入口
+
+- `deploy/docker/compose.yaml`：唯一 `adui-scada` Compose，7 容器、1 PostgreSQL，SCADA `adui_scada` 和 Keycloak `adui_scada_keycloak` 分为两个逻辑数据库，使用 Docker 新项目自有的 PostgreSQL/Redis 命名卷。
+- `scripts/docker-stack.mjs`：只提供本机 `plan/up/down/ps/logs`，旧项目容器若存在则拒绝启动，不读取/删除旧数据卷。
+- `scripts/docker-stack.cases.mjs`：14 项本机新库/新卷和历史项目隔离安全检查。
+- `scripts/prepare-oidc-lab.mjs`：在 `.local/docker/` 生成/复用本机随机凭据与 TLS 文件，保留原业务函数名称以最小化影响，不能自动覆盖已有秘密。
+- `scripts/init-docker-db.mjs`：从 Git 忽略的随机凭据构造固定回环数据库 URL，调用 Prisma `migrate deploy`；`scripts/init-docker-db.cases.mjs` 校验独立数据库和密码保护。
+- `deploy/docker/oidc-lab/init-keycloak-db.sql`：首次 PostgreSQL 初始化时创建 Keycloak 独立逻辑库。
+- `.env.example`、`scripts/check-env-config.mjs`：统一数据库名称 `adui_scada`、端口 `15433`，OIDC 默认关闭，密码不入 Git。

@@ -25,7 +25,7 @@ function withRoot(test) {
   }
 }
 
-void describe("本机 OIDC Lab Docker 启动准备", () => {
+void describe("唯一 ADui SCADA Docker 首次安装准备", () => {
   void it("生成高熵随机凭据且不使用公开默认口令", () => {
     const secret = makeLabSecrets();
     assert.equal(Object.keys(secret).length, 4);
@@ -39,7 +39,7 @@ void describe("本机 OIDC Lab Docker 启动准备", () => {
       assert.equal(readFileSync(join(root, ".env"), "utf8"), example);
       assert.ok(existsSync(result.composeEnv));
       assert.equal(
-        validateLabSecrets(readFileSync(join(root, ".local/oidc-lab/secrets.env"), "utf8"))
+        validateLabSecrets(readFileSync(join(root, ".local/docker/secrets.env"), "utf8"))
           .SCADA_LAB_CLIENT_SECRET.length,
         43,
       );
@@ -50,7 +50,7 @@ void describe("本机 OIDC Lab Docker 启动准备", () => {
   void it("重复准备保留所有既有凭据", () => {
     withRoot((root) => {
       prepareOidcLab(root, { ensureTls: () => {} });
-      const file = join(root, ".local/oidc-lab/secrets.env");
+      const file = join(root, ".local/docker/secrets.env");
       const before = readFileSync(file, "utf8");
       prepareOidcLab(root, {
         ensureTls: () => {},
@@ -105,7 +105,7 @@ void describe("本机 OIDC Lab Docker 启动准备", () => {
   void it("已有凭据文件损坏时拒绝重置", () => {
     withRoot((root) => {
       prepareOidcLab(root, { ensureTls: () => {} });
-      writeFileSync(join(root, ".local/oidc-lab/secrets.env"), "SCADA_LAB_DB_PASSWORD=错误\n");
+      writeFileSync(join(root, ".local/docker/secrets.env"), "SCADA_LAB_DB_PASSWORD=错误\n");
       assert.throws(() => prepareOidcLab(root, { ensureTls: () => {} }), /拒绝自动重置/);
     });
   });

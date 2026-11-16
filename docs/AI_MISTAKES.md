@@ -172,6 +172,15 @@
 - **验证**：已对修复候选应用仓库相同的 ADR 状态正则进行静态核对；Windows `pnpm run docs:check`、`vp check` 与完整 `pnpm run ready` **修复后尚待维护者复验**。真实 Docker 项目迁移、数据备份与回归未因本次文档修复执行。
 - **证据**：维护者 2026-11-16 Windows 验收日志、PR #55、`docs/adr/0066-single-local-compose-project.md`、`scripts/validate-docs.mjs`、`docs/VALIDATION.md`。
 
+### E-020 · 把已删除的 Docker 历史卷当作必须存在，阻断全新安装
+
+- **现象**：维护者已删除原 Demo、独立 PostgreSQL 与 OIDC Lab 三组 Docker 项目，随后确认连全部历史数据卷也已删除、没有数据库备份；而此前生成的单 Compose 仍通过 `external: true` 强制引用 `adui-scada-oidc-lab_*` 历史卷，并要求 `docker:migrate`。这种配置会在不存在历史卷时拒绝启动，不符合“只保留一个全新 adui-scada”需求。
+- **根因**：只根据先前“保护已有身份数据”的上下文推断旧卷仍存在，没有及时根据维护者最新确认的实际状态收敛部署目标，同时 `.env.example` 中库名和端口存在与最新环境契约不一致的风险。
+- **修复**：统一唯一 `deploy/docker/compose.yaml`，取消历史外部卷与 `docker:migrate`，由 Docker 创建新的 `adui-scada_postgres-data` / `adui-scada_redis-data`。业务库、账号统一 `adui_scada`，Keycloak 在同一 PostgreSQL 上创建独立逻辑库。根 `.env.example` 与校验脚本同步，随机密码保存在 Git 忽略目录；`docker:up` 首次启动后执行 Prisma `migrate deploy`，不触碰历史数据或生产环境。
+- **避免**：部署方案必须先确认“全新安装、原位升级、数据库恢复”三种状态，不得将历史数据卷存在视为事实。检查 Compose 卷的 `external`、名称、端口及秘密文件生命周期，并验证复制默认 `.env.example` 就能启动。用户明确删除数据并无备份时，不得声称历史用户、工程或会话可以自动恢复。
+- **验证**：新增单项目/新卷/数据库命名/Prisma 迁移连接保护离线测试；提交后的 Windows `test:docker`、`test:docker:db`、`env:check`、`ready` 及真实 Docker 首次启动均须维护者验收，尚未完成。
+- **证据**：维护者最新 Docker Desktop 截图与“全部数据卷已删除、无备份”说明、PR #55、ADR-0066 与 `docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
