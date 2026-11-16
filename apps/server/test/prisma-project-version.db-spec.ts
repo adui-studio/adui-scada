@@ -83,7 +83,13 @@ afterAll(async () => {
     if (service) {
       await service.client.scadaAuthSession.deleteMany({ where: { tenantId: tenantAuth } });
       await service.client.scadaIdentity.deleteMany({ where: { tenantId: tenantAuth } });
-      for (const tenantId of [tenantA, tenantB, tenantRollback, tenantRevocation, tenantTwoWriters]) {
+      for (const tenantId of [
+        tenantA,
+        tenantB,
+        tenantRollback,
+        tenantRevocation,
+        tenantTwoWriters,
+      ]) {
         await service.client.scadaProjectAudit.deleteMany({ where: { tenantId } });
         await service.client.scadaProjectVersion.deleteMany({ where: { tenantId } });
         await service.client.scadaProjectGrant.deleteMany({ where: { tenantId } });

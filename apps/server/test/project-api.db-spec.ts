@@ -183,8 +183,9 @@ describe("PostgreSQL 真实工程 API 事务", () => {
   });
 
   it("十二项真实授权工程按十条游标分页且同租户无权工程不泄漏", async () => {
-    const ids = Array.from({ length: 12 }, (_, index) =>
-      "page-" + String(index + 1).padStart(3, "0"),
+    const ids = Array.from(
+      { length: 12 },
+      (_, index) => "page-" + String(index + 1).padStart(3, "0"),
     );
     // 只向随机测试租户执行现有创建事务，自动形成不可变首版和 ACL。
     for (const id of ids) {
@@ -207,9 +208,9 @@ describe("PostgreSQL 真实工程 API 事务", () => {
         afterProjectId: second.at(-1)?.projectId,
       }),
     ).toEqual([]);
-    expect((await store.list(principalPaging, { limit: 100 })).map((item) => item.projectId)).toEqual(
-      ids,
-    );
+    expect(
+      (await store.list(principalPaging, { limit: 100 })).map((item) => item.projectId),
+    ).toEqual(ids);
     expect(first.every((item) => item.headRevision === 1)).toBe(true);
     expect(second.every((item) => item.headRevision === 1)).toBe(true);
     expect(Object.keys(first[0] ?? {}).sort()).toEqual([
@@ -223,7 +224,9 @@ describe("PostgreSQL 真实工程 API 事务", () => {
       ProjectVersionAccessDeniedError,
     );
     expect(await service.client.scadaProject.count({ where: { tenantId: tenantPaging } })).toBe(13);
-    expect(await service.client.scadaProjectAudit.count({ where: { tenantId: tenantPaging } })).toBe(13);
+    expect(
+      await service.client.scadaProjectAudit.count({ where: { tenantId: tenantPaging } }),
+    ).toBe(13);
   });
 
   it("同一租户重复创建工程返回冲突且不会覆盖既有首版", async () => {
