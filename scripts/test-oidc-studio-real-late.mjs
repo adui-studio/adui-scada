@@ -378,7 +378,10 @@ async function verifyFramework(
   // 第二主体操作时窗口可能在后台；先激活本标签，才派发可见性复核事件。
   await session.send("Page.bringToFront");
   await waitFor(
-    () => session.evaluate(function () { return document.visibilityState === "visible"; }),
+    () =>
+      session.evaluate(function () {
+        return document.visibilityState === "visible";
+      }),
     "真实 Studio 迟到保存未达到受控状态",
   );
   // 保存完成后真实服务端水位已为 3，恢复可见只读复核必须撤销旧基线 2。
