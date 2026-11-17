@@ -37,6 +37,7 @@
     "test:oidc:revoke:browser": "node scripts/test-oidc-real-acl-revocation.mjs --run-revoke --confirm-lab adui_scada",
     "test:projects:oidc:browser": "node scripts/test-project-browser-oidc.mjs",
     "test:projects:oidc:denial": "node scripts/test-project-browser-oidc.mjs --simulate-access-denial",
+    "test:projects:oidc:resume": "node scripts/test-project-browser-oidc.mjs --simulate-resume-check",
     "test:projects:oidc:browser:pages": "node scripts/test-project-browser-oidc.mjs --require-multipage",
     "oidc:lab:projects:pages": "node scripts/test-project-browser-oidc.mjs --prepare-multipage --confirm-lab adui_scada",
     "verify:oidc:https:readonly": "node scripts/verify-oidc-https-readonly.mjs",
