@@ -1418,3 +1418,11 @@ PR #64 已按维护者授权 Squash 合并为 `main@d59df5e9ef2d702954f6b2017399
 维护者 Windows 实际执行 `vp check --fix`，报告 **188 个受检文件中 1 个错误和 1 个警告**，同时显示 Formatting completed；具体是 `apps/web-react/src/studio/StudioPage.tsx` 的 `react(immutability)`（Effect cleanup 对 `active` 重赋值）和 TS2339（在 `isScadaAccessRejection(error)` 的类型谓词否定分支中读取 `error.kind`，被推断为 `never`）。该输出表示**格式化执行完毕，不代表检查通过**，不能继续标记 `ready` 已通过。
 
 针对 PR #66 新增 React 代码提交 `e5bddb6c98682130fc80841368466fa1aacccb51`：仅将临时 `let active` 替换为 `AbortController.signal.aborted` 生命周期保护，并在分支前分别计算 `accessRejected` 与 `revisionConflict`，复用原错误分类而不重写权限/CAS 逻辑。协作容器以 TypeScript **5.8.3** 的等价收窄片段运行 `tsc --noEmit --strict` 成功；**尚未运行本项目 TypeScript 6 或 Vite+，也未验证 Windows 本地 `vp check` 零错误**。不得将未执行的 `test:projects:oidc:config`（目标 24/24）、`test:unit`（目标 558/558）、`docs:check`、`ready` 和 `test:projects:oidc:resume` 写成已通过。详见 `docs/AI_MISTAKES.md` E-031。
+
+## 2026-11-17 · PR #66 Windows 复验与待排查问题
+
+- 维护者 Windows 已执行：`pnpm run test:projects:oidc:config` **24/24 通过**、`pnpm run test:unit` **558/558 通过**、`vp check` **333 个文件格式正确 / 188 个受检文件零警告错误**、`pnpm run docs:check` **86 个 Markdown 通过**。
+- `pnpm run ready` **未通过**：`apps/web-vue/src/studio/StudioPage.vue:1221` 出现 TS2339（重复类型谓词导致 `error.kind` 收窄成 `never`），已在 PR #66 原分支采用与 React 对等的布尔分类最小修复，**修复后完整质量链待 Windows 复验**。
+- `pnpm run test:projects:oidc:resume` **未通过，退出码 1**：React 第一组“认证会话过期”场景在准备独立 CAS 基线时的工程载入阶段返回受控错误；当时尚未注入本轮 401，不得将此日志直接认定为复核逻辑的 401 失败。
+- 浏览器脚本增加仅含固定白名单文案的“确认前 / 确认后”诊断分类及对应测试断言；不公开页面原始错误正文、网络响应、Cookie、令牌或堆栈。此项是**诊断增强，不代表真实浏览器问题已经修复**。
+- 后续验收：`pnpm --filter @adui/scada-web-vue run typecheck`、`vp check`、`pnpm run test:projects:oidc:config`、`pnpm run ready`、`pnpm run test:projects:oidc:resume`，分别记录真实退出码；若浏览器仍失败，使用新的固定阶段信息继续定位。PR 保持 Draft，未经单独授权不合并。
