@@ -2717,3 +2717,39 @@ if ($browserExitCode -ne 0) { throw "真实双框架 Studio 迟到 201 专项失
 诊断补丁会在下一轮分别输出第二主体读取版本 2、追加 CAS 2→3 的结果，以及 Studio 释放真实 201、界面恢复、页面可见、CAS 水位失效和过期保存拒绝的阶段。等待超时时只回显经过白名单筛选的布尔量/计数/枚举，不打印任何 Cookie、Token、工程 ID、身份、URL、响应正文或原始异常。看到哪个阶段未完成及其受控状态后，再据实修复，不延长超时或放宽权限门禁。
 
 **本次诊断补丁后的所有 Windows 检查和真实 Lab 浏览器仍待执行。** 请先拉取 PR 分支最新 HEAD 并记录 `git rev-parse HEAD`，再按本节前面的 PowerShell 质量链步骤运行。质量链通过后，单独运行 `pnpm run test:oidc:dual:studio:late`；真实专项仍需退出码 0，且 React/Vue 两阶段均打印完成，才能结案。
+
+## 第十七小批 · 双主体隔离窗口可见性修复复验
+
+第二轮 Windows 真实浏览器日志已定位：React 真实 BFF 第二主体提交到修订 3，第一主体成功消费旧 201；但 `Page.bringToFront` 后 `visible=false`，专项退出码 **1**。候选使用 CDP 只将**第二主体测试浏览器窗口**设置为 `normal/minimized`，不触碰用户浏览器和现有业务数据，不伪造第一主体可见性。CDP 窗口 API 实际支持性与 Windows 前台行为须由本机测试确认；仍为 hidden 或窗口 CDP 操作拒绝时必须失败，并保留相关测试工程供人工复核。
+
+请确保本地无未提交更改、拉取 PR #72 最新 HEAD，并执行：
+
+```powershell
+git status --short
+git fetch origin
+git switch test/v0.3-b34-studio-real-late-ui
+git pull --ff-only origin test/v0.3-b34-studio-real-late-ui
+git rev-parse HEAD
+
+pnpm run test:oidc:dual:studio:config
+if ($LASTEXITCODE -ne 0) { throw "双窗口离线安全检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+```
+
+确认本机隔离 Lab 允许**重新创建两份新 UUID 专用工程**且两位不同预绑定主体均可登录后，单独执行：
+
+```powershell
+pnpm run test:oidc:dual:studio:late
+$browserExitCode = $LASTEXITCODE
+Write-Host "真实 Studio 双窗口专项退出码：$browserExitCode"
+if ($browserExitCode -ne 0) { throw "真实 Studio 双窗口专项失败" }
+```
+
+本次要真实看到 React **和** Vue 各自完成 201 交付、真实可见性确认、CAS 水位变更后失效、无额外版本写入、画布草稿不变及三版审计，最后退出码 0。若依然 `visible=false`，只保留脱敏阶段日志，不强行设置 `document.visibilityState`。上次专项创建的测试工程仍在本机 Lab，脚本不会删除。
