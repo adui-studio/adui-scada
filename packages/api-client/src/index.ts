@@ -55,6 +55,17 @@ export class ScadaApiError extends Error {
   }
 }
 
+/**
+ * 认证丢失或工程访问被拒绝时的失效信号。
+ * 404 不能区分不存在和无权访问，应用层应保守丢弃已缓存的服务端摘要。
+ */
+export function isScadaAccessRejection(error: unknown): error is ScadaApiError {
+  return (
+    error instanceof ScadaApiError &&
+    (error.kind === "unauthenticated" || error.kind === "forbidden" || error.kind === "not_found")
+  );
+}
+
 /** 由应用层提供运行时环境；默认仅使用浏览器同源 Fetch 与当前 Cookie。 */
 export interface ScadaApiClientOptions {
   readonly fetcher?: typeof fetch;
