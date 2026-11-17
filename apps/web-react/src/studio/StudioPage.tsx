@@ -1062,7 +1062,7 @@ export default function StudioPage() {
         } catch (error) {
           setServerError(error instanceof Error ? error.message : "服务端操作失败");
           if (isScadaAccessRejection(error)) {
-            serverSession.reset();
+            serverSession.invalidateAccess();
             setServerProjectId("");
             setServerHeadRevision(null);
             setServerRows([]);
