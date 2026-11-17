@@ -824,3 +824,11 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 
 **验收**：共享 API Client 与 CAS 会话单测覆盖 401/403/404、重复保存阻断、合法重新载入恢复、首次创建不回归、网络中断仍保留基线；Windows `vp check`、`test:unit`、`ready` 和 React/Vue 两端现有工程浏览器验收。真正服务端权限撤销的全链安全性已由第七小批独立 `adui_scada_test` 实测覆盖，**不需要也不允许本批为 UI 模拟而写现有 OIDC Lab 授权表**。没有后台主动推送，因此“即时清空”特指实际请求收到拒绝后的状态更新。
 无论拒绝首先来自 Studio 的保存/历史查询，还是独立工程列表的分页刷新，均使用相同的父级授权失效处理：React 子组件通过 `onAccessRejected(error)` 回调、Vue 子组件通过 `accessRejected` 事件通知 Studio；父级清空旧 CAS 和服务端历史摘要并重建工程管理列表组件。子组件中的临时错误显示不承担父级缓存失效职责。重新挂载使旧分页请求无法把迟到响应写回新列表。
+
+### 第三十四批第九小批 · 临时浏览器权限拒绝模拟与写入阻断
+
+复用已有 `scripts/test-project-browser-oidc.mjs` 的本机 OIDC HTTPS/Keycloak/数据库白名单、Chrome CDP 独立 Profile、`Page.addScriptToEvaluateOnNewDocument`、React/Vue 同源 BFF 登录、已授权工程列表、确认载入与 IndexedDB 摘要检测。新增互斥模式 `--simulate-access-denial`；`resolveProjectBrowserMode` 严格拒绝与 `--prepare-multipage --confirm-lab` 等写入模式组合。正常浏览器命令和既有多页准备流程保持原样。
+
+`installAccessDenialFaultInPage(runtime=globalThis)` 必须在每次页面初始化前注入，包装应用捕获的 `fetch`。对于所有路径为 `/api/v1/projects` 或其子路径的非 GET/HEAD 请求，包装器**先于底层 Fetch**返回静态 403，同时只记录本地 `writeAttempts` 计数；不携带请求 Cookie 或正文，不打开远程数据库。不论当前是否触发模拟拒绝，该写入保护在整个模拟 Profile 中持续有效。只有显式 `armAccessDenialInPage(projectId,scope,status)` 时，才将同 Origin、指定项目和路径范围的 GET 返回固定 401/403/404，记录命中计数，普通 OIDC `/auth/me`、其他 Origin 和非目标只读请求不得被伪造。页面注入函数以 `function.toString()` 独立执行，禁止引用 Node 模块闭包辅助函数（防复发 E-002/E-025）。
+
+模拟专项每轮重新导航、以真实 BFF 只读打开既有授权工程并确认 CAS 基线，然后通过 UI 操作触发：①查询服务端历史→401；②授权工程列表刷新→403，确认子组件拒绝通知清除父级基线；③点击保存前查询工程水位→404，确认再次点击保存也不会请求创建版本。等待浏览器可观测状态稳定后，比较服务端水位、历史和工程列表全部失效、本地画布与 IndexedDB 草稿 Hash 不变、`writeAttempts=0`。模拟器只返回状态码，没有真实 ACL 更新；既有后台真库 31/31 验证了真实权限拒绝的服务端行为，二者应分别报告验收结论。
