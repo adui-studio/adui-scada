@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   armStudioRealLateInPage,
+  classifyStudioLocalDrift,
   attemptRestoreDuringSaveInPage,
   describeStudioRealLateFailure,
   installStudioRealLateHookInPage,
@@ -329,6 +330,46 @@ void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
         error.message === "隔离第二主体浏览器窗口状态切换失败" &&
         !error.message.includes("sensitive_token"),
     );
+  });
+
+  void it("画布与自动保存状态未变时不误报本地数据变化", () => {
+    const before = {
+      canvas: "<svg>画布安全基线</svg>",
+      autoSave: true,
+      drafts: { count: 1, hash: "a".repeat(64) },
+    };
+    const drift = classifyStudioLocalDrift(before, structuredClone(before));
+    assert.deepEqual(drift, {
+      canvasChanged: false,
+      autoSaveChanged: false,
+      draftCountChanged: false,
+      draftHashChanged: false,
+    });
+  });
+
+  void it("独立识别四类本地变化且诊断不得泄露原画布与草稿摘要", () => {
+    const secret = "隐私草稿内容_token_secret_禁止输出";
+    const baseline = {
+      canvas: secret,
+      autoSave: true,
+      drafts: { count: 1, hash: secret },
+    };
+    const changed = [
+      [{ ...baseline, canvas: "新画布" }, "canvasChanged"],
+      [{ ...baseline, autoSave: false }, "autoSaveChanged"],
+      [{ ...baseline, drafts: { ...baseline.drafts, count: 2 } }, "draftCountChanged"],
+      [{ ...baseline, drafts: { ...baseline.drafts, hash: "b".repeat(64) } }, "draftHashChanged"],
+    ];
+    for (const [after, category] of changed) {
+      const drift = classifyStudioLocalDrift(baseline, after);
+      assert.deepEqual(
+        Object.entries(drift).filter(([, differs]) => differs).map(([key]) => key),
+        [category],
+      );
+      const diagnostic = JSON.stringify(drift);
+      assert.equal(diagnostic.includes(secret), false);
+      assert.equal(Object.values(drift).filter(Boolean).length, 1);
+    }
   });
 
   void it("未知错误必须脱敏，不能输出 Cookie、Token 或数据库地址", () => {
