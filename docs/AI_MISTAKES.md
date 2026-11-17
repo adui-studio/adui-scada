@@ -340,6 +340,8 @@
 - **验证**：修复前维护者实测 `test:sse:fault:unit` 在 `ready` 中 **2/4**、`ready` 退出码 **1**；当前 GitHub 代码补丁只经静态核对，**修复后 Windows `test:sse:fault:unit`、`vp check`、`docs:check` 及完整 `ready` 均待复验**。此前同一分支 `test:db` **32/32，退出码 0**，不代表新代理补丁已经验证通过。
 - **证据**：维护者 Windows 原始 SSE `bad port` 错误日志、PR #70、`scripts/sse-fault-proxy.mjs`、`scripts/sse-fault-proxy.test.mjs`、`docs/VALIDATION.md`。
 
+> **2026-11-17 · E-036 / E-037 最终 Windows 结案补录**：历史段落中的“尚待复验”仅描述候选阶段。维护者已在 Windows 通过异步快照 Mock 修复后的 `vp check` **333/188 零告警错误**、共享会话 **31/31** 与全量 Vitest **567/567**、SSE 故障代理独立 **4/4** 及完整 `pnpm run ready` **退出码 0**（包含 OIDC 浏览器离线安全 33/33、NestJS HTTP E2E 49/49 和双框架/服务端构建）。此前独立真实 PostgreSQL `test:db` 也已 **32/32、退出码 0**。E-036 的 Promise/Mock 类型错误与 E-037 的故障代理 Fetch `bad port` 均有实测通过证据；未记录随机禁用端口具体数值，不推断 Windows 测试精确 Git HEAD。新结案文档提交本身未重新执行 Windows 质量链，PR #70 仍需维护者明确授权后才可合并。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
