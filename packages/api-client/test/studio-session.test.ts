@@ -244,6 +244,144 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     expect(api.appendVersion).not.toHaveBeenCalled();
   });
 
+  it("标签页恢复时没有已确认的服务端基线则不发起身份与工程请求", async () => {
+    const api = mockClient();
+    const session = createStudioServerProjectSession(api);
+    await expect(session.revalidateBaseline(waterTreatmentDemoDocument.projectId)).resolves.toBe(
+      "skipped",
+    );
+    expect(api.getMe).not.toHaveBeenCalled();
+    expect(api.getProject).not.toHaveBeenCalled();
+  });
+
+  it("标签页重新可见时只读复核身份、项目权限与相同水位，不产生版本写入", async () => {
+    const api = mockClient();
+    const session = createStudioServerProjectSession(api);
+    session.acceptLoadedVersion(await session.readVersion(waterTreatmentDemoDocument.projectId, 1));
+    api.getMe.mockClear();
+    api.getProject.mockClear();
+
+    await expect(session.revalidateBaseline(waterTreatmentDemoDocument.projectId)).resolves.toBe(
+      "unchanged",
+    );
+    expect(api.getMe).toHaveBeenCalledTimes(1);
+    expect(api.getProject).toHaveBeenCalledTimes(1);
+    expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBe(1);
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).not.toHaveBeenCalled();
+  });
+
+  it("其他标签页注销后再次激活获得 401 会失效旧 CAS 且禁止误创建", async () => {
+    const api = mockClient();
+    const session = createStudioServerProjectSession(api);
+    session.acceptLoadedVersion(await session.readVersion(waterTreatmentDemoDocument.projectId, 1));
+    api.getMe.mockRejectedValueOnce(
+      new ScadaApiError("登录已失效，请重新登录", "unauthenticated", 401),
+    );
+
+    await expect(session.revalidateBaseline(waterTreatmentDemoDocument.projectId)).rejects.toMatchObject({
+      kind: "unauthenticated",
+      status: 401,
+    });
+    expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBeNull();
+    await expect(session.saveDocument(documentCopy())).rejects.toMatchObject({ kind: "forbidden" });
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).not.toHaveBeenCalled();
+  });
+
+  it("其他标签页撤销本工程 ACL 后再次激活获得 404 则清除旧基线", async () => {
+    const api = mockClient();
+    const session = createStudioServerProjectSession(api);
+    session.acceptLoadedVersion(await session.readVersion(waterTreatmentDemoDocument.projectId, 1));
+    api.getProject.mockRejectedValueOnce(
+      new ScadaApiError("工程不存在或无权访问", "not_found", 404),
+    );
+
+    await expect(session.revalidateBaseline(waterTreatmentDemoDocument.projectId)).rejects.toMatchObject({
+      kind: "not_found",
+      status: 404,
+    });
+    expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBeNull();
+    await expect(session.saveDocument(documentCopy())).rejects.toMatchObject({ kind: "forbidden" });
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).not.toHaveBeenCalled();
+  });
+
+  it("切换为另一个已认证主体也必须清除上一主体的 CAS 基线", async () => {
+    const api = mockClient();
+    const session = createStudioServerProjectSession(api);
+    session.acceptLoadedVersion(await session.readVersion(waterTreatmentDemoDocument.projectId, 1));
+    api.getMe.mockResolvedValueOnce({
+      authenticated: true,
+      principal: { tenantId: principal.tenantId, subjectId: "user-b" },
+    });
+
+    await expect(session.revalidateBaseline(waterTreatmentDemoDocument.projectId)).rejects.toMatchObject({
+      kind: "forbidden",
+      status: 403,
+    });
+    expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBeNull();
+    expect(api.getProject).toHaveBeenCalledTimes(1);
+  });
+
+  it("另一标签页推进修订号时再次激活应提示 CAS 冲突并清除旧水位", async () => {
+    const api = mockClient();
+    const session = createStudioServerProjectSession(api);
+    session.acceptLoadedVersion(await session.readVersion(waterTreatmentDemoDocument.projectId, 1));
+    api.getProject.mockResolvedValueOnce({
+      projectId: waterTreatmentDemoDocument.projectId,
+      headRevision: 2,
+      createdAt,
+      updatedAt: createdAt,
+    });
+
+    await expect(session.revalidateBaseline(waterTreatmentDemoDocument.projectId)).rejects.toMatchObject({
+      kind: "conflict",
+      status: 409,
+    });
+    expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBeNull();
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).not.toHaveBeenCalled();
+  });
+
+  it("恢复可见时网络故障不得误判为撤权或删除原来的保存基线", async () => {
+    const api = mockClient();
+    const session = createStudioServerProjectSession(api);
+    session.acceptLoadedVersion(await session.readVersion(waterTreatmentDemoDocument.projectId, 1));
+    const failure = new ScadaApiError("网络请求失败，请检查连接", "network");
+    api.getProject.mockRejectedValueOnce(failure);
+
+    await expect(session.revalidateBaseline(waterTreatmentDemoDocument.projectId)).rejects.toBe(
+      failure,
+    );
+    expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBe(1);
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).not.toHaveBeenCalled();
+  });
+
+  it("恢复可见的迟到验证结果不能清空后来重新载入的合法基线", async () => {
+    const api = mockClient();
+    const session = createStudioServerProjectSession(api);
+    const version = await session.readVersion(waterTreatmentDemoDocument.projectId, 1);
+    session.acceptLoadedVersion(version);
+    let release: (() => void) | undefined;
+    api.getMe.mockImplementationOnce(
+      () =>
+        new Promise<Awaited<ReturnType<ScadaApiClient["getMe"]>>>((_resolve, reject) => {
+          release = () => reject(new ScadaApiError("登录已失效，请重新登录", "unauthenticated", 401));
+        }),
+    );
+    const pending = session.revalidateBaseline(waterTreatmentDemoDocument.projectId);
+    session.reset();
+    session.acceptLoadedVersion(version);
+    release?.();
+
+    await expect(pending).resolves.toBe("skipped");
+    expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBe(1);
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).not.toHaveBeenCalled();
+  });
+
   it("本地草稿恢复或 JSON 导入显式清除服务端修订号基线", async () => {
     const api = mockClient();
     const session = createStudioServerProjectSession(api);
