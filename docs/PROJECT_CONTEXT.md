@@ -1273,3 +1273,10 @@ PR #66 的 React / Vue 标签页恢复只读复核已由维护者在 Windows 完
 维护者 Windows 已真实执行本批 `pnpm run test:unit`：**561/561** 通过，新增共享会话迟到 401/404/正常快照回归包含在 **25/25** 项内；独立 `vp check`：333 个文件格式正确、188 个受检文件零警告或错误；完整 `pnpm run ready`：React/Vue/共享包/NestJS TypeScript 检查、561/561 单测、SSE 8/8、故障代理 4/4、OIDC 浏览器安全规则 24/24、NestJS HTTP E2E 49/49、86 个 Markdown 检查和 React/Vue/NestJS 构建均成功，PowerShell **退出码 0**。
 
 本批仅涉及共享 API Client 的 `readVersion` 内存代次保护和 3 项单元测试，未修改 React/Vue UI、数据库、服务端授权、OIDC Lab、工业控制设备写入。日志未提供 `git rev-parse HEAD`，新文档提交后的完整质量链也尚未复验；新增竞态真实浏览器专项仍未执行。PR #67 仍为 Draft，指派 `@adui-dev`，未经维护者明确授权不得合并。
+
+
+## 2026-11-17 · 第三十四批第十三小批：保存过程中切换工程上下文（候选）
+
+前置 PR #67 已按维护者明确授权 Squash 合并为 `main@0d5962b5b7d5b208a550d8cd3ba9a4b72b508c6d`，维护者 Windows 已在上一批通过 561/561 单测、49/49 服务端 E2E、`vp check`、React/Vue/NestJS 构建与 `ready` 退出码 0。本批复核了共享 `saveDocument` 的网络等待边界：若本地会话中途 `reset`、重新确认载入或访问失效，迟到的旧 401/404/409、创建或追加成功回包不能覆盖/清空新 CAS 基线；服务端 POST 已发出时仍可能成功，所以必须提示人工重新读取最新版本，不可自动重试或冒称远端已回滚。
+
+候选仅更改 `packages/api-client/src/studio-session.ts`、新增五项 `studio-session.test.ts` 单测并同步需求/设计/验收等文档。Vue/React 仍共用现有服务端会话；未修改编辑器、IndexedDB、API、Prisma、OIDC Lab、工业设备。目标单测共享 **30/30**、全量 **566/566**，**本批 Windows `vp check`、`test:unit`、`docs:check`、`ready` 均待实测**；现有浏览器专项不能替代此批异步写入竞态回归。Draft PR 指派 `@adui-dev`，未经单独明确授权不得合并。
