@@ -1560,3 +1560,13 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 复核 `scripts/sse-fault-proxy.mjs` 原实现发现代理对 `127.0.0.1` 使用 `server.listen(0)` 接受操作系统随机分配端口；失败的两个测试经 Node 内置 `fetch` 访问代理，第三个 Keep-Alive 测试走 `node:http` 并通过。Fetch 标准会拒绝部分 HTTP 禁用端口，日志中的 `bad port` 与随机选择该端口的风险吻合；**本次输出没有记录代理实际选中的端口号，不能精确断言具体是哪一个禁用端口**。为避免重现，仅在测试故障代理内改为从 **20000～49151** 的安全高端口范围随机绑定本机监听，遇 `EADDRINUSE` 或 Windows `EACCES` 最多重试 32 次并保留固定中文错误，测试夹具断言所有实际监听端口都在该范围。保留原有 SSE 字节阻断、Keep-Alive、资源回收与外部目标拒绝断言，不关闭 Fetch 安全保护。
 
 该修复**尚未在 Windows 重新实测**。维护者应先执行 `pnpm run test:sse:fault:unit`（目标 4/4），再执行 `vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 并记录退出码。原有真实数据库 **32/32 通过**证据仍成立；本轮修复未更改数据库测试、Schema、迁移或服务端生产代码。GitHub 最新文档提交本身也尚未通过新的 Windows 质量链。PR #70 保持 Draft，等待维护者明确合并授权。
+
+## 2026-11-17 · PR #70 Windows 复验结案：真实 PostgreSQL 32/32 与完整 ready 退出码 0
+
+维护者最新 Windows PowerShell 文件记录了此前 SSE 禁用端口修复后的真实复验：单独 `pnpm run test:sse:fault:unit` **4/4、0 失败**；单独 `vp check` **333 个格式文件正确、188 个受检文件零警告/Lint/类型错误**；`pnpm run docs:check` **86 个 Markdown 通过**。随后完整 `pnpm run ready` 执行到 React Web、Vue Web 与 NestJS Server 构建结束，PowerShell 明确输出 **“完整质量链退出码：0”**，失败断言未触发。本轮日志相较上轮 `ready` 退出码 1 已覆盖相同的 SSE `fetch failed: bad port` 失败路径，故 E-037 的**受控端口修复已获得真实 Windows 回归通过证据**。
+
+完整 `ready` 本轮覆盖：Catalog **12 清单/52 项依赖**、共享 TSConfig **10 个消费端**、根环境/LF/中文文案、Prisma Client **7.10.1**、共享 Core、React/Vue/草稿仓储/API Client/NestJS 类型检查；Vitest **49/49 文件、567/567 用例**（共享 Studio Session **31/31**）、SSE 客户端 **8/8**、SSE 故障代理 **4/4**、OIDC HTTPS 代理 **10/10**、Lab 凭据 **6/6**、身份预绑定 **14/14**、Docker **14/14**、Docker 数据库保护 **9/9**、匿名 HTTPS 探针 **11/11**、工程浏览器离线 **33/33**、双主体 CAS 安全预检 **11/11**、ACL 撤销安全门禁 **8/8**、NestJS HTTP E2E **6/6 文件、49/49 用例**、文档 **86 份**及 React/Vue/NestJS 构建成功。HTTP E2E 中受控健康检查故意返回的 503/ERROR 属测试覆盖的预期路径，**并非 ready 失败**。
+
+结合此前维护者已提供的隔离 PostgreSQL `adui_scada_test` Prisma **4 项迁移最新**及 `pnpm run test:db` **4/4 文件、32/32 用例、退出码 0**，第三十四批第十五小批的**既定两层验收门禁已经通过**：真实数据库旧 201 迟到/另一个 Cookie 会话推进水位/旧 CAS 409/持久化审计一致性和共享 Session 旧成功回包迟到后的新 CAS 基线保护。数据库专项是此前独立执行的结果，不属于 `ready`；没有改变原有真实响应仅在测试消费端延迟交付这一边界，也没有测试工业设备写入或生产环境。
+
+**Git 证据边界**：上传的两段 Windows 日志均未附 `git rev-parse HEAD`，故无法将 Windows 成功结果绑定到**精确提交 SHA**。本次追加结案文档将再产生新的 Git HEAD，文档新提交本身**尚未再次运行 Windows `vp check`/`docs:check`/`ready`**。截至补录前 PR #70 仍为 Draft，Assignee `@adui-dev`；即使验收通过，未经维护者明确授权也不得自动合并。
