@@ -1570,3 +1570,11 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 结合此前维护者已提供的隔离 PostgreSQL `adui_scada_test` Prisma **4 项迁移最新**及 `pnpm run test:db` **4/4 文件、32/32 用例、退出码 0**，第三十四批第十五小批的**既定两层验收门禁已经通过**：真实数据库旧 201 迟到/另一个 Cookie 会话推进水位/旧 CAS 409/持久化审计一致性和共享 Session 旧成功回包迟到后的新 CAS 基线保护。数据库专项是此前独立执行的结果，不属于 `ready`；没有改变原有真实响应仅在测试消费端延迟交付这一边界，也没有测试工业设备写入或生产环境。
 
 **Git 证据边界**：上传的两段 Windows 日志均未附 `git rev-parse HEAD`，故无法将 Windows 成功结果绑定到**精确提交 SHA**。本次追加结案文档将再产生新的 Git HEAD，文档新提交本身**尚未再次运行 Windows `vp check`/`docs:check`/`ready`**。截至补录前 PR #70 仍为 Draft，Assignee `@adui-dev`；即使验收通过，未经维护者明确授权也不得自动合并。
+
+## 第三十四批第十六小批 · 真实双浏览器迟到 201 验收边界
+
+新候选沿用 `scripts/test-oidc-dual-cas.mjs`，通过 `pnpm run test:oidc:dual:late` 独立手工触发。离线 `pnpm run test:oidc:dual:config` 新增 5 项，目标 **16/16**；数字为候选预期，不是已执行结果。实际 HTTP 请求由两个临时隔离的 Chrome/Edge Profile 经 React/Vue HTTPS Origin 的正式 BFF 发出；首个 `201` 已在浏览器收到并校验克隆体，但原响应暂缓被测试消费端读取；第二主体推进版本 3 后再交付原 `201`，过期 CAS 必须返回 `409`。真实 PostgreSQL 只读检查版本、审计/操作者与摘要。
+
+**风险与约束**：脚本复用已有 `resolveProjectBrowserLab` / `resolveLabIdentityTarget` 安全门禁，需要已预绑定的同租户不同主体、可信本机 HTTPS / Keycloak 和本机 `adui_scada` Lab；显式写入模式只创建新的 UUID 专用空白工程并授权第二主体，保留工程供复核，不连接 `adui_scada_test`、不修改现有工程、不接触 PLC/DCS。默认 `ready` 只执行离线配置测试，不启动真实浏览器写入。该模式是浏览器 API 级真实网络 + 真库联动，**不等于 Studio UI 点击保存、TCP 故障注入或客户端共享 Session 的完整 E2E**。
+
+待维护者 Windows 核对 Git HEAD 与分支后执行 `pnpm run test:oidc:dual:config`、`vp check`、`pnpm run docs:check`、`pnpm run ready`；确认隔离 Lab 完整运行后单独执行 `pnpm run test:oidc:dual:late` 并打印 `$LASTEXITCODE`。只可复制固定阶段和退出码；不得在日志中粘贴 Cookie、口令、Token、主体 ID、数据库 URL 或原始响应正文。任何退出码非零均不得标记为通过。
