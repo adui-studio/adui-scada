@@ -421,7 +421,7 @@ export async function saveDraftInPage() {
   return false;
 }
 
-async function enableAutoSaveInPage() {
+export async function enableAutoSaveInPage() {
   const menu = document.querySelector(".studio-file-menu");
   if (!menu) throw new Error("没有找到草稿操作菜单");
   menu.open = true;
