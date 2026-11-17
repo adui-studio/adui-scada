@@ -7,6 +7,9 @@ import { Reflector } from "@nestjs/core";
 import request from "supertest";
 import { waterTreatmentDemoDocument } from "@adui/scada-core";
 import { AuthSessionService } from "../src/auth/auth-session.service.js";
+import { ScadaAuthController } from "../src/auth/scada-auth.controller.js";
+import { OidcCallbackService } from "../src/auth/oidc-callback.service.js";
+import { OidcLoginTransactionService } from "../src/auth/oidc-login-transaction.service.js";
 import type { IssuedAuthSession } from "../src/auth/auth-session.service.js";
 import {
   SCADA_CSRF_COOKIE_NAME,
@@ -137,10 +140,13 @@ beforeAll(async () => {
   });
   if (!config.enabled) throw new Error("真实双会话测试 OIDC 配置未启用");
   const moduleRef = await Test.createTestingModule({
-    controllers: [ProjectApiController],
+    controllers: [ProjectApiController, ScadaAuthController],
     providers: [
       { provide: PrismaService, useValue: database },
       { provide: SCADA_OIDC_STARTUP_CONFIG, useValue: config },
+      // 本专项不发起 IdP 授权码流程，只复用真实 Cookie 认证和注销入口。
+      { provide: OidcLoginTransactionService, useValue: {} },
+      { provide: OidcCallbackService, useValue: {} },
       AuthSessionService,
       PrismaProjectVersionStore,
       ScadaSecurityAuditService,
@@ -280,6 +286,117 @@ describe("本机隔离 PostgreSQL 双 Cookie 会话 HTTP CAS 事务", () => {
         where: { tenantId, projectId },
       });
       expect(afterRetry).toBe(2);
+    });
+  });
+
+  it("真实 HTTP 注销只撤销当前 Cookie 会话，旧请求立即失败且另一主体仍能保存", async () => {
+    await withFixture(async ({ tenantId, sessionA, sessionB }) => {
+      const logout = await request(app!.getHttpServer())
+        .post("/api/v1/auth/logout")
+        .set("Cookie", cookie(sessionA))
+        .set("Origin", origin)
+        .set("Sec-Fetch-Site", "same-origin")
+        .set("X-SCADA-CSRF", sessionA.csrfToken);
+      expect(logout.status).toBe(204);
+      expect(logout.headers["cache-control"]).toBe("no-store");
+      expect(JSON.stringify(logout.headers["set-cookie"])).toContain("Max-Age=0");
+
+      const [revoked, active] = await Promise.all([
+        database!.client.scadaAuthSession.findUnique({
+          where: { sessionId: sessionA.sessionId },
+          select: { revokedAt: true },
+        }),
+        database!.client.scadaAuthSession.findUnique({
+          where: { sessionId: sessionB.sessionId },
+          select: { revokedAt: true },
+        }),
+      ]);
+      expect(revoked?.revokedAt).toBeInstanceOf(Date);
+      expect(active?.revokedAt).toBeNull();
+
+      const identityA = await request(app!.getHttpServer())
+        .get("/api/v1/auth/me")
+        .set("Cookie", cookie(sessionA));
+      expect(identityA.status).toBe(401);
+      const listA = await request(app!.getHttpServer())
+        .get("/api/v1/projects")
+        .set("Cookie", cookie(sessionA));
+      expect(listA.status).toBe(401);
+      const writeA = await postVersion(sessionA);
+      expect(writeA.status).toBe(401);
+
+      const identityB = await request(app!.getHttpServer())
+        .get("/api/v1/auth/me")
+        .set("Cookie", cookie(sessionB));
+      expect(identityB.status).toBe(200);
+      expect(identityB.body).toEqual({
+        authenticated: true,
+        principal: { tenantId, subjectId: subjectB },
+      });
+      const writeB = await postVersion(sessionB);
+      expect(writeB.status).toBe(201);
+      expect(writeB.body.revision).toBe(2);
+
+      const audit = await database!.client.scadaProjectAudit.findMany({
+        where: { tenantId, projectId },
+        orderBy: { revision: "asc" },
+      });
+      expect(audit.map((entry) => entry.actorId)).toEqual([subjectA, subjectB]);
+    });
+  });
+
+  it("移除第二主体全部工程 ACL 后原会话仍有效但列表、详情、历史和写入立即隔离", async () => {
+    await withFixture(async ({ tenantId, sessionA, sessionB }) => {
+      const removed = await database!.client.scadaProjectGrant.deleteMany({
+        where: { tenantId, projectId, subjectId: subjectB },
+      });
+      expect(removed.count).toBe(3);
+
+      const identityB = await request(app!.getHttpServer())
+        .get("/api/v1/auth/me")
+        .set("Cookie", cookie(sessionB));
+      expect(identityB.status).toBe(200);
+      expect(identityB.body).toEqual({
+        authenticated: true,
+        principal: { tenantId, subjectId: subjectB },
+      });
+
+      const listB = await request(app!.getHttpServer())
+        .get("/api/v1/projects")
+        .set("Cookie", cookie(sessionB));
+      expect(listB.status).toBe(200);
+      expect(listB.body).toEqual([]);
+
+      const detailB = await request(app!.getHttpServer())
+        .get("/api/v1/projects/" + projectId)
+        .set("Cookie", cookie(sessionB));
+      expect(detailB.status).toBe(404);
+      const versionsB = await request(app!.getHttpServer())
+        .get("/api/v1/projects/" + projectId + "/versions")
+        .set("Cookie", cookie(sessionB));
+      expect(versionsB.status).toBe(404);
+      const writeB = await postVersion(sessionB);
+      expect(writeB.status).toBe(404);
+
+      const detailA = await request(app!.getHttpServer())
+        .get("/api/v1/projects/" + projectId)
+        .set("Cookie", cookie(sessionA));
+      expect(detailA.status).toBe(200);
+      const writeA = await postVersion(sessionA);
+      expect(writeA.status).toBe(201);
+      expect(writeA.body.revision).toBe(2);
+
+      const [project, audits] = await Promise.all([
+        database!.client.scadaProject.findUniqueOrThrow({
+          where: { tenantId_projectId: { tenantId, projectId } },
+        }),
+        database!.client.scadaProjectAudit.findMany({
+          where: { tenantId, projectId },
+          orderBy: { revision: "asc" },
+        }),
+      ]);
+      expect(project.headRevision).toBe(2n);
+      expect(audits.map((entry) => entry.actorId)).toEqual([subjectA, subjectA]);
     });
   });
 });
