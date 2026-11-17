@@ -99,6 +99,12 @@ void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
     assert.equal(response.status, 201);
     assert.equal((await response.json()).revision, 2);
     assert.equal(state.active.phase, "released");
+    assert.equal(
+      (await runtime.fetch("/api/v1/projects/" + projectId + "/versions", versionRequest())).status,
+      403,
+    );
+    assert.equal(calls.length, 1);
+    assert.equal(state.rejectedWrites, 1);
     assert.throws(
       () => releaseStudioRealLateInPage(origin, projectId, runtime),
       /真实 Studio 迟到保存未达到受控状态/,
