@@ -8,6 +8,7 @@ import {
   installStudioRealLateHookInPage,
   parseStudioRealLateMode,
   releaseStudioRealLateInPage,
+  readStudioContentCanvasInPage,
   setSecondaryBrowserWindowState,
   studioRealLateStateInPage,
 } from "./test-oidc-studio-real-late.mjs";
@@ -51,6 +52,30 @@ function versionRequest(expectedRevision = 1, changedProjectId = projectId, head
       document: { projectId: changedProjectId, schemaVersion: "0.3.0" },
     }),
   };
+}
+
+/** 最小 SVG DOM 测试夹具：保留 SVG 直系子元素，并模拟 cloneNode 后移除视口网格。 */
+function studioCanvasRuntime(children) {
+  const source = {
+    cloneNode: (deep) => {
+      assert.equal(deep, true);
+      const copied = children.map((child) => ({
+        ...child,
+        removed: false,
+        getAttribute: (name) => (name === "fill" ? child.fill ?? null : null),
+        remove() {
+          this.removed = true;
+        },
+      }));
+      return {
+        children: copied,
+        get innerHTML() {
+          return copied.filter((child) => !child.removed).map((child) => child.markup).join("");
+        },
+      };
+    },
+  };
+  return { document: { querySelector: (selector) => selector === ".studio-svg" ? source : null } };
 }
 
 async function settleResponse() {
@@ -329,6 +354,72 @@ void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
       (error) =>
         error.message === "隔离第二主体浏览器窗口状态切换失败" &&
         !error.message.includes("sensitive_token"),
+    );
+  });
+
+  void it("仅视口网格几何属性变化时，完整画布内容快照仍相等", () => {
+    const content = [
+      { localName: "defs", markup: "<defs><pattern id='scada-studio-grid'/></defs>" },
+      { localName: "image", markup: "<image href='data:image/svg+xml,固定内容'/>" },
+      { localName: "rect", fill: "none", markup: "<rect class='studio-page-boundary'/>" },
+      { localName: "g", markup: "<g><rect x='10' width='40'/></g>" },
+    ];
+    const before = studioCanvasRuntime([
+      content[0],
+      content[1],
+      {
+        localName: "rect",
+        fill: "url(#scada-studio-grid)",
+        markup: "<rect x='0' y='0' width='1920' height='1080' fill='url(#scada-studio-grid)'/>",
+      },
+      ...content.slice(2),
+    ]);
+    const after = studioCanvasRuntime([
+      content[0],
+      content[1],
+      {
+        localName: "rect",
+        fill: "url(#scada-studio-grid)",
+        markup: "<rect x='-10' y='20' width='2048' height='1152' fill='url(#scada-studio-grid)'/>",
+      },
+      ...content.slice(2),
+    ]);
+    assert.equal(readStudioContentCanvasInPage(before), readStudioContentCanvasInPage(after));
+    assert.ok(readStudioContentCanvasInPage(before).includes("studio-page-boundary"));
+  });
+
+  void it("图元与渲染内容变化仍必须触发画布差异，不能被视口过滤掩盖", () => {
+    const base = [
+      { localName: "image", markup: "<image href='data:image/svg+xml,原有图元'/>" },
+      { localName: "rect", fill: "url(#scada-studio-grid)", markup: "<rect fill='url(#scada-studio-grid)'/>" },
+      { localName: "g", markup: "<g transform='rotate(0)'><rect width='30'/></g>" },
+    ];
+    const before = readStudioContentCanvasInPage(studioCanvasRuntime(base));
+    const imageChanged = readStudioContentCanvasInPage(studioCanvasRuntime([
+      { ...base[0], markup: "<image href='data:image/svg+xml,修改后图元'/>" },
+      ...base.slice(1),
+    ]));
+    const nodeChanged = readStudioContentCanvasInPage(studioCanvasRuntime([
+      ...base.slice(0, 2),
+      { ...base[2], markup: "<g transform='rotate(45)'><rect width='30'/></g>" },
+    ]));
+    assert.notEqual(before, imageChanged);
+    assert.notEqual(before, nodeChanged);
+  });
+
+  void it("画布不存在或存在多个直系视口网格时必须安全失败", () => {
+    assert.throws(
+      () => readStudioContentCanvasInPage({ document: { querySelector: () => null } }),
+      /真实 Studio 迟到保存未达到受控状态/,
+    );
+    const duplicatedGrid = {
+      localName: "rect",
+      fill: "url(#scada-studio-grid)",
+      markup: "<rect fill='url(#scada-studio-grid)'/>",
+    };
+    assert.throws(
+      () => readStudioContentCanvasInPage(studioCanvasRuntime([duplicatedGrid, duplicatedGrid])),
+      /真实 Studio 迟到保存未达到受控状态/,
     );
   });
 
