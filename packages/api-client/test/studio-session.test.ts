@@ -521,13 +521,10 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     });
     let rejectDetail: (() => void) | undefined;
     api.getProject.mockImplementationOnce(() => {
-        notifyRequested?.();
-        return new Promise<Awaited<ReturnType<ScadaApiClient["getProject"]>>>(
-          (_resolve, reject) => {
-            rejectDetail = () =>
-              reject(new ScadaApiError("工程不存在或无权访问", "not_found", 404));
-          },
-        );
+      notifyRequested?.();
+      return new Promise<Awaited<ReturnType<ScadaApiClient["getProject"]>>>((_resolve, reject) => {
+        rejectDetail = () => reject(new ScadaApiError("工程不存在或无权访问", "not_found", 404));
+      });
     });
     const pending = session.saveDocument(documentCopy());
     await requested;
@@ -561,16 +558,16 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     });
     let resolveCreated: (() => void) | undefined;
     api.createProject.mockImplementationOnce((document) => {
-        notifyRequested?.();
-        return new Promise<Awaited<ReturnType<ScadaApiClient["createProject"]>>>((resolve) => {
-          resolveCreated = () =>
-            resolve({
-              projectId: document.projectId,
-              headRevision: 1,
-              createdAt,
-              updatedAt: createdAt,
-            });
-        });
+      notifyRequested?.();
+      return new Promise<Awaited<ReturnType<ScadaApiClient["createProject"]>>>((resolve) => {
+        resolveCreated = () =>
+          resolve({
+            projectId: document.projectId,
+            headRevision: 1,
+            createdAt,
+            updatedAt: createdAt,
+          });
+      });
     });
     const pending = session.saveDocument(documentCopy());
     await requested;
@@ -598,16 +595,16 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     });
     let resolveAppended: (() => void) | undefined;
     api.appendVersion.mockImplementationOnce((_projectId, expectedRevision) => {
-        notifyRequested?.();
-        return new Promise<Awaited<ReturnType<ScadaApiClient["appendVersion"]>>>((resolve) => {
-          resolveAppended = () =>
-            resolve(
-              createProjectSnapshot(waterTreatmentDemoDocument, {
-                revision: expectedRevision + 1,
-                createdAt,
-              }),
-            );
-        });
+      notifyRequested?.();
+      return new Promise<Awaited<ReturnType<ScadaApiClient["appendVersion"]>>>((resolve) => {
+        resolveAppended = () =>
+          resolve(
+            createProjectSnapshot(waterTreatmentDemoDocument, {
+              revision: expectedRevision + 1,
+              createdAt,
+            }),
+          );
+      });
     });
     const pending = session.saveDocument(documentCopy());
     await requested;
@@ -636,13 +633,12 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     });
     let rejectAppended: (() => void) | undefined;
     api.appendVersion.mockImplementationOnce(() => {
-        notifyRequested?.();
-        return new Promise<Awaited<ReturnType<ScadaApiClient["appendVersion"]>>>(
-          (_resolve, reject) => {
-            rejectAppended = () =>
-              reject(new ScadaApiError("工程版本冲突", "conflict", 409));
-          },
-        );
+      notifyRequested?.();
+      return new Promise<Awaited<ReturnType<ScadaApiClient["appendVersion"]>>>(
+        (_resolve, reject) => {
+          rejectAppended = () => reject(new ScadaApiError("工程版本冲突", "conflict", 409));
+        },
+      );
     });
     const pending = session.saveDocument(documentCopy());
     await requested;
