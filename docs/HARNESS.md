@@ -2761,3 +2761,42 @@ if ($browserExitCode -ne 0) { throw "真实 Studio 双窗口专项失败" }
 请先查看 `git status --short`，确保当前处于 `test/v0.3-b34-studio-real-late-ui` 分支，再执行 `git fetch origin`、`git pull --ff-only origin test/v0.3-b34-studio-real-late-ui`、`git rev-parse HEAD`。按前文命令依次运行 `pnpm run test:oidc:dual:studio:config`（新目标 **13/13**）、`vp check`、`pnpm run docs:check` 和完整 `pnpm run ready`；各命令最终退出码必须为 0，失败后停止验收。
 
 确认本机隔离 Lab 可以新增两份新的随机专用工程后，再单独执行 `pnpm run test:oidc:dual:studio:late`。如果再出现“本地数据变化”，记录其**固定中文阶段**和 `canvasChanged/autoSaveChanged/draftCountChanged/draftHashChanged` 四项布尔值以及最终退出码，不粘贴 SVG、草稿正文、原始 SHA-256、Cookie、Token、数据库连接和主体标识。本次禁止直接将变化分类为正常自动保存，必须先依据真实状态逐项定位。React 和 Vue 两端及最终三版审计均通过、退出码 0 才能关闭 PR 的真实验收。
+
+## 第十七小批 · 第四轮视口网格快照修复后复验
+
+第四轮真实 Lab 专项失败阶段现已明确为 React 的“CAS 只读复核后”，其中**仅 `canvasChanged=true`**，IndexedDB 草稿整记录哈希与数量、自动保存布尔值均未变化；命令退出码 **1**，Vue/最终 PostgreSQL 审计尚未执行。仓库确认原始 `.studio-svg.innerHTML` 混合了真实图元与随视口变化的辅助网格。候选修复仅对该测试快照忽略一个直系辅助网格矩形，其他 SVG 子节点及草稿/CAS/审计完全严格。
+
+复验前核对工作区状态与当前 PR SHA，不覆盖本地未提交修改：
+
+```powershell
+git status --short
+git fetch origin
+git switch test/v0.3-b34-studio-real-late-ui
+git pull --ff-only origin test/v0.3-b34-studio-real-late-ui
+git rev-parse HEAD
+
+pnpm run test:oidc:dual:studio:config
+$offlineExitCode = $LASTEXITCODE
+Write-Host "Studio 视口快照离线测试退出码：$offlineExitCode"
+if ($offlineExitCode -ne 0) { throw "Studio 视口快照离线测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+```
+
+仅在受控本机 Keycloak/可信 HTTPS 双 Origin/PostgreSQL Lab 和两名已预绑定普通测试主体都确认就绪，且允许再创建两份随机专用测试工程时，单独执行：
+
+```powershell
+pnpm run test:oidc:dual:studio:late
+$browserExitCode = $LASTEXITCODE
+Write-Host "真实双框架 Studio 迟到响应退出码：$browserExitCode"
+if ($browserExitCode -ne 0) { throw "真实双框架 Studio 迟到响应专项失败" }
+```
+
+必须看到 React、Vue 两轮均完成真实 201、远端 CAS 3、旧基线清除、画布内容与草稿保护、无额外 POST 和真实数据库三版审计，最终退出码 **0** 才能结案。若修复后 `canvasChanged` 仍为 true，说明剩余 SVG 内容有实际差异，应保持失败、进一步分辨渲染图片和图元差异，不能继续扩大忽略范围。已有历史测试工程保留，不自动删除。
