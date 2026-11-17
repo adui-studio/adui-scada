@@ -2526,3 +2526,9 @@ if ($browserExitCode -ne 0) { throw "双框架延迟保存专项失败" }
 维护者第二轮实测的 `test:projects:oidc:config` **30/31**，`ready` 也在同一离线测试中提前终止；因此即使此前已输出 `566/566` Vitest 和 `vp check` 零警告，**也不得称该次完整 `ready` 通过**。独立浏览器 React 已通过延迟 409/401/503，Vue 在 BFF 身份阶段返回通用诊断，真实原因未确定。
 
 先在 PR #69 最新 HEAD 上单独复验离线用例（目标 31/31），通过后才运行完整 `ready`；独立浏览器最后运行并记录数值退出码。新固定诊断“Vue BFF 会话未通过验证”表示只读 `/api/v1/auth/me` 返回了非预期的认证布尔结果，**不等同**已证明 HTTP 401、会话过期或存在用户越权。失败时核对本机 HTTPS 监听、服务端 BFF 日志与当前 Origin，仅使用状态或受控诊断，不打印任何 Cookie、CSRF、Token、用户标识和服务端正文。不因错误诊断而取消身份断言，也不得让工程写入穿透浏览器隔离层。
+
+## 第三十四批第十四小批 · React 503 延迟保存超时分阶段复验
+
+第三次 Windows 交互式浏览器日志在 React “服务端暂时不可用”场景**开始后**报通用页面超时，专项退出码 1；Vue 本轮没有开始。为避免将开始提示当成通过，浏览器脚本将明确打印模拟 POST 已触发与已释放的安全阶段标记，并在有界等待失败时仅输出预先审核的固定类别（权限模拟基线加载超时、POST 未命中、额外写请求、Busy 未保持、按钮未禁用、保存操作未结束、页面未显示拒绝错误）。真实身份、授权与 CAS 断言继续 fail-closed；所有项目 POST 仍在隔离浏览器中拒绝/挂起，绝不进入受控 Lab。
+
+先核对本机 HEAD；`pnpm run test:projects:oidc:config` 预计 **33/33**，`vp check` 零告警，`pnpm run docs:check` 通过，再以 `pnpm run ready` 的实际退出码判断完整质量链；单独启动现有可信 HTTPS/Keycloak Lab 后运行 `pnpm run test:projects:oidc:save:browser`，必须同时完成 React/Vue 的 409/401/503 三项并最终返回退出码 0。失败时仅复制固定阶段、固定类别和退出码，禁止粘贴凭据、Cookie、Token、工程正文、服务器原始错误和 CDP 堆栈。不把受控模拟当作真正 PostgreSQL 写入后回包 E2E。
