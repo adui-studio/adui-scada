@@ -1442,3 +1442,15 @@ PR #64 已按维护者授权 Squash 合并为 `main@d59df5e9ef2d702954f6b2017399
 代码复查发现：既有 `revalidateBaseline` 使用原基线引用识别旧请求，但相邻 `readVersion` 的 `catch` 会直接按旧请求返回的 401/403/404 调用 `invalidateAccess(projectId)`，如果期间用户 `reset` 或重建了基线，存在将旧授权错误应用到新上下文的风险。旧成功结果在上下文改变后也可能继续传给 UI。候选修复为共享会话增加内存代次，在每个 `await` 与异常路径确认一致，过期结果受控 409 拒绝；原有当前请求的权限拒绝及 CAS 安全规则保持不变。
 
 新增 3 项 Vitest 回归，目标全量 **561/561**、共享会话 **25/25**，本批不新增数据库迁移、不修改 React/Vue 组件/IndexedDB、服务端 ACL 或工业设备接口。**候选版本目前未经本机 Windows TS6 / Vite+ / Vitest / 完整 ready 或独立浏览器复验；不得标记通过。** 完成后须核对本机 `git rev-parse HEAD` 与 PR 最新 HEAD，再提交实际退出码、失败原因与验证记录。PR 保持 Draft、未合并。
+
+
+## 2026-11-17 · PR #67 Windows 质量链实际验收结果
+
+维护者已上传 Windows PowerShell 完整日志，以下数据均为**实际执行结果**，不再是候选预期：
+
+- `pnpm run test:unit`：49 个测试文件、**561/561** 个测试通过，其中共享 `packages/api-client/test/studio-session.test.ts` **25/25**（包含本批新增的 3 项迟到请求竞态回归）；其后的 PowerShell 非零退出码校验未触发。
+- 独立 `vp check`：333 个文件格式正确、188 个文件零告警 / Lint / 类型错误；非零退出码校验未触发。
+- `pnpm run ready`：依赖目录、共享配置、环境与 LF、中文文案、Prisma Client 和 Core 构建均完成；React `tsc --build`、Vue `vue-tsc --build`、共享包及 NestJS 类型检查成功；再次执行 561/561 单测、SSE 客户端 **8/8**、故障代理 **4/4**、OIDC 工程浏览器离线门禁 **24/24**、NestJS HTTP E2E **49/49**、Markdown **86 份**及 React/Vue/NestJS 构建成功。PowerShell 明确输出：**完整质量链退出码：0**。
+- E2E 日志中存在测试故意构造的 HTTP 503 健康检查失败输出，所属 `app.e2e-spec.ts` 与整个 E2E 文件均报告通过，不作为本次实际质量链失败。
+
+**边界与待核对**：原始终端日志没有附 `git rev-parse HEAD`，不能证明本机运行的精确 Git SHA；当前 PR 分支仍须按实际提交核对。日志不包含本批新增竞态的真实浏览器并发重现、真实 Keycloak/ACL 撤销或独立 `test:projects:oidc:resume` 执行；离线 24/24 不能冒充后者。此条验收文档提交发生在上述本机 `ready` 之后，故不能称**文档更新后的新 HEAD** 已再次经过 `docs:check` 或 `ready`。PR #67 保持 Draft，未经维护者本次明确授权不得合并。
