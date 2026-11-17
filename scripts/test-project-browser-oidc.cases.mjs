@@ -122,6 +122,33 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     );
   });
 
+  void it("工程载入诊断只允许固定阶段和类别，不返回真实页面正文", () => {
+    const safe = "服务器工程载入阶段返回受控错误（确认前：版本冲突）";
+    assert.equal(
+      describeBrowserPageException({
+        exception: { className: "Error", description: "Error: " + safe + "\\n敏感数据" },
+      }),
+      safe,
+    );
+    assert.equal(
+      describeBrowserPageException({
+        exception: {
+          className: "Error",
+          description: "Error: " + safe + "；Bearer secret",
+        },
+      }),
+      "页面脚本断言异常",
+    );
+    const error = new Error("浏览器页面操作失败，请检查当前 Studio 状态");
+    error.pageDiagnostic = safe;
+    assert.equal(describeProjectBrowserFailure(error), "浏览器页面操作失败：" + safe);
+    error.pageDiagnostic = safe + "；敏感信息";
+    assert.equal(
+      describeProjectBrowserFailure(error),
+      "浏览器安全回归断言失败，检查终端测试条件及真实页面状态",
+    );
+  });
+
   void it("CDP 异常只返回白名单错误原因或安全类别，不泄漏原始堆栈", () => {
     assert.equal(
       describeBrowserPageException({
@@ -302,6 +329,123 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       await assert.rejects(
         openProjectInPage("test-project", 1, "confirm"),
         /服务器工程载入阶段返回受控错误（确认前）/,
+      );
+    } finally {
+      if (originalDocument === undefined) delete globalThis.document;
+      else globalThis.document = originalDocument;
+      if (originalWindow === undefined) delete globalThis.window;
+      else globalThis.window = originalWindow;
+    }
+  });
+
+  void it("上一轮错误跨过忙碌阶段残留时仍允许本次正常取消载入", async () => {
+    const originalDocument = globalThis.document;
+    const originalWindow = globalThis.window;
+    const state = { error: "服务端工程版本已更新", notice: "", busy: false };
+    const button = {
+      disabled: false,
+      click() {
+        setTimeout(() => {
+          state.busy = true;
+        }, 10);
+        setTimeout(() => {
+          state.busy = false;
+        }, 50);
+        setTimeout(() => {
+          globalThis.window.confirm();
+        }, 160);
+      },
+    };
+    const versionPanel = {
+      querySelector(selector) {
+        return selector === '[role="alert"]' && state.error ? { textContent: state.error } : null;
+      },
+      querySelectorAll(selector) {
+        return selector === ".studio-version-help" && state.busy
+          ? [{ textContent: "正在处理工程版本…" }]
+          : [];
+      },
+    };
+    const item = {
+      querySelector(selector) {
+        return selector === "code" ? { textContent: "test-project" } : button;
+      },
+    };
+    globalThis.document = {
+      querySelector(selector) {
+        if (selector === ".studio-project-browser-panel") {
+          return { querySelectorAll: () => [item] };
+        }
+        if (selector === '[aria-label="服务端工程版本"]') return versionPanel;
+        if (selector === ".studio-notice") return { textContent: state.notice };
+        return null;
+      },
+    };
+    globalThis.window = { confirm: () => false };
+    try {
+      assert.deepEqual(await openProjectInPage("test-project", 1, "cancel"), {
+        confirmCount: 1,
+        intercepted: 0,
+        outcome: "cancel",
+      });
+      assert.equal(state.error, "服务端工程版本已更新");
+    } finally {
+      if (originalDocument === undefined) delete globalThis.document;
+      else globalThis.document = originalDocument;
+      if (originalWindow === undefined) delete globalThis.window;
+      else globalThis.window = originalWindow;
+    }
+  });
+
+  void it("旧错误已清除又以相同内容新出现时必须继续拒绝载入", async () => {
+    const originalDocument = globalThis.document;
+    const originalWindow = globalThis.window;
+    const state = { error: "服务端工程版本已更新", notice: "", busy: false };
+    const button = {
+      disabled: false,
+      click() {
+        setTimeout(() => {
+          state.error = "";
+          state.busy = true;
+        }, 10);
+        setTimeout(() => {
+          state.busy = false;
+        }, 60);
+        setTimeout(() => {
+          state.error = "服务端工程版本已更新";
+        }, 150);
+      },
+    };
+    const versionPanel = {
+      querySelector(selector) {
+        return selector === '[role="alert"]' && state.error ? { textContent: state.error } : null;
+      },
+      querySelectorAll(selector) {
+        return selector === ".studio-version-help" && state.busy
+          ? [{ textContent: "正在处理工程版本…" }]
+          : [];
+      },
+    };
+    const item = {
+      querySelector(selector) {
+        return selector === "code" ? { textContent: "test-project" } : button;
+      },
+    };
+    globalThis.document = {
+      querySelector(selector) {
+        if (selector === ".studio-project-browser-panel") {
+          return { querySelectorAll: () => [item] };
+        }
+        if (selector === '[aria-label="服务端工程版本"]') return versionPanel;
+        if (selector === ".studio-notice") return { textContent: state.notice };
+        return null;
+      },
+    };
+    globalThis.window = { confirm: () => false };
+    try {
+      await assert.rejects(
+        openProjectInPage("test-project", 1, "confirm"),
+        /服务器工程载入阶段返回受控错误（确认前：版本冲突）/,
       );
     } finally {
       if (originalDocument === undefined) delete globalThis.document;
