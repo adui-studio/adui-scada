@@ -90,7 +90,7 @@ export function requireCasResult(results) {
 export function describeDualOidcFailure(error) {
   if (error instanceof Error && SAFE_ERRORS.has(error.message)) return error.message;
   if (error?.pageDiagnostic) {
-    return "隔离浏览器页面执行失败：" + String(error.pageDiagnostic).slice(0, 40);
+    return "隔离浏览器页面执行失败（已脱敏）";
   }
   return "双身份 OIDC Lab 专项未通过，内部错误详情已脱敏";
 }
@@ -115,7 +115,7 @@ export async function identityInPage(expectedOrigin, runtime = globalThis) {
 
 export async function createCasProjectInPage(origin, projectId, runtime = globalThis) {
   if (runtime.location.origin !== origin) throw new Error("专用工程创建失败，禁止修改其他工程");
-  if (!/^b34-oidc-cas-[0-9a-f-]{36}$/.test(projectId)) {
+  if (!/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId)) {
     throw new Error("专用工程创建失败，禁止修改其他工程");
   }
   const matches = runtime.document.cookie
@@ -490,8 +490,12 @@ async function run() {
     await secondBrowser.send("Page.navigate", { url: origins[1] + "/" });
     let second = null;
     for (let attempt = 0; attempt < 75; attempt += 1) {
-      second = await secondBrowser.evaluate(identityInPage, origins[1]);
-      if (second) break;
+      try {
+        second = await secondBrowser.evaluate(identityInPage, origins[1]);
+        if (second) break;
+      } catch {
+        // 导航到 Vue Origin 时 JS 上下文可能暂时不可用。
+      }
       await pause(200);
     }
     requireDifferentSubjects(first, second);
@@ -511,7 +515,7 @@ async function run() {
     await client.connect();
 
     const projectId = PROJECT_PREFIX + randomUUID();
-    assert.match(projectId, PROJECT_PATTERN);
+    assert.match(projectId, PROJECT_PATTERN, "专用工程 ID 不符合受控随机命名要求");
     await firstBrowser.evaluate(createCasProjectInPage, origins[0], projectId);
     process.stdout.write("已在本机 Lab 创建独立双主体 CAS 专用工程：" + projectId + "\n");
     await grantSecondSubject(client, projectId, first, second);
@@ -537,8 +541,11 @@ async function run() {
       "真实双 Keycloak 主体 HTTP CAS 专项通过：201＋409，最终修订号为 2，审计主体匹配。测试工程保留供复核。\n",
     );
   } finally {
-    if (client) await client.end();
-    for (const browser of browsers.reverse()) await browser.close();
+    try {
+      if (client) await client.end();
+    } finally {
+      for (const browser of browsers.reverse()) await browser.close();
+    }
   }
 }
 
