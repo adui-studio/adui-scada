@@ -773,3 +773,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 
 - `apps/server/test/projects-cas-cookie-http.db-spec.ts`：独立真实 PostgreSQL HTTP 测试（与已有 `apps/server/vitest.config.db.ts` 的 `test/**/*.db-spec.ts` 匹配）。使用真正的 NestJS Guard、Session Service、Project API Controller、PrismaProjectVersionStore；由可信测试主体内部签发两份 BFF Cookie/CSRF 会话。对同工程修订竞争断言 HTTP 201/409 和数据库审计一致性，包含错误 CSRF、Origin、混用凭据、ACL 拒绝。仅针对随机 `test-<UUID>` 租户清理。
 - 根 `pnpm run test:db`：旧 **25 项**真实 PostgreSQL 回归预计增加 **4 项**，共预计 **29 项**；以维护者在本机真实数据库的最终报告为准。默认 `ready` 不连接/写入数据库。
+
+## 第三十四批第六小批 · 真实双 Keycloak 主体 CAS 测试
+
+- `scripts/test-oidc-dual-cas.mjs`：两个独立临时 Chrome/Edge Profile 的真实 Keycloak 登录、同源 BFF 会话与专用新建工程的双会话 CAS 竞争；写入必须 `--run-cas --confirm-lab adui_scada`。复用现有 OIDC Lab 配置白名单、正式工程 API 与服务端已安装的 `pg`，不添加新的第三方依赖。
+- `scripts/test-oidc-dual-cas.cases.mjs`：11 项 Node 内置离线测试，覆盖配置门禁、不同主体、同源与 CSRF、专用工程限制、201/409 与审计、错误脱敏，不访问浏览器或数据库。
+- 根 `package.json`：`test:oidc:dual:config`（包含在 `ready`）、`test:oidc:dual:preflight`（只读验证；OIDC 登录会正常生成会话）、`test:oidc:dual:cas`（显式写入全链专项，默认质量链不执行）。
