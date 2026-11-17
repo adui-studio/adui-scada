@@ -798,8 +798,8 @@ React 和 Vue 在一个真实临时浏览器中分别进入 Studio：对比工�
 
 ## 2026-11-17 · 第三十四批第五小批：两会话 HTTP CAS 409 隔离验收
 
-\`apps/server/test/projects-cas-cookie-http.db-spec.ts\` 构造真实 NestJS \`ProjectApiController\` 与 \`ScadaSessionGuard\`/\`ScadaProjectGuard\`、真实 \`AuthSessionService\` 和 \`PrismaProjectVersionStore\`，**不替换 Guard、会话或仓储为 Mock**。测试先在本机 \`adui_scada_test\` 的随机租户中创建两个 \`active\` 主体；使用仅供服务端可信身份流程调用的内部 \`issueForVerifiedSubject\` 为每个主体创建独立 Cookie 与 CSRF 配对，再通过现有工程创建事务建立修订 1 并显式授予另一主体同工程的读取/追加 ACL。通过 Supertest 发出的请求实际经过 HTTP 控制器、Origin/Fetch Metadata、会话 Cookie、CSRF 双提交、ACL 和 PostgreSQL 行锁事务。
+`apps/server/test/projects-cas-cookie-http.db-spec.ts` 构造真实 NestJS `ProjectApiController` 与 `ScadaSessionGuard`/`ScadaProjectGuard`、真实 `AuthSessionService` 和 `PrismaProjectVersionStore`，**不替换 Guard、会话或仓储为 Mock**。测试先在本机 `adui_scada_test` 的随机租户中创建两个 `active` 主体；使用仅供服务端可信身份流程调用的内部 `issueForVerifiedSubject` 为每个主体创建独立 Cookie 与 CSRF 配对，再通过现有工程创建事务建立修订 1 并显式授予另一主体同工程的读取/追加 ACL。通过 Supertest 发出的请求实际经过 HTTP 控制器、Origin/Fetch Metadata、会话 Cookie、CSRF 双提交、ACL 和 PostgreSQL 行锁事务。
 
-四项独立测试分别验证：双主体读取工程摘要且未登录拒绝；错误 CSRF、非法 Origin、Bearer 与 Cookie 混用均失败并保持数据库不变；具备合法会话但缺少 \`version:append\` 时返回 404；两个会话同时发送 \`expectedRevision=1\`，恰好得到 201/409，失败重试仍为 409，最终 head 为 2，历史/审计仅有修订 1、2，修订 2 的 \`createdBy\`/审计 \`actorId\` 与成功 HTTP 请求主体一致。单独用例只清理自己的随机测试租户的会话、审计、历史、授权、工程和身份。
+四项独立测试分别验证：双主体读取工程摘要且未登录拒绝；错误 CSRF、非法 Origin、Bearer 与 Cookie 混用均失败并保持数据库不变；具备合法会话但缺少 `version:append` 时返回 404；两个会话同时发送 `expectedRevision=1`，恰好得到 201/409，失败重试仍为 409，最终 head 为 2，历史/审计仅有修订 1、2，修订 2 的 `createdBy`/审计 `actorId` 与成功 HTTP 请求主体一致。单独用例只清理自己的随机测试租户的会话、审计、历史、授权、工程和身份。
 
 不修改 HTTP 响应契约；本专项覆盖真实 BFF Cookie 与 PostgreSQL 的 HTTP 行为，**不覆盖真实 Keycloak 授权码回调、真实浏览器 TLS Cookie、多个服务端进程或生产环境安全认证**。不得把它混称为真实双 IdP 登录测试。
