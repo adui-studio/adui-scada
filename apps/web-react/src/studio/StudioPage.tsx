@@ -60,6 +60,7 @@ import { svgDataUrl } from "@adui/scada-runtime";
 import {
   createScadaApiClient,
   createStudioServerProjectSession,
+  isScadaAccessRejection,
   ScadaApiError,
 } from "@adui/scada-api-client";
 import { TagManager } from "./TagManager.tsx";
@@ -143,6 +144,7 @@ export default function StudioPage() {
   const [serverRows, setServerRows] = useState<readonly ProjectVersionSummary[]>([]);
   const [serverHasMore, setServerHasMore] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [serverAccessRevision, setServerAccessRevision] = useState(0);
   const [serverInspectedVersion, setServerInspectedVersion] = useState<ProjectSnapshot | null>(
     null,
   );
@@ -1059,6 +1061,15 @@ export default function StudioPage() {
           await action();
         } catch (error) {
           setServerError(error instanceof Error ? error.message : "服务端操作失败");
+          if (isScadaAccessRejection(error)) {
+            serverSession.reset();
+            setServerProjectId("");
+            setServerHeadRevision(null);
+            setServerRows([]);
+            setServerHasMore(false);
+            setServerInspectedVersion(null);
+            setServerAccessRevision((revision) => revision + 1);
+          }
           if (
             error instanceof ScadaApiError &&
             (error.kind === "unauthenticated" ||
@@ -1724,6 +1735,7 @@ export default function StudioPage() {
             </div>
           </details>
           <ServerProjectBrowser
+            key={serverAccessRevision}
             api={serverApi}
             currentProjectId={state.document.projectId}
             disabled={historyBusy}
