@@ -689,25 +689,31 @@ async function verifyResumeScenarios(session, origin, name, selected) {
     if (scenario.scope === "revision") {
       const checked = await waitFor(async () => {
         const state = await session.evaluate(resumeCheckStateInPage);
-        return state.driftHits > 0 &&
+        if (
+          state.driftHits > 0 &&
           state.baselineCleared &&
           state.headCleared &&
           state.serverRows === 0
-          ? state
-          : null;
+        ) {
+          return state;
+        }
+        return null;
       }, name + " 标签页恢复时 CAS 版本变化");
       assert.ok(checked.notice.includes("服务端版本已变化"));
       assert.equal(checked.writeAttempts, 0);
     } else {
       const checked = await waitFor(async () => {
         const state = await session.evaluate(accessDenialStateInPage);
-        return state.hits > 0 &&
+        if (
+          state.hits > 0 &&
           state.baselineCleared &&
           state.headCleared &&
           state.serverRows === 0 &&
           state.browserRows === 0
-          ? state
-          : null;
+        ) {
+          return state;
+        }
+        return null;
       }, name + " 标签页恢复时访问失效");
       assert.equal(checked.writeAttempts, 0, name + " 恢复可见不能触发工程写入");
     }
