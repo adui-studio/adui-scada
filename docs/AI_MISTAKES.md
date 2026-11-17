@@ -351,6 +351,22 @@
 - **验证与边界**：维护者实际 Windows 日志已提供上述质量链及双浏览器成功记录；本次仅更正文档历史表述，**没有补跑此前所称协作容器 20 次测试**。当前文档新增提交尚未重新执行 `docs:check` / `ready`。
 - **证据**：PR #71 初稿及后续验收正文、2026-11-17 维护者 Windows PowerShell 日志、`docs/VALIDATION.md`。
 
+### E-039 · 真实 Studio 浏览器测试初稿未复用严格工程前缀与 CDP 自包含约束（第三十四批第十七小批）
+
+- **现象**：本批初稿新增的真实 Studio 迟到响应脚本使用了 `b34-studio-late-<UUID>` 前缀，而已存在的 `createCasProjectInPage` 和 `grantSecondSubject` 只允许 `b34-oidc-cas-<UUID>`；另一处页面注入函数 `armStudioRealLateInPage` 引用了 Node 模块作用域的 `PROJECT_PATTERN`。这两项在 GitHub 候选静态审查时发现，**没有真实浏览器执行失败日志**，不能记为 Windows 已发生的故障。
+- **根因**：在复用既有严格安全辅助函数时未先对齐它们的工程 ID 契约，并在函数被 CDP `function.toString()` 独立序列化执行时误用模块作用域常量，再次触及 E-002 / E-025 的已知边界。
+- **修正与防复发**：只改回既有的随机 `b34-oidc-cas-<UUID>` 测试工程前缀，将页面函数正则内联为自包含字面量；原创建/授权 SQL 白名单绝不放宽。新增 CDP 页面函数前逐一核对它实际运行的作用域和已有测试夹具权限约束。
+- **验证边界**：候选源码静态语法检查及隔离 V8 Mock 中的单次 201 保留/释放、拒绝额外写入路径已核对，但新脚本的 Node 单元测试、Windows `vp check` / `ready` 与真实 Keycloak/PostgreSQL 浏览器仍待执行，不宣称综合测试通过。
+- **证据**：本批分支初稿与修正提交、`scripts/test-oidc-studio-real-late.mjs`、`scripts/test-oidc-dual-cas.mjs`、`docs/VALIDATION.md`。
+
+### E-040 · String.raw 生成 Markdown 时保留代码反引号转义（第三十四批第十七小批）
+
+- **现象**：本批候选文档首次提交后在六份新增章节中出现 `\\\`` 的字面反斜杠加反引号，导致行内代码与 `powershell` 代码围栏不能按预期展示。由对 GitHub Blob 的静态检查发现，**没有维护者 Windows `docs:check` 失败日志**。
+- **根因**：在 JavaScript `String.raw` 模板中为了包裹 Markdown 反引号添加转义字符，`String.raw` 会保留原始反斜杠，而不是将其移除。
+- **修正与防复发**：仅在六份文档的第十七小批新增章节中把 `反斜杠＋反引号` 还原为合法 Markdown 反引号；不改历史记录。后续先检查实际生成的文件内容，核对代码围栏成对出现，不能只验证 JS 模板字符串本身能解析。
+- **验证边界**：新增 HARNESS 章节含两组成对 PowerShell 代码围栏，新增文档不再含上述转义序列。完整仓库 `docs:check`、`vp check` 与 `ready` 仍需维护者 Windows 实际执行并提供退出码。
+- **证据**：本批文档候选及修正提交、`docs/HARNESS.md`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
