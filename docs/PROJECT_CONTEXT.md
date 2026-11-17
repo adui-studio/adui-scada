@@ -1416,3 +1416,18 @@ PR #72 候选已新增固定阶段与安全状态摘要，方便下一轮定位�
 生产变更限于 `StudioServerProjectSession` 一个方法、React/Vue 两处确认载入顺序；不新增 API、依赖、Prisma 迁移、Schema 或设备写入。共享 Session 新增 **8 项** Mock 测试，工程浏览器安全测试新增 **2 项**；预计全量 Vitest **581** 项、共享 Session **45** 项、OIDC 工程浏览器离线 **37** 项，均仅为**目标数量**。真实浏览器新增模拟确认后 GET 修订号漂移和真实 409 预览后的人工确认载入检查。当前这些测试与最新 `vp check`、`docs:check`、完整 `ready` 尚未在 Windows 执行。
 
 并发边界：再次 GET 检查不能提供跨浏览器事务锁；最后一次只读校验之后仍可能发生新的远端提交，后续保存必须继续使用原服务端 CAS 和标签页恢复只读复核。PR 默认 Open/Draft、Assignee `@adui-dev`；未经维护者新授权不得合并。
+
+
+## 2026-11-17 · 第三十四批第十九小批：PR #74 已合并
+
+维护者在 Windows 提供的实际日志确认：OIDC 工程浏览器离线 37/37、vp check 335 文件格式正确 / 190 受检零警告错误、docs:check 86 Markdown、Vitest 581/581、NestJS E2E 49/49、React/Vue/NestJS 构建通过，完整 pnpm run ready 退出码 0；React/Vue 真实 OIDC 浏览器专项退出码 0。GitHub 已复核 PR #74 的 HEAD、Draft 状态及 @adui-dev Assignee，按维护者明确授权执行 Squash Merge。
+
+合并提交：8cd2223853e7e5dc05695b8ab1226911ec7bd734，目标分支 main。PR #74 当前 Closed / Merged。真实浏览器专项验证确认框后版本水位漂移拒绝载入、画布/草稿/自动保存保护、409 只读预览后人工确认载入，以及 401/503 延迟保存拒绝与重复提交保护。最后一次 GET 不是跨浏览器原子锁，后续写入仍依赖服务端 CAS。
+
+## 2026-11-17 · 第三十四批第二十小批：同源双标签页服务端 CAS 协同候选
+
+以 main@8cd2223853e7e5dc05695b8ab1226911ec7bd734 为基线，新建分支 ai/b34-same-origin-multitab-cas。本批仅新增隔离真实浏览器验收脚本、18 项 Node 离线安全用例和质量链入口；没有修改生产 Studio、API Client、NestJS、Prisma、工程 Schema、依赖或工业设备写入能力。
+
+同一隔离浏览器 Profile 的两个真实标签页共享同一 Keycloak 主体，分别覆盖 React/Vue Origin：两个标签先载入同一首版；第一标签真实 UI 保存 2，第二标签恢复可见后通过现有只读复核发现过期 CAS；第二标签的旧保存不得发出 POST，预览并人工确认载入 2 后再保存 3；第一标签恢复可见必须再次清除旧 CAS。数据库最终只允许 1/2/3 三版与三条同主体审计。测试每个框架创建一份随机专用工程并留存，不修改已有工程或 ACL。
+
+本协作环境已对两个新增 .mjs 文件完成隔离 ECMAScript 语法解析，并使用隔离 V8 Mock 执行核心门禁用例 18/18；这不是 Node --test、Windows vp check 或真实浏览器验收。Windows test:oidc:dual:studio:multitab:config、vp check、docs:check、完整 pnpm run ready 和 React/Vue 同源双标签页真实 Lab 专项均待维护者执行。候选 PR 默认 Open/Draft，必须指派 @adui-dev；未经维护者明确授权不得合并。
