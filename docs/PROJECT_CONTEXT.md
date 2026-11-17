@@ -1364,8 +1364,8 @@ PR #69 继续只修改浏览器测试脚本和离线保护测试，用严格固�
 
 ## 2026-11-17 · 第三十四批第十七小批：真实 Studio 迟到 201 联合浏览器候选
 
-已获授权合并的 PR #71 进入 \`main@c6460177fe38aa3532e4a956aad60143e7fd2d14\`。新小批只增加独立安全浏览器专项和离线测试，不改变现有共享 \`StudioServerProjectSession\`、React/Vue 页面业务流程、NestJS API、Schema、Prisma、工业设备权限或第三方依赖。
+已获授权合并的 PR #71 进入 `main@c6460177fe38aa3532e4a956aad60143e7fd2d14`。新小批只增加独立安全浏览器专项和离线测试，不改变现有共享 `StudioServerProjectSession`、React/Vue 页面业务流程、NestJS API、Schema、Prisma、工业设备权限或第三方依赖。
 
-上一小批虽然让双浏览器通过真实 BFF API 推进版本 2→3，但没有操作 Studio 保存按钮。本批针对两位真实 Keycloak 测试主体分别在 React/Vue Studio 建立首版 CAS、保存本地草稿、真实 UI 提交版本 2 并持有已到达的 201；第二主体推进 3 后再释放旧回包，通过页面可见性只读复核撤销旧 CAS，阻止 UI 再次提交，并比较本地画布/草稿。复用原 UUID 专用工程及三项 ACL 门禁，测试工程留存。默认 \`ready\` 仅运行新增的 **9 项**离线安全测试。
+上一小批虽然让双浏览器通过真实 BFF API 推进版本 2→3，但没有操作 Studio 保存按钮。本批针对两位真实 Keycloak 测试主体分别在 React/Vue Studio 建立首版 CAS、保存本地草稿、真实 UI 提交版本 2 并持有已到达的 201；第二主体推进 3 后再释放旧回包，通过页面可见性只读复核撤销旧 CAS，阻止 UI 再次提交，并比较本地画布/草稿。复用原 UUID 专用工程及三项 ACL 门禁，测试工程留存。默认 `ready` 仅运行新增的 **9 项**离线安全测试。
 
-**当前状态：候选，尚无 Windows \`test:oidc:dual:studio:config\` / \`vp check\` / \`ready\` 及双框架真实 Lab 浏览器专项通过证据。** 离线 Node 9/9 和完整质量链的实际退出码必须来自维护者运行；真正写入也须先确认本机可信 OIDC Lab，并使用显式命令。Draft PR 继续要求 Assignee \`@adui-dev\`，未经授权不合并。
+**当前状态：候选，尚无 Windows `test:oidc:dual:studio:config` / `vp check` / `ready` 及双框架真实 Lab 浏览器专项通过证据。** 离线 Node 9/9 和完整质量链的实际退出码必须来自维护者运行；真正写入也须先确认本机可信 OIDC Lab，并使用显式命令。Draft PR 继续要求 Assignee `@adui-dev`，未经授权不合并。
