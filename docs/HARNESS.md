@@ -2658,3 +2658,12 @@ if ($lateExitCode -ne 0) { throw "真实浏览器迟到 201 专项失败" }
 ```
 
 独立浏览器专项必须实际完成并打印“真实迟到 201 专项通过”，不能把启动提示当作成功。此脚本不驱动 React/Vue Studio UI 的保存按钮，也没有人为切断 TCP；客户端 UI 与共享 Session 的端到端晚回包保护仍需另批专项。当前候选**没有 Windows 完整质量链或真实 Lab 联合测试的通过日志**。
+
+
+## 第三十四批第十六小批 · 真实 Windows 全链与双浏览器专项验收结案
+
+2026-11-17 维护者 Windows PowerShell 实测：`pnpm run test:oidc:dual:config` **16/16**、`vp check` **333/188 零告警错误**、`docs:check` **86 个 Markdown**；完整 `pnpm run ready` 最终 **退出码 0**，包含 **567/567** Vitest、**49/49** NestJS HTTP E2E、SSE 客户端 **8/8**、故障代理 **4/4**、OIDC 工程安全离线 **33/33**、双主体 **16/16** 与双 Web/Server 构建。
+
+另单独运行的 **`pnpm run test:oidc:dual:late` 退出码 0**，验证真实双 Keycloak BFF、React/Vue Origin API、PostgreSQL Lab 工程版本 2→3、暂存已到达的旧 201、旧 CAS 2→409，以及三版版本与审计一致；专用测试工程保留。前文“当前候选无 Windows 结果”属于验收前记录，最新结论以本段为准。
+
+`ready` 与真实交互式专项为**两条分开执行的命令**，日志没有包含本机 `git rev-parse HEAD`；本次只追认已提供的真实退出码，文档补录生成的新提交尚未重新验证。此模式不注入网络 TCP 故障，也不操作 Studio UI 保存按钮；不得扩展结论到生产设备、工业现场或真实 Studio UI 迟到回包 E2E。PR #71 保持 Draft 并指派 `@adui-dev`，未经明确授权不得合并。
