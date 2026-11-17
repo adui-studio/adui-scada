@@ -1062,7 +1062,7 @@ export default function StudioPage() {
 
   /** 从其他标签页返回时以真实服务端只读核对旧 CAS，不依赖本地跨页身份消息。 */
   useEffect(() => {
-    let active = true;
+    const lifecycle = new AbortController();
     const revalidateOnVisible = () => {
       if (
         document.visibilityState !== "visible" ||
@@ -1078,24 +1078,23 @@ export default function StudioPage() {
       void serverSession
         .revalidateBaseline(projectId)
         .catch((error: unknown) => {
-          if (!active || editor.snapshot().document.projectId !== projectId) return;
-          if (isScadaAccessRejection(error)) {
+          if (lifecycle.signal.aborted || editor.snapshot().document.projectId !== projectId) return;
+          const accessRejected = isScadaAccessRejection(error);
+          const revisionConflict = error instanceof ScadaApiError && error.kind === "conflict";
+          if (accessRejected) {
             invalidateServerAccess();
             setServerIdentity(
               error.kind === "unauthenticated"
                 ? "未登录或服务端尚未启用身份接口"
                 : "服务端身份或工程授权已变化",
             );
-          } else if (error instanceof ScadaApiError && error.kind === "conflict") {
+          } else if (revisionConflict) {
             setServerHeadRevision(null);
             setServerRows([]);
             setServerHasMore(false);
             setServerInspectedVersion(null);
           }
-          if (
-            error instanceof ScadaApiError &&
-            (isScadaAccessRejection(error) || error.kind === "conflict")
-          ) {
+          if (error instanceof ScadaApiError && (accessRejected || revisionConflict)) {
             setServerError(error.message);
             setNotice("标签页恢复校验发现变更：" + error.message + "；本地画布与草稿不变");
           } else if (error instanceof ScadaApiError && error.kind === "network") {
@@ -1108,7 +1107,7 @@ export default function StudioPage() {
     };
     document.addEventListener("visibilitychange", revalidateOnVisible);
     return () => {
-      active = false;
+      lifecycle.abort();
       document.removeEventListener("visibilitychange", revalidateOnVisible);
     };
   }, [editor, invalidateServerAccess, serverSession]);
