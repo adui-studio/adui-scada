@@ -317,13 +317,21 @@ async function openDedicatedProject(session, origin, projectId) {
   return before;
 }
 
-function requireUnchangedDocument(before, after) {
-  if (
-    before.canvas !== after.canvas ||
-    before.autoSave !== after.autoSave ||
-    before.drafts?.count !== after.drafts?.count ||
-    before.drafts?.hash !== after.drafts?.hash
-  ) {
+/** 只分类本地变化，不返回 SVG、草稿内容、摘要或其他敏感数据。 */
+export function classifyStudioLocalDrift(before, after) {
+  return {
+    canvasChanged: before.canvas !== after.canvas,
+    autoSaveChanged: before.autoSave !== after.autoSave,
+    draftCountChanged: before.drafts?.count !== after.drafts?.count,
+    draftHashChanged: before.drafts?.hash !== after.drafts?.hash,
+  };
+}
+
+/** 每个操作边界都检查原断言，失败时仅公开固定阶段与变化类型。 */
+function requireUnchangedDocument(before, after, name, stage) {
+  const drift = classifyStudioLocalDrift(before, after);
+  if (Object.values(drift).some(Boolean)) {
+    process.stdout.write(name + "：" + stage + "本地数据变化 " + JSON.stringify(drift) + "\n");
     throw new Error("真实 Studio 迟到保存的本地数据发生变化");
   }
 }
@@ -415,7 +423,7 @@ async function verifyFramework(
     throw new Error("真实 Studio 迟到保存未阻止重复写入");
   }
   assert.equal(await session.evaluate(attemptRestoreDuringSaveInPage), true);
-  requireUnchangedDocument(before, await inspectStudioState(session));
+  requireUnchangedDocument(before, await inspectStudioState(session), name, "保存挂起期间");
   process.stdout.write(name + "：真实 201 已到达并挂起 Studio UI，另一主体准备推进版本 3\n");
 
   // 第二主体真实读取/提交时恢复其独立浏览器窗口，不影响原有 BFF 会话。
@@ -449,7 +457,7 @@ async function verifyFramework(
   ) {
     throw new Error("真实 Studio 迟到保存结果与数据库不一致");
   }
-  requireUnchangedDocument(before, await inspectStudioState(session));
+  requireUnchangedDocument(before, await inspectStudioState(session), name, "远端提交修订号 3 后");
   try {
     assert.equal(await session.evaluate(releaseStudioRealLateInPage, origin, projectId), true);
   } catch {
@@ -463,7 +471,7 @@ async function verifyFramework(
     "Studio 接收真实 201 并恢复保存界面",
     (state) => !state.busy && state.baselineRevision === 2 && state.savedSecondVersion,
   );
-  requireUnchangedDocument(before, await inspectStudioState(session));
+  requireUnchangedDocument(before, await inspectStudioState(session), name, "Studio 消费旧 201 后");
 
   // 先最小化第二主体的独立窗口，再激活第一主体标签。
   // 只接受浏览器真实报告 visible；若 OS 仍遮挡，保留失败而不模拟可见性。
@@ -482,6 +490,7 @@ async function verifyFramework(
   if (stale.writeAttempts !== 1 || stale.rejectedWrites !== 0) {
     throw new Error("真实 Studio 迟到保存未阻止重复写入");
   }
+  requireUnchangedDocument(before, await inspectStudioState(session), name, "CAS 只读复核后");
   assert.equal(await session.evaluate(triggerSaveTimingInPage), true);
   await waitForStudioState(
     session,
@@ -493,7 +502,7 @@ async function verifyFramework(
   if (final.writeAttempts !== 1 || final.rejectedWrites !== 0 || !final.baselineCleared) {
     throw new Error("真实 Studio 迟到保存未阻止重复写入");
   }
-  requireUnchangedDocument(before, await inspectStudioState(session));
+  requireUnchangedDocument(before, await inspectStudioState(session), name, "过期 CAS 保存拒绝后");
 
   const latest = await secondBrowser.evaluate(readCasProjectInPage, secondOrigin, projectId, 3);
   if (latest.contentHash !== third.contentHash) {
