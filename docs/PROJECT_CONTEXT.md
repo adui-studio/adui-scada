@@ -1346,3 +1346,9 @@ PR #69 继续只修改浏览器测试脚本和离线保护测试，用严格固�
 维护者最新 Windows 再次执行 SSE 故障代理专项 **4/4**、`vp check` **333/188 零警告错误**、`docs:check` **86**；随后 `pnpm run ready` 完整执行至 React/Vue/NestJS 构建结束，**退出码 0**，包括单测 **567/567**、共享 Session **31/31**、SSE 客户端 **8/8**、故障代理 **4/4**、工程浏览器安全离线 **33/33**、NestJS HTTP E2E **49/49**。此前 PostgreSQL 隔离库 `test:db` **32/32、退出码 0** 且 4 项迁移最新的实测结论保持成立。原始 `ready` 的 `bad port` 失败已有修复后复验通过证据，E-037 结案；E-036 的 TS2740 Mock 修复也已在 Windows TypeScript、`vp check` 与单测中通过。
 
 上述结果覆盖本批预定共享 Session 和真实数据库分层 CAS 验收；不等于同一真实浏览器内物理 TCP 断流或工业现场验证。Windows 原始日志未打印本地 HEAD，因此无法精确匹配 PR Git SHA；本次结案文档追加提交后质量链亦未再次执行。PR #70 继续 Open/Draft、Assignee `@adui-dev`，仍待本次明确合并授权。
+
+## 2026-11-17 · 第三十四批第十六小批：真实浏览器迟到 201 联合验收候选
+
+基于 PR #70 已授权合并的 `main@95fb9df6cb590b87de3c4a71842e54bce86d6df4`，仅扩展已有真实双 Keycloak 主体 CAS 测试脚本和本机 Lab 命令。目标：第一浏览器收到真实 201 后暂缓消费、第二浏览器读取 2 并写入 3、旧 201 最终交付、旧 CAS 必须 409、两端实际读取版本 3、PostgreSQL 三条版本与审计完全一致。原双主体写入门禁与仅新建随机专用工程限制不变。
+
+新增 5 项 Node 离线安全测试，原 `test:oidc:dual:config` 从 11 项预计增至 **16 项**；完整 `ready` 仍需 Windows 实测，真实 `test:oidc:dual:late` 必须额外在安全隔离的本机 Keycloak/HTTPS/PostgreSQL Lab 中手工执行并提供最终退出码。当前未获得本次候选的 Windows 运行证据，不声称联合场景通过、真实物理 TCP 断流被覆盖或 Studio UI 内部恢复被验证。Draft PR 不合并。
