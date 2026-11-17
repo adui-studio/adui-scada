@@ -351,7 +351,6 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
 
   void it("已存在十一项授权工程时多页准备不执行任何写入", async () => {
     const origin = "https://127.0.0.1:15173";
-    let writes = 0;
     const projects = Array.from({ length: 11 }, (_, i) => ({
       projectId: "existing-" + String(i).padStart(2, "0"),
       headRevision: 1,
@@ -362,7 +361,13 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       fetch: async (path, options) => {
         assert.equal(options.method, "GET");
         if (path === "/api/v1/auth/me") {
-          return { status: 200, json: async () => ({ authenticated: true, principal: { tenantId: "test", subjectId: "engineer" } }) };
+          return {
+            status: 200,
+            json: async () => ({
+              authenticated: true,
+              principal: { tenantId: "test", subjectId: "engineer" },
+            }),
+          };
         }
         assert.equal(path, "/api/v1/projects?limit=100");
         return { status: 200, json: async () => projects };
@@ -373,7 +378,6 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       created: 0,
       after: 11,
     });
-    assert.equal(writes, 0);
   });
 
   void it("通过正式同源创建接口补齐十一项工程，使用当前会话 CSRF 且只写最小测试文档", async () => {
@@ -384,12 +388,20 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     const runtime = {
       location: { origin },
       document: { cookie: "__Host-adui-scada-csrf=" + token },
-      crypto: { randomUUID: () => "00000000-0000-4000-8000-" + String(++writes).padStart(12, "0") },
+      crypto: {
+        randomUUID: () => "00000000-0000-4000-8000-" + String(++writes).padStart(12, "0"),
+      },
       fetch: async (path, options) => {
         assert.equal(options.credentials, "same-origin");
         assert.equal(options.mode, "same-origin");
         if (path === "/api/v1/auth/me") {
-          return { status: 200, json: async () => ({ authenticated: true, principal: { tenantId: "test", subjectId: "engineer" } }) };
+          return {
+            status: 200,
+            json: async () => ({
+              authenticated: true,
+              principal: { tenantId: "test", subjectId: "engineer" },
+            }),
+          };
         }
         if (options.method === "POST") {
           assert.equal(path, "/api/v1/projects");
@@ -438,7 +450,13 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       fetch: async (path, options) => {
         if (options.method === "POST") writes++;
         if (path === "/api/v1/auth/me") {
-          return { status: 200, json: async () => ({ authenticated: true, principal: { tenantId: "test", subjectId: "engineer" } }) };
+          return {
+            status: 200,
+            json: async () => ({
+              authenticated: true,
+              principal: { tenantId: "test", subjectId: "engineer" },
+            }),
+          };
         }
         return { status: 200, json: async () => [{ projectId: "existing", headRevision: 1 }] };
       },
