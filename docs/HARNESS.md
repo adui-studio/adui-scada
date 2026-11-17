@@ -2532,3 +2532,9 @@ if ($browserExitCode -ne 0) { throw "双框架延迟保存专项失败" }
 第三次 Windows 交互式浏览器日志在 React “服务端暂时不可用”场景**开始后**报通用页面超时，专项退出码 1；Vue 本轮没有开始。为避免将开始提示当成通过，浏览器脚本将明确打印模拟 POST 已触发与已释放的安全阶段标记，并在有界等待失败时仅输出预先审核的固定类别（权限模拟基线加载超时、POST 未命中、额外写请求、Busy 未保持、按钮未禁用、保存操作未结束、页面未显示拒绝错误）。真实身份、授权与 CAS 断言继续 fail-closed；所有项目 POST 仍在隔离浏览器中拒绝/挂起，绝不进入受控 Lab。
 
 先核对本机 HEAD；`pnpm run test:projects:oidc:config` 预计 **33/33**，`vp check` 零告警，`pnpm run docs:check` 通过，再以 `pnpm run ready` 的实际退出码判断完整质量链；单独启动现有可信 HTTPS/Keycloak Lab 后运行 `pnpm run test:projects:oidc:save:browser`，必须同时完成 React/Vue 的 409/401/503 三项并最终返回退出码 0。失败时仅复制固定阶段、固定类别和退出码，禁止粘贴凭据、Cookie、Token、工程正文、服务器原始错误和 CDP 堆栈。不把受控模拟当作真正 PostgreSQL 写入后回包 E2E。
+
+## 第三十四批第十四小批 · Vue 409 与 33 项离线用例最终候选复验
+
+维护者第四轮 Windows `test:projects:oidc:config` **32/33**，失败是新增未知诊断负向断言预期错误；同轮独立 `test:projects:oidc:save:browser` React 409/401/503 执行完成，Vue 在 409 合成响应释放后失败，实际退出码 1。后续候选修复了预期文案与 Vue 保存 409 后共享 CAS 基线的响应式显示对齐，**修复后没有 Windows 实测证据**。
+
+先核对 `git status --short`、`git rev-parse HEAD` 与远端 PR HEAD，确保未覆盖本地改动；执行 `pnpm run test:projects:oidc:config`（目标 33/33）、`vp check`（零告警）、`pnpm run docs:check`（文档门禁）、完整 `pnpm run ready`（退出码须 0），最后在受控 HTTPS / Keycloak Lab 独立运行 `pnpm run test:projects:oidc:save:browser` 并记录退出码。专项必须让 React/Vue 均完成 409、401、503，双框架 409/401 清除 CAS、503 保留 CAS，按钮禁用、仅一条 POST、SVG/IndexedDB/自动保存完全不变。模拟 POST 永不进入真实 Lab；若出现固定“CAS 基线状态不符合预期”，不能通过调整预期或跳过断言规避，需要继续检查 UI 与共享会话一致性。
