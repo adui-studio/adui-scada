@@ -803,3 +803,13 @@ React 和 Vue 在一个真实临时浏览器中分别进入 Studio：对比工�
 四项独立测试分别验证：双主体读取工程摘要且未登录拒绝；错误 CSRF、非法 Origin、Bearer 与 Cookie 混用均失败并保持数据库不变；具备合法会话但缺少 `version:append` 时返回 404；两个会话同时发送 `expectedRevision=1`，恰好得到 201/409，失败重试仍为 409，最终 head 为 2，历史/审计仅有修订 1、2，修订 2 的 `createdBy`/审计 `actorId` 与成功 HTTP 请求主体一致。单独用例只清理自己的随机测试租户的会话、审计、历史、授权、工程和身份。
 
 不修改 HTTP 响应契约；本专项覆盖真实 BFF Cookie 与 PostgreSQL 的 HTTP 行为，**不覆盖真实 Keycloak 授权码回调、真实浏览器 TLS Cookie、多个服务端进程或生产环境安全认证**。不得把它混称为真实双 IdP 登录测试。
+
+## 2026-11-17 · 第三十四批第六小批：真实双 Keycloak 身份交互式 CAS
+
+新增 `scripts/test-oidc-dual-cas.mjs` 与对应 `cases.mjs`，不更改正式身份或工程模块。前置条件是同一个本机隔离 Keycloak Realm 的**两位不同用户**已经通过现有 `oidc:lab:identity` 的受控流程绑定为同租户、不同且有效的本地主体（脚本**不会自动新建用户或绑定身份**）。
+
+测试通过两个独立的 Chrome/Edge `--user-data-dir` 临时 Profile，分别走现有 `/api/v1/auth/oidc/start` 与回调，校验浏览器当前同源 `/api/v1/auth/me`。第一个主体保留在 React HTTPS Origin；第二个主体先经 React 固定回调完成标准登录，再导航到 Vue HTTPS Origin 验证会话。Node 端只接收受控主体 ID 做**内存比较和 SQL 参数**，绝不输出 Cookie、密码、OIDC code、Token、租户或主体标识；页面 CDP 回调是完全自包含函数，不引用 Node 模块闭包。结束时关闭浏览器、删除隔离 Profile；退出时的敏感异常统一脱敏。
+
+`--run-cas --confirm-lab adui_scada` 明确允许写入时，用第一个真实 BFF 会话的可读 CSRF Cookie 和正式 `POST /api/v1/projects` 新建 `b34-oidc-cas-<UUID>`、单页、零 Tag、零图元的 `ScadaDocument 0.3.0`。Node 使用服务端既有 `pg` 依赖连接严格验证过的本机 `adui_scada` Lab，在 SERIALIZABLE 事务中确认该新工程唯一且水位为 1、首版创建者为第一主体、两身份仍 active、仅第一主体具有原生三项创建者 ACL；随后仅给第二主体授予 `project:read`、`version:read`、`version:append`，绝不触及已有工程和角色权限。
+
+两浏览器分别读取 `/versions/1` 并核对空白工程文档及内容摘要，然后各自使用不同真实会话与 CSRF 同时提交修订 1 的 CAS。检查 201/409 结果和成功 SHA-256；Node 以只读、参数化 PostgreSQL 查询核对版本 1/2、`head_revision=2`、两条成功审计与获胜主体匹配；双方再通过原 BFF HTTP 路由读取修订 2 一致。脚本不会直接修改修订号、覆盖既有工程、伪造 Cookie、禁用 TLS 或自动删除测试审计数据。该验收覆盖**本机单服务进程、真实两次 Keycloak 登录/HTTPS 浏览器与数据库**，仍不能视为跨实例部署/生产环境工业安全验收。
