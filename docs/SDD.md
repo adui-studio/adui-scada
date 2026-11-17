@@ -832,3 +832,13 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 `installAccessDenialFaultInPage(runtime=globalThis)` 必须在每次页面初始化前注入，包装应用捕获的 `fetch`。对于所有路径为 `/api/v1/projects` 或其子路径的非 GET/HEAD 请求，包装器**先于底层 Fetch**返回静态 403，同时只记录本地 `writeAttempts` 计数；不携带请求 Cookie 或正文，不打开远程数据库。不论当前是否触发模拟拒绝，该写入保护在整个模拟 Profile 中持续有效。只有显式 `armAccessDenialInPage(projectId,scope,status)` 时，才将同 Origin、指定项目和路径范围的 GET 返回固定 401/403/404，记录命中计数，普通 OIDC `/auth/me`、其他 Origin 和非目标只读请求不得被伪造。页面注入函数以 `function.toString()` 独立执行，禁止引用 Node 模块闭包辅助函数（防复发 E-002/E-025）。
 
 模拟专项每轮重新导航、以真实 BFF 只读打开既有授权工程并确认 CAS 基线，然后通过 UI 操作触发：①查询服务端历史→401；②授权工程列表刷新→403，确认子组件拒绝通知清除父级基线；③点击保存前查询工程水位→404，确认再次点击保存也不会请求创建版本。等待浏览器可观测状态稳定后，比较服务端水位、历史和工程列表全部失效、本地画布与 IndexedDB 草稿 Hash 不变、`writeAttempts=0`。模拟器只返回状态码，没有真实 ACL 更新；既有后台真库 31/31 验证了真实权限拒绝的服务端行为，二者应分别报告验收结论。
+
+### 第三十四批第十小批 · 真实 ACL 撤销的双框架浏览器事务与证据边界
+
+新增 `scripts/test-oidc-real-acl-revocation.mjs`，复用第六小批的 `startBrowser`、`waitForLogin`、同源真实身份读取、`createCasProjectInPage`、`grantSecondSubject` 和 `readCasProjectInPage`，并复用第九小批的 Studio 页面快照、IndexedDB 草稿 SHA-256、授权列表翻页、确认载入、访问失效 DOM 探针及在第二用户浏览器始终运行的工程写入拦截器。只将原测试模块的部分已有函数显式导出，**不变更**正常脚本的 CLI 行为。
+
+`resolveRevocationMode([])` 只允许两位普通 Keycloak 用户的真实独立会话预检。必须明确传入 `--run-revoke --confirm-lab adui_scada` 才能写入；先使用 `resolveProjectBrowserLab` 和 `resolveLabIdentityTarget` 拒绝远程、不可信 TLS/Realm/Origin、生产模式或数据库连接。执行时每个框架只新建一份 `b34-oidc-cas-<UUID>` 空白首版工程，不使用已有项目 ID、也不修改历史工程；第二主体先真实取得三项最小 ACL 并经 Studio 显式确认首版载入，随后才开始撤销事务。
+
+`revokeSecondSubject` 在 PostgreSQL `BEGIN ISOLATION LEVEL SERIALIZABLE` 中 `SELECT … FOR UPDATE` 锁定本次新工程，仅当仍为创建者首版、修订号 1、第一主体三项及第二主体恰好三项固定 ACL（无其他额外授权）时，以租户 ID、专用工程 ID、第二主体 ID 和三项权限为完整条件执行一次 `DELETE … RETURNING permission`。提交后用 `verifyRevokedProject` 对比三项创建者授权、仅有一个版本和成功审计、首版操作主体；重复撤销时无 SQL 删除。若创建后流程中途失败，`finally` 在同样范围约束下尝试撤销新授予的 ACL；不做全租户批量撤销，不修改身份映射/已存在 Lab 工程，不清除测试工程。
+
+第二主体的 React 与 Vue 浏览器按顺序验证（分别创建两份专用工程，避免撤销后重新授权造成旧状态不可信）。UI 测试经真实 HTTPS/Keycloak/BFF `GET` 获取首版、查找授权列表并在确认对话后建立 CAS 基线；实际撤销后直接从相同 Origin 读取详情、历史、首版并断言 `[404,404,404]`，`/auth/me` 仍匹配第二主体。用户界面查询服务端历史后必须清空旧服务端摘要和授权列表、保留本地 SVG 与 IndexedDB 草稿；重复保存必须显示受控的访问失效提示且没有工程写入。主体验证另一浏览器仍能读首版；在数据库再次检查水位仍为 1、版本/成功审计仍为 1。所有诊断只输出静态中文步骤与本次测试项目 ID，不输出主体信息、Cookie、Token、原始 SQL 错误或 HTTP 正文。

@@ -798,3 +798,10 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/test-project-browser-oidc.mjs`：在现有真实 OIDC 双框架只读工程浏览器脚本中增加 `--simulate-access-denial` 独立模式，仅在隔离浏览器安装写入阻断和定向 401/403/404 只读 Fetch 模拟；复用真正的 Keycloak Cookie、受控同源工程读取及原有草稿哈希断言。不改生产 Web 或 NestJS 实现。
 - `scripts/test-project-browser-oidc.cases.mjs`：新增离线测试，检查模式互斥、工程写请求永不转发真实 Fetch、模拟状态仅命中目标路径和状态、普通登录 GET 不被改写；原 18 项预计增至 21 项。
 - `package.json`：新增 `test:projects:oidc:denial`，与常规 `test:projects:oidc:browser` 及需显式写入确认的多页准备命令分离。
+
+## 第三十四批第十小批 · 真实双 Keycloak 主体 ACL 撤销与 React/Vue 浏览器专项
+
+- `scripts/test-oidc-real-acl-revocation.mjs`：独立 OIDC 双人只读预检与显式本机 Lab 写入测试；只创建两份 UUID 专用空白工程，在串行化 PostgreSQL 事务中对第二主体严格定向撤销三项 ACL，复核真实 404、原 BFF 身份、React/Vue CAS 与本地草稿保护、创建者保留读取以及单首版审计；异常时尝试回收本轮授予的权限。
+- `scripts/test-oidc-real-acl-revocation.cases.mjs`：八项离线安全回归，覆盖写入模式门禁、任意工程拒绝、同租户不同主体、固定 ACL 精确删除与回滚、幂等、版本/审计和浏览器 GET 脱敏。
+- `scripts/test-oidc-dual-cas.mjs` 与 `scripts/test-project-browser-oidc.mjs`：仅将必要的已存在 Chrome/CDP 及 Studio 页面检查辅助函数显式导出；已有 CAS 和模拟拒绝专项的行为不变。
+- 根目录 `package.json`：增加 `test:oidc:revoke:config`、`test:oidc:revoke:preflight`、`test:oidc:revoke:browser`；仅把离线配置测试接入 `ready`，真实 PostgreSQL 撤权浏览器测试必须手动显式确认执行。

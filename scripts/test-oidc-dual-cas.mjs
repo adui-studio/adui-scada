@@ -305,7 +305,7 @@ class BrowserSession {
   }
 }
 
-function executablePath() {
+export function executablePath() {
   const root = process.env.PROGRAMFILES || "C:\\Program Files";
   const x86 = process.env["PROGRAMFILES(X86)"] || "C:\\Program Files (x86)";
   return [
@@ -317,7 +317,7 @@ function executablePath() {
   ].find((path) => path && existsSync(path));
 }
 
-async function startBrowser(executable) {
+export async function startBrowser(executable) {
   const folder = mkdtempSync(join(tmpdir(), "adui-scada-oidc-dual-"));
   const child = spawn(
     executable,
@@ -375,7 +375,7 @@ async function startBrowser(executable) {
   }
 }
 
-async function waitForLogin(session, origin, label) {
+export async function waitForLogin(session, origin, label) {
   await session.send("Page.navigate", {
     url: origin + "/api/v1/auth/oidc/start",
   });
