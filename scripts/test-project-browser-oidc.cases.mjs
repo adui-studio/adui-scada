@@ -341,10 +341,10 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     );
     assert.throws(
       () =>
-        resolveProjectBrowserMode(
-          ["--prepare-multipage", "--confirm-lab", "adui_scada"],
-          { ...lab, SCADA_DATABASE_URL: "postgresql://127.0.0.1:15432/adui_scada_test" },
-        ),
+        resolveProjectBrowserMode(["--prepare-multipage", "--confirm-lab", "adui_scada"], {
+          ...lab,
+          SCADA_DATABASE_URL: "postgresql://127.0.0.1:15432/adui_scada_test",
+        }),
       /多页数据准备配置不符合本机可信 Lab 边界/,
     );
   });
