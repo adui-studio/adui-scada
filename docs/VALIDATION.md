@@ -1628,3 +1628,17 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 原因分析：两端实际 SVG 页面都包含由 `visibleRect` 控制的网格矩形，旧测试比较整个 `.studio-svg.innerHTML`；在窗口恢复可见或尺寸变化后可能发生不属于工程数据的网格变更，形成假阳性。这一解释与观察相符，**但没有本次 DOM diff 证据证明变更仅来自网格**。候选只在真实 Studio 联合专项中克隆 SVG 并移除单个直系 `fill="url(#scada-studio-grid)"` 网格元素后比较所有剩余 SVG 子节点。原草稿 SHA-256、草稿数、自动保存、真实 CAS 单次 POST 与审计断言不变；业务 SVG 渲染图元变化继续严格失败。
 
 新增 3 项离线安全测试，目标从 13 提升为 **16/16**。从仓库源码提取的纯页面快照函数在隔离 V8 Mock 下覆盖网格变化、图元变化和重复网格拒绝路径，**非仓库 Node、浏览器、PostgreSQL 或完整质量链成功证据**。当前新补丁 `pnpm run test:oidc:dual:studio:config`、`vp check`、`pnpm run docs:check`、`pnpm run ready` 及真实 `pnpm run test:oidc:dual:studio:late` 均待 Windows 实测。用户第四轮日志未打印本地 Git SHA，不能绑定 PR 当前 HEAD。
+
+## 2026-11-17 · 第三十四批第十七小批 Windows 最终验收结案
+
+维护者 Windows PowerShell 已分别运行离线质量链与隔离 Lab 真实浏览器专项，均已提供明确执行输出：
+
+- `pnpm run test:oidc:dual:studio:config`：**16/16 通过**（本批最终新增 3 项 SVG 视口网格回归在内），失败 0；完整 `ready` 内再次执行 **16/16 通过**。
+- `vp check`：**335** 个文件格式正确，**190** 个受检文件零警告、零 Lint / TypeScript 错误。
+- `pnpm run docs:check`：**86** 份 Markdown 通过。
+- 完整 `pnpm run ready`：**退出码 0**。依赖、配置、环境与中文文案门禁、Prisma Client 7.10.1 生成、Core 构建、React/Vue/Server 类型检查、Vitest **49 文件 / 567 项全通过**（Studio 共享 Session **31/31**）、SSE 客户端 **8/8**、TCP 故障代理 **4/4**、OIDC 工程浏览器安全离线 **33/33**、双主体 CAS 离线 **16/16**、本批 Studio 离线 **16/16**、ACL 撤销安全离线 **8/8**、NestJS HTTP E2E **6 文件 / 49 项全通过**，以及 React/Vue 与 NestJS 构建均执行至结尾。HTTP E2E 中预设的 401/404/503 负向响应与健康检查错误日志是受控测试，不代表整体命令失败。
+- 独立交互式 `pnpm run test:oidc:dual:studio:late`：维护者 PowerShell 明确输出 **“真实 Studio 专项退出码：0”**。两位不同、同租户且已预绑定的 Keycloak 主体进入独立隔离浏览器，创建**两个新的随机专用空白工程**。React 和 Vue 分别通过真实 Studio UI 建立首版 CAS、真实 POST 写入修订 2；原 HTTP 201 到达浏览器后暂缓交付，第二主体真实读取修订 2 并以 HTTP 201 追加至 3；第一主体随后消费旧 201，真实页面恢复可见并完成服务器水位只读复核，旧 CAS 撤销，受控拒绝额外版本写入。两端均打印“真实 UI 迟到 201、CAS 复核失效、草稿保护与三版审计检查完成”，最终确认每个工程仅存在 1/2/3 三版，SVG 组态内容、IndexedDB 草稿与自动保存状态不被改写。测试工程按设计保留。
+
+**证据与边界**：前四轮在真实浏览器中的测试夹具阶段错误、窗口可见性错误及非持久化 SVG 网格快照误报，最终候选未再阻断 Windows 双框架专项；但此前具体 DOM 差异没有独立抓取，不能断言第四轮变化只由网格引起。当前“画布内容未改变”依据的是排除单个视口网格的**工程内容快照**，仍严格比较其余 SVG 子节点、草稿整记录哈希和 CAS/审计。HTTP 201 延迟属于浏览器端在真实响应到达后的消费过程，**不是物理 TCP 断流**，也不是现场工业设备安全验证。真实 Lab 在受控本机 `adui_scada` 执行，此次**没有另行运行** `adui_scada_test` 32/32 或全新 Prisma 迁移。
+
+**SHA 限制**：两段 Windows 日志没有本地 `git rev-parse HEAD`，不能精确绑定通过结果到 Git SHA；GitHub 补录前 PR #72 HEAD 为 `a69cf0c456ae39e157b015b366d00424941df155`，相较上次候选 `c681feba` 多出涉及两份测试脚本的一次提交。**本次新增验收和结案文档提交本身尚未经 Windows 再次运行** `vp check`、`docs:check` 或 `ready`。PR #72 继续 Draft，Assignee `@adui-dev`；未经维护者新的明确授权不合并。
