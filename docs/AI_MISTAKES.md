@@ -367,6 +367,15 @@
 - **验证边界**：新增 HARNESS 章节含两组成对 PowerShell 代码围栏，新增文档不再含上述转义序列。完整仓库 `docs:check`、`vp check` 与 `ready` 仍需维护者 Windows 实际执行并提供退出码。
 - **证据**：本批文档候选及修正提交、`docs/HARNESS.md`、`docs/VALIDATION.md`。
 
+### E-041 · 真实 Studio 迟到 201 浏览器专项多个等待阶段复用同一通用错误（第三十四批第十七小批）
+
+- **现象**：维护者 Windows 首次执行 `pnpm run test:oidc:dual:studio:late`，两位真实 Keycloak 主体登录、两个专用工程创建与授权、React Studio 确认载入及真实 201 到达/挂起均已输出成功阶段；紧接着报告“真实 Studio 迟到保存未达到受控状态”，专项退出码 **1**。该信息无法区分第二主体推进、释放旧 201、Studio 成功状态恢复、页面可见性、CAS 复核或过期保存拒绝中的具体失败点。
+- **已确认的代码诊断缺陷**：新专项将 `releaseStudioRealLateInPage` 和多段 `waitFor` 都复用相同中文错误，且等待超时不输出阶段与状态摘要。**真实浏览器专项的确切失败阶段及底层原因仍待复测**；不能推断为 PostgreSQL CAS、React/Vue 生产 UI 或 BFF 已损坏。
+- **最小修正**：新增 `waitForStudioState`，每个关键等待使用固定阶段名称；超时只输出经过白名单构造的页面状态枚举、POST/写入计数、Busy/Disabled、CAS 基线/摘要清除、错误提示与可见性布尔值。第二主体读取版本 2、追加 3 和旧 201 释放也增加固定阶段输出。禁止输出工程 ID、主体、Cookie、Token、数据库 URL、响应正文、原始异常或堆栈；所有失败仍然退出码 1，不放宽 CAS/CSRF/ACL/TLS/单次写入约束。
+- **避免**：真实浏览器测试中不得让多个异步阶段共用同一“未达到预期状态”错误。每个等待都必须对应明确阶段，并在超时时只读回传足以区分状态的固定安全字段；开始日志不能代替完成日志。若现有证据只能定位到一个阶段，必须将根因标记为“待确认”，不猜测业务缺陷。
+- **验证**：维护者已提供修正前 Windows 离线测试 **9/9**、`vp check` **335 文件/190 受检零警告错误**、`docs:check` **86** 份和完整 `ready` **退出码 0**；同次真实 Studio 专项**退出码 1**。新增阶段诊断候选已完成静态语法检查，**修正后的 Node 9/9、Windows `vp check` / `docs:check` / `ready` 与真实双框架 Lab 浏览器均待复验**。维护者日志未提供 `git rev-parse HEAD`，不能将前述成功结果绑定到某个 PR SHA。
+- **证据**：维护者 2026-11-17 Windows 首轮真实 Studio 迟到 201 专项及完整质量链日志、PR #72、`scripts/test-oidc-studio-real-late.mjs`、`scripts/test-oidc-studio-real-late.cases.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
