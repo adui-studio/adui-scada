@@ -374,12 +374,12 @@ export async function setSecondaryBrowserWindowState(session, windowState) {
     throw new Error("隔离第二主体浏览器窗口状态切换失败");
   }
   try {
-    const window = await session.send("Browser.getWindowForTarget");
-    if (!Number.isSafeInteger(window.windowId) || window.windowId <= 0) {
+    const targetWindow = await session.send("Browser.getWindowForTarget");
+    if (!Number.isSafeInteger(targetWindow.windowId) || targetWindow.windowId <= 0) {
       throw new Error("隔离第二主体浏览器窗口状态切换失败");
     }
     await session.send("Browser.setWindowBounds", {
-      windowId: window.windowId,
+      windowId: targetWindow.windowId,
       bounds: { windowState },
     });
     return true;
