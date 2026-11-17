@@ -2716,4 +2716,4 @@ if ($browserExitCode -ne 0) { throw "真实双框架 Studio 迟到 201 专项失
 
 诊断补丁会在下一轮分别输出第二主体读取版本 2、追加 CAS 2→3 的结果，以及 Studio 释放真实 201、界面恢复、页面可见、CAS 水位失效和过期保存拒绝的阶段。等待超时时只回显经过白名单筛选的布尔量/计数/枚举，不打印任何 Cookie、Token、工程 ID、身份、URL、响应正文或原始异常。看到哪个阶段未完成及其受控状态后，再据实修复，不延长超时或放宽权限门禁。
 
-**本次诊断补丁后的所有 Windows 检查和真实 Lab 浏览器仍待执行。** 请先拉取 PR 分支最新 HEAD 并记录 `git rev-parse HEAD)，再按本节前面的 PowerShell 质量链步骤运行。质量链通过后，单独运行 `pnpm run test:oidc:dual:studio:late`；真实专项仍需退出码 0，且 React/Vue 两阶段均打印完成，才能结案。
+**本次诊断补丁后的所有 Windows 检查和真实 Lab 浏览器仍待执行。** 请先拉取 PR 分支最新 HEAD 并记录 `git rev-parse HEAD`，再按本节前面的 PowerShell 质量链步骤运行。质量链通过后，单独运行 `pnpm run test:oidc:dual:studio:late`；真实专项仍需退出码 0，且 React/Vue 两阶段均打印完成，才能结案。
