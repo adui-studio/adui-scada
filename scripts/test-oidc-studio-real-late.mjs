@@ -113,9 +113,8 @@ export function installStudioRealLateHookInPage(runtime = globalThis) {
       return rejectWrite();
     }
 
-    let request;
     try {
-      request = typeof init?.body === "string" ? JSON.parse(init.body) : null;
+      const request = typeof init?.body === "string" ? JSON.parse(init.body) : null;
       const cookieValues = runtime.document.cookie
         .split(";")
         .map((value) => value.trim())
