@@ -1473,3 +1473,11 @@ PR #64 已按维护者授权 Squash 合并为 `main@d59df5e9ef2d702954f6b2017399
 - 健康检查 E2E 中故意构造的 HTTP 503 和对应框架日志属于已通过的测试场景，不能将其误记为本批 `ready` 失败。
 
 **证据边界**：上述验收由维护者在 Windows 本机执行，协作端没有代跑全链。原始日志没有 `git rev-parse HEAD`，因此只能确认该批功能和测试输出与预期相符，不能宣称已经核实本地运行提交与 GitHub PR 最新 HEAD 完全一致。日志不包含新增保存竞态的真实浏览器/真实 PostgreSQL 延迟回包专项，也未独立执行旧 `test:projects:oidc:resume`；24/24 为浏览器安全**离线**测试，不能替代真实交互式浏览器。此文档记录是 Windows 运行后追加的，最新文档提交本身**尚未重新通过** `docs:check` 或 `ready`。PR #68 保持 Draft，不经维护者明确授权不合并。
+
+## 2026-11-17 · 第三十四批第十四小批：延迟保存双框架浏览器专项待验收
+
+本批以 `main@a1e710d2be86675f156fe0c36534e528b2203cae` 为基线。前一批 Windows 完整 `ready` 566/566 单元测试、49/49 HTTP E2E、双框架及服务端构建、退出码 0 属于已提供的历史验收，不是新浏览器专项的结果。
+
+候选新增单一隔离浏览器模式 `--simulate-save-timing` 和 `test:projects:oidc:save:browser`；通过真实 Keycloak/BFF 同源只读载入建立基线，并在浏览器拦截所有工程非 GET/HEAD，只有当前工程版本追加 POST 会被延迟并得到受控 401/409/503 错误。Node 接收的只包括命中数、按钮 Busy/Disabled、是否出错与 CAS 摘要，不带工程数据或敏感会话信息。React/Vue 均检查两次连续点击只尝试一次 POST、无自动重试、409/401 失效 CAS、503 保持 CAS，以及本地 SVG/IndexedDB/自动保存完整性。离线新增 4 项，预期总数从 24 增至 28；不修改 Lab ACL、数据库、工程版本和生产设备。
+
+协作端已对两份脚本进行了去除 ESM 导入后的 **V8 语法解析静态检查，均无语法错误**；该检查**不等同于 Node.js `node --test`、Oxfmt、完整 TypeScript 6 或真实浏览器验证**。此处仍需 Windows `pnpm run test:projects:oidc:config`、`vp check`、`docs:check`、`pnpm run ready` 及独立 `pnpm run test:projects:oidc:save:browser` 的原始日志、真实退出码和本地 HEAD 核对。特别地，合成 POST 失败不证明真实 PostgreSQL 写入已发生或被回滚，也不涵盖第十三小批真实写入成功后客户端切换上下文时的后端时序。
