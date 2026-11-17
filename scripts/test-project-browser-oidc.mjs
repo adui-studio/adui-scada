@@ -29,6 +29,9 @@ const SAFE_PAGE_ERRORS = new Set([
   "权限拒绝模拟参数不合法",
   "权限拒绝模拟操作按钮不可用",
   "标签页恢复测试要求浏览器页面处于可见状态",
+  "保存时序模拟参数不合法",
+  "保存时序模拟尚未命中唯一的版本追加请求",
+  "保存时序模拟操作按钮不可用",
 ]);
 const PAGE_ERROR_TYPES = new Map([
   ["ReferenceError", "页面脚本引用异常"],
@@ -53,7 +56,7 @@ const SAFE_FAILURES = new Set([
   "React 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
   "Vue 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
   "真实多页验收要求至少十一项已授权工程，当前未覆盖有效的第二页",
-  "仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check 或显式确认的多页数据准备参数",
+  "仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check、--simulate-save-timing 或显式确认的多页数据准备参数",
   "多页数据准备配置不符合本机可信 Lab 边界",
   "多页数据准备只允许本机 React Origin",
   "多页数据准备缺少可信登录会话",
@@ -455,7 +458,7 @@ function installRevisionConflictFaultInPage() {
  */
 export function installAccessDenialFaultInPage(runtime = globalThis) {
   const actualFetch = runtime.fetch.bind(runtime);
-  const state = { active: null, hits: 0, writeAttempts: 0 };
+  const state = { active: null, hits: 0, writeAttempts: 0, save: null };
   runtime.__aduiTestAccessDenial = state;
   runtime.fetch = async (input, init) => {
     const raw = typeof input === "string" ? input : input.url;
@@ -469,6 +472,19 @@ export function installAccessDenialFaultInPage(runtime = globalThis) {
     // 故障模拟只能读取既有工程；即使 UI 意外调用保存，也绝不能送到真实 Lab。
     if (projectPath && method !== "GET" && method !== "HEAD") {
       state.writeAttempts += 1;
+      const pending = state.save;
+      if (
+        pending &&
+        !pending.resolve &&
+        method === "POST" &&
+        url.origin === runtime.location.origin &&
+        url.pathname === "/api/v1/projects/" + encodeURIComponent(pending.projectId) + "/versions"
+      ) {
+        pending.hits += 1;
+        return new Promise((resolve) => {
+          pending.resolve = resolve;
+        });
+      }
       return new Response("{}", {
         status: 403,
         headers: { "Content-Type": "application/json" },
@@ -493,6 +509,78 @@ export function installAccessDenialFaultInPage(runtime = globalThis) {
       }
     }
     return actualFetch(input, init);
+  };
+}
+
+/**
+ * 延迟版本追加模拟：真实 BFF 只负责身份和工程 GET，POST 始终由隔离页面拦截。
+ * 只允许固定拒绝状态，不伪造服务端提交成功或写入后已回滚。
+ */
+export function armSaveTimingInPage(projectId, status, runtime = globalThis) {
+  const state = runtime.__aduiTestAccessDenial;
+  if (
+    !state ||
+    typeof projectId !== "string" ||
+    projectId.length === 0 ||
+    projectId.length > 128 ||
+    ![401, 409, 503].includes(status) ||
+    state.save
+  ) {
+    throw new Error("保存时序模拟参数不合法");
+  }
+  state.save = { projectId, status, hits: 0, resolve: null };
+  state.writeAttempts = 0;
+  return true;
+}
+
+/** 只在命中恰好一个版本追加 POST 后释放模拟回包。 */
+export function releaseSaveTimingInPage(runtime = globalThis) {
+  const pending = runtime.__aduiTestAccessDenial?.save;
+  if (!pending || pending.hits !== 1 || !pending.resolve) {
+    throw new Error("保存时序模拟尚未命中唯一的版本追加请求");
+  }
+  const release = pending.resolve;
+  pending.resolve = null;
+  release(
+    new Response("{}", {
+      status: pending.status,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+  return true;
+}
+
+/** 使用真实 Studio UI 连续触发两次保存以检验互斥，不直接调用客户端接口。 */
+export function triggerSaveTimingInPage() {
+  const panel = document.querySelector('[aria-label="服务端工程版本"]');
+  const menu = panel?.closest("details");
+  if (menu) menu.open = true;
+  const button = [...(panel?.querySelectorAll("button") ?? [])].find(
+    (item) => item.textContent.trim() === "保存至服务端",
+  );
+  if (!button || button.disabled) throw new Error("保存时序模拟操作按钮不可用");
+  button.click();
+  button.click();
+  return true;
+}
+
+/** 只返回固定状态与计数，不传递页面错误正文、Cookie 或工程文档。 */
+export function saveTimingStateInPage() {
+  const panel = document.querySelector('[aria-label="服务端工程版本"]');
+  const text = panel?.textContent ?? "";
+  const button = [...(panel?.querySelectorAll("button") ?? [])].find(
+    (item) => item.textContent.trim() === "保存至服务端",
+  );
+  const state = globalThis.__aduiTestAccessDenial;
+  return {
+    hits: state?.save?.hits ?? 0,
+    writeAttempts: state?.writeAttempts ?? -1,
+    busy: [...(panel?.querySelectorAll(".studio-version-help") ?? [])].some((node) =>
+      node.textContent?.includes("正在处理工程版本"),
+    ),
+    disabled: button?.disabled ?? false,
+    hasError: Boolean(panel?.querySelector('[role="alert"]')),
+    baselineCleared: /CAS 基线：\s*未建立/.test(text),
   };
 }
 
@@ -819,6 +907,9 @@ export function resolveProjectBrowserMode(parameters, env) {
   if (parameters.length === 1 && parameters[0] === "--simulate-resume-check") {
     return { requireMultiPage: false, prepareMultiPage: false, simulateResumeCheck: true };
   }
+  if (parameters.length === 1 && parameters[0] === "--simulate-save-timing") {
+    return { requireMultiPage: false, prepareMultiPage: false, simulateSaveTiming: true };
+  }
   if (
     parameters.length === 3 &&
     parameters[0] === "--prepare-multipage" &&
@@ -833,7 +924,7 @@ export function resolveProjectBrowserMode(parameters, env) {
     return { requireMultiPage: false, prepareMultiPage: true };
   }
   throw new Error(
-    "仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check 或显式确认的多页数据准备参数",
+    "仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check、--simulate-save-timing 或显式确认的多页数据准备参数",
   );
 }
 
