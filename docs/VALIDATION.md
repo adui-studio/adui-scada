@@ -1499,3 +1499,13 @@ PR #64 已按维护者授权 Squash 合并为 `main@d59df5e9ef2d702954f6b2017399
 独立 `pnpm run test:projects:oidc:save:browser` 再次 **退出码 1**。React 的身份、工程浏览、草稿及模拟延迟保存 409/401/503 全部完成；Vue 完成首页与 Studio 入口后，在“真实 BFF 会话与授权工程列表”阶段得到“浏览器安全回归断言失败”通用诊断，未进入 Vue 工程列表及保存模拟。代码检查显示此阶段首先执行 `authenticatedInPage(origin)` 的布尔断言；认证结果为 false 时原先被通用断言脱敏路径吞没，但**尚不能由日志区分 Origin 不匹配、HTTP 401/403、网络或身份响应契约异常**。不能据此推断 Vue 真实授权已失效，也不能把该问题当成保存操作失败。
 
 已在原 PR 分支最小修复：新用例按照已有安全规则期望固定消息，并补充已审核的 `React BFF 会话未通过验证` / `Vue BFF 会话未通过验证` 失败类别，保持业务身份检查必须为 true 后才继续工程读取；未开放 Cookie、URL、Token、用户信息或原始异常正文。两份 MJS 在协作端完成 V8 语法解析，脱敏函数的固定返回结果与新增断言一致，**但不是本机 Node `--test` 或真实 Chrome/CDP 验收**。预计离线仍 **31/31**（不删除任何测试），实际复验 `test:projects:oidc:config`、`vp check`、`docs:check`、完整 `ready` 和 `test:projects:oidc:save:browser` 均待维护者在最新 HEAD 上执行并记录退出码。
+
+## 2026-11-17 · PR #69 第三次 Windows 交互式验收：React 503 阶段通用超时
+
+维护者本机 Windows 再次执行 `pnpm run test:projects:oidc:save:browser`，返回 **退出码 1**。真实 Keycloak 登录、React Studio 工程列表、IndexedDB 草稿、取消载入、模拟水位冲突、确认 CAS 基线均完成；随后 React 依次打印“旧 CAS 水位冲突”（409）、“服务端身份过期”（401）和“服务端暂时不可用”（503）的**场景开始**消息，但在 503 消息之后、Vue 第一条步骤消息之前，终端报告“浏览器登录或 Studio 页面未达到预期状态，请检查隔离 Lab、登录与服务端工程”。**仅凭场景开始消息不能证明 React 503 已通过，更不能称 Vue 本轮通过或失败**。本轮仅提供独立浏览器日志，不能反推最新 `ready`、`vp check`、33 项离线测试的执行结果。
+
+代码复查发现，通用 `waitFor` 在超时时抛出“阶段标签＋未达到预期状态”，但 `describeProjectBrowserFailure` 将所有该类标签统一掩盖为一条通用消息，无法区分 503 期间是重新读取工程基线、唯一版本 POST 未挂起，还是模拟回包后 UI 没有结束或未显示错误。**实际失败的具体阶段尚未确定**，因此本批不修改共享 API Client 或 React/Vue 生产逻辑、不改变 HTTP 503 的保留 CAS 预期。
+
+候选最小改动只在浏览器测试：允许输出严格白名单内的 React/Vue“权限模拟首页加载 / 工程列表加载”超时阶段；对 401/409/503 两段保存等待使用仅含固定状态的诊断（指定 POST 未命中、写入次数异常、Busy 未保持、按钮未禁用、保存未结束、未显示错误或页面状态不可读）。不打印工程 ID、响应正文、Cookie、Token、原始异常或堆栈；原有“唯一 POST、按钮禁用、503 保留基线、画布/IndexedDB 不变”所有断言保留。新增加两项 Node 安全离线用例，目标 `test:projects:oidc:config` **33/33**（前版 31 项），用例覆盖正向阶段分类、错误类别严格匹配、附带 Bearer 信息的伪造诊断不放行。协作端已完成两份 MJS 的 **V8 语法解析**及真实分类函数的有限状态模拟，分别得到固定类别并拒绝敏感拼接；**不等同 Windows Node、`ready` 或 Chrome/Keycloak 浏览器复验**。
+
+下一步维护者必须核对本机 Git SHA，在最新 PR HEAD 上执行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 以及最后独立的 `pnpm run test:projects:oidc:save:browser`。若仍失败，应收集最新固定阶段/状态类别与退出码，再判断业务修复方向；严禁删除用例、伪造 HTTP 成功、绕过真实身份或把工程写请求发至 Lab。PR #69 保持 Open/Draft，未获明确合并授权不得合并。
