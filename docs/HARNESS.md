@@ -2302,3 +2302,35 @@ Write-Host "第八小批完整质量链退出码：$LASTEXITCODE"
 原 `ready` 有 **49 个单测文件、544 项单测和 49 项 HTTP E2E**；本批新增 API Client/Session 合计 **6 项单元测试**，预计变成 **550/550**，真实结果以 Windows 日志为准。该检查不会发起真实 Keycloak 登录，也不会修改既有 Lab 工程。需要浏览器互通复验时，可在**不修改现有用户 ACL**的前提下运行既有 `pnpm run test:projects:oidc:browser`，用预绑定普通测试用户人工完成受控本机真实 OIDC 登录；这只能证明正常权限路径不回归，不能伪称撤权浏览器 E2E 已验证。
 
 授权拒绝的实际 UI 行为需要额外的专用临时权限夹具或安全浏览器模拟场景方能自动化覆盖，**本批未实现该自动化专项**。不得在维护者既有 `adui_scada` 业务工程上直接做删除 ACL 或注销会话的破坏性实验，也不应把 `test:db` 的历史成功错误描述为本次前端新 HEAD 的验证。
+
+## 第三十四批第九小批 · 双框架 OIDC 浏览器模拟权限拒绝专项
+
+在 PR #63 经维护者明确授权 Squash 合并后，以 `main@6f09e1930fe55f567245708bf5eb80edacd7b42a` 为基线，只扩展现有浏览器脚本、离线规则测试、根命令与文档，不新增正式业务 API、Vue/React 页面改动、Prisma 迁移或数据库写入。**本批真实浏览器尚未实测**。
+
+Windows 验收顺序，先确认本地无待保存修改，再同步新分支：
+
+```powershell
+git status --short
+git fetch origin
+git switch --track origin/test/v0.3-b34-oidc-access-denial-browser
+git rev-parse HEAD
+
+# 独立离线安全测试：原 18 项 + 新增 3 项，预计 21/21。
+pnpm run test:projects:oidc:config
+if ($LASTEXITCODE -ne 0) { throw "浏览器模拟规则检查失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+
+# 在受控本机 HTTPS OIDC Lab 正常运行后，独立执行不会到达后端写入路由的模拟专项。
+pnpm run test:projects:oidc:denial
+Write-Host "权限拒绝模拟浏览器退出码：$LASTEXITCODE"
+```
+
+执行浏览器专项时使用已有**预绑定普通 Keycloak 测试用户**人工登录，不在 PowerShell 中粘贴密码。浏览器按真实授权列表选取既有一项工程，先通过实际同源 GET 确认载入，再在页面内模拟服务端 GET 返回：React/Vue 分别覆盖历史 401、列表 403、工程水位 404，验证旧 CAS 基线与授权摘要消失、SVG 画布和 IndexedDB 草稿内容摘要未改变、没有任何工程写入请求向真实 Lab 发送。该模式对工程 API 的所有非 GET/HEAD 请求永久拦截，不执行真实服务器的登出、ACL 撤销或项目创建。临时浏览器 Profile 在 finally 中关闭并删除，不打印任何用户身份或密钥。
+
+**风险及边界**：若真实 Keycloak/HTTPS Lab 未启动、临时 Profile 无现有工程权限或 DOM/浏览器版本不符合既有脚本约束，专项按安全设计失败并返回退出码 1，不得放宽数据库白名单、关闭 TLS 或为测试手工更改既有 ACL。浏览器演练是**模拟服务端拒绝**，不是“真实撤权 E2E”；独立真实 PostgreSQL 服务端 ACL 测试（上一批 31/31）仍是另一层证据。目标验收为离线 **21/21**、原单测 **550/550**、服务端 E2E **49/49**、真实模拟浏览器命令 **退出码 0**，均需以维护者 Windows 实际日志为准。
