@@ -1306,3 +1306,19 @@ E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CD
 结合真实代码分析，前一次模拟冲突**故意设置**服务端错误提示；测试 `openProjectInPage` 在下一次点击“打开”后直接读取同一错误节点并立即判错，没有等待新 `runServerAction` 清除旧错误与启动操作。这个测试竞态与症状吻合，**现有日志无法单独证明真实确认载入请求已失败或成功**。本次最小修复在页面测试动作中记录点击前错误，只有观察到新的忙碌状态或错误变化，且新操作不再进行中时，才允许对当前真实错误作失败判断；成功分支仍必须满足确认回调和“CAS 基线已建立”。补充两项正反回归，离线配置/测试预计由 **11 增至 13**。不修改 React/Vue、API Client、OIDC、数据库、Prisma、TLS、工业设备接口或任何现有真实安全断言。
 
 **当前 HEAD 尚未执行 Windows 修复后测试**。维护者应先执行 `pnpm run test:projects:oidc:config` 与 `vp check`、`pnpm run docs:check`，然后独立重跑 `pnpm run test:projects:oidc:browser`；双框架真实 OIDC 专项成功后再完成全链 `pnpm run ready` 确认。隔离浏览器在成功与失败后均按凭据安全策略自动关闭，不能以窗口关闭本身判定成功与否。
+
+## 2026-11-17 · 第三十四批第四小批真实多页与双主体 CAS 候选验收
+
+基于 PR #58 合并提交 `d95ee4d15bec64a047c519fde7b5f98b837cca05`，新增隔离测试数据库 `apps/server/test/project-api.db-spec.ts` 的 12 项授权工程真实游标分页与同租户不可见工程验证，以及 `apps/server/test/prisma-project-version.db-spec.ts` 的两个独立 Prisma 连接/两个授权主体抢同一 `expectedRevision` 的真实 PostgreSQL CAS 原子性与审计操作者核验。只在已显式配置的本机独立 `adui_scada_test` 执行真实数据库读写，随机测试租户限定数据范围；预计真库独立用例从 23 增至 25。没有更改 NestJS API、数据库迁移或任何工业设备写入。
+
+`scripts/test-project-browser-oidc.mjs` 保留原成功的普通交互式模式，新增 `--require-multipage` 强制 React/Vue 均访问过真实有数据的第二页并返回；根命令为 `test:projects:oidc:browser:pages`。未人为准备当前主体至少 11 个已授权工程时严格测试必须非零退出；脚本不修改运行中 Lab 工程/授权。新增一项离线模式约束测试（预计 14 项）随 `ready` 执行。
+
+**当前仅为 GitHub 候选代码与静态差异**：新 `test:projects:oidc:config`、`vp check`、`docs:check`、`ready`、真实 `test:db` 和真人 `test:projects:oidc:browser:pages` 均待维护者 Windows 验收。此前 PR #58 的 13/13、544/544、49/49、真实双端 OIDC 专项退出码 0 不能替代本 HEAD 的测试结果。真实 BFF 两会话 HTTP CAS/409 与生产工业安全验收仍未覆盖。
+
+## 2026-11-17 · 第三十四批第四小批本机 Lab 多页测试数据准备（待 Windows 运行）
+
+维护者提供的 Windows 日志已确认前一候选：`test:projects:oidc:config` **14/14**、`ready` **544/544 单元测试、49/49 HTTP E2E、退出码 0**；本机独立 `adui_scada_test` 四项迁移最新，`test:db` **3/3 文件、25/25 项、退出码 0**。独立严格浏览器 `test:projects:oidc:browser:pages` 在 React 分页阶段因未覆盖有效第二页而退出码 **1**，Vue 未进入该轮测试。此失败不构成真实分页业务逻辑错误或 PostgreSQL CAS 失败。
+
+本次新增 `oidc:lab:projects:pages` 显式数据准备命令，复用既有隔离 Chrome/Edge 浏览器与 Keycloak 真人登录；入口必须 `--prepare-multipage --confirm-lab adui_scada`，并复用可信 OIDC Lab 环境/数据库安全白名单。通过登录后的 BFF Session 和 CSRF 向当前测试主体发起正式工程创建请求，只补齐至 11 项授权工程。空白 `ScadaDocument 0.3.0` 不含现存工程的数据。旧工程、现存 ACL、迁移、业务接口与工业设备权限不修改；测试数据新建后保留，不自动清理。
+
+新增四项纯离线保护与状态回归（配置门禁、已足额时零写入、补齐与重复执行、跨 Origin / 缺失 CSRF 拒绝），预计该文件 **18/18**，但**尚无维护者 Windows 的 Vite+、完整 ready、真实浏览器数据准备或严格 React/Vue 多页成功日志**；此前 14/14 不能冒充新候选通过。GitHub 原始 JavaScript 已完成有限的 V8 语法解析与模拟 Fetch 行为核对，不等同于仓库完整质量链或真实 PostgreSQL 写入。执行前应人工确认当前 NestJS 实际连接的 Lab 数据库和根环境一致，运行后独立执行严格多页验收。

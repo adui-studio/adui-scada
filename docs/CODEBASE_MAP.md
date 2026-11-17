@@ -761,3 +761,10 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/test-project-browser-oidc.mjs`：仅在本机隔离 OIDC HTTPS Lab 下执行，维护者手动在临时 Chrome/Edge 完成真实 OIDC 登录。验证 React/Vue 授权工程列表、分页（足量时）、明确取消、预加载的只读 GET 水位故障注入、确认载入、可见 CAS 基线、自动保存停写与 IndexedDB 原草稿不变。无需第三方浏览器依赖，不访问正式工业设备，不执行服务端工程 POST；失败诊断固定白名单脱敏。
 - `scripts/test-project-browser-oidc.cases.mjs`：纯离线 Node 测试，验证两套固定 HTTPS Origin、本机 Keycloak Issuer、回环 Lab PostgreSQL、证书与生产/不安全选项拒绝；已纳入 `ready`。
 - 根 `package.json`：新增 `test:projects:oidc:config` 与交互式 `test:projects:oidc:browser`，后者永不加入默认质量链，避免 CI 自动登录或连接真实数据库。
+
+### 第三十四批第四小批 · 真库分页与独立连接 CAS / 双端多页严格模式
+
+- `apps/server/test/project-api.db-spec.ts`：在经白名单验证的本机 `adui_scada_test` 随机租户中用真实创建事务准备 12 个授权工程与 1 个同租户不可见工程，验证 `10 + 2 + 0` 分页、ACL 与摘要白名单；清理严格限定测试租户。
+- `apps/server/test/prisma-project-version.db-spec.ts`：两套独立 Prisma 连接与不同受信主体同时追加同一个修订号，断言一个成功、一个冲突，以及精确水位、不可变版本和获胜者成功审计。
+- `scripts/test-project-browser-oidc.mjs`：新增可选 `--require-multipage`，必须真正翻入有数据的第二页并返回第一页，双框架都成功才算通过。默认登录与单页安全回归模式不变，不向 OIDC Lab 写入工程或权限。
+- `scripts/test-project-browser-oidc.cases.mjs`：新增严格模式拒绝空第二页的离线用例，随既有 `ready` 检查。根 `package.json` 新增交互式 `test:projects:oidc:browser:pages`，不加入 `ready`。

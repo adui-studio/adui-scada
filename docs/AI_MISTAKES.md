@@ -235,6 +235,8 @@
 - **验证**：修复前维护者实测 `test:projects:oidc:config` **11/11**、`vp check` **328/183 零告警**、`docs:check` **86 Markdown**、完整 `ready` **退出码 0**，但交互式浏览器专项 **退出码 1**。本补丁离线测试预计 **13 项**；**修复后的 Windows 离线/浏览器与质量链尚未执行，不能声称已通过**。
 - **证据**：2026-11-16 维护者浏览器专项日志、PR #58、`scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs` 和本仓库 `StudioPage.tsx`、`StudioPage.vue` 的 `runServerAction`。
 
+> **2026-11-17 结案补录（E-023 至 E-026）**：上述各错误段落保留发生时的原始“待复验”描述作为历史证据，并非当前仍未修复。维护者在 PR #58 的最终 Windows 验收中确认离线 OIDC 浏览器测试 **13/13**、`vp check` **328 格式文件/183 受检文件零告警**、完整 `ready` **544/544 单测、49/49 HTTP E2E、退出码 0**；React/Vue 真实 OIDC 浏览器专项分别完成身份、草稿、取消载入、模拟冲突与确认载入，退出码 **0**。PR #58 已按维护者授权 Squash 合并至 `main@d95ee4d15bec64a047c519fde7b5f98b837cca05`。有数据的第二页与真实不同主体 PostgreSQL 并发 CAS 仍待第四小批独立专项，不属于 E-023 至 E-026 的历史问题未关闭。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

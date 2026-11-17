@@ -7,6 +7,7 @@ import { loadEnvFile } from "node:process";
 import { setTimeout as pause } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { resolveReadonlyProbeOrigins } from "./verify-oidc-https-readonly.mjs";
+import { resolveLabIdentityTarget } from "./oidc-lab-identity.mjs";
 
 const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const LOOPBACK = "127.0.0.1";
@@ -46,6 +47,15 @@ const SAFE_FAILURES = new Set([
   "浏览器页面操作失败，请检查当前 Studio 状态",
   "React 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
   "Vue 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
+  "真实多页验收要求至少十一项已授权工程，当前未覆盖有效的第二页",
+  "仅支持 --require-multipage 或显式确认的多页数据准备参数",
+  "多页数据准备配置不符合本机可信 Lab 边界",
+  "多页数据准备只允许本机 React Origin",
+  "多页数据准备缺少可信登录会话",
+  "多页数据准备 CSRF Cookie 无效",
+  "多页数据准备服务端请求失败",
+  "多页数据准备列表响应无效",
+  "多页数据准备未能建立有效的第二页",
 ]);
 
 /** CDP 异常只按确定的脚本错误文案或异常类别公开，禁止泄漏脚本堆栈与 Cookie。 */
@@ -502,7 +512,134 @@ export function requireAuthorizedProjectPage(result) {
   return result.projects;
 }
 
-async function verifyStudio(session, origin, name) {
+/**
+ * 严格多页验收必须真正访问过包含授权工程的第二页。
+ * 仅用于隔离浏览器测试，不修改服务端或权限表。
+ */
+export function requireRealMultiPageCoverage(covered, required) {
+  if (required && !covered) {
+    throw new Error("真实多页验收要求至少十一项已授权工程，当前未覆盖有效的第二页");
+  }
+}
+
+/** 写入模式与只读验收严格分开，只有显式确认的本机 Lab 能创建测试工程。 */
+export function resolveProjectBrowserMode(parameters, env) {
+  if (parameters.length === 0) return { requireMultiPage: false, prepareMultiPage: false };
+  if (parameters.length === 1 && parameters[0] === "--require-multipage") {
+    return { requireMultiPage: true, prepareMultiPage: false };
+  }
+  if (
+    parameters.length === 3 &&
+    parameters[0] === "--prepare-multipage" &&
+    parameters[1] === "--confirm-lab" &&
+    parameters[2] === "adui_scada"
+  ) {
+    try {
+      resolveLabIdentityTarget(env);
+    } catch {
+      throw new Error("多页数据准备配置不符合本机可信 Lab 边界");
+    }
+    return { requireMultiPage: false, prepareMultiPage: true };
+  }
+  throw new Error("仅支持 --require-multipage 或显式确认的多页数据准备参数");
+}
+
+/**
+ * 只从已验证的同源 BFF 会话创建最小空白工程。
+ * 依靠正式创建接口生成首版、ACL 与审计；不直接写数据库、不复制现有工程数据。
+ * 函数必须自包含，以便 CDP 通过 function.toString() 在页面执行。
+ */
+export async function prepareAuthorizedMultiPageInPage(expectedOrigin, runtime = globalThis) {
+  if (runtime.location.origin !== expectedOrigin) {
+    throw new Error("多页数据准备只允许本机 React Origin");
+  }
+
+  const request = async (method, path, body, csrfToken) => {
+    try {
+      const response = await runtime.fetch("/api/v1" + path, {
+        method,
+        credentials: "same-origin",
+        mode: "same-origin",
+        redirect: "error",
+        cache: "no-store",
+        referrerPolicy: "no-referrer",
+        headers: {
+          Accept: "application/json",
+          ...(method === "POST"
+            ? { "Content-Type": "application/json", "X-SCADA-CSRF": csrfToken }
+            : {}),
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+      if (response.status !== (method === "POST" ? 201 : 200)) {
+        throw new Error("多页数据准备服务端请求失败");
+      }
+      return await response.json();
+    } catch {
+      throw new Error("多页数据准备服务端请求失败");
+    }
+  };
+
+  const identity = await request("GET", "/auth/me");
+  if (
+    identity?.authenticated !== true ||
+    typeof identity.principal?.tenantId !== "string" ||
+    typeof identity.principal?.subjectId !== "string"
+  ) {
+    throw new Error("多页数据准备缺少可信登录会话");
+  }
+
+  const original = await request("GET", "/projects?limit=100");
+  if (!Array.isArray(original) || original.length > 100) {
+    throw new Error("多页数据准备列表响应无效");
+  }
+  if (original.length >= 11) return { before: original.length, created: 0, after: original.length };
+
+  const tokens = runtime.document.cookie
+    .split(";")
+    .map((fragment) => fragment.trim())
+    .filter((fragment) => fragment.startsWith("__Host-adui-scada-csrf="));
+  const csrfToken = tokens.length === 1 ? tokens[0].slice("__Host-adui-scada-csrf=".length) : "";
+  if (!/^scada_csrf_[A-Za-z0-9_-]{43}$/.test(csrfToken)) {
+    throw new Error("多页数据准备 CSRF Cookie 无效");
+  }
+
+  const needed = 11 - original.length;
+  for (let index = 0; index < needed; index += 1) {
+    const projectId = "b34-pages-" + runtime.crypto.randomUUID();
+    const document = {
+      schemaVersion: "0.3.0",
+      projectId,
+      tags: [],
+      pages: [
+        {
+          id: "page-main",
+          name: "多页验收测试",
+          size: { width: 1920, height: 1080 },
+          nodes: [],
+        },
+      ],
+    };
+    const created = await request("POST", "/projects", { document }, csrfToken);
+    if (created?.projectId !== projectId || created.headRevision !== 1) {
+      throw new Error("多页数据准备服务端请求失败");
+    }
+  }
+
+  const first = await request("GET", "/projects?limit=10");
+  const cursor = Array.isArray(first) && first.length === 10 ? first[9]?.projectId : undefined;
+  if (typeof cursor !== "string") throw new Error("多页数据准备列表响应无效");
+  const second = await request(
+    "GET",
+    "/projects?limit=10&afterProjectId=" + encodeURIComponent(cursor),
+  );
+  if (!Array.isArray(second) || second.length === 0) {
+    throw new Error("多页数据准备未能建立有效的第二页");
+  }
+  return { before: original.length, created: needed, after: original.length + needed };
+}
+
+async function verifyStudio(session, origin, name, requireMultiPage) {
   const report = (phase) => process.stdout.write(name + "：正在验证" + phase + "\n");
   report("首页加载与组态入口");
   await session.send("Page.navigate", { url: origin + "/" });
@@ -568,6 +705,7 @@ async function verifyStudio(session, origin, name) {
     }
   }
 
+  requireRealMultiPageCoverage(paginated, requireMultiPage);
   report("临时 IndexedDB 草稿保存与自动保存");
   assert.equal(await session.evaluate(saveDraftInPage), true);
   assert.equal(await session.evaluate(enableAutoSaveInPage), true);
@@ -628,6 +766,7 @@ async function verifyStudio(session, origin, name) {
 
 async function run() {
   if (existsSync(ROOT_ENV)) loadEnvFile(ROOT_ENV);
+  const mode = resolveProjectBrowserMode(process.argv.slice(2), process.env);
   const origins = resolveProjectBrowserLab(process.env);
   const executable = browserExecutable();
   if (!executable) throw new Error("未找到本机 Chrome/Edge 浏览器");
@@ -672,13 +811,26 @@ async function run() {
       "真实 OIDC 登录",
       180000,
     );
+    if (mode.prepareMultiPage) {
+      const result = await session.evaluate(prepareAuthorizedMultiPageInPage, origins[0]);
+      process.stdout.write(
+        "本机 OIDC Lab 数据准备完成：原有 " +
+          result.before +
+          " 项，本次新建 " +
+          result.created +
+          " 项，当前至少 " +
+          result.after +
+          " 项授权工程。请独立运行严格双框架多页验收。\n",
+      );
+      return;
+    }
     // 必须在 React/Vue Studio 加载前安装，API Client 构造时会捕获 Fetch 函数。
     await session.send("Page.addScriptToEvaluateOnNewDocument", {
       source: "(" + installRevisionConflictFaultInPage.toString() + ")()",
     });
     process.stdout.write("真实 OIDC 会话已在 React Origin 验证，开始双框架只读工程验收。\n");
-    await verifyStudio(session, origins[0], "React");
-    await verifyStudio(session, origins[1], "Vue");
+    await verifyStudio(session, origins[0], "React", mode.requireMultiPage);
+    await verifyStudio(session, origins[1], "Vue", mode.requireMultiPage);
     process.stdout.write("双框架 OIDC 工程管理专项通过；服务端工程未新增、未覆盖、未发布。\n");
   } finally {
     session?.socket.close();
