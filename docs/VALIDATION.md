@@ -1578,3 +1578,18 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 **风险与约束**：脚本复用已有 `resolveProjectBrowserLab` / `resolveLabIdentityTarget` 安全门禁，需要已预绑定的同租户不同主体、可信本机 HTTPS / Keycloak 和本机 `adui_scada` Lab；显式写入模式只创建新的 UUID 专用空白工程并授权第二主体，保留工程供复核，不连接 `adui_scada_test`、不修改现有工程、不接触 PLC/DCS。默认 `ready` 只执行离线配置测试，不启动真实浏览器写入。该模式是浏览器 API 级真实网络 + 真库联动，**不等于 Studio UI 点击保存、TCP 故障注入或客户端共享 Session 的完整 E2E**。
 
 待维护者 Windows 核对 Git HEAD 与分支后执行 `pnpm run test:oidc:dual:config`、`vp check`、`pnpm run docs:check`、`pnpm run ready`；确认隔离 Lab 完整运行后单独执行 `pnpm run test:oidc:dual:late` 并打印 `$LASTEXITCODE`。只可复制固定阶段和退出码；不得在日志中粘贴 Cookie、口令、Token、主体 ID、数据库 URL 或原始响应正文。任何退出码非零均不得标记为通过。
+
+
+## 2026-11-17 · 第三十四批第十六小批 Windows 最终验收结果
+
+维护者提交的 Windows PowerShell 日志确认以下**实际运行结果**（此前本文件“候选 / 待执行”描述为本轮验收前历史状态）：
+
+- `pnpm run test:oidc:dual:config`：新增模式在内的 Node 安全回归 **16/16**、0 失败；后续 `ready` 中再次运行 **16/16**。
+- `vp check`：**333** 个文件格式正确、**188** 个受检文件零警告、零 Lint/类型错误。
+- `pnpm run docs:check`：**86** 个 Markdown 检查通过。
+- `pnpm run ready`：完整运行至 React/Vue 两端与 NestJS 构建结束，PowerShell **“完整质量链退出码：0”**。覆盖 Vitest **49 文件/567 项**（共享 Studio Session **31/31**）、SSE 客户端 **8/8**、SSE 故障代理 **4/4**、OIDC 工程浏览器离线 **33/33**、双主体离线 **16/16**、ACL 离线 **8/8**、NestJS HTTP E2E **6 文件/49 项**，以及环境、中文文案、类型检查和构建。
+- 独立交互式 `pnpm run test:oidc:dual:late`：两位不同的真实 Keycloak 已预绑定主体在隔离 Chrome/Edge 浏览器中建立同租户独立 BFF 会话，成功创建**本轮新 UUID 专用工程**；第一主体真实 POST 提交版本 2 且 201 暂缓消费，第二主体真实读取版本 2 并追加版本 3，之后旧 201 交付且旧 CAS 2 返回 409，最终 PostgreSQL 版本/审计断言通过，明确打印“真实迟到 201 专项通过”，PowerShell **“真实迟到 201 专项退出码：0”**。新建专用工程保留供复核。
+
+**验收边界**：独立交互式专项操作的是本机可信 `adui_scada` OIDC Lab，而非前批另行运行的 `adui_scada_test` 数据库专项；真实 HTTP 201 已到达浏览器，由测试代码延迟消费原始 Response，**没有造成物理 TCP 断流**。浏览器直接调用正式同源工程 API，不通过 React/Vue Studio 真实保存按钮，因此**不证明 Studio UI/共享 Session 接收真实迟到 201 的完整端到端安全性**。E2E 中被刻意触发的健康检查 503/ERROR 是测试负例，实际质量链以最终退出码 0 为准。
+
+**Git 证据边界**：本次两段日志都没有 `git rev-parse HEAD`，无法把 Windows 通过结果精确归属到 PR #71 的某个 Git SHA。GitHub 核对在补录前 PR HEAD 为 `e2f2133d1db25a054591e3b5fa9a243a0f4cc8ba`，其较此前候选 `74297e3` 多出维护者的一次**仅两份测试脚本格式化**提交；日志通过的 `vp check` 与之相符但不能证明该 SHA。当前新增验收文档提交**尚未经 Windows 重新运行** `vp check`、`docs:check`、`ready`。PR #71 仍须保持 Draft，指派 `@adui-dev`，未经新一轮明确合并授权不得合并。
