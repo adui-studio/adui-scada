@@ -1376,3 +1376,9 @@ PR #69 继续只修改浏览器测试脚本和离线保护测试，用严格固�
 同一轮单独执行 `pnpm run test:oidc:dual:studio:late` 时，两位主体登录、两份专用工程准备以及 React Studio 真实 201 到达/挂起均已输出；随后在推进/释放/消费阶段报通用“真实 Studio 迟到保存未达到受控状态”，退出码 **1**。当前没有证据区分其具体失败阶段，**不能宣称真实 Studio 双框架专项通过**。
 
 PR #72 候选已新增固定阶段与安全状态摘要，方便下一轮定位；本次修改后 Windows 离线测试、质量链和真实浏览器均需重跑。维护者提供的日志未包含 `git rev-parse HEAD`，不能将此前质量链结果归属到 PR 的某个精确 SHA。PR 保持 Draft、Assignee `@adui-dev`，不合并。
+
+## 2026-11-17 · 第三十四批第十七小批：第二轮真实 Studio 窗口可见性故障
+
+维护者第二轮 Windows `test:oidc:dual:studio:late` 已实测 React 双主体真实 CAS 2→3 HTTP 201 成功、第一主体保存真实 201 消费成功且 UI 显示 CAS 基线 2；但 `Page.bringToFront` 后仍输出 `visible=false`，专项退出码 **1**。后续真实只读 CAS 复核、旧水位阻止第四版以及 Vue 全流程**没有得到本次通过证据**。
+
+候选仅修正隔离测试的第二浏览器窗口管理，不修改生产 UI、共享 CAS、API、数据库与工业控制安全：第二主体真实操作时使用正常窗口，第一主体恢复可见前最小化第二窗口，仍严格要求真实 `visible`。新增 2 项离线测试（目标 **11/11**）。新代码和文档尚未经 Windows `vp check`、`docs:check`、`ready` 与真实 Lab 复验；PR #72 保持 Draft、Assignee `@adui-dev`，不合并。
