@@ -900,3 +900,15 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 Node 编排第二主体读取 2、再 POST CAS 2→3，随后释放旧 201、第一主体过期 CAS 2→409、两端只读核对版本 3。只在本轮创建的随机项目上通过 `pg` 的只读 SQL 核对 `head_revision=3`、精确三条版本与审计记录及主体/摘要。失败时仍清理两个隔离浏览器 Profile，成功或失败均不自动删除测试专用工程，以免误删人工 Lab 数据。
 
 此项**不修改** `StudioServerProjectSession`、React/Vue 页面、NestJS、Prisma Schema、迁移、授权接口或工业控制权限。它比第十五小批的两层分离 Mock/DB 测试增加真实双浏览器与真实 BFF 的连续请求，但响应延后只发生在测试脚本中，尚未证明真实 Studio UI 接收到旧 201 后如何恢复；这一边界必须在验收报告中保留。
+
+## 2026-11-17 · 第三十四批第十七小批：Studio 真实保存 201 的浏览器测试设计
+
+新增独立的 \`scripts/test-oidc-studio-real-late.mjs\`，复用现有双主体 Keycloak 登录、同源 BFF、随机测试工程创建、\`grantSecondSubject\` 与 \`verifyLateCasAudit\`，以及 \`test-project-browser-oidc.mjs\` 中已被 Windows 验证的 Studio 页面导航、分页载入、草稿与状态检查函数。原浏览器文件仅额外导出已有 \`enableAutoSaveInPage\`，不修改实现。
+
+隔离浏览器的 \`Page.addScriptToEvaluateOnNewDocument\` 在 UI 初始化前注入自包含 Fetch 包装器，默认拒绝任何工程非 GET/HEAD 请求。仅显式 arm 时允许当前 UUID 专用工程发出**一次**同源 \`POST /api/v1/projects/:projectId/versions\`，严格核对工程 ID、\`expectedRevision=1\`、CSRF Cookie 与请求头、同源 Fetch 属性。其他写请求都在浏览器中返回 403，绝不进入 Lab。真实 201 和快照摘要验证通过后，拦截器持有原始 \`Response\` 并保持 UI Promise 挂起；不能将合成 201 冒充实际服务端提交。
+
+真实 Studio UI 通过工程管理分页选择本轮测试工程、\`window.confirm\` 明确确认载入、保存真实 IndexedDB 草稿并开启自动保存，然后调用原“保存至服务端”按钮两次。只有第一条版本 POST 允许穿透。等待状态仅允许公开计数、布尔值和 CAS 修订号，不输出 Cookie、Token、正文、外部主体 ID 或 URL。挂起期间点击原“恢复草稿”控件，预期现有互斥标记拒绝恢复；不会注入共享 Session 或修改组件内部私有状态。
+
+第二主体经真实 BFF 读取已提交版本 2 并以 CAS 2→3 提交，第一浏览器此时才释放原始 201。待页面正常结束保存并显示基线 2 后，派发实际 \`visibilitychange\`（页面必须可见），由现有 \`revalidateBaseline\` 发起真实只读请求发现 head=3，从而清除旧 CAS 与服务端摘要。随后从 UI 再次点击保存验证没有 POST 到达。最终比对 SVG、IndexedDB 数量/SHA-256、自动保存状态，且只在本轮两个专用工程上读取 PostgreSQL 三条版本/审计，测试项目保留供人工检查。
+
+该策略检验**当前合法保存上下文中旧成功回包已交付后的水位复核**；不声称在 UI 互斥锁持有期间强行切换到新上下文，后者已由共享 Session Promise 单元测试覆盖。离线安全测试只模拟包装器/命令参数，真正 Chrome、Keycloak、TLS、PostgreSQL 与 UI 集成必须在 Windows 单独执行，物理 TCP 故障不在本批范围。
