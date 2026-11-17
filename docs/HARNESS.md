@@ -2585,3 +2585,31 @@ if ($dbExitCode -ne 0) { throw "真实 PostgreSQL 专项失败" }
 ```
 
 `test:db` 必须对照新增用例的 **201 已提交/审计存在→第二主体推进至 3→旧 201 延迟交付→旧 CAS 409→最终水位、版本、审计 1/2/3**；若出现迁移缺失或隔离库前置不满足，保持失败，不使用已有业务库绕过。此测试只阻滞应用层交付，不声明真实浏览器 TCP 故障已验收。需要测试物理 TCP 阻断或真实双浏览器现场并发时另开专项评审。
+
+## 第三十四批第十五小批 · SSE 故障代理随机禁用端口 Windows 复验
+
+维护者实际已通过 `test:db` **32/32，退出码 0**（隔离 PostgreSQL 四项迁移已是最新）、`test:unit` **567/567**、`vp check` **333/188 零警告错误**、`docs:check` **86**；但 `ready` 被 `scripts/sse-fault-proxy.test.mjs` 中两个 `fetch failed: bad port` 阻断，SSE 故障代理 **2/4**，整条质量链退出码 **1**。SSE 客户端 **8/8** 通过不能替代故障代理检查。
+
+最小候选将测试故障代理的监听从无条件 `listen(0)` 改为随机选择本机 **20000～49151** 的 HTTP/Fetch 允许端口，发生 `EADDRINUSE`/`EACCES` 可受控重试最多 32 次；保持回环绑定、外部 URL 严格拒绝、SSE 静默阻断、TCP 资源清理及其他既有断言。原四项单测均通过 `withOrigin` 再验证实际端口范围。不能通过修改 Node Fetch 禁用端口列表、禁用 Web 安全或删除原测试来处理此故障。
+
+同步最新 PR #70 分支并保留本地未提交更改后，在 Windows 项目根执行：
+
+```powershell
+pnpm run test:sse:fault:unit
+$faultExitCode = $LASTEXITCODE
+Write-Host "SSE 故障代理退出码：$faultExitCode"
+if ($faultExitCode -ne 0) { throw "SSE 故障代理测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+```
+
+必要时还可独立复查 `pnpm run test:db`，但不得为了消除 `bad port` 而切换生产或开发 PostgreSQL。当前新增代理端口修复只有静态源码核对，**尚无 Windows 新版 SSE 或 ready 退出码**；已有真实 DB 32/32 的验收结论不受影响。
