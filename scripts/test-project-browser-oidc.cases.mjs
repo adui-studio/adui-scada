@@ -7,6 +7,8 @@ import {
   openProjectInPage,
   requireAuthorizedProjectPage,
   requireRealMultiPageCoverage,
+  prepareAuthorizedMultiPageInPage,
+  resolveProjectBrowserMode,
   resolveProjectBrowserLab,
 } from "./test-project-browser-oidc.mjs";
 
@@ -309,6 +311,147 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       () => requireRealMultiPageCoverage(false, true),
       /真实多页验收要求至少十一项已授权工程，当前未覆盖有效的第二页/,
     );
+  });
+
+  void it("多页数据准备必须显式确认本机可信 OIDC Lab", () => {
+    const lab = {
+      ...sample,
+      SCADA_DATABASE_URL:
+        "postgresql://adui_scada:only-for-test@127.0.0.1:15432/adui_scada?schema=public",
+      SCADA_DB_HOST: "127.0.0.1",
+      SCADA_DB_PORT: "15432",
+      SCADA_DB_NAME: "adui_scada",
+      SCADA_DB_USER: "adui_scada",
+    };
+    assert.deepEqual(resolveProjectBrowserMode([], lab), {
+      requireMultiPage: false,
+      prepareMultiPage: false,
+    });
+    assert.deepEqual(resolveProjectBrowserMode(["--require-multipage"], lab), {
+      requireMultiPage: true,
+      prepareMultiPage: false,
+    });
+    assert.deepEqual(
+      resolveProjectBrowserMode(["--prepare-multipage", "--confirm-lab", "adui_scada"], lab),
+      { requireMultiPage: false, prepareMultiPage: true },
+    );
+    assert.throws(
+      () => resolveProjectBrowserMode(["--prepare-multipage"], lab),
+      /仅支持 --require-multipage 或显式确认的多页数据准备参数/,
+    );
+    assert.throws(
+      () =>
+        resolveProjectBrowserMode(
+          ["--prepare-multipage", "--confirm-lab", "adui_scada"],
+          { ...lab, SCADA_DATABASE_URL: "postgresql://127.0.0.1:15432/adui_scada_test" },
+        ),
+      /多页数据准备配置不符合本机可信 Lab 边界/,
+    );
+  });
+
+  void it("已存在十一项授权工程时多页准备不执行任何写入", async () => {
+    const origin = "https://127.0.0.1:15173";
+    let writes = 0;
+    const projects = Array.from({ length: 11 }, (_, i) => ({
+      projectId: "existing-" + String(i).padStart(2, "0"),
+      headRevision: 1,
+    }));
+    const runtime = {
+      location: { origin },
+      document: { cookie: "" },
+      fetch: async (path, options) => {
+        assert.equal(options.method, "GET");
+        if (path === "/api/v1/auth/me") {
+          return { status: 200, json: async () => ({ authenticated: true, principal: { tenantId: "test", subjectId: "engineer" } }) };
+        }
+        assert.equal(path, "/api/v1/projects?limit=100");
+        return { status: 200, json: async () => projects };
+      },
+    };
+    assert.deepEqual(await prepareAuthorizedMultiPageInPage(origin, runtime), {
+      before: 11,
+      created: 0,
+      after: 11,
+    });
+    assert.equal(writes, 0);
+  });
+
+  void it("通过正式同源创建接口补齐十一项工程，使用当前会话 CSRF 且只写最小测试文档", async () => {
+    const origin = "https://127.0.0.1:15173";
+    const token = "scada_csrf_" + "c".repeat(43);
+    const projects = [{ projectId: "existing", headRevision: 1 }];
+    let writes = 0;
+    const runtime = {
+      location: { origin },
+      document: { cookie: "__Host-adui-scada-csrf=" + token },
+      crypto: { randomUUID: () => "00000000-0000-4000-8000-" + String(++writes).padStart(12, "0") },
+      fetch: async (path, options) => {
+        assert.equal(options.credentials, "same-origin");
+        assert.equal(options.mode, "same-origin");
+        if (path === "/api/v1/auth/me") {
+          return { status: 200, json: async () => ({ authenticated: true, principal: { tenantId: "test", subjectId: "engineer" } }) };
+        }
+        if (options.method === "POST") {
+          assert.equal(path, "/api/v1/projects");
+          assert.equal(options.headers["X-SCADA-CSRF"], token);
+          const payload = JSON.parse(options.body);
+          assert.deepEqual(Object.keys(payload), ["document"]);
+          assert.equal(payload.document.schemaVersion, "0.3.0");
+          assert.deepEqual(payload.document.tags, []);
+          assert.equal(payload.document.pages.length, 1);
+          assert.deepEqual(payload.document.pages[0].nodes, []);
+          const created = { projectId: payload.document.projectId, headRevision: 1 };
+          projects.push(created);
+          return { status: 201, json: async () => created };
+        }
+        const url = new URL(path, origin);
+        const limit = Number(url.searchParams.get("limit"));
+        const after = url.searchParams.get("afterProjectId") || "";
+        const page = [...projects]
+          .filter((item) => item.projectId > after)
+          .sort((a, b) => a.projectId.localeCompare(b.projectId))
+          .slice(0, limit);
+        return { status: 200, json: async () => page };
+      },
+    };
+    assert.deepEqual(await prepareAuthorizedMultiPageInPage(origin, runtime), {
+      before: 1,
+      created: 10,
+      after: 11,
+    });
+    assert.equal(writes, 10);
+    assert.equal(projects.length, 11);
+    assert.deepEqual(await prepareAuthorizedMultiPageInPage(origin, runtime), {
+      before: 11,
+      created: 0,
+      after: 11,
+    });
+    assert.equal(writes, 10);
+  });
+
+  void it("多页数据准备拒绝跨 Origin 与缺少 CSRF，拒绝前不写入", async () => {
+    const origin = "https://127.0.0.1:15173";
+    let writes = 0;
+    const runtime = {
+      location: { origin },
+      document: { cookie: "" },
+      fetch: async (path, options) => {
+        if (options.method === "POST") writes++;
+        if (path === "/api/v1/auth/me") {
+          return { status: 200, json: async () => ({ authenticated: true, principal: { tenantId: "test", subjectId: "engineer" } }) };
+        }
+        return { status: 200, json: async () => [{ projectId: "existing", headRevision: 1 }] };
+      },
+    };
+    await assert.rejects(
+      prepareAuthorizedMultiPageInPage("https://127.0.0.1:15174", runtime),
+      /多页数据准备只允许本机 React Origin/,
+    );
+    await assert.rejects(
+      prepareAuthorizedMultiPageInPage(origin, runtime),
+      /多页数据准备 CSRF Cookie 无效/,
+    );
+    assert.equal(writes, 0);
   });
 
   void it("不允许生产模式启动交互式本机测试", () => {
