@@ -36,6 +36,10 @@ const SAFE_PAGE_ERRORS = new Set([
 /** 仅接受固定阶段与类别，禁止输出服务端异常正文。 */
 const SAFE_OPEN_FAILURE =
   /^服务器工程载入阶段返回受控错误（确认(?:前|后)：(?:身份过期|权限拒绝|版本冲突|快照校验|网络故障|服务故障|协议响应)）$/;
+const SAFE_SAVE_TIMING_TIMEOUT =
+  /^(?:React|Vue) 延迟保存 (?:401|409|503)：(?:版本 POST 未命中|工程写入次数异常|操作忙碌状态未保持|保存按钮未禁用|保存操作未结束|页面未显示拒绝错误|无法读取浏览器状态)$/;
+const SAFE_SAVE_BASELINE_TIMEOUT =
+  /^(?:React|Vue) 权限模拟(?:首页加载|工程列表加载)未达到预期状态$/;
 const PAGE_ERROR_TYPES = new Map([
   ["ReferenceError", "页面脚本引用异常"],
   ["TypeError", "页面脚本类型异常"],
@@ -104,7 +108,8 @@ export function describeProjectBrowserFailure(error) {
       ? "工程列表接口返回 HTTP " + status
       : "工程列表接口状态异常";
   }
-  if (SAFE_FAILURES.has(message)) return message;
+  if (SAFE_FAILURES.has(message) || SAFE_SAVE_TIMING_TIMEOUT.test(message)) return message;
+  if (SAFE_SAVE_BASELINE_TIMEOUT.test(message)) return "浏览器阶段超时：" + message;
   if (
     [
       "只读 HTTPS 探针要求显式启用可信 OIDC 开发代理",
@@ -819,6 +824,68 @@ async function verifyResumeScenarios(session, origin, name, selected) {
   }
 }
 
+/**
+ * 仅从固定布尔状态生成可公开的延迟保存故障类别，不回显工程、身份或异常正文。
+ * 此函数只在 Node 测试层调用，不注入浏览器页面。
+ */
+export function describeSaveTimingTimeout(name, status, phase, state) {
+  if (
+    !["React", "Vue"].includes(name) ||
+    ![401, 409, 503].includes(status) ||
+    !["pending", "completed"].includes(phase)
+  ) {
+    return "浏览器延迟保存状态异常（已脱敏）";
+  }
+  let reason;
+  if (!state || typeof state !== "object") {
+    reason = "无法读取浏览器状态";
+  } else if (state.hits !== 1) {
+    reason = "版本 POST 未命中";
+  } else if (state.writeAttempts !== 1) {
+    reason = "工程写入次数异常";
+  } else if (phase === "pending") {
+    reason = !state.busy
+      ? "操作忙碌状态未保持"
+      : !state.disabled
+        ? "保存按钮未禁用"
+        : "无法读取浏览器状态";
+  } else {
+    reason = state.busy
+      ? "保存操作未结束"
+      : !state.hasError
+        ? "页面未显示拒绝错误"
+        : "无法读取浏览器状态";
+  }
+  return name + " 延迟保存 " + status + "：" + reason;
+}
+
+/** 保存请求的两段独立等待只检查受控状态，超时后返回固定类别。 */
+async function waitForSaveTimingStage(session, name, status, phase) {
+  const label =
+    name + " " + status + (phase === "pending" ? " 版本追加请求挂起" : " 延迟保存拒绝后界面恢复");
+  try {
+    return await waitFor(async () => {
+      const state = await session.evaluate(saveTimingStateInPage);
+      const matched =
+        phase === "pending"
+          ? state.hits === 1 && state.busy && state.disabled
+          : !state.busy && state.hasError;
+      return matched ? state : null;
+    }, label);
+  } catch (error) {
+    if (!(error instanceof Error) || error.message !== label + "未达到预期状态") {
+      throw error;
+    }
+    let state;
+    try {
+      state = await session.evaluate(saveTimingStateInPage);
+    } catch {
+      state = null;
+    }
+    throw new Error(describeSaveTimingTimeout(name, status, phase, state));
+  }
+}
+
 /** 两端均由真实 UI 发起版本追加；隔离浏览器持有 POST 回包但从不向 Lab 转发写请求。 */
 async function verifySaveTimingScenarios(session, origin, name, selected) {
   const scenarios = [
@@ -835,10 +902,8 @@ async function verifySaveTimingScenarios(session, origin, name, selected) {
       true,
     );
     assert.equal(await session.evaluate(triggerSaveTimingInPage), true);
-    const pending = await waitFor(async () => {
-      const state = await session.evaluate(saveTimingStateInPage);
-      return state.hits === 1 && state.busy && state.disabled ? state : null;
-    }, name + " 版本追加请求挂起");
+    process.stdout.write(name + "：" + scenario.status + " 保存已触发，等待唯一版本 POST\n");
+    const pending = await waitForSaveTimingStage(session, name, scenario.status, "pending");
     assert.equal(pending.writeAttempts, 1, name + " 重复点击不得额外发起版本写入");
     const during = await inspectStudioState(session);
     assert.equal(during.canvas, before.canvas, name + " 保存等待期间改变了本地画布");
@@ -846,10 +911,8 @@ async function verifySaveTimingScenarios(session, origin, name, selected) {
     assert.equal(during.autoSave, before.autoSave, name + " 保存等待期间改变了自动保存");
 
     assert.equal(await session.evaluate(releaseSaveTimingInPage), true);
-    const completed = await waitFor(async () => {
-      const state = await session.evaluate(saveTimingStateInPage);
-      return !state.busy && state.hasError ? state : null;
-    }, name + " 延迟保存拒绝后界面恢复");
+    process.stdout.write(name + "：" + scenario.status + " 已释放合成拒绝，等待界面恢复\n");
+    const completed = await waitForSaveTimingStage(session, name, scenario.status, "completed");
     assert.equal(completed.writeAttempts, 1, name + " 失败后不得自动重试写入");
     assert.equal(completed.baselineCleared, scenario.baselineCleared);
     const after = await inspectStudioState(session);
