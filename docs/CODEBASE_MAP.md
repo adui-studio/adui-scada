@@ -863,3 +863,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 
 - `scripts/test-oidc-studio-real-late.mjs`：新增 `classifyStudioLocalDrift`，将 `canvasChanged`、`autoSaveChanged`、`draftCountChanged`、`draftHashChanged` 四项变化分类，并在原保存/远端提交/旧 201 消费/真实 CAS 复核/过期保存拒绝五个阶段执行原强制不变断言，失败只报告字段类别。
 - `scripts/test-oidc-studio-real-late.cases.mjs`：增加两项纯函数分类及敏感信息脱敏用例；预期离线总数由 11 增至 **13**。Node/Windows 真实测试待执行。
+
+### 第十七小批 · SVG 内容快照排除动态视口网格
+
+- `scripts/test-oidc-studio-real-late.mjs`：`readStudioContentCanvasInPage` 仅在本联合专项克隆 SVG 并移除单个直系视口网格 `rect`；`inspectStudioProtectedState` 复用原 `inspectStudioState` 的 IndexedDB 与自动保存观察数据，只将 `canvas` 切换为保留其余 SVG 的语义快照。
+- `scripts/test-oidc-studio-real-late.cases.mjs`：新增 3 项离线用例，确保动态网格尺寸变化不误报、渲染图元变化仍拒绝、画布缺失和重复网格失败；累计目标 **16 项**。
+- 没有修改 React/Vue 生产画布、共享 `test-project-browser-oidc.mjs` 的既有快照、IndexedDB 仓储或安全写入门禁。
