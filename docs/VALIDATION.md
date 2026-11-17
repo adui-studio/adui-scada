@@ -1481,3 +1481,13 @@ PR #64 已按维护者授权 Squash 合并为 `main@d59df5e9ef2d702954f6b2017399
 候选新增单一隔离浏览器模式 `--simulate-save-timing` 和 `test:projects:oidc:save:browser`；通过真实 Keycloak/BFF 同源只读载入建立基线，并在浏览器拦截所有工程非 GET/HEAD，只有当前工程版本追加 POST 会被延迟并得到受控 401/409/503 错误。Node 接收的只包括命中数、按钮 Busy/Disabled、是否出错与 CAS 摘要，不带工程数据或敏感会话信息。React/Vue 均检查两次连续点击只尝试一次 POST、无自动重试、409/401 失效 CAS、503 保持 CAS，以及本地 SVG/IndexedDB/自动保存完整性。离线新增 4 项，预期总数从 24 增至 28；不修改 Lab ACL、数据库、工程版本和生产设备。
 
 协作端已对两份脚本进行了去除 ESM 导入后的 **V8 语法解析静态检查，均无语法错误**；该检查**不等同于 Node.js `node --test`、Oxfmt、完整 TypeScript 6 或真实浏览器验证**。此处仍需 Windows `pnpm run test:projects:oidc:config`、`vp check`、`docs:check`、`pnpm run ready` 及独立 `pnpm run test:projects:oidc:save:browser` 的原始日志、真实退出码和本地 HEAD 核对。特别地，合成 POST 失败不证明真实 PostgreSQL 写入已发生或被回滚，也不涵盖第十三小批真实写入成功后客户端切换上下文时的后端时序。
+
+## 2026-11-17 · PR #69 Windows 验收：质量链通过，真实 Vue 浏览器专项仍失败
+
+维护者 Windows PowerShell 日志显示 `pnpm run test:projects:oidc:config` **28/28**、`vp check` **333 个格式文件正确、188 个受检文件零告警/错误**。完整 `pnpm run ready` 完成 React/Vue/共享包/NestJS 类型检查、Vitest **566/566**、SSE 客户端 **8/8**、故障代理 **4/4**、OIDC 工程浏览器离线 **28/28**、NestJS HTTP E2E **49/49**、86 个 Markdown 检查及 React/Vue/NestJS 构建；后续 PowerShell 的失败退出码断言未触发。以上是**新增修复前原分支的真实 Windows 质量链证据**。
+
+独立 `pnpm run test:projects:oidc:save:browser` **失败，实际退出码 1**：React 完整工程管理及延迟保存 **409/401/503** 三场景通过后，Vue 成功进行首页、真实 BFF、授权分页和临时 IndexedDB 草稿步骤，但在“**取消载入与画布保护**”阶段出现固定安全诊断“**浏览器页面操作失败：服务器工程载入阶段返回受控错误（确认前）**”；Vue 尚未进入延迟保存三场景。**不得将 React 通过或全链 `ready` 通过等同双框架专项通过**。
+
+检查现有 `openProjectInPage` 发现判定缺陷：此前将“本次看到忙碌”直接和“最终仍有错误节点”组合为失败，未要求错误必须属于本次新请求，存在与 E-026 同类的**旧错误跨越忙碌阶段误判风险**。此条件问题已通过增加“前后错误变化 / 曾经清空”核对作最小修正；固定白名单诊断新增身份过期、授权拒绝、版本冲突、快照校验、网络故障、服务故障、协议响应类别，不打印原始错误文案。新增三项 Node 离线用例：旧错误跨忙碌、相同错误清空再出现、诊断脱敏；预期离线总数 **31**。协作端使用当前实际 `openProjectInPage` 函数在 Code Mode V8 模拟三个时序分支，分别得到正确的取消结果、受控版本冲突和受控身份过期；**并非 Windows Node/CDP/Keycloak 复验**。
+
+**根因边界**：日志只有脱敏的“确认前”，无法判定此次 Vue 阻塞究竟来自旧 UI 错误残留、真实 API 401/403/404、版本漂移、网络或快照校验。修复解决了确定存在的测试判定缺陷并增强诊断，但**实际 Vue 失败尚未确认关闭**。后续在最新 PR HEAD 先执行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`、`pnpm run ready`，再独立复测 `pnpm run test:projects:oidc:save:browser`，记录真实退出码及新的固定类别；严禁输出认证 Cookie、Token、工程正文或浏览器原始堆栈。新文档提交之后同样尚未复验。PR #69 保持 Draft，等待维护者明确授权才可合并。
