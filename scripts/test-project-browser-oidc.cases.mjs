@@ -120,6 +120,9 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       ),
       "React 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
     );
+    for (const reason of ["React BFF 会话未通过验证", "Vue BFF 会话未通过验证"]) {
+      assert.equal(describeProjectBrowserFailure(new Error(reason)), reason);
+    }
   });
 
   void it("工程载入诊断只允许固定阶段和类别，不返回真实页面正文", () => {
