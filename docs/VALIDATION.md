@@ -1361,3 +1361,11 @@ E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CD
 由于现有诊断把“同本地主体”和“跨租户”合并，**当前不知哪一条件触发**，不能认定第二位用户必然没有绑定、两次登录必然同一账户，更不能归因于 CAS 数据库事务。补丁仅在 `requireDifferentSubjects` 中将两种错误拆为固定、脱敏的中文类别，并在第二次登录前提示更换账号；测试更新为分别断言对应失败消息，身份拒绝逻辑未放宽。诊断不足记录 E-029。
 
 **仍待 Windows 复验**：最新 HEAD 的 `test:oidc:dual:config`、`vp check`、`docs:check`、`ready`；随后只跑 `test:oidc:dual:preflight` 检查两个不同 Keycloak 账号是否绑定到同一受控租户。**只有预检通过并明确确认当前 NestJS 实际连接本机 `adui_scada` Lab 后**才应执行会写入的 `test:oidc:dual:cas`。没有真实的双用户 201/409 结果，PR 仍 Draft，不合并。
+
+## 2026-11-17 · 第三十四批第六小批真实双 Keycloak CAS 验收通过
+
+维护者 Windows 在本机受控 OIDC Lab 先运行 `pnpm run test:oidc:dual:preflight`：两个独立浏览器分别通过真实 Keycloak 登录普通用户 `adui` 与 `test`，BFF 服务端确认属于同一可信租户、不同本地主体，终端显示“只读预检通过；没有创建工程或修改授权”，**退出码 0**。此前身份校验阶段失败已在真实身份预绑定核对后解除，不需弱化校验。
+
+随后维护者执行显式写入命令 `pnpm run test:oidc:dual:cas`，**退出码 0**。日志确认两个独立 Keycloak/BFF 会话通过主体和租户校验，正式 HTTP API 在本机 Lab 创建专用空白工程 `b34-oidc-cas-0d3b3199-24ec-4740-b9cb-5c7a6087f7ad`，第二主体仅取得该新工程的限定 ACL；两个浏览器实际读取首版后对 `expectedRevision=1` 并发保存，返回**恰好一次 HTTP 201 与一次 HTTP 409**，最终修订号 **2**、真实 PostgreSQL 成功版本与审计主体一致，双方读取最终快照一致。专用工程及审计记录按设计保留供复核，**无需重建、不得无故清理数据库卷**。
+
+**验收范围**：本次证据覆盖真实的两位 Keycloak 用户、两个隔离浏览器、React/Vue HTTPS Origin 的同源 BFF 请求、同一专用工程的服务端 ACL 与 PostgreSQL CAS；不证明多服务进程部署、生产 TLS 基础设施或工业现场安全。维护者此前已对本批诊断修复前候选提供 `test:oidc:dual:config` **11/11**、`vp check` **331/186 零告警**、`docs:check` **86 份**、完整 `ready` **544/544 单测与 49/49 E2E、退出码 0**。此次日志**未附 `git rev-parse HEAD` 与最新诊断文档改动后的完整质量链**；本次更新验收文档后还需对新 HEAD 执行 `vp check`、`docs:check`、`ready` 并核对 SHA。不能把前次质量链记录冒充最新提交验证。
