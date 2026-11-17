@@ -4,6 +4,7 @@ import {
   describeBrowserPageException,
   describeProjectBrowserFailure,
   describeSaveTimingTimeout,
+  requireSaveTimingBaseline,
   inspectStudioState,
   installAccessDenialFaultInPage,
   armAccessDenialInPage,
@@ -657,6 +658,19 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
   });
 
   void it("保存拒绝完成超时区分操作未结束和错误提示未显示", () => {
+    assert.equal(requireSaveTimingBaseline("React", 503, false, false), true);
+    assert.throws(
+      () => requireSaveTimingBaseline("Vue", 409, false, true),
+      (error) =>
+        describeProjectBrowserFailure(error) ===
+        "Vue 延迟保存 409：CAS 基线状态不符合预期",
+    );
+    assert.equal(
+      describeProjectBrowserFailure(
+        new Error("Vue 延迟保存 409：CAS 基线状态不符合预期；secret"),
+      ),
+      "浏览器安全回归断言失败，检查终端测试条件及真实页面状态",
+    );
     const stillBusy = describeSaveTimingTimeout("React", 503, "completed", {
       hits: 1,
       writeAttempts: 1,
