@@ -1,0 +1,278 @@
+import "reflect-metadata";
+import { randomBytes, randomUUID } from "node:crypto";
+import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
+import type { INestApplication } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
+import { Reflector } from "@nestjs/core";
+import request from "supertest";
+import { waterTreatmentDemoDocument } from "@adui/scada-core";
+import { AuthSessionService } from "../src/auth/auth-session.service.js";
+import type { IssuedAuthSession } from "../src/auth/auth-session.service.js";
+import {
+  SCADA_CSRF_COOKIE_NAME,
+  SCADA_SESSION_COOKIE_NAME,
+} from "../src/auth/scada-auth-cookie.js";
+import { ScadaProjectGuard } from "../src/auth/scada-project.guard.js";
+import { ScadaSessionGuard } from "../src/auth/scada-session.guard.js";
+import { SCADA_OIDC_STARTUP_CONFIG } from "../src/auth/oidc-provider-discovery.service.js";
+import { resolveOidcStartupConfig } from "../src/config/oidc-startup.config.js";
+import { PrismaService } from "../src/database/prisma.service.js";
+import { ProjectApiController } from "../src/projects/project-api.controller.js";
+import { ProjectApiExceptionFilter } from "../src/projects/project-api.exception-filter.js";
+import { PrismaProjectVersionStore } from "../src/projects/prisma-project-version-store.js";
+import { ScadaSecurityAuditService } from "../src/security/scada-security-audit.js";
+
+// 本测试执行真实 HTTP + Cookie/CSRF + ACL + Prisma，严格禁止触碰业务库。
+const testUrl = process.env.SCADA_TEST_DATABASE_URL;
+if (!testUrl) throw new Error("真实双会话 HTTP 测试必须显式设置 SCADA_TEST_DATABASE_URL");
+let parsedUrl: URL;
+try {
+  parsedUrl = new URL(testUrl);
+} catch {
+  throw new Error("真实双会话 HTTP 测试数据库地址格式无效");
+}
+if (
+  !["127.0.0.1", "localhost"].includes(parsedUrl.hostname) ||
+  parsedUrl.pathname !== "/adui_scada_test" ||
+  !["postgresql:", "postgres:"].includes(parsedUrl.protocol)
+) {
+  throw new Error("真实双会话 HTTP 测试仅允许连接本机 adui_scada_test 隔离数据库");
+}
+
+const originalDatabaseUrl = process.env.SCADA_DATABASE_URL;
+const origin = "https://scada.example.org";
+const subjectA = "test-http-engineer-a";
+const subjectB = "test-http-engineer-b";
+const projectId = waterTreatmentDemoDocument.projectId;
+
+interface IsolatedFixture {
+  readonly tenantId: string;
+  readonly sessionA: IssuedAuthSession;
+  readonly sessionB: IssuedAuthSession;
+}
+
+let app: INestApplication | undefined;
+let database: PrismaService | undefined;
+let sessions: AuthSessionService;
+let store: PrismaProjectVersionStore;
+
+function document() {
+  return JSON.parse(JSON.stringify(waterTreatmentDemoDocument)) as typeof waterTreatmentDemoDocument;
+}
+
+function cookie(session: IssuedAuthSession): string {
+  return (
+    SCADA_SESSION_COOKIE_NAME +
+    "=" +
+    session.token +
+    "; " +
+    SCADA_CSRF_COOKIE_NAME +
+    "=" +
+    session.csrfToken
+  );
+}
+
+function postVersion(session: IssuedAuthSession, expectedRevision = 1) {
+  return request(app!.getHttpServer())
+    .post("/api/v1/projects/" + projectId + "/versions")
+    .set("Cookie", cookie(session))
+    .set("Origin", origin)
+    .set("Sec-Fetch-Site", "same-origin")
+    .set("X-SCADA-CSRF", session.csrfToken)
+    .send({ expectedRevision, document: document() });
+}
+
+/** 每个测试独立租户和会话；只清理本用例写入的记录。 */
+async function withFixture(run: (fixture: IsolatedFixture) => Promise<void>): Promise<void> {
+  const tenantId = "test-" + randomUUID();
+  try {
+    await database!.client.scadaIdentity.createMany({
+      data: [
+        { tenantId, subjectId: subjectA, status: "active" },
+        { tenantId, subjectId: subjectB, status: "active" },
+      ],
+    });
+    const principalA = { tenantId, subjectId: subjectA };
+    const principalB = { tenantId, subjectId: subjectB };
+    const [sessionA, sessionB] = await Promise.all([
+      sessions.issueForVerifiedSubject(principalA),
+      sessions.issueForVerifiedSubject(principalB),
+    ]);
+    await store.create(principalA, { document: document() });
+    await database!.client.scadaProjectGrant.createMany({
+      data: ["project:read", "version:read", "version:append"].map((permission) => ({
+        tenantId,
+        projectId,
+        subjectId: subjectB,
+        permission,
+      })),
+    });
+    await run({ tenantId, sessionA, sessionB });
+  } finally {
+    if (database) {
+      await database.client.scadaProjectAudit.deleteMany({ where: { tenantId } });
+      await database.client.scadaProjectVersion.deleteMany({ where: { tenantId } });
+      await database.client.scadaProjectGrant.deleteMany({ where: { tenantId } });
+      await database.client.scadaProject.deleteMany({ where: { tenantId } });
+      await database.client.scadaAuthSession.deleteMany({ where: { tenantId } });
+      await database.client.scadaIdentity.deleteMany({ where: { tenantId } });
+    }
+  }
+}
+
+beforeAll(async () => {
+  process.env.SCADA_DATABASE_URL = testUrl;
+  database = new PrismaService();
+  await database.onModuleInit();
+  const config = resolveOidcStartupConfig({
+    NODE_ENV: "test",
+    SCADA_OIDC_ENABLED: "true",
+    SCADA_OIDC_ISSUER: "https://id.example.org/realms/scada",
+    SCADA_OIDC_CLIENT_ID: "adui-scada",
+    SCADA_OIDC_CLIENT_SECRET: "isolated-http-cas-test-secret",
+    SCADA_OIDC_REDIRECT_URI: origin + "/api/v1/auth/oidc/callback",
+    SCADA_OIDC_WEB_ORIGINS: origin,
+    SCADA_OIDC_TRANSACTION_ENCRYPTION_KEY: randomBytes(32).toString("base64url"),
+  });
+  if (!config.enabled) throw new Error("真实双会话测试 OIDC 配置未启用");
+  const moduleRef = await Test.createTestingModule({
+    controllers: [ProjectApiController],
+    providers: [
+      { provide: PrismaService, useValue: database },
+      { provide: SCADA_OIDC_STARTUP_CONFIG, useValue: config },
+      AuthSessionService,
+      PrismaProjectVersionStore,
+      ScadaSecurityAuditService,
+      ScadaSessionGuard,
+      ScadaProjectGuard,
+      ProjectApiExceptionFilter,
+      Reflector,
+    ],
+  }).compile();
+  sessions = moduleRef.get(AuthSessionService);
+  store = moduleRef.get(PrismaProjectVersionStore);
+  app = moduleRef.createNestApplication();
+  await app.init();
+});
+
+afterAll(async () => {
+  try {
+    await app?.close();
+    await database?.onModuleDestroy();
+  } finally {
+    if (originalDatabaseUrl === undefined) delete process.env.SCADA_DATABASE_URL;
+    else process.env.SCADA_DATABASE_URL = originalDatabaseUrl;
+  }
+});
+
+describe("本机隔离 PostgreSQL 双 Cookie 会话 HTTP CAS 事务", () => {
+  it("两个不同可信主体的独立 Cookie 会话均通过实际授权列表与身份隔离", async () => {
+    await withFixture(async ({ tenantId, sessionA, sessionB }) => {
+      expect(sessionA.sessionId).not.toBe(sessionB.sessionId);
+      expect(sessionA.token).not.toBe(sessionB.token);
+      const responses = await Promise.all(
+        [sessionA, sessionB].map((session) =>
+          request(app!.getHttpServer())
+            .get("/api/v1/projects")
+            .set("Cookie", cookie(session)),
+        ),
+      );
+      for (const response of responses) {
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([expect.objectContaining({ projectId, headRevision: 1 })]);
+      }
+      expect(await database!.client.scadaAuthSession.count({ where: { tenantId } })).toBe(2);
+      const unauthenticated = await request(app!.getHttpServer()).get("/api/v1/projects");
+      expect(unauthenticated.status).toBe(401);
+    });
+  });
+
+  it("错误 CSRF、非法 Origin 和混用凭据均拒绝写入且不改变水位", async () => {
+    await withFixture(async ({ tenantId, sessionA, sessionB }) => {
+      const wrongCsrf = await postVersion(sessionA).set("X-SCADA-CSRF", sessionB.csrfToken);
+      expect(wrongCsrf.status).toBe(403);
+      const wrongOrigin = await postVersion(sessionA).set("Origin", "https://untrusted.example.org");
+      expect(wrongOrigin.status).toBe(403);
+      const mixedCredentials = await postVersion(sessionA).set(
+        "Authorization",
+        "Bearer " + sessionA.token,
+      );
+      expect(mixedCredentials.status).toBe(401);
+      const project = await database!.client.scadaProject.findUniqueOrThrow({
+        where: { tenantId_projectId: { tenantId, projectId } },
+      });
+      expect(project.headRevision).toBe(1n);
+      expect(
+        await database!.client.scadaProjectVersion.count({ where: { tenantId, projectId } }),
+      ).toBe(1);
+      expect(
+        await database!.client.scadaProjectAudit.count({ where: { tenantId, projectId } }),
+      ).toBe(1);
+    });
+  });
+
+  it("有有效会话但缺少版本追加 ACL 的主体仍无法写入工程", async () => {
+    await withFixture(async ({ tenantId, sessionB }) => {
+      const removed = await database!.client.scadaProjectGrant.deleteMany({
+        where: { tenantId, projectId, subjectId: subjectB, permission: "version:append" },
+      });
+      expect(removed.count).toBe(1);
+      const denied = await postVersion(sessionB);
+      expect(denied.status).toBe(404);
+      const summary = await request(app!.getHttpServer())
+        .get("/api/v1/projects")
+        .set("Cookie", cookie(sessionB));
+      expect(summary.status).toBe(200);
+      expect(summary.body).toHaveLength(1);
+      expect(
+        await database!.client.scadaProjectVersion.count({ where: { tenantId, projectId } }),
+      ).toBe(1);
+    });
+  });
+
+  it("两个不同会话并发保存同一修订号只能一个 HTTP 201，另一个 HTTP 409", async () => {
+    await withFixture(async ({ tenantId, sessionA, sessionB }) => {
+      const responses = await Promise.all([postVersion(sessionA), postVersion(sessionB)]);
+      expect(responses.map((response) => response.status).sort()).toEqual([201, 409]);
+      const winningIndex = responses.findIndex((response) => response.status === 201);
+      expect(winningIndex).toBeGreaterThanOrEqual(0);
+      const winning = responses[winningIndex]!;
+      const losing = responses[1 - winningIndex]!;
+      const winner = winningIndex === 0 ? subjectA : subjectB;
+      expect(winning.body.revision).toBe(2);
+      expect(winning.body.contentHash).toMatch(/^[a-f0-9]{64}$/);
+      expect(losing.body).toEqual({
+        statusCode: 409,
+        message: "工程版本已变化，请重新获取最新修订号",
+      });
+      expect(JSON.stringify(losing.body)).not.toContain("Prisma");
+
+      const [project, versions, audits] = await Promise.all([
+        database!.client.scadaProject.findUniqueOrThrow({
+          where: { tenantId_projectId: { tenantId, projectId } },
+        }),
+        database!.client.scadaProjectVersion.findMany({
+          where: { tenantId, projectId },
+          orderBy: { revision: "asc" },
+        }),
+        database!.client.scadaProjectAudit.findMany({
+          where: { tenantId, projectId },
+          orderBy: { revision: "asc" },
+        }),
+      ]);
+      expect(project.headRevision).toBe(2n);
+      expect(versions.map((version) => version.revision)).toEqual([1n, 2n]);
+      expect(versions[1]?.contentHash).toBe(winning.body.contentHash);
+      expect(versions[1]?.createdBy).toBe(winner);
+      expect(audits.map((audit) => audit.revision)).toEqual([1n, 2n]);
+      expect(audits.map((audit) => audit.actorId)).toEqual([subjectA, winner]);
+
+      const staleRetry = await postVersion(winningIndex === 0 ? sessionB : sessionA);
+      expect(staleRetry.status).toBe(409);
+      const afterRetry = await database!.client.scadaProjectVersion.count({
+        where: { tenantId, projectId },
+      });
+      expect(afterRetry).toBe(2);
+    });
+  });
+});
