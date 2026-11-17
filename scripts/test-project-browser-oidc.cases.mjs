@@ -6,6 +6,7 @@ import {
   inspectStudioState,
   installAccessDenialFaultInPage,
   armAccessDenialInPage,
+  triggerStudioResumeInPage,
   openProjectInPage,
   requireAuthorizedProjectPage,
   requireRealMultiPageCoverage,
@@ -338,13 +339,18 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       prepareMultiPage: false,
       simulateAccessDenial: true,
     });
+    assert.deepEqual(resolveProjectBrowserMode(["--simulate-resume-check"], lab), {
+      requireMultiPage: false,
+      prepareMultiPage: false,
+      simulateResumeCheck: true,
+    });
     assert.deepEqual(
       resolveProjectBrowserMode(["--prepare-multipage", "--confirm-lab", "adui_scada"], lab),
       { requireMultiPage: false, prepareMultiPage: true },
     );
     assert.throws(
       () => resolveProjectBrowserMode(["--prepare-multipage"], lab),
-      /仅支持 --require-multipage、--simulate-access-denial 或显式确认的多页数据准备参数/,
+      /仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check 或显式确认的多页数据准备参数/,
     );
     assert.throws(
       () =>
@@ -363,12 +369,75 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
           ["--simulate-access-denial", "--confirm-lab", "adui_scada"],
           sample,
         ),
-      /仅支持 --require-multipage、--simulate-access-denial 或显式确认的多页数据准备参数/,
+      /仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check 或显式确认的多页数据准备参数/,
     );
     assert.throws(
       () => resolveProjectBrowserMode(["--simulate-access-denial", "--prepare-multipage"], sample),
-      /仅支持 --require-multipage、--simulate-access-denial 或显式确认的多页数据准备参数/,
+      /仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check 或显式确认的多页数据准备参数/,
     );
+  });
+
+  void it("标签页恢复模式不得与数据库写入确认或其他浏览器模式组合", () => {
+    for (const parameters of [
+      ["--simulate-resume-check", "--confirm-lab", "adui_scada"],
+      ["--simulate-resume-check", "--prepare-multipage"],
+      ["--simulate-resume-check", "--simulate-access-denial"],
+    ]) {
+      assert.throws(
+        () => resolveProjectBrowserMode(parameters, sample),
+        /仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check 或显式确认的多页数据准备参数/,
+      );
+    }
+  });
+
+  void it("标签页恢复的 401 模拟仅可命中同源身份接口并保持工程写入阻断", async () => {
+    let forwarded = 0;
+    const runtime = {
+      location: {
+        origin: "https://127.0.0.1:15173",
+        href: "https://127.0.0.1:15173/studio",
+      },
+      async fetch() {
+        forwarded += 1;
+        return new Response("{}", { status: 200 });
+      },
+    };
+    installAccessDenialFaultInPage(runtime);
+    assert.equal(armAccessDenialInPage("project-1", "identity", 401, runtime), true);
+    assert.equal((await runtime.fetch("/api/v1/auth/me")).status, 401);
+    assert.equal((await runtime.fetch("/api/v1/projects/project-1")).status, 200);
+    assert.equal((await runtime.fetch("/api/v1/projects", { method: "POST" })).status, 403);
+    assert.equal(runtime.__aduiTestAccessDenial.hits, 1);
+    assert.equal(runtime.__aduiTestAccessDenial.writeAttempts, 1);
+    assert.equal(forwarded, 1);
+    assert.throws(
+      () => armAccessDenialInPage("project-1", "identity", 404, runtime),
+      /权限拒绝模拟参数不合法/,
+    );
+  });
+
+  void it("标签页恢复事件只在页面可见时派发，绝不执行网络写入", () => {
+    const previous = globalThis.document;
+    const seen = [];
+    globalThis.document = {
+      visibilityState: "visible",
+      dispatchEvent(event) {
+        seen.push(event.type);
+      },
+    };
+    try {
+      assert.equal(triggerStudioResumeInPage(), true);
+      assert.deepEqual(seen, ["visibilitychange"]);
+      globalThis.document.visibilityState = "hidden";
+      assert.throws(
+        () => triggerStudioResumeInPage(),
+        /标签页恢复测试要求浏览器页面处于可见状态/,
+      );
+      assert.deepEqual(seen, ["visibilitychange"]);
+    } finally {
+      if (previous === undefined) delete globalThis.document;
+      else globalThis.document = previous;
+    }
   });
 
   void it("隔离浏览器永久拒绝任何工程写请求且不转发到真实 Lab", async () => {
