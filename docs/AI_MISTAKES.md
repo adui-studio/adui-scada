@@ -266,6 +266,15 @@
 
 > **2026-11-17 结案补录（E-029）**：上文“尚待 Windows 复验”保留为错误发生和修复候选时的历史状态，不再是本专项的最新结论。维护者已用两个不同的 Keycloak 账号在独立隔离浏览器分别执行 `test:oidc:dual:preflight` 与 `test:oidc:dual:cas`，**两条命令退出码均为 0**；真实 BFF 身份为同租户不同主体，CAS 实际返回 **201＋409**，最终修订号 2、成功版本和审计操作者一致。修复后的最新文档 HEAD 的 `vp check` / `docs:check` / 完整 `ready` 以及本地提交 SHA 对照仍待补证；成功的交互式浏览器专项不等于整个新 HEAD 的所有质量检查通过。
 
+### E-030 · ACL 测试 Mock 将 DELETE RETURNING 误归类为 SELECT（第三十四批第十小批）
+
+- **现象**：候选脚本 `test-oidc-real-acl-revocation.cases.mjs` 新增 8 项离线测试后，协作端对真实脚本函数和相应测试以 V8 模拟运行，首次得到 **7/8**；“撤权只删除全新专用工程的第二主体三项固定 ACL”失败并返回安全诊断“专用工程权限撤销失败，必须核对定向 ACL”。**这不是 Windows Node `--test` 日志，也未调用真实 PostgreSQL。**
+- **根因**：新数据库 Mock 先检查 `sql.includes("FROM public.scada_project_grants")`，而真实 SQL `DELETE FROM public.scada_project_grants … RETURNING permission` 同时包含这个子串，优先命中 SELECT 分支并错误返回已有授权数据；随后 `RETURNING permission` 校验按设计拒绝。根因属于**测试夹具 SQL 匹配次序**，不是真实数据库撤权代码已通过或已失败。
+- **修复**：仅将 Mock 中 `sql.startsWith("DELETE FROM public.scada_project_grants")` 的匹配放到 `includes("FROM public.scada_project_grants")` 之前；真实串行化事务、工程前缀/主体/首版/三项权限保护、回滚与单元断言保持不变。
+- **避免**：SQL 模拟测试若采用包含子串匹配，先处理有副作用的准确语句类型（DELETE/INSERT/UPDATE），后处理 SELECT；对 `DELETE … RETURNING` 必须断言返回的字段结构，并检查调用参数只命中随机专用工程和第二主体。不要为使测试通过修改生产 SQL 权限约束。
+- **验证**：同一协作 V8 模拟条件复验 **8/8**；当前仅为非 Node/非 PostgreSQL 的候选自检，Windows `pnpm run test:oidc:revoke:config`、`vp check`、`ready` 与真实 Lab 撤权专项**均待维护者执行**，不得声明验收通过。
+- **证据**：`scripts/test-oidc-real-acl-revocation.cases.mjs`、`scripts/test-oidc-real-acl-revocation.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
