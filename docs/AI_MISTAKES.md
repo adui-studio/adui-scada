@@ -394,6 +394,15 @@
 - **验证边界**：第三轮真实浏览器**退出码 1**为用户已提供证据；新增分类纯函数在隔离 V8 中以五种输入核对全为预期，但这**不是仓库 Node 测试或真实浏览器验证**。候选离线测试目标 **13/13**；最新补丁的 Windows `vp check`、`docs:check`、`ready` 及真实 Keycloak/PostgreSQL/React/Vue 专项都尚待实测。用户日志仍未附本地 Git HEAD。
 - **证据**：PR #72、第三轮 Windows 真实 Studio 浏览器日志、`scripts/test-oidc-studio-real-late.mjs`、`scripts/test-oidc-studio-real-late.cases.mjs`、`docs/VALIDATION.md`。
 
+### E-044 · Studio SVG 快照将随视口变化的辅助网格误当成工程内容（第三十四批第十七小批）
+
+- **现象**：维护者第四轮 Windows `pnpm run test:oidc:dual:studio:late` 已完成 React 真正保存版本 2、第二主体真实追加版本 3、旧 201 交付及浏览器可见性恢复；CAS 只读复核后严格本地检查输出 `{"canvasChanged":true,"autoSaveChanged":false,"draftCountChanged":false,"draftHashChanged":false}`，专项**退出码 1**。后续 PostgreSQL 最终审计和 Vue 联合流程没有执行。
+- **已确认的测试设计缺陷**：现有 `inspectStudioState` 使用 `.studio-svg.innerHTML` 代表整个画布，但 React/Vue 画布都在 SVG 内直接渲染 `fill="url(#scada-studio-grid)"` 的辅助网格矩形，`x/y/width/height` 与 `visibleRect` 绑定并可随真实窗口可见性/尺寸变化重新计算。原始 `innerHTML` 并非稳定的工程内容快照。**本轮变化是否确实仅由网格坐标引起尚待 Windows 复验**，不能据此认定生产数据已经损坏或完全无异常。
+- **最小修复候选**：仅在第十七小批真实浏览器专项引入 `readStudioContentCanvasInPage`，克隆当前 SVG，精确移除**顶层、填充为 `url(#scada-studio-grid)` 的一个视口辅助网格 `rect`**。其他完整 SVG 内容，包括渲染 `image`、背景、边界、图元、命中层及辅助交互节点继续严格比较。缺失画布或重复视口网格安全失败。保留原 `classifyStudioLocalDrift` 的四项布尔输出、五个阶段对比以及 IndexedDB 草稿整记录 SHA-256、数量、自动保存状态、CAS 和 SQL 审计全部断言；不修改 React/Vue 生产业务代码、Core 或数据库。
+- **防复发**：涉及画布的端到端快照必须区别“工程内容”和“随窗口/缩放变化的视口辅助元素”；不能随意将整个 DOM `innerHTML` 当作持久化 Schema。只排除经源码明确确认的非持久化动态节点，并用负向用例证明业务 SVG 真改变仍失败。不得把此次候选说成真实根因已实测结案。
+- **验证边界**：新增三个 Node 离线测试定义（目标由 **13** 项增加至 **16** 项），覆盖视口网格变化不影响内容、图元或渲染变化仍被识别、重复网格/画布缺失拒绝。页面函数从仓库源码提取后在隔离 V8 Mock 执行以上三类路径符合预期，**但不是 Node 16/16 或 Windows 真实浏览器通过证据**。最新候选 `vp check`、`docs:check`、`ready`、React/Vue 真 Lab 均未复验。
+- **证据**：维护者第四轮 Windows 原始日志、PR #72、`apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`、`scripts/test-project-browser-oidc.mjs`、`scripts/test-oidc-studio-real-late.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
