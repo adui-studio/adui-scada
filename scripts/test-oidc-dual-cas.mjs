@@ -19,7 +19,8 @@ const SERVER_PACKAGE = fileURLToPath(new URL("../apps/server/package.json", impo
 const LOOPBACK = "127.0.0.1";
 const PROJECT_PREFIX = "b34-oidc-cas-";
 const PRINCIPAL_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
-const PROJECT_PATTERN = /^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const PROJECT_PATTERN =
+  /^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 const SAFE_ERRORS = new Set([
   "双身份专项只支持只读预检或显式确认的本机 CAS 验收",
@@ -71,8 +72,10 @@ export function requireCasResult(results) {
   if (
     !Array.isArray(results) ||
     results.length !== 2 ||
-    results.map((result) => result?.status).sort((left, right) => left - right).join(",") !==
-      "201,409"
+    results
+      .map((result) => result?.status)
+      .sort((left, right) => left - right)
+      .join(",") !== "201,409"
   ) {
     throw new Error("双会话 HTTP CAS 结果不是一次 201 与一次 409");
   }
@@ -115,7 +118,9 @@ export async function identityInPage(expectedOrigin, runtime = globalThis) {
 
 export async function createCasProjectInPage(origin, projectId, runtime = globalThis) {
   if (runtime.location.origin !== origin) throw new Error("专用工程创建失败，禁止修改其他工程");
-  if (!/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId)) {
+  if (
+    !/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId)
+  ) {
     throw new Error("专用工程创建失败，禁止修改其他工程");
   }
   const matches = runtime.document.cookie
@@ -256,10 +261,13 @@ class BrowserSession {
   send(method, params = {}) {
     const id = ++this.counter;
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error("隔离浏览器调试连接失败"));
-      }, method === "Runtime.evaluate" ? 45000 : 15000);
+      const timer = setTimeout(
+        () => {
+          this.pending.delete(id);
+          reject(new Error("隔离浏览器调试连接失败"));
+        },
+        method === "Runtime.evaluate" ? 45000 : 15000,
+      );
       this.pending.set(id, { resolve, reject, timer });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
@@ -367,7 +375,9 @@ async function waitForLogin(session, origin, label) {
   await session.send("Page.navigate", {
     url: origin + "/api/v1/auth/oidc/start",
   });
-  process.stdout.write("请在" + label + "的独立隔离浏览器中手动登录已预绑定的 Keycloak 测试用户；不要输入终端密码。\n");
+  process.stdout.write(
+    "请在" + label + "的独立隔离浏览器中手动登录已预绑定的 Keycloak 测试用户；不要输入终端密码。\n",
+  );
   for (let attempt = 0; attempt < 900; attempt += 1) {
     try {
       const principal = await session.evaluate(identityInPage, origin);
@@ -538,7 +548,14 @@ async function run() {
       secondBrowser.evaluate(appendCasVersionInPage, origins[1], projectId),
     ]);
     const outcome = requireCasResult(results);
-    await verifyCasAudit(client, projectId, first, second, outcome.winnerIndex, outcome.contentHash);
+    await verifyCasAudit(
+      client,
+      projectId,
+      first,
+      second,
+      outcome.winnerIndex,
+      outcome.contentHash,
+    );
     const [afterFirst, afterSecond] = await Promise.all([
       firstBrowser.evaluate(readCasProjectInPage, origins[0], projectId, 2),
       secondBrowser.evaluate(readCasProjectInPage, origins[1], projectId, 2),

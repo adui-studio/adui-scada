@@ -22,28 +22,21 @@ const csrf = "scada_csrf_" + "a".repeat(43);
 void describe("真实双 Keycloak 主体 CAS 浏览器安全预检", () => {
   void it("默认只读，写入必须使用完整的本机 Lab 双重确认", () => {
     assert.deepEqual(parseDualOidcMode([]), { write: false });
-    assert.deepEqual(
-      parseDualOidcMode(["--run-cas", "--confirm-lab", "adui_scada"]),
-      { write: true },
-    );
+    assert.deepEqual(parseDualOidcMode(["--run-cas", "--confirm-lab", "adui_scada"]), {
+      write: true,
+    });
     for (const args of [
       ["--run-cas"],
       ["--run-cas", "--confirm-lab", "adui_scada_test"],
       ["--run-cas", "--confirm-lab", "adui_scada", "--force"],
     ]) {
-      assert.throws(
-        () => parseDualOidcMode(args),
-        /只支持只读预检或显式确认的本机 CAS 验收/,
-      );
+      assert.throws(() => parseDualOidcMode(args), /只支持只读预检或显式确认的本机 CAS 验收/);
     }
   });
 
   void it("拒绝相同主体、不同租户和非法的可信身份上下文", () => {
     assert.doesNotThrow(() => requireDifferentSubjects(first, second));
-    assert.throws(
-      () => requireDifferentSubjects(first, first),
-      /必须属于同一可信租户的不同主体/,
-    );
+    assert.throws(() => requireDifferentSubjects(first, first), /必须属于同一可信租户的不同主体/);
     assert.throws(
       () => requireDifferentSubjects(first, { ...second, tenantId: "other" }),
       /必须属于同一可信租户的不同主体/,
@@ -242,9 +235,7 @@ void describe("真实双 Keycloak 主体 CAS 浏览器安全预检", () => {
   });
 
   void it("未知浏览器异常与敏感字段必须统一脱敏", () => {
-    const diagnostic = describeDualOidcFailure(
-      new Error("secret_cookie=不允许进入终端"),
-    );
+    const diagnostic = describeDualOidcFailure(new Error("secret_cookie=不允许进入终端"));
     assert.equal(diagnostic, "双身份 OIDC Lab 专项未通过，内部错误详情已脱敏");
     assert.equal(diagnostic.includes("secret_cookie"), false);
   });
