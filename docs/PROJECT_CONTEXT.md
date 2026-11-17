@@ -1278,3 +1278,9 @@ PR #66 的 React / Vue 标签页恢复只读复核已由维护者在 Windows 完
 前置 PR #67 已按维护者明确授权 Squash 合并为 `main@0d5962b5b7d5b208a550d8cd3ba9a4b72b508c6d`，维护者 Windows 已在上一批通过 561/561 单测、49/49 服务端 E2E、`vp check`、React/Vue/NestJS 构建与 `ready` 退出码 0。本批复核了共享 `saveDocument` 的网络等待边界：若本地会话中途 `reset`、重新确认载入或访问失效，迟到的旧 401/404/409、创建或追加成功回包不能覆盖/清空新 CAS 基线；服务端 POST 已发出时仍可能成功，所以必须提示人工重新读取最新版本，不可自动重试或冒称远端已回滚。
 
 候选仅更改 `packages/api-client/src/studio-session.ts`、新增五项 `studio-session.test.ts` 单测并同步需求/设计/验收等文档。Vue/React 仍共用现有服务端会话；未修改编辑器、IndexedDB、API、Prisma、OIDC Lab、工业设备。目标单测共享 **30/30**、全量 **566/566**，**本批 Windows `vp check`、`test:unit`、`docs:check`、`ready` 均待实测**；现有浏览器专项不能替代此批异步写入竞态回归。Draft PR 指派 `@adui-dev`，未经单独明确授权不得合并。
+
+## 2026-11-17 · 第三十四批第十三小批：Windows 全链验收通过，PR #68 待审查
+
+维护者 Windows 实测确认共享 Studio 服务端会话 **30/30**、整仓 Vitest **566/566**（49 文件），新增的五项“保存请求中切换上下文”的迟到 401/404/创建或追加回包回归均包含其中。独立 `vp check` **333 个格式文件 / 188 个受检文件零警告错误**；`docs:check` 86 份 Markdown 通过；完整 `pnpm run ready` 完成 React/Vue/共享包/NestJS 类型检查、OIDC 工程浏览器离线 24/24、SSE 8/8、故障代理 4/4、服务端 HTTP E2E 49/49 以及 React/Vue/Server 构建，PowerShell **退出码 0**。此前文档中的“候选、待复验”属于开发当时的历史状态，不代表当前仍未通过。
+
+本批仍限定共享 API Client 的保存会话状态保护、五项 Promise 单测及相关文档，不执行真实 Lab 工程写入、ACL 修改、数据库迁移或工业设备控制。验收日志未显示本机 Git HEAD；新增竞态尚无真实浏览器/真实 PostgreSQL 延迟写入验证；本段文档提交后的质量链没有重新运行。PR #68 保持 Open / Draft，Assignee 为 `@adui-dev`，必须单独获得维护者明确合并授权。
