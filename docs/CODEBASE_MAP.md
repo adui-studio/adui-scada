@@ -885,3 +885,8 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：既有版本历史“载入”与授权工程列表“打开”都在确认后、暂停自动保存之前调用相同共享只读验证；未改变编辑器引擎、工程格式或后端。
 - `scripts/test-project-browser-oidc.mjs`：原真实 Keycloak 双框架 Lab 专项扩展 `confirm-drift` 合成 GET 版本差异，阻止确认后覆盖；409 预览后经真实服务端版本列表按钮进行人工确认载入，核对 CAS 恢复、草稿未覆盖、自动保存暂停且无额外版本 POST。
 - `scripts/test-project-browser-oidc.cases.mjs`：新增 **2 项** Node 内置离线保护测试，目标 OIDC 工程浏览器安全离线共 **37 项**；沿用原严格 Lab 环境、临时 Profile、CSRF 和全部工程写请求本地阻断。
+## 第三十四批第二十小批 · 真实多标签页 OIDC 会话回归
+
+- scripts/test-oidc-real-multitab.mjs：一个隔离 Chrome/Edge Profile 内创建 React/Vue 写入与跟随四个真实标签页；通过真实标签切换触发既有前台 BFF/CAS 复核，使用正式同源 CSRF 注销接口验证共享会话失效。仅创建一份随机专用工程并追加修订 2/3，跟随标签页工程 POST 始终本地阻断。
+- scripts/test-oidc-real-multitab.cases.mjs：Node 内置离线安全测试覆盖显式本机数据库确认、真实可见事件计数、同一租户/主体、注销 CSRF 契约、脱敏状态摘要、本地画布/草稿/自动保存一致性及错误脱敏。
+- 根 package.json：增加 test:projects:oidc:multitab:config 并纳入 ready；增加独立手工执行的 test:projects:oidc:multitab:browser，不把真实登录、工程写入和注销放入默认质量链。

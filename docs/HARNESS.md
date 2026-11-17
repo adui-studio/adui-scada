@@ -2885,3 +2885,42 @@ if ($browserExitCode -ne 0) { throw "确认载入浏览器专项失败" }
 ```
 
 验收需要看到 React **和** Vue 在“确认载入前的模拟远端版本冲突”时保持原画布、草稿和自动保存，确认后合成 HEAD 水位变化拒绝载入；然后正常确认打开工程建立 CAS 基线，409 只读预览最新版后通过真正 UI 确认再次载入恢复 CAS，同时只产生测试 Profile 内的单次被拦截 POST，其他全部为真实受保护 GET。既有 401、503 恢复仍须通过。最终命令退出码为 **0** 才能验收；没有实测日志前所有测试计数均是目标，不是结果。此专项非物理 TCP 断流、非生产/工业现场验收。
+## 第三十四批第二十小批 · 真实多标签页 OIDC 会话与 CAS 验收
+
+本批真实浏览器专项使用**一个临时 Chrome/Edge Profile、四个真实标签页、一个普通 Keycloak 测试用户**。React/Vue 使用现有本机 HTTPS Origin；四个标签页共用浏览器 Host Cookie 存储，但身份/工程请求仍只发往当前标签页自己的同源 BFF。运行前确保本机可信 Keycloak、React/Vue HTTPS、NestJS、隔离 PostgreSQL Lab 和 NODE_EXTRA_CA_CERTS 均按现有 AGENTS.md / HARNESS.md 约束就绪。
+
+先执行离线安全用例和完整质量链：
+
+~~~powershell
+git status --short
+git fetch origin
+git switch --track origin/feature/v0.3-b34-multitab-oidc-session
+git rev-parse HEAD
+
+pnpm run test:projects:oidc:multitab:config
+if ($LASTEXITCODE -ne 0) { throw "真实多标签页离线安全测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "第二十小批完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+~~~
+
+在维护者明确确认本机 Lab 数据库名称后，单独运行真实浏览器专项：
+
+~~~powershell
+pnpm run test:projects:oidc:multitab:browser
+$browserExitCode = $LASTEXITCODE
+Write-Host "第二十小批真实多标签页专项退出码：$browserExitCode"
+if ($browserExitCode -ne 0) { throw "真实多标签页 OIDC 专项失败" }
+~~~
+
+交互说明：命令启动一个全新的隔离浏览器窗口，维护者只需手动登录一次已预绑定的普通 Keycloak 测试用户；不要在终端输入或粘贴密码。脚本在本轮专用工程上通过正式 BFF 创建首版，由 React 写入端真实追加 2、Vue 写入端真实追加 3；React/Vue 跟随标签页通过实际切换前台触发服务端水位复核，并点击现有 Studio 保存按钮验证旧 CAS 不产生工程 POST。随后 React 写入端执行真实 /api/v1/auth/logout CSRF 注销，两个跟随标签页分别切回前台，验证真实 401、CAS/授权缓存失效与本地草稿保护。
+
+本轮仅新建一份随机 b34-oidc-cas-UUID 专用工程，保留版本 1/2/3 供维护者复核；不会更改其他工程、ACL、身份映射或现有 Lab 业务数据。跟随标签页内所有工程非 GET/HEAD 请求始终由页面 Fetch 包装器阻断，必须保持零穿透。隐藏标签页在后台期间不应收到即时身份广播，只有切回前台后才通过真实 BFF 复核；这不是后台推送、物理 TCP 断流或生产/工业现场验收。临时浏览器 Profile 在退出时关闭并清理。
