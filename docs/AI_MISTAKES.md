@@ -415,6 +415,16 @@
 - **验证边界**：本次只完成隔离 ECMAScript 语法解析；仓库 Node `--test`、Windows `vp check`、`docs:check`、完整 `ready` 和真实双标签页 Lab 尚未执行，不能写成通过。
 - **证据**：`scripts/test-oidc-studio-multitab.mjs`、`scripts/test-oidc-studio-multitab.cases.mjs`。
 
+
+### E-046 · 清理脚本导入时误删入口守卫仍使用的 resolve（第三十四批第二十小批）
+
+- **现象**：整理新浏览器脚本的未使用导入时，误将 node:path 的 resolve 一并移除；文件底部的直接执行入口仍调用 resolve(process.argv[1])。文件语法解析不会检查该标识符是否在运行时可用。
+- **根因**：只根据主流程中的路径拼接判断导入是否使用，没有全文搜索入口守卫和模块尾部代码。
+- **修正**：恢复 resolve 导入，并保留 join；未改变入口守卫行为。
+- **防复发**：删除导入前必须对整个文件搜索标识符全部引用点；语法解析后还要做静态标识符核对或真实 Node 执行，不能把“语法通过”当成“运行通过”。
+- **验证边界**：当前已恢复导入；仓库 Node 运行、Windows Vite+ 检查和真实浏览器专项仍待执行。
+- **证据**：scripts/test-oidc-studio-multitab.mjs。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
