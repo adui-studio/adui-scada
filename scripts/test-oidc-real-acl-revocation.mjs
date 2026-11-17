@@ -175,7 +175,10 @@ export async function verifyRevokedProject(client, projectId, first, second) {
 
 /** 独立浏览器仅返回真实 HTTP 状态码，不读取响应正文与用户 Cookie。 */
 export async function revokedResponsesInPage(origin, projectId, runtime = globalThis) {
-  if (runtime.location.origin !== origin || !PROJECT_PATTERN.test(projectId)) {
+  if (
+    runtime.location.origin !== origin ||
+    !/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId)
+  ) {
     throw new Error("专用工程历史或权限校验失败");
   }
   const path = "/api/v1/projects/" + encodeURIComponent(projectId);
