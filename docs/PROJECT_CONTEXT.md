@@ -1198,3 +1198,9 @@ PR #57 经维护者人工验收和单独合并授权，以 Squash Commit `c426d2
 维护者 Windows 实测候选：新增真实双 Cookie HTTP CAS 专项 **4/4**，全部隔离 PostgreSQL 回归 **29/29**、退出码 0；离线 OIDC 浏览器保护 **18/18**、`vp check` **329 个格式文件 / 184 个受检文件零告警**、完整 `pnpm run ready` **544/544 单元测试、49/49 服务端 E2E**、React/Vue/NestJS 构建成功、退出码 0。HTTP 竞争场景验证两份真实服务端签发并存储的 Cookie/CSRF 会话只产生一个 HTTP 201 与一个 HTTP 409，数据库修订号、历史与审计一致；并非两次真实 Keycloak 授权码登录。
 
 此前数值数组未带比较器导致的 Vite+ 1 条 Lint 警告，已最小修复并在复验日志中关闭，记录 E-027。PR #60 仍保持 Draft、Assignee `@adui-dev`，未获本次合并授权。Windows 日志未附 `git rev-parse HEAD`，新补的文档提交须再跑 `docs:check`；不需要再次运行会写入随机测试租户的数据库专项来验证纯文档变化，除非代码 HEAD 又发生改变。
+
+## 2026-11-17 · 第三十四批第六小批：真实双 Keycloak 主体 HTTP CAS 候选（待验收）
+
+以已合并 PR #60 的 `main@e7c345b8` 为基线，新增两个独立浏览器 Profile 的真实 Keycloak 双主体登录与受控 HTTP CAS 专项。已有第一位普通预绑定用户，**第二位同租户不同本地主体是否已在 Lab 中预绑定尚未确认**；工具不能创建 Keycloak 身份，不模拟第二用户。默认预检只核对两次真实 BFF 会话；需维护者显式执行 `test:oidc:dual:cas` 才通过正式 API 创建新专用空白工程，并仅给第二主体授予这一新工程的三项 ACL；两个浏览器从 React/Vue Origin 同时提交相同修订号，核对 201/409、最终快照、PostgreSQL 水位/审计。新工程保留、不删除、不触碰现有 11 项分页测试工程。
+
+本批暂只有候选 GitHub 代码及有限语法/Mock 静态核对，真实两个 Keycloak 用户登录、Windows 质量链、隔离 Lab 写入验证均待维护者执行；不修改生产业务、工程 Schema、Prisma 迁移、工业协议或设备写入权限。PR 必须保持 Draft 并指派 `@adui-dev`，未获明确授权不得合并。
