@@ -178,11 +178,7 @@ export class StudioServerProjectSession {
           throw error;
         }
         // 首次保存的 404 仍允许尝试创建；服务端独立校验身份和租户唯一约束。
-        const created = await this.awaitSaveStep(
-          generation,
-          this.api.createProject(checked),
-          true,
-        );
+        const created = await this.awaitSaveStep(generation, this.api.createProject(checked), true);
         this.contextGeneration += 1;
         this.baseline = {
           projectId: checked.projectId,
