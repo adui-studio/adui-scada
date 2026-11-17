@@ -1491,3 +1491,11 @@ PR #64 已按维护者授权 Squash 合并为 `main@d59df5e9ef2d702954f6b2017399
 检查现有 `openProjectInPage` 发现判定缺陷：此前将“本次看到忙碌”直接和“最终仍有错误节点”组合为失败，未要求错误必须属于本次新请求，存在与 E-026 同类的**旧错误跨越忙碌阶段误判风险**。此条件问题已通过增加“前后错误变化 / 曾经清空”核对作最小修正；固定白名单诊断新增身份过期、授权拒绝、版本冲突、快照校验、网络故障、服务故障、协议响应类别，不打印原始错误文案。新增三项 Node 离线用例：旧错误跨忙碌、相同错误清空再出现、诊断脱敏；预期离线总数 **31**。协作端使用当前实际 `openProjectInPage` 函数在 Code Mode V8 模拟三个时序分支，分别得到正确的取消结果、受控版本冲突和受控身份过期；**并非 Windows Node/CDP/Keycloak 复验**。
 
 **根因边界**：日志只有脱敏的“确认前”，无法判定此次 Vue 阻塞究竟来自旧 UI 错误残留、真实 API 401/403/404、版本漂移、网络或快照校验。修复解决了确定存在的测试判定缺陷并增强诊断，但**实际 Vue 失败尚未确认关闭**。后续在最新 PR HEAD 先执行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`、`pnpm run ready`，再独立复测 `pnpm run test:projects:oidc:save:browser`，记录真实退出码及新的固定类别；严禁输出认证 Cookie、Token、工程正文或浏览器原始堆栈。新文档提交之后同样尚未复验。PR #69 保持 Draft，等待维护者明确授权才可合并。
+
+## 2026-11-17 · PR #69 第二次 Windows 验收：新增诊断断言失败，Vue BFF 阶段未通过
+
+维护者已提供第二轮 Windows PowerShell 原始记录：`pnpm run test:projects:oidc:config` **31 项中 30 通过、1 失败**。唯一失败是新增的“工程载入诊断只允许固定阶段和类别，不返回真实页面正文”，断言实际为已有固定脱敏消息“浏览器页面操作失败，请检查当前 Studio 状态”，而本批新增测试错误地期望另一条通用失败文案。这是**新增测试预期与已有安全契约冲突**，不是敏感数据泄漏。另行 `vp check` **333 个格式文件、188 个受检文件零警告/错误**；`pnpm run ready` 运行到 Vitest **566/566**、SSE 等步骤后，在同一 OIDC 离线用例 **30/31** 处退出码 1；后续 HTTP E2E、文档及构建没有由该次 `ready` 执行完成，**不能标记完整质量链通过**。
+
+独立 `pnpm run test:projects:oidc:save:browser` 再次 **退出码 1**。React 的身份、工程浏览、草稿及模拟延迟保存 409/401/503 全部完成；Vue 完成首页与 Studio 入口后，在“真实 BFF 会话与授权工程列表”阶段得到“浏览器安全回归断言失败”通用诊断，未进入 Vue 工程列表及保存模拟。代码检查显示此阶段首先执行 `authenticatedInPage(origin)` 的布尔断言；认证结果为 false 时原先被通用断言脱敏路径吞没，但**尚不能由日志区分 Origin 不匹配、HTTP 401/403、网络或身份响应契约异常**。不能据此推断 Vue 真实授权已失效，也不能把该问题当成保存操作失败。
+
+已在原 PR 分支最小修复：新用例按照已有安全规则期望固定消息，并补充已审核的 `React BFF 会话未通过验证` / `Vue BFF 会话未通过验证` 失败类别，保持业务身份检查必须为 true 后才继续工程读取；未开放 Cookie、URL、Token、用户信息或原始异常正文。两份 MJS 在协作端完成 V8 语法解析，脱敏函数的固定返回结果与新增断言一致，**但不是本机 Node `--test` 或真实 Chrome/CDP 验收**。预计离线仍 **31/31**（不删除任何测试），实际复验 `test:projects:oidc:config`、`vp check`、`docs:check`、完整 `ready` 和 `test:projects:oidc:save:browser` 均待维护者在最新 HEAD 上执行并记录退出码。
