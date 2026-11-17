@@ -297,7 +297,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     try {
       await assert.rejects(
         openProjectInPage("test-project", 1, "confirm"),
-        /服务器工程载入阶段返回受控错误/,
+        /服务器工程载入阶段返回受控错误（确认前）/,
       );
     } finally {
       if (originalDocument === undefined) delete globalThis.document;
