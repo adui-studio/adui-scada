@@ -2619,3 +2619,51 @@ if ($readyExitCode -ne 0) { throw "完整质量链失败" }
 2026-11-17 维护者 Windows 实测：`pnpm run test:sse:fault:unit` **4/4**；`vp check` **333 文件格式正确/188 受检零告警错误**；`docs:check` **86**；完整 `pnpm run ready` **退出码 0**，包含共享 Vitest **567/567**、SSE 客户端 **8/8**、故障代理 **4/4**、OIDC 工程浏览器离线安全 **33/33**、NestJS HTTP E2E **49/49**、React/Vue/NestJS 类型检查和构建。另有同一小批此前已在本机隔离 `adui_scada_test` 单独执行的真实 `test:db` **4/4 文件、32/32 用例、退出码 0**，四项 Prisma 迁移为最新。
 
 前面“故障代理 2/4”和“ready 退出码 1”是补丁前历史记录，不再是本批当前质量结论。修复后 Windows 证明 SSE 代理在所测端口上的安全监听与 TCP 故障注入恢复正常；上轮未记录随机分配的确切禁用端口，因此不虚构具体端口值。两层 CAS 测试仍非物理 TCP 断流或真实浏览器对同一 PostgreSQL 提交回包的单条完整 E2E。原始日志没有 `git rev-parse HEAD`，新文档提交亦未运行完整门禁；未经明确授权不合并 PR #70。
+
+## 第三十四批第十六小批 · 真实 Keycloak 双浏览器迟到 201
+
+复用原 `test:oidc:dual:preflight` / `test:oidc:dual:cas` 的可信本机环境和身份准备流程，新增**互斥、显式确认、手动运行**的 `test:oidc:dual:late`。原只读预检不写工程；新模式仅为本轮随机 UUID 专用空白工程授予第二主体三项权限，第一浏览器真实 201 已到但延迟消费，第二浏览器完成修订 3，再释放旧 201、旧 CAS 必须 409，SQL 精确核对版本、摘要及审计。测试工程保留。不可将该流程用在现有业务/生产 PostgreSQL 或真实工业设备上。
+
+Windows 根目录质量验证（先确认工作区没有未提交改动）：
+
+```powershell
+git status --short
+git fetch origin
+git switch --track origin/test/v0.3-b34-browser-real-late-cas
+git rev-parse HEAD
+git rev-parse origin/test/v0.3-b34-browser-real-late-cas
+
+pnpm run test:oidc:dual:config
+if ($LASTEXITCODE -ne 0) { throw "双主体迟到响应离线安全测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "第十六小批完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+```
+
+在**已独立确认本机真实 Keycloak / HTTPS 双 Origin / PostgreSQL Lab**、第二位已预绑定普通测试主体以及显式允许新增专用测试工程的前提下，单独执行：
+
+```powershell
+pnpm run test:oidc:dual:late
+$lateExitCode = $LASTEXITCODE
+Write-Host "真实浏览器迟到 201 专项退出码：$lateExitCode"
+if ($lateExitCode -ne 0) { throw "真实浏览器迟到 201 专项失败" }
+```
+
+独立浏览器专项必须实际完成并打印“真实迟到 201 专项通过”，不能把启动提示当作成功。此脚本不驱动 React/Vue Studio UI 的保存按钮，也没有人为切断 TCP；客户端 UI 与共享 Session 的端到端晚回包保护仍需另批专项。当前候选**没有 Windows 完整质量链或真实 Lab 联合测试的通过日志**。
+
+
+## 第三十四批第十六小批 · 真实 Windows 全链与双浏览器专项验收结案
+
+2026-11-17 维护者 Windows PowerShell 实测：`pnpm run test:oidc:dual:config` **16/16**、`vp check` **333/188 零告警错误**、`docs:check` **86 个 Markdown**；完整 `pnpm run ready` 最终 **退出码 0**，包含 **567/567** Vitest、**49/49** NestJS HTTP E2E、SSE 客户端 **8/8**、故障代理 **4/4**、OIDC 工程安全离线 **33/33**、双主体 **16/16** 与双 Web/Server 构建。
+
+另单独运行的 **`pnpm run test:oidc:dual:late` 退出码 0**，验证真实双 Keycloak BFF、React/Vue Origin API、PostgreSQL Lab 工程版本 2→3、暂存已到达的旧 201、旧 CAS 2→409，以及三版版本与审计一致；专用测试工程保留。前文“当前候选无 Windows 结果”属于验收前记录，最新结论以本段为准。
+
+`ready` 与真实交互式专项为**两条分开执行的命令**，日志没有包含本机 `git rev-parse HEAD`；本次只追认已提供的真实退出码，文档补录生成的新提交尚未重新验证。此模式不注入网络 TCP 故障，也不操作 Studio UI 保存按钮；不得扩展结论到生产设备、工业现场或真实 Studio UI 迟到回包 E2E。PR #71 保持 Draft 并指派 `@adui-dev`，未经明确授权不得合并。

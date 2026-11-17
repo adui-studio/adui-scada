@@ -834,3 +834,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/server/test/projects-cas-cookie-http.db-spec.ts`：复用已有随机租户、双 Cookie/CSRF 和真实 NestJS/PostgreSQL 事务装配；新增真实 201 提交后延迟向消费端交付、第二主体追加 3、旧预期 CAS 409、快照与审计一致性回归。仍由 `pnpm run test:db` 单独触发，**不进入默认 `ready`**。
 - `packages/api-client/test/studio-session.test.ts`：新增旧追加成功 Promise 迟到、用户重新载入更高修订号及后续 CAS 正常追加的会话测试，继续由 `pnpm run test:unit` 和 `ready` 执行。
 - 生产 `StudioServerProjectSession`、React/Vue 页面、NestJS Controller、Prisma、数据库迁移和工业网关均不修改。
+
+## 第三十四批第十六小批 · 真实双浏览器迟到 201
+
+- `scripts/test-oidc-dual-cas.mjs`：保留原只读预检/真实双主体同修订 CAS；新增互斥 `--run-late-response` 模式，浏览器内暂存已经实际返回的 201，第二主体推进至 3，旧 CAS 409，并从真实 PostgreSQL 只读核对三版/审计。
+- `scripts/test-oidc-dual-cas.cases.mjs`：原 11 项离线用例新增 5 项，覆盖显式模式门禁、同源单次 POST、失败/重复启动/无 CSRF、合法 CAS 范围与三版审计一致性。
+- 根 `package.json`：增加 `test:oidc:dual:late` 手工写入入口，**不加入 `ready` 的真实浏览器和数据库执行链**；离线安全回归继续使用原 `test:oidc:dual:config`。
