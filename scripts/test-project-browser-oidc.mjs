@@ -40,6 +40,8 @@ const SAFE_SAVE_TIMING_TIMEOUT =
   /^(?:React|Vue) 延迟保存 (?:401|409|503)：(?:版本 POST 未命中|工程写入次数异常|操作忙碌状态未保持|保存按钮未禁用|保存操作未结束|页面未显示拒绝错误|无法读取浏览器状态)$/;
 const SAFE_SAVE_BASELINE_TIMEOUT =
   /^(?:React|Vue) 权限模拟(?:首页加载|工程列表加载)未达到预期状态$/;
+const SAFE_SAVE_BASELINE_MISMATCH =
+  /^(?:React|Vue) 延迟保存 (?:401|409|503)：CAS 基线状态不符合预期$/;
 const PAGE_ERROR_TYPES = new Map([
   ["ReferenceError", "页面脚本引用异常"],
   ["TypeError", "页面脚本类型异常"],
@@ -108,7 +110,13 @@ export function describeProjectBrowserFailure(error) {
       ? "工程列表接口返回 HTTP " + status
       : "工程列表接口状态异常";
   }
-  if (SAFE_FAILURES.has(message) || SAFE_SAVE_TIMING_TIMEOUT.test(message)) return message;
+  if (
+    SAFE_FAILURES.has(message) ||
+    SAFE_SAVE_TIMING_TIMEOUT.test(message) ||
+    SAFE_SAVE_BASELINE_MISMATCH.test(message)
+  ) {
+    return message;
+  }
   if (SAFE_SAVE_BASELINE_TIMEOUT.test(message)) return "浏览器阶段超时：" + message;
   if (
     [
@@ -859,6 +867,20 @@ export function describeSaveTimingTimeout(name, status, phase, state) {
   return name + " 延迟保存 " + status + "：" + reason;
 }
 
+/** 保存结果必须反映共享 CAS；只输出框架和固定状态，不暴露工程详情。 */
+export function requireSaveTimingBaseline(name, status, cleared, expected) {
+  if (cleared === expected) return true;
+  if (
+    !["React", "Vue"].includes(name) ||
+    ![401, 409, 503].includes(status) ||
+    typeof cleared !== "boolean" ||
+    typeof expected !== "boolean"
+  ) {
+    throw new Error("浏览器延迟保存状态异常（已脱敏）");
+  }
+  throw new Error(name + " 延迟保存 " + status + "：CAS 基线状态不符合预期");
+}
+
 /** 保存请求的两段独立等待只检查受控状态，超时后返回固定类别。 */
 async function waitForSaveTimingStage(session, name, status, phase) {
   const label =
@@ -914,7 +936,10 @@ async function verifySaveTimingScenarios(session, origin, name, selected) {
     process.stdout.write(name + "：" + scenario.status + " 已释放合成拒绝，等待界面恢复\n");
     const completed = await waitForSaveTimingStage(session, name, scenario.status, "completed");
     assert.equal(completed.writeAttempts, 1, name + " 失败后不得自动重试写入");
-    assert.equal(completed.baselineCleared, scenario.baselineCleared);
+    assert.equal(
+      requireSaveTimingBaseline(name, scenario.status, completed.baselineCleared, scenario.baselineCleared),
+      true,
+    );
     const after = await inspectStudioState(session);
     assert.equal(after.canvas, before.canvas, name + " 保存失败改变了本地画布");
     assert.deepEqual(after.drafts, before.drafts, name + " 保存失败改变了草稿");
