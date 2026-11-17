@@ -375,6 +375,10 @@ describe("本机隔离 PostgreSQL 双 Cookie 会话 HTTP CAS 事务", () => {
         .get("/api/v1/projects/" + projectId + "/versions")
         .set("Cookie", cookie(sessionB));
       expect(versionsB.status).toBe(404);
+      const snapshotB = await request(app!.getHttpServer())
+        .get("/api/v1/projects/" + projectId + "/versions/1")
+        .set("Cookie", cookie(sessionB));
+      expect(snapshotB.status).toBe(404);
       const writeB = await postVersion(sessionB);
       expect(writeB.status).toBe(404);
 
