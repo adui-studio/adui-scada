@@ -281,6 +281,14 @@ async function verifyRevokedStudio(session, origin, projectId, before) {
   assert.equal(after.autoSave, before.autoSave, "真实撤权不能改变本地自动保存开关");
 
   assert.equal(await session.evaluate(triggerAccessDenialInPage, "detail"), true);
+  await waitForValue(
+    () =>
+      session.evaluate(function () {
+        const panel = document.querySelector('[aria-label="服务端工程版本"]');
+        return panel?.querySelector('[role="alert"]')?.textContent?.includes("当前工程访问已失效");
+      }),
+    "真实撤权后旧工程不得触发新建或追加",
+  );
   assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
   const state = await session.evaluate(accessDenialStateInPage);
   if (state.writeAttempts !== 0) throw new Error("真实撤权后旧工程不得触发新建或追加");
@@ -361,6 +369,11 @@ async function run() {
         const before = await openDedicatedStudioProject(guestBrowser, origin, projectId);
         assert.equal(await revokeSecondSubject(client, projectId, owner, guest), true);
         revoked = true;
+        assert.deepEqual(
+          await guestBrowser.evaluate(identityInPage, origin),
+          guest,
+          "撤销工程 ACL 不能注销当前 Keycloak 会话",
+        );
         await verifyRevokedProject(client, projectId, owner, guest);
         await verifyRevokedStudio(guestBrowser, origin, projectId, before);
 
