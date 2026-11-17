@@ -10,6 +10,7 @@ import {
   appendCasVersionInPage,
   createCasProjectInPage,
   grantSecondSubject,
+  executablePath,
   identityInPage,
   readCasProjectInPage,
   requireDifferentSubjects,
@@ -34,9 +35,9 @@ import { resolveLabIdentityTarget } from "./oidc-lab-identity.mjs";
 
 const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const SERVER_PACKAGE = fileURLToPath(new URL("../apps/server/package.json", import.meta.url));
-const PROJECT_PREFIX = "b34-studio-late-";
+const PROJECT_PREFIX = "b34-oidc-cas-";
 const PROJECT_PATTERN =
-  /^b34-studio-late-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  /^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const SAFE_ERRORS = new Set([
   "真实 Studio 迟到响应专项必须显式确认本机 Lab",
   "真实 Studio 迟到响应专项仅允许可信本机 OIDC Lab",
@@ -394,7 +395,6 @@ async function run() {
   loadEnvFile(ROOT_ENV);
   const origins = resolveProjectBrowserLab(process.env);
   const target = resolveLabIdentityTarget(process.env);
-  const { executablePath } = await import("./test-oidc-dual-cas.mjs");
   const executable = executablePath();
   if (!executable) throw new Error("未找到本机 Chrome/Edge 浏览器");
   for (const origin of origins) {
