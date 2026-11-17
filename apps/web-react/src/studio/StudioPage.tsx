@@ -1276,6 +1276,10 @@ export default function StudioPage() {
         ) {
           return;
         }
+        await serverSession.revalidateConfirmedLoad(result);
+        if (editor.snapshot().document.projectId !== projectId) {
+          throw new TypeError("确认载入期间当前工程已变化，拒绝覆盖本地画布");
+        }
         await pauseAutoSave();
         editor.loadDocument(result.snapshot.document);
         serverSession.acceptLoadedVersion(result);
@@ -1326,6 +1330,10 @@ export default function StudioPage() {
           )
         ) {
           return;
+        }
+        await serverSession.revalidateConfirmedLoad(version);
+        if (editor.snapshot().document.projectId !== originalProjectId) {
+          throw new TypeError("确认打开期间当前工程已变化，拒绝覆盖本地画布");
         }
         await pauseAutoSave();
         editor.loadDocument(version.snapshot.document);
