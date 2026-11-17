@@ -1135,6 +1135,7 @@ export default function StudioPage() {
       label,
       async () => {
         setServerError("");
+        setServerRecoveryProjectId("");
         try {
           await action();
         } catch (error) {
