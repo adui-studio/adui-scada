@@ -1290,3 +1290,9 @@ PR #66 的 React / Vue 标签页恢复只读复核已由维护者在 Windows 完
 PR #68 已获维护者明确授权并 Squash 合并为 `main@a1e710d2be86675f156fe0c36534e528b2203cae`。上批 Windows `ready` 566/566 单测及 49/49 HTTP E2E 通过；第十三小批的 POST 迟到成功/拒绝仍仅有共享 Promise 单测。本小批按原有 Lab 边界增加 React/Vue 实际浏览器按钮行为验收：真实 Keycloak 登录、同源工程只读 GET 建立 CAS；模拟延迟 POST 409、401、503 在浏览器端返回，不会写真实工程、版本或 ACL。断言重复点击只尝试一次、等待时按钮禁用、CAS 状态正确，以及 SVG/IndexedDB/自动保存状态不变。
 
 候选仅涉及现有 `scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`、根 `package.json` 和相关文档，不改变 React/Vue 业务代码、共享 Core/客户端、NestJS、Prisma、OIDC 用户或工业网关。预计 Node 离线浏览器安全用例 28/28（原 24 + 新 4），所有实际 `vp check`、`ready` 与双框架交互式专项均待维护者 Windows 复验。PR 仍保持 Draft，必须指派 `@adui-dev`，未获单独授权不得合并。
+
+## 2026-11-17 · 第三十四批第十四小批：Windows 全链通过，Vue 交互式回归仍待修复后复验
+
+维护者 Windows 已实际通过 OIDC 浏览器离线 **28/28**、`vp check` **333/188 零警告错误**、完整 `ready`（Vitest **566/566**、HTTP E2E **49/49**、React/Vue/NestJS 构建及 86 份 Markdown），但独立 `test:projects:oidc:save:browser` **退出码 1**。React 完整保存时序 409、401、503 通过；Vue 完成真实登录、分页及 IndexedDB 草稿，在“取消载入与画布保护”的载入确认之前失败，未进入 Vue 三种保存拒绝场景。
+
+PR #69 已针对浏览器脚本确认存在的旧错误残留判定风险最小修正，并新增脱敏的受控错误类别及三项离线回归（预期 **31/31**），未修改 React/Vue 组件、共享 API Client、NestJS、PostgreSQL、OIDC ACL 或工业设备。原始失败的具体 HTTP/页面根因尚无证据定论；修复提交后的 Windows 全链和实际 Vue 交互式浏览器结果**仍待复验**。PR 继续保持 Open/Draft，Assignee `@adui-dev`，未经明确授权不得合并。
