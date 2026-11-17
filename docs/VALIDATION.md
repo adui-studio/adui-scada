@@ -1608,3 +1608,9 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 但单独的 `pnpm run test:oidc:dual:studio:late` **退出码 1**。真实 Keycloak 双主体登录、两个随机专用工程创建/授权/首版读取、React Studio 确认载入及真实版本 2 的 201 到达并挂起均已输出。之后只有通用“真实 Studio 迟到保存未达到受控状态”，尚不能确认失败来自第二主体读取/追加、旧响应释放、UI 消费成功、可见性事件、CAS 复核或后续过期保存断言。不得将离线安全测试与 `ready` 通过误写成真实浏览器通过。
 
 候选诊断修正：`scripts/test-oidc-studio-real-late.mjs` 的每个关键等待已分配独立固定阶段；超时只返回页面请求阶段、受控计数、忙碌/禁用、CAS/摘要状态、错误提示和可见性等安全字段；第二主体读 2/写 3 与释放旧 201 也有阶段日志。未知异常、工程 ID、身份、Cookie、Token、URL、响应正文和堆栈继续脱敏。**诊断修正尚未由维护者 Windows 复验**，需要重新执行离线 9 项、`vp check`、`docs:check`、完整 `ready`，再单独运行真实双框架专项。前次日志未包含 `git rev-parse HEAD`，不可将其绑定到 PR #72 当前 HEAD。
+
+## 第十七小批 · 第二轮 Windows 真实窗口可见性失败及修复候选
+
+真实 `pnpm run test:oidc:dual:studio:late` 第二轮 **退出码 1**：两位真实 Keycloak 测试主体、两个新建专用工程准备正常；React Studio 原始 201 已到并挂起，第二主体实际读到修订 2、POST 以 HTTP **201** 将真实数据库推进修订 3，随后 React 消费原始 201 并显示旧 CAS 基线 2。浏览器在执行 `Page.bringToFront` 后仍然报告 `phase=released`、`writeAttempts=1`、`rejectedWrites=0`、`busy=false`、`baselineRevision=2`、`savedSecondVersion=true`、**`visible=false`**。故本次尚未触发真实可见性 GET 水位复核，也未执行 Vue。
+
+候选最小修复只涉及测试脚本中的第二主体隔离浏览器窗口：使用有官方定义的 CDP `Browser.getWindowForTarget` / `Browser.setWindowBounds`，在第二主体操作前切为正常窗口、操作完成后最小化，再激活第一主体标签。原 `document.visibilityState === "visible"` **原样保持为严格阻断条件**，不得通过覆盖属性或伪造可见事件绕过；所有真实 CAS、工程白名单、CSRF、草稿和三版审计断言保留。离线安全测试从 9 项增加至目标 **11 项**，**本补丁后的 Node、`vp check`、`docs:check`、`ready`、真实 Lab 尚未执行**。用户日志未包括本地 Git SHA，不能把上轮结果绑定到最新补丁。
