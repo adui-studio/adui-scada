@@ -444,10 +444,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     assert.equal(runtime.__aduiTestAccessDenial.writeAttempts, 3);
     assert.equal((await runtime.fetch("/api/v1/projects/project-1")).status, 200);
     assert.equal(forwarded, 1);
-    assert.throws(
-      () => releaseSaveTimingInPage(runtime),
-      /保存时序模拟尚未命中唯一的版本追加请求/,
-    );
+    assert.throws(() => releaseSaveTimingInPage(runtime), /保存时序模拟尚未命中唯一的版本追加请求/);
   });
 
   void it("保存时序状态只允许固定 401、409、503 且不接受重复挂起", async () => {
@@ -462,19 +459,10 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
         },
       };
       installAccessDenialFaultInPage(runtime);
-      assert.throws(
-        () => armSaveTimingInPage("test", 201, runtime),
-        /保存时序模拟参数不合法/,
-      );
-      assert.throws(
-        () => armSaveTimingInPage("", status, runtime),
-        /保存时序模拟参数不合法/,
-      );
+      assert.throws(() => armSaveTimingInPage("test", 201, runtime), /保存时序模拟参数不合法/);
+      assert.throws(() => armSaveTimingInPage("", status, runtime), /保存时序模拟参数不合法/);
       assert.equal(armSaveTimingInPage("test", status, runtime), true);
-      assert.throws(
-        () => armSaveTimingInPage("test", status, runtime),
-        /保存时序模拟参数不合法/,
-      );
+      assert.throws(() => armSaveTimingInPage("test", status, runtime), /保存时序模拟参数不合法/);
       assert.throws(
         () => releaseSaveTimingInPage(runtime),
         /保存时序模拟尚未命中唯一的版本追加请求/,
