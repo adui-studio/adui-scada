@@ -856,3 +856,12 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 `StudioServerProjectSession` 为 `readVersion(projectId, revision)` 捕获启动时的 `contextGeneration`，在 `getMe`、`readVersion`、`getProject` 每次异步返回后复核，并在 `catch` 处理拒绝之前再复核。代次变化表明另一项明确的用户动作已经重置或更换了当前保存上下文；此时统一返回受控 `ScadaApiError(kind="conflict", status=409)`，不得再触发 `invalidateAccess(projectId)` 或返回旧快照给调用者确认。没有上下文变动的 401/403/404 继续执行原有权限失效与防误创建逻辑。
 
 代次在 `reset`、`invalidateAccess`、`acceptLoadedVersion` 以及当前已有保存/冲突处理引起的 CAS 基线变更时推进。该计数只在当前 `StudioServerProjectSession` 实例中有效，不持久化、不用于服务端授权或版本 CAS；服务端仍以真实 Cookie 会话、ACL 和预计修订号作最终判定。React/Vue 无需维护各自的第二套代次规则，不修改 SVG 画布或 IndexedDB。
+
+
+## 2026-11-17 · 第三十四批第十三小批：服务端保存异步上下文保护
+
+共享 `StudioServerProjectSession` 继续复用第十二小批的 `contextGeneration`。`saveDocument` 在取得 `saving` 互斥锁后捕获代次，所有会让任务异步暂停的 `getMe`、`getProject`、`createProject`、`appendVersion` 均通过 `awaitSaveStep` 等待：`try/finally` 在 Promise 成功或失败后都校验旧代次。旧代次被替换时强制抛出受控 409，并在外层权限拒绝处理以及追加版本冲突处理之前检查代次，避免旧 401/404/409 清空或阻断新的合法基线。新代次出现于显式 reset、权限失效、重新确认载入以及既有 CAS 更新；保存成功仍按原有版本与身份规则推进基线。
+
+**已发送的服务端 POST 不可依赖浏览器回滚**：即使保存异步完成时已切换上下文，服务器仍可能已创建工程或追加不可变版本。当前客户端不接受该迟到回包来写入本地新基线，而是以“写入可能已生效，请重新读取最新版本”的固定中文冲突文案提示人工复核。禁止自动重试或在没有服务端证据时回退数据库审计。工业设备写入不在此 API 内，NestJS 仍负责 CSRF、授权与版本 CAS。React/Vue 无需各自复制代次状态机。
+
+测试通过 Mock API 控制异步阶段，并且分别断言迟到失败与迟到成功后的新基线不变、旧请求不会额外创建或追加工程、当前业务规则仍由原有测试覆盖。此小批未改服务端 HTTP 协议或物理浏览器多标签事件。
