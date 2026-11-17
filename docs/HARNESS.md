@@ -2847,3 +2847,41 @@ if ($browserExitCode -ne 0) { throw "双框架冲突恢复浏览器专项失败"
 ```
 
 应能实际看到 React/Vue 两端在合成 409 后通过真实 Studio 操作只读预览最新远端版本，旧 CAS 继续未建立、差异比较可见、画布与 IndexedDB 草稿完全不变；原 401 与 503 故障分支也仍通过。无授权工程或缺少可信 Lab 必须按原规则失败，不能自动授予 ACL 或伪造 HTTP 成功。浏览器临时 Profile 用后销毁。当前候选尚未实际运行本批 Windows `vp check`、`docs:check`、`ready` 或真实浏览器专项。
+
+## 第三十四批第十九小批 · 确认载入后水位复核 Windows 验收
+
+维护者先确保本地工作区没有未提交的修改，并查看分支与 SHA。新候选包含共享 Session **8 项单测**、浏览器离线 **2 项用例**，还将扩展真实 Keycloak/HTTPS 双 Origin 浏览器的确认后版本变化与 409 只读预览再载入验收。所有 OIDC 浏览器非 GET 工程请求仍被测试 Profile 本地拦截，不会写入现有 Lab 工程和 ACL。
+
+```powershell
+git status --short
+git fetch origin
+git switch --track origin/test/v0.3-b34-confirmed-load-race
+git rev-parse HEAD
+
+pnpm run test:projects:oidc:config
+if ($LASTEXITCODE -ne 0) { throw "确认载入浏览器离线测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "第十九小批完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+```
+
+如本地分支已存在，先 `git switch test/v0.3-b34-confirmed-load-race`，再执行 `git pull --ff-only origin test/v0.3-b34-confirmed-load-race`。这些命令须按顺序确认返回码，不能因为其中一个 Vitest 文件成功便声称完整 `ready` 通过。
+
+若本机可信 Keycloak、双 HTTPS Origin、已预绑定正常用户、授权工程和 PostgreSQL Lab 只读前置均已满足，则再单独执行真实 OIDC 浏览器专项：
+
+```powershell
+pnpm run test:projects:oidc:save:browser
+$browserExitCode = $LASTEXITCODE
+Write-Host "第十九小批确认载入专项退出码：$browserExitCode"
+if ($browserExitCode -ne 0) { throw "确认载入浏览器专项失败" }
+```
+
+验收需要看到 React **和** Vue 在“确认载入前的模拟远端版本冲突”时保持原画布、草稿和自动保存，确认后合成 HEAD 水位变化拒绝载入；然后正常确认打开工程建立 CAS 基线，409 只读预览最新版后通过真正 UI 确认再次载入恢复 CAS，同时只产生测试 Profile 内的单次被拦截 POST，其他全部为真实受保护 GET。既有 401、503 恢复仍须通过。最终命令退出码为 **0** 才能验收；没有实测日志前所有测试计数均是目标，不是结果。此专项非物理 TCP 断流、非生产/工业现场验收。
