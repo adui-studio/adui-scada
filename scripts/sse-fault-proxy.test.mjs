@@ -32,6 +32,8 @@ async function withOrigin(check) {
   const url = "http://127.0.0.1:" + server.address().port + "/";
   const proxy = await startSseFaultProxy(url);
   try {
+    const port = Number(new URL(proxy.url).port);
+    assert.ok(port >= 20_000 && port < 49_152, "故障代理必须使用 Fetch 允许的本机端口");
     await check(proxy);
   } finally {
     await proxy.close();
