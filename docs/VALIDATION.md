@@ -1325,6 +1325,6 @@ E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CD
 
 ## 2026-11-17 · 第三十四批第五小批双 BFF Cookie HTTP CAS 候选验证
 
-以已合并 PR #59 的 \`main@4c3cb0d7\` 为起点，新增 \`apps/server/test/projects-cas-cookie-http.db-spec.ts\`，仅在现有独立 \`vitest.config.db.ts\` 下执行真实 PostgreSQL HTTP 集成测试。四项用例使用两个不同 \`active\` 主体通过内部 \`AuthSessionService.issueForVerifiedSubject\` 获取独立短期 BFF Cookie + CSRF；真正的 NestJS Session Guard、Project Guard、Project API Controller、Prisma 仓储与本机隔离 PostgreSQL 处理请求。核验 HTTP 201/409 竞争，水位 2、两个 SHA-256 版本、成功审计操作者、旧版本再次提交 409，及错误 CSRF / Origin / 凭据混用 / ACL 的拒绝路径。独立 \`test:db\` 预计由原 25 项增加至 **29 项**，尚待 Windows 实际验收。没有改变业务接口、数据库 Schema/迁移、客户端、工业协议或权限行为。
+以已合并 PR #59 的 `main@4c3cb0d7` 为起点，新增 `apps/server/test/projects-cas-cookie-http.db-spec.ts`，仅在现有独立 `vitest.config.db.ts` 下执行真实 PostgreSQL HTTP 集成测试。四项用例使用两个不同 `active` 主体通过内部 `AuthSessionService.issueForVerifiedSubject` 获取独立短期 BFF Cookie + CSRF；真正的 NestJS Session Guard、Project Guard、Project API Controller、Prisma 仓储与本机隔离 PostgreSQL 处理请求。核验 HTTP 201/409 竞争，水位 2、两个 SHA-256 版本、成功审计操作者、旧版本再次提交 409，及错误 CSRF / Origin / 凭据混用 / ACL 的拒绝路径。独立 `test:db` 预计由原 25 项增加至 **29 项**，尚待 Windows 实际验收。没有改变业务接口、数据库 Schema/迁移、客户端、工业协议或权限行为。
 
-**验证证据边界**：候选文件已进行 TypeScript 语法解析及有限 transpile 检查（无语法诊断），但当前协作容器无仓库可安装的 pnpm/Vite+ 项目依赖、无用户本机 PostgreSQL，不具备对本次 Head 执行真实 \`vp check\`、\`test:db\`、\`ready\` 的条件。必须以维护者实际 Windows 日志和退出码为准。第四小批真实 Keycloak React/Vue 严格多页通过记录仍然有效，但两份 Cookie 在**本隔离测试里不是分别通过真实 Keycloak 授权码回调建立**；不得扩写为 IdP 双登录验收。
+**验证证据边界**：候选文件已进行 TypeScript 语法解析及有限 transpile 检查（无语法诊断），但当前协作容器无仓库可安装的 pnpm/Vite+ 项目依赖、无用户本机 PostgreSQL，不具备对本次 Head 执行真实 `vp check`、`test:db`、`ready` 的条件。必须以维护者实际 Windows 日志和退出码为准。第四小批真实 Keycloak React/Vue 严格多页通过记录仍然有效，但两份 Cookie 在**本隔离测试里不是分别通过真实 Keycloak 授权码回调建立**；不得扩写为 IdP 双登录验收。
