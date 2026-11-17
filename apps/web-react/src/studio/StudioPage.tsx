@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input } from "tdesign-react";
 import { CloseIcon } from "tdesign-icons-react";
 import "tdesign-react/es/style/index.css";
@@ -1050,7 +1050,7 @@ export default function StudioPage() {
   }
 
   /** 工程管理、版本查询和保存共用的授权缓存失效处理。 */
-  function invalidateServerAccess(): void {
+  const invalidateServerAccess = useCallback((): void => {
     serverSession.invalidateAccess();
     setServerProjectId("");
     setServerHeadRevision(null);
@@ -1058,7 +1058,7 @@ export default function StudioPage() {
     setServerHasMore(false);
     setServerInspectedVersion(null);
     setServerAccessRevision((revision) => revision + 1);
-  }
+  }, [serverSession]);
 
   /** 从其他标签页返回时以真实服务端只读核对旧 CAS，不依赖本地跨页身份消息。 */
   useEffect(() => {
@@ -1111,7 +1111,7 @@ export default function StudioPage() {
       active = false;
       document.removeEventListener("visibilitychange", revalidateOnVisible);
     };
-  }, [editor, serverSession]);
+  }, [editor, invalidateServerAccess, serverSession]);
 
   function handleServerBrowserAccessRejected(error: ScadaApiError): void {
     invalidateServerAccess();
