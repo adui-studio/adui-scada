@@ -580,6 +580,9 @@ async function saveServerVersion(session, expectedRevision) {
     result.ui.headRevision !== expectedRevision + 1 ||
     result.write.phase !== "committed" ||
     result.write.resultRevision !== expectedRevision + 1 ||
+    result.write.writeAttempts !== 1 ||
+    result.write.acceptedWrites !== 1 ||
+    result.write.rejectedWrites !== 0 ||
     !result.write.hashValid
   ) {
     throw new Error("同源多标签页服务端保存状态未达到预期");
@@ -618,11 +621,20 @@ async function waitForDraftChange(session, previousHash) {
     const state = await inspectStudioState(session);
     return state.drafts.count > 0 && state.drafts.hash !== previousHash ? state : null;
   }, "同源多标签页本地自动保存");
-  await pause(350);
-  const stable = await inspectStudioState(session);
-  if (stable.drafts.hash !== changed.drafts.hash) {
-    throw new Error("同源多标签页本地草稿未按预期变化");
+  let stableHash = changed.drafts.hash;
+  let stableCount = 0;
+  const stableUntil = Date.now() + 5000;
+  let stable = changed;
+  while (Date.now() < stableUntil && stableCount < 4) {
+    await pause(300);
+    stable = await inspectStudioState(session);
+    if (stable.drafts.hash === stableHash) stableCount += 1;
+    else {
+      stableHash = stable.drafts.hash;
+      stableCount = 0;
+    }
   }
+  if (stableCount < 4) throw new Error("同源多标签页本地草稿未按预期变化");
   return stable.drafts;
 }
 
@@ -732,6 +744,7 @@ async function verifyFramework(first, second, origin, name, client, principal) {
   const firstAfterSave = await inspectProtectedState(first);
   const firstDocument = await first.evaluate(readStudioDocumentHashInPage);
   assert.equal(firstAfterSave.autoSave, false);
+  assert.deepEqual(firstAfterSave.drafts, localDraft);
 
   await activateStudioTab(second);
   await requireStudioTabHidden(first);
