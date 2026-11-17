@@ -484,6 +484,178 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     expect(api.appendVersion).not.toHaveBeenCalled();
   });
 
+  it("保存身份请求迟到 401 不得清除重新确认的合法 CAS 基线", async () => {
+    const api = mockClient();
+    const session = createStudioServerProjectSession(api);
+    const version = await session.readVersion(waterTreatmentDemoDocument.projectId, 1);
+    session.acceptLoadedVersion(version);
+    api.getProject.mockClear();
+
+    let rejectIdentity: (() => void) | undefined;
+    api.getMe.mockImplementationOnce(
+      () =>
+        new Promise<Awaited<ReturnType<ScadaApiClient["getMe"]>>>((_resolve, reject) => {
+          rejectIdentity = () =>
+            reject(new ScadaApiError("登录已失效，请重新登录", "unauthenticated", 401));
+        }),
+    );
+
+    const pending = session.saveDocument(documentCopy());
+    session.reset();
+    session.acceptLoadedVersion(version);
+    rejectIdentity?.();
+
+    await expect(pending).rejects.toMatchObject({ kind: "conflict", status: 409 });
+    expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBe(1);
+    expect(api.getProject).not.toHaveBeenCalled();
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).not.toHaveBeenCalled();
+  });
+
+  it("保存水位查询迟到 404 不得自动创建，明确重新保存仍可创建", async () => {
+    const api = mockClient();
+    const session = createStudioServerProjectSession(api);
+    let notifyRequested: (() => void) | undefined;
+    const requested = new Promise<void>((resolve) => {
+      notifyRequested = resolve;
+    });
+    let rejectDetail: (() => void) | undefined;
+    api.getProject.mockImplementationOnce(() => {
+      notifyRequested?.();
+      return new Promise<Awaited<ReturnType<ScadaApiClient["getProject"]>>>((_resolve, reject) => {
+        rejectDetail = () => reject(new ScadaApiError("工程不存在或无权访问", "not_found", 404));
+      });
+    });
+    const pending = session.saveDocument(documentCopy());
+    await requested;
+    session.reset();
+    rejectDetail?.();
+
+    await expect(pending).rejects.toMatchObject({ kind: "conflict", status: 409 });
+    expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBeNull();
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).not.toHaveBeenCalled();
+
+    api.getProject.mockRejectedValueOnce(
+      new ScadaApiError("工程不存在或无权访问", "not_found", 404),
+    );
+    await expect(session.saveDocument(documentCopy())).resolves.toMatchObject({
+      revision: 1,
+      created: true,
+    });
+    expect(api.createProject).toHaveBeenCalledTimes(1);
+  });
+
+  it("工程创建已发出后切换上下文，不得凭迟到成功响应重建旧基线", async () => {
+    const api = mockClient();
+    api.getProject.mockRejectedValueOnce(
+      new ScadaApiError("工程不存在或无权访问", "not_found", 404),
+    );
+    const session = createStudioServerProjectSession(api);
+    let notifyRequested: (() => void) | undefined;
+    const requested = new Promise<void>((resolve) => {
+      notifyRequested = resolve;
+    });
+    let resolveCreated: (() => void) | undefined;
+    api.createProject.mockImplementationOnce((document) => {
+      notifyRequested?.();
+      return new Promise<Awaited<ReturnType<ScadaApiClient["createProject"]>>>((resolve) => {
+        resolveCreated = () =>
+          resolve({
+            projectId: document.projectId,
+            headRevision: 1,
+            createdAt,
+            updatedAt: createdAt,
+          });
+      });
+    });
+    const pending = session.saveDocument(documentCopy());
+    await requested;
+    session.reset();
+    resolveCreated?.();
+
+    await expect(pending).rejects.toMatchObject({
+      kind: "conflict",
+      status: 409,
+      message: "服务端保存期间工程上下文已变化，写入可能已生效，请重新读取最新版本",
+    });
+    expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBeNull();
+    expect(api.createProject).toHaveBeenCalledTimes(1);
+    expect(api.appendVersion).not.toHaveBeenCalled();
+  });
+
+  it("旧版本追加成功响应迟到，不得覆盖随后重新载入的 CAS 基线", async () => {
+    const api = mockClient();
+    const session = createStudioServerProjectSession(api);
+    const version = await session.readVersion(waterTreatmentDemoDocument.projectId, 1);
+    session.acceptLoadedVersion(version);
+    let notifyRequested: (() => void) | undefined;
+    const requested = new Promise<void>((resolve) => {
+      notifyRequested = resolve;
+    });
+    let resolveAppended: (() => void) | undefined;
+    api.appendVersion.mockImplementationOnce((_projectId, expectedRevision) => {
+      notifyRequested?.();
+      return new Promise<Awaited<ReturnType<ScadaApiClient["appendVersion"]>>>((resolve) => {
+        resolveAppended = () =>
+          resolve(
+            createProjectSnapshot(waterTreatmentDemoDocument, {
+              revision: expectedRevision + 1,
+              createdAt,
+            }),
+          );
+      });
+    });
+    const pending = session.saveDocument(documentCopy());
+    await requested;
+    session.reset();
+    session.acceptLoadedVersion(version);
+    resolveAppended?.();
+
+    await expect(pending).rejects.toMatchObject({
+      kind: "conflict",
+      status: 409,
+      message: "服务端保存期间工程上下文已变化，写入可能已生效，请重新读取最新版本",
+    });
+    expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBe(1);
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).toHaveBeenCalledTimes(1);
+  });
+
+  it("旧版本追加冲突迟到，不得清除随后重新确认的 CAS 基线", async () => {
+    const api = mockClient();
+    const session = createStudioServerProjectSession(api);
+    const version = await session.readVersion(waterTreatmentDemoDocument.projectId, 1);
+    session.acceptLoadedVersion(version);
+    let notifyRequested: (() => void) | undefined;
+    const requested = new Promise<void>((resolve) => {
+      notifyRequested = resolve;
+    });
+    let rejectAppended: (() => void) | undefined;
+    api.appendVersion.mockImplementationOnce(() => {
+      notifyRequested?.();
+      return new Promise<Awaited<ReturnType<ScadaApiClient["appendVersion"]>>>(
+        (_resolve, reject) => {
+          rejectAppended = () => reject(new ScadaApiError("工程版本冲突", "conflict", 409));
+        },
+      );
+    });
+    const pending = session.saveDocument(documentCopy());
+    await requested;
+    session.reset();
+    session.acceptLoadedVersion(version);
+    rejectAppended?.();
+
+    await expect(pending).rejects.toMatchObject({
+      kind: "conflict",
+      status: 409,
+      message: "服务端保存期间工程上下文已变化，写入可能已生效，请重新读取最新版本",
+    });
+    expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBe(1);
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).toHaveBeenCalledTimes(1);
+  });
+
   it("同一会话保存中的重复提交不发送第二个网络写入", async () => {
     const api = mockClient();
     let release: (() => void) | undefined;
