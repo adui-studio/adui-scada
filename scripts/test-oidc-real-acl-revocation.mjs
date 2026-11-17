@@ -288,3 +288,108 @@ async function verifyRevokedStudio(session, origin, projectId, before) {
   assert.equal(preserved.canvas, before.canvas);
   assert.deepEqual(preserved.drafts, before.drafts);
 }
+
+/** 默认双账号只读预检；写入仅限显式确认后的新建两份专用空白工程。 */
+async function run() {
+  if (!existsSync(ROOT_ENV)) throw new Error("真实撤权专项只允许本机可信 OIDC Lab");
+  loadEnvFile(ROOT_ENV);
+  const mode = resolveRevocationMode(process.argv.slice(2));
+  const origins = resolveProjectBrowserLab(process.env);
+  const target = resolveLabIdentityTarget(process.env);
+  const executable = executablePath();
+  if (!executable) throw new Error("真实撤权专项缺少可用的本机浏览器");
+  for (const origin of origins) {
+    const response = await fetch(origin + "/", { redirect: "error" });
+    if (!response.ok || response.url !== origin + "/") {
+      throw new Error("真实撤权专项只允许本机可信 OIDC Lab");
+    }
+  }
+
+  const browsers = [];
+  let client;
+  try {
+    const ownerBrowser = await startBrowser(executable);
+    browsers.push(ownerBrowser);
+    const owner = await waitForLogin(ownerBrowser, origins[0], "第一位主体");
+    const guestBrowser = await startBrowser(executable);
+    browsers.push(guestBrowser);
+    process.stdout.write(
+      "第二个隔离浏览器必须登录同一租户下另一位已预绑定的 Keycloak 普通测试用户。\n",
+    );
+    const guest = await waitForLogin(guestBrowser, origins[0], "第二位主体");
+    requireDifferentSubjects(owner, guest);
+    process.stdout.write("已确认真实双主体 BFF 会话属于同一租户且主体不同。\n");
+    if (!mode.write) {
+      process.stdout.write("真实撤权只读预检通过；未创建工程或修改 ACL。\n");
+      return;
+    }
+
+    const serverRequire = createRequire(SERVER_PACKAGE);
+    const { Client } = serverRequire("pg");
+    client = new Client({
+      connectionString: target.connectionString,
+      connectionTimeoutMillis: 5000,
+      query_timeout: 10000,
+    });
+    await client.connect();
+    // 仅测试用户的 UI 永久拦截工程写入；创建者使用正式接口创建新测试工程。
+    await guestBrowser.send("Page.addScriptToEvaluateOnNewDocument", {
+      source: "(" + installAccessDenialFaultInPage.toString() + ")()",
+    });
+
+    for (const [index, origin] of origins.entries()) {
+      const framework = index === 0 ? "React" : "Vue";
+      const projectId = "b34-oidc-cas-" + randomUUID();
+      assert.match(projectId, PROJECT_PATTERN, "专用工程名称不符合随机命名规则");
+      await ownerBrowser.evaluate(createCasProjectInPage, origins[0], projectId);
+      process.stdout.write(framework + "：已创建独立空白专用工程 " + projectId + "。\n");
+      let granted = false;
+      let revoked = false;
+      try {
+        await grantSecondSubject(client, projectId, owner, guest);
+        granted = true;
+        await guestBrowser.send("Page.navigate", { url: origin + "/" });
+        const principal = await waitForValue(
+          () => guestBrowser.evaluate(identityInPage, origin),
+          "真实撤权专项只允许本机可信 OIDC Lab",
+        );
+        assert.deepEqual(principal, guest, "第二主体在 React/Vue Origin 必须一致");
+        const firstRead = await ownerBrowser.evaluate(readCasProjectInPage, origins[0], projectId, 1);
+        const secondRead = await guestBrowser.evaluate(readCasProjectInPage, origin, projectId, 1);
+        assert.deepEqual(firstRead, secondRead, "双方读取首版数据必须一致");
+
+        const before = await openDedicatedStudioProject(guestBrowser, origin, projectId);
+        assert.equal(await revokeSecondSubject(client, projectId, owner, guest), true);
+        revoked = true;
+        await verifyRevokedProject(client, projectId, owner, guest);
+        await verifyRevokedStudio(guestBrowser, origin, projectId, before);
+
+        const ownerRead = await ownerBrowser.evaluate(readCasProjectInPage, origins[0], projectId, 1);
+        assert.deepEqual(ownerRead, firstRead, "撤销第二主体不能影响创建者读取");
+        await verifyRevokedProject(client, projectId, owner, guest);
+        process.stdout.write(
+          framework + "：真实 ACL 撤销、HTTP 404、CAS 失效、草稿保护与审计检查通过。\n",
+        );
+      } finally {
+        // 任何失败都尽量回收本轮新工程授予第二主体的三项 ACL，不能碰旧工程。
+        if (granted && !revoked) await revokeSecondSubject(client, projectId, owner, guest);
+      }
+    }
+    process.stdout.write(
+      "React/Vue 真实双主体 ACL 撤销浏览器专项通过；两份新建空白工程保留供复核。\n",
+    );
+  } finally {
+    try {
+      if (client) await client.end();
+    } finally {
+      for (const browser of browsers.reverse()) await browser.close();
+    }
+  }
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  run().catch((error) => {
+    process.stderr.write("错误：" + describeRevocationFailure(error) + "\n");
+    process.exitCode = 1;
+  });
+}
