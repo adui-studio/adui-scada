@@ -843,7 +843,7 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 
 ## 第三十四批第十七小批 · 真实 React/Vue Studio 迟到 201 UI 联合验收
 
-- \`scripts/test-oidc-studio-real-late.mjs\`：独立真实双主体、双框架 Studio UI、正式 HTTPS BFF 和 PostgreSQL 的版本 2→3、迟到真实 201、标签页可见只读复核、重复提交/草稿保护验收脚本；默认拒绝，须显式确认本机 Lab。
-- \`scripts/test-oidc-studio-real-late.cases.mjs\`：9 项 Node 内置离线用例，验证显式模式、项目写请求白名单、真实 Response 保留/释放、CSRF、重复/异常拒绝、脱敏状态及原草稿恢复 UI 点击辅助。
-- \`scripts/test-project-browser-oidc.mjs\`：只把既有 \`enableAutoSaveInPage\` 改为命名导出，复用其真实页面辅助函数而不改已有只读/合成拒绝模式。
-- 根目录 \`package.json\`：新增 \`test:oidc:dual:studio:config\` 到 \`ready\`，新增独立**手工写入**的 \`test:oidc:dual:studio:late\`；没有修改生产 React/Vue/NestJS/Core、数据库迁移和工业设备权限。
+- `scripts/test-oidc-studio-real-late.mjs`：独立真实双主体、双框架 Studio UI、正式 HTTPS BFF 和 PostgreSQL 的版本 2→3、迟到真实 201、标签页可见只读复核、重复提交/草稿保护验收脚本；默认拒绝，须显式确认本机 Lab。
+- `scripts/test-oidc-studio-real-late.cases.mjs`：9 项 Node 内置离线用例，验证显式模式、项目写请求白名单、真实 Response 保留/释放、CSRF、重复/异常拒绝、脱敏状态及原草稿恢复 UI 点击辅助。
+- `scripts/test-project-browser-oidc.mjs`：只把既有 `enableAutoSaveInPage` 改为命名导出，复用其真实页面辅助函数而不改已有只读/合成拒绝模式。
+- 根目录 `package.json`：新增 `test:oidc:dual:studio:config` 到 `ready`，新增独立**手工写入**的 `test:oidc:dual:studio:late`；没有修改生产 React/Vue/NestJS/Core、数据库迁移和工业设备权限。
