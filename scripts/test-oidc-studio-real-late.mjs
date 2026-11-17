@@ -224,6 +224,7 @@ export function studioRealLateStateInPage(runtime = globalThis) {
       runtime.document
         .querySelector(".studio-notice")
         ?.textContent?.includes("已追加服务端版本 #2") === true,
+    visible: runtime.document.visibilityState === "visible",
   };
 }
 
@@ -326,6 +327,43 @@ function requireUnchangedDocument(before, after) {
   }
 }
 
+/**
+ * 等待真实 Studio UI 的受控状态；超时只输出固定布尔量和枚举，不输出工程/身份/响应正文。
+ */
+async function waitForStudioState(session, name, stage, predicate) {
+  let state = null;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    try {
+      state = await session.evaluate(studioRealLateStateInPage);
+      if (predicate(state)) return state;
+    } catch {
+      // 导航或渲染期间页面执行上下文可能暂时不可用。
+    }
+    await pause(150);
+  }
+  const safeState = {
+    phase: ["armed", "sent", "received", "released", "failed", "missing"].includes(state?.phase)
+      ? state.phase
+      : "unknown",
+    hits: Number.isInteger(state?.hits) ? state.hits : -1,
+    writeAttempts: Number.isInteger(state?.writeAttempts) ? state.writeAttempts : -1,
+    rejectedWrites: Number.isInteger(state?.rejectedWrites) ? state.rejectedWrites : -1,
+    busy: state?.busy === true,
+    disabled: state?.disabled === true,
+    baselineRevision:
+      Number.isSafeInteger(state?.baselineRevision) ? state.baselineRevision : null,
+    baselineCleared: state?.baselineCleared === true,
+    headCleared: state?.headCleared === true,
+    hasError: state?.hasError === true,
+    savedSecondVersion: state?.savedSecondVersion === true,
+    visible: state?.visible === true,
+  };
+  process.stdout.write(
+    name + "：" + stage + "未达到预期，受控页面状态 " + JSON.stringify(safeState) + "\n",
+  );
+  throw new Error("真实 Studio 迟到保存未达到受控状态");
+}
+
 /** 两种框架各在真实 Studio UI 触发保存，第二主体从另一个浏览器推进数据库水位。 */
 async function verifyFramework(
   session,
@@ -343,10 +381,12 @@ async function verifyFramework(
   const before = await openDedicatedProject(session, origin, projectId);
   assert.equal(await session.evaluate(armStudioRealLateInPage, origin, projectId), true);
   assert.equal(await session.evaluate(triggerSaveTimingInPage), true);
-  const held = await waitFor(async () => {
-    const state = await session.evaluate(studioRealLateStateInPage);
-    return state.phase === "received" && state.busy && state.disabled ? state : null;
-  }, "真实 Studio 迟到保存未达到受控状态");
+  const held = await waitForStudioState(
+    session,
+    name,
+    "真实 201 挂起",
+    (state) => state.phase === "received" && state.busy && state.disabled,
+  );
   if (held.hits !== 1 || held.writeAttempts !== 1 || held.rejectedWrites !== 0) {
     throw new Error("真实 Studio 迟到保存未阻止重复写入");
   }
@@ -354,8 +394,25 @@ async function verifyFramework(
   requireUnchangedDocument(before, await inspectStudioState(session));
   process.stdout.write(name + "：真实 201 已到达并挂起 Studio UI，另一主体准备推进版本 3\n");
 
-  const secondRead = await secondBrowser.evaluate(readCasProjectInPage, secondOrigin, projectId, 2);
-  const third = await secondBrowser.evaluate(appendCasVersionInPage, secondOrigin, projectId, 2);
+  let secondRead;
+  try {
+    secondRead = await secondBrowser.evaluate(readCasProjectInPage, secondOrigin, projectId, 2);
+  } catch {
+    process.stdout.write(name + "：第二主体读取真实版本 2 失败\n");
+    throw new Error("真实 Studio 迟到保存结果与数据库不一致");
+  }
+  process.stdout.write(name + "：第二主体已读取真实版本 2\n");
+  let third;
+  try {
+    third = await secondBrowser.evaluate(appendCasVersionInPage, secondOrigin, projectId, 2);
+  } catch {
+    process.stdout.write(name + "：第二主体提交 CAS 2→3 失败\n");
+    throw new Error("真实 Studio 迟到保存结果与数据库不一致");
+  }
+  process.stdout.write(
+    name + "：第二主体追加请求返回 HTTP " + third.status +
+      (Number.isSafeInteger(third.revision) ? "、修订号 " + third.revision : "") + "\n",
+  );
   if (
     third.status !== 201 ||
     third.revision !== 3 ||
@@ -364,36 +421,43 @@ async function verifyFramework(
     throw new Error("真实 Studio 迟到保存结果与数据库不一致");
   }
   requireUnchangedDocument(before, await inspectStudioState(session));
-  assert.equal(await session.evaluate(releaseStudioRealLateInPage, origin, projectId), true);
-  await waitFor(async () => {
-    const state = await session.evaluate(studioRealLateStateInPage);
-    return !state.busy && state.baselineRevision === 2 && state.savedSecondVersion ? state : null;
-  }, "真实 Studio 迟到保存未达到受控状态");
+  try {
+    assert.equal(await session.evaluate(releaseStudioRealLateInPage, origin, projectId), true);
+  } catch {
+    process.stdout.write(name + "：旧 201 释放前的请求计数或状态不符合预期\n");
+    throw new Error("真实 Studio 迟到保存未达到受控状态");
+  }
+  process.stdout.write(name + "：已向 Studio 交付真实 201，等待界面确认版本 2\n");
+  await waitForStudioState(
+    session,
+    name,
+    "Studio 接收真实 201 并恢复保存界面",
+    (state) => !state.busy && state.baselineRevision === 2 && state.savedSecondVersion,
+  );
   requireUnchangedDocument(before, await inspectStudioState(session));
 
   // 第二主体操作时窗口可能在后台；先激活本标签，才派发可见性复核事件。
   await session.send("Page.bringToFront");
-  await waitFor(
-    () =>
-      session.evaluate(function () {
-        return document.visibilityState === "visible";
-      }),
-    "真实 Studio 迟到保存未达到受控状态",
-  );
+  await waitForStudioState(session, name, "浏览器切换到可见状态", (state) => state.visible);
+  process.stdout.write(name + "：Studio 页面已可见，触发服务端 CAS 只读复核\n");
   // 保存完成后真实服务端水位已为 3，恢复可见只读复核必须撤销旧基线 2。
   assert.equal(await session.evaluate(triggerStudioResumeInPage), true);
-  const stale = await waitFor(async () => {
-    const state = await session.evaluate(studioRealLateStateInPage);
-    return !state.busy && state.baselineCleared && state.headCleared ? state : null;
-  }, "真实 Studio 迟到保存未达到受控状态");
+  const stale = await waitForStudioState(
+    session,
+    name,
+    "服务端水位 3 使旧 CAS 基线失效",
+    (state) => !state.busy && state.baselineCleared && state.headCleared,
+  );
   if (stale.writeAttempts !== 1 || stale.rejectedWrites !== 0) {
     throw new Error("真实 Studio 迟到保存未阻止重复写入");
   }
   assert.equal(await session.evaluate(triggerSaveTimingInPage), true);
-  await waitFor(async () => {
-    const state = await session.evaluate(studioRealLateStateInPage);
-    return !state.busy && state.hasError ? state : null;
-  }, "真实 Studio 迟到保存未达到受控状态");
+  await waitForStudioState(
+    session,
+    name,
+    "过期 CAS 再次保存被拒绝",
+    (state) => !state.busy && state.hasError,
+  );
   const final = await session.evaluate(studioRealLateStateInPage);
   if (final.writeAttempts !== 1 || final.rejectedWrites !== 0 || !final.baselineCleared) {
     throw new Error("真实 Studio 迟到保存未阻止重复写入");
