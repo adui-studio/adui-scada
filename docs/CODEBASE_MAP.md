@@ -877,3 +877,11 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/web-react/src/studio/StudioPage.tsx` 与 `apps/web-vue/src/studio/StudioPage.vue`：409 后仅对对应工程提供相同中文“只读预览最新版本”操作，核验最新快照与历史第一页水位一致再显示差异；保留既有人工确认载入入口。
 - `scripts/test-project-browser-oidc.mjs`：扩展原只读/合成 409 专项，点击真实 React/Vue Studio 恢复按钮，验证真实 GET 对比与零额外工程写入。
 - `scripts/test-project-browser-oidc.cases.mjs`：新增 2 项页面按钮与脱敏状态离线回归（目标由 33 项增至 **35 项**）；不新增依赖、HTTP 路由、数据库迁移、Schema 或设备写入权限。
+
+## 第三十四批第十九小批 · 人工确认载入后的安全水位闭环
+
+- `packages/api-client/src/studio-session.ts`：新增 `revalidateConfirmedLoad`，在人工确认后再次只读核对主体、修订号和会话代次，区分 403、409、401/404 和临时网络故障，不产生任何工程写入或提前建立 CAS。
+- `packages/api-client/test/studio-session.test.ts`：新增 **8 项** Vitest Mock 回归：最新版本人工确认、显式旧历史版本、确认期间水位变化、旧基线失效、登录主体切换、撤权 404、网络 503、迟到 404 不影响新基线。共享 Session 目标 **45 项**，全量 Vitest 目标 **581 项**。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：既有版本历史“载入”与授权工程列表“打开”都在确认后、暂停自动保存之前调用相同共享只读验证；未改变编辑器引擎、工程格式或后端。
+- `scripts/test-project-browser-oidc.mjs`：原真实 Keycloak 双框架 Lab 专项扩展 `confirm-drift` 合成 GET 版本差异，阻止确认后覆盖；409 预览后经真实服务端版本列表按钮进行人工确认载入，核对 CAS 恢复、草稿未覆盖、自动保存暂停且无额外版本 POST。
+- `scripts/test-project-browser-oidc.cases.mjs`：新增 **2 项** Node 内置离线保护测试，目标 OIDC 工程浏览器安全离线共 **37 项**；沿用原严格 Lab 环境、临时 Profile、CSRF 和全部工程写请求本地阻断。
