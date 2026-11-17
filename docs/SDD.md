@@ -882,3 +882,11 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 正式共享 `StudioServerProjectSession.saveDocument` 收到服务端版本冲突 409 时清除其 CAS 基线；401/403/404 按访问拒绝规则失效相关缓存，503 临时故障仍保留现有 CAS 并由后续真实服务端请求重新校验。React Studio 的 `activeServerBaseline` 每次渲染直接从共享会话读取；Vue 则在 `serverBaselineRevision` 响应式变量中保存镜像，原先在成功保存、确认载入、主动访问失效时更新，但在仅有 409 的保存错误路径漏更新镜像。
 
 最小修复在 Vue `runServerAction` 错误路径且标签为“保存服务端工程”时，将 `serverBaselineRevision.value` 重新赋值为共享会话针对**当前编辑工程**的真实 `getBaselineRevision`。此变更不更改共享会话的授权、CAS 算法、实际 POST 或 React 页面；保持 Vue 409 失效展示、503 保留基线及既有访问失效流程。隔离浏览器 `verifySaveTimingScenarios` 已经同时对 React/Vue 检查 401、409 清基线与 503 保留基线；新增固定错误类别使失败时只输出框架/HTTP 模拟状态和“CAS 基线状态不符合预期”，绝不输出工程 ID、Cookie、Token 或原始响应。
+
+## 2026-11-17 · 第三十四批第十五小批：真实提交后的旧回包与更新水位复核
+
+继续使用已有 `StudioServerProjectSession` 的 `contextGeneration` 和 `awaitSaveStep`，不新增业务状态或公开 API。共享 Vitest 用例借助受控 Promise 将一次 appendVersion 的修订号 2 成功回包暂缓；在此期间模拟服务器已由另一会话推进到 3，客户端显式 `reset` 后通过 `readVersion(..., 3)` 和 `acceptLoadedVersion` 建立新基线。解除旧 Promise 后，保存必须以“服务端保存期间工程上下文已变化，写入可能已生效，请重新读取最新版本”受控 409 拒绝，而**不得覆盖新基线 3**；下一次 `saveDocument` 预期必须是 CAS 3→4。
+
+既有 NestJS 真实数据库测试 `projects-cas-cookie-http.db-spec.ts` 新增一项：先通过第一 Cookie/CSRF 会话真实 HTTP POST 返回 201 并实际提交到隔离 PostgreSQL 版本 2 和审计；在**测试消费端 Promise** 持有该真实响应期间，第二 Cookie/CSRF 会话基于 2 追加 3；真实 GET 详情和快照返回修订号 3，随后把旧 201 交付给模拟客户端，再尝试以旧预期 2 写入，服务端必须返回 409 且持久化水位/版本/审计保持 3。延迟点在测试消费端而非真实 TCP 传输；数据库真实读取在释放前已证明事务提交。每项测试由 `withFixture` 创建随机租户，`finally` 仅清理本租户的版本、审计、授权、会话和身份。
+
+两个测试共同验证协议与会话逻辑，但没有让同一浏览器 Session 直接与 PostgreSQL 实例联动，也没有模拟网络丢包、断电、进程崩溃或跨 Origin Cookie 复用。保持只读设备边界。

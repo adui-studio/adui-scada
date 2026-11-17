@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import { connect, createServer } from "node:net";
 
 /**
@@ -69,13 +70,26 @@ export async function startSseFaultProxy(targetUrl) {
     downstream.on("error", destroy);
     upstream.on("error", destroy);
   });
-  await new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      server.off("error", reject);
-      resolve();
-    });
-  });
+  // Fetch 标准会拒绝部分随机端口；仅在不包含禁用端口的范围监听本机代理。
+  // 遇到 Windows 端口保留或并发占用时重新选择，不降级 HTTP 安全检查。
+  let listening = false;
+  for (let attempt = 0; attempt < 32; attempt += 1) {
+    const port = randomInt(20_000, 49_152);
+    try {
+      await new Promise((resolve, reject) => {
+        server.once("error", reject);
+        server.listen(port, "127.0.0.1", () => {
+          server.off("error", reject);
+          resolve();
+        });
+      });
+      listening = true;
+      break;
+    } catch (error) {
+      if (error?.code !== "EADDRINUSE" && error?.code !== "EACCES") throw error;
+    }
+  }
+  if (!listening) throw new Error("故障代理未找到可用的本机 HTTP 监听端口");
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("故障代理无法读取监听端口");
 

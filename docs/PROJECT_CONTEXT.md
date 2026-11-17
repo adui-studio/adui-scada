@@ -1320,3 +1320,29 @@ PR #69 继续只修改浏览器测试脚本和离线保护测试，用严格固�
 维护者最新 Windows 真实执行确认 `test:projects:oidc:config` **33/33**、`vp check` **333 个格式文件 / 188 个受检文件零错误警告**、`docs:check` **86 份 Markdown**；完整 `pnpm run ready` 已执行到末尾且非零退出码断言未触发，包含 Vitest **566/566**、共享 Studio Session **30/30**、SSE **8/8**、TCP 故障代理 **4/4**、NestJS HTTP E2E **49/49**、React/Vue/Server 类型检查与构建。独立 `test:projects:oidc:save:browser` 通过：React/Vue 在可信 Keycloak/BFF Lab 分别载入授权工程并完整通过合成 POST **409/401/503**、一次写入尝试/忙碌互斥、错误后 CAS 状态与本地草稿保护，维护者明确报告**退出码 0**。浏览器写入拦截仍生效，未修改真实 Lab 工程版本和 ACL。
 
 此前第四轮 **32/33**、Vue 409 合成响应后的失败和更早的脱敏/载入问题保留为历史；Vue CAS 响应式副本不同步的 E-035 已经获得双框架真实 UI 回归结果支持，当前本批验收通过。**尚缺本机 `git rev-parse HEAD`**，不声称 Windows 运行提交与 PR 最新 HEAD 精确一致；本段文档提交后的质量链也未重新执行。本批不覆盖真实 PostgreSQL 完成 POST 后的延迟回包、跨会话写入或工业设备控制。PR #69 仍为 Open / Draft、Assignee `@adui-dev`，等待最终审查与明确合并授权。
+
+## 2026-11-17 · 第三十四批第十五小批：真实数据库提交后的迟到回包分层验收候选
+
+前置第十四小批 PR #69 经维护者明确授权已 Squash 合并至 `main@c5df29fb7a769235237c5c4da33f20a0c013fe2e`。前批已在 Windows 通过离线保护 33/33、Vitest 566/566、HTTP E2E 49/49、`ready` 全链及 React/Vue 双框架真实浏览器合成 409/401/503 保存拒绝专项（退出码 0）。这些不是本批真实数据库新用例的运行结果。
+
+本批针对“POST 确实已成功提交，旧 201 较晚交付”补齐两层互补测试：共享 `StudioServerProjectSession` 的旧成功回包迟到后保护新修订号 3 并安全续写 CAS 4；以及原有独立 PostgreSQL `test:db` 中真实双 Cookie HTTP 写入到 2，再由另一主体写到 3，延迟把先前真实 201 交给模拟消费端，旧 CAS 2 必须返回 409，数据库水位/版本/审计均保持 3。只向原有随机临时租户写入并在 finally 清理，不操作实际 Lab 或已有业务工程。前后两个测试**不是同一条真实浏览器/数据库链路**；模拟延迟为消费端交付门控，而非物理网络断流。
+
+候选仅改共享客户端测试、真实数据库 HTTP 测试和配套需求/设计/验收文档，无生产代码、依赖或迁移变更。目标全量 Vitest **567/567**、共享会话 **31/31**、真实 `test:db` **30/30**，均**等待 Windows 实际执行**；`test:db` 不在默认 `ready` 中。Draft PR 必须指派 `@adui-dev` 并核实，未获维护者本次明确授权不得合并。
+
+## 2026-11-17 · 第三十四批第十五小批：TS2740 单点修复待 Windows 复验
+
+首次 Windows `vp check --fix` 报新增共享 Session 单测一处 **TS2740、0 警告**，格式化虽完成但 Lint/类型检查没有通过。原因是 Core 异步 `createProjectSnapshot` 返回 `Promise<ProjectSnapshot>`，而 `mockResolvedValueOnce` 需要已解析快照。PR #70 原分支仅在 `mockResolvedValueOnce` 中先 `await createProjectSnapshot`，不更改共享会话业务逻辑、真实 PostgreSQL HTTP 测试或测试库安全约束。
+
+修复后本地 `vp check`、Vitest 31/31（全量目标 567/567）、`ready` 及单独 `test:db` 仍需维护者重新执行。保持 Draft、Assignee `@adui-dev`、未经授权不得合并。
+
+## 2026-11-17 · 第三十四批第十五小批：真实 PostgreSQL 回归通过，SSE 代理坏端口阻断 ready
+
+维护者最新 Windows 验收确认本机隔离 `adui_scada_test` 四项迁移为最新，`pnpm run test:db` **4/4 文件、32/32 项通过、退出码 0**；这覆盖新加的真实 HTTP 201 已提交/旧回包迟到/第二主体 CAS 追加/持久化审计一致性。历史计划预期 `30/30` 已被真实统计 `32/32` 覆盖。单独 `test:unit` **567/567**、`vp check` **333/188 零告警**、`docs:check` **86** 项通过。但完整 `ready` 在 SSE 故障代理四项中两项 `fetch failed: bad port` 处停止，**退出码 1**；同次质量链后续保护与构建未执行完毕。
+
+已在原 Draft PR #70 的 SSE 故障代理测试工具内将 OS 随机端口改为 Fetch 允许的随机高端口（20000～49151，本机监听，冲突重试最多 32 次），并在现有四项 SSE 测试夹具中增加安全端口断言；不改变实际 SSE 业务行为、SCADA Core、PostgreSQL、NestJS 或工业设备接口。禁用端口这一机制与日志吻合，但**未保存真实端口号码**，修复后 `test:sse:fault:unit` / `ready` 仍待 Windows 复验。PR #70 继续 Open/Draft、Assignee `@adui-dev`，不得提前合并。
+
+## 2026-11-17 · 第三十四批第十五小批：Windows 完整质量链结案通过
+
+维护者最新 Windows 再次执行 SSE 故障代理专项 **4/4**、`vp check` **333/188 零警告错误**、`docs:check` **86**；随后 `pnpm run ready` 完整执行至 React/Vue/NestJS 构建结束，**退出码 0**，包括单测 **567/567**、共享 Session **31/31**、SSE 客户端 **8/8**、故障代理 **4/4**、工程浏览器安全离线 **33/33**、NestJS HTTP E2E **49/49**。此前 PostgreSQL 隔离库 `test:db` **32/32、退出码 0** 且 4 项迁移最新的实测结论保持成立。原始 `ready` 的 `bad port` 失败已有修复后复验通过证据，E-037 结案；E-036 的 TS2740 Mock 修复也已在 Windows TypeScript、`vp check` 与单测中通过。
+
+上述结果覆盖本批预定共享 Session 和真实数据库分层 CAS 验收；不等于同一真实浏览器内物理 TCP 断流或工业现场验证。Windows 原始日志未打印本地 HEAD，因此无法精确匹配 PR Git SHA；本次结案文档追加提交后质量链亦未再次执行。PR #70 继续 Open/Draft、Assignee `@adui-dev`，仍待本次明确合并授权。

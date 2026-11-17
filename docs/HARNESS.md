@@ -2544,3 +2544,78 @@ if ($browserExitCode -ne 0) { throw "双框架延迟保存专项失败" }
 2026-11-17 维护者 Windows 复验已提供 `pnpm run test:projects:oidc:config` **33/33**、`vp check` **333/188 零告警错误**、`docs:check` **86 份 Markdown**、完整 `ready` 执行至 React/Vue/Server 构建完成且非零失败断言未触发（566/566 Vitest、49/49 HTTP E2E），以及独立 `pnpm run test:projects:oidc:save:browser` **退出码 0**。真实浏览器分别完成 React 与 Vue 的 409/401/503 延迟拒绝、只尝试一次 POST、草稿和自动保存保持不变；所有写请求在浏览器被拦截，未修改 Lab 工程和 ACL。
 
 本段是此前“候选/待复验”说明的**最新验收结论**。仍须保留完整日志和本地提交 SHA 关联；上传日志没有 `git rev-parse HEAD`，本次文档补录自身亦未重新验收。真实 PostgreSQL 成功写入后的延迟响应并不在此专项范围内。
+
+## 第三十四批第十五小批 · 真实数据库提交后延迟交付的分层验收
+
+候选新增 **1 项**共享 Studio Session 单测，目标 **31/31**、全量 Vitest **567/567**；新增 **1 项**真实 PostgreSQL 双 Cookie HTTP CAS 测试，现有 DB 专项原为 4 个文件 / **29** 项，目标 **30/30**，具体以维护者 Windows 实测为准。真实 DB 测试仍不属于 `ready`，**必须独立执行**。
+
+安全前置：仅使用现有 `SCADA_TEST_DATABASE_URL` 指向**本机** `adui_scada_test` 的经过明确授权的隔离测试数据库，已应用项目现有迁移；切勿把根 `SCADA_DATABASE_URL` 或生产、开发、OIDC Lab 业务库当作测试库。数据库测试文件现有前置保护拒绝远程 Host、非法库名和非 PostgreSQL 协议；不会自动新建或迁移数据库。本小批所有新增实际 SQL 使用原 `withFixture` 的**随机租户**，按租户作用域清理，**不触碰已有工程**。测试成功回包的延迟发生在消费端 Promise，而非 TCP 网络故障。
+
+Windows 从项目根执行，先核对当前工作分支和未提交更改：
+
+```powershell
+git status --short
+git fetch origin
+git switch test/v0.3-b34-real-commit-late-response
+git pull --ff-only origin test/v0.3-b34-real-commit-late-response
+git rev-parse HEAD
+
+pnpm run test:unit
+if ($LASTEXITCODE -ne 0) { throw "共享会话单元测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 代码检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+```
+
+**单独真实 PostgreSQL 验收**（确认独立测试库、迁移及本机已有安全环境变量后才执行；不要复制口令到终端、日志或 PR）：
+
+```powershell
+pnpm run test:db
+$dbExitCode = $LASTEXITCODE
+Write-Host "真实 PostgreSQL 专项退出码：$dbExitCode"
+if ($dbExitCode -ne 0) { throw "真实 PostgreSQL 专项失败" }
+```
+
+`test:db` 必须对照新增用例的 **201 已提交/审计存在→第二主体推进至 3→旧 201 延迟交付→旧 CAS 409→最终水位、版本、审计 1/2/3**；若出现迁移缺失或隔离库前置不满足，保持失败，不使用已有业务库绕过。此测试只阻滞应用层交付，不声明真实浏览器 TCP 故障已验收。需要测试物理 TCP 阻断或真实双浏览器现场并发时另开专项评审。
+
+## 第三十四批第十五小批 · SSE 故障代理随机禁用端口 Windows 复验
+
+维护者实际已通过 `test:db` **32/32，退出码 0**（隔离 PostgreSQL 四项迁移已是最新）、`test:unit` **567/567**、`vp check` **333/188 零警告错误**、`docs:check` **86**；但 `ready` 被 `scripts/sse-fault-proxy.test.mjs` 中两个 `fetch failed: bad port` 阻断，SSE 故障代理 **2/4**，整条质量链退出码 **1**。SSE 客户端 **8/8** 通过不能替代故障代理检查。
+
+最小候选将测试故障代理的监听从无条件 `listen(0)` 改为随机选择本机 **20000～49151** 的 HTTP/Fetch 允许端口，发生 `EADDRINUSE`/`EACCES` 可受控重试最多 32 次；保持回环绑定、外部 URL 严格拒绝、SSE 静默阻断、TCP 资源清理及其他既有断言。原四项单测均通过 `withOrigin` 再验证实际端口范围。不能通过修改 Node Fetch 禁用端口列表、禁用 Web 安全或删除原测试来处理此故障。
+
+同步最新 PR #70 分支并保留本地未提交更改后，在 Windows 项目根执行：
+
+```powershell
+pnpm run test:sse:fault:unit
+$faultExitCode = $LASTEXITCODE
+Write-Host "SSE 故障代理退出码：$faultExitCode"
+if ($faultExitCode -ne 0) { throw "SSE 故障代理测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+```
+
+必要时还可独立复查 `pnpm run test:db`，但不得为了消除 `bad port` 而切换生产或开发 PostgreSQL。当前新增代理端口修复只有静态源码核对，**尚无 Windows 新版 SSE 或 ready 退出码**；已有真实 DB 32/32 的验收结论不受影响。
+
+## 第三十四批第十五小批 · Windows 最终质量结果
+
+2026-11-17 维护者 Windows 实测：`pnpm run test:sse:fault:unit` **4/4**；`vp check` **333 文件格式正确/188 受检零告警错误**；`docs:check` **86**；完整 `pnpm run ready` **退出码 0**，包含共享 Vitest **567/567**、SSE 客户端 **8/8**、故障代理 **4/4**、OIDC 工程浏览器离线安全 **33/33**、NestJS HTTP E2E **49/49**、React/Vue/NestJS 类型检查和构建。另有同一小批此前已在本机隔离 `adui_scada_test` 单独执行的真实 `test:db` **4/4 文件、32/32 用例、退出码 0**，四项 Prisma 迁移为最新。
+
+前面“故障代理 2/4”和“ready 退出码 1”是补丁前历史记录，不再是本批当前质量结论。修复后 Windows 证明 SSE 代理在所测端口上的安全监听与 TCP 故障注入恢复正常；上轮未记录随机分配的确切禁用端口，因此不虚构具体端口值。两层 CAS 测试仍非物理 TCP 断流或真实浏览器对同一 PostgreSQL 提交回包的单条完整 E2E。原始日志没有 `git rev-parse HEAD`，新文档提交亦未运行完整门禁；未经明确授权不合并 PR #70。

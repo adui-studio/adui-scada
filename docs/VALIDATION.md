@@ -1534,3 +1534,39 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 **修复结论**：此前 Vue 409 时共享 `serverSession` CAS 基线已清除但响应式 `serverBaselineRevision` 未同步的缺陷（E-035），以及新增离线脱敏断言文案不一致（E-033/E-034 相关回归），均已通过这轮离线和真实浏览器质量门禁验证；历史几轮退出码 1 仅保留为故障及修复经过，**不是当前验收结论**。
 
 **证据边界**：双框架专项是**真实浏览器 UI ＋ 合成 POST 拒绝**，浏览器永久阻断工程写入；并非真实 PostgreSQL 写入已成功后的网络延迟或真实跨会话/跨标签写竞争专项，不扩大工业设备写入权限。本轮日志**未包含 `git rev-parse HEAD`**，不能精确证明 Windows 运行 SHA；在记录前，PR #69 的远端 HEAD 为 `a16e3f946e28dc8b155ad5f33fde82b198a5b511`，较上一轮 `3600c4246b7748cbbe50ca922fe3f7cc83cf4484` 仅多一个离线测试文件整理提交。补录验收结果会产生新的文档提交，**文档新 HEAD 尚未再次经过 Windows 质量链**。PR 继续保持 Open / Draft、Assignee `@adui-dev`，未经维护者单独明确授权不合并。
+
+## 2026-11-17 · 第三十四批第十五小批：真实提交后迟到 201 / CAS 回归候选待验收
+
+基线为第十四小批已合并的 `main@c5df29fb7a769235237c5c4da33f20a0c013fe2e`。前批 Windows 日志已有共享 Session 30/30、全量 566/566 单测、HTTP E2E 49/49、离线 OIDC 33/33、`vp check` 与 `ready` 完成和浏览器合成拒绝专项退出码 0，但**不能视为本批新增真实 DB 用例已运行**。
+
+本批新代码只涉及 `packages/api-client/test/studio-session.test.ts` 与 `apps/server/test/projects-cas-cookie-http.db-spec.ts`：新增 1 项 Promise 时序单测，要求旧成功 2 回包在客户端重建 CAS 3 后必须受控拒绝，基线保持 3，后续以 3 追加到 4；新增 1 项隔离 PostgreSQL + 真实 Cookie/CSRF/ACL + HTTP 事务测试，第一主体在旧 201 暂未交付应用消费端时完成真实数据库版本 2 和审计，第二主体再追加版本 3；真实 GET 读取版本 3，之后释放旧 201，客户端尝试旧 CAS 2 必须返回 409，数据库不得产生额外版本/审计。所有写入只使用原 `withFixture` 生成的随机租户，清理范围由 tenantId 限定，测试目标明确拒绝外部数据库。延迟实现是**收到真实 HTTP 响应后在消费端 Promise 暂留**，不控制 TCP 传输本身。两层用例独立，不等于已经打通真实浏览器 UI 直接处理这一 PostgreSQL 回包。
+
+期望共享 Session **31/31**、全量 Vitest **567/567**；真实 `pnpm run test:db` 预计 **30/30**，必须额外执行且要求真实退出码 0。候选提交后**尚未在 Windows 执行 `vp check`、`pnpm run test:unit`、`pnpm run docs:check`、`pnpm run ready` 或 `pnpm run test:db`**，不得写成已通过。若现有测试数据库缺少迁移/连接失败，不得转向生产库解决。未更改真实 OIDC 用户/ACL、NestJS 业务 Controller、Prisma Schema、工业设备或前端工程保存逻辑。PR 保持 Draft；只有维护者明确同意才能合并。
+
+## 2026-11-17 · 第三十四批第十五小批首次 Windows Vite+ 类型检查：TS2740 修复候选
+
+维护者本机执行 `vp check --fix`，格式化阶段已完成，但 **188 个受检文件内 1 个 TypeScript TS2740 错误、0 警告**，因此**本次质量检查失败**。错误定位 `packages/api-client/test/studio-session.test.ts:676`，新增旧保存回包迟到场景将 `createProjectSnapshot(waterTreatmentDemoDocument, { revision: 4, createdAt })` 直接传入 `api.appendVersion.mockResolvedValueOnce`。仓库实际 Core `project-snapshot.ts` 中此工厂为 `async`，返回 `Promise<ProjectSnapshot>`；Vitest 的 `mockResolvedValueOnce` 对该 Mock 要求已解析的 `ProjectSnapshot`。不能把格式化完成等同 `vp check` 通过。
+
+已在 Draft PR #70 原分支将唯一不匹配调用改为 `mockResolvedValueOnce(await createProjectSnapshot(...))`，复用原 async `it`，保留原有真实 SHA-256 快照生成、CAS 3→4、期望调用次数及旧回包上下文保护。改动**仅一处测试值**，不更改生产 API Client、Core、NestJS、Schema 或真实数据库行为。经 GitHub 代码确认新表达式恰好位于 async 测试内，且 Core 工厂返回 Promise；此项是静态类型原因核对，不是本机 TS6 / `vp check` 通过证据。
+
+**修复后待 Windows 复验**：`vp check` 零错误警告；`pnpm run test:unit` 目标共享会话 31/31、全量 567/567；`pnpm run docs:check` 与 `pnpm run ready` 实际退出码 0；真实本机隔离 PostgreSQL `pnpm run test:db` 目标 30/30 且退出码 0。原始日志不包含本机 HEAD 校验和后续测试，通过前不能合并 PR。
+
+## 2026-11-17 · PR #70 Windows 实测：真实数据库 32/32 通过，ready 被 SSE 代理禁用端口中断
+
+维护者 Windows 原始日志已确认本机独立测试数据库 `adui_scada_test`（`127.0.0.1:15432`）的 `prisma migrate status` 显示 **4 项迁移、Database schema is up to date**。随后独立 `pnpm run test:db` 在真实 PostgreSQL、NestJS HTTP、Cookie/CSRF 和 ACL 下 **4/4 文件、32/32 项通过，退出码 0**。其中新增的“真实 PostgreSQL 已提交版本后延迟交付旧 201，最新水位与审计不得回退”实际通过，包含 CAS 旧水位拒绝与版本/审计核对。**此前文档将数据库专项预计为 30/30 不准确，以维护者实际 32/32 为准**。隔离数据库测试完成不等于工业现场验证。
+
+维护者附带的完整 Windows 质量日志另行证明：`pnpm run test:unit` **49/49 文件、567/567 用例（共享 Studio Session 31/31）通过**；`vp check` **333 个文件格式正确、188 个受检文件零警告/Lint/类型错误**；`pnpm run docs:check` **86 份 Markdown 通过**。完整 `pnpm run ready` 已通过依赖/环境/LF/中文文案/Prisma/Core、双框架及服务端类型检查、单测 567/567、SSE 客户端 **8/8**，但在 `test:sse:fault:unit` 报 **4 项中 2 通过、2 失败**，均为 `TypeError: fetch failed`，原因链 `Error: bad port`；完整 `ready` **实际退出码 1**。因此该次 `ready` 之后的 OIDC 保护、HTTP E2E、文档和构建阶段**未在该次质量链执行完成**，不能宣称整条 `ready` 已通过。
+
+复核 `scripts/sse-fault-proxy.mjs` 原实现发现代理对 `127.0.0.1` 使用 `server.listen(0)` 接受操作系统随机分配端口；失败的两个测试经 Node 内置 `fetch` 访问代理，第三个 Keep-Alive 测试走 `node:http` 并通过。Fetch 标准会拒绝部分 HTTP 禁用端口，日志中的 `bad port` 与随机选择该端口的风险吻合；**本次输出没有记录代理实际选中的端口号，不能精确断言具体是哪一个禁用端口**。为避免重现，仅在测试故障代理内改为从 **20000～49151** 的安全高端口范围随机绑定本机监听，遇 `EADDRINUSE` 或 Windows `EACCES` 最多重试 32 次并保留固定中文错误，测试夹具断言所有实际监听端口都在该范围。保留原有 SSE 字节阻断、Keep-Alive、资源回收与外部目标拒绝断言，不关闭 Fetch 安全保护。
+
+该修复**尚未在 Windows 重新实测**。维护者应先执行 `pnpm run test:sse:fault:unit`（目标 4/4），再执行 `vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 并记录退出码。原有真实数据库 **32/32 通过**证据仍成立；本轮修复未更改数据库测试、Schema、迁移或服务端生产代码。GitHub 最新文档提交本身也尚未通过新的 Windows 质量链。PR #70 保持 Draft，等待维护者明确合并授权。
+
+## 2026-11-17 · PR #70 Windows 复验结案：真实 PostgreSQL 32/32 与完整 ready 退出码 0
+
+维护者最新 Windows PowerShell 文件记录了此前 SSE 禁用端口修复后的真实复验：单独 `pnpm run test:sse:fault:unit` **4/4、0 失败**；单独 `vp check` **333 个格式文件正确、188 个受检文件零警告/Lint/类型错误**；`pnpm run docs:check` **86 个 Markdown 通过**。随后完整 `pnpm run ready` 执行到 React Web、Vue Web 与 NestJS Server 构建结束，PowerShell 明确输出 **“完整质量链退出码：0”**，失败断言未触发。本轮日志相较上轮 `ready` 退出码 1 已覆盖相同的 SSE `fetch failed: bad port` 失败路径，故 E-037 的**受控端口修复已获得真实 Windows 回归通过证据**。
+
+完整 `ready` 本轮覆盖：Catalog **12 清单/52 项依赖**、共享 TSConfig **10 个消费端**、根环境/LF/中文文案、Prisma Client **7.10.1**、共享 Core、React/Vue/草稿仓储/API Client/NestJS 类型检查；Vitest **49/49 文件、567/567 用例**（共享 Studio Session **31/31**）、SSE 客户端 **8/8**、SSE 故障代理 **4/4**、OIDC HTTPS 代理 **10/10**、Lab 凭据 **6/6**、身份预绑定 **14/14**、Docker **14/14**、Docker 数据库保护 **9/9**、匿名 HTTPS 探针 **11/11**、工程浏览器离线 **33/33**、双主体 CAS 安全预检 **11/11**、ACL 撤销安全门禁 **8/8**、NestJS HTTP E2E **6/6 文件、49/49 用例**、文档 **86 份**及 React/Vue/NestJS 构建成功。HTTP E2E 中受控健康检查故意返回的 503/ERROR 属测试覆盖的预期路径，**并非 ready 失败**。
+
+结合此前维护者已提供的隔离 PostgreSQL `adui_scada_test` Prisma **4 项迁移最新**及 `pnpm run test:db` **4/4 文件、32/32 用例、退出码 0**，第三十四批第十五小批的**既定两层验收门禁已经通过**：真实数据库旧 201 迟到/另一个 Cookie 会话推进水位/旧 CAS 409/持久化审计一致性和共享 Session 旧成功回包迟到后的新 CAS 基线保护。数据库专项是此前独立执行的结果，不属于 `ready`；没有改变原有真实响应仅在测试消费端延迟交付这一边界，也没有测试工业设备写入或生产环境。
+
+**Git 证据边界**：上传的两段 Windows 日志均未附 `git rev-parse HEAD`，故无法将 Windows 成功结果绑定到**精确提交 SHA**。本次追加结案文档将再产生新的 Git HEAD，文档新提交本身**尚未再次运行 Windows `vp check`/`docs:check`/`ready`**。截至补录前 PR #70 仍为 Draft，Assignee `@adui-dev`；即使验收通过，未经维护者明确授权也不得自动合并。

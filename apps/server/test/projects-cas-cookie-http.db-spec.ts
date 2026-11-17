@@ -289,6 +289,91 @@ describe("本机隔离 PostgreSQL 双 Cookie 会话 HTTP CAS 事务", () => {
     });
   });
 
+  it("真实 PostgreSQL 已提交版本后延迟交付旧 201，最新水位与审计不得回退", async () => {
+    await withFixture(async ({ tenantId, sessionA, sessionB }) => {
+      // 仅延迟测试消费端收到真实 201 的时机，不伪造 HTTP 成功，也不暂停数据库事务。
+      const committed = await postVersion(sessionA, 1);
+      expect(committed.status).toBe(201);
+      expect(committed.body.revision).toBe(2);
+      expect(committed.body.contentHash).toMatch(/^[a-f0-9]{64}$/);
+      let releaseReply: (() => void) | undefined;
+      const delayedReply = new Promise<{ revision: number; contentHash: string }>((resolve) => {
+        releaseReply = () =>
+          resolve({ revision: committed.body.revision, contentHash: committed.body.contentHash });
+      });
+      let clientReceived = false;
+      const pendingDelivery = delayedReply.then((reply) => {
+        clientReceived = true;
+        return reply;
+      });
+
+      // 旧回包仍被消费端持有期间，真实数据库已提交修订号 2 和对应审计。
+      const [afterCommit, committedVersions, committedAudits] = await Promise.all([
+        database!.client.scadaProject.findUniqueOrThrow({
+          where: { tenantId_projectId: { tenantId, projectId } },
+        }),
+        database!.client.scadaProjectVersion.findMany({
+          where: { tenantId, projectId },
+          orderBy: { revision: "asc" },
+        }),
+        database!.client.scadaProjectAudit.findMany({
+          where: { tenantId, projectId },
+          orderBy: { revision: "asc" },
+        }),
+      ]);
+      expect(afterCommit.headRevision).toBe(2n);
+      expect(committedVersions.map((version) => version.revision)).toEqual([1n, 2n]);
+      expect(committedAudits.map((audit) => audit.revision)).toEqual([1n, 2n]);
+      expect(committedAudits[1]?.actorId).toBe(subjectA);
+
+      // 第二个受控 Cookie 会话在旧回包交付前追加到修订号 3。
+      const next = await postVersion(sessionB, 2);
+      expect(next.status).toBe(201);
+      expect(next.body.revision).toBe(3);
+      const refreshed = await request(app!.getHttpServer())
+        .get("/api/v1/projects/" + projectId)
+        .set("Cookie", cookie(sessionA));
+      expect(refreshed.status).toBe(200);
+      expect(refreshed.body.headRevision).toBe(3);
+      const latestSnapshot = await request(app!.getHttpServer())
+        .get("/api/v1/projects/" + projectId + "/versions/3")
+        .set("Cookie", cookie(sessionA));
+      expect(latestSnapshot.status).toBe(200);
+      expect(latestSnapshot.body.revision).toBe(3);
+      expect(latestSnapshot.body.contentHash).toBe(next.body.contentHash);
+
+      // 现在才向模拟客户端交付旧 201；旧修订号不得作为新的 CAS 写入依据。
+      expect(clientReceived).toBe(false);
+      releaseReply?.();
+      const late = await pendingDelivery;
+      expect(clientReceived).toBe(true);
+      expect(late.revision).toBe(2);
+      expect(late.contentHash).toBe(committed.body.contentHash);
+      const staleRetry = await postVersion(sessionA, late.revision);
+      expect(staleRetry.status).toBe(409);
+
+      const [finalProject, finalVersions, finalAudits] = await Promise.all([
+        database!.client.scadaProject.findUniqueOrThrow({
+          where: { tenantId_projectId: { tenantId, projectId } },
+        }),
+        database!.client.scadaProjectVersion.findMany({
+          where: { tenantId, projectId },
+          orderBy: { revision: "asc" },
+        }),
+        database!.client.scadaProjectAudit.findMany({
+          where: { tenantId, projectId },
+          orderBy: { revision: "asc" },
+        }),
+      ]);
+      expect(finalProject.headRevision).toBe(3n);
+      expect(finalVersions.map((version) => version.revision)).toEqual([1n, 2n, 3n]);
+      expect(finalVersions[1]?.contentHash).toBe(late.contentHash);
+      expect(finalVersions[2]?.contentHash).toBe(next.body.contentHash);
+      expect(finalAudits.map((audit) => audit.revision)).toEqual([1n, 2n, 3n]);
+      expect(finalAudits.map((audit) => audit.actorId)).toEqual([subjectA, subjectA, subjectB]);
+    });
+  });
+
   it("真实 HTTP 注销只撤销当前 Cookie 会话，旧请求立即失败且另一主体仍能保存", async () => {
     await withFixture(async ({ tenantId, sessionA, sessionB }) => {
       const logout = await request(app!.getHttpServer())

@@ -322,6 +322,26 @@
 
 > **2026-11-17 E-032 至 E-035 结案补录**：保留上述历史失败与候选阶段描述作为证据，不再将其误读为 PR #69 最新状态。维护者 Windows 最新回归 `pnpm run test:projects:oidc:config` **33/33**、`vp check` **333 格式文件/188 受检零告警**、`docs:check` **86 份**、完整 `ready` 已执行至末尾且非零断言未触发（566/566 单测、49/49 HTTP E2E、双框架及服务端构建）。**React/Vue 真实浏览器均完成合成延迟保存 409/401/503**，`test:projects:oidc:save:browser` PowerShell 明确退出码 **0**，测试期间所有工程写请求均在浏览器端阻断。Vue 409 的 `serverBaselineRevision` 与共享 CAS 同步回归得到实际验证；未知错误附带敏感正文仍由严格安全白名单拒绝。日志未给出本地 Git HEAD，新增结案文档提交后也尚未重跑 `ready`；合成 POST 拒绝**不代表**真实 PostgreSQL 写入后回包、跨标签竞态或工业设备安全已验收。
 
+### E-036 · 异步工程快照工厂的 Promise 误传给 Vitest 同步 Mock 值（第三十四批第十五小批）
+
+- **现象**：维护者 2026-11-17 Windows 执行 `vp check --fix`，`packages/api-client/test/studio-session.test.ts:676` 报 **TS2740**：`Promise<ProjectSnapshot>` 缺少 `ProjectSnapshot` 的 `formatVersion`、`projectId`、`revision` 等字段。188 个文件内 1 个类型错误、0 警告，格式化完成但检查未通过。
+- **已确认原因**：当前 `packages/core/src/project-snapshot.ts` 将 `createProjectSnapshot` 声明为 `async (...): Promise<ProjectSnapshot>`，内部还计算 SHA-256 摘要；新增客户端用例直接传入 `api.appendVersion.mockResolvedValueOnce(createProjectSnapshot(...))`。Vitest 的 `mockResolvedValueOnce` 期望 Mock 方法解析后的 `ProjectSnapshot`，不能把工厂 Promise 当作快照对象。
+- **最小修复**：只在已有 `async it` 中使用 `mockResolvedValueOnce(await createProjectSnapshot(...))`。保留真实快照与 SHA-256 校验，不用 `as ProjectSnapshot`、`any`、禁用类型检查或替代伪造对象，不改变生产代码及隔离数据库测试。
+- **防复发**：使用异步 Core 工厂准备 Vitest Mock 返回值前，先核对工厂签名；`mockResolvedValueOnce` 传已解析的值，需要延迟计算或异步拒绝则用符合接口签名的 `mockImplementationOnce`。不能从函数名推断返回同步对象；提交前应对新增测试运行真实 `vp check` 和对应单测。
+- **验证边界**：维护者原始 **TS2740 失败** 已确认；PR #70 的修复表达式与 Core 异步签名经静态复核，**修复后 Windows TypeScript 6、`vp check`、共享会话 31/31、`ready` 和隔离 PostgreSQL `test:db` 均未重新实测**，不得标为通过。
+- **证据**：维护者原始 Windows `vp check --fix` 日志、PR #70、`packages/core/src/project-snapshot.ts`、`packages/api-client/test/studio-session.test.ts`、`docs/VALIDATION.md`。
+
+### E-037 · SSE 故障代理使用随机禁用 HTTP 端口导致 Node Fetch 拒绝（第三十四批第十五小批）
+
+- **现象**：维护者 2026-11-17 Windows 在隔离 PostgreSQL 专项 **32/32、退出码 0**，单元测试 **567/567**、`vp check` **333 格式文件/188 受检零告警** 后运行完整 `pnpm run ready`；SSE 客户端 **8/8** 通过，随后 `scripts/sse-fault-proxy.test.mjs` **4 项中 2 失败**，两项分别是普通 HTTP 透传和双 SSE 订阅，错误 `TypeError: fetch failed`、内部 `Error: bad port`；Keep-Alive `node:http` 用例通过，`ready` **实际退出码 1**。
+- **原因与证据边界**：故障代理用 `server.listen(0, "127.0.0.1")` 从 OS 临时端口池选取任意监听端口；测试用全局 `fetch(new URL("...", proxy.url))` 请求代理。WHATWG Fetch 标准会屏蔽一些端口（如 6000、6667、10080），Node 内置 Fetch 同样可能返回 `bad port`；`node:http` 不受相同 Fetch 端口阻止，因此症状高度吻合。**用户日志没有给出实际绑定端口号，不能确定是哪一个端口**；不将该推断当作已观测的精确端口。
+- **最小修复**：保持代理只绑定 `127.0.0.1`、仍严格拒绝非本机或非 HTTP 目标；随机监听只从明确避开所有已知 Fetch 禁用端口的 **20000～49151** 高端口范围选择，遇到 `EADDRINUSE` 或 Windows `EACCES` 最多重新尝试 32 次，资源与连接关闭流程不变。原 SSE 四项测试的 `withOrigin` 夹具增加端口范围断言；保留 Fetch 请求、真实 TCP 静默阻断、Keep-Alive 复用、连接回收测试。
+- **防复发**：测试代理或临时浏览器服务不能假设 `listen(0)` 选择的端口一定允许浏览器/Fetch 访问。随机端口应满足协议客户端的安全限制并覆盖端口占用重试；不要用绕过浏览器禁用端口、关闭认证/TLS、改用不安全生产端口或删测试来掩盖。遇到随机端口失败先区分 `fetch` 的 `bad port`、TCP 拒绝和 SSE 协议失败，避免错修业务逻辑。
+- **验证**：修复前维护者实测 `test:sse:fault:unit` 在 `ready` 中 **2/4**、`ready` 退出码 **1**；当前 GitHub 代码补丁只经静态核对，**修复后 Windows `test:sse:fault:unit`、`vp check`、`docs:check` 及完整 `ready` 均待复验**。此前同一分支 `test:db` **32/32，退出码 0**，不代表新代理补丁已经验证通过。
+- **证据**：维护者 Windows 原始 SSE `bad port` 错误日志、PR #70、`scripts/sse-fault-proxy.mjs`、`scripts/sse-fault-proxy.test.mjs`、`docs/VALIDATION.md`。
+
+> **2026-11-17 · E-036 / E-037 最终 Windows 结案补录**：历史段落中的“尚待复验”仅描述候选阶段。维护者已在 Windows 通过异步快照 Mock 修复后的 `vp check` **333/188 零告警错误**、共享会话 **31/31** 与全量 Vitest **567/567**、SSE 故障代理独立 **4/4** 及完整 `pnpm run ready` **退出码 0**（包含 OIDC 浏览器离线安全 33/33、NestJS HTTP E2E 49/49 和双框架/服务端构建）。此前独立真实 PostgreSQL `test:db` 也已 **32/32、退出码 0**。E-036 的 Promise/Mock 类型错误与 E-037 的故障代理 Fetch `bad port` 均有实测通过证据；未记录随机禁用端口具体数值，不推断 Windows 测试精确 Git HEAD。新结案文档提交本身未重新执行 Windows 质量链，PR #70 仍需维护者明确授权后才可合并。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
