@@ -8,7 +8,10 @@ import { join, resolve } from "node:path";
 import { loadEnvFile } from "node:process";
 import { setTimeout as pause } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { describeBrowserPageException, resolveProjectBrowserLab } from "./test-project-browser-oidc.mjs";
+import {
+  describeBrowserPageException,
+  resolveProjectBrowserLab,
+} from "./test-project-browser-oidc.mjs";
 import { resolveLabIdentityTarget } from "./oidc-lab-identity.mjs";
 
 const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
@@ -389,19 +392,23 @@ export async function grantSecondSubject(client, projectId, first, second) {
   await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
   try {
     const project = await client.query(
-      "SELECT head_revision FROM public.scada_projects WHERE tenant_id = $1 AND project_id = $2 FOR UPDATE",
+      "SELECT head_revision FROM public.scada_projects " +
+        "WHERE tenant_id = $1 AND project_id = $2 FOR UPDATE",
       [first.tenantId, projectId],
     );
     const version = await client.query(
-      "SELECT created_by FROM public.scada_project_versions WHERE tenant_id = $1 AND project_id = $2 AND revision = 1",
+      "SELECT created_by FROM public.scada_project_versions " +
+        "WHERE tenant_id = $1 AND project_id = $2 AND revision = 1",
       [first.tenantId, projectId],
     );
     const identities = await client.query(
-      "SELECT subject_id FROM public.scada_identities WHERE tenant_id = $1 AND subject_id IN ($2, $3) AND status = 'active'",
+      "SELECT subject_id FROM public.scada_identities " +
+        "WHERE tenant_id = $1 AND subject_id IN ($2, $3) AND status = 'active'",
       [first.tenantId, first.subjectId, second.subjectId],
     );
     const grants = await client.query(
-      "SELECT subject_id, permission FROM public.scada_project_grants WHERE tenant_id = $1 AND project_id = $2",
+      "SELECT subject_id, permission FROM public.scada_project_grants " +
+        "WHERE tenant_id = $1 AND project_id = $2",
       [first.tenantId, projectId],
     );
     if (
@@ -419,7 +426,9 @@ export async function grantSecondSubject(client, projectId, first, second) {
       throw new Error("专用工程 ACL 准备失败，请检查隔离 Lab 身份绑定");
     }
     await client.query(
-      "INSERT INTO public.scada_project_grants (tenant_id, project_id, subject_id, permission) VALUES ($1, $2, $3, 'project:read'), ($1, $2, $3, 'version:read'), ($1, $2, $3, 'version:append')",
+      "INSERT INTO public.scada_project_grants (tenant_id, project_id, subject_id, permission) " +
+        "VALUES ($1, $2, $3, 'project:read'), " +
+        "($1, $2, $3, 'version:read'), ($1, $2, $3, 'version:append')",
       [first.tenantId, projectId, second.subjectId],
     );
     await client.query("COMMIT");
@@ -431,11 +440,13 @@ export async function grantSecondSubject(client, projectId, first, second) {
 
 export async function verifyCasAudit(client, projectId, first, second, winnerIndex, hash) {
   const versions = await client.query(
-    "SELECT revision, created_by, content_hash FROM public.scada_project_versions WHERE tenant_id = $1 AND project_id = $2 ORDER BY revision",
+    "SELECT revision, created_by, content_hash FROM public.scada_project_versions " +
+      "WHERE tenant_id = $1 AND project_id = $2 ORDER BY revision",
     [first.tenantId, projectId],
   );
   const audits = await client.query(
-    "SELECT revision, actor_id FROM public.scada_project_audit WHERE tenant_id = $1 AND project_id = $2 ORDER BY revision",
+    "SELECT revision, actor_id FROM public.scada_project_audit " +
+      "WHERE tenant_id = $1 AND project_id = $2 ORDER BY revision",
     [first.tenantId, projectId],
   );
   const head = await client.query(
