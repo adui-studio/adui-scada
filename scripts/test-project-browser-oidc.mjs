@@ -623,7 +623,9 @@ export function conflictPreviewStateInPage() {
   const panel = document.querySelector('[aria-label="服务端工程版本"]');
   const text = panel?.textContent ?? "";
   const comparison = panel?.querySelector(".studio-version-comparison");
-  const revision = comparison?.querySelector("strong")?.textContent?.match(/服务端版本 #(\d+)/)?.[1];
+  const revision = comparison
+    ?.querySelector("strong")
+    ?.textContent?.match(/服务端版本 #(\d+)/)?.[1];
   return {
     writeAttempts: globalThis.__aduiTestAccessDenial?.writeAttempts ?? -1,
     busy: [...(panel?.querySelectorAll(".studio-version-help") ?? [])].some((node) =>
@@ -986,11 +988,11 @@ async function verifySaveTimingScenarios(session, origin, name, selected) {
       assert.equal(await session.evaluate(triggerConflictPreviewInPage), true);
       const preview = await waitFor(async () => {
         const state = await session.evaluate(conflictPreviewStateInPage);
-        return !state.busy &&
+        const previewReady =
+          !state.busy &&
           state.comparisonVisible &&
-          state.previewRevision === selected.headRevision
-          ? state
-          : null;
+          state.previewRevision === selected.headRevision;
+        return previewReady ? state : null;
       }, name + " 冲突恢复只读预览最新服务端版本");
       assert.equal(preview.writeAttempts, 1, name + " 预览不允许额外写入工程");
       assert.equal(preview.baselineCleared, true, name + " 只读预览不应建立 CAS 基线");
