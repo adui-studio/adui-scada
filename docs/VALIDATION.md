@@ -1348,3 +1348,16 @@ E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CD
 新增独立 `scripts/test-oidc-dual-cas.mjs`、`scripts/test-oidc-dual-cas.cases.mjs`，以及根命令 `test:oidc:dual:config`（新增 11 项、加入 `ready`）、`test:oidc:dual:preflight` 和 `test:oidc:dual:cas`。首个模式只验证两份来自真实 Keycloak 授权码登录的独立 BFF 会话对应同租户不同主体；写入模式除固定 `--run-cas --confirm-lab adui_scada` 外还须通过已有本机 Lab 配置白名单，在独立专用空白工程上执行受控授权、真实 HTTP CAS 201＋409、PostgreSQL 历史/审计核对。不触碰其他工程、工业设备或生产数据库。
 
 候选源码完成了**有限 V8 语法解析与模拟页面/SQL 行为核对**，包括不完整命令拒绝、相同主体拒绝、专用工程 ID 限制、单次新建、错误脱敏、固定 ACL 授权；未在用户 Windows 运行真实 Node 测试、`vp check`、完整 `pnpm run ready` 或两次 Keycloak 真人登录，也没有访问本机 PostgreSQL。完整候选状态必须以维护者终端日志及退出码为准。第六小批与第五小批已有的双 BFF Cookie HTTP 真库 29/29 通过证据不同，不能冒充本批真实双 Keycloak 登录已通过。
+
+## 2026-11-17 · 第三十四批第六小批 Windows 质量链通过、真实双身份条件未满足
+
+维护者实测最新候选（身份错误诊断细分**之前**）：`pnpm run test:oidc:dual:config` **11/11**，`vp check` **331 个格式文件 / 186 个受检文件零警告、Lint 或类型错误**，`pnpm run docs:check` **86 个 Markdown**，完整 `pnpm run ready` **544/544 单元测试、49/49 NestJS HTTP E2E、React/Vue/NestJS 构建成功、最终退出码 0**。此前 `vp check --fix` 的 3 条 `eslint(no-unused-vars)` 已经最小删除并由维护者复验关闭，记录 E-028。
+
+随后在真实本机隔离 Keycloak Lab 执行：
+
+- `pnpm run test:oidc:dual:preflight`：两个浏览器均已到达真实登录后的身份比较，失败提示“**两次登录必须属于同一可信租户的不同主体**”，退出码 **1**。
+- `pnpm run test:oidc:dual:cas`：同样在身份比较阶段失败，退出码 **1**；**尚未进入创建专用工程、授予该工程 ACL 或提交 HTTP CAS 阶段**。正常 OIDC 登录可能生成本地短期会话，但无本批专用工程写入证据。
+
+由于现有诊断把“同本地主体”和“跨租户”合并，**当前不知哪一条件触发**，不能认定第二位用户必然没有绑定、两次登录必然同一账户，更不能归因于 CAS 数据库事务。补丁仅在 `requireDifferentSubjects` 中将两种错误拆为固定、脱敏的中文类别，并在第二次登录前提示更换账号；测试更新为分别断言对应失败消息，身份拒绝逻辑未放宽。诊断不足记录 E-029。
+
+**仍待 Windows 复验**：最新 HEAD 的 `test:oidc:dual:config`、`vp check`、`docs:check`、`ready`；随后只跑 `test:oidc:dual:preflight` 检查两个不同 Keycloak 账号是否绑定到同一受控租户。**只有预检通过并明确确认当前 NestJS 实际连接本机 `adui_scada` Lab 后**才应执行会写入的 `test:oidc:dual:cas`。没有真实的双用户 201/409 结果，PR 仍 Draft，不合并。
