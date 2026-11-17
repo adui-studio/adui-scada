@@ -18,9 +18,6 @@ const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const SERVER_PACKAGE = fileURLToPath(new URL("../apps/server/package.json", import.meta.url));
 const LOOPBACK = "127.0.0.1";
 const PROJECT_PREFIX = "b34-oidc-cas-";
-const PROJECT_NAME = "双主体 CAS 验收";
-const CSRF_NAME = "__Host-adui-scada-csrf";
-const CSRF_PATTERN = /^scada_csrf_[A-Za-z0-9_-]{43}$/;
 const PRINCIPAL_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const PROJECT_PATTERN = /^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
