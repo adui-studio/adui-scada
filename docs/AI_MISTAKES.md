@@ -264,6 +264,8 @@
 - **验证**：维护者在诊断修复前的 `test:oidc:dual:config` **11/11**、`vp check` 零警告、`ready` 退出码 0，但真实 `preflight` 和 `cas` 退出码均为 1。**修改后的离线、质量链和真实双登录尚未在 Windows 重新执行，不得标为通过；专用工程 CAS 的 201/409 尚无本小批真实验收证据**。
 - **证据**：PR #61、`scripts/test-oidc-dual-cas.mjs`、`scripts/test-oidc-dual-cas.cases.mjs`、维护者原始 Windows 两条预检失败日志、`docs/VALIDATION.md`。
 
+> **2026-11-17 结案补录（E-029）**：上文“尚待 Windows 复验”保留为错误发生和修复候选时的历史状态，不再是本专项的最新结论。维护者已用两个不同的 Keycloak 账号在独立隔离浏览器分别执行 `test:oidc:dual:preflight` 与 `test:oidc:dual:cas`，**两条命令退出码均为 0**；真实 BFF 身份为同租户不同主体，CAS 实际返回 **201＋409**，最终修订号 2、成功版本和审计操作者一致。修复后的最新文档 HEAD 的 `vp check` / `docs:check` / 完整 `ready` 以及本地提交 SHA 对照仍待补证；成功的交互式浏览器专项不等于整个新 HEAD 的所有质量检查通过。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
