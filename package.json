@@ -32,6 +32,7 @@
     "test:oidc:dual:config": "node --test scripts/test-oidc-dual-cas.cases.mjs",
     "test:oidc:dual:preflight": "node scripts/test-oidc-dual-cas.mjs",
     "test:oidc:dual:cas": "node scripts/test-oidc-dual-cas.mjs --run-cas --confirm-lab adui_scada",
+    "test:oidc:dual:late": "node scripts/test-oidc-dual-cas.mjs --run-late-response --confirm-lab adui_scada",
     "test:oidc:revoke:config": "node --test scripts/test-oidc-real-acl-revocation.cases.mjs",
     "test:oidc:revoke:preflight": "node scripts/test-oidc-real-acl-revocation.mjs",
     "test:oidc:revoke:browser": "node scripts/test-oidc-real-acl-revocation.mjs --run-revoke --confirm-lab adui_scada",
