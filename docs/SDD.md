@@ -823,3 +823,4 @@ React 和 Vue 在一个真实临时浏览器中分别进入 Studio：对比工�
 React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverProjectId`、`serverHeadRevision`、`serverRows`、`serverHasMore` 和 `serverInspectedVersion`；Vue 同时清除界面缓存的 `serverBaselineRevision`。两套 `ServerProjectBrowser` 以访问失效的组件 `key` 重新建立独立游标会话，旧请求即使随后返回也不能覆盖已重建的组件。提示仍使用受控中文 `ScadaApiError.message`，身份失效时标记未登录。所有处理**只清理服务端派生缓存**，不调用 `DocumentEditor.loadDocument`、不删除 IndexedDB 草稿、不触碰本地撤销历史。
 
 **验收**：共享 API Client 与 CAS 会话单测覆盖 401/403/404、重复保存阻断、合法重新载入恢复、首次创建不回归、网络中断仍保留基线；Windows `vp check`、`test:unit`、`ready` 和 React/Vue 两端现有工程浏览器验收。真正服务端权限撤销的全链安全性已由第七小批独立 `adui_scada_test` 实测覆盖，**不需要也不允许本批为 UI 模拟而写现有 OIDC Lab 授权表**。没有后台主动推送，因此“即时清空”特指实际请求收到拒绝后的状态更新。
+无论拒绝首先来自 Studio 的保存/历史查询，还是独立工程列表的分页刷新，均使用相同的父级授权失效处理：React 子组件通过 `onAccessRejected(error)` 回调、Vue 子组件通过 `accessRejected` 事件通知 Studio；父级清空旧 CAS 和服务端历史摘要并重建工程管理列表组件。子组件中的临时错误显示不承担父级缓存失效职责。重新挂载使旧分页请求无法把迟到响应写回新列表。
