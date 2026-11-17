@@ -1596,8 +1596,8 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 
 ## 第三十四批第十七小批 · 真实 Studio UI 迟到 201 候选验收
 
-新测试仅操作本轮两个随机 \`b34-oidc-cas-<UUID>\` 专用空白工程；真实提交由 React/Vue Studio UI 的“保存至服务端”发起，第二 Keycloak 主体通过独立浏览器正式 BFF API 追加第三版。两个浏览器同租户不同已预绑定本地主体，严格本机可信 HTTPS 和 \`adui_scada\` Lab；项目授权仅来自已审核的 \`grantSecondSubject\`，不会自动清理已有业务工程或用户。所有测试工程写请求默认由浏览器拒绝，只放行单次严格匹配的专用工程版本追加。
+新测试仅操作本轮两个随机 `b34-oidc-cas-<UUID>` 专用空白工程；真实提交由 React/Vue Studio UI 的“保存至服务端”发起，第二 Keycloak 主体通过独立浏览器正式 BFF API 追加第三版。两个浏览器同租户不同已预绑定本地主体，严格本机可信 HTTPS 和 `adui_scada` Lab；项目授权仅来自已审核的 `grantSecondSubject`，不会自动清理已有业务工程或用户。所有测试工程写请求默认由浏览器拒绝，只放行单次严格匹配的专用工程版本追加。
 
-本批目标：\`pnpm run test:oidc:dual:studio:config\` 新增 **9 项**离线保护；原 \`pnpm run test:oidc:dual:config\` 仍为 16 项；完整 \`pnpm run ready\` 的既有 Vitest **567** 项及 NestJS E2E **49** 项不应因测试工具修改而改变（仅为参考，不能代替实测）。静态语法检查不代表 Node 测试通过。独立真实浏览器专项 \`pnpm run test:oidc:dual:studio:late\` 必须手工在本机可信 Keycloak/HTTPS/PostgreSQL Lab 执行，目标 React 与 Vue 都完成真实 201 延迟、远端 3、可见性 CAS 失效、无额外 POST 和三版审计，命令退出码须为 0。
+本批目标：`pnpm run test:oidc:dual:studio:config` 新增 **9 项**离线保护；原 `pnpm run test:oidc:dual:config` 仍为 16 项；完整 `pnpm run ready` 的既有 Vitest **567** 项及 NestJS E2E **49** 项不应因测试工具修改而改变（仅为参考，不能代替实测）。静态语法检查不代表 Node 测试通过。独立真实浏览器专项 `pnpm run test:oidc:dual:studio:late` 必须手工在本机可信 Keycloak/HTTPS/PostgreSQL Lab 执行，目标 React 与 Vue 都完成真实 201 延迟、远端 3、可见性 CAS 失效、无额外 POST 和三版审计，命令退出码须为 0。
 
-**待验证/风险**：当前没有 Windows \`vp check\`、\`docs:check\`、完整 \`ready\` 或真实 Lab 的通过日志。正式 Studio UI 对保存中的历史载入、JSON 导入、草稿恢复存在互斥保护；本专项仅在互斥阻止切换后，核对旧响应交付和可见性水位变化的状态安全，不模拟通过私有状态强行切换工程，也不模拟 TCP 断流。保存后的首版 CAS 2 可能短暂显示在 UI，必须由实际只读复核清除后才能阻止下一次旧水位提交。失败时不得关闭登录/CSRF/TLS/工程权限，或放行未知工程写入，也不能复制 Cookie、Token、私钥、用户身份和 SQL 内部信息。
+**待验证/风险**：当前没有 Windows `vp check`、`docs:check`、完整 `ready` 或真实 Lab 的通过日志。正式 Studio UI 对保存中的历史载入、JSON 导入、草稿恢复存在互斥保护；本专项仅在互斥阻止切换后，核对旧响应交付和可见性水位变化的状态安全，不模拟通过私有状态强行切换工程，也不模拟 TCP 断流。保存后的首版 CAS 2 可能短暂显示在 UI，必须由实际只读复核清除后才能阻止下一次旧水位提交。失败时不得关闭登录/CSRF/TLS/工程权限，或放行未知工程写入，也不能复制 Cookie、Token、私钥、用户身份和 SQL 内部信息。
