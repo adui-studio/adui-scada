@@ -557,8 +557,8 @@ async function openDedicatedProject(session, projectId) {
   const opened = await session.evaluate(openProjectInPage, projectId, 1, "confirm");
   assert.deepEqual(opened, { confirmCount: 1, intercepted: 0, outcome: "confirm" });
   assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
-  const state = await session.evaluate(studioMultiTabUiStateInPage);
-  if (state.baselineRevision !== 1 || state.headRevision !== 1) {
+  const ui = await session.evaluate(studioMultiTabUiStateInPage);
+  if (ui.baselineRevision !== 1 || ui.headRevision !== 1) {
     throw new Error("同源多标签页 CAS 状态未正确失效");
   }
 }
