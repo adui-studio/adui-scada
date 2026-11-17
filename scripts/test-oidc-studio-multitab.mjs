@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { loadEnvFile } from "node:process";
 import { setTimeout as pause } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
@@ -14,7 +14,6 @@ import {
   waitForLogin,
 } from "./test-oidc-dual-cas.mjs";
 import {
-  clickBrowserControlInPage,
   confirmPreviewedServerVersionInPage,
   conflictPreviewStateInPage,
   describeBrowserPageException,
@@ -22,7 +21,6 @@ import {
   enterStudioInPage,
   inspectStudioState,
   openProjectInPage,
-  pageStateInPage,
   resolveProjectBrowserLab,
   saveDraftInPage,
   triggerConflictPreviewInPage,
@@ -285,12 +283,66 @@ export function clickStudioServerSaveInPage() {
   const button = [...(panel?.querySelectorAll("button") ?? [])].find(
     (item) => item.textContent.trim() === "保存至服务端",
   );
-  if (!button || button.disabled) throw new Error("同源多标签页页面操作失败");
+  if (!button) throw new Error("同源多标签页页面操作失败");
+  if (button.disabled) return { clicked: false, disabled: true };
   button.click();
-  return true;
+  return { clicked: true, disabled: false };
 }
 
 /** 页面状态只返回 CAS 修订号、按钮状态与固定布尔量。 */
+/** 通过现有导出按钮读取工程 JSON 摘要，避免把 SVG 辅助层当成工程数据。 */
+export async function readStudioDocumentHashInPage() {
+  const menu = document.querySelector(".studio-file-menu");
+  if (!menu) throw new Error("同源多标签页页面操作失败");
+  menu.open = true;
+  const button = [...menu.querySelectorAll("button")].find(
+    (item) => item.textContent.trim() === "导出 JSON",
+  );
+  if (!button) throw new Error("同源多标签页页面操作失败");
+  const originalCreate = Reflect.get(URL, "createObjectURL");
+  const originalClick = Reflect.get(HTMLAnchorElement.prototype, "click");
+  if (typeof originalCreate !== "function" || typeof originalClick !== "function") {
+    throw new Error("同源多标签页页面操作失败");
+  }
+  let exportedBlob = null;
+  try {
+    URL.createObjectURL = function (value) {
+      exportedBlob = value;
+      return originalCreate.call(URL, value);
+    };
+    HTMLAnchorElement.prototype.click = function () {
+      if (this.download && this.href.startsWith("blob:")) return;
+      return originalClick.call(this);
+    };
+    button.click();
+    if (!(exportedBlob instanceof Blob)) throw new Error("同源多标签页页面操作失败");
+    const json = await exportedBlob.text();
+    const snapshot = JSON.parse(json);
+    if (
+      typeof snapshot.projectId !== "string" ||
+      snapshot.schemaVersion !== "0.3.0" ||
+      !Array.isArray(snapshot.pages)
+    ) {
+      throw new Error("同源多标签页页面操作失败");
+    }
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(json),
+    );
+    return {
+      projectId: snapshot.projectId,
+      schemaVersion: snapshot.schemaVersion,
+      hash: Array.from(new Uint8Array(digest), (byte) =>
+        byte.toString(16).padStart(2, "0"),
+      ).join(""),
+    };
+  } finally {
+    URL.createObjectURL = originalCreate;
+    HTMLAnchorElement.prototype.click = originalClick;
+    menu.open = false;
+  }
+}
+
 export function studioMultiTabUiStateInPage() {
   const panel = document.querySelector('[aria-label="服务端工程版本"]');
   const text = panel?.textContent ?? "";
@@ -493,7 +545,10 @@ async function openDedicatedProject(session, projectId) {
 }
 
 async function saveServerVersion(session, expectedRevision) {
-  await session.evaluate(clickStudioServerSaveInPage);
+  const clicked = await session.evaluate(clickStudioServerSaveInPage);
+  if (!clicked.clicked || clicked.disabled) {
+    throw new Error("同源多标签页服务端保存状态未达到预期");
+  }
   const result = await waitFor(async () => {
     const ui = await session.evaluate(studioMultiTabUiStateInPage);
     const write = await session.evaluate(studioMultiTabWriteStateInPage);
@@ -511,6 +566,32 @@ async function saveServerVersion(session, expectedRevision) {
     throw new Error("同源多标签页服务端保存状态未达到预期");
   }
   return result.write;
+}
+
+async function verifyStaleSaveBlocked(session, name, expectedAttempts, expectedAccepted) {
+  const clicked = await session.evaluate(clickStudioServerSaveInPage);
+  if (clicked.clicked) {
+    await waitFor(async () => {
+      const ui = await session.evaluate(studioMultiTabUiStateInPage);
+      return !ui.busy && ui.hasAlert ? ui : null;
+    }, name + " 过期 CAS 保存拒绝");
+  } else if (!clicked.disabled) {
+    throw new Error("同源多标签页 CAS 状态未正确失效");
+  }
+  const [ui, write] = await Promise.all([
+    session.evaluate(studioMultiTabUiStateInPage),
+    session.evaluate(studioMultiTabWriteStateInPage),
+  ]);
+  if (
+    ui.baselineRevision !== null ||
+    !ui.previewEnabled ||
+    write.writeAttempts !== expectedAttempts ||
+    write.acceptedWrites !== expectedAccepted ||
+    write.rejectedWrites !== 0
+  ) {
+    throw new Error("同源多标签页 CAS 状态未正确失效");
+  }
+  return { ui, write };
 }
 
 async function waitForDraftChange(session, previousHash) {
@@ -606,9 +687,12 @@ async function verifyFramework(first, second, origin, name, client, principal) {
     throw new Error("同源多标签页两标签身份不一致");
   }
 
+  await activateStudioTab(first);
+  await requireStudioTabHidden(second);
   assert.equal(await first.evaluate(enterStudioInPage), true);
   await openDedicatedProject(first, projectId);
   await activateStudioTab(second);
+  await requireStudioTabHidden(first);
   assert.equal(await second.evaluate(enterStudioInPage), true);
   await openDedicatedProject(second, projectId);
 
@@ -619,6 +703,7 @@ async function verifyFramework(first, second, origin, name, client, principal) {
   await second.evaluate(addStudioSymbolInPage, "+ 水箱");
   const localDraft = await waitForDraftChange(second, initialDraft.drafts.hash);
   const beforeConflict = await inspectProtectedState(second);
+  assert.equal(beforeConflict.autoSave, true);
 
   await activateStudioTab(first);
   await requireStudioTabHidden(second);
@@ -626,6 +711,7 @@ async function verifyFramework(first, second, origin, name, client, principal) {
   assert.equal(await first.evaluate(armStudioMultiTabWriteInPage, origin, projectId, 1), true);
   const revision2 = await saveServerVersion(first, 1);
   const firstAfterSave = await inspectProtectedState(first);
+  const firstDocument = await first.evaluate(readStudioDocumentHashInPage);
   assert.equal(firstAfterSave.autoSave, false);
 
   await activateStudioTab(second);
@@ -640,16 +726,8 @@ async function verifyFramework(first, second, origin, name, client, principal) {
   assert.deepEqual(afterResume.drafts, localDraft);
   assert.equal(afterResume.autoSave, true);
 
-  await second.evaluate(clickStudioServerSaveInPage);
-  const staleSave = await waitFor(async () => {
-    const ui = await second.evaluate(studioMultiTabUiStateInPage);
-    const write = await second.evaluate(studioMultiTabWriteStateInPage);
-    return !ui.busy && ui.hasAlert ? { ui, write } : null;
-  }, name + " 第二标签页过期 CAS 保存拒绝");
-  assert.equal(staleSave.ui.baselineRevision, null);
+  const staleSave = await verifyStaleSaveBlocked(second, name + " 第二标签页", 0, 0);
   assert.equal(staleSave.write.writeAttempts, 0);
-  assert.equal(staleSave.write.acceptedWrites, 0);
-  assert.equal(staleSave.write.rejectedWrites, 0);
   const afterStaleSave = await inspectProtectedState(second);
   assert.equal(afterStaleSave.canvas, beforeConflict.canvas);
   assert.deepEqual(afterStaleSave.drafts, localDraft);
@@ -673,11 +751,12 @@ async function verifyFramework(first, second, origin, name, client, principal) {
   assert.equal(await second.evaluate(waitForStudioActionIdleInPage), true);
   const afterLoad = await inspectProtectedState(second);
   const loadedUi = await second.evaluate(studioMultiTabUiStateInPage);
+  const loadedDocument = await second.evaluate(readStudioDocumentHashInPage);
   assert.equal(loadedUi.baselineRevision, 2);
   assert.equal(loadedUi.headRevision, 2);
   assert.equal(afterLoad.autoSave, false);
   assert.deepEqual(afterLoad.drafts, localDraft);
-  assert.equal(afterLoad.canvas, firstAfterSave.canvas);
+  assert.deepEqual(loadedDocument, firstDocument);
 
   await second.evaluate(addStudioSymbolInPage, "+ 文本");
   assert.equal(await second.evaluate(armStudioMultiTabWriteInPage, origin, projectId, 2), true);
@@ -697,16 +776,8 @@ async function verifyFramework(first, second, origin, name, client, principal) {
   assert.equal(firstAfterResume.canvas, firstAfterSave.canvas);
   assert.deepEqual(firstAfterResume.drafts, localDraft);
 
-  await first.evaluate(clickStudioServerSaveInPage);
-  const firstStaleSave = await waitFor(async () => {
-    const ui = await first.evaluate(studioMultiTabUiStateInPage);
-    const write = await first.evaluate(studioMultiTabWriteStateInPage);
-    return !ui.busy && ui.hasAlert ? { ui, write } : null;
-  }, name + " 第一标签页过期 CAS 保存拒绝");
-  assert.equal(firstStaleSave.ui.baselineRevision, null);
+  const firstStaleSave = await verifyStaleSaveBlocked(first, name + " 第一标签页", 1, 1);
   assert.equal(firstStaleSave.write.writeAttempts, 1);
-  assert.equal(firstStaleSave.write.acceptedWrites, 1);
-  assert.equal(firstStaleSave.write.rejectedWrites, 0);
 
   const audit = await verifySameSubjectMultitabAudit(
     client,
