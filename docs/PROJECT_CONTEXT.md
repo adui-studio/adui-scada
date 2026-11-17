@@ -1284,3 +1284,39 @@ PR #66 的 React / Vue 标签页恢复只读复核已由维护者在 Windows 完
 维护者 Windows 实测确认共享 Studio 服务端会话 **30/30**、整仓 Vitest **566/566**（49 文件），新增的五项“保存请求中切换上下文”的迟到 401/404/创建或追加回包回归均包含其中。独立 `vp check` **333 个格式文件 / 188 个受检文件零警告错误**；`docs:check` 86 份 Markdown 通过；完整 `pnpm run ready` 完成 React/Vue/共享包/NestJS 类型检查、OIDC 工程浏览器离线 24/24、SSE 8/8、故障代理 4/4、服务端 HTTP E2E 49/49 以及 React/Vue/Server 构建，PowerShell **退出码 0**。此前文档中的“候选、待复验”属于开发当时的历史状态，不代表当前仍未通过。
 
 本批仍限定共享 API Client 的保存会话状态保护、五项 Promise 单测及相关文档，不执行真实 Lab 工程写入、ACL 修改、数据库迁移或工业设备控制。验收日志未显示本机 Git HEAD；新增竞态尚无真实浏览器/真实 PostgreSQL 延迟写入验证；本段文档提交后的质量链没有重新运行。PR #68 保持 Open / Draft，Assignee 为 `@adui-dev`，必须单独获得维护者明确合并授权。
+
+## 2026-11-17 · 第三十四批第十四小批：浏览器延迟保存与重复提交回归（候选）
+
+PR #68 已获维护者明确授权并 Squash 合并为 `main@a1e710d2be86675f156fe0c36534e528b2203cae`。上批 Windows `ready` 566/566 单测及 49/49 HTTP E2E 通过；第十三小批的 POST 迟到成功/拒绝仍仅有共享 Promise 单测。本小批按原有 Lab 边界增加 React/Vue 实际浏览器按钮行为验收：真实 Keycloak 登录、同源工程只读 GET 建立 CAS；模拟延迟 POST 409、401、503 在浏览器端返回，不会写真实工程、版本或 ACL。断言重复点击只尝试一次、等待时按钮禁用、CAS 状态正确，以及 SVG/IndexedDB/自动保存状态不变。
+
+候选仅涉及现有 `scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`、根 `package.json` 和相关文档，不改变 React/Vue 业务代码、共享 Core/客户端、NestJS、Prisma、OIDC 用户或工业网关。预计 Node 离线浏览器安全用例 28/28（原 24 + 新 4），所有实际 `vp check`、`ready` 与双框架交互式专项均待维护者 Windows 复验。PR 仍保持 Draft，必须指派 `@adui-dev`，未获单独授权不得合并。
+
+## 2026-11-17 · 第三十四批第十四小批：Windows 全链通过，Vue 交互式回归仍待修复后复验
+
+维护者 Windows 已实际通过 OIDC 浏览器离线 **28/28**、`vp check` **333/188 零警告错误**、完整 `ready`（Vitest **566/566**、HTTP E2E **49/49**、React/Vue/NestJS 构建及 86 份 Markdown），但独立 `test:projects:oidc:save:browser` **退出码 1**。React 完整保存时序 409、401、503 通过；Vue 完成真实登录、分页及 IndexedDB 草稿，在“取消载入与画布保护”的载入确认之前失败，未进入 Vue 三种保存拒绝场景。
+
+PR #69 已针对浏览器脚本确认存在的旧错误残留判定风险最小修正，并新增脱敏的受控错误类别及三项离线回归（预期 **31/31**），未修改 React/Vue 组件、共享 API Client、NestJS、PostgreSQL、OIDC ACL 或工业设备。原始失败的具体 HTTP/页面根因尚无证据定论；修复提交后的 Windows 全链和实际 Vue 交互式浏览器结果**仍待复验**。PR 继续保持 Open/Draft，Assignee `@adui-dev`，未经明确授权不得合并。
+
+## 2026-11-17 · 第三十四批第十四小批：第二轮 Windows 失败与测试诊断契约修复
+
+第二轮真实 Windows `test:projects:oidc:config` **30/31**：新增诊断用例把既有安全脱敏回退文案误认成另一句通用提示；`vp check` **333/188** 零警告，`ready` 中共享 Vitest **566/566** 通过，但在相同 30/31 离线测试处终止，完整质量链**退出码 1**。交互式浏览器专项 React 的 409/401/503 延迟保存均通过，Vue 在“真实 BFF 会话与授权工程列表”阶段失败，退出码 **1**；该阶段的原有布尔断言导致具体失败类别被通用错误信息覆盖，身份/网络原因尚未判定。
+
+候选已对齐原有脱敏契约测试，追加 React/Vue BFF 会话固定中文拒绝诊断并保留必须身份有效的验证。预计离线测试 **31/31**，但该候选及新 HEAD 的 `ready`、真实 Vue BFF/浏览器保存专项均**未在 Windows 复验**。不修改前端业务组件、生产 API、Cookie、Lab ACL、数据库或工业设备接口。PR #69 保持 Draft，等待后续实际验收和单独合并授权。
+
+## 2026-11-17 · 第三十四批第十四小批：第三次浏览器专项停在 React 503 场景
+
+第三次 Windows 真实 `test:projects:oidc:save:browser` 退出码 **1**：React 完成正式登录、授权工程列表/分页、草稿、取消与模拟冲突、确认载入；随后依次进入 409、401、503 延迟保存，**在打印 503 开始消息后、尚未进入 Vue 前**抛出被统一脱敏的页面未达到预期状态。场景标题不是通过证据，503 内具体超时阶段未知。上一轮 `test:projects:oidc:config` 30/31、`ready` 失败属于历史日志，本轮没有新的质量链成功记录。
+
+PR #69 继续只修改浏览器测试脚本和离线保护测试，用严格固定分类保留等待阶段超时及保存等待的布尔状态，新增两项用例（目标离线 **33 项**），不改变测试的真实登录、工程 API 写入阻断、CAS、SVG/IndexedDB/自动保存断言，不触碰 NestJS/Prisma/工业接口。协作端的 V8 静态解析与分类函数模拟不代表 Windows 验收；当前真实 503/双框架专项仍未通过，PR Draft、Assignee `@adui-dev`，未经授权不合并。
+
+## 2026-11-17 · 第三十四批第十四小批：第四次 Windows 失败后的双框架 CAS 显示修复候选
+
+维护者新日志明确 `test:projects:oidc:config` **32/33**、退出码 1：仅新加的未知超时诊断断言与仓库已有固定安全回退消息不一致；已最小修正预期，未放宽脱敏。真实 `test:projects:oidc:save:browser` **退出码 1**：React 409/401/503 全部完成请求挂起与合成响应释放；Vue 已通过真实 BFF、授权分页、草稿、取消、冲突和确认载入，并在 409 POST 合成回包释放后报告通用安全断言失败。
+
+静态检查发现 Vue Studio 的 `serverBaselineRevision` 独立响应式缓存未在 409 保存失败后跟随共享会话清空，而 React 直接读取共享 CAS。候选补丁仅同步 Vue 保存异常后的当前共享 CAS 基线（503 保留、409 清除、401 继续失效）；新增固定安全诊断，保留已有真实 UI、唯一 POST、无真实写入、草稿保护断言。离线测试仍 33 项，尚未经过本机修复后完整验收。PR #69 继续保持 Open / Draft，未合并，Assignee `@adui-dev`，未经授权不得合并。
+
+## 2026-11-17 · 第三十四批第十四小批：Windows 全链及双框架延迟保存专项验收通过
+
+维护者最新 Windows 真实执行确认 `test:projects:oidc:config` **33/33**、`vp check` **333 个格式文件 / 188 个受检文件零错误警告**、`docs:check` **86 份 Markdown**；完整 `pnpm run ready` 已执行到末尾且非零退出码断言未触发，包含 Vitest **566/566**、共享 Studio Session **30/30**、SSE **8/8**、TCP 故障代理 **4/4**、NestJS HTTP E2E **49/49**、React/Vue/Server 类型检查与构建。独立 `test:projects:oidc:save:browser` 通过：React/Vue 在可信 Keycloak/BFF Lab 分别载入授权工程并完整通过合成 POST **409/401/503**、一次写入尝试/忙碌互斥、错误后 CAS 状态与本地草稿保护，维护者明确报告**退出码 0**。浏览器写入拦截仍生效，未修改真实 Lab 工程版本和 ACL。
+
+此前第四轮 **32/33**、Vue 409 合成响应后的失败和更早的脱敏/载入问题保留为历史；Vue CAS 响应式副本不同步的 E-035 已经获得双框架真实 UI 回归结果支持，当前本批验收通过。**尚缺本机 `git rev-parse HEAD`**，不声称 Windows 运行提交与 PR 最新 HEAD 精确一致；本段文档提交后的质量链也未重新执行。本批不覆盖真实 PostgreSQL 完成 POST 后的延迟回包、跨会话写入或工业设备控制。PR #69 仍为 Open / Draft、Assignee `@adui-dev`，等待最终审查与明确合并授权。

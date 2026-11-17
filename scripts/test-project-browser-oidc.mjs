@@ -29,7 +29,19 @@ const SAFE_PAGE_ERRORS = new Set([
   "权限拒绝模拟参数不合法",
   "权限拒绝模拟操作按钮不可用",
   "标签页恢复测试要求浏览器页面处于可见状态",
+  "保存时序模拟参数不合法",
+  "保存时序模拟尚未命中唯一的版本追加请求",
+  "保存时序模拟操作按钮不可用",
 ]);
+/** 仅接受固定阶段与类别，禁止输出服务端异常正文。 */
+const SAFE_OPEN_FAILURE =
+  /^服务器工程载入阶段返回受控错误（确认(?:前|后)：(?:身份过期|权限拒绝|版本冲突|快照校验|网络故障|服务故障|协议响应)）$/;
+const SAFE_SAVE_TIMING_TIMEOUT =
+  /^(?:React|Vue) 延迟保存 (?:401|409|503)：(?:版本 POST 未命中|工程写入次数异常|操作忙碌状态未保持|保存按钮未禁用|保存操作未结束|页面未显示拒绝错误|无法读取浏览器状态)$/;
+const SAFE_SAVE_BASELINE_TIMEOUT =
+  /^(?:React|Vue) 权限模拟(?:首页加载|工程列表加载)未达到预期状态$/;
+const SAFE_SAVE_BASELINE_MISMATCH =
+  /^(?:React|Vue) 延迟保存 (?:401|409|503)：CAS 基线状态不符合预期$/;
 const PAGE_ERROR_TYPES = new Map([
   ["ReferenceError", "页面脚本引用异常"],
   ["TypeError", "页面脚本类型异常"],
@@ -50,10 +62,12 @@ const SAFE_FAILURES = new Set([
   "浏览器调试标签页无法创建",
   "浏览器调试命令执行失败",
   "浏览器页面操作失败，请检查当前 Studio 状态",
+  "React BFF 会话未通过验证",
+  "Vue BFF 会话未通过验证",
   "React 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
   "Vue 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
   "真实多页验收要求至少十一项已授权工程，当前未覆盖有效的第二页",
-  "仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check 或显式确认的多页数据准备参数",
+  "仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check、--simulate-save-timing 或显式确认的多页数据准备参数",
   "多页数据准备配置不符合本机可信 Lab 边界",
   "多页数据准备只允许本机 React Origin",
   "多页数据准备缺少可信登录会话",
@@ -72,6 +86,8 @@ export function describeBrowserPageException(details) {
       return known;
     }
   }
+  const openFailure = firstLine.startsWith("Error: ") ? firstLine.slice(7) : "";
+  if (SAFE_OPEN_FAILURE.test(openFailure)) return openFailure;
   return PAGE_ERROR_TYPES.get(details?.exception?.className) ?? "页面脚本异常（已脱敏）";
 }
 
@@ -82,6 +98,7 @@ export function describeProjectBrowserFailure(error) {
     const reason = error.pageDiagnostic;
     if (
       SAFE_PAGE_ERRORS.has(reason) ||
+      SAFE_OPEN_FAILURE.test(reason) ||
       [...PAGE_ERROR_TYPES.values(), "页面脚本异常（已脱敏）"].includes(reason)
     ) {
       return "浏览器页面操作失败：" + reason;
@@ -93,7 +110,14 @@ export function describeProjectBrowserFailure(error) {
       ? "工程列表接口返回 HTTP " + status
       : "工程列表接口状态异常";
   }
-  if (SAFE_FAILURES.has(message)) return message;
+  if (
+    SAFE_FAILURES.has(message) ||
+    SAFE_SAVE_TIMING_TIMEOUT.test(message) ||
+    SAFE_SAVE_BASELINE_MISMATCH.test(message)
+  ) {
+    return message;
+  }
+  if (SAFE_SAVE_BASELINE_TIMEOUT.test(message)) return "浏览器阶段超时：" + message;
   if (
     [
       "只读 HTTPS 探针要求显式启用可信 OIDC 开发代理",
@@ -455,7 +479,7 @@ function installRevisionConflictFaultInPage() {
  */
 export function installAccessDenialFaultInPage(runtime = globalThis) {
   const actualFetch = runtime.fetch.bind(runtime);
-  const state = { active: null, hits: 0, writeAttempts: 0 };
+  const state = { active: null, hits: 0, writeAttempts: 0, save: null };
   runtime.__aduiTestAccessDenial = state;
   runtime.fetch = async (input, init) => {
     const raw = typeof input === "string" ? input : input.url;
@@ -469,6 +493,19 @@ export function installAccessDenialFaultInPage(runtime = globalThis) {
     // 故障模拟只能读取既有工程；即使 UI 意外调用保存，也绝不能送到真实 Lab。
     if (projectPath && method !== "GET" && method !== "HEAD") {
       state.writeAttempts += 1;
+      const pending = state.save;
+      if (
+        pending &&
+        !pending.resolve &&
+        method === "POST" &&
+        url.origin === runtime.location.origin &&
+        url.pathname === "/api/v1/projects/" + encodeURIComponent(pending.projectId) + "/versions"
+      ) {
+        pending.hits += 1;
+        return new Promise((resolve) => {
+          pending.resolve = resolve;
+        });
+      }
       return new Response("{}", {
         status: 403,
         headers: { "Content-Type": "application/json" },
@@ -493,6 +530,78 @@ export function installAccessDenialFaultInPage(runtime = globalThis) {
       }
     }
     return actualFetch(input, init);
+  };
+}
+
+/**
+ * 延迟版本追加模拟：真实 BFF 只负责身份和工程 GET，POST 始终由隔离页面拦截。
+ * 只允许固定拒绝状态，不伪造服务端提交成功或写入后已回滚。
+ */
+export function armSaveTimingInPage(projectId, status, runtime = globalThis) {
+  const state = runtime.__aduiTestAccessDenial;
+  if (
+    !state ||
+    typeof projectId !== "string" ||
+    projectId.length === 0 ||
+    projectId.length > 128 ||
+    ![401, 409, 503].includes(status) ||
+    state.save
+  ) {
+    throw new Error("保存时序模拟参数不合法");
+  }
+  state.save = { projectId, status, hits: 0, resolve: null };
+  state.writeAttempts = 0;
+  return true;
+}
+
+/** 只在命中恰好一个版本追加 POST 后释放模拟回包。 */
+export function releaseSaveTimingInPage(runtime = globalThis) {
+  const pending = runtime.__aduiTestAccessDenial?.save;
+  if (!pending || pending.hits !== 1 || !pending.resolve) {
+    throw new Error("保存时序模拟尚未命中唯一的版本追加请求");
+  }
+  const release = pending.resolve;
+  pending.resolve = null;
+  release(
+    new Response("{}", {
+      status: pending.status,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+  return true;
+}
+
+/** 使用真实 Studio UI 连续触发两次保存以检验互斥，不直接调用客户端接口。 */
+export function triggerSaveTimingInPage() {
+  const panel = document.querySelector('[aria-label="服务端工程版本"]');
+  const menu = panel?.closest("details");
+  if (menu) menu.open = true;
+  const button = [...(panel?.querySelectorAll("button") ?? [])].find(
+    (item) => item.textContent.trim() === "保存至服务端",
+  );
+  if (!button || button.disabled) throw new Error("保存时序模拟操作按钮不可用");
+  button.click();
+  button.click();
+  return true;
+}
+
+/** 只返回固定状态与计数，不传递页面错误正文、Cookie 或工程文档。 */
+export function saveTimingStateInPage() {
+  const panel = document.querySelector('[aria-label="服务端工程版本"]');
+  const text = panel?.textContent ?? "";
+  const button = [...(panel?.querySelectorAll("button") ?? [])].find(
+    (item) => item.textContent.trim() === "保存至服务端",
+  );
+  const state = globalThis.__aduiTestAccessDenial;
+  return {
+    hits: state?.save?.hits ?? 0,
+    writeAttempts: state?.writeAttempts ?? -1,
+    busy: [...(panel?.querySelectorAll(".studio-version-help") ?? [])].some((node) =>
+      node.textContent?.includes("正在处理工程版本"),
+    ),
+    disabled: button?.disabled ?? false,
+    hasError: Boolean(panel?.querySelector('[role="alert"]')),
+    baselineCleared: /CAS 基线：\s*未建立/.test(text),
   };
 }
 
@@ -723,6 +832,126 @@ async function verifyResumeScenarios(session, origin, name, selected) {
   }
 }
 
+/**
+ * 仅从固定布尔状态生成可公开的延迟保存故障类别，不回显工程、身份或异常正文。
+ * 此函数只在 Node 测试层调用，不注入浏览器页面。
+ */
+export function describeSaveTimingTimeout(name, status, phase, state) {
+  if (
+    !["React", "Vue"].includes(name) ||
+    ![401, 409, 503].includes(status) ||
+    !["pending", "completed"].includes(phase)
+  ) {
+    return "浏览器延迟保存状态异常（已脱敏）";
+  }
+  let reason;
+  if (!state || typeof state !== "object") {
+    reason = "无法读取浏览器状态";
+  } else if (state.hits !== 1) {
+    reason = "版本 POST 未命中";
+  } else if (state.writeAttempts !== 1) {
+    reason = "工程写入次数异常";
+  } else if (phase === "pending") {
+    reason = !state.busy
+      ? "操作忙碌状态未保持"
+      : !state.disabled
+        ? "保存按钮未禁用"
+        : "无法读取浏览器状态";
+  } else {
+    reason = state.busy
+      ? "保存操作未结束"
+      : !state.hasError
+        ? "页面未显示拒绝错误"
+        : "无法读取浏览器状态";
+  }
+  return name + " 延迟保存 " + status + "：" + reason;
+}
+
+/** 保存结果必须反映共享 CAS；只输出框架和固定状态，不暴露工程详情。 */
+export function requireSaveTimingBaseline(name, status, cleared, expected) {
+  if (cleared === expected) return true;
+  if (
+    !["React", "Vue"].includes(name) ||
+    ![401, 409, 503].includes(status) ||
+    typeof cleared !== "boolean" ||
+    typeof expected !== "boolean"
+  ) {
+    throw new Error("浏览器延迟保存状态异常（已脱敏）");
+  }
+  throw new Error(name + " 延迟保存 " + status + "：CAS 基线状态不符合预期");
+}
+
+/** 保存请求的两段独立等待只检查受控状态，超时后返回固定类别。 */
+async function waitForSaveTimingStage(session, name, status, phase) {
+  const label =
+    name + " " + status + (phase === "pending" ? " 版本追加请求挂起" : " 延迟保存拒绝后界面恢复");
+  try {
+    return await waitFor(async () => {
+      const state = await session.evaluate(saveTimingStateInPage);
+      const matched =
+        phase === "pending"
+          ? state.hits === 1 && state.busy && state.disabled
+          : !state.busy && state.hasError;
+      return matched ? state : null;
+    }, label);
+  } catch (error) {
+    if (!(error instanceof Error) || error.message !== label + "未达到预期状态") {
+      throw error;
+    }
+    let state;
+    try {
+      state = await session.evaluate(saveTimingStateInPage);
+    } catch {
+      state = null;
+    }
+    throw new Error(describeSaveTimingTimeout(name, status, phase, state));
+  }
+}
+
+/** 两端均由真实 UI 发起版本追加；隔离浏览器持有 POST 回包但从不向 Lab 转发写请求。 */
+async function verifySaveTimingScenarios(session, origin, name, selected) {
+  const scenarios = [
+    { status: 409, title: "旧 CAS 水位冲突", baselineCleared: true },
+    { status: 401, title: "服务端身份过期", baselineCleared: true },
+    { status: 503, title: "服务端暂时不可用", baselineCleared: false },
+  ];
+  for (const scenario of scenarios) {
+    process.stdout.write(name + "：正在验证延迟保存响应与" + scenario.title + "\n");
+    const before = await prepareAccessDenialBaseline(session, origin, name, selected);
+    assert.ok(before.server.includes("CAS 基线：" + selected.headRevision));
+    assert.equal(
+      await session.evaluate(armSaveTimingInPage, selected.projectId, scenario.status),
+      true,
+    );
+    assert.equal(await session.evaluate(triggerSaveTimingInPage), true);
+    process.stdout.write(name + "：" + scenario.status + " 保存已触发，等待唯一版本 POST\n");
+    const pending = await waitForSaveTimingStage(session, name, scenario.status, "pending");
+    assert.equal(pending.writeAttempts, 1, name + " 重复点击不得额外发起版本写入");
+    const during = await inspectStudioState(session);
+    assert.equal(during.canvas, before.canvas, name + " 保存等待期间改变了本地画布");
+    assert.deepEqual(during.drafts, before.drafts, name + " 保存等待期间改变了草稿");
+    assert.equal(during.autoSave, before.autoSave, name + " 保存等待期间改变了自动保存");
+
+    assert.equal(await session.evaluate(releaseSaveTimingInPage), true);
+    process.stdout.write(name + "：" + scenario.status + " 已释放合成拒绝，等待界面恢复\n");
+    const completed = await waitForSaveTimingStage(session, name, scenario.status, "completed");
+    assert.equal(completed.writeAttempts, 1, name + " 失败后不得自动重试写入");
+    assert.equal(
+      requireSaveTimingBaseline(
+        name,
+        scenario.status,
+        completed.baselineCleared,
+        scenario.baselineCleared,
+      ),
+      true,
+    );
+    const after = await inspectStudioState(session);
+    assert.equal(after.canvas, before.canvas, name + " 保存失败改变了本地画布");
+    assert.deepEqual(after.drafts, before.drafts, name + " 保存失败改变了草稿");
+    assert.equal(after.autoSave, before.autoSave, name + " 保存失败改变了自动保存");
+  }
+}
+
 export async function openProjectInPage(projectId, headRevision, mode) {
   const panel = document.querySelector(".studio-project-browser-panel");
   const item = [...(panel?.querySelectorAll(".studio-project-browser-item") || [])].find(
@@ -736,6 +965,7 @@ export async function openProjectInPage(projectId, headRevision, mode) {
   const versionPanel = document.querySelector('[aria-label="服务端工程版本"]');
   const errorBeforeClick = versionPanel?.querySelector('[role="alert"]')?.textContent ?? "";
   let newActionObserved = false;
+  let previousErrorCleared = false;
   if (mode === "conflict") globalThis.__aduiTestProjectRevisionFault = fault;
   window.confirm = () => {
     confirmCount += 1;
@@ -750,7 +980,8 @@ export async function openProjectInPage(projectId, headRevision, mode) {
       const busy = [...(versionPanel?.querySelectorAll(".studio-version-help") ?? [])].some(
         (node) => node.textContent?.includes("正在处理工程版本"),
       );
-      // 上一次模拟冲突留下的错误不能当作本次新请求的失败。
+      // 只把本次出现的错误当成载入失败；旧错误跨过忙碌阶段也不能误报。
+      if (errorBeforeClick && !error) previousErrorCleared = true;
       if (busy || error !== errorBeforeClick) newActionObserved = true;
       if (mode === "conflict" && fault.calls > 0 && error.includes("服务端工程版本已更新")) {
         return { confirmCount, intercepted: fault.calls, outcome: "conflict" };
@@ -761,12 +992,34 @@ export async function openProjectInPage(projectId, headRevision, mode) {
       if (mode === "confirm" && confirmCount > 0 && notice.includes("CAS 基线已建立")) {
         return { confirmCount, intercepted: fault.calls, outcome: "confirm" };
       }
-      if (error && mode !== "conflict" && newActionObserved && !busy) {
-        // 不输出页面错误正文：仅区分是否已进入用户确认，以便定位载入前的失败。
+      if (
+        error &&
+        mode !== "conflict" &&
+        newActionObserved &&
+        !busy &&
+        (error !== errorBeforeClick || previousErrorCleared)
+      ) {
+        // 只允许已审核的固定诊断类别，不能把页面错误正文带回 Node 进程。
+        const category = error.includes("登录已失效")
+          ? "身份过期"
+          : error.includes("当前操作未获得授权") || error.includes("工程不存在或无权访问")
+            ? "权限拒绝"
+            : error.includes("服务端工程版本已更新") || error.includes("工程存在冲突")
+              ? "版本冲突"
+              : error.includes("快照完整性校验失败")
+                ? "快照校验"
+                : error.includes("网络请求失败") || error.includes("读取服务端响应失败")
+                  ? "网络故障"
+                  : error.includes("服务端暂时无法完成请求")
+                    ? "服务故障"
+                    : error.includes("服务端返回") || error.includes("服务端响应")
+                      ? "协议响应"
+                      : null;
+        const phase = confirmCount === 0 ? "确认前" : "确认后";
         throw new Error(
-          confirmCount === 0
-            ? "服务器工程载入阶段返回受控错误（确认前）"
-            : "服务器工程载入阶段返回受控错误（确认后）",
+          category
+            ? "服务器工程载入阶段返回受控错误（" + phase + "：" + category + "）"
+            : "服务器工程载入阶段返回受控错误（" + phase + "）",
         );
       }
       await new Promise((done) => setTimeout(done, 100));
@@ -819,6 +1072,9 @@ export function resolveProjectBrowserMode(parameters, env) {
   if (parameters.length === 1 && parameters[0] === "--simulate-resume-check") {
     return { requireMultiPage: false, prepareMultiPage: false, simulateResumeCheck: true };
   }
+  if (parameters.length === 1 && parameters[0] === "--simulate-save-timing") {
+    return { requireMultiPage: false, prepareMultiPage: false, simulateSaveTiming: true };
+  }
   if (
     parameters.length === 3 &&
     parameters[0] === "--prepare-multipage" &&
@@ -833,7 +1089,7 @@ export function resolveProjectBrowserMode(parameters, env) {
     return { requireMultiPage: false, prepareMultiPage: true };
   }
   throw new Error(
-    "仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check 或显式确认的多页数据准备参数",
+    "仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check、--simulate-save-timing 或显式确认的多页数据准备参数",
   );
 }
 
@@ -945,7 +1201,10 @@ async function verifyStudio(session, origin, name, requireMultiPage) {
   );
   assert.equal(await session.evaluate(enterStudioInPage), true, name + " 无法进入 Studio");
   report("真实 BFF 会话与授权工程列表");
-  assert.equal(await session.evaluate(authenticatedInPage, origin), true, name + " 会话未通过验证");
+  const authenticated = await session.evaluate(authenticatedInPage, origin);
+  if (authenticated !== true) {
+    throw new Error(name === "React" ? "React BFF 会话未通过验证" : "Vue BFF 会话未通过验证");
+  }
 
   const initial = requireAuthorizedProjectPage(await session.evaluate(projectsInPage));
   if (initial.length === 0) {
@@ -1123,25 +1382,29 @@ async function run() {
         "(" +
         installRevisionConflictFaultInPage.toString() +
         ")();" +
-        (mode.simulateAccessDenial || mode.simulateResumeCheck
+        (mode.simulateAccessDenial || mode.simulateResumeCheck || mode.simulateSaveTiming
           ? "(" + installAccessDenialFaultInPage.toString() + ")();"
           : ""),
     });
     process.stdout.write("真实 OIDC 会话已在 React Origin 验证，开始双框架只读工程验收。\n");
     await verifyStudio(session, origins[0], "React", mode.requireMultiPage);
-    if (mode.simulateAccessDenial || mode.simulateResumeCheck) {
+    if (mode.simulateAccessDenial || mode.simulateResumeCheck || mode.simulateSaveTiming) {
       const projects = requireAuthorizedProjectPage(await session.evaluate(projectsInPage));
       if (mode.simulateAccessDenial) {
         await verifyAccessDenialScenarios(session, origins[0], "React", projects[0]);
+      } else if (mode.simulateSaveTiming) {
+        await verifySaveTimingScenarios(session, origins[0], "React", projects[0]);
       } else {
         await verifyResumeScenarios(session, origins[0], "React", projects[0]);
       }
     }
     await verifyStudio(session, origins[1], "Vue", mode.requireMultiPage);
-    if (mode.simulateAccessDenial || mode.simulateResumeCheck) {
+    if (mode.simulateAccessDenial || mode.simulateResumeCheck || mode.simulateSaveTiming) {
       const projects = requireAuthorizedProjectPage(await session.evaluate(projectsInPage));
       if (mode.simulateAccessDenial) {
         await verifyAccessDenialScenarios(session, origins[1], "Vue", projects[0]);
+      } else if (mode.simulateSaveTiming) {
+        await verifySaveTimingScenarios(session, origins[1], "Vue", projects[0]);
       } else {
         await verifyResumeScenarios(session, origins[1], "Vue", projects[0]);
       }
@@ -1151,7 +1414,9 @@ async function run() {
         ? "双框架模拟 401/403/404 授权拒绝专项通过；工程写入已在浏览器阻断，Lab ACL 未修改。\n"
         : mode.simulateResumeCheck
           ? "双框架标签页重新可见只读复核专项通过；工程写入已在浏览器阻断，Lab ACL 未修改。\n"
-          : "双框架 OIDC 工程管理专项通过；服务端工程未新增、未覆盖、未发布。\n",
+          : mode.simulateSaveTiming
+            ? "双框架延迟保存拒绝与重复提交专项通过；版本 POST 已在浏览器阻断，Lab 工程与 ACL 未修改。\n"
+            : "双框架 OIDC 工程管理专项通过；服务端工程未新增、未覆盖、未发布。\n",
     );
   } finally {
     session?.socket.close();

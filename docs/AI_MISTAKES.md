@@ -284,6 +284,44 @@
 - **验证**：GitHub 候选提交 `e5bddb6c98682130fc80841368466fa1aacccb51` 只修改 React Studio 对应逻辑；协作容器 TypeScript **5.8.3** 对等价类型收窄最小片段执行 `tsc --noEmit --strict` **无错误**。**仓库实际 TypeScript 6、`vp check`、`test:unit`、`docs:check`、`ready` 和 React/Vue 真实浏览器恢复专项尚待 Windows 复验**；不得将该片段检查描述为整体零告警通过。
 - **证据**：维护者 2026-11-17 的 `vp check --fix` 原始错误日志、PR #66、`apps/web-react/src/studio/StudioPage.tsx`、`docs/VALIDATION.md`。
 
+### E-032 · 浏览器工程载入测试将旧错误跨忙碌阶段误判为新请求失败的风险（第三十四批第十四小批）
+
+- **现象**：2026-11-17 维护者 Windows `test:projects:oidc:config` 28/28、`vp check` 333 个格式文件及 188 个受检文件零告警、完整 `ready` 566/566 单测及 49/49 HTTP E2E 通过。但交互式 `test:projects:oidc:save:browser`：React 409/401/503 三种延迟保存拒绝均通过，Vue 在“取消载入与画布保护”报“服务器工程载入阶段返回受控错误（确认前）”，**专项退出码 1**。
+- **确认的代码问题**：`openProjectInPage` 一旦观察过 Busy，便在 Busy 结束后对任意仍可见的错误节点判失败，未确认该错误是否来自本轮操作。若原有错误节点没有及时清空，可能重现 E-026 的历史误报。**目前日志尚不能证明维护者此次 Vue 失败就是旧错误引起**，真实 HTTP/身份/快照错误类别仍待复测。
+- **最小修复候选**：要求新错误与点击前不同，或实际观测到旧错误已清除后又出现；否则不将旧节点当成当前失败。保持确认对话框、CAS 状态与超时断言不放松。新增仅固定七类的中文错误类别白名单，可定位身份、授权、冲突、快照、网络、服务和协议问题而不输出敏感正文。
+- **避免**：连续“故障模拟 → 恢复操作”或跨 React/Vue Origin 时，既要观察当前操作实际开始，也要区分旧错误残留；测试不能因为上一个动作留下错误就提前宣告当前动作失败。新错误即使与旧错误文本相同，观察到清空后再次出现时仍必须失败；不可通过自动重试、屏蔽真实错误或输出原始页面异常绕过。
+- **验证**：新增三项离线回归，目标 `test:projects:oidc:config` **31/31**；协作端对实际修改的页面函数进行 V8 三分支时序模拟，通过旧错误取消、重新出现冲突拒绝及新身份错误分类，**不等于 Node/Chrome/Keycloak 验收**。Windows `vp check`、`ready` 和真实双框架浏览器专项修复后**均待复验**。
+- **证据**：维护者 2026-11-17 Windows 原始日志、PR #69、`scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs` 和 `docs/VALIDATION.md`。
+
+### E-033 · 新增脱敏错误单测与已有安全回退文案相冲突（第三十四批第十四小批）
+
+- **现象**：2026-11-17 维护者 Windows `pnpm run test:projects:oidc:config` 31 项中 **30 通过、1 失败**；失败位置为“工程载入诊断只允许固定阶段和类别，不返回真实页面正文”。实际 `describeProjectBrowserFailure(error)` 对不在白名单中的 `pageDiagnostic` 返回“浏览器页面操作失败，请检查当前 Studio 状态”，而新增用例期望“浏览器安全回归断言失败，检查终端测试条件及真实页面状态”。同次 `vp check` 333 文件/188 受检零警告，`ready` 在相同离线用例处提前退出码 **1**。
+- **确认的根因**：原有“页面安全诊断不得输出任意未知错误内容”回归明确把未知 `pageDiagnostic` 脱敏为固定页面操作消息；新增用例没有复用该既有契约，错误地把“不认识的顶层异常”与“已识别页面操作异常但诊断类别未知”两种路径混为一谈。两条输出均为固定中文安全消息，故这不是敏感信息实际泄漏。
+- **最小修复**：仅将新增断言的期望修为既有回退消息，保留完整白名单、含敏感文本的负向用例、固定分类和未知消息的强制脱敏。另将浏览器 `verifyStudio` 的 React/Vue BFF 身份布尔检查失败改为两条精确固定中文诊断，以便区分该阶段与页面脚本/工程保存；仍必须认证有效才能继续，不自动登录、不伪造身份或绕过 ACL。
+- **避免**：新增测试复用已有安全诊断逻辑时，必须先阅读相邻的正向与负向回归，区分“顶层未知错误”和“已知外层错误下的未知诊断”；精确匹配实际契约，不为了让某一新用例通过而放宽全局脱敏策略。身份读取失败只能输出固定阶段和类别，不能打印页面原始错误或 Cookie。
+- **验证**：维护者提供的原始 **30/31、`ready` 退出码 1** 为修复前证据；协作端已对最小调整后的真实脱敏函数做 V8 分支验证，安全白名单与固定回退结果相符，**尚未执行 Windows Node 31/31、完整 `ready` 或真实 Vue 浏览器专项**。原始浏览器第二次失败发生在 Vue “真实 BFF 会话与授权工程列表”阶段，尚不能仅凭通用报错推断具体 HTTP 失败根因。
+- **证据**：PR #69、维护者 2026-11-17 第二轮 Windows CLI 输出、`scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs` 与 `docs/VALIDATION.md`。
+
+### E-034 · 浏览器专项的阶段超时被统一脱敏为无法定位的通用消息（第三十四批第十四小批）
+
+- **现象**：维护者 2026-11-17 Windows `pnpm run test:projects:oidc:save:browser` 第三轮专项在 React 完成真实 OIDC 登录、授权工程、草稿、取消/冲突与确认载入后，打印 409、401、503 延迟保存场景开始提示；在 React 503 开始消息之后、Vue 开始之前报告“浏览器登录或 Studio 页面未达到预期状态，请检查隔离 Lab、登录与服务端工程”，**退出码 1**。该日志不能证明 React 503 已通过，具体等待阶段和真实错误原因尚未确定。
+- **确认的代码问题**：`waitFor` 在超时抛出含测试阶段标签的固定中文错误，但 `describeProjectBrowserFailure` 把所有以“未达到预期状态”结尾的情况归为同一句通用失败，丢失了定位唯一版本 POST、保存 Busy/Disabled、合成响应后 UI 恢复或工程基线重新载入的能力。仅靠场景开始的日志无法证明各场景通过。
+- **最小修复候选**：针对 React/Vue 两种固定框架与 401/409/503 三种固定模拟状态加入严格白名单诊断：在两段保存等待超时后只读取浏览器返回的命中计数及 Busy/Disabled/hasError 布尔状态，映射为有限中文类别；针对既有基线等待只允许两个具体固定标签。禁止输出项目 ID、身份、Cookie、Token、URL、异常正文或堆栈，拒绝附加敏感字段的伪造诊断。**不改变** 503 必须保留 CAS、401/409 必须失效 CAS、所有工程写入隔离等质量断言。
+- **避免**：CDP E2E 多阶段异步测试中，一切“未达到预期状态”不能不加区别地丢失安全阶段；与其延长超时或掩盖异常，应以固定白名单暴露阶段，并在独立离线单测验证未知信息仍被脱敏。打印“开始测试”不是“通过测试”。
+- **验证**：新增 2 项 Node 离线测试，预期 `test:projects:oidc:config` 由 **31/31 目标**增至 **33/33 目标**，协作端使用实际仓库函数在 V8 中验证安全类别与敏感附加内容拒绝、两份脚本均通过 V8 语法解析；**Windows Node、真实 `ready`、Chrome/Keycloak 双框架浏览器均需维护者重新执行**。原始 React 503 具体故障仍待新固定类别证据。
+- **证据**：维护者 2026-11-17 第三轮 Windows 专项退出码 1、PR #69、`scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`、`docs/VALIDATION.md`。
+
+### E-035 · Vue 保存 409 后共享 CAS 基线已清空但响应式展示未同步（第三十四批第十四小批）
+
+- **现象**：维护者 Windows OIDC 浏览器离线安全测试 **32/33**（唯一失败是带 `；secret` 的未知超时诊断期望错误，实际仍安全脱敏）；独立双框架保存专项 **退出码 1**。React 409/401/503 均通过真实 UI 的延迟 POST 挂起与合成错误释放；Vue 通过真实 BFF、工程列表和确认载入，在 409 合成响应已释放后出现通用断言失败，**不能宣称双框架通过**。
+- **确认的代码问题**：共享 `saveDocument` 对版本冲突 409 清空内部 CAS 基线；React 在渲染时直接调用 `serverSession.getBaselineRevision`，Vue 显示 `serverBaselineRevision` 响应式副本。Vue `runServerAction` 的 409 保存失败分支原先仅记录 `serverError`，而不更新 `serverBaselineRevision`，因此 UI 可能继续显示旧修订号。这个不同步问题通过代码核对成立，与浏览器日志吻合；但原始错误被通用脱敏，不能独立证明它是唯一失败的断言。
+- **最小修复**：只在 Vue“保存服务端工程”操作失败时，从当前工程的共享 Session 读取 CAS 并同步响应式状态；保证 409 显示未建立、503 继续保留、401 依旧清理，不改共享存储或服务端接口。对新增离线测试仅对齐已有未知错误安全回退文案，不能放行 `secret` 附加内容。浏览器已有 CAS 断言原样保留，新增固定“Vue 延迟保存 409：CAS 基线状态不符合预期”安全诊断和相邻正反向单元断言。
+- **避免**：跨框架共享会话状态发生变更时，React 直接读取共享对象与 Vue 单独缓存 `ref` 的视图必须同步验证，尤其是在拒绝/冲突的异常路径。不能只测试成功保存与权限撤销；模拟拒绝后需同时核对共享内部基线与 UI 状态。新增脱敏负向断言要核对真实安全回退文案，不按相似描述推断。
+- **验证边界**：协作端完成源码静态比较、V8 语法解析与诊断函数固定分支模拟；本次未实际运行 Windows `test:projects:oidc:config`（目标 33/33）、`vp check`、`docs:check`、`ready` 或真实双框架浏览器。旧日志仍是 **32/33、浏览器退出码 1**，不得将修复候选当作已经验收通过。
+- **证据**：维护者第四次 Windows 两段原始日志、PR #69、`apps/web-vue/src/studio/StudioPage.vue`、`packages/api-client/src/studio-session.ts`、`scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`、`docs/VALIDATION.md`。
+
+> **2026-11-17 E-032 至 E-035 结案补录**：保留上述历史失败与候选阶段描述作为证据，不再将其误读为 PR #69 最新状态。维护者 Windows 最新回归 `pnpm run test:projects:oidc:config` **33/33**、`vp check` **333 格式文件/188 受检零告警**、`docs:check` **86 份**、完整 `ready` 已执行至末尾且非零断言未触发（566/566 单测、49/49 HTTP E2E、双框架及服务端构建）。**React/Vue 真实浏览器均完成合成延迟保存 409/401/503**，`test:projects:oidc:save:browser` PowerShell 明确退出码 **0**，测试期间所有工程写请求均在浏览器端阻断。Vue 409 的 `serverBaselineRevision` 与共享 CAS 同步回归得到实际验证；未知错误附带敏感正文仍由严格安全白名单拒绝。日志未给出本地 Git HEAD，新增结案文档提交后也尚未重跑 `ready`；合成 POST 拒绝**不代表**真实 PostgreSQL 写入后回包、跨标签竞态或工业设备安全已验收。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

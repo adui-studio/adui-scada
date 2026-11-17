@@ -1256,6 +1256,12 @@ async function runServerAction(
       } catch (error) {
         serverError.value = error instanceof Error ? error.message : "服务端操作失败";
         if (isScadaAccessRejection(error)) invalidateServerAccess();
+        if (label === "保存服务端工程") {
+          // 保存冲突可能已清除共享 CAS 基线；临时服务故障则继续保留。
+          serverBaselineRevision.value = serverSession.getBaselineRevision(
+            editor.snapshot().document.projectId,
+          );
+        }
         if (
           error instanceof ScadaApiError &&
           (error.kind === "unauthenticated" || (label === "检查服务端身份" && error.status === 404))

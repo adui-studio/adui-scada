@@ -864,3 +864,21 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 **已发送的服务端 POST 不可依赖浏览器回滚**：即使保存异步完成时已切换上下文，服务器仍可能已创建工程或追加不可变版本。当前客户端不接受该迟到回包来写入本地新基线，而是以“写入可能已生效，请重新读取最新版本”的固定中文冲突文案提示人工复核。禁止自动重试或在没有服务端证据时回退数据库审计。工业设备写入不在此 API 内，NestJS 仍负责 CSRF、授权与版本 CAS。React/Vue 无需各自复制代次状态机。
 
 测试通过 Mock API 控制异步阶段，并且分别断言迟到失败与迟到成功后的新基线不变、旧请求不会额外创建或追加工程、当前业务规则仍由原有测试覆盖。此小批未改服务端 HTTP 协议或物理浏览器多标签事件。
+
+## 2026-11-17 · 第三十四批第十四小批：浏览器保存延迟拒绝专项
+
+复用 `scripts/test-project-browser-oidc.mjs` 的临时 Chrome/Edge CDP Profile、真实 Keycloak 登录、双 Origin、`prepareAccessDenialBaseline` 与 `inspectStudioState`；不改正式 API Client、SCADA Core 或 React/Vue 页面。通过新模式 `--simulate-save-timing` 单独运行：先于客户端初始化安装已有 `installAccessDenialFaultInPage`，保持所有工程非只读请求在页面内终止；仅当显式 `armSaveTimingInPage` 后匹配同源当前工程的 `POST /api/v1/projects/:projectId/versions` 才挂起响应。调用真实“保存至服务端”按钮两次，等待 POST 命中且 UI Busy、按钮 Disabled，检查只尝试一次；之后 `releaseSaveTimingInPage` 以固定 409、401、503 状态依次交付合成响应。
+
+409 与 401 必须让现有 CAS 基线失效，503 属暂时服务器故障必须保留基线；三种场景都检查不存在自动重试以及本地 SVG、IndexedDB、自动保存未变。每种状态前重新以真实 GET 载入授权工程，避免前一场景的 UI 结果串扰。脚本的 Node 断言只接收命中计数、Busy、Disabled、是否有错误、CAS 是否清空等布尔摘要，不打印 Cookie、工程正文或服务器错误详情；浏览器注入函数不得引用 Node 模块作用域。不存在 201/成功 POST 模拟，更不声称服务器实际提交或回滚。未涉及工业设备写入与生产安全评审。
+
+## 2026-11-17 · 第三十四批第十四小批补充：取消载入测试应区分旧错误残留
+
+`openProjectInPage` 在点击工程列表项前记录现有服务端错误节点。仅观察到“正在处理工程版本”并不代表忙碌结束后仍存在的错误属于新请求；修复后，只有错误内容与旧错误不同，或本次确实观察到旧错误被清空后重新出现，才将该错误判作当前载入失败。完成成功路径依旧要求正常的 `window.confirm` 与后续 CAS 提示，真实的新错误仍必须拒绝载入，未得到有效确认会超时失败，不能通过放宽页面断言掩盖失败。
+
+新拒绝仅使用受审核固定阶段与类别，`describeBrowserPageException`、`describeProjectBrowserFailure` 均以完整白名单正则检查后才将安全类别交付 Node 终端。新类别不代表真实 HTTP 状态码，也不携带工程 ID、身份、Cookie、响应正文或异常堆栈。此变更仅涉及 CDP 专项脚本与离线回归，不改变 Vue/React 页面业务逻辑或服务器授权。
+
+## 2026-11-17 · 第三十四批第十四小批补充：Vue 保存异常后 CAS 响应式缓存对齐
+
+正式共享 `StudioServerProjectSession.saveDocument` 收到服务端版本冲突 409 时清除其 CAS 基线；401/403/404 按访问拒绝规则失效相关缓存，503 临时故障仍保留现有 CAS 并由后续真实服务端请求重新校验。React Studio 的 `activeServerBaseline` 每次渲染直接从共享会话读取；Vue 则在 `serverBaselineRevision` 响应式变量中保存镜像，原先在成功保存、确认载入、主动访问失效时更新，但在仅有 409 的保存错误路径漏更新镜像。
+
+最小修复在 Vue `runServerAction` 错误路径且标签为“保存服务端工程”时，将 `serverBaselineRevision.value` 重新赋值为共享会话针对**当前编辑工程**的真实 `getBaselineRevision`。此变更不更改共享会话的授权、CAS 算法、实际 POST 或 React 页面；保持 Vue 409 失效展示、503 保留基线及既有访问失效流程。隔离浏览器 `verifySaveTimingScenarios` 已经同时对 React/Vue 检查 401、409 清基线与 503 保留基线；新增固定错误类别使失败时只输出框架/HTTP 模拟状态和“CAS 基线状态不符合预期”，绝不输出工程 ID、Cookie、Token 或原始响应。
