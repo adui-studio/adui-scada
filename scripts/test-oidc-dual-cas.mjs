@@ -32,7 +32,8 @@ const SAFE_ERRORS = new Set([
   "隔离浏览器调试连接失败",
   "隔离浏览器页面执行失败",
   "登录超时，请检查第二个 Keycloak 测试主体是否已预绑定",
-  "两次登录必须属于同一可信租户的不同主体",
+  "两次登录所属租户不一致，请核对第二位测试用户的本机身份预绑定",
+  "两次登录映射到同一本地主体，第二个浏览器须使用另一位已预绑定的测试用户",
   "真实身份响应格式不正确",
   "双会话专项缺少有效 CSRF Cookie",
   "专用工程创建失败，禁止修改其他工程",
@@ -63,8 +64,11 @@ export function requireDifferentSubjects(first, second) {
     typeof item.subjectId === "string" &&
     PRINCIPAL_PATTERN.test(item.subjectId);
   if (!valid(first) || !valid(second)) throw new Error("真实身份响应格式不正确");
-  if (first.tenantId !== second.tenantId || first.subjectId === second.subjectId) {
-    throw new Error("两次登录必须属于同一可信租户的不同主体");
+  if (first.tenantId !== second.tenantId) {
+    throw new Error("两次登录所属租户不一致，请核对第二位测试用户的本机身份预绑定");
+  }
+  if (first.subjectId === second.subjectId) {
+    throw new Error("两次登录映射到同一本地主体，第二个浏览器须使用另一位已预绑定的测试用户");
   }
 }
 
@@ -504,6 +508,9 @@ async function run() {
     const first = await waitForLogin(firstBrowser, origins[0], "第一位主体");
     const secondBrowser = await startBrowser(executable);
     browsers.push(secondBrowser);
+    process.stdout.write(
+      "第二个隔离浏览器必须登录另一位 Keycloak 测试用户，且已预绑定到与第一位相同的本机租户。\n",
+    );
     await waitForLogin(secondBrowser, origins[0], "第二位主体");
     await secondBrowser.send("Page.navigate", { url: origins[1] + "/" });
     let second = null;
