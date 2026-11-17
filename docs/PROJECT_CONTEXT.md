@@ -1228,3 +1228,9 @@ PR #57 经维护者人工验收和单独合并授权，以 Squash Commit `c426d2
 PR #62 经维护者授权已 Squash 合并至 `main@d743e17df42fda97a1cd9bce8676ad75b5ed37c9`；第七小批的独立本机 PostgreSQL 真库已实际通过 **31/31**，以及 Windows `vp check`、`docs:check`、完整 `ready` 的 544/544 单测和 49/49 HTTP E2E。第八小批聚焦下一次真实服务端请求收到 401/403/404 时对过时授权信息的前端保护：共享 API Client 失效 CAS 基线并阻断被撤权工程自动创建、重复保存；React/Vue 同构清空服务端历史摘要和授权工程分页缓存、保留 IndexedDB 草稿及当前画布。只有显式重新确认合法服务端版本载入才恢复 CAS；网络中断不误判权限撤销。
 
 本批无 Prisma 迁移、OIDC 后端或工业控制写入变更；新增 6 项共享单测，预计普通单测 **550 项**，**尚未在维护者 Windows 运行 `vp check`、`ready` 或真实浏览器回归**。因没有在 OIDC Lab 做破坏性 ACL 变更，不能把前端“撤权 UI”称作真实多用户 E2E 已验收。新分支提交 Draft PR、必须指派 `@adui-dev`，未经单独授权不得合并。
+
+## 2026-11-17 · 第三十四批第九小批：浏览器模拟访问拒绝候选
+
+PR #63 已由维护者授权 Squash 合并为 `main@6f09e1930fe55f567245708bf5eb80edacd7b42a`。此前双端已通过真实 Keycloak 正常授权 OIDC 浏览器专项，完整 `ready` 550/550 单测、49/49 服务端 E2E、退出码 0。第九小批复用同一浏览器/CDP 测试框架新增独立 `test:projects:oidc:denial`：在临时 Profile 安装对工程写请求的永久拒绝，并对三个固定只读 API 路径模拟 401/403/404，分别验证 React/Vue 的旧 CAS/工程摘要清理、本地 SVG 与 IndexedDB 草稿保护及 404 后重复保存无误创建。普通 OIDC 浏览器命令和真实用户/ACL/数据库保持不变。
+
+新增 3 项离线安全测试，预期相关 Node 专项 21 项；**尚未在维护者 Windows 执行真实浏览器、完整 ready 或 vp check**，不能提前标记通过。本批是对客户端拒绝处理的真实 UI + 模拟 HTTP 测试，不是从 Keycloak 撤销实际权限的完整 E2E。后续需在独立临时权限夹具和受控事务下补全真实 ACL revoke 浏览器专项，不能直接删改 Lab 用户的历史工程权限。
