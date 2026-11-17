@@ -924,3 +924,9 @@ Node 编排第二主体读取 2、再 POST CAS 2→3，随后释放旧 201、第
 维护者第二轮真实专项已经确认 React Studio 原始 201 交付成功、第二主体真实版本 3 提交成功，但独立 Chrome/Edge 窗口在执行 `Page.bringToFront` 后仍报告 `document.visibilityState=hidden`，导致原先正确的可见性安全断言失败。CDP `Page.bringToFront` 只激活目标标签页，并不负责 Windows 两个隔离浏览器窗口的显隐关系。
 
 只在本次专用测试脚本新增 `setSecondaryBrowserWindowState`：第二主体操作前通过 `Browser.getWindowForTarget` 精确获取**第二主体测试 Profile**的窗口 ID，并用 `Browser.setWindowBounds` 设为 `normal`；第二主体成功推进版本 3、第一主体已消费原始 201 后，将第二窗口设为 `minimized`，再次对第一主体执行 `Page.bringToFront`。仍然要求真实 `document.visibilityState === "visible"` 才能派发已有的只读复核事件、检查远端新水位 3 和清除过期 CAS。ID 不合法、CDP 失败或真实页面继续隐藏时照常失败，不伪造 getter 或关闭断言。窗口管理只发生于隔离测试进程，完成后仍由现有 `finally` 关闭两份独立浏览器 Profile。
+
+## 2026-11-17 · 第十七小批：本地数据变化的严格分阶段诊断
+
+维护者第三轮真实 Lab 运行已经证明 React 的第二主体 HTTP 201 推进修订 3、第一主体消费旧 201，以及独立浏览器可见性恢复均能完成；此后脚本报“真实 Studio 迟到保存的本地数据发生变化”。按照该脚本顺序，最终失败位于 CAS 基线清空及 UI 拒绝旧 CAS 再次保存之后的本地快照一致性检查。当前日志**未区分** SVG、自动保存、草稿数量、草稿哈希，也未证明根因属于业务代码。
+
+测试脚本只增加纯函数 `classifyStudioLocalDrift`，把原 SVG 内容全等、自动保存布尔值全等、IndexedDB 草稿数量全等、原始记录 SHA-256 全等转成四个布尔诊断字段。`requireUnchangedDocument` 仍按**任一变化即拒绝**执行，不引入等待重试、自动修正草稿、修改生产 UI 或修改数据仓储。分别在保存挂起、远端版本 3 已提交、Studio 消费旧 201、CAS 只读复核完成、过期保存被 UI 拒绝后检查。只在出现差异时显示固定阶段和布尔状态，不暴露原始 SVG、草稿、摘要或用户身份。
