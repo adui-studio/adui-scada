@@ -264,10 +264,10 @@ void describe("真实双 Keycloak 主体 CAS 浏览器安全预检", () => {
 
   void it("迟到响应模式只向本次随机专用工程发一次正式同源 POST", async () => {
     const calls = [];
-    const response = new Response(
-      JSON.stringify({ revision: 2, contentHash: "b".repeat(64) }),
-      { status: 201, headers: { "Content-Type": "application/json" } },
-    );
+    const response = new Response(JSON.stringify({ revision: 2, contentHash: "b".repeat(64) }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    });
     const runtime = {
       location: { origin },
       document: { cookie: "__Host-adui-scada-csrf=" + csrf },
@@ -322,20 +322,16 @@ void describe("真实双 Keycloak 主体 CAS 浏览器安全预检", () => {
       releaseHeldCasResponseInPage(origin, projectId, runtime),
       /请求状态不符合预期/,
     );
-    assert.throws(
-      () => armHeldCasResponseInPage(origin, projectId, runtime),
-      /请求状态不符合预期/,
-    );
+    assert.throws(() => armHeldCasResponseInPage(origin, projectId, runtime), /请求状态不符合预期/);
     assert.equal(writes, 1);
-    resolveResponse(new Response(JSON.stringify({ revision: 2, contentHash: "a".repeat(64) }), {
-      status: 201,
-    }));
+    resolveResponse(
+      new Response(JSON.stringify({ revision: 2, contentHash: "a".repeat(64) }), {
+        status: 201,
+      }),
+    );
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(heldCasResponsePhaseInPage(origin, projectId, runtime), "received");
-    assert.equal(
-      (await releaseHeldCasResponseInPage(origin, projectId, runtime)).revision,
-      2,
-    );
+    assert.equal((await releaseHeldCasResponseInPage(origin, projectId, runtime)).revision, 2);
     runtime.document.cookie = "";
     assert.throws(
       () => armHeldCasResponseInPage(origin, projectId, runtime),

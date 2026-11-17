@@ -213,7 +213,9 @@ export async function appendCasVersionInPage(
 ) {
   if (
     runtime.location.origin !== origin ||
-    !/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId) ||
+    !/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
+      projectId,
+    ) ||
     ![1, 2].includes(expectedRevision)
   ) {
     throw new Error("双会话 HTTP CAS 事务历史或审计不一致");
@@ -267,7 +269,9 @@ export async function appendCasVersionInPage(
 export function armHeldCasResponseInPage(origin, projectId, runtime = globalThis) {
   if (
     runtime.location.origin !== origin ||
-    !/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId) ||
+    !/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
+      projectId,
+    ) ||
     runtime.__aduiScadaHeldCas !== undefined
   ) {
     throw new Error("真实迟到 201 专项请求状态不符合预期");
@@ -734,12 +738,7 @@ async function run() {
         2,
       );
       process.stdout.write("已验证真实修订号 2 可读，旧 201 仍保留在第一浏览器。\n");
-      const third = await secondBrowser.evaluate(
-        appendCasVersionInPage,
-        origins[1],
-        projectId,
-        2,
-      );
+      const third = await secondBrowser.evaluate(appendCasVersionInPage, origins[1], projectId, 2);
       if (
         third.status !== 201 ||
         third.revision !== 3 ||
@@ -747,11 +746,7 @@ async function run() {
       ) {
         throw new Error("真实迟到 201 专项版本或审计不一致");
       }
-      const old = await firstBrowser.evaluate(
-        releaseHeldCasResponseInPage,
-        origins[0],
-        projectId,
-      );
+      const old = await firstBrowser.evaluate(releaseHeldCasResponseInPage, origins[0], projectId);
       if (old.status !== 201 || old.revision !== 2 || old.contentHash !== secondRead.contentHash) {
         throw new Error("真实迟到 201 专项版本或审计不一致");
       }
