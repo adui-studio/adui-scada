@@ -1048,6 +1048,26 @@ export default function StudioPage() {
     }
   }
 
+  /** 工程管理、版本查询和保存共用的授权缓存失效处理。 */
+  function invalidateServerAccess(): void {
+    serverSession.invalidateAccess();
+    setServerProjectId("");
+    setServerHeadRevision(null);
+    setServerRows([]);
+    setServerHasMore(false);
+    setServerInspectedVersion(null);
+    setServerAccessRevision((revision) => revision + 1);
+  }
+
+  function handleServerBrowserAccessRejected(error: ScadaApiError): void {
+    invalidateServerAccess();
+    setServerError(error.message);
+    setNotice("授权工程列表访问失败：" + error.message + "；本地画布与草稿不变");
+    if (error.kind === "unauthenticated" || error.kind === "not_found") {
+      setServerIdentity("未登录或服务端尚未启用身份接口");
+    }
+  }
+
   async function runServerAction(
     label: string,
     action: () => Promise<void>,
@@ -1061,15 +1081,7 @@ export default function StudioPage() {
           await action();
         } catch (error) {
           setServerError(error instanceof Error ? error.message : "服务端操作失败");
-          if (isScadaAccessRejection(error)) {
-            serverSession.invalidateAccess();
-            setServerProjectId("");
-            setServerHeadRevision(null);
-            setServerRows([]);
-            setServerHasMore(false);
-            setServerInspectedVersion(null);
-            setServerAccessRevision((revision) => revision + 1);
-          }
+          if (isScadaAccessRejection(error)) invalidateServerAccess();
           if (
             error instanceof ScadaApiError &&
             (error.kind === "unauthenticated" ||
@@ -1740,6 +1752,7 @@ export default function StudioPage() {
             currentProjectId={state.document.projectId}
             disabled={historyBusy}
             onOpen={openServerProject}
+            onAccessRejected={handleServerBrowserAccessRejected}
           />
           <details className="studio-version-menu">
             <summary>服务端工程</summary>
