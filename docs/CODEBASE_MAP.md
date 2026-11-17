@@ -823,3 +823,8 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 
 - `packages/api-client/src/studio-session.ts`：在既有 `contextGeneration` 基础上为 `saveDocument` 添加 `awaitSaveStep`，四类异步身份、水位、创建及追加操作均在结果返回或拒绝时核对当前会话代次；POST 可能已执行时使用明确的受控 409 中文提示，旧错误不得覆盖新基线。
 - `packages/api-client/test/studio-session.test.ts`：新增五项 Promise 时序回归（旧 401、旧 404、迟到创建成功、迟到追加成功、迟到追加冲突）。React 与 Vue 使用共享实现，无需 UI 双份代码；本批不新增浏览器测试入口、依赖或服务器接口。
+
+## 第三十四批第十四小批 · 双框架浏览器延迟保存安全回归
+
+- `scripts/test-project-browser-oidc.mjs`：原有 OIDC 浏览器测试增加单独 `--simulate-save-timing`，通过已有浏览器工程写入阻断钩子在同源版本 POST 上增加限定的延迟 401/409/503 拒绝；对 React/Vue 均验证真实 UI 重复提交、CAS 状态与本地画布/草稿/自动保存保护。
+- `scripts/test-project-browser-oidc.cases.mjs`：补充新模式白名单、互斥、固定项目 POST 拦截、写入绝不穿透、请求释放和 UI 状态摘要的离线测试。根 `package.json` 增加 `test:projects:oidc:save:browser` 入口。共享客户端、Web 页面、NestJS 和数据库无需更改。
