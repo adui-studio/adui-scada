@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input } from "tdesign-react";
 import { CloseIcon } from "tdesign-icons-react";
 import "tdesign-react/es/style/index.css";
@@ -148,6 +148,7 @@ export default function StudioPage() {
   const [serverInspectedVersion, setServerInspectedVersion] = useState<ProjectSnapshot | null>(
     null,
   );
+  const resumeValidationRef = useRef(false);
   const historyActionRef = useRef(false);
   const autoSaveSessionRef = useRef<DraftAutoSaveSession | null>(null);
   const draftActionRef = useRef(false);
@@ -1049,7 +1050,7 @@ export default function StudioPage() {
   }
 
   /** 工程管理、版本查询和保存共用的授权缓存失效处理。 */
-  function invalidateServerAccess(): void {
+  const invalidateServerAccess = useCallback((): void => {
     serverSession.invalidateAccess();
     setServerProjectId("");
     setServerHeadRevision(null);
@@ -1057,7 +1058,60 @@ export default function StudioPage() {
     setServerHasMore(false);
     setServerInspectedVersion(null);
     setServerAccessRevision((revision) => revision + 1);
-  }
+  }, [serverSession]);
+
+  /** 从其他标签页返回时以真实服务端只读核对旧 CAS，不依赖本地跨页身份消息。 */
+  useEffect(() => {
+    const lifecycle = new AbortController();
+    const revalidateOnVisible = () => {
+      if (
+        document.visibilityState !== "visible" ||
+        resumeValidationRef.current ||
+        historyActionRef.current ||
+        draftActionRef.current
+      ) {
+        return;
+      }
+      const projectId = editor.snapshot().document.projectId;
+      if (serverSession.getBaselineRevision(projectId) === null) return;
+      resumeValidationRef.current = true;
+      void serverSession
+        .revalidateBaseline(projectId)
+        .catch((error: unknown) => {
+          if (lifecycle.signal.aborted || editor.snapshot().document.projectId !== projectId)
+            return;
+          const accessRejected = isScadaAccessRejection(error);
+          const revisionConflict = error instanceof ScadaApiError && error.kind === "conflict";
+          if (accessRejected) {
+            invalidateServerAccess();
+            setServerIdentity(
+              error.kind === "unauthenticated"
+                ? "未登录或服务端尚未启用身份接口"
+                : "服务端身份或工程授权已变化",
+            );
+          } else if (revisionConflict) {
+            setServerHeadRevision(null);
+            setServerRows([]);
+            setServerHasMore(false);
+            setServerInspectedVersion(null);
+          }
+          if (error instanceof ScadaApiError && (accessRejected || revisionConflict)) {
+            setServerError(error.message);
+            setNotice("标签页恢复校验发现变更：" + error.message + "；本地画布与草稿不变");
+          } else if (error instanceof ScadaApiError && error.kind === "network") {
+            setNotice("暂时无法复核服务端状态；原 CAS 基线保留，保存时仍需服务器校验");
+          }
+        })
+        .finally(() => {
+          resumeValidationRef.current = false;
+        });
+    };
+    document.addEventListener("visibilitychange", revalidateOnVisible);
+    return () => {
+      lifecycle.abort();
+      document.removeEventListener("visibilitychange", revalidateOnVisible);
+    };
+  }, [editor, invalidateServerAccess, serverSession]);
 
   function handleServerBrowserAccessRejected(error: ScadaApiError): void {
     invalidateServerAccess();

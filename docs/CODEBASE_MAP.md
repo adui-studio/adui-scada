@@ -805,3 +805,11 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/test-oidc-real-acl-revocation.cases.mjs`：八项离线安全回归，覆盖写入模式门禁、任意工程拒绝、同租户不同主体、固定 ACL 精确删除与回滚、幂等、版本/审计和浏览器 GET 脱敏。
 - `scripts/test-oidc-dual-cas.mjs` 与 `scripts/test-project-browser-oidc.mjs`：仅将必要的已存在 Chrome/CDP 及 Studio 页面检查辅助函数显式导出；已有 CAS 和模拟拒绝专项的行为不变。
 - 根目录 `package.json`：增加 `test:oidc:revoke:config`、`test:oidc:revoke:preflight`、`test:oidc:revoke:browser`；仅把离线配置测试接入 `ready`，真实 PostgreSQL 撤权浏览器测试必须手动显式确认执行。
+
+## 第三十四批第十一小批 · React/Vue 标签页恢复时只读复核
+
+- `packages/api-client/src/studio-session.ts`：`StudioServerProjectSession.revalidateBaseline` 比较当前可信身份、工程授权可读性和最新 `headRevision`，处理 401/403/404、主体切换、409 及网络中断；过期异步请求不能清除已切换的合法新基线。
+- `packages/api-client/test/studio-session.test.ts`：新增 8 项共享单测，覆盖无基线零请求、正常复核、注销、ACL 撤销、换号、CAS 水位、网络故障与迟到结果保护。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：仅在页面从后台恢复为可见时发起只读检查，跳过已有保存/草稿等互斥操作并清除过时的服务端 UI 摘要；不改本地编辑和 IndexedDB 草稿。
+- `scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`：独立 `--simulate-resume-check` 模式，增加 3 项离线测试，真实 OIDC 登录 + 模拟可见事件 + 模拟服务端拒绝/水位变化，所有工程写请求仍被隔离浏览器阻断。
+- 根 `package.json`：新增只读交互命令 `test:projects:oidc:resume`；普通浏览器模式、真实 PostgreSQL 撤权专项、版本持久化、OIDC Lab 权限映射及工业设备路径不变。

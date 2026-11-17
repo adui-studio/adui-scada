@@ -1242,3 +1242,22 @@ PR #63 已由维护者授权 Squash 合并为 `main@6f09e1930fe55f567245708bf5eb
 候选分支只新增独立双主体登录与专用工程撤权脚本、8 项 Node 离线安全测试和根脚本，并复用暴露原有浏览器 CDP/Studio 辅助函数，无产品前端或 NestJS/Prisma 变更。写入模式必须显式确认本机 `adui_scada` Lab，每框架新建一份 UUID 空白工程；严格串行化事务核对首版、创建者和 ACL 后定向撤销第二主体三项授权，UI 及 API 检查真实 404、CAS 状态和草稿保护，异常清理只针对新项目。旧用户/工程/ACL 和生产工业设备数据保持不变；不自动清除新测试工程审计。
 
 候选**尚无 Windows `vp check`、完整 `ready` 或真实权限撤销浏览器输出**。协作端有限 V8 模拟复核修正新测试 Mock 的 SQL 分支顺序后 8/8 通过，不能当成真实 Node/PG/Chrome 成功。下一步维护者需先运行只读预检并核对实际数据库连接，再单独执行显式写入浏览器专项；PR 仅 Draft，立即指派实际 GitHub 账户 `@adui-dev`，未经明确授权不得合并。
+
+## 2026-11-17 · 第三十四批第十一小批：切回标签页时复核已确认 CAS 基线（候选）
+
+第十小批 PR #65 已按维护者授权 Squash 合并到 `main@e809d306743bd20508630c1809d6993b755f1874`。维护者 Windows 已真实完成 React/Vue 两份新专用空白工程的 PostgreSQL ACL 撤销、HTTP 404、CAS 状态/草稿保护及首版审计（浏览器专项退出码 0），质量链单测 550/550、服务端 HTTP E2E 49/49。该实测不能替代本小批的重新可见事件验收。
+
+本批只扩展共享 `StudioServerProjectSession.revalidateBaseline`、React/Vue Studio 的 `visibilitychange` 可见事件监听、原有单元测试及只读 OIDC 浏览器模拟专项。已建立 CAS 基线的后台标签恢复时，按原始已加载的可信租户/主体与 revision 重新读取真实 BFF 身份与工程摘要：401/403/404、主体换号会失效旧基线并保留误创建阻断，远端水位变化清空旧 CAS、普通网络失败保留原基线，不覆盖 SVG 或 IndexedDB 草稿，旧请求异步返回不能清空新加载基线。未建立基线、正在保存或卸载的组件不强制发起请求。
+
+新增 8 项共享单测和 3 项 OIDC 浏览器离线安全测试，预计常规单测 **558 项**、浏览器离线 **24 项**，真实交互专项 `test:projects:oidc:resume` 尚待维护者 Windows 验证。此模式是**真实 BFF 登录＋模拟可见事件与 HTTP 拒绝**，不是后台推送或真正的其他标签注销 E2E；不动 Keycloak 用户、Lab ACL 和现有工程，不发送工业设备写入请求。新分支 PR 默认 Draft、立即指派实际 GitHub 账号 `@adui-dev`，未经维护者再授权不得合并。
+
+## 2026-11-17 · 第三十四批第十一小批 React 检查修复与待复验
+
+PR #66 仍为 Draft，维护者在 Windows `vp check --fix` 实测发现 React Studio 恢复监听中的 `react(immutability)` **1 条警告**与 TypeScript **TS2339 1 个错误**，188 个受检文件的格式化完成但完整检查失败。修复已提交至同一 PR 分支：`e5bddb6c98682130fc80841368466fa1aacccb51`，以 `AbortController` 替代 Effect cleanup 可变闭包标记，并提前缓存访问拒绝/CAS 冲突两种条件，保留 Vue/React 功能与共享状态机。已在协作容器 TypeScript 5.8.3 对等价收窄片段进行严格静态编译，未运行项目 TS6/Vite+。本批仍须 Windows 重新执行 `vp check`、完整质量链及双框架只读浏览器专项；**不应将格式化成功写成 Lint 或构建通过**，不得提前合并。错误复盘见 E-031。
+
+
+## 2026-11-17 · 第三十四批第十一小批 Windows 验收结果
+
+PR #66 的 React / Vue 标签页恢复只读复核已由维护者在 Windows 完成复验：`vp check` **333/188 零警告错误**；OIDC 浏览器离线 **24/24**；完整 `pnpm run ready` 中 Vue `vue-tsc --build`、React 类型检查、Vitest **558/558**、NestJS HTTP E2E **49/49**、React/Vue/Server 构建及文档检查 **86 个 Markdown** 均完成，质量链结束后未触发退出码断言。独立的 `test:projects:oidc:resume` 中 React/Vue 均通过模拟 401、404、修订水位变化三组页面重新可见场景，退出码 **0**；本地画布、IndexedDB 草稿和自动保存不变，浏览器内阻断真实工程写入，未修改 Lab ACL。
+
+此前 React Compiler/TS2339、Vue TS2339 及浏览器准备阶段失败保留为历史错误记录，目前 Windows 已复验通过。**仍需确认本机 `git rev-parse HEAD` 与 PR 最新 HEAD 一致**；此次文档更新提交后需要按需重跑检查。该专项使用真实 Keycloak/BFF 登录但模拟标签页可见事件及受控 GET 失败，不能等同多物理标签真实注销或生产工业安全验证。PR #66 保持 Open/Draft、指派 `@adui-dev`，未经当前批次明确合并授权不合并。

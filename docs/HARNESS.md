@@ -2373,3 +2373,41 @@ Write-Host "真实 React/Vue ACL 撤销浏览器退出码：$LASTEXITCODE"
 交互阶段每位主体在临时隔离浏览器中手动登录 Keycloak 普通测试用户，不在终端输入/粘贴密码。此命令**真实创建两份新 UUID 空白专用工程**（分别供 React 与 Vue 测试），用固定三项 ACL 暂时授予第二位主体；在已建立真实 CAS 基线且确认本地 IndexedDB 草稿存在后，仅定向删除该新工程上的第二主体三项 ACL。随后要求真实 BFF `/auth/me` 依然有效，详情、历史与首版三个请求均返回 404，React/Vue 服务端摘要及 CAS 清空、本地画布和草稿不变，重复保存被阻断，创建者仍能读首版，PostgreSQL 修订号仍为 1 且仅单条成功审计。专用工程及其首版、审计保留供复核，**不清空数据库、撤销已有工程权限或修改既有测试账号**。失败时脚本在 `finally` 尽可能定向回收本轮授予的第二主体 ACL；如需人工复核，只检查终端输出的本次随机工程，禁止全库删除。
 
 本批目标：新离线安全用例 **8/8**；`ready` 普通单元测试预计仍为 **550/550**、服务端 E2E **49/49**、旧项目浏览器离线 21/21；新真实浏览器脚本 **退出码 0**。协作端仅完成 V8 函数语法及 8 项模拟测试，**真实 Windows CLI、Keycloak 双登录、PostgreSQL SQL 与双框架 UI 尚未执行**。不能将模拟测试标为 Node 正式通过。
+
+## 第三十四批第十一小批 · 跨标签页恢复时只读会话/ACL/CAS 复核
+
+在第十小批 PR #65 获维护者授权、真实双 Keycloak 本机 PostgreSQL ACL 撤销 React/Vue 浏览器专项退出码 0 并 Squash 合并为 `main@e809d306743bd20508630c1809d6993b755f1874` 后，开始本小批。目标是**已载入 CAS 的标签页重新可见时**查询同源 BFF 最新身份、工程 ACL 和水位，不等待用户再次点击“保存”，也不对其它标签页广播主体 ID、权限或 Cookie。
+
+Windows 仓库验收：
+
+```powershell
+git status --short
+git fetch origin
+git switch --track origin/fix/v0.3-b34-resume-session-revalidation
+git rev-parse HEAD
+
+pnpm run test:projects:oidc:config
+if ($LASTEXITCODE -ne 0) { throw "标签页恢复浏览器规则检查失败" }
+pnpm run test:unit
+if ($LASTEXITCODE -ne 0) { throw "共享 CAS 恢复复核单元测试失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "格式、Lint 或 TypeScript 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+Write-Host "第十一小批 ready 退出码：$LASTEXITCODE"
+```
+
+原 Windows 验收已有 550 项单测、21 项 OIDC 浏览器离线测试、49 项服务端 E2E；本批新增共享 CAS **8 项**与离线浏览器 **3 项**，预计 **558/558 单测、24/24 浏览器离线和 49/49 E2E**，必须以实际运行输出为准；`docs:check` 目标仍是 86 篇 Markdown。
+
+本机双 Web HTTPS 与 Keycloak Lab 已按既有文档运行、采用预绑定的普通测试用户登录后，执行本批**浏览器模拟**专项：
+
+```powershell
+pnpm run test:projects:oidc:resume
+Write-Host "双框架标签页恢复浏览器退出码：$LASTEXITCODE"
+```
+
+该专项仍在临时独立 Chrome/Edge Profile 中使用真实登录会话，先通过真实授权列表和实际同源 GET 确认载入工程并保存一份临时 IndexedDB 草稿；随后在页面内**模拟可见事件**，分别只对当前 Origin 模拟 `GET /auth/me` 401、`GET /projects/:id` 404 或将合法 GET 响应的 `headRevision` 增大 1。所有工程 API 非 GET/HEAD 请求在模拟器内始终拒绝，**不会写真实 Lab 工程、ACL 或版本，也不需要真实登出其他标签页**。React/Vue 两端分别验证旧 CAS/水位/授权摘要失效、本地 SVG 画布、IndexedDB 草稿哈希及自动保存状态不变，专项最终退出码须为 0。
+
+**范围边界**：本批没有实现广播式会话立即同步、轮询或跨 Origin Cookie 传输。只有当前文档重新可见并存在 CAS 基线时执行只读复核；真正后台长期可见性、双物理标签并行与真实另一个标签页注销/ACL 撤权仍需后续专用 E2E。既有第十小批真实 PostgreSQL ACL 撤销端到端通过是独立证据，不能把本批模拟事件称为“跨标签页真实注销 E2E 已验收”。源码及质量链均需 Windows 复验；本协作环境无实际 Chrome/Keycloak/React/Vue 全链结果。

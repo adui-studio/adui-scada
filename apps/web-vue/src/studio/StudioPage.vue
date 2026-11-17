@@ -108,6 +108,8 @@ const serverHasMore = ref(false);
 const serverError = ref("");
 const serverAccessRevision = ref(0);
 const serverInspectedVersion = shallowRef<ProjectSnapshot | null>(null);
+let resumeValidationInProgress = false;
+let studioMounted = false;
 let historyActionInProgress = false;
 let autoSaveSession: DraftAutoSaveSession | null = null;
 let draftActionInProgress = false;
@@ -458,6 +460,8 @@ watch(
 );
 
 onMounted(() => {
+  studioMounted = true;
+  document.addEventListener("visibilitychange", onStudioVisible);
   window.addEventListener("keydown", handleKey);
   subscribeDraft();
   void checkLocalDraft();
@@ -474,6 +478,8 @@ onMounted(() => {
   canvasResizeObserver.observe(canvas);
 });
 onUnmounted(() => {
+  studioMounted = false;
+  document.removeEventListener("visibilitychange", onStudioVisible);
   canvasResizeObserver?.disconnect();
   canvasResizeObserver = null;
   window.removeEventListener("keydown", handleKey);
@@ -1177,6 +1183,54 @@ function invalidateServerAccess(): void {
   serverHasMore.value = false;
   serverInspectedVersion.value = null;
   serverAccessRevision.value += 1;
+}
+
+/** 从其他标签页返回时只通过 BFF 的真实身份和工程授权结果复核旧 CAS。 */
+async function revalidateOnResume(): Promise<void> {
+  if (
+    !studioMounted ||
+    document.visibilityState !== "visible" ||
+    resumeValidationInProgress ||
+    historyActionInProgress ||
+    draftActionInProgress
+  ) {
+    return;
+  }
+  const projectId = editor.snapshot().document.projectId;
+  if (serverSession.getBaselineRevision(projectId) === null) return;
+  resumeValidationInProgress = true;
+  try {
+    await serverSession.revalidateBaseline(projectId);
+  } catch (error) {
+    if (!studioMounted || editor.snapshot().document.projectId !== projectId) return;
+    const accessRejected = isScadaAccessRejection(error);
+    const revisionConflict = error instanceof ScadaApiError && error.kind === "conflict";
+    if (accessRejected) {
+      invalidateServerAccess();
+      serverIdentity.value =
+        error.kind === "unauthenticated"
+          ? "未登录或服务端尚未启用身份接口"
+          : "服务端身份或工程授权已变化";
+    } else if (error instanceof ScadaApiError && error.kind === "conflict") {
+      serverBaselineRevision.value = null;
+      serverHeadRevision.value = null;
+      serverRows.value = [];
+      serverHasMore.value = false;
+      serverInspectedVersion.value = null;
+    }
+    if (error instanceof ScadaApiError && (accessRejected || revisionConflict)) {
+      serverError.value = error.message;
+      notice.value = "标签页恢复校验发现变更：" + error.message + "；本地画布与草稿不变";
+    } else if (error instanceof ScadaApiError && error.kind === "network") {
+      notice.value = "暂时无法复核服务端状态；原 CAS 基线保留，保存时仍需服务器校验";
+    }
+  } finally {
+    resumeValidationInProgress = false;
+  }
+}
+
+function onStudioVisible(): void {
+  void revalidateOnResume();
 }
 
 function handleServerBrowserAccessRejected(error: ScadaApiError): void {
