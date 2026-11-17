@@ -1017,10 +1017,14 @@ export async function openProjectInPage(projectId, headRevision, mode) {
   const errorBeforeClick = versionPanel?.querySelector('[role="alert"]')?.textContent ?? "";
   let newActionObserved = false;
   let previousErrorCleared = false;
+  if (!["cancel", "conflict", "confirm", "confirm-drift"].includes(mode)) {
+    throw new Error("工程安全载入流程模式不合法");
+  }
   if (mode === "conflict") globalThis.__aduiTestProjectRevisionFault = fault;
   window.confirm = () => {
     confirmCount += 1;
-    return mode === "confirm";
+    if (mode === "confirm-drift") globalThis.__aduiTestProjectRevisionFault = fault;
+    return mode === "confirm" || mode === "confirm-drift";
   };
   try {
     button.click();
@@ -1036,6 +1040,14 @@ export async function openProjectInPage(projectId, headRevision, mode) {
       if (busy || error !== errorBeforeClick) newActionObserved = true;
       if (mode === "conflict" && fault.calls > 0 && error.includes("服务端工程版本已更新")) {
         return { confirmCount, intercepted: fault.calls, outcome: "conflict" };
+      }
+      if (
+        mode === "confirm-drift" &&
+        confirmCount === 1 &&
+        fault.calls === 1 &&
+        error.includes("确认载入时服务端版本已变化")
+      ) {
+        return { confirmCount, intercepted: fault.calls, outcome: "confirm-drift" };
       }
       if (mode === "cancel" && confirmCount > 0) {
         return { confirmCount, intercepted: fault.calls, outcome: "cancel" };
@@ -1344,6 +1356,25 @@ async function verifyStudio(session, origin, name, requireMultiPage) {
   assert.equal(afterConflict.canvas, baseline.canvas, name + " 模拟远端水位冲突改变了画布");
   assert.deepEqual(afterConflict.drafts, baseline.drafts, name + " 模拟远端水位冲突修改了草稿");
   assert.equal(afterConflict.autoSave, true, name + " 模拟远端水位冲突停止了自动保存");
+
+  report("模拟确认框之后远端追加版本并阻断载入");
+  const confirmedDrift = await session.evaluate(
+    openProjectInPage,
+    selected.projectId,
+    selected.headRevision,
+    "confirm-drift",
+  );
+  assert.deepEqual(confirmedDrift, {
+    confirmCount: 1,
+    intercepted: 1,
+    outcome: "confirm-drift",
+  });
+  assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
+  const afterConfirmedDrift = await inspectStudioState(session);
+  assert.equal(afterConfirmedDrift.canvas, baseline.canvas, name + " 确认后版本变化修改了画布");
+  assert.deepEqual(afterConfirmedDrift.drafts, baseline.drafts, name + " 确认后版本变化修改了草稿");
+  assert.equal(afterConfirmedDrift.autoSave, true, name + " 确认后版本变化暂停了自动保存");
+  assert.ok(afterConfirmedDrift.server.includes("CAS 基线：未建立"));
 
   report("确认载入与 CAS 基线");
   const opened = await session.evaluate(
