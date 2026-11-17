@@ -1167,6 +1167,27 @@ async function runHistoryAction(
   }
 }
 
+/** 工程列表和版本操作共用的服务端授权缓存失效保护。 */
+function invalidateServerAccess(): void {
+  serverSession.invalidateAccess();
+  serverProjectId.value = "";
+  serverHeadRevision.value = null;
+  serverBaselineRevision.value = null;
+  serverRows.value = [];
+  serverHasMore.value = false;
+  serverInspectedVersion.value = null;
+  serverAccessRevision.value += 1;
+}
+
+function handleServerBrowserAccessRejected(error: ScadaApiError): void {
+  invalidateServerAccess();
+  serverError.value = error.message;
+  notice.value = "授权工程列表访问失败：" + error.message + "；本地画布与草稿不变";
+  if (error.kind === "unauthenticated" || error.kind === "not_found") {
+    serverIdentity.value = "未登录或服务端尚未启用身份接口";
+  }
+}
+
 async function runServerAction(
   label: string,
   action: () => Promise<void>,
@@ -1180,16 +1201,7 @@ async function runServerAction(
         await action();
       } catch (error) {
         serverError.value = error instanceof Error ? error.message : "服务端操作失败";
-        if (isScadaAccessRejection(error)) {
-          serverSession.invalidateAccess();
-          serverProjectId.value = "";
-          serverHeadRevision.value = null;
-          serverBaselineRevision.value = null;
-          serverRows.value = [];
-          serverHasMore.value = false;
-          serverInspectedVersion.value = null;
-          serverAccessRevision.value += 1;
-        }
+        if (isScadaAccessRejection(error)) invalidateServerAccess();
         if (
           error instanceof ScadaApiError &&
           (error.kind === "unauthenticated" || (label === "检查服务端身份" && error.status === 404))
@@ -1714,6 +1726,7 @@ async function importJson(event: Event) {
           :current-project-id="state.document.projectId"
           :disabled="historyBusy"
           @open="openServerProject"
+          @access-rejected="handleServerBrowserAccessRejected"
         />
         <details class="studio-version-menu">
           <summary>服务端工程</summary>
