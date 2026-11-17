@@ -391,7 +391,6 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     expect(api.appendVersion).not.toHaveBeenCalled();
   });
 
-
   it("迟到的 401 不能清除相同工程重新确认的合法 CAS 基线", async () => {
     const api = mockClient();
     const session = createStudioServerProjectSession(api);
