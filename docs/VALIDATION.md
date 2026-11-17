@@ -1402,3 +1402,13 @@ PR #64 已按维护者授权 Squash 合并为 `main@d59df5e9ef2d702954f6b2017399
 本批新增 `scripts/test-oidc-real-acl-revocation.mjs`：默认通过两份真实独立 Keycloak 登录核对同租户不同本地主体，不执行写入；显式确认 `--run-revoke --confirm-lab adui_scada` 后，在本机受控 OIDC Lab 分别创建 React/Vue 专用随机空白工程，仅对新工程授予第二主体三项权限并于真实 Studio 确认载入后定向撤销。随后第二主体真实 HTTP 详情/历史/首版 404，身份仍有效，UI 的旧 CAS/水位/授权列表被清除，重复保存受控拒绝，SVG 画布与 IndexedDB 草稿保持不变；第一主体仍能读取旧首版、PostgreSQL 修订号和成功审计仍为 1。所有测试工程保留供人工复核，不触碰历史工程、其他主体 ACL、真实生产或工业采集设备。
 
 新增 `scripts/test-oidc-real-acl-revocation.cases.mjs` 共 8 项离线安全测试；仅此 8 项会进入 `ready`，浏览器与 Lab 写入必须单独人工执行。协作端使用 V8 分段解析脚本与测试通过；首次模拟中 8 项为 7 通过/1 失败，定位到**SQL 测试 Mock 的 DELETE 匹配落入普通 SELECT 分支**，只调整 Mock 判断先后，再次模拟 **8/8**，未放宽真实 SQL 事务保护与断言。**这不是 Windows `node --test` 的实际运行结果**，也未执行本批 `vp check`、`docs:check`、`ready`、真实 Prisma/Keycloak/浏览器专项。全链仅为待验收候选，不能声称真实撤权已验证通过。
+
+## 2026-11-17 · 第三十四批第十一小批：标签页重新可见时 BFF 身份与 CAS 复核候选
+
+基线为按维护者明确授权 Squash 合并的 PR #65：`main@e809d306743bd20508630c1809d6993b755f1874`。第十小批维护者实际通过 React/Vue 真实 PostgreSQL ACL 撤销浏览器专项，退出码 0；原本 550/550 单测、49/49 服务端 E2E、8/8 撤权离线测试、21/21 OIDC 浏览器离线规则与完整质量链的终端证据已登记。前一批通过并不意味着本批页面可见事件功能已实测。
+
+本批新逻辑在已确认的工程 CAS 基线上，页面从隐藏变为可见时只读获取 BFF 身份与工程水位（独立 GET，仍走后端 Session/ACL），检测其它标签页注销所产生的 401、撤权 404、账号切换、修订号变化 409，丢弃旧 CAS 与服务端摘要，不删除/重置本地画布、IndexedDB 草稿或自动保存状态。**网络故障不清除基线；从没有建立基线的工程不自动查询**。重新载入新基线后，旧异步校验的迟到结果不得清掉新状态。React/Vue 生命周期对等，在卸载时移除可见事件监听。
+
+共享 `studio-session.test.ts` 新增 8 项单测；OIDC 浏览器独立 `--simulate-resume-check` 模式使用真实 Keycloak/BFF 登录和既有工程 GET，只模拟 DOM `visibilitychange`、身份 401、工程 404 和水位变化，实际工程写请求始终在临时 Profile 内拒绝。对应浏览器离线新 3 项，预计普通单测 **558/558**、离线浏览器 **24/24**，服务端 E2E 仍为 **49/49**。此专项不能证明真实两个物理标签同时可见或后台即时授权推送，只用于校验重新可见时的只读 UI 行为。
+
+**当前验证**：候选代码在 GitHub 独立分支，**尚未在 Windows 执行新 HEAD 的 `vp check`、`test:unit`、`test:projects:oidc:config`、`docs:check`、`ready` 或新浏览器交互专项**。不能冒充通过或提前合并。
