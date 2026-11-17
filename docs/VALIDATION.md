@@ -1650,3 +1650,11 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 新增测试目标：共享 CAS Session 由 **31 增至 37** 项，Vitest 全量由上一轮 **567 增至 573** 项；`test:projects:oidc:config` 由 **33 增至 35** 项。真正的 `test:projects:oidc:save:browser` 使用两端隔离 Chrome/Edge + Keycloak/BFF 会话、合成 409 后只读核验真实版本，必须保持浏览器非 GET 工程写入拦截及原本 401/503 回归；不涉及新增数据库写入或 Lab ACL 变更，也不等于另一场真实 PostgreSQL 并发 409。
 
 **当前所有新增数字均为预期，不是实测通过记录。** 需要在 Windows 实际执行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`，再在受控本机可信 OIDC HTTPS 环境独立执行 `pnpm run test:projects:oidc:save:browser`，分别核对 React/Vue 409 预览、仅一次被拦截 POST、真实 GET 与本地草稿保持不变，并记录每条命令退出码及 `git rev-parse HEAD`。不得从旧 PR #72 的成功日志推断本批通过。
+
+## 第三十四批第十九小批 · 确认后再复核最新水位的验收要求
+
+本批针对既有 `readVersion → window.confirm → loadDocument` 的时间差增加共享 `revalidateConfirmedLoad`，要求**用户确认后才发起**登录身份与服务端水位只读核验，核验全部成功且编辑工程上下文不变时才能暂停自动保存并替换画布。当前工程历史“载入”及授权工程“打开”在 React/Vue 中采用相同顺序，不自动覆盖草稿、重试写入或变更 CAS 语义。旧历史版本仍不能作为最新 CAS 基线；权限撤销必须阻断误创建；网络 503 保留原基线；延迟旧权限拒绝不能污染新会话。
+
+新测试计划：共享 Session **8 项新增**，目标 **45/45**；全量 Vitest 目标 **581/581**，浏览器离线新增 2 项，目标 `test:projects:oidc:config` **37/37**。真实 `test:projects:oidc:save:browser` 在 React/Vue 原“取消载入、模拟水位冲突、确认载入”之间增加**确认后才合成远端 HEAD 漂移**的负向检查：必须先出现一次确认，再得到受控冲突，保持画布、草稿和自动保存，CAS 不被错误建立。原 409 保存模拟的最新版本只读预览完成后，还需真正点版本列表“载入”并确认；再次真实只读 GET 成功后，CAS 基线正确恢复，自动保存暂停，IndexedDB 草稿及 Lab 工程未写入，401/503 场景继续安全通过。
+
+安全边界：浏览器模拟的确认后水位漂移及版本 POST 409/401/503 属于本机隔离 Profile 的合成拒绝/GET 替换，不是再次执行真实 PostgreSQL 并发写入；真实 GET 仍走受保护的 HTTPS BFF，浏览器隔离层截断所有工程 POST。单次确认后 GET 不保证数据库锁或原子一致性，服务端保存时继续原 CAS。**候选尚未实际运行 Windows Node/Vitest/类型检查、`vp check`、`docs:check`、完整 `ready` 或本机 Keycloak 浏览器专项**，不能使用上一小批的成功日志作为新改动的验收结果。需记录本机 HEAD SHA 与命令退出码。
