@@ -954,3 +954,18 @@ Node 编排第二主体读取 2、再 POST CAS 2→3，随后释放旧 201、第
 React/Vue 原 `loadServerVersion` 及 `openServerProject` 确认对话后，先 await `revalidateConfirmedLoad`，再检查原编辑工程 ID 未发生变化，之后才执行现有 `pauseAutoSave`、`loadDocument` 与 `acceptLoadedVersion`。没有把预览自动转换成 CAS，也没有修改原确认提示或 IndexedDB 草稿持久化。早期历史版本如果服务端最新水位保持不变仍可载入，按既有规则得到空 CAS 基线。确认期间异步水位改变必须先失败，禁止替换 SVG；此防护不承诺对最终 GET 之后的远端写入提供事务级原子性，未来保存依旧由服务端行锁与 CAS 判断。
 
 浏览器新增两种独立回归：原工程列表“打开”的测试钩子仅在 `window.confirm` 返回同意之后，针对本轮专用工程的一个 GET 摘要**合成水位 +1**，检查双框架拒绝载入、画布/草稿/自动保存不变；此数据不写入 PostgreSQL。原 409 保存模拟专项完成真实 BFF 最新版只读预览后，再点击**真实服务端版本列表的“载入”按钮**，接受原确认、执行真实 GET 复核，必须建立原最新 CAS 并暂停自动保存，同时保持 IndexedDB 草稿和写入拦截计数。测试不将合成 GET 漂移称为真实并发数据库提交，也不扩大工业设备控制权限。
+
+
+## 第三十四批第二十小批 · 同源多标签页 CAS 验收设计
+
+本批补充现有会话水位复核的真实浏览器覆盖，不新增生产运行时模块：
+
+1. 在一个隔离 Chrome/Edge Profile 中创建两个同源标签页；两页必须通过真实 BFF /api/v1/auth/me 读取到同一租户、同一主体。React 与 Vue 分别使用各自 HTTPS Origin 执行完整流程。
+2. 两页分别通过现有工程管理 UI 打开本轮随机工程首版，建立各自独立的 StudioServerProjectSession CAS 基线。第二页创建 IndexedDB 草稿并启用自动保存，再修改本地画布。
+3. 第一页通过真实 Studio“保存至服务端”按钮提交唯一一次 expectedRevision=1 POST，数据库真实追加修订 2。切回第二页时必须使用真实标签页前后台切换，检查 document.visibilityState，由既有 visibilitychange 监听触发 revalidateBaseline。
+4. 第二页发现水位漂移后清除旧 CAS；本地 SVG、IndexedDB 草稿和自动保存保持不变。保存尝试必须在任何版本 POST 前拒绝。之后只读预览修订 2，人工确认载入，再通过 revalidateConfirmedLoad 建立 CAS=2；载入暂停自动保存但不得覆盖本地 IndexedDB 草稿。
+5. 第二页以 CAS=2 真实保存修订 3；第一页恢复可见后必须检测到水位 3 并清除 CAS=2。第一页再次保存不得发出额外 POST。PostgreSQL 版本与审计必须只有 1/2/3，创建者及三个版本审计操作者均为同一主体，修订 2/3 的摘要与真实 HTTP 201 一致。
+
+隔离浏览器写入守卫在每个 Origin 页面脚本加载前安装：工程 GET/HEAD 正常访问；其他工程写请求默认 403；只为本轮随机工程按明确的 CAS 水位逐次 arm 一次版本 POST。工程首版创建发生在守卫安装前，仍由同源 CSRF 保护的正式 BFF POST 完成。测试不删除数据、不改 ACL、不操作已有工程。
+
+不增加 BroadcastChannel、storage event、跨标签页身份同步或新的 CAS 机制。该专项验证的是现有“页面恢复可见 → 只读复核 → 人工确认 → 服务端 CAS”的协作闭环，不是物理 TCP 断流、生产现场安全或跨设备控制验收。
