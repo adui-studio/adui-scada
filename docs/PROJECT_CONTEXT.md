@@ -1254,3 +1254,10 @@ PR #63 已由维护者授权 Squash 合并为 `main@6f09e1930fe55f567245708bf5eb
 ## 2026-11-17 · 第三十四批第十一小批 React 检查修复与待复验
 
 PR #66 仍为 Draft，维护者在 Windows `vp check --fix` 实测发现 React Studio 恢复监听中的 `react(immutability)` **1 条警告**与 TypeScript **TS2339 1 个错误**，188 个受检文件的格式化完成但完整检查失败。修复已提交至同一 PR 分支：`e5bddb6c98682130fc80841368466fa1aacccb51`，以 `AbortController` 替代 Effect cleanup 可变闭包标记，并提前缓存访问拒绝/CAS 冲突两种条件，保留 Vue/React 功能与共享状态机。已在协作容器 TypeScript 5.8.3 对等价收窄片段进行严格静态编译，未运行项目 TS6/Vite+。本批仍须 Windows 重新执行 `vp check`、完整质量链及双框架只读浏览器专项；**不应将格式化成功写成 Lint 或构建通过**，不得提前合并。错误复盘见 E-031。
+
+
+## 2026-11-17 · 第三十四批第十一小批 Windows 验收结果
+
+PR #66 的 React / Vue 标签页恢复只读复核已由维护者在 Windows 完成复验：`vp check` **333/188 零警告错误**；OIDC 浏览器离线 **24/24**；完整 `pnpm run ready` 中 Vue `vue-tsc --build`、React 类型检查、Vitest **558/558**、NestJS HTTP E2E **49/49**、React/Vue/Server 构建及文档检查 **86 个 Markdown** 均完成，质量链结束后未触发退出码断言。独立的 `test:projects:oidc:resume` 中 React/Vue 均通过模拟 401、404、修订水位变化三组页面重新可见场景，退出码 **0**；本地画布、IndexedDB 草稿和自动保存不变，浏览器内阻断真实工程写入，未修改 Lab ACL。
+
+此前 React Compiler/TS2339、Vue TS2339 及浏览器准备阶段失败保留为历史错误记录，目前 Windows 已复验通过。**仍需确认本机 `git rev-parse HEAD` 与 PR 最新 HEAD 一致**；此次文档更新提交后需要按需重跑检查。该专项使用真实 Keycloak/BFF 登录但模拟标签页可见事件及受控 GET 失败，不能等同多物理标签真实注销或生产工业安全验证。PR #66 保持 Open/Draft、指派 `@adui-dev`，未经当前批次明确合并授权不合并。
