@@ -622,6 +622,68 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     expect(api.appendVersion).toHaveBeenCalledTimes(1);
   });
 
+  it("旧保存成功回包滞留期间重新载入更高水位，新基线可继续安全追加", async () => {
+    const api = mockClient();
+    const session = createStudioServerProjectSession(api);
+    const projectId = waterTreatmentDemoDocument.projectId;
+    session.acceptLoadedVersion(await session.readVersion(projectId, 1));
+    expect(session.getBaselineRevision(projectId)).toBe(1);
+
+    let notifyRequested: (() => void) | undefined;
+    const requested = new Promise<void>((resolve) => {
+      notifyRequested = resolve;
+    });
+    let releaseOldReply: (() => void) | undefined;
+    api.appendVersion.mockImplementationOnce((_projectId, expectedRevision) => {
+      notifyRequested?.();
+      return new Promise<Awaited<ReturnType<ScadaApiClient["appendVersion"]>>>((resolve) => {
+        releaseOldReply = () =>
+          resolve(
+            createProjectSnapshot(waterTreatmentDemoDocument, {
+              revision: expectedRevision + 1,
+              createdAt,
+            }),
+          );
+      });
+    });
+
+    const oldSave = session.saveDocument(documentCopy());
+    await requested;
+    expect(api.appendVersion).toHaveBeenCalledTimes(1);
+
+    // 模拟另一会话将真实服务器水位推进到 3，再由用户主动重新载入最新快照。
+    session.reset();
+    api.getProject.mockResolvedValue({
+      projectId,
+      headRevision: 3,
+      createdAt,
+      updatedAt: createdAt,
+    });
+    const refreshed = await session.readVersion(projectId, 3);
+    session.acceptLoadedVersion(refreshed);
+    expect(session.getBaselineRevision(projectId)).toBe(3);
+
+    releaseOldReply?.();
+    await expect(oldSave).rejects.toMatchObject({
+      kind: "conflict",
+      status: 409,
+      message: "服务端保存期间工程上下文已变化，写入可能已生效，请重新读取最新版本",
+    });
+    expect(session.getBaselineRevision(projectId)).toBe(3);
+    expect(api.appendVersion).toHaveBeenCalledTimes(1);
+
+    api.appendVersion.mockResolvedValueOnce(
+      createProjectSnapshot(waterTreatmentDemoDocument, { revision: 4, createdAt }),
+    );
+    await expect(session.saveDocument(documentCopy())).resolves.toMatchObject({
+      revision: 4,
+      created: false,
+    });
+    expect(api.appendVersion).toHaveBeenNthCalledWith(1, projectId, 1, expect.any(Object));
+    expect(api.appendVersion).toHaveBeenNthCalledWith(2, projectId, 3, expect.any(Object));
+    expect(session.getBaselineRevision(projectId)).toBe(4);
+  });
+
   it("旧版本追加冲突迟到，不得清除随后重新确认的 CAS 基线", async () => {
     const api = mockClient();
     const session = createStudioServerProjectSession(api);
