@@ -1369,3 +1369,11 @@ E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CD
 随后维护者执行显式写入命令 `pnpm run test:oidc:dual:cas`，**退出码 0**。日志确认两个独立 Keycloak/BFF 会话通过主体和租户校验，正式 HTTP API 在本机 Lab 创建专用空白工程 `b34-oidc-cas-0d3b3199-24ec-4740-b9cb-5c7a6087f7ad`，第二主体仅取得该新工程的限定 ACL；两个浏览器实际读取首版后对 `expectedRevision=1` 并发保存，返回**恰好一次 HTTP 201 与一次 HTTP 409**，最终修订号 **2**、真实 PostgreSQL 成功版本与审计主体一致，双方读取最终快照一致。专用工程及审计记录按设计保留供复核，**无需重建、不得无故清理数据库卷**。
 
 **验收范围**：本次证据覆盖真实的两位 Keycloak 用户、两个隔离浏览器、React/Vue HTTPS Origin 的同源 BFF 请求、同一专用工程的服务端 ACL 与 PostgreSQL CAS；不证明多服务进程部署、生产 TLS 基础设施或工业现场安全。维护者此前已对本批诊断修复前候选提供 `test:oidc:dual:config` **11/11**、`vp check` **331/186 零告警**、`docs:check` **86 份**、完整 `ready` **544/544 单测与 49/49 E2E、退出码 0**。此次日志**未附 `git rev-parse HEAD` 与最新诊断文档改动后的完整质量链**；本次更新验收文档后还需对新 HEAD 执行 `vp check`、`docs:check`、`ready` 并核对 SHA。不能把前次质量链记录冒充最新提交验证。
+
+## 2026-11-17 · 第三十四批第七小批会话注销与 ACL 动态撤销候选（待 Windows 验收）
+
+以 PR #61 Squash Merge 的 `main@669c9ff3` 为基线，**只扩展现有真实数据库 HTTP 集成测试**：`apps/server/test/projects-cas-cookie-http.db-spec.ts` 增加 `ScadaAuthController` 的真实 `POST /api/v1/auth/logout` 路由，保留原有 `AuthSessionService`、`ScadaSessionGuard`、`ScadaProjectGuard`、`PrismaProjectVersionStore` 与实际 PostgreSQL，不替换登录会话、Guard、权限或工程仓储为 Mock。仅 OIDC 授权码发起/回调的两个**无关且不调用的**依赖在测试容器中使用空对象提供者，不冒充真实 IdP 登录。
+
+新增两个隔离租户用例：一是注销主体 A 当前 Cookie/CSRF 会话后真正回查 PostgreSQL `revokedAt`，再次复用旧 Cookie 的身份、工程列表和写请求均必须立即 401，而主体 B 的身份、工程保存 201 与成功审计不受影响；二是在会话仍有效时定向删除随机测试工程上主体 B 的三项 ACL，B 仍可读取 `/auth/me`，但工程列表为空，详情、历史、版本写入均 404；主体 A 仍正常读取并追加修订号 2，历史/审计保持一致。本批既无产品代码更改也无 Prisma 迁移；所有写入限定于本机独立 `adui_scada_test` 的随机租户并由已有夹具定向清理。
+
+旧数据库专项已由维护者 Windows 验收 **29/29**；新候选预计 **31/31**，尚无 Windows `vp check`、`docs:check`、`ready`、`test:db` 新 HEAD 通过日志。必须把实际退出码和 `git rev-parse HEAD` 与 PR SHA 核对后才能标为通过。默认 `ready` 不执行真实数据库写入，执行 `test:db` 前要核实测试库环境与迁移状态。测试结论不能扩展为真实双 Keycloak 用户退出登录、跨实例权限同步或生产安全评审通过。
