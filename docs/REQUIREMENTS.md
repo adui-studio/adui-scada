@@ -322,3 +322,11 @@ Core 新增框架无关 Tag 定义模型，使用稳定 `tagId` 区分不可变�
 以 PR #59 合并的 `main@4c3cb0d7` 为基线，只增加真实 PostgreSQL 隔离测试及验收说明，**不修改现有 REST/CSRF/ACL、React/Vue、工程 Schema、Prisma 迁移或工业设备权限**。在本机独立 `adui_scada_test` 的随机测试租户中，通过实际 `AuthSessionService.issueForVerifiedSubject` 为两个不同活跃可信主体创建两份独立、仅保存摘要的短期 BFF Cookie 会话；由真实 NestJS Session Guard、Project Guard、工程控制器与 Prisma 仓储处理两个并发 `POST /api/v1/projects/:projectId/versions`，双方携带同一 `expectedRevision=1`，要求严格一份 HTTP 201 与一份 HTTP 409。数据库最终只有首版和成功追加的第二版，水位、SHA-256 快照、审计操作者与实际成功响应一致。补充 Cookie/CSRF/Origin/ACL 拒绝场景，所有用例在 `finally` 定向清理当前随机租户。
 
 **验收边界**：这里的 Cookie 会话在隔离测试中由服务端可信主体签发，真实使用 PostgreSQL，但**不执行两次 Keycloak 授权码登录**，也不代表真实 TLS 代理/浏览器端完整身份交互；之前 React/Vue OIDC 严格分页专项另有 Windows 实测证据。新增测试仅通过显式 `SCADA_TEST_DATABASE_URL` 连接独立本机测试库，并只属于独立 `test:db`，不会进入默认 `ready`。正式跨 IdP 双登录以及生产安全验收后续独立评估。
+
+## V0.3 第三十四批第六小批：真实 Keycloak 双主体登录与 HTTP CAS（FR-001 / FR-002 / FR-013 / NFR-003 局部）
+
+以第五小批 PR #60 合并后 `main@e7c345b8` 为基线。补一套**独立执行的、本机可信 Keycloak Lab 双主体交互式验收工具**，让维护者分别在两个隔离 Chrome/Edge Profile 里，使用两位不同的已预绑定普通测试用户通过标准授权码流程登录。两次会话必须来自同一租户且具有不同的 `subjectId`；禁止测试脚本自动输入密码、复制 Cookie、冒用身份或将会话内容输出终端。
+
+默认 `test:oidc:dual:preflight` 仅核对两个真实登录会话的可信身份和租户关系，除正常 OIDC 登录事务/会话之外不写工程或 ACL。显式 `test:oidc:dual:cas` 还必须有 `--run-cas --confirm-lab adui_scada` 双重确认，且沿用现有 `resolveLabIdentityTarget`、`resolveProjectBrowserLab` 对本机回环、非生产、Keycloak Realm、TLS、固定 Origin 与数据库目标的严格检查。成功登录后仅由第一个主体通过正式工程 API 新建 **`b34-oidc-cas-<UUID>` 专用空白工程**；经目标库事务精确核对新工程/首版/创建者权限后，仅给第二个主体新增三项固定工程权限，绝不授权现有项目。
+
+两个浏览器分别经 React/Vue 的 HTTPS 同源 API 读取同一首版快照，然后并发 `POST /api/v1/projects/:projectId/versions`，都携带 `expectedRevision=1`，要求**一次 HTTP 201＋一次 HTTP 409**，并以服务端版本历史/成功审计与实际获胜主体核对；最终两端都能读取修订 2。新建的专用测试记录保留供核验，不自动删除工程、卷或修改其他身份 ACL。该专项不属于默认 `ready`，11 项离线环境/安全/接口边界测试通过新增命令加入 `ready`。**本批不改变任何生产 API、Core/Schema、Prisma 迁移、Vue/React 组件或设备写入权限。**
