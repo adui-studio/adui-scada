@@ -33,6 +33,9 @@ const SAFE_PAGE_ERRORS = new Set([
   "保存时序模拟尚未命中唯一的版本追加请求",
   "保存时序模拟操作按钮不可用",
 ]);
+/** 仅接受固定阶段与类别，禁止输出服务端异常正文。 */
+const SAFE_OPEN_FAILURE =
+  /^服务器工程载入阶段返回受控错误（确认(?:前|后)：(?:身份过期|权限拒绝|版本冲突|快照校验|网络故障|服务故障|协议响应)）$/;
 const PAGE_ERROR_TYPES = new Map([
   ["ReferenceError", "页面脚本引用异常"],
   ["TypeError", "页面脚本类型异常"],
@@ -75,6 +78,8 @@ export function describeBrowserPageException(details) {
       return known;
     }
   }
+  const openFailure = firstLine.startsWith("Error: ") ? firstLine.slice(7) : "";
+  if (SAFE_OPEN_FAILURE.test(openFailure)) return openFailure;
   return PAGE_ERROR_TYPES.get(details?.exception?.className) ?? "页面脚本异常（已脱敏）";
 }
 
@@ -85,6 +90,7 @@ export function describeProjectBrowserFailure(error) {
     const reason = error.pageDiagnostic;
     if (
       SAFE_PAGE_ERRORS.has(reason) ||
+      SAFE_OPEN_FAILURE.test(reason) ||
       [...PAGE_ERROR_TYPES.values(), "页面脚本异常（已脱敏）"].includes(reason)
     ) {
       return "浏览器页面操作失败：" + reason;
@@ -864,6 +870,7 @@ export async function openProjectInPage(projectId, headRevision, mode) {
   const versionPanel = document.querySelector('[aria-label="服务端工程版本"]');
   const errorBeforeClick = versionPanel?.querySelector('[role="alert"]')?.textContent ?? "";
   let newActionObserved = false;
+  let previousErrorCleared = false;
   if (mode === "conflict") globalThis.__aduiTestProjectRevisionFault = fault;
   window.confirm = () => {
     confirmCount += 1;
@@ -878,7 +885,8 @@ export async function openProjectInPage(projectId, headRevision, mode) {
       const busy = [...(versionPanel?.querySelectorAll(".studio-version-help") ?? [])].some(
         (node) => node.textContent?.includes("正在处理工程版本"),
       );
-      // 上一次模拟冲突留下的错误不能当作本次新请求的失败。
+      // 只把本次出现的错误当成载入失败；旧错误跨过忙碌阶段也不能误报。
+      if (errorBeforeClick && !error) previousErrorCleared = true;
       if (busy || error !== errorBeforeClick) newActionObserved = true;
       if (mode === "conflict" && fault.calls > 0 && error.includes("服务端工程版本已更新")) {
         return { confirmCount, intercepted: fault.calls, outcome: "conflict" };
@@ -889,12 +897,34 @@ export async function openProjectInPage(projectId, headRevision, mode) {
       if (mode === "confirm" && confirmCount > 0 && notice.includes("CAS 基线已建立")) {
         return { confirmCount, intercepted: fault.calls, outcome: "confirm" };
       }
-      if (error && mode !== "conflict" && newActionObserved && !busy) {
-        // 不输出页面错误正文：仅区分是否已进入用户确认，以便定位载入前的失败。
+      if (
+        error &&
+        mode !== "conflict" &&
+        newActionObserved &&
+        !busy &&
+        (error !== errorBeforeClick || previousErrorCleared)
+      ) {
+        // 只允许已审核的固定诊断类别，不能把页面错误正文带回 Node 进程。
+        const category = error.includes("登录已失效")
+          ? "身份过期"
+          : error.includes("当前操作未获得授权") || error.includes("工程不存在或无权访问")
+            ? "权限拒绝"
+            : error.includes("服务端工程版本已更新") || error.includes("工程存在冲突")
+              ? "版本冲突"
+              : error.includes("快照完整性校验失败")
+                ? "快照校验"
+                : error.includes("网络请求失败") || error.includes("读取服务端响应失败")
+                  ? "网络故障"
+                  : error.includes("服务端暂时无法完成请求")
+                    ? "服务故障"
+                    : error.includes("服务端返回") || error.includes("服务端响应")
+                      ? "协议响应"
+                      : null;
+        const phase = confirmCount === 0 ? "确认前" : "确认后";
         throw new Error(
-          confirmCount === 0
-            ? "服务器工程载入阶段返回受控错误（确认前）"
-            : "服务器工程载入阶段返回受控错误（确认后）",
+          category
+            ? "服务器工程载入阶段返回受控错误（" + phase + "：" + category + "）"
+            : "服务器工程载入阶段返回受控错误（" + phase + "）",
         );
       }
       await new Promise((done) => setTimeout(done, 100));
