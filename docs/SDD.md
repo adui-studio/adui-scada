@@ -930,3 +930,9 @@ Node 编排第二主体读取 2、再 POST CAS 2→3，随后释放旧 201、第
 维护者第三轮真实 Lab 运行已经证明 React 的第二主体 HTTP 201 推进修订 3、第一主体消费旧 201，以及独立浏览器可见性恢复均能完成；此后脚本报“真实 Studio 迟到保存的本地数据发生变化”。按照该脚本顺序，最终失败位于 CAS 基线清空及 UI 拒绝旧 CAS 再次保存之后的本地快照一致性检查。当前日志**未区分** SVG、自动保存、草稿数量、草稿哈希，也未证明根因属于业务代码。
 
 测试脚本只增加纯函数 `classifyStudioLocalDrift`，把原 SVG 内容全等、自动保存布尔值全等、IndexedDB 草稿数量全等、原始记录 SHA-256 全等转成四个布尔诊断字段。`requireUnchangedDocument` 仍按**任一变化即拒绝**执行，不引入等待重试、自动修正草稿、修改生产 UI 或修改数据仓储。分别在保存挂起、远端版本 3 已提交、Studio 消费旧 201、CAS 只读复核完成、过期保存被 UI 拒绝后检查。只在出现差异时显示固定阶段和布尔状态，不暴露原始 SVG、草稿、摘要或用户身份。
+
+## 2026-11-17 · 第十七小批：SVG 视口网格与工程图元的快照边界
+
+第四轮真实浏览器日志在 React CAS 只读复核后确认 `canvasChanged=true`，但 `autoSaveChanged`、`draftCountChanged` 与 `draftHashChanged` 均为 false。源码调查发现 `scripts/test-project-browser-oidc.mjs` 的共享页面快照使用 `.studio-svg.innerHTML`，React/Vue SVG 包含一个直系 `rect[fill="url(#scada-studio-grid)"]`，它的 `x/y/width/height` 来自随浏览器视口变化的 `visibleRect`。因此直接比较全部 `innerHTML` 存在视口辅助网格变化造成误报的可能；**尚无真实 DOM 差异证据确认本轮只有网格变化**。
+
+只在新 `scripts/test-oidc-studio-real-late.mjs` 联合验收中加入自包含的 `readStudioContentCanvasInPage`：克隆 SVG 节点，仅从克隆的直系子节点中移除唯一的视口网格矩形，再返回完整剩余 `innerHTML` 供五个原有操作边界做强制一致性比较。画布不存在或发现多个直系视口网格时继续拒绝；渲染图片的 `href`、真实图元、边界、命中区域及其他 SVG 内容均保留。现有 `inspectStudioState` 及其其他 OIDC 浏览器回归不修改，原草稿 SHA/数量与自动保存等检查保留。真实业务 SVG 发生变化时仍触发 `canvasChanged=true`。不接入浏览器持久化、Core、React/Vue 业务或 NestJS 变更。
