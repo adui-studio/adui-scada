@@ -1342,3 +1342,9 @@ E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CD
 **验收边界**：此次真实 Cookie 会话由服务端测试接口为两个受控可信主体签发，并不是分别经真实 Keycloak 授权码流程建立两次会话；不代表企业 IdP、生产 TLS 或跨进程部署验收。没有修改工业设备写入权限或既有业务数据库/卷。
 
 **提交与复验边界**：维护者日志未包含 `git rev-parse HEAD` 与 `git status --short`，因此不能独立证明日志所运行的本地提交 SHA 与 PR 的每一个 GitHub Blob 完全相同。本次将 E-027 和最终验收结果补充到仓库文档后，仅文档 HEAD 发生变化；仍需运行 `pnpm run docs:check` 核对新文档版本。真实数据库 29/29、已有代码的 `ready` 成功不因文档变更被改写为失败，但不冒充**文档新提交后**已重新执行完整质量链。
+
+## 2026-11-17 · 第三十四批第六小批真实双 Keycloak 主体候选
+
+新增独立 `scripts/test-oidc-dual-cas.mjs`、`scripts/test-oidc-dual-cas.cases.mjs`，以及根命令 `test:oidc:dual:config`（新增 11 项、加入 `ready`）、`test:oidc:dual:preflight` 和 `test:oidc:dual:cas`。首个模式只验证两份来自真实 Keycloak 授权码登录的独立 BFF 会话对应同租户不同主体；写入模式除固定 `--run-cas --confirm-lab adui_scada` 外还须通过已有本机 Lab 配置白名单，在独立专用空白工程上执行受控授权、真实 HTTP CAS 201＋409、PostgreSQL 历史/审计核对。不触碰其他工程、工业设备或生产数据库。
+
+候选源码完成了**有限 V8 语法解析与模拟页面/SQL 行为核对**，包括不完整命令拒绝、相同主体拒绝、专用工程 ID 限制、单次新建、错误脱敏、固定 ACL 授权；未在用户 Windows 运行真实 Node 测试、`vp check`、完整 `pnpm run ready` 或两次 Keycloak 真人登录，也没有访问本机 PostgreSQL。完整候选状态必须以维护者终端日志及退出码为准。第六小批与第五小批已有的双 BFF Cookie HTTP 真库 29/29 通过证据不同，不能冒充本批真实双 Keycloak 登录已通过。
