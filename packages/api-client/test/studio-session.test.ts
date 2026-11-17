@@ -673,7 +673,7 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     expect(api.appendVersion).toHaveBeenCalledTimes(1);
 
     api.appendVersion.mockResolvedValueOnce(
-      createProjectSnapshot(waterTreatmentDemoDocument, { revision: 4, createdAt }),
+      await createProjectSnapshot(waterTreatmentDemoDocument, { revision: 4, createdAt }),
     );
     await expect(session.saveDocument(documentCopy())).resolves.toMatchObject({
       revision: 4,
