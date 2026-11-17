@@ -1600,3 +1600,11 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 本批目标：`pnpm run test:oidc:dual:studio:config` 新增 **9 项**离线保护；原 `pnpm run test:oidc:dual:config` 仍为 16 项；完整 `pnpm run ready` 的既有 Vitest **567** 项及 NestJS E2E **49** 项不应因测试工具修改而改变（仅为参考，不能代替实测）。静态语法检查不代表 Node 测试通过。独立真实浏览器专项 `pnpm run test:oidc:dual:studio:late` 必须手工在本机可信 Keycloak/HTTPS/PostgreSQL Lab 执行，目标 React 与 Vue 都完成真实 201 延迟、远端 3、可见性 CAS 失效、无额外 POST 和三版审计，命令退出码须为 0。
 
 **待验证/风险**：当前没有 Windows `vp check`、`docs:check`、完整 `ready` 或真实 Lab 的通过日志。正式 Studio UI 对保存中的历史载入、JSON 导入、草稿恢复存在互斥保护；本专项仅在互斥阻止切换后，核对旧响应交付和可见性水位变化的状态安全，不模拟通过私有状态强行切换工程，也不模拟 TCP 断流。保存后的首版 CAS 2 可能短暂显示在 UI，必须由实际只读复核清除后才能阻止下一次旧水位提交。失败时不得关闭登录/CSRF/TLS/工程权限，或放行未知工程写入，也不能复制 Cookie、Token、私钥、用户身份和 SQL 内部信息。
+
+## 第十七小批 · Windows 首轮真实浏览器失败与阶段诊断
+
+维护者提供的首轮 Windows 日志确认：`pnpm run test:oidc:dual:studio:config` **9/9**；`vp check` **335 个文件格式正确、190 个受检文件零警告/Lint/类型错误**；`docs:check` **86 个 Markdown**；完整 `pnpm run ready` 最终退出码 **0**，包括 Vitest **567/567**、SSE **8/8**、SSE 故障代理 **4/4**、OIDC 工程浏览器离线 **33/33**、双主体离线 **16/16**、NestJS HTTP E2E **49/49** 和 React/Vue/NestJS 构建。
+
+但单独的 `pnpm run test:oidc:dual:studio:late` **退出码 1**。真实 Keycloak 双主体登录、两个随机专用工程创建/授权/首版读取、React Studio 确认载入及真实版本 2 的 201 到达并挂起均已输出。之后只有通用“真实 Studio 迟到保存未达到受控状态”，尚不能确认失败来自第二主体读取/追加、旧响应释放、UI 消费成功、可见性事件、CAS 复核或后续过期保存断言。不得将离线安全测试与 `ready` 通过误写成真实浏览器通过。
+
+候选诊断修正：`scripts/test-oidc-studio-real-late.mjs` 的每个关键等待已分配独立固定阶段；超时只返回页面请求阶段、受控计数、忙碌/禁用、CAS/摘要状态、错误提示和可见性等安全字段；第二主体读 2/写 3 与释放旧 201 也有阶段日志。未知异常、工程 ID、身份、Cookie、Token、URL、响应正文和堆栈继续脱敏。**诊断修正尚未由维护者 Windows 复验**，需要重新执行离线 9 项、`vp check`、`docs:check`、完整 `ready`，再单独运行真实双框架专项。前次日志未包含 `git rev-parse HEAD`，不可将其绑定到 PR #72 当前 HEAD。
