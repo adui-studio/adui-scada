@@ -107,8 +107,7 @@ export function installStudioRealLateHookInPage(runtime = globalThis) {
       url.origin !== runtime.location.origin ||
       url.search !== "" ||
       url.hash !== "" ||
-      url.pathname !==
-        "/api/v1/projects/" + encodeURIComponent(active.projectId) + "/versions"
+      url.pathname !== "/api/v1/projects/" + encodeURIComponent(active.projectId) + "/versions"
     ) {
       return rejectWrite();
     }
@@ -120,9 +119,7 @@ export function installStudioRealLateHookInPage(runtime = globalThis) {
         .map((value) => value.trim())
         .filter((value) => value.startsWith("__Host-adui-scada-csrf="));
       const token =
-        cookieValues.length === 1
-          ? cookieValues[0].slice("__Host-adui-scada-csrf=".length)
-          : "";
+        cookieValues.length === 1 ? cookieValues[0].slice("__Host-adui-scada-csrf=".length) : "";
       const header = new Headers(init?.headers).get("X-SCADA-CSRF");
       if (
         request?.expectedRevision !== 1 ||
@@ -147,10 +144,7 @@ export function installStudioRealLateHookInPage(runtime = globalThis) {
         return response;
       }
       const saved = await response.clone().json();
-      if (
-        saved?.revision !== 2 ||
-        !/^[0-9a-f]{64}$/.test(saved.contentHash ?? "")
-      ) {
+      if (saved?.revision !== 2 || !/^[0-9a-f]{64}$/.test(saved.contentHash ?? "")) {
         active.phase = "failed";
         return response;
       }
@@ -169,7 +163,9 @@ export function armStudioRealLateInPage(origin, projectId, runtime = globalThis)
   const state = runtime.__aduiTestStudioRealLate;
   if (
     runtime.location.origin !== origin ||
-    !/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId) ||
+    !/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
+      projectId,
+    ) ||
     !state ||
     state.active ||
     state.writeAttempts !== 0 ||
@@ -216,8 +212,8 @@ export function studioRealLateStateInPage(runtime = globalThis) {
     hits: state?.active?.hits ?? 0,
     writeAttempts: state?.writeAttempts ?? -1,
     rejectedWrites: state?.rejectedWrites ?? -1,
-    busy: [...(panel?.querySelectorAll(".studio-version-help") ?? [])].some(
-      (item) => item.textContent?.includes("正在处理工程版本"),
+    busy: [...(panel?.querySelectorAll(".studio-version-help") ?? [])].some((item) =>
+      item.textContent?.includes("正在处理工程版本"),
     ),
     disabled: button?.disabled ?? false,
     baselineRevision: baselineText && baselineText !== "未建立" ? Number(baselineText) : null,
@@ -225,9 +221,9 @@ export function studioRealLateStateInPage(runtime = globalThis) {
     headCleared: /服务端最新修订号：\s*未查询/.test(text),
     hasError: Boolean(panel?.querySelector('[role="alert"]')),
     savedSecondVersion:
-      runtime.document.querySelector(".studio-notice")?.textContent?.includes(
-        "已追加服务端版本 #2",
-      ) === true,
+      runtime.document
+        .querySelector(".studio-notice")
+        ?.textContent?.includes("已追加服务端版本 #2") === true,
   };
 }
 

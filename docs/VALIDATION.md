@@ -1579,7 +1579,6 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 
 待维护者 Windows 核对 Git HEAD 与分支后执行 `pnpm run test:oidc:dual:config`、`vp check`、`pnpm run docs:check`、`pnpm run ready`；确认隔离 Lab 完整运行后单独执行 `pnpm run test:oidc:dual:late` 并打印 `$LASTEXITCODE`。只可复制固定阶段和退出码；不得在日志中粘贴 Cookie、口令、Token、主体 ID、数据库 URL 或原始响应正文。任何退出码非零均不得标记为通过。
 
-
 ## 2026-11-17 · 第三十四批第十六小批 Windows 最终验收结果
 
 维护者提交的 Windows PowerShell 日志确认以下**实际运行结果**（此前本文件“候选 / 待执行”描述为本轮验收前历史状态）：

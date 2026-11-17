@@ -14,13 +14,18 @@ const origin = "https://127.0.0.1:15173";
 const projectId = "b34-oidc-cas-00000000-0000-4000-8000-000000000001";
 const csrf = "scada_csrf_" + "a".repeat(43);
 
-function runtimeForTest(response = new Response(JSON.stringify({
-  revision: 2,
-  contentHash: "b".repeat(64),
-}), {
-  status: 201,
-  headers: { "Content-Type": "application/json" },
-})) {
+function runtimeForTest(
+  response = new Response(
+    JSON.stringify({
+      revision: 2,
+      contentHash: "b".repeat(64),
+    }),
+    {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    },
+  ),
+) {
   const calls = [];
   const runtime = {
     location: { origin, href: origin + "/" },
@@ -170,7 +175,8 @@ void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
       installStudioRealLateHookInPage(runtime);
       armStudioRealLateInPage(origin, projectId, runtime);
       assert.equal(
-        (await runtime.fetch("/api/v1/projects/" + projectId + "/versions", versionRequest())).status,
+        (await runtime.fetch("/api/v1/projects/" + projectId + "/versions", versionRequest()))
+          .status,
         403,
       );
       assert.equal(calls.length, 0);
@@ -210,8 +216,7 @@ void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
     };
     const runtime = {
       document: {
-        querySelector: (selector) =>
-          selector === '[aria-label="服务端工程版本"]' ? panel : null,
+        querySelector: (selector) => (selector === '[aria-label="服务端工程版本"]' ? panel : null),
       },
       __aduiTestStudioRealLate: {
         active: { phase: "received", hits: 1 },

@@ -1353,7 +1353,6 @@ PR #69 继续只修改浏览器测试脚本和离线保护测试，用严格固�
 
 新增 5 项 Node 离线安全测试，原 `test:oidc:dual:config` 从 11 项预计增至 **16 项**；完整 `ready` 仍需 Windows 实测，真实 `test:oidc:dual:late` 必须额外在安全隔离的本机 Keycloak/HTTPS/PostgreSQL Lab 中手工执行并提供最终退出码。当前未获得本次候选的 Windows 运行证据，不声称联合场景通过、真实物理 TCP 断流被覆盖或 Studio UI 内部恢复被验证。Draft PR 不合并。
 
-
 ## 2026-11-17 · 第三十四批第十六小批：Windows 验收通过，PR #71 待审
 
 维护者 Windows 已实测 `test:oidc:dual:config` **16/16**，独立 `vp check` **333 文件/188 受检零告警**、`docs:check` **86 个 Markdown**、完整 `pnpm run ready` **退出码 0**（567/567 单元测试、49/49 NestJS HTTP E2E、SSE 8/8 与 4/4、React/Vue/NestJS 类型检查及构建）。

@@ -2659,7 +2659,6 @@ if ($lateExitCode -ne 0) { throw "真实浏览器迟到 201 专项失败" }
 
 独立浏览器专项必须实际完成并打印“真实迟到 201 专项通过”，不能把启动提示当作成功。此脚本不驱动 React/Vue Studio UI 的保存按钮，也没有人为切断 TCP；客户端 UI 与共享 Session 的端到端晚回包保护仍需另批专项。当前候选**没有 Windows 完整质量链或真实 Lab 联合测试的通过日志**。
 
-
 ## 第三十四批第十六小批 · 真实 Windows 全链与双浏览器专项验收结案
 
 2026-11-17 维护者 Windows PowerShell 实测：`pnpm run test:oidc:dual:config` **16/16**、`vp check` **333/188 零告警错误**、`docs:check` **86 个 Markdown**；完整 `pnpm run ready` 最终 **退出码 0**，包含 **567/567** Vitest、**49/49** NestJS HTTP E2E、SSE 客户端 **8/8**、故障代理 **4/4**、OIDC 工程安全离线 **33/33**、双主体 **16/16** 与双 Web/Server 构建。
