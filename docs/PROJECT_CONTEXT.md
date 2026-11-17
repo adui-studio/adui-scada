@@ -1314,3 +1314,9 @@ PR #69 继续只修改浏览器测试脚本和离线保护测试，用严格固�
 维护者新日志明确 `test:projects:oidc:config` **32/33**、退出码 1：仅新加的未知超时诊断断言与仓库已有固定安全回退消息不一致；已最小修正预期，未放宽脱敏。真实 `test:projects:oidc:save:browser` **退出码 1**：React 409/401/503 全部完成请求挂起与合成响应释放；Vue 已通过真实 BFF、授权分页、草稿、取消、冲突和确认载入，并在 409 POST 合成回包释放后报告通用安全断言失败。
 
 静态检查发现 Vue Studio 的 `serverBaselineRevision` 独立响应式缓存未在 409 保存失败后跟随共享会话清空，而 React 直接读取共享 CAS。候选补丁仅同步 Vue 保存异常后的当前共享 CAS 基线（503 保留、409 清除、401 继续失效）；新增固定安全诊断，保留已有真实 UI、唯一 POST、无真实写入、草稿保护断言。离线测试仍 33 项，尚未经过本机修复后完整验收。PR #69 继续保持 Open / Draft，未合并，Assignee `@adui-dev`，未经授权不得合并。
+
+## 2026-11-17 · 第三十四批第十四小批：Windows 全链及双框架延迟保存专项验收通过
+
+维护者最新 Windows 真实执行确认 `test:projects:oidc:config` **33/33**、`vp check` **333 个格式文件 / 188 个受检文件零错误警告**、`docs:check` **86 份 Markdown**；完整 `pnpm run ready` 已执行到末尾且非零退出码断言未触发，包含 Vitest **566/566**、共享 Studio Session **30/30**、SSE **8/8**、TCP 故障代理 **4/4**、NestJS HTTP E2E **49/49**、React/Vue/Server 类型检查与构建。独立 `test:projects:oidc:save:browser` 通过：React/Vue 在可信 Keycloak/BFF Lab 分别载入授权工程并完整通过合成 POST **409/401/503**、一次写入尝试/忙碌互斥、错误后 CAS 状态与本地草稿保护，维护者明确报告**退出码 0**。浏览器写入拦截仍生效，未修改真实 Lab 工程版本和 ACL。
+
+此前第四轮 **32/33**、Vue 409 合成响应后的失败和更早的脱敏/载入问题保留为历史；Vue CAS 响应式副本不同步的 E-035 已经获得双框架真实 UI 回归结果支持，当前本批验收通过。**尚缺本机 `git rev-parse HEAD`**，不声称 Windows 运行提交与 PR 最新 HEAD 精确一致；本段文档提交后的质量链也未重新执行。本批不覆盖真实 PostgreSQL 完成 POST 后的延迟回包、跨会话写入或工业设备控制。PR #69 仍为 Open / Draft、Assignee `@adui-dev`，等待最终审查与明确合并授权。
