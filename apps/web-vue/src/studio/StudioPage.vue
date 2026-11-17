@@ -53,6 +53,7 @@ import { svgDataUrl } from "@adui/scada-runtime";
 import {
   createScadaApiClient,
   createStudioServerProjectSession,
+  isScadaAccessRejection,
   ScadaApiError,
 } from "@adui/scada-api-client";
 import TagManager from "./TagManager.vue";
@@ -105,6 +106,7 @@ const serverBaselineRevision = ref<number | null>(null);
 const serverRows = shallowRef<readonly ProjectVersionSummary[]>([]);
 const serverHasMore = ref(false);
 const serverError = ref("");
+const serverAccessRevision = ref(0);
 const serverInspectedVersion = shallowRef<ProjectSnapshot | null>(null);
 let historyActionInProgress = false;
 let autoSaveSession: DraftAutoSaveSession | null = null;
@@ -1178,6 +1180,16 @@ async function runServerAction(
         await action();
       } catch (error) {
         serverError.value = error instanceof Error ? error.message : "服务端操作失败";
+        if (isScadaAccessRejection(error)) {
+          serverSession.reset();
+          serverProjectId.value = "";
+          serverHeadRevision.value = null;
+          serverBaselineRevision.value = null;
+          serverRows.value = [];
+          serverHasMore.value = false;
+          serverInspectedVersion.value = null;
+          serverAccessRevision.value += 1;
+        }
         if (
           error instanceof ScadaApiError &&
           (error.kind === "unauthenticated" || (label === "检查服务端身份" && error.status === 404))
@@ -1697,6 +1709,7 @@ async function importJson(event: Event) {
           </div>
         </details>
         <ServerProjectBrowser
+          :key="serverAccessRevision"
           :api="serverApi"
           :current-project-id="state.document.projectId"
           :disabled="historyBusy"
