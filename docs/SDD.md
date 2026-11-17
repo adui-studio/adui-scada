@@ -864,3 +864,9 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 **已发送的服务端 POST 不可依赖浏览器回滚**：即使保存异步完成时已切换上下文，服务器仍可能已创建工程或追加不可变版本。当前客户端不接受该迟到回包来写入本地新基线，而是以“写入可能已生效，请重新读取最新版本”的固定中文冲突文案提示人工复核。禁止自动重试或在没有服务端证据时回退数据库审计。工业设备写入不在此 API 内，NestJS 仍负责 CSRF、授权与版本 CAS。React/Vue 无需各自复制代次状态机。
 
 测试通过 Mock API 控制异步阶段，并且分别断言迟到失败与迟到成功后的新基线不变、旧请求不会额外创建或追加工程、当前业务规则仍由原有测试覆盖。此小批未改服务端 HTTP 协议或物理浏览器多标签事件。
+
+## 2026-11-17 · 第三十四批第十四小批：浏览器保存延迟拒绝专项
+
+复用 `scripts/test-project-browser-oidc.mjs` 的临时 Chrome/Edge CDP Profile、真实 Keycloak 登录、双 Origin、`prepareAccessDenialBaseline` 与 `inspectStudioState`；不改正式 API Client、SCADA Core 或 React/Vue 页面。通过新模式 `--simulate-save-timing` 单独运行：先于客户端初始化安装已有 `installAccessDenialFaultInPage`，保持所有工程非只读请求在页面内终止；仅当显式 `armSaveTimingInPage` 后匹配同源当前工程的 `POST /api/v1/projects/:projectId/versions` 才挂起响应。调用真实“保存至服务端”按钮两次，等待 POST 命中且 UI Busy、按钮 Disabled，检查只尝试一次；之后 `releaseSaveTimingInPage` 以固定 409、401、503 状态依次交付合成响应。
+
+409 与 401 必须让现有 CAS 基线失效，503 属暂时服务器故障必须保留基线；三种场景都检查不存在自动重试以及本地 SVG、IndexedDB、自动保存未变。每种状态前重新以真实 GET 载入授权工程，避免前一场景的 UI 结果串扰。脚本的 Node 断言只接收命中计数、Busy、Disabled、是否有错误、CAS 是否清空等布尔摘要，不打印 Cookie、工程正文或服务器错误详情；浏览器注入函数不得引用 Node 模块作用域。不存在 201/成功 POST 模拟，更不声称服务器实际提交或回滚。未涉及工业设备写入与生产安全评审。
