@@ -1234,3 +1234,11 @@ PR #62 经维护者授权已 Squash 合并至 `main@d743e17df42fda97a1cd9bce8676
 PR #63 已由维护者授权 Squash 合并为 `main@6f09e1930fe55f567245708bf5eb80edacd7b42a`。此前双端已通过真实 Keycloak 正常授权 OIDC 浏览器专项，完整 `ready` 550/550 单测、49/49 服务端 E2E、退出码 0。第九小批复用同一浏览器/CDP 测试框架新增独立 `test:projects:oidc:denial`：在临时 Profile 安装对工程写请求的永久拒绝，并对三个固定只读 API 路径模拟 401/403/404，分别验证 React/Vue 的旧 CAS/工程摘要清理、本地 SVG 与 IndexedDB 草稿保护及 404 后重复保存无误创建。普通 OIDC 浏览器命令和真实用户/ACL/数据库保持不变。
 
 新增 3 项离线安全测试，预期相关 Node 专项 21 项；**尚未在维护者 Windows 执行真实浏览器、完整 ready 或 vp check**，不能提前标记通过。本批是对客户端拒绝处理的真实 UI + 模拟 HTTP 测试，不是从 Keycloak 撤销实际权限的完整 E2E。后续需在独立临时权限夹具和受控事务下补全真实 ACL revoke 浏览器专项，不能直接删改 Lab 用户的历史工程权限。
+
+## 2026-11-17 · 第三十四批第十小批：真实双 Keycloak ACL 撤销浏览器候选
+
+第三十四批第九小批 PR #64 已按维护者明确授权 Squash 合并到 `main@d59df5e9ef2d702954f6b20173990abe53dffc3a`，维护者 Windows 实际通过离线 21/21、550/550 单测、49/49 E2E，以及真实 Keycloak 登录＋React/Vue 浏览器模拟 401/403/404、CAS/草稿保护（专项退出码 0）。第十小批为该模拟验证补充**真正的本机 PostgreSQL ACL 撤销及 React/Vue UI 端到端证据**。
+
+候选分支只新增独立双主体登录与专用工程撤权脚本、8 项 Node 离线安全测试和根脚本，并复用暴露原有浏览器 CDP/Studio 辅助函数，无产品前端或 NestJS/Prisma 变更。写入模式必须显式确认本机 `adui_scada` Lab，每框架新建一份 UUID 空白工程；严格串行化事务核对首版、创建者和 ACL 后定向撤销第二主体三项授权，UI 及 API 检查真实 404、CAS 状态和草稿保护，异常清理只针对新项目。旧用户/工程/ACL 和生产工业设备数据保持不变；不自动清除新测试工程审计。
+
+候选**尚无 Windows `vp check`、完整 `ready` 或真实权限撤销浏览器输出**。协作端有限 V8 模拟复核修正新测试 Mock 的 SQL 分支顺序后 8/8 通过，不能当成真实 Node/PG/Chrome 成功。下一步维护者需先运行只读预检并核对实际数据库连接，再单独执行显式写入浏览器专项；PR 仅 Draft，立即指派实际 GitHub 账户 `@adui-dev`，未经明确授权不得合并。
