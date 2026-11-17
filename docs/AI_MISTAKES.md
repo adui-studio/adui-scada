@@ -322,6 +322,15 @@
 
 > **2026-11-17 E-032 至 E-035 结案补录**：保留上述历史失败与候选阶段描述作为证据，不再将其误读为 PR #69 最新状态。维护者 Windows 最新回归 `pnpm run test:projects:oidc:config` **33/33**、`vp check` **333 格式文件/188 受检零告警**、`docs:check` **86 份**、完整 `ready` 已执行至末尾且非零断言未触发（566/566 单测、49/49 HTTP E2E、双框架及服务端构建）。**React/Vue 真实浏览器均完成合成延迟保存 409/401/503**，`test:projects:oidc:save:browser` PowerShell 明确退出码 **0**，测试期间所有工程写请求均在浏览器端阻断。Vue 409 的 `serverBaselineRevision` 与共享 CAS 同步回归得到实际验证；未知错误附带敏感正文仍由严格安全白名单拒绝。日志未给出本地 Git HEAD，新增结案文档提交后也尚未重跑 `ready`；合成 POST 拒绝**不代表**真实 PostgreSQL 写入后回包、跨标签竞态或工业设备安全已验收。
 
+### E-036 · 异步工程快照工厂的 Promise 误传给 Vitest 同步 Mock 值（第三十四批第十五小批）
+
+- **现象**：维护者 2026-11-17 Windows 执行 `vp check --fix`，`packages/api-client/test/studio-session.test.ts:676` 报 **TS2740**：`Promise<ProjectSnapshot>` 缺少 `ProjectSnapshot` 的 `formatVersion`、`projectId`、`revision` 等字段。188 个文件内 1 个类型错误、0 警告，格式化完成但检查未通过。
+- **已确认原因**：当前 `packages/core/src/project-snapshot.ts` 将 `createProjectSnapshot` 声明为 `async (...): Promise<ProjectSnapshot>`，内部还计算 SHA-256 摘要；新增客户端用例直接传入 `api.appendVersion.mockResolvedValueOnce(createProjectSnapshot(...))`。Vitest 的 `mockResolvedValueOnce` 期望 Mock 方法解析后的 `ProjectSnapshot`，不能把工厂 Promise 当作快照对象。
+- **最小修复**：只在已有 `async it` 中使用 `mockResolvedValueOnce(await createProjectSnapshot(...))`。保留真实快照与 SHA-256 校验，不用 `as ProjectSnapshot`、`any`、禁用类型检查或替代伪造对象，不改变生产代码及隔离数据库测试。
+- **防复发**：使用异步 Core 工厂准备 Vitest Mock 返回值前，先核对工厂签名；`mockResolvedValueOnce` 传已解析的值，需要延迟计算或异步拒绝则用符合接口签名的 `mockImplementationOnce`。不能从函数名推断返回同步对象；提交前应对新增测试运行真实 `vp check` 和对应单测。
+- **验证边界**：维护者原始 **TS2740 失败** 已确认；PR #70 的修复表达式与 Core 异步签名经静态复核，**修复后 Windows TypeScript 6、`vp check`、共享会话 31/31、`ready` 和隔离 PostgreSQL `test:db` 均未重新实测**，不得标为通过。
+- **证据**：维护者原始 Windows `vp check --fix` 日志、PR #70、`packages/core/src/project-snapshot.ts`、`packages/api-client/test/studio-session.test.ts`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
