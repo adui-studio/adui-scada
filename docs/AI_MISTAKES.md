@@ -403,6 +403,8 @@
 - **验证边界**：新增三个 Node 离线测试定义（目标由 **13** 项增加至 **16** 项），覆盖视口网格变化不影响内容、图元或渲染变化仍被识别、重复网格/画布缺失拒绝。页面函数从仓库源码提取后在隔离 V8 Mock 执行以上三类路径符合预期，**但不是 Node 16/16 或 Windows 真实浏览器通过证据**。最新候选 `vp check`、`docs:check`、`ready`、React/Vue 真 Lab 均未复验。
 - **证据**：维护者第四轮 Windows 原始日志、PR #72、`apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`、`scripts/test-project-browser-oidc.mjs`、`scripts/test-oidc-studio-real-late.mjs`、`docs/VALIDATION.md`。
 
+> **2026-11-17 · E-041～E-044 Windows 最终验收补录**：以上四项的“候选 / 待复测”仅描述各轮历史状态。维护者现已在 Windows 真实完成 `pnpm run test:oidc:dual:studio:config` **16/16 通过**、`vp check` **335 格式文件 / 190 受检零告警错误**、`docs:check` **86 份 Markdown** 和完整 `pnpm run ready` **退出码 0**（Vitest **567/567**、NestJS HTTP E2E **49/49**，React/Vue/NestJS 构建完成）。另在两个全新隔离测试工程上，由两位真实预绑定 Keycloak 主体分别执行 React/Vue Studio 真实 UI 的迟到 HTTP 201 测试，均完成版本 2→3、真实可见性恢复、远端水位只读复核、过期 CAS 拒绝、SVG 内容和 IndexedDB 草稿保持不变、仅三版历史和审计；交互式 `pnpm run test:oidc:dual:studio:late` **退出码 0**。E-041 的阶段错误已通过明确状态诊断定位；E-042 的双窗口可见性障碍未再复现；E-043 的本地差异已按阶段区分；E-044 的非持久化视口网格已从此专项 SVG 内容快照中精确排除，其余图元仍严格比较。**注意**：没有独立的原始 SVG DOM diff 证明前轮变化完全源自网格；最终通过仅证明新的测试口径及其所有保留断言满足。201 暂缓是浏览器对已到达真实响应的消费时序，**非 TCP 断流**。成功日志没有本地 Git HEAD，新补录文档提交尚未重新运行 Windows 全链；PR #72 仍 Open/Draft 并指派 `@adui-dev`，等待明确合并授权。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
