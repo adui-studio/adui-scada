@@ -1368,3 +1368,11 @@ PR #69 继续只修改浏览器测试脚本和离线保护测试，用严格固�
 上一小批虽然让双浏览器通过真实 BFF API 推进版本 2→3，但没有操作 Studio 保存按钮。本批针对两位真实 Keycloak 测试主体分别在 React/Vue Studio 建立首版 CAS、保存本地草稿、真实 UI 提交版本 2 并持有已到达的 201；第二主体推进 3 后再释放旧回包，通过页面可见性只读复核撤销旧 CAS，阻止 UI 再次提交，并比较本地画布/草稿。复用原 UUID 专用工程及三项 ACL 门禁，测试工程留存。默认 `ready` 仅运行新增的 **9 项**离线安全测试。
 
 **当前状态：候选，尚无 Windows `test:oidc:dual:studio:config` / `vp check` / `ready` 及双框架真实 Lab 浏览器专项通过证据。** 离线 Node 9/9 和完整质量链的实际退出码必须来自维护者运行；真正写入也须先确认本机可信 OIDC Lab，并使用显式命令。Draft PR 继续要求 Assignee `@adui-dev`，未经授权不合并。
+
+## 2026-11-17 · 第三十四批第十七小批：Windows 首轮质量链通过，真实 Studio 专项待定位
+
+维护者 Windows 已提供第十七小批候选的离线安全测试 **9/9**、`vp check` **335 文件格式正确/190 受检零警告错误**、`docs:check` **86 Markdown**，完整 `pnpm run ready` 已执行至 React/Vue 与 NestJS 构建完成，最终退出码 **0**。单测 **567/567**、NestJS HTTP E2E **49/49**、SSE 客户端 **8/8**、故障代理 **4/4**、双主体离线 **16/16**。
+
+同一轮单独执行 `pnpm run test:oidc:dual:studio:late` 时，两位主体登录、两份专用工程准备以及 React Studio 真实 201 到达/挂起均已输出；随后在推进/释放/消费阶段报通用“真实 Studio 迟到保存未达到受控状态”，退出码 **1**。当前没有证据区分其具体失败阶段，**不能宣称真实 Studio 双框架专项通过**。
+
+PR #72 候选已新增固定阶段与安全状态摘要，方便下一轮定位；本次修改后 Windows 离线测试、质量链和真实浏览器均需重跑。维护者提供的日志未包含 `git rev-parse HEAD`，不能将此前质量链结果归属到 PR 的某个精确 SHA。PR 保持 Draft、Assignee `@adui-dev`，不合并。
