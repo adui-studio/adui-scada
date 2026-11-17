@@ -1328,3 +1328,17 @@ E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CD
 以已合并 PR #59 的 `main@4c3cb0d7` 为起点，新增 `apps/server/test/projects-cas-cookie-http.db-spec.ts`，仅在现有独立 `vitest.config.db.ts` 下执行真实 PostgreSQL HTTP 集成测试。四项用例使用两个不同 `active` 主体通过内部 `AuthSessionService.issueForVerifiedSubject` 获取独立短期 BFF Cookie + CSRF；真正的 NestJS Session Guard、Project Guard、Project API Controller、Prisma 仓储与本机隔离 PostgreSQL 处理请求。核验 HTTP 201/409 竞争，水位 2、两个 SHA-256 版本、成功审计操作者、旧版本再次提交 409，及错误 CSRF / Origin / 凭据混用 / ACL 的拒绝路径。独立 `test:db` 预计由原 25 项增加至 **29 项**，尚待 Windows 实际验收。没有改变业务接口、数据库 Schema/迁移、客户端、工业协议或权限行为。
 
 **验证证据边界**：候选文件已进行 TypeScript 语法解析及有限 transpile 检查（无语法诊断），但当前协作容器无仓库可安装的 pnpm/Vite+ 项目依赖、无用户本机 PostgreSQL，不具备对本次 Head 执行真实 `vp check`、`test:db`、`ready` 的条件。必须以维护者实际 Windows 日志和退出码为准。第四小批真实 Keycloak React/Vue 严格多页通过记录仍然有效，但两份 Cookie 在**本隔离测试里不是分别通过真实 Keycloak 授权码回调建立**；不得扩写为 IdP 双登录验收。
+
+## 2026-11-17 · 第三十四批第五小批 Windows 完整验收记录（PR #60）
+
+维护者在 Windows 本机 `D:\Workspace\adui-studio\adui-scada` 针对第五小批候选执行实际质量检查，并提供完整运行日志：
+
+- `pnpm run test:projects:oidc:config`：**18/18** 通过。
+- `vp check`：**329** 个文件格式正确，**184** 个受检文件零警告、Lint 或类型错误；此前 `vp check --fix` 的 `typescript(require-array-sort-compare)` 一条警告已通过显式数值比较器修复。该问题记录为 E-027。
+- `pnpm run docs:check`：**86** 个 Markdown 文件通过。
+- `pnpm run ready`：依赖/配置/环境/中文文案与核心构建通过；**49/49 文件、544/544 单元测试**；SSE、OIDC 代理、OIDC Lab、身份、Docker、HTTPS、浏览器离线保护及服务器 E2E 专项均执行成功；**6/6 文件、49/49 NestJS E2E**；React、Vue、NestJS 均构建完成，**最终退出码 0**。
+- `pnpm run test:db`：本机显式隔离 PostgreSQL 测试 **4/4 文件、29/29 用例通过，退出码 0**。其中新增 `projects-cas-cookie-http.db-spec.ts` **4/4**，包含两个不同可信主体持久化 BFF Cookie/CSRF 会话竞争相同修订号，真实 HTTP **201/409** 以及最后历史版本、事务水位、成功审计操作主体一致性。
+
+**验收边界**：此次真实 Cookie 会话由服务端测试接口为两个受控可信主体签发，并不是分别经真实 Keycloak 授权码流程建立两次会话；不代表企业 IdP、生产 TLS 或跨进程部署验收。没有修改工业设备写入权限或既有业务数据库/卷。
+
+**提交与复验边界**：维护者日志未包含 `git rev-parse HEAD` 与 `git status --short`，因此不能独立证明日志所运行的本地提交 SHA 与 PR 的每一个 GitHub Blob 完全相同。本次将 E-027 和最终验收结果补充到仓库文档后，仅文档 HEAD 发生变化；仍需运行 `pnpm run docs:check` 核对新文档版本。真实数据库 29/29、已有代码的 `ready` 成功不因文档变更被改写为失败，但不冒充**文档新提交后**已重新执行完整质量链。
