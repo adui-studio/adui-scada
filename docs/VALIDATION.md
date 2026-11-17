@@ -1521,3 +1521,16 @@ PR #64 已按维护者授权 Squash 合并为 `main@d59df5e9ef2d702954f6b2017399
 PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失败后，从共享 `serverSession.getBaselineRevision(当前工程)` 刷新响应式缓存；409 反映 null、401 仍按原授权拒绝失效、503 继续保留原 CAS 值。浏览器测试现有真实 UI 断言不放宽，并增加严格白名单的 `Vue 延迟保存 409：CAS 基线状态不符合预期` 诊断以防下一轮仍无法定位。离线用例保持 **33 项**，增加同用例内的成功/冲突分支与附带敏感文本拒绝断言。
 
 协作端确认修改后两份 JS 文件 V8 语法解析成功、共享会话 409 清基线与 Vue 响应式同步路径静态匹配、诊断函数对 409/401/503 正反分支及敏感附加文本拒绝正确；**未运行 Windows 真实 Node、TypeScript 6、Vite+、完整 `ready` 或真实 Chrome/Keycloak 双框架专项**。下一步必须在本地最新 PR HEAD 重跑 `test:projects:oidc:config`（目标 33/33）、`vp check`、`docs:check`、`pnpm run ready` 与独立 `test:projects:oidc:save:browser`，记录完整实际退出码和 HEAD。不能删除用例、放宽现有安全断言或向 Lab 转发工程 POST。
+
+## 2026-11-17 · PR #69 第五次 Windows 验收：双框架延迟保存专项通过
+
+维护者本机 Windows PowerShell 最新提交的两份原始日志已将第三十四批第十四小批从“候选”推进到**实际验收通过**：
+
+- `pnpm run test:projects:oidc:config`：**33/33**，Node.js 测试套件全部通过、0 失败、0 跳过，后续非零退出码断言未触发，覆盖先前失败的固定脱敏文案以及 Vue 409 CAS 基线诊断用例。
+- 独立 `vp check`：**333** 个文件格式正确、**188** 个文件零警告/Lint/类型错误；`pnpm run docs:check`：**86** 个 Markdown 文件通过。
+- `pnpm run ready`：依赖 Catalog **12 清单、52 项依赖**、共享 TSConfig **10 个消费端**、根环境与 LF、中文文案 **212** 个自有文件、Prisma Client **7.10.1**、Core、React `tsc --build`、Vue `vue-tsc --build`、草稿存储/共享 API Client 与 NestJS 类型检查均完成；Vitest **49/49** 测试文件、**566/566** 单测（共享会话 **30/30**）、SSE 客户端 **8/8**、TCP 故障代理 **4/4**、OIDC 工程浏览器离线规则 **33/33**、NestJS HTTP E2E **6/6** 文件 **49/49**、Markdown **86** 份以及 React/Vue/NestJS 构建均通过。PowerShell 在命令结束后执行 `if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }`，**没有触发异常**；原始日志没有再单独打印 `ready` 的数值退出码。HTTP E2E 健康检查刻意产生的 503/ERROR 日志属于通过的测试场景，并非完整质量链失败。
+- 独立 `pnpm run test:projects:oidc:save:browser`：在真实可信本机 Keycloak/BFF 和两套 HTTPS Web Origin 下，React 与 Vue 均完整通过授权工程列表/分页、临时 IndexedDB 草稿与自动保存、取消载入、模拟 CAS 冲突、确认载入；**每个框架都完成模拟 409/401/503 三种保存拒绝**，明确记录唯一版本 POST 挂起和合成响应释放。脚本输出“双框架延迟保存拒绝与重复提交专项通过；版本 POST 已在浏览器阻断，Lab 工程与 ACL 未修改”，且维护者 PowerShell 明确输出 **“双框架延迟保存专项退出码：0”**，后续失败断言未触发。
+
+**修复结论**：此前 Vue 409 时共享 `serverSession` CAS 基线已清除但响应式 `serverBaselineRevision` 未同步的缺陷（E-035），以及新增离线脱敏断言文案不一致（E-033/E-034 相关回归），均已通过这轮离线和真实浏览器质量门禁验证；历史几轮退出码 1 仅保留为故障及修复经过，**不是当前验收结论**。
+
+**证据边界**：双框架专项是**真实浏览器 UI ＋ 合成 POST 拒绝**，浏览器永久阻断工程写入；并非真实 PostgreSQL 写入已成功后的网络延迟或真实跨会话/跨标签写竞争专项，不扩大工业设备写入权限。本轮日志**未包含 `git rev-parse HEAD`**，不能精确证明 Windows 运行 SHA；在记录前，PR #69 的远端 HEAD 为 `a16e3f946e28dc8b155ad5f33fde82b198a5b511`，较上一轮 `3600c4246b7748cbbe50ca922fe3f7cc83cf4484` 仅多一个离线测试文件整理提交。补录验收结果会产生新的文档提交，**文档新 HEAD 尚未再次经过 Windows 质量链**。PR 继续保持 Open / Draft、Assignee `@adui-dev`，未经维护者单独明确授权不合并。
