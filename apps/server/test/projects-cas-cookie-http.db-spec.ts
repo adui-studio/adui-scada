@@ -57,7 +57,8 @@ let sessions: AuthSessionService;
 let store: PrismaProjectVersionStore;
 
 function document() {
-  return JSON.parse(JSON.stringify(waterTreatmentDemoDocument)) as typeof waterTreatmentDemoDocument;
+  const copy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument));
+  return copy as typeof waterTreatmentDemoDocument;
 }
 
 function cookie(session: IssuedAuthSession): string {
@@ -158,10 +159,13 @@ beforeAll(async () => {
 afterAll(async () => {
   try {
     await app?.close();
-    await database?.onModuleDestroy();
   } finally {
-    if (originalDatabaseUrl === undefined) delete process.env.SCADA_DATABASE_URL;
-    else process.env.SCADA_DATABASE_URL = originalDatabaseUrl;
+    try {
+      await database?.onModuleDestroy();
+    } finally {
+      if (originalDatabaseUrl === undefined) delete process.env.SCADA_DATABASE_URL;
+      else process.env.SCADA_DATABASE_URL = originalDatabaseUrl;
+    }
   }
 });
 
@@ -191,7 +195,10 @@ describe("本机隔离 PostgreSQL 双 Cookie 会话 HTTP CAS 事务", () => {
     await withFixture(async ({ tenantId, sessionA, sessionB }) => {
       const wrongCsrf = await postVersion(sessionA).set("X-SCADA-CSRF", sessionB.csrfToken);
       expect(wrongCsrf.status).toBe(403);
-      const wrongOrigin = await postVersion(sessionA).set("Origin", "https://untrusted.example.org");
+      const wrongOrigin = await postVersion(sessionA).set(
+        "Origin",
+        "https://untrusted.example.org",
+      );
       expect(wrongOrigin.status).toBe(403);
       const mixedCredentials = await postVersion(sessionA).set(
         "Authorization",
