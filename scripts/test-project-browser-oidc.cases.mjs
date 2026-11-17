@@ -126,7 +126,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     const safe = "服务器工程载入阶段返回受控错误（确认前：版本冲突）";
     assert.equal(
       describeBrowserPageException({
-        exception: { className: "Error", description: "Error: " + safe + "\\n敏感数据" },
+        exception: { className: "Error", description: "Error: " + safe + "\n敏感数据" },
       }),
       safe,
     );
@@ -350,10 +350,10 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
         }, 10);
         setTimeout(() => {
           state.busy = false;
-        }, 50);
+        }, 150);
         setTimeout(() => {
           globalThis.window.confirm();
-        }, 160);
+        }, 260);
       },
     };
     const versionPanel = {
