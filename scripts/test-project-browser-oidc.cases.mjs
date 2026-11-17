@@ -358,7 +358,8 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
 
   void it("权限拒绝专项只接受单一只读模拟模式，禁止组合写入确认参数", () => {
     assert.throws(
-      () => resolveProjectBrowserMode(["--simulate-access-denial", "--confirm-lab", "adui_scada"], sample),
+      () =>
+        resolveProjectBrowserMode(["--simulate-access-denial", "--confirm-lab", "adui_scada"], sample),
       /仅支持 --require-multipage、--simulate-access-denial 或显式确认的多页数据准备参数/,
     );
     assert.throws(
