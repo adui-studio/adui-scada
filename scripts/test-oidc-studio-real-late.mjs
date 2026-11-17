@@ -350,8 +350,7 @@ async function waitForStudioState(session, name, stage, predicate) {
     rejectedWrites: Number.isInteger(state?.rejectedWrites) ? state.rejectedWrites : -1,
     busy: state?.busy === true,
     disabled: state?.disabled === true,
-    baselineRevision:
-      Number.isSafeInteger(state?.baselineRevision) ? state.baselineRevision : null,
+    baselineRevision: Number.isSafeInteger(state?.baselineRevision) ? state.baselineRevision : null,
     baselineCleared: state?.baselineCleared === true,
     headCleared: state?.headCleared === true,
     hasError: state?.hasError === true,
@@ -410,8 +409,11 @@ async function verifyFramework(
     throw new Error("真实 Studio 迟到保存结果与数据库不一致");
   }
   process.stdout.write(
-    name + "：第二主体追加请求返回 HTTP " + third.status +
-      (Number.isSafeInteger(third.revision) ? "、修订号 " + third.revision : "") + "\n",
+    name +
+      "：第二主体追加请求返回 HTTP " +
+      third.status +
+      (Number.isSafeInteger(third.revision) ? "、修订号 " + third.revision : "") +
+      "\n",
   );
   if (
     third.status !== 201 ||
