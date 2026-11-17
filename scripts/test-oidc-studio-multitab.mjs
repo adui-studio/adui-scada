@@ -289,7 +289,6 @@ export function clickStudioServerSaveInPage() {
   return { clicked: true, disabled: false };
 }
 
-/** 页面状态只返回 CAS 修订号、按钮状态与固定布尔量。 */
 /** 通过现有导出按钮读取工程 JSON 摘要，避免把 SVG 辅助层当成工程数据。 */
 export async function readStudioDocumentHashInPage() {
   const menu = document.querySelector(".studio-file-menu");
@@ -343,6 +342,7 @@ export async function readStudioDocumentHashInPage() {
   }
 }
 
+/** 页面状态只返回 CAS 修订号、按钮状态与固定布尔量。 */
 export function studioMultiTabUiStateInPage() {
   const panel = document.querySelector('[aria-label="服务端工程版本"]');
   const text = panel?.textContent ?? "";
@@ -397,7 +397,23 @@ export async function findProjectPageInBrowserInPage(projectId) {
     const next = buttons[1];
     if (!next || next.disabled) return { found: false, pageNumber };
     next.click();
-    await new Promise((done) => setTimeout(done, 120));
+    const changedUntil = Date.now() + 5000;
+    let pageChanged = false;
+    while (Date.now() < changedUntil) {
+      const currentPage = Number(
+        panel.querySelector(".studio-project-browser-pagination span")
+          ?.textContent?.match(/第\s*(\d+)\s*页/)?.[1] ?? 0,
+      );
+      const loading = [...panel.querySelectorAll("button")].some(
+        (item) => item.disabled && item.textContent.trim() === "刷新",
+      );
+      if (currentPage > pageNumber && !loading) {
+        pageChanged = true;
+        break;
+      }
+      await new Promise((done) => setTimeout(done, 100));
+    }
+    if (!pageChanged) throw new Error("同源多标签页工程列表未找到专用工程");
   }
   throw new Error("同源多标签页工程列表未找到专用工程");
 }
@@ -500,14 +516,34 @@ async function openCompanionChromeTab(browser) {
     throw new Error("同源多标签页浏览器调试连接失败");
   }
   const socket = new WebSocket(tab.webSocketDebuggerUrl);
-  await new Promise((resolve, reject) => {
-    socket.addEventListener("open", resolve, { once: true });
-    socket.addEventListener("error", reject, { once: true });
-  });
-  const session = new CompanionChromeSession(socket);
-  await session.send("Page.enable");
-  await session.send("Runtime.enable");
-  return session;
+  try {
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error("同源多标签页浏览器调试连接失败")), 10000);
+      socket.addEventListener(
+        "open",
+        () => {
+          clearTimeout(timeout);
+          resolve();
+        },
+        { once: true },
+      );
+      socket.addEventListener(
+        "error",
+        () => {
+          clearTimeout(timeout);
+          reject(new Error("同源多标签页浏览器调试连接失败"));
+        },
+        { once: true },
+      );
+    });
+    const session = new CompanionChromeSession(socket);
+    await session.send("Page.enable");
+    await session.send("Runtime.enable");
+    return session;
+  } catch {
+    socket.close();
+    throw new Error("同源多标签页浏览器调试连接失败");
+  }
 }
 
 async function navigateToOrigin(session, origin, label) {
