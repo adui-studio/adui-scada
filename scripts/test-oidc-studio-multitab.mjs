@@ -794,7 +794,7 @@ async function verifyFramework(first, second, origin, name, client, principal) {
   assert.deepEqual(afterLoad.drafts, localDraft);
   assert.deepEqual(loadedDocument, firstDocument);
 
-  await second.evaluate(addStudioSymbolInPage, "+ 文本");
+  await second.evaluate(addStudioSymbolInPage, "+ 水箱");
   assert.equal(await second.evaluate(armStudioMultiTabWriteInPage, origin, projectId, 2), true);
   const revision3 = await saveServerVersion(second, 2);
   const secondAfterSave = await inspectProtectedState(second);
