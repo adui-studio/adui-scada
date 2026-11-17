@@ -170,7 +170,7 @@ export function armStudioRealLateInPage(origin, projectId, runtime = globalThis)
   const state = runtime.__aduiTestStudioRealLate;
   if (
     runtime.location.origin !== origin ||
-    !PROJECT_PATTERN.test(projectId) ||
+    !/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId) ||
     !state ||
     state.active ||
     state.writeAttempts !== 0 ||
