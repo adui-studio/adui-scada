@@ -936,3 +936,11 @@ Node 编排第二主体读取 2、再 POST CAS 2→3，随后释放旧 201、第
 第四轮真实浏览器日志在 React CAS 只读复核后确认 `canvasChanged=true`，但 `autoSaveChanged`、`draftCountChanged` 与 `draftHashChanged` 均为 false。源码调查发现 `scripts/test-project-browser-oidc.mjs` 的共享页面快照使用 `.studio-svg.innerHTML`，React/Vue SVG 包含一个直系 `rect[fill="url(#scada-studio-grid)"]`，它的 `x/y/width/height` 来自随浏览器视口变化的 `visibleRect`。因此直接比较全部 `innerHTML` 存在视口辅助网格变化造成误报的可能；**尚无真实 DOM 差异证据确认本轮只有网格变化**。
 
 只在新 `scripts/test-oidc-studio-real-late.mjs` 联合验收中加入自包含的 `readStudioContentCanvasInPage`：克隆 SVG 节点，仅从克隆的直系子节点中移除唯一的视口网格矩形，再返回完整剩余 `innerHTML` 供五个原有操作边界做强制一致性比较。画布不存在或发现多个直系视口网格时继续拒绝；渲染图片的 `href`、真实图元、边界、命中区域及其他 SVG 内容均保留。现有 `inspectStudioState` 及其其他 OIDC 浏览器回归不修改，原草稿 SHA/数量与自动保存等检查保留。真实业务 SVG 发生变化时仍触发 `canvasChanged=true`。不接入浏览器持久化、Core、React/Vue 业务或 NestJS 变更。
+
+## 2026-11-17 · 第三十四批第十八小批：409 冲突恢复的只读预览与水位双核验
+
+共享 `packages/api-client/src/studio-session.ts` 新增 `previewLatestVersion(projectId): Promise<ServerProjectVersion>`，与现有 `readVersion` 共用 `contextGeneration` 代次与权限失效语义，但**不调用** `acceptLoadedVersion`。请求顺序为 `getMe → getProject(首水位) → readVersion(首水位) → getProject(末水位)`；每次 await 后校验代次，且快照的 `projectId`、`revision` 与两次远端 `headRevision` 必须一致。并发改版返回受控 409，既不提交版本也不把已过期快照返回给 UI；过期 401/404 不能污染后来重建的基线。当前请求发生真实 401/403/404 时按共享 `invalidateAccess` 拒绝后续误创建；网络失败保持合法基线。只读预览返回快照与身份信息，但**不使其成为 CAS 保存基线**。
+
+两端 `StudioPage` 仅记录当前冲突对应的 `projectId`，避免工程切换后显示错误操作入口；409（包括前台可见性真实水位冲突）出现时提供“只读预览最新版本”。用户点击后沿用现有 `runServerAction`、历史忙碌与草稿互斥，先调用共享预览，再以真正受保护的 `listVersions(limit=10)` 读取第一页。只接受第一页最新修订号与刚核验的 `headRevision` 相同的结果，防止异步历史列表把已经过期的版本当作最新；之后更新 `serverRows`、`serverHeadRevision`、`serverInspectedVersion`，显示已有 `compareProjectDocuments` 内容差异。成功只读操作不改 `editor`、IndexedDB 和共享 CAS。用户仍必须单独点击已有版本“载入”并明确确认，才会暂停自动保存、替换画布及建立新基线。
+
+复用 `scripts/test-project-browser-oidc.mjs --simulate-save-timing` 的隔离真实 Keycloak 浏览器模式：合成 409 被释放后，React/Vue Studio 必须显示预览按钮，点击后由真实 BFF 通过全部 GET 核验最新版本，预览比较可见且不创建 CAS，浏览器写入拦截器必须仍只记录先前的一个被拦截 POST；画布、草稿 SHA-256 与自动保存状态不变。此模式的 409 是**浏览器本地合成拒绝**，不是另行发生真实 PostgreSQL 写入冲突；此前真实 BFF/PostgreSQL CAS 验收另有独立证据。失败或不具备可信 OIDC 环境时保持拒绝，不泄露身份、Cookie、Token、响应正文或 SQL。
