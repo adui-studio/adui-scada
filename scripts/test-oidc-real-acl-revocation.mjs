@@ -194,3 +194,97 @@ export async function revokedResponsesInPage(origin, projectId, runtime = global
   }
   return codes;
 }
+
+/** 等待 CDP 页面状态稳定；失败只输出已审核标签，不泄漏页面原始异常。 */
+async function waitForValue(task, label) {
+  for (let attempt = 0; attempt < 110; attempt += 1) {
+    try {
+      const value = await task();
+      if (value) return value;
+    } catch {
+      // 页面加载时的临时上下文切换不应泄漏页面 URL 或浏览器异常。
+    }
+    await pause(200);
+  }
+  throw new Error(label);
+}
+
+async function openDedicatedStudioProject(session, origin, projectId) {
+  await session.send("Page.navigate", { url: origin + "/" });
+  await waitForValue(
+    () =>
+      session.evaluate(function (expectedOrigin) {
+        return location.origin === expectedOrigin && document.readyState === "complete";
+      }, origin),
+    "真实撤权专项只允许本机可信 OIDC Lab",
+  );
+  assert.equal(await session.evaluate(enterStudioInPage), true);
+  await session.evaluate(function () {
+    const menu = document.querySelector(".studio-project-browser-menu");
+    if (!menu) throw new Error("未找到工程管理入口");
+    menu.open = true;
+  });
+
+  let page = await waitForValue(async () => {
+    const result = await session.evaluate(pageStateInPage);
+    return result && !result.busy && result.pageNumber === 1 && result.ids.length > 0
+      ? result
+      : null;
+  }, "没有找到专用工程的授权列表入口");
+  let found = false;
+  for (let index = 0; index < 50; index += 1) {
+    if (page.ids.includes(projectId)) {
+      found = true;
+      break;
+    }
+    if (!page.nextEnabled) break;
+    const nextNumber = page.pageNumber + 1;
+    assert.equal(await session.evaluate(clickBrowserControlInPage, "next"), true);
+    page = await waitForValue(async () => {
+      const result = await session.evaluate(pageStateInPage);
+      return result && !result.busy && result.pageNumber === nextNumber && result.ids.length > 0
+        ? result
+        : null;
+    }, "没有找到专用工程的授权列表入口");
+  }
+  if (!found) throw new Error("没有找到专用工程的授权列表入口");
+
+  assert.equal(await session.evaluate(saveDraftInPage), true);
+  const beforeLoad = await inspectStudioState(session);
+  const loaded = await session.evaluate(openProjectInPage, projectId, 1, "confirm");
+  assert.deepEqual(loaded, { confirmCount: 1, intercepted: 0, outcome: "confirm" });
+  assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
+  const beforeRevoke = await inspectStudioState(session);
+  assert.deepEqual(beforeRevoke.drafts, beforeLoad.drafts);
+  assert.ok(beforeRevoke.server.includes("CAS 基线：1"));
+  return beforeRevoke;
+}
+
+async function verifyRevokedStudio(session, origin, projectId, before) {
+  const codes = await session.evaluate(revokedResponsesInPage, origin, projectId);
+  assert.deepEqual(codes, [404, 404, 404], "实际受控服务端必须按 404 隐藏已撤权工程");
+
+  assert.equal(await session.evaluate(triggerAccessDenialInPage, "history"), true);
+  await waitForValue(async () => {
+    const state = await session.evaluate(accessDenialStateInPage);
+    return state.baselineCleared &&
+      state.headCleared &&
+      state.serverRows === 0 &&
+      state.browserRows === 0
+      ? state
+      : null;
+  }, "真实撤权后客户端仍保留旧授权摘要");
+
+  const after = await inspectStudioState(session);
+  assert.equal(after.canvas, before.canvas, "真实撤权后本地 SVG 画布必须保持不变");
+  assert.deepEqual(after.drafts, before.drafts, "真实撤权不能覆盖 IndexedDB 草稿");
+  assert.equal(after.autoSave, before.autoSave, "真实撤权不能改变本地自动保存开关");
+
+  assert.equal(await session.evaluate(triggerAccessDenialInPage, "detail"), true);
+  assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
+  const state = await session.evaluate(accessDenialStateInPage);
+  if (state.writeAttempts !== 0) throw new Error("真实撤权后旧工程不得触发新建或追加");
+  const preserved = await inspectStudioState(session);
+  assert.equal(preserved.canvas, before.canvas);
+  assert.deepEqual(preserved.drafts, before.drafts);
+}
