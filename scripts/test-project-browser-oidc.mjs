@@ -627,6 +627,97 @@ async function verifyAccessDenialScenarios(session, origin, name, selected) {
   }
 }
 
+/** 在可见的 Studio 页面模拟一次浏览器切回事件，不发起任何写请求。 */
+export function triggerStudioResumeInPage() {
+  if (document.visibilityState !== "visible") {
+    throw new Error("标签页恢复测试要求浏览器页面处于可见状态");
+  }
+  document.dispatchEvent(new Event("visibilitychange"));
+  return true;
+}
+
+/** 修订号变化仍通过真实 GET 摘要模拟，绝不修改服务端版本。 */
+function armResumeRevisionDriftInPage(projectId) {
+  globalThis.__aduiTestProjectRevisionFault = { projectId, calls: 0 };
+  return true;
+}
+
+function resumeCheckStateInPage() {
+  const panel = document.querySelector('[aria-label="服务端工程版本"]');
+  const text = panel?.textContent ?? "";
+  return {
+    driftHits: globalThis.__aduiTestProjectRevisionFault?.calls ?? 0,
+    notice: document.querySelector(".studio-notice")?.textContent ?? "",
+    baselineCleared: /CAS 基线：\s*未建立/.test(text),
+    headCleared: /服务端最新修订号：\s*未查询/.test(text),
+    serverRows: panel?.querySelectorAll(".studio-version-item").length ?? -1,
+    writeAttempts: globalThis.__aduiTestAccessDenial?.writeAttempts ?? -1,
+  };
+}
+
+/** 双端只读验证标签页恢复时 401、404 和版本漂移不会污染本地草稿。 */
+async function verifyResumeScenarios(session, origin, name, selected) {
+  const scenarios = [
+    { scope: "identity", status: 401, title: "认证会话过期" },
+    { scope: "detail", status: 404, title: "工程授权撤销" },
+    { scope: "revision", status: 200, title: "其他标签页推进远端版本" },
+  ];
+  for (const scenario of scenarios) {
+    process.stdout.write(name + "：正在验证标签页恢复时" + scenario.title + "\n");
+    await prepareAccessDenialBaseline(session, origin, name, selected);
+    assert.equal(await session.evaluate(saveDraftInPage), true);
+    const before = await inspectStudioState(session);
+    assert.ok(before.drafts.count >= 1, name + " 恢复测试前需存在 IndexedDB 草稿");
+
+    if (scenario.scope === "revision") {
+      assert.equal(
+        await session.evaluate(armResumeRevisionDriftInPage, selected.projectId),
+        true,
+      );
+    } else {
+      assert.equal(
+        await session.evaluate(
+          armAccessDenialInPage,
+          selected.projectId,
+          scenario.scope,
+          scenario.status,
+        ),
+        true,
+      );
+    }
+    assert.equal(await session.evaluate(triggerStudioResumeInPage), true);
+    if (scenario.scope === "revision") {
+      const checked = await waitFor(async () => {
+        const state = await session.evaluate(resumeCheckStateInPage);
+        return state.driftHits > 0 &&
+          state.baselineCleared &&
+          state.headCleared &&
+          state.serverRows === 0
+          ? state
+          : null;
+      }, name + " 标签页恢复时 CAS 版本变化");
+      assert.ok(checked.notice.includes("服务端版本已变化"));
+      assert.equal(checked.writeAttempts, 0);
+    } else {
+      const checked = await waitFor(async () => {
+        const state = await session.evaluate(accessDenialStateInPage);
+        return state.hits > 0 &&
+          state.baselineCleared &&
+          state.headCleared &&
+          state.serverRows === 0 &&
+          state.browserRows === 0
+          ? state
+          : null;
+      }, name + " 标签页恢复时访问失效");
+      assert.equal(checked.writeAttempts, 0, name + " 恢复可见不能触发工程写入");
+    }
+    const after = await inspectStudioState(session);
+    assert.equal(after.canvas, before.canvas, name + " 恢复校验修改了本地画布");
+    assert.deepEqual(after.drafts, before.drafts, name + " 恢复校验修改了草稿");
+    assert.equal(after.autoSave, before.autoSave, name + " 恢复校验修改了自动保存");
+  }
+}
+
 export async function openProjectInPage(projectId, headRevision, mode) {
   const panel = document.querySelector(".studio-project-browser-panel");
   const item = [...(panel?.querySelectorAll(".studio-project-browser-item") || [])].find(
