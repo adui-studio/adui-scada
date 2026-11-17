@@ -263,7 +263,6 @@ export async function appendCasVersionInPage(
   return { status: 201, revision: saved.revision, contentHash: saved.contentHash };
 }
 
-
 /** 首个浏览器真实发出一次 POST，收到可信 201 后暂不向测试消费端交付原响应。 */
 export function armHeldCasResponseInPage(origin, projectId, runtime = globalThis) {
   if (
@@ -363,8 +362,11 @@ export async function releaseHeldCasResponseInPage(origin, projectId, runtime = 
 }
 
 export async function verifyLateCasAudit(client, projectId, first, second, firstHash, secondHash) {
-  if (!PROJECT_PATTERN.test(projectId) || !/^[0-9a-f]{64}$/.test(firstHash) ||
-      !/^[0-9a-f]{64}$/.test(secondHash)) {
+  if (
+    !PROJECT_PATTERN.test(projectId) ||
+    !/^[0-9a-f]{64}$/.test(firstHash) ||
+    !/^[0-9a-f]{64}$/.test(secondHash)
+  ) {
     throw new Error("真实迟到 201 专项版本或审计不一致");
   }
   const versions = await client.query(
@@ -386,9 +388,10 @@ export async function verifyLateCasAudit(client, projectId, first, second, first
     audits.rows.length !== 3 ||
     head.rows.length !== 1 ||
     String(head.rows[0].head_revision) !== "3" ||
-    [1, 2, 3].some((revision, index) =>
-      String(versions.rows[index].revision) !== String(revision) ||
-      String(audits.rows[index].revision) !== String(revision),
+    [1, 2, 3].some(
+      (revision, index) =>
+        String(versions.rows[index].revision) !== String(revision) ||
+        String(audits.rows[index].revision) !== String(revision),
     ) ||
     versions.rows[0].created_by !== first.subjectId ||
     versions.rows[1].created_by !== first.subjectId ||
@@ -737,8 +740,11 @@ async function run() {
         projectId,
         2,
       );
-      if (third.status !== 201 || third.revision !== 3 ||
-          !/^[0-9a-f]{64}$/.test(third.contentHash ?? "")) {
+      if (
+        third.status !== 201 ||
+        third.revision !== 3 ||
+        !/^[0-9a-f]{64}$/.test(third.contentHash ?? "")
+      ) {
         throw new Error("真实迟到 201 专项版本或审计不一致");
       }
       const old = await firstBrowser.evaluate(
