@@ -779,3 +779,8 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/test-oidc-dual-cas.mjs`：两个独立临时 Chrome/Edge Profile 的真实 Keycloak 登录、同源 BFF 会话与专用新建工程的双会话 CAS 竞争；写入必须 `--run-cas --confirm-lab adui_scada`。复用现有 OIDC Lab 配置白名单、正式工程 API 与服务端已安装的 `pg`，不添加新的第三方依赖。
 - `scripts/test-oidc-dual-cas.cases.mjs`：11 项 Node 内置离线测试，覆盖配置门禁、不同主体、同源与 CSRF、专用工程限制、201/409 与审计、错误脱敏，不访问浏览器或数据库。
 - 根 `package.json`：`test:oidc:dual:config`（包含在 `ready`）、`test:oidc:dual:preflight`（只读验证；OIDC 登录会正常生成会话）、`test:oidc:dual:cas`（显式写入全链专项，默认质量链不执行）。
+
+## 第三十四批第七小批 · 会话注销与工程 ACL 动态撤销的真库 HTTP 回归
+
+- `apps/server/test/projects-cas-cookie-http.db-spec.ts`：在已有双 Cookie 会话 HTTP CAS 四项测试基础上新增两项。测试容器同时注册真实 `ScadaAuthController` 和 `ProjectApiController`，使用真实 `AuthSessionService`、Session/Project Guards、Prisma；仅无关 OIDC 授权码前置入口依赖使用测试占位符。覆盖一个会话注销后旧 Cookie 401/另一主体仍能写入，以及有效身份被撤销工程 ACL 后列表不可见、详情/历史/写入 404。
+- 运行入口保持 `pnpm run test:db`：现有 `apps/server/vitest.config.db.ts` 自动收集 `test/**/*.db-spec.ts`，新候选从此前 29 项预计增加至 31 项。默认 `pnpm run ready` 不连接真实 PostgreSQL，也不修改已有本机 OIDC Lab 数据。
