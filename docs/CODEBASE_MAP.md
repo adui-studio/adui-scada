@@ -768,3 +768,8 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/server/test/prisma-project-version.db-spec.ts`：两套独立 Prisma 连接与不同受信主体同时追加同一个修订号，断言一个成功、一个冲突，以及精确水位、不可变版本和获胜者成功审计。
 - `scripts/test-project-browser-oidc.mjs`：新增可选 `--require-multipage`，必须真正翻入有数据的第二页并返回第一页，双框架都成功才算通过。默认登录与单页安全回归模式不变，不向 OIDC Lab 写入工程或权限。
 - `scripts/test-project-browser-oidc.cases.mjs`：新增严格模式拒绝空第二页的离线用例，随既有 `ready` 检查。根 `package.json` 新增交互式 `test:projects:oidc:browser:pages`，不加入 `ready`。
+
+## V0.3 第三十四批第五小批 · 真实双 Cookie 会话 HTTP CAS 回归
+
+- `apps/server/test/projects-cas-cookie-http.db-spec.ts`：独立真实 PostgreSQL HTTP 测试（与已有 `apps/server/vitest.config.db.ts` 的 `test/**/*.db-spec.ts` 匹配）。使用真正的 NestJS Guard、Session Service、Project API Controller、PrismaProjectVersionStore；由可信测试主体内部签发两份 BFF Cookie/CSRF 会话。对同工程修订竞争断言 HTTP 201/409 和数据库审计一致性，包含错误 CSRF、Origin、混用凭据、ACL 拒绝。仅针对随机 `test-<UUID>` 租户清理。
+- 根 `pnpm run test:db`：旧 **25 项**真实 PostgreSQL 回归预计增加 **4 项**，共预计 **29 项**；以维护者在本机真实数据库的最终报告为准。默认 `ready` 不连接/写入数据库。

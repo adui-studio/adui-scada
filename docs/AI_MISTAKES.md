@@ -237,6 +237,15 @@
 
 > **2026-11-17 结案补录（E-023 至 E-026）**：上述各错误段落保留发生时的原始“待复验”描述作为历史证据，并非当前仍未修复。维护者在 PR #58 的最终 Windows 验收中确认离线 OIDC 浏览器测试 **13/13**、`vp check` **328 格式文件/183 受检文件零告警**、完整 `ready` **544/544 单测、49/49 HTTP E2E、退出码 0**；React/Vue 真实 OIDC 浏览器专项分别完成身份、草稿、取消载入、模拟冲突与确认载入，退出码 **0**。PR #58 已按维护者授权 Squash 合并至 `main@d95ee4d15bec64a047c519fde7b5f98b837cca05`。有数据的第二页与真实不同主体 PostgreSQL 并发 CAS 仍待第四小批独立专项，不属于 E-023 至 E-026 的历史问题未关闭。
 
+### E-027 · HTTP 状态码数组排序缺少数值比较器（第三十四批第五小批）
+
+- **现象**：2026-11-17 维护者 Windows 执行 `vp check --fix`，`apps/server/test/projects-cas-cookie-http.db-spec.ts` 新增的双 Cookie HTTP CAS 测试断言触发 `typescript(require-array-sort-compare)`；当次 184 个受检文件 **0 错误 / 1 警告**，格式化虽完成但不能视为零警告通过。
+- **根因**：新增断言直接调用 `responses.map((response) => response.status).sort()`，省略了数值比较函数；JavaScript 默认的 `sort()` 基于字符串排序规则，且不符合仓库现有 TypeScript Lint 约束。这里测试预期是两个 HTTP 数值状态码恰好为 201 与 409。
+- **修复**：仅在该断言中使用 `.sort((left, right) => left - right)`，不更改两个会话、CSRF、ACL、CAS、数据库和审计的测试语义。保留明确的 `expect(...).toEqual([201, 409])` 与成功/失败请求的独立断言。
+- **避免**：数组为数值型状态码、修订号或时间戳时，在新增测试和业务代码中使用显式比较器；提交前先运行无 `--fix` 的 `vp check` 并确认零警告，再执行真实 HTTP/数据库回归，不把“自动格式化完成”当作 Lint 通过。
+- **验证**：维护者在修复后提供的 Windows 日志确认 `vp check` **329 个格式文件正确、184 个受检文件零警告/Lint/类型错误**，OIDC 离线安全测试 **18/18**，完整 `pnpm run ready` 中单元测试 **544/544**、服务端 E2E **49/49**、React/Vue/NestJS 构建完成、质量链退出码 **0**；另以本机独立 PostgreSQL 运行 `pnpm run test:db`，**4/4 文件、29/29 用例通过，退出码 0**。本次文档追加提交后的 `docs:check` 需独立复核；上述结论只对应维护者提交日志时的测试候选代码。
+- **证据**：PR #60、修复提交 `017aaa22729e987720a09d865726c8edcabff839`、`apps/server/test/projects-cas-cookie-http.db-spec.ts`、维护者 2026-11-17 Windows `vp check --fix` / `vp check` / `ready` / `test:db` 日志，以及 `docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

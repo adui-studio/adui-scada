@@ -316,3 +316,9 @@ Core 新增框架无关 Tag 定义模型，使用稳定 `tagId` 区分不可变�
 在已合并的 PR #58 双框架真实 OIDC 工程浏览器专项基础上，本小批只增强现有验收，不变更公开 API、`StudioProjectBrowser`、React/Vue 业务组件、Prisma Schema/迁移和工业写入权限。隔离 `adui_scada_test` 的现有 `test:db` 新增**同租户 12 个获 `project:read` 授权工程、另外 1 个同租户无权工程**的真实 PostgreSQL 游标测试，核验每页 10 条的首页/第二页/空末页、升序、授权过滤、租户隔离及摘要白名单，并在随机测试租户中自动清理。另使用**两套独立 PrismaService 连接和不同授权主体**对同一工程的同一修订号同时调用 `append`，要求只有一次提交成功，数据库水位/不可变版本/成功审计精确对应获胜主体，竞争者返回 `ProjectRevisionConflictError`；不生成真实 OIDC Cookie，也不声称双会话 HTTP 409 已执行。
 
 为原 `test:projects:oidc:browser` 增加独立的 `test:projects:oidc:browser:pages` 严格模式：只允许可信本机 OIDC HTTPS Lab，React/Vue 都必须真正访问包含数据的第二页并返回上一页，否则失败；**不自动创建、授权、覆盖或清理正在运行的 Lab 工程**。运行严格模式前维护者须按受控流程准备至少 11 项已经授权的工程，且其具备 `project:read` 与所选择工程的 `version:read`。数据库集成测试和交互式严格模式均不纳入默认 `ready`；仅新增的离线模式保护用例会经 `ready` 执行。生产数据库、Keycloak 正式 Realm、跨站请求和工业设备均不属于本批验收。
+
+## V0.3 第三十四批第五小批：双 BFF Cookie HTTP 会话并发 CAS（FR-001 / FR-002 / FR-013 / NFR-003 局部）
+
+以 PR #59 合并的 `main@4c3cb0d7` 为基线，只增加真实 PostgreSQL 隔离测试及验收说明，**不修改现有 REST/CSRF/ACL、React/Vue、工程 Schema、Prisma 迁移或工业设备权限**。在本机独立 `adui_scada_test` 的随机测试租户中，通过实际 `AuthSessionService.issueForVerifiedSubject` 为两个不同活跃可信主体创建两份独立、仅保存摘要的短期 BFF Cookie 会话；由真实 NestJS Session Guard、Project Guard、工程控制器与 Prisma 仓储处理两个并发 `POST /api/v1/projects/:projectId/versions`，双方携带同一 `expectedRevision=1`，要求严格一份 HTTP 201 与一份 HTTP 409。数据库最终只有首版和成功追加的第二版，水位、SHA-256 快照、审计操作者与实际成功响应一致。补充 Cookie/CSRF/Origin/ACL 拒绝场景，所有用例在 `finally` 定向清理当前随机租户。
+
+**验收边界**：这里的 Cookie 会话在隔离测试中由服务端可信主体签发，真实使用 PostgreSQL，但**不执行两次 Keycloak 授权码登录**，也不代表真实 TLS 代理/浏览器端完整身份交互；之前 React/Vue OIDC 严格分页专项另有 Windows 实测证据。新增测试仅通过显式 `SCADA_TEST_DATABASE_URL` 连接独立本机测试库，并只属于独立 `test:db`，不会进入默认 `ready`。正式跨 IdP 双登录以及生产安全验收后续独立评估。
