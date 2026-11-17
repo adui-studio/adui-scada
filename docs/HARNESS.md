@@ -2440,3 +2440,37 @@ if ($readyExitCode -ne 0) { throw "完整质量链失败" }
 ```
 
 目标：共享单元测试原 22 项 + 3 项，共 **25 项**；全量 Vitest 原 558 项 + 3 项，共 **561 项**；HTTP E2E 预计仍 49 项。数字仅为候选预期，不能当作实际执行结果。旧 OIDC `test:projects:oidc:resume` 已在第十一小批通过；本批未改变框架生命周期，但完整质量链和相关浏览器回归仍以维护者实测为准。
+
+
+## 第三十四批第十三小批 · 服务端保存上下文切换保护验收
+
+此批在上一小批 `main@0d5962b5b7d5b208a550d8cd3ba9a4b72b508c6d` 基础上增加 **5 项**共享会话 Promise 时序测试，目标共享 CAS 测试 **30/30**、全量 Vitest **566/566**（此前 25/25、561/561），服务端 HTTP E2E 预计仍 **49/49**；均须以维护者 Windows 实际日志和退出码为准。代码只涉及共享 API Client，不发起真实 PostgreSQL 或 Keycloak 写入。
+
+Windows 从项目根目录执行：
+
+```powershell
+git status --short
+git fetch origin
+git switch --track origin/fix/v0.3-b34-pending-save-context-guard
+git rev-parse HEAD
+
+pnpm run test:unit
+$unitExitCode = $LASTEXITCODE
+Write-Host "共享会话单测退出码：$unitExitCode"
+if ($unitExitCode -ne 0) { throw "共享会话单测失败" }
+
+vp check
+$checkExitCode = $LASTEXITCODE
+Write-Host "Vite+ 检查退出码：$checkExitCode"
+if ($checkExitCode -ne 0) { throw "格式、Lint 或类型检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+```
+
+已有 `test:projects:oidc:resume` 属第十一小批“真实登录＋模拟可见事件/服务端拒绝”浏览器专项，不覆盖本次保存中 Promise 竞态；如 Lab 运行可另行回归，但不要用该专项代替本批共享会话时序单测。保存请求一旦发送到真实服务器，测试不能假装能够取消或回滚；本小批不触碰真实工程和 ACL。
