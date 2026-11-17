@@ -262,6 +262,38 @@ async function waitFor(task, label, tries = 100) {
   throw new Error(label);
 }
 
+/**
+ * 仅排除画布中随浏览器视口变化的直系网格矩形。
+ * 图元、渲染图片、命中层和其他 SVG 子节点都必须保留并严格比较。
+ * CDP 单独序列化执行，不依赖 Node 模块作用域常量。
+ */
+export function readStudioContentCanvasInPage(runtime = globalThis) {
+  const source = runtime.document.querySelector(".studio-svg");
+  if (!source) {
+    throw new Error("真实 Studio 迟到保存未达到受控状态");
+  }
+  const canvas = source.cloneNode(true);
+  const viewportGrids = [...canvas.children].filter(
+    (element) =>
+      element.localName === "rect" &&
+      element.getAttribute("fill") === "url(#scada-studio-grid)",
+  );
+  if (viewportGrids.length > 1) {
+    throw new Error("真实 Studio 迟到保存未达到受控状态");
+  }
+  viewportGrids[0]?.remove();
+  return canvas.innerHTML;
+}
+
+/** 保留现有草稿、自动保存检查；画布比较使用不含视口网格的完整内容。 */
+async function inspectStudioProtectedState(session) {
+  const [state, canvas] = await Promise.all([
+    inspectStudioState(session),
+    session.evaluate(readStudioContentCanvasInPage),
+  ]);
+  return { ...state, canvas };
+}
+
 /** 原有分页 UI 必须实际选中本轮新建的专用工程，不从脚本侧替换应用状态。 */
 async function openDedicatedProject(session, origin, projectId) {
   await session.send("Page.navigate", { url: origin + "/" });
@@ -309,7 +341,7 @@ async function openDedicatedProject(session, origin, projectId) {
   assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
   assert.equal(await session.evaluate(saveDraftInPage), true);
   assert.equal(await session.evaluate(enableAutoSaveInPage), true);
-  const before = await inspectStudioState(session);
+  const before = await inspectStudioProtectedState(session);
   const state = await session.evaluate(studioRealLateStateInPage);
   if (state.baselineRevision !== 1 || before.drafts.count < 1 || before.autoSave !== true) {
     throw new Error("真实 Studio 迟到响应测试准备失败");
@@ -423,7 +455,7 @@ async function verifyFramework(
     throw new Error("真实 Studio 迟到保存未阻止重复写入");
   }
   assert.equal(await session.evaluate(attemptRestoreDuringSaveInPage), true);
-  requireUnchangedDocument(before, await inspectStudioState(session), name, "保存挂起期间");
+  requireUnchangedDocument(before, await inspectStudioProtectedState(session), name, "保存挂起期间");
   process.stdout.write(name + "：真实 201 已到达并挂起 Studio UI，另一主体准备推进版本 3\n");
 
   // 第二主体真实读取/提交时恢复其独立浏览器窗口，不影响原有 BFF 会话。
@@ -457,7 +489,7 @@ async function verifyFramework(
   ) {
     throw new Error("真实 Studio 迟到保存结果与数据库不一致");
   }
-  requireUnchangedDocument(before, await inspectStudioState(session), name, "远端提交修订号 3 后");
+  requireUnchangedDocument(before, await inspectStudioProtectedState(session), name, "远端提交修订号 3 后");
   try {
     assert.equal(await session.evaluate(releaseStudioRealLateInPage, origin, projectId), true);
   } catch {
@@ -471,7 +503,7 @@ async function verifyFramework(
     "Studio 接收真实 201 并恢复保存界面",
     (state) => !state.busy && state.baselineRevision === 2 && state.savedSecondVersion,
   );
-  requireUnchangedDocument(before, await inspectStudioState(session), name, "Studio 消费旧 201 后");
+  requireUnchangedDocument(before, await inspectStudioProtectedState(session), name, "Studio 消费旧 201 后");
 
   // 先最小化第二主体的独立窗口，再激活第一主体标签。
   // 只接受浏览器真实报告 visible；若 OS 仍遮挡，保留失败而不模拟可见性。
@@ -490,7 +522,7 @@ async function verifyFramework(
   if (stale.writeAttempts !== 1 || stale.rejectedWrites !== 0) {
     throw new Error("真实 Studio 迟到保存未阻止重复写入");
   }
-  requireUnchangedDocument(before, await inspectStudioState(session), name, "CAS 只读复核后");
+  requireUnchangedDocument(before, await inspectStudioProtectedState(session), name, "CAS 只读复核后");
   assert.equal(await session.evaluate(triggerSaveTimingInPage), true);
   await waitForStudioState(
     session,
@@ -502,7 +534,7 @@ async function verifyFramework(
   if (final.writeAttempts !== 1 || final.rejectedWrites !== 0 || !final.baselineCleared) {
     throw new Error("真实 Studio 迟到保存未阻止重复写入");
   }
-  requireUnchangedDocument(before, await inspectStudioState(session), name, "过期 CAS 保存拒绝后");
+  requireUnchangedDocument(before, await inspectStudioProtectedState(session), name, "过期 CAS 保存拒绝后");
 
   const latest = await secondBrowser.evaluate(readCasProjectInPage, secondOrigin, projectId, 3);
   if (latest.contentHash !== third.contentHash) {
