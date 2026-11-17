@@ -2753,3 +2753,11 @@ if ($browserExitCode -ne 0) { throw "真实 Studio 双窗口专项失败" }
 ```
 
 本次要真实看到 React **和** Vue 各自完成 201 交付、真实可见性确认、CAS 水位变更后失效、无额外版本写入、画布草稿不变及三版审计，最后退出码 0。若依然 `visible=false`，只保留脱敏阶段日志，不强行设置 `document.visibilityState`。上次专项创建的测试工程仍在本机 Lab，脚本不会删除。
+
+## 第十七小批 · 第三轮本地数据变化专项复验
+
+第三轮真实浏览器证据：React 已真实完成版本 2 提交、另一主体推进版本 3、旧 201 交付和页面可见性恢复，但严格本地数据检查返回失败，专项**退出码 1**。根据脚本顺序，失败已经走到 CAS 只读复核及被拒绝的旧 CAS 再次保存之后。本次只把四种本地变化改成不泄漏内容的布尔诊断，并在五个关键阶段保持原强制比较；不能据此认为 IndexedDB 或 SVG 已被证明安全。
+
+请先查看 `git status --short`，确保当前处于 `test/v0.3-b34-studio-real-late-ui` 分支，再执行 `git fetch origin`、`git pull --ff-only origin test/v0.3-b34-studio-real-late-ui`、`git rev-parse HEAD`。按前文命令依次运行 `pnpm run test:oidc:dual:studio:config`（新目标 **13/13**）、`vp check`、`pnpm run docs:check` 和完整 `pnpm run ready`；各命令最终退出码必须为 0，失败后停止验收。
+
+确认本机隔离 Lab 可以新增两份新的随机专用工程后，再单独执行 `pnpm run test:oidc:dual:studio:late`。如果再出现“本地数据变化”，记录其**固定中文阶段**和 `canvasChanged/autoSaveChanged/draftCountChanged/draftHashChanged` 四项布尔值以及最终退出码，不粘贴 SVG、草稿正文、原始 SHA-256、Cookie、Token、数据库连接和主体标识。本次禁止直接将变化分类为正常自动保存，必须先依据真实状态逐项定位。React 和 Vue 两端及最终三版审计均通过、退出码 0 才能关闭 PR 的真实验收。
