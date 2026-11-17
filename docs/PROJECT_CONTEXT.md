@@ -1266,3 +1266,10 @@ PR #66 的 React / Vue 标签页恢复只读复核已由维护者在 Windows 完
 前置 PR #66 已获维护者单独授权并 Squash 合并到 `main@19752e6219bffd3de9b672e89e95e6dabfb14535`；第十一小批 Windows `ready`、React/Vue 标签页恢复浏览器模拟专项已通过（真实测试退出码 0，详见 VALIDATION）。本小批进一步补齐共享 `readVersion` 的异步上下文边界：旧读请求在 `reset`、新的服务端确认载入或 CAS 推进后才结束时，原先旧 401/404 的统一拒绝处理可能污染新基线，旧正常响应也可能在新上下文被确认载入。
 
 候选最小修改只涉及共享 `packages/api-client/src/studio-session.ts` 和 3 项单测，使用内存代次保护迟到只读结果；生产代码不依赖 React/Vue、未新增依赖、数据库、服务端写入或工业设备权限。初版预期 `test:unit` **561/561**（旧 558 + 新 3），实际结果须以 Windows TypeScript 6、Vite+、Vitest 与完整 `ready` 输出为准。浏览器真实旧请求竞态尚无专项 E2E；本次既不模拟真实撤权也不触碰 Lab ACL。Draft PR 默认指派 `@adui-dev`，未经单独授权不得合并。
+
+
+## 2026-11-17 · 第三十四批第十二小批：Windows 全链验收通过，PR #67 待审查
+
+维护者 Windows 已真实执行本批 `pnpm run test:unit`：**561/561** 通过，新增共享会话迟到 401/404/正常快照回归包含在 **25/25** 项内；独立 `vp check`：333 个文件格式正确、188 个受检文件零警告或错误；完整 `pnpm run ready`：React/Vue/共享包/NestJS TypeScript 检查、561/561 单测、SSE 8/8、故障代理 4/4、OIDC 浏览器安全规则 24/24、NestJS HTTP E2E 49/49、86 个 Markdown 检查和 React/Vue/NestJS 构建均成功，PowerShell **退出码 0**。
+
+本批仅涉及共享 API Client 的 `readVersion` 内存代次保护和 3 项单元测试，未修改 React/Vue UI、数据库、服务端授权、OIDC Lab、工业控制设备写入。日志未提供 `git rev-parse HEAD`，新文档提交后的完整质量链也尚未复验；新增竞态真实浏览器专项仍未执行。PR #67 仍为 Draft，指派 `@adui-dev`，未经维护者明确授权不得合并。
