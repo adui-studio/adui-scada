@@ -937,7 +937,12 @@ async function verifySaveTimingScenarios(session, origin, name, selected) {
     const completed = await waitForSaveTimingStage(session, name, scenario.status, "completed");
     assert.equal(completed.writeAttempts, 1, name + " 失败后不得自动重试写入");
     assert.equal(
-      requireSaveTimingBaseline(name, scenario.status, completed.baselineCleared, scenario.baselineCleared),
+      requireSaveTimingBaseline(
+        name,
+        scenario.status,
+        completed.baselineCleared,
+        scenario.baselineCleared,
+      ),
       true,
     );
     const after = await inspectStudioState(session);
