@@ -814,7 +814,6 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`：独立 `--simulate-resume-check` 模式，增加 3 项离线测试，真实 OIDC 登录 + 模拟可见事件 + 模拟服务端拒绝/水位变化，所有工程写请求仍被隔离浏览器阻断。
 - 根 `package.json`：新增只读交互命令 `test:projects:oidc:resume`；普通浏览器模式、真实 PostgreSQL 撤权专项、版本持久化、OIDC Lab 权限映射及工业设备路径不变。
 
-
 ## 第三十四批第十二小批 · 服务端版本读取迟到结果防污染
 
 - `packages/api-client/src/studio-session.ts`：共享 Studio 工程会话增加仅在内存中使用的上下文代次；`readVersion` 在逐步读取身份、快照、工程最新水位及异常处理时检查代次，以受控冲突丢弃已经切换上下文的旧结果，不影响活跃请求的 401/403/404 权限保护。

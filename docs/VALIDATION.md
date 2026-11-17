@@ -1427,7 +1427,6 @@ PR #64 已按维护者授权 Squash 合并为 `main@d59df5e9ef2d702954f6b2017399
 - 浏览器脚本增加仅含固定白名单文案的“确认前 / 确认后”诊断分类及对应测试断言；不公开页面原始错误正文、网络响应、Cookie、令牌或堆栈。此项是**诊断增强，不代表真实浏览器问题已经修复**。
 - 后续验收：`pnpm --filter @adui/scada-web-vue run typecheck`、`vp check`、`pnpm run test:projects:oidc:config`、`pnpm run ready`、`pnpm run test:projects:oidc:resume`，分别记录真实退出码；若浏览器仍失败，使用新的固定阶段信息继续定位。PR 保持 Draft，未经单独授权不合并。
 
-
 ## 2026-11-17 · PR #66 Windows 最终复验：质量链与双框架标签页恢复专项通过
 
 维护者在 Windows 提供完整终端日志：`vp check` 检查 **333 个格式文件正确、188 个受检文件零警告/错误**；`pnpm run test:projects:oidc:config` **24/24**；`pnpm run ready` 连续完成 React `tsc --build`、Vue `vue-tsc --build`、共享包/服务端类型检查、Vitest **558/558（49 文件）**、SSE 客户端 **8/8**、故障代理 **4/4**、NestJS HTTP E2E **49/49（6 文件）**、Markdown **86 个**及 React/Vue/NestJS 构建，脚本结束回到 PowerShell 提示符，随后 `if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }` 未触发异常。此事实关闭此前 Vue TS2339 的 Windows 编译阻塞。
@@ -1435,7 +1434,6 @@ PR #64 已按维护者授权 Squash 合并为 `main@d59df5e9ef2d702954f6b2017399
 维护者随后独立执行 `pnpm run test:projects:oidc:resume`：React 与 Vue 均完成真实 BFF 登录、授权工程分页、IndexedDB 草稿及自动保存、取消载入与水位冲突、确认载入 CAS，以及**标签页恢复模拟身份 401、工程详情 404、远端修订变化**三场景；脚本明确报告“双框架标签页重新可见只读复核专项通过；工程写入已在浏览器阻断，Lab ACL 未修改”，PowerShell 输出专项退出码 **0**。此前一次浏览器准备阶段退出码 1 为历史失败，当前复验已通过；由于缺少中间失败的具体安全阶段诊断，不对其真实根因作猜测。
 
 **证据边界**：上述测试由维护者在本机 Windows 运行，协作端未代为执行；日志未给出 `git rev-parse HEAD`，因此不能断言该运行精确对应 GitHub 最新提交。此条文档本身提交后尚无新的文档检查或完整质量链日志。专项中 401/404/版本漂移是隔离浏览器只读模拟，不代表真实物理双标签并发、真实 Keycloak 跨标签注销或生产工业安全认证。PR #66 继续保持 Draft，需维护者单独明确授权才可合并。
-
 
 ## 2026-11-17 · 第三十四批第十二小批：共享 readVersion 迟到结果保护候选
 
