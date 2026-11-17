@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { loadEnvFile } from "node:process";
 import { setTimeout as pause } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
@@ -96,13 +96,12 @@ export function resolveMultiTabMode(args, env) {
   try {
     const databaseUrl = new URL(env.SCADA_DATABASE_URL);
     if (
-      databaseUrl.protocol !== "postgresql:" ||
-      databaseUrl.hostname !== LOOPBACK ||
-      databaseUrl.port !== String(env.SCADA_LAB_POSTGRES_PORT)
+      databaseUrl.protocol === "postgresql:" &&
+      databaseUrl.hostname === LOOPBACK &&
+      databaseUrl.port === String(env.SCADA_LAB_POSTGRES_PORT)
     ) {
-      throw new Error("invalid");
+      databaseName = databaseUrl.pathname.replace(/^\//, "");
     }
-    databaseName = databaseUrl.pathname.replace(/^\//, "");
   } catch {
     throw new Error("真实多标签页测试只允许本机隔离数据库");
   }
@@ -160,6 +159,21 @@ export function requireSamePrincipal(expected, actual) {
     throw new Error("四个标签页未共享同一 BFF 身份");
   }
   return true;
+}
+
+export async function readAuthStatusInPage(expectedOrigin, runtime = globalThis) {
+  if (runtime.location.origin !== expectedOrigin) return 0;
+  try {
+    const response = await runtime.fetch("/api/v1/auth/me", {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
+      redirect: "error",
+    });
+    return response.status;
+  } catch {
+    return 0;
+  }
 }
 
 export function readMultiTabSessionStateInPage(runtime = globalThis) {
@@ -636,9 +650,8 @@ async function verifyLogoutRevalidation(session, origin, beforeState) {
       : null;
   }, "注销后服务端 CAS 基线未失效");
   if (state.writeAttempts !== 0) throw new Error("注销后标签页尝试工程写入");
-  if (await session.evaluate(identityInPage, origin)) {
-    throw new Error("注销后标签页身份未失效");
-  }
+  const authStatus = await session.evaluate(readAuthStatusInPage, origin);
+  if (authStatus !== 401) throw new Error("注销后标签页身份未失效");
   const afterResume = await inspectProtectedState(session);
   requireUnchangedStudioState(beforeState, afterResume);
   await requireSaveRefusedWithoutProjectWrite(session);
@@ -854,7 +867,7 @@ async function run() {
   }
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   run().catch((error) => {
     process.stderr.write("错误：" + describeMultiTabFailure(error) + "\n");
     process.exitCode = 1;

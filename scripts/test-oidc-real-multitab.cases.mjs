@@ -4,6 +4,7 @@ import {
   describeMultiTabFailure,
   installMultiTabVisibilityProbeInPage,
   logoutCurrentSessionInPage,
+  readAuthStatusInPage,
   readMultiTabSessionStateInPage,
   refreshProjectListInPage,
   requireSameCanvasAndDrafts,
@@ -131,6 +132,13 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
     assert.equal(request.options.headers["X-SCADA-CSRF"], csrf);
     assert.equal("body" in request.options, false);
     assert.equal(JSON.stringify(result).includes(csrf), false);
+    assert.equal(
+      await readAuthStatusInPage(runtime.location.origin, {
+        location: runtime.location,
+        fetch: async () => ({ status: 401 }),
+      }),
+      401,
+    );
     await assert.rejects(
       logoutCurrentSessionInPage("https://127.0.0.1:15174", runtime),
       /本地会话注销未返回 HTTP 204/,
