@@ -757,7 +757,11 @@ async function verifyFramework(first, second, origin, name, client, principal) {
     const state = await second.evaluate(conflictPreviewStateInPage);
     return state.comparisonVisible && state.previewRevision === 2 ? state : null;
   }, name + " 第二标签页只读预览最新版本");
-  assert.equal(preview.writeAttempts, 0);
+  assert.equal(preview.baselineCleared, true);
+  const previewWrite = await second.evaluate(studioMultiTabWriteStateInPage);
+  assert.equal(previewWrite.writeAttempts, 0);
+  assert.equal(previewWrite.acceptedWrites, 0);
+  assert.equal(previewWrite.rejectedWrites, 0);
   const afterPreview = await inspectProtectedState(second);
   assert.equal(afterPreview.canvas, beforeConflict.canvas);
   assert.deepEqual(afterPreview.drafts, localDraft);
