@@ -890,3 +890,13 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 既有 NestJS 真实数据库测试 `projects-cas-cookie-http.db-spec.ts` 新增一项：先通过第一 Cookie/CSRF 会话真实 HTTP POST 返回 201 并实际提交到隔离 PostgreSQL 版本 2 和审计；在**测试消费端 Promise** 持有该真实响应期间，第二 Cookie/CSRF 会话基于 2 追加 3；真实 GET 详情和快照返回修订号 3，随后把旧 201 交付给模拟客户端，再尝试以旧预期 2 写入，服务端必须返回 409 且持久化水位/版本/审计保持 3。延迟点在测试消费端而非真实 TCP 传输；数据库真实读取在释放前已证明事务提交。每项测试由 `withFixture` 创建随机租户，`finally` 仅清理本租户的版本、审计、授权、会话和身份。
 
 两个测试共同验证协议与会话逻辑，但没有让同一浏览器 Session 直接与 PostgreSQL 实例联动，也没有模拟网络丢包、断电、进程崩溃或跨 Origin Cookie 复用。保持只读设备边界。
+
+## 2026-11-17 · 第三十四批第十六小批：真实双浏览器 201 延迟消费专项设计
+
+复用 `scripts/test-oidc-dual-cas.mjs` 的隔离浏览器、可信 BFF、严格随机项目创建和串行化 ACL 准备流程。新增显式 `--run-late-response` 写入模式与原 `--run-cas` 互斥；两者均要求 `--confirm-lab adui_scada`，默认仍只读。
+
+浏览器内自包含的 `armHeldCasResponseInPage` 仅对当前随机专用工程发起一次同源 CSRF 保护 POST。获取真实 201 后先解析克隆体核对 `revision=2` 和 SHA-256 形状，把原始 `Response` 保留在临时 Profile 内；`heldCasResponsePhaseInPage` 仅公开固定相位，不暴露 HTTP 正文和 Cookie；`releaseHeldCasResponseInPage` 仅允许一次显式消费。超时、非 201、非法快照、错误项目、跨 Origin、缺少 CSRF 或重复启动均拒绝，不做隐式重试。
+
+Node 编排第二主体读取 2、再 POST CAS 2→3，随后释放旧 201、第一主体过期 CAS 2→409、两端只读核对版本 3。只在本轮创建的随机项目上通过 `pg` 的只读 SQL 核对 `head_revision=3`、精确三条版本与审计记录及主体/摘要。失败时仍清理两个隔离浏览器 Profile，成功或失败均不自动删除测试专用工程，以免误删人工 Lab 数据。
+
+此项**不修改** `StudioServerProjectSession`、React/Vue 页面、NestJS、Prisma Schema、迁移、授权接口或工业控制权限。它比第十五小批的两层分离 Mock/DB 测试增加真实双浏览器与真实 BFF 的连续请求，但响应延后只发生在测试脚本中，尚未证明真实 Studio UI 接收到旧 201 后如何恢复；这一边界必须在验收报告中保留。
