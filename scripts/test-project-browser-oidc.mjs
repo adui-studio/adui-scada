@@ -989,9 +989,7 @@ async function verifySaveTimingScenarios(session, origin, name, selected) {
       const preview = await waitFor(async () => {
         const state = await session.evaluate(conflictPreviewStateInPage);
         const previewReady =
-          !state.busy &&
-          state.comparisonVisible &&
-          state.previewRevision === selected.headRevision;
+          !state.busy && state.comparisonVisible && state.previewRevision === selected.headRevision;
         return previewReady ? state : null;
       }, name + " 冲突恢复只读预览最新服务端版本");
       assert.equal(preview.writeAttempts, 1, name + " 预览不允许额外写入工程");

@@ -1004,17 +1004,13 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     const panel = { querySelectorAll: () => [button] };
     const originalDocument = globalThis.document;
     globalThis.document = {
-      querySelector: (selector) =>
-        selector === '[aria-label="服务端工程版本"]' ? panel : null,
+      querySelector: (selector) => (selector === '[aria-label="服务端工程版本"]' ? panel : null),
     };
     try {
       assert.equal(triggerConflictPreviewInPage(), true);
       assert.equal(clicks, 1);
       button.disabled = true;
-      assert.throws(
-        () => triggerConflictPreviewInPage(),
-        /冲突恢复只读预览按钮不可用/,
-      );
+      assert.throws(() => triggerConflictPreviewInPage(), /冲突恢复只读预览按钮不可用/);
     } finally {
       globalThis.document = originalDocument;
     }

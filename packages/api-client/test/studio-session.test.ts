@@ -828,11 +828,9 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     let rejectRead: (() => void) | undefined;
     api.readVersion.mockImplementationOnce(() => {
       signalRequested?.();
-      return new Promise<Awaited<ReturnType<ScadaApiClient["readVersion"]>>>(
-        (_resolve, reject) => {
-          rejectRead = () => reject(new ScadaApiError("工程不存在或无权访问", "not_found", 404));
-        },
-      );
+      return new Promise<Awaited<ReturnType<ScadaApiClient["readVersion"]>>>((_resolve, reject) => {
+        rejectRead = () => reject(new ScadaApiError("工程不存在或无权访问", "not_found", 404));
+      });
     });
     const pending = session.previewLatestVersion(projectId);
     await requested;
@@ -872,9 +870,7 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     const projectId = waterTreatmentDemoDocument.projectId;
     const session = createStudioServerProjectSession(api);
     session.acceptLoadedVersion(await session.readVersion(projectId, 1));
-    api.getProject.mockRejectedValueOnce(
-      new ScadaApiError("服务端暂时不可用", "network", 503),
-    );
+    api.getProject.mockRejectedValueOnce(new ScadaApiError("服务端暂时不可用", "network", 503));
     await expect(session.previewLatestVersion(projectId)).rejects.toMatchObject({
       kind: "network",
       status: 503,
@@ -883,5 +879,4 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     expect(api.createProject).not.toHaveBeenCalled();
     expect(api.appendVersion).not.toHaveBeenCalled();
   });
-
 });
