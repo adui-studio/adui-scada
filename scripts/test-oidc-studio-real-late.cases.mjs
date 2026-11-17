@@ -75,7 +75,9 @@ function studioCanvasRuntime(children) {
       };
     },
   };
-  return { document: { querySelector: (selector) => selector === ".studio-svg" ? source : null } };
+  return {
+    document: { querySelector: (selector) => (selector === ".studio-svg" ? source : null) },
+  };
 }
 
 async function settleResponse() {
@@ -391,7 +393,11 @@ void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
   void it("图元与渲染内容变化仍必须触发画布差异，不能被视口过滤掩盖", () => {
     const base = [
       { localName: "image", markup: "<image href='data:image/svg+xml,原有图元'/>" },
-      { localName: "rect", fill: "url(#scada-studio-grid)", markup: "<rect fill='url(#scada-studio-grid)'/>" },
+      {
+        localName: "rect",
+        fill: "url(#scada-studio-grid)",
+        markup: "<rect fill='url(#scada-studio-grid)'/>",
+      },
       { localName: "g", markup: "<g transform='rotate(0)'><rect width='30'/></g>" },
     ];
     const before = readStudioContentCanvasInPage(studioCanvasRuntime(base));
