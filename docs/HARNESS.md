@@ -2670,11 +2670,11 @@ if ($lateExitCode -ne 0) { throw "真实浏览器迟到 201 专项失败" }
 
 ## 第三十四批第十七小批 · React/Vue Studio 真实迟到 201 独立验收
 
-仅在隔离本机 Keycloak/HTTPS 双 Web Origin/PostgreSQL Lab 完备、已有两个同租户不同的预绑定普通测试用户时，才能运行显式写入专项。默认 \`ready\` 只包含 9 项 Node 离线安全测试，**不会创建工程或修改 ACL**。真实专项仅新建两个 UUID 测试工程；第一个主体在 React 与 Vue 分别通过 Studio UI 发出一次真实保存，第二主体从另一个独立浏览器推进到第三版。所有失败路径保留专用测试工程供复核，不删除其他工程、数据卷、用户或授权。
+仅在隔离本机 Keycloak/HTTPS 双 Web Origin/PostgreSQL Lab 完备、已有两个同租户不同的预绑定普通测试用户时，才能运行显式写入专项。默认 `ready` 只包含 9 项 Node 离线安全测试，**不会创建工程或修改 ACL**。真实专项仅新建两个 UUID 测试工程；第一个主体在 React 与 Vue 分别通过 Studio UI 发出一次真实保存，第二主体从另一个独立浏览器推进到第三版。所有失败路径保留专用测试工程供复核，不删除其他工程、数据卷、用户或授权。
 
 请先核对本地工作区，避免覆盖未提交变更。Windows PowerShell 从项目根执行：
 
-\`\`\`powershell
+```powershell
 git status --short
 git fetch origin
 git switch --track origin/test/v0.3-b34-studio-real-late-ui
@@ -2696,17 +2696,17 @@ pnpm run ready
 $readyExitCode = $LASTEXITCODE
 Write-Host "第十七小批完整质量链退出码：$readyExitCode"
 if ($readyExitCode -ne 0) { throw "完整质量链失败" }
-\`\`\`
+```
 
 完成本机 Lab 安全前置核查、允许创建**两个新专用空白工程**后，单独运行（需在隔离 Chrome/Edge 两窗口手动登录两位已预绑定普通测试用户；不得在终端粘贴密码）：
 
-\`\`\`powershell
+```powershell
 pnpm run test:oidc:dual:studio:late
 $browserExitCode = $LASTEXITCODE
 Write-Host "React/Vue 真实 Studio 迟到 201 退出码：$browserExitCode"
 if ($browserExitCode -ne 0) { throw "真实双框架 Studio 迟到 201 专项失败" }
-\`\`\`
+```
 
 验收必须同时看到 React 和 Vue 的“真实 UI 迟到 201、CAS 复核失效、草稿保护与三版审计检查完成”以及最终成功结论和明确退出码 0。浏览器中的版本 POST 必须恰好一次；第二主体真实追加至修订 3；释放第一主体已到达的 201 后，页面因真实只读 GET 发现水位差异清除旧 CAS，重复点击不再写入。比较画布 SVG、草稿数量与 SHA-256、自动保存状态，全过程只显示固定中文阶段。此测试仍不代表物理 TCP 断流、保存中强行上下文切换或生产系统验收。
 
-**当前仅提交验收候选，尚未运行上述 Windows 质量链与真实 Lab 专项。** 运行时务必打印并提供本机 \`git rev-parse HEAD\`，以便将证据与 PR HEAD 关联；本次只读静态检查不代替端到端验证。
+**当前仅提交验收候选，尚未运行上述 Windows 质量链与真实 Lab 专项。** 运行时务必打印并提供本机 `git rev-parse HEAD`，以便将证据与 PR HEAD 关联；本次只读静态检查不代替端到端验证。
