@@ -2242,3 +2242,37 @@ Write-Host "真实双 Keycloak 主体 HTTP CAS 验收退出码：$LASTEXITCODE"
 4. 只有预检退出码 0 且维护者核实运行中的 NestJS 连接到本机受控 `adui_scada` OIDC Lab 后，才单独执行 `test:oidc:dual:cas`。这会创建一份新的专用工程及精确 ACL，保留历史审计；不要反复在身份未满足时重跑写入命令。
 
 预绑定工具使用的参数契约见 `scripts/oidc-lab-identity.mjs`：`--tenant`、`--subject`、`--keycloak-sub`；默认只读预览，真正写入还须显式 `--apply --confirm-lab adui_scada`。它严格限制回环、本机库、可信 Realm 与迁移状态，不能替代第二位 Keycloak 用户的真实登录。
+
+## 第三十四批第七小批 · 本机隔离 PostgreSQL 会话注销与 ACL 即时撤销 HTTP 专项
+
+基于 PR #61 已合并的 `main@669c9ff3bb2d6194890cbc5049b58803ca775c5e`，只扩展 `apps/server/test/projects-cas-cookie-http.db-spec.ts` 的真实数据库 HTTP 测试，不新增产品 API 或用户权限管理能力。上一批 Windows `pnpm run ready` 已由维护者实测 **544/544 单测、49/49 E2E、退出码 0**，真实双 Keycloak 登录的 CAS 为 HTTP **201 + 409**；这些是第六小批的历史证据，不代表本批代码已复验。
+
+本批新增两项：
+
+1. 真实 NestJS `POST /api/v1/auth/logout` 使用原有同源 Cookie/CSRF，通过 PostgreSQL 服务端会话撤销当前主体 A 的会话；验证返回 HTTP **204**、清除 Cookie、数据库 `revokedAt` 已写入。即使客户端故意复用旧 Cookie，`/api/v1/auth/me`、工程列表和版本追加必须立即返回 **401**；未被撤销的主体 B 的会话仍有效，并能独立保存修订 2，成功审计只记录 B。
+2. 在两个已登录会话仍有效时，**仅在随机测试租户**删除主体 B 对该测试工程的三项 ACL；必须立即从 B 的工程列表移除，工程详情、历史列表及版本追加均返回 **404**，而 `/auth/me` 仍证明其身份有效；工程创建者 A 仍可读取和保存修订 2，成功审计与 A 一致。
+
+每个用例复用既有唯一 `test-<UUID>` 租户夹具，在 `finally` 定向清理本次审计、历史、ACL、工程、会话与身份。该专项不连接真实 Keycloak，也不读取或修改已有 OIDC Lab 的两位用户、11 项分页工程和双主体 CAS 专用工程；不是生产会话注销验收。测试数据只允许本机独立 `adui_scada_test`，`SCADA_TEST_DATABASE_URL` 必须显式配置；绝不使用真实业务库 `adui_scada`、Keycloak 库或远程数据库。
+
+Windows 命令如下：
+
+```powershell
+git fetch origin
+git switch --track origin/test/v0.3-b34-session-acl-revocation
+git rev-parse HEAD
+git status --short
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码质量检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+
+# 必须先核对独立测试数据库与迁移状态，禁止指向实际运行的 OIDC Lab。
+pnpm run test:db
+if ($LASTEXITCODE -ne 0) { throw "真实 PostgreSQL 会话与 ACL 专项失败" }
+Write-Host "第七小批验收退出码：$LASTEXITCODE"
+```
+
+真实 PostgreSQL `test:db` 原 **29** 项加本批 **2** 项，预计 **31/31**，这是验收目标不是实际通过结论。此处测试只验证已存在的会话注销和动态授权实现，**不提供新的会话或工程权限管理 UI，不扩大控制设备写入权限，也不替代独立真实 Keycloak 人工交互验收**。
