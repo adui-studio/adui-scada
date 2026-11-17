@@ -240,7 +240,9 @@ describe("本机隔离 PostgreSQL 双 Cookie 会话 HTTP CAS 事务", () => {
   it("两个不同会话并发保存同一修订号只能一个 HTTP 201，另一个 HTTP 409", async () => {
     await withFixture(async ({ tenantId, sessionA, sessionB }) => {
       const responses = await Promise.all([postVersion(sessionA), postVersion(sessionB)]);
-      expect(responses.map((response) => response.status).sort()).toEqual([201, 409]);
+      expect(
+        responses.map((response) => response.status).sort((left, right) => left - right),
+      ).toEqual([201, 409]);
       const winningIndex = responses.findIndex((response) => response.status === 201);
       expect(winningIndex).toBeGreaterThanOrEqual(0);
       const winning = responses[winningIndex]!;
