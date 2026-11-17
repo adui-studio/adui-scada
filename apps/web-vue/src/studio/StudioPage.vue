@@ -1218,10 +1218,7 @@ async function revalidateOnResume(): Promise<void> {
       serverHasMore.value = false;
       serverInspectedVersion.value = null;
     }
-    if (
-      error instanceof ScadaApiError &&
-      (accessRejected || revisionConflict)
-    ) {
+    if (error instanceof ScadaApiError && (accessRejected || revisionConflict)) {
       serverError.value = error.message;
       notice.value = "标签页恢复校验发现变更：" + error.message + "；本地画布与草稿不变";
     } else if (error instanceof ScadaApiError && error.kind === "network") {
