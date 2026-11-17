@@ -683,7 +683,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     );
     assert.equal(
       describeProjectBrowserFailure(new Error("React 权限模拟工程列表加载未达到预期状态；secret")),
-      "浏览器登录或 Studio 页面未达到预期状态，请检查隔离 Lab、登录与服务端工程",
+      "浏览器安全回归断言失败，检查终端测试条件及真实页面状态",
     );
   });
 
