@@ -795,3 +795,11 @@ React 和 Vue 在一个真实临时浏览器中分别进入 Studio：对比工�
 - 沿用 `PrismaProjectVersionStore.append` 的工程行 `FOR UPDATE`、ACL 复查、`expectedRevision` 比较、版本追加/水位推进/成功审计同事务规则。两个不同 `subjectId` 分别通过两个独立 `PrismaService` 连接并发提交 `expectedRevision=1`：要求一成功、一 `ProjectRevisionConflictError`；数据库最终仅有修订 1/2 的两条历史与两条审计记录，修订 2 的审计操作者必须等于真实获胜主体。此验证在仓储层，不是两条 OIDC HTTP 请求，也不会测试新的发布或设备写入。
 - 交互式 `test:projects:oidc:browser:pages` 复用原真实 Keycloak/HTTPS/Chrome/Edge 临时浏览器专项，额外强制 React 与 Vue 都进行**有数据的第二页**前后翻页；普通 `test:projects:oidc:browser` 行为保持不变。命令不向 Lab 写入项目、ACL、版本或身份；授权工程不足 11 项时以中文固定错误和非零退出码停止，禁止伪造多页通过结论。
 - 独立 `pnpm run test:db` 仍必须显式配置 `SCADA_TEST_DATABASE_URL` 指向本机 `adui_scada_test`，与根环境业务库 `adui_scada` 严格隔离；不新增数据库表、字段、索引、迁移和依赖。
+
+## 2026-11-17 · 第三十四批第五小批：两会话 HTTP CAS 409 隔离验收
+
+\`apps/server/test/projects-cas-cookie-http.db-spec.ts\` 构造真实 NestJS \`ProjectApiController\` 与 \`ScadaSessionGuard\`/\`ScadaProjectGuard\`、真实 \`AuthSessionService\` 和 \`PrismaProjectVersionStore\`，**不替换 Guard、会话或仓储为 Mock**。测试先在本机 \`adui_scada_test\` 的随机租户中创建两个 \`active\` 主体；使用仅供服务端可信身份流程调用的内部 \`issueForVerifiedSubject\` 为每个主体创建独立 Cookie 与 CSRF 配对，再通过现有工程创建事务建立修订 1 并显式授予另一主体同工程的读取/追加 ACL。通过 Supertest 发出的请求实际经过 HTTP 控制器、Origin/Fetch Metadata、会话 Cookie、CSRF 双提交、ACL 和 PostgreSQL 行锁事务。
+
+四项独立测试分别验证：双主体读取工程摘要且未登录拒绝；错误 CSRF、非法 Origin、Bearer 与 Cookie 混用均失败并保持数据库不变；具备合法会话但缺少 \`version:append\` 时返回 404；两个会话同时发送 \`expectedRevision=1\`，恰好得到 201/409，失败重试仍为 409，最终 head 为 2，历史/审计仅有修订 1、2，修订 2 的 \`createdBy\`/审计 \`actorId\` 与成功 HTTP 请求主体一致。单独用例只清理自己的随机测试租户的会话、审计、历史、授权、工程和身份。
+
+不修改 HTTP 响应契约；本专项覆盖真实 BFF Cookie 与 PostgreSQL 的 HTTP 行为，**不覆盖真实 Keycloak 授权码回调、真实浏览器 TLS Cookie、多个服务端进程或生产环境安全认证**。不得把它混称为真实双 IdP 登录测试。
