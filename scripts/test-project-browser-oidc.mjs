@@ -457,7 +457,9 @@ export function installAccessDenialFaultInPage(runtime = globalThis) {
   runtime.fetch = async (input, init) => {
     const raw = typeof input === "string" ? input : input.url;
     const url = new URL(raw, runtime.location.href);
-    const method = (init?.method ?? (typeof input === "string" ? "GET" : input.method)).toUpperCase();
+    const method = (
+      init?.method ?? (typeof input === "string" ? "GET" : input.method)
+    ).toUpperCase();
     const projectPath =
       url.pathname === "/api/v1/projects" || url.pathname.startsWith("/api/v1/projects/");
 
@@ -513,12 +515,7 @@ function triggerAccessDenialInPage(scope) {
     scope === "list"
       ? document.querySelector(".studio-project-browser-panel")
       : document.querySelector('[aria-label="服务端工程版本"]');
-  const label =
-    scope === "list"
-      ? "刷新"
-      : scope === "history"
-        ? "查询服务端历史"
-        : "保存至服务端";
+  const label = scope === "list" ? "刷新" : scope === "history" ? "查询服务端历史" : "保存至服务端";
   const button = [...(panel?.querySelectorAll("button") || [])].find(
     (item) => item.textContent.trim() === label,
   );
@@ -728,7 +725,9 @@ export function resolveProjectBrowserMode(parameters, env) {
     }
     return { requireMultiPage: false, prepareMultiPage: true };
   }
-  throw new Error("仅支持 --require-multipage、--simulate-access-denial 或显式确认的多页数据准备参数");
+  throw new Error(
+    "仅支持 --require-multipage、--simulate-access-denial 或显式确认的多页数据准备参数",
+  );
 }
 
 /**
@@ -1017,9 +1016,7 @@ async function run() {
         "(" +
         installRevisionConflictFaultInPage.toString() +
         ")();" +
-        (mode.simulateAccessDenial
-          ? "(" + installAccessDenialFaultInPage.toString() + ")();"
-          : ""),
+        (mode.simulateAccessDenial ? "(" + installAccessDenialFaultInPage.toString() + ")();" : ""),
     });
     process.stdout.write("真实 OIDC 会话已在 React Origin 验证，开始双框架只读工程验收。\n");
     await verifyStudio(session, origins[0], "React", mode.requireMultiPage);
