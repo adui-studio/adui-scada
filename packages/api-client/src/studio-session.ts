@@ -45,7 +45,8 @@ export class StudioServerProjectSession {
    * 只有明确恢复本地工程或重新载入授权工程才能解除阻断。
    */
   invalidateAccess(projectId?: string): void {
-    this.blockedCreateProjectId = projectId ?? this.baseline?.projectId ?? this.blockedCreateProjectId;
+    this.blockedCreateProjectId =
+      projectId ?? this.baseline?.projectId ?? this.blockedCreateProjectId;
     this.baseline = null;
   }
 
