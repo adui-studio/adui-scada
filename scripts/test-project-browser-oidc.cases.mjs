@@ -12,6 +12,8 @@ import {
   releaseSaveTimingInPage,
   triggerSaveTimingInPage,
   saveTimingStateInPage,
+  triggerConflictPreviewInPage,
+  conflictPreviewStateInPage,
   triggerStudioResumeInPage,
   openProjectInPage,
   requireAuthorizedProjectPage,
@@ -988,6 +990,65 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       /多页数据准备 CSRF Cookie 无效/,
     );
     assert.equal(writes, 0);
+  });
+
+  void it("冲突后通过真正的只读预览按钮操作，不能调用页面写入函数", () => {
+    let clicks = 0;
+    const button = {
+      textContent: "只读预览最新版本",
+      disabled: false,
+      click: () => {
+        clicks += 1;
+      },
+    };
+    const panel = { querySelectorAll: () => [button] };
+    const originalDocument = globalThis.document;
+    globalThis.document = {
+      querySelector: (selector) =>
+        selector === '[aria-label="服务端工程版本"]' ? panel : null,
+    };
+    try {
+      assert.equal(triggerConflictPreviewInPage(), true);
+      assert.equal(clicks, 1);
+      button.disabled = true;
+      assert.throws(
+        () => triggerConflictPreviewInPage(),
+        /冲突恢复只读预览按钮不可用/,
+      );
+    } finally {
+      globalThis.document = originalDocument;
+    }
+  });
+
+  void it("预览状态只暴露受控计数、布尔量和修订号", () => {
+    const originalDocument = globalThis.document;
+    const previousFault = globalThis.__aduiTestAccessDenial;
+    const panel = {
+      textContent: "服务端最新修订号：3 · CAS 基线：未建立",
+      querySelectorAll: (selector) =>
+        selector === ".studio-version-help" ? [{ textContent: "已只读核验" }] : [],
+      querySelector: (selector) =>
+        selector === ".studio-version-comparison"
+          ? { querySelector: () => ({ textContent: "服务端版本 #3 · 与当前内容不同" }) }
+          : null,
+    };
+    globalThis.__aduiTestAccessDenial = { writeAttempts: 1, secret: "保密令牌" };
+    globalThis.document = { querySelector: () => panel };
+    try {
+      const state = conflictPreviewStateInPage();
+      assert.deepEqual(state, {
+        writeAttempts: 1,
+        busy: false,
+        baselineCleared: true,
+        hasError: false,
+        comparisonVisible: true,
+        previewRevision: 3,
+      });
+      assert.equal(JSON.stringify(state).includes("保密令牌"), false);
+    } finally {
+      globalThis.document = originalDocument;
+      globalThis.__aduiTestAccessDenial = previousFault;
+    }
   });
 
   void it("不允许生产模式启动交互式本机测试", () => {
