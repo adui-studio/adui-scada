@@ -1394,3 +1394,11 @@ E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CD
 第九小批增加了**可人工复验、浏览器内无服务端工程写入**的专项：仅在 `--simulate-access-denial` 模式下，将工程只读 GET 的历史接口、授权工程列表接口和工程当前水位接口依次模拟为 401、403、404，在 React/Vue 每个 Origin 上检查 CAS 基线/服务端版本水位/列表旧摘要清除、IndexedDB 草稿 Hash 与画布一致；404 后重复保存不能触发真实工程创建或追加。模拟 wrapper 在程序捕获 Fetch 之前安装，**所有工程路径非 GET/HEAD 方法先被硬性拦截**，只对匹配的当前 Origin 和具体路由 GET 模拟状态，不重写 Cookie/身份、不触碰 Keycloak/ACL。新增 3 项 Node.js 离线测试证明写入拦截、Scope/状态白名单、参数组合互斥；预计 `test:projects:oidc:config` 从 **18 项到 21 项**。
 
 **当前验证：** GitHub 分支已提交候选源码；协作端仅做有限 JS 函数语法解析与变更锚点检查，**尚未在 Windows 执行新 HEAD 的 `test:projects:oidc:config`、`vp check`、`docs:check`、`ready` 或 React/Vue 交互浏览器专项**。无真实测试证据时不能声称 21/21 或拒绝 UI 测试已经通过。第七小批 PostgreSQL 31/31 的真实 ACL 即时撤销测试是服务端独立证据；本批模拟状态不证明真实 Keycloak ACL 撤销后的端到端一致性，也不意味着工业生产安全验证完成。
+
+## 2026-11-17 · 第三十四批第十小批真实 ACL 撤销双框架浏览器候选（待 Windows 验收）
+
+PR #64 已按维护者授权 Squash 合并为 `main@d59df5e9ef2d702954f6b20173990abe53dffc3a`。维护者已实际执行旧模拟拒绝浏览器专项：React/Vue 401/403/404 均通过、退出码 0，`test:projects:oidc:config` 21/21、`vp check` 331/186 零告警、`docs:check` 86，完整 `ready` 550/550 单测、49/49 服务端 E2E 和双端/NestJS 构建完成。**此前仅有模拟 HTTP 拒绝，不是真实数据库 ACL 撤销后的 UI 验收。**
+
+本批新增 `scripts/test-oidc-real-acl-revocation.mjs`：默认通过两份真实独立 Keycloak 登录核对同租户不同本地主体，不执行写入；显式确认 `--run-revoke --confirm-lab adui_scada` 后，在本机受控 OIDC Lab 分别创建 React/Vue 专用随机空白工程，仅对新工程授予第二主体三项权限并于真实 Studio 确认载入后定向撤销。随后第二主体真实 HTTP 详情/历史/首版 404，身份仍有效，UI 的旧 CAS/水位/授权列表被清除，重复保存受控拒绝，SVG 画布与 IndexedDB 草稿保持不变；第一主体仍能读取旧首版、PostgreSQL 修订号和成功审计仍为 1。所有测试工程保留供人工复核，不触碰历史工程、其他主体 ACL、真实生产或工业采集设备。
+
+新增 `scripts/test-oidc-real-acl-revocation.cases.mjs` 共 8 项离线安全测试；仅此 8 项会进入 `ready`，浏览器与 Lab 写入必须单独人工执行。协作端使用 V8 分段解析脚本与测试通过；首次模拟中 8 项为 7 通过/1 失败，定位到**SQL 测试 Mock 的 DELETE 匹配落入普通 SELECT 分支**，只调整 Mock 判断先后，再次模拟 **8/8**，未放宽真实 SQL 事务保护与断言。**这不是 Windows `node --test` 的实际运行结果**，也未执行本批 `vp check`、`docs:check`、`ready`、真实 Prisma/Keycloak/浏览器专项。全链仅为待验收候选，不能声称真实撤权已验证通过。
