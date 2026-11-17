@@ -901,7 +901,12 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
   it("显式选择早期历史版本可确认载入但不能冒充最新 CAS", async () => {
     const api = mockClient();
     const projectId = waterTreatmentDemoDocument.projectId;
-    api.getProject.mockResolvedValue({ projectId, headRevision: 3, createdAt, updatedAt: createdAt });
+    api.getProject.mockResolvedValue({
+      projectId,
+      headRevision: 3,
+      createdAt,
+      updatedAt: createdAt,
+    });
     const session = createStudioServerProjectSession(api);
     const version = await session.readVersion(projectId, 1);
 
@@ -940,7 +945,12 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     const session = createStudioServerProjectSession(api);
     const version = await session.readVersion(projectId, 1);
     session.acceptLoadedVersion(version);
-    api.getProject.mockResolvedValue({ projectId, headRevision: 2, createdAt, updatedAt: createdAt });
+    api.getProject.mockResolvedValue({
+      projectId,
+      headRevision: 2,
+      createdAt,
+      updatedAt: createdAt,
+    });
 
     await expect(session.revalidateConfirmedLoad(version)).rejects.toMatchObject({
       kind: "conflict",
