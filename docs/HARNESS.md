@@ -2334,3 +2334,42 @@ Write-Host "权限拒绝模拟浏览器退出码：$LASTEXITCODE"
 执行浏览器专项时使用已有**预绑定普通 Keycloak 测试用户**人工登录，不在 PowerShell 中粘贴密码。浏览器按真实授权列表选取既有一项工程，先通过实际同源 GET 确认载入，再在页面内模拟服务端 GET 返回：React/Vue 分别覆盖历史 401、列表 403、工程水位 404，验证旧 CAS 基线与授权摘要消失、SVG 画布和 IndexedDB 草稿内容摘要未改变、没有任何工程写入请求向真实 Lab 发送。该模式对工程 API 的所有非 GET/HEAD 请求永久拦截，不执行真实服务器的登出、ACL 撤销或项目创建。临时浏览器 Profile 在 finally 中关闭并删除，不打印任何用户身份或密钥。
 
 **风险及边界**：若真实 Keycloak/HTTPS Lab 未启动、临时 Profile 无现有工程权限或 DOM/浏览器版本不符合既有脚本约束，专项按安全设计失败并返回退出码 1，不得放宽数据库白名单、关闭 TLS 或为测试手工更改既有 ACL。浏览器演练是**模拟服务端拒绝**，不是“真实撤权 E2E”；独立真实 PostgreSQL 服务端 ACL 测试（上一批 31/31）仍是另一层证据。目标验收为离线 **21/21**、原单测 **550/550**、服务端 E2E **49/49**、真实模拟浏览器命令 **退出码 0**，均需以维护者 Windows 实际日志为准。
+
+## 第三十四批第十小批 · 真实双主体 ACL 撤销与 React/Vue UI 验收（受控写入）
+
+基线为维护者明确授权 Squash 合并的 PR #64：`main@d59df5e9ef2d702954f6b20173990abe53dffc3a`。第九小批真实 Keycloak 登录＋浏览器内 401/403/404 模拟已在 Windows React/Vue 完整通过（专项退出码 0），离线 OIDC 浏览器专项 21/21、常规单测 550/550、服务端 E2E 49/49。该证据**不代表**真实 PostgreSQL ACL 撤销后的双框架 UI 已通过，因此本批新增独立专项。
+
+只增加新的受控 OIDC Lab 验收脚本与 8 项 Node.js 离线安全用例，复用现有真实 CDP 浏览器和官方工程创建/读取入口，**不修改正式前端/后端、Schema、迁移、Keycloak 用户、历史工程或工业控制路径**。预检无数据库写入；完整浏览器专项带有显式写入开关，严格拒绝非生产与非回环 TLS/数据库、错误的库名或无效身份映射。
+
+Windows 验收步骤：
+
+```powershell
+git status --short
+git fetch origin
+git switch --track origin/test/v0.3-b34-real-acl-revocation-ui
+git rev-parse HEAD
+
+pnpm run test:oidc:revoke:config
+if ($LASTEXITCODE -ne 0) { throw "权限撤销离线测试失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "格式、Lint 或类型检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+
+# 仅登录检查，没有工程/ACL 写入；两个独立浏览器分别登录 adui 与 test。
+pnpm run test:oidc:revoke:preflight
+Write-Host "真实撤权只读预检退出码：$LASTEXITCODE"
+```
+
+**仅当只读预检退出码为 0，且重新核对 NestJS 当前真实连接本机受控 `adui_scada` OIDC Lab 后**，维护者才可决定运行下面的显式写入专项。不要把本机独立的 `adui_scada_test` 真库测试环境当成此命令的目标，也不要使用生产库、远端数据库、其他 Keycloak Realm 或旧账号：
+
+```powershell
+pnpm run test:oidc:revoke:browser
+Write-Host "真实 React/Vue ACL 撤销浏览器退出码：$LASTEXITCODE"
+```
+
+交互阶段每位主体在临时隔离浏览器中手动登录 Keycloak 普通测试用户，不在终端输入/粘贴密码。此命令**真实创建两份新 UUID 空白专用工程**（分别供 React 与 Vue 测试），用固定三项 ACL 暂时授予第二位主体；在已建立真实 CAS 基线且确认本地 IndexedDB 草稿存在后，仅定向删除该新工程上的第二主体三项 ACL。随后要求真实 BFF `/auth/me` 依然有效，详情、历史与首版三个请求均返回 404，React/Vue 服务端摘要及 CAS 清空、本地画布和草稿不变，重复保存被阻断，创建者仍能读首版，PostgreSQL 修订号仍为 1 且仅单条成功审计。专用工程及其首版、审计保留供复核，**不清空数据库、撤销已有工程权限或修改既有测试账号**。失败时脚本在 `finally` 尽可能定向回收本轮授予的第二主体 ACL；如需人工复核，只检查终端输出的本次随机工程，禁止全库删除。
+
+本批目标：新离线安全用例 **8/8**；`ready` 普通单元测试预计仍为 **550/550**、服务端 E2E **49/49**、旧项目浏览器离线 21/21；新真实浏览器脚本 **退出码 0**。协作端仅完成 V8 函数语法及 8 项模拟测试，**真实 Windows CLI、Keycloak 双登录、PostgreSQL SQL 与双框架 UI 尚未执行**。不能将模拟测试标为 Node 正式通过。
