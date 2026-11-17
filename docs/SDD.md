@@ -842,3 +842,11 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 `revokeSecondSubject` 在 PostgreSQL `BEGIN ISOLATION LEVEL SERIALIZABLE` 中 `SELECT … FOR UPDATE` 锁定本次新工程，仅当仍为创建者首版、修订号 1、第一主体三项及第二主体恰好三项固定 ACL（无其他额外授权）时，以租户 ID、专用工程 ID、第二主体 ID 和三项权限为完整条件执行一次 `DELETE … RETURNING permission`。提交后用 `verifyRevokedProject` 对比三项创建者授权、仅有一个版本和成功审计、首版操作主体；重复撤销时无 SQL 删除。若创建后流程中途失败，`finally` 在同样范围约束下尝试撤销新授予的 ACL；不做全租户批量撤销，不修改身份映射/已存在 Lab 工程，不清除测试工程。
 
 第二主体的 React 与 Vue 浏览器按顺序验证（分别创建两份专用工程，避免撤销后重新授权造成旧状态不可信）。UI 测试经真实 HTTPS/Keycloak/BFF `GET` 获取首版、查找授权列表并在确认对话后建立 CAS 基线；实际撤销后直接从相同 Origin 读取详情、历史、首版并断言 `[404,404,404]`，`/auth/me` 仍匹配第二主体。用户界面查询服务端历史后必须清空旧服务端摘要和授权列表、保留本地 SVG 与 IndexedDB 草稿；重复保存必须显示受控的访问失效提示且没有工程写入。主体验证另一浏览器仍能读首版；在数据库再次检查水位仍为 1、版本/成功审计仍为 1。所有诊断只输出静态中文步骤与本次测试项目 ID，不输出主体信息、Cookie、Token、原始 SQL 错误或 HTTP 正文。
+
+### 第三十四批第十一小批 · `StudioServerProjectSession.revalidateBaseline` 与前台恢复事件
+
+共享 `packages/api-client/src/studio-session.ts` 新增 `revalidateBaseline(projectId): Promise<"unchanged" | "skipped">`。仅当当前 `projectId` 与已确认保存基线一致时执行两个顺序 GET：`getMe()` 和 `getProject(projectId)`；不读取或修改 IndexedDB、工程 Schema，不调用 `createProject`/`appendVersion`。检测已认证主体的 `tenantId/subjectId` 与旧基线不一致时，以受控 `forbidden` 403 拒绝；响应 401/403/404 时经现有 `invalidateAccess` 保留原 ID 的自动创建阻断；`headRevision` 与保存基线不一致则按 `conflict` 409 丢弃基线。网络失败原样抛出且不误清 CAS。
+
+调用开始时保存原基线对象引用，每次 `await` 后核对其仍是最新；用户在等待中清空或重新确认载入新基线时，旧请求以 `skipped` 返回，不允许覆盖或清空新基线。React 与 Vue 均只监听 `visibilitychange` 的可见状态（不是后台轮询/权限推送），并在主动历史、草稿或前一次复核进行中跳过本次事件；发生授权/版本变化时仅重置服务端修订号、远端历史和对比快照，不重载画布、不停止本地自动保存。组件卸载时移除事件监听，迟到结果不更新已卸载的组件。
+
+独立浏览器回归复用已有安全 CDP 脚本的 `--simulate-resume-check` 单模式，以真实 Keycloak/BFF 读取并显式载入既有授权工程，随后调用自包含的 `triggerStudioResumeInPage` 派发可见事件。模拟 401 只定向当前 Origin 的 `GET /api/v1/auth/me`，模拟 404 只定向既有项目 GET 详情；修订号漂移仍借已有受控 GET 响应摘要模拟器将 `headRevision` 增加 1。隔离 Profile 永久拦截工程 API 非 GET/HEAD 写请求。每轮比较恢复前后 SVG DOM、IndexedDB SHA-256、自动保存状态，并验证 UI CAS/旧水位失效和零工程写入尝试。本专项**不在真实数据库中修改 ACL 或版本号**。
