@@ -944,3 +944,13 @@ Node 编排第二主体读取 2、再 POST CAS 2→3，随后释放旧 201、第
 两端 `StudioPage` 仅记录当前冲突对应的 `projectId`，避免工程切换后显示错误操作入口；409（包括前台可见性真实水位冲突）出现时提供“只读预览最新版本”。用户点击后沿用现有 `runServerAction`、历史忙碌与草稿互斥，先调用共享预览，再以真正受保护的 `listVersions(limit=10)` 读取第一页。只接受第一页最新修订号与刚核验的 `headRevision` 相同的结果，防止异步历史列表把已经过期的版本当作最新；之后更新 `serverRows`、`serverHeadRevision`、`serverInspectedVersion`，显示已有 `compareProjectDocuments` 内容差异。成功只读操作不改 `editor`、IndexedDB 和共享 CAS。用户仍必须单独点击已有版本“载入”并明确确认，才会暂停自动保存、替换画布及建立新基线。
 
 复用 `scripts/test-project-browser-oidc.mjs --simulate-save-timing` 的隔离真实 Keycloak 浏览器模式：合成 409 被释放后，React/Vue Studio 必须显示预览按钮，点击后由真实 BFF 通过全部 GET 核验最新版本，预览比较可见且不创建 CAS，浏览器写入拦截器必须仍只记录先前的一个被拦截 POST；画布、草稿 SHA-256 与自动保存状态不变。此模式的 409 是**浏览器本地合成拒绝**，不是另行发生真实 PostgreSQL 写入冲突；此前真实 BFF/PostgreSQL CAS 验收另有独立证据。失败或不具备可信 OIDC 环境时保持拒绝，不泄露身份、Cookie、Token、响应正文或 SQL。
+
+## 2026-11-17 · 第三十四批第十九小批：确认载入后的身份和水位复核
+
+已有流程 `readVersion → window.confirm → pauseAutoSave → editor.loadDocument → acceptLoadedVersion` 在用户确认对话框期间存在时间差：`readVersion` 返回的最新水位可能已过期，确认后仍可能加载旧快照并错误提示“已载入最新版本”，虽然下一次 CAS 写入仍会被服务器拒绝。
+
+新增框架无关的 `StudioServerProjectSession.revalidateConfirmedLoad(version): Promise<void>`，仅在用户**同意载入之后**调用。顺序：`getMe` → 校验当前 contextGeneration 与原 principal tenant/subject → `getProject(version.snapshot.projectId)` → 再校验 contextGeneration 与远端 `headRevision === version.headRevision`。身份不一致受控返回 403；远端水位变化受控返回 409，同时清除同工程的过期 CAS 基线（其他工程基线不受影响）；实时 401/403/404 走既有 `invalidateAccess`，阻断误创建；503/network 保留此前合法基线。所有请求都是 GET，不读取或写入 IndexedDB，不创建、追加、回滚或删除工程。过期异步请求在 catch 中仍核对 contextGeneration，不会清除后来已重新确认的有效基线。
+
+React/Vue 原 `loadServerVersion` 及 `openServerProject` 确认对话后，先 await `revalidateConfirmedLoad`，再检查原编辑工程 ID 未发生变化，之后才执行现有 `pauseAutoSave`、`loadDocument` 与 `acceptLoadedVersion`。没有把预览自动转换成 CAS，也没有修改原确认提示或 IndexedDB 草稿持久化。早期历史版本如果服务端最新水位保持不变仍可载入，按既有规则得到空 CAS 基线。确认期间异步水位改变必须先失败，禁止替换 SVG；此防护不承诺对最终 GET 之后的远端写入提供事务级原子性，未来保存依旧由服务端行锁与 CAS 判断。
+
+浏览器新增两种独立回归：原工程列表“打开”的测试钩子仅在 `window.confirm` 返回同意之后，针对本轮专用工程的一个 GET 摘要**合成水位 +1**，检查双框架拒绝载入、画布/草稿/自动保存不变；此数据不写入 PostgreSQL。原 409 保存模拟专项完成真实 BFF 最新版只读预览后，再点击**真实服务端版本列表的“载入”按钮**，接受原确认、执行真实 GET 复核，必须建立原最新 CAS 并暂停自动保存，同时保持 IndexedDB 草稿和写入拦截计数。测试不将合成 GET 漂移称为真实并发数据库提交，也不扩大工业设备控制权限。

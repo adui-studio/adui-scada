@@ -14,6 +14,7 @@ import {
   saveTimingStateInPage,
   triggerConflictPreviewInPage,
   conflictPreviewStateInPage,
+  confirmPreviewedServerVersionInPage,
   triggerStudioResumeInPage,
   openProjectInPage,
   requireAuthorizedProjectPage,
@@ -1044,6 +1045,62 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     } finally {
       globalThis.document = originalDocument;
       globalThis.__aduiTestAccessDenial = previousFault;
+    }
+  });
+
+  void it("只使用实际版本列表载入按钮确认并等待受控 UI 成功", async () => {
+    let clicks = 0;
+    const originalDocument = globalThis.document;
+    const originalWindow = globalThis.window;
+    let notice = "";
+    const button = {
+      textContent: "载入",
+      disabled: false,
+      click: () => {
+        clicks += 1;
+        const approved = globalThis.window.confirm("测试用户确认载入");
+        if (approved) notice = "已载入服务端最新版本 #3，自动保存已暂停";
+      },
+    };
+    const row = {
+      querySelector: () => ({ textContent: "服务端版本 #3" }),
+      querySelectorAll: () => [button],
+    };
+    const panel = {
+      querySelectorAll: (selector) => (selector === ".studio-version-item" ? [row] : []),
+      querySelector: () => null,
+    };
+    const originalConfirm = () => false;
+    globalThis.window = { confirm: originalConfirm };
+    globalThis.document = {
+      querySelector: (selector) =>
+        selector === '[aria-label="服务端工程版本"]'
+          ? panel
+          : selector === ".studio-notice"
+            ? { textContent: notice }
+            : null,
+    };
+    try {
+      assert.deepEqual(await confirmPreviewedServerVersionInPage(3), {
+        confirmed: true,
+        confirmCount: 1,
+      });
+      assert.equal(clicks, 1);
+      assert.equal(globalThis.window.confirm, originalConfirm);
+    } finally {
+      globalThis.document = originalDocument;
+      globalThis.window = originalWindow;
+    }
+  });
+
+  void it("无效修订号或缺少目标按钮时不能触发人工确认", async () => {
+    await assert.rejects(confirmPreviewedServerVersionInPage(0), /冲突恢复确认载入版本参数不合法/);
+    const originalDocument = globalThis.document;
+    globalThis.document = { querySelector: () => null };
+    try {
+      await assert.rejects(confirmPreviewedServerVersionInPage(3), /冲突恢复确认载入按钮不可用/);
+    } finally {
+      globalThis.document = originalDocument;
     }
   });
 

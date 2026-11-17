@@ -137,6 +137,52 @@ export class StudioServerProjectSession {
     }
   }
 
+  /**
+   * 用户确认载入后、替换画布之前重新核验身份及工程水位。
+   * 旧预览或旧工程列表记录不得在确认对话框期间变成隐式最新版本。
+   */
+  async revalidateConfirmedLoad(version: ServerProjectVersion): Promise<void> {
+    const generation = this.contextGeneration;
+    const projectId = version.snapshot.projectId;
+    try {
+      const identity = await this.api.getMe();
+      this.requireCurrentContext(generation);
+      if (
+        identity.principal.tenantId !== version.principal.tenantId ||
+        identity.principal.subjectId !== version.principal.subjectId
+      ) {
+        throw new ScadaApiError(
+          "确认载入时服务端登录主体已变化，请重新登录并选择工程",
+          "forbidden",
+          403,
+        );
+      }
+      const current = await this.api.getProject(projectId);
+      this.requireCurrentContext(generation);
+      if (current.headRevision !== version.headRevision) {
+        throw new ScadaApiError(
+          "确认载入时服务端版本已变化，请重新只读预览最新版本",
+          "conflict",
+          409,
+        );
+      }
+    } catch (error) {
+      // 旧请求不能撤销随后重新确认的合法基线。
+      this.requireCurrentContext(generation);
+      if (isScadaAccessRejection(error)) {
+        this.invalidateAccess(projectId);
+      } else if (
+        error instanceof ScadaApiError &&
+        error.kind === "conflict" &&
+        this.baseline?.projectId === projectId
+      ) {
+        this.contextGeneration += 1;
+        this.baseline = null;
+      }
+      throw error;
+    }
+  }
+
   /** 只有用户实际载入最新服务端版本，才建立后续 CAS 保存基线。 */
   acceptLoadedVersion(version: ServerProjectVersion): void {
     this.contextGeneration += 1;
