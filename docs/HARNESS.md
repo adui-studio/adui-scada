@@ -2613,3 +2613,9 @@ if ($readyExitCode -ne 0) { throw "完整质量链失败" }
 ```
 
 必要时还可独立复查 `pnpm run test:db`，但不得为了消除 `bad port` 而切换生产或开发 PostgreSQL。当前新增代理端口修复只有静态源码核对，**尚无 Windows 新版 SSE 或 ready 退出码**；已有真实 DB 32/32 的验收结论不受影响。
+
+## 第三十四批第十五小批 · Windows 最终质量结果
+
+2026-11-17 维护者 Windows 实测：`pnpm run test:sse:fault:unit` **4/4**；`vp check` **333 文件格式正确/188 受检零告警错误**；`docs:check` **86**；完整 `pnpm run ready` **退出码 0**，包含共享 Vitest **567/567**、SSE 客户端 **8/8**、故障代理 **4/4**、OIDC 工程浏览器离线安全 **33/33**、NestJS HTTP E2E **49/49**、React/Vue/NestJS 类型检查和构建。另有同一小批此前已在本机隔离 `adui_scada_test` 单独执行的真实 `test:db` **4/4 文件、32/32 用例、退出码 0**，四项 Prisma 迁移为最新。
+
+前面“故障代理 2/4”和“ready 退出码 1”是补丁前历史记录，不再是本批当前质量结论。修复后 Windows 证明 SSE 代理在所测端口上的安全监听与 TCP 故障注入恢复正常；上轮未记录随机分配的确切禁用端口，因此不虚构具体端口值。两层 CAS 测试仍非物理 TCP 断流或真实浏览器对同一 PostgreSQL 提交回包的单条完整 E2E。原始日志没有 `git rev-parse HEAD`，新文档提交亦未运行完整门禁；未经明确授权不合并 PR #70。
