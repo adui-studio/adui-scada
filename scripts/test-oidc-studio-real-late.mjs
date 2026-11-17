@@ -49,6 +49,7 @@ const SAFE_ERRORS = new Set([
   "真实 Studio 迟到保存结果与数据库不一致",
   "真实 Studio 迟到保存未阻止重复写入",
   "真实 Studio 迟到保存的本地数据发生变化",
+  "隔离第二主体浏览器窗口状态切换失败",
 ]);
 
 export function parseStudioRealLateMode(args) {
@@ -363,6 +364,30 @@ async function waitForStudioState(session, name, stage, predicate) {
   throw new Error("真实 Studio 迟到保存未达到受控状态");
 }
 
+/**
+ * 仅管理第二位测试主体所属的隔离浏览器窗口。
+ * CDP Page.bringToFront 只激活标签，不保证 Windows 把窗口从遮挡中恢复。
+ * 不修改 document.visibilityState，不伪造 visibilitychange。
+ */
+export async function setSecondaryBrowserWindowState(session, windowState) {
+  if (windowState !== "normal" && windowState !== "minimized") {
+    throw new Error("隔离第二主体浏览器窗口状态切换失败");
+  }
+  try {
+    const window = await session.send("Browser.getWindowForTarget");
+    if (!Number.isSafeInteger(window.windowId) || window.windowId <= 0) {
+      throw new Error("隔离第二主体浏览器窗口状态切换失败");
+    }
+    await session.send("Browser.setWindowBounds", {
+      windowId: window.windowId,
+      bounds: { windowState },
+    });
+    return true;
+  } catch {
+    throw new Error("隔离第二主体浏览器窗口状态切换失败");
+  }
+}
+
 /** 两种框架各在真实 Studio UI 触发保存，第二主体从另一个浏览器推进数据库水位。 */
 async function verifyFramework(
   session,
@@ -393,6 +418,8 @@ async function verifyFramework(
   requireUnchangedDocument(before, await inspectStudioState(session));
   process.stdout.write(name + "：真实 201 已到达并挂起 Studio UI，另一主体准备推进版本 3\n");
 
+  // 第二主体真实读取/提交时恢复其独立浏览器窗口，不影响原有 BFF 会话。
+  await setSecondaryBrowserWindowState(secondBrowser, "normal");
   let secondRead;
   try {
     secondRead = await secondBrowser.evaluate(readCasProjectInPage, secondOrigin, projectId, 2);
@@ -438,7 +465,9 @@ async function verifyFramework(
   );
   requireUnchangedDocument(before, await inspectStudioState(session));
 
-  // 第二主体操作时窗口可能在后台；先激活本标签，才派发可见性复核事件。
+  // 先最小化第二主体的独立窗口，再激活第一主体标签。
+  // 只接受浏览器真实报告 visible；若 OS 仍遮挡，保留失败而不模拟可见性。
+  await setSecondaryBrowserWindowState(secondBrowser, "minimized");
   await session.send("Page.bringToFront");
   await waitForStudioState(session, name, "浏览器切换到可见状态", (state) => state.visible);
   process.stdout.write(name + "：Studio 页面已可见，触发服务端 CAS 只读复核\n");
