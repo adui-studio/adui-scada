@@ -847,3 +847,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/test-oidc-studio-real-late.cases.mjs`：9 项 Node 内置离线用例，验证显式模式、项目写请求白名单、真实 Response 保留/释放、CSRF、重复/异常拒绝、脱敏状态及原草稿恢复 UI 点击辅助。
 - `scripts/test-project-browser-oidc.mjs`：只把既有 `enableAutoSaveInPage` 改为命名导出，复用其真实页面辅助函数而不改已有只读/合成拒绝模式。
 - 根目录 `package.json`：新增 `test:oidc:dual:studio:config` 到 `ready`，新增独立**手工写入**的 `test:oidc:dual:studio:late`；没有修改生产 React/Vue/NestJS/Core、数据库迁移和工业设备权限。
+
+### 第十七小批首轮失败后的阶段诊断补充
+
+- `scripts/test-oidc-studio-real-late.mjs`：新增 `waitForStudioState`，分别报告真实 201 挂起、第二主体读取 2/追加 3、Studio 消费 201、页面可见、CAS 失效与过期保存拒绝阶段；超时状态仅包含枚举、计数和布尔值。
+- `scripts/test-oidc-studio-real-late.cases.mjs`：扩展状态脱敏回归，覆盖 document 可见性布尔值。
+- 真实浏览器首轮在“React 真实 201 已到达并挂起”之后退出码 1，根因待新的阶段诊断日志确认；不得把该失败标记为已经修复。
