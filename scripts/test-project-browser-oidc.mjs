@@ -999,7 +999,66 @@ async function verifySaveTimingScenarios(session, origin, name, selected) {
       assert.equal(preserved.canvas, before.canvas, name + " 只读预览改变了本地画布");
       assert.deepEqual(preserved.drafts, before.drafts, name + " 只读预览改变了草稿");
       assert.equal(preserved.autoSave, before.autoSave, name + " 只读预览修改了自动保存");
+
+      process.stdout.write(name + "：正在确认载入已核验的服务端最新版本\n");
+      const loaded = await session.evaluate(confirmPreviewedServerVersionInPage, selected.headRevision);
+      assert.deepEqual(loaded, { confirmed: true, confirmCount: 1 });
+      assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
+      const afterLoad = await inspectStudioState(session);
+      assert.deepEqual(afterLoad.drafts, before.drafts, name + " 确认载入修改了 IndexedDB 草稿");
+      assert.equal(afterLoad.autoSave, false, name + " 确认载入后未暂停自动保存");
+      assert.ok(
+        afterLoad.server.includes("CAS 基线：" + selected.headRevision),
+        name + " 确认载入未建立原服务器最新 CAS 基线",
+      );
+      const confirmedState = await session.evaluate(conflictPreviewStateInPage);
+      assert.equal(confirmedState.writeAttempts, 1, name + " 确认载入不允许额外写入");
     }
+  }
+}
+
+/** 只点击真实 Studio 服务端版本列表的载入按钮，模拟操作员明确确认。 */
+export async function confirmPreviewedServerVersionInPage(revision) {
+  if (!Number.isSafeInteger(revision) || revision < 1) {
+    throw new Error("冲突恢复确认载入版本参数不合法");
+  }
+  const panel = document.querySelector('[aria-label="服务端工程版本"]');
+  const row = [...(panel?.querySelectorAll(".studio-version-item") ?? [])].find(
+    (item) => item.querySelector("strong")?.textContent.trim() === "服务端版本 #" + revision,
+  );
+  const button = [...(row?.querySelectorAll("button") ?? [])].find(
+    (item) => item.textContent.trim() === "载入",
+  );
+  if (!button || button.disabled) throw new Error("冲突恢复确认载入按钮不可用");
+  const originalConfirm = window.confirm;
+  let confirmCount = 0;
+  window.confirm = () => {
+    confirmCount += 1;
+    return true;
+  };
+  try {
+    button.click();
+    const until = Date.now() + 20000;
+    while (Date.now() < until) {
+      const notice = document.querySelector(".studio-notice")?.textContent ?? "";
+      const busy = [...(panel?.querySelectorAll(".studio-version-help") ?? [])].some(
+        (element) => element.textContent?.includes("正在处理工程版本"),
+      );
+      if (
+        confirmCount === 1 &&
+        !busy &&
+        notice.includes("已载入服务端最新版本 #" + revision)
+      ) {
+        return { confirmed: true, confirmCount };
+      }
+      if (confirmCount > 0 && !busy && panel?.querySelector('[role="alert"]')) {
+        throw new Error("冲突恢复确认载入未通过受控复核");
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    throw new Error("冲突恢复确认载入超时");
+  } finally {
+    window.confirm = originalConfirm;
   }
 }
 
