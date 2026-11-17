@@ -362,7 +362,12 @@ async function run() {
           "真实撤权专项只允许本机可信 OIDC Lab",
         );
         assert.deepEqual(principal, guest, "第二主体在 React/Vue Origin 必须一致");
-        const firstRead = await ownerBrowser.evaluate(readCasProjectInPage, origins[0], projectId, 1);
+        const firstRead = await ownerBrowser.evaluate(
+          readCasProjectInPage,
+          origins[0],
+          projectId,
+          1,
+        );
         const secondRead = await guestBrowser.evaluate(readCasProjectInPage, origin, projectId, 1);
         assert.deepEqual(firstRead, secondRead, "双方读取首版数据必须一致");
 
@@ -377,7 +382,12 @@ async function run() {
         await verifyRevokedProject(client, projectId, owner, guest);
         await verifyRevokedStudio(guestBrowser, origin, projectId, before);
 
-        const ownerRead = await ownerBrowser.evaluate(readCasProjectInPage, origins[0], projectId, 1);
+        const ownerRead = await ownerBrowser.evaluate(
+          readCasProjectInPage,
+          origins[0],
+          projectId,
+          1,
+        );
         assert.deepEqual(ownerRead, firstRead, "撤销第二主体不能影响创建者读取");
         await verifyRevokedProject(client, projectId, owner, guest);
         process.stdout.write(

@@ -53,10 +53,9 @@ function mockDatabase({ guestGranted = true, extraGrant = false, version = 1 } =
 void describe("真实双主体专用工程 ACL 撤销浏览器安全门禁", () => {
   void it("默认只读；必须显式确认当前本机 Lab 才允许创建专用工程并撤权", () => {
     assert.deepEqual(resolveRevocationMode([]), { write: false });
-    assert.deepEqual(
-      resolveRevocationMode(["--run-revoke", "--confirm-lab", "adui_scada"]),
-      { write: true },
-    );
+    assert.deepEqual(resolveRevocationMode(["--run-revoke", "--confirm-lab", "adui_scada"]), {
+      write: true,
+    });
     for (const input of [
       ["--run-revoke"],
       ["--run-revoke", "--confirm-lab", "adui_scada_test"],
@@ -102,7 +101,10 @@ void describe("真实双主体专用工程 ACL 撤销浏览器安全门禁", () 
   void it("权限已撤销的专用工程重复回收保持幂等，不再执行 SQL DELETE", async () => {
     const client = mockDatabase({ guestGranted: false });
     assert.equal(await revokeSecondSubject(client, projectId, owner, guest), false);
-    assert.equal(client.calls.some((item) => item.sql.startsWith("DELETE")), false);
+    assert.equal(
+      client.calls.some((item) => item.sql.startsWith("DELETE")),
+      false,
+    );
     assert.equal(client.calls.at(-1).sql, "COMMIT");
   });
 
@@ -114,7 +116,10 @@ void describe("真实双主体专用工程 ACL 撤销浏览器安全门禁", () 
         /专用工程权限撤销失败/,
       );
       assert.equal(client.calls.at(-1).sql, "ROLLBACK");
-      assert.equal(client.calls.some((item) => item.sql.startsWith("DELETE")), false);
+      assert.equal(
+        client.calls.some((item) => item.sql.startsWith("DELETE")),
+        false,
+      );
     }
   });
 
