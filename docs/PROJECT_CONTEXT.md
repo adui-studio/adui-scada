@@ -1388,3 +1388,9 @@ PR #72 候选已新增固定阶段与安全状态摘要，方便下一轮定位�
 维护者第三轮 `pnpm run test:oidc:dual:studio:late` 仍然**退出码 1**。此次已越过第二轮窗口可见性阻塞：React 真实版本 2 的 201 交付、第二主体 CAS 2→3、Studio 返回可见均成功。日志随后报本地数据变化；结合当前脚本顺序，真实 CAS 复核使基线清空、UI 再次保存被拒绝且无额外 POST 等前置断言也已通过，失败在最后的 SVG、IndexedDB 草稿及自动保存一致性比较，Vue 与最终 PostgreSQL 三版审计尚未执行。
 
 尚不知道哪类数据改变，也无法判断发生于 CAS 复核还是最终再次点击保存。PR #72 新增四类布尔脱敏诊断及五个强制比较点，**没有放宽数据安全断言**、没有改生产业务逻辑。离线测试新增两项，目标 **13/13**。最新候选仍待 Windows Node、`vp check`、`docs:check`、`ready`、真实浏览器复验；PR Open/Draft，Assignee `@adui-dev`，未经授权不合并。
+
+## 2026-11-17 · 第三十四批第十七小批：第四轮 SVG 内容误报候选修正
+
+维护者第四轮真实 Lab `pnpm run test:oidc:dual:studio:late` **退出码 1**：React 完成真实 POST 201、第二主体 CAS 2→3、旧 201 交付、浏览器恢复可见及 CAS 只读复核；本地变化分类确认**仅 `canvasChanged=true`**，自动保存、IndexedDB 草稿数量和原始记录哈希均未改变。真实数据库最终三版审计与 Vue 整套测试仍未执行。
+
+源码检查发现 `.studio-svg.innerHTML` 包含位置随 `visibleRect` 的辅助视口网格矩形；当前提出仅调整本专项的画布快照口径，忽略**单个直系网格元素**，保留其余全部 SVG/草稿/SQL 安全断言和 React/Vue 业务逻辑。根因是否仅为网格重算仍需真实浏览器验证。新增 3 项离线安全用例，累计目标 **16/16**；当前未取得该补丁的 Windows `vp check`、`ready` 或真实 Lab 退出码 0。PR #72 继续 Draft，Assignee `@adui-dev`，未获合并授权。
