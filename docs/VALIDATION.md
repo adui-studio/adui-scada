@@ -1322,3 +1322,9 @@ E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CD
 本次新增 `oidc:lab:projects:pages` 显式数据准备命令，复用既有隔离 Chrome/Edge 浏览器与 Keycloak 真人登录；入口必须 `--prepare-multipage --confirm-lab adui_scada`，并复用可信 OIDC Lab 环境/数据库安全白名单。通过登录后的 BFF Session 和 CSRF 向当前测试主体发起正式工程创建请求，只补齐至 11 项授权工程。空白 `ScadaDocument 0.3.0` 不含现存工程的数据。旧工程、现存 ACL、迁移、业务接口与工业设备权限不修改；测试数据新建后保留，不自动清理。
 
 新增四项纯离线保护与状态回归（配置门禁、已足额时零写入、补齐与重复执行、跨 Origin / 缺失 CSRF 拒绝），预计该文件 **18/18**，但**尚无维护者 Windows 的 Vite+、完整 ready、真实浏览器数据准备或严格 React/Vue 多页成功日志**；此前 14/14 不能冒充新候选通过。GitHub 原始 JavaScript 已完成有限的 V8 语法解析与模拟 Fetch 行为核对，不等同于仓库完整质量链或真实 PostgreSQL 写入。执行前应人工确认当前 NestJS 实际连接的 Lab 数据库和根环境一致，运行后独立执行严格多页验收。
+
+## 2026-11-17 · 第三十四批第五小批双 BFF Cookie HTTP CAS 候选验证
+
+以已合并 PR #59 的 \`main@4c3cb0d7\` 为起点，新增 \`apps/server/test/projects-cas-cookie-http.db-spec.ts\`，仅在现有独立 \`vitest.config.db.ts\` 下执行真实 PostgreSQL HTTP 集成测试。四项用例使用两个不同 \`active\` 主体通过内部 \`AuthSessionService.issueForVerifiedSubject\` 获取独立短期 BFF Cookie + CSRF；真正的 NestJS Session Guard、Project Guard、Project API Controller、Prisma 仓储与本机隔离 PostgreSQL 处理请求。核验 HTTP 201/409 竞争，水位 2、两个 SHA-256 版本、成功审计操作者、旧版本再次提交 409，及错误 CSRF / Origin / 凭据混用 / ACL 的拒绝路径。独立 \`test:db\` 预计由原 25 项增加至 **29 项**，尚待 Windows 实际验收。没有改变业务接口、数据库 Schema/迁移、客户端、工业协议或权限行为。
+
+**验证证据边界**：候选文件已进行 TypeScript 语法解析及有限 transpile 检查（无语法诊断），但当前协作容器无仓库可安装的 pnpm/Vite+ 项目依赖、无用户本机 PostgreSQL，不具备对本次 Head 执行真实 \`vp check\`、\`test:db\`、\`ready\` 的条件。必须以维护者实际 Windows 日志和退出码为准。第四小批真实 Keycloak React/Vue 严格多页通过记录仍然有效，但两份 Cookie 在**本隔离测试里不是分别通过真实 Keycloak 授权码回调建立**；不得扩写为 IdP 双登录验收。
