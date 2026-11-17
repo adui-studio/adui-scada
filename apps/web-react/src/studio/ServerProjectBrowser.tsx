@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createStudioProjectBrowser,
+  isScadaAccessRejection,
   ScadaApiError,
   STUDIO_PROJECT_PAGE_SIZE,
 } from "@adui/scada-api-client";
@@ -44,12 +45,7 @@ export function ServerProjectBrowser({
       if (mounted.current) setPage(result);
     } catch (cause) {
       if (mounted.current) {
-        if (
-          cause instanceof ScadaApiError &&
-          (cause.kind === "unauthenticated" ||
-            cause.kind === "forbidden" ||
-            cause.kind === "not_found")
-        ) {
+        if (isScadaAccessRejection(cause)) {
           setPage(browser.reset());
         }
         setError(
