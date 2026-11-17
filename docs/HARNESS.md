@@ -2187,3 +2187,45 @@ Write-Host "本批验收退出码：$LASTEXITCODE"
 ```
 
 每一项 HTTP 集成测试都使用唯一 `test-<UUID>` 租户，完成后按审计、历史、ACL、工程、会话、身份顺序定向删除当前测试租户的数据；不删除任何数据库或 Docker 卷，不修改现有 Keycloak 身份绑定，也不运行工业设备写入。**本批候选代码尚未在维护者 Windows 运行，预计数不是测试通过结论。** 真正两次 Keycloak 授权码流程、跨进程并发与生产 TLS 验收仍另列后续专项。
+
+## 第三十四批第六小批 · 真实 Keycloak 双主体登录与 HTTP CAS
+
+第五小批 PR #60 已合并到 `main@e7c345b851287f985a45153233c36eb03106f5dd`。维护者 Windows 曾通过 `ready`（544/544 单测、49/49 E2E，退出码 0）及隔离 PostgreSQL `test:db`（29/29，退出码 0）；**最新第六小批代码仍待单独验收，不能复用前一批的通过结果**。
+
+先在本机受控 Keycloak `adui-scada` Realm 准备**第二位不同的普通测试用户**，并通过已有 `pnpm run oidc:lab:identity` 受控工具，将其外部 Keycloak UUID 绑定为与第一位用户同租户、但不同 `subjectId` 的活动主体。此步只做可信身份预绑定，不授予已有工程权限；不要复制账号密码到终端、环境变量、PR 或聊天中。默认不修改 Lab 数据，工具也不会生成 Keycloak 用户。第二位用户尚未绑定时必须在只读预检失败，不得降低安全校验。
+
+Windows 验收顺序：
+
+```powershell
+git fetch origin
+git switch --track origin/test/v0.3-b34-oidc-dual-login-cas
+git rev-parse HEAD
+git status --short
+
+pnpm run test:oidc:dual:config
+if ($LASTEXITCODE -ne 0) { throw "双主体离线安全测试失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "格式、Lint 或类型检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+
+# 请先保证两套本机 HTTPS Web、NestJS、Keycloak 和可信根证书可用。
+# 以下命令会让维护者依次在两个隔离浏览器中手动登录不同的预绑定测试用户。
+pnpm run test:oidc:dual:preflight
+Write-Host "双身份真实登录只读预检退出码：$LASTEXITCODE"
+```
+
+只读预检必须确认两个不同主体、同一租户。其本身不创建或授予工程权限；标准 OIDC 登录仍会写入正常的登录事务和短期 BFF 会话。
+
+**仅在维护者确认当前运行中的 NestJS 确实使用非生产本机 `adui_scada` Lab，并明确愿意创建专用测试工程时**，单独执行：
+
+```powershell
+pnpm run test:oidc:dual:cas
+Write-Host "真实双 Keycloak 主体 HTTP CAS 验收退出码：$LASTEXITCODE"
+```
+
+此命令**会写数据库**：第一主体通过正式 HTTP 创建全新的 `b34-oidc-cas-<UUID>` 空白工程，随后只给第二主体授权这一个工程的三项固定 ACL，两浏览器发送并发 HTTP CAS。成功应得到一份 201、一份 409，最终修订 2、历史与成功审计操作者一致。**新工程和 ACL/历史会保留供人工核验**，失败中途也可能保留部分新工程记录，不自动删除、不修改此前 11 项分页验收工程。每次运行生成一个新工程，不要反复执行造数。用户无需在命令行输入 Keycloak 密码。
+
+所有检查严禁远程数据库、生产 OIDC Realm、无效 TLS 或把测试主体验证简化为同一用户的两个窗口。该专项不属于 `ready`；新增的 11 项离线安全回归已接入 `ready`。当前未在维护者 Windows/真实 Lab 执行，不声称真实双主体登录和 CAS 已通过。
