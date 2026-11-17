@@ -194,7 +194,9 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     ]) {
       const api = mockClient();
       const session = createStudioServerProjectSession(api);
-      session.acceptLoadedVersion(await session.readVersion(waterTreatmentDemoDocument.projectId, 1));
+      session.acceptLoadedVersion(
+        await session.readVersion(waterTreatmentDemoDocument.projectId, 1),
+      );
       api.readVersion.mockRejectedValueOnce(denial);
 
       await expect(session.readVersion(waterTreatmentDemoDocument.projectId, 1)).rejects.toBe(
