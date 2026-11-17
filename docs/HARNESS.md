@@ -2276,3 +2276,29 @@ Write-Host "第七小批验收退出码：$LASTEXITCODE"
 ```
 
 真实 PostgreSQL `test:db` 原 **29** 项加本批 **2** 项，预计 **31/31**，这是验收目标不是实际通过结论。此处测试只验证已存在的会话注销和动态授权实现，**不提供新的会话或工程权限管理 UI，不扩大控制设备写入权限，也不替代独立真实 Keycloak 人工交互验收**。
+
+## 第三十四批第八小批 · 前端服务端授权失效最小安全回归
+
+基于经维护者授权 Squash 合并的 PR #62，正式 `main@d743e17df42fda97a1cd9bce8676ad75b5ed37c9`。本批只修改共享 API Client、React/Vue Studio 和已有共享单元测试，**不修改 PostgreSQL、NestJS 认证或工程权限、Keycloak 用户、OIDC Lab ACL 及正式工程数据**。
+
+Windows 先确认无待保存的未提交修改，然后同步候选分支：
+
+```powershell
+git status --short
+git fetch origin
+git switch --track origin/fix/v0.3-b34-studio-access-revocation
+git rev-parse HEAD
+pnpm run test:unit
+if ($LASTEXITCODE -ne 0) { throw "共享服务端会话回归失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "格式、Lint 或类型检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档静态检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+Write-Host "第八小批完整质量链退出码：$LASTEXITCODE"
+```
+
+原 `ready` 有 **49 个单测文件、544 项单测和 49 项 HTTP E2E**；本批新增 API Client/Session 合计 **6 项单元测试**，预计变成 **550/550**，真实结果以 Windows 日志为准。该检查不会发起真实 Keycloak 登录，也不会修改既有 Lab 工程。需要浏览器互通复验时，可在**不修改现有用户 ACL**的前提下运行既有 `pnpm run test:projects:oidc:browser`，用预绑定普通测试用户人工完成受控本机真实 OIDC 登录；这只能证明正常权限路径不回归，不能伪称撤权浏览器 E2E 已验证。
+
+授权拒绝的实际 UI 行为需要额外的专用临时权限夹具或安全浏览器模拟场景方能自动化覆盖，**本批未实现该自动化专项**。不得在维护者既有 `adui_scada` 业务工程上直接做删除 ACL 或注销会话的破坏性实验，也不应把 `test:db` 的历史成功错误描述为本次前端新 HEAD 的验证。
