@@ -176,9 +176,7 @@ describe("本机隔离 PostgreSQL 双 Cookie 会话 HTTP CAS 事务", () => {
       expect(sessionA.token).not.toBe(sessionB.token);
       const responses = await Promise.all(
         [sessionA, sessionB].map((session) =>
-          request(app!.getHttpServer())
-            .get("/api/v1/projects")
-            .set("Cookie", cookie(session)),
+          request(app!.getHttpServer()).get("/api/v1/projects").set("Cookie", cookie(session)),
         ),
       );
       for (const response of responses) {
