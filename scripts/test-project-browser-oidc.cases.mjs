@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   describeBrowserPageException,
   describeProjectBrowserFailure,
+  describeSaveTimingTimeout,
   inspectStudioState,
   installAccessDenialFaultInPage,
   armAccessDenialInPage,
@@ -619,6 +620,71 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       assert.equal((await pending).status, status);
       assert.equal(runtime.__aduiTestAccessDenial.writeAttempts, 1);
     }
+  });
+
+  void it("保存等待超时按固定状态分类并阻止异常正文进入终端", () => {
+    const pending = { hits: 0, writeAttempts: 0, busy: false, disabled: false };
+    const message = describeSaveTimingTimeout("React", 503, "pending", pending);
+    assert.equal(message, "React 延迟保存 503：版本 POST 未命中");
+    assert.equal(describeProjectBrowserFailure(new Error(message)), message);
+    assert.equal(
+      describeSaveTimingTimeout("Vue", 409, "pending", {
+        hits: 1,
+        writeAttempts: 1,
+        busy: true,
+        disabled: false,
+      }),
+      "Vue 延迟保存 409：保存按钮未禁用",
+    );
+    assert.equal(
+      describeSaveTimingTimeout("React", 401, "pending", {
+        hits: 1,
+        writeAttempts: 2,
+        busy: true,
+        disabled: true,
+      }),
+      "React 延迟保存 401：工程写入次数异常",
+    );
+    const unsafe = "React 延迟保存 503：版本 POST 未命中；Bearer 敏感内容";
+    assert.equal(
+      describeProjectBrowserFailure(new Error(unsafe)),
+      "浏览器安全回归断言失败，检查终端测试条件及真实页面状态",
+    );
+    assert.equal(
+      describeSaveTimingTimeout("任意身份", 503, "pending", pending),
+      "浏览器延迟保存状态异常（已脱敏）",
+    );
+  });
+
+  void it("保存拒绝完成超时区分操作未结束和错误提示未显示", () => {
+    const stillBusy = describeSaveTimingTimeout("React", 503, "completed", {
+      hits: 1,
+      writeAttempts: 1,
+      busy: true,
+      hasError: false,
+    });
+    assert.equal(stillBusy, "React 延迟保存 503：保存操作未结束");
+    assert.equal(describeProjectBrowserFailure(new Error(stillBusy)), stillBusy);
+    const missingError = describeSaveTimingTimeout("Vue", 401, "completed", {
+      hits: 1,
+      writeAttempts: 1,
+      busy: false,
+      hasError: false,
+    });
+    assert.equal(missingError, "Vue 延迟保存 401：页面未显示拒绝错误");
+    assert.equal(describeProjectBrowserFailure(new Error(missingError)), missingError);
+    assert.equal(
+      describeSaveTimingTimeout("React", 409, "completed", null),
+      "React 延迟保存 409：无法读取浏览器状态",
+    );
+    assert.equal(
+      describeProjectBrowserFailure(new Error("React 权限模拟工程列表加载未达到预期状态")),
+      "浏览器阶段超时：React 权限模拟工程列表加载未达到预期状态",
+    );
+    assert.equal(
+      describeProjectBrowserFailure(new Error("React 权限模拟工程列表加载未达到预期状态；secret")),
+      "浏览器登录或 Studio 页面未达到预期状态，请检查隔离 Lab、登录与服务端工程",
+    );
   });
 
   void it("保存时序浏览器动作仅操作真实按钮并返回受控计数", () => {
