@@ -24,6 +24,8 @@ const SAFE_PAGE_ERRORS = new Set([
   "工程打开按钮不可用",
   "服务器工程载入阶段返回受控错误",
   "工程安全载入流程超时",
+  "权限拒绝模拟参数不合法",
+  "权限拒绝模拟操作按钮不可用",
 ]);
 const PAGE_ERROR_TYPES = new Map([
   ["ReferenceError", "页面脚本引用异常"],
@@ -532,8 +534,8 @@ function accessDenialStateInPage() {
   return {
     hits: fault?.hits ?? 0,
     writeAttempts: fault?.writeAttempts ?? -1,
-    baselineCleared: text.includes("CAS 基线：未建立"),
-    headCleared: text.includes("服务端最新修订号：未查询"),
+    baselineCleared: /CAS 基线：\s*未建立/.test(text),
+    headCleared: /服务端最新修订号：\s*未查询/.test(text),
     serverRows: panel?.querySelectorAll(".studio-version-item").length ?? -1,
     browserRows: document.querySelectorAll(".studio-project-browser-item").length,
   };
