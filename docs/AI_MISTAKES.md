@@ -320,6 +320,8 @@
 - **验证边界**：协作端完成源码静态比较、V8 语法解析与诊断函数固定分支模拟；本次未实际运行 Windows `test:projects:oidc:config`（目标 33/33）、`vp check`、`docs:check`、`ready` 或真实双框架浏览器。旧日志仍是 **32/33、浏览器退出码 1**，不得将修复候选当作已经验收通过。
 - **证据**：维护者第四次 Windows 两段原始日志、PR #69、`apps/web-vue/src/studio/StudioPage.vue`、`packages/api-client/src/studio-session.ts`、`scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`、`docs/VALIDATION.md`。
 
+> **2026-11-17 E-032 至 E-035 结案补录**：保留上述历史失败与候选阶段描述作为证据，不再将其误读为 PR #69 最新状态。维护者 Windows 最新回归 `pnpm run test:projects:oidc:config` **33/33**、`vp check` **333 格式文件/188 受检零告警**、`docs:check` **86 份**、完整 `ready` 已执行至末尾且非零断言未触发（566/566 单测、49/49 HTTP E2E、双框架及服务端构建）。**React/Vue 真实浏览器均完成合成延迟保存 409/401/503**，`test:projects:oidc:save:browser` PowerShell 明确退出码 **0**，测试期间所有工程写请求均在浏览器端阻断。Vue 409 的 `serverBaselineRevision` 与共享 CAS 同步回归得到实际验证；未知错误附带敏感正文仍由严格安全白名单拒绝。日志未给出本地 Git HEAD，新增结案文档提交后也尚未重跑 `ready`；合成 POST 拒绝**不代表**真实 PostgreSQL 写入后回包、跨标签竞态或工业设备安全已验收。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
