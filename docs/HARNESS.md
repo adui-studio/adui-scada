@@ -2160,13 +2160,13 @@ Write-Host "隔离 PostgreSQL 测试退出码：$LASTEXITCODE"
 
 ## 第三十四批第五小批 · 双 BFF Cookie HTTP 会话 CAS 409（独立真实数据库专项）
 
-第四小批 PR #59 已经维护者授权 Squash 合并至 \`main@4c3cb0d7e61ce2aed48350aa33e26e811078d65b\`，其真实 PostgreSQL **25/25**、OIDC Lab 工程准备 **1＋10**、React/Vue 严格多页回归均有维护者 Windows **退出码 0** 记录。此前数据准备新增的 **18 项**离线保护和最新代码完整 \`ready\` 尚无最终成功日志，不能用旧 14 项结果冒充。
+第四小批 PR #59 已经维护者授权 Squash 合并至 `main@4c3cb0d7e61ce2aed48350aa33e26e811078d65b`，其真实 PostgreSQL **25/25**、OIDC Lab 工程准备 **1＋10**、React/Vue 严格多页回归均有维护者 Windows **退出码 0** 记录。此前数据准备新增的 **18 项**离线保护和最新代码完整 `ready` 尚无最终成功日志，不能用旧 14 项结果冒充。
 
-第五小批仅补 \`apps/server/test/projects-cas-cookie-http.db-spec.ts\`，预计真实数据库用例从 25 项增至 **29 项**。**本测试不登录 Keycloak**：两个不同主体在随机租户中通过真实服务端会话签发生成独立 Cookie/CSRF，实际访问内存 NestJS HTTP Server，经正式 Session/Project Guards、事务仓储、数据库行锁与审计，断言同时保存相同修订号只允许 HTTP 201＋409。禁止把两条测试会话冒充两次真正 OIDC IdP 登录。
+第五小批仅补 `apps/server/test/projects-cas-cookie-http.db-spec.ts`，预计真实数据库用例从 25 项增至 **29 项**。**本测试不登录 Keycloak**：两个不同主体在随机租户中通过真实服务端会话签发生成独立 Cookie/CSRF，实际访问内存 NestJS HTTP Server，经正式 Session/Project Guards、事务仓储、数据库行锁与审计，断言同时保存相同修订号只允许 HTTP 201＋409。禁止把两条测试会话冒充两次真正 OIDC IdP 登录。
 
-**Windows 执行顺序**：先同步当前测试分支，核对 \`git rev-parse HEAD\`；执行 \`pnpm run test:projects:oidc:config\`（上一小批新增预计 18 项）、\`vp check\`、\`pnpm run docs:check\` 和完整 \`pnpm run ready\`。真实数据库专项必须单独运行；先确认 \`SCADA_TEST_DATABASE_URL\` 明确指向本机独立 **\`adui_scada_test\`**，**迁移已完成且实际 NestJS 业务数据库不是该测试库**；严禁把业务库 \`adui_scada\`、OIDC Lab 库或生产远程数据库当作测试库。不要输出或提交数据库口令。
+**Windows 执行顺序**：先同步当前测试分支，核对 `git rev-parse HEAD`；执行 `pnpm run test:projects:oidc:config`（上一小批新增预计 18 项）、`vp check`、`pnpm run docs:check` 和完整 `pnpm run ready`。真实数据库专项必须单独运行；先确认 `SCADA_TEST_DATABASE_URL` 明确指向本机独立 **`adui_scada_test`**，**迁移已完成且实际 NestJS 业务数据库不是该测试库**；严禁把业务库 `adui_scada`、OIDC Lab 库或生产远程数据库当作测试库。不要输出或提交数据库口令。
 
-\`\`\`powershell
+```powershell
 git rev-parse HEAD
 git status --short
 
@@ -2184,6 +2184,6 @@ if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
 pnpm run test:db
 if ($LASTEXITCODE -ne 0) { throw "真实 PostgreSQL HTTP CAS 专项失败" }
 Write-Host "本批验收退出码：$LASTEXITCODE"
-\`\`\`
+```
 
-每一项 HTTP 集成测试都使用唯一 \`test-<UUID>\` 租户，完成后按审计、历史、ACL、工程、会话、身份顺序定向删除当前测试租户的数据；不删除任何数据库或 Docker 卷，不修改现有 Keycloak 身份绑定，也不运行工业设备写入。**本批候选代码尚未在维护者 Windows 运行，预计数不是测试通过结论。** 真正两次 Keycloak 授权码流程、跨进程并发与生产 TLS 验收仍另列后续专项。
+每一项 HTTP 集成测试都使用唯一 `test-<UUID>` 租户，完成后按审计、历史、ACL、工程、会话、身份顺序定向删除当前测试租户的数据；不删除任何数据库或 Docker 卷，不修改现有 Keycloak 身份绑定，也不运行工业设备写入。**本批候选代码尚未在维护者 Windows 运行，预计数不是测试通过结论。** 真正两次 Keycloak 授权码流程、跨进程并发与生产 TLS 验收仍另列后续专项。
