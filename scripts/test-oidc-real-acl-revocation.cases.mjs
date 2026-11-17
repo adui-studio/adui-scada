@@ -32,6 +32,9 @@ function mockDatabase({ guestGranted = true, extraGrant = false, version = 1 } =
       if (sql.includes("FROM public.scada_project_audit")) {
         return { rows: [{ revision: "1", actor_id: owner.subjectId }] };
       }
+      if (sql.startsWith("DELETE FROM public.scada_project_grants")) {
+        return { rows: permissions.map((permission) => ({ permission })) };
+      }
       if (sql.includes("FROM public.scada_project_grants")) {
         return {
           rows: [
@@ -40,9 +43,6 @@ function mockDatabase({ guestGranted = true, extraGrant = false, version = 1 } =
             ...(extraGrant ? [{ subject_id: "unknown", permission: "project:read" }] : []),
           ],
         };
-      }
-      if (sql.startsWith("DELETE FROM public.scada_project_grants")) {
-        return { rows: permissions.map((permission) => ({ permission })) };
       }
       return { rows: [] };
     },
