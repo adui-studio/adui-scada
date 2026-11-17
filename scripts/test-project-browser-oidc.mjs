@@ -259,7 +259,7 @@ async function authenticatedInPage(origin) {
   }
 }
 
-async function enterStudioInPage() {
+export async function enterStudioInPage() {
   const deadline = Date.now() + 15000;
   while (Date.now() < deadline) {
     const nav = document.querySelector(".scada-app-nav");
@@ -296,7 +296,7 @@ async function projectsInPage(afterProjectId) {
   };
 }
 
-function pageStateInPage() {
+export function pageStateInPage() {
   const panel = document.querySelector(".studio-project-browser-panel");
   if (!panel) return null;
   const buttons = [...panel.querySelectorAll(".studio-project-browser-pagination button")];
@@ -321,7 +321,7 @@ function pageStateInPage() {
   };
 }
 
-async function waitForStudioActionIdleInPage() {
+export async function waitForStudioActionIdleInPage() {
   for (let retry = 0; retry < 120; retry += 1) {
     const busy = [
       ...document.querySelectorAll('[aria-label="服务端工程版本"] .studio-version-help'),
@@ -378,7 +378,7 @@ export async function inspectStudioState(session) {
   return { ...view, drafts };
 }
 
-async function saveDraftInPage() {
+export async function saveDraftInPage() {
   const button = [...document.querySelectorAll("button")].find(
     (item) => item.textContent.trim() === "保存草稿",
   );
@@ -510,7 +510,7 @@ export function armAccessDenialInPage(projectId, scope, status, runtime = global
 }
 
 /** 只点击已有 UI；禁止调用服务端写入 API 或修改浏览器的用户身份。 */
-function triggerAccessDenialInPage(scope) {
+export function triggerAccessDenialInPage(scope) {
   const panel =
     scope === "list"
       ? document.querySelector(".studio-project-browser-panel")
@@ -524,7 +524,7 @@ function triggerAccessDenialInPage(scope) {
   return true;
 }
 
-function accessDenialStateInPage() {
+export function accessDenialStateInPage() {
   const fault = globalThis.__aduiTestAccessDenial;
   const panel = document.querySelector('[aria-label="服务端工程版本"]');
   const text = panel?.textContent ?? "";
@@ -674,7 +674,7 @@ export async function openProjectInPage(projectId, headRevision, mode) {
   }
 }
 
-function clickBrowserControlInPage(kind) {
+export function clickBrowserControlInPage(kind) {
   const panel = document.querySelector(".studio-project-browser-panel");
   const buttons = [...(panel?.querySelectorAll(".studio-project-browser-pagination button") || [])];
   const button = kind === "next" ? buttons[1] : buttons[0];
