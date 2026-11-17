@@ -1250,3 +1250,7 @@ PR #63 已由维护者授权 Squash 合并为 `main@6f09e1930fe55f567245708bf5eb
 本批只扩展共享 `StudioServerProjectSession.revalidateBaseline`、React/Vue Studio 的 `visibilitychange` 可见事件监听、原有单元测试及只读 OIDC 浏览器模拟专项。已建立 CAS 基线的后台标签恢复时，按原始已加载的可信租户/主体与 revision 重新读取真实 BFF 身份与工程摘要：401/403/404、主体换号会失效旧基线并保留误创建阻断，远端水位变化清空旧 CAS、普通网络失败保留原基线，不覆盖 SVG 或 IndexedDB 草稿，旧请求异步返回不能清空新加载基线。未建立基线、正在保存或卸载的组件不强制发起请求。
 
 新增 8 项共享单测和 3 项 OIDC 浏览器离线安全测试，预计常规单测 **558 项**、浏览器离线 **24 项**，真实交互专项 `test:projects:oidc:resume` 尚待维护者 Windows 验证。此模式是**真实 BFF 登录＋模拟可见事件与 HTTP 拒绝**，不是后台推送或真正的其他标签注销 E2E；不动 Keycloak 用户、Lab ACL 和现有工程，不发送工业设备写入请求。新分支 PR 默认 Draft、立即指派实际 GitHub 账号 `@adui-dev`，未经维护者再授权不得合并。
+
+## 2026-11-17 · 第三十四批第十一小批 React 检查修复与待复验
+
+PR #66 仍为 Draft，维护者在 Windows `vp check --fix` 实测发现 React Studio 恢复监听中的 `react(immutability)` **1 条警告**与 TypeScript **TS2339 1 个错误**，188 个受检文件的格式化完成但完整检查失败。修复已提交至同一 PR 分支：`e5bddb6c98682130fc80841368466fa1aacccb51`，以 `AbortController` 替代 Effect cleanup 可变闭包标记，并提前缓存访问拒绝/CAS 冲突两种条件，保留 Vue/React 功能与共享状态机。已在协作容器 TypeScript 5.8.3 对等价收窄片段进行严格静态编译，未运行项目 TS6/Vite+。本批仍须 Windows 重新执行 `vp check`、完整质量链及双框架只读浏览器专项；**不应将格式化成功写成 Lint 或构建通过**，不得提前合并。错误复盘见 E-031。
