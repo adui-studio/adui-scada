@@ -792,3 +792,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：同一安全规则清除服务端修订号、历史摘要、对比快照及工程管理游标缓存；原画布、IndexedDB 草稿与本地历史不变。
 - `packages/api-client/test/api-client.test.ts`、`packages/api-client/test/studio-session.test.ts`：新拒绝类型、403/404 权限撤销、401 身份过期、重复保存保护、重新加载恢复与网络错误保持原基线的回归。
 - `apps/web-react/src/studio/ServerProjectBrowser.tsx`、`apps/web-vue/src/studio/ServerProjectBrowser.vue`：使用共享拒绝分类；列表请求 401/403/404 时除了清空自身游标，还通过 `onAccessRejected` / `accessRejected` 通知父级 Studio 立即清理旧 CAS 和服务端历史，而不是只清空子组件列表。
+
+## 第三十四批第九小批 · 双框架 HTTP 拒绝模拟浏览器专项
+
+- `scripts/test-project-browser-oidc.mjs`：在现有真实 OIDC 双框架只读工程浏览器脚本中增加 `--simulate-access-denial` 独立模式，仅在隔离浏览器安装写入阻断和定向 401/403/404 只读 Fetch 模拟；复用真正的 Keycloak Cookie、受控同源工程读取及原有草稿哈希断言。不改生产 Web 或 NestJS 实现。
+- `scripts/test-project-browser-oidc.cases.mjs`：新增离线测试，检查模式互斥、工程写请求永不转发真实 Fetch、模拟状态仅命中目标路径和状态、普通登录 GET 不被改写；原 18 项预计增至 21 项。
+- `package.json`：新增 `test:projects:oidc:denial`，与常规 `test:projects:oidc:browser` 及需显式写入确认的多页准备命令分离。
