@@ -363,7 +363,9 @@ void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
     for (const [after, category] of changed) {
       const drift = classifyStudioLocalDrift(baseline, after);
       assert.deepEqual(
-        Object.entries(drift).filter(([, differs]) => differs).map(([key]) => key),
+        Object.entries(drift)
+          .filter(([, differs]) => differs)
+          .map(([key]) => key),
         [category],
       );
       const diagnostic = JSON.stringify(drift);
