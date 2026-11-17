@@ -148,6 +148,7 @@ export default function StudioPage() {
   const [serverInspectedVersion, setServerInspectedVersion] = useState<ProjectSnapshot | null>(
     null,
   );
+  const resumeValidationRef = useRef(false);
   const historyActionRef = useRef(false);
   const autoSaveSessionRef = useRef<DraftAutoSaveSession | null>(null);
   const draftActionRef = useRef(false);
@@ -1058,6 +1059,59 @@ export default function StudioPage() {
     setServerInspectedVersion(null);
     setServerAccessRevision((revision) => revision + 1);
   }
+
+  /** 从其他标签页返回时以真实服务端只读核对旧 CAS，不依赖本地跨页身份消息。 */
+  useEffect(() => {
+    let active = true;
+    const revalidateOnVisible = () => {
+      if (
+        document.visibilityState !== "visible" ||
+        resumeValidationRef.current ||
+        historyActionRef.current ||
+        draftActionRef.current
+      ) {
+        return;
+      }
+      const projectId = editor.snapshot().document.projectId;
+      if (serverSession.getBaselineRevision(projectId) === null) return;
+      resumeValidationRef.current = true;
+      void serverSession
+        .revalidateBaseline(projectId)
+        .catch((error: unknown) => {
+          if (!active || editor.snapshot().document.projectId !== projectId) return;
+          if (isScadaAccessRejection(error)) {
+            invalidateServerAccess();
+            setServerIdentity(
+              error.kind === "unauthenticated"
+                ? "未登录或服务端尚未启用身份接口"
+                : "服务端身份或工程授权已变化",
+            );
+          } else if (error instanceof ScadaApiError && error.kind === "conflict") {
+            setServerHeadRevision(null);
+            setServerRows([]);
+            setServerHasMore(false);
+            setServerInspectedVersion(null);
+          }
+          if (
+            error instanceof ScadaApiError &&
+            (isScadaAccessRejection(error) || error.kind === "conflict")
+          ) {
+            setServerError(error.message);
+            setNotice("标签页恢复校验发现变更：" + error.message + "；本地画布与草稿不变");
+          } else if (error instanceof ScadaApiError && error.kind === "network") {
+            setNotice("暂时无法复核服务端状态；原 CAS 基线保留，保存时仍需服务器校验");
+          }
+        })
+        .finally(() => {
+          resumeValidationRef.current = false;
+        });
+    };
+    document.addEventListener("visibilitychange", revalidateOnVisible);
+    return () => {
+      active = false;
+      document.removeEventListener("visibilitychange", revalidateOnVisible);
+    };
+  }, [editor, serverSession]);
 
   function handleServerBrowserAccessRejected(error: ScadaApiError): void {
     invalidateServerAccess();
