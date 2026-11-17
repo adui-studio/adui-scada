@@ -853,3 +853,8 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/test-oidc-studio-real-late.mjs`：新增 `waitForStudioState`，分别报告真实 201 挂起、第二主体读取 2/追加 3、Studio 消费 201、页面可见、CAS 失效与过期保存拒绝阶段；超时状态仅包含枚举、计数和布尔值。
 - `scripts/test-oidc-studio-real-late.cases.mjs`：扩展状态脱敏回归，覆盖 document 可见性布尔值。
 - 真实浏览器首轮在“React 真实 201 已到达并挂起”之后退出码 1，根因待新的阶段诊断日志确认；不得把该失败标记为已经修复。
+
+### 第十七小批 · 独立 Chrome/Edge 双窗口可见性修复候选
+
+- `scripts/test-oidc-studio-real-late.mjs`：增加只允许第二主体浏览器窗口 `normal/minimized` 的 CDP 管理函数。真正版本 2→3 读写时恢复第二窗口；提交成功、旧 201 交付后最小化第二窗口，再严格等待第一主体真实 `visible`，后续 CAS/IndexedDB/审计断言原样保留。
+- `scripts/test-oidc-studio-real-late.cases.mjs`：从原 9 项新增 2 项窗口命令与失败封闭离线回归，目标 11 项，尚需 Node 实际执行。
