@@ -301,6 +301,11 @@ describe("本机隔离 PostgreSQL 双 Cookie 会话 HTTP CAS 事务", () => {
         releaseReply = () =>
           resolve({ revision: committed.body.revision, contentHash: committed.body.contentHash });
       });
+      let clientReceived = false;
+      const pendingDelivery = delayedReply.then((reply) => {
+        clientReceived = true;
+        return reply;
+      });
 
       // 旧回包仍被消费端持有期间，真实数据库已提交修订号 2 和对应审计。
       const [afterCommit, committedVersions, committedAudits] = await Promise.all([
@@ -338,8 +343,10 @@ describe("本机隔离 PostgreSQL 双 Cookie 会话 HTTP CAS 事务", () => {
       expect(latestSnapshot.body.contentHash).toBe(next.body.contentHash);
 
       // 现在才向模拟客户端交付旧 201；旧修订号不得作为新的 CAS 写入依据。
+      expect(clientReceived).toBe(false);
       releaseReply?.();
-      const late = await delayedReply;
+      const late = await pendingDelivery;
+      expect(clientReceived).toBe(true);
       expect(late.revision).toBe(2);
       expect(late.contentHash).toBe(committed.body.contentHash);
       const staleRetry = await postVersion(sessionA, late.revision);
