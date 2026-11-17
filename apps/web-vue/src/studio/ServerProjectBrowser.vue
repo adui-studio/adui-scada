@@ -2,6 +2,7 @@
 import { onUnmounted, shallowRef } from "vue";
 import {
   createStudioProjectBrowser,
+  isScadaAccessRejection,
   ScadaApiError,
   STUDIO_PROJECT_PAGE_SIZE,
 } from "@adui/scada-api-client";
@@ -14,6 +15,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   open: [projectId: string, headRevision: number];
+  accessRejected: [error: ScadaApiError];
 }>();
 
 /** 只维护列表和分页；工程切换、CAS 与草稿互斥属于 Studio。 */
@@ -38,13 +40,9 @@ async function loadPage(action: "refresh" | "next" | "previous"): Promise<void> 
     if (active) page.value = result;
   } catch (cause) {
     if (active) {
-      if (
-        cause instanceof ScadaApiError &&
-        (cause.kind === "unauthenticated" ||
-          cause.kind === "forbidden" ||
-          cause.kind === "not_found")
-      ) {
+      if (isScadaAccessRejection(cause)) {
         page.value = browser.reset();
+        emit("accessRejected", cause);
       }
       error.value =
         cause instanceof ScadaApiError ? cause.message : "工程列表读取失败，请检查登录与服务端连接";

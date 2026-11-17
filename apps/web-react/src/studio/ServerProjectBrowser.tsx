@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createStudioProjectBrowser,
+  isScadaAccessRejection,
   ScadaApiError,
   STUDIO_PROJECT_PAGE_SIZE,
 } from "@adui/scada-api-client";
@@ -11,6 +12,7 @@ interface ServerProjectBrowserProps {
   readonly currentProjectId: string;
   readonly disabled: boolean;
   readonly onOpen: (projectId: string, headRevision: number) => Promise<void>;
+  readonly onAccessRejected: (error: ScadaApiError) => void;
 }
 
 /** 仅浏览已授权的工程摘要；载入和草稿保护由 Studio 协调。 */
@@ -19,6 +21,7 @@ export function ServerProjectBrowser({
   currentProjectId,
   disabled,
   onOpen,
+  onAccessRejected,
 }: ServerProjectBrowserProps) {
   const browser = useMemo(() => createStudioProjectBrowser(api), [api]);
   const [page, setPage] = useState<StudioProjectBrowserPage>(() => browser.snapshot());
@@ -44,13 +47,9 @@ export function ServerProjectBrowser({
       if (mounted.current) setPage(result);
     } catch (cause) {
       if (mounted.current) {
-        if (
-          cause instanceof ScadaApiError &&
-          (cause.kind === "unauthenticated" ||
-            cause.kind === "forbidden" ||
-            cause.kind === "not_found")
-        ) {
+        if (isScadaAccessRejection(cause)) {
           setPage(browser.reset());
+          onAccessRejected(cause);
         }
         setError(
           cause instanceof ScadaApiError

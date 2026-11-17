@@ -1,6 +1,6 @@
 import { parseScadaDocument } from "@adui/scada-core";
 import type { ProjectSnapshot, ScadaDocument } from "@adui/scada-core";
-import { ScadaApiError } from "./index.ts";
+import { isScadaAccessRejection, ScadaApiError } from "./index.ts";
 import type { ScadaApiClient, ScadaPrincipal } from "./index.ts";
 
 export interface ServerProjectSaveResult {
@@ -25,6 +25,7 @@ export class StudioServerProjectSession {
     revision: number;
     principal: ScadaPrincipal;
   } | null = null;
+  private blockedCreateProjectId: string | null = null;
   private saving = false;
 
   private readonly api: ScadaApiClient;
@@ -36,6 +37,17 @@ export class StudioServerProjectSession {
   /** JSON 导入、本地草稿恢复或本地历史载入后必须清除旧基线。 */
   reset(): void {
     this.baseline = null;
+    this.blockedCreateProjectId = null;
+  }
+
+  /**
+   * 身份或工程授权失效后禁止把 404 当作可以新建同 ID 工程的凭据。
+   * 只有明确恢复本地工程或重新载入授权工程才能解除阻断。
+   */
+  invalidateAccess(projectId?: string): void {
+    this.blockedCreateProjectId =
+      projectId ?? this.baseline?.projectId ?? this.blockedCreateProjectId;
+    this.baseline = null;
   }
 
   getBaselineRevision(projectId: string): number | null {
@@ -44,14 +56,20 @@ export class StudioServerProjectSession {
 
   /** 先校验快照、身份和当前服务端水位，供 UI 在用户确认后载入。 */
   async readVersion(projectId: string, revision: number): Promise<ServerProjectVersion> {
-    const identity = await this.api.getMe();
-    const snapshot = await this.api.readVersion(projectId, revision);
-    const current = await this.api.getProject(projectId);
-    return { snapshot, headRevision: current.headRevision, principal: identity.principal };
+    try {
+      const identity = await this.api.getMe();
+      const snapshot = await this.api.readVersion(projectId, revision);
+      const current = await this.api.getProject(projectId);
+      return { snapshot, headRevision: current.headRevision, principal: identity.principal };
+    } catch (error) {
+      if (isScadaAccessRejection(error)) this.invalidateAccess(projectId);
+      throw error;
+    }
   }
 
   /** 只有用户实际载入最新服务端版本，才建立后续 CAS 保存基线。 */
   acceptLoadedVersion(version: ServerProjectVersion): void {
+    this.blockedCreateProjectId = null;
     const { snapshot, headRevision, principal } = version;
     this.baseline =
       snapshot.revision === headRevision
@@ -64,16 +82,30 @@ export class StudioServerProjectSession {
       throw new ScadaApiError("服务端工程正在保存，请勿重复提交", "conflict", 409);
     }
     this.saving = true;
+    let attemptedProjectId: string | undefined;
     try {
       // 获取独立副本，网络等待期间画布修改不能改变本次实际提交的文档。
       const checked = parseScadaDocument(document);
+      attemptedProjectId = checked.projectId;
+      if (this.blockedCreateProjectId === checked.projectId) {
+        throw new ScadaApiError(
+          "当前工程访问已失效，请重新从授权工程列表载入后再保存",
+          "forbidden",
+          403,
+        );
+      }
       const principal = (await this.api.getMe()).principal;
       let current;
       try {
         current = await this.api.getProject(checked.projectId);
       } catch (error) {
         if (!(error instanceof ScadaApiError) || error.kind !== "not_found") throw error;
-        // 无权访问与不存在统一 404；创建仍需服务端独立鉴权和租户唯一约束。
+        // 已明确载入过该工程后再收到 404，不能把授权撤销当作新工程创建。
+        if (this.baseline?.projectId === checked.projectId) {
+          this.invalidateAccess(checked.projectId);
+          throw error;
+        }
+        // 首次保存的 404 仍允许尝试创建；服务端独立校验身份和租户唯一约束。
         const created = await this.api.createProject(checked);
         this.baseline = {
           projectId: checked.projectId,
@@ -113,6 +145,9 @@ export class StudioServerProjectSession {
         }
         throw error;
       }
+    } catch (error) {
+      if (isScadaAccessRejection(error)) this.invalidateAccess(attemptedProjectId);
+      throw error;
     } finally {
       this.saving = false;
     }

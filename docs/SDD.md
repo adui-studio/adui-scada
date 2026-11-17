@@ -813,3 +813,14 @@ React 和 Vue 在一个真实临时浏览器中分别进入 Studio：对比工�
 `--run-cas --confirm-lab adui_scada` 明确允许写入时，用第一个真实 BFF 会话的可读 CSRF Cookie 和正式 `POST /api/v1/projects` 新建 `b34-oidc-cas-<UUID>`、单页、零 Tag、零图元的 `ScadaDocument 0.3.0`。Node 使用服务端既有 `pg` 依赖连接严格验证过的本机 `adui_scada` Lab，在 SERIALIZABLE 事务中确认该新工程唯一且水位为 1、首版创建者为第一主体、两身份仍 active、仅第一主体具有原生三项创建者 ACL；随后仅给第二主体授予 `project:read`、`version:read`、`version:append`，绝不触及已有工程和角色权限。
 
 两浏览器分别读取 `/versions/1` 并核对空白工程文档及内容摘要，然后各自使用不同真实会话与 CSRF 同时提交修订 1 的 CAS。检查 201/409 结果和成功 SHA-256；Node 以只读、参数化 PostgreSQL 查询核对版本 1/2、`head_revision=2`、两条成功审计与获胜主体匹配；双方再通过原 BFF HTTP 路由读取修订 2 一致。脚本不会直接修改修订号、覆盖既有工程、伪造 Cookie、禁用 TLS 或自动删除测试审计数据。该验收覆盖**本机单服务进程、真实两次 Keycloak 登录/HTTPS 浏览器与数据库**，仍不能视为跨实例部署/生产环境工业安全验收。
+
+### 第三十四批第八小批 · 服务端拒绝访问后的双框架状态失效语义
+
+`packages/api-client/src/index.ts` 导出 `isScadaAccessRejection(error)`：只将共享 `ScadaApiError` 的 `unauthenticated`（401）、`forbidden`（403）、`not_found`（404）视作需要丢弃旧授权缓存的拒绝信号；不把普通 `network`、`conflict`、`invalid_response` 或未知异常混入。HTTP 404 同时表示不存在和无权访问，前端不能推断真实授权，也不解析错误响应体。
+
+`StudioServerProjectSession.readVersion/saveDocument` 在确认的拒绝后立即失效旧基线。`invalidateAccess(projectId?)` 同时保留单工程的短期创建阻断标记：原来已有 CAS 基线的工程发生 404 后**不尝试 POST 创建**，重复保存亦直接受控拒绝；`acceptLoadedVersion()` 仅在服务端授权重新读取并由用户确认后清除阻断、重建 CAS 基线。`reset()` 为导入 JSON、本地草稿/本地历史恢复等显式上下文切换使用；失败没有浏览器持久化凭据和权限信息。首次保存真正未载入过的新工程仍可按既有服务端唯一约束尝试创建。
+
+React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverProjectId`、`serverHeadRevision`、`serverRows`、`serverHasMore` 和 `serverInspectedVersion`；Vue 同时清除界面缓存的 `serverBaselineRevision`。两套 `ServerProjectBrowser` 以访问失效的组件 `key` 重新建立独立游标会话，旧请求即使随后返回也不能覆盖已重建的组件。提示仍使用受控中文 `ScadaApiError.message`，身份失效时标记未登录。所有处理**只清理服务端派生缓存**，不调用 `DocumentEditor.loadDocument`、不删除 IndexedDB 草稿、不触碰本地撤销历史。
+
+**验收**：共享 API Client 与 CAS 会话单测覆盖 401/403/404、重复保存阻断、合法重新载入恢复、首次创建不回归、网络中断仍保留基线；Windows `vp check`、`test:unit`、`ready` 和 React/Vue 两端现有工程浏览器验收。真正服务端权限撤销的全链安全性已由第七小批独立 `adui_scada_test` 实测覆盖，**不需要也不允许本批为 UI 模拟而写现有 OIDC Lab 授权表**。没有后台主动推送，因此“即时清空”特指实际请求收到拒绝后的状态更新。
+无论拒绝首先来自 Studio 的保存/历史查询，还是独立工程列表的分页刷新，均使用相同的父级授权失效处理：React 子组件通过 `onAccessRejected(error)` 回调、Vue 子组件通过 `accessRejected` 事件通知 Studio；父级清空旧 CAS 和服务端历史摘要并重建工程管理列表组件。子组件中的临时错误显示不承担父级缓存失效职责。重新挂载使旧分页请求无法把迟到响应写回新列表。
