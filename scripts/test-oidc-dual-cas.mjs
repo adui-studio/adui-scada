@@ -41,10 +41,20 @@ const SAFE_ERRORS = new Set([
   "专用工程 ACL 准备失败，请检查隔离 Lab 身份绑定",
   "双会话 HTTP CAS 结果不是一次 201 与一次 409",
   "双会话 HTTP CAS 事务历史或审计不一致",
+  "真实迟到 201 专项请求状态不符合预期",
+  "真实迟到 201 专项版本或审计不一致",
 ]);
 
 export function parseDualOidcMode(args) {
   if (args.length === 0) return { write: false };
+  if (
+    args.length === 3 &&
+    args[0] === "--run-late-response" &&
+    args[1] === "--confirm-lab" &&
+    args[2] === "adui_scada"
+  ) {
+    return { write: true, lateResponse: true };
+  }
   if (
     args.length === 3 &&
     args[0] === "--run-cas" &&
@@ -195,8 +205,17 @@ export async function readCasProjectInPage(origin, projectId, revision, runtime 
   return { revision: snapshot.revision, contentHash: snapshot.contentHash };
 }
 
-export async function appendCasVersionInPage(origin, projectId, runtime = globalThis) {
-  if (runtime.location.origin !== origin) {
+export async function appendCasVersionInPage(
+  origin,
+  projectId,
+  expectedRevision = 1,
+  runtime = globalThis,
+) {
+  if (
+    runtime.location.origin !== origin ||
+    !/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId) ||
+    ![1, 2].includes(expectedRevision)
+  ) {
     throw new Error("双会话 HTTP CAS 事务历史或审计不一致");
   }
   const matches = runtime.document.cookie
@@ -221,7 +240,7 @@ export async function appendCasVersionInPage(origin, projectId, runtime = global
         "X-SCADA-CSRF": csrf,
       },
       body: JSON.stringify({
-        expectedRevision: 1,
+        expectedRevision,
         document: {
           schemaVersion: "0.3.0",
           projectId,
@@ -242,6 +261,146 @@ export async function appendCasVersionInPage(origin, projectId, runtime = global
   if (response.status !== 201) return { status: response.status };
   const saved = await response.json();
   return { status: 201, revision: saved.revision, contentHash: saved.contentHash };
+}
+
+
+/** 首个浏览器真实发出一次 POST，收到可信 201 后暂不向测试消费端交付原响应。 */
+export function armHeldCasResponseInPage(origin, projectId, runtime = globalThis) {
+  if (
+    runtime.location.origin !== origin ||
+    !/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId) ||
+    runtime.__aduiScadaHeldCas !== undefined
+  ) {
+    throw new Error("真实迟到 201 专项请求状态不符合预期");
+  }
+  const matches = runtime.document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .filter((part) => part.startsWith("__Host-adui-scada-csrf="));
+  const csrf = matches.length === 1 ? matches[0].slice("__Host-adui-scada-csrf=".length) : "";
+  if (!/^scada_csrf_[A-Za-z0-9_-]{43}$/.test(csrf)) {
+    throw new Error("双会话专项缺少有效 CSRF Cookie");
+  }
+  const state = { projectId, phase: "pending", response: null };
+  runtime.__aduiScadaHeldCas = state;
+  const document = {
+    schemaVersion: "0.3.0",
+    projectId,
+    tags: [],
+    pages: [
+      {
+        id: "page-main",
+        name: "双主体 CAS 验收",
+        size: { width: 1920, height: 1080 },
+        nodes: [],
+      },
+    ],
+  };
+  void runtime
+    .fetch("/api/v1/projects/" + encodeURIComponent(projectId) + "/versions", {
+      method: "POST",
+      credentials: "same-origin",
+      mode: "same-origin",
+      redirect: "error",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-SCADA-CSRF": csrf,
+      },
+      body: JSON.stringify({ expectedRevision: 1, document }),
+    })
+    .then(async (response) => {
+      if (response.status !== 201) {
+        state.phase = "failed";
+        return;
+      }
+      // 验证克隆体已完整返回；原始 Response 留待后续显式交付。
+      const value = await response.clone().json();
+      if (value.revision !== 2 || !/^[0-9a-f]{64}$/.test(value.contentHash ?? "")) {
+        state.phase = "failed";
+        return;
+      }
+      state.response = response;
+      state.phase = "received";
+    })
+    .catch(() => {
+      state.phase = "failed";
+    });
+  return true;
+}
+
+/** 返回固定状态，不把 HTTP 正文、Cookie 或测试主体带回 Node 日志。 */
+export function heldCasResponsePhaseInPage(origin, projectId, runtime = globalThis) {
+  if (runtime.location.origin !== origin) {
+    throw new Error("真实迟到 201 专项请求状态不符合预期");
+  }
+  const state = runtime.__aduiScadaHeldCas;
+  if (!state || state.projectId !== projectId) return "missing";
+  return state.phase;
+}
+
+export async function releaseHeldCasResponseInPage(origin, projectId, runtime = globalThis) {
+  const state = runtime.__aduiScadaHeldCas;
+  if (
+    runtime.location.origin !== origin ||
+    state?.projectId !== projectId ||
+    state.phase !== "received" ||
+    !state.response
+  ) {
+    throw new Error("真实迟到 201 专项请求状态不符合预期");
+  }
+  delete runtime.__aduiScadaHeldCas;
+  try {
+    const saved = await state.response.json();
+    if (saved.revision !== 2 || !/^[0-9a-f]{64}$/.test(saved.contentHash ?? "")) {
+      throw new Error("真实迟到 201 专项请求状态不符合预期");
+    }
+    return { status: 201, revision: saved.revision, contentHash: saved.contentHash };
+  } catch {
+    throw new Error("真实迟到 201 专项请求状态不符合预期");
+  }
+}
+
+export async function verifyLateCasAudit(client, projectId, first, second, firstHash, secondHash) {
+  if (!PROJECT_PATTERN.test(projectId) || !/^[0-9a-f]{64}$/.test(firstHash) ||
+      !/^[0-9a-f]{64}$/.test(secondHash)) {
+    throw new Error("真实迟到 201 专项版本或审计不一致");
+  }
+  const versions = await client.query(
+    "SELECT revision, created_by, content_hash FROM public.scada_project_versions " +
+      "WHERE tenant_id = $1 AND project_id = $2 ORDER BY revision",
+    [first.tenantId, projectId],
+  );
+  const audits = await client.query(
+    "SELECT revision, actor_id FROM public.scada_project_audit " +
+      "WHERE tenant_id = $1 AND project_id = $2 ORDER BY revision",
+    [first.tenantId, projectId],
+  );
+  const head = await client.query(
+    "SELECT head_revision FROM public.scada_projects WHERE tenant_id = $1 AND project_id = $2",
+    [first.tenantId, projectId],
+  );
+  if (
+    versions.rows.length !== 3 ||
+    audits.rows.length !== 3 ||
+    head.rows.length !== 1 ||
+    String(head.rows[0].head_revision) !== "3" ||
+    [1, 2, 3].some((revision, index) =>
+      String(versions.rows[index].revision) !== String(revision) ||
+      String(audits.rows[index].revision) !== String(revision),
+    ) ||
+    versions.rows[0].created_by !== first.subjectId ||
+    versions.rows[1].created_by !== first.subjectId ||
+    versions.rows[2].created_by !== second.subjectId ||
+    versions.rows[1].content_hash !== firstHash ||
+    versions.rows[2].content_hash !== secondHash ||
+    audits.rows[0].actor_id !== first.subjectId ||
+    audits.rows[1].actor_id !== first.subjectId ||
+    audits.rows[2].actor_id !== second.subjectId
+  ) {
+    throw new Error("真实迟到 201 专项版本或审计不一致");
+  }
 }
 
 class BrowserSession {
@@ -549,6 +708,75 @@ async function run() {
       secondBrowser.evaluate(readCasProjectInPage, origins[1], projectId, 1),
     ]);
     assert.deepEqual(firstRead, secondRead, "两会话读取的首版快照必须一致");
+    if (mode.lateResponse) {
+      process.stdout.write("真实迟到 201 专项：第一主体提交一次真实 POST，等待服务器响应到达。\n");
+      assert.equal(
+        await firstBrowser.evaluate(armHeldCasResponseInPage, origins[0], projectId),
+        true,
+        "首个真实工程保存请求必须成功发起",
+      );
+      let phase = "pending";
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        phase = await firstBrowser.evaluate(heldCasResponsePhaseInPage, origins[0], projectId);
+        if (phase !== "pending") break;
+        await pause(150);
+      }
+      if (phase !== "received") {
+        throw new Error("真实迟到 201 专项请求状态不符合预期");
+      }
+      const secondRead = await secondBrowser.evaluate(
+        readCasProjectInPage,
+        origins[1],
+        projectId,
+        2,
+      );
+      process.stdout.write("已验证真实修订号 2 可读，旧 201 仍保留在第一浏览器。\n");
+      const third = await secondBrowser.evaluate(
+        appendCasVersionInPage,
+        origins[1],
+        projectId,
+        2,
+      );
+      if (third.status !== 201 || third.revision !== 3 ||
+          !/^[0-9a-f]{64}$/.test(third.contentHash ?? "")) {
+        throw new Error("真实迟到 201 专项版本或审计不一致");
+      }
+      const old = await firstBrowser.evaluate(
+        releaseHeldCasResponseInPage,
+        origins[0],
+        projectId,
+      );
+      if (old.status !== 201 || old.revision !== 2 || old.contentHash !== secondRead.contentHash) {
+        throw new Error("真实迟到 201 专项版本或审计不一致");
+      }
+      const rejected = await firstBrowser.evaluate(
+        appendCasVersionInPage,
+        origins[0],
+        projectId,
+        2,
+      );
+      if (rejected.status !== 409) {
+        throw new Error("真实迟到 201 专项版本或审计不一致");
+      }
+      const [latestFirst, latestSecond] = await Promise.all([
+        firstBrowser.evaluate(readCasProjectInPage, origins[0], projectId, 3),
+        secondBrowser.evaluate(readCasProjectInPage, origins[1], projectId, 3),
+      ]);
+      assert.deepEqual(latestFirst, latestSecond, "双浏览器最终必须读取同一真实修订号 3");
+      assert.equal(latestFirst.contentHash, third.contentHash, "最终修订摘要必须匹配");
+      await verifyLateCasAudit(
+        client,
+        projectId,
+        first,
+        second,
+        old.contentHash,
+        third.contentHash,
+      );
+      process.stdout.write(
+        "真实迟到 201 专项通过：版本 2 已提交、第二主体推进至 3、旧 CAS 返回 409，版本与审计一致。测试工程保留供复核。\n",
+      );
+      return;
+    }
     process.stdout.write("两位主体均已通过真实工程读取和授权校验，开始同修订号竞争提交。\n");
     const results = await Promise.all([
       firstBrowser.evaluate(appendCasVersionInPage, origins[0], projectId),
