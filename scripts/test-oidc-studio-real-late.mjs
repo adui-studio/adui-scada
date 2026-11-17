@@ -275,8 +275,7 @@ export function readStudioContentCanvasInPage(runtime = globalThis) {
   const canvas = source.cloneNode(true);
   const viewportGrids = [...canvas.children].filter(
     (element) =>
-      element.localName === "rect" &&
-      element.getAttribute("fill") === "url(#scada-studio-grid)",
+      element.localName === "rect" && element.getAttribute("fill") === "url(#scada-studio-grid)",
   );
   if (viewportGrids.length > 1) {
     throw new Error("真实 Studio 迟到保存未达到受控状态");
@@ -455,7 +454,12 @@ async function verifyFramework(
     throw new Error("真实 Studio 迟到保存未阻止重复写入");
   }
   assert.equal(await session.evaluate(attemptRestoreDuringSaveInPage), true);
-  requireUnchangedDocument(before, await inspectStudioProtectedState(session), name, "保存挂起期间");
+  requireUnchangedDocument(
+    before,
+    await inspectStudioProtectedState(session),
+    name,
+    "保存挂起期间",
+  );
   process.stdout.write(name + "：真实 201 已到达并挂起 Studio UI，另一主体准备推进版本 3\n");
 
   // 第二主体真实读取/提交时恢复其独立浏览器窗口，不影响原有 BFF 会话。
@@ -489,7 +493,12 @@ async function verifyFramework(
   ) {
     throw new Error("真实 Studio 迟到保存结果与数据库不一致");
   }
-  requireUnchangedDocument(before, await inspectStudioProtectedState(session), name, "远端提交修订号 3 后");
+  requireUnchangedDocument(
+    before,
+    await inspectStudioProtectedState(session),
+    name,
+    "远端提交修订号 3 后",
+  );
   try {
     assert.equal(await session.evaluate(releaseStudioRealLateInPage, origin, projectId), true);
   } catch {
@@ -527,7 +536,12 @@ async function verifyFramework(
   if (stale.writeAttempts !== 1 || stale.rejectedWrites !== 0) {
     throw new Error("真实 Studio 迟到保存未阻止重复写入");
   }
-  requireUnchangedDocument(before, await inspectStudioProtectedState(session), name, "CAS 只读复核后");
+  requireUnchangedDocument(
+    before,
+    await inspectStudioProtectedState(session),
+    name,
+    "CAS 只读复核后",
+  );
   assert.equal(await session.evaluate(triggerSaveTimingInPage), true);
   await waitForStudioState(
     session,
@@ -539,7 +553,12 @@ async function verifyFramework(
   if (final.writeAttempts !== 1 || final.rejectedWrites !== 0 || !final.baselineCleared) {
     throw new Error("真实 Studio 迟到保存未阻止重复写入");
   }
-  requireUnchangedDocument(before, await inspectStudioProtectedState(session), name, "过期 CAS 保存拒绝后");
+  requireUnchangedDocument(
+    before,
+    await inspectStudioProtectedState(session),
+    name,
+    "过期 CAS 保存拒绝后",
+  );
 
   const latest = await secondBrowser.evaluate(readCasProjectInPage, secondOrigin, projectId, 3);
   if (latest.contentHash !== third.contentHash) {

@@ -62,7 +62,7 @@ function studioCanvasRuntime(children) {
       const copied = children.map((child) => ({
         ...child,
         removed: false,
-        getAttribute: (name) => (name === "fill" ? child.fill ?? null : null),
+        getAttribute: (name) => (name === "fill" ? (child.fill ?? null) : null),
         remove() {
           this.removed = true;
         },
@@ -70,7 +70,10 @@ function studioCanvasRuntime(children) {
       return {
         children: copied,
         get innerHTML() {
-          return copied.filter((child) => !child.removed).map((child) => child.markup).join("");
+          return copied
+            .filter((child) => !child.removed)
+            .map((child) => child.markup)
+            .join("");
         },
       };
     },
@@ -401,14 +404,18 @@ void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
       { localName: "g", markup: "<g transform='rotate(0)'><rect width='30'/></g>" },
     ];
     const before = readStudioContentCanvasInPage(studioCanvasRuntime(base));
-    const imageChanged = readStudioContentCanvasInPage(studioCanvasRuntime([
-      { ...base[0], markup: "<image href='data:image/svg+xml,修改后图元'/>" },
-      ...base.slice(1),
-    ]));
-    const nodeChanged = readStudioContentCanvasInPage(studioCanvasRuntime([
-      ...base.slice(0, 2),
-      { ...base[2], markup: "<g transform='rotate(45)'><rect width='30'/></g>" },
-    ]));
+    const imageChanged = readStudioContentCanvasInPage(
+      studioCanvasRuntime([
+        { ...base[0], markup: "<image href='data:image/svg+xml,修改后图元'/>" },
+        ...base.slice(1),
+      ]),
+    );
+    const nodeChanged = readStudioContentCanvasInPage(
+      studioCanvasRuntime([
+        ...base.slice(0, 2),
+        { ...base[2], markup: "<g transform='rotate(45)'><rect width='30'/></g>" },
+      ]),
+    );
     assert.notEqual(before, imageChanged);
     assert.notEqual(before, nodeChanged);
   });
