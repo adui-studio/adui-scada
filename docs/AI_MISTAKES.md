@@ -246,6 +246,24 @@
 - **验证**：维护者在修复后提供的 Windows 日志确认 `vp check` **329 个格式文件正确、184 个受检文件零警告/Lint/类型错误**，OIDC 离线安全测试 **18/18**，完整 `pnpm run ready` 中单元测试 **544/544**、服务端 E2E **49/49**、React/Vue/NestJS 构建完成、质量链退出码 **0**；另以本机独立 PostgreSQL 运行 `pnpm run test:db`，**4/4 文件、29/29 用例通过，退出码 0**。本次文档追加提交后的 `docs:check` 需独立复核；上述结论只对应维护者提交日志时的测试候选代码。
 - **证据**：PR #60、修复提交 `017aaa22729e987720a09d865726c8edcabff839`、`apps/server/test/projects-cas-cookie-http.db-spec.ts`、维护者 2026-11-17 Windows `vp check --fix` / `vp check` / `ready` / `test:db` 日志，以及 `docs/VALIDATION.md`。
 
+### E-028 · 真实双 Keycloak 验收脚本保留三个未使用模块常量（第三十四批第六小批）
+
+- **现象**：2026-11-17 维护者 Windows 运行 `vp check --fix` 时，`scripts/test-oidc-dual-cas.mjs` 的 `PROJECT_NAME`、`CSRF_NAME`、`CSRF_PATTERN` 触发 **3 条 `eslint(no-unused-vars)` 警告、0 错误**，自动格式化完成但不得算作代码检查通过。
+- **根因**：浏览器 CDP 的 `function.toString()` 执行要求函数自包含，页面内已使用相应固定字符串/正则；模块顶部残留的三个常量并未被任何 Node 代码引用。
+- **修复**：仅删除三个未使用常量声明，不调整 OIDC、CSRF、同源请求、CAS、ACL、数据写入和既有离线断言，见 PR #61 提交 `0b7b57837b91921eeaae579e6ad440b292de1796`。
+- **避免**：新写页面注入函数或测试脚本时，逐一核对模块级常量是否真正被引用；提交前运行不带 `--fix` 的 `vp check`，不能把格式化完成视为零警告。
+- **验证**：维护者后续 Windows `vp check` **331 文件格式正确、186 受检文件零警告/Lint/类型错误**；`test:oidc:dual:config` **11/11**、`docs:check` **86 个 Markdown**、`pnpm run ready` **544/544 单元测试、49/49 服务端 E2E，退出码 0**。这些是本次新增身份提示改动**之前**的代码候选验收，不代表最新 HEAD 已复验。
+- **证据**：PR #61、维护者 2026-11-17 Windows `vp check --fix` 与完整 `ready` 日志、`docs/VALIDATION.md`。
+
+### E-029 · 双主体预检把同主体与跨租户误用合并为同一诊断（第三十四批第六小批）
+
+- **现象**：2026-11-17 维护者在本机真实 Keycloak Lab 分别执行 `test:oidc:dual:preflight` 与显式 `test:oidc:dual:cas`，均在两次登录之后输出“**两次登录必须属于同一可信租户的不同主体**”，退出码均为 **1**。第一轮输出没有区分两窗口最终是同一本地主体还是分属不同租户；无法根据该日志断言具体是哪一种。
+- **根因**：`requireDifferentSubjects` 用一个 `if (first.tenantId !== second.tenantId || first.subjectId === second.subjectId)` 对两个不同的合法性条件抛出相同中文消息。该保护本身按设计拒绝不合格主体，问题在于不够明确的可执行诊断，不是 HTTP CAS 或 PostgreSQL 已验证失败。
+- **修复候选**：保持两项身份约束完全不变，分别输出固定的中文失败类别——“**两次登录所属租户不一致，请核对第二位测试用户的本机身份预绑定**”和“**两次登录映射到同一本地主体，第二个浏览器须使用另一位已预绑定的测试用户**”；加入安全错误白名单与离线回归，并在第二个浏览器登录前提示必须使用不同测试账号。**不打印租户、主体 ID、Keycloak UUID、Cookie、Token 或用户凭据**。
+- **避免**：真实 OIDC 多主体测试必须区分“同主体”“不同租户”“身份无效”三种拒绝类别；只核对分类，不从脱敏错误推断外部用户具体身份。登录失败不能通过改 ACL、静默合并租户或复用同一账号绕过；第二位测试用户必须经受控本机工具预绑定到第一位所在租户的独立本地主体。
+- **验证**：维护者在诊断修复前的 `test:oidc:dual:config` **11/11**、`vp check` 零警告、`ready` 退出码 0，但真实 `preflight` 和 `cas` 退出码均为 1。**修改后的离线、质量链和真实双登录尚未在 Windows 重新执行，不得标为通过；专用工程 CAS 的 201/409 尚无本小批真实验收证据**。
+- **证据**：PR #61、`scripts/test-oidc-dual-cas.mjs`、`scripts/test-oidc-dual-cas.cases.mjs`、维护者原始 Windows 两条预检失败日志、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
