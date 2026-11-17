@@ -1192,3 +1192,9 @@ PR #57 经维护者人工验收和单独合并授权，以 Squash Commit `c426d2
 第四小批 PR #59 已合并至 `main@4c3cb0d7`，真实 PostgreSQL 25/25 与 React/Vue 严格多页（本机预绑定普通 Keycloak 用户、11 项授权工程）均由维护者 Windows 退出码 0 验证。为关闭仓储层竞争与 HTTP 409 映射之间的缺口，新分支只增加真实数据库 HTTP 集成测试，使用两个不同可信主体和独立 BFF Cookie/CSRF，会话持久化、Guard、ACL、控制器、Prisma 事务、审计全走真实业务实现。四项新用例预计将独立数据库测试总数提升到 29；只触碰本机显式隔离测试库内随机租户并定向清理，不变更业务代码、前端工程、数据库迁移或生产控制权限。
 
 **测试本身不包含双 Keycloak 授权码登录**，也不验证企业 IdP、生产 TLS 或多进程部署。最新本地 `ready`、新增 HTTP CAS 的真实 PostgreSQL 结果与原第 34 批四小批准备工具的 18/18 离线回归仍待 Windows 证据，PR 将保持 Draft 直至人工验收及明确合并授权。
+
+## 2026-11-17 · 第三十四批第五小批：Windows 双 BFF Cookie HTTP CAS 验收完成
+
+维护者 Windows 实测候选：新增真实双 Cookie HTTP CAS 专项 **4/4**，全部隔离 PostgreSQL 回归 **29/29**、退出码 0；离线 OIDC 浏览器保护 **18/18**、`vp check` **329 个格式文件 / 184 个受检文件零告警**、完整 `pnpm run ready` **544/544 单元测试、49/49 服务端 E2E**、React/Vue/NestJS 构建成功、退出码 0。HTTP 竞争场景验证两份真实服务端签发并存储的 Cookie/CSRF 会话只产生一个 HTTP 201 与一个 HTTP 409，数据库修订号、历史与审计一致；并非两次真实 Keycloak 授权码登录。
+
+此前数值数组未带比较器导致的 Vite+ 1 条 Lint 警告，已最小修复并在复验日志中关闭，记录 E-027。PR #60 仍保持 Draft、Assignee `@adui-dev`，未获本次合并授权。Windows 日志未附 `git rev-parse HEAD`，新补的文档提交须再跑 `docs:check`；不需要再次运行会写入随机测试租户的数据库专项来验证纯文档变化，除非代码 HEAD 又发生改变。
