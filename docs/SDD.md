@@ -876,3 +876,9 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 `openProjectInPage` 在点击工程列表项前记录现有服务端错误节点。仅观察到“正在处理工程版本”并不代表忙碌结束后仍存在的错误属于新请求；修复后，只有错误内容与旧错误不同，或本次确实观察到旧错误被清空后重新出现，才将该错误判作当前载入失败。完成成功路径依旧要求正常的 `window.confirm` 与后续 CAS 提示，真实的新错误仍必须拒绝载入，未得到有效确认会超时失败，不能通过放宽页面断言掩盖失败。
 
 新拒绝仅使用受审核固定阶段与类别，`describeBrowserPageException`、`describeProjectBrowserFailure` 均以完整白名单正则检查后才将安全类别交付 Node 终端。新类别不代表真实 HTTP 状态码，也不携带工程 ID、身份、Cookie、响应正文或异常堆栈。此变更仅涉及 CDP 专项脚本与离线回归，不改变 Vue/React 页面业务逻辑或服务器授权。
+
+## 2026-11-17 · 第三十四批第十四小批补充：Vue 保存异常后 CAS 响应式缓存对齐
+
+正式共享 `StudioServerProjectSession.saveDocument` 收到服务端版本冲突 409 时清除其 CAS 基线；401/403/404 按访问拒绝规则失效相关缓存，503 临时故障仍保留现有 CAS 并由后续真实服务端请求重新校验。React Studio 的 `activeServerBaseline` 每次渲染直接从共享会话读取；Vue 则在 `serverBaselineRevision` 响应式变量中保存镜像，原先在成功保存、确认载入、主动访问失效时更新，但在仅有 409 的保存错误路径漏更新镜像。
+
+最小修复在 Vue `runServerAction` 错误路径且标签为“保存服务端工程”时，将 `serverBaselineRevision.value` 重新赋值为共享会话针对**当前编辑工程**的真实 `getBaselineRevision`。此变更不更改共享会话的授权、CAS 算法、实际 POST 或 React 页面；保持 Vue 409 失效展示、503 保留基线及既有访问失效流程。隔离浏览器 `verifySaveTimingScenarios` 已经同时对 React/Vue 检查 401、409 清基线与 503 保留基线；新增固定错误类别使失败时只输出框架/HTTP 模拟状态和“CAS 基线状态不符合预期”，绝不输出工程 ID、Cookie、Token 或原始响应。
