@@ -23,6 +23,8 @@ const SAFE_PAGE_ERRORS = new Set([
   "服务端列表分页契约不正确",
   "工程打开按钮不可用",
   "服务器工程载入阶段返回受控错误",
+  "服务器工程载入阶段返回受控错误（确认前）",
+  "服务器工程载入阶段返回受控错误（确认后）",
   "工程安全载入流程超时",
   "权限拒绝模拟参数不合法",
   "权限拒绝模拟操作按钮不可用",
@@ -760,7 +762,12 @@ export async function openProjectInPage(projectId, headRevision, mode) {
         return { confirmCount, intercepted: fault.calls, outcome: "confirm" };
       }
       if (error && mode !== "conflict" && newActionObserved && !busy) {
-        throw new Error("服务器工程载入阶段返回受控错误");
+        // 不输出页面错误正文：仅区分是否已进入用户确认，以便定位载入前的失败。
+        throw new Error(
+          confirmCount === 0
+            ? "服务器工程载入阶段返回受控错误（确认前）"
+            : "服务器工程载入阶段返回受控错误（确认后）",
+        );
       }
       await new Promise((done) => setTimeout(done, 100));
     }
