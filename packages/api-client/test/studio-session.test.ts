@@ -738,4 +738,145 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     expect(api.getMe).toHaveBeenCalledTimes(1);
     expect(api.appendVersion).not.toHaveBeenCalled();
   });
+  it("冲突恢复只读预览最新版本不写入、不建立 CAS 基线", async () => {
+    const api = mockClient();
+    const projectId = waterTreatmentDemoDocument.projectId;
+    const snapshot = await createProjectSnapshot(waterTreatmentDemoDocument, {
+      revision: 3,
+      createdAt,
+    });
+    api.getProject.mockResolvedValue({
+      projectId,
+      headRevision: 3,
+      createdAt,
+      updatedAt: createdAt,
+    });
+    api.readVersion.mockResolvedValue(snapshot);
+    const session = createStudioServerProjectSession(api);
+
+    const result = await session.previewLatestVersion(projectId);
+    expect(result).toMatchObject({
+      snapshot: { projectId, revision: 3 },
+      headRevision: 3,
+      principal,
+    });
+    expect(api.getMe).toHaveBeenCalledTimes(1);
+    expect(api.getProject).toHaveBeenCalledTimes(2);
+    expect(api.readVersion).toHaveBeenCalledWith(projectId, 3);
+    expect(session.getBaselineRevision(projectId)).toBeNull();
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).not.toHaveBeenCalled();
+  });
+
+  it("已有旧基线时只读预览不自动接受最新水位，旧 CAS 保存仍被拒绝", async () => {
+    const api = mockClient();
+    const projectId = waterTreatmentDemoDocument.projectId;
+    const session = createStudioServerProjectSession(api);
+    session.acceptLoadedVersion(await session.readVersion(projectId, 1));
+    expect(session.getBaselineRevision(projectId)).toBe(1);
+
+    api.getProject.mockResolvedValue({
+      projectId,
+      headRevision: 2,
+      createdAt,
+      updatedAt: createdAt,
+    });
+    await expect(session.previewLatestVersion(projectId)).resolves.toMatchObject({
+      headRevision: 2,
+      snapshot: { revision: 2 },
+    });
+    expect(session.getBaselineRevision(projectId)).toBe(1);
+    await expect(session.saveDocument(documentCopy())).rejects.toMatchObject({
+      kind: "conflict",
+      status: 409,
+    });
+    expect(session.getBaselineRevision(projectId)).toBeNull();
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).not.toHaveBeenCalled();
+  });
+
+  it("核验期间远端修订继续推进时拒绝展示已经过期的最新预览", async () => {
+    const api = mockClient();
+    const projectId = waterTreatmentDemoDocument.projectId;
+    api.getProject
+      .mockResolvedValueOnce({ projectId, headRevision: 2, createdAt, updatedAt: createdAt })
+      .mockResolvedValueOnce({ projectId, headRevision: 3, createdAt, updatedAt: createdAt });
+    const session = createStudioServerProjectSession(api);
+    await expect(session.previewLatestVersion(projectId)).rejects.toMatchObject({
+      kind: "conflict",
+      status: 409,
+      message: "只读核验期间服务端版本已变化，请重新查询最新版本",
+    });
+    expect(api.readVersion).toHaveBeenCalledWith(projectId, 2);
+    expect(session.getBaselineRevision(projectId)).toBeNull();
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).not.toHaveBeenCalled();
+  });
+
+  it("预览请求迟到 404 不能撤销随后重新确认的有效 CAS 基线", async () => {
+    const api = mockClient();
+    const projectId = waterTreatmentDemoDocument.projectId;
+    const version = await createProjectSnapshot(waterTreatmentDemoDocument, {
+      revision: 1,
+      createdAt,
+    });
+    const session = createStudioServerProjectSession(api);
+    let signalRequested: (() => void) | undefined;
+    const requested = new Promise<void>((resolve) => {
+      signalRequested = resolve;
+    });
+    let rejectRead: (() => void) | undefined;
+    api.readVersion.mockImplementationOnce(() => {
+      signalRequested?.();
+      return new Promise<Awaited<ReturnType<ScadaApiClient["readVersion"]>>>((_resolve, reject) => {
+        rejectRead = () => reject(new ScadaApiError("工程不存在或无权访问", "not_found", 404));
+      });
+    });
+    const pending = session.previewLatestVersion(projectId);
+    await requested;
+    session.reset();
+    session.acceptLoadedVersion({ snapshot: version, headRevision: 1, principal });
+    rejectRead?.();
+
+    await expect(pending).rejects.toMatchObject({ kind: "conflict", status: 409 });
+    expect(session.getBaselineRevision(projectId)).toBe(1);
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).not.toHaveBeenCalled();
+  });
+
+  it("只读预览遇到真实权限拒绝时清空旧基线并阻断误创建", async () => {
+    const api = mockClient();
+    const projectId = waterTreatmentDemoDocument.projectId;
+    const session = createStudioServerProjectSession(api);
+    session.acceptLoadedVersion(await session.readVersion(projectId, 1));
+    api.getProject.mockRejectedValueOnce(
+      new ScadaApiError("工程不存在或无权访问", "not_found", 404),
+    );
+    await expect(session.previewLatestVersion(projectId)).rejects.toMatchObject({
+      kind: "not_found",
+      status: 404,
+    });
+    expect(session.getBaselineRevision(projectId)).toBeNull();
+    await expect(session.saveDocument(documentCopy())).rejects.toMatchObject({
+      kind: "forbidden",
+      status: 403,
+    });
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).not.toHaveBeenCalled();
+  });
+
+  it("只读预览网络失败时保留原合法基线且不写服务端", async () => {
+    const api = mockClient();
+    const projectId = waterTreatmentDemoDocument.projectId;
+    const session = createStudioServerProjectSession(api);
+    session.acceptLoadedVersion(await session.readVersion(projectId, 1));
+    api.getProject.mockRejectedValueOnce(new ScadaApiError("服务端暂时不可用", "network", 503));
+    await expect(session.previewLatestVersion(projectId)).rejects.toMatchObject({
+      kind: "network",
+      status: 503,
+    });
+    expect(session.getBaselineRevision(projectId)).toBe(1);
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).not.toHaveBeenCalled();
+  });
 });

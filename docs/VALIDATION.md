@@ -1642,3 +1642,11 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 **证据与边界**：前四轮在真实浏览器中的测试夹具阶段错误、窗口可见性错误及非持久化 SVG 网格快照误报，最终候选未再阻断 Windows 双框架专项；但此前具体 DOM 差异没有独立抓取，不能断言第四轮变化只由网格引起。当前“画布内容未改变”依据的是排除单个视口网格的**工程内容快照**，仍严格比较其余 SVG 子节点、草稿整记录哈希和 CAS/审计。HTTP 201 延迟属于浏览器端在真实响应到达后的消费过程，**不是物理 TCP 断流**，也不是现场工业设备安全验证。真实 Lab 在受控本机 `adui_scada` 执行，此次**没有另行运行** `adui_scada_test` 32/32 或全新 Prisma 迁移。
 
 **SHA 限制**：两段 Windows 日志没有本地 `git rev-parse HEAD`，不能精确绑定通过结果到 Git SHA；GitHub 补录前 PR #72 HEAD 为 `a69cf0c456ae39e157b015b366d00424941df155`，相较上次候选 `c681feba` 多出涉及两份测试脚本的一次提交。**本次新增验收和结案文档提交本身尚未经 Windows 再次运行** `vp check`、`docs:check` 或 `ready`。PR #72 继续 Draft，Assignee `@adui-dev`；未经维护者新的明确授权不合并。
+
+## 第三十四批第十八小批 · 409 只读冲突恢复候选验收
+
+新增的 `StudioServerProjectSession.previewLatestVersion` 只读读取身份、首版水位、快照及再次确认水位；每个 await 后验证上下文代次，拒绝并发修改、水位与快照不匹配和过期请求；当前 401/403/404 继续使旧权限缓存失效，503/network 继续保留合法 CAS。**只有后续真实人工确认载入**才允许重新建立 CAS。React/Vue 的恢复按钮仅在本工程发生 409 后显示，不允许预览行为更新画布和 IndexedDB；读完快照再次读取历史列表第一页并核验最新修订号，避免预览被后续变更悄悄覆盖。
+
+新增测试目标：共享 CAS Session 由 **31 增至 37** 项，Vitest 全量由上一轮 **567 增至 573** 项；`test:projects:oidc:config` 由 **33 增至 35** 项。真正的 `test:projects:oidc:save:browser` 使用两端隔离 Chrome/Edge + Keycloak/BFF 会话、合成 409 后只读核验真实版本，必须保持浏览器非 GET 工程写入拦截及原本 401/503 回归；不涉及新增数据库写入或 Lab ACL 变更，也不等于另一场真实 PostgreSQL 并发 409。
+
+**当前所有新增数字均为预期，不是实测通过记录。** 需要在 Windows 实际执行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`，再在受控本机可信 OIDC HTTPS 环境独立执行 `pnpm run test:projects:oidc:save:browser`，分别核对 React/Vue 409 预览、仅一次被拦截 POST、真实 GET 与本地草稿保持不变，并记录每条命令退出码及 `git rev-parse HEAD`。不得从旧 PR #72 的成功日志推断本批通过。

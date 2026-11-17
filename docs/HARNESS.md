@@ -2808,3 +2808,42 @@ if ($browserExitCode -ne 0) { throw "真实双框架 Studio 迟到响应专项�
 另已在严格本机隔离 Lab 下执行 `pnpm run test:oidc:dual:studio:late`，最后明确输出 **退出码 0**。React/Vue 两轮都已完成真正 Studio UI 触发保存、浏览器暂缓交付真实 201、第二主体真实 CAS 2→3、页面重新可见、只读水位复核清除旧基线、禁止额外版本、SVG 内容/IndexedDB 草稿保护及 PostgreSQL 三版审计。两个新建专用工程按设计留存。视口网格属于动态装饰性 SVG，实际快照只排除该一个已知非持久化元素；图元与渲染内容的变化仍为失败。
 
 验收前记录的第一至第四轮失败与候选修复均保留作为复盘，**本节是最新 Windows 验收结论**。本次并没有模拟物理 TCP 丢包，也没有进行工业现场测试。日志未包含本地 `git rev-parse HEAD`，不得追溯绑定确切 Git SHA。补录文档的后续 Git 提交本身仍需下次质量检查；PR #72 保持 Draft / `@adui-dev`，等待维护者明确授权才允许合并。
+
+## 第三十四批第十八小批 · 双框架 409 冲突只读预览复验
+
+**先验条件**：本机 Windows、仓库 `feature/v0.3-b34-conflict-preview` 分支、同一可信 Keycloak HTTPS Lab 的两套 Origin、已预绑定普通测试主体及已有已授权工程。新预览操作全部是已存在的 GET 路由，**不自动创建、追加、删除工程或修改 ACL**；原 `--simulate-save-timing` 浏览器拦截器仍截断所有工程 POST。用户登录由独立临时浏览器按真实 OIDC 流程进行，不能粘贴密码、Token 或 Cookie。
+
+从项目根目录按顺序操作（先确认无未提交修改，不要覆盖本地工作）：
+
+```powershell
+git status --short
+git fetch origin
+git switch --track origin/feature/v0.3-b34-conflict-preview
+git rev-parse HEAD
+git rev-parse origin/feature/v0.3-b34-conflict-preview
+
+pnpm run test:projects:oidc:config
+if ($LASTEXITCODE -ne 0) { throw "工程浏览器离线安全测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "第十八小批完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+```
+
+上述全部通过后，在**已确认本机可信 Keycloak/HTTPS 双 Origin Lab 可供只读验收**的前提下，单独执行：
+
+```powershell
+pnpm run test:projects:oidc:save:browser
+$browserExitCode = $LASTEXITCODE
+Write-Host "第十八小批真实双框架 409 只读预览退出码：$browserExitCode"
+if ($browserExitCode -ne 0) { throw "双框架冲突恢复浏览器专项失败" }
+```
+
+应能实际看到 React/Vue 两端在合成 409 后通过真实 Studio 操作只读预览最新远端版本，旧 CAS 继续未建立、差异比较可见、画布与 IndexedDB 草稿完全不变；原 401 与 503 故障分支也仍通过。无授权工程或缺少可信 Lab 必须按原规则失败，不能自动授予 ACL 或伪造 HTTP 成功。浏览器临时 Profile 用后销毁。当前候选尚未实际运行本批 Windows `vp check`、`docs:check`、`ready` 或真实浏览器专项。

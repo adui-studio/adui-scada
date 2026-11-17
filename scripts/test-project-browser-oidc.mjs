@@ -605,6 +605,39 @@ export function saveTimingStateInPage() {
   };
 }
 
+/** 冲突发生后只触发双框架现有 UI 的只读最新版本预览。 */
+export function triggerConflictPreviewInPage() {
+  const panel = document.querySelector('[aria-label="服务端工程版本"]');
+  const button = [...(panel?.querySelectorAll("button") ?? [])].find(
+    (item) => item.textContent.trim() === "只读预览最新版本",
+  );
+  if (!button || button.disabled) {
+    throw new Error("冲突恢复只读预览按钮不可用");
+  }
+  button.click();
+  return true;
+}
+
+/** 只返回固定状态和修订号，不导出服务端工程、身份或响应正文。 */
+export function conflictPreviewStateInPage() {
+  const panel = document.querySelector('[aria-label="服务端工程版本"]');
+  const text = panel?.textContent ?? "";
+  const comparison = panel?.querySelector(".studio-version-comparison");
+  const revision = comparison
+    ?.querySelector("strong")
+    ?.textContent?.match(/服务端版本 #(\d+)/)?.[1];
+  return {
+    writeAttempts: globalThis.__aduiTestAccessDenial?.writeAttempts ?? -1,
+    busy: [...(panel?.querySelectorAll(".studio-version-help") ?? [])].some((node) =>
+      node.textContent?.includes("正在处理工程版本"),
+    ),
+    baselineCleared: /CAS 基线：\s*未建立/.test(text),
+    hasError: Boolean(panel?.querySelector('[role="alert"]')),
+    comparisonVisible: Boolean(comparison),
+    previewRevision: revision === undefined ? null : Number(revision),
+  };
+}
+
 /** 被序列化到页面独立执行；只允许三类安全拒绝与固定的只读接口范围。 */
 export function armAccessDenialInPage(projectId, scope, status, runtime = globalThis) {
   const state = runtime.__aduiTestAccessDenial;
@@ -949,6 +982,24 @@ async function verifySaveTimingScenarios(session, origin, name, selected) {
     assert.equal(after.canvas, before.canvas, name + " 保存失败改变了本地画布");
     assert.deepEqual(after.drafts, before.drafts, name + " 保存失败改变了草稿");
     assert.equal(after.autoSave, before.autoSave, name + " 保存失败改变了自动保存");
+
+    if (scenario.status === 409) {
+      process.stdout.write(name + "：正在通过真实 UI 只读预览冲突后的最新服务端版本\n");
+      assert.equal(await session.evaluate(triggerConflictPreviewInPage), true);
+      const preview = await waitFor(async () => {
+        const state = await session.evaluate(conflictPreviewStateInPage);
+        const previewReady =
+          !state.busy && state.comparisonVisible && state.previewRevision === selected.headRevision;
+        return previewReady ? state : null;
+      }, name + " 冲突恢复只读预览最新服务端版本");
+      assert.equal(preview.writeAttempts, 1, name + " 预览不允许额外写入工程");
+      assert.equal(preview.baselineCleared, true, name + " 只读预览不应建立 CAS 基线");
+      assert.equal(preview.hasError, false, name + " 只读预览必须核验真实快照");
+      const preserved = await inspectStudioState(session);
+      assert.equal(preserved.canvas, before.canvas, name + " 只读预览改变了本地画布");
+      assert.deepEqual(preserved.drafts, before.drafts, name + " 只读预览改变了草稿");
+      assert.equal(preserved.autoSave, before.autoSave, name + " 只读预览修改了自动保存");
+    }
   }
 }
 

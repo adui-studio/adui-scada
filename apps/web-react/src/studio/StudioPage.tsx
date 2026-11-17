@@ -144,6 +144,7 @@ export default function StudioPage() {
   const [serverRows, setServerRows] = useState<readonly ProjectVersionSummary[]>([]);
   const [serverHasMore, setServerHasMore] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [serverRecoveryProjectId, setServerRecoveryProjectId] = useState("");
   const [serverAccessRevision, setServerAccessRevision] = useState(0);
   const [serverInspectedVersion, setServerInspectedVersion] = useState<ProjectSnapshot | null>(
     null,
@@ -1057,6 +1058,7 @@ export default function StudioPage() {
     setServerRows([]);
     setServerHasMore(false);
     setServerInspectedVersion(null);
+    setServerRecoveryProjectId("");
     setServerAccessRevision((revision) => revision + 1);
   }, [serverSession]);
 
@@ -1090,6 +1092,7 @@ export default function StudioPage() {
                 : "服务端身份或工程授权已变化",
             );
           } else if (revisionConflict) {
+            setServerRecoveryProjectId(projectId);
             setServerHeadRevision(null);
             setServerRows([]);
             setServerHasMore(false);
@@ -1127,14 +1130,19 @@ export default function StudioPage() {
     action: () => Promise<void>,
     lockDraft = false,
   ): Promise<void> {
+    const actionProjectId = editor.snapshot().document.projectId;
     await runHistoryAction(
       label,
       async () => {
         setServerError("");
+        setServerRecoveryProjectId("");
         try {
           await action();
         } catch (error) {
           setServerError(error instanceof Error ? error.message : "服务端操作失败");
+          if (error instanceof ScadaApiError && error.kind === "conflict") {
+            setServerRecoveryProjectId(actionProjectId);
+          }
           if (isScadaAccessRejection(error)) invalidateServerAccess();
           if (
             error instanceof ScadaApiError &&
@@ -1166,6 +1174,7 @@ export default function StudioPage() {
         const result = await serverSession.saveDocument(document);
         if (editor.snapshot().document.projectId !== document.projectId) return;
         setServerIdentity("服务端身份已验证");
+        setServerRecoveryProjectId("");
         setServerProjectId(document.projectId);
         setServerHeadRevision(result.revision);
         setServerRows([]);
@@ -1196,6 +1205,33 @@ export default function StudioPage() {
       setServerInspectedVersion(null);
       setNotice("已读取服务端工程版本摘要；当前画布和 IndexedDB 草稿均未改变");
     });
+  }
+
+  /** 冲突恢复仅只读核验与预览，实际载入必须由用户再次确认。 */
+  async function previewServerConflict(): Promise<void> {
+    await runServerAction(
+      "只读预览最新服务端版本",
+      async () => {
+        const projectId = editor.snapshot().document.projectId;
+        const version = await serverSession.previewLatestVersion(projectId);
+        const rows = await serverApi.listVersions(projectId, { limit: HISTORY_PAGE_SIZE });
+        if (editor.snapshot().document.projectId !== projectId) return;
+        if (rows[0]?.revision !== version.headRevision) {
+          throw new ScadaApiError("服务端历史版本又有更新，请重新只读预览", "conflict", 409);
+        }
+        setServerIdentity("服务端身份已验证");
+        setServerProjectId(projectId);
+        setServerHeadRevision(version.headRevision);
+        setServerRows(rows);
+        setServerHasMore(rows.length === HISTORY_PAGE_SIZE);
+        setServerInspectedVersion(version.snapshot);
+        setServerRecoveryProjectId("");
+        setNotice(
+          `已只读核验服务端最新版本 #${version.headRevision}；当前画布与草稿不变，载入前须再次确认`,
+        );
+      },
+      true,
+    );
   }
 
   async function loadMoreServerVersions(): Promise<void> {
@@ -1243,6 +1279,7 @@ export default function StudioPage() {
         await pauseAutoSave();
         editor.loadDocument(result.snapshot.document);
         serverSession.acceptLoadedVersion(result);
+        setServerRecoveryProjectId("");
         clearLayerDrag();
         setLayerSearch("");
         setCollapsedGroupIds(new Set());
@@ -1853,6 +1890,18 @@ export default function StudioPage() {
                 <p className="studio-version-error" role="alert">
                   {serverError}
                 </p>
+              )}
+              {serverError && serverRecoveryProjectId === state.document.projectId && (
+                <div className="studio-version-help">
+                  <p>当前画布与 IndexedDB 草稿已保留。可先只读对比最新版本，再决定是否载入。</p>
+                  <button
+                    type="button"
+                    disabled={historyBusy}
+                    onClick={() => void previewServerConflict()}
+                  >
+                    只读预览最新版本
+                  </button>
+                </div>
               )}
               {!historyBusy && visibleServerRows.length === 0 && (
                 <p className="studio-version-help">尚无已查询的服务端历史版本。</p>

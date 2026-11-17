@@ -869,3 +869,11 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/test-oidc-studio-real-late.mjs`：`readStudioContentCanvasInPage` 仅在本联合专项克隆 SVG 并移除单个直系视口网格 `rect`；`inspectStudioProtectedState` 复用原 `inspectStudioState` 的 IndexedDB 与自动保存观察数据，只将 `canvas` 切换为保留其余 SVG 的语义快照。
 - `scripts/test-oidc-studio-real-late.cases.mjs`：新增 3 项离线用例，确保动态网格尺寸变化不误报、渲染图元变化仍拒绝、画布缺失和重复网格失败；累计目标 **16 项**。
 - 没有修改 React/Vue 生产画布、共享 `test-project-browser-oidc.mjs` 的既有快照、IndexedDB 仓储或安全写入门禁。
+
+## 第三十四批第十八小批 · 冲突后只读核验最新服务端版本
+
+- `packages/api-client/src/studio-session.ts`：新增 `previewLatestVersion`，用真实可信身份和两次服务端水位包围一次经 SHA 校验的最新快照读取；旧上下文、改版竞态和访问拒绝均保持 fail-closed，不建立 CAS、不发写入。
+- `packages/api-client/test/studio-session.test.ts`：增加 6 项 Mock 测试，覆盖只读预览、旧基线不可升级为新 CAS、水位并发、迟到 404 不污染新基线、实时权限拒绝和临时网络失败；新增用例仍需 Windows Vitest 实测。
+- `apps/web-react/src/studio/StudioPage.tsx` 与 `apps/web-vue/src/studio/StudioPage.vue`：409 后仅对对应工程提供相同中文“只读预览最新版本”操作，核验最新快照与历史第一页水位一致再显示差异；保留既有人工确认载入入口。
+- `scripts/test-project-browser-oidc.mjs`：扩展原只读/合成 409 专项，点击真实 React/Vue Studio 恢复按钮，验证真实 GET 对比与零额外工程写入。
+- `scripts/test-project-browser-oidc.cases.mjs`：新增 2 项页面按钮与脱敏状态离线回归（目标由 33 项增至 **35 项**）；不新增依赖、HTTP 路由、数据库迁移、Schema 或设备写入权限。
