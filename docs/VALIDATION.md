@@ -1550,3 +1550,13 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 已在 Draft PR #70 原分支将唯一不匹配调用改为 `mockResolvedValueOnce(await createProjectSnapshot(...))`，复用原 async `it`，保留原有真实 SHA-256 快照生成、CAS 3→4、期望调用次数及旧回包上下文保护。改动**仅一处测试值**，不更改生产 API Client、Core、NestJS、Schema 或真实数据库行为。经 GitHub 代码确认新表达式恰好位于 async 测试内，且 Core 工厂返回 Promise；此项是静态类型原因核对，不是本机 TS6 / `vp check` 通过证据。
 
 **修复后待 Windows 复验**：`vp check` 零错误警告；`pnpm run test:unit` 目标共享会话 31/31、全量 567/567；`pnpm run docs:check` 与 `pnpm run ready` 实际退出码 0；真实本机隔离 PostgreSQL `pnpm run test:db` 目标 30/30 且退出码 0。原始日志不包含本机 HEAD 校验和后续测试，通过前不能合并 PR。
+
+## 2026-11-17 · PR #70 Windows 实测：真实数据库 32/32 通过，ready 被 SSE 代理禁用端口中断
+
+维护者 Windows 原始日志已确认本机独立测试数据库 `adui_scada_test`（`127.0.0.1:15432`）的 `prisma migrate status` 显示 **4 项迁移、Database schema is up to date**。随后独立 `pnpm run test:db` 在真实 PostgreSQL、NestJS HTTP、Cookie/CSRF 和 ACL 下 **4/4 文件、32/32 项通过，退出码 0**。其中新增的“真实 PostgreSQL 已提交版本后延迟交付旧 201，最新水位与审计不得回退”实际通过，包含 CAS 旧水位拒绝与版本/审计核对。**此前文档将数据库专项预计为 30/30 不准确，以维护者实际 32/32 为准**。隔离数据库测试完成不等于工业现场验证。
+
+维护者附带的完整 Windows 质量日志另行证明：`pnpm run test:unit` **49/49 文件、567/567 用例（共享 Studio Session 31/31）通过**；`vp check` **333 个文件格式正确、188 个受检文件零警告/Lint/类型错误**；`pnpm run docs:check` **86 份 Markdown 通过**。完整 `pnpm run ready` 已通过依赖/环境/LF/中文文案/Prisma/Core、双框架及服务端类型检查、单测 567/567、SSE 客户端 **8/8**，但在 `test:sse:fault:unit` 报 **4 项中 2 通过、2 失败**，均为 `TypeError: fetch failed`，原因链 `Error: bad port`；完整 `ready` **实际退出码 1**。因此该次 `ready` 之后的 OIDC 保护、HTTP E2E、文档和构建阶段**未在该次质量链执行完成**，不能宣称整条 `ready` 已通过。
+
+复核 `scripts/sse-fault-proxy.mjs` 原实现发现代理对 `127.0.0.1` 使用 `server.listen(0)` 接受操作系统随机分配端口；失败的两个测试经 Node 内置 `fetch` 访问代理，第三个 Keep-Alive 测试走 `node:http` 并通过。Fetch 标准会拒绝部分 HTTP 禁用端口，日志中的 `bad port` 与随机选择该端口的风险吻合；**本次输出没有记录代理实际选中的端口号，不能精确断言具体是哪一个禁用端口**。为避免重现，仅在测试故障代理内改为从 **20000～49151** 的安全高端口范围随机绑定本机监听，遇 `EADDRINUSE` 或 Windows `EACCES` 最多重试 32 次并保留固定中文错误，测试夹具断言所有实际监听端口都在该范围。保留原有 SSE 字节阻断、Keep-Alive、资源回收与外部目标拒绝断言，不关闭 Fetch 安全保护。
+
+该修复**尚未在 Windows 重新实测**。维护者应先执行 `pnpm run test:sse:fault:unit`（目标 4/4），再执行 `vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 并记录退出码。原有真实数据库 **32/32 通过**证据仍成立；本轮修复未更改数据库测试、Schema、迁移或服务端生产代码。GitHub 最新文档提交本身也尚未通过新的 Windows 质量链。PR #70 保持 Draft，等待维护者明确合并授权。
