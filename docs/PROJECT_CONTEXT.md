@@ -1296,3 +1296,9 @@ PR #68 已获维护者明确授权并 Squash 合并为 `main@a1e710d2be86675f156
 维护者 Windows 已实际通过 OIDC 浏览器离线 **28/28**、`vp check` **333/188 零警告错误**、完整 `ready`（Vitest **566/566**、HTTP E2E **49/49**、React/Vue/NestJS 构建及 86 份 Markdown），但独立 `test:projects:oidc:save:browser` **退出码 1**。React 完整保存时序 409、401、503 通过；Vue 完成真实登录、分页及 IndexedDB 草稿，在“取消载入与画布保护”的载入确认之前失败，未进入 Vue 三种保存拒绝场景。
 
 PR #69 已针对浏览器脚本确认存在的旧错误残留判定风险最小修正，并新增脱敏的受控错误类别及三项离线回归（预期 **31/31**），未修改 React/Vue 组件、共享 API Client、NestJS、PostgreSQL、OIDC ACL 或工业设备。原始失败的具体 HTTP/页面根因尚无证据定论；修复提交后的 Windows 全链和实际 Vue 交互式浏览器结果**仍待复验**。PR 继续保持 Open/Draft，Assignee `@adui-dev`，未经明确授权不得合并。
+
+## 2026-11-17 · 第三十四批第十四小批：第二轮 Windows 失败与测试诊断契约修复
+
+第二轮真实 Windows `test:projects:oidc:config` **30/31**：新增诊断用例把既有安全脱敏回退文案误认成另一句通用提示；`vp check` **333/188** 零警告，`ready` 中共享 Vitest **566/566** 通过，但在相同 30/31 离线测试处终止，完整质量链**退出码 1**。交互式浏览器专项 React 的 409/401/503 延迟保存均通过，Vue 在“真实 BFF 会话与授权工程列表”阶段失败，退出码 **1**；该阶段的原有布尔断言导致具体失败类别被通用错误信息覆盖，身份/网络原因尚未判定。
+
+候选已对齐原有脱敏契约测试，追加 React/Vue BFF 会话固定中文拒绝诊断并保留必须身份有效的验证。预计离线测试 **31/31**，但该候选及新 HEAD 的 `ready`、真实 Vue BFF/浏览器保存专项均**未在 Windows 复验**。不修改前端业务组件、生产 API、Cookie、Lab ACL、数据库或工业设备接口。PR #69 保持 Draft，等待后续实际验收和单独合并授权。
