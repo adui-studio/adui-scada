@@ -1620,3 +1620,11 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 用户第三轮 Windows 真实 `test:oidc:dual:studio:late` 日志：两个隔离 Keycloak 会话、新建随机测试工程、React 真实 201 保存、第二主体真实版本 2 读取、HTTP 201 追加修订号 3、第一主体旧 201 交付全部成功；测试随后确认“Studio 页面已可见，触发服务端 CAS 只读复核”。之后以“真实 Studio 迟到保存的本地数据发生变化”失败，**专项退出码 1**。按本版本测试脚本的最后执行顺序，旧 CAS 只读复核和再次保存拒绝的前置校验已完成；但具体是哪种本地数据发生变化、何时发生，原日志无法区分。此次未达到最终 PostgreSQL 三版审计和 Vue 全流程，绝不可记录为全部通过。
 
 修复候选只改测试断言的**可定位性**：分类 SVG 画布、自动保存状态、IndexedDB 草稿数目和原始草稿记录 SHA-256 是否变化，五个业务阶段逐一运行原本的强制不变断言；失败只输出固定阶段及布尔结果，不泄漏画布/草稿/摘要正文。新增两项离线安全用例，目标由 11 项增至 **13/13**。目前只对纯诊断函数运行过隔离 V8 模拟，五种输入与预期匹配；**没有最新补丁的 Node 13/13、`vp check`、`docs:check`、`ready`、真实浏览器成功日志**。原先的 Windows `ready` 退出码 0 属于更早候选，不能套用到现版本。第三轮用户日志没有本地 `git rev-parse HEAD`。
+
+## 第十七小批 · 第四轮 Windows SVG 差异分类与视口网格候选修复
+
+维护者第四轮 `pnpm run test:oidc:dual:studio:late` 输出：真实 Keycloak 双主体与新建测试工程准备成功，React Studio 真实 201 到达后挂起，第二主体真实读取修订 2 并通过 HTTP 201 推进至 3，第一主体消费旧 201，页面真实恢复为 `visible` 并触发 CAS 只读复核。随后在**“CAS 只读复核后”**的严格本地比较报告 `{"canvasChanged":true,"autoSaveChanged":false,"draftCountChanged":false,"draftHashChanged":false}`，**专项退出码 1**。未执行 PostgreSQL 最终三版审计与 Vue 流程。不能把前面的真实 CAS 步骤成功扩大为整体联合验收通过。
+
+原因分析：两端实际 SVG 页面都包含由 `visibleRect` 控制的网格矩形，旧测试比较整个 `.studio-svg.innerHTML`；在窗口恢复可见或尺寸变化后可能发生不属于工程数据的网格变更，形成假阳性。这一解释与观察相符，**但没有本次 DOM diff 证据证明变更仅来自网格**。候选只在真实 Studio 联合专项中克隆 SVG 并移除单个直系 `fill="url(#scada-studio-grid)"` 网格元素后比较所有剩余 SVG 子节点。原草稿 SHA-256、草稿数、自动保存、真实 CAS 单次 POST 与审计断言不变；业务 SVG 渲染图元变化继续严格失败。
+
+新增 3 项离线安全测试，目标从 13 提升为 **16/16**。从仓库源码提取的纯页面快照函数在隔离 V8 Mock 下覆盖网格变化、图元变化和重复网格拒绝路径，**非仓库 Node、浏览器、PostgreSQL 或完整质量链成功证据**。当前新补丁 `pnpm run test:oidc:dual:studio:config`、`vp check`、`pnpm run docs:check`、`pnpm run ready` 及真实 `pnpm run test:oidc:dual:studio:late` 均待 Windows 实测。用户第四轮日志未打印本地 Git SHA，不能绑定 PR 当前 HEAD。
