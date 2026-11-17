@@ -1329,3 +1329,8 @@ PR #69 继续只修改浏览器测试脚本和离线保护测试，用严格固�
 
 候选仅改共享客户端测试、真实数据库 HTTP 测试和配套需求/设计/验收文档，无生产代码、依赖或迁移变更。目标全量 Vitest **567/567**、共享会话 **31/31**、真实 `test:db` **30/30**，均**等待 Windows 实际执行**；`test:db` 不在默认 `ready` 中。Draft PR 必须指派 `@adui-dev` 并核实，未获维护者本次明确授权不得合并。
 
+## 2026-11-17 · 第三十四批第十五小批：TS2740 单点修复待 Windows 复验
+
+首次 Windows `vp check --fix` 报新增共享 Session 单测一处 **TS2740、0 警告**，格式化虽完成但 Lint/类型检查没有通过。原因是 Core 异步 `createProjectSnapshot` 返回 `Promise<ProjectSnapshot>`，而 `mockResolvedValueOnce` 需要已解析快照。PR #70 原分支仅在 `mockResolvedValueOnce` 中先 `await createProjectSnapshot`，不更改共享会话业务逻辑、真实 PostgreSQL HTTP 测试或测试库安全约束。
+
+修复后本地 `vp check`、Vitest 31/31（全量目标 567/567）、`ready` 及单独 `test:db` 仍需维护者重新执行。保持 Draft、Assignee `@adui-dev`、未经授权不得合并。
