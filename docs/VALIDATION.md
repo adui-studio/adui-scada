@@ -1412,3 +1412,9 @@ PR #64 已按维护者授权 Squash 合并为 `main@d59df5e9ef2d702954f6b2017399
 共享 `studio-session.test.ts` 新增 8 项单测；OIDC 浏览器独立 `--simulate-resume-check` 模式使用真实 Keycloak/BFF 登录和既有工程 GET，只模拟 DOM `visibilitychange`、身份 401、工程 404 和水位变化，实际工程写请求始终在临时 Profile 内拒绝。对应浏览器离线新 3 项，预计普通单测 **558/558**、离线浏览器 **24/24**，服务端 E2E 仍为 **49/49**。此专项不能证明真实两个物理标签同时可见或后台即时授权推送，只用于校验重新可见时的只读 UI 行为。
 
 **当前验证**：候选代码在 GitHub 独立分支，**尚未在 Windows 执行新 HEAD 的 `vp check`、`test:unit`、`test:projects:oidc:config`、`docs:check`、`ready` 或新浏览器交互专项**。不能冒充通过或提前合并。
+
+## 2026-11-17 · 第三十四批第十一小批 React Compiler 与 TypeScript 检查问题修复候选
+
+维护者 Windows 实际执行 `vp check --fix`，报告 **188 个受检文件中 1 个错误和 1 个警告**，同时显示 Formatting completed；具体是 `apps/web-react/src/studio/StudioPage.tsx` 的 `react(immutability)`（Effect cleanup 对 `active` 重赋值）和 TS2339（在 `isScadaAccessRejection(error)` 的类型谓词否定分支中读取 `error.kind`，被推断为 `never`）。该输出表示**格式化执行完毕，不代表检查通过**，不能继续标记 `ready` 已通过。
+
+针对 PR #66 新增 React 代码提交 `e5bddb6c98682130fc80841368466fa1aacccb51`：仅将临时 `let active` 替换为 `AbortController.signal.aborted` 生命周期保护，并在分支前分别计算 `accessRejected` 与 `revisionConflict`，复用原错误分类而不重写权限/CAS 逻辑。协作容器以 TypeScript **5.8.3** 的等价收窄片段运行 `tsc --noEmit --strict` 成功；**尚未运行本项目 TypeScript 6 或 Vite+，也未验证 Windows 本地 `vp check` 零错误**。不得将未执行的 `test:projects:oidc:config`（目标 24/24）、`test:unit`（目标 558/558）、`docs:check`、`ready` 和 `test:projects:oidc:resume` 写成已通过。详见 `docs/AI_MISTAKES.md` E-031。
