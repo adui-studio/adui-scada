@@ -2538,3 +2538,9 @@ if ($browserExitCode -ne 0) { throw "双框架延迟保存专项失败" }
 维护者第四轮 Windows `test:projects:oidc:config` **32/33**，失败是新增未知诊断负向断言预期错误；同轮独立 `test:projects:oidc:save:browser` React 409/401/503 执行完成，Vue 在 409 合成响应释放后失败，实际退出码 1。后续候选修复了预期文案与 Vue 保存 409 后共享 CAS 基线的响应式显示对齐，**修复后没有 Windows 实测证据**。
 
 先核对 `git status --short`、`git rev-parse HEAD` 与远端 PR HEAD，确保未覆盖本地改动；执行 `pnpm run test:projects:oidc:config`（目标 33/33）、`vp check`（零告警）、`pnpm run docs:check`（文档门禁）、完整 `pnpm run ready`（退出码须 0），最后在受控 HTTPS / Keycloak Lab 独立运行 `pnpm run test:projects:oidc:save:browser` 并记录退出码。专项必须让 React/Vue 均完成 409、401、503，双框架 409/401 清除 CAS、503 保留 CAS，按钮禁用、仅一条 POST、SVG/IndexedDB/自动保存完全不变。模拟 POST 永不进入真实 Lab；若出现固定“CAS 基线状态不符合预期”，不能通过调整预期或跳过断言规避，需要继续检查 UI 与共享会话一致性。
+
+## 第三十四批第十四小批 · 双框架延迟保存专项验收结案
+
+2026-11-17 维护者 Windows 复验已提供 `pnpm run test:projects:oidc:config` **33/33**、`vp check` **333/188 零告警错误**、`docs:check` **86 份 Markdown**、完整 `ready` 执行至 React/Vue/Server 构建完成且非零失败断言未触发（566/566 Vitest、49/49 HTTP E2E），以及独立 `pnpm run test:projects:oidc:save:browser` **退出码 0**。真实浏览器分别完成 React 与 Vue 的 409/401/503 延迟拒绝、只尝试一次 POST、草稿和自动保存保持不变；所有写请求在浏览器被拦截，未修改 Lab 工程和 ACL。
+
+本段是此前“候选/待复验”说明的**最新验收结论**。仍须保留完整日志和本地提交 SHA 关联；上传日志没有 `git rev-parse HEAD`，本次文档补录自身亦未重新验收。真实 PostgreSQL 成功写入后的延迟响应并不在此专项范围内。
