@@ -315,7 +315,11 @@ void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
     assert.equal(calls, 1);
     await assert.rejects(
       setSecondaryBrowserWindowState(
-        { send: async () => { throw new Error("sensitive_token_禁止泄漏"); } },
+        {
+          send: async () => {
+            throw new Error("sensitive_token_禁止泄漏");
+          },
+        },
         "minimized",
       ),
       (error) =>
