@@ -840,3 +840,32 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/test-oidc-dual-cas.mjs`：保留原只读预检/真实双主体同修订 CAS；新增互斥 `--run-late-response` 模式，浏览器内暂存已经实际返回的 201，第二主体推进至 3，旧 CAS 409，并从真实 PostgreSQL 只读核对三版/审计。
 - `scripts/test-oidc-dual-cas.cases.mjs`：原 11 项离线用例新增 5 项，覆盖显式模式门禁、同源单次 POST、失败/重复启动/无 CSRF、合法 CAS 范围与三版审计一致性。
 - 根 `package.json`：增加 `test:oidc:dual:late` 手工写入入口，**不加入 `ready` 的真实浏览器和数据库执行链**；离线安全回归继续使用原 `test:oidc:dual:config`。
+
+## 第三十四批第十七小批 · 真实 React/Vue Studio 迟到 201 UI 联合验收
+
+- `scripts/test-oidc-studio-real-late.mjs`：独立真实双主体、双框架 Studio UI、正式 HTTPS BFF 和 PostgreSQL 的版本 2→3、迟到真实 201、标签页可见只读复核、重复提交/草稿保护验收脚本；默认拒绝，须显式确认本机 Lab。
+- `scripts/test-oidc-studio-real-late.cases.mjs`：9 项 Node 内置离线用例，验证显式模式、项目写请求白名单、真实 Response 保留/释放、CSRF、重复/异常拒绝、脱敏状态及原草稿恢复 UI 点击辅助。
+- `scripts/test-project-browser-oidc.mjs`：只把既有 `enableAutoSaveInPage` 改为命名导出，复用其真实页面辅助函数而不改已有只读/合成拒绝模式。
+- 根目录 `package.json`：新增 `test:oidc:dual:studio:config` 到 `ready`，新增独立**手工写入**的 `test:oidc:dual:studio:late`；没有修改生产 React/Vue/NestJS/Core、数据库迁移和工业设备权限。
+
+### 第十七小批首轮失败后的阶段诊断补充
+
+- `scripts/test-oidc-studio-real-late.mjs`：新增 `waitForStudioState`，分别报告真实 201 挂起、第二主体读取 2/追加 3、Studio 消费 201、页面可见、CAS 失效与过期保存拒绝阶段；超时状态仅包含枚举、计数和布尔值。
+- `scripts/test-oidc-studio-real-late.cases.mjs`：扩展状态脱敏回归，覆盖 document 可见性布尔值。
+- 真实浏览器首轮在“React 真实 201 已到达并挂起”之后退出码 1，根因待新的阶段诊断日志确认；不得把该失败标记为已经修复。
+
+### 第十七小批 · 独立 Chrome/Edge 双窗口可见性修复候选
+
+- `scripts/test-oidc-studio-real-late.mjs`：增加只允许第二主体浏览器窗口 `normal/minimized` 的 CDP 管理函数。真正版本 2→3 读写时恢复第二窗口；提交成功、旧 201 交付后最小化第二窗口，再严格等待第一主体真实 `visible`，后续 CAS/IndexedDB/审计断言原样保留。
+- `scripts/test-oidc-studio-real-late.cases.mjs`：从原 9 项新增 2 项窗口命令与失败封闭离线回归，目标 11 项，尚需 Node 实际执行。
+
+### 第十七小批 · 本地数据异常的分阶段分类检查
+
+- `scripts/test-oidc-studio-real-late.mjs`：新增 `classifyStudioLocalDrift`，将 `canvasChanged`、`autoSaveChanged`、`draftCountChanged`、`draftHashChanged` 四项变化分类，并在原保存/远端提交/旧 201 消费/真实 CAS 复核/过期保存拒绝五个阶段执行原强制不变断言，失败只报告字段类别。
+- `scripts/test-oidc-studio-real-late.cases.mjs`：增加两项纯函数分类及敏感信息脱敏用例；预期离线总数由 11 增至 **13**。Node/Windows 真实测试待执行。
+
+### 第十七小批 · SVG 内容快照排除动态视口网格
+
+- `scripts/test-oidc-studio-real-late.mjs`：`readStudioContentCanvasInPage` 仅在本联合专项克隆 SVG 并移除单个直系视口网格 `rect`；`inspectStudioProtectedState` 复用原 `inspectStudioState` 的 IndexedDB 与自动保存观察数据，只将 `canvas` 切换为保留其余 SVG 的语义快照。
+- `scripts/test-oidc-studio-real-late.cases.mjs`：新增 3 项离线用例，确保动态网格尺寸变化不误报、渲染图元变化仍拒绝、画布缺失和重复网格失败；累计目标 **16 项**。
+- 没有修改 React/Vue 生产画布、共享 `test-project-browser-oidc.mjs` 的既有快照、IndexedDB 仓储或安全写入门禁。

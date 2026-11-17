@@ -2659,7 +2659,6 @@ if ($lateExitCode -ne 0) { throw "真实浏览器迟到 201 专项失败" }
 
 独立浏览器专项必须实际完成并打印“真实迟到 201 专项通过”，不能把启动提示当作成功。此脚本不驱动 React/Vue Studio UI 的保存按钮，也没有人为切断 TCP；客户端 UI 与共享 Session 的端到端晚回包保护仍需另批专项。当前候选**没有 Windows 完整质量链或真实 Lab 联合测试的通过日志**。
 
-
 ## 第三十四批第十六小批 · 真实 Windows 全链与双浏览器专项验收结案
 
 2026-11-17 维护者 Windows PowerShell 实测：`pnpm run test:oidc:dual:config` **16/16**、`vp check` **333/188 零告警错误**、`docs:check` **86 个 Markdown**；完整 `pnpm run ready` 最终 **退出码 0**，包含 **567/567** Vitest、**49/49** NestJS HTTP E2E、SSE 客户端 **8/8**、故障代理 **4/4**、OIDC 工程安全离线 **33/33**、双主体 **16/16** 与双 Web/Server 构建。
@@ -2667,3 +2666,145 @@ if ($lateExitCode -ne 0) { throw "真实浏览器迟到 201 专项失败" }
 另单独运行的 **`pnpm run test:oidc:dual:late` 退出码 0**，验证真实双 Keycloak BFF、React/Vue Origin API、PostgreSQL Lab 工程版本 2→3、暂存已到达的旧 201、旧 CAS 2→409，以及三版版本与审计一致；专用测试工程保留。前文“当前候选无 Windows 结果”属于验收前记录，最新结论以本段为准。
 
 `ready` 与真实交互式专项为**两条分开执行的命令**，日志没有包含本机 `git rev-parse HEAD`；本次只追认已提供的真实退出码，文档补录生成的新提交尚未重新验证。此模式不注入网络 TCP 故障，也不操作 Studio UI 保存按钮；不得扩展结论到生产设备、工业现场或真实 Studio UI 迟到回包 E2E。PR #71 保持 Draft 并指派 `@adui-dev`，未经明确授权不得合并。
+
+## 第三十四批第十七小批 · React/Vue Studio 真实迟到 201 独立验收
+
+仅在隔离本机 Keycloak/HTTPS 双 Web Origin/PostgreSQL Lab 完备、已有两个同租户不同的预绑定普通测试用户时，才能运行显式写入专项。默认 `ready` 只包含 9 项 Node 离线安全测试，**不会创建工程或修改 ACL**。真实专项仅新建两个 UUID 测试工程；第一个主体在 React 与 Vue 分别通过 Studio UI 发出一次真实保存，第二主体从另一个独立浏览器推进到第三版。所有失败路径保留专用测试工程供复核，不删除其他工程、数据卷、用户或授权。
+
+请先核对本地工作区，避免覆盖未提交变更。Windows PowerShell 从项目根执行：
+
+```powershell
+git status --short
+git fetch origin
+git switch --track origin/test/v0.3-b34-studio-real-late-ui
+git rev-parse HEAD
+git rev-parse origin/test/v0.3-b34-studio-real-late-ui
+
+pnpm run test:oidc:dual:studio:config
+$offlineExitCode = $LASTEXITCODE
+Write-Host "第十七小批离线安全测试退出码：$offlineExitCode"
+if ($offlineExitCode -ne 0) { throw "真实 Studio 迟到 201 离线安全测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "第十七小批完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+```
+
+完成本机 Lab 安全前置核查、允许创建**两个新专用空白工程**后，单独运行（需在隔离 Chrome/Edge 两窗口手动登录两位已预绑定普通测试用户；不得在终端粘贴密码）：
+
+```powershell
+pnpm run test:oidc:dual:studio:late
+$browserExitCode = $LASTEXITCODE
+Write-Host "React/Vue 真实 Studio 迟到 201 退出码：$browserExitCode"
+if ($browserExitCode -ne 0) { throw "真实双框架 Studio 迟到 201 专项失败" }
+```
+
+验收必须同时看到 React 和 Vue 的“真实 UI 迟到 201、CAS 复核失效、草稿保护与三版审计检查完成”以及最终成功结论和明确退出码 0。浏览器中的版本 POST 必须恰好一次；第二主体真实追加至修订 3；释放第一主体已到达的 201 后，页面因真实只读 GET 发现水位差异清除旧 CAS，重复点击不再写入。比较画布 SVG、草稿数量与 SHA-256、自动保存状态，全过程只显示固定中文阶段。此测试仍不代表物理 TCP 断流、保存中强行上下文切换或生产系统验收。
+
+**当前仅提交验收候选，尚未运行上述 Windows 质量链与真实 Lab 专项。** 运行时务必打印并提供本机 `git rev-parse HEAD`，以便将证据与 PR HEAD 关联；本次只读静态检查不代替端到端验证。
+
+## 第十七小批 · 真实 Studio 专项失败后的复验补充
+
+首轮 Windows 质量链已经有真实日志：离线 9/9、`vp check` 335/190 零警告、`docs:check` 86、完整 `ready` 退出码 0；但真实 `test:oidc:dual:studio:late` 退出码 1，最后确认的成功阶段是“React：真实 201 已到达并挂起 Studio UI，另一主体准备推进版本 3”。原始日志不足以定位具体失败阶段。
+
+诊断补丁会在下一轮分别输出第二主体读取版本 2、追加 CAS 2→3 的结果，以及 Studio 释放真实 201、界面恢复、页面可见、CAS 水位失效和过期保存拒绝的阶段。等待超时时只回显经过白名单筛选的布尔量/计数/枚举，不打印任何 Cookie、Token、工程 ID、身份、URL、响应正文或原始异常。看到哪个阶段未完成及其受控状态后，再据实修复，不延长超时或放宽权限门禁。
+
+**本次诊断补丁后的所有 Windows 检查和真实 Lab 浏览器仍待执行。** 请先拉取 PR 分支最新 HEAD 并记录 `git rev-parse HEAD`，再按本节前面的 PowerShell 质量链步骤运行。质量链通过后，单独运行 `pnpm run test:oidc:dual:studio:late`；真实专项仍需退出码 0，且 React/Vue 两阶段均打印完成，才能结案。
+
+## 第十七小批 · 双主体隔离窗口可见性修复复验
+
+第二轮 Windows 真实浏览器日志已定位：React 真实 BFF 第二主体提交到修订 3，第一主体成功消费旧 201；但 `Page.bringToFront` 后 `visible=false`，专项退出码 **1**。候选使用 CDP 只将**第二主体测试浏览器窗口**设置为 `normal/minimized`，不触碰用户浏览器和现有业务数据，不伪造第一主体可见性。CDP 窗口 API 实际支持性与 Windows 前台行为须由本机测试确认；仍为 hidden 或窗口 CDP 操作拒绝时必须失败，并保留相关测试工程供人工复核。
+
+请确保本地无未提交更改、拉取 PR #72 最新 HEAD，并执行：
+
+```powershell
+git status --short
+git fetch origin
+git switch test/v0.3-b34-studio-real-late-ui
+git pull --ff-only origin test/v0.3-b34-studio-real-late-ui
+git rev-parse HEAD
+
+pnpm run test:oidc:dual:studio:config
+if ($LASTEXITCODE -ne 0) { throw "双窗口离线安全检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+```
+
+确认本机隔离 Lab 允许**重新创建两份新 UUID 专用工程**且两位不同预绑定主体均可登录后，单独执行：
+
+```powershell
+pnpm run test:oidc:dual:studio:late
+$browserExitCode = $LASTEXITCODE
+Write-Host "真实 Studio 双窗口专项退出码：$browserExitCode"
+if ($browserExitCode -ne 0) { throw "真实 Studio 双窗口专项失败" }
+```
+
+本次要真实看到 React **和** Vue 各自完成 201 交付、真实可见性确认、CAS 水位变更后失效、无额外版本写入、画布草稿不变及三版审计，最后退出码 0。若依然 `visible=false`，只保留脱敏阶段日志，不强行设置 `document.visibilityState`。上次专项创建的测试工程仍在本机 Lab，脚本不会删除。
+
+## 第十七小批 · 第三轮本地数据变化专项复验
+
+第三轮真实浏览器证据：React 已真实完成版本 2 提交、另一主体推进版本 3、旧 201 交付和页面可见性恢复，但严格本地数据检查返回失败，专项**退出码 1**。根据脚本顺序，失败已经走到 CAS 只读复核及被拒绝的旧 CAS 再次保存之后。本次只把四种本地变化改成不泄漏内容的布尔诊断，并在五个关键阶段保持原强制比较；不能据此认为 IndexedDB 或 SVG 已被证明安全。
+
+请先查看 `git status --short`，确保当前处于 `test/v0.3-b34-studio-real-late-ui` 分支，再执行 `git fetch origin`、`git pull --ff-only origin test/v0.3-b34-studio-real-late-ui`、`git rev-parse HEAD`。按前文命令依次运行 `pnpm run test:oidc:dual:studio:config`（新目标 **13/13**）、`vp check`、`pnpm run docs:check` 和完整 `pnpm run ready`；各命令最终退出码必须为 0，失败后停止验收。
+
+确认本机隔离 Lab 可以新增两份新的随机专用工程后，再单独执行 `pnpm run test:oidc:dual:studio:late`。如果再出现“本地数据变化”，记录其**固定中文阶段**和 `canvasChanged/autoSaveChanged/draftCountChanged/draftHashChanged` 四项布尔值以及最终退出码，不粘贴 SVG、草稿正文、原始 SHA-256、Cookie、Token、数据库连接和主体标识。本次禁止直接将变化分类为正常自动保存，必须先依据真实状态逐项定位。React 和 Vue 两端及最终三版审计均通过、退出码 0 才能关闭 PR 的真实验收。
+
+## 第十七小批 · 第四轮视口网格快照修复后复验
+
+第四轮真实 Lab 专项失败阶段现已明确为 React 的“CAS 只读复核后”，其中**仅 `canvasChanged=true`**，IndexedDB 草稿整记录哈希与数量、自动保存布尔值均未变化；命令退出码 **1**，Vue/最终 PostgreSQL 审计尚未执行。仓库确认原始 `.studio-svg.innerHTML` 混合了真实图元与随视口变化的辅助网格。候选修复仅对该测试快照忽略一个直系辅助网格矩形，其他 SVG 子节点及草稿/CAS/审计完全严格。
+
+复验前核对工作区状态与当前 PR SHA，不覆盖本地未提交修改：
+
+```powershell
+git status --short
+git fetch origin
+git switch test/v0.3-b34-studio-real-late-ui
+git pull --ff-only origin test/v0.3-b34-studio-real-late-ui
+git rev-parse HEAD
+
+pnpm run test:oidc:dual:studio:config
+$offlineExitCode = $LASTEXITCODE
+Write-Host "Studio 视口快照离线测试退出码：$offlineExitCode"
+if ($offlineExitCode -ne 0) { throw "Studio 视口快照离线测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+```
+
+仅在受控本机 Keycloak/可信 HTTPS 双 Origin/PostgreSQL Lab 和两名已预绑定普通测试主体都确认就绪，且允许再创建两份随机专用测试工程时，单独执行：
+
+```powershell
+pnpm run test:oidc:dual:studio:late
+$browserExitCode = $LASTEXITCODE
+Write-Host "真实双框架 Studio 迟到响应退出码：$browserExitCode"
+if ($browserExitCode -ne 0) { throw "真实双框架 Studio 迟到响应专项失败" }
+```
+
+必须看到 React、Vue 两轮均完成真实 201、远端 CAS 3、旧基线清除、画布内容与草稿保护、无额外 POST 和真实数据库三版审计，最终退出码 **0** 才能结案。若修复后 `canvasChanged` 仍为 true，说明剩余 SVG 内容有实际差异，应保持失败、进一步分辨渲染图片和图元差异，不能继续扩大忽略范围。已有历史测试工程保留，不自动删除。
+
+## 第三十四批第十七小批 · Windows 真实双框架最终验收结果（2026-11-17）
+
+维护者 Windows 已经提供完整日志，覆盖 `pnpm run test:oidc:dual:studio:config` **16/16**、`vp check` **335/190 零告警错误**、`docs:check` **86 个 Markdown**、完整 `pnpm run ready` **退出码 0**（Vitest **567/567**、HTTP E2E **49/49**，SSE 8/8、故障代理 4/4，React/Vue/NestJS 类型检查与构建通过）。这与单独的真实 Lab 写入专项是**两条不同的命令**，不能混为一次执行。
+
+另已在严格本机隔离 Lab 下执行 `pnpm run test:oidc:dual:studio:late`，最后明确输出 **退出码 0**。React/Vue 两轮都已完成真正 Studio UI 触发保存、浏览器暂缓交付真实 201、第二主体真实 CAS 2→3、页面重新可见、只读水位复核清除旧基线、禁止额外版本、SVG 内容/IndexedDB 草稿保护及 PostgreSQL 三版审计。两个新建专用工程按设计留存。视口网格属于动态装饰性 SVG，实际快照只排除该一个已知非持久化元素；图元与渲染内容的变化仍为失败。
+
+验收前记录的第一至第四轮失败与候选修复均保留作为复盘，**本节是最新 Windows 验收结论**。本次并没有模拟物理 TCP 丢包，也没有进行工业现场测试。日志未包含本地 `git rev-parse HEAD`，不得追溯绑定确切 Git SHA。补录文档的后续 Git 提交本身仍需下次质量检查；PR #72 保持 Draft / `@adui-dev`，等待维护者明确授权才允许合并。

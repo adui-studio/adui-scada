@@ -1579,7 +1579,6 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 
 待维护者 Windows 核对 Git HEAD 与分支后执行 `pnpm run test:oidc:dual:config`、`vp check`、`pnpm run docs:check`、`pnpm run ready`；确认隔离 Lab 完整运行后单独执行 `pnpm run test:oidc:dual:late` 并打印 `$LASTEXITCODE`。只可复制固定阶段和退出码；不得在日志中粘贴 Cookie、口令、Token、主体 ID、数据库 URL 或原始响应正文。任何退出码非零均不得标记为通过。
 
-
 ## 2026-11-17 · 第三十四批第十六小批 Windows 最终验收结果
 
 维护者提交的 Windows PowerShell 日志确认以下**实际运行结果**（此前本文件“候选 / 待执行”描述为本轮验收前历史状态）：
@@ -1593,3 +1592,53 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 **验收边界**：独立交互式专项操作的是本机可信 `adui_scada` OIDC Lab，而非前批另行运行的 `adui_scada_test` 数据库专项；真实 HTTP 201 已到达浏览器，由测试代码延迟消费原始 Response，**没有造成物理 TCP 断流**。浏览器直接调用正式同源工程 API，不通过 React/Vue Studio 真实保存按钮，因此**不证明 Studio UI/共享 Session 接收真实迟到 201 的完整端到端安全性**。E2E 中被刻意触发的健康检查 503/ERROR 是测试负例，实际质量链以最终退出码 0 为准。
 
 **Git 证据边界**：本次两段日志都没有 `git rev-parse HEAD`，无法把 Windows 通过结果精确归属到 PR #71 的某个 Git SHA。GitHub 核对在补录前 PR HEAD 为 `e2f2133d1db25a054591e3b5fa9a243a0f4cc8ba`，其较此前候选 `74297e3` 多出维护者的一次**仅两份测试脚本格式化**提交；日志通过的 `vp check` 与之相符但不能证明该 SHA。当前新增验收文档提交**尚未经 Windows 重新运行** `vp check`、`docs:check`、`ready`。PR #71 仍须保持 Draft，指派 `@adui-dev`，未经新一轮明确合并授权不得合并。
+
+## 第三十四批第十七小批 · 真实 Studio UI 迟到 201 候选验收
+
+新测试仅操作本轮两个随机 `b34-oidc-cas-<UUID>` 专用空白工程；真实提交由 React/Vue Studio UI 的“保存至服务端”发起，第二 Keycloak 主体通过独立浏览器正式 BFF API 追加第三版。两个浏览器同租户不同已预绑定本地主体，严格本机可信 HTTPS 和 `adui_scada` Lab；项目授权仅来自已审核的 `grantSecondSubject`，不会自动清理已有业务工程或用户。所有测试工程写请求默认由浏览器拒绝，只放行单次严格匹配的专用工程版本追加。
+
+本批目标：`pnpm run test:oidc:dual:studio:config` 新增 **9 项**离线保护；原 `pnpm run test:oidc:dual:config` 仍为 16 项；完整 `pnpm run ready` 的既有 Vitest **567** 项及 NestJS E2E **49** 项不应因测试工具修改而改变（仅为参考，不能代替实测）。静态语法检查不代表 Node 测试通过。独立真实浏览器专项 `pnpm run test:oidc:dual:studio:late` 必须手工在本机可信 Keycloak/HTTPS/PostgreSQL Lab 执行，目标 React 与 Vue 都完成真实 201 延迟、远端 3、可见性 CAS 失效、无额外 POST 和三版审计，命令退出码须为 0。
+
+**待验证/风险**：当前没有 Windows `vp check`、`docs:check`、完整 `ready` 或真实 Lab 的通过日志。正式 Studio UI 对保存中的历史载入、JSON 导入、草稿恢复存在互斥保护；本专项仅在互斥阻止切换后，核对旧响应交付和可见性水位变化的状态安全，不模拟通过私有状态强行切换工程，也不模拟 TCP 断流。保存后的首版 CAS 2 可能短暂显示在 UI，必须由实际只读复核清除后才能阻止下一次旧水位提交。失败时不得关闭登录/CSRF/TLS/工程权限，或放行未知工程写入，也不能复制 Cookie、Token、私钥、用户身份和 SQL 内部信息。
+
+## 第十七小批 · Windows 首轮真实浏览器失败与阶段诊断
+
+维护者提供的首轮 Windows 日志确认：`pnpm run test:oidc:dual:studio:config` **9/9**；`vp check` **335 个文件格式正确、190 个受检文件零警告/Lint/类型错误**；`docs:check` **86 个 Markdown**；完整 `pnpm run ready` 最终退出码 **0**，包括 Vitest **567/567**、SSE **8/8**、SSE 故障代理 **4/4**、OIDC 工程浏览器离线 **33/33**、双主体离线 **16/16**、NestJS HTTP E2E **49/49** 和 React/Vue/NestJS 构建。
+
+但单独的 `pnpm run test:oidc:dual:studio:late` **退出码 1**。真实 Keycloak 双主体登录、两个随机专用工程创建/授权/首版读取、React Studio 确认载入及真实版本 2 的 201 到达并挂起均已输出。之后只有通用“真实 Studio 迟到保存未达到受控状态”，尚不能确认失败来自第二主体读取/追加、旧响应释放、UI 消费成功、可见性事件、CAS 复核或后续过期保存断言。不得将离线安全测试与 `ready` 通过误写成真实浏览器通过。
+
+候选诊断修正：`scripts/test-oidc-studio-real-late.mjs` 的每个关键等待已分配独立固定阶段；超时只返回页面请求阶段、受控计数、忙碌/禁用、CAS/摘要状态、错误提示和可见性等安全字段；第二主体读 2/写 3 与释放旧 201 也有阶段日志。未知异常、工程 ID、身份、Cookie、Token、URL、响应正文和堆栈继续脱敏。**诊断修正尚未由维护者 Windows 复验**，需要重新执行离线 9 项、`vp check`、`docs:check`、完整 `ready`，再单独运行真实双框架专项。前次日志未包含 `git rev-parse HEAD`，不可将其绑定到 PR #72 当前 HEAD。
+
+## 第十七小批 · 第二轮 Windows 真实窗口可见性失败及修复候选
+
+真实 `pnpm run test:oidc:dual:studio:late` 第二轮 **退出码 1**：两位真实 Keycloak 测试主体、两个新建专用工程准备正常；React Studio 原始 201 已到并挂起，第二主体实际读到修订 2、POST 以 HTTP **201** 将真实数据库推进修订 3，随后 React 消费原始 201 并显示旧 CAS 基线 2。浏览器在执行 `Page.bringToFront` 后仍然报告 `phase=released`、`writeAttempts=1`、`rejectedWrites=0`、`busy=false`、`baselineRevision=2`、`savedSecondVersion=true`、**`visible=false`**。故本次尚未触发真实可见性 GET 水位复核，也未执行 Vue。
+
+候选最小修复只涉及测试脚本中的第二主体隔离浏览器窗口：使用有官方定义的 CDP `Browser.getWindowForTarget` / `Browser.setWindowBounds`，在第二主体操作前切为正常窗口、操作完成后最小化，再激活第一主体标签。原 `document.visibilityState === "visible"` **原样保持为严格阻断条件**，不得通过覆盖属性或伪造可见事件绕过；所有真实 CAS、工程白名单、CSRF、草稿和三版审计断言保留。离线安全测试从 9 项增加至目标 **11 项**，**本补丁后的 Node、`vp check`、`docs:check`、`ready`、真实 Lab 尚未执行**。用户日志未包括本地 Git SHA，不能把上轮结果绑定到最新补丁。
+
+## 第十七小批 · 第三轮 Windows 真实本地数据失败与分类补丁
+
+用户第三轮 Windows 真实 `test:oidc:dual:studio:late` 日志：两个隔离 Keycloak 会话、新建随机测试工程、React 真实 201 保存、第二主体真实版本 2 读取、HTTP 201 追加修订号 3、第一主体旧 201 交付全部成功；测试随后确认“Studio 页面已可见，触发服务端 CAS 只读复核”。之后以“真实 Studio 迟到保存的本地数据发生变化”失败，**专项退出码 1**。按本版本测试脚本的最后执行顺序，旧 CAS 只读复核和再次保存拒绝的前置校验已完成；但具体是哪种本地数据发生变化、何时发生，原日志无法区分。此次未达到最终 PostgreSQL 三版审计和 Vue 全流程，绝不可记录为全部通过。
+
+修复候选只改测试断言的**可定位性**：分类 SVG 画布、自动保存状态、IndexedDB 草稿数目和原始草稿记录 SHA-256 是否变化，五个业务阶段逐一运行原本的强制不变断言；失败只输出固定阶段及布尔结果，不泄漏画布/草稿/摘要正文。新增两项离线安全用例，目标由 11 项增至 **13/13**。目前只对纯诊断函数运行过隔离 V8 模拟，五种输入与预期匹配；**没有最新补丁的 Node 13/13、`vp check`、`docs:check`、`ready`、真实浏览器成功日志**。原先的 Windows `ready` 退出码 0 属于更早候选，不能套用到现版本。第三轮用户日志没有本地 `git rev-parse HEAD`。
+
+## 第十七小批 · 第四轮 Windows SVG 差异分类与视口网格候选修复
+
+维护者第四轮 `pnpm run test:oidc:dual:studio:late` 输出：真实 Keycloak 双主体与新建测试工程准备成功，React Studio 真实 201 到达后挂起，第二主体真实读取修订 2 并通过 HTTP 201 推进至 3，第一主体消费旧 201，页面真实恢复为 `visible` 并触发 CAS 只读复核。随后在**“CAS 只读复核后”**的严格本地比较报告 `{"canvasChanged":true,"autoSaveChanged":false,"draftCountChanged":false,"draftHashChanged":false}`，**专项退出码 1**。未执行 PostgreSQL 最终三版审计与 Vue 流程。不能把前面的真实 CAS 步骤成功扩大为整体联合验收通过。
+
+原因分析：两端实际 SVG 页面都包含由 `visibleRect` 控制的网格矩形，旧测试比较整个 `.studio-svg.innerHTML`；在窗口恢复可见或尺寸变化后可能发生不属于工程数据的网格变更，形成假阳性。这一解释与观察相符，**但没有本次 DOM diff 证据证明变更仅来自网格**。候选只在真实 Studio 联合专项中克隆 SVG 并移除单个直系 `fill="url(#scada-studio-grid)"` 网格元素后比较所有剩余 SVG 子节点。原草稿 SHA-256、草稿数、自动保存、真实 CAS 单次 POST 与审计断言不变；业务 SVG 渲染图元变化继续严格失败。
+
+新增 3 项离线安全测试，目标从 13 提升为 **16/16**。从仓库源码提取的纯页面快照函数在隔离 V8 Mock 下覆盖网格变化、图元变化和重复网格拒绝路径，**非仓库 Node、浏览器、PostgreSQL 或完整质量链成功证据**。当前新补丁 `pnpm run test:oidc:dual:studio:config`、`vp check`、`pnpm run docs:check`、`pnpm run ready` 及真实 `pnpm run test:oidc:dual:studio:late` 均待 Windows 实测。用户第四轮日志未打印本地 Git SHA，不能绑定 PR 当前 HEAD。
+
+## 2026-11-17 · 第三十四批第十七小批 Windows 最终验收结案
+
+维护者 Windows PowerShell 已分别运行离线质量链与隔离 Lab 真实浏览器专项，均已提供明确执行输出：
+
+- `pnpm run test:oidc:dual:studio:config`：**16/16 通过**（本批最终新增 3 项 SVG 视口网格回归在内），失败 0；完整 `ready` 内再次执行 **16/16 通过**。
+- `vp check`：**335** 个文件格式正确，**190** 个受检文件零警告、零 Lint / TypeScript 错误。
+- `pnpm run docs:check`：**86** 份 Markdown 通过。
+- 完整 `pnpm run ready`：**退出码 0**。依赖、配置、环境与中文文案门禁、Prisma Client 7.10.1 生成、Core 构建、React/Vue/Server 类型检查、Vitest **49 文件 / 567 项全通过**（Studio 共享 Session **31/31**）、SSE 客户端 **8/8**、TCP 故障代理 **4/4**、OIDC 工程浏览器安全离线 **33/33**、双主体 CAS 离线 **16/16**、本批 Studio 离线 **16/16**、ACL 撤销安全离线 **8/8**、NestJS HTTP E2E **6 文件 / 49 项全通过**，以及 React/Vue 与 NestJS 构建均执行至结尾。HTTP E2E 中预设的 401/404/503 负向响应与健康检查错误日志是受控测试，不代表整体命令失败。
+- 独立交互式 `pnpm run test:oidc:dual:studio:late`：维护者 PowerShell 明确输出 **“真实 Studio 专项退出码：0”**。两位不同、同租户且已预绑定的 Keycloak 主体进入独立隔离浏览器，创建**两个新的随机专用空白工程**。React 和 Vue 分别通过真实 Studio UI 建立首版 CAS、真实 POST 写入修订 2；原 HTTP 201 到达浏览器后暂缓交付，第二主体真实读取修订 2 并以 HTTP 201 追加至 3；第一主体随后消费旧 201，真实页面恢复可见并完成服务器水位只读复核，旧 CAS 撤销，受控拒绝额外版本写入。两端均打印“真实 UI 迟到 201、CAS 复核失效、草稿保护与三版审计检查完成”，最终确认每个工程仅存在 1/2/3 三版，SVG 组态内容、IndexedDB 草稿与自动保存状态不被改写。测试工程按设计保留。
+
+**证据与边界**：前四轮在真实浏览器中的测试夹具阶段错误、窗口可见性错误及非持久化 SVG 网格快照误报，最终候选未再阻断 Windows 双框架专项；但此前具体 DOM 差异没有独立抓取，不能断言第四轮变化只由网格引起。当前“画布内容未改变”依据的是排除单个视口网格的**工程内容快照**，仍严格比较其余 SVG 子节点、草稿整记录哈希和 CAS/审计。HTTP 201 延迟属于浏览器端在真实响应到达后的消费过程，**不是物理 TCP 断流**，也不是现场工业设备安全验证。真实 Lab 在受控本机 `adui_scada` 执行，此次**没有另行运行** `adui_scada_test` 32/32 或全新 Prisma 迁移。
+
+**SHA 限制**：两段 Windows 日志没有本地 `git rev-parse HEAD`，不能精确绑定通过结果到 Git SHA；GitHub 补录前 PR #72 HEAD 为 `a69cf0c456ae39e157b015b366d00424941df155`，相较上次候选 `c681feba` 多出涉及两份测试脚本的一次提交。**本次新增验收和结案文档提交本身尚未经 Windows 再次运行** `vp check`、`docs:check` 或 `ready`。PR #72 继续 Draft，Assignee `@adui-dev`；未经维护者新的明确授权不合并。

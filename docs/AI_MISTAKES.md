@@ -351,6 +351,60 @@
 - **验证与边界**：维护者实际 Windows 日志已提供上述质量链及双浏览器成功记录；本次仅更正文档历史表述，**没有补跑此前所称协作容器 20 次测试**。当前文档新增提交尚未重新执行 `docs:check` / `ready`。
 - **证据**：PR #71 初稿及后续验收正文、2026-11-17 维护者 Windows PowerShell 日志、`docs/VALIDATION.md`。
 
+### E-039 · 真实 Studio 浏览器测试初稿未复用严格工程前缀与 CDP 自包含约束（第三十四批第十七小批）
+
+- **现象**：本批初稿新增的真实 Studio 迟到响应脚本使用了 `b34-studio-late-<UUID>` 前缀，而已存在的 `createCasProjectInPage` 和 `grantSecondSubject` 只允许 `b34-oidc-cas-<UUID>`；另一处页面注入函数 `armStudioRealLateInPage` 引用了 Node 模块作用域的 `PROJECT_PATTERN`。这两项在 GitHub 候选静态审查时发现，**没有真实浏览器执行失败日志**，不能记为 Windows 已发生的故障。
+- **根因**：在复用既有严格安全辅助函数时未先对齐它们的工程 ID 契约，并在函数被 CDP `function.toString()` 独立序列化执行时误用模块作用域常量，再次触及 E-002 / E-025 的已知边界。
+- **修正与防复发**：只改回既有的随机 `b34-oidc-cas-<UUID>` 测试工程前缀，将页面函数正则内联为自包含字面量；原创建/授权 SQL 白名单绝不放宽。新增 CDP 页面函数前逐一核对它实际运行的作用域和已有测试夹具权限约束。
+- **验证边界**：候选源码静态语法检查及隔离 V8 Mock 中的单次 201 保留/释放、拒绝额外写入路径已核对，但新脚本的 Node 单元测试、Windows `vp check` / `ready` 与真实 Keycloak/PostgreSQL 浏览器仍待执行，不宣称综合测试通过。
+- **证据**：本批分支初稿与修正提交、`scripts/test-oidc-studio-real-late.mjs`、`scripts/test-oidc-dual-cas.mjs`、`docs/VALIDATION.md`。
+
+### E-040 · String.raw 生成 Markdown 时保留代码反引号转义（第三十四批第十七小批）
+
+- **现象**：本批候选文档首次提交后在六份新增章节中出现多余的反斜杠加反引号，导致行内代码与 `powershell` 代码围栏不能按预期展示。由对 GitHub Blob 的静态检查发现，**没有维护者 Windows `docs:check` 失败日志**。
+- **根因**：在 JavaScript `String.raw` 模板中为了包裹 Markdown 反引号添加转义字符，`String.raw` 会保留原始反斜杠，而不是将其移除。
+- **修正与防复发**：仅在六份文档的第十七小批新增章节中把 `反斜杠＋反引号` 还原为合法 Markdown 反引号；不改历史记录。后续先检查实际生成的文件内容，核对代码围栏成对出现，不能只验证 JS 模板字符串本身能解析。
+- **验证边界**：新增 HARNESS 章节含两组成对 PowerShell 代码围栏，新增文档不再含上述转义序列。完整仓库 `docs:check`、`vp check` 与 `ready` 仍需维护者 Windows 实际执行并提供退出码。
+- **证据**：本批文档候选及修正提交、`docs/HARNESS.md`、`docs/VALIDATION.md`。
+
+### E-041 · 真实 Studio 迟到 201 浏览器专项多个等待阶段复用同一通用错误（第三十四批第十七小批）
+
+- **现象**：维护者 Windows 首次执行 `pnpm run test:oidc:dual:studio:late`，两位真实 Keycloak 主体登录、两个专用工程创建与授权、React Studio 确认载入及真实 201 到达/挂起均已输出成功阶段；紧接着报告“真实 Studio 迟到保存未达到受控状态”，专项退出码 **1**。该信息无法区分第二主体推进、释放旧 201、Studio 成功状态恢复、页面可见性、CAS 复核或过期保存拒绝中的具体失败点。
+- **已确认的代码诊断缺陷**：新专项将 `releaseStudioRealLateInPage` 和多段 `waitFor` 都复用相同中文错误，且等待超时不输出阶段与状态摘要。**真实浏览器专项的确切失败阶段及底层原因仍待复测**；不能推断为 PostgreSQL CAS、React/Vue 生产 UI 或 BFF 已损坏。
+- **最小修正**：新增 `waitForStudioState`，每个关键等待使用固定阶段名称；超时只输出经过白名单构造的页面状态枚举、POST/写入计数、Busy/Disabled、CAS 基线/摘要清除、错误提示与可见性布尔值。第二主体读取版本 2、追加 3 和旧 201 释放也增加固定阶段输出。禁止输出工程 ID、主体、Cookie、Token、数据库 URL、响应正文、原始异常或堆栈；所有失败仍然退出码 1，不放宽 CAS/CSRF/ACL/TLS/单次写入约束。
+- **避免**：真实浏览器测试中不得让多个异步阶段共用同一“未达到预期状态”错误。每个等待都必须对应明确阶段，并在超时时只读回传足以区分状态的固定安全字段；开始日志不能代替完成日志。若现有证据只能定位到一个阶段，必须将根因标记为“待确认”，不猜测业务缺陷。
+- **验证**：维护者已提供修正前 Windows 离线测试 **9/9**、`vp check` **335 文件/190 受检零警告错误**、`docs:check` **86** 份和完整 `ready` **退出码 0**；同次真实 Studio 专项**退出码 1**。新增阶段诊断候选已完成静态语法检查，**修正后的 Node 9/9、Windows `vp check` / `docs:check` / `ready` 与真实双框架 Lab 浏览器均待复验**。维护者日志未提供 `git rev-parse HEAD`，不能将前述成功结果绑定到某个 PR SHA。
+- **证据**：维护者 2026-11-17 Windows 首轮真实 Studio 迟到 201 专项及完整质量链日志、PR #72、`scripts/test-oidc-studio-real-late.mjs`、`scripts/test-oidc-studio-real-late.cases.mjs`、`docs/VALIDATION.md`。
+
+### E-042 · 双独立浏览器窗口下 Page.bringToFront 不能保证页面可见（第三十四批第十七小批）
+
+- **现象**：维护者第二轮 Windows 真实 `test:oidc:dual:studio:late` 在 React Studio 完成真实版本 2 保存、第二主体真实读取版本 2、CAS 2→3 返回 HTTP 201、第一主体消费原始 201 并显示基线 2 后，停在“浏览器切换到可见状态”，诊断状态为 `phase=released`、`writeAttempts=1`、`baselineRevision=2`、`savedSecondVersion=true`、**`visible=false`**，专项退出码 **1**。后续水位复核和 Vue 流程没有执行。
+- **已确认的测试假设缺陷**：原脚本仅执行 CDP `Page.bringToFront` 然后等待浏览器真正的 `document.visibilityState === "visible"`。CDP 该命令定义为“激活标签页”，不承诺把另一独立 Chrome/Edge 窗口从前台移走；实际 Windows 日志已证明它不足以满足当前可见性前置条件。**仍无法断言具体是遮挡、最小化、系统前台策略还是 Chromium 窗口生命周期造成隐藏**，不能据此判定生产 Studio、CAS 或 PostgreSQL 失败。
+- **最小修复候选**：只对真实测试的**第二主体隔离窗口**调用 CDP `Browser.getWindowForTarget` 与 `Browser.setWindowBounds`；在第二主体读/写前恢复为 `normal`，在其追加版本 3 后、第一主体完成旧 201 消费后设为 `minimized`，再激活第一主体标签并严格等待真实 `visible === true`。仅允许 `normal/minimized` 两个窗口状态并校验有效窗口 ID；失败返回固定中文安全消息，不修改 `document.visibilityState`、不模拟可见事件、不移除后续真实 GET/CAS/画布/草稿/审计断言。
+- **防复发**：跨两个独立浏览器 Profile 的 CDP 专项必须区分“激活标签页”和“操作系统窗口前台/可见”；可见性是需要真实观察的环境前置条件，绝不能用覆盖浏览器 DOM getter、强制派发隐藏状态下的 `visibilitychange` 或关闭 UI 校验来制造通过。浏览器窗口管理仅限测试临时 Profile，不依赖 Win32 外部提权或人工凭据。
+- **验证边界**：第二轮真实浏览器失败日志及恢复前状态已确认；新增窗口切换函数和拒绝用例为**修复候选**。候选的 Windows Node 离线测试、`vp check`、`docs:check`、`ready` 与双框架真实 Lab 专项尚未复验。上轮通过的质量链退出码 0 不能覆盖本次新增代码；本次用户日志也未提供本地 Git HEAD。
+- **证据**：PR #72、维护者第二轮 Windows 浏览器日志、`scripts/test-oidc-studio-real-late.mjs`、`scripts/test-oidc-studio-real-late.cases.mjs`、CDP 官方 `Page.bringToFront` 与 `Browser.setWindowBounds` 协议文档、`docs/VALIDATION.md`。
+
+### E-043 · 真实 Studio CAS 恢复后本地数据比较仅返回笼统失败（第三十四批第十七小批）
+
+- **现象**：维护者第三轮 Windows 真实 `test:oidc:dual:studio:late` 已通过 React 真实 HTTP 201 保存、第二主体 CAS 2→3、旧 201 交付和页面恢复可见；日志打印“Studio 页面已可见，触发服务端 CAS 只读复核”后，测试以“真实 Studio 迟到保存的本地数据发生变化”退出码 **1**。依据当前脚本执行顺序，CAS 复核必须已使旧基线与服务端头信息失效，之后再次点击保存必须进入受控错误状态且工程写入计数仍为 1，才会执行到最后一条本地比较；本轮未执行最终 SQL 三版审计和 Vue 流程。
+- **已确认的测试诊断缺陷**：`requireUnchangedDocument` 将 SVG、自动保存开关、IndexedDB 草稿数量及整个原始草稿记录 JSON 哈希四项条件合并为一个异常，且未标记对比发生在哪个操作阶段。现有日志**不足以确认具体变化字段及其发生时间**；尤其不能推断是 IndexedDB 自动保存元数据变化、SVG 实际改变或生产 CAS 业务错误。
+- **候选最小修复**：新增纯函数 `classifyStudioLocalDrift`，仅返回 `canvasChanged`、`autoSaveChanged`、`draftCountChanged`、`draftHashChanged` 四个布尔值；原任一不一致即失败的断言**完全保留**。为已有保存挂起、第二主体提交 3、旧 201 消费、CAS 只读复核、过期保存拒绝五个检查点逐一添加固定中文阶段，仅在失败时输出布尔分类，不输出 SVG、草稿记录、哈希、Cookie、Token、主体 ID 或 HTTP 正文。新增两个离线用例覆盖无变化与四类独立变化及敏感数据拒绝。
+- **防复发**：保护性 E2E 断言应能判断变化的实际类别与首次发生阶段；没有具体证据前不得删除草稿哈希比较、忽略自动保存修订号、延迟无限等待或声称数据一定未改变。若下轮仅出现 `draftHashChanged=true`，需再区分 IndexedDB 记录正文与保存元数据，而不是直接放宽判断。
+- **验证边界**：第三轮真实浏览器**退出码 1**为用户已提供证据；新增分类纯函数在隔离 V8 中以五种输入核对全为预期，但这**不是仓库 Node 测试或真实浏览器验证**。候选离线测试目标 **13/13**；最新补丁的 Windows `vp check`、`docs:check`、`ready` 及真实 Keycloak/PostgreSQL/React/Vue 专项都尚待实测。用户日志仍未附本地 Git HEAD。
+- **证据**：PR #72、第三轮 Windows 真实 Studio 浏览器日志、`scripts/test-oidc-studio-real-late.mjs`、`scripts/test-oidc-studio-real-late.cases.mjs`、`docs/VALIDATION.md`。
+
+### E-044 · Studio SVG 快照将随视口变化的辅助网格误当成工程内容（第三十四批第十七小批）
+
+- **现象**：维护者第四轮 Windows `pnpm run test:oidc:dual:studio:late` 已完成 React 真正保存版本 2、第二主体真实追加版本 3、旧 201 交付及浏览器可见性恢复；CAS 只读复核后严格本地检查输出 `{"canvasChanged":true,"autoSaveChanged":false,"draftCountChanged":false,"draftHashChanged":false}`，专项**退出码 1**。后续 PostgreSQL 最终审计和 Vue 联合流程没有执行。
+- **已确认的测试设计缺陷**：现有 `inspectStudioState` 使用 `.studio-svg.innerHTML` 代表整个画布，但 React/Vue 画布都在 SVG 内直接渲染 `fill="url(#scada-studio-grid)"` 的辅助网格矩形，`x/y/width/height` 与 `visibleRect` 绑定并可随真实窗口可见性/尺寸变化重新计算。原始 `innerHTML` 并非稳定的工程内容快照。**本轮变化是否确实仅由网格坐标引起尚待 Windows 复验**，不能据此认定生产数据已经损坏或完全无异常。
+- **最小修复候选**：仅在第十七小批真实浏览器专项引入 `readStudioContentCanvasInPage`，克隆当前 SVG，精确移除**顶层、填充为 `url(#scada-studio-grid)` 的一个视口辅助网格 `rect`**。其他完整 SVG 内容，包括渲染 `image`、背景、边界、图元、命中层及辅助交互节点继续严格比较。缺失画布或重复视口网格安全失败。保留原 `classifyStudioLocalDrift` 的四项布尔输出、五个阶段对比以及 IndexedDB 草稿整记录 SHA-256、数量、自动保存状态、CAS 和 SQL 审计全部断言；不修改 React/Vue 生产业务代码、Core 或数据库。
+- **防复发**：涉及画布的端到端快照必须区别“工程内容”和“随窗口/缩放变化的视口辅助元素”；不能随意将整个 DOM `innerHTML` 当作持久化 Schema。只排除经源码明确确认的非持久化动态节点，并用负向用例证明业务 SVG 真改变仍失败。不得把此次候选说成真实根因已实测结案。
+- **验证边界**：新增三个 Node 离线测试定义（目标由 **13** 项增加至 **16** 项），覆盖视口网格变化不影响内容、图元或渲染变化仍被识别、重复网格/画布缺失拒绝。页面函数从仓库源码提取后在隔离 V8 Mock 执行以上三类路径符合预期，**但不是 Node 16/16 或 Windows 真实浏览器通过证据**。最新候选 `vp check`、`docs:check`、`ready`、React/Vue 真 Lab 均未复验。
+- **证据**：维护者第四轮 Windows 原始日志、PR #72、`apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`、`scripts/test-project-browser-oidc.mjs`、`scripts/test-oidc-studio-real-late.mjs`、`docs/VALIDATION.md`。
+
+> **2026-11-17 · E-041～E-044 Windows 最终验收补录**：以上四项的“候选 / 待复测”仅描述各轮历史状态。维护者现已在 Windows 真实完成 `pnpm run test:oidc:dual:studio:config` **16/16 通过**、`vp check` **335 格式文件 / 190 受检零告警错误**、`docs:check` **86 份 Markdown** 和完整 `pnpm run ready` **退出码 0**（Vitest **567/567**、NestJS HTTP E2E **49/49**，React/Vue/NestJS 构建完成）。另在两个全新隔离测试工程上，由两位真实预绑定 Keycloak 主体分别执行 React/Vue Studio 真实 UI 的迟到 HTTP 201 测试，均完成版本 2→3、真实可见性恢复、远端水位只读复核、过期 CAS 拒绝、SVG 内容和 IndexedDB 草稿保持不变、仅三版历史和审计；交互式 `pnpm run test:oidc:dual:studio:late` **退出码 0**。E-041 的阶段错误已通过明确状态诊断定位；E-042 的双窗口可见性障碍未再复现；E-043 的本地差异已按阶段区分；E-044 的非持久化视口网格已从此专项 SVG 内容快照中精确排除，其余图元仍严格比较。**注意**：没有独立的原始 SVG DOM diff 证明前轮变化完全源自网格；最终通过仅证明新的测试口径及其所有保留断言满足。201 暂缓是浏览器对已到达真实响应的消费时序，**非 TCP 断流**。成功日志没有本地 Git HEAD，新补录文档提交尚未重新运行 Windows 全链；PR #72 仍 Open/Draft 并指派 `@adui-dev`，等待明确合并授权。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

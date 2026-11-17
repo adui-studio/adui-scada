@@ -900,3 +900,39 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 Node 编排第二主体读取 2、再 POST CAS 2→3，随后释放旧 201、第一主体过期 CAS 2→409、两端只读核对版本 3。只在本轮创建的随机项目上通过 `pg` 的只读 SQL 核对 `head_revision=3`、精确三条版本与审计记录及主体/摘要。失败时仍清理两个隔离浏览器 Profile，成功或失败均不自动删除测试专用工程，以免误删人工 Lab 数据。
 
 此项**不修改** `StudioServerProjectSession`、React/Vue 页面、NestJS、Prisma Schema、迁移、授权接口或工业控制权限。它比第十五小批的两层分离 Mock/DB 测试增加真实双浏览器与真实 BFF 的连续请求，但响应延后只发生在测试脚本中，尚未证明真实 Studio UI 接收到旧 201 后如何恢复；这一边界必须在验收报告中保留。
+
+## 2026-11-17 · 第三十四批第十七小批：Studio 真实保存 201 的浏览器测试设计
+
+新增独立的 `scripts/test-oidc-studio-real-late.mjs`，复用现有双主体 Keycloak 登录、同源 BFF、随机测试工程创建、`grantSecondSubject` 与 `verifyLateCasAudit`，以及 `test-project-browser-oidc.mjs` 中已被 Windows 验证的 Studio 页面导航、分页载入、草稿与状态检查函数。原浏览器文件仅额外导出已有 `enableAutoSaveInPage`，不修改实现。
+
+隔离浏览器的 `Page.addScriptToEvaluateOnNewDocument` 在 UI 初始化前注入自包含 Fetch 包装器，默认拒绝任何工程非 GET/HEAD 请求。仅显式 arm 时允许当前 UUID 专用工程发出**一次**同源 `POST /api/v1/projects/:projectId/versions`，严格核对工程 ID、`expectedRevision=1`、CSRF Cookie 与请求头、同源 Fetch 属性。其他写请求都在浏览器中返回 403，绝不进入 Lab。真实 201 和快照摘要验证通过后，拦截器持有原始 `Response` 并保持 UI Promise 挂起；不能将合成 201 冒充实际服务端提交。
+
+真实 Studio UI 通过工程管理分页选择本轮测试工程、`window.confirm` 明确确认载入、保存真实 IndexedDB 草稿并开启自动保存，然后调用原“保存至服务端”按钮两次。只有第一条版本 POST 允许穿透。等待状态仅允许公开计数、布尔值和 CAS 修订号，不输出 Cookie、Token、正文、外部主体 ID 或 URL。挂起期间点击原“恢复草稿”控件，预期现有互斥标记拒绝恢复；不会注入共享 Session 或修改组件内部私有状态。
+
+第二主体经真实 BFF 读取已提交版本 2 并以 CAS 2→3 提交，第一浏览器此时才释放原始 201。待页面正常结束保存并显示基线 2 后，派发实际 `visibilitychange`（页面必须可见），由现有 `revalidateBaseline` 发起真实只读请求发现 head=3，从而清除旧 CAS 与服务端摘要。随后从 UI 再次点击保存验证没有 POST 到达。最终比对 SVG、IndexedDB 数量/SHA-256、自动保存状态，且只在本轮两个专用工程上读取 PostgreSQL 三条版本/审计，测试项目保留供人工检查。
+
+该策略检验**当前合法保存上下文中旧成功回包已交付后的水位复核**；不声称在 UI 互斥锁持有期间强行切换到新上下文，后者已由共享 Session Promise 单元测试覆盖。离线安全测试只模拟包装器/命令参数，真正 Chrome、Keycloak、TLS、PostgreSQL 与 UI 集成必须在 Windows 单独执行，物理 TCP 故障不在本批范围。
+
+## 2026-11-17 · 第三十四批第十七小批：真实 Studio 迟到回包阶段诊断补充
+
+维护者首轮 Windows 实际执行中，React Studio 已真实提交版本 2，201 到达浏览器并被拦截器挂起；随后测试输出通用“真实 Studio 迟到保存未达到受控状态”，退出码 1。现有脚本在释放旧 201、等待 UI 成功状态、浏览器可见性、CAS 水位复核和最终过期保存拒绝等多个阶段复用同一错误，无法定位是哪一个状态断言未满足。**真实失败阶段与底层原因仍待复测**，不把它推断为生产 UI、API 或 PostgreSQL 缺陷。
+
+候选仅为真实浏览器脚本新增 `waitForStudioState`，分别标记固定阶段；超时后重新读取一次页面状态，仅输出经过字段白名单构造的 `phase`、POST/写入/拒绝计数、Busy/Disabled、CAS 基线、服务端摘要清空、错误提示及 document 可见性。第二主体读取修订 2、追加 CAS 2→3、释放旧 201 均增加固定阶段日志。没有传回工程/主体标识、Cookie、Token、响应正文、URL 或原始异常。既有真实请求、数据库事务、共享 Session、UI CAS 算法及安全门禁不变；失败仍然返回非零退出码。新增可见性布尔字段仅用于受控诊断与离线状态测试。
+
+## 2026-11-17 · 第十七小批：双窗口真实可见性复核最小修复
+
+维护者第二轮真实专项已经确认 React Studio 原始 201 交付成功、第二主体真实版本 3 提交成功，但独立 Chrome/Edge 窗口在执行 `Page.bringToFront` 后仍报告 `document.visibilityState=hidden`，导致原先正确的可见性安全断言失败。CDP `Page.bringToFront` 只激活目标标签页，并不负责 Windows 两个隔离浏览器窗口的显隐关系。
+
+只在本次专用测试脚本新增 `setSecondaryBrowserWindowState`：第二主体操作前通过 `Browser.getWindowForTarget` 精确获取**第二主体测试 Profile**的窗口 ID，并用 `Browser.setWindowBounds` 设为 `normal`；第二主体成功推进版本 3、第一主体已消费原始 201 后，将第二窗口设为 `minimized`，再次对第一主体执行 `Page.bringToFront`。仍然要求真实 `document.visibilityState === "visible"` 才能派发已有的只读复核事件、检查远端新水位 3 和清除过期 CAS。ID 不合法、CDP 失败或真实页面继续隐藏时照常失败，不伪造 getter 或关闭断言。窗口管理只发生于隔离测试进程，完成后仍由现有 `finally` 关闭两份独立浏览器 Profile。
+
+## 2026-11-17 · 第十七小批：本地数据变化的严格分阶段诊断
+
+维护者第三轮真实 Lab 运行已经证明 React 的第二主体 HTTP 201 推进修订 3、第一主体消费旧 201，以及独立浏览器可见性恢复均能完成；此后脚本报“真实 Studio 迟到保存的本地数据发生变化”。按照该脚本顺序，最终失败位于 CAS 基线清空及 UI 拒绝旧 CAS 再次保存之后的本地快照一致性检查。当前日志**未区分** SVG、自动保存、草稿数量、草稿哈希，也未证明根因属于业务代码。
+
+测试脚本只增加纯函数 `classifyStudioLocalDrift`，把原 SVG 内容全等、自动保存布尔值全等、IndexedDB 草稿数量全等、原始记录 SHA-256 全等转成四个布尔诊断字段。`requireUnchangedDocument` 仍按**任一变化即拒绝**执行，不引入等待重试、自动修正草稿、修改生产 UI 或修改数据仓储。分别在保存挂起、远端版本 3 已提交、Studio 消费旧 201、CAS 只读复核完成、过期保存被 UI 拒绝后检查。只在出现差异时显示固定阶段和布尔状态，不暴露原始 SVG、草稿、摘要或用户身份。
+
+## 2026-11-17 · 第十七小批：SVG 视口网格与工程图元的快照边界
+
+第四轮真实浏览器日志在 React CAS 只读复核后确认 `canvasChanged=true`，但 `autoSaveChanged`、`draftCountChanged` 与 `draftHashChanged` 均为 false。源码调查发现 `scripts/test-project-browser-oidc.mjs` 的共享页面快照使用 `.studio-svg.innerHTML`，React/Vue SVG 包含一个直系 `rect[fill="url(#scada-studio-grid)"]`，它的 `x/y/width/height` 来自随浏览器视口变化的 `visibleRect`。因此直接比较全部 `innerHTML` 存在视口辅助网格变化造成误报的可能；**尚无真实 DOM 差异证据确认本轮只有网格变化**。
+
+只在新 `scripts/test-oidc-studio-real-late.mjs` 联合验收中加入自包含的 `readStudioContentCanvasInPage`：克隆 SVG 节点，仅从克隆的直系子节点中移除唯一的视口网格矩形，再返回完整剩余 `innerHTML` 供五个原有操作边界做强制一致性比较。画布不存在或发现多个直系视口网格时继续拒绝；渲染图片的 `href`、真实图元、边界、命中区域及其他 SVG 内容均保留。现有 `inspectStudioState` 及其其他 OIDC 浏览器回归不修改，原草稿 SHA/数量与自动保存等检查保留。真实业务 SVG 发生变化时仍触发 `canvasChanged=true`。不接入浏览器持久化、Core、React/Vue 业务或 NestJS 变更。
