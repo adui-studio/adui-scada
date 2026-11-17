@@ -385,6 +385,15 @@
 - **验证边界**：第二轮真实浏览器失败日志及恢复前状态已确认；新增窗口切换函数和拒绝用例为**修复候选**。候选的 Windows Node 离线测试、`vp check`、`docs:check`、`ready` 与双框架真实 Lab 专项尚未复验。上轮通过的质量链退出码 0 不能覆盖本次新增代码；本次用户日志也未提供本地 Git HEAD。
 - **证据**：PR #72、维护者第二轮 Windows 浏览器日志、`scripts/test-oidc-studio-real-late.mjs`、`scripts/test-oidc-studio-real-late.cases.mjs`、CDP 官方 `Page.bringToFront` 与 `Browser.setWindowBounds` 协议文档、`docs/VALIDATION.md`。
 
+### E-043 · 真实 Studio CAS 恢复后本地数据比较仅返回笼统失败（第三十四批第十七小批）
+
+- **现象**：维护者第三轮 Windows 真实 `test:oidc:dual:studio:late` 已通过 React 真实 HTTP 201 保存、第二主体 CAS 2→3、旧 201 交付和页面恢复可见；日志打印“Studio 页面已可见，触发服务端 CAS 只读复核”后，测试以“真实 Studio 迟到保存的本地数据发生变化”退出码 **1**。依据当前脚本执行顺序，CAS 复核必须已使旧基线与服务端头信息失效，之后再次点击保存必须进入受控错误状态且工程写入计数仍为 1，才会执行到最后一条本地比较；本轮未执行最终 SQL 三版审计和 Vue 流程。
+- **已确认的测试诊断缺陷**：`requireUnchangedDocument` 将 SVG、自动保存开关、IndexedDB 草稿数量及整个原始草稿记录 JSON 哈希四项条件合并为一个异常，且未标记对比发生在哪个操作阶段。现有日志**不足以确认具体变化字段及其发生时间**；尤其不能推断是 IndexedDB 自动保存元数据变化、SVG 实际改变或生产 CAS 业务错误。
+- **候选最小修复**：新增纯函数 `classifyStudioLocalDrift`，仅返回 `canvasChanged`、`autoSaveChanged`、`draftCountChanged`、`draftHashChanged` 四个布尔值；原任一不一致即失败的断言**完全保留**。为已有保存挂起、第二主体提交 3、旧 201 消费、CAS 只读复核、过期保存拒绝五个检查点逐一添加固定中文阶段，仅在失败时输出布尔分类，不输出 SVG、草稿记录、哈希、Cookie、Token、主体 ID 或 HTTP 正文。新增两个离线用例覆盖无变化与四类独立变化及敏感数据拒绝。
+- **防复发**：保护性 E2E 断言应能判断变化的实际类别与首次发生阶段；没有具体证据前不得删除草稿哈希比较、忽略自动保存修订号、延迟无限等待或声称数据一定未改变。若下轮仅出现 `draftHashChanged=true`，需再区分 IndexedDB 记录正文与保存元数据，而不是直接放宽判断。
+- **验证边界**：第三轮真实浏览器**退出码 1**为用户已提供证据；新增分类纯函数在隔离 V8 中以五种输入核对全为预期，但这**不是仓库 Node 测试或真实浏览器验证**。候选离线测试目标 **13/13**；最新补丁的 Windows `vp check`、`docs:check`、`ready` 及真实 Keycloak/PostgreSQL/React/Vue 专项都尚待实测。用户日志仍未附本地 Git HEAD。
+- **证据**：PR #72、第三轮 Windows 真实 Studio 浏览器日志、`scripts/test-oidc-studio-real-late.mjs`、`scripts/test-oidc-studio-real-late.cases.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
