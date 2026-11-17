@@ -670,10 +670,7 @@ async function verifyResumeScenarios(session, origin, name, selected) {
     assert.ok(before.drafts.count >= 1, name + " 恢复测试前需存在 IndexedDB 草稿");
 
     if (scenario.scope === "revision") {
-      assert.equal(
-        await session.evaluate(armResumeRevisionDriftInPage, selected.projectId),
-        true,
-      );
+      assert.equal(await session.evaluate(armResumeRevisionDriftInPage, selected.projectId), true);
     } else {
       assert.equal(
         await session.evaluate(

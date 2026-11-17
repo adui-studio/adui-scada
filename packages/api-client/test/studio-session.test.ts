@@ -376,7 +376,8 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
     api.getMe.mockImplementationOnce(
       () =>
         new Promise<Awaited<ReturnType<ScadaApiClient["getMe"]>>>((_resolve, reject) => {
-          release = () => reject(new ScadaApiError("登录已失效，请重新登录", "unauthenticated", 401));
+          release = () =>
+            reject(new ScadaApiError("登录已失效，请重新登录", "unauthenticated", 401));
         }),
     );
     const pending = session.revalidateBaseline(waterTreatmentDemoDocument.projectId);

@@ -429,10 +429,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       assert.equal(triggerStudioResumeInPage(), true);
       assert.deepEqual(seen, ["visibilitychange"]);
       globalThis.document.visibilityState = "hidden";
-      assert.throws(
-        () => triggerStudioResumeInPage(),
-        /标签页恢复测试要求浏览器页面处于可见状态/,
-      );
+      assert.throws(() => triggerStudioResumeInPage(), /标签页恢复测试要求浏览器页面处于可见状态/);
       assert.deepEqual(seen, ["visibilitychange"]);
     } finally {
       if (previous === undefined) delete globalThis.document;

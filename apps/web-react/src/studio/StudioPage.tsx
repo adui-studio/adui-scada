@@ -1078,7 +1078,8 @@ export default function StudioPage() {
       void serverSession
         .revalidateBaseline(projectId)
         .catch((error: unknown) => {
-          if (lifecycle.signal.aborted || editor.snapshot().document.projectId !== projectId) return;
+          if (lifecycle.signal.aborted || editor.snapshot().document.projectId !== projectId)
+            return;
           const accessRejected = isScadaAccessRejection(error);
           const revisionConflict = error instanceof ScadaApiError && error.kind === "conflict";
           if (accessRejected) {
