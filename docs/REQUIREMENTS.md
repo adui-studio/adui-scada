@@ -319,6 +319,6 @@ Core 新增框架无关 Tag 定义模型，使用稳定 `tagId` 区分不可变�
 
 ## V0.3 第三十四批第五小批：双 BFF Cookie HTTP 会话并发 CAS（FR-001 / FR-002 / FR-013 / NFR-003 局部）
 
-以 PR #59 合并的 \`main@4c3cb0d7\` 为基线，只增加真实 PostgreSQL 隔离测试及验收说明，**不修改现有 REST/CSRF/ACL、React/Vue、工程 Schema、Prisma 迁移或工业设备权限**。在本机独立 \`adui_scada_test\` 的随机测试租户中，通过实际 \`AuthSessionService.issueForVerifiedSubject\` 为两个不同活跃可信主体创建两份独立、仅保存摘要的短期 BFF Cookie 会话；由真实 NestJS Session Guard、Project Guard、工程控制器与 Prisma 仓储处理两个并发 \`POST /api/v1/projects/:projectId/versions\`，双方携带同一 \`expectedRevision=1\`，要求严格一份 HTTP 201 与一份 HTTP 409。数据库最终只有首版和成功追加的第二版，水位、SHA-256 快照、审计操作者与实际成功响应一致。补充 Cookie/CSRF/Origin/ACL 拒绝场景，所有用例在 \`finally\` 定向清理当前随机租户。
+以 PR #59 合并的 `main@4c3cb0d7` 为基线，只增加真实 PostgreSQL 隔离测试及验收说明，**不修改现有 REST/CSRF/ACL、React/Vue、工程 Schema、Prisma 迁移或工业设备权限**。在本机独立 `adui_scada_test` 的随机测试租户中，通过实际 `AuthSessionService.issueForVerifiedSubject` 为两个不同活跃可信主体创建两份独立、仅保存摘要的短期 BFF Cookie 会话；由真实 NestJS Session Guard、Project Guard、工程控制器与 Prisma 仓储处理两个并发 `POST /api/v1/projects/:projectId/versions`，双方携带同一 `expectedRevision=1`，要求严格一份 HTTP 201 与一份 HTTP 409。数据库最终只有首版和成功追加的第二版，水位、SHA-256 快照、审计操作者与实际成功响应一致。补充 Cookie/CSRF/Origin/ACL 拒绝场景，所有用例在 `finally` 定向清理当前随机租户。
 
-**验收边界**：这里的 Cookie 会话在隔离测试中由服务端可信主体签发，真实使用 PostgreSQL，但**不执行两次 Keycloak 授权码登录**，也不代表真实 TLS 代理/浏览器端完整身份交互；之前 React/Vue OIDC 严格分页专项另有 Windows 实测证据。新增测试仅通过显式 \`SCADA_TEST_DATABASE_URL\` 连接独立本机测试库，并只属于独立 \`test:db\`，不会进入默认 \`ready\`。正式跨 IdP 双登录以及生产安全验收后续独立评估。
+**验收边界**：这里的 Cookie 会话在隔离测试中由服务端可信主体签发，真实使用 PostgreSQL，但**不执行两次 Keycloak 授权码登录**，也不代表真实 TLS 代理/浏览器端完整身份交互；之前 React/Vue OIDC 严格分页专项另有 Windows 实测证据。新增测试仅通过显式 `SCADA_TEST_DATABASE_URL` 连接独立本机测试库，并只属于独立 `test:db`，不会进入默认 `ready`。正式跨 IdP 双登录以及生产安全验收后续独立评估。
