@@ -26,6 +26,7 @@ const SAFE_PAGE_ERRORS = new Set([
   "工程安全载入流程超时",
   "权限拒绝模拟参数不合法",
   "权限拒绝模拟操作按钮不可用",
+  "标签页恢复测试要求浏览器页面处于可见状态",
 ]);
 const PAGE_ERROR_TYPES = new Map([
   ["ReferenceError", "页面脚本引用异常"],
@@ -50,7 +51,7 @@ const SAFE_FAILURES = new Set([
   "React 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
   "Vue 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
   "真实多页验收要求至少十一项已授权工程，当前未覆盖有效的第二页",
-  "仅支持 --require-multipage、--simulate-access-denial 或显式确认的多页数据准备参数",
+  "仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check 或显式确认的多页数据准备参数",
   "多页数据准备配置不符合本机可信 Lab 边界",
   "多页数据准备只允许本机 React Origin",
   "多页数据准备缺少可信登录会话",
@@ -476,6 +477,7 @@ export function installAccessDenialFaultInPage(runtime = globalThis) {
     if (fault && method === "GET" && url.origin === runtime.location.origin) {
       const path = "/api/v1/projects/" + encodeURIComponent(fault.projectId);
       const matched =
+        (fault.scope === "identity" && url.pathname === "/api/v1/auth/me") ||
         (fault.scope === "list" && url.pathname === "/api/v1/projects") ||
         (fault.scope === "history" &&
           (url.pathname === path || url.pathname === path + "/versions")) ||
@@ -499,8 +501,9 @@ export function armAccessDenialInPage(projectId, scope, status, runtime = global
     !state ||
     typeof projectId !== "string" ||
     projectId.length === 0 ||
-    !["list", "history", "detail"].includes(scope) ||
-    ![401, 403, 404].includes(status)
+    !["identity", "list", "history", "detail"].includes(scope) ||
+    ![401, 403, 404].includes(status) ||
+    (scope === "identity" && status !== 401)
   ) {
     throw new Error("权限拒绝模拟参数不合法");
   }
@@ -712,6 +715,9 @@ export function resolveProjectBrowserMode(parameters, env) {
   if (parameters.length === 1 && parameters[0] === "--simulate-access-denial") {
     return { requireMultiPage: false, prepareMultiPage: false, simulateAccessDenial: true };
   }
+  if (parameters.length === 1 && parameters[0] === "--simulate-resume-check") {
+    return { requireMultiPage: false, prepareMultiPage: false, simulateResumeCheck: true };
+  }
   if (
     parameters.length === 3 &&
     parameters[0] === "--prepare-multipage" &&
@@ -726,7 +732,7 @@ export function resolveProjectBrowserMode(parameters, env) {
     return { requireMultiPage: false, prepareMultiPage: true };
   }
   throw new Error(
-    "仅支持 --require-multipage、--simulate-access-denial 或显式确认的多页数据准备参数",
+    "仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check 或显式确认的多页数据准备参数",
   );
 }
 
@@ -1016,23 +1022,35 @@ async function run() {
         "(" +
         installRevisionConflictFaultInPage.toString() +
         ")();" +
-        (mode.simulateAccessDenial ? "(" + installAccessDenialFaultInPage.toString() + ")();" : ""),
+        (mode.simulateAccessDenial || mode.simulateResumeCheck
+          ? "(" + installAccessDenialFaultInPage.toString() + ")();"
+          : ""),
     });
     process.stdout.write("真实 OIDC 会话已在 React Origin 验证，开始双框架只读工程验收。\n");
     await verifyStudio(session, origins[0], "React", mode.requireMultiPage);
-    if (mode.simulateAccessDenial) {
+    if (mode.simulateAccessDenial || mode.simulateResumeCheck) {
       const projects = requireAuthorizedProjectPage(await session.evaluate(projectsInPage));
-      await verifyAccessDenialScenarios(session, origins[0], "React", projects[0]);
+      if (mode.simulateAccessDenial) {
+        await verifyAccessDenialScenarios(session, origins[0], "React", projects[0]);
+      } else {
+        await verifyResumeScenarios(session, origins[0], "React", projects[0]);
+      }
     }
     await verifyStudio(session, origins[1], "Vue", mode.requireMultiPage);
-    if (mode.simulateAccessDenial) {
+    if (mode.simulateAccessDenial || mode.simulateResumeCheck) {
       const projects = requireAuthorizedProjectPage(await session.evaluate(projectsInPage));
-      await verifyAccessDenialScenarios(session, origins[1], "Vue", projects[0]);
+      if (mode.simulateAccessDenial) {
+        await verifyAccessDenialScenarios(session, origins[1], "Vue", projects[0]);
+      } else {
+        await verifyResumeScenarios(session, origins[1], "Vue", projects[0]);
+      }
     }
     process.stdout.write(
       mode.simulateAccessDenial
         ? "双框架模拟 401/403/404 授权拒绝专项通过；工程写入已在浏览器阻断，Lab ACL 未修改。\n"
-        : "双框架 OIDC 工程管理专项通过；服务端工程未新增、未覆盖、未发布。\n",
+        : mode.simulateResumeCheck
+          ? "双框架标签页重新可见只读复核专项通过；工程写入已在浏览器阻断，Lab ACL 未修改。\n"
+          : "双框架 OIDC 工程管理专项通过；服务端工程未新增、未覆盖、未发布。\n",
     );
   } finally {
     session?.socket.close();
