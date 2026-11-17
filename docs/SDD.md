@@ -870,3 +870,9 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 复用 `scripts/test-project-browser-oidc.mjs` 的临时 Chrome/Edge CDP Profile、真实 Keycloak 登录、双 Origin、`prepareAccessDenialBaseline` 与 `inspectStudioState`；不改正式 API Client、SCADA Core 或 React/Vue 页面。通过新模式 `--simulate-save-timing` 单独运行：先于客户端初始化安装已有 `installAccessDenialFaultInPage`，保持所有工程非只读请求在页面内终止；仅当显式 `armSaveTimingInPage` 后匹配同源当前工程的 `POST /api/v1/projects/:projectId/versions` 才挂起响应。调用真实“保存至服务端”按钮两次，等待 POST 命中且 UI Busy、按钮 Disabled，检查只尝试一次；之后 `releaseSaveTimingInPage` 以固定 409、401、503 状态依次交付合成响应。
 
 409 与 401 必须让现有 CAS 基线失效，503 属暂时服务器故障必须保留基线；三种场景都检查不存在自动重试以及本地 SVG、IndexedDB、自动保存未变。每种状态前重新以真实 GET 载入授权工程，避免前一场景的 UI 结果串扰。脚本的 Node 断言只接收命中计数、Busy、Disabled、是否有错误、CAS 是否清空等布尔摘要，不打印 Cookie、工程正文或服务器错误详情；浏览器注入函数不得引用 Node 模块作用域。不存在 201/成功 POST 模拟，更不声称服务器实际提交或回滚。未涉及工业设备写入与生产安全评审。
+
+## 2026-11-17 · 第三十四批第十四小批补充：取消载入测试应区分旧错误残留
+
+`openProjectInPage` 在点击工程列表项前记录现有服务端错误节点。仅观察到“正在处理工程版本”并不代表忙碌结束后仍存在的错误属于新请求；修复后，只有错误内容与旧错误不同，或本次确实观察到旧错误被清空后重新出现，才将该错误判作当前载入失败。完成成功路径依旧要求正常的 `window.confirm` 与后续 CAS 提示，真实的新错误仍必须拒绝载入，未得到有效确认会超时失败，不能通过放宽页面断言掩盖失败。
+
+新拒绝仅使用受审核固定阶段与类别，`describeBrowserPageException`、`describeProjectBrowserFailure` 均以完整白名单正则检查后才将安全类别交付 Node 终端。新类别不代表真实 HTTP 状态码，也不携带工程 ID、身份、Cookie、响应正文或异常堆栈。此变更仅涉及 CDP 专项脚本与离线回归，不改变 Vue/React 页面业务逻辑或服务器授权。
