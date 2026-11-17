@@ -2473,3 +2473,18 @@ if ($readyExitCode -ne 0) { throw "完整质量链失败" }
 ```
 
 已有 `test:projects:oidc:resume` 属第十一小批“真实登录＋模拟可见事件/服务端拒绝”浏览器专项，不覆盖本次保存中 Promise 竞态；如 Lab 运行可另行回归，但不要用该专项代替本批共享会话时序单测。保存请求一旦发送到真实服务器，测试不能假装能够取消或回滚；本小批不触碰真实工程和 ACL。
+
+## 第三十四批第十四小批 · 双框架延迟保存浏览器专项
+
+`pnpm run test:projects:oidc:save:browser` 复用第三十四批的本机真实 Keycloak/BFF 登录与 React/Vue 双 Origin 验收环境，单独运行 `--simulate-save-timing`。默认只有此单一模式，不得与 `--prepare-multipage`、`--confirm-lab` 等任何写入模式组合；所有工程 API POST 在浏览器拦截，**不向真实 Lab 发送任何工程写入**，不变更 ACL、工程、版本及生产设备。维护者仍须预先启动受控 Lab 服务并使用已预绑定普通测试账号完成一次登录；终端禁止输入或粘贴密码。
+
+验证顺序：先运行 `pnpm run test:projects:oidc:config`（候选 28 项，原 24 项 + 4 项离线用例），再运行 `pnpm run ready`（实际退出码应为 0，TypeScript / 构建 / 单元 / HTTP E2E 全链）。随后独立交互式执行：
+
+```powershell
+pnpm run test:projects:oidc:save:browser
+$browserExitCode = $LASTEXITCODE
+Write-Host "双框架延迟保存专项退出码：$browserExitCode"
+if ($browserExitCode -ne 0) { throw "双框架延迟保存专项失败" }
+```
+
+React/Vue 各自以真实 GET 建立已有授权工程的 CAS 基线；在 UI 连续点击保存后仅允许一条被阻断的版本追加 POST，延迟响应下按钮禁用、画布/IndexedDB/自动保存不变；409/401 清除 CAS，503 保留 CAS；浏览器 Profile 结束后清理。失败日志只输出固定中文类别，绝不打印异常原文、Cookie、Token 和工程正文。此专项是**真实浏览器 UI + 合成 POST 响应**，不代表真实数据库写入延迟、真实跨标签并发、现场工业安全已验收。没有浏览器环境时不能把离线 28/28 或 `ready` 通过替代真实浏览器退出码。
