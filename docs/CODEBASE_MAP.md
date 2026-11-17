@@ -819,7 +819,6 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `packages/api-client/src/studio-session.ts`：共享 Studio 工程会话增加仅在内存中使用的上下文代次；`readVersion` 在逐步读取身份、快照、工程最新水位及异常处理时检查代次，以受控冲突丢弃已经切换上下文的旧结果，不影响活跃请求的 401/403/404 权限保护。
 - `packages/api-client/test/studio-session.test.ts`：3 项新回归分别覆盖旧 401 不清空新确认的 CAS、旧 404 不污染本地工程首次创建、迟到合法快照不能被新上下文接受。React/Vue 继续共用此会话实现，不触碰各框架组件、API 协议或工程 Schema。
 
-
 ## 第三十四批第十三小批 · 服务端保存迟到结果防污染
 
 - `packages/api-client/src/studio-session.ts`：在既有 `contextGeneration` 基础上为 `saveDocument` 添加 `awaitSaveStep`，四类异步身份、水位、创建及追加操作均在结果返回或拒绝时核对当前会话代次；POST 可能已执行时使用明确的受控 409 中文提示，旧错误不得覆盖新基线。

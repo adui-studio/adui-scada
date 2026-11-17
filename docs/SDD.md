@@ -857,7 +857,6 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 
 代次在 `reset`、`invalidateAccess`、`acceptLoadedVersion` 以及当前已有保存/冲突处理引起的 CAS 基线变更时推进。该计数只在当前 `StudioServerProjectSession` 实例中有效，不持久化、不用于服务端授权或版本 CAS；服务端仍以真实 Cookie 会话、ACL 和预计修订号作最终判定。React/Vue 无需维护各自的第二套代次规则，不修改 SVG 画布或 IndexedDB。
 
-
 ## 2026-11-17 · 第三十四批第十三小批：服务端保存异步上下文保护
 
 共享 `StudioServerProjectSession` 继续复用第十二小批的 `contextGeneration`。`saveDocument` 在取得 `saving` 互斥锁后捕获代次，所有会让任务异步暂停的 `getMe`、`getProject`、`createProject`、`appendVersion` 均通过 `awaitSaveStep` 等待：`try/finally` 在 Promise 成功或失败后都校验旧代次。旧代次被替换时强制抛出受控 409，并在外层权限拒绝处理以及追加版本冲突处理之前检查代次，避免旧 401/404/409 清空或阻断新的合法基线。新代次出现于显式 reset、权限失效、重新确认载入以及既有 CAS 更新；保存成功仍按原有版本与身份规则推进基线。
