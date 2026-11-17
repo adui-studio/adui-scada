@@ -405,6 +405,16 @@
 
 > **2026-11-17 · E-041～E-044 Windows 最终验收补录**：以上四项的“候选 / 待复测”仅描述各轮历史状态。维护者现已在 Windows 真实完成 `pnpm run test:oidc:dual:studio:config` **16/16 通过**、`vp check` **335 格式文件 / 190 受检零告警错误**、`docs:check` **86 份 Markdown** 和完整 `pnpm run ready` **退出码 0**（Vitest **567/567**、NestJS HTTP E2E **49/49**，React/Vue/NestJS 构建完成）。另在两个全新隔离测试工程上，由两位真实预绑定 Keycloak 主体分别执行 React/Vue Studio 真实 UI 的迟到 HTTP 201 测试，均完成版本 2→3、真实可见性恢复、远端水位只读复核、过期 CAS 拒绝、SVG 内容和 IndexedDB 草稿保持不变、仅三版历史和审计；交互式 `pnpm run test:oidc:dual:studio:late` **退出码 0**。E-041 的阶段错误已通过明确状态诊断定位；E-042 的双窗口可见性障碍未再复现；E-043 的本地差异已按阶段区分；E-044 的非持久化视口网格已从此专项 SVG 内容快照中精确排除，其余图元仍严格比较。**注意**：没有独立的原始 SVG DOM diff 证明前轮变化完全源自网格；最终通过仅证明新的测试口径及其所有保留断言满足。201 暂缓是浏览器对已到达真实响应的消费时序，**非 TCP 断流**。成功日志没有本地 Git HEAD，新补录文档提交尚未重新运行 Windows 全链；PR #72 仍 Open/Draft 并指派 `@adui-dev`，等待明确合并授权。
 
+
+### E-045 · 同源多标签页验收脚本重构后重复声明局部变量（第三十四批第二十小批）
+
+- **现象**：新增 `openDedicatedProject` 分页逻辑时，先声明 `let state` 保存分页状态，随后又在同一函数作用域声明 `const state` 保存 Studio UI 状态。隔离 ECMAScript 语法解析在候选静态核对阶段发现重复绑定，**没有提交给维护者 Windows，也没有真实 Node 执行失败记录**。
+- **根因**：把原本单一用途的局部变量扩展为两种状态后，未同步调整后续变量名；只检查代码片段而没有解析完整文件。
+- **修正**：将第二个绑定改为 `ui`，分别表达工程列表分页状态与 Studio CAS UI 状态；主脚本和离线用例文件重新通过隔离 ECMAScript 语法解析。
+- **防复发**：每次对已有函数拼接或替换代码后，必须对**完整文件**执行语法解析，并检查同一词法作用域的 `const/let` 重复绑定；不能以局部片段看起来正确代替文件级检查。
+- **验证边界**：本次只完成隔离 ECMAScript 语法解析；仓库 Node `--test`、Windows `vp check`、`docs:check`、完整 `ready` 和真实双标签页 Lab 尚未执行，不能写成通过。
+- **证据**：`scripts/test-oidc-studio-multitab.mjs`、`scripts/test-oidc-studio-multitab.cases.mjs`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
