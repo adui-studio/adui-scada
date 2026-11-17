@@ -332,7 +332,17 @@ function requireUnchangedDocument(before, after) {
 }
 
 /** 两种框架各在真实 Studio UI 触发保存，第二主体从另一个浏览器推进数据库水位。 */
-async function verifyFramework(session, secondBrowser, client, origin, secondOrigin, name, projectId, first, second) {
+async function verifyFramework(
+  session,
+  secondBrowser,
+  client,
+  origin,
+  secondOrigin,
+  name,
+  projectId,
+  first,
+  second,
+) {
   process.stdout.write(name + "：正在通过真实 Studio 载入本次专用工程并建立 CAS 基线\n");
   const before = await openDedicatedProject(session, origin, projectId);
   assert.equal(await session.evaluate(armStudioRealLateInPage, origin, projectId), true);
@@ -350,7 +360,11 @@ async function verifyFramework(session, secondBrowser, client, origin, secondOri
 
   const secondRead = await secondBrowser.evaluate(readCasProjectInPage, secondOrigin, projectId, 2);
   const third = await secondBrowser.evaluate(appendCasVersionInPage, secondOrigin, projectId, 2);
-  if (third.status !== 201 || third.revision !== 3 || !/^[0-9a-f]{64}$/.test(third.contentHash ?? "")) {
+  if (
+    third.status !== 201 ||
+    third.revision !== 3 ||
+    !/^[0-9a-f]{64}$/.test(third.contentHash ?? "")
+  ) {
     throw new Error("真实 Studio 迟到保存结果与数据库不一致");
   }
   requireUnchangedDocument(before, await inspectStudioState(session));
@@ -385,7 +399,14 @@ async function verifyFramework(session, secondBrowser, client, origin, secondOri
   if (latest.contentHash !== third.contentHash) {
     throw new Error("真实 Studio 迟到保存结果与数据库不一致");
   }
-  await verifyLateCasAudit(client, projectId, first, second, secondRead.contentHash, third.contentHash);
+  await verifyLateCasAudit(
+    client,
+    projectId,
+    first,
+    second,
+    secondRead.contentHash,
+    third.contentHash,
+  );
   process.stdout.write(name + "：真实 UI 迟到 201、CAS 复核失效、草稿保护与三版审计检查完成\n");
 }
 
@@ -444,10 +465,26 @@ async function run() {
     });
 
     await verifyFramework(
-      firstBrowser, secondBrowser, client, origins[0], origins[1], "React", projectIds[0], first, second,
+      firstBrowser,
+      secondBrowser,
+      client,
+      origins[0],
+      origins[1],
+      "React",
+      projectIds[0],
+      first,
+      second,
     );
     await verifyFramework(
-      firstBrowser, secondBrowser, client, origins[1], origins[1], "Vue", projectIds[1], first, second,
+      firstBrowser,
+      secondBrowser,
+      client,
+      origins[1],
+      origins[1],
+      "Vue",
+      projectIds[1],
+      first,
+      second,
     );
     process.stdout.write(
       "真实双框架 Studio 迟到 201 专项通过：两个新工程均仅生成三版；CAS 过期拒绝，画布与草稿未改变。测试工程保留供复核。\n",
