@@ -1,0 +1,264 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import {
+  armStudioRealLateInPage,
+  attemptRestoreDuringSaveInPage,
+  describeStudioRealLateFailure,
+  installStudioRealLateHookInPage,
+  parseStudioRealLateMode,
+  releaseStudioRealLateInPage,
+  studioRealLateStateInPage,
+} from "./test-oidc-studio-real-late.mjs";
+
+const origin = "https://127.0.0.1:15173";
+const projectId = "b34-oidc-cas-00000000-0000-4000-8000-000000000001";
+const csrf = "scada_csrf_" + "a".repeat(43);
+
+function runtimeForTest(response = new Response(JSON.stringify({
+  revision: 2,
+  contentHash: "b".repeat(64),
+}), {
+  status: 201,
+  headers: { "Content-Type": "application/json" },
+})) {
+  const calls = [];
+  const runtime = {
+    location: { origin, href: origin + "/" },
+    document: { cookie: "__Host-adui-scada-csrf=" + csrf },
+    fetch: async (input, init) => {
+      calls.push({ input, init });
+      return response;
+    },
+  };
+  return { runtime, calls };
+}
+
+function versionRequest(expectedRevision = 1, changedProjectId = projectId, header = csrf) {
+  return {
+    method: "POST",
+    credentials: "same-origin",
+    mode: "same-origin",
+    headers: { "X-SCADA-CSRF": header },
+    body: JSON.stringify({
+      expectedRevision,
+      document: { projectId: changedProjectId, schemaVersion: "0.3.0" },
+    }),
+  };
+}
+
+async function settleResponse() {
+  for (let index = 0; index < 5; index += 1) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+}
+
+void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
+  void it("必须完整确认本机 Lab；默认及混合模式均禁止真实数据库写入", () => {
+    assert.equal(
+      parseStudioRealLateMode(["--run-studio-late", "--confirm-lab", "adui_scada"]),
+      true,
+    );
+    for (const args of [
+      [],
+      ["--run-studio-late"],
+      ["--run-studio-late", "--confirm-lab", "adui_scada_test"],
+      ["--run-studio-late", "--confirm-lab", "adui_scada", "--force"],
+      ["--run-late-response", "--confirm-lab", "adui_scada"],
+    ]) {
+      assert.throws(
+        () => parseStudioRealLateMode(args),
+        /真实 Studio 迟到响应专项必须显式确认本机 Lab/,
+      );
+    }
+  });
+
+  void it("真实 201 到达后保持 UI Promise 挂起，单次释放才交付原始响应", async () => {
+    const { runtime, calls } = runtimeForTest();
+    installStudioRealLateHookInPage(runtime);
+    assert.equal(armStudioRealLateInPage(origin, projectId, runtime), true);
+    let returned = false;
+    const promise = runtime
+      .fetch("/api/v1/projects/" + projectId + "/versions", versionRequest())
+      .then((response) => {
+        returned = true;
+        return response;
+      });
+    await settleResponse();
+    assert.equal(returned, false);
+    const state = runtime.__aduiTestStudioRealLate;
+    assert.equal(state.active.phase, "received");
+    assert.equal(state.active.hits, 1);
+    assert.equal(state.writeAttempts, 1);
+    assert.equal(state.rejectedWrites, 0);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].init.headers["X-SCADA-CSRF"], csrf);
+    assert.equal(JSON.parse(calls[0].init.body).expectedRevision, 1);
+    assert.equal(releaseStudioRealLateInPage(origin, projectId, runtime), true);
+    const response = await promise;
+    assert.equal(returned, true);
+    assert.equal(response.status, 201);
+    assert.equal((await response.json()).revision, 2);
+    assert.equal(state.active.phase, "released");
+    assert.throws(
+      () => releaseStudioRealLateInPage(origin, projectId, runtime),
+      /真实 Studio 迟到保存未达到受控状态/,
+    );
+  });
+
+  void it("不允许在未预设工程、跨 Origin、错误工程 ID 或重复挂起时放行 POST", async () => {
+    const { runtime, calls } = runtimeForTest();
+    installStudioRealLateHookInPage(runtime);
+    assert.equal(
+      (await runtime.fetch("/api/v1/projects/" + projectId + "/versions", versionRequest())).status,
+      403,
+    );
+    assert.equal(calls.length, 0);
+    assert.throws(
+      () => armStudioRealLateInPage("https://127.0.0.1:15174", projectId, runtime),
+      /真实 Studio 迟到保存未达到受控状态/,
+    );
+    assert.throws(
+      () => armStudioRealLateInPage(origin, "production-project", runtime),
+      /真实 Studio 迟到保存未达到受控状态/,
+    );
+    assert.throws(
+      () => armStudioRealLateInPage(origin, projectId, runtime),
+      /真实 Studio 迟到保存未达到受控状态/,
+    );
+    assert.equal(runtime.__aduiTestStudioRealLate.rejectedWrites, 1);
+  });
+
+  void it("只允许当前工程 CAS=1，错误 CSRF、跨站与其他工程写入均被拒绝", async () => {
+    const { runtime, calls } = runtimeForTest();
+    installStudioRealLateHookInPage(runtime);
+    armStudioRealLateInPage(origin, projectId, runtime);
+    const paths = [
+      ["/api/v1/projects", versionRequest()],
+      ["/api/v1/projects/another/versions", versionRequest()],
+      ["https://127.0.0.1:15174/api/v1/projects/" + projectId + "/versions", versionRequest()],
+      ["/api/v1/projects/" + projectId + "/versions", versionRequest(2)],
+      ["/api/v1/projects/" + projectId + "/versions", versionRequest(1, "another")],
+      ["/api/v1/projects/" + projectId + "/versions", versionRequest(1, projectId, "bad")],
+    ];
+    for (const [path, options] of paths) {
+      const response = await runtime.fetch(path, options);
+      assert.equal(response.status, 403);
+    }
+    assert.equal(calls.length, 0);
+    assert.equal(runtime.__aduiTestStudioRealLate.writeAttempts, paths.length);
+    assert.equal(runtime.__aduiTestStudioRealLate.rejectedWrites, paths.length);
+    assert.throws(
+      () => releaseStudioRealLateInPage(origin, projectId, runtime),
+      /真实 Studio 迟到保存未达到受控状态/,
+    );
+  });
+
+  void it("CSRF Cookie 缺失或重复时不得把版本 POST 交付服务器", async () => {
+    for (const cookie of ["", "__Host-adui-scada-csrf=bad", "__Host-adui-scada-csrf=" + csrf + "; __Host-adui-scada-csrf=" + csrf]) {
+      const { runtime, calls } = runtimeForTest();
+      runtime.document.cookie = cookie;
+      installStudioRealLateHookInPage(runtime);
+      armStudioRealLateInPage(origin, projectId, runtime);
+      assert.equal(
+        (await runtime.fetch("/api/v1/projects/" + projectId + "/versions", versionRequest())).status,
+        403,
+      );
+      assert.equal(calls.length, 0);
+    }
+  });
+
+  void it("真正 409 或格式错误的 201 不得伪装成受控成功并保持请求挂起", async () => {
+    for (const response of [
+      new Response("{}", { status: 409 }),
+      new Response(JSON.stringify({ revision: 3, contentHash: "a".repeat(64) }), { status: 201 }),
+      new Response(JSON.stringify({ revision: 2, contentHash: "bad" }), { status: 201 }),
+    ]) {
+      const { runtime } = runtimeForTest(response);
+      installStudioRealLateHookInPage(runtime);
+      armStudioRealLateInPage(origin, projectId, runtime);
+      const actual = await runtime.fetch(
+        "/api/v1/projects/" + projectId + "/versions",
+        versionRequest(),
+      );
+      assert.equal(actual.status, response.status);
+      assert.equal(runtime.__aduiTestStudioRealLate.active.phase, "failed");
+      assert.throws(
+        () => releaseStudioRealLateInPage(origin, projectId, runtime),
+        /真实 Studio 迟到保存未达到受控状态/,
+      );
+    }
+  });
+
+  void it("真实 UI 状态函数只返回脱敏阶段和布尔信息，不读取文档或 Cookie", () => {
+    const panel = {
+      textContent: "服务端最新修订号：2 · CAS 基线：2",
+      querySelectorAll: (selector) =>
+        selector === "button"
+          ? [{ textContent: "保存至服务端", disabled: true }]
+          : [{ textContent: "正在处理工程版本" }],
+      querySelector: () => null,
+    };
+    const runtime = {
+      document: {
+        querySelector: (selector) =>
+          selector === '[aria-label="服务端工程版本"]' ? panel : null,
+      },
+      __aduiTestStudioRealLate: {
+        active: { phase: "received", hits: 1 },
+        writeAttempts: 1,
+        rejectedWrites: 0,
+      },
+    };
+    const state = studioRealLateStateInPage(runtime);
+    assert.deepEqual(state, {
+      phase: "received",
+      hits: 1,
+      writeAttempts: 1,
+      rejectedWrites: 0,
+      busy: true,
+      disabled: true,
+      baselineRevision: 2,
+      baselineCleared: false,
+      headCleared: false,
+      hasError: false,
+      savedSecondVersion: false,
+    });
+    assert.equal(JSON.stringify(state).includes(csrf), false);
+  });
+
+  void it("保存期间尝试恢复草稿只调用现有控件，不修改测试页面和全局确认函数", () => {
+    let clicks = 0;
+    const originalConfirm = () => false;
+    const runtime = {
+      confirm: originalConfirm,
+      document: {
+        querySelector: () => ({
+          open: false,
+          querySelectorAll: () => [
+            {
+              textContent: "恢复草稿",
+              disabled: false,
+              click: () => {
+                clicks += 1;
+                assert.equal(runtime.confirm(), true);
+              },
+            },
+          ],
+        }),
+      },
+    };
+    assert.equal(attemptRestoreDuringSaveInPage(runtime), true);
+    assert.equal(clicks, 1);
+    assert.equal(runtime.confirm, originalConfirm);
+  });
+
+  void it("未知错误必须脱敏，不能输出 Cookie、Token 或数据库地址", () => {
+    const result = describeStudioRealLateFailure(new Error("secret_token=不可公开"));
+    assert.equal(result, "真实 Studio 迟到响应专项未通过，内部错误详情已脱敏");
+    assert.equal(result.includes("secret_token"), false);
+    assert.equal(
+      describeStudioRealLateFailure(new Error("真实 Studio 迟到保存未阻止重复写入")),
+      "真实 Studio 迟到保存未阻止重复写入",
+    );
+  });
+});
