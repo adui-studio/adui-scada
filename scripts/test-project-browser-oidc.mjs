@@ -56,6 +56,8 @@ const SAFE_FAILURES = new Set([
   "浏览器调试标签页无法创建",
   "浏览器调试命令执行失败",
   "浏览器页面操作失败，请检查当前 Studio 状态",
+  "React BFF 会话未通过验证",
+  "Vue BFF 会话未通过验证",
   "React 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
   "Vue 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
   "真实多页验收要求至少十一项已授权工程，当前未覆盖有效的第二页",
@@ -1106,7 +1108,10 @@ async function verifyStudio(session, origin, name, requireMultiPage) {
   );
   assert.equal(await session.evaluate(enterStudioInPage), true, name + " 无法进入 Studio");
   report("真实 BFF 会话与授权工程列表");
-  assert.equal(await session.evaluate(authenticatedInPage, origin), true, name + " 会话未通过验证");
+  const authenticated = await session.evaluate(authenticatedInPage, origin);
+  if (authenticated !== true) {
+    throw new Error(name === "React" ? "React BFF 会话未通过验证" : "Vue BFF 会话未通过验证");
+  }
 
   const initial = requireAuthorizedProjectPage(await session.evaluate(projectsInPage));
   if (initial.length === 0) {
