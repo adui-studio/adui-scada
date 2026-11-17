@@ -157,6 +157,11 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
       status: 404,
     });
     expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBeNull();
+    await expect(session.saveDocument(documentCopy())).rejects.toMatchObject({
+      kind: "forbidden",
+      status: 403,
+    });
+    expect(api.getProject).toHaveBeenCalledTimes(2);
     expect(api.createProject).not.toHaveBeenCalled();
     expect(api.appendVersion).not.toHaveBeenCalled();
   });
@@ -174,6 +179,10 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
       status: 401,
     });
     expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBeNull();
+    await expect(session.saveDocument(documentCopy())).rejects.toMatchObject({
+      kind: "forbidden",
+      status: 403,
+    });
     expect(api.createProject).not.toHaveBeenCalled();
     expect(api.appendVersion).not.toHaveBeenCalled();
   });
@@ -194,6 +203,25 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
       expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBeNull();
       expect(api.appendVersion).not.toHaveBeenCalled();
     }
+  });
+
+  it("重新从授权列表确认载入后清除访问阻断并可正常 CAS 保存", async () => {
+    const api = mockClient();
+    const session = createStudioServerProjectSession(api);
+    session.acceptLoadedVersion(await session.readVersion(waterTreatmentDemoDocument.projectId, 1));
+    api.getProject.mockRejectedValueOnce(
+      new ScadaApiError("工程不存在或无权访问", "not_found", 404),
+    );
+    await expect(session.saveDocument(documentCopy())).rejects.toMatchObject({ kind: "not_found" });
+    await expect(session.saveDocument(documentCopy())).rejects.toMatchObject({ kind: "forbidden" });
+
+    session.acceptLoadedVersion(await session.readVersion(waterTreatmentDemoDocument.projectId, 1));
+    await expect(session.saveDocument(documentCopy())).resolves.toMatchObject({
+      revision: 2,
+      created: false,
+    });
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.appendVersion).toHaveBeenCalledTimes(1);
   });
 
   it("短时网络中断不应清除已确认的 CAS 基线或触发额外创建", async () => {
