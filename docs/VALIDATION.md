@@ -1543,3 +1543,10 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 
 期望共享 Session **31/31**、全量 Vitest **567/567**；真实 `pnpm run test:db` 预计 **30/30**，必须额外执行且要求真实退出码 0。候选提交后**尚未在 Windows 执行 `vp check`、`pnpm run test:unit`、`pnpm run docs:check`、`pnpm run ready` 或 `pnpm run test:db`**，不得写成已通过。若现有测试数据库缺少迁移/连接失败，不得转向生产库解决。未更改真实 OIDC 用户/ACL、NestJS 业务 Controller、Prisma Schema、工业设备或前端工程保存逻辑。PR 保持 Draft；只有维护者明确同意才能合并。
 
+## 2026-11-17 · 第三十四批第十五小批首次 Windows Vite+ 类型检查：TS2740 修复候选
+
+维护者本机执行 `vp check --fix`，格式化阶段已完成，但 **188 个受检文件内 1 个 TypeScript TS2740 错误、0 警告**，因此**本次质量检查失败**。错误定位 `packages/api-client/test/studio-session.test.ts:676`，新增旧保存回包迟到场景将 `createProjectSnapshot(waterTreatmentDemoDocument, { revision: 4, createdAt })` 直接传入 `api.appendVersion.mockResolvedValueOnce`。仓库实际 Core `project-snapshot.ts` 中此工厂为 `async`，返回 `Promise<ProjectSnapshot>`；Vitest 的 `mockResolvedValueOnce` 对该 Mock 要求已解析的 `ProjectSnapshot`。不能把格式化完成等同 `vp check` 通过。
+
+已在 Draft PR #70 原分支将唯一不匹配调用改为 `mockResolvedValueOnce(await createProjectSnapshot(...))`，复用原 async `it`，保留原有真实 SHA-256 快照生成、CAS 3→4、期望调用次数及旧回包上下文保护。改动**仅一处测试值**，不更改生产 API Client、Core、NestJS、Schema 或真实数据库行为。经 GitHub 代码确认新表达式恰好位于 async 测试内，且 Core 工厂返回 Promise；此项是静态类型原因核对，不是本机 TS6 / `vp check` 通过证据。
+
+**修复后待 Windows 复验**：`vp check` 零错误警告；`pnpm run test:unit` 目标共享会话 31/31、全量 567/567；`pnpm run docs:check` 与 `pnpm run ready` 实际退出码 0；真实本机隔离 PostgreSQL `pnpm run test:db` 目标 30/30 且退出码 0。原始日志不包含本机 HEAD 校验和后续测试，通过前不能合并 PR。
