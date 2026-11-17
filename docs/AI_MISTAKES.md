@@ -311,6 +311,15 @@
 - **验证**：新增 2 项 Node 离线测试，预期 `test:projects:oidc:config` 由 **31/31 目标**增至 **33/33 目标**，协作端使用实际仓库函数在 V8 中验证安全类别与敏感附加内容拒绝、两份脚本均通过 V8 语法解析；**Windows Node、真实 `ready`、Chrome/Keycloak 双框架浏览器均需维护者重新执行**。原始 React 503 具体故障仍待新固定类别证据。
 - **证据**：维护者 2026-11-17 第三轮 Windows 专项退出码 1、PR #69、`scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`、`docs/VALIDATION.md`。
 
+### E-035 · Vue 保存 409 后共享 CAS 基线已清空但响应式展示未同步（第三十四批第十四小批）
+
+- **现象**：维护者 Windows OIDC 浏览器离线安全测试 **32/33**（唯一失败是带 `；secret` 的未知超时诊断期望错误，实际仍安全脱敏）；独立双框架保存专项 **退出码 1**。React 409/401/503 均通过真实 UI 的延迟 POST 挂起与合成错误释放；Vue 通过真实 BFF、工程列表和确认载入，在 409 合成响应已释放后出现通用断言失败，**不能宣称双框架通过**。
+- **确认的代码问题**：共享 `saveDocument` 对版本冲突 409 清空内部 CAS 基线；React 在渲染时直接调用 `serverSession.getBaselineRevision`，Vue 显示 `serverBaselineRevision` 响应式副本。Vue `runServerAction` 的 409 保存失败分支原先仅记录 `serverError`，而不更新 `serverBaselineRevision`，因此 UI 可能继续显示旧修订号。这个不同步问题通过代码核对成立，与浏览器日志吻合；但原始错误被通用脱敏，不能独立证明它是唯一失败的断言。
+- **最小修复**：只在 Vue“保存服务端工程”操作失败时，从当前工程的共享 Session 读取 CAS 并同步响应式状态；保证 409 显示未建立、503 继续保留、401 依旧清理，不改共享存储或服务端接口。对新增离线测试仅对齐已有未知错误安全回退文案，不能放行 `secret` 附加内容。浏览器已有 CAS 断言原样保留，新增固定“Vue 延迟保存 409：CAS 基线状态不符合预期”安全诊断和相邻正反向单元断言。
+- **避免**：跨框架共享会话状态发生变更时，React 直接读取共享对象与 Vue 单独缓存 `ref` 的视图必须同步验证，尤其是在拒绝/冲突的异常路径。不能只测试成功保存与权限撤销；模拟拒绝后需同时核对共享内部基线与 UI 状态。新增脱敏负向断言要核对真实安全回退文案，不按相似描述推断。
+- **验证边界**：协作端完成源码静态比较、V8 语法解析与诊断函数固定分支模拟；本次未实际运行 Windows `test:projects:oidc:config`（目标 33/33）、`vp check`、`docs:check`、`ready` 或真实双框架浏览器。旧日志仍是 **32/33、浏览器退出码 1**，不得将修复候选当作已经验收通过。
+- **证据**：维护者第四次 Windows 两段原始日志、PR #69、`apps/web-vue/src/studio/StudioPage.vue`、`packages/api-client/src/studio-session.ts`、`scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
