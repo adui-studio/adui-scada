@@ -584,19 +584,27 @@ async function verifyAccessDenialScenarios(session, origin, name, selected) {
     process.stdout.write(name + "：正在验证模拟 " + scenario.title + "\n");
     const before = await prepareAccessDenialBaseline(session, origin, name, selected);
     assert.equal(
-      await session.evaluate(armAccessDenialInPage, selected.projectId, scenario.scope, scenario.status),
+      await session.evaluate(
+        armAccessDenialInPage,
+        selected.projectId,
+        scenario.scope,
+        scenario.status,
+      ),
       true,
     );
     assert.equal(await session.evaluate(triggerAccessDenialInPage, scenario.scope), true);
     const result = await waitFor(async () => {
       const state = await session.evaluate(accessDenialStateInPage);
-      return state.hits > 0 &&
+      if (
+        state.hits > 0 &&
         state.baselineCleared &&
         state.headCleared &&
         state.serverRows === 0 &&
         state.browserRows === 0
-        ? state
-        : null;
+      ) {
+        return state;
+      }
+      return null;
     }, name + " 权限拒绝后旧服务端缓存清除");
     assert.equal(result.writeAttempts, 0, name + " 拒绝路径不应向服务端尝试写入");
 
