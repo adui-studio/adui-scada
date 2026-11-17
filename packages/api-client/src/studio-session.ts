@@ -102,6 +102,41 @@ export class StudioServerProjectSession {
     }
   }
 
+  /**
+   * 冲突后的最新版本只读预览：身份、最新水位、快照与再次核对的水位必须一致。
+   * 不建立 CAS 基线，不修改当前画布或 IndexedDB；只允许显式确认载入后恢复保存。
+   */
+  async previewLatestVersion(projectId: string): Promise<ServerProjectVersion> {
+    const generation = this.contextGeneration;
+    try {
+      const identity = await this.api.getMe();
+      this.requireCurrentContext(generation);
+      const firstHead = await this.api.getProject(projectId);
+      this.requireCurrentContext(generation);
+      const snapshot = await this.api.readVersion(projectId, firstHead.headRevision);
+      this.requireCurrentContext(generation);
+      const lastHead = await this.api.getProject(projectId);
+      this.requireCurrentContext(generation);
+      if (
+        snapshot.projectId !== projectId ||
+        snapshot.revision !== firstHead.headRevision ||
+        lastHead.headRevision !== firstHead.headRevision
+      ) {
+        throw new ScadaApiError(
+          "只读核验期间服务端版本已变化，请重新查询最新版本",
+          "conflict",
+          409,
+        );
+      }
+      return { snapshot, headRevision: lastHead.headRevision, principal: identity.principal };
+    } catch (error) {
+      // 迟到的旧读取绝不清空另一工程的新基线，也不以 404 判断可以新建。
+      this.requireCurrentContext(generation);
+      if (isScadaAccessRejection(error)) this.invalidateAccess(projectId);
+      throw error;
+    }
+  }
+
   /** 只有用户实际载入最新服务端版本，才建立后续 CAS 保存基线。 */
   acceptLoadedVersion(version: ServerProjectVersion): void {
     this.contextGeneration += 1;
