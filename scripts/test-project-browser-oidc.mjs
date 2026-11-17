@@ -1006,7 +1006,10 @@ async function verifySaveTimingScenarios(session, origin, name, selected) {
       assert.equal(preserved.autoSave, before.autoSave, name + " 只读预览修改了自动保存");
 
       process.stdout.write(name + "：正在确认载入已核验的服务端最新版本\n");
-      const loaded = await session.evaluate(confirmPreviewedServerVersionInPage, selected.headRevision);
+      const loaded = await session.evaluate(
+        confirmPreviewedServerVersionInPage,
+        selected.headRevision,
+      );
       assert.deepEqual(loaded, { confirmed: true, confirmCount: 1 });
       assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
       const afterLoad = await inspectStudioState(session);
