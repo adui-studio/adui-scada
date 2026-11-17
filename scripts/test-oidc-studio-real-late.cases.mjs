@@ -7,6 +7,7 @@ import {
   installStudioRealLateHookInPage,
   parseStudioRealLateMode,
   releaseStudioRealLateInPage,
+  setSecondaryBrowserWindowState,
   studioRealLateStateInPage,
 } from "./test-oidc-studio-real-late.mjs";
 
@@ -268,6 +269,59 @@ void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
     assert.equal(attemptRestoreDuringSaveInPage(runtime), true);
     assert.equal(clicks, 1);
     assert.equal(runtime.confirm, originalConfirm);
+  });
+
+  void it("切换第二主体窗口只能使用 CDP 指定隔离窗口，不改写页面可见性", async () => {
+    const commands = [];
+    const session = {
+      send: async (method, args) => {
+        commands.push({ method, args });
+        return method === "Browser.getWindowForTarget" ? { windowId: 17 } : {};
+      },
+    };
+    assert.equal(await setSecondaryBrowserWindowState(session, "normal"), true);
+    assert.equal(await setSecondaryBrowserWindowState(session, "minimized"), true);
+    assert.deepEqual(commands, [
+      { method: "Browser.getWindowForTarget", args: undefined },
+      {
+        method: "Browser.setWindowBounds",
+        args: { windowId: 17, bounds: { windowState: "normal" } },
+      },
+      { method: "Browser.getWindowForTarget", args: undefined },
+      {
+        method: "Browser.setWindowBounds",
+        args: { windowId: 17, bounds: { windowState: "minimized" } },
+      },
+    ]);
+    assert.equal(commands.some((item) => item.method === "Runtime.evaluate"), false);
+  });
+
+  void it("窗口标识异常、非法状态或 CDP 拒绝时必须显式失败，不能绕过真实 visible", async () => {
+    let calls = 0;
+    const invalidSession = {
+      send: async () => {
+        calls += 1;
+        return { windowId: 0 };
+      },
+    };
+    await assert.rejects(
+      setSecondaryBrowserWindowState(invalidSession, "normal"),
+      /隔离第二主体浏览器窗口状态切换失败/,
+    );
+    await assert.rejects(
+      setSecondaryBrowserWindowState(invalidSession, "visible"),
+      /隔离第二主体浏览器窗口状态切换失败/,
+    );
+    assert.equal(calls, 1);
+    await assert.rejects(
+      setSecondaryBrowserWindowState(
+        { send: async () => { throw new Error("sensitive_token_禁止泄漏"); } },
+        "minimized",
+      ),
+      (error) =>
+        error.message === "隔离第二主体浏览器窗口状态切换失败" &&
+        !error.message.includes("sensitive_token"),
+    );
   });
 
   void it("未知错误必须脱敏，不能输出 Cookie、Token 或数据库地址", () => {
