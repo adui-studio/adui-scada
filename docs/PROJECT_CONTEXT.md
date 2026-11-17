@@ -1382,3 +1382,9 @@ PR #72 候选已新增固定阶段与安全状态摘要，方便下一轮定位�
 维护者第二轮 Windows `test:oidc:dual:studio:late` 已实测 React 双主体真实 CAS 2→3 HTTP 201 成功、第一主体保存真实 201 消费成功且 UI 显示 CAS 基线 2；但 `Page.bringToFront` 后仍输出 `visible=false`，专项退出码 **1**。后续真实只读 CAS 复核、旧水位阻止第四版以及 Vue 全流程**没有得到本次通过证据**。
 
 候选仅修正隔离测试的第二浏览器窗口管理，不修改生产 UI、共享 CAS、API、数据库与工业控制安全：第二主体真实操作时使用正常窗口，第一主体恢复可见前最小化第二窗口，仍严格要求真实 `visible`。新增 2 项离线测试（目标 **11/11**）。新代码和文档尚未经 Windows `vp check`、`docs:check`、`ready` 与真实 Lab 复验；PR #72 保持 Draft、Assignee `@adui-dev`，不合并。
+
+## 2026-11-17 · 第三十四批第十七小批：第三轮真实浏览器本地一致性异常
+
+维护者第三轮 `pnpm run test:oidc:dual:studio:late` 仍然**退出码 1**。此次已越过第二轮窗口可见性阻塞：React 真实版本 2 的 201 交付、第二主体 CAS 2→3、Studio 返回可见均成功。日志随后报本地数据变化；结合当前脚本顺序，真实 CAS 复核使基线清空、UI 再次保存被拒绝且无额外 POST 等前置断言也已通过，失败在最后的 SVG、IndexedDB 草稿及自动保存一致性比较，Vue 与最终 PostgreSQL 三版审计尚未执行。
+
+尚不知道哪类数据改变，也无法判断发生于 CAS 复核还是最终再次点击保存。PR #72 新增四类布尔脱敏诊断及五个强制比较点，**没有放宽数据安全断言**、没有改生产业务逻辑。离线测试新增两项，目标 **13/13**。最新候选仍待 Windows Node、`vp check`、`docs:check`、`ready`、真实浏览器复验；PR Open/Draft，Assignee `@adui-dev`，未经授权不合并。
