@@ -850,3 +850,9 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 调用开始时保存原基线对象引用，每次 `await` 后核对其仍是最新；用户在等待中清空或重新确认载入新基线时，旧请求以 `skipped` 返回，不允许覆盖或清空新基线。React 与 Vue 均只监听 `visibilitychange` 的可见状态（不是后台轮询/权限推送），并在主动历史、草稿或前一次复核进行中跳过本次事件；发生授权/版本变化时仅重置服务端修订号、远端历史和对比快照，不重载画布、不停止本地自动保存。组件卸载时移除事件监听，迟到结果不更新已卸载的组件。
 
 独立浏览器回归复用已有安全 CDP 脚本的 `--simulate-resume-check` 单模式，以真实 Keycloak/BFF 读取并显式载入既有授权工程，随后调用自包含的 `triggerStudioResumeInPage` 派发可见事件。模拟 401 只定向当前 Origin 的 `GET /api/v1/auth/me`，模拟 404 只定向既有项目 GET 详情；修订号漂移仍借已有受控 GET 响应摘要模拟器将 `headRevision` 增加 1。隔离 Profile 永久拦截工程 API 非 GET/HEAD 写请求。每轮比较恢复前后 SVG DOM、IndexedDB SHA-256、自动保存状态，并验证 UI CAS/旧水位失效和零工程写入尝试。本专项**不在真实数据库中修改 ACL 或版本号**。
+
+## 2026-11-17 · 第三十四批第十二小批：服务端读取上下文代次保护
+
+`StudioServerProjectSession` 为 `readVersion(projectId, revision)` 捕获启动时的 `contextGeneration`，在 `getMe`、`readVersion`、`getProject` 每次异步返回后复核，并在 `catch` 处理拒绝之前再复核。代次变化表明另一项明确的用户动作已经重置或更换了当前保存上下文；此时统一返回受控 `ScadaApiError(kind="conflict", status=409)`，不得再触发 `invalidateAccess(projectId)` 或返回旧快照给调用者确认。没有上下文变动的 401/403/404 继续执行原有权限失效与防误创建逻辑。
+
+代次在 `reset`、`invalidateAccess`、`acceptLoadedVersion` 以及当前已有保存/冲突处理引起的 CAS 基线变更时推进。该计数只在当前 `StudioServerProjectSession` 实例中有效，不持久化、不用于服务端授权或版本 CAS；服务端仍以真实 Cookie 会话、ACL 和预计修订号作最终判定。React/Vue 无需维护各自的第二套代次规则，不修改 SVG 画布或 IndexedDB。

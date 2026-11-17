@@ -27,6 +27,7 @@ export class StudioServerProjectSession {
   } | null = null;
   private blockedCreateProjectId: string | null = null;
   private saving = false;
+  private contextGeneration = 0;
 
   private readonly api: ScadaApiClient;
 
@@ -34,8 +35,16 @@ export class StudioServerProjectSession {
     this.api = api;
   }
 
+  /** 避免上下文切换后迟到的只读请求修改或返回旧工程数据。 */
+  private requireCurrentContext(generation: number): void {
+    if (generation !== this.contextGeneration) {
+      throw new ScadaApiError("服务端工程读取上下文已变化，请重新操作", "conflict", 409);
+    }
+  }
+
   /** JSON 导入、本地草稿恢复或本地历史载入后必须清除旧基线。 */
   reset(): void {
+    this.contextGeneration += 1;
     this.baseline = null;
     this.blockedCreateProjectId = null;
   }
@@ -45,6 +54,7 @@ export class StudioServerProjectSession {
    * 只有明确恢复本地工程或重新载入授权工程才能解除阻断。
    */
   invalidateAccess(projectId?: string): void {
+    this.contextGeneration += 1;
     this.blockedCreateProjectId =
       projectId ?? this.baseline?.projectId ?? this.blockedCreateProjectId;
     this.baseline = null;
@@ -56,12 +66,18 @@ export class StudioServerProjectSession {
 
   /** 先校验快照、身份和当前服务端水位，供 UI 在用户确认后载入。 */
   async readVersion(projectId: string, revision: number): Promise<ServerProjectVersion> {
+    const generation = this.contextGeneration;
     try {
       const identity = await this.api.getMe();
+      this.requireCurrentContext(generation);
       const snapshot = await this.api.readVersion(projectId, revision);
+      this.requireCurrentContext(generation);
       const current = await this.api.getProject(projectId);
+      this.requireCurrentContext(generation);
       return { snapshot, headRevision: current.headRevision, principal: identity.principal };
     } catch (error) {
+      // 迟到的旧请求不能将新工程的合法基线误判为撤权，也不能返回可被确认载入的旧快照。
+      this.requireCurrentContext(generation);
       if (isScadaAccessRejection(error)) this.invalidateAccess(projectId);
       throw error;
     }
@@ -69,6 +85,7 @@ export class StudioServerProjectSession {
 
   /** 只有用户实际载入最新服务端版本，才建立后续 CAS 保存基线。 */
   acceptLoadedVersion(version: ServerProjectVersion): void {
+    this.contextGeneration += 1;
     this.blockedCreateProjectId = null;
     const { snapshot, headRevision, principal } = version;
     this.baseline =
@@ -104,7 +121,10 @@ export class StudioServerProjectSession {
     } catch (error) {
       if (this.baseline !== baseline) return "skipped";
       if (isScadaAccessRejection(error)) this.invalidateAccess(projectId);
-      if (error instanceof ScadaApiError && error.kind === "conflict") this.baseline = null;
+      if (error instanceof ScadaApiError && error.kind === "conflict") {
+        this.contextGeneration += 1;
+        this.baseline = null;
+      }
       throw error;
     }
   }
@@ -139,6 +159,7 @@ export class StudioServerProjectSession {
         }
         // 首次保存的 404 仍允许尝试创建；服务端独立校验身份和租户唯一约束。
         const created = await this.api.createProject(checked);
+        this.contextGeneration += 1;
         this.baseline = {
           projectId: checked.projectId,
           revision: created.headRevision,
@@ -154,6 +175,7 @@ export class StudioServerProjectSession {
         baseline.principal.tenantId !== principal.tenantId ||
         baseline.principal.subjectId !== principal.subjectId
       ) {
+        this.contextGeneration += 1;
         this.baseline = null;
         throw new ScadaApiError(
           "服务端已有工程，请先载入最新服务端版本再保存，避免覆盖他人的修改",
@@ -163,16 +185,19 @@ export class StudioServerProjectSession {
       }
 
       if (current.headRevision !== baseline.revision) {
+        this.contextGeneration += 1;
         this.baseline = null;
         throw new ScadaApiError("服务端版本已变化，请重新查询并载入最新版本", "conflict", 409);
       }
 
       try {
         const saved = await this.api.appendVersion(checked.projectId, baseline.revision, checked);
+        this.contextGeneration += 1;
         this.baseline = { projectId: checked.projectId, revision: saved.revision, principal };
         return { projectId: checked.projectId, revision: saved.revision, created: false };
       } catch (error) {
         if (error instanceof ScadaApiError && error.kind === "conflict") {
+          this.contextGeneration += 1;
           this.baseline = null;
         }
         throw error;

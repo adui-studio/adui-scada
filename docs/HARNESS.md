@@ -2411,3 +2411,32 @@ Write-Host "双框架标签页恢复浏览器退出码：$LASTEXITCODE"
 该专项仍在临时独立 Chrome/Edge Profile 中使用真实登录会话，先通过真实授权列表和实际同源 GET 确认载入工程并保存一份临时 IndexedDB 草稿；随后在页面内**模拟可见事件**，分别只对当前 Origin 模拟 `GET /auth/me` 401、`GET /projects/:id` 404 或将合法 GET 响应的 `headRevision` 增大 1。所有工程 API 非 GET/HEAD 请求在模拟器内始终拒绝，**不会写真实 Lab 工程、ACL 或版本，也不需要真实登出其他标签页**。React/Vue 两端分别验证旧 CAS/水位/授权摘要失效、本地 SVG 画布、IndexedDB 草稿哈希及自动保存状态不变，专项最终退出码须为 0。
 
 **范围边界**：本批没有实现广播式会话立即同步、轮询或跨 Origin Cookie 传输。只有当前文档重新可见并存在 CAS 基线时执行只读复核；真正后台长期可见性、双物理标签并行与真实另一个标签页注销/ACL 撤权仍需后续专用 E2E。既有第十小批真实 PostgreSQL ACL 撤销端到端通过是独立证据，不能把本批模拟事件称为“跨标签页真实注销 E2E 已验收”。源码及质量链均需 Windows 复验；本协作环境无实际 Chrome/Keycloak/React/Vue 全链结果。
+
+## 第三十四批第十二小批 · 共享版本读取上下文切换保护回归
+
+此小批不需要启动真实 Keycloak/浏览器或写 PostgreSQL；新增回归在已有 Vitest 共享会话测试中以受控 Promise 排序模拟：旧读取等待时重置/重新确认载入，分别迟到返回 401、404 和有效快照。前两项必须保留新合法 CAS 或允许明确恢复的本地工程按原有创建规则操作；第三项必须受控拒绝旧快照、不额外执行工程详情 GET。原有活跃会话的 401/403/404、防误创建、CAS 冲突及网络故障测试不删除。
+
+Windows 从新分支执行：
+
+```powershell
+git status --short
+git fetch origin
+git switch --track origin/fix/v0.3-b34-read-version-stale-context
+git rev-parse HEAD
+
+pnpm run test:unit
+if ($LASTEXITCODE -ne 0) { throw "共享会话单元测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "第十二小批完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+```
+
+目标：共享单元测试原 22 项 + 3 项，共 **25 项**；全量 Vitest 原 558 项 + 3 项，共 **561 项**；HTTP E2E 预计仍 49 项。数字仅为候选预期，不能当作实际执行结果。旧 OIDC `test:projects:oidc:resume` 已在第十一小批通过；本批未改变框架生命周期，但完整质量链和相关浏览器回归仍以维护者实测为准。

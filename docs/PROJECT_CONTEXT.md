@@ -1255,9 +1255,21 @@ PR #63 已由维护者授权 Squash 合并为 `main@6f09e1930fe55f567245708bf5eb
 
 PR #66 仍为 Draft，维护者在 Windows `vp check --fix` 实测发现 React Studio 恢复监听中的 `react(immutability)` **1 条警告**与 TypeScript **TS2339 1 个错误**，188 个受检文件的格式化完成但完整检查失败。修复已提交至同一 PR 分支：`e5bddb6c98682130fc80841368466fa1aacccb51`，以 `AbortController` 替代 Effect cleanup 可变闭包标记，并提前缓存访问拒绝/CAS 冲突两种条件，保留 Vue/React 功能与共享状态机。已在协作容器 TypeScript 5.8.3 对等价收窄片段进行严格静态编译，未运行项目 TS6/Vite+。本批仍须 Windows 重新执行 `vp check`、完整质量链及双框架只读浏览器专项；**不应将格式化成功写成 Lint 或构建通过**，不得提前合并。错误复盘见 E-031。
 
-
 ## 2026-11-17 · 第三十四批第十一小批 Windows 验收结果
 
 PR #66 的 React / Vue 标签页恢复只读复核已由维护者在 Windows 完成复验：`vp check` **333/188 零警告错误**；OIDC 浏览器离线 **24/24**；完整 `pnpm run ready` 中 Vue `vue-tsc --build`、React 类型检查、Vitest **558/558**、NestJS HTTP E2E **49/49**、React/Vue/Server 构建及文档检查 **86 个 Markdown** 均完成，质量链结束后未触发退出码断言。独立的 `test:projects:oidc:resume` 中 React/Vue 均通过模拟 401、404、修订水位变化三组页面重新可见场景，退出码 **0**；本地画布、IndexedDB 草稿和自动保存不变，浏览器内阻断真实工程写入，未修改 Lab ACL。
 
 此前 React Compiler/TS2339、Vue TS2339 及浏览器准备阶段失败保留为历史错误记录，目前 Windows 已复验通过。**仍需确认本机 `git rev-parse HEAD` 与 PR 最新 HEAD 一致**；此次文档更新提交后需要按需重跑检查。该专项使用真实 Keycloak/BFF 登录但模拟标签页可见事件及受控 GET 失败，不能等同多物理标签真实注销或生产工业安全验证。PR #66 保持 Open/Draft、指派 `@adui-dev`，未经当前批次明确合并授权不合并。
+
+## 2026-11-17 · 第三十四批第十二小批：迟到版本读取与新工程上下文隔离（候选）
+
+前置 PR #66 已获维护者单独授权并 Squash 合并到 `main@19752e6219bffd3de9b672e89e95e6dabfb14535`；第十一小批 Windows `ready`、React/Vue 标签页恢复浏览器模拟专项已通过（真实测试退出码 0，详见 VALIDATION）。本小批进一步补齐共享 `readVersion` 的异步上下文边界：旧读请求在 `reset`、新的服务端确认载入或 CAS 推进后才结束时，原先旧 401/404 的统一拒绝处理可能污染新基线，旧正常响应也可能在新上下文被确认载入。
+
+候选最小修改只涉及共享 `packages/api-client/src/studio-session.ts` 和 3 项单测，使用内存代次保护迟到只读结果；生产代码不依赖 React/Vue、未新增依赖、数据库、服务端写入或工业设备权限。初版预期 `test:unit` **561/561**（旧 558 + 新 3），实际结果须以 Windows TypeScript 6、Vite+、Vitest 与完整 `ready` 输出为准。浏览器真实旧请求竞态尚无专项 E2E；本次既不模拟真实撤权也不触碰 Lab ACL。Draft PR 默认指派 `@adui-dev`，未经单独授权不得合并。
+
+
+## 2026-11-17 · 第三十四批第十二小批：Windows 全链验收通过，PR #67 待审查
+
+维护者 Windows 已真实执行本批 `pnpm run test:unit`：**561/561** 通过，新增共享会话迟到 401/404/正常快照回归包含在 **25/25** 项内；独立 `vp check`：333 个文件格式正确、188 个受检文件零警告或错误；完整 `pnpm run ready`：React/Vue/共享包/NestJS TypeScript 检查、561/561 单测、SSE 8/8、故障代理 4/4、OIDC 浏览器安全规则 24/24、NestJS HTTP E2E 49/49、86 个 Markdown 检查和 React/Vue/NestJS 构建均成功，PowerShell **退出码 0**。
+
+本批仅涉及共享 API Client 的 `readVersion` 内存代次保护和 3 项单元测试，未修改 React/Vue UI、数据库、服务端授权、OIDC Lab、工业控制设备写入。日志未提供 `git rev-parse HEAD`，新文档提交后的完整质量链也尚未复验；新增竞态真实浏览器专项仍未执行。PR #67 仍为 Draft，指派 `@adui-dev`，未经维护者明确授权不得合并。
