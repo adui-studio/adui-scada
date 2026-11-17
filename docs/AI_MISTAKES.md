@@ -275,6 +275,15 @@
 - **验证**：同一协作 V8 模拟条件复验 **8/8**；当前仅为非 Node/非 PostgreSQL 的候选自检，Windows `pnpm run test:oidc:revoke:config`、`vp check`、`ready` 与真实 Lab 撤权专项**均待维护者执行**，不得声明验收通过。
 - **证据**：`scripts/test-oidc-real-acl-revocation.cases.mjs`、`scripts/test-oidc-real-acl-revocation.mjs`、`docs/VALIDATION.md`。
 
+### E-031 · React 标签页恢复监听使用可变闭包标记与重复类型守卫（第三十四批第十一小批）
+
+- **现象**：2026-11-17 维护者在 Windows 执行 `vp check --fix`，`apps/web-react/src/studio/StudioPage.tsx` 报 **1 条 React Compiler 警告** `react(immutability): Cannot reassign variable after render completes`（原第 1111 行）及 **1 条 TypeScript TS2339 错误** `Property 'kind' does not exist on type 'never'`（原第 1097 行）。检查涉及 188 个文件；**仅格式化步骤完成，Lint/类型检查失败**，不能记为已验收。
+- **根因**：`useEffect` 内的 `let active = true` 在返回的 cleanup 中被重赋值，违反 React Compiler 的闭包不可变约束。后续同一错误对象已经通过 `error instanceof ScadaApiError` 收窄，却在 `(isScadaAccessRejection(error) || error.kind === "conflict")` 中重复调用返回 `error is ScadaApiError` 的类型谓词；在 `||` 的右分支，TypeScript 将其错误地视为不可能继续访问 `kind` 的 `never`。这两处均源于本小批新增的 React 页面恢复校验，不属于 Vue 或服务端权限失败。
+- **最小修复**：将 Effect 生命周期变量改为 `const lifecycle = new AbortController()`，异步错误处理使用 `lifecycle.signal.aborted` 避免卸载后更新；cleanup 执行 `lifecycle.abort()` 并保持原有事件移除。提前以 `accessRejected` 和 `revisionConflict` 两个布尔值单次计算原有拒绝与冲突条件，在后续 UI 分支复用，避免条件表达式再次执行类型谓词。401/403/404、409、网络失败、SVG/IndexedDB 草稿保护以及跨框架契约全部不变。
+- **避免**：React Compiler 启用时，Effect cleanup 不重赋值渲染期间捕获的普通 `let`，优先用可取消信号/受控 Ref 表达生命周期。类型谓词返回宽泛 `ScadaApiError` 时，不要在已收窄到同一类型的 `&&`/`||` 右分支再次调用该谓词并直接读取对象属性；先独立计算可复用的拒绝分类或使用真正可判别的子类型。不要通过禁用 Lint 或 `any` 绕过。
+- **验证**：GitHub 候选提交 `e5bddb6c98682130fc80841368466fa1aacccb51` 只修改 React Studio 对应逻辑；协作容器 TypeScript **5.8.3** 对等价类型收窄最小片段执行 `tsc --noEmit --strict` **无错误**。**仓库实际 TypeScript 6、`vp check`、`test:unit`、`docs:check`、`ready` 和 React/Vue 真实浏览器恢复专项尚待 Windows 复验**；不得将该片段检查描述为整体零告警通过。
+- **证据**：维护者 2026-11-17 的 `vp check --fix` 原始错误日志、PR #66、`apps/web-react/src/studio/StudioPage.tsx`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
