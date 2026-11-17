@@ -1386,3 +1386,11 @@ E-024 最小修复为交互式验收增加 React/Vue **静态阶段进度**、CD
 
 新增 6 项共享单元测试，预计 `test:unit` **550/550**；`vp check`、`docs:check`、完整 `ready` 与双端真实浏览器正常路径均**待维护者 Windows 执行**，本协作环境尚无可运行 Vite+/Vue/React/真实 OIDC Lab 的对应测试结果。拒绝后的浏览器 UI 尚未使用自动化权限撤销场景验证，不得标为已通过。
 复审补充：工程管理列表本身的 401/403/404 若只清除子组件游标，父级 Studio 的旧修订号和 CAS 基线仍可能显示；本批进一步增加 React `onAccessRejected` 回调 / Vue `accessRejected` 事件并复用父级失效处理函数。**该父子联动目前仍待 Windows TypeScript / Vue SFC 类型检查及浏览器回归**。
+
+## 2026-11-17 · 第三十四批第九小批模拟服务端拒绝的 React/Vue 浏览器回归候选
+
+基线：PR #63 已经维护者明确同意并 Squash 合并到 `main@6f09e1930fe55f567245708bf5eb80edacd7b42a`。前批真实 Windows 已经完成普通浏览器 OIDC 专项（React/Vue 皆通过，退出码 0）、`ready` **550/550** 单测、**49/49** HTTP E2E 和构建，完整退出码 0；这些不能冒充本批新增模拟专项的通过结果。
+
+第九小批增加了**可人工复验、浏览器内无服务端工程写入**的专项：仅在 `--simulate-access-denial` 模式下，将工程只读 GET 的历史接口、授权工程列表接口和工程当前水位接口依次模拟为 401、403、404，在 React/Vue 每个 Origin 上检查 CAS 基线/服务端版本水位/列表旧摘要清除、IndexedDB 草稿 Hash 与画布一致；404 后重复保存不能触发真实工程创建或追加。模拟 wrapper 在程序捕获 Fetch 之前安装，**所有工程路径非 GET/HEAD 方法先被硬性拦截**，只对匹配的当前 Origin 和具体路由 GET 模拟状态，不重写 Cookie/身份、不触碰 Keycloak/ACL。新增 3 项 Node.js 离线测试证明写入拦截、Scope/状态白名单、参数组合互斥；预计 `test:projects:oidc:config` 从 **18 项到 21 项**。
+
+**当前验证：** GitHub 分支已提交候选源码；协作端仅做有限 JS 函数语法解析与变更锚点检查，**尚未在 Windows 执行新 HEAD 的 `test:projects:oidc:config`、`vp check`、`docs:check`、`ready` 或 React/Vue 交互浏览器专项**。无真实测试证据时不能声称 21/21 或拒绝 UI 测试已经通过。第七小批 PostgreSQL 31/31 的真实 ACL 即时撤销测试是服务端独立证据；本批模拟状态不证明真实 Keycloak ACL 撤销后的端到端一致性，也不意味着工业生产安全验证完成。

@@ -24,6 +24,8 @@ const SAFE_PAGE_ERRORS = new Set([
   "工程打开按钮不可用",
   "服务器工程载入阶段返回受控错误",
   "工程安全载入流程超时",
+  "权限拒绝模拟参数不合法",
+  "权限拒绝模拟操作按钮不可用",
 ]);
 const PAGE_ERROR_TYPES = new Map([
   ["ReferenceError", "页面脚本引用异常"],
@@ -48,7 +50,7 @@ const SAFE_FAILURES = new Set([
   "React 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
   "Vue 隔离 Lab 没有授权工程，请先由维护者按受控流程准备至少一份工程",
   "真实多页验收要求至少十一项已授权工程，当前未覆盖有效的第二页",
-  "仅支持 --require-multipage 或显式确认的多页数据准备参数",
+  "仅支持 --require-multipage、--simulate-access-denial 或显式确认的多页数据准备参数",
   "多页数据准备配置不符合本机可信 Lab 边界",
   "多页数据准备只允许本机 React Origin",
   "多页数据准备缺少可信登录会话",
@@ -443,6 +445,185 @@ function installRevisionConflictFaultInPage() {
   };
 }
 
+/**
+ * 只在本次浏览器专项显式启用的 Profile 中安装。
+ * 浏览器模拟 GET 拒绝，不修改服务端 ACL；任意工程写请求始终在浏览器本地拒绝。
+ * 通过独立的 runtime 入参允许离线测试，CDP 序列化执行时默认使用 globalThis。
+ */
+export function installAccessDenialFaultInPage(runtime = globalThis) {
+  const actualFetch = runtime.fetch.bind(runtime);
+  const state = { active: null, hits: 0, writeAttempts: 0 };
+  runtime.__aduiTestAccessDenial = state;
+  runtime.fetch = async (input, init) => {
+    const raw = typeof input === "string" ? input : input.url;
+    const url = new URL(raw, runtime.location.href);
+    const method = (
+      init?.method ?? (typeof input === "string" ? "GET" : input.method)
+    ).toUpperCase();
+    const projectPath =
+      url.pathname === "/api/v1/projects" || url.pathname.startsWith("/api/v1/projects/");
+
+    // 故障模拟只能读取既有工程；即使 UI 意外调用保存，也绝不能送到真实 Lab。
+    if (projectPath && method !== "GET" && method !== "HEAD") {
+      state.writeAttempts += 1;
+      return new Response("{}", {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const fault = state.active;
+    if (fault && method === "GET" && url.origin === runtime.location.origin) {
+      const path = "/api/v1/projects/" + encodeURIComponent(fault.projectId);
+      const matched =
+        (fault.scope === "list" && url.pathname === "/api/v1/projects") ||
+        (fault.scope === "history" &&
+          (url.pathname === path || url.pathname === path + "/versions")) ||
+        (fault.scope === "detail" && url.pathname === path);
+      if (matched) {
+        state.hits += 1;
+        return new Response("{}", {
+          status: fault.status,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    }
+    return actualFetch(input, init);
+  };
+}
+
+/** 被序列化到页面独立执行；只允许三类安全拒绝与固定的只读接口范围。 */
+export function armAccessDenialInPage(projectId, scope, status, runtime = globalThis) {
+  const state = runtime.__aduiTestAccessDenial;
+  if (
+    !state ||
+    typeof projectId !== "string" ||
+    projectId.length === 0 ||
+    !["list", "history", "detail"].includes(scope) ||
+    ![401, 403, 404].includes(status)
+  ) {
+    throw new Error("权限拒绝模拟参数不合法");
+  }
+  state.active = { projectId, scope, status };
+  state.hits = 0;
+  return true;
+}
+
+/** 只点击已有 UI；禁止调用服务端写入 API 或修改浏览器的用户身份。 */
+function triggerAccessDenialInPage(scope) {
+  const panel =
+    scope === "list"
+      ? document.querySelector(".studio-project-browser-panel")
+      : document.querySelector('[aria-label="服务端工程版本"]');
+  const label = scope === "list" ? "刷新" : scope === "history" ? "查询服务端历史" : "保存至服务端";
+  const button = [...(panel?.querySelectorAll("button") || [])].find(
+    (item) => item.textContent.trim() === label,
+  );
+  if (!button || button.disabled) throw new Error("权限拒绝模拟操作按钮不可用");
+  button.click();
+  return true;
+}
+
+function accessDenialStateInPage() {
+  const fault = globalThis.__aduiTestAccessDenial;
+  const panel = document.querySelector('[aria-label="服务端工程版本"]');
+  const text = panel?.textContent ?? "";
+  return {
+    hits: fault?.hits ?? 0,
+    writeAttempts: fault?.writeAttempts ?? -1,
+    baselineCleared: /CAS 基线：\s*未建立/.test(text),
+    headCleared: /服务端最新修订号：\s*未查询/.test(text),
+    serverRows: panel?.querySelectorAll(".studio-version-item").length ?? -1,
+    browserRows: document.querySelectorAll(".studio-project-browser-item").length,
+  };
+}
+
+async function prepareAccessDenialBaseline(session, origin, name, selected) {
+  await session.send("Page.navigate", { url: origin + "/" });
+  await waitFor(
+    () =>
+      session.evaluate(function (expected) {
+        return location.origin === expected && document.readyState === "complete";
+      }, origin),
+    name + " 权限模拟首页加载",
+  );
+  assert.equal(await session.evaluate(enterStudioInPage), true);
+  await session.evaluate(function () {
+    const menu = document.querySelector(".studio-project-browser-menu");
+    if (!menu) throw new Error("未找到工程管理入口");
+    menu.open = true;
+  });
+  await waitFor(async () => {
+    const state = await session.evaluate(pageStateInPage);
+    return state?.ids.includes(selected.projectId) && !state.busy ? state : null;
+  }, name + " 权限模拟工程列表加载");
+  const opened = await session.evaluate(
+    openProjectInPage,
+    selected.projectId,
+    selected.headRevision,
+    "confirm",
+  );
+  assert.deepEqual(opened, { confirmCount: 1, intercepted: 0, outcome: "confirm" });
+  assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
+  const before = await inspectStudioState(session);
+  assert.ok(before.server.includes("CAS 基线：" + selected.headRevision));
+  return before;
+}
+
+/** 真实 Keycloak 只负责登录；401/403/404 与所有写请求在隔离浏览器本地模拟。 */
+async function verifyAccessDenialScenarios(session, origin, name, selected) {
+  const scenarios = [
+    { status: 401, scope: "history", title: "401 身份拒绝后的服务端版本缓存" },
+    { status: 403, scope: "list", title: "403 工程列表拒绝后的父级 CAS 失效" },
+    { status: 404, scope: "detail", title: "404 工程撤权后的重复保存阻断" },
+  ];
+  for (const scenario of scenarios) {
+    process.stdout.write(name + "：正在验证模拟 " + scenario.title + "\n");
+    const before = await prepareAccessDenialBaseline(session, origin, name, selected);
+    assert.equal(
+      await session.evaluate(
+        armAccessDenialInPage,
+        selected.projectId,
+        scenario.scope,
+        scenario.status,
+      ),
+      true,
+    );
+    assert.equal(await session.evaluate(triggerAccessDenialInPage, scenario.scope), true);
+    const result = await waitFor(async () => {
+      const state = await session.evaluate(accessDenialStateInPage);
+      if (
+        state.hits > 0 &&
+        state.baselineCleared &&
+        state.headCleared &&
+        state.serverRows === 0 &&
+        state.browserRows === 0
+      ) {
+        return state;
+      }
+      return null;
+    }, name + " 权限拒绝后旧服务端缓存清除");
+    assert.equal(result.writeAttempts, 0, name + " 拒绝路径不应向服务端尝试写入");
+
+    const after = await inspectStudioState(session);
+    assert.equal(after.canvas, before.canvas, name + " 权限拒绝改变了本地画布");
+    assert.deepEqual(after.drafts, before.drafts, name + " 权限拒绝改变了 IndexedDB 草稿");
+    assert.equal(after.autoSave, before.autoSave, name + " 权限拒绝修改了本地自动保存状态");
+
+    if (scenario.scope === "detail") {
+      assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
+      assert.equal(await session.evaluate(triggerAccessDenialInPage, "detail"), true);
+      assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
+      const again = await session.evaluate(accessDenialStateInPage);
+      assert.equal(again.hits, result.hits, name + " 重复保存不应重新查询已拒绝的工程");
+      assert.equal(again.writeAttempts, 0, name + " 重复保存不应发起工程创建或追加");
+      const preserved = await inspectStudioState(session);
+      assert.equal(preserved.canvas, before.canvas);
+      assert.deepEqual(preserved.drafts, before.drafts);
+    }
+  }
+}
+
 export async function openProjectInPage(projectId, headRevision, mode) {
   const panel = document.querySelector(".studio-project-browser-panel");
   const item = [...(panel?.querySelectorAll(".studio-project-browser-item") || [])].find(
@@ -528,6 +709,9 @@ export function resolveProjectBrowserMode(parameters, env) {
   if (parameters.length === 1 && parameters[0] === "--require-multipage") {
     return { requireMultiPage: true, prepareMultiPage: false };
   }
+  if (parameters.length === 1 && parameters[0] === "--simulate-access-denial") {
+    return { requireMultiPage: false, prepareMultiPage: false, simulateAccessDenial: true };
+  }
   if (
     parameters.length === 3 &&
     parameters[0] === "--prepare-multipage" &&
@@ -541,7 +725,9 @@ export function resolveProjectBrowserMode(parameters, env) {
     }
     return { requireMultiPage: false, prepareMultiPage: true };
   }
-  throw new Error("仅支持 --require-multipage 或显式确认的多页数据准备参数");
+  throw new Error(
+    "仅支持 --require-multipage、--simulate-access-denial 或显式确认的多页数据准备参数",
+  );
 }
 
 /**
@@ -826,12 +1012,28 @@ async function run() {
     }
     // 必须在 React/Vue Studio 加载前安装，API Client 构造时会捕获 Fetch 函数。
     await session.send("Page.addScriptToEvaluateOnNewDocument", {
-      source: "(" + installRevisionConflictFaultInPage.toString() + ")()",
+      source:
+        "(" +
+        installRevisionConflictFaultInPage.toString() +
+        ")();" +
+        (mode.simulateAccessDenial ? "(" + installAccessDenialFaultInPage.toString() + ")();" : ""),
     });
     process.stdout.write("真实 OIDC 会话已在 React Origin 验证，开始双框架只读工程验收。\n");
     await verifyStudio(session, origins[0], "React", mode.requireMultiPage);
+    if (mode.simulateAccessDenial) {
+      const projects = requireAuthorizedProjectPage(await session.evaluate(projectsInPage));
+      await verifyAccessDenialScenarios(session, origins[0], "React", projects[0]);
+    }
     await verifyStudio(session, origins[1], "Vue", mode.requireMultiPage);
-    process.stdout.write("双框架 OIDC 工程管理专项通过；服务端工程未新增、未覆盖、未发布。\n");
+    if (mode.simulateAccessDenial) {
+      const projects = requireAuthorizedProjectPage(await session.evaluate(projectsInPage));
+      await verifyAccessDenialScenarios(session, origins[1], "Vue", projects[0]);
+    }
+    process.stdout.write(
+      mode.simulateAccessDenial
+        ? "双框架模拟 401/403/404 授权拒绝专项通过；工程写入已在浏览器阻断，Lab ACL 未修改。\n"
+        : "双框架 OIDC 工程管理专项通过；服务端工程未新增、未覆盖、未发布。\n",
+    );
   } finally {
     session?.socket.close();
     child.kill();
