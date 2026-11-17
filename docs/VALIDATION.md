@@ -1534,3 +1534,12 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 **修复结论**：此前 Vue 409 时共享 `serverSession` CAS 基线已清除但响应式 `serverBaselineRevision` 未同步的缺陷（E-035），以及新增离线脱敏断言文案不一致（E-033/E-034 相关回归），均已通过这轮离线和真实浏览器质量门禁验证；历史几轮退出码 1 仅保留为故障及修复经过，**不是当前验收结论**。
 
 **证据边界**：双框架专项是**真实浏览器 UI ＋ 合成 POST 拒绝**，浏览器永久阻断工程写入；并非真实 PostgreSQL 写入已成功后的网络延迟或真实跨会话/跨标签写竞争专项，不扩大工业设备写入权限。本轮日志**未包含 `git rev-parse HEAD`**，不能精确证明 Windows 运行 SHA；在记录前，PR #69 的远端 HEAD 为 `a16e3f946e28dc8b155ad5f33fde82b198a5b511`，较上一轮 `3600c4246b7748cbbe50ca922fe3f7cc83cf4484` 仅多一个离线测试文件整理提交。补录验收结果会产生新的文档提交，**文档新 HEAD 尚未再次经过 Windows 质量链**。PR 继续保持 Open / Draft、Assignee `@adui-dev`，未经维护者单独明确授权不合并。
+
+## 2026-11-17 · 第三十四批第十五小批：真实提交后迟到 201 / CAS 回归候选待验收
+
+基线为第十四小批已合并的 `main@c5df29fb7a769235237c5c4da33f20a0c013fe2e`。前批 Windows 日志已有共享 Session 30/30、全量 566/566 单测、HTTP E2E 49/49、离线 OIDC 33/33、`vp check` 与 `ready` 完成和浏览器合成拒绝专项退出码 0，但**不能视为本批新增真实 DB 用例已运行**。
+
+本批新代码只涉及 `packages/api-client/test/studio-session.test.ts` 与 `apps/server/test/projects-cas-cookie-http.db-spec.ts`：新增 1 项 Promise 时序单测，要求旧成功 2 回包在客户端重建 CAS 3 后必须受控拒绝，基线保持 3，后续以 3 追加到 4；新增 1 项隔离 PostgreSQL + 真实 Cookie/CSRF/ACL + HTTP 事务测试，第一主体在旧 201 暂未交付应用消费端时完成真实数据库版本 2 和审计，第二主体再追加版本 3；真实 GET 读取版本 3，之后释放旧 201，客户端尝试旧 CAS 2 必须返回 409，数据库不得产生额外版本/审计。所有写入只使用原 `withFixture` 生成的随机租户，清理范围由 tenantId 限定，测试目标明确拒绝外部数据库。延迟实现是**收到真实 HTTP 响应后在消费端 Promise 暂留**，不控制 TCP 传输本身。两层用例独立，不等于已经打通真实浏览器 UI 直接处理这一 PostgreSQL 回包。
+
+期望共享 Session **31/31**、全量 Vitest **567/567**；真实 `pnpm run test:db` 预计 **30/30**，必须额外执行且要求真实退出码 0。候选提交后**尚未在 Windows 执行 `vp check`、`pnpm run test:unit`、`pnpm run docs:check`、`pnpm run ready` 或 `pnpm run test:db`**，不得写成已通过。若现有测试数据库缺少迁移/连接失败，不得转向生产库解决。未更改真实 OIDC 用户/ACL、NestJS 业务 Controller、Prisma Schema、工业设备或前端工程保存逻辑。PR 保持 Draft；只有维护者明确同意才能合并。
+
