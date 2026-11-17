@@ -201,6 +201,11 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
         denial,
       );
       expect(session.getBaselineRevision(waterTreatmentDemoDocument.projectId)).toBeNull();
+      await expect(session.saveDocument(documentCopy())).rejects.toMatchObject({
+        kind: "forbidden",
+        status: 403,
+      });
+      expect(api.createProject).not.toHaveBeenCalled();
       expect(api.appendVersion).not.toHaveBeenCalled();
     }
   });
