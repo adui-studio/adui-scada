@@ -154,7 +154,11 @@ void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
   });
 
   void it("CSRF Cookie 缺失或重复时不得把版本 POST 交付服务器", async () => {
-    for (const cookie of ["", "__Host-adui-scada-csrf=bad", "__Host-adui-scada-csrf=" + csrf + "; __Host-adui-scada-csrf=" + csrf]) {
+    for (const cookie of [
+      "",
+      "__Host-adui-scada-csrf=bad",
+      "__Host-adui-scada-csrf=" + csrf + "; __Host-adui-scada-csrf=" + csrf,
+    ]) {
       const { runtime, calls } = runtimeForTest();
       runtime.document.cookie = cookie;
       installStudioRealLateHookInPage(runtime);
