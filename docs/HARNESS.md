@@ -2107,7 +2107,22 @@ Write-Host "真实 OIDC 工程浏览器专项退出码：$LASTEXITCODE"
 
 ## 第三十四批第四小批 · 真实多页与两主体 CAS 竞争专项（独立运行）
 
-本小批只补足 PR #58 已标明的两个验证空白，**不在 OIDC Lab 自动创建工程**。现有交互式测试保持不变；新增独立严格入口：
+本小批补足 PR #58 已标明的两个验证空白。严格浏览器模式始终只读，不会隐式创建工程。维护者 2026-11-17 已实测隔离 PostgreSQL **25/25 通过**；严格浏览器模式在 React 第二页条件不足时受控退出（退出码 1），Vue 尚未执行。针对这一明确阻塞，增加**单独且必须显式确认**的本机 Lab 数据准备入口，默认质量链和普通/严格浏览器测试均不触发准备动作。
+
+### 已获维护者授权的本机 Lab 多页数据准备
+
+仅限运行中的 **本机** React/Vue HTTPS、Keycloak `adui-scada` Realm 和现有受控 `127.0.0.1:15432/adui_scada` Lab。操作前核对**当前 NestJS 进程**实际数据库与根 `.env` 的 Lab 连接一致；命令只校验本机配置，不能远程证明另一个运行进程的实际连接。禁止在生产、远程服务或其它数据库上执行。
+
+```powershell
+# 使用既有可信 NODE_EXTRA_CA_CERTS / NODE_USE_SYSTEM_CA 环境。
+pnpm run test:projects:oidc:config
+pnpm run oidc:lab:projects:pages
+Write-Host "本机 Lab 工程数据准备退出码：$LASTEXITCODE"
+```
+
+准备命令要求 `--prepare-multipage --confirm-lab adui_scada` 双重显式参数（已固定在脚本），并沿用 `oidc-lab-identity.mjs` 中的本机数据库/Realm/非生产配置白名单。命令启动**临时隔离浏览器**，维护者手工登录已预绑定的普通 Keycloak 测试账号。随后仅使用该身份的同源 BFF Session、CSRF 和正式 `POST /api/v1/projects`：先读取当前账号获授权工程；若不足 11 项，仅新增缺少的数量；若已有至少 11 项则不写入。新工程仅包含一个空白组态页、零 Tag/图元，使用 `b34-pages-<UUID>` ID，由原有服务端事务完成首版快照、三项创建者 ACL 和审计；**不复制已有工程内容、不直接操作 ACL/身份表、不更新现有工程、不发布、不清理数据库卷**。已创建测试记录会保留供人工验收，不会在浏览器关闭后自动删除。若中途失败，重新执行会重新读取当前可见数量并只补缺额。
+
+随后使用**另一条独立命令**执行严格只读浏览器验收：
 
 ```powershell
 # 在测试前，先核对当前 OIDC Lab 已按受控流程存在至少 11 项
@@ -2129,7 +2144,7 @@ finally {
 }
 ```
 
-严格模式仍通过 Keycloak 真人登录，验证 React/Vue 分别进入授权工程第二页再返回第一页，并继续执行取消、模拟冲突、确认载入、CAS/IndexedDB 保护。授权不足 11 项时**必须失败**，不是项目故障；本批不为达到数字私自授予 ACL 或创建工程。只有单页库存的场景仍应使用原 `test:projects:oidc:browser`（不能算严格多页通过）。
+严格模式仍通过 Keycloak 真人登录，验证 React/Vue 分别进入授权工程第二页再返回第一页，并继续执行取消、模拟冲突、确认载入、CAS/IndexedDB 保护。授权不足 11 项时**必须失败**，不是项目故障；**只有上文明确授权并单独运行的准备命令才允许通过正式服务端 API 新建测试工程**。普通浏览器专项和严格模式仍然只读。
 
 真实 PostgreSQL 测试复用现有 `pnpm run test:db`，只连接**已迁移的本机独立 `adui_scada_test`**，且会在该库中向**随机 `test-<UUID>` 租户**写入/删除测试数据。维护者必须先通过现有流程核对 `SCADA_TEST_DATABASE_URL` 指向该库、具备有效本机测试连接和迁移，不得直接将开发库 `adui_scada`、Keycloak 数据库、远端数据库或生产库配置给测试命令：
 
@@ -2141,4 +2156,4 @@ pnpm run test:db
 Write-Host "隔离 PostgreSQL 测试退出码：$LASTEXITCODE"
 ```
 
-`test:db` 在现有 `vitest.config.db.ts` 中独立于 `ready`，并有 URL 主机与数据库名白名单；此次预计在旧的 **23 项**基础上新增 **2 项**、共 **25 项**（以实际测试报告为准）。新增离线环境安全检查由 13 增至 **14 项**，随默认 `ready` 执行；交互式多页严格检查仍不进入 `ready`。CAS 用例在仓储层使用独立 Prisma 连接和两位授权主体，不代表生产 HTTP 双 Cookie 会话、真实 OIDC 409、企业 IdP 或正式工业安全验收。所有新测试在当前候选分支下均待 Windows 真实运行。
+`test:db` 在现有 `vitest.config.db.ts` 中独立于 `ready`，并有 URL 主机与数据库名白名单；此次预计在旧的 **23 项**基础上新增 **2 项**、共 **25 项**（以实际测试报告为准）。新增离线环境安全检查在本次多页准备工具后由 14 增至预计 **18 项**，随默认 `ready` 执行；交互式多页严格检查与显式数据准备均不进入 `ready`。CAS 用例在仓储层使用独立 Prisma 连接和两位授权主体，不代表生产 HTTP 双 Cookie 会话、真实 OIDC 409、企业 IdP 或正式工业安全验收。维护者已完成此前候选的 Windows 离线配置 14/14、完整 ready（退出码 0）与真实 PostgreSQL 25/25（退出码 0）；**新增数据准备入口与其 4 项单测尚未完成 Windows 复验，也没有在本机执行数据写入**。
