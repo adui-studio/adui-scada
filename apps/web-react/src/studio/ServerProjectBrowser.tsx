@@ -12,6 +12,7 @@ interface ServerProjectBrowserProps {
   readonly currentProjectId: string;
   readonly disabled: boolean;
   readonly onOpen: (projectId: string, headRevision: number) => Promise<void>;
+  readonly onAccessRejected: (error: ScadaApiError) => void;
 }
 
 /** 仅浏览已授权的工程摘要；载入和草稿保护由 Studio 协调。 */
@@ -20,6 +21,7 @@ export function ServerProjectBrowser({
   currentProjectId,
   disabled,
   onOpen,
+  onAccessRejected,
 }: ServerProjectBrowserProps) {
   const browser = useMemo(() => createStudioProjectBrowser(api), [api]);
   const [page, setPage] = useState<StudioProjectBrowserPage>(() => browser.snapshot());
@@ -47,6 +49,7 @@ export function ServerProjectBrowser({
       if (mounted.current) {
         if (isScadaAccessRejection(cause)) {
           setPage(browser.reset());
+          onAccessRejected(cause);
         }
         setError(
           cause instanceof ScadaApiError
