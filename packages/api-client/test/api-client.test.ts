@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { createProjectSnapshot, waterTreatmentDemoDocument } from "@adui/scada-core";
-import { createScadaApiClient, ScadaApiError } from "../src/index.ts";
+import { createScadaApiClient, isScadaAccessRejection, ScadaApiError } from "../src/index.ts";
 
 const CSRF_TOKEN = "scada_csrf_" + "a".repeat(43);
 const CSRF_COOKIE = "__Host-adui-scada-csrf=" + CSRF_TOKEN;
@@ -33,6 +33,20 @@ function documentCopy() {
 }
 
 describe("框架无关工程 API Client", () => {
+  it("仅把 401、403 与不可区分的 404 视为需要清除服务端授权缓存的拒绝", () => {
+    for (const [kind, status] of [
+      ["unauthenticated", 401],
+      ["forbidden", 403],
+      ["not_found", 404],
+    ] as const) {
+      expect(isScadaAccessRejection(new ScadaApiError("受控访问拒绝", kind, status))).toBe(true);
+    }
+    expect(isScadaAccessRejection(new ScadaApiError("网络中断", "network"))).toBe(false);
+    expect(isScadaAccessRejection(new ScadaApiError("版本冲突", "conflict", 409))).toBe(false);
+    expect(isScadaAccessRejection(new Error("未知异常"))).toBe(false);
+    expect(isScadaAccessRejection(null)).toBe(false);
+  });
+
   it("身份查询只读取同源受保护路径和可信最小身份数据", async () => {
     const harness = createHarness(
       jsonResponse({
