@@ -77,6 +77,38 @@ export class StudioServerProjectSession {
         : null;
   }
 
+  /**
+   * 标签页重新可见时只读复核现有服务端 CAS 基线。
+   * 不创建工程、不写版本；过期请求不能清除后来已切换或重新载入的基线。
+   */
+  async revalidateBaseline(projectId: string): Promise<"unchanged" | "skipped"> {
+    const baseline = this.baseline;
+    if (!baseline || baseline.projectId !== projectId) return "skipped";
+
+    try {
+      const identity = await this.api.getMe();
+      if (this.baseline !== baseline) return "skipped";
+      if (
+        identity.principal.tenantId !== baseline.principal.tenantId ||
+        identity.principal.subjectId !== baseline.principal.subjectId
+      ) {
+        throw new ScadaApiError("服务端登录主体已变化，请重新载入授权工程", "forbidden", 403);
+      }
+
+      const current = await this.api.getProject(projectId);
+      if (this.baseline !== baseline) return "skipped";
+      if (current.headRevision !== baseline.revision) {
+        throw new ScadaApiError("服务端版本已变化，请重新查询并载入最新版本", "conflict", 409);
+      }
+      return "unchanged";
+    } catch (error) {
+      if (this.baseline !== baseline) return "skipped";
+      if (isScadaAccessRejection(error)) this.invalidateAccess(projectId);
+      if (error instanceof ScadaApiError && error.kind === "conflict") this.baseline = null;
+      throw error;
+    }
+  }
+
   async saveDocument(document: ScadaDocument): Promise<ServerProjectSaveResult> {
     if (this.saving) {
       throw new ScadaApiError("服务端工程正在保存，请勿重复提交", "conflict", 409);
