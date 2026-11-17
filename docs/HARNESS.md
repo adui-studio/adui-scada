@@ -2488,3 +2488,35 @@ if ($browserExitCode -ne 0) { throw "双框架延迟保存专项失败" }
 ```
 
 React/Vue 各自以真实 GET 建立已有授权工程的 CAS 基线；在 UI 连续点击保存后仅允许一条被阻断的版本追加 POST，延迟响应下按钮禁用、画布/IndexedDB/自动保存不变；409/401 清除 CAS，503 保留 CAS；浏览器 Profile 结束后清理。失败日志只输出固定中文类别，绝不打印异常原文、Cookie、Token 和工程正文。此专项是**真实浏览器 UI + 合成 POST 响应**，不代表真实数据库写入延迟、真实跨标签并发、现场工业安全已验收。没有浏览器环境时不能把离线 28/28 或 `ready` 通过替代真实浏览器退出码。
+
+## 第三十四批第十四小批 · Vue 载入确认前失败的复验边界
+
+维护者首次 Windows 测试：离线 OIDC 浏览器安全用例 **28/28**、`vp check` 零告警、`ready` 566/566 单测与 49/49 HTTP E2E 通过；交互式 `test:projects:oidc:save:browser` 在 React 延迟保存三场景通过后，Vue **取消载入**确认前发生受控错误，专项退出码 **1**。失败原因尚不能仅凭旧脱敏类别判断。此日志属于真实浏览器专项失败，不得标记为已通过。
+
+浏览器脚本修复候选加强旧错误与本次新错误的区分，并仅输出固定七类安全原因；新增三项安全离线用例，预计 **31/31**。复验步骤：
+
+```powershell
+git status --short
+git fetch origin
+git rev-parse HEAD
+git rev-parse origin/test/v0.3-b34-browser-save-timing
+
+pnpm run test:projects:oidc:config
+if ($LASTEXITCODE -ne 0) { throw "工程浏览器离线保护测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+
+pnpm run test:projects:oidc:save:browser
+$browserExitCode = $LASTEXITCODE
+Write-Host "双框架延迟保存专项退出码：$browserExitCode"
+if ($browserExitCode -ne 0) { throw "双框架延迟保存专项失败" }
+```
+
+运行前确认本机可信 Keycloak、双 Origin HTTPS Web、NestJS 与授权工程均就绪。本专项仍只模拟浏览器内版本追加 POST 拒绝，真实 Lab 不接受工程写入；不能通过禁用 HTTP 失败断言、关闭 TLS、自动重试工程写入或打印原始异常来提高通过率。
