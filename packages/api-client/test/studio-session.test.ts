@@ -821,15 +821,21 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
       createdAt,
     });
     const session = createStudioServerProjectSession(api);
+    let signalRequested: (() => void) | undefined;
+    const requested = new Promise<void>((resolve) => {
+      signalRequested = resolve;
+    });
     let rejectRead: (() => void) | undefined;
-    api.readVersion.mockImplementationOnce(
-      () =>
-        new Promise<Awaited<ReturnType<ScadaApiClient["readVersion"]>>>((_resolve, reject) => {
+    api.readVersion.mockImplementationOnce(() => {
+      signalRequested?.();
+      return new Promise<Awaited<ReturnType<ScadaApiClient["readVersion"]>>>(
+        (_resolve, reject) => {
           rejectRead = () => reject(new ScadaApiError("工程不存在或无权访问", "not_found", 404));
-        }),
-    );
+        },
+      );
+    });
     const pending = session.previewLatestVersion(projectId);
-    await vi.waitFor(() => expect(api.readVersion).toHaveBeenCalledTimes(1));
+    await requested;
     session.reset();
     session.acceptLoadedVersion({ snapshot: version, headRevision: 1, principal });
     rejectRead?.();
