@@ -791,3 +791,4 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `packages/api-client/src/studio-session.ts`：`StudioServerProjectSession` 在访问失效时作废 CAS 基线，禁止已有基线工程 404 后错误触发创建，并防止重复保存重新尝试；授权版本重新读取和确认载入后方可恢复。
 - `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：同一安全规则清除服务端修订号、历史摘要、对比快照及工程管理游标缓存；原画布、IndexedDB 草稿与本地历史不变。
 - `packages/api-client/test/api-client.test.ts`、`packages/api-client/test/studio-session.test.ts`：新拒绝类型、403/404 权限撤销、401 身份过期、重复保存保护、重新加载恢复与网络错误保持原基线的回归。
+- `apps/web-react/src/studio/ServerProjectBrowser.tsx`、`apps/web-vue/src/studio/ServerProjectBrowser.vue`：使用共享拒绝分类；列表请求 401/403/404 时除了清空自身游标，还通过 `onAccessRejected` / `accessRejected` 通知父级 Studio 立即清理旧 CAS 和服务端历史，而不是只清空子组件列表。
