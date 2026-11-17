@@ -6,6 +6,10 @@ import {
   inspectStudioState,
   installAccessDenialFaultInPage,
   armAccessDenialInPage,
+  armSaveTimingInPage,
+  releaseSaveTimingInPage,
+  triggerSaveTimingInPage,
+  saveTimingStateInPage,
   triggerStudioResumeInPage,
   openProjectInPage,
   requireAuthorizedProjectPage,
@@ -344,13 +348,18 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       prepareMultiPage: false,
       simulateResumeCheck: true,
     });
+    assert.deepEqual(resolveProjectBrowserMode(["--simulate-save-timing"], lab), {
+      requireMultiPage: false,
+      prepareMultiPage: false,
+      simulateSaveTiming: true,
+    });
     assert.deepEqual(
       resolveProjectBrowserMode(["--prepare-multipage", "--confirm-lab", "adui_scada"], lab),
       { requireMultiPage: false, prepareMultiPage: true },
     );
     assert.throws(
       () => resolveProjectBrowserMode(["--prepare-multipage"], lab),
-      /仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check 或显式确认的多页数据准备参数/,
+      /仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check、--simulate-save-timing 或显式确认的多页数据准备参数/,
     );
     assert.throws(
       () =>
@@ -369,11 +378,11 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
           ["--simulate-access-denial", "--confirm-lab", "adui_scada"],
           sample,
         ),
-      /仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check 或显式确认的多页数据准备参数/,
+      /仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check、--simulate-save-timing 或显式确认的多页数据准备参数/,
     );
     assert.throws(
       () => resolveProjectBrowserMode(["--simulate-access-denial", "--prepare-multipage"], sample),
-      /仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check 或显式确认的多页数据准备参数/,
+      /仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check、--simulate-save-timing 或显式确认的多页数据准备参数/,
     );
   });
 
@@ -385,8 +394,149 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     ]) {
       assert.throws(
         () => resolveProjectBrowserMode(parameters, sample),
-        /仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check 或显式确认的多页数据准备参数/,
+        /仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check、--simulate-save-timing 或显式确认的多页数据准备参数/,
       );
+    }
+  });
+
+  void it("延迟保存模式不得与数据库写入确认或其他浏览器模式组合", () => {
+    for (const parameters of [
+      ["--simulate-save-timing", "--confirm-lab", "adui_scada"],
+      ["--simulate-save-timing", "--prepare-multipage"],
+      ["--simulate-save-timing", "--simulate-access-denial"],
+      ["--simulate-save-timing", "--simulate-resume-check"],
+    ]) {
+      assert.throws(
+        () => resolveProjectBrowserMode(parameters, sample),
+        /仅支持 --require-multipage、--simulate-access-denial、--simulate-resume-check、--simulate-save-timing 或显式确认的多页数据准备参数/,
+      );
+    }
+  });
+
+  void it("保存模拟只挂起当前工程的版本 POST，禁止任何工程写入穿透", async () => {
+    let forwarded = 0;
+    const runtime = {
+      location: {
+        origin: "https://127.0.0.1:15173",
+        href: "https://127.0.0.1:15173/studio",
+      },
+      async fetch() {
+        forwarded += 1;
+        return new Response("{}", { status: 200 });
+      },
+    };
+    installAccessDenialFaultInPage(runtime);
+    assert.equal(armSaveTimingInPage("project-1", 409, runtime), true);
+    const delayed = runtime.fetch("/api/v1/projects/project-1/versions", { method: "POST" });
+    assert.equal(runtime.__aduiTestAccessDenial.save.hits, 1);
+    assert.equal(runtime.__aduiTestAccessDenial.writeAttempts, 1);
+    assert.equal(
+      (await runtime.fetch("/api/v1/projects/project-2/versions", { method: "POST" })).status,
+      403,
+    );
+    assert.equal(
+      (await runtime.fetch("https://example.invalid/api/v1/projects", { method: "POST" })).status,
+      403,
+    );
+    assert.equal(forwarded, 0);
+    assert.equal(releaseSaveTimingInPage(runtime), true);
+    assert.equal((await delayed).status, 409);
+    assert.equal(runtime.__aduiTestAccessDenial.writeAttempts, 3);
+    assert.equal((await runtime.fetch("/api/v1/projects/project-1")).status, 200);
+    assert.equal(forwarded, 1);
+    assert.throws(
+      () => releaseSaveTimingInPage(runtime),
+      /保存时序模拟尚未命中唯一的版本追加请求/,
+    );
+  });
+
+  void it("保存时序状态只允许固定 401、409、503 且不接受重复挂起", async () => {
+    for (const status of [401, 503]) {
+      const runtime = {
+        location: {
+          origin: "https://127.0.0.1:15174",
+          href: "https://127.0.0.1:15174/studio",
+        },
+        async fetch() {
+          throw new Error("不能向真实工程 API 转发写入");
+        },
+      };
+      installAccessDenialFaultInPage(runtime);
+      assert.throws(
+        () => armSaveTimingInPage("test", 201, runtime),
+        /保存时序模拟参数不合法/,
+      );
+      assert.throws(
+        () => armSaveTimingInPage("", status, runtime),
+        /保存时序模拟参数不合法/,
+      );
+      assert.equal(armSaveTimingInPage("test", status, runtime), true);
+      assert.throws(
+        () => armSaveTimingInPage("test", status, runtime),
+        /保存时序模拟参数不合法/,
+      );
+      assert.throws(
+        () => releaseSaveTimingInPage(runtime),
+        /保存时序模拟尚未命中唯一的版本追加请求/,
+      );
+      const pending = runtime.fetch("/api/v1/projects/test/versions", { method: "POST" });
+      assert.equal(releaseSaveTimingInPage(runtime), true);
+      assert.equal((await pending).status, status);
+      assert.equal(runtime.__aduiTestAccessDenial.writeAttempts, 1);
+    }
+  });
+
+  void it("保存时序浏览器动作仅操作真实按钮并返回受控计数", () => {
+    const originalDocument = globalThis.document;
+    const originalState = globalThis.__aduiTestAccessDenial;
+    let clicks = 0;
+    const details = { open: false };
+    const save = {
+      disabled: false,
+      textContent: "保存至服务端",
+      click() {
+        clicks += 1;
+      },
+    };
+    const panel = {
+      textContent: "CAS 基线：1",
+      closest: () => details,
+      querySelectorAll(selector) {
+        if (selector === "button") return [save];
+        if (selector === ".studio-version-help") {
+          return [{ textContent: "正在处理工程版本…" }];
+        }
+        return [];
+      },
+      querySelector: () => null,
+    };
+    globalThis.document = {
+      querySelector: () => panel,
+    };
+    globalThis.__aduiTestAccessDenial = {
+      save: { hits: 1 },
+      writeAttempts: 1,
+    };
+    try {
+      assert.equal(triggerSaveTimingInPage(), true);
+      assert.equal(clicks, 2);
+      assert.equal(details.open, true);
+      assert.deepEqual(saveTimingStateInPage(), {
+        hits: 1,
+        writeAttempts: 1,
+        busy: true,
+        disabled: false,
+        hasError: false,
+        baselineCleared: false,
+      });
+      save.disabled = true;
+      assert.throws(() => triggerSaveTimingInPage(), /保存时序模拟操作按钮不可用/);
+      assert.equal(clicks, 2);
+    } finally {
+      if (originalDocument === undefined) delete globalThis.document;
+      else globalThis.document = originalDocument;
+      if (originalState === undefined) delete globalThis.__aduiTestAccessDenial;
+      else globalThis.__aduiTestAccessDenial = originalState;
     }
   });
 
