@@ -1509,3 +1509,15 @@ PR #64 已按维护者授权 Squash 合并为 `main@d59df5e9ef2d702954f6b2017399
 候选最小改动只在浏览器测试：允许输出严格白名单内的 React/Vue“权限模拟首页加载 / 工程列表加载”超时阶段；对 401/409/503 两段保存等待使用仅含固定状态的诊断（指定 POST 未命中、写入次数异常、Busy 未保持、按钮未禁用、保存未结束、未显示错误或页面状态不可读）。不打印工程 ID、响应正文、Cookie、Token、原始异常或堆栈；原有“唯一 POST、按钮禁用、503 保留基线、画布/IndexedDB 不变”所有断言保留。新增加两项 Node 安全离线用例，目标 `test:projects:oidc:config` **33/33**（前版 31 项），用例覆盖正向阶段分类、错误类别严格匹配、附带 Bearer 信息的伪造诊断不放行。协作端已完成两份 MJS 的 **V8 语法解析**及真实分类函数的有限状态模拟，分别得到固定类别并拒绝敏感拼接；**不等同 Windows Node、`ready` 或 Chrome/Keycloak 浏览器复验**。
 
 下一步维护者必须核对本机 Git SHA，在最新 PR HEAD 上执行 `pnpm run test:projects:oidc:config`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 以及最后独立的 `pnpm run test:projects:oidc:save:browser`。若仍失败，应收集最新固定阶段/状态类别与退出码，再判断业务修复方向；严禁删除用例、伪造 HTTP 成功、绕过真实身份或把工程写请求发至 Lab。PR #69 保持 Open/Draft，未获明确合并授权不得合并。
+
+## 2026-11-17 · PR #69 第四次 Windows 验收：离线 32/33 与 Vue 409 合成拒绝后失败
+
+维护者提交的实际 Windows 日志：`pnpm run test:projects:oidc:config` 执行 **33** 项，**32 通过、1 失败、退出码 1**。唯一失败为“保存拒绝完成超时区分操作未结束和错误提示未显示”，位于 `scripts/test-project-browser-oidc.cases.mjs` 对带 `；secret` 的伪造阶段超时诊断的断言。实际 `describeProjectBrowserFailure` 正确返回固定的“浏览器安全回归断言失败，检查终端测试条件及真实页面状态”，测试错误期望另一条安全通用文案。本次修复**只改测试期望**，没有允许任意错误或敏感信息透传。
+
+维护者随后仍运行 `pnpm run test:projects:oidc:save:browser`，**真实退出码 1**。此次日志已明确包含新增阶段标记：React 409、401、503 各自都“保存已触发，等待唯一版本 POST”且“已释放合成拒绝，等待界面恢复”，之后完成进入 Vue；Vue 真实 BFF、授权分页、IndexedDB 草稿、取消/冲突/确认载入与 CAS 基线均完成；Vue 409 同样成功进入唯一版本 POST 并释放合成拒绝后，报告固定的“浏览器安全回归断言失败”。**不能将 Vue 409 或整套浏览器专项标为通过**。该次日志未提供具体断言分支或最新 `ready` 退出码。
+
+对照 `packages/api-client/src/studio-session.ts` 与两个 Studio 页面确认一个可复现的代码契约差异：共享会话对 409 清除内部 CAS 基线；React 在渲染时动态读取该会话基线，而 Vue 使用单独 `serverBaselineRevision` 响应式缓存，仅在成功保存/确认载入及显式权限失效时更新。Vue `runServerAction` 的 409 错误路径未同步该缓存，可能继续显示旧 CAS 修订号，与本次“409 回包已释放后失败”现象吻合。**原始通用错误不足以证明这就是唯一失败断言**，但此缓存一致性缺陷可由代码确定，必须修复。
+
+PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失败后，从共享 `serverSession.getBaselineRevision(当前工程)` 刷新响应式缓存；409 反映 null、401 仍按原授权拒绝失效、503 继续保留原 CAS 值。浏览器测试现有真实 UI 断言不放宽，并增加严格白名单的 `Vue 延迟保存 409：CAS 基线状态不符合预期` 诊断以防下一轮仍无法定位。离线用例保持 **33 项**，增加同用例内的成功/冲突分支与附带敏感文本拒绝断言。
+
+协作端确认修改后两份 JS 文件 V8 语法解析成功、共享会话 409 清基线与 Vue 响应式同步路径静态匹配、诊断函数对 409/401/503 正反分支及敏感附加文本拒绝正确；**未运行 Windows 真实 Node、TypeScript 6、Vite+、完整 `ready` 或真实 Chrome/Keycloak 双框架专项**。下一步必须在本地最新 PR HEAD 重跑 `test:projects:oidc:config`（目标 33/33）、`vp check`、`docs:check`、`pnpm run ready` 与独立 `test:projects:oidc:save:browser`，记录完整实际退出码和 HEAD。不能删除用例、放宽现有安全断言或向 Lab 转发工程 POST。
