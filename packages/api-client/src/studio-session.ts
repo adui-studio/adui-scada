@@ -35,10 +35,29 @@ export class StudioServerProjectSession {
     this.api = api;
   }
 
-  /** 避免上下文切换后迟到的只读请求修改或返回旧工程数据。 */
-  private requireCurrentContext(generation: number): void {
+  /** 避免上下文切换后迟到的读写结果修改新工程会话。 */
+  private requireCurrentContext(generation: number, writeSent = false): void {
     if (generation !== this.contextGeneration) {
-      throw new ScadaApiError("服务端工程读取上下文已变化，请重新操作", "conflict", 409);
+      throw new ScadaApiError(
+        writeSent
+          ? "服务端保存期间工程上下文已变化，写入可能已生效，请重新读取最新版本"
+          : "服务端工程上下文已变化，请重新操作",
+        "conflict",
+        409,
+      );
+    }
+  }
+
+  /** 网络请求完成或失败后均核对保存上下文，避免迟到的拒绝污染新基线。 */
+  private async awaitSaveStep<T>(
+    generation: number,
+    request: Promise<T>,
+    writeSent = false,
+  ): Promise<T> {
+    try {
+      return await request;
+    } finally {
+      this.requireCurrentContext(generation, writeSent);
     }
   }
 
@@ -134,6 +153,7 @@ export class StudioServerProjectSession {
       throw new ScadaApiError("服务端工程正在保存，请勿重复提交", "conflict", 409);
     }
     this.saving = true;
+    const generation = this.contextGeneration;
     let attemptedProjectId: string | undefined;
     try {
       // 获取独立副本，网络等待期间画布修改不能改变本次实际提交的文档。
@@ -146,10 +166,10 @@ export class StudioServerProjectSession {
           403,
         );
       }
-      const principal = (await this.api.getMe()).principal;
+      const principal = (await this.awaitSaveStep(generation, this.api.getMe())).principal;
       let current;
       try {
-        current = await this.api.getProject(checked.projectId);
+        current = await this.awaitSaveStep(generation, this.api.getProject(checked.projectId));
       } catch (error) {
         if (!(error instanceof ScadaApiError) || error.kind !== "not_found") throw error;
         // 已明确载入过该工程后再收到 404，不能把授权撤销当作新工程创建。
@@ -158,7 +178,11 @@ export class StudioServerProjectSession {
           throw error;
         }
         // 首次保存的 404 仍允许尝试创建；服务端独立校验身份和租户唯一约束。
-        const created = await this.api.createProject(checked);
+        const created = await this.awaitSaveStep(
+          generation,
+          this.api.createProject(checked),
+          true,
+        );
         this.contextGeneration += 1;
         this.baseline = {
           projectId: checked.projectId,
@@ -191,19 +215,29 @@ export class StudioServerProjectSession {
       }
 
       try {
-        const saved = await this.api.appendVersion(checked.projectId, baseline.revision, checked);
+        const saved = await this.awaitSaveStep(
+          generation,
+          this.api.appendVersion(checked.projectId, baseline.revision, checked),
+          true,
+        );
         this.contextGeneration += 1;
         this.baseline = { projectId: checked.projectId, revision: saved.revision, principal };
         return { projectId: checked.projectId, revision: saved.revision, created: false };
       } catch (error) {
-        if (error instanceof ScadaApiError && error.kind === "conflict") {
+        if (
+          this.contextGeneration === generation &&
+          error instanceof ScadaApiError &&
+          error.kind === "conflict"
+        ) {
           this.contextGeneration += 1;
           this.baseline = null;
         }
         throw error;
       }
     } catch (error) {
-      if (isScadaAccessRejection(error)) this.invalidateAccess(attemptedProjectId);
+      if (this.contextGeneration === generation && isScadaAccessRejection(error)) {
+        this.invalidateAccess(attemptedProjectId);
+      }
       throw error;
     } finally {
       this.saving = false;
