@@ -4,6 +4,8 @@ import {
   describeBrowserPageException,
   describeProjectBrowserFailure,
   inspectStudioState,
+  installAccessDenialFaultInPage,
+  armAccessDenialInPage,
   openProjectInPage,
   requireAuthorizedProjectPage,
   requireRealMultiPageCoverage,
@@ -331,13 +333,18 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       requireMultiPage: true,
       prepareMultiPage: false,
     });
+    assert.deepEqual(resolveProjectBrowserMode(["--simulate-access-denial"], lab), {
+      requireMultiPage: false,
+      prepareMultiPage: false,
+      simulateAccessDenial: true,
+    });
     assert.deepEqual(
       resolveProjectBrowserMode(["--prepare-multipage", "--confirm-lab", "adui_scada"], lab),
       { requireMultiPage: false, prepareMultiPage: true },
     );
     assert.throws(
       () => resolveProjectBrowserMode(["--prepare-multipage"], lab),
-      /仅支持 --require-multipage 或显式确认的多页数据准备参数/,
+      /仅支持 --require-multipage、--simulate-access-denial 或显式确认的多页数据准备参数/,
     );
     assert.throws(
       () =>
@@ -346,6 +353,88 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
           SCADA_DATABASE_URL: "postgresql://127.0.0.1:15432/adui_scada_test",
         }),
       /多页数据准备配置不符合本机可信 Lab 边界/,
+    );
+  });
+
+  void it("权限拒绝专项只接受单一只读模拟模式，禁止组合写入确认参数", () => {
+    assert.throws(
+      () => resolveProjectBrowserMode(["--simulate-access-denial", "--confirm-lab", "adui_scada"], sample),
+      /仅支持 --require-multipage、--simulate-access-denial 或显式确认的多页数据准备参数/,
+    );
+    assert.throws(
+      () => resolveProjectBrowserMode(["--simulate-access-denial", "--prepare-multipage"], sample),
+      /仅支持 --require-multipage、--simulate-access-denial 或显式确认的多页数据准备参数/,
+    );
+  });
+
+  void it("隔离浏览器永久拒绝任何工程写请求且不转发到真实 Lab", async () => {
+    let forwarded = 0;
+    const runtime = {
+      location: {
+        origin: "https://127.0.0.1:15173",
+        href: "https://127.0.0.1:15173/studio",
+      },
+      async fetch() {
+        forwarded += 1;
+        return new Response("{}", { status: 200 });
+      },
+    };
+    installAccessDenialFaultInPage(runtime);
+    for (const [url, method] of [
+      ["/api/v1/projects", "POST"],
+      ["/api/v1/projects/project-1/versions", "POST"],
+      ["https://remote.invalid/api/v1/projects", "DELETE"],
+    ]) {
+      const response = await runtime.fetch(url, { method });
+      assert.equal(response.status, 403);
+    }
+    assert.equal(forwarded, 0);
+    assert.equal(runtime.__aduiTestAccessDenial.writeAttempts, 3);
+
+    const read = await runtime.fetch("/api/v1/projects?limit=10");
+    assert.equal(read.status, 200);
+    assert.equal(forwarded, 1);
+  });
+
+  void it("模拟拒绝只命中指定的只读路径和 401/403/404，不影响登录请求", async () => {
+    let forwarded = 0;
+    const runtime = {
+      location: {
+        origin: "https://127.0.0.1:15173",
+        href: "https://127.0.0.1:15173/studio",
+      },
+      async fetch() {
+        forwarded += 1;
+        return new Response("{}", { status: 200 });
+      },
+    };
+    installAccessDenialFaultInPage(runtime);
+    for (const [scope, status, path] of [
+      ["history", 401, "/api/v1/projects/project-1/versions?limit=10"],
+      ["list", 403, "/api/v1/projects?limit=10"],
+      ["detail", 404, "/api/v1/projects/project-1"],
+    ]) {
+      assert.equal(armAccessDenialInPage("project-1", scope, status, runtime), true);
+      const rejected = await runtime.fetch(path);
+      assert.equal(rejected.status, status);
+      assert.equal(runtime.__aduiTestAccessDenial.hits, 1);
+      assert.equal((await runtime.fetch("/api/v1/auth/me")).status, 200);
+      assert.equal((await runtime.fetch("https://remote.invalid/api/v1/projects")).status, 200);
+      assert.equal(runtime.__aduiTestAccessDenial.hits, 1);
+    }
+    assert.equal(forwarded, 6);
+    assert.equal(runtime.__aduiTestAccessDenial.writeAttempts, 0);
+    assert.throws(
+      () => armAccessDenialInPage("project-1", "detail", 201, runtime),
+      /权限拒绝模拟参数不合法/,
+    );
+    assert.throws(
+      () => armAccessDenialInPage("", "list", 401, runtime),
+      /权限拒绝模拟参数不合法/,
+    );
+    assert.throws(
+      () => armAccessDenialInPage("project-1", "write", 403, runtime),
+      /权限拒绝模拟参数不合法/,
     );
   });
 
