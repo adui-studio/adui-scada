@@ -145,7 +145,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     error.pageDiagnostic = safe + "；敏感信息";
     assert.equal(
       describeProjectBrowserFailure(error),
-      "浏览器安全回归断言失败，检查终端测试条件及真实页面状态",
+      "浏览器页面操作失败，请检查当前 Studio 状态",
     );
   });
 
