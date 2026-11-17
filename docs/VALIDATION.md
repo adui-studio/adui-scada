@@ -1614,3 +1614,9 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 真实 `pnpm run test:oidc:dual:studio:late` 第二轮 **退出码 1**：两位真实 Keycloak 测试主体、两个新建专用工程准备正常；React Studio 原始 201 已到并挂起，第二主体实际读到修订 2、POST 以 HTTP **201** 将真实数据库推进修订 3，随后 React 消费原始 201 并显示旧 CAS 基线 2。浏览器在执行 `Page.bringToFront` 后仍然报告 `phase=released`、`writeAttempts=1`、`rejectedWrites=0`、`busy=false`、`baselineRevision=2`、`savedSecondVersion=true`、**`visible=false`**。故本次尚未触发真实可见性 GET 水位复核，也未执行 Vue。
 
 候选最小修复只涉及测试脚本中的第二主体隔离浏览器窗口：使用有官方定义的 CDP `Browser.getWindowForTarget` / `Browser.setWindowBounds`，在第二主体操作前切为正常窗口、操作完成后最小化，再激活第一主体标签。原 `document.visibilityState === "visible"` **原样保持为严格阻断条件**，不得通过覆盖属性或伪造可见事件绕过；所有真实 CAS、工程白名单、CSRF、草稿和三版审计断言保留。离线安全测试从 9 项增加至目标 **11 项**，**本补丁后的 Node、`vp check`、`docs:check`、`ready`、真实 Lab 尚未执行**。用户日志未包括本地 Git SHA，不能把上轮结果绑定到最新补丁。
+
+## 第十七小批 · 第三轮 Windows 真实本地数据失败与分类补丁
+
+用户第三轮 Windows 真实 `test:oidc:dual:studio:late` 日志：两个隔离 Keycloak 会话、新建随机测试工程、React 真实 201 保存、第二主体真实版本 2 读取、HTTP 201 追加修订号 3、第一主体旧 201 交付全部成功；测试随后确认“Studio 页面已可见，触发服务端 CAS 只读复核”。之后以“真实 Studio 迟到保存的本地数据发生变化”失败，**专项退出码 1**。按本版本测试脚本的最后执行顺序，旧 CAS 只读复核和再次保存拒绝的前置校验已完成；但具体是哪种本地数据发生变化、何时发生，原日志无法区分。此次未达到最终 PostgreSQL 三版审计和 Vue 全流程，绝不可记录为全部通过。
+
+修复候选只改测试断言的**可定位性**：分类 SVG 画布、自动保存状态、IndexedDB 草稿数目和原始草稿记录 SHA-256 是否变化，五个业务阶段逐一运行原本的强制不变断言；失败只输出固定阶段及布尔结果，不泄漏画布/草稿/摘要正文。新增两项离线安全用例，目标由 11 项增至 **13/13**。目前只对纯诊断函数运行过隔离 V8 模拟，五种输入与预期匹配；**没有最新补丁的 Node 13/13、`vp check`、`docs:check`、`ready`、真实浏览器成功日志**。原先的 Windows `ready` 退出码 0 属于更早候选，不能套用到现版本。第三轮用户日志没有本地 `git rev-parse HEAD`。
