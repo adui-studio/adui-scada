@@ -918,3 +918,9 @@ Node 编排第二主体读取 2、再 POST CAS 2→3，随后释放旧 201、第
 维护者首轮 Windows 实际执行中，React Studio 已真实提交版本 2，201 到达浏览器并被拦截器挂起；随后测试输出通用“真实 Studio 迟到保存未达到受控状态”，退出码 1。现有脚本在释放旧 201、等待 UI 成功状态、浏览器可见性、CAS 水位复核和最终过期保存拒绝等多个阶段复用同一错误，无法定位是哪一个状态断言未满足。**真实失败阶段与底层原因仍待复测**，不把它推断为生产 UI、API 或 PostgreSQL 缺陷。
 
 候选仅为真实浏览器脚本新增 `waitForStudioState`，分别标记固定阶段；超时后重新读取一次页面状态，仅输出经过字段白名单构造的 `phase`、POST/写入/拒绝计数、Busy/Disabled、CAS 基线、服务端摘要清空、错误提示及 document 可见性。第二主体读取修订 2、追加 CAS 2→3、释放旧 201 均增加固定阶段日志。没有传回工程/主体标识、Cookie、Token、响应正文、URL 或原始异常。既有真实请求、数据库事务、共享 Session、UI CAS 算法及安全门禁不变；失败仍然返回非零退出码。新增可见性布尔字段仅用于受控诊断与离线状态测试。
+
+## 2026-11-17 · 第十七小批：双窗口真实可见性复核最小修复
+
+维护者第二轮真实专项已经确认 React Studio 原始 201 交付成功、第二主体真实版本 3 提交成功，但独立 Chrome/Edge 窗口在执行 `Page.bringToFront` 后仍报告 `document.visibilityState=hidden`，导致原先正确的可见性安全断言失败。CDP `Page.bringToFront` 只激活目标标签页，并不负责 Windows 两个隔离浏览器窗口的显隐关系。
+
+只在本次专用测试脚本新增 `setSecondaryBrowserWindowState`：第二主体操作前通过 `Browser.getWindowForTarget` 精确获取**第二主体测试 Profile**的窗口 ID，并用 `Browser.setWindowBounds` 设为 `normal`；第二主体成功推进版本 3、第一主体已消费原始 201 后，将第二窗口设为 `minimized`，再次对第一主体执行 `Page.bringToFront`。仍然要求真实 `document.visibilityState === "visible"` 才能派发已有的只读复核事件、检查远端新水位 3 和清除过期 CAS。ID 不合法、CDP 失败或真实页面继续隐藏时照常失败，不伪造 getter 或关闭断言。窗口管理只发生于隔离测试进程，完成后仍由现有 `finally` 关闭两份独立浏览器 Profile。
