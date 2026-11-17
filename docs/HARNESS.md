@@ -2667,3 +2667,46 @@ if ($lateExitCode -ne 0) { throw "真实浏览器迟到 201 专项失败" }
 另单独运行的 **`pnpm run test:oidc:dual:late` 退出码 0**，验证真实双 Keycloak BFF、React/Vue Origin API、PostgreSQL Lab 工程版本 2→3、暂存已到达的旧 201、旧 CAS 2→409，以及三版版本与审计一致；专用测试工程保留。前文“当前候选无 Windows 结果”属于验收前记录，最新结论以本段为准。
 
 `ready` 与真实交互式专项为**两条分开执行的命令**，日志没有包含本机 `git rev-parse HEAD`；本次只追认已提供的真实退出码，文档补录生成的新提交尚未重新验证。此模式不注入网络 TCP 故障，也不操作 Studio UI 保存按钮；不得扩展结论到生产设备、工业现场或真实 Studio UI 迟到回包 E2E。PR #71 保持 Draft 并指派 `@adui-dev`，未经明确授权不得合并。
+
+## 第三十四批第十七小批 · React/Vue Studio 真实迟到 201 独立验收
+
+仅在隔离本机 Keycloak/HTTPS 双 Web Origin/PostgreSQL Lab 完备、已有两个同租户不同的预绑定普通测试用户时，才能运行显式写入专项。默认 \`ready\` 只包含 9 项 Node 离线安全测试，**不会创建工程或修改 ACL**。真实专项仅新建两个 UUID 测试工程；第一个主体在 React 与 Vue 分别通过 Studio UI 发出一次真实保存，第二主体从另一个独立浏览器推进到第三版。所有失败路径保留专用测试工程供复核，不删除其他工程、数据卷、用户或授权。
+
+请先核对本地工作区，避免覆盖未提交变更。Windows PowerShell 从项目根执行：
+
+\`\`\`powershell
+git status --short
+git fetch origin
+git switch --track origin/test/v0.3-b34-studio-real-late-ui
+git rev-parse HEAD
+git rev-parse origin/test/v0.3-b34-studio-real-late-ui
+
+pnpm run test:oidc:dual:studio:config
+$offlineExitCode = $LASTEXITCODE
+Write-Host "第十七小批离线安全测试退出码：$offlineExitCode"
+if ($offlineExitCode -ne 0) { throw "真实 Studio 迟到 201 离线安全测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "第十七小批完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+\`\`\`
+
+完成本机 Lab 安全前置核查、允许创建**两个新专用空白工程**后，单独运行（需在隔离 Chrome/Edge 两窗口手动登录两位已预绑定普通测试用户；不得在终端粘贴密码）：
+
+\`\`\`powershell
+pnpm run test:oidc:dual:studio:late
+$browserExitCode = $LASTEXITCODE
+Write-Host "React/Vue 真实 Studio 迟到 201 退出码：$browserExitCode"
+if ($browserExitCode -ne 0) { throw "真实双框架 Studio 迟到 201 专项失败" }
+\`\`\`
+
+验收必须同时看到 React 和 Vue 的“真实 UI 迟到 201、CAS 复核失效、草稿保护与三版审计检查完成”以及最终成功结论和明确退出码 0。浏览器中的版本 POST 必须恰好一次；第二主体真实追加至修订 3；释放第一主体已到达的 201 后，页面因真实只读 GET 发现水位差异清除旧 CAS，重复点击不再写入。比较画布 SVG、草稿数量与 SHA-256、自动保存状态，全过程只显示固定中文阶段。此测试仍不代表物理 TCP 断流、保存中强行上下文切换或生产系统验收。
+
+**当前仅提交验收候选，尚未运行上述 Windows 质量链与真实 Lab 专项。** 运行时务必打印并提供本机 \`git rev-parse HEAD\`，以便将证据与 PR HEAD 关联；本次只读静态检查不代替端到端验证。
