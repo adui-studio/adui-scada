@@ -1284,3 +1284,9 @@ PR #66 的 React / Vue 标签页恢复只读复核已由维护者在 Windows 完
 维护者 Windows 实测确认共享 Studio 服务端会话 **30/30**、整仓 Vitest **566/566**（49 文件），新增的五项“保存请求中切换上下文”的迟到 401/404/创建或追加回包回归均包含其中。独立 `vp check` **333 个格式文件 / 188 个受检文件零警告错误**；`docs:check` 86 份 Markdown 通过；完整 `pnpm run ready` 完成 React/Vue/共享包/NestJS 类型检查、OIDC 工程浏览器离线 24/24、SSE 8/8、故障代理 4/4、服务端 HTTP E2E 49/49 以及 React/Vue/Server 构建，PowerShell **退出码 0**。此前文档中的“候选、待复验”属于开发当时的历史状态，不代表当前仍未通过。
 
 本批仍限定共享 API Client 的保存会话状态保护、五项 Promise 单测及相关文档，不执行真实 Lab 工程写入、ACL 修改、数据库迁移或工业设备控制。验收日志未显示本机 Git HEAD；新增竞态尚无真实浏览器/真实 PostgreSQL 延迟写入验证；本段文档提交后的质量链没有重新运行。PR #68 保持 Open / Draft，Assignee 为 `@adui-dev`，必须单独获得维护者明确合并授权。
+
+## 2026-11-17 · 第三十四批第十四小批：浏览器延迟保存与重复提交回归（候选）
+
+PR #68 已获维护者明确授权并 Squash 合并为 `main@a1e710d2be86675f156fe0c36534e528b2203cae`。上批 Windows `ready` 566/566 单测及 49/49 HTTP E2E 通过；第十三小批的 POST 迟到成功/拒绝仍仅有共享 Promise 单测。本小批按原有 Lab 边界增加 React/Vue 实际浏览器按钮行为验收：真实 Keycloak 登录、同源工程只读 GET 建立 CAS；模拟延迟 POST 409、401、503 在浏览器端返回，不会写真实工程、版本或 ACL。断言重复点击只尝试一次、等待时按钮禁用、CAS 状态正确，以及 SVG/IndexedDB/自动保存状态不变。
+
+候选仅涉及现有 `scripts/test-project-browser-oidc.mjs`、`scripts/test-project-browser-oidc.cases.mjs`、根 `package.json` 和相关文档，不改变 React/Vue 业务代码、共享 Core/客户端、NestJS、Prisma、OIDC 用户或工业网关。预计 Node 离线浏览器安全用例 28/28（原 24 + 新 4），所有实际 `vp check`、`ready` 与双框架交互式专项均待维护者 Windows 复验。PR 仍保持 Draft，必须指派 `@adui-dev`，未获单独授权不得合并。
