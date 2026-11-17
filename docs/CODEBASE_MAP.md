@@ -784,3 +784,10 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 
 - `apps/server/test/projects-cas-cookie-http.db-spec.ts`：在已有双 Cookie 会话 HTTP CAS 四项测试基础上新增两项。测试容器同时注册真实 `ScadaAuthController` 和 `ProjectApiController`，使用真实 `AuthSessionService`、Session/Project Guards、Prisma；仅无关 OIDC 授权码前置入口依赖使用测试占位符。覆盖一个会话注销后旧 Cookie 401/另一主体仍能写入，以及有效身份被撤销工程 ACL 后列表不可见、详情/历史/写入 404。
 - 运行入口保持 `pnpm run test:db`：现有 `apps/server/vitest.config.db.ts` 自动收集 `test/**/*.db-spec.ts`，新候选从此前 29 项预计增加至 31 项。默认 `pnpm run ready` 不连接真实 PostgreSQL，也不修改已有本机 OIDC Lab 数据。
+
+## 第三十四批第八小批 · 服务端权限拒绝的双框架失效保护
+
+- `packages/api-client/src/index.ts`：新增 `isScadaAccessRejection`，统一 401/403/404 受控拒绝分类，不读取服务端原始错误正文。
+- `packages/api-client/src/studio-session.ts`：`StudioServerProjectSession` 在访问失效时作废 CAS 基线，禁止已有基线工程 404 后错误触发创建，并防止重复保存重新尝试；授权版本重新读取和确认载入后方可恢复。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：同一安全规则清除服务端修订号、历史摘要、对比快照及工程管理游标缓存；原画布、IndexedDB 草稿与本地历史不变。
+- `packages/api-client/test/api-client.test.ts`、`packages/api-client/test/studio-session.test.ts`：新拒绝类型、403/404 权限撤销、401 身份过期、重复保存保护、重新加载恢复与网络错误保持原基线的回归。
