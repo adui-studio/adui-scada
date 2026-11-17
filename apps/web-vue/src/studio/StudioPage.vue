@@ -1181,7 +1181,7 @@ async function runServerAction(
       } catch (error) {
         serverError.value = error instanceof Error ? error.message : "服务端操作失败";
         if (isScadaAccessRejection(error)) {
-          serverSession.reset();
+          serverSession.invalidateAccess();
           serverProjectId.value = "";
           serverHeadRevision.value = null;
           serverBaselineRevision.value = null;
