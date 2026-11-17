@@ -7,10 +7,10 @@ import { Reflector } from "@nestjs/core";
 import request from "supertest";
 import { waterTreatmentDemoDocument } from "@adui/scada-core";
 import { AuthSessionService } from "../src/auth/auth-session.service.js";
+import type { IssuedAuthSession } from "../src/auth/auth-session.service.js";
 import { ScadaAuthController } from "../src/auth/scada-auth.controller.js";
 import { OidcCallbackService } from "../src/auth/oidc-callback.service.js";
 import { OidcLoginTransactionService } from "../src/auth/oidc-login-transaction.service.js";
-import type { IssuedAuthSession } from "../src/auth/auth-session.service.js";
 import {
   SCADA_CSRF_COOKIE_NAME,
   SCADA_SESSION_COOKIE_NAME,
