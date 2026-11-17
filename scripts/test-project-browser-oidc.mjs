@@ -811,6 +811,46 @@ async function verifyResumeScenarios(session, origin, name, selected) {
   }
 }
 
+/** 两端均由真实 UI 发起版本追加；隔离浏览器持有 POST 回包但从不向 Lab 转发写请求。 */
+async function verifySaveTimingScenarios(session, origin, name, selected) {
+  const scenarios = [
+    { status: 409, title: "旧 CAS 水位冲突", baselineCleared: true },
+    { status: 401, title: "服务端身份过期", baselineCleared: true },
+    { status: 503, title: "服务端暂时不可用", baselineCleared: false },
+  ];
+  for (const scenario of scenarios) {
+    process.stdout.write(name + "：正在验证延迟保存响应与" + scenario.title + "\n");
+    const before = await prepareAccessDenialBaseline(session, origin, name, selected);
+    assert.ok(before.server.includes("CAS 基线：" + selected.headRevision));
+    assert.equal(
+      await session.evaluate(armSaveTimingInPage, selected.projectId, scenario.status),
+      true,
+    );
+    assert.equal(await session.evaluate(triggerSaveTimingInPage), true);
+    const pending = await waitFor(async () => {
+      const state = await session.evaluate(saveTimingStateInPage);
+      return state.hits === 1 && state.busy && state.disabled ? state : null;
+    }, name + " 版本追加请求挂起");
+    assert.equal(pending.writeAttempts, 1, name + " 重复点击不得额外发起版本写入");
+    const during = await inspectStudioState(session);
+    assert.equal(during.canvas, before.canvas, name + " 保存等待期间改变了本地画布");
+    assert.deepEqual(during.drafts, before.drafts, name + " 保存等待期间改变了草稿");
+    assert.equal(during.autoSave, before.autoSave, name + " 保存等待期间改变了自动保存");
+
+    assert.equal(await session.evaluate(releaseSaveTimingInPage), true);
+    const completed = await waitFor(async () => {
+      const state = await session.evaluate(saveTimingStateInPage);
+      return !state.busy && state.hasError ? state : null;
+    }, name + " 延迟保存拒绝后界面恢复");
+    assert.equal(completed.writeAttempts, 1, name + " 失败后不得自动重试写入");
+    assert.equal(completed.baselineCleared, scenario.baselineCleared);
+    const after = await inspectStudioState(session);
+    assert.equal(after.canvas, before.canvas, name + " 保存失败改变了本地画布");
+    assert.deepEqual(after.drafts, before.drafts, name + " 保存失败改变了草稿");
+    assert.equal(after.autoSave, before.autoSave, name + " 保存失败改变了自动保存");
+  }
+}
+
 export async function openProjectInPage(projectId, headRevision, mode) {
   const panel = document.querySelector(".studio-project-browser-panel");
   const item = [...(panel?.querySelectorAll(".studio-project-browser-item") || [])].find(
@@ -1214,25 +1254,29 @@ async function run() {
         "(" +
         installRevisionConflictFaultInPage.toString() +
         ")();" +
-        (mode.simulateAccessDenial || mode.simulateResumeCheck
+        (mode.simulateAccessDenial || mode.simulateResumeCheck || mode.simulateSaveTiming
           ? "(" + installAccessDenialFaultInPage.toString() + ")();"
           : ""),
     });
     process.stdout.write("真实 OIDC 会话已在 React Origin 验证，开始双框架只读工程验收。\n");
     await verifyStudio(session, origins[0], "React", mode.requireMultiPage);
-    if (mode.simulateAccessDenial || mode.simulateResumeCheck) {
+    if (mode.simulateAccessDenial || mode.simulateResumeCheck || mode.simulateSaveTiming) {
       const projects = requireAuthorizedProjectPage(await session.evaluate(projectsInPage));
       if (mode.simulateAccessDenial) {
         await verifyAccessDenialScenarios(session, origins[0], "React", projects[0]);
+      } else if (mode.simulateSaveTiming) {
+        await verifySaveTimingScenarios(session, origins[0], "React", projects[0]);
       } else {
         await verifyResumeScenarios(session, origins[0], "React", projects[0]);
       }
     }
     await verifyStudio(session, origins[1], "Vue", mode.requireMultiPage);
-    if (mode.simulateAccessDenial || mode.simulateResumeCheck) {
+    if (mode.simulateAccessDenial || mode.simulateResumeCheck || mode.simulateSaveTiming) {
       const projects = requireAuthorizedProjectPage(await session.evaluate(projectsInPage));
       if (mode.simulateAccessDenial) {
         await verifyAccessDenialScenarios(session, origins[1], "Vue", projects[0]);
+      } else if (mode.simulateSaveTiming) {
+        await verifySaveTimingScenarios(session, origins[1], "Vue", projects[0]);
       } else {
         await verifyResumeScenarios(session, origins[1], "Vue", projects[0]);
       }
@@ -1242,7 +1286,9 @@ async function run() {
         ? "双框架模拟 401/403/404 授权拒绝专项通过；工程写入已在浏览器阻断，Lab ACL 未修改。\n"
         : mode.simulateResumeCheck
           ? "双框架标签页重新可见只读复核专项通过；工程写入已在浏览器阻断，Lab ACL 未修改。\n"
-          : "双框架 OIDC 工程管理专项通过；服务端工程未新增、未覆盖、未发布。\n",
+          : mode.simulateSaveTiming
+            ? "双框架延迟保存拒绝与重复提交专项通过；版本 POST 已在浏览器阻断，Lab 工程与 ACL 未修改。\n"
+            : "双框架 OIDC 工程管理专项通过；服务端工程未新增、未覆盖、未发布。\n",
     );
   } finally {
     session?.socket.close();
