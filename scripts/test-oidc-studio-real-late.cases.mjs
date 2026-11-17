@@ -293,7 +293,10 @@ void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
         args: { windowId: 17, bounds: { windowState: "minimized" } },
       },
     ]);
-    assert.equal(commands.some((item) => item.method === "Runtime.evaluate"), false);
+    assert.equal(
+      commands.some((item) => item.method === "Runtime.evaluate"),
+      false,
+    );
   });
 
   void it("窗口标识异常、非法状态或 CDP 拒绝时必须显式失败，不能绕过真实 visible", async () => {
