@@ -1203,7 +1203,9 @@ async function revalidateOnResume(): Promise<void> {
     await serverSession.revalidateBaseline(projectId);
   } catch (error) {
     if (!studioMounted || editor.snapshot().document.projectId !== projectId) return;
-    if (isScadaAccessRejection(error)) {
+    const accessRejected = isScadaAccessRejection(error);
+    const revisionConflict = error instanceof ScadaApiError && error.kind === "conflict";
+    if (accessRejected) {
       invalidateServerAccess();
       serverIdentity.value =
         error.kind === "unauthenticated"
@@ -1218,7 +1220,7 @@ async function revalidateOnResume(): Promise<void> {
     }
     if (
       error instanceof ScadaApiError &&
-      (isScadaAccessRejection(error) || error.kind === "conflict")
+      (accessRejected || revisionConflict)
     ) {
       serverError.value = error.message;
       notice.value = "标签页恢复校验发现变更：" + error.message + "；本地画布与草稿不变";
