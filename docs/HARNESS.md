@@ -2885,3 +2885,48 @@ if ($browserExitCode -ne 0) { throw "确认载入浏览器专项失败" }
 ```
 
 验收需要看到 React **和** Vue 在“确认载入前的模拟远端版本冲突”时保持原画布、草稿和自动保存，确认后合成 HEAD 水位变化拒绝载入；然后正常确认打开工程建立 CAS 基线，409 只读预览最新版后通过真正 UI 确认再次载入恢复 CAS，同时只产生测试 Profile 内的单次被拦截 POST，其他全部为真实受保护 GET。既有 401、503 恢复仍须通过。最终命令退出码为 **0** 才能验收；没有实测日志前所有测试计数均是目标，不是结果。此专项非物理 TCP 断流、非生产/工业现场验收。
+
+
+## 第三十四批第二十小批 · React/Vue 同源双标签页真实 CAS 专项
+
+先确认工作区干净并切换候选分支，依次执行离线测试、格式检查、文档检查和完整质量链：
+
+\`\`\`powershell
+git status --short
+git fetch origin
+git switch --track origin/ai/b34-same-origin-multitab-cas
+git rev-parse HEAD
+
+pnpm run test:oidc:dual:studio:multitab:config
+if ($LASTEXITCODE -ne 0) { throw "同源多标签页离线安全测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run ready
+$readyExitCode = $LASTEXITCODE
+Write-Host "第二十小批完整质量链退出码：$readyExitCode"
+if ($readyExitCode -ne 0) { throw "完整质量链失败" }
+\`\`\`
+
+完整质量链通过后，在本机可信 Keycloak、React/Vue 双 HTTPS Origin、PostgreSQL Lab 和已预绑定普通测试用户均就绪的前提下，单独执行：
+
+\`\`\`powershell
+pnpm run test:oidc:dual:studio:multitab
+$multitabExitCode = $LASTEXITCODE
+Write-Host "同源双标签页真实浏览器专项退出码：$multitabExitCode"
+if ($multitabExitCode -ne 0) { throw "同源双标签页真实浏览器专项失败" }
+\`\`\`
+
+该命令会打开一个隔离 Chrome/Edge Profile。只需在其中完成一次预绑定 Keycloak 测试用户登录；不要在终端输入或粘贴密码。测试在同一浏览器窗口创建第二个标签页，并分别在 React、Vue Origin 完整运行：
+
+- 两标签真实 BFF 身份必须相同；每个 Origin 只新建一个随机 b34-oidc-multitab-<UUID> 专用工程。
+- 两页先载入修订 1；第二页保存 IndexedDB 草稿并启用自动保存。第一页通过真实 Studio UI 保存修订 2，第二页切回前台后必须通过真实 visibilitychange 发现水位漂移。
+- 第二页的过期保存必须在版本 POST 前拒绝；只读预览与确认载入修订 2 后，CAS=2 恢复、自动保存暂停、原 IndexedDB 草稿保持不变。
+- 第二页通过真实 UI 保存修订 3；第一页恢复可见后必须清除过期 CAS=2，保存再次被拒绝且不产生第四版。
+- PostgreSQL 必须只有修订 1/2/3 和三条同主体审计记录，摘要与两次真实 201 一致。
+
+**安全边界**：首版创建只发生在随机专用工程；写入守卫只放行每个标签页各一次明确 CAS 的版本 POST，其他工程写请求均在浏览器拦截。测试工程会保留供审计，不自动删除，不修改现有工程、用户或 ACL。必须保持浏览器窗口正常显示，不要最小化或关闭；专项要求通过真实前后台切换观察 visibilityState，不使用脚本伪造可见性事件。真实浏览器专项不属于默认 ready。
