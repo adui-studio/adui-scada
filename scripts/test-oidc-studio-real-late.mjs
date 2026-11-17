@@ -503,7 +503,12 @@ async function verifyFramework(
     "Studio 接收真实 201 并恢复保存界面",
     (state) => !state.busy && state.baselineRevision === 2 && state.savedSecondVersion,
   );
-  requireUnchangedDocument(before, await inspectStudioProtectedState(session), name, "Studio 消费旧 201 后");
+  requireUnchangedDocument(
+    before,
+    await inspectStudioProtectedState(session),
+    name,
+    "Studio 消费旧 201 后",
+  );
 
   // 先最小化第二主体的独立窗口，再激活第一主体标签。
   // 只接受浏览器真实报告 visible；若 OS 仍遮挡，保留失败而不模拟可见性。
