@@ -1394,3 +1394,11 @@ PR #72 候选已新增固定阶段与安全状态摘要，方便下一轮定位�
 维护者第四轮真实 Lab `pnpm run test:oidc:dual:studio:late` **退出码 1**：React 完成真实 POST 201、第二主体 CAS 2→3、旧 201 交付、浏览器恢复可见及 CAS 只读复核；本地变化分类确认**仅 `canvasChanged=true`**，自动保存、IndexedDB 草稿数量和原始记录哈希均未改变。真实数据库最终三版审计与 Vue 整套测试仍未执行。
 
 源码检查发现 `.studio-svg.innerHTML` 包含位置随 `visibleRect` 的辅助视口网格矩形；当前提出仅调整本专项的画布快照口径，忽略**单个直系网格元素**，保留其余全部 SVG/草稿/SQL 安全断言和 React/Vue 业务逻辑。根因是否仅为网格重算仍需真实浏览器验证。新增 3 项离线安全用例，累计目标 **16/16**；当前未取得该补丁的 Windows `vp check`、`ready` 或真实 Lab 退出码 0。PR #72 继续 Draft，Assignee `@adui-dev`，未获合并授权。
+
+## 2026-11-17 · 第三十四批第十七小批：Windows 双框架真实迟到 201 验收通过
+
+维护者 Windows 完整 `pnpm run ready` **退出码 0**；Studio 本批 Node 离线 **16/16**、`vp check` **335 文件格式正确 / 190 受检零警告错误**、`docs:check` **86 份**、Vitest **567/567**、NestJS HTTP E2E **49/49**、SSE 客户端 **8/8** 与故障代理 **4/4**、React/Vue/NestJS 类型检查和构建均完成。此前文档标记的“最新补丁待 Windows 实测”为验收前历史状态，最新结论以此段为准。
+
+独立真实 `pnpm run test:oidc:dual:studio:late` 也**退出码 0**：两个不同的真实 Keycloak 预绑定主体分别在隔离浏览器中建立同租户会话；React 与 Vue 的真实 Studio 保存按钮在两个新建的专用工程上分别提交修订 2，第二主体推进至 3，再交付已到达的旧 201；页面恢复可见后，真实只读复核撤销过期 CAS，阻止额外写入，并核对工程 SVG 内容、IndexedDB 草稿与数据库三版审计。每个专用工程只保留 1/2/3 三版并留存供复核。视口辅助网格不属于持久化工程内容，测试仅将其排除于 SVG 内容快照，其余图元继续严格比较。
+
+未模拟物理 TCP 断流、生产或工业现场安全验收。成功日志未含本地 Git HEAD，无法绑定具体 SHA；本次结案文档提交后未重新运行质量链。PR #72 保持 **Open / Draft**，已指派 `@adui-dev`，仍待明确合并授权，不合并。
