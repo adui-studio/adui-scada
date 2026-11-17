@@ -1255,6 +1255,7 @@ async function runServerAction(
     label,
     async () => {
       serverError.value = "";
+      serverRecoveryProjectId.value = "";
       try {
         await action();
       } catch (error) {
