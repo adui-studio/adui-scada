@@ -1658,3 +1658,20 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 新测试计划：共享 Session **8 项新增**，目标 **45/45**；全量 Vitest 目标 **581/581**，浏览器离线新增 2 项，目标 `test:projects:oidc:config` **37/37**。真实 `test:projects:oidc:save:browser` 在 React/Vue 原“取消载入、模拟水位冲突、确认载入”之间增加**确认后才合成远端 HEAD 漂移**的负向检查：必须先出现一次确认，再得到受控冲突，保持画布、草稿和自动保存，CAS 不被错误建立。原 409 保存模拟的最新版本只读预览完成后，还需真正点版本列表“载入”并确认；再次真实只读 GET 成功后，CAS 基线正确恢复，自动保存暂停，IndexedDB 草稿及 Lab 工程未写入，401/503 场景继续安全通过。
 
 安全边界：浏览器模拟的确认后水位漂移及版本 POST 409/401/503 属于本机隔离 Profile 的合成拒绝/GET 替换，不是再次执行真实 PostgreSQL 并发写入；真实 GET 仍走受保护的 HTTPS BFF，浏览器隔离层截断所有工程 POST。单次确认后 GET 不保证数据库锁或原子一致性，服务端保存时继续原 CAS。**候选尚未实际运行 Windows Node/Vitest/类型检查、`vp check`、`docs:check`、完整 `ready` 或本机 Keycloak 浏览器专项**，不能使用上一小批的成功日志作为新改动的验收结果。需记录本机 HEAD SHA 与命令退出码。
+
+
+## 第三十四批第二十小批 · 同源多标签页 CAS 验收
+
+新增 scripts/test-oidc-studio-multitab.cases.mjs，默认质量链只运行离线保护测试：
+
+- 真实写入模式必须精确确认本机 adui_scada Lab；默认参数、混合参数、其他数据库名均拒绝。
+- 首版创建只接受本机 HTTPS Origin、随机 b34-oidc-multitab-<UUID> 工程 ID 和唯一 CSRF Cookie。
+- 写入守卫默认拒绝所有工程 POST/PUT/PATCH/DELETE；仅允许被显式 arm 的当前工程、指定 CAS 水位的一次真实版本 POST，并核对 201 修订号及 SHA-256。
+- GET/HEAD 只读透传；错误工程、跨 Origin、错误水位、错误 CSRF、重复 POST、非 201 与格式错误 201 均不得伪装成功。
+- 数据库结案必须核对同一主体的三版版本记录、三条审计记录和最终 head=3。
+
+新增离线用例目标 18 项，命令为 pnpm run test:oidc:dual:studio:multitab:config，并纳入 pnpm run ready。全量 Vitest 预期仍为 581 项；该专项使用 Node 内置测试，不增加第三方依赖。
+
+真实浏览器专项为手动命令 pnpm run test:oidc:dual:studio:multitab，不加入默认 ready。它使用一个隔离浏览器 Profile 的两个真实标签页，在 React 和 Vue Origin 分别创建一个随机专用工程，验证版本 1→2→3、可见性恢复复核、只读预览、人工确认载入、IndexedDB 草稿保护和 PostgreSQL 同主体审计。测试工程留存供审计，不清理、不修改既有工程或 ACL。
+
+**当前验证状态**：本协作环境已对两个新增 .mjs 文件完成隔离 ECMAScript 语法解析，并使用隔离 V8 Mock 执行核心门禁用例 18/18；这不等于仓库 Node --test。Windows vp check、docs:check、完整 pnpm run ready 和真实双标签页 Lab 尚待维护者执行。
