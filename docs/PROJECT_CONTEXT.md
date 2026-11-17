@@ -1334,3 +1334,9 @@ PR #69 继续只修改浏览器测试脚本和离线保护测试，用严格固�
 首次 Windows `vp check --fix` 报新增共享 Session 单测一处 **TS2740、0 警告**，格式化虽完成但 Lint/类型检查没有通过。原因是 Core 异步 `createProjectSnapshot` 返回 `Promise<ProjectSnapshot>`，而 `mockResolvedValueOnce` 需要已解析快照。PR #70 原分支仅在 `mockResolvedValueOnce` 中先 `await createProjectSnapshot`，不更改共享会话业务逻辑、真实 PostgreSQL HTTP 测试或测试库安全约束。
 
 修复后本地 `vp check`、Vitest 31/31（全量目标 567/567）、`ready` 及单独 `test:db` 仍需维护者重新执行。保持 Draft、Assignee `@adui-dev`、未经授权不得合并。
+
+## 2026-11-17 · 第三十四批第十五小批：真实 PostgreSQL 回归通过，SSE 代理坏端口阻断 ready
+
+维护者最新 Windows 验收确认本机隔离 `adui_scada_test` 四项迁移为最新，`pnpm run test:db` **4/4 文件、32/32 项通过、退出码 0**；这覆盖新加的真实 HTTP 201 已提交/旧回包迟到/第二主体 CAS 追加/持久化审计一致性。历史计划预期 `30/30` 已被真实统计 `32/32` 覆盖。单独 `test:unit` **567/567**、`vp check` **333/188 零告警**、`docs:check` **86** 项通过。但完整 `ready` 在 SSE 故障代理四项中两项 `fetch failed: bad port` 处停止，**退出码 1**；同次质量链后续保护与构建未执行完毕。
+
+已在原 Draft PR #70 的 SSE 故障代理测试工具内将 OS 随机端口改为 Fetch 允许的随机高端口（20000～49151，本机监听，冲突重试最多 32 次），并在现有四项 SSE 测试夹具中增加安全端口断言；不改变实际 SSE 业务行为、SCADA Core、PostgreSQL、NestJS 或工业设备接口。禁用端口这一机制与日志吻合，但**未保存真实端口号码**，修复后 `test:sse:fault:unit` / `ready` 仍待 Windows 复验。PR #70 继续 Open/Draft、Assignee `@adui-dev`，不得提前合并。
