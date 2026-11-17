@@ -890,4 +890,3 @@ React 的 `runServerAction` 与 Vue 对应处理在拒绝后清除旧 `serverPro
 既有 NestJS 真实数据库测试 `projects-cas-cookie-http.db-spec.ts` 新增一项：先通过第一 Cookie/CSRF 会话真实 HTTP POST 返回 201 并实际提交到隔离 PostgreSQL 版本 2 和审计；在**测试消费端 Promise** 持有该真实响应期间，第二 Cookie/CSRF 会话基于 2 追加 3；真实 GET 详情和快照返回修订号 3，随后把旧 201 交付给模拟客户端，再尝试以旧预期 2 写入，服务端必须返回 409 且持久化水位/版本/审计保持 3。延迟点在测试消费端而非真实 TCP 传输；数据库真实读取在释放前已证明事务提交。每项测试由 `withFixture` 创建随机租户，`finally` 仅清理本租户的版本、审计、授权、会话和身份。
 
 两个测试共同验证协议与会话逻辑，但没有让同一浏览器 Session 直接与 PostgreSQL 实例联动，也没有模拟网络丢包、断电、进程崩溃或跨 Origin Cookie 复用。保持只读设备边界。
-
