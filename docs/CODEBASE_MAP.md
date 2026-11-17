@@ -885,3 +885,10 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：既有版本历史“载入”与授权工程列表“打开”都在确认后、暂停自动保存之前调用相同共享只读验证；未改变编辑器引擎、工程格式或后端。
 - `scripts/test-project-browser-oidc.mjs`：原真实 Keycloak 双框架 Lab 专项扩展 `confirm-drift` 合成 GET 版本差异，阻止确认后覆盖；409 预览后经真实服务端版本列表按钮进行人工确认载入，核对 CAS 恢复、草稿未覆盖、自动保存暂停且无额外版本 POST。
 - `scripts/test-project-browser-oidc.cases.mjs`：新增 **2 项** Node 内置离线保护测试，目标 OIDC 工程浏览器安全离线共 **37 项**；沿用原严格 Lab 环境、临时 Profile、CSRF 和全部工程写请求本地阻断。
+
+
+## 第三十四批第二十小批 · 同源多标签页 CAS 验收工具
+
+- scripts/test-oidc-studio-multitab.mjs：同一浏览器 Profile、两个真实同源标签页的 React/Vue Studio CAS 协同专项；创建随机工程，验证真实 UI 版本 1→2→3、可见性恢复、只读预览、人工确认载入、草稿保护和同主体 PostgreSQL 审计。
+- scripts/test-oidc-studio-multitab.cases.mjs：写入模式、CSRF、Origin、单次 CAS POST 守卫及数据库审计摘要的 Node 离线安全测试。
+- 根 package.json：新增 test:oidc:dual:studio:multitab:config（默认质量链）和 test:oidc:dual:studio:multitab（仅本机 Lab 手动执行）。
