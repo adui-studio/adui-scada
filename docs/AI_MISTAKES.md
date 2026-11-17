@@ -331,6 +331,15 @@
 - **验证边界**：维护者原始 **TS2740 失败** 已确认；PR #70 的修复表达式与 Core 异步签名经静态复核，**修复后 Windows TypeScript 6、`vp check`、共享会话 31/31、`ready` 和隔离 PostgreSQL `test:db` 均未重新实测**，不得标为通过。
 - **证据**：维护者原始 Windows `vp check --fix` 日志、PR #70、`packages/core/src/project-snapshot.ts`、`packages/api-client/test/studio-session.test.ts`、`docs/VALIDATION.md`。
 
+### E-037 · SSE 故障代理使用随机禁用 HTTP 端口导致 Node Fetch 拒绝（第三十四批第十五小批）
+
+- **现象**：维护者 2026-11-17 Windows 在隔离 PostgreSQL 专项 **32/32、退出码 0**，单元测试 **567/567**、`vp check` **333 格式文件/188 受检零告警** 后运行完整 `pnpm run ready`；SSE 客户端 **8/8** 通过，随后 `scripts/sse-fault-proxy.test.mjs` **4 项中 2 失败**，两项分别是普通 HTTP 透传和双 SSE 订阅，错误 `TypeError: fetch failed`、内部 `Error: bad port`；Keep-Alive `node:http` 用例通过，`ready` **实际退出码 1**。
+- **原因与证据边界**：故障代理用 `server.listen(0, "127.0.0.1")` 从 OS 临时端口池选取任意监听端口；测试用全局 `fetch(new URL("...", proxy.url))` 请求代理。WHATWG Fetch 标准会屏蔽一些端口（如 6000、6667、10080），Node 内置 Fetch 同样可能返回 `bad port`；`node:http` 不受相同 Fetch 端口阻止，因此症状高度吻合。**用户日志没有给出实际绑定端口号，不能确定是哪一个端口**；不将该推断当作已观测的精确端口。
+- **最小修复**：保持代理只绑定 `127.0.0.1`、仍严格拒绝非本机或非 HTTP 目标；随机监听只从明确避开所有已知 Fetch 禁用端口的 **20000～49151** 高端口范围选择，遇到 `EADDRINUSE` 或 Windows `EACCES` 最多重新尝试 32 次，资源与连接关闭流程不变。原 SSE 四项测试的 `withOrigin` 夹具增加端口范围断言；保留 Fetch 请求、真实 TCP 静默阻断、Keep-Alive 复用、连接回收测试。
+- **防复发**：测试代理或临时浏览器服务不能假设 `listen(0)` 选择的端口一定允许浏览器/Fetch 访问。随机端口应满足协议客户端的安全限制并覆盖端口占用重试；不要用绕过浏览器禁用端口、关闭认证/TLS、改用不安全生产端口或删测试来掩盖。遇到随机端口失败先区分 `fetch` 的 `bad port`、TCP 拒绝和 SSE 协议失败，避免错修业务逻辑。
+- **验证**：修复前维护者实测 `test:sse:fault:unit` 在 `ready` 中 **2/4**、`ready` 退出码 **1**；当前 GitHub 代码补丁只经静态核对，**修复后 Windows `test:sse:fault:unit`、`vp check`、`docs:check` 及完整 `ready` 均待复验**。此前同一分支 `test:db` **32/32，退出码 0**，不代表新代理补丁已经验证通过。
+- **证据**：维护者 Windows 原始 SSE `bad port` 错误日志、PR #70、`scripts/sse-fault-proxy.mjs`、`scripts/sse-fault-proxy.test.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
