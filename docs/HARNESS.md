@@ -2800,3 +2800,11 @@ if ($browserExitCode -ne 0) { throw "真实双框架 Studio 迟到响应专项�
 ```
 
 必须看到 React、Vue 两轮均完成真实 201、远端 CAS 3、旧基线清除、画布内容与草稿保护、无额外 POST 和真实数据库三版审计，最终退出码 **0** 才能结案。若修复后 `canvasChanged` 仍为 true，说明剩余 SVG 内容有实际差异，应保持失败、进一步分辨渲染图片和图元差异，不能继续扩大忽略范围。已有历史测试工程保留，不自动删除。
+
+## 第三十四批第十七小批 · Windows 真实双框架最终验收结果（2026-11-17）
+
+维护者 Windows 已经提供完整日志，覆盖 `pnpm run test:oidc:dual:studio:config` **16/16**、`vp check` **335/190 零告警错误**、`docs:check` **86 个 Markdown**、完整 `pnpm run ready` **退出码 0**（Vitest **567/567**、HTTP E2E **49/49**，SSE 8/8、故障代理 4/4，React/Vue/NestJS 类型检查与构建通过）。这与单独的真实 Lab 写入专项是**两条不同的命令**，不能混为一次执行。
+
+另已在严格本机隔离 Lab 下执行 `pnpm run test:oidc:dual:studio:late`，最后明确输出 **退出码 0**。React/Vue 两轮都已完成真正 Studio UI 触发保存、浏览器暂缓交付真实 201、第二主体真实 CAS 2→3、页面重新可见、只读水位复核清除旧基线、禁止额外版本、SVG 内容/IndexedDB 草稿保护及 PostgreSQL 三版审计。两个新建专用工程按设计留存。视口网格属于动态装饰性 SVG，实际快照只排除该一个已知非持久化元素；图元与渲染内容的变化仍为失败。
+
+验收前记录的第一至第四轮失败与候选修复均保留作为复盘，**本节是最新 Windows 验收结论**。本次并没有模拟物理 TCP 丢包，也没有进行工业现场测试。日志未包含本地 `git rev-parse HEAD`，不得追溯绑定确切 Git SHA。补录文档的后续 Git 提交本身仍需下次质量检查；PR #72 保持 Draft / `@adui-dev`，等待维护者明确授权才允许合并。
