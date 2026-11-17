@@ -858,3 +858,8 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 
 - `scripts/test-oidc-studio-real-late.mjs`：增加只允许第二主体浏览器窗口 `normal/minimized` 的 CDP 管理函数。真正版本 2→3 读写时恢复第二窗口；提交成功、旧 201 交付后最小化第二窗口，再严格等待第一主体真实 `visible`，后续 CAS/IndexedDB/审计断言原样保留。
 - `scripts/test-oidc-studio-real-late.cases.mjs`：从原 9 项新增 2 项窗口命令与失败封闭离线回归，目标 11 项，尚需 Node 实际执行。
+
+### 第十七小批 · 本地数据异常的分阶段分类检查
+
+- `scripts/test-oidc-studio-real-late.mjs`：新增 `classifyStudioLocalDrift`，将 `canvasChanged`、`autoSaveChanged`、`draftCountChanged`、`draftHashChanged` 四项变化分类，并在原保存/远端提交/旧 201 消费/真实 CAS 复核/过期保存拒绝五个阶段执行原强制不变断言，失败只报告字段类别。
+- `scripts/test-oidc-studio-real-late.cases.mjs`：增加两项纯函数分类及敏感信息脱敏用例；预期离线总数由 11 增至 **13**。Node/Windows 真实测试待执行。
