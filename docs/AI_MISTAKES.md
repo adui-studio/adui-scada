@@ -376,6 +376,15 @@
 - **验证**：维护者已提供修正前 Windows 离线测试 **9/9**、`vp check` **335 文件/190 受检零警告错误**、`docs:check` **86** 份和完整 `ready` **退出码 0**；同次真实 Studio 专项**退出码 1**。新增阶段诊断候选已完成静态语法检查，**修正后的 Node 9/9、Windows `vp check` / `docs:check` / `ready` 与真实双框架 Lab 浏览器均待复验**。维护者日志未提供 `git rev-parse HEAD`，不能将前述成功结果绑定到某个 PR SHA。
 - **证据**：维护者 2026-11-17 Windows 首轮真实 Studio 迟到 201 专项及完整质量链日志、PR #72、`scripts/test-oidc-studio-real-late.mjs`、`scripts/test-oidc-studio-real-late.cases.mjs`、`docs/VALIDATION.md`。
 
+### E-042 · 双独立浏览器窗口下 Page.bringToFront 不能保证页面可见（第三十四批第十七小批）
+
+- **现象**：维护者第二轮 Windows 真实 `test:oidc:dual:studio:late` 在 React Studio 完成真实版本 2 保存、第二主体真实读取版本 2、CAS 2→3 返回 HTTP 201、第一主体消费原始 201 并显示基线 2 后，停在“浏览器切换到可见状态”，诊断状态为 `phase=released`、`writeAttempts=1`、`baselineRevision=2`、`savedSecondVersion=true`、**`visible=false`**，专项退出码 **1**。后续水位复核和 Vue 流程没有执行。
+- **已确认的测试假设缺陷**：原脚本仅执行 CDP `Page.bringToFront` 然后等待浏览器真正的 `document.visibilityState === "visible"`。CDP 该命令定义为“激活标签页”，不承诺把另一独立 Chrome/Edge 窗口从前台移走；实际 Windows 日志已证明它不足以满足当前可见性前置条件。**仍无法断言具体是遮挡、最小化、系统前台策略还是 Chromium 窗口生命周期造成隐藏**，不能据此判定生产 Studio、CAS 或 PostgreSQL 失败。
+- **最小修复候选**：只对真实测试的**第二主体隔离窗口**调用 CDP `Browser.getWindowForTarget` 与 `Browser.setWindowBounds`；在第二主体读/写前恢复为 `normal`，在其追加版本 3 后、第一主体完成旧 201 消费后设为 `minimized`，再激活第一主体标签并严格等待真实 `visible === true`。仅允许 `normal/minimized` 两个窗口状态并校验有效窗口 ID；失败返回固定中文安全消息，不修改 `document.visibilityState`、不模拟可见事件、不移除后续真实 GET/CAS/画布/草稿/审计断言。
+- **防复发**：跨两个独立浏览器 Profile 的 CDP 专项必须区分“激活标签页”和“操作系统窗口前台/可见”；可见性是需要真实观察的环境前置条件，绝不能用覆盖浏览器 DOM getter、强制派发隐藏状态下的 `visibilitychange` 或关闭 UI 校验来制造通过。浏览器窗口管理仅限测试临时 Profile，不依赖 Win32 外部提权或人工凭据。
+- **验证边界**：第二轮真实浏览器失败日志及恢复前状态已确认；新增窗口切换函数和拒绝用例为**修复候选**。候选的 Windows Node 离线测试、`vp check`、`docs:check`、`ready` 与双框架真实 Lab 专项尚未复验。上轮通过的质量链退出码 0 不能覆盖本次新增代码；本次用户日志也未提供本地 Git HEAD。
+- **证据**：PR #72、维护者第二轮 Windows 浏览器日志、`scripts/test-oidc-studio-real-late.mjs`、`scripts/test-oidc-studio-real-late.cases.mjs`、CDP 官方 `Page.bringToFront` 与 `Browser.setWindowBounds` 协议文档、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
