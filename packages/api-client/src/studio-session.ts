@@ -1,6 +1,6 @@
 import { parseScadaDocument } from "@adui/scada-core";
 import type { ProjectSnapshot, ScadaDocument } from "@adui/scada-core";
-import { ScadaApiError } from "./index.ts";
+import { isScadaAccessRejection, ScadaApiError } from "./index.ts";
 import type { ScadaApiClient, ScadaPrincipal } from "./index.ts";
 
 export interface ServerProjectSaveResult {
@@ -44,10 +44,15 @@ export class StudioServerProjectSession {
 
   /** 先校验快照、身份和当前服务端水位，供 UI 在用户确认后载入。 */
   async readVersion(projectId: string, revision: number): Promise<ServerProjectVersion> {
-    const identity = await this.api.getMe();
-    const snapshot = await this.api.readVersion(projectId, revision);
-    const current = await this.api.getProject(projectId);
-    return { snapshot, headRevision: current.headRevision, principal: identity.principal };
+    try {
+      const identity = await this.api.getMe();
+      const snapshot = await this.api.readVersion(projectId, revision);
+      const current = await this.api.getProject(projectId);
+      return { snapshot, headRevision: current.headRevision, principal: identity.principal };
+    } catch (error) {
+      if (isScadaAccessRejection(error)) this.reset();
+      throw error;
+    }
   }
 
   /** 只有用户实际载入最新服务端版本，才建立后续 CAS 保存基线。 */
@@ -73,7 +78,12 @@ export class StudioServerProjectSession {
         current = await this.api.getProject(checked.projectId);
       } catch (error) {
         if (!(error instanceof ScadaApiError) || error.kind !== "not_found") throw error;
-        // 无权访问与不存在统一 404；创建仍需服务端独立鉴权和租户唯一约束。
+        // 已明确载入过该工程后再收到 404，不能把授权撤销当作新工程创建。
+        if (this.baseline?.projectId === checked.projectId) {
+          this.reset();
+          throw error;
+        }
+        // 首次保存的 404 仍允许尝试创建；服务端独立校验身份和租户唯一约束。
         const created = await this.api.createProject(checked);
         this.baseline = {
           projectId: checked.projectId,
@@ -113,6 +123,9 @@ export class StudioServerProjectSession {
         }
         throw error;
       }
+    } catch (error) {
+      if (isScadaAccessRejection(error)) this.reset();
+      throw error;
     } finally {
       this.saving = false;
     }
