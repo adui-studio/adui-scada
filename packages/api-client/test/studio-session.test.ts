@@ -279,7 +279,9 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
       new ScadaApiError("登录已失效，请重新登录", "unauthenticated", 401),
     );
 
-    await expect(session.revalidateBaseline(waterTreatmentDemoDocument.projectId)).rejects.toMatchObject({
+    await expect(
+      session.revalidateBaseline(waterTreatmentDemoDocument.projectId),
+    ).rejects.toMatchObject({
       kind: "unauthenticated",
       status: 401,
     });
@@ -297,7 +299,9 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
       new ScadaApiError("工程不存在或无权访问", "not_found", 404),
     );
 
-    await expect(session.revalidateBaseline(waterTreatmentDemoDocument.projectId)).rejects.toMatchObject({
+    await expect(
+      session.revalidateBaseline(waterTreatmentDemoDocument.projectId),
+    ).rejects.toMatchObject({
       kind: "not_found",
       status: 404,
     });
@@ -316,7 +320,9 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
       principal: { tenantId: principal.tenantId, subjectId: "user-b" },
     });
 
-    await expect(session.revalidateBaseline(waterTreatmentDemoDocument.projectId)).rejects.toMatchObject({
+    await expect(
+      session.revalidateBaseline(waterTreatmentDemoDocument.projectId),
+    ).rejects.toMatchObject({
       kind: "forbidden",
       status: 403,
     });
@@ -335,7 +341,9 @@ describe("Studio 服务端工程 CAS 会话安全", () => {
       updatedAt: createdAt,
     });
 
-    await expect(session.revalidateBaseline(waterTreatmentDemoDocument.projectId)).rejects.toMatchObject({
+    await expect(
+      session.revalidateBaseline(waterTreatmentDemoDocument.projectId),
+    ).rejects.toMatchObject({
       kind: "conflict",
       status: 409,
     });
