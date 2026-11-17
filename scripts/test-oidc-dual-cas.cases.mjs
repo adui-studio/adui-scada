@@ -36,10 +36,13 @@ void describe("真实双 Keycloak 主体 CAS 浏览器安全预检", () => {
 
   void it("拒绝相同主体、不同租户和非法的可信身份上下文", () => {
     assert.doesNotThrow(() => requireDifferentSubjects(first, second));
-    assert.throws(() => requireDifferentSubjects(first, first), /必须属于同一可信租户的不同主体/);
+    assert.throws(
+      () => requireDifferentSubjects(first, first),
+      /两次登录映射到同一本地主体，第二个浏览器须使用另一位已预绑定的测试用户/,
+    );
     assert.throws(
       () => requireDifferentSubjects(first, { ...second, tenantId: "other" }),
-      /必须属于同一可信租户的不同主体/,
+      /两次登录所属租户不一致，请核对第二位测试用户的本机身份预绑定/,
     );
     assert.throws(
       () => requireDifferentSubjects(first, { ...second, subjectId: "不可信" }),
@@ -238,5 +241,13 @@ void describe("真实双 Keycloak 主体 CAS 浏览器安全预检", () => {
     const diagnostic = describeDualOidcFailure(new Error("secret_cookie=不允许进入终端"));
     assert.equal(diagnostic, "双身份 OIDC Lab 专项未通过，内部错误详情已脱敏");
     assert.equal(diagnostic.includes("secret_cookie"), false);
+    const sameSubject = new Error(
+      "两次登录映射到同一本地主体，第二个浏览器须使用另一位已预绑定的测试用户",
+    );
+    assert.equal(describeDualOidcFailure(sameSubject), sameSubject.message);
+    const differentTenant = new Error(
+      "两次登录所属租户不一致，请核对第二位测试用户的本机身份预绑定",
+    );
+    assert.equal(describeDualOidcFailure(differentTenant), differentTenant.message);
   });
 });
