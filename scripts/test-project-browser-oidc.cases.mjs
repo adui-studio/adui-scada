@@ -1067,8 +1067,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       querySelectorAll: () => [button],
     };
     const panel = {
-      querySelectorAll: (selector) =>
-        selector === ".studio-version-item" ? [row] : [],
+      querySelectorAll: (selector) => (selector === ".studio-version-item" ? [row] : []),
       querySelector: () => null,
     };
     const originalConfirm = () => false;
@@ -1095,17 +1094,11 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
   });
 
   void it("无效修订号或缺少目标按钮时不能触发人工确认", async () => {
-    await assert.rejects(
-      confirmPreviewedServerVersionInPage(0),
-      /冲突恢复确认载入版本参数不合法/,
-    );
+    await assert.rejects(confirmPreviewedServerVersionInPage(0), /冲突恢复确认载入版本参数不合法/);
     const originalDocument = globalThis.document;
     globalThis.document = { querySelector: () => null };
     try {
-      await assert.rejects(
-        confirmPreviewedServerVersionInPage(3),
-        /冲突恢复确认载入按钮不可用/,
-      );
+      await assert.rejects(confirmPreviewedServerVersionInPage(3), /冲突恢复确认载入按钮不可用/);
     } finally {
       globalThis.document = originalDocument;
     }

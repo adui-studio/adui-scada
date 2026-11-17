@@ -1049,14 +1049,10 @@ export async function confirmPreviewedServerVersionInPage(revision) {
     const until = Date.now() + 20000;
     while (Date.now() < until) {
       const notice = document.querySelector(".studio-notice")?.textContent ?? "";
-      const busy = [...(panel?.querySelectorAll(".studio-version-help") ?? [])].some(
-        (element) => element.textContent?.includes("正在处理工程版本"),
+      const busy = [...(panel?.querySelectorAll(".studio-version-help") ?? [])].some((element) =>
+        element.textContent?.includes("正在处理工程版本"),
       );
-      if (
-        confirmCount === 1 &&
-        !busy &&
-        notice.includes("已载入服务端最新版本 #" + revision)
-      ) {
+      if (confirmCount === 1 && !busy && notice.includes("已载入服务端最新版本 #" + revision)) {
         return { confirmed: true, confirmCount };
       }
       if (confirmCount > 0 && !busy && panel?.querySelector('[role="alert"]')) {

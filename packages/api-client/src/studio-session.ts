@@ -151,7 +151,11 @@ export class StudioServerProjectSession {
         identity.principal.tenantId !== version.principal.tenantId ||
         identity.principal.subjectId !== version.principal.subjectId
       ) {
-        throw new ScadaApiError("确认载入时服务端登录主体已变化，请重新登录并选择工程", "forbidden", 403);
+        throw new ScadaApiError(
+          "确认载入时服务端登录主体已变化，请重新登录并选择工程",
+          "forbidden",
+          403,
+        );
       }
       const current = await this.api.getProject(projectId);
       this.requireCurrentContext(generation);
