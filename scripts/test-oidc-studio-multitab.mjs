@@ -14,6 +14,7 @@ import {
   waitForLogin,
 } from "./test-oidc-dual-cas.mjs";
 import {
+  clickBrowserControlInPage,
   confirmPreviewedServerVersionInPage,
   conflictPreviewStateInPage,
   describeBrowserPageException,
@@ -21,6 +22,7 @@ import {
   enterStudioInPage,
   inspectStudioState,
   openProjectInPage,
+  pageStateInPage,
   resolveProjectBrowserLab,
   saveDraftInPage,
   triggerConflictPreviewInPage,
@@ -367,55 +369,21 @@ export function studioMultiTabUiStateInPage() {
   };
 }
 
-/** 只通过工程管理 UI 翻页查找本轮新建工程，不调用页面内部状态 setter。 */
-export async function findProjectPageInBrowserInPage(projectId) {
+export function openProjectBrowserMenuInPage() {
   const menu = document.querySelector(".studio-project-browser-menu");
-  const panel = document.querySelector(".studio-project-browser-panel");
-  if (!menu || !panel) throw new Error("同源多标签页页面操作失败");
+  if (!menu) throw new Error("同源多标签页页面操作失败");
   menu.open = true;
-  const refresh = [...panel.querySelectorAll("button")].find(
+  return true;
+}
+
+export function refreshProjectBrowserInPage() {
+  const panel = document.querySelector(".studio-project-browser-panel");
+  if (!panel) throw new Error("同源多标签页页面操作失败");
+  const button = [...panel.querySelectorAll("button")].find(
     (item) => item.textContent.trim() === "刷新",
   );
-  if (refresh && !refresh.disabled) refresh.click();
-  const until = Date.now() + 25000;
-  while (Date.now() < until) {
-    const items = [...panel.querySelectorAll(".studio-project-browser-item")];
-    const found = items.some((item) => item.querySelector("code")?.textContent?.trim() === projectId);
-    const pageNumber = Number(
-      panel.querySelector(".studio-project-browser-pagination span")
-        ?.textContent?.match(/第\s*(\d+)\s*页/)?.[1] ?? 0,
-    );
-    if (found) return { found: true, pageNumber };
-    const busy = [...panel.querySelectorAll("button")].some(
-      (item) => item.disabled && item.textContent.trim() === "刷新",
-    );
-    if (busy || items.length === 0) {
-      await new Promise((done) => setTimeout(done, 100));
-      continue;
-    }
-    const buttons = [...panel.querySelectorAll(".studio-project-browser-pagination button")];
-    const next = buttons[1];
-    if (!next || next.disabled) return { found: false, pageNumber };
-    next.click();
-    const changedUntil = Date.now() + 5000;
-    let pageChanged = false;
-    while (Date.now() < changedUntil) {
-      const currentPage = Number(
-        panel.querySelector(".studio-project-browser-pagination span")
-          ?.textContent?.match(/第\s*(\d+)\s*页/)?.[1] ?? 0,
-      );
-      const loading = [...panel.querySelectorAll("button")].some(
-        (item) => item.disabled && item.textContent.trim() === "刷新",
-      );
-      if (currentPage > pageNumber && !loading) {
-        pageChanged = true;
-        break;
-      }
-      await new Promise((done) => setTimeout(done, 100));
-    }
-    if (!pageChanged) throw new Error("同源多标签页工程列表未找到专用工程");
-  }
-  throw new Error("同源多标签页工程列表未找到专用工程");
+  if (button && !button.disabled) button.click();
+  return true;
 }
 
 export async function activateStudioTab(session) {
@@ -569,8 +537,23 @@ async function inspectProtectedState(session) {
 }
 
 async function openDedicatedProject(session, projectId) {
-  const found = await session.evaluate(findProjectPageInBrowserInPage, projectId);
-  if (!found?.found) throw new Error("同源多标签页工程列表未找到专用工程");
+  assert.equal(await session.evaluate(openProjectBrowserMenuInPage), true);
+  await session.evaluate(refreshProjectBrowserInPage);
+  let state = await waitFor(async () => {
+    const current = await session.evaluate(pageStateInPage);
+    return current && !current.busy ? current : null;
+  }, "同源多标签页工程列表加载");
+  let found = state.ids.includes(projectId);
+  for (let index = 0; !found && index < 100 && state.nextEnabled; index += 1) {
+    const previousPage = state.pageNumber;
+    assert.equal(await session.evaluate(clickBrowserControlInPage, "next"), true);
+    state = await waitFor(async () => {
+      const current = await session.evaluate(pageStateInPage);
+      return current && !current.busy && current.pageNumber > previousPage ? current : null;
+    }, "同源多标签页工程列表翻页");
+    found = state.ids.includes(projectId);
+  }
+  if (!found) throw new Error("同源多标签页工程列表未找到专用工程");
   const opened = await session.evaluate(openProjectInPage, projectId, 1, "confirm");
   assert.deepEqual(opened, { confirmCount: 1, intercepted: 0, outcome: "confirm" });
   assert.equal(await session.evaluate(waitForStudioActionIdleInPage), true);
