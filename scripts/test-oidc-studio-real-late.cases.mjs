@@ -237,8 +237,11 @@ void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
       headCleared: false,
       hasError: false,
       savedSecondVersion: false,
+      visible: false,
     });
     assert.equal(JSON.stringify(state).includes(csrf), false);
+    runtime.document.visibilityState = "visible";
+    assert.equal(studioRealLateStateInPage(runtime).visible, true);
   });
 
   void it("保存期间尝试恢复草稿只调用现有控件，不修改测试页面和全局确认函数", () => {
