@@ -284,7 +284,11 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
       { count: Number.NaN, hash: "a".repeat(64) },
     ]) {
       assert.throws(
-        () => requireSameCanvasAndDrafts({ ...snapshot, drafts: invalidDrafts }, { ...snapshot, drafts: invalidDrafts }),
+        () =>
+          requireSameCanvasAndDrafts(
+            { ...snapshot, drafts: invalidDrafts },
+            { ...snapshot, drafts: invalidDrafts },
+          ),
         /标签页恢复改变了 IndexedDB 草稿/,
       );
     }
@@ -293,7 +297,11 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
       /标签页恢复改变了本地画布/,
     );
     assert.throws(
-      () => requireSameCanvasAndDrafts({ ...snapshot, canvas: undefined }, { ...snapshot, canvas: undefined }),
+      () =>
+        requireSameCanvasAndDrafts(
+          { ...snapshot, canvas: undefined },
+          { ...snapshot, canvas: undefined },
+        ),
       /标签页恢复改变了本地画布/,
     );
   });
@@ -306,7 +314,11 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
     };
     for (const invalidAutoSave of [undefined, null, "true", 1]) {
       assert.throws(
-        () => requireUnchangedStudioState({ ...snapshot, autoSave: invalidAutoSave }, { ...snapshot, autoSave: invalidAutoSave }),
+        () =>
+          requireUnchangedStudioState(
+            { ...snapshot, autoSave: invalidAutoSave },
+            { ...snapshot, autoSave: invalidAutoSave },
+          ),
         /标签页恢复改变了自动保存状态/,
       );
     }
