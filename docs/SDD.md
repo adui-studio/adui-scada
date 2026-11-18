@@ -1083,3 +1083,11 @@ React `StudioPage.tsx` 用 `useMemo(() => validateProjectReleasePreflight(state.
 `passed` 仅代表检查时该已保存版本满足现有 SVG 静态兼容性，**不是发布许可**；响应始终 `Cache-Control: no-store`。锁的保护范围仅限该次读取事务；请求结束后版本仍可能继续追加，因此未来真实发布必须重新在独立发布事务中比较版本、授权及安全门禁，而不能信任本次预检结果。新增只读路由没有发布历史表、设备连接、工业命令或数据源访问。
 
 单元测试覆盖有效当前版本、静态属性错误、过期水位、授权缺失/工程不存在、损坏摘要与无效 revision；HTTP E2E 覆盖 200/401/404/409/400 与零工程写入。服务端没有直接接收未保存的 Studio 编辑态；React/Vue 仍使用当前共享 Core 的本地静态预检，接入服务端报告须独立设计工程保存/载入及水位保护。
+
+## 2026-11-18 · 第三十五批第七小批：框架无关服务端预检 API Client 契约
+
+`packages/api-client/src/index.ts` 的 `ScadaApiClient` 新增 `preflightRelease(projectId: string, revision: number): Promise<ScadaReleasePreflightReport>`。服务端路由与 Prisma 事务完全沿用第四、第五小批已实现的只读行为。共享 Client 构造的 GET 目标固定为 `/api/v1/projects/{projectId}/versions/{revision}/release-preflight`，不得输入外部 Origin，使用已有 `credentials: same-origin`、`mode: same-origin`、`redirect: error`、`cache: no-store`、`referrerPolicy: no-referrer`，不读取 CSRF Cookie，也不携带请求体。
+
+新的响应解析器要求精确六个根字段；`revision` 与 `headRevision` 都等于本次请求的正安全整数，`projectId` 必须一致，`contentHash` 必须是小写 SHA-256 格式（不重新计算服务端快照摘要，服务端仍负责持久化完整性核对）。`issues` 必须为最多 10000 条的数组，每条精确为 `code/severity/path/message`，代码只允许共享 Core 当前的 `DOCUMENT_INVALID`、`UNSUPPORTED_SYMBOL`、`UNSUPPORTED_SYMBOL_VERSION`、`UNSUPPORTED_BINDING_SLOT`、`UNSUPPORTED_SYMBOL_PROP`、`UNRESOLVED_BOUND_TAG`、`UNSUPPORTED_RULES`；severity 必须为 `error`，非空路径和中文原因的长度上限 512，`passed` 与有无 issue 必须一致。API 200 也必须包含 `Cache-Control: no-store`，否则 `invalid_response`。严格拒绝多余的 `document`、`snapshot`、`token`、`published` 等字段。
+
+本批仅扩展框架无关 Client 类型与请求/解析能力，不持久化报告、不改 Studio UI、工程 Schema、服务端模块、CAS 基线、权限或数据库迁移。预检报告通过不等于正式发布许可；工程后续仍可能被其他主体更新，未来发布事务必须重新复核身份、授权、修订水位、静态兼容性以及工业安全条件。新增 8 条 API Client Vitest 反向/正向用例，并更新现有 Studio 会话测试 Mock 以满足新的接口签名。
