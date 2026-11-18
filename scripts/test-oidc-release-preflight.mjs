@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { loadEnvFile } from "node:process";
 import { setTimeout as pause } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { resolve } from "node:path";
 import {
   executablePath,
   identityInPage,
