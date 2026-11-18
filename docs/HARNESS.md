@@ -3285,7 +3285,7 @@ finally {
 只读检查示例（不会修改数据库）：
 
 ```powershell
-docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml exec -T postgres psql -U adui_scada -d adui_scada -v ON_ERROR_STOP=1 -c "SELECT current_database();" -c "SELECT migration_name, started_at, finished_at, rolled_back_at FROM \"_prisma_migrations\" WHERE migration_name = '20261118000000_release_state_and_events';" -c "SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'public.scada_project_grants'::regclass AND conname = 'scada_project_grants_permission_check';" -c "SELECT to_regclass('public.scada_project_release_events') AS release_events, to_regclass('public.scada_project_release_state') AS release_state;"
+docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml exec -T postgres psql -U adui_scada -d adui_scada -v ON_ERROR_STOP=1 -c "SELECT current_database();" -c "SELECT migration_name, started_at, finished_at, rolled_back_at FROM public._prisma_migrations WHERE migration_name = '20261118000000_release_state_and_events';" -c "SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'public.scada_project_grants'::regclass AND conname = 'scada_project_grants_permission_check';" -c "SELECT to_regclass('public.scada_project_release_events') AS release_events, to_regclass('public.scada_project_release_state') AS release_state;"
 ```
 
 以上查询仅用于判断迁移失败前是否留下了部分 DDL；不要公开连接凭据或修改查询为写操作。
