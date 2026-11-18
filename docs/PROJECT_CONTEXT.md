@@ -1520,3 +1520,9 @@ PR #75 的同源双标签 CAS 质量和真实浏览器专项经 Windows 19/19、
 PR #86 依据维护者明确授权 Squash 合并至 `main@a934a33ba2251880f934ff4f5e9937ff78711f5c`。维护者上传日志证明单元测试 593/593、HTTP E2E 51/51、`vp check` 341/196 零告警、完整 `ready` 退出码 0；**未提供**单独 Git HEAD、`test:browser` 和 `test:release:preflight:browser` 退出码。该浏览器验收缺口保持待补，不得记作已通过。
 
 第三小批继续 FR-008 静态门禁：Core 增加已知 SVG 图元 `props` 消费检查，对未被渲染器处理的属性报告路径与受控错误，不改变现有工程文件或工业设备。新增三项单测，候选全量 Vitest 目标为 596/596。候选的 `vp check`、`docs:check`、`ready` 和浏览器专项均待执行；新 PR 保持 Draft，需先验收并取得独立合并授权。
+
+## 2026-11-18 · PR #87 HTTPS Studio 浏览器专项探测修复候选
+
+维护者 Windows 新上传日志：本批 Core 属性兼容性预检的 Vitest **596/596**、HTTP E2E **51/51**、`vp check` **341/196 零告警**、文档 **86 份**、完整 `ready` **退出码 0**。但真实 Vite Web 为 HTTPS 15173/15174，旧 `test-studio-browser.mjs` 默认探测 HTTP，导致布局与发布预检浏览器专项均在 React 首页阶段 **退出码 1**，其余 UI 断言未运行。
+
+当前 Draft PR #87 追加不降级协议的双 Web 回环地址解析、Node 可信 TLS GET 预检、6 项配置/安全离线测试，并将配置专项纳入 `ready`。协作容器已以 GitHub 原文件 Blob 校验执行 Node 离线 6/6，并以临时 HTTPS 服务验证证书拒绝/显式信任路径；Windows 新 HEAD 的 `vp check`、`ready`、真实 React/Vue Chrome/Edge 布局与发布预检专项尚待维护者复测。PR 保持 Open / Draft，未获本次单独合并授权，不合并。
