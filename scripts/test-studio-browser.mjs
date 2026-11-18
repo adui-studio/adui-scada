@@ -6,7 +6,10 @@ import { join } from "node:path";
 import { loadEnvFile } from "node:process";
 import { setTimeout as pause } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { resolveStudioBrowserTargets, verifyStudioBrowserTarget } from "./studio-browser-targets.mjs";
+import {
+  resolveStudioBrowserTargets,
+  verifyStudioBrowserTarget,
+} from "./studio-browser-targets.mjs";
 
 // 浏览器验证统一读取仓库根目录 .env，避免连接其他端口上的旧工程服务。
 const envPath = fileURLToPath(new URL("../.env", import.meta.url));

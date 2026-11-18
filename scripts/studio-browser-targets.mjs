@@ -78,8 +78,7 @@ export async function verifyStudioBrowserTarget(target, env = process.env) {
       if (response.status !== 200) throw new Error("首页响应状态异常");
     }
   } catch (error) {
-    const code =
-      error && typeof error === "object" ? (error.cause?.code ?? error.code) : undefined;
+    const code = error && typeof error === "object" ? (error.cause?.code ?? error.code) : undefined;
     if (code === "ENOENT" || code === "EACCES") {
       throw new Error(target.name + " 本机 HTTPS 根证书文件不可读取");
     }
