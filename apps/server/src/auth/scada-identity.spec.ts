@@ -121,6 +121,7 @@ function makeSessionService() {
 function context(
   request: ScadaAuthenticatedRequest,
   action?: "project:read" | "version:read" | "version:append",
+  responseHeaders = new Map<string, string>(),
 ): ExecutionContext {
   const handler = () => undefined;
   if (action) Reflect.defineMetadata(SCADA_PROJECT_PERMISSION, action, handler);
@@ -128,7 +129,14 @@ function context(
     getType: () => "http",
     getHandler: () => handler,
     getClass: () => class TestRoute {},
-    switchToHttp: () => ({ getRequest: () => request }),
+    switchToHttp: () => ({
+      getRequest: () => request,
+      getResponse: () => ({
+        setHeader(name: string, value: string) {
+          responseHeaders.set(name.toLowerCase(), value);
+        },
+      }),
+    }),
   } as unknown as ExecutionContext;
 }
 
@@ -231,9 +239,14 @@ describe("可信会话与工程 Guard", () => {
     const fake = makeSessionService();
     const guard = new ScadaSessionGuard(fake.service, makeAuditRecorder().audit, makeOidcConfig());
     for (const header of [undefined, ["Bearer fake"], "Basic fake", "Bearer fake"]) {
+      const responseHeaders = new Map<string, string>();
       await expect(
-        guard.canActivate(context({ headers: { authorization: header } })),
+        guard.canActivate(
+          context({ headers: { authorization: header } }, undefined, responseHeaders),
+        ),
       ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(responseHeaders.get("cache-control")).toBe("no-store");
+      expect(responseHeaders.get("pragma")).toBe("no-cache");
     }
   });
 
@@ -244,8 +257,11 @@ describe("可信会话与工程 Guard", () => {
     const request: ScadaAuthenticatedRequest = {
       headers: { authorization: `Bearer ${issued.token}` },
     };
-    expect(await guard.canActivate(context(request))).toBe(true);
+    const responseHeaders = new Map<string, string>();
+    expect(await guard.canActivate(context(request, undefined, responseHeaders))).toBe(true);
     expect(request.scadaPrincipal).toEqual(principal);
+    expect(responseHeaders.get("cache-control")).toBe("no-store");
+    expect(responseHeaders.get("pragma")).toBe("no-cache");
   });
 
   it("工程 Guard 缺少权限元数据时默认拒绝", async () => {

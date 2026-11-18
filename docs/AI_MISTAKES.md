@@ -405,35 +405,44 @@
 
 > **2026-11-17 · E-041～E-044 Windows 最终验收补录**：以上四项的“候选 / 待复测”仅描述各轮历史状态。维护者现已在 Windows 真实完成 `pnpm run test:oidc:dual:studio:config` **16/16 通过**、`vp check` **335 格式文件 / 190 受检零告警错误**、`docs:check` **86 份 Markdown** 和完整 `pnpm run ready` **退出码 0**（Vitest **567/567**、NestJS HTTP E2E **49/49**，React/Vue/NestJS 构建完成）。另在两个全新隔离测试工程上，由两位真实预绑定 Keycloak 主体分别执行 React/Vue Studio 真实 UI 的迟到 HTTP 201 测试，均完成版本 2→3、真实可见性恢复、远端水位只读复核、过期 CAS 拒绝、SVG 内容和 IndexedDB 草稿保持不变、仅三版历史和审计；交互式 `pnpm run test:oidc:dual:studio:late` **退出码 0**。E-041 的阶段错误已通过明确状态诊断定位；E-042 的双窗口可见性障碍未再复现；E-043 的本地差异已按阶段区分；E-044 的非持久化视口网格已从此专项 SVG 内容快照中精确排除，其余图元仍严格比较。**注意**：没有独立的原始 SVG DOM diff 证明前轮变化完全源自网格；最终通过仅证明新的测试口径及其所有保留断言满足。201 暂缓是浏览器对已到达真实响应的消费时序，**非 TCP 断流**。成功日志没有本地 Git HEAD，新补录文档提交尚未重新运行 Windows 全链；PR #72 仍 Open/Draft 并指派 `@adui-dev`，等待明确合并授权。
 
+### E-045 · 初始空白标签页未安装可见性探针导致真实 OIDC 登录前阻塞（第三十四批第二十小批）
 
-### E-045 · 同源多标签页验收脚本重构后重复声明局部变量（第三十四批第二十小批）
+- **现象**：维护者截图显示同一 Chrome 窗口的初始标签页及四个测试标签页仍为 `about:blank`；上传日志中离线安全用例 9/9、`vp check` 零告警、Vitest 581/581、服务端 E2E 49/49，但未包含真实多标签页浏览器专项的终端命令、退出码或完成记录。不能单凭截图断言真实专项的最终退出阶段。
+- **确认的代码缺陷**：`installPageProbes` 只调用 `Page.addScriptToEvaluateOnNewDocument`，该注入默认不执行于已经存在的空白文档。`activateTab` 却先于 `waitForLogin` 导航读取当前文档的可见性计数，并要求隐藏变可见时计数递增。协作容器真实 Chromium 对照显示旧逻辑 `probe=null`，在当前空白文档立即执行探针安装后可观察到 `visibleEvents=1`。
+- **最小修复**：保持新文档注入与真实 `Page.bringToFront`，额外在新标签页创建时调用一次 `session.evaluate(installMultiTabVisibilityProbeInPage)` 初始化已存在的空白文档。页面探针自身幂等，不修改 `document.visibilityState`、不人工派发 `visibilitychange`，不放宽后续真实 BFF、CAS、草稿与权限约束。新增离线顺序断言。
+- **避免**：CDP 新文档注入与已存在执行上下文是两个不同的生命周期；测试如果在首次 `Page.navigate` 之前读取当前 DOM 状态，就必须先在当前文档初始化依赖项，并保留导航后的注入；不能以空白页面作为真实 OIDC 登录失败的证据。
+- **验证边界**：协作容器已执行 `node --test /mnt/data/test_multitab_patch.mjs`，独立顺序模拟 **1/1** 通过；`node /mnt/data/verify_blank_visibility.mjs` 在真实 Chromium 观察到旧空白文档未注入、修复后 `visibleEvents=1`。两项验证仅覆盖本次探针初始化机制；当前 GitHub 新提交的 Windows `vp check`、完整 `ready`、真实 Keycloak/HTTPS/PostgreSQL 浏览器专项待执行，不能声称 PR #76 全链通过。
+- **证据**：维护者 2026-11-18 上传的五标签页截图及质量链日志、PR #76、`scripts/test-oidc-real-multitab.mjs`、`scripts/test-oidc-real-multitab.cases.mjs`、`docs/VALIDATION.md`。
 
-- **现象**：新增 `openDedicatedProject` 分页逻辑时，先声明 `let state` 保存分页状态，随后又在同一函数作用域声明 `const state` 保存 Studio UI 状态。隔离 ECMAScript 语法解析在候选静态核对阶段发现重复绑定，**没有提交给维护者 Windows，也没有真实 Node 执行失败记录**。
-- **根因**：把原本单一用途的局部变量扩展为两种状态后，未同步调整后续变量名；只检查代码片段而没有解析完整文件。
-- **修正**：将第二个绑定改为 `ui`，分别表达工程列表分页状态与 Studio CAS UI 状态；主脚本和离线用例文件重新通过隔离 ECMAScript 语法解析。
-- **防复发**：每次对已有函数拼接或替换代码后，必须对**完整文件**执行语法解析，并检查同一词法作用域的 `const/let` 重复绑定；不能以局部片段看起来正确代替文件级检查。
-- **验证边界**：本次只完成隔离 ECMAScript 语法解析；仓库 Node `--test`、Windows `vp check`、`docs:check`、完整 `ready` 和真实双标签页 Lab 尚未执行，不能写成通过。
-- **证据**：`scripts/test-oidc-studio-multitab.mjs`、`scripts/test-oidc-studio-multitab.cases.mjs`。
+### E-046 · 将 CAS 状态摘要误当作 SVG/草稿保护快照（第三十四批第二十小批）
 
+- **现象**：维护者 Windows 真实执行 `pnpm run test:projects:oidc:multitab:browser`，单次 Keycloak 登录完成、四个标签页已核对为同一 BFF 主体，随后报“标签页恢复改变了本地画布”，浏览器专项 **退出码 1**；没有进入远端版本推进、注销与 Vue 完整验收。
+- **已确认的代码原因**：`openStudioProject` 返回 `readMultiTabSessionStateInPage` 的 CAS/身份 UI 状态摘要，不包含 `canvas` 或 `drafts`；真实脚本在 React/Vue 各自首次 `openStudioProject` 后创建草稿、开启自动保存，却立即用 `requireSameCanvasAndDrafts(initialSummary, draftSnapshot)` 比较二者。摘要 `canvas` 为 `undefined`，与从真实 SVG 读取的字符串必然不相等。这里是测试快照类型混用导致的确定性误报，**不能据此推断现场工程画布有变化**。
+- **最小修复**：保留 `openStudioProject` 对正式工程 UI 确认与 CAS 修订号的校验；React/Vue 均只在 `prepareFollowerDraft` 成功完成草稿创建和自动保存启用后，取得 `inspectProtectedState` 全量快照作为后续基准。删除初始化阶段两处无效的摘要与草稿比较，不删除后续版本漂移、CAS 恢复和注销时 SVG 内容、IndexedDB 整记录摘要、草稿数量、自动保存状态、零工程 POST 的严格断言。
+- **避免**：不能把只读 CAS 状态摘要当作持久化数据快照。建立本地数据保护基准应在业务初始化完成后、行为复核之前；初始化自身会有意创建草稿并启用自动保存，不应对初始化前后状态使用“完全不变”断言。新增 Node 离线用例验证 `prepareFollowerDraft` 返回完整画布/草稿状态，CAS 摘要仍被严格比较函数拒绝。
+- **验证边界**：维护者提供的**修复前** Windows 日志：多标签页离线 **10/10**、`vp check` **337 格式文件/192 受检零告警**、`docs:check` **86 个 Markdown**、Vitest **581/581**、HTTP E2E **49/49**；上传内容显示 `ready` 构建到末尾，**没有最终退出码**。真实浏览器专项明确退出码 **1**。当前修复候选的离线目标 **11/11**，Windows `vp check`、`docs:check`、完整 `ready`、真实 React/Vue/Keycloak/PostgreSQL 专项均须重新执行。
+- **证据**：维护者 2026-11-18 浏览器终端输出、PR #76、`scripts/test-oidc-real-multitab.mjs`、`scripts/test-oidc-real-multitab.cases.mjs`、`docs/VALIDATION.md`。
 
-### E-046 · 清理脚本导入时误删入口守卫仍使用的 resolve（第三十四批第二十小批）
+### E-047 · Session Guard 新增 HTTP 响应接口后遗漏旧身份测试夹具（第三十四批第二十七小批）
 
-- **现象**：整理新浏览器脚本的未使用导入时，误将 node:path 的 resolve 一并移除；文件底部的直接执行入口仍调用 resolve(process.argv[1])。文件语法解析不会检查该标识符是否在运行时可用。
-- **根因**：只根据主流程中的路径拼接判断导入是否使用，没有全文搜索入口守卫和模块尾部代码。
-- **修正**：恢复 resolve 导入，并保留 join；未改变入口守卫行为。
-- **防复发**：删除导入前必须对整个文件搜索标识符全部引用点；语法解析后还要做静态标识符核对或真实 Node 执行，不能把“语法通过”当成“运行通过”。
-- **验证边界**：当前已恢复导入；仓库 Node 运行、Windows Vite+ 检查和真实浏览器专项仍待执行。
-- **证据**：scripts/test-oidc-studio-multitab.mjs。
+- **现象**：维护者 Windows 在 PR #83 初版候选执行 `vp check` **337 个格式文件、192 个受检文件零警告错误**；`pnpm run test:unit` **580/583**、3 项失败，均在 `apps/server/src/auth/scada-identity.spec.ts` 的既有 Bearer 拒绝/成功/审计用例中报告 `TypeError: http.getResponse is not a function`。完整 `pnpm run ready` 于单测处退出码 **1**；独立 NestJS HTTP E2E **49/49**、`docs:check` 86 份通过。这些是**修复前的实测结果**。
+- **确认根因**：本批生产 `ScadaSessionGuard.canActivate` 为确保被 Guard 提前拒绝的 401/403 同样禁止缓存，在 HTTP 上下文调用 `context.switchToHttp().getResponse()` 并设置 `Cache-Control: no-store` / `Pragma: no-cache`。新增的 `scada-session.guard.spec.ts` Mock 已同步提供 `getResponse`，但另一份长期存在的 `scada-identity.spec.ts` 公共 `context()` 仍只实现 `getRequest()`；测试在执行原身份与审计逻辑前抛出 TypeError。这是旧测试夹具漏更，不是可据此断言真实 BFF 发生认证放行或数据泄漏。
+- **最小修复**：仅补全 `scada-identity.spec.ts` 的共用 HTTP Context 夹具，保留既有 `getRequest`、权限 Metadata、身份与审计断言，追加可记录头部的 `getResponse().setHeader()`。在原无效 Bearer 401 和有效会话成功场景分别断言 `no-store` / `no-cache`，无须更改正式 Guard、绕过响应对象读取或弱化测试断言。
+- **防复发**：任何 NestJS Guard/Interceptor 新增 `ExecutionContext` 访问方法时，必须全文检索**所有**共用与独立测试夹具，并为该方法补上最小 Mock；单个新测试通过与真实装配 E2E 通过，不能替代全量单元测试。检查失败的真实异常类别，不因三项用例同时失败就修改已正确执行的生产身份逻辑。
+- **验证边界**：原 Windows `vp check`、HTTP E2E、文档检查通过与 `ready` 失败均已实测。当前 PR #83 修复候选只已通过 GitHub 源码和补丁静态核对，**修复后 Windows `pnpm run test:unit`（目标 583/583）、`vp check`、`docs:check`、完整 `pnpm run ready` 均待执行**；不可将原 `580/583` 宣称已修复通过。
+- **证据**：维护者 2026-11-18 Windows 日志、PR #83、`apps/server/src/auth/scada-identity.spec.ts`、`apps/server/src/auth/scada-session.guard.ts`、`docs/VALIDATION.md`。
 
+> **2026-11-18 · E-047 Windows 结案补录**：上述“修复后待测”是候选阶段的历史边界。维护者 Windows 在修复公共 `ExecutionContext` Mock 后实际运行 `pnpm run test:unit`，**49/49 文件、583/583 用例通过，退出码 0**；完整 `pnpm run ready` **退出码 0**，包括 `vp check` 337/192 零告警、HTTP E2E 49/49、文档 86 份以及双框架和服务端构建。旧 3 项 TypeError 未再发生。PR #83 已经维护者明确授权 Squash 合并至 `main@650b084f770bb92241b3b93a02689160b7b8bc41`。原日志没有本机 `git rev-parse HEAD`，合并后新提交没有额外执行 Windows 复测；不可将此结论延伸为工业现场安全认证。
 
-### E-047 · 复用其他专项的浏览器状态读取器却未复用其写入守卫（第三十四批第二十小批）
+### E-048 · 旧同源双标签页专项在 CDP 中引用 Node 模块常量（第三十四批遗留 PR #75）
 
-- **现象**：新同源双标签页脚本复用了工程浏览器专项的冲突预览状态函数；该函数读取的是原专项的全局访问拒绝守卫计数，而新专项安装的是独立写入守卫，因此预览状态的 writeAttempts 会返回 -1，不能作为本专项的写入次数断言。
-- **根因**：只复用了 UI 预览状态函数，没有核对它依赖的页面全局状态来源；不同专项的测试守卫不是同一个全局对象。
-- **修正**：预览状态只断言比较视图、目标修订号和 CAS 已清除；实际写入次数统一从本专项的 studioMultiTabWriteStateInPage 读取。
-- **防复发**：跨测试文件复用页面函数前，必须检查函数读取的全局变量、注入脚本及状态生命周期；UI 状态与请求守卫计数应由各自专项的同一数据源提供。
-- **验证边界**：修正已完成；隔离 V8 核心门禁用例与静态解析需在最终版本重新执行，真实 Node 和浏览器验收仍待维护者执行。
-- **证据**：scripts/test-oidc-studio-multitab.mjs、scripts/test-project-browser-oidc.mjs。
+- **现象**：2026-11-18 排查长期保持 Draft 的 PR #75 时，在旧 `scripts/test-oidc-studio-multitab.mjs` 中发现 `createMultitabProjectInPage` 和 `armStudioMultiTabWriteInPage` 的项目 ID 检查依赖模块级 `PROJECT_PATTERN`。二者被 `session.evaluate` 使用 `function.toString()` 独立发往真实浏览器，页面内没有 Node 模块词法环境，因而存在确定的 `ReferenceError` 风险。**没有 Windows 运行失败证据，不能记作真实浏览器事故。**
+- **根因**：原离线单测直接调用导出函数，与 Node 模块一起运行，可以访问该常量，未模拟 CDP 序列化边界；重复违反 E-002、E-025 与 E-039 的已知规则。
+- **修正**：只在两段浏览器页面函数内联已审核的 `b34-oidc-multitab-<UUID>` 精确正则，仍拒绝其他工程；Node 侧数据库审计和随机工程生成继续使用模块级常量。新增 Node 内置测试，要求两段页面函数的序列化源码均不包含 `PROJECT_PATTERN`；原 18 项测试保持不变，目标增加到 19 项。未修改现有 BFF、CSRF、真实工程访问保护或数据库。
+- **合流说明**：PR #75 的旧文档曾暂用 E-045/E-046/E-047 记录三处静态候选问题；这三个编号后来被 `main` 的真实四标签页与身份 Guard 错误正式占用，**绝不以旧分支编号覆盖主线历史**。保留 PR #75 的改动历史，通过带双父提交的合流和主线文档重建保留当前正式编号。
+- **防复发**：页面运行函数必须自包含；CDP `evaluate` 与 Node 直接调用是两个不同环境。对新脚本先检查序列化源码，不允许引用 import/模块常量，再运行 Node 离线、`vp check`、完整 `ready` 和真实 Chrome/Keycloak 专项；单测静态断言不等于浏览器实测。
+- **验证边界**：截至此次远程候选，**未执行** Windows Node 19/19、`vp check`、`docs:check`、`ready` 或真实 React/Vue 本机 Lab 浏览器。原 PR #75 声称的隔离 V8 18/18 仅属于旧代码、并非当前提交的真实 Node 测试。
+- **证据**：PR #75、`scripts/test-oidc-studio-multitab.mjs`、`scripts/test-oidc-studio-multitab.cases.mjs`、`docs/VALIDATION.md`。
 
 ## 三、从已发生问题提炼的预防性门禁
 

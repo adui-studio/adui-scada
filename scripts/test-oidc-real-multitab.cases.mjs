@@ -1,0 +1,629 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import {
+  describeMultiTabFailure,
+  installMultiTabVisibilityProbeInPage,
+  installPageProbes,
+  logoutCurrentSessionInPage,
+  prepareFollowerDraft,
+  prepareWriterReadOnlySession,
+  readAuthStatusInPage,
+  readLogoutProjectStatusesInPage,
+  readMultiTabSessionStateInPage,
+  refreshProjectListInPage,
+  requireHiddenSessionUnchanged,
+  requireLogoutHttp401,
+  requireLogoutProjectDenied,
+  requireSameCanvasAndDrafts,
+  requireSamePrincipal,
+  requireUnchangedStudioState,
+  requireVisibleTransition,
+  resolveMultiTabMode,
+  verifyHiddenTabBeforeResume,
+  visibilityProbeStateInPage,
+} from "./test-oidc-real-multitab.mjs";
+
+const sample = {
+  SCADA_DATABASE_URL: "postgresql://scada:secret@127.0.0.1:15432/adui_scada",
+  SCADA_LAB_POSTGRES_PORT: "15432",
+};
+
+void describe("OIDC 真实多标签页会话安全门禁", () => {
+  void it("只接受与显式确认完全一致的本机隔离数据库", () => {
+    assert.deepEqual(
+      resolveMultiTabMode(["--run-multitab", "--confirm-lab", "adui_scada"], sample),
+      { databaseName: "adui_scada" },
+    );
+    assert.deepEqual(
+      resolveMultiTabMode(["--run-multitab", "--confirm-lab", "adui_scada_oidc_lab"], {
+        SCADA_DATABASE_URL: "postgresql://scada:secret@127.0.0.1:15432/adui_scada_oidc_lab",
+        SCADA_LAB_POSTGRES_PORT: "15432",
+      }),
+      { databaseName: "adui_scada_oidc_lab" },
+    );
+  });
+
+  void it("缺少显式确认、库名不一致或数据库不是本机时拒绝启动", () => {
+    assert.throws(
+      () => resolveMultiTabMode([], sample),
+      /真实多标签页测试必须显式确认本机隔离数据库/,
+    );
+    assert.throws(
+      () => resolveMultiTabMode(["--run-multitab", "--confirm-lab", "other"], sample),
+      /真实多标签页测试只允许本机隔离数据库/,
+    );
+    assert.throws(
+      () =>
+        resolveMultiTabMode(["--run-multitab", "--confirm-lab", "adui_scada"], {
+          SCADA_DATABASE_URL: "postgresql://scada:secret@db.example.org/adui_scada",
+          SCADA_LAB_POSTGRES_PORT: "15432",
+        }),
+      /真实多标签页测试只允许本机隔离数据库/,
+    );
+  });
+
+  void it("真实可见性探针只记录浏览器报告的状态变化", () => {
+    let listener;
+    const runtime = {
+      document: {
+        visibilityState: "hidden",
+        addEventListener(type, callback) {
+          assert.equal(type, "visibilitychange");
+          listener = callback;
+        },
+      },
+    };
+    assert.equal(installMultiTabVisibilityProbeInPage(runtime), true);
+    runtime.document.visibilityState = "visible";
+    listener();
+    runtime.document.visibilityState = "hidden";
+    listener();
+    assert.deepEqual(visibilityProbeStateInPage(runtime), {
+      visibility: "hidden",
+      visibleEvents: 1,
+      hiddenEvents: 1,
+    });
+    assert.equal(
+      requireVisibleTransition(
+        { visibility: "hidden", visibleEvents: 2, hiddenEvents: 1 },
+        { visibility: "visible", visibleEvents: 3, hiddenEvents: 1 },
+      ),
+      true,
+    );
+    assert.throws(
+      () =>
+        requireVisibleTransition(
+          { visibility: "hidden", visibleEvents: 2, hiddenEvents: 1 },
+          { visibility: "visible", visibleEvents: 2, hiddenEvents: 1 },
+        ),
+      /真实标签页没有发生可见性切换/,
+    );
+  });
+
+  void it("初始空白标签页必须在首次激活前安装可见性探针", async () => {
+    const calls = [];
+    const session = {
+      send: async (method, params) => {
+        calls.push(method);
+        assert.equal(method, "Page.addScriptToEvaluateOnNewDocument");
+        assert.match(params.source, /installMultiTabVisibilityProbeInPage/);
+        assert.match(params.source, /installAccessDenialFaultInPage/);
+      },
+      evaluate: async (action) => {
+        calls.push("Runtime.evaluate");
+        assert.equal(action, installMultiTabVisibilityProbeInPage);
+        return true;
+      },
+    };
+    await installPageProbes(session, true);
+    assert.deepEqual(calls, ["Page.addScriptToEvaluateOnNewDocument", "Runtime.evaluate"]);
+  });
+
+  void it("四个标签页必须对应同一租户和同一主体", () => {
+    const principal = { tenantId: "tenant-a", subjectId: "subject-a" };
+    assert.equal(requireSamePrincipal(principal, { ...principal }), true);
+    assert.throws(
+      () =>
+        requireSamePrincipal(principal, {
+          tenantId: "tenant-a",
+          subjectId: "subject-b",
+        }),
+      /四个标签页未共享同一 BFF 身份/,
+    );
+  });
+
+  void it("真实注销只使用当前 Origin 的 CSRF 双提交且不返回令牌", async () => {
+    const csrf = "scada_csrf_" + "c".repeat(43);
+    let request;
+    const runtime = {
+      location: { origin: "https://127.0.0.1:15173" },
+      document: { cookie: "__Host-adui-scada-csrf=" + csrf },
+      fetch: async (url, options) => {
+        request = { url, options };
+        return { status: 204 };
+      },
+    };
+    const result = await logoutCurrentSessionInPage(runtime.location.origin, runtime);
+    assert.deepEqual(result, { status: 204 });
+    assert.equal(request.url, "/api/v1/auth/logout");
+    assert.equal(request.options.method, "POST");
+    assert.equal(request.options.credentials, "same-origin");
+    assert.equal(request.options.mode, "same-origin");
+    assert.equal(request.options.headers["X-SCADA-CSRF"], csrf);
+    assert.equal("body" in request.options, false);
+    assert.equal(JSON.stringify(result).includes(csrf), false);
+    assert.equal(
+      await readAuthStatusInPage(runtime.location.origin, {
+        location: runtime.location,
+        fetch: async () => ({ status: 401 }),
+      }),
+      401,
+    );
+    await assert.rejects(
+      logoutCurrentSessionInPage("https://127.0.0.1:15174", runtime),
+      /本地会话注销未返回 HTTP 204/,
+    );
+  });
+
+  void it("注销后四个标签页的同源 BFF 只接受真实 HTTP 401", async () => {
+    for (const origin of ["https://127.0.0.1:15173", "https://127.0.0.1:15174"]) {
+      let request;
+      const status = await readAuthStatusInPage(origin, {
+        location: { origin },
+        fetch: async (url, options) => {
+          request = { url, options };
+          return { status: 401 };
+        },
+      });
+      assert.equal(requireLogoutHttp401(status), true);
+      assert.equal(request.url, "/api/v1/auth/me");
+      assert.equal(request.options.method, "GET");
+      assert.equal(request.options.credentials, "same-origin");
+      assert.equal(request.options.cache, "no-store");
+      assert.equal(request.options.redirect, "error");
+    }
+
+    for (const status of [undefined, 0, 200, 204, 403, 500]) {
+      assert.throws(() => requireLogoutHttp401(status), /注销后标签页身份未失效/);
+    }
+    assert.equal(
+      await readAuthStatusInPage("https://127.0.0.1:15173", {
+        location: { origin: "https://127.0.0.1:15174" },
+        fetch: async () => {
+          throw new Error("跨 Origin 不得发起请求");
+        },
+      }),
+      0,
+    );
+  });
+
+  void it("注销后仅向同源随机专用工程发起四条受保护只读 GET", async () => {
+    const projectId = "b34-oidc-cas-12345678-1234-1234-1234-123456789abc";
+    for (const origin of ["https://127.0.0.1:15173", "https://127.0.0.1:15174"]) {
+      const requests = [];
+      const runtime = {
+        location: { origin },
+        fetch: async (path, options) => {
+          requests.push({ path, options });
+          return { status: 401 };
+        },
+      };
+      const statuses = await readLogoutProjectStatusesInPage(origin, projectId, runtime);
+      assert.deepEqual(statuses, [401, 401, 401, 401]);
+      assert.equal(requireLogoutProjectDenied(statuses), true);
+      assert.deepEqual(
+        requests.map((request) => request.path),
+        [
+          "/api/v1/projects?limit=10",
+          "/api/v1/projects/" + projectId,
+          "/api/v1/projects/" + projectId + "/versions?limit=10",
+          "/api/v1/projects/" + projectId + "/versions/3",
+        ],
+      );
+      for (const request of requests) {
+        assert.equal(request.options.method, "GET");
+        assert.equal(request.options.credentials, "same-origin");
+        assert.equal(request.options.mode, "same-origin");
+        assert.equal(request.options.redirect, "error");
+        assert.equal(request.options.cache, "no-store");
+        assert.equal(request.options.headers.Accept, "application/json");
+        assert.equal("body" in request.options, false);
+      }
+      requests.length = 0;
+      assert.equal(
+        await readLogoutProjectStatusesInPage("https://127.0.0.1:15174/other", projectId, runtime),
+        null,
+      );
+      assert.equal(await readLogoutProjectStatusesInPage(origin, "../admin", runtime), null);
+      assert.equal(requests.length, 0);
+    }
+  });
+
+  void it("注销后任一工程读取成功、重定向或网络失败都不能判为拒绝", async () => {
+    for (const statuses of [
+      null,
+      undefined,
+      [],
+      [401],
+      [401, 401, 401],
+      [401, 401, 401, 401, 401],
+      [200, 401, 401, 401],
+      [401, 200, 401, 401],
+      [401, 401, 200, 401],
+      [401, 401, 401, 200],
+      [403, 401, 401, 401],
+      [401, 401, 401, 403],
+      [0, 401, 401, 401],
+      [401, 401, 0, 401],
+      [503, 401, 401, 401],
+      [401, 401, 401, 302],
+      [undefined, undefined, undefined, undefined],
+    ]) {
+      assert.throws(() => requireLogoutProjectDenied(statuses), /注销后工程读取未返回 HTTP 401/);
+    }
+    const projectId = "b34-oidc-cas-12345678-1234-1234-1234-123456789abc";
+    let hits = 0;
+    const statuses = await readLogoutProjectStatusesInPage("https://127.0.0.1:15173", projectId, {
+      location: { origin: "https://127.0.0.1:15173" },
+      fetch: async () => {
+        hits += 1;
+        if (hits === 1) throw new Error("网络或 TLS 连接失败");
+        return { status: 401 };
+      },
+    });
+    assert.deepEqual(statuses, [0, 401, 401, 401]);
+    assert.throws(() => requireLogoutProjectDenied(statuses), /注销后工程读取未返回 HTTP 401/);
+  });
+
+  void it("四条工程只读路由任一路径未返回 401 均拒绝，且不读取响应正文", async () => {
+    const projectId = "b34-oidc-cas-12345678-1234-1234-1234-123456789abc";
+    const origin = "https://127.0.0.1:15173";
+    for (let rejectedPath = 0; rejectedPath < 4; rejectedPath += 1) {
+      let requests = 0;
+      const statuses = await readLogoutProjectStatusesInPage(origin, projectId, {
+        location: { origin },
+        fetch: async () => {
+          const index = requests;
+          requests += 1;
+          return {
+            status: index === rejectedPath ? 200 : 401,
+            json: () => {
+              throw new Error("只读探针不得读取工程正文");
+            },
+            text: () => {
+              throw new Error("只读探针不得读取工程正文");
+            },
+          };
+        },
+      });
+      assert.equal(requests, 4);
+      assert.equal(statuses[rejectedPath], 200);
+      assert.throws(() => requireLogoutProjectDenied(statuses), /注销后工程读取未返回 HTTP 401/);
+    }
+  });
+
+  void it("注销后尚未可见的标签页必须保留 CAS、水位及零工程写入", () => {
+    const state = {
+      baselineRevision: 3,
+      baselineCleared: false,
+      headCleared: false,
+      identityRejected: false,
+      busy: false,
+      writeAttempts: 0,
+    };
+    assert.equal(requireHiddenSessionUnchanged(state, 3), true);
+    for (const changes of [
+      { baselineRevision: 2 },
+      { baselineRevision: null },
+      { baselineCleared: true },
+      { headCleared: true },
+      { identityRejected: true },
+      { busy: true },
+      { writeAttempts: 1 },
+      { writeAttempts: undefined },
+    ]) {
+      assert.throws(
+        () => requireHiddenSessionUnchanged({ ...state, ...changes }, 3),
+        /注销后隐藏标签页状态提前变化/,
+      );
+    }
+    assert.throws(() => requireHiddenSessionUnchanged(state, 0), /注销后隐藏标签页状态提前变化/);
+    assert.throws(
+      () => requireHiddenSessionUnchanged(undefined, 3),
+      /注销后隐藏标签页状态提前变化/,
+    );
+  });
+
+  void it("隐藏页必须先确认未可见，再只读比较本地完整快照", async () => {
+    const actions = [];
+    let hash = "a".repeat(64);
+    const baseline = {
+      canvas: "<svg>工程图元</svg>",
+      drafts: { count: 1, hash },
+      autoSave: true,
+    };
+    const session = {
+      evaluate: async (action) => {
+        actions.push(action.name);
+        switch (action.name) {
+          case "visibilityProbeStateInPage":
+            return { visibility: "hidden" };
+          case "readMultiTabSessionStateInPage":
+            return {
+              baselineRevision: 3,
+              baselineCleared: false,
+              headCleared: false,
+              identityRejected: false,
+              busy: false,
+              writeAttempts: 0,
+            };
+          case "stateInPage":
+            return { autoSave: true };
+          case "readBrowserDraftsInPage":
+            return { count: 1, hash };
+          case "readStudioContentCanvasInPage":
+            return "<svg>工程图元</svg>";
+          default:
+            throw new Error("隐藏页预检调用了未知操作");
+        }
+      },
+    };
+
+    await verifyHiddenTabBeforeResume(session, baseline);
+    assert.deepEqual(actions.slice(0, 2), [
+      "visibilityProbeStateInPage",
+      "readMultiTabSessionStateInPage",
+    ]);
+    assert.equal(actions.includes("readBrowserDraftsInPage"), true);
+    assert.equal(actions.includes("readStudioContentCanvasInPage"), true);
+    assert.equal(actions.includes("saveDraftInPage"), false);
+    assert.equal(actions.includes("enableAutoSaveInPage"), false);
+
+    hash = "b".repeat(64);
+    await assert.rejects(
+      verifyHiddenTabBeforeResume(session, baseline),
+      /标签页恢复改变了 IndexedDB 草稿/,
+    );
+  });
+
+  void it("会话状态摘要只返回白名单状态，不包含页面敏感正文", () => {
+    const secret = "sensitive-session-content";
+    const panel = {
+      textContent: "服务端身份已验证 CAS 基线：未建立 服务端最新修订号：未查询",
+      querySelectorAll: () => [{ textContent: "只读预览最新版本" }],
+      querySelector: () => ({ textContent: "服务端版本已变化 " + secret }),
+    };
+    const runtime = {
+      document: {
+        querySelector: (selector) =>
+          selector === '[aria-label="服务端工程版本"]'
+            ? panel
+            : selector === ".studio-notice"
+              ? { textContent: "标签页恢复校验发现变更 " + secret }
+              : null,
+        body: { textContent: secret },
+      },
+      __aduiTestAccessDenial: { writeAttempts: 0, token: secret },
+    };
+    const state = readMultiTabSessionStateInPage(runtime);
+    assert.deepEqual(state, {
+      baselineRevision: null,
+      baselineCleared: true,
+      headCleared: true,
+      recoveryAvailable: true,
+      resumeConflictVisible: true,
+      identityVerified: true,
+      identityRejected: false,
+      hasError: true,
+      errorCategory: "conflict",
+      busy: false,
+      writeAttempts: 0,
+    });
+    assert.equal(JSON.stringify(state).includes(secret), false);
+  });
+
+  void it("跟随页先初始化草稿再生成完整保护快照，不能将 CAS 摘要当画布", async () => {
+    const actions = [];
+    const draft = { count: 1, hash: "a".repeat(64) };
+    const canvas = "<svg>工程图元</svg>";
+    const session = {
+      evaluate: async (action) => {
+        actions.push(action.name);
+        switch (action.name) {
+          case "saveDraftInPage":
+          case "enableAutoSaveInPage":
+            return true;
+          case "stateInPage":
+            return { autoSave: true, canvas: "<svg>包含视口网格</svg>" };
+          case "readBrowserDraftsInPage":
+            return draft;
+          case "readStudioContentCanvasInPage":
+            return canvas;
+          default:
+            throw new Error("跟随页快照测试调用了未知操作");
+        }
+      },
+    };
+    const snapshot = await prepareFollowerDraft(session);
+    assert.deepEqual(actions, [
+      "saveDraftInPage",
+      "enableAutoSaveInPage",
+      "stateInPage",
+      "readBrowserDraftsInPage",
+      "readStudioContentCanvasInPage",
+    ]);
+    assert.equal(snapshot.canvas, canvas);
+    assert.deepEqual(snapshot.drafts, draft);
+    assert.equal(snapshot.autoSave, true);
+    assert.equal(requireUnchangedStudioState(snapshot, structuredClone(snapshot)), true);
+    assert.throws(
+      () => requireSameCanvasAndDrafts({ baselineRevision: 1 }, snapshot),
+      /标签页恢复改变了本地画布/,
+    );
+  });
+
+  void it("写入页只建立 Studio 只读快照，不重新保存同源草稿", async () => {
+    const actions = [];
+    let revision = 3;
+    let writeAttempts = 0;
+    const draft = { count: 1, hash: "a".repeat(64) };
+    const canvas = "<svg>工程内容</svg>";
+    const session = {
+      evaluate: async (action) => {
+        actions.push(action.name);
+        switch (action.name) {
+          case "installAccessDenialFaultInPage":
+            return undefined;
+          case "stateInPage":
+            return { canvas: "<svg>动态网格</svg>", autoSave: false };
+          case "readBrowserDraftsInPage":
+            return draft;
+          case "readStudioContentCanvasInPage":
+            return canvas;
+          case "readMultiTabSessionStateInPage":
+            return { baselineRevision: revision, writeAttempts };
+          default:
+            throw new Error("写入页保护快照测试调用了未知操作");
+        }
+      },
+    };
+
+    const snapshot = await prepareWriterReadOnlySession(session, 3);
+    assert.deepEqual(actions, [
+      "installAccessDenialFaultInPage",
+      "stateInPage",
+      "readBrowserDraftsInPage",
+      "readStudioContentCanvasInPage",
+      "readMultiTabSessionStateInPage",
+    ]);
+    assert.equal(snapshot.canvas, canvas);
+    assert.deepEqual(snapshot.drafts, draft);
+    assert.equal(snapshot.autoSave, false);
+
+    revision = 2;
+    await assert.rejects(prepareWriterReadOnlySession(session, 3), /Studio CAS 基线与预期不一致/);
+    revision = 3;
+    writeAttempts = 1;
+    await assert.rejects(prepareWriterReadOnlySession(session, 3), /Studio CAS 基线与预期不一致/);
+  });
+
+  void it("本地画布、IndexedDB 草稿和自动保存必须逐项保持一致", () => {
+    const before = {
+      canvas: "<svg>原画布</svg>",
+      drafts: { count: 1, hash: "a".repeat(64) },
+      autoSave: true,
+    };
+    assert.equal(requireUnchangedStudioState(before, structuredClone(before)), true);
+    assert.equal(
+      requireSameCanvasAndDrafts(before, {
+        ...before,
+        autoSave: false,
+      }),
+      true,
+    );
+    assert.throws(
+      () => requireUnchangedStudioState(before, { ...before, canvas: "<svg>变化</svg>" }),
+      /标签页恢复改变了本地画布/,
+    );
+    assert.throws(
+      () =>
+        requireUnchangedStudioState(before, {
+          ...before,
+          drafts: { count: 1, hash: "b".repeat(64) },
+        }),
+      /标签页恢复改变了 IndexedDB 草稿/,
+    );
+    assert.throws(
+      () => requireUnchangedStudioState(before, { ...before, autoSave: false }),
+      /标签页恢复改变了自动保存状态/,
+    );
+  });
+
+  void it("缺失或损坏的本地草稿快照不得被视作没有变化", () => {
+    const snapshot = {
+      canvas: "<svg>原画布</svg>",
+      drafts: { count: 1, hash: "a".repeat(64) },
+      autoSave: true,
+    };
+    for (const invalidDrafts of [
+      undefined,
+      null,
+      {},
+      { count: 1 },
+      { count: 0, hash: "a".repeat(64) },
+      { count: 1, hash: "" },
+      { count: 1, hash: "非 SHA-256 摘要" },
+      { count: Number.NaN, hash: "a".repeat(64) },
+    ]) {
+      assert.throws(
+        () =>
+          requireSameCanvasAndDrafts(
+            { ...snapshot, drafts: invalidDrafts },
+            { ...snapshot, drafts: invalidDrafts },
+          ),
+        /标签页恢复改变了 IndexedDB 草稿/,
+      );
+    }
+    assert.throws(
+      () => requireSameCanvasAndDrafts({ drafts: snapshot.drafts }, { drafts: snapshot.drafts }),
+      /标签页恢复改变了本地画布/,
+    );
+    assert.throws(
+      () =>
+        requireSameCanvasAndDrafts(
+          { ...snapshot, canvas: undefined },
+          { ...snapshot, canvas: undefined },
+        ),
+      /标签页恢复改变了本地画布/,
+    );
+  });
+
+  void it("自动保存状态缺失时不能以双方相同的空值绕过保护", () => {
+    const snapshot = {
+      canvas: "<svg>原画布</svg>",
+      drafts: { count: 1, hash: "a".repeat(64) },
+      autoSave: true,
+    };
+    for (const invalidAutoSave of [undefined, null, "true", 1]) {
+      assert.throws(
+        () =>
+          requireUnchangedStudioState(
+            { ...snapshot, autoSave: invalidAutoSave },
+            { ...snapshot, autoSave: invalidAutoSave },
+          ),
+        /标签页恢复改变了自动保存状态/,
+      );
+    }
+    assert.equal(requireUnchangedStudioState(snapshot, structuredClone(snapshot)), true);
+  });
+
+  void it("工程列表刷新必须点击真实可用按钮", () => {
+    let clicks = 0;
+    const button = { textContent: "刷新", disabled: false, click: () => (clicks += 1) };
+    const runtime = {
+      document: {
+        querySelector: () => ({ querySelectorAll: () => [button] }),
+      },
+    };
+    assert.equal(refreshProjectListInPage(runtime), true);
+    assert.equal(clicks, 1);
+    assert.throws(
+      () =>
+        refreshProjectListInPage({
+          document: { querySelector: () => null },
+        }),
+      /工程列表刷新失败/,
+    );
+  });
+
+  void it("未知浏览器异常不得泄露原始凭据或堆栈", () => {
+    const secret = "Cookie=private-token";
+    const message = describeMultiTabFailure(new Error(secret));
+    assert.equal(message, "真实多标签页 OIDC 安全专项失败（已脱敏）");
+    assert.equal(message.includes(secret), false);
+    assert.equal(
+      describeMultiTabFailure(new Error("注销后服务端 CAS 基线未失效")),
+      "注销后服务端 CAS 基线未失效",
+    );
+  });
+});

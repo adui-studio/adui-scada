@@ -1417,17 +1417,84 @@ PR #72 候选已新增固定阶段与安全状态摘要，方便下一轮定位�
 
 并发边界：再次 GET 检查不能提供跨浏览器事务锁；最后一次只读校验之后仍可能发生新的远端提交，后续保存必须继续使用原服务端 CAS 和标签页恢复只读复核。PR 默认 Open/Draft、Assignee `@adui-dev`；未经维护者新授权不得合并。
 
+## 2026-11-18 · 第三十四批第二十小批：真实多标签页会话与工程一致性候选
 
-## 2026-11-17 · 第三十四批第十九小批：PR #74 已合并
+基于已合并 PR #74 的 main@8cd2223853e7e5dc05695b8ab1226911ec7bd734 新建分支 feature/v0.3-b34-multitab-oidc-session。本批先补真实浏览器验收工具，不修改生产 React/Vue 页面、共享 API Client、NestJS、Prisma、数据库迁移或工业设备权限。
 
-维护者在 Windows 提供的实际日志确认：OIDC 工程浏览器离线 37/37、vp check 335 文件格式正确 / 190 受检零警告错误、docs:check 86 Markdown、Vitest 581/581、NestJS E2E 49/49、React/Vue/NestJS 构建通过，完整 pnpm run ready 退出码 0；React/Vue 真实 OIDC 浏览器专项退出码 0。GitHub 已复核 PR #74 的 HEAD、Draft 状态及 @adui-dev Assignee，按维护者明确授权执行 Squash Merge。
+新增一个隔离 Chrome/Edge Profile 中的四个真实标签页：React 写入/跟随、Vue 写入/跟随。只登录一次 Keycloak 普通预绑定测试用户，通过同一 Host 的 React/Vue HTTPS Origin 验证 Cookie 会话共享；正式 API 创建一份随机专用工程并真实推进版本 1→2→3。两个跟随标签页实际切回前台时，验证原有 visibilitychange 复核发现远端水位变化、失效 CAS，且保存操作没有工程 POST 穿透。随后真实 CSRF 注销 BFF 会话，隐藏标签页保持既有内存状态，分别切回前台后由真实 BFF 401 失效服务端缓存。
 
-合并提交：8cd2223853e7e5dc05695b8ab1226911ec7bd734，目标分支 main。PR #74 当前 Closed / Merged。真实浏览器专项验证确认框后版本水位漂移拒绝载入、画布/草稿/自动保存保护、409 只读预览后人工确认载入，以及 401/503 延迟保存拒绝与重复提交保护。最后一次 GET 不是跨浏览器原子锁，后续写入仍依赖服务端 CAS。
+新增 scripts/test-oidc-real-multitab.mjs 和 9 项 Node 离线安全测试；根 ready 纳入离线配置门禁，真实浏览器写入/注销专项仅在 --run-multitab --confirm-lab 数据库名 显式确认后手工执行。当前属于开发候选：Windows Node 离线、vp check、docs:check、完整 ready 和真实四标签页 Keycloak/HTTPS 浏览器专项均尚未执行；所有测试数量均为目标，不作为通过证据。测试专用工程按既有安全测试惯例保留；新工程仅由现有创建 API 创建创建者默认权限，不手工授予其他主体或修改既有 ACL。
 
-## 2026-11-17 · 第三十四批第二十小批：同源双标签页服务端 CAS 协同候选
+## 2026-11-18 · 第三十四批第二十一小批：测试快照缺失即拒绝（候选）
 
-以 main@8cd2223853e7e5dc05695b8ab1226911ec7bd734 为基线，新建分支 ai/b34-same-origin-multitab-cas。本批仅新增隔离真实浏览器验收脚本、18 项 Node 离线安全用例和质量链入口；没有修改生产 Studio、API Client、NestJS、Prisma、工程 Schema、依赖或工业设备写入能力。
+PR #76 已获维护者明确授权并通过 GitHub Squash 合并，main@7d2adb04e08bea3303797a6ac379d33068ac7322。维护者日志显示前批离线 11/11、完整 ready 退出码 0，真实 Keycloak 四标签页专项退出码 0；日志未单独证明本地 Git HEAD。
 
-同一隔离浏览器 Profile 的两个真实标签页共享同一 Keycloak 主体，分别覆盖 React/Vue Origin：两个标签先载入同一首版；第一标签真实 UI 保存 2，第二标签恢复可见后通过现有只读复核发现过期 CAS；第二标签的旧保存不得发出 POST，预览并人工确认载入 2 后再保存 3；第一标签恢复可见必须再次清除旧 CAS。数据库最终只允许 1/2/3 三版与三条同主体审计。测试每个框架创建一份随机专用工程并留存，不修改已有工程或 ACL。
+本批以已合并 main 为基线，新增多标签页保护快照的缺失/无效值安全门禁和两项 Node 用例，不调整生产行为。此批后续 Windows 离线目标 13/13，完整质量链和真实浏览器尚未执行，PR 默认 Draft 且指派 @adui-dev，未经新的授权不合并。
 
-本协作环境已对两个新增 .mjs 文件完成隔离 ECMAScript 语法解析，并使用隔离 V8 Mock 执行核心门禁用例 18/18；这不是 Node --test、Windows vp check 或真实浏览器验收。Windows test:oidc:dual:studio:multitab:config、vp check、docs:check、完整 pnpm run ready 和 React/Vue 同源双标签页真实 Lab 专项均待维护者执行。候选 PR 默认 Open/Draft，必须指派 @adui-dev；未经维护者明确授权不得合并。
+## 2026-11-18 · 第三十四批第二十二小批：真实四标签页注销后身份全覆盖候选
+
+第二十一小批 PR #77 经维护者授权已 Squash 合并，`main@1969ae47ac5da2a9c5b3cc5c36003642f35f245f`。原 Windows 质量记录为多标签页离线 13/13、`ready` 退出码 0（Vitest 581/581，NestJS HTTP E2E 49/49，双 Web/NestJS 构建通过）；原日志无本地 HEAD 且第二十一小批未重跑真实 Keycloak 浏览器专项。
+
+本批仅补足原四标签页脚本中两个**写入页**的注销后真实 BFF 状态核验：React 写入页注销后同源身份 GET 必须 401，Vue 写入页重新真实可见后自身 Origin 身份 GET 必须 401，两个跟随页已有的真实 CAS 失效、草稿/画布保护及零工程 POST 断言不变。仅修改测试脚本、离线用例及相应需求/设计/验收文档，不修改正式双框架、认证后端、数据库或工业权限。新离线目标 14 项，**尚未执行**新候选的 Windows 质量链与真实四标签页浏览器；PR 应保持 Draft、指派 `@adui-dev`，不得在未获新授权前合并。
+
+## 2026-11-18 · 第三十四批第二十三小批：四个 Studio 页注销恢复安全回归候选
+
+PR #78 经维护者授权已 Squash 合并到 `main@43a2236bec8b528e0d7e1763dba58a558ddfab0a`；对应维护者 Windows 离线 14/14、完整 `ready` 退出码 0，真实 Keycloak 四标签页专项退出码 0。日志未单独给出本机 HEAD；前批写入页只检查 BFF 401，**没有**进入 Studio 进行页面 CAS 清理验收。
+
+本批在完成原随机工程真实修订 1→2→3 后，增加两个写入页的 Studio 授权确认载入、只读保护快照和写请求本地阻断。注销后四个标签页各自真实变为可见并验证 CAS/授权失效、BFF 401、本地 SVG/IndexedDB/自动保存保持与旧 CAS 保存零穿透。由于同 Origin 标签页共享 IndexedDB，写入页不再次保存草稿或开启自动保存，避免测试自身改写跟随页草稿。正式 React/Vue 页面、共享 API Client、NestJS、数据库和工业网关逻辑未改变。
+
+新增 1 项 Node 安全回归，目标为 15/15；当前尚未在新 HEAD 执行 Windows 离线、`vp check`、`docs:check`、`ready` 或真实四 Studio 标签页专项，PR 默认 Open/Draft 且必须指派 `@adui-dev`，未经新授权不合并。
+
+## 2026-11-18 · 第三十四批第二十四小批：后台隐藏页快照保护候选
+
+第三十四批第二十三小批 PR #79 已获维护者明确授权并通过 GitHub Squash 合并，`main@922a72d808658e81d80930436dfabae081b4f83c`。Windows 维护者日志确认离线 **15/15**、完整 `ready` 退出码 0，真实 Keycloak 四 Studio 标签页专项退出码 0；没有独立本地 HEAD 输出，不能宣称日志绑定 GitHub 新提交。
+
+本批检查到前批注销后仅即时比较三个隐藏页的 CAS 修订号和身份标记，完整本地保护快照直到恢复可见才比较；后台页在恢复前的异常修改缺乏第一现场的单独验收。本批扩展隐藏页只读验证：真实隐藏状态、CAS 修订号及水位不提前失效、后台操作不忙/零工程写入、SVG 内容与 IndexedDB 草稿及自动保存保持原值。四页恢复后的原断言全部保留；仅修改浏览器测试脚本、其离线安全用例及需求/设计/验证文档，不更改正式 React/Vue、共享 API、NestJS、Prisma 或工业控制权限。
+
+新增 2 项离线测试，覆盖隐藏页异常状态拒绝与严格读取顺序，目标 **17/17**；新候选尚未在 Windows 执行 `vp check`、离线脚本、完整 `ready` 和真实四 Studio 标签页专项，维持 Draft PR、指派 `@adui-dev`，未经新授权不合并。
+
+## 2026-11-18 · 第三十四批第二十五小批：共享注销后受保护工程只读 API 安全回归候选
+
+第二十四小批 PR #80 已经维护者 Windows 通过离线 17/17、完整 `ready` 退出码 0、真实 Keycloak 四 Studio 标签页专项退出码 0，并获明确授权 Squash 合并至 `main@2559d6ff7375cac22ad9741d98e121408269e3ad`。用户日志缺少独立本地 Git HEAD，不臆断验收执行的精确提交。
+
+本批从已验收四页注销后身份 BFF 401 出发，补齐同一 Cookie 会话对真实工程业务只读接口的拒绝：分别在 React/Vue Origin 确认列表及本轮专用工程第三版 GET 均为 401，拒绝 200、302、403、网络失败及非法工程 ID，且不读取工程响应正文或输出凭据。新增 2 项 Node 安全回归，目标离线 **19/19**。保留全部原可见性、CAS、水位、草稿/画布/自动保存和零工程 POST 断言。仅修改浏览器测试脚本、Node 用例及需求/设计/验证文档，不改正式双框架或服务端工业权限。
+
+本批仅为 GitHub 候选，**尚未**运行新 HEAD 的 Windows 离线、`vp check`、`docs:check`、完整 `ready` 或真实 Keycloak 四标签页专项；新 PR 默认 Draft，Assignee 立即指派并核实 `@adui-dev`，未经本批新明确授权不合并。
+
+## 2026-11-18 · 第三十四批第二十六小批：注销后全部工程 GET 路由拒绝候选
+
+第二十五小批 PR #81 经维护者 Windows 验收离线 19/19、完整 `ready` 退出码 0、真实 Keycloak 四标签页浏览器专项退出码 0；已在维护者新明确授权后经 GitHub Squash 合并至 `main@21085c1ebde325c8420e7f31e75294e030d8cd0a`。日志未提供独立本地 Git HEAD，不能将执行证据自动关联至确切 SHA。
+
+核对 NestJS 当前 Controller 而非按规划推断：工程共四条受保护 GET 路由。上批已验收工程列表与指定版本两个 GET，本批新增工程详情及历史版本列表两个 GET，在同一个真实注销会话的 React/Vue 两个 HTTPS Origin 上均要求 HTTP 401。只读请求仅访问本轮随机专用工程，不读取响应正文，不触碰正式 React/Vue、NestJS、Prisma、ACL 或工业设备权限；原四 Studio 页身份/CAS/画布/草稿/零写入断言继续保留。
+
+两项已有离线用例调整为四路由契约，并新增一项逐路由拒绝回归，目标 Node 离线 **20/20**。当前只是 GitHub 候选，**尚未执行**新 HEAD 的 Windows 离线、`vp check`、`docs:check`、完整 `ready` 和真实 Keycloak 浏览器专项；PR 默认 Draft，立即指派并复核 `@adui-dev`，未获本批新的明确授权不得合并。
+
+## 2026-11-18 · 第三十四批第二十七小批：Session Guard HTTP 拒绝响应禁缓存候选
+
+第二十六小批 PR #82 经维护者实际 Windows 验证：多标签页离线 **20/20**、完整 `ready` 退出码 0、真实 Keycloak 四 Studio 标签页专项退出码 0，已在用户明确授权后 Squash 合并至 `main@9fd3b863af8c2af7518d1f8a2e256c85e3bc08ab`。原上传日志未包含独立本地 HEAD，不能将其与当前候选新提交的验收结果混同。
+
+本批经 NestJS Controller/Guard 代码核对发现：成功路由的 `@Header(no-store)` 无法单独证明被 Guard 提前拒绝的 401/403 也禁止缓存。本批做最小服务端防护：Session Guard 在 HTTP 分支所有认证逻辑之前统一设置 `Cache-Control: no-store` 与 `Pragma: no-cache`，不更改原鉴权、CSRF、BFF Cookie、租户或 ACL 逻辑。新增 Guard 401/403 单测及两条真实根模块装配 E2E 的响应头断言。只改服务端 Guard、相邻测试与对应项目文档，Vue/React 双版本、SCADA Core、Prisma、工业网关与设备权限保持不变。
+
+新 Vitest 目标 **583/583**，NestJS HTTP E2E 仍 **49/49**（仅为目标）；**新 HEAD 尚未在 Windows 实际执行** `vp check`、`ready` 或真实 Lab 浏览器专项。PR 默认 Draft，立即指派并核验 `@adui-dev`，未经本批新的合并授权不得合并。
+
+## 2026-11-18 · 第三十四批第二十七小批 E-047 单元测试 Mock 修复候选
+
+维护者 Windows 首轮质量验收：`vp check` **337/192** 零警告，HTTP E2E **49/49**、`docs:check` **86** 份均通过；但全量 Vitest **580/583**，有三项 `scada-identity.spec.ts` 原身份与审计回归失败，`ready` 退出码 **1**。原因已由日志与候选源码定位为该文件共用 HTTP Context Mock 缺少本批 Guard 新依赖的 `getResponse().setHeader`，并非已观察到生产认证策略错误。
+
+PR #83 修复候选只补全旧身份测试的共用 Context Mock，保留生产 `no-store/no-cache`、401/403、Bearer/Cookie、CSRF、会话审计与工程权限；在既有无效 Bearer 和正常认证场景检查响应头。错误复盘编号 E-047。**修复后 Windows 单测目标 583/583，完整 `ready` 尚待真实退出码为 0 的验收**；PR 保持 Draft、Assignee `@adui-dev`，不得在本轮未获新合并授权时合并。
+
+## 2026-11-18 · 第三十四批第二十八小批：OIDC 根模块 CSRF/Origin 403 禁缓存候选
+
+第二十七小批 PR #83 曾因旧 `scada-identity.spec.ts` Mock 缺失 `getResponse` 触发 E-047 的 3 项失败（580/583、`ready` 退出码 1）；修复后维护者 Windows 已通过 **583/583**、完整 `ready` **退出码 0**，含 HTTP E2E **49/49**。PR #83 经新的明确授权 Squash 合并到 `main@650b084f770bb92241b3b93a02689160b7b8bc41`；用户日志未提供独立本地 Git HEAD，对测试执行 SHA 不做额外推断。
+
+本批核对真实 `OidcEnabledAppModule` E2E 发现之前只有两个匿名 401 HTTP 响应头断言，虽然 Guard 单测覆盖 403，还没有通过根模块实际 HTTP 异常处理验证 CSRF/Origin 拒绝时的禁止缓存头。仅在既有 E2E 增加两条受保护 `POST /api/v1/auth/logout` 测试：缺少 CSRF Header 或不可信 Origin 时，真实 HTTP 403、no-store/no-cache、无会话 Cookie 清除或重定向。测试使用无效但格式合法的静态测试 Cookie 与 Mock Prisma，不访问真实数据库/Keycloak；正式服务端业务逻辑、React/Vue、Prisma、ACL、工程 Schema 和工业设备权限不变。
+
+新增 2 条 HTTP E2E，目标由 **49** 增至 **51/51**；Vitest 单元测试仍为 **583/583**。新提交尚未 Windows 实测，维持 Draft PR、立即指派并复核 `@adui-dev`，未经本批明确授权不合并。
+
+## 2026-11-18 · 第三十四批历史遗留 PR #75 合流候选
+
+PR #84（第三十四批第二十八小批）已根据维护者提供的 51/51 HTTP E2E、583/583 Vitest 和完整 `ready` 退出码 0 实测记录，由用户明确同意后 Squash 合并到 `main@fd2a600b45f4c2c7400984932b69c46da18ab028`。
+
+排查遗留 PR #75 确认其仍为 Open / Draft，最早在 PR #74 之后创建，实际保留两份尚未集成的同源双标签 CAS 浏览器与 Node 安全测试脚本。当前已有的四标签共享 OIDC 注销测试不能代替同一 Origin 两标签提交同一工程的版本 1→2→3、过期 CAS 阻断、只读预览、人工载入及同主体审计。因为 #75 老主线基线与后续代码、文档冲突，本轮以**保留原分支历史和最新 main 内容**的双父提交合流，修复两处 CDP 模块常量引用并补 1 项离线测试，不回改正式业务源码。
+
+本批新候选安全离线目标 **19/19**、HTTP E2E 保持 **51/51**、Vitest 保持 **583/583**，全部都**需要在新分支实际执行复验**。真正的同源双标签 Lab 仅可显式确认后独立手动启动；会新建两份随机测试工程和有限版本，用户/ACL/既有工程及工业设备不做任何修改。PR #75 继续 Draft、Assignee `@adui-dev`，无新明确合并授权不合并。

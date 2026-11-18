@@ -67,6 +67,11 @@ void describe("同源多标签页 Studio CAS 写入保护", () => {
     }
   });
 
+  void it("CDP 独立页面函数不得引用 Node 模块中的工程正则常量", () => {
+    assert.equal(createMultitabProjectInPage.toString().includes("PROJECT_PATTERN"), false);
+    assert.equal(armStudioMultiTabWriteInPage.toString().includes("PROJECT_PATTERN"), false);
+  });
+
   void it("未知浏览器异常不回显凭据、工程正文或原始堆栈", () => {
     const message = describeStudioMultiTabFailure(
       new Error("token=secret; project=document; stack=private"),

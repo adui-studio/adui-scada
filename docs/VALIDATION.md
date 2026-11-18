@@ -1659,19 +1659,120 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 
 安全边界：浏览器模拟的确认后水位漂移及版本 POST 409/401/503 属于本机隔离 Profile 的合成拒绝/GET 替换，不是再次执行真实 PostgreSQL 并发写入；真实 GET 仍走受保护的 HTTPS BFF，浏览器隔离层截断所有工程 POST。单次确认后 GET 不保证数据库锁或原子一致性，服务端保存时继续原 CAS。**候选尚未实际运行 Windows Node/Vitest/类型检查、`vp check`、`docs:check`、完整 `ready` 或本机 Keycloak 浏览器专项**，不能使用上一小批的成功日志作为新改动的验收结果。需记录本机 HEAD SHA 与命令退出码。
 
+## 第三十四批第二十小批 · 真实多标签页 OIDC 会话与 CAS 候选验收
 
-## 第三十四批第二十小批 · 同源多标签页 CAS 验收
+新增 scripts/test-oidc-real-multitab.mjs 与 scripts/test-oidc-real-multitab.cases.mjs。离线用例目标 **9/9**，根 ready 新增 test:projects:oidc:multitab:config；真实浏览器命令 test:projects:oidc:multitab:browser 不纳入 ready，必须显式确认本机隔离数据库并手工运行。
 
-新增 scripts/test-oidc-studio-multitab.cases.mjs，默认质量链只运行离线保护测试：
+真实专项使用一个临时浏览器 Profile 内的 React 写入/跟随、Vue 写入/跟随四个标签页。单用户登录后通过正式 BFF 创建唯一随机专用工程；React 与 Vue 写入端分别真实提交版本 2 和 3，两个跟随端分别切回前台验证 visibilitychange 后的真实身份/水位 GET、旧 CAS 清除、真实保存按钮拒绝旧基线且零工程 POST。最后通过真实 CSRF /api/v1/auth/logout 注销共享 Cookie 会话，两个跟随端重新可见时分别验证 401、服务端缓存失效及本地数据保持。
 
-- 真实写入模式必须精确确认本机 adui_scada Lab；默认参数、混合参数、其他数据库名均拒绝。
-- 首版创建只接受本机 HTTPS Origin、随机 b34-oidc-multitab-<UUID> 工程 ID 和唯一 CSRF Cookie。
-- 写入守卫默认拒绝所有工程 POST/PUT/PATCH/DELETE；仅允许被显式 arm 的当前工程、指定 CAS 水位的一次真实版本 POST，并核对 201 修订号及 SHA-256。
-- GET/HEAD 只读透传；错误工程、跨 Origin、错误水位、错误 CSRF、重复 POST、非 201 与格式错误 201 均不得伪装成功。
-- 数据库结案必须核对同一主体的三版版本记录、三条审计记录和最终 head=3。
+当前分支为 feature/v0.3-b34-multitab-oidc-session，基线 main@8cd2223853e7e5dc05695b8ab1226911ec7bd734。**当前仅有代码与文档候选，没有 Windows Node、vp check、docs:check、完整 ready 或真实 Chrome/Keycloak/PostgreSQL 浏览器执行记录。** 目标数量不能作为通过结果；验收时必须提供 git rev-parse HEAD、各命令输出及退出码。专用工程会按设计保留；不触碰其他工程、既有 ACL、身份映射、数据库迁移或工业设备；新工程仅由现有创建 API 按既定流程创建创建者默认权限，不手工增加其他主体授权。
 
-新增离线用例目标 18 项，命令为 pnpm run test:oidc:dual:studio:multitab:config，并纳入 pnpm run ready。全量 Vitest 预期仍为 581 项；该专项使用 Node 内置测试，不增加第三方依赖。
+## 2026-11-18 · 第二十小批首次空白标签页可见性探针缺陷修复候选
 
-真实浏览器专项为手动命令 pnpm run test:oidc:dual:studio:multitab，不加入默认 ready。它使用一个隔离浏览器 Profile 的两个真实标签页，在 React 和 Vue Origin 分别创建一个随机专用工程，验证版本 1→2→3、可见性恢复复核、只读预览、人工确认载入、IndexedDB 草稿保护和 PostgreSQL 同主体审计。测试工程留存供审计，不清理、不修改既有工程或 ACL。
+维护者提供的质量链日志已确认独立多标签页离线 9/9、`vp check` 337 格式文件 / 192 受检零错误、`docs:check` 86 Markdown、Vitest 581/581、NestJS HTTP E2E 49/49；日志末尾截至 NestJS Prisma Client 生成，缺少完整 `ready` 的最终退出码，也没有真实 `test:projects:oidc:multitab:browser` 命令及退出码。截图中五个标签页均显示 `about:blank`，具体浏览器专项结束状态尚不能由日志独立确认。
 
-**当前验证状态**：本协作环境已对两个新增 .mjs 文件完成隔离 ECMAScript 语法解析，并使用隔离 V8 Mock 执行核心门禁用例 18/18；这不等于仓库 Node --test。Windows vp check、docs:check、完整 pnpm run ready 和真实双标签页 Lab 尚待维护者执行。
+静态复核发现测试脚本在首次导航之前只注册 `Page.addScriptToEvaluateOnNewDocument`，但立即调用真实 `Page.bringToFront` 并要求可见性计数递增，存在当前空白文档尚未注册监听器而超时的问题。协作容器真实 Chromium 对照验证：旧空白文档 `probe=null`，额外调用一次 `session.evaluate(installMultiTabVisibilityProbeInPage)` 后，切回标签页可记录 `visibleEvents=1`。协作容器独立初始化顺序测试 **1/1** 通过；两者不是仓库 Windows 全量测试。本次只增加当前文档初始化及离线执行顺序断言，不更改生产业务代码、真实 `visibilitychange` 语义、OIDC 认证、CSRF、CAS 或 Lab 安全限制。
+
+当前 GitHub 修复候选尚未由维护者 Windows 执行新离线目标 10/10、`vp check`、完整 `ready` 或真实多标签页专项。以上旧质量链数据不能等同本次修复已验收；需记录当前本地 `git rev-parse HEAD` 与各命令退出码。
+
+## 2026-11-18 · 第二十小批真实四标签页首次工程载入误报修复候选（E-046）
+
+维护者本机已执行 `pnpm run test:projects:oidc:multitab:browser`：真实 Keycloak 登录完成，四个标签页均确认同一 BFF 主体；进入 React/Vue Studio 工程复核后，报“标签页恢复改变了本地画布”，**专项退出码 1**。这一输出不能证明 SVG 数据丢失，也不能说明远端版本推进、注销或四标签页最终一致性已通过。
+
+经当前 PR #76 源码核对，`openStudioProject` 返回的只是 `readMultiTabSessionStateInPage` 的 CAS/身份 UI 状态摘要，`canvas` 和 `drafts` 均不存在；而 React/Vue 首次确认打开工程后，用该摘要与刚创建草稿、开启自动保存所得的完整快照调用 `requireSameCanvasAndDrafts`，必然报画布差异。草稿创建、自动保存开启本就属于初始化的预期状态变更。候选最小修复只删除**首次初始化阶段**这两处错误跨类型比较，以初始化完成后的 `inspectProtectedState` 作为后续保护基准，新增离线回归模拟真实初始化操作。远端 CAS 水位变化、服务端身份失效、人工恢复后的所有 SVG/草稿数量/整记录 SHA-256/自动保存以及零工程 POST 断言全部保留。
+
+本次维护者提供的**修复前** Windows 质量记录：离线 10/10、`vp check` 337 格式文件/192 受检零告警、`docs:check` 86 份、单测 581/581、HTTP E2E 49/49；`ready` 最后显示 Prisma Client 生成，缺少最终退出码。当前候选离线目标 **11/11**，新 HEAD 的 `vp check`、`docs:check`、完整 `ready` 和真实 Keycloak 浏览器专项待维护者执行。只根据本次代码修正无法声称多标签页真实测试已通过。
+
+## 2026-11-18 · 第三十四批第二十一小批：多标签页本地快照有效性门禁候选
+
+从已合并 PR #76 的真实浏览器专项继续，检查到 `requireSameCanvasAndDrafts` 原比较使用可选链，前后快照都缺失 IndexedDB `drafts` 时，`undefined === undefined` 会误判为没有变化。自动保存前后都缺失时也存在类似误判。该问题属于**测试断言边界**，不是已经证实发生的生产数据丢失事故。
+
+本批只修改 `scripts/test-oidc-real-multitab.mjs` 的比较前有效性判断及对应 Node 离线用例：要求 SVG 快照为字符串、草稿数量为至少 1 的安全整数、整记录摘要为 64 位十六进制 SHA-256、自动保存为明确布尔值；任何缺失或损坏均按原有脱敏中文错误拒绝，正常快照的逐项严格比较和全部真实 CAS/注销保护保留。离线目标从 11 项增加至 **13 项（候选，尚未执行）**。不修改 React/Vue 正式页面、OIDC、工程 API、数据库、工业设备权限，也不创建或删除 Lab 工程。
+
+**验收边界**：当前仅为 GitHub 代码候选，尚未执行新 HEAD 的 Windows `test:projects:oidc:multitab:config`、`vp check`、`docs:check`、`ready` 或真实四标签页专项，不得沿用 PR #76 已通过的退出码；若依赖和业务代码均未变化，可优先执行离线与完整质量链，再评估是否重跑真实专项。
+
+## 2026-11-18 · 第三十四批第二十一小批 Windows 结案与第二十二小批候选
+
+维护者 Windows 对第二十一小批提交的日志显示：`test:projects:oidc:multitab:config` **13/13**、退出码 **0**；完整 `pnpm run ready` 退出码 **0**，其中 `vp check` **337** 个格式文件和 **192** 个受检文件零警告/错误、Vitest **581/581**、HTTP E2E **49/49**、`docs:check` **86** 个 Markdown、React/Vue/NestJS 构建完成。日志未单独包含本地 `git rev-parse HEAD`；本批未重跑真实四标签页专项。维护者已明确授权，PR #77 经 GitHub Squash 合并至 `main@1969ae47ac5da2a9c5b3cc5c36003642f35f245f`。这是已合并旧提交的 Windows 验收，不等于下一批新代码已通过。
+
+第二十二小批只扩展 `scripts/test-oidc-real-multitab.mjs` 与离线安全用例：原注销 HTTP 204 后增加 React **写入页**自身同源 `/auth/me` HTTP 401 核验；两个跟随页的所有 CAS/草稿/零写入断言不变；最后真实激活 Vue **写入页**并验证 Vue Origin 的 HTTP 401。新增 Node 纯函数在 200/204/403/500、网络失败 0、缺值及跨 Origin 时必须拒绝。离线目标 **14/14**，仅为候选目标，尚未执行新 HEAD 的 Windows 专项、`vp check`、`docs:check`、`ready` 或真实 Chrome/Keycloak 四标签页浏览器测试；不得以 PR #77 的结果代替。真实测试仍会按已有显式确认仅创建随机测试工程并追加修订 2/3，工程按原惯例保留，不清理既有数据。
+
+建议维护者复核当前本地 HEAD 后执行：
+
+```powershell
+git rev-parse HEAD
+pnpm run test:projects:oidc:multitab:config
+Write-Host "离线专项退出码：$LASTEXITCODE"
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+```
+
+完整质量链通过后，在已启动受控本机 OIDC HTTPS Lab 且确认会创建一份新的专用工程、注销当前隔离浏览器会话时，再单独执行 `pnpm run test:projects:oidc:multitab:browser` 并记录最终退出码。禁止在终端输入或记录 Keycloak 密码。以上不代表工业现场或生产验收。
+
+## 2026-11-18 · 第三十四批第二十二小批结案与第二十三小批候选
+
+维护者 Windows 第二十二小批日志显示：`test:projects:oidc:multitab:config` **14/14**、退出码 **0**；完整 `pnpm run ready` 退出码 **0**，其中 `vp check` 337 个格式文件 / 192 受检零告警，Vitest **581/581**、HTTP E2E **49/49**、`docs:check` **86** 份及 React/Vue/NestJS 构建均成功。另有本机真实 `test:projects:oidc:multitab:browser` 退出码 **0**，确认四标签页 BFF 身份 GET 401、两个跟随 Studio 页的 CAS/草稿保护及旧 CAS 零写入；上传日志未单独包含 `git rev-parse HEAD`，无法独立确认本机 SHA。用户明确授权后，PR #78 已经 GitHub Squash 合并至 `main@43a2236bec8b528e0d7e1763dba58a558ddfab0a`。
+
+第二十三小批新增**两个写入页**真实 Studio 确认载入修订 3、只读草稿快照与页面工程写入阻断，最终让 React/Vue 写入/跟随四个 Studio 页均通过现有可见性恢复、BFF 401、CAS/远端水位失效、旧保存零 POST、SVG/草稿/自动保存不变的全套断言。新增 Node 离线用例，目标 **15/15**，并未更改正式 React/Vue、NestJS、Prisma 或工业接口。真实 Lab 专项仍创建且保留单份随机专用工程、真实追加 2/3、执行一次隔离会话注销，不涉及已有项目或 ACL。
+
+协作容器只对新增辅助函数的**同逻辑独立 Node 模拟**运行 `node --check` 与契约断言，**2/2** 通过；这不是仓库源码的真实 Node 离线测试，更不是 Windows `ready`、CDP/Keycloak 集成或工业安全验收。新 HEAD 的 `vp check`、`docs:check`、完整 `ready` 和真实四 Studio 标签页专项均**尚未执行**，旧批次通过的日志不能当成新批验收证据。
+
+Windows 建议先执行 `git rev-parse HEAD`，再执行 `pnpm run test:projects:oidc:multitab:config` 和 `pnpm run ready`，记录每条最终退出码；质量链通过后再在已确认的本机隔离 OIDC HTTPS Lab 执行 `pnpm run test:projects:oidc:multitab:browser`，用真实 Chrome/Edge 完成单次 Keycloak 手动登录，最终核对浏览器专项退出码。测试将创建并保留新专用工程且注销隔离会话，禁止终端输入密码或输出令牌。
+
+## 2026-11-18 · 第三十四批第二十三小批验收及第二十四小批候选
+
+维护者 Windows 提供的第二十三小批日志已确认 `test:projects:oidc:multitab:config` **15/15**、退出码 **0**；完整 `pnpm run ready` 退出码 **0**，其中 `vp check` **337** 个格式文件、**192** 个受检文件零警告/错误，Vitest **581/581**、NestJS HTTP E2E **49/49**、`docs:check` **86** 份 Markdown，以及 React/Vue/NestJS 类型检查和构建完成。真实 Keycloak 四个 Studio 标签页专项退出码 **0**：四页经真实可见性切换失效 CAS/授权缓存，收到 BFF 401，本地 SVG/IndexedDB 草稿/自动保存保持不变，旧 CAS 保存未产生工程写入。原日志没有本地 `git rev-parse HEAD`，未独立关联确切 SHA；PR #79 按维护者明确授权 Squash 合并到 `main@922a72d808658e81d80930436dfabae081b4f83c`。
+
+第二十四小批仅扩展注销后尚未恢复可见的三个隐藏 Studio 标签页的保护检查：原 CAS 水位及未拒绝身份必须保留，后台操作不忙碌、写入计数为零；更重要的是在切回前台之前即重新取得完整 SVG 内容、IndexedDB 草稿数量及整记录 SHA-256、自动保存状态，并逐项比对注销前基线。缺失或发生变化必须失败。新增 2 项 Node 离线用例：一项覆盖非法隐藏页 CAS/水位/后台写入，一项通过真实测试辅助函数 Mock 验证先确认 hidden 再只读读取完整快照，并拒绝草稿哈希变化；**目标 17/17（仅候选目标）**；四个 Studio 页面注销后的已有真实 BFF 401、CAS/授权失效、零保存写入与快照断言均保留。
+
+**当前尚未执行第二十四小批新 HEAD 的仓库 Node 离线测试、`vp check`、`docs:check`、完整 `pnpm run ready` 或真实 Chrome/Edge/Keycloak 四标签页专项**。协作环境无法通过公共网络获取此 GitHub 仓库以复跑完整测试；上批通过结果不可冒充新提交验收。新测试仍在已确认的本机隔离 Lab 中通过既有受控创建接口生成并保留一份随机测试工程，真实追加版本 2/3 并注销隔离会话，不碰已有工程和授权。
+
+Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 `pnpm run test:projects:oidc:multitab:config` 和 `pnpm run ready`，记录各自最终退出码；质量链均通过且已确认本机隔离 OIDC HTTPS Lab 后，手动执行 `pnpm run test:projects:oidc:multitab:browser` 并检查最终退出码。禁止把 Keycloak 口令输入终端、复用生产数据或输出敏感令牌。
+
+## 2026-11-18 · 第三十四批第二十四小批 Windows 结案及第二十五小批候选
+
+维护者提供的第二十四小批 Windows 日志：`pnpm run test:projects:oidc:multitab:config` **17/17**、退出码 **0**；完整 `pnpm run ready` **退出码 0**，其中 `vp check` **337** 格式文件和 **192** 个受检文件零警告/错误，Vitest **581/581**、NestJS HTTP E2E **49/49**、`docs:check` **86** 份，React/Vue/NestJS 类型检查和构建完成。真实 `pnpm run test:projects:oidc:multitab:browser` **退出码 0**，三个隐藏 Studio 页恢复前的 CAS、SVG、IndexedDB 草稿、自动保存和零写入安全断言通过，四页恢复后同源身份 HTTP 401 及旧 CAS 零工程写入通过。日志无独立 `git rev-parse HEAD`；经核对，PR #80 后续只多一处测试断言排版提交，并已在用户明确授权后 Squash 合并到 `main@2559d6ff7375cac22ad9741d98e121408269e3ad`。不得将第二十四小批结果等同于下一批的新 HEAD 验收。
+
+第二十五小批只增强测试脚本中**注销后受保护工程只读 API 的真实 HTTP 拒绝验证**：React 与 Vue 两个 HTTPS Origin 的工程列表 `GET /api/v1/projects?limit=10` 和本轮随机专用工程历史版本 `GET /api/v1/projects/{id}/versions/3` 均必须返回 **401**。只读探针拒绝任意其他工程 ID/跨 Origin，且不读取返回正文。新增两项 Node 离线回归（同源/只读路径白名单与异常 HTTP/网络拒绝），**目标 19/19，仅为候选数量**。不改变正式 UI、共享 API Client、NestJS、Prisma、数据库或工业权限，也不削弱原四标签页、CAS/本地数据安全断言。
+
+**新 HEAD 的 Windows `test:projects:oidc:multitab:config`、`vp check`、`docs:check`、完整 `pnpm run ready` 和真实 Keycloak 四标签页专项均尚未执行。** 必须记录真实退出码与本地 `git rev-parse HEAD`。真实专项仍需显式确认本机隔离 Lab，会创建并保留一份随机测试工程、追加版本 2/3 并注销隔离会话；禁止输入终端密码、输出 Cookie/Token、触碰既有工程或生产数据库。
+
+## 2026-11-18 · 第三十四批第二十五小批验收结案与第二十六小批候选
+
+维护者提交的第二十五小批 Windows 日志：`pnpm run test:projects:oidc:multitab:config` **19/19**，退出码 **0**；完整 `pnpm run ready` **退出码 0**，其中 `vp check` 337 个格式文件、192 个受检文件零警告/Lint/类型错误，Vitest **581/581**，HTTP E2E **49/49**，`docs:check` **86** 份，React/Vue/NestJS 类型检查与构建均成功。真实 `pnpm run test:projects:oidc:multitab:browser` **退出码 0**：四个 Studio 页 CAS/身份/本地数据保护及零过期工程写入保持，两个 HTTPS Origin 的工程列表和指定修订版本 GET 真实返回 401。维护者日志未提供独立的 `git rev-parse HEAD`；GitHub 核对 PR #81 最新提交仅包含测试排版调整，无断言语义变化。维护者明确授权后已 Squash 合并为 `main@21085c1ebde325c8420e7f31e75294e030d8cd0a`。
+
+第二十六小批经真实 NestJS Controller 确认工程共有四条受保护 GET 路由。仅对原脚本已存在的双 Origin 注销后探针补充工程详情 `GET /:id` 和历史版本列表 `GET /:id/versions?limit=10`，连同已覆盖的列表与指定版本，要求**四条全部真实返回 HTTP 401**。严格同源只读、随机专用工程 ID、无响应正文与零额外工程写入，原四 Studio 页恢复及 SVG/IndexedDB/自动保存断言不变。现有 19 项离线用例中两项按四路由调整，额外新增一项逐路径失败回归；**新目标 20/20（尚未执行）**。
+
+**第二十六小批新 HEAD 的 Windows `test:projects:oidc:multitab:config`、`vp check`、`docs:check`、完整 `pnpm run ready` 和真实 Keycloak 四标签页专项尚未执行。** 旧 PR #81 退出码不得视为本批结果。建议在 Windows 先执行 `git rev-parse HEAD` 记录测试对应 SHA，再按顺序执行上述离线专项与完整质量链；全部真实退出码为 0 后，再在显式确认的本机 OIDC HTTPS Lab 运行 `pnpm run test:projects:oidc:multitab:browser`。交互式测试仍创建并保留随机专用工程、追加修订 2/3、注销当前隔离会话，禁止输入终端密码、输出真实令牌或操作生产工程。
+
+## 2026-11-18 · 第三十四批第二十六小批结案及第二十七小批候选
+
+维护者 Windows 已提交第二十六小批日志：`test:projects:oidc:multitab:config` **20/20**、退出码 **0**；完整 `pnpm run ready` **退出码 0**，其中 `vp check` **337** 个格式文件 / **192** 受检文件零警告，Vitest **581/581**、NestJS HTTP E2E **49/49**、`docs:check` **86** 份且 React/Vue/NestJS 类型检查与构建成功。真实 `pnpm run test:projects:oidc:multitab:browser` **退出码 0**，React/Vue 双 Origin 四条工程只读 GET 实际返回 BFF 401，四 Studio 标签页 CAS/授权失效和本地 SVG/IndexedDB/自动保存/零写入保护均通过。日志未单独包含本地 `git rev-parse HEAD`；GitHub 对 PR #82 附加提交的 diff 确认为一处测试断言排版。用户明确授权后 PR #82 经 Squash 合并至 `main@9fd3b863af8c2af7518d1f8a2e256c85e3bc08ab`。
+
+第二十七小批针对 NestJS Session Guard 在 Controller 执行前拒绝 401/403 的响应缓存策略，仅在该 Guard HTTP 路径提前设置 `Cache-Control: no-store` 和 `Pragma: no-cache`，不修改任何权限分支或写入。新增两项 Guard 单测，原 Vitest **581 项**基础上目标 **583 项**；真实 OIDC 根模块 E2E 在已有两项匿名 401 用例增加响应头检查，**E2E 数量仍为 49 项**。这些数字为待执行目标，尚非运行结果。
+
+**新 HEAD 尚未执行** Windows `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`docs:check`、完整 `pnpm run ready` 或真实 Keycloak OIDC Lab 回归。需先核对 `git rev-parse HEAD`，再执行完整 `ready` 记录最终退出码；此批不改浏览器前端，如需复验真实多标签页，现有 `test:projects:oidc:multitab:browser` 仍涉及新建并保留一份专用工程及注销隔离会话，必须继续使用显式本机 Lab 确认。不得以此前 PR #82 的结果代替本批验证，也不得声称生产现场或工业设备安全认证。
+
+## 2026-11-18 · 第三十四批第二十七小批 Windows 首轮失败与 E-047 修复候选
+
+维护者 Windows 在 PR #83 原候选上执行 `vp check`：**337** 个格式文件正确、**192** 个受检文件零警告/Lint/类型错误；`pnpm run test:unit`：**580/583**（49 个文件中 48 个通过，`scada-identity.spec.ts` 有 **3 项失败**）；`pnpm run test:e2e:server`：**49/49**；`pnpm run docs:check`：**86** 份 Markdown 通过；完整 `pnpm run ready` 在相同三项单测失败处中止，**退出码 1**。因此原 HEAD **未通过完整质量链**，不能因 49/49 E2E 成功就标记验收通过。日志未提供本地 `git rev-parse HEAD` 结果，不擅自关联具体 SHA。
+
+三项失败具有同一代码根因：`ScadaSessionGuard` 新增 `context.switchToHttp().getResponse().setHeader()` 以在早期 401/403 阻止缓存，但 `apps/server/src/auth/scada-identity.spec.ts` 的共用 `context()` Mock 尚未实现 `getResponse`，实际抛出 `TypeError: http.getResponse is not a function`，导致原 Unauthorized/成功/审计断言未进入目标流程。修复候选仅补充此 Mock 的 `setHeader()` 及响应头记录，并在原失败场景加入对 `no-store` / `no-cache` 的正向断言；正式 Guard、授权逻辑和原 583 项测试数量不变。
+
+**修复后的新 HEAD 尚未运行 Windows 复验**。优先在候选分支执行 `pnpm --filter @adui/scada-server exec vp test run src/auth/scada-identity.spec.ts` 或按现有 `pnpm run test:unit` 做全量回归；应获得 **583/583** 后再执行 `vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 并核对最终退出码。此次测试 Mock 修复不要求创建新的 Keycloak 测试工程，不影响 React/Vue 业务页面或工业设备读写；真实浏览器如需再次复核，仍须遵守隔离 Lab 的明确确认限制。参见 E-047。
+
+## 2026-11-18 · 第三十四批第二十七小批结案与第二十八小批候选
+
+维护者 Windows 在 PR #83 的 E-047 Mock 修复后提供了实际 `pnpm run test:unit`：**49/49 文件、583/583 用例通过，退出码 0**；完整 `pnpm run ready` **退出码 0**，包含 `vp check` **337** 个格式文件、**192** 个受检文件零警告/Lint/类型错误，SSE **8/8**、故障代理 **4/4**、OIDC 多标签离线 **20/20**、NestJS HTTP E2E **49/49**、`docs:check` **86** 份、React/Vue/NestJS 类型检查及构建成功。由此 E-047 历史 580/583、`ready` 退出码 1 已关闭。维护者日志未提供本地 `git rev-parse HEAD`，仅能按已核查的后续 GitHub 提交记录判断差异；PR #83 按明确授权 Squash 合并到 `main@650b084f770bb92241b3b93a02689160b7b8bc41`。
+
+第二十八小批只扩充 `apps/server/test/oidc-module-bootstrap.e2e-spec.ts` 的真实 OIDC 根模块 HTTP 403 路径。分别模拟可信来源但缺少 CSRF 请求头，以及有正确测试 CSRF 值但不可信来源，均要求 `POST /api/v1/auth/logout` 返回 403 JSON、`Cache-Control: no-store`、`Pragma: no-cache`、无 `Set-Cookie` 清除、无重定向。真实 Guard 被调用但 Prisma 是空 Mock，不可接触真实会话、真实数据库或 Keycloak。原 49 项 HTTP E2E 目标扩展为 **51/51**；Vitest 单元测试维持 **583/583**（均仅为待测目标）。
+
+**第二十八小批的新 HEAD 尚未运行** Windows `vp check`、`pnpm run test:e2e:server`、`pnpm run test:unit`、`pnpm run docs:check` 或完整 `pnpm run ready`。上批 583/583、49/49 和 `ready` 0 是**已合并旧代码**的真实结果，不能用来声明新提交通过。维护者应先记录 `git rev-parse HEAD`，再执行 HTTP E2E（目标 51/51）和完整 `ready`（最终退出码必须 0）。此批不需要额外启动真实 Keycloak、创建测试工程或执行数据库写操作。
+
+## 2026-11-18 · PR #84 已验收合并与 PR #75 冲突修复候选
+
+维护者 Windows 在 PR #84 新增的真实 OIDC 根模块 403 禁缓存 E2E 后执行 `pnpm run test:e2e:server` **6/6 文件、51/51 用例、退出码 0**；完整 `pnpm run ready` **退出码 0**，含 `vp check` **337** 格式文件 / **192** 受检零警告错误、Vitest **583/583**、HTTP E2E **51/51**、文档 **86** 份与 React/Vue/NestJS 构建。PR #84 按用户明确授权 Squash 合并至 `main@fd2a600b45f4c2c7400984932b69c46da18ab028`；用户日志未提供本地 `git rev-parse HEAD`。
+
+审查发现此前遗留的 PR #75 仍 Open / Draft，基于老的 `main@8cd2223853e7e5dc05695b8ab1226911ec7bd734`，与当前主线文档/`package.json` 冲突；它新增的**同一 Origin 双标签 CAS** 与后来已合并的四页注销专项并不相同，不能直接关闭丢弃。原 PR #75 文档中使用的 E-045/E-046/E-047 错误编号与现主线发生冲突，冲突解决仅保留主线的这些复盘，旧分支局部错误整理入新的 E-048。原分支 18 项离线用例**从无 Windows 实测结果**，不视为通过。
+
+按当前 `main` 构造双父提交的 Git 合流，保留旧 PR #75 全部历史并保留主线所有后续安全代码和文档；在新脚本内修正两处 CDP 页面函数对 Node 作用域 `PROJECT_PATTERN` 的非法引用，新增 1 项序列化边界回归，离线安全目标 **19/19**；根 `package.json` 仅添加两个专项命令且仅将**离线**配置专项加入现有 `ready`。新分支源码尚未运行本地 Node、Windows `vp check`、`docs:check`、完整 `ready` 或真实 Keycloak/双 Origin/数据库浏览器专项；**不能将 PR #84 的成功日志迁移到 PR #75**。待真实日志与 `$LASTEXITCODE` 完成之后，再请求新一轮合并授权。

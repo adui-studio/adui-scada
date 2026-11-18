@@ -955,17 +955,84 @@ React/Vue 原 `loadServerVersion` 及 `openServerProject` 确认对话后，先 
 
 浏览器新增两种独立回归：原工程列表“打开”的测试钩子仅在 `window.confirm` 返回同意之后，针对本轮专用工程的一个 GET 摘要**合成水位 +1**，检查双框架拒绝载入、画布/草稿/自动保存不变；此数据不写入 PostgreSQL。原 409 保存模拟专项完成真实 BFF 最新版只读预览后，再点击**真实服务端版本列表的“载入”按钮**，接受原确认、执行真实 GET 复核，必须建立原最新 CAS 并暂停自动保存，同时保持 IndexedDB 草稿和写入拦截计数。测试不将合成 GET 漂移称为真实并发数据库提交，也不扩大工业设备控制权限。
 
+## 2026-11-18 · 第三十四批第二十小批：真实多标签页 BFF 会话与 CAS 复核
 
-## 第三十四批第二十小批 · 同源多标签页 CAS 验收设计
+新增 scripts/test-oidc-real-multitab.mjs 与 scripts/test-oidc-real-multitab.cases.mjs，不修改 StudioServerProjectSession、React/Vue Studio、NestJS、Prisma Schema、迁移或设备权限。测试复用现有 test-project-browser-oidc.mjs 的 Studio 页面动作、草稿摘要与写请求阻断器，复用 test-oidc-dual-cas.mjs 的专用工程创建、版本追加和真实 OIDC 登录，并复用 test-oidc-studio-real-late.mjs 的 SVG 语义快照（仅排除经源码确认的单个视口网格）。
 
-本批补充现有会话水位复核的真实浏览器覆盖，不新增生产运行时模块：
+真实浏览器使用一个临时 Profile 和四个 CDP Target：React 写入/跟随标签页、Vue 写入/跟随标签页。四个页面在导航前安装自包含可见性观察函数；两个跟随页面另外安装工程写请求本地阻断器。测试只通过 CDP Page.bringToFront 激活真实标签页，并要求浏览器报告 document.visibilityState === "visible" 且可见事件计数递增；不覆盖 DOM 属性、不手动派发 visibilitychange。一次真实 Keycloak 登录后，四个标签页各自从本机 React/Vue HTTPS Origin 请求 /api/v1/auth/me，并核对租户与主体相同，以证明两个 Origin 实际共享同一 Host Cookie BFF 会话。
 
-1. 在一个隔离 Chrome/Edge Profile 中创建两个同源标签页；两页必须通过真实 BFF /api/v1/auth/me 读取到同一租户、同一主体。React 与 Vue 分别使用各自 HTTPS Origin 执行完整流程。
-2. 两页分别通过现有工程管理 UI 打开本轮随机工程首版，建立各自独立的 StudioServerProjectSession CAS 基线。第二页创建 IndexedDB 草稿并启用自动保存，再修改本地画布。
-3. 第一页通过真实 Studio“保存至服务端”按钮提交唯一一次 expectedRevision=1 POST，数据库真实追加修订 2。切回第二页时必须使用真实标签页前后台切换，检查 document.visibilityState，由既有 visibilitychange 监听触发 revalidateBaseline。
-4. 第二页发现水位漂移后清除旧 CAS；本地 SVG、IndexedDB 草稿和自动保存保持不变。保存尝试必须在任何版本 POST 前拒绝。之后只读预览修订 2，人工确认载入，再通过 revalidateConfirmedLoad 建立 CAS=2；载入暂停自动保存但不得覆盖本地 IndexedDB 草稿。
-5. 第二页以 CAS=2 真实保存修订 3；第一页恢复可见后必须检测到水位 3 并清除 CAS=2。第一页再次保存不得发出额外 POST。PostgreSQL 版本与审计必须只有 1/2/3，创建者及三个版本审计操作者均为同一主体，修订 2/3 的摘要与真实 HTTP 201 一致。
+专用工程通过正式同源 POST /api/v1/projects 创建，React 写入端以 CAS 1→2、Vue 写入端以 CAS 2→3 追加真实版本。React/Vue 跟随页切回前台后，现有 StudioServerProjectSession.revalidateBaseline 必须通过 BFF GET /auth/me 与工程摘要发现远端水位变化并清除旧 CAS；跟随页真实点击保存时，页面内写入阻断器记录的工程 POST 必须为零。之后两跟随页分别经现有人工确认载入最新修订 3，建立有效基线并恢复自动保存。
 
-隔离浏览器写入守卫在每个 Origin 页面脚本加载前安装：工程 GET/HEAD 正常访问；其他工程写请求默认 403；只为本轮随机工程按明确的 CAS 水位逐次 arm 一次版本 POST。工程首版创建发生在守卫安装前，仍由同源 CSRF 保护的正式 BFF POST 完成。测试不删除数据、不改 ACL、不操作已有工程。
+注销场景由 React 写入标签页向同源 /api/v1/auth/logout 发送真实 POST，使用当前 __Host-adui-scada-csrf Cookie 的双提交 X-SCADA-CSRF；浏览器自动附带 Origin/Sec-Fetch 元数据。隐藏跟随页在未切回前仍保持其内存状态，重新可见后各自真实请求 /auth/me 收到 401 并由现有页面逻辑清除服务端 CAS/授权缓存。全程不广播账户状态、不复制 Cookie、不读取或打印身份主体或令牌。
 
-不增加 BroadcastChannel、storage event、跨标签页身份同步或新的 CAS 机制。该专项验证的是现有“页面恢复可见 → 只读复核 → 人工确认 → 服务端 CAS”的协作闭环，不是物理 TCP 断流、生产现场安全或跨设备控制验收。
+每个跟随页的画布、IndexedDB 草稿数量/整记录 SHA-256 和自动保存开关都进行前后比较。只在本轮随机专用工程创建首版及追加 2/3 版；工程保留供维护者复核，不修改既有工程、既有 ACL、身份映射和生产数据；新工程仅由现有创建 API 按既定事务创建创建者默认权限，不手工新增其他主体授权。离线测试只覆盖参数门禁、可见性状态、身份一致性、CSRF 注销契约、脱敏状态摘要及本地一致性断言；真实 Chrome/Edge、Keycloak、HTTPS 和 BFF 集成必须由维护者独立执行。
+
+## 2026-11-18 · 第三十四批第二十二小批：同一 Profile 四标签页注销后身份核验
+
+在原 `scripts/test-oidc-real-multitab.mjs` 中，React 写入页执行一次真实的、CSRF 保护的注销 HTTP 204。保留两个跟随页在仍隐藏时 CAS 为修订号 3 的原始保护断言；随后对注销发起的 React 写入页直接以当前 Origin 的 `readAuthStatusInPage` 获取真实 `/api/v1/auth/me` 状态，并要求严格 401。
+
+React/Vue 跟随页仍按原顺序真实切换为可见，验证已有 `StudioServerProjectSession` 的 CAS/授权缓存清除、旧保存零写入及画布/草稿/自动保存不变。最后将原本未参加注销后状态验证的 Vue 写入页从隐藏切换到真实可见，在 Vue Origin 执行同源 `GET /api/v1/auth/me` 并要求 HTTP 401。以 Node 侧纯函数 `requireLogoutHttp401` 复用严格状态判断，任何非 401（包括网络错误映射的 0）均拒绝；CDP 注入函数保持自包含，不引用 Node 侧 helper。
+
+本次不增加注销广播机制或主动推送，也不触发额外工程 POST、数据库查询或生产业务改动。测试窗口的 Cookie/Token/身份不输出，继续在结束时销毁隔离 Profile。
+
+## 2026-11-18 · 第三十四批第二十三小批：写入页 Studio 基线与共享注销全页复核
+
+真实四标签页专项继续先由 React/Vue 写入页使用受控 API 创建并追加专用工程至修订号 3，再让写入页各自真正进入 Studio、通过授权列表确认载入当前修订号 3。两个跟随页原有版本漂移、CAS 恢复、草稿保护流程不变。
+
+新增 `prepareWriterReadOnlySession(session, revision)`，先对写入页执行自包含的 `installAccessDenialFaultInPage` 使后续项目 POST 被本地阻断，再通过 `inspectProtectedState` 只读抓取 SVG 内容、IndexedDB 草稿数量与全记录 SHA-256 和自动保存布尔值。读取 `readMultiTabSessionStateInPage` 并强制 `baselineRevision === revision` 与 `writeAttempts === 0`；使用原 `requireUnchangedStudioState` 检验快照完整性。不调用 `saveDraftInPage` 或 `enableAutoSaveInPage`，避免污染同 Origin 跟随页的共享 IndexedDB。
+
+注销时先确认 React/Vue 跟随页、Vue 写入页均真实隐藏，React 写入页调用现有 CSRF 注销并直接验证同源 HTTP 401。随后依次实际激活 React 跟随、Vue 跟随、Vue 写入与 React 写入，四者均调用原 `verifyLogoutRevalidation`，验证 UI 中 CAS/远端水位与授权缓存失效、BFF GET 401、SVG/草稿/自动保存不变和旧保存零工程写入。所有额外调用仅针对本次隔离工程或只读 BFF 身份接口，严格保留浏览器脱敏和 Profile 释放。
+
+此专项并非跨独立 Profile 的注销广播，也不涉及生产业务接口、工业设备控制或数据库迁移。
+
+## 2026-11-18 · 第三十四批第二十四小批：隐藏页身份失效前的全量快照
+
+原 `scripts/test-oidc-real-multitab.mjs` 的注销流程在 React 写入页 HTTP 204 后，对三个隐藏 Studio 标签页仅比较 `baselineRevision === 3` 和 `identityRejected === false`，完整 SVG/IndexedDB/自动保存检查直到它们恢复可见才执行。本批保留既有正式注销、真实页面恢复、零 POST 等全部验收约束，补充注销后、**任何隐藏页恢复可见前**的保护阶段。
+
+新增 Node 侧纯断言 `requireHiddenSessionUnchanged(state, expectedRevision)`，对修订号、`baselineCleared`、`headCleared`、`identityRejected`、`busy`、`writeAttempts` 使用严格值比较；无效输入或提前变化统一抛出既有脱敏中文错误，不回显项目 ID、主体、Cookie、草稿内容或摘要。
+
+新增内部 `verifyHiddenTabBeforeResume(session, beforeState)`：先通过既有 CDP 探针严格等待真实 `hidden`，只读提取会话摘要并断言 CAS/水位/零写入；再复用 `inspectProtectedState` 和 `requireUnchangedStudioState` 比较全量 SVG、IndexedDB 与自动保存状态。分别对 React 跟随、Vue 跟随、Vue 写入页调用，基准取各自已有的修订号 3 保护快照。React 注销发起页仍保持可见且通过真实 GET 获取 401，因此不属于隐藏页预检范围。
+
+上述预检完成后仍沿用原有四个 Studio 页面真实可见性切换、BFF 401、CAS/授权缓存清理、原保存按钮零工程 POST 及本地数据保护测试。不会额外调用设备写入、清理数据库或修改测试工程 ACL。
+
+## 2026-11-18 · 第三十四批第二十五小批：已注销会话对工程只读 API 的拒绝
+
+真实多标签页脚本保留前序一次 CSRF 注销 HTTP 204、三个 hidden 页恢复前快照检查、四个 Studio 页真实可见性恢复、同源身份 GET 401、旧 CAS 保存阻断与 SVG/IndexedDB/自动保存保护。新增检查只在这组已有断言全部成功之后执行，不创建额外工程版本或改变测试隔离 Profile。
+
+`readLogoutProjectStatusesInPage(origin, projectId, runtime)` 是可由 CDP 独立序列化的自包含页面函数，先以严格正则验证专用 `b34-oidc-cas-<UUID>` 工程 ID 与当前页面 Origin，校验失败不发请求并返回 `null`。随后顺序执行 **两个只读同源 GET**：列表 `?limit=10` 和本轮项目 `versions/3`，始终禁用重定向及缓存，仅将 HTTP 状态数字组成二元数组；网络、TLS 或重定向故障映射为 `0`，不读取响应正文与凭据。以 Node 侧 `requireLogoutProjectDenied` 要求数组长度恰好为 2 且两个状态均严格等于 401，任何其他结果以固定中文安全错误失败。
+
+React 写入页和 Vue 写入页各执行一次完整二元探针，分别由独立白名单阶段标识失败 Origin；四标签页原 CAS/授权缓存检查不被替换。离线回归核对具体固定路径、只读请求选项、跨 Origin/非法项目 ID 零请求和网络及 HTTP 各类异常的 fail-closed 结果。此测试不证明不同浏览器 Profile 的注销传播或设备安全性。
+
+## 2026-11-18 · 第三十四批第二十六小批：BFF 工程只读接口注销后的全路径校验
+
+依据 `apps/server/src/projects/project-api.controller.ts` 的真实 `@Get()` 路由确认工程列表、工程详情、历史版本列表和单个历史版本四条 GET 均有 `ScadaSessionGuard`，其中详情额外要求 `project:read`，历史版本两个路由额外要求 `version:read`。本批不修改这些生产 Guard，而是扩展已合并第二十五小批的 `readLogoutProjectStatusesInPage` 页面侧同源只读探针。
+
+页面函数仍然严格验证当前 Origin 与本轮 `b34-oidc-cas-<UUID>` 工程 ID，并依次访问 `?limit=10`、`/:id`、`/:id/versions?limit=10`、`/:id/versions/3` 四条固定 GET；保留 `credentials/mode: same-origin`、`redirect: error`、`cache: no-store`、`Accept: application/json`、无请求体、不读取响应正文。网络及 TLS 故障继续以数字状态 0 呈现，仅返回恰好四项状态数组到 Node 端。
+
+`requireLogoutProjectDenied` 保持原中文脱敏诊断并将门禁从严格两项 401 扩展到**四项每一项都为 401**；不足、超量、缺失、200/3xx/403/5xx 均拒绝。真实浏览器脚本仍在原四 Studio 标签页和本地数据保护断言完成后，各从 React、Vue 写入页复用一次同一探针，不制造第二次注销或新的工程版本。
+
+离线测试将原两个 GET 路由用例扩展至四路由，再新增一项逐个路由注入 200 的回归，验证任何单一路由放行都会失败、只读探针不会访问响应 `json()` 或 `text()`；目标离线总数 **20 项**。这不等于真实浏览器已经验证通过。
+
+## 2026-11-18 · 第三十四批第二十七小批：Guard 早期拒绝响应禁止缓存
+
+`apps/server/src/auth/scada-session.guard.ts` 的 `canActivate` 在确认 HTTP 上下文后、解析 Cookie/Authorization 前通过 NestJS `context.switchToHttp().getResponse()` 获取响应，将 `Cache-Control: no-store` 和 `Pragma: no-cache` 作为安全默认值设置。此位置早于所有 HTTP 401/403 拒绝，因此不依赖业务 Controller 装饰器成功返回之后才设置的 `@Header`；原鉴权分支、审计类别、CSRF 双提交、同源来源检查及 Bearer/Cookie 不混用逻辑均保持不变。
+
+为避免将 NestJS 或 Express 全量响应对象引入身份模块类型约束，仅定义 `setHeader(name: string, value: string): void` 的局部窄接口。`ScadaSessionGuard` 原单元测试 `context` 夹具只读记录被设置的头；新增拒绝 401/403 单元用例，同时断言拒绝前不调用任何会话仓储。`OidcEnabledAppModule` 装配 E2E 在真实 NestJS HTTP 层核对 `auth/me` 和工程列表匿名 401 响应含 `no-store` / `no-cache`，没有真实数据库连接。
+
+这是对拒绝路径的预防性加强，**不是**已有生产缓存泄漏的事故结论。需 Windows 真实质量链验证，新 HEAD 未运行前不声明完成或通过。依赖、工程 Schema、BFF Cookie/Token、授权流程、React/Vue 及工业网关均不变。
+
+## 2026-11-18 · 第三十四批第二十八小批：真实 NestJS Guard 403 禁缓存 E2E
+
+沿用 `apps/server/test/oidc-module-bootstrap.e2e-spec.ts` 的 `OidcEnabledAppModule` 真正装配路径，不单独 Mock Controller、Guard 或 HTTP 异常处理；外部 `PrismaService` 仍以 `{ client: {} }` 替换，不允许数据库查询。使用现有 `ScadaAuthController` 的 `POST /api/v1/auth/logout`，测试值满足 `scada_s_<43 chars>` / `scada_csrf_<43 chars>` 协议形状但不对应任何真实用户。
+
+第一条用例带可信 `Origin`、`Sec-Fetch-Site: same-origin` 和两种 Cookie，刻意缺少 `X-SCADA-CSRF`，预期在 `ScadaSessionGuard` 的 CSRF 双提交检查中提前返回 403。第二条用例带匹配的 CSRF 请求头，但使用不可信 `Origin`，必须在 Origin 白名单检查处提前拒绝为 403。两条用例都逐项检查 JSON 403、安全固定中文原因、`Cache-Control: no-store`、`Pragma: no-cache`，并要求 `Set-Cookie` 与 `Location` 缺失，避免把未完成注销误报为清理成功。
+
+不新增测试依赖，不改现有代码路径或异常吞吐；先前 401 HTTP 根模块用例保持不变。此次在已有 49 项 HTTP E2E 上新增 2 项，**新目标为 51/51（待 Windows 实测）**；Vitest 单元测试总数仍为 583 项，不改变浏览器、多标签页或工业现场验收边界。
+
+## 2026-11-18 · PR #75 历史专项与新主线合流设计
+
+在 `main` 已有的 `scripts/test-oidc-real-multitab.mjs` 四标签共享会话注销专项之外，保留 `scripts/test-oidc-studio-multitab.mjs` 的**同一 Origin 双标签 CAS** 功能。通过原有 `startBrowser` 在同一临时 Chrome/Edge Profile 创建第二 CDP 标签页，逐个 Origin 复用真实 BFF 身份、工程列表及 Studio 控件，只在明确确认的本机 OIDC HTTPS Lab 新建随机工程。两个标签的写入守卫在页面导航之前安装，工程 GET/HEAD 透传；非 GET/HEAD 默认拒绝，仅分别为 CAS=1 与 CAS=2 允许单次目标工程 POST。不得引用模块级常量进入被 CDP `function.toString()` 序列化的页面函数。
+
+每个 Origin 的双标签页先载入修订 1，第二页创建 IndexedDB 草稿并启用自动保存。第一页真实保存修订 2 后，第二页通过真实可见性恢复触发只读水位复核，失效过期 CAS、拒绝旧版本 POST、保留画布/草稿/自动保存；然后真实只读预览、人工载入修订 2 并追加修订 3。第一页恢复可见后也必须拒绝旧 CAS。最终从唯一隔离 PostgreSQL 租户/工程过滤读取头版本、版本行与审计行，三版的内容摘要必须匹配两个实际 HTTP 201 结果。
+
+复用现有 `createCasProjectInPage` 的安全边界，在新页面函数中**内联精确工程 ID 正则**，防止重复 E-002/E-025/E-039 的浏览器脚本引用 Node 模块闭包问题。离线用例在原 18 项基础上新增 1 项序列化边界检查，目标 19/19；它只能证明纯函数/安全门禁，不能代替真实 Keycloak/Chrome/PostgreSQL 验收。未更改任何生产 React/Vue、共享 Core、NestJS、Prisma 模型或迁移。

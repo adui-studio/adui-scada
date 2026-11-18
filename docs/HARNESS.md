@@ -2886,19 +2886,20 @@ if ($browserExitCode -ne 0) { throw "确认载入浏览器专项失败" }
 
 验收需要看到 React **和** Vue 在“确认载入前的模拟远端版本冲突”时保持原画布、草稿和自动保存，确认后合成 HEAD 水位变化拒绝载入；然后正常确认打开工程建立 CAS 基线，409 只读预览最新版后通过真正 UI 确认再次载入恢复 CAS，同时只产生测试 Profile 内的单次被拦截 POST，其他全部为真实受保护 GET。既有 401、503 恢复仍须通过。最终命令退出码为 **0** 才能验收；没有实测日志前所有测试计数均是目标，不是结果。此专项非物理 TCP 断流、非生产/工业现场验收。
 
+## 第三十四批第二十小批 · 真实多标签页 OIDC 会话与 CAS 验收
 
-## 第三十四批第二十小批 · React/Vue 同源双标签页真实 CAS 专项
+本批真实浏览器专项使用**一个临时 Chrome/Edge Profile、四个真实标签页、一个普通 Keycloak 测试用户**。React/Vue 使用现有本机 HTTPS Origin；四个标签页共用浏览器 Host Cookie 存储，但身份/工程请求仍只发往当前标签页自己的同源 BFF。运行前确保本机可信 Keycloak、React/Vue HTTPS、NestJS、隔离 PostgreSQL Lab 和 NODE_EXTRA_CA_CERTS 均按现有 AGENTS.md / HARNESS.md 约束就绪。
 
-先确认工作区干净并切换候选分支，依次执行离线测试、格式检查、文档检查和完整质量链：
+先执行离线安全用例和完整质量链：
 
-\`\`\`powershell
+```powershell
 git status --short
 git fetch origin
-git switch --track origin/ai/b34-same-origin-multitab-cas
+git switch --track origin/feature/v0.3-b34-multitab-oidc-session
 git rev-parse HEAD
 
-pnpm run test:oidc:dual:studio:multitab:config
-if ($LASTEXITCODE -ne 0) { throw "同源多标签页离线安全测试失败" }
+pnpm run test:projects:oidc:multitab:config
+if ($LASTEXITCODE -ne 0) { throw "真实多标签页离线安全测试失败" }
 
 vp check
 if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
@@ -2910,23 +2911,52 @@ pnpm run ready
 $readyExitCode = $LASTEXITCODE
 Write-Host "第二十小批完整质量链退出码：$readyExitCode"
 if ($readyExitCode -ne 0) { throw "完整质量链失败" }
-\`\`\`
+```
 
-完整质量链通过后，在本机可信 Keycloak、React/Vue 双 HTTPS Origin、PostgreSQL Lab 和已预绑定普通测试用户均就绪的前提下，单独执行：
+在维护者明确确认本机 Lab 数据库名称后，单独运行真实浏览器专项：
 
-\`\`\`powershell
+```powershell
+pnpm run test:projects:oidc:multitab:browser
+$browserExitCode = $LASTEXITCODE
+Write-Host "第二十小批真实多标签页专项退出码：$browserExitCode"
+if ($browserExitCode -ne 0) { throw "真实多标签页 OIDC 专项失败" }
+```
+
+交互说明：命令启动一个全新的隔离浏览器窗口，维护者只需手动登录一次已预绑定的普通 Keycloak 测试用户；不要在终端输入或粘贴密码。脚本在本轮专用工程上通过正式 BFF 创建首版，由 React 写入端真实追加 2、Vue 写入端真实追加 3；React/Vue 跟随标签页通过实际切换前台触发服务端水位复核，并点击现有 Studio 保存按钮验证旧 CAS 不产生工程 POST。随后 React 写入端执行真实 /api/v1/auth/logout CSRF 注销，两个跟随标签页分别切回前台，验证真实 401、CAS/授权缓存失效与本地草稿保护。
+
+本轮仅新建一份随机 b34-oidc-cas-UUID 专用工程，保留版本 1/2/3 供维护者复核；不会更改其他工程、既有 ACL、身份映射或现有 Lab 业务数据；新工程仅由现有创建 API 按既定流程创建创建者默认权限，不手工增加其他主体授权。跟随标签页内所有工程非 GET/HEAD 请求始终由页面 Fetch 包装器阻断，必须保持零穿透。隐藏标签页在后台期间不应收到即时身份广播，只有切回前台后才通过真实 BFF 复核；这不是后台推送、物理 TCP 断流或生产/工业现场验收。临时浏览器 Profile 在退出时关闭并清理。
+
+## 第三十四批遗留 PR #75 · React/Vue 同源双标签页 CAS 专项验收
+
+本次在 PR #84 合并之后从最新 `main` 无强制推送地解决旧 PR #75 冲突。先确认本地没有未提交改动，核对 PR #75 分支的 HEAD 与远端一致，再执行离线与完整质量门禁。不要把之前 51/51 HTTP E2E、583/583 Vitest 或 `ready` 退出码 0 当作本分支已验收。
+
+```powershell
+git status --short
+git fetch origin
+git switch ai/b34-same-origin-multitab-cas
+git pull --ff-only
+git rev-parse HEAD
+
+pnpm run test:oidc:dual:studio:multitab:config
+Write-Host "同源双标签页离线测试退出码：$LASTEXITCODE"
+
+vp check
+Write-Host "Vite+ 检查退出码：$LASTEXITCODE"
+
+pnpm run docs:check
+Write-Host "文档检查退出码：$LASTEXITCODE"
+
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+```
+
+离线安全用例**目标 19/19**，GitHub 分支新增 2 个 `.mjs` 文件，自动纳入 `ready` 的仅是本机不写数据库的 Node 离线测试。完整 `ready` 必须实际退出码 0，不能由单独 E2E 或之前分支构建成功替代。新脚本是否符合 Vite+ 格式/Lint、Node 运行及浏览器行为均以维护者 Windows 实测为准。
+
+在本机可信 Keycloak、双 HTTPS Origin、受控 PostgreSQL Lab、已预绑定普通测试用户都就绪，并允许创建本次随机专用测试工程时，另行运行：
+
+```powershell
 pnpm run test:oidc:dual:studio:multitab
-$multitabExitCode = $LASTEXITCODE
-Write-Host "同源双标签页真实浏览器专项退出码：$multitabExitCode"
-if ($multitabExitCode -ne 0) { throw "同源双标签页真实浏览器专项失败" }
-\`\`\`
+Write-Host "同源双标签页真实浏览器专项退出码：$LASTEXITCODE"
+```
 
-该命令会打开一个隔离 Chrome/Edge Profile。只需在其中完成一次预绑定 Keycloak 测试用户登录；不要在终端输入或粘贴密码。测试在同一浏览器窗口创建第二个标签页，并分别在 React、Vue Origin 完整运行：
-
-- 两标签真实 BFF 身份必须相同；每个 Origin 只新建一个随机 b34-oidc-multitab-<UUID> 专用工程。
-- 两页先载入修订 1；第二页保存 IndexedDB 草稿并启用自动保存。第一页通过真实 Studio UI 保存修订 2，第二页切回前台后必须通过真实 visibilitychange 发现水位漂移。
-- 第二页的过期保存必须在版本 POST 前拒绝；只读预览与确认载入修订 2 后，CAS=2 恢复、自动保存暂停、原 IndexedDB 草稿保持不变。
-- 第二页通过真实 UI 保存修订 3；第一页恢复可见后必须清除过期 CAS=2，保存再次被拒绝且不产生第四版。
-- PostgreSQL 必须只有修订 1/2/3 和三条同主体审计记录，摘要与两次真实 201 一致。
-
-**安全边界**：首版创建只发生在随机专用工程；写入守卫只放行每个标签页各一次明确 CAS 的版本 POST，其他工程写请求均在浏览器拦截。测试工程会保留供审计，不自动删除，不修改现有工程、用户或 ACL。必须保持浏览器窗口正常显示，不要最小化或关闭；专项要求通过真实前后台切换观察 visibilityState，不使用脚本伪造可见性事件。真实浏览器专项不属于默认 ready。
+隔离 Chrome/Edge 中只需手动登录一次，**不要将密码、Cookie、Token 或数据库凭据粘贴进终端**。React/Vue 各创建一份随机专用工程，走真实 Studio UI 的版本 1→2→3、后台到前台实际可见性切换、过期 CAS 阻断、只读预览和人工载入、IndexedDB 草稿不变与 SQL 三版审计；测试工程保留，不删除既有数据。专项可能写入**仅本轮随机专用工程**，不允许在生产环境执行，也不允许改动工业设备。

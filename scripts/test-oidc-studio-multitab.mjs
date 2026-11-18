@@ -74,7 +74,7 @@ export function describeStudioMultiTabFailure(error) {
 
 /** 只为本轮随机测试工程创建首版，不接触任何既有工程。 */
 export async function createMultitabProjectInPage(origin, projectId, runtime = globalThis) {
-  if (runtime.location.origin !== origin || !PROJECT_PATTERN.test(projectId)) {
+  if (runtime.location.origin !== origin || !/^b34-oidc-multitab-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId)) {
     throw new Error("同源多标签页工程创建失败");
   }
   const cookies = runtime.document.cookie
@@ -235,7 +235,7 @@ export function armStudioMultiTabWriteInPage(
   const state = runtime.__aduiTestStudioMultiTab;
   if (
     runtime.location.origin !== origin ||
-    !PROJECT_PATTERN.test(projectId) ||
+    !/^b34-oidc-multitab-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId) ||
     ![1, 2].includes(expectedRevision) ||
     !state ||
     state.allowed !== null
