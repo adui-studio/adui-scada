@@ -20,6 +20,27 @@ function jsonResponse(value: unknown, status = 200): Response {
   });
 }
 
+function preflightResponse(value: unknown, status = 200, cacheControl = "no-store"): Response {
+  return new Response(JSON.stringify(value), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": cacheControl,
+    },
+  });
+}
+
+function validPreflightReport() {
+  return {
+    projectId: PROJECT_ID,
+    revision: 2,
+    headRevision: 2,
+    contentHash: "a".repeat(64),
+    passed: true,
+    issues: [],
+  };
+}
+
 function createHarness(response: Response, cookie = CSRF_COOKIE) {
   const fetcher = vi.fn<typeof fetch>(async () => response);
   return {
@@ -289,5 +310,154 @@ describe("框架无关工程 API Client", () => {
     expect(error).toMatchObject({ kind: "network" });
     expect((error as Error).message).not.toContain("上游密钥");
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("服务端发布预检只以当前修订号执行同源 GET，不读取 Cookie 或发送工程正文", async () => {
+    const fetcher = vi.fn<typeof fetch>(async () => preflightResponse(validPreflightReport()));
+    const readCookie = vi.fn<() => string>(() => {
+      throw new Error("只读预检不允许读取 Cookie");
+    });
+    const client = createScadaApiClient({ fetcher, readCookie });
+    expect(await client.preflightRelease(PROJECT_ID, 2)).toEqual(validPreflightReport());
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/projects/" + PROJECT_ID + "/versions/2/release-preflight",
+      expect.objectContaining({
+        method: "GET",
+        credentials: "same-origin",
+        mode: "same-origin",
+        redirect: "error",
+        referrerPolicy: "no-referrer",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      }),
+    );
+    const options = fetcher.mock.calls[0]?.[1];
+    expect(options).not.toHaveProperty("body");
+    expect(options?.headers).not.toHaveProperty("X-SCADA-CSRF");
+    expect(readCookie).not.toHaveBeenCalled();
+  });
+
+  it("发布预检可以返回静态错误报告而不将不兼容判作 HTTP 失败", async () => {
+    const issue = {
+      code: "UNSUPPORTED_SYMBOL_PROP",
+      severity: "error",
+      path: "pages[0].nodes[1].props.color",
+      message: "当前 SVG 运行时不处理此图元属性",
+    };
+    const report = { ...validPreflightReport(), passed: false, issues: [issue] };
+    const harness = createHarness(preflightResponse(report));
+    expect(await harness.client.preflightRelease(PROJECT_ID, 2)).toEqual(report);
+    expect(harness.fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("发布预检拒绝非法工程标识和修订号，输入错误不得触发网络", async () => {
+    const harness = createHarness(preflightResponse(validPreflightReport()));
+    await expect(harness.client.preflightRelease("../unsafe", 2)).rejects.toThrow(
+      "工程 ID 必须是合法的 1～128 字符 ASCII 标识符",
+    );
+    for (const revision of [0, -1, 1.1, Number.MAX_SAFE_INTEGER + 1, NaN]) {
+      await expect(harness.client.preflightRelease(PROJECT_ID, revision)).rejects.toThrow(
+        "发布预检修订号必须是正安全整数",
+      );
+    }
+    expect(harness.fetcher).not.toHaveBeenCalled();
+  });
+
+  it("服务端发布预检拒绝跨工程、非当前版本、无效摘要与额外字段", async () => {
+    const valid = validPreflightReport();
+    for (const change of [
+      { projectId: "another-project" },
+      { revision: 1 },
+      { headRevision: 3 },
+      { contentHash: "Z".repeat(64) },
+      { published: true },
+      { document: documentCopy() },
+    ]) {
+      const harness = createHarness(preflightResponse({ ...valid, ...change }));
+      await expect(harness.client.preflightRelease(PROJECT_ID, 2)).rejects.toMatchObject({
+        kind: "invalid_response",
+      });
+    }
+  });
+
+  it("服务端发布预检拒绝错误的 passed 与 issues 组合", async () => {
+    const valid = validPreflightReport();
+    const issue = {
+      code: "UNSUPPORTED_RULES",
+      severity: "error",
+      path: "pages[0].nodes[0].rules",
+      message: "当前 SVG 运行时尚未执行图元规则",
+    };
+    for (const change of [
+      { passed: false, issues: [] },
+      { passed: true, issues: [issue] },
+      { passed: "true" },
+      { issues: {} },
+    ]) {
+      const harness = createHarness(preflightResponse({ ...valid, ...change }));
+      await expect(harness.client.preflightRelease(PROJECT_ID, 2)).rejects.toMatchObject({
+        kind: "invalid_response",
+      });
+    }
+  });
+
+  it("发布预检问题项必须是 Core 已知错误码与受控字段，不得透传任意对象", async () => {
+    const valid = validPreflightReport();
+    const issue = {
+      code: "DOCUMENT_INVALID",
+      severity: "error",
+      path: "pages[0]",
+      message: "工程文档无效",
+    };
+    for (const change of [
+      { code: "FUTURE_UNSAFE_CODE" },
+      { severity: "warning" },
+      { path: "" },
+      { path: "p".repeat(513) },
+      { message: "" },
+      { message: "x".repeat(513) },
+      { secret: "不允许返回" },
+    ]) {
+      const harness = createHarness(
+        preflightResponse({ ...valid, passed: false, issues: [{ ...issue, ...change }] }),
+      );
+      await expect(harness.client.preflightRelease(PROJECT_ID, 2)).rejects.toMatchObject({
+        kind: "invalid_response",
+      });
+    }
+  });
+
+  it("发布预检要求服务端明确禁止缓存，拒绝响应体不是 JSON", async () => {
+    for (const header of ["", "private", "no-store-disabled"]) {
+      const harness = createHarness(preflightResponse(validPreflightReport(), 200, header));
+      await expect(harness.client.preflightRelease(PROJECT_ID, 2)).rejects.toMatchObject({
+        kind: "invalid_response",
+      });
+    }
+    const html = createHarness(
+      new Response("<html>身份登录</html>", {
+        status: 200,
+        headers: { "Content-Type": "text/html", "Cache-Control": "no-store" },
+      }),
+    );
+    await expect(html.client.preflightRelease(PROJECT_ID, 2)).rejects.toMatchObject({
+      kind: "invalid_response",
+    });
+  });
+
+  it("发布预检 HTTP 401、404、409 均沿用可信访问拒绝与水位冲突分类", async () => {
+    for (const [status, kind] of [
+      [401, "unauthenticated"],
+      [404, "not_found"],
+      [409, "conflict"],
+    ] as const) {
+      const harness = createHarness(preflightResponse({ message: "private-token" }, status));
+      const failure = await harness.client
+        .preflightRelease(PROJECT_ID, 2)
+        .catch((error: unknown) => error);
+      expect(failure).toMatchObject({ kind, status });
+      expect((failure as Error).message).not.toContain("private-token");
+    }
   });
 });

@@ -1842,3 +1842,9 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 维护者在 Windows 执行 `vp check --fix` 时，`scripts/test-oidc-release-preflight.cases.mjs:190` 出现 **1 条** `typescript(no-misused-spread)` 警告、**0 错误**。原因是 Mock `Map` 中的响应正文存在数组/对象联合类型，测试将 `old.body` 未经非数组对象校验直接展开；格式化完成不能视为静态检查通过。
 
 PR #90 功能分支已最小增加 `assert.ok(old?.body && !Array.isArray(old.body), "发布预检测试夹具正文必须为对象")` 后才展开原正文，保留所有四个负向断言。GitHub 回读已验证此断言存在。**新 HEAD 的 Windows `vp check`、`pnpm run test:release:preflight:oidc:config`、`pnpm run docs:check`、完整 `pnpm run ready` 及交互式真实 Keycloak 浏览器专项均待执行**；不得将修复前的检查或其他 V8 模拟结果记作 Windows 新 HEAD 通过。参见 `docs/AI_MISTAKES.md` E-051。
+
+## 2026-11-18 · PR #90 合并与第三十五批第七小批共享 API Client 待验收
+
+PR #90 已依据维护者明确授权 Squash 合并至 `main@1e891193f0a4fb9191b1f24bdf369713c7e54aeb`，合并前 GitHub HEAD `72437a996c163fec05f55560f68f782eea8da488`，Assignee `@adui-dev`。Windows 原始日志中 `pnpm run test:release:preflight:oidc:config` **11/11**、`vp check` **345 格式文件/200 受检零告警**、`docs:check` **86 份**、完整 `ready` **退出码 0**（Vitest **602/602**、HTTP E2E **55/55**、三端构建成功）；另由维护者两次实际执行真实 Keycloak React/Vue 双 Origin 发布预检浏览器专项，结果均通过、退出码均 **0**。日志没有独立本地 Git HEAD，不得将 Windows 结果宣称为严格 SHA 级绑定。
+
+第七小批仅修改 `@adui/scada-api-client` 和对应测试/文档：添加只读 `preflightRelease(projectId, revision)` 与响应字段、摘要、问题码、no-store 的白名单验证；单测新增 **8** 项，已有 Studio 会话测试 Mock 补齐新方法。服务端 NestJS GET 与 React/Vue UI 不改，正式发布/回滚/工业设备写入不开放。新分支在协作环境中完成源码与现有契约静态核对，**未实际执行 Windows `vp check`、`test:unit`、`test:e2e:server`、`docs:check`、完整 `ready` 或双框架真实浏览器专项**。下一轮目标：Vitest **610/610**、HTTP E2E **55/55**、Vite+ 零警告、文档检查及完整 `ready` 退出码 0，目标不是已取得的结果。测试应先核对 `git rev-parse HEAD` 与工作区状态，不覆盖维护者本地改动。

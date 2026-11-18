@@ -550,3 +550,9 @@ React/Vue **两处载入入口**（当前工程历史版本“载入”、授权
 在现有可信 OIDC/BFF 工程 API 上新增 `GET /api/v1/projects/:projectId/versions/:revision/release-preflight`。只接受**已保存且仍为当前 head** 的修订号，且必须具备 `version:read` 工程 ACL；在同一只读事务中验证工程行锁、授权、head 水位、历史快照 SHA-256 与数据库元数据后，调用共享 Core `validateProjectReleasePreflight`。返回 `projectId`、`revision`、`headRevision`、`contentHash`、`passed`、`issues`，不返回文档正文，也不接受草稿或客户端自称发布权限。
 
 无可信会话返回 401、未授权或工程不存在返回统一 404、版本过期返回 409、非法修订号返回 400；完整性错误不得伪装预检通过。Swagger 仅复用现有受控本机文档；默认 OIDC 关闭时路由不存在。不引入新角色、发布权限、数据库表/迁移、发布指针、版本发布/回滚按钮、设备命令或工业数据源。本批是 FR-008 的**只读安全前置步骤**，FR-008 整体仍为“规划中”。
+
+## V0.3 第三十五批第七小批 · 共享 API Client 的服务端发布预检读取（FR-008 局部）
+
+React/Vue 两端共用的 `@adui/scada-api-client` 增加 `preflightRelease(projectId, revision)` **只读**方法，调用已存在且受可信 OIDC 会话和 `version:read` ACL 保护的 `GET /api/v1/projects/:projectId/versions/:revision/release-preflight`。仅接受合法工程标识与正安全整数修订号；使用已有 same-origin Cookie Fetch，禁止请求正文、CSRF 写入头、跨站跳转，且要求响应显式 `Cache-Control: no-store`。
+
+只解析服务端最小报告 `projectId/revision/headRevision/contentHash/passed/issues`，工程标识与水位必须同本次请求一致，摘要须为 64 位小写十六进制，问题码须属于当前共享 Core 的静态预检枚举；报告不得携带工程正文、未批准的额外字段或未知错误码，`passed` 必须与问题列表是否为空一致。401/404/409 使用已有安全错误分类；错误正文不回显。**这仅提供供双框架后续接入的共享调用能力，本批不改 Studio 预检 UI、草稿或 CAS 状态，不自动触发此方法。** 发布指针、发布角色授权、不可变发布事务、回滚与工业设备写入仍不开放，FR-008 整体继续为“规划中”。
