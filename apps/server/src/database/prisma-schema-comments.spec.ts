@@ -74,6 +74,22 @@ describe("Prisma 模型及 PostgreSQL 数据库中文注释约束", () => {
     expect(releaseMigration).toContain("\nBEGIN;\n");
     expect(releaseMigration.trimEnd().endsWith("COMMIT;")).toBe(true);
   });
+  it("失败迁移遗留的旧工程权限约束会被完整替换", () => {
+    const dropStatement =
+      'DROP CONSTRAINT IF EXISTS "scada_project_grants_permission_check"';
+    const addStatement =
+      'ADD CONSTRAINT "scada_project_grants_permission_check"';
+    const permissionCheck =
+      'CHECK ("permission" IN (\'project:read\', \'version:read\', \'version:append\', \'release:publish\', \'release:rollback\'))';
+
+    expect(releaseMigration).toContain(dropStatement);
+    expect(releaseMigration).toContain(addStatement);
+    expect(releaseMigration).toContain(permissionCheck);
+    expect(releaseMigration.indexOf(dropStatement)).toBeLessThan(
+      releaseMigration.indexOf(addStatement),
+    );
+  });
+
   it("所有 Prisma 业务表和实际持久化字段都有中文数据库注释", () => {
     for (const match of models) {
       const body = match[2]!;
