@@ -8,10 +8,12 @@ import {
   prepareFollowerDraft,
   prepareWriterReadOnlySession,
   readAuthStatusInPage,
+  readLogoutProjectStatusesInPage,
   readMultiTabSessionStateInPage,
   refreshProjectListInPage,
   requireHiddenSessionUnchanged,
   requireLogoutHttp401,
+  requireLogoutProjectDenied,
   requireSameCanvasAndDrafts,
   requireSamePrincipal,
   requireUnchangedStudioState,
@@ -193,6 +195,82 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
       }),
       0,
     );
+  });
+
+  void it("注销后只向同源的随机专用工程发起两个只读请求", async () => {
+    const projectId = "b34-oidc-cas-12345678-1234-1234-1234-123456789abc";
+    for (const origin of ["https://127.0.0.1:15173", "https://127.0.0.1:15174"]) {
+      const requests = [];
+      const runtime = {
+        location: { origin },
+        fetch: async (path, options) => {
+          requests.push({ path, options });
+          return { status: 401 };
+        },
+      };
+      const statuses = await readLogoutProjectStatusesInPage(origin, projectId, runtime);
+      assert.deepEqual(statuses, [401, 401]);
+      assert.equal(requireLogoutProjectDenied(statuses), true);
+      assert.deepEqual(
+        requests.map((request) => request.path),
+        [
+          "/api/v1/projects?limit=10",
+          "/api/v1/projects/" + projectId + "/versions/3",
+        ],
+      );
+      for (const request of requests) {
+        assert.equal(request.options.method, "GET");
+        assert.equal(request.options.credentials, "same-origin");
+        assert.equal(request.options.mode, "same-origin");
+        assert.equal(request.options.redirect, "error");
+        assert.equal(request.options.cache, "no-store");
+        assert.equal(request.options.headers.Accept, "application/json");
+        assert.equal("body" in request.options, false);
+      }
+      requests.length = 0;
+      assert.equal(
+        await readLogoutProjectStatusesInPage("https://127.0.0.1:15174/other", projectId, runtime),
+        null,
+      );
+      assert.equal(await readLogoutProjectStatusesInPage(origin, "../admin", runtime), null);
+      assert.equal(requests.length, 0);
+    }
+  });
+
+  void it("注销后任一工程读取成功、重定向或网络失败都不能判为拒绝", async () => {
+    for (const statuses of [
+      null,
+      undefined,
+      [],
+      [401],
+      [401, 401, 401],
+      [200, 401],
+      [401, 200],
+      [403, 401],
+      [401, 403],
+      [0, 401],
+      [401, 0],
+      [503, 401],
+      [401, 302],
+    ]) {
+      assert.throws(() => requireLogoutProjectDenied(statuses), /注销后受保护工程接口仍可访问/);
+    }
+    const projectId = "b34-oidc-cas-12345678-1234-1234-1234-123456789abc";
+    let hits = 0;
+    const statuses = await readLogoutProjectStatusesInPage(
+      "https://127.0.0.1:15173",
+      projectId,
+      {
+        location: { origin: "https://127.0.0.1:15173" },
+        fetch: async () => {
+          hits += 1;
+          if (hits === 1) throw new Error("网络或 TLS 连接失败");
+          return { status: 401 };
+        },
+      },
+    );
+    assert.deepEqual(statuses, [0, 401]);
+    assert.throws(() => requireLogoutProjectDenied(statuses), /注销后受保护工程接口仍可访问/);
   });
 
   void it("注销后尚未可见的标签页必须保留 CAS、水位及零工程写入", () => {
