@@ -69,32 +69,11 @@ describe("Prisma 模型及 PostgreSQL 数据库中文注释约束", () => {
       .filter((line) => /release_event_(?:from|to|semantic)_hash_check|release_state_hash_check/.test(line));
 
     expect(hashChecks).toHaveLength(4);
-    expect(hashChecks.every((line) => line.includes("~ '^[0-9a-f]{64}
-    for (const match of models) {
-      const body = match[2]!;
-      const mappedTable = body.match(/@@map\("([^"]+)"\)/)?.[1];
-      const tableName = mappedTable ?? match[1]!;
-      expect(commentText("TABLE", `"${tableName}"`)).toMatch(chinese);
-      for (const field of readModelFields(body)) {
-        // 关联属性不对应 PostgreSQL 物理列，只要求 Prisma 中文说明。
-        const fieldType = field.line
-          .trim()
-          .split(/\s+/)[1]
-          ?.replace(/[[\]?]/g, "");
-        const modelTypes = new Set(models.map((entry) => entry[1]));
-        if (field.line.includes("@relation(") || modelTypes.has(fieldType ?? "")) continue;
-        const columnName = field.line.match(/@map\("([^"]+)"\)/)?.[1] ?? field.name;
-        expect(commentText("COLUMN", `"${tableName}"."${columnName}"`)).toMatch(chinese);
-      }
-    }
-  });
-});
-)"))).toBe(true);
+    expect(hashChecks.every((line) => line.includes("~ '^[0-9a-f]{64}$')"))).toBe(true);
     expect(releaseMigration.match(/^CREATE TABLE /gm)).toHaveLength(2);
     expect(releaseMigration).toContain("\nBEGIN;\n");
     expect(releaseMigration.trimEnd().endsWith("COMMIT;")).toBe(true);
   });
-
   it("所有 Prisma 业务表和实际持久化字段都有中文数据库注释", () => {
     for (const match of models) {
       const body = match[2]!;
