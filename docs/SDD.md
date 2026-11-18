@@ -1060,3 +1060,26 @@ React `StudioPage.tsx` 用 `useMemo(() => validateProjectReleasePreflight(state.
 共享 Core 的静态预检新增 `UNSUPPORTED_SYMBOL_PROP`，只对已支持的 `tank` / `pump` / `pipe` / `label` 按现有 `renderSvgPage` 消费范围检查 `props`。水箱、水泵、管道仅允许 Studio 的 `__scadaStudio` 编辑状态；文本图元另外允许 `text` 与 `unit`。不受支持的属性即使符合 Schema 的 JSON 安全约束，也不得被静态预检误判为 SVG 运行时已经处理，逐项返回 `pages[i].nodes[j].props.属性名` 及中文原因。未知图元仍以 `UNSUPPORTED_SYMBOL` 拒绝，不为未知类型猜测属性契约。
 
 此规则不改 `parseScadaDocument`、编辑器、渲染器、Schema、工程快照及版本写入；未来 SVG 图元真正支持新属性时，必须同步更新预检消费映射与测试。当前静态预检通过仍不代表可正式发布、具备工业数据源或运行时安全保障。本批新增三个 Core 单测；Windows 质量链与双框架浏览器专项待实测。
+
+## 2026-11-18 · 第三十五批第四小批：服务端已保存版本只读发布预检
+
+新增 `GET /api/v1/projects/:projectId/versions/:revision/release-preflight`，只由已启用可信 OIDC 的 `ProjectApiController` 注册。执行顺序：
+
+1. `ScadaSessionGuard` 验证可信会话，`ScadaProjectGuard` 根据服务端可信主体与工程 ACL 预检查 `version:read`；错误默认拒绝。Controller 使用现有安全正整数解析器拒绝非法 revision。
+2. `PrismaProjectVersionStore.preflightRelease` 再检查主体/工程 ID，进入现有 `$transaction`，对工程执行 `FOR SHARE` 行锁，并在锁内复核 `version:read` 权限；只有 `head_revision === revision` 才继续，否则以既有 `ProjectRevisionConflictError` 返回 409。先做权限复核再检查水位，不泄漏未授权工程的 head。
+3. 在同一事务读取对应历史快照，调用 `readProjectSnapshot` 验证文档、SHA-256，比较 `projectId`、`revision`、`contentHash`、`createdAt` 与数据库列，异常不得返回成功报告。
+4. 调用共享 Core `validateProjectReleasePreflight(snapshot.document)`，只返回如下**只读报告**，不包含完整工程正文：
+   ```json
+   {
+     "projectId": "water-demo",
+     "revision": 1,
+     "headRevision": 1,
+     "contentHash": "SHA-256 十六进制摘要",
+     "passed": true,
+     "issues": []
+   }
+   ```
+
+`passed` 仅代表检查时该已保存版本满足现有 SVG 静态兼容性，**不是发布许可**；响应始终 `Cache-Control: no-store`。锁的保护范围仅限该次读取事务；请求结束后版本仍可能继续追加，因此未来真实发布必须重新在独立发布事务中比较版本、授权及安全门禁，而不能信任本次预检结果。新增只读路由没有发布历史表、设备连接、工业命令或数据源访问。
+
+单元测试覆盖有效当前版本、静态属性错误、过期水位、授权缺失/工程不存在、损坏摘要与无效 revision；HTTP E2E 覆盖 200/401/404/409/400 与零工程写入。服务端没有直接接收未保存的 Studio 编辑态；React/Vue 仍使用当前共享 Core 的本地静态预检，接入服务端报告须独立设计工程保存/载入及水位保护。

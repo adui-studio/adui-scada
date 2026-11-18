@@ -30,7 +30,10 @@ import {
   ProjectAlreadyExistsError,
   ProjectRequestValidationError,
 } from "../src/projects/prisma-project-version-store.js";
-import type { ProjectSummary } from "../src/projects/prisma-project-version-store.js";
+import type {
+  ProjectSummary,
+  ProjectReleasePreflightSummary,
+} from "../src/projects/prisma-project-version-store.js";
 import { ProjectApiController } from "../src/projects/project-api.controller.js";
 import { ProjectApiExceptionFilter } from "../src/projects/project-api.exception-filter.js";
 import { PrismaService } from "../src/database/prisma.service.js";
@@ -114,6 +117,20 @@ describe("工程 API HTTP 接口（端到端）", () => {
         revision: number,
       ) => Promise<ProjectSnapshot>
     >(async () => snapshot),
+    preflightRelease: vi.fn<
+      (
+        principal: AuthenticatedProjectPrincipal | null,
+        projectId: string,
+        revision: number,
+      ) => Promise<ProjectReleasePreflightSummary>
+    >(async () => ({
+      projectId: PROJECT_ID,
+      revision: 1,
+      headRevision: 1,
+      contentHash: snapshot.contentHash,
+      passed: true,
+      issues: [],
+    })),
     append: vi.fn<
       (
         principal: AuthenticatedProjectPrincipal | null,
@@ -406,5 +423,64 @@ describe("工程 API HTTP 接口（端到端）", () => {
     expect(response.status).toBe(409);
     expect(response.body.message).toBe("当前租户下已存在相同工程标识的工程");
     expect(JSON.stringify(response.body)).not.toContain("Prisma");
+  });
+
+  it("受保护只读预检返回最小报告，不泄漏快照或创建版本", async () => {
+    permissions = ["version:read"];
+    const response = await request(app.getHttpServer())
+      .get("/api/v1/projects/" + PROJECT_ID + "/versions/1/release-preflight")
+      .set("Authorization", "Bearer " + SESSION_TOKEN)
+      .expect(200);
+
+    expect(response.body).toEqual({
+      projectId: PROJECT_ID,
+      revision: 1,
+      headRevision: 1,
+      contentHash: snapshot.contentHash,
+      passed: true,
+      issues: [],
+    });
+    expect(response.body).not.toHaveProperty("document");
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(store.preflightRelease).toHaveBeenCalledWith(PRINCIPAL, PROJECT_ID, 1);
+    expect(store.append).not.toHaveBeenCalled();
+    expect(store.create).not.toHaveBeenCalled();
+  });
+
+  it("发布预检没有可信会话时返回 401 而不调用仓储", async () => {
+    const response = await request(app.getHttpServer())
+      .get("/api/v1/projects/" + PROJECT_ID + "/versions/1/release-preflight")
+      .expect(401);
+
+    expect(response.status).toBe(401);
+    expect(store.preflightRelease).not.toHaveBeenCalled();
+  });
+
+  it("发布预检缺少版本读取权限时返回 404 且不暴露工程存在性", async () => {
+    permissions = ["project:read"];
+    const response = await request(app.getHttpServer())
+      .get("/api/v1/projects/" + PROJECT_ID + "/versions/1/release-preflight")
+      .set("Authorization", "Bearer " + SESSION_TOKEN)
+      .expect(404);
+
+    expect(response.status).toBe(404);
+    expect(store.preflightRelease).not.toHaveBeenCalled();
+  });
+
+  it("过期修订号返回 409，非法修订号返回 400，均不修改工程", async () => {
+    store.preflightRelease.mockRejectedValueOnce(new ProjectRevisionConflictError());
+    const stale = await request(app.getHttpServer())
+      .get("/api/v1/projects/" + PROJECT_ID + "/versions/1/release-preflight")
+      .set("Authorization", "Bearer " + SESSION_TOKEN)
+      .expect(409);
+
+    expect(stale.body.message).toBe("工程版本已变化，请重新获取最新修订号");
+    const invalid = await request(app.getHttpServer())
+      .get("/api/v1/projects/" + PROJECT_ID + "/versions/0/release-preflight")
+      .set("Authorization", "Bearer " + SESSION_TOKEN)
+      .expect(400);
+    expect(invalid.body.message).toContain("修订号");
+    expect(store.preflightRelease).toHaveBeenCalledTimes(1);
+    expect(store.append).not.toHaveBeenCalled();
   });
 });

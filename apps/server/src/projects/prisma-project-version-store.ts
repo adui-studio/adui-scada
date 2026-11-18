@@ -4,12 +4,14 @@ import type {
   ProjectListQuery,
   ProjectVersionQuery,
   ProjectVersionSummary,
+  ProjectReleasePreflightIssue,
   ScadaDocument,
 } from "@adui/scada-core";
 import {
   createProjectSnapshot,
   parseServerProjectSaveRequest,
   readProjectSnapshot,
+  validateProjectReleasePreflight,
 } from "@adui/scada-core";
 import type { Prisma } from "../generated/prisma/client.js";
 import { PrismaService } from "../database/prisma.service.js";
@@ -25,6 +27,16 @@ export interface ProjectSummary {
   readonly headRevision: number;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+/** 已保存的当前修订版的静态发布预检；不包含快照正文与发布许可。 */
+export interface ProjectReleasePreflightSummary {
+  readonly projectId: string;
+  readonly revision: number;
+  readonly headRevision: number;
+  readonly contentHash: string;
+  readonly passed: boolean;
+  readonly issues: readonly ProjectReleasePreflightIssue[];
 }
 
 /** 未授权与工程不存在统一拒绝，不向外暴露工程是否存在。 */
@@ -603,6 +615,61 @@ export class PrismaProjectVersionStore {
         throw new TypeError("数据库工程版本元数据与快照不一致");
       }
       return snapshot;
+    }, TRANSACTION_OPTIONS);
+  }
+
+  /**
+   * 只读检查当前已保存的工程版本。工程共享锁阻止并发推进 head，
+   * 在同一事务内再次读取 ACL；该锁不等于对授权记录加锁。
+   * 兼容性 passed 不表示可发布；不创建发布记录或写入审计。
+   */
+  async preflightRelease(
+    principal: AuthenticatedProjectPrincipal | null,
+    projectId: string,
+    revision: number,
+  ): Promise<ProjectReleasePreflightSummary> {
+    requirePrincipal(principal);
+    requireProjectId(projectId);
+    if (!Number.isSafeInteger(revision) || revision <= 0) {
+      throw new ProjectRequestValidationError("发布预检修订号必须为大于零的安全整数");
+    }
+
+    return this.database.client.$transaction(async (tx) => {
+      const head = await lockProject(tx, principal, projectId, "SHARE");
+      await requireProjectPermission(tx, principal, projectId, "version:read");
+      if (head !== BigInt(revision)) {
+        throw new ProjectRevisionConflictError();
+      }
+
+      const row = await tx.scadaProjectVersion.findUnique({
+        where: {
+          tenantId_projectId_revision: {
+            tenantId: principal.tenantId,
+            projectId,
+            revision: BigInt(revision),
+          },
+        },
+      });
+      if (!row) throw new ProjectRevisionNotFoundError();
+      const snapshot = await readProjectSnapshot(row.snapshot);
+      if (
+        snapshot.projectId !== projectId ||
+        snapshot.revision !== revision ||
+        snapshot.contentHash !== row.contentHash ||
+        snapshot.createdAt !== row.createdAt.toISOString()
+      ) {
+        throw new TypeError("数据库工程版本元数据与快照不一致");
+      }
+
+      const report = validateProjectReleasePreflight(snapshot.document);
+      return {
+        projectId,
+        revision,
+        headRevision: revision,
+        contentHash: snapshot.contentHash,
+        passed: report.passed,
+        issues: report.issues,
+      };
     }, TRANSACTION_OPTIONS);
   }
 }

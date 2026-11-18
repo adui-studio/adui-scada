@@ -544,3 +544,9 @@ React/Vue **两处载入入口**（当前工程历史版本“载入”、授权
 - 提供 `test:release:preflight:browser` 独立隔离 Chrome/Edge 专项，验证两端合法演示、导入合法 Schema 但当前 SVG 不支持的图元/规则、问题路径、修复恢复及原始工程 JSON 未被预检改写。浏览器专项不是默认 `ready` 项，仍须 Windows 实测。
 
 本批不新增正式发布按钮、后端发布写入 API、数据库表/迁移、图元规则执行引擎、工业数据源或设备命令。FR-008 仍未整体交付。
+
+## V0.3 第三十五批第四小批 · 服务端当前版本只读发布预检（FR-008 局部）
+
+在现有可信 OIDC/BFF 工程 API 上新增 `GET /api/v1/projects/:projectId/versions/:revision/release-preflight`。只接受**已保存且仍为当前 head** 的修订号，且必须具备 `version:read` 工程 ACL；在同一只读事务中验证工程行锁、授权、head 水位、历史快照 SHA-256 与数据库元数据后，调用共享 Core `validateProjectReleasePreflight`。返回 `projectId`、`revision`、`headRevision`、`contentHash`、`passed`、`issues`，不返回文档正文，也不接受草稿或客户端自称发布权限。
+
+无可信会话返回 401、未授权或工程不存在返回统一 404、版本过期返回 409、非法修订号返回 400；完整性错误不得伪装预检通过。Swagger 仅复用现有受控本机文档；默认 OIDC 关闭时路由不存在。不引入新角色、发布权限、数据库表/迁移、发布指针、版本发布/回滚按钮、设备命令或工业数据源。本批是 FR-008 的**只读安全前置步骤**，FR-008 整体仍为“规划中”。
