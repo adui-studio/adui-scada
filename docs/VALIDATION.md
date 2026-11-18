@@ -1920,3 +1920,16 @@ PR #91 Windows 原始测试证据：`pnpm run test:unit` **50/50 文件 610/610 
 
 修复后的迁移、静态回归、事务 Mock 和文档目前只完成 GitHub 源码静态核对；**尚未在 PostgreSQL 执行，也没有修复后 Windows Vitest/ready 结果**。后续必须先在独立 `adui_scada_test` 执行首次/二次迁移与 `test:db`，另行只读检查原 `adui_scada` 失败状态。详见 `docs/AI_MISTAKES.md` E-055～E-057。
 本次修复另在现有 Prisma 注释测试文件增加 1 项迁移完整性静态回归，因此修复后的单元测试验收目标为 **617/617**（原始 615/616 是修复前日志，新增测试后计数同步增加 1）。该目标尚未由 Windows 实际运行确认。
+## 2026-11-18 · PR #99 PostgreSQL 只读诊断命令路径修正（E-058）
+
+维护者执行上一版只读检查时，Docker Compose 在读取 `deploy/docker/compose.postgres.dev.yaml` 阶段报文件不存在；**命令没有启动 psql、没有连接 PostgreSQL、没有执行 SQL，也没有修改数据库**。原命令中的 `public.\\_prisma_migrations` 另有多余反斜杠，若执行到 SQL 解析阶段会导致标识符语法错误。
+
+已根据当前仓库真实配置核对并修正 `docs/HARNESS.md`：
+
+- 当前唯一 Compose 文件：`deploy/docker/compose.yaml`。
+- 项目名：`adui-scada`。
+- PostgreSQL 服务名：`postgres`。
+- Compose 环境文件：根 `.env` 与本机 `.local/docker/compose.env`。
+- 正确系统表标识符：`public._prisma_migrations`，不带反斜杠。
+
+修正后的 Windows 只读查询仍待维护者执行；原 `adui_scada` 的失败迁移记录、首条权限 CHECK 和发布表状态依旧**未检查**。本次 Compose 路径失败不代表 PostgreSQL 或数据库状态查询失败。详见 `docs/AI_MISTAKES.md` E-058。
