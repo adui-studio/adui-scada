@@ -3172,3 +3172,20 @@ Write-Host "完整质量链退出码：$LASTEXITCODE"
 ```
 
 新增一份 ADR 后预计检查 **87 份 Markdown**；此前 PR #94 的 Vitest **615/615**、HTTP E2E **55/55** 和 Vite+ **351/206 零告警**是合并前 Windows 基线，**不得**自动记作本 PR 测试通过。当前没有新代码、接口、迁移、浏览器行为或工业设备写入，因此无需为这份设计文档单独执行真实 Keycloak/数据库写入专项；未来落实正式发布必须先通过额外工业安全评审、隔离数据库迁移与双框架验收。
+
+## 第三十五批第十二小批 · 发布事务决策矩阵文档检查
+
+本批仅提交 ADR-0069 的**待评审决策/测试矩阵**，不添加发布权限、数据库迁移、NestJS 写路由、Runtime 发布指针或任何设备命令。检查 `docs/RELEASE_TRANSACTION_REVIEW.md` 的 R-01～R-08、I-01～I-06、T-01～T-22，确认均明确“候选、待批准或未执行”，ADR-0069 状态仍为 Proposed，FR-008 仍为规划中；链接必须存在且相对路径正确。Windows 在功能分支记录工作区状态和 HEAD 后执行：
+
+```powershell
+git status --short
+git rev-parse HEAD
+pnpm run docs:check
+Write-Host "文档退出码：$LASTEXITCODE"
+vp check
+Write-Host "Vite+ 退出码：$LASTEXITCODE"
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+```
+
+预计 Markdown **88 份**，原有 Vitest **615/615** 和 HTTP E2E **55/55** 均为**待复验的上一批基线**，不是本分支通过证据。此次没有新的 API/迁移/浏览器行为；后续正式发布写事务必须另行取得 ADR/工业安全批准，并完成隔离 PostgreSQL、可信 OIDC 与双框架完整验收。
