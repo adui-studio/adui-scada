@@ -984,3 +984,13 @@ React/Vue 跟随页仍按原顺序真实切换为可见，验证已有 `StudioSe
 注销时先确认 React/Vue 跟随页、Vue 写入页均真实隐藏，React 写入页调用现有 CSRF 注销并直接验证同源 HTTP 401。随后依次实际激活 React 跟随、Vue 跟随、Vue 写入与 React 写入，四者均调用原 `verifyLogoutRevalidation`，验证 UI 中 CAS/远端水位与授权缓存失效、BFF GET 401、SVG/草稿/自动保存不变和旧保存零工程写入。所有额外调用仅针对本次隔离工程或只读 BFF 身份接口，严格保留浏览器脱敏和 Profile 释放。
 
 此专项并非跨独立 Profile 的注销广播，也不涉及生产业务接口、工业设备控制或数据库迁移。
+
+## 2026-11-18 · 第三十四批第二十四小批：隐藏页身份失效前的全量快照
+
+原 `scripts/test-oidc-real-multitab.mjs` 的注销流程在 React 写入页 HTTP 204 后，对三个隐藏 Studio 标签页仅比较 `baselineRevision === 3` 和 `identityRejected === false`，完整 SVG/IndexedDB/自动保存检查直到它们恢复可见才执行。本批保留既有正式注销、真实页面恢复、零 POST 等全部验收约束，补充注销后、**任何隐藏页恢复可见前**的保护阶段。
+
+新增 Node 侧纯断言 `requireHiddenSessionUnchanged(state, expectedRevision)`，对修订号、`baselineCleared`、`headCleared`、`identityRejected`、`busy`、`writeAttempts` 使用严格值比较；无效输入或提前变化统一抛出既有脱敏中文错误，不回显项目 ID、主体、Cookie、草稿内容或摘要。
+
+新增内部 `verifyHiddenTabBeforeResume(session, beforeState)`：先通过既有 CDP 探针严格等待真实 `hidden`，只读提取会话摘要并断言 CAS/水位/零写入；再复用 `inspectProtectedState` 和 `requireUnchangedStudioState` 比较全量 SVG、IndexedDB 与自动保存状态。分别对 React 跟随、Vue 跟随、Vue 写入页调用，基准取各自已有的修订号 3 保护快照。React 注销发起页仍保持可见且通过真实 GET 获取 401，因此不属于隐藏页预检范围。
+
+上述预检完成后仍沿用原有四个 Studio 页面真实可见性切换、BFF 401、CAS/授权缓存清理、原保存按钮零工程 POST 及本地数据保护测试。不会额外调用设备写入、清理数据库或修改测试工程 ACL。
