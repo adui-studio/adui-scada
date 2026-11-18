@@ -1690,3 +1690,21 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 本批只修改 `scripts/test-oidc-real-multitab.mjs` 的比较前有效性判断及对应 Node 离线用例：要求 SVG 快照为字符串、草稿数量为至少 1 的安全整数、整记录摘要为 64 位十六进制 SHA-256、自动保存为明确布尔值；任何缺失或损坏均按原有脱敏中文错误拒绝，正常快照的逐项严格比较和全部真实 CAS/注销保护保留。离线目标从 11 项增加至 **13 项（候选，尚未执行）**。不修改 React/Vue 正式页面、OIDC、工程 API、数据库、工业设备权限，也不创建或删除 Lab 工程。
 
 **验收边界**：当前仅为 GitHub 代码候选，尚未执行新 HEAD 的 Windows `test:projects:oidc:multitab:config`、`vp check`、`docs:check`、`ready` 或真实四标签页专项，不得沿用 PR #76 已通过的退出码；若依赖和业务代码均未变化，可优先执行离线与完整质量链，再评估是否重跑真实专项。
+
+## 2026-11-18 · 第三十四批第二十一小批 Windows 结案与第二十二小批候选
+
+维护者 Windows 对第二十一小批提交的日志显示：`test:projects:oidc:multitab:config` **13/13**、退出码 **0**；完整 `pnpm run ready` 退出码 **0**，其中 `vp check` **337** 个格式文件和 **192** 个受检文件零警告/错误、Vitest **581/581**、HTTP E2E **49/49**、`docs:check` **86** 个 Markdown、React/Vue/NestJS 构建完成。日志未单独包含本地 `git rev-parse HEAD`；本批未重跑真实四标签页专项。维护者已明确授权，PR #77 经 GitHub Squash 合并至 `main@1969ae47ac5da2a9c5b3cc5c36003642f35f245f`。这是已合并旧提交的 Windows 验收，不等于下一批新代码已通过。
+
+第二十二小批只扩展 `scripts/test-oidc-real-multitab.mjs` 与离线安全用例：原注销 HTTP 204 后增加 React **写入页**自身同源 `/auth/me` HTTP 401 核验；两个跟随页的所有 CAS/草稿/零写入断言不变；最后真实激活 Vue **写入页**并验证 Vue Origin 的 HTTP 401。新增 Node 纯函数在 200/204/403/500、网络失败 0、缺值及跨 Origin 时必须拒绝。离线目标 **14/14**，仅为候选目标，尚未执行新 HEAD 的 Windows 专项、`vp check`、`docs:check`、`ready` 或真实 Chrome/Keycloak 四标签页浏览器测试；不得以 PR #77 的结果代替。真实测试仍会按已有显式确认仅创建随机测试工程并追加修订 2/3，工程按原惯例保留，不清理既有数据。
+
+建议维护者复核当前本地 HEAD 后执行：
+
+```powershell
+git rev-parse HEAD
+pnpm run test:projects:oidc:multitab:config
+Write-Host "离线专项退出码：$LASTEXITCODE"
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+```
+
+完整质量链通过后，在已启动受控本机 OIDC HTTPS Lab 且确认会创建一份新的专用工程、注销当前隔离浏览器会话时，再单独执行 `pnpm run test:projects:oidc:multitab:browser` 并记录最终退出码。禁止在终端输入或记录 Keycloak 密码。以上不代表工业现场或生产验收。
