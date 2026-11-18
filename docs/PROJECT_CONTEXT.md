@@ -1436,3 +1436,11 @@ PR #76 已获维护者明确授权并通过 GitHub Squash 合并，main@7d2adb04
 第二十一小批 PR #77 经维护者授权已 Squash 合并，`main@1969ae47ac5da2a9c5b3cc5c36003642f35f245f`。原 Windows 质量记录为多标签页离线 13/13、`ready` 退出码 0（Vitest 581/581，NestJS HTTP E2E 49/49，双 Web/NestJS 构建通过）；原日志无本地 HEAD 且第二十一小批未重跑真实 Keycloak 浏览器专项。
 
 本批仅补足原四标签页脚本中两个**写入页**的注销后真实 BFF 状态核验：React 写入页注销后同源身份 GET 必须 401，Vue 写入页重新真实可见后自身 Origin 身份 GET 必须 401，两个跟随页已有的真实 CAS 失效、草稿/画布保护及零工程 POST 断言不变。仅修改测试脚本、离线用例及相应需求/设计/验收文档，不修改正式双框架、认证后端、数据库或工业权限。新离线目标 14 项，**尚未执行**新候选的 Windows 质量链与真实四标签页浏览器；PR 应保持 Draft、指派 `@adui-dev`，不得在未获新授权前合并。
+
+## 2026-11-18 · 第三十四批第二十三小批：四个 Studio 页注销恢复安全回归候选
+
+PR #78 经维护者授权已 Squash 合并到 `main@43a2236bec8b528e0d7e1763dba58a558ddfab0a`；对应维护者 Windows 离线 14/14、完整 `ready` 退出码 0，真实 Keycloak 四标签页专项退出码 0。日志未单独给出本机 HEAD；前批写入页只检查 BFF 401，**没有**进入 Studio 进行页面 CAS 清理验收。
+
+本批在完成原随机工程真实修订 1→2→3 后，增加两个写入页的 Studio 授权确认载入、只读保护快照和写请求本地阻断。注销后四个标签页各自真实变为可见并验证 CAS/授权失效、BFF 401、本地 SVG/IndexedDB/自动保存保持与旧 CAS 保存零穿透。由于同 Origin 标签页共享 IndexedDB，写入页不再次保存草稿或开启自动保存，避免测试自身改写跟随页草稿。正式 React/Vue 页面、共享 API Client、NestJS、数据库和工业网关逻辑未改变。
+
+新增 1 项 Node 安全回归，目标为 15/15；当前尚未在新 HEAD 执行 Windows 离线、`vp check`、`docs:check`、`ready` 或真实四 Studio 标签页专项，PR 默认 Open/Draft 且必须指派 `@adui-dev`，未经新授权不合并。
