@@ -1572,3 +1572,9 @@ PR #89 在维护者 Windows 真实 PostgreSQL 36/36、单测 602/602、HTTP E2E 
 用户 Windows 日志：Studio OIDC 配置 **12/12**，`vp check` **351 格式文件/206 受检零告警**，Vitest **615/615**、HTTP E2E **55/55**、文档 **86 份**、完整 `ready` **退出码 0**；另独立真实 Keycloak 双 HTTPS Origin Studio 发布预检按钮专项 React/Vue 均通过，退出码 **0**，包含当前画布与已保存版本差异及模拟 409/401/404。日志没有独立 `git rev-parse HEAD`，不能严格绑定 GitHub SHA。PR #93 经本轮维护者明确授权 Squash 合并至 `main@3d1a08ba44b5a3d7a78a90b9dbb2fd515a67f77f`，合并前 HEAD `f0f09b5fb48fb488a12a01c393c07da33e046358`。
 
 第十小批从新 main 建立 `fix/v0.3-b35-preflight-late-auth-rejection`，按源码发现的 E-053 对等修复 React/Vue：即使只读预检期间编辑导致文档引用变化，迟到的 401/403/404 仍必须让父级服务端授权和 CAS 失效；过时报告和局部错误不转移至新画布。扩展原真实 Keycloak 专项的单次延迟 401 并新增 1 项离线测试，预计离线 **13/13**，Vitest **615/615** 和 E2E **55/55** 为候选目标，**尚未在 Windows 实测**。未新增数据库、Schema、工程写入或正式发布；FR-008 发布事务仍未实现。
+
+## 2026-11-18 · PR #94 验收合并与第十一小批正式发布方案候选
+
+维护者 Windows 原始日志确认 PR #94：Node Studio OIDC 离线安全测试 **13/13**，`vp check` **351 格式文件/206 受检零告警**，Vitest **51/51 文件、615/615**，NestJS E2E **6/6 文件、55/55**，Markdown **86 份**，React/Vue/Server 类型检查与构建均通过，完整 `pnpm run ready` **退出码 0**。维护者另在本机可信 Keycloak 双 HTTPS Origin 真实运行 Studio 按钮专项：React/Vue 的编辑期间迟到 401、409、404、CAS 失效和草稿保护均通过，退出码 **0**。日志未附独立 `git rev-parse HEAD`，不能严格 SHA 绑定。PR #94 经本轮明确授权，从 GitHub HEAD `19f86ee6c99632b4c2e1b8ea17c634e083da8855` Squash 合并至 `main@9727acdcf45516661f92a9f094d1158aa2c24651`。
+
+第三十五批第十一小批从新 main 建立 `docs/v0.3-b35-release-transaction-design`，仅增加 [ADR-0069](adr/0069-release-pointer-atomic-publication-design.md) **Proposed**，形成正式发布指针、发布代次 CAS、成功审计事件、事务内授权、回滚限制与双框架 Runtime 安全验收的**候选**契约；同步需求、设计、架构与测试边界。**没有新增 Schema、迁移、发布 ACL、HTTP 写入或设备操作，也没有将 FR-008 标为已完成**。该文档分支的 Windows `docs:check` 与完整 `ready` 尚待维护者执行。
