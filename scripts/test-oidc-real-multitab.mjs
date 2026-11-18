@@ -497,6 +497,7 @@ async function findProjectInList(session, projectId, expectedRevision) {
     const state = await session.evaluate(pageStateInPage);
     return state && !state.busy ? state : null;
   }, "工程列表刷新失败");
+  if (page.error) throw new Error("工程列表刷新失败");
 
   for (let index = 0; index < 100; index += 1) {
     const projectIndex = page.ids.indexOf(projectId);
@@ -513,6 +514,7 @@ async function findProjectInList(session, projectId, expectedRevision) {
       const state = await session.evaluate(pageStateInPage);
       return state && !state.busy && state.pageNumber > previousPage ? state : null;
     }, "工程列表翻页失败");
+    if (page.error) throw new Error("工程列表刷新失败");
   }
   throw new Error("工程列表未显示本轮专用工程");
 }
@@ -726,7 +728,7 @@ async function run() {
 
     phase = "真实 OIDC 登录";
     await activateTab(tabs.reactWriter, "真实标签页没有发生可见性切换");
-    const principal = await waitForLogin(tabs.reactWriter, reactOrigin, "同一隔离浏览器");
+    const principal = await waitForLogin(tabs.reactWriter, reactOrigin, "本次测试");
 
     phase = "专用工程创建";
     const projectId = PROJECT_PREFIX + randomUUID();
@@ -769,7 +771,13 @@ async function run() {
     if (revisionTwo.status !== 201 || revisionTwo.revision !== 2) {
       throw new Error("真实工程版本或摘要核验失败");
     }
-    await tabs.reactWriter.evaluate(readCasProjectInPage, reactOrigin, projectId, 2);
+    const revisionTwoRead = await tabs.reactWriter.evaluate(
+      readCasProjectInPage,
+      reactOrigin,
+      projectId,
+      2,
+    );
+    if (revisionTwoRead.revision !== 2) throw new Error("真实工程版本或摘要核验失败");
     await activateHiddenTab(tabs.reactFollower, "真实标签页没有发生可见性切换");
     await verifyVersionDrift(tabs.reactFollower, reactDraft);
 
@@ -792,7 +800,13 @@ async function run() {
     if (revisionThree.status !== 201 || revisionThree.revision !== 3) {
       throw new Error("真实工程版本或摘要核验失败");
     }
-    await tabs.vueWriter.evaluate(readCasProjectInPage, vueOrigin, projectId, 3);
+    const revisionThreeRead = await tabs.vueWriter.evaluate(
+      readCasProjectInPage,
+      vueOrigin,
+      projectId,
+      3,
+    );
+    if (revisionThreeRead.revision !== 3) throw new Error("真实工程版本或摘要核验失败");
     await activateHiddenTab(tabs.vueFollower, "真实标签页没有发生可见性切换");
     await verifyVersionDrift(tabs.vueFollower, vueDraft);
     const vueRevisionThree = await restoreLatestBaseline(
