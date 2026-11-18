@@ -1,6 +1,7 @@
 import { parseServerProjectSaveRequest, readProjectSnapshot } from "@adui/scada-core";
 import type {
   ProjectSnapshot,
+  ProjectReleasePreflightIssue,
   ProjectListQuery,
   ProjectVersionQuery,
   ProjectVersionSummary,
@@ -20,6 +21,16 @@ export interface ScadaProjectSummary {
   readonly headRevision: number;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+/** 已保存的当前工程版本的服务端静态预检，不代表正式发布许可。 */
+export interface ScadaReleasePreflightReport {
+  readonly projectId: string;
+  readonly revision: number;
+  readonly headRevision: number;
+  readonly contentHash: string;
+  readonly passed: boolean;
+  readonly issues: readonly ProjectReleasePreflightIssue[];
 }
 
 export interface ScadaPrincipal {
@@ -83,6 +94,7 @@ export interface ScadaApiClient {
     query?: ProjectVersionQuery,
   ): Promise<readonly ProjectVersionSummary[]>;
   readVersion(projectId: string, revision: number): Promise<ProjectSnapshot>;
+  preflightRelease(projectId: string, revision: number): Promise<ScadaReleasePreflightReport>;
   appendVersion(
     projectId: string,
     expectedRevision: number,
@@ -166,6 +178,78 @@ function parseVersionSummary(value: unknown): ProjectVersionSummary {
   };
 }
 
+const PREFLIGHT_CODES: ReadonlySet<string> = new Set([
+  "DOCUMENT_INVALID",
+  "UNSUPPORTED_SYMBOL",
+  "UNSUPPORTED_SYMBOL_VERSION",
+  "UNSUPPORTED_BINDING_SLOT",
+  "UNSUPPORTED_SYMBOL_PROP",
+  "UNRESOLVED_BOUND_TAG",
+  "UNSUPPORTED_RULES",
+]);
+
+function parsePreflightIssue(value: unknown): ProjectReleasePreflightIssue {
+  const record = requireRecord(value, ["code", "severity", "path", "message"]);
+  if (
+    typeof record.code !== "string" ||
+    !PREFLIGHT_CODES.has(record.code) ||
+    record.severity !== "error" ||
+    typeof record.path !== "string" ||
+    record.path.length === 0 ||
+    record.path.length > 512 ||
+    typeof record.message !== "string" ||
+    record.message.length === 0 ||
+    record.message.length > 512
+  ) {
+    throw new ScadaApiError("服务端发布预检问题项无效", "invalid_response");
+  }
+  return {
+    code: record.code as ProjectReleasePreflightIssue["code"],
+    severity: "error",
+    path: record.path,
+    message: record.message,
+  };
+}
+
+function parseReleasePreflightReport(
+  value: unknown,
+  projectId: string,
+  revision: number,
+): ScadaReleasePreflightReport {
+  const record = requireRecord(value, [
+    "projectId",
+    "revision",
+    "headRevision",
+    "contentHash",
+    "passed",
+    "issues",
+  ]);
+  if (
+    record.projectId !== projectId ||
+    record.revision !== revision ||
+    record.headRevision !== revision ||
+    typeof record.contentHash !== "string" ||
+    !/^[a-f0-9]{64}$/.test(record.contentHash) ||
+    typeof record.passed !== "boolean" ||
+    !Array.isArray(record.issues) ||
+    record.issues.length > 10000
+  ) {
+    throw new ScadaApiError("服务端发布预检报告与请求版本不一致", "invalid_response");
+  }
+  const issues = record.issues.map(parsePreflightIssue);
+  if (record.passed !== (issues.length === 0)) {
+    throw new ScadaApiError("服务端发布预检结果与问题列表不一致", "invalid_response");
+  }
+  return {
+    projectId,
+    revision,
+    headRevision: revision,
+    contentHash: record.contentHash,
+    passed: record.passed,
+    issues,
+  };
+}
+
 function parseList<T>(value: unknown, parser: (input: unknown) => T): readonly T[] {
   if (!Array.isArray(value) || value.length > 10000) {
     throw new ScadaApiError("服务端返回的列表无效", "invalid_response");
@@ -244,6 +328,7 @@ export function createScadaApiClient(options: ScadaApiClientOptions = {}): Scada
     path: string,
     expectedStatus: 200 | 201 | 204,
     body?: unknown,
+    requireNoStore = false,
   ): Promise<unknown> {
     const headers: Record<string, string> = { Accept: "application/json" };
     if (method === "POST") {
@@ -268,6 +353,12 @@ export function createScadaApiClient(options: ScadaApiClientOptions = {}): Scada
     if (response.status !== expectedStatus) {
       if (!response.ok) throw responseError(response.status);
       throw new ScadaApiError("服务端响应状态不符合接口协议", "invalid_response", response.status);
+    }
+    if (
+      requireNoStore &&
+      !/(?:^|,)\s*no-store\s*(?:,|$)/i.test(response.headers.get("cache-control") ?? "")
+    ) {
+      throw new ScadaApiError("服务端发布预检响应缺少禁止缓存标记", "invalid_response");
     }
     if (expectedStatus === 204) return undefined;
     if (!/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type") ?? "")) {
@@ -398,6 +489,18 @@ export function createScadaApiClient(options: ScadaApiClientOptions = {}): Scada
         throw new ScadaApiError("服务端返回的历史修订号不一致", "invalid_response");
       }
       return snapshot;
+    },
+    async preflightRelease(projectId, revision) {
+      const path = projectPath(projectId);
+      const checkedRevision = requirePositiveNumber(revision, "发布预检修订号");
+      const report = await request(
+        "GET",
+        path + "/versions/" + checkedRevision + "/release-preflight",
+        200,
+        undefined,
+        true,
+      );
+      return parseReleasePreflightReport(report, projectId, checkedRevision);
     },
     async appendVersion(projectId, expectedRevision, document) {
       const path = projectPath(projectId);
