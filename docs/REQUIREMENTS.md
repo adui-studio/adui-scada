@@ -450,5 +450,5 @@ React/Vue **两处载入入口**（当前工程历史版本“载入”、授权
 - 通过正式工程 API 只创建一份随机 b34-oidc-cas-UUID 专用空白工程。React 写入端真实追加修订 2，React 跟随端切回前台后必须通过真实 visibilitychange 与 BFF GET 发现水位变化、清除旧 CAS；随后 Vue 写入端追加修订 3，Vue 跟随端与 React 跟随端分别切回前台并发现最新水位。
 - 跟随端在 CAS 水位失效后通过真实 Studio 保存按钮重复触发保存，浏览器拦截器必须确认没有工程 POST 穿透；随后人工确认载入最新修订，重新建立正确 CAS 基线。SVG 工程内容、IndexedDB 草稿数量与 SHA-256、自动保存状态必须保持不变。
 - 两个跟随端确认载入修订 3 并重新开启本地自动保存后，由 React 写入端调用正式 CSRF 保护的 /api/v1/auth/logout 注销共享 BFF 会话。隐藏标签页在尚未重新可见前保持既有内存状态；切回前台后，React/Vue 各自通过真实 BFF 401 失效旧 CAS 与授权摘要，且不得误创建或追加工程。
-- 新增独立 Node 离线门禁并纳入 ready；真实浏览器创建工程、追加版本和注销专项必须显式使用 --run-multitab --confirm-lab 数据库名 手工启动，不属于默认 ready。不修改 React/Vue 生产页面、共享 Session、NestJS、Prisma Schema、数据库迁移、ACL 或工业设备权限。
+- 新增独立 Node 离线门禁并纳入 ready；真实浏览器创建工程、追加版本和注销专项必须显式使用 --run-multitab --confirm-lab 数据库名 手工启动，不属于默认 ready。不修改 React/Vue 生产页面、共享 Session、NestJS、Prisma Schema、数据库迁移或工业设备权限；不修改既有工程和 ACL，新工程仅由现有创建 API 按既定流程创建创建者默认权限，不为其他主体新增授权。
 - 本批只验证真实浏览器标签页切换时的前台复核；不承诺隐藏标签页即时获知注销、不模拟物理 TCP 断流，也不将浏览器测试等同生产/工业现场验收。

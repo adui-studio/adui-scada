@@ -1422,4 +1422,4 @@ PR #72 候选已新增固定阶段与安全状态摘要，方便下一轮定位�
 
 新增一个隔离 Chrome/Edge Profile 中的四个真实标签页：React 写入/跟随、Vue 写入/跟随。只登录一次 Keycloak 普通预绑定测试用户，通过同一 Host 的 React/Vue HTTPS Origin 验证 Cookie 会话共享；正式 API 创建一份随机专用工程并真实推进版本 1→2→3。两个跟随标签页实际切回前台时，验证原有 visibilitychange 复核发现远端水位变化、失效 CAS，且保存操作没有工程 POST 穿透。随后真实 CSRF 注销 BFF 会话，隐藏标签页保持既有内存状态，分别切回前台后由真实 BFF 401 失效服务端缓存。
 
-新增 scripts/test-oidc-real-multitab.mjs 和 9 项 Node 离线安全测试；根 ready 纳入离线配置门禁，真实浏览器写入/注销专项仅在 --run-multitab --confirm-lab 数据库名 显式确认后手工执行。当前属于开发候选：Windows Node 离线、vp check、docs:check、完整 ready 和真实四标签页 Keycloak/HTTPS 浏览器专项均尚未执行；所有测试数量均为目标，不作为通过证据。测试专用工程按既有安全测试惯例保留，且不新增 ACL。
+新增 scripts/test-oidc-real-multitab.mjs 和 9 项 Node 离线安全测试；根 ready 纳入离线配置门禁，真实浏览器写入/注销专项仅在 --run-multitab --confirm-lab 数据库名 显式确认后手工执行。当前属于开发候选：Windows Node 离线、vp check、docs:check、完整 ready 和真实四标签页 Keycloak/HTTPS 浏览器专项均尚未执行；所有测试数量均为目标，不作为通过证据。测试专用工程按既有安全测试惯例保留；新工程仅由现有创建 API 创建创建者默认权限，不手工授予其他主体或修改既有 ACL。
