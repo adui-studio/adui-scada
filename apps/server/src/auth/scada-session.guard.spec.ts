@@ -120,9 +120,9 @@ describe("浏览器 Cookie 会话与 CSRF Guard", () => {
     const responseHeaders = new Map<string, string>();
     const request: ScadaAuthenticatedRequest = { method: "GET", headers: {} };
 
-    await expect(harness.guard.canActivate(context(request, responseHeaders))).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      harness.guard.canActivate(context(request, responseHeaders)),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(responseHeaders.get("cache-control")).toBe("no-store");
     expect(responseHeaders.get("pragma")).toBe("no-cache");
     expect(harness.bearerTokens).toHaveLength(0);
@@ -141,9 +141,9 @@ describe("浏览器 Cookie 会话与 CSRF Guard", () => {
       },
     };
 
-    await expect(harness.guard.canActivate(context(request, responseHeaders))).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    await expect(
+      harness.guard.canActivate(context(request, responseHeaders)),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(responseHeaders.get("cache-control")).toBe("no-store");
     expect(responseHeaders.get("pragma")).toBe("no-cache");
     expect(harness.cookieCalls).toHaveLength(0);
