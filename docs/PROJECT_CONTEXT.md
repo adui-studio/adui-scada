@@ -1578,3 +1578,9 @@ PR #89 在维护者 Windows 真实 PostgreSQL 36/36、单测 602/602、HTTP E2E 
 维护者 Windows 原始日志确认 PR #94：Node Studio OIDC 离线安全测试 **13/13**，`vp check` **351 格式文件/206 受检零告警**，Vitest **51/51 文件、615/615**，NestJS E2E **6/6 文件、55/55**，Markdown **86 份**，React/Vue/Server 类型检查与构建均通过，完整 `pnpm run ready` **退出码 0**。维护者另在本机可信 Keycloak 双 HTTPS Origin 真实运行 Studio 按钮专项：React/Vue 的编辑期间迟到 401、409、404、CAS 失效和草稿保护均通过，退出码 **0**。日志未附独立 `git rev-parse HEAD`，不能严格 SHA 绑定。PR #94 经本轮明确授权，从 GitHub HEAD `19f86ee6c99632b4c2e1b8ea17c634e083da8855` Squash 合并至 `main@9727acdcf45516661f92a9f094d1158aa2c24651`。
 
 第三十五批第十一小批从新 main 建立 `docs/v0.3-b35-release-transaction-design`，仅增加 [ADR-0069](adr/0069-release-pointer-atomic-publication-design.md) **Proposed**，形成正式发布指针、发布代次 CAS、成功审计事件、事务内授权、回滚限制与双框架 Runtime 安全验收的**候选**契约；同步需求、设计、架构与测试边界。**没有新增 Schema、迁移、发布 ACL、HTTP 写入或设备操作，也没有将 FR-008 标为已完成**。该文档分支的 Windows `docs:check` 与完整 `ready` 尚待维护者执行。
+
+## 2026-11-18 · PR #95 授权合并与第三十五批第十二小批候选
+
+维护者 Windows 原始日志确认 PR #95：文档检查 **87 份**、Vite+ **352 格式文件/206 受检零告警**、Vitest **615/615**、HTTP E2E **55/55**、OIDC Studio 离线安全 **13/13**、React/Vue/Server 类型检查及构建通过，完整 `pnpm run ready` **退出码 0**。GitHub 合并前 HEAD `d5ceea382b92734b408b41d546b9ba93646e9914`，获得维护者本轮明确授权后 Squash 合并至 `main@0bc70202f8d1cced27edd72d49fb1de05c44c58f`。Windows 日志未含本地独立 HEAD，不能严格绑定到该 SHA。
+
+第十二小批从新 main 建立 `docs/v0.3-b35-release-decision-gates`，新增 [发布事务评审决策与验收矩阵](RELEASE_TRANSACTION_REVIEW.md)，把 Proposed ADR-0069 未决项拆分为 R-01～R-08 推荐但未批准的选项、I-01～I-06 不变量和 T-01～T-22 **未来**安全测试。同步需求/架构/SDD/代码索引与验收。此次**未新增** Prisma 迁移、权限、HTTP 写接口、Runtime 发布状态或工业设备操作；Windows `docs:check`、`vp check`、完整 `ready` 尚待实测。ADR-0069 继续 Proposed、FR-008 继续规划中。

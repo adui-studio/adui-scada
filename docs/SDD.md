@@ -1119,3 +1119,7 @@ React `ServerReleasePreflight.tsx`、Vue `ServerReleasePreflight.vue` 的异步 
 [ADR-0069](adr/0069-release-pointer-atomic-publication-design.md)（**Proposed**）定义今后写入功能的设计边界，而**不是现有 NestJS/Prisma 的可调用接口**。核心区分为：`headRevision` 仅代表编辑版本水位；独立 `releasedRevision/releasedContentHash` 只表示当前运行发布版本；`releaseGeneration` 为严格单调的发布/回滚 CAS 代次，防止发布→回滚→再发布相同修订号时的 ABA 问题。事务写入候选须在锁内复核可信主体、独立 `release:publish`/`release:rollback` ACL、期望版本及代次，重新读取并校验不可变 ProjectSnapshot 和 Core 兼容性，并在同一事务中追加发布事件与切换指针。回滚目标必须是曾实际发布过的快照，不能直接指向任意已保存工程版本或草稿。
 
 当前真实代码只有 `project:read/version:read/version:append` 三种 ACL、不可变工程历史、版本追加审计和**只读** `release-preflight` GET，没有发布表、指针、事务、角色、路由或 Runtime 发布态加载。是否采用本 ADR 的候选列名、API 路径、幂等与审计策略仍需维护者审核；新增正式写入之前必须先完成迁移中文注释、隔离数据库并发/故障回滚、双框架运行时只读安全等专项。任何预检 `passed=true` 均不能代替发布事务内重新校验。
+
+## 2026-11-18 · 第三十五批第十二小批：发布写事务准入评审
+
+[正式发布事务评审决策与验收矩阵](RELEASE_TRANSACTION_REVIEW.md) 仅提供 ADR-0069 **Proposed** 状态下的 R-01～R-08 待决建议、编辑/发布指针独立不变量 I-01～I-06、T-01～T-22 未来故障注入验收。包含同工程并发 CAS、ABA、撤权竞争、幂等重试、跨租户不可枚举、审计与指针单事务、Runtime 只认已提交冻结快照等测试义务。**矩阵中的拟定 ACL、路由、模型和 HTTP 错误不代表当前 NestJS/Prisma 已支持**；只有获得独立架构与工业安全审查、实施迁移并经真实数据库验证后才允许写入实现。
