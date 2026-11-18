@@ -71,6 +71,8 @@ model ScadaProjectVersion {
   project     ScadaProject        @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
   /// 该成功保存版本对应的审计事件。
   audit       ScadaProjectAudit?
+  /// 该版本作为正式发布事件目标版本的历史引用。
+  releaseTargetEvents ScadaProjectReleaseEvent[] @relation("ScadaProjectReleaseEventToVersion")
 
   @@id([tenantId, projectId, revision])
   @@index([tenantId, projectId, createdAt], map: "scada_project_versions_created_idx")
