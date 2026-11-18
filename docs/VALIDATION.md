@@ -1836,3 +1836,9 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 第六小批在该主线新分支增加 `scripts/test-oidc-release-preflight.mjs`、同名 `.cases.mjs` 与根命令。浏览器专项只复用已有可信 Keycloak 登录 / HTTPS 双 Origin，选取真实 `project:read` + `version:read` 的已保存工程，逐一 GET 读取与核对版本、摘要、200 报告、无缓存、400、409，检查 React/Vue 返回一致且工程 head 未变化。没有任何正式发布写入或工业设备请求；不创建、删除、更新工程/ACL，也不从浏览器读取 Cookie 或密钥。新离线用例共 **11 项**，独立 Node 命令已加入常规 `ready`；真实交互式浏览器专项必须另行执行。
 
 **协作环境中已完成的验证仅限于**：从 GitHub 最新页面函数源码提取后在隔离 V8 直接执行的 11/11 安全契约用例，以及额外 8/8 正向/负向请求模拟；这不是 Windows Node `node --test`、Vite+、完整 `ready` 或真实 Keycloak 浏览器执行记录。**本分支这些 Windows 命令与真实 Keycloak 登录均待实测**，不得宣称已经通过。原先的 Vitest 602/602、NestJS HTTP E2E 55/55 与 test:db 36/36 只属于合并前验收基线。
+
+## 2026-11-18 · PR #90 OIDC 发布预检测试对象展开 Lint 警告与修复候选
+
+维护者在 Windows 执行 `vp check --fix` 时，`scripts/test-oidc-release-preflight.cases.mjs:190` 出现 **1 条** `typescript(no-misused-spread)` 警告、**0 错误**。原因是 Mock `Map` 中的响应正文存在数组/对象联合类型，测试将 `old.body` 未经非数组对象校验直接展开；格式化完成不能视为静态检查通过。
+
+PR #90 功能分支已最小增加 `assert.ok(old?.body && !Array.isArray(old.body), "发布预检测试夹具正文必须为对象")` 后才展开原正文，保留所有四个负向断言。GitHub 回读已验证此断言存在。**新 HEAD 的 Windows `vp check`、`pnpm run test:release:preflight:oidc:config`、`pnpm run docs:check`、完整 `pnpm run ready` 及交互式真实 Keycloak 浏览器专项均待执行**；不得将修复前的检查或其他 V8 模拟结果记作 Windows 新 HEAD 通过。参见 `docs/AI_MISTAKES.md` E-051。
