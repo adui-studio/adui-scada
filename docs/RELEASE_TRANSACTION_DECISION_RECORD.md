@@ -164,6 +164,29 @@ React/Vue 双端：
 
 **本阶段仍不包含 PLC/DCS 写入许可。**
 
+## 6. B 阶段 Schema 定稿范围
+
+本实现小批在 ADR-0069 Accepted 基线下落地 Prisma 数据结构，但**不实现发布/回滚 API**。
+
+已定稿并实现：
+
+- `ScadaProjectReleaseState`：每工程一行；`releaseGeneration` 初始为 0；首次正式发布前 `releasedRevision`、`releasedContentHash`、`lastReleaseEventId` 均为空。
+- `ScadaProjectReleaseEvent`：只追加成功发布/回滚事件；`generation` 从 1 开始并按工程唯一；事件目标通过复合外键指向不可变历史版本。
+- `idempotencyKey`：按租户、工程、可信主体、动作建立唯一约束，最大 128 字符。
+- `requestSemanticHash`：服务端语义摘要，必须为小写 SHA-256 十六进制 64 字符。
+- 发布/回滚权限动作：新增 `release:publish` 与 `release:rollback`，数据库允许但**不会自动授予现有主体**；现有工程创建者仍只获得既有三项工程/版本权限。
+- 既有工程迁移时统一创建 generation=0 的未发布状态；新工程创建事务同步创建该状态行。
+- 发布状态与事件表、物理字段、业务索引全部保留中文 PostgreSQL 注释。
+- 旧迁移不修改，只新增 `20261118000000_release_state_and_events`。
+
+本阶段仍不实现：
+
+- 正式发布/回滚 Controller 与 API Client。
+- 发布事务锁、CAS、幂等重试处理。
+- Runtime 发布指针读取。
+- 生产审批/双人审批流程。
+- PLC/DCS 或其他设备写入。
+
 ## 6. 维护者批准记录
 
 **批准时间：2026-11-18**
