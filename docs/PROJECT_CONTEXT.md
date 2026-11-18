@@ -1482,4 +1482,3 @@ PR #78 经维护者授权已 Squash 合并到 `main@43a2236bec8b528e0d7e1763dba5
 维护者 Windows 首轮质量验收：`vp check` **337/192** 零警告，HTTP E2E **49/49**、`docs:check` **86** 份均通过；但全量 Vitest **580/583**，有三项 `scada-identity.spec.ts` 原身份与审计回归失败，`ready` 退出码 **1**。原因已由日志与候选源码定位为该文件共用 HTTP Context Mock 缺少本批 Guard 新依赖的 `getResponse().setHeader`，并非已观察到生产认证策略错误。
 
 PR #83 修复候选只补全旧身份测试的共用 Context Mock，保留生产 `no-store/no-cache`、401/403、Bearer/Cookie、CSRF、会话审计与工程权限；在既有无效 Bearer 和正常认证场景检查响应头。错误复盘编号 E-047。**修复后 Windows 单测目标 583/583，完整 `ready` 尚待真实退出码为 0 的验收**；PR 保持 Draft、Assignee `@adui-dev`，不得在本轮未获新合并授权时合并。
-

@@ -1760,4 +1760,3 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 三项失败具有同一代码根因：`ScadaSessionGuard` 新增 `context.switchToHttp().getResponse().setHeader()` 以在早期 401/403 阻止缓存，但 `apps/server/src/auth/scada-identity.spec.ts` 的共用 `context()` Mock 尚未实现 `getResponse`，实际抛出 `TypeError: http.getResponse is not a function`，导致原 Unauthorized/成功/审计断言未进入目标流程。修复候选仅补充此 Mock 的 `setHeader()` 及响应头记录，并在原失败场景加入对 `no-store` / `no-cache` 的正向断言；正式 Guard、授权逻辑和原 583 项测试数量不变。
 
 **修复后的新 HEAD 尚未运行 Windows 复验**。优先在候选分支执行 `pnpm --filter @adui/scada-server exec vp test run src/auth/scada-identity.spec.ts` 或按现有 `pnpm run test:unit` 做全量回归；应获得 **583/583** 后再执行 `vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 并核对最终退出码。此次测试 Mock 修复不要求创建新的 Keycloak 测试工程，不影响 React/Vue 业务页面或工业设备读写；真实浏览器如需再次复核，仍须遵守隔离 Lab 的明确确认限制。参见 E-047。
-
