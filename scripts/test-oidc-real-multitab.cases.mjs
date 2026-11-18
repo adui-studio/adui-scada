@@ -220,10 +220,7 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
         /注销后隐藏标签页状态提前变化/,
       );
     }
-    assert.throws(
-      () => requireHiddenSessionUnchanged(state, 0),
-      /注销后隐藏标签页状态提前变化/,
-    );
+    assert.throws(() => requireHiddenSessionUnchanged(state, 0), /注销后隐藏标签页状态提前变化/);
     assert.throws(
       () => requireHiddenSessionUnchanged(undefined, 3),
       /注销后隐藏标签页状态提前变化/,
