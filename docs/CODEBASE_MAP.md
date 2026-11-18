@@ -914,3 +914,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 
 - `scripts/studio-browser-targets.mjs`：依据本机 OIDC HTTPS 配置解析并安全探测两套 Web 首页；拒绝远程地址、协议降级及不受信任的证书。供 `scripts/test-studio-browser.mjs` 复用。
 - `scripts/studio-browser-targets.cases.mjs`：6 项 Node 离线地址、协议与安全配置回归，由根命令 `test:studio:browser:config` 调用，并纳入 `ready`。
+
+## 2026-11-18 · 第三十五批第四小批服务端只读发布预检
+
+- `apps/server/src/projects/project-api.controller.ts`：只在可信 OIDC 根模块注册的 `GET :projectId/versions/:revision/release-preflight`，会话 Guard + `version:read` 工程 Guard，返回无缓存的静态报告。
+- `apps/server/src/projects/prisma-project-version-store.ts`：`preflightRelease` 在同一个只读共享锁事务里复核主体、授权、head 与完整历史快照，委托共享 Core `validateProjectReleasePreflight`；不访问设备或写工程版本。
+- `apps/server/src/projects/prisma-project-version-store.spec.ts`：6 项预检安全/完整性单测；`apps/server/test/projects-api.e2e-spec.ts`：4 项受保护 HTTP 路由 Mock E2E。
