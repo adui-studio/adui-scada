@@ -83,7 +83,15 @@ export function installStudioPreflightReadGuardInPage(origins, runtime = globalT
   };
   runtime.__aduiScadaStudioPreflightGuard = state;
   runtime.fetch = async (input, options) => {
-    const raw = typeof input === "string" ? input : input?.url ?? String(input);
+    const raw =
+      typeof input === "string"
+        ? input
+        : typeof input?.url === "string"
+          ? input.url
+          : typeof input?.href === "string"
+            ? input.href
+            : null;
+    if (!raw) throw new Error("真实 Studio 发布预检请求地址无效");
     const url = new URL(raw, runtime.location.origin + "/");
     if (!url.pathname.startsWith("/api/v1/projects")) {
       return originalFetch(input, options);
