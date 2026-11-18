@@ -1482,3 +1482,11 @@ PR #78 经维护者授权已 Squash 合并到 `main@43a2236bec8b528e0d7e1763dba5
 维护者 Windows 首轮质量验收：`vp check` **337/192** 零警告，HTTP E2E **49/49**、`docs:check` **86** 份均通过；但全量 Vitest **580/583**，有三项 `scada-identity.spec.ts` 原身份与审计回归失败，`ready` 退出码 **1**。原因已由日志与候选源码定位为该文件共用 HTTP Context Mock 缺少本批 Guard 新依赖的 `getResponse().setHeader`，并非已观察到生产认证策略错误。
 
 PR #83 修复候选只补全旧身份测试的共用 Context Mock，保留生产 `no-store/no-cache`、401/403、Bearer/Cookie、CSRF、会话审计与工程权限；在既有无效 Bearer 和正常认证场景检查响应头。错误复盘编号 E-047。**修复后 Windows 单测目标 583/583，完整 `ready` 尚待真实退出码为 0 的验收**；PR 保持 Draft、Assignee `@adui-dev`，不得在本轮未获新合并授权时合并。
+
+## 2026-11-18 · 第三十四批第二十八小批：OIDC 根模块 CSRF/Origin 403 禁缓存候选
+
+第二十七小批 PR #83 曾因旧 `scada-identity.spec.ts` Mock 缺失 `getResponse` 触发 E-047 的 3 项失败（580/583、`ready` 退出码 1）；修复后维护者 Windows 已通过 **583/583**、完整 `ready` **退出码 0**，含 HTTP E2E **49/49**。PR #83 经新的明确授权 Squash 合并到 `main@650b084f770bb92241b3b93a02689160b7b8bc41`；用户日志未提供独立本地 Git HEAD，对测试执行 SHA 不做额外推断。
+
+本批核对真实 `OidcEnabledAppModule` E2E 发现之前只有两个匿名 401 HTTP 响应头断言，虽然 Guard 单测覆盖 403，还没有通过根模块实际 HTTP 异常处理验证 CSRF/Origin 拒绝时的禁止缓存头。仅在既有 E2E 增加两条受保护 `POST /api/v1/auth/logout` 测试：缺少 CSRF Header 或不可信 Origin 时，真实 HTTP 403、no-store/no-cache、无会话 Cookie 清除或重定向。测试使用无效但格式合法的静态测试 Cookie 与 Mock Prisma，不访问真实数据库/Keycloak；正式服务端业务逻辑、React/Vue、Prisma、ACL、工程 Schema 和工业设备权限不变。
+
+新增 2 条 HTTP E2E，目标由 **49** 增至 **51/51**；Vitest 单元测试仍为 **583/583**。新提交尚未 Windows 实测，维持 Draft PR、立即指派并复核 `@adui-dev`，未经本批明确授权不合并。

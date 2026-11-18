@@ -504,3 +504,12 @@ React/Vue **两处载入入口**（当前工程历史版本“载入”、授权
 - 当启用了受保护身份/工程路由且 `ScadaSessionGuard` 进入 HTTP 上下文时，无论之后成功、无凭据 401、失效 Cookie 401 还是来源/CSRF 403，统一在响应上设置 `Cache-Control: no-store` 与 `Pragma: no-cache`。不改变拒绝状态码、不返回 Cookie/Token 或主体数据、不把拒绝变成成功。
 - 非 HTTP 上下文继续按原逻辑拒绝；当前 OIDC 根模块实装 E2E 必须从 `GET /api/v1/auth/me` 和 `GET /api/v1/projects` 获取真实 401，并验证两个禁止缓存响应头。Guard 单测分别覆盖无凭据 401 与缺失 CSRF Header 403，不调用会话仓储。
 - 保留所有现有四标签页、CAS、工程读写、租户/ACL 与独立 Lab 安全保护。本批无 Vue/React、数据库 Schema、Docker、身份 Cookie 协议或工业设备写入变更。
+
+## 第三十四批第二十八小批 · Guard 403 HTTP 拒绝响应禁缓存真实模块验收（FR-002 / FR-013 / NFR-003 局部）
+
+第二十七小批已合并 Session Guard 的 HTTP 401/403 禁缓存处理，单元测试已覆盖 403；但真正装配 `OidcEnabledAppModule` 的 HTTP E2E 原先仅验证匿名身份和工程 GET 的 401。本批以现有受保护 `POST /api/v1/auth/logout` 为测试入口，补足两条 HTTP 403 拒绝路径：
+
+- 同源可信 `Origin` 和合法格式的测试会话/CSRF Cookie 存在，但省略 `X-SCADA-CSRF` 请求头，必须返回 403 JSON，响应携带 `Cache-Control: no-store`、`Pragma: no-cache`；不得清除 Cookie、重定向或进入真实会话仓储。
+- 即使 Cookie 和 `X-SCADA-CSRF` 匹配，只要 `Origin` 不在可信白名单，仍须得到 403 JSON 和同样的禁止缓存响应头，不清除 Cookie、重定向或撤销任何会话。
+- 测试通过真实 NestJS 根模块、真实 Guard 和 Supertest HTTP 发起，但仅使用静态无效测试会话值与 Mock Prisma，不连接数据库或 Keycloak，不发起生产或工业设备写入。
+- 正式 Guard、控制器、CSRF 验证、会话/工程 ACL、React/Vue 及工程 Schema 均保持不变；这是为既有安全加固补充 E2E 证据，不是已发现实际缓存泄漏。

@@ -1020,3 +1020,11 @@ React 写入页和 Vue 写入页各执行一次完整二元探针，分别由独
 为避免将 NestJS 或 Express 全量响应对象引入身份模块类型约束，仅定义 `setHeader(name: string, value: string): void` 的局部窄接口。`ScadaSessionGuard` 原单元测试 `context` 夹具只读记录被设置的头；新增拒绝 401/403 单元用例，同时断言拒绝前不调用任何会话仓储。`OidcEnabledAppModule` 装配 E2E 在真实 NestJS HTTP 层核对 `auth/me` 和工程列表匿名 401 响应含 `no-store` / `no-cache`，没有真实数据库连接。
 
 这是对拒绝路径的预防性加强，**不是**已有生产缓存泄漏的事故结论。需 Windows 真实质量链验证，新 HEAD 未运行前不声明完成或通过。依赖、工程 Schema、BFF Cookie/Token、授权流程、React/Vue 及工业网关均不变。
+
+## 2026-11-18 · 第三十四批第二十八小批：真实 NestJS Guard 403 禁缓存 E2E
+
+沿用 `apps/server/test/oidc-module-bootstrap.e2e-spec.ts` 的 `OidcEnabledAppModule` 真正装配路径，不单独 Mock Controller、Guard 或 HTTP 异常处理；外部 `PrismaService` 仍以 `{ client: {} }` 替换，不允许数据库查询。使用现有 `ScadaAuthController` 的 `POST /api/v1/auth/logout`，测试值满足 `scada_s_<43 chars>` / `scada_csrf_<43 chars>` 协议形状但不对应任何真实用户。
+
+第一条用例带可信 `Origin`、`Sec-Fetch-Site: same-origin` 和两种 Cookie，刻意缺少 `X-SCADA-CSRF`，预期在 `ScadaSessionGuard` 的 CSRF 双提交检查中提前返回 403。第二条用例带匹配的 CSRF 请求头，但使用不可信 `Origin`，必须在 Origin 白名单检查处提前拒绝为 403。两条用例都逐项检查 JSON 403、安全固定中文原因、`Cache-Control: no-store`、`Pragma: no-cache`，并要求 `Set-Cookie` 与 `Location` 缺失，避免把未完成注销误报为清理成功。
+
+不新增测试依赖，不改现有代码路径或异常吞吐；先前 401 HTTP 根模块用例保持不变。此次在已有 49 项 HTTP E2E 上新增 2 项，**新目标为 51/51（待 Windows 实测）**；Vitest 单元测试总数仍为 583 项，不改变浏览器、多标签页或工业现场验收边界。

@@ -1760,3 +1760,11 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 三项失败具有同一代码根因：`ScadaSessionGuard` 新增 `context.switchToHttp().getResponse().setHeader()` 以在早期 401/403 阻止缓存，但 `apps/server/src/auth/scada-identity.spec.ts` 的共用 `context()` Mock 尚未实现 `getResponse`，实际抛出 `TypeError: http.getResponse is not a function`，导致原 Unauthorized/成功/审计断言未进入目标流程。修复候选仅补充此 Mock 的 `setHeader()` 及响应头记录，并在原失败场景加入对 `no-store` / `no-cache` 的正向断言；正式 Guard、授权逻辑和原 583 项测试数量不变。
 
 **修复后的新 HEAD 尚未运行 Windows 复验**。优先在候选分支执行 `pnpm --filter @adui/scada-server exec vp test run src/auth/scada-identity.spec.ts` 或按现有 `pnpm run test:unit` 做全量回归；应获得 **583/583** 后再执行 `vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 并核对最终退出码。此次测试 Mock 修复不要求创建新的 Keycloak 测试工程，不影响 React/Vue 业务页面或工业设备读写；真实浏览器如需再次复核，仍须遵守隔离 Lab 的明确确认限制。参见 E-047。
+
+## 2026-11-18 · 第三十四批第二十七小批结案与第二十八小批候选
+
+维护者 Windows 在 PR #83 的 E-047 Mock 修复后提供了实际 `pnpm run test:unit`：**49/49 文件、583/583 用例通过，退出码 0**；完整 `pnpm run ready` **退出码 0**，包含 `vp check` **337** 个格式文件、**192** 个受检文件零警告/Lint/类型错误，SSE **8/8**、故障代理 **4/4**、OIDC 多标签离线 **20/20**、NestJS HTTP E2E **49/49**、`docs:check` **86** 份、React/Vue/NestJS 类型检查及构建成功。由此 E-047 历史 580/583、`ready` 退出码 1 已关闭。维护者日志未提供本地 `git rev-parse HEAD`，仅能按已核查的后续 GitHub 提交记录判断差异；PR #83 按明确授权 Squash 合并到 `main@650b084f770bb92241b3b93a02689160b7b8bc41`。
+
+第二十八小批只扩充 `apps/server/test/oidc-module-bootstrap.e2e-spec.ts` 的真实 OIDC 根模块 HTTP 403 路径。分别模拟可信来源但缺少 CSRF 请求头，以及有正确测试 CSRF 值但不可信来源，均要求 `POST /api/v1/auth/logout` 返回 403 JSON、`Cache-Control: no-store`、`Pragma: no-cache`、无 `Set-Cookie` 清除、无重定向。真实 Guard 被调用但 Prisma 是空 Mock，不可接触真实会话、真实数据库或 Keycloak。原 49 项 HTTP E2E 目标扩展为 **51/51**；Vitest 单元测试维持 **583/583**（均仅为待测目标）。
+
+**第二十八小批的新 HEAD 尚未运行** Windows `vp check`、`pnpm run test:e2e:server`、`pnpm run test:unit`、`pnpm run docs:check` 或完整 `pnpm run ready`。上批 583/583、49/49 和 `ready` 0 是**已合并旧代码**的真实结果，不能用来声明新提交通过。维护者应先记录 `git rev-parse HEAD`，再执行 HTTP E2E（目标 51/51）和完整 `ready`（最终退出码必须 0）。此批不需要额外启动真实 Keycloak、创建测试工程或执行数据库写操作。
