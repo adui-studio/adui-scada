@@ -1002,3 +1002,13 @@ React/Vue 跟随页仍按原顺序真实切换为可见，验证已有 `StudioSe
 `readLogoutProjectStatusesInPage(origin, projectId, runtime)` 是可由 CDP 独立序列化的自包含页面函数，先以严格正则验证专用 `b34-oidc-cas-<UUID>` 工程 ID 与当前页面 Origin，校验失败不发请求并返回 `null`。随后顺序执行 **两个只读同源 GET**：列表 `?limit=10` 和本轮项目 `versions/3`，始终禁用重定向及缓存，仅将 HTTP 状态数字组成二元数组；网络、TLS 或重定向故障映射为 `0`，不读取响应正文与凭据。以 Node 侧 `requireLogoutProjectDenied` 要求数组长度恰好为 2 且两个状态均严格等于 401，任何其他结果以固定中文安全错误失败。
 
 React 写入页和 Vue 写入页各执行一次完整二元探针，分别由独立白名单阶段标识失败 Origin；四标签页原 CAS/授权缓存检查不被替换。离线回归核对具体固定路径、只读请求选项、跨 Origin/非法项目 ID 零请求和网络及 HTTP 各类异常的 fail-closed 结果。此测试不证明不同浏览器 Profile 的注销传播或设备安全性。
+
+## 2026-11-18 · 第三十四批第二十六小批：BFF 工程只读接口注销后的全路径校验
+
+依据 `apps/server/src/projects/project-api.controller.ts` 的真实 `@Get()` 路由确认工程列表、工程详情、历史版本列表和单个历史版本四条 GET 均有 `ScadaSessionGuard`，其中详情额外要求 `project:read`，历史版本两个路由额外要求 `version:read`。本批不修改这些生产 Guard，而是扩展已合并第二十五小批的 `readLogoutProjectStatusesInPage` 页面侧同源只读探针。
+
+页面函数仍然严格验证当前 Origin 与本轮 `b34-oidc-cas-<UUID>` 工程 ID，并依次访问 `?limit=10`、`/:id`、`/:id/versions?limit=10`、`/:id/versions/3` 四条固定 GET；保留 `credentials/mode: same-origin`、`redirect: error`、`cache: no-store`、`Accept: application/json`、无请求体、不读取响应正文。网络及 TLS 故障继续以数字状态 0 呈现，仅返回恰好四项状态数组到 Node 端。
+
+`requireLogoutProjectDenied` 保持原中文脱敏诊断并将门禁从严格两项 401 扩展到**四项每一项都为 401**；不足、超量、缺失、200/3xx/403/5xx 均拒绝。真实浏览器脚本仍在原四 Studio 标签页和本地数据保护断言完成后，各从 React、Vue 写入页复用一次同一探针，不制造第二次注销或新的工程版本。
+
+离线测试将原两个 GET 路由用例扩展至四路由，再新增一项逐个路由注入 200 的回归，验证任何单一路由放行都会失败、只读探针不会访问响应 `json()` 或 `text()`；目标离线总数 **20 项**。这不等于真实浏览器已经验证通过。

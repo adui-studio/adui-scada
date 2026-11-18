@@ -186,7 +186,7 @@ export function requireLogoutHttp401(status) {
   return true;
 }
 
-/** 只读核对两个受保护工程路径；页面只返回 HTTP 状态，不读取响应正文。 */
+/** 只读核对四个真实受保护工程 GET 路由；页面只返回 HTTP 状态，不读取响应正文。 */
 export async function readLogoutProjectStatusesInPage(origin, projectId, runtime = globalThis) {
   if (
     runtime.location.origin !== origin ||
@@ -195,9 +195,12 @@ export async function readLogoutProjectStatusesInPage(origin, projectId, runtime
     return null;
   }
 
+  const projectPath = "/api/v1/projects/" + encodeURIComponent(projectId);
   const paths = [
     "/api/v1/projects?limit=10",
-    "/api/v1/projects/" + encodeURIComponent(projectId) + "/versions/3",
+    projectPath,
+    projectPath + "/versions?limit=10",
+    projectPath + "/versions/3",
   ];
   const statuses = [];
   for (const path of paths) {
@@ -221,9 +224,11 @@ export async function readLogoutProjectStatusesInPage(origin, projectId, runtime
 export function requireLogoutProjectDenied(statuses) {
   if (
     !Array.isArray(statuses) ||
-    statuses.length !== 2 ||
+    statuses.length !== 4 ||
     statuses[0] !== 401 ||
-    statuses[1] !== 401
+    statuses[1] !== 401 ||
+    statuses[2] !== 401 ||
+    statuses[3] !== 401
   ) {
     throw new Error("注销后工程读取未返回 HTTP 401");
   }
@@ -983,7 +988,7 @@ async function run() {
     requireLogoutProjectDenied(vueProjectStatuses);
 
     process.stdout.write(
-      "真实多标签页专项通过：三个隐藏页在恢复前保持 CAS、本地画布、IndexedDB 草稿、自动保存与零工程写入；React/Vue 四个 Studio 页恢复后完成同源 BFF 401、CAS 与授权失效，双 Origin 工程列表及历史版本读取均返回 401，旧 CAS 保存未产生工程写入。专用工程保留供维护者复核。\n",
+      "真实多标签页专项通过：三个隐藏页在恢复前保持 CAS、本地画布、IndexedDB 草稿、自动保存与零工程写入；React/Vue 四个 Studio 页恢复后完成同源 BFF 401、CAS 与授权失效，双 Origin 四条工程只读 GET 路由均返回 401，旧 CAS 保存未产生工程写入。专用工程保留供维护者复核。\n",
     );
   } catch (error) {
     if (error instanceof Error && SAFE_ERRORS.has(error.message)) throw error;

@@ -1736,3 +1736,11 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 第二十五小批只增强测试脚本中**注销后受保护工程只读 API 的真实 HTTP 拒绝验证**：React 与 Vue 两个 HTTPS Origin 的工程列表 `GET /api/v1/projects?limit=10` 和本轮随机专用工程历史版本 `GET /api/v1/projects/{id}/versions/3` 均必须返回 **401**。只读探针拒绝任意其他工程 ID/跨 Origin，且不读取返回正文。新增两项 Node 离线回归（同源/只读路径白名单与异常 HTTP/网络拒绝），**目标 19/19，仅为候选数量**。不改变正式 UI、共享 API Client、NestJS、Prisma、数据库或工业权限，也不削弱原四标签页、CAS/本地数据安全断言。
 
 **新 HEAD 的 Windows `test:projects:oidc:multitab:config`、`vp check`、`docs:check`、完整 `pnpm run ready` 和真实 Keycloak 四标签页专项均尚未执行。** 必须记录真实退出码与本地 `git rev-parse HEAD`。真实专项仍需显式确认本机隔离 Lab，会创建并保留一份随机测试工程、追加版本 2/3 并注销隔离会话；禁止输入终端密码、输出 Cookie/Token、触碰既有工程或生产数据库。
+
+## 2026-11-18 · 第三十四批第二十五小批验收结案与第二十六小批候选
+
+维护者提交的第二十五小批 Windows 日志：`pnpm run test:projects:oidc:multitab:config` **19/19**，退出码 **0**；完整 `pnpm run ready` **退出码 0**，其中 `vp check` 337 个格式文件、192 个受检文件零警告/Lint/类型错误，Vitest **581/581**，HTTP E2E **49/49**，`docs:check` **86** 份，React/Vue/NestJS 类型检查与构建均成功。真实 `pnpm run test:projects:oidc:multitab:browser` **退出码 0**：四个 Studio 页 CAS/身份/本地数据保护及零过期工程写入保持，两个 HTTPS Origin 的工程列表和指定修订版本 GET 真实返回 401。维护者日志未提供独立的 `git rev-parse HEAD`；GitHub 核对 PR #81 最新提交仅包含测试排版调整，无断言语义变化。维护者明确授权后已 Squash 合并为 `main@21085c1ebde325c8420e7f31e75294e030d8cd0a`。
+
+第二十六小批经真实 NestJS Controller 确认工程共有四条受保护 GET 路由。仅对原脚本已存在的双 Origin 注销后探针补充工程详情 `GET /:id` 和历史版本列表 `GET /:id/versions?limit=10`，连同已覆盖的列表与指定版本，要求**四条全部真实返回 HTTP 401**。严格同源只读、随机专用工程 ID、无响应正文与零额外工程写入，原四 Studio 页恢复及 SVG/IndexedDB/自动保存断言不变。现有 19 项离线用例中两项按四路由调整，额外新增一项逐路径失败回归；**新目标 20/20（尚未执行）**。
+
+**第二十六小批新 HEAD 的 Windows `test:projects:oidc:multitab:config`、`vp check`、`docs:check`、完整 `pnpm run ready` 和真实 Keycloak 四标签页专项尚未执行。** 旧 PR #81 退出码不得视为本批结果。建议在 Windows 先执行 `git rev-parse HEAD` 记录测试对应 SHA，再按顺序执行上述离线专项与完整质量链；全部真实退出码为 0 后，再在显式确认的本机 OIDC HTTPS Lab 运行 `pnpm run test:projects:oidc:multitab:browser`。交互式测试仍创建并保留随机专用工程、追加修订 2/3、注销当前隔离会话，禁止输入终端密码、输出真实令牌或操作生产工程。
