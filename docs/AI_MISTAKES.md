@@ -444,6 +444,15 @@
 - **验证边界**：截至此次远程候选，**未执行** Windows Node 19/19、`vp check`、`docs:check`、`ready` 或真实 React/Vue 本机 Lab 浏览器。原 PR #75 声称的隔离 V8 18/18 仅属于旧代码、并非当前提交的真实 Node 测试。
 - **证据**：PR #75、`scripts/test-oidc-studio-multitab.mjs`、`scripts/test-oidc-studio-multitab.cases.mjs`、`docs/VALIDATION.md`。
 
+### E-049 · HTTPS 开发服务被旧 Studio 浏览器脚本误判为未启动（第三十五批第三小批）
+
+- **现象**：2026-11-18 维护者在 Windows 同时启动 React/Vue，本机 Vite+ 实际分别监听 `https://127.0.0.1:15173/` 与 `https://127.0.0.1:15174/`；独立 `test:browser` 和 `test:release:preflight:browser` 都在 React 连接探测时报告“开发服务未启动：http://127.0.0.1:15173/”，**两项退出码均为 1**。同批 `test:unit` **596/596**、`vp check` **341/196 零告警**、`docs:check` **86 份**、完整 `ready` **退出码 0**，证明离线质量链通过，但不能替代浏览器专项。
+- **确认根因**：`scripts/test-studio-browser.mjs` 在缺少 `SCADA_REACT_URL` / `SCADA_VUE_URL` 覆盖时无条件拼接 `http://`，未读取本仓库已有的 `SCADA_OIDC_DEV_HTTPS_ENABLED=true`。原预检 `fetch` 因协议不一致在启动浏览器之前失败；“服务未启动”属于误导性的网络诊断，**并不是 React/Vue 应用实际未启动或正式发布预检功能失败的证据**。
+- **最小修复候选**：新增 `scripts/studio-browser-targets.mjs`，根据现有 HTTPS 开关和回环端口生成双框架 URL，显式覆写仅允许回环 Web 首页，HTTPS 模式禁止降级为 HTTP；原脚本用共用解析和只读连接探测。HTTPS 探测使用 Node `https.request` 严格 `rejectUnauthorized: true`，根证书可从 `NODE_EXTRA_CA_CERTS` 显式读取，以兼容脚本启动后才加载根 `.env` 的场景；对 TLS/文件错误仅返回固定中文类别。**不允许**关闭 Node TLS 校验、为 Chrome/Edge 增加忽略证书参数、修改 OIDC/数据库/设备。
+- **防复发**：浏览器专项应从当前实际 Vite 服务协议推导目标，且 HTTP/HTTPS 模式、用户覆写、非法远程地址和证书验证都必须有离线反向测试；`ready` 里的离线质量链不等于真实 Chrome/Edge 已连接双 Origin。新命令 `test:studio:browser:config` 纳入 `ready`，而实际浏览器专项仍须独立执行。
+- **验证边界**：协作容器对 GitHub 当前两个新文件的 Blob SHA 完整比对一致，Node.js 22 的 `node --test` **6/6 通过**；使用临时本机自签 HTTPS 服务实际确认“未知证书拒绝”与“显式信任本机 CA 后接受”两条路径，未关闭证书校验。**Windows 新 HEAD 的 `vp check`、完整 `ready` 和两个浏览器专项尚未执行**；自签服务模拟不是 Windows Chrome/Edge 验收。
+- **证据**：维护者 2026-11-18 Vite+ 截图、PowerShell 两项专项退出码 1、质量日志、PR #87、`scripts/studio-browser-targets.mjs` 与 `scripts/studio-browser-targets.cases.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
