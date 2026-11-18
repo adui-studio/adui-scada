@@ -1046,3 +1046,11 @@ React 写入页和 Vue 写入页各执行一次完整二元探针，分别由独
 遍历严格按照 Parser 的页面、图元和绑定插入顺序返回稳定问题路径。不会调用 `createProjectSnapshot`、任何 DraftRepository、IndexedDB、网络或数据库；不更改原来的 `validateProjectDocument`、工程 JSON、运行 SVG renderer、Tag 类型定义，也没有授权写入口。当前 SVG/绑定映射由受支持的四种图元静态列出，未来扩展 SVG 注册/规则引擎时须同步更新，不能误把被渲染器忽略的值当成已支持。
 
 这是 FR-008 的一个**可测试前置步骤**，并未实现完整发布校验流程。正式发布仍须后续独立设计服务器授权、发布记录与不可变快照、事务指针及回滚、发布快照运行时加载、实时 Tag 来源与数据质量、安全审计；本小批不会开放工业写入。
+
+## 2026-11-18 · 第三十五批第二小批：React/Vue Studio 静态发布预检 UI
+
+React `StudioPage.tsx` 用 `useMemo(() => validateProjectReleasePreflight(state.document), [state.document])` 派生结果；Vue `StudioPage.vue` 用 `computed(() => validateProjectReleasePreflight(state.value.document))` 派生结果。两端都不维护独立的可过期报告缓存，也不将结果存进 Schema、IndexedDB、服务端或新的状态管理包；用户切换、载入、编辑工程后均依当前 `document` 重新计算。
+
+在现有 `studio-version-menu` 折叠菜单中新增「发布预检」，复用共享 `studio-version-panel` / `studio-version-list` 样式和无障碍状态文案。通过显示明确的**只读静态兼容性**结论；失败枚举全部 `issues`，分别显示 `path` 与中文 `message`，不输出/执行任意文档规则内容，不利用文档值构建 HTML。DOM 文本由 React/Vue 自动转义；不发出任何网络请求。
+
+新增 `scripts/test-studio-browser.mjs --release-preflight` 和根脚本 `test:release:preflight:browser`。测试基于现有临时 Chromium Profile、React/Vue HTTP 开发端口，浏览器里只调用正式 Studio JSON 导入/导出按钮，使用 Schema 合法却含未来图元类型、未实现规则及历史 `unknown` 已绑定 Tag 的隔离内存数据模拟失败，再恢复原 JSON 并检查没有过期问题。专项不能被当作正式发布接口或数据库/工业现场验收。
