@@ -88,6 +88,11 @@ function createHarness(options: HarnessOptions = {}) {
       steps.push("推进工程水位");
     }),
   };
+  const releaseStates = {
+    create: vi.fn<(args: { readonly data: Record<string, unknown> }) => Promise<void>>(async () => {
+      steps.push("创建未发布状态");
+    }),
+  };
   const grants = {
     createMany: vi.fn<
       (args: { readonly data: readonly Record<string, unknown>[] }) => Promise<void>
@@ -131,6 +136,7 @@ function createHarness(options: HarnessOptions = {}) {
       return options.projectExists === false ? [] : [{ head_revision: options.headRevision ?? 1n }];
     }),
     scadaProject: project,
+    scadaProjectReleaseState: releaseStates,
     scadaProjectGrant: grants,
     scadaProjectVersion: versions,
     scadaProjectAudit: audits,
@@ -148,6 +154,7 @@ function createHarness(options: HarnessOptions = {}) {
     store: new PrismaProjectVersionStore(database),
     steps,
     project,
+    releaseStates,
     grants,
     versions,
     audits,
@@ -156,7 +163,7 @@ function createHarness(options: HarnessOptions = {}) {
 }
 
 describe("工程 API 事务仓储", () => {
-  it("创建工程时按顺序原子写入三项权限、首版快照、水位与成功审计", async () => {
+  it("创建工程时原子写入未发布状态、三项权限、首版快照、水位与成功审计", async () => {
     const harness = createHarness();
     const result = await harness.store.create(PRINCIPAL, { document: createDocument() });
 
@@ -169,12 +176,20 @@ describe("工程 API 事务仓储", () => {
     expect(harness.steps).toEqual([
       "复核创建者状态",
       "创建工程",
+      "创建未发布状态",
       "创建工程授权",
       "写入历史快照",
       "推进工程水位",
       "写入成功审计",
       "读取工程摘要",
     ]);
+    expect(harness.releaseStates.create.mock.calls[0]?.[0]).toMatchObject({
+      data: {
+        tenantId: PRINCIPAL.tenantId,
+        projectId: PROJECT_ID,
+        releaseGeneration: 0n,
+      },
+    });
     expect(harness.grants.createMany.mock.calls[0]?.[0].data).toHaveLength(3);
     expect(harness.audits.create.mock.calls[0]?.[0]).toMatchObject({
       data: { action: "version:append", revision: 1n, actorId: PRINCIPAL.subjectId },
