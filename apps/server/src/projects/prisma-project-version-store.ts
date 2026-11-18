@@ -619,8 +619,8 @@ export class PrismaProjectVersionStore {
   }
 
   /**
-   * 只读检查当前已保存的工程版本。工程共享锁防止在权限、当前水位、
-   * 快照验证与静态 SVG 预检之间插入版本追加或撤权操作。
+   * 只读检查当前已保存的工程版本。工程共享锁阻止并发推进 head，
+   * 在同一事务内再次读取 ACL；该锁不等于对授权记录加锁。
    * 兼容性 passed 不表示可发布；不创建发布记录或写入审计。
    */
   async preflightRelease(
