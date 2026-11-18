@@ -1682,3 +1682,11 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 经当前 PR #76 源码核对，`openStudioProject` 返回的只是 `readMultiTabSessionStateInPage` 的 CAS/身份 UI 状态摘要，`canvas` 和 `drafts` 均不存在；而 React/Vue 首次确认打开工程后，用该摘要与刚创建草稿、开启自动保存所得的完整快照调用 `requireSameCanvasAndDrafts`，必然报画布差异。草稿创建、自动保存开启本就属于初始化的预期状态变更。候选最小修复只删除**首次初始化阶段**这两处错误跨类型比较，以初始化完成后的 `inspectProtectedState` 作为后续保护基准，新增离线回归模拟真实初始化操作。远端 CAS 水位变化、服务端身份失效、人工恢复后的所有 SVG/草稿数量/整记录 SHA-256/自动保存以及零工程 POST 断言全部保留。
 
 本次维护者提供的**修复前** Windows 质量记录：离线 10/10、`vp check` 337 格式文件/192 受检零告警、`docs:check` 86 份、单测 581/581、HTTP E2E 49/49；`ready` 最后显示 Prisma Client 生成，缺少最终退出码。当前候选离线目标 **11/11**，新 HEAD 的 `vp check`、`docs:check`、完整 `ready` 和真实 Keycloak 浏览器专项待维护者执行。只根据本次代码修正无法声称多标签页真实测试已通过。
+
+## 2026-11-18 · 第三十四批第二十一小批：多标签页本地快照有效性门禁候选
+
+从已合并 PR #76 的真实浏览器专项继续，检查到 `requireSameCanvasAndDrafts` 原比较使用可选链，前后快照都缺失 IndexedDB `drafts` 时，`undefined === undefined` 会误判为没有变化。自动保存前后都缺失时也存在类似误判。该问题属于**测试断言边界**，不是已经证实发生的生产数据丢失事故。
+
+本批只修改 `scripts/test-oidc-real-multitab.mjs` 的比较前有效性判断及对应 Node 离线用例：要求 SVG 快照为字符串、草稿数量为至少 1 的安全整数、整记录摘要为 64 位十六进制 SHA-256、自动保存为明确布尔值；任何缺失或损坏均按原有脱敏中文错误拒绝，正常快照的逐项严格比较和全部真实 CAS/注销保护保留。离线目标从 11 项增加至 **13 项（候选，尚未执行）**。不修改 React/Vue 正式页面、OIDC、工程 API、数据库、工业设备权限，也不创建或删除 Lab 工程。
+
+**验收边界**：当前仅为 GitHub 代码候选，尚未执行新 HEAD 的 Windows `test:projects:oidc:multitab:config`、`vp check`、`docs:check`、`ready` 或真实四标签页专项，不得沿用 PR #76 已通过的退出码；若依赖和业务代码均未变化，可优先执行离线与完整质量链，再评估是否重跑真实专项。
