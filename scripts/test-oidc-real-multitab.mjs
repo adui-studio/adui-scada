@@ -195,12 +195,12 @@ export async function readLogoutProjectStatusesInPage(origin, projectId, runtime
     return null;
   }
 
-  const path = "/api/v1/projects/" + encodeURIComponent(projectId);
+  const projectPath = "/api/v1/projects/" + encodeURIComponent(projectId);
   const paths = [
     "/api/v1/projects?limit=10",
-    path,
-    path + "/versions?limit=10",
-    path + "/versions/3",
+    projectPath,
+    projectPath + "/versions?limit=10",
+    projectPath + "/versions/3",
   ];
   const statuses = [];
   for (const path of paths) {
