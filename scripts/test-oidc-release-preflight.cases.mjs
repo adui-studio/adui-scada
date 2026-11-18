@@ -184,6 +184,7 @@ void describe("真实 Keycloak 双 Origin 发布预检只读安全门禁", () =>
       const { runtime, map, prefix } = fixture();
       const path = prefix + "/versions/3/release-preflight";
       const old = map.get(path);
+      assert.ok(old?.body && !Array.isArray(old.body), "发布预检测试夹具正文必须为对象");
       map.set(path, {
         ...old,
         ...(change.cache === null ? { cache: null } : {}),
