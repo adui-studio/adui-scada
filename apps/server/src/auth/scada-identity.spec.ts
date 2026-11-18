@@ -241,7 +241,9 @@ describe("可信会话与工程 Guard", () => {
     for (const header of [undefined, ["Bearer fake"], "Basic fake", "Bearer fake"]) {
       const responseHeaders = new Map<string, string>();
       await expect(
-        guard.canActivate(context({ headers: { authorization: header } }, undefined, responseHeaders)),
+        guard.canActivate(
+          context({ headers: { authorization: header } }, undefined, responseHeaders),
+        ),
       ).rejects.toBeInstanceOf(UnauthorizedException);
       expect(responseHeaders.get("cache-control")).toBe("no-store");
       expect(responseHeaders.get("pragma")).toBe("no-cache");
