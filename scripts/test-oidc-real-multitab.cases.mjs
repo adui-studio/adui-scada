@@ -257,7 +257,7 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
       [401, 401, 0, 401],
       [503, 401, 401, 401],
       [401, 401, 401, 302],
-      new Array(4),
+      [undefined, undefined, undefined, undefined],
     ]) {
       assert.throws(() => requireLogoutProjectDenied(statuses), /注销后工程读取未返回 HTTP 401/);
     }
