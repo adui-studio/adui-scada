@@ -3095,3 +3095,9 @@ Write-Host "完整质量链退出码：$LASTEXITCODE"
 ```
 
 新增只读 Client 不代表 Studio UI 已有服务端预检展示；双框架集成需后续独立提交并验收，不允许为了“接入”修改 CAS 版本、IndexedDB 草稿或授权范围。若发现 401/404/409 或报告字段不合法，必须按现有安全错误类型拒绝，不能自动创建新工程、静默重试或将本地静态结果冒充服务端许可。
+
+## 第三十五批第八小批 · React/Vue Studio 服务端只读预检验收
+
+此次是独立于本地静态预检的**手动**服务端 GET 入口，必须验证双框架 UI 都显示“检查服务端已保存版本”，且没有点击时绝不提示服务端已通过。共享 `readCurrentServerReleasePreflight` 还必须在版本变化、SHA-256 摘要与快照不匹配、授权拒绝时受控失败，并且任何预检动作均不得写草稿、工程版本、CAS 基线、发布指针或工业设备。
+
+Windows 必须在当前功能分支记录 `git rev-parse HEAD`，执行 `pnpm run test:unit`、`pnpm run test:e2e:server`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 并保留真实退出码；目标 **615/615** Vitest、**55/55** HTTP E2E 仅为新分支待测，不是现有结果。随后分别启动 React/Vue 开发服务，执行 `pnpm run test:release:preflight:browser`，观察原静态合法/不兼容/恢复用例和新的手动服务端按钮安全断言均通过。当前专项不会自动点击新按钮并进行受保护 Keycloak 网络验证；须在未来真实浏览器专项中另外覆盖同源点击、未保存画布标记及 ACL/409 的 UI 行为，不能用离线 Browser UI 结构断言冒充真实 OIDC 端到端成功。
