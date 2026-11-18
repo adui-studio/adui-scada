@@ -1613,3 +1613,4 @@ PR #99 已修复：
 - 同步 `docs/HARNESS.md` 隔离库流程、`docs/VALIDATION.md` 和 E-055～E-057。
 
 **重要：原 `adui_scada` 数据库中是否已保留首条权限 CHECK 尚未确认。** 暂停对该库的迁移和任何 resolve/删除操作，先做只读检查。修复后的 SQL 尚未在 PostgreSQL 执行，Vitest/ready 也尚未复验。下一步只允许把 `SCADA_DATABASE_URL` 与 `SCADA_TEST_DATABASE_URL` 临时指向本机 `adui_scada_test`，按 `docs/HARNESS.md` 的 `try/finally` 步骤完成首次/二次迁移和数据库测试；随后再根据只读检查结果制定原 `adui_scada` 的恢复方案。
+本轮新增 1 项迁移 SQL 静态回归，修复后全量单元测试验收目标为 **617/617**；这是待 Windows 实测目标，不是通过结果。
