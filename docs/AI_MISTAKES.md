@@ -540,6 +540,15 @@
 - **验证边界**：维护者本次输出仅证明 Compose 文件路径解析失败；没有任何 SQL 被执行、没有数据库变更。修正后的命令已与当前仓库 Compose 参数静态对照，仍待维护者 Windows 执行。不能把这次失败描述为 PostgreSQL 查询失败或数据库状态已检查。
 - **证据**：维护者 2026-11-18 PowerShell 输出、PR #99、`scripts/docker-stack.mjs`、`deploy/docker/compose.yaml`、`docs/HARNESS.md`。
 
+### E-059 · 失败迁移的约束存在性保护误跳过旧版权限定义（第三十五批 B 阶段）
+
+- **现象**：维护者对 `adui_scada` 执行只读检查，确认失败迁移 `20261118000000_release_state_and_events` 的记录存在，`started_at` 有值、`finished_at` 与 `rolled_back_at` 均为空；`scada_project_grants_permission_check` 仍存在，但定义只允许 `project:read`、`version:read`、`version:append`；发布状态表和事件表均不存在。由此确认原迁移首条 ALTER 已持久化，后续 CREATE TABLE 未成功。
+- **根因**：重建迁移时为兼容部分失败状态加入“同名约束不存在才创建”的保护。该判断只验证约束名称存在，不验证其定义；在本次真实数据库中旧三项权限约束已存在，因此重试会跳过创建，继续保留不包含 `release:publish` / `release:rollback` 的旧定义，导致数据库与 Prisma 权限动作不一致。
+- **最小修复**：新迁移事务内明确执行 `ALTER TABLE ... DROP CONSTRAINT IF EXISTS scada_project_grants_permission_check`，随后按五项权限重新 `ADD CONSTRAINT`。无论首次空库部署还是从本次失败状态恢复，都会得到同一完整约束；DDL 与后续建表、回填和 COMMENT 位于同一个 `BEGIN/COMMIT`。静态测试新增断言，确保先 DROP 再 ADD 且五项权限全部存在。
+- **防复发**：迁移恢复不能只按约束名称判断对象存在；必须核对实际定义或采用事务内显式替换。失败迁移恢复前先只读检查 `_prisma_migrations`、约束定义和目标表；修订后的迁移先在独立 `adui_scada_test` 首次/二次部署验证，再考虑开发库恢复。未经维护者明确授权，不执行 `migrate resolve` 或任何现有数据库写入。
+- **验证边界**：维护者本轮只读查询退出码 0，已确认数据库名、失败记录、旧 CHECK 定义和两张表缺失。GitHub PR #99 已修订迁移及静态回归；**修复后的 Windows `db:validate`、`db:generate`、`vp check`、单元测试、隔离 PostgreSQL 首次/二次迁移、`test:db` 和 `ready` 均尚未执行**。对 `adui_scada` 的 `migrate resolve` 与迁移重试也尚未授权、尚未执行。
+- **证据**：维护者 2026-11-18 PostgreSQL 只读查询原始输出、PR #99、`apps/server/prisma/migrations/20261118000000_release_state_and_events/migration.sql`、`apps/server/src/database/prisma-schema-comments.spec.ts`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
