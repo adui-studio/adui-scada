@@ -45,8 +45,10 @@ const SAFE_PHASES = new Set([
   "React 标签页二次水位复核",
   "最终版本只读核验",
   "共享会话注销",
+  "React 写入标签页身份失效复核",
   "React 标签页身份失效复核",
   "Vue 标签页身份失效复核",
+  "Vue 写入标签页身份失效复核",
 ]);
 
 const SAFE_ERRORS = new Set([
@@ -171,6 +173,11 @@ export async function readAuthStatusInPage(expectedOrigin, runtime = globalThis)
   } catch {
     return 0;
   }
+}
+
+export function requireLogoutHttp401(status) {
+  if (status !== 401) throw new Error("注销后标签页身份未失效");
+  return true;
 }
 
 export function readMultiTabSessionStateInPage(runtime = globalThis) {
@@ -659,7 +666,7 @@ async function verifyLogoutRevalidation(session, origin, beforeState) {
   }, "注销后服务端 CAS 基线未失效");
   if (state.writeAttempts !== 0) throw new Error("注销后标签页尝试工程写入");
   const authStatus = await session.evaluate(readAuthStatusInPage, origin);
-  if (authStatus !== 401) throw new Error("注销后标签页身份未失效");
+  requireLogoutHttp401(authStatus);
   const afterResume = await inspectProtectedState(session);
   requireUnchangedStudioState(beforeState, afterResume);
   await requireSaveRefusedWithoutProjectWrite(session);
@@ -834,6 +841,7 @@ async function run() {
     await activateTab(tabs.reactWriter, "真实标签页没有发生可见性切换");
     await requireHiddenTab(tabs.reactFollower, "真实标签页没有发生可见性切换");
     await requireHiddenTab(tabs.vueFollower, "真实标签页没有发生可见性切换");
+    await requireHiddenTab(tabs.vueWriter, "真实标签页没有发生可见性切换");
     const logout = await tabs.reactWriter.evaluate(logoutCurrentSessionInPage, reactOrigin);
     if (logout.status !== 204) throw new Error("本地会话注销未返回 HTTP 204");
 
@@ -848,6 +856,9 @@ async function run() {
       throw new Error("注销后隐藏标签页状态提前变化");
     }
 
+    phase = "React 写入标签页身份失效复核";
+    requireLogoutHttp401(await tabs.reactWriter.evaluate(readAuthStatusInPage, reactOrigin));
+
     phase = "React 标签页身份失效复核";
     await activateHiddenTab(tabs.reactFollower, "真实标签页没有发生可见性切换");
     await verifyLogoutRevalidation(tabs.reactFollower, reactOrigin, reactRevisionThree);
@@ -856,8 +867,12 @@ async function run() {
     await activateHiddenTab(tabs.vueFollower, "真实标签页没有发生可见性切换");
     await verifyLogoutRevalidation(tabs.vueFollower, vueOrigin, vueRevisionThree);
 
+    phase = "Vue 写入标签页身份失效复核";
+    await activateHiddenTab(tabs.vueWriter, "真实标签页没有发生可见性切换");
+    requireLogoutHttp401(await tabs.vueWriter.evaluate(readAuthStatusInPage, vueOrigin));
+
     process.stdout.write(
-      "真实多标签页专项通过：React/Vue 跟随标签页均通过真实可见性切换发现远端版本推进与共享会话注销；本地画布、IndexedDB 草稿和自动保存保持不变，旧 CAS 保存未产生工程写入。专用工程保留供维护者复核。\n",
+      "真实多标签页专项通过：React/Vue 四个标签页已确认共享会话注销后的真实 BFF 401；两个跟随页通过真实可见性切换发现远端版本推进、清除旧 CAS，且本地画布、IndexedDB 草稿和自动保存保持不变，旧 CAS 保存未产生工程写入。专用工程保留供维护者复核。\n",
     );
   } catch (error) {
     if (error instanceof Error && SAFE_ERRORS.has(error.message)) throw error;

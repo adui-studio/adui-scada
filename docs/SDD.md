@@ -966,3 +966,11 @@ React/Vue 原 `loadServerVersion` 及 `openServerProject` 确认对话后，先 
 注销场景由 React 写入标签页向同源 /api/v1/auth/logout 发送真实 POST，使用当前 __Host-adui-scada-csrf Cookie 的双提交 X-SCADA-CSRF；浏览器自动附带 Origin/Sec-Fetch 元数据。隐藏跟随页在未切回前仍保持其内存状态，重新可见后各自真实请求 /auth/me 收到 401 并由现有页面逻辑清除服务端 CAS/授权缓存。全程不广播账户状态、不复制 Cookie、不读取或打印身份主体或令牌。
 
 每个跟随页的画布、IndexedDB 草稿数量/整记录 SHA-256 和自动保存开关都进行前后比较。只在本轮随机专用工程创建首版及追加 2/3 版；工程保留供维护者复核，不修改既有工程、既有 ACL、身份映射和生产数据；新工程仅由现有创建 API 按既定事务创建创建者默认权限，不手工新增其他主体授权。离线测试只覆盖参数门禁、可见性状态、身份一致性、CSRF 注销契约、脱敏状态摘要及本地一致性断言；真实 Chrome/Edge、Keycloak、HTTPS 和 BFF 集成必须由维护者独立执行。
+
+## 2026-11-18 · 第三十四批第二十二小批：同一 Profile 四标签页注销后身份核验
+
+在原 `scripts/test-oidc-real-multitab.mjs` 中，React 写入页执行一次真实的、CSRF 保护的注销 HTTP 204。保留两个跟随页在仍隐藏时 CAS 为修订号 3 的原始保护断言；随后对注销发起的 React 写入页直接以当前 Origin 的 `readAuthStatusInPage` 获取真实 `/api/v1/auth/me` 状态，并要求严格 401。
+
+React/Vue 跟随页仍按原顺序真实切换为可见，验证已有 `StudioServerProjectSession` 的 CAS/授权缓存清除、旧保存零写入及画布/草稿/自动保存不变。最后将原本未参加注销后状态验证的 Vue 写入页从隐藏切换到真实可见，在 Vue Origin 执行同源 `GET /api/v1/auth/me` 并要求 HTTP 401。以 Node 侧纯函数 `requireLogoutHttp401` 复用严格状态判断，任何非 401（包括网络错误映射的 0）均拒绝；CDP 注入函数保持自包含，不引用 Node 侧 helper。
+
+本次不增加注销广播机制或主动推送，也不触发额外工程 POST、数据库查询或生产业务改动。测试窗口的 Cookie/Token/身份不输出，继续在结束时销毁隔离 Profile。

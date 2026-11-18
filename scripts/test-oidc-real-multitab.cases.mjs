@@ -9,6 +9,7 @@ import {
   readAuthStatusInPage,
   readMultiTabSessionStateInPage,
   refreshProjectListInPage,
+  requireLogoutHttp401,
   requireSameCanvasAndDrafts,
   requireSamePrincipal,
   requireUnchangedStudioState,
@@ -156,6 +157,38 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
     await assert.rejects(
       logoutCurrentSessionInPage("https://127.0.0.1:15174", runtime),
       /本地会话注销未返回 HTTP 204/,
+    );
+  });
+
+  void it("注销后四个标签页的同源 BFF 只接受真实 HTTP 401", async () => {
+    for (const origin of ["https://127.0.0.1:15173", "https://127.0.0.1:15174"]) {
+      let request;
+      const status = await readAuthStatusInPage(origin, {
+        location: { origin },
+        fetch: async (url, options) => {
+          request = { url, options };
+          return { status: 401 };
+        },
+      });
+      assert.equal(requireLogoutHttp401(status), true);
+      assert.equal(request.url, "/api/v1/auth/me");
+      assert.equal(request.options.method, "GET");
+      assert.equal(request.options.credentials, "same-origin");
+      assert.equal(request.options.cache, "no-store");
+      assert.equal(request.options.redirect, "error");
+    }
+
+    for (const status of [undefined, 0, 200, 204, 403, 500]) {
+      assert.throws(() => requireLogoutHttp401(status), /注销后标签页身份未失效/);
+    }
+    assert.equal(
+      await readAuthStatusInPage("https://127.0.0.1:15173", {
+        location: { origin: "https://127.0.0.1:15174" },
+        fetch: async () => {
+          throw new Error("跨 Origin 不得发起请求");
+        },
+      }),
+      0,
     );
   });
 
