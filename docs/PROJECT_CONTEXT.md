@@ -1601,3 +1601,25 @@ PR #96 的发布事务评审矩阵已完成 Windows 质量验收并经维护者�
 ADR-0069 Accepted 只完成架构决策，不代表 FR-008 已实现。当前仍没有正式发布/回滚写 API、Prisma 发布模型、Runtime 发布指针加载或工业设备写入能力。后续 B～F 阶段必须分别建立独立 Draft PR，并完成隔离 PostgreSQL、双框架 Runtime、真实 Keycloak/HTTPS 和工业安全专项验收后再进入下一阶段。
 
 PR #97 当前承载本次 Accepted 决策文档更新，继续保持 Draft，Assignee 为 `@adui-dev`；本次 Accepted 授权**不等于授权合并 PR #97**。
+## 2026-11-18 · 第三十五批 B 阶段：正式发布 Prisma Schema
+
+ADR-0069 已 Accepted 后，开始 B 阶段权限与 Schema 实施。当前实现只建立正式发布数据边界，不开放正式发布/回滚 API、Runtime 发布切换或工业设备写入。
+
+本阶段已落地：
+
+- `ScadaProjectReleaseState`：每工程唯一状态行，`releaseGeneration=0` 表示未发布，发布目标和最后事件初始为空。
+- `ScadaProjectReleaseEvent`：只追加成功发布/回滚事件；generation 从 1 开始按工程唯一；事件目标通过复合外键绑定不可变历史版本。
+- `idempotencyKey` 按租户、工程、可信主体、动作唯一，长度 1～128；`requestSemanticHash` 使用服务端 SHA-256 语义摘要。
+- 新增 `release:publish`、`release:rollback` 权限动作，但不向现有工程主体自动授予，保持默认拒绝。
+- 既有工程通过增量迁移补齐 generation=0 状态；新工程创建事务同步建立未发布状态。
+- 新增迁移：`20261118000000_release_state_and_events`；未修改任何已应用历史迁移。
+- 正式发布事件/状态表、字段及索引均要求中文 PostgreSQL 注释。
+
+本阶段仍禁止：
+
+- 正式发布/回滚 Controller 或 API Client。
+- Runtime 发布指针加载和切换。
+- 生产双人审批实现。
+- PLC/DCS 或其他工业设备写入。
+
+B 阶段的真实 PostgreSQL 首次/二次迁移、Prisma Client 生成、Schema 注释、权限和租户隔离测试需在 Windows 隔离数据库环境中完成后，才可认定本小批验收通过。
