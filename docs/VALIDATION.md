@@ -1884,11 +1884,13 @@ PR #91 Windows 原始测试证据：`pnpm run test:unit` **50/50 文件 610/610 
 前批 PR #95 的 Windows 质量链：`docs:check` **87 份，退出码 0**；`vp check` **352 格式文件、206 受检文件零告警/错误，退出码 0**；完整 `pnpm run ready` **退出码 0**，包括 Vitest **615/615**、HTTP E2E **55/55**、OIDC Studio 离线安全 **13/13**、React/Vue/NestJS 类型检查和构建。维护者明确授权，PR #95 GitHub HEAD `d5ceea382b92734b408b41d546b9ba93646e9914` Squash 合并到 `main@0bc70202f8d1cced27edd72d49fb1de05c44c58f`；原始日志没有 `git rev-parse HEAD`，不作 SHA 级严格绑定。文档验收不等于 ADR-0069 被批准，ADR 仍 Proposed。
 
 第十二小批新增 `docs/RELEASE_TRANSACTION_REVIEW.md`，列出八项待维护者正式决定的发布/回滚权限、审批、幂等、回滚范围、Runtime、审计与工业安全选择，以及二十二项**未执行**数据库/HTTP/Runtime 负向测试，供下一阶段准入评审。本次未改生产代码，不宣称发布写事务、权限或真实 PostgreSQL 发布测试已实现。新增一份 Markdown 后预计文档检查 **88 份**，仅为待测试计数。**新分支 Windows `pnpm run docs:check`、`vp check`、`pnpm run ready` 均待实际运行**，此前 615/615 与 55/55 仅是合并前基线。
+
 ## 2026-11-18 · PR #99 Prisma Client 生成与测试解构错误修复待复测
 
 维护者 Windows 在 PR #99 分支执行 `vp check --fix`，出现 12 项 TypeScript 错误：旧生成的 Prisma Client 不包含新发布模型 delegate；`project-api.db-spec.ts` 的 `Promise.all` 新增第五项查询但只解构四个变量，导致 `releaseState` 未声明及相邻推断错误。该次只证明格式化完成，代码检查失败。
 
 已在 PR #99 最小修复：
+
 - 补齐 `ScadaProjectVersion.releaseTargetEvents` 与发布事件目标版本关系的反向 Prisma 字段。
 - 将工程创建数据库测试解构补齐第五个 `releaseState` 变量。
 - 新增 E-054 记录防复发要求：Schema 变更后先 `pnpm run db:validate`、`pnpm run db:generate`，再执行 `vp check`。

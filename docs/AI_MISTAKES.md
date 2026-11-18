@@ -489,7 +489,6 @@
 - **验证边界**：本批只在 GitHub 功能分支修改双框架 UI 与原只读浏览器脚本，离线安全门禁从 12 项增为 **13 项**；从最新 GitHub 源码在隔离 V8 模拟运行 **13/13**（非正式 Node 运行结果）。**Windows `vp check`、`test:release:preflight:oidc:studio:config`、完整 `ready`、真实 Keycloak 双框架延迟 401 仍待实测**。
 - **证据**：PR #94 候选代码、第三十五批第九小批已合并组件、`scripts/test-oidc-studio-release-preflight.mjs` / `.cases.mjs`、`docs/VALIDATION.md`。
 
-
 ### E-054 · 新 Prisma 模型未生成客户端且数据库测试结果解构遗漏（第三十五批 B 阶段）
 
 - **现象**：维护者在 PR #99 Windows 分支运行 `vp check --fix`，报告 12 项 TypeScript 错误：`PrismaClient` 类型没有 `scadaProjectReleaseState` / `scadaProjectReleaseEvent` delegate；测试中的 `grants.map` 参数退化为隐式 `any`；`releaseState` 未声明。该次格式化完成，但检查失败。
