@@ -91,6 +91,8 @@ INSERT INTO "scada_project_release_state" (
 SELECT "tenant_id", "project_id", 0, "updated_at"
 FROM "scada_projects";
 
+COMMENT ON COLUMN "scada_project_grants"."permission" IS '明确授予的工程读取、版本读取、版本追加或正式发布操作权限。';
+
 COMMENT ON TABLE "scada_project_release_state" IS 'SCADA 工程正式发布状态表：每工程唯一发布指针、代次与最后成功发布事件。';
 COMMENT ON COLUMN "scada_project_release_state"."tenant_id" IS '正式发布状态所属租户标识。';
 COMMENT ON COLUMN "scada_project_release_state"."project_id" IS '正式发布状态所属工程标识。';
