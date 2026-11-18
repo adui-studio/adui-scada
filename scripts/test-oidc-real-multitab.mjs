@@ -44,7 +44,10 @@ const SAFE_PHASES = new Set([
   "Vue 标签页版本水位复核",
   "React 标签页二次水位复核",
   "最终版本只读核验",
+  "React 写入标签页确认载入",
+  "Vue 写入标签页确认载入",
   "共享会话注销",
+  "React 注销发起页 HTTP 状态核验",
   "React 写入标签页身份失效复核",
   "React 标签页身份失效复核",
   "Vue 标签页身份失效复核",
@@ -565,6 +568,18 @@ export async function prepareFollowerDraft(session) {
   return state;
 }
 
+/** 写入页只安装工程写入阻断，并复用已有草稿的只读快照，避免覆盖同源跟随页草稿。 */
+export async function prepareWriterReadOnlySession(session, revision) {
+  await session.evaluate(installAccessDenialFaultInPage);
+  const protectedState = await inspectProtectedState(session);
+  const current = await session.evaluate(readMultiTabSessionStateInPage);
+  if (current.baselineRevision !== revision || current.writeAttempts !== 0) {
+    throw new Error("Studio CAS 基线与预期不一致");
+  }
+  requireUnchangedStudioState(protectedState, protectedState);
+  return protectedState;
+}
+
 async function restoreLatestBaseline(session, projectId, revision, previousState) {
   await findProjectInList(session, projectId, revision);
   const opened = await session.evaluate(openProjectInPage, projectId, revision, "confirm");
@@ -837,6 +852,16 @@ async function run() {
     const latest = await tabs.vueWriter.evaluate(readCasProjectInPage, vueOrigin, projectId, 3);
     if (latest.revision !== 3) throw new Error("真实工程版本或摘要核验失败");
 
+    phase = "React 写入标签页确认载入";
+    await activateTab(tabs.reactWriter, "真实标签页没有发生可见性切换");
+    await openStudioProject(tabs.reactWriter, projectId, 3);
+    const reactWriterState = await prepareWriterReadOnlySession(tabs.reactWriter, 3);
+
+    phase = "Vue 写入标签页确认载入";
+    await activateTab(tabs.vueWriter, "真实标签页没有发生可见性切换");
+    await openStudioProject(tabs.vueWriter, projectId, 3);
+    const vueWriterState = await prepareWriterReadOnlySession(tabs.vueWriter, 3);
+
     phase = "共享会话注销";
     await activateTab(tabs.reactWriter, "真实标签页没有发生可见性切换");
     await requireHiddenTab(tabs.reactFollower, "真实标签页没有发生可见性切换");
@@ -847,16 +872,19 @@ async function run() {
 
     const hiddenReact = await tabs.reactFollower.evaluate(readMultiTabSessionStateInPage);
     const hiddenVue = await tabs.vueFollower.evaluate(readMultiTabSessionStateInPage);
+    const hiddenVueWriter = await tabs.vueWriter.evaluate(readMultiTabSessionStateInPage);
     if (
       hiddenReact.baselineRevision !== 3 ||
       hiddenVue.baselineRevision !== 3 ||
+      hiddenVueWriter.baselineRevision !== 3 ||
       hiddenReact.identityRejected ||
-      hiddenVue.identityRejected
+      hiddenVue.identityRejected ||
+      hiddenVueWriter.identityRejected
     ) {
       throw new Error("注销后隐藏标签页状态提前变化");
     }
 
-    phase = "React 写入标签页身份失效复核";
+    phase = "React 注销发起页 HTTP 状态核验";
     requireLogoutHttp401(await tabs.reactWriter.evaluate(readAuthStatusInPage, reactOrigin));
 
     phase = "React 标签页身份失效复核";
@@ -869,10 +897,14 @@ async function run() {
 
     phase = "Vue 写入标签页身份失效复核";
     await activateHiddenTab(tabs.vueWriter, "真实标签页没有发生可见性切换");
-    requireLogoutHttp401(await tabs.vueWriter.evaluate(readAuthStatusInPage, vueOrigin));
+    await verifyLogoutRevalidation(tabs.vueWriter, vueOrigin, vueWriterState);
+
+    phase = "React 写入标签页身份失效复核";
+    await activateHiddenTab(tabs.reactWriter, "真实标签页没有发生可见性切换");
+    await verifyLogoutRevalidation(tabs.reactWriter, reactOrigin, reactWriterState);
 
     process.stdout.write(
-      "真实多标签页专项通过：React/Vue 四个标签页已确认共享会话注销后的真实 BFF 401；两个跟随页通过真实可见性切换发现远端版本推进、清除旧 CAS，且本地画布、IndexedDB 草稿和自动保存保持不变，旧 CAS 保存未产生工程写入。专用工程保留供维护者复核。\n",
+      "真实多标签页专项通过：React/Vue 四个 Studio 标签页均通过真实可见性切换清除注销后的 CAS 和授权缓存，并收到同源 BFF 401；本地画布、IndexedDB 草稿和自动保存保持不变，旧 CAS 保存未产生工程写入。专用工程保留供维护者复核。\n",
     );
   } catch (error) {
     if (error instanceof Error && SAFE_ERRORS.has(error.message)) throw error;

@@ -974,3 +974,13 @@ React/Vue 原 `loadServerVersion` 及 `openServerProject` 确认对话后，先 
 React/Vue 跟随页仍按原顺序真实切换为可见，验证已有 `StudioServerProjectSession` 的 CAS/授权缓存清除、旧保存零写入及画布/草稿/自动保存不变。最后将原本未参加注销后状态验证的 Vue 写入页从隐藏切换到真实可见，在 Vue Origin 执行同源 `GET /api/v1/auth/me` 并要求 HTTP 401。以 Node 侧纯函数 `requireLogoutHttp401` 复用严格状态判断，任何非 401（包括网络错误映射的 0）均拒绝；CDP 注入函数保持自包含，不引用 Node 侧 helper。
 
 本次不增加注销广播机制或主动推送，也不触发额外工程 POST、数据库查询或生产业务改动。测试窗口的 Cookie/Token/身份不输出，继续在结束时销毁隔离 Profile。
+
+## 2026-11-18 · 第三十四批第二十三小批：写入页 Studio 基线与共享注销全页复核
+
+真实四标签页专项继续先由 React/Vue 写入页使用受控 API 创建并追加专用工程至修订号 3，再让写入页各自真正进入 Studio、通过授权列表确认载入当前修订号 3。两个跟随页原有版本漂移、CAS 恢复、草稿保护流程不变。
+
+新增 `prepareWriterReadOnlySession(session, revision)`，先对写入页执行自包含的 `installAccessDenialFaultInPage` 使后续项目 POST 被本地阻断，再通过 `inspectProtectedState` 只读抓取 SVG 内容、IndexedDB 草稿数量与全记录 SHA-256 和自动保存布尔值。读取 `readMultiTabSessionStateInPage` 并强制 `baselineRevision === revision` 与 `writeAttempts === 0`；使用原 `requireUnchangedStudioState` 检验快照完整性。不调用 `saveDraftInPage` 或 `enableAutoSaveInPage`，避免污染同 Origin 跟随页的共享 IndexedDB。
+
+注销时先确认 React/Vue 跟随页、Vue 写入页均真实隐藏，React 写入页调用现有 CSRF 注销并直接验证同源 HTTP 401。随后依次实际激活 React 跟随、Vue 跟随、Vue 写入与 React 写入，四者均调用原 `verifyLogoutRevalidation`，验证 UI 中 CAS/远端水位与授权缓存失效、BFF GET 401、SVG/草稿/自动保存不变和旧保存零工程写入。所有额外调用仅针对本次隔离工程或只读 BFF 身份接口，严格保留浏览器脱敏和 Profile 释放。
+
+此专项并非跨独立 Profile 的注销广播，也不涉及生产业务接口、工业设备控制或数据库迁移。

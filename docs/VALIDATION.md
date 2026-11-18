@@ -1708,3 +1708,13 @@ Write-Host "完整质量链退出码：$LASTEXITCODE"
 ```
 
 完整质量链通过后，在已启动受控本机 OIDC HTTPS Lab 且确认会创建一份新的专用工程、注销当前隔离浏览器会话时，再单独执行 `pnpm run test:projects:oidc:multitab:browser` 并记录最终退出码。禁止在终端输入或记录 Keycloak 密码。以上不代表工业现场或生产验收。
+
+## 2026-11-18 · 第三十四批第二十二小批结案与第二十三小批候选
+
+维护者 Windows 第二十二小批日志显示：`test:projects:oidc:multitab:config` **14/14**、退出码 **0**；完整 `pnpm run ready` 退出码 **0**，其中 `vp check` 337 个格式文件 / 192 受检零告警，Vitest **581/581**、HTTP E2E **49/49**、`docs:check` **86** 份及 React/Vue/NestJS 构建均成功。另有本机真实 `test:projects:oidc:multitab:browser` 退出码 **0**，确认四标签页 BFF 身份 GET 401、两个跟随 Studio 页的 CAS/草稿保护及旧 CAS 零写入；上传日志未单独包含 `git rev-parse HEAD`，无法独立确认本机 SHA。用户明确授权后，PR #78 已经 GitHub Squash 合并至 `main@43a2236bec8b528e0d7e1763dba58a558ddfab0a`。
+
+第二十三小批新增**两个写入页**真实 Studio 确认载入修订 3、只读草稿快照与页面工程写入阻断，最终让 React/Vue 写入/跟随四个 Studio 页均通过现有可见性恢复、BFF 401、CAS/远端水位失效、旧保存零 POST、SVG/草稿/自动保存不变的全套断言。新增 Node 离线用例，目标 **15/15**，并未更改正式 React/Vue、NestJS、Prisma 或工业接口。真实 Lab 专项仍创建且保留单份随机专用工程、真实追加 2/3、执行一次隔离会话注销，不涉及已有项目或 ACL。
+
+协作容器只对新增辅助函数的**同逻辑独立 Node 模拟**运行 `node --check` 与契约断言，**2/2** 通过；这不是仓库源码的真实 Node 离线测试，更不是 Windows `ready`、CDP/Keycloak 集成或工业安全验收。新 HEAD 的 `vp check`、`docs:check`、完整 `ready` 和真实四 Studio 标签页专项均**尚未执行**，旧批次通过的日志不能当成新批验收证据。
+
+Windows 建议先执行 `git rev-parse HEAD`，再执行 `pnpm run test:projects:oidc:multitab:config` 和 `pnpm run ready`，记录每条最终退出码；质量链通过后再在已确认的本机隔离 OIDC HTTPS Lab 执行 `pnpm run test:projects:oidc:multitab:browser`，用真实 Chrome/Edge 完成单次 Keycloak 手动登录，最终核对浏览器专项退出码。测试将创建并保留新专用工程且注销隔离会话，禁止终端输入密码或输出令牌。
