@@ -75,6 +75,11 @@ export type {
 } from "./project-version-repository.ts";
 export { parseServerProjectSaveRequest } from "./server-project-contract.ts";
 export type { ServerProjectSaveRequest } from "./server-project-contract.ts";
+export { validateProjectReleasePreflight } from "./release-preflight.ts";
+export type {
+  ProjectReleasePreflightIssue,
+  ProjectReleasePreflightResult,
+} from "./release-preflight.ts";
 export { compareProjectDocuments } from "./project-version-compare.ts";
 export type {
   ProjectDocumentMetrics,
