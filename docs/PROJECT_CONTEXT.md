@@ -1460,3 +1460,11 @@ PR #78 经维护者授权已 Squash 合并到 `main@43a2236bec8b528e0d7e1763dba5
 本批从已验收四页注销后身份 BFF 401 出发，补齐同一 Cookie 会话对真实工程业务只读接口的拒绝：分别在 React/Vue Origin 确认列表及本轮专用工程第三版 GET 均为 401，拒绝 200、302、403、网络失败及非法工程 ID，且不读取工程响应正文或输出凭据。新增 2 项 Node 安全回归，目标离线 **19/19**。保留全部原可见性、CAS、水位、草稿/画布/自动保存和零工程 POST 断言。仅修改浏览器测试脚本、Node 用例及需求/设计/验证文档，不改正式双框架或服务端工业权限。
 
 本批仅为 GitHub 候选，**尚未**运行新 HEAD 的 Windows 离线、`vp check`、`docs:check`、完整 `ready` 或真实 Keycloak 四标签页专项；新 PR 默认 Draft，Assignee 立即指派并核实 `@adui-dev`，未经本批新明确授权不合并。
+
+## 2026-11-18 · 第三十四批第二十六小批：注销后全部工程 GET 路由拒绝候选
+
+第二十五小批 PR #81 经维护者 Windows 验收离线 19/19、完整 `ready` 退出码 0、真实 Keycloak 四标签页浏览器专项退出码 0；已在维护者新明确授权后经 GitHub Squash 合并至 `main@21085c1ebde325c8420e7f31e75294e030d8cd0a`。日志未提供独立本地 Git HEAD，不能将执行证据自动关联至确切 SHA。
+
+核对 NestJS 当前 Controller 而非按规划推断：工程共四条受保护 GET 路由。上批已验收工程列表与指定版本两个 GET，本批新增工程详情及历史版本列表两个 GET，在同一个真实注销会话的 React/Vue 两个 HTTPS Origin 上均要求 HTTP 401。只读请求仅访问本轮随机专用工程，不读取响应正文，不触碰正式 React/Vue、NestJS、Prisma、ACL 或工业设备权限；原四 Studio 页身份/CAS/画布/草稿/零写入断言继续保留。
+
+两项已有离线用例调整为四路由契约，并新增一项逐路由拒绝回归，目标 Node 离线 **20/20**。当前只是 GitHub 候选，**尚未执行**新 HEAD 的 Windows 离线、`vp check`、`docs:check`、完整 `ready` 和真实 Keycloak 浏览器专项；PR 默认 Draft，立即指派并复核 `@adui-dev`，未获本批新的明确授权不得合并。
