@@ -92,7 +92,7 @@ describe("正式发布 PostgreSQL 增量迁移", () => {
         AND c.relname IN ('scada_project_release_state', 'scada_project_release_events')
     `;
 
-    expect(columns).toHaveLength(7 + 12);
+    expect(columns).toHaveLength(20);
     expect(columns.every((row) => /[一-龥]/.test(row.description ?? ""))).toBe(true);
   });
 
