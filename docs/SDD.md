@@ -1113,3 +1113,9 @@ React `StudioPage.tsx` 用 `useMemo(() => validateProjectReleasePreflight(state.
 React `ServerReleasePreflight.tsx`、Vue `ServerReleasePreflight.vue` 的异步 `catch` 中将两类副作用拆开：**会话级**身份/ACL 拒绝通知由 `active` 生命周期控制，独立于本地文档引用；**仅针对发起时文档的局部错误显示**继续验证当前文档引用一致。成功报告的文档绑定与 Core `compareProjectDocuments` 不变；不影响共享 `readCurrentServerReleasePreflight` 的四段 GET、无请求体、no-store 和最终水位检查。父级原有 `invalidateServerAccess` 负责清理远端摘要和 CAS，绝不删除本地编辑器或 IndexedDB 草稿。
 
 既有 `scripts/test-oidc-studio-release-preflight.mjs` 的预检 GET 安全门禁增加 `holdStudioPreflight401InPage` / `releaseStudioPreflight401InPage`，只允许已 arm 的当前工程修订号、401 且单次挂起状态，禁止挂起时再次设置目标；释放的是已合成的本地拒绝，不向真实 BFF 发出写入。真实 React/Vue Studio 自动化在预检响应未返回期间通过正式按钮新增未保存图元，断言释放 401 后原会话 CAS 已失效、报告未显示且 SVG、JSON、草稿、自动保存未因预检变化。新增 1 项 Node 离线安全测试，保留原 12 项及真实 409、404 回归。测试和浏览器均不得用模拟成功或修改授权代替真实 Keycloak 登录。
+
+## 2026-11-18 · 第三十五批第十一小批：正式发布指针/回滚事务方案待评审
+
+[ADR-0069](adr/0069-release-pointer-atomic-publication-design.md)（**Proposed**）定义今后写入功能的设计边界，而**不是现有 NestJS/Prisma 的可调用接口**。核心区分为：`headRevision` 仅代表编辑版本水位；独立 `releasedRevision/releasedContentHash` 只表示当前运行发布版本；`releaseGeneration` 为严格单调的发布/回滚 CAS 代次，防止发布→回滚→再发布相同修订号时的 ABA 问题。事务写入候选须在锁内复核可信主体、独立 `release:publish`/`release:rollback` ACL、期望版本及代次，重新读取并校验不可变 ProjectSnapshot 和 Core 兼容性，并在同一事务中追加发布事件与切换指针。回滚目标必须是曾实际发布过的快照，不能直接指向任意已保存工程版本或草稿。
+
+当前真实代码只有 `project:read/version:read/version:append` 三种 ACL、不可变工程历史、版本追加审计和**只读** `release-preflight` GET，没有发布表、指针、事务、角色、路由或 Runtime 发布态加载。是否采用本 ADR 的候选列名、API 路径、幂等与审计策略仍需维护者审核；新增正式写入之前必须先完成迁移中文注释、隔离数据库并发/故障回滚、双框架运行时只读安全等专项。任何预检 `passed=true` 均不能代替发布事务内重新校验。
