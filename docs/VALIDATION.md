@@ -1728,3 +1728,11 @@ Windows 建议先执行 `git rev-parse HEAD`，再执行 `pnpm run test:projects
 **当前尚未执行第二十四小批新 HEAD 的仓库 Node 离线测试、`vp check`、`docs:check`、完整 `pnpm run ready` 或真实 Chrome/Edge/Keycloak 四标签页专项**。协作环境无法通过公共网络获取此 GitHub 仓库以复跑完整测试；上批通过结果不可冒充新提交验收。新测试仍在已确认的本机隔离 Lab 中通过既有受控创建接口生成并保留一份随机测试工程，真实追加版本 2/3 并注销隔离会话，不碰已有工程和授权。
 
 Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 `pnpm run test:projects:oidc:multitab:config` 和 `pnpm run ready`，记录各自最终退出码；质量链均通过且已确认本机隔离 OIDC HTTPS Lab 后，手动执行 `pnpm run test:projects:oidc:multitab:browser` 并检查最终退出码。禁止把 Keycloak 口令输入终端、复用生产数据或输出敏感令牌。
+
+## 2026-11-18 · 第三十四批第二十四小批 Windows 结案及第二十五小批候选
+
+维护者提供的第二十四小批 Windows 日志：`pnpm run test:projects:oidc:multitab:config` **17/17**、退出码 **0**；完整 `pnpm run ready` **退出码 0**，其中 `vp check` **337** 格式文件和 **192** 个受检文件零警告/错误，Vitest **581/581**、NestJS HTTP E2E **49/49**、`docs:check` **86** 份，React/Vue/NestJS 类型检查和构建完成。真实 `pnpm run test:projects:oidc:multitab:browser` **退出码 0**，三个隐藏 Studio 页恢复前的 CAS、SVG、IndexedDB 草稿、自动保存和零写入安全断言通过，四页恢复后同源身份 HTTP 401 及旧 CAS 零工程写入通过。日志无独立 `git rev-parse HEAD`；经核对，PR #80 后续只多一处测试断言排版提交，并已在用户明确授权后 Squash 合并到 `main@2559d6ff7375cac22ad9741d98e121408269e3ad`。不得将第二十四小批结果等同于下一批的新 HEAD 验收。
+
+第二十五小批只增强测试脚本中**注销后受保护工程只读 API 的真实 HTTP 拒绝验证**：React 与 Vue 两个 HTTPS Origin 的工程列表 `GET /api/v1/projects?limit=10` 和本轮随机专用工程历史版本 `GET /api/v1/projects/{id}/versions/3` 均必须返回 **401**。只读探针拒绝任意其他工程 ID/跨 Origin，且不读取返回正文。新增两项 Node 离线回归（同源/只读路径白名单与异常 HTTP/网络拒绝），**目标 19/19，仅为候选数量**。不改变正式 UI、共享 API Client、NestJS、Prisma、数据库或工业权限，也不削弱原四标签页、CAS/本地数据安全断言。
+
+**新 HEAD 的 Windows `test:projects:oidc:multitab:config`、`vp check`、`docs:check`、完整 `pnpm run ready` 和真实 Keycloak 四标签页专项均尚未执行。** 必须记录真实退出码与本地 `git rev-parse HEAD`。真实专项仍需显式确认本机隔离 Lab，会创建并保留一份随机测试工程、追加版本 2/3 并注销隔离会话；禁止输入终端密码、输出 Cookie/Token、触碰既有工程或生产数据库。
