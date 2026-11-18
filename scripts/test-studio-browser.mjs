@@ -469,6 +469,90 @@ async function runStudioInteroperability(session) {
   process.stdout.write("React → Vue → React → Vue：完整往返及双端非法导入保护成功\n");
 }
 
+/** 只读取真实 Studio 发布预检面板的状态与问题，不访问网络或工程存储。 */
+function readStudioReleasePreflightInPage() {
+  const menu = [...document.querySelectorAll("details.studio-version-menu")].find(
+    (item) => item.querySelector("summary")?.textContent.trim() === "发布预检",
+  );
+  if (!menu) throw new Error("未找到发布预检入口");
+  menu.open = true;
+  const panel = menu.querySelector('[aria-label="工程发布前静态兼容性预检"]');
+  if (!panel) throw new Error("未找到静态预检面板");
+  const status = panel.querySelector('[role="status"]')?.textContent.trim() ?? "";
+  const issues = [...panel.querySelectorAll('ol[aria-label="发布预检问题"] > li')].map(
+    (item) => ({
+      path: item.querySelector("code")?.textContent.trim() ?? "",
+      message: item.querySelector("p")?.textContent.trim() ?? "",
+    }),
+  );
+  menu.open = false;
+  return {
+    passed: status.includes("静态兼容性检查通过"),
+    issueCount: issues.length,
+    issues,
+  };
+}
+
+/** 两套 Studio 使用同一个共享 Core 校验契约，并在导入后立即更新预检结果。 */
+async function runStudioReleasePreflight(session) {
+  await session.send("Emulation.setDeviceMetricsOverride", {
+    width: 1440,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  for (const target of targets) {
+    await navigateStudioForInterop(session, target, "release-preflight-" + target.name);
+    const evaluate = (fn, ...args) =>
+      session.evaluate(
+        "(" + fn.toString() + ")(" + args.map((arg) => JSON.stringify(arg)).join(",") + ")",
+      );
+    const initial = JSON.parse(await evaluate(exportStudioJsonInPage));
+    const initialReport = await evaluate(readStudioReleasePreflightInPage);
+    assert.deepStrictEqual(
+      initialReport,
+      { passed: true, issueCount: 0, issues: [] },
+      target.name + " 合法演示工程的静态预检未通过",
+    );
+
+    const unsupported = JSON.parse(JSON.stringify(initial));
+    const node = unsupported.pages[0].nodes[1];
+    node.type = "future-gauge";
+    node.rules = [{ kind: "not-implemented" }];
+    unsupported.tags.find((tag) => tag.tagId === "water.level").dataType = "unknown";
+    await evaluate(importStudioJsonInPage, JSON.stringify(unsupported), true);
+    const report = await evaluate(readStudioReleasePreflightInPage);
+    assert.equal(report.passed, false, target.name + " 不支持的工程误报静态预检通过");
+    assert.equal(report.issueCount, 3, target.name + " 预检问题数量不符合预期");
+    assert.deepStrictEqual(
+      report.issues.map((issue) => issue.path),
+      [
+        "pages[0].nodes[1].type",
+        "pages[0].nodes[1].rules",
+        "pages[0].nodes[1].bindings.level.tagId",
+      ],
+      target.name + " 预检未显示准确的工程问题路径",
+    );
+    assert.ok(
+      report.issues.every((issue) => issue.message.length > 0),
+      target.name + " 预检问题缺少中文说明",
+    );
+    assert.deepStrictEqual(
+      JSON.parse(await evaluate(exportStudioJsonInPage)),
+      unsupported,
+      target.name + " 发布预检意外改动了当前工程内容",
+    );
+
+    await evaluate(importStudioJsonInPage, JSON.stringify(initial), true);
+    assert.deepStrictEqual(
+      await evaluate(readStudioReleasePreflightInPage),
+      { passed: true, issueCount: 0, issues: [] },
+      target.name + " 恢复合法工程后仍显示过期预检问题",
+    );
+    process.stdout.write(target.name + " Studio 发布预检通过、问题展示与恢复更新通过\n");
+  }
+}
+
 /** 在真实浏览器内定位项目 Tag 管理表单并打开详情区。 */
 function openTagManagerInPage() {
   const menu = [...document.querySelectorAll("details.studio-advanced")].find((node) =>
@@ -1578,6 +1662,10 @@ async function main() {
     await session.send("Runtime.enable");
     if (process.argv.includes("--interop")) {
       await runStudioInteroperability(session);
+      return;
+    }
+    if (process.argv.includes("--release-preflight")) {
+      await runStudioReleasePreflight(session);
       return;
     }
     if (process.argv.includes("--tags")) {
