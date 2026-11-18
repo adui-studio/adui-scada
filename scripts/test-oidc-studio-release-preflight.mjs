@@ -316,9 +316,13 @@ async function clickAndRead(session, origin, selected, status = null) {
         : null;
     }
     if (status === 409) {
-      return requests.simulatedResponses === 1 && ui.error ? { requests, ui } : null;
+      return requests.simulatedResponses === 1 && ui.error && ui.buttonReady
+        ? { requests, ui }
+        : null;
     }
-    return requests.simulatedResponses === 1 && ui.baselineCleared ? { requests, ui } : null;
+    return requests.simulatedResponses === 1 && ui.baselineCleared && ui.buttonReady
+      ? { requests, ui }
+      : null;
   }, "真实 Studio 发布预检手动触发请求契约不一致");
   const requestSequence =
     status === null ? ["head", "snapshot", "preflight", "head"] : expected;
@@ -329,7 +333,10 @@ async function clickAndRead(session, origin, selected, status = null) {
   ) {
     throw new Error("真实 Studio 发布预检手动触发请求契约不一致");
   }
-  if (status === null && (result.ui.passed !== selected.passed || result.ui.issueCount !== selected.issueCount)) {
+  if (
+    status === null &&
+    (result.ui.passed !== selected.passed || result.ui.issueCount !== selected.issueCount)
+  ) {
     throw new Error("真实 Studio 发布预检报告与服务端当前版本不一致");
   }
   return result.ui;
