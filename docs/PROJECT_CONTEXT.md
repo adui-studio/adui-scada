@@ -1538,3 +1538,9 @@ PR #86 依据维护者明确授权 Squash 合并至 `main@a934a33ba2251880f934ff
 第四小批 PR #88 在维护者 Windows `602/602` Vitest、`55/55` HTTP E2E、Vite+ `343/198` 零告警、完整 `ready` 退出码 0 的证据下，经本轮明确授权 Squash 合并至 `main@058277f20088d20e0d3f6cd58ff553868cc92c48`；仍未获得本地 Git HEAD 与真实 Keycloak+PostgreSQL 新 GET 专项结果。
 
 第五小批从该 main 建立 `feat/v0.3-b35-release-preflight-db-http`，**不修改生产接口**，只在既有隔离数据库 Cookie HTTP E2E 的随机租户夹具中新增 4 项真实 PostgreSQL 回归，覆盖报告 200/401、旧 head 409/当前版本不兼容报告、动态 ACL 404、篡改测试版摘要 500 与零额外版本/审计。沿用 `SCADA_TEST_DATABASE_URL` 仅允许本机 `adui_scada_test` 的前置保护；不引入 Keycloak 交互、测试库之外的写入、Schema 迁移或工业设备写入。候选 Windows `vp check`、`docs:check`、`ready` 与独立 `test:db` **待运行**，Draft PR 等待新一轮验收和授权。
+
+## 2026-11-18 · 第三十五批第六小批：真实 OIDC 发布预检只读联调候选
+
+PR #89 在维护者 Windows 真实 PostgreSQL 36/36、单测 602/602、HTTP E2E 55/55、Vite+ 343/198 零警告、完整 `ready` 退出码 0 的证据下获明确授权，已 Squash 合并至 `main@9825a80badffa7863590b893a337c4c52e9e0d29`。终端日志没有本地 HEAD，不能声明严格 SHA 绑定。
+
+本批从该 main 创建 `feat/v0.3-b35-oidc-release-preflight-readonly`，不改生产 Controller/仓储/Schema/双 Web UI，只增加复用真实 Keycloak 隔离浏览器及双 HTTPS Origin 的服务端发布预检 GET 验收脚本和 11 项 Node 离线安全测试。浏览器仅检查已有、同时具备工程和版本读取权限的当前已保存工程，核对报告/摘要/水位与 400/409/no-store，不修改工程、版本、ACL、数据库 Schema 或工业设备。离线专项纳入 `ready`；真实交互需要手工登录并单独运行。Windows 质量链与真实 Keycloak 浏览器结果**待维护者复验**。FR-008 正式发布与回滚仍未交付，新 PR 必须 Draft 并指派 `@adui-dev`。
