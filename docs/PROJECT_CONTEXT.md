@@ -1532,3 +1532,9 @@ PR #86 依据维护者明确授权 Squash 合并至 `main@a934a33ba2251880f934ff
 维护者 Windows 已真实完成 PR #87：React/Vue 两种分辨率共四组浏览器布局 **19/19**，双框架发布预检专项退出码 **0**；Vitest **596/596**，HTTP E2E **51/51**，`vp check` **343/198** 零告警，文档 **86 份**，完整 `pnpm run ready` **退出码 0**。日志未附本机 Git HEAD；GitHub PR #87 合并前 HEAD 为 `c16595774798e213f2da4bfea4cfd718677cf3be`，维护者本次明确授权后 Squash 合并到 `main@602540baa570dfca21bd56f71ec634bb0263312d`。
 
 第四小批从该 main 建立 `feat/v0.3-b35-server-release-preflight-readonly`：NestJS 工程 API 新增受 OIDC 会话及 `version:read` ACL 保护的 GET 当前版本预检，Prisma 在单个工程共享锁事务里检查 head、完整历史快照，再复用 Core SVG 只读报告。新增 6 项仓储单测与 4 项 HTTP E2E；全量 Vitest 目标 **602/602**、NestJS HTTP E2E 目标 **55/55**，都只是候选目标，**Windows 尚未实测**。不实现正式发布指针、写入、回滚、ACL 变更或工业设备操作；新 PR 继续 Draft 并指派 `@adui-dev`。
+
+## 2026-11-18 · 第三十五批第五小批：真实隔离 PostgreSQL 只读发布预检联调
+
+第四小批 PR #88 在维护者 Windows `602/602` Vitest、`55/55` HTTP E2E、Vite+ `343/198` 零告警、完整 `ready` 退出码 0 的证据下，经本轮明确授权 Squash 合并至 `main@058277f20088d20e0d3f6cd58ff553868cc92c48`；仍未获得本地 Git HEAD 与真实 Keycloak+PostgreSQL 新 GET 专项结果。
+
+第五小批从该 main 建立 `feat/v0.3-b35-release-preflight-db-http`，**不修改生产接口**，只在既有隔离数据库 Cookie HTTP E2E 的随机租户夹具中新增 4 项真实 PostgreSQL 回归，覆盖报告 200/401、旧 head 409/当前版本不兼容报告、动态 ACL 404、篡改测试版摘要 500 与零额外版本/审计。沿用 `SCADA_TEST_DATABASE_URL` 仅允许本机 `adui_scada_test` 的前置保护；不引入 Keycloak 交互、测试库之外的写入、Schema 迁移或工业设备写入。候选 Windows `vp check`、`docs:check`、`ready` 与独立 `test:db` **待运行**，Draft PR 等待新一轮验收和授权。
