@@ -1028,3 +1028,11 @@ React 写入页和 Vue 写入页各执行一次完整二元探针，分别由独
 第一条用例带可信 `Origin`、`Sec-Fetch-Site: same-origin` 和两种 Cookie，刻意缺少 `X-SCADA-CSRF`，预期在 `ScadaSessionGuard` 的 CSRF 双提交检查中提前返回 403。第二条用例带匹配的 CSRF 请求头，但使用不可信 `Origin`，必须在 Origin 白名单检查处提前拒绝为 403。两条用例都逐项检查 JSON 403、安全固定中文原因、`Cache-Control: no-store`、`Pragma: no-cache`，并要求 `Set-Cookie` 与 `Location` 缺失，避免把未完成注销误报为清理成功。
 
 不新增测试依赖，不改现有代码路径或异常吞吐；先前 401 HTTP 根模块用例保持不变。此次在已有 49 项 HTTP E2E 上新增 2 项，**新目标为 51/51（待 Windows 实测）**；Vitest 单元测试总数仍为 583 项，不改变浏览器、多标签页或工业现场验收边界。
+
+## 2026-11-18 · PR #75 历史专项与新主线合流设计
+
+在 `main` 已有的 `scripts/test-oidc-real-multitab.mjs` 四标签共享会话注销专项之外，保留 `scripts/test-oidc-studio-multitab.mjs` 的**同一 Origin 双标签 CAS** 功能。通过原有 `startBrowser` 在同一临时 Chrome/Edge Profile 创建第二 CDP 标签页，逐个 Origin 复用真实 BFF 身份、工程列表及 Studio 控件，只在明确确认的本机 OIDC HTTPS Lab 新建随机工程。两个标签的写入守卫在页面导航之前安装，工程 GET/HEAD 透传；非 GET/HEAD 默认拒绝，仅分别为 CAS=1 与 CAS=2 允许单次目标工程 POST。不得引用模块级常量进入被 CDP `function.toString()` 序列化的页面函数。
+
+每个 Origin 的双标签页先载入修订 1，第二页创建 IndexedDB 草稿并启用自动保存。第一页真实保存修订 2 后，第二页通过真实可见性恢复触发只读水位复核，失效过期 CAS、拒绝旧版本 POST、保留画布/草稿/自动保存；然后真实只读预览、人工载入修订 2 并追加修订 3。第一页恢复可见后也必须拒绝旧 CAS。最终从唯一隔离 PostgreSQL 租户/工程过滤读取头版本、版本行与审计行，三版的内容摘要必须匹配两个实际 HTTP 201 结果。
+
+复用现有 `createCasProjectInPage` 的安全边界，在新页面函数中**内联精确工程 ID 正则**，防止重复 E-002/E-025/E-039 的浏览器脚本引用 Node 模块闭包问题。离线用例在原 18 项基础上新增 1 项序列化边界检查，目标 19/19；它只能证明纯函数/安全门禁，不能代替真实 Keycloak/Chrome/PostgreSQL 验收。未更改任何生产 React/Vue、共享 Core、NestJS、Prisma 模型或迁移。

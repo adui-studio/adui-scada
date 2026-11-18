@@ -1768,3 +1768,11 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 第二十八小批只扩充 `apps/server/test/oidc-module-bootstrap.e2e-spec.ts` 的真实 OIDC 根模块 HTTP 403 路径。分别模拟可信来源但缺少 CSRF 请求头，以及有正确测试 CSRF 值但不可信来源，均要求 `POST /api/v1/auth/logout` 返回 403 JSON、`Cache-Control: no-store`、`Pragma: no-cache`、无 `Set-Cookie` 清除、无重定向。真实 Guard 被调用但 Prisma 是空 Mock，不可接触真实会话、真实数据库或 Keycloak。原 49 项 HTTP E2E 目标扩展为 **51/51**；Vitest 单元测试维持 **583/583**（均仅为待测目标）。
 
 **第二十八小批的新 HEAD 尚未运行** Windows `vp check`、`pnpm run test:e2e:server`、`pnpm run test:unit`、`pnpm run docs:check` 或完整 `pnpm run ready`。上批 583/583、49/49 和 `ready` 0 是**已合并旧代码**的真实结果，不能用来声明新提交通过。维护者应先记录 `git rev-parse HEAD`，再执行 HTTP E2E（目标 51/51）和完整 `ready`（最终退出码必须 0）。此批不需要额外启动真实 Keycloak、创建测试工程或执行数据库写操作。
+
+## 2026-11-18 · PR #84 已验收合并与 PR #75 冲突修复候选
+
+维护者 Windows 在 PR #84 新增的真实 OIDC 根模块 403 禁缓存 E2E 后执行 `pnpm run test:e2e:server` **6/6 文件、51/51 用例、退出码 0**；完整 `pnpm run ready` **退出码 0**，含 `vp check` **337** 格式文件 / **192** 受检零警告错误、Vitest **583/583**、HTTP E2E **51/51**、文档 **86** 份与 React/Vue/NestJS 构建。PR #84 按用户明确授权 Squash 合并至 `main@fd2a600b45f4c2c7400984932b69c46da18ab028`；用户日志未提供本地 `git rev-parse HEAD`。
+
+审查发现此前遗留的 PR #75 仍 Open / Draft，基于老的 `main@8cd2223853e7e5dc05695b8ab1226911ec7bd734`，与当前主线文档/`package.json` 冲突；它新增的**同一 Origin 双标签 CAS** 与后来已合并的四页注销专项并不相同，不能直接关闭丢弃。原 PR #75 文档中使用的 E-045/E-046/E-047 错误编号与现主线发生冲突，冲突解决仅保留主线的这些复盘，旧分支局部错误整理入新的 E-048。原分支 18 项离线用例**从无 Windows 实测结果**，不视为通过。
+
+按当前 `main` 构造双父提交的 Git 合流，保留旧 PR #75 全部历史并保留主线所有后续安全代码和文档；在新脚本内修正两处 CDP 页面函数对 Node 作用域 `PROJECT_PATTERN` 的非法引用，新增 1 项序列化边界回归，离线安全目标 **19/19**；根 `package.json` 仅添加两个专项命令且仅将**离线**配置专项加入现有 `ready`。新分支源码尚未运行本地 Node、Windows `vp check`、`docs:check`、完整 `ready` 或真实 Keycloak/双 Origin/数据库浏览器专项；**不能将 PR #84 的成功日志迁移到 PR #75**。待真实日志与 `$LASTEXITCODE` 完成之后，再请求新一轮合并授权。

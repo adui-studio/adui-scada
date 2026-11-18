@@ -891,3 +891,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - scripts/test-oidc-real-multitab.mjs：一个隔离 Chrome/Edge Profile 内创建 React/Vue 写入与跟随四个真实标签页；通过真实标签切换触发既有前台 BFF/CAS 复核，使用正式同源 CSRF 注销接口验证共享会话失效。仅创建一份随机专用工程并追加修订 2/3；创建只使用现有 API 的创建者默认权限，不手工授予其他主体，跟随标签页工程 POST 始终本地阻断。
 - scripts/test-oidc-real-multitab.cases.mjs：Node 内置离线安全测试覆盖显式本机数据库确认、真实可见事件计数、同一租户/主体、注销 CSRF 契约、脱敏状态摘要、本地画布/草稿/自动保存一致性及错误脱敏。
 - 根 package.json：增加 test:projects:oidc:multitab:config 并纳入 ready；增加独立手工执行的 test:projects:oidc:multitab:browser，不把真实登录、工程写入和注销放入默认质量链。
+
+## 第三十四批遗留 PR #75 · 同源双标签页 CAS 验收工具
+
+- `scripts/test-oidc-studio-multitab.mjs`：一个隔离 Chrome/Edge Profile 内的两页同源 Studio CAS 协同专项，分别覆盖 React/Vue 的修订 1→2→3、真实页面可见性、只读预览、人工载入、草稿保护及同主体数据库审计；仅在明确本机 Lab 确认后启动。
+- `scripts/test-oidc-studio-multitab.cases.mjs`：19 项 Node 内置离线安全测试，新增 CDP 页面函数不得引用模块级工程正则的边界回归。
+- 根目录 `package.json`：新增 `test:oidc:dual:studio:multitab:config` 纳入 `ready`；`test:oidc:dual:studio:multitab` 为必须单独手动执行的真实浏览器专项。

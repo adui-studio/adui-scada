@@ -2925,3 +2925,38 @@ if ($browserExitCode -ne 0) { throw "真实多标签页 OIDC 专项失败" }
 交互说明：命令启动一个全新的隔离浏览器窗口，维护者只需手动登录一次已预绑定的普通 Keycloak 测试用户；不要在终端输入或粘贴密码。脚本在本轮专用工程上通过正式 BFF 创建首版，由 React 写入端真实追加 2、Vue 写入端真实追加 3；React/Vue 跟随标签页通过实际切换前台触发服务端水位复核，并点击现有 Studio 保存按钮验证旧 CAS 不产生工程 POST。随后 React 写入端执行真实 /api/v1/auth/logout CSRF 注销，两个跟随标签页分别切回前台，验证真实 401、CAS/授权缓存失效与本地草稿保护。
 
 本轮仅新建一份随机 b34-oidc-cas-UUID 专用工程，保留版本 1/2/3 供维护者复核；不会更改其他工程、既有 ACL、身份映射或现有 Lab 业务数据；新工程仅由现有创建 API 按既定流程创建创建者默认权限，不手工增加其他主体授权。跟随标签页内所有工程非 GET/HEAD 请求始终由页面 Fetch 包装器阻断，必须保持零穿透。隐藏标签页在后台期间不应收到即时身份广播，只有切回前台后才通过真实 BFF 复核；这不是后台推送、物理 TCP 断流或生产/工业现场验收。临时浏览器 Profile 在退出时关闭并清理。
+
+## 第三十四批遗留 PR #75 · React/Vue 同源双标签页 CAS 专项验收
+
+本次在 PR #84 合并之后从最新 `main` 无强制推送地解决旧 PR #75 冲突。先确认本地没有未提交改动，核对 PR #75 分支的 HEAD 与远端一致，再执行离线与完整质量门禁。不要把之前 51/51 HTTP E2E、583/583 Vitest 或 `ready` 退出码 0 当作本分支已验收。
+
+```powershell
+git status --short
+git fetch origin
+git switch ai/b34-same-origin-multitab-cas
+git pull --ff-only
+git rev-parse HEAD
+
+pnpm run test:oidc:dual:studio:multitab:config
+Write-Host "同源双标签页离线测试退出码：$LASTEXITCODE"
+
+vp check
+Write-Host "Vite+ 检查退出码：$LASTEXITCODE"
+
+pnpm run docs:check
+Write-Host "文档检查退出码：$LASTEXITCODE"
+
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+```
+
+离线安全用例**目标 19/19**，GitHub 分支新增 2 个 `.mjs` 文件，自动纳入 `ready` 的仅是本机不写数据库的 Node 离线测试。完整 `ready` 必须实际退出码 0，不能由单独 E2E 或之前分支构建成功替代。新脚本是否符合 Vite+ 格式/Lint、Node 运行及浏览器行为均以维护者 Windows 实测为准。
+
+在本机可信 Keycloak、双 HTTPS Origin、受控 PostgreSQL Lab、已预绑定普通测试用户都就绪，并允许创建本次随机专用测试工程时，另行运行：
+
+```powershell
+pnpm run test:oidc:dual:studio:multitab
+Write-Host "同源双标签页真实浏览器专项退出码：$LASTEXITCODE"
+```
+
+隔离 Chrome/Edge 中只需手动登录一次，**不要将密码、Cookie、Token 或数据库凭据粘贴进终端**。React/Vue 各创建一份随机专用工程，走真实 Studio UI 的版本 1→2→3、后台到前台实际可见性切换、过期 CAS 阻断、只读预览和人工载入、IndexedDB 草稿不变与 SQL 三版审计；测试工程保留，不删除既有数据。专项可能写入**仅本轮随机专用工程**，不允许在生产环境执行，也不允许改动工业设备。

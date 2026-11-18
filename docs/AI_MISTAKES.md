@@ -434,6 +434,16 @@
 
 > **2026-11-18 · E-047 Windows 结案补录**：上述“修复后待测”是候选阶段的历史边界。维护者 Windows 在修复公共 `ExecutionContext` Mock 后实际运行 `pnpm run test:unit`，**49/49 文件、583/583 用例通过，退出码 0**；完整 `pnpm run ready` **退出码 0**，包括 `vp check` 337/192 零告警、HTTP E2E 49/49、文档 86 份以及双框架和服务端构建。旧 3 项 TypeError 未再发生。PR #83 已经维护者明确授权 Squash 合并至 `main@650b084f770bb92241b3b93a02689160b7b8bc41`。原日志没有本机 `git rev-parse HEAD`，合并后新提交没有额外执行 Windows 复测；不可将此结论延伸为工业现场安全认证。
 
+### E-048 · 旧同源双标签页专项在 CDP 中引用 Node 模块常量（第三十四批遗留 PR #75）
+
+- **现象**：2026-11-18 排查长期保持 Draft 的 PR #75 时，在旧 `scripts/test-oidc-studio-multitab.mjs` 中发现 `createMultitabProjectInPage` 和 `armStudioMultiTabWriteInPage` 的项目 ID 检查依赖模块级 `PROJECT_PATTERN`。二者被 `session.evaluate` 使用 `function.toString()` 独立发往真实浏览器，页面内没有 Node 模块词法环境，因而存在确定的 `ReferenceError` 风险。**没有 Windows 运行失败证据，不能记作真实浏览器事故。**
+- **根因**：原离线单测直接调用导出函数，与 Node 模块一起运行，可以访问该常量，未模拟 CDP 序列化边界；重复违反 E-002、E-025 与 E-039 的已知规则。
+- **修正**：只在两段浏览器页面函数内联已审核的 `b34-oidc-multitab-<UUID>` 精确正则，仍拒绝其他工程；Node 侧数据库审计和随机工程生成继续使用模块级常量。新增 Node 内置测试，要求两段页面函数的序列化源码均不包含 `PROJECT_PATTERN`；原 18 项测试保持不变，目标增加到 19 项。未修改现有 BFF、CSRF、真实工程访问保护或数据库。
+- **合流说明**：PR #75 的旧文档曾暂用 E-045/E-046/E-047 记录三处静态候选问题；这三个编号后来被 `main` 的真实四标签页与身份 Guard 错误正式占用，**绝不以旧分支编号覆盖主线历史**。保留 PR #75 的改动历史，通过带双父提交的合流和主线文档重建保留当前正式编号。
+- **防复发**：页面运行函数必须自包含；CDP `evaluate` 与 Node 直接调用是两个不同环境。对新脚本先检查序列化源码，不允许引用 import/模块常量，再运行 Node 离线、`vp check`、完整 `ready` 和真实 Chrome/Keycloak 专项；单测静态断言不等于浏览器实测。
+- **验证边界**：截至此次远程候选，**未执行** Windows Node 19/19、`vp check`、`docs:check`、`ready` 或真实 React/Vue 本机 Lab 浏览器。原 PR #75 声称的隔离 V8 18/18 仅属于旧代码、并非当前提交的真实 Node 测试。
+- **证据**：PR #75、`scripts/test-oidc-studio-multitab.mjs`、`scripts/test-oidc-studio-multitab.cases.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
