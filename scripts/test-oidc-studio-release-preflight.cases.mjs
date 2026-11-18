@@ -6,6 +6,8 @@ import {
   clickStudioPreflightInPage,
   describeStudioPreflightFailure,
   installStudioPreflightReadGuardInPage,
+  holdStudioPreflight401InPage,
+  releaseStudioPreflight401InPage,
   requireReadonlyStudioPreflightMode,
   studioPreflightGuardStateInPage,
   studioPreflightUiStateInPage,
@@ -77,6 +79,7 @@ void describe("真实 Keycloak Studio 发布预检浏览器只读安全门禁", 
       requests: ["head", "snapshot", "preflight", "head"],
       blockedWrites: 0,
       simulatedResponses: 0,
+      pendingRejection: false,
     });
     assert.equal(calls.length, 4);
     assert.ok(calls.every(({ options }) => options.method === "GET"));
@@ -151,6 +154,38 @@ void describe("真实 Keycloak Studio 发布预检浏览器只读安全门禁", 
     }
     assert.deepEqual(studioPreflightGuardStateInPage(runtime)?.requests, []);
     assert.equal(runtime.__aduiScadaStudioPreflightGuard.simulatedStatus, null);
+  });
+
+  void it("迟到 401 只挂起指定预检 GET，释放前不发送真实网络请求", async () => {
+    const { runtime, calls } = fixture();
+    assert.equal(installStudioPreflightReadGuardInPage([origin], runtime), true);
+    assert.equal(armStudioPreflightReadGuardInPage(origin, projectId, 2, 401, runtime), true);
+    assert.equal(holdStudioPreflight401InPage(runtime), true);
+    assert.throws(
+      () => releaseStudioPreflight401InPage(runtime),
+      /真实 Studio 预检迟到拒绝尚未挂起/,
+    );
+    const pending = runtime.fetch(base + "/versions/2/release-preflight", { method: "GET" });
+    assert.equal(studioPreflightGuardStateInPage(runtime)?.pendingRejection, true);
+    assert.deepEqual(studioPreflightGuardStateInPage(runtime)?.requests, ["preflight"]);
+    assert.equal(calls.length, 0);
+    assert.throws(
+      () => armStudioPreflightReadGuardInPage(origin, projectId, 2, 409, runtime),
+      /真实 Studio 发布预检安全门禁参数无效/,
+    );
+    assert.equal(releaseStudioPreflight401InPage(runtime), true);
+    assert.equal((await pending).status, 401);
+    assert.deepEqual(studioPreflightGuardStateInPage(runtime), {
+      requests: ["preflight"],
+      blockedWrites: 0,
+      simulatedResponses: 1,
+      pendingRejection: false,
+    });
+    assert.throws(
+      () => releaseStudioPreflight401InPage(runtime),
+      /真实 Studio 预检迟到拒绝尚未挂起/,
+    );
+    assert.equal(calls.length, 0);
   });
 
   void it("安全门禁在同一页面不允许重复安装，防止双重拦截", () => {
