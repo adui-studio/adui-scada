@@ -3101,3 +3101,31 @@ Write-Host "完整质量链退出码：$LASTEXITCODE"
 此次是独立于本地静态预检的**手动**服务端 GET 入口，必须验证双框架 UI 都显示“检查服务端已保存版本”，且没有点击时绝不提示服务端已通过。共享 `readCurrentServerReleasePreflight` 还必须在版本变化、SHA-256 摘要与快照不匹配、授权拒绝时受控失败，并且任何预检动作均不得写草稿、工程版本、CAS 基线、发布指针或工业设备。
 
 Windows 必须在当前功能分支记录 `git rev-parse HEAD`，执行 `pnpm run test:unit`、`pnpm run test:e2e:server`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready` 并保留真实退出码；目标 **615/615** Vitest、**55/55** HTTP E2E 仅为新分支待测，不是现有结果。随后分别启动 React/Vue 开发服务，执行 `pnpm run test:release:preflight:browser`，观察原静态合法/不兼容/恢复用例和新的手动服务端按钮安全断言均通过。当前专项不会自动点击新按钮并进行受保护 Keycloak 网络验证；须在未来真实浏览器专项中另外覆盖同源点击、未保存画布标记及 ACL/409 的 UI 行为，不能用离线 Browser UI 结构断言冒充真实 OIDC 端到端成功。
+
+## 第三十五批第九小批 · 真实 Keycloak React/Vue Studio 发布预检 UI 按钮专项
+
+**离线门禁**：`pnpm run test:release:preflight:oidc:studio:config` 使用 Node 内置测试执行 12 项只读/跨域拒绝/按钮选择器/CDP 自包含契约，自动加入完整 `ready`。该命令不打开浏览器，不需要 Keycloak、数据库、账号或人工操作。Windows 先运行：
+
+```powershell
+git status --short
+git rev-parse HEAD
+pnpm run test:release:preflight:oidc:studio:config
+Write-Host "Studio 预检离线测试退出码：$LASTEXITCODE"
+vp check
+Write-Host "Vite+ 退出码：$LASTEXITCODE"
+pnpm run docs:check
+Write-Host "文档检查退出码：$LASTEXITCODE"
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+```
+
+**真实交互验收**：仅在本机可信隔离 Keycloak Lab、正常 TLS 校验的 React/Vue HTTPS Web、同源 NestJS BFF 全部可用，且预绑定普通用户已拥有至少一份可访问并具备 `version:read` 的已保存工程时，另行执行：
+
+```powershell
+pnpm run test:release:preflight:oidc:studio:browser
+Write-Host "真实 Studio 发布预检按钮退出码：$LASTEXITCODE"
+```
+
+登录仅在测试自动打开的隔离 Chrome/Edge 中人工完成，不得将密码、Token、Cookie、工程正文或数据库连接信息放进终端。脚本只使用真实“工程管理/打开/发布预检”UI 读取已有工程，在临时浏览器中添加**未保存**文本图元以检查版本差异；工程 API POST、DELETE 和跨 Origin 请求在页面初始化前被阻断，409/401/404 仅对当前测试工程的预检 GET 合成响应，绝不更新真实 ACL、CAS/版本、发布指针或现场设备。脚本比较预检前后 SVG、JSON SHA-256、草稿整体摘要、自动保存与 CAS；401/404 预期使远端访问基线失效但本地内容不丢失。真实 HTTP 400/409 和数据库摘要另由原 `test:release:preflight:oidc:browser` 覆盖，二者不可混记。
+
+真实 UI 专项属于**单独交互命令**，不能自动加入 `ready` 或通过伪造 Keycloak 登录、关闭 TLS、扩展 ACL、临时创建工程来满足测试。新分支 Windows 验收和真实浏览器结果均待维护者执行；本测试通过也不等于 FR-008 正式发布安全验收。
