@@ -944,3 +944,8 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/web-react/src/studio/ServerReleasePreflight.tsx` 与 `apps/web-vue/src/studio/ServerReleasePreflight.vue`：独立于本地静态兼容性预检的手动服务端已保存版本预检；对比当前画布与真实快照、显示中文安全告知、授权失败时回报父级。
 - `apps/web-react/src/studio/StudioPage.tsx` 与 `apps/web-vue/src/studio/StudioPage.vue`：接入上述双端组件，按工程/已知最新水位/授权上下文强制清理旧 UI 结果，不修改保存和 IndexedDB 流程。
 - `scripts/test-studio-browser.mjs`：现有 `--release-preflight` 浏览器流程检查双端手动服务端入口存在、未执行时不展示服务端成功，继续保留 JSON 导入/恢复静态结果检查。
+
+## 2026-11-18 · 第三十五批第九小批真实 Studio Keycloak 预检专项
+
+- `scripts/test-oidc-studio-release-preflight.mjs`：复用已有隔离 Chrome/Edge、真实 Keycloak 登录与只读工程选择，顺序点击 React/Vue 正式 UI“检查服务端已保存版本”，守卫只允许同源工程 GET 并模拟预检 409/401/404，核对远端水位/摘要与本地画布/草稿/CAS。
+- `scripts/test-oidc-studio-release-preflight.cases.mjs`：12 项纯 Node 契约、安全模式、CDP 序列化及 UI 选择器测试；`test:release:preflight:oidc:studio:config` 随 `ready` 自动执行，交互式 `test:release:preflight:oidc:studio:browser` 独立运行。
