@@ -453,7 +453,9 @@ describe("框架无关工程 API Client", () => {
       [409, "conflict"],
     ] as const) {
       const harness = createHarness(preflightResponse({ message: "private-token" }, status));
-      const failure = await harness.client.preflightRelease(PROJECT_ID, 2).catch((error: unknown) => error);
+      const failure = await harness.client
+        .preflightRelease(PROJECT_ID, 2)
+        .catch((error: unknown) => error);
       expect(failure).toMatchObject({ kind, status });
       expect((failure as Error).message).not.toContain("private-token");
     }
