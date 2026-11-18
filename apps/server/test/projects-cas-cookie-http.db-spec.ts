@@ -537,7 +537,7 @@ describe("本机隔离 PostgreSQL 双 Cookie 会话 HTTP CAS 事务", () => {
   });
 
   it("真实版本推进后旧预检返回 409，当前不兼容属性仅报告问题", async () => {
-    await withFixture(async ({ tenantId, sessionA, sessionB }) => {
+    await withFixture(async ({ tenantId, sessionB }) => {
       const incompatible = document();
       incompatible.pages[0]!.nodes[1]!.props.color = "#ff0000";
       const saved = await store.append(
