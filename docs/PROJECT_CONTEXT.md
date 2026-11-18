@@ -1550,3 +1550,9 @@ PR #89 在维护者 Windows 真实 PostgreSQL 36/36、单测 602/602、HTTP E2E 
 维护者上传 PR #90 Windows 原始日志：OIDC 发布预检 Node 专项 **11/11**、`vp check` **345 格式文件 / 200 受检文件零告警**、86 份文档检查、Vitest **602/602**、NestJS HTTP E2E **55/55**、React/Vue/NestJS 类型检查与构建及完整 `ready` **退出码 0**。真实 Keycloak 双 HTTPS Origin 发布预检浏览器专项独立连续执行两次，React/Vue 版本摘要、400/409、无缓存均通过，两次退出码均 **0**。未提供独立 `git rev-parse HEAD`，不能声称 Windows 结果已严格 SHA 绑定。经本轮维护者明确授权，PR #90 已 Squash 合并至 `main@1e891193f0a4fb9191b1f24bdf369713c7e54aeb`。
 
 第七小批从新 main 建立 `feat/v0.3-b35-api-release-preflight-readonly`，仅增加共享 API Client 的 `preflightRelease` 同源 GET、服务端最小只读报告严格解析及 8 项单测；更新现有 Studio 会话类型 Mock 和需求/设计/代码索引。React/Vue Studio 尚**未**改用此 API，当前本地静态预检 UI 保持不变；正式发布、发布回滚与设备写入仍未实现。候选 Vitest **610/610** 为待测目标，既有 HTTP E2E **55/55** 亦须复验；新分支 Windows `vp check`、`test:unit`、`docs:check`、`ready` 均尚未执行，新 PR 必须 Draft 并指派 `@adui-dev`。
+
+## 2026-11-18 · 第三十五批第八小批双框架 Studio 服务端只读预检候选
+
+维护者 Windows 已真实通过 PR #91：Vitest **610/610**、NestJS HTTP E2E **55/55**、Vite+ **345 文件格式 / 200 文件零告警**、86 个 Markdown 文档检查、React/Vue/NestJS 类型检查与构建，完整 `pnpm run ready` **退出码 0**。维护者本轮明确授权后，PR #91 以 `ea4c6f93cf16edabb070e81fb0c9fc23c455c3f0` Squash 合并到 `main@1e4626bf7e8a2f08e5c4bc52c8907f3bc2149b28`。用户原始日志未附单独本地 `git rev-parse HEAD`，因此不声明严格 SHA 绑定。
+
+第八小批从新 main 建立 `feat/v0.3-b35-studio-server-preflight-readonly`；新增共享 API Client 四段 GET 编排及 5 项单测，React/Vue Studio 独立手动预检面板，保留本地当前画布静态预检、对照已保存快照避免把未保存编辑内容误认为已获服务端许可。更新原浏览器 `test:release:preflight:browser` 对应 UI 入口检查。**候选尚未在 Windows 执行新的 `vp check`、`test:unit`、`docs:check`、`ready` 或浏览器专项**；目标 Vitest **615/615**、HTTP E2E **55/55** 为待测基线。正式发布、回滚、工程发布指针和工业设备写入未开放。

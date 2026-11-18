@@ -59,6 +59,7 @@ import {
 } from "@adui/scada-api-client";
 import TagManager from "./TagManager.vue";
 import ServerProjectBrowser from "./ServerProjectBrowser.vue";
+import ServerReleasePreflight from "./ServerReleasePreflight.vue";
 import "./studio.css";
 import "@adui/tailwind/studio.css";
 
@@ -1247,6 +1248,15 @@ function handleServerBrowserAccessRejected(error: ScadaApiError): void {
   }
 }
 
+function handleServerPreflightAccessRejected(error: ScadaApiError): void {
+  invalidateServerAccess();
+  serverError.value = error.message;
+  notice.value = "服务端发布预检访问失败：" + error.message + "；本地画布与草稿不变";
+  if (error.kind === "unauthenticated") {
+    serverIdentity.value = "未登录或服务端尚未启用身份接口";
+  }
+}
+
 async function runServerAction(
   label: string,
   action: () => Promise<void>,
@@ -1850,6 +1860,13 @@ async function importJson(event: Event) {
                 </li>
               </ol>
             </div>
+            <ServerReleasePreflight
+              :key="`${state.document.projectId}:${serverHeadRevision ?? '未查询'}:${serverAccessRevision}`"
+              :api="serverApi"
+              :document="state.document"
+              :disabled="historyBusy"
+              @access-rejected="handleServerPreflightAccessRejected"
+            />
           </div>
         </details>
         <ServerProjectBrowser

@@ -527,3 +527,7 @@ export type { StudioProjectBrowserPage } from "./project-browser.ts";
 // 与 Vue/React 生命周期无关的服务端版本基线与 CAS 保存状态机。
 export { createStudioServerProjectSession, StudioServerProjectSession } from "./studio-session.ts";
 export type { ServerProjectSaveResult, ServerProjectVersion } from "./studio-session.ts";
+
+// 当前已保存版本的只读发布预检编排，不建立服务器 CAS 基线。
+export { readCurrentServerReleasePreflight } from "./server-release-preflight.ts";
+export type { StudioServerReleasePreflight } from "./server-release-preflight.ts";

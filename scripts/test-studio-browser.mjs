@@ -468,6 +468,15 @@ function readStudioReleasePreflightInPage() {
   menu.open = true;
   const panel = menu.querySelector('[aria-label="工程发布前静态兼容性预检"]');
   if (!panel) throw new Error("未找到静态预检面板");
+  const remotePanel = panel.querySelector('[aria-label="服务端已保存版本发布预检"]');
+  if (!remotePanel) throw new Error("未找到服务端已保存版本预检面板");
+  const remoteButton = remotePanel.querySelector("button");
+  if (remoteButton?.textContent.trim() !== "检查服务端已保存版本") {
+    throw new Error("服务端预检缺少手动只读入口");
+  }
+  if (remotePanel.querySelector('[role="status"]')) {
+    throw new Error("未发起服务端请求时不得显示服务端预检成功");
+  }
   const status = panel.querySelector('[role="status"]')?.textContent.trim() ?? "";
   const issues = [...panel.querySelectorAll('ol[aria-label="发布预检问题"] > li')].map((item) => ({
     path: item.querySelector("code")?.textContent.trim() ?? "",
@@ -478,6 +487,7 @@ function readStudioReleasePreflightInPage() {
     passed: status.includes("静态兼容性检查通过"),
     issueCount: issues.length,
     issues,
+    serverReadAvailable: true,
   };
 }
 
@@ -499,7 +509,7 @@ async function runStudioReleasePreflight(session) {
     const initialReport = await evaluate(readStudioReleasePreflightInPage);
     assert.deepStrictEqual(
       initialReport,
-      { passed: true, issueCount: 0, issues: [] },
+      { passed: true, issueCount: 0, issues: [], serverReadAvailable: true },
       target.name + " 合法演示工程的静态预检未通过",
     );
 
@@ -534,7 +544,7 @@ async function runStudioReleasePreflight(session) {
     await evaluate(importStudioJsonInPage, JSON.stringify(initial), true);
     assert.deepStrictEqual(
       await evaluate(readStudioReleasePreflightInPage),
-      { passed: true, issueCount: 0, issues: [] },
+      { passed: true, issueCount: 0, issues: [], serverReadAvailable: true },
       target.name + " 恢复合法工程后仍显示过期预检问题",
     );
     process.stdout.write(target.name + " Studio 发布预检通过、问题展示与恢复更新通过\n");
