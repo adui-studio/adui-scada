@@ -3189,3 +3189,103 @@ Write-Host "完整质量链退出码：$LASTEXITCODE"
 ```
 
 预计 Markdown **88 份**，原有 Vitest **615/615** 和 HTTP E2E **55/55** 均为**待复验的上一批基线**，不是本分支通过证据。此次没有新的 API/迁移/浏览器行为；后续正式发布写事务必须另行取得 ADR/工业安全批准，并完成隔离 PostgreSQL、可信 OIDC 与双框架完整验收。
+## 2026-11-18 · PR #99 正式发布 Schema 迁移与隔离库验收
+
+第三十五批 B 阶段新增迁移 `20261118000000_release_state_and_events`。该迁移必须只在本机独立 `adui_scada_test` 首次/二次部署和验证；根 `.env` 的 `SCADA_DATABASE_URL` 默认可能仍指向开发库 `adui_scada`。**不能在没有临时覆盖 URL 的情况下直接执行 `pnpm run db:migrate:deploy`。**
+
+### 先检查代码，不访问数据库
+
+```powershell
+pnpm run db:validate
+Write-Host "Schema 校验退出码：$LASTEXITCODE"
+
+pnpm run db:generate
+Write-Host "Prisma Client 生成退出码：$LASTEXITCODE"
+
+vp check
+Write-Host "Vite+ 退出码：$LASTEXITCODE"
+```
+
+### 仅在本机独立 adui_scada_test 执行迁移和数据库测试
+
+下面的步骤从根 `.env` 读取本机开发连接串，仅在当前 PowerShell 进程中将数据库名改为 `adui_scada_test`；同时设置 Prisma CLI 使用的 `SCADA_DATABASE_URL` 和数据库测试必须显式提供的 `SCADA_TEST_DATABASE_URL`。不修改 `.env` 文件，不输出连接串或口令，并在 `finally` 中恢复原环境变量。
+
+```powershell
+$originalDatabaseUrl = $env:SCADA_DATABASE_URL
+$originalTestDatabaseUrl = $env:SCADA_TEST_DATABASE_URL
+$developmentDatabaseUrl = (
+  Get-Content .env |
+    Where-Object { $_ -match '^SCADA_DATABASE_URL=' } |
+    Select-Object -First 1
+)
+if (-not $developmentDatabaseUrl) {
+  throw "根 .env 缺少 SCADA_DATABASE_URL"
+}
+$developmentDatabaseUrl = $developmentDatabaseUrl.Substring(19)
+$testDatabaseUrl = $developmentDatabaseUrl -replace '/adui_scada(?=\?|$)', '/adui_scada_test'
+if ($testDatabaseUrl -eq $developmentDatabaseUrl) {
+  throw "无法从开发数据库 URL 推导隔离测试数据库 URL"
+}
+$testUri = [Uri]$testDatabaseUrl
+if (
+  $testUri.Host -notin @("127.0.0.1", "localhost") -or
+  $testUri.AbsolutePath -ne "/adui_scada_test"
+) {
+  throw "数据库迁移与测试仅允许本机 adui_scada_test"
+}
+
+try {
+  $env:SCADA_DATABASE_URL = $testDatabaseUrl
+  $env:SCADA_TEST_DATABASE_URL = $testDatabaseUrl
+
+  pnpm run db:migrate:deploy
+  if ($LASTEXITCODE -ne 0) { throw "隔离数据库首次迁移失败" }
+  Write-Host "隔离数据库首次迁移退出码：$LASTEXITCODE"
+
+  pnpm run db:migrate:deploy
+  if ($LASTEXITCODE -ne 0) { throw "隔离数据库二次迁移失败" }
+  Write-Host "隔离数据库二次迁移退出码：$LASTEXITCODE"
+
+  pnpm run db:migrate:status
+  if ($LASTEXITCODE -ne 0) { throw "隔离数据库迁移状态检查失败" }
+  Write-Host "隔离数据库迁移状态退出码：$LASTEXITCODE"
+
+  pnpm run test:db
+  if ($LASTEXITCODE -ne 0) { throw "隔离 PostgreSQL 数据库测试失败" }
+  Write-Host "隔离 PostgreSQL 数据库测试退出码：$LASTEXITCODE"
+}
+finally {
+  if ($null -eq $originalDatabaseUrl) {
+    Remove-Item Env:SCADA_DATABASE_URL -ErrorAction SilentlyContinue
+  }
+  else {
+    $env:SCADA_DATABASE_URL = $originalDatabaseUrl
+  }
+
+  if ($null -eq $originalTestDatabaseUrl) {
+    Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+  }
+  else {
+    $env:SCADA_TEST_DATABASE_URL = $originalTestDatabaseUrl
+  }
+}
+```
+
+如果当前 PowerShell 的根 `.env` URL 不符合上述路径替换规则，应由维护者在本机安全设置正确测试 URL；**不得**为了继续测试把数据库目标改成 `adui_scada`、Keycloak 库、远端数据库或生产数据库。真实数据库测试文件会因缺少 `SCADA_TEST_DATABASE_URL` 而在加载阶段拒绝运行，这是预期安全保护，不应删除。
+
+### 已经在错误数据库上出现失败迁移时
+
+如果 `migrate deploy` 日志显示目标为 `adui_scada`，并且迁移状态为 P3018/P3009：
+
+- 立即停止对该数据库再次执行 `migrate deploy`、`migrate resolve` 或任何 DROP/DELETE/手工清理。
+- 不要假设 Prisma 自动回滚了迁移中此前成功的语句。
+- 先使用只读查询核对当前数据库、`_prisma_migrations` 失败记录、`scada_project_grants_permission_check` 是否存在，以及两张发布表是否存在。
+- 将只读结果交由维护者确认后，再制定该数据库的恢复步骤。不要把开发库的失败状态带入隔离测试库验收。
+
+只读检查示例（不会修改数据库）：
+
+```powershell
+docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml exec -T postgres psql -U adui_scada -d adui_scada -v ON_ERROR_STOP=1 -c "SELECT current_database();" -c "SELECT migration_name, started_at, finished_at, rolled_back_at FROM \"_prisma_migrations\" WHERE migration_name = '20261118000000_release_state_and_events';" -c "SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'public.scada_project_grants'::regclass AND conname = 'scada_project_grants_permission_check';" -c "SELECT to_regclass('public.scada_project_release_events') AS release_events, to_regclass('public.scada_project_release_state') AS release_state;"
+```
+
+以上查询仅用于判断迁移失败前是否留下了部分 DDL；不要公开连接凭据或修改查询为写操作。
