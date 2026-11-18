@@ -266,10 +266,24 @@ export function refreshProjectListInPage(runtime = globalThis) {
 }
 
 export function requireSameCanvasAndDrafts(before, after) {
-  if (!before || !after || before.canvas !== after.canvas) {
+  if (
+    typeof before?.canvas !== "string" ||
+    typeof after?.canvas !== "string" ||
+    before.canvas !== after.canvas
+  ) {
     throw new Error("标签页恢复改变了本地画布");
   }
-  if (before.drafts?.count !== after.drafts?.count || before.drafts?.hash !== after.drafts?.hash) {
+  const validDrafts = (value) =>
+    Number.isSafeInteger(value?.count) &&
+    value.count >= 1 &&
+    typeof value.hash === "string" &&
+    /^[a-f0-9]{64}$/i.test(value.hash);
+  if (
+    !validDrafts(before.drafts) ||
+    !validDrafts(after.drafts) ||
+    before.drafts.count !== after.drafts.count ||
+    before.drafts.hash !== after.drafts.hash
+  ) {
     throw new Error("标签页恢复改变了 IndexedDB 草稿");
   }
   return true;
@@ -277,7 +291,11 @@ export function requireSameCanvasAndDrafts(before, after) {
 
 export function requireUnchangedStudioState(before, after) {
   requireSameCanvasAndDrafts(before, after);
-  if (before.autoSave !== after.autoSave) {
+  if (
+    typeof before.autoSave !== "boolean" ||
+    typeof after.autoSave !== "boolean" ||
+    before.autoSave !== after.autoSave
+  ) {
     throw new Error("标签页恢复改变了自动保存状态");
   }
   return true;
