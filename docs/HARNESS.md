@@ -3075,3 +3075,23 @@ Write-Host "真实 Keycloak 发布预检退出码：$LASTEXITCODE"
 ```
 
 隔离浏览器内人工输入测试账号密码，**不要**在终端、聊天、日志中输入或粘贴密码；绝不关闭 HTTPS/TLS 验证，也不要用远端数据库、生产设备、伪造 Token 或写入工程绕过测试。该专项只验证已有发布前静态只读接口；不代表发布指针、权限变更、回滚或工业运行安全已验收。
+
+## 第三十五批第七小批 · 共享 API Client 服务端发布预检待验收
+
+本批只改变框架无关 `@adui/scada-api-client` 的只读请求契约，新增 8 条 Vitest 单测并补齐既有 Studio CAS 会话 Mock。**不改 React/Vue Studio UI，也不触发真实数据库写入或发布流程。** 在 Windows 确认新功能分支 HEAD 后执行：
+
+```powershell
+git rev-parse HEAD
+pnpm run test:unit
+Write-Host "单元测试退出码：$LASTEXITCODE"
+pnpm run test:e2e:server
+Write-Host "HTTP E2E 退出码：$LASTEXITCODE"
+vp check
+Write-Host "Vite+ 退出码：$LASTEXITCODE"
+pnpm run docs:check
+Write-Host "文档检查退出码：$LASTEXITCODE"
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+```
+
+新增只读 Client 不代表 Studio UI 已有服务端预检展示；双框架集成需后续独立提交并验收，不允许为了“接入”修改 CAS 版本、IndexedDB 草稿或授权范围。若发现 401/404/409 或报告字段不合法，必须按现有安全错误类型拒绝，不能自动创建新工程、静默重试或将本地静态结果冒充服务端许可。
