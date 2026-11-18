@@ -47,6 +47,7 @@ const SAFE_PHASES = new Set([
   "React 写入标签页确认载入",
   "Vue 写入标签页确认载入",
   "共享会话注销",
+  "React 注销发起页 HTTP 状态核验",
   "React 写入标签页身份失效复核",
   "React 标签页身份失效复核",
   "Vue 标签页身份失效复核",
@@ -883,7 +884,7 @@ async function run() {
       throw new Error("注销后隐藏标签页状态提前变化");
     }
 
-    phase = "React 写入标签页身份失效复核";
+    phase = "React 注销发起页 HTTP 状态核验";
     requireLogoutHttp401(await tabs.reactWriter.evaluate(readAuthStatusInPage, reactOrigin));
 
     phase = "React 标签页身份失效复核";
