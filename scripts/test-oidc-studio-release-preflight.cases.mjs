@@ -94,7 +94,8 @@ void describe("真实 Keycloak Studio 发布预检浏览器只读安全门禁", 
     installStudioPreflightReadGuardInPage([origin], runtime);
     await runtime.fetch("/api/v1/auth/me", { method: "GET" });
     await runtime.fetch("/images/demo.svg", { method: "GET" });
-    assert.equal(calls.length, 2);
+    await runtime.fetch(new URL("/images/demo.svg", origin), { method: "GET" });
+    assert.equal(calls.length, 3);
     assert.deepEqual(studioPreflightGuardStateInPage(runtime)?.requests, []);
   });
 
@@ -109,6 +110,10 @@ void describe("真实 Keycloak Studio 发布预检浏览器只读安全门禁", 
     ]) {
       await assert.rejects(runtime.fetch(path, { method }), /真实 Studio 发布预检/);
     }
+    await assert.rejects(
+      runtime.fetch({ unexpected: "object" }, { method: "GET" }),
+      /真实 Studio 发布预检请求地址无效/,
+    );
     assert.equal(calls.length, 0);
     assert.equal(studioPreflightGuardStateInPage(runtime)?.blockedWrites, 4);
   });
