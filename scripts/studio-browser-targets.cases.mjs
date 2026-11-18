@@ -11,34 +11,38 @@ void describe("双框架浏览器测试协议与本机目标保护", () => {
   });
 
   void it("可信 OIDC HTTPS 开关同时切换两端协议而不修改端口", () => {
-    assert.deepEqual(resolveStudioBrowserTargets({
-      SCADA_OIDC_DEV_HTTPS_ENABLED: "true",
-      SCADA_WEB_HOST: "127.0.0.1",
-      SCADA_REACT_DEV_PORT: "15173",
-      SCADA_VUE_DEV_PORT: "15174",
-    }), [
-      { name: "React", url: "https://127.0.0.1:15173/" },
-      { name: "Vue", url: "https://127.0.0.1:15174/" },
-    ]);
+    assert.deepEqual(
+      resolveStudioBrowserTargets({
+        SCADA_OIDC_DEV_HTTPS_ENABLED: "true",
+        SCADA_WEB_HOST: "127.0.0.1",
+        SCADA_REACT_DEV_PORT: "15173",
+        SCADA_VUE_DEV_PORT: "15174",
+      }),
+      [
+        { name: "React", url: "https://127.0.0.1:15173/" },
+        { name: "Vue", url: "https://127.0.0.1:15174/" },
+      ],
+    );
   });
 
   void it("保留合法自定义 HTTPS 回环 Origin", () => {
-    assert.deepEqual(resolveStudioBrowserTargets({
-      SCADA_OIDC_DEV_HTTPS_ENABLED: "true",
-      SCADA_REACT_URL: "https://localhost:15473/",
-      SCADA_VUE_URL: "https://127.0.0.1:15474/",
-    }).map((entry) => entry.url), [
-      "https://localhost:15473/",
-      "https://127.0.0.1:15474/",
-    ]);
+    assert.deepEqual(
+      resolveStudioBrowserTargets({
+        SCADA_OIDC_DEV_HTTPS_ENABLED: "true",
+        SCADA_REACT_URL: "https://localhost:15473/",
+        SCADA_VUE_URL: "https://127.0.0.1:15474/",
+      }).map((entry) => entry.url),
+      ["https://localhost:15473/", "https://127.0.0.1:15474/"],
+    );
   });
 
   void it("HTTPS 模式不能通过显式覆盖降级为 HTTP", () => {
     assert.throws(
-      () => resolveStudioBrowserTargets({
-        SCADA_OIDC_DEV_HTTPS_ENABLED: "true",
-        SCADA_REACT_URL: "http://127.0.0.1:15173/",
-      }),
+      () =>
+        resolveStudioBrowserTargets({
+          SCADA_OIDC_DEV_HTTPS_ENABLED: "true",
+          SCADA_REACT_URL: "http://127.0.0.1:15173/",
+        }),
       /React 浏览器测试只能访问本机匹配协议的 Web 首页/,
     );
   });
@@ -51,10 +55,11 @@ void describe("双框架浏览器测试协议与本机目标保护", () => {
       "https://127.0.0.1:15173/?token=secret",
     ]) {
       assert.throws(
-        () => resolveStudioBrowserTargets({
-          SCADA_OIDC_DEV_HTTPS_ENABLED: "true",
-          SCADA_REACT_URL,
-        }),
+        () =>
+          resolveStudioBrowserTargets({
+            SCADA_OIDC_DEV_HTTPS_ENABLED: "true",
+            SCADA_REACT_URL,
+          }),
         /React 浏览器测试只能访问本机匹配协议的 Web 首页/,
       );
     }
