@@ -496,7 +496,6 @@ describe("本机隔离 PostgreSQL 双 Cookie 会话 HTTP CAS 事务", () => {
     });
   });
 
-
   it("真实 PostgreSQL 当前版本预检对两个 Cookie 主体返回一致只读报告", async () => {
     await withFixture(async ({ tenantId, sessionA, sessionB }) => {
       const version = await database!.client.scadaProjectVersion.findUniqueOrThrow({
@@ -540,11 +539,10 @@ describe("本机隔离 PostgreSQL 双 Cookie 会话 HTTP CAS 事务", () => {
     await withFixture(async ({ tenantId, sessionB }) => {
       const incompatible = document();
       incompatible.pages[0]!.nodes[1]!.props.color = "#ff0000";
-      const saved = await store.append(
-        { tenantId, subjectId: subjectA },
-        projectId,
-        { expectedRevision: 1, document: incompatible },
-      );
+      const saved = await store.append({ tenantId, subjectId: subjectA }, projectId, {
+        expectedRevision: 1,
+        document: incompatible,
+      });
       expect(saved.revision).toBe(2);
       const stale = await getReleasePreflight(sessionB, 1);
       expect(stale.status).toBe(409);
