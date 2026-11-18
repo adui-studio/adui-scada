@@ -1828,3 +1828,17 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 维护者 Windows 执行 `vp check --fix` 报告 `apps/server/test/projects-cas-cookie-http.db-spec.ts:539`：`eslint(no-unused-vars)` 1 条警告及 `typescript(TS6133)` 1 条错误，都是新数据库发布预检用例未使用的 `sessionA` 解构；该次**格式化完成，但代码检查失败**。没有证据表明后续 `test:db` 或完整 `ready` 已运行。
 
 已在 PR #89 同一功能分支最小删除该用例未使用的 `sessionA` 参数，保留 `tenantId`、`sessionB`、原 `subjectA` 主体标识、版本水位、静态兼容报告和审计断言。GitHub 回读源码的静态核对通过；**新的 Windows `vp check`、`docs:check`、`ready` 和隔离 PostgreSQL `test:db` 均待维护者执行**，未以代码修复冒充测试通过。详见 `docs/AI_MISTAKES.md` E-050。运行 `vp check --fix` 可能留下本地格式变动，更新远端分支前应先检查 `git status --short` 和 `git diff`，不得直接清理用户本地改动。
+
+## 2026-11-18 · PR #89 授权合并与第三十五批第六小批真实 Keycloak 发布预检候选
+
+第五小批 PR #89 的 Windows 原始证据：本机独立 `adui_scada_test` 的 4 项 Prisma 迁移最新、`pnpm run test:db` **4/4 文件、36/36 项，退出码 0**；`vp check` **343 格式文件、198 受检零告警**，`test:unit` **602/602**、HTTP E2E **55/55**、86 份 Markdown 文档检查、完整 `ready` **退出码 0**。测试负向分支故意破坏随机测试租户摘要时，NestJS 内部 ERROR 堆栈是预期受控 500 的服务端日志，不是对外响应泄漏，也不影响整套测试最终成功。用户日志未含本机 `git rev-parse HEAD`，不能把测试结果严格绑定到某 SHA。GitHub PR #89 合并前 HEAD 为 `8f09025a0a3b15e6e8ac0d134103a51a7606e284`，获维护者本轮明确授权 Squash 合并至 `main@9825a80badffa7863590b893a337c4c52e9e0d29`。
+
+第六小批在该主线新分支增加 `scripts/test-oidc-release-preflight.mjs`、同名 `.cases.mjs` 与根命令。浏览器专项只复用已有可信 Keycloak 登录 / HTTPS 双 Origin，选取真实 `project:read` + `version:read` 的已保存工程，逐一 GET 读取与核对版本、摘要、200 报告、无缓存、400、409，检查 React/Vue 返回一致且工程 head 未变化。没有任何正式发布写入或工业设备请求；不创建、删除、更新工程/ACL，也不从浏览器读取 Cookie 或密钥。新离线用例共 **11 项**，独立 Node 命令已加入常规 `ready`；真实交互式浏览器专项必须另行执行。
+
+**协作环境中已完成的验证仅限于**：从 GitHub 最新页面函数源码提取后在隔离 V8 直接执行的 11/11 安全契约用例，以及额外 8/8 正向/负向请求模拟；这不是 Windows Node `node --test`、Vite+、完整 `ready` 或真实 Keycloak 浏览器执行记录。**本分支这些 Windows 命令与真实 Keycloak 登录均待实测**，不得宣称已经通过。原先的 Vitest 602/602、NestJS HTTP E2E 55/55 与 test:db 36/36 只属于合并前验收基线。
+
+## 2026-11-18 · PR #90 OIDC 发布预检测试对象展开 Lint 警告与修复候选
+
+维护者在 Windows 执行 `vp check --fix` 时，`scripts/test-oidc-release-preflight.cases.mjs:190` 出现 **1 条** `typescript(no-misused-spread)` 警告、**0 错误**。原因是 Mock `Map` 中的响应正文存在数组/对象联合类型，测试将 `old.body` 未经非数组对象校验直接展开；格式化完成不能视为静态检查通过。
+
+PR #90 功能分支已最小增加 `assert.ok(old?.body && !Array.isArray(old.body), "发布预检测试夹具正文必须为对象")` 后才展开原正文，保留所有四个负向断言。GitHub 回读已验证此断言存在。**新 HEAD 的 Windows `vp check`、`pnpm run test:release:preflight:oidc:config`、`pnpm run docs:check`、完整 `pnpm run ready` 及交互式真实 Keycloak 浏览器专项均待执行**；不得将修复前的检查或其他 V8 模拟结果记作 Windows 新 HEAD 通过。参见 `docs/AI_MISTAKES.md` E-051。

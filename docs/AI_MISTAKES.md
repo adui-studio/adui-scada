@@ -462,6 +462,15 @@
 - **验证边界**：已从 GitHub 最新分支重新读取修复后的目标文件，静态确认该测试块不再出现 `sessionA`，原 409/不兼容报告断言仍在；**修复后 Windows `vp check`、`pnpm run ready` 与独立 `pnpm run test:db` 尚未执行**。不能将静态核对冒充完整复验。
 - **证据**：维护者本轮原始 `vp check --fix` 输出、PR #89、`apps/server/test/projects-cas-cookie-http.db-spec.ts`、`docs/VALIDATION.md`。
 
+### E-051 · OIDC 发布预检测试将联合类型的数组当对象展开（第三十五批第六小批）
+
+- **现象**：维护者 2026-11-18 在 PR #90 Windows 分支执行 `vp check --fix`，`scripts/test-oidc-release-preflight.cases.mjs:190` 的 `body: { ...old.body, ...change.patch }` 触发 `typescript(no-misused-spread)` **1 条警告、0 错误**；格式化完成不等于 Lint 零告警。
+- **确认根因**：测试夹具的 `Map` 同时存放工程列表数组、历史版本数组及发布预检报告对象；`map.get(path)?.body` 因此可能是数组。原代码未证明其为非数组对象就展开，正好重复违反 E-003 的类型安全规则。这是 Mock 类型收窄缺失，不是发布预检服务端写入或身份接口故障证据。
+- **最小修复候选**：仅在“篡改水位、摘要、正文额外字段及缺少 no-store 必须拒绝”用例的 `map.set` 前增加 `assert.ok(old?.body && !Array.isArray(old.body), "发布预检测试夹具正文必须为对象")`；保证非数组对象之后才执行原来的浅层合并。保留四个负向报告场景及其断言，不更改正式 API、浏览器脚本、安全配置或 Core。
+- **防复发**：对由 `Map`、联合类型或 JSON Mock 取出的值，在对象展开前必须明确排除数组与空值；不得以类型断言、禁用规则或 `Object.assign` 模糊数组与对象的差异。提交前执行不带 `--fix` 的 `vp check` 并确认零警告。
+- **验证边界**：本轮已从 GitHub 回读新分支文件，确认单处保护断言存在且原四种错误报告和全部 11 条测试仍保留；**修复后的 Windows `vp check`、`test:release:preflight:oidc:config` 与完整 `ready` 尚未执行**，不能声称告警已实测关闭。
+- **证据**：维护者 Windows `vp check --fix` 原始输出、PR #90、`scripts/test-oidc-release-preflight.cases.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

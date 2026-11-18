@@ -3044,3 +3044,34 @@ try {
 ```
 
 并独立执行 `vp check`、`pnpm run docs:check` 与完整 `pnpm run ready`，保留各项退出码。此专项复用测试内部签发的受信会话，**不连接真实 Keycloak 授权码登录/JWKS**；只验证服务端真实隔离数据库路径。严禁为了绕过失败把测试地址改为开发/生产数据库。
+
+## 第三十五批第六小批 · 真实 Keycloak 双 HTTPS Origin 发布预检只读专项
+
+新增 `test:release:preflight:oidc:config`，通过 Node 内置测试验证 `scripts/test-oidc-release-preflight.mjs` 的参数默认拒绝、CDP 函数序列化、同源 GET、版本/摘要校验、无缓存响应、非法版本 400、非当前水位 409、ACL 缺失时跳过及固定中文脱敏诊断。**只有这个不访问网络或数据库的配置专项纳入 `ready`**；真正的浏览器测试不自动运行。
+
+真正的 `test:release:preflight:oidc:browser` 复用现有 `resolveProjectBrowserLab`、隔离 Chrome/Edge 与真实 Keycloak 登录；必须提前启动本机两套有效 HTTPS Web Origin、同源 NestJS BFF、可信 Keycloak Lab、已经通过维护者受控预绑定的普通测试用户，并且该主体至少有一份同时具备 `project:read` 和 `version:read` 的**已保存工程**。不得为通过专项临时修改用户或业务工程 ACL。
+
+单次真实登录后依次核对 React/Vue 两套 HTTPS Origin 的相同 BFF 主体、当前工程摘要、已保存版本摘要及服务端 GET `/api/v1/projects/:projectId/versions/:revision/release-preflight` 返回的 `projectId/revision/headRevision/contentHash/passed/issues`，同时核对匿名外的有效会话前提、400 非法版本、409 非当前版本、`Cache-Control: no-store` 和读取后工程 head 不变。浏览器仅发同源 GET，不创建版本、不读取快照正文，不读取或输出 Cookie、Token、密码、工程 ID、Tag 或摘要原文；只输出受控中文阶段结果。脚本不接受任何写入参数，也不直接建立 PostgreSQL 连接。若无同时具备版本读取权限的工程，专项必须失败并让维护者检查现有授权，不能扩大权限或随意创建工程。
+
+Windows 先运行：
+
+```powershell
+git rev-parse HEAD
+pnpm run test:release:preflight:oidc:config
+Write-Host "OIDC 发布预检离线测试退出码：$LASTEXITCODE"
+vp check
+Write-Host "Vite+ 退出码：$LASTEXITCODE"
+pnpm run docs:check
+Write-Host "文档退出码：$LASTEXITCODE"
+pnpm run ready
+Write-Host "质量链退出码：$LASTEXITCODE"
+```
+
+再在本机可信 Lab 三套服务均运行时，单独执行：
+
+```powershell
+pnpm run test:release:preflight:oidc:browser
+Write-Host "真实 Keycloak 发布预检退出码：$LASTEXITCODE"
+```
+
+隔离浏览器内人工输入测试账号密码，**不要**在终端、聊天、日志中输入或粘贴密码；绝不关闭 HTTPS/TLS 验证，也不要用远端数据库、生产设备、伪造 Token 或写入工程绕过测试。该专项只验证已有发布前静态只读接口；不代表发布指针、权限变更、回滚或工业运行安全已验收。
