@@ -108,7 +108,7 @@ model ScadaProjectReleaseState {
   tenantId            String                  @map("tenant_id") @db.VarChar(128)
   /// 发布状态所属工程标识。
   projectId           String                  @map("project_id") @db.VarChar(128)
-  /// 当前正式发布的不可变历史修订号；空值表示尚未发布。
+  /// 当前正式发布的不可变历史修订号；空值表示尚未发布，数据库增量迁移维护其复合外键。
   releasedRevision    BigInt?                 @map("released_revision")
   /// 当前正式发布快照的 SHA-256 摘要；必须与发布修订号同时存在或同时为空。
   releasedContentHash String?                 @map("released_content_hash") @db.VarChar(64)
