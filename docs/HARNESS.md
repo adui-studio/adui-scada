@@ -3014,3 +3014,33 @@ Write-Host "发布预检浏览器退出码：$LASTEXITCODE"
 ```
 
 本机配置离线测试虽已加入 `ready`，以上真实浏览器专项仍需单独执行，不访问工业设备、不执行正式工程发布或数据库写入。
+
+## 第三十五批第五小批 · 隔离 PostgreSQL 发布预检 HTTP 专项
+
+本批在现有 `apps/server/test/projects-cas-cookie-http.db-spec.ts` 新增 4 项真实 NestJS HTTP + Cookie 会话 + ACL + Prisma 预检回归。**只允许**在已经独立创建、完成迁移的本机 `adui_scada_test` 测试库执行。专项通过 `SCADA_TEST_DATABASE_URL` 检查回环 Host、PostgreSQL 协议及精确数据库名；每例仅以 `test-<随机 UUID>` 租户建立数据，并在 `finally` 清理该租户。包含一例刻意破坏**本次随机测试版本**的摘要元数据并断言 500，严禁在现有业务库、Keycloak 库、生产库或任何非隔离库中执行。
+
+`pnpm run ready` **不会执行**真实 `test:db`；单元测试/Mock E2E 通过不能替代数据库专项。沿用项目既有测试库凭据配置，不要在终端、提交或聊天中输出密码、数据库 URL、Cookie 或 Token。先按原有 PostgreSQL 专项步骤确认测试库已应用最新迁移；只在当前 PowerShell 进程内临时指向专用测试 URL 并在结束后恢复环境变量：
+
+```powershell
+git rev-parse HEAD
+$testUrl = $env:SCADA_TEST_DATABASE_URL
+if (-not $testUrl) { throw "请先按既有流程配置隔离 PostgreSQL 测试库" }
+$target = [uri]$testUrl
+if ($target.Host -notin @("127.0.0.1", "localhost") -or $target.AbsolutePath -ne "/adui_scada_test" -or $target.Scheme -notin @("postgresql", "postgres")) {
+  throw "数据库专项只允许本机 adui_scada_test"
+}
+$previousDatabaseUrl = $env:SCADA_DATABASE_URL
+try {
+  $env:SCADA_DATABASE_URL = $testUrl
+  pnpm run test:db
+  Write-Host "真实 PostgreSQL 专项退出码：$LASTEXITCODE"
+} finally {
+  if ($null -eq $previousDatabaseUrl) {
+    Remove-Item Env:SCADA_DATABASE_URL -ErrorAction SilentlyContinue
+  } else {
+    $env:SCADA_DATABASE_URL = $previousDatabaseUrl
+  }
+}
+```
+
+并独立执行 `vp check`、`pnpm run docs:check` 与完整 `pnpm run ready`，保留各项退出码。此专项复用测试内部签发的受信会话，**不连接真实 Keycloak 授权码登录/JWKS**；只验证服务端真实隔离数据库路径。严禁为了绕过失败把测试地址改为开发/生产数据库。
