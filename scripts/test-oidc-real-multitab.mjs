@@ -49,6 +49,8 @@ const SAFE_PHASES = new Set([
   "共享会话注销",
   "React 注销发起页 HTTP 状态核验",
   "React 写入标签页身份失效复核",
+  "React 注销后工程读取拒绝复核",
+  "Vue 注销后工程读取拒绝复核",
   "React 标签页身份失效复核",
   "Vue 标签页身份失效复核",
   "Vue 写入标签页身份失效复核",
@@ -83,6 +85,7 @@ const SAFE_ERRORS = new Set([
   "本地会话注销未返回 HTTP 204",
   "注销后隐藏标签页状态提前变化",
   "注销后标签页身份未失效",
+  "注销后受保护工程接口仍可访问",
   "注销后服务端 CAS 基线未失效",
   "注销后标签页尝试工程写入",
 ]);
@@ -180,6 +183,52 @@ export async function readAuthStatusInPage(expectedOrigin, runtime = globalThis)
 
 export function requireLogoutHttp401(status) {
   if (status !== 401) throw new Error("注销后标签页身份未失效");
+  return true;
+}
+
+/** 只读核对两个受保护工程路径；页面只返回 HTTP 状态，不读取响应正文。 */
+export async function readLogoutProjectStatusesInPage(origin, projectId, runtime = globalThis) {
+  if (
+    runtime.location.origin !== origin ||
+    !/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
+      projectId,
+    )
+  ) {
+    return null;
+  }
+
+  const paths = [
+    "/api/v1/projects?limit=10",
+    "/api/v1/projects/" + encodeURIComponent(projectId) + "/versions/3",
+  ];
+  const statuses = [];
+  for (const path of paths) {
+    try {
+      const response = await runtime.fetch(path, {
+        method: "GET",
+        credentials: "same-origin",
+        mode: "same-origin",
+        redirect: "error",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      statuses.push(response.status);
+    } catch {
+      statuses.push(0);
+    }
+  }
+  return statuses;
+}
+
+export function requireLogoutProjectDenied(statuses) {
+  if (
+    !Array.isArray(statuses) ||
+    statuses.length !== 2 ||
+    statuses[0] !== 401 ||
+    statuses[1] !== 401
+  ) {
+    throw new Error("注销后受保护工程接口仍可访问");
+  }
   return true;
 }
 
@@ -919,8 +968,24 @@ async function run() {
     await activateHiddenTab(tabs.reactWriter, "真实标签页没有发生可见性切换");
     await verifyLogoutRevalidation(tabs.reactWriter, reactOrigin, reactWriterState);
 
+    phase = "React 注销后工程读取拒绝复核";
+    const reactProjectStatuses = await tabs.reactWriter.evaluate(
+      readLogoutProjectStatusesInPage,
+      reactOrigin,
+      projectId,
+    );
+    requireLogoutProjectDenied(reactProjectStatuses);
+
+    phase = "Vue 注销后工程读取拒绝复核";
+    const vueProjectStatuses = await tabs.vueWriter.evaluate(
+      readLogoutProjectStatusesInPage,
+      vueOrigin,
+      projectId,
+    );
+    requireLogoutProjectDenied(vueProjectStatuses);
+
     process.stdout.write(
-      "真实多标签页专项通过：三个隐藏页在恢复前保持 CAS、本地画布、IndexedDB 草稿、自动保存与零工程写入；React/Vue 四个 Studio 标签页随后通过真实可见性切换清除注销后的 CAS 和授权缓存，并收到同源 BFF 401，旧 CAS 保存未产生工程写入。专用工程保留供维护者复核。\n",
+      "真实多标签页专项通过：三个隐藏页在恢复前保持 CAS、本地画布、IndexedDB 草稿、自动保存与零工程写入；React/Vue 四个 Studio 页恢复后完成同源 BFF 401、CAS 与授权失效，双 Origin 工程列表及历史版本读取均返回 401，旧 CAS 保存未产生工程写入。专用工程保留供维护者复核。\n",
     );
   } catch (error) {
     if (error instanceof Error && SAFE_ERRORS.has(error.message)) throw error;
