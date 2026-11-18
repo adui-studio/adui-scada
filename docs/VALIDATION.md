@@ -1796,3 +1796,13 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 维护者提交的 Windows `pnpm run test:unit` 结果为 **593/593**，`vp check` 为 **341 格式文件 / 196 受检文件零告警**，完整 `pnpm run ready` **退出码 0**，含 HTTP E2E **51/51**、文档 **86 份**、React/Vue 与 NestJS 构建成功。GitHub PR #86 合并前 HEAD 为 `d4ef0b68d91658b60204587a22c63cf26e473f72`，获维护者本次明确授权 Squash 合并为 `main@a934a33ba2251880f934ff4f5e9937ff78711f5c`。日志**未提供本地 Git HEAD**，**未提供** `test:browser` 和 `test:release:preflight:browser` 的独立结果；这两项仍须补测。
 
 第三十五批第三小批变更 `release-preflight.ts` 的 SVG 图元已消费属性白名单，新增三项反向/正向 Core 单测，预期单元测试目标为 **596/596**（仅预测，非实测）。请在 Windows 新分支 `feat/v0.3-b35-preflight-prop-compatibility` 核对 `git rev-parse HEAD` 并执行 `pnpm run test:unit`、`vp check`、`pnpm run docs:check`、`pnpm run ready`；在 React/Vue Web 本机服务启动后执行 `pnpm run test:browser` 和 `pnpm run test:release:preflight:browser`，逐项记录退出码。所有待验收项目均不得标记为通过。
+
+## 2026-11-18 · PR #87 Windows 离线验收与 HTTPS 浏览器探测修复候选
+
+维护者在 Windows 第三十五批第三小批执行的原始日志显示：`pnpm run test:unit` **50/50 文件、596/596 用例、退出码 0**；`vp check` **341 个格式文件、196 个受检文件零警告错误、退出码 0**；`pnpm run docs:check` **86 份 Markdown、退出码 0**；完整 `pnpm run ready` **退出码 0**，含 HTTP E2E **51/51**、React/Vue/NestJS 类型检查与构建通过。日志未给独立 `git rev-parse HEAD`，不能将结果绑定到本次后续新增的浏览器补丁提交。
+
+维护者同时启动的两套 Vite Web 均为 HTTPS（React 15173、Vue 15174），但 `scripts/test-studio-browser.mjs` 原探测仍为 HTTP：`pnpm run test:browser` 和 `pnpm run test:release:preflight:browser` **均在 React 首页探测处退出码 1**，没有开始浏览器内容校验。确认是测试目标 URL 协议拼接错误，不是本轮已证明的前端业务缺陷。
+
+修复候选将目标解析独立到 `scripts/studio-browser-targets.mjs`，读取既有 `SCADA_OIDC_DEV_HTTPS_ENABLED`，仅访问回环地址，HTTPS 禁止降级；通过严格 Node HTTPS 证书校验并显式读取 `NODE_EXTRA_CA_CERTS` 只读探测，不关闭 TLS。新增 `test:studio:browser:config` 并纳入 `ready`，有 **6 项** Node 离线用例。协作容器使用与 GitHub Blob SHA 相同的两个文件，`node --test` **6/6 通过**，另以临时本机自签 HTTPS 服务验证不可信证书拒绝、显式信任后通过；不代表真实 Windows 双框架专项通过。
+
+**新 HEAD 仍待 Windows 实测**：`pnpm run test:studio:browser:config`、`vp check`、`pnpm run docs:check`、`pnpm run ready`、`pnpm run test:browser` 和 `pnpm run test:release:preflight:browser`；Chrome/Edge 必须信任本机 CA，不得使用忽略证书参数。新增配置测试不计入 596 项 Vitest，完整 `ready` 应包含独立 Node 6 项检查。
