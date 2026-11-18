@@ -1596,3 +1596,20 @@ PR #99 已最小修复：
 - 在 `docs/AI_MISTAKES.md` E-054 与 `docs/VALIDATION.md` 记录防复发及验收边界。
 
 **修复后尚未在 Windows 复验**。下一步必须先执行 `pnpm run db:validate`、`pnpm run db:generate`，再运行 `vp check`；随后进行隔离 PostgreSQL 首次/二次迁移、`test:db`、`test:unit`、文档检查及完整 `ready`。不把旧生成客户端造成的类型错误解释成数据库模型已经迁移成功。
+## 2026-11-18 · PR #99 B 阶段迁移与单测失败修复待 Windows 复验
+
+维护者上传的 PR #99 Windows 日志：
+- Prisma `db:validate` **0**、`db:generate` **0**，Vite+ **354 格式文件、207 受检文件零告警/错误，退出码 0**。
+- 新迁移首次部署 **P3018 / SQLSTATE 42601**，二次部署 **P3009**。
+- 日志显示迁移目标是本机开发库 `adui_scada`，**不是** `adui_scada_test`；不能计为隔离 PostgreSQL 验收。
+- 真实 DB 测试未配置 `SCADA_TEST_DATABASE_URL`，5 个数据库测试文件按既有安全保护拒绝加载，没有执行用例。
+- Vitest **615/616**：唯一失败是工程创建单测 Mock 缺少新增的发布状态 delegate；完整 `ready` 同样退出码 1。
+- 文档检查 **88 份通过**。
+
+PR #99 已修复：
+- 完整重建正式发布 migration，恢复哈希/生命周期/事件约束，移除重复片段并用单一事务包裹；首条权限 CHECK 做存在性保护。
+- 增加迁移 SQL 静态回归。
+- 补齐工程创建测试的 `releaseStates.create` Mock、调用顺序及 generation=0 断言。
+- 同步 `docs/HARNESS.md` 隔离库流程、`docs/VALIDATION.md` 和 E-055～E-057。
+
+**重要：原 `adui_scada` 数据库中是否已保留首条权限 CHECK 尚未确认。** 暂停对该库的迁移和任何 resolve/删除操作，先做只读检查。修复后的 SQL 尚未在 PostgreSQL 执行，Vitest/ready 也尚未复验。下一步只允许把 `SCADA_DATABASE_URL` 与 `SCADA_TEST_DATABASE_URL` 临时指向本机 `adui_scada_test`，按 `docs/HARNESS.md` 的 `try/finally` 步骤完成首次/二次迁移和数据库测试；随后再根据只读检查结果制定原 `adui_scada` 的恢复方案。
