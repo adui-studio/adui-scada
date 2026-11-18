@@ -1584,3 +1584,13 @@ PR #89 在维护者 Windows 真实 PostgreSQL 36/36、单测 602/602、HTTP E2E 
 维护者 Windows 原始日志确认 PR #95：文档检查 **87 份**、Vite+ **352 格式文件/206 受检零告警**、Vitest **615/615**、HTTP E2E **55/55**、OIDC Studio 离线安全 **13/13**、React/Vue/Server 类型检查及构建通过，完整 `pnpm run ready` **退出码 0**。GitHub 合并前 HEAD `d5ceea382b92734b408b41d546b9ba93646e9914`，获得维护者本轮明确授权后 Squash 合并至 `main@0bc70202f8d1cced27edd72d49fb1de05c44c58f`。Windows 日志未含本地独立 HEAD，不能严格绑定到该 SHA。
 
 第十二小批从新 main 建立 `docs/v0.3-b35-release-decision-gates`，新增 [发布事务评审决策与验收矩阵](RELEASE_TRANSACTION_REVIEW.md)，把 Proposed ADR-0069 未决项拆分为 R-01～R-08 推荐但未批准的选项、I-01～I-06 不变量和 T-01～T-22 **未来**安全测试。同步需求/架构/SDD/代码索引与验收。此次**未新增** Prisma 迁移、权限、HTTP 写接口、Runtime 发布状态或工业设备操作；Windows `docs:check`、`vp check`、完整 `ready` 尚待实测。ADR-0069 继续 Proposed、FR-008 继续规划中。
+## 2026-11-18 · PR #99 B 阶段 Prisma Client 类型错误修复待复验
+
+维护者在 PR #99 Windows 分支执行 `vp check --fix`，发现 12 项 TypeScript 错误：本地 Prisma Client 仍为旧 Schema 生成物，缺少发布状态/事件 delegate；工程创建 DB 测试新增第五个 Promise 查询后遗漏第五个解构变量，导致 `releaseState` 未声明；发布事件目标版本关系还需补齐 Prisma 反向关系。
+
+PR #99 已最小修复：
+- `ScadaProjectVersion.releaseTargetEvents` 反向关系。
+- `project-api.db-spec.ts` 五项查询与五个解构变量对应。
+- 在 `docs/AI_MISTAKES.md` E-054 与 `docs/VALIDATION.md` 记录防复发及验收边界。
+
+**修复后尚未在 Windows 复验**。下一步必须先执行 `pnpm run db:validate`、`pnpm run db:generate`，再运行 `vp check`；随后进行隔离 PostgreSQL 首次/二次迁移、`test:db`、`test:unit`、文档检查及完整 `ready`。不把旧生成客户端造成的类型错误解释成数据库模型已经迁移成功。
