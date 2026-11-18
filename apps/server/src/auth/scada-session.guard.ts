@@ -25,6 +25,10 @@ interface ParsedAuthCookies {
   readonly csrfToken?: string;
 }
 
+interface ScadaAuthHttpResponse {
+  setHeader(name: string, value: string): void;
+}
+
 export interface ScadaAuthenticatedRequest {
   readonly headers: {
     readonly authorization?: string | string[];
@@ -104,7 +108,13 @@ export class ScadaSessionGuard implements CanActivate {
       );
     }
 
-    const request = context.switchToHttp().getRequest<ScadaAuthenticatedRequest>();
+    // Guard 可能在 Controller 的 @Header 执行前拒绝请求；错误响应同样禁止缓存。
+    const http = context.switchToHttp();
+    const response = http.getResponse<ScadaAuthHttpResponse>();
+    response.setHeader("Cache-Control", "no-store");
+    response.setHeader("Pragma", "no-cache");
+
+    const request = http.getRequest<ScadaAuthenticatedRequest>();
     const cookies = parseAuthCookies(request.headers.cookie);
     if (!cookies.valid) {
       this.reject("malformed_cookie", new UnauthorizedException("浏览器身份 Cookie 格式无效"));
