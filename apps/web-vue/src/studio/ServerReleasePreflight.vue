@@ -79,7 +79,7 @@ async function checkSavedVersion(): Promise<void> {
 </script>
 
 <template>
-  <section class="studio-version-panel" aria-label="服务端已保存版本发布预检">
+  <section aria-label="服务端已保存版本发布预检">
     <p class="studio-version-help">
       服务端预检仅检查已保存的当前修订，与上方当前画布静态预检不同；不会保存、发布或修改草稿。
     </p>
