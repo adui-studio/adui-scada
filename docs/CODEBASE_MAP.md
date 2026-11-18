@@ -936,3 +936,11 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `packages/api-client/src/index.ts`：`ScadaApiClient.preflightRelease`、`ScadaReleasePreflightReport` 和服务端响应白名单解析；只使用现有同源 GET、`Cache-Control: no-store`、OIDC/BFF Cookie，拒绝未知问题码与跨工程/修订号响应。
 - `packages/api-client/test/api-client.test.ts`：新增 8 项只读路径、输入限制、合法错误报告、禁缓存、响应结构、错误映射测试。
 - `packages/api-client/test/studio-session.test.ts`：增加与共享 Client 扩展保持类型一致的预检 Mock；既有 CAS 逻辑与断言保持不变。
+
+## 2026-11-18 · 第三十五批第八小批 Studio 双框架服务端预检
+
+- `packages/api-client/src/server-release-preflight.ts`：共享当前服务端版本头/快照 SHA-256/只读报告/最终水位的四步 GET 编排，遇到摘要不一致或版本推进拒绝成功。
+- `packages/api-client/test/server-release-preflight.test.ts`：新增 5 项当前版本、并发更新、摘要不一致、快照错版及 ACL 拒绝回归。
+- `apps/web-react/src/studio/ServerReleasePreflight.tsx` 与 `apps/web-vue/src/studio/ServerReleasePreflight.vue`：独立于本地静态兼容性预检的手动服务端已保存版本预检；对比当前画布与真实快照、显示中文安全告知、授权失败时回报父级。
+- `apps/web-react/src/studio/StudioPage.tsx` 与 `apps/web-vue/src/studio/StudioPage.vue`：接入上述双端组件，按工程/已知最新水位/授权上下文强制清理旧 UI 结果，不修改保存和 IndexedDB 流程。
+- `scripts/test-studio-browser.mjs`：现有 `--release-preflight` 浏览器流程检查双端手动服务端入口存在、未执行时不展示服务端成功，继续保留 JSON 导入/恢复静态结果检查。
