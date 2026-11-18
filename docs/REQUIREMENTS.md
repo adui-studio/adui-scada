@@ -487,3 +487,12 @@ React/Vue **两处载入入口**（当前工程历史版本“载入”、授权
 - 两条请求均必须由浏览器当前可信 HTTPS Origin 发起，使用 `credentials: same-origin`、`mode: same-origin`、`cache: no-store`、`redirect: error` 和 JSON Accept，绝不携带工程写入请求体、CSRF 明文或外站请求。
 - 只检查状态码，不读取返回正文或打印工程文档；严格检查专用工程 ID 格式与 Origin，一端返回 200/403/302/503、网络错误或缺失均不算成功。原身份注销 401、隐藏页预检、CAS/ACL 撤销、零 POST 及本地数据全量保护不变。
 - 该专项只覆盖当前本机隔离 OIDC HTTPS Lab 的同一 Profile/同一 BFF 会话，不推断跨 Profile 全局注销，也不修改正式 React/Vue、NestJS、Prisma、工程权限及工业设备写入。
+
+## 第三十四批第二十六小批 · 共享注销后四条工程只读 GET 路由全部拒绝（FR-002 / FR-013 / NFR-003 局部）
+
+已合并的第二十五小批通过真实 Keycloak/BFF 验证了工程列表 GET 和指定修订快照 GET 在注销后返回 401，但 NestJS `ProjectApiController` 实际还存在另外两条受保护的工程 GET 路由：`GET /api/v1/projects/:projectId`（工程详情，`project:read`）与 `GET /api/v1/projects/:projectId/versions`（历史版本列表，`version:read`），此前没有在注销后独立验证。
+
+- 同一个受控隔离 Profile 的 React/Vue 两个可信 HTTPS Origin，均须对 **四条实际存在的工程 GET 路由**逐一获取真实 HTTP 401：`GET /api/v1/projects?limit=10`、`GET /api/v1/projects/{本轮专用工程ID}`、`GET /api/v1/projects/{本轮专用工程ID}/versions?limit=10`、`GET /api/v1/projects/{本轮专用工程ID}/versions/3`。
+- 仅允许当前 Origin、既有严格 `b34-oidc-cas-<UUID>` 随机专用工程及 GET 方法；禁止读取响应正文、记录 Cookie/Token、向已注销的 BFF 重发工程写入，跨 Origin/非法工程 ID 必须零请求。
+- 任一接口返回 200、302、403、404、503、网络错误 0、缺失状态或结果数量错误，都不得当作全部授权已撤销。原有真实 CSRF 注销、四 Studio 标签页可见性恢复、旧 CAS 零工程写入、SVG/IndexedDB/自动保存保护继续严格保留。
+- 只扩展已有测试门禁与回归文档，不改变正式 Vue/React、共享 API Client、NestJS 认证策略、数据库或工业设备写入权限。本测试不代表跨独立浏览器 Profile 的注销广播或生产现场安全验收。
