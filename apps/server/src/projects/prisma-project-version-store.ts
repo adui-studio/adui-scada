@@ -375,6 +375,16 @@ export class PrismaProjectVersionStore {
         throw error;
       }
 
+      // 每个工程从创建时即拥有唯一未发布状态；首次发布前 generation 保持 0 且没有目标版本。
+      await tx.scadaProjectReleaseState.create({
+        data: {
+          tenantId: principal.tenantId,
+          projectId: document.projectId,
+          releaseGeneration: 0n,
+          updatedAt: new Date(createdAt),
+        },
+      });
+
       await tx.scadaProjectGrant.createMany({
         data: OWNER_PERMISSIONS.map((permission) => ({
           tenantId: principal.tenantId,
