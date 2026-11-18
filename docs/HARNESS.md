@@ -3129,3 +3129,29 @@ Write-Host "真实 Studio 发布预检按钮退出码：$LASTEXITCODE"
 登录仅在测试自动打开的隔离 Chrome/Edge 中人工完成，不得将密码、Token、Cookie、工程正文或数据库连接信息放进终端。脚本只使用真实“工程管理/打开/发布预检”UI 读取已有工程，在临时浏览器中添加**未保存**文本图元以检查版本差异；工程 API POST、DELETE 和跨 Origin 请求在页面初始化前被阻断，409/401/404 仅对当前测试工程的预检 GET 合成响应，绝不更新真实 ACL、CAS/版本、发布指针或现场设备。脚本比较预检前后 SVG、JSON SHA-256、草稿整体摘要、自动保存与 CAS；401/404 预期使远端访问基线失效但本地内容不丢失。真实 HTTP 400/409 和数据库摘要另由原 `test:release:preflight:oidc:browser` 覆盖，二者不可混记。
 
 真实 UI 专项属于**单独交互命令**，不能自动加入 `ready` 或通过伪造 Keycloak 登录、关闭 TLS、扩展 ACL、临时创建工程来满足测试。新分支 Windows 验收和真实浏览器结果均待维护者执行；本测试通过也不等于 FR-008 正式发布安全验收。
+
+## 第三十五批第十小批 · 编辑期间迟到 401 访问拒绝双框架验收
+
+此批以最小生产修改将 React/Vue 预检的 401/403/404 **会话级拒绝通知**与“请求文档是否仍为当前画布”的局部 UI 检查拆开。真实 OIDC 浏览器专项在模拟的 401 GET 返回前通过正式 UI 编辑文档，再放行旧拒绝；要求远端 CAS 失效、原报告不恢复、画布/IndexedDB/自动保存不因预检修改。只有隔离浏览器的指定 GET 响应被挂起，工程 API 非 GET 永远阻断。不得为测试增加工程 ACL、创建工程或降低 TLS 校验。
+
+Windows 在该功能分支记录 `git rev-parse HEAD` 后执行：
+
+```powershell
+pnpm run test:release:preflight:oidc:studio:config
+Write-Host "迟到拒绝离线专项退出码：$LASTEXITCODE"
+vp check
+Write-Host "Vite+ 退出码：$LASTEXITCODE"
+pnpm run docs:check
+Write-Host "文档检查退出码：$LASTEXITCODE"
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+```
+
+随后在可信本机 Keycloak、BFF、React/Vue HTTPS 两个 Origin 已启动、测试账号有已授权保存工程的前提下，**单独**执行：
+
+```powershell
+pnpm run test:release:preflight:oidc:studio:browser
+Write-Host "真实迟到拒绝双框架退出码：$LASTEXITCODE"
+```
+
+本批 Windows 目标为新离线 **13/13**、Vitest **615/615**、HTTP E2E **55/55** 和完整 `ready=0`，均**待维护者实际执行**，不得将先前 PR #93 的成功外推到新 HEAD。真实浏览器中不手工添加真实工程权限、不输入终端密码、不关闭证书验证；仅允许访问现有授权工程并在隔离页面产生未保存编辑。
