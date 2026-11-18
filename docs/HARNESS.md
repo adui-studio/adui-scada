@@ -2989,3 +2989,28 @@ Write-Host "双框架发布预检浏览器退出码：$LASTEXITCODE"
 ```
 
 测试应在隔离 Chrome/Edge Profile 的两套 Web Studio 中，分别核验「发布预检」菜单、通过/失败提示、精确问题路径及恢复后不留旧提示；模拟不兼容 JSON 只导入浏览器当前编辑会话，不保存草稿或服务端版本、不开启 Keycloak、不创建数据库和工业设备写入。测试工具的浏览器 Profile 在退出后会清理。通过后仍不能宣布正式工程发布已实现。浏览器专项**不包含**在 `ready` 中，必须提供独立退出码。
+
+## 第三十五批第三小批 · 本机 HTTPS Studio 浏览器测试探测
+
+`test:browser`、`test:release:preflight:browser` 和同脚本的其他本机 Studio 专项统一使用 `scripts/studio-browser-targets.mjs` 解析 React/Vue 地址。根 `.env` 的 `SCADA_OIDC_DEV_HTTPS_ENABLED=true` 时，两端默认为 `https://127.0.0.1:15173/`、`https://127.0.0.1:15174/`，不再误用 HTTP；未启用时仍使用 HTTP。只允许回环首页，不能以 `SCADA_REACT_URL` / `SCADA_VUE_URL` 将 HTTPS 模式降级为 HTTP 或指向远端。
+
+HTTPS 预检只发匿名 GET，严格校验服务器证书，不转发 Cookie；可通过 `NODE_EXTRA_CA_CERTS` 提供受信任的本机 CA（脚本在读取 `.env` 后为探测请求显式加载），或由 Node 进程使用系统 CA。Chrome/Edge 独立临时 Profile 也须信任相同 CA；不使用 `NODE_TLS_REJECT_UNAUTHORIZED=0`、`--ignore-certificate-errors` 或关闭 OIDC 校验来规避错误。若证书未被信任，应修复本机 CA/证书 SAN，**不得**直接忽略失败。
+
+建议在 Windows 当前 PR HEAD 下先执行：
+
+```powershell
+git rev-parse HEAD
+pnpm run test:studio:browser:config
+Write-Host "浏览器目标安全测试退出码：$LASTEXITCODE"
+```
+
+React/Vue 已以相同回环协议启动后，再执行：
+
+```powershell
+pnpm run test:browser
+Write-Host "双框架布局退出码：$LASTEXITCODE"
+pnpm run test:release:preflight:browser
+Write-Host "发布预检浏览器退出码：$LASTEXITCODE"
+```
+
+本机配置离线测试虽已加入 `ready`，以上真实浏览器专项仍需单独执行，不访问工业设备、不执行正式工程发布或数据库写入。

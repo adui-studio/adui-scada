@@ -1854,7 +1854,8 @@ export default function StudioPage() {
             <summary>发布预检</summary>
             <div className="studio-version-panel" aria-label="工程发布前静态兼容性预检">
               <p className="studio-version-help">
-                当前工程：{state.document.projectId} · 仅检查 SVG 静态兼容性，不保存、不发布，也不改动草稿。
+                当前工程：{state.document.projectId} · 仅检查 SVG
+                静态兼容性，不保存、不发布，也不改动草稿。
               </p>
               {releasePreflight.passed ? (
                 <p className="studio-version-help" role="status">

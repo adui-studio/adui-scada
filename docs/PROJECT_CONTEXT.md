@@ -1514,3 +1514,15 @@ PR #75 的同源双标签 CAS 质量和真实浏览器专项经 Windows 19/19、
 本批将已有 `validateProjectReleasePreflight` 接入 React/Vue 双框架 Studio 工具栏的「发布预检」只读面板。两端均根据当前文档派生结果：兼容时明确只为静态 SVG 预检通过，不兼容时展示数量、字段路径和中文原因；不创建版本、不触碰草稿与 CAS。另新增临时 Chrome/Edge 双框架独立专项 `test:release:preflight:browser`，通过合法/不支持/恢复三个实际 JSON 导入阶段验证结果更新与工程无损。
 
 新 UI 与浏览器测试尚未在 Windows 完成 `vp check`、全量 `ready`、`test:browser` 和 `test:release:preflight:browser`；不得将第一小批的 Core 单测通过视为本批双框架 UI 验收。PR 默认 Draft、必须指派并核验 GitHub `@adui-dev`，无新明确合并授权不合并。正式发布授权/持久化、运行时发布态、回滚及工业安全仍未交付。
+
+## 2026-11-18 · 第三十五批第三小批：SVG 属性静态兼容性候选
+
+PR #86 依据维护者明确授权 Squash 合并至 `main@a934a33ba2251880f934ff4f5e9937ff78711f5c`。维护者上传日志证明单元测试 593/593、HTTP E2E 51/51、`vp check` 341/196 零告警、完整 `ready` 退出码 0；**未提供**单独 Git HEAD、`test:browser` 和 `test:release:preflight:browser` 退出码。该浏览器验收缺口保持待补，不得记作已通过。
+
+第三小批继续 FR-008 静态门禁：Core 增加已知 SVG 图元 `props` 消费检查，对未被渲染器处理的属性报告路径与受控错误，不改变现有工程文件或工业设备。新增三项单测，候选全量 Vitest 目标为 596/596。候选的 `vp check`、`docs:check`、`ready` 和浏览器专项均待执行；新 PR 保持 Draft，需先验收并取得独立合并授权。
+
+## 2026-11-18 · PR #87 HTTPS Studio 浏览器专项探测修复候选
+
+维护者 Windows 新上传日志：本批 Core 属性兼容性预检的 Vitest **596/596**、HTTP E2E **51/51**、`vp check` **341/196 零告警**、文档 **86 份**、完整 `ready` **退出码 0**。但真实 Vite Web 为 HTTPS 15173/15174，旧 `test-studio-browser.mjs` 默认探测 HTTP，导致布局与发布预检浏览器专项均在 React 首页阶段 **退出码 1**，其余 UI 断言未运行。
+
+当前 Draft PR #87 追加不降级协议的双 Web 回环地址解析、Node 可信 TLS GET 预检、6 项配置/安全离线测试，并将配置专项纳入 `ready`。协作容器已以 GitHub 原文件 Blob 校验执行 Node 离线 6/6，并以临时 HTTPS 服务验证证书拒绝/显式信任路径；Windows 新 HEAD 的 `vp check`、`ready`、真实 React/Vue Chrome/Edge 布局与发布预检专项尚待维护者复测。PR 保持 Open / Draft，未获本次单独合并授权，不合并。

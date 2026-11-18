@@ -1829,7 +1829,8 @@ async function importJson(event: Event) {
           <summary>发布预检</summary>
           <div class="studio-version-panel" aria-label="工程发布前静态兼容性预检">
             <p class="studio-version-help">
-              当前工程：{{ state.document.projectId }} · 仅检查 SVG 静态兼容性，不保存、不发布，也不改动草稿。
+              当前工程：{{ state.document.projectId }} · 仅检查 SVG
+              静态兼容性，不保存、不发布，也不改动草稿。
             </p>
             <p v-if="releasePreflight.passed" class="studio-version-help" role="status">
               静态兼容性检查通过；仍须完成服务端授权、数据源和正式发布事务校验。

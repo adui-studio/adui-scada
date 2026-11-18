@@ -12,6 +12,14 @@ const SVG_RUNTIME_BINDINGS: ReadonlyMap<string, readonly string[]> = new Map([
   ["label", ["value"]],
 ]);
 
+/** 仅接受 SVG 渲染器真正消费的属性及 Studio 编辑状态。 */
+const SVG_RUNTIME_PROPS: ReadonlyMap<string, readonly string[]> = new Map([
+  ["tank", ["__scadaStudio"]],
+  ["pump", ["__scadaStudio"]],
+  ["pipe", ["__scadaStudio"]],
+  ["label", ["__scadaStudio", "text", "unit"]],
+]);
+
 export type ProjectReleasePreflightIssue =
   | ProjectValidationIssue
   | {
@@ -19,6 +27,7 @@ export type ProjectReleasePreflightIssue =
         | "UNSUPPORTED_SYMBOL"
         | "UNSUPPORTED_SYMBOL_VERSION"
         | "UNSUPPORTED_BINDING_SLOT"
+        | "UNSUPPORTED_SYMBOL_PROP"
         | "UNRESOLVED_BOUND_TAG"
         | "UNSUPPORTED_RULES";
       readonly severity: "error";
@@ -60,6 +69,20 @@ export function validateProjectReleasePreflight(input: unknown): ProjectReleaseP
           path: `${path}.symbolVersion`,
           message: "当前 SVG 运行时不支持此图元版本",
         });
+      }
+
+      const allowedProps = SVG_RUNTIME_PROPS.get(node.type);
+      if (allowedProps !== undefined) {
+        for (const prop of Object.keys(node.props)) {
+          if (!allowedProps.includes(prop)) {
+            issues.push({
+              code: "UNSUPPORTED_SYMBOL_PROP",
+              severity: "error",
+              path: `${path}.props.${prop}`,
+              message: "当前 SVG 运行时不处理此图元属性",
+            });
+          }
+        }
       }
 
       if (node.rules.length > 0) {

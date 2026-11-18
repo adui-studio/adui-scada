@@ -6,25 +6,15 @@ import { join } from "node:path";
 import { loadEnvFile } from "node:process";
 import { setTimeout as pause } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+import {
+  resolveStudioBrowserTargets,
+  verifyStudioBrowserTarget,
+} from "./studio-browser-targets.mjs";
 
 // 浏览器验证统一读取仓库根目录 .env，避免连接其他端口上的旧工程服务。
 const envPath = fileURLToPath(new URL("../.env", import.meta.url));
 if (existsSync(envPath)) loadEnvFile(envPath);
-const host = process.env.SCADA_WEB_HOST || "127.0.0.1";
-const targets = [
-  {
-    name: "React",
-    url:
-      process.env.SCADA_REACT_URL ||
-      "http://" + host + ":" + (process.env.SCADA_REACT_DEV_PORT || "15173") + "/",
-  },
-  {
-    name: "Vue",
-    url:
-      process.env.SCADA_VUE_URL ||
-      "http://" + host + ":" + (process.env.SCADA_VUE_DEV_PORT || "15174") + "/",
-  },
-];
+const targets = resolveStudioBrowserTargets(process.env);
 const viewports = [
   { width: 1440, height: 900 },
   { width: 1024, height: 768 },
@@ -479,12 +469,10 @@ function readStudioReleasePreflightInPage() {
   const panel = menu.querySelector('[aria-label="工程发布前静态兼容性预检"]');
   if (!panel) throw new Error("未找到静态预检面板");
   const status = panel.querySelector('[role="status"]')?.textContent.trim() ?? "";
-  const issues = [...panel.querySelectorAll('ol[aria-label="发布预检问题"] > li')].map(
-    (item) => ({
-      path: item.querySelector("code")?.textContent.trim() ?? "",
-      message: item.querySelector("p")?.textContent.trim() ?? "",
-    }),
-  );
+  const issues = [...panel.querySelectorAll('ol[aria-label="发布预检问题"] > li')].map((item) => ({
+    path: item.querySelector("code")?.textContent.trim() ?? "",
+    message: item.querySelector("p")?.textContent.trim() ?? "",
+  }));
   menu.open = false;
   return {
     passed: status.includes("静态兼容性检查通过"),
@@ -1621,12 +1609,7 @@ async function main() {
   const browserPath = browserExecutable();
   assert.ok(browserPath, "未找到 Chrome/Edge，可设置 SCADA_BROWSER_PATH 指定浏览器路径");
   for (const target of targets) {
-    try {
-      const response = await fetch(target.url, { signal: AbortSignal.timeout(3000) });
-      assert.ok(response.ok, "应用页面无法访问");
-    } catch (error) {
-      throw new Error(target.name + " 开发服务未启动：" + target.url, { cause: error });
-    }
+    await verifyStudioBrowserTarget(target);
   }
 
   const userData = mkdtempSync(join(tmpdir(), "adui-scada-browser-check-"));
