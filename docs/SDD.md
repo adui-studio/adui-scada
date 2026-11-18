@@ -1054,3 +1054,9 @@ React `StudioPage.tsx` 用 `useMemo(() => validateProjectReleasePreflight(state.
 在现有 `studio-version-menu` 折叠菜单中新增「发布预检」，复用共享 `studio-version-panel` / `studio-version-list` 样式和无障碍状态文案。通过显示明确的**只读静态兼容性**结论；失败枚举全部 `issues`，分别显示 `path` 与中文 `message`，不输出/执行任意文档规则内容，不利用文档值构建 HTML。DOM 文本由 React/Vue 自动转义；不发出任何网络请求。
 
 新增 `scripts/test-studio-browser.mjs --release-preflight` 和根脚本 `test:release:preflight:browser`。测试基于现有临时 Chromium Profile、React/Vue HTTP 开发端口，浏览器里只调用正式 Studio JSON 导入/导出按钮，使用 Schema 合法却含未来图元类型、未实现规则及历史 `unknown` 已绑定 Tag 的隔离内存数据模拟失败，再恢复原 JSON 并检查没有过期问题。专项不能被当作正式发布接口或数据库/工业现场验收。
+
+## 2026-11-18 · 第三十五批第三小批：SVG 图元属性消费边界
+
+共享 Core 的静态预检新增 `UNSUPPORTED_SYMBOL_PROP`，只对已支持的 `tank` / `pump` / `pipe` / `label` 按现有 `renderSvgPage` 消费范围检查 `props`。水箱、水泵、管道仅允许 Studio 的 `__scadaStudio` 编辑状态；文本图元另外允许 `text` 与 `unit`。不受支持的属性即使符合 Schema 的 JSON 安全约束，也不得被静态预检误判为 SVG 运行时已经处理，逐项返回 `pages[i].nodes[j].props.属性名` 及中文原因。未知图元仍以 `UNSUPPORTED_SYMBOL` 拒绝，不为未知类型猜测属性契约。
+
+此规则不改 `parseScadaDocument`、编辑器、渲染器、Schema、工程快照及版本写入；未来 SVG 图元真正支持新属性时，必须同步更新预检消费映射与测试。当前静态预检通过仍不代表可正式发布、具备工业数据源或运行时安全保障。本批新增三个 Core 单测；Windows 质量链与双框架浏览器专项待实测。
