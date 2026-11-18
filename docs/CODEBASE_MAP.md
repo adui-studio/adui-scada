@@ -955,3 +955,7 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/web-react/src/studio/ServerReleasePreflight.tsx`、`apps/web-vue/src/studio/ServerReleasePreflight.vue`：预检失败的会话级授权拒绝与当前文档局部错误显示解耦，防止编辑期间延迟 401/403/404 丢失父级 CAS 失效信号。
 - `scripts/test-oidc-studio-release-preflight.mjs`：原真实双 HTTPS Origin 浏览器专项新增指定当前版本的单次延迟 401，编辑画布后释放，严格比对 CAS 失效、本地 SVG/JSON/草稿不变。
 - `scripts/test-oidc-studio-release-preflight.cases.mjs`：新增第 13 项 Node 离线门禁，覆盖单次延迟 401、拒绝提前释放或重臂、零网络写入。
+
+## 2026-11-18 · 第三十五批第十一小批正式发布方案
+
+- `docs/adr/0069-release-pointer-atomic-publication-design.md`：**Proposed** 的发布指针/代次、发布事件、独立 ACL、事务锁序、回滚目标、Runtime 只读加载及分阶段验收边界。尚无对应生产源码/数据库变更；不能将 ADR 视为已实现功能。
