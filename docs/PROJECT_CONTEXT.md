@@ -1526,3 +1526,9 @@ PR #86 依据维护者明确授权 Squash 合并至 `main@a934a33ba2251880f934ff
 维护者 Windows 新上传日志：本批 Core 属性兼容性预检的 Vitest **596/596**、HTTP E2E **51/51**、`vp check` **341/196 零告警**、文档 **86 份**、完整 `ready` **退出码 0**。但真实 Vite Web 为 HTTPS 15173/15174，旧 `test-studio-browser.mjs` 默认探测 HTTP，导致布局与发布预检浏览器专项均在 React 首页阶段 **退出码 1**，其余 UI 断言未运行。
 
 当前 Draft PR #87 追加不降级协议的双 Web 回环地址解析、Node 可信 TLS GET 预检、6 项配置/安全离线测试，并将配置专项纳入 `ready`。协作容器已以 GitHub 原文件 Blob 校验执行 Node 离线 6/6，并以临时 HTTPS 服务验证证书拒绝/显式信任路径；Windows 新 HEAD 的 `vp check`、`ready`、真实 React/Vue Chrome/Edge 布局与发布预检专项尚待维护者复测。PR 保持 Open / Draft，未获本次单独合并授权，不合并。
+
+## 2026-11-18 · PR #87 授权合并与第三十五批第四小批服务端只读预检
+
+维护者 Windows 已真实完成 PR #87：React/Vue 两种分辨率共四组浏览器布局 **19/19**，双框架发布预检专项退出码 **0**；Vitest **596/596**，HTTP E2E **51/51**，`vp check` **343/198** 零告警，文档 **86 份**，完整 `pnpm run ready` **退出码 0**。日志未附本机 Git HEAD；GitHub PR #87 合并前 HEAD 为 `c16595774798e213f2da4bfea4cfd718677cf3be`，维护者本次明确授权后 Squash 合并到 `main@602540baa570dfca21bd56f71ec634bb0263312d`。
+
+第四小批从该 main 建立 `feat/v0.3-b35-server-release-preflight-readonly`：NestJS 工程 API 新增受 OIDC 会话及 `version:read` ACL 保护的 GET 当前版本预检，Prisma 在单个工程共享锁事务里检查 head、完整历史快照，再复用 Core SVG 只读报告。新增 6 项仓储单测与 4 项 HTTP E2E；全量 Vitest 目标 **602/602**、NestJS HTTP E2E 目标 **55/55**，都只是候选目标，**Windows 尚未实测**。不实现正式发布指针、写入、回滚、ACL 变更或工业设备操作；新 PR 继续 Draft 并指派 `@adui-dev`。
