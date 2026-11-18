@@ -213,10 +213,7 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
       assert.equal(requireLogoutProjectDenied(statuses), true);
       assert.deepEqual(
         requests.map((request) => request.path),
-        [
-          "/api/v1/projects?limit=10",
-          "/api/v1/projects/" + projectId + "/versions/3",
-        ],
+        ["/api/v1/projects?limit=10", "/api/v1/projects/" + projectId + "/versions/3"],
       );
       for (const request of requests) {
         assert.equal(request.options.method, "GET");
@@ -257,18 +254,14 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
     }
     const projectId = "b34-oidc-cas-12345678-1234-1234-1234-123456789abc";
     let hits = 0;
-    const statuses = await readLogoutProjectStatusesInPage(
-      "https://127.0.0.1:15173",
-      projectId,
-      {
-        location: { origin: "https://127.0.0.1:15173" },
-        fetch: async () => {
-          hits += 1;
-          if (hits === 1) throw new Error("网络或 TLS 连接失败");
-          return { status: 401 };
-        },
+    const statuses = await readLogoutProjectStatusesInPage("https://127.0.0.1:15173", projectId, {
+      location: { origin: "https://127.0.0.1:15173" },
+      fetch: async () => {
+        hits += 1;
+        if (hits === 1) throw new Error("网络或 TLS 连接失败");
+        return { status: 401 };
       },
-    );
+    });
     assert.deepEqual(statuses, [0, 401]);
     assert.throws(() => requireLogoutProjectDenied(statuses), /注销后工程读取未返回 HTTP 401/);
   });

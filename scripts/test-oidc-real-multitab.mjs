@@ -190,9 +190,7 @@ export function requireLogoutHttp401(status) {
 export async function readLogoutProjectStatusesInPage(origin, projectId, runtime = globalThis) {
   if (
     runtime.location.origin !== origin ||
-    !/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
-      projectId,
-    )
+    !/^b34-oidc-cas-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId)
   ) {
     return null;
   }
