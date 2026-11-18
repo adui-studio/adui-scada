@@ -1848,3 +1848,9 @@ PR #90 功能分支已最小增加 `assert.ok(old?.body && !Array.isArray(old.bo
 PR #90 已依据维护者明确授权 Squash 合并至 `main@1e891193f0a4fb9191b1f24bdf369713c7e54aeb`，合并前 GitHub HEAD `72437a996c163fec05f55560f68f782eea8da488`，Assignee `@adui-dev`。Windows 原始日志中 `pnpm run test:release:preflight:oidc:config` **11/11**、`vp check` **345 格式文件/200 受检零告警**、`docs:check` **86 份**、完整 `ready` **退出码 0**（Vitest **602/602**、HTTP E2E **55/55**、三端构建成功）；另由维护者两次实际执行真实 Keycloak React/Vue 双 Origin 发布预检浏览器专项，结果均通过、退出码均 **0**。日志没有独立本地 Git HEAD，不得将 Windows 结果宣称为严格 SHA 级绑定。
 
 第七小批仅修改 `@adui/scada-api-client` 和对应测试/文档：添加只读 `preflightRelease(projectId, revision)` 与响应字段、摘要、问题码、no-store 的白名单验证；单测新增 **8** 项，已有 Studio 会话测试 Mock 补齐新方法。服务端 NestJS GET 与 React/Vue UI 不改，正式发布/回滚/工业设备写入不开放。新分支在协作环境中完成源码与现有契约静态核对，**未实际执行 Windows `vp check`、`test:unit`、`test:e2e:server`、`docs:check`、完整 `ready` 或双框架真实浏览器专项**。下一轮目标：Vitest **610/610**、HTTP E2E **55/55**、Vite+ 零警告、文档检查及完整 `ready` 退出码 0，目标不是已取得的结果。测试应先核对 `git rev-parse HEAD` 与工作区状态，不覆盖维护者本地改动。
+
+## 2026-11-18 · PR #91 授权合并与第三十五批第八小批待验收
+
+PR #91 Windows 原始测试证据：`pnpm run test:unit` **50/50 文件 610/610 项，退出码 0**；`test:e2e:server` **6/6 文件 55/55 项，退出码 0**；`vp check` **345 格式文件 / 200 受检零告警，退出码 0**；`docs:check` **86 份，退出码 0**；`pnpm run ready` **退出码 0**，React/Vue/NestJS 编译与构建成功。HTTP E2E 中 Health 503 是显式模拟就绪失败的负向用例，不代表 E2E 整体失败。测试日志没有独立本地 Git HEAD，因此不严格绑定到单笔 SHA。PR #91 GitHub 合并前 HEAD `ea4c6f93cf16edabb070e81fb0c9fc23c455c3f0`，获得维护者明确授权后 Squash 合并至 `main@1e4626bf7e8a2f08e5c4bc52c8907f3bc2149b28`。
+
+第八小批只读共享水位编排新增 5 项 Vitest，React/Vue 同步增加手动点击后对照已保存快照的服务端预检组件及 ACL 失败通知，并调整既有静态发布预检浏览器专项的手动按钮/默认未查询断言。保持工程 Schema、Studio 保存/载入、草稿和 CAS 状态逻辑不变。**当前新 HEAD 未执行 Windows `test:unit`、`vp check`、`docs:check`、`ready`、`test:release:preflight:browser` 或真实 Keycloak UI 点击验收**。预期 Vitest **615/615**、HTTP E2E **55/55**、完整 `ready=0`，仅属待实测目标。真实浏览器专项需在 React/Vue 开发服务已启动的环境执行；如 HTTPS 代理已启用，沿用现有可信 TLS Lab 设置，不可降级证书验证。
