@@ -197,7 +197,7 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
     );
   });
 
-  void it("注销后只向同源的随机专用工程发起两个只读请求", async () => {
+  void it("注销后仅向同源随机专用工程发起四条受保护只读 GET", async () => {
     const projectId = "b34-oidc-cas-12345678-1234-1234-1234-123456789abc";
     for (const origin of ["https://127.0.0.1:15173", "https://127.0.0.1:15174"]) {
       const requests = [];
@@ -209,11 +209,16 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
         },
       };
       const statuses = await readLogoutProjectStatusesInPage(origin, projectId, runtime);
-      assert.deepEqual(statuses, [401, 401]);
+      assert.deepEqual(statuses, [401, 401, 401, 401]);
       assert.equal(requireLogoutProjectDenied(statuses), true);
       assert.deepEqual(
         requests.map((request) => request.path),
-        ["/api/v1/projects?limit=10", "/api/v1/projects/" + projectId + "/versions/3"],
+        [
+          "/api/v1/projects?limit=10",
+          "/api/v1/projects/" + projectId,
+          "/api/v1/projects/" + projectId + "/versions?limit=10",
+          "/api/v1/projects/" + projectId + "/versions/3",
+        ],
       );
       for (const request of requests) {
         assert.equal(request.options.method, "GET");
@@ -241,14 +246,18 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
       [],
       [401],
       [401, 401, 401],
-      [200, 401],
-      [401, 200],
-      [403, 401],
-      [401, 403],
-      [0, 401],
-      [401, 0],
-      [503, 401],
-      [401, 302],
+      [401, 401, 401, 401, 401],
+      [200, 401, 401, 401],
+      [401, 200, 401, 401],
+      [401, 401, 200, 401],
+      [401, 401, 401, 200],
+      [403, 401, 401, 401],
+      [401, 401, 401, 403],
+      [0, 401, 401, 401],
+      [401, 401, 0, 401],
+      [503, 401, 401, 401],
+      [401, 401, 401, 302],
+      new Array(4),
     ]) {
       assert.throws(() => requireLogoutProjectDenied(statuses), /注销后工程读取未返回 HTTP 401/);
     }
@@ -262,8 +271,38 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
         return { status: 401 };
       },
     });
-    assert.deepEqual(statuses, [0, 401]);
+    assert.deepEqual(statuses, [0, 401, 401, 401]);
     assert.throws(() => requireLogoutProjectDenied(statuses), /注销后工程读取未返回 HTTP 401/);
+  });
+
+  void it("四条工程只读路由任一路径未返回 401 均拒绝，且不读取响应正文", async () => {
+    const projectId = "b34-oidc-cas-12345678-1234-1234-1234-123456789abc";
+    const origin = "https://127.0.0.1:15173";
+    for (let rejectedPath = 0; rejectedPath < 4; rejectedPath += 1) {
+      let requests = 0;
+      const statuses = await readLogoutProjectStatusesInPage(origin, projectId, {
+        location: { origin },
+        fetch: async () => {
+          const index = requests;
+          requests += 1;
+          return {
+            status: index === rejectedPath ? 200 : 401,
+            json: () => {
+              throw new Error("只读探针不得读取工程正文");
+            },
+            text: () => {
+              throw new Error("只读探针不得读取工程正文");
+            },
+          };
+        },
+      });
+      assert.equal(requests, 4);
+      assert.equal(statuses[rejectedPath], 200);
+      assert.throws(
+        () => requireLogoutProjectDenied(statuses),
+        /注销后工程读取未返回 HTTP 401/,
+      );
+    }
   });
 
   void it("注销后尚未可见的标签页必须保留 CAS、水位及零工程写入", () => {
