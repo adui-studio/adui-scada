@@ -24,28 +24,39 @@
 - **回滚**：将指针切换至本工程**曾成功正式发布**过、仍可验证的不可变快照；不修改 `headRevision`，不删除版本、撤销草稿或改写旧审计。
 - **不变量**：任何鉴权、版本、快照、兼容性、设备只读策略或审计失败，当前发布指针与代次**完全不变**，不得出现只有指针没有事件或只有事件没有指针的已提交状态。
 
-## 3. 批准的持久化方向（尚未实现）
+## 3. 批准的持久化方向（B 阶段 Schema 已定稿）
 
-批准独立于编辑主表采用两种关系的持久化方向；具体 Prisma 模型字段类型、索引、外键和迁移实现仍须在 B 阶段独立数据建模评审，**不得直接据此手工生成或应用迁移**。
+批准独立于编辑主表采用两种关系的持久化方向。B 阶段已按下述字段、约束、复合外键和索引落地 Prisma Schema 与增量迁移；发布事务本身仍未实现。
 
-### 3.1 `ScadaProjectReleaseState`（每工程最多一条）
+### 3.1 `ScadaProjectReleaseState`（每工程恰好一条）
 
-| 候选字段                | 约束或含义                                                               |
-| ----------------------- | ------------------------------------------------------------------------ |
-| `tenantId`、`projectId` | 复合主键；外键指向现有 `ScadaProject`，租户隔离                          |
-| `releasedRevision`      | 正安全整数、可空；空表示未发布，引用不可变版本                           |
-| `releasedContentHash`   | 可空、与 `releasedRevision` 同时为空或同时存在；来自服务端实际已验证快照 |
-| `releaseGeneration`     | 初始 0；仅成功发布或回滚时 +1，必须防溢出                                |
-| `lastReleaseEventId`    | 可空；指向与当前指针状态对应的已提交发布事件                             |
-| `updatedAt`             | 数据库时间；仅诊断展示，不参与版本 CAS                                   |
+| 字段 | 约束或含义 |
+| --- | --- |
+| `tenantId`、`projectId` | 复合主键；外键指向现有 `ScadaProject`，租户隔离 |
+| `releasedRevision` | 正 BigInt、可空；空表示未发布，并通过复合外键引用不可变版本 |
+| `releasedContentHash` | 可空；与 `releasedRevision` 同时为空或同时存在，必须为小写 SHA-256 |
+| `releaseGeneration` | BigInt，初始 0；仅未来成功发布或回滚时 +1 |
+| `lastReleaseEventId` | 可空 UUID；通过唯一约束和外键指向当前最后成功发布事件 |
+| `updatedAt` | PostgreSQL 时间戳；仅诊断展示，不参与版本 CAS |
 
-`ScadaProject.headRevision` 与 `releaseGeneration` **是两个独立并发水位**。运行时读取只能由发布指针选择快照，不允许从 head 推断或使用任意列表尾项。
+B 阶段对既有工程补齐 generation=0 的状态行；新工程创建事务同步建立状态行。`ScadaProject.headRevision` 与 `releaseGeneration` 保持两个独立并发水位。
 
 ### 3.2 `ScadaProjectReleaseEvent`（仅追加）
 
-记录 `eventId`、`tenantId/projectId`、`generation`、`action`（候选 `PUBLISH` / `ROLLBACK`）、`fromRevision/fromContentHash`、`toRevision/toContentHash`、可信 `actorId`、服务端 `createdAt`、受控幂等标识及请求语义摘要。应以数据库约束保证同一工程同一代次最多一条，且外键指向**已存在、不可变**的工程历史版本；不能以 JSON 自由文本或客户端提交的 `actorId` 当作审计事实。幂等键不得包含 Token、Cookie、工程正文或设备地址。
+| 字段 | 约束或含义 |
+| --- | --- |
+| `eventId` | UUID 主键 |
+| `tenantId`、`projectId` | 复合工程范围，外键指向 `ScadaProject` |
+| `generation` | BigInt，从 1 开始；同一工程唯一 |
+| `action` | 仅允许 `PUBLISH` / `ROLLBACK` |
+| `fromRevision/fromContentHash` | 当前发布目标；首次发布为空，必须成对存在 |
+| `toRevision/toContentHash` | 新发布目标；必须指向不可变历史版本并通过 SHA-256 格式约束 |
+| `actorId` | 可信会话主体；不从请求体读取 |
+| `idempotencyKey` | 1～128 字符；按租户/工程/主体/动作唯一 |
+| `requestSemanticHash` | 服务端计算的小写 SHA-256 语义摘要 |
+| `createdAt` | 成功事务提交时间 |
 
-业务版本的旧 `ScadaProjectAudit` **不应重命名或复用为发布事件**，以免保存版本被误统计为生产发布。失败请求只输出经过脱敏的固定安全诊断；是否引入持久失败审计、保留期及合规策略，留待专项审查。
+数据库约束保证同一工程同一代次最多一条，幂等键按批准范围唯一，发布事件目标通过复合外键指向**已存在、不可变**的工程历史版本；不能以 JSON 自由文本或客户端提交的 `actorId` 当作审计事实。幂等键不得包含 Token、Cookie、工程正文或设备地址。
 
 ## 4. 批准的身份、授权和 HTTP 契约方向（均未开放）
 
