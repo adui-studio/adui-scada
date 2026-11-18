@@ -397,3 +397,9 @@ DatabaseModule 是 PrismaService 唯一 Nest 提供方；身份模块和工程�
 Docker 只维护 `deploy/docker/compose.yaml` 的 `adui-scada` 项目。七个独立服务包含 React/Vue HTTP Demo、NestJS、模拟器、唯一 PostgreSQL 17、Redis、Keycloak。PostgreSQL 业务库 `adui_scada` 与 Keycloak 专用逻辑库 `adui_scada_keycloak` 共享实例。新项目使用 `adui-scada_postgres-data`、`adui-scada_redis-data` 自管理持久卷，不挂载任何历史 OIDC Lab 数据卷；以前的 Keycloak 用户与 SCADA 身份绑定不再自动存在。
 
 `docker:up` 本机生成随机秘密和证书、启动七容器并执行现有 Prisma `migrate deploy`，不会自动开放未认证工程写入。旧数据卷迁移入口已经删除。WebStorm 的 React/Vue OIDC HTTPS 联调仍须在新数据库上另行重新验收。参见 [ADR-0066](adr/0066-single-local-compose-project.md)。
+
+## 2026-11-18 · 正式发布/回滚的独立事务边界（ADR-0069，Proposed）
+
+现有工程历史与 `ScadaProject.headRevision` 属于编辑态，双框架发布预检和受保护服务端 GET 只返回即时静态兼容性，不产生发布状态。候选 [ADR-0069](adr/0069-release-pointer-atomic-publication-design.md) 建议将未来运行时使用的**已发布指针**和**单调发布代次**独立于编辑 head 存储，通过可信 OIDC、独立发布/回滚权限、锁内完整性复核和同事务只追加审计事件确保原子切换。运行时未来必须从发布指针读取不可变快照，不能自动读取编辑 head，也不能把未发布或过期数据视为正常运行。
+
+**此决策尚未 Accepted，当前没有相关 Prisma 模型、迁移、HTTP 路由、发布 UI 或工业设备写入。** 仅是后续安全评审基线，FR-008 仍处于规划中。
