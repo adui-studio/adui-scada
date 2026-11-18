@@ -3308,10 +3308,10 @@ PR #99 已将迁移开头改为在同一事务内：
 
 如果 `migrate deploy` 日志显示目标为 `adui_scada`，并且迁移状态为 P3018/P3009：
 
-- 立即停止对该数据库再次执行 `migrate deploy`、`migrate resolve` 或任何 DROP/DELETE/手工清理。
+- 在迁移状态、部分 DDL 未核实前，停止再次执行 `migrate deploy`、`migrate resolve` 或任何 DROP/DELETE/手工清理。
 - 不要假设 Prisma 自动回滚了迁移中此前成功的语句。
-- 先使用只读查询核对当前数据库、`_prisma_migrations` 失败记录、`scada_project_grants_permission_check` 是否存在，以及两张发布表是否存在。
-- 将只读结果交由维护者确认后，再制定该数据库的恢复步骤。不要把开发库的失败状态带入隔离测试库验收。
+- **本次 PR #99 的只读结果已于 2026-11-18 由维护者确认**：失败记录未完成且未标记 rolled back；旧三项权限 CHECK 存在；两张发布表不存在，详见上方“只读结果已确认”。
+- 当前仍须先完成独立 `adui_scada_test` 的修复迁移验收、开发库备份和维护者明确授权，才可按上方恢复顺序执行 `migrate resolve --rolled-back` 与重试。不要把开发库的失败状态带入隔离测试库验收。
 
 只读检查使用仓库当前唯一 Compose 文件 `deploy/docker/compose.yaml` 和服务 `postgres`；`compose.postgres.dev.yaml` 已不在当前仓库。命令必须同时加载根 `.env` 与本机 `.local/docker/compose.env`，后者提供 Compose 所需的本机随机配置。
 
