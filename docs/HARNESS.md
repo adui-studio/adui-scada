@@ -3155,3 +3155,20 @@ Write-Host "真实迟到拒绝双框架退出码：$LASTEXITCODE"
 ```
 
 本批 Windows 目标为新离线 **13/13**、Vitest **615/615**、HTTP E2E **55/55** 和完整 `ready=0`，均**待维护者实际执行**，不得将先前 PR #93 的成功外推到新 HEAD。真实浏览器中不手工添加真实工程权限、不输入终端密码、不关闭证书验证；仅允许访问现有授权工程并在隔离页面产生未保存编辑。
+
+## 第三十五批第十一小批 · ADR-0069 安全设计文档验收
+
+本批仅新增 **Proposed** [ADR-0069](adr/0069-release-pointer-atomic-publication-design.md)，不允许为让文档验收通过而顺手修改原有 Prisma 已应用迁移、身份/ACL 代码、React/Vue Studio 或设备网关。核对新 ADR 标题编号、Proposed 状态、相对文档链接和与现有三个工程 ACL/编辑 `headRevision` 契约的一致性；需要维护者明确审查并批准未决项后才考虑下一批真正可写发布事务。
+
+```powershell
+git status --short
+git rev-parse HEAD
+pnpm run docs:check
+Write-Host "文档检查退出码：$LASTEXITCODE"
+vp check
+Write-Host "Vite+ 退出码：$LASTEXITCODE"
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+```
+
+新增一份 ADR 后预计检查 **87 份 Markdown**；此前 PR #94 的 Vitest **615/615**、HTTP E2E **55/55** 和 Vite+ **351/206 零告警**是合并前 Windows 基线，**不得**自动记作本 PR 测试通过。当前没有新代码、接口、迁移、浏览器行为或工业设备写入，因此无需为这份设计文档单独执行真实 Keycloak/数据库写入专项；未来落实正式发布必须先通过额外工业安全评审、隔离数据库迁移与双框架验收。
