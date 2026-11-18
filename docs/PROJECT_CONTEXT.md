@@ -1476,3 +1476,10 @@ PR #78 经维护者授权已 Squash 合并到 `main@43a2236bec8b528e0d7e1763dba5
 本批经 NestJS Controller/Guard 代码核对发现：成功路由的 `@Header(no-store)` 无法单独证明被 Guard 提前拒绝的 401/403 也禁止缓存。本批做最小服务端防护：Session Guard 在 HTTP 分支所有认证逻辑之前统一设置 `Cache-Control: no-store` 与 `Pragma: no-cache`，不更改原鉴权、CSRF、BFF Cookie、租户或 ACL 逻辑。新增 Guard 401/403 单测及两条真实根模块装配 E2E 的响应头断言。只改服务端 Guard、相邻测试与对应项目文档，Vue/React 双版本、SCADA Core、Prisma、工业网关与设备权限保持不变。
 
 新 Vitest 目标 **583/583**，NestJS HTTP E2E 仍 **49/49**（仅为目标）；**新 HEAD 尚未在 Windows 实际执行** `vp check`、`ready` 或真实 Lab 浏览器专项。PR 默认 Draft，立即指派并核验 `@adui-dev`，未经本批新的合并授权不得合并。
+
+## 2026-11-18 · 第三十四批第二十七小批 E-047 单元测试 Mock 修复候选
+
+维护者 Windows 首轮质量验收：`vp check` **337/192** 零警告，HTTP E2E **49/49**、`docs:check` **86** 份均通过；但全量 Vitest **580/583**，有三项 `scada-identity.spec.ts` 原身份与审计回归失败，`ready` 退出码 **1**。原因已由日志与候选源码定位为该文件共用 HTTP Context Mock 缺少本批 Guard 新依赖的 `getResponse().setHeader`，并非已观察到生产认证策略错误。
+
+PR #83 修复候选只补全旧身份测试的共用 Context Mock，保留生产 `no-store/no-cache`、401/403、Bearer/Cookie、CSRF、会话审计与工程权限；在既有无效 Bearer 和正常认证场景检查响应头。错误复盘编号 E-047。**修复后 Windows 单测目标 583/583，完整 `ready` 尚待真实退出码为 0 的验收**；PR 保持 Draft、Assignee `@adui-dev`，不得在本轮未获新合并授权时合并。
+
