@@ -1625,3 +1625,16 @@ PR #99 已修复：
 因此原失败迁移留下了部分 DDL，不能称为整体回滚。PR #99 已将迁移开头改为在事务内先删除同名旧 CHECK，再按五项权限重建，并增加静态测试防止只按约束名称存在性而跳过旧定义（E-059）。**开发库尚未执行任何恢复写入**。
 
 下一步：先在独立 `adui_scada_test` 验收修复迁移首次/二次部署、状态及数据库测试；对现有 `adui_scada` 完成可恢复备份并取得维护者明确授权后，才执行 `migrate resolve --rolled-back` 和修复迁移重试。修复后的 Windows `vp check`、`test:unit`、`test:db`、`ready` 均待复验。另：本轮对话上传的根 `.env` 含有凭据类配置，应按已披露凭据受控轮换，具体见安全提醒；不得将值写入仓库文档。
+## 2026-11-18 · PR #99 Windows 代码质量复验通过，隔离 PostgreSQL 验收待执行
+
+维护者提供的最新 Windows 日志：
+
+- `pnpm run db:validate`：Prisma Schema valid，退出码 0。
+- `pnpm run db:generate`：Prisma Client 7.10.1 生成成功，退出码 0。
+- `vp check`：354 个文件格式正确，207 个受检文件零警告、Lint/TypeScript 错误，退出码 0。
+- `pnpm run test:unit`：51/51 文件、**618/618** 项通过，退出码 0。
+- `pnpm run docs:check`：88 份 Markdown 通过，退出码 0。
+
+本轮单测已覆盖发布 Schema SQL 静态完整性、失败迁移旧权限 CHECK 替换和新工程 generation=0 状态 Mock；此前 615/616 的唯一失败已关闭。日志未提供本机 `git rev-parse HEAD`，不作 GitHub HEAD 严格绑定。
+
+**尚未完成**：本机隔离 `adui_scada_test` 的首次/二次迁移、`migrate status`、真实 PostgreSQL `test:db` 和完整 `pnpm run ready`。现有开发库 `adui_scada` 的部分失败迁移已只读确认，仍保留旧三项权限 CHECK；未经隔离库验收、可恢复备份及维护者明确授权，不执行 `migrate resolve --rolled-back` 或任何开发库恢复写入。PR #99 继续 Draft，Assignee `@adui-dev`。
