@@ -1806,3 +1806,11 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 修复候选将目标解析独立到 `scripts/studio-browser-targets.mjs`，读取既有 `SCADA_OIDC_DEV_HTTPS_ENABLED`，仅访问回环地址，HTTPS 禁止降级；通过严格 Node HTTPS 证书校验并显式读取 `NODE_EXTRA_CA_CERTS` 只读探测，不关闭 TLS。新增 `test:studio:browser:config` 并纳入 `ready`，有 **6 项** Node 离线用例。协作容器使用与 GitHub Blob SHA 相同的两个文件，`node --test` **6/6 通过**，另以临时本机自签 HTTPS 服务验证不可信证书拒绝、显式信任后通过；不代表真实 Windows 双框架专项通过。
 
 **新 HEAD 仍待 Windows 实测**：`pnpm run test:studio:browser:config`、`vp check`、`pnpm run docs:check`、`pnpm run ready`、`pnpm run test:browser` 和 `pnpm run test:release:preflight:browser`；Chrome/Edge 必须信任本机 CA，不得使用忽略证书参数。新增配置测试不计入 596 项 Vitest，完整 `ready` 应包含独立 Node 6 项检查。
+
+## 2026-11-18 · PR #87 合并与第三十五批第四小批服务端预检待测
+
+维护者上传 Windows 原始记录证明 PR #87 的 `test:browser`：React/Vue × 两分辨率各 **19/19**，退出码 **0**；`test:release:preflight:browser` 双框架均通过，退出码 **0**；`test:unit` **596/596**，`vp check` **343 文件格式正确 / 198 受检零告警**，`docs:check` **86 Markdown**，完整 `ready` **退出码 0**，包括 HTTP E2E **51/51**、双框架/服务端构建。日志未附本地 `git rev-parse HEAD`。GitHub HEAD 经核对为 `c16595774798e213f2da4bfea4cfd718677cf3be`，维护者明确授权后 PR #87 Squash 合并至 `main@602540baa570dfca21bd56f71ec634bb0263312d`。
+
+第三十五批第四小批引入只读 `GET /api/v1/projects/:projectId/versions/:revision/release-preflight`；只允许经 OIDC/BFF 认证且拥有 `version:read` 的用户读取与当前水位完全匹配的服务端历史快照兼容报告。使用同事务工程行共享锁、权限复核、历史快照 SHA-256/数据库字段检查与 Core 静态门禁。新加 **6** 项仓储 Vitest、**4** 项 NestJS Mock HTTP E2E。拟定目标 **602/602** 单测、**55/55** HTTP E2E、`vp check` 零警告、文档检查与完整 `ready` 退出码 **0**；目标不是实测结果。
+
+需 Windows 在最新功能分支记录 `git rev-parse HEAD`，分别运行 `pnpm run test:unit`、`pnpm run test:e2e:server`、`vp check`、`pnpm run docs:check`、`pnpm run ready` 并保留各自退出码。现有真实 PostgreSQL `test:db` 未为新接口新增专用数据库场景；Mock HTTP E2E 不等于真实 OIDC + PostgreSQL 只读 HTTP 实测。此批不改 Prisma 迁移，不建立正式发布权限或数据写入。
