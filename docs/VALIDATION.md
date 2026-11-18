@@ -1933,3 +1933,15 @@ PR #91 Windows 原始测试证据：`pnpm run test:unit` **50/50 文件 610/610 
 - 正确系统表标识符：`public._prisma_migrations`，不带反斜杠。
 
 修正后的 Windows 只读查询仍待维护者执行；原 `adui_scada` 的失败迁移记录、首条权限 CHECK 和发布表状态依旧**未检查**。本次 Compose 路径失败不代表 PostgreSQL 或数据库状态查询失败。详见 `docs/AI_MISTAKES.md` E-058。
+## 2026-11-18 · PR #99 开发库失败迁移只读结果与权限约束恢复修复（E-059）
+
+维护者 Windows 使用当前唯一 Compose 文件 `deploy/docker/compose.yaml` 执行只读查询，退出码 **0**。结果确认：
+
+- 当前数据库为 `adui_scada`。
+- `20261118000000_release_state_and_events` 迁移记录存在；`started_at=2026-11-18 07:03:15.496457+00`，`finished_at=NULL`、`rolled_back_at=NULL`。
+- `scada_project_grants_permission_check` 存在，但定义仍只包含 `project:read`、`version:read`、`version:append`。
+- `scada_project_release_events` 与 `scada_project_release_state` 均不存在。
+
+这证明原迁移首条 ALTER 已持久化，后续建表未完成；此前“约束不存在才创建”的恢复保护会错误跳过该旧定义。PR #99 已修正迁移：事务内先 `DROP CONSTRAINT IF EXISTS`，再创建包含五项权限的新 CHECK；并在 `prisma-schema-comments.spec.ts` 新增静态回归，验证先删除后重建、完整权限集合。E-059 已记录该问题。
+
+**尚未执行任何数据库恢复写入**。修复迁移需先在隔离 `adui_scada_test` 完成首次/二次部署、状态检查与 `test:db`；对现有 `adui_scada` 的 `migrate resolve --rolled-back` 和迁移重试，必须等待可恢复备份与维护者明确授权。修复后的 Windows 单测、Vite+、数据库专项与完整 `ready` 仍待执行。
