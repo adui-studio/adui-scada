@@ -920,3 +920,8 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/server/src/projects/project-api.controller.ts`：只在可信 OIDC 根模块注册的 `GET :projectId/versions/:revision/release-preflight`，会话 Guard + `version:read` 工程 Guard，返回无缓存的静态报告。
 - `apps/server/src/projects/prisma-project-version-store.ts`：`preflightRelease` 在同一个只读共享锁事务里复核主体、授权、head 与完整历史快照，委托共享 Core `validateProjectReleasePreflight`；不访问设备或写工程版本。
 - `apps/server/src/projects/prisma-project-version-store.spec.ts`：6 项预检安全/完整性单测；`apps/server/test/projects-api.e2e-spec.ts`：4 项受保护 HTTP 路由 Mock E2E。
+
+## 2026-11-18 · 第三十五批第五小批真实发布预检数据库回归
+
+- `apps/server/test/projects-cas-cookie-http.db-spec.ts`：继续复用随机隔离租户和真实 NestJS HTTP + Cookie + PostgreSQL 夹具，新增 4 项当前版本发布预检 200/401、旧版本 409、ACL 撤销 404、随机测试版本摘要破坏 500 的回归。代码不改变 `PrismaProjectVersionStore`、HTTP Controller 或工程 API 契约。
+- 独立入口仍为 `pnpm run test:db`（服务端 `vitest.config.db.ts`），未加入常规 `ready`；执行前必须确认 `SCADA_TEST_DATABASE_URL` 是本机 `adui_scada_test` 已迁移隔离库。
