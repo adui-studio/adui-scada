@@ -994,3 +994,11 @@ React/Vue 跟随页仍按原顺序真实切换为可见，验证已有 `StudioSe
 新增内部 `verifyHiddenTabBeforeResume(session, beforeState)`：先通过既有 CDP 探针严格等待真实 `hidden`，只读提取会话摘要并断言 CAS/水位/零写入；再复用 `inspectProtectedState` 和 `requireUnchangedStudioState` 比较全量 SVG、IndexedDB 与自动保存状态。分别对 React 跟随、Vue 跟随、Vue 写入页调用，基准取各自已有的修订号 3 保护快照。React 注销发起页仍保持可见且通过真实 GET 获取 401，因此不属于隐藏页预检范围。
 
 上述预检完成后仍沿用原有四个 Studio 页面真实可见性切换、BFF 401、CAS/授权缓存清理、原保存按钮零工程 POST 及本地数据保护测试。不会额外调用设备写入、清理数据库或修改测试工程 ACL。
+
+## 2026-11-18 · 第三十四批第二十五小批：已注销会话对工程只读 API 的拒绝
+
+真实多标签页脚本保留前序一次 CSRF 注销 HTTP 204、三个 hidden 页恢复前快照检查、四个 Studio 页真实可见性恢复、同源身份 GET 401、旧 CAS 保存阻断与 SVG/IndexedDB/自动保存保护。新增检查只在这组已有断言全部成功之后执行，不创建额外工程版本或改变测试隔离 Profile。
+
+`readLogoutProjectStatusesInPage(origin, projectId, runtime)` 是可由 CDP 独立序列化的自包含页面函数，先以严格正则验证专用 `b34-oidc-cas-<UUID>` 工程 ID 与当前页面 Origin，校验失败不发请求并返回 `null`。随后顺序执行 **两个只读同源 GET**：列表 `?limit=10` 和本轮项目 `versions/3`，始终禁用重定向及缓存，仅将 HTTP 状态数字组成二元数组；网络、TLS 或重定向故障映射为 `0`，不读取响应正文与凭据。以 Node 侧 `requireLogoutProjectDenied` 要求数组长度恰好为 2 且两个状态均严格等于 401，任何其他结果以固定中文安全错误失败。
+
+React 写入页和 Vue 写入页各执行一次完整二元探针，分别由独立白名单阶段标识失败 Origin；四标签页原 CAS/授权缓存检查不被替换。离线回归核对具体固定路径、只读请求选项、跨 Origin/非法项目 ID 零请求和网络及 HTTP 各类异常的 fail-closed 结果。此测试不证明不同浏览器 Profile 的注销传播或设备安全性。

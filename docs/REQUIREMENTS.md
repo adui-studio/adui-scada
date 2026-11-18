@@ -477,3 +477,13 @@ React/Vue **两处载入入口**（当前工程历史版本“载入”、授权
 - 同步检查这三个后台 Studio 页的 CAS 修订号仍为 3、基线和远端水位没有提前被清理、身份未提前拒绝、没有仍在进行的版本操作，且工程写入尝试次数严格为 0。快照缺失、无效、任一数据变化、错误修订号或非零写入均安全失败，不忽略变更。
 - React 注销发起页的真实 HTTP 401 检查及之后四个 Studio 页的真实 `visibilitychange`、CAS/授权失效、零工程写入、画布和草稿保护全部保留。隐藏页不要求即时广播或主动登出；本项只是测试其在恢复可见前应保持原有内存与本地状态。
 - 本批仅扩展显式确认的本机 OIDC HTTPS Lab 安全测试脚本和离线回归，不修改生产 React/Vue、共享 Session、NestJS、Prisma、工程 ACL 或工业设备权限。
+
+## 第三十四批第二十五小批 · 共享注销后工程列表与历史版本只读接口拒绝（FR-002 / FR-013 / NFR-003 局部）
+
+前批四个 Studio 页的真实 HTTP 401 核验只覆盖了 `/api/v1/auth/me`，不能仅据此断言工程业务接口也拒绝已注销 Cookie 会话。本批在既有真实注销、四页可见性恢复与所有 CAS/草稿保护断言通过后，从 React、Vue **各一个已注销的同源写入页**额外发起受控只读请求：
+
+- `GET /api/v1/projects?limit=10`：工程列表接口必须返回 HTTP **401**。
+- `GET /api/v1/projects/{本轮随机专用工程ID}/versions/3`：指定历史版本接口必须返回 HTTP **401**。
+- 两条请求均必须由浏览器当前可信 HTTPS Origin 发起，使用 `credentials: same-origin`、`mode: same-origin`、`cache: no-store`、`redirect: error` 和 JSON Accept，绝不携带工程写入请求体、CSRF 明文或外站请求。
+- 只检查状态码，不读取返回正文或打印工程文档；严格检查专用工程 ID 格式与 Origin，一端返回 200/403/302/503、网络错误或缺失均不算成功。原身份注销 401、隐藏页预检、CAS/ACL 撤销、零 POST 及本地数据全量保护不变。
+- 该专项只覆盖当前本机隔离 OIDC HTTPS Lab 的同一 Profile/同一 BFF 会话，不推断跨 Profile 全局注销，也不修改正式 React/Vue、NestJS、Prisma、工程权限及工业设备写入。
