@@ -537,7 +537,7 @@
 - **根因**：助手沿用已删除的旧双 Compose 文件路径，没有先读取当前 `deploy/docker/compose.yaml` 与 `scripts/docker-stack.mjs` 的唯一 Compose 参数；同时把 Markdown 转义误带入 PowerShell 双引号中的 SQL。PowerShell 不使用反斜杠转义 SQL 标识符。
 - **修复**：只读诊断改用当前唯一文件 `deploy/docker/compose.yaml`、项目 `adui-scada`、服务 `postgres`，并同时加载根 `.env` 与 `.local/docker/compose.env`；系统表写为 `public._prisma_migrations`，不加反斜杠。`docs/HARNESS.md` 已同步修正。
 - **防复发**：提供 Docker 命令前先核对 `scripts/docker-stack.mjs` 的 `COMPOSE_ARGS` 和 `deploy/docker/compose.yaml` 服务名；不得从历史文档推断当前文件存在。PowerShell 双引号内 SQL 使用原生 SQL 标识符，不附加 Markdown 转义反斜杠。先运行只读命令，确认输出后再讨论任何数据库恢复动作。
-- **验证边界**：维护者本次输出仅证明 Compose 文件路径解析失败；没有任何 SQL 被执行、没有数据库变更。修正后的命令已与当前仓库 Compose 参数静态对照，仍待维护者 Windows 执行。不能把这次失败描述为 PostgreSQL 查询失败或数据库状态已检查。
+- **验证边界**：首次错误命令仅在 Compose 路径解析阶段失败，没有执行 SQL 或修改数据库。维护者随后使用修正后的当前 Compose 命令在 Windows 实际执行成功，退出码 0；该查询结果进一步记录于 E-059。不得把首次路径错误描述为 PostgreSQL 查询失败。
 - **证据**：维护者 2026-11-18 PowerShell 输出、PR #99、`scripts/docker-stack.mjs`、`deploy/docker/compose.yaml`、`docs/HARNESS.md`。
 
 ### E-059 · 失败迁移的约束存在性保护误跳过旧版权限定义（第三十五批 B 阶段）
