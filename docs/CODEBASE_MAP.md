@@ -897,3 +897,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `scripts/test-oidc-studio-multitab.mjs`：一个隔离 Chrome/Edge Profile 内的两页同源 Studio CAS 协同专项，分别覆盖 React/Vue 的修订 1→2→3、真实页面可见性、只读预览、人工载入、草稿保护及同主体数据库审计；仅在明确本机 Lab 确认后启动。
 - `scripts/test-oidc-studio-multitab.cases.mjs`：19 项 Node 内置离线安全测试，新增 CDP 页面函数不得引用模块级工程正则的边界回归。
 - 根目录 `package.json`：新增 `test:oidc:dual:studio:multitab:config` 纳入 `ready`；`test:oidc:dual:studio:multitab` 为必须单独手动执行的真实浏览器专项。
+
+## V0.3 第三十五批第一小批 · 发布前 SVG 静态兼容性 Core
+
+- `packages/core/src/release-preflight.ts`：框架无关只读 `validateProjectReleasePreflight`，复用现有 Schema 校验，报告未知图元/版本、未消费绑定槽、待确认已绑定 Tag 类型及不受支持的图元规则。无发布写入、权限或数据库依赖。
+- `packages/core/src/index.ts`：导出预检函数及结构化问题/结果类型，供未来 React/Vue、后端服务复用；不修改现有 `project-snapshot` 或渲染器行为。
+- `packages/core/test/release-preflight.test.ts`：10 项 Vitest 回归覆盖合法演示、结构失败、历史版本不隐式迁移、隐藏未知图元、版本、已绑定 Tag 待确认、未绑定 Tag 保留、非法槽位、未实现规则及多问题稳定路径/无副作用。
