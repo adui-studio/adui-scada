@@ -253,7 +253,7 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
       [503, 401],
       [401, 302],
     ]) {
-      assert.throws(() => requireLogoutProjectDenied(statuses), /注销后受保护工程接口仍可访问/);
+      assert.throws(() => requireLogoutProjectDenied(statuses), /注销后工程读取未返回 HTTP 401/);
     }
     const projectId = "b34-oidc-cas-12345678-1234-1234-1234-123456789abc";
     let hits = 0;
@@ -270,7 +270,7 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
       },
     );
     assert.deepEqual(statuses, [0, 401]);
-    assert.throws(() => requireLogoutProjectDenied(statuses), /注销后受保护工程接口仍可访问/);
+    assert.throws(() => requireLogoutProjectDenied(statuses), /注销后工程读取未返回 HTTP 401/);
   });
 
   void it("注销后尚未可见的标签页必须保留 CAS、水位及零工程写入", () => {
