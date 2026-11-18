@@ -41,7 +41,7 @@ model ScadaProjectGrant {
   projectId String       @map("project_id") @db.VarChar(128)
   /// 被授权的可信身份主体标识。
   subjectId String       @map("subject_id") @db.VarChar(128)
-  /// 明确授予的工程读取、版本读取或版本追加权限。
+  /// 明确授予的工程读取、版本读取、版本追加或正式发布操作权限。
   permission String      @db.Text
   /// 该授权记录所属的工程主表记录。
   project   ScadaProject @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
