@@ -3282,10 +3282,12 @@ finally {
 - 先使用只读查询核对当前数据库、`_prisma_migrations` 失败记录、`scada_project_grants_permission_check` 是否存在，以及两张发布表是否存在。
 - 将只读结果交由维护者确认后，再制定该数据库的恢复步骤。不要把开发库的失败状态带入隔离测试库验收。
 
+只读检查使用仓库当前唯一 Compose 文件 `deploy/docker/compose.yaml` 和服务 `postgres`；`compose.postgres.dev.yaml` 已不在当前仓库。命令必须同时加载根 `.env` 与本机 `.local/docker/compose.env`，后者提供 Compose 所需的本机随机配置。
+
 只读检查示例（不会修改数据库）：
 
 ```powershell
-docker compose --env-file .env -f deploy/docker/compose.postgres.dev.yaml exec -T postgres psql -U adui_scada -d adui_scada -v ON_ERROR_STOP=1 -c "SELECT current_database();" -c "SELECT migration_name, started_at, finished_at, rolled_back_at FROM public._prisma_migrations WHERE migration_name = '20261118000000_release_state_and_events';" -c "SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'public.scada_project_grants'::regclass AND conname = 'scada_project_grants_permission_check';" -c "SELECT to_regclass('public.scada_project_release_events') AS release_events, to_regclass('public.scada_project_release_state') AS release_state;"
+docker compose -p adui-scada --env-file .env --env-file .local/docker/compose.env -f deploy/docker/compose.yaml exec -T postgres psql -U adui_scada -d adui_scada -v ON_ERROR_STOP=1 -c "SELECT current_database();" -c "SELECT migration_name, started_at, finished_at, rolled_back_at FROM public._prisma_migrations WHERE migration_name = '20261118000000_release_state_and_events';" -c "SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'public.scada_project_grants'::regclass AND conname = 'scada_project_grants_permission_check';" -c "SELECT to_regclass('public.scada_project_release_events') AS release_events, to_regclass('public.scada_project_release_state') AS release_state;"
 ```
 
 以上查询仅用于判断迁移失败前是否留下了部分 DDL；不要公开连接凭据或修改查询为写操作。
