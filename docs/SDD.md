@@ -954,3 +954,15 @@ Node 编排第二主体读取 2、再 POST CAS 2→3，随后释放旧 201、第
 React/Vue 原 `loadServerVersion` 及 `openServerProject` 确认对话后，先 await `revalidateConfirmedLoad`，再检查原编辑工程 ID 未发生变化，之后才执行现有 `pauseAutoSave`、`loadDocument` 与 `acceptLoadedVersion`。没有把预览自动转换成 CAS，也没有修改原确认提示或 IndexedDB 草稿持久化。早期历史版本如果服务端最新水位保持不变仍可载入，按既有规则得到空 CAS 基线。确认期间异步水位改变必须先失败，禁止替换 SVG；此防护不承诺对最终 GET 之后的远端写入提供事务级原子性，未来保存依旧由服务端行锁与 CAS 判断。
 
 浏览器新增两种独立回归：原工程列表“打开”的测试钩子仅在 `window.confirm` 返回同意之后，针对本轮专用工程的一个 GET 摘要**合成水位 +1**，检查双框架拒绝载入、画布/草稿/自动保存不变；此数据不写入 PostgreSQL。原 409 保存模拟专项完成真实 BFF 最新版只读预览后，再点击**真实服务端版本列表的“载入”按钮**，接受原确认、执行真实 GET 复核，必须建立原最新 CAS 并暂停自动保存，同时保持 IndexedDB 草稿和写入拦截计数。测试不将合成 GET 漂移称为真实并发数据库提交，也不扩大工业设备控制权限。
+
+## 2026-11-18 · 第三十四批第二十小批：真实多标签页 BFF 会话与 CAS 复核
+
+新增 scripts/test-oidc-real-multitab.mjs 与 scripts/test-oidc-real-multitab.cases.mjs，不修改 StudioServerProjectSession、React/Vue Studio、NestJS、Prisma Schema、迁移或设备权限。测试复用现有 test-project-browser-oidc.mjs 的 Studio 页面动作、草稿摘要与写请求阻断器，复用 test-oidc-dual-cas.mjs 的专用工程创建、版本追加和真实 OIDC 登录，并复用 test-oidc-studio-real-late.mjs 的 SVG 语义快照（仅排除经源码确认的单个视口网格）。
+
+真实浏览器使用一个临时 Profile 和四个 CDP Target：React 写入/跟随标签页、Vue 写入/跟随标签页。四个页面在导航前安装自包含可见性观察函数；两个跟随页面另外安装工程写请求本地阻断器。测试只通过 CDP Page.bringToFront 激活真实标签页，并要求浏览器报告 document.visibilityState === "visible" 且可见事件计数递增；不覆盖 DOM 属性、不手动派发 visibilitychange。一次真实 Keycloak 登录后，四个标签页各自从本机 React/Vue HTTPS Origin 请求 /api/v1/auth/me，并核对租户与主体相同，以证明两个 Origin 实际共享同一 Host Cookie BFF 会话。
+
+专用工程通过正式同源 POST /api/v1/projects 创建，React 写入端以 CAS 1→2、Vue 写入端以 CAS 2→3 追加真实版本。React/Vue 跟随页切回前台后，现有 StudioServerProjectSession.revalidateBaseline 必须通过 BFF GET /auth/me 与工程摘要发现远端水位变化并清除旧 CAS；跟随页真实点击保存时，页面内写入阻断器记录的工程 POST 必须为零。之后两跟随页分别经现有人工确认载入最新修订 3，建立有效基线并恢复自动保存。
+
+注销场景由 React 写入标签页向同源 /api/v1/auth/logout 发送真实 POST，使用当前 __Host-adui-scada-csrf Cookie 的双提交 X-SCADA-CSRF；浏览器自动附带 Origin/Sec-Fetch 元数据。隐藏跟随页在未切回前仍保持其内存状态，重新可见后各自真实请求 /auth/me 收到 401 并由现有页面逻辑清除服务端 CAS/授权缓存。全程不广播账户状态、不复制 Cookie、不读取或打印身份主体或令牌。
+
+每个跟随页的画布、IndexedDB 草稿数量/整记录 SHA-256 和自动保存开关都进行前后比较。只在本轮随机专用工程创建首版及追加 2/3 版；工程保留供维护者复核，不修改既有工程、既有 ACL、身份映射和生产数据；新工程仅由现有创建 API 按既定事务创建创建者默认权限，不手工新增其他主体授权。离线测试只覆盖参数门禁、可见性状态、身份一致性、CSRF 注销契约、脱敏状态摘要及本地一致性断言；真实 Chrome/Edge、Keycloak、HTTPS 和 BFF 集成必须由维护者独立执行。

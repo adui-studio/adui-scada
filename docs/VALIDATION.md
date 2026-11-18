@@ -1658,3 +1658,27 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 新测试计划：共享 Session **8 项新增**，目标 **45/45**；全量 Vitest 目标 **581/581**，浏览器离线新增 2 项，目标 `test:projects:oidc:config` **37/37**。真实 `test:projects:oidc:save:browser` 在 React/Vue 原“取消载入、模拟水位冲突、确认载入”之间增加**确认后才合成远端 HEAD 漂移**的负向检查：必须先出现一次确认，再得到受控冲突，保持画布、草稿和自动保存，CAS 不被错误建立。原 409 保存模拟的最新版本只读预览完成后，还需真正点版本列表“载入”并确认；再次真实只读 GET 成功后，CAS 基线正确恢复，自动保存暂停，IndexedDB 草稿及 Lab 工程未写入，401/503 场景继续安全通过。
 
 安全边界：浏览器模拟的确认后水位漂移及版本 POST 409/401/503 属于本机隔离 Profile 的合成拒绝/GET 替换，不是再次执行真实 PostgreSQL 并发写入；真实 GET 仍走受保护的 HTTPS BFF，浏览器隔离层截断所有工程 POST。单次确认后 GET 不保证数据库锁或原子一致性，服务端保存时继续原 CAS。**候选尚未实际运行 Windows Node/Vitest/类型检查、`vp check`、`docs:check`、完整 `ready` 或本机 Keycloak 浏览器专项**，不能使用上一小批的成功日志作为新改动的验收结果。需记录本机 HEAD SHA 与命令退出码。
+
+## 第三十四批第二十小批 · 真实多标签页 OIDC 会话与 CAS 候选验收
+
+新增 scripts/test-oidc-real-multitab.mjs 与 scripts/test-oidc-real-multitab.cases.mjs。离线用例目标 **9/9**，根 ready 新增 test:projects:oidc:multitab:config；真实浏览器命令 test:projects:oidc:multitab:browser 不纳入 ready，必须显式确认本机隔离数据库并手工运行。
+
+真实专项使用一个临时浏览器 Profile 内的 React 写入/跟随、Vue 写入/跟随四个标签页。单用户登录后通过正式 BFF 创建唯一随机专用工程；React 与 Vue 写入端分别真实提交版本 2 和 3，两个跟随端分别切回前台验证 visibilitychange 后的真实身份/水位 GET、旧 CAS 清除、真实保存按钮拒绝旧基线且零工程 POST。最后通过真实 CSRF /api/v1/auth/logout 注销共享 Cookie 会话，两个跟随端重新可见时分别验证 401、服务端缓存失效及本地数据保持。
+
+当前分支为 feature/v0.3-b34-multitab-oidc-session，基线 main@8cd2223853e7e5dc05695b8ab1226911ec7bd734。**当前仅有代码与文档候选，没有 Windows Node、vp check、docs:check、完整 ready 或真实 Chrome/Keycloak/PostgreSQL 浏览器执行记录。** 目标数量不能作为通过结果；验收时必须提供 git rev-parse HEAD、各命令输出及退出码。专用工程会按设计保留；不触碰其他工程、既有 ACL、身份映射、数据库迁移或工业设备；新工程仅由现有创建 API 按既定流程创建创建者默认权限，不手工增加其他主体授权。
+
+## 2026-11-18 · 第二十小批首次空白标签页可见性探针缺陷修复候选
+
+维护者提供的质量链日志已确认独立多标签页离线 9/9、`vp check` 337 格式文件 / 192 受检零错误、`docs:check` 86 Markdown、Vitest 581/581、NestJS HTTP E2E 49/49；日志末尾截至 NestJS Prisma Client 生成，缺少完整 `ready` 的最终退出码，也没有真实 `test:projects:oidc:multitab:browser` 命令及退出码。截图中五个标签页均显示 `about:blank`，具体浏览器专项结束状态尚不能由日志独立确认。
+
+静态复核发现测试脚本在首次导航之前只注册 `Page.addScriptToEvaluateOnNewDocument`，但立即调用真实 `Page.bringToFront` 并要求可见性计数递增，存在当前空白文档尚未注册监听器而超时的问题。协作容器真实 Chromium 对照验证：旧空白文档 `probe=null`，额外调用一次 `session.evaluate(installMultiTabVisibilityProbeInPage)` 后，切回标签页可记录 `visibleEvents=1`。协作容器独立初始化顺序测试 **1/1** 通过；两者不是仓库 Windows 全量测试。本次只增加当前文档初始化及离线执行顺序断言，不更改生产业务代码、真实 `visibilitychange` 语义、OIDC 认证、CSRF、CAS 或 Lab 安全限制。
+
+当前 GitHub 修复候选尚未由维护者 Windows 执行新离线目标 10/10、`vp check`、完整 `ready` 或真实多标签页专项。以上旧质量链数据不能等同本次修复已验收；需记录当前本地 `git rev-parse HEAD` 与各命令退出码。
+
+## 2026-11-18 · 第二十小批真实四标签页首次工程载入误报修复候选（E-046）
+
+维护者本机已执行 `pnpm run test:projects:oidc:multitab:browser`：真实 Keycloak 登录完成，四个标签页均确认同一 BFF 主体；进入 React/Vue Studio 工程复核后，报“标签页恢复改变了本地画布”，**专项退出码 1**。这一输出不能证明 SVG 数据丢失，也不能说明远端版本推进、注销或四标签页最终一致性已通过。
+
+经当前 PR #76 源码核对，`openStudioProject` 返回的只是 `readMultiTabSessionStateInPage` 的 CAS/身份 UI 状态摘要，`canvas` 和 `drafts` 均不存在；而 React/Vue 首次确认打开工程后，用该摘要与刚创建草稿、开启自动保存所得的完整快照调用 `requireSameCanvasAndDrafts`，必然报画布差异。草稿创建、自动保存开启本就属于初始化的预期状态变更。候选最小修复只删除**首次初始化阶段**这两处错误跨类型比较，以初始化完成后的 `inspectProtectedState` 作为后续保护基准，新增离线回归模拟真实初始化操作。远端 CAS 水位变化、服务端身份失效、人工恢复后的所有 SVG/草稿数量/整记录 SHA-256/自动保存以及零工程 POST 断言全部保留。
+
+本次维护者提供的**修复前** Windows 质量记录：离线 10/10、`vp check` 337 格式文件/192 受检零告警、`docs:check` 86 份、单测 581/581、HTTP E2E 49/49；`ready` 最后显示 Prisma Client 生成，缺少最终退出码。当前候选离线目标 **11/11**，新 HEAD 的 `vp check`、`docs:check`、完整 `ready` 和真实 Keycloak 浏览器专项待维护者执行。只根据本次代码修正无法声称多标签页真实测试已通过。
