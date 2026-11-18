@@ -103,7 +103,7 @@ afterAll(async () => {
 describe("PostgreSQL 真实工程 API 事务", () => {
   it("创建工程时原子保存创建者三项权限、首版快照、水位与审计", async () => {
     const summary = await store.create(principalCreate, { document: document(projectId) });
-    const [project, grants, version, audit] = await Promise.all([
+    const [project, grants, version, audit, releaseState] = await Promise.all([
       service.client.scadaProject.findUniqueOrThrow({
         where: { tenantId_projectId: { tenantId: tenantCreate, projectId } },
       }),
