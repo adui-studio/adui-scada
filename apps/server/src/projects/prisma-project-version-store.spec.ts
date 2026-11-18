@@ -59,8 +59,16 @@ function mockStore(options: FakeOptions = {}) {
         },
       ),
       findUnique: vi.fn<
-        () => Promise<{ snapshot: ProjectSnapshot; contentHash: string; createdAt: Date } | null>
-      >(async () => {
+        (_request: {
+          where: {
+            tenantId_projectId_revision: {
+              tenantId: string;
+              projectId: string;
+              revision: bigint;
+            };
+          };
+        }) => Promise<{ snapshot: ProjectSnapshot; contentHash: string; createdAt: Date } | null>
+      >(async (_request) => {
         steps.push("读取版本");
         const snapshot = options.stored;
         if (!snapshot) return null;
