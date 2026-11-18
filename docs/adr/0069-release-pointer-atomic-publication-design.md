@@ -1,10 +1,10 @@
-# ADR-0069：工程正式发布指针、事务审计与回滚安全边界（候选设计）
+# ADR-0069：工程正式发布指针、事务审计与回滚安全边界
 
-- 状态：Proposed
+- 状态：Accepted
 - 日期：2026-11-18
 - 关联需求：FR-007、FR-008、FR-013、FR-014、FR-016、NFR-002、NFR-003、NFR-004、NFR-006
 - 前置：[ADR-0035](0035-project-validation-snapshot.md)、[ADR-0041](0041-project-persistence-access-model.md)、[ADR-0043](0043-prisma-project-transaction-store.md)、[ADR-0045](0045-trusted-session-and-project-guard.md)、[ADR-0065](0065-oidc-bff-and-project-api.md)
-- 与当前代码关系：**仅提出后续正式发布候选设计；本 ADR 不代表权限、表、API 或运行时加载已实现或已批准。**
+- 与当前代码关系：**本 ADR 已获维护者明确批准，定义后续正式发布事务的架构边界；权限、表、API、Runtime 发布态和工业设备操作仍未实现或开放。**
 
 ## 1. 背景与已验证事实
 
@@ -24,9 +24,9 @@
 - **回滚**：将指针切换至本工程**曾成功正式发布**过、仍可验证的不可变快照；不修改 `headRevision`，不删除版本、撤销草稿或改写旧审计。
 - **不变量**：任何鉴权、版本、快照、兼容性、设备只读策略或审计失败，当前发布指针与代次**完全不变**，不得出现只有指针没有事件或只有事件没有指针的已提交状态。
 
-## 3. 候选持久化模型（均未实现）
+## 3. 批准的持久化方向（尚未实现）
 
-建议独立于编辑主表新增两种关系，名称与字段仍需数据建模评审，**不得据此手工生成或应用迁移**。
+批准独立于编辑主表采用两种关系的持久化方向；具体 Prisma 模型字段类型、索引、外键和迁移实现仍须在 B 阶段独立数据建模评审，**不得直接据此手工生成或应用迁移**。
 
 ### 3.1 `ScadaProjectReleaseState`（每工程最多一条）
 
@@ -47,14 +47,14 @@
 
 业务版本的旧 `ScadaProjectAudit` **不应重命名或复用为发布事件**，以免保存版本被误统计为生产发布。失败请求只输出经过脱敏的固定安全诊断；是否引入持久失败审计、保留期及合规策略，留待专项审查。
 
-## 4. 候选身份、授权和 HTTP 契约（均未开放）
+## 4. 批准的身份、授权和 HTTP 契约方向（均未开放）
 
-- 所有正式发布与回滚请求必须经可信 OIDC/BFF 会话、同源 Origin/Fetch Metadata/CSRF 和**独立发布权限**。建议 `release:publish` 与 `release:rollback` 为新增明确授权动作；**不从 `version:append`、`version:read`、租户 ID、邮箱、OIDC Groups 或前端角色自动继承**。实际权限粒度、默认授予策略仍待审批。
-- 后续候选命令可按 `POST /api/v1/projects/:projectId/releases` 和 `POST /api/v1/projects/:projectId/releases/rollback` 讨论，读取可考虑 `GET /api/v1/projects/:projectId/releases/current`。这些**不是现有路由或已定 API**，未审核前不得加 Controller、Client 或公开 Swagger 契约。
+- 所有正式发布与回滚请求必须经可信 OIDC/BFF 会话、同源 Origin/Fetch Metadata/CSRF 和**独立发布权限**。批准新增明确的工程级 `release:publish` 与 `release:rollback` 授权动作；**不从 `version:append`、`version:read`、租户 ID、邮箱、OIDC Groups 或前端角色自动继承**，默认拒绝。具体权限存储与管理实现留待 B 阶段。
+- 后续实现命令按本 ADR 的候选契约方向讨论： `POST /api/v1/projects/:projectId/releases` 和 `POST /api/v1/projects/:projectId/releases/rollback` 讨论，读取可考虑 `GET /api/v1/projects/:projectId/releases/current`。这些**尚不是现有路由或已实现 API**；进入实现前仍须形成独立 HTTP 契约与测试，不得提前开放。
 - 发布命令至少需要受控的 `expectedHeadRevision`、`expectedReleaseGeneration`、`targetRevision`、幂等标识；**请求不得包含快照正文、可信主体、租户或最终 hash 的权威来源**。回滚命令不依赖当前编辑 head，却必须校验预期发布代次及历史真实已发布目标。
 - 成功返回须区分已保存 head、当前已发布修订、发布代次和事件标识。409 表示版本/代次 CAS 冲突或同一幂等标识与不同语义冲突；未授权与不存在统一不泄露目标工程。缓存须显式禁止，未知错误不得泄露快照/凭据/数据源。
 
-## 5. 发布与回滚原子事务候选顺序
+## 5. 批准的发布与回滚原子事务顺序
 
 ### 5.1 发布
 
@@ -95,17 +95,21 @@ Runtime 只从服务端受保护的当前发布指针解析快照；不可使用
 | E · 回滚事务         | 仅选择曾发布版本，独立权限和新代次事件                              | 旧指针不变、跨租户拒绝、ABA/并发回滚、实际版本切换一致性      |
 | F · 生产安全评审     | 数据源授权、实际资源和工业现场运行边界                              | 专项审批与现场只读安全审查，**不包含 PLC/DCS 写入许可**       |
 
-每阶段在独立 Draft PR 中维护测试证据及 `AGENTS.md` / `docs/AI_MISTAKES.md` 约束。**当前仅 A 阶段候选；B–F 均未开始，不可将此 ADR 计为 FR-008 实现完成。**
+每阶段在独立 Draft PR 中维护测试证据及 `AGENTS.md` / `docs/AI_MISTAKES.md` 约束。**A 阶段设计评审已批准；B–F 均未开始。Accepted 仅代表架构决策完成，不可将此 ADR 计为 FR-008 实现完成。**
 
-**评审入口**：另见 [正式发布事务评审决策与验收矩阵](../RELEASE_TRANSACTION_REVIEW.md)。该清单将本 ADR 未决内容拆分为 R-01～R-08 和未来 T-01～T-22 负向场景，方便维护者逐项批准、修改或驳回。**本 ADR 仍为 Proposed；附加评审矩阵并不构成 Accepted 或生产写入授权。**
+**评审入口**：另见 [正式发布事务评审决策与验收矩阵](../RELEASE_TRANSACTION_REVIEW.md)。该清单将本 ADR 未决内容拆分为 R-01～R-08 和未来 T-01～T-22 负向场景，方便维护者逐项批准、修改或驳回。**本 ADR 现为 Accepted；附加评审矩阵记录了本次批准的 R-01～R-08 基线。Accepted 不等于生产发布写入授权，也不改变设备写入仍需独立工业安全审批的边界。**
 
-## 8. 需要维护者明确批准的未决事项
+## 8. 已批准的决策边界
 
-1. 发布/回滚是否需要单人操作还是双人审批；本 ADR 不默许普通编辑者自动发布。
-2. 发布权限命名与默认分配方式，回滚目标可否为任何过去发布过的版本，以及发布前安全签核职责。
-3. 发布过程中 Runtime 是否即时切换、是否支持分批设备/画面切换，服务端是否允许无活动读者直接发布。
-4. 多实例隔离、发布状态读缓存、故障时的旧发布保留期限和安全策略。
-5. 实际 PostgreSQL 列类型、事件幂等键长度/失效策略、外键与索引和失败审计保留要求。
-6. 首次发布前必须增加的工业 Tag 数据源、资源可用性、运行时版本兼容性及安全门禁清单。
+维护者于 **2026-11-18** 明确批准本 ADR 进入 **Accepted**，并批准评审矩阵中的 **R-01～R-08 推荐基线**。该批准只确认架构与安全边界，不代表对应代码、数据库、API 或 Runtime 已实现。
 
-**在这些事项明确、迁移审核且隔离测试通过之前，只能保留目前的只读静态/服务端预检，不新增正式发布写入按钮、工程版本指针切换 API、回滚接口或工业设备命令。**
+1. **发布/回滚权限**：采用独立工程级 `release:publish` 与 `release:rollback`，默认拒绝，不从编辑、读取权限或 OIDC Groups 自动继承。
+2. **生产审批**：V0.3 先在隔离 Lab 完成设计与验证；生产启用前必须明确审批责任和双人复核方案。在双人审批方案完成前不开放生产发布。
+3. **首次发布版本**：只能针对事务内重新验证的当前已保存 head；使用 `expectedHeadRevision`、`targetRevision` 和 `expectedReleaseGeneration`，正文与权威 hash 均由服务端读取。
+4. **幂等与冲突**：幂等键按租户/工程/操作主体/操作类型隔离；同键同语义重试复用已提交结果，同键不同语义返回受控冲突；不得写入 Token、Cookie、工程正文或设备地址。
+5. **回滚范围**：只能回滚到本工程历史上成功正式发布、仍可验证的不可变版本；回滚必须重新执行当前适用安全门禁并产生新的发布代次。
+6. **Runtime**：只认独立发布指针；事务提交前不可见；发布版本不可用时 fail-closed，不回落到编辑 head、浏览器草稿或模拟正常数据。
+7. **事务与审计**：成功发布/回滚事件、发布指针与 `releaseGeneration` 在同一 PostgreSQL 事务中原子提交；任何门禁、并发、数据库或审计失败均保持旧发布状态。
+8. **工业安全**：发布前必须重新核对 Tag 绑定、数据源质量、Runtime/资源兼容性和只读工业策略；本 ADR 不授予任何 PLC/DCS 或其他设备控制写入权限。
+
+**后续 B～F 阶段仍必须分别通过 Prisma 数据模型/迁移、真实 PostgreSQL 并发故障注入、React/Vue Runtime、Keycloak/HTTPS 和工业安全专项验收后才能逐步实现。**
