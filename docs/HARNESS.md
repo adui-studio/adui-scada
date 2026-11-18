@@ -3189,6 +3189,7 @@ Write-Host "完整质量链退出码：$LASTEXITCODE"
 ```
 
 预计 Markdown **88 份**，原有 Vitest **615/615** 和 HTTP E2E **55/55** 均为**待复验的上一批基线**，不是本分支通过证据。此次没有新的 API/迁移/浏览器行为；后续正式发布写事务必须另行取得 ADR/工业安全批准，并完成隔离 PostgreSQL、可信 OIDC 与双框架完整验收。
+
 ## 2026-11-18 · PR #99 正式发布 Schema 迁移与隔离库验收
 
 第三十五批 B 阶段新增迁移 `20261118000000_release_state_and_events`。该迁移必须只在本机独立 `adui_scada_test` 首次/二次部署和验证；根 `.env` 的 `SCADA_DATABASE_URL` 默认可能仍指向开发库 `adui_scada`。**不能在没有临时覆盖 URL 的情况下直接执行 `pnpm run db:migrate:deploy`。**

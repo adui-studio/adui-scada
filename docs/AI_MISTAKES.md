@@ -489,7 +489,6 @@
 - **验证边界**：本批只在 GitHub 功能分支修改双框架 UI 与原只读浏览器脚本，离线安全门禁从 12 项增为 **13 项**；从最新 GitHub 源码在隔离 V8 模拟运行 **13/13**（非正式 Node 运行结果）。**Windows `vp check`、`test:release:preflight:oidc:studio:config`、完整 `ready`、真实 Keycloak 双框架延迟 401 仍待实测**。
 - **证据**：PR #94 候选代码、第三十五批第九小批已合并组件、`scripts/test-oidc-studio-release-preflight.mjs` / `.cases.mjs`、`docs/VALIDATION.md`。
 
-
 ### E-054 · 新 Prisma 模型未生成客户端且数据库测试结果解构遗漏（第三十五批 B 阶段）
 
 - 现象：维护者在 PR #99 Windows 分支运行 vp check --fix，报告 12 项 TypeScript 错误：PrismaClient 类型没有 scadaProjectReleaseState / scadaProjectReleaseEvent delegate；测试中的 grants.map 参数退化为隐式 any；releaseState 未声明。该次格式化完成，但检查失败。
@@ -529,7 +528,6 @@
 - 当前安全处置：原 adui_scada 中该迁移已登记为失败；是否保留了迁移开始前的首条权限 CHECK 尚待只读查询确认。禁止直接再次部署、执行 migrate resolve、删除约束/表或手工清理 _prisma_migrations，应先核对迁移记录、约束和目标表，再制定针对该数据库的恢复步骤。
 - 验证边界：维护者日志已证明错误目标库、P3018/P3009 及测试环境变量缺失；隔离 adui_scada_test 尚未执行本批迁移。修订后的 PowerShell 流程只完成文档静态核对，Windows 真实首次/二次迁移和 test:db 待执行。
 - 证据：维护者 2026-11-18 上传的完整 PowerShell 日志、PR #99、docs/HARNESS.md PostgreSQL 隔离测试库章节、apps/server/prisma.config.ts、五个数据库测试文件的 URL 前置校验。
-
 
 ### E-058 · PostgreSQL 只读诊断命令引用已移除 Compose 文件且错误转义系统表标识符（第三十五批 B 阶段）
 

@@ -66,7 +66,9 @@ describe("Prisma 模型及 PostgreSQL 数据库中文注释约束", () => {
   it("正式发布迁移的哈希约束完整且 DDL 使用单一事务", () => {
     const hashChecks = releaseMigration
       .split("\n")
-      .filter((line) => /release_event_(?:from|to|semantic)_hash_check|release_state_hash_check/.test(line));
+      .filter((line) =>
+        /release_event_(?:from|to|semantic)_hash_check|release_state_hash_check/.test(line),
+      );
 
     expect(hashChecks).toHaveLength(4);
     expect(hashChecks.every((line) => line.includes("~ '^[0-9a-f]{64}$')"))).toBe(true);
@@ -75,12 +77,10 @@ describe("Prisma 模型及 PostgreSQL 数据库中文注释约束", () => {
     expect(releaseMigration.trimEnd().endsWith("COMMIT;")).toBe(true);
   });
   it("失败迁移遗留的旧工程权限约束会被完整替换", () => {
-    const dropStatement =
-      'DROP CONSTRAINT IF EXISTS "scada_project_grants_permission_check"';
-    const addStatement =
-      'ADD CONSTRAINT "scada_project_grants_permission_check"';
+    const dropStatement = 'DROP CONSTRAINT IF EXISTS "scada_project_grants_permission_check"';
+    const addStatement = 'ADD CONSTRAINT "scada_project_grants_permission_check"';
     const permissionCheck =
-      'CHECK ("permission" IN (\'project:read\', \'version:read\', \'version:append\', \'release:publish\', \'release:rollback\'))';
+      "CHECK (\"permission\" IN ('project:read', 'version:read', 'version:append', 'release:publish', 'release:rollback'))";
 
     expect(releaseMigration).toContain(dropStatement);
     expect(releaseMigration).toContain(addStatement);
