@@ -85,7 +85,7 @@ const SAFE_ERRORS = new Set([
   "本地会话注销未返回 HTTP 204",
   "注销后隐藏标签页状态提前变化",
   "注销后标签页身份未失效",
-  "注销后受保护工程接口仍可访问",
+  "注销后工程读取未返回 HTTP 401",
   "注销后服务端 CAS 基线未失效",
   "注销后标签页尝试工程写入",
 ]);
@@ -227,7 +227,7 @@ export function requireLogoutProjectDenied(statuses) {
     statuses[0] !== 401 ||
     statuses[1] !== 401
   ) {
-    throw new Error("注销后受保护工程接口仍可访问");
+    throw new Error("注销后工程读取未返回 HTTP 401");
   }
   return true;
 }
