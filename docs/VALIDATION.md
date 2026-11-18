@@ -1896,3 +1896,26 @@ PR #91 Windows 原始测试证据：`pnpm run test:unit` **50/50 文件 610/610 
 - 新增 E-054 记录防复发要求：Schema 变更后先 `pnpm run db:validate`、`pnpm run db:generate`，再执行 `vp check`。
 
 **修复后尚未取得 Windows 新结果**。请先在正确分支执行 Schema validate 与 Client generate，再运行 `vp check`；随后执行隔离 PostgreSQL 首次/二次迁移、数据库测试、单元测试和完整 `ready`。旧生成客户端错误不能用类型断言或 `any` 绕过；格式化完成不能视为质量检查通过。参见 `docs/AI_MISTAKES.md` E-054。
+## 2026-11-18 · PR #99 发布迁移 P3018、错误目标库与测试 Mock 修复待验收
+
+维护者 Windows 原始日志确认：
+- `pnpm run db:validate` 退出码 **0**；Prisma 7.10.1 Schema 有效。
+- `pnpm run db:generate` 退出码 **0**；新 Prisma Client 生成成功。
+- `vp check` **354 个文件格式正确、207 个受检文件零告警/错误，退出码 0**。
+- `pnpm run db:migrate:deploy` 首次失败 **P3018 / SQLSTATE 42601**；随后二次部署 **P3009**，迁移状态显示 `20261118000000_release_state_and_events` 失败。
+- **该次迁移目标实际为本机 `127.0.0.1:15432/adui_scada`，不是隔离库 `adui_scada_test`。** 不得把这次操作记录为隔离数据库验收。
+- `pnpm run test:db` 因没有显式设置 `SCADA_TEST_DATABASE_URL`，5 个数据库测试文件在加载阶段全部拒绝运行、0 项测试执行；这是既有安全前置按设计工作，不应移除。
+- `pnpm run test:unit` **50/51 文件、615/616 项**，唯一失败是 `project-api.store.spec.ts` 的事务 Mock 缺少 `scadaProjectReleaseState.create`；完整 `ready` 同样在该项退出码 **1**。
+- `pnpm run docs:check` **88 份 Markdown，退出码 0**。
+
+### 已在 PR #99 修复的代码问题
+
+1. 重建 `20261118000000_release_state_and_events/migration.sql`：完整修复四条 SHA-256 CHECK，移除重复 SQL 片段，将 lifecycle/actor/rollback 约束放回正确 CREATE TABLE；加入显式 `BEGIN/COMMIT`；对首条权限 CHECK 增加存在性保护，以便在确认部分 DDL 后可安全制定恢复步骤。
+2. `prisma-schema-comments.spec.ts` 新增迁移静态回归，检查四条完整哈希约束、两张表和事务边界。
+3. `project-api.store.spec.ts` 的 `createHarness` 新增发布状态事务 Mock，核对创建工程后先建立 generation=0 未发布状态，再创建三项权限/版本/审计。
+
+### 数据库安全处置
+
+原 `adui_scada` 的失败迁移记录及首条 ALTER 是否已生效尚未通过只读 SQL 核对。**在检查前，不要再次对 `adui_scada` 执行迁移，不要执行 `migrate resolve`、DROP、DELETE 或手工清理 `_prisma_migrations`。** 已在 `docs/HARNESS.md` 增加只读状态查询及显式隔离 URL 的 PowerShell `try/finally` 流程。
+
+修复后的迁移、静态回归、事务 Mock 和文档目前只完成 GitHub 源码静态核对；**尚未在 PostgreSQL 执行，也没有修复后 Windows Vitest/ready 结果**。后续必须先在独立 `adui_scada_test` 执行首次/二次迁移与 `test:db`，另行只读检查原 `adui_scada` 失败状态。详见 `docs/AI_MISTAKES.md` E-055～E-057。
