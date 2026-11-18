@@ -5,6 +5,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { OidcEnabledAppModule } from "../src/app.module.js";
+import { SCADA_CSRF_COOKIE_NAME, SCADA_SESSION_COOKIE_NAME } from "../src/auth/scada-auth-cookie.js";
 import { SCADA_OIDC_STARTUP_CONFIG } from "../src/auth/oidc-provider-discovery.service.js";
 import { resolveOidcStartupConfig } from "../src/config/oidc-startup.config.js";
 import { PrismaService } from "../src/database/prisma.service.js";
@@ -66,5 +67,53 @@ describe("OIDC 根模块与工程 API Guard 启动装配（端到端）", () => 
     expect(response.headers["cache-control"]).toBe("no-store");
     expect(response.headers.pragma).toBe("no-cache");
     expect(response.headers.location).toBeUndefined();
+  });
+
+  it("真实根模块拒绝缺失 CSRF 请求头的注销，403 响应禁止缓存且不清除 Cookie", async () => {
+    const sessionToken = "scada_s_" + "s".repeat(43);
+    const csrfToken = "scada_csrf_" + "c".repeat(43);
+    const response = await request(app.getHttpServer())
+      .post("/api/v1/auth/logout")
+      .set(
+        "Cookie",
+        `${SCADA_SESSION_COOKIE_NAME}=${sessionToken}; ${SCADA_CSRF_COOKIE_NAME}=${csrfToken}`,
+      )
+      .set("Origin", "https://scada.example.org")
+      .set("Sec-Fetch-Site", "same-origin")
+      .expect(403);
+
+    expect(response.status).toBe(403);
+    expect(response.headers["content-type"]).toMatch(/^application\/json/);
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.headers.pragma).toBe("no-cache");
+    expect(response.headers["set-cookie"]).toBeUndefined();
+    expect(response.headers.location).toBeUndefined();
+    expect(response.body).toMatchObject({ statusCode: 403, message: "CSRF 校验失败" });
+  });
+
+  it("真实根模块拒绝不可信 Origin 的注销，403 响应禁止缓存且不清除 Cookie", async () => {
+    const sessionToken = "scada_s_" + "s".repeat(43);
+    const csrfToken = "scada_csrf_" + "c".repeat(43);
+    const response = await request(app.getHttpServer())
+      .post("/api/v1/auth/logout")
+      .set(
+        "Cookie",
+        `${SCADA_SESSION_COOKIE_NAME}=${sessionToken}; ${SCADA_CSRF_COOKIE_NAME}=${csrfToken}`,
+      )
+      .set("Origin", "https://untrusted.example.org")
+      .set("Sec-Fetch-Site", "same-origin")
+      .set("X-SCADA-CSRF", csrfToken)
+      .expect(403);
+
+    expect(response.status).toBe(403);
+    expect(response.headers["content-type"]).toMatch(/^application\/json/);
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.headers.pragma).toBe("no-cache");
+    expect(response.headers["set-cookie"]).toBeUndefined();
+    expect(response.headers.location).toBeUndefined();
+    expect(response.body).toMatchObject({
+      statusCode: 403,
+      message: "请求来源不在可信站点白名单中",
+    });
   });
 });
