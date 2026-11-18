@@ -959,3 +959,8 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 ## 2026-11-18 · 第三十五批第十一小批正式发布方案
 
 - `docs/adr/0069-release-pointer-atomic-publication-design.md`：**Proposed** 的发布指针/代次、发布事件、独立 ACL、事务锁序、回滚目标、Runtime 只读加载及分阶段验收边界。尚无对应生产源码/数据库变更；不能将 ADR 视为已实现功能。
+
+## 2026-11-18 · 第三十五批第十二小批发布事务评审矩阵
+
+- `docs/RELEASE_TRANSACTION_REVIEW.md`：ADR-0069 Proposed 设计的 R-01～R-08 维护者决策、I-01～I-06 不变量和 T-01～T-22 未来数据库/HTTP/Runtime 安全负向测试；当前只用于评审，不包含可执行发布代码。
+- `docs/adr/0069-release-pointer-atomic-publication-design.md`：新增评审矩阵交叉引用，**状态仍为 Proposed**。
