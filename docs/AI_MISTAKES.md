@@ -480,6 +480,15 @@
 - **验证边界**：三条警告来自用户提供的**修复前** Windows 输出；当前修复已在 GitHub 分支修改了两个文件并保留原有断言。**修复后 Windows 的 `vp check`、`test:release:preflight:oidc:studio:config`、完整 `ready` 与真实 Keycloak 双框架按钮专项尚未执行**，不可将前一轮格式化成功或协作端模拟结果当作修复已实际验收。
 - **证据**：维护者 2026-11-18 PowerShell 警告日志、PR #93、`scripts/test-oidc-studio-release-preflight.mjs`、`scripts/test-oidc-studio-release-preflight.cases.mjs`、`docs/VALIDATION.md`。
 
+### E-053 · 发布预检请求中途编辑画布时迟到的授权拒绝被旧文档门禁吞掉（第三十五批第十小批）
+
+- **现象**：静态核对 `apps/web-react/src/studio/ServerReleasePreflight.tsx` 与 `apps/web-vue/src/studio/ServerReleasePreflight.vue`，两端捕获服务端预检请求异常时，把 `isScadaAccessRejection(cause)` 及父级 `invalidateServerAccess` 通知包在“当前文档仍与请求发起时引用相同”的条件内。**尚无 Windows 实际触发该迟到路径的失败日志**；这是源码可确定的潜在安全状态失效缺陷，不能误记为用户现场事故。
+- **根因**：本地文档引用检查本来只用于抑制过时的 UI 报告和错误文案，却一并抑制了身份过期、授权撤销的独立状态信号。当用户在只读 GET 挂起时继续编辑，同一工程的新文档对象使延迟返回的 401/403/404 不会通知父级清理受保护工程摘要及 CAS 基线。
+- **最小修复候选**：React/Vue 均改为：组件仍挂载时，任何 `isScadaAccessRejection` 先独立通知父级 `invalidateServerAccess`；仅当当前文档与请求时文档仍相同时才显示属于该文档的局部错误。保持原成功结果文档门禁、卸载后忽略、只读四段 GET、画布/草稿不变。原真实 OIDC Studio 浏览器脚本扩展**仅当前隔离页面的一次模拟 401**：在第三条预检 GET 等待时点击真实“+ 文本”，再释放 401，确认 CAS 失效且本地完整 SVG/导出摘要/草稿及自动保存不变。不得向真实 Lab 提交工程或修改 ACL。
+- **防复发**：将“过期页面结果不显示”和“身份/权限拒绝必须传播”分为两条独立保护条件；异步请求期间用户切换编辑内容不应复用过时报告，也不得抑制对全会话有效的 401/403/404。原浏览器专项需测试迟到拒绝，不能仅测试用户不编辑时的立即拒绝。
+- **验证边界**：本批只在 GitHub 功能分支修改双框架 UI 与原只读浏览器脚本，离线安全门禁从 12 项增为 **13 项**；从最新 GitHub 源码在隔离 V8 模拟运行 **13/13**（非正式 Node 运行结果）。**Windows `vp check`、`test:release:preflight:oidc:studio:config`、完整 `ready`、真实 Keycloak 双框架延迟 401 仍待实测**。
+- **证据**：PR #94 候选代码、第三十五批第九小批已合并组件、`scripts/test-oidc-studio-release-preflight.mjs` / `.cases.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
