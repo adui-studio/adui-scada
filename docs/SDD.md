@@ -954,6 +954,7 @@ Node 编排第二主体读取 2、再 POST CAS 2→3，随后释放旧 201、第
 React/Vue 原 `loadServerVersion` 及 `openServerProject` 确认对话后，先 await `revalidateConfirmedLoad`，再检查原编辑工程 ID 未发生变化，之后才执行现有 `pauseAutoSave`、`loadDocument` 与 `acceptLoadedVersion`。没有把预览自动转换成 CAS，也没有修改原确认提示或 IndexedDB 草稿持久化。早期历史版本如果服务端最新水位保持不变仍可载入，按既有规则得到空 CAS 基线。确认期间异步水位改变必须先失败，禁止替换 SVG；此防护不承诺对最终 GET 之后的远端写入提供事务级原子性，未来保存依旧由服务端行锁与 CAS 判断。
 
 浏览器新增两种独立回归：原工程列表“打开”的测试钩子仅在 `window.confirm` 返回同意之后，针对本轮专用工程的一个 GET 摘要**合成水位 +1**，检查双框架拒绝载入、画布/草稿/自动保存不变；此数据不写入 PostgreSQL。原 409 保存模拟专项完成真实 BFF 最新版只读预览后，再点击**真实服务端版本列表的“载入”按钮**，接受原确认、执行真实 GET 复核，必须建立原最新 CAS 并暂停自动保存，同时保持 IndexedDB 草稿和写入拦截计数。测试不将合成 GET 漂移称为真实并发数据库提交，也不扩大工业设备控制权限。
+
 ## 2026-11-18 · 第三十四批第二十小批：真实多标签页 BFF 会话与 CAS 复核
 
 新增 scripts/test-oidc-real-multitab.mjs 与 scripts/test-oidc-real-multitab.cases.mjs，不修改 StudioServerProjectSession、React/Vue Studio、NestJS、Prisma Schema、迁移或设备权限。测试复用现有 test-project-browser-oidc.mjs 的 Studio 页面动作、草稿摘要与写请求阻断器，复用 test-oidc-dual-cas.mjs 的专用工程创建、版本追加和真实 OIDC 登录，并复用 test-oidc-studio-real-late.mjs 的 SVG 语义快照（仅排除经源码确认的单个视口网格）。

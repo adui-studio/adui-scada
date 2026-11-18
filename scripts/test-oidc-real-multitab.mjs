@@ -106,10 +106,7 @@ export function resolveMultiTabMode(args, env) {
     throw new Error("真实多标签页测试只允许本机隔离数据库");
   }
 
-  if (
-    !["adui_scada", "adui_scada_oidc_lab"].includes(databaseName) ||
-    args[2] !== databaseName
-  ) {
+  if (!["adui_scada", "adui_scada_oidc_lab"].includes(databaseName) || args[2] !== databaseName) {
     throw new Error("真实多标签页测试只允许本机隔离数据库");
   }
   return { databaseName };
@@ -200,12 +197,9 @@ export function readMultiTabSessionStateInPage(runtime = globalThis) {
     baselineRevision: revision ? Number(revision[1]) : null,
     baselineCleared: /CAS 基线：\s*未建立/.test(text),
     headCleared: /服务端最新修订号：\s*未查询/.test(text),
-    recoveryAvailable: buttons.some(
-      (button) => button.textContent.trim() === "只读预览最新版本",
-    ),
+    recoveryAvailable: buttons.some((button) => button.textContent.trim() === "只读预览最新版本"),
     resumeConflictVisible:
-      noticeText.includes("标签页恢复校验发现变更") ||
-      bodyText.includes("标签页恢复校验发现变更"),
+      noticeText.includes("标签页恢复校验发现变更") || bodyText.includes("标签页恢复校验发现变更"),
     identityVerified: text.includes("服务端身份已验证"),
     identityRejected:
       text.includes("未登录或服务端尚未启用身份接口") ||
@@ -237,8 +231,7 @@ export async function logoutCurrentSessionInPage(expectedOrigin, runtime = globa
     .split(";")
     .map((part) => part.trim())
     .filter((part) => part.startsWith("__Host-adui-scada-csrf="));
-  const csrf =
-    matches.length === 1 ? matches[0].slice("__Host-adui-scada-csrf=".length) : "";
+  const csrf = matches.length === 1 ? matches[0].slice("__Host-adui-scada-csrf=".length) : "";
   if (!/^scada_csrf_[A-Za-z0-9_-]{43}$/.test(csrf)) {
     throw new Error("本地会话注销未返回 HTTP 204");
   }
@@ -276,10 +269,7 @@ export function requireSameCanvasAndDrafts(before, after) {
   if (!before || !after || before.canvas !== after.canvas) {
     throw new Error("标签页恢复改变了本地画布");
   }
-  if (
-    before.drafts?.count !== after.drafts?.count ||
-    before.drafts?.hash !== after.drafts?.hash
-  ) {
+  if (before.drafts?.count !== after.drafts?.count || before.drafts?.hash !== after.drafts?.hash) {
     throw new Error("标签页恢复改变了 IndexedDB 草稿");
   }
   return true;
@@ -415,11 +405,9 @@ async function createBrowserTab(port) {
   const socket = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolveOpen, rejectOpen) => {
     socket.addEventListener("open", resolveOpen, { once: true });
-    socket.addEventListener(
-      "error",
-      () => rejectOpen(new Error("浏览器调试标签页无法创建")),
-      { once: true },
-    );
+    socket.addEventListener("error", () => rejectOpen(new Error("浏览器调试标签页无法创建")), {
+      once: true,
+    });
   });
   const session = new ChromeSession(socket);
   await session.send("Page.enable");
@@ -479,11 +467,7 @@ async function activateHiddenTab(session, label) {
 }
 
 async function waitForAuthenticated(session, origin) {
-  return waitFor(
-    () => session.evaluate(identityInPage, origin),
-    "真实 OIDC 登录未完成",
-    30000,
-  );
+  return waitFor(() => session.evaluate(identityInPage, origin), "真实 OIDC 登录未完成", 30000);
 }
 
 async function findProjectInList(session, projectId, expectedRevision) {
@@ -619,9 +603,7 @@ async function requireSaveRefusedWithoutProjectWrite(session) {
     const current = await session.evaluate(readMultiTabSessionStateInPage);
     if (current.writeAttempts > 0) return current;
     const started =
-      current.busy ||
-      !current.hasError ||
-      current.errorCategory !== before.errorCategory;
+      current.busy || !current.hasError || current.errorCategory !== before.errorCategory;
     if (!started || current.busy || !current.hasError) return null;
     return current;
   }, "标签页恢复未触发 CAS 水位复核");
@@ -648,12 +630,10 @@ async function verifyVersionDrift(session, beforeState) {
 async function verifyLogoutRevalidation(session, origin, beforeState) {
   const state = await waitFor(async () => {
     const current = await session.evaluate(readMultiTabSessionStateInPage);
-    return (
-      !current.busy &&
+    return !current.busy &&
       current.baselineCleared &&
       current.headCleared &&
       current.identityRejected
-    )
       ? current
       : null;
   }, "注销后服务端 CAS 基线未失效");
@@ -815,12 +795,7 @@ async function run() {
     if (revisionThreeRead.revision !== 3) throw new Error("真实工程版本或摘要核验失败");
     await activateHiddenTab(tabs.vueFollower, "真实标签页没有发生可见性切换");
     await verifyVersionDrift(tabs.vueFollower, vueDraft);
-    const vueRevisionThree = await restoreLatestBaseline(
-      tabs.vueFollower,
-      projectId,
-      3,
-      vueDraft,
-    );
+    const vueRevisionThree = await restoreLatestBaseline(tabs.vueFollower, projectId, 3, vueDraft);
 
     phase = "React 标签页二次水位复核";
     await activateHiddenTab(tabs.reactFollower, "真实标签页没有发生可见性切换");

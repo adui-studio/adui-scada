@@ -1658,6 +1658,7 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 新测试计划：共享 Session **8 项新增**，目标 **45/45**；全量 Vitest 目标 **581/581**，浏览器离线新增 2 项，目标 `test:projects:oidc:config` **37/37**。真实 `test:projects:oidc:save:browser` 在 React/Vue 原“取消载入、模拟水位冲突、确认载入”之间增加**确认后才合成远端 HEAD 漂移**的负向检查：必须先出现一次确认，再得到受控冲突，保持画布、草稿和自动保存，CAS 不被错误建立。原 409 保存模拟的最新版本只读预览完成后，还需真正点版本列表“载入”并确认；再次真实只读 GET 成功后，CAS 基线正确恢复，自动保存暂停，IndexedDB 草稿及 Lab 工程未写入，401/503 场景继续安全通过。
 
 安全边界：浏览器模拟的确认后水位漂移及版本 POST 409/401/503 属于本机隔离 Profile 的合成拒绝/GET 替换，不是再次执行真实 PostgreSQL 并发写入；真实 GET 仍走受保护的 HTTPS BFF，浏览器隔离层截断所有工程 POST。单次确认后 GET 不保证数据库锁或原子一致性，服务端保存时继续原 CAS。**候选尚未实际运行 Windows Node/Vitest/类型检查、`vp check`、`docs:check`、完整 `ready` 或本机 Keycloak 浏览器专项**，不能使用上一小批的成功日志作为新改动的验收结果。需记录本机 HEAD SHA 与命令退出码。
+
 ## 第三十四批第二十小批 · 真实多标签页 OIDC 会话与 CAS 候选验收
 
 新增 scripts/test-oidc-real-multitab.mjs 与 scripts/test-oidc-real-multitab.cases.mjs。离线用例目标 **9/9**，根 ready 新增 test:projects:oidc:multitab:config；真实浏览器命令 test:projects:oidc:multitab:browser 不纳入 ready，必须显式确认本机隔离数据库并手工运行。

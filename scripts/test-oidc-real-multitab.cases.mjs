@@ -27,14 +27,10 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
       { databaseName: "adui_scada" },
     );
     assert.deepEqual(
-      resolveMultiTabMode(
-        ["--run-multitab", "--confirm-lab", "adui_scada_oidc_lab"],
-        {
-          SCADA_DATABASE_URL:
-            "postgresql://scada:secret@127.0.0.1:15432/adui_scada_oidc_lab",
-          SCADA_LAB_POSTGRES_PORT: "15432",
-        },
-      ),
+      resolveMultiTabMode(["--run-multitab", "--confirm-lab", "adui_scada_oidc_lab"], {
+        SCADA_DATABASE_URL: "postgresql://scada:secret@127.0.0.1:15432/adui_scada_oidc_lab",
+        SCADA_LAB_POSTGRES_PORT: "15432",
+      }),
       { databaseName: "adui_scada_oidc_lab" },
     );
   });
@@ -50,13 +46,10 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
     );
     assert.throws(
       () =>
-        resolveMultiTabMode(
-          ["--run-multitab", "--confirm-lab", "adui_scada"],
-          {
-            SCADA_DATABASE_URL: "postgresql://scada:secret@db.example.org/adui_scada",
-            SCADA_LAB_POSTGRES_PORT: "15432",
-          },
-        ),
+        resolveMultiTabMode(["--run-multitab", "--confirm-lab", "adui_scada"], {
+          SCADA_DATABASE_URL: "postgresql://scada:secret@db.example.org/adui_scada",
+          SCADA_LAB_POSTGRES_PORT: "15432",
+        }),
       /真实多标签页测试只允许本机隔离数据库/,
     );
   });
