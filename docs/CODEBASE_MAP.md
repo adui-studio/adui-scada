@@ -909,3 +909,8 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：复用 Core `validateProjectReleasePreflight`，在各自工具栏「发布预检」菜单对当前文档实时显示状态及结构化路径/原因，不保存校验副本，不发起任何发布请求。
 - `scripts/test-studio-browser.mjs`：新增 `--release-preflight` 的临时隔离浏览器专项，React/Vue 各自演练合法文档通过、含未知图元/规则/已绑定 unknown Tag 的 JSON 导入后失败，以及恢复原文档后的结果重算和工程 JSON 无损。
 - `package.json`：新增 `test:release:preflight:browser` 独立命令，不纳入自动 `ready`，需要本机 Web 服务及可用 Chrome/Edge。
+
+## 2026-11-18 · 双框架 Studio 浏览器测试协议探测
+
+- `scripts/studio-browser-targets.mjs`：依据本机 OIDC HTTPS 配置解析并安全探测两套 Web 首页；拒绝远程地址、协议降级及不受信任的证书。供 `scripts/test-studio-browser.mjs` 复用。
+- `scripts/studio-browser-targets.cases.mjs`：6 项 Node 离线地址、协议与安全配置回归，由根命令 `test:studio:browser:config` 调用，并纳入 `ready`。
