@@ -1867,7 +1867,10 @@ export default function StudioPage() {
                   </p>
                   <ol className="studio-version-list" aria-label="发布预检问题">
                     {releasePreflight.issues.map((issue, index) => (
-                      <li className="studio-version-item" key={`${issue.code}:${issue.path}:${index}`}>
+                      <li
+                        className="studio-version-item"
+                        key={`${issue.code}:${issue.path}:${index}`}
+                      >
                         <code>{issue.path}</code>
                         <p className="studio-version-help">{issue.message}</p>
                       </li>
