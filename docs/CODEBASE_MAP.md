@@ -925,3 +925,8 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 
 - `apps/server/test/projects-cas-cookie-http.db-spec.ts`：继续复用随机隔离租户和真实 NestJS HTTP + Cookie + PostgreSQL 夹具，新增 4 项当前版本发布预检 200/401、旧版本 409、ACL 撤销 404、随机测试版本摘要破坏 500 的回归。代码不改变 `PrismaProjectVersionStore`、HTTP Controller 或工程 API 契约。
 - 独立入口仍为 `pnpm run test:db`（服务端 `vitest.config.db.ts`），未加入常规 `ready`；执行前必须确认 `SCADA_TEST_DATABASE_URL` 是本机 `adui_scada_test` 已迁移隔离库。
+
+## 2026-11-18 · 第三十五批第六小批真实 Keycloak 发布预检浏览器专项
+
+- `scripts/test-oidc-release-preflight.mjs`：复用现有本机受控 OIDC 环境与隔离 Chrome/Edge，人工登录一次，React/Vue 双 HTTPS Origin 中仅通过 BFF Cookie 发 GET，检查已授权工程的当前版本发布预检 200 / 非法修订号 400 / 过期水位 409 / no-store / 摘要一致；返回节点不携带快照或凭据。脚本**没有写入模式**。
+- `scripts/test-oidc-release-preflight.cases.mjs`：11 项纯 Node 配置/浏览器请求契约测试；根命令 `test:release:preflight:oidc:config` 纳入 `ready`，交互式 `test:release:preflight:oidc:browser` 必须手动执行。
