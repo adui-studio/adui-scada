@@ -930,3 +930,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 
 - `scripts/test-oidc-release-preflight.mjs`：复用现有本机受控 OIDC 环境与隔离 Chrome/Edge，人工登录一次，React/Vue 双 HTTPS Origin 中仅通过 BFF Cookie 发 GET，检查已授权工程的当前版本发布预检 200 / 非法修订号 400 / 过期水位 409 / no-store / 摘要一致；返回节点不携带快照或凭据。脚本**没有写入模式**。
 - `scripts/test-oidc-release-preflight.cases.mjs`：11 项纯 Node 配置/浏览器请求契约测试；根命令 `test:release:preflight:oidc:config` 纳入 `ready`，交互式 `test:release:preflight:oidc:browser` 必须手动执行。
+
+## 2026-11-18 · 第三十五批第七小批共享发布预检 API Client
+
+- `packages/api-client/src/index.ts`：`ScadaApiClient.preflightRelease`、`ScadaReleasePreflightReport` 和服务端响应白名单解析；只使用现有同源 GET、`Cache-Control: no-store`、OIDC/BFF Cookie，拒绝未知问题码与跨工程/修订号响应。
+- `packages/api-client/test/api-client.test.ts`：新增 8 项只读路径、输入限制、合法错误报告、禁缓存、响应结构、错误映射测试。
+- `packages/api-client/test/studio-session.test.ts`：增加与共享 Client 扩展保持类型一致的预检 Mock；既有 CAS 逻辑与断言保持不变。
