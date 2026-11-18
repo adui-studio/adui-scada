@@ -27,26 +27,35 @@ function fixture({ passed = true, firstDenied = false } = {}) {
       ];
   const prefix = "/api/v1/projects/" + projectId;
   const map = new Map([
-    ["/api/v1/projects?limit=100", { status: 200, body: firstDenied ? [
-      { projectId: candidate, headRevision: 1 },
-      project,
-    ] : [project] }],
-    [prefix + "/versions?limit=1", {
-      status: 200,
-      body: [{ projectId, revision: 3, contentHash: hash }],
-    }],
-    [prefix + "/versions/3/release-preflight", {
-      status: 200,
-      body: {
-        projectId,
-        revision: 3,
-        headRevision: 3,
-        contentHash: hash,
-        passed,
-        issues,
+    [
+      "/api/v1/projects?limit=100",
+      {
+        status: 200,
+        body: firstDenied ? [{ projectId: candidate, headRevision: 1 }, project] : [project],
       },
-      cache: "no-store",
-    }],
+    ],
+    [
+      prefix + "/versions?limit=1",
+      {
+        status: 200,
+        body: [{ projectId, revision: 3, contentHash: hash }],
+      },
+    ],
+    [
+      prefix + "/versions/3/release-preflight",
+      {
+        status: 200,
+        body: {
+          projectId,
+          revision: 3,
+          headRevision: 3,
+          contentHash: hash,
+          passed,
+          issues,
+        },
+        cache: "no-store",
+      },
+    ],
     [prefix + "/versions/0/release-preflight", { status: 400 }],
     [prefix + "/versions/4/release-preflight", { status: 409 }],
     [prefix, { status: 200, body: project }],
