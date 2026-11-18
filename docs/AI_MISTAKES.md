@@ -432,6 +432,8 @@
 - **验证边界**：原 Windows `vp check`、HTTP E2E、文档检查通过与 `ready` 失败均已实测。当前 PR #83 修复候选只已通过 GitHub 源码和补丁静态核对，**修复后 Windows `pnpm run test:unit`（目标 583/583）、`vp check`、`docs:check`、完整 `pnpm run ready` 均待执行**；不可将原 `580/583` 宣称已修复通过。
 - **证据**：维护者 2026-11-18 Windows 日志、PR #83、`apps/server/src/auth/scada-identity.spec.ts`、`apps/server/src/auth/scada-session.guard.ts`、`docs/VALIDATION.md`。
 
+> **2026-11-18 · E-047 Windows 结案补录**：上述“修复后待测”是候选阶段的历史边界。维护者 Windows 在修复公共 `ExecutionContext` Mock 后实际运行 `pnpm run test:unit`，**49/49 文件、583/583 用例通过，退出码 0**；完整 `pnpm run ready` **退出码 0**，包括 `vp check` 337/192 零告警、HTTP E2E 49/49、文档 86 份以及双框架和服务端构建。旧 3 项 TypeError 未再发生。PR #83 已经维护者明确授权 Squash 合并至 `main@650b084f770bb92241b3b93a02689160b7b8bc41`。原日志没有本机 `git rev-parse HEAD`，合并后新提交没有额外执行 Windows 复测；不可将此结论延伸为工业现场安全认证。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
