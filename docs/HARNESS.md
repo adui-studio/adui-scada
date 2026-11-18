@@ -3273,6 +3273,37 @@ finally {
 
 如果当前 PowerShell 的根 `.env` URL 不符合上述路径替换规则，应由维护者在本机安全设置正确测试 URL；**不得**为了继续测试把数据库目标改成 `adui_scada`、Keycloak 库、远端数据库或生产数据库。真实数据库测试文件会因缺少 `SCADA_TEST_DATABASE_URL` 而在加载阶段拒绝运行，这是预期安全保护，不应删除。
 
+### 2026-11-18 · `adui_scada` 失败迁移只读结果已确认
+
+维护者已成功执行上方只读检查，实际结果如下：
+
+- `current_database()`：`adui_scada`。
+- `_prisma_migrations` 中存在 `20261118000000_release_state_and_events`：`started_at` 为 `2026-11-18 07:03:15.496457+00`，`finished_at IS NULL`、`rolled_back_at IS NULL`。
+- `scada_project_grants_permission_check` 存在，但定义仍只允许 `project:read`、`version:read`、`version:append`。
+- `scada_project_release_events` 与 `scada_project_release_state` 均不存在。
+- 只读命令退出码 0。
+
+这确认了原迁移的部分 DDL：首条权限约束已经提交，后续两张发布表没有创建。不能把它称为“迁移整体回滚”。目前没有查询到发布表或发布事件；这也不等于对整个数据库所有业务数据做过完整审计。
+
+### 修复后的迁移恢复设计（尚未执行）
+
+PR #99 已将迁移开头改为在同一事务内：
+
+1. `DROP CONSTRAINT IF EXISTS scada_project_grants_permission_check`；
+2. 重新创建包含五项权限的同名 CHECK；
+3. 创建发布事件/状态表、约束、索引，回填既有工程的 generation=0 状态并写入中文注释；
+4. 最后提交事务。
+
+因此它既适用于全新隔离库，也能在 Prisma 将旧失败迁移标记为 rolled back 后替换本次遗留的三项权限 CHECK。静态源码检查不能代替真实 PostgreSQL 验证。
+
+**恢复 `adui_scada` 前置条件：**
+
+- 先在独立 `adui_scada_test` 完成修复迁移首次部署、二次部署、`migrate status` 和 `test:db`。
+- 对 `adui_scada` 完成可恢复备份并验证备份可读。
+- 由维护者明确授权对现有开发库执行迁移元数据和 Schema 写操作。
+
+取得上述授权后，恢复顺序才是：确认 `SCADA_DATABASE_URL` 指向本机 `adui_scada` → 执行 `prisma migrate resolve --rolled-back 20261118000000_release_state_and_events` → 执行修复后的 `prisma migrate deploy` → 执行 `prisma migrate status` 并再次只读核对权限 CHECK 和两张发布表。使用仓库 Prisma 7 CLI 与 `apps/server/prisma.config.ts`；不得手工编辑 `_prisma_migrations`，不得执行 reset、DROP、DELETE 或重置数据库。**在维护者明确授权前，上述恢复命令不得执行。**
+
 ### 已经在错误数据库上出现失败迁移时
 
 如果 `migrate deploy` 日志显示目标为 `adui_scada`，并且迁移状态为 P3018/P3009：
