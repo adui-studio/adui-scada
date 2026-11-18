@@ -1861,7 +1861,7 @@ async function importJson(event: Event) {
               </ol>
             </div>
             <ServerReleasePreflight
-              :key="state.document.projectId"
+              :key="`${state.document.projectId}:${serverHeadRevision ?? '未查询'}:${serverAccessRevision}`"
               :api="serverApi"
               :document="state.document"
               :disabled="historyBusy"
