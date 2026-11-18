@@ -86,6 +86,13 @@ function postVersion(session: IssuedAuthSession, expectedRevision = 1) {
     .send({ expectedRevision, document: document() });
 }
 
+/** 受保护的 GET 发布预检不需要 CSRF Header，也不接收工程 JSON。 */
+function getReleasePreflight(session: IssuedAuthSession, revision: number) {
+  return request(app!.getHttpServer())
+    .get("/api/v1/projects/" + projectId + "/versions/" + revision + "/release-preflight")
+    .set("Cookie", cookie(session));
+}
+
 /** 每个测试独立租户和会话；只清理本用例写入的记录。 */
 async function withFixture(run: (fixture: IsolatedFixture) => Promise<void>): Promise<void> {
   const tenantId = "test-" + randomUUID();
@@ -486,6 +493,146 @@ describe("本机隔离 PostgreSQL 双 Cookie 会话 HTTP CAS 事务", () => {
       ]);
       expect(project.headRevision).toBe(2n);
       expect(audits.map((entry) => entry.actorId)).toEqual([subjectA, subjectA]);
+    });
+  });
+
+
+  it("真实 PostgreSQL 当前版本预检对两个 Cookie 主体返回一致只读报告", async () => {
+    await withFixture(async ({ tenantId, sessionA, sessionB }) => {
+      const version = await database!.client.scadaProjectVersion.findUniqueOrThrow({
+        where: { tenantId_projectId_revision: { tenantId, projectId, revision: 1n } },
+      });
+      for (const session of [sessionA, sessionB]) {
+        const response = await getReleasePreflight(session, 1);
+        expect(response.status).toBe(200);
+        expect(response.headers["cache-control"]).toBe("no-store");
+        expect(response.body).toEqual({
+          projectId,
+          revision: 1,
+          headRevision: 1,
+          contentHash: version.contentHash,
+          passed: true,
+          issues: [],
+        });
+        expect(response.body).not.toHaveProperty("document");
+        expect(response.body).not.toHaveProperty("snapshot");
+      }
+
+      const [project, versionCount, auditCount] = await Promise.all([
+        database!.client.scadaProject.findUniqueOrThrow({
+          where: { tenantId_projectId: { tenantId, projectId } },
+        }),
+        database!.client.scadaProjectVersion.count({ where: { tenantId, projectId } }),
+        database!.client.scadaProjectAudit.count({ where: { tenantId, projectId } }),
+      ]);
+      expect(project.headRevision).toBe(1n);
+      expect(versionCount).toBe(1);
+      expect(auditCount).toBe(1);
+    });
+  });
+
+  it("真实版本推进后旧预检返回 409，当前不兼容属性仅报告问题", async () => {
+    await withFixture(async ({ tenantId, sessionA, sessionB }) => {
+      const incompatible = document();
+      incompatible.pages[0]!.nodes[1]!.props.color = "#ff0000";
+      const saved = await store.append(
+        { tenantId, subjectId: subjectA },
+        projectId,
+        { expectedRevision: 1, document: incompatible },
+      );
+      expect(saved.revision).toBe(2);
+      const stale = await getReleasePreflight(sessionB, 1);
+      expect(stale.status).toBe(409);
+      expect(stale.body.message).toBe("工程版本已变化，请重新获取最新修订号");
+
+      const current = await getReleasePreflight(sessionB, 2);
+      expect(current.status).toBe(200);
+      expect(current.body).toEqual({
+        projectId,
+        revision: 2,
+        headRevision: 2,
+        contentHash: saved.contentHash,
+        passed: false,
+        issues: [
+          {
+            code: "UNSUPPORTED_SYMBOL_PROP",
+            severity: "error",
+            path: "pages[0].nodes[1].props.color",
+            message: "当前 SVG 运行时不处理此图元属性",
+          },
+        ],
+      });
+
+      const [head, revisions, audits] = await Promise.all([
+        database!.client.scadaProject.findUniqueOrThrow({
+          where: { tenantId_projectId: { tenantId, projectId } },
+        }),
+        database!.client.scadaProjectVersion.findMany({
+          where: { tenantId, projectId },
+          orderBy: { revision: "asc" },
+        }),
+        database!.client.scadaProjectAudit.findMany({
+          where: { tenantId, projectId },
+          orderBy: { revision: "asc" },
+        }),
+      ]);
+      expect(head.headRevision).toBe(2n);
+      expect(revisions.map((entry) => entry.revision)).toEqual([1n, 2n]);
+      expect(audits.map((entry) => entry.revision)).toEqual([1n, 2n]);
+    });
+  });
+
+  it("真实 ACL 撤销 version:read 后预检立即返回 404，原授权主体不受影响", async () => {
+    await withFixture(async ({ tenantId, sessionA, sessionB }) => {
+      const removed = await database!.client.scadaProjectGrant.deleteMany({
+        where: { tenantId, projectId, subjectId: subjectB, permission: "version:read" },
+      });
+      expect(removed.count).toBe(1);
+
+      const denied = await getReleasePreflight(sessionB, 1);
+      expect(denied.status).toBe(404);
+      expect(denied.body.message).toBe("工程资源不存在或无权访问");
+      const allowed = await getReleasePreflight(sessionA, 1);
+      expect(allowed.status).toBe(200);
+      expect(allowed.body.passed).toBe(true);
+
+      const [project, versions, audits] = await Promise.all([
+        database!.client.scadaProject.findUniqueOrThrow({
+          where: { tenantId_projectId: { tenantId, projectId } },
+        }),
+        database!.client.scadaProjectVersion.count({ where: { tenantId, projectId } }),
+        database!.client.scadaProjectAudit.count({ where: { tenantId, projectId } }),
+      ]);
+      expect(project.headRevision).toBe(1n);
+      expect(versions).toBe(1);
+      expect(audits).toBe(1);
+    });
+  });
+
+  it("仅在随机测试租户篡改元数据摘要后预检受控失败且不追加版本", async () => {
+    await withFixture(async ({ tenantId, sessionA }) => {
+      const corrupted = await database!.client.scadaProjectVersion.update({
+        where: { tenantId_projectId_revision: { tenantId, projectId, revision: 1n } },
+        data: { contentHash: "0".repeat(64) },
+      });
+      expect(corrupted.contentHash).toBe("0".repeat(64));
+
+      const response = await getReleasePreflight(sessionA, 1);
+      expect(response.status).toBe(500);
+      expect(response.body.statusCode).toBe(500);
+      expect(JSON.stringify(response.body)).not.toContain("Prisma");
+      expect(JSON.stringify(response.body)).not.toContain("数据库工程版本元数据与快照不一致");
+
+      const [project, versions, audits] = await Promise.all([
+        database!.client.scadaProject.findUniqueOrThrow({
+          where: { tenantId_projectId: { tenantId, projectId } },
+        }),
+        database!.client.scadaProjectVersion.count({ where: { tenantId, projectId } }),
+        database!.client.scadaProjectAudit.count({ where: { tenantId, projectId } }),
+      ]);
+      expect(project.headRevision).toBe(1n);
+      expect(versions).toBe(1);
+      expect(audits).toBe(1);
     });
   });
 });
