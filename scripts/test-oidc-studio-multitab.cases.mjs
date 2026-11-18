@@ -25,10 +25,10 @@ function createRuntime(responseFactory) {
       calls.push({ input, init });
       return responseFactory
         ? responseFactory(input, init)
-        : new Response(
-            JSON.stringify({ revision: 2, contentHash: hash2 }),
-            { status: 201, headers: { "Content-Type": "application/json" } },
-          );
+        : new Response(JSON.stringify({ revision: 2, contentHash: hash2 }), {
+            status: 201,
+            headers: { "Content-Type": "application/json" },
+          });
     },
   };
   return { runtime, calls };
@@ -171,12 +171,7 @@ void describe("同源多标签页 Studio CAS 写入保护", () => {
     const { runtime, calls } = createRuntime();
     installStudioMultiTabWriteGuardInPage(origin, runtime);
     assert.equal(
-      (
-        await runtime.fetch(
-          "/api/v1/projects/" + projectId + "/versions",
-          writeRequest(),
-        )
-      ).status,
+      (await runtime.fetch("/api/v1/projects/" + projectId + "/versions", writeRequest())).status,
       403,
     );
     assert.equal(calls.length, 0);
@@ -213,12 +208,7 @@ void describe("同源多标签页 Studio CAS 写入保护", () => {
     armStudioMultiTabWriteInPage(origin, projectId, 1, runtime);
     await runtime.fetch("/api/v1/projects/" + projectId + "/versions", writeRequest());
     assert.equal(
-      (
-        await runtime.fetch(
-          "/api/v1/projects/" + projectId + "/versions",
-          writeRequest(),
-        )
-      ).status,
+      (await runtime.fetch("/api/v1/projects/" + projectId + "/versions", writeRequest())).status,
       403,
     );
     assert.equal(calls.length, 1);
@@ -261,12 +251,7 @@ void describe("同源多标签页 Studio CAS 写入保护", () => {
       installStudioMultiTabWriteGuardInPage(origin, runtime);
       armStudioMultiTabWriteInPage(origin, projectId, 1, runtime);
       assert.equal(
-        (
-          await runtime.fetch(
-            "/api/v1/projects/" + projectId + "/versions",
-            writeRequest(),
-          )
-        ).status,
+        (await runtime.fetch("/api/v1/projects/" + projectId + "/versions", writeRequest())).status,
         403,
       );
       assert.equal(calls.length, 0);
@@ -295,9 +280,7 @@ void describe("同源多标签页 Studio CAS 写入保护", () => {
   });
 
   void it("真实服务端返回 409 时不能误报写入成功", async () => {
-    const { runtime, calls } = createRuntime(
-      async () => new Response("{}", { status: 409 }),
-    );
+    const { runtime, calls } = createRuntime(async () => new Response("{}", { status: 409 }));
     installStudioMultiTabWriteGuardInPage(origin, runtime);
     armStudioMultiTabWriteInPage(origin, projectId, 1, runtime);
     const response = await runtime.fetch(

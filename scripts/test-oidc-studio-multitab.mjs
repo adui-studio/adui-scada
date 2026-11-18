@@ -74,7 +74,12 @@ export function describeStudioMultiTabFailure(error) {
 
 /** 只为本轮随机测试工程创建首版，不接触任何既有工程。 */
 export async function createMultitabProjectInPage(origin, projectId, runtime = globalThis) {
-  if (runtime.location.origin !== origin || !/^b34-oidc-multitab-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId)) {
+  if (
+    runtime.location.origin !== origin ||
+    !/^b34-oidc-multitab-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
+      projectId,
+    )
+  ) {
     throw new Error("同源多标签页工程创建失败");
   }
   const cookies = runtime.document.cookie
@@ -164,8 +169,7 @@ export function installStudioMultiTabWriteGuardInPage(expectedOrigin, runtime = 
       allowed.used ||
       method !== "POST" ||
       url.origin !== expectedOrigin ||
-      url.pathname !==
-        "/api/v1/projects/" + encodeURIComponent(allowed.projectId) + "/versions" ||
+      url.pathname !== "/api/v1/projects/" + encodeURIComponent(allowed.projectId) + "/versions" ||
       url.search !== "" ||
       url.hash !== ""
     ) {
@@ -235,7 +239,9 @@ export function armStudioMultiTabWriteInPage(
   const state = runtime.__aduiTestStudioMultiTab;
   if (
     runtime.location.origin !== origin ||
-    !/^b34-oidc-multitab-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(projectId) ||
+    !/^b34-oidc-multitab-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
+      projectId,
+    ) ||
     ![1, 2].includes(expectedRevision) ||
     !state ||
     state.allowed !== null
@@ -326,16 +332,13 @@ export async function readStudioDocumentHashInPage() {
     ) {
       throw new Error("同源多标签页页面操作失败");
     }
-    const digest = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(json),
-    );
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(json));
     return {
       projectId: snapshot.projectId,
       schemaVersion: snapshot.schemaVersion,
-      hash: Array.from(new Uint8Array(digest), (byte) =>
-        byte.toString(16).padStart(2, "0"),
-      ).join(""),
+      hash: Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join(
+        "",
+      ),
     };
   } finally {
     URL.createObjectURL = originalCreate;
@@ -470,7 +473,9 @@ class CompanionChromeSession {
 }
 
 async function openCompanionChromeTab(browser) {
-  const port = Number(readFileSync(join(browser.folder, "DevToolsActivePort"), "utf8").split("\n")[0]);
+  const port = Number(
+    readFileSync(join(browser.folder, "DevToolsActivePort"), "utf8").split("\n")[0],
+  );
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error("同源多标签页第二个标签页创建失败");
   }
@@ -694,13 +699,13 @@ async function verifyFramework(first, second, origin, name, client, principal) {
   process.stdout.write(name + "：准备同源双标签页专用工程\n");
   const projectId = "b34-oidc-multitab-" + randomUUID();
   assert.match(projectId, PROJECT_PATTERN);
-  assert.deepEqual(
-    await first.evaluate(createMultitabProjectInPage, origin, projectId),
-    { created: true, headRevision: 1 },
-  );
+  assert.deepEqual(await first.evaluate(createMultitabProjectInPage, origin, projectId), {
+    created: true,
+    headRevision: 1,
+  });
 
-  const install = "(" + installStudioMultiTabWriteGuardInPage.toString() + ")(" +
-    JSON.stringify(origin) + ");";
+  const install =
+    "(" + installStudioMultiTabWriteGuardInPage.toString() + ")(" + JSON.stringify(origin) + ");";
   await Promise.all([
     first.send("Page.addScriptToEvaluateOnNewDocument", { source: install }),
     second.send("Page.addScriptToEvaluateOnNewDocument", { source: install }),
@@ -780,10 +785,10 @@ async function verifyFramework(first, second, origin, name, client, principal) {
   assert.deepEqual(afterPreview.drafts, localDraft);
   assert.equal(afterPreview.autoSave, true);
 
-  assert.deepEqual(
-    await second.evaluate(confirmPreviewedServerVersionInPage, 2),
-    { confirmed: true, confirmCount: 1 },
-  );
+  assert.deepEqual(await second.evaluate(confirmPreviewedServerVersionInPage, 2), {
+    confirmed: true,
+    confirmCount: 1,
+  });
   assert.equal(await second.evaluate(waitForStudioActionIdleInPage), true);
   const afterLoad = await inspectProtectedState(second);
   const loadedUi = await second.evaluate(studioMultiTabUiStateInPage);
@@ -823,9 +828,7 @@ async function verifyFramework(first, second, origin, name, client, principal) {
     revision3.resultHash,
   );
   assert.deepEqual(audit, { versionCount: 3, auditCount: 3, headRevision: 3 });
-  process.stdout.write(
-    name + " 同源双标签页 CAS 恢复、草稿保护和 PostgreSQL 三版审计通过\n",
-  );
+  process.stdout.write(name + " 同源双标签页 CAS 恢复、草稿保护和 PostgreSQL 三版审计通过\n");
 }
 
 async function run() {
