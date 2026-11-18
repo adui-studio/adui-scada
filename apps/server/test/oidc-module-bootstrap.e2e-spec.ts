@@ -5,7 +5,10 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { OidcEnabledAppModule } from "../src/app.module.js";
-import { SCADA_CSRF_COOKIE_NAME, SCADA_SESSION_COOKIE_NAME } from "../src/auth/scada-auth-cookie.js";
+import {
+  SCADA_CSRF_COOKIE_NAME,
+  SCADA_SESSION_COOKIE_NAME,
+} from "../src/auth/scada-auth-cookie.js";
 import { SCADA_OIDC_STARTUP_CONFIG } from "../src/auth/oidc-provider-discovery.service.js";
 import { resolveOidcStartupConfig } from "../src/config/oidc-startup.config.js";
 import { PrismaService } from "../src/database/prisma.service.js";
