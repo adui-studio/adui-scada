@@ -183,6 +183,23 @@ export function requireLogoutHttp401(status) {
   return true;
 }
 
+/** 注销后尚未激活的标签页不得提前清空 CAS，或在后台尝试工程写入。 */
+export function requireHiddenSessionUnchanged(state, expectedRevision) {
+  if (
+    !Number.isSafeInteger(expectedRevision) ||
+    expectedRevision < 1 ||
+    state?.baselineRevision !== expectedRevision ||
+    state.baselineCleared !== false ||
+    state.headCleared !== false ||
+    state.identityRejected !== false ||
+    state.busy !== false ||
+    state.writeAttempts !== 0
+  ) {
+    throw new Error("注销后隐藏标签页状态提前变化");
+  }
+  return true;
+}
+
 export function readMultiTabSessionStateInPage(runtime = globalThis) {
   const panel = runtime.document.querySelector('[aria-label="服务端工程版本"]');
   const text = panel?.textContent ?? "";
@@ -669,6 +686,15 @@ async function verifyVersionDrift(session, beforeState) {
   requireUnchangedStudioState(beforeState, afterSave);
 }
 
+/** 在任何真实可见性恢复前，对隐藏页的会话摘要和本地持久化快照逐项复核。 */
+async function verifyHiddenTabBeforeResume(session, beforeState) {
+  await requireHiddenTab(session, "真实标签页没有发生可见性切换");
+  const state = await session.evaluate(readMultiTabSessionStateInPage);
+  requireHiddenSessionUnchanged(state, 3);
+  const snapshot = await inspectProtectedState(session);
+  requireUnchangedStudioState(beforeState, snapshot);
+}
+
 async function verifyLogoutRevalidation(session, origin, beforeState) {
   const state = await waitFor(async () => {
     const current = await session.evaluate(readMultiTabSessionStateInPage);
@@ -870,19 +896,9 @@ async function run() {
     const logout = await tabs.reactWriter.evaluate(logoutCurrentSessionInPage, reactOrigin);
     if (logout.status !== 204) throw new Error("本地会话注销未返回 HTTP 204");
 
-    const hiddenReact = await tabs.reactFollower.evaluate(readMultiTabSessionStateInPage);
-    const hiddenVue = await tabs.vueFollower.evaluate(readMultiTabSessionStateInPage);
-    const hiddenVueWriter = await tabs.vueWriter.evaluate(readMultiTabSessionStateInPage);
-    if (
-      hiddenReact.baselineRevision !== 3 ||
-      hiddenVue.baselineRevision !== 3 ||
-      hiddenVueWriter.baselineRevision !== 3 ||
-      hiddenReact.identityRejected ||
-      hiddenVue.identityRejected ||
-      hiddenVueWriter.identityRejected
-    ) {
-      throw new Error("注销后隐藏标签页状态提前变化");
-    }
+    await verifyHiddenTabBeforeResume(tabs.reactFollower, reactRevisionThree);
+    await verifyHiddenTabBeforeResume(tabs.vueFollower, vueRevisionThree);
+    await verifyHiddenTabBeforeResume(tabs.vueWriter, vueWriterState);
 
     phase = "React 注销发起页 HTTP 状态核验";
     requireLogoutHttp401(await tabs.reactWriter.evaluate(readAuthStatusInPage, reactOrigin));
@@ -904,7 +920,7 @@ async function run() {
     await verifyLogoutRevalidation(tabs.reactWriter, reactOrigin, reactWriterState);
 
     process.stdout.write(
-      "真实多标签页专项通过：React/Vue 四个 Studio 标签页均通过真实可见性切换清除注销后的 CAS 和授权缓存，并收到同源 BFF 401；本地画布、IndexedDB 草稿和自动保存保持不变，旧 CAS 保存未产生工程写入。专用工程保留供维护者复核。\n",
+      "真实多标签页专项通过：三个隐藏页在恢复前保持 CAS、本地画布、IndexedDB 草稿、自动保存与零工程写入；React/Vue 四个 Studio 标签页随后通过真实可见性切换清除注销后的 CAS 和授权缓存，并收到同源 BFF 401，旧 CAS 保存未产生工程写入。专用工程保留供维护者复核。\n",
     );
   } catch (error) {
     if (error instanceof Error && SAFE_ERRORS.has(error.message)) throw error;
