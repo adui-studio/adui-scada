@@ -489,6 +489,19 @@
 - **验证边界**：本批只在 GitHub 功能分支修改双框架 UI 与原只读浏览器脚本，离线安全门禁从 12 项增为 **13 项**；从最新 GitHub 源码在隔离 V8 模拟运行 **13/13**（非正式 Node 运行结果）。**Windows `vp check`、`test:release:preflight:oidc:studio:config`、完整 `ready`、真实 Keycloak 双框架延迟 401 仍待实测**。
 - **证据**：PR #94 候选代码、第三十五批第九小批已合并组件、`scripts/test-oidc-studio-release-preflight.mjs` / `.cases.mjs`、`docs/VALIDATION.md`。
 
+
+### E-054 · 新 Prisma 模型未生成客户端且数据库测试结果解构遗漏（第三十五批 B 阶段）
+
+- **现象**：维护者在 PR #99 Windows 分支运行 `vp check --fix`，报告 12 项 TypeScript 错误：`PrismaClient` 类型没有 `scadaProjectReleaseState` / `scadaProjectReleaseEvent` delegate；测试中的 `grants.map` 参数退化为隐式 `any`；`releaseState` 未声明。该次格式化完成，但检查失败。
+- **已确认根因**：
+  1. 当前工作区的 Prisma Client 仍是旧 Schema 生成物。仓库的 `vp check` 不负责生成 Prisma Client，PR 新增模型后必须先执行根脚本 `pnpm run db:generate`（或服务端等价脚本），再运行 TypeScript 检查；仅修改 `schema.prisma` 不会自动更新生成类型。
+  2. `apps/server/test/project-api.db-spec.ts` 的 `Promise.all` 新增第五个发布状态查询，却仍只声明四个解构变量，随后直接引用未声明的 `releaseState`。这是新增测试的元组解构错误。
+  3. Prisma 新增 `ScadaProjectReleaseEvent.toVersion` 关系时，必须在 `ScadaProjectVersion` 模型提供匹配的反向关系字段；否则 Prisma Schema 关系校验无法完成。
+- **最小修复**：补充 `ScadaProjectVersion.releaseTargetEvents` 反向关系；将数据库测试解构改为 `[project, grants, version, audit, releaseState]`。不使用 `any`、类型断言或关闭规则绕过错误。重新生成 Prisma Client 后再检查类型。
+- **防复发**：新增/修改 Prisma model 后，严格按顺序执行 `pnpm run db:validate`、`pnpm run db:generate`，再运行 `vp check` / TypeScript 检查；新增 `Promise.all` 查询时逐项核对数组项与解构变量数量；每条 Prisma relation 必须核对两端模型的正反向关系。不要把旧生成客户端的 TS2339 误判为业务模型不存在，也不能只靠 `vp check --fix` 自动格式化。
+- **验证边界**：上述 12 项错误来自维护者提供的修复前 Windows 日志。GitHub PR #99 已按最小范围修复 Schema 反向关系和测试解构；**修复后的 Windows `db:validate`、`db:generate`、`vp check`、单元/数据库测试和完整 `ready` 尚未执行**，不得宣称已通过。
+- **证据**：维护者 2026-11-18 Windows `vp check --fix` 原始日志、PR #99、`apps/server/prisma/schema.prisma`、`apps/server/test/project-api.db-spec.ts`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
