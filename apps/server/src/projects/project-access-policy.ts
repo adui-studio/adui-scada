@@ -16,10 +16,21 @@ export interface ProjectPermissionGrant extends ProjectAccessScope {
   readonly permissions: readonly ProjectAccessAction[];
 }
 
-/** 仅表示工程与版本操作权限，不包含正式发布或工业设备写入权限。 */
-export type ProjectAccessAction = "project:read" | "version:read" | "version:append";
+/** 表示工程、版本和正式发布操作权限；不包含任何工业设备写入权限。 */
+export type ProjectAccessAction =
+  | "project:read"
+  | "version:read"
+  | "version:append"
+  | "release:publish"
+  | "release:rollback";
 
-const ACTIONS: readonly ProjectAccessAction[] = ["project:read", "version:read", "version:append"];
+const ACTIONS: readonly ProjectAccessAction[] = [
+  "project:read",
+  "version:read",
+  "version:append",
+  "release:publish",
+  "release:rollback",
+];
 const IDENTIFIER_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
 function validIdentifier(value: unknown): value is string {
