@@ -1544,3 +1544,9 @@ PR #86 依据维护者明确授权 Squash 合并至 `main@a934a33ba2251880f934ff
 PR #89 在维护者 Windows 真实 PostgreSQL 36/36、单测 602/602、HTTP E2E 55/55、Vite+ 343/198 零警告、完整 `ready` 退出码 0 的证据下获明确授权，已 Squash 合并至 `main@9825a80badffa7863590b893a337c4c52e9e0d29`。终端日志没有本地 HEAD，不能声明严格 SHA 绑定。
 
 本批从该 main 创建 `feat/v0.3-b35-oidc-release-preflight-readonly`，不改生产 Controller/仓储/Schema/双 Web UI，只增加复用真实 Keycloak 隔离浏览器及双 HTTPS Origin 的服务端发布预检 GET 验收脚本和 11 项 Node 离线安全测试。浏览器仅检查已有、同时具备工程和版本读取权限的当前已保存工程，核对报告/摘要/水位与 400/409/no-store，不修改工程、版本、ACL、数据库 Schema 或工业设备。离线专项纳入 `ready`；真实交互需要手工登录并单独运行。Windows 质量链与真实 Keycloak 浏览器结果**待维护者复验**。FR-008 正式发布与回滚仍未交付，新 PR 必须 Draft 并指派 `@adui-dev`。
+
+## 2026-11-18 · PR #90 授权合并与第三十五批第七小批候选
+
+维护者上传 PR #90 Windows 原始日志：OIDC 发布预检 Node 专项 **11/11**、`vp check` **345 格式文件 / 200 受检文件零告警**、86 份文档检查、Vitest **602/602**、NestJS HTTP E2E **55/55**、React/Vue/NestJS 类型检查与构建及完整 `ready` **退出码 0**。真实 Keycloak 双 HTTPS Origin 发布预检浏览器专项独立连续执行两次，React/Vue 版本摘要、400/409、无缓存均通过，两次退出码均 **0**。未提供独立 `git rev-parse HEAD`，不能声称 Windows 结果已严格 SHA 绑定。经本轮维护者明确授权，PR #90 已 Squash 合并至 `main@1e891193f0a4fb9191b1f24bdf369713c7e54aeb`。
+
+第七小批从新 main 建立 `feat/v0.3-b35-api-release-preflight-readonly`，仅增加共享 API Client 的 `preflightRelease` 同源 GET、服务端最小只读报告严格解析及 8 项单测；更新现有 Studio 会话类型 Mock 和需求/设计/代码索引。React/Vue Studio 尚**未**改用此 API，当前本地静态预检 UI 保持不变；正式发布、发布回滚与设备写入仍未实现。候选 Vitest **610/610** 为待测目标，既有 HTTP E2E **55/55** 亦须复验；新分支 Windows `vp check`、`test:unit`、`docs:check`、`ready` 均尚未执行，新 PR 必须 Draft 并指派 `@adui-dev`。
