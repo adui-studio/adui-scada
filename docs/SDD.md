@@ -1099,3 +1099,11 @@ React `StudioPage.tsx` 用 `useMemo(() => validateProjectReleasePreflight(state.
 `ServerReleasePreflight.tsx` / `ServerReleasePreflight.vue` 是同构 UI 适配层：手动触发，不对当前文档自动发网络请求；在内存保存与请求时文档对象关联的已保存快照和预检报告，只在仍是发起请求时的编辑文档时显示。用共享 Core `compareProjectDocuments` 判断当前画布是否与远端快照一致；即使服务端 `passed=true`，不一致时必须显式提示“当前画布不能视为通过服务端预检”，且无论匹配与否都明确不是正式发布许可。编辑对象变化隐藏旧报告，父级服务端修订号/授权变化导致子面板重新挂载。认证/ACL 被拒绝时通知父级原有 `invalidateServerAccess`，但不清空本地画布与 IndexedDB。无授权、网络错误、409 和无效响应均只显示既有脱敏错误，不触发新建或版本追加。
 
 原 `test:release:preflight:browser` 只读检查增加“双框架有独立服务端预检手动按钮，未点击前不会渲染服务端通过状态”；不模拟真实 Keycloak，会继续保留既有合法/不兼容 JSON 往返保护。真实受保护 UI 点击浏览器联调需要未来独立专项，不能将此 UI 结构断言视为已通过真实身份、服务端版本或发布事务验收。
+
+## 2026-11-18 · 第三十五批第九小批：真实 OIDC Studio 按钮只读浏览器验收架构
+
+新 `scripts/test-oidc-studio-release-preflight.mjs` 复用既有 `startBrowser`、`waitForLogin`、`readReleasePreflightInPage`、工程列表分页及 `openProjectInPage` 真实确认载入流程。先用真实同源 GET 选取已授权、拥有版本读取权限的现有工程，绝不为测试创建工程或修改 ACL；登录后通过 CDP `Page.addScriptToEvaluateOnNewDocument` 注入**自包含**工程 Fetch 安全门禁，使 API Client 构造前即捕获受控 Fetch。门禁阻止工程 POST/DELETE 与跨 Origin 工程请求，记录固定 `head/snapshot/preflight` 路由类别；401/404/409 仅对当前授权工程指定版本的预检 GET 生成受控 `Response`，不传播为服务器写入或更改权限。
+
+正常场景断言唯一 `head → snapshot → preflight → head` GET 顺序、结果修订与静态问题数量、当前画布与已保存快照一致；用导出 JSON SHA-256、去除视口网格后的完整 SVG、IndexedDB 草稿整记录摘要、自动保存开关和 CAS 基线对比预检前后状态。使用正式“+ 文本”按钮对临时编辑画布造成**未保存**变化；核对旧结果被隐藏，再次服务端预检只说明已保存版本通过，不把改变后的本地画布当作服务端已验证。409 检查错误展示与基线不变，401/404 检查访问失效后的 CAS 清空、画布/草稿/自动保存不变；最后撤销模拟并真实 GET 核验远端水位与摘要。
+
+`scripts/test-oidc-studio-release-preflight.cases.mjs` 共 12 项 Node 离线正反向用例，验证默认禁止写入参数、跨域与工程写入阻断、四段 GET、模拟返回、参数界限、页面按钮、默认无成功报告、CDP 序列化独立性及脱敏。根 `test:release:preflight:oidc:studio:config` 纳入 `ready`，交互式 `test:release:preflight:oidc:studio:browser` **不得**纳入 `ready`。不修改正式 UI、Core、API Client、NestJS、Prisma 或工程 Schema；FR-008 正式发布事务依旧缺失。

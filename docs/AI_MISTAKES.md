@@ -471,6 +471,15 @@
 - **验证边界**：本轮已从 GitHub 回读新分支文件，确认单处保护断言存在且原四种错误报告和全部 11 条测试仍保留；**修复后的 Windows `vp check`、`test:release:preflight:oidc:config` 与完整 `ready` 尚未执行**，不能声称告警已实测关闭。
 - **证据**：维护者 Windows `vp check --fix` 原始输出、PR #90、`scripts/test-oidc-release-preflight.cases.mjs`、`docs/VALIDATION.md`。
 
+### E-052 · OIDC Studio 浏览器只读专项的测试方法绑定与 Fetch 对象隐式字符串化警告（第三十五批第九小批）
+
+- **现象**：2026-11-18 维护者 Windows 在 PR #93 分支运行 `vp check --fix`，测试脚本共 **0 错误、3 条警告**：`scripts/test-oidc-studio-release-preflight.cases.mjs` 的两处 `runtime.fetch` 取值与比较触发 `typescript(unbound-method)`；`scripts/test-oidc-studio-release-preflight.mjs` 的 `String(input)` 触发 `typescript(no-base-to-string)`。自动格式化完成不能代表 Lint/类型检查通过。
+- **已确认根因**：测试夹具使用对象方法简写 `async fetch(...) {}`，其签名可能依赖 `this`；将 `runtime.fetch` 当作裸函数值用于比较虽未调用，仍触发无绑定方法检查，重复 E-016 的风险。新浏览器 Fetch 守卫允许 `input` 是未知对象时通过默认 `Object.prototype.toString` 被转换成 `[object Object]`，没有先显式读取 URL/Request 的安全字符串属性。
+- **最小修复候选**：仅将测试夹具方法改为箭头属性 `fetch: async (...) => { ... }`，保留原有“可信 Origin 不安装守卫且 Fetch 引用不变”的两项断言；守卫明确只从字符串、Request 的 `url` 或 URL 的 `href` 读取地址，对不符合条件的输入抛出固定中文“真实 Studio 发布预检请求地址无效”，不再调用 `String(input)`。在现有离线用例中增加 URL 对象合法读取和异常对象阻断两条反向校验，**12 项既有测试均保留**；不关闭 Lint、不修改真实 React/Vue/NestJS、OIDC、CAS、草稿或设备逻辑。
+- **防复发**：Node 测试中的伪 Fetch 如需比较引用，应优先使用不依赖 `this` 的箭头函数；真实 Fetch 入参属于明确的 `string/Request/URL`，对未知对象应 fail-closed，不依赖隐式字符串化。新增测试/浏览器脚本需要执行未附带 `--fix` 的 `vp check`，确认零警告后再执行离线和真实浏览器专项。
+- **验证边界**：三条警告来自用户提供的**修复前** Windows 输出；当前修复已在 GitHub 分支修改了两个文件并保留原有断言。**修复后 Windows 的 `vp check`、`test:release:preflight:oidc:studio:config`、完整 `ready` 与真实 Keycloak 双框架按钮专项尚未执行**，不可将前一轮格式化成功或协作端模拟结果当作修复已实际验收。
+- **证据**：维护者 2026-11-18 PowerShell 警告日志、PR #93、`scripts/test-oidc-studio-release-preflight.mjs`、`scripts/test-oidc-studio-release-preflight.cases.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
