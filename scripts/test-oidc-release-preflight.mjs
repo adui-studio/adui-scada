@@ -66,7 +66,7 @@ export async function readReleasePreflightInPage(expectedOrigin, runtime = globa
     }
     if (
       response.redirected ||
-      (response.url && new URL(response.url).origin !== expectedOrigin)
+      (response.url && response.url !== expectedOrigin + path)
     ) {
       throw new Error("发布预检只读 HTTP 发生非预期重定向");
     }
