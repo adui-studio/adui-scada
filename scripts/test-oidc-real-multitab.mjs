@@ -415,7 +415,7 @@ async function createBrowserTab(port) {
   return session;
 }
 
-async function installPageProbes(session, blockProjectWrites) {
+export async function installPageProbes(session, blockProjectWrites) {
   const source = [
     "(" + installMultiTabVisibilityProbeInPage.toString() + ")();",
     blockProjectWrites ? "(" + installAccessDenialFaultInPage.toString() + ")();" : "",
@@ -423,6 +423,8 @@ async function installPageProbes(session, blockProjectWrites) {
     .filter(Boolean)
     .join("\n");
   await session.send("Page.addScriptToEvaluateOnNewDocument", { source });
+  // 新文档注入不会执行于现有 about:blank，首次切换前需要立即安装探针。
+  await session.evaluate(installMultiTabVisibilityProbeInPage);
 }
 
 async function waitFor(task, label, timeout = 20000) {

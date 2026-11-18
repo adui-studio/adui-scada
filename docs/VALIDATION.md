@@ -1666,3 +1666,11 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 真实专项使用一个临时浏览器 Profile 内的 React 写入/跟随、Vue 写入/跟随四个标签页。单用户登录后通过正式 BFF 创建唯一随机专用工程；React 与 Vue 写入端分别真实提交版本 2 和 3，两个跟随端分别切回前台验证 visibilitychange 后的真实身份/水位 GET、旧 CAS 清除、真实保存按钮拒绝旧基线且零工程 POST。最后通过真实 CSRF /api/v1/auth/logout 注销共享 Cookie 会话，两个跟随端重新可见时分别验证 401、服务端缓存失效及本地数据保持。
 
 当前分支为 feature/v0.3-b34-multitab-oidc-session，基线 main@8cd2223853e7e5dc05695b8ab1226911ec7bd734。**当前仅有代码与文档候选，没有 Windows Node、vp check、docs:check、完整 ready 或真实 Chrome/Keycloak/PostgreSQL 浏览器执行记录。** 目标数量不能作为通过结果；验收时必须提供 git rev-parse HEAD、各命令输出及退出码。专用工程会按设计保留；不触碰其他工程、既有 ACL、身份映射、数据库迁移或工业设备；新工程仅由现有创建 API 按既定流程创建创建者默认权限，不手工增加其他主体授权。
+
+## 2026-11-18 · 第二十小批首次空白标签页可见性探针缺陷修复候选
+
+维护者提供的质量链日志已确认独立多标签页离线 9/9、`vp check` 337 格式文件 / 192 受检零错误、`docs:check` 86 Markdown、Vitest 581/581、NestJS HTTP E2E 49/49；日志末尾截至 NestJS Prisma Client 生成，缺少完整 `ready` 的最终退出码，也没有真实 `test:projects:oidc:multitab:browser` 命令及退出码。截图中五个标签页均显示 `about:blank`，具体浏览器专项结束状态尚不能由日志独立确认。
+
+静态复核发现测试脚本在首次导航之前只注册 `Page.addScriptToEvaluateOnNewDocument`，但立即调用真实 `Page.bringToFront` 并要求可见性计数递增，存在当前空白文档尚未注册监听器而超时的问题。协作容器真实 Chromium 对照验证：旧空白文档 `probe=null`，额外调用一次 `session.evaluate(installMultiTabVisibilityProbeInPage)` 后，切回标签页可记录 `visibleEvents=1`。协作容器独立初始化顺序测试 **1/1** 通过；两者不是仓库 Windows 全量测试。本次只增加当前文档初始化及离线执行顺序断言，不更改生产业务代码、真实 `visibilitychange` 语义、OIDC 认证、CSRF、CAS 或 Lab 安全限制。
+
+当前 GitHub 修复候选尚未由维护者 Windows 执行新离线目标 10/10、`vp check`、完整 `ready` 或真实多标签页专项。以上旧质量链数据不能等同本次修复已验收；需记录当前本地 `git rev-parse HEAD` 与各命令退出码。

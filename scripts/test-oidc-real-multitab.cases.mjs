@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   describeMultiTabFailure,
   installMultiTabVisibilityProbeInPage,
+  installPageProbes,
   logoutCurrentSessionInPage,
   readAuthStatusInPage,
   readMultiTabSessionStateInPage,
@@ -90,6 +91,25 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
         ),
       /真实标签页没有发生可见性切换/,
     );
+  });
+
+  void it("初始空白标签页必须在首次激活前安装可见性探针", async () => {
+    const calls = [];
+    const session = {
+      send: async (method, params) => {
+        calls.push(method);
+        assert.equal(method, "Page.addScriptToEvaluateOnNewDocument");
+        assert.match(params.source, /installMultiTabVisibilityProbeInPage/);
+        assert.match(params.source, /installAccessDenialFaultInPage/);
+      },
+      evaluate: async (action) => {
+        calls.push("Runtime.evaluate");
+        assert.equal(action, installMultiTabVisibilityProbeInPage);
+        return true;
+      },
+    };
+    await installPageProbes(session, true);
+    assert.deepEqual(calls, ["Page.addScriptToEvaluateOnNewDocument", "Runtime.evaluate"]);
   });
 
   void it("四个标签页必须对应同一租户和同一主体", () => {

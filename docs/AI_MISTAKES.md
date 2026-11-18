@@ -405,6 +405,15 @@
 
 > **2026-11-17 · E-041～E-044 Windows 最终验收补录**：以上四项的“候选 / 待复测”仅描述各轮历史状态。维护者现已在 Windows 真实完成 `pnpm run test:oidc:dual:studio:config` **16/16 通过**、`vp check` **335 格式文件 / 190 受检零告警错误**、`docs:check` **86 份 Markdown** 和完整 `pnpm run ready` **退出码 0**（Vitest **567/567**、NestJS HTTP E2E **49/49**，React/Vue/NestJS 构建完成）。另在两个全新隔离测试工程上，由两位真实预绑定 Keycloak 主体分别执行 React/Vue Studio 真实 UI 的迟到 HTTP 201 测试，均完成版本 2→3、真实可见性恢复、远端水位只读复核、过期 CAS 拒绝、SVG 内容和 IndexedDB 草稿保持不变、仅三版历史和审计；交互式 `pnpm run test:oidc:dual:studio:late` **退出码 0**。E-041 的阶段错误已通过明确状态诊断定位；E-042 的双窗口可见性障碍未再复现；E-043 的本地差异已按阶段区分；E-044 的非持久化视口网格已从此专项 SVG 内容快照中精确排除，其余图元仍严格比较。**注意**：没有独立的原始 SVG DOM diff 证明前轮变化完全源自网格；最终通过仅证明新的测试口径及其所有保留断言满足。201 暂缓是浏览器对已到达真实响应的消费时序，**非 TCP 断流**。成功日志没有本地 Git HEAD，新补录文档提交尚未重新运行 Windows 全链；PR #72 仍 Open/Draft 并指派 `@adui-dev`，等待明确合并授权。
 
+### E-045 · 初始空白标签页未安装可见性探针导致真实 OIDC 登录前阻塞（第三十四批第二十小批）
+
+- **现象**：维护者截图显示同一 Chrome 窗口的初始标签页及四个测试标签页仍为 `about:blank`；上传日志中离线安全用例 9/9、`vp check` 零告警、Vitest 581/581、服务端 E2E 49/49，但未包含真实多标签页浏览器专项的终端命令、退出码或完成记录。不能单凭截图断言真实专项的最终退出阶段。
+- **确认的代码缺陷**：`installPageProbes` 只调用 `Page.addScriptToEvaluateOnNewDocument`，该注入默认不执行于已经存在的空白文档。`activateTab` 却先于 `waitForLogin` 导航读取当前文档的可见性计数，并要求隐藏变可见时计数递增。协作容器真实 Chromium 对照显示旧逻辑 `probe=null`，在当前空白文档立即执行探针安装后可观察到 `visibleEvents=1`。
+- **最小修复**：保持新文档注入与真实 `Page.bringToFront`，额外在新标签页创建时调用一次 `session.evaluate(installMultiTabVisibilityProbeInPage)` 初始化已存在的空白文档。页面探针自身幂等，不修改 `document.visibilityState`、不人工派发 `visibilitychange`，不放宽后续真实 BFF、CAS、草稿与权限约束。新增离线顺序断言。
+- **避免**：CDP 新文档注入与已存在执行上下文是两个不同的生命周期；测试如果在首次 `Page.navigate` 之前读取当前 DOM 状态，就必须先在当前文档初始化依赖项，并保留导航后的注入；不能以空白页面作为真实 OIDC 登录失败的证据。
+- **验证边界**：协作容器已执行 `node --test /mnt/data/test_multitab_patch.mjs`，独立顺序模拟 **1/1** 通过；`node /mnt/data/verify_blank_visibility.mjs` 在真实 Chromium 观察到旧空白文档未注入、修复后 `visibleEvents=1`。两项验证仅覆盖本次探针初始化机制；当前 GitHub 新提交的 Windows `vp check`、完整 `ready`、真实 Keycloak/HTTPS/PostgreSQL 浏览器专项待执行，不能声称 PR #76 全链通过。
+- **证据**：维护者 2026-11-18 上传的五标签页截图及质量链日志、PR #76、`scripts/test-oidc-real-multitab.mjs`、`scripts/test-oidc-real-multitab.cases.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
