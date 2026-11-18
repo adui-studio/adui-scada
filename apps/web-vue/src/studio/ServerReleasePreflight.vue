@@ -57,15 +57,18 @@ async function checkSavedVersion(): Promise<void> {
       checked.value = { ...result, requestedDocument };
     }
   } catch (cause) {
-    if (active && props.document === requestedDocument) {
+    if (active) {
+      // 画布修改不应吞掉迟到的 401/403/404；仅错误提示属于原画布。
       if (isScadaAccessRejection(cause)) emit("accessRejected", cause);
-      failure.value = {
-        document: requestedDocument,
-        message:
-          cause instanceof ScadaApiError
-            ? cause.message
-            : "服务端发布预检失败，请检查当前登录和网络连接",
-      };
+      if (props.document === requestedDocument) {
+        failure.value = {
+          document: requestedDocument,
+          message:
+            cause instanceof ScadaApiError
+              ? cause.message
+              : "服务端发布预检失败，请检查当前登录和网络连接",
+        };
+      }
     }
   } finally {
     inFlight = false;

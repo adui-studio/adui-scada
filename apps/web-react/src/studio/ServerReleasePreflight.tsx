@@ -64,15 +64,18 @@ export function ServerReleasePreflight({
         setChecked({ ...result, requestedDocument });
       }
     } catch (cause) {
-      if (active.current && latestDocument.current === requestedDocument) {
+      if (active.current) {
+        // 画布修改不应吞掉迟到的 401/403/404；仅错误提示属于原画布。
         if (isScadaAccessRejection(cause)) onAccessRejected(cause);
-        setFailure({
-          document: requestedDocument,
-          message:
-            cause instanceof ScadaApiError
-              ? cause.message
-              : "服务端发布预检失败，请检查当前登录和网络连接",
-        });
+        if (latestDocument.current === requestedDocument) {
+          setFailure({
+            document: requestedDocument,
+            message:
+              cause instanceof ScadaApiError
+                ? cause.message
+                : "服务端发布预检失败，请检查当前登录和网络连接",
+          });
+        }
       }
     } finally {
       inFlight.current = false;

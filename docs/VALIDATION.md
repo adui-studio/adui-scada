@@ -1866,3 +1866,9 @@ PR #91 Windows 原始测试证据：`pnpm run test:unit` **50/50 文件 610/610 
 维护者 Windows 在第三十五批第九小批 Draft PR #93 上实际执行 `vp check --fix`：**0 错误 / 3 警告 / 206 个受检文件**，分别是 `typescript(unbound-method)` 两条（Node 测试夹具直接引用对象方法 `runtime.fetch`）与 `typescript(no-base-to-string)` 一条（浏览器只读守卫使用 `String(input)`）。`--fix` 只完成格式化，**没有**取得零告警验收。
 
 本轮远程最小修复在原 Draft 分支上将夹具 Fetch 定义为箭头函数，保持原引用相等的断言；正式页面注入的 Fetch 守卫改为从字符串、Request.url 或 URL.href 中严格读取地址，无法识别的对象固定中文拒绝、不发送网络请求；既有 12 项离线单测不删减，新增 URL 对象成功读取与未知对象拒绝的内部断言。后续需以 GitHub 最新 HEAD 对齐 Windows 本地工作区，执行 `pnpm run test:release:preflight:oidc:studio:config`、`vp check`、`pnpm run docs:check` 和完整 `pnpm run ready`，再于可信本机 Lab 单独执行真实 `test:release:preflight:oidc:studio:browser`，每条记录退出码。**修复后这些 Windows 测试及真实浏览器专项均尚未执行**；此前 PR #92 的完整 `ready=0` 不代表 PR #93 质量验收。
+
+## 2026-11-18 · PR #93 授权合并与第三十五批第十小批迟到 401 候选
+
+用户 Windows 上传原始日志：`pnpm run test:release:preflight:oidc:studio:config` **12/12**、`vp check` **351/206 零警告和错误**、`docs:check` **86 份**，Vitest **51/51 文件 615/615**、HTTP E2E **6/6 文件 55/55**，React/Vue/Server 类型检查、构建及完整 `pnpm run ready` **退出码 0**。用户另独立真实执行 `test:release:preflight:oidc:studio:browser`，React/Vue 均完成真实 Keycloak 登录、工程载入、GET 预检、未保存画布及模拟 409/401/404 的安全检查，退出码 **0**。未提供本机独立 HEAD，GitHub 合并前 HEAD `f0f09b5fb48fb488a12a01c393c07da33e046358` 与上一版差异仅格式化；维护者明确授权 Squash 合并至 `main@3d1a08ba44b5a3d7a78a90b9dbb2fd515a67f77f`。Windows 日志不能声称严格 SHA 绑定。
+
+第十小批仅修复 React/Vue 预检请求期间编辑后迟到 401/403/404 的父级会话拒绝传播，并扩展既有真实 OIDC 浏览器专项的单次延迟 401 挂起与安全释放；增加 Node 离线第 **13** 项。GitHub 最新文件的页面安全函数及 13 条契约已在隔离 V8 等价测试环境中模拟 **13/13 通过**；**这不是** Windows `node --test`、`vp check`、完整 `ready` 或真实 Keycloak 浏览器验收。新分支 Windows 必须重新执行 `test:release:preflight:oidc:studio:config`、`vp check`、`docs:check`、`ready` 和真实 `test:release:preflight:oidc:studio:browser` 并提供退出码；Vitest **615/615** 与 HTTP E2E **55/55** 为待测预期。没有发布写入/回滚或设备操作。

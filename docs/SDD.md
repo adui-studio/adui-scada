@@ -1107,3 +1107,9 @@ React `StudioPage.tsx` 用 `useMemo(() => validateProjectReleasePreflight(state.
 正常场景断言唯一 `head → snapshot → preflight → head` GET 顺序、结果修订与静态问题数量、当前画布与已保存快照一致；用导出 JSON SHA-256、去除视口网格后的完整 SVG、IndexedDB 草稿整记录摘要、自动保存开关和 CAS 基线对比预检前后状态。使用正式“+ 文本”按钮对临时编辑画布造成**未保存**变化；核对旧结果被隐藏，再次服务端预检只说明已保存版本通过，不把改变后的本地画布当作服务端已验证。409 检查错误展示与基线不变，401/404 检查访问失效后的 CAS 清空、画布/草稿/自动保存不变；最后撤销模拟并真实 GET 核验远端水位与摘要。
 
 `scripts/test-oidc-studio-release-preflight.cases.mjs` 共 12 项 Node 离线正反向用例，验证默认禁止写入参数、跨域与工程写入阻断、四段 GET、模拟返回、参数界限、页面按钮、默认无成功报告、CDP 序列化独立性及脱敏。根 `test:release:preflight:oidc:studio:config` 纳入 `ready`，交互式 `test:release:preflight:oidc:studio:browser` **不得**纳入 `ready`。不修改正式 UI、Core、API Client、NestJS、Prisma 或工程 Schema；FR-008 正式发布事务依旧缺失。
+
+## 2026-11-18 · 第三十五批第十小批：迟到 401 对等传播与只读故障注入
+
+React `ServerReleasePreflight.tsx`、Vue `ServerReleasePreflight.vue` 的异步 `catch` 中将两类副作用拆开：**会话级**身份/ACL 拒绝通知由 `active` 生命周期控制，独立于本地文档引用；**仅针对发起时文档的局部错误显示**继续验证当前文档引用一致。成功报告的文档绑定与 Core `compareProjectDocuments` 不变；不影响共享 `readCurrentServerReleasePreflight` 的四段 GET、无请求体、no-store 和最终水位检查。父级原有 `invalidateServerAccess` 负责清理远端摘要和 CAS，绝不删除本地编辑器或 IndexedDB 草稿。
+
+既有 `scripts/test-oidc-studio-release-preflight.mjs` 的预检 GET 安全门禁增加 `holdStudioPreflight401InPage` / `releaseStudioPreflight401InPage`，只允许已 arm 的当前工程修订号、401 且单次挂起状态，禁止挂起时再次设置目标；释放的是已合成的本地拒绝，不向真实 BFF 发出写入。真实 React/Vue Studio 自动化在预检响应未返回期间通过正式按钮新增未保存图元，断言释放 401 后原会话 CAS 已失效、报告未显示且 SVG、JSON、草稿、自动保存未因预检变化。新增 1 项 Node 离线安全测试，保留原 12 项及真实 409、404 回归。测试和浏览器均不得用模拟成功或修改授权代替真实 Keycloak 登录。

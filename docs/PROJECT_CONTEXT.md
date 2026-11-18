@@ -1566,3 +1566,9 @@ PR #89 在维护者 Windows 真实 PostgreSQL 36/36、单测 602/602、HTTP E2E 
 ## 2026-11-18 · PR #93 E-052 质量门禁提醒
 
 维护者 Windows 提供 PR #93 的首次 `vp check --fix`：206 个受检文件，**0 错误但 3 条 TypeScript Lint 警告**（两条对象方法未绑定、一条未知 Fetch 对象隐式字符串化）。原分支的 12 项 Node 安全用例和真实 Keycloak UI 验收不能因此声明已通过。GitHub 当前 Draft 分支仅修复两个脚本的相关表达式与测试断言，继续保持安全的只读 GET、跨 Origin/非 GET 阻断和 React/Vue 对等要求，未改生产代码。Windows 无警告 `vp check`、完整 `ready` 与真实浏览器按钮专项继续待验收，不合并 PR #93。
+
+## 2026-11-18 · PR #93 验收合并与第三十五批第十小批候选
+
+用户 Windows 日志：Studio OIDC 配置 **12/12**，`vp check` **351 格式文件/206 受检零告警**，Vitest **615/615**、HTTP E2E **55/55**、文档 **86 份**、完整 `ready` **退出码 0**；另独立真实 Keycloak 双 HTTPS Origin Studio 发布预检按钮专项 React/Vue 均通过，退出码 **0**，包含当前画布与已保存版本差异及模拟 409/401/404。日志没有独立 `git rev-parse HEAD`，不能严格绑定 GitHub SHA。PR #93 经本轮维护者明确授权 Squash 合并至 `main@3d1a08ba44b5a3d7a78a90b9dbb2fd515a67f77f`，合并前 HEAD `f0f09b5fb48fb488a12a01c393c07da33e046358`。
+
+第十小批从新 main 建立 `fix/v0.3-b35-preflight-late-auth-rejection`，按源码发现的 E-053 对等修复 React/Vue：即使只读预检期间编辑导致文档引用变化，迟到的 401/403/404 仍必须让父级服务端授权和 CAS 失效；过时报告和局部错误不转移至新画布。扩展原真实 Keycloak 专项的单次延迟 401 并新增 1 项离线测试，预计离线 **13/13**，Vitest **615/615** 和 E2E **55/55** 为候选目标，**尚未在 Windows 实测**。未新增数据库、Schema、工程写入或正式发布；FR-008 发布事务仍未实现。

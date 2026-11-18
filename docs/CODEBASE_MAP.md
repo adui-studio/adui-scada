@@ -949,3 +949,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 
 - `scripts/test-oidc-studio-release-preflight.mjs`：复用已有隔离 Chrome/Edge、真实 Keycloak 登录与只读工程选择，顺序点击 React/Vue 正式 UI“检查服务端已保存版本”，守卫只允许同源工程 GET 并模拟预检 409/401/404，核对远端水位/摘要与本地画布/草稿/CAS。
 - `scripts/test-oidc-studio-release-preflight.cases.mjs`：12 项纯 Node 契约、安全模式、CDP 序列化及 UI 选择器测试；`test:release:preflight:oidc:studio:config` 随 `ready` 自动执行，交互式 `test:release:preflight:oidc:studio:browser` 独立运行。
+
+## 2026-11-18 · 第三十五批第十小批迟到认证拒绝回归
+
+- `apps/web-react/src/studio/ServerReleasePreflight.tsx`、`apps/web-vue/src/studio/ServerReleasePreflight.vue`：预检失败的会话级授权拒绝与当前文档局部错误显示解耦，防止编辑期间延迟 401/403/404 丢失父级 CAS 失效信号。
+- `scripts/test-oidc-studio-release-preflight.mjs`：原真实双 HTTPS Origin 浏览器专项新增指定当前版本的单次延迟 401，编辑画布后释放，严格比对 CAS 失效、本地 SVG/JSON/草稿不变。
+- `scripts/test-oidc-studio-release-preflight.cases.mjs`：新增第 13 项 Node 离线门禁，覆盖单次延迟 401、拒绝提前释放或重臂、零网络写入。

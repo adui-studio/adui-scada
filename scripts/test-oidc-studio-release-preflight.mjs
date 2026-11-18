@@ -80,6 +80,9 @@ export function installStudioPreflightReadGuardInPage(origins, runtime = globalT
     requests: [],
     blockedWrites: 0,
     simulatedResponses: 0,
+    holdRejection: false,
+    pendingRejection: false,
+    releaseRejection: null,
   };
   runtime.__aduiScadaStudioPreflightGuard = state;
   runtime.fetch = async (input, options) => {
@@ -120,13 +123,23 @@ export function installStudioPreflightReadGuardInPage(origins, runtime = globalT
       state.requests.push(kind);
       if (kind === "preflight" && state.simulatedStatus !== null) {
         state.simulatedResponses += 1;
-        return new runtime.Response(JSON.stringify({ message: "受控模拟拒绝" }), {
+        const simulated = new runtime.Response(JSON.stringify({ message: "受控模拟拒绝" }), {
           status: state.simulatedStatus,
           headers: {
             "Content-Type": "application/json",
             "Cache-Control": "no-store",
           },
         });
+        if (state.holdRejection) {
+          state.pendingRejection = true;
+          await new Promise((release) => {
+            state.releaseRejection = release;
+          });
+          state.pendingRejection = false;
+          state.releaseRejection = null;
+          state.holdRejection = false;
+        }
+        return simulated;
       }
     }
     return originalFetch(input, options);
@@ -146,6 +159,7 @@ export function armStudioPreflightReadGuardInPage(
   if (
     runtime.location?.origin !== origin ||
     !state ||
+    state.pendingRejection ||
     typeof projectId !== "string" ||
     !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(projectId) ||
     !Number.isSafeInteger(revision) ||
@@ -159,6 +173,27 @@ export function armStudioPreflightReadGuardInPage(
   state.simulatedStatus = status;
   state.requests = [];
   state.simulatedResponses = 0;
+  state.holdRejection = false;
+  return true;
+}
+
+/** 仅为当前测试的 401 GET 挂起一次响应，禁止改动真实工程或 ACL。 */
+export function holdStudioPreflight401InPage(runtime = globalThis) {
+  const state = runtime.__aduiScadaStudioPreflightGuard;
+  if (!state || state.simulatedStatus !== 401 || state.holdRejection || state.pendingRejection) {
+    throw new Error("真实 Studio 预检迟到拒绝状态无效");
+  }
+  state.holdRejection = true;
+  return true;
+}
+
+/** 仅释放一条已拦截的 401 响应，不新增任何 HTTP 请求。 */
+export function releaseStudioPreflight401InPage(runtime = globalThis) {
+  const state = runtime.__aduiScadaStudioPreflightGuard;
+  if (!state?.pendingRejection || typeof state.releaseRejection !== "function") {
+    throw new Error("真实 Studio 预检迟到拒绝尚未挂起");
+  }
+  state.releaseRejection();
   return true;
 }
 
@@ -169,6 +204,7 @@ export function studioPreflightGuardStateInPage(runtime = globalThis) {
     requests: state.requests.slice(),
     blockedWrites: state.blockedWrites,
     simulatedResponses: state.simulatedResponses,
+    pendingRejection: state.pendingRejection,
   };
 }
 
@@ -378,7 +414,7 @@ async function verifyOrigin(session, origin, name, principal, selected) {
     const ui = await session.evaluate(studioPreflightUiStateInPage);
     return ui?.stale && ui.revision === null ? true : null;
   }, "真实 Studio 发布预检未保护当前画布和草稿");
-  const edited = await getProtectedState(session);
+  let edited = await getProtectedState(session);
   if (
     edited.hash === initial.hash ||
     edited.baselineRevision !== initial.baselineRevision ||
@@ -393,27 +429,74 @@ async function verifyOrigin(session, origin, name, principal, selected) {
   }
   requireSameLocalState(edited, await getProtectedState(session));
 
-  process.stdout.write(name + "：正在验证模拟 409 与 401/404 拒绝不修改画布及草稿。\n");
+  process.stdout.write(name + "：正在验证 409 与编辑期间迟到的 401 访问拒绝。\n");
   const conflict = await clickAndRead(session, origin, selected, 409);
   if (conflict.revision !== null || conflict.baselineCleared) {
     throw new Error("真实 Studio 发布预检错误状态处理不符合预期");
   }
   requireSameLocalState(edited, await getProtectedState(session));
-  for (const status of [401, 404]) {
-    const rejected = await clickAndRead(session, origin, selected, status);
-    if (rejected.revision !== null || !rejected.baselineCleared) {
-      throw new Error("真实 Studio 发布预检错误状态处理不符合预期");
-    }
-    const after = await getProtectedState(session);
-    if (
-      after.canvas !== edited.canvas ||
-      after.hash !== edited.hash ||
-      JSON.stringify(after.drafts) !== JSON.stringify(edited.drafts) ||
-      after.autoSave !== edited.autoSave
-    ) {
-      throw new Error("真实 Studio 发布预检未保护当前画布和草稿");
-    }
+  assert.equal(
+    await session.evaluate(
+      armStudioPreflightReadGuardInPage,
+      origin,
+      selected.projectId,
+      selected.revision,
+      401,
+    ),
+    true,
+  );
+  assert.equal(await session.evaluate(holdStudioPreflight401InPage), true);
+  assert.equal(await session.evaluate(clickStudioPreflightInPage), true);
+  await waitFor(async () => {
+    const guard = await session.evaluate(studioPreflightGuardStateInPage);
+    return guard?.pendingRejection &&
+      JSON.stringify(guard.requests) === JSON.stringify(["head", "snapshot", "preflight"])
+      ? true
+      : null;
+  }, "真实 Studio 预检迟到拒绝未进入挂起");
+  const beforePendingEdit = await getProtectedState(session);
+  assert.equal(await session.evaluate(addStudioSymbolInPage, "+ 文本"), true);
+  const afterPendingEdit = await getProtectedState(session);
+  if (
+    afterPendingEdit.hash === beforePendingEdit.hash ||
+    afterPendingEdit.baselineRevision !== beforePendingEdit.baselineRevision
+  ) {
+    throw new Error("真实 Studio 发布预检未保护当前画布和草稿");
   }
+  assert.equal(await session.evaluate(releaseStudioPreflight401InPage), true);
+  await waitFor(async () => {
+    const [guard, ui] = await Promise.all([
+      session.evaluate(studioPreflightGuardStateInPage),
+      session.evaluate(studioPreflightUiStateInPage),
+    ]);
+    return guard?.pendingRejection === false &&
+      guard.simulatedResponses === 1 &&
+      guard.blockedWrites === 0 &&
+      JSON.stringify(guard.requests) === JSON.stringify(["head", "snapshot", "preflight"]) &&
+      ui?.baselineCleared &&
+      ui.buttonReady &&
+      ui.revision === null
+      ? true
+      : null;
+  }, "真实 Studio 预检迟到拒绝未使授权基线失效");
+  const afterDenied = await getProtectedState(session);
+  if (
+    afterDenied.baselineRevision !== null ||
+    afterDenied.canvas !== afterPendingEdit.canvas ||
+    afterDenied.hash !== afterPendingEdit.hash ||
+    JSON.stringify(afterDenied.drafts) !== JSON.stringify(afterPendingEdit.drafts) ||
+    afterDenied.autoSave !== afterPendingEdit.autoSave
+  ) {
+    throw new Error("真实 Studio 发布预检未保护当前画布和草稿");
+  }
+  edited = afterDenied;
+
+  process.stdout.write(name + "：正在验证模拟 404 拒绝保持画布与草稿。\n");
+  const rejected = await clickAndRead(session, origin, selected, 404);
+  if (rejected.revision !== null || !rejected.baselineCleared) {
+    throw new Error("真实 Studio 发布预检错误状态处理不符合预期");
+  }
+  requireSameLocalState(edited, await getProtectedState(session));
   assert.equal(
     await session.evaluate(
       armStudioPreflightReadGuardInPage,
@@ -434,7 +517,7 @@ async function verifyOrigin(session, origin, name, principal, selected) {
   }
   const guard = await session.evaluate(studioPreflightGuardStateInPage);
   assert.equal(guard.blockedWrites, 0);
-  process.stdout.write(name + "：真实按钮、未保存画布提示、409/401/404 及本地保护均通过。\n");
+  process.stdout.write(name + "：真实按钮、迟到 401、409/404 及本地保护均通过。\n");
 }
 
 async function run() {
