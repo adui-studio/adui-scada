@@ -1814,3 +1814,17 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 第三十五批第四小批引入只读 `GET /api/v1/projects/:projectId/versions/:revision/release-preflight`；只允许经 OIDC/BFF 认证且拥有 `version:read` 的用户读取与当前水位完全匹配的服务端历史快照兼容报告。使用同事务工程行共享锁、权限复核、历史快照 SHA-256/数据库字段检查与 Core 静态门禁。新加 **6** 项仓储 Vitest、**4** 项 NestJS Mock HTTP E2E。拟定目标 **602/602** 单测、**55/55** HTTP E2E、`vp check` 零警告、文档检查与完整 `ready` 退出码 **0**；目标不是实测结果。
 
 需 Windows 在最新功能分支记录 `git rev-parse HEAD`，分别运行 `pnpm run test:unit`、`pnpm run test:e2e:server`、`vp check`、`pnpm run docs:check`、`pnpm run ready` 并保留各自退出码。现有真实 PostgreSQL `test:db` 未为新接口新增专用数据库场景；Mock HTTP E2E 不等于真实 OIDC + PostgreSQL 只读 HTTP 实测。此批不改 Prisma 迁移，不建立正式发布权限或数据写入。
+
+## 2026-11-18 · PR #88 验收合并与第三十五批第五小批真实 PostgreSQL HTTP 发布预检候选
+
+维护者上传的 Windows 原始日志已确认第四小批 `pnpm run test:unit` **602/602**、`pnpm run test:e2e:server` **55/55**、`vp check` **343 格式文件/198 受检零告警**、`docs:check` **86 份**、完整 `pnpm run ready` **退出码 0**，React/Vue 与 NestJS 构建成功；完整 `ready` 包括 Node 浏览器协议安全门禁。原始日志未包含独立本机 `git rev-parse HEAD`，因此不宣称这些结果已经严格绑定到 GitHub SHA。PR #88 的 GitHub HEAD `874ea667e5858e73eeb7363c005c104f2bc34fe5` 已核对，按维护者本轮明确授权 Squash 合并至 `main@058277f20088d20e0d3f6cd58ff553868cc92c48`。
+
+第五小批只修改 **`apps/server/test/projects-cas-cookie-http.db-spec.ts`** 的隔离 PostgreSQL + NestJS Cookie HTTP 回归，并沿用该文件原有的 `SCADA_TEST_DATABASE_URL` 本机 `adui_scada_test` 白名单及 `withFixture` 随机租户清理。新增 **4 项**：两个会话的当前版本只读报告及匿名 401，真实修订水位推进后的旧版 409 与新版本兼容性错误，撤销第二主体 `version:read` ACL 后 404，以及**仅在本次随机测试租户**破坏历史快照数据库摘要后 500 且不产生新版本。成功/拒绝请求均对照真实 PostgreSQL 的 head、版本数量和审计数量；绝不访问既有租户工程、生产数据库或工业设备。被破坏的测试行在 `finally` 内随随机租户清理，不引入迁移。
+
+**候选暂未实测**：新分支需要 Windows `git rev-parse HEAD`，分别执行 `vp check`、`pnpm run docs:check`、`pnpm run ready` 和独立 **`pnpm run test:db`**。现有 `ready` 不包含真实数据库专项；旧 `602/602`、`55/55` 为第四小批实测基线，不能视为当前新 HEAD 已验收。此批复用服务端内部测试可信主体签发，**不执行真实 Keycloak 授权码/JWKS 交互**；只证明隔离库真实 HTTP/Cookie/ACL/Prisma 路径，不代替真实 OIDC 浏览器验收与发布安全审查。
+
+## 2026-11-18 · PR #89 新用例未使用会话参数的 Vite+ 修复待复测
+
+维护者 Windows 执行 `vp check --fix` 报告 `apps/server/test/projects-cas-cookie-http.db-spec.ts:539`：`eslint(no-unused-vars)` 1 条警告及 `typescript(TS6133)` 1 条错误，都是新数据库发布预检用例未使用的 `sessionA` 解构；该次**格式化完成，但代码检查失败**。没有证据表明后续 `test:db` 或完整 `ready` 已运行。
+
+已在 PR #89 同一功能分支最小删除该用例未使用的 `sessionA` 参数，保留 `tenantId`、`sessionB`、原 `subjectA` 主体标识、版本水位、静态兼容报告和审计断言。GitHub 回读源码的静态核对通过；**新的 Windows `vp check`、`docs:check`、`ready` 和隔离 PostgreSQL `test:db` 均待维护者执行**，未以代码修复冒充测试通过。详见 `docs/AI_MISTAKES.md` E-050。运行 `vp check --fix` 可能留下本地格式变动，更新远端分支前应先检查 `git status --short` 和 `git diff`，不得直接清理用户本地改动。

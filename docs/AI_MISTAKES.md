@@ -453,6 +453,15 @@
 - **验证边界**：协作容器对 GitHub 当前两个新文件的 Blob SHA 完整比对一致，Node.js 22 的 `node --test` **6/6 通过**；使用临时本机自签 HTTPS 服务实际确认“未知证书拒绝”与“显式信任本机 CA 后接受”两条路径，未关闭证书校验。**Windows 新 HEAD 的 `vp check`、完整 `ready` 和两个浏览器专项尚未执行**；自签服务模拟不是 Windows Chrome/Edge 验收。
 - **证据**：维护者 2026-11-18 Vite+ 截图、PowerShell 两项专项退出码 1、质量日志、PR #87、`scripts/studio-browser-targets.mjs` 与 `scripts/studio-browser-targets.cases.mjs`、`docs/VALIDATION.md`。
 
+### E-050 · 数据库专项新用例多余解构触发 Vite+ 未使用参数错误（第三十五批第五小批）
+
+- **现象**：维护者 2026-11-18 在 PR #89 Windows 分支运行 `vp check --fix`，`apps/server/test/projects-cas-cookie-http.db-spec.ts:539` 同时报告 `eslint(no-unused-vars)` 和 `typescript(TS6133)`，均指向新增测试的 `sessionA` 解构。格式化完成，但代码检查仍是 **1 个错误、1 个警告**，不可声称通过。
+- **根因**：新增“版本推进后旧预检 409”用例从 `withFixture` 解构了 `sessionA`，但实际通过 `{ tenantId, subjectId: subjectA }` 构造可信仓储主体，只在 HTTP GET 中使用 `sessionB`；会话 `sessionA` 从未读取。这是测试参数多取，不是服务端认证或事务逻辑失效的证据。
+- **最小修复**：只把该用例的 `async ({ tenantId, sessionA, sessionB })` 改为 `async ({ tenantId, sessionB })`。不修改 `subjectA`、任何测试断言、随机租户清理、数据库白名单或生产代码。
+- **防复发**：对新增回调中的参数解构逐项检查使用位置；区分真实会话变量与既有主体标识常量；PR 创建前运行 `vp check` 并确保错误和警告均为零，不以“格式化成功”替代 Lint/类型检查。
+- **验证边界**：已从 GitHub 最新分支重新读取修复后的目标文件，静态确认该测试块不再出现 `sessionA`，原 409/不兼容报告断言仍在；**修复后 Windows `vp check`、`pnpm run ready` 与独立 `pnpm run test:db` 尚未执行**。不能将静态核对冒充完整复验。
+- **证据**：维护者本轮原始 `vp check --fix` 输出、PR #89、`apps/server/test/projects-cas-cookie-http.db-spec.ts`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
