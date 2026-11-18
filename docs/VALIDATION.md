@@ -1718,3 +1718,13 @@ Write-Host "完整质量链退出码：$LASTEXITCODE"
 协作容器只对新增辅助函数的**同逻辑独立 Node 模拟**运行 `node --check` 与契约断言，**2/2** 通过；这不是仓库源码的真实 Node 离线测试，更不是 Windows `ready`、CDP/Keycloak 集成或工业安全验收。新 HEAD 的 `vp check`、`docs:check`、完整 `ready` 和真实四 Studio 标签页专项均**尚未执行**，旧批次通过的日志不能当成新批验收证据。
 
 Windows 建议先执行 `git rev-parse HEAD`，再执行 `pnpm run test:projects:oidc:multitab:config` 和 `pnpm run ready`，记录每条最终退出码；质量链通过后再在已确认的本机隔离 OIDC HTTPS Lab 执行 `pnpm run test:projects:oidc:multitab:browser`，用真实 Chrome/Edge 完成单次 Keycloak 手动登录，最终核对浏览器专项退出码。测试将创建并保留新专用工程且注销隔离会话，禁止终端输入密码或输出令牌。
+
+## 2026-11-18 · 第三十四批第二十三小批验收及第二十四小批候选
+
+维护者 Windows 提供的第二十三小批日志已确认 `test:projects:oidc:multitab:config` **15/15**、退出码 **0**；完整 `pnpm run ready` 退出码 **0**，其中 `vp check` **337** 个格式文件、**192** 个受检文件零警告/错误，Vitest **581/581**、NestJS HTTP E2E **49/49**、`docs:check` **86** 份 Markdown，以及 React/Vue/NestJS 类型检查和构建完成。真实 Keycloak 四个 Studio 标签页专项退出码 **0**：四页经真实可见性切换失效 CAS/授权缓存，收到 BFF 401，本地 SVG/IndexedDB 草稿/自动保存保持不变，旧 CAS 保存未产生工程写入。原日志没有本地 `git rev-parse HEAD`，未独立关联确切 SHA；PR #79 按维护者明确授权 Squash 合并到 `main@922a72d808658e81d80930436dfabae081b4f83c`。
+
+第二十四小批仅扩展注销后尚未恢复可见的三个隐藏 Studio 标签页的保护检查：原 CAS 水位及未拒绝身份必须保留，后台操作不忙碌、写入计数为零；更重要的是在切回前台之前即重新取得完整 SVG 内容、IndexedDB 草稿数量及整记录 SHA-256、自动保存状态，并逐项比对注销前基线。缺失或发生变化必须失败。新增 1 项 Node 离线用例，**目标 16/16（仅候选目标）**；四个 Studio 页面注销后的已有真实 BFF 401、CAS/授权失效、零保存写入与快照断言均保留。
+
+**当前尚未执行第二十四小批新 HEAD 的仓库 Node 离线测试、`vp check`、`docs:check`、完整 `pnpm run ready` 或真实 Chrome/Edge/Keycloak 四标签页专项**。协作环境无法通过公共网络获取此 GitHub 仓库以复跑完整测试；上批通过结果不可冒充新提交验收。新测试仍在已确认的本机隔离 Lab 中通过既有受控创建接口生成并保留一份随机测试工程，真实追加版本 2/3 并注销隔离会话，不碰已有工程和授权。
+
+Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 `pnpm run test:projects:oidc:multitab:config` 和 `pnpm run ready`，记录各自最终退出码；质量链均通过且已确认本机隔离 OIDC HTTPS Lab 后，手动执行 `pnpm run test:projects:oidc:multitab:browser` 并检查最终退出码。禁止把 Keycloak 口令输入终端、复用生产数据或输出敏感令牌。
