@@ -1949,3 +1949,29 @@ PR #91 Windows 原始测试证据：`pnpm run test:unit` **50/50 文件 610/610 
 这证明原迁移首条 ALTER 已持久化，后续建表未完成；此前“约束不存在才创建”的恢复保护会错误跳过该旧定义。PR #99 已修正迁移：事务内先 `DROP CONSTRAINT IF EXISTS`，再创建包含五项权限的新 CHECK；并在 `prisma-schema-comments.spec.ts` 新增静态回归，验证先删除后重建、完整权限集合。E-059 已记录该问题。
 
 **尚未执行任何数据库恢复写入**。修复迁移需先在隔离 `adui_scada_test` 完成首次/二次部署、状态检查与 `test:db`；对现有 `adui_scada` 的 `migrate resolve --rolled-back` 和迁移重试，必须等待可恢复备份与维护者明确授权。修复后的 Windows 单测、Vite+、数据库专项与完整 `ready` 仍待执行。
+## 2026-11-18 · PR #99 Windows Schema / Vite+ / Vitest 复验通过，PostgreSQL 与 ready 待验收
+
+维护者最新 Windows 原始输出确认：
+
+| 命令 | 结果 | 退出码 |
+| --- | --- | ---: |
+| `pnpm run db:validate` | Prisma Schema valid | 0 |
+| `pnpm run db:generate` | Prisma Client 7.10.1 生成成功 | 0 |
+| `vp check` | 354 个文件格式正确；207 个受检文件零警告、Lint 与类型错误 | 0 |
+| `pnpm run test:unit` | 51/51 文件、618/618 项通过 | 0 |
+| `pnpm run docs:check` | 88 份 Markdown 通过 | 0 |
+
+Vitest 日志明确包含 `apps/server/src/database/prisma-schema-comments.spec.ts` 4 项测试通过、`apps/server/src/projects/project-api.store.spec.ts` 13 项通过，说明迁移哈希/事务静态回归、旧权限约束替换静态回归及工程创建发布状态事务 Mock 均已进入并通过本轮单测。
+
+**本轮未提供 `git rev-parse HEAD`，因此不能把上述 Windows 结果严格绑定到 GitHub 当前 PR #99 HEAD。** 本轮只证明 Schema、生成客户端、静态检查、全量单测和文档检查通过；不能据此声称真实 PostgreSQL 已执行修复迁移。
+
+### 尚待执行
+
+1. 按本文件引用的 `docs/HARNESS.md` PowerShell `try/finally` 流程，将 Prisma CLI 与 DB 测试的环境变量临时指向本机隔离库 `adui_scada_test`。
+2. 修复迁移首次部署成功。
+3. 同一隔离库二次部署无待执行迁移。
+4. `migrate status` 显示最新。
+5. `pnpm run test:db` 全部数据库测试通过，且迁移表/字段/索引中文注释、CHECK、FK、初始化状态均符合预期。
+6. 执行完整 `pnpm run ready` 并记录最终退出码。
+
+原开发库 `adui_scada` 的失败迁移记录和旧三项权限 CHECK 已由维护者只读确认。**仍未执行 `migrate resolve --rolled-back` 或任何开发库恢复写入**；必须先完成隔离库验收、可恢复备份，并取得维护者明确授权。
