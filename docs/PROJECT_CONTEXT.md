@@ -1613,7 +1613,7 @@ PR #99 已修复：
 - 同步 `docs/HARNESS.md` 隔离库流程、`docs/VALIDATION.md` 和 E-055～E-057。
 
 **重要：原 `adui_scada` 数据库中是否已保留首条权限 CHECK 尚未确认。** 暂停对该库的迁移和任何 resolve/删除操作，先做只读检查。修复后的 SQL 尚未在 PostgreSQL 执行，Vitest/ready 也尚未复验。下一步只允许把 `SCADA_DATABASE_URL` 与 `SCADA_TEST_DATABASE_URL` 临时指向本机 `adui_scada_test`，按 `docs/HARNESS.md` 的 `try/finally` 步骤完成首次/二次迁移和数据库测试；随后再根据只读检查结果制定原 `adui_scada` 的恢复方案。
-本轮新增 1 项迁移 SQL 静态回归，修复后全量单元测试验收目标为 **617/617**；这是待 Windows 实测目标，不是通过结果。
+本轮新增 1 项迁移 SQL 静态回归，修复后全量单元测试验收目标为 **618/618**；这是待 Windows 实测目标，不是通过结果。
 ## 2026-11-18 · PR #99 失败迁移状态已只读确认，修复约束恢复逻辑待验收
 
 维护者 Windows 使用仓库当前 Compose 参数完成 PostgreSQL 只读检查，退出码 0。实际数据库为 `adui_scada`；迁移 `20261118000000_release_state_and_events` 有 started_at、finished_at 与 rolled_back_at 均为空。首条 `scada_project_grants_permission_check` 已持久化，但仍只允许原三项工程/版本权限；发布事件表和发布状态表均不存在。
