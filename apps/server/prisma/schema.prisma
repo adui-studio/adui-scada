@@ -24,6 +24,10 @@ model ScadaProject {
   grants       ScadaProjectGrant[]
   /// 该工程只追加的历史版本集合。
   versions     ScadaProjectVersion[]
+  /// 该工程的独立正式发布状态；未发布时目标修订为空且代次为 0。
+  releaseState  ScadaProjectReleaseState?
+  /// 该工程只追加的正式发布与回滚事件。
+  releaseEvents ScadaProjectReleaseEvent[]
 
   @@id([tenantId, projectId])
   @@map("scada_projects")
@@ -37,7 +41,7 @@ model ScadaProjectGrant {
   projectId String       @map("project_id") @db.VarChar(128)
   /// 被授权的可信身份主体标识。
   subjectId String       @map("subject_id") @db.VarChar(128)
-  /// 明确授予的工程读取、版本读取或版本追加权限。
+  /// 明确授予的工程读取、版本读取、版本追加或正式发布操作权限。
   permission String      @db.Text
   /// 该授权记录所属的工程主表记录。
   project   ScadaProject @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
@@ -95,6 +99,75 @@ model ScadaProjectAudit {
   @@unique([tenantId, projectId, revision], map: "scada_project_audit_version_key")
   @@index([tenantId, actorId, createdAt], map: "scada_project_audit_actor_idx")
   @@map("scada_project_audit")
+}
+
+
+/// 每工程唯一的正式发布指针；未发布时不引用任何历史版本。
+model ScadaProjectReleaseState {
+  /// 发布状态所属租户标识。
+  tenantId            String                  @map("tenant_id") @db.VarChar(128)
+  /// 发布状态所属工程标识。
+  projectId           String                  @map("project_id") @db.VarChar(128)
+  /// 当前正式发布的不可变历史修订号；空值表示尚未发布，数据库增量迁移维护其复合外键。
+  releasedRevision    BigInt?                 @map("released_revision")
+  /// 当前正式发布快照的 SHA-256 摘要；必须与发布修订号同时存在或同时为空。
+  releasedContentHash String?                 @map("released_content_hash") @db.VarChar(64)
+  /// 正式发布代次；初始为 0，每次成功发布或回滚严格递增。
+  releaseGeneration   BigInt                  @default(0) @map("release_generation")
+  /// 当前发布指针对应的最后成功发布事件；未发布时为空。
+  lastReleaseEventId  String?                 @unique(map: "scada_project_release_state_last_event_key") @map("last_release_event_id") @db.Uuid
+  /// 发布状态最近更新时间；仅用于诊断展示，不参与版本 CAS。
+  updatedAt           DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+  /// 该发布状态所属的工程主表记录。
+  project             ScadaProject            @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
+  /// 当前发布指针引用的版本由数据库复合外键维护；该可空复合关系不暴露为 Prisma relation 字段。
+  /// 当前发布指针对应的最后成功发布事件。
+  lastReleaseEvent    ScadaProjectReleaseEvent? @relation("ScadaProjectReleaseStateLastEvent", fields: [lastReleaseEventId], references: [eventId], onDelete: Restrict)
+
+  @@id([tenantId, projectId])
+  @@map("scada_project_release_state")
+}
+
+/// 只追加正式发布与回滚事件；不复用版本保存审计。
+model ScadaProjectReleaseEvent {
+  /// 发布事件全局唯一 UUID 标识。
+  eventId             String                  @id @default(uuid()) @map("event_id") @db.Uuid
+  /// 发布事件所属租户标识。
+  tenantId            String                  @map("tenant_id") @db.VarChar(128)
+  /// 发布事件所属工程标识。
+  projectId           String                  @map("project_id") @db.VarChar(128)
+  /// 本次成功发布或回滚后的发布代次；从 1 开始严格递增。
+  generation          BigInt
+  /// 发布事件动作，仅允许 PUBLISH 或 ROLLBACK。
+  action              String                  @db.VarChar(16)
+  /// 事务提交前的正式发布修订号；首次发布时为空，数据库增量迁移维护其复合外键。
+  fromRevision        BigInt?                 @map("from_revision")
+  /// 事务提交前正式发布快照的 SHA-256 摘要；必须与原发布修订号同时存在或同时为空。
+  fromContentHash     String?                 @map("from_content_hash") @db.VarChar(64)
+  /// 事务提交后的正式发布修订号。
+  toRevision          BigInt                  @map("to_revision")
+  /// 事务提交后的正式发布快照 SHA-256 摘要。
+  toContentHash       String                  @map("to_content_hash") @db.VarChar(64)
+  /// 执行发布或回滚操作的可信主体标识。
+  actorId             String                  @map("actor_id") @db.VarChar(128)
+  /// 受控客户端幂等标识；不得写入令牌、Cookie、工程正文或设备地址。
+  idempotencyKey      String                  @map("idempotency_key") @db.VarChar(128)
+  /// 服务端计算的请求语义 SHA-256 摘要，用于区分同幂等标识的不同语义。
+  requestSemanticHash String                  @map("request_semantic_hash") @db.VarChar(64)
+  /// 发布事件成功提交时间。
+  createdAt           DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 该事件所属的工程主表记录。
+  project             ScadaProject            @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
+  /// 该事件提交后的正式发布版本。
+  toVersion           ScadaProjectVersion     @relation("ScadaProjectReleaseEventToVersion", fields: [tenantId, projectId, toRevision], references: [tenantId, projectId, revision], onDelete: Restrict)
+  /// 若该事件是当前发布指针的最后一次成功变更，则被状态表引用。
+  currentReleaseState ScadaProjectReleaseState? @relation("ScadaProjectReleaseStateLastEvent")
+
+  @@unique([tenantId, projectId, generation], map: "scada_project_release_event_generation_key")
+  @@unique([tenantId, projectId, actorId, action, idempotencyKey], map: "scada_project_release_event_idempotency_key")
+  @@index([tenantId, projectId, createdAt], map: "scada_project_release_event_project_created_idx")
+  @@index([tenantId, actorId, createdAt], map: "scada_project_release_event_actor_created_idx")
+  @@map("scada_project_release_events")
 }
 
 /// 已验证的租户内主体；不保存前端提供的角色、令牌明文或本地密码。
