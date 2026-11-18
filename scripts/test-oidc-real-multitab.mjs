@@ -687,7 +687,7 @@ async function verifyVersionDrift(session, beforeState) {
 }
 
 /** 在任何真实可见性恢复前，对隐藏页的会话摘要和本地持久化快照逐项复核。 */
-async function verifyHiddenTabBeforeResume(session, beforeState) {
+export async function verifyHiddenTabBeforeResume(session, beforeState) {
   await requireHiddenTab(session, "真实标签页没有发生可见性切换");
   const state = await session.evaluate(readMultiTabSessionStateInPage);
   requireHiddenSessionUnchanged(state, 3);
