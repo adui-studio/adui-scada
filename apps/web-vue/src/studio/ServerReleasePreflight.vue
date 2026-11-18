@@ -7,10 +7,7 @@ import {
   readCurrentServerReleasePreflight,
   ScadaApiError,
 } from "@adui/scada-api-client";
-import type {
-  ScadaApiClient,
-  StudioServerReleasePreflight,
-} from "@adui/scada-api-client";
+import type { ScadaApiClient, StudioServerReleasePreflight } from "@adui/scada-api-client";
 
 const props = defineProps<{
   api: ScadaApiClient;
@@ -106,11 +103,7 @@ async function checkSavedVersion(): Promise<void> {
             : "当前画布与已保存快照不同，当前画布不能视为通过服务端预检"
         }}。该结果仅代表读取时的版本，不是正式发布许可。
       </p>
-      <ol
-        v-if="!visible.report.passed"
-        class="studio-version-list"
-        aria-label="服务端发布预检问题"
-      >
+      <ol v-if="!visible.report.passed" class="studio-version-list" aria-label="服务端发布预检问题">
         <li
           v-for="(issue, index) in visible.report.issues"
           :key="`${issue.code}:${issue.path}:${index}`"

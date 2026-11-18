@@ -6,10 +6,7 @@ import {
   readCurrentServerReleasePreflight,
   ScadaApiError,
 } from "@adui/scada-api-client";
-import type {
-  ScadaApiClient,
-  StudioServerReleasePreflight,
-} from "@adui/scada-api-client";
+import type { ScadaApiClient, StudioServerReleasePreflight } from "@adui/scada-api-client";
 
 interface ServerReleasePreflightProps {
   readonly api: ScadaApiClient;
@@ -31,9 +28,7 @@ export function ServerReleasePreflight({
 }: ServerReleasePreflightProps) {
   const [busy, setBusy] = useState(false);
   const [checked, setChecked] = useState<CheckedReleasePreflight | null>(null);
-  const [failure, setFailure] = useState<{ document: ScadaDocument; message: string } | null>(
-    null,
-  );
+  const [failure, setFailure] = useState<{ document: ScadaDocument; message: string } | null>(null);
   const inFlight = useRef(false);
   const active = useRef(true);
   const latestDocument = useRef(document);
@@ -121,10 +116,7 @@ export function ServerReleasePreflight({
           {!visible.report.passed && (
             <ol className="studio-version-list" aria-label="服务端发布预检问题">
               {visible.report.issues.map((issue, index) => (
-                <li
-                  key={`${issue.code}:${issue.path}:${index}`}
-                  className="studio-version-item"
-                >
+                <li key={`${issue.code}:${issue.path}:${index}`} className="studio-version-item">
                   <code>{issue.path}</code>
                   <p className="studio-version-help">{issue.message}</p>
                 </li>
