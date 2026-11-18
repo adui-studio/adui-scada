@@ -85,8 +85,12 @@ export function installStudioPreflightReadGuardInPage(origins, runtime = globalT
   runtime.fetch = async (input, options) => {
     const raw = typeof input === "string" ? input : input?.url ?? String(input);
     const url = new URL(raw, runtime.location.origin + "/");
-    if (url.origin !== runtime.location.origin || !url.pathname.startsWith("/api/v1/projects")) {
+    if (!url.pathname.startsWith("/api/v1/projects")) {
       return originalFetch(input, options);
+    }
+    if (url.origin !== runtime.location.origin) {
+      state.blockedWrites += 1;
+      throw new Error("真实 Studio 发布预检拒绝跨 Origin 工程请求");
     }
     const method = String(options?.method ?? input?.method ?? "GET").toUpperCase();
     if (method !== "GET") {
