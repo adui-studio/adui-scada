@@ -1556,3 +1556,9 @@ PR #89 在维护者 Windows 真实 PostgreSQL 36/36、单测 602/602、HTTP E2E 
 维护者 Windows 已真实通过 PR #91：Vitest **610/610**、NestJS HTTP E2E **55/55**、Vite+ **345 文件格式 / 200 文件零告警**、86 个 Markdown 文档检查、React/Vue/NestJS 类型检查与构建，完整 `pnpm run ready` **退出码 0**。维护者本轮明确授权后，PR #91 以 `ea4c6f93cf16edabb070e81fb0c9fc23c455c3f0` Squash 合并到 `main@1e4626bf7e8a2f08e5c4bc52c8907f3bc2149b28`。用户原始日志未附单独本地 `git rev-parse HEAD`，因此不声明严格 SHA 绑定。
 
 第八小批从新 main 建立 `feat/v0.3-b35-studio-server-preflight-readonly`；新增共享 API Client 四段 GET 编排及 5 项单测，React/Vue Studio 独立手动预检面板，保留本地当前画布静态预检、对照已保存快照避免把未保存编辑内容误认为已获服务端许可。更新原浏览器 `test:release:preflight:browser` 对应 UI 入口检查。**候选尚未在 Windows 执行新的 `vp check`、`test:unit`、`docs:check`、`ready` 或浏览器专项**；目标 Vitest **615/615**、HTTP E2E **55/55** 为待测基线。正式发布、回滚、工程发布指针和工业设备写入未开放。
+
+## 2026-11-18 · PR #92 已授权合并与第三十五批第九小批候选
+
+维护者 Windows 原始日志确认 PR #92：Vitest **615/615**（51 文件）、NestJS HTTP E2E **55/55**（6 文件）、`vp check` **349 格式文件/204 受检零告警**、文档检查 **86 份**，React/Vue/Server 类型检查与构建均通过，完整 `pnpm run ready` 最终退出码 **0**；独立 `test:release:preflight:browser` React/Vue 双端合法、问题展示、JSON 恢复通过，退出码 **0**。日志未附独立 `git rev-parse HEAD`，不能严格 SHA 绑定；GitHub PR #92 HEAD `8c779edf1cbd59d2700e842fa75a6750ead8aeb2`，经本轮维护者明确授权 Squash 合并至 `main@172181972b424a19f8a00def6127fd35cb15a389`。
+
+第九小批从该 main 创建 `feat/v0.3-b35-oidc-studio-preflight-browser`，只新增真实 Keycloak 双框架**UI 按钮点击**的交互浏览器专项及 12 项离线安全用例和根命令/文档。通过现有授权工程的正式 UI 载入后，以只读门禁检查四段 GET、未保存画布变更/旧结果清理、401/404/409 模拟拒绝，以及本地草稿/CAS 保护。**没有正式发布/回滚/设备写入，也没有新增工程或 ACL 写入模式**。隔离 V8 正反向模拟 12/12 仅属本轮源码模拟，Windows Node `--test`、`vp check`、完整 `ready` 与真实 Keycloak 浏览器**均待维护者实测**。
