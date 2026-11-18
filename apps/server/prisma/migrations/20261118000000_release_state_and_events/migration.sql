@@ -3,21 +3,13 @@
 
 BEGIN;
 
--- 允许重试此前失败且可能只完成首条 ALTER TABLE 的迁移。
-DO $migration$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint
-    WHERE conname = 'scada_project_grants_permission_check'
-      AND conrelid = 'public.scada_project_grants'::regclass
-  ) THEN
-    ALTER TABLE "scada_project_grants"
-      ADD CONSTRAINT "scada_project_grants_permission_check"
-      CHECK ("permission" IN ('project:read', 'version:read', 'version:append', 'release:publish', 'release:rollback'));
-  END IF;
-END;
-$migration$;
+-- 无论首次部署还是从旧失败迁移恢复，都以本次完整权限集合替换同名旧约束。
+ALTER TABLE "scada_project_grants"
+  DROP CONSTRAINT IF EXISTS "scada_project_grants_permission_check";
+
+ALTER TABLE "scada_project_grants"
+  ADD CONSTRAINT "scada_project_grants_permission_check"
+  CHECK ("permission" IN ('project:read', 'version:read', 'version:append', 'release:publish', 'release:rollback'));
 
 CREATE TABLE "scada_project_release_events" (
   "event_id" UUID NOT NULL,
