@@ -308,16 +308,10 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
     assert.equal(snapshot.autoSave, false);
 
     revision = 2;
-    await assert.rejects(
-      prepareWriterReadOnlySession(session, 3),
-      /Studio CAS 基线与预期不一致/,
-    );
+    await assert.rejects(prepareWriterReadOnlySession(session, 3), /Studio CAS 基线与预期不一致/);
     revision = 3;
     writeAttempts = 1;
-    await assert.rejects(
-      prepareWriterReadOnlySession(session, 3),
-      /Studio CAS 基线与预期不一致/,
-    );
+    await assert.rejects(prepareWriterReadOnlySession(session, 3), /Studio CAS 基线与预期不一致/);
   });
 
   void it("本地画布、IndexedDB 草稿和自动保存必须逐项保持一致", () => {
