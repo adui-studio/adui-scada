@@ -17,6 +17,7 @@ import {
   requireUnchangedStudioState,
   requireVisibleTransition,
   resolveMultiTabMode,
+  verifyHiddenTabBeforeResume,
   visibilityProbeStateInPage,
 } from "./test-oidc-real-multitab.mjs";
 
@@ -226,6 +227,58 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
     assert.throws(
       () => requireHiddenSessionUnchanged(undefined, 3),
       /注销后隐藏标签页状态提前变化/,
+    );
+  });
+
+  void it("隐藏页必须先确认未可见，再只读比较本地完整快照", async () => {
+    const actions = [];
+    let hash = "a".repeat(64);
+    const baseline = {
+      canvas: "<svg>工程图元</svg>",
+      drafts: { count: 1, hash },
+      autoSave: true,
+    };
+    const session = {
+      evaluate: async (action) => {
+        actions.push(action.name);
+        switch (action.name) {
+          case "visibilityProbeStateInPage":
+            return { visibility: "hidden" };
+          case "readMultiTabSessionStateInPage":
+            return {
+              baselineRevision: 3,
+              baselineCleared: false,
+              headCleared: false,
+              identityRejected: false,
+              busy: false,
+              writeAttempts: 0,
+            };
+          case "stateInPage":
+            return { autoSave: true };
+          case "readBrowserDraftsInPage":
+            return { count: 1, hash };
+          case "readStudioContentCanvasInPage":
+            return "<svg>工程图元</svg>";
+          default:
+            throw new Error("隐藏页预检调用了未知操作");
+        }
+      },
+    };
+
+    await verifyHiddenTabBeforeResume(session, baseline);
+    assert.deepEqual(actions.slice(0, 2), [
+      "visibilityProbeStateInPage",
+      "readMultiTabSessionStateInPage",
+    ]);
+    assert.equal(actions.includes("readBrowserDraftsInPage"), true);
+    assert.equal(actions.includes("readStudioContentCanvasInPage"), true);
+    assert.equal(actions.includes("saveDraftInPage"), false);
+    assert.equal(actions.includes("enableAutoSaveInPage"), false);
+
+    hash = "b".repeat(64);
+    await assert.rejects(
+      verifyHiddenTabBeforeResume(session, baseline),
+      /标签页恢复改变了 IndexedDB 草稿/,
     );
   });
 
