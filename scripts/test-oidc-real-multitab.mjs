@@ -582,7 +582,8 @@ async function restoreLatestBaseline(session, projectId, revision, previousState
 async function waitForVersionDrift(session) {
   const state = await waitFor(async () => {
     const current = await session.evaluate(readMultiTabSessionStateInPage);
-    return current.baselineCleared &&
+    return !current.busy &&
+      current.baselineCleared &&
       current.headCleared &&
       current.recoveryAvailable &&
       current.resumeConflictVisible
@@ -600,9 +601,9 @@ async function verifyIdentityCheck(session, expectedAuthenticated) {
   const state = await waitFor(async () => {
     const current = await session.evaluate(readMultiTabSessionStateInPage);
     if (expectedAuthenticated) {
-      return current.identityVerified && !current.hasError ? current : null;
+      return current.identityVerified && !current.hasError && !current.busy ? current : null;
     }
-    return current.identityRejected && current.hasError ? current : null;
+    return current.identityRejected && current.hasError && !current.busy ? current : null;
   }, "标签页恢复未触发 CAS 水位复核");
   if (state.writeAttempts !== 0) throw new Error("标签页恢复尝试了工程写入");
   return state;
@@ -647,7 +648,12 @@ async function verifyVersionDrift(session, beforeState) {
 async function verifyLogoutRevalidation(session, origin, beforeState) {
   const state = await waitFor(async () => {
     const current = await session.evaluate(readMultiTabSessionStateInPage);
-    return current.baselineCleared && current.headCleared && current.identityRejected
+    return (
+      !current.busy &&
+      current.baselineCleared &&
+      current.headCleared &&
+      current.identityRejected
+    )
       ? current
       : null;
   }, "注销后服务端 CAS 基线未失效");
