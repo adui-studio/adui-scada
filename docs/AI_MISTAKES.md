@@ -423,6 +423,15 @@
 - **验证边界**：维护者提供的**修复前** Windows 日志：多标签页离线 **10/10**、`vp check` **337 格式文件/192 受检零告警**、`docs:check` **86 个 Markdown**、Vitest **581/581**、HTTP E2E **49/49**；上传内容显示 `ready` 构建到末尾，**没有最终退出码**。真实浏览器专项明确退出码 **1**。当前修复候选的离线目标 **11/11**，Windows `vp check`、`docs:check`、完整 `ready`、真实 React/Vue/Keycloak/PostgreSQL 专项均须重新执行。
 - **证据**：维护者 2026-11-18 浏览器终端输出、PR #76、`scripts/test-oidc-real-multitab.mjs`、`scripts/test-oidc-real-multitab.cases.mjs`、`docs/VALIDATION.md`。
 
+### E-047 · Session Guard 新增 HTTP 响应接口后遗漏旧身份测试夹具（第三十四批第二十七小批）
+
+- **现象**：维护者 Windows 在 PR #83 初版候选执行 `vp check` **337 个格式文件、192 个受检文件零警告错误**；`pnpm run test:unit` **580/583**、3 项失败，均在 `apps/server/src/auth/scada-identity.spec.ts` 的既有 Bearer 拒绝/成功/审计用例中报告 `TypeError: http.getResponse is not a function`。完整 `pnpm run ready` 于单测处退出码 **1**；独立 NestJS HTTP E2E **49/49**、`docs:check` 86 份通过。这些是**修复前的实测结果**。
+- **确认根因**：本批生产 `ScadaSessionGuard.canActivate` 为确保被 Guard 提前拒绝的 401/403 同样禁止缓存，在 HTTP 上下文调用 `context.switchToHttp().getResponse()` 并设置 `Cache-Control: no-store` / `Pragma: no-cache`。新增的 `scada-session.guard.spec.ts` Mock 已同步提供 `getResponse`，但另一份长期存在的 `scada-identity.spec.ts` 公共 `context()` 仍只实现 `getRequest()`；测试在执行原身份与审计逻辑前抛出 TypeError。这是旧测试夹具漏更，不是可据此断言真实 BFF 发生认证放行或数据泄漏。
+- **最小修复**：仅补全 `scada-identity.spec.ts` 的共用 HTTP Context 夹具，保留既有 `getRequest`、权限 Metadata、身份与审计断言，追加可记录头部的 `getResponse().setHeader()`。在原无效 Bearer 401 和有效会话成功场景分别断言 `no-store` / `no-cache`，无须更改正式 Guard、绕过响应对象读取或弱化测试断言。
+- **防复发**：任何 NestJS Guard/Interceptor 新增 `ExecutionContext` 访问方法时，必须全文检索**所有**共用与独立测试夹具，并为该方法补上最小 Mock；单个新测试通过与真实装配 E2E 通过，不能替代全量单元测试。检查失败的真实异常类别，不因三项用例同时失败就修改已正确执行的生产身份逻辑。
+- **验证边界**：原 Windows `vp check`、HTTP E2E、文档检查通过与 `ready` 失败均已实测。当前 PR #83 修复候选只已通过 GitHub 源码和补丁静态核对，**修复后 Windows `pnpm run test:unit`（目标 583/583）、`vp check`、`docs:check`、完整 `pnpm run ready` 均待执行**；不可将原 `580/583` 宣称已修复通过。
+- **证据**：维护者 2026-11-18 Windows 日志、PR #83、`apps/server/src/auth/scada-identity.spec.ts`、`apps/server/src/auth/scada-session.guard.ts`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

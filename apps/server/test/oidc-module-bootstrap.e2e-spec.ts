@@ -51,6 +51,8 @@ describe("OIDC 根模块与工程 API Guard 启动装配（端到端）", () => 
     const response = await request(app.getHttpServer()).get("/api/v1/auth/me").expect(401);
     expect(response.status).toBe(401);
     expect(response.headers["content-type"]).toMatch(/^application\/json/);
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.headers.pragma).toBe("no-cache");
     expect(response.body).toMatchObject({
       statusCode: 401,
       message: "缺少有效的身份凭据",
@@ -61,6 +63,8 @@ describe("OIDC 根模块与工程 API Guard 启动装配（端到端）", () => 
     const response = await request(app.getHttpServer()).get("/api/v1/projects").expect(401);
     expect(response.status).toBe(401);
     expect(response.headers["content-type"]).toMatch(/^application\/json/);
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.headers.pragma).toBe("no-cache");
     expect(response.headers.location).toBeUndefined();
   });
 });

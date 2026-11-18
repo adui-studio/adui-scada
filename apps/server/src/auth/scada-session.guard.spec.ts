@@ -36,10 +36,20 @@ function createConfig(): EnabledOidcConfig {
   return result;
 }
 
-function context(request: ScadaAuthenticatedRequest): ExecutionContext {
+function context(
+  request: ScadaAuthenticatedRequest,
+  responseHeaders = new Map<string, string>(),
+): ExecutionContext {
   return {
     getType: () => "http",
-    switchToHttp: () => ({ getRequest: () => request }),
+    switchToHttp: () => ({
+      getRequest: () => request,
+      getResponse: () => ({
+        setHeader(name: string, value: string) {
+          responseHeaders.set(name.toLowerCase(), value);
+        },
+      }),
+    }),
   } as unknown as ExecutionContext;
 }
 
@@ -105,6 +115,40 @@ function createHarness() {
 }
 
 describe("浏览器 Cookie 会话与 CSRF Guard", () => {
+  it("认证失败也禁止缓存 401 响应，且不放宽会话校验", async () => {
+    const harness = createHarness();
+    const responseHeaders = new Map<string, string>();
+    const request: ScadaAuthenticatedRequest = { method: "GET", headers: {} };
+
+    await expect(
+      harness.guard.canActivate(context(request, responseHeaders)),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(responseHeaders.get("cache-control")).toBe("no-store");
+    expect(responseHeaders.get("pragma")).toBe("no-cache");
+    expect(harness.bearerTokens).toHaveLength(0);
+    expect(harness.cookieCalls).toHaveLength(0);
+  });
+
+  it("CSRF 拒绝的 403 响应也禁止缓存且不进入会话仓储", async () => {
+    const harness = createHarness();
+    const responseHeaders = new Map<string, string>();
+    const request: ScadaAuthenticatedRequest = {
+      method: "POST",
+      headers: {
+        cookie: cookieHeader({ session: SESSION_TOKEN, csrf: CSRF_TOKEN }),
+        origin: "https://scada.example.org",
+        "sec-fetch-site": "same-origin",
+      },
+    };
+
+    await expect(
+      harness.guard.canActivate(context(request, responseHeaders)),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(responseHeaders.get("cache-control")).toBe("no-store");
+    expect(responseHeaders.get("pragma")).toBe("no-cache");
+    expect(harness.cookieCalls).toHaveLength(0);
+  });
+
   it("保留显式 Bearer 认证并标记认证方式", async () => {
     const harness = createHarness();
     const request: ScadaAuthenticatedRequest = {

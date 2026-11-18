@@ -1012,3 +1012,11 @@ React 写入页和 Vue 写入页各执行一次完整二元探针，分别由独
 `requireLogoutProjectDenied` 保持原中文脱敏诊断并将门禁从严格两项 401 扩展到**四项每一项都为 401**；不足、超量、缺失、200/3xx/403/5xx 均拒绝。真实浏览器脚本仍在原四 Studio 标签页和本地数据保护断言完成后，各从 React、Vue 写入页复用一次同一探针，不制造第二次注销或新的工程版本。
 
 离线测试将原两个 GET 路由用例扩展至四路由，再新增一项逐个路由注入 200 的回归，验证任何单一路由放行都会失败、只读探针不会访问响应 `json()` 或 `text()`；目标离线总数 **20 项**。这不等于真实浏览器已经验证通过。
+
+## 2026-11-18 · 第三十四批第二十七小批：Guard 早期拒绝响应禁止缓存
+
+`apps/server/src/auth/scada-session.guard.ts` 的 `canActivate` 在确认 HTTP 上下文后、解析 Cookie/Authorization 前通过 NestJS `context.switchToHttp().getResponse()` 获取响应，将 `Cache-Control: no-store` 和 `Pragma: no-cache` 作为安全默认值设置。此位置早于所有 HTTP 401/403 拒绝，因此不依赖业务 Controller 装饰器成功返回之后才设置的 `@Header`；原鉴权分支、审计类别、CSRF 双提交、同源来源检查及 Bearer/Cookie 不混用逻辑均保持不变。
+
+为避免将 NestJS 或 Express 全量响应对象引入身份模块类型约束，仅定义 `setHeader(name: string, value: string): void` 的局部窄接口。`ScadaSessionGuard` 原单元测试 `context` 夹具只读记录被设置的头；新增拒绝 401/403 单元用例，同时断言拒绝前不调用任何会话仓储。`OidcEnabledAppModule` 装配 E2E 在真实 NestJS HTTP 层核对 `auth/me` 和工程列表匿名 401 响应含 `no-store` / `no-cache`，没有真实数据库连接。
+
+这是对拒绝路径的预防性加强，**不是**已有生产缓存泄漏的事故结论。需 Windows 真实质量链验证，新 HEAD 未运行前不声明完成或通过。依赖、工程 Schema、BFF Cookie/Token、授权流程、React/Vue 及工业网关均不变。

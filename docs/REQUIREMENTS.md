@@ -496,3 +496,11 @@ React/Vue **两处载入入口**（当前工程历史版本“载入”、授权
 - 仅允许当前 Origin、既有严格 `b34-oidc-cas-<UUID>` 随机专用工程及 GET 方法；禁止读取响应正文、记录 Cookie/Token、向已注销的 BFF 重发工程写入，跨 Origin/非法工程 ID 必须零请求。
 - 任一接口返回 200、302、403、404、503、网络错误 0、缺失状态或结果数量错误，都不得当作全部授权已撤销。原有真实 CSRF 注销、四 Studio 标签页可见性恢复、旧 CAS 零工程写入、SVG/IndexedDB/自动保存保护继续严格保留。
 - 只扩展已有测试门禁与回归文档，不改变正式 Vue/React、共享 API Client、NestJS 认证策略、数据库或工业设备写入权限。本测试不代表跨独立浏览器 Profile 的注销广播或生产现场安全验收。
+
+## 第三十四批第二十七小批 · 身份拒绝响应与工程接口禁止缓存（FR-002 / FR-013 / NFR-003 局部）
+
+当前工程四条 GET 已经真实验证注销后均返回 401；但 Controller 上的 `@Header("Cache-Control", "no-store")` 在 NestJS Guard 提前拒绝请求时不能作为失败响应头已设置的证明。本批不改变认证/授权判断，增强共享会话 Guard 的 HTTP 响应缓存保护。
+
+- 当启用了受保护身份/工程路由且 `ScadaSessionGuard` 进入 HTTP 上下文时，无论之后成功、无凭据 401、失效 Cookie 401 还是来源/CSRF 403，统一在响应上设置 `Cache-Control: no-store` 与 `Pragma: no-cache`。不改变拒绝状态码、不返回 Cookie/Token 或主体数据、不把拒绝变成成功。
+- 非 HTTP 上下文继续按原逻辑拒绝；当前 OIDC 根模块实装 E2E 必须从 `GET /api/v1/auth/me` 和 `GET /api/v1/projects` 获取真实 401，并验证两个禁止缓存响应头。Guard 单测分别覆盖无凭据 401 与缺失 CSRF Header 403，不调用会话仓储。
+- 保留所有现有四标签页、CAS、工程读写、租户/ACL 与独立 Lab 安全保护。本批无 Vue/React、数据库 Schema、Docker、身份 Cookie 协议或工业设备写入变更。
