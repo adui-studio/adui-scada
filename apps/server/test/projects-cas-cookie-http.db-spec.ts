@@ -518,6 +518,11 @@ describe("本机隔离 PostgreSQL 双 Cookie 会话 HTTP CAS 事务", () => {
         expect(response.body).not.toHaveProperty("snapshot");
       }
 
+      const unauthenticated = await request(app!.getHttpServer()).get(
+        "/api/v1/projects/" + projectId + "/versions/1/release-preflight",
+      );
+      expect(unauthenticated.status).toBe(401);
+
       const [project, versionCount, auditCount] = await Promise.all([
         database!.client.scadaProject.findUniqueOrThrow({
           where: { tenantId_projectId: { tenantId, projectId } },
