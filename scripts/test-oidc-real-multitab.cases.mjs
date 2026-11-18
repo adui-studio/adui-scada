@@ -10,6 +10,7 @@ import {
   readAuthStatusInPage,
   readMultiTabSessionStateInPage,
   refreshProjectListInPage,
+  requireHiddenSessionUnchanged,
   requireLogoutHttp401,
   requireSameCanvasAndDrafts,
   requireSamePrincipal,
@@ -190,6 +191,41 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
         },
       }),
       0,
+    );
+  });
+
+  void it("注销后尚未可见的标签页必须保留 CAS、水位及零工程写入", () => {
+    const state = {
+      baselineRevision: 3,
+      baselineCleared: false,
+      headCleared: false,
+      identityRejected: false,
+      busy: false,
+      writeAttempts: 0,
+    };
+    assert.equal(requireHiddenSessionUnchanged(state, 3), true);
+    for (const changes of [
+      { baselineRevision: 2 },
+      { baselineRevision: null },
+      { baselineCleared: true },
+      { headCleared: true },
+      { identityRejected: true },
+      { busy: true },
+      { writeAttempts: 1 },
+      { writeAttempts: undefined },
+    ]) {
+      assert.throws(
+        () => requireHiddenSessionUnchanged({ ...state, ...changes }, 3),
+        /注销后隐藏标签页状态提前变化/,
+      );
+    }
+    assert.throws(
+      () => requireHiddenSessionUnchanged(state, 0),
+      /注销后隐藏标签页状态提前变化/,
+    );
+    assert.throws(
+      () => requireHiddenSessionUnchanged(undefined, 3),
+      /注销后隐藏标签页状态提前变化/,
     );
   });
 
