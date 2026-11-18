@@ -1776,3 +1776,9 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 审查发现此前遗留的 PR #75 仍 Open / Draft，基于老的 `main@8cd2223853e7e5dc05695b8ab1226911ec7bd734`，与当前主线文档/`package.json` 冲突；它新增的**同一 Origin 双标签 CAS** 与后来已合并的四页注销专项并不相同，不能直接关闭丢弃。原 PR #75 文档中使用的 E-045/E-046/E-047 错误编号与现主线发生冲突，冲突解决仅保留主线的这些复盘，旧分支局部错误整理入新的 E-048。原分支 18 项离线用例**从无 Windows 实测结果**，不视为通过。
 
 按当前 `main` 构造双父提交的 Git 合流，保留旧 PR #75 全部历史并保留主线所有后续安全代码和文档；在新脚本内修正两处 CDP 页面函数对 Node 作用域 `PROJECT_PATTERN` 的非法引用，新增 1 项序列化边界回归，离线安全目标 **19/19**；根 `package.json` 仅添加两个专项命令且仅将**离线**配置专项加入现有 `ready`。新分支源码尚未运行本地 Node、Windows `vp check`、`docs:check`、完整 `ready` 或真实 Keycloak/双 Origin/数据库浏览器专项；**不能将 PR #84 的成功日志迁移到 PR #75**。待真实日志与 `$LASTEXITCODE` 完成之后，再请求新一轮合并授权。
+
+## 2026-11-18 · 第三十五批第一小批静态发布预检待验收
+
+第三十四批遗留 PR #75 已在 Windows 实测：双标签离线 19/19、完整 ready 退出码 0、真实 React/Vue 同源双标签 Chrome + Keycloak + PostgreSQL CAS 专项退出码 0；单元测试 583/583、HTTP E2E 51/51、vp check 339 格式文件及 194 受检零告警，docs:check 86 份。PR #75 在明确授权后 Squash 合并到 main@46dd07177bdd9528443f7fe621f1a48deac483a0。日志没有独立本地 HEAD，不将执行记录绑定到未核实的精确 SHA。
+
+本小批新建 Core 静态预检 validateProjectReleasePreflight，新增 10 项 Vitest，目标全量 593/593（**尚未执行**）。预检只校验当前 SVG 能否消费工程图元、版本、绑定与规则，不创建发布版本，不操作远端数据库或现场设备。Windows 新 HEAD 的 vp check、typecheck、test:unit、docs:check 和完整 pnpm run ready **均待运行**，上一批成功不能代替此批结果。

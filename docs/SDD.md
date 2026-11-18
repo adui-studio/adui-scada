@@ -1036,3 +1036,13 @@ React 写入页和 Vue 写入页各执行一次完整二元探针，分别由独
 每个 Origin 的双标签页先载入修订 1，第二页创建 IndexedDB 草稿并启用自动保存。第一页真实保存修订 2 后，第二页通过真实可见性恢复触发只读水位复核，失效过期 CAS、拒绝旧版本 POST、保留画布/草稿/自动保存；然后真实只读预览、人工载入修订 2 并追加修订 3。第一页恢复可见后也必须拒绝旧 CAS。最终从唯一隔离 PostgreSQL 租户/工程过滤读取头版本、版本行与审计行，三版的内容摘要必须匹配两个实际 HTTP 201 结果。
 
 复用现有 `createCasProjectInPage` 的安全边界，在新页面函数中**内联精确工程 ID 正则**，防止重复 E-002/E-025/E-039 的浏览器脚本引用 Node 模块闭包问题。离线用例在原 18 项基础上新增 1 项序列化边界检查，目标 19/19；它只能证明纯函数/安全门禁，不能代替真实 Keycloak/Chrome/PostgreSQL 验收。未更改任何生产 React/Vue、共享 Core、NestJS、Prisma 模型或迁移。
+
+## 2026-11-18 · V0.3 第三十五批第一小批：工程发布前只读 SVG 兼容性契约
+
+新增 `packages/core/src/release-preflight.ts`，对外导出 `validateProjectReleasePreflight(input: unknown): ProjectReleasePreflightResult`、`ProjectReleasePreflightIssue`。它首先调用已有 `validateProjectDocument`，只在严格 0.3.0 Parser 返回防御性工程副本时继续。Schema 错误使用同一 `DOCUMENT_INVALID` 问题结构；通过返回 `{ passed: true, issues: [] }`，否则返回 `{ passed: false, issues: [带 code、severity、path、message 的只读问题] }`。其中 `passed` 严格定义为**静态 SVG 兼容性门禁**，不得在客户端或服务端用它直接发起发布。
+
+当前 `renderSvgPage` switch 仅实现 `tank`/`pump`/`pipe`/`label`，均使用现有 `symbolVersion: "1"` 的基础图元契约；定义相对应的只读槽位映射，依次验证图元类型、图元版本、非空 `rules`、绑定槽、绑定 Tag 类型。错误码为 `UNSUPPORTED_SYMBOL`、`UNSUPPORTED_SYMBOL_VERSION`、`UNSUPPORTED_RULES`、`UNSUPPORTED_BINDING_SLOT`、`UNRESOLVED_BOUND_TAG`。即使图元当前被隐藏，也不跳过规则和兼容性验证；有效但未绑定的 `unknown` Tag 不会被错误升级或阻断。
+
+遍历严格按照 Parser 的页面、图元和绑定插入顺序返回稳定问题路径。不会调用 `createProjectSnapshot`、任何 DraftRepository、IndexedDB、网络或数据库；不更改原来的 `validateProjectDocument`、工程 JSON、运行 SVG renderer、Tag 类型定义，也没有授权写入口。当前 SVG/绑定映射由受支持的四种图元静态列出，未来扩展 SVG 注册/规则引擎时须同步更新，不能误把被渲染器忽略的值当成已支持。
+
+这是 FR-008 的一个**可测试前置步骤**，并未实现完整发布校验流程。正式发布仍须后续独立设计服务器授权、发布记录与不可变快照、事务指针及回滚、发布快照运行时加载、实时 Tag 来源与数据质量、安全审计；本小批不会开放工业写入。
