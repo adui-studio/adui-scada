@@ -1562,3 +1562,7 @@ PR #89 在维护者 Windows 真实 PostgreSQL 36/36、单测 602/602、HTTP E2E 
 维护者 Windows 原始日志确认 PR #92：Vitest **615/615**（51 文件）、NestJS HTTP E2E **55/55**（6 文件）、`vp check` **349 格式文件/204 受检零告警**、文档检查 **86 份**，React/Vue/Server 类型检查与构建均通过，完整 `pnpm run ready` 最终退出码 **0**；独立 `test:release:preflight:browser` React/Vue 双端合法、问题展示、JSON 恢复通过，退出码 **0**。日志未附独立 `git rev-parse HEAD`，不能严格 SHA 绑定；GitHub PR #92 HEAD `8c779edf1cbd59d2700e842fa75a6750ead8aeb2`，经本轮维护者明确授权 Squash 合并至 `main@172181972b424a19f8a00def6127fd35cb15a389`。
 
 第九小批从该 main 创建 `feat/v0.3-b35-oidc-studio-preflight-browser`，只新增真实 Keycloak 双框架**UI 按钮点击**的交互浏览器专项及 12 项离线安全用例和根命令/文档。通过现有授权工程的正式 UI 载入后，以只读门禁检查四段 GET、未保存画布变更/旧结果清理、401/404/409 模拟拒绝，以及本地草稿/CAS 保护。**没有正式发布/回滚/设备写入，也没有新增工程或 ACL 写入模式**。隔离 V8 正反向模拟 12/12 仅属本轮源码模拟，Windows Node `--test`、`vp check`、完整 `ready` 与真实 Keycloak 浏览器**均待维护者实测**。
+
+## 2026-11-18 · PR #93 E-052 质量门禁提醒
+
+维护者 Windows 提供 PR #93 的首次 `vp check --fix`：206 个受检文件，**0 错误但 3 条 TypeScript Lint 警告**（两条对象方法未绑定、一条未知 Fetch 对象隐式字符串化）。原分支的 12 项 Node 安全用例和真实 Keycloak UI 验收不能因此声明已通过。GitHub 当前 Draft 分支仅修复两个脚本的相关表达式与测试断言，继续保持安全的只读 GET、跨 Origin/非 GET 阻断和 React/Vue 对等要求，未改生产代码。Windows 无警告 `vp check`、完整 `ready` 与真实浏览器按钮专项继续待验收，不合并 PR #93。
