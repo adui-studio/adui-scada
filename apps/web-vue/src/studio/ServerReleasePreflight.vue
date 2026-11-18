@@ -32,11 +32,10 @@ const failure = shallowRef<{ document: ScadaDocument; message: string } | null>(
 const visible = computed(() =>
   checked.value?.requestedDocument === props.document ? checked.value : null,
 );
-const comparison = computed(() =>
-  visible.value
-    ? compareProjectDocuments(props.document, visible.value.snapshot.document)
-    : null,
-);
+const comparison = computed(() => {
+  const result = visible.value;
+  return result ? compareProjectDocuments(props.document, result.snapshot.document) : null;
+});
 const error = computed(() =>
   failure.value?.document === props.document ? failure.value.message : "",
 );
