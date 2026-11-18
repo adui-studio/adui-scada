@@ -1777,7 +1777,6 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 
 按当前 `main` 构造双父提交的 Git 合流，保留旧 PR #75 全部历史并保留主线所有后续安全代码和文档；在新脚本内修正两处 CDP 页面函数对 Node 作用域 `PROJECT_PATTERN` 的非法引用，新增 1 项序列化边界回归，离线安全目标 **19/19**；根 `package.json` 仅添加两个专项命令且仅将**离线**配置专项加入现有 `ready`。新分支源码尚未运行本地 Node、Windows `vp check`、`docs:check`、完整 `ready` 或真实 Keycloak/双 Origin/数据库浏览器专项；**不能将 PR #84 的成功日志迁移到 PR #75**。待真实日志与 `$LASTEXITCODE` 完成之后，再请求新一轮合并授权。
 
-
 ## 2026-11-18 · 第三十五批第一小批静态发布预检待验收
 
 第三十四批遗留 PR #75 已在 Windows 实测：双标签离线 19/19、完整 ready 退出码 0、真实 React/Vue 同源双标签 Chrome + Keycloak + PostgreSQL CAS 专项退出码 0；单元测试 583/583、HTTP E2E 51/51、vp check 339 格式文件及 194 受检零告警，docs:check 86 份。PR #75 在明确授权后 Squash 合并到 main@46dd07177bdd9528443f7fe621f1a48deac483a0。日志没有独立本地 HEAD，不将执行记录绑定到未核实的精确 SHA。
