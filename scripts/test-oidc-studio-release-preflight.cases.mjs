@@ -20,7 +20,7 @@ function fixture() {
   const runtime = {
     location: { origin },
     Response,
-    async fetch(input, options) {
+    fetch: async (input, options) => {
       calls.push({ input, options });
       return new Response(JSON.stringify({ status: "ok" }), {
         status: 200,
