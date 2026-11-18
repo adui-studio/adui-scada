@@ -6,6 +6,7 @@ import {
   installPageProbes,
   logoutCurrentSessionInPage,
   prepareFollowerDraft,
+  prepareWriterReadOnlySession,
   readAuthStatusInPage,
   readMultiTabSessionStateInPage,
   refreshProjectListInPage,
@@ -265,6 +266,57 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
     assert.throws(
       () => requireSameCanvasAndDrafts({ baselineRevision: 1 }, snapshot),
       /标签页恢复改变了本地画布/,
+    );
+  });
+
+  void it("写入页只建立 Studio 只读快照，不重新保存同源草稿", async () => {
+    const actions = [];
+    let revision = 3;
+    let writeAttempts = 0;
+    const draft = { count: 1, hash: "a".repeat(64) };
+    const canvas = "<svg>工程内容</svg>";
+    const session = {
+      evaluate: async (action) => {
+        actions.push(action.name);
+        switch (action.name) {
+          case "installAccessDenialFaultInPage":
+            return undefined;
+          case "stateInPage":
+            return { canvas: "<svg>动态网格</svg>", autoSave: false };
+          case "readBrowserDraftsInPage":
+            return draft;
+          case "readStudioContentCanvasInPage":
+            return canvas;
+          case "readMultiTabSessionStateInPage":
+            return { baselineRevision: revision, writeAttempts };
+          default:
+            throw new Error("写入页保护快照测试调用了未知操作");
+        }
+      },
+    };
+
+    const snapshot = await prepareWriterReadOnlySession(session, 3);
+    assert.deepEqual(actions, [
+      "installAccessDenialFaultInPage",
+      "stateInPage",
+      "readBrowserDraftsInPage",
+      "readStudioContentCanvasInPage",
+      "readMultiTabSessionStateInPage",
+    ]);
+    assert.equal(snapshot.canvas, canvas);
+    assert.deepEqual(snapshot.drafts, draft);
+    assert.equal(snapshot.autoSave, false);
+
+    revision = 2;
+    await assert.rejects(
+      prepareWriterReadOnlySession(session, 3),
+      /Studio CAS 基线与预期不一致/,
+    );
+    revision = 3;
+    writeAttempts = 1;
+    await assert.rejects(
+      prepareWriterReadOnlySession(session, 3),
+      /Studio CAS 基线与预期不一致/,
     );
   });
 
