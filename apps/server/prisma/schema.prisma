@@ -71,12 +71,6 @@ model ScadaProjectVersion {
   project     ScadaProject        @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
   /// 该成功保存版本对应的审计事件。
   audit       ScadaProjectAudit?
-  /// 该版本曾作为正式发布事件的原目标版本集合。
-  releaseTargetEvents ScadaProjectReleaseEvent[] @relation("ScadaProjectReleaseEventToVersion")
-  /// 该版本曾作为正式发布事件的原发布版本集合。
-  releaseSourceEvents ScadaProjectReleaseEvent[] @relation("ScadaProjectReleaseEventFromVersion")
-  /// 该版本当前是否被发布状态指针引用。
-  releaseStateTargets ScadaProjectReleaseState[] @relation("ScadaProjectReleaseStateVersion")
 
   @@id([tenantId, projectId, revision])
   @@index([tenantId, projectId, createdAt], map: "scada_project_versions_created_idx")
@@ -126,8 +120,7 @@ model ScadaProjectReleaseState {
   updatedAt           DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
   /// 该发布状态所属的工程主表记录。
   project             ScadaProject            @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
-  /// 当前发布状态引用的不可变历史版本。
-  releasedVersion     ScadaProjectVersion?    @relation("ScadaProjectReleaseStateVersion", fields: [tenantId, projectId, releasedRevision], references: [tenantId, projectId, revision], onDelete: Restrict)
+  /// 当前发布指针引用的版本由数据库复合外键维护；该可空复合关系不暴露为 Prisma relation 字段。
   /// 当前发布指针对应的最后成功发布事件。
   lastReleaseEvent    ScadaProjectReleaseEvent? @relation("ScadaProjectReleaseStateLastEvent", fields: [lastReleaseEventId], references: [eventId], onDelete: Restrict)
 
@@ -165,8 +158,7 @@ model ScadaProjectReleaseEvent {
   createdAt           DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
   /// 该事件所属的工程主表记录。
   project             ScadaProject            @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
-  /// 该事件提交前引用的正式发布版本。
-  fromVersion         ScadaProjectVersion?    @relation("ScadaProjectReleaseEventFromVersion", fields: [tenantId, projectId, fromRevision], references: [tenantId, projectId, revision], onDelete: Restrict)
+  /// 该事件提交前的版本由数据库复合外键维护；首次发布时修订号为空。
   /// 该事件提交后的正式发布版本。
   toVersion           ScadaProjectVersion     @relation("ScadaProjectReleaseEventToVersion", fields: [tenantId, projectId, toRevision], references: [tenantId, projectId, revision], onDelete: Restrict)
   /// 若该事件是当前发布指针的最后一次成功变更，则被状态表引用。
