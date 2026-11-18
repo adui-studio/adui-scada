@@ -210,7 +210,9 @@ export function studioPreflightUiStateInPage(runtime = globalThis) {
     stale: text.includes("之前的服务端预检结果已隐藏"),
     notPublished: status.includes("不是正式发布许可"),
     issueCount: panel.querySelectorAll('ol[aria-label="服务端发布预检问题"] > li').length,
-    error: Boolean(panel.querySelector('[role="alert"]') || server?.querySelector('[role="alert"]')),
+    error: Boolean(
+      panel.querySelector('[role="alert"]') || server?.querySelector('[role="alert"]'),
+    ),
     baselineCleared: /CAS 基线：\s*未建立/.test(serverText),
   };
 }
@@ -332,8 +334,7 @@ async function clickAndRead(session, origin, selected, status = null) {
       ? { requests, ui }
       : null;
   }, "真实 Studio 发布预检手动触发请求契约不一致");
-  const requestSequence =
-    status === null ? ["head", "snapshot", "preflight", "head"] : expected;
+  const requestSequence = status === null ? ["head", "snapshot", "preflight", "head"] : expected;
   if (
     JSON.stringify(result.requests.requests) !== JSON.stringify(requestSequence) ||
     result.requests.blockedWrites !== 0 ||
@@ -356,10 +357,7 @@ async function verifyOrigin(session, origin, name, principal, selected) {
     () => session.evaluate(identityInPage, origin),
     "真实 Studio 发布预检 React/Vue 可信身份不一致",
   );
-  if (
-    identity.tenantId !== principal.tenantId ||
-    identity.subjectId !== principal.subjectId
-  ) {
+  if (identity.tenantId !== principal.tenantId || identity.subjectId !== principal.subjectId) {
     throw new Error("真实 Studio 发布预检 React/Vue 可信身份不一致");
   }
   process.stdout.write(name + "：正在使用真实 Studio 工程管理入口打开已授权版本。\n");

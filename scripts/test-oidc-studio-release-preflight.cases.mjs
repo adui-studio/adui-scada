@@ -63,12 +63,7 @@ void describe("真实 Keycloak Studio 发布预检浏览器只读安全门禁", 
     const { runtime, calls } = fixture();
     assert.equal(installStudioPreflightReadGuardInPage([origin], runtime), true);
     assert.equal(armStudioPreflightReadGuardInPage(origin, projectId, 2, null, runtime), true);
-    for (const path of [
-      base,
-      base + "/versions/2",
-      base + "/versions/2/release-preflight",
-      base,
-    ]) {
+    for (const path of [base, base + "/versions/2", base + "/versions/2/release-preflight", base]) {
       const response = await runtime.fetch(path, {
         method: "GET",
         credentials: "same-origin",
@@ -196,10 +191,7 @@ void describe("真实 Keycloak Studio 发布预检浏览器只读安全门禁", 
     assert.equal(menu.open, true);
     assert.equal(button.clickCount, 1);
     button.disabled = true;
-    assert.throws(
-      () => clickStudioPreflightInPage(runtime),
-      /真实 Studio 发布预检按钮不可用/,
-    );
+    assert.throws(() => clickStudioPreflightInPage(runtime), /真实 Studio 发布预检按钮不可用/);
   });
 
   void it("未点击的预检面板不能被当作服务端通过，当前修订和错误均为空", () => {
@@ -235,10 +227,9 @@ void describe("真实 Keycloak Studio 发布预检浏览器只读安全门禁", 
   });
 
   void it("CDP 独立函数序列化后不引用 Node 作用域变量", async () => {
-    const isolated = runInNewContext(
-      "(" + installStudioPreflightReadGuardInPage.toString() + ")",
-      { URL },
-    );
+    const isolated = runInNewContext("(" + installStudioPreflightReadGuardInPage.toString() + ")", {
+      URL,
+    });
     const { runtime, calls } = fixture();
     assert.equal(isolated([origin], runtime), true);
     armStudioPreflightReadGuardInPage(origin, projectId, 2, 409, runtime);
