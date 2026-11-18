@@ -66,6 +66,7 @@ import {
 } from "@adui/scada-api-client";
 import { TagManager } from "./TagManager.tsx";
 import { ServerProjectBrowser } from "./ServerProjectBrowser.tsx";
+import { ServerReleasePreflight } from "./ServerReleasePreflight.tsx";
 import "./studio.css";
 import "@adui/tailwind/studio.css";
 
@@ -1879,6 +1880,20 @@ export default function StudioPage() {
                   </ol>
                 </div>
               )}
+              <ServerReleasePreflight
+                key={state.document.projectId}
+                api={serverApi}
+                document={state.document}
+                disabled={historyBusy}
+                onAccessRejected={(error) => {
+                  invalidateServerAccess();
+                  setServerError(error.message);
+                  setNotice("服务端发布预检访问失败：" + error.message + "；本地画布与草稿不变");
+                  if (error.kind === "unauthenticated") {
+                    setServerIdentity("未登录或服务端尚未启用身份接口");
+                  }
+                }}
+              />
             </div>
           </details>
           <ServerProjectBrowser
