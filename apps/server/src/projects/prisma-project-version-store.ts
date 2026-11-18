@@ -617,6 +617,7 @@ export class PrismaProjectVersionStore {
       return snapshot;
     }, TRANSACTION_OPTIONS);
   }
+
   /**
    * 只读检查当前已保存的工程版本。工程共享锁防止在权限、当前水位、
    * 快照验证与静态 SVG 预检之间插入版本追加或撤权操作。
