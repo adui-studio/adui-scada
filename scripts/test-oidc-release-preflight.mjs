@@ -64,10 +64,7 @@ export async function readReleasePreflightInPage(expectedOrigin, runtime = globa
     } catch {
       throw new Error("发布预检只读 HTTP 请求失败");
     }
-    if (
-      response.redirected ||
-      (response.url && response.url !== expectedOrigin + path)
-    ) {
+    if (response.redirected || (response.url && response.url !== expectedOrigin + path)) {
       throw new Error("发布预检只读 HTTP 发生非预期重定向");
     }
     return response;
@@ -164,9 +161,7 @@ export async function readReleasePreflightInPage(expectedOrigin, runtime = globa
     if (invalid.status !== 400) throw new Error("发布预检非法修订号未受控拒绝");
 
     const staleRevision = revision === Number.MAX_SAFE_INTEGER ? revision - 1 : revision + 1;
-    const stale = await request(
-      base + "/versions/" + staleRevision + "/release-preflight",
-    );
+    const stale = await request(base + "/versions/" + staleRevision + "/release-preflight");
     if (stale.status !== 409) throw new Error("发布预检过期水位未受控拒绝");
 
     const detail = await request(base);

@@ -188,7 +188,7 @@ void describe("真实 Keycloak 双 Origin 发布预检只读安全门禁", () =>
       map.set(path, {
         ...old,
         ...(change.cache === null ? { cache: null } : {}),
-        body: { ...old.body, ...(change.patch ?? {}) },
+        body: { ...old.body, ...change.patch },
       });
       await assert.rejects(readReleasePreflightInPage(origin, runtime), change.message);
     }
