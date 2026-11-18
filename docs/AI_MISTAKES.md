@@ -531,6 +531,15 @@
 - 证据：维护者 2026-11-18 上传的完整 PowerShell 日志、PR #99、docs/HARNESS.md PostgreSQL 隔离测试库章节、apps/server/prisma.config.ts、五个数据库测试文件的 URL 前置校验。
 
 
+### E-058 · PostgreSQL 只读诊断命令引用已移除 Compose 文件且错误转义系统表标识符（第三十五批 B 阶段）
+
+- **现象**：维护者 Windows 执行数据库只读检查时，Docker Compose 在启动 psql 前报 `compose.postgres.dev.yaml` 不存在；命令未进入容器、未连接 PostgreSQL、未执行任何 SQL。该命令中的 `public.\\_prisma_migrations` 还多写了反斜杠；即使 Compose 路径正确，PostgreSQL 也无法将其解析为预期的系统表标识符。
+- **根因**：助手沿用已删除的旧双 Compose 文件路径，没有先读取当前 `deploy/docker/compose.yaml` 与 `scripts/docker-stack.mjs` 的唯一 Compose 参数；同时把 Markdown 转义误带入 PowerShell 双引号中的 SQL。PowerShell 不使用反斜杠转义 SQL 标识符。
+- **修复**：只读诊断改用当前唯一文件 `deploy/docker/compose.yaml`、项目 `adui-scada`、服务 `postgres`，并同时加载根 `.env` 与 `.local/docker/compose.env`；系统表写为 `public._prisma_migrations`，不加反斜杠。`docs/HARNESS.md` 已同步修正。
+- **防复发**：提供 Docker 命令前先核对 `scripts/docker-stack.mjs` 的 `COMPOSE_ARGS` 和 `deploy/docker/compose.yaml` 服务名；不得从历史文档推断当前文件存在。PowerShell 双引号内 SQL 使用原生 SQL 标识符，不附加 Markdown 转义反斜杠。先运行只读命令，确认输出后再讨论任何数据库恢复动作。
+- **验证边界**：维护者本次输出仅证明 Compose 文件路径解析失败；没有任何 SQL 被执行、没有数据库变更。修正后的命令已与当前仓库 Compose 参数静态对照，仍待维护者 Windows 执行。不能把这次失败描述为 PostgreSQL 查询失败或数据库状态已检查。
+- **证据**：维护者 2026-11-18 PowerShell 输出、PR #99、`scripts/docker-stack.mjs`、`deploy/docker/compose.yaml`、`docs/HARNESS.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
