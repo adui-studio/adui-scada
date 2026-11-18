@@ -267,6 +267,52 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
     );
   });
 
+  void it("缺失或损坏的本地草稿快照不得被视作没有变化", () => {
+    const snapshot = {
+      canvas: "<svg>原画布</svg>",
+      drafts: { count: 1, hash: "a".repeat(64) },
+      autoSave: true,
+    };
+    for (const invalidDrafts of [
+      undefined,
+      null,
+      {},
+      { count: 1 },
+      { count: 0, hash: "a".repeat(64) },
+      { count: 1, hash: "" },
+      { count: 1, hash: "非 SHA-256 摘要" },
+      { count: Number.NaN, hash: "a".repeat(64) },
+    ]) {
+      assert.throws(
+        () => requireSameCanvasAndDrafts({ ...snapshot, drafts: invalidDrafts }, { ...snapshot, drafts: invalidDrafts }),
+        /标签页恢复改变了 IndexedDB 草稿/,
+      );
+    }
+    assert.throws(
+      () => requireSameCanvasAndDrafts({ drafts: snapshot.drafts }, { drafts: snapshot.drafts }),
+      /标签页恢复改变了本地画布/,
+    );
+    assert.throws(
+      () => requireSameCanvasAndDrafts({ ...snapshot, canvas: undefined }, { ...snapshot, canvas: undefined }),
+      /标签页恢复改变了本地画布/,
+    );
+  });
+
+  void it("自动保存状态缺失时不能以双方相同的空值绕过保护", () => {
+    const snapshot = {
+      canvas: "<svg>原画布</svg>",
+      drafts: { count: 1, hash: "a".repeat(64) },
+      autoSave: true,
+    };
+    for (const invalidAutoSave of [undefined, null, "true", 1]) {
+      assert.throws(
+        () => requireUnchangedStudioState({ ...snapshot, autoSave: invalidAutoSave }, { ...snapshot, autoSave: invalidAutoSave }),
+        /标签页恢复改变了自动保存状态/,
+      );
+    }
+    assert.equal(requireUnchangedStudioState(snapshot, structuredClone(snapshot)), true);
+  });
+
   void it("工程列表刷新必须点击真实可用按钮", () => {
     let clicks = 0;
     const button = { textContent: "刷新", disabled: false, click: () => (clicks += 1) };
