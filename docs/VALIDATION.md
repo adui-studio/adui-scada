@@ -1854,3 +1854,9 @@ PR #90 已依据维护者明确授权 Squash 合并至 `main@1e891193f0a4fb9191b
 PR #91 Windows 原始测试证据：`pnpm run test:unit` **50/50 文件 610/610 项，退出码 0**；`test:e2e:server` **6/6 文件 55/55 项，退出码 0**；`vp check` **345 格式文件 / 200 受检零告警，退出码 0**；`docs:check` **86 份，退出码 0**；`pnpm run ready` **退出码 0**，React/Vue/NestJS 编译与构建成功。HTTP E2E 中 Health 503 是显式模拟就绪失败的负向用例，不代表 E2E 整体失败。测试日志没有独立本地 Git HEAD，因此不严格绑定到单笔 SHA。PR #91 GitHub 合并前 HEAD `ea4c6f93cf16edabb070e81fb0c9fc23c455c3f0`，获得维护者明确授权后 Squash 合并至 `main@1e4626bf7e8a2f08e5c4bc52c8907f3bc2149b28`。
 
 第八小批只读共享水位编排新增 5 项 Vitest，React/Vue 同步增加手动点击后对照已保存快照的服务端预检组件及 ACL 失败通知，并调整既有静态发布预检浏览器专项的手动按钮/默认未查询断言。保持工程 Schema、Studio 保存/载入、草稿和 CAS 状态逻辑不变。**当前新 HEAD 未执行 Windows `test:unit`、`vp check`、`docs:check`、`ready`、`test:release:preflight:browser` 或真实 Keycloak UI 点击验收**。预期 Vitest **615/615**、HTTP E2E **55/55**、完整 `ready=0`，仅属待实测目标。真实浏览器专项需在 React/Vue 开发服务已启动的环境执行；如 HTTPS 代理已启用，沿用现有可信 TLS Lab 设置，不可降级证书验证。
+
+## 2026-11-18 · PR #92 合并与第三十五批第九小批 OIDC Studio UI 候选
+
+第八小批维护者 Windows 日志：`pnpm run test:unit` 51/51 文件、**615/615 项通过，退出码 0**；`test:e2e:server` 6/6 文件、**55/55 项通过，退出码 0**；`vp check` **349/204 零告警**，`docs:check` **86 份**，完整 `ready` **退出码 0**，双框架/服务端构建通过；`test:release:preflight:browser` React/Vue 双端通过退出码 0。没有单独本地 HEAD。经用户本轮授权，PR #92 从 GitHub HEAD `8c779edf1cbd59d2700e842fa75a6750ead8aeb2` Squash 合并至 `main@172181972b424a19f8a00def6127fd35cb15a389`。
+
+第九小批候选新增真实 OIDC Studio 手动预检按钮专项、12 项 Node 离线契约及命令。浏览器在页面初始化前阻断任何工程写入，使用已有授权工程核对双框架真实 UI 四段 GET、已保存快照与未保存画布的区分、401/404/409 模拟拒绝和 IndexedDB/CAS 保护，结束时复核真实工程水位与摘要。本轮协作环境从 GitHub 实际源文件提取函数后，使用受控 V8 模拟运行新增契约 **12/12**，这**不是** Windows Node `--test`、真实 Chrome/Edge/Keycloak 登录或完整仓库检查通过。新分支 `pnpm run test:release:preflight:oidc:studio:config`、`vp check`、`test:unit`、`docs:check`、`ready` 与真实 `test:release:preflight:oidc:studio:browser` 均**待实测**，不得提前标为已通过。原有 Vitest 615/615 与 E2E 55/55 是合并前基线。
