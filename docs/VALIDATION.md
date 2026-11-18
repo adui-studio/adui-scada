@@ -1790,3 +1790,9 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 第三十五批第二小批仅对 React/Vue Studio 新增「发布预检」菜单，借助 Core 根据当前文档展示静态兼容性通过提示，或逐项显示错误路径与中文原因。结果从当前编辑器快照派生，工程切换/导入/修改后不保留旧报告；菜单没有写入动作。另在既有 `scripts/test-studio-browser.mjs` 添加 `--release-preflight` 双框架隔离浏览器专项、根 `test:release:preflight:browser` 命令。专项通过真实 JSON 导入/导出测试合法演示、不支持的图元/规则/已绑定 unknown Tag、恢复合法工程，保留原始数据且不发工程网络请求。
 
 **新 HEAD 尚未运行 Windows** `vp check`、`typecheck:web`、`test:unit`（目标仍 593/593）、`test:browser`（双视口）、`test:release:preflight:browser`、`docs:check` 或完整 `ready`，不得借用 PR #85 质量链成功来声明本次 Vue/React UI 已通过。浏览器专项在默认 `ready` 之外，必须单独执行并记录退出码。本批不产生工程发布、数据库事务或工业设备写入。
+
+## 2026-11-18 · PR #86 授权合并与第三十五批第三小批待验收
+
+维护者提交的 Windows `pnpm run test:unit` 结果为 **593/593**，`vp check` 为 **341 格式文件 / 196 受检文件零告警**，完整 `pnpm run ready` **退出码 0**，含 HTTP E2E **51/51**、文档 **86 份**、React/Vue 与 NestJS 构建成功。GitHub PR #86 合并前 HEAD 为 `d4ef0b68d91658b60204587a22c63cf26e473f72`，获维护者本次明确授权 Squash 合并为 `main@a934a33ba2251880f934ff4f5e9937ff78711f5c`。日志**未提供本地 Git HEAD**，**未提供** `test:browser` 和 `test:release:preflight:browser` 的独立结果；这两项仍须补测。
+
+第三十五批第三小批变更 `release-preflight.ts` 的 SVG 图元已消费属性白名单，新增三项反向/正向 Core 单测，预期单元测试目标为 **596/596**（仅预测，非实测）。请在 Windows 新分支 `feat/v0.3-b35-preflight-prop-compatibility` 核对 `git rev-parse HEAD` 并执行 `pnpm run test:unit`、`vp check`、`pnpm run docs:check`、`pnpm run ready`；在 React/Vue Web 本机服务启动后执行 `pnpm run test:browser` 和 `pnpm run test:release:preflight:browser`，逐项记录退出码。所有待验收项目均不得标记为通过。
