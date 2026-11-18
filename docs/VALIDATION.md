@@ -1744,3 +1744,11 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 第二十六小批经真实 NestJS Controller 确认工程共有四条受保护 GET 路由。仅对原脚本已存在的双 Origin 注销后探针补充工程详情 `GET /:id` 和历史版本列表 `GET /:id/versions?limit=10`，连同已覆盖的列表与指定版本，要求**四条全部真实返回 HTTP 401**。严格同源只读、随机专用工程 ID、无响应正文与零额外工程写入，原四 Studio 页恢复及 SVG/IndexedDB/自动保存断言不变。现有 19 项离线用例中两项按四路由调整，额外新增一项逐路径失败回归；**新目标 20/20（尚未执行）**。
 
 **第二十六小批新 HEAD 的 Windows `test:projects:oidc:multitab:config`、`vp check`、`docs:check`、完整 `pnpm run ready` 和真实 Keycloak 四标签页专项尚未执行。** 旧 PR #81 退出码不得视为本批结果。建议在 Windows 先执行 `git rev-parse HEAD` 记录测试对应 SHA，再按顺序执行上述离线专项与完整质量链；全部真实退出码为 0 后，再在显式确认的本机 OIDC HTTPS Lab 运行 `pnpm run test:projects:oidc:multitab:browser`。交互式测试仍创建并保留随机专用工程、追加修订 2/3、注销当前隔离会话，禁止输入终端密码、输出真实令牌或操作生产工程。
+
+## 2026-11-18 · 第三十四批第二十六小批结案及第二十七小批候选
+
+维护者 Windows 已提交第二十六小批日志：`test:projects:oidc:multitab:config` **20/20**、退出码 **0**；完整 `pnpm run ready` **退出码 0**，其中 `vp check` **337** 个格式文件 / **192** 受检文件零警告，Vitest **581/581**、NestJS HTTP E2E **49/49**、`docs:check` **86** 份且 React/Vue/NestJS 类型检查与构建成功。真实 `pnpm run test:projects:oidc:multitab:browser` **退出码 0**，React/Vue 双 Origin 四条工程只读 GET 实际返回 BFF 401，四 Studio 标签页 CAS/授权失效和本地 SVG/IndexedDB/自动保存/零写入保护均通过。日志未单独包含本地 `git rev-parse HEAD`；GitHub 对 PR #82 附加提交的 diff 确认为一处测试断言排版。用户明确授权后 PR #82 经 Squash 合并至 `main@9fd3b863af8c2af7518d1f8a2e256c85e3bc08ab`。
+
+第二十七小批针对 NestJS Session Guard 在 Controller 执行前拒绝 401/403 的响应缓存策略，仅在该 Guard HTTP 路径提前设置 `Cache-Control: no-store` 和 `Pragma: no-cache`，不修改任何权限分支或写入。新增两项 Guard 单测，原 Vitest **581 项**基础上目标 **583 项**；真实 OIDC 根模块 E2E 在已有两项匿名 401 用例增加响应头检查，**E2E 数量仍为 49 项**。这些数字为待执行目标，尚非运行结果。
+
+**新 HEAD 尚未执行** Windows `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`docs:check`、完整 `pnpm run ready` 或真实 Keycloak OIDC Lab 回归。需先核对 `git rev-parse HEAD`，再执行完整 `ready` 记录最终退出码；此批不改浏览器前端，如需复验真实多标签页，现有 `test:projects:oidc:multitab:browser` 仍涉及新建并保留一份专用工程及注销隔离会话，必须继续使用显式本机 Lab 确认。不得以此前 PR #82 的结果代替本批验证，也不得声称生产现场或工业设备安全认证。
