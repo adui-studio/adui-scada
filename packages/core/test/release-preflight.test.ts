@@ -114,3 +114,40 @@ test("多个问题逐项以稳定路径返回，且不能影响其他图元与�
   ]);
   expect(JSON.stringify(document)).toBe(before);
 });
+
+test("当前图元未消费的属性必须明确拒绝而不能静默发布", () => {
+  const document = source();
+  document.pages[0]!.nodes[1]!.props.color = "#ff0000";
+  const before = JSON.stringify(document);
+  expect(validateProjectReleasePreflight(document)).toMatchObject({
+    passed: false,
+    issues: [
+      {
+        code: "UNSUPPORTED_SYMBOL_PROP",
+        path: "pages[0].nodes[1].props.color",
+        message: "当前 SVG 运行时不处理此图元属性",
+      },
+    ],
+  });
+  expect(JSON.stringify(document)).toBe(before);
+});
+
+test("文本图元已消费的文本与单位属性以及 Studio 编辑状态保持兼容", () => {
+  const document = source();
+  const label = document.pages[0]!.nodes[0]!;
+  label.props.unit = "%";
+  label.props.__scadaStudio = { visible: false, locked: true };
+  expect(validateProjectReleasePreflight(document)).toEqual({ passed: true, issues: [] });
+});
+
+test("未来图元的属性不重复误报但未知图元仍受阻", () => {
+  const document = source();
+  const node = document.pages[0]!.nodes[0]!;
+  node.type = "future-gauge";
+  node.props.futureSetting = "待支持";
+  expect(validateProjectReleasePreflight(document)).toMatchObject({
+    passed: false,
+    issues: [{ code: "UNSUPPORTED_SYMBOL", path: "pages[0].nodes[0].type" }],
+  });
+  expect(validateProjectReleasePreflight(document).issues).toHaveLength(1);
+});
