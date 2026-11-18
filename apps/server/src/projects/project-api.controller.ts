@@ -97,6 +97,24 @@ export class ProjectApiController {
     return this.projects.listVersions(request.scadaPrincipal ?? null, projectId, query);
   }
 
+  @Get(":projectId/versions/:revision/release-preflight")
+  @Header("Cache-Control", "no-store")
+  @UseGuards(ScadaProjectGuard)
+  @SetMetadata(SCADA_PROJECT_PERMISSION, "version:read")
+  @ApiOperation({ summary: "只读预检已保存的当前工程版本是否兼容 SVG 运行时" })
+  @ApiOkResponse({ description: "返回当前版本静态兼容性报告，不包含工程快照正文" })
+  @ApiResponse({ status: 400, description: "发布预检修订号无效" })
+  @ApiResponse({ status: 404, description: "工程不存在或无权读取版本" })
+  @ApiResponse({ status: 409, description: "请求版本不是当前版本，需重新读取版本水位" })
+  preflightRelease(
+    @Req() request: ScadaAuthenticatedRequest,
+    @Param("projectId") projectId: string,
+    @Param("revision") revisionValue: string,
+  ) {
+    const revision = parseRevisionParam(revisionValue);
+    return this.projects.preflightRelease(request.scadaPrincipal ?? null, projectId, revision);
+  }
+
   @Get(":projectId/versions/:revision")
   @Header("Cache-Control", "no-store")
   @UseGuards(ScadaProjectGuard)
