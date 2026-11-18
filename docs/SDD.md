@@ -1091,3 +1091,11 @@ React `StudioPage.tsx` 用 `useMemo(() => validateProjectReleasePreflight(state.
 新的响应解析器要求精确六个根字段；`revision` 与 `headRevision` 都等于本次请求的正安全整数，`projectId` 必须一致，`contentHash` 必须是小写 SHA-256 格式（不重新计算服务端快照摘要，服务端仍负责持久化完整性核对）。`issues` 必须为最多 10000 条的数组，每条精确为 `code/severity/path/message`，代码只允许共享 Core 当前的 `DOCUMENT_INVALID`、`UNSUPPORTED_SYMBOL`、`UNSUPPORTED_SYMBOL_VERSION`、`UNSUPPORTED_BINDING_SLOT`、`UNSUPPORTED_SYMBOL_PROP`、`UNRESOLVED_BOUND_TAG`、`UNSUPPORTED_RULES`；severity 必须为 `error`，非空路径和中文原因的长度上限 512，`passed` 与有无 issue 必须一致。API 200 也必须包含 `Cache-Control: no-store`，否则 `invalid_response`。严格拒绝多余的 `document`、`snapshot`、`token`、`published` 等字段。
 
 本批仅扩展框架无关 Client 类型与请求/解析能力，不持久化报告、不改 Studio UI、工程 Schema、服务端模块、CAS 基线、权限或数据库迁移。预检报告通过不等于正式发布许可；工程后续仍可能被其他主体更新，未来发布事务必须重新复核身份、授权、修订水位、静态兼容性以及工业安全条件。新增 8 条 API Client Vitest 反向/正向用例，并更新现有 Studio 会话测试 Mock 以满足新的接口签名。
+
+## 2026-11-18 · 第三十五批第八小批：双框架只读服务端预检 UI 与共享水位编排
+
+新增 `packages/api-client/src/server-release-preflight.ts` 的 `readCurrentServerReleasePreflight(api, projectId)`，只接受 `getProject/readVersion/preflightRelease` 三个只读依赖。执行 `GET project head → GET 具备 SHA-256 校验的完整版本快照 → GET 只读预检报告 → GET 最终 head`；快照的工程/修订号与请求必须一致，预检内容摘要必须与完整快照一致，第二次 head 变化抛出受控 `conflict/409`。不创建 CAS 基线、不修改工程或身份/授权缓存，也不保留持久化报告。新增 5 项 Vitest，覆盖正常、并发版本推进、摘要损坏、错版快照和身份/权限拒绝。
+
+`ServerReleasePreflight.tsx` / `ServerReleasePreflight.vue` 是同构 UI 适配层：手动触发，不对当前文档自动发网络请求；在内存保存与请求时文档对象关联的已保存快照和预检报告，只在仍是发起请求时的编辑文档时显示。用共享 Core `compareProjectDocuments` 判断当前画布是否与远端快照一致；即使服务端 `passed=true`，不一致时必须显式提示“当前画布不能视为通过服务端预检”，且无论匹配与否都明确不是正式发布许可。编辑对象变化隐藏旧报告，父级服务端修订号/授权变化导致子面板重新挂载。认证/ACL 被拒绝时通知父级原有 `invalidateServerAccess`，但不清空本地画布与 IndexedDB。无授权、网络错误、409 和无效响应均只显示既有脱敏错误，不触发新建或版本追加。
+
+原 `test:release:preflight:browser` 只读检查增加“双框架有独立服务端预检手动按钮，未点击前不会渲染服务端通过状态”；不模拟真实 Keycloak，会继续保留既有合法/不兼容 JSON 往返保护。真实受保护 UI 点击浏览器联调需要未来独立专项，不能将此 UI 结构断言视为已通过真实身份、服务端版本或发布事务验收。
