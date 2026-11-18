@@ -231,4 +231,100 @@ describe("Prisma 工程版本事务仓储", () => {
     }
     expect(fake.transaction).not.toHaveBeenCalled();
   });
+
+  it("只读预检当前已保存版本并返回不含快照正文的兼容报告", async () => {
+    const snapshot = await createProjectSnapshot(document(), {
+      revision: 1,
+      createdAt: "2026-11-18T00:00:00.000Z",
+    });
+    const fake = mockStore({ head: 1n, stored: snapshot });
+    const report = await fake.store.preflightRelease(principal, projectId, 1);
+    expect(report).toEqual({
+      projectId,
+      revision: 1,
+      headRevision: 1,
+      contentHash: snapshot.contentHash,
+      passed: true,
+      issues: [],
+    });
+    expect(fake.steps).toEqual(["工程行锁", "权限复查", "读取版本"]);
+    expect(fake.tx.scadaProjectVersion.findUnique).toHaveBeenCalledWith({
+      where: {
+        tenantId_projectId_revision: {
+          tenantId: principal.tenantId,
+          projectId,
+          revision: 1n,
+        },
+      },
+    });
+    expect(fake.tx.scadaProjectVersion.create).not.toHaveBeenCalled();
+    expect(fake.tx.scadaProject.update).not.toHaveBeenCalled();
+    expect(fake.tx.scadaProjectAudit.create).not.toHaveBeenCalled();
+  });
+
+  it("已保存但图元属性不受支持时仅报告稳定错误路径", async () => {
+    const invalid = document();
+    invalid.pages[0].nodes[1].props.color = "red";
+    const snapshot = await createProjectSnapshot(invalid, {
+      revision: 1,
+      createdAt: "2026-11-18T00:00:00.000Z",
+    });
+    const fake = mockStore({ head: 1n, stored: snapshot });
+    const report = await fake.store.preflightRelease(principal, projectId, 1);
+    expect(report).toMatchObject({
+      passed: false,
+      issues: [
+        {
+          code: "UNSUPPORTED_SYMBOL_PROP",
+          path: "pages[0].nodes[1].props.color",
+          severity: "error",
+        },
+      ],
+    });
+    expect(report.issues).toHaveLength(1);
+    expect(fake.tx.scadaProjectAudit.create).not.toHaveBeenCalled();
+  });
+
+  it("并发版本水位已推进时拒绝旧版本预检而不读取历史快照", async () => {
+    const fake = mockStore({ head: 2n });
+    await expect(fake.store.preflightRelease(principal, projectId, 1)).rejects.toBeInstanceOf(
+      ProjectRevisionConflictError,
+    );
+    expect(fake.steps).toEqual(["工程行锁", "权限复查"]);
+    expect(fake.tx.scadaProjectVersion.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("未授权和工程不存在均在读取快照前统一拒绝", async () => {
+    for (const options of [
+      { head: 1n, projectExists: false },
+      { head: 1n, permissions: ["project:read"] },
+    ]) {
+      const fake = mockStore(options);
+      await expect(fake.store.preflightRelease(principal, projectId, 1)).rejects.toBeInstanceOf(
+        ProjectVersionAccessDeniedError,
+      );
+      expect(fake.tx.scadaProjectVersion.findUnique).not.toHaveBeenCalled();
+    }
+  });
+
+  it("损坏的数据库摘要不产生通过报告", async () => {
+    const snapshot = await createProjectSnapshot(document(), {
+      revision: 1,
+      createdAt: "2026-11-18T00:00:00.000Z",
+    });
+    const fake = mockStore({ head: 1n, stored: snapshot, storedHash: "0".repeat(64) });
+    await expect(fake.store.preflightRelease(principal, projectId, 1)).rejects.toThrow(
+      /数据库工程版本元数据与快照不一致/,
+    );
+  });
+
+  it("非法预检修订号不查询数据库或创建版本", async () => {
+    const fake = mockStore();
+    for (const revision of [0, -1, 0.5, Number.MAX_SAFE_INTEGER + 1]) {
+      await expect(fake.store.preflightRelease(principal, projectId, revision)).rejects.toThrow(
+        /发布预检修订号/,
+      );
+    }
+    expect(fake.transaction).not.toHaveBeenCalled();
+  });
 });
