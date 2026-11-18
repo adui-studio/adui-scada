@@ -479,12 +479,10 @@ function readStudioReleasePreflightInPage() {
   const panel = menu.querySelector('[aria-label="工程发布前静态兼容性预检"]');
   if (!panel) throw new Error("未找到静态预检面板");
   const status = panel.querySelector('[role="status"]')?.textContent.trim() ?? "";
-  const issues = [...panel.querySelectorAll('ol[aria-label="发布预检问题"] > li')].map(
-    (item) => ({
-      path: item.querySelector("code")?.textContent.trim() ?? "",
-      message: item.querySelector("p")?.textContent.trim() ?? "",
-    }),
-  );
+  const issues = [...panel.querySelectorAll('ol[aria-label="发布预检问题"] > li')].map((item) => ({
+    path: item.querySelector("code")?.textContent.trim() ?? "",
+    message: item.querySelector("p")?.textContent.trim() ?? "",
+  }));
   menu.open = false;
   return {
     passed: status.includes("静态兼容性检查通过"),
