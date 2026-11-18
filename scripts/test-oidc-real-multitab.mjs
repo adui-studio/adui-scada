@@ -530,7 +530,7 @@ async function inspectProtectedState(session) {
   return { ...state, canvas };
 }
 
-async function prepareFollowerDraft(session) {
+export async function prepareFollowerDraft(session) {
   if (!(await session.evaluate(saveDraftInPage))) throw new Error("Studio 工程载入失败");
   if (!(await session.evaluate(enableAutoSaveInPage))) throw new Error("Studio 工程载入失败");
   const state = await inspectProtectedState(session);
@@ -739,14 +739,13 @@ async function run() {
     process.stdout.write("四个标签页已验证为同一 BFF 主体，开始 React/Vue Studio 工程复核。\n");
 
     phase = "React 跟随标签页载入";
-    const reactInitial = await openStudioProject(tabs.reactFollower, projectId, 1);
+    await openStudioProject(tabs.reactFollower, projectId, 1);
+    // CAS 状态摘要不是本地画布快照；草稿初始化完成后才建立保护基准。
     const reactDraft = await prepareFollowerDraft(tabs.reactFollower);
-    requireSameCanvasAndDrafts(reactInitial, reactDraft);
 
     phase = "Vue 跟随标签页载入";
-    const vueInitial = await openStudioProject(tabs.vueFollower, projectId, 1);
+    await openStudioProject(tabs.vueFollower, projectId, 1);
     const vueDraft = await prepareFollowerDraft(tabs.vueFollower);
-    requireSameCanvasAndDrafts(vueInitial, vueDraft);
 
     phase = "React 标签页版本水位复核";
     await activateTab(tabs.reactWriter, "真实标签页没有发生可见性切换");

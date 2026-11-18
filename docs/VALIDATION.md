@@ -1674,3 +1674,11 @@ PR #69 原分支最小候选已增加：仅在 Vue“保存服务端工程”失
 静态复核发现测试脚本在首次导航之前只注册 `Page.addScriptToEvaluateOnNewDocument`，但立即调用真实 `Page.bringToFront` 并要求可见性计数递增，存在当前空白文档尚未注册监听器而超时的问题。协作容器真实 Chromium 对照验证：旧空白文档 `probe=null`，额外调用一次 `session.evaluate(installMultiTabVisibilityProbeInPage)` 后，切回标签页可记录 `visibleEvents=1`。协作容器独立初始化顺序测试 **1/1** 通过；两者不是仓库 Windows 全量测试。本次只增加当前文档初始化及离线执行顺序断言，不更改生产业务代码、真实 `visibilitychange` 语义、OIDC 认证、CSRF、CAS 或 Lab 安全限制。
 
 当前 GitHub 修复候选尚未由维护者 Windows 执行新离线目标 10/10、`vp check`、完整 `ready` 或真实多标签页专项。以上旧质量链数据不能等同本次修复已验收；需记录当前本地 `git rev-parse HEAD` 与各命令退出码。
+
+## 2026-11-18 · 第二十小批真实四标签页首次工程载入误报修复候选（E-046）
+
+维护者本机已执行 `pnpm run test:projects:oidc:multitab:browser`：真实 Keycloak 登录完成，四个标签页均确认同一 BFF 主体；进入 React/Vue Studio 工程复核后，报“标签页恢复改变了本地画布”，**专项退出码 1**。这一输出不能证明 SVG 数据丢失，也不能说明远端版本推进、注销或四标签页最终一致性已通过。
+
+经当前 PR #76 源码核对，`openStudioProject` 返回的只是 `readMultiTabSessionStateInPage` 的 CAS/身份 UI 状态摘要，`canvas` 和 `drafts` 均不存在；而 React/Vue 首次确认打开工程后，用该摘要与刚创建草稿、开启自动保存所得的完整快照调用 `requireSameCanvasAndDrafts`，必然报画布差异。草稿创建、自动保存开启本就属于初始化的预期状态变更。候选最小修复只删除**首次初始化阶段**这两处错误跨类型比较，以初始化完成后的 `inspectProtectedState` 作为后续保护基准，新增离线回归模拟真实初始化操作。远端 CAS 水位变化、服务端身份失效、人工恢复后的所有 SVG/草稿数量/整记录 SHA-256/自动保存以及零工程 POST 断言全部保留。
+
+本次维护者提供的**修复前** Windows 质量记录：离线 10/10、`vp check` 337 格式文件/192 受检零告警、`docs:check` 86 份、单测 581/581、HTTP E2E 49/49；`ready` 最后显示 Prisma Client 生成，缺少最终退出码。当前候选离线目标 **11/11**，新 HEAD 的 `vp check`、`docs:check`、完整 `ready` 和真实 Keycloak 浏览器专项待维护者执行。只根据本次代码修正无法声称多标签页真实测试已通过。

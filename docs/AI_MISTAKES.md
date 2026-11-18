@@ -414,6 +414,15 @@
 - **验证边界**：协作容器已执行 `node --test /mnt/data/test_multitab_patch.mjs`，独立顺序模拟 **1/1** 通过；`node /mnt/data/verify_blank_visibility.mjs` 在真实 Chromium 观察到旧空白文档未注入、修复后 `visibleEvents=1`。两项验证仅覆盖本次探针初始化机制；当前 GitHub 新提交的 Windows `vp check`、完整 `ready`、真实 Keycloak/HTTPS/PostgreSQL 浏览器专项待执行，不能声称 PR #76 全链通过。
 - **证据**：维护者 2026-11-18 上传的五标签页截图及质量链日志、PR #76、`scripts/test-oidc-real-multitab.mjs`、`scripts/test-oidc-real-multitab.cases.mjs`、`docs/VALIDATION.md`。
 
+### E-046 · 将 CAS 状态摘要误当作 SVG/草稿保护快照（第三十四批第二十小批）
+
+- **现象**：维护者 Windows 真实执行 `pnpm run test:projects:oidc:multitab:browser`，单次 Keycloak 登录完成、四个标签页已核对为同一 BFF 主体，随后报“标签页恢复改变了本地画布”，浏览器专项 **退出码 1**；没有进入远端版本推进、注销与 Vue 完整验收。
+- **已确认的代码原因**：`openStudioProject` 返回 `readMultiTabSessionStateInPage` 的 CAS/身份 UI 状态摘要，不包含 `canvas` 或 `drafts`；真实脚本在 React/Vue 各自首次 `openStudioProject` 后创建草稿、开启自动保存，却立即用 `requireSameCanvasAndDrafts(initialSummary, draftSnapshot)` 比较二者。摘要 `canvas` 为 `undefined`，与从真实 SVG 读取的字符串必然不相等。这里是测试快照类型混用导致的确定性误报，**不能据此推断现场工程画布有变化**。
+- **最小修复**：保留 `openStudioProject` 对正式工程 UI 确认与 CAS 修订号的校验；React/Vue 均只在 `prepareFollowerDraft` 成功完成草稿创建和自动保存启用后，取得 `inspectProtectedState` 全量快照作为后续基准。删除初始化阶段两处无效的摘要与草稿比较，不删除后续版本漂移、CAS 恢复和注销时 SVG 内容、IndexedDB 整记录摘要、草稿数量、自动保存状态、零工程 POST 的严格断言。
+- **避免**：不能把只读 CAS 状态摘要当作持久化数据快照。建立本地数据保护基准应在业务初始化完成后、行为复核之前；初始化自身会有意创建草稿并启用自动保存，不应对初始化前后状态使用“完全不变”断言。新增 Node 离线用例验证 `prepareFollowerDraft` 返回完整画布/草稿状态，CAS 摘要仍被严格比较函数拒绝。
+- **验证边界**：维护者提供的**修复前** Windows 日志：多标签页离线 **10/10**、`vp check` **337 格式文件/192 受检零告警**、`docs:check` **86 个 Markdown**、Vitest **581/581**、HTTP E2E **49/49**；上传内容显示 `ready` 构建到末尾，**没有最终退出码**。真实浏览器专项明确退出码 **1**。当前修复候选的离线目标 **11/11**，Windows `vp check`、`docs:check`、完整 `ready`、真实 React/Vue/Keycloak/PostgreSQL 专项均须重新执行。
+- **证据**：维护者 2026-11-18 浏览器终端输出、PR #76、`scripts/test-oidc-real-multitab.mjs`、`scripts/test-oidc-real-multitab.cases.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

@@ -5,6 +5,7 @@ import {
   installMultiTabVisibilityProbeInPage,
   installPageProbes,
   logoutCurrentSessionInPage,
+  prepareFollowerDraft,
   readAuthStatusInPage,
   readMultiTabSessionStateInPage,
   refreshProjectListInPage,
@@ -192,6 +193,46 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
       writeAttempts: 0,
     });
     assert.equal(JSON.stringify(state).includes(secret), false);
+  });
+
+  void it("跟随页先初始化草稿再生成完整保护快照，不能将 CAS 摘要当画布", async () => {
+    const actions = [];
+    const draft = { count: 1, hash: "a".repeat(64) };
+    const canvas = "<svg>工程图元</svg>";
+    const session = {
+      evaluate: async (action) => {
+        actions.push(action.name);
+        switch (action.name) {
+          case "saveDraftInPage":
+          case "enableAutoSaveInPage":
+            return true;
+          case "stateInPage":
+            return { autoSave: true, canvas: "<svg>包含视口网格</svg>" };
+          case "readBrowserDraftsInPage":
+            return draft;
+          case "readStudioContentCanvasInPage":
+            return canvas;
+          default:
+            throw new Error("跟随页快照测试调用了未知操作");
+        }
+      },
+    };
+    const snapshot = await prepareFollowerDraft(session);
+    assert.deepEqual(actions, [
+      "saveDraftInPage",
+      "enableAutoSaveInPage",
+      "stateInPage",
+      "readBrowserDraftsInPage",
+      "readStudioContentCanvasInPage",
+    ]);
+    assert.equal(snapshot.canvas, canvas);
+    assert.deepEqual(snapshot.drafts, draft);
+    assert.equal(snapshot.autoSave, true);
+    assert.equal(requireUnchangedStudioState(snapshot, structuredClone(snapshot)), true);
+    assert.throws(
+      () => requireSameCanvasAndDrafts({ baselineRevision: 1 }, snapshot),
+      /标签页恢复改变了本地画布/,
+    );
   });
 
   void it("本地画布、IndexedDB 草稿和自动保存必须逐项保持一致", () => {
