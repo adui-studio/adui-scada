@@ -20,6 +20,7 @@ import {
   buildLayerTree,
   studioViewportRect,
   compareProjectDocuments,
+  validateProjectReleasePreflight,
 } from "@adui/scada-core";
 import type {
   LayerTreeGroup,
@@ -198,6 +199,10 @@ export default function StudioPage() {
         ? compareProjectDocuments(state.document, inspectedVersion.document)
         : null,
     [state.document, inspectedVersion],
+  );
+  const releasePreflight = useMemo(
+    () => validateProjectReleasePreflight(state.document),
+    [state.document],
   );
   const snapResult = useMemo(() => {
     if (preview === null) return null;
@@ -1842,6 +1847,36 @@ export default function StudioPage() {
                 >
                   加载更早版本
                 </button>
+              )}
+            </div>
+          </details>
+          <details className="studio-version-menu">
+            <summary>发布预检</summary>
+            <div className="studio-version-panel" aria-label="工程发布前静态兼容性预检">
+              <p className="studio-version-help">
+                当前工程：{state.document.projectId} · 仅检查 SVG 静态兼容性，不保存、不发布，也不改动草稿。
+              </p>
+              {releasePreflight.passed ? (
+                <p className="studio-version-help" role="status">
+                  静态兼容性检查通过；仍须完成服务端授权、数据源和正式发布事务校验。
+                </p>
+              ) : (
+                <div>
+                  <p className="studio-version-error" role="status">
+                    发现 {releasePreflight.issues.length} 项兼容性问题，当前工程不能视为可发布。
+                  </p>
+                  <ol className="studio-version-list" aria-label="发布预检问题">
+                    {releasePreflight.issues.map((issue, index) => (
+                      <li
+                        className="studio-version-item"
+                        key={`${issue.code}:${issue.path}:${index}`}
+                      >
+                        <code>{issue.path}</code>
+                        <p className="studio-version-help">{issue.message}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
               )}
             </div>
           </details>

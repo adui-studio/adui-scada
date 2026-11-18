@@ -1506,3 +1506,11 @@ PR #75 的同源双标签 CAS 质量和真实浏览器专项经 Windows 19/19、
 下一阶段从反复的 OIDC/CAS 回归转向 FR-008 的静态安全基础。新候选只在共享 Core 增加 validateProjectReleasePreflight 与 10 项测试，识别当前 SVG 运行时不支持的图元及版本、未消费的绑定、已绑定 unknown Tag 和规则。不会创建发布指针、数据库写入或设备命令，也不会改变 React/Vue 现有版本保存。预检通过不等于有权限发布或可进行工业现场运行。
 
 新候选 Vitest 目标 593/593，Windows vp check、单元测试、docs:check 和完整 ready 尚待执行。PR 默认 Draft，必须指派并复核 @adui-dev；用户未明确授权此新 PR 合并之前不得合并。
+
+## 2026-11-18 · 第三十五批第二小批：React/Vue Studio 发布静态预检候选
+
+前批共享 Core 静态预检 PR #85 在 Windows 完成单测 593/593、`vp check` 341/196 零警告、完整 `ready` 退出码 0，获用户明确授权后 Squash 合并至 `main@b0bf3f683030d3e87e2f3a9b360294ff332cdbc7`。维护者日志未附独立的本地 Git HEAD，保留此证据边界。
+
+本批将已有 `validateProjectReleasePreflight` 接入 React/Vue 双框架 Studio 工具栏的「发布预检」只读面板。两端均根据当前文档派生结果：兼容时明确只为静态 SVG 预检通过，不兼容时展示数量、字段路径和中文原因；不创建版本、不触碰草稿与 CAS。另新增临时 Chrome/Edge 双框架独立专项 `test:release:preflight:browser`，通过合法/不支持/恢复三个实际 JSON 导入阶段验证结果更新与工程无损。
+
+新 UI 与浏览器测试尚未在 Windows 完成 `vp check`、全量 `ready`、`test:browser` 和 `test:release:preflight:browser`；不得将第一小批的 Core 单测通过视为本批双框架 UI 验收。PR 默认 Draft、必须指派并核验 GitHub `@adui-dev`，无新明确合并授权不合并。正式发布授权/持久化、运行时发布态、回滚及工业安全仍未交付。

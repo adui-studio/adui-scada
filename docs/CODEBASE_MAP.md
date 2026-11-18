@@ -903,3 +903,9 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `packages/core/src/release-preflight.ts`：框架无关只读 `validateProjectReleasePreflight`，复用现有 Schema 校验，报告未知图元/版本、未消费绑定槽、待确认已绑定 Tag 类型及不受支持的图元规则。无发布写入、权限或数据库依赖。
 - `packages/core/src/index.ts`：导出预检函数及结构化问题/结果类型，供未来 React/Vue、后端服务复用；不修改现有 `project-snapshot` 或渲染器行为。
 - `packages/core/test/release-preflight.test.ts`：10 项 Vitest 回归覆盖合法演示、结构失败、历史版本不隐式迁移、隐藏未知图元、版本、已绑定 Tag 待确认、未绑定 Tag 保留、非法槽位、未实现规则及多问题稳定路径/无副作用。
+
+## V0.3 第三十五批第二小批 · Studio 发布静态预检入口
+
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：复用 Core `validateProjectReleasePreflight`，在各自工具栏「发布预检」菜单对当前文档实时显示状态及结构化路径/原因，不保存校验副本，不发起任何发布请求。
+- `scripts/test-studio-browser.mjs`：新增 `--release-preflight` 的临时隔离浏览器专项，React/Vue 各自演练合法文档通过、含未知图元/规则/已绑定 unknown Tag 的 JSON 导入后失败，以及恢复原文档后的结果重算和工程 JSON 无损。
+- `package.json`：新增 `test:release:preflight:browser` 独立命令，不纳入自动 `ready`，需要本机 Web 服务及可用 Chrome/Edge。

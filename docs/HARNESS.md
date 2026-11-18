@@ -2960,3 +2960,32 @@ Write-Host "同源双标签页真实浏览器专项退出码：$LASTEXITCODE"
 ```
 
 隔离 Chrome/Edge 中只需手动登录一次，**不要将密码、Cookie、Token 或数据库凭据粘贴进终端**。React/Vue 各创建一份随机专用工程，走真实 Studio UI 的版本 1→2→3、后台到前台实际可见性切换、过期 CAS 阻断、只读预览和人工载入、IndexedDB 草稿不变与 SQL 三版审计；测试工程保留，不删除既有数据。专项可能写入**仅本轮随机专用工程**，不允许在生产环境执行，也不允许改动工业设备。
+
+## 第三十五批第二小批 · React/Vue 发布静态预检浏览器专项
+
+第一小批的 Core 静态预检已在 Windows 单测 **593/593**、`vp check` **341/196**、完整 `ready` 退出码 **0** 后经授权合并为 PR #85。此批变更了两端真实 Studio 视图及独立浏览器专项，**必须重新检查代码、类型与布局**。不把上一批质量链结果当作此批成功。
+
+```powershell
+git fetch origin
+git switch feat/v0.3-b35-studio-release-preflight
+git pull --ff-only
+git rev-parse HEAD
+
+pnpm run test:unit
+Write-Host "单元测试退出码：$LASTEXITCODE"
+vp check
+Write-Host "Vite+ 检查退出码：$LASTEXITCODE"
+pnpm run docs:check
+Write-Host "文档检查退出码：$LASTEXITCODE"
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+```
+
+双框架静态预检界面应先使用 `pnpm run dev:react` 与 `pnpm run dev:vue` 在本机可信回环端口启动，再由第三个 PowerShell 会话执行独立无凭据浏览器专项：
+
+```powershell
+pnpm run test:release:preflight:browser
+Write-Host "双框架发布预检浏览器退出码：$LASTEXITCODE"
+```
+
+测试应在隔离 Chrome/Edge Profile 的两套 Web Studio 中，分别核验「发布预检」菜单、通过/失败提示、精确问题路径及恢复后不留旧提示；模拟不兼容 JSON 只导入浏览器当前编辑会话，不保存草稿或服务端版本、不开启 Keycloak、不创建数据库和工业设备写入。测试工具的浏览器 Profile 在退出后会清理。通过后仍不能宣布正式工程发布已实现。浏览器专项**不包含**在 `ready` 中，必须提供独立退出码。

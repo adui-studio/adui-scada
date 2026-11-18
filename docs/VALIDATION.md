@@ -1782,3 +1782,11 @@ Windows 下一轮应先 `git rev-parse HEAD` 确认当前 PR 提交，再运行 
 第三十四批遗留 PR #75 已在 Windows 实测：双标签离线 19/19、完整 ready 退出码 0、真实 React/Vue 同源双标签 Chrome + Keycloak + PostgreSQL CAS 专项退出码 0；单元测试 583/583、HTTP E2E 51/51、vp check 339 格式文件及 194 受检零告警，docs:check 86 份。PR #75 在明确授权后 Squash 合并到 main@46dd07177bdd9528443f7fe621f1a48deac483a0。日志没有独立本地 HEAD，不将执行记录绑定到未核实的精确 SHA。
 
 本小批新建 Core 静态预检 validateProjectReleasePreflight，新增 10 项 Vitest，目标全量 593/593（**尚未执行**）。预检只校验当前 SVG 能否消费工程图元、版本、绑定与规则，不创建发布版本，不操作远端数据库或现场设备。Windows 新 HEAD 的 vp check、typecheck、test:unit、docs:check 和完整 pnpm run ready **均待运行**，上一批成功不能代替此批结果。
+
+## 2026-11-18 · PR #85 合并验收与第三十五批第二小批待测
+
+维护者上传的 Windows 原始日志：PR #85 第一小批 Core 发布静态预检 `pnpm run test:unit` **50/50 文件、593/593 用例通过，退出码 0**；`vp check` **341** 格式文件、**196** 受检文件零警告错误、退出码 **0**；完整 `pnpm run ready` **退出码 0**，含 593/593 Vitest、51/51 NestJS HTTP E2E、docs:check 86 份、React/Vue/NestJS 类型检查与构建。用户日志未单独提供 `git rev-parse HEAD`；GitHub 最后一个 HEAD 仅对两份文档做尾部空行格式清理。经用户明确授权，PR #85 Squash 合并至 `main@b0bf3f683030d3e87e2f3a9b360294ff332cdbc7`。此结论不代表已经提供正式发布服务。
+
+第三十五批第二小批仅对 React/Vue Studio 新增「发布预检」菜单，借助 Core 根据当前文档展示静态兼容性通过提示，或逐项显示错误路径与中文原因。结果从当前编辑器快照派生，工程切换/导入/修改后不保留旧报告；菜单没有写入动作。另在既有 `scripts/test-studio-browser.mjs` 添加 `--release-preflight` 双框架隔离浏览器专项、根 `test:release:preflight:browser` 命令。专项通过真实 JSON 导入/导出测试合法演示、不支持的图元/规则/已绑定 unknown Tag、恢复合法工程，保留原始数据且不发工程网络请求。
+
+**新 HEAD 尚未运行 Windows** `vp check`、`typecheck:web`、`test:unit`（目标仍 593/593）、`test:browser`（双视口）、`test:release:preflight:browser`、`docs:check` 或完整 `ready`，不得借用 PR #85 质量链成功来声明本次 Vue/React UI 已通过。浏览器专项在默认 `ready` 之外，必须单独执行并记录退出码。本批不产生工程发布、数据库事务或工业设备写入。

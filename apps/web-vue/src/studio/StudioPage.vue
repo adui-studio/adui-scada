@@ -15,6 +15,7 @@ import {
   buildLayerTree,
   studioViewportRect,
   compareProjectDocuments,
+  validateProjectReleasePreflight,
 } from "@adui/scada-core";
 import type {
   ProjectSnapshot,
@@ -185,6 +186,7 @@ const historyComparison = computed(() =>
     ? compareProjectDocuments(state.value.document, inspectedVersion.value.document)
     : null,
 );
+const releasePreflight = computed(() => validateProjectReleasePreflight(state.value.document));
 
 const page = computed(() => {
   const result = state.value.document.pages.find((item) => item.id === state.value.activePageId);
@@ -1821,6 +1823,32 @@ async function importJson(event: Event) {
             >
               加载更早版本
             </button>
+          </div>
+        </details>
+        <details class="studio-version-menu">
+          <summary>发布预检</summary>
+          <div class="studio-version-panel" aria-label="工程发布前静态兼容性预检">
+            <p class="studio-version-help">
+              当前工程：{{ state.document.projectId }} · 仅检查 SVG 静态兼容性，不保存、不发布，也不改动草稿。
+            </p>
+            <p v-if="releasePreflight.passed" class="studio-version-help" role="status">
+              静态兼容性检查通过；仍须完成服务端授权、数据源和正式发布事务校验。
+            </p>
+            <div v-else>
+              <p class="studio-version-error" role="status">
+                发现 {{ releasePreflight.issues.length }} 项兼容性问题，当前工程不能视为可发布。
+              </p>
+              <ol class="studio-version-list" aria-label="发布预检问题">
+                <li
+                  v-for="(issue, index) in releasePreflight.issues"
+                  :key="`${issue.code}:${issue.path}:${index}`"
+                  class="studio-version-item"
+                >
+                  <code>{{ issue.path }}</code>
+                  <p class="studio-version-help">{{ issue.message }}</p>
+                </li>
+              </ol>
+            </div>
           </div>
         </details>
         <ServerProjectBrowser
