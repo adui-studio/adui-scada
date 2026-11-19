@@ -157,6 +157,26 @@ export class ProjectApiController {
     return this.projects.append(request.scadaPrincipal ?? null, projectId, body);
   }
 
+  @Get(":projectId/releases/current")
+  @Header("Cache-Control", "no-store")
+  @UseGuards(ScadaProjectGuard)
+  @SetMetadata(SCADA_PROJECT_PERMISSION, "release:read")
+  @ApiOperation({ summary: "只读读取当前正式发布指针及不可变快照" })
+  @ApiOkResponse({ description: "返回未发布状态，或当前已提交发布快照与事件元数据" })
+  @ApiResponse({ status: 401, description: "可信会话无效或已撤销" })
+  @ApiResponse({ status: 404, description: "工程不存在或无权读取正式发布快照" })
+  @ApiResponse({ status: 500, description: "发布指针、发布事件或快照完整性校验失败" })
+  readCurrentRelease(
+    @Req() request: ScadaAuthenticatedRequest,
+    @Param("projectId") projectId: string,
+  ) {
+    return this.releases.readCurrent(
+      request.scadaPrincipal ?? null,
+      request.scadaSessionId ?? null,
+      projectId,
+    );
+  }
+
   @Post(":projectId/releases")
   @Header("Cache-Control", "no-store")
   @HttpCode(HttpStatus.CREATED)
