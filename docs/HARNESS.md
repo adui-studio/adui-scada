@@ -3343,6 +3343,7 @@ docker compose -p adui-scada --env-file .env --env-file .local/docker/compose.en
 不得先删除事件再删除仍引用该事件的状态；不得通过放宽外键、使用 CASCADE 或跳过 finally 清理来让测试通过。任何新增带 `RESTRICT` 外键的表，都必须同步检查所有 DB spec 的 fixture teardown / afterAll。
 
 PR #99 已将该顺序同步至双 Cookie HTTP、工程版本和工程 API 三个 PostgreSQL 测试文件。维护者 2026-11-19 Windows 在隔离 `adui_scada_test` 复验 `pnpm run test:db`：5/5 文件、41/41 项通过，双 Cookie HTTP CAS 11/11 通过，退出码 0。
+
 ## 2026-11-19 · 正式发布 Schema 隔离 PostgreSQL 验收结果
 
 维护者 Windows 在本机隔离库 `adui_scada_test`（`127.0.0.1:15432`）完成以下实测：

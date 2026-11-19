@@ -1658,6 +1658,7 @@ PR #99 已修复：
 PR #99 已修复三个真实 PostgreSQL 测试文件的 teardown 顺序：先删发布状态，再删发布事件，再删审计、版本、授权和工程；并在 HARNESS / VALIDATION / AI_MISTAKES E-061 记录。生产外键、迁移 SQL 与业务代码均未修改。
 
 **待 Windows 复验**：修复后的 `pnpm run test:db`、最新 `docs:check` 和完整 `pnpm run ready`。原开发库 `adui_scada` 的失败迁移仍不恢复，直到隔离验收、可恢复备份和维护者明确授权。
+
 ## 2026-11-19 · 第三十五批 B 阶段正式发布 Schema 验收通过
 
 维护者 Windows 已完成 PR #99 对应候选代码的隔离 PostgreSQL 专项与完整质量链：
