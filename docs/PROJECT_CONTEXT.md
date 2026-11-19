@@ -1727,17 +1727,17 @@ PR #99 分支同步 PR #97 后的静态评审发现，原发布状态 lastReleas
 
 已将 Prisma ORM 导航关系改为使用已有唯一 lastReleaseEventId -> eventId 建立一对一；数据库层第二条迁移中的六字段复合外键保持不变，继续校验租户、工程、代次、目标修订、摘要与事件 UUID。没有新增或修改迁移 SQL，也没有执行数据库写入。静态回归同步检查 ORM 单字段关系与 SQL 六字段约束。
 
-本次修复后仍待 Windows 重新执行 db:validate、db:generate、vp check、test:unit（目标 620/620）、隔离 PostgreSQL test:db（42/42）、docs:check 与完整 ready。原开发库 adui_scada 的失败迁移继续冻结。
+维护者随后完成 Windows 验收：Prisma Client 7.10.1 生成成功、单测 620/620、Vite+ 355 文件/207 受检零警告错误、完整 ready 退出码 0；隔离 PostgreSQL 第二条迁移首次/二次部署、status 与 test:db 42/42 均通过。E-064 已关闭；原开发库 adui_scada 的失败迁移继续冻结。
 
-## 2026-11-19 · PR #99 复合外键静态断言误报修复（E-065）
+## 2026-11-19 · PR #99 复合外键静态断言误报修复（E-065，后续验收通过）
 
 维护者 Windows 复验确认 E-063/E-064 的 Prisma P1012 已解除：`db:validate`、`db:generate` 均退出码 0；`vp check` 355/207 零警告错误、`docs:check` 89 份通过。Vitest 已实际运行，共 **619/620** 项通过；唯一失败项为 `prisma-schema-comments.spec.ts` 中六字段复合外键的单行字符串 `toContain` 与原 SQL 多行排版不一致，`test:unit` 退出码 1。
 
-已最小修复静态测试：仅忽略外键 DDL 排版空白，同时完整核验约束名、六列外键字段、六列被引用字段、删除/更新规则，去除重复断言；不修改迁移、Prisma Schema、PostgreSQL 或生产逻辑。候选源码通过隔离 JS 正反向字符串检查，但最新 Windows `test:unit`（目标 620/620）、`vp check`、`docs:check`、完整 `ready` 与隔离 PostgreSQL `test:db`（目标 42/42）仍待执行；用户日志未附 HEAD SHA。
+已最小修复静态测试：仅忽略外键 DDL 排版空白，同时完整核验约束名、六列外键字段、六列被引用字段、删除/更新规则，去除重复断言；不修改迁移、Prisma Schema、PostgreSQL 或生产逻辑。随后 Windows 实测 620/620 单测、vp check、docs:check 与完整 ready 通过；第二条迁移首次/二次部署、status 和真实 PostgreSQL test:db 42/42 也通过。用户日志未附本地 HEAD SHA，因此只记录实测内容，不虚构提交绑定。
 
 PR #99 保持 Open/Draft，指派 `@adui-dev`，不合并；原开发库 `adui_scada` 失败迁移保持冻结。
 
-## 2026-11-19 · PR #99 E-065 修复后完整质量链通过，等待复合外键真实数据库验收
+## 2026-11-19 · PR #99 E-065 修复后完整质量链与真实数据库验收通过
 
 维护者 Windows 最新日志确认：
 
@@ -1746,9 +1746,9 @@ PR #99 保持 Open/Draft，指派 `@adui-dev`，不合并；原开发库 `adui_s
 - `pnpm run docs:check`：89 个 Markdown 文件通过，退出码 0。
 - 完整 `pnpm run ready`：退出码 0；依赖、共享配置、环境、中文文案、Prisma Client 7.10.1、React/Vue/Server 类型检查、620 项单测、SSE/OIDC/Docker/浏览器配置专项、NestJS HTTP E2E 55/55、文档和 React/Vue/NestJS 构建全部通过。
 
-这证明 E-063 的 Prisma Schema 解析问题、E-064 的一对一关系语义问题和 E-065 的多行 SQL 静态断言问题均已从当前测试执行路径中排除。维护者日志没有提供本地 `git rev-parse HEAD`，因此不声称这组结果已严格绑定当前 GitHub HEAD `1296814729a6ba0ae8f7d1d9a6c01bcce3c53f79`。记录性文档更新后需要再运行 `docs:check`。
+这证明 E-063 的 Prisma Schema 解析问题、E-064 的一对一关系语义问题和 E-065 的多行 SQL 静态断言问题均已从当前测试执行路径中排除。维护者日志没有提供本地 `git rev-parse HEAD`，因此不声称这组结果已严格绑定某个提交 SHA；远端分支在本轮数据库测试记录时为 `d217dde085a5654d8dfe4cc01ef3756ab338466e`，该提交只调整三份文档格式，不修改业务代码或迁移。
 
-**仍未完成真实 PostgreSQL 验收**：`ready` 不包含 `db:migrate:deploy` 或 `test:db`。本轮仍需按 `docs/HARNESS.md` 的 PowerShell `try/finally` 流程，仅在本机隔离 `adui_scada_test` 应用第二条迁移 `20261119000000_release_state_event_integrity`，执行二次部署、迁移状态检查和 `test:db`（目标 42/42）。旧 41/41 结果不覆盖新增的复合外键测试。
+**真实 PostgreSQL 验收已完成**：第二条迁移 `20261119000000_release_state_event_integrity` 首次部署、二次部署、status 均退出码 0；`pnpm run test:db` 5/5 文件、42/42 项通过。旧 41/41 是第一条迁移验收，不再作为本轮最终结果。
 
 原开发库 `adui_scada` 的部分失败迁移继续冻结，未获得可恢复备份和维护者单独明确授权前，不执行任何恢复写操作。PR #99 保持 Open / Draft，Assignee `@adui-dev`，尚未授权合并。
 

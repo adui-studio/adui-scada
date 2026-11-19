@@ -2137,19 +2137,15 @@ PR #99 已将 Prisma ORM 一对一导航关系改为使用已有全局唯一 `la
 
 静态回归已同步断言：Prisma 关系只使用唯一事件 ID，而 SQL 仍包含完整六字段复合外键。此次未修改任何迁移 SQL 或数据库。
 
-**修复后待维护者 Windows 实测**：
+**结案验证（后续维护者 Windows 实测）**：
 
-| 验收项                    |                               目标 |
-| ------------------------- | ---------------------------------: |
-| `pnpm run db:validate`    |                           退出码 0 |
-| `pnpm run db:generate`    |                           退出码 0 |
-| `vp check`                |                     零警告、零错误 |
-| `pnpm run test:unit`      |                            620/620 |
-| 隔离 PostgreSQL `test:db` |                              42/42 |
-| `pnpm run docs:check`     | 89 份 Markdown，实际计数以命令为准 |
-| 完整 `pnpm run ready`     |                           退出码 0 |
+- Prisma Client 7.10.1 生成成功，说明 E-064 修复后的 Prisma Schema 已被 Prisma 解析。
+- `pnpm run test:unit`：51/51 文件、620/620 项通过，退出码 0。
+- `vp check`：355 文件格式正确、207 受检文件零警告/Lint/类型错误，退出码 0。
+- `pnpm run ready`：最终退出码 0。
+- 第二条增量迁移部署后，隔离 PostgreSQL `test:db`：5/5 文件、42/42 项通过，退出码 0。
 
-数据库专项仍只允许使用 `docs/HARNESS.md` 中 `try/finally` 流程连接本机隔离 `adui_scada_test`；原开发库 `adui_scada` 的失败迁移保持冻结，不执行 resolve、deploy、reset、DROP、DELETE 或手工修改 `_prisma_migrations`。
+本案例已关闭。原开发库 `adui_scada` 的失败迁移保持冻结，不执行 resolve、deploy、reset、DROP、DELETE 或手工修改 `_prisma_migrations`。
 
 ## 2026-11-19 · PR #99 发布复合外键静态断言误报修复（E-065，Windows 与隔离 PostgreSQL 验收通过）
 
