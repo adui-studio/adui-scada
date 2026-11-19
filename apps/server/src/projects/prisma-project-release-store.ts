@@ -45,6 +45,14 @@ export interface ProjectReleaseResult {
   readonly createdAt: string;
 }
 
+/** 事务锁内发现会话已撤销、过期或主体已停用。 */
+export class ProjectReleaseSessionInvalidError extends Error {
+  constructor() {
+    super("身份会话无效或已经失效");
+    this.name = "ProjectReleaseSessionInvalidError";
+  }
+}
+
 /** 同一幂等键被用于不同语义时返回冲突。 */
 export class ProjectReleaseConflictError extends Error {
   constructor() {
@@ -159,7 +167,7 @@ async function lockActiveSession(
   sessionId: string | null,
 ): Promise<void> {
   if (typeof sessionId !== "string" || !SESSION_ID_PATTERN.test(sessionId)) {
-    throw new ProjectVersionAccessDeniedError();
+    throw new ProjectReleaseSessionInvalidError();
   }
 
   const sessions = await tx.$queryRaw<Array<{ session_id: string }>>`
@@ -177,7 +185,7 @@ async function lockActiveSession(
       AND identity_row.status = 'active'
     FOR SHARE OF auth_session, identity_row
   `;
-  if (sessions.length !== 1) throw new ProjectVersionAccessDeniedError();
+  if (sessions.length !== 1) throw new ProjectReleaseSessionInvalidError();
 }
 
 /** 在事务内锁定授权行；撤权事务必须等待本次发布结束，反之则发布看见撤权结果。 */

@@ -37,6 +37,7 @@ import type {
 import type { ProjectReleaseResult } from "../src/projects/prisma-project-release-store.js";
 import { ProjectApiController } from "../src/projects/project-api.controller.js";
 import { PrismaProjectReleaseStore } from "../src/projects/prisma-project-release-store.js";
+import { ProjectReleaseGateUnavailableError } from "../src/projects/project-release-safety-gate.js";
 import { ProjectApiExceptionFilter } from "../src/projects/project-api.exception-filter.js";
 import { PrismaService } from "../src/database/prisma.service.js";
 import { ScadaSecurityAuditService } from "../src/security/scada-security-audit.js";
@@ -563,11 +564,7 @@ describe("工程 API HTTP 接口（端到端）", () => {
 
   it("工业安全门禁尚未就绪时返回 503 且不泄漏内部细节", async () => {
     permissions = ["release:publish"];
-    releases.publish.mockRejectedValueOnce(
-      Object.assign(new Error("正式发布安全门禁尚未完成，当前请求已被安全拒绝"), {
-        name: "ProjectReleaseGateUnavailableError",
-      }),
-    );
+    releases.publish.mockRejectedValueOnce(new ProjectReleaseGateUnavailableError());
     const response = await request(app.getHttpServer())
       .post("/api/v1/projects/" + PROJECT_ID + "/releases")
       .set("Authorization", "Bearer " + SESSION_TOKEN)

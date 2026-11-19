@@ -10,6 +10,7 @@ import {
 import {
   ProjectReleaseConflictError,
   ProjectReleasePreflightRejectedError,
+  ProjectReleaseSessionInvalidError,
 } from "./prisma-project-release-store.js";
 import { ProjectReleaseGateUnavailableError } from "./project-release-safety-gate.js";
 
@@ -39,6 +40,7 @@ export class ProjectApiExceptionFilter implements ExceptionFilter {
       | ProjectVersionAccessDeniedError
       | ProjectReleaseConflictError
       | ProjectReleasePreflightRejectedError
+      | ProjectReleaseSessionInvalidError
       | ProjectReleaseGateUnavailableError,
     host: ArgumentsHost,
   ): void {
@@ -55,6 +57,9 @@ export class ProjectApiExceptionFilter implements ExceptionFilter {
       exception instanceof ProjectReleaseConflictError
     ) {
       statusCode = HttpStatus.CONFLICT;
+      message = exception.message;
+    } else if (exception instanceof ProjectReleaseSessionInvalidError) {
+      statusCode = HttpStatus.UNAUTHORIZED;
       message = exception.message;
     } else if (exception instanceof ProjectReleasePreflightRejectedError) {
       statusCode = HttpStatus.UNPROCESSABLE_ENTITY;
