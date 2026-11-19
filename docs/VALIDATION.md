@@ -2269,3 +2269,28 @@ Vitest 汇总：5/6 文件通过，41 项通过、11 项 skipped，1 个 Suite �
 **最小修复**：PR #100 提交 `055e2115174fba27cc745f2277e251b94ab4eb74` 仅为 `projects-cas-cookie-http.db-spec.ts` 增加 `PrismaProjectReleaseStore` 和 `ProjectReleaseSafetyGate` 的导入及 Provider 注册，继续复用现有真实 PrismaService 与默认 fail-closed 安全门禁。未修改生产代码、数据库 Schema、迁移或测试断言。
 
 **待维护者复验**：先运行双 Cookie 定向数据库测试，再完整运行 `pnpm run test:db`；通过后执行 `vp check` 和完整 `pnpm run ready`。当前尚无修复后的 Windows 实测结果，不得将本次 5/6、41 passed 记录为修复已通过。
+
+## 2026-11-19 · 第三十五批 C1 最终验收与 PR #100 合并（E-068 / E-069 结案）
+
+维护者 Windows 在 PR #100 最终验收 HEAD `f576cacaadd2376f8e75d5270482ac9a356f81ed` 完成完整质量链。此前 E-068 的隔离 URL 缺失问题通过 `docs/HARNESS.md` 的 PowerShell `try/finally` 包装解决；E-069 的双 Cookie 测试 NestJS Provider 遗漏通过最小测试夹具修改解决。
+
+| 验收项目 | 最终结果 | 退出码 |
+|---|---:|---:|
+| PostgreSQL 专项 | 6/6 文件、52/52 用例 | 0 |
+| 双 Cookie HTTP CAS | 11/11 | 0（包含于 test:db） |
+| 正式发布事务 PostgreSQL | 10/10 | 0（包含于 test:db） |
+| 发布 Schema 完整性 | 6/6 | 0（包含于 test:db） |
+| `vp check` | 359 文件格式正确；211 个受检文件零警告/Lint/TypeScript 错误 | 0 |
+| `docs:check` | 89 个 Markdown 文件 | 0 |
+| 单元测试 | 52/52 文件、633/633 用例 | 0 |
+| SSE 客户端 / 故障代理 | 8/8、4/4 | 0 |
+| OIDC / Docker / 浏览器配置安全专项 | 全部通过 | 0 |
+| NestJS HTTP E2E | 6/6 文件、59/59 用例 | 0 |
+| React / Vue / NestJS 构建 | 均成功 | 0 |
+| 完整 `pnpm run ready` | 全链完成 | **0** |
+
+数据库日志中的“数据库工程版本元数据与快照不一致”来自随机测试租户主动篡改摘要的预期负向用例；对应 HTTP 测试通过，不是 Suite 失败。
+
+**合并记录**：PR #100 已按维护者明确授权 Squash 合并至 `main`，合并提交为 `8db55e4b1bb97d69c08dc9238eb61f76071b7e72`。PR Assignee 为 `@adui-dev`。测试结果对应合并前 HEAD `f576cacaadd2376f8e75d5270482ac9a356f81ed`。
+
+E-068 与 E-069 均已关闭。C1 交付的是服务端发布事务及其默认 fail-closed 安全门禁；生产 `ProjectReleaseSafetyGate` 仍返回 503。Runtime 发布态读取、回滚事务、运行时读取授权、双人审批和生产安全评审仍未完成；不授予任何 PLC/DCS 或其他设备写入权限。原开发库 `adui_scada` 的历史失败迁移继续冻结，未执行恢复写入。

@@ -26,7 +26,7 @@
 
 ## 3. 批准的持久化方向（尚未实现）
 
-批准独立于编辑主表采用两种关系的持久化方向；具体 Prisma 模型字段类型、索引、外键和迁移实现仍须在 B 阶段独立数据建模评审，**不得直接据此手工生成或应用迁移**。
+批准独立于编辑主表采用两种关系的持久化方向。B 阶段已通过 PR #99 将对应 Prisma 模型、索引、外键和增量迁移合并至 main；已应用迁移保持不可变。
 
 ### 3.1 `ScadaProjectReleaseState`（每工程最多一条）
 
@@ -50,7 +50,7 @@
 ## 4. 批准的身份、授权和 HTTP 契约方向（均未开放）
 
 - 所有正式发布与回滚请求必须经可信 OIDC/BFF 会话、同源 Origin/Fetch Metadata/CSRF 和**独立发布权限**。批准新增明确的工程级 `release:publish` 与 `release:rollback` 授权动作；**不从 `version:append`、`version:read`、租户 ID、邮箱、OIDC Groups 或前端角色自动继承**，默认拒绝。具体权限存储与管理实现留待 B 阶段。
-- 后续实现命令按本 ADR 的候选契约方向讨论： `POST /api/v1/projects/:projectId/releases` 和 `POST /api/v1/projects/:projectId/releases/rollback` 讨论，读取可考虑 `GET /api/v1/projects/:projectId/releases/current`。这些**尚不是现有路由或已实现 API**；进入实现前仍须形成独立 HTTP 契约与测试，不得提前开放。
+- 发布命令 `POST /api/v1/projects/:projectId/releases` 已由 C1 实现并合并；其生产安全门禁仍 fail-closed，当前真实应用请求返回 503。回滚命令 `POST /api/v1/projects/:projectId/releases/rollback` 与只读当前发布快照 `GET /api/v1/projects/:projectId/releases/current` 尚未实现，进入各阶段前仍须形成完整 HTTP 契约与测试。
 - 发布命令至少需要受控的 `expectedHeadRevision`、`expectedReleaseGeneration`、`targetRevision`、幂等标识；**请求不得包含快照正文、可信主体、租户或最终 hash 的权威来源**。回滚命令不依赖当前编辑 head，却必须校验预期发布代次及历史真实已发布目标。
 - 成功返回须区分已保存 head、当前已发布修订、发布代次和事件标识。409 表示版本/代次 CAS 冲突或同一幂等标识与不同语义冲突；未授权与不存在统一不泄露目标工程。缓存须显式禁止，未知错误不得泄露快照/凭据/数据源。
 
@@ -95,7 +95,7 @@ Runtime 只从服务端受保护的当前发布指针解析快照；不可使用
 | E · 回滚事务         | 仅选择曾发布版本，独立权限和新代次事件                              | 旧指针不变、跨租户拒绝、ABA/并发回滚、实际版本切换一致性      |
 | F · 生产安全评审     | 数据源授权、实际资源和工业现场运行边界                              | 专项审批与现场只读安全审查，**不包含 PLC/DCS 写入许可**       |
 
-每阶段在独立 Draft PR 中维护测试证据及 `AGENTS.md` / `docs/AI_MISTAKES.md` 约束。**A 阶段设计评审已批准；B–F 均未开始。Accepted 仅代表架构决策完成，不可将此 ADR 计为 FR-008 实现完成。**
+每阶段在独立 Draft PR 中维护测试证据及 `AGENTS.md` / `docs/AI_MISTAKES.md` 约束。**当前进度：A 已批准；B 已完成；C1 发布事务已完成并通过真实 PostgreSQL/完整质量链验收；C 的工业安全门禁仍 fail-closed；D、E、F 尚未开始。** Accepted 不代表 FR-008 全部完成。
 
 **评审入口**：另见 [正式发布事务评审决策与验收矩阵](../RELEASE_TRANSACTION_REVIEW.md)。该清单将本 ADR 未决内容拆分为 R-01～R-08 和未来 T-01～T-22 负向场景，方便维护者逐项批准、修改或驳回。**本 ADR 现为 Accepted；附加评审矩阵记录了本次批准的 R-01～R-08 基线。Accepted 不等于生产发布写入授权，也不改变设备写入仍需独立工业安全审批的边界。**
 
@@ -121,3 +121,11 @@ B 阶段发布状态/事件 Prisma Schema、独立发布权限和复合引用完
 C1 当前在 PR #100 Draft 候选分支实现正式发布命令与事务：事务内锁定工程、会话/身份、ACL、发布状态和不可变版本；执行 head/releaseGeneration 双 CAS、UUID v4 幂等、快照完整性与静态兼容性检查；在同一事务追加发布事件并更新指针。生产 `ProjectReleaseSafetyGate` 固定 fail-closed，Runtime/Tag/数据源/资源/审批及工业安全门禁未完成前不允许真实发布成功。
 
 维护者 Windows 已通过 C1 发布仓储定向测试 13/13、全量单测 633/633、`vp check` 零警告错误及 `docs:check` 89 份；真实 PostgreSQL `test:db` 与完整 `ready` 尚待执行。当前实现不代表 T-01～T-22 全部验收完成，也不开放 Runtime、回滚、生产发布或工业设备写入。
+
+## 2026-11-19 · B/C1 实施状态与 D 阶段准入
+
+B 阶段通过 PR #99 合并发布状态/事件 Prisma Schema、独立发布权限动作和复合引用完整性。C1 通过 PR #100 合并 `POST /api/v1/projects/:projectId/releases` 与事务实现：锁内复核可信会话、主体、ACL、head/releaseGeneration 双 CAS、幂等和不可变快照；发布事件与发布指针同事务提交。维护者 Windows 最终验收 PostgreSQL 6/6 文件、52/52 用例，单测 633/633、HTTP E2E 59/59、`vp check`、`docs:check` 及完整 `ready` 均通过。PR #100 合并提交为 `8db55e4b1bb97d69c08dc9238eb61f76071b7e72`。
+
+生产 `ProjectReleaseSafetyGate` 仍默认拒绝，真实应用发布请求返回 503；这不是生产发布授权。当前没有回滚路由、当前发布快照读取路由或 Runtime 发布指针消费。
+
+D 阶段只读 Runtime 的读取权限已获维护者批准：新增独立工程 ACL `release:read`，默认拒绝，不从 `project:read`、`version:read` 或其他权限继承。运行人员可在显式获得该权限后读取已提交发布指针及其不可变快照，而无需获得工程编辑或历史版本读取权限。当前 `ProjectAccessAction` 尚未实现该动作，当前发布快照读取路由与 Runtime 接入也尚未实现；由 D 阶段独立实施并验收。

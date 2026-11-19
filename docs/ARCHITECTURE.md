@@ -406,16 +406,14 @@ Docker 只维护 `deploy/docker/compose.yaml` 的 `adui-scada` 项目。七个�
 
 ## 2026-11-18 · 发布事务架构决策已批准与实施准入
 
-[发布事务评审决策与验收矩阵](RELEASE_TRANSACTION_REVIEW.md) 已记录 R-01～R-08 已批准基线、I-01～I-06 不变量和 T-01～T-22 未来负向测试义务。该矩阵是**已批准的架构决策与后续验收资料**，不是可用服务；当前 main 仍没有正式发布/回滚写接口，Runtime 不通过新指针加载生产快照，不得将编辑 head 或静态预检结果当作运行发布版本。
+[发布事务评审决策与验收矩阵](RELEASE_TRANSACTION_REVIEW.md) 记录 R-01～R-08 已批准基线、I-01～I-06 不变量和 T-01～T-22 验收义务。B 阶段发布状态/事件 Schema 已合并；C1 的 `POST /api/v1/projects/:projectId/releases` 已合并，但生产门禁仍默认拒绝并返回 503。当前尚无回滚写接口或 Runtime 发布指针读取路由；Runtime 不得将编辑 head、草稿或静态预检结果当作运行发布版本。
 
-## 2026-11-19 · 第三十五批 C1 正式发布事务服务实现候选
+## 2026-11-19 · 第三十五批 C1 正式发布事务已合并
 
-PR #100 候选分支在现有可信 OIDC/BFF 工程 API 中增加正式发布命令：
+PR #100 已 Squash 合并至 `main`（合并提交 `8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。`ProjectApiController` 提供 `POST /api/v1/projects/:projectId/releases`，复用可信 OIDC/BFF 会话、Cookie CSRF、工程 Guard 和统一异常过滤，权限固定为独立 `release:publish`。
 
-- `ProjectApiController` 提供 `POST :projectId/releases`，复用会话、CSRF、工程 Guard 和统一异常过滤；权限固定为独立 `release:publish`。
-- `PrismaProjectReleaseStore` 负责事务内会话/身份/ACL 复核、工程/发布状态/不可变版本行锁、双 CAS、UUID v4 幂等、快照完整性、静态兼容性、发布事件和指针原子提交。
-- `ProjectReleaseSafetyGate` 生产默认 Provider 始终 fail-closed 并返回 503；不得通过环境变量、请求字段或普通工程权限绕过。
-- 仅 PostgreSQL 测试模块注入测试门禁以验证数据库事务，不改变生产依赖注入。
-- 不新增 Prisma 迁移；发布状态/事件模型继续使用 PR #99 已合并的 B 阶段 Schema。
+`PrismaProjectReleaseStore` 在同一 PostgreSQL 事务中锁定工程、会话/身份、ACL、发布状态和不可变版本，执行 head/releaseGeneration 双 CAS、UUID v4 幂等、快照 SHA-256 与 Core 静态兼容性复核，随后追加发布事件并更新发布指针。任何失败均整体回滚。
 
-当前 Windows 已通过 13/13 发布仓储定向测试、633/633 全量单测、359 文件/211 受检零警告的 `vp check` 和 89 份 `docs:check`。真实 PostgreSQL `test:db`、完整 `ready` 尚待执行；Runtime 发布态读取、回滚、双人审批、生产启用及工业设备写入仍未实现或开放。
+生产 `ProjectReleaseSafetyGate` 仍固定 fail-closed 并返回 503；没有通过环境变量、请求字段或测试替身放行生产请求的路径。该门禁未完成前不能成功发布。C1 没有新增 Prisma 迁移，继续使用 B 阶段已合并的发布 Schema。
+
+维护者 Windows 最终验收 HEAD `f576cacaadd2376f8e75d5270482ac9a356f81ed`：隔离 PostgreSQL 6/6 文件、52/52 用例；单测 633/633；HTTP E2E 59/59；`vp check` 359/211 零警告错误；`docs:check` 89 份；完整 `pnpm run ready` 退出码 0。Runtime 发布态读取、回滚事务、双人审批、生产启用及工业设备写入仍未实现或开放。

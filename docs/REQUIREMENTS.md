@@ -32,7 +32,7 @@ V1 目标：SVG 组态编辑器、独立 Runtime、工程版本发布、OPC UA/M
 | FR-005 | 2D 画布与编辑操作     | P0     | 部分实现                  | 画布缩放、增删、框选、多选、对齐、图层、快捷键、多页面与撤销重做已实现；高级编辑待开发                                |
 | FR-006 | 工业图元及 Tag 绑定   | P0     | 部分实现                  | 工程 Tag 目录、稳定 ID 引用、绑定完整性与类型兼容已实现；工业数据源/地址映射仍待开发                                  |
 | FR-007 | 独立 Runtime          | P0     | 规划中                    | 仅加载发布快照，刷新可恢复实时订阅                                                                                    |
-| FR-008 | 校验发布/版本回滚     | P0     | 部分实现（C1 候选待验收） | B 阶段 Schema 已合并；C1 发布事务候选已通过单元阶段，真实 PostgreSQL 与完整 ready 待验收；Runtime/回滚/生产审批未完成 |
+| FR-008 | 校验发布/版本回滚     | P0     | 部分实现（B/C1 已完成） | B 阶段 Schema 与复合约束已合并；C1 发布事务已通过真实 PostgreSQL 和完整 ready；Runtime/回滚/生产审批未完成 |
 | FR-009 | 实时订阅与增量数据    | P0     | 规划中                    | 快照、增量、断线重连与质量一致                                                                                        |
 | FR-010 | 工业只读网关接入      | P0     | 规划中                    | 模拟服务采集、超时和重连，默认不能写入                                                                                |
 | FR-011 | 报警与确认            | P0     | 规划中                    | 触发、确认、恢复与重触发状态可追溯                                                                                    |
@@ -596,3 +596,11 @@ React/Vue Studio 在服务端只读发布预检请求未完成时允许继续编
 PR #99 已合并 B 阶段发布状态/事件 Schema、默认不授予的独立发布/回滚权限及 PostgreSQL 复合引用约束。PR #100 Draft 候选新增 `POST /api/v1/projects/:projectId/releases`、独立 `release:publish`、事务内会话/身份/ACL 复核、head/releaseGeneration 双 CAS、幂等、不可变快照校验及发布事件/指针同事务提交。
 
 维护者 Windows 已通过 C1 定向测试 13/13、全量单测 633/633、`vp check` 零警告错误、`docs:check` 89 份。真实 PostgreSQL `test:db` 和完整 `ready` 仍待执行。生产安全门禁当前固定 fail-closed；Runtime 只读发布态、回滚事务、双人审批和生产启用尚未交付。FR-008 仅为部分实现，不能标记为完成。
+
+## 2026-11-19 · FR-008 第三十五批 B/C1 阶段验收完成
+
+B 阶段发布状态/事件 Schema、独立发布/回滚权限动作及租户/工程/修订/摘要复合完整性已通过 PR #99 合并。C1 通过 PR #100 合并正式发布命令 `POST /api/v1/projects/:projectId/releases`：服务端仅从可信会话和数据库读取主体、ACL 与不可变快照；使用 head/releaseGeneration 双 CAS、UUID v4 幂等；发布事件与发布指针在同一事务提交。
+
+维护者 Windows 最终验收：隔离 PostgreSQL 6/6 文件、52/52 用例；单测 633/633；NestJS HTTP E2E 59/59；`vp check`、`docs:check` 和完整 `pnpm run ready` 均退出码 0。PR #100 合并提交为 `8db55e4b1bb97d69c08dc9238eb61f76071b7e72`。
+
+FR-008 仍为**部分实现**：生产安全门禁固定 fail-closed；D 阶段只读 Runtime 发布态读取、E 阶段回滚事务、运行时读取权限、双人审批与生产安全评审尚未完成。不得将本次服务端事务测试等同于生产发布许可；不包含 PLC/DCS 或其他工业设备写入权限。
