@@ -2232,3 +2232,21 @@ E-066（7 个 Mock 类型参数和 1 个 unbound-method 警告）与 E-067（目
 - `pnpm run ready`，覆盖配置、环境、中文文案、双框架/Server 类型检查、HTTP E2E、文档和构建。
 
 C1 不新增 Prisma 迁移。`test:db` 必须使用本机隔离库；原开发库 `adui_scada` 的历史失败迁移继续冻结，不执行恢复写入。当前生产 `ProjectReleaseSafetyGate` 仍默认 fail-closed，不能把单元测试中的测试门禁替身视为生产放行。
+
+## 2026-11-19 · 第三十五批 C1 PostgreSQL 首次执行被环境变量保护阻断（E-068，待复验）
+
+维护者 Windows 日志确认：
+
+| 验证项 | 实际结果 | 退出码 |
+|---|---|---:|
+| `docs:check` | 89 个 Markdown 文件通过 | 0 |
+| `vp check` | 359 个文件格式正确；211 个受检文件零警告/Lint/TypeScript 错误 | 0 |
+| Core 构建 | 通过 | 0（由 test:db 前置脚本继续执行确认） |
+| Prisma Client | 7.10.1 生成成功 | 0 |
+| `pnpm run test:db` | 6 个 Suite 在模块加载阶段因缺少 `SCADA_TEST_DATABASE_URL` 退出；0 个测试用例执行 | 1 |
+
+**原因与安全结论**：当前 PowerShell 进程未设置 `SCADA_TEST_DATABASE_URL`。六个 DB spec 的导入前置检查按设计拒绝运行；没有证据显示测试连接 PostgreSQL 或执行数据库写入。这不是事务、迁移、约束或并发测试失败。不得删除环境变量保护或把测试 URL 改为开发库/生产库。
+
+**修复方式**：`docs/HARNESS.md` 新增 C1 专用 PowerShell `try/finally` 包装，自动从根 `.env` 推导本机 `adui_scada_test`，在当前进程同时设置两个数据库 URL，运行 `pnpm run test:db` 后恢复原环境变量。C1 不新增迁移，因此该重跑步骤不执行迁移部署。
+
+**待执行**：维护者按 `docs/HARNESS.md` 新增的完整脚本重跑 `pnpm run test:db`。文档更新后还须重新执行 `pnpm run docs:check` 与 `vp check`；本节记录的 89 份/359 文件结果来自本次文档更新之前的 Windows 日志，不能冒充更新后的检查结果。原开发库 `adui_scada` 的失败迁移继续冻结。
