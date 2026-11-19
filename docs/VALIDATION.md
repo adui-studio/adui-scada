@@ -2013,3 +2013,44 @@ Vitest 日志明确包含 `apps/server/src/database/prisma-schema-comments.spec.
 - `docs/AI_MISTAKES.md` 新增 E-061。
 
 本次仅修改测试清理逻辑与文档；没有放宽/删除生产外键，没有修改迁移 SQL，没有执行数据库清理写入。**修复后的 `test:db`、最新文档 `docs:check` 和完整 `ready` 仍待 Windows 复验。**
+## 2026-11-19 · PR #99 正式发布 Schema 隔离 PostgreSQL 与完整质量链验收通过
+
+维护者最新 Windows 日志确认：修复后的三处 PostgreSQL 测试清理逻辑已在真实隔离库验证通过。
+
+### 隔离 PostgreSQL 专项（独立于 `ready` 执行）
+
+| 验收项 | 实际结果 | 退出码 |
+| --- | --- | ---: |
+| 首次 `db:migrate:deploy` | 已应用 `20261118000000_release_state_and_events` | 0 |
+| 二次 `db:migrate:deploy` | No pending migrations to apply | 0 |
+| `db:migrate:status` | Database schema is up to date | 0 |
+| `test:db` | 5/5 文件、41/41 项通过 | 0 |
+
+`projects-cas-cookie-http.db-spec.ts` 11/11、`prisma-project-version.db-spec.ts` 12/12、`project-api.db-spec.ts` 7/7、`oidc-schema.db-spec.ts` 6/6、`release-schema.db-spec.ts` 5/5 全部通过。日志中的“数据库工程版本元数据与快照不一致”是最后一个测试主动篡改摘要时产生的预期服务端异常；该测试本身通过，不是测试失败。
+
+### 完整 `pnpm run ready`
+
+| 验收项 | 实际结果 |
+| --- | --- |
+| 依赖目录 | 12 个清单、52 项 Catalog 依赖通过 |
+| 共享配置 / 环境 / LF | 10 个 TSConfig 消费端通过；根环境和换行检查通过 |
+| 中文文案 | 231 个自有代码或配置文件检查通过 |
+| Vite+ | 354 文件格式正确；207 受检文件零警告、Lint 和类型错误 |
+| 单元测试 | 51/51 文件、618/618 项通过 |
+| React / Vue / draft-storage / API Client 类型检查 | 全部通过 |
+| Server 类型检查 | 通过 |
+| SSE 客户端 / TCP 故障单测 | 8/8、4/4 通过 |
+| OIDC、Docker、浏览器配置安全门禁 | `ready` 中各脚本均执行成功 |
+| HTTP E2E | 6/6 文件、55/55 项通过 |
+| 文档检查 | 88 份 Markdown 通过 |
+| React / Vue 构建 | 均成功 |
+| NestJS Server 构建 | 成功 |
+
+维护者最终输出：`pnpm run ready` **退出码 0**。`test:db` 是单独执行的隔离 PostgreSQL 专项，并不包含在 `ready` 脚本内；两者分别通过。
+
+### 验证边界与后续
+
+- 维护者上传的 Windows 日志没有包含 `git rev-parse HEAD`，因此本记录不声称所有上述执行结果严格绑定到 GitHub 当前分支 SHA；PR 分支后续文档提交还需重跑 `docs:check`。
+- 原开发库 `adui_scada` 的历史失败迁移记录仍未恢复；隔离库通过不代表开发库已完成迁移。对原库执行 `migrate resolve --rolled-back` 与迁移重试仍须可恢复备份及维护者明确授权。
+- 正式发布 API、回滚 API、Runtime 发布指针切换、CAS/幂等业务逻辑、双人审批和任何工业设备写入均未在本批开放。
+- PR #99 继续保持 Draft，等待 PR #97 Accepted 决策文档先行验收并合并，再做最终评审。
