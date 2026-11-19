@@ -2154,7 +2154,7 @@ PR #99 已将 Prisma ORM 一对一导航关系改为使用已有全局唯一 `la
 
 数据库专项仍只允许使用 `docs/HARNESS.md` 中 `try/finally` 流程连接本机隔离 `adui_scada_test`；原开发库 `adui_scada` 的失败迁移保持冻结，不执行 resolve、deploy、reset、DROP、DELETE 或手工修改 `_prisma_migrations`。
 
-## 2026-11-19 · PR #99 发布复合外键静态断言误报修复（E-065，待 Windows 复验）
+## 2026-11-19 · PR #99 发布复合外键静态断言误报修复（E-065，Windows 质量链通过，数据库待验收）
 
 维护者新一轮 Windows 测试确认：`db:validate` 退出码 **0**，`db:generate` 退出码 **0**，Prisma Client 7.10.1 正常生成；`vp check` 为 355 个格式文件和 207 个受检文件零警告错误，退出码 **0**；`docs:check` 89 份 Markdown 通过，退出码 **0**。
 
