@@ -38,6 +38,7 @@ interface ProjectPublishRequest {
 export interface ProjectReleaseResult {
   readonly projectId: string;
   readonly action: "PUBLISH";
+  /** 发布事件提交时的工程 head 水位；幂等重放返回原始值。 */
   readonly headRevision: number;
   readonly releasedRevision: number;
   readonly releasedContentHash: string;

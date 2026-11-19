@@ -28,7 +28,6 @@ interface ProjectApiHttpResponse {
   ProjectVersionAccessDeniedError,
   ProjectReleaseConflictError,
   ProjectReleasePreflightRejectedError,
-  ProjectReleaseSessionInvalidError,
   ProjectReleaseGateUnavailableError,
 )
 export class ProjectApiExceptionFilter implements ExceptionFilter {

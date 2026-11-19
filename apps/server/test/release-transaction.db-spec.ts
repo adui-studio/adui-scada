@@ -55,6 +55,7 @@ let app: INestApplication | undefined;
 let database: PrismaService | undefined;
 let sessions: AuthSessionService;
 let projectStore: PrismaProjectVersionStore;
+let releaseGateBarrier: (() => Promise<void>) | undefined;
 
 function createDocument(projectId: string, unsupported = false): Record<string, unknown> {
   const copy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument)) as Record<string, unknown>;
@@ -171,7 +172,11 @@ beforeAll(async () => {
       // 仅此隔离测试模块替换默认拒绝门禁，验证数据库事务本身；不改变生产 Provider。
       {
         provide: ProjectReleaseSafetyGate,
-        useValue: { assertReady: async () => undefined },
+        useValue: {
+          assertReady: async () => {
+            await releaseGateBarrier?.();
+          },
+        },
       },
       ScadaSecurityAuditService,
       ScadaSessionGuard,
@@ -338,6 +343,76 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
       });
       expect(state.releaseGeneration).toBe(2n);
       expect(state.releasedRevision).toBe(2n);
+    });
+  });
+
+  it("发布持有会话与 ACL 行锁期间撤销操作必须等待事务提交", async () => {
+    await withFixture(async (fixture) => {
+      let markGateEntered = () => undefined;
+      let releaseGate = () => undefined;
+      const gateEntered = new Promise<void>((resolve) => {
+        markGateEntered = resolve;
+      });
+      const gateReleased = new Promise<void>((resolve) => {
+        releaseGate = resolve;
+      });
+      releaseGateBarrier = async () => {
+        markGateEntered();
+        await gateReleased;
+      };
+
+      const publishPromise = postPublish(
+        fixture,
+        "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f4",
+      ).then((response) => response);
+      let grantRevocationFinished = false;
+      let sessionRevocationFinished = false;
+      let grantRevocation: Promise<{ count: number }> | undefined;
+      let sessionRevocation: Promise<boolean> | undefined;
+
+      try {
+        await gateEntered;
+        grantRevocation = database!.client.scadaProjectGrant
+          .deleteMany({
+            where: {
+              tenantId: fixture.tenantId,
+              projectId: fixture.projectId,
+              subjectId,
+              permission: "release:publish",
+            },
+          })
+          .then((result) => {
+            grantRevocationFinished = true;
+            return result;
+          });
+        sessionRevocation = sessions
+          .revokeForVerifiedSubject(
+            { tenantId: fixture.tenantId, subjectId },
+            fixture.session.sessionId,
+          )
+          .then((result) => {
+            sessionRevocationFinished = true;
+            return result;
+          });
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 50));
+        expect(grantRevocationFinished).toBe(false);
+        expect(sessionRevocationFinished).toBe(false);
+
+        releaseGate();
+        const response = await publishPromise;
+        expect(response.status).toBe(201);
+        expect(await grantRevocation).toMatchObject({ count: 1 });
+        expect(await sessionRevocation).toBe(true);
+        expect(grantRevocationFinished).toBe(true);
+        expect(sessionRevocationFinished).toBe(true);
+      } finally {
+        releaseGate();
+        releaseGateBarrier = undefined;
+        await publishPromise.catch(() => undefined);
+        await grantRevocation?.catch(() => undefined);
+        await sessionRevocation?.catch(() => undefined);
+      }
     });
   });
 
