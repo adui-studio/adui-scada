@@ -2294,3 +2294,19 @@ Vitest 汇总：5/6 文件通过，41 项通过、11 项 skipped，1 个 Suite �
 **合并记录**：PR #100 已按维护者明确授权 Squash 合并至 `main`，合并提交为 `8db55e4b1bb97d69c08dc9238eb61f76071b7e72`。PR Assignee 为 `@adui-dev`。测试结果对应合并前 HEAD `f576cacaadd2376f8e75d5270482ac9a356f81ed`。
 
 E-068 与 E-069 均已关闭。C1 交付的是服务端发布事务及其默认 fail-closed 安全门禁；生产 `ProjectReleaseSafetyGate` 仍返回 503。Runtime 发布态读取、回滚事务、运行时读取授权、双人审批和生产安全评审仍未完成；不授予任何 PLC/DCS 或其他设备写入权限。原开发库 `adui_scada` 的历史失败迁移继续冻结，未执行恢复写入。
+
+## 2026-11-19 · 第三十五批 D1 服务端只读发布读取候选（待维护者验收）
+
+候选分支 `codex/b35-d1-release-read-runtime` 新增独立 `release:read` ACL、`GET /api/v1/projects/:projectId/releases/current` 和权限 CHECK 增量迁移 `20261119180000_release_read_permission`。本轮没有修改 React/Vue、SSE、生产发布安全门禁或设备接口。
+
+**新增自动化覆盖（尚未执行）**：
+
+- 权限单测：工程读取、历史版本读取和发布写权限均不能继承 `release:read`。
+- 发布仓储单测：未发布状态不读取 head/快照；已发布读取核对不可变快照 SHA-256、数据库元数据及最后发布事件。
+- HTTP E2E：独立 ACL、可信会话、未发布状态和 no-store。
+- 隔离 PostgreSQL：权限 CHECK 接受 `release:read`；未授权拒绝、显式授权读取、仅 release:read 访问、跨租户相同工程 ID 隔离及快照正文篡改拒绝。
+- 迁移必须在本机隔离 `adui_scada_test` 首次/重复部署并核对状态；原开发库 `adui_scada` 的历史失败迁移继续冻结，禁止将本迁移应用到生产库。
+
+**尚未实测**：本候选尚未执行 TypeScript/Lint、单测、NestJS HTTP E2E、隔离 PostgreSQL 迁移/测试、文档检查或完整质量链。不得把源码静态核对当作测试通过。
+
+维护者验收顺序：在根目录确认工作区和分支后，先用 `docs/HARNESS.md` 的隔离数据库 PowerShell `try/finally` 模板将当前进程的 `SCADA_DATABASE_URL` 与 `SCADA_TEST_DATABASE_URL` 限定到本机 `adui_scada_test`；执行 `pnpm run db:migrate:deploy`、`pnpm run db:migrate:status`、`pnpm run test:db`。随后执行 `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run docs:check`、`pnpm run typecheck:server` 和 `pnpm run build:server`；最后可执行完整 `pnpm run ready`。每条命令记录独立退出码。

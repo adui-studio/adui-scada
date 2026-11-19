@@ -50,7 +50,8 @@ describe("正式发布 PostgreSQL 增量迁移", () => {
       FROM "_prisma_migrations"
       WHERE migration_name IN (
         '20261118000000_release_state_and_events',
-        '20261119000000_release_state_event_integrity'
+        '20261119000000_release_state_event_integrity',
+        '20261119180000_release_read_permission'
       )
         AND rolled_back_at IS NULL
     `;
@@ -58,6 +59,7 @@ describe("正式发布 PostgreSQL 增量迁移", () => {
     expect(migrations.map((row) => row.migration_name).sort()).toEqual([
       "20261118000000_release_state_and_events",
       "20261119000000_release_state_event_integrity",
+      "20261119180000_release_read_permission",
     ]);
     expect(migrations.every((row) => row.finished_at instanceof Date)).toBe(true);
   });
@@ -208,6 +210,19 @@ describe("正式发布 PostgreSQL 增量迁移", () => {
     expect(grantConstraint).toHaveLength(1);
     expect(grantConstraint[0]?.definition).toContain("release:publish");
     expect(grantConstraint[0]?.definition).toContain("release:rollback");
+    expect(grantConstraint[0]?.definition).toContain("release:read");
+
+    const permissionComment = await service!.client.$queryRaw<
+      Array<{ description: string | null }>
+    >`
+      SELECT col_description('public.scada_project_grants'::regclass, attnum) AS description
+      FROM pg_attribute
+      WHERE attrelid = 'public.scada_project_grants'::regclass
+        AND attname = 'permission'
+        AND NOT attisdropped
+    `;
+    expect(permissionComment).toHaveLength(1);
+    expect(permissionComment[0]?.description ?? "").toMatch(/[一-龥]/);
   });
 
   it("正式发布业务索引均存在并具备中文数据库注释", async () => {

@@ -994,3 +994,14 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 ## 2026-11-19 · 第三十五批 C1 合并与验收状态
 
 PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 新增发布事务仓储、默认 fail-closed 安全门禁和发布 HTTP 路由；生产发布请求仍返回 503。最终 Windows 验收：PostgreSQL 6/6 文件、52/52 用例；单测 633/633；HTTP E2E 59/59；React/Vue/Server 构建及完整 `ready` 通过。
+
+## 2026-11-19 · 第三十五批 D1 服务端只读发布读取候选
+
+- `apps/server/src/projects/project-access-policy.ts`：增加独立工程权限 `release:read`；不加入工程创建者默认权限。
+- `apps/server/src/projects/prisma-project-release-store.ts`：增加 `readCurrent`；事务内复核会话、主体、ACL、发布状态、最后发布事件和不可变快照摘要；工程锁只查询 `project_id`，不读取 `head_revision`。
+- `apps/server/src/projects/project-api.controller.ts`：增加 `GET /api/v1/projects/:projectId/releases/current`，独立 `release:read` Guard 与 `no-store`。
+- `apps/server/prisma/migrations/20261119180000_release_read_permission/migration.sql`：扩展工程授权权限 CHECK 白名单并更新中文列注释，不自动授予现有主体。
+- `apps/server/src/projects/project-access-policy.spec.ts`、`prisma-project-release-store.spec.ts`：覆盖权限不继承、未发布状态、发布事件/指针和快照摘要校验。
+- `apps/server/test/projects-api.e2e-spec.ts`、`release-transaction.db-spec.ts`、`release-schema.db-spec.ts`：覆盖 HTTP 会话/ACL、未发布、仅 release:read、跨租户同 ID、快照篡改和真实数据库权限约束。
+
+本节记录的是 D1 候选分支内容；测试与迁移结果须以维护者 Windows 和隔离 PostgreSQL 实测为准。
