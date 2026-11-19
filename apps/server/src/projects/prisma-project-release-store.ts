@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { Injectable } from "@nestjs/common";
-import type { ProjectReleasePreflightIssue } from "@adui/scada-core";
+import type { ProjectReleasePreflightIssue, ProjectSnapshot } from "@adui/scada-core";
 import { readProjectSnapshot, validateProjectReleasePreflight } from "@adui/scada-core";
 import type { Prisma } from "../generated/prisma/client.js";
 import { PrismaService } from "../database/prisma.service.js";
@@ -46,6 +46,25 @@ export interface ProjectReleaseResult {
   readonly eventId: string;
   readonly createdAt: string;
 }
+
+/** 当前发布指针读取结果；不包含编辑 head 或本地草稿信息。 */
+export type ProjectCurrentReleaseResult =
+  | {
+      readonly status: "UNRELEASED";
+      readonly projectId: string;
+      readonly releaseGeneration: 0;
+    }
+  | {
+      readonly status: "RELEASED";
+      readonly projectId: string;
+      readonly releasedRevision: number;
+      readonly releasedContentHash: string;
+      readonly releaseGeneration: number;
+      readonly eventId: string;
+      readonly lastAction: "PUBLISH" | "ROLLBACK";
+      readonly releasedAt: string;
+      readonly snapshot: ProjectSnapshot;
+    };
 
 /** 事务锁内发现会话已撤销、过期或主体已停用。 */
 export class ProjectReleaseSessionInvalidError extends Error {
@@ -237,6 +256,64 @@ async function lockProjectVersion(
   if (versions.length !== 1) throw new ProjectVersionAccessDeniedError();
 }
 
+/** 只锁定工程身份行，不读取 head_revision，Runtime 不得依赖编辑 head。 */
+async function lockProjectForReleaseRead(
+  tx: Prisma.TransactionClient,
+  principal: AuthenticatedProjectPrincipal,
+  projectId: string,
+): Promise<void> {
+  const projects = await tx.$queryRaw<Array<{ project_id: string }>>`
+    SELECT project_id
+    FROM scada_projects
+    WHERE tenant_id = ${principal.tenantId}
+      AND project_id = ${projectId}
+    FOR SHARE
+  `;
+  if (projects.length !== 1 || projects[0]?.project_id !== projectId) {
+    throw new ProjectVersionAccessDeniedError();
+  }
+}
+
+/** 读取发布状态使用共享锁；读取事务按工程 → 会话 → ACL → 状态 → 版本 → 事件锁定。 */
+async function lockReleaseStateForRead(
+  tx: Prisma.TransactionClient,
+  principal: AuthenticatedProjectPrincipal,
+  projectId: string,
+): Promise<bigint> {
+  const states = await tx.$queryRaw<Array<{ release_generation: bigint }>>`
+    SELECT release_generation
+    FROM scada_project_release_state
+    WHERE tenant_id = ${principal.tenantId}
+      AND project_id = ${projectId}
+    FOR SHARE
+  `;
+  const lockedState = states[0];
+  if (states.length !== 1 || !lockedState) {
+    throw new TypeError("数据库工程正式发布状态记录缺失");
+  }
+  return lockedState.release_generation;
+}
+
+/** 读取最后发布事件时持有共享锁，避免读取期间事件行被并发改写。 */
+async function lockCurrentReleaseEvent(
+  tx: Prisma.TransactionClient,
+  principal: AuthenticatedProjectPrincipal,
+  projectId: string,
+  eventId: string,
+): Promise<void> {
+  const events = await tx.$queryRaw<Array<{ event_id: string }>>`
+    SELECT event_id
+    FROM scada_project_release_events
+    WHERE tenant_id = ${principal.tenantId}
+      AND project_id = ${projectId}
+      AND event_id = ${eventId}
+    FOR SHARE
+  `;
+  if (events.length !== 1 || events[0]?.event_id !== eventId) {
+    throw new TypeError("数据库当前正式发布事件记录缺失");
+  }
+}
+
 /** 发布状态行使用独立锁；工程行始终先锁定，保持与版本追加一致的锁顺序。 */
 async function lockReleaseState(
   tx: Prisma.TransactionClient,
@@ -314,7 +391,7 @@ function toReleaseResult(projectId: string, event: ReleaseEventResultRow): Proje
 
 /**
  * 正式发布事务仓储。
- * 锁顺序固定为工程 → 会话/主体 → ACL → 发布状态 → 不可变版本；成功事件与发布指针同事务提交。
+ * 发布锁顺序固定为工程 → 会话/主体 → ACL → 发布状态 → 不可变版本；读取还会共享锁定最后发布事件。
  */
 @Injectable()
 export class PrismaProjectReleaseStore {
@@ -322,6 +399,140 @@ export class PrismaProjectReleaseStore {
     private readonly database: PrismaService,
     private readonly safetyGate: ProjectReleaseSafetyGate,
   ) {}
+
+  /**
+   * 只读读取当前发布指针与其不可变快照。
+   * 工程行只取 project_id 并持有共享锁，不查询 head_revision；权限、状态、事件和快照均在同一事务内复核。
+   */
+  async readCurrent(
+    principal: AuthenticatedProjectPrincipal | null,
+    sessionId: string | null,
+    projectId: string,
+  ): Promise<ProjectCurrentReleaseResult> {
+    requirePrincipal(principal);
+    requireProjectId(projectId);
+
+    return this.database.client.$transaction(async (tx) => {
+      await lockProjectForReleaseRead(tx, principal, projectId);
+      await lockActiveSession(tx, principal, sessionId);
+      await requireLockedProjectPermission(tx, principal, projectId, "release:read");
+      const lockedReleaseGeneration = await lockReleaseStateForRead(tx, principal, projectId);
+
+      const state = await tx.scadaProjectReleaseState.findUnique({
+        where: {
+          tenantId_projectId: {
+            tenantId: principal.tenantId,
+            projectId,
+          },
+        },
+        select: {
+          releaseGeneration: true,
+          releasedRevision: true,
+          releasedContentHash: true,
+          lastReleaseEventId: true,
+        },
+      });
+      if (!state) throw new TypeError("数据库工程正式发布状态记录缺失");
+      validateReleaseState(state);
+      if (state.releaseGeneration !== lockedReleaseGeneration) {
+        throw new TypeError("数据库工程正式发布状态锁定水位不一致");
+      }
+
+      if (state.releaseGeneration === 0n) {
+        return {
+          status: "UNRELEASED",
+          projectId,
+          releaseGeneration: 0,
+        };
+      }
+
+      if (
+        state.releasedRevision === null ||
+        state.releasedContentHash === null ||
+        state.lastReleaseEventId === null
+      ) {
+        throw new TypeError("数据库工程正式发布状态不符合生命周期约束");
+      }
+
+      const releasedRevision = Number(state.releasedRevision);
+      await lockProjectVersion(tx, principal, projectId, releasedRevision);
+      await lockCurrentReleaseEvent(
+        tx,
+        principal,
+        projectId,
+        state.lastReleaseEventId,
+      );
+
+      const version = await tx.scadaProjectVersion.findUnique({
+        where: {
+          tenantId_projectId_revision: {
+            tenantId: principal.tenantId,
+            projectId,
+            revision: state.releasedRevision,
+          },
+        },
+        select: {
+          snapshot: true,
+          contentHash: true,
+          createdAt: true,
+        },
+      });
+      if (!version) {
+        throw new TypeError("数据库当前正式发布快照记录缺失");
+      }
+
+      const snapshot = await readProjectSnapshot(version.snapshot);
+      if (
+        snapshot.projectId !== projectId ||
+        snapshot.revision !== releasedRevision ||
+        snapshot.contentHash !== version.contentHash ||
+        snapshot.contentHash !== state.releasedContentHash ||
+        snapshot.createdAt !== version.createdAt.toISOString()
+      ) {
+        throw new TypeError("数据库当前正式发布快照完整性校验失败");
+      }
+
+      const event = await tx.scadaProjectReleaseEvent.findUnique({
+        where: { eventId: state.lastReleaseEventId },
+        select: {
+          eventId: true,
+          tenantId: true,
+          projectId: true,
+          generation: true,
+          action: true,
+          toRevision: true,
+          toContentHash: true,
+          createdAt: true,
+        },
+      });
+      if (
+        !event ||
+        event.eventId !== state.lastReleaseEventId ||
+        event.tenantId !== principal.tenantId ||
+        event.projectId !== projectId ||
+        event.generation !== state.releaseGeneration ||
+        (event.action !== "PUBLISH" && event.action !== "ROLLBACK") ||
+        event.toRevision !== state.releasedRevision ||
+        event.toContentHash !== state.releasedContentHash ||
+        !(event.createdAt instanceof Date) ||
+        !Number.isFinite(event.createdAt.getTime())
+      ) {
+        throw new TypeError("数据库当前正式发布事件与指针不一致");
+      }
+
+      return {
+        status: "RELEASED",
+        projectId,
+        releasedRevision,
+        releasedContentHash: state.releasedContentHash,
+        releaseGeneration: Number(state.releaseGeneration),
+        eventId: event.eventId,
+        lastAction: event.action,
+        releasedAt: event.createdAt.toISOString(),
+        snapshot,
+      };
+    }, TRANSACTION_OPTIONS);
+  }
 
   async publish(
     principal: AuthenticatedProjectPrincipal | null,
