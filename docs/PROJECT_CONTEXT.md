@@ -1658,3 +1658,16 @@ PR #99 已修复：
 PR #99 已修复三个真实 PostgreSQL 测试文件的 teardown 顺序：先删发布状态，再删发布事件，再删审计、版本、授权和工程；并在 HARNESS / VALIDATION / AI_MISTAKES E-061 记录。生产外键、迁移 SQL 与业务代码均未修改。
 
 **待 Windows 复验**：修复后的 `pnpm run test:db`、最新 `docs:check` 和完整 `pnpm run ready`。原开发库 `adui_scada` 的失败迁移仍不恢复，直到隔离验收、可恢复备份和维护者明确授权。
+## 2026-11-19 · 第三十五批 B 阶段正式发布 Schema 验收通过
+
+维护者 Windows 已完成 PR #99 对应候选代码的隔离 PostgreSQL 专项与完整质量链：
+
+- 隔离库 `adui_scada_test`：正式发布迁移首次部署成功、二次部署无待执行项、部署后 `migrate status` up to date，均退出码 0。
+- `pnpm run test:db`：5/5 文件、41/41 项通过；双 Cookie HTTP CAS 11/11、工程版本 12/12、工程 API 7/7、OIDC Schema 6/6、发布 Schema 5/5。
+- `pnpm run ready`：最终退出码 0；包括 618/618 单测、55/55 HTTP E2E、354 文件格式正确、207 受检文件零警告/错误、88 份文档检查、React/Vue/Server 类型检查及三端构建。
+
+此前新增发布状态 RESTRICT 外键导致的 11 项 DB 测试清理失败已通过调整测试夹具依赖顺序修复；没有放宽或删除生产外键，没有修改已应用迁移。
+
+**仍未完成**：维护者日志没有提供 `git rev-parse HEAD`，所以实测结果不能严格绑定到当前 GitHub SHA；本次文档同步后需再运行 `docs:check`。原开发库 `adui_scada` 的历史失败迁移仍未恢复，必须先备份并取得维护者明确授权。正式发布/回滚 API、Runtime 发布指针切换、CAS/幂等业务逻辑、双人审批和工业设备写入仍未开放。
+
+PR #99 继续保持 Open / Draft，Assignee 为 `@adui-dev`；PR #97 仍为 Open / Draft，需先完成 Accepted 决策文档验收与合并。
