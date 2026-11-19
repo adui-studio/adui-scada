@@ -128,4 +128,4 @@ B 阶段通过 PR #99 合并发布状态/事件 Prisma Schema、独立发布权�
 
 生产 `ProjectReleaseSafetyGate` 仍默认拒绝，真实应用发布请求返回 503；这不是生产发布授权。当前没有回滚路由、当前发布快照读取路由或 Runtime 发布指针消费。
 
-D 阶段只读 Runtime 实施前，必须先明确运行人员读取已发布快照的权限动作。当前 `ProjectAccessAction` 没有 `release:read` 或 `runtime:read`；建议新增独立 `release:read`，默认拒绝且不从 `project:read` / `version:read` 继承。该权限策略尚待维护者确认，未确认前不实现读取路由或 Runtime 接入。
+D 阶段只读 Runtime 的读取权限已获维护者批准：新增独立工程 ACL `release:read`，默认拒绝，不从 `project:read`、`version:read` 或其他权限继承。运行人员可在显式获得该权限后读取已提交发布指针及其不可变快照，而无需获得工程编辑或历史版本读取权限。当前 `ProjectAccessAction` 尚未实现该动作，当前发布快照读取路由与 Runtime 接入也尚未实现；由 D 阶段独立实施并验收。
