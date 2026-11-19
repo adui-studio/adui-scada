@@ -1802,3 +1802,9 @@ C1 当前已通过静态检查、发布事务单测和全量单测；真实 Post
 根因是助手只提醒参考 `docs/HARNESS.md`，没有给出可直接复制的环境包装命令，重复了历史 E-057 类错误。已在 `docs/HARNESS.md` 新增 C1 专用 `try/finally` 脚本：从根 `.env` 推导本机 `adui_scada_test`，同时设置 `SCADA_DATABASE_URL` / `SCADA_TEST_DATABASE_URL`，只运行 `pnpm run test:db`，最后恢复环境变量。C1 不新增迁移，不执行迁移部署。
 
 **C1 真实 PostgreSQL 验收仍待重跑**；文档更新后的 `docs:check` / `vp check` 也待维护者复验。PR #100 保持 Open/Draft，Assignee `@adui-dev`；生产发布安全门禁继续 fail-closed，原开发库 `adui_scada` 失败迁移继续冻结。
+
+## 2026-11-19 · C1 真实 PostgreSQL 测试模块 DI 修复，等待复验
+
+维护者 Windows 在正确设置隔离数据库环境后，C1 数据库专项已真实执行：OIDC Schema 6/6、工程版本 12/12、工程 API 7/7、发布 Schema 6/6、正式发布事务 10/10 通过；双 Cookie HTTP Suite 因手工 NestJS TestingModule 漏注册 `PrismaProjectReleaseStore` 及其 `ProjectReleaseSafetyGate` 依赖，在模块编译阶段失败，11 项跳过。汇总 5/6 文件、41 项通过、11 项 skipped、1 个 Suite 初始化失败，退出码 1。
+
+PR #100 已提交最小测试夹具修复 `055e2115174fba27cc745f2277e251b94ab4eb74`：双 Cookie 测试模块补齐真实发布仓储和默认 fail-closed 安全门禁 Provider；未修改生产代码、数据库或迁移。修复后 PostgreSQL 定向/全量测试、`vp check` 和完整 `ready` 尚待维护者 Windows 复验。PR #100 保持 Open/Draft，Assignee `@adui-dev`；生产发布门禁继续 fail-closed，原开发库 `adui_scada` 的历史失败迁移继续冻结。
