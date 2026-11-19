@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
 import { DatabaseModule } from "../database/database.module.js";
 import { PrismaProjectVersionStore } from "./prisma-project-version-store.js";
+import { PrismaProjectReleaseStore } from "./prisma-project-release-store.js";
+import { ProjectReleaseSafetyGate } from "./project-release-safety-gate.js";
 
 /**
  * 工程持久化仓储只由 ProjectApiModule 显式导入。
@@ -8,7 +10,7 @@ import { PrismaProjectVersionStore } from "./prisma-project-version-store.js";
  */
 @Module({
   imports: [DatabaseModule],
-  providers: [PrismaProjectVersionStore],
-  exports: [PrismaProjectVersionStore],
+  providers: [PrismaProjectVersionStore, PrismaProjectReleaseStore, ProjectReleaseSafetyGate],
+  exports: [PrismaProjectVersionStore, PrismaProjectReleaseStore],
 })
 export class ProjectPersistenceModule {}
