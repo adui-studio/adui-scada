@@ -417,3 +417,11 @@ PR #100 已 Squash 合并至 `main`（合并提交 `8db55e4b1bb97d69c08dc9238eb6
 生产 `ProjectReleaseSafetyGate` 仍固定 fail-closed 并返回 503；没有通过环境变量、请求字段或测试替身放行生产请求的路径。该门禁未完成前不能成功发布。C1 没有新增 Prisma 迁移，继续使用 B 阶段已合并的发布 Schema。
 
 维护者 Windows 最终验收 HEAD `f576cacaadd2376f8e75d5270482ac9a356f81ed`：隔离 PostgreSQL 6/6 文件、52/52 用例；单测 633/633；HTTP E2E 59/59；`vp check` 359/211 零警告错误；`docs:check` 89 份；完整 `pnpm run ready` 退出码 0。Runtime 发布态读取、回滚事务、双人审批、生产启用及工业设备写入仍未实现或开放。
+
+## 2026-11-19 · 第三十五批 D1 服务端只读发布读取候选
+
+D1 候选在现有工程 API 中新增只读路由 `GET /api/v1/projects/:projectId/releases/current`，要求显式 `release:read` 工程 ACL，并使用 `Cache-Control: no-store`。该权限默认拒绝，不从 `project:read`、`version:read` 或发布写权限继承；工程创建流程不自动授予。
+
+服务端只从独立 `ScadaProjectReleaseState` 指针定位不可变 `ScadaProjectVersion`，验证快照 SHA-256、版本元数据和最后发布事件。读取事务按工程身份、有效会话/主体、ACL、发布状态、版本、最后发布事件顺序获取共享锁；工程锁 SQL 不选择 `head_revision`，避免 Runtime 误用编辑 head。未发布返回明确 `UNRELEASED` 状态；指针、事件、快照异常 fail-closed。
+
+本阶段不包含 Runtime Core、SSE/Tag 实时质量、React/Vue Runtime 页面、回滚或生产启用；C1 的生产发布安全门禁继续 fail-closed。D1 候选仍需真实隔离 PostgreSQL 和 Windows 质量链验收。
