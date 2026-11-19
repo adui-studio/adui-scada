@@ -584,3 +584,9 @@ React/Vue Studio 在服务端只读发布预检请求未完成时允许继续编
 ## V0.3 第三十五批第十二小批 · FR-008 设计评审准入门禁
 
 新增 [正式发布事务评审决策与验收矩阵](RELEASE_TRANSACTION_REVIEW.md)，将 [ADR-0069](adr/0069-release-pointer-atomic-publication-design.md) 的待决架构拆成 R-01～R-08 八项明确审批记录，以及 T-01～T-22 二十二项**未来**安全负向验证义务。设计评审须区分独立发布/回滚 ACL、单调发布代次、幂等、成功事件和指针原子性、仅限曾发布版本的回滚、Runtime 质量/资源门禁和工业设备只读策略。未获批准前，**不添加 Prisma 发布表、公开 HTTP 写入、生产发布/回滚按钮或设备写入**；FR-008 继续“规划中”。
+
+## V0.3 第三十五批第十三小批 · FR-008 正式发布事务架构决策已批准（ADR-0069 Accepted）
+
+维护者于 2026-11-18 明确批准 [ADR-0069](adr/0069-release-pointer-atomic-publication-design.md) 由 Proposed 进入 **Accepted**，并批准 [正式发布事务评审决策与验收矩阵](RELEASE_TRANSACTION_REVIEW.md) 的 R-01～R-08 推荐基线。批准内容包括独立发布/回滚 ACL 默认拒绝、首次发布只针对事务内复核的当前已保存 head、按租户/工程/主体/操作类型隔离的幂等、仅回滚历史成功发布版本、Runtime 只认独立发布指针、事件/指针/代次同事务原子提交，以及 Tag/数据源/Runtime/资源工业安全门禁 fail-closed。
+
+本小批仍为**架构决策与文档同步**：不表示 FR-008 已实现，不开放正式发布/回滚 API、Runtime 发布态或生产操作，也不授予 PLC/DCS 写入权限。B～F 阶段仍须分别完成权限与 Schema、发布事务、只读 Runtime、回滚和生产安全评审，并通过各自真实数据库、双框架和工业安全验收。FR-008 继续保持“规划中”，不得把 ADR Accepted 记为功能完成。
