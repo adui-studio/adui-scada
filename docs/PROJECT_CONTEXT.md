@@ -1794,3 +1794,11 @@ GitHub 源码回读静态核对确认未泛型化的 `vi.fn()` 数量为 0，unb
 维护者日志未附本地 `git rev-parse HEAD`，不声称本轮结果严格绑定本地 SHA；GitHub PR #100 当前远端候选 HEAD 为 `7c619941f486b639298e4015d6538b995919d8c5`。
 
 C1 当前已通过静态检查、发布事务单测和全量单测；真实 PostgreSQL `test:db`、完整 HTTP E2E/`ready` 仍待维护者验收。当前生产发布安全门禁固定 fail-closed；没有开放 Runtime 发布态、回滚、双人审批、生产发布或工业设备写入。PR #100 继续 Open/Draft，Assignee 为 `@adui-dev`，未经新的明确授权不得合并。
+
+## 2026-11-19 · 第三十五批 C1 PostgreSQL 首次验收因隔离 URL 未设置而中止（E-068）
+
+维护者 Windows 本轮 `docs:check` 89 份 Markdown 通过、`vp check` 359 个文件格式正确且 211 个受检文件零警告/错误，均退出码 0。`pnpm run test:db` 的 Core 构建和 Prisma Client 7.10.1 生成成功，但六个数据库测试 Suite 因当前 PowerShell 未设置 `SCADA_TEST_DATABASE_URL`，在模块加载阶段全部 fail-closed，0 个测试用例执行，退出码 1。没有证据显示 PostgreSQL 连接或数据库写入发生。
+
+根因是助手只提醒参考 `docs/HARNESS.md`，没有给出可直接复制的环境包装命令，重复了历史 E-057 类错误。已在 `docs/HARNESS.md` 新增 C1 专用 `try/finally` 脚本：从根 `.env` 推导本机 `adui_scada_test`，同时设置 `SCADA_DATABASE_URL` / `SCADA_TEST_DATABASE_URL`，只运行 `pnpm run test:db`，最后恢复环境变量。C1 不新增迁移，不执行迁移部署。
+
+**C1 真实 PostgreSQL 验收仍待重跑**；文档更新后的 `docs:check` / `vp check` 也待维护者复验。PR #100 保持 Open/Draft，Assignee `@adui-dev`；生产发布安全门禁继续 fail-closed，原开发库 `adui_scada` 失败迁移继续冻结。
