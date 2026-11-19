@@ -572,8 +572,17 @@
 - **风险**：数据库原约束允许发布状态引用另一工程的事件；也允许状态/事件中的修订号存在但其内容摘要与实际不可变版本不一致，或状态代次与最后事件代次不一致。这违反 I-01/I-02 对指针、代次、事件、租户和工程闭包的要求。
 - **最小修复**：不修改已在隔离 PostgreSQL 应用的 20261118000000_release_state_and_events。新增 20261119000000_release_state_event_integrity 增量迁移：为不可变版本建立 tenant/project/revision/contentHash 复合唯一键；发布事件来源/目标版本和发布状态目标版本均使用包含 SHA-256 的复合外键；发布状态末次事件使用包含租户、工程、代次、目标修订、目标摘要和事件 UUID 的复合外键。Prisma Schema 同步建模这些关系，并为复合外键提供必要索引及中文索引注释。
 - **防复发**：多租户数据模型中的跨表引用不能只使用全局 ID；应将 tenantId、projectId 与业务修订号、内容摘要、代次一起纳入复合键/外键。涉及不可变快照时必须将摘要绑定到版本主键；涉及状态指针时必须让指针、最后事件和代次保持数据库级一致，不能只依赖未来应用层校验。
-- **验证边界**：新增静态 Schema/迁移回归和隔离 PostgreSQL 负向用例，验收目标为单测 **619/619**、数据库专项 **42/42**；新增迁移首次/二次部署、状态检查及跨工程/错误代次/错误摘要拒绝均**待维护者 Windows 实测**。原有 618/618、41/41 和完整 ready=0 是修复前结果，不能外推为本次增量迁移通过。
+- **验证边界**：新增静态 Schema/迁移回归和隔离 PostgreSQL 负向用例，验收目标为单测 **620/620**、数据库专项 **42/42**；新增迁移首次/二次部署、状态检查及跨工程/错误代次/错误摘要拒绝均**待维护者 Windows 实测**。原有 618/618、41/41 和完整 ready=0 是修复前结果，不能外推为本次增量迁移通过。
 - **证据**：PR #99、apps/server/prisma/schema.prisma、apps/server/prisma/migrations/20261119000000_release_state_event_integrity/migration.sql、apps/server/test/release-schema.db-spec.ts、apps/server/src/database/prisma-schema-comments.spec.ts、ADR-0069 I-01/I-02。
+
+### E-063 · Prisma Schema 字段级 @relation 属性被错误拆分为多行（第三十五批 B 阶段）
+
+- **现象**：维护者 2026-11-19 Windows 在 PR #99 最新候选执行 `pnpm run db:validate`，Prisma 7.10.1 报 P1012、28 条 Schema 解析错误，集中在 `schema.prisma` 的 `releasedVersion`、`lastReleaseEvent`、`fromVersion`、`toVersion` 四个字段。`pnpm run db:generate` 同样因 P1012 失败；`pnpm run test:unit` 在 Vitest 启动前调用 `db:generate`，因此也未进入单元测试。同期 `vp check` 355 个文件格式正确、207 个受检文件零警告/错误；`docs:check` 89 个 Markdown 通过。
+- **根因**：Prisma Schema 的字段级 `@relation(...)` 属性被按多行函数调用方式编写。Prisma Schema Language 将字段定义按单行解析，换行后的关系参数被当作独立字段/属性，导致 `This line is not a valid field or attribute definition`。这不是 SQL 迁移语法或 PostgreSQL 连接问题。
+- **最小修复**：将四个字段的完整 `@relation(...)` 属性恢复为单行声明，保留原关系名称、fields、references、onDelete 和 onUpdate 参数；新增静态回归，要求每个包含 `@relation(` 的字段行同一行存在闭合 `)`。不修改已应用迁移、数据库、权限逻辑或复合外键设计。
+- **防复发**：Prisma Schema 关系属性必须按仓库 Prisma 7.10.1 的实际语法保持单行；不能把 TypeScript/JavaScript 的多行函数调用格式套用到 `.prisma` 字段定义。新增或修改关系后必须先执行 `pnpm run db:validate`，再 `pnpm run db:generate`，之后才执行 `vp check`、单元测试和数据库专项。
+- **验证边界**：修复提交只完成远程源码修改与静态回读，**尚未**在 Windows 重新执行 `db:validate`、`db:generate`、`test:unit`、`test:db` 或 `ready`。修复后的单元测试目标由 619 项调整为 **620 项**；隔离 PostgreSQL 目标仍为 **42 项**。此前 `vp check` 与 `docs:check` 是修复前日志，不能冒充修复后通过。
+- **证据**：维护者 2026-11-19 Windows 原始 P1012 日志、PR #99、`apps/server/prisma/schema.prisma`、`apps/server/src/database/prisma-schema-comments.spec.ts`、`docs/VALIDATION.md`。
 
 ## 三、从已发生问题提炼的预防性门禁
 

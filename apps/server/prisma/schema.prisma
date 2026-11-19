@@ -128,21 +128,9 @@ model ScadaProjectReleaseState {
   /// 该发布状态所属的工程主表记录。
   project             ScadaProject            @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
   /// 当前发布指针引用的不可变工程版本；复合外键同时校验修订号与 SHA-256 摘要。
-  releasedVersion ScadaProjectVersion? @relation(
-    "ScadaProjectReleaseStateVersion",
-    fields: [tenantId, projectId, releasedRevision, releasedContentHash],
-    references: [tenantId, projectId, revision, contentHash],
-    onDelete: Restrict,
-    onUpdate: Cascade
-  )
+  releasedVersion ScadaProjectVersion? @relation("ScadaProjectReleaseStateVersion", fields: [tenantId, projectId, releasedRevision, releasedContentHash], references: [tenantId, projectId, revision, contentHash], onDelete: Restrict, onUpdate: Cascade)
   /// 当前发布指针对应的最后成功事件；复合外键同时校验租户、工程、代次、修订与摘要。
-  lastReleaseEvent ScadaProjectReleaseEvent? @relation(
-    "ScadaProjectReleaseStateLastEvent",
-    fields: [tenantId, projectId, releaseGeneration, releasedRevision, releasedContentHash, lastReleaseEventId],
-    references: [tenantId, projectId, generation, toRevision, toContentHash, eventId],
-    onDelete: Restrict,
-    onUpdate: Cascade
-  )
+  lastReleaseEvent ScadaProjectReleaseEvent? @relation("ScadaProjectReleaseStateLastEvent", fields: [tenantId, projectId, releaseGeneration, releasedRevision, releasedContentHash, lastReleaseEventId], references: [tenantId, projectId, generation, toRevision, toContentHash, eventId], onDelete: Restrict, onUpdate: Cascade)
 
   @@id([tenantId, projectId])
   @@index([tenantId, projectId, releasedRevision, releasedContentHash], map: "scada_project_release_state_version_idx")
@@ -180,21 +168,9 @@ model ScadaProjectReleaseEvent {
   /// 该事件所属的工程主表记录。
   project             ScadaProject            @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
   /// 该事件提交前的正式发布版本；首次发布时为空。
-  fromVersion ScadaProjectVersion? @relation(
-    "ScadaProjectReleaseEventFromVersion",
-    fields: [tenantId, projectId, fromRevision, fromContentHash],
-    references: [tenantId, projectId, revision, contentHash],
-    onDelete: Restrict,
-    onUpdate: Cascade
-  )
+  fromVersion ScadaProjectVersion? @relation("ScadaProjectReleaseEventFromVersion", fields: [tenantId, projectId, fromRevision, fromContentHash], references: [tenantId, projectId, revision, contentHash], onDelete: Restrict, onUpdate: Cascade)
   /// 该事件提交后的正式发布版本；复合外键同时校验快照摘要。
-  toVersion ScadaProjectVersion @relation(
-    "ScadaProjectReleaseEventToVersion",
-    fields: [tenantId, projectId, toRevision, toContentHash],
-    references: [tenantId, projectId, revision, contentHash],
-    onDelete: Restrict,
-    onUpdate: Cascade
-  )
+  toVersion ScadaProjectVersion @relation("ScadaProjectReleaseEventToVersion", fields: [tenantId, projectId, toRevision, toContentHash], references: [tenantId, projectId, revision, contentHash], onDelete: Restrict, onUpdate: Cascade)
   /// 若该事件是当前发布指针的最后一次成功变更，则被状态表引用。
   currentReleaseState ScadaProjectReleaseState? @relation("ScadaProjectReleaseStateLastEvent")
 

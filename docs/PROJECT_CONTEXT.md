@@ -1707,6 +1707,14 @@ PR #99 分支同步 PR #97 后的静态评审发现，原发布状态 lastReleas
 
 已在 PR #99 新增增量迁移 20261119000000_release_state_event_integrity，不修改已应用的 20261118000000_release_state_and_events。新迁移为工程版本建立摘要复合唯一键，将发布事件来源/目标版本、发布状态目标版本与最后发布事件全部改为租户/工程/修订/摘要/代次复合外键；Prisma Schema、静态迁移测试和隔离 PostgreSQL 负向测试同步更新。目标是让 PostgreSQL 直接拒绝跨工程事件引用、代次不匹配和摘要不匹配。
 
-新增 Windows 验收目标：单测 **619/619**、隔离 PostgreSQL **42/42**，另需新迁移首次/二次部署、status、vp check、docs:check 和完整 ready 实测。此前 618/618、41/41 和完整 ready=0 属于本次完整性修复之前的代码，不得作为新迁移验收结果。
+新增 Windows 验收目标：单测 **620/620**、隔离 PostgreSQL **42/42**，另需新迁移首次/二次部署、status、vp check、docs:check 和完整 ready 实测。此前 618/618、41/41 和完整 ready=0 属于本次完整性修复之前的代码，不得作为新迁移验收结果。
 
 原开发库 adui_scada 的失败迁移仍冻结；本次新增迁移只允许先在隔离 adui_scada_test 验收。PR #99 继续保持 Open / Draft，Assignee 为 @adui-dev，未获得合并授权。
+
+## 2026-11-19 · PR #99 Prisma Schema 关联属性语法修复（E-063）
+
+维护者 Windows 在最新候选执行 db:validate 时，Prisma 7.10.1 对 releasedVersion、lastReleaseEvent、fromVersion、toVersion 四个字段报告 P1012；根因是将字段级 @relation(...) 属性拆成多行，Prisma Schema 解析器不接受这种字段声明形式。db:generate 同样失败；test:unit 在 Vitest 启动前执行 db:generate，因此本次没有进入单元测试。
+
+已在 PR #99 将四个完整 @relation 属性恢复为单行，并在 prisma-schema-comments.spec.ts 增加静态回归，防止再次拆行。保留关系名称、复合字段、引用字段和删除/更新行为；没有修改两条迁移 SQL、数据库或业务权限代码。
+
+本轮修复后的 Windows 验收仍待执行：db:validate、db:generate、vp check、test:unit（目标 620/620）、隔离 PostgreSQL test:db（目标 42/42）、docs:check 与完整 ready。维护者本轮修复前 vp check 355/207 和 docs:check 89 份通过；不能将其外推为修复后验证结果。

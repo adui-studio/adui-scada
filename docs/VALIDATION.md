@@ -2095,9 +2095,37 @@ PR #99 已新增不可变增量迁移 20261119000000_release_state_event_integri
 | db:validate / db:generate            |                           退出码 0 |
 | 新增迁移首次部署 / 二次部署 / status |                         均退出码 0 |
 | vp check                             |                     零警告、零错误 |
-| test:unit                            |                            619/619 |
+| test:unit                            |                            620/620 |
 | 隔离 PostgreSQL test:db              |                              42/42 |
 | docs:check                           | 89 份 Markdown，实际计数以命令为准 |
 | 完整 ready                           |                           退出码 0 |
 
 本轮没有运行 Windows、Prisma 或 PostgreSQL 命令；上述均为验收目标，不是通过结果。原开发库 adui_scada 仍不得执行任何迁移恢复或写操作，直到完成可恢复备份并获得维护者单独明确授权。
+
+## 2026-11-19 · PR #99 Prisma Schema 关联属性 P1012 修复（E-063，待 Windows 复验）
+
+维护者 Windows 在最新候选执行 `pnpm run db:validate`，Prisma 7.10.1 对 `releasedVersion`、`lastReleaseEvent`、`fromVersion`、`toVersion` 四个字段级关系报 P1012（28 条解析错误）。原因是 `@relation(...)` 参数被拆成多行；Prisma Schema 字段级属性需要保持单行。`db:generate` 同样失败；`test:unit` 在 Vitest 启动前调用 `db:generate`，因此没有执行任何 Vitest 用例。
+
+PR #99 已将四个 `@relation(...)` 属性恢复为单行，并在 `prisma-schema-comments.spec.ts` 新增静态回归，确保每个关系属性都在同一字段行闭合。未修改已应用迁移、第二条增量迁移 SQL、数据库、权限业务逻辑或复合外键定义。
+
+维护者本轮修复前的独立结果：
+
+- `vp check`：355 个文件格式正确；207 个受检文件零警告、Lint 与类型错误。
+- `docs:check`：89 个 Markdown 文件通过。
+- `db:validate`、`db:generate`：P1012，退出码 1。
+- `test:unit`：在 db:generate 阶段失败，Vitest 未启动，不能计作单测失败项或通过项。
+- 本轮没有执行 `db:migrate:deploy`、`test:db` 或完整 `ready`，没有数据库写入证据。
+
+**修复后待维护者 Windows 执行**：
+
+| 验收项                               |                               目标 |
+| ------------------------------------ | ---------------------------------: |
+| `pnpm run db:validate`               |                           退出码 0 |
+| `pnpm run db:generate`               |                           退出码 0 |
+| `vp check`                           |                     零警告、零错误 |
+| `pnpm run test:unit`                 |                            620/620 |
+| 隔离 PostgreSQL `test:db`             |                              42/42 |
+| `pnpm run docs:check`                | 89 份 Markdown，实际计数以命令为准 |
+| 完整 `pnpm run ready`                |                           退出码 0 |
+
+数据库迁移专项仍须使用 `docs/HARNESS.md` 中的 PowerShell `try/finally` 环境变量保护流程，仅连接本机隔离 `adui_scada_test`。原开发库 `adui_scada` 的失败迁移保持冻结，不执行 resolve、deploy、reset、DROP、DELETE 或手工修改 `_prisma_migrations`。

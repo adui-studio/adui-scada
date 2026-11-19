@@ -94,6 +94,12 @@ describe("Prisma 模型及 PostgreSQL 数据库中文注释约束", () => {
     );
   });
 
+  it("Prisma 字段级关联属性必须完整写在单行", () => {
+    const relationLines = schema.split(/\r?\n/).filter((line) => line.includes("@relation("));
+    expect(relationLines.length).toBeGreaterThan(0);
+    expect(relationLines.every((line) => line.includes(")"))).toBe(true);
+  });
+
   it("发布状态、事件与不可变版本通过复合外键保持租户工程代次和摘要闭包", () => {
     expect(schema).toContain(
       '@@unique([tenantId, projectId, revision, contentHash], map: "scada_project_versions_snapshot_reference_key")',
