@@ -87,7 +87,7 @@ async function createHarness(options: HarnessOptions = {}) {
       revision: 1,
       createdAt: CREATED_AT,
     }));
-  const state = options.state ?? {
+  const state: NonNullable<HarnessOptions["state"]> = options.state ?? {
     releaseGeneration: 0n,
     releasedRevision: null,
     releasedContentHash: null,
@@ -122,22 +122,43 @@ async function createHarness(options: HarnessOptions = {}) {
       },
     ),
     scadaProjectReleaseState: {
-      findUnique: vi.fn(async () => {
+      findUnique: vi.fn<() => Promise<typeof state>>(async () => {
         steps.push("读取发布状态");
         return state;
       }),
-      updateMany: vi.fn(async (args: { data: Record<string, unknown> }) => {
+      updateMany: vi.fn<
+        (args: { data: { releaseGeneration: bigint } }) => Promise<{ count: number }>
+      >(async (args) => {
         steps.push("更新发布指针");
         expect(args.data.releaseGeneration).toBe(state.releaseGeneration + 1n);
         return { count: options.updateCount ?? 1 };
       }),
     },
     scadaProjectReleaseEvent: {
-      findFirst: vi.fn(async () => {
+      findFirst: vi.fn<
+        () => Promise<NonNullable<HarnessOptions["previousEvent"]> | null>
+      >(async () => {
         steps.push("查询幂等事件");
         return options.previousEvent ?? null;
       }),
-      create: vi.fn(async (args: { data: Record<string, unknown> }) => {
+      create: vi.fn<
+        (args: {
+          data: {
+            eventId: string;
+            generation: bigint;
+            action: string;
+            toRevision: bigint;
+            toContentHash: string;
+          };
+        }) => Promise<{
+          eventId: string;
+          generation: bigint;
+          action: string;
+          toRevision: bigint;
+          toContentHash: string;
+          createdAt: Date;
+        }>
+      >(async (args) => {
         steps.push("追加发布事件");
         return {
           eventId: args.data.eventId,
@@ -150,7 +171,13 @@ async function createHarness(options: HarnessOptions = {}) {
       }),
     },
     scadaProjectVersion: {
-      findUnique: vi.fn(async () => {
+      findUnique: vi.fn<
+        () => Promise<{
+          snapshot: typeof snapshot;
+          contentHash: string;
+          createdAt: Date;
+        } | null>
+      >(async () => {
         steps.push("读取不可变快照");
         return {
           snapshot,
@@ -160,16 +187,15 @@ async function createHarness(options: HarnessOptions = {}) {
       }),
     },
   };
-  const transaction = vi.fn(async (callback: (client: typeof tx) => Promise<unknown>) =>
-    callback(tx),
-  );
+  const transaction = vi.fn<
+    (callback: (client: typeof tx) => Promise<unknown>) => Promise<unknown>
+  >(async (callback) => callback(tx));
   const database = { client: { $transaction: transaction } } as unknown as PrismaService;
+  const gateAssertReady = vi.fn<ProjectReleaseSafetyGate["assertReady"]>(async () => {
+    steps.push("通过测试安全门禁");
+  });
   const gate = options.allowGate
-    ? {
-        assertReady: vi.fn(async () => {
-          steps.push("通过测试安全门禁");
-        }),
-      }
+    ? { assertReady: gateAssertReady }
     : new ProjectReleaseSafetyGate();
 
   return {
@@ -177,7 +203,7 @@ async function createHarness(options: HarnessOptions = {}) {
     tx,
     steps,
     transaction,
-    gate,
+    gateAssertReady,
     snapshot,
   };
 }
@@ -304,7 +330,7 @@ describe("正式发布事务仓储", () => {
     await expect(
       harness.store.publish(PRINCIPAL, SESSION_ID, PROJECT_ID, REQUEST, IDEMPOTENCY_KEY),
     ).rejects.toBeInstanceOf(ProjectReleasePreflightRejectedError);
-    expect(harness.gate.assertReady).not.toHaveBeenCalled();
+    expect(harness.gateAssertReady).not.toHaveBeenCalled();
     expect(harness.tx.scadaProjectReleaseEvent.create).not.toHaveBeenCalled();
   });
 
