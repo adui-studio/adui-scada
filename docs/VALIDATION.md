@@ -2310,3 +2310,18 @@ E-068 与 E-069 均已关闭。C1 交付的是服务端发布事务及其默认 
 **尚未实测**：本候选尚未执行 TypeScript/Lint、单测、NestJS HTTP E2E、隔离 PostgreSQL 迁移/测试、文档检查或完整质量链。不得把源码静态核对当作测试通过。
 
 维护者验收顺序：在根目录确认工作区和分支后，先用 `docs/HARNESS.md` 的隔离数据库 PowerShell `try/finally` 模板将当前进程的 `SCADA_DATABASE_URL` 与 `SCADA_TEST_DATABASE_URL` 限定到本机 `adui_scada_test`；执行 `pnpm run db:migrate:deploy`、`pnpm run db:migrate:status`、`pnpm run test:db`。随后执行 `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run docs:check`、`pnpm run typecheck:server` 和 `pnpm run build:server`；最后可执行完整 `pnpm run ready`。每条命令记录独立退出码。
+
+## 2026-11-20 · 第三十五批 D1 隔离 PostgreSQL 迁移与真实数据库专项验收通过
+
+维护者 Windows 在仓库根目录按限定本机隔离数据库的 PowerShell `try/finally` 流程执行；Prisma 明确报告目标是 `127.0.0.1:15432/adui_scada_test`，脚本结束时输出「数据库环境变量已恢复」。对应测试日志：
+
+- 首次 `pnpm run db:migrate:deploy`：识别 **7 条迁移**，成功应用 `20261119180000_release_read_permission`。
+- 第二次 `pnpm run db:migrate:deploy`：仍识别 7 条迁移，提示 `No pending migrations to apply`。
+- `pnpm run db:migrate:status`：`Database schema is up to date!`。
+- `pnpm run test:db`：**6/6 个测试文件、57/57 项测试通过**；其中 `release-transaction.db-spec.ts` **15/15**，包含 D1 新增的独立 `release:read` 授权、未发布状态、仅发布读取权限、同名跨租户工程隔离和快照正文篡改拒绝；`release-schema.db-spec.ts` **6/6**。完整流程输出「D1 PostgreSQL 专项验收通过」。
+
+两条 NestJS `ExceptionsHandler` 错误堆栈分别是主动篡改随机测试租户中工程版本元数据和已发布快照摘要的预期负向测试；对应 Suite 全部通过。不能为了隐藏错误日志降低完整性校验或跳过负向测试。
+
+**前次误操作及保护边界**：维护者此前未设置隔离环境而直接运行迁移命令，Prisma 指向已冻结的 `adui_scada` 并返回 P3009；随后 `test:db` 因缺少 `SCADA_TEST_DATABASE_URL`，6 个 Suite 在导入阶段拒绝、0 测试执行。这些失败命令不属于本次通过的隔离数据库验收；原 `adui_scada` 开发库仍冻结，不得执行迁移修复、重置、修改历史表或生产操作。
+
+**后续质量门禁**：此前另一次维护者日志已有 `vp check` 359/211 零告警、单测 633/633、HTTP E2E 59/59、文档 89 份通过，但该日志未提供 `git rev-parse HEAD`，不能严格绑定 D1 远程最新提交。GitHub D1 PR #102 于本次记录前已出现格式调整提交 `45eb631f452f10aeffa0dbe30a8485afc37864aa`；数据库日志同样未包含本地 SHA。此次仅确认 D1 隔离数据库专项通过；最新 HEAD 的 `vp check`、全量 `pnpm run ready` 等仍需维护者复验。PR 保持 Draft，未经明确授权不得合并。
