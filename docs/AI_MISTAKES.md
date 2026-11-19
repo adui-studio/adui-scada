@@ -632,6 +632,15 @@
 - **验证状态**：安全保护行为符合预期；本次真实 PostgreSQL 测试仍**待维护者使用修复后的完整环境包装命令重新执行**。修复后的 `docs:check` / `vp check` 也需在文档提交后重新运行。原开发库 `adui_scada` 的历史失败迁移继续冻结。
 - **证据**：维护者 2026-11-19 上传的 `pnpm run test:db` 原始 Vitest 输出；`apps/server/test/release-transaction.db-spec.ts` 及其他五个 DB spec 的 `SCADA_TEST_DATABASE_URL` 导入前置校验；`docs/HARNESS.md` 的隔离 PostgreSQL 既有模板。
 
+### E-069 · 双 Cookie PostgreSQL 测试模块遗漏正式发布仓储依赖
+
+- **现象**：维护者 2026-11-19 Windows 在正确设置隔离数据库环境变量后运行服务端真实 PostgreSQL 专项。Core Node 构建与 Prisma Client 7.10.1 生成成功；六个数据库 Suite 中五个通过，分别为 OIDC Schema 6/6、工程版本 12/12、工程 API 7/7、发布 Schema 6/6、正式发布事务 10/10。唯一失败的 `projects-cas-cookie-http.db-spec.ts` 在 NestJS 测试模块初始化时抛出 `Nest can't resolve dependencies of the ProjectApiController (PrismaProjectVersionStore, ?)`，缺少 `PrismaProjectReleaseStore`。Vitest 汇总为 5/6 文件通过、41 项通过、11 项跳过、1 个 Suite 失败，退出码 1；该文件 11 项测试没有执行。
+- **根因**：正式 `ProjectApiController` 构造函数已从仅注入 `PrismaProjectVersionStore` 扩展为同时注入 `PrismaProjectReleaseStore`；生产 `ProjectPersistenceModule` 已注册两个仓储及 `ProjectReleaseSafetyGate`，但双 Cookie 真实 HTTP 数据库测试使用手工 `Test.createTestingModule`，只注册旧版本仓储，遗漏新发布仓储及其安全门禁依赖。这是测试模块装配未随 Controller 构造依赖同步更新，不是 PostgreSQL 约束或发布事务断言失败。
+- **最小修复**：仅在 `apps/server/test/projects-cas-cookie-http.db-spec.ts` 中导入并将真实 `PrismaProjectReleaseStore`、默认 fail-closed 的 `ProjectReleaseSafetyGate` 注册到测试模块 providers；沿用该测试模块已有的真实隔离 `PrismaService`。不修改生产 Controller、生产模块、发布事务、权限、Schema、迁移或数据库。
+- **防复发**：任何 NestJS Controller 构造函数依赖变化，都必须检索所有手工 `Test.createTestingModule` / `controllers: [该 Controller]` 测试模块并核对完整 provider 图。真实 PostgreSQL HTTP 测试应注册真实仓储及生产默认安全门禁；不能用空对象或放行型 Mock 掩盖依赖缺失，也不能因当前用例暂不访问新路由就忽略 Controller 必须完成实例化的依赖。
+- **验证状态**：修复已提交到 PR #100，提交 `055e2115174fba27cc745f2277e251b94ab4eb74`。当前仅回读确认两个导入和两个 Provider 已注册；**修复后的定向双 Cookie 测试、全量 `pnpm run test:db`、`vp check` 和完整 `pnpm run ready` 均待维护者重新执行**。原始失败统计保留为修复前证据，不将 41/52 误写为修复后结果。
+- **证据**：维护者 2026-11-19 Windows PostgreSQL 测试日志；`apps/server/src/projects/project-api.controller.ts`；`apps/server/src/projects/project-persistence.module.ts`；`apps/server/src/projects/prisma-project-release-store.ts`；`apps/server/src/projects/project-release-safety-gate.ts`；PR #100 修复提交 `055e2115174fba27cc745f2277e251b94ab4eb74`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
