@@ -3190,6 +3190,30 @@ Write-Host "完整质量链退出码：$LASTEXITCODE"
 
 预计 Markdown **88 份**，原有 Vitest **615/615** 和 HTTP E2E **55/55** 均为**待复验的上一批基线**，不是本分支通过证据。此次没有新的 API/迁移/浏览器行为；后续正式发布写事务必须另行取得 ADR/工业安全批准，并完成隔离 PostgreSQL、可信 OIDC 与双框架完整验收。
 
+## 第三十五批第十三小批 · ADR-0069 Accepted 决策文档同步检查
+
+本批维护者已明确批准 ADR-0069 进入 **Accepted**，并批准 R-01～R-08 推荐基线。文档复核应确认：
+
+- ADR-0069 状态为 Accepted，决策记录与 R-01～R-08 的最终结果一致。
+- `RELEASE_TRANSACTION_REVIEW.md` 不再将 R-01～R-08 描述为待批准；I-01～I-06 为已批准设计不变量，T-01～T-22 仍是未来测试义务、尚未执行。
+- ARCHITECTURE、SDD、REQUIREMENTS、CODEBASE_MAP、PROJECT_CONTEXT 对 ADR 状态和 FR-008 实现状态保持一致。
+- FR-008 仍为规划中；Accepted 不代表 Prisma、API、Runtime 或生产发布功能已完成。
+- 正式发布/回滚写入、生产双人审批与任何 PLC/DCS 设备写入仍受独立阶段门禁约束。
+
+本 PR 仅同步架构状态文档，不修改代码、Schema、迁移或运行行为。Windows 验收执行：
+
+```powershell
+git status --short
+git fetch origin
+git switch docs/v0.3-b35-release-decision-record
+git pull --ff-only
+git rev-parse HEAD
+pnpm run docs:check
+Write-Host "Accepted 决策文档检查退出码：$LASTEXITCODE"
+```
+
+文档检查通过只证明 Markdown 结构和链接规则满足仓库检查，不代表未来 T-01～T-22 测试已执行，也不代表发布功能或工业安全验收完成。
+
 ## 2026-11-18 · PR #99 正式发布 Schema 迁移与隔离库验收
 
 第三十五批 B 阶段新增迁移 `20261118000000_release_state_and_events`。该迁移必须只在本机独立 `adui_scada_test` 首次/二次部署和验证；根 `.env` 的 `SCADA_DATABASE_URL` 默认可能仍指向开发库 `adui_scada`。**不能在没有临时覆盖 URL 的情况下直接执行 `pnpm run db:migrate:deploy`。**
@@ -3358,3 +3382,13 @@ PR #99 已将该顺序同步至双 Cookie HTTP、工程版本和工程 API 三�
 维护者随后执行完整 `pnpm run ready`，最终退出码 0。`ready` 包含 618/618 单元测试、55/55 HTTP E2E、354 文件格式正确、207 受检文件零警告/错误、88 份 Markdown 检查以及 React/Vue/Server 类型检查和构建。`test:db` 是单独的隔离 PostgreSQL 专项，不包含在 `ready` 脚本中。
 
 原开发库 `adui_scada` 的历史失败迁移未在本次操作中恢复；隔离库验收通过不代表开发库已恢复。任何对原库的迁移元数据或 Schema 写入仍需可恢复备份和维护者明确授权。
+
+## 2026-11-19 · PR #97 合并与 PR #99 分支同步
+
+PR #97 已完成维护者 Windows 文档验收后 Squash 合并至 `main`，合并提交为 `8a622f8766856069065ee7d5cbadeb826646e676`。该提交正式将 ADR-0069 Accepted 决策、R-01～R-08 批准基线及对应文档同步纳入主线。
+
+PR #99 已从原功能分支 `c38de5ca38cc619a1128a84b63eca3523f42c9d7` 合流最新 `main`。本次只合并 PR #97 的十份文档变更；PR #99 原有 Prisma Schema、迁移 SQL、权限实现和测试源码保持不变。该同步不执行任何数据库命令，也不触碰原开发库 `adui_scada`。
+
+PR #97 的 Windows `docs:check` 为 89 份 Markdown、退出码 0；该终端记录没有同时提供本地 HEAD，因此不声称其结果严格绑定到 PR #99 同步后的 HEAD。PR #99 同步后仍须在 Windows 最新 HEAD 执行 `vp check` 与 `pnpm run docs:check`；此前 618/618 单测、41/41 隔离 PostgreSQL 测试、55/55 HTTP E2E 和完整 `ready=0` 对应的代码未被本次文档合流修改，但本次同步本身不构成重新执行这些测试的证据。
+
+PR #99 继续保持 Open / Draft，Assignee 为 `@adui-dev`。原开发库 `adui_scada` 的失败迁移仍冻结；恢复操作必须等待可恢复备份和维护者单独明确授权。

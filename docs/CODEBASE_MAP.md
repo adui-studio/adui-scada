@@ -964,3 +964,10 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 
 - `docs/RELEASE_TRANSACTION_REVIEW.md`：ADR-0069 Proposed 设计的 R-01～R-08 维护者决策、I-01～I-06 不变量和 T-01～T-22 未来数据库/HTTP/Runtime 安全负向测试；当前只用于评审，不包含可执行发布代码。
 - `docs/adr/0069-release-pointer-atomic-publication-design.md`：新增评审矩阵交叉引用，**状态仍为 Proposed**。
+
+## 2026-11-18 · 第三十五批第十三小批 ADR-0069 Accepted 架构决策
+
+- `docs/adr/0069-release-pointer-atomic-publication-design.md`：ADR-0069 已由维护者批准为 **Accepted**；仅确定正式发布指针、代次、原子事务、独立权限、回滚、Runtime 和工业安全边界，不代表功能实现。
+- `docs/RELEASE_TRANSACTION_DECISION_RECORD.md`：记录维护者批准的 R-01～R-08 决策基线及后续实施顺序。
+- `docs/RELEASE_TRANSACTION_REVIEW.md`：记录已批准的 R-01～R-08、I-01～I-06 不变量和 T-01～T-22 **未来测试义务**；T 场景尚未执行。
+- FR-008 继续规划中；当前 main 无正式发布/回滚写 API、Runtime 发布指针加载或设备写入许可。

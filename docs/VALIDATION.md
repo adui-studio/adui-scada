@@ -1885,6 +1885,14 @@ PR #91 Windows 原始测试证据：`pnpm run test:unit` **50/50 文件 610/610 
 
 第十二小批新增 `docs/RELEASE_TRANSACTION_REVIEW.md`，列出八项待维护者正式决定的发布/回滚权限、审批、幂等、回滚范围、Runtime、审计与工业安全选择，以及二十二项**未执行**数据库/HTTP/Runtime 负向测试，供下一阶段准入评审。本次未改生产代码，不宣称发布写事务、权限或真实 PostgreSQL 发布测试已实现。新增一份 Markdown 后预计文档检查 **88 份**，仅为待测试计数。**新分支 Windows `pnpm run docs:check`、`vp check`、`pnpm run ready` 均待实际运行**，此前 615/615 与 55/55 仅是合并前基线。
 
+## 2026-11-19 · PR #97 ADR-0069 Accepted 决策文档同步（Windows 待验收）
+
+维护者已于 2026-11-18 明确批准 ADR-0069 进入 Accepted，并批准 R-01～R-08 推荐基线。PR #97 将 ADR、决策记录、评审矩阵及 PROJECT_CONTEXT 设为 Accepted；本轮复核又发现 ARCHITECTURE、SDD、REQUIREMENTS、CODEBASE_MAP、HARNESS 和 VALIDATION 中仍保留“Proposed/待批准”现状描述，已在 PR #97 分支进行最小文档同步。
+
+本轮仅修改文档，不涉及生产代码、Prisma Schema、数据库迁移、API、Runtime 或设备接口。FR-008 仍为规划中；T-01～T-22 仍是未来验收义务，不是已通过测试。
+
+PR #97 当前分支：`docs/v0.3-b35-release-decision-record`。该分支新增/修改的 Markdown 文档同步完成后，**Windows `pnpm run docs:check` 尚待执行**；预计文件数需以实际命令输出为准。未提供本轮本地 HEAD 与退出码，不得将 PR #99 的 88 份文档检查结果外推为 PR #97 通过。
+
 ## 2026-11-18 · PR #99 Prisma Client 生成与测试解构错误修复待复测
 
 维护者 Windows 在 PR #99 分支执行 `vp check --fix`，出现 12 项 TypeScript 错误：旧生成的 Prisma Client 不包含新发布模型 delegate；`project-api.db-spec.ts` 的 `Promise.all` 新增第五项查询但只解构四个变量，导致 `releaseState` 未声明及相邻推断错误。该次只证明格式化完成，代码检查失败。
@@ -2054,4 +2062,14 @@ Vitest 日志明确包含 `apps/server/src/database/prisma-schema-comments.spec.
 - 维护者上传的 Windows 日志没有包含 `git rev-parse HEAD`，因此本记录不声称所有上述执行结果严格绑定到 GitHub 当前分支 SHA；PR 分支后续文档提交还需重跑 `docs:check`。
 - 原开发库 `adui_scada` 的历史失败迁移记录仍未恢复；隔离库通过不代表开发库已完成迁移。对原库执行 `migrate resolve --rolled-back` 与迁移重试仍须可恢复备份及维护者明确授权。
 - 正式发布 API、回滚 API、Runtime 发布指针切换、CAS/幂等业务逻辑、双人审批和任何工业设备写入均未在本批开放。
-- PR #99 继续保持 Draft，等待 PR #97 Accepted 决策文档先行验收并合并，再做最终评审。
+- PR #99 继续保持 Draft，Assignee 为 `@adui-dev`；PR #97 已完成 Accepted 决策文档验收并合并至 `main`，PR #99 后续评审以前置决策已进入主线为准。
+
+## 2026-11-19 · PR #97 合并与 PR #99 分支同步
+
+PR #97 已完成维护者 Windows 文档验收后 Squash 合并至 `main`，合并提交为 `8a622f8766856069065ee7d5cbadeb826646e676`。该提交正式将 ADR-0069 Accepted 决策、R-01～R-08 批准基线及对应文档同步纳入主线。
+
+PR #99 已从原功能分支 `c38de5ca38cc619a1128a84b63eca3523f42c9d7` 合流最新 `main`。本次只合并 PR #97 的十份文档变更；PR #99 原有 Prisma Schema、迁移 SQL、权限实现和测试源码保持不变。该同步不执行任何数据库命令，也不触碰原开发库 `adui_scada`。
+
+PR #97 的 Windows `docs:check` 为 89 份 Markdown、退出码 0；该终端记录没有同时提供本地 HEAD，因此不声称其结果严格绑定到 PR #99 同步后的 HEAD。PR #99 同步后仍须在 Windows 最新 HEAD 执行 `vp check` 与 `pnpm run docs:check`；此前 618/618 单测、41/41 隔离 PostgreSQL 测试、55/55 HTTP E2E 和完整 `ready=0` 对应的代码未被本次文档合流修改，但本次同步本身不构成重新执行这些测试的证据。
+
+PR #99 继续保持 Open / Draft，Assignee 为 `@adui-dev`。原开发库 `adui_scada` 的失败迁移仍冻结；恢复操作必须等待可恢复备份和维护者单独明确授权。
