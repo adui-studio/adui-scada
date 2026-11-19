@@ -16,13 +16,14 @@ export interface ProjectPermissionGrant extends ProjectAccessScope {
   readonly permissions: readonly ProjectAccessAction[];
 }
 
-/** 表示工程、版本和正式发布操作权限；不包含任何工业设备写入权限。 */
+/** 表示工程、版本、正式发布和发布快照读取权限；不包含任何工业设备写入权限。 */
 export type ProjectAccessAction =
   | "project:read"
   | "version:read"
   | "version:append"
   | "release:publish"
-  | "release:rollback";
+  | "release:rollback"
+  | "release:read";
 
 const ACTIONS: readonly ProjectAccessAction[] = [
   "project:read",
@@ -30,6 +31,7 @@ const ACTIONS: readonly ProjectAccessAction[] = [
   "version:append",
   "release:publish",
   "release:rollback",
+  "release:read",
 ];
 const IDENTIFIER_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
