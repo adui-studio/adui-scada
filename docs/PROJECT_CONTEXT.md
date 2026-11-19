@@ -1584,6 +1584,7 @@ PR #89 在维护者 Windows 真实 PostgreSQL 36/36、单测 602/602、HTTP E2E 
 维护者 Windows 原始日志确认 PR #95：文档检查 **87 份**、Vite+ **352 格式文件/206 受检零告警**、Vitest **615/615**、HTTP E2E **55/55**、OIDC Studio 离线安全 **13/13**、React/Vue/Server 类型检查及构建通过，完整 `pnpm run ready` **退出码 0**。GitHub 合并前 HEAD `d5ceea382b92734b408b41d546b9ba93646e9914`，获得维护者本轮明确授权后 Squash 合并至 `main@0bc70202f8d1cced27edd72d49fb1de05c44c58f`。Windows 日志未含本地独立 HEAD，不能严格绑定到该 SHA。
 
 第十二小批从新 main 建立 `docs/v0.3-b35-release-decision-gates`，新增 [发布事务评审决策与验收矩阵](RELEASE_TRANSACTION_REVIEW.md)，把 Proposed ADR-0069 未决项拆分为 R-01～R-08 推荐但未批准的选项、I-01～I-06 不变量和 T-01～T-22 **未来**安全测试。同步需求/架构/SDD/代码索引与验收。此次**未新增** Prisma 迁移、权限、HTTP 写接口、Runtime 发布状态或工业设备操作；Windows `docs:check`、`vp check`、完整 `ready` 尚待实测。ADR-0069 继续 Proposed、FR-008 继续规划中。
+
 ## 2026-11-18 · 第三十五批第十三小批：ADR-0069 已获维护者批准
 
 PR #96 的发布事务评审矩阵已完成 Windows 质量验收并经维护者明确授权后合并。随后维护者明确同意 ADR-0069 进入 **Accepted**，并批准 R-01～R-08 推荐基线。
