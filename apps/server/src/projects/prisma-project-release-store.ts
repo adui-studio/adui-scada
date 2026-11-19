@@ -456,12 +456,7 @@ export class PrismaProjectReleaseStore {
 
       const releasedRevision = Number(state.releasedRevision);
       await lockProjectVersion(tx, principal, projectId, releasedRevision);
-      await lockCurrentReleaseEvent(
-        tx,
-        principal,
-        projectId,
-        state.lastReleaseEventId,
-      );
+      await lockCurrentReleaseEvent(tx, principal, projectId, state.lastReleaseEventId);
 
       const version = await tx.scadaProjectVersion.findUnique({
         where: {

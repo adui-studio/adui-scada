@@ -133,9 +133,7 @@ async function createHarness(options: HarnessOptions = {}) {
         }
         if (query.includes("FROM scada_project_release_events")) {
           steps.push("锁定当前发布事件");
-          return options.currentEvent
-            ? [{ event_id: options.currentEvent.eventId }]
-            : [];
+          return options.currentEvent ? [{ event_id: options.currentEvent.eventId }] : [];
         }
         throw new Error("测试遇到未登记的数据库锁查询");
       },
@@ -260,9 +258,9 @@ describe("正式发布事务仓储", () => {
     const harness = await createHarness({
       permissions: ["project:read", "version:read"],
     });
-    await expect(
-      harness.store.readCurrent(PRINCIPAL, SESSION_ID, PROJECT_ID),
-    ).rejects.toThrow(/工程资源不存在或无权访问/);
+    await expect(harness.store.readCurrent(PRINCIPAL, SESSION_ID, PROJECT_ID)).rejects.toThrow(
+      /工程资源不存在或无权访问/,
+    );
     expect(harness.tx.scadaProjectReleaseState.findUnique).not.toHaveBeenCalled();
     expect(harness.tx.scadaProjectVersion.findUnique).not.toHaveBeenCalled();
   });
@@ -348,9 +346,9 @@ describe("正式发布事务仓储", () => {
         createdAt: new Date(CREATED_AT),
       },
     });
-    await expect(
-      harness.store.readCurrent(PRINCIPAL, SESSION_ID, PROJECT_ID),
-    ).rejects.toThrow(/数据库当前正式发布事件与指针不一致/);
+    await expect(harness.store.readCurrent(PRINCIPAL, SESSION_ID, PROJECT_ID)).rejects.toThrow(
+      /数据库当前正式发布事件与指针不一致/,
+    );
   });
 
   it("不可变快照摘要与发布指针不一致时拒绝返回快照", async () => {
@@ -380,9 +378,9 @@ describe("正式发布事务仓储", () => {
         createdAt: new Date(CREATED_AT),
       },
     });
-    await expect(
-      harness.store.readCurrent(PRINCIPAL, SESSION_ID, PROJECT_ID),
-    ).rejects.toThrow(/数据库当前正式发布快照完整性校验失败/);
+    await expect(harness.store.readCurrent(PRINCIPAL, SESSION_ID, PROJECT_ID)).rejects.toThrow(
+      /数据库当前正式发布快照完整性校验失败/,
+    );
   });
 
   it("请求字段、幂等键或目标版本无效时不打开数据库事务", async () => {

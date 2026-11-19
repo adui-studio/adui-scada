@@ -557,7 +557,9 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
           where: { tenantId: otherTenantId },
         });
         await database!.client.scadaProjectAudit.deleteMany({ where: { tenantId: otherTenantId } });
-        await database!.client.scadaProjectVersion.deleteMany({ where: { tenantId: otherTenantId } });
+        await database!.client.scadaProjectVersion.deleteMany({
+          where: { tenantId: otherTenantId },
+        });
         await database!.client.scadaProjectGrant.deleteMany({ where: { tenantId: otherTenantId } });
         await database!.client.scadaProject.deleteMany({ where: { tenantId: otherTenantId } });
         await database!.client.scadaAuthSession.deleteMany({ where: { tenantId: otherTenantId } });
