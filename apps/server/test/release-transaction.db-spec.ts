@@ -80,10 +80,10 @@ function cookie(session: IssuedAuthSession): string {
   );
 }
 
-function publishBody(expectedReleaseGeneration = 0) {
+function publishBody(expectedHeadRevision = 1, expectedReleaseGeneration = 0) {
   return {
-    expectedHeadRevision: 1,
-    targetRevision: 1,
+    expectedHeadRevision,
+    targetRevision: expectedHeadRevision,
     expectedReleaseGeneration,
   };
 }
@@ -91,6 +91,7 @@ function publishBody(expectedReleaseGeneration = 0) {
 function postPublish(
   fixture: ReleaseFixture,
   idempotencyKey: string,
+  expectedHeadRevision = 1,
   expectedReleaseGeneration = 0,
 ) {
   return request(app!.getHttpServer())
@@ -100,7 +101,7 @@ function postPublish(
     .set("Sec-Fetch-Site", "same-origin")
     .set("X-SCADA-CSRF", fixture.session.csrfToken)
     .set("Idempotency-Key", idempotencyKey)
-    .send(publishBody(expectedReleaseGeneration));
+    .send(publishBody(expectedHeadRevision, expectedReleaseGeneration));
 }
 
 /** 每项测试使用随机租户、工程与真实会话，只清理本用例写入的数据。 */
@@ -201,7 +202,7 @@ afterAll(async () => {
 describe("隔离 PostgreSQL 正式发布事务", () => {
   it("成功发布在同一事务内写入事件和发布指针且不修改编辑 head", async () => {
     await withFixture(async (fixture) => {
-      const response = await postPublish(fixture, "release-db-success-0001");
+      const response = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e8");
       expect(response.status).toBe(201);
       expect(response.headers["cache-control"]).toBe("no-store");
       expect(response.body).toMatchObject({
@@ -246,8 +247,8 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
 
   it("同幂等键同语义重试复用原事件，不重复推进代次", async () => {
     await withFixture(async (fixture) => {
-      const first = await postPublish(fixture, "release-db-idempotent-0001");
-      const second = await postPublish(fixture, "release-db-idempotent-0001");
+      const first = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e9");
+      const second = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e9");
       expect(first.status).toBe(201);
       expect(second.status).toBe(201);
       expect(second.body).toEqual(first.body);
@@ -265,8 +266,13 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
 
   it("同幂等键不同语义返回 409 且不追加第二条事件", async () => {
     await withFixture(async (fixture) => {
-      const first = await postPublish(fixture, "release-db-conflict-0001");
-      const second = await postPublish(fixture, "release-db-conflict-0001", 1);
+      const first = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4ea");
+      const second = await postPublish(
+        fixture,
+        "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4ea",
+        1,
+        1,
+      );
       expect(first.status).toBe(201);
       expect(second.status).toBe(409);
       expect(
@@ -277,11 +283,69 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
     });
   });
 
+  it("不同幂等键重复发布同一修订时保守拒绝", async () => {
+    await withFixture(async (fixture) => {
+      const first = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f0");
+      const second = await postPublish(
+        fixture,
+        "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f1",
+        1,
+        1,
+      );
+      expect(first.status).toBe(201);
+      expect(second.status).toBe(409);
+      expect(
+        await database!.client.scadaProjectReleaseEvent.count({
+          where: { tenantId: fixture.tenantId, projectId: fixture.projectId },
+        }),
+      ).toBe(1);
+    });
+  });
+
+  it("新 head 发布后事件来源版本指向上一发布快照", async () => {
+    await withFixture(async (fixture) => {
+      const first = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f2");
+      expect(first.status).toBe(201);
+      await projectStore.append(
+        { tenantId: fixture.tenantId, subjectId },
+        fixture.projectId,
+        {
+          expectedRevision: 1,
+          document: createDocument(fixture.projectId),
+        },
+      );
+      const second = await postPublish(
+        fixture,
+        "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f3",
+        2,
+        1,
+      );
+      expect(second.status).toBe(201);
+      const events = await database!.client.scadaProjectReleaseEvent.findMany({
+        where: { tenantId: fixture.tenantId, projectId: fixture.projectId },
+        orderBy: { generation: "asc" },
+      });
+      expect(events).toHaveLength(2);
+      expect(events[1]).toMatchObject({
+        generation: 2n,
+        fromRevision: 1n,
+        fromContentHash: first.body.releasedContentHash,
+        toRevision: 2n,
+        toContentHash: second.body.releasedContentHash,
+      });
+      const state = await database!.client.scadaProjectReleaseState.findUniqueOrThrow({
+        where: { tenantId_projectId: { tenantId: fixture.tenantId, projectId: fixture.projectId } },
+      });
+      expect(state.releaseGeneration).toBe(2n);
+      expect(state.releasedRevision).toBe(2n);
+    });
+  });
+
   it("同一工程相同预期代次的并发发布最多一个成功", async () => {
     await withFixture(async (fixture) => {
       const responses = await Promise.all([
-        postPublish(fixture, "release-db-race-a-0001"),
-        postPublish(fixture, "release-db-race-b-0001"),
+        postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4eb"),
+        postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4ec"),
       ]);
       expect(responses.map((response) => response.status).sort((a, b) => a - b)).toEqual([
         201,
@@ -303,7 +367,7 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
   it("缺少独立发布权限时拒绝且不写入发布事件", async () => {
     await withFixture(
       async (fixture) => {
-        const response = await postPublish(fixture, "release-db-denied-0001");
+        const response = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4ed");
         expect(response.status).toBe(404);
         expect(
           await database!.client.scadaProjectReleaseEvent.count({
@@ -318,7 +382,7 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
   it("静态兼容性不通过时返回 422 且不改变发布状态", async () => {
     await withFixture(
       async (fixture) => {
-        const response = await postPublish(fixture, "release-db-preflight-0001");
+        const response = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4ee");
         expect(response.status).toBe(422);
         expect(response.body.issues).toHaveLength(1);
         const state = await database!.client.scadaProjectReleaseState.findUniqueOrThrow({
@@ -342,7 +406,7 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
         { tenantId: fixture.tenantId, subjectId },
         fixture.session.sessionId,
       )).toBe(true);
-      const response = await postPublish(fixture, "release-db-revoked-0001");
+      const response = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4ef");
       expect(response.status).toBe(401);
       expect(
         await database!.client.scadaProjectReleaseEvent.count({

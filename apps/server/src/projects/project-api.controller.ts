@@ -165,7 +165,7 @@ export class ProjectApiController {
   @ApiHeader({
     name: "Idempotency-Key",
     required: true,
-    description: "同一主体对同一工程的受控幂等标识，长度 1 至 128 位",
+    description: "由客户端安全随机生成的 UUID v4；不得复用会话令牌或其他凭据",
   })
   @ApiCreatedResponse({ description: "正式发布事件与发布指针已在同一事务中提交" })
   @ApiResponse({ status: 400, description: "正式发布请求或幂等标识无效" })

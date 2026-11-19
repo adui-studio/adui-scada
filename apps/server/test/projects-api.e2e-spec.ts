@@ -503,7 +503,7 @@ describe("工程 API HTTP 接口（端到端）", () => {
     const response = await request(app.getHttpServer())
       .post("/api/v1/projects/" + PROJECT_ID + "/releases")
       .set("Authorization", "Bearer " + SESSION_TOKEN)
-      .set("Idempotency-Key", "release-request-0001")
+      .set("Idempotency-Key", "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e8")
       .send(body)
       .expect(201);
 
@@ -515,7 +515,7 @@ describe("工程 API HTTP 接口（端到端）", () => {
       SESSION_ID,
       PROJECT_ID,
       body,
-      "release-request-0001",
+      "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e8",
     );
   });
 
@@ -524,7 +524,7 @@ describe("工程 API HTTP 接口（端到端）", () => {
     const response = await request(app.getHttpServer())
       .post("/api/v1/projects/" + PROJECT_ID + "/releases")
       .set("Authorization", "Bearer " + SESSION_TOKEN)
-      .set("Idempotency-Key", "release-request-0002")
+      .set("Idempotency-Key", "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e9")
       .send({
         expectedHeadRevision: 1,
         targetRevision: 1,
@@ -550,7 +550,7 @@ describe("工程 API HTTP 接口（端到端）", () => {
       .set("Cookie", cookie)
       .set("Origin", ORIGIN)
       .set("Sec-Fetch-Site", "same-origin")
-      .set("Idempotency-Key", "release-request-0003")
+      .set("Idempotency-Key", "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4ea")
       .send({
         expectedHeadRevision: 1,
         targetRevision: 1,
@@ -568,7 +568,7 @@ describe("工程 API HTTP 接口（端到端）", () => {
     const response = await request(app.getHttpServer())
       .post("/api/v1/projects/" + PROJECT_ID + "/releases")
       .set("Authorization", "Bearer " + SESSION_TOKEN)
-      .set("Idempotency-Key", "release-request-0004")
+      .set("Idempotency-Key", "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4eb")
       .send({
         expectedHeadRevision: 1,
         targetRevision: 1,
