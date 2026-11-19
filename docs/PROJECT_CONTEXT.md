@@ -1768,3 +1768,9 @@ E-063、E-064、E-065 的 Prisma Schema 解析、一对一关系唯一性和多�
 本次 Windows 终端日志未包含 `git rev-parse HEAD`。GitHub 分支在测试记录时已存在 `d217dde085a5654d8dfe4cc01ef3756ab338466e` 文档格式提交（仅三份文档各移除一行空白，不涉及业务代码或迁移），但不伪称终端输出提供了该 SHA。
 
 原开发库 `adui_scada` 的历史失败迁移继续冻结；本轮迁移与测试只针对隔离 `adui_scada_test`。恢复开发库仍须可恢复备份及维护者单独明确授权。正式发布 API/回滚 API、Runtime 发布指针切换、发布事务 CAS/幂等业务逻辑、双人审批和工业设备写入仍未实现或开放。PR #99 保持 Open / Draft，Assignee 为 `@adui-dev`，尚未获得合并授权。
+
+## 2026-11-19 · 第三十五批 C1 发布事务 Mock 警告修复候选（E-066）
+
+维护者 Windows 首次 `vp check --fix` 在 `apps/server/src/projects/prisma-project-release-store.spec.ts` 报告 7 处缺少 Mock 类型参数及 1 处 unbound-method 警告。候选提交 `6bc35e269b4f7c6099fa1c8da9933263cad3f0a5` 已为所有 Mock 补充显式签名，并把安全门禁 spy 作为独立 `gateAssertReady` 引用。
+
+GitHub 源码回读静态核对确认未泛型化的 `vi.fn()` 数量为 0，unbound-method 的旧断言已消失。**Windows 修复后 vp check、单测、docs:check 和完整 ready 尚待执行**，不得将静态检查视为通过。当前 C1 仍为候选，不合并、不启用生产发布；默认工业安全门禁保持 fail-closed。

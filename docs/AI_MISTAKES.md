@@ -602,6 +602,16 @@
 - **验证边界**：修复后维护者 Windows 实测 `pnpm run test:unit` **51/51 文件、620/620 项通过**，`vp check` 355 个文件格式正确、207 个受检文件零警告/Lint/类型错误，`docs:check` 89 份通过，完整 `pnpm run ready` 退出码 **0**；随后隔离 PostgreSQL 新迁移首次/二次部署、status 均退出码 0，`test:db` **5/5 文件、42/42 项通过**。因此该静态断言误报已修复并通过 Windows 与真实 PostgreSQL 验收。数据库测试日志中的元数据/快照不一致 TypeError 属于主动篡改摘要的预期负向用例，最终 42 项全部通过。用户提供的最新日志未附本地 `git rev-parse HEAD`；当前 GitHub 分支在本轮记录时为 `d217dde085a5654d8dfe4cc01ef3756ab338466e`，测试结果不作超出日志的 SHA 绑定声明。
 - **证据**：维护者 2026-11-19 Windows 复验日志、PR #99、`apps/server/src/database/prisma-schema-comments.spec.ts`、`apps/server/prisma/migrations/20261119000000_release_state_event_integrity/migration.sql`、`docs/VALIDATION.md`。
 
+
+### E-066 · 正式发布事务单测 Mock 缺少显式类型并触发 unbound-method（第三十五批 C1）
+
+- **现象**：维护者 2026-11-19 Windows 执行 `vp check --fix`，`apps/server/src/projects/prisma-project-release-store.spec.ts` 报告 8 条警告、0 个错误：7 处 `vitest(require-mock-type-parameters)`，分别位于发布状态查询/更新、幂等事件查询/创建、不可变版本读取、事务回调和安全门禁 Mock；另有 1 处 `typescript(unbound-method)`，测试直接把 `harness.gate.assertReady` 作为断言参数。格式化完成不代表零警告通过。
+- **根因**：新增测试夹具没有沿用仓库 E-005 的显式 `vi.fn<真实函数签名>()` 约束；安全门禁夹具把生产类方法与测试 Mock 作为联合对象暴露，随后解引用类方法传入 `expect`，触发 unbound-method。
+- **最小修复**：为 7 个 Mock 补充明确函数签名及返回类型；把测试安全门禁的 Mock 独立暴露为 `gateAssertReady`，断言只引用该 Mock，不再解引用类实例方法。保留生产服务、事务顺序、测试场景和全部既有断言。
+- **防复发**：新增 Prisma/Vitest 事务测试时，Mock 的输入参数和返回值应按真实调用契约显式类型化；需要断言方法调用时，保留独立的箭头 Mock 引用，不把类方法从对象上解构或裸传给 `expect`。提交前执行未带 `--fix` 的 `vp check`，要求零警告、零错误。
+- **验证边界**：修复已提交到候选分支提交 `6bc35e269b4f7c6099fa1c8da9933263cad3f0a5`。GitHub 回读静态核对确认目标文件没有未泛型化的 `vi.fn()`，且不再直接断言 `harness.gate.assertReady`；**Windows 修复后 `vp check`、发布仓储单测、全量 `test:unit` 和完整 `ready` 尚待维护者执行**，不能将静态核对当作 Lint 或运行测试通过。
+- **证据**：维护者 2026-11-19 Windows `vp check --fix` 原始日志、候选提交 `6bc35e269b4f7c6099fa1c8da9933263cad3f0a5`、`apps/server/src/projects/prisma-project-release-store.spec.ts`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

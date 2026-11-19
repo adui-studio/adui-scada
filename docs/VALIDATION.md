@@ -2196,3 +2196,9 @@ PR #99 已将 Prisma ORM 一对一导航关系改为使用已有全局唯一 `la
 **提交绑定说明**：维护者日志没有包含 `git rev-parse HEAD`。本次执行时 GitHub 远端分支已存在仅调整文档格式的提交 `d217dde085a5654d8dfe4cc01ef3756ab338466e`（父提交 `f725bbb21df5fc3861782d3ca206abdd2916ef4f`）；该提交没有修改业务代码、Prisma Schema 或迁移 SQL。测试结果按维护者提供的真实日志记录，不虚构本地 SHA。
 
 原开发库 `adui_scada` 的历史失败迁移继续冻结；本轮所有迁移和真实数据库测试均限定在本机隔离 `adui_scada_test`，没有获得或执行原开发库恢复授权。
+
+## 2026-11-19 · 第三十五批 C1 Mock 警告修复候选（E-066，待 Windows 复验）
+
+维护者 Windows 的首次 `vp check --fix` 在 `prisma-project-release-store.spec.ts` 报告 8 条警告、0 个错误。候选提交 `6bc35e269b4f7c6099fa1c8da9933263cad3f0a5` 已为 7 个 Mock 增加显式函数签名，并将安全门禁调用 Mock 独立为 `gateAssertReady`，避免 unbound-method。
+
+GitHub 回读静态核对确认该文件不再包含无泛型参数的 `vi.fn()`，也不再直接引用 `harness.gate.assertReady`。这只是源码静态核对，**不是 Windows Lint 或测试通过记录**。修复后的 `vp check`、发布仓储单测、全量 `pnpm run test:unit`、`pnpm run docs:check` 与完整 `pnpm run ready` 均待维护者实测。未提供的命令退出码不得推断。
