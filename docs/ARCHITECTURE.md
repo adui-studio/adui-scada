@@ -407,3 +407,15 @@ Docker 只维护 `deploy/docker/compose.yaml` 的 `adui-scada` 项目。七个�
 ## 2026-11-18 · 发布事务架构决策已批准与实施准入
 
 [发布事务评审决策与验收矩阵](RELEASE_TRANSACTION_REVIEW.md) 已记录 R-01～R-08 已批准基线、I-01～I-06 不变量和 T-01～T-22 未来负向测试义务。该矩阵是**已批准的架构决策与后续验收资料**，不是可用服务；当前 main 仍没有正式发布/回滚写接口，Runtime 不通过新指针加载生产快照，不得将编辑 head 或静态预检结果当作运行发布版本。
+
+## 2026-11-19 · 第三十五批 C1 正式发布事务服务实现候选
+
+PR #100 候选分支在现有可信 OIDC/BFF 工程 API 中增加正式发布命令：
+
+- `ProjectApiController` 提供 `POST :projectId/releases`，复用会话、CSRF、工程 Guard 和统一异常过滤；权限固定为独立 `release:publish`。
+- `PrismaProjectReleaseStore` 负责事务内会话/身份/ACL 复核、工程/发布状态/不可变版本行锁、双 CAS、UUID v4 幂等、快照完整性、静态兼容性、发布事件和指针原子提交。
+- `ProjectReleaseSafetyGate` 生产默认 Provider 始终 fail-closed 并返回 503；不得通过环境变量、请求字段或普通工程权限绕过。
+- 仅 PostgreSQL 测试模块注入测试门禁以验证数据库事务，不改变生产依赖注入。
+- 不新增 Prisma 迁移；发布状态/事件模型继续使用 PR #99 已合并的 B 阶段 Schema。
+
+当前 Windows 已通过 13/13 发布仓储定向测试、633/633 全量单测、359 文件/211 受检零警告的 `vp check` 和 89 份 `docs:check`。真实 PostgreSQL `test:db`、完整 `ready` 尚待执行；Runtime 发布态读取、回滚、双人审批、生产启用及工业设备写入仍未实现或开放。
