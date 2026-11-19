@@ -1137,3 +1137,13 @@ PR #99 的 B 阶段 Prisma Schema 建立 ScadaProjectReleaseState 与 ScadaProje
 - 复合外键的引用目标唯一索引、来源/目标查询索引均由新迁移创建并添加中文数据库注释。
 
 这些约束仅建立持久化完整性，不代表正式发布/回滚 API、CAS/行锁事务、幂等、Runtime 发布指针或双人审批已经实现；FR-008 仍按 ADR-0069 的 B～F 阶段独立推进。新迁移必须先在隔离 adui_scada_test 完成真实首次/二次部署与负向 PostgreSQL 测试，原开发库失败迁移保持冻结。
+
+## 2026-11-19 · 第三十五批 C1：正式发布事务实现与单元验收状态
+
+PR #100 候选分支新增服务端正式发布命令 `POST /api/v1/projects/:projectId/releases`。HTTP 请求受可信 OIDC/BFF 会话、Cookie CSRF、`ScadaProjectGuard` 和独立 `release:publish` 工程权限保护；请求体仅允许 `expectedHeadRevision`、`targetRevision`、`expectedReleaseGeneration` 三个安全整数，目标修订必须等于预期 head；`Idempotency-Key` 为小写 UUID v4。成功与异常响应均禁止缓存。
+
+`PrismaProjectReleaseStore.publish` 在单一 Prisma PostgreSQL 事务内依次锁定工程、有效会话/身份、ACL、发布状态和不可变版本；锁内重新检查主体 active、会话未撤销/过期、`release:publish`、head/releaseGeneration CAS、幂等语义、快照 SHA-256 与共享 Core 静态预检。仅全部门禁通过后，才追加发布事件并 CAS 更新发布状态；两者同事务提交，任何失败整体回滚。
+
+当前生产 `ProjectReleaseSafetyGate` 固定抛出门禁未就绪异常并返回 503；Runtime、Tag、数据源、资源、生产审批和工业安全门禁未完成前，不允许真实应用请求成功发布。隔离 PostgreSQL 测试模块可注入测试门禁，仅验证事务实现，不改变生产 Provider。
+
+维护者 Windows 已通过发布仓储定向测试 13/13、全量单测 52/52 文件/633/633 项、`vp check` 359 文件/211 受检零警告错误、`docs:check` 89 份。**真实 PostgreSQL `test:db` 与完整 `ready` 尚待执行**；C1 仍为 Draft 候选，不能将当前单元测试通过等同于真实数据库并发/故障注入或生产发布能力验收。
