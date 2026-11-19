@@ -1156,4 +1156,16 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。服�
 
 维护者 Windows 实测隔离 PostgreSQL 6/6 文件、52/52 用例，单测 633/633，HTTP E2E 59/59，`vp check`、`docs:check` 与完整 `ready` 均通过。此结果不代表 ADR-0069 T-01～T-22 全部完成。
 
-D 阶段 Runtime 读取权限策略已获维护者批准：新增独立工程 ACL `release:read`，默认拒绝，不从 `project:read`、`version:read` 或其他权限继承。当前代码尚未实现该 ACL 或发布快照读取路由；D 阶段负责实现并验收，不能在实现前将权限决策描述为已有能力。
+D 阶段 Runtime 读取权限策略已获维护者批准：新增独立工程 ACL `release:read`，默认拒绝，不从 `project:read`、`version:read` 或其他权限继承。D1 候选已在 `ProjectAccessAction` 中增加该动作，并提供 `GET /api/v1/projects/:projectId/releases/current`；候选仍待隔离 PostgreSQL 与 Windows 验收，不能描述为已合并或生产可用。
+
+## 2026-11-19 · 第三十五批 D1 服务端只读发布快照 API 候选
+
+服务端只读接口 `GET /api/v1/projects/:projectId/releases/current` 受可信 OIDC/BFF 会话、`ScadaProjectGuard` 和独立 `release:read` ACL 保护，成功与错误响应均 `Cache-Control: no-store`。接口不读取工程编辑 head、不读取 IndexedDB 草稿，也不回退到 Demo 数据。
+
+响应契约：
+
+- 未发布：`{ status: "UNRELEASED", projectId, releaseGeneration: 0 }`，不返回 head、快照或版本内容。
+- 已发布：`{ status: "RELEASED", projectId, releasedRevision, releasedContentHash, releaseGeneration, eventId, lastAction, releasedAt, snapshot }`。
+- 已发布快照必须通过共享 Core `readProjectSnapshot` 的摘要与 Schema 校验；服务端再核对版本行元数据、发布状态和最后事件的租户/工程/代次/目标修订/摘要。异常不返回快照正文。
+
+仓储读取事务按工程身份、会话/主体、ACL、发布状态、不可变版本、最后发布事件顺序获取共享锁。工程锁 SQL 只读取 `project_id`，不读取 `head_revision`；状态为未发布时不查询版本快照。该实现只提供发布快照读取基础设施，不负责 SSE、实时 Tag 质量、运行时故障恢复或 Vue/React UI。
