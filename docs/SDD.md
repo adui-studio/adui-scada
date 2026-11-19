@@ -1114,12 +1114,12 @@ React `ServerReleasePreflight.tsx`、Vue `ServerReleasePreflight.vue` 的异步 
 
 既有 `scripts/test-oidc-studio-release-preflight.mjs` 的预检 GET 安全门禁增加 `holdStudioPreflight401InPage` / `releaseStudioPreflight401InPage`，只允许已 arm 的当前工程修订号、401 且单次挂起状态，禁止挂起时再次设置目标；释放的是已合成的本地拒绝，不向真实 BFF 发出写入。真实 React/Vue Studio 自动化在预检响应未返回期间通过正式按钮新增未保存图元，断言释放 401 后原会话 CAS 已失效、报告未显示且 SVG、JSON、草稿、自动保存未因预检变化。新增 1 项 Node 离线安全测试，保留原 12 项及真实 409、404 回归。测试和浏览器均不得用模拟成功或修改授权代替真实 Keycloak 登录。
 
-## 2026-11-18 · 第三十五批第十一小批：正式发布指针/回滚事务方案待评审
+## 2026-11-18 · 第三十五批第十一小批：正式发布指针/回滚事务方案（ADR-0069 Accepted）
 
-[ADR-0069](adr/0069-release-pointer-atomic-publication-design.md)（**Proposed**）定义今后写入功能的设计边界，而**不是现有 NestJS/Prisma 的可调用接口**。核心区分为：`headRevision` 仅代表编辑版本水位；独立 `releasedRevision/releasedContentHash` 只表示当前运行发布版本；`releaseGeneration` 为严格单调的发布/回滚 CAS 代次，防止发布→回滚→再发布相同修订号时的 ABA 问题。事务写入候选须在锁内复核可信主体、独立 `release:publish`/`release:rollback` ACL、期望版本及代次，重新读取并校验不可变 ProjectSnapshot 和 Core 兼容性，并在同一事务中追加发布事件与切换指针。回滚目标必须是曾实际发布过的快照，不能直接指向任意已保存工程版本或草稿。
+[ADR-0069](adr/0069-release-pointer-atomic-publication-design.md)（**Accepted**）已获维护者批准，定义后续正式发布/回滚写入功能的架构边界，而**不是现有 NestJS/Prisma 的可调用接口**。核心区分为：`headRevision` 仅代表编辑版本水位；独立 `releasedRevision/releasedContentHash` 只表示当前运行发布版本；`releaseGeneration` 为严格单调的发布/回滚 CAS 代次，防止发布→回滚→再发布相同修订号时的 ABA 问题。批准的事务方向要求锁内复核可信主体、独立 `release:publish`/`release:rollback` ACL、期望版本及代次，重新读取并校验不可变 ProjectSnapshot 和 Core 兼容性，并在同一事务中追加发布事件与切换指针。回滚目标必须是曾实际发布过的快照，不能直接指向任意已保存工程版本或草稿。
 
-当前真实代码只有 `project:read/version:read/version:append` 三种 ACL、不可变工程历史、版本追加审计和**只读** `release-preflight` GET，没有发布表、指针、事务、角色、路由或 Runtime 发布态加载。是否采用本 ADR 的候选列名、API 路径、幂等与审计策略仍需维护者审核；新增正式写入之前必须先完成迁移中文注释、隔离数据库并发/故障回滚、双框架运行时只读安全等专项。任何预检 `passed=true` 均不能代替发布事务内重新校验。
+当前 main 真实代码仍只有 `project:read/version:read/version:append` 三种 ACL、不可变工程历史、版本追加审计和**只读** `release-preflight` GET，没有发布表、正式发布事务、发布/回滚路由或 Runtime 发布态加载。ADR-0069 与 R-01～R-08 的架构基线已批准；具体 Prisma、HTTP、Runtime 和工业安全实现仍须独立 PR 与对应专项验收。任何预检 `passed=true` 均不能代替发布事务内重新校验。
 
 ## 2026-11-18 · 第三十五批第十二小批：发布写事务准入评审
 
-[正式发布事务评审决策与验收矩阵](RELEASE_TRANSACTION_REVIEW.md) 仅提供 ADR-0069 **Proposed** 状态下的 R-01～R-08 待决建议、编辑/发布指针独立不变量 I-01～I-06、T-01～T-22 未来故障注入验收。包含同工程并发 CAS、ABA、撤权竞争、幂等重试、跨租户不可枚举、审计与指针单事务、Runtime 只认已提交冻结快照等测试义务。**矩阵中的拟定 ACL、路由、模型和 HTTP 错误不代表当前 NestJS/Prisma 已支持**；只有获得独立架构与工业安全审查、实施迁移并经真实数据库验证后才允许写入实现。
+[正式发布事务评审决策与验收矩阵](RELEASE_TRANSACTION_REVIEW.md) 记录 ADR-0069 **Accepted** 状态下已批准的 R-01～R-08 基线、编辑/发布指针独立不变量 I-01～I-06，以及 T-01～T-22 未来故障注入验收义务。测试涵盖同工程并发 CAS、ABA、撤权竞争、幂等重试、跨租户不可枚举、审计与指针单事务、Runtime 只认已提交冻结快照等。**矩阵中的 ACL、路由、模型和 HTTP 契约仍不代表当前 NestJS/Prisma 已全部支持**；各实现阶段仍须完成迁移中文注释、隔离数据库并发/故障回滚、双框架运行时只读安全等专项验收。
