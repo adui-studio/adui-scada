@@ -556,6 +556,16 @@
 - **验证边界**：维护者已实测连接目标是本机 `adui_scada_test`，数据库存在，5 条迁移已应用、1 条待执行，状态命令退出码 1。PowerShell `finally` 已恢复原环境变量；本次没有执行迁移写入。首次/二次部署、部署后 status 与 `test:db` 仍待执行。
 - **证据**：维护者 2026-11-19 Windows `pnpm run db:migrate:status` 原始输出、PR #99、`apps/server/package.json` 的 `db:migrate:status` 脚本、`docs/HARNESS.md`。
 
+### E-061 · 新增发布状态外键后数据库测试夹具未按依赖顺序清理（第三十五批 B 阶段）
+
+- **现象**：维护者 Windows 在隔离库 `adui_scada_test` 完成正式发布迁移首次部署、二次部署和 `migrate status`，均退出码 0；随后 `pnpm run test:db` 为 4 个文件通过、1 个文件失败，30 项通过、11 项失败。11 项全部集中在 `projects-cas-cookie-http.db-spec.ts` 的 `withFixture` finally 清理阶段，删除 `scada_projects` 时触发 `scada_project_release_state_project_fkey`。
+- **根因**：`PrismaProjectVersionStore.create` 已为每个新工程创建 `ScadaProjectReleaseState`，该状态通过 `ON DELETE RESTRICT` 外键引用工程。旧双 Cookie HTTP 测试夹具仍按旧顺序删除审计、版本、授权后直接删除工程，没有先清理发布状态。类似清理逻辑也存在于工程版本 DB 测试；工程 API DB 测试虽已删除发布表记录，但原顺序先删事件再删状态，与状态对最后事件的外键方向不一致。
+- **最小修复**：在 `projects-cas-cookie-http.db-spec.ts` 和 `prisma-project-version.db-spec.ts` 的租户清理中，先删除 `ScadaProjectReleaseState`，再删除 `ScadaProjectReleaseEvent`，然后按审计、版本、授权、工程顺序清理；在 `project-api.db-spec.ts` 将状态/事件删除顺序调整为状态在前、事件在后。只修改测试夹具，不删除或放宽任何生产外键，不修改迁移和业务数据。
+- **错误日志辨析**：日志中 `数据库工程版本元数据与快照不一致` 来自最后一个用例主动篡改随机租户版本摘要；该用例明确期待 HTTP 500 且检查响应不泄漏内部错误。它不是这 11 项失败的共同根因；实际失败栈均指向 finally 中删除工程时的 RESTRICT 外键。
+- **防复发**：新增带 RESTRICT 外键的业务表后，必须检索全部真实 PostgreSQL 测试夹具的 teardown/afterAll；按引用方向先删引用方，再删被引用方。发布状态引用最后事件，因此先删状态；发布事件引用历史版本，因此再删事件，之后才能删版本和工程。不得通过 CASCADE、删除外键或放宽 RESTRICT 规避测试清理问题。
+- **验证边界**：维护者已实测隔离库首次迁移、二次迁移及部署后 status 均退出码 0；`test:db` 结果为 4/5 文件、30/41 项通过。三处清理代码已更新到 PR #99；**修复后的 Windows `test:db`、完整 `ready` 尚未执行**。本轮没有修改数据库、迁移 SQL 或生产外键。
+- **证据**：维护者 2026-11-19 Windows `test:db` 日志、PR #99、`apps/server/test/projects-cas-cookie-http.db-spec.ts`、`apps/server/test/prisma-project-version.db-spec.ts`、`apps/server/test/project-api.db-spec.ts`、`apps/server/prisma/schema.prisma`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
