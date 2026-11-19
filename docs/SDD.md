@@ -1156,4 +1156,4 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。服�
 
 维护者 Windows 实测隔离 PostgreSQL 6/6 文件、52/52 用例，单测 633/633，HTTP E2E 59/59，`vp check`、`docs:check` 与完整 `ready` 均通过。此结果不代表 ADR-0069 T-01～T-22 全部完成。
 
-D 阶段开始前必须确定 Runtime 读取权限及其与编辑权限的隔离策略。当前代码没有 `release:read` 或 `runtime:read`；不得直接复用 `project:read` / `version:read` 作为工业运行权限。
+D 阶段 Runtime 读取权限策略已获维护者批准：新增独立工程 ACL `release:read`，默认拒绝，不从 `project:read`、`version:read` 或其他权限继承。当前代码尚未实现该 ACL 或发布快照读取路由；D 阶段负责实现并验收，不能在实现前将权限决策描述为已有能力。
