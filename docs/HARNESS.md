@@ -3409,21 +3409,22 @@ PR #99 在原发布 Schema 迁移已应用后新增 20261119000000_release_state
 
 本轮迁移和测试只允许访问本机 adui_scada_test。原开发库 adui_scada 的失败迁移仍处于冻结状态；不得对其执行 migrate resolve、migrate deploy、DROP、DELETE、reset 或手工修改 _prisma_migrations。必须等待可恢复备份和维护者单独明确授权。
 
-## 2026-11-19 · PR #99 E-065 修复后工程质量链通过，第二条迁移待真实 PostgreSQL 验收
+## 2026-11-19 · PR #99 E-065 修复后工程质量链与第二条迁移验收通过
 
-维护者 Windows 最新日志：`pnpm run test:unit` 51/51 文件、620/620 项通过；`vp check` 355 文件格式正确、207 受检文件零警告/Lint/类型错误；`docs:check` 89 个 Markdown 通过；完整 `pnpm run ready` 最终退出码 0，包含 55/55 HTTP E2E 与 React/Vue/NestJS 构建。Prisma Client 7.10.1 在单测和完整质量链中生成成功。该终端记录未包含 `git rev-parse HEAD`，不能把结果严格绑定到本节更新前的远端 SHA；本节文档变更后需重新运行 `docs:check`。
+维护者 Windows 最新日志：`pnpm run test:unit` 51/51 文件、620/620 项通过；`vp check` 355 文件格式正确、207 受检文件零警告/Lint/类型错误；`docs:check` 89 个 Markdown 通过；完整 `pnpm run ready` 最终退出码 0，包含 55/55 HTTP E2E 与 React/Vue/NestJS 构建。Prisma Client 7.10.1 在单测和完整质量链中生成成功。随后隔离 PostgreSQL 第二条迁移首次/二次部署、status 均退出码 0，`test:db` 5/5 文件、42/42 项通过。数据库测试日志中“数据库工程版本元数据与快照不一致”的 TypeError 来自主动篡改随机测试租户摘要的预期负向 HTTP 500，用例通过。维护者终端记录未包含 `git rev-parse HEAD`，不能虚构本地 SHA；远端分支在本轮记录时为 `d217dde085a5654d8dfe4cc01ef3756ab338466e`，该提交只调整三份文档格式，不修改业务代码或迁移。
 
-**不要把完整 `ready=0` 当成 PostgreSQL 迁移通过**：根 `ready` 脚本没有执行 `db:migrate:deploy`、`db:migrate:status` 或 `test:db`。此前 41/41 的真实数据库测试对应首条发布迁移，不能代替本轮新增第二条迁移的 42/42 验收。
+**质量链与数据库专项是两类独立验收**：根 `ready` 脚本没有执行 `db:migrate:deploy`、`db:migrate:status` 或 `test:db`，因此本轮分别执行。此前 41/41 对应首条发布迁移；本轮新增第二条迁移后，最终真实数据库结果为 42/42。
 
-当前隔离库此前已应用首条 `20261118000000_release_state_and_events`。本次数据库专项应沿用本节上方 PowerShell `try/finally` 模板，并按下列边界执行：
+当前隔离库此前已应用首条 `20261118000000_release_state_and_events`。维护者随后已按本节上方 PowerShell `try/finally` 模板完成第二条迁移验收，实际结果记录如下：
 
-1. 确认根 `.env` 开发 URL 的主机为 `127.0.0.1`、端口为 `15432`、数据库为 `adui_scada`；只在当前 PowerShell 进程把数据库名转换为 `adui_scada_test`，不改写根 `.env`，不输出 URL/口令。
-2. 同时临时设置 `SCADA_DATABASE_URL` 与 `SCADA_TEST_DATABASE_URL` 为该测试库 URL，并验证 Host、协议、路径符合本节保护代码。
-3. `pnpm run db:migrate:deploy`：预期只应用 `20261119000000_release_state_event_integrity`；非零退出码立即停止。
-4. 再次 `pnpm run db:migrate:deploy`：应无待执行迁移。
-5. `pnpm run db:migrate:status`：部署后应 up to date 且退出码 0。
-6. `pnpm run test:db`：目标 5/5 文件、42/42 项通过，重点检查跨工程事件引用、错误代次、错误版本摘要、错误事件目标摘要均被真实 PostgreSQL 外键拒绝，合法关联可成功。
-7. 无论成功或失败均执行 `finally`，恢复两个原环境变量。
+1. 根 `.env` 保持开发 URL，不修改文件；当前 PowerShell 进程中的 `SCADA_DATABASE_URL` 与 `SCADA_TEST_DATABASE_URL` 临时指向本机 `127.0.0.1:15432/adui_scada_test`。
+2. 第二条 `pnpm run db:migrate:deploy` 首次部署成功应用 `20261119000000_release_state_event_integrity`，退出码 0。
+3. 二次 `pnpm run db:migrate:deploy` 输出 `No pending migrations to apply`，退出码 0。
+4. `pnpm run db:migrate:status` 输出 `Database schema is up to date!`，退出码 0。
+5. `pnpm run test:db`：**5/5 文件、42/42 项通过**，退出码 0；`release-schema.db-spec.ts` 6/6，跨工程事件引用、错误代次、错误状态摘要、错误事件目标摘要均被拒绝，正确状态/事件关联成功。
+6. PowerShell `finally` 恢复两个原环境变量。
+
+上述是维护者本轮实际结果，不再是待执行步骤。若未来重新创建隔离库或重新验证迁移，仍必须按前述保护模板执行；出现 failed migration / P3009 时立即停止。
 
 迁移前若只看到 pending migration，按 E-060 检查完整输出后可部署；若出现 failed migration / P3009、连接目标不是本机隔离库或任何环境校验不匹配，立即停止。**禁止**把测试目标改成开发库 `adui_scada`、OIDC Lab 库、远程数据库或生产数据库。
 

@@ -2074,7 +2074,7 @@ PR #97 的 Windows `docs:check` 为 89 份 Markdown、退出码 0；该终端记
 
 PR #99 继续保持 Open / Draft，Assignee 为 `@adui-dev`。原开发库 `adui_scada` 的失败迁移仍冻结；恢复操作必须等待可恢复备份和维护者单独明确授权。
 
-## 2026-11-19 · PR #99 发布状态复合外键完整性修复（E-062，待 Windows 验收）
+## 2026-11-19 · PR #99 发布状态复合外键完整性修复（E-062，隔离 PostgreSQL 验收通过）
 
 静态评审发现原发布 Schema 中，状态表的 last_release_event_id 只引用全局事件 UUID；没有同时约束租户、工程、发布代次、目标修订和 SHA-256。状态及发布事件对历史版本的外键也只绑定修订号，不能由数据库保证摘要与不可变快照一致。该问题在发布 API 尚未实现时发现，不是已发生的跨工程写入事故。
 
@@ -2088,21 +2088,18 @@ PR #99 已新增不可变增量迁移 20261119000000_release_state_event_integri
 
 新增 prisma-schema-comments.spec.ts 静态回归和 release-schema.db-spec.ts 真实 PostgreSQL 负向用例，覆盖跨工程事件引用、错误代次、错误状态摘要、错误事件目标摘要拒绝及正确关联成功。测试清理遵循发布状态、发布事件、历史版本、工程的外键依赖顺序。
 
-**待维护者 Windows 实测**：
+**维护者 Windows 实测结果**：
 
-| 验收项                               |                               目标 |
-| ------------------------------------ | ---------------------------------: |
-| db:validate / db:generate            |                           退出码 0 |
-| 新增迁移首次部署 / 二次部署 / status |                         均退出码 0 |
-| vp check                             |                     零警告、零错误 |
-| test:unit                            |                            620/620 |
-| 隔离 PostgreSQL test:db              |                              42/42 |
-| docs:check                           | 89 份 Markdown，实际计数以命令为准 |
-| 完整 ready                           |                           退出码 0 |
+| 验收项 | 实际结果 | 退出码 |
+|---|---:|---:|
+| 第二条迁移首次部署 | 成功应用 `20261119000000_release_state_event_integrity` | 0 |
+| 第二条迁移二次部署 | 无待执行迁移 | 0 |
+| `db:migrate:status` | Database schema is up to date | 0 |
+| `test:db` | 5/5 文件、42/42 项 | 0 |
 
-本轮没有运行 Windows、Prisma 或 PostgreSQL 命令；上述均为验收目标，不是通过结果。原开发库 adui_scada 仍不得执行任何迁移恢复或写操作，直到完成可恢复备份并获得维护者单独明确授权。
+发布 Schema DB 测试 6/6，真实 PostgreSQL 已拒绝跨工程事件引用、错误代次、错误状态摘要和错误事件目标摘要，并接受合法关联。原开发库 `adui_scada` 未执行迁移恢复或其他写操作。
 
-## 2026-11-19 · PR #99 Prisma Schema 关联属性 P1012 修复（E-063，待 Windows 复验）
+## 2026-11-19 · PR #99 Prisma Schema 关联属性 P1012 修复（E-063，已修复并通过后续验收）
 
 维护者 Windows 在最新候选执行 `pnpm run db:validate`，Prisma 7.10.1 对 `releasedVersion`、`lastReleaseEvent`、`fromVersion`、`toVersion` 四个字段级关系报 P1012（28 条解析错误）。原因是 `@relation(...)` 参数被拆成多行；Prisma Schema 字段级属性需要保持单行。`db:generate` 同样失败；`test:unit` 在 Vitest 启动前调用 `db:generate`，因此没有执行任何 Vitest 用例。
 
@@ -2130,7 +2127,7 @@ PR #99 已将四个 `@relation(...)` 属性恢复为单行，并在 `prisma-sche
 
 数据库迁移专项仍须使用 `docs/HARNESS.md` 中的 PowerShell `try/finally` 环境变量保护流程，仅连接本机隔离 `adui_scada_test`。原开发库 `adui_scada` 的失败迁移保持冻结，不执行 resolve、deploy、reset、DROP、DELETE 或手工修改 `_prisma_migrations`。
 
-## 2026-11-19 · PR #99 Prisma 一对一发布事件关系 P1012 修复（E-064，待 Windows 复验）
+## 2026-11-19 · PR #99 Prisma 一对一发布事件关系 P1012 修复（E-064，已修复并通过后续验收）
 
 维护者在 HEAD `e02e48e4ae46fb0e02ab6ee3ab3b21872d58134f` 的 Windows 检查中，E-063 的字段多行解析错误已消失；Prisma 7.10.1 继续报告 `lastReleaseEvent` 一对一关系 defining side 的六个字段不具备唯一约束。`db:generate` 同样失败，`test:unit` 在 Vitest 启动前因 Client 生成失败而中止。`vp check` 355 个文件格式正确、207 个受检文件零警告/错误；`docs:check` 89 份通过。
 
@@ -2154,7 +2151,7 @@ PR #99 已将 Prisma ORM 一对一导航关系改为使用已有全局唯一 `la
 
 数据库专项仍只允许使用 `docs/HARNESS.md` 中 `try/finally` 流程连接本机隔离 `adui_scada_test`；原开发库 `adui_scada` 的失败迁移保持冻结，不执行 resolve、deploy、reset、DROP、DELETE 或手工修改 `_prisma_migrations`。
 
-## 2026-11-19 · PR #99 发布复合外键静态断言误报修复（E-065，Windows 质量链通过，数据库待验收）
+## 2026-11-19 · PR #99 发布复合外键静态断言误报修复（E-065，Windows 与隔离 PostgreSQL 验收通过）
 
 维护者新一轮 Windows 测试确认：`db:validate` 退出码 **0**，`db:generate` 退出码 **0**，Prisma Client 7.10.1 正常生成；`vp check` 为 355 个格式文件和 207 个受检文件零警告错误，退出码 **0**；`docs:check` 89 份 Markdown 通过，退出码 **0**。
 
@@ -2164,11 +2161,11 @@ PR #99 已将 Prisma ORM 一对一导航关系改为使用已有全局唯一 `la
 
 维护者随后提供 Windows 最新质量链结果：`pnpm run test:unit` **51/51 文件、620/620 项通过**，退出码 0；`vp check` 355 个文件格式正确、207 个受检文件零警告/Lint/类型错误，退出码 0；`docs:check` 89 个 Markdown 通过，退出码 0；完整 `pnpm run ready` 覆盖依赖目录、共享配置、环境、中文文案、Prisma Client 生成、Web/Server 类型检查、单元测试、SSE/OIDC/Docker 配置专项、HTTP E2E **6/6 文件、55/55 项**、文档检查，以及 React、Vue、NestJS 构建，最终退出码 **0**。Prisma Client 7.10.1 在单测与 ready 中均成功生成。
 
-**仍待单独验收**：`ready` 脚本不包含真实 PostgreSQL `test:db`，也不执行迁移部署。第二条迁移 `20261119000000_release_state_event_integrity` 的首次/二次部署、部署后 `migrate status` 和隔离数据库测试 **42/42** 尚无本轮执行证据。此前旧迁移对应的 41/41 不能代替本次 42/42。
+**后续真实 PostgreSQL 验收现已完成**：维护者在本机隔离 `127.0.0.1:15432/adui_scada_test` 首次应用 `20261119000000_release_state_event_integrity`，退出码 0；二次部署 `No pending migrations to apply`，退出码 0；`db:migrate:status` 为 up to date，退出码 0；`pnpm run test:db` 为 **5/5 文件、42/42 项通过**，退出码 0。发布 Schema 文件 6/6，其中四类非法复合引用均被真实 PostgreSQL 拒绝，合法关联成功。此前 41/41 是第一条迁移验收，42/42 是新增第二条迁移后的最终结果。
 
 **验证边界**：维护者提供的本轮终端日志未包含 `git rev-parse HEAD`，故上述 Windows 结果只能记录为本轮实际日志，不能严格绑定到当前 GitHub SHA `1296814729a6ba0ae8f7d1d9a6c01bcce3c53f79`。本次文档同步后还需重新执行 `docs:check`。原开发库 `adui_scada` 失败迁移继续冻结，未经可恢复备份与维护者明确授权不得执行恢复写入。
 
-## 2026-11-19 · PR #99 E-065 修复后的完整工程质量链通过（真实 PostgreSQL 待验收）
+## 2026-11-19 · PR #99 E-065 修复后的完整工程质量链与真实 PostgreSQL 验收通过
 
 维护者提供的 Windows 日志显示：
 
@@ -2179,6 +2176,27 @@ PR #99 已将 Prisma ORM 一对一导航关系改为使用已有全局唯一 `la
 
 本次日志没有给出 `git rev-parse HEAD`，不得把这组实测结果声称为严格绑定到当前远端 SHA。此前单独 `db:validate` 退出码 0、`db:generate` 退出码 0 的日志已证明 Prisma Schema 语义校验通过；本轮 `test:unit` 和 `ready` 又实际成功运行 Prisma Client 生成。
 
-**下一项唯一阻塞是独立 PostgreSQL 专项**：完整 `ready` 明确不包含 `db:migrate:deploy` 或 `test:db`。必须使用本文件对应的 `docs/HARNESS.md` PowerShell `try/finally` 保护流程，只将当前进程的 `SCADA_DATABASE_URL` 和 `SCADA_TEST_DATABASE_URL` 临时指向本机 `127.0.0.1:15432/adui_scada_test`，应用新增的 `20261119000000_release_state_event_integrity`，再次部署确认幂等，检查 `migrate status` up to date，再执行 `pnpm run test:db`（目标 5/5 文件、42/42 项）。如果出现 failed migration / P3009，立即停止，不得继续部署或自行修复元数据。
+**第三十五批 B 阶段当前验收结论**：工程质量链与第二条迁移的真实 PostgreSQL 专项均已通过。完整 `ready` 不包含 `db:migrate:deploy` 或 `test:db`，因此本次分别执行并记录，不能把两类验收互相替代。第二条迁移首次/二次部署、status 和 42/42 数据库测试的具体结果见本节上方 E-062/E-065 记录。
 
-原开发库 `adui_scada` 的失败迁移保持冻结，不执行 `migrate resolve`、`migrate deploy`、reset、DROP、DELETE 或手工编辑 `_prisma_migrations`；必须等待可恢复备份和维护者单独明确授权。
+维护者本轮 Windows 日志没有附 `git rev-parse HEAD`。当前 GitHub PR 分支在本次文档更新前的 HEAD 为 `d217dde085a5654d8dfe4cc01ef3756ab338466e`；该提交只调整三份文档的格式，没有改动本批代码或迁移。不能将日志未提供的本地 SHA 伪写为已核验。原开发库 `adui_scada` 的失败迁移仍冻结，不执行 `migrate resolve`、`migrate deploy`、reset、DROP、DELETE 或手工编辑 `_prisma_migrations`；恢复仍须可恢复备份和维护者单独明确授权。
+
+## 2026-11-19 · 第三十五批 B 阶段最终验收汇总
+
+维护者 Windows 已提供以下实际结果：
+
+| 检查 | 结果 | 退出码 |
+|---|---:|---:|
+| `docs:check` | 89 份 Markdown | 0 |
+| `test:unit` | 51/51 文件、620/620 项 | 0 |
+| `vp check` | 355 文件格式正确、207 受检文件零警告/Lint/类型错误 | 0 |
+| 完整 `ready` | 依赖、配置、环境、中文文案、Prisma Client、类型检查、单测、SSE/OIDC/Docker/浏览器专项、HTTP E2E 55/55、React/Vue/NestJS 构建全部完成 | 0 |
+| 第二条迁移首次部署 | `20261119000000_release_state_event_integrity` 成功应用到隔离 `adui_scada_test` | 0 |
+| 第二条迁移二次部署 | 无待执行迁移 | 0 |
+| 迁移状态 | Database schema is up to date | 0 |
+| `test:db` | 5/5 文件、42/42 项 | 0 |
+
+真实 PostgreSQL 发布 Schema 用例 6/6，覆盖两张发布表和中文注释、约束与索引、generation=0 初始状态，以及跨工程事件引用、代次不匹配、状态摘要不匹配、事件目标摘要不匹配拒绝和合法引用成功。日志中“数据库工程版本元数据与快照不一致”的 TypeError 是主动篡改随机测试租户摘要的预期负向 HTTP 500，相关测试通过，不构成失败。
+
+**提交绑定说明**：维护者日志没有包含 `git rev-parse HEAD`。本次执行时 GitHub 远端分支已存在仅调整文档格式的提交 `d217dde085a5654d8dfe4cc01ef3756ab338466e`（父提交 `f725bbb21df5fc3861782d3ca206abdd2916ef4f`）；该提交没有修改业务代码、Prisma Schema 或迁移 SQL。测试结果按维护者提供的真实日志记录，不虚构本地 SHA。
+
+原开发库 `adui_scada` 的历史失败迁移继续冻结；本轮所有迁移和真实数据库测试均限定在本机隔离 `adui_scada_test`，没有获得或执行原开发库恢复授权。
