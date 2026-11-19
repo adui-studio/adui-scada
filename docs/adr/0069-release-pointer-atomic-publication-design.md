@@ -113,3 +113,11 @@ Runtime 只从服务端受保护的当前发布指针解析快照；不可使用
 8. **工业安全**：发布前必须重新核对 Tag 绑定、数据源质量、Runtime/资源兼容性和只读工业策略；本 ADR 不授予任何 PLC/DCS 或其他设备控制写入权限。
 
 **后续 B～F 阶段仍必须分别通过 Prisma 数据模型/迁移、真实 PostgreSQL 并发故障注入、React/Vue Runtime、Keycloak/HTTPS 和工业安全专项验收后才能逐步实现。**
+
+## 2026-11-19 · ADR-0069 B 阶段完成与 C1 发布事务候选状态
+
+B 阶段发布状态/事件 Prisma Schema、独立发布权限和复合引用完整性已通过 PR #99 合并至 `main`（合并提交 `3ba7b2728ca345a5a2962e6815c5d76069ade822`）。
+
+C1 当前在 PR #100 Draft 候选分支实现正式发布命令与事务：事务内锁定工程、会话/身份、ACL、发布状态和不可变版本；执行 head/releaseGeneration 双 CAS、UUID v4 幂等、快照完整性与静态兼容性检查；在同一事务追加发布事件并更新指针。生产 `ProjectReleaseSafetyGate` 固定 fail-closed，Runtime/Tag/数据源/资源/审批及工业安全门禁未完成前不允许真实发布成功。
+
+维护者 Windows 已通过 C1 发布仓储定向测试 13/13、全量单测 633/633、`vp check` 零警告错误及 `docs:check` 89 份；真实 PostgreSQL `test:db` 与完整 `ready` 尚待执行。当前实现不代表 T-01～T-22 全部验收完成，也不开放 Runtime、回滚、生产发布或工业设备写入。
