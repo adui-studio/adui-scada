@@ -1774,3 +1774,9 @@ E-063、E-064、E-065 的 Prisma Schema 解析、一对一关系唯一性和多�
 维护者 Windows 首次 `vp check --fix` 在 `apps/server/src/projects/prisma-project-release-store.spec.ts` 报告 7 处缺少 Mock 类型参数及 1 处 unbound-method 警告。候选提交 `6bc35e269b4f7c6099fa1c8da9933263cad3f0a5` 已为所有 Mock 补充显式签名，并把安全门禁 spy 作为独立 `gateAssertReady` 引用。
 
 GitHub 源码回读静态核对确认未泛型化的 `vi.fn()` 数量为 0，unbound-method 的旧断言已消失。**Windows 修复后 vp check、单测、docs:check 和完整 ready 尚待执行**，不得将静态检查视为通过。当前 C1 仍为候选，不合并、不启用生产发布；默认工业安全门禁保持 fail-closed。
+
+## 2026-11-19 · 第三十五批 C1 请求校验单测断言修复候选（E-067）
+
+维护者 Windows 已确认：`vp check` 359 个文件格式正确、211 个受检文件零警告/错误，退出码 0；`test:unit` 632/633 项通过，唯一失败是发布仓储无效输入测试把目标修订不匹配的专属错误误判为失败；`docs:check` 89 份通过，退出码 0。
+
+根因是多个不同校验分支共用宽泛错误正则。候选修复为每类非法输入单独声明预期错误，保留“不得开启数据库事务”断言，不修改生产校验。修复后的 Windows 定向测试、全量单测及完整工程质量链待维护者复验；PR #100 继续保持 Open/Draft，未授权合并。

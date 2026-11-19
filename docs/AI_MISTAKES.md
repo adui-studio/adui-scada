@@ -611,6 +611,15 @@
 - **验证边界**：修复已提交到候选分支提交 `6bc35e269b4f7c6099fa1c8da9933263cad3f0a5`。GitHub 回读静态核对确认目标文件没有未泛型化的 `vi.fn()`，且不再直接断言 `harness.gate.assertReady`；**Windows 修复后 `vp check`、发布仓储单测、全量 `test:unit` 和完整 `ready` 尚待维护者执行**，不能将静态核对当作 Lint 或运行测试通过。
 - **证据**：维护者 2026-11-19 Windows `vp check --fix` 原始日志、候选提交 `6bc35e269b4f7c6099fa1c8da9933263cad3f0a5`、`apps/server/src/projects/prisma-project-release-store.spec.ts`。
 
+### E-067 · 发布请求单测用统一错误正则掩盖了目标修订不匹配的专属校验（第三十五批 C1）
+
+- **现象**：维护者 2026-11-19 Windows 在最新 C1 候选执行 `vp check`，359 个文件格式正确、211 个受检文件零警告/错误，退出码 0；`pnpm run test:unit` 为 51/52 个文件通过、632/633 项通过，唯一失败位于 `apps/server/src/projects/prisma-project-release-store.spec.ts` 的“请求字段、幂等键或目标版本无效时不打开数据库事务”。测试收到“首次正式发布目标必须等于预期工程 head 修订号”，但统一断言只接受“正式发布请求”或“Idempotency-Key”。`docs:check` 89 个 Markdown 通过，退出码 0。
+- **根因**：无效输入用例把请求白名单错误、目标修订与预期 head 不一致、幂等键格式错误放进同一个循环，却给所有场景使用同一个宽泛错误正则。生产解析器按设计先校验字段白名单和 UUID，再校验安全整数与目标修订一致性；目标修订用例因此正确触发了专属业务校验，测试却误把它判为失败。
+- **最小修复**：为每个无效输入用例增加独立 `expectedMessage`，分别精确匹配请求白名单、目标修订不一致和 Idempotency-Key 错误。保持生产校验逻辑、错误文案、事务边界及“所有非法输入不打开数据库事务”的断言不变。
+- **防复发**：将不同校验层级放入同一参数化测试时，每个用例必须携带自己的预期错误类别；不要使用覆盖多个无关分支的宽泛正则。测试应同时验证拒绝原因与副作用边界，避免只验证“某种错误发生”。
+- **验证边界**：修复已提交至候选分支；GitHub 源码回读仅能证明每个非法输入现在具有对应的精确错误正则，**修复后的 Windows 发布仓储单测、全量 `pnpm run test:unit`、`vp check`、`docs:check` 与完整 `ready` 尚待维护者执行**。不得将本轮修复描述为已通过。
+- **证据**：维护者 2026-11-19 Windows `vp check`、`test:unit`、`docs:check` 原始日志；`apps/server/src/projects/prisma-project-release-store.spec.ts`；本次修复提交。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

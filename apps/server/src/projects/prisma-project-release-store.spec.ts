@@ -211,18 +211,49 @@ async function createHarness(options: HarnessOptions = {}) {
 describe("正式发布事务仓储", () => {
   it("请求字段、幂等键或目标版本无效时不打开数据库事务", async () => {
     const harness = await createHarness();
-    for (const [input, key] of [
-      [{ ...REQUEST, actorId: "attacker" }, IDEMPOTENCY_KEY],
-      [{ ...REQUEST, snapshot: {} }, IDEMPOTENCY_KEY],
-      [{ ...REQUEST, targetRevision: 2 }, IDEMPOTENCY_KEY],
-      [REQUEST, ""],
-      [REQUEST, "scada_s_" + "s".repeat(43)],
-      [REQUEST, "B2F8A51C-03C6-4E6C-A4D0-4D7F6EF4A4E8"],
-      [REQUEST, ["duplicate", "header"]],
-    ] as const) {
+    const invalidCases = [
+      {
+        input: { ...REQUEST, actorId: "attacker" },
+        key: IDEMPOTENCY_KEY,
+        expectedMessage: /正式发布请求只允许/,
+      },
+      {
+        input: { ...REQUEST, snapshot: {} },
+        key: IDEMPOTENCY_KEY,
+        expectedMessage: /正式发布请求只允许/,
+      },
+      {
+        input: { ...REQUEST, targetRevision: 2 },
+        key: IDEMPOTENCY_KEY,
+        expectedMessage: /首次正式发布目标必须等于预期工程 head 修订号/,
+      },
+      { input: REQUEST, key: "", expectedMessage: /Idempotency-Key/ },
+      {
+        input: REQUEST,
+        key: "scada_s_" + "s".repeat(43),
+        expectedMessage: /Idempotency-Key/,
+      },
+      {
+        input: REQUEST,
+        key: "B2F8A51C-03C6-4E6C-A4D0-4D7F6EF4A4E8",
+        expectedMessage: /Idempotency-Key/,
+      },
+      {
+        input: REQUEST,
+        key: ["duplicate", "header"],
+        expectedMessage: /Idempotency-Key/,
+      },
+    ] as const;
+    for (const invalidCase of invalidCases) {
       await expect(
-        harness.store.publish(PRINCIPAL, SESSION_ID, PROJECT_ID, input, key),
-      ).rejects.toThrow(/正式发布请求|Idempotency-Key/);
+        harness.store.publish(
+          PRINCIPAL,
+          SESSION_ID,
+          PROJECT_ID,
+          invalidCase.input,
+          invalidCase.key,
+        ),
+      ).rejects.toThrow(invalidCase.expectedMessage);
     }
     expect(harness.transaction).not.toHaveBeenCalled();
   });

@@ -2202,3 +2202,9 @@ PR #99 已将 Prisma ORM 一对一导航关系改为使用已有全局唯一 `la
 维护者 Windows 的首次 `vp check --fix` 在 `prisma-project-release-store.spec.ts` 报告 8 条警告、0 个错误。候选提交 `6bc35e269b4f7c6099fa1c8da9933263cad3f0a5` 已为 7 个 Mock 增加显式函数签名，并将安全门禁调用 Mock 独立为 `gateAssertReady`，避免 unbound-method。
 
 GitHub 回读静态核对确认该文件不再包含无泛型参数的 `vi.fn()`，也不再直接引用 `harness.gate.assertReady`。这只是源码静态核对，**不是 Windows Lint 或测试通过记录**。修复后的 `vp check`、发布仓储单测、全量 `pnpm run test:unit`、`pnpm run docs:check` 与完整 `pnpm run ready` 均待维护者实测。未提供的命令退出码不得推断。
+
+## 2026-11-19 · 第三十五批 C1 请求校验测试断言修复候选（E-067，待 Windows 复验）
+
+维护者 Windows 最新日志：`vp check` 359 个文件格式正确、211 个受检文件零警告/错误（退出码 0）；`test:unit` 51/52 文件、632/633 项通过，唯一失败是发布仓储输入校验测试将目标修订不匹配的专属错误误判为失败；`docs:check` 89 个 Markdown 通过（退出码 0）。
+
+候选修复只调整 `prisma-project-release-store.spec.ts`：七类非法输入分别声明预期错误正则，覆盖请求字段白名单、目标修订必须等于预期 head、UUID v4 幂等键格式。生产校验、异常文案和事务逻辑均不修改。**修复后 Windows 定向测试、全量单测、vp check、docs:check 和完整 ready 尚待执行**；当前不能宣称 C1 单测通过。
