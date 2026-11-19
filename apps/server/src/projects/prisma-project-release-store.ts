@@ -219,6 +219,24 @@ async function requireLockedProjectPermission(
   if (!allowed) throw new ProjectVersionAccessDeniedError();
 }
 
+/** 不可变快照在读取和指针提交期间持有共享锁，避免并发数据库修改。 */
+async function lockProjectVersion(
+  tx: Prisma.TransactionClient,
+  principal: AuthenticatedProjectPrincipal,
+  projectId: string,
+  revision: number,
+): Promise<void> {
+  const versions = await tx.$queryRaw<Array<{ revision: bigint }>>`
+    SELECT revision
+    FROM scada_project_versions
+    WHERE tenant_id = ${principal.tenantId}
+      AND project_id = ${projectId}
+      AND revision = ${BigInt(revision)}
+    FOR SHARE
+  `;
+  if (versions.length !== 1) throw new ProjectVersionAccessDeniedError();
+}
+
 /** 发布状态行使用独立锁；工程行始终先锁定，保持与版本追加一致的锁顺序。 */
 async function lockReleaseState(
   tx: Prisma.TransactionClient,
@@ -381,6 +399,7 @@ export class PrismaProjectReleaseStore {
           throw new ProjectReleaseConflictError();
         }
 
+        await lockProjectVersion(tx, principal, projectId, request.targetRevision);
         const version = await tx.scadaProjectVersion.findUnique({
           where: {
             tenantId_projectId_revision: {
@@ -416,7 +435,6 @@ export class PrismaProjectReleaseStore {
 
         const generation = state.releaseGeneration + 1n;
         const eventId = randomUUID();
-        const createdAt = new Date();
         const event = await tx.scadaProjectReleaseEvent.create({
           data: {
             eventId,
@@ -431,7 +449,6 @@ export class PrismaProjectReleaseStore {
             actorId: principal.subjectId,
             idempotencyKey: request.idempotencyKey,
             requestSemanticHash: semanticHash,
-            createdAt,
           },
           select: {
             eventId: true,
@@ -457,7 +474,7 @@ export class PrismaProjectReleaseStore {
             releasedContentHash: snapshot.contentHash,
             releaseGeneration: generation,
             lastReleaseEventId: eventId,
-            updatedAt: createdAt,
+            updatedAt: event.createdAt,
           },
         });
         if (updated.count !== 1) throw new ProjectReleaseConflictError();

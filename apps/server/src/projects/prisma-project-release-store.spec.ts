@@ -96,7 +96,6 @@ async function createHarness(options: HarnessOptions = {}) {
     releasedContentHash: null,
     lastReleaseEventId: null,
   };
-  const eventId = "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e8";
 
   const tx = {
     $queryRaw: vi.fn<
@@ -118,6 +117,10 @@ async function createHarness(options: HarnessOptions = {}) {
       if (query.includes("FROM scada_project_release_state")) {
         steps.push("锁定发布状态");
         return [{ release_generation: state.releaseGeneration }];
+      }
+      if (query.includes("FROM scada_project_versions")) {
+        steps.push("锁定不可变快照");
+        return [{ revision: 1n }];
       }
       throw new Error("测试遇到未登记的数据库锁查询");
     }),
@@ -145,7 +148,7 @@ async function createHarness(options: HarnessOptions = {}) {
           action: args.data.action,
           toRevision: args.data.toRevision,
           toContentHash: args.data.toContentHash,
-          createdAt: args.data.createdAt,
+          createdAt: new Date(CREATED_AT),
         };
       }),
     },
@@ -179,7 +182,6 @@ async function createHarness(options: HarnessOptions = {}) {
     transaction,
     gate,
     snapshot,
-    eventId,
   };
 }
 
@@ -355,6 +357,7 @@ describe("正式发布事务仓储", () => {
       "锁定发布状态",
       "读取发布状态",
       "查询幂等事件",
+      "锁定不可变快照",
       "读取不可变快照",
       "通过测试安全门禁",
       "追加发布事件",
