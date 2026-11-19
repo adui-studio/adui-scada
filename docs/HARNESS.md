@@ -3261,15 +3261,15 @@ if (
 
 迁移前可以先运行 `pnpm run db:migrate:status` 查看隔离库状态。**本项目当前 Prisma CLI 7.10.1 在存在待执行迁移时，实际会打印 `Following migration have not yet been applied` 并返回退出码 1**；这表示存在 pending migration，不等同于 P3009 失败迁移。必须根据完整输出区分：仅列出待执行迁移时可以继续部署；出现 failed migration / P3009 时立即停止。不要仅因状态命令退出码为 1 就认定数据库故障，也不要把任何退出码 1 自动忽略。
 
-本次维护者已确认隔离库 `adui_scada_test` 有 5 条已应用迁移，唯一待执行项为 `20261118000000_release_state_and_events`，输出未报告失败迁移。下一步应直接执行下面的首次部署，而不是再次用“状态命令必须退出码 0”的条件阻断。
+上面“5 条已应用迁移、唯一待执行项为 `20261118000000_release_state_and_events`”是 2026-11-19 首条发布迁移部署前的历史状态。维护者随后已在隔离 `adui_scada_test` 成功应用 `20261118000000_release_state_and_events`，并完成当时版本的二次部署、status 与 41/41 数据库测试。当前 PR #99 又增加了第二条迁移 `20261119000000_release_state_event_integrity`；**本轮尚无证据显示它已在隔离库应用**，因此当前预期 pending 项应是这条第二迁移。部署前若 status 只列出该 pending 项且没有 failed migration / P3009，可继续执行下面的部署；如果出现 failed migration / P3009 或其他连接错误，立即停止。
 
 try {
   $env:SCADA_DATABASE_URL = $testDatabaseUrl
   $env:SCADA_TEST_DATABASE_URL = $testDatabaseUrl
 
   pnpm run db:migrate:deploy
-  if ($LASTEXITCODE -ne 0) { throw "隔离数据库首次迁移失败" }
-  Write-Host "隔离数据库首次迁移退出码：$LASTEXITCODE"
+  if ($LASTEXITCODE -ne 0) { throw "隔离数据库迁移部署失败" }
+  Write-Host "隔离数据库迁移部署退出码：$LASTEXITCODE"
 
   pnpm run db:migrate:deploy
   if ($LASTEXITCODE -ne 0) { throw "隔离数据库二次迁移失败" }
