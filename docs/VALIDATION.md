@@ -2250,3 +2250,22 @@ C1 不新增 Prisma 迁移。`test:db` 必须使用本机隔离库；原开发�
 **修复方式**：`docs/HARNESS.md` 新增 C1 专用 PowerShell `try/finally` 包装，自动从根 `.env` 推导本机 `adui_scada_test`，在当前进程同时设置两个数据库 URL，运行 `pnpm run test:db` 后恢复原环境变量。C1 不新增迁移，因此该重跑步骤不执行迁移部署。
 
 **待执行**：维护者按 `docs/HARNESS.md` 新增的完整脚本重跑 `pnpm run test:db`。文档更新后还须重新执行 `pnpm run docs:check` 与 `vp check`；本节记录的 89 份/359 文件结果来自本次文档更新之前的 Windows 日志，不能冒充更新后的检查结果。原开发库 `adui_scada` 的失败迁移继续冻结。
+
+## 2026-11-19 · 第三十五批 C1 PostgreSQL 双 Cookie 测试模块依赖修复（E-069，待复验）
+
+维护者 Windows 在正确设置隔离 PostgreSQL 环境后执行服务端数据库专项，Core Node 构建与 Prisma Client 7.10.1 生成成功。实际结果：
+
+| 数据库测试文件 | 结果 |
+|---|---:|
+| `oidc-schema.db-spec.ts` | 6/6 |
+| `prisma-project-version.db-spec.ts` | 12/12 |
+| `project-api.db-spec.ts` | 7/7 |
+| `projects-cas-cookie-http.db-spec.ts` | 测试模块初始化失败，11 项未执行 |
+| `release-schema.db-spec.ts` | 6/6 |
+| `release-transaction.db-spec.ts` | 10/10 |
+
+Vitest 汇总：5/6 文件通过，41 项通过、11 项 skipped，1 个 Suite 初始化失败，命令退出码 1。失败原因为 `ProjectApiController` 构造函数新增的 `PrismaProjectReleaseStore` 未注册到双 Cookie 数据库测试的手工 NestJS TestingModule；其依赖 `ProjectReleaseSafetyGate` 也缺失。该错误发生在测试模块编译阶段，不是 11 项断言失败，也不能据此判定发布事务或 PostgreSQL Schema 有缺陷。
+
+**最小修复**：PR #100 提交 `055e2115174fba27cc745f2277e251b94ab4eb74` 仅为 `projects-cas-cookie-http.db-spec.ts` 增加 `PrismaProjectReleaseStore` 和 `ProjectReleaseSafetyGate` 的导入及 Provider 注册，继续复用现有真实 PrismaService 与默认 fail-closed 安全门禁。未修改生产代码、数据库 Schema、迁移或测试断言。
+
+**待维护者复验**：先运行双 Cookie 定向数据库测试，再完整运行 `pnpm run test:db`；通过后执行 `vp check` 和完整 `pnpm run ready`。当前尚无修复后的 Windows 实测结果，不得将本次 5/6、41 passed 记录为修复已通过。
