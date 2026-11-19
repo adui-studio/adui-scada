@@ -1822,6 +1822,18 @@ PR #100 已 Squash 合并至 `main`，合并提交 `8db55e4b1bb97d69c08dc9238eb6
 
 E-068（数据库测试隔离 URL 指引遗漏）和 E-069（双 Cookie 测试模块缺少发布仓储 Provider）已由后续真实 Windows 复验关闭。PR #100 Assignee 已核对为 `@adui-dev`。
 
-**当前实际能力边界**：B 阶段发布状态/事件 Schema 已合并；C1 已实现 `POST /api/v1/projects/:projectId/releases`、独立 `release:publish`、事务内权限/会话复核、head 与 releaseGeneration 双 CAS、幂等和事件/指针原子提交。生产 `ProjectReleaseSafetyGate` 仍固定 fail-closed 并返回 503；不能真实发布成功。只读 Runtime 发布指针加载、回滚事务、运行时读取权限、双人审批和生产安全评审尚未交付。原开发库 `adui_scada` 的历史失败迁移继续冻结。
+**当前实际能力边界**：B 阶段发布状态/事件 Schema 已合并；C1 已实现正式发布事务，但生产 `ProjectReleaseSafetyGate` 仍固定 fail-closed 并返回 503，不能真实发布成功。D1 候选新增独立 `release:read` ACL、当前发布指针只读接口和不可变快照校验；尚待隔离 PostgreSQL、Windows 质量链与真实 OIDC/HTTPS 验收。共享 Runtime Core、SSE 实时 Tag 质量、React/Vue Runtime UI、回滚事务、双人审批和生产安全评审尚未交付。原开发库 `adui_scada` 的历史失败迁移继续冻结。
 
-**下一阶段准入**：Runtime 读取权限决策已明确，进入 D 阶段只读 Runtime 实施。新增独立工程 ACL `release:read`，默认拒绝，不继承 `project:read`、`version:read` 或其他权限。当前 `ProjectAccessAction` 尚未实现该动作；D 阶段需完成 ACL、只读发布指针接口、共享 Runtime Core 及 React/Vue 对等接入，并通过专项验收。
+**下一阶段准入**：`release:read` 已获批准，D1 服务端读取能力进入候选实现。权限默认拒绝，不继承 `project:read`、`version:read` 或其他权限；工程创建时不自动授予。当前候选接口为 `GET /api/v1/projects/:projectId/releases/current`，不读取 `head_revision`，只从独立发布指针加载快照。D1 验收后再继续共享 Runtime Core 和 React/Vue 对等接入。
+
+## 2026-11-19 · 第三十五批 D1 服务端只读发布读取候选
+
+候选分支 `codex/b35-d1-release-read-runtime` 从 PR #101 合并后的 main 开始，完成以下最小实现：
+
+- `ProjectAccessAction` 新增独立 `release:read`；默认拒绝，不加入 `OWNER_PERMISSIONS`，不从工程/历史版本/发布写权限继承。
+- 新增增量迁移 `20261119180000_release_read_permission`，只扩展工程授权表权限 CHECK 白名单并更新权限列中文注释，不修改已有授权记录。
+- 新增 `GET /api/v1/projects/:projectId/releases/current`，返回 `UNRELEASED` 或 `RELEASED`；已发布响应包含事件元数据和经 SHA-256 校验的不可变快照。
+- 仓储在同一事务内锁定工程身份、会话/主体、ACL、发布状态、版本和最后事件；工程锁只选择 `project_id`，不读取编辑 `head_revision`。
+- 新增权限单测、仓储完整性单测、HTTP E2E 和隔离 PostgreSQL 事务/跨租户/篡改快照测试。
+
+**验收状态**：代码与文档已提交至候选分支，按独立 Draft PR 交付并指派 `@adui-dev`；GitHub 实际 PR/Assignee/HEAD 状态以创建后核验为准。真实 PostgreSQL 迁移/测试、Windows `vp check`、单测、HTTP E2E、`docs:check` 和完整 `ready` 尚未执行。未验收前不合并、不部署；生产发布门禁保持 fail-closed。
