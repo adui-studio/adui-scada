@@ -1639,6 +1639,7 @@ PR #99 已修复：
 本轮单测已覆盖发布 Schema SQL 静态完整性、失败迁移旧权限 CHECK 替换和新工程 generation=0 状态 Mock；此前 615/616 的唯一失败已关闭。日志未提供本机 `git rev-parse HEAD`，不作 GitHub HEAD 严格绑定。
 
 **尚未完成**：本机隔离 `adui_scada_test` 的首次/二次迁移、`migrate status`、真实 PostgreSQL `test:db` 和完整 `pnpm run ready`。现有开发库 `adui_scada` 的部分失败迁移已只读确认，仍保留旧三项权限 CHECK；未经隔离库验收、可恢复备份及维护者明确授权，不执行 `migrate resolve --rolled-back` 或任何开发库恢复写入。PR #99 继续 Draft，Assignee `@adui-dev`。
+
 ## 2026-11-19 · PR #99 隔离数据库状态已确认，待执行正式发布迁移
 
 维护者 Windows 已确认 `adui_scada_test` 存在，`docs:check` 88 份通过，退出码 0。隔离库 `db:migrate:status` 成功连接本机 `127.0.0.1:15432/adui_scada_test`，报告 5 条已发现迁移及唯一待执行项 `20261118000000_release_state_and_events`，未报告 failed migration / P3009；该状态命令在当前 Prisma CLI 下返回退出码 1，PowerShell `finally` 已恢复原环境变量，且本次没有执行迁移写入。

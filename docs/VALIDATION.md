@@ -1976,6 +1976,7 @@ Vitest 日志明确包含 `apps/server/src/database/prisma-schema-comments.spec.
 6. 执行完整 `pnpm run ready` 并记录最终退出码。
 
 原开发库 `adui_scada` 的失败迁移记录和旧三项权限 CHECK 已由维护者只读确认。**仍未执行 `migrate resolve --rolled-back` 或任何开发库恢复写入**；必须先完成隔离库验收、可恢复备份，并取得维护者明确授权。
+
 ## 2026-11-19 · PR #99 隔离数据库迁移状态确认（E-060）
 
 维护者 Windows 已确认：
