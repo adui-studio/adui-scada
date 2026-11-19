@@ -602,6 +602,45 @@
 - **验证边界**：修复后维护者 Windows 实测 `pnpm run test:unit` **51/51 文件、620/620 项通过**，`vp check` 355 个文件格式正确、207 个受检文件零警告/Lint/类型错误，`docs:check` 89 份通过，完整 `pnpm run ready` 退出码 **0**；随后隔离 PostgreSQL 新迁移首次/二次部署、status 均退出码 0，`test:db` **5/5 文件、42/42 项通过**。因此该静态断言误报已修复并通过 Windows 与真实 PostgreSQL 验收。数据库测试日志中的元数据/快照不一致 TypeError 属于主动篡改摘要的预期负向用例，最终 42 项全部通过。用户提供的最新日志未附本地 `git rev-parse HEAD`；当前 GitHub 分支在本轮记录时为 `d217dde085a5654d8dfe4cc01ef3756ab338466e`，测试结果不作超出日志的 SHA 绑定声明。
 - **证据**：维护者 2026-11-19 Windows 复验日志、PR #99、`apps/server/src/database/prisma-schema-comments.spec.ts`、`apps/server/prisma/migrations/20261119000000_release_state_event_integrity/migration.sql`、`docs/VALIDATION.md`。
 
+### E-066 · 正式发布事务单测 Mock 缺少显式类型并触发 unbound-method（第三十五批 C1，已关闭）
+
+- **现象**：维护者 2026-11-19 Windows 首次执行 `vp check --fix`，`apps/server/src/projects/prisma-project-release-store.spec.ts` 报告 8 条警告、0 个错误：7 处 `vitest(require-mock-type-parameters)`，另有 1 处 `typescript(unbound-method)`。
+- **根因**：新增测试夹具没有沿用仓库 E-005 的显式 `vi.fn<真实函数签名>()` 约束；安全门禁夹具把生产类方法与测试 Mock 作为联合对象暴露，随后将类方法直接传入 `expect`。
+- **最小修复**：为 7 个 Mock 补充明确函数签名及返回类型；将测试安全门禁 Mock 独立暴露为 `gateAssertReady`，断言不再解引用类实例方法。未修改生产服务、事务顺序或测试场景。
+- **防复发**：新增 Prisma/Vitest 事务测试时，Mock 输入和返回值按真实调用契约显式类型化；断言调用次数时保留独立箭头 Mock 引用。提交前执行不带 `--fix` 的 `vp check`，要求零警告、零错误。
+- **验证结论**：维护者随后 Windows 实测 `vp check` **359 个文件格式正确、211 个受检文件零警告/Lint/类型错误，退出码 0**；发布事务定向测试 13/13、全量 `pnpm run test:unit` 52/52 文件且 633/633 项通过，退出码 0。E-066 已关闭。完整 `ready` 和真实 PostgreSQL 专项仍分别待执行，不能由本次单测代替。
+- **提交绑定说明**：维护者本轮终端日志未提供本地 `git rev-parse HEAD`。GitHub 候选分支当前 HEAD 为 `7c619941f486b639298e4015d6538b995919d8c5`，但不将未提供的本地 SHA 伪写为实测绑定。
+- **证据**：维护者 2026-11-19 Windows `vp check --fix` 与后续 `vp check`、`test:unit` 日志；候选分支 `apps/server/src/projects/prisma-project-release-store.spec.ts`。
+
+### E-067 · 发布请求单测用统一错误正则掩盖了目标修订不匹配的专属校验（第三十五批 C1，已关闭）
+
+- **现象**：维护者 2026-11-19 Windows 首次复验中 `vp check` 已零警告；`pnpm run test:unit` 为 51/52 文件、632/633 项通过，唯一失败是发布仓储无效输入测试收到“首次正式发布目标必须等于预期工程 head 修订号”，而统一断言只接受“正式发布请求”或“Idempotency-Key”。
+- **根因**：请求白名单、目标修订与预期 head 不一致、幂等键格式错误被放进同一循环，却共用一个宽泛错误正则；生产校验按设计触发了目标修订专属错误，测试错误地将其判为失败。
+- **最小修复**：为七类非法输入分别声明 `expectedMessage`，精确匹配请求白名单、目标修订不一致和 Idempotency-Key 错误；保留“非法输入不得开启数据库事务”的断言。没有修改生产校验逻辑或错误文案。
+- **防复发**：参数化测试混合不同校验层级时，每个用例必须携带自己的错误类别；同时断言拒绝原因和副作用边界，避免使用宽泛正则掩盖实际分支。
+- **验证结论**：维护者 Windows 定向测试 `vp test run apps/server/src/projects/prisma-project-release-store.spec.ts` **13/13 通过**，退出码 0；全量 `pnpm run test:unit` **52/52 文件、633/633 项通过**，退出码 0；`vp check` **359 个文件格式正确、211 个受检文件零警告/Lint/类型错误**，退出码 0；`docs:check` **89 个 Markdown 通过**，退出码 0。E-067 已关闭。HTTP E2E、真实 PostgreSQL `test:db` 和完整 `ready` 尚未执行，不能将其写为通过。
+- **提交绑定说明**：维护者本轮终端日志未提供本地 `git rev-parse HEAD`。GitHub 候选分支当前 HEAD 为 `7c619941f486b639298e4015d6538b995919d8c5`，但不将未提供的本地 SHA 伪写为实测绑定。
+- **证据**：维护者 2026-11-19 Windows 定向测试、全量单测、`vp check`、`docs:check` 日志；候选分支 `apps/server/src/projects/prisma-project-release-store.spec.ts`。
+
+### E-068 · C1 PostgreSQL 验收指令再次遗漏显式隔离 URL 环境设置（第三十五批 C1，待复验）
+
+- **现象**：维护者 2026-11-19 Windows 执行 `pnpm run test:db`，此前 `docs:check` 89 份 Markdown 通过、`vp check` 359 个文件格式正确且 211 个受检文件零警告/错误，均退出码 0；数据库专项的 6 个测试文件全部在模块加载时因 `SCADA_TEST_DATABASE_URL` 未设置而退出，Vitest 显示 6 个失败 Suite、0 个测试，命令退出码 1。失败位置分别是 OIDC Schema、工程版本、工程 API、双会话 HTTP、发布 Schema 和正式发布事务 DB spec 的 URL 前置保护。
+- **根因**：此前助手只要求“按 `docs/HARNESS.md` 的 PowerShell `try/finally` 流程执行”，却没有在回复中给出本轮可直接复制的环境设置命令。维护者随后直接运行裸 `pnpm run test:db`，当前 PowerShell 进程没有 `SCADA_TEST_DATABASE_URL`。这是对历史 E-057 同类问题的再次复发，属于助手验收指引不完整，不归咎于维护者。
+- **影响边界**：测试文件在导入阶段即 fail-closed，Vitest 没有执行任何 DB 测试用例；日志没有显示连接 PostgreSQL、执行 SQL、创建/删除随机租户或修改数据库。该失败不能解释为发布事务、数据库约束或并发测试失败。`pnpm run test:db` 前置的 Core 构建和 Prisma Client 7.10.1 生成已成功。
+- **最小修复**：在 `docs/HARNESS.md` 增加 C1 专用“仅运行 test:db、不执行迁移”的完整 PowerShell `try/finally` 代码块：从根 `.env` 读取开发 URL，只在当前进程将数据库名替换为 `adui_scada_test`，验证 URL scheme/host/path，设置 `SCADA_DATABASE_URL` 与 `SCADA_TEST_DATABASE_URL`，运行测试并在 `finally` 恢复两个原值。不修改测试 URL 白名单、不修改生产代码、不执行迁移。
+- **防复发**：凡要求真实 PostgreSQL 测试，回复必须把环境设置、隔离目标验证、测试命令和 `finally` 恢复写在同一个可复制 PowerShell 代码块中；只写“参考 HARNESS”或“临时指向隔离库”不算完整指引。C1 不新增 Prisma 迁移，不要把 B 阶段 `migrate deploy/status` 模板原样带入本轮。
+- **验证状态**：安全保护行为符合预期；本次真实 PostgreSQL 测试仍**待维护者使用修复后的完整环境包装命令重新执行**。修复后的 `docs:check` / `vp check` 也需在文档提交后重新运行。原开发库 `adui_scada` 的历史失败迁移继续冻结。
+- **证据**：维护者 2026-11-19 上传的 `pnpm run test:db` 原始 Vitest 输出；`apps/server/test/release-transaction.db-spec.ts` 及其他五个 DB spec 的 `SCADA_TEST_DATABASE_URL` 导入前置校验；`docs/HARNESS.md` 的隔离 PostgreSQL 既有模板。
+
+### E-069 · 双 Cookie PostgreSQL 测试模块遗漏正式发布仓储依赖
+
+- **现象**：维护者 2026-11-19 Windows 在正确设置隔离数据库环境变量后运行服务端真实 PostgreSQL 专项。Core Node 构建与 Prisma Client 7.10.1 生成成功；六个数据库 Suite 中五个通过，分别为 OIDC Schema 6/6、工程版本 12/12、工程 API 7/7、发布 Schema 6/6、正式发布事务 10/10。唯一失败的 `projects-cas-cookie-http.db-spec.ts` 在 NestJS 测试模块初始化时抛出 `Nest can't resolve dependencies of the ProjectApiController (PrismaProjectVersionStore, ?)`，缺少 `PrismaProjectReleaseStore`。Vitest 汇总为 5/6 文件通过、41 项通过、11 项跳过、1 个 Suite 失败，退出码 1；该文件 11 项测试没有执行。
+- **根因**：正式 `ProjectApiController` 构造函数已从仅注入 `PrismaProjectVersionStore` 扩展为同时注入 `PrismaProjectReleaseStore`；生产 `ProjectPersistenceModule` 已注册两个仓储及 `ProjectReleaseSafetyGate`，但双 Cookie 真实 HTTP 数据库测试使用手工 `Test.createTestingModule`，只注册旧版本仓储，遗漏新发布仓储及其安全门禁依赖。这是测试模块装配未随 Controller 构造依赖同步更新，不是 PostgreSQL 约束或发布事务断言失败。
+- **最小修复**：仅在 `apps/server/test/projects-cas-cookie-http.db-spec.ts` 中导入并将真实 `PrismaProjectReleaseStore`、默认 fail-closed 的 `ProjectReleaseSafetyGate` 注册到测试模块 providers；沿用该测试模块已有的真实隔离 `PrismaService`。不修改生产 Controller、生产模块、发布事务、权限、Schema、迁移或数据库。
+- **防复发**：任何 NestJS Controller 构造函数依赖变化，都必须检索所有手工 `Test.createTestingModule` / `controllers: [该 Controller]` 测试模块并核对完整 provider 图。真实 PostgreSQL HTTP 测试应注册真实仓储及生产默认安全门禁；不能用空对象或放行型 Mock 掩盖依赖缺失，也不能因当前用例暂不访问新路由就忽略 Controller 必须完成实例化的依赖。
+- **验证状态**：修复已提交到 PR #100，提交 `055e2115174fba27cc745f2277e251b94ab4eb74`。当前仅回读确认两个导入和两个 Provider 已注册；**修复后的定向双 Cookie 测试、全量 `pnpm run test:db`、`vp check` 和完整 `pnpm run ready` 均待维护者重新执行**。原始失败统计保留为修复前证据，不将 41/52 误写为修复后结果。
+- **证据**：维护者 2026-11-19 Windows PostgreSQL 测试日志；`apps/server/src/projects/project-api.controller.ts`；`apps/server/src/projects/project-persistence.module.ts`；`apps/server/src/projects/prisma-project-release-store.ts`；`apps/server/src/projects/project-release-safety-gate.ts`；PR #100 修复提交 `055e2115174fba27cc745f2277e251b94ab4eb74`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

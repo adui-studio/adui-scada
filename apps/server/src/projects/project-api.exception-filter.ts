@@ -7,8 +7,15 @@ import {
   ProjectRevisionNotFoundError,
   ProjectVersionAccessDeniedError,
 } from "./prisma-project-version-store.js";
+import {
+  ProjectReleaseConflictError,
+  ProjectReleasePreflightRejectedError,
+  ProjectReleaseSessionInvalidError,
+} from "./prisma-project-release-store.js";
+import { ProjectReleaseGateUnavailableError } from "./project-release-safety-gate.js";
 
 interface ProjectApiHttpResponse {
+  setHeader(name: string, value: string): void;
   status(code: number): ProjectApiHttpResponse;
   json(body: unknown): void;
 }
@@ -20,6 +27,10 @@ interface ProjectApiHttpResponse {
   ProjectRevisionConflictError,
   ProjectRevisionNotFoundError,
   ProjectVersionAccessDeniedError,
+  ProjectReleaseConflictError,
+  ProjectReleasePreflightRejectedError,
+  ProjectReleaseSessionInvalidError,
+  ProjectReleaseGateUnavailableError,
 )
 export class ProjectApiExceptionFilter implements ExceptionFilter {
   catch(
@@ -28,10 +39,15 @@ export class ProjectApiExceptionFilter implements ExceptionFilter {
       | ProjectRequestValidationError
       | ProjectRevisionConflictError
       | ProjectRevisionNotFoundError
-      | ProjectVersionAccessDeniedError,
+      | ProjectVersionAccessDeniedError
+      | ProjectReleaseConflictError
+      | ProjectReleasePreflightRejectedError
+      | ProjectReleaseSessionInvalidError
+      | ProjectReleaseGateUnavailableError,
     host: ArgumentsHost,
   ): void {
     const response = host.switchToHttp().getResponse<ProjectApiHttpResponse>();
+    response.setHeader("Cache-Control", "no-store");
     let statusCode: number;
     let message: string;
 
@@ -40,9 +56,21 @@ export class ProjectApiExceptionFilter implements ExceptionFilter {
       message = exception.message;
     } else if (
       exception instanceof ProjectAlreadyExistsError ||
-      exception instanceof ProjectRevisionConflictError
+      exception instanceof ProjectRevisionConflictError ||
+      exception instanceof ProjectReleaseConflictError
     ) {
       statusCode = HttpStatus.CONFLICT;
+      message = exception.message;
+    } else if (exception instanceof ProjectReleaseSessionInvalidError) {
+      statusCode = HttpStatus.UNAUTHORIZED;
+      message = exception.message;
+    } else if (exception instanceof ProjectReleasePreflightRejectedError) {
+      statusCode = HttpStatus.UNPROCESSABLE_ENTITY;
+      message = exception.message;
+      response.status(statusCode).json({ statusCode, message, issues: exception.issues });
+      return;
+    } else if (exception instanceof ProjectReleaseGateUnavailableError) {
+      statusCode = HttpStatus.SERVICE_UNAVAILABLE;
       message = exception.message;
     } else {
       statusCode = HttpStatus.NOT_FOUND;

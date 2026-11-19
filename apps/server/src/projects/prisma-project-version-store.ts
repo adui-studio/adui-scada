@@ -107,7 +107,7 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return prototype === Object.prototype || prototype === null;
 }
 
-function requirePrincipal(
+export function requirePrincipal(
   principal: AuthenticatedProjectPrincipal | null,
 ): asserts principal is AuthenticatedProjectPrincipal {
   if (
@@ -121,7 +121,7 @@ function requirePrincipal(
   }
 }
 
-function requireProjectId(projectId: string): void {
+export function requireProjectId(projectId: string): void {
   if (typeof projectId !== "string" || !ID_PATTERN.test(projectId)) {
     throw new ProjectVersionAccessDeniedError();
   }
@@ -274,7 +274,7 @@ function isUniqueConstraintError(error: unknown): boolean {
   return error !== null && typeof error === "object" && "code" in error && error.code === "P2002";
 }
 
-async function lockProject(
+export async function lockProject(
   tx: Prisma.TransactionClient,
   principal: AuthenticatedProjectPrincipal,
   projectId: string,

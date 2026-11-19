@@ -1768,3 +1768,43 @@ E-063、E-064、E-065 的 Prisma Schema 解析、一对一关系唯一性和多�
 本次 Windows 终端日志未包含 `git rev-parse HEAD`。GitHub 分支在测试记录时已存在 `d217dde085a5654d8dfe4cc01ef3756ab338466e` 文档格式提交（仅三份文档各移除一行空白，不涉及业务代码或迁移），但不伪称终端输出提供了该 SHA。
 
 原开发库 `adui_scada` 的历史失败迁移继续冻结；本轮迁移与测试只针对隔离 `adui_scada_test`。恢复开发库仍须可恢复备份及维护者单独明确授权。正式发布 API/回滚 API、Runtime 发布指针切换、发布事务 CAS/幂等业务逻辑、双人审批和工业设备写入仍未实现或开放。PR #99 保持 Open / Draft，Assignee 为 `@adui-dev`，尚未获得合并授权。
+
+## 2026-11-19 · 第三十五批 C1 发布事务 Mock 警告修复候选（E-066）
+
+维护者 Windows 首次 `vp check --fix` 在 `apps/server/src/projects/prisma-project-release-store.spec.ts` 报告 7 处缺少 Mock 类型参数及 1 处 unbound-method 警告。候选提交 `6bc35e269b4f7c6099fa1c8da9933263cad3f0a5` 已为所有 Mock 补充显式签名，并把安全门禁 spy 作为独立 `gateAssertReady` 引用。
+
+GitHub 源码回读静态核对确认未泛型化的 `vi.fn()` 数量为 0，unbound-method 的旧断言已消失。**Windows 修复后 vp check、单测、docs:check 和完整 ready 尚待执行**，不得将静态检查视为通过。当前 C1 仍为候选，不合并、不启用生产发布；默认工业安全门禁保持 fail-closed。
+
+## 2026-11-19 · 第三十五批 C1 请求校验单测断言修复候选（E-067）
+
+维护者 Windows 已确认：`vp check` 359 个文件格式正确、211 个受检文件零警告/错误，退出码 0；`test:unit` 632/633 项通过，唯一失败是发布仓储无效输入测试把目标修订不匹配的专属错误误判为失败；`docs:check` 89 份通过，退出码 0。
+
+根因是多个不同校验分支共用宽泛错误正则。候选修复为每类非法输入单独声明预期错误，保留“不得开启数据库事务”断言，不修改生产校验。修复后的 Windows 定向测试、全量单测及完整工程质量链待维护者复验；PR #100 继续保持 Open/Draft，未授权合并。
+
+## 2026-11-19 · 第三十五批 C1 发布事务单元阶段验收通过
+
+维护者 Windows 最新日志确认：
+
+- 发布事务定向测试：13/13 通过，退出码 0。
+- `vp check`：359 个文件格式正确，211 个受检文件零警告/Lint/TypeScript 错误，退出码 0。
+- `pnpm run test:unit`：52/52 文件、633/633 项通过，退出码 0；Prisma Client 7.10.1 生成成功。
+- `pnpm run docs:check`：89 个 Markdown 文件通过，退出码 0。
+- E-066（Mock 类型与 unbound-method 警告）和 E-067（无效输入测试错误断言）已关闭。
+
+维护者日志未附本地 `git rev-parse HEAD`，不声称本轮结果严格绑定本地 SHA；GitHub PR #100 当前远端候选 HEAD 为 `7c619941f486b639298e4015d6538b995919d8c5`。
+
+C1 当前已通过静态检查、发布事务单测和全量单测；真实 PostgreSQL `test:db`、完整 HTTP E2E/`ready` 仍待维护者验收。当前生产发布安全门禁固定 fail-closed；没有开放 Runtime 发布态、回滚、双人审批、生产发布或工业设备写入。PR #100 继续 Open/Draft，Assignee 为 `@adui-dev`，未经新的明确授权不得合并。
+
+## 2026-11-19 · 第三十五批 C1 PostgreSQL 首次验收因隔离 URL 未设置而中止（E-068）
+
+维护者 Windows 本轮 `docs:check` 89 份 Markdown 通过、`vp check` 359 个文件格式正确且 211 个受检文件零警告/错误，均退出码 0。`pnpm run test:db` 的 Core 构建和 Prisma Client 7.10.1 生成成功，但六个数据库测试 Suite 因当前 PowerShell 未设置 `SCADA_TEST_DATABASE_URL`，在模块加载阶段全部 fail-closed，0 个测试用例执行，退出码 1。没有证据显示 PostgreSQL 连接或数据库写入发生。
+
+根因是助手只提醒参考 `docs/HARNESS.md`，没有给出可直接复制的环境包装命令，重复了历史 E-057 类错误。已在 `docs/HARNESS.md` 新增 C1 专用 `try/finally` 脚本：从根 `.env` 推导本机 `adui_scada_test`，同时设置 `SCADA_DATABASE_URL` / `SCADA_TEST_DATABASE_URL`，只运行 `pnpm run test:db`，最后恢复环境变量。C1 不新增迁移，不执行迁移部署。
+
+**C1 真实 PostgreSQL 验收仍待重跑**；文档更新后的 `docs:check` / `vp check` 也待维护者复验。PR #100 保持 Open/Draft，Assignee `@adui-dev`；生产发布安全门禁继续 fail-closed，原开发库 `adui_scada` 失败迁移继续冻结。
+
+## 2026-11-19 · C1 真实 PostgreSQL 测试模块 DI 修复，等待复验
+
+维护者 Windows 在正确设置隔离数据库环境后，C1 数据库专项已真实执行：OIDC Schema 6/6、工程版本 12/12、工程 API 7/7、发布 Schema 6/6、正式发布事务 10/10 通过；双 Cookie HTTP Suite 因手工 NestJS TestingModule 漏注册 `PrismaProjectReleaseStore` 及其 `ProjectReleaseSafetyGate` 依赖，在模块编译阶段失败，11 项跳过。汇总 5/6 文件、41 项通过、11 项 skipped、1 个 Suite 初始化失败，退出码 1。
+
+PR #100 已提交最小测试夹具修复 `055e2115174fba27cc745f2277e251b94ab4eb74`：双 Cookie 测试模块补齐真实发布仓储和默认 fail-closed 安全门禁 Provider；未修改生产代码、数据库或迁移。修复后 PostgreSQL 定向/全量测试、`vp check` 和完整 `ready` 尚待维护者 Windows 复验。PR #100 保持 Open/Draft，Assignee `@adui-dev`；生产发布门禁继续 fail-closed，原开发库 `adui_scada` 的历史失败迁移继续冻结。

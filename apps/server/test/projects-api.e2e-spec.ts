@@ -34,7 +34,10 @@ import type {
   ProjectSummary,
   ProjectReleasePreflightSummary,
 } from "../src/projects/prisma-project-version-store.js";
+import type { ProjectReleaseResult } from "../src/projects/prisma-project-release-store.js";
 import { ProjectApiController } from "../src/projects/project-api.controller.js";
+import { PrismaProjectReleaseStore } from "../src/projects/prisma-project-release-store.js";
+import { ProjectReleaseGateUnavailableError } from "../src/projects/project-release-safety-gate.js";
 import { ProjectApiExceptionFilter } from "../src/projects/project-api.exception-filter.js";
 import { PrismaService } from "../src/database/prisma.service.js";
 import { ScadaSecurityAuditService } from "../src/security/scada-security-audit.js";
@@ -140,6 +143,28 @@ describe("工程 API HTTP 接口（端到端）", () => {
     >(async () => snapshot),
   };
 
+  const releaseResult: ProjectReleaseResult = {
+    projectId: PROJECT_ID,
+    action: "PUBLISH",
+    headRevision: 1,
+    releasedRevision: 1,
+    releasedContentHash: "a".repeat(64),
+    releaseGeneration: 1,
+    eventId: "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e8",
+    createdAt: "2026-11-19T00:00:00.000Z",
+  };
+  const releases = {
+    publish: vi.fn<
+      (
+        principal: AuthenticatedProjectPrincipal | null,
+        sessionId: string | null,
+        projectId: string,
+        input: unknown,
+        idempotencyKey: unknown,
+      ) => Promise<ProjectReleaseResult>
+    >(async () => releaseResult),
+  };
+
   const sessions = {
     authenticateWithSession: vi.fn<(token: unknown) => Promise<AuthenticatedSession | null>>(
       async (token) =>
@@ -182,6 +207,7 @@ describe("工程 API HTTP 接口（端到端）", () => {
       controllers: [ProjectApiController],
       providers: [
         { provide: PrismaProjectVersionStore, useValue: store },
+        { provide: PrismaProjectReleaseStore, useValue: releases },
         { provide: AuthSessionService, useValue: sessions },
         { provide: PrismaService, useValue: database },
         { provide: ScadaSecurityAuditService, useValue: audit },
@@ -465,6 +491,95 @@ describe("工程 API HTTP 接口（端到端）", () => {
 
     expect(response.status).toBe(404);
     expect(store.preflightRelease).not.toHaveBeenCalled();
+  });
+
+  it("正式发布必须具有独立 release:publish 权限并使用服务端会话上下文", async () => {
+    permissions = ["release:publish"];
+    const body = {
+      expectedHeadRevision: 1,
+      targetRevision: 1,
+      expectedReleaseGeneration: 0,
+    };
+    const response = await request(app.getHttpServer())
+      .post("/api/v1/projects/" + PROJECT_ID + "/releases")
+      .set("Authorization", "Bearer " + SESSION_TOKEN)
+      .set("Idempotency-Key", "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e8")
+      .send(body)
+      .expect(201);
+
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual(releaseResult);
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(releases.publish).toHaveBeenCalledWith(
+      PRINCIPAL,
+      SESSION_ID,
+      PROJECT_ID,
+      body,
+      "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e8",
+    );
+  });
+
+  it("缺少 release:publish 时统一返回 404 且不进入发布仓储", async () => {
+    permissions = ["project:read", "version:read", "version:append"];
+    const response = await request(app.getHttpServer())
+      .post("/api/v1/projects/" + PROJECT_ID + "/releases")
+      .set("Authorization", "Bearer " + SESSION_TOKEN)
+      .set("Idempotency-Key", "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e9")
+      .send({
+        expectedHeadRevision: 1,
+        targetRevision: 1,
+        expectedReleaseGeneration: 0,
+      })
+      .expect(404);
+
+    expect(response.status).toBe(404);
+    expect(releases.publish).not.toHaveBeenCalled();
+  });
+
+  it("正式发布 Cookie 写请求缺少 CSRF Header 时拒绝执行", async () => {
+    const cookie =
+      SCADA_SESSION_COOKIE_NAME +
+      "=" +
+      SESSION_TOKEN +
+      "; " +
+      SCADA_CSRF_COOKIE_NAME +
+      "=" +
+      CSRF_TOKEN;
+    const response = await request(app.getHttpServer())
+      .post("/api/v1/projects/" + PROJECT_ID + "/releases")
+      .set("Cookie", cookie)
+      .set("Origin", ORIGIN)
+      .set("Sec-Fetch-Site", "same-origin")
+      .set("Idempotency-Key", "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4ea")
+      .send({
+        expectedHeadRevision: 1,
+        targetRevision: 1,
+        expectedReleaseGeneration: 0,
+      })
+      .expect(403);
+
+    expect(response.status).toBe(403);
+    expect(releases.publish).not.toHaveBeenCalled();
+  });
+
+  it("工业安全门禁尚未就绪时返回 503 且不泄漏内部细节", async () => {
+    permissions = ["release:publish"];
+    releases.publish.mockRejectedValueOnce(new ProjectReleaseGateUnavailableError());
+    const response = await request(app.getHttpServer())
+      .post("/api/v1/projects/" + PROJECT_ID + "/releases")
+      .set("Authorization", "Bearer " + SESSION_TOKEN)
+      .set("Idempotency-Key", "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4eb")
+      .send({
+        expectedHeadRevision: 1,
+        targetRevision: 1,
+        expectedReleaseGeneration: 0,
+      })
+      .expect(503);
+
+    expect(response.status).toBe(503);
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.body.message).toContain("安全门禁尚未完成");
+    expect(JSON.stringify(response.body)).not.toContain("Prisma");
   });
 
   it("过期修订号返回 409，非法修订号返回 400，均不修改工程", async () => {

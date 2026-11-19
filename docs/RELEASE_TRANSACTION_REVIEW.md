@@ -109,3 +109,23 @@ ADR-0069 与 R-01～R-08 的架构决策已批准，可以按 B～F 阶段开展
 上述批准只确认架构和安全边界，不代表代码、数据库、API 或 Runtime 已实现。
 
 后续实现必须分别完成 Prisma Schema/迁移、真实 PostgreSQL 并发与故障注入、React/Vue Runtime、Keycloak/HTTPS 和工业安全专项验收，并取得新的明确合并授权。
+
+## 2026-11-19 · 第三十五批 C1 正式发布事务候选实施状态
+
+PR #100 候选分支已实现服务端发布命令、独立 `release:publish`、事务内会话/身份/ACL 复核、工程/发布状态/不可变版本行锁、head/releaseGeneration 双 CAS、UUID v4 幂等、快照校验、静态 Core 预检以及发布事件/指针同事务提交。
+
+**已完成的 Windows 单元阶段验证**：
+
+- 发布仓储定向测试 13/13 通过。
+- `vp check`：359 文件格式正确，211 受检文件零警告/Lint/类型错误。
+- `pnpm run test:unit`：52/52 文件、633/633 项通过，Prisma Client 7.10.1 生成成功。
+- `pnpm run docs:check`：89 个 Markdown 通过。
+- E-066、E-067 已关闭。
+
+**仍未完成的 C1 真实数据库及工程级验收**：
+
+- `pnpm run test:db` 尚未在本轮候选上执行，必须使用本机隔离 `adui_scada_test`，验证真实 PostgreSQL 事务、并发、撤权/会话撤销锁竞争、幂等及清理。
+- `pnpm run ready` 尚未在本轮候选上执行，须完成 HTTP E2E、类型检查、双框架/Server 构建及全部配置专项。
+- 维护者本轮 Windows 日志未提供本地 HEAD SHA；GitHub PR #100 远端候选 HEAD 为 `7c619941f486b639298e4015d6538b995919d8c5`，不伪造本地提交绑定。
+
+本 C1 只验证服务端事务候选，不代表 ADR-0069 的 T-01～T-22 已全部完成。Runtime 发布态加载、回滚事务、双人审批、生产启用和工业设备写入仍未实现；生产门禁保持 fail-closed。

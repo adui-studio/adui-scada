@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Header,
+  Headers,
   HttpCode,
   HttpStatus,
   Param,
@@ -17,7 +18,9 @@ import type { ScadaAuthenticatedRequest } from "../auth/scada-session.guard.js";
 import { ScadaProjectGuard, SCADA_PROJECT_PERMISSION } from "../auth/scada-project.guard.js";
 import { ScadaSessionGuard } from "../auth/scada-session.guard.js";
 import {
+  ApiBody,
   ApiCreatedResponse,
+  ApiHeader,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
@@ -29,6 +32,7 @@ import {
   ProjectRequestValidationError,
 } from "./prisma-project-version-store.js";
 import { ProjectApiExceptionFilter } from "./project-api.exception-filter.js";
+import { PrismaProjectReleaseStore } from "./prisma-project-release-store.js";
 
 /** 仅在 OIDC 显式启用的根模块中注册；所有写入均经过会话、CSRF 与工程 ACL。 */
 @ApiTags("工程管理")
@@ -36,7 +40,10 @@ import { ProjectApiExceptionFilter } from "./project-api.exception-filter.js";
 @UseGuards(ScadaSessionGuard)
 @UseFilters(ProjectApiExceptionFilter)
 export class ProjectApiController {
-  constructor(private readonly projects: PrismaProjectVersionStore) {}
+  constructor(
+    private readonly projects: PrismaProjectVersionStore,
+    private readonly releases: PrismaProjectReleaseStore,
+  ) {}
 
   @Post()
   @Header("Cache-Control", "no-store")
@@ -148,6 +155,54 @@ export class ProjectApiController {
     @Body() body: unknown,
   ) {
     return this.projects.append(request.scadaPrincipal ?? null, projectId, body);
+  }
+
+  @Post(":projectId/releases")
+  @Header("Cache-Control", "no-store")
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(ScadaProjectGuard)
+  @SetMetadata(SCADA_PROJECT_PERMISSION, "release:publish")
+  @ApiOperation({ summary: "通过双 CAS 与幂等保护提交正式发布事务" })
+  @ApiHeader({
+    name: "Idempotency-Key",
+    required: true,
+    description: "由客户端安全随机生成的 UUID v4；不得复用会话令牌或其他凭据",
+  })
+  @ApiBody({
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["expectedHeadRevision", "targetRevision", "expectedReleaseGeneration"],
+      properties: {
+        expectedHeadRevision: { type: "integer", minimum: 1 },
+        targetRevision: { type: "integer", minimum: 1 },
+        expectedReleaseGeneration: { type: "integer", minimum: 0 },
+      },
+    },
+  })
+  @ApiCreatedResponse({ description: "正式发布事件与发布指针已在同一事务中提交" })
+  @ApiResponse({ status: 400, description: "正式发布请求或幂等标识无效" })
+  @ApiResponse({ status: 401, description: "可信会话无效或已撤销" })
+  @ApiResponse({ status: 404, description: "工程不存在或无权执行正式发布" })
+  @ApiResponse({ status: 409, description: "工程 head、发布代次或幂等语义发生冲突" })
+  @ApiResponse({ status: 422, description: "已保存快照未通过静态发布兼容性检查" })
+  @ApiResponse({
+    status: 503,
+    description: "Runtime、Tag、数据源及工业安全门禁尚未就绪，发布默认拒绝",
+  })
+  publish(
+    @Req() request: ScadaAuthenticatedRequest,
+    @Param("projectId") projectId: string,
+    @Body() body: unknown,
+    @Headers("idempotency-key") idempotencyKey: string | undefined,
+  ) {
+    return this.releases.publish(
+      request.scadaPrincipal ?? null,
+      request.scadaSessionId ?? null,
+      projectId,
+      body,
+      idempotencyKey,
+    );
   }
 }
 
