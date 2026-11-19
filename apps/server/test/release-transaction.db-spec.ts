@@ -348,16 +348,16 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
 
   it("发布持有会话与 ACL 行锁期间撤销操作必须等待事务提交", async () => {
     await withFixture(async (fixture) => {
-      let markGateEntered = () => undefined;
-      let releaseGate = () => undefined;
+      let markGateEntered: (() => void) | undefined;
+      let releaseGate: (() => void) | undefined;
       const gateEntered = new Promise<void>((resolve) => {
-        markGateEntered = resolve;
+        markGateEntered = () => resolve();
       });
       const gateReleased = new Promise<void>((resolve) => {
-        releaseGate = resolve;
+        releaseGate = () => resolve();
       });
       releaseGateBarrier = async () => {
-        markGateEntered();
+        markGateEntered?.();
         await gateReleased;
       };
 
@@ -399,7 +399,7 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
         expect(grantRevocationFinished).toBe(false);
         expect(sessionRevocationFinished).toBe(false);
 
-        releaseGate();
+        releaseGate?.();
         const response = await publishPromise;
         expect(response.status).toBe(201);
         expect(await grantRevocation).toMatchObject({ count: 1 });
@@ -407,7 +407,7 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
         expect(grantRevocationFinished).toBe(true);
         expect(sessionRevocationFinished).toBe(true);
       } finally {
-        releaseGate();
+        releaseGate?.();
         releaseGateBarrier = undefined;
         await publishPromise.catch(() => undefined);
         await grantRevocation?.catch(() => undefined);
