@@ -602,7 +602,6 @@
 - **验证边界**：修复后维护者 Windows 实测 `pnpm run test:unit` **51/51 文件、620/620 项通过**，`vp check` 355 个文件格式正确、207 个受检文件零警告/Lint/类型错误，`docs:check` 89 份通过，完整 `pnpm run ready` 退出码 **0**；随后隔离 PostgreSQL 新迁移首次/二次部署、status 均退出码 0，`test:db` **5/5 文件、42/42 项通过**。因此该静态断言误报已修复并通过 Windows 与真实 PostgreSQL 验收。数据库测试日志中的元数据/快照不一致 TypeError 属于主动篡改摘要的预期负向用例，最终 42 项全部通过。用户提供的最新日志未附本地 `git rev-parse HEAD`；当前 GitHub 分支在本轮记录时为 `d217dde085a5654d8dfe4cc01ef3756ab338466e`，测试结果不作超出日志的 SHA 绑定声明。
 - **证据**：维护者 2026-11-19 Windows 复验日志、PR #99、`apps/server/src/database/prisma-schema-comments.spec.ts`、`apps/server/prisma/migrations/20261119000000_release_state_event_integrity/migration.sql`、`docs/VALIDATION.md`。
 
-
 ### E-066 · 正式发布事务单测 Mock 缺少显式类型并触发 unbound-method（第三十五批 C1）
 
 - **现象**：维护者 2026-11-19 Windows 执行 `vp check --fix`，`apps/server/src/projects/prisma-project-release-store.spec.ts` 报告 8 条警告、0 个错误：7 处 `vitest(require-mock-type-parameters)`，分别位于发布状态查询/更新、幂等事件查询/创建、不可变版本读取、事务回调和安全门禁 Mock；另有 1 处 `typescript(unbound-method)`，测试直接把 `harness.gate.assertReady` 作为断言参数。格式化完成不代表零警告通过。

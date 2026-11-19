@@ -135,12 +135,12 @@ async function createHarness(options: HarnessOptions = {}) {
       }),
     },
     scadaProjectReleaseEvent: {
-      findFirst: vi.fn<
-        () => Promise<NonNullable<HarnessOptions["previousEvent"]> | null>
-      >(async () => {
-        steps.push("查询幂等事件");
-        return options.previousEvent ?? null;
-      }),
+      findFirst: vi.fn<() => Promise<NonNullable<HarnessOptions["previousEvent"]> | null>>(
+        async () => {
+          steps.push("查询幂等事件");
+          return options.previousEvent ?? null;
+        },
+      ),
       create: vi.fn<
         (args: {
           data: {
