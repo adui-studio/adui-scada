@@ -2142,14 +2142,14 @@ PR #99 已将 Prisma ORM 一对一导航关系改为使用已有全局唯一 `la
 
 **修复后待维护者 Windows 实测**：
 
-| 验收项 | 目标 |
-|---|---:|
-| `pnpm run db:validate` | 退出码 0 |
-| `pnpm run db:generate` | 退出码 0 |
-| `vp check` | 零警告、零错误 |
-| `pnpm run test:unit` | 620/620 |
-| 隔离 PostgreSQL `test:db` | 42/42 |
-| `pnpm run docs:check` | 89 份 Markdown，实际计数以命令为准 |
-| 完整 `pnpm run ready` | 退出码 0 |
+| 验收项                    |                               目标 |
+| ------------------------- | ---------------------------------: |
+| `pnpm run db:validate`    |                           退出码 0 |
+| `pnpm run db:generate`    |                           退出码 0 |
+| `vp check`                |                     零警告、零错误 |
+| `pnpm run test:unit`      |                            620/620 |
+| 隔离 PostgreSQL `test:db` |                              42/42 |
+| `pnpm run docs:check`     | 89 份 Markdown，实际计数以命令为准 |
+| 完整 `pnpm run ready`     |                           退出码 0 |
 
 数据库专项仍只允许使用 `docs/HARNESS.md` 中 `try/finally` 流程连接本机隔离 `adui_scada_test`；原开发库 `adui_scada` 的失败迁移保持冻结，不执行 resolve、deploy、reset、DROP、DELETE 或手工修改 `_prisma_migrations`。
