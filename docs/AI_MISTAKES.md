@@ -629,7 +629,7 @@
 - **影响边界**：测试文件在导入阶段即 fail-closed，Vitest 没有执行任何 DB 测试用例；日志没有显示连接 PostgreSQL、执行 SQL、创建/删除随机租户或修改数据库。该失败不能解释为发布事务、数据库约束或并发测试失败。`pnpm run test:db` 前置的 Core 构建和 Prisma Client 7.10.1 生成已成功。
 - **最小修复**：在 `docs/HARNESS.md` 增加 C1 专用“仅运行 test:db、不执行迁移”的完整 PowerShell `try/finally` 代码块：从根 `.env` 读取开发 URL，只在当前进程将数据库名替换为 `adui_scada_test`，验证 URL scheme/host/path，设置 `SCADA_DATABASE_URL` 与 `SCADA_TEST_DATABASE_URL`，运行测试并在 `finally` 恢复两个原值。不修改测试 URL 白名单、不修改生产代码、不执行迁移。
 - **防复发**：凡要求真实 PostgreSQL 测试，回复必须把环境设置、隔离目标验证、测试命令和 `finally` 恢复写在同一个可复制 PowerShell 代码块中；只写“参考 HARNESS”或“临时指向隔离库”不算完整指引。C1 不新增 Prisma 迁移，不要把 B 阶段 `migrate deploy/status` 模板原样带入本轮。
-- **验证状态**：安全保护行为符合预期；本次真实 PostgreSQL 测试仍**待维护者使用修复后的完整环境包装命令重新执行**。修复后的 `docs:check` / `vp check` 也需在文档提交后重新运行。原开发库 `adui_scada` 的历史失败迁移继续冻结。
+- **验证结论（已关闭）**：维护者随后按 `docs/HARNESS.md` 的 C1 专用 PowerShell `try/finally` 包装，在本机隔离 `adui_scada_test` 执行 `pnpm run test:db`，**6/6 文件、52/52 用例通过，退出码 0**。同一轮最终验收中 `vp check` 为 359 个文件格式正确、211 个受检文件零警告/Lint/TypeScript 错误；`docs:check` 89 个 Markdown 通过；完整 `pnpm run ready` 退出码 0。首次裸命令因缺少测试 URL 在导入阶段 fail-closed、没有执行用例的历史事实仍保留；后续隔离包装已验证可正常运行。C1 不新增迁移；原开发库 `adui_scada` 的历史失败迁移继续冻结。
 - **证据**：维护者 2026-11-19 上传的 `pnpm run test:db` 原始 Vitest 输出；`apps/server/test/release-transaction.db-spec.ts` 及其他五个 DB spec 的 `SCADA_TEST_DATABASE_URL` 导入前置校验；`docs/HARNESS.md` 的隔离 PostgreSQL 既有模板。
 
 ### E-069 · 双 Cookie PostgreSQL 测试模块遗漏正式发布仓储依赖
@@ -638,7 +638,7 @@
 - **根因**：正式 `ProjectApiController` 构造函数已从仅注入 `PrismaProjectVersionStore` 扩展为同时注入 `PrismaProjectReleaseStore`；生产 `ProjectPersistenceModule` 已注册两个仓储及 `ProjectReleaseSafetyGate`，但双 Cookie 真实 HTTP 数据库测试使用手工 `Test.createTestingModule`，只注册旧版本仓储，遗漏新发布仓储及其安全门禁依赖。这是测试模块装配未随 Controller 构造依赖同步更新，不是 PostgreSQL 约束或发布事务断言失败。
 - **最小修复**：仅在 `apps/server/test/projects-cas-cookie-http.db-spec.ts` 中导入并将真实 `PrismaProjectReleaseStore`、默认 fail-closed 的 `ProjectReleaseSafetyGate` 注册到测试模块 providers；沿用该测试模块已有的真实隔离 `PrismaService`。不修改生产 Controller、生产模块、发布事务、权限、Schema、迁移或数据库。
 - **防复发**：任何 NestJS Controller 构造函数依赖变化，都必须检索所有手工 `Test.createTestingModule` / `controllers: [该 Controller]` 测试模块并核对完整 provider 图。真实 PostgreSQL HTTP 测试应注册真实仓储及生产默认安全门禁；不能用空对象或放行型 Mock 掩盖依赖缺失，也不能因当前用例暂不访问新路由就忽略 Controller 必须完成实例化的依赖。
-- **验证状态**：修复已提交到 PR #100，提交 `055e2115174fba27cc745f2277e251b94ab4eb74`。当前仅回读确认两个导入和两个 Provider 已注册；**修复后的定向双 Cookie 测试、全量 `pnpm run test:db`、`vp check` 和完整 `pnpm run ready` 均待维护者重新执行**。原始失败统计保留为修复前证据，不将 41/52 误写为修复后结果。
+- **验证结论（已关闭）**：修复提交 `055e2115174fba27cc745f2277e251b94ab4eb74` 补齐真实 `PrismaProjectReleaseStore` 与默认 fail-closed 的 `ProjectReleaseSafetyGate` Provider。维护者随后 Windows 实测 PostgreSQL 专项 **6/6 文件、52/52 用例通过，退出码 0**，其中双 Cookie HTTP CAS 11/11、正式发布事务 10/10；`vp check` 359 个文件格式正确、211 个受检文件零警告/Lint/TypeScript 错误；`docs:check` 89 个 Markdown 通过；完整 `pnpm run ready` 退出码 0。PR #100 已 Squash 合并，合并提交 `8db55e4b1bb97d69c08dc9238eb61f76071b7e72`；上述测试对应合并前验收 HEAD `f576cacaadd2376f8e75d5270482ac9a356f81ed`。原始 5/6、41 passed 是修复前的模块装配失败，保留为历史证据；E-069 已关闭。生产安全门禁仍默认拒绝。
 - **证据**：维护者 2026-11-19 Windows PostgreSQL 测试日志；`apps/server/src/projects/project-api.controller.ts`；`apps/server/src/projects/project-persistence.module.ts`；`apps/server/src/projects/prisma-project-release-store.ts`；`apps/server/src/projects/project-release-safety-gate.ts`；PR #100 修复提交 `055e2115174fba27cc745f2277e251b94ab4eb74`。
 
 ## 三、从已发生问题提炼的预防性门禁
