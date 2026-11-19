@@ -3327,3 +3327,18 @@ docker compose -p adui-scada --env-file .env --env-file .local/docker/compose.en
 ```
 
 以上查询仅用于判断迁移失败前是否留下了部分 DDL；不要公开连接凭据或修改查询为写操作。
+## 2026-11-19 · 发布状态表加入后的 PostgreSQL 测试夹具清理顺序
+
+第三十五批 B 阶段新增 `scada_project_release_state`，其工程外键使用 `ON DELETE RESTRICT`；状态行还可引用最后一次发布事件。发布事件又通过外键引用工程及不可变历史版本。因此真实 PostgreSQL 测试夹具的清理顺序必须遵循外键引用方向：
+
+1. `scadaProjectReleaseState.deleteMany`：先删除发布状态，解除其对工程和最后发布事件的引用。
+2. `scadaProjectReleaseEvent.deleteMany`：再删除发布事件，解除其对工程历史版本的引用。
+3. 删除工程审计。
+4. 删除工程历史版本。
+5. 删除工程授权。
+6. 删除工程。
+7. 最后按各测试自身关系清理认证会话和身份。
+
+不得先删除事件再删除仍引用该事件的状态；不得通过放宽外键、使用 CASCADE 或跳过 finally 清理来让测试通过。任何新增带 `RESTRICT` 外键的表，都必须同步检查所有 DB spec 的 fixture teardown / afterAll。
+
+PR #99 本轮已将该顺序同步至双 Cookie HTTP、工程版本和工程 API 三个 PostgreSQL 测试文件。修复后仍需在隔离 `adui_scada_test` 重新运行 `pnpm run test:db` 验证。
