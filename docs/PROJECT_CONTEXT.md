@@ -1837,3 +1837,11 @@ E-068（数据库测试隔离 URL 指引遗漏）和 E-069（双 Cookie 测试�
 - 新增权限单测、仓储完整性单测、HTTP E2E 和隔离 PostgreSQL 事务/跨租户/篡改快照测试。
 
 **验收状态**：代码与文档已提交至候选分支，按独立 Draft PR 交付并指派 `@adui-dev`；GitHub 实际 PR/Assignee/HEAD 状态以创建后核验为准。真实 PostgreSQL 迁移/测试、Windows `vp check`、单测、HTTP E2E、`docs:check` 和完整 `ready` 尚未执行。未验收前不合并、不部署；生产发布门禁保持 fail-closed。
+
+## 2026-11-20 · 第三十五批 D1 PostgreSQL 专项已通过，PR #102 仍待完整质量验收
+
+维护者 Windows 已使用限定到 `127.0.0.1:15432/adui_scada_test` 的 PowerShell `try/finally` 流程完成 D1 权限迁移：Prisma 识别 7 条迁移，成功应用 `20261119180000_release_read_permission`；二次部署无待执行迁移，`migrate status` up to date。真实 `test:db` 为 **6/6 文件、57/57 项通过**，发布事务 **15/15**、发布 Schema **6/6**；测试结束后环境变量恢复。新 5 项 D1 数据库场景（授权隔离、未发布、仅发布读取权限、跨租户同名工程、快照篡改拒绝）均通过。
+
+两段 NestJS 异常栈是随机测试数据被主动篡改时的预期 fail-closed 用例，测试套件并未失败。此前未限定数据库时发生的 P3009 目标是**冻结开发库** `adui_scada`，另一次未设置 `SCADA_TEST_DATABASE_URL` 的 `test:db` 在加载阶段中止且未运行测试；不得误记为 D1 代码缺陷，也不得操作该开发库的历史迁移。
+
+PR #102 当前为独立 Draft，已指派 `@adui-dev`，生产发布安全门禁继续 fail-closed；没有生产发布、回滚、设备写入或 Runtime React/Vue UI。用户实测日志不含 `git rev-parse HEAD`，因此不能声称 57 项测试严格绑定到远程格式整理后 HEAD `45eb631f452f10aeffa0dbe30a8485afc37864aa`。完成该 HEAD 的 `vp check`、`docs:check` 和完整 `pnpm run ready` 后，方可提请最终合并核验；尚未获得本 PR 合并授权。
