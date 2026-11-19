@@ -3392,3 +3392,19 @@ PR #99 已从原功能分支 `c38de5ca38cc619a1128a84b63eca3523f42c9d7` 合流�
 PR #97 的 Windows `docs:check` 为 89 份 Markdown、退出码 0；该终端记录没有同时提供本地 HEAD，因此不声称其结果严格绑定到 PR #99 同步后的 HEAD。PR #99 同步后仍须在 Windows 最新 HEAD 执行 `vp check` 与 `pnpm run docs:check`；此前 618/618 单测、41/41 隔离 PostgreSQL 测试、55/55 HTTP E2E 和完整 `ready=0` 对应的代码未被本次文档合流修改，但本次同步本身不构成重新执行这些测试的证据。
 
 PR #99 继续保持 Open / Draft，Assignee 为 `@adui-dev`。原开发库 `adui_scada` 的失败迁移仍冻结；恢复操作必须等待可恢复备份和维护者单独明确授权。
+
+## 2026-11-19 · PR #99 发布状态复合外键增量迁移验收
+
+PR #99 在原发布 Schema 迁移已应用后新增 20261119000000_release_state_event_integrity。**不得回改已应用的 20261118000000_release_state_and_events**；新迁移只在独立测试库增加复合唯一索引和复合外键，绑定租户、工程、发布代次、修订号与 SHA-256 摘要。
+
+维护者此前已在本机隔离 adui_scada_test 成功应用第一条发布 Schema 迁移。当前复验应先通过本节上方原有 PowerShell try/finally 隔离 URL 流程确认 SCADA_DATABASE_URL 和 SCADA_TEST_DATABASE_URL 均指向 127.0.0.1:15432/adui_scada_test，再执行：
+
+1. pnpm run db:validate 与 pnpm run db:generate。
+2. pnpm run db:migrate:deploy，应只应用新增的 20261119000000_release_state_event_integrity。
+3. 再次执行 pnpm run db:migrate:deploy，应无待执行迁移。
+4. 执行 pnpm run db:migrate:status，确认 up to date。
+5. 执行 pnpm run test:db，重点检查发布 Schema 复合外键负向用例。
+
+新增测试会尝试将工程 A 的事件关联到同租户工程 B，并尝试不匹配的代次、版本摘要和事件目标摘要；所有错误关联都必须被 PostgreSQL 外键拒绝，正确关联必须成功。测试 finally 必须按发布状态、发布事件、历史版本、工程的顺序清理。
+
+本轮迁移和测试只允许访问本机 adui_scada_test。原开发库 adui_scada 的失败迁移仍处于冻结状态；不得对其执行 migrate resolve、migrate deploy、DROP、DELETE、reset 或手工修改 _prisma_migrations。必须等待可恢复备份和维护者单独明确授权。

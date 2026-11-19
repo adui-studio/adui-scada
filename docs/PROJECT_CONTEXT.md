@@ -1689,7 +1689,7 @@ PR #99 已修复三个真实 PostgreSQL 测试文件的 teardown 顺序：先删
 
 **仍未完成**：维护者日志没有提供 `git rev-parse HEAD`，所以实测结果不能严格绑定到当前 GitHub SHA；本次文档同步后需再运行 `docs:check`。原开发库 `adui_scada` 的历史失败迁移仍未恢复，必须先备份并取得维护者明确授权。正式发布/回滚 API、Runtime 发布指针切换、CAS/幂等业务逻辑、双人审批和工业设备写入仍未开放。
 
-PR #99 继续保持 Open / Draft，Assignee 为 `@adui-dev`；PR #97 仍为 Open / Draft，需先完成 Accepted 决策文档验收与合并。
+当时 PR #99 继续保持 Open / Draft，Assignee 为 `@adui-dev`；当时 PR #97 仍为 Open / Draft，需先完成 Accepted 决策文档验收与合并。该记录是 PR #97 合并前的历史状态。
 
 ## 2026-11-19 · PR #97 合并与 PR #99 分支同步
 
@@ -1700,3 +1700,13 @@ PR #99 已从原功能分支 `c38de5ca38cc619a1128a84b63eca3523f42c9d7` 合流�
 PR #97 的 Windows `docs:check` 为 89 份 Markdown、退出码 0；该终端记录没有同时提供本地 HEAD，因此不声称其结果严格绑定到 PR #99 同步后的 HEAD。PR #99 同步后仍须在 Windows 最新 HEAD 执行 `vp check` 与 `pnpm run docs:check`；此前 618/618 单测、41/41 隔离 PostgreSQL 测试、55/55 HTTP E2E 和完整 `ready=0` 对应的代码未被本次文档合流修改，但本次同步本身不构成重新执行这些测试的证据。
 
 PR #99 继续保持 Open / Draft，Assignee 为 `@adui-dev`。原开发库 `adui_scada` 的失败迁移仍冻结；恢复操作必须等待可恢复备份和维护者单独明确授权。
+
+## 2026-11-19 · PR #99 发布状态复合引用完整性修复（E-062）
+
+PR #99 分支同步 PR #97 后的静态评审发现，原发布状态 lastReleaseEventId 仅以全局 UUID 引用发布事件，没有在数据库级绑定租户、工程、发布代次、目标修订和摘要；发布状态及事件的版本引用也未把 SHA-256 与不可变版本联合约束。该问题在正式发布 API 尚未实现时发现，没有真实跨工程发布写入事故证据。
+
+已在 PR #99 新增增量迁移 20261119000000_release_state_event_integrity，不修改已应用的 20261118000000_release_state_and_events。新迁移为工程版本建立摘要复合唯一键，将发布事件来源/目标版本、发布状态目标版本与最后发布事件全部改为租户/工程/修订/摘要/代次复合外键；Prisma Schema、静态迁移测试和隔离 PostgreSQL 负向测试同步更新。目标是让 PostgreSQL 直接拒绝跨工程事件引用、代次不匹配和摘要不匹配。
+
+新增 Windows 验收目标：单测 **619/619**、隔离 PostgreSQL **42/42**，另需新迁移首次/二次部署、status、vp check、docs:check 和完整 ready 实测。此前 618/618、41/41 和完整 ready=0 属于本次完整性修复之前的代码，不得作为新迁移验收结果。
+
+原开发库 adui_scada 的失败迁移仍冻结；本次新增迁移只允许先在隔离 adui_scada_test 验收。PR #99 继续保持 Open / Draft，Assignee 为 @adui-dev，未获得合并授权。

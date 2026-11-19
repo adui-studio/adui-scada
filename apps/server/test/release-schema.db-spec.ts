@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vite-plus/test";
 import { PrismaService } from "../src/database/prisma.service.js";
 
@@ -47,12 +48,18 @@ describe("正式发布 PostgreSQL 增量迁移", () => {
     >`
       SELECT migration_name, finished_at
       FROM "_prisma_migrations"
-      WHERE migration_name = '20261118000000_release_state_and_events'
+      WHERE migration_name IN (
+        '20261118000000_release_state_and_events',
+        '20261119000000_release_state_event_integrity'
+      )
         AND rolled_back_at IS NULL
     `;
 
-    expect(migrations).toHaveLength(1);
-    expect(migrations[0]?.finished_at).toBeInstanceOf(Date);
+    expect(migrations.map((row) => row.migration_name).sort()).toEqual([
+      "20261118000000_release_state_and_events",
+      "20261119000000_release_state_event_integrity",
+    ]);
+    expect(migrations.every((row) => row.finished_at instanceof Date)).toBe(true);
   });
 
   it("发布状态与发布事件表均已创建并包含中文表、字段注释", async () => {
@@ -141,6 +148,57 @@ describe("正式发布 PostgreSQL 增量迁移", () => {
       ]),
     );
 
+    const stateForeignKeys = await service!.client.$queryRaw<
+      Array<{ constraint_name: string; definition: string }>
+    >`
+      SELECT conname AS constraint_name, pg_get_constraintdef(oid) AS definition
+      FROM pg_constraint
+      WHERE conrelid = 'public.scada_project_release_state'::regclass
+        AND conname IN (
+          'scada_project_release_state_version_fkey',
+          'scada_project_release_state_last_event_fkey'
+        )
+    `;
+    expect(stateForeignKeys).toHaveLength(2);
+    const stateVersionForeignKey = stateForeignKeys.find(
+      (row) => row.constraint_name === "scada_project_release_state_version_fkey",
+    );
+    const stateEventForeignKey = stateForeignKeys.find(
+      (row) => row.constraint_name === "scada_project_release_state_last_event_fkey",
+    );
+    expect(stateVersionForeignKey?.definition).toContain(
+      "FOREIGN KEY (tenant_id, project_id, released_revision, released_content_hash)",
+    );
+    expect(stateVersionForeignKey?.definition).toContain(
+      "REFERENCES scada_project_versions(tenant_id, project_id, revision, content_hash)",
+    );
+    expect(stateEventForeignKey?.definition).toContain(
+      "FOREIGN KEY (tenant_id, project_id, release_generation, released_revision, released_content_hash, last_release_event_id)",
+    );
+    expect(stateEventForeignKey?.definition).toContain(
+      "REFERENCES scada_project_release_events(tenant_id, project_id, generation, to_revision, to_content_hash, event_id)",
+    );
+
+    const eventForeignKeys = await service!.client.$queryRaw<
+      Array<{ constraint_name: string; definition: string }>
+    >`
+      SELECT conname AS constraint_name, pg_get_constraintdef(oid) AS definition
+      FROM pg_constraint
+      WHERE conrelid = 'public.scada_project_release_events'::regclass
+        AND conname IN (
+          'scada_project_release_event_from_version_fkey',
+          'scada_project_release_event_to_version_fkey'
+        )
+    `;
+    expect(eventForeignKeys).toHaveLength(2);
+    expect(
+      eventForeignKeys.every((row) =>
+        row.definition.includes(
+          "REFERENCES scada_project_versions(tenant_id, project_id, revision, content_hash)",
+        ),
+      ),
+    ).toBe(true);
+
     const grantConstraint = await service!.client.$queryRaw<Array<{ definition: string }>>`
       SELECT pg_get_constraintdef(oid) AS definition
       FROM pg_constraint
@@ -168,16 +226,26 @@ describe("正式发布 PostgreSQL 增量迁移", () => {
           'scada_project_release_event_generation_key',
           'scada_project_release_event_idempotency_key',
           'scada_project_release_event_project_created_idx',
-          'scada_project_release_event_actor_created_idx'
+          'scada_project_release_event_actor_created_idx',
+          'scada_project_versions_snapshot_reference_key',
+          'scada_project_release_event_state_reference_key',
+          'scada_project_release_event_from_version_idx',
+          'scada_project_release_event_to_version_idx',
+          'scada_project_release_state_version_idx'
         )
     `;
 
     expect(indexes.map((row) => row.index_name).sort()).toEqual([
       "scada_project_release_event_actor_created_idx",
+      "scada_project_release_event_from_version_idx",
       "scada_project_release_event_generation_key",
       "scada_project_release_event_idempotency_key",
       "scada_project_release_event_project_created_idx",
+      "scada_project_release_event_state_reference_key",
+      "scada_project_release_event_to_version_idx",
       "scada_project_release_state_last_event_key",
+      "scada_project_release_state_version_idx",
+      "scada_project_versions_snapshot_reference_key",
     ]);
     for (const row of indexes) {
       expect(row.description ?? "").toMatch(/[一-龥]/);
@@ -205,5 +273,123 @@ describe("正式发布 PostgreSQL 增量迁移", () => {
       },
     });
     expect(invalidStates).toBe(0);
+  });
+
+  it("发布状态、发布事件与不可变版本必须保持租户工程代次和摘要闭包", async () => {
+    const tenantId = `test-${randomUUID()}`;
+    const projectA = `release-a-${randomUUID()}`;
+    const projectB = `release-b-${randomUUID()}`;
+    const eventId = randomUUID();
+    const wrongEventId = randomUUID();
+    const contentHash = "a".repeat(64);
+    const wrongHash = "b".repeat(64);
+    const now = new Date();
+
+    try {
+      await service!.client.scadaProject.createMany({
+        data: [projectA, projectB].map((projectId) => ({
+          tenantId,
+          projectId,
+          headRevision: 1n,
+          createdAt: now,
+          updatedAt: now,
+        })),
+      });
+      await service!.client.scadaProjectVersion.createMany({
+        data: [projectA, projectB].map((projectId) => ({
+          tenantId,
+          projectId,
+          revision: 1n,
+          snapshot: { formatVersion: "0.3.0", projectId, revision: 1 },
+          contentHash,
+          createdBy: "release-schema-test",
+          createdAt: now,
+        })),
+      });
+      await service!.client.scadaProjectReleaseState.createMany({
+        data: [projectA, projectB].map((projectId) => ({
+          tenantId,
+          projectId,
+          releaseGeneration: 0n,
+          updatedAt: now,
+        })),
+      });
+      await service!.client.$executeRaw`
+        INSERT INTO "scada_project_release_events" (
+          "event_id", "tenant_id", "project_id", "generation", "action",
+          "from_revision", "from_content_hash", "to_revision", "to_content_hash",
+          "actor_id", "idempotency_key", "request_semantic_hash"
+        ) VALUES (
+          ${eventId}::uuid, ${tenantId}, ${projectA}, 1, 'PUBLISH',
+          NULL, NULL, 1, ${contentHash},
+          'release-schema-test', ${`publish-${randomUUID()}`}, ${"c".repeat(64)}
+        )
+      `;
+
+      // 同租户其他工程即使具有相同修订号和摘要，也不能引用工程 A 的发布事件。
+      await expect(service!.client.$executeRaw`
+        UPDATE "scada_project_release_state"
+        SET "release_generation" = 1,
+            "released_revision" = 1,
+            "released_content_hash" = ${contentHash},
+            "last_release_event_id" = ${eventId}::uuid
+        WHERE "tenant_id" = ${tenantId} AND "project_id" = ${projectB}
+      `).rejects.toThrow(/foreign key constraint/i);
+
+      // 状态代次必须与最后成功事件的代次一致，防止指针和审计水位分离。
+      await expect(service!.client.$executeRaw`
+        UPDATE "scada_project_release_state"
+        SET "release_generation" = 2,
+            "released_revision" = 1,
+            "released_content_hash" = ${contentHash},
+            "last_release_event_id" = ${eventId}::uuid
+        WHERE "tenant_id" = ${tenantId} AND "project_id" = ${projectA}
+      `).rejects.toThrow(/foreign key constraint/i);
+
+      // 发布状态摘要必须与工程不可变版本摘要一致。
+      await expect(service!.client.$executeRaw`
+        UPDATE "scada_project_release_state"
+        SET "release_generation" = 1,
+            "released_revision" = 1,
+            "released_content_hash" = ${wrongHash},
+            "last_release_event_id" = ${eventId}::uuid
+        WHERE "tenant_id" = ${tenantId} AND "project_id" = ${projectA}
+      `).rejects.toThrow(/foreign key constraint/i);
+
+      // 发布事件目标摘要必须与其引用的不可变工程版本一致。
+      await expect(service!.client.$executeRaw`
+        INSERT INTO "scada_project_release_events" (
+          "event_id", "tenant_id", "project_id", "generation", "action",
+          "from_revision", "from_content_hash", "to_revision", "to_content_hash",
+          "actor_id", "idempotency_key", "request_semantic_hash"
+        ) VALUES (
+          ${wrongEventId}::uuid, ${tenantId}, ${projectA}, 2, 'PUBLISH',
+          NULL, NULL, 1, ${wrongHash},
+          'release-schema-test', ${`publish-${randomUUID()}`}, ${"d".repeat(64)}
+        )
+      `).rejects.toThrow(/foreign key constraint/i);
+
+      // 正确匹配租户、工程、代次、修订和摘要的发布状态可以提交。
+      await service!.client.$executeRaw`
+        UPDATE "scada_project_release_state"
+        SET "release_generation" = 1,
+            "released_revision" = 1,
+            "released_content_hash" = ${contentHash},
+            "last_release_event_id" = ${eventId}::uuid
+        WHERE "tenant_id" = ${tenantId} AND "project_id" = ${projectA}
+      `;
+      const state = await service!.client.scadaProjectReleaseState.findUniqueOrThrow({
+        where: { tenantId_projectId: { tenantId, projectId: projectA } },
+      });
+      expect(state.releaseGeneration).toBe(1n);
+      expect(state.releasedRevision).toBe(1n);
+      expect(state.releasedContentHash).toBe(contentHash);
+      expect(state.lastReleaseEventId).toBe(eventId);
+    } finally {
+      await service!.client.scadaProjectReleaseState.deleteMany({ where: { tenantId } });
+      await service!.client.scadaProjectReleaseEvent.deleteMany({ where: { tenantId } });
+      await service!.client.scadaProjectVersion.deleteMany({ where: { tenantId } });
+      await service!.client.scadaProject.deleteMany({ where: { tenantId } });
+    }
   });
 });

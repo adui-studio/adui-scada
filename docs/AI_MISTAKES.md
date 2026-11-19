@@ -566,6 +566,15 @@
 - **验证边界**：首次修复前，维护者实测 `test:db` 为 4/5 文件、30/41 项通过；三处清理代码按外键依赖顺序修复后，维护者再次实测 `test:db` 5/5 文件、41/41 项通过，双 Cookie HTTP CAS 用例 11/11 通过；完整 `pnpm run ready` 最终退出码 0。修复仅修改测试清理逻辑与文档，没有修改数据库、迁移 SQL 或生产外键。
 - **证据**：维护者 2026-11-19 Windows `test:db` 日志、PR #99、`apps/server/test/projects-cas-cookie-http.db-spec.ts`、`apps/server/test/prisma-project-version.db-spec.ts`、`apps/server/test/project-api.db-spec.ts`、`apps/server/prisma/schema.prisma`。
 
+### E-062 · 正式发布状态的末次事件与不可变版本缺少租户工程代次及摘要复合闭包（第三十五批 B 阶段）
+
+- **发现方式**：对 PR #99 的 Prisma Schema、已应用迁移和 ADR-0069 I-01/I-02 做静态代码评审时发现。原 lastReleaseEventId 仅以全局 UUID 引用发布事件；发布状态与发布事件、不可变版本的修订号和 SHA-256 摘要也没有全部绑定。**没有证据表明该缺口已被正式发布 API 使用或造成真实跨工程数据写入**；当时发布 API 尚未实现。
+- **风险**：数据库原约束允许发布状态引用另一工程的事件；也允许状态/事件中的修订号存在但其内容摘要与实际不可变版本不一致，或状态代次与最后事件代次不一致。这违反 I-01/I-02 对指针、代次、事件、租户和工程闭包的要求。
+- **最小修复**：不修改已在隔离 PostgreSQL 应用的 20261118000000_release_state_and_events。新增 20261119000000_release_state_event_integrity 增量迁移：为不可变版本建立 tenant/project/revision/contentHash 复合唯一键；发布事件来源/目标版本和发布状态目标版本均使用包含 SHA-256 的复合外键；发布状态末次事件使用包含租户、工程、代次、目标修订、目标摘要和事件 UUID 的复合外键。Prisma Schema 同步建模这些关系，并为复合外键提供必要索引及中文索引注释。
+- **防复发**：多租户数据模型中的跨表引用不能只使用全局 ID；应将 tenantId、projectId 与业务修订号、内容摘要、代次一起纳入复合键/外键。涉及不可变快照时必须将摘要绑定到版本主键；涉及状态指针时必须让指针、最后事件和代次保持数据库级一致，不能只依赖未来应用层校验。
+- **验证边界**：新增静态 Schema/迁移回归和隔离 PostgreSQL 负向用例，验收目标为单测 **619/619**、数据库专项 **42/42**；新增迁移首次/二次部署、状态检查及跨工程/错误代次/错误摘要拒绝均**待维护者 Windows 实测**。原有 618/618、41/41 和完整 ready=0 是修复前结果，不能外推为本次增量迁移通过。
+- **证据**：PR #99、apps/server/prisma/schema.prisma、apps/server/prisma/migrations/20261119000000_release_state_event_integrity/migration.sql、apps/server/test/release-schema.db-spec.ts、apps/server/src/database/prisma-schema-comments.spec.ts、ADR-0069 I-01/I-02。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

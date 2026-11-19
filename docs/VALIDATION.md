@@ -2073,3 +2073,31 @@ PR #99 已从原功能分支 `c38de5ca38cc619a1128a84b63eca3523f42c9d7` 合流�
 PR #97 的 Windows `docs:check` 为 89 份 Markdown、退出码 0；该终端记录没有同时提供本地 HEAD，因此不声称其结果严格绑定到 PR #99 同步后的 HEAD。PR #99 同步后仍须在 Windows 最新 HEAD 执行 `vp check` 与 `pnpm run docs:check`；此前 618/618 单测、41/41 隔离 PostgreSQL 测试、55/55 HTTP E2E 和完整 `ready=0` 对应的代码未被本次文档合流修改，但本次同步本身不构成重新执行这些测试的证据。
 
 PR #99 继续保持 Open / Draft，Assignee 为 `@adui-dev`。原开发库 `adui_scada` 的失败迁移仍冻结；恢复操作必须等待可恢复备份和维护者单独明确授权。
+
+## 2026-11-19 · PR #99 发布状态复合外键完整性修复（E-062，待 Windows 验收）
+
+静态评审发现原发布 Schema 中，状态表的 last_release_event_id 只引用全局事件 UUID；没有同时约束租户、工程、发布代次、目标修订和 SHA-256。状态及发布事件对历史版本的外键也只绑定修订号，不能由数据库保证摘要与不可变快照一致。该问题在发布 API 尚未实现时发现，不是已发生的跨工程写入事故。
+
+PR #99 已新增不可变增量迁移 20261119000000_release_state_event_integrity，不修改已经在隔离库应用的 20261118000000_release_state_and_events。新迁移增加：
+
+- 工程版本 tenant_id/project_id/revision/content_hash 复合唯一键。
+- 发布事件来源与目标版本的复合外键，确保 SHA-256 与实际版本一致。
+- 发布状态目标版本复合外键，确保指针摘要与不可变快照一致。
+- 发布状态末次事件复合外键，确保租户、工程、代次、目标修订、摘要与事件 UUID 完全一致。
+- 上述复合外键所需索引及中文数据库索引注释。
+
+新增 prisma-schema-comments.spec.ts 静态回归和 release-schema.db-spec.ts 真实 PostgreSQL 负向用例，覆盖跨工程事件引用、错误代次、错误状态摘要、错误事件目标摘要拒绝及正确关联成功。测试清理遵循发布状态、发布事件、历史版本、工程的外键依赖顺序。
+
+**待维护者 Windows 实测**：
+
+| 验收项 | 目标 |
+|---|---:|
+| db:validate / db:generate | 退出码 0 |
+| 新增迁移首次部署 / 二次部署 / status | 均退出码 0 |
+| vp check | 零警告、零错误 |
+| test:unit | 619/619 |
+| 隔离 PostgreSQL test:db | 42/42 |
+| docs:check | 89 份 Markdown，实际计数以命令为准 |
+| 完整 ready | 退出码 0 |
+
+本轮没有运行 Windows、Prisma 或 PostgreSQL 命令；上述均为验收目标，不是通过结果。原开发库 adui_scada 仍不得执行任何迁移恢复或写操作，直到完成可恢复备份并获得维护者单独明确授权。

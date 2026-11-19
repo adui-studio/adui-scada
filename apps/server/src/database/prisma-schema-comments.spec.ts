@@ -17,6 +17,10 @@ const releaseMigration = readFileSync(
   new URL("20261118000000_release_state_and_events/migration.sql", migrationsRoot),
   "utf8",
 );
+const releaseIntegrityMigration = readFileSync(
+  new URL("20261119000000_release_state_event_integrity/migration.sql", migrationsRoot),
+  "utf8",
+);
 
 const chinese = /[一-龥]/;
 const models = [...schema.matchAll(/^model (\w+) \{([\s\S]*?)^\}/gm)];
@@ -88,6 +92,33 @@ describe("Prisma 模型及 PostgreSQL 数据库中文注释约束", () => {
     expect(releaseMigration.indexOf(dropStatement)).toBeLessThan(
       releaseMigration.indexOf(addStatement),
     );
+  });
+
+  it("发布状态、事件与不可变版本通过复合外键保持租户工程代次和摘要闭包", () => {
+    expect(schema).toContain(
+      '@@unique([tenantId, projectId, revision, contentHash], map: "scada_project_versions_snapshot_reference_key")',
+    );
+    expect(schema).toContain(
+      '@@unique([tenantId, projectId, generation, toRevision, toContentHash, eventId], map: "scada_project_release_event_state_reference_key")',
+    );
+    expect(releaseIntegrityMigration).toContain(
+      'FOREIGN KEY ("tenant_id", "project_id", "released_revision", "released_content_hash")',
+    );
+    expect(releaseIntegrityMigration).toContain(
+      'FOREIGN KEY ("tenant_id", "project_id", "release_generation", "released_revision", "released_content_hash", "last_release_event_id")',
+    );
+    expect(releaseIntegrityMigration).toContain(
+      'REFERENCES "scada_project_release_events" ("tenant_id", "project_id", "generation", "to_revision", "to_content_hash", "event_id")',
+    );
+    expect(releaseIntegrityMigration).toContain(
+      'FOREIGN KEY ("tenant_id", "project_id", "from_revision", "from_content_hash")',
+    );
+    expect(releaseIntegrityMigration).toContain(
+      'FOREIGN KEY ("tenant_id", "project_id", "to_revision", "to_content_hash")',
+    );
+    expect(releaseIntegrityMigration.match(/^CREATE (?:UNIQUE )?INDEX /gm)).toHaveLength(5);
+    expect(releaseIntegrityMigration).toContain("BEGIN;");
+    expect(releaseIntegrityMigration.trimEnd().endsWith("COMMIT;")).toBe(true);
   });
 
   it("所有 Prisma 业务表和实际持久化字段都有中文数据库注释", () => {

@@ -70,11 +70,16 @@ model ScadaProjectVersion {
   /// 此历史版本所属的工程。
   project     ScadaProject        @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
   /// 该成功保存版本对应的审计事件。
-  audit       ScadaProjectAudit?
+  audit               ScadaProjectAudit?
+  /// 该版本作为正式发布事件来源版本的历史引用。
+  releaseFromEvents   ScadaProjectReleaseEvent[] @relation("ScadaProjectReleaseEventFromVersion")
   /// 该版本作为正式发布事件目标版本的历史引用。
   releaseTargetEvents ScadaProjectReleaseEvent[] @relation("ScadaProjectReleaseEventToVersion")
+  /// 该版本作为当前正式发布指针的历史引用。
+  releaseStates       ScadaProjectReleaseState[] @relation("ScadaProjectReleaseStateVersion")
 
   @@id([tenantId, projectId, revision])
+  @@unique([tenantId, projectId, revision, contentHash], map: "scada_project_versions_snapshot_reference_key")
   @@index([tenantId, projectId, createdAt], map: "scada_project_versions_created_idx")
   @@map("scada_project_versions")
 }
@@ -122,11 +127,25 @@ model ScadaProjectReleaseState {
   updatedAt           DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
   /// 该发布状态所属的工程主表记录。
   project             ScadaProject            @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
-  /// 当前发布指针引用的版本由数据库复合外键维护；该可空复合关系不暴露为 Prisma relation 字段。
-  /// 当前发布指针对应的最后成功发布事件。
-  lastReleaseEvent    ScadaProjectReleaseEvent? @relation("ScadaProjectReleaseStateLastEvent", fields: [lastReleaseEventId], references: [eventId], onDelete: Restrict)
+  /// 当前发布指针引用的不可变工程版本；复合外键同时校验修订号与 SHA-256 摘要。
+  releasedVersion ScadaProjectVersion? @relation(
+    "ScadaProjectReleaseStateVersion",
+    fields: [tenantId, projectId, releasedRevision, releasedContentHash],
+    references: [tenantId, projectId, revision, contentHash],
+    onDelete: Restrict,
+    onUpdate: Cascade
+  )
+  /// 当前发布指针对应的最后成功事件；复合外键同时校验租户、工程、代次、修订与摘要。
+  lastReleaseEvent ScadaProjectReleaseEvent? @relation(
+    "ScadaProjectReleaseStateLastEvent",
+    fields: [tenantId, projectId, releaseGeneration, releasedRevision, releasedContentHash, lastReleaseEventId],
+    references: [tenantId, projectId, generation, toRevision, toContentHash, eventId],
+    onDelete: Restrict,
+    onUpdate: Cascade
+  )
 
   @@id([tenantId, projectId])
+  @@index([tenantId, projectId, releasedRevision, releasedContentHash], map: "scada_project_release_state_version_idx")
   @@map("scada_project_release_state")
 }
 
@@ -160,12 +179,29 @@ model ScadaProjectReleaseEvent {
   createdAt           DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
   /// 该事件所属的工程主表记录。
   project             ScadaProject            @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
-  /// 该事件提交后的正式发布版本。
-  toVersion           ScadaProjectVersion     @relation("ScadaProjectReleaseEventToVersion", fields: [tenantId, projectId, toRevision], references: [tenantId, projectId, revision], onDelete: Restrict)
+  /// 该事件提交前的正式发布版本；首次发布时为空。
+  fromVersion ScadaProjectVersion? @relation(
+    "ScadaProjectReleaseEventFromVersion",
+    fields: [tenantId, projectId, fromRevision, fromContentHash],
+    references: [tenantId, projectId, revision, contentHash],
+    onDelete: Restrict,
+    onUpdate: Cascade
+  )
+  /// 该事件提交后的正式发布版本；复合外键同时校验快照摘要。
+  toVersion ScadaProjectVersion @relation(
+    "ScadaProjectReleaseEventToVersion",
+    fields: [tenantId, projectId, toRevision, toContentHash],
+    references: [tenantId, projectId, revision, contentHash],
+    onDelete: Restrict,
+    onUpdate: Cascade
+  )
   /// 若该事件是当前发布指针的最后一次成功变更，则被状态表引用。
   currentReleaseState ScadaProjectReleaseState? @relation("ScadaProjectReleaseStateLastEvent")
 
   @@unique([tenantId, projectId, generation], map: "scada_project_release_event_generation_key")
+  @@unique([tenantId, projectId, generation, toRevision, toContentHash, eventId], map: "scada_project_release_event_state_reference_key")
+  @@index([tenantId, projectId, fromRevision, fromContentHash], map: "scada_project_release_event_from_version_idx")
+  @@index([tenantId, projectId, toRevision, toContentHash], map: "scada_project_release_event_to_version_idx")
   @@unique([tenantId, projectId, actorId, action, idempotencyKey], map: "scada_project_release_event_idempotency_key")
   @@index([tenantId, projectId, createdAt], map: "scada_project_release_event_project_created_idx")
   @@index([tenantId, actorId, createdAt], map: "scada_project_release_event_actor_created_idx")
