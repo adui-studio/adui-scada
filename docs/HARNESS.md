@@ -3429,3 +3429,20 @@ PR #99 在原发布 Schema 迁移已应用后新增 20261119000000_release_state
 迁移前若只看到 pending migration，按 E-060 检查完整输出后可部署；若出现 failed migration / P3009、连接目标不是本机隔离库或任何环境校验不匹配，立即停止。**禁止**把测试目标改成开发库 `adui_scada`、OIDC Lab 库、远程数据库或生产数据库。
 
 原开发库 `adui_scada` 的 `20261118000000_release_state_and_events` 失败迁移继续冻结；未经可恢复备份与维护者单独明确授权，不得执行 `migrate resolve`、`migrate deploy`、reset、DROP、DELETE 或手工修改 `_prisma_migrations`。
+
+## 2026-11-19 · 第三十五批 C1 正式发布事务真实 PostgreSQL 验收入口
+
+新增 `apps/server/test/release-transaction.db-spec.ts`，由 `apps/server/vitest.config.db.ts` 的既有 DB 专项配置发现。该测试使用真实 NestJS HTTP、Cookie/CSRF、Prisma 和 PostgreSQL，覆盖：
+
+- 发布事件与状态指针同事务提交、编辑 head 保持不变。
+- 同幂等键同语义重放、同键异语义冲突、不同幂等键重复发布同一修订保守拒绝。
+- 新 head 发布时事件来源版本指向上一已发布快照。
+- 同一工程相同预期发布代次并发时最多一个成功。
+- 发布事务持有会话/身份及 ACL 共享行锁期间，撤销/撤权事务等待发布结束。
+- 独立发布 ACL 缺失、静态预检失败、会话撤销时不产生成功发布事件。
+
+生产 Provider 的 `ProjectReleaseSafetyGate` 仍固定 fail-closed。只有该 DB spec 的测试 Nest 模块替换为测试门禁，目的是隔离验证事务、CAS、幂等和行锁，不代表生产请求可以成功发布。
+
+执行前必须使用本文件既有 PowerShell `try/finally` 流程，确保 `SCADA_DATABASE_URL` 与 `SCADA_TEST_DATABASE_URL` 均指向本机 `127.0.0.1:15432/adui_scada_test`；测试文件自身还会校验 `SCADA_TEST_DATABASE_URL` 的协议、主机和数据库名。随后执行 `pnpm run test:db`。该脚本会构建 Core、生成 Prisma Client，并使用 `vitest.config.db.ts` 执行全部数据库专项。
+
+本批不新增迁移，不需要对任何数据库执行 `migrate deploy`。不得将连接指向原开发库 `adui_scada`、远程库或生产库；发生 P3009、failed migration、连接目标不符或状态不明时立即停止。每项随机租户/工程测试必须在 finally 按 RESTRICT 外键依赖顺序清理，不能放宽外键或跳过清理。
