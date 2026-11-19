@@ -3409,7 +3409,6 @@ PR #99 在原发布 Schema 迁移已应用后新增 20261119000000_release_state
 
 本轮迁移和测试只允许访问本机 adui_scada_test。原开发库 adui_scada 的失败迁移仍处于冻结状态；不得对其执行 migrate resolve、migrate deploy、DROP、DELETE、reset 或手工修改 _prisma_migrations。必须等待可恢复备份和维护者单独明确授权。
 
-
 ## 2026-11-19 · PR #99 E-065 修复后工程质量链通过，第二条迁移待真实 PostgreSQL 验收
 
 维护者 Windows 最新日志：`pnpm run test:unit` 51/51 文件、620/620 项通过；`vp check` 355 文件格式正确、207 受检文件零警告/Lint/类型错误；`docs:check` 89 个 Markdown 通过；完整 `pnpm run ready` 最终退出码 0，包含 55/55 HTTP E2E 与 React/Vue/NestJS 构建。Prisma Client 7.10.1 在单测和完整质量链中生成成功。该终端记录未包含 `git rev-parse HEAD`，不能把结果严格绑定到本节更新前的远端 SHA；本节文档变更后需重新运行 `docs:check`。
