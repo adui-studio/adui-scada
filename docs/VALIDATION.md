@@ -1976,3 +1976,16 @@ Vitest 日志明确包含 `apps/server/src/database/prisma-schema-comments.spec.
 6. 执行完整 `pnpm run ready` 并记录最终退出码。
 
 原开发库 `adui_scada` 的失败迁移记录和旧三项权限 CHECK 已由维护者只读确认。**仍未执行 `migrate resolve --rolled-back` 或任何开发库恢复写入**；必须先完成隔离库验收、可恢复备份，并取得维护者明确授权。
+## 2026-11-19 · PR #99 隔离数据库迁移状态确认（E-060）
+
+维护者 Windows 已确认：
+
+- `docs:check`：88 份 Markdown 通过，退出码 **0**。
+- 本机 Docker PostgreSQL 中存在数据库 `adui_scada_test`，数据库列表查询退出码 **0**。
+- 将 `SCADA_DATABASE_URL` 与 `SCADA_TEST_DATABASE_URL` 临时指向该隔离库后，`pnpm run db:migrate:status` 成功连接 `127.0.0.1:15432/adui_scada_test`。
+- Prisma 报告 5 条迁移已发现，唯一待执行迁移为 `20261118000000_release_state_and_events`；输出未报告 failed migration / P3009。
+- 当前 Prisma CLI 对该 pending 状态返回退出码 **1**，PowerShell 包装因此提前停止；`finally` 已恢复原环境变量。本次没有执行任何迁移写入。
+
+**判断**：这是预期的部署前状态，不是数据库故障。不得只按 status 退出码判断；必须结合输出区分 pending migration 与 failed migration。修复后的迁移可进入隔离库首次部署；部署成功后再进行第二次部署、status 和 `test:db`。
+
+本轮更新 `docs/HARNESS.md` 与 E-060，明确当前 Prisma 7.10.1 对 pending 状态的实际退出码语义。**首次/二次部署、部署后 status、真实 `test:db` 和完整 `ready` 均仍待 Windows 执行。**
