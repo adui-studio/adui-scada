@@ -1990,3 +1990,25 @@ Vitest 日志明确包含 `apps/server/src/database/prisma-schema-comments.spec.
 **判断**：这是预期的部署前状态，不是数据库故障。不得只按 status 退出码判断；必须结合输出区分 pending migration 与 failed migration。修复后的迁移可进入隔离库首次部署；部署成功后再进行第二次部署、status 和 `test:db`。
 
 本轮更新 `docs/HARNESS.md` 与 E-060，明确当前 Prisma 7.10.1 对 pending 状态的实际退出码语义。**首次/二次部署、部署后 status、真实 `test:db` 和完整 `ready` 均仍待 Windows 执行。**
+## 2026-11-19 · PR #99 隔离 PostgreSQL 迁移通过，DB 测试发现发布状态清理外键问题
+
+维护者 Windows 最新日志确认，所有数据库命令均在本机隔离库 `adui_scada_test`（`127.0.0.1:15432`）执行：
+
+| 验收项 | 实际结果 | 退出码 |
+| --- | --- | ---: |
+| 首次 `db:migrate:deploy` | 成功应用 `20261118000000_release_state_and_events` | 0 |
+| 二次 `db:migrate:deploy` | No pending migrations to apply | 0 |
+| 部署后 `db:migrate:status` | Database schema is up to date | 0 |
+| `test:db` | 4/5 文件、30/41 项通过；1 文件 11 项失败 | 1 |
+
+11 项失败全部集中在 `projects-cas-cookie-http.db-spec.ts` 的 finally 清理。Prisma 报 `scada_project_release_state_project_fkey` RESTRICT：新建工程会同时创建发布状态行，旧测试清理没有先删除该状态便删除工程。日志中的“数据库工程版本元数据与快照不一致”来自主动篡改快照摘要的最后一个安全测试；该测试期望 HTTP 500 并验证内部错误不会泄漏，不是 11 项失败的共同根因。
+
+### 已在 PR #99 修复
+
+- 双 Cookie HTTP DB 测试：先删发布状态，再删发布事件、审计、版本、授权、工程。
+- 工程版本 DB 测试：补齐发布状态/事件清理。
+- 工程 API DB 测试：将原先先删事件、后删状态调整为状态优先，符合状态对最后事件的外键方向。
+- `docs/HARNESS.md` 增加带 RESTRICT 外键的测试夹具清理顺序。
+- `docs/AI_MISTAKES.md` 新增 E-061。
+
+本次仅修改测试清理逻辑与文档；没有放宽/删除生产外键，没有修改迁移 SQL，没有执行数据库清理写入。**修复后的 `test:db`、最新文档 `docs:check` 和完整 `ready` 仍待 Windows 复验。**
