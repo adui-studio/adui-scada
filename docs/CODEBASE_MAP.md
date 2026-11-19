@@ -979,7 +979,7 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - apps/server/prisma/migrations/20261119000000_release_state_event_integrity/migration.sql：版本摘要复合唯一键、发布状态与事件的复合外键及其中文索引注释。
 - apps/server/test/release-schema.db-spec.ts：隔离 PostgreSQL 验证跨工程事件引用、错误代次、错误版本摘要和正确状态引用。
 
-## 2026-11-19 · 第三十五批 C1 正式发布事务候选
+## 2026-11-19 · 第三十五批 C1 正式发布事务（已合并）
 
 - `apps/server/src/projects/project-release-safety-gate.ts`：正式发布安全门禁接口；生产默认 Provider 固定 fail-closed，门禁未完成返回 503。
 - `apps/server/src/projects/prisma-project-release-store.ts`：发布事务仓储，负责输入白名单、会话/身份/ACL 事务内复核、工程/发布状态/不可变版本行锁、双 CAS、幂等、快照完整性、Core 静态预检、事件与发布指针原子提交。
@@ -987,5 +987,10 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `apps/server/src/projects/project-api.controller.ts`：增加 `POST /api/v1/projects/:projectId/releases`，要求 `release:publish` 和 UUID v4 `Idempotency-Key`。
 - `apps/server/src/projects/project-api.exception-filter.ts`：映射发布冲突、会话失效、静态预检失败和门禁未就绪；错误响应禁止缓存。
 - `apps/server/src/projects/project-persistence.module.ts`：注册发布仓储和默认安全门禁 Provider。
-- `apps/server/test/projects-api.e2e-spec.ts`：HTTP 路由、独立权限、CSRF、no-store 和默认门禁错误映射。
-- `apps/server/test/release-transaction.db-spec.ts`：真实隔离 PostgreSQL 发布事务测试；当前待维护者执行。
+- `apps/server/test/projects-api.e2e-spec.ts`：HTTP 路由、独立权限、CSRF、no-store 和默认门禁错误映射；完整服务端 E2E 59/59 通过。
+- `apps/server/test/release-transaction.db-spec.ts`：真实隔离 PostgreSQL 发布事务测试，10 项覆盖事件/指针原子性、幂等、并发 CAS、撤权/会话锁竞争及 fail-closed 场景；最终 10/10 通过。
+- `apps/server/test/projects-cas-cookie-http.db-spec.ts`：双 Cookie 真实 HTTP + PostgreSQL CAS 测试，11 项覆盖身份隔离、CSRF/Origin、并发 CAS、迟到响应、注销、ACL 撤销和只读预检；最终 11/11 通过。测试模块注册真实发布仓储与默认 fail-closed 安全门禁。
+
+## 2026-11-19 · 第三十五批 C1 合并与验收状态
+
+PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 新增发布事务仓储、默认 fail-closed 安全门禁和发布 HTTP 路由；生产发布请求仍返回 503。最终 Windows 验收：PostgreSQL 6/6 文件、52/52 用例；单测 633/633；HTTP E2E 59/59；React/Vue/Server 构建及完整 `ready` 通过。
