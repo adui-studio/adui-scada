@@ -2255,14 +2255,14 @@ C1 不新增 Prisma 迁移。`test:db` 必须使用本机隔离库；原开发�
 
 维护者 Windows 在正确设置隔离 PostgreSQL 环境后执行服务端数据库专项，Core Node 构建与 Prisma Client 7.10.1 生成成功。实际结果：
 
-| 数据库测试文件 | 结果 |
-|---|---:|
-| `oidc-schema.db-spec.ts` | 6/6 |
-| `prisma-project-version.db-spec.ts` | 12/12 |
-| `project-api.db-spec.ts` | 7/7 |
+| 数据库测试文件                        |                            结果 |
+| ------------------------------------- | ------------------------------: |
+| `oidc-schema.db-spec.ts`              |                             6/6 |
+| `prisma-project-version.db-spec.ts`   |                           12/12 |
+| `project-api.db-spec.ts`              |                             7/7 |
 | `projects-cas-cookie-http.db-spec.ts` | 测试模块初始化失败，11 项未执行 |
-| `release-schema.db-spec.ts` | 6/6 |
-| `release-transaction.db-spec.ts` | 10/10 |
+| `release-schema.db-spec.ts`           |                             6/6 |
+| `release-transaction.db-spec.ts`      |                           10/10 |
 
 Vitest 汇总：5/6 文件通过，41 项通过、11 项 skipped，1 个 Suite 初始化失败，命令退出码 1。失败原因为 `ProjectApiController` 构造函数新增的 `PrismaProjectReleaseStore` 未注册到双 Cookie 数据库测试的手工 NestJS TestingModule；其依赖 `ProjectReleaseSafetyGate` 也缺失。该错误发生在测试模块编译阶段，不是 11 项断言失败，也不能据此判定发布事务或 PostgreSQL Schema 有缺陷。
 
