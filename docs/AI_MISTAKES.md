@@ -622,6 +622,16 @@
 - **提交绑定说明**：维护者本轮终端日志未提供本地 `git rev-parse HEAD`。GitHub 候选分支当前 HEAD 为 `7c619941f486b639298e4015d6538b995919d8c5`，但不将未提供的本地 SHA 伪写为实测绑定。
 - **证据**：维护者 2026-11-19 Windows 定向测试、全量单测、`vp check`、`docs:check` 日志；候选分支 `apps/server/src/projects/prisma-project-release-store.spec.ts`。
 
+### E-068 · C1 PostgreSQL 验收指令再次遗漏显式隔离 URL 环境设置（第三十五批 C1，待复验）
+
+- **现象**：维护者 2026-11-19 Windows 执行 `pnpm run test:db`，此前 `docs:check` 89 份 Markdown 通过、`vp check` 359 个文件格式正确且 211 个受检文件零警告/错误，均退出码 0；数据库专项的 6 个测试文件全部在模块加载时因 `SCADA_TEST_DATABASE_URL` 未设置而退出，Vitest 显示 6 个失败 Suite、0 个测试，命令退出码 1。失败位置分别是 OIDC Schema、工程版本、工程 API、双会话 HTTP、发布 Schema 和正式发布事务 DB spec 的 URL 前置保护。
+- **根因**：此前助手只要求“按 `docs/HARNESS.md` 的 PowerShell `try/finally` 流程执行”，却没有在回复中给出本轮可直接复制的环境设置命令。维护者随后直接运行裸 `pnpm run test:db`，当前 PowerShell 进程没有 `SCADA_TEST_DATABASE_URL`。这是对历史 E-057 同类问题的再次复发，属于助手验收指引不完整，不归咎于维护者。
+- **影响边界**：测试文件在导入阶段即 fail-closed，Vitest 没有执行任何 DB 测试用例；日志没有显示连接 PostgreSQL、执行 SQL、创建/删除随机租户或修改数据库。该失败不能解释为发布事务、数据库约束或并发测试失败。`pnpm run test:db` 前置的 Core 构建和 Prisma Client 7.10.1 生成已成功。
+- **最小修复**：在 `docs/HARNESS.md` 增加 C1 专用“仅运行 test:db、不执行迁移”的完整 PowerShell `try/finally` 代码块：从根 `.env` 读取开发 URL，只在当前进程将数据库名替换为 `adui_scada_test`，验证 URL scheme/host/path，设置 `SCADA_DATABASE_URL` 与 `SCADA_TEST_DATABASE_URL`，运行测试并在 `finally` 恢复两个原值。不修改测试 URL 白名单、不修改生产代码、不执行迁移。
+- **防复发**：凡要求真实 PostgreSQL 测试，回复必须把环境设置、隔离目标验证、测试命令和 `finally` 恢复写在同一个可复制 PowerShell 代码块中；只写“参考 HARNESS”或“临时指向隔离库”不算完整指引。C1 不新增 Prisma 迁移，不要把 B 阶段 `migrate deploy/status` 模板原样带入本轮。
+- **验证状态**：安全保护行为符合预期；本次真实 PostgreSQL 测试仍**待维护者使用修复后的完整环境包装命令重新执行**。修复后的 `docs:check` / `vp check` 也需在文档提交后重新运行。原开发库 `adui_scada` 的历史失败迁移继续冻结。
+- **证据**：维护者 2026-11-19 上传的 `pnpm run test:db` 原始 Vitest 输出；`apps/server/test/release-transaction.db-spec.ts` 及其他五个 DB spec 的 `SCADA_TEST_DATABASE_URL` 导入前置校验；`docs/HARNESS.md` 的隔离 PostgreSQL 既有模板。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
