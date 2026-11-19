@@ -1118,7 +1118,7 @@ React `ServerReleasePreflight.tsx`、Vue `ServerReleasePreflight.vue` 的异步 
 
 [ADR-0069](adr/0069-release-pointer-atomic-publication-design.md)（**Accepted**）已获维护者批准，定义后续正式发布/回滚写入功能的架构边界，而**不是现有 NestJS/Prisma 的可调用接口**。核心区分为：`headRevision` 仅代表编辑版本水位；独立 `releasedRevision/releasedContentHash` 只表示当前运行发布版本；`releaseGeneration` 为严格单调的发布/回滚 CAS 代次，防止发布→回滚→再发布相同修订号时的 ABA 问题。批准的事务方向要求锁内复核可信主体、独立 `release:publish`/`release:rollback` ACL、期望版本及代次，重新读取并校验不可变 ProjectSnapshot 和 Core 兼容性，并在同一事务中追加发布事件与切换指针。回滚目标必须是曾实际发布过的快照，不能直接指向任意已保存工程版本或草稿。
 
-当前 main 真实代码仍只有 `project:read/version:read/version:append` 三种 ACL、不可变工程历史、版本追加审计和**只读** `release-preflight` GET，没有发布表、正式发布事务、发布/回滚路由或 Runtime 发布态加载。ADR-0069 与 R-01～R-08 的架构基线已批准；具体 Prisma、HTTP、Runtime 和工业安全实现仍须独立 PR 与对应专项验收。任何预检 `passed=true` 均不能代替发布事务内重新校验。
+当前 main 已包含 B 阶段发布状态/事件模型、独立 `release:publish` / `release:rollback` 权限动作及复合引用完整性；C1 已实现 `POST /api/v1/projects/:projectId/releases` 和发布事务。生产 `ProjectReleaseSafetyGate` 固定 fail-closed，真实应用请求仍不能成功发布。当前没有 `release:read` / `runtime:read` 权限、当前发布快照读取路由或回滚写路由；任何预检 `passed=true` 均不能代替发布事务内重新校验。
 
 ## 2026-11-18 · 第三十五批第十二小批：发布写事务准入评审
 
@@ -1147,3 +1147,13 @@ PR #100 候选分支新增服务端正式发布命令 `POST /api/v1/projects/:pr
 当前生产 `ProjectReleaseSafetyGate` 固定抛出门禁未就绪异常并返回 503；Runtime、Tag、数据源、资源、生产审批和工业安全门禁未完成前，不允许真实应用请求成功发布。隔离 PostgreSQL 测试模块可注入测试门禁，仅验证事务实现，不改变生产 Provider。
 
 维护者 Windows 已通过发布仓储定向测试 13/13、全量单测 52/52 文件/633/633 项、`vp check` 359 文件/211 受检零警告错误、`docs:check` 89 份。**真实 PostgreSQL `test:db` 与完整 `ready` 尚待执行**；C1 仍为 Draft 候选，不能将当前单元测试通过等同于真实数据库并发/故障注入或生产发布能力验收。
+
+## 2026-11-19 · 第三十五批 C1 最终实现与验收
+
+PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。服务端发布请求 `POST /api/v1/projects/:projectId/releases` 只接受 `expectedHeadRevision`、`targetRevision`、`expectedReleaseGeneration` 三个安全整数和 UUID v4 `Idempotency-Key`。请求不接受客户端快照正文、主体、租户或权威摘要。
+
+`PrismaProjectReleaseStore.publish` 在单一 PostgreSQL 事务中锁定工程、有效会话/身份、ACL、发布状态与不可变版本；锁内复核 `release:publish`、head/releaseGeneration CAS、幂等语义、快照 SHA-256 和共享 Core 静态预检。仅测试模块可以注入测试门禁；生产 `ProjectReleaseSafetyGate` 固定 fail-closed 并返回 503。发布事件与指针在同一事务提交，编辑 head 不回退。
+
+维护者 Windows 实测隔离 PostgreSQL 6/6 文件、52/52 用例，单测 633/633，HTTP E2E 59/59，`vp check`、`docs:check` 与完整 `ready` 均通过。此结果不代表 ADR-0069 T-01～T-22 全部完成。
+
+D 阶段开始前必须确定 Runtime 读取权限及其与编辑权限的隔离策略。当前代码没有 `release:read` 或 `runtime:read`；不得直接复用 `project:read` / `version:read` 作为工业运行权限。
