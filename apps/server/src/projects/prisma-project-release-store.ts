@@ -314,7 +314,7 @@ function toReleaseResult(projectId: string, event: ReleaseEventResultRow): Proje
 
 /**
  * 正式发布事务仓储。
- * 锁顺序固定为工程 → 会话/主体 → ACL → 发布状态；成功事件与发布指针同事务提交。
+ * 锁顺序固定为工程 → 会话/主体 → ACL → 发布状态 → 不可变版本；成功事件与发布指针同事务提交。
  */
 @Injectable()
 export class PrismaProjectReleaseStore {

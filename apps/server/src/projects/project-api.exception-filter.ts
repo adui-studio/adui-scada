@@ -15,6 +15,7 @@ import {
 import { ProjectReleaseGateUnavailableError } from "./project-release-safety-gate.js";
 
 interface ProjectApiHttpResponse {
+  setHeader(name: string, value: string): void;
   status(code: number): ProjectApiHttpResponse;
   json(body: unknown): void;
 }
@@ -46,6 +47,7 @@ export class ProjectApiExceptionFilter implements ExceptionFilter {
     host: ArgumentsHost,
   ): void {
     const response = host.switchToHttp().getResponse<ProjectApiHttpResponse>();
+    response.setHeader("Cache-Control", "no-store");
     let statusCode: number;
     let message: string;
 

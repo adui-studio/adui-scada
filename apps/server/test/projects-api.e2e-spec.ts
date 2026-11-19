@@ -577,6 +577,7 @@ describe("工程 API HTTP 接口（端到端）", () => {
       .expect(503);
 
     expect(response.status).toBe(503);
+    expect(response.headers["cache-control"]).toBe("no-store");
     expect(response.body.message).toContain("安全门禁尚未完成");
     expect(JSON.stringify(response.body)).not.toContain("Prisma");
   });
