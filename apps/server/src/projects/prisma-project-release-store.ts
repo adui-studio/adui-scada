@@ -21,7 +21,8 @@ import { ProjectReleaseSafetyGate } from "./project-release-safety-gate.js";
 
 const TRANSACTION_OPTIONS = { maxWait: 2000, timeout: 10000 };
 const SESSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+const IDEMPOTENCY_KEY_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const MAX_SAFE_BIGINT = BigInt(Number.MAX_SAFE_INTEGER);
 
@@ -37,6 +38,7 @@ interface ProjectPublishRequest {
 export interface ProjectReleaseResult {
   readonly projectId: string;
   readonly action: "PUBLISH";
+  /** 发布事件提交时的工程 head 水位；幂等重放返回原始值。 */
   readonly headRevision: number;
   readonly releasedRevision: number;
   readonly releasedContentHash: string;
@@ -121,7 +123,7 @@ function parsePublishRequest(input: unknown, idempotencyKey: unknown): ProjectPu
     );
   }
   if (typeof idempotencyKey !== "string" || !IDEMPOTENCY_KEY_PATTERN.test(idempotencyKey)) {
-    throw new ProjectRequestValidationError("Idempotency-Key 必须为 1 至 128 位受控字符");
+    throw new ProjectRequestValidationError("Idempotency-Key 必须为服务端生成的 UUID v4");
   }
 
   const expectedHeadRevision = parseSafePositiveInteger(
@@ -372,6 +374,10 @@ export class PrismaProjectReleaseStore {
           throw new ProjectReleaseConflictError();
         }
         if (state.releaseGeneration >= MAX_SAFE_BIGINT) {
+          throw new ProjectReleaseConflictError();
+        }
+        // ADR-0069 尚未批准“不同幂等键重复发布同一修订”的语义，当前保守拒绝。
+        if (state.releasedRevision === BigInt(request.targetRevision)) {
           throw new ProjectReleaseConflictError();
         }
 

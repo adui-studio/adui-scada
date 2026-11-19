@@ -27,7 +27,7 @@ const REQUEST = {
   targetRevision: 1,
   expectedReleaseGeneration: 0,
 };
-const IDEMPOTENCY_KEY = "release-unit-test-0001";
+const IDEMPOTENCY_KEY = "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e8";
 
 function createDocument(unsupported = false): ScadaDocument {
   const copy = JSON.parse(JSON.stringify(waterTreatmentDemoDocument)) as ScadaDocument;
@@ -191,7 +191,8 @@ describe("正式发布事务仓储", () => {
       [{ ...REQUEST, snapshot: {} }, IDEMPOTENCY_KEY],
       [{ ...REQUEST, targetRevision: 2 }, IDEMPOTENCY_KEY],
       [REQUEST, ""],
-      [REQUEST, "x".repeat(129)],
+      [REQUEST, "scada_s_" + "s".repeat(43)],
+      [REQUEST, "B2F8A51C-03C6-4E6C-A4D0-4D7F6EF4A4E8"],
       [REQUEST, ["duplicate", "header"]],
     ] as const) {
       await expect(
@@ -262,6 +263,29 @@ describe("正式发布事务仓储", () => {
     expect(staleGeneration.tx.scadaProjectReleaseEvent.create).not.toHaveBeenCalled();
   });
 
+  it("不同幂等键重复选择当前已发布修订时保守冲突", async () => {
+    const harness = await createHarness({
+      state: {
+        releaseGeneration: 1n,
+        releasedRevision: 1n,
+        releasedContentHash: "a".repeat(64),
+        lastReleaseEventId: "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e8",
+      },
+      allowGate: true,
+    });
+    await expect(
+      harness.store.publish(
+        PRINCIPAL,
+        SESSION_ID,
+        PROJECT_ID,
+        { ...REQUEST, expectedReleaseGeneration: 1 },
+        "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e9",
+      ),
+    ).rejects.toBeInstanceOf(ProjectReleaseConflictError);
+    expect(harness.tx.scadaProjectVersion.findUnique).not.toHaveBeenCalled();
+    expect(harness.tx.scadaProjectReleaseEvent.create).not.toHaveBeenCalled();
+  });
+
   it("快照摘要或数据库元数据不一致时拒绝发布", async () => {
     const snapshot = await createProjectSnapshot(createDocument(), {
       revision: 1,
@@ -310,16 +334,20 @@ describe("正式发布事务仓储", () => {
       IDEMPOTENCY_KEY,
     );
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       projectId: PROJECT_ID,
       action: "PUBLISH",
       headRevision: 1,
       releasedRevision: 1,
       releasedContentHash: harness.snapshot.contentHash,
       releaseGeneration: 1,
-      eventId: harness.eventId,
-      createdAt: CREATED_AT,
     });
+    expect(result.eventId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    );
+    expect(Date.parse(result.createdAt)).not.toBeNaN();
+    const createdEvent = harness.tx.scadaProjectReleaseEvent.create.mock.calls[0]?.[0];
+    expect(result.eventId).toBe(createdEvent?.data.eventId);
     expect(harness.steps).toEqual([
       "锁定工程",
       "锁定会话与主体",
