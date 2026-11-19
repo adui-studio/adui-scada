@@ -1645,6 +1645,7 @@ PR #99 已修复：
 维护者 Windows 已确认 `adui_scada_test` 存在，`docs:check` 88 份通过，退出码 0。隔离库 `db:migrate:status` 成功连接本机 `127.0.0.1:15432/adui_scada_test`，报告 5 条已发现迁移及唯一待执行项 `20261118000000_release_state_and_events`，未报告 failed migration / P3009；该状态命令在当前 Prisma CLI 下返回退出码 1，PowerShell `finally` 已恢复原环境变量，且本次没有执行迁移写入。
 
 这表示隔离库处于正常待部署状态，不是迁移失败。E-060 已记录退出码误判，`docs/HARNESS.md` 已修正。下一步在确认 PR 分支 HEAD 后，直接在隔离库执行首次 `db:migrate:deploy`、二次部署、部署后 `migrate status` 和 `test:db`；之后执行完整 `ready`。原开发库 `adui_scada` 的部分失败迁移仍不做恢复，等待隔离库验收、可恢复备份和维护者明确授权。
+
 ## 2026-11-19 · PR #99 隔离迁移通过，数据库测试清理逻辑已修复待复验
 
 维护者 Windows 在本机隔离 PostgreSQL `adui_scada_test` 上实测：

@@ -3327,6 +3327,7 @@ docker compose -p adui-scada --env-file .env --env-file .local/docker/compose.en
 ```
 
 以上查询仅用于判断迁移失败前是否留下了部分 DDL；不要公开连接凭据或修改查询为写操作。
+
 ## 2026-11-19 · 发布状态表加入后的 PostgreSQL 测试夹具清理顺序
 
 第三十五批 B 阶段新增 `scada_project_release_state`，其工程外键使用 `ON DELETE RESTRICT`；状态行还可引用最后一次发布事件。发布事件又通过外键引用工程及不可变历史版本。因此真实 PostgreSQL 测试夹具的清理顺序必须遵循外键引用方向：

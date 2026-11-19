@@ -1990,16 +1990,17 @@ Vitest 日志明确包含 `apps/server/src/database/prisma-schema-comments.spec.
 **判断**：这是预期的部署前状态，不是数据库故障。不得只按 status 退出码判断；必须结合输出区分 pending migration 与 failed migration。修复后的迁移可进入隔离库首次部署；部署成功后再进行第二次部署、status 和 `test:db`。
 
 本轮更新 `docs/HARNESS.md` 与 E-060，明确当前 Prisma 7.10.1 对 pending 状态的实际退出码语义。**首次/二次部署、部署后 status、真实 `test:db` 和完整 `ready` 均仍待 Windows 执行。**
+
 ## 2026-11-19 · PR #99 隔离 PostgreSQL 迁移通过，DB 测试发现发布状态清理外键问题
 
 维护者 Windows 最新日志确认，所有数据库命令均在本机隔离库 `adui_scada_test`（`127.0.0.1:15432`）执行：
 
-| 验收项 | 实际结果 | 退出码 |
-| --- | --- | ---: |
-| 首次 `db:migrate:deploy` | 成功应用 `20261118000000_release_state_and_events` | 0 |
-| 二次 `db:migrate:deploy` | No pending migrations to apply | 0 |
-| 部署后 `db:migrate:status` | Database schema is up to date | 0 |
-| `test:db` | 4/5 文件、30/41 项通过；1 文件 11 项失败 | 1 |
+| 验收项                     | 实际结果                                           | 退出码 |
+| -------------------------- | -------------------------------------------------- | -----: |
+| 首次 `db:migrate:deploy`   | 成功应用 `20261118000000_release_state_and_events` |      0 |
+| 二次 `db:migrate:deploy`   | No pending migrations to apply                     |      0 |
+| 部署后 `db:migrate:status` | Database schema is up to date                      |      0 |
+| `test:db`                  | 4/5 文件、30/41 项通过；1 文件 11 项失败           |      1 |
 
 11 项失败全部集中在 `projects-cas-cookie-http.db-spec.ts` 的 finally 清理。Prisma 报 `scada_project_release_state_project_fkey` RESTRICT：新建工程会同时创建发布状态行，旧测试清理没有先删除该状态便删除工程。日志中的“数据库工程版本元数据与快照不一致”来自主动篡改快照摘要的最后一个安全测试；该测试期望 HTTP 500 并验证内部错误不会泄漏，不是 11 项失败的共同根因。
 
