@@ -1645,3 +1645,15 @@ PR #99 已修复：
 维护者 Windows 已确认 `adui_scada_test` 存在，`docs:check` 88 份通过，退出码 0。隔离库 `db:migrate:status` 成功连接本机 `127.0.0.1:15432/adui_scada_test`，报告 5 条已发现迁移及唯一待执行项 `20261118000000_release_state_and_events`，未报告 failed migration / P3009；该状态命令在当前 Prisma CLI 下返回退出码 1，PowerShell `finally` 已恢复原环境变量，且本次没有执行迁移写入。
 
 这表示隔离库处于正常待部署状态，不是迁移失败。E-060 已记录退出码误判，`docs/HARNESS.md` 已修正。下一步在确认 PR 分支 HEAD 后，直接在隔离库执行首次 `db:migrate:deploy`、二次部署、部署后 `migrate status` 和 `test:db`；之后执行完整 `ready`。原开发库 `adui_scada` 的部分失败迁移仍不做恢复，等待隔离库验收、可恢复备份和维护者明确授权。
+## 2026-11-19 · PR #99 隔离迁移通过，数据库测试清理逻辑已修复待复验
+
+维护者 Windows 在本机隔离 PostgreSQL `adui_scada_test` 上实测：
+
+- 首次 `db:migrate:deploy` 成功应用正式发布迁移，退出码 0。
+- 二次部署提示无待执行迁移，退出码 0。
+- `db:migrate:status` 提示 Database schema is up to date，退出码 0。
+- `test:db`：4/5 文件、30/41 项通过；双 Cookie HTTP 数据库测试 11 项失败，均因 fixture finally 删除工程前未删除新建的发布状态行，触发 `scada_project_release_state_project_fkey` RESTRICT。
+
+PR #99 已修复三个真实 PostgreSQL 测试文件的 teardown 顺序：先删发布状态，再删发布事件，再删审计、版本、授权和工程；并在 HARNESS / VALIDATION / AI_MISTAKES E-061 记录。生产外键、迁移 SQL 与业务代码均未修改。
+
+**待 Windows 复验**：修复后的 `pnpm run test:db`、最新 `docs:check` 和完整 `pnpm run ready`。原开发库 `adui_scada` 的失败迁移仍不恢复，直到隔离验收、可恢复备份和维护者明确授权。
