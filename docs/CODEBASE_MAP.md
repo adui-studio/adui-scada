@@ -361,7 +361,7 @@
 
 ## V0.3 第十批：Prisma + PostgreSQL 初始工程模型
 
-- `apps/server/prisma/schema.prisma`：工程、权限、版本快照和成功提交审计四个 PostgreSQL Prisma 模型。
+- `apps/server/prisma/schema.prisma`：工程、权限、版本快照、成功提交审计、正式发布状态和发布事件六个 PostgreSQL Prisma 模型。
 - `apps/server/prisma.config.ts`：按现有根 `.env` 读取 Prisma CLI 连接配置；未配置数据库不初始化连接。
 - `apps/server/prisma/migrations/`：首次迁移 SQL 和 provider 锁，包含由 PostgreSQL 执行的额外 CHECK 约束。
 - `deploy/docker/compose.postgres.dev.yaml`：本机隔离开发 PostgreSQL（loopback、独立命名卷、必须显式配置口令）。
@@ -381,7 +381,7 @@
 
 ### 第十一批补充：数据库中文注释与 Lint Mock 修复
 
-- `apps/server/prisma/schema.prisma`：四个业务模型及其全部字段、关联属性的中文 `///` 文档说明。
+- `apps/server/prisma/schema.prisma`：六个业务模型及其全部字段、关联属性的中文 `///` 文档说明。
 - `apps/server/prisma/migrations/20261112170000_add_chinese_table_comments/migration.sql`：新增不触及历史数据的中文 PostgreSQL 表、列、索引注释迁移。
 - `apps/server/src/database/prisma-schema-comments.spec.ts`：2 项无数据库静态单测，校验新旧业务模型属性的中文说明及迁移 `COMMENT ON` 覆盖。
 - `apps/server/test/prisma-project-version.db-spec.ts`：增加 PostgreSQL `pg_description` 查询，验证业务表/列注释在隔离真库中生效。
@@ -971,3 +971,10 @@ OIDC 登录/回调、加密服务、HTTP Controller、工程 API、API Client �
 - `docs/RELEASE_TRANSACTION_DECISION_RECORD.md`：记录维护者批准的 R-01～R-08 决策基线及后续实施顺序。
 - `docs/RELEASE_TRANSACTION_REVIEW.md`：记录已批准的 R-01～R-08、I-01～I-06 不变量和 T-01～T-22 **未来测试义务**；T 场景尚未执行。
 - FR-008 继续规划中；当前 main 无正式发布/回滚写 API、Runtime 发布指针加载或设备写入许可。
+
+## 2026-11-19 · 第三十五批 B 阶段正式发布 Schema 复合引用
+
+- apps/server/prisma/schema.prisma：六个工程持久化模型；发布状态、发布事件和不可变版本通过租户/工程/修订/摘要/代次复合关系保持引用闭包。
+- apps/server/prisma/migrations/20261118000000_release_state_and_events/migration.sql：正式发布状态/事件表及默认拒绝的独立发布权限；已应用迁移保持不可变。
+- apps/server/prisma/migrations/20261119000000_release_state_event_integrity/migration.sql：版本摘要复合唯一键、发布状态与事件的复合外键及其中文索引注释。
+- apps/server/test/release-schema.db-spec.ts：隔离 PostgreSQL 验证跨工程事件引用、错误代次、错误版本摘要和正确状态引用。

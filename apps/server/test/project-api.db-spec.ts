@@ -84,6 +84,8 @@ afterAll(async () => {
         tenantDisabled,
         tenantPaging,
       ]) {
+        await service.client.scadaProjectReleaseState.deleteMany({ where: { tenantId } });
+        await service.client.scadaProjectReleaseEvent.deleteMany({ where: { tenantId } });
         await service.client.scadaProjectAudit.deleteMany({ where: { tenantId } });
         await service.client.scadaProjectVersion.deleteMany({ where: { tenantId } });
         await service.client.scadaProjectGrant.deleteMany({ where: { tenantId } });
@@ -101,7 +103,7 @@ afterAll(async () => {
 describe("PostgreSQL 真实工程 API 事务", () => {
   it("创建工程时原子保存创建者三项权限、首版快照、水位与审计", async () => {
     const summary = await store.create(principalCreate, { document: document(projectId) });
-    const [project, grants, version, audit] = await Promise.all([
+    const [project, grants, version, audit, releaseState] = await Promise.all([
       service.client.scadaProject.findUniqueOrThrow({
         where: { tenantId_projectId: { tenantId: tenantCreate, projectId } },
       }),
@@ -113,6 +115,9 @@ describe("PostgreSQL 真实工程 API 事务", () => {
       }),
       service.client.scadaProjectAudit.findFirstOrThrow({
         where: { tenantId: tenantCreate, projectId, revision: 1n },
+      }),
+      service.client.scadaProjectReleaseState.findUniqueOrThrow({
+        where: { tenantId_projectId: { tenantId: tenantCreate, projectId } },
       }),
     ]);
 
@@ -128,6 +133,10 @@ describe("PostgreSQL 真实工程 API 事务", () => {
     expect(snapshot.contentHash).toBe(version.contentHash);
     expect(audit.actorId).toBe(subjectId);
     expect(audit.action).toBe("version:append");
+    expect(releaseState.releaseGeneration).toBe(0n);
+    expect(releaseState.releasedRevision).toBeNull();
+    expect(releaseState.releasedContentHash).toBeNull();
+    expect(releaseState.lastReleaseEventId).toBeNull();
   });
 
   it("工程列表按租户与 project:read 隔离，详情和历史摘要不暴露完整文档", async () => {

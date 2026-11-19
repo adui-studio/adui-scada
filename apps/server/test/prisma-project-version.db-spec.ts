@@ -90,6 +90,8 @@ afterAll(async () => {
         tenantRevocation,
         tenantTwoWriters,
       ]) {
+        await service.client.scadaProjectReleaseState.deleteMany({ where: { tenantId } });
+        await service.client.scadaProjectReleaseEvent.deleteMany({ where: { tenantId } });
         await service.client.scadaProjectAudit.deleteMany({ where: { tenantId } });
         await service.client.scadaProjectVersion.deleteMany({ where: { tenantId } });
         await service.client.scadaProjectGrant.deleteMany({ where: { tenantId } });

@@ -71,6 +71,24 @@ describe("服务端工程级权限策略", () => {
     ).toBe(false);
   });
 
+  it("发布权限必须显式授予，不能由版本追加权限推导", () => {
+    expect(hasProjectPermission(principal, scope, grant, "release:publish")).toBe(false);
+    expect(hasProjectPermission(principal, scope, grant, "release:rollback")).toBe(false);
+
+    const publisher: ProjectPermissionGrant = {
+      ...grant,
+      permissions: ["release:publish"],
+    };
+    const rollbackOnly: ProjectPermissionGrant = {
+      ...grant,
+      permissions: ["release:rollback"],
+    };
+    expect(hasProjectPermission(principal, scope, publisher, "release:publish")).toBe(true);
+    expect(hasProjectPermission(principal, scope, publisher, "release:rollback")).toBe(false);
+    expect(hasProjectPermission(principal, scope, rollbackOnly, "release:rollback")).toBe(true);
+    expect(hasProjectPermission(principal, scope, rollbackOnly, "release:publish")).toBe(false);
+  });
+
   it("未知权限名称不会被解释为管理员或写入权限", () => {
     const invalidAction = "devices:write" as ProjectAccessAction;
     expect(hasProjectPermission(principal, scope, grant, invalidAction)).toBe(false);

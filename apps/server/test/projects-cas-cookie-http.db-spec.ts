@@ -121,6 +121,9 @@ async function withFixture(run: (fixture: IsolatedFixture) => Promise<void>): Pr
     await run({ tenantId, sessionA, sessionB });
   } finally {
     if (database) {
+      // 发布状态通过 RESTRICT 外键保护工程；先删除状态，再删除事件与工程版本。
+      await database.client.scadaProjectReleaseState.deleteMany({ where: { tenantId } });
+      await database.client.scadaProjectReleaseEvent.deleteMany({ where: { tenantId } });
       await database.client.scadaProjectAudit.deleteMany({ where: { tenantId } });
       await database.client.scadaProjectVersion.deleteMany({ where: { tenantId } });
       await database.client.scadaProjectGrant.deleteMany({ where: { tenantId } });
