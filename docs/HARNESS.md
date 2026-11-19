@@ -3342,4 +3342,18 @@ docker compose -p adui-scada --env-file .env --env-file .local/docker/compose.en
 
 不得先删除事件再删除仍引用该事件的状态；不得通过放宽外键、使用 CASCADE 或跳过 finally 清理来让测试通过。任何新增带 `RESTRICT` 外键的表，都必须同步检查所有 DB spec 的 fixture teardown / afterAll。
 
-PR #99 本轮已将该顺序同步至双 Cookie HTTP、工程版本和工程 API 三个 PostgreSQL 测试文件。修复后仍需在隔离 `adui_scada_test` 重新运行 `pnpm run test:db` 验证。
+PR #99 已将该顺序同步至双 Cookie HTTP、工程版本和工程 API 三个 PostgreSQL 测试文件。维护者 2026-11-19 Windows 在隔离 `adui_scada_test` 复验 `pnpm run test:db`：5/5 文件、41/41 项通过，双 Cookie HTTP CAS 11/11 通过，退出码 0。
+## 2026-11-19 · 正式发布 Schema 隔离 PostgreSQL 验收结果
+
+维护者 Windows 在本机隔离库 `adui_scada_test`（`127.0.0.1:15432`）完成以下实测：
+
+1. 首次 `pnpm run db:migrate:deploy`：成功应用 `20261118000000_release_state_and_events`，退出码 0。
+2. 二次 `pnpm run db:migrate:deploy`：提示 `No pending migrations to apply`，退出码 0。
+3. `pnpm run db:migrate:status`：提示 `Database schema is up to date!`，退出码 0。
+4. `pnpm run test:db`：5/5 文件、41/41 项通过，退出码 0；包括双 Cookie HTTP CAS 11/11、工程版本 12/12、工程 API 7/7、OIDC Schema 6/6、发布 Schema 5/5。
+
+测试中服务端记录的“数据库工程版本元数据与快照不一致”来自主动篡改摘要的安全用例；用例预期受控 HTTP 500，并检查内部异常不泄漏，Vitest 将其判定为通过。
+
+维护者随后执行完整 `pnpm run ready`，最终退出码 0。`ready` 包含 618/618 单元测试、55/55 HTTP E2E、354 文件格式正确、207 受检文件零警告/错误、88 份 Markdown 检查以及 React/Vue/Server 类型检查和构建。`test:db` 是单独的隔离 PostgreSQL 专项，不包含在 `ready` 脚本中。
+
+原开发库 `adui_scada` 的历史失败迁移未在本次操作中恢复；隔离库验收通过不代表开发库已恢复。任何对原库的迁移元数据或 Schema 写入仍需可恢复备份和维护者明确授权。
