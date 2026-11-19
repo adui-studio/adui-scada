@@ -1824,4 +1824,4 @@ E-068（数据库测试隔离 URL 指引遗漏）和 E-069（双 Cookie 测试�
 
 **当前实际能力边界**：B 阶段发布状态/事件 Schema 已合并；C1 已实现 `POST /api/v1/projects/:projectId/releases`、独立 `release:publish`、事务内权限/会话复核、head 与 releaseGeneration 双 CAS、幂等和事件/指针原子提交。生产 `ProjectReleaseSafetyGate` 仍固定 fail-closed 并返回 503；不能真实发布成功。只读 Runtime 发布指针加载、回滚事务、运行时读取权限、双人审批和生产安全评审尚未交付。原开发库 `adui_scada` 的历史失败迁移继续冻结。
 
-**下一阶段准入**：按 ADR-0069 进入 D 阶段只读 Runtime 设计前，先明确 Runtime 读取权限。当前 `ProjectAccessAction` 没有 `release:read` / `runtime:read`；不能擅自把 `project:read` 或 `version:read` 当作生产 Runtime 权限。
+**下一阶段准入**：Runtime 读取权限决策已明确，进入 D 阶段只读 Runtime 实施。新增独立工程 ACL `release:read`，默认拒绝，不继承 `project:read`、`version:read` 或其他权限。当前 `ProjectAccessAction` 尚未实现该动作；D 阶段需完成 ACL、只读发布指针接口、共享 Runtime Core 及 React/Vue 对等接入，并通过专项验收。
