@@ -1808,3 +1808,20 @@ C1 当前已通过静态检查、发布事务单测和全量单测；真实 Post
 维护者 Windows 在正确设置隔离数据库环境后，C1 数据库专项已真实执行：OIDC Schema 6/6、工程版本 12/12、工程 API 7/7、发布 Schema 6/6、正式发布事务 10/10 通过；双 Cookie HTTP Suite 因手工 NestJS TestingModule 漏注册 `PrismaProjectReleaseStore` 及其 `ProjectReleaseSafetyGate` 依赖，在模块编译阶段失败，11 项跳过。汇总 5/6 文件、41 项通过、11 项 skipped、1 个 Suite 初始化失败，退出码 1。
 
 PR #100 已提交最小测试夹具修复 `055e2115174fba27cc745f2277e251b94ab4eb74`：双 Cookie 测试模块补齐真实发布仓储和默认 fail-closed 安全门禁 Provider；未修改生产代码、数据库或迁移。修复后 PostgreSQL 定向/全量测试、`vp check` 和完整 `ready` 尚待维护者 Windows 复验。PR #100 保持 Open/Draft，Assignee `@adui-dev`；生产发布门禁继续 fail-closed，原开发库 `adui_scada` 的历史失败迁移继续冻结。
+
+## 2026-11-19 · 第三十五批 C1 最终验收通过，PR #100 已合并
+
+PR #100 已 Squash 合并至 `main`，合并提交 `8db55e4b1bb97d69c08dc9238eb61f76071b7e72`。维护者 Windows 在合并前验收 HEAD `f576cacaadd2376f8e75d5270482ac9a356f81ed` 完成：
+
+- 真实隔离 PostgreSQL：6/6 文件、52/52 用例通过；双 Cookie HTTP CAS 11/11，正式发布事务 10/10，发布 Schema 6/6。
+- 单元测试：52/52 文件、633/633 用例通过。
+- `vp check`：359 个文件格式正确、211 个受检文件零警告/Lint/TypeScript 错误。
+- `docs:check`：89 个 Markdown 文件通过。
+- SSE 客户端 8/8、故障代理 4/4、NestJS HTTP E2E 59/59。
+- React、Vue、NestJS 类型检查与构建完成；完整 `pnpm run ready` 退出码 0。
+
+E-068（数据库测试隔离 URL 指引遗漏）和 E-069（双 Cookie 测试模块缺少发布仓储 Provider）已由后续真实 Windows 复验关闭。PR #100 Assignee 已核对为 `@adui-dev`。
+
+**当前实际能力边界**：B 阶段发布状态/事件 Schema 已合并；C1 已实现 `POST /api/v1/projects/:projectId/releases`、独立 `release:publish`、事务内权限/会话复核、head 与 releaseGeneration 双 CAS、幂等和事件/指针原子提交。生产 `ProjectReleaseSafetyGate` 仍固定 fail-closed 并返回 503；不能真实发布成功。只读 Runtime 发布指针加载、回滚事务、运行时读取权限、双人审批和生产安全评审尚未交付。原开发库 `adui_scada` 的历史失败迁移继续冻结。
+
+**下一阶段准入**：按 ADR-0069 进入 D 阶段只读 Runtime 设计前，先明确 Runtime 读取权限。当前 `ProjectAccessAction` 没有 `release:read` / `runtime:read`；不能擅自把 `project:read` 或 `version:read` 当作生产 Runtime 权限。
