@@ -2213,19 +2213,20 @@ GitHub 回读静态核对确认该文件不再包含无泛型参数的 `vi.fn()`
 
 维护者 Windows 在修复最新候选代码后提供以下实际结果：
 
-| 验证项 | 实际结果 | 退出码 |
-|---|---|---:|
-| 发布事务定向测试 | `vp test run apps/server/src/projects/prisma-project-release-store.spec.ts`，1/1 文件、13/13 项 | 0 |
-| `vp check` | 359 个文件格式正确；211 个受检文件零警告、Lint、TypeScript 错误 | 0 |
-| Prisma Client | Prisma 7.10.1 生成成功 | 0 |
-| `pnpm run test:unit` | 52/52 文件、633/633 项 | 0 |
-| `pnpm run docs:check` | 89 个 Markdown 文件 | 0 |
+| 验证项                | 实际结果                                                                                        | 退出码 |
+| --------------------- | ----------------------------------------------------------------------------------------------- | -----: |
+| 发布事务定向测试      | `vp test run apps/server/src/projects/prisma-project-release-store.spec.ts`，1/1 文件、13/13 项 |      0 |
+| `vp check`            | 359 个文件格式正确；211 个受检文件零警告、Lint、TypeScript 错误                                 |      0 |
+| Prisma Client         | Prisma 7.10.1 生成成功                                                                          |      0 |
+| `pnpm run test:unit`  | 52/52 文件、633/633 项                                                                          |      0 |
+| `pnpm run docs:check` | 89 个 Markdown 文件                                                                             |      0 |
 
 E-066（7 个 Mock 类型参数和 1 个 unbound-method 警告）与 E-067（目标修订不匹配用例的宽泛错误断言）均已关闭。生产请求校验逻辑没有因测试修复而放宽。
 
 **提交绑定边界**：维护者日志没有提供本地 `git rev-parse HEAD`。GitHub PR #100 当前候选分支 HEAD 为 `7c619941f486b639298e4015d6538b995919d8c5`；本节只记录维护者实际提供的 Windows 结果，不声称这些日志已严格绑定到该 SHA。
 
 **仍待执行的 C1 验收**：
+
 - `pnpm run test:e2e:server`（完整 `ready` 中会执行）。
 - 按 `docs/HARNESS.md` 的 PowerShell `try/finally` 隔离环境流程执行 `pnpm run test:db`，目标仅限本机 `adui_scada_test`。
 - `pnpm run ready`，覆盖配置、环境、中文文案、双框架/Server 类型检查、HTTP E2E、文档和构建。
