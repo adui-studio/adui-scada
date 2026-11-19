@@ -1717,4 +1717,14 @@ PR #99 分支同步 PR #97 后的静态评审发现，原发布状态 lastReleas
 
 已在 PR #99 将四个完整 @relation 属性恢复为单行，并在 prisma-schema-comments.spec.ts 增加静态回归，防止再次拆行。保留关系名称、复合字段、引用字段和删除/更新行为；没有修改两条迁移 SQL、数据库或业务权限代码。
 
-本轮修复后的 Windows 验收仍待执行：db:validate、db:generate、vp check、test:unit（目标 620/620）、隔离 PostgreSQL test:db（目标 42/42）、docs:check 与完整 ready。维护者本轮修复前 vp check 355/207 和 docs:check 89 份通过；不能将其外推为修复后验证结果。
+维护者随后在 HEAD e02e48e4ae46fb0e02ab6ee3ab3b21872d58134f 重新执行 db:validate 与 db:generate：E-063 的 28 条字段解析错误已消失，但出现 lastReleaseEvent 一对一复合字段不唯一的第二条 P1012（E-064）；test:unit 在 Prisma Client 生成阶段中止，Vitest 未启动。同期 vp check 355 个格式文件、207 个受检文件零警告/错误，docs:check 89 份通过。这些是 E-064 修复前结果。
+
+## 2026-11-19 · PR #99 Prisma 一对一发布事件关系修复（E-064）
+
+维护者 Windows 在 HEAD e02e48e4ae46fb0e02ab6ee3ab3b21872d58134f 重新执行 Prisma 检查时，E-063 的字段多行解析错误已消失；Prisma 7.10.1 随后报告 lastReleaseEvent 一对一关系的六个关联字段没有匹配唯一约束。db:generate 同样失败，test:unit 在 Vitest 启动前因 Prisma Client 生成失败而中止。vp check 355/207 零警告错误、docs:check 89 份通过。
+
+根因是复合关系字段包含 releasedRevision、releasedContentHash、lastReleaseEventId 三个可空字段；Prisma @@unique 要求全部组合字段必填，不能通过修改未发布状态语义解决。
+
+已将 Prisma ORM 导航关系改为使用已有唯一 lastReleaseEventId -> eventId 建立一对一；数据库层第二条迁移中的六字段复合外键保持不变，继续校验租户、工程、代次、目标修订、摘要与事件 UUID。没有新增或修改迁移 SQL，也没有执行数据库写入。静态回归同步检查 ORM 单字段关系与 SQL 六字段约束。
+
+本次修复后仍待 Windows 重新执行 db:validate、db:generate、vp check、test:unit（目标 620/620）、隔离 PostgreSQL test:db（42/42）、docs:check 与完整 ready。原开发库 adui_scada 的失败迁移继续冻结。

@@ -2106,14 +2106,14 @@ PR #99 已新增不可变增量迁移 20261119000000_release_state_event_integri
 
 维护者 Windows 在最新候选执行 `pnpm run db:validate`，Prisma 7.10.1 对 `releasedVersion`、`lastReleaseEvent`、`fromVersion`、`toVersion` 四个字段级关系报 P1012（28 条解析错误）。原因是 `@relation(...)` 参数被拆成多行；Prisma Schema 字段级属性需要保持单行。`db:generate` 同样失败；`test:unit` 在 Vitest 启动前调用 `db:generate`，因此没有执行任何 Vitest 用例。
 
-PR #99 已将四个 `@relation(...)` 属性恢复为单行，并在 `prisma-schema-comments.spec.ts` 新增静态回归，确保每个关系属性都在同一字段行闭合。未修改已应用迁移、第二条增量迁移 SQL、数据库、权限业务逻辑或复合外键定义。
+PR #99 已将四个 `@relation(...)` 属性恢复为单行，并在 `prisma-schema-comments.spec.ts` 新增静态回归，确保每个关系属性都在同一字段行闭合。维护者随后在 HEAD `e02e48e4ae46fb0e02ab6ee3ab3b21872d58134f` 重新执行 `db:validate`，原 28 条解析错误已消失，但继续暴露 `lastReleaseEvent` 一对一关系的复合唯一约束问题；该独立问题已记录为 E-064。未修改已应用迁移、第二条增量迁移 SQL、数据库或权限业务逻辑。
 
-维护者本轮修复前的独立结果：
+维护者在 E-063 修复后的后续 Windows 检查结果：
 
 - `vp check`：355 个文件格式正确；207 个受检文件零警告、Lint 与类型错误。
 - `docs:check`：89 个 Markdown 文件通过。
-- `db:validate`、`db:generate`：P1012，退出码 1。
-- `test:unit`：在 db:generate 阶段失败，Vitest 未启动，不能计作单测失败项或通过项。
+- `db:validate`、`db:generate`：原字段多行解析错误已消失，但随后因 `lastReleaseEvent` 一对一复合字段不唯一而返回 P1012，退出码 1。
+- `test:unit`：在 db:generate 阶段因同一 P1012 失败，Vitest 未启动，不能计作单测失败项或通过项。
 - 本轮没有执行 `db:migrate:deploy`、`test:db` 或完整 `ready`，没有数据库写入证据。
 
 **修复后待维护者 Windows 执行**：
@@ -2129,3 +2129,27 @@ PR #99 已将四个 `@relation(...)` 属性恢复为单行，并在 `prisma-sche
 | 完整 `pnpm run ready`     |                           退出码 0 |
 
 数据库迁移专项仍须使用 `docs/HARNESS.md` 中的 PowerShell `try/finally` 环境变量保护流程，仅连接本机隔离 `adui_scada_test`。原开发库 `adui_scada` 的失败迁移保持冻结，不执行 resolve、deploy、reset、DROP、DELETE 或手工修改 `_prisma_migrations`。
+
+## 2026-11-19 · PR #99 Prisma 一对一发布事件关系 P1012 修复（E-064，待 Windows 复验）
+
+维护者在 HEAD `e02e48e4ae46fb0e02ab6ee3ab3b21872d58134f` 的 Windows 检查中，E-063 的字段多行解析错误已消失；Prisma 7.10.1 继续报告 `lastReleaseEvent` 一对一关系 defining side 的六个字段不具备唯一约束。`db:generate` 同样失败，`test:unit` 在 Vitest 启动前因 Client 生成失败而中止。`vp check` 355 个文件格式正确、207 个受检文件零警告/错误；`docs:check` 89 份通过。
+
+根因是原关系将三个可空发布指针字段纳入复合关系，而 Prisma `@@unique` 要求组合字段全部必填。不能把“未发布”状态字段改为必填，也不能通过改成一对多弱化业务关系。
+
+PR #99 已将 Prisma ORM 一对一导航关系改为使用已有全局唯一 `lastReleaseEventId -> eventId`；`lastReleaseEventId` 仍可空且保留 `@unique`。第二条迁移中的六字段 PostgreSQL 复合外键保持不变，仍强制校验租户、工程、代次、目标修订、摘要和事件 UUID。无需新增迁移或额外唯一索引。
+
+静态回归已同步断言：Prisma 关系只使用唯一事件 ID，而 SQL 仍包含完整六字段复合外键。此次未修改任何迁移 SQL 或数据库。
+
+**修复后待维护者 Windows 实测**：
+
+| 验收项 | 目标 |
+|---|---:|
+| `pnpm run db:validate` | 退出码 0 |
+| `pnpm run db:generate` | 退出码 0 |
+| `vp check` | 零警告、零错误 |
+| `pnpm run test:unit` | 620/620 |
+| 隔离 PostgreSQL `test:db` | 42/42 |
+| `pnpm run docs:check` | 89 份 Markdown，实际计数以命令为准 |
+| 完整 `pnpm run ready` | 退出码 0 |
+
+数据库专项仍只允许使用 `docs/HARNESS.md` 中 `try/finally` 流程连接本机隔离 `adui_scada_test`；原开发库 `adui_scada` 的失败迁移保持冻结，不执行 resolve、deploy、reset、DROP、DELETE 或手工修改 `_prisma_migrations`。

@@ -129,8 +129,8 @@ model ScadaProjectReleaseState {
   project             ScadaProject            @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict)
   /// 当前发布指针引用的不可变工程版本；复合外键同时校验修订号与 SHA-256 摘要。
   releasedVersion ScadaProjectVersion? @relation("ScadaProjectReleaseStateVersion", fields: [tenantId, projectId, releasedRevision, releasedContentHash], references: [tenantId, projectId, revision, contentHash], onDelete: Restrict, onUpdate: Cascade)
-  /// 当前发布指针对应的最后成功事件；复合外键同时校验租户、工程、代次、修订与摘要。
-  lastReleaseEvent ScadaProjectReleaseEvent? @relation("ScadaProjectReleaseStateLastEvent", fields: [tenantId, projectId, releaseGeneration, releasedRevision, releasedContentHash, lastReleaseEventId], references: [tenantId, projectId, generation, toRevision, toContentHash, eventId], onDelete: Restrict, onUpdate: Cascade)
+  /// Prisma 通过全局唯一事件 ID 建立一对一关系；数据库复合外键额外校验租户、工程、代次、修订与摘要。
+  lastReleaseEvent ScadaProjectReleaseEvent? @relation("ScadaProjectReleaseStateLastEvent", fields: [lastReleaseEventId], references: [eventId], onDelete: Restrict, onUpdate: Cascade)
 
   @@id([tenantId, projectId])
   @@index([tenantId, projectId, releasedRevision, releasedContentHash], map: "scada_project_release_state_version_idx")

@@ -107,8 +107,17 @@ describe("Prisma 模型及 PostgreSQL 数据库中文注释约束", () => {
     expect(schema).toContain(
       '@@unique([tenantId, projectId, generation, toRevision, toContentHash, eventId], map: "scada_project_release_event_state_reference_key")',
     );
+    expect(schema).toContain(
+      'lastReleaseEventId  String?                 @unique(map: "scada_project_release_state_last_event_key") @map("last_release_event_id") @db.Uuid',
+    );
+    expect(schema).toContain(
+      'lastReleaseEvent ScadaProjectReleaseEvent? @relation("ScadaProjectReleaseStateLastEvent", fields: [lastReleaseEventId], references: [eventId], onDelete: Restrict, onUpdate: Cascade)',
+    );
     expect(releaseIntegrityMigration).toContain(
       'FOREIGN KEY ("tenant_id", "project_id", "released_revision", "released_content_hash")',
+    );
+    expect(releaseIntegrityMigration).toContain(
+      'FOREIGN KEY ("tenant_id", "project_id", "release_generation", "released_revision", "released_content_hash", "last_release_event_id")',
     );
     expect(releaseIntegrityMigration).toContain(
       'FOREIGN KEY ("tenant_id", "project_id", "release_generation", "released_revision", "released_content_hash", "last_release_event_id")',

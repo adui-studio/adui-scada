@@ -1133,7 +1133,7 @@ PR #99 的 B 阶段 Prisma Schema 建立 ScadaProjectReleaseState 与 ScadaProje
 - ScadaProjectVersion 增加 tenantId + projectId + revision + contentHash 复合唯一键，将不可变修订与 SHA-256 绑定。
 - ScadaProjectReleaseEvent.fromVersion/toVersion 分别引用上述复合键；来源版本允许为空（首次发布），目标版本必须存在，二者摘要均由数据库外键校验。
 - ScadaProjectReleaseState.releasedVersion 通过租户、工程、修订和摘要引用不可变版本。
-- ScadaProjectReleaseState.lastReleaseEvent 通过租户、工程、发布代次、目标修订、目标摘要和事件 UUID 引用最后成功事件；数据库因此拒绝跨工程事件引用、代次漂移及目标摘要不一致。
+- Prisma 的 ScadaProjectReleaseState.lastReleaseEvent 导航关系使用全局唯一 lastReleaseEventId -> eventId 建立一对一；releasedRevision、releasedContentHash 和 lastReleaseEventId 保持可空，不能将它们加入 Prisma 要求必填字段的 @@unique。PostgreSQL 增量迁移仍额外保留六字段复合外键（租户、工程、代次、目标修订、目标摘要、事件 UUID），继续拒绝跨工程事件引用、代次漂移及目标摘要不一致。该 ORM 映射不削弱数据库完整性。
 - 复合外键的引用目标唯一索引、来源/目标查询索引均由新迁移创建并添加中文数据库注释。
 
 这些约束仅建立持久化完整性，不代表正式发布/回滚 API、CAS/行锁事务、幂等、Runtime 发布指针或双人审批已经实现；FR-008 仍按 ADR-0069 的 B～F 阶段独立推进。新迁移必须先在隔离 adui_scada_test 完成真实首次/二次部署与负向 PostgreSQL 测试，原开发库失败迁移保持冻结。

@@ -584,6 +584,15 @@
 - **验证边界**：修复提交只完成远程源码修改与静态回读，**尚未**在 Windows 重新执行 `db:validate`、`db:generate`、`test:unit`、`test:db` 或 `ready`。修复后的单元测试目标由 619 项调整为 **620 项**；隔离 PostgreSQL 目标仍为 **42 项**。此前 `vp check` 与 `docs:check` 是修复前日志，不能冒充修复后通过。
 - **证据**：维护者 2026-11-19 Windows 原始 P1012 日志、PR #99、`apps/server/prisma/schema.prisma`、`apps/server/src/database/prisma-schema-comments.spec.ts`、`docs/VALIDATION.md`。
 
+### E-064 · Prisma 一对一关联复合唯一键包含可空字段（第三十五批 B 阶段）
+
+- **现象**：维护者 2026-11-19 Windows 在 HEAD `e02e48e4ae46fb0e02ab6ee3ab3b21872d58134f` 重新执行 `db:validate`，此前 E-063 的 28 条 Schema 解析错误已消失，但 Prisma 7.10.1 又报告 1 条 P1012：`lastReleaseEvent` 一对一关系的 defining side 六个关联字段不具备匹配的唯一约束。`db:generate` 同样失败；`test:unit` 在生成 Client 阶段中止，Vitest 未启动。同期 `vp check` 355 个文件格式正确、207 个受检文件零警告/错误；`docs:check` 89 个 Markdown 通过。
+- **根因**：该关系原先同时把 `tenantId`、`projectId`、`releaseGeneration`、可空 `releasedRevision`、可空 `releasedContentHash`、可空 `lastReleaseEventId` 作为 Prisma 关系标量。Prisma 提示添加六字段 `@@unique`，但 Prisma Schema 规则要求 `@@unique` 中的字段全部必填；当前三个发布指针字段必须可空以表达“尚未发布”，不能为了通过校验将其改为必填或伪造复合唯一键。`lastReleaseEventId` 本身已有单字段 `@unique`，对应数据库唯一索引。
+- **最小修复**：Prisma ORM 的一对一导航关系仅使用已有唯一字段 `lastReleaseEventId -> ScadaProjectReleaseEvent.eventId`；保持 `lastReleaseEventId` 可空且 `@unique`。数据库层不降级：已存在的 `20261119000000_release_state_event_integrity` 仍通过六字段复合外键校验租户、工程、代次、目标修订、目标摘要和事件 UUID。无需新增或修改迁移，也不需要增加重复唯一索引。
+- **防复发**：Prisma ORM 关系映射与 PostgreSQL 额外约束可以分层：当复合关系包含可空字段、无法声明 Prisma `@@unique` 时，可用稳定且全局唯一的业务键表达 ORM 导航关系，同时必须保留并测试数据库更强的复合外键。不要把可空业务状态字段改成必填，不要把一对一关系改成一对多来规避校验，也不要因 ORM 无法表达全部列而删除数据库级租户/工程闭包。
+- **验证边界**：本轮修复只修改 Prisma 关系映射、静态回归和说明文档；没有修改两条迁移 SQL、数据库或业务写入逻辑。修复后的 Windows `db:validate`、`db:generate`、`test:unit`、隔离 PostgreSQL `test:db`、`vp check`、`docs:check` 与完整 `ready` **尚未执行**。单元测试目标仍为 **620/620**，数据库专项仍为 **42/42**；此前 `vp check` 355/207 与 `docs:check` 89 份是修复前日志。
+- **证据**：维护者 2026-11-19 Windows P1012 日志、PR #99、`apps/server/prisma/schema.prisma`、`apps/server/prisma/migrations/20261119000000_release_state_event_integrity/migration.sql`、`apps/server/src/database/prisma-schema-comments.spec.ts`、Prisma 7 Schema API 对 `@@unique` 必填字段的规则。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
