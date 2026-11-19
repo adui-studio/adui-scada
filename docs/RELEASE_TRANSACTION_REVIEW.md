@@ -6,9 +6,9 @@
 
 ## 1. 当前仓库事实和本次边界
 
-`ScadaProject.headRevision` 仍只表示最新已保存编辑版本；`ScadaProjectVersion` 保存经 SHA-256 核验的不可变快照。B 阶段已建立 `ScadaProjectReleaseState`、`ScadaProjectReleaseEvent`、独立 `release:publish` / `release:rollback` 权限动作及租户/工程/修订/摘要复合引用完整性。C1 已实现 `POST /api/v1/projects/:projectId/releases`，并在服务端事务内执行会话/ACL、head 与 releaseGeneration 双 CAS、幂等、快照完整性和静态预检；生产安全门禁仍固定 fail-closed 并返回 503。当前尚未实现 `release:read` ACL、当前发布快照只读路由或回滚写路由；`release:read` 的独立授权策略已获批准，具体实现属于 D 阶段。
+`ScadaProject.headRevision` 仍只表示最新已保存编辑版本；`ScadaProjectVersion` 保存经 SHA-256 核验的不可变快照。B 阶段已建立发布状态/事件及独立发布/回滚权限；C1 已实现正式发布事务，生产安全门禁仍固定 fail-closed 并返回 503。D1 候选在独立工程 ACL 中加入 `release:read`，并新增当前发布指针只读路由；候选尚待真实 PostgreSQL 与 Windows 验收，回滚写路由仍未实现。
 
-ADR-0069 的架构基线已获维护者批准。B 与 C1 已分别通过 PR #99、PR #100 合并；D 阶段只读 Runtime、E 阶段回滚和 F 阶段生产安全评审仍待独立实施。**预检 `passed=true` 不代表获得发布权限，也不代表当前画布已经保存或具备生产运行条件。**
+ADR-0069 的架构基线与独立 `release:read` 权限策略已获维护者批准。B 与 C1 已分别通过 PR #99、PR #100 合并；D1 服务端读取候选位于独立 Draft PR，尚未验收合并；共享 Runtime Core、React/Vue Runtime、E 阶段回滚和 F 阶段生产安全评审仍待独立实施。**预检 `passed=true` 不代表获得发布权限，也不代表当前画布已经保存或具备生产运行条件。**
 
 ## 2. 评审决策登记表
 
@@ -137,3 +137,9 @@ PR #100 已 Squash 合并至 main，提交 `8db55e4b1bb97d69c08dc9238eb61f76071b
 C1 的生产 `ProjectReleaseSafetyGate` 仍固定 fail-closed，当前应用请求不能成功发布。D 阶段应只读加载已提交发布指针和对应不可变快照，未发布、指针损坏、快照摘要不匹配、数据库不可用或 Tag 质量不合格时必须明确失败，禁止回落到编辑 head、草稿或 Demo 数据。
 
 **D 阶段权限决策已获维护者批准**：新增独立工程 ACL `release:read`，默认拒绝，不继承 `project:read`、`version:read` 或其他权限。运行人员显式获得 `release:read` 后可读取已提交发布指针及其不可变快照，无需获得工程编辑或历史版本读取权限。当前 `ProjectAccessAction` 尚未实现该动作，当前发布快照读取路由也不存在；由 D 阶段独立实施、测试和验收。
+
+## 2026-11-19 · 第三十五批 D1 服务端只读发布读取候选
+
+D1 候选新增 `GET /api/v1/projects/:projectId/releases/current`，权限为独立 `release:read`，默认拒绝，不从 `project:read`、`version:read` 或发布写权限继承，也不在工程创建时自动授予。响应使用 `Cache-Control: no-store`，区分 `UNRELEASED` 与 `RELEASED`；已发布状态返回指针修订/摘要/代次、最后事件信息及不可变快照，不暴露编辑 head。
+
+`PrismaProjectReleaseStore.readCurrent` 在同一只读事务中锁定工程身份（只选择 `project_id`，不读取 `head_revision`）、有效会话/主体、ACL、发布状态、不可变版本和最后发布事件；重新验证 SHA-256、快照元数据、最后事件与发布指针。数据库缺少状态行、事件不一致或快照校验失败均不返回快照正文。D1 候选尚未执行隔离 PostgreSQL 迁移/测试、Windows `vp check`、单测、HTTP E2E、`docs:check` 或完整 `ready`。
