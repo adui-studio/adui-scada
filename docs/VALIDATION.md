@@ -2237,13 +2237,13 @@ C1 不新增 Prisma 迁移。`test:db` 必须使用本机隔离库；原开发�
 
 维护者 Windows 日志确认：
 
-| 验证项 | 实际结果 | 退出码 |
-|---|---|---:|
-| `docs:check` | 89 个 Markdown 文件通过 | 0 |
-| `vp check` | 359 个文件格式正确；211 个受检文件零警告/Lint/TypeScript 错误 | 0 |
-| Core 构建 | 通过 | 0（由 test:db 前置脚本继续执行确认） |
-| Prisma Client | 7.10.1 生成成功 | 0 |
-| `pnpm run test:db` | 6 个 Suite 在模块加载阶段因缺少 `SCADA_TEST_DATABASE_URL` 退出；0 个测试用例执行 | 1 |
+| 验证项             | 实际结果                                                                         |                               退出码 |
+| ------------------ | -------------------------------------------------------------------------------- | -----------------------------------: |
+| `docs:check`       | 89 个 Markdown 文件通过                                                          |                                    0 |
+| `vp check`         | 359 个文件格式正确；211 个受检文件零警告/Lint/TypeScript 错误                    |                                    0 |
+| Core 构建          | 通过                                                                             | 0（由 test:db 前置脚本继续执行确认） |
+| Prisma Client      | 7.10.1 生成成功                                                                  |                                    0 |
+| `pnpm run test:db` | 6 个 Suite 在模块加载阶段因缺少 `SCADA_TEST_DATABASE_URL` 退出；0 个测试用例执行 |                                    1 |
 
 **原因与安全结论**：当前 PowerShell 进程未设置 `SCADA_TEST_DATABASE_URL`。六个 DB spec 的导入前置检查按设计拒绝运行；没有证据显示测试连接 PostgreSQL 或执行数据库写入。这不是事务、迁移、约束或并发测试失败。不得删除环境变量保护或把测试 URL 改为开发库/生产库。
 
