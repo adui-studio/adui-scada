@@ -1728,3 +1728,11 @@ PR #99 分支同步 PR #97 后的静态评审发现，原发布状态 lastReleas
 已将 Prisma ORM 导航关系改为使用已有唯一 lastReleaseEventId -> eventId 建立一对一；数据库层第二条迁移中的六字段复合外键保持不变，继续校验租户、工程、代次、目标修订、摘要与事件 UUID。没有新增或修改迁移 SQL，也没有执行数据库写入。静态回归同步检查 ORM 单字段关系与 SQL 六字段约束。
 
 本次修复后仍待 Windows 重新执行 db:validate、db:generate、vp check、test:unit（目标 620/620）、隔离 PostgreSQL test:db（42/42）、docs:check 与完整 ready。原开发库 adui_scada 的失败迁移继续冻结。
+
+## 2026-11-19 · PR #99 复合外键静态断言误报修复（E-065）
+
+维护者 Windows 复验确认 E-063/E-064 的 Prisma P1012 已解除：`db:validate`、`db:generate` 均退出码 0；`vp check` 355/207 零警告错误、`docs:check` 89 份通过。Vitest 已实际运行，共 **619/620** 项通过；唯一失败项为 `prisma-schema-comments.spec.ts` 中六字段复合外键的单行字符串 `toContain` 与原 SQL 多行排版不一致，`test:unit` 退出码 1。
+
+已最小修复静态测试：仅忽略外键 DDL 排版空白，同时完整核验约束名、六列外键字段、六列被引用字段、删除/更新规则，去除重复断言；不修改迁移、Prisma Schema、PostgreSQL 或生产逻辑。候选源码通过隔离 JS 正反向字符串检查，但最新 Windows `test:unit`（目标 620/620）、`vp check`、`docs:check`、完整 `ready` 与隔离 PostgreSQL `test:db`（目标 42/42）仍待执行；用户日志未附 HEAD SHA。
+
+PR #99 保持 Open/Draft，指派 `@adui-dev`，不合并；原开发库 `adui_scada` 失败迁移保持冻结。

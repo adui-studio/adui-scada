@@ -116,15 +116,17 @@ describe("Prisma 模型及 PostgreSQL 数据库中文注释约束", () => {
     expect(releaseIntegrityMigration).toContain(
       'FOREIGN KEY ("tenant_id", "project_id", "released_revision", "released_content_hash")',
     );
-    expect(releaseIntegrityMigration).toContain(
+    // 仅忽略 SQL 排版空白，仍校验约束名称、六字段顺序、引用目标和删除/更新规则。
+    const normalizedIntegrityMigration = releaseIntegrityMigration.replace(/\s+/g, "");
+    const lastReleaseEventForeignKey = [
+      'ADD CONSTRAINT "scada_project_release_state_last_event_fkey"',
       'FOREIGN KEY ("tenant_id", "project_id", "release_generation", "released_revision", "released_content_hash", "last_release_event_id")',
-    );
-    expect(releaseIntegrityMigration).toContain(
-      'FOREIGN KEY ("tenant_id", "project_id", "release_generation", "released_revision", "released_content_hash", "last_release_event_id")',
-    );
-    expect(releaseIntegrityMigration).toContain(
       'REFERENCES "scada_project_release_events" ("tenant_id", "project_id", "generation", "to_revision", "to_content_hash", "event_id")',
-    );
+      "ON DELETE RESTRICT ON UPDATE CASCADE;",
+    ]
+      .join(" ")
+      .replace(/\s+/g, "");
+    expect(normalizedIntegrityMigration).toContain(lastReleaseEventForeignKey);
     expect(releaseIntegrityMigration).toContain(
       'FOREIGN KEY ("tenant_id", "project_id", "from_revision", "from_content_hash")',
     );

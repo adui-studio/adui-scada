@@ -2153,3 +2153,15 @@ PR #99 已将 Prisma ORM 一对一导航关系改为使用已有全局唯一 `la
 | 完整 `pnpm run ready`     |                           退出码 0 |
 
 数据库专项仍只允许使用 `docs/HARNESS.md` 中 `try/finally` 流程连接本机隔离 `adui_scada_test`；原开发库 `adui_scada` 的失败迁移保持冻结，不执行 resolve、deploy、reset、DROP、DELETE 或手工修改 `_prisma_migrations`。
+
+## 2026-11-19 · PR #99 发布复合外键静态断言误报修复（E-065，待 Windows 复验）
+
+维护者新一轮 Windows 测试确认：`db:validate` 退出码 **0**，`db:generate` 退出码 **0**，Prisma Client 7.10.1 正常生成；`vp check` 为 355 个格式文件和 207 个受检文件零警告错误，退出码 **0**；`docs:check` 89 份 Markdown 通过，退出码 **0**。
+
+`test:unit` 已实际执行 Vitest，共 **51 个测试文件（50 通过、1 失败），619/620 项通过，退出码 1**。唯一失败处位于 `prisma-schema-comments.spec.ts:119`：对六字段末次发布事件外键和其引用表使用了单行字符串查找，而迁移 SQL 实际将列名逐行排版。测试中该六字段 `FOREIGN KEY` 断言还重复出现。错误属于静态断言的空白格式依赖；不能据此推断真实 PostgreSQL 外键失败，也没有运行新迁移或数据库专项的证据。
+
+本次仅修改上述静态用例：精确检查 `ADD CONSTRAINT scada_project_release_state_last_event_fkey`、外键侧六字段、被引用事件表的六字段及 `ON DELETE RESTRICT ON UPDATE CASCADE` 的连续组合，只忽略 SQL 排版空白，不改变字段名、顺序或完整性门禁。移除重复断言。没有改动已应用的迁移 SQL、Schema、数据库或发布业务写入。
+
+验收目标：`pnpm run test:unit` **620/620**、`vp check` 零警告/错误、`pnpm run docs:check` 通过、完整 `pnpm run ready` 退出码 0；之后仅按 `docs/HARNESS.md` 保护流程在隔离 `127.0.0.1:15432/adui_scada_test` 复验新迁移首次/再次部署及 `test:db` **42/42**。原开发库 `adui_scada` 失败迁移继续冻结，未经备份与明确授权不得执行恢复写入。
+
+**验证边界**：本轮候选仅完成 GitHub 源码静态核对及隔离 JS 字符串正向/负向检查。维护者本次提供的 Windows 日志未包含 `git rev-parse HEAD`，因此不将已通过项目归属于本次新 HEAD。

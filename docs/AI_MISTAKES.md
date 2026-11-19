@@ -593,6 +593,15 @@
 - **验证边界**：本轮修复只修改 Prisma 关系映射、静态回归和说明文档；没有修改两条迁移 SQL、数据库或业务写入逻辑。修复后的 Windows `db:validate`、`db:generate`、`test:unit`、隔离 PostgreSQL `test:db`、`vp check`、`docs:check` 与完整 `ready` **尚未执行**。单元测试目标仍为 **620/620**，数据库专项仍为 **42/42**；此前 `vp check` 355/207 与 `docs:check` 89 份是修复前日志。
 - **证据**：维护者 2026-11-19 Windows P1012 日志、PR #99、`apps/server/prisma/schema.prisma`、`apps/server/prisma/migrations/20261119000000_release_state_event_integrity/migration.sql`、`apps/server/src/database/prisma-schema-comments.spec.ts`、Prisma 7 Schema API 对 `@@unique` 必填字段的规则。
 
+### E-065 · 发布末次事件复合外键静态断言误将 SQL 排版当成约束错误（第三十五批 B 阶段）
+
+- **现象**：维护者 2026-11-19 Windows 复验中 `pnpm run db:validate` 与 `db:generate` 均退出码 0，Prisma Client 7.10.1 成功生成；`vp check` 355 个文件格式正确、207 个受检文件零警告/Lint/类型错误，`docs:check` 89 份通过。单元测试进入 Vitest 后为 **619/620**，仅 `apps/server/src/database/prisma-schema-comments.spec.ts` 的“发布状态、事件与不可变版本通过复合外键保持租户工程代次和摘要闭包”失败；`test:unit` 退出码 1。
+- **确认根因**：静态测试对 `20261119000000_release_state_event_integrity/migration.sql` 使用单行 `toContain('FOREIGN KEY (...)')` 和 `toContain('REFERENCES ... (...)')`，但真实迁移将六个字段逐行排版，严格字符串匹配因此失败；同一六字段 `FOREIGN KEY` 断言还被意外重复写入。现有日志**没有执行数据库迁移或真实 PostgreSQL 外键负向测试**，不能把这一次静态断言失败解释成已发现数据库外键缺失，也不能称真实外键已通过。
+- **最小修复**：只修正 `prisma-schema-comments.spec.ts` 中的六字段末次事件检查，先对迁移 SQL 与预期完整约束片段分别消除排版空白，再匹配同一个 `ADD CONSTRAINT`、六个外键字段、六个目标字段和 `ON DELETE RESTRICT ON UPDATE CASCADE` 的连续组合；移除重复断言。其他摘要/版本外键、事务、索引及中文注释检查原样保留。**不修改任何 Prisma Schema、迁移 SQL、数据库或正式发布业务逻辑**。
+- **防复发**：静态 DDL 校验对多行 `FOREIGN KEY/REFERENCES` 不能默认单行排版；只归一化空白、不归一化字段名称或顺序，并让外键与其目标表、引用字段、约束名保持同一组合校验。对 SQL 校验脚本先用真实迁移文本做正向匹配，再用错误列名/列序或错误删除规则做负向自检；不可通过删除安全断言或回改已应用迁移使测试变绿。
+- **验证边界**：本轮对当前 GitHub SQL 文本执行了 1 项正向及 3 类负向的隔离 JavaScript 字符串断言自检，均符合预期；**这不是 Node/Vitest、Windows 或 PostgreSQL 实际验收**。修复后的 `pnpm run test:unit` 目标仍为 **620/620**，独立本机隔离 `adui_scada_test` 的数据库专项仍为 **42/42**，`vp check`、`docs:check`、完整 `ready` 均待 Windows 再次实测；用户日志没有包含本地 HEAD SHA，不能把结果绑定到当前 GitHub 新提交。
+- **证据**：维护者 2026-11-19 Windows 复验日志、PR #99、`apps/server/src/database/prisma-schema-comments.spec.ts`、`apps/server/prisma/migrations/20261119000000_release_state_event_integrity/migration.sql`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
