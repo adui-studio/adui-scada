@@ -547,6 +547,15 @@
 - **验证边界**：维护者本轮只读查询退出码 0，已确认数据库名、失败记录、旧 CHECK 定义和两张表缺失。修复后 Windows 已实测 `db:validate`、`db:generate`、`vp check`（354/207 零告警错误）、`test:unit`（618/618）与原有 `docs:check`（88 份）均退出码 0；静态测试已验证先 DROP 再 ADD 和五项权限。**隔离 PostgreSQL 首次/二次迁移、`test:db` 与完整 `ready` 仍未执行**。对 `adui_scada` 的 `migrate resolve` 与迁移重试也尚未授权、尚未执行；Windows 日志未提供本地 HEAD SHA。
 - **证据**：维护者 2026-11-18 PostgreSQL 只读查询原始输出、PR #99、`apps/server/prisma/migrations/20261118000000_release_state_and_events/migration.sql`、`apps/server/src/database/prisma-schema-comments.spec.ts`。
 
+### E-060 · 将 Prisma 待执行迁移状态的退出码 1 误判为数据库故障（第三十五批 B 阶段）
+
+- **现象**：维护者在本机隔离数据库 `adui_scada_test` 执行 `pnpm run db:migrate:status`，Prisma 成功连接 `127.0.0.1:15432`，报告 5 条迁移已发现，唯一待执行迁移为 `20261118000000_release_state_and_events`，没有报告失败迁移；该命令返回退出码 1。助手先前提供的 PowerShell 包装仅以退出码是否为 0 判断状态，并抛出“隔离数据库迁移状态异常”，导致流程在迁移部署前停止。
+- **根因**：把 Prisma CLI 的状态输出与退出码割裂判断，并错误假设“存在 pending migration 时 status 必须退出码 0”。本项目当前 Prisma 7.10.1 的实际 Windows 日志证明：仅有待执行迁移时也会返回 1；不能用通用经验覆盖仓库实际版本输出。
+- **最小修复**：本次不修改 Prisma 或数据库。将状态结果解释为“5 条已应用、1 条待执行、未见 failed migration”，直接进入隔离库首次 `migrate deploy`；部署后再运行 `migrate status`，此时应输出 up to date 且退出码 0。
+- **防复发**：执行 `migrate status` 时同时检查完整文本和退出码。输出仅列出待执行迁移且未出现失败迁移/P3009 时，属于正常部署前状态；出现 failed migration、P3009、连接错误或其他数据库错误时才停止。不要把所有非零退出码一概忽略，也不要只凭退出码判断迁移是否失败。
+- **验证边界**：维护者已实测连接目标是本机 `adui_scada_test`，数据库存在，5 条迁移已应用、1 条待执行，状态命令退出码 1。PowerShell `finally` 已恢复原环境变量；本次没有执行迁移写入。首次/二次部署、部署后 status 与 `test:db` 仍待执行。
+- **证据**：维护者 2026-11-19 Windows `pnpm run db:migrate:status` 原始输出、PR #99、`apps/server/package.json` 的 `db:migrate:status` 脚本、`docs/HARNESS.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
