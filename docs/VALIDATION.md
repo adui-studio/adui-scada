@@ -2090,14 +2090,14 @@ PR #99 已新增不可变增量迁移 20261119000000_release_state_event_integri
 
 **待维护者 Windows 实测**：
 
-| 验收项 | 目标 |
-|---|---:|
-| db:validate / db:generate | 退出码 0 |
-| 新增迁移首次部署 / 二次部署 / status | 均退出码 0 |
-| vp check | 零警告、零错误 |
-| test:unit | 619/619 |
-| 隔离 PostgreSQL test:db | 42/42 |
-| docs:check | 89 份 Markdown，实际计数以命令为准 |
-| 完整 ready | 退出码 0 |
+| 验收项                               |                               目标 |
+| ------------------------------------ | ---------------------------------: |
+| db:validate / db:generate            |                           退出码 0 |
+| 新增迁移首次部署 / 二次部署 / status |                         均退出码 0 |
+| vp check                             |                     零警告、零错误 |
+| test:unit                            |                            619/619 |
+| 隔离 PostgreSQL test:db              |                              42/42 |
+| docs:check                           | 89 份 Markdown，实际计数以命令为准 |
+| 完整 ready                           |                           退出码 0 |
 
 本轮没有运行 Windows、Prisma 或 PostgreSQL 命令；上述均为验收目标，不是通过结果。原开发库 adui_scada 仍不得执行任何迁移恢复或写操作，直到完成可恢复备份并获得维护者单独明确授权。
