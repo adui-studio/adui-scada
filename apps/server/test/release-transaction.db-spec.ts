@@ -224,10 +224,14 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
 
       const [project, state, events] = await Promise.all([
         database!.client.scadaProject.findUniqueOrThrow({
-          where: { tenantId_projectId: { tenantId: fixture.tenantId, projectId: fixture.projectId } },
+          where: {
+            tenantId_projectId: { tenantId: fixture.tenantId, projectId: fixture.projectId },
+          },
         }),
         database!.client.scadaProjectReleaseState.findUniqueOrThrow({
-          where: { tenantId_projectId: { tenantId: fixture.tenantId, projectId: fixture.projectId } },
+          where: {
+            tenantId_projectId: { tenantId: fixture.tenantId, projectId: fixture.projectId },
+          },
         }),
         database!.client.scadaProjectReleaseEvent.findMany({
           where: { tenantId: fixture.tenantId, projectId: fixture.projectId },
@@ -272,12 +276,7 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
   it("同幂等键不同语义返回 409 且不追加第二条事件", async () => {
     await withFixture(async (fixture) => {
       const first = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4ea");
-      const second = await postPublish(
-        fixture,
-        "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4ea",
-        1,
-        1,
-      );
+      const second = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4ea", 1, 1);
       expect(first.status).toBe(201);
       expect(second.status).toBe(409);
       expect(
@@ -291,12 +290,7 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
   it("不同幂等键重复发布同一修订时保守拒绝", async () => {
     await withFixture(async (fixture) => {
       const first = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f0");
-      const second = await postPublish(
-        fixture,
-        "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f1",
-        1,
-        1,
-      );
+      const second = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f1", 1, 1);
       expect(first.status).toBe(201);
       expect(second.status).toBe(409);
       expect(
@@ -311,20 +305,11 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
     await withFixture(async (fixture) => {
       const first = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f2");
       expect(first.status).toBe(201);
-      await projectStore.append(
-        { tenantId: fixture.tenantId, subjectId },
-        fixture.projectId,
-        {
-          expectedRevision: 1,
-          document: createDocument(fixture.projectId),
-        },
-      );
-      const second = await postPublish(
-        fixture,
-        "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f3",
-        2,
-        1,
-      );
+      await projectStore.append({ tenantId: fixture.tenantId, subjectId }, fixture.projectId, {
+        expectedRevision: 1,
+        document: createDocument(fixture.projectId),
+      });
+      const second = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f3", 2, 1);
       expect(second.status).toBe(201);
       const events = await database!.client.scadaProjectReleaseEvent.findMany({
         where: { tenantId: fixture.tenantId, projectId: fixture.projectId },
@@ -361,10 +346,9 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
         await gateReleased;
       };
 
-      const publishPromise = postPublish(
-        fixture,
-        "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f4",
-      ).then((response) => response);
+      const publishPromise = postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f4").then(
+        (response) => response,
+      );
       let grantRevocationFinished = false;
       let sessionRevocationFinished = false;
       let grantRevocation: Promise<{ count: number }> | undefined;
@@ -423,12 +407,13 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
         postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4ec"),
       ]);
       expect(responses.map((response) => response.status).sort((a, b) => a - b)).toEqual([
-        201,
-        409,
+        201, 409,
       ]);
       const [state, eventCount] = await Promise.all([
         database!.client.scadaProjectReleaseState.findUniqueOrThrow({
-          where: { tenantId_projectId: { tenantId: fixture.tenantId, projectId: fixture.projectId } },
+          where: {
+            tenantId_projectId: { tenantId: fixture.tenantId, projectId: fixture.projectId },
+          },
         }),
         database!.client.scadaProjectReleaseEvent.count({
           where: { tenantId: fixture.tenantId, projectId: fixture.projectId },
@@ -461,7 +446,9 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
         expect(response.status).toBe(422);
         expect(response.body.issues).toHaveLength(1);
         const state = await database!.client.scadaProjectReleaseState.findUniqueOrThrow({
-          where: { tenantId_projectId: { tenantId: fixture.tenantId, projectId: fixture.projectId } },
+          where: {
+            tenantId_projectId: { tenantId: fixture.tenantId, projectId: fixture.projectId },
+          },
         });
         expect(state.releaseGeneration).toBe(0n);
         expect(state.releasedRevision).toBeNull();
@@ -477,10 +464,12 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
 
   it("会话撤销后拒绝发布且不写入事件", async () => {
     await withFixture(async (fixture) => {
-      expect(await sessions.revokeForVerifiedSubject(
-        { tenantId: fixture.tenantId, subjectId },
-        fixture.session.sessionId,
-      )).toBe(true);
+      expect(
+        await sessions.revokeForVerifiedSubject(
+          { tenantId: fixture.tenantId, subjectId },
+          fixture.session.sessionId,
+        ),
+      ).toBe(true);
       const response = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4ef");
       expect(response.status).toBe(401);
       expect(

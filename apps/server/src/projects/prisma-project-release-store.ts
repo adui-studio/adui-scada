@@ -270,7 +270,7 @@ function validateReleaseState(state: {
         state.releasedRevision <= 0n ||
         state.releasedRevision > MAX_SAFE_BIGINT)) ||
     (state.releasedContentHash !== null && !SHA256_PATTERN.test(state.releasedContentHash)) ||
-    ((state.releasedRevision === null) !== (state.releasedContentHash === null)) ||
+    (state.releasedRevision === null) !== (state.releasedContentHash === null) ||
     (state.releaseGeneration === 0n &&
       (state.releasedRevision !== null ||
         state.releasedContentHash !== null ||

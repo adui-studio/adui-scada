@@ -2090,12 +2090,12 @@ PR #99 已新增不可变增量迁移 20261119000000_release_state_event_integri
 
 **维护者 Windows 实测结果**：
 
-| 验收项 | 实际结果 | 退出码 |
-|---|---:|---:|
-| 第二条迁移首次部署 | 成功应用 `20261119000000_release_state_event_integrity` | 0 |
-| 第二条迁移二次部署 | 无待执行迁移 | 0 |
-| `db:migrate:status` | Database schema is up to date | 0 |
-| `test:db` | 5/5 文件、42/42 项 | 0 |
+| 验收项              |                                                实际结果 | 退出码 |
+| ------------------- | ------------------------------------------------------: | -----: |
+| 第二条迁移首次部署  | 成功应用 `20261119000000_release_state_event_integrity` |      0 |
+| 第二条迁移二次部署  |                                            无待执行迁移 |      0 |
+| `db:migrate:status` |                           Database schema is up to date |      0 |
+| `test:db`           |                                      5/5 文件、42/42 项 |      0 |
 
 发布 Schema DB 测试 6/6，真实 PostgreSQL 已拒绝跨工程事件引用、错误代次、错误状态摘要和错误事件目标摘要，并接受合法关联。原开发库 `adui_scada` 未执行迁移恢复或其他写操作。
 
@@ -2180,16 +2180,16 @@ PR #99 已将 Prisma ORM 一对一导航关系改为使用已有全局唯一 `la
 
 维护者 Windows 已提供以下实际结果：
 
-| 检查 | 结果 | 退出码 |
-|---|---:|---:|
-| `docs:check` | 89 份 Markdown | 0 |
-| `test:unit` | 51/51 文件、620/620 项 | 0 |
-| `vp check` | 355 文件格式正确、207 受检文件零警告/Lint/类型错误 | 0 |
-| 完整 `ready` | 依赖、配置、环境、中文文案、Prisma Client、类型检查、单测、SSE/OIDC/Docker/浏览器专项、HTTP E2E 55/55、React/Vue/NestJS 构建全部完成 | 0 |
-| 第二条迁移首次部署 | `20261119000000_release_state_event_integrity` 成功应用到隔离 `adui_scada_test` | 0 |
-| 第二条迁移二次部署 | 无待执行迁移 | 0 |
-| 迁移状态 | Database schema is up to date | 0 |
-| `test:db` | 5/5 文件、42/42 项 | 0 |
+| 检查               |                                                                                                                                 结果 | 退出码 |
+| ------------------ | -----------------------------------------------------------------------------------------------------------------------------------: | -----: |
+| `docs:check`       |                                                                                                                       89 份 Markdown |      0 |
+| `test:unit`        |                                                                                                               51/51 文件、620/620 项 |      0 |
+| `vp check`         |                                                                                   355 文件格式正确、207 受检文件零警告/Lint/类型错误 |      0 |
+| 完整 `ready`       | 依赖、配置、环境、中文文案、Prisma Client、类型检查、单测、SSE/OIDC/Docker/浏览器专项、HTTP E2E 55/55、React/Vue/NestJS 构建全部完成 |      0 |
+| 第二条迁移首次部署 |                                                      `20261119000000_release_state_event_integrity` 成功应用到隔离 `adui_scada_test` |      0 |
+| 第二条迁移二次部署 |                                                                                                                         无待执行迁移 |      0 |
+| 迁移状态           |                                                                                                        Database schema is up to date |      0 |
+| `test:db`          |                                                                                                                   5/5 文件、42/42 项 |      0 |
 
 真实 PostgreSQL 发布 Schema 用例 6/6，覆盖两张发布表和中文注释、约束与索引、generation=0 初始状态，以及跨工程事件引用、代次不匹配、状态摘要不匹配、事件目标摘要不匹配拒绝和合法引用成功。日志中“数据库工程版本元数据与快照不一致”的 TypeError 是主动篡改随机测试租户摘要的预期负向 HTTP 500，相关测试通过，不构成失败。
 

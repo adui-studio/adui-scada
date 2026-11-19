@@ -186,7 +186,10 @@ export class ProjectApiController {
   @ApiResponse({ status: 404, description: "工程不存在或无权执行正式发布" })
   @ApiResponse({ status: 409, description: "工程 head、发布代次或幂等语义发生冲突" })
   @ApiResponse({ status: 422, description: "已保存快照未通过静态发布兼容性检查" })
-  @ApiResponse({ status: 503, description: "Runtime、Tag、数据源及工业安全门禁尚未就绪，发布默认拒绝" })
+  @ApiResponse({
+    status: 503,
+    description: "Runtime、Tag、数据源及工业安全门禁尚未就绪，发布默认拒绝",
+  })
   publish(
     @Req() request: ScadaAuthenticatedRequest,
     @Param("projectId") projectId: string,

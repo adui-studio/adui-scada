@@ -39,10 +39,7 @@ function createDocument(unsupported = false): ScadaDocument {
   return copy;
 }
 
-function semanticHash(
-  projectId: string,
-  request: typeof REQUEST = REQUEST,
-): string {
+function semanticHash(projectId: string, request: typeof REQUEST = REQUEST): string {
   return createHash("sha256")
     .update(
       JSON.stringify({
@@ -98,32 +95,32 @@ async function createHarness(options: HarnessOptions = {}) {
   };
 
   const tx = {
-    $queryRaw: vi.fn<
-      (parts: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>
-    >(async (parts) => {
-      const query = parts.join("?");
-      if (query.includes("FROM scada_projects")) {
-        steps.push("锁定工程");
-        return [{ head_revision: options.head ?? 1n }];
-      }
-      if (query.includes("FROM scada_auth_sessions")) {
-        steps.push("锁定会话与主体");
-        return options.sessionActive === false ? [] : [{ session_id: SESSION_ID }];
-      }
-      if (query.includes("FROM scada_project_grants")) {
-        steps.push("锁定发布授权");
-        return (options.permissions ?? ["release:publish"]).map((permission) => ({ permission }));
-      }
-      if (query.includes("FROM scada_project_release_state")) {
-        steps.push("锁定发布状态");
-        return [{ release_generation: state.releaseGeneration }];
-      }
-      if (query.includes("FROM scada_project_versions")) {
-        steps.push("锁定不可变快照");
-        return [{ revision: 1n }];
-      }
-      throw new Error("测试遇到未登记的数据库锁查询");
-    }),
+    $queryRaw: vi.fn<(parts: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>>(
+      async (parts) => {
+        const query = parts.join("?");
+        if (query.includes("FROM scada_projects")) {
+          steps.push("锁定工程");
+          return [{ head_revision: options.head ?? 1n }];
+        }
+        if (query.includes("FROM scada_auth_sessions")) {
+          steps.push("锁定会话与主体");
+          return options.sessionActive === false ? [] : [{ session_id: SESSION_ID }];
+        }
+        if (query.includes("FROM scada_project_grants")) {
+          steps.push("锁定发布授权");
+          return (options.permissions ?? ["release:publish"]).map((permission) => ({ permission }));
+        }
+        if (query.includes("FROM scada_project_release_state")) {
+          steps.push("锁定发布状态");
+          return [{ release_generation: state.releaseGeneration }];
+        }
+        if (query.includes("FROM scada_project_versions")) {
+          steps.push("锁定不可变快照");
+          return [{ revision: 1n }];
+        }
+        throw new Error("测试遇到未登记的数据库锁查询");
+      },
+    ),
     scadaProjectReleaseState: {
       findUnique: vi.fn(async () => {
         steps.push("读取发布状态");
@@ -254,13 +251,7 @@ describe("正式发布事务仓储", () => {
       allowGate: true,
     });
     await expect(
-      staleGeneration.store.publish(
-        PRINCIPAL,
-        SESSION_ID,
-        PROJECT_ID,
-        REQUEST,
-        IDEMPOTENCY_KEY,
-      ),
+      staleGeneration.store.publish(PRINCIPAL, SESSION_ID, PROJECT_ID, REQUEST, IDEMPOTENCY_KEY),
     ).rejects.toBeInstanceOf(ProjectReleaseConflictError);
     expect(staleGeneration.tx.scadaProjectReleaseEvent.create).not.toHaveBeenCalled();
   });
