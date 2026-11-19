@@ -3235,6 +3235,10 @@ if (
   throw "数据库迁移与测试仅允许本机 adui_scada_test"
 }
 
+迁移前可以先运行 `pnpm run db:migrate:status` 查看隔离库状态。**本项目当前 Prisma CLI 7.10.1 在存在待执行迁移时，实际会打印 `Following migration have not yet been applied` 并返回退出码 1**；这表示存在 pending migration，不等同于 P3009 失败迁移。必须根据完整输出区分：仅列出待执行迁移时可以继续部署；出现 failed migration / P3009 时立即停止。不要仅因状态命令退出码为 1 就认定数据库故障，也不要把任何退出码 1 自动忽略。
+
+本次维护者已确认隔离库 `adui_scada_test` 有 5 条已应用迁移，唯一待执行项为 `20261118000000_release_state_and_events`，输出未报告失败迁移。下一步应直接执行下面的首次部署，而不是再次用“状态命令必须退出码 0”的条件阻断。
+
 try {
   $env:SCADA_DATABASE_URL = $testDatabaseUrl
   $env:SCADA_TEST_DATABASE_URL = $testDatabaseUrl
