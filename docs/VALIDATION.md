@@ -1884,3 +1884,11 @@ PR #91 Windows 原始测试证据：`pnpm run test:unit` **50/50 文件 610/610 
 前批 PR #95 的 Windows 质量链：`docs:check` **87 份，退出码 0**；`vp check` **352 格式文件、206 受检文件零告警/错误，退出码 0**；完整 `pnpm run ready` **退出码 0**，包括 Vitest **615/615**、HTTP E2E **55/55**、OIDC Studio 离线安全 **13/13**、React/Vue/NestJS 类型检查和构建。维护者明确授权，PR #95 GitHub HEAD `d5ceea382b92734b408b41d546b9ba93646e9914` Squash 合并到 `main@0bc70202f8d1cced27edd72d49fb1de05c44c58f`；原始日志没有 `git rev-parse HEAD`，不作 SHA 级严格绑定。文档验收不等于 ADR-0069 被批准，ADR 仍 Proposed。
 
 第十二小批新增 `docs/RELEASE_TRANSACTION_REVIEW.md`，列出八项待维护者正式决定的发布/回滚权限、审批、幂等、回滚范围、Runtime、审计与工业安全选择，以及二十二项**未执行**数据库/HTTP/Runtime 负向测试，供下一阶段准入评审。本次未改生产代码，不宣称发布写事务、权限或真实 PostgreSQL 发布测试已实现。新增一份 Markdown 后预计文档检查 **88 份**，仅为待测试计数。**新分支 Windows `pnpm run docs:check`、`vp check`、`pnpm run ready` 均待实际运行**，此前 615/615 与 55/55 仅是合并前基线。
+
+## 2026-11-19 · PR #97 ADR-0069 Accepted 决策文档同步（Windows 待验收）
+
+维护者已于 2026-11-18 明确批准 ADR-0069 进入 Accepted，并批准 R-01～R-08 推荐基线。PR #97 将 ADR、决策记录、评审矩阵及 PROJECT_CONTEXT 设为 Accepted；本轮复核又发现 ARCHITECTURE、SDD、REQUIREMENTS、CODEBASE_MAP、HARNESS 和 VALIDATION 中仍保留“Proposed/待批准”现状描述，已在 PR #97 分支进行最小文档同步。
+
+本轮仅修改文档，不涉及生产代码、Prisma Schema、数据库迁移、API、Runtime 或设备接口。FR-008 仍为规划中；T-01～T-22 仍是未来验收义务，不是已通过测试。
+
+PR #97 当前分支：`docs/v0.3-b35-release-decision-record`。该分支新增/修改的 Markdown 文档同步完成后，**Windows `pnpm run docs:check` 尚待执行**；预计文件数需以实际命令输出为准。未提供本轮本地 HEAD 与退出码，不得将 PR #99 的 88 份文档检查结果外推为 PR #97 通过。
