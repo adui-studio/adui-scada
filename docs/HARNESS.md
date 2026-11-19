@@ -3446,3 +3446,76 @@ PR #99 在原发布 Schema 迁移已应用后新增 20261119000000_release_state
 执行前必须使用本文件既有 PowerShell `try/finally` 流程，确保 `SCADA_DATABASE_URL` 与 `SCADA_TEST_DATABASE_URL` 均指向本机 `127.0.0.1:15432/adui_scada_test`；测试文件自身还会校验 `SCADA_TEST_DATABASE_URL` 的协议、主机和数据库名。随后执行 `pnpm run test:db`。该脚本会构建 Core、生成 Prisma Client，并使用 `vitest.config.db.ts` 执行全部数据库专项。
 
 本批不新增迁移，不需要对任何数据库执行 `migrate deploy`。不得将连接指向原开发库 `adui_scada`、远程库或生产库；发生 P3009、failed migration、连接目标不符或状态不明时立即停止。每项随机租户/工程测试必须在 finally 按 RESTRICT 外键依赖顺序清理，不能放宽外键或跳过清理。
+
+## 2026-11-19 · 第三十五批 C1 PostgreSQL 测试重跑（仅设置隔离 URL，不执行迁移）
+
+C1 没有新增 Prisma 迁移；PR #99 的两条 B 阶段迁移此前已在本机隔离 `adui_scada_test` 完成首次/二次部署和真实 Schema 验收。因此 C1 重跑只执行 `pnpm run test:db`，**不要再次运行 `db:migrate:deploy`、`db:migrate:status`，也不要修改根 `.env`**。
+
+必须在仓库根目录的同一个 PowerShell 会话中完整执行下面代码。它从根 `.env` 读取 `SCADA_DATABASE_URL`，只在当前进程将数据库名替换为 `adui_scada_test`，同时设置 Prisma 使用的 `SCADA_DATABASE_URL` 和测试文件强制要求的 `SCADA_TEST_DATABASE_URL`；不会输出连接串或口令，并在 `finally` 中恢复两个原值。
+
+`SCADA_TEST_DATABASE_URL` 缺失时，六个 DB spec 会在模块加载阶段拒绝运行，这是预期 fail-closed 保护，不得删除或绕过。
+
+```powershell
+$originalDatabaseUrl = $env:SCADA_DATABASE_URL
+$originalTestDatabaseUrl = $env:SCADA_TEST_DATABASE_URL
+$testExitCode = $null
+
+try {
+  $developmentDatabaseEntry = (
+    Get-Content .env |
+      Where-Object { $_ -match '^SCADA_DATABASE_URL=' } |
+      Select-Object -First 1
+  )
+  if (-not $developmentDatabaseEntry) {
+    throw "根 .env 缺少 SCADA_DATABASE_URL"
+  }
+
+  $developmentDatabaseUrl = $developmentDatabaseEntry.Substring(19)
+  $testDatabaseUrl = $developmentDatabaseUrl -replace '/adui_scada(?=\\?|$)', '/adui_scada_test'
+  if ($testDatabaseUrl -eq $developmentDatabaseUrl) {
+    throw "无法从开发数据库 URL 推导隔离测试数据库 URL"
+  }
+
+  $testUri = [Uri]$testDatabaseUrl
+  if (
+    $testUri.Scheme -notin @("postgresql", "postgres") -or
+    $testUri.Host -notin @("127.0.0.1", "localhost") -or
+    $testUri.AbsolutePath -ne "/adui_scada_test"
+  ) {
+    throw "PostgreSQL 专项仅允许连接本机 adui_scada_test 隔离数据库"
+  }
+
+  $env:SCADA_DATABASE_URL = $testDatabaseUrl
+  $env:SCADA_TEST_DATABASE_URL = $testDatabaseUrl
+
+  pnpm run test:db
+  $testExitCode = $LASTEXITCODE
+  Write-Host "PostgreSQL 专项退出码：$testExitCode"
+}
+finally {
+  if ($null -eq $originalDatabaseUrl) {
+    Remove-Item Env:SCADA_DATABASE_URL -ErrorAction SilentlyContinue
+  }
+  else {
+    $env:SCADA_DATABASE_URL = $originalDatabaseUrl
+  }
+
+  if ($null -eq $originalTestDatabaseUrl) {
+    Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+  }
+  else {
+    $env:SCADA_TEST_DATABASE_URL = $originalTestDatabaseUrl
+  }
+}
+
+if ($null -eq $testExitCode) {
+  throw "PostgreSQL 专项未执行，请检查前置环境错误"
+}
+if ($testExitCode -ne 0) {
+  throw "PostgreSQL 专项未通过，退出码：$testExitCode"
+}
+```
+
+执行前确认根 `.env` 中的开发 URL 是本机 `127.0.0.1:15432/adui_scada`；上述脚本只替换数据库路径，若根 URL 不是该本机开发库，应停止并由维护者在本机安全设置正确的隔离测试 URL，不能改指向远程或生产环境。测试文件还会独立校验测试 URL 的协议、主机和数据库名。
+
+本次用户首次裸跑 `pnpm run test:db` 时，6 个 Suite 均在导入阶段因缺少 `SCADA_TEST_DATABASE_URL` 退出，0 个测试执行；没有证据显示 PostgreSQL 已连接或数据库发生写入。按本节完整脚本重跑后，再依据 Vitest 实际统计和最终退出码记录结果。原开发库 `adui_scada` 的历史失败迁移继续冻结。
