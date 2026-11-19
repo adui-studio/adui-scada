@@ -2162,6 +2162,24 @@ PR #99 已将 Prisma ORM 一对一导航关系改为使用已有全局唯一 `la
 
 本次仅修改上述静态用例：精确检查 `ADD CONSTRAINT scada_project_release_state_last_event_fkey`、外键侧六字段、被引用事件表的六字段及 `ON DELETE RESTRICT ON UPDATE CASCADE` 的连续组合，只忽略 SQL 排版空白，不改变字段名、顺序或完整性门禁。移除重复断言。没有改动已应用的迁移 SQL、Schema、数据库或发布业务写入。
 
-验收目标：`pnpm run test:unit` **620/620**、`vp check` 零警告/错误、`pnpm run docs:check` 通过、完整 `pnpm run ready` 退出码 0；之后仅按 `docs/HARNESS.md` 保护流程在隔离 `127.0.0.1:15432/adui_scada_test` 复验新迁移首次/再次部署及 `test:db` **42/42**。原开发库 `adui_scada` 失败迁移继续冻结，未经备份与明确授权不得执行恢复写入。
+维护者随后提供 Windows 最新质量链结果：`pnpm run test:unit` **51/51 文件、620/620 项通过**，退出码 0；`vp check` 355 个文件格式正确、207 个受检文件零警告/Lint/类型错误，退出码 0；`docs:check` 89 个 Markdown 通过，退出码 0；完整 `pnpm run ready` 覆盖依赖目录、共享配置、环境、中文文案、Prisma Client 生成、Web/Server 类型检查、单元测试、SSE/OIDC/Docker 配置专项、HTTP E2E **6/6 文件、55/55 项**、文档检查，以及 React、Vue、NestJS 构建，最终退出码 **0**。Prisma Client 7.10.1 在单测与 ready 中均成功生成。
 
-**验证边界**：本轮候选仅完成 GitHub 源码静态核对及隔离 JS 字符串正向/负向检查。维护者本次提供的 Windows 日志未包含 `git rev-parse HEAD`，因此不将已通过项目归属于本次新 HEAD。
+**仍待单独验收**：`ready` 脚本不包含真实 PostgreSQL `test:db`，也不执行迁移部署。第二条迁移 `20261119000000_release_state_event_integrity` 的首次/二次部署、部署后 `migrate status` 和隔离数据库测试 **42/42** 尚无本轮执行证据。此前旧迁移对应的 41/41 不能代替本次 42/42。
+
+**验证边界**：维护者提供的本轮终端日志未包含 `git rev-parse HEAD`，故上述 Windows 结果只能记录为本轮实际日志，不能严格绑定到当前 GitHub SHA `1296814729a6ba0ae8f7d1d9a6c01bcce3c53f79`。本次文档同步后还需重新执行 `docs:check`。原开发库 `adui_scada` 失败迁移继续冻结，未经可恢复备份与维护者明确授权不得执行恢复写入。
+
+
+## 2026-11-19 · PR #99 E-065 修复后的完整工程质量链通过（真实 PostgreSQL 待验收）
+
+维护者提供的 Windows 日志显示：
+
+- `pnpm run test:unit`：51/51 文件、620/620 项通过，退出码 0；其中 Prisma Schema 注释与复合外键静态回归 6/6 通过。
+- `vp check`：355 个文件格式正确，207 个受检文件零警告、Lint 和类型错误，退出码 0。
+- `pnpm run docs:check`：89 个 Markdown 文件通过，退出码 0。
+- 完整 `pnpm run ready`：退出码 0；依赖目录 12 清单/52 项 Catalog、共享配置、根环境与 LF、231 个文件中文文案检查、Prisma Client 7.10.1 生成、React/Vue/Draft Storage/API Client 类型检查、Server 类型检查、620/620 单测、SSE 客户端 8/8、TCP 故障代理 4/4、OIDC/Docker/浏览器专项配置、NestJS HTTP E2E 6/6 文件/55/55 项、89 份文档及 React/Vue/NestJS 构建全部执行完成。
+
+本次日志没有给出 `git rev-parse HEAD`，不得把这组实测结果声称为严格绑定到当前远端 SHA。此前单独 `db:validate` 退出码 0、`db:generate` 退出码 0 的日志已证明 Prisma Schema 语义校验通过；本轮 `test:unit` 和 `ready` 又实际成功运行 Prisma Client 生成。
+
+**下一项唯一阻塞是独立 PostgreSQL 专项**：完整 `ready` 明确不包含 `db:migrate:deploy` 或 `test:db`。必须使用本文件对应的 `docs/HARNESS.md` PowerShell `try/finally` 保护流程，只将当前进程的 `SCADA_DATABASE_URL` 和 `SCADA_TEST_DATABASE_URL` 临时指向本机 `127.0.0.1:15432/adui_scada_test`，应用新增的 `20261119000000_release_state_event_integrity`，再次部署确认幂等，检查 `migrate status` up to date，再执行 `pnpm run test:db`（目标 5/5 文件、42/42 项）。如果出现 failed migration / P3009，立即停止，不得继续部署或自行修复元数据。
+
+原开发库 `adui_scada` 的失败迁移保持冻结，不执行 `migrate resolve`、`migrate deploy`、reset、DROP、DELETE 或手工编辑 `_prisma_migrations`；必须等待可恢复备份和维护者单独明确授权。
