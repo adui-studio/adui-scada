@@ -23,6 +23,8 @@ import { PrismaService } from "../src/database/prisma.service.js";
 import { ProjectApiController } from "../src/projects/project-api.controller.js";
 import { ProjectApiExceptionFilter } from "../src/projects/project-api.exception-filter.js";
 import { PrismaProjectVersionStore } from "../src/projects/prisma-project-version-store.js";
+import { PrismaProjectReleaseStore } from "../src/projects/prisma-project-release-store.js";
+import { ProjectReleaseSafetyGate } from "../src/projects/project-release-safety-gate.js";
 import { ScadaSecurityAuditService } from "../src/security/scada-security-audit.js";
 
 // 本测试执行真实 HTTP + Cookie/CSRF + ACL + Prisma，严格禁止触碰业务库。
@@ -159,6 +161,8 @@ beforeAll(async () => {
       { provide: OidcCallbackService, useValue: {} },
       AuthSessionService,
       PrismaProjectVersionStore,
+      PrismaProjectReleaseStore,
+      ProjectReleaseSafetyGate,
       ScadaSecurityAuditService,
       ScadaSessionGuard,
       ScadaProjectGuard,
