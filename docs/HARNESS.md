@@ -3189,3 +3189,27 @@ Write-Host "完整质量链退出码：$LASTEXITCODE"
 ```
 
 预计 Markdown **88 份**，原有 Vitest **615/615** 和 HTTP E2E **55/55** 均为**待复验的上一批基线**，不是本分支通过证据。此次没有新的 API/迁移/浏览器行为；后续正式发布写事务必须另行取得 ADR/工业安全批准，并完成隔离 PostgreSQL、可信 OIDC 与双框架完整验收。
+
+## 第三十五批第十三小批 · ADR-0069 Accepted 决策文档同步检查
+
+本批维护者已明确批准 ADR-0069 进入 **Accepted**，并批准 R-01～R-08 推荐基线。文档复核应确认：
+
+- ADR-0069 状态为 Accepted，决策记录与 R-01～R-08 的最终结果一致。
+- `RELEASE_TRANSACTION_REVIEW.md` 不再将 R-01～R-08 描述为待批准；I-01～I-06 为已批准设计不变量，T-01～T-22 仍是未来测试义务、尚未执行。
+- ARCHITECTURE、SDD、REQUIREMENTS、CODEBASE_MAP、PROJECT_CONTEXT 对 ADR 状态和 FR-008 实现状态保持一致。
+- FR-008 仍为规划中；Accepted 不代表 Prisma、API、Runtime 或生产发布功能已完成。
+- 正式发布/回滚写入、生产双人审批与任何 PLC/DCS 设备写入仍受独立阶段门禁约束。
+
+本 PR 仅同步架构状态文档，不修改代码、Schema、迁移或运行行为。Windows 验收执行：
+
+```powershell
+git status --short
+git fetch origin
+git switch docs/v0.3-b35-release-decision-record
+git pull --ff-only
+git rev-parse HEAD
+pnpm run docs:check
+Write-Host "Accepted 决策文档检查退出码：$LASTEXITCODE"
+```
+
+文档检查通过只证明 Markdown 结构和链接规则满足仓库检查，不代表未来 T-01～T-22 测试已执行，也不代表发布功能或工业安全验收完成。
