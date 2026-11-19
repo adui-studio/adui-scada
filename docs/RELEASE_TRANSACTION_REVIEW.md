@@ -6,7 +6,7 @@
 
 ## 1. 当前仓库事实和本次边界
 
-`ScadaProject.headRevision` 仍只表示最新已保存编辑版本；`ScadaProjectVersion` 保存经 SHA-256 核验的不可变快照。B 阶段已建立 `ScadaProjectReleaseState`、`ScadaProjectReleaseEvent`、独立 `release:publish` / `release:rollback` 权限动作及租户/工程/修订/摘要复合引用完整性。C1 已实现 `POST /api/v1/projects/:projectId/releases`，并在服务端事务内执行会话/ACL、head 与 releaseGeneration 双 CAS、幂等、快照完整性和静态预检；生产安全门禁仍固定 fail-closed 并返回 503。当前尚无 `release:read` / `runtime:read`、当前发布快照只读路由或回滚写路由。
+`ScadaProject.headRevision` 仍只表示最新已保存编辑版本；`ScadaProjectVersion` 保存经 SHA-256 核验的不可变快照。B 阶段已建立 `ScadaProjectReleaseState`、`ScadaProjectReleaseEvent`、独立 `release:publish` / `release:rollback` 权限动作及租户/工程/修订/摘要复合引用完整性。C1 已实现 `POST /api/v1/projects/:projectId/releases`，并在服务端事务内执行会话/ACL、head 与 releaseGeneration 双 CAS、幂等、快照完整性和静态预检；生产安全门禁仍固定 fail-closed 并返回 503。当前尚未实现 `release:read` ACL、当前发布快照只读路由或回滚写路由；`release:read` 的独立授权策略已获批准，具体实现属于 D 阶段。
 
 ADR-0069 的架构基线已获维护者批准。B 与 C1 已分别通过 PR #99、PR #100 合并；D 阶段只读 Runtime、E 阶段回滚和 F 阶段生产安全评审仍待独立实施。**预检 `passed=true` 不代表获得发布权限，也不代表当前画布已经保存或具备生产运行条件。**
 
@@ -136,4 +136,4 @@ PR #100 已 Squash 合并至 main，提交 `8db55e4b1bb97d69c08dc9238eb61f76071b
 
 C1 的生产 `ProjectReleaseSafetyGate` 仍固定 fail-closed，当前应用请求不能成功发布。D 阶段应只读加载已提交发布指针和对应不可变快照，未发布、指针损坏、快照摘要不匹配、数据库不可用或 Tag 质量不合格时必须明确失败，禁止回落到编辑 head、草稿或 Demo 数据。
 
-**D 阶段尚有一项权限策略待维护者确认**：Runtime 读取是否新增独立工程 ACL `release:read`（推荐，默认拒绝，不继承 `project:read` / `version:read`），以便运行人员读取已发布快照而不获得工程编辑/历史版本读取权限。当前 `ProjectAccessAction` 没有该动作，不能在实现中自行推断或复用现有权限。
+**D 阶段权限决策已获维护者批准**：新增独立工程 ACL `release:read`，默认拒绝，不继承 `project:read`、`version:read` 或其他权限。运行人员显式获得 `release:read` 后可读取已提交发布指针及其不可变快照，无需获得工程编辑或历史版本读取权限。当前 `ProjectAccessAction` 尚未实现该动作，当前发布快照读取路由也不存在；由 D 阶段独立实施、测试和验收。
