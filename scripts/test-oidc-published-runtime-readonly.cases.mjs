@@ -54,6 +54,7 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
     assert.equal(calls.length, 1);
     assert.deepEqual(publishedReadGuardStateInPage(runtime), {
       paths: ["/api/v1/projects/" + projectId + "/releases/current"],
+      statuses: [404],
       blocked: 0,
     });
   });
