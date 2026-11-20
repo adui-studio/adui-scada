@@ -1205,3 +1205,15 @@ React `PublishedRuntimePage.tsx` 和 Vue `PublishedRuntimePage.vue` 复用同一
 5. 用户可显式刷新或停止读取；状态由共享 Runtime 统一控制，`401/403/404`、网络离线、完整性异常和代次回退均不回退到编辑 head、草稿或 Demo。浏览器仅在成功读取已提交冻结快照后展示静态组态。
 
 本批没有修改数据库或服务端授权、发布写门禁、OIDC 配置与现场网关。真正的已发布工程需要合法已提交发布指针，生产 `ProjectReleaseSafetyGate` 仍然默认拒绝，因此默认运行环境不能靠此 UI 创建发布；真实 OIDC/HTTPS 双框架全链专项须后续实施。
+
+## 2026-11-20 · 第三十五批 D5a 双框架真实发布读取拒绝测试契约
+
+新增 `scripts/test-oidc-published-runtime-readonly.mjs` 和 `.cases.mjs`，复用现有 `resolveProjectBrowserLab`、`startBrowser`、`waitForLogin` 和 `identityInPage`。只接收空命令行参数；保留本机 HTTPS、可信 CA、Keycloak Lab 和数据库目标的严格先决条件。
+
+1. 真实隔离 Chrome/Edge 登录已预绑定 Keycloak 测试主体，两端 Origin 必须得到相同可信身份。页面执行函数不捕获 Node 模块变量，只允许返回脱敏状态/请求路径/布尔值，不读取 Cookie、Token、CSRF 或工程文档正文。
+2. 安装工程 API Fetch 门禁后，点击真实导航按钮“已发布运行”，先断言无工程读取请求。输入本次随机 `d5a-missing-UUID` 工程 ID，独立触发输入与提交，避免 Vue/React 同步时序混淆。
+3. 只允许当前 Origin 的固定工程 GET，没有请求正文、Bearer 或跨站请求；任何工程 POST/DELETE、跨站或其他非法工程访问直接在浏览器内拒绝。只有一个 `/api/v1/projects/:id/releases/current` 允许通过 Fetch。
+4. 服务端应将随机不存在工程安全归类为授权拒绝，不显示任何静态 SVG，页面质量始终包含 `UNAVAILABLE`。如果页面返回有效发布、发生额外请求或任一 Origin 主体不同，专项失败。
+5. 自动化脚本仅在维护者显式运行 `pnpm run test:published:oidc:browser` 时启动真实浏览器；不写数据库，不创建正式发布记录。安全门禁自身单测 `pnpm run test:published:oidc:config` 进入 `pnpm run ready`；真实浏览器专项**不自动进入 ready**，因为需要手动 Keycloak 登录和本机 HTTPS 服务。
+
+本阶段仅覆盖无权访问时的拒绝基线。D5b 才讨论经过隔离审批的 `release:read` 显式授权工程，以及 UNRELEASED/RELEASED/撤权/断网和静态画面真实性；不能把 D5a 通过等同正式发布工业安全验收。
