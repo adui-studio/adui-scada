@@ -616,3 +616,11 @@ D1 候选新增独立工程 ACL `release:read` 与 `GET /api/v1/projects/:projec
 D1 服务端独立 `release:read`、发布指针 GET 和 Prisma 迁移已在 PR #102 合并，隔离 PostgreSQL 57/57、完整 Windows `ready`（639 项单测、62 项服务端 E2E）通过。D2a 候选新增共享发布响应契约、受保护的同源 API Client 读取和发布 Runtime 内存状态机；支持未发布、已验证、离线、拒绝和异常的分离语义，拒绝代次回退、编辑 head/草稿兜底和异常旧画面。
 
 **FR-008 仍为部分实现**：D2a 尚待 Windows 实测；React/Vue 对等运行接入、自动指针刷新、Tag 实时质量、回滚事务、真实 IdP/HTTPS 浏览器专项及生产安全评审未完成；生产发布门禁与 PLC/DCS 写入继续默认拒绝。
+
+## 2026-11-20 · FR-008 第三十五批 D2b 发布指针刷新与失效保护候选
+
+D2a 已由 PR #103 Squash 合并到 `main`（`5f45bacbc90dd841dfb8b1992605d4652464361a`），维护者 Windows `vp check` 364/216、单测 662/662、HTTP E2E 62/62、`docs:check` 89 份及完整 `ready` 退出码 0。
+
+D2b 候选在共享 Runtime 增加显式生命周期管理的 `PublishedRuntimeRefresher`，支持只读发布指针定时刷新、已发布版本切换、离线有界退避、10 秒单次读取超时、撤权与非法快照阻断、隐藏页面清空画面、重显重新校验，以及退出/切换工程后取消旧请求和定时任务。超时和隐藏均不允许迟到响应恢复运行内容；同一会话隐藏时保留非正文的代次校验水位，防止重显绕过回退保护。所有状态的实时 Tag 质量仍是 `UNAVAILABLE`。
+
+**FR-008 仍为部分实现**：刷新控制器需要未来 D3/D4 的 React/Vue 生命周期显式接入，尚未连到两端 Runtime UI、工业网关、真实 Tag、生产发布、回滚写接口或 Keycloak/HTTPS 真实运行专项。本批未实际执行 Windows 检查，不能描述为已验收或生产可用。
