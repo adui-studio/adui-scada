@@ -32,20 +32,23 @@ function database({ invalidHead = false, released = false, failInsert = false } 
       }
       if (sql.includes("FROM public.scada_project_release_state")) {
         return {
-          rows: [{
-            release_generation: released ? "1" : "0",
-            released_revision: null,
-            released_content_hash: null,
-            last_release_event_id: null,
-          }],
+          rows: [
+            {
+              release_generation: released ? "1" : "0",
+              released_revision: null,
+              released_content_hash: null,
+              last_release_event_id: null,
+            },
+          ],
         };
       }
       if (sql.includes("FROM public.scada_project_release_events")) return { rows: [] };
       if (sql.includes("FROM public.scada_project_grants") && sql.includes("SELECT subject_id")) {
         return {
-          rows: ["project:read", "version:read", "version:append"].map(
-            (permission) => ({ subject_id: "lab-engineer", permission }),
-          ),
+          rows: ["project:read", "version:read", "version:append"].map((permission) => ({
+            subject_id: "lab-engineer",
+            permission,
+          })),
         };
       }
       if (sql.includes("INSERT INTO public.scada_project_grants")) {
@@ -68,10 +71,9 @@ function database({ invalidHead = false, released = false, failInsert = false } 
 void describe("D5b1 本机专用未发布测试夹具安全门禁", () => {
   void it("默认只读，写入必须精确确认数据库；未知及额外参数拒绝", () => {
     assert.deepEqual(parsePublishedFixtureMode([]), { apply: false });
-    assert.deepEqual(
-      parsePublishedFixtureMode(["--apply", "--confirm-lab", "adui_scada"]),
-      { apply: true },
-    );
+    assert.deepEqual(parsePublishedFixtureMode(["--apply", "--confirm-lab", "adui_scada"]), {
+      apply: true,
+    });
     for (const args of [
       ["--apply"],
       ["--confirm-lab", "adui_scada"],
@@ -96,11 +98,13 @@ void describe("D5b1 本机专用未发布测试夹具安全门禁", () => {
       async query(sql) {
         calls.push(sql);
         if (sql.includes('public."_prisma_migrations"') && sql.includes("ANY(")) {
-          return { rows: [
-            { migration_name: "20261118000000_release_state_and_events" },
-            { migration_name: "20261119000000_release_state_event_integrity" },
-            { migration_name: "20261119180000_release_read_permission" },
-          ] };
+          return {
+            rows: [
+              { migration_name: "20261118000000_release_state_and_events" },
+              { migration_name: "20261119000000_release_state_event_integrity" },
+              { migration_name: "20261119180000_release_read_permission" },
+            ],
+          };
         }
         if (sql.includes('public."_prisma_migrations"')) {
           return { rows: [{ count: 0 }] };
@@ -174,7 +178,10 @@ void describe("D5b1 本机专用未发布测试夹具安全门禁", () => {
         () => grantPublishedFixtureRead(client, PROJECT_ID, PRINCIPAL),
         /ACL 写入失败/,
       );
-      assert.equal(calls.some(({ sql }) => sql.includes("INSERT")), false);
+      assert.equal(
+        calls.some(({ sql }) => sql.includes("INSERT")),
+        false,
+      );
       assert.equal(calls.at(-1).sql, "ROLLBACK");
     }
   });

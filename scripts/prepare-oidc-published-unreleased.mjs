@@ -7,11 +7,7 @@ import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 import { resolveLabIdentityTarget } from "./oidc-lab-identity.mjs";
 import { resolveProjectBrowserLab } from "./test-project-browser-oidc.mjs";
-import {
-  executablePath,
-  startBrowser,
-  waitForLogin,
-} from "./test-oidc-dual-cas.mjs";
+import { executablePath, startBrowser, waitForLogin } from "./test-oidc-dual-cas.mjs";
 
 const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const SERVER_PACKAGE = fileURLToPath(new URL("../apps/server/package.json", import.meta.url));
@@ -274,10 +270,12 @@ export async function verifyPublishedFixtureInPage(origin, projectId, runtime = 
   ) {
     throw new Error("D5b1 发布状态只读确认失败");
   }
-  const response = await runtime.fetch(
-    "/api/v1/projects/" + projectId + "/releases/current",
-    { method: "GET", credentials: "same-origin", cache: "no-store", redirect: "error" },
-  );
+  const response = await runtime.fetch("/api/v1/projects/" + projectId + "/releases/current", {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store",
+    redirect: "error",
+  });
   if (response.status !== 200) throw new Error("D5b1 发布状态只读确认失败");
   const result = await response.json();
   if (
@@ -310,7 +308,9 @@ async function run() {
     await preflightPublishedFixture(client, target);
     process.stdout.write("D5b1 只读预检通过：本机 Lab 发布迁移、可信身份和零专用工程已确认。\n");
     if (!mode.apply) {
-      process.stdout.write("未创建工程或修改 ACL。执行写入需显式 --apply --confirm-lab adui_scada。\n");
+      process.stdout.write(
+        "未创建工程或修改 ACL。执行写入需显式 --apply --confirm-lab adui_scada。\n",
+      );
       return;
     }
 
@@ -334,8 +334,7 @@ async function run() {
   } catch (error) {
     if (createdProjectId) {
       process.stderr.write(
-        "专用工程已创建但后续验收未完成，请保留并单独核查工程：" +
-          createdProjectId + "\n",
+        "专用工程已创建但后续验收未完成，请保留并单独核查工程：" + createdProjectId + "\n",
       );
     }
     throw error;

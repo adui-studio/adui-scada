@@ -1045,7 +1045,6 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - 根 `package.json`：`test:published:oidc:config`（加入 `ready`）、`test:published:oidc:browser`（手工启动，需真实 HTTPS 与 IdP 登录）。
 - 对应需求、SDD、架构、验收与上下文文档同步；不新增运行时依赖、数据库迁移或设备接口。
 
-
 ## 2026-11-20 · D5b1 本机未发布授权夹具准备入口
 
 - `scripts/prepare-oidc-published-unreleased.mjs`：受限 OIDC Lab 真实已授权未发布夹具准备；默认仅预检迁移与可信主体，显式确认后通过现有 HTTP 工程创建 API 建立随机新工程，再以单一可回滚 SQL 事务补充此工程的 `release:read`，最后只读核对 UNRELEASED。
