@@ -1064,3 +1064,11 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `scripts/test-oidc-published-runtime-denied.mjs`：本机双框架可信 HTTPS OIDC 浏览器只读专项；真实 200 UNRELEASED → 只对精确当前工程发布 GET 本地构造一次 HTTP 404 → 状态 denied/无快照 → 真实 200 恢复 → 停止读取；绝不进行数据库 ACL 删除或发布写入。
 - `scripts/test-oidc-published-runtime-denied.cases.mjs`：9 项默认只读参数、单次 404 模拟、跨站/非 GET 拦截、状态清理、请求白名单和错误脱敏门禁。
 - `package.json`：`test:published:oidc:denied:config` 加入完整 `ready`；`test:published:oidc:denied:browser` 需要维护者手动 Keycloak 登录，独立验收且不加入 `ready`。
+
+
+## 2026-11-20 · D5b4a 真实发布读取 ACL 撤销前只读预检
+
+- `scripts/preflight-oidc-published-revocation.mjs`：强制无参数，使用现有受控本机 Keycloak/HTTPS/PG Lab 校验器；在 PostgreSQL `REPEATABLE READ READ ONLY` 事务内确认原 D5b1 工程、四项权限、发布迁移和可信身份完整，以及尚无 `d5b4-revoke-%` 专用工程；最终 ROLLBACK/关闭连接。
+- `scripts/preflight-oidc-published-revocation.cases.mjs`：10 项 Node 脱敏、只读 SQL、事务回滚、数据库/迁移/身份/工程/ACL 漂移拒绝安全门禁。
+- `package.json`：`test:published:oidc:revoke:preflight:config` 加入 `ready`；`oidc:lab:published:revoke:preflight` 为维护者手工执行的真实数据库只读检查（不加入 `ready`）。
+- 后续真实撤权须对全新独立工程单独授权，**绝不复用或删除已通过 D5b1～D5b3 专项的原工程授权**。

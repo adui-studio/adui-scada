@@ -3630,3 +3630,30 @@ Write-Host "D5b3 真实浏览器退出码：$LASTEXITCODE"
 ```
 
 新 Node 9 项门禁加入 `ready`；真实 Keycloak 登录浏览器专项**不**自动执行。该脚本编写及远程提交不等于 Windows 上实际成功，目前新增测试和浏览器专项待维护者验收。
+
+
+## 2026-11-20 · 第三十五批 D5b4a 真实 ACL 撤销前只读预检（Draft 待 Windows 验收）
+
+维护者 D5b3 Windows 实测 `test:published:oidc:denied:config` **9/9**、`vp check` **380 文件格式正确、232 文件零告警**、`docs:check` **89 份**、`ready` **680/680 单元测试、62/62 E2E、最终退出码 0**；React/Vue 真实 Keycloak/HTTPS 先真实 200→浏览器模拟单次 404→真实 200 恢复、两端均通过，专项退出码 0。PR #109 经明确授权 Squash 合并至 `main`（`33c8d31d8eae6c46b8a3ab5ddaabf44a3f8fa227`）。该结果仅为浏览器模拟拒绝，不能代替真实 PostgreSQL ACL 撤销。
+
+D5b4 必须新建单独 `d5b4-revoke-<UUID v4>` 测试工程（**本批不创建**），通过正式同源 API 与最小授权准备，然后在维护者后续**单独授权**的本机 Lab 中演练真实 `release:read` 撤销，验证原已授权会话在 React/Vue 两端返回服务端真实 HTTP 404、页面清空且无越权内容；保留 D5b1 的既有 `d5b-unreleased-42c376a0-5bdc-4fd6-80d6-da29e0312aca` 工程和四项权限，确保之前 D5b1～D5b3 可继续回归。
+
+本 D5b4a 只新增**只读准备检查**，用现有 `resolvePublishedFixtureTarget` 验证 Keycloak/可信 HTTPS 双 Origin、本机 `127.0.0.1:15432/adui_scada?schema=public`；在 PostgreSQL `BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY` 中只执行 SELECT，检查当前连接用户、三条发布迁移和零未处理失败、预绑定 active 主体、原 D5b1 工程首版和单次审计、发布代次 0、零事件、创建者 `project:read/version:read/version:append/release:read` 四项 ACL，以及当前租户尚无 `d5b4-revoke-%` 专用工程。最终总是执行 ROLLBACK，并在 `finally` 关闭数据库连接。预检不输出密码/令牌/工程正文。
+
+```powershell
+git fetch origin
+git switch --track origin/test/b35-d5b4a-release-read-revocation-preflight
+git rev-parse HEAD
+pnpm run test:published:oidc:revoke:preflight:config
+vp check
+pnpm run docs:check
+pnpm run ready
+Write-Host "D5b4a 全量质量链退出码：$LASTEXITCODE"
+
+pnpm run oidc:lab:published:revoke:preflight
+Write-Host "D5b4a 真实数据库只读预检退出码：$LASTEXITCODE"
+```
+
+**禁止**对上述命令追加 `--apply`、`--run-revoke`、`--confirm-lab` 或 `--project-id`；所有额外参数均按设计拒绝。本批不提供创建、撤销、恢复 ACL 的数据库写入模式，也不启动真实浏览器专项。下一小批 D5b4b 若要写入专用工程或 ACL，须单独确认新工程命名、权限恢复方案、本机备份和实际写操作授权，不能删除 D5b1 的 `release:read`。
+
+代码编写后仅进行隔离 JavaScript 语法及查询路径模拟核对；**新 10 项 Node 测试、Windows `vp check` / `ready` 和真实 PostgreSQL 只读预检仍待维护者执行**。不对外宣称 D5b4 真实撤权已通过。

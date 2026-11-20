@@ -2478,3 +2478,10 @@ E-073 候选改为同时识别成功/拒绝/离线/错误终态，对单一 GET 
 前置证据：维护者 D5b2 Windows `test:published:oidc:offline:config` 9/9、`vp check` 378/230 零警告、`docs:check` 89 份、`ready` 680/680 单测和 62/62 E2E 且最终退出码 0；真实 React/Vue HTTPS Keycloak 浏览器首次读取→单次模拟 Fetch 网络失败→恢复与停止退出码 0；PR #108 已 Squash 合并至 `main`，提交 `0b073e574daf93c9b521c53bf56a8ebdc125a525`。
 
 新 D5b3 只新增 browser 测试和 Node 9 项安全门禁：通过真实受保护 GET 200 确认当前 UNRELEASED，浏览器仅为当前工程模拟一次本地 404（非真实授权拒绝），验证 `denied` 无快照及清空状态，再通过真实 GET 200 恢复、停止读取。不删除真实 ACL，不写工程，不发布，设备安全边界不变。新增 `test:published:oidc:denied:config` 进入 `ready`，手工浏览器为 `test:published:oidc:denied:browser`。新代码尚未在 Windows 运行，真实 ACL 撤销和 RELEASED 快照仍待独立验收。
+
+
+## 2026-11-20 · D5b3 Windows 全量验收完成 / D5b4a 只读预检候选
+
+维护者提交真实日志：D5b3 Node 安全门禁 **9/9**，Vite+ **380 个格式文件/232 个受检文件零告警**，Markdown **89 份**，完整 `ready` 最终退出码 **0**，包含 **680/680** 单测与 **62/62** 服务端 E2E、React/Vue/NestJS 构建；双框架真实 Keycloak/HTTPS 授权读取、浏览器模拟单次 404、真实授权恢复及停止均退出码 **0**。该实测与“真实 ACL 撤销”有明确区别。PR #109 Squash 合并 `main@33c8d31d8eae6c46b8a3ab5ddaabf44a3f8fa227`。
+
+新增 D5b4a `preflight-oidc-published-revocation.mjs` 和 **10 项** Node 只读安全测试，根 `test:published:oidc:revoke:preflight:config` 纳入 `ready`。真实预检命令为 `pnpm run oidc:lab:published:revoke:preflight`，严格本机 Keycloak/HTTPS 与 PostgreSQL 目标；事务为 `REPEATABLE READ READ ONLY`，在 ROLLBACK 后结束，核对原 D5b1 测试夹具及授权、迁移、预绑定身份，D5b4 工程必须尚不存在。没有 INSERT/UPDATE/DELETE/发布或浏览器写入，不能使用旧 D5b1 工程做真实撤权。新 Node 和本机数据库预检尚未实测，PR 继续保持 Draft，等待维护者验证。
