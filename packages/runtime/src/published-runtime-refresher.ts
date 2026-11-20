@@ -90,7 +90,7 @@ export class PublishedRuntimeRefresher {
 
     const status = this.runtime.snapshot().status;
     if (status === "denied" || status === "error") {
-      // 撤权和完整性错误禁止自动重试；只能由调用方显式开启新会话。
+      // 撤权和完整性错误禁止定时自动重试；显式刷新和重新可见仍须通过服务端校验。
       return;
     }
     if (status !== "verified" && status !== "unreleased" && status !== "offline") {
