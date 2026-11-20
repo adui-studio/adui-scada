@@ -443,3 +443,42 @@ button:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+/* React/Vue 正式发布只读入口共用表单布局；不会触发现场设备操作。 */
+.scada-published-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.scada-published-controls label {
+  color: var(--scada-text-secondary);
+  font-size: 13px;
+}
+.scada-published-controls input {
+  flex: 1 1 260px;
+  min-width: 140px;
+  border: 1px solid var(--scada-border-strong);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--scada-text-strong);
+  background: var(--scada-canvas);
+}
+.scada-published-controls input:focus-visible {
+  outline: 2px solid var(--scada-cyan);
+  outline-offset: 2px;
+}
+.scada-published-controls button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.scada-status[data-status="verified"] {
+  color: var(--scada-cyan);
+  border-color: var(--scada-cyan);
+}
+.scada-status[data-status="offline"],
+.scada-status[data-status="denied"],
+.scada-status[data-status="unreleased"],
+.scada-status[data-status="loading"] {
+  color: var(--scada-warning);
+}
