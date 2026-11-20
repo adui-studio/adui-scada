@@ -1037,3 +1037,10 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `packages/runtime/src/runtime.css`：共享只读工程 ID 输入、按钮和发布状态样式，无新样式依赖。
 
 无 Prisma Schema、发布写事务、生产安全门禁或外部依赖变更。
+
+## 2026-11-20 · 第三十五批 D5a 真正 OIDC/HTTPS 发布读取只读拒绝候选
+
+- `scripts/test-oidc-published-runtime-readonly.mjs`：复用可信 Keycloak Lab 和 Chrome/Edge CDP，真实 React/Vue 页面点击“已发布运行”，固定随机不存在工程 ID 的只读发布路径，断言拒绝、无静态 SVG、Tag `UNAVAILABLE` 与零工程写入；浏览器页面函数自包含且只输出安全类别。
+- `scripts/test-oidc-published-runtime-readonly.cases.mjs`：新增 10 项 Node 自有门禁测试，覆盖无参模式、同源 GET、非 GET/跨站/正文拦截、身份路由透传、重复安装、CDP 独立作用域、真实按钮选择、非法 ID、脱敏状态及异常脱敏。
+- 根 `package.json`：`test:published:oidc:config`（加入 `ready`）、`test:published:oidc:browser`（手工启动，需真实 HTTPS 与 IdP 登录）。
+- 对应需求、SDD、架构、验收与上下文文档同步；不新增运行时依赖、数据库迁移或设备接口。
