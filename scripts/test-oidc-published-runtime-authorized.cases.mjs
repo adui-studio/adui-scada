@@ -247,7 +247,13 @@ void describe("D5b1 双框架真实发布授权只读专项", () => {
       [500, /没有返回 HTTP 200/],
     ]) {
       assert.throws(
-        () => requirePublishedAuthorizedRead({ status: "denied" }, { ...response, statuses: [http] }, "UNRELEASED", unreleasedId),
+        () =>
+          requirePublishedAuthorizedRead(
+            { status: "denied" },
+            { ...response, statuses: [http] },
+            "UNRELEASED",
+            unreleasedId,
+          ),
         expected,
       );
     }
@@ -276,7 +282,13 @@ void describe("D5b1 双框架真实发布授权只读专项", () => {
       );
     }
     assert.throws(
-      () => requirePublishedAuthorizedRead({ ...state(), status: "denied" }, guard, "UNRELEASED", unreleasedId),
+      () =>
+        requirePublishedAuthorizedRead(
+          { ...state(), status: "denied" },
+          guard,
+          "UNRELEASED",
+          unreleasedId,
+        ),
       /页面状态与预期不一致/,
     );
     assert.throws(
