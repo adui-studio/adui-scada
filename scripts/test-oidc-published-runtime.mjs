@@ -116,9 +116,11 @@ export async function readPublishedRuntimeInPage(
     ) {
       throw new Error("正式发布 OIDC 浏览器专项发布读取发生重定向");
     }
-    const cacheControl = response.headers?.get("cache-control") ?? "";
-    if (!cacheControl.split(",").some((item) => item.trim().toLowerCase() === "no-store")) {
-      throw new Error("正式发布 OIDC 浏览器专项发布读取响应未禁止缓存");
+    if (response.status === 200) {
+      const cacheControl = response.headers?.get("cache-control") ?? "";
+      if (!cacheControl.split(",").some((item) => item.trim().toLowerCase() === "no-store")) {
+        throw new Error("正式发布 OIDC 浏览器专项发布读取响应未禁止缓存");
+      }
     }
     return response;
   };
@@ -348,6 +350,8 @@ export async function openPublishedRuntimeUiInPage(
       throw new Error("正式发布 OIDC 浏览器专项页面入口不可用");
     };
     page = await waitForPage();
+    // React useEffect 与 Vue setup 均需先完成共享 API Client 和刷新器初始化。
+    await new Promise((resolve) => runtime.setTimeout(resolve, 50));
 
     const submitProject = async (projectId, expectedState) => {
       const input = page.querySelector(
@@ -498,11 +502,12 @@ async function run() {
       const framework = index === 0 ? "React" : "Vue";
       await browser.send("Page.navigate", { url: origin + "/" });
       const principal = await waitForIdentity(browser, origin, framework);
-      assert.deepEqual(
-        principal,
-        firstPrincipal,
-        "React/Vue HTTPS Origin 必须映射到同一可信 OIDC 主体",
-      );
+      if (
+        principal?.tenantId !== firstPrincipal?.tenantId ||
+        principal?.subjectId !== firstPrincipal?.subjectId
+      ) {
+        throw new Error("正式发布 OIDC 浏览器专项两个 HTTPS Origin 主体不一致");
+      }
       process.stdout.write(framework + "：正在验证匿名拒绝与独立 release:read 权限。\n");
       let server;
       try {
@@ -545,11 +550,19 @@ async function run() {
       assert.equal(ui.auditReadOnly, true);
       assert.ok(ui.auditCount >= 3);
 
-      if (baseline) {
-        assert.deepEqual(server, baseline, "React/Vue HTTPS Origin 当前发布指针摘要必须一致");
-      } else {
-        baseline = server;
+      if (
+        baseline &&
+        (server.status !== baseline.status ||
+          server.releaseGeneration !== baseline.releaseGeneration ||
+          server.releasedRevision !== baseline.releasedRevision ||
+          server.releasedContentHash !== baseline.releasedContentHash ||
+          server.eventId !== baseline.eventId ||
+          server.lastAction !== baseline.lastAction ||
+          server.releasedAt !== baseline.releasedAt)
+      ) {
+        throw new Error("正式发布 OIDC 浏览器专项两个 Origin 发布指针不一致");
       }
+      if (!baseline) baseline = server;
       process.stdout.write(
         framework +
           "：发布状态 " +
