@@ -2386,3 +2386,45 @@ Write-Host "完整质量链退出码：$LASTEXITCODE"
 ```
 
 如果本地已有分支则正常 switch/pull；提交前处理工作区未保存修改。本批不需要 Prisma 迁移。**真实双浏览器 Keycloak/HTTPS、release:read 独立授权、无发布/已发布/撤权和可见性等 E2E 尚未执行**，不可把静态检查和 Demo 浏览器测试视为正式发布 Runtime 工业安全验收。
+
+## 2026-11-20 · 第三十五批 D5a 真实 OIDC 双框架发布读取专项候选（待验收）
+
+基线：PR #105 已按维护者授权 Squash 合并至 main，SHA 637ebbce3191c998b3264733645da947a3739e9f。D3/D4 Windows 日志：vp check 370/222、单测 680/680、服务端 E2E 62/62、docs:check 89、React/Vue/NestJS 构建成功、ready 退出码 0。
+
+D5a 新增脚本和离线用例；**当前没有实际执行结果**。离线配置测试 test:release:runtime:oidc:config 纳入 ready，真实 test:release:runtime:oidc:browser 必须单独人工运行，不能把它写成自动通过。
+
+真实浏览器前置准备：
+- 本机可信 Keycloak Realm、React/Vue HTTPS Origin、NestJS BFF 正常运行；TLS 根证书必须由 Chrome/Edge 信任，禁止关闭 TLS 校验。
+- 同一已预绑定普通测试主体；授权工程 A 仅具备 release:read，且缺少 project:read 和 version:read。
+- 对照工程 B 对同一主体具备 project:read，但缺少 release:read。
+- 在当前 PowerShell 会话设置两个工程 ID 环境变量，不写入根 .env，不发给聊天或终端日志。不得通过本专项创建工程或修改 ACL。
+
+浏览器脚本检查匿名 401、A 的发布读取 200/no-store、A 的工程详情/历史版本读取 404、B 的工程详情 200/发布读取 404；再真实点击 React/Vue“已发布运行”入口，分别验证 A 读取、B 拒绝、A 恢复和 Tag UNAVAILABLE。若 A 没有合法发布指针，UNRELEASED 是合法通过；本批不要求开放生产发布。所有工程 API 请求必须是同源 GET、no-store、redirect:error，任何非 GET 都立即失败。
+
+建议维护者 Windows 执行：
+
+    git status --short
+    git fetch origin
+    git switch --track origin/feat/b35-d5-oidc-published-read-browser
+    git rev-parse HEAD
+    pnpm run test:release:runtime:oidc:config
+    Write-Host "D5a 离线专项退出码：$LASTEXITCODE"
+    vp check
+    Write-Host "vp check 退出码：$LASTEXITCODE"
+    pnpm run docs:check
+    Write-Host "docs:check 退出码：$LASTEXITCODE"
+    pnpm run ready
+    Write-Host "ready 退出码：$LASTEXITCODE"
+
+若本地已有分支，用普通 switch/pull；工作区有未提交修改时先处理。然后在 React/Vue/NestJS/Keycloak HTTPS Lab 都启动后，临时设置：
+
+    $env:SCADA_OIDC_RELEASE_READ_PROJECT_ID = "已预先授权 release:read 的工程 ID"
+    $env:SCADA_OIDC_RELEASE_DENIED_PROJECT_ID = "仅有 project:read 的对照工程 ID"
+    pnpm run test:release:runtime:oidc:browser
+    Write-Host "D5a 真实浏览器专项退出码：$LASTEXITCODE"
+    Remove-Item Env:SCADA_OIDC_RELEASE_READ_PROJECT_ID -ErrorAction SilentlyContinue
+    Remove-Item Env:SCADA_OIDC_RELEASE_DENIED_PROJECT_ID -ErrorAction SilentlyContinue
+
+示例占位文本必须替换为现有测试工程 ID；ID 只保留在本机当前 PowerShell 会话，不提交、不贴入聊天。此专项不直连 PostgreSQL、不写数据库、不创建/修改工程和 ACL、不调用发布/回滚或设备写接口。真实 Keycloak 登录在独立临时浏览器中人工完成，密码不进终端/聊天；脚本 finally 关闭并清理 Profile。
+
+未通过前不合并。真实 HTTPS/OIDC 专项即使通过也只证明发布读取授权与双框架 UI 通路，不证明生产发布授权、实时 Tag 质量、现场网关或 PLC/DCS 安全。
