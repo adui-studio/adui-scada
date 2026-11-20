@@ -1888,3 +1888,9 @@ D5a 候选分支 `test/b35-d5a-published-runtime-oidc-readonly` 新增真实 HTT
 维护者 Windows 已验证 D5a 门禁 10/10、`vp check` 372/224 零告警、`docs:check` 89 份、单测 680/680、NestJS HTTP E2E 62/62，完整 `ready` 退出码 0；未提供本机 HEAD SHA。真实 Keycloak/HTTPS D5a 浏览器运行在人工登录成功后显示“真实登录失败”、退出码 1，不能将此误报记录为真实登录失败或专项通过。
 
 通过当前 PR #106 源码确认 E-071：`waitForState` 错误引用 `run()` 局部 `browser` 并吞掉 `ReferenceError`。修复候选在原 Draft 分支最小修改等待逻辑与 Node 回归测试，不涉及 React/Vue 正式业务、NestJS、Prisma、发布授权或任何设备写入。修复后的 Windows `ready` 与真实双框架 OIDC 浏览器专项均待复验；D5b 未开始。
+
+## 2026-11-20 · D5a 阶段诊断候选（E-072，尚未实测）
+
+维护者 Windows 在 HEAD `e12599a94c0c11f97e95a26ff978281812ee39ac` 完成 D5a 离线门禁 12/12、`vp check` 372/224 零告警、`docs:check` 89 份、单测 680/680、HTTP E2E 62/62 和完整 `ready` 退出码 0。交互式 Keycloak/HTTPS 浏览器专项在人工登录成功后仅返回脱敏通用错误、退出码 1；真实失败步骤尚不明确。
+
+D5a Draft PR #106 增补固定阶段的安全诊断、导航 DOM 就绪等待及两项 Node 回归，保留失败后销毁隔离浏览器 Profile，不放宽同主体、GET 404、零工程写入与隐藏敏感数据规则。新提交的 Windows 质量链和真实浏览器尚待执行；D5b 未开始。

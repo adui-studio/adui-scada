@@ -27,6 +27,31 @@ const FAILURES = new Set([
   "正式发布运行只读专项检测到非只读工程请求",
 ]);
 
+const PUBLISHED_STEPS = [
+  "BFF 会话",
+  "导航就绪",
+  "只读门禁安装",
+  "打开运行页面",
+  "运行页面就绪",
+  "默认零请求",
+  "输入工程 ID",
+  "提交发布读取",
+  "等待受控拒绝",
+  "核对只读断言",
+];
+const PUBLISHED_PHASES = new Set([
+  "OIDC 登录",
+  ...["React", "Vue"].flatMap((name) => PUBLISHED_STEPS.map((step) => name + "：" + step)),
+]);
+const PUBLISHED_PAGE_DIAGNOSTICS = new Set([
+  "页面脚本引用异常",
+  "页面脚本类型异常",
+  "页面脚本语法异常",
+  "浏览器存储或 DOM 异常",
+  "页面脚本断言异常",
+  "页面脚本异常（已脱敏）",
+]);
+
 export function requirePublishedReadonlyMode(args) {
   if (!Array.isArray(args) || args.length !== 0) {
     throw new Error("正式发布运行只读专项只接受无参数模式");
@@ -36,6 +61,20 @@ export function requirePublishedReadonlyMode(args) {
 
 export function describePublishedReadonlyFailure(error) {
   if (error instanceof Error && FAILURES.has(error.message)) return error.message;
+  if (
+    error instanceof Error &&
+    error.message === "正式发布运行只读专项阶段失败" &&
+    PUBLISHED_PHASES.has(error.stage)
+  ) {
+    const reason = PUBLISHED_PAGE_DIAGNOSTICS.has(error.pageDiagnostic)
+      ? error.pageDiagnostic
+      : error.failureKind === "assertion"
+        ? "只读安全断言不符"
+        : error.failureKind === "reference"
+          ? "测试脚本引用异常"
+          : "异常已脱敏";
+    return "正式发布运行只读专项" + error.stage + "失败：" + reason;
+  }
   return "正式发布运行只读专项未通过，内部诊断已脱敏";
 }
 
@@ -83,6 +122,16 @@ export function publishedReadGuardStateInPage(runtime = globalThis) {
   const state = runtime.__aduiPublishedReadGuard;
   if (!state) return null;
   return { paths: state.paths.slice(), statuses: state.statuses.slice(), blocked: state.blocked };
+}
+
+/** 等待实际导航加载完成，避免身份先于 React/Vue 按钮就绪而误判。 */
+export function publishedNavigationReadyInPage(runtime = globalThis) {
+  return (
+    runtime.document.readyState === "complete" &&
+    [...runtime.document.querySelectorAll("nav.scada-app-nav button")].some(
+      (item) => item.textContent?.trim() === "已发布运行" && !item.disabled,
+    )
+  );
 }
 
 /** 通过真实导航与按钮激活页面，不调用 React/Vue 内部方法。 */
@@ -168,12 +217,19 @@ async function run() {
   }
 
   const browser = await startBrowser(executable);
+  let stage = "OIDC 登录";
+  const reportStage = (phase) => {
+    stage = phase;
+    process.stdout.write("正式发布运行只读专项：" + phase + "，正在验证\n");
+  };
   try {
+    reportStage(stage);
     const identity = await waitForLogin(browser, origins[0], "正式发布运行只读专项");
     if (!identity) throw new Error("正式发布运行只读专项真实登录失败");
     const missingProject = "d5a-missing-" + crypto.randomUUID();
     for (const [index, origin] of origins.entries()) {
       const name = index === 0 ? "React" : "Vue";
+      reportStage(name + "：BFF 会话");
       await browser.send("Page.navigate", { url: origin + "/" });
       const principal = await waitForState(
         () => browser.evaluate(identityInPage, origin),
@@ -183,16 +239,28 @@ async function run() {
         100,
       );
       assert.deepEqual(principal, identity, "正式发布运行只读专项两端登录主体不一致");
+      reportStage(name + "：导航就绪");
+      await waitForState(
+        () => browser.evaluate(publishedNavigationReadyInPage),
+        "正式发布运行只读专项没有进入发布页面",
+      );
+      reportStage(name + "：只读门禁安装");
       await browser.evaluate(installPublishedReadGuardInPage, origin);
+      reportStage(name + "：打开运行页面");
       await browser.evaluate(openPublishedRuntimeInPage);
+      reportStage(name + "：运行页面就绪");
       await waitForState(
         () => browser.evaluate(publishedRuntimeUiStateInPage).then((x) => x?.status === "idle"),
         "正式发布运行只读专项没有进入发布页面",
       );
+      reportStage(name + "：默认零请求");
       const before = await browser.evaluate(publishedReadGuardStateInPage);
       assert.deepEqual(before.paths, [], "未选择工程时不得预读取工程 API");
+      reportStage(name + "：输入工程 ID");
       await browser.evaluate(enterPublishedProjectInPage, missingProject);
+      reportStage(name + "：提交发布读取");
       await browser.evaluate(submitPublishedProjectInPage);
+      reportStage(name + "：等待受控拒绝");
       const denied = await waitForState(
         () =>
           browser
@@ -200,6 +268,7 @@ async function run() {
             .then((x) => (x?.status === "denied" ? x : null)),
         "正式发布运行只读专项发布读取没有受控拒绝",
       );
+      reportStage(name + "：核对只读断言");
       assert.equal(denied.snapshot, false, "无授权时不应出现发布快照");
       assert.equal(denied.quality, true, "未接入现场数据应标记为不可用");
       const guard = await browser.evaluate(publishedReadGuardStateInPage);
@@ -217,6 +286,17 @@ async function run() {
     process.stdout.write(
       "真实双 HTTPS Origin 已发布运行 D5a 只读拒绝专项通过；未创建发布指针、工程、ACL 或工业设备操作。\n",
     );
+  } catch (error) {
+    const failure = new Error("正式发布运行只读专项阶段失败");
+    failure.stage = stage;
+    failure.pageDiagnostic = error?.pageDiagnostic;
+    failure.failureKind =
+      error instanceof assert.AssertionError
+        ? "assertion"
+        : error instanceof ReferenceError
+          ? "reference"
+          : "unknown";
+    throw failure;
   } finally {
     await browser.close();
   }

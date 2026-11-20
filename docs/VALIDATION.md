@@ -2436,3 +2436,9 @@ Write-Host "真实发布只读浏览器专项退出码：$LASTEXITCODE"
 真实 `pnpm run test:published:oidc:browser` 在维护者人工 Keycloak 登录成功后输出“正式发布运行只读专项真实登录失败”，退出码 **1**。经仓库源码定位，该文本对应共享 `waitForLogin` 已返回后 React/Vue 循环中的错误等待：`waitForState` 引用了 `run()` 局部 `browser`，又重复执行 CDP evaluate，`ReferenceError` 被通用捕获吞没。不是已证实的 Keycloak/HTTPS/BFF 登录失败。
 
 E-071 候选仅修正等待回调执行、收紧导航异常重试，并将首次 OIDC 登录与 React/Vue BFF 后续会话检查的失败标签分离；Node 门禁增加 2 项，**修复后完整 Windows 质量链和真实浏览器专项均待重新验收**。不修改正式发布授权、ACL、迁移或生产安全门禁；PR 仍为 Draft，未合并。
+
+## 2026-11-20 · D5a Windows HEAD 绑定质量通过，真实浏览器失败阶段待定位（E-072）
+
+维护者提供本地 `git rev-parse HEAD` = `e12599a94c0c11f97e95a26ff978281812ee39ac`，`test:published:oidc:config` **12/12 通过**，`vp check` **372 文件格式正确 / 224 文件零警告错误**，`docs:check` **89 份通过**，单测 **680/680**、服务端 HTTP E2E **62/62**，完整 `ready` **退出码 0**；E-071 等待作用域修复已通过该 HEAD 的离线质量检查。随后独立 `test:published:oidc:browser` 在人工登录后输出统一脱敏错误，**退出码 1**。现有错误不能定位到具体页面步骤，也不能视为 Keycloak 登录失败或浏览器崩溃。浏览器在 `finally` 中按设计关闭隔离 Profile。
+
+E-072 候选增加固定阶段和安全错误类别诊断，登录后等待 React/Vue 实际导航 DOM 完成再进入页面，防止页面尚未渲染时误点。新增两项 Node 防回归，预计由 12 项增至 14 项。本批**尚未在 Windows 执行修复后的门禁、完整 `ready` 与真实浏览器专项**；不能将上一 HEAD 的通过日志当作新提交的执行证据。未修改 NestJS、Prisma、用户 ACL、正式发布指针、生产发布门禁或工业设备写入。

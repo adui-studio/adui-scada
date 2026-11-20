@@ -8,6 +8,7 @@ import {
   openPublishedRuntimeInPage,
   publishedReadGuardStateInPage,
   publishedRuntimeUiStateInPage,
+  publishedNavigationReadyInPage,
   requirePublishedReadonlyMode,
   submitPublishedProjectInPage,
   waitForState,
@@ -250,6 +251,47 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
     await assert.rejects(
       waitForState(async () => null, "正式发布运行只读专项 React BFF 会话未通过验证", 1),
       /React BFF 会话未通过验证/,
+    );
+  });
+
+  void it("导航就绪必须等待真实按钮与完整页面，CDP 隔离执行不依赖 Node 作用域", () => {
+    const ready = runInNewContext("(" + publishedNavigationReadyInPage.toString() + ")");
+    const runtime = {
+      document: {
+        readyState: "loading",
+        querySelectorAll() {
+          return [{ textContent: "已发布运行", disabled: false }];
+        },
+      },
+    };
+    assert.equal(ready(runtime), false);
+    runtime.document.readyState = "complete";
+    assert.equal(ready(runtime), true);
+    runtime.document.querySelectorAll = () => [{ textContent: "已发布运行", disabled: true }];
+    assert.equal(ready(runtime), false);
+    runtime.document.querySelectorAll = () => [];
+    assert.equal(ready(runtime), false);
+  });
+
+  void it("阶段诊断固定白名单脱敏并区分浏览器断言与脚本异常", () => {
+    const testError = new Error("正式发布运行只读专项阶段失败");
+    testError.stage = "React：打开运行页面";
+    testError.pageDiagnostic = "页面脚本类型异常";
+    assert.equal(
+      describePublishedReadonlyFailure(testError),
+      "正式发布运行只读专项React：打开运行页面失败：页面脚本类型异常",
+    );
+    testError.stage = "Vue：核对只读断言";
+    testError.pageDiagnostic = "Cookie=secret; access_token=private";
+    testError.failureKind = "assertion";
+    assert.equal(
+      describePublishedReadonlyFailure(testError),
+      "正式发布运行只读专项Vue：核对只读断言失败：只读安全断言不符",
+    );
+    testError.stage = "Cookie=secret; access_token=private";
+    assert.equal(
+      describePublishedReadonlyFailure(testError),
+      "正式发布运行只读专项未通过，内部诊断已脱敏",
     );
   });
 

@@ -659,6 +659,15 @@
 - **验证边界**：本批修复后需在 Windows 最新 HEAD 执行 `pnpm run test:published:oidc:config`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`，并在可信 Keycloak/HTTPS Lab 中独立执行 `pnpm run test:published:oidc:browser`。原有 10 项测试通过不能证明本次新增 2 项通过，且修复源码不等于真实 D5a 专项已验收。未修改任何生产权限、API、数据库迁移或工业设备读写逻辑。
 - **证据**：维护者 2026-11-20 Windows 真实浏览器原始错误及完整质量日志、PR #106、`scripts/test-oidc-published-runtime-readonly.mjs`、`scripts/test-oidc-published-runtime-readonly.cases.mjs` 与 `docs/VALIDATION.md`。
 
+### E-072 · D5a 真实浏览器阶段异常被统一脱敏为无从定位（第三十五批 D5a，待 Windows 复验）
+
+- **现象**：维护者 2026-11-20 Windows 在本机 HEAD `e12599a94c0c11f97e95a26ff978281812ee39ac` 实测 D5a 门禁 12/12、`vp check` 372/224 零告警、`docs:check` 89 份、680/680 单测、62/62 服务端 E2E 和完整 `ready` 退出码 0。交互式 `pnpm run test:published:oidc:browser` 在人工 Keycloak 登录成功后迅速退出，仅显示“正式发布运行只读专项未通过，内部诊断已脱敏”，退出码 1。脚本 `finally` 关闭隔离浏览器及会话是安全设计，不能据此推断浏览器崩溃。
+- **当前可确认的问题**：D5a 脚本多个 CDP 页面操作及断言失败后经过 `describePublishedReadonlyFailure` 统一脱敏，除少量固定异常外仅返回通用错误，导致无法区分 React/Vue BFF 会话、SPA 导航按钮、只读门禁、页面入口、表单输入、发布读取及安全断言中的哪一步失败。实际内部异常类别和失败步骤尚未获得诊断证据，不能猜为 Keycloak、React/Vue 业务页面或 404 契约错误。
+- **最小修复候选**：在每一步读取前报告固定中文阶段；登录后先等待真实 React/Vue 页面 `document.readyState === "complete"` 和导航中的“已发布运行”按钮存在、可用，再安装安全门禁并点击；对后续异常只返回严格白名单的阶段名、CDP 已脱敏错误类别或“安全断言不符”，绝不展示原始错误、堆栈、Cookie、Token、工程 ID、数据库地址和工程正文。保留失败后关闭临时浏览器、原有 404/同主体/零写入断言以及生产 fail-closed。
+- **防复发**：真实登录后的多阶段 CDP 脚本必须区分阶段并等待业务 DOM 准备就绪；纯粹“登录成功”不能证明 SPA 路由已经渲染。对诊断字符串使用固定阶段和安全类别白名单，并在 Node 隔离 VM 回归中验证非法阶段及敏感诊断无法回显。
+- **验证边界**：新增两项 Node 门禁测试后需在最新 PR HEAD 复验 `test:published:oidc:config`、`vp check`、`docs:check`、完整 `ready`，再执行可信 Keycloak/HTTPS 双框架真实浏览器专项。之前的 12/12、680/680、62/62 只证明旧 HEAD 的离线检查通过，不是新候选通过。D5b 未开始。
+- **证据**：维护者 2026-11-20 Windows 原始 D5a 日志、PR #106、`scripts/test-oidc-published-runtime-readonly.mjs`、`scripts/test-oidc-published-runtime-readonly.cases.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
