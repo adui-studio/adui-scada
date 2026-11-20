@@ -143,3 +143,9 @@ D1 候选在 `ProjectAccessAction` 中新增独立 `release:read`，默认拒绝
 D1 已由 PR #102 合并至 main，独立 `release:read`、只读发布指针 API 和不可变快照校验已通过维护者 Windows 完整质量链与隔离 PostgreSQL 57 项专项；生产 `ProjectReleaseSafetyGate` 仍 fail-closed，回滚和设备写入仍未开放。
 
 D2a 仅增加共享 Core 发布响应协议检查、同源只读 API Client 与框架无关 Runtime 状态机；离线或失去授权时清空运行画面而非把旧数据伪装成实时结果。状态 `verified` 仅表示发布快照通过静态摘要校验，Tag 质量固定 `UNAVAILABLE`。此候选尚未进行真实 TLS/OIDC 双框架运行验收，不改变 ADR-0069 的已批准生产安全边界。
+
+## 2026-11-20 · D2a 合并与 D2b 发布指针刷新候选
+
+D2a 已通过维护者 Windows `ready` 并在 PR #103 Squash 合并至 main（`5f45bacbc90dd841dfb8b1992605d4652464361a`）。D2b 候选在框架无关 Runtime 上增加仅显式启用的发布指针刷新控制器：定时串行读取已提交发布指针、超时离线、撤权与摘要错误 fail-closed、运行页隐藏/重显保护、单调代次/新版本切换及请求取消。隐藏会清空正文但在当前身份会话内保留水位以防代次回退；身份切换和卸载必须彻底停止。
+
+本候选不改变 ADR-0069 的权限、生产发布事务和工业安全审批；`ProjectReleaseSafetyGate` 继续 fail-closed。尚未连接 React/Vue Runtime、实时 Tag 或真实 Keycloak/HTTPS 浏览器，不能把已发布配置校验通过解释为现场 Tag `GOOD`。
