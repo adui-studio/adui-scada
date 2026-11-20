@@ -2425,6 +2425,6 @@ D5a 新增脚本和离线用例；**当前没有实际执行结果**。离线配
     Remove-Item Env:SCADA_OIDC_RELEASE_READ_PROJECT_ID -ErrorAction SilentlyContinue
     Remove-Item Env:SCADA_OIDC_RELEASE_DENIED_PROJECT_ID -ErrorAction SilentlyContinue
 
-示例占位文本必须替换为现有测试工程 ID；ID 只保留在本机当前 PowerShell 会话，不提交、不贴入聊天。此专项不直连 PostgreSQL、不写数据库、不创建/修改工程和 ACL、不调用发布/回滚或设备写接口。真实 Keycloak 登录在独立临时浏览器中人工完成，密码不进终端/聊天；脚本 finally 关闭并清理 Profile。
+示例占位文本必须替换为现有测试工程 ID；ID 只保留在本机当前 PowerShell 会话，不提交、不贴入聊天。此专项不直连 PostgreSQL、不写工程/ACL/发布数据、不创建/修改工程和 ACL、不调用发布/回滚或设备写接口；正常 OIDC 登录仍会按现有流程持久化认证事务与会话。真实 Keycloak 登录在独立临时浏览器中人工完成，密码不进终端/聊天；脚本 finally 关闭并清理 Profile。
 
 未通过前不合并。真实 HTTPS/OIDC 专项即使通过也只证明发布读取授权与双框架 UI 通路，不证明生产发布授权、实时 Tag 质量、现场网关或 PLC/DCS 安全。
