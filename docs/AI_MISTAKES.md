@@ -670,6 +670,15 @@
 
 **E-071/E-072 最终 Windows 验收（2026-11-20）**：本机 `git rev-parse HEAD` 为 `1b7eaab6e4637361e4c84d316902a62cd6f09d9a`；D5a Node 14/14，`vp check` 372/224 零错误警告，`docs:check` 89 份，`pnpm run ready` 包含单测 680/680、HTTP E2E 62/62 且退出码 0。随后真实 Keycloak/HTTPS 双 Origin 浏览器专项逐阶段确认 React/Vue 可信会话、零默认请求、单一 GET 404、零 SVG/零写入，退出码 0。PR #106 已 Squash 合并至 `main`（`fede2b649c4c6d6ca0ffcc79ee3b56ccef9d932a`）。只代表未授权/不存在工程拒绝成功，**不代表真实已授权 UNRELEASED/RELEASED、撤权、断网或工业现场验证通过**。
 
+### E-073 · D5b1 真实授权测试复用示例工程 ID，404 被等待器误报为未知异常（第三十五批 D5b1，待 Windows 复验）
+
+- **现象**：维护者 2026-11-20 Windows D5b1 `test:published:oidc:authorized:config` 7/7、`vp check` 374/226 零警告错误、`docs:check` 89 份、完整 `ready` 包含 680/680 单测及 62/62 E2E 且退出码 0。随后复制 `docs/HARNESS.md` 中 `d5b-unreleased-12345678-1234-4234-8234-123456789abc` 格式示例运行真实授权浏览器；真实登录及 React 页面导航、工程输入完成后，在“React：发布读取”阶段返回“异常已脱敏”、退出码 1。没有抓取受控 HTTP 状态，**不能认定实际返回了 404**。
+- **确认的设计与诊断问题**：示例 ID 仅满足参数正则，并未由脚本创建，也没有任何证据证明该 ID 属于隔离库中真实存在且已授予当前主体独立 `release:read` 的工程；文档提供可直接复制执行的假 ID，容易误导验收。脚本提交后只等待 `unreleased/verified`，实际 `denied/offline/error` 不能终止等待，超时又被阶段异常包装掩盖，无法判断是缺少测试数据、会话拒绝、网络问题还是客户端验证错误。
+- **最小修复候选**：浏览器状态等待接受全部五种明确终态，之后严格核对单次同源 GET 路径、阻断计数及唯一 HTTP 状态。对 404 使用不可区分的固定诊断“预置工程不存在或未授予 release:read”；401、403、非 200、200 但页面拒绝均单独安全分类。顶层异常只回显白名单原因，不输出工程 ID、HTTP 正文、Token、Cookie、SQL 或堆栈；增加 3 项 Node 回归。HARNESS 改为人工输入**真实已预置**的工程 ID，删除可直接运行的伪数据示例。
+- **防复发**：真实 E2E 验收不能将正则合规的示例 ID 冒充已存在工程；必须区分参数校验与外部数据存在性。轮询应识别成功与受控失败终态，拒绝状态应 fail-closed 并在安全诊断中明确区分 HTTP 类别；测试不能为成功而绕过发布写入安全门禁。
+- **验证边界**：本批源码修复后的 Node 门禁预计由 7 项升至 10 项；需在 Windows 最新 PR HEAD 重新执行 `test:published:oidc:authorized:config`、`vp check`、`docs:check` 和完整 `ready`。真实 Keycloak/HTTPS 的 `UNRELEASED` 仍必须先有**实际存在且已授权**的隔离工程，`RELEASED` 仍需已合法预置发布快照；两种真实浏览器均未通过。无数据库、API、ACL、发布记录、Schema 或工业设备读写更改。
+- **证据**：维护者 2026-11-20 本轮 Windows 真实浏览器日志、先前 D5b1 离线质量日志、PR #107、`scripts/test-oidc-published-runtime-authorized.mjs`、`scripts/test-oidc-published-runtime-authorized.cases.mjs`、`docs/HARNESS.md` 与 `docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

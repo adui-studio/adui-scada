@@ -53,6 +53,12 @@ const SAFE_FAILURES = new Set([
   "D5b1 真实授权发布状态与预期不一致",
   "D5b1 当前发布读取请求不符合只读约束",
   "D5b1 双框架发布状态摘要不一致",
+  "D5b1 HTTP 404：预置工程不存在或未授予 release:read",
+  "D5b1 HTTP 401：可信会话已失效",
+  "D5b1 HTTP 403：没有正式发布读取授权",
+  "D5b1 正式发布读取没有返回 HTTP 200",
+  "D5b1 正式发布页面状态与预期不一致",
+  "D5b1 正式发布页面未完成读取",
 ]);
 
 /** 只接受本机人为预置的 D5b1 专用工程；脚本绝不创建、授权或发布。 */
@@ -86,11 +92,13 @@ export function describePublishedAuthorizedFailure(error) {
     error.message === "D5b1 浏览器阶段验证失败" &&
     PHASES.has(error.phase)
   ) {
-    const reason = PAGE_DIAGNOSTICS.has(error.pageDiagnostic)
-      ? error.pageDiagnostic
-      : error.failureKind === "assertion"
-        ? "安全断言不符"
-        : "异常已脱敏";
+    const reason = SAFE_FAILURES.has(error.safeReason)
+      ? error.safeReason
+      : PAGE_DIAGNOSTICS.has(error.pageDiagnostic)
+        ? error.pageDiagnostic
+        : error.failureKind === "assertion"
+          ? "安全断言不符"
+          : "异常已脱敏";
     return "D5b1 " + error.phase + "失败：" + reason;
   }
   return "D5b1 真实授权只读验收失败，内部信息已脱敏";
@@ -179,6 +187,46 @@ export function requirePublishedAuthorizedState(state, expectedStatus) {
   };
 }
 
+/** 允许授权成功和受控失败作为终态，避免 HTTP 404 被误报为浏览器执行异常。 */
+export function isPublishedAuthorizedTerminalState(state) {
+  return (
+    state !== null &&
+    typeof state === "object" &&
+    ["unreleased", "verified", "denied", "offline", "error"].includes(state.status)
+  );
+}
+
+/**
+ * 只核对受控同源 GET 路径和 HTTP 状态，不读取响应正文。
+ * HTTP 404 对工程不存在和缺少独立 release:read 授权不可区分。
+ */
+export function requirePublishedAuthorizedRead(state, guard, expectedStatus, projectId) {
+  if (
+    typeof projectId !== "string" ||
+    !FIXTURE_PATTERN.test(projectId) ||
+    !guard ||
+    guard.blocked !== 0 ||
+    !Array.isArray(guard.paths) ||
+    guard.paths.length !== 1 ||
+    guard.paths[0] !== "/api/v1/projects/" + projectId + "/releases/current" ||
+    !Array.isArray(guard.statuses) ||
+    guard.statuses.length !== 1
+  ) {
+    throw new Error("D5b1 当前发布读取请求不符合只读约束");
+  }
+  const status = guard.statuses[0];
+  if (status === 404) {
+    throw new Error("D5b1 HTTP 404：预置工程不存在或未授予 release:read");
+  }
+  if (status === 401) throw new Error("D5b1 HTTP 401：可信会话已失效");
+  if (status === 403) throw new Error("D5b1 HTTP 403：没有正式发布读取授权");
+  if (status !== 200) throw new Error("D5b1 正式发布读取没有返回 HTTP 200");
+  if (state?.status !== (expectedStatus === "RELEASED" ? "verified" : "unreleased")) {
+    throw new Error("D5b1 正式发布页面状态与预期不一致");
+  }
+  return requirePublishedAuthorizedState(state, expectedStatus);
+}
+
 async function run() {
   const mode = parsePublishedAuthorizedMode(process.argv.slice(2));
   if (!existsSync(ROOT_ENV)) throw new Error("D5b1 本机可信 HTTPS Lab 缺失");
@@ -240,23 +288,17 @@ async function run() {
         () =>
           browser
             .evaluate(publishedAuthorizedUiStateInPage, mode.projectId)
-            .then((value) =>
-              value?.status === (mode.expectedStatus === "RELEASED" ? "verified" : "unreleased")
-                ? value
-                : null,
-            ),
-        "D5b1 真实授权发布状态与预期不一致",
+            .then((value) => (isPublishedAuthorizedTerminalState(value) ? value : null)),
+        "D5b1 正式发布页面未完成读取",
       );
       report(name + "：对照发布状态");
-      const summary = requirePublishedAuthorizedState(state, mode.expectedStatus);
       const guard = await browser.evaluate(publishedReadGuardStateInPage);
-      assert.equal(guard.blocked, 0, "D5b1 当前发布读取请求不符合只读约束");
-      assert.deepEqual(
-        guard.paths,
-        ["/api/v1/projects/" + mode.projectId + "/releases/current"],
-        "D5b1 当前发布读取请求不符合只读约束",
+      const summary = requirePublishedAuthorizedRead(
+        state,
+        guard,
+        mode.expectedStatus,
+        mode.projectId,
       );
-      assert.deepEqual(guard.statuses, [200], "D5b1 当前发布读取请求不符合只读约束");
       if (baseline !== null) {
         assert.deepEqual(summary, baseline, "D5b1 双框架发布状态摘要不一致");
       } else {
@@ -271,6 +313,8 @@ async function run() {
     const failure = new Error("D5b1 浏览器阶段验证失败");
     failure.phase = phase;
     failure.pageDiagnostic = error?.pageDiagnostic;
+    failure.safeReason =
+      error instanceof Error && SAFE_FAILURES.has(error.message) ? error.message : null;
     failure.failureKind = error instanceof assert.AssertionError ? "assertion" : "unknown";
     throw failure;
   } finally {

@@ -2454,3 +2454,11 @@ E-072 候选增加固定阶段和安全错误类别诊断，登录后等待 Reac
 真实浏览器操作使用 D5a 的同源 GET 门禁与真实 DOM 导航，确保两端同一 BFF 主体、选择前零发布请求、目标仅请求一次 `GET /api/v1/projects/:projectId/releases/current` 且 HTTP 200；`UNRELEASED` 必须显示无 SVG、generation 0，`RELEASED` 必须由共享 Core/Runtime 完整性校验后展示非空 SVG 与正修订号/代次，两端状态摘要一致，Tag 均维持 `UNAVAILABLE`。不输出工程正文、凭据、工程 ID 或 SVG 源码，异常只报告固定阶段。**不能使用生产发布 API 构造测试数据**，因为 `ProjectReleaseSafetyGate` 仍默认拒绝；已发布场景只有预置合法隔离快照才能进行，未预置则应拒绝并记录阻塞，不能伪装测试通过。
 
 候选预计新增 **7 项** Node 安全测试（尚未在 Windows 实测）；仓库修改、`vp check`、`docs:check`、`ready` 与真实 Keycloak/HTTPS 授权场景仍需完整验证。没有启动真实数据库写入、调整生产发布安全门禁或开放工业设备写入。
+
+## 2026-11-20 · D5b1 Windows 离线通过，真实授权读取在示例 ID 处失败（E-073）
+
+维护者实际运行 `test:published:oidc:authorized:config` **7/7 通过，退出码 0**，`vp check` **374 文件格式正确 / 226 受检零告警**，`docs:check` **89 份通过**，完整 `pnpm run ready` **680/680 单测、62/62 HTTP E2E、React/Vue/Server 构建完成，退出码 0**。原始完整质量日志未附 `git rev-parse HEAD`；不能将结果严格绑定到后续修复提交。
+
+随后维护者直接使用 HARNESS 中展示的 `d5b-unreleased-12345678-1234-4234-8234-123456789abc` 示例 ID。真实 Keycloak 登录成功，React BFF、导航与输入成功；在 React 发布读取阶段输出“异常已脱敏”，专项 **退出码 1**，Vue 未执行。该示例 ID 的真实工程存在性和独立 `release:read` ACL **尚未得到证实**；原脚本只等待成功状态，可能将 HTTP 404 等受控拒绝误报为超时，不能从本日志断定实际 HTTP 状态。
+
+E-073 候选改为同时识别成功/拒绝/离线/错误终态，对单一 GET 的 HTTP 404（工程不存在或未授权）、401、403、非 200 与客户端状态不一致分别固定脱敏诊断；新增 3 项 Node 回归，预计从 7 项增至 10 项；HARNESS 改为人工输入已存在工程 ID，不再提供可直接复制的虚构 UUID。保持 D5b1 一次只读 GET、零数据库写入、默认发布安全门禁 fail-closed。新提交的 Windows 全量 `ready`、真实 UNRELEASED/RELEASED 两种授权浏览器仍待验证，PR 保持 Draft。

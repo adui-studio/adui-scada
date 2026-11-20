@@ -3533,13 +3533,19 @@ pnpm run docs:check
 pnpm run ready
 ```
 
-真实只读专项需确认本机 HTTPS 双 Origin、Keycloak 预绑定主体和原有证书信任后**手动执行**。以下 ID 均为示例，必须替换为**已存在且已授予当前登录主体 release:read** 的专用 UUID v4 工程，不得使用普通生产工程：
+真实只读专项需确认本机 HTTPS 双 Origin、Keycloak 预绑定主体和原有证书信任后**手动执行**。**不要复制示例 UUID 作为真实工程**；先由有权维护人员确认工程确实存在于指定隔离数据库、当前 Keycloak 主体已被独立授予 `release:read` 且预期发布代次正确，再人工输入真实专用工程 ID：
 
 ```powershell
-pnpm run test:published:oidc:authorized:browser --status UNRELEASED --project-id d5b-unreleased-12345678-1234-4234-8234-123456789abc
+$unreleasedProjectId = Read-Host "输入真实存在且已授权的 D5b1 未发布隔离工程 ID"
+pnpm run test:published:oidc:authorized:browser --status UNRELEASED --project-id $unreleasedProjectId
 Write-Host "D5b1 未发布专项退出码：$LASTEXITCODE"
-pnpm run test:published:oidc:authorized:browser --status RELEASED --project-id d5b-released-12345678-1234-4234-8234-123456789abc
+
+# 只有在已存在合法、真实的隔离发布快照时才执行
+$releasedProjectId = Read-Host "输入真实存在且已授权的 D5b1 已发布隔离工程 ID"
+pnpm run test:published:oidc:authorized:browser --status RELEASED --project-id $releasedProjectId
 Write-Host "D5b1 已发布专项退出码：$LASTEXITCODE"
 ```
+
+若尚未合法预置，应该停止真实授权验收并先确认隔离数据准备流程；独立 `release:read` 权限不可由 `project:read` 或 `version:read` 代替。HTTP 404 只表示工程不存在或无读取授权，不得推断更具体的数据库情况。
 
 如果缺少预置 `RELEASED` 合法快照、身份未授权、数据库未隔离或状态不一致，**测试应退出 1**，将该场景标记为“未完成前置条件”，不能跳过真实响应断言、手工修改 DB 发布状态或把 HTTP Mock 当作真实验收。全程不读取工程编辑 head、草稿、Cookie、Token，也不发起任何工程写入请求。ACL 撤销、页面隐藏恢复和断网由后续专项覆盖。

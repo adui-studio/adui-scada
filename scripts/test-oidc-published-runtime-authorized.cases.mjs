@@ -4,7 +4,9 @@ import { runInNewContext } from "node:vm";
 import {
   describePublishedAuthorizedFailure,
   enterPublishedAuthorizedProjectInPage,
+  isPublishedAuthorizedTerminalState,
   parsePublishedAuthorizedMode,
+  requirePublishedAuthorizedRead,
   publishedAuthorizedUiStateInPage,
   requirePublishedAuthorizedState,
 } from "./test-oidc-published-runtime-authorized.mjs";
@@ -219,6 +221,70 @@ void describe("D5b1 双框架真实发布授权只读专项", () => {
     });
   });
 
+  void it("真实页面必须识别已发布、未发布、拒绝、离线和异常终态", () => {
+    for (const status of ["unreleased", "verified", "denied", "offline", "error"]) {
+      assert.equal(isPublishedAuthorizedTerminalState({ status }), true);
+    }
+    for (const status of ["idle", "loading", "unknown", null]) {
+      assert.equal(isPublishedAuthorizedTerminalState({ status }), false);
+    }
+    assert.equal(isPublishedAuthorizedTerminalState(null), false);
+  });
+
+  void it("HTTP 404 必须指出预置工程或发布读取 ACL 前置条件，不能伪装为超时", () => {
+    const response = {
+      blocked: 0,
+      paths: ["/api/v1/projects/" + unreleasedId + "/releases/current"],
+      statuses: [404],
+    };
+    assert.throws(
+      () => requirePublishedAuthorizedRead({ status: "denied" }, response, "UNRELEASED", unreleasedId),
+      /HTTP 404：预置工程不存在或未授予 release:read/,
+    );
+    for (const [http, expected] of [
+      [401, /HTTP 401：可信会话已失效/],
+      [403, /HTTP 403：没有正式发布读取授权/],
+      [500, /没有返回 HTTP 200/],
+    ]) {
+      assert.throws(
+        () => requirePublishedAuthorizedRead({ status: "denied" }, { ...response, statuses: [http] }, "UNRELEASED", unreleasedId),
+        expected,
+      );
+    }
+  });
+
+  void it("HTTP 200 仍严格检查真实状态及只读请求，任何额外请求不得漏过", () => {
+    const guard = {
+      blocked: 0,
+      paths: ["/api/v1/projects/" + unreleasedId + "/releases/current"],
+      statuses: [200],
+    };
+    assert.deepEqual(requirePublishedAuthorizedRead(state(), guard, "UNRELEASED", unreleasedId), {
+      status: "UNRELEASED",
+      releaseGeneration: 0,
+      releasedRevision: null,
+    });
+    for (const invalid of [
+      { ...guard, blocked: 1 },
+      { ...guard, paths: [...guard.paths, "/api/v1/projects/other"] },
+      { ...guard, statuses: [200, 200] },
+      { ...guard, paths: ["/api/v1/projects/other/releases/current"] },
+    ]) {
+      assert.throws(
+        () => requirePublishedAuthorizedRead(state(), invalid, "UNRELEASED", unreleasedId),
+        /不符合只读约束/,
+      );
+    }
+    assert.throws(
+      () => requirePublishedAuthorizedRead({ ...state(), status: "denied" }, guard, "UNRELEASED", unreleasedId),
+      /页面状态与预期不一致/,
+    );
+    assert.throws(
+      () => requirePublishedAuthorizedRead(state(), guard, "UNRELEASED", "../other"),
+      /不符合只读约束/,
+    );
+  });
+
   void it("非白名单阶段和敏感诊断绝不回显，已审核阶段只输出固定类别", () => {
     const error = new Error("D5b1 浏览器阶段验证失败");
     error.phase = "React：发布读取";
@@ -227,12 +293,18 @@ void describe("D5b1 双框架真实发布授权只读专项", () => {
       describePublishedAuthorizedFailure(error),
       "D5b1 React：发布读取失败：页面脚本类型异常",
     );
+    error.safeReason = "D5b1 HTTP 404：预置工程不存在或未授予 release:read";
+    assert.equal(
+      describePublishedAuthorizedFailure(error),
+      "D5b1 React：发布读取失败：D5b1 HTTP 404：预置工程不存在或未授予 release:read",
+    );
     error.phase = "Cookie=secret; access_token=private";
     assert.equal(
       describePublishedAuthorizedFailure(error),
       "D5b1 真实授权只读验收失败，内部信息已脱敏",
     );
     error.phase = "Vue：对照发布状态";
+    error.safeReason = "access_token=private";
     error.pageDiagnostic = "access_token=private";
     error.failureKind = "assertion";
     assert.equal(

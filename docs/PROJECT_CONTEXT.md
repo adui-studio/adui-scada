@@ -1900,3 +1900,9 @@ D5a Draft PR #106 增补固定阶段的安全诊断、导航 DOM 就绪等待及
 D5a Windows HEAD `1b7eaab6e4637361e4c84d316902a62cd6f09d9a` 已通过 14/14 Node 门禁、`vp check` 372/224 零告警、`docs:check` 89 份、680/680 单测、62/62 HTTP E2E 和完整 `ready` 退出码 0。React/Vue 真实 Keycloak/HTTPS 双框架无授权 404 拒绝专项也退出码 0。维护者明确授权合并 PR #106；已 Squash 合并至 `main`，提交 `fede2b649c4c6d6ca0ffcc79ee3b56ccef9d932a` 且 main HEAD 一致。
 
 D5b1 独立候选 `test/b35-d5b1-published-runtime-authorized-readonly` 继续验证真实 `release:read` 授权下两端 `UNRELEASED/RELEASED` 状态、同源 GET、状态摘要与静态 SVG 的一致性。新脚本**只读**、必须手动输入已预置的隔离工程 ID，不自动创建工程/权限/发布记录；生产 `ProjectReleaseSafetyGate` 仍 fail-closed，真实 `RELEASED` 验收需要另行合法预置隔离快照，绝不能临时开启发布门禁。候选待 Windows 全量 `ready`、真实授权浏览器和预置数据验收，不提前合并；ACL 撤销、离线和页面恢复仍留在后续 D5b 子批次。
+
+## 2026-11-20 · D5b1 真实授权读取失败复核（E-073，待 Windows 复验）
+
+维护者 Windows D5b1 门禁 **7/7**、`vp check` **374/226** 零错误告警、`docs:check` **89**、完整 `ready` **680/680 单测、62/62 HTTP E2E** 且退出码 **0**。真实 Keycloak/HTTPS 在 React 已登录并通过页面输入后，使用文档的格式示例工程 ID 时，于发布读取阶段收到“异常已脱敏”、退出码 **1**；尚无证据证明该工程真实存在或已授予当前主体独立 `release:read`，也未观测实际 HTTP 状态，不能把失败误记为 Keycloak 故障或已授权验收成功。
+
+PR #107 D5b1 E-073 候选将 `denied/offline/error` 纳入状态等待终态，依据受控单次 GET 的 HTTP 状态分类 404/401/403/非 200 与客户端状态不符，仍全部 fail-closed，新增 3 项 Node 门禁；文档改为人工输入已预置工程，不再使用可复制的示例 UUID。**修复后的 Windows 质量链和真实授权双框架尚未实测，PR 保持 Draft；RELEASED 不能绕过生产默认拒绝门禁造数据。**
