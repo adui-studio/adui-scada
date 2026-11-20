@@ -1016,3 +1016,12 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `packages/runtime/test/published-runtime.test.ts`：未发布/已验证、离线、撤权、事件代次回退、合法回滚、跨工程旧响应、停止取消、非法 ID 等用例。
 
 没有新增后端路由、数据库迁移、设备写入或前端 UI 变更。
+
+## 2026-11-20 · 第三十五批 D2b 发布指针刷新与版本切换候选
+
+- `packages/runtime/src/published-runtime-refresher.ts`：新增 `PublishedRuntimeRefresher`，通过外部 `start/refresh/setVisible/stop` 控制串行发布指针 GET；定时刷新默认 15 秒、单次请求超时默认 10 秒、离线有界退避默认最多 60 秒；测试可注入调度器。
+- `packages/runtime/src/published-runtime.ts`：补充 `expire()` 处理无响应读取超时，以及 `suspend()` 隐藏时清空可显示正文但不清除同会话单调发布水位；原 `stop()` 仍彻底清理。
+- `packages/runtime/src/index.ts`：导出刷新器和调度器配置类型。
+- `packages/runtime/test/published-runtime-refresher.test.ts`：新增定时切版、未变化指针校验、离线退避/恢复、授权撤销、摘要篡改、隐藏/重显、水位防回退、并发单请求、超时迟到响应、停止/工程切换资源回收及参数校验测试。
+
+没有新数据库迁移、API 写入、React/Vue UI 变更或工业设备操作。

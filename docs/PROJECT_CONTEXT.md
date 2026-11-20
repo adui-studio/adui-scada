@@ -1858,3 +1858,11 @@ D2a 独立候选分支 `feat/b35-d2-published-runtime-core` 从上述 main 合�
 - Core/API Client/Runtime 三处增加自动化单测用例；不修改 React/Vue 页面、不改 NestJS、数据库、生产发布安全门禁或设备写入边界。
 
 D2a 代码与文档**尚未在 Windows 实测**；需 Draft PR 绑定 Assignee `@adui-dev`，等待全量质量检查，不合并。D2a 不是正式生产运行能力；共享 Runtime/UI 接入、真实 Tag、回滚、工业安全评审分批进行。
+
+## 2026-11-20 · 第三十五批 D2a 已合并，D2b 发布刷新候选开发中
+
+维护者明确授权合并 PR #103；GitHub 已完成 Squash Merge，合并提交和 `main` HEAD 均为 `5f45bacbc90dd841dfb8b1992605d4652464361a`。维护者 Windows D2a 质量链：`vp check` 364 个格式文件与 216 个受检代码文件零警告错误；单测 55/55 文件、662/662 用例；服务端 E2E 62/62；文档 89 份；React/Vue/Server 构建通过；完整 `pnpm run ready` 退出码 0。用户日志未提供 `git rev-parse HEAD`，不宣称严格关联提交 SHA。
+
+D2b 独立候选分支 `feat/b35-d2b-release-pointer-refresh` 从上述 main 建立；本小批新增共享 Runtime 发布指针自动刷新控制器，不依赖框架 UI 或真实现场数据。支持手动启动/停止、外部可见性驱动、串行定时刷新、离线退避、读取超时、撤权和校验异常默认停止轮询、发布代次单调保护、版本切换与合法回滚读取。隐藏时清空正文但保持同会话发布水位；登出/切工程停止时清除全部状态。所有 Tag 质量仍 `UNAVAILABLE`，生产发布门禁保持 fail-closed。
+
+**D2b 验收状态：候选源码及测试已提交到分支，未在维护者 Windows 环境执行 Vite+、单元测试、构建或完整 ready。** 当前工作不包括 React/Vue UI、真实 TLS/OIDC 双框架浏览器验证、工业网关或设备写入。待独立 Draft PR 与维护者实测，不得未经批准合并。

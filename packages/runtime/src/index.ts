@@ -32,3 +32,10 @@ export type {
   PublishedRuntimeListener,
   PublishedReleaseReader,
 } from "./published-runtime.ts";
+
+/** 可见性与身份生命周期驱动的正式发布指针只读刷新器。 */
+export { PublishedRuntimeRefresher } from "./published-runtime-refresher.ts";
+export type {
+  PublishedRefreshOptions,
+  PublishedRefreshSchedule,
+} from "./published-runtime-refresher.ts";

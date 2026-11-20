@@ -435,3 +435,11 @@ D1 已在 PR #102 合并：当前发布指针只读 API、独立 `release:read` 
 3. `@adui/scada-runtime` 的 `PublishedRuntime`：维护明确的发布快照只读状态机，不依赖 Vue/React、Studio、IndexedDB 或 SSE 模拟数据源；请求上下文切换使用 AbortSignal 和请求代次双重保护。
 
 D2a 不自动显示断线前缓存；`offline`、`denied` 和 `error` 均无可展示的快照，且 `tagQuality` 始终为 `UNAVAILABLE`。正式发布配置已验证不代表实时工业 Tag 已连接。后续 D2b/D3/D4 再研究发布指针自动刷新、Tag 质量接入及 React/Vue 对等使用，生产安全门禁依然 fail-closed。
+
+## 2026-11-20 · 第三十五批 D2b 发布指针生命周期控制器候选
+
+D2a 已由 PR #103 合并至 `main`（`5f45bacbc90dd841dfb8b1992605d4652464361a`）。D2b 在 `@adui/scada-runtime` 内新增小型 `PublishedRuntimeRefresher`，**组合**已存在的 `PublishedRuntime` 和 `PublishedReleaseReader`，不改变服务端发布 ACL/API、Core Schema 或 React/Vue 的工程文件格式。
+
+刷新器由未来框架适配层显式启动和停止；不私自创建后台常驻任务，也不连接 PLC/DCS、演示 SSE 或编辑数据。单次可取消定时器串行刷新；网络离线以有限退避重试，读取超时触发 `PublishedRuntime.expire()` 受控离线；撤权/摘要异常停止自动轮询。页面隐藏使用 `suspend()` 擦除可显示快照但保留当前身份会话的单调代次水位，彻底登出或工程切换使用 `stop()` 清除全部水位。异步旧请求由 AbortSignal + epoch + Runtime requestGeneration 共同拒绝。
+
+继续遵循 ADR-0069：`verified` 只表示已提交快照经 SHA-256 验证，实时 Tag 质量始终 `UNAVAILABLE`。本阶段未部署到 Vue/React Runtime，不具备现场只读运行验收结论，也不允许生产发布或设备写入。

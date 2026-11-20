@@ -140,6 +140,23 @@ export class PublishedRuntime {
     }
   }
 
+  /** 单次读取超时后撤销旧请求、清空快照并显示离线；迟到的请求不能恢复画面。 */
+  expire(): void {
+    if (this.controller === null || this.currentProjectId === null) return;
+    const projectId = this.currentProjectId;
+    this.requestGeneration++;
+    this.controller.abort();
+    this.controller = null;
+    this.publish({
+      status: "offline",
+      projectId,
+      releaseGeneration: null,
+      snapshot: null,
+      message: "正式发布指针读取超时，已清空运行画面",
+      tagQuality: "UNAVAILABLE",
+    });
+  }
+
   private acceptRelease(release: PublishedRelease): void {
     if (release.status === "UNRELEASED") {
       if (this.lastPointer !== null) {
@@ -181,6 +198,17 @@ export class PublishedRuntime {
       message: "正式发布快照已校验，实时 Tag 数据尚未连接",
       tagQuality: "UNAVAILABLE",
     });
+  }
+
+  /**
+   * 页面隐藏时清除全部可显示内容和请求，仅保留本会话发布代次校验水位。
+   * 身份改变或退出页面必须调用 stop，不能将此方法用于权限主体切换。
+   */
+  suspend(): void {
+    this.requestGeneration++;
+    this.controller?.abort();
+    this.controller = null;
+    this.publish(initialPublishedRuntimeState);
   }
 
   /** 离开运行页或身份上下文变化时必须调用，取消请求并清除全部发布态缓存。 */
