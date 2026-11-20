@@ -2325,3 +2325,15 @@ E-068 与 E-069 均已关闭。C1 交付的是服务端发布事务及其默认 
 **前次误操作及保护边界**：维护者此前未设置隔离环境而直接运行迁移命令，Prisma 指向已冻结的 `adui_scada` 并返回 P3009；随后 `test:db` 因缺少 `SCADA_TEST_DATABASE_URL`，6 个 Suite 在导入阶段拒绝、0 测试执行。这些失败命令不属于本次通过的隔离数据库验收；原 `adui_scada` 开发库仍冻结，不得执行迁移修复、重置、修改历史表或生产操作。
 
 **后续质量门禁**：此前另一次维护者日志已有 `vp check` 359/211 零告警、单测 633/633、HTTP E2E 59/59、文档 89 份通过，但该日志未提供 `git rev-parse HEAD`，不能严格绑定 D1 远程最新提交。GitHub D1 PR #102 于本次记录前已出现格式调整提交 `45eb631f452f10aeffa0dbe30a8485afc37864aa`；数据库日志同样未包含本地 SHA。此次仅确认 D1 隔离数据库专项通过；最新 HEAD 的 `vp check`、全量 `pnpm run ready` 等仍需维护者复验。PR 保持 Draft，未经明确授权不得合并。
+
+## 2026-11-20 · 第三十五批 D2a 共享发布只读 Runtime 候选（待验收）
+
+基线：PR #102 已 Squash 合并至 `main`（`7056a4bd1347cdbc9741e2aebdfa96e19bd347bc`）。维护者 D1 Windows 隔离 PostgreSQL 6/6 文件、57/57 用例、迁移 7/7，最终 `pnpm run ready` 退出码 0；单测 639/639、NestJS HTTP E2E 62/62、`vp check` 359/211、`docs:check` 89 份通过。测试日志未提供本地 `git rev-parse HEAD`，不宣称严格 SHA 绑定。
+
+D2a 在独立 Draft PR 中新增 Core 发布响应严格校验、同源 API Client 发布指针读取、共享 Runtime 发布态以及三组负向测试。验收应覆盖：
+
+- 解析：只接受 `UNRELEASED` 或字段齐全的 `RELEASED`；拒绝额外 head、错误摘要、跨工程、非法事件与时间、被篡改快照。
+- 网络：同源 Cookie GET、`no-store`、响应大小限制、401/403/404、AbortSignal、非法工程 ID。
+- Runtime：只有验证过的发布态允许 `verified`，Tag 质量始终 `UNAVAILABLE`；断网/撤权清空正文，代次回退和同代次变更拒绝，新代次合法回滚允许较低修订，stop/旧请求不能覆盖最新状态。
+
+**当前未实际执行** D2a 的 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和完整 `pnpm run ready`，不能把测试源文件存在当成测试通过。D2a 无数据库迁移或 PostgreSQL 数据写入，默认不要求重新执行 D1 的迁移。D2a 不属于生产发布授权或真实 Keycloak/HTTPS 现场验收。
