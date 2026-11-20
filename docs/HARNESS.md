@@ -3583,3 +3583,25 @@ Write-Host "真实授权双框架退出码：$LASTEXITCODE"
 ```
 
 新增 `test:published:oidc:fixture:config` 9 项 Node 安全门禁并加入 `ready`；真实写入脚本不会随 `ready` 自动运行。本批脚本已提交候选，但尚未在维护者 Windows 执行、未创建数据库夹具，不能冒称已验收。生产 `ProjectReleaseSafetyGate` 和工业设备写入继续关闭；`RELEASED` 快照、撤权和离线恢复仍是独立后续专项。
+
+
+## 2026-11-20 · 第三十五批 D5b2 双框架 UNRELEASED 离线恢复（Draft 待 Windows 验收）
+
+PR #107 已经由维护者提供真实双 HTTPS Origin `UNRELEASED` 成功验收日志并授权 Squash Merge，`main` 提交 `956dd521deea849b76a4c9c2503154d81a09eace`。本小批沿用当时已创建、已授权的单一只读工程 `d5b-unreleased-42c376a0-5bdc-4fd6-80d6-da29e0312aca`，不再次执行夹具 `--apply`、不增加授权、不开发布或设备写入。
+
+新增 `test:published:oidc:offline:config` 9 项 Node 安全门禁并纳入 `ready`。新增 `test:published:oidc:offline:browser` 专项仅接受 `--project-id d5b-unreleased-<UUIDv4>`，复用真实 Keycloak/BFF 会话、React 与 Vue 两个可信 HTTPS Origin，严格只读。首次真实 `GET /api/v1/projects/:id/releases/current` 返回 200 `UNRELEASED` 后，点击真实“立即刷新”，在已注册的只读门禁外**仅拦截一次**同源精确发布 GET 并返回本地网络错误；验证前端为 `offline`、无 SVG、无发布代次且质量保持 `UNAVAILABLE`。随后再次点击真实刷新，从服务器实际取得 200 `UNRELEASED` 并清除离线状态；最后点击“停止读取”验证 `idle`、无画面和零额外请求。
+
+**关键时序**：因为 `createScadaApiClient` 在组件挂载时捕获 `globalThis.fetch`，网络故障层必须在运行页首次挂载**之前**安装，只在首次真实 GET 200 后 `arm`。注入只发生于浏览器 JS Fetch 层，不是真实物理 TCP 故障，也不会触碰 Keycloak、数据库、服务器或其他窗口。该专项的真实浏览器及 Windows 全量质量链尚未执行，任何成功声明需以实际退出码为准。
+
+```powershell
+pnpm run test:published:oidc:offline:config
+vp check
+pnpm run docs:check
+pnpm run ready
+
+$projectId = "d5b-unreleased-42c376a0-5bdc-4fd6-80d6-da29e0312aca"
+pnpm run test:published:oidc:offline:browser --project-id $projectId
+Write-Host "D5b2 真实离线恢复退出码：$LASTEXITCODE"
+```
+
+本小批不修改运行时业务代码；已发布 `RELEASED`、ACL 真撤销及真实网络 TCP 故障仍未由此验收，生产发布写入门禁保持关闭。

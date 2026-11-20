@@ -2468,3 +2468,8 @@ E-073 候选改为同时识别成功/拒绝/离线/错误终态，对单一 GET 
 维护者实际验证 Docker `adui_scada` 数据库完成 7/7 Prisma 迁移、未解决迁移 0、保留 39 工程/168 ACL、39 条有效 UNRELEASED 状态和 0 发布事件；此前已备份 SHA-256 校验并在隔离恢复副本上完成 `pg_restore` 和迁移回放。随后授权仅为本机可信 Lab 创建一个 D5b1 专用未发布工程并为已验证 `lab-engineer` 授予该工程独立 `release:read`。
 
 新增 `scripts/prepare-oidc-published-unreleased.mjs` 和 9 项 Node 安全回归；默认只读预检，显式 `--apply --confirm-lab adui_scada` 才调用受保护的工程创建 HTTP API 并在 SQL SERIALIZABLE 事务内加一条 ACL。已有工程、其他权限、发布状态与工业设备不写入。失败后不自动删除已创建工程，须按 ID 单独核查。工具编写阶段已完成 V8 隔离函数行为检查（7 项基本检查通过），**并非整仓 Node 9/9 或 Windows 真实数据库/浏览器测试通过**。新提交的 `test:published:oidc:fixture:config`、`vp check`、`docs:check`、`ready` 和真实夹具写入/双框架读取仍待执行。PR #107 保持 Draft，不提前合并。
+
+
+## 2026-11-20 · D5b2 本机双框架发布只读故障注入（待真实验收）
+
+在已由维护者成功完成的 PR #107 / D5b1 真实授权 `UNRELEASED` 基础上，新增 9 项本地 Node 故障模拟安全用例和 `test:published:oidc:offline:browser`。先通过真实 Keycloak/BFF、React/Vue HTTPS 同源读取已授权工程，后**仅在浏览器 JS Fetch 层**模拟一次精确 GET 网络异常，检查离线态清空、Tag 质量 `UNAVAILABLE`、真实刷新恢复与停止读取，所有工程 API 受先前只读门禁保护。绝不在 DB 写入、删除 ACL、变更发布指针或启用设备输出。本批尚未运行 Windows Node/浏览器测试、`vp check` 和完整 `ready`，不要将模拟故障表述为真实 TCP 断网。
