@@ -155,3 +155,9 @@ D2a 已通过维护者 Windows `ready` 并在 PR #103 Squash 合并至 main（`5
 D2b 已由 PR #104 合并到 main（`95c1c0e4b3423ba9acfcf425f3b82de304f04633`），发布指针自动刷新、超时、离线退避和失效保护已通过维护者 Windows 离线质量链。D3/D4 候选同步为 React/Vue 增加仅发布配置的只读运行页，复用独立 `release:read`、同源 Cookie 和共享发布状态机；无有效发布指针或权限则不显示配置快照，不从编辑 head、IndexedDB 或 Demo 兜底。
 
 本候选严格维持 ADR-0069 的只读优先与安全隔离：静态 SVG 仅预览白名单图元，Tag 质量 `UNAVAILABLE`，缺值 BAD 只是 SVG 占位；无真实网关和写入权限。当前未做真实 Keycloak/HTTPS 双框架 E2E 和生产安全评审，`ProjectReleaseSafetyGate` 保持 fail-closed。
+
+## 2026-11-20 · D3/D4 已合并与 D5a 真实 OIDC 发布读取验证候选
+
+D3/D4 已由 PR #105 合并到 main（SHA 637ebbce3191c998b3264733645da947a3739e9f），双框架“已发布运行”只读入口已完成 Windows ready 验收。D5a 增加真实 Keycloak 双 HTTPS Origin 浏览器专项，验证独立 release:read 而非工程/历史版本读取权限、同一可信 BFF 主体、匿名 401、权限不继承、发布指针 no-store、双框架页面真实接线和零写请求。测试使用预先存在的授权/拒绝对照工程，不修改 ACL 或数据库。
+
+此验证不改变 ADR-0069 的生产发布门禁。生产 ProjectReleaseSafetyGate 继续 fail-closed；没有真实发布指针时只显示 UNRELEASED，Tag 质量仍 UNAVAILABLE。
