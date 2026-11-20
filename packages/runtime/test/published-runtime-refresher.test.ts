@@ -227,6 +227,25 @@ describe("正式发布 Runtime 指针刷新与失效保护", () => {
     refresher.stop();
   });
 
+  it("页面隐藏后重新可见仍拒绝发布代次回退，不能靠隐藏绕过安全水位", async () => {
+    const first = await published(2, 3);
+    const stale = await published(1, 2);
+    const readCurrentRelease = vi
+      .fn<PublishedReleaseReader["readCurrentRelease"]>()
+      .mockResolvedValueOnce(first)
+      .mockResolvedValueOnce(stale);
+    const clock = manualClock();
+    const { runtime, refresher } = fixture({ readCurrentRelease }, clock.schedule);
+    await refresher.start(projectId);
+    await refresher.setVisible(false);
+    expect(runtime.snapshot()).toMatchObject({ status: "idle", snapshot: null });
+    await refresher.setVisible(true);
+    expect(runtime.snapshot()).toMatchObject({ status: "error", snapshot: null });
+    expect(clock.pendingDelays()).toEqual([]);
+    expect(readCurrentRelease).toHaveBeenCalledTimes(2);
+    refresher.stop();
+  });
+
   it("手动刷新与自动刷新同一时刻只发一条 GET，旧的计划任务被取消", async () => {
     const data = await published();
     let finish: ((value: unknown) => void) | undefined;
