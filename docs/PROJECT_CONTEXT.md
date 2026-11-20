@@ -1866,3 +1866,11 @@ D2a 代码与文档**尚未在 Windows 实测**；需 Draft PR 绑定 Assignee `
 D2b 独立候选分支 `feat/b35-d2b-release-pointer-refresh` 从上述 main 建立；本小批新增共享 Runtime 发布指针自动刷新控制器，不依赖框架 UI 或真实现场数据。支持手动启动/停止、外部可见性驱动、串行定时刷新、离线退避、读取超时、撤权和校验异常默认停止轮询、发布代次单调保护、版本切换与合法回滚读取。隐藏时清空正文但保持同会话发布水位；登出/切工程停止时清除全部状态。所有 Tag 质量仍 `UNAVAILABLE`，生产发布门禁保持 fail-closed。
 
 **D2b 验收状态：候选源码及测试已提交到分支，未在维护者 Windows 环境执行 Vite+、单元测试、构建或完整 ready。** 当前工作不包括 React/Vue UI、真实 TLS/OIDC 双框架浏览器验证、工业网关或设备写入。待独立 Draft PR 与维护者实测，不得未经批准合并。
+
+## 2026-11-20 · PR #104 已合并，D3/D4 双框架已发布运行候选开发中
+
+维护者明确同意合并 PR #104，GitHub Squash 合并提交 `95c1c0e4b3423ba9acfcf425f3b82de304f04633` 且与 main HEAD 一致。维护者 Windows 的 D2b 日志：`vp check` 366 文件 / 218 受检零警告，`test:unit` 56/56 文件 / 677/677 用例，新增刷新专项 15/15，服务端 HTTP E2E 62/62，文档 89 份，React/Vue/NestJS 构建成功，完整 `pnpm run ready` 退出码 0。本次终端日志未附本地 SHA，不宣称严格绑定。
+
+D3/D4 候选从 D2b 合并后的 main 建立独立功能分支，同步向两端增加明确标识的“已发布运行”只读入口，原 Demo Runtime 和 Studio 入口不变。双端均复用同一个 `release:read` API Client 与 PublishedRuntimeRefresher 逻辑；静态 SVG 传入空 Tag 列表、显示不可用质量和缺失值占位说明。用户显式选择工程 ID，不使用 project:read 列表权限。页面隐藏、卸载及登出后的状态保护仍需真实浏览器专项覆盖。
+
+**当前候选源码/文档尚未在维护者 Windows 上通过 `vp check`、`test:unit`、`docs:check` 或完整 `ready`。** 生产发布安全门禁继续拒绝真实发布；回滚与真实现场 Tag/工业设备写入未开放。D3/D4 后续还需真实 Keycloak/HTTPS 双端浏览器权限、刷新、撤权和故障恢复专项验收。
