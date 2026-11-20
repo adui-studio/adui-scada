@@ -1037,3 +1037,11 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `packages/runtime/src/runtime.css`：共享只读工程 ID 输入、按钮和发布状态样式，无新样式依赖。
 
 无 Prisma Schema、发布写事务、生产安全门禁或外部依赖变更。
+
+## 2026-11-20 · 第三十五批 D5a 真实 OIDC 发布读取浏览器专项候选
+
+- scripts/test-oidc-published-runtime.mjs：真实 Keycloak 手动登录、双 HTTPS Origin 主体一致、匿名 401、独立 release:read、权限不继承、真实 React/Vue 已发布运行 UI 与同源只读请求审计；只读、不直连数据库。
+- scripts/test-oidc-published-runtime.cases.mjs：参数/本机 Lab/双工程 ID 校验、发布响应边界、401/404/no-store、跨工程与篡改数据、CDP 自包含和 UI 请求只读离线用例。
+- 根 package.json：新增 test:release:runtime:oidc:config（加入 ready）与 test:release:runtime:oidc:browser（人工独立执行，不加入 ready）。
+
+本批不修改 React/Vue 页面、NestJS、Prisma、数据库、OIDC 配置或设备接口。
