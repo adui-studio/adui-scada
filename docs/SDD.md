@@ -1169,3 +1169,13 @@ D 阶段 Runtime 读取权限策略已获维护者批准：新增独立工程 AC
 - 已发布快照必须通过共享 Core `readProjectSnapshot` 的摘要与 Schema 校验；服务端再核对版本行元数据、发布状态和最后事件的租户/工程/代次/目标修订/摘要。异常不返回快照正文。
 
 仓储读取事务按工程身份、会话/主体、ACL、发布状态、不可变版本、最后发布事件顺序获取共享锁。工程锁 SQL 只读取 `project_id`，不读取 `head_revision`；状态为未发布时不查询版本快照。该实现只提供发布快照读取基础设施，不负责 SSE、实时 Tag 质量、运行时故障恢复或 Vue/React UI。
+
+## 2026-11-20 · 第三十五批 D2a 共享正式发布只读 Runtime 候选
+
+D1 已通过维护者 Windows 完整 `ready` 与隔离 PostgreSQL 57/57 项测试，并在 PR #102 Squash 合并至 `main`（`7056a4bd1347cdbc9741e2aebdfa96e19bd347bc`）。D2a 候选只新增共享发布响应校验、浏览器同源只读 API Client 和与 UI 无关的 Runtime 发布态会话，不修改发布/回滚写事务或生产安全门禁。
+
+- Core `parsePublishedRelease(input, requestedProjectId)`：严格拒绝未知状态、额外编辑字段和不合法元数据；`UNRELEASED` 仅允许 `status/projectId/releaseGeneration=0`；`RELEASED` 校验项目 ID、修订、代次、事件 UUID、`PUBLISH/ROLLBACK`、UTC 时间、SHA-256 与 `readProjectSnapshot` 返回的不可变快照一致。
+- API Client `readCurrentRelease(projectId, signal?)`：仅 GET 固定同源 `/api/v1/projects/:projectId/releases/current`，使用已有 BFF Cookie、`credentials/mode: same-origin`、`redirect: error`、`cache: no-store`、`referrerPolicy: no-referrer`；服务端成功响应必须标记 `Cache-Control: no-store`；限制响应容量为快照上限加发布元数据空间。GET 不携带 CSRF、Bearer 或前端自报权限。
+- Runtime `PublishedRuntime`：通过注入只读 `PublishedReleaseReader` 使用同一 API 契约；状态为 `idle/loading/unreleased/verified/offline/denied/error`。只有通过完整性校验的不可变快照才能进入 `verified`。所有状态的 `tagQuality` 固定为 `UNAVAILABLE`，`verified` 不代表现场 Tag `GOOD`。
+- 同一会话中禁止发布代次回退、同代次修改修订/摘要/事件 ID 和已发布退回未发布；更高代次的历史已发布版本回滚允许较低修订。切换工程、取消运行或迟到的旧请求不得污染最新状态。网络中断明确 `offline` 且清空画面，不回退到缓存或草稿；401/403/404 清空快照与授权水位；篡改、Schema 不兼容及其它错误均 `error` 且停止显示。
+- 本阶段**尚未**接入 Vue/React Runtime、自动轮询发布指针、SSE/工业 Tag 来源、实时质量恢复、真实 TLS/OIDC 双端运行验证或生产发布。以上接口与状态均为候选，单元测试和 Windows 质量链待实测。
