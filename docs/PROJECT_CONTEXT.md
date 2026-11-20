@@ -1874,3 +1874,11 @@ D2b 独立候选分支 `feat/b35-d2b-release-pointer-refresh` 从上述 main 建
 D3/D4 候选从 D2b 合并后的 main 建立独立功能分支，同步向两端增加明确标识的“已发布运行”只读入口，原 Demo Runtime 和 Studio 入口不变。双端均复用同一个 `release:read` API Client 与 PublishedRuntimeRefresher 逻辑；静态 SVG 传入空 Tag 列表、显示不可用质量和缺失值占位说明。用户显式选择工程 ID，不使用 project:read 列表权限。页面隐藏、卸载及登出后的状态保护仍需真实浏览器专项覆盖。
 
 **当前候选源码/文档尚未在维护者 Windows 上通过 `vp check`、`test:unit`、`docs:check` 或完整 `ready`。** 生产发布安全门禁继续拒绝真实发布；回滚与真实现场 Tag/工业设备写入未开放。D3/D4 后续还需真实 Keycloak/HTTPS 双端浏览器权限、刷新、撤权和故障恢复专项验收。
+
+## 2026-11-20 · PR #105 已合并，第三十五批 D5a 真实发布只读拒绝专项候选
+
+维护者确认并同意合并 PR #105；GitHub 验证当前 PR 为 Merged，合并 SHA `637ebbce3191c998b3264733645da947a3739e9f`，main HEAD 相同。此前 Windows D3/D4 完整离线质量链：`vp check` 370/222 零告警、单测 680/680、HTTP E2E 62/62、`docs:check` 89 份、React/Vue/NestJS 构建完成、`pnpm run ready` 退出码 0；原日志不含 git SHA。
+
+D5a 候选分支 `test/b35-d5a-published-runtime-oidc-readonly` 新增真实 HTTPS 双框架已发布运行只读拒绝测试脚本及 10 项安全门禁 cases；复用现有 Keycloak 同一主体验证、隔离 CDP 浏览器、同源 fetch 边界。自动 cases 加入 `ready`，真实浏览器脚本需维护者在本机可信 OIDC Lab 手动登录后单独执行。测试随机不存在工程，只断言两个框架无权限时 404 安全拒绝和零快照/零写入。
+
+**尚未实测 D5a；不允许提前合并。** 本阶段没有生产正式发布、真实 `release:read` 授权、动态 Tag、PLC/DCS 写入，也不能证明已授权发布/撤权/断网等后续 D5b 场景通过。
