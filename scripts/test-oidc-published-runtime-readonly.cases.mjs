@@ -248,11 +248,7 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
     );
     assert.equal(calls, 1);
     await assert.rejects(
-      waitForState(
-        async () => null,
-        "正式发布运行只读专项 React BFF 会话未通过验证",
-        1,
-      ),
+      waitForState(async () => null, "正式发布运行只读专项 React BFF 会话未通过验证", 1),
       /React BFF 会话未通过验证/,
     );
   });
@@ -268,9 +264,7 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
       "正式发布运行只读专项发布读取没有受控拒绝",
     );
     assert.equal(
-      describePublishedReadonlyFailure(
-        new Error("正式发布运行只读专项 React BFF 会话未通过验证"),
-      ),
+      describePublishedReadonlyFailure(new Error("正式发布运行只读专项 React BFF 会话未通过验证")),
       "正式发布运行只读专项 React BFF 会话未通过验证",
     );
   });
