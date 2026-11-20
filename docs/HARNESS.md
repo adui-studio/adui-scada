@@ -3533,6 +3533,6 @@ D5a 真实浏览器专项使用 pnpm run test:release:runtime:oidc:browser，离
     Remove-Item Env:SCADA_OIDC_RELEASE_READ_PROJECT_ID -ErrorAction SilentlyContinue
     Remove-Item Env:SCADA_OIDC_RELEASE_DENIED_PROJECT_ID -ErrorAction SilentlyContinue
 
-脚本仅使用现有真实 OIDC/BFF Cookie 和同源 GET；先验证匿名 401、授权工程发布读取 200/no-store、同工程详情/历史版本 404、对照工程详情 200/发布读取 404，再点击 React/Vue 页面执行读取/拒绝/恢复。所有工程 API 必须 GET、same-origin、no-store、redirect:error、无 body/Authorization/CSRF。脚本无参数、无数据库连接、无写入模式；不创建工程、不授予/撤销 ACL、不执行发布或回滚。工程 ID 仅在当前 PowerShell 进程环境中存在，不得写入根 .env、Git、终端记录或聊天。真实 OIDC 密码由维护者在独立临时浏览器手动输入，不进入终端；Profile 结束自动关闭清理。
+脚本仅使用现有真实 OIDC/BFF Cookie 和同源 GET；先验证匿名 401、授权工程发布读取 200/no-store、同工程详情/历史版本 404、对照工程详情 200/发布读取 404，再点击 React/Vue 页面执行读取/拒绝/恢复。所有工程 API 必须 GET、same-origin、no-store、redirect:error、无 body/Authorization/CSRF。脚本无参数、无数据库直连、无工程写入模式；不创建工程、不授予/撤销 ACL、不执行发布或回滚。正常 OIDC 登录仍按现有 BFF 流程持久化认证事务与会话。工程 ID 仅在当前 PowerShell 进程环境中存在，不得写入根 .env、Git、终端记录或聊天。真实 OIDC 密码由维护者在独立临时浏览器手动输入，不进入终端；Profile 结束自动关闭清理。
 
 没有正式发布指针时 UNRELEASED 为合法状态；有合法指针时页面验证静态快照，Tag 仍为 UNAVAILABLE。此专项通过不代表生产发布、现场 Tag、工业网关或 PLC/DCS 设备写入已获授权。
