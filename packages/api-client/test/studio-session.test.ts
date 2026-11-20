@@ -32,6 +32,11 @@ function mockClient() {
     readVersion: vi.fn<ScadaApiClient["readVersion"]>(async (_projectId, revision) =>
       createProjectSnapshot(waterTreatmentDemoDocument, { revision, createdAt }),
     ),
+    readCurrentRelease: vi.fn<ScadaApiClient["readCurrentRelease"]>(async () => ({
+      status: "UNRELEASED",
+      projectId: waterTreatmentDemoDocument.projectId,
+      releaseGeneration: 0,
+    })),
     preflightRelease: vi.fn<ScadaApiClient["preflightRelease"]>(async (projectId, revision) => ({
       projectId,
       revision,
