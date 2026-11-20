@@ -303,7 +303,7 @@ export async function openPublishedRuntimeUiInPage(
       throw new TypeError("正式发布 OIDC 浏览器专项页面请求地址无效");
     }
     const url = new runtime.URL(inputUrl, runtime.location.href);
-    if (url.origin === expectedOrigin && url.pathname.startsWith("/api/v1/projects/")) {
+    if (url.origin === expectedOrigin && url.pathname.startsWith("/api/v1/")) {
       const method = (init.method ?? (input && input.method) ?? "GET").toUpperCase();
       const headers = new runtime.Headers(init.headers ?? (input && input.headers));
       const hasBody = Object.prototype.hasOwnProperty.call(init, "body") && init.body !== undefined;
