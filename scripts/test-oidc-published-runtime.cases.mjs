@@ -96,7 +96,7 @@ function fixture(options = {}) {
     calls.push({ path, request });
     if (path === "/api/v1/projects/" + allowedProjectId + "/releases/current") {
       if (request.credentials === "omit") {
-        return makeResponse(path, options.anonymousStatus ?? 401, { message: "未认证" });
+        return makeResponse(path, options.anonymousStatus ?? 401, { message: "未认证" }, { cacheControl: options.anonymousCache ?? "no-store" });
       }
       return makeResponse(path, options.allowedStatus ?? 200, allowed, {
         cacheControl: options.allowedCache ?? "no-store",
@@ -104,16 +104,16 @@ function fixture(options = {}) {
       });
     }
     if (path === "/api/v1/projects/" + allowedProjectId) {
-      return makeResponse(path, options.allowedProjectStatus ?? 404, { message: "拒绝" });
+      return makeResponse(path, options.allowedProjectStatus ?? 404, { message: "拒绝" }, { cacheControl: options.allowedProjectCache ?? "no-store" });
     }
     if (path === "/api/v1/projects/" + allowedProjectId + "/versions?limit=1") {
-      return makeResponse(path, options.allowedVersionStatus ?? 404, { message: "拒绝" });
+      return makeResponse(path, options.allowedVersionStatus ?? 404, { message: "拒绝" }, { cacheControl: options.allowedVersionCache ?? "no-store" });
     }
     if (path === "/api/v1/projects/" + deniedProjectId) {
-      return makeResponse(path, options.deniedProjectStatus ?? 200, { projectId: deniedProjectId });
+      return makeResponse(path, options.deniedProjectStatus ?? 200, { projectId: deniedProjectId }, { cacheControl: options.deniedProjectCache ?? "no-store" });
     }
     if (path === "/api/v1/projects/" + deniedProjectId + "/releases/current") {
-      return makeResponse(path, options.deniedReleaseStatus ?? 404, { message: "拒绝" });
+      return makeResponse(path, options.deniedReleaseStatus ?? 404, { message: "拒绝" }, { cacheControl: options.deniedReleaseCache ?? "no-store" });
     }
     throw new Error("测试夹具收到未登记的只读请求");
   };
@@ -193,6 +193,17 @@ void describe("真实 Keycloak 双 HTTPS Origin 发布读取只读安全门禁",
     assert.equal(calls[3].path, "/api/v1/projects/" + allowedProjectId + "/versions?limit=1");
     assert.equal(calls[4].path, "/api/v1/projects/" + deniedProjectId);
     assert.equal(calls[5].path, "/api/v1/projects/" + deniedProjectId + "/releases/current");
+  });
+
+  void it("Guard 在 401/404 阶段提前拒绝时不依赖成功响应的 no-store 断言", async () => {
+    const { runtime } = fixture({
+      anonymousCache: "",
+      allowedProjectCache: "",
+      allowedVersionCache: "",
+      deniedReleaseCache: "",
+    });
+    const result = await readPublishedRuntimeInPage(origin, allowedProjectId, deniedProjectId, runtime);
+    assert.equal(result.status, "UNRELEASED");
   });
 
   void it("已发布响应校验快照指针和事件元数据，仅向 Node 返回脱敏摘要", async () => {
