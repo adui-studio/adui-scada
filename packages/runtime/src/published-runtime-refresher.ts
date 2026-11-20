@@ -189,7 +189,7 @@ export class PublishedRuntimeRefresher {
       this.epoch++;
       this.pending = null;
       this.offlineFailures = 0;
-      this.runtime.stop();
+      this.runtime.suspend();
       return;
     }
     await this.refresh();
