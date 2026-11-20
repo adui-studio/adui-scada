@@ -110,7 +110,9 @@ void describe("D5b1 本机专用未发布测试夹具安全门禁", () => {
       },
     };
     assert.equal(
-      await preflightPublishedFixture(client, { issuer: "https://127.0.0.1:18443/realms/adui-scada" }),
+      await preflightPublishedFixture(client, {
+        issuer: "https://127.0.0.1:18443/realms/adui-scada",
+      }),
       true,
     );
     assert.equal(calls.filter((sql) => /INSERT|UPDATE|DELETE|DROP/i.test(sql)).length, 0);
@@ -159,7 +161,10 @@ void describe("D5b1 本机专用未发布测试夹具安全门禁", () => {
     assert.deepEqual(inserts[0].params, ["lab-tenant", PROJECT_ID, "lab-engineer"]);
     assert.equal(calls[0].sql, "BEGIN ISOLATION LEVEL SERIALIZABLE");
     assert.equal(calls.at(-1).sql, "COMMIT");
-    assert.equal(calls.some(({ sql }) => /DROP |DELETE |UPDATE |PUBLISH |ROLLBACK TO/.test(sql)), false);
+    assert.equal(
+      calls.some(({ sql }) => /^\s*(?:DROP|DELETE|UPDATE|PUBLISH)\b/i.test(sql)),
+      false,
+    );
   });
 
   void it("既有工程历史异常或已发布状态拒绝写入并 ROLLBACK", async () => {

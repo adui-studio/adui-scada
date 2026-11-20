@@ -194,7 +194,8 @@ export async function grantPublishedFixtureRead(client, projectId, principal) {
       params,
     );
     const states = await client.query(
-      "SELECT release_generation, released_revision, released_content_hash, last_release_event_id " +
+      "SELECT release_generation, released_revision, released_content_hash, " +
+        "last_release_event_id " +
         "FROM public.scada_project_release_state " +
         "WHERE tenant_id = $1 AND project_id = $2",
       params,
