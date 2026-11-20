@@ -1059,7 +1059,6 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `scripts/test-oidc-published-runtime-offline.cases.mjs`：9 项离线故障输入边界、注入时序、一次性失败、跨 Origin 与写入拒绝、真实控件、清空状态、请求审计和脱敏门禁。
 - `package.json`：`test:published:oidc:offline:config` 加入 `ready`；`test:published:oidc:offline:browser` 保持需要维护者手工登录的独立真实浏览器专项。
 
-
 ## 2026-11-20 · D5b3 单次模拟 HTTP 404 访问拒绝与恢复
 
 - `scripts/test-oidc-published-runtime-denied.mjs`：本机双框架可信 HTTPS OIDC 浏览器只读专项；真实 200 UNRELEASED → 只对精确当前工程发布 GET 本地构造一次 HTTP 404 → 状态 denied/无快照 → 真实 200 恢复 → 停止读取；绝不进行数据库 ACL 删除或发布写入。

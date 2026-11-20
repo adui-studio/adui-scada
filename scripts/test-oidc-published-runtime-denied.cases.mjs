@@ -171,7 +171,10 @@ void describe("D5b3 双框架真实授权发布 HTTP 404 拒绝模拟与恢复�
       { snapshot: true },
       { quality: false },
     ]) {
-      assert.throws(() => requirePublishedDenialState({ ...denialPage(), ...diff }), /受控拒绝终态/);
+      assert.throws(
+        () => requirePublishedDenialState({ ...denialPage(), ...diff }),
+        /受控拒绝终态/,
+      );
     }
   });
 
@@ -200,8 +203,7 @@ void describe("D5b3 双框架真实授权发布 HTTP 404 拒绝模拟与恢复�
       );
     }
     assert.throws(
-      () =>
-        requirePublishedDenialReadGuards(base, { injected: 0, armed: true }, PROJECT_ID, false),
+      () => requirePublishedDenialReadGuards(base, { injected: 0, armed: true }, PROJECT_ID, false),
       /额外请求或非只读写入/,
     );
   });

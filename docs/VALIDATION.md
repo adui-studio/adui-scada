@@ -2473,7 +2473,6 @@ E-073 候选改为同时识别成功/拒绝/离线/错误终态，对单一 GET 
 
 在已由维护者成功完成的 PR #107 / D5b1 真实授权 `UNRELEASED` 基础上，新增 9 项本地 Node 故障模拟安全用例和 `test:published:oidc:offline:browser`。先通过真实 Keycloak/BFF、React/Vue HTTPS 同源读取已授权工程，后**仅在浏览器 JS Fetch 层**模拟一次精确 GET 网络异常，检查离线态清空、Tag 质量 `UNAVAILABLE`、真实刷新恢复与停止读取，所有工程 API 受先前只读门禁保护。绝不在 DB 写入、删除 ACL、变更发布指针或启用设备输出。本批尚未运行 Windows Node/浏览器测试、`vp check` 和完整 `ready`，不要将模拟故障表述为真实 TCP 断网。
 
-
 ## 2026-11-20 · D5b3 只读模拟 HTTP 404 安全拒绝专项（待 Windows 真实验收）
 
 前置证据：维护者 D5b2 Windows `test:published:oidc:offline:config` 9/9、`vp check` 378/230 零警告、`docs:check` 89 份、`ready` 680/680 单测和 62/62 E2E 且最终退出码 0；真实 React/Vue HTTPS Keycloak 浏览器首次读取→单次模拟 Fetch 网络失败→恢复与停止退出码 0；PR #108 已 Squash 合并至 `main`，提交 `0b073e574daf93c9b521c53bf56a8ebdc125a525`。

@@ -3605,7 +3605,6 @@ Write-Host "D5b2 真实离线恢复退出码：$LASTEXITCODE"
 
 本小批不修改运行时业务代码；已发布 `RELEASED`、ACL 真撤销及真实网络 TCP 故障仍未由此验收，生产发布写入门禁保持关闭。
 
-
 ## 2026-11-20 · D5b3 双框架发布读取模拟 HTTP 404 拒绝与恢复（Draft 待实测）
 
 维护者已在 PR #108 的 HEAD 完成 React/Vue 真实 Keycloak/HTTPS D5b2 单次 Fetch 网络失败→离线清理→真实恢复专项（退出码 0），完整 `pnpm run ready` 退出码 0、680/680 单测、62/62 服务端 E2E；PR #108 已 Squash 合并（`0b073e574daf93c9b521c53bf56a8ebdc125a525`）。
