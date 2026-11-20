@@ -2386,3 +2386,33 @@ Write-Host "完整质量链退出码：$LASTEXITCODE"
 ```
 
 如果本地已有分支则正常 switch/pull；提交前处理工作区未保存修改。本批不需要 Prisma 迁移。**真实双浏览器 Keycloak/HTTPS、release:read 独立授权、无发布/已发布/撤权和可见性等 E2E 尚未执行**，不可把静态检查和 Demo 浏览器测试视为正式发布 Runtime 工业安全验收。
+
+## 2026-11-20 · 第三十五批 D5a 真实 OIDC/HTTPS 已发布运行只读拒绝候选（待验收）
+
+基线：PR #105 已处于 Merged，合并 SHA `637ebbce3191c998b3264733645da947a3739e9f`，与 main HEAD 一致。维护者此前日志确认 PR #105 单测 680/680、NestJS HTTP E2E 62/62、React/Vue/Server 构建通过，`vp check` 370/222、`docs:check` 89 份及完整 `ready` 退出码 0，但未提供本地 SHA；不作为 D5a 的验收证据。
+
+D5a 独立候选包含只读浏览器安全门禁、10 项 Node cases 和真实双 Origin OIDC 浏览器运行程序。候选源文件**尚未在 Windows 上实际运行**，不能声称类型/Lint、自动测试、真实 IdP、TLS 或浏览器专项通过。
+
+候选 Windows 验收顺序：
+```powershell
+git status --short
+git fetch origin
+git switch --track origin/test/b35-d5a-published-runtime-oidc-readonly
+git rev-parse HEAD
+pnpm run test:published:oidc:config
+Write-Host "D5a 门禁单测退出码：$LASTEXITCODE"
+vp check
+Write-Host "vp check 退出码：$LASTEXITCODE"
+pnpm run docs:check
+Write-Host "docs:check 退出码：$LASTEXITCODE"
+pnpm run ready
+Write-Host "ready 退出码：$LASTEXITCODE"
+```
+真实浏览器专项仅在先按 `docs/HARNESS.md` 核对本机可信 Keycloak/HTTPS 双 Origin、预绑定身份、证书 CA 和当前数据库目标**之后**，另行显式运行：
+```powershell
+pnpm run test:published:oidc:browser
+Write-Host "真实发布只读浏览器专项退出码：$LASTEXITCODE"
+```
+如本地分支已存在，正常 `git switch` 并 `git pull --ff-only`，先保护工作区未提交修改。
+
+**边界**：D5a 只验证随机不存在工程的拒绝，绝不创建工程、发布记录、数据库授权或写入。真实已授权 `release:read`、已发布快照、ACL 撤销、页面隐藏/恢复与断网专项另行实现，禁止将 D5a 自动化当作全部 D5 验收。生产 `ProjectReleaseSafetyGate` 继续 fail-closed，冻结开发库不得被执行迁移操作。
