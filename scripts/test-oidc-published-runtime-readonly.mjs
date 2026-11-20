@@ -45,6 +45,7 @@ export function installPublishedReadGuardInPage(origin, runtime = globalThis) {
   const original = runtime.fetch.bind(runtime);
   const state = {
     paths: [],
+    statuses: [],
     blocked: 0,
   };
   runtime.__aduiPublishedReadGuard = state;
@@ -71,7 +72,10 @@ export function installPublishedReadGuardInPage(origin, runtime = globalThis) {
       throw new Error("正式发布运行拒绝非只读工程请求");
     }
     state.paths.push(target.pathname + target.search);
-    return original(input, init);
+    return Promise.resolve(original(input, init)).then((response) => {
+      state.statuses.push(response.status);
+      return response;
+    });
   };
   return true;
 }
@@ -80,7 +84,7 @@ export function installPublishedReadGuardInPage(origin, runtime = globalThis) {
 export function publishedReadGuardStateInPage(runtime = globalThis) {
   const state = runtime.__aduiPublishedReadGuard;
   if (!state) return null;
-  return { paths: state.paths.slice(), blocked: state.blocked };
+  return { paths: state.paths.slice(), statuses: state.statuses.slice(), blocked: state.blocked };
 }
 
 /** 通过真实导航与按钮激活页面，不调用 React/Vue 内部方法。 */
@@ -200,6 +204,7 @@ async function run() {
       assert.deepEqual(guard.paths, [
         "/api/v1/projects/" + missingProject + "/releases/current",
       ], "真实页面只能向目标发布指针发起一个 GET");
+      assert.deepEqual(guard.statuses, [404], "真实服务端必须返回不可区分的 404 拒绝");
       process.stdout.write(name + "：真实会话、发布入口、默认零请求、无授权拒绝与零工程写入通过。\n");
     }
     process.stdout.write(
