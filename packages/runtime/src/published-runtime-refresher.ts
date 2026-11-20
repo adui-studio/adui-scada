@@ -11,12 +11,15 @@ export interface PublishedRefreshOptions {
   readonly intervalMs?: number;
   /** 离线重试最大间隔，不能小于正常间隔，默认 60 秒。 */
   readonly maxOfflineIntervalMs?: number;
+  /** 单次请求超时上限，默认 10 秒；超时后立即清空快照并启动离线退避。 */
+  readonly requestTimeoutMs?: number;
   /** 测试可注入受控时钟；正式运行使用单次 setTimeout。 */
   readonly schedule?: PublishedRefreshSchedule;
 }
 
 const DEFAULT_REFRESH_MS = 15_000;
 const DEFAULT_MAX_OFFLINE_MS = 60_000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 const MIN_REFRESH_MS = 1_000;
 const MAX_REFRESH_MS = 300_000;
 
@@ -44,6 +47,7 @@ export class PublishedRuntimeRefresher {
   private readonly runtime: PublishedRuntime;
   private readonly intervalMs: number;
   private readonly maxOfflineIntervalMs: number;
+  private readonly requestTimeoutMs: number;
   private readonly schedule: PublishedRefreshSchedule;
   private projectId: string | null = null;
   private active = false;
@@ -52,24 +56,33 @@ export class PublishedRuntimeRefresher {
   private offlineFailures = 0;
   private pending: Promise<void> | null = null;
   private cancelScheduled: (() => void) | null = null;
+  private cancelWatchdog: (() => void) | null = null;
 
   constructor(runtime: PublishedRuntime, options: PublishedRefreshOptions = {}) {
     const intervalMs = options.intervalMs ?? DEFAULT_REFRESH_MS;
     const maxOfflineIntervalMs = options.maxOfflineIntervalMs ?? DEFAULT_MAX_OFFLINE_MS;
+    const requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     requireInterval(intervalMs, "正式发布刷新间隔");
     requireInterval(maxOfflineIntervalMs, "正式发布离线重试上限");
+    requireInterval(requestTimeoutMs, "正式发布单次请求超时");
     if (maxOfflineIntervalMs < intervalMs) {
       throw new TypeError("正式发布离线重试上限不得小于刷新间隔");
     }
     this.runtime = runtime;
     this.intervalMs = intervalMs;
     this.maxOfflineIntervalMs = maxOfflineIntervalMs;
+    this.requestTimeoutMs = requestTimeoutMs;
     this.schedule = options.schedule ?? defaultSchedule;
   }
 
   private clearSchedule(): void {
     this.cancelScheduled?.();
     this.cancelScheduled = null;
+  }
+
+  private clearWatchdog(): void {
+    this.cancelWatchdog?.();
+    this.cancelWatchdog = null;
   }
 
   private scheduleNext(): void {
@@ -137,10 +150,26 @@ export class PublishedRuntimeRefresher {
     const expectedEpoch = this.epoch;
     const projectId = this.projectId;
     const task = (async () => {
+      const timeout = new Promise<void>((resolve) => {
+        this.cancelWatchdog = this.schedule(() => {
+          if (expectedEpoch !== this.epoch) return;
+          this.cancelWatchdog = null;
+          try {
+            this.runtime.expire();
+          } catch {
+            // 未预期的监听器异常也不得让超时回调持有旧发布快照。
+            this.stop();
+          } finally {
+            resolve();
+          }
+        }, this.requestTimeoutMs);
+      });
       try {
-        await this.runtime.load(projectId);
+        // 网络底层忽略 AbortSignal 时也必须按超时上限撤下运行画面。
+        await Promise.race([this.runtime.load(projectId), timeout]);
       } finally {
         if (expectedEpoch === this.epoch) {
+          this.clearWatchdog();
           this.pending = null;
           this.scheduleNext();
         }
@@ -156,6 +185,7 @@ export class PublishedRuntimeRefresher {
     this.visible = visible;
     this.clearSchedule();
     if (!visible) {
+      this.clearWatchdog();
       this.epoch++;
       this.pending = null;
       this.offlineFailures = 0;
@@ -169,6 +199,7 @@ export class PublishedRuntimeRefresher {
   stop(): void {
     this.epoch++;
     this.clearSchedule();
+    this.clearWatchdog();
     this.active = false;
     this.visible = false;
     this.projectId = null;
