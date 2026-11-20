@@ -2386,3 +2386,59 @@ Write-Host "完整质量链退出码：$LASTEXITCODE"
 ```
 
 如果本地已有分支则正常 switch/pull；提交前处理工作区未保存修改。本批不需要 Prisma 迁移。**真实双浏览器 Keycloak/HTTPS、release:read 独立授权、无发布/已发布/撤权和可见性等 E2E 尚未执行**，不可把静态检查和 Demo 浏览器测试视为正式发布 Runtime 工业安全验收。
+
+## 2026-11-20 · 第三十五批 D5a 真实 OIDC/HTTPS 已发布运行只读拒绝候选（待验收）
+
+基线：PR #105 已处于 Merged，合并 SHA `637ebbce3191c998b3264733645da947a3739e9f`，与 main HEAD 一致。维护者此前日志确认 PR #105 单测 680/680、NestJS HTTP E2E 62/62、React/Vue/Server 构建通过，`vp check` 370/222、`docs:check` 89 份及完整 `ready` 退出码 0，但未提供本地 SHA；不作为 D5a 的验收证据。
+
+D5a 独立候选包含只读浏览器安全门禁、10 项 Node cases 和真实双 Origin OIDC 浏览器运行程序。候选源文件**尚未在 Windows 上实际运行**，不能声称类型/Lint、自动测试、真实 IdP、TLS 或浏览器专项通过。
+
+候选 Windows 验收顺序：
+
+```powershell
+git status --short
+git fetch origin
+git switch --track origin/test/b35-d5a-published-runtime-oidc-readonly
+git rev-parse HEAD
+pnpm run test:published:oidc:config
+Write-Host "D5a 门禁单测退出码：$LASTEXITCODE"
+vp check
+Write-Host "vp check 退出码：$LASTEXITCODE"
+pnpm run docs:check
+Write-Host "docs:check 退出码：$LASTEXITCODE"
+pnpm run ready
+Write-Host "ready 退出码：$LASTEXITCODE"
+```
+
+真实浏览器专项仅在先按 `docs/HARNESS.md` 核对本机可信 Keycloak/HTTPS 双 Origin、预绑定身份、证书 CA 和当前数据库目标**之后**，另行显式运行：
+
+```powershell
+pnpm run test:published:oidc:browser
+Write-Host "真实发布只读浏览器专项退出码：$LASTEXITCODE"
+```
+
+如本地分支已存在，正常 `git switch` 并 `git pull --ff-only`，先保护工作区未提交修改。
+
+**边界**：D5a 只验证随机不存在工程的拒绝，绝不创建工程、发布记录、数据库授权或写入。真实已授权 `release:read`、已发布快照、ACL 撤销、页面隐藏/恢复与断网专项另行实现，禁止将 D5a 自动化当作全部 D5 验收。生产 `ProjectReleaseSafetyGate` 继续 fail-closed，冻结开发库不得被执行迁移操作。
+
+## 2026-11-20 · 第三十五批 D5a 浏览器原生 setter Lint 修复（PR #106，待 Windows 复验）
+
+维护者在 D5a 候选 `test/b35-d5a-published-runtime-oidc-readonly` 上运行 `vp check --fix`，实际得到 224 个文件、**0 错误 / 1 条 `typescript(unbound-method)` 警告**，位置为发布读取脚本 `HTMLInputElement.prototype.value` setter 解引用。该次检查不能记录为零警告通过。
+
+修复仅涉及 D5a 页面输入注入：改用 `Reflect.set(inputPrototype, "value", projectId, input)` 通过原生属性 setter 绑定输入框接收者，保留安全 ID 校验、缺失 setter 拒绝、冒泡 `input` 事件和真正的 React/Vue 页面交互。在原 10 项 Node 安全门禁中扩充受控输入 setter/事件/VM 独立作用域回归；不放宽真实 404、同源只读请求、Token/Cookie 脱敏或服务端安全门禁。
+
+**已执行的仅是协作环境 Node.js 22 等价函数隔离行为验证：5/5 检查通过。** 该环境不能解析 github.com，未检出完整仓库，所以没有运行真实 `test:published:oidc:config`、`vp check`、`docs:check`、`ready` 或真实 Keycloak/HTTPS 浏览器专项；待 Windows 维护者按上文 D5a 验收顺序在最新 HEAD 复验，不得用该局部验证冒充整仓通过。PR 保持 Draft、不合并。
+
+## 2026-11-20 · D5a Windows 离线质量通过，真实登录后等待作用域错误（PR #106，待复验）
+
+维护者在 Windows 实际运行 D5a 的 `pnpm run test:published:oidc:config` **10/10 通过，退出码 0**；`vp check` **372 个格式文件 / 224 个受检文件零警告、错误，退出码 0**；`pnpm run docs:check` **89 份通过，退出码 0**；完整 `pnpm run ready` **680/680 单元测试、62/62 服务端 E2E、双框架和服务端构建完成，退出码 0**。该日志未记录 `git rev-parse HEAD`，不能将结果绑定到最新远程 SHA。上一节 E-070 的原生 setter Lint 故障已由 Windows 检查关闭。
+
+真实 `pnpm run test:published:oidc:browser` 在维护者人工 Keycloak 登录成功后输出“正式发布运行只读专项真实登录失败”，退出码 **1**。经仓库源码定位，该文本对应共享 `waitForLogin` 已返回后 React/Vue 循环中的错误等待：`waitForState` 引用了 `run()` 局部 `browser`，又重复执行 CDP evaluate，`ReferenceError` 被通用捕获吞没。不是已证实的 Keycloak/HTTPS/BFF 登录失败。
+
+E-071 候选仅修正等待回调执行、收紧导航异常重试，并将首次 OIDC 登录与 React/Vue BFF 后续会话检查的失败标签分离；Node 门禁增加 2 项，**修复后完整 Windows 质量链和真实浏览器专项均待重新验收**。不修改正式发布授权、ACL、迁移或生产安全门禁；PR 仍为 Draft，未合并。
+
+## 2026-11-20 · D5a Windows HEAD 绑定质量通过，真实浏览器失败阶段待定位（E-072）
+
+维护者提供本地 `git rev-parse HEAD` = `e12599a94c0c11f97e95a26ff978281812ee39ac`，`test:published:oidc:config` **12/12 通过**，`vp check` **372 文件格式正确 / 224 文件零警告错误**，`docs:check` **89 份通过**，单测 **680/680**、服务端 HTTP E2E **62/62**，完整 `ready` **退出码 0**；E-071 等待作用域修复已通过该 HEAD 的离线质量检查。随后独立 `test:published:oidc:browser` 在人工登录后输出统一脱敏错误，**退出码 1**。现有错误不能定位到具体页面步骤，也不能视为 Keycloak 登录失败或浏览器崩溃。浏览器在 `finally` 中按设计关闭隔离 Profile。
+
+E-072 候选增加固定阶段和安全错误类别诊断，登录后等待 React/Vue 实际导航 DOM 完成再进入页面，防止页面尚未渲染时误点。新增两项 Node 防回归，预计由 12 项增至 14 项。本批**尚未在 Windows 执行修复后的门禁、完整 `ready` 与真实浏览器专项**；不能将上一 HEAD 的通过日志当作新提交的执行证据。未修改 NestJS、Prisma、用户 ACL、正式发布指针、生产发布门禁或工业设备写入。
