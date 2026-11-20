@@ -238,7 +238,8 @@ void describe("D5b1 双框架真实发布授权只读专项", () => {
       statuses: [404],
     };
     assert.throws(
-      () => requirePublishedAuthorizedRead({ status: "denied" }, response, "UNRELEASED", unreleasedId),
+      () =>
+        requirePublishedAuthorizedRead({ status: "denied" }, response, "UNRELEASED", unreleasedId),
       /HTTP 404：预置工程不存在或未授予 release:read/,
     );
     for (const [http, expected] of [
