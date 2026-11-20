@@ -610,3 +610,9 @@ FR-008 仍为**部分实现**：生产安全门禁固定 fail-closed；D 阶段�
 D1 候选新增独立工程 ACL `release:read` 与 `GET /api/v1/projects/:projectId/releases/current`。权限默认拒绝，不继承工程读取、历史版本读取或发布写权限，不自动授予工程创建者。接口只读取独立发布指针与不可变快照，未发布返回 `UNRELEASED`，已发布返回发布元数据、最后事件和经过 SHA-256 校验的快照；不读取编辑 head，不读取本地草稿，不返回 Demo 数据。新增权限、仓储、HTTP、跨租户和快照篡改测试及权限 CHECK 增量迁移。
 
 **FR-008 仍为部分实现**：D1 当前为待验收候选；真实隔离 PostgreSQL 迁移与测试、Windows 检查和 HTTP E2E 尚未执行。共享 Runtime Core、SSE/Tag 实时质量、React/Vue Runtime、回滚事务、双人审批和生产安全评审仍未交付。生产 `ProjectReleaseSafetyGate` 保持 fail-closed，不包含任何 PLC/DCS 设备写入许可。
+
+## 2026-11-20 · FR-008 第三十五批 D2a 共享发布只读 Runtime 候选
+
+D1 服务端独立 `release:read`、发布指针 GET 和 Prisma 迁移已在 PR #102 合并，隔离 PostgreSQL 57/57、完整 Windows `ready`（639 项单测、62 项服务端 E2E）通过。D2a 候选新增共享发布响应契约、受保护的同源 API Client 读取和发布 Runtime 内存状态机；支持未发布、已验证、离线、拒绝和异常的分离语义，拒绝代次回退、编辑 head/草稿兜底和异常旧画面。
+
+**FR-008 仍为部分实现**：D2a 尚待 Windows 实测；React/Vue 对等运行接入、自动指针刷新、Tag 实时质量、回滚事务、真实 IdP/HTTPS 浏览器专项及生产安全评审未完成；生产发布门禁与 PLC/DCS 写入继续默认拒绝。

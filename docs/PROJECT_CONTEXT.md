@@ -1845,3 +1845,16 @@ E-068（数据库测试隔离 URL 指引遗漏）和 E-069（双 Cookie 测试�
 两段 NestJS 异常栈是随机测试数据被主动篡改时的预期 fail-closed 用例，测试套件并未失败。此前未限定数据库时发生的 P3009 目标是**冻结开发库** `adui_scada`，另一次未设置 `SCADA_TEST_DATABASE_URL` 的 `test:db` 在加载阶段中止且未运行测试；不得误记为 D1 代码缺陷，也不得操作该开发库的历史迁移。
 
 PR #102 当前为独立 Draft，已指派 `@adui-dev`，生产发布安全门禁继续 fail-closed；没有生产发布、回滚、设备写入或 Runtime React/Vue UI。用户实测日志不含 `git rev-parse HEAD`，因此不能声称 57 项测试严格绑定到远程格式整理后 HEAD `45eb631f452f10aeffa0dbe30a8485afc37864aa`。完成该 HEAD 的 `vp check`、`docs:check` 和完整 `pnpm run ready` 后，方可提请最终合并核验；尚未获得本 PR 合并授权。
+
+## 2026-11-20 · PR #102 D1 已合并；第三十五批 D2a 共享发布 Runtime 候选
+
+PR #102 在维护者明确授权后 Squash 合并至 `main`，合并提交 `7056a4bd1347cdbc9741e2aebdfa96e19bd347bc`；GitHub 验证合并提交与 `main` HEAD 一致，原 PR Assignee `@adui-dev`。维护者 Windows 隔离 PostgreSQL 已完成 7 条迁移、57/57 用例；另提供完整质量链：`vp check` 359/211 零告警、`docs:check` 89 份、单测 639/639、服务端 E2E 62/62、React/Vue/Server 构建完成、`pnpm run ready` 退出码 0。用户日志未附本地 SHA，按实际记录表述。
+
+D2a 独立候选分支 `feat/b35-d2-published-runtime-core` 从上述 main 合并提交建立。候选新增：
+
+- Core `parsePublishedRelease`：发布指针/事件/快照内容摘要一致性；禁止附加编辑字段。
+- API Client `readCurrentRelease`：固定同源只读 BFF GET、`no-store`、AbortSignal、大小限制及受控拒绝。
+- Runtime `PublishedRuntime`：未发布、已验证、离线、授权拒绝及异常独立状态；新旧请求隔离、撤权清空、代次回退拒绝；所有状态 Tag 质量固定 `UNAVAILABLE`。
+- Core/API Client/Runtime 三处增加自动化单测用例；不修改 React/Vue 页面、不改 NestJS、数据库、生产发布安全门禁或设备写入边界。
+
+D2a 代码与文档**尚未在 Windows 实测**；需 Draft PR 绑定 Assignee `@adui-dev`，等待全量质量检查，不合并。D2a 不是正式生产运行能力；共享 Runtime/UI 接入、真实 Tag、回滚、工业安全评审分批进行。

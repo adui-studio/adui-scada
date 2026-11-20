@@ -1,6 +1,11 @@
-import { parseServerProjectSaveRequest, readProjectSnapshot } from "@adui/scada-core";
+import {
+  parsePublishedRelease,
+  parseServerProjectSaveRequest,
+  readProjectSnapshot,
+} from "@adui/scada-core";
 import type {
   ProjectSnapshot,
+  PublishedRelease,
   ProjectReleasePreflightIssue,
   ProjectListQuery,
   ProjectVersionQuery,
@@ -15,6 +20,8 @@ const CSRF_COOKIE_NAME = "__Host-adui-scada-csrf";
 const CSRF_TOKEN_PATTERN = /^scada_csrf_[A-Za-z0-9_-]{43}$/;
 const MAX_COOKIE_LENGTH = 4096;
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+// 发布响应包含已校验的最大 2 MiB 快照和少量发布指针元数据。
+const MAX_RELEASE_RESPONSE_BYTES = MAX_RESPONSE_BYTES + 4096;
 
 export interface ScadaProjectSummary {
   readonly projectId: string;
@@ -94,6 +101,8 @@ export interface ScadaApiClient {
     query?: ProjectVersionQuery,
   ): Promise<readonly ProjectVersionSummary[]>;
   readVersion(projectId: string, revision: number): Promise<ProjectSnapshot>;
+  /** 只读取正式发布指针，独立权限 release:read；不接触编辑 head。 */
+  readCurrentRelease(projectId: string, signal?: AbortSignal): Promise<PublishedRelease>;
   preflightRelease(projectId: string, revision: number): Promise<ScadaReleasePreflightReport>;
   appendVersion(
     projectId: string,
@@ -329,6 +338,8 @@ export function createScadaApiClient(options: ScadaApiClientOptions = {}): Scada
     expectedStatus: 200 | 201 | 204,
     body?: unknown,
     requireNoStore = false,
+    signal?: AbortSignal,
+    maxResponseBytes = MAX_RESPONSE_BYTES,
   ): Promise<unknown> {
     const headers: Record<string, string> = { Accept: "application/json" };
     if (method === "POST") {
@@ -345,6 +356,7 @@ export function createScadaApiClient(options: ScadaApiClientOptions = {}): Scada
         redirect: "error",
         cache: "no-store",
         referrerPolicy: "no-referrer",
+        ...(signal === undefined ? {} : { signal }),
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
     } catch {
@@ -370,7 +382,7 @@ export function createScadaApiClient(options: ScadaApiClientOptions = {}): Scada
     } catch {
       throw new ScadaApiError("读取服务端响应失败", "network");
     }
-    if (!content || new TextEncoder().encode(content).byteLength > MAX_RESPONSE_BYTES) {
+    if (!content || new TextEncoder().encode(content).byteLength > maxResponseBytes) {
       throw new ScadaApiError("服务端响应为空或超过容量限制", "invalid_response");
     }
     try {
@@ -489,6 +501,24 @@ export function createScadaApiClient(options: ScadaApiClientOptions = {}): Scada
         throw new ScadaApiError("服务端返回的历史修订号不一致", "invalid_response");
       }
       return snapshot;
+    },
+    async readCurrentRelease(projectId, signal) {
+      const path = projectPath(projectId) + "/releases/current";
+      const response = await request(
+        "GET",
+        path,
+        200,
+        undefined,
+        true,
+        signal,
+        MAX_RELEASE_RESPONSE_BYTES,
+      );
+      try {
+        return await parsePublishedRelease(response, projectId);
+      } catch {
+        // 服务端未知字段、篡改快照或跨工程指针均不允许透传原始响应内容。
+        throw new ScadaApiError("当前正式发布响应完整性校验失败", "invalid_response");
+      }
     },
     async preflightRelease(projectId, revision) {
       const path = projectPath(projectId);

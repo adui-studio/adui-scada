@@ -425,3 +425,13 @@ D1 候选在现有工程 API 中新增只读路由 `GET /api/v1/projects/:projec
 服务端只从独立 `ScadaProjectReleaseState` 指针定位不可变 `ScadaProjectVersion`，验证快照 SHA-256、版本元数据和最后发布事件。读取事务按工程身份、有效会话/主体、ACL、发布状态、版本、最后发布事件顺序获取共享锁；工程锁 SQL 不选择 `head_revision`，避免 Runtime 误用编辑 head。未发布返回明确 `UNRELEASED` 状态；指针、事件、快照异常 fail-closed。
 
 本阶段不包含 Runtime Core、SSE/Tag 实时质量、React/Vue Runtime 页面、回滚或生产启用；C1 的生产发布安全门禁继续 fail-closed。D1 候选仍需真实隔离 PostgreSQL 和 Windows 质量链验收。
+
+## 2026-11-20 · 第三十五批 D2a 共享只读发布 Runtime 分层候选
+
+D1 已在 PR #102 合并：当前发布指针只读 API、独立 `release:read` 工程 ACL 和不可变快照校验均在 NestJS 服务端实施。D2a 将相同安全契约按职责拆成三层：
+
+1. `@adui/scada-core` 的 `published-release.ts`：校验 `UNRELEASED/RELEASED` 响应与 SHA-256 快照内容；无框架、Fetch、认证或设备依赖。
+2. `@adui/scada-api-client` 的 `readCurrentRelease`：仅访问固定同源已发布读取路由，拒绝跨站、重定向、不受控响应以及缺少 `no-store` 的成功响应；不通过工程历史读取权限绕行。
+3. `@adui/scada-runtime` 的 `PublishedRuntime`：维护明确的发布快照只读状态机，不依赖 Vue/React、Studio、IndexedDB 或 SSE 模拟数据源；请求上下文切换使用 AbortSignal 和请求代次双重保护。
+
+D2a 不自动显示断线前缓存；`offline`、`denied` 和 `error` 均无可展示的快照，且 `tagQuality` 始终为 `UNAVAILABLE`。正式发布配置已验证不代表实时工业 Tag 已连接。后续 D2b/D3/D4 再研究发布指针自动刷新、Tag 质量接入及 React/Vue 对等使用，生产安全门禁依然 fail-closed。

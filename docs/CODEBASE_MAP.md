@@ -1005,3 +1005,14 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `apps/server/test/projects-api.e2e-spec.ts`、`release-transaction.db-spec.ts`、`release-schema.db-spec.ts`：覆盖 HTTP 会话/ACL、未发布、仅 release:read、跨租户同 ID、快照篡改和真实数据库权限约束。
 
 本节记录的是 D1 候选分支内容；测试与迁移结果须以维护者 Windows 和隔离 PostgreSQL 实测为准。
+
+## 2026-11-20 · 第三十五批 D2a 共享发布态基础设施候选
+
+- `packages/core/src/published-release.ts`：严格解析当前正式发布响应，验证指针、事件、不可变快照和 SHA-256；由 Core `index.ts` 导出。
+- `packages/core/test/published-release.test.ts`：未发布、已发布、回滚、跨工程、异常状态、额外字段和篡改负向测试。
+- `packages/api-client/src/index.ts`：增加 `ScadaApiClient.readCurrentRelease(projectId, signal?)`，复用同源 Cookie Fetch 安全协议；为发布快照响应预留有限元数据容量。
+- `packages/api-client/test/published-release.test.ts`：同源、禁止缓存、响应大小、授权拒绝、快照与网络失败测试；`studio-session.test.ts` 同步既有完整接口 Mock。
+- `packages/runtime/src/published-runtime.ts`：`PublishedRuntime` 及发布状态机；由 Runtime `index.ts` 导出，不混用演示 `DemoRuntime`。
+- `packages/runtime/test/published-runtime.test.ts`：未发布/已验证、离线、撤权、事件代次回退、合法回滚、跨工程旧响应、停止取消、非法 ID 等用例。
+
+没有新增后端路由、数据库迁移、设备写入或前端 UI 变更。

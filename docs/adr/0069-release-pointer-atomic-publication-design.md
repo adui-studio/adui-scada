@@ -137,3 +137,9 @@ D1 候选在 `ProjectAccessAction` 中新增独立 `release:read`，默认拒绝
 候选只读接口为 `GET /api/v1/projects/:projectId/releases/current`，使用可信 OIDC/BFF 会话、工程 Guard、独立 ACL 和 `Cache-Control: no-store`。未发布工程返回 `UNRELEASED`；已发布工程返回发布修订、摘要、代次、最后事件元数据和通过 `readProjectSnapshot` 校验的不可变快照。仓储事务只选择并共享锁定工程 `project_id`，**不查询 `head_revision`**；随后按工程、有效会话/主体、ACL、状态、不可变版本、最后发布事件的顺序持有共享锁，并核对最后发布事件与指针一致。权限缺失、租户不匹配、状态/事件不一致或快照摘要错误均 fail-closed。
 
 本候选仅交付服务端只读读取基础设施，不包含 Runtime Core、SSE 数据源、动态 Tag 质量状态、React/Vue Runtime UI、回滚或生产发布许可。迁移、真实 PostgreSQL、单测、HTTP E2E、`vp check`、`docs:check` 和完整 `ready` 均待维护者在对应分支实测。
+
+## 2026-11-20 · D1 已合并与 D2a 只读发布 Runtime 候选
+
+D1 已由 PR #102 合并至 main，独立 `release:read`、只读发布指针 API 和不可变快照校验已通过维护者 Windows 完整质量链与隔离 PostgreSQL 57 项专项；生产 `ProjectReleaseSafetyGate` 仍 fail-closed，回滚和设备写入仍未开放。
+
+D2a 仅增加共享 Core 发布响应协议检查、同源只读 API Client 与框架无关 Runtime 状态机；离线或失去授权时清空运行画面而非把旧数据伪装成实时结果。状态 `verified` 仅表示发布快照通过静态摘要校验，Tag 质量固定 `UNAVAILABLE`。此候选尚未进行真实 TLS/OIDC 双框架运行验收，不改变 ADR-0069 的已批准生产安全边界。
