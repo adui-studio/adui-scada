@@ -2337,3 +2337,25 @@ D2a 在独立 Draft PR 中新增 Core 发布响应严格校验、同源 API Clie
 - Runtime：只有验证过的发布态允许 `verified`，Tag 质量始终 `UNAVAILABLE`；断网/撤权清空正文，代次回退和同代次变更拒绝，新代次合法回滚允许较低修订，stop/旧请求不能覆盖最新状态。
 
 **当前未实际执行** D2a 的 `vp check`、`pnpm run test:unit`、`pnpm run docs:check` 和完整 `pnpm run ready`，不能把测试源文件存在当成测试通过。D2a 无数据库迁移或 PostgreSQL 数据写入，默认不要求重新执行 D1 的迁移。D2a 不属于生产发布授权或真实 Keycloak/HTTPS 现场验收。
+
+## 2026-11-20 · 第三十五批 D2b 发布指针刷新候选（待维护者验收）
+
+**基线**：PR #103 已获得维护者合并授权并 Squash 合并到 main，提交 `5f45bacbc90dd841dfb8b1992605d4652464361a`。D2a Windows 全量单测 662/662、HTTP E2E 62/62、`vp check` 364/216、`docs:check` 89 份、完整 `ready` 退出码 0。本轮 D2b 新增测试**尚未实际运行**。
+
+D2b 增量测试覆盖：单次定时刷新对新发布代次切版；未变化发布指针仍验证权限与 SHA-256；离线 1x/2x/4x 有界退避并在恢复时重读发布快照；401/403/404 撤权和坏摘要停止自动刷新；隐藏页清除正文、重显时拒绝回退；请求无响应触发超时撤下旧画面并恢复；手动/定时并发单 GET；跨工程旧回包和已取消定时回调失效；合法新代次回滚与非法代次变更；stop 资源清理与非法配置/工程 ID 拒绝。
+
+维护者在 Windows 的独立验收建议：
+```powershell
+git fetch origin
+git switch --track origin/feat/b35-d2b-release-pointer-refresh
+git rev-parse HEAD
+vp check
+Write-Host "vp check 退出码：$LASTEXITCODE"
+pnpm run test:unit
+Write-Host "单测退出码：$LASTEXITCODE"
+pnpm run docs:check
+Write-Host "文档检查退出码：$LASTEXITCODE"
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+```
+若本地已有同名分支，使用 `git switch feat/b35-d2b-release-pointer-refresh` 并执行 `git pull --ff-only`。切换前先处理未提交修改；D2b 不增加 Prisma 模型或迁移，默认无需对冻结开发库、生产库或隔离库执行数据库部署。不得把代码存在、模拟时钟单测或旧批次的 Windows 结果误记成 D2b 实测通过。生产发布门禁、PLC/DCS 写入均继续默认拒绝。
