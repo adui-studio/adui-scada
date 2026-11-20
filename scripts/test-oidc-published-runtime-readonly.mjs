@@ -108,7 +108,13 @@ export function enterPublishedProjectInPage(projectId, runtime = globalThis) {
   if (!setter) throw new Error("正式发布运行页面输入接口不可用");
   setter.call(input, projectId);
   input.dispatchEvent(new runtime.Event("input", { bubbles: true }));
-  const form = input.closest("form");
+  return true;
+}
+
+/** 输入确认后才允许点击，防止框架状态仍是旧工程 ID。 */
+export function submitPublishedProjectInPage(runtime = globalThis) {
+  const panel = runtime.document.querySelector('[data-testid="published-runtime-page"]');
+  const form = panel?.querySelector("form");
   const submit = [...(form?.querySelectorAll("button") ?? [])].find(
     (item) => item.textContent?.trim() === "读取正式发布",
   );
@@ -167,19 +173,10 @@ async function run() {
       await browser.send("Page.navigate", { url: origin + "/" });
       const principal = await waitForState(
         browser,
-        async function () {
-          return null;
-        },
+        () => browser.evaluate(identityInPage, origin),
         "正式发布运行只读专项真实登录失败",
-        1,
-      ).catch(async () => {
-        for (let i = 0; i < 100; i++) {
-          const me = await browser.evaluate(identityInPage, origin).catch(() => null);
-          if (me) return me;
-          await pause(150);
-        }
-        throw new Error("正式发布运行只读专项真实登录失败");
-      });
+        100,
+      );
       assert.deepEqual(principal, identity, "正式发布运行只读专项两端登录主体不一致");
       await browser.evaluate(installPublishedReadGuardInPage, origin);
       await browser.evaluate(openPublishedRuntimeInPage);
@@ -191,6 +188,7 @@ async function run() {
       const before = await browser.evaluate(publishedReadGuardStateInPage);
       assert.deepEqual(before.paths, [], "未选择工程时不得预读取工程 API");
       await browser.evaluate(enterPublishedProjectInPage, missingProject);
+      await browser.evaluate(submitPublishedProjectInPage);
       const denied = await waitForState(
         browser,
         () => browser.evaluate(publishedRuntimeUiStateInPage).then((x) =>
