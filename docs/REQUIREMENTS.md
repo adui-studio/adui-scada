@@ -624,3 +624,11 @@ D2a 已由 PR #103 Squash 合并到 `main`（`5f45bacbc90dd841dfb8b1992605d46524
 D2b 候选在共享 Runtime 增加显式生命周期管理的 `PublishedRuntimeRefresher`，支持只读发布指针定时刷新、已发布版本切换、离线有界退避、10 秒单次读取超时、撤权与非法快照阻断、隐藏页面清空画面、重显重新校验，以及退出/切换工程后取消旧请求和定时任务。超时和隐藏均不允许迟到响应恢复运行内容；同一会话隐藏时保留非正文的代次校验水位，防止重显绕过回退保护。所有状态的实时 Tag 质量仍是 `UNAVAILABLE`。
 
 **FR-008 仍为部分实现**：刷新控制器需要未来 D3/D4 的 React/Vue 生命周期显式接入，尚未连到两端 Runtime UI、工业网关、真实 Tag、生产发布、回滚写接口或 Keycloak/HTTPS 真实运行专项。本批未实际执行 Windows 检查，不能描述为已验收或生产可用。
+
+## 2026-11-20 · FR-008 第三十五批 D3/D4 双框架已发布运行只读入口候选
+
+D2b 通过 PR #104 Squash 合并到 main（`95c1c0e4b3423ba9acfcf425f3b82de304f04633`），维护者 Windows `vp check` 366/218、单测 677/677、HTTP E2E 62/62、`docs:check` 89 份及完整 `ready` 退出码 0。
+
+D3/D4 候选同步新增 React 与 Vue 的独立“已发布运行”导航入口，保持原水处理 Demo Runtime 和 Studio 不变。用户显式输入已授权工程 ID 后才发起 `release:read` 受保护的同源 BFF GET；双端共享 `PublishedRuntime` / `PublishedRuntimeRefresher`，对未发布、已验证、离线、拒绝及异常分别展示，退出/切换导航时清空内容、可见性变化暂停和恢复受控验证。仅在已通过发布指针/快照 SHA-256 校验后预览静态 SVG；不读取编辑 head、历史版本或草稿。
+
+**FR-008 继续部分实现**：当前发布写门禁仍生产 fail-closed；正式发布读取只有在明确授予 `release:read` 且数据库已有合法已提交发布指针时才能成功展示。当前没有真实工业 Tag 来源，静态组态图元无读数，Tag 质量始终 `UNAVAILABLE`。跨框架真实 OIDC/HTTPS、授权撤销、超时与生命周期浏览器专项未执行，本候选不得宣称生产可用或现场数据正常。
