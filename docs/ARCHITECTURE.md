@@ -451,3 +451,9 @@ D2a 已由 PR #103 合并至 `main`（`5f45bacbc90dd841dfb8b1992605d4652464361a`
 为保持模拟监控独立，两端 App 导航增加“已发布运行”第三入口，原运行监控 Demo 与 Studio 互不改变，避免把 SSE 假数据附加到已发布工程。静态 SVG 预览由 Runtime 封装 `publishedSnapshotSvg`：重新校验文档 Schema 后复用 Core 图元白名单渲染，并显式传空 Tag 值，不允许现场质量状态冒充 `GOOD`。未连接网关，Tag 质量 `UNAVAILABLE`；渲染器的缺值 BAD 仅为占位而非真实故障诊断。
 
 本候选不使用工程发现 API（`project:read` 不等于 `release:read`），不缓存发布正文和工程 ID，不触发设备写入。仍需要真实 HTTPS/Keycloak 双浏览器联调与撤权/切后台测试，不能将静态构建通过视为现场验收。
+
+## 2026-11-20 · 第三十五批 D5a 真实 HTTPS 发布只读拒绝基线候选
+
+PR #105 已合并（main `637ebbce3191c998b3264733645da947a3739e9f`）。D5a 在现有受控本机 OIDC/HTTPS CDP 测试架构上复用浏览器、可信身份和同源 Lab 验证；新增专用**只读零写入** Fetch 门禁和双框架真实页面动作验收。只读取随机不存在工程的发布指针，要求服务端 404 显示拒绝、不回退到 Demo、草稿或编辑 head；不读取响应正文，不向 Node 输出任何会话秘密。
+
+该候选没有改动共享 Core、Runtime、Vue/React 页面、NestJS API、Prisma、网关或生产发布门禁。D5a 不会创建已发布快照，也不进行 ACL 赋权；显式授权、实际发布指针和长连接/页面可见性恢复属于后续隔离专项。
