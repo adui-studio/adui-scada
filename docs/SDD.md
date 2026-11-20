@@ -1193,3 +1193,15 @@ D1 已通过维护者 Windows 完整 `ready` 与隔离 PostgreSQL 57/57 项测�
 - 新一代次可切换到新的发布修订；合法 `ROLLBACK` 可指向较低修订，但代次必须递增；同代次变更摘要/事件或较低代次均 fail-closed。已验证的配置快照不代表现场 Tag `GOOD`，所有状态 `tagQuality="UNAVAILABLE"`。
 
 **局限**：本批没有实现 React/Vue 页面接线、浏览器隐藏/在线真实事件专项、动态 Tag 质量、生产发布或工业设备写入。超时防止无限等待，但真正底层网络取消依赖受控 API Client 对 AbortSignal 的支持。D2b 候选尚待 Windows `vp check`、单测、`docs:check` 和 `ready`。
+
+## 2026-11-20 · 第三十五批 D3/D4 双框架正式发布运行页候选
+
+React `PublishedRuntimePage.tsx` 和 Vue `PublishedRuntimePage.vue` 复用同一无框架发布状态机。原 `RuntimePage` 继续使用模拟 SSE/离线 Demo，不将其当作正式发布运行源。新增导航键 `published`，两套 Web 均懒加载新页面，不修改 Studio 画布和工程文件 Schema。
+
+1. 用户必须显式输入并提交受控工程 ID（1～128 位 ASCII 字母/数字及 `._-`），前端仅作快速校验；**服务端可信身份和独立 `release:read` 是唯一授权依据**。不通过 `project:read` 列表发现工程，不把 ID 保存到本地缓存或 URL。
+2. 以 `createScadaApiClient().readCurrentRelease` 为唯一发布读取源，通过 `PublishedRuntimeRefresher.start` 发起只读 GET；已有 Core 校验发布状态与 SHA-256。明确显示工程、发布代次、已发布修订号、受控中文状态消息，以及实时质量 `UNAVAILABLE`；不显示模拟数值、不提供发布、回滚或设备写按钮。
+3. 仅 `status="verified"` 且存在快照时，调用共享 `publishedSnapshotSvg` 重新解析快照文档并以空 Tag 列表经现有 `renderSvgPage` 白名单渲染静态 SVG。由于现有 SVG 渲染器将未绑定的动态值显示为 `BAD` 占位，两个页面均明确提示：**画布内 BAD 占位不代表现场设备故障诊断**。它也不表示 Tag 连接成功。
+4. 挂载时注册 `visibilitychange`，隐藏则 `setVisible(false)` 清空可显示画面、取消请求但保留同身份会话发布代次水位，重显必须从服务端重新校验；退出、卸载或 `pagehide` 则 `stop()` 彻底释放定时器/请求和快照。React StrictMode 清理挂载会话，Vue 在 `onUnmounted` 清理监听。
+5. 用户可显式刷新或停止读取；状态由共享 Runtime 统一控制，`401/403/404`、网络离线、完整性异常和代次回退均不回退到编辑 head、草稿或 Demo。浏览器仅在成功读取已提交冻结快照后展示静态组态。
+
+本批没有修改数据库或服务端授权、发布写门禁、OIDC 配置与现场网关。真正的已发布工程需要合法已提交发布指针，生产 `ProjectReleaseSafetyGate` 仍然默认拒绝，因此默认运行环境不能靠此 UI 创建发布；真实 OIDC/HTTPS 双框架全链专项须后续实施。
