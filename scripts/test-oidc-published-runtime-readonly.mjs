@@ -134,7 +134,7 @@ export function publishedRuntimeUiStateInPage(runtime = globalThis) {
   return { status, snapshot, quality };
 }
 
-async function waitForState(browser, fn, failure, attempts = 80) {
+async function waitForState(fn, failure, attempts = 80) {
   for (let i = 0; i < attempts; i++) {
     try {
       const value = await browser.evaluate(fn);
@@ -172,7 +172,6 @@ async function run() {
       const name = index === 0 ? "React" : "Vue";
       await browser.send("Page.navigate", { url: origin + "/" });
       const principal = await waitForState(
-        browser,
         () => browser.evaluate(identityInPage, origin),
         "正式发布运行只读专项真实登录失败",
         100,
@@ -181,7 +180,6 @@ async function run() {
       await browser.evaluate(installPublishedReadGuardInPage, origin);
       await browser.evaluate(openPublishedRuntimeInPage);
       await waitForState(
-        browser,
         () => browser.evaluate(publishedRuntimeUiStateInPage).then((x) => x?.status === "idle"),
         "正式发布运行只读专项没有进入发布页面",
       );
@@ -190,7 +188,6 @@ async function run() {
       await browser.evaluate(enterPublishedProjectInPage, missingProject);
       await browser.evaluate(submitPublishedProjectInPage);
       const denied = await waitForState(
-        browser,
         () => browser.evaluate(publishedRuntimeUiStateInPage).then((x) =>
           x?.status === "denied" ? x : null,
         ),
