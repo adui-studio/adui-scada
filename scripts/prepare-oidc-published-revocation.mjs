@@ -257,6 +257,7 @@ async function run() {
     query_timeout: 10000,
   });
   let browser;
+  let attemptedProjectId = null;
   let createdProjectId = null;
   try {
     await client.connect();
@@ -277,6 +278,7 @@ async function run() {
     }
     const projectId = "d5b4-revoke-" + randomUUID();
     assert.match(projectId, PROJECT_PATTERN);
+    attemptedProjectId = projectId;
     await browser.evaluate(createPublishedRevokeFixtureInPage, origins[0], projectId);
     createdProjectId = projectId;
     process.stdout.write("已使用正式工程 API 创建独立 D5b4 工程：" + projectId + "\n");
@@ -285,10 +287,12 @@ async function run() {
     process.stdout.write("D5b4b 专用工程创建和 release:read 验证通过。\n");
     process.stdout.write("专用工程 ID：" + projectId + "\n");
   } catch (error) {
-    if (createdProjectId) {
+    if (attemptedProjectId) {
       process.stderr.write(
-        "独立 D5b4 工程已创建但后续验证未完成，禁止自动删除，请人工核查：" +
-          createdProjectId +
+        (createdProjectId
+          ? "独立 D5b4 工程已创建但后续验证未完成，禁止自动删除，请人工核查："
+          : "独立 D5b4 工程创建请求结果不确定，禁止自动重试，请人工核查：") +
+          attemptedProjectId +
           "\n",
       );
     }
