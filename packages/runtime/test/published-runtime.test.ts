@@ -1,15 +1,16 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { createProjectSnapshot, waterTreatmentDemoDocument } from "@adui/scada-core";
 import { PublishedRuntime, initialPublishedRuntimeState } from "../src/published-runtime.ts";
-import type {
-  PublishedReleaseReader,
-  PublishedRuntimeState,
-} from "../src/published-runtime.ts";
+import type { PublishedReleaseReader, PublishedRuntimeState } from "../src/published-runtime.ts";
 
 const projectId = waterTreatmentDemoDocument.projectId;
 const releasedAt = "2026-11-20T00:00:00.000Z";
 
-async function published(revision = 1, generation = 1, eventId = "8ab20dc6-7b2c-4baf-85cd-089625a8413d") {
+async function published(
+  revision = 1,
+  generation = 1,
+  eventId = "8ab20dc6-7b2c-4baf-85cd-089625a8413d",
+) {
   const snapshot = await createProjectSnapshot(waterTreatmentDemoDocument, {
     revision,
     createdAt: "2026-11-19T00:00:00.000Z",
@@ -56,7 +57,11 @@ describe("共享正式发布 Runtime 只读加载状态", () => {
 
   it("只在发布响应及快照摘要校验后显示已验证状态，Tag 质量仍不可用", async () => {
     const data = await published();
-    const reader: PublishedReleaseReader = { async readCurrentRelease() { return data; } };
+    const reader: PublishedReleaseReader = {
+      async readCurrentRelease() {
+        return data;
+      },
+    };
     const { runtime } = fixture(reader);
     await runtime.load(projectId);
     expect(runtime.snapshot()).toMatchObject({
@@ -71,7 +76,8 @@ describe("共享正式发布 Runtime 只读加载状态", () => {
 
   it("断网时立即撤去可显示的发布快照，不把旧画面伪装成在线画面", async () => {
     const data = await published();
-    const readCurrentRelease = vi.fn<PublishedReleaseReader["readCurrentRelease"]>()
+    const readCurrentRelease = vi
+      .fn<PublishedReleaseReader["readCurrentRelease"]>()
       .mockResolvedValueOnce(data)
       .mockRejectedValueOnce({ kind: "network" });
     const { runtime } = fixture({ readCurrentRelease });
@@ -90,7 +96,8 @@ describe("共享正式发布 Runtime 只读加载状态", () => {
     for (const kind of ["unauthenticated", "forbidden", "not_found"]) {
       const data = await published(1, 4);
       const next = await published(1, 1);
-      const readCurrentRelease = vi.fn<PublishedReleaseReader["readCurrentRelease"]>()
+      const readCurrentRelease = vi
+        .fn<PublishedReleaseReader["readCurrentRelease"]>()
         .mockResolvedValueOnce(data)
         .mockRejectedValueOnce({ kind })
         .mockResolvedValueOnce(next);
@@ -108,7 +115,8 @@ describe("共享正式发布 Runtime 只读加载状态", () => {
     const data = await published();
     const changed = JSON.parse(JSON.stringify(data));
     changed.snapshot.document.pages[0].nodes[0].props.text = "篡改显示";
-    const readCurrentRelease = vi.fn<PublishedReleaseReader["readCurrentRelease"]>()
+    const readCurrentRelease = vi
+      .fn<PublishedReleaseReader["readCurrentRelease"]>()
       .mockResolvedValueOnce(data)
       .mockResolvedValueOnce(changed);
     const { runtime } = fixture({ readCurrentRelease });
@@ -124,7 +132,8 @@ describe("共享正式发布 Runtime 只读加载状态", () => {
     const changed = await published(1, 3);
     const unreleased = { status: "UNRELEASED", projectId, releaseGeneration: 0 };
     for (const invalid of [older, changed, unreleased]) {
-      const readCurrentRelease = vi.fn<PublishedReleaseReader["readCurrentRelease"]>()
+      const readCurrentRelease = vi
+        .fn<PublishedReleaseReader["readCurrentRelease"]>()
         .mockResolvedValueOnce(current)
         .mockResolvedValueOnce(invalid);
       const { runtime } = fixture({ readCurrentRelease });
@@ -138,7 +147,8 @@ describe("共享正式发布 Runtime 只读加载状态", () => {
     const current = await published(2, 2);
     const earlier = await published(1, 3, "b19da691-9f02-4451-a517-49b1f19b2530");
     const rollback = { ...earlier, lastAction: "ROLLBACK" };
-    const readCurrentRelease = vi.fn<PublishedReleaseReader["readCurrentRelease"]>()
+    const readCurrentRelease = vi
+      .fn<PublishedReleaseReader["readCurrentRelease"]>()
       .mockResolvedValueOnce(current)
       .mockResolvedValueOnce(rollback);
     const { runtime } = fixture({ readCurrentRelease });
@@ -157,29 +167,30 @@ describe("共享正式发布 Runtime 只读加载状态", () => {
     const secondProjectId = "another-project";
     const document = { ...waterTreatmentDemoDocument, projectId: secondProjectId };
     const snapshot = await createProjectSnapshot(document, {
-      revision: 1, createdAt: "2026-11-19T00:00:00.000Z",
+      revision: 1,
+      createdAt: "2026-11-19T00:00:00.000Z",
     });
     let completeOld: ((value: unknown) => void) | undefined;
     let oldSignal: AbortSignal | undefined;
-    const readCurrentRelease = vi.fn<PublishedReleaseReader["readCurrentRelease"]>(
-      (id, signal) => {
-        if (id === projectId) {
-          oldSignal = signal;
-          return new Promise<unknown>((resolve) => { completeOld = resolve; });
-        }
-        return Promise.resolve({
-          status: "RELEASED",
-          projectId: secondProjectId,
-          releasedRevision: 1,
-          releasedContentHash: snapshot.contentHash,
-          releaseGeneration: 1,
-          eventId: "ad02b824-51c4-401c-8a7f-a1b4e3bd0858",
-          lastAction: "PUBLISH",
-          releasedAt,
-          snapshot,
+    const readCurrentRelease = vi.fn<PublishedReleaseReader["readCurrentRelease"]>((id, signal) => {
+      if (id === projectId) {
+        oldSignal = signal;
+        return new Promise<unknown>((resolve) => {
+          completeOld = resolve;
         });
-      },
-    );
+      }
+      return Promise.resolve({
+        status: "RELEASED",
+        projectId: secondProjectId,
+        releasedRevision: 1,
+        releasedContentHash: snapshot.contentHash,
+        releaseGeneration: 1,
+        eventId: "ad02b824-51c4-401c-8a7f-a1b4e3bd0858",
+        lastAction: "PUBLISH",
+        releasedAt,
+        snapshot,
+      });
+    });
     const { runtime } = fixture({ readCurrentRelease });
     const pending = runtime.load(projectId);
     await runtime.load(secondProjectId);
@@ -197,7 +208,9 @@ describe("共享正式发布 Runtime 只读加载状态", () => {
     const reader: PublishedReleaseReader = {
       readCurrentRelease(_projectId, signal) {
         receivedSignal = signal;
-        return new Promise<unknown>((resolve) => { resolveRequest = resolve; });
+        return new Promise<unknown>((resolve) => {
+          resolveRequest = resolve;
+        });
       },
     };
     const { runtime, states } = fixture(reader);

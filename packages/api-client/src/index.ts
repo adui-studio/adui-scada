@@ -1,4 +1,8 @@
-import { parsePublishedRelease, parseServerProjectSaveRequest, readProjectSnapshot } from "@adui/scada-core";
+import {
+  parsePublishedRelease,
+  parseServerProjectSaveRequest,
+  readProjectSnapshot,
+} from "@adui/scada-core";
 import type {
   ProjectSnapshot,
   PublishedRelease,

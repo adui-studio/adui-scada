@@ -20,7 +20,8 @@ function fixture(result: Response) {
 
 async function published() {
   const snapshot = await createProjectSnapshot(waterTreatmentDemoDocument, {
-    revision: 1, createdAt: "2026-11-19T00:00:00.000Z",
+    revision: 1,
+    createdAt: "2026-11-19T00:00:00.000Z",
   });
   return {
     status: "RELEASED" as const,
@@ -40,7 +41,9 @@ describe("共享 API Client 当前正式发布只读接口", () => {
     const expected = { status: "UNRELEASED", projectId, releaseGeneration: 0 };
     const { client, fetcher } = fixture(response(expected));
     const controller = new AbortController();
-    await expect(client.readCurrentRelease(projectId, controller.signal)).resolves.toEqual(expected);
+    await expect(client.readCurrentRelease(projectId, controller.signal)).resolves.toEqual(
+      expected,
+    );
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(fetcher).toHaveBeenCalledWith(
       "/api/v1/projects/" + projectId + "/releases/current",
@@ -95,7 +98,9 @@ describe("共享 API Client 当前正式发布只读接口", () => {
   });
 
   it("非法工程 ID 在 Fetch 之前拒绝，不能拼接相对路径", async () => {
-    const { client, fetcher } = fixture(response({ status: "UNRELEASED", projectId, releaseGeneration: 0 }));
+    const { client, fetcher } = fixture(
+      response({ status: "UNRELEASED", projectId, releaseGeneration: 0 }),
+    );
     await expect(client.readCurrentRelease("../other")).rejects.toThrow(/工程 ID/);
     expect(fetcher).not.toHaveBeenCalled();
   });
@@ -113,12 +118,17 @@ describe("共享 API Client 当前正式发布只读接口", () => {
 
   it("当前发布响应比 2 MiB 快照和元数据上限更大时 fail-closed", async () => {
     const huge = "x".repeat(2 * 1024 * 1024 + 4097);
-    const fetcher = vi.fn<typeof fetch>(async () => new Response(huge, {
-      status: 200,
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-    }));
+    const fetcher = vi.fn<typeof fetch>(
+      async () =>
+        new Response(huge, {
+          status: 200,
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+        }),
+    );
     const client = createScadaApiClient({ fetcher });
     await expect(client.readCurrentRelease(projectId)).rejects.toBeInstanceOf(ScadaApiError);
-    await expect(client.readCurrentRelease(projectId)).rejects.toMatchObject({ kind: "invalid_response" });
+    await expect(client.readCurrentRelease(projectId)).rejects.toMatchObject({
+      kind: "invalid_response",
+    });
   });
 });
