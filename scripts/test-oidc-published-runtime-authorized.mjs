@@ -147,12 +147,7 @@ export function publishedAuthorizedUiStateInPage(projectId, runtime = globalThis
 
 /** 完全校验两种状态；RELEASED 的 SVG 仅由共享 Runtime 校验快照后渲染。 */
 export function requirePublishedAuthorizedState(state, expectedStatus) {
-  if (
-    !state ||
-    typeof state !== "object" ||
-    state.sameProject !== true ||
-    state.quality !== true
-  ) {
+  if (!state || typeof state !== "object" || state.sameProject !== true || state.quality !== true) {
     throw new Error("D5b1 真实授权发布状态与预期不一致");
   }
   if (expectedStatus === "UNRELEASED") {

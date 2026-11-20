@@ -41,7 +41,11 @@ function pageFixture(expectedProjectId, status = "unreleased") {
   const panel = {
     querySelector(selector) {
       if (selector === ".scada-status") {
-        return { getAttribute() { return status; } };
+        return {
+          getAttribute() {
+            return status;
+          },
+        };
       }
       if (selector === '[data-testid="published-runtime-svg"]') {
         return status === "verified" ? {} : null;
@@ -80,12 +84,7 @@ void describe("D5b1 双框架真实发布授权只读专项", () => {
       ["--status", "RELEASED", "--project-id", unreleasedId],
       ["--status", "UNRELEASED", "--project-id", releasedId],
       ["--status", "RELEASED", "--project-id", "../other"],
-      [
-        "--status",
-        "RELEASED",
-        "--project-id",
-        "d5b-released-12345678-1234-1234-8234-123456789abc",
-      ],
+      ["--status", "RELEASED", "--project-id", "d5b-released-12345678-1234-1234-8234-123456789abc"],
       ["--status", "RELEASED", "--project-id", releasedId, "--force"],
     ]) {
       assert.throws(() => parsePublishedAuthorizedMode(args), /D5b1 只允许|预置工程名称/);
@@ -189,16 +188,10 @@ void describe("D5b1 双框架真实发布授权只读专项", () => {
       );
     }
     const fixture = pageFixture(unreleasedId);
-    assert.equal(
-      publishedAuthorizedUiStateInPage(releasedId, fixture).sameProject,
-      false,
-    );
+    assert.equal(publishedAuthorizedUiStateInPage(releasedId, fixture).sameProject, false);
     fixture.entries.find((item) => item.textContent === "发布代次").nextElementSibling.textContent =
       "9007199254740992";
-    assert.equal(
-      publishedAuthorizedUiStateInPage(unreleasedId, fixture).releaseGeneration,
-      null,
-    );
+    assert.equal(publishedAuthorizedUiStateInPage(unreleasedId, fixture).releaseGeneration, null);
   });
 
   void it("复用 D5a 同源只读门禁，非法项目写入不得触达真实 Fetch", async () => {
