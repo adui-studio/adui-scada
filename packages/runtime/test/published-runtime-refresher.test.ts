@@ -253,9 +253,10 @@ describe("正式发布 Runtime 指针刷新与失效保护", () => {
       .fn<PublishedReleaseReader["readCurrentRelease"]>()
       .mockResolvedValueOnce(data)
       .mockImplementationOnce(
-        () => new Promise<unknown>((resolve) => {
-          finish = resolve;
-        }),
+        () =>
+          new Promise<unknown>((resolve) => {
+            finish = resolve;
+          }),
       );
     const clock = manualClock();
     const { refresher, runtime } = fixture({ readCurrentRelease }, clock.schedule);
@@ -355,8 +356,8 @@ describe("正式发布 Runtime 指针刷新与失效保护", () => {
       "6d73d75e-4a7a-4454-b107-0c3bc3f34fc9",
       otherProjectId,
     );
-    const readCurrentRelease = vi.fn<PublishedReleaseReader["readCurrentRelease"]>(
-      async (id) => id === projectId ? firstProject : secondProject,
+    const readCurrentRelease = vi.fn<PublishedReleaseReader["readCurrentRelease"]>(async (id) =>
+      id === projectId ? firstProject : secondProject,
     );
     const clock = manualClock();
     const { runtime, refresher } = fixture({ readCurrentRelease }, clock.schedule);
@@ -445,17 +446,19 @@ describe("正式发布 Runtime 指针刷新与失效保护", () => {
       () => new PublishedRuntimeRefresher(runtime, { schedule: clock.schedule, intervalMs: 0 }),
     ).toThrow(/1000～300000/);
     expect(
-      () => new PublishedRuntimeRefresher(runtime, {
-        schedule: clock.schedule,
-        intervalMs: 10_000,
-        maxOfflineIntervalMs: 1_000,
-      }),
+      () =>
+        new PublishedRuntimeRefresher(runtime, {
+          schedule: clock.schedule,
+          intervalMs: 10_000,
+          maxOfflineIntervalMs: 1_000,
+        }),
     ).toThrow(/不得小于/);
     expect(
-      () => new PublishedRuntimeRefresher(runtime, {
-        schedule: clock.schedule,
-        requestTimeoutMs: 0,
-      }),
+      () =>
+        new PublishedRuntimeRefresher(runtime, {
+          schedule: clock.schedule,
+          requestTimeoutMs: 0,
+        }),
     ).toThrow(/1000～300000/);
     const refresher = new PublishedRuntimeRefresher(runtime, {
       schedule: clock.schedule,

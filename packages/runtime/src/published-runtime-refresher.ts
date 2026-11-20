@@ -1,10 +1,7 @@
 import { PublishedRuntime } from "./published-runtime.ts";
 
 /** 单次延时刷新；取消函数必须使未触发的任务不再运行。 */
-export type PublishedRefreshSchedule = (
-  callback: () => void,
-  delayMs: number,
-) => () => void;
+export type PublishedRefreshSchedule = (callback: () => void, delayMs: number) => () => void;
 
 export interface PublishedRefreshOptions {
   /** 正常刷新间隔，限制在 1～300 秒，默认 15 秒。 */
@@ -29,11 +26,7 @@ const defaultSchedule: PublishedRefreshSchedule = (callback, delayMs) => {
 };
 
 function requireInterval(value: number, label: string): void {
-  if (
-    !Number.isSafeInteger(value) ||
-    value < MIN_REFRESH_MS ||
-    value > MAX_REFRESH_MS
-  ) {
+  if (!Number.isSafeInteger(value) || value < MIN_REFRESH_MS || value > MAX_REFRESH_MS) {
     throw new TypeError(label + "必须是 1000～300000 毫秒的安全整数");
   }
 }
