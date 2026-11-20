@@ -3519,3 +3519,27 @@ if ($testExitCode -ne 0) {
 执行前确认根 `.env` 中的开发 URL 是本机 `127.0.0.1:15432/adui_scada`；上述脚本只替换数据库路径，若根 URL 不是该本机开发库，应停止并由维护者在本机安全设置正确的隔离测试 URL，不能改指向远程或生产环境。测试文件还会独立校验测试 URL 的协议、主机和数据库名。
 
 本次用户首次裸跑 `pnpm run test:db` 时，6 个 Suite 均在导入阶段因缺少 `SCADA_TEST_DATABASE_URL` 退出，0 个测试执行；没有证据显示 PostgreSQL 已连接或数据库发生写入。按本节完整脚本重跑后，再依据 Vitest 实际统计和最终退出码记录结果。原开发库 `adui_scada` 的历史失败迁移继续冻结。
+
+## 2026-11-20 · D5b1 真实 Keycloak/HTTPS 已授权发布只读专项
+
+D5a 无授权 404 双端验收已于 PR #106 在 Windows 真实浏览器通过。D5b1 是独立候选，**不提供任何数据库准备、授权或发布写入命令**。只能在严格本机可信 OIDC Lab 里由有授权的维护者事先准备带 `release:read` 的专用工程；该权限独立于 `project:read` / `version:read`。用于 `UNRELEASED` 的工程必须未发布且 `releaseGeneration=0`，用于 `RELEASED` 的工程必须已有合法提交的发布快照和事件。默认 `ProjectReleaseSafetyGate` 禁止正式发布，不得为了生成测试数据而绕过、关闭或修改该门禁。
+
+离线代码门禁（加入 `pnpm run ready`）：
+
+```powershell
+pnpm run test:published:oidc:authorized:config
+vp check
+pnpm run docs:check
+pnpm run ready
+```
+
+真实只读专项需确认本机 HTTPS 双 Origin、Keycloak 预绑定主体和原有证书信任后**手动执行**。以下 ID 均为示例，必须替换为**已存在且已授予当前登录主体 release:read** 的专用 UUID v4 工程，不得使用普通生产工程：
+
+```powershell
+pnpm run test:published:oidc:authorized:browser --status UNRELEASED --project-id d5b-unreleased-12345678-1234-4234-8234-123456789abc
+Write-Host "D5b1 未发布专项退出码：$LASTEXITCODE"
+pnpm run test:published:oidc:authorized:browser --status RELEASED --project-id d5b-released-12345678-1234-4234-8234-123456789abc
+Write-Host "D5b1 已发布专项退出码：$LASTEXITCODE"
+```
+
+如果缺少预置 `RELEASED` 合法快照、身份未授权、数据库未隔离或状态不一致，**测试应退出 1**，将该场景标记为“未完成前置条件”，不能跳过真实响应断言、手工修改 DB 发布状态或把 HTTP Mock 当作真实验收。全程不读取工程编辑 head、草稿、Cookie、Token，也不发起任何工程写入请求。ACL 撤销、页面隐藏恢复和断网由后续专项覆盖。
