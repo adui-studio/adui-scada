@@ -451,3 +451,9 @@ D2a 已由 PR #103 合并至 `main`（`5f45bacbc90dd841dfb8b1992605d4652464361a`
 为保持模拟监控独立，两端 App 导航增加“已发布运行”第三入口，原运行监控 Demo 与 Studio 互不改变，避免把 SSE 假数据附加到已发布工程。静态 SVG 预览由 Runtime 封装 `publishedSnapshotSvg`：重新校验文档 Schema 后复用 Core 图元白名单渲染，并显式传空 Tag 值，不允许现场质量状态冒充 `GOOD`。未连接网关，Tag 质量 `UNAVAILABLE`；渲染器的缺值 BAD 仅为占位而非真实故障诊断。
 
 本候选不使用工程发现 API（`project:read` 不等于 `release:read`），不缓存发布正文和工程 ID，不触发设备写入。仍需要真实 HTTPS/Keycloak 双浏览器联调与撤权/切后台测试，不能将静态构建通过视为现场验收。
+
+## 2026-11-20 · 第三十五批 D5a 真实 OIDC 双 Origin 发布读取验证候选
+
+D5a 不改业务架构，复用 D1 服务端 release:read、D2a API Client、D2b Runtime 生命周期与 D3/D4 React/Vue 页面；新增 Node 离线安全门禁和一个真实 Keycloak/HTTPS 双 Origin 浏览器脚本。脚本通过现有同源 BFF Cookie，验证 React/Vue 两 Origin 映射到同一可信主体，再分别访问已授权与无发布权限的既有工程。
+
+权限测试采用两份预先存在的隔离 Lab 工程，而不是测试中创建/改 ACL：A 只授予 release:read（同时拒绝 project/version read）；B 授予 project:read 但缺少 release:read。这两种反向检查分别证明权限独立且不继承。所有工程 API 都是同源 GET；脚本不连接数据库、不更改身份、不执行工程/发布写入。真实浏览器只输出固定阶段与发布状态，不输出工程 ID、主体 ID、摘要和快照正文。
