@@ -632,3 +632,11 @@ D2b 通过 PR #104 Squash 合并到 main（`95c1c0e4b3423ba9acfcf425f3b82de304f0
 D3/D4 候选同步新增 React 与 Vue 的独立“已发布运行”导航入口，保持原水处理 Demo Runtime 和 Studio 不变。用户显式输入已授权工程 ID 后才发起 `release:read` 受保护的同源 BFF GET；双端共享 `PublishedRuntime` / `PublishedRuntimeRefresher`，对未发布、已验证、离线、拒绝及异常分别展示，退出/切换导航时清空内容、可见性变化暂停和恢复受控验证。仅在已通过发布指针/快照 SHA-256 校验后预览静态 SVG；不读取编辑 head、历史版本或草稿。
 
 **FR-008 继续部分实现**：当前发布写门禁仍生产 fail-closed；正式发布读取只有在明确授予 `release:read` 且数据库已有合法已提交发布指针时才能成功展示。当前没有真实工业 Tag 来源，静态组态图元无读数，Tag 质量始终 `UNAVAILABLE`。跨框架真实 OIDC/HTTPS、授权撤销、超时与生命周期浏览器专项未执行，本候选不得宣称生产可用或现场数据正常。
+
+## 2026-11-20 · FR-008 第三十五批 D5a 真实 OIDC 双框架发布读取专项候选
+
+D3/D4 已通过 PR #105 合并到 main（SHA 637ebbce3191c998b3264733645da947a3739e9f），React/Vue 两端已有独立“已发布运行”入口，共享 D2a/D2b 发布状态机。D5a 新增真实 Keycloak + 两套 HTTPS Origin 的只读浏览器专项，验证相同可信主体、匿名 401、仅 release:read 可读、project:read/version:read 不继承，以及拥有 project:read 但没有 release:read 的对照工程返回 404。专项实际点击 React/Vue 两端的“已发布运行”页面，验证授权工程读取/拒绝/恢复、发布状态一致、Tag 质量 UNAVAILABLE 与所有 UI 工程请求只使用同源 GET + no-store。
+
+D5a 不创建工程、不修改 ACL、不写数据库、不触发发布/回滚，也不访问工业设备。需维护者在隔离本机 Lab 预先准备同一已绑定 Keycloak 测试主体的两份既有工程：一份只显式授予 release:read（不含 project:read / version:read）；另一份授予 project:read 但不授予 release:read。两个工程 ID 通过当前 PowerShell 进程环境变量传入，不保存到 .env、终端日志或聊天。无发布指针时 UNRELEASED 是合法通过状态；生产发布门禁继续 fail-closed，因此本专项不要求真实生产发布。
+
+**验收边界**：D5a 只验证真实 BFF/OIDC/HTTPS 发布读取和 UI；不验证现场 Tag、实时数据质量、生产部署、工业安全联锁或设备写入。真实浏览器脚本不纳入 ready，须单独人工运行。
