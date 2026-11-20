@@ -19,6 +19,8 @@ const FAILURES = new Set([
   "正式发布运行只读专项缺少本机 Chrome/Edge",
   "正式发布运行只读专项 HTTPS 页面不可用",
   "正式发布运行只读专项真实登录失败",
+  "正式发布运行只读专项 React BFF 会话未通过验证",
+  "正式发布运行只读专项 Vue BFF 会话未通过验证",
   "正式发布运行只读专项两端登录主体不一致",
   "正式发布运行只读专项没有进入发布页面",
   "正式发布运行只读专项发布读取没有受控拒绝",
@@ -133,13 +135,16 @@ export function publishedRuntimeUiStateInPage(runtime = globalThis) {
   return { status, snapshot, quality };
 }
 
-async function waitForState(fn, failure, attempts = 80) {
+/** 只执行调用者传入的读取操作；导航切换可重试，其他错误立即安全失败。 */
+export async function waitForState(fn, failure, attempts = 80) {
   for (let i = 0; i < attempts; i++) {
     try {
-      const value = await browser.evaluate(fn);
+      const value = await fn();
       if (value) return value;
-    } catch {
-      // 页面懒加载或跳转期间只读等待，不展示敏感异常正文。
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== "隔离浏览器页面执行失败") {
+        throw error;
+      }
     }
     await pause(150);
   }
@@ -172,7 +177,9 @@ async function run() {
       await browser.send("Page.navigate", { url: origin + "/" });
       const principal = await waitForState(
         () => browser.evaluate(identityInPage, origin),
-        "正式发布运行只读专项真实登录失败",
+        index === 0
+          ? "正式发布运行只读专项 React BFF 会话未通过验证"
+          : "正式发布运行只读专项 Vue BFF 会话未通过验证",
         100,
       );
       assert.deepEqual(principal, identity, "正式发布运行只读专项两端登录主体不一致");

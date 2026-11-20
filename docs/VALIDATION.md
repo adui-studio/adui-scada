@@ -2428,3 +2428,11 @@ Write-Host "真实发布只读浏览器专项退出码：$LASTEXITCODE"
 修复仅涉及 D5a 页面输入注入：改用 `Reflect.set(inputPrototype, "value", projectId, input)` 通过原生属性 setter 绑定输入框接收者，保留安全 ID 校验、缺失 setter 拒绝、冒泡 `input` 事件和真正的 React/Vue 页面交互。在原 10 项 Node 安全门禁中扩充受控输入 setter/事件/VM 独立作用域回归；不放宽真实 404、同源只读请求、Token/Cookie 脱敏或服务端安全门禁。
 
 **已执行的仅是协作环境 Node.js 22 等价函数隔离行为验证：5/5 检查通过。** 该环境不能解析 github.com，未检出完整仓库，所以没有运行真实 `test:published:oidc:config`、`vp check`、`docs:check`、`ready` 或真实 Keycloak/HTTPS 浏览器专项；待 Windows 维护者按上文 D5a 验收顺序在最新 HEAD 复验，不得用该局部验证冒充整仓通过。PR 保持 Draft、不合并。
+
+## 2026-11-20 · D5a Windows 离线质量通过，真实登录后等待作用域错误（PR #106，待复验）
+
+维护者在 Windows 实际运行 D5a 的 `pnpm run test:published:oidc:config` **10/10 通过，退出码 0**；`vp check` **372 个格式文件 / 224 个受检文件零警告、错误，退出码 0**；`pnpm run docs:check` **89 份通过，退出码 0**；完整 `pnpm run ready` **680/680 单元测试、62/62 服务端 E2E、双框架和服务端构建完成，退出码 0**。该日志未记录 `git rev-parse HEAD`，不能将结果绑定到最新远程 SHA。上一节 E-070 的原生 setter Lint 故障已由 Windows 检查关闭。
+
+真实 `pnpm run test:published:oidc:browser` 在维护者人工 Keycloak 登录成功后输出“正式发布运行只读专项真实登录失败”，退出码 **1**。经仓库源码定位，该文本对应共享 `waitForLogin` 已返回后 React/Vue 循环中的错误等待：`waitForState` 引用了 `run()` 局部 `browser`，又重复执行 CDP evaluate，`ReferenceError` 被通用捕获吞没。不是已证实的 Keycloak/HTTPS/BFF 登录失败。
+
+E-071 候选仅修正等待回调执行、收紧导航异常重试，并将首次 OIDC 登录与 React/Vue BFF 后续会话检查的失败标签分离；Node 门禁增加 2 项，**修复后完整 Windows 质量链和真实浏览器专项均待重新验收**。不修改正式发布授权、ACL、迁移或生产安全门禁；PR 仍为 Draft，未合并。

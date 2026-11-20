@@ -641,14 +641,23 @@
 - **验证结论（已关闭）**：修复提交 `055e2115174fba27cc745f2277e251b94ab4eb74` 补齐真实 `PrismaProjectReleaseStore` 与默认 fail-closed 的 `ProjectReleaseSafetyGate` Provider。维护者随后 Windows 实测 PostgreSQL 专项 **6/6 文件、52/52 用例通过，退出码 0**，其中双 Cookie HTTP CAS 11/11、正式发布事务 10/10；`vp check` 359 个文件格式正确、211 个受检文件零警告/Lint/TypeScript 错误；`docs:check` 89 个 Markdown 通过；完整 `pnpm run ready` 退出码 0。PR #100 已 Squash 合并，合并提交 `8db55e4b1bb97d69c08dc9238eb61f76071b7e72`；上述测试对应合并前验收 HEAD `f576cacaadd2376f8e75d5270482ac9a356f81ed`。原始 5/6、41 passed 是修复前的模块装配失败，保留为历史证据；E-069 已关闭。生产安全门禁仍默认拒绝。
 - **证据**：维护者 2026-11-19 Windows PostgreSQL 测试日志；`apps/server/src/projects/project-api.controller.ts`；`apps/server/src/projects/project-persistence.module.ts`；`apps/server/src/projects/prisma-project-release-store.ts`；`apps/server/src/projects/project-release-safety-gate.ts`；PR #100 修复提交 `055e2115174fba27cc745f2277e251b94ab4eb74`。
 
-### E-070 · D5a 浏览器输入原生 setter 解引用触发 unbound-method（第三十五批 D5a，待 Windows 复验）
+### E-070 · D5a 浏览器输入原生 setter 解引用触发 unbound-method（第三十五批 D5a，已关闭）
 
 - **现象**：维护者 2026-11-20 Windows 执行 `vp check --fix`，`scripts/test-oidc-published-runtime-readonly.mjs:104` 报 `typescript(unbound-method)`，224 个检查文件中 0 错误、1 警告；格式化完成不代表质量门禁通过。
 - **根因**：为模拟真实 React/Vue 受控输入，浏览器专项从 `HTMLInputElement.prototype` 的 `value` 属性描述符抽取 `set` 函数再调用 `.call(input, projectId)`。虽然显式绑定了接收者，但对原生方法的独立函数引用被 Vite+ 的 `unbound-method` 规则拒绝。
 - **最小修复**：保留原生 `value` setter 存在性检查，改用 `Reflect.set(inputPrototype, "value", projectId, input)`，由属性设置机制以 `input` 为 receiver 调用原生 setter；仍派发冒泡 `input` 事件。原页面导航、工程 ID 白名单、同源只读请求及安全断言不变；在原 10 项门禁测试中扩充受控输入自有 setter 旁路、原生 setter 的 `this`、事件派发及无 setter 拒绝断言，并通过独立 VM 执行页面函数验证没有 Node 词法依赖。
 - **防复发**：受控输入的浏览器脚本应保留原生 setter 与事件语义，不以 `input.value = ...` 替代；避免把可能依赖 `this` 的原生方法解引用为独立变量，也不要全局忽略 `unbound-method`。相关回归应覆盖原生 receiver、事件与无 setter 的 fail-closed。
-- **验证边界**：协作环境 Node.js 22 已对等价修改执行隔离 VM/原生 setter 行为示例，5 项检查通过。由于协作容器不能解析 GitHub 域名，尚未在完整仓库运行 Node 门禁套件、Windows `vp check`、完整 `ready` 或真实 Keycloak/HTTPS 双端专项；全部待维护者在最新 PR HEAD 复验，不得标为已关闭。
+- **验证结论**：维护者 2026-11-20 Windows 实测 D5a `test:published:oidc:config` 10/10 通过、`vp check` 372 个格式文件 / 224 个受检文件零警告错误、`docs:check` 89 份通过、完整 `ready` 包含 680/680 单测与 62/62 HTTP E2E 且退出码 0。E-070 的 setter Lint 问题已关闭；本地日志未附 Git HEAD，不将这些结果严格绑定到远程 SHA。真实浏览器专项另有独立等待逻辑错误，记录为 E-071。
 - **证据**：维护者 Windows `vp check --fix` 原始日志、PR #106、`scripts/test-oidc-published-runtime-readonly.mjs`、`scripts/test-oidc-published-runtime-readonly.cases.mjs` 与 `docs/VALIDATION.md`。
+
+### E-071 · D5a 登录后等待函数误引用不存在的 browser 并吞没异常（第三十五批 D5a，待 Windows 复验）
+
+- **现象**：维护者 2026-11-20 Windows 的 D5a 离线 10/10、`vp check` 372/224 零告警、`docs:check` 89 份与完整 `ready` 退出码 0，随后真实 `test:published:oidc:browser` 在人工 Keycloak 登录成功后报“正式发布运行只读专项真实登录失败”，退出码 1。该诊断并不能证明登录失败。
+- **根因**：脚本先通过共享 `waitForLogin` 成功取得可信 BFF 主体，才进入双 Origin 循环。该循环调用外部 `waitForState(fn)`：它错误地访问仅定义于 `run()` 局部作用域的 `browser`，又对已经包含 `browser.evaluate(...)` 的回调重复调用 `browser.evaluate(fn)`。未定义标识符产生的 `ReferenceError` 被通用 `catch` 静默吞掉，最终所有重试均失败并误报“真实登录失败”。现有代码与唯一报错路径共同支持本次定位；后续页面行为仍待复测。
+- **最小修复**：`waitForState` 直接 `await fn()`，不引用外层 `browser`；只重试已知的 CDP 导航执行异常“隔离浏览器页面执行失败”，其他错误立即向上抛出并在顶层安全脱敏。首次登录与 React/Vue 重新导航后的 BFF 会话失败使用不同的固定中文标签。新增两项 Node 用例，验证回调确实调用、导航切换重试、非导航错误立即失败和合法超时拒绝；保留真实同主体、404、零快照和零工程写入断言。
+- **防复发**：浏览器异步等待器的参数必须明确是“操作函数”还是“浏览器页面函数”，不允许在 helper 中重复序列化；作用域中的 CDP Session 要作为参数或由调用者闭包封装。重试仅针对已知暂时性错误，不能用无差别 `catch` 把 `ReferenceError` 等编码错误伪装成登录与业务失败。Node 回归测试必须在没有全局 `browser` 的独立环境执行。
+- **验证边界**：本批修复后需在 Windows 最新 HEAD 执行 `pnpm run test:published:oidc:config`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`，并在可信 Keycloak/HTTPS Lab 中独立执行 `pnpm run test:published:oidc:browser`。原有 10 项测试通过不能证明本次新增 2 项通过，且修复源码不等于真实 D5a 专项已验收。未修改任何生产权限、API、数据库迁移或工业设备读写逻辑。
+- **证据**：维护者 2026-11-20 Windows 真实浏览器原始错误及完整质量日志、PR #106、`scripts/test-oidc-published-runtime-readonly.mjs`、`scripts/test-oidc-published-runtime-readonly.cases.mjs` 与 `docs/VALIDATION.md`。
 
 ## 三、从已发生问题提炼的预防性门禁
 

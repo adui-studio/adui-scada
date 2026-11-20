@@ -10,6 +10,7 @@ import {
   publishedRuntimeUiStateInPage,
   requirePublishedReadonlyMode,
   submitPublishedProjectInPage,
+  waitForState,
 } from "./test-oidc-published-runtime-readonly.mjs";
 
 const origin = "https://127.0.0.1:15173";
@@ -216,6 +217,46 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
     });
   });
 
+  void it("登录后状态等待必须执行传入的异步回调，不重复执行 CDP 函数", async () => {
+    let calls = 0;
+    const result = await waitForState(
+      async () => {
+        calls++;
+        if (calls === 1) return null;
+        if (calls === 2) throw new Error("隔离浏览器页面执行失败");
+        return { authenticated: true };
+      },
+      "正式发布运行只读专项 React BFF 会话未通过验证",
+      3,
+    );
+    assert.deepEqual(result, { authenticated: true });
+    assert.equal(calls, 3);
+  });
+
+  void it("非导航异常立即失败，真实超时与异常不可互相伪装", async () => {
+    let calls = 0;
+    await assert.rejects(
+      waitForState(
+        () => {
+          calls++;
+          throw new ReferenceError("状态等待回调引用了不存在的变量");
+        },
+        "正式发布运行只读专项 React BFF 会话未通过验证",
+        2,
+      ),
+      /状态等待回调引用了不存在的变量/,
+    );
+    assert.equal(calls, 1);
+    await assert.rejects(
+      waitForState(
+        async () => null,
+        "正式发布运行只读专项 React BFF 会话未通过验证",
+        1,
+      ),
+      /React BFF 会话未通过验证/,
+    );
+  });
+
   void it("未知浏览器异常必须脱敏，不输出 Cookie 和令牌", () => {
     const unsafe = new Error("Cookie=secret; access_token=private");
     const message = describePublishedReadonlyFailure(unsafe);
@@ -225,6 +266,12 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
     assert.equal(
       describePublishedReadonlyFailure(new Error("正式发布运行只读专项发布读取没有受控拒绝")),
       "正式发布运行只读专项发布读取没有受控拒绝",
+    );
+    assert.equal(
+      describePublishedReadonlyFailure(
+        new Error("正式发布运行只读专项 React BFF 会话未通过验证"),
+      ),
+      "正式发布运行只读专项 React BFF 会话未通过验证",
     );
   });
 });

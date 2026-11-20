@@ -1882,3 +1882,9 @@ D3/D4 候选从 D2b 合并后的 main 建立独立功能分支，同步向两端
 D5a 候选分支 `test/b35-d5a-published-runtime-oidc-readonly` 新增真实 HTTPS 双框架已发布运行只读拒绝测试脚本及 10 项安全门禁 cases；复用现有 Keycloak 同一主体验证、隔离 CDP 浏览器、同源 fetch 边界。自动 cases 加入 `ready`，真实浏览器脚本需维护者在本机可信 OIDC Lab 手动登录后单独执行。测试随机不存在工程，只断言两个框架无权限时 404 安全拒绝和零快照/零写入。
 
 **尚未实测 D5a；不允许提前合并。** 本阶段没有生产正式发布、真实 `release:read` 授权、动态 Tag、PLC/DCS 写入，也不能证明已授权发布/撤权/断网等后续 D5b 场景通过。
+
+## 2026-11-20 · D5a 离线质量链通过，真实浏览器等待函数误报登录失败
+
+维护者 Windows 已验证 D5a 门禁 10/10、`vp check` 372/224 零告警、`docs:check` 89 份、单测 680/680、NestJS HTTP E2E 62/62，完整 `ready` 退出码 0；未提供本机 HEAD SHA。真实 Keycloak/HTTPS D5a 浏览器运行在人工登录成功后显示“真实登录失败”、退出码 1，不能将此误报记录为真实登录失败或专项通过。
+
+通过当前 PR #106 源码确认 E-071：`waitForState` 错误引用 `run()` 局部 `browser` 并吞掉 `ReferenceError`。修复候选在原 Draft 分支最小修改等待逻辑与 Node 回归测试，不涉及 React/Vue 正式业务、NestJS、Prisma、发布授权或任何设备写入。修复后的 Windows `ready` 与真实双框架 OIDC 浏览器专项均待复验；D5b 未开始。
