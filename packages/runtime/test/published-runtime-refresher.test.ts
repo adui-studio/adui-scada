@@ -243,13 +243,88 @@ describe("正式发布 Runtime 指针刷新与失效保护", () => {
     await refresher.start(projectId);
     const first = refresher.refresh();
     const second = refresher.refresh();
-    expect(clock.pendingDelays()).toEqual([]);
+    expect(clock.pendingDelays()).toEqual([10_000]);
     expect(readCurrentRelease).toHaveBeenCalledTimes(2);
     finish?.(data);
     await Promise.all([first, second]);
     expect(runtime.snapshot()).toMatchObject({ status: "verified", releaseGeneration: 1 });
     expect(clock.pendingDelays()).toEqual([1_000]);
     refresher.stop();
+  });
+
+  it("单次读取悬挂超过超时上限后立即离线并安全重试，旧响应不得回填", async () => {
+    const stale = await published(1, 1);
+    const current = await published(2, 2, "f279cd50-ebf4-41bd-a7e7-9200387a32b6");
+    let finishStale: ((value: unknown) => void) | undefined;
+    let staleSignal: AbortSignal | undefined;
+    const readCurrentRelease = vi.fn<PublishedReleaseReader["readCurrentRelease"]>(
+      (_id, signal) => {
+        if (!finishStale) {
+          staleSignal = signal;
+          return new Promise<unknown>((resolve) => {
+            finishStale = resolve;
+          });
+        }
+        return Promise.resolve(current);
+      },
+    );
+    const clock = manualClock();
+    const { runtime, refresher } = fixture({ readCurrentRelease }, clock.schedule);
+    const initial = refresher.start(projectId);
+    expect(runtime.snapshot()).toMatchObject({ status: "loading", snapshot: null });
+    expect(clock.pendingDelays()).toEqual([10_000]);
+
+    clock.fireNext();
+    await initial;
+    expect(staleSignal?.aborted).toBe(true);
+    expect(runtime.snapshot()).toMatchObject({ status: "offline", snapshot: null });
+    expect(clock.pendingDelays()).toEqual([1_000]);
+
+    clock.fireNext();
+    await vi.waitFor(() => {
+      expect(runtime.snapshot()).toMatchObject({
+        status: "verified",
+        releaseGeneration: 2,
+        snapshot: { revision: 2 },
+        tagQuality: "UNAVAILABLE",
+      });
+    });
+    finishStale?.(stale);
+    await Promise.resolve();
+    expect(runtime.snapshot()).toMatchObject({
+      status: "verified",
+      releaseGeneration: 2,
+      snapshot: { revision: 2 },
+    });
+    expect(readCurrentRelease).toHaveBeenCalledTimes(2);
+    refresher.stop();
+  });
+
+  it("停止时清理仍在悬挂的超时任务，超时旧回调不得再请求或显示", async () => {
+    const data = await published();
+    let finish: ((value: unknown) => void) | undefined;
+    let receivedSignal: AbortSignal | undefined;
+    const readCurrentRelease = vi.fn<PublishedReleaseReader["readCurrentRelease"]>(
+      (_id, signal) => {
+        receivedSignal = signal;
+        return new Promise<unknown>((resolve) => {
+          finish = resolve;
+        });
+      },
+    );
+    const clock = manualClock();
+    const { runtime, refresher } = fixture({ readCurrentRelease }, clock.schedule);
+    const pending = refresher.start(projectId);
+    const timeoutCallback = clock.tasks[0]?.callback;
+    expect(clock.pendingDelays()).toEqual([10_000]);
+    refresher.stop();
+    expect(receivedSignal?.aborted).toBe(true);
+    expect(clock.pendingDelays()).toEqual([]);
+    timeoutCallback?.();
+    finish?.(data);
+    await pending;
+    expect(runtime.snapshot()).toMatchObject({ status: "idle", snapshot: null });
+    expect(readCurrentRelease).toHaveBeenCalledTimes(1);
   });
 
   it("切换工程的旧响应和已取消定时回调无法覆盖新工程", async () => {
@@ -357,6 +432,12 @@ describe("正式发布 Runtime 指针刷新与失效保护", () => {
         maxOfflineIntervalMs: 1_000,
       }),
     ).toThrow(/不得小于/);
+    expect(
+      () => new PublishedRuntimeRefresher(runtime, {
+        schedule: clock.schedule,
+        requestTimeoutMs: 0,
+      }),
+    ).toThrow(/1000～300000/);
     const refresher = new PublishedRuntimeRefresher(runtime, {
       schedule: clock.schedule,
     });
