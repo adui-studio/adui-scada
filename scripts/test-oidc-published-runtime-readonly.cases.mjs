@@ -93,7 +93,7 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
   });
 
   void it("CDP 页面函数无 Node 作用域引用且按独立上下文可运行", async () => {
-    const isolated = runInNewContext("(" + installPublishedReadGuardInPage.toString() + ")");
+    const isolated = runInNewContext("(" + installPublishedReadGuardInPage.toString() + ")", { URL });
     const { runtime } = fixture();
     assert.equal(isolated(origin, runtime), true);
     await runtime.fetch("/api/v1/projects/" + projectId + "/releases/current", {
