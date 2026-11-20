@@ -1025,3 +1025,15 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `packages/runtime/test/published-runtime-refresher.test.ts`：新增定时切版、未变化指针校验、离线退避/恢复、授权撤销、摘要篡改、隐藏/重显、水位防回退、并发单请求、超时迟到响应、停止/工程切换资源回收及参数校验测试。
 
 没有新数据库迁移、API 写入、React/Vue UI 变更或工业设备操作。
+
+## 2026-11-20 · 第三十五批 D3/D4 双框架正式发布只读 UI 候选
+
+- `packages/runtime/src/published-runtime-view.ts`：共享发布状态中文名称及 `publishedSnapshotSvg`；仅空 Tag 静态 SVG、Schema 白名单，不混入模拟值。
+- `packages/runtime/src/index.ts`：导出只读发布视图契约。
+- `packages/runtime/test/published-runtime-view.test.ts`：状态中文文案、静态 SVG 不携带模拟 Tag 和空页面拒绝的基础单测。
+- `apps/web-react/src/runtime/PublishedRuntimePage.tsx`：React 页面挂载创建受控会话，输入工程 ID、显式读取/刷新/停止、可见性与卸载清理、静态组态预览。
+- `apps/web-vue/src/runtime/PublishedRuntimePage.vue`：Vue Composition API 对等实现，复用相同运行时控制器和状态。
+- `apps/web-react/src/App.tsx`、`apps/web-vue/src/App.vue`：新增对等第三导航项“已发布运行”，两端均懒加载新页，不取代原模拟监控或 Studio。
+- `packages/runtime/src/runtime.css`：共享只读工程 ID 输入、按钮和发布状态样式，无新样式依赖。
+
+无 Prisma Schema、发布写事务、生产安全门禁或外部依赖变更。

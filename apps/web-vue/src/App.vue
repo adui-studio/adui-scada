@@ -2,8 +2,11 @@
 import { defineAsyncComponent, ref } from "vue";
 
 const RuntimePage = defineAsyncComponent(() => import("./runtime/RuntimePage.vue"));
+const PublishedRuntimePage = defineAsyncComponent(
+  () => import("./runtime/PublishedRuntimePage.vue"),
+);
 const StudioPage = defineAsyncComponent(() => import("./studio/StudioPage.vue"));
-const view = ref<"runtime" | "studio">("runtime");
+const view = ref<"runtime" | "published" | "studio">("runtime");
 </script>
 
 <template>
@@ -24,6 +27,13 @@ const view = ref<"runtime" | "studio">("runtime");
       </button>
       <button
         type="button"
+        :aria-current="view === 'published' ? 'page' : undefined"
+        @click="view = 'published'"
+      >
+        已发布运行
+      </button>
+      <button
+        type="button"
         :aria-current="view === 'studio' ? 'page' : undefined"
         @click="view = 'studio'"
       >
@@ -32,6 +42,7 @@ const view = ref<"runtime" | "studio">("runtime");
       <span class="scada-app-version">V0.2 本地原型</span>
     </nav>
     <RuntimePage v-if="view === 'runtime'" />
+    <PublishedRuntimePage v-else-if="view === 'published'" />
     <StudioPage v-else />
   </div>
 </template>

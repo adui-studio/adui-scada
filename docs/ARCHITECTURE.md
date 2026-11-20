@@ -443,3 +443,11 @@ D2a 已由 PR #103 合并至 `main`（`5f45bacbc90dd841dfb8b1992605d4652464361a`
 刷新器由未来框架适配层显式启动和停止；不私自创建后台常驻任务，也不连接 PLC/DCS、演示 SSE 或编辑数据。单次可取消定时器串行刷新；网络离线以有限退避重试，读取超时触发 `PublishedRuntime.expire()` 受控离线；撤权/摘要异常停止自动轮询。页面隐藏使用 `suspend()` 擦除可显示快照但保留当前身份会话的单调代次水位，彻底登出或工程切换使用 `stop()` 清除全部水位。异步旧请求由 AbortSignal + epoch + Runtime requestGeneration 共同拒绝。
 
 继续遵循 ADR-0069：`verified` 只表示已提交快照经 SHA-256 验证，实时 Tag 质量始终 `UNAVAILABLE`。本阶段未部署到 Vue/React Runtime，不具备现场只读运行验收结论，也不允许生产发布或设备写入。
+
+## 2026-11-20 · 第三十五批 D3/D4 双框架只读发布 UI 适配候选
+
+在 D1（独立服务端 `release:read`）、D2a（Core/API Client/Runtime）及 D2b（生命周期刷新）均已合并的基础上，本批将相同只读发布会话同步接入 React/Vue。各端在自己的惰性页面中持有 `PublishedRuntime` 和 `PublishedRuntimeRefresher`，通过共享 API Client 同源 Cookie GET 获取独立发布指针；UI 只负责输入、状态呈现和浏览器可见性、卸载生命周期。
+
+为保持模拟监控独立，两端 App 导航增加“已发布运行”第三入口，原运行监控 Demo 与 Studio 互不改变，避免把 SSE 假数据附加到已发布工程。静态 SVG 预览由 Runtime 封装 `publishedSnapshotSvg`：重新校验文档 Schema 后复用 Core 图元白名单渲染，并显式传空 Tag 值，不允许现场质量状态冒充 `GOOD`。未连接网关，Tag 质量 `UNAVAILABLE`；渲染器的缺值 BAD 仅为占位而非真实故障诊断。
+
+本候选不使用工程发现 API（`project:read` 不等于 `release:read`），不缓存发布正文和工程 ID，不触发设备写入。仍需要真实 HTTPS/Keycloak 双浏览器联调与撤权/切后台测试，不能将静态构建通过视为现场验收。

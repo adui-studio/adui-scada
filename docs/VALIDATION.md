@@ -2361,3 +2361,28 @@ Write-Host "完整质量链退出码：$LASTEXITCODE"
 ```
 
 若本地已有同名分支，使用 `git switch feat/b35-d2b-release-pointer-refresh` 并执行 `git pull --ff-only`。切换前先处理未提交修改；D2b 不增加 Prisma 模型或迁移，默认无需对冻结开发库、生产库或隔离库执行数据库部署。不得把代码存在、模拟时钟单测或旧批次的 Windows 结果误记成 D2b 实测通过。生产发布门禁、PLC/DCS 写入均继续默认拒绝。
+
+## 2026-11-20 · 第三十五批 D3/D4 双框架已发布运行 UI 候选（待维护者实测）
+
+D2b PR #104 已按维护者授权合并，main 合并 SHA `95c1c0e4b3423ba9acfcf425f3b82de304f04633`；Windows 实测 D2b 的 `vp check` 366/218、单测 677/677、HTTP E2E 62/62、`docs:check` 89 份，`ready` 退出码 0。此批新增两套“已发布运行”入口、共享静态发布 SVG 渲染与对应单测；**未在当前候选 HEAD 上执行任何质量检查**。
+
+候选验收边界：React/Vue 导航均独立出现已发布运行入口，未输入工程 ID 时零发布 API 请求；非法 ID 无网络请求；未授予 release:read 或无有效 Cookie 返回安全拒绝；未发布返回独立状态；真实已提交发布快照通过 SHA-256 校验才可显示静态 SVG；断网、10 秒超时、撤权、代次回退及切后台都必须撤下旧画面；停止/导航离开清除会话，返回时不会恢复草稿或 Demo；静态 SVG 不填充模拟 Tag、没有现场 GOOD，BAD 占位不当作故障诊断。
+
+建议维护者 Windows 在最新 PR HEAD 上执行：
+
+```powershell
+git status --short
+git fetch origin
+git switch --track origin/feat/b35-d3-d4-dual-published-runtime-ui
+git rev-parse HEAD
+vp check
+Write-Host "vp check 退出码：$LASTEXITCODE"
+pnpm run test:unit
+Write-Host "单元测试退出码：$LASTEXITCODE"
+pnpm run docs:check
+Write-Host "文档检查退出码：$LASTEXITCODE"
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+```
+
+如果本地已有分支则正常 switch/pull；提交前处理工作区未保存修改。本批不需要 Prisma 迁移。**真实双浏览器 Keycloak/HTTPS、release:read 独立授权、无发布/已发布/撤权和可见性等 E2E 尚未执行**，不可把静态检查和 Demo 浏览器测试视为正式发布 Runtime 工业安全验收。
