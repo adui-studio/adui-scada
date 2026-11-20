@@ -47,6 +47,6 @@ describe("双框架已发布运行画面只读预览", () => {
         ...snapshot,
         document: { ...snapshot.document, pages: [] },
       }),
-    ).toThrow(/至少一个页面|不包含页面/);
+    ).toThrow(/页面数量必须/);
   });
 });
