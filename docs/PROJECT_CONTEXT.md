@@ -1906,3 +1906,8 @@ D5b1 独立候选 `test/b35-d5b1-published-runtime-authorized-readonly` 继续�
 维护者 Windows D5b1 门禁 **7/7**、`vp check` **374/226** 零错误告警、`docs:check` **89**、完整 `ready` **680/680 单测、62/62 HTTP E2E** 且退出码 **0**。真实 Keycloak/HTTPS 在 React 已登录并通过页面输入后，使用文档的格式示例工程 ID 时，于发布读取阶段收到“异常已脱敏”、退出码 **1**；尚无证据证明该工程真实存在或已授予当前主体独立 `release:read`，也未观测实际 HTTP 状态，不能把失败误记为 Keycloak 故障或已授权验收成功。
 
 PR #107 D5b1 E-073 候选将 `denied/offline/error` 纳入状态等待终态，依据受控单次 GET 的 HTTP 状态分类 404/401/403/非 200 与客户端状态不符，仍全部 fail-closed，新增 3 项 Node 门禁；文档改为人工输入已预置工程，不再使用可复制的示例 UUID。**修复后的 Windows 质量链和真实授权双框架尚未实测，PR 保持 Draft；RELEASED 不能绕过生产默认拒绝门禁造数据。**
+
+
+## 2026-11-20 · D5b1 本机专用 UNRELEASED 夹具准备候选（PR #107）
+
+维护者在 Docker 原开发库 `adui_scada` 成功恢复 7 条 Prisma 迁移，未解决迁移 0，39 原工程、168 ACL、39 未发布状态及 0 发布事件保留；明确批准仅对本机一个新专用工程及 `lab-engineer` 的独立 `release:read` 进行准备。本批新增只读默认的 Lab 工具和单独的 `--apply --confirm-lab adui_scada` 写入模式。工具通过正式同源 OIDC/CSRF 工程创建 API 创建随机前缀工程，再在严校验的 SQL 事务中只增加同主体单条 `release:read`，并通过真实发布 GET 只读确认。脚本没有在用户 Docker 数据库运行，不能声称夹具已存在；真实授权双框架仍待验收。

@@ -2462,3 +2462,10 @@ E-072 候选增加固定阶段和安全错误类别诊断，登录后等待 Reac
 随后维护者直接使用 HARNESS 中展示的 `d5b-unreleased-12345678-1234-4234-8234-123456789abc` 示例 ID。真实 Keycloak 登录成功，React BFF、导航与输入成功；在 React 发布读取阶段输出“异常已脱敏”，专项 **退出码 1**，Vue 未执行。该示例 ID 的真实工程存在性和独立 `release:read` ACL **尚未得到证实**；原脚本只等待成功状态，可能将 HTTP 404 等受控拒绝误报为超时，不能从本日志断定实际 HTTP 状态。
 
 E-073 候选改为同时识别成功/拒绝/离线/错误终态，对单一 GET 的 HTTP 404（工程不存在或未授权）、401、403、非 200 与客户端状态不一致分别固定脱敏诊断；新增 3 项 Node 回归，预计从 7 项增至 10 项；HARNESS 改为人工输入已存在工程 ID，不再提供可直接复制的虚构 UUID。保持 D5b1 一次只读 GET、零数据库写入、默认发布安全门禁 fail-closed。新提交的 Windows 全量 `ready`、真实 UNRELEASED/RELEASED 两种授权浏览器仍待验证，PR 保持 Draft。
+
+
+## 2026-11-20 · D5b1 专用未发布工程准备候选（明确授权、尚未执行）
+
+维护者实际验证 Docker `adui_scada` 数据库完成 7/7 Prisma 迁移、未解决迁移 0、保留 39 工程/168 ACL、39 条有效 UNRELEASED 状态和 0 发布事件；此前已备份 SHA-256 校验并在隔离恢复副本上完成 `pg_restore` 和迁移回放。随后授权仅为本机可信 Lab 创建一个 D5b1 专用未发布工程并为已验证 `lab-engineer` 授予该工程独立 `release:read`。
+
+新增 `scripts/prepare-oidc-published-unreleased.mjs` 和 9 项 Node 安全回归；默认只读预检，显式 `--apply --confirm-lab adui_scada` 才调用受保护的工程创建 HTTP API 并在 SQL SERIALIZABLE 事务内加一条 ACL。已有工程、其他权限、发布状态与工业设备不写入。失败后不自动删除已创建工程，须按 ID 单独核查。工具编写阶段已完成 V8 隔离函数行为检查（7 项基本检查通过），**并非整仓 Node 9/9 或 Windows 真实数据库/浏览器测试通过**。新提交的 `test:published:oidc:fixture:config`、`vp check`、`docs:check`、`ready` 和真实夹具写入/双框架读取仍待执行。PR #107 保持 Draft，不提前合并。
