@@ -270,6 +270,19 @@ void describe("D5b1 双框架真实发布授权只读专项", () => {
       releaseGeneration: 0,
       releasedRevision: null,
     });
+    assert.deepEqual(
+      requirePublishedAuthorizedRead(
+        state("verified"),
+        {
+          blocked: 0,
+          paths: ["/api/v1/projects/" + releasedId + "/releases/current"],
+          statuses: [200],
+        },
+        "RELEASED",
+        releasedId,
+      ),
+      { status: "RELEASED", releaseGeneration: 2, releasedRevision: 1 },
+    );
     for (const invalid of [
       { ...guard, blocked: 1 },
       { ...guard, paths: [...guard.paths, "/api/v1/projects/other"] },
