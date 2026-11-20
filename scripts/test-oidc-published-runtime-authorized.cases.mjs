@@ -80,7 +80,12 @@ void describe("D5b1 双框架真实发布授权只读专项", () => {
       ["--status", "RELEASED", "--project-id", unreleasedId],
       ["--status", "UNRELEASED", "--project-id", releasedId],
       ["--status", "RELEASED", "--project-id", "../other"],
-      ["--status", "RELEASED", "--project-id", "d5b-released-12345678-1234-1234-8234-123456789abc"],
+      [
+        "--status",
+        "RELEASED",
+        "--project-id",
+        "d5b-released-12345678-1234-1234-8234-123456789abc",
+      ],
       ["--status", "RELEASED", "--project-id", releasedId, "--force"],
     ]) {
       assert.throws(() => parsePublishedAuthorizedMode(args), /D5b1 只允许|预置工程名称/);
@@ -148,7 +153,10 @@ void describe("D5b1 双框架真实发布授权只读专项", () => {
   });
 
   void it("已发布必须由已校验的快照画面组成，且代次修订为正", () => {
-    const actual = publishedAuthorizedUiStateInPage(releasedId, pageFixture(releasedId, "verified"));
+    const actual = publishedAuthorizedUiStateInPage(
+      releasedId,
+      pageFixture(releasedId, "verified"),
+    );
     assert.deepEqual(actual, state("verified"));
     assert.deepEqual(requirePublishedAuthorizedState(actual, "RELEASED"), {
       status: "RELEASED",

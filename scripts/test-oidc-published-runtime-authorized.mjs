@@ -123,9 +123,13 @@ export function publishedAuthorizedUiStateInPage(projectId, runtime = globalThis
   if (!panel) return null;
   const entries = [...panel.querySelectorAll("dt")];
   const findValue = (key) =>
-    entries.find((item) => item.textContent?.trim() === key)?.nextElementSibling?.textContent?.trim();
+    entries
+      .find((item) => item.textContent?.trim() === key)
+      ?.nextElementSibling?.textContent?.trim();
   const parseCount = (value) =>
-    typeof value === "string" && /^(0|[1-9][0-9]*)$/.test(value) && Number.isSafeInteger(Number(value))
+    typeof value === "string" &&
+    /^(0|[1-9][0-9]*)$/.test(value) &&
+    Number.isSafeInteger(Number(value))
       ? Number(value)
       : null;
   const rawRevision = findValue("发布修订");
