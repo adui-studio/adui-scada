@@ -23,3 +23,12 @@ export {
   RuntimeStatusHistory,
 } from "./diagnostics.ts";
 export type { RuntimeDiagnostics, RuntimeStatusEvent } from "./diagnostics.ts";
+
+/** 正式发布运行态独立于演示 SSE 与 Studio 编辑缓存。 */
+export { PublishedRuntime, initialPublishedRuntimeState } from "./published-runtime.ts";
+export type {
+  PublishedRuntimeStatus,
+  PublishedRuntimeState,
+  PublishedRuntimeListener,
+  PublishedReleaseReader,
+} from "./published-runtime.ts";
