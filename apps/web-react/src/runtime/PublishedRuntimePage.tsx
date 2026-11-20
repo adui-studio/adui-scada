@@ -34,7 +34,10 @@ export default function PublishedRuntimePage() {
         if (!lifetime.signal.aborted) setMessage("发布运行状态切换失败，请重新启动读取");
       });
     };
-    const onPageHide = () => refresher.stop();
+    const onPageHide = () => {
+      refresher.stop();
+      if (!lifetime.signal.aborted) setActiveProjectId(null);
+    };
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("pagehide", onPageHide);
 
