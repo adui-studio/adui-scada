@@ -1879,6 +1879,6 @@ D3/D4 候选从 D2b 合并后的 main 建立独立功能分支，同步向两端
 
 维护者确认并授权合并 PR #105；GitHub Squash 合并提交 637ebbce3191c998b3264733645da947a3739e9f，并验证与 main HEAD 一致。D3/D4 Windows 质量链由维护者日志确认：vp check 370/222 零警告、单测 680/680、HTTP E2E 62/62、docs:check 89 份、React/Vue/Server 构建成功、完整 pnpm run ready 退出码 0。
 
-D5a 新增真实 Keycloak 双 HTTPS Origin 的只读发布读取浏览器专项，要求两份既有隔离 Lab 工程和当前 PowerShell 临时设置的工程 ID：授权工程仅有 release:read，且无 project:read / version:read；对照工程有 project:read 但没有 release:read。同一预绑定普通测试用户只手动登录一次，React/Vue 两 Origin 共用当前主机 Cookie 并核对主体。专项验证匿名 401、权限不继承、发布指针 no-store、真实 UI、撤权拒绝后再次授权恢复及全程零工程写入。脚本不创建工程、不授予权限、不连接 PostgreSQL、不修改发布记录，临时浏览器 Profile 退出清理。
+D5a 新增真实 Keycloak 双 HTTPS Origin 的只读发布读取浏览器专项，要求两份既有隔离 Lab 工程和当前 PowerShell 临时设置的工程 ID：授权工程仅有 release:read，且无 project:read / version:read；对照工程有 project:read 但没有 release:read。同一预绑定普通测试用户只手动登录一次，React/Vue 两 Origin 共用当前主机 Cookie 并核对主体。专项验证匿名 401、权限不继承、发布指针 no-store、真实 UI、撤权拒绝后再次授权恢复及全程零工程写入。脚本不创建工程、不授予权限、不直接连接 PostgreSQL、不修改工程/ACL/发布记录；正常 OIDC 登录按既有 BFF 流程建立认证事务与会话，临时浏览器 Profile 退出清理。
 
 **当前 D5a 源码、离线测试和文档已提交到候选分支；尚未执行 Node/Vitest、Windows vp check、docs:check、完整 ready 或真实 Keycloak 浏览器。** 无已发布指针时 UNRELEASED 是预期结果；生产发布门禁仍 fail-closed，现场 Tag 质量仍 UNAVAILABLE。
