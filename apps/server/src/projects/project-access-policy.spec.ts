@@ -89,6 +89,20 @@ describe("服务端工程级权限策略", () => {
     expect(hasProjectPermission(principal, scope, rollbackOnly, "release:publish")).toBe(false);
   });
 
+  it("正式发布快照读取必须独立显式授予", () => {
+    expect(hasProjectPermission(principal, scope, grant, "release:read")).toBe(false);
+
+    const runtimeReader: ProjectPermissionGrant = {
+      ...grant,
+      permissions: ["release:read"],
+    };
+    expect(hasProjectPermission(principal, scope, runtimeReader, "release:read")).toBe(true);
+    expect(hasProjectPermission(principal, scope, runtimeReader, "project:read")).toBe(false);
+    expect(hasProjectPermission(principal, scope, runtimeReader, "version:read")).toBe(false);
+    expect(hasProjectPermission(principal, scope, runtimeReader, "release:publish")).toBe(false);
+    expect(hasProjectPermission(principal, scope, runtimeReader, "release:rollback")).toBe(false);
+  });
+
   it("未知权限名称不会被解释为管理员或写入权限", () => {
     const invalidAction = "devices:write" as ProjectAccessAction;
     expect(hasProjectPermission(principal, scope, grant, invalidAction)).toBe(false);

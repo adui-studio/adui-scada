@@ -75,12 +75,23 @@ interface HarnessOptions {
     readonly createdAt: Date;
     readonly requestSemanticHash: string;
   } | null;
+  readonly currentEvent?: {
+    readonly eventId: string;
+    readonly tenantId: string;
+    readonly projectId: string;
+    readonly generation: bigint;
+    readonly action: string;
+    readonly toRevision: bigint;
+    readonly toContentHash: string;
+    readonly createdAt: Date;
+  } | null;
   readonly updateCount?: number;
   readonly allowGate?: boolean;
 }
 
 async function createHarness(options: HarnessOptions = {}) {
   const steps: string[] = [];
+  const queries: string[] = [];
   const snapshot =
     options.snapshot ??
     (await createProjectSnapshot(createDocument(), {
@@ -98,8 +109,10 @@ async function createHarness(options: HarnessOptions = {}) {
     $queryRaw: vi.fn<(parts: TemplateStringsArray, ...values: unknown[]) => Promise<unknown[]>>(
       async (parts) => {
         const query = parts.join("?");
+        queries.push(query);
         if (query.includes("FROM scada_projects")) {
           steps.push("锁定工程");
+          if (query.includes("SELECT project_id")) return [{ project_id: PROJECT_ID }];
           return [{ head_revision: options.head ?? 1n }];
         }
         if (query.includes("FROM scada_auth_sessions")) {
@@ -118,6 +131,10 @@ async function createHarness(options: HarnessOptions = {}) {
           steps.push("锁定不可变快照");
           return [{ revision: 1n }];
         }
+        if (query.includes("FROM scada_project_release_events")) {
+          steps.push("锁定当前发布事件");
+          return options.currentEvent ? [{ event_id: options.currentEvent.eventId }] : [];
+        }
         throw new Error("测试遇到未登记的数据库锁查询");
       },
     ),
@@ -135,6 +152,12 @@ async function createHarness(options: HarnessOptions = {}) {
       }),
     },
     scadaProjectReleaseEvent: {
+      findUnique: vi.fn<() => Promise<NonNullable<HarnessOptions["currentEvent"]> | null>>(
+        async () => {
+          steps.push("读取当前发布事件");
+          return options.currentEvent ?? null;
+        },
+      ),
       findFirst: vi.fn<() => Promise<NonNullable<HarnessOptions["previousEvent"]> | null>>(
         async () => {
           steps.push("查询幂等事件");
@@ -202,6 +225,7 @@ async function createHarness(options: HarnessOptions = {}) {
     store: new PrismaProjectReleaseStore(database, gate as ProjectReleaseSafetyGate),
     tx,
     steps,
+    queries,
     transaction,
     gateAssertReady,
     snapshot,
@@ -209,6 +233,156 @@ async function createHarness(options: HarnessOptions = {}) {
 }
 
 describe("正式发布事务仓储", () => {
+  it("未发布工程返回明确状态且不读取编辑 head、快照或发布事件", async () => {
+    const harness = await createHarness({ permissions: ["release:read"] });
+    const result = await harness.store.readCurrent(PRINCIPAL, SESSION_ID, PROJECT_ID);
+
+    expect(result).toEqual({
+      status: "UNRELEASED",
+      projectId: PROJECT_ID,
+      releaseGeneration: 0,
+    });
+    expect(harness.tx.scadaProjectVersion.findUnique).not.toHaveBeenCalled();
+    expect(harness.tx.scadaProjectReleaseEvent.findUnique).not.toHaveBeenCalled();
+    expect(harness.queries.some((query) => /head_revision/i.test(query))).toBe(false);
+    expect(harness.steps).toEqual([
+      "锁定工程",
+      "锁定会话与主体",
+      "锁定发布授权",
+      "锁定发布状态",
+      "读取发布状态",
+    ]);
+  });
+
+  it("工程读取和历史版本读取权限不能继承 release:read", async () => {
+    const harness = await createHarness({
+      permissions: ["project:read", "version:read"],
+    });
+    await expect(harness.store.readCurrent(PRINCIPAL, SESSION_ID, PROJECT_ID)).rejects.toThrow(
+      /工程资源不存在或无权访问/,
+    );
+    expect(harness.tx.scadaProjectReleaseState.findUnique).not.toHaveBeenCalled();
+    expect(harness.tx.scadaProjectVersion.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("只凭 release:read 返回已提交发布快照并核对最后发布事件", async () => {
+    const snapshot = await createProjectSnapshot(createDocument(), {
+      revision: 1,
+      createdAt: CREATED_AT,
+    });
+    const eventId = "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e8";
+    const state = {
+      releaseGeneration: 1n,
+      releasedRevision: 1n,
+      releasedContentHash: snapshot.contentHash,
+      lastReleaseEventId: eventId,
+    };
+    const currentEvent = {
+      eventId,
+      tenantId: PRINCIPAL.tenantId,
+      projectId: PROJECT_ID,
+      generation: 1n,
+      action: "PUBLISH",
+      toRevision: 1n,
+      toContentHash: snapshot.contentHash,
+      createdAt: new Date(CREATED_AT),
+    };
+    const harness = await createHarness({
+      permissions: ["release:read"],
+      state,
+      snapshot,
+      currentEvent,
+    });
+    const result = await harness.store.readCurrent(PRINCIPAL, SESSION_ID, PROJECT_ID);
+
+    expect(result).toMatchObject({
+      status: "RELEASED",
+      projectId: PROJECT_ID,
+      releasedRevision: 1,
+      releasedContentHash: snapshot.contentHash,
+      releaseGeneration: 1,
+      eventId,
+      lastAction: "PUBLISH",
+      releasedAt: CREATED_AT,
+      snapshot: { projectId: PROJECT_ID, revision: 1, contentHash: snapshot.contentHash },
+    });
+    expect(harness.queries.some((query) => /head_revision/i.test(query))).toBe(false);
+    expect(harness.steps).toEqual([
+      "锁定工程",
+      "锁定会话与主体",
+      "锁定发布授权",
+      "锁定发布状态",
+      "读取发布状态",
+      "锁定不可变快照",
+      "锁定当前发布事件",
+      "读取不可变快照",
+      "读取当前发布事件",
+    ]);
+  });
+
+  it("发布事件与发布指针不一致时拒绝返回快照", async () => {
+    const snapshot = await createProjectSnapshot(createDocument(), {
+      revision: 1,
+      createdAt: CREATED_AT,
+    });
+    const eventId = "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e8";
+    const harness = await createHarness({
+      permissions: ["release:read"],
+      state: {
+        releaseGeneration: 1n,
+        releasedRevision: 1n,
+        releasedContentHash: snapshot.contentHash,
+        lastReleaseEventId: eventId,
+      },
+      snapshot,
+      currentEvent: {
+        eventId,
+        tenantId: PRINCIPAL.tenantId,
+        projectId: PROJECT_ID,
+        generation: 1n,
+        action: "PUBLISH",
+        toRevision: 1n,
+        toContentHash: "0".repeat(64),
+        createdAt: new Date(CREATED_AT),
+      },
+    });
+    await expect(harness.store.readCurrent(PRINCIPAL, SESSION_ID, PROJECT_ID)).rejects.toThrow(
+      /数据库当前正式发布事件与指针不一致/,
+    );
+  });
+
+  it("不可变快照摘要与发布指针不一致时拒绝返回快照", async () => {
+    const snapshot = await createProjectSnapshot(createDocument(), {
+      revision: 1,
+      createdAt: CREATED_AT,
+    });
+    const eventId = "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e8";
+    const harness = await createHarness({
+      permissions: ["release:read"],
+      state: {
+        releaseGeneration: 1n,
+        releasedRevision: 1n,
+        releasedContentHash: snapshot.contentHash,
+        lastReleaseEventId: eventId,
+      },
+      snapshot,
+      storedHash: "0".repeat(64),
+      currentEvent: {
+        eventId,
+        tenantId: PRINCIPAL.tenantId,
+        projectId: PROJECT_ID,
+        generation: 1n,
+        action: "PUBLISH",
+        toRevision: 1n,
+        toContentHash: snapshot.contentHash,
+        createdAt: new Date(CREATED_AT),
+      },
+    });
+    await expect(harness.store.readCurrent(PRINCIPAL, SESSION_ID, PROJECT_ID)).rejects.toThrow(
+      /数据库当前正式发布快照完整性校验失败/,
+    );
+  });
+
   it("请求字段、幂等键或目标版本无效时不打开数据库事务", async () => {
     const harness = await createHarness();
     const invalidCases = [

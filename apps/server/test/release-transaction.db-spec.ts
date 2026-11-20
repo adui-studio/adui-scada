@@ -5,6 +5,7 @@ import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { Reflector } from "@nestjs/core";
 import request from "supertest";
+import type { Prisma } from "../src/generated/prisma/client.js";
 import { waterTreatmentDemoDocument } from "@adui/scada-core";
 import { AuthSessionService } from "../src/auth/auth-session.service.js";
 import type { IssuedAuthSession } from "../src/auth/auth-session.service.js";
@@ -103,6 +104,13 @@ function postPublish(
     .set("X-SCADA-CSRF", fixture.session.csrfToken)
     .set("Idempotency-Key", idempotencyKey)
     .send(publishBody(expectedHeadRevision, expectedReleaseGeneration));
+}
+
+/** 只读读取当前发布指针；与工程 head 和历史版本 API 分离。 */
+function getCurrentRelease(fixture: ReleaseFixture) {
+  return request(app!.getHttpServer())
+    .get("/api/v1/projects/" + fixture.projectId + "/releases/current")
+    .set("Cookie", cookie(fixture.session));
 }
 
 /** 每项测试使用随机租户、工程与真实会话，只清理本用例写入的数据。 */
@@ -421,6 +429,191 @@ describe("隔离 PostgreSQL 正式发布事务", () => {
       ]);
       expect(state.releaseGeneration).toBe(1n);
       expect(eventCount).toBe(1);
+    });
+  });
+
+  it("缺少 release:read 时即使拥有工程和版本读取权限也拒绝", async () => {
+    await withFixture(async (fixture) => {
+      const response = await getCurrentRelease(fixture);
+      expect(response.status).toBe(404);
+      expect(response.body.message).toBe("工程资源不存在或无权访问");
+      expect(response.headers["cache-control"]).toBe("no-store");
+    });
+  });
+
+  it("显式授予 release:read 后未发布工程返回明确未发布状态", async () => {
+    await withFixture(async (fixture) => {
+      await database!.client.scadaProjectGrant.create({
+        data: {
+          tenantId: fixture.tenantId,
+          projectId: fixture.projectId,
+          subjectId,
+          permission: "release:read",
+        },
+      });
+      const response = await getCurrentRelease(fixture);
+      expect(response.status).toBe(200);
+      expect(response.headers["cache-control"]).toBe("no-store");
+      expect(response.body).toEqual({
+        status: "UNRELEASED",
+        projectId: fixture.projectId,
+        releaseGeneration: 0,
+      });
+      expect(response.body).not.toHaveProperty("headRevision");
+      expect(response.body).not.toHaveProperty("snapshot");
+    });
+  });
+
+  it("仅授予 release:read 时读取已发布快照但不能读取工程或历史版本", async () => {
+    await withFixture(async (fixture) => {
+      const published = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f5");
+      expect(published.status).toBe(201);
+
+      await database!.client.scadaProjectGrant.deleteMany({
+        where: {
+          tenantId: fixture.tenantId,
+          projectId: fixture.projectId,
+          subjectId,
+        },
+      });
+      await database!.client.scadaProjectGrant.create({
+        data: {
+          tenantId: fixture.tenantId,
+          projectId: fixture.projectId,
+          subjectId,
+          permission: "release:read",
+        },
+      });
+
+      const response = await getCurrentRelease(fixture);
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({
+        status: "RELEASED",
+        projectId: fixture.projectId,
+        releasedRevision: 1,
+        releasedContentHash: published.body.releasedContentHash,
+        releaseGeneration: 1,
+        eventId: published.body.eventId,
+        lastAction: "PUBLISH",
+        snapshot: {
+          projectId: fixture.projectId,
+          revision: 1,
+          contentHash: published.body.releasedContentHash,
+        },
+      });
+      expect(response.body).not.toHaveProperty("headRevision");
+      expect(response.headers["cache-control"]).toBe("no-store");
+
+      const project = await request(app!.getHttpServer())
+        .get("/api/v1/projects/" + fixture.projectId)
+        .set("Cookie", cookie(fixture.session));
+      const versions = await request(app!.getHttpServer())
+        .get("/api/v1/projects/" + fixture.projectId + "/versions")
+        .set("Cookie", cookie(fixture.session));
+      expect(project.status).toBe(404);
+      expect(versions.status).toBe(404);
+    });
+  });
+
+  it("相同工程 ID 的跨租户读取只能看到本租户发布状态", async () => {
+    await withFixture(async (fixture) => {
+      const published = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f6");
+      expect(published.status).toBe(201);
+
+      const otherTenantId = "test-" + randomUUID();
+      const otherPrincipal = { tenantId: otherTenantId, subjectId };
+      try {
+        await database!.client.scadaIdentity.create({
+          data: { tenantId: otherTenantId, subjectId, status: "active" },
+        });
+        const otherSession = await sessions.issueForVerifiedSubject(otherPrincipal);
+        await projectStore.create(otherPrincipal, {
+          document: createDocument(fixture.projectId),
+        });
+        await database!.client.scadaProjectGrant.create({
+          data: {
+            tenantId: otherTenantId,
+            projectId: fixture.projectId,
+            subjectId,
+            permission: "release:read",
+          },
+        });
+
+        const response = await request(app!.getHttpServer())
+          .get("/api/v1/projects/" + fixture.projectId + "/releases/current")
+          .set("Cookie", cookie(otherSession));
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual({
+          status: "UNRELEASED",
+          projectId: fixture.projectId,
+          releaseGeneration: 0,
+        });
+        expect(response.body.releasedContentHash).toBeUndefined();
+      } finally {
+        await database!.client.scadaProjectReleaseState.deleteMany({
+          where: { tenantId: otherTenantId },
+        });
+        await database!.client.scadaProjectReleaseEvent.deleteMany({
+          where: { tenantId: otherTenantId },
+        });
+        await database!.client.scadaProjectAudit.deleteMany({ where: { tenantId: otherTenantId } });
+        await database!.client.scadaProjectVersion.deleteMany({
+          where: { tenantId: otherTenantId },
+        });
+        await database!.client.scadaProjectGrant.deleteMany({ where: { tenantId: otherTenantId } });
+        await database!.client.scadaProject.deleteMany({ where: { tenantId: otherTenantId } });
+        await database!.client.scadaAuthSession.deleteMany({ where: { tenantId: otherTenantId } });
+        await database!.client.scadaIdentity.deleteMany({ where: { tenantId: otherTenantId } });
+      }
+    });
+  });
+
+  it("当前发布快照内容被篡改时拒绝返回正文", async () => {
+    await withFixture(async (fixture) => {
+      const published = await postPublish(fixture, "c2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4f7");
+      expect(published.status).toBe(201);
+      await database!.client.scadaProjectGrant.create({
+        data: {
+          tenantId: fixture.tenantId,
+          projectId: fixture.projectId,
+          subjectId,
+          permission: "release:read",
+        },
+      });
+
+      const version = await database!.client.scadaProjectVersion.findUniqueOrThrow({
+        where: {
+          tenantId_projectId_revision: {
+            tenantId: fixture.tenantId,
+            projectId: fixture.projectId,
+            revision: 1n,
+          },
+        },
+      });
+      const tampered = JSON.parse(JSON.stringify(version.snapshot)) as {
+        document: {
+          pages: Array<{ nodes: Array<{ props: Record<string, unknown> }> }>;
+        };
+      };
+      const node = tampered.document.pages[0]?.nodes[1];
+      if (!node) throw new Error("测试快照缺少预期图元");
+      node.props.color = "red";
+      const snapshotData = JSON.parse(JSON.stringify(tampered)) as Prisma.InputJsonValue;
+      await database!.client.scadaProjectVersion.update({
+        where: {
+          tenantId_projectId_revision: {
+            tenantId: fixture.tenantId,
+            projectId: fixture.projectId,
+            revision: 1n,
+          },
+        },
+        data: { snapshot: snapshotData },
+      });
+
+      const response = await getCurrentRelease(fixture);
+      expect(response.status).toBe(500);
+      expect(JSON.stringify(response.body)).not.toContain("工程版本快照摘要不匹配");
+      expect(JSON.stringify(response.body)).not.toContain("water-treatment");
     });
   });
 

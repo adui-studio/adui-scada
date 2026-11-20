@@ -2274,23 +2274,54 @@ Vitest 汇总：5/6 文件通过，41 项通过、11 项 skipped，1 个 Suite �
 
 维护者 Windows 在 PR #100 最终验收 HEAD `f576cacaadd2376f8e75d5270482ac9a356f81ed` 完成完整质量链。此前 E-068 的隔离 URL 缺失问题通过 `docs/HARNESS.md` 的 PowerShell `try/finally` 包装解决；E-069 的双 Cookie 测试 NestJS Provider 遗漏通过最小测试夹具修改解决。
 
-| 验收项目 | 最终结果 | 退出码 |
-|---|---:|---:|
-| PostgreSQL 专项 | 6/6 文件、52/52 用例 | 0 |
-| 双 Cookie HTTP CAS | 11/11 | 0（包含于 test:db） |
-| 正式发布事务 PostgreSQL | 10/10 | 0（包含于 test:db） |
-| 发布 Schema 完整性 | 6/6 | 0（包含于 test:db） |
-| `vp check` | 359 文件格式正确；211 个受检文件零警告/Lint/TypeScript 错误 | 0 |
-| `docs:check` | 89 个 Markdown 文件 | 0 |
-| 单元测试 | 52/52 文件、633/633 用例 | 0 |
-| SSE 客户端 / 故障代理 | 8/8、4/4 | 0 |
-| OIDC / Docker / 浏览器配置安全专项 | 全部通过 | 0 |
-| NestJS HTTP E2E | 6/6 文件、59/59 用例 | 0 |
-| React / Vue / NestJS 构建 | 均成功 | 0 |
-| 完整 `pnpm run ready` | 全链完成 | **0** |
+| 验收项目                           |                                                    最终结果 |              退出码 |
+| ---------------------------------- | ----------------------------------------------------------: | ------------------: |
+| PostgreSQL 专项                    |                                        6/6 文件、52/52 用例 |                   0 |
+| 双 Cookie HTTP CAS                 |                                                       11/11 | 0（包含于 test:db） |
+| 正式发布事务 PostgreSQL            |                                                       10/10 | 0（包含于 test:db） |
+| 发布 Schema 完整性                 |                                                         6/6 | 0（包含于 test:db） |
+| `vp check`                         | 359 文件格式正确；211 个受检文件零警告/Lint/TypeScript 错误 |                   0 |
+| `docs:check`                       |                                         89 个 Markdown 文件 |                   0 |
+| 单元测试                           |                                    52/52 文件、633/633 用例 |                   0 |
+| SSE 客户端 / 故障代理              |                                                    8/8、4/4 |                   0 |
+| OIDC / Docker / 浏览器配置安全专项 |                                                    全部通过 |                   0 |
+| NestJS HTTP E2E                    |                                        6/6 文件、59/59 用例 |                   0 |
+| React / Vue / NestJS 构建          |                                                      均成功 |                   0 |
+| 完整 `pnpm run ready`              |                                                    全链完成 |               **0** |
 
 数据库日志中的“数据库工程版本元数据与快照不一致”来自随机测试租户主动篡改摘要的预期负向用例；对应 HTTP 测试通过，不是 Suite 失败。
 
 **合并记录**：PR #100 已按维护者明确授权 Squash 合并至 `main`，合并提交为 `8db55e4b1bb97d69c08dc9238eb61f76071b7e72`。PR Assignee 为 `@adui-dev`。测试结果对应合并前 HEAD `f576cacaadd2376f8e75d5270482ac9a356f81ed`。
 
 E-068 与 E-069 均已关闭。C1 交付的是服务端发布事务及其默认 fail-closed 安全门禁；生产 `ProjectReleaseSafetyGate` 仍返回 503。Runtime 发布态读取、回滚事务、运行时读取授权、双人审批和生产安全评审仍未完成；不授予任何 PLC/DCS 或其他设备写入权限。原开发库 `adui_scada` 的历史失败迁移继续冻结，未执行恢复写入。
+
+## 2026-11-19 · 第三十五批 D1 服务端只读发布读取候选（待维护者验收）
+
+候选分支 `codex/b35-d1-release-read-runtime` 新增独立 `release:read` ACL、`GET /api/v1/projects/:projectId/releases/current` 和权限 CHECK 增量迁移 `20261119180000_release_read_permission`。本轮没有修改 React/Vue、SSE、生产发布安全门禁或设备接口。
+
+**新增自动化覆盖（尚未执行）**：
+
+- 权限单测：工程读取、历史版本读取和发布写权限均不能继承 `release:read`。
+- 发布仓储单测：未发布状态不读取 head/快照；已发布读取核对不可变快照 SHA-256、数据库元数据及最后发布事件。
+- HTTP E2E：独立 ACL、可信会话、未发布状态和 no-store。
+- 隔离 PostgreSQL：权限 CHECK 接受 `release:read`；未授权拒绝、显式授权读取、仅 release:read 访问、跨租户相同工程 ID 隔离及快照正文篡改拒绝。
+- 迁移必须在本机隔离 `adui_scada_test` 首次/重复部署并核对状态；原开发库 `adui_scada` 的历史失败迁移继续冻结，禁止将本迁移应用到生产库。
+
+**尚未实测**：本候选尚未执行 TypeScript/Lint、单测、NestJS HTTP E2E、隔离 PostgreSQL 迁移/测试、文档检查或完整质量链。不得把源码静态核对当作测试通过。
+
+维护者验收顺序：在根目录确认工作区和分支后，先用 `docs/HARNESS.md` 的隔离数据库 PowerShell `try/finally` 模板将当前进程的 `SCADA_DATABASE_URL` 与 `SCADA_TEST_DATABASE_URL` 限定到本机 `adui_scada_test`；执行 `pnpm run db:migrate:deploy`、`pnpm run db:migrate:status`、`pnpm run test:db`。随后执行 `vp check`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`pnpm run docs:check`、`pnpm run typecheck:server` 和 `pnpm run build:server`；最后可执行完整 `pnpm run ready`。每条命令记录独立退出码。
+
+## 2026-11-20 · 第三十五批 D1 隔离 PostgreSQL 迁移与真实数据库专项验收通过
+
+维护者 Windows 在仓库根目录按限定本机隔离数据库的 PowerShell `try/finally` 流程执行；Prisma 明确报告目标是 `127.0.0.1:15432/adui_scada_test`，脚本结束时输出「数据库环境变量已恢复」。对应测试日志：
+
+- 首次 `pnpm run db:migrate:deploy`：识别 **7 条迁移**，成功应用 `20261119180000_release_read_permission`。
+- 第二次 `pnpm run db:migrate:deploy`：仍识别 7 条迁移，提示 `No pending migrations to apply`。
+- `pnpm run db:migrate:status`：`Database schema is up to date!`。
+- `pnpm run test:db`：**6/6 个测试文件、57/57 项测试通过**；其中 `release-transaction.db-spec.ts` **15/15**，包含 D1 新增的独立 `release:read` 授权、未发布状态、仅发布读取权限、同名跨租户工程隔离和快照正文篡改拒绝；`release-schema.db-spec.ts` **6/6**。完整流程输出「D1 PostgreSQL 专项验收通过」。
+
+两条 NestJS `ExceptionsHandler` 错误堆栈分别是主动篡改随机测试租户中工程版本元数据和已发布快照摘要的预期负向测试；对应 Suite 全部通过。不能为了隐藏错误日志降低完整性校验或跳过负向测试。
+
+**前次误操作及保护边界**：维护者此前未设置隔离环境而直接运行迁移命令，Prisma 指向已冻结的 `adui_scada` 并返回 P3009；随后 `test:db` 因缺少 `SCADA_TEST_DATABASE_URL`，6 个 Suite 在导入阶段拒绝、0 测试执行。这些失败命令不属于本次通过的隔离数据库验收；原 `adui_scada` 开发库仍冻结，不得执行迁移修复、重置、修改历史表或生产操作。
+
+**后续质量门禁**：此前另一次维护者日志已有 `vp check` 359/211 零告警、单测 633/633、HTTP E2E 59/59、文档 89 份通过，但该日志未提供 `git rev-parse HEAD`，不能严格绑定 D1 远程最新提交。GitHub D1 PR #102 于本次记录前已出现格式调整提交 `45eb631f452f10aeffa0dbe30a8485afc37864aa`；数据库日志同样未包含本地 SHA。此次仅确认 D1 隔离数据库专项通过；最新 HEAD 的 `vp check`、全量 `pnpm run ready` 等仍需维护者复验。PR 保持 Draft，未经明确授权不得合并。

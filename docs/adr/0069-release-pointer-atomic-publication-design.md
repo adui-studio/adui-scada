@@ -4,7 +4,7 @@
 - 日期：2026-11-18
 - 关联需求：FR-007、FR-008、FR-013、FR-014、FR-016、NFR-002、NFR-003、NFR-004、NFR-006
 - 前置：[ADR-0035](0035-project-validation-snapshot.md)、[ADR-0041](0041-project-persistence-access-model.md)、[ADR-0043](0043-prisma-project-transaction-store.md)、[ADR-0045](0045-trusted-session-and-project-guard.md)、[ADR-0065](0065-oidc-bff-and-project-api.md)
-- 与当前代码关系：**本 ADR 已获维护者明确批准，定义后续正式发布事务的架构边界；权限、表、API、Runtime 发布态和工业设备操作仍未实现或开放。**
+- 与当前代码关系：**本 ADR 已获维护者明确批准；B/C1 已合并，D1 候选新增独立 `release:read` ACL 和当前发布快照只读 API，仍待真实 PostgreSQL 与 Windows 验收。生产发布门禁继续 fail-closed；共享 Runtime Core、React/Vue 接入、回滚和设备操作未开放。**
 
 ## 1. 背景与已验证事实
 
@@ -86,16 +86,16 @@ Runtime 只从服务端受保护的当前发布指针解析快照；不可使用
 
 ## 7. 分批实施与验收门禁
 
-| 阶段                 | 预期内容                                                            | 必须实测的门禁                                                |
-| -------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------- |
-| A · 本 ADR           | 定义租户/工程发布指针、代次、ACL、原子事务及失败边界                | 文档静态检查；评审设计冲突与未决事项                          |
-| B · 权限与 Schema    | 通过评审后增量 Prisma 模型/迁移、中文表列索引注释、默认拒绝发布权限 | 隔离 PostgreSQL **首次/二次迁移**、权限和租户隔离、无生产连接 |
-| C · 发布事务         | 服务端发布命令、幂等、锁内权限及静态/工业安全门禁                   | 真实 DB 并发、故障回滚、旧请求/撤权/非法快照拒绝、日志脱敏    |
-| D · 只读发布 Runtime | 从发布指针加载冻结快照，显示未发布/离线/错误质量                    | React/Vue 功能对等、真实 TLS + OIDC 浏览器、运行时故障恢复    |
-| E · 回滚事务         | 仅选择曾发布版本，独立权限和新代次事件                              | 旧指针不变、跨租户拒绝、ABA/并发回滚、实际版本切换一致性      |
-| F · 生产安全评审     | 数据源授权、实际资源和工业现场运行边界                              | 专项审批与现场只读安全审查，**不包含 PLC/DCS 写入许可**       |
+| 阶段                 | 预期内容                                                                           | 必须实测的门禁                                                     |
+| -------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| A · 本 ADR           | 定义租户/工程发布指针、代次、ACL、原子事务及失败边界                               | 文档静态检查；评审设计冲突与未决事项                               |
+| B · 权限与 Schema    | 通过评审后增量 Prisma 模型/迁移、中文表列索引注释、默认拒绝发布权限                | 隔离 PostgreSQL **首次/二次迁移**、权限和租户隔离、无生产连接      |
+| C · 发布事务         | 服务端发布命令、幂等、锁内权限及静态/工业安全门禁                                  | 真实 DB 并发、故障回滚、旧请求/撤权/非法快照拒绝、日志脱敏         |
+| D · 只读发布 Runtime | D1 服务端独立 `release:read` 与只读快照 API；后续共享 Runtime Core、React/Vue 接入 | 隔离 PostgreSQL 权限/摘要/租户测试，真实 TLS + OIDC 双框架运行验收 |
+| E · 回滚事务         | 仅选择曾发布版本，独立权限和新代次事件                                             | 旧指针不变、跨租户拒绝、ABA/并发回滚、实际版本切换一致性           |
+| F · 生产安全评审     | 数据源授权、实际资源和工业现场运行边界                                             | 专项审批与现场只读安全审查，**不包含 PLC/DCS 写入许可**            |
 
-每阶段在独立 Draft PR 中维护测试证据及 `AGENTS.md` / `docs/AI_MISTAKES.md` 约束。**当前进度：A 已批准；B 已完成；C1 发布事务已完成并通过真实 PostgreSQL/完整质量链验收；C 的工业安全门禁仍 fail-closed；D、E、F 尚未开始。** Accepted 不代表 FR-008 全部完成。
+每阶段在独立 Draft PR 中维护测试证据及 `AGENTS.md` / `docs/AI_MISTAKES.md` 约束。**当前进度：A 已批准；B 已完成；C1 发布事务已完成并通过真实 PostgreSQL/完整质量链验收；C 的工业安全门禁仍 fail-closed；D1 服务端读取基础设施已在候选分支实现、等待专项验收；共享 Runtime Core、React/Vue 接入、E、F 尚未开始。** Accepted 不代表 FR-008 全部完成。
 
 **评审入口**：另见 [正式发布事务评审决策与验收矩阵](../RELEASE_TRANSACTION_REVIEW.md)。该清单将本 ADR 未决内容拆分为 R-01～R-08 和未来 T-01～T-22 负向场景，方便维护者逐项批准、修改或驳回。**本 ADR 现为 Accepted；附加评审矩阵记录了本次批准的 R-01～R-08 基线。Accepted 不等于生产发布写入授权，也不改变设备写入仍需独立工业安全审批的边界。**
 
@@ -126,6 +126,14 @@ C1 当前在 PR #100 Draft 候选分支实现正式发布命令与事务：事�
 
 B 阶段通过 PR #99 合并发布状态/事件 Prisma Schema、独立发布权限动作和复合引用完整性。C1 通过 PR #100 合并 `POST /api/v1/projects/:projectId/releases` 与事务实现：锁内复核可信会话、主体、ACL、head/releaseGeneration 双 CAS、幂等和不可变快照；发布事件与发布指针同事务提交。维护者 Windows 最终验收 PostgreSQL 6/6 文件、52/52 用例，单测 633/633、HTTP E2E 59/59、`vp check`、`docs:check` 及完整 `ready` 均通过。PR #100 合并提交为 `8db55e4b1bb97d69c08dc9238eb61f76071b7e72`。
 
-生产 `ProjectReleaseSafetyGate` 仍默认拒绝，真实应用发布请求返回 503；这不是生产发布授权。当前没有回滚路由、当前发布快照读取路由或 Runtime 发布指针消费。
+生产 `ProjectReleaseSafetyGate` 仍默认拒绝，真实应用发布请求返回 503；这不是生产发布授权。当前没有回滚路由；当前发布快照读取路由仅存在于 D1 候选分支，尚未合并或完成真实数据库验收。
 
-D 阶段只读 Runtime 的读取权限已获维护者批准：新增独立工程 ACL `release:read`，默认拒绝，不从 `project:read`、`version:read` 或其他权限继承。运行人员可在显式获得该权限后读取已提交发布指针及其不可变快照，而无需获得工程编辑或历史版本读取权限。当前 `ProjectAccessAction` 尚未实现该动作，当前发布快照读取路由与 Runtime 接入也尚未实现；由 D 阶段独立实施并验收。
+D 阶段只读 Runtime 的读取权限已获维护者批准：新增独立工程 ACL `release:read`，默认拒绝，不从 `project:read`、`version:read` 或其他权限继承。D1 候选在 `ProjectAccessAction` 中加入该动作，并提供 `GET /api/v1/projects/:projectId/releases/current`；读取事务仅锁定工程身份行，不查询 `head_revision`，并按工程、会话/主体、ACL、发布状态、不可变版本、最后事件顺序持有共享锁，校验发布状态、事件与快照 SHA-256。该候选尚待隔离 PostgreSQL、Windows 质量链和真实 OIDC/HTTPS 验收；共享 Runtime Core、React/Vue 接入及运行时 Tag 质量状态仍未交付。
+
+## 2026-11-19 · 第三十五批 D1 服务端只读发布读取候选
+
+D1 候选在 `ProjectAccessAction` 中新增独立 `release:read`，默认拒绝，不加入工程创建时的 `OWNER_PERMISSIONS`，不从 `project:read`、`version:read` 或 `release:publish` 继承。增量迁移 `20261119180000_release_read_permission` 仅扩展 `scada_project_grants_permission_check` 白名单并更新权限列中文注释，不自动授予任何既有主体，也不修改已应用迁移。
+
+候选只读接口为 `GET /api/v1/projects/:projectId/releases/current`，使用可信 OIDC/BFF 会话、工程 Guard、独立 ACL 和 `Cache-Control: no-store`。未发布工程返回 `UNRELEASED`；已发布工程返回发布修订、摘要、代次、最后事件元数据和通过 `readProjectSnapshot` 校验的不可变快照。仓储事务只选择并共享锁定工程 `project_id`，**不查询 `head_revision`**；随后按工程、有效会话/主体、ACL、状态、不可变版本、最后发布事件的顺序持有共享锁，并核对最后发布事件与指针一致。权限缺失、租户不匹配、状态/事件不一致或快照摘要错误均 fail-closed。
+
+本候选仅交付服务端只读读取基础设施，不包含 Runtime Core、SSE 数据源、动态 Tag 质量状态、React/Vue Runtime UI、回滚或生产发布许可。迁移、真实 PostgreSQL、单测、HTTP E2E、`vp check`、`docs:check` 和完整 `ready` 均待维护者在对应分支实测。

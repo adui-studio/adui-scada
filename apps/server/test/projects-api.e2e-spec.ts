@@ -34,9 +34,12 @@ import type {
   ProjectSummary,
   ProjectReleasePreflightSummary,
 } from "../src/projects/prisma-project-version-store.js";
-import type { ProjectReleaseResult } from "../src/projects/prisma-project-release-store.js";
 import { ProjectApiController } from "../src/projects/project-api.controller.js";
 import { PrismaProjectReleaseStore } from "../src/projects/prisma-project-release-store.js";
+import type {
+  ProjectCurrentReleaseResult,
+  ProjectReleaseResult,
+} from "../src/projects/prisma-project-release-store.js";
 import { ProjectReleaseGateUnavailableError } from "../src/projects/project-release-safety-gate.js";
 import { ProjectApiExceptionFilter } from "../src/projects/project-api.exception-filter.js";
 import { PrismaService } from "../src/database/prisma.service.js";
@@ -153,7 +156,19 @@ describe("工程 API HTTP 接口（端到端）", () => {
     eventId: "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e8",
     createdAt: "2026-11-19T00:00:00.000Z",
   };
+  const currentReleaseResult: ProjectCurrentReleaseResult = {
+    status: "UNRELEASED",
+    projectId: PROJECT_ID,
+    releaseGeneration: 0,
+  };
   const releases = {
+    readCurrent: vi.fn<
+      (
+        principal: AuthenticatedProjectPrincipal | null,
+        sessionId: string | null,
+        projectId: string,
+      ) => Promise<ProjectCurrentReleaseResult>
+    >(async () => currentReleaseResult),
     publish: vi.fn<
       (
         principal: AuthenticatedProjectPrincipal | null,
@@ -491,6 +506,40 @@ describe("工程 API HTTP 接口（端到端）", () => {
 
     expect(response.status).toBe(404);
     expect(store.preflightRelease).not.toHaveBeenCalled();
+  });
+
+  it("当前发布读取只接受独立 release:read 并返回未发布状态", async () => {
+    permissions = ["release:read"];
+    const response = await request(app.getHttpServer())
+      .get("/api/v1/projects/" + PROJECT_ID + "/releases/current")
+      .set("Authorization", "Bearer " + SESSION_TOKEN)
+      .expect(200);
+
+    expect(response.body).toEqual(currentReleaseResult);
+    expect(response.body).not.toHaveProperty("headRevision");
+    expect(response.body).not.toHaveProperty("document");
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(releases.readCurrent).toHaveBeenCalledWith(PRINCIPAL, SESSION_ID, PROJECT_ID);
+  });
+
+  it("工程读取或历史版本读取权限不能继承 release:read", async () => {
+    permissions = ["project:read", "version:read", "version:append"];
+    const response = await request(app.getHttpServer())
+      .get("/api/v1/projects/" + PROJECT_ID + "/releases/current")
+      .set("Authorization", "Bearer " + SESSION_TOKEN)
+      .expect(404);
+
+    expect(response.status).toBe(404);
+    expect(releases.readCurrent).not.toHaveBeenCalled();
+  });
+
+  it("当前发布读取没有可信会话时返回 401 且不进入仓储", async () => {
+    const response = await request(app.getHttpServer())
+      .get("/api/v1/projects/" + PROJECT_ID + "/releases/current")
+      .expect(401);
+
+    expect(response.status).toBe(401);
+    expect(releases.readCurrent).not.toHaveBeenCalled();
   });
 
   it("正式发布必须具有独立 release:publish 权限并使用服务端会话上下文", async () => {
