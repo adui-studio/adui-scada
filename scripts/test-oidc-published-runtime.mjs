@@ -485,8 +485,15 @@ async function run() {
   if (!existsSync(ROOT_ENV)) {
     throw new Error("正式发布 OIDC 浏览器专项只允许本机可信 HTTPS Lab");
   }
+  // 工程 ID 只允许来自启动 Node 前的当前 PowerShell 进程环境，不从根 .env 读取。
+  const allowedProjectId = process.env.SCADA_OIDC_RELEASE_READ_PROJECT_ID;
+  const deniedProjectId = process.env.SCADA_OIDC_RELEASE_DENIED_PROJECT_ID;
   loadEnvFile(ROOT_ENV);
-  const target = resolvePublishedRuntimeBrowserTarget(process.env);
+  const target = resolvePublishedRuntimeBrowserTarget({
+    ...process.env,
+    SCADA_OIDC_RELEASE_READ_PROJECT_ID: allowedProjectId,
+    SCADA_OIDC_RELEASE_DENIED_PROJECT_ID: deniedProjectId,
+  });
   const executable = executablePath();
   if (!executable) throw new Error("正式发布 OIDC 浏览器专项缺少 Chrome/Edge");
 
@@ -571,7 +578,7 @@ async function run() {
       );
     }
     process.stdout.write(
-      "真实 Keycloak 双 HTTPS Origin 正式发布只读专项通过；未创建或修改工程、ACL、发布记录、数据库或工业设备。\n",
+      "真实 Keycloak 双 HTTPS Origin 正式发布只读专项通过；未创建或修改工程、ACL、发布记录或工业设备，仅使用现有 OIDC 登录流程建立会话。\n",
     );
   } finally {
     await browser.close();
