@@ -67,7 +67,10 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
       ["/api/v1/projects/" + projectId, { method: "DELETE" }],
       ["https://outside.example/api/v1/projects", { method: "GET" }],
       ["/api/v1/projects/" + projectId, { method: "GET", body: "{}" }],
-      ["/api/v1/projects/" + projectId, { method: "GET", headers: { Authorization: "Bearer secret" } }],
+      [
+        "/api/v1/projects/" + projectId,
+        { method: "GET", headers: { Authorization: "Bearer secret" } },
+      ],
     ]) {
       assert.throws(() => runtime.fetch(path, options), /拒绝非只读/);
     }
@@ -94,7 +97,9 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
   });
 
   void it("CDP 页面函数无 Node 作用域引用且按独立上下文可运行", async () => {
-    const isolated = runInNewContext("(" + installPublishedReadGuardInPage.toString() + ")", { URL });
+    const isolated = runInNewContext("(" + installPublishedReadGuardInPage.toString() + ")", {
+      URL,
+    });
     const { runtime } = fixture();
     assert.equal(isolated(origin, runtime), true);
     await runtime.fetch("/api/v1/projects/" + projectId + "/releases/current", {
@@ -108,7 +113,15 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
     const runtime = {
       document: {
         querySelectorAll() {
-          return [{ textContent: "已发布运行", disabled: false, click() { clicks++; } }];
+          return [
+            {
+              textContent: "已发布运行",
+              disabled: false,
+              click() {
+                clicks++;
+              },
+            },
+          ];
         },
       },
     };
@@ -118,7 +131,11 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
 
   void it("工程 ID 校验、原生 setter 赋值和输入事件不绕过真实表单", () => {
     const runtime = {
-      document: { querySelector() { return null; } },
+      document: {
+        querySelector() {
+          return null;
+        },
+      },
     };
     assert.throws(() => enterPublishedProjectInPage("../other", runtime), /工程标识不安全/);
     assert.throws(() => submitPublishedProjectInPage(runtime), /按钮不可用/);
@@ -151,7 +168,11 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
       },
       document: {
         querySelector() {
-          return { querySelector() { return input; } };
+          return {
+            querySelector() {
+              return input;
+            },
+          };
         },
       },
     };
@@ -168,7 +189,11 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
     const root = {
       querySelector(selector) {
         if (selector === ".scada-status") {
-          return { getAttribute() { return "denied"; } };
+          return {
+            getAttribute() {
+              return "denied";
+            },
+          };
         }
         if (selector === '[data-testid="published-runtime-svg"]') return null;
         return null;
@@ -178,10 +203,16 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
       },
     };
     const runtime = {
-      document: { querySelector() { return root; } },
+      document: {
+        querySelector() {
+          return root;
+        },
+      },
     };
     assert.deepEqual(publishedRuntimeUiStateInPage(runtime), {
-      status: "denied", snapshot: false, quality: true,
+      status: "denied",
+      snapshot: false,
+      quality: true,
     });
   });
 

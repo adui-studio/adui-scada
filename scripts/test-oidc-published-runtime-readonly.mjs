@@ -51,11 +51,7 @@ export function installPublishedReadGuardInPage(origin, runtime = globalThis) {
   runtime.__aduiPublishedReadGuard = state;
   runtime.fetch = (input, init) => {
     const raw =
-      typeof input === "string"
-        ? input
-        : typeof input?.url === "string"
-          ? input.url
-          : null;
+      typeof input === "string" ? input : typeof input?.url === "string" ? input.url : null;
     if (!raw) throw new Error("正式发布运行只读请求地址非法");
     const target = new URL(raw, runtime.location.origin + "/");
     const isProject = target.pathname.startsWith("/api/v1/projects");
@@ -131,8 +127,8 @@ export function publishedRuntimeUiStateInPage(runtime = globalThis) {
   if (!panel) return null;
   const status = panel.querySelector(".scada-status")?.getAttribute("data-status") ?? "";
   const snapshot = Boolean(panel.querySelector('[data-testid="published-runtime-svg"]'));
-  const quality = [...panel.querySelectorAll("dd")].some(
-    (item) => item.textContent?.includes("UNAVAILABLE"),
+  const quality = [...panel.querySelectorAll("dd")].some((item) =>
+    item.textContent?.includes("UNAVAILABLE"),
   );
   return { status, snapshot, quality };
 }
@@ -191,20 +187,25 @@ async function run() {
       await browser.evaluate(enterPublishedProjectInPage, missingProject);
       await browser.evaluate(submitPublishedProjectInPage);
       const denied = await waitForState(
-        () => browser.evaluate(publishedRuntimeUiStateInPage).then((x) =>
-          x?.status === "denied" ? x : null,
-        ),
+        () =>
+          browser
+            .evaluate(publishedRuntimeUiStateInPage)
+            .then((x) => (x?.status === "denied" ? x : null)),
         "正式发布运行只读专项发布读取没有受控拒绝",
       );
       assert.equal(denied.snapshot, false, "无授权时不应出现发布快照");
       assert.equal(denied.quality, true, "未接入现场数据应标记为不可用");
       const guard = await browser.evaluate(publishedReadGuardStateInPage);
       assert.equal(guard.blocked, 0, "正式发布运行只读专项检测到非只读工程请求");
-      assert.deepEqual(guard.paths, [
-        "/api/v1/projects/" + missingProject + "/releases/current",
-      ], "真实页面只能向目标发布指针发起一个 GET");
+      assert.deepEqual(
+        guard.paths,
+        ["/api/v1/projects/" + missingProject + "/releases/current"],
+        "真实页面只能向目标发布指针发起一个 GET",
+      );
       assert.deepEqual(guard.statuses, [404], "真实服务端必须返回不可区分的 404 拒绝");
-      process.stdout.write(name + "：真实会话、发布入口、默认零请求、无授权拒绝与零工程写入通过。\n");
+      process.stdout.write(
+        name + "：真实会话、发布入口、默认零请求、无授权拒绝与零工程写入通过。\n",
+      );
     }
     process.stdout.write(
       "真实双 HTTPS Origin 已发布运行 D5a 只读拒绝专项通过；未创建发布指针、工程、ACL 或工业设备操作。\n",

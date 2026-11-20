@@ -2394,6 +2394,7 @@ Write-Host "完整质量链退出码：$LASTEXITCODE"
 D5a 独立候选包含只读浏览器安全门禁、10 项 Node cases 和真实双 Origin OIDC 浏览器运行程序。候选源文件**尚未在 Windows 上实际运行**，不能声称类型/Lint、自动测试、真实 IdP、TLS 或浏览器专项通过。
 
 候选 Windows 验收顺序：
+
 ```powershell
 git status --short
 git fetch origin
@@ -2408,11 +2409,14 @@ Write-Host "docs:check 退出码：$LASTEXITCODE"
 pnpm run ready
 Write-Host "ready 退出码：$LASTEXITCODE"
 ```
+
 真实浏览器专项仅在先按 `docs/HARNESS.md` 核对本机可信 Keycloak/HTTPS 双 Origin、预绑定身份、证书 CA 和当前数据库目标**之后**，另行显式运行：
+
 ```powershell
 pnpm run test:published:oidc:browser
 Write-Host "真实发布只读浏览器专项退出码：$LASTEXITCODE"
 ```
+
 如本地分支已存在，正常 `git switch` 并 `git pull --ff-only`，先保护工作区未提交修改。
 
 **边界**：D5a 只验证随机不存在工程的拒绝，绝不创建工程、发布记录、数据库授权或写入。真实已授权 `release:read`、已发布快照、ACL 撤销、页面隐藏/恢复与断网专项另行实现，禁止将 D5a 自动化当作全部 D5 验收。生产 `ProjectReleaseSafetyGate` 继续 fail-closed，冻结开发库不得被执行迁移操作。
