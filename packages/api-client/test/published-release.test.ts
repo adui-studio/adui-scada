@@ -41,7 +41,8 @@ describe("共享 API Client 当前正式发布只读接口", () => {
     const { client, fetcher } = fixture(response(expected));
     const controller = new AbortController();
     await expect(client.readCurrentRelease(projectId, controller.signal)).resolves.toEqual(expected);
-    expect(fetcher).toHaveBeenCalledExactlyOnceWith(
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledWith(
       "/api/v1/projects/" + projectId + "/releases/current",
       expect.objectContaining({
         method: "GET",
@@ -111,7 +112,7 @@ describe("共享 API Client 当前正式发布只读接口", () => {
   });
 
   it("当前发布响应比 2 MiB 快照和元数据上限更大时 fail-closed", async () => {
-    const huge = "x".repeat(2 * 1024 * 1024 + 4096);
+    const huge = "x".repeat(2 * 1024 * 1024 + 4097);
     const fetcher = vi.fn<typeof fetch>(async () => new Response(huge, {
       status: 200,
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
