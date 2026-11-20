@@ -105,12 +105,11 @@ export function enterPublishedProjectInPage(projectId, runtime = globalThis) {
   if (!panel) throw new Error("正式发布运行页面不可用");
   const input = panel.querySelector('input[placeholder="输入已授权工程 ID"]');
   if (!input) throw new Error("正式发布运行页面缺少工程选择器");
-  const setter = Object.getOwnPropertyDescriptor(
-    runtime.HTMLInputElement.prototype,
-    "value",
-  )?.set;
-  if (!setter) throw new Error("正式发布运行页面输入接口不可用");
-  setter.call(input, projectId);
+  const inputPrototype = runtime.HTMLInputElement.prototype;
+  if (typeof Object.getOwnPropertyDescriptor(inputPrototype, "value")?.set !== "function") {
+    throw new Error("正式发布运行页面输入接口不可用");
+  }
+  Reflect.set(inputPrototype, "value", projectId, input);
   input.dispatchEvent(new runtime.Event("input", { bubbles: true }));
   return true;
 }

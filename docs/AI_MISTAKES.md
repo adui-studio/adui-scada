@@ -641,6 +641,15 @@
 - **验证结论（已关闭）**：修复提交 `055e2115174fba27cc745f2277e251b94ab4eb74` 补齐真实 `PrismaProjectReleaseStore` 与默认 fail-closed 的 `ProjectReleaseSafetyGate` Provider。维护者随后 Windows 实测 PostgreSQL 专项 **6/6 文件、52/52 用例通过，退出码 0**，其中双 Cookie HTTP CAS 11/11、正式发布事务 10/10；`vp check` 359 个文件格式正确、211 个受检文件零警告/Lint/TypeScript 错误；`docs:check` 89 个 Markdown 通过；完整 `pnpm run ready` 退出码 0。PR #100 已 Squash 合并，合并提交 `8db55e4b1bb97d69c08dc9238eb61f76071b7e72`；上述测试对应合并前验收 HEAD `f576cacaadd2376f8e75d5270482ac9a356f81ed`。原始 5/6、41 passed 是修复前的模块装配失败，保留为历史证据；E-069 已关闭。生产安全门禁仍默认拒绝。
 - **证据**：维护者 2026-11-19 Windows PostgreSQL 测试日志；`apps/server/src/projects/project-api.controller.ts`；`apps/server/src/projects/project-persistence.module.ts`；`apps/server/src/projects/prisma-project-release-store.ts`；`apps/server/src/projects/project-release-safety-gate.ts`；PR #100 修复提交 `055e2115174fba27cc745f2277e251b94ab4eb74`。
 
+### E-070 · D5a 浏览器输入原生 setter 解引用触发 unbound-method（第三十五批 D5a，待 Windows 复验）
+
+- **现象**：维护者 2026-11-20 Windows 执行 `vp check --fix`，`scripts/test-oidc-published-runtime-readonly.mjs:104` 报 `typescript(unbound-method)`，224 个检查文件中 0 错误、1 警告；格式化完成不代表质量门禁通过。
+- **根因**：为模拟真实 React/Vue 受控输入，浏览器专项从 `HTMLInputElement.prototype` 的 `value` 属性描述符抽取 `set` 函数再调用 `.call(input, projectId)`。虽然显式绑定了接收者，但对原生方法的独立函数引用被 Vite+ 的 `unbound-method` 规则拒绝。
+- **最小修复**：保留原生 `value` setter 存在性检查，改用 `Reflect.set(inputPrototype, "value", projectId, input)`，由属性设置机制以 `input` 为 receiver 调用原生 setter；仍派发冒泡 `input` 事件。原页面导航、工程 ID 白名单、同源只读请求及安全断言不变；在原 10 项门禁测试中扩充受控输入自有 setter 旁路、原生 setter 的 `this`、事件派发及无 setter 拒绝断言，并通过独立 VM 执行页面函数验证没有 Node 词法依赖。
+- **防复发**：受控输入的浏览器脚本应保留原生 setter 与事件语义，不以 `input.value = ...` 替代；避免把可能依赖 `this` 的原生方法解引用为独立变量，也不要全局忽略 `unbound-method`。相关回归应覆盖原生 receiver、事件与无 setter 的 fail-closed。
+- **验证边界**：协作环境 Node.js 22 已对等价修改执行隔离 VM/原生 setter 行为示例，5 项检查通过。由于协作容器不能解析 GitHub 域名，尚未在完整仓库运行 Node 门禁套件、Windows `vp check`、完整 `ready` 或真实 Keycloak/HTTPS 双端专项；全部待维护者在最新 PR HEAD 复验，不得标为已关闭。
+- **证据**：维护者 Windows `vp check --fix` 原始日志、PR #106、`scripts/test-oidc-published-runtime-readonly.mjs`、`scripts/test-oidc-published-runtime-readonly.cases.mjs` 与 `docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

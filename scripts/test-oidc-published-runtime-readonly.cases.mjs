@@ -116,12 +116,52 @@ void describe("正式发布运行真实 OIDC 双框架只读门禁", () => {
     assert.equal(clicks, 1);
   });
 
-  void it("非法工程 ID 不能填入页面，输入与按钮操作分离", () => {
+  void it("工程 ID 校验、原生 setter 赋值和输入事件不绕过真实表单", () => {
     const runtime = {
       document: { querySelector() { return null; } },
     };
     assert.throws(() => enterPublishedProjectInPage("../other", runtime), /工程标识不安全/);
     assert.throws(() => submitPublishedProjectInPage(runtime), /按钮不可用/);
+
+    const events = [];
+    const input = {
+      dispatchEvent(event) {
+        events.push({ type: event.type, bubbles: event.bubbles });
+      },
+    };
+    Object.defineProperty(input, "value", {
+      set() {
+        throw new Error("不得通过受控输入框自身的 setter 赋值");
+      },
+    });
+    const inputPrototype = {};
+    Object.defineProperty(inputPrototype, "value", {
+      set(value) {
+        assert.equal(this, input);
+        this.nativeValue = value;
+      },
+    });
+    const browserRuntime = {
+      HTMLInputElement: { prototype: inputPrototype },
+      Event: class {
+        constructor(type, options) {
+          this.type = type;
+          this.bubbles = options.bubbles;
+        }
+      },
+      document: {
+        querySelector() {
+          return { querySelector() { return input; } };
+        },
+      },
+    };
+    const isolated = runInNewContext("(" + enterPublishedProjectInPage.toString() + ")");
+    assert.equal(isolated(projectId, browserRuntime), true);
+    assert.equal(input.nativeValue, projectId);
+    assert.deepEqual(events, [{ type: "input", bubbles: true }]);
+
+    browserRuntime.HTMLInputElement.prototype = {};
+    assert.throws(() => isolated(projectId, browserRuntime), /输入接口不可用/);
   });
 
   void it("只返回可展示状态、画面存在与否和质量标识，不返回工程正文", () => {

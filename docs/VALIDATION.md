@@ -2416,3 +2416,11 @@ Write-Host "真实发布只读浏览器专项退出码：$LASTEXITCODE"
 如本地分支已存在，正常 `git switch` 并 `git pull --ff-only`，先保护工作区未提交修改。
 
 **边界**：D5a 只验证随机不存在工程的拒绝，绝不创建工程、发布记录、数据库授权或写入。真实已授权 `release:read`、已发布快照、ACL 撤销、页面隐藏/恢复与断网专项另行实现，禁止将 D5a 自动化当作全部 D5 验收。生产 `ProjectReleaseSafetyGate` 继续 fail-closed，冻结开发库不得被执行迁移操作。
+
+## 2026-11-20 · 第三十五批 D5a 浏览器原生 setter Lint 修复（PR #106，待 Windows 复验）
+
+维护者在 D5a 候选 `test/b35-d5a-published-runtime-oidc-readonly` 上运行 `vp check --fix`，实际得到 224 个文件、**0 错误 / 1 条 `typescript(unbound-method)` 警告**，位置为发布读取脚本 `HTMLInputElement.prototype.value` setter 解引用。该次检查不能记录为零警告通过。
+
+修复仅涉及 D5a 页面输入注入：改用 `Reflect.set(inputPrototype, "value", projectId, input)` 通过原生属性 setter 绑定输入框接收者，保留安全 ID 校验、缺失 setter 拒绝、冒泡 `input` 事件和真正的 React/Vue 页面交互。在原 10 项 Node 安全门禁中扩充受控输入 setter/事件/VM 独立作用域回归；不放宽真实 404、同源只读请求、Token/Cookie 脱敏或服务端安全门禁。
+
+**已执行的仅是协作环境 Node.js 22 等价函数隔离行为验证：5/5 检查通过。** 该环境不能解析 github.com，未检出完整仓库，所以没有运行真实 `test:published:oidc:config`、`vp check`、`docs:check`、`ready` 或真实 Keycloak/HTTPS 浏览器专项；待 Windows 维护者按上文 D5a 验收顺序在最新 HEAD 复验，不得用该局部验证冒充整仓通过。PR 保持 Draft、不合并。
