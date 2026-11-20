@@ -1053,7 +1053,6 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 
 本小批不改变共享 Core、Vue/React、NestJS 实现、Prisma Schema/迁移、生产发布安全门禁或设备读写，新增数据只在维护者明确授权的本机 Lab 手工执行时产生。
 
-
 ## 2026-11-20 · D5b2 已授权未发布离线恢复安全测试
 
 - `scripts/test-oidc-published-runtime-offline.mjs`：双框架 HTTPS OIDC 浏览器专项，已存在的 `d5b-unreleased-<UUIDv4>` 只读工程，真实 GET 200 → 一次 Fetch 网络拒绝（模拟）→ 离线无快照 → 真实 GET 200 恢复 → 停止读取；不连接设备、不修改数据库或权限。

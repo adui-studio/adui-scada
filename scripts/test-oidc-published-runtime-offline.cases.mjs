@@ -68,10 +68,7 @@ void describe("D5b2 双框架真实授权发布离线模拟与恢复安全门禁
   void it("注入前必须已经安装只读门禁，并匹配可信 origin 和专用工程", () => {
     const { runtime } = setup();
     const install = isolate(installPublishedOfflineFaultInPage);
-    assert.throws(
-      () => install("https://evil.invalid", PROJECT_ID, runtime),
-      /故障模拟门禁未就绪/,
-    );
+    assert.throws(() => install("https://evil.invalid", PROJECT_ID, runtime), /故障模拟门禁未就绪/);
     assert.throws(() => install(ORIGIN, "../other", runtime), /故障模拟门禁未就绪/);
     delete runtime.__aduiPublishedReadGuard;
     assert.throws(() => install(ORIGIN, PROJECT_ID, runtime), /故障模拟门禁未就绪/);
@@ -177,7 +174,9 @@ void describe("D5b2 双框架真实授权发布离线模拟与恢复安全门禁
     assert.equal(
       requirePublishedOfflineReadGuards(
         { paths: [PATH, PATH], statuses: [200, 200], blocked: 0 },
-        fault, PROJECT_ID, true,
+        fault,
+        PROJECT_ID,
+        true,
       ),
       true,
     );
@@ -194,12 +193,7 @@ void describe("D5b2 双框架真实授权发布离线模拟与恢复安全门禁
     }
     assert.throws(
       () =>
-        requirePublishedOfflineReadGuards(
-          base,
-          { injected: 0, armed: true },
-          PROJECT_ID,
-          false,
-        ),
+        requirePublishedOfflineReadGuards(base, { injected: 0, armed: true }, PROJECT_ID, false),
       /额外请求或非只读写入/,
     );
   });

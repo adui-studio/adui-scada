@@ -51,9 +51,17 @@ const PAGE_DIAGNOSTICS = new Set([
 const PHASES = new Set([
   "OIDC 登录",
   ...["React", "Vue"].flatMap((name) =>
-    ["BFF 会话", "导航就绪", "打开发布运行", "真实首次读取",
-      "注入单次网络故障", "验证离线清理", "真实重新读取", "验证恢复状态",
-      "停止读取与资源清理"].map((step) => name + "：" + step),
+    [
+      "BFF 会话",
+      "导航就绪",
+      "打开发布运行",
+      "真实首次读取",
+      "注入单次网络故障",
+      "验证离线清理",
+      "真实重新读取",
+      "验证恢复状态",
+      "停止读取与资源清理",
+    ].map((step) => name + "：" + step),
   ),
 ]);
 
@@ -72,7 +80,11 @@ export function parsePublishedOfflineMode(args) {
 
 export function describePublishedOfflineFailure(error) {
   if (error instanceof Error && SAFE_FAILURES.has(error.message)) return error.message;
-  if (error instanceof Error && error.message === "D5b2 浏览器阶段失败" && PHASES.has(error.phase)) {
+  if (
+    error instanceof Error &&
+    error.message === "D5b2 浏览器阶段失败" &&
+    PHASES.has(error.phase)
+  ) {
     const reason = SAFE_FAILURES.has(error.safeReason)
       ? error.safeReason
       : PAGE_DIAGNOSTICS.has(error.pageDiagnostic)
@@ -246,7 +258,8 @@ async function run() {
       await browser.evaluate(openPublishedRuntimeInPage);
       await waitForState(
         () =>
-          browser.evaluate(publishedAuthorizedUiStateInPage, mode.projectId)
+          browser
+            .evaluate(publishedAuthorizedUiStateInPage, mode.projectId)
             .then((state) => state?.status === "idle"),
         "D5b2 只读发布读取前置条件不满足",
       );
@@ -257,13 +270,17 @@ async function run() {
       await browser.evaluate(enterPublishedAuthorizedProjectInPage, mode.projectId);
       await browser.evaluate(submitPublishedProjectInPage);
       const initial = await waitForState(
-        () => browser.evaluate(publishedAuthorizedUiStateInPage, mode.projectId)
-          .then((state) => state?.status === "unreleased" ? state : null),
+        () =>
+          browser
+            .evaluate(publishedAuthorizedUiStateInPage, mode.projectId)
+            .then((state) => (state?.status === "unreleased" ? state : null)),
         "D5b2 只读发布读取前置条件不满足",
       );
       requirePublishedAuthorizedRead(
-        initial, await browser.evaluate(publishedReadGuardStateInPage),
-        "UNRELEASED", mode.projectId,
+        initial,
+        await browser.evaluate(publishedReadGuardStateInPage),
+        "UNRELEASED",
+        mode.projectId,
       );
 
       report(name + "：注入单次网络故障");
@@ -272,8 +289,10 @@ async function run() {
 
       report(name + "：验证离线清理");
       const offline = await waitForState(
-        () => browser.evaluate(publishedAuthorizedUiStateInPage, mode.projectId)
-          .then((state) => state?.status === "offline" ? state : null),
+        () =>
+          browser
+            .evaluate(publishedAuthorizedUiStateInPage, mode.projectId)
+            .then((state) => (state?.status === "offline" ? state : null)),
         "D5b2 模拟网络故障未产生离线终态",
       );
       requirePublishedOfflineState(offline);
@@ -287,8 +306,10 @@ async function run() {
       report(name + "：真实重新读取");
       await browser.evaluate(clickPublishedReadControlInPage, "立即刷新");
       const restored = await waitForState(
-        () => browser.evaluate(publishedAuthorizedUiStateInPage, mode.projectId)
-          .then((state) => state?.status === "unreleased" ? state : null),
+        () =>
+          browser
+            .evaluate(publishedAuthorizedUiStateInPage, mode.projectId)
+            .then((state) => (state?.status === "unreleased" ? state : null)),
         "D5b2 服务恢复后未重新取得真实授权指针",
       );
       report(name + "：验证恢复状态");
@@ -311,8 +332,10 @@ async function run() {
       report(name + "：停止读取与资源清理");
       await browser.evaluate(clickPublishedReadControlInPage, "停止读取");
       const stopped = await waitForState(
-        () => browser.evaluate(publishedAuthorizedUiStateInPage, mode.projectId)
-          .then((state) => state?.status === "idle" ? state : null),
+        () =>
+          browser
+            .evaluate(publishedAuthorizedUiStateInPage, mode.projectId)
+            .then((state) => (state?.status === "idle" ? state : null)),
         "D5b2 停止读取后未清空页面状态",
       );
       if (
@@ -337,8 +360,8 @@ async function run() {
     const failure = new Error("D5b2 浏览器阶段失败");
     failure.phase = phase;
     failure.pageDiagnostic = error?.pageDiagnostic;
-    failure.safeReason = error instanceof Error && SAFE_FAILURES.has(error.message)
-      ? error.message : null;
+    failure.safeReason =
+      error instanceof Error && SAFE_FAILURES.has(error.message) ? error.message : null;
     failure.failureKind = error instanceof assert.AssertionError ? "assertion" : "unknown";
     throw failure;
   } finally {

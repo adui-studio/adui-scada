@@ -3584,7 +3584,6 @@ Write-Host "真实授权双框架退出码：$LASTEXITCODE"
 
 新增 `test:published:oidc:fixture:config` 9 项 Node 安全门禁并加入 `ready`；真实写入脚本不会随 `ready` 自动运行。本批脚本已提交候选，但尚未在维护者 Windows 执行、未创建数据库夹具，不能冒称已验收。生产 `ProjectReleaseSafetyGate` 和工业设备写入继续关闭；`RELEASED` 快照、撤权和离线恢复仍是独立后续专项。
 
-
 ## 2026-11-20 · 第三十五批 D5b2 双框架 UNRELEASED 离线恢复（Draft 待 Windows 验收）
 
 PR #107 已经由维护者提供真实双 HTTPS Origin `UNRELEASED` 成功验收日志并授权 Squash Merge，`main` 提交 `956dd521deea849b76a4c9c2503154d81a09eace`。本小批沿用当时已创建、已授权的单一只读工程 `d5b-unreleased-42c376a0-5bdc-4fd6-80d6-da29e0312aca`，不再次执行夹具 `--apply`、不增加授权、不开发布或设备写入。
