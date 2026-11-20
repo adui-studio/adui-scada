@@ -52,9 +52,7 @@ export default function PublishedRuntimePage() {
 
   const svg = useMemo(
     () =>
-      state.status === "verified" && state.snapshot
-        ? publishedSnapshotSvg(state.snapshot)
-        : null,
+      state.status === "verified" && state.snapshot ? publishedSnapshotSvg(state.snapshot) : null,
     [state.status, state.snapshot],
   );
 
@@ -154,8 +152,8 @@ export default function PublishedRuntimePage() {
       <section className="scada-panel" aria-label="已发布静态组态预览">
         <h2>已发布组态静态预览</h2>
         <p className="scada-diagnostics-note">
-          此画面只来自已验证的正式发布快照；未连接现场 Tag。
-          画布内缺失值的 BAD 占位不代表设备故障诊断。
+          此画面只来自已验证的正式发布快照；未连接现场 Tag。 画布内缺失值的 BAD
+          占位不代表设备故障诊断。
         </p>
         {svg ? (
           <img

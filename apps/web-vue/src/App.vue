@@ -2,7 +2,9 @@
 import { defineAsyncComponent, ref } from "vue";
 
 const RuntimePage = defineAsyncComponent(() => import("./runtime/RuntimePage.vue"));
-const PublishedRuntimePage = defineAsyncComponent(() => import("./runtime/PublishedRuntimePage.vue"));
+const PublishedRuntimePage = defineAsyncComponent(
+  () => import("./runtime/PublishedRuntimePage.vue"),
+);
 const StudioPage = defineAsyncComponent(() => import("./studio/StudioPage.vue"));
 const view = ref<"runtime" | "published" | "studio">("runtime");
 </script>
