@@ -3656,3 +3656,32 @@ Write-Host "D5b4a 真实数据库只读预检退出码：$LASTEXITCODE"
 **禁止**对上述命令追加 `--apply`、`--run-revoke`、`--confirm-lab` 或 `--project-id`；所有额外参数均按设计拒绝。本批不提供创建、撤销、恢复 ACL 的数据库写入模式，也不启动真实浏览器专项。下一小批 D5b4b 若要写入专用工程或 ACL，须单独确认新工程命名、权限恢复方案、本机备份和实际写操作授权，不能删除 D5b1 的 `release:read`。
 
 代码编写后仅进行隔离 JavaScript 语法及查询路径模拟核对；**新 10 项 Node 测试、Windows `vp check` / `ready` 和真实 PostgreSQL 只读预检仍待维护者执行**。不对外宣称 D5b4 真实撤权已通过。
+
+
+## 2026-11-20 · 第三十五批 D5b4b 独立真实撤权测试工程准备（Draft 待 Windows 验收）
+
+D5b4a 已经在真实本机 `adui_scada` Lab 只读预检通过，退出码 **0**；维护者 Windows `test:published:oidc:revoke:preflight:config` **10/10**、`vp check` **382 格式文件/234 受检文件零告警**、`docs:check` **89** 份、`pnpm run ready` **680/680** 单测、**62/62** E2E 和最终退出码 **0**，PR #110 经授权 Squash 合并至 `main@bbcf827b95d609b73052aaa2076d137ae01e92b5`。本结论仅证明撤权准备的只读校验，**未进行任何真实 ACL 撤销**。
+
+D5b4b 的目标是**单独准备未来可撤权工程，不碰原 D5b1 工程**。新增 `scripts/prepare-oidc-published-revocation.mjs`，默认无参数只读：复用 D5b4a 已审查的 `inspectPublishedRevocationReadiness`，使用严格本机 OIDC/HTTPS、Prisma 迁移与 PostgreSQL `adui_scada` 校验。执行该预检不创建工程、无 ACL INSERT/DELETE、无浏览器登录。额外参数按设计拒绝。
+
+**注意：仅获得维护者独立明确授权后**，才可在真实本机 Lab 执行候选脚本的双重确认写入模式。写入流程先完成 D5b4a 只读预检，再独立打开 Keycloak 浏览器验证 `lab-tenant/lab-engineer` 的可信 BFF 主体；生成一份 `d5b4-revoke-<UUIDv4>` 工程，使用正式同源 `POST /api/v1/projects`、Cookie CSRF 创建单页空白首版；在 `SERIALIZABLE` 事务中锁定该新工程并确认仅有创建者三项初始 ACL、首版/审计和零发布事件，**同时只读核对原 D5b1 工程完整四项 ACL**；只对**新工程**插入一条 `release:read`，验证仅四项权限并提交；再通过正式只读发布 GET 取得 `200 UNRELEASED` 及 `Cache-Control: no-store`。写入失败回滚 ACL INSERT，但正式工程 API 已提交的工程可能仍存在；**不得自动 DELETE、不得自动重新创建或补授权，应记录输出的专用工程 ID 并人工复核**。数据库不允许 `release:publish`、`release:rollback` 授权，不允许修改发布指针或设备。
+
+```powershell
+git fetch origin
+git switch --track origin/test/b35-d5b4b-release-read-fixture
+git rev-parse HEAD
+
+pnpm run test:published:oidc:revoke:fixture:config
+vp check
+pnpm run docs:check
+pnpm run ready
+Write-Host "D5b4b 完整质量链退出码：$LASTEXITCODE"
+
+# 严格无参数，只读预检；未获得独立授权时不要追加 --apply
+pnpm run oidc:lab:published:revoke:fixture
+Write-Host "D5b4b 只读预检退出码：$LASTEXITCODE"
+```
+
+真实创建、真实撤销和真实双框架撤权后 HTTP 404 均**尚未执行**。只有专用工程创建成功后，才能推进 D5b4c 的真实 ACL 撤销与拒绝验收；撤权步骤必须单独确认备份/恢复边界与执行授权，不能重复执行 D5b4a 的零工程预检当作后续状态已就绪。
+
+D5b4b 候选已做隔离 JavaScript 函数/Mock 行为检查，**11/11 为非 Node、非 PostgreSQL 的静态与隔离测试**；Windows Node、质量链、真实 Lab 预检和任何写操作均待维护者执行。
