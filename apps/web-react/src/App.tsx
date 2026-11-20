@@ -1,10 +1,11 @@
 import { lazy, Suspense, useState } from "react";
 
 const RuntimePage = lazy(() => import("./runtime/RuntimePage.tsx"));
+const PublishedRuntimePage = lazy(() => import("./runtime/PublishedRuntimePage.tsx"));
 const StudioPage = lazy(() => import("./studio/StudioPage.tsx"));
 
 export default function App() {
-  const [view, setView] = useState<"runtime" | "studio">("runtime");
+  const [view, setView] = useState<"runtime" | "published" | "studio">("runtime");
   return (
     <div
       className={
@@ -27,6 +28,13 @@ export default function App() {
         </button>
         <button
           type="button"
+          aria-current={view === "published" ? "page" : undefined}
+          onClick={() => setView("published")}
+        >
+          已发布运行
+        </button>
+        <button
+          type="button"
           aria-current={view === "studio" ? "page" : undefined}
           onClick={() => setView("studio")}
         >
@@ -41,7 +49,13 @@ export default function App() {
           </main>
         }
       >
-        {view === "runtime" ? <RuntimePage /> : <StudioPage />}
+        {view === "runtime" ? (
+          <RuntimePage />
+        ) : view === "published" ? (
+          <PublishedRuntimePage />
+        ) : (
+          <StudioPage />
+        )}
       </Suspense>
     </div>
   );
