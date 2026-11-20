@@ -632,3 +632,9 @@ D2b 通过 PR #104 Squash 合并到 main（`95c1c0e4b3423ba9acfcf425f3b82de304f0
 D3/D4 候选同步新增 React 与 Vue 的独立“已发布运行”导航入口，保持原水处理 Demo Runtime 和 Studio 不变。用户显式输入已授权工程 ID 后才发起 `release:read` 受保护的同源 BFF GET；双端共享 `PublishedRuntime` / `PublishedRuntimeRefresher`，对未发布、已验证、离线、拒绝及异常分别展示，退出/切换导航时清空内容、可见性变化暂停和恢复受控验证。仅在已通过发布指针/快照 SHA-256 校验后预览静态 SVG；不读取编辑 head、历史版本或草稿。
 
 **FR-008 继续部分实现**：当前发布写门禁仍生产 fail-closed；正式发布读取只有在明确授予 `release:read` 且数据库已有合法已提交发布指针时才能成功展示。当前没有真实工业 Tag 来源，静态组态图元无读数，Tag 质量始终 `UNAVAILABLE`。跨框架真实 OIDC/HTTPS、授权撤销、超时与生命周期浏览器专项未执行，本候选不得宣称生产可用或现场数据正常。
+
+## 2026-11-20 · 第三十五批 D5a 真实 OIDC/HTTPS 发布读取拒绝基线候选
+
+PR #105 已合并至 `main`（`637ebbce3191c998b3264733645da947a3739e9f`），React/Vue 均具备独立“已发布运行”只读入口，但真实 Keycloak/HTTPS 双端运行尚待验收。D5a 在**不修改数据库、工程、ACL、发布记录或工业设备**的前提下新增独立浏览器专项：两端必须是同一真实预绑定主体、页面默认零发布读取请求、显式选择随机不存在工程后只允许 GET 固定当前发布路径、必须受控拒绝并保持零快照、Tag 质量不可用、工程 API 写入全部阻断。脚本没有写入模式，拒绝任何参数或 Lab 写入确认。
+
+该测试不依赖 `project:read` 工程列表、不授予 `release:read`，因此**只验证未授权/不存在工程的安全拒绝**。拥有独立 `release:read` 权限时的 `UNRELEASED/RELEASED`、实际 SHA-256 快照、ACL 实时撤销、超时与可见性恢复仍需要后续 D5b 隔离数据准备及真实浏览器专项。生产发布门禁仍 fail-closed，FR-008 继续部分实现。
