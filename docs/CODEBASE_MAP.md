@@ -1058,3 +1058,9 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `scripts/test-oidc-published-runtime-offline.mjs`：双框架 HTTPS OIDC 浏览器专项，已存在的 `d5b-unreleased-<UUIDv4>` 只读工程，真实 GET 200 → 一次 Fetch 网络拒绝（模拟）→ 离线无快照 → 真实 GET 200 恢复 → 停止读取；不连接设备、不修改数据库或权限。
 - `scripts/test-oidc-published-runtime-offline.cases.mjs`：9 项离线故障输入边界、注入时序、一次性失败、跨 Origin 与写入拒绝、真实控件、清空状态、请求审计和脱敏门禁。
 - `package.json`：`test:published:oidc:offline:config` 加入 `ready`；`test:published:oidc:offline:browser` 保持需要维护者手工登录的独立真实浏览器专项。
+
+## 2026-11-20 · D5b3 单次模拟 HTTP 404 访问拒绝与恢复
+
+- `scripts/test-oidc-published-runtime-denied.mjs`：本机双框架可信 HTTPS OIDC 浏览器只读专项；真实 200 UNRELEASED → 只对精确当前工程发布 GET 本地构造一次 HTTP 404 → 状态 denied/无快照 → 真实 200 恢复 → 停止读取；绝不进行数据库 ACL 删除或发布写入。
+- `scripts/test-oidc-published-runtime-denied.cases.mjs`：9 项默认只读参数、单次 404 模拟、跨站/非 GET 拦截、状态清理、请求白名单和错误脱敏门禁。
+- `package.json`：`test:published:oidc:denied:config` 加入完整 `ready`；`test:published:oidc:denied:browser` 需要维护者手动 Keycloak 登录，独立验收且不加入 `ready`。

@@ -3604,3 +3604,29 @@ Write-Host "D5b2 真实离线恢复退出码：$LASTEXITCODE"
 ```
 
 本小批不修改运行时业务代码；已发布 `RELEASED`、ACL 真撤销及真实网络 TCP 故障仍未由此验收，生产发布写入门禁保持关闭。
+
+## 2026-11-20 · D5b3 双框架发布读取模拟 HTTP 404 拒绝与恢复（Draft 待实测）
+
+维护者已在 PR #108 的 HEAD 完成 React/Vue 真实 Keycloak/HTTPS D5b2 单次 Fetch 网络失败→离线清理→真实恢复专项（退出码 0），完整 `pnpm run ready` 退出码 0、680/680 单测、62/62 服务端 E2E；PR #108 已 Squash 合并（`0b073e574daf93c9b521c53bf56a8ebdc125a525`）。
+
+本小批**复用已有** D5b1 专用未发布工程 `d5b-unreleased-42c376a0-5bdc-4fd6-80d6-da29e0312aca`，在真实已登录的同源页面先完成真实 HTTP 200 与 `UNRELEASED` 校验；在已安装的只读门禁外、发布页挂载前安装一次性模拟层，只在首次成功后启用。点击真实“立即刷新”时仅为完全匹配的工程发布 GET 构造本地 HTTP 404 Response，验证 React/Vue 均进入 `denied`，清除发布代次/快照并保持 Tag 质量 `UNAVAILABLE`；再次点击真实刷新必须转发到服务器并获取 HTTP 200、恢复 `UNRELEASED`；最后点击停止读取，验证 `idle` 和零额外工程请求。模拟 404 不转发给服务器，真实服务器日志不会出现该次模拟拒绝。
+
+**边界**：此专项只是在浏览器 Fetch 层**模拟访问拒绝**，绝不撤销 PostgreSQL `release:read` ACL，不触发真正的授权服务端拒绝，不修改 Keycloak 会话、工程版本、发布指针或工业设备。不把“模拟 404”当作“真实 ACL 已撤销”。任何真实撤权需单独授权、隔离准备、服务端状态核对与回收方案。
+
+```powershell
+git fetch origin
+git switch --track origin/test/b35-d5b3-published-runtime-denial-recovery
+git rev-parse HEAD
+
+pnpm run test:published:oidc:denied:config
+vp check
+pnpm run docs:check
+pnpm run ready
+Write-Host "完整质量链退出码：$LASTEXITCODE"
+
+$projectId = "d5b-unreleased-42c376a0-5bdc-4fd6-80d6-da29e0312aca"
+pnpm run test:published:oidc:denied:browser --project-id $projectId
+Write-Host "D5b3 真实浏览器退出码：$LASTEXITCODE"
+```
+
+新 Node 9 项门禁加入 `ready`；真实 Keycloak 登录浏览器专项**不**自动执行。该脚本编写及远程提交不等于 Windows 上实际成功，目前新增测试和浏览器专项待维护者验收。
