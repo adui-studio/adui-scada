@@ -3519,3 +3519,20 @@ if ($testExitCode -ne 0) {
 执行前确认根 `.env` 中的开发 URL 是本机 `127.0.0.1:15432/adui_scada`；上述脚本只替换数据库路径，若根 URL 不是该本机开发库，应停止并由维护者在本机安全设置正确的隔离测试 URL，不能改指向远程或生产环境。测试文件还会独立校验测试 URL 的协议、主机和数据库名。
 
 本次用户首次裸跑 `pnpm run test:db` 时，6 个 Suite 均在导入阶段因缺少 `SCADA_TEST_DATABASE_URL` 退出，0 个测试执行；没有证据显示 PostgreSQL 已连接或数据库发生写入。按本节完整脚本重跑后，再依据 Vitest 实际统计和最终退出码记录结果。原开发库 `adui_scada` 的历史失败迁移继续冻结。
+
+## 第三十五批 D5a · 真实 Keycloak 双 HTTPS Origin 正式发布读取专项
+
+D5a 真实浏览器专项使用 pnpm run test:release:runtime:oidc:browser，离线参数与页面契约门禁为 pnpm run test:release:runtime:oidc:config（已加入 ready；真实浏览器不加入）。
+
+前置条件：本机可信 Keycloak Lab、React/Vue 两个 HTTPS Origin、NestJS BFF、Chrome/Edge 可信 TLS 根证书及已预绑定普通测试用户均就绪。当前 PowerShell 会话临时设置两份既有工程 ID：SCADA_OIDC_RELEASE_READ_PROJECT_ID 对应只显式授予 release:read、不具备 project:read / version:read 的工程；SCADA_OIDC_RELEASE_DENIED_PROJECT_ID 对应当前主体有 project:read、无 release:read 的对照工程。两工程需属于同一可信测试租户，且不可相同。
+
+    $env:SCADA_OIDC_RELEASE_READ_PROJECT_ID = "已预先授权 release:read 的工程 ID"
+    $env:SCADA_OIDC_RELEASE_DENIED_PROJECT_ID = "仅有 project:read 的对照工程 ID"
+    pnpm run test:release:runtime:oidc:browser
+    Write-Host "D5a 真实浏览器专项退出码：$LASTEXITCODE"
+    Remove-Item Env:SCADA_OIDC_RELEASE_READ_PROJECT_ID -ErrorAction SilentlyContinue
+    Remove-Item Env:SCADA_OIDC_RELEASE_DENIED_PROJECT_ID -ErrorAction SilentlyContinue
+
+脚本仅使用现有真实 OIDC/BFF Cookie 和同源 GET；先验证匿名 401、授权工程发布读取 200/no-store、同工程详情/历史版本 404、对照工程详情 200/发布读取 404，再点击 React/Vue 页面执行读取/拒绝/恢复。所有工程 API 必须 GET、same-origin、no-store、redirect:error、无 body/Authorization/CSRF。脚本无参数、无数据库连接、无写入模式；不创建工程、不授予/撤销 ACL、不执行发布或回滚。工程 ID 仅在当前 PowerShell 进程环境中存在，不得写入根 .env、Git、终端记录或聊天。真实 OIDC 密码由维护者在独立临时浏览器手动输入，不进入终端；Profile 结束自动关闭清理。
+
+没有正式发布指针时 UNRELEASED 为合法状态；有合法指针时页面验证静态快照，Tag 仍为 UNAVAILABLE。此专项通过不代表生产发布、现场 Tag、工业网关或 PLC/DCS 设备写入已获授权。
