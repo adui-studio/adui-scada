@@ -75,6 +75,8 @@ export type {
 } from "./project-version-repository.ts";
 export { parseServerProjectSaveRequest } from "./server-project-contract.ts";
 export type { ServerProjectSaveRequest } from "./server-project-contract.ts";
+export { parsePublishedRelease } from "./published-release.ts";
+export type { PublishedRelease } from "./published-release.ts";
 export { validateProjectReleasePreflight } from "./release-preflight.ts";
 export type {
   ProjectReleasePreflightIssue,
