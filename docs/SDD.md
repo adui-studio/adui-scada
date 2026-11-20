@@ -1179,3 +1179,17 @@ D1 已通过维护者 Windows 完整 `ready` 与隔离 PostgreSQL 57/57 项测�
 - Runtime `PublishedRuntime`：通过注入只读 `PublishedReleaseReader` 使用同一 API 契约；状态为 `idle/loading/unreleased/verified/offline/denied/error`。只有通过完整性校验的不可变快照才能进入 `verified`。所有状态的 `tagQuality` 固定为 `UNAVAILABLE`，`verified` 不代表现场 Tag `GOOD`。
 - 同一会话中禁止发布代次回退、同代次修改修订/摘要/事件 ID 和已发布退回未发布；更高代次的历史已发布版本回滚允许较低修订。切换工程、取消运行或迟到的旧请求不得污染最新状态。网络中断明确 `offline` 且清空画面，不回退到缓存或草稿；401/403/404 清空快照与授权水位；篡改、Schema 不兼容及其它错误均 `error` 且停止显示。
 - 本阶段**尚未**接入 Vue/React Runtime、自动轮询发布指针、SSE/工业 Tag 来源、实时质量恢复、真实 TLS/OIDC 双端运行验证或生产发布。以上接口与状态均为候选，单元测试和 Windows 质量链待实测。
+
+## 2026-11-20 · 第三十五批 D2b 发布刷新状态机与可见性契约候选
+
+**输入**：外部生命周期管理 `PublishedRuntimeRefresher.start(projectId)`、`refresh()`、`setVisible(boolean)`、`stop()`，注入的 `PublishedRuntime`，可选受控单次调度器。只允许经 D2a `readCurrentRelease` 与 Core `parsePublishedRelease` 的当前已提交发布指针；不读取编辑 head、草稿、Demo 或版本历史。
+
+- `start` 是显式新会话：立即清空此前工程的全部运行数据和校验水位，读取指定工程发布态；默认刷新间隔 15000ms，可选输入限定为 1000～300000ms 的安全整数。
+- 定时刷新采用单次定时器，前一次读取完成后才安排下一次，防止并行堆积；手动与定时刷新并发时只发送一条当前工程 GET。每次进入 `loading` 都立即清除旧画面，只有新的完整性校验成功才能显示 `verified`；刷新成功重置退避。
+- `offline` 不保留旧快照，可按 15s→30s→60s 的默认有界指数退避重新读取；连续离线重试上限默认 60000ms。读取超时默认 10000ms，通过 `PublishedRuntime.expire()` 取消请求、撤下画面，迟到结果不得覆盖新发布状态。全部间隔均可在隔离测试中注入手动调度器，无新依赖。
+- `denied`（401/403/404）与 `error`（快照、事件、Schema 或代次不一致）不自动安排下一次刷新；必须由调用方明确重新开启运行会话才应恢复长期刷新。
+- `setVisible(false)` 取消请求与定时器、清空可显示正文，并调用 `PublishedRuntime.suspend()` **保留当前身份会话的非正文发布代次/事件校验水位**；`setVisible(true)` 必须先重新 GET 并校验才能显示。隐藏与重显由后续框架 UI 适配器显式调用，本阶段不注册全局 DOM 监听。
+- `stop` 取消所有调度、AbortSignal 及运行内容，**彻底清除发布水位**；必须用于登出、身份切换和 Runtime 卸载。历史延迟回调即使仍被执行，也受 epoch 与请求代次双重保护。
+- 新一代次可切换到新的发布修订；合法 `ROLLBACK` 可指向较低修订，但代次必须递增；同代次变更摘要/事件或较低代次均 fail-closed。已验证的配置快照不代表现场 Tag `GOOD`，所有状态 `tagQuality="UNAVAILABLE"`。
+
+**局限**：本批没有实现 React/Vue 页面接线、浏览器隐藏/在线真实事件专项、动态 Tag 质量、生产发布或工业设备写入。超时防止无限等待，但真正底层网络取消依赖受控 API Client 对 AbortSignal 的支持。D2b 候选尚待 Windows `vp check`、单测、`docs:check` 和 `ready`。
