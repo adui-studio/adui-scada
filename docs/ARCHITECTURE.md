@@ -456,4 +456,4 @@ D2a 已由 PR #103 合并至 `main`（`5f45bacbc90dd841dfb8b1992605d4652464361a`
 
 D5a 不改业务架构，复用 D1 服务端 release:read、D2a API Client、D2b Runtime 生命周期与 D3/D4 React/Vue 页面；新增 Node 离线安全门禁和一个真实 Keycloak/HTTPS 双 Origin 浏览器脚本。脚本通过现有同源 BFF Cookie，验证 React/Vue 两 Origin 映射到同一可信主体，再分别访问已授权与无发布权限的既有工程。
 
-权限测试采用两份预先存在的隔离 Lab 工程，而不是测试中创建/改 ACL：A 只授予 release:read（同时拒绝 project/version read）；B 授予 project:read 但缺少 release:read。这两种反向检查分别证明权限独立且不继承。所有工程 API 都是同源 GET；脚本不连接数据库、不更改身份、不执行工程/发布写入。真实浏览器只输出固定阶段与发布状态，不输出工程 ID、主体 ID、摘要和快照正文。
+权限测试采用两份预先存在的隔离 Lab 工程，而不是测试中创建/改 ACL：A 只授予 release:read（同时拒绝 project/version read）；B 授予 project:read 但缺少 release:read。这两种反向检查分别证明权限独立且不继承。所有工程 API 都是同源 GET；脚本不直接连接数据库、不更改工程授权、不执行工程/发布写入；正常 OIDC 登录仍由 BFF 按既有流程持久化认证事务与会话。真实浏览器只输出固定阶段与发布状态，不输出工程 ID、主体 ID、摘要和快照正文。
