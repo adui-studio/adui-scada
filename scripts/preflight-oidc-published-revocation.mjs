@@ -9,12 +9,7 @@ const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const SERVER_PACKAGE = fileURLToPath(new URL("../apps/server/package.json", import.meta.url));
 const BASELINE_PROJECT = "d5b-unreleased-42c376a0-5bdc-4fd6-80d6-da29e0312aca";
 const PRINCIPAL = { tenantId: "lab-tenant", subjectId: "lab-engineer" };
-const EXPECTED_PERMISSIONS = [
-  "project:read",
-  "version:read",
-  "version:append",
-  "release:read",
-];
+const EXPECTED_PERMISSIONS = ["project:read", "version:read", "version:append", "release:read"];
 const RELEASE_MIGRATIONS = [
   "20261118000000_release_state_and_events",
   "20261119000000_release_state_event_integrity",
@@ -95,17 +90,13 @@ export function assertPublishedRevocationPreflightRows(rows) {
     EXPECTED_PERMISSIONS.some(
       (permission) =>
         rows.grants.filter(
-          (row) =>
-            row.subject_id === PRINCIPAL.subjectId && row.permission === permission,
+          (row) => row.subject_id === PRINCIPAL.subjectId && row.permission === permission,
         ).length !== 1,
     )
   ) {
     throw new Error("D5b4a D5b1 基线授权发生变化，拒绝继续");
   }
-  if (
-    rows.dedicated?.length !== 1 ||
-    Number(rows.dedicated[0].count) !== 0
-  ) {
+  if (rows.dedicated?.length !== 1 || Number(rows.dedicated[0].count) !== 0) {
     throw new Error("D5b4a 已发现 D5b4 专用工程，必须单独核对");
   }
   return true;
@@ -120,65 +111,89 @@ export async function inspectPublishedRevocationReadiness(client, target) {
   try {
     const scope = [PRINCIPAL.tenantId, BASELINE_PROJECT];
     const rows = {
-      database: (await client.query(
-        "SELECT current_database() AS database_name, current_user AS database_user",
-      )).rows,
-      migrations: (await client.query(
-        'SELECT migration_name FROM public."_prisma_migrations" ' +
-          "WHERE migration_name = ANY($1::text[]) AND finished_at IS NOT NULL " +
-          "AND rolled_back_at IS NULL",
-        [RELEASE_MIGRATIONS],
-      )).rows,
-      unresolved: (await client.query(
-        'SELECT COUNT(*)::integer AS count FROM public."_prisma_migrations" ' +
-          "WHERE finished_at IS NULL AND rolled_back_at IS NULL",
-      )).rows,
-      identity: (await client.query(
-        "SELECT 1 FROM public.scada_identities " +
-          "WHERE tenant_id = $1 AND subject_id = $2 AND status = 'active'",
-        [PRINCIPAL.tenantId, PRINCIPAL.subjectId],
-      )).rows,
-      externalIdentity: (await client.query(
-        "SELECT 1 FROM public.scada_external_identities " +
-          "WHERE issuer = $1 AND tenant_id = $2 AND subject_id = $3",
-        [target.issuer, PRINCIPAL.tenantId, PRINCIPAL.subjectId],
-      )).rows,
-      project: (await client.query(
-        "SELECT head_revision FROM public.scada_projects " +
-          "WHERE tenant_id = $1 AND project_id = $2",
-        scope,
-      )).rows,
-      versions: (await client.query(
-        "SELECT revision, created_by FROM public.scada_project_versions " +
-          "WHERE tenant_id = $1 AND project_id = $2",
-        scope,
-      )).rows,
-      audit: (await client.query(
-        "SELECT revision, actor_id, action FROM public.scada_project_audit " +
-          "WHERE tenant_id = $1 AND project_id = $2",
-        scope,
-      )).rows,
-      state: (await client.query(
-        "SELECT release_generation, released_revision, released_content_hash, " +
-          "last_release_event_id FROM public.scada_project_release_state " +
-          "WHERE tenant_id = $1 AND project_id = $2",
-        scope,
-      )).rows,
-      events: (await client.query(
-        "SELECT COUNT(*)::integer AS count FROM public.scada_project_release_events " +
-          "WHERE tenant_id = $1 AND project_id = $2",
-        scope,
-      )).rows,
-      grants: (await client.query(
-        "SELECT subject_id, permission FROM public.scada_project_grants " +
-          "WHERE tenant_id = $1 AND project_id = $2",
-        scope,
-      )).rows,
-      dedicated: (await client.query(
-        "SELECT COUNT(*)::integer AS count FROM public.scada_projects " +
-          "WHERE tenant_id = $1 AND project_id LIKE 'd5b4-revoke-%'",
-        [PRINCIPAL.tenantId],
-      )).rows,
+      database: (
+        await client.query(
+          "SELECT current_database() AS database_name, current_user AS database_user",
+        )
+      ).rows,
+      migrations: (
+        await client.query(
+          'SELECT migration_name FROM public."_prisma_migrations" ' +
+            "WHERE migration_name = ANY($1::text[]) AND finished_at IS NOT NULL " +
+            "AND rolled_back_at IS NULL",
+          [RELEASE_MIGRATIONS],
+        )
+      ).rows,
+      unresolved: (
+        await client.query(
+          'SELECT COUNT(*)::integer AS count FROM public."_prisma_migrations" ' +
+            "WHERE finished_at IS NULL AND rolled_back_at IS NULL",
+        )
+      ).rows,
+      identity: (
+        await client.query(
+          "SELECT 1 FROM public.scada_identities " +
+            "WHERE tenant_id = $1 AND subject_id = $2 AND status = 'active'",
+          [PRINCIPAL.tenantId, PRINCIPAL.subjectId],
+        )
+      ).rows,
+      externalIdentity: (
+        await client.query(
+          "SELECT 1 FROM public.scada_external_identities " +
+            "WHERE issuer = $1 AND tenant_id = $2 AND subject_id = $3",
+          [target.issuer, PRINCIPAL.tenantId, PRINCIPAL.subjectId],
+        )
+      ).rows,
+      project: (
+        await client.query(
+          "SELECT head_revision FROM public.scada_projects " +
+            "WHERE tenant_id = $1 AND project_id = $2",
+          scope,
+        )
+      ).rows,
+      versions: (
+        await client.query(
+          "SELECT revision, created_by FROM public.scada_project_versions " +
+            "WHERE tenant_id = $1 AND project_id = $2",
+          scope,
+        )
+      ).rows,
+      audit: (
+        await client.query(
+          "SELECT revision, actor_id, action FROM public.scada_project_audit " +
+            "WHERE tenant_id = $1 AND project_id = $2",
+          scope,
+        )
+      ).rows,
+      state: (
+        await client.query(
+          "SELECT release_generation, released_revision, released_content_hash, " +
+            "last_release_event_id FROM public.scada_project_release_state " +
+            "WHERE tenant_id = $1 AND project_id = $2",
+          scope,
+        )
+      ).rows,
+      events: (
+        await client.query(
+          "SELECT COUNT(*)::integer AS count FROM public.scada_project_release_events " +
+            "WHERE tenant_id = $1 AND project_id = $2",
+          scope,
+        )
+      ).rows,
+      grants: (
+        await client.query(
+          "SELECT subject_id, permission FROM public.scada_project_grants " +
+            "WHERE tenant_id = $1 AND project_id = $2",
+          scope,
+        )
+      ).rows,
+      dedicated: (
+        await client.query(
+          "SELECT COUNT(*)::integer AS count FROM public.scada_projects " +
+            "WHERE tenant_id = $1 AND project_id LIKE 'd5b4-revoke-%'",
+          [PRINCIPAL.tenantId],
+        )
+      ).rows,
     };
     assertPublishedRevocationPreflightRows(rows);
     return true;
@@ -206,9 +221,7 @@ async function run() {
     process.stdout.write(
       "D5b4a 只读预检通过：可信 Lab、原 D5b1 工程及授权完整，尚无 D5b4 专用工程。\n",
     );
-    process.stdout.write(
-      "未创建工程、未修改 ACL、未发布或回滚；真实撤权必须另行授权。\n",
-    );
+    process.stdout.write("未创建工程、未修改 ACL、未发布或回滚；真实撤权必须另行授权。\n");
   } finally {
     await client.end();
   }

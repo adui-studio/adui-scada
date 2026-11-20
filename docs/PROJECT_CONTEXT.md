@@ -1919,7 +1919,6 @@ PR #107 D5b1 E-073 候选将 `denied/offline/error` 纳入状态等待终态，�
 
 在 D5b2 双框架真实 Keycloak/HTTPS 授权未发布的单次离线异常恢复通过并合并 PR #108 后，继续 D5b3 **浏览器模拟单次 HTTP 404 拒绝**。继续使用已有的 `d5b-unreleased-*` 隔离工程；从真实 200 UNRELEASED → 浏览器模拟 404 且进入 denied、清空画面 → 再真实 200 恢复 → 停止读取。仅补充自动化测试，不修改真实 ACL/工程/发布状态，不涉及设备写入。此批不能代表真实撤销 PostgreSQL 授权的行为已通过，仍待单独授权的安全专项。
 
-
 ## 2026-11-20 · D5b3 已合并，D5b4a 独立真实撤权只读预检
 
 PR #109 真实 Windows 全量 `ready`、D5b3 React/Vue HTTPS 浏览器 404 模拟拒绝和恢复专项全部通过后，经授权合并 `main@33c8d31d8eae6c46b8a3ab5ddaabf44a3f8fa227`。下一小批只为未来真实 `release:read` ACL 撤销准备隔离门禁：必须另建 `d5b4-revoke-<UUID v4>` 专用工程，不动 D5b1 `d5b-unreleased-*` 及原有授权；新增 CLI 默认只读、SQL READ ONLY 事务校验当前 7 条迁移、可信主体、既有 D5b1 基线完整及 D5b4 工程不存在，查询后 ROLLBACK。无工程或 ACL 写操作，无生产安全门禁/设备变化。新候选待 Windows `ready` 与本机 PostgreSQL 预检真实验收。

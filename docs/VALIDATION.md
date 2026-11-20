@@ -2479,7 +2479,6 @@ E-073 候选改为同时识别成功/拒绝/离线/错误终态，对单一 GET 
 
 新 D5b3 只新增 browser 测试和 Node 9 项安全门禁：通过真实受保护 GET 200 确认当前 UNRELEASED，浏览器仅为当前工程模拟一次本地 404（非真实授权拒绝），验证 `denied` 无快照及清空状态，再通过真实 GET 200 恢复、停止读取。不删除真实 ACL，不写工程，不发布，设备安全边界不变。新增 `test:published:oidc:denied:config` 进入 `ready`，手工浏览器为 `test:published:oidc:denied:browser`。新代码尚未在 Windows 运行，真实 ACL 撤销和 RELEASED 快照仍待独立验收。
 
-
 ## 2026-11-20 · D5b3 Windows 全量验收完成 / D5b4a 只读预检候选
 
 维护者提交真实日志：D5b3 Node 安全门禁 **9/9**，Vite+ **380 个格式文件/232 个受检文件零告警**，Markdown **89 份**，完整 `ready` 最终退出码 **0**，包含 **680/680** 单测与 **62/62** 服务端 E2E、React/Vue/NestJS 构建；双框架真实 Keycloak/HTTPS 授权读取、浏览器模拟单次 404、真实授权恢复及停止均退出码 **0**。该实测与“真实 ACL 撤销”有明确区别。PR #109 Squash 合并 `main@33c8d31d8eae6c46b8a3ab5ddaabf44a3f8fa227`。

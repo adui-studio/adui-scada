@@ -3631,7 +3631,6 @@ Write-Host "D5b3 真实浏览器退出码：$LASTEXITCODE"
 
 新 Node 9 项门禁加入 `ready`；真实 Keycloak 登录浏览器专项**不**自动执行。该脚本编写及远程提交不等于 Windows 上实际成功，目前新增测试和浏览器专项待维护者验收。
 
-
 ## 2026-11-20 · 第三十五批 D5b4a 真实 ACL 撤销前只读预检（Draft 待 Windows 验收）
 
 维护者 D5b3 Windows 实测 `test:published:oidc:denied:config` **9/9**、`vp check` **380 文件格式正确、232 文件零告警**、`docs:check` **89 份**、`ready` **680/680 单元测试、62/62 E2E、最终退出码 0**；React/Vue 真实 Keycloak/HTTPS 先真实 200→浏览器模拟单次 404→真实 200 恢复、两端均通过，专项退出码 0。PR #109 经明确授权 Squash 合并至 `main`（`33c8d31d8eae6c46b8a3ab5ddaabf44a3f8fa227`）。该结果仅为浏览器模拟拒绝，不能代替真实 PostgreSQL ACL 撤销。

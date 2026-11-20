@@ -9,12 +9,7 @@ import {
 } from "./preflight-oidc-published-revocation.mjs";
 
 const BASELINE = "d5b-unreleased-42c376a0-5bdc-4fd6-80d6-da29e0312aca";
-const PERMISSIONS = [
-  "project:read",
-  "version:read",
-  "version:append",
-  "release:read",
-];
+const PERMISSIONS = ["project:read", "version:read", "version:append", "release:read"];
 const MIGRATIONS = [
   "20261118000000_release_state_and_events",
   "20261119000000_release_state_event_integrity",
@@ -31,12 +26,14 @@ function validRows() {
     project: [{ head_revision: "1" }],
     versions: [{ revision: "1", created_by: "lab-engineer" }],
     audit: [{ revision: "1", actor_id: "lab-engineer", action: "version:append" }],
-    state: [{
-      release_generation: "0",
-      released_revision: null,
-      released_content_hash: null,
-      last_release_event_id: null,
-    }],
+    state: [
+      {
+        release_generation: "0",
+        released_revision: null,
+        released_content_hash: null,
+        last_release_event_id: null,
+      },
+    ],
     events: [{ count: 0 }],
     grants: PERMISSIONS.map((permission) => ({
       subject_id: "lab-engineer",
@@ -106,10 +103,7 @@ void describe("D5b4a 发布读取真实 ACL 撤销前只读安全预检", () => 
       () => resolvePublishedRevocationPreflightTarget({ NODE_ENV: "production" }),
       /只能连接可信本机 OIDC Lab/,
     );
-    assert.throws(
-      () => resolvePublishedRevocationPreflightTarget({}),
-      /只能连接可信本机 OIDC Lab/,
-    );
+    assert.throws(() => resolvePublishedRevocationPreflightTarget({}), /只能连接可信本机 OIDC Lab/);
   });
 
   void it("真实发布迁移、原工程首版与独立 read 权限完整时允许预检", () => {
@@ -118,10 +112,18 @@ void describe("D5b4a 发布读取真实 ACL 撤销前只读安全预检", () => 
 
   void it("数据库目标、缺少发布迁移或未解决迁移都必须拒绝", () => {
     for (const modify of [
-      (rows) => { rows.database[0].database_name = "adui_scada_test"; },
-      (rows) => { rows.database[0].database_user = "other"; },
-      (rows) => { rows.migrations.pop(); },
-      (rows) => { rows.unresolved[0].count = 1; },
+      (rows) => {
+        rows.database[0].database_name = "adui_scada_test";
+      },
+      (rows) => {
+        rows.database[0].database_user = "other";
+      },
+      (rows) => {
+        rows.migrations.pop();
+      },
+      (rows) => {
+        rows.unresolved[0].count = 1;
+      },
     ]) {
       const rows = validRows();
       modify(rows);
@@ -145,12 +147,24 @@ void describe("D5b4a 发布读取真实 ACL 撤销前只读安全预检", () => 
 
   void it("原工程修订、审计或发布指针变化必须停止预检", () => {
     for (const modify of [
-      (rows) => { rows.project[0].head_revision = "2"; },
-      (rows) => { rows.versions[0].created_by = "other"; },
-      (rows) => { rows.audit[0].action = "release:publish"; },
-      (rows) => { rows.state[0].release_generation = "1"; },
-      (rows) => { rows.state[0].released_revision = "1"; },
-      (rows) => { rows.events[0].count = 1; },
+      (rows) => {
+        rows.project[0].head_revision = "2";
+      },
+      (rows) => {
+        rows.versions[0].created_by = "other";
+      },
+      (rows) => {
+        rows.audit[0].action = "release:publish";
+      },
+      (rows) => {
+        rows.state[0].release_generation = "1";
+      },
+      (rows) => {
+        rows.state[0].released_revision = "1";
+      },
+      (rows) => {
+        rows.events[0].count = 1;
+      },
     ]) {
       const rows = validRows();
       modify(rows);
@@ -163,27 +177,29 @@ void describe("D5b4a 发布读取真实 ACL 撤销前只读安全预检", () => 
 
   void it("D5b1 基线 release:read 缺失、重复或混入新权限均拒绝", () => {
     for (const modify of [
-      (rows) => { rows.grants.pop(); },
-      (rows) => { rows.grants[3].subject_id = "other"; },
-      (rows) => { rows.grants[3].permission = "release:publish"; },
-      (rows) => { rows.grants.push(rows.grants[0]); },
+      (rows) => {
+        rows.grants.pop();
+      },
+      (rows) => {
+        rows.grants[3].subject_id = "other";
+      },
+      (rows) => {
+        rows.grants[3].permission = "release:publish";
+      },
+      (rows) => {
+        rows.grants.push(rows.grants[0]);
+      },
     ]) {
       const rows = validRows();
       modify(rows);
-      assert.throws(
-        () => assertPublishedRevocationPreflightRows(rows),
-        /基线授权发生变化/,
-      );
+      assert.throws(() => assertPublishedRevocationPreflightRows(rows), /基线授权发生变化/);
     }
   });
 
   void it("已有 D5b4 工程不得误以为仍是零夹具状态", () => {
     const rows = validRows();
     rows.dedicated[0].count = 1;
-    assert.throws(
-      () => assertPublishedRevocationPreflightRows(rows),
-      /已发现 D5b4 专用工程/,
-    );
+    assert.throws(() => assertPublishedRevocationPreflightRows(rows), /已发现 D5b4 专用工程/);
   });
 
   void it("真实查询必须使用只读可重复读事务，并只引用原 D5b1 工程", async () => {

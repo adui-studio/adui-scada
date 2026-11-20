@@ -1065,7 +1065,6 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `scripts/test-oidc-published-runtime-denied.cases.mjs`：9 项默认只读参数、单次 404 模拟、跨站/非 GET 拦截、状态清理、请求白名单和错误脱敏门禁。
 - `package.json`：`test:published:oidc:denied:config` 加入完整 `ready`；`test:published:oidc:denied:browser` 需要维护者手动 Keycloak 登录，独立验收且不加入 `ready`。
 
-
 ## 2026-11-20 · D5b4a 真实发布读取 ACL 撤销前只读预检
 
 - `scripts/preflight-oidc-published-revocation.mjs`：强制无参数，使用现有受控本机 Keycloak/HTTPS/PG Lab 校验器；在 PostgreSQL `REPEATABLE READ READ ONLY` 事务内确认原 D5b1 工程、四项权限、发布迁移和可信身份完整，以及尚无 `d5b4-revoke-%` 专用工程；最终 ROLLBACK/关闭连接。
