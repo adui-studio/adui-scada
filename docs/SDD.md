@@ -1205,3 +1205,27 @@ React `PublishedRuntimePage.tsx` 和 Vue `PublishedRuntimePage.vue` 复用同一
 5. 用户可显式刷新或停止读取；状态由共享 Runtime 统一控制，`401/403/404`、网络离线、完整性异常和代次回退均不回退到编辑 head、草稿或 Demo。浏览器仅在成功读取已提交冻结快照后展示静态组态。
 
 本批没有修改数据库或服务端授权、发布写门禁、OIDC 配置与现场网关。真正的已发布工程需要合法已提交发布指针，生产 `ProjectReleaseSafetyGate` 仍然默认拒绝，因此默认运行环境不能靠此 UI 创建发布；真实 OIDC/HTTPS 双框架全链专项须后续实施。
+
+## 2026-11-20 · 第三十五批 D5a 真实 Keycloak 双 HTTPS Origin 发布读取契约候选
+
+新增 scripts/test-oidc-published-runtime.mjs 与离线配置/页面契约测试 scripts/test-oidc-published-runtime.cases.mjs。真实脚本无参数，只允许读取；复用现有 resolveProjectBrowserLab、startBrowser、waitForLogin、identityInPage 和隔离临时 Chrome/Edge Profile，不另建 OIDC、TLS 或浏览器启动机制。
+
+**运行前置（均为既有测试资源，不由脚本创建/修改）**：
+
+- 根 .env 配置本机可信 Keycloak Realm、React/Vue HTTPS Origin、NestJS BFF、本机 Lab PostgreSQL 地址及可信根证书；resolveProjectBrowserLab 只校验配置，脚本不直接连接 PostgreSQL。
+- 当前 PowerShell 进程临时设置 SCADA_OIDC_RELEASE_READ_PROJECT_ID：同一预绑定普通测试主体只有该工程的独立 release:read，不具备该工程 project:read / version:read。
+- 临时设置 SCADA_OIDC_RELEASE_DENIED_PROJECT_ID：同一主体可以读取该既有工程详情（project:read），但没有 release:read。两 ID 必须不同且格式合法。
+- 维护者人工在隔离浏览器中完成一次 Keycloak 登录；不在终端/聊天输入密码、Cookie 或 Token。
+
+**每个 HTTPS Origin 的只读检查**：
+
+1. 匿名 credentials: omit 请求当前发布路由，必须得到 401 且不重定向。
+2. 授权工程当前发布 GET 必须 200 + Cache-Control: no-store；只返回到 Node 内存的发布状态、代次、修订、摘要/事件元数据供跨 Origin 比较，不输出工程 ID、快照正文、Tag 或摘要。
+3. 同一授权工程详情 GET 与历史版本 GET 均必须 404，证明 release:read 不授予 project:read / version:read。
+4. 对照工程详情 GET 必须 200，而当前发布 GET 必须 404，证明 project:read 不继承 release:read。
+5. 点击真实“已发布运行”导航与表单，分别验证授权读取、对照工程拒绝、再次授权恢复；Tag 质量始终 UNAVAILABLE。若已有合法发布指针，状态必须为 verified 并出现静态 SVG；若尚未发布，UNRELEASED 且无预览是合法状态。
+6. 页面 Fetch 审计要求所有工程请求仅为当前 Origin 的 GET /api/v1/projects/:projectId/releases/current，credentials/mode: same-origin、cache: no-store、redirect: error，且无 body、Authorization 或 CSRF 写凭据。整个脚本无 POST/PUT/PATCH/DELETE。
+
+**失败边界**：未认证、缺少 release 权限、缓存头缺失、重定向、跨 Origin、主体不一致、两端发布指针不一致、UI 显示旧快照或出现任何工程写请求均失败；诊断白名单脱敏，不输出原始浏览器堆栈、工程 ID、Cookie、Token、快照正文或摘要。浏览器临时 Profile 在 finally 中关闭并清理。
+
+此专项不能把 UNRELEASED 当成生产发布已完成，也不能把静态发布快照验证当作实时 Tag GOOD。生产 ProjectReleaseSafetyGate 继续 fail-closed。
