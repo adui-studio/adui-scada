@@ -1894,3 +1894,19 @@ D5a 候选分支 `test/b35-d5a-published-runtime-oidc-readonly` 新增真实 HTT
 维护者 Windows 在 HEAD `e12599a94c0c11f97e95a26ff978281812ee39ac` 完成 D5a 离线门禁 12/12、`vp check` 372/224 零告警、`docs:check` 89 份、单测 680/680、HTTP E2E 62/62 和完整 `ready` 退出码 0。交互式 Keycloak/HTTPS 浏览器专项在人工登录成功后仅返回脱敏通用错误、退出码 1；真实失败步骤尚不明确。
 
 D5a Draft PR #106 增补固定阶段的安全诊断、导航 DOM 就绪等待及两项 Node 回归，保留失败后销毁隔离浏览器 Profile，不放宽同主体、GET 404、零工程写入与隐藏敏感数据规则。新提交的 Windows 质量链和真实浏览器尚待执行；D5b 未开始。
+
+## 2026-11-20 · PR #106 D5a 已合并；第三十五批 D5b1 真实授权只读候选
+
+D5a Windows HEAD `1b7eaab6e4637361e4c84d316902a62cd6f09d9a` 已通过 14/14 Node 门禁、`vp check` 372/224 零告警、`docs:check` 89 份、680/680 单测、62/62 HTTP E2E 和完整 `ready` 退出码 0。React/Vue 真实 Keycloak/HTTPS 双框架无授权 404 拒绝专项也退出码 0。维护者明确授权合并 PR #106；已 Squash 合并至 `main`，提交 `fede2b649c4c6d6ca0ffcc79ee3b56ccef9d932a` 且 main HEAD 一致。
+
+D5b1 独立候选 `test/b35-d5b1-published-runtime-authorized-readonly` 继续验证真实 `release:read` 授权下两端 `UNRELEASED/RELEASED` 状态、同源 GET、状态摘要与静态 SVG 的一致性。新脚本**只读**、必须手动输入已预置的隔离工程 ID，不自动创建工程/权限/发布记录；生产 `ProjectReleaseSafetyGate` 仍 fail-closed，真实 `RELEASED` 验收需要另行合法预置隔离快照，绝不能临时开启发布门禁。候选待 Windows 全量 `ready`、真实授权浏览器和预置数据验收，不提前合并；ACL 撤销、离线和页面恢复仍留在后续 D5b 子批次。
+
+## 2026-11-20 · D5b1 真实授权读取失败复核（E-073，待 Windows 复验）
+
+维护者 Windows D5b1 门禁 **7/7**、`vp check` **374/226** 零错误告警、`docs:check` **89**、完整 `ready` **680/680 单测、62/62 HTTP E2E** 且退出码 **0**。真实 Keycloak/HTTPS 在 React 已登录并通过页面输入后，使用文档的格式示例工程 ID 时，于发布读取阶段收到“异常已脱敏”、退出码 **1**；尚无证据证明该工程真实存在或已授予当前主体独立 `release:read`，也未观测实际 HTTP 状态，不能把失败误记为 Keycloak 故障或已授权验收成功。
+
+PR #107 D5b1 E-073 候选将 `denied/offline/error` 纳入状态等待终态，依据受控单次 GET 的 HTTP 状态分类 404/401/403/非 200 与客户端状态不符，仍全部 fail-closed，新增 3 项 Node 门禁；文档改为人工输入已预置工程，不再使用可复制的示例 UUID。**修复后的 Windows 质量链和真实授权双框架尚未实测，PR 保持 Draft；RELEASED 不能绕过生产默认拒绝门禁造数据。**
+
+## 2026-11-20 · D5b1 本机专用 UNRELEASED 夹具准备候选（PR #107）
+
+维护者在 Docker 原开发库 `adui_scada` 成功恢复 7 条 Prisma 迁移，未解决迁移 0，39 原工程、168 ACL、39 未发布状态及 0 发布事件保留；明确批准仅对本机一个新专用工程及 `lab-engineer` 的独立 `release:read` 进行准备。本批新增只读默认的 Lab 工具和单独的 `--apply --confirm-lab adui_scada` 写入模式。工具通过正式同源 OIDC/CSRF 工程创建 API 创建随机前缀工程，再在严校验的 SQL 事务中只增加同主体单条 `release:read`，并通过真实发布 GET 只读确认。脚本没有在用户 Docker 数据库运行，不能声称夹具已存在；真实授权双框架仍待验收。

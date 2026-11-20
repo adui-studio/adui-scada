@@ -2442,3 +2442,29 @@ E-071 候选仅修正等待回调执行、收紧导航异常重试，并将首�
 维护者提供本地 `git rev-parse HEAD` = `e12599a94c0c11f97e95a26ff978281812ee39ac`，`test:published:oidc:config` **12/12 通过**，`vp check` **372 文件格式正确 / 224 文件零警告错误**，`docs:check` **89 份通过**，单测 **680/680**、服务端 HTTP E2E **62/62**，完整 `ready` **退出码 0**；E-071 等待作用域修复已通过该 HEAD 的离线质量检查。随后独立 `test:published:oidc:browser` 在人工登录后输出统一脱敏错误，**退出码 1**。现有错误不能定位到具体页面步骤，也不能视为 Keycloak 登录失败或浏览器崩溃。浏览器在 `finally` 中按设计关闭隔离 Profile。
 
 E-072 候选增加固定阶段和安全错误类别诊断，登录后等待 React/Vue 实际导航 DOM 完成再进入页面，防止页面尚未渲染时误点。新增两项 Node 防回归，预计由 12 项增至 14 项。本批**尚未在 Windows 执行修复后的门禁、完整 `ready` 与真实浏览器专项**；不能将上一 HEAD 的通过日志当作新提交的执行证据。未修改 NestJS、Prisma、用户 ACL、正式发布指针、生产发布门禁或工业设备写入。
+
+## 2026-11-20 · D5a 最终真实双框架验收并合并 PR #106
+
+维护者 Windows HEAD `1b7eaab6e4637361e4c84d316902a62cd6f09d9a` 的离线安全门禁 **14/14 通过**，`vp check` **372 文件格式正确 / 224 受检零告警错误**，`docs:check` **89 份通过**，`pnpm run ready` 单测 **680/680**、服务端 HTTP E2E **62/62**、React/Vue/Server 构建完成且完整退出码 **0**。独立 `pnpm run test:published:oidc:browser` 在真实 Keycloak/HTTPS 双 Origin 中 React/Vue 两端均验证相同可信主体、发布入口、无选择时零请求、随机不存在工程 GET 404、安全拒绝、零发布 SVG 和零工程写入，退出码 **0**。经明确授权 PR #106 Squash 合并，合并 SHA 与 `main` HEAD 均为 `fede2b649c4c6d6ca0ffcc79ee3b56ccef9d932a`，E-071/E-072 已关闭。该验收**不涵盖**真实授权、发布快照、撤权或故障恢复。
+
+## 2026-11-20 · 第三十五批 D5b1 真实授权只读状态专项候选（待 Windows 验收）
+
+在已合并的 D5a 基线上新增 `test:published:oidc:authorized:config`（默认加入 `ready`）和 `test:published:oidc:authorized:browser`（必须由维护者在可信本机 Keycloak/HTTPS Lab 中主动启动）。脚本只接受 `--status UNRELEASED|RELEASED --project-id d5b-(unreleased|released)-<UUID v4>` 且状态与前缀必须一致。必须使用事先由授权维护者创建的、真实绑定当前登录主体独立 `release:read` 权限的本机隔离工程；脚本本身**不执行**创建工程、ACL 授予、正式发布或任何数据库写入。
+
+真实浏览器操作使用 D5a 的同源 GET 门禁与真实 DOM 导航，确保两端同一 BFF 主体、选择前零发布请求、目标仅请求一次 `GET /api/v1/projects/:projectId/releases/current` 且 HTTP 200；`UNRELEASED` 必须显示无 SVG、generation 0，`RELEASED` 必须由共享 Core/Runtime 完整性校验后展示非空 SVG 与正修订号/代次，两端状态摘要一致，Tag 均维持 `UNAVAILABLE`。不输出工程正文、凭据、工程 ID 或 SVG 源码，异常只报告固定阶段。**不能使用生产发布 API 构造测试数据**，因为 `ProjectReleaseSafetyGate` 仍默认拒绝；已发布场景只有预置合法隔离快照才能进行，未预置则应拒绝并记录阻塞，不能伪装测试通过。
+
+候选预计新增 **7 项** Node 安全测试（尚未在 Windows 实测）；仓库修改、`vp check`、`docs:check`、`ready` 与真实 Keycloak/HTTPS 授权场景仍需完整验证。没有启动真实数据库写入、调整生产发布安全门禁或开放工业设备写入。
+
+## 2026-11-20 · D5b1 Windows 离线通过，真实授权读取在示例 ID 处失败（E-073）
+
+维护者实际运行 `test:published:oidc:authorized:config` **7/7 通过，退出码 0**，`vp check` **374 文件格式正确 / 226 受检零告警**，`docs:check` **89 份通过**，完整 `pnpm run ready` **680/680 单测、62/62 HTTP E2E、React/Vue/Server 构建完成，退出码 0**。原始完整质量日志未附 `git rev-parse HEAD`；不能将结果严格绑定到后续修复提交。
+
+随后维护者直接使用 HARNESS 中展示的 `d5b-unreleased-12345678-1234-4234-8234-123456789abc` 示例 ID。真实 Keycloak 登录成功，React BFF、导航与输入成功；在 React 发布读取阶段输出“异常已脱敏”，专项 **退出码 1**，Vue 未执行。该示例 ID 的真实工程存在性和独立 `release:read` ACL **尚未得到证实**；原脚本只等待成功状态，可能将 HTTP 404 等受控拒绝误报为超时，不能从本日志断定实际 HTTP 状态。
+
+E-073 候选改为同时识别成功/拒绝/离线/错误终态，对单一 GET 的 HTTP 404（工程不存在或未授权）、401、403、非 200 与客户端状态不一致分别固定脱敏诊断；新增 3 项 Node 回归，预计从 7 项增至 10 项；HARNESS 改为人工输入已存在工程 ID，不再提供可直接复制的虚构 UUID。保持 D5b1 一次只读 GET、零数据库写入、默认发布安全门禁 fail-closed。新提交的 Windows 全量 `ready`、真实 UNRELEASED/RELEASED 两种授权浏览器仍待验证，PR 保持 Draft。
+
+## 2026-11-20 · D5b1 专用未发布工程准备候选（明确授权、尚未执行）
+
+维护者实际验证 Docker `adui_scada` 数据库完成 7/7 Prisma 迁移、未解决迁移 0、保留 39 工程/168 ACL、39 条有效 UNRELEASED 状态和 0 发布事件；此前已备份 SHA-256 校验并在隔离恢复副本上完成 `pg_restore` 和迁移回放。随后授权仅为本机可信 Lab 创建一个 D5b1 专用未发布工程并为已验证 `lab-engineer` 授予该工程独立 `release:read`。
+
+新增 `scripts/prepare-oidc-published-unreleased.mjs` 和 9 项 Node 安全回归；默认只读预检，显式 `--apply --confirm-lab adui_scada` 才调用受保护的工程创建 HTTP API 并在 SQL SERIALIZABLE 事务内加一条 ACL。已有工程、其他权限、发布状态与工业设备不写入。失败后不自动删除已创建工程，须按 ID 单独核查。工具编写阶段已完成 V8 隔离函数行为检查（7 项基本检查通过），**并非整仓 Node 9/9 或 Windows 真实数据库/浏览器测试通过**。新提交的 `test:published:oidc:fixture:config`、`vp check`、`docs:check`、`ready` 和真实夹具写入/双框架读取仍待执行。PR #107 保持 Draft，不提前合并。

@@ -3519,3 +3519,67 @@ if ($testExitCode -ne 0) {
 执行前确认根 `.env` 中的开发 URL 是本机 `127.0.0.1:15432/adui_scada`；上述脚本只替换数据库路径，若根 URL 不是该本机开发库，应停止并由维护者在本机安全设置正确的隔离测试 URL，不能改指向远程或生产环境。测试文件还会独立校验测试 URL 的协议、主机和数据库名。
 
 本次用户首次裸跑 `pnpm run test:db` 时，6 个 Suite 均在导入阶段因缺少 `SCADA_TEST_DATABASE_URL` 退出，0 个测试执行；没有证据显示 PostgreSQL 已连接或数据库发生写入。按本节完整脚本重跑后，再依据 Vitest 实际统计和最终退出码记录结果。原开发库 `adui_scada` 的历史失败迁移继续冻结。
+
+## 2026-11-20 · D5b1 真实 Keycloak/HTTPS 已授权发布只读专项
+
+D5a 无授权 404 双端验收已于 PR #106 在 Windows 真实浏览器通过。D5b1 是独立候选，**不提供任何数据库准备、授权或发布写入命令**。只能在严格本机可信 OIDC Lab 里由有授权的维护者事先准备带 `release:read` 的专用工程；该权限独立于 `project:read` / `version:read`。用于 `UNRELEASED` 的工程必须未发布且 `releaseGeneration=0`，用于 `RELEASED` 的工程必须已有合法提交的发布快照和事件。默认 `ProjectReleaseSafetyGate` 禁止正式发布，不得为了生成测试数据而绕过、关闭或修改该门禁。
+
+离线代码门禁（加入 `pnpm run ready`）：
+
+```powershell
+pnpm run test:published:oidc:authorized:config
+vp check
+pnpm run docs:check
+pnpm run ready
+```
+
+真实只读专项需确认本机 HTTPS 双 Origin、Keycloak 预绑定主体和原有证书信任后**手动执行**。**不要复制示例 UUID 作为真实工程**；先由有权维护人员确认工程确实存在于指定隔离数据库、当前 Keycloak 主体已被独立授予 `release:read` 且预期发布代次正确，再人工输入真实专用工程 ID：
+
+```powershell
+$unreleasedProjectId = Read-Host "输入真实存在且已授权的 D5b1 未发布隔离工程 ID"
+pnpm run test:published:oidc:authorized:browser --status UNRELEASED --project-id $unreleasedProjectId
+Write-Host "D5b1 未发布专项退出码：$LASTEXITCODE"
+
+# 只有在已存在合法、真实的隔离发布快照时才执行
+$releasedProjectId = Read-Host "输入真实存在且已授权的 D5b1 已发布隔离工程 ID"
+pnpm run test:published:oidc:authorized:browser --status RELEASED --project-id $releasedProjectId
+Write-Host "D5b1 已发布专项退出码：$LASTEXITCODE"
+```
+
+若尚未合法预置，应该停止真实授权验收并先确认隔离数据准备流程；独立 `release:read` 权限不可由 `project:read` 或 `version:read` 代替。HTTP 404 只表示工程不存在或无读取授权，不得推断更具体的数据库情况。
+
+如果缺少预置 `RELEASED` 合法快照、身份未授权、数据库未隔离或状态不一致，**测试应退出 1**，将该场景标记为“未完成前置条件”，不能跳过真实响应断言、手工修改 DB 发布状态或把 HTTP Mock 当作真实验收。全程不读取工程编辑 head、草稿、Cookie、Token，也不发起任何工程写入请求。ACL 撤销、页面隐藏恢复和断网由后续专项覆盖。
+
+## 2026-11-20 · D5b1 已授权本机未发布专用工程准备入口（PR #107，待实测）
+
+维护者已对本机 Docker `adui_scada` 数据库的**一个**专用 D5b1 未发布工程与该工程的 `lab-engineer` 独立 `release:read` 授权作出明确许可。此前已以独立恢复副本演练失败迁移，原开发库修复七条迁移成功，保留 39 工程、168 ACL、39 条未发布状态、0 发布事件。**这些历史数字不代表本批新增夹具已经创建。**
+
+新增 `pnpm run oidc:lab:published:unreleased`：默认只读预检，校验严格本机 OIDC/HTTPS 双 Origin、`127.0.0.1:15432/adui_scada?schema=public`、三条发布迁移、零未处理迁移、`lab-tenant/lab-engineer` 的 active 身份和可信 Keycloak Issuer 预绑定，并拒绝已有 `d5b-unreleased-%` 夹具。不会打印数据库密码或 Keycloak 凭据。
+
+```powershell
+git rev-parse HEAD
+pnpm run test:published:oidc:fixture:config
+pnpm run oidc:lab:published:unreleased
+Write-Host "D5b1 夹具只读预检退出码：$LASTEXITCODE"
+```
+
+上面全部通过且确认正式 Lab 已启动后，再由维护者在真实浏览器中手动登录已预绑定 Keycloak 用户，**显式运行一次**：
+
+```powershell
+pnpm run oidc:lab:published:unreleased --apply --confirm-lab adui_scada
+Write-Host "D5b1 夹具准备退出码：$LASTEXITCODE"
+```
+
+执行过程以真实 `/api/v1/projects` Cookie/CSRF 同源 POST 创建随机 `d5b-unreleased-<UUID v4>` 工程；由服务端现有 `PrismaProjectVersionStore.create` 原子建立首版快照、审计、创建者三项基础权限及未发布状态。随后使用独立 PostgreSQL `SERIALIZABLE` 事务在严格核对该新工程首版、审计、ACL、代次 0、零事件后，**只新增该工程创建主体的一条 `release:read` 授权**；最后由真实浏览器 GET `/releases/current` 验证 HTTP 200 与 `UNRELEASED`。不会授予 `release:publish` / `release:rollback`，不会直接写入快照或发布指针，也不会修改已有工程。
+
+**非原子边界**：创建工程与 ACL 写入是跨 HTTP/SQL 的两段提交。如后续授权或验证失败，专用工程可能已创建但尚未授权；脚本会报告其工程 ID 并停止，不会自动执行危险的 DELETE 或重跑创建。遇到这类失败必须先只读核查，不能重复运行 `--apply` 或手工绕过 ACL 校验。
+
+成功后复制工具输出的**真实**工程 ID（不使用文档的示例 ID）运行：
+
+```powershell
+$projectId = Read-Host "输入刚刚创建的 D5b1 未发布工程 ID"
+pnpm run test:published:oidc:authorized:browser --status UNRELEASED --project-id $projectId
+Write-Host "真实授权双框架退出码：$LASTEXITCODE"
+```
+
+新增 `test:published:oidc:fixture:config` 9 项 Node 安全门禁并加入 `ready`；真实写入脚本不会随 `ready` 自动运行。本批脚本已提交候选，但尚未在维护者 Windows 执行、未创建数据库夹具，不能冒称已验收。生产 `ProjectReleaseSafetyGate` 和工业设备写入继续关闭；`RELEASED` 快照、撤权和离线恢复仍是独立后续专项。

@@ -650,7 +650,7 @@
 - **验证结论**：维护者 2026-11-20 Windows 实测 D5a `test:published:oidc:config` 10/10 通过、`vp check` 372 个格式文件 / 224 个受检文件零警告错误、`docs:check` 89 份通过、完整 `ready` 包含 680/680 单测与 62/62 HTTP E2E 且退出码 0。E-070 的 setter Lint 问题已关闭；本地日志未附 Git HEAD，不将这些结果严格绑定到远程 SHA。真实浏览器专项另有独立等待逻辑错误，记录为 E-071。
 - **证据**：维护者 Windows `vp check --fix` 原始日志、PR #106、`scripts/test-oidc-published-runtime-readonly.mjs`、`scripts/test-oidc-published-runtime-readonly.cases.mjs` 与 `docs/VALIDATION.md`。
 
-### E-071 · D5a 登录后等待函数误引用不存在的 browser 并吞没异常（第三十五批 D5a，待 Windows 复验）
+### E-071 · D5a 登录后等待函数误引用不存在的 browser 并吞没异常（第三十五批 D5a，已关闭）
 
 - **现象**：维护者 2026-11-20 Windows 的 D5a 离线 10/10、`vp check` 372/224 零告警、`docs:check` 89 份与完整 `ready` 退出码 0，随后真实 `test:published:oidc:browser` 在人工 Keycloak 登录成功后报“正式发布运行只读专项真实登录失败”，退出码 1。该诊断并不能证明登录失败。
 - **根因**：脚本先通过共享 `waitForLogin` 成功取得可信 BFF 主体，才进入双 Origin 循环。该循环调用外部 `waitForState(fn)`：它错误地访问仅定义于 `run()` 局部作用域的 `browser`，又对已经包含 `browser.evaluate(...)` 的回调重复调用 `browser.evaluate(fn)`。未定义标识符产生的 `ReferenceError` 被通用 `catch` 静默吞掉，最终所有重试均失败并误报“真实登录失败”。现有代码与唯一报错路径共同支持本次定位；后续页面行为仍待复测。
@@ -659,7 +659,7 @@
 - **验证边界**：本批修复后需在 Windows 最新 HEAD 执行 `pnpm run test:published:oidc:config`、`vp check`、`pnpm run docs:check`、完整 `pnpm run ready`，并在可信 Keycloak/HTTPS Lab 中独立执行 `pnpm run test:published:oidc:browser`。原有 10 项测试通过不能证明本次新增 2 项通过，且修复源码不等于真实 D5a 专项已验收。未修改任何生产权限、API、数据库迁移或工业设备读写逻辑。
 - **证据**：维护者 2026-11-20 Windows 真实浏览器原始错误及完整质量日志、PR #106、`scripts/test-oidc-published-runtime-readonly.mjs`、`scripts/test-oidc-published-runtime-readonly.cases.mjs` 与 `docs/VALIDATION.md`。
 
-### E-072 · D5a 真实浏览器阶段异常被统一脱敏为无从定位（第三十五批 D5a，待 Windows 复验）
+### E-072 · D5a 真实浏览器阶段异常被统一脱敏为无从定位（第三十五批 D5a，已关闭）
 
 - **现象**：维护者 2026-11-20 Windows 在本机 HEAD `e12599a94c0c11f97e95a26ff978281812ee39ac` 实测 D5a 门禁 12/12、`vp check` 372/224 零告警、`docs:check` 89 份、680/680 单测、62/62 服务端 E2E 和完整 `ready` 退出码 0。交互式 `pnpm run test:published:oidc:browser` 在人工 Keycloak 登录成功后迅速退出，仅显示“正式发布运行只读专项未通过，内部诊断已脱敏”，退出码 1。脚本 `finally` 关闭隔离浏览器及会话是安全设计，不能据此推断浏览器崩溃。
 - **当前可确认的问题**：D5a 脚本多个 CDP 页面操作及断言失败后经过 `describePublishedReadonlyFailure` 统一脱敏，除少量固定异常外仅返回通用错误，导致无法区分 React/Vue BFF 会话、SPA 导航按钮、只读门禁、页面入口、表单输入、发布读取及安全断言中的哪一步失败。实际内部异常类别和失败步骤尚未获得诊断证据，不能猜为 Keycloak、React/Vue 业务页面或 404 契约错误。
@@ -667,6 +667,17 @@
 - **防复发**：真实登录后的多阶段 CDP 脚本必须区分阶段并等待业务 DOM 准备就绪；纯粹“登录成功”不能证明 SPA 路由已经渲染。对诊断字符串使用固定阶段和安全类别白名单，并在 Node 隔离 VM 回归中验证非法阶段及敏感诊断无法回显。
 - **验证边界**：新增两项 Node 门禁测试后需在最新 PR HEAD 复验 `test:published:oidc:config`、`vp check`、`docs:check`、完整 `ready`，再执行可信 Keycloak/HTTPS 双框架真实浏览器专项。之前的 12/12、680/680、62/62 只证明旧 HEAD 的离线检查通过，不是新候选通过。D5b 未开始。
 - **证据**：维护者 2026-11-20 Windows 原始 D5a 日志、PR #106、`scripts/test-oidc-published-runtime-readonly.mjs`、`scripts/test-oidc-published-runtime-readonly.cases.mjs`、`docs/VALIDATION.md`。
+
+**E-071/E-072 最终 Windows 验收（2026-11-20）**：本机 `git rev-parse HEAD` 为 `1b7eaab6e4637361e4c84d316902a62cd6f09d9a`；D5a Node 14/14，`vp check` 372/224 零错误警告，`docs:check` 89 份，`pnpm run ready` 包含单测 680/680、HTTP E2E 62/62 且退出码 0。随后真实 Keycloak/HTTPS 双 Origin 浏览器专项逐阶段确认 React/Vue 可信会话、零默认请求、单一 GET 404、零 SVG/零写入，退出码 0。PR #106 已 Squash 合并至 `main`（`fede2b649c4c6d6ca0ffcc79ee3b56ccef9d932a`）。只代表未授权/不存在工程拒绝成功，**不代表真实已授权 UNRELEASED/RELEASED、撤权、断网或工业现场验证通过**。
+
+### E-073 · D5b1 真实授权测试复用示例工程 ID，404 被等待器误报为未知异常（第三十五批 D5b1，待 Windows 复验）
+
+- **现象**：维护者 2026-11-20 Windows D5b1 `test:published:oidc:authorized:config` 7/7、`vp check` 374/226 零警告错误、`docs:check` 89 份、完整 `ready` 包含 680/680 单测及 62/62 E2E 且退出码 0。随后复制 `docs/HARNESS.md` 中 `d5b-unreleased-12345678-1234-4234-8234-123456789abc` 格式示例运行真实授权浏览器；真实登录及 React 页面导航、工程输入完成后，在“React：发布读取”阶段返回“异常已脱敏”、退出码 1。没有抓取受控 HTTP 状态，**不能认定实际返回了 404**。
+- **确认的设计与诊断问题**：示例 ID 仅满足参数正则，并未由脚本创建，也没有任何证据证明该 ID 属于隔离库中真实存在且已授予当前主体独立 `release:read` 的工程；文档提供可直接复制执行的假 ID，容易误导验收。脚本提交后只等待 `unreleased/verified`，实际 `denied/offline/error` 不能终止等待，超时又被阶段异常包装掩盖，无法判断是缺少测试数据、会话拒绝、网络问题还是客户端验证错误。
+- **最小修复候选**：浏览器状态等待接受全部五种明确终态，之后严格核对单次同源 GET 路径、阻断计数及唯一 HTTP 状态。对 404 使用不可区分的固定诊断“预置工程不存在或未授予 release:read”；401、403、非 200、200 但页面拒绝均单独安全分类。顶层异常只回显白名单原因，不输出工程 ID、HTTP 正文、Token、Cookie、SQL 或堆栈；增加 3 项 Node 回归。HARNESS 改为人工输入**真实已预置**的工程 ID，删除可直接运行的伪数据示例。
+- **防复发**：真实 E2E 验收不能将正则合规的示例 ID 冒充已存在工程；必须区分参数校验与外部数据存在性。轮询应识别成功与受控失败终态，拒绝状态应 fail-closed 并在安全诊断中明确区分 HTTP 类别；测试不能为成功而绕过发布写入安全门禁。
+- **验证边界**：本批源码修复后的 Node 门禁预计由 7 项升至 10 项；需在 Windows 最新 PR HEAD 重新执行 `test:published:oidc:authorized:config`、`vp check`、`docs:check` 和完整 `ready`。真实 Keycloak/HTTPS 的 `UNRELEASED` 仍必须先有**实际存在且已授权**的隔离工程，`RELEASED` 仍需已合法预置发布快照；两种真实浏览器均未通过。无数据库、API、ACL、发布记录、Schema 或工业设备读写更改。
+- **证据**：维护者 2026-11-20 本轮 Windows 真实浏览器日志、先前 D5b1 离线质量日志、PR #107、`scripts/test-oidc-published-runtime-authorized.mjs`、`scripts/test-oidc-published-runtime-authorized.cases.mjs`、`docs/HARNESS.md` 与 `docs/VALIDATION.md`。
 
 ## 三、从已发生问题提炼的预防性门禁
 

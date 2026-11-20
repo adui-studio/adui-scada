@@ -1044,3 +1044,11 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `scripts/test-oidc-published-runtime-readonly.cases.mjs`：新增 10 项 Node 自有门禁测试，覆盖无参模式、同源 GET、非 GET/跨站/正文拦截、身份路由透传、重复安装、CDP 独立作用域、真实按钮选择、非法 ID、脱敏状态及异常脱敏。
 - 根 `package.json`：`test:published:oidc:config`（加入 `ready`）、`test:published:oidc:browser`（手工启动，需真实 HTTPS 与 IdP 登录）。
 - 对应需求、SDD、架构、验收与上下文文档同步；不新增运行时依赖、数据库迁移或设备接口。
+
+## 2026-11-20 · D5b1 本机未发布授权夹具准备入口
+
+- `scripts/prepare-oidc-published-unreleased.mjs`：受限 OIDC Lab 真实已授权未发布夹具准备；默认仅预检迁移与可信主体，显式确认后通过现有 HTTP 工程创建 API 建立随机新工程，再以单一可回滚 SQL 事务补充此工程的 `release:read`，最后只读核对 UNRELEASED。
+- `scripts/prepare-oidc-published-unreleased.cases.mjs`：9 项 Node 安全回归，包括非法/生产参数拒绝、CSRF 同源工程创建、首版/审计/状态/ACL 核验、回滚及脱敏、只读发布 GET。
+- 根 `package.json`：`test:published:oidc:fixture:config` 加入 `ready`；`oidc:lab:published:unreleased` 为必须人工显式执行的真实数据准备工具，不加入 `ready`。
+
+本小批不改变共享 Core、Vue/React、NestJS 实现、Prisma Schema/迁移、生产发布安全门禁或设备读写，新增数据只在维护者明确授权的本机 Lab 手工执行时产生。
