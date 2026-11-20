@@ -140,6 +140,23 @@ export class PublishedRuntime {
     }
   }
 
+  /** 单次读取超时后撤销旧请求、清空快照并显示离线；迟到的请求不能恢复画面。 */
+  expire(): void {
+    if (this.controller === null || this.currentProjectId === null) return;
+    const projectId = this.currentProjectId;
+    this.requestGeneration++;
+    this.controller.abort();
+    this.controller = null;
+    this.publish({
+      status: "offline",
+      projectId,
+      releaseGeneration: null,
+      snapshot: null,
+      message: "正式发布指针读取超时，已清空运行画面",
+      tagQuality: "UNAVAILABLE",
+    });
+  }
+
   private acceptRelease(release: PublishedRelease): void {
     if (release.status === "UNRELEASED") {
       if (this.lastPointer !== null) {
