@@ -3657,7 +3657,6 @@ Write-Host "D5b4a 真实数据库只读预检退出码：$LASTEXITCODE"
 
 代码编写后仅进行隔离 JavaScript 语法及查询路径模拟核对；**新 10 项 Node 测试、Windows `vp check` / `ready` 和真实 PostgreSQL 只读预检仍待维护者执行**。不对外宣称 D5b4 真实撤权已通过。
 
-
 ## 2026-11-20 · 第三十五批 D5b4b 独立真实撤权测试工程准备（Draft 待 Windows 验收）
 
 D5b4a 已经在真实本机 `adui_scada` Lab 只读预检通过，退出码 **0**；维护者 Windows `test:published:oidc:revoke:preflight:config` **10/10**、`vp check` **382 格式文件/234 受检文件零告警**、`docs:check` **89** 份、`pnpm run ready` **680/680** 单测、**62/62** E2E 和最终退出码 **0**，PR #110 经授权 Squash 合并至 `main@bbcf827b95d609b73052aaa2076d137ae01e92b5`。本结论仅证明撤权准备的只读校验，**未进行任何真实 ACL 撤销**。

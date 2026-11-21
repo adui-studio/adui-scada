@@ -1072,7 +1072,6 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `package.json`：`test:published:oidc:revoke:preflight:config` 加入 `ready`；`oidc:lab:published:revoke:preflight` 为维护者手工执行的真实数据库只读检查（不加入 `ready`）。
 - 后续真实撤权须对全新独立工程单独授权，**绝不复用或删除已通过 D5b1～D5b3 专项的原工程授权**。
 
-
 ## 2026-11-20 · D5b4b 独立撤权夹具准备
 
 - `scripts/prepare-oidc-published-revocation.mjs`：默认无参只读检查 D5b4a 基线；单独授权后才能使用显式双确认，生成全新 `d5b4-revoke-<UUIDv4>`，通过正式同源 BFF POST / Cookie CSRF 创建唯一空白首版，`SERIALIZABLE` 检查首版/审计、D5b1 原授权并仅给新工程 INSERT 一条 `release:read`，最后只读验证 `200 UNRELEASED`，不做 ACL 删除。

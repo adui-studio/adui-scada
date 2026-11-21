@@ -2485,7 +2485,6 @@ E-073 候选改为同时识别成功/拒绝/离线/错误终态，对单一 GET 
 
 新增 D5b4a `preflight-oidc-published-revocation.mjs` 和 **10 项** Node 只读安全测试，根 `test:published:oidc:revoke:preflight:config` 纳入 `ready`。真实预检命令为 `pnpm run oidc:lab:published:revoke:preflight`，严格本机 Keycloak/HTTPS 与 PostgreSQL 目标；事务为 `REPEATABLE READ READ ONLY`，在 ROLLBACK 后结束，核对原 D5b1 测试夹具及授权、迁移、预绑定身份，D5b4 工程必须尚不存在。没有 INSERT/UPDATE/DELETE/发布或浏览器写入，不能使用旧 D5b1 工程做真实撤权。新 Node 和本机数据库预检尚未实测，PR 继续保持 Draft，等待维护者验证。
 
-
 ## 2026-11-20 · D5b4a 已验收合并，D5b4b 隔离工程准备候选
 
 D5b4a 真实本机 PostgreSQL READ ONLY 预检和 Windows 质量链均由维护者确认退出码 **0**。新增 10/10 Node；`vp check` 382/234 零告警，`docs:check` 89 份；完整 `ready` 680/680 单测、62/62 E2E、React/Vue/NestJS 构建成功，退出码 0；PR #110 Squash 合并至 `main@bbcf827b95d609b73052aaa2076d137ae01e92b5`。数据库无 D5b4 工程，原 D5b1 专用工程和四项 ACL 未变。

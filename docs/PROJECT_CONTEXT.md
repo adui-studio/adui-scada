@@ -1923,7 +1923,6 @@ PR #107 D5b1 E-073 候选将 `denied/offline/error` 纳入状态等待终态，�
 
 PR #109 真实 Windows 全量 `ready`、D5b3 React/Vue HTTPS 浏览器 404 模拟拒绝和恢复专项全部通过后，经授权合并 `main@33c8d31d8eae6c46b8a3ab5ddaabf44a3f8fa227`。下一小批只为未来真实 `release:read` ACL 撤销准备隔离门禁：必须另建 `d5b4-revoke-<UUID v4>` 专用工程，不动 D5b1 `d5b-unreleased-*` 及原有授权；新增 CLI 默认只读、SQL READ ONLY 事务校验当前 7 条迁移、可信主体、既有 D5b1 基线完整及 D5b4 工程不存在，查询后 ROLLBACK。无工程或 ACL 写操作，无生产安全门禁/设备变化。新候选待 Windows `ready` 与本机 PostgreSQL 预检真实验收。
 
-
 ## 2026-11-20 · PR #110 已合并，D5b4b 专用真实撤权夹具准备候选
 
 维护者 D5b4a 本机 READ ONLY 预检与完整 Windows `ready` 均退出码 0，PR #110 已合并到 `main@bbcf827b95d609b73052aaa2076d137ae01e92b5`。下阶段不复用原 D5b1 的 `d5b-unreleased-*` 工程做撤权，而是准备独立 `d5b4-revoke-<UUIDv4>` 工程。新增显式确认创建脚本（默认只读）：只经可信 Keycloak/BFF + 正式 POST/CSRF 新建空白工程，事务内核对新工程初始三项授权、首版/审计/未发布以及旧 D5b1 四项授权，然后仅对新工程添加一条 `release:read`；无数据库 ACL DELETE、无发布/设备操作。真实写入需维护者额外授权；本批只提交候选代码、测试与文档，尚未进行本机写入或完整 Windows 质量验收。

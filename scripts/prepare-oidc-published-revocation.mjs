@@ -219,10 +219,12 @@ export async function verifyPublishedRevokeFixtureInPage(origin, projectId, runt
   ) {
     throw new Error("D5b4b 新工程只读 HTTP 200 验证失败");
   }
-  const response = await runtime.fetch(
-    "/api/v1/projects/" + projectId + "/releases/current",
-    { method: "GET", credentials: "same-origin", cache: "no-store", redirect: "error" },
-  );
+  const response = await runtime.fetch("/api/v1/projects/" + projectId + "/releases/current", {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store",
+    redirect: "error",
+  });
   if (response.status !== 200 || response.headers?.get("cache-control") !== "no-store") {
     throw new Error("D5b4b 新工程只读 HTTP 200 验证失败");
   }

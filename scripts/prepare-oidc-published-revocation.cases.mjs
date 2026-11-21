@@ -45,12 +45,14 @@ function database(options = {}) {
       }
       if (sql.includes("FROM public.scada_project_release_state")) {
         return {
-          rows: [{
-            release_generation: options.released ? "1" : "0",
-            released_revision: null,
-            released_content_hash: null,
-            last_release_event_id: null,
-          }],
+          rows: [
+            {
+              release_generation: options.released ? "1" : "0",
+              released_revision: null,
+              released_content_hash: null,
+              last_release_event_id: null,
+            },
+          ],
         };
       }
       if (sql.includes("FROM public.scada_project_release_events")) return { rows: [] };
@@ -93,10 +95,9 @@ function browserRuntime() {
 void describe("D5b4b 独立真实撤权工程创建与最小授权安全门禁", () => {
   void it("默认仅执行只读预检，创建必须显式双重确认", () => {
     assert.deepEqual(parsePublishedRevokeFixtureMode([]), { apply: false });
-    assert.deepEqual(
-      parsePublishedRevokeFixtureMode(["--apply", "--confirm-lab", "adui_scada"]),
-      { apply: true },
-    );
+    assert.deepEqual(parsePublishedRevokeFixtureMode(["--apply", "--confirm-lab", "adui_scada"]), {
+      apply: true,
+    });
     for (const args of [
       ["--apply"],
       ["--confirm-lab", "adui_scada"],
@@ -106,10 +107,7 @@ void describe("D5b4b 独立真实撤权工程创建与最小授权安全门禁",
       ["--restore"],
       ["--apply", "--apply", "--confirm-lab", "adui_scada"],
     ]) {
-      assert.throws(
-        () => parsePublishedRevokeFixtureMode(args),
-        /专用工程准备参数不合法/,
-      );
+      assert.throws(() => parsePublishedRevokeFixtureMode(args), /专用工程准备参数不合法/);
     }
   });
 
@@ -154,10 +152,7 @@ void describe("D5b4b 独立真实撤权工程创建与最小授权安全门禁",
       [ORIGIN, PROJECT_ID, "__Host-adui-scada-csrf=" + CSRF + "; __Host-adui-scada-csrf=" + CSRF],
     ]) {
       runtime.document.cookie = cookie;
-      await assert.rejects(
-        action(origin, id, runtime),
-        /新工程创建未通过正式 API 验证/,
-      );
+      await assert.rejects(action(origin, id, runtime), /新工程创建未通过正式 API 验证/);
     }
     assert.equal(calls.length, 0);
   });
@@ -174,10 +169,7 @@ void describe("D5b4b 独立真实撤权工程创建与最小授权安全门禁",
         calls.push({ url, options });
         return { status, json: async () => summary };
       };
-      await assert.rejects(
-        action(ORIGIN, PROJECT_ID, runtime),
-        /新工程创建未通过正式 API 验证/,
-      );
+      await assert.rejects(action(ORIGIN, PROJECT_ID, runtime), /新工程创建未通过正式 API 验证/);
     }
     assert.equal(calls.length, 3);
   });
@@ -189,10 +181,7 @@ void describe("D5b4b 独立真实撤权工程创建与最小授权安全门禁",
     assert.equal(calls.at(-1).sql, "COMMIT");
     const inserts = calls.filter(({ sql }) => sql.startsWith("INSERT INTO"));
     assert.equal(inserts.length, 1);
-    assert.deepEqual(
-      inserts[0].params,
-      [PRINCIPAL.tenantId, PROJECT_ID, PRINCIPAL.subjectId],
-    );
+    assert.deepEqual(inserts[0].params, [PRINCIPAL.tenantId, PROJECT_ID, PRINCIPAL.subjectId]);
     assert.match(inserts[0].sql, /'release:read'/);
     assert.equal(calls.filter(({ sql }) => /^(DELETE|UPDATE|DROP|ALTER)/.test(sql)).length, 0);
     const baselineReads = calls.filter(({ params }) => params[1] === BASELINE);
@@ -230,7 +219,10 @@ void describe("D5b4b 独立真实撤权工程创建与最小授权安全门禁",
         /授权写入失败/,
       );
       assert.equal(calls.at(-1).sql, "ROLLBACK");
-      assert.equal(calls.some(({ sql }) => sql.startsWith("INSERT INTO")), false);
+      assert.equal(
+        calls.some(({ sql }) => sql.startsWith("INSERT INTO")),
+        false,
+      );
     }
   });
 
@@ -242,7 +234,10 @@ void describe("D5b4b 独立真实撤权工程创建与最小授权安全门禁",
     );
     assert.equal(calls.at(-1).sql, "ROLLBACK");
     assert.equal(calls.filter(({ sql }) => sql.startsWith("INSERT INTO")).length, 1);
-    assert.equal(calls.some(({ sql }) => sql === "COMMIT"), false);
+    assert.equal(
+      calls.some(({ sql }) => sql === "COMMIT"),
+      false,
+    );
   });
 
   void it("已授权项目只读 HTTP 200 必须是无快照的 UNRELEASED 且禁止缓存", async () => {
@@ -293,10 +288,7 @@ void describe("D5b4b 独立真实撤权工程创建与最小授权安全门禁",
       };
       await assert.rejects(action(ORIGIN, PROJECT_ID, runtime), /HTTP 200 验证失败/);
     }
-    await assert.rejects(
-      action("https://evil.invalid", PROJECT_ID, runtime),
-      /HTTP 200 验证失败/,
-    );
+    await assert.rejects(action("https://evil.invalid", PROJECT_ID, runtime), /HTTP 200 验证失败/);
     assert.equal(calls.length, 4);
   });
 });
