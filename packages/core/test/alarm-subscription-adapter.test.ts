@@ -228,3 +228,41 @@ test("错误时效参数必须拒绝且不能启动资源", () => {
   expect(source.handlers).toEqual([]);
   expect(scheduler.intervals).toEqual([]);
 });
+
+test("构造后外部修改配置不能放宽或缩短既定时间窗口", () => {
+  const source = new TestSource();
+  const scheduler = new TestScheduler();
+  const options = {
+    maxAgeMs: 3000,
+    checkIntervalMs: 1000,
+    nowMs: () => startMs,
+  };
+  const adapter = new AlarmSubscriptionAdapter("tank.level", source, scheduler, options);
+  options.maxAgeMs = 1;
+  options.checkIntervalMs = 1;
+  adapter.start();
+  source.emit({ kind: "snapshot", values: [value] });
+  expect(adapter.snapshot().baseline?.value.sequence).toBe(5);
+  expect(scheduler.intervals).toEqual([1000]);
+  adapter.stop();
+});
+
+test("受控时钟读取异常必须释放订阅并禁止迟到快照恢复", () => {
+  const source = new TestSource();
+  const scheduler = new TestScheduler();
+  const adapter = new AlarmSubscriptionAdapter("tank.level", source, scheduler, {
+    maxAgeMs: 3000,
+    checkIntervalMs: 1000,
+    nowMs: () => {
+      throw new TypeError("测试时钟不可用");
+    },
+  });
+  adapter.start();
+  expect(() => source.emit({ kind: "snapshot", values: [value] })).toThrow("测试时钟不可用");
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(source.closes).toBe(1);
+  expect(scheduler.cancels).toBe(1);
+  source.emit({ kind: "snapshot", values: [value] });
+  expect(adapter.snapshot().baseline).toBeNull();
+});
