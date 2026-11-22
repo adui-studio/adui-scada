@@ -1328,3 +1328,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-snapshot-baseline.ts`：从显式上游核验、同活跃会话代次的 `TagChange.snapshot` 全批校验并选择目标 GOOD 数值 Tag，建立冻结的序列基线；拒绝非 snapshot、旧会话、缺失、重复和无效输入，不创建报警事件。
 - `packages/core/test/alarm-snapshot-baseline.test.ts`：新增 7 项定向测试定义，覆盖初始基线防御性复制、未核验来源与 delta、旧会话、整批校验、坏质量与时间、非法参数及后续同代次增量联动。
 - `packages/core/src/index.ts`：导出 `establishAlarmSnapshotBaseline` 及三种公共类型；原 TagStore/Runtime、React/Vue、NestJS/Prisma 与发布门禁保持不变。
+
+## 2026-11-22 · D5b9k FR-011 报警增量基线纯函数
+
+- `packages/core/src/alarm-tag-delta.ts`：只读同会话 delta 筛选。显式上游核验/代次，整批 Tag 校验与重复拒绝，复用质量/时效/严格序列契约；有效目标增量返回冻结新基线，其他拒绝不返回旧读数或可使用基线。
+- `packages/core/test/alarm-tag-delta.test.ts`：新增 **9 项定向测试定义**，覆盖快照→多次增量、防御性复制、来源与种类拒绝、会话失配、序列回退、坏质量/超龄、其他 Tag 空更新、整批非法与异常参数。
+- `packages/core/src/index.ts`：增加 `advanceAlarmTagDeltaBaseline` 及结果类型公共导出。TagStore / Runtime、Vue/React、NestJS / Prisma、工业网关和发布 Gate 未改。
