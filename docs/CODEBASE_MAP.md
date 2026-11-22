@@ -1286,3 +1286,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/web-react/src/runtime/PublishedRuntimePage.tsx`、`apps/web-vue/src/runtime/PublishedRuntimePage.vue`：只在 `verified` 多页面快照下提供同构“组态页面”下拉选择。所选页面不在当前快照时自动采用当前首页；开始新工程和停止时清理选择。切换不调用服务端 API。
 - `packages/runtime/src/runtime.css`：React/Vue 共享发布控制区域的 `select` 复用现有输入框边框、间距、文字及焦点样式，不新增框架专属样式。
 - 正式发布服务器、工业采集、Tag 质量模型与 Schema 均无改动，尚未进行真实多页面已发布浏览器 Lab 专项。
+
+## 2026-11-22 · D5b9d FR-011 Core 报警生命周期基础
+
+- `packages/core/src/alarm-state.ts`：新增纯函数 `transitionAlarmState`，四态 `ALARM_STATES`、三事件 `ALARM_EVENTS` 与共享中文显示标签；无状态实例用 `null` 表示，未知状态/事件拒绝，确认和恢复相互独立，恢复后重新触发清除上次确认结果。
+- `packages/core/test/alarm-state.test.ts`：新增 8 项定向单元测试定义，包含初次触发、活动期确认、恢复后确认、已确认恢复、重触发、无实例拒绝、未知状态与事件拒绝、标签契约。
+- `packages/core/src/index.ts`：新增公共导出，不更改共享工程 Schema、编辑器或原 TagStore API。报警阈值、规则模型、服务端报警实例/权限/审计、React/Vue 警报界面均未实现。

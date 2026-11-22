@@ -83,6 +83,12 @@ interface DriverAdapter {
 
 报警至少区分 ACTIVE_UNACKED、ACTIVE_ACKED、CLEARED_UNACKED、CLEARED_ACKED，阈值、死区、延时和恢复语义单独设计；确认不意味着工艺条件恢复。
 
+### 2026-11-22 · FR-011 最小共享报警生命周期模型（D5b9d 候选）
+
+`packages/core/src/alarm-state.ts` 提供纯函数 `transitionAlarmState(previous, event)`，不依赖 Vue、React、NestJS 或工业协议，枚举四个既定状态及 `TRIGGER`（触发）、`RECOVER`（工艺条件恢复）、`ACKNOWLEDGE`（确认）三种事件。初始 `null` 表示尚不存在报警实例，只能通过首次 `TRIGGER` 建立 `ACTIVE_UNACKED`；不存在实例时确认或恢复均拒绝。激活期重复触发不重复新建事件，也不会改变已经确认的状态；`RECOVER` 仅结束激活、保留原有确认情况；`ACKNOWLEDGE` 仅更新确认、不改变激活条件；从任一恢复状态重新触发都建立新的 `ACTIVE_UNACKED` 状态。已恢复/已确认状态的重复事件维持幂等；未知状态码或事件类别明确拒绝。
+
+该模块**不接收原始 Tag/PLC 数据作为触发条件**，不计算阈值、死区、延时或数据质量，不提供报警规则配置、实例 ID、事件存储、时间戳、审计、操作权限或真实 `POST /alarms/:id/ack` 路由。调用者必须在未来独立实现可信 Tag 质量与来源检查、阈值/去抖、主体授权和不可变审计后才可接入生产业务。这里的事件命名和状态转换只是 FR-011 的框架无关基础契约；**FR-011 的完整报警与确认功能仍处于规划中**，不允许将 Core 函数当作现场报警系统已可用。
+
 历史数据保存 Tag ID、源时间/平台时间、类型化数值和质量；归档策略、保留期和数据库分区需基于容量估算。关系数据拟用 Prisma，TimescaleDB Hypertable 使用独立 SQL 迁移。**V0.1 尚未实现报警与历史。**
 
 ## 6. 候选 REST 接口与权限

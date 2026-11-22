@@ -2997,3 +2997,23 @@ if ($LASTEXITCODE -ne 0) { throw "D5b9c Vite+ 检查失败" }
 ```
 
 预计 `published-runtime-view.test.ts` 由 4 项变为 **5 项**，**不是本轮已通过证据**。真实 React/Vue 多页面已发布现场浏览器专项需要独立合法的 RELEASED 夹具，当前生产门禁无条件拒绝，不能为了演示私自创建夹具、修改数据库或临时开启发布。即使定向单测和静态检查通过，也不能据此声称真实 OIDC/HTTPS 多页面浏览器验收完成。Issue #126 Open，ADR-0070 Proposed。
+
+## 2026-11-22 · D5b9d 共享报警生命周期状态机仅验证新增差异
+
+D5b9c PR #142 维护者在精确 HEAD `36c1ecd6d096e5403559a2f92fa6a50be6b846ba` 实测发布静态 SVG 定向 **5/5** 与 Vite+ **413 格式文件、264 受检零警告错误**，经明确授权合并到 `main@228965e702e372d67737a9866f1af77107b3bc55`。旧批完整 `ready`、NestJS HTTP E2E 和 React/Vue 构建不重复执行。
+
+本轮 D5b9d 为 FR-011 新增纯 Core 状态机及 **8 项**单元测试定义，不涉及真实设备触发、Tag 质量阈值、授权或任何报警确认写入。覆盖四个正式状态、三种纯事件、重复事件幂等、恢复/确认独立性、重触发清除旧确认、无实例及非法输入拒绝。**尚未在维护者 Windows 运行，因此 8 项仅为待验收目标，不是通过证据**。
+
+维护者检出本 PR 的最新 HEAD 后仅执行一次：
+
+```powershell
+git rev-parse HEAD
+
+vp test run packages/core/test/alarm-state.test.ts
+if ($LASTEXITCODE -ne 0) { throw "FR-011 Core 报警状态机定向测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "FR-011 Vite+ 检查失败" }
+```
+
+无需重复上批完整 `pnpm run ready`、HTTP E2E、React/Vue 构建或真实已发布 Lab 浏览器。代码没有真实阈值与工业只读授权，定向单测通过也**不能**把 FR-011 标记为生产报警能力已实现；正式发布 Gate 仍无条件拒绝，Issue #126 Open，ADR-0070 Proposed。
