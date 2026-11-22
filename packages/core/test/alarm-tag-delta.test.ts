@@ -1,13 +1,6 @@
 import { expect, test } from "vite-plus/test";
-import {
-  advanceAlarmTagDeltaBaseline,
-  establishAlarmSnapshotBaseline,
-} from "../src/index.ts";
-import type {
-  AlarmSnapshotBaseline,
-  AlarmTagDeltaRequest,
-  TagValue,
-} from "../src/index.ts";
+import { advanceAlarmTagDeltaBaseline, establishAlarmSnapshotBaseline } from "../src/index.ts";
+import type { AlarmSnapshotBaseline, AlarmTagDeltaRequest, TagValue } from "../src/index.ts";
 
 const nowMs = Date.parse("2026-11-22T09:00:00.000Z");
 const previous: TagValue = {
@@ -125,12 +118,14 @@ test("没有快照基线或重连混入旧代次时必须拒绝", () => {
     status: "DELTA_REJECTED",
     reason: "BASELINE_REQUIRED",
   });
-  expect(
-    advanceAlarmTagDeltaBaseline({ ...request, activeGeneration: 3 }, nowMs, 1000),
-  ).toEqual({ status: "DELTA_REJECTED", reason: "SESSION_MISMATCH" });
-  expect(
-    advanceAlarmTagDeltaBaseline({ ...request, deltaGeneration: 1 }, nowMs, 1000),
-  ).toEqual({ status: "DELTA_REJECTED", reason: "SESSION_MISMATCH" });
+  expect(advanceAlarmTagDeltaBaseline({ ...request, activeGeneration: 3 }, nowMs, 1000)).toEqual({
+    status: "DELTA_REJECTED",
+    reason: "SESSION_MISMATCH",
+  });
+  expect(advanceAlarmTagDeltaBaseline({ ...request, deltaGeneration: 1 }, nowMs, 1000)).toEqual({
+    status: "DELTA_REJECTED",
+    reason: "SESSION_MISMATCH",
+  });
 });
 
 test("重复与倒退序列、基线 Tag 不一致均拒绝", () => {
@@ -144,11 +139,7 @@ test("重复与倒退序列、基线 Tag 不一致均拒绝", () => {
     ).toEqual({ status: "DELTA_REJECTED", reason: "SEQUENCE_NOT_ADVANCED" });
   }
   expect(
-    advanceAlarmTagDeltaBaseline(
-      { ...request, expectedTagId: "other.tag" },
-      nowMs,
-      1000,
-    ),
+    advanceAlarmTagDeltaBaseline({ ...request, expectedTagId: "other.tag" }, nowMs, 1000),
   ).toEqual({ status: "DELTA_REJECTED", reason: "TAG_MISMATCH" });
 });
 
@@ -218,16 +209,10 @@ test("整个批次存在重复或非法 Tag 时拒绝而不部分推进", () => 
 test("非法会话代次、无效时间参数和非法基线明确拒绝", () => {
   for (const invalid of [-1, 0.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1]) {
     expect(() =>
-      advanceAlarmTagDeltaBaseline(
-        { ...request, deltaGeneration: invalid },
-        nowMs,
-        1000,
-      ),
+      advanceAlarmTagDeltaBaseline({ ...request, deltaGeneration: invalid }, nowMs, 1000),
     ).toThrow("报警增量会话代次无效");
   }
-  expect(() => advanceAlarmTagDeltaBaseline(request, Number.NaN, 1000)).toThrow(
-    "当前时间参数无效",
-  );
+  expect(() => advanceAlarmTagDeltaBaseline(request, Number.NaN, 1000)).toThrow("当前时间参数无效");
   expect(() =>
     advanceAlarmTagDeltaBaseline(
       { ...request, baseline: { generation: 2, value: { ...previous, sequence: -1 } } },
