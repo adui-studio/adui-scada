@@ -1984,3 +1984,9 @@ PR #116 已按维护者授权 Squash 合并至 `main@2dd95347c86c15261dfb71f6f0a
 PR #117 仅追加三份 D5b4 真实撤权历史证据文档，维护者已明确同意合并，Squash 提交 `main@3c2e51c385ddaacb5015b0ea600610e9f3f764a1`。实际 D5b4 测试工程已撤销一条 `release:read`，剩余三项工程/版本基础 ACL；原 D5b1 未修改。真实 React/Vue 发布运行页 HTTP 404 专项已通过，但不能代表 Studio 未保存画布、IndexedDB 草稿或并发会话已验证。
 
 D5b5 候选沿用现有 Studio UI/本地 IndexedDB 数据抽样能力及发布读取零写入安全门禁，双框架分别只读载入**同一现有 D5b4 工程**、在临时浏览器 Profile 保存草稿、新增未保存文本、执行真实发布接口一次 404、确认草稿摘要/画布/JSON/CAS 无变化。本次只添加测试与文档，不修改生产代码或真实数据库；该测试仅验证“独立同源发布 GET 不影响本地编辑”，更严格的 Studio 自身拒绝消费、迟到响应与多标签页竞态仍列为后续独立专项。离线测试候选尚待 Windows 原生质量链和真实 Keycloak/HTTPS 双框架验收。
+
+## 2026-11-22 · D5b5 首轮 Windows 质量门禁失败，E-075 修复待验收
+
+PR #118 的首次 Windows `test:published:oidc:revoke:studio:config` **10/11**，`ready` 在同一用例中止（退出码 **1**）；`vp check` **396/248 零警告错误**、`docs:check` **89**、Vitest **680/680** 成功，但后续 HTTP E2E 与构建未执行。唯一失败由测试 `node:vm` 跨 Realm 嵌套请求对象的原生 `assert.deepStrictEqual` 引起；旧隔离 V8/Mock 未复现此语义，详见 E-075。
+
+已在 PR #118 分支仅修正该测试一行：`structuredClone(requests)` 后仍按原字段及数量严格断言；协作端原生 Node 最小复现及六种负向篡改检查通过，**不代表 Windows 最新 HEAD 的完整质量链已通过**。PR 继续保持 Draft，未合并；D5b4 真实 ACL 撤销仍有效，本小批不恢复权限、不创建新工程、不改动数据库或工业设备。
