@@ -2645,3 +2645,13 @@ PR #117 已按维护者明确授权 Squash 合并至 `main@3c2e51c385ddaacb5015b
 源码证实 `installPublishedReadGuardInPage` 先 push `paths`，待 `fetch` 结束再 push `statuses`；先前脚本没有在记基线前保证旧 GET 的响应已结算。E-078 候选新增共享的有界等待：守卫必须 `blocked === 0`、请求与响应数组存在、状态数量不能反超路径数量；等未完成的原生 GET 补齐后才继续。**原严格每次只增加一条目标 GET/404、请求历史不可变化、最终 SVG/JSON/IndexedDB/自动保存/CAS 完全一致仍全部执行**，等待超时仍失败；不清空或忽略任何记录。新增 D5b5b 4 项离线测试定义（20 项），D5b5c 14 项不变。
 
 **待维护者 Windows 在最新 HEAD 重验**：D5b5b 20/20、D5b5c 14/14、`vp check`、`docs:check`、完整 `ready`，随后 D5b4e 只读审计、D5b5b/D5b5c 真实 React/Vue。上次完整质量链不能替代新补丁测试；未知请求异常、长时间未返回或任何本地漂移均保持 fail-closed。
+
+## 2026-11-22 · E-079 D5b5b 真实双框架通过，D5b5c 第一页逆序交付仍失败
+
+维护者 Windows 明确打印 `git rev-parse HEAD = baa612ca029ff3f8a3bd6fe75b03ba24c7d85f9b` 并通过版本一致性检查；D5b4e PostgreSQL 撤权后只读审计**通过**，原 D5b4 工程仍仅缺少 `release:read`，三项基础 ACL 及 D5b1 基线完整。随后 D5b5b 真实 Keycloak/Chrome **React 与 Vue 各自两标签页**都完成正式 Studio 首版只读载入、第一标签保存一次 IndexedDB 草稿、分别新增未保存图元、顺序真实发布 GET 404、真实页面可见性切换与最终 SVG/JSON/草稿/CAS 不变检查，脚本整体退出码 0；**D5b5b 真实浏览器阻塞本轮关闭**。
+
+D5b5c React 两个已完成网络读取的真实 404 Response 的 Promise 同时 pending、第二页优先交付严格通过；随后在第一标签后交付阶段失败，类别为 `D5b5 双标签读取期间工程请求数量不符`，进程退出码 **1**。Vue 尚未进入 D5b5c 阶段。末尾单独的无条件 `Write-Host` 打印“真实浏览器验收通过”不是测试成功结果，不能据此关闭 D5b5c。原脚本在**第一标签严格核验前主动切回第一可见标签**；可见性恢复可能引入常规背景 GET，但尚无请求数量的原始证据证明这就是唯一根因。
+
+E-079 候选只将这一处 `switchToTab(browser, second)` 延后到两个原始 404 各自完成**严格单次目标 GET + HTTP 404 + no-store + 无重定向 + 本地完整状态**校验后的最终可见性恢复阶段。第一标签在仍然隐藏时完成原始 Response 交付，不伪造响应、不改变原守卫、不忽略额外 GET；最后仍切回第一标签执行 SVG/工程 JSON/IndexedDB/CAS 和零写入复核。新加 1 项隐藏标签页仍能独立完成逆序交付且两标签各一次 GET 的 Node 测试定义，D5b5c 目标由 **14 增至 15 项**。
+
+本次 E-079 修补**尚未在 Windows 测试或真实 Chrome/Keycloak 复验**。上轮 D5b5b 20/20、D5b5c 14/14、`vp check` 401/253、`docs:check` 89、完整 `ready` 退出码 0 为**旧 HEAD** 的证据，不代表 E-079 新提交已通过。PR #121 保持 Draft；不修改 React/Vue/NestJS 生产代码、不恢复 ACL、不创建工程、不执行数据库或设备写入。
