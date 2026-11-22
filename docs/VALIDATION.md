@@ -2744,3 +2744,12 @@ PR #129 已按维护者明确合并授权 Squash 合并至 `main@fb320f4731cd595
 **当前仅有仓库代码与文档静态核对证据**：已读取 `AGENTS.md`、`AI_MISTAKES.md`、ADR-0069、`RELEASE_TRANSACTION_REVIEW`，核对正式发布仓储和 `ProjectReleaseSafetyGate`。后者目前固定拒绝是正确安全边界；不因本 ADR 提议而解除。尚未在当前分支 Windows 执行 `pnpm run docs:check`、`vp check` 或完整 `pnpm run ready`；**没有任何真实发布/回滚/撤权成功记录**，LF-01～LF-12 为未来需逐项提供的证据，不能标记通过。
 
 维护者在验收分支后执行：`git rev-parse HEAD`、`pnpm run docs:check`、`vp check`、`pnpm run ready`，逐项核对退出码与 ADR 相对链接。不应运行 `db:migrate`、`test:db`、真实发现、发布、ACL 撤销或其他需额外审批的操作。文档检查成功不代表工业安全设计已被批准，Draft PR 合并也不授予发布权限。
+
+## 2026-11-22 · D5b8 PR #132 首次 Windows 质量链失败与 E-082 状态修复
+
+维护者提供 2026-11-22 在 `chore/d5b8-published-fixture-design` 的实际验收日志：首次 `pnpm run docs:check` 报 `ADR 状态无效：0070-isolated-published-fixture-safety-review.md`，**退出码 1**；`vp check` **412 个文件格式正确、263 个受检文件零警告或错误**；完整 `pnpm run ready` 已执行并通过 Vitest **57/57 文件、682/682 用例**、SSE/安全离线专项、D5b7b 元数据 14/14、D5b7d 基线 5/5、D5b7c ACL 17/17、D5b7f 无 ID 发现 16/16、NestJS HTTP E2E **6/6 文件、62/62 用例**，但在末尾再次因 ADR 状态失败，`ready` **退出码 1，不能记录为通过**。失败后的 `Write-Host "D5b8 质量链验收通过"` 为独立打印，不属于 `ready` 成功证据。
+
+根因与 E-019 相同：原文件使用 `- 状态：Proposed（待维护者与工业安全专项评审，**未授权实施**）`，仓库 `scripts/validate-docs.mjs` 只接受状态行精确匹配枚举。PR #132 本分支已最小修改为 `- 状态：Proposed` 与独立 `- 审批：...`，不放宽正则、不修改业务逻辑；同步 E-082 复盘。远程修正文案已按现有正则静态核对，**尚未获得修复后 Windows `docs:check`、`vp check` 和完整 `ready` 的实际日志**，当前 PR 仍须重新验收且不能自动合并。
+
+Issue #126 仍未结案：D5b7f 真实发现 `NOT_FOUND`，Proposed ADR-0070 只是正式发布安全门禁及独立夹具的待审批设计，未开放任何发布、撤权、数据库写入或现场设备操作。
+
