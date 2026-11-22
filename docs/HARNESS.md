@@ -4034,3 +4034,52 @@ pnpm run test:published:oidc:revoke:studio:browser --project-id $projectId
 **后续测试准入**：如扩展为 React/Vue 同源双标签页竞争，先复用既有已撤权 D5b4 工程的 `project:read`、`version:read`，仅在独立浏览器本地草稿操作并发；所有服务端工程写入继续阻断，任一框架/标签页状态漂移即失败。只有在明确设计并验证真实响应时序控制后，才可把“Studio 自身迟到 200/401/404 处理”列为已覆盖。禁止重复执行撤权 `--apply` 或恢复 `release:read`；新 SQL 写入须另行授权。
 
 **文档变更验证边界**：本次只是补录维护者既有真实 Windows 日志，未在最新文档分支运行 `vp check`、`docs:check` 或完整 `ready`；上述真实验收仅归属于已核验的合并代码，不可冒充文档 PR 的 CI 结果。
+
+## 2026-11-22 · D5b5b React/Vue 同源双标签页撤权后只读回归（Draft 候选）
+
+D5b5 第一小批已在真实 Windows Keycloak/HTTPS Lab 中使用**已撤销 `release:read` 的同一现存 D5b4 工程**完成 React/Vue Studio 本地画布、IndexedDB 草稿摘要与 CAS 保护验收；维护者 2026-11-22 又执行 `docs:check` **89 份**和 `vp check` **396 格式文件/248 受检零错误警告**，明确同意合并 PR #119；GitHub Squash 合并为 `main@8855becab403a334231be7b2fb253452a71c0c76`。本段先前 Windows 结果与此次候选新增代码无关，不能当作 D5b5b 验收通过。
+
+新脚本 `scripts/test-oidc-studio-revoked-multitab.mjs` 仅接收 `--project-id d5b4-revoke-<UUIDv4>`。先用已有可信本机 HTTPS/Keycloak BFF 启动独立临时 Chrome/Edge Profile，然后在**同一 Profile、同一框架 Origin** 建立两个真实标签页；分别对 React 与 Vue 做如下回归：
+
+1. **第一标签页**：真实工程管理列表及首版 `revision 1` 只读载入现存 D5b4 专用工程；通过正式“保存草稿”按钮**仅向隔离浏览器本地 IndexedDB 保存一次**，然后新增未保存文本图元并读取无网格 SVG、工程 JSON 摘要、草稿计数/哈希、自动保存与 CAS 基线。自动保存必须关闭。
+2. **第二标签页**：通过实际 CDP `Page.bringToFront` 激活，验证第一标签页真实进入 `hidden`；使用同一 Keycloak 本地主体，真实 UI 只读载入相同首版工程。第二标签页**只读取**第一标签页已经保存的共享 IndexedDB 草稿，核对草稿计数和摘要一致；在自己的画布新增未保存文本，不再次保存草稿、不写服务端版本。
+3. **交错只读请求**：先切回第一标签页并核对第二标签页已隐藏，严格对比两个标签各自的编辑与草稿快照；第一标签页从 Studio 页执行**独立真实同源 GET** `/api/v1/projects/<同一 ID>/releases/current`，必须单条 404、`no-store`、无重定向，且 SVG、JSON、IndexedDB 草稿及 CAS 未变化。切到第二标签页，执行相同独立真实 GET 404 与本地保护断言；最后切回第一标签页，重新严格比对两标签完整本地状态。
+4. **全部工程 API Fetch 必须只读**：复用在页面导航前安装的 `installPublishedReadGuardInPage`，工程 API 非 GET、附带异常请求体或显式 Authorization 的请求被拦截；两个标签页的阻断计数始终为零。现存工程在数据库中仍保留 `project:read`、`version:read`、`version:append`；不授予或恢复 `release:read`。页面最终仅打印固定中文阶段与通过/失败，不输出 Cookie、Token、工程正文、草稿哈希或真实项目 ID。
+
+**范围声明**：本次是**两个真实标签页并存、可见性切换、依次读取真实 404**的双框架测试。HTTP 请求不是并发挂起，也没有模拟迟到 200/401/404；发布 GET 由测试从 Studio 页面独立发起，**不是** Studio 正式发布功能自身消费失败响应。草稿比较为读取值 SHA-256 而非 IndexedDB 底层文件逐字节检查。若未来要测试迟到响应或真实双标签页并行写入，需要另立专项且不能复用本阶段“只读”验收结论。所有实际 D5b4 工程操作仅限现有授权范围，禁止再次创建工程、执行撤权 `--apply` 或恢复权限。
+
+仅**离线测试**自动纳入根 `ready`，真实浏览器入口必须维护者手动执行。Windows 先验收新分支：
+
+```powershell
+git fetch origin
+git switch test/b35-d5b5-multitab-revoked-readonly
+git pull --ff-only
+git rev-parse HEAD
+
+pnpm run test:published:oidc:revoke:multitab:config
+if ($LASTEXITCODE -ne 0) { throw "D5b5b 双标签页离线门禁失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b5b Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b5b 文档检查失败" }
+
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "D5b5b 完整质量链失败" }
+Write-Host "D5b5b 质量链退出码：$LASTEXITCODE"
+```
+
+未来**仅在本次离线质量链通过、可信 HTTPS/Keycloak Lab 已运行且原 D5b4 工程仍处于已撤权状态**时人工运行真实只读专项，不要复制虚构 UUID：
+
+```powershell
+$projectId = (Read-Host "请输入已撤权的真实 D5b4 工程 ID").Trim()
+pnpm run oidc:lab:published:revoke:after --project-id $projectId
+if ($LASTEXITCODE -ne 0) { throw "D5b4e 撤权后数据库只读复核失败" }
+
+pnpm run test:published:oidc:revoke:multitab:browser --project-id $projectId
+if ($LASTEXITCODE -ne 0) { throw "D5b5b 双框架真实双标签页专项失败" }
+Write-Host "D5b5b 双标签页真实只读专项退出码：$LASTEXITCODE"
+```
+
+协作端仅回读 GitHub 源码、执行新脚本 V8 语法解析和 **11/11 隔离 V8/Mock 测试定义**；**不是 Windows 原生 Node `node --test`、`vp check`、`ready`、真实 Chrome/Edge 或 PostgreSQL 结果**。本小批没有连接 Lab，也没有进行任何远端写入。
