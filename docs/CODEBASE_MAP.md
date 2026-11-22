@@ -1152,3 +1152,10 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - `scripts/test-oidc-studio-revoked-late-multitab.mjs`：复用同一诊断分类，避免 D5b5c 将 D5b5 的已知固定错误再次泛化；完整原 404/草稿/CAS 断言保留。
 - `scripts/test-oidc-studio-revoked-multitab.cases.mjs`：增加 5 项原严格断言正反向及分类覆盖；`scripts/test-oidc-studio-revoked-late-gate.cases.mjs`：增加 1 项安全白名单透传测试。
 - `scripts/test-oidc-studio-revoked-draft.mjs` 与只读网络守卫、React/Vue Studio、NestJS、Prisma、工程 ACL 均未修改。浏览器失败的实际底层差异仍待 Windows 真实阶段分类。
+
+## 2026-11-22 · E-078 异步工程只读 GET 守卫响应等待
+
+- `scripts/test-oidc-studio-revoked-multitab.mjs`：新增 `requireD5b5ReadGuardProgress` 与 `waitForD5b5ReadGuardSettled`，只等待真实 `fetch` 已发出但尚未登记的状态返回；两次发布 GET 前后及最终复核前使用，有界超时保持失败。
+- `scripts/test-oidc-studio-revoked-late-multitab.mjs`：复用同一只读响应结算等待，避免第二页真实 Response 交付后拿未完成的后台 GET 状态做严格数量比较；仍完整执行相同的 404/no-store/无重定向、SVG/JSON/草稿/CAS 与零写入检查。
+- `scripts/test-oidc-studio-revoked-multitab.cases.mjs`：新增 4 项异步响应补齐、只读门禁异常、额外 GET 严格拒绝的离线用例，目标由 16 项变成 20 项。D5b5c 原 14 项未修改。
+- 原有 `scripts/test-oidc-published-runtime-readonly.mjs` 的响应记录机制、业务代码与数据库权限均不变。
