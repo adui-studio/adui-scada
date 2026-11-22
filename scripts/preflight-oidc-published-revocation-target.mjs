@@ -126,10 +126,85 @@ export function assertPublishedRevocationAfterRows(rows, projectId) {
   return assertPublishedRevocationRows(rows, projectId, "after");
 }
 
-/**
- * 唯一允许的数据库事务为 READ ONLY；读取 ACL、版本和发布指针元数据，
- * 不获取工程快照正文、Cookie、Token 或其他租户数据。
- */
+/** 同一受控只读查询快照供撤权前、撤权后与专用事务内重新校验。 */
+export async function readPublishedRevocationRows(client, target, projectId) {
+  if (!PROJECT_PATTERN.test(projectId)) {
+    throw new Error("D5b4c 参数仅允许现有独立专用工程 ID，禁止写入模式");
+  }
+  const tenant = PRINCIPAL.tenantId;
+  const scope = (id) => [tenant, id];
+  const query = async (sql, params) => (await client.query(sql, params)).rows;
+  const readProject = async (id) => {
+    const params = scope(id);
+    return {
+      project: await query(
+        "SELECT head_revision FROM public.scada_projects " +
+          "WHERE tenant_id = $1 AND project_id = $2",
+        params,
+      ),
+      versions: await query(
+        "SELECT revision, created_by FROM public.scada_project_versions " +
+          "WHERE tenant_id = $1 AND project_id = $2",
+        params,
+      ),
+      audit: await query(
+        "SELECT revision, actor_id, action FROM public.scada_project_audit " +
+          "WHERE tenant_id = $1 AND project_id = $2",
+        params,
+      ),
+      state: await query(
+        "SELECT release_generation, released_revision, released_content_hash, " +
+          "last_release_event_id FROM public.scada_project_release_state " +
+          "WHERE tenant_id = $1 AND project_id = $2",
+        params,
+      ),
+      events: await query(
+        "SELECT COUNT(*)::integer AS count FROM public.scada_project_release_events " +
+          "WHERE tenant_id = $1 AND project_id = $2",
+        params,
+      ),
+      grants: await query(
+        "SELECT subject_id, permission FROM public.scada_project_grants " +
+          "WHERE tenant_id = $1 AND project_id = $2",
+        params,
+      ),
+    };
+  };
+  return {
+    database: await query(
+      "SELECT current_database() AS database_name, current_user AS database_user",
+    ),
+    migrations: await query(
+      'SELECT migration_name FROM public."_prisma_migrations" ' +
+        "WHERE migration_name = ANY($1::text[]) AND finished_at IS NOT NULL " +
+        "AND rolled_back_at IS NULL",
+      [MIGRATIONS],
+    ),
+    unresolved: await query(
+      'SELECT COUNT(*)::integer AS count FROM public."_prisma_migrations" ' +
+        "WHERE finished_at IS NULL AND rolled_back_at IS NULL",
+    ),
+    identity: await query(
+      "SELECT 1 FROM public.scada_identities " +
+        "WHERE tenant_id = $1 AND subject_id = $2 AND status = 'active'",
+      [tenant, PRINCIPAL.subjectId],
+    ),
+    externalIdentity: await query(
+      "SELECT 1 FROM public.scada_external_identities " +
+        "WHERE issuer = $1 AND tenant_id = $2 AND subject_id = $3",
+      [target.issuer, tenant, PRINCIPAL.subjectId],
+    ),
+    dedicated: await query(
+      "SELECT project_id FROM public.scada_projects " +
+        "WHERE tenant_id = $1 AND project_id LIKE 'd5b4-revoke-%'",
+      [tenant],
+    ),
+    target: await readProject(projectId),
+    original: await readProject(ORIGINAL_PROJECT),
+  };
+}
+
+/** 独立 READ ONLY 事务读取 ACL、版本和发布指针，不获取快照正文。 */
 export async function inspectPublishedRevocationTarget(
   client,
   target,
@@ -141,77 +216,7 @@ export async function inspectPublishedRevocationTarget(
   }
   await client.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
   try {
-    const tenant = PRINCIPAL.tenantId;
-    const scope = (id) => [tenant, id];
-    const query = async (sql, params) => (await client.query(sql, params)).rows;
-    const readProject = async (id) => {
-      const params = scope(id);
-      return {
-        project: await query(
-          "SELECT head_revision FROM public.scada_projects " +
-            "WHERE tenant_id = $1 AND project_id = $2",
-          params,
-        ),
-        versions: await query(
-          "SELECT revision, created_by FROM public.scada_project_versions " +
-            "WHERE tenant_id = $1 AND project_id = $2",
-          params,
-        ),
-        audit: await query(
-          "SELECT revision, actor_id, action FROM public.scada_project_audit " +
-            "WHERE tenant_id = $1 AND project_id = $2",
-          params,
-        ),
-        state: await query(
-          "SELECT release_generation, released_revision, released_content_hash, " +
-            "last_release_event_id FROM public.scada_project_release_state " +
-            "WHERE tenant_id = $1 AND project_id = $2",
-          params,
-        ),
-        events: await query(
-          "SELECT COUNT(*)::integer AS count FROM public.scada_project_release_events " +
-            "WHERE tenant_id = $1 AND project_id = $2",
-          params,
-        ),
-        grants: await query(
-          "SELECT subject_id, permission FROM public.scada_project_grants " +
-            "WHERE tenant_id = $1 AND project_id = $2",
-          params,
-        ),
-      };
-    };
-    const rows = {
-      database: await query(
-        "SELECT current_database() AS database_name, current_user AS database_user",
-      ),
-      migrations: await query(
-        'SELECT migration_name FROM public."_prisma_migrations" ' +
-          "WHERE migration_name = ANY($1::text[]) AND finished_at IS NOT NULL " +
-          "AND rolled_back_at IS NULL",
-        [MIGRATIONS],
-      ),
-      unresolved: await query(
-        'SELECT COUNT(*)::integer AS count FROM public."_prisma_migrations" ' +
-          "WHERE finished_at IS NULL AND rolled_back_at IS NULL",
-      ),
-      identity: await query(
-        "SELECT 1 FROM public.scada_identities " +
-          "WHERE tenant_id = $1 AND subject_id = $2 AND status = 'active'",
-        [tenant, PRINCIPAL.subjectId],
-      ),
-      externalIdentity: await query(
-        "SELECT 1 FROM public.scada_external_identities " +
-          "WHERE issuer = $1 AND tenant_id = $2 AND subject_id = $3",
-        [target.issuer, tenant, PRINCIPAL.subjectId],
-      ),
-      dedicated: await query(
-        "SELECT project_id FROM public.scada_projects " +
-          "WHERE tenant_id = $1 AND project_id LIKE 'd5b4-revoke-%'",
-        [tenant],
-      ),
-      target: await readProject(projectId),
-      original: await readProject(ORIGINAL_PROJECT),
-    };
+    const rows = await readPublishedRevocationRows(client, target, projectId);
     if (phase === "after") assertPublishedRevocationAfterRows(rows, projectId);
     else assertPublishedRevocationTargetRows(rows, projectId);
     return true;

@@ -3875,3 +3875,47 @@ Write-Host "撤权后只读验收退出码：$LASTEXITCODE"
 ```
 
 根 `test:published:oidc:revoke:sequence:config` 只运行 10 项离线测试并加入 `ready`；真实 `oidc:lab:published:revoke:sequence` 需要显式参数、真实 Keycloak/HTTPS/PostgreSQL 环境及维护者单独授权，**不纳入 `ready`**。协作端仅对当前 GitHub 源码隔离 V8 模拟执行新门禁定义 **10/10**，不是 Windows Node `--test`、本机真实浏览器或真实数据库验收。
+
+## 2026-11-22 · D5b4g 单条 release:read 事务撤销候选（仅代码，不执行真实写入）
+
+PR #115 D5b4f 的 Windows 原始日志确认：新增编排离线门禁 **10/10**、`vp check` **392 个格式文件/244 个受检文件零警告错误**、`docs:check` **89 份**、完整 `ready` **680/680 单测、62/62 HTTP E2E、React/Vue/NestJS 构建成功、退出码 0**；已按维护者明确授权 Squash 合并至 `main@7fa1ad5734aed653140cb0ec56a1473d036a8cd4`。原日志没有本机 `git rev-parse HEAD`，不冒充严格 SHA 绑定。
+
+**D5b4g 当前仅编写并审查单条 ACL 撤销候选，不意味着已获得创建工程、撤权或任何数据库写入授权。** 新脚本 `scripts/revoke-oidc-published-read-target.mjs` 仅供可信本机 OIDC Lab 的 `d5b4-revoke-<UUIDv4>` 专用工程；默认为只读：仅接受 `--project-id <真实 ID>`，复用 D5b4c 的 `REPEATABLE READ READ ONLY` 事务和原 D5b1 完整基线。受控写入参数必须同时具备目标 ID、`--apply --confirm-lab adui_scada --confirm-project <完全相同的 ID>`，拒绝所有额外参数、旧 D5b1 工程、其他库及不可信身份。
+
+在**未来再次独立授权 ACL 撤销**之后，写入候选才允许按以下固定流程执行：先通过 D5b4c 完整只读预检；在 `SERIALIZABLE` 事务锁定这份新工程的首版行；在同一事务内重新运行已有的迁移、可信身份、唯一工程、版本审计、零发布、目标四项 ACL 和原 D5b1 四项 ACL 校验；**仅一次**执行带 tenant、工程 ID、主体和精确 `permission = 'release:read'` 条件的 `DELETE … RETURNING subject_id, permission`，必须恰好返回预期一行；仍在事务内使用 D5b4e 的严格三项 ACL 校验；提交后再以独立 `READ ONLY` 事务复核。任何未通过的条件都不允许提交；结果不确定或提交后检查失败时**禁止自动重试或恢复**，必须由维护者人工只读审计。
+
+- 绝不针对 `d5b-unreleased-*` 或其他 `b34-*` 工程执行撤权，也不能修改 `project:read`、`version:read`、`version:append`、其他主体或任何发布指针。
+- 不新增服务端 ACL 管理 API、不改变 Prisma Schema/迁移或 Vue/React Runtime，不涉及 PLC/DCS/工业设备写入。
+- 即使本候选未来成功执行一次 DELETE，也不代表 React/Vue 的真实 HTTP 404、草稿/画布保护或工业安全认证已通过；仍需手工运行原 D5b4f `after` 编排，并保留已获授权的 `before` 记录。
+- 失败或连接中断时真实 COMMIT 结果可能不确定；**不能因为脚本退出码非零就假定数据库没有变化**，尤其不得自行重复执行写入模式。
+
+当前允许维护者执行的**纯离线**质量门禁为：
+
+```powershell
+git fetch origin
+git switch test/b35-d5b4g-target-release-read-revoke-guard
+git pull --ff-only
+git rev-parse HEAD
+
+pnpm run test:published:oidc:revoke:single:config
+if ($LASTEXITCODE -ne 0) { throw "D5b4g 单条撤权安全用例失败" }
+
+pnpm run test:published:oidc:revoke:target:config
+if ($LASTEXITCODE -ne 0) { throw "D5b4c 原只读安全用例失败" }
+
+pnpm run test:published:oidc:revoke:after:config
+if ($LASTEXITCODE -ne 0) { throw "D5b4e 原只读安全用例失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b4g Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b4g 文档检查失败" }
+
+pnpm run ready
+Write-Host "D5b4g 完整质量链退出码：$LASTEXITCODE"
+```
+
+**以下写入模式仅为未来技术审查的格式示意，本次严禁执行**：`pnpm run oidc:lab:published:revoke:single --project-id <真实 D5b4 专用工程 ID> --apply --confirm-lab adui_scada --confirm-project <同一真实 ID>`。即使只是独立只读预检，也必须先经单独授权成功创建真实专用工程；禁止把本节占位符当作实际工程 ID。此前用户明确未授权创建 D5b4 工程或执行任何数据库写入，此边界未改变。
+
+本小批隔离 V8/Mock 只完成新增 **13/13** 及旧 D5b4c/e **21/21** 源测试定义复核，均**不是 Windows Node `node --test`、`vp check`、`ready` 或真实 PostgreSQL 写入实测**。正式验证结果需使用 Windows 完整工作区补证。

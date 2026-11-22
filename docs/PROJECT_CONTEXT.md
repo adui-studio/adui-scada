@@ -1964,3 +1964,9 @@ D5b4e 新候选仅增加撤权后 PostgreSQL `REPEATABLE READ READ ONLY` 审计�
 D5b4e Windows 完整验收中，新旧只读安全门禁 21/21、`vp check` 390/242 零错误警告、`docs:check` 89、`ready` 680/680 单测与 62/62 HTTP E2E 及双框架/服务端构建完成，退出码 0。PR #114 经维护者授权 Squash 合并为 `main@aa512cf30d4b524f187d6cb8e46c77840fd72036`；原始日志没有本地 HEAD 对照。
 
 D5b4f 仅新增只读 CLI 的阶段编排与离线门禁：在真实 `before` 或 `after` 中，固定执行数据库只读、React/Vue 真实只读 GET、数据库再只读，不允许切换阶段、创建工程、撤销/恢复 ACL、自动补偿、生产发布或操作工业设备。此候选待 Windows 全量质量链验收，真实工程尚未获创建授权；D5b4f 不是替代未来真实审批与撤权执行的自动化事务。
+
+## 2026-11-22 · PR #115 已合并，D5b4g 专用单条 ACL 撤销工具候选
+
+维护者 Windows D5b4f 离线 **10/10**、`vp check` **392/244 零错误警告**、`docs:check` **89**、完整 `ready` **680/680 单测、62/62 HTTP E2E、React/Vue/NestJS 构建完成、退出码 0**；PR #115 经授权 Squash 合并为 `main@7fa1ad5734aed653140cb0ec56a1473d036a8cd4`。日志没有独立的本地 HEAD 对照。真实 D5b4 专用工程仍未获创建授权。
+
+D5b4g 候选新增默认只读、未来需双重确认的 `d5b4-revoke-UUIDv4` 单条 `release:read` 撤权事务工具；先 D5b4c 只读预检，锁内完整复核前置四项及原 D5b1 基线，只允许单条 DELETE RETURNING，检查三项 ACL 后提交并再次只读核验。现阶段只完成代码候选及离线模拟检查，**没有执行数据库连接、权限变更或创建工程**。下一步等待维护者 Windows 完整 `ready` 复验；未来真实写入和 D5b4f 前后真实浏览器专项须另行授权。

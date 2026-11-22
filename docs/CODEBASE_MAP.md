@@ -1108,3 +1108,12 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - 根 `package.json`：`test:published:oidc:revoke:sequence:config` 纳入 `ready`；真实 `oidc:lab:published:revoke:sequence` 仅供以后获单独授权人工执行，不在自动检查中。
 
 D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React 生产业务代码或工业设备读写能力。
+
+## 2026-11-22 · D5b4g 专用单条发布读取授权撤销候选
+
+- `scripts/preflight-oidc-published-revocation-target.mjs`：提取不含事务控制的 `readPublishedRevocationRows` 查询，供原 D5b4c/e READ ONLY 检查与新锁内事务复用；原前后 ACL 断言、查询 SQL、READ ONLY/ROLLBACK 流程保持不变。
+- `scripts/revoke-oidc-published-read-target.mjs`：独立候选，默认只读；未来写入需目标工程 ID 双重确认和受控 Lab，`SERIALIZABLE` 锁目标工程行，锁内复核全部基线，仅单条定向 `DELETE … RETURNING`，再校验 D5b4e 三项 ACL 和原 D5b1，提交后独立 READ ONLY 复核；任何不确定状态禁止自动重试。
+- `scripts/revoke-oidc-published-read-target.cases.mjs`：新增 13 项 Node 离线安全用例定义，覆盖非法参数、精确删除范围、前后 ACL、并发漂移模拟、回滚、未知 COMMIT 与安全脱敏。
+- 根 `package.json`：`test:published:oidc:revoke:single:config` 纳入 `ready`；`oidc:lab:published:revoke:single` 为必须单独授权并人工运行的受控入口，绝不自动调用。
+
+本批没有修改 NestJS ACL 管理服务、Prisma Schema/迁移、React/Vue 业务代码或工业设备，**尚未执行任何数据库写入**。
