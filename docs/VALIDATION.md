@@ -2880,6 +2880,7 @@ Write-Host "D5b8e Windows 离线验收通过" -ForegroundColor Green
 D5b8e PR #137 在维护者 Windows **精确 HEAD `88c2c285b8361fd99c51eed48df8e6130484e647`** 实测 Vitest **698/698**、Gate **14/14**、Vite+ **413/264 零错误警告**、文档 **90**、HTTP E2E **62/62**、React/Vue/NestJS 构建及完整 `ready` 成功。获本轮明确授权后已 Squash 合并至 `main@a56549dbe614e4f4c18d17e0d01e7eff6d7a4c70`。
 
 D5b8f 仅新增两项测试定义：
+
 1. **仓储级**：合法静态快照（零 Tag/绑定/规则）经过现有真实 `publish` 事务及生产 `assertReady`，仍返回两类固定安全阻塞，发布事件不插入，发布指针与代次不更新。
 2. **HTTP E2E**：已有 `ProjectReleaseGateUnavailableError` 携带 `SAFETY_ASSESSMENT_UNAVAILABLE` 时，正式 POST 只响应固定中文 503、`Cache-Control: no-store`，不暴露代码、路径或原始消息；不调用其他工程写入口。
 
