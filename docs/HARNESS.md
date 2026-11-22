@@ -4238,3 +4238,52 @@ E-079 候选将“切回第一标签”移到两次真实响应完成严格交�
 ```
 
 只使用**已经存在且撤权状态未变化**的隔离工程；上轮 D5b5b 已真实双框架通过且本补丁不改变该脚本，可优先单独复测 D5b5c。若最终 D5b5c 通过，再根据维护者验收标准复核整条组合链。严格禁止恢复 `release:read`、再次执行撤权、生产数据库写入和设备控制。
+
+## 2026-11-22 · D5b6 已撤权正式运行页真实隐藏重显专项（Draft 待验收）
+
+在 PR #121 已合并、D5b5b/D5b5c 均具备 React/Vue 真实浏览器通过证据后，新增 **D5b6**：专门验证**正式已发布运行页**（不是 Studio 测试自己发的 GET）在独立 `release:read` 已撤权时，真实标签页隐藏/重显是否清空旧内容、只在重显时重新读取且仍安全拒绝。每个 Origin 的首次 GET 与重显 GET 都必须来自现有运行页业务生命周期，真实返回 `404 + no-store + 无重定向`。隐藏与停止不能增加请求，整个测试只能发 GET。使用同一个隔离 Chrome Profile 的两个同源标签页和同一真实预绑定身份，原生按钮触发，绝不造假 404，不恢复 ACL。
+
+**Windows 先执行正式质量链**（异常时停止；不要将单独无条件打印的“通过”当成功）：
+
+```powershell
+& {
+    git fetch origin
+    if ($LASTEXITCODE -ne 0) { throw "远端引用更新失败" }
+    git switch test/b35-d5b6-revoked-runtime-visibility
+    if ($LASTEXITCODE -ne 0) { throw "切换 D5b6 分支失败" }
+    git pull --ff-only
+    if ($LASTEXITCODE -ne 0) { throw "D5b6 分支更新失败" }
+    $head = (git rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0) { throw "读取 Git HEAD 失败" }
+    Write-Host "D5b6 本次验收 HEAD：$head"
+
+    pnpm run test:published:oidc:revoke:visibility:config
+    if ($LASTEXITCODE -ne 0) { throw "D5b6 离线安全测试失败" }
+
+    vp check
+    if ($LASTEXITCODE -ne 0) { throw "D5b6 Vite+ 零警告检查失败" }
+
+    pnpm run docs:check
+    if ($LASTEXITCODE -ne 0) { throw "D5b6 文档检查失败" }
+
+    pnpm run ready
+    if ($LASTEXITCODE -ne 0) { throw "D5b6 完整质量链失败" }
+    Write-Host "D5b6 完整质量链实际退出码：$LASTEXITCODE"
+}
+```
+
+**质量链通过后**仅在可信本机 HTTPS/Keycloak Lab、同一已撤权且当前仍保持三项基础授权的 D5b4 专用工程上，先只读审计，再真实运行页面生命周期，失败即停止：
+
+```powershell
+& {
+    $projectId = "d5b4-revoke-52c2ad3b-4800-42ca-8769-a7bee5da4d4a"
+    pnpm run oidc:lab:published:revoke:after --project-id $projectId
+    if ($LASTEXITCODE -ne 0) { throw "D5b6 撤权后数据库只读复核失败" }
+
+    pnpm run test:published:oidc:revoke:visibility:browser --project-id $projectId
+    if ($LASTEXITCODE -ne 0) { throw "D5b6 已撤权真实隐藏重显专项失败" }
+    Write-Host "D5b6 React/Vue 已发布运行真实浏览器专项通过"
+}
+```
+
+真实浏览器需要在脚本启动的**独立隔离浏览器**中手动登录现有预绑定 Keycloak 测试用户，**不要在终端输入密码**。必须看到 React/Vue 各自的首次 404、隐藏清空、重显 404 和停止清理四类阶段通过。Node 离线 13 项、Vite+、docs、ready 和真实浏览器尚未获得新提交后的 Windows 执行记录，不能提前标记通过。新专项不测试 `verified → denied` 的真实已发布状态撤权竞争；生产安全门禁和设备写入仍关闭。
