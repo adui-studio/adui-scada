@@ -757,7 +757,6 @@
 - **防复发**：涉及 ACL 集合完整性的测试必须使用**不按具体权限预过滤的真实查询形状**，主动注入跨主体与多余权限行并证明读取门禁拒绝。不能只根据过滤后的“命中目标授权”就声称整个 ACL 正常。只读工具与业务权限服务的语义应分别报告，不以离线 Mock 冒充正式运行验收。
 - **验证边界**：已完成 GitHub 源码/Schema/既有 D5b4 ACL 契约核对；新 D5b7e HEAD 的 17 项 Node、Windows Vite+、文档及 `ready` 尚未实测。未执行 PostgreSQL 写入、ACL 恢复、真实发布或撤权，独立已发布夹具仍无存在性证据。
 
-
 ### E-083 · D5b8a 发布门禁测试重复遗漏 Vitest Mock 泛型（第三十五批，待 Windows 复验）
 
 - **现象**：维护者在 Windows 执行 `vp check --fix` 时，对 `apps/server/src/projects/project-release-safety-gate.spec.ts:77` 的 `const query = vi.fn();` 报 `vitest(require-mock-type-parameters)` 警告 1 条、错误 0 条；终端仅显示格式化完成，不能认定 `vp check` 通过。此次无证据表明发布事务或工业设备发生变更。

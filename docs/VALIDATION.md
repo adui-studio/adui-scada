@@ -2750,4 +2750,3 @@ D5b8a 在独立分支对正式 `ProjectReleaseSafetyGate` 增加安全阻塞评�
 维护者在 Windows 执行 `vp check --fix` 时，`apps/server/src/projects/project-release-safety-gate.spec.ts:77` 出现 **1 条 `vitest(require-mock-type-parameters)` 警告、0 条错误**：`const query = vi.fn();` 未声明 Mock 函数泛型。命令随后报告“Formatting completed”，**并不代表零告警的 `vp check` 已通过**。这是已记录的 E-005 同类缺陷复发，新增 E-083。
 
 PR #133 已在原分支将上述单行改为 `const query = vi.fn<() => Promise<unknown[]>>();`，仍只断言 `expect(query).not.toHaveBeenCalled()`，不实际访问事务或数据库，不修改生产 Gate、HTTP 503 错误或发布指针。已完成 GitHub 远程文件回读与差异检查，**尚未取得修复后 Windows `vp check`、Vitest 及完整 `pnpm run ready` 的运行结果**；PR 保持 Draft，Issue #126 不因修复 Lint 就结案。
-
