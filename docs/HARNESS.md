@@ -4011,3 +4011,26 @@ Write-Host "D5b5 修复后完整质量链退出码：$LASTEXITCODE"
 ```
 
 真实 `test:published:oidc:revoke:studio:browser` 仍须在上述全部通过后单独人工执行，且只允许读取**先前已真实撤权的同一现存工程**。本次没有授权恢复 ACL、重新创建测试工程或执行任何数据库写入。协作端只运行了原生 Node 跨 Realm 最小复现与六种负向请求篡改检查，尚不能宣称最新 PR HEAD 的 Windows 11/11 或真实浏览器专项通过。
+
+## 2026-11-22 · D5b5 真实 Studio 双框架浏览器专项终验通过
+
+维护者 Windows 原始日志确认 `main@039bfd01ecf34e3641556fc5536a6bda377cf732` 经 `git rev-parse HEAD` 变量校验一致（终端未独立打印 SHA）、Git 工作区清洁。此前此版本 D5b5 新增 Node 离线门禁 **11/11**、完整 `ready` **680/680 Vitest 单测、62/62 HTTP E2E、React/Vue/NestJS 构建成功、退出码 0**，均已完成。
+
+本次只读真实终验依次执行并成功：
+
+```powershell
+# 仅记录历史已执行命令契约；工程 ID 为已存在并完成撤权的真实 D5b4 工程。
+pnpm run oidc:lab:published:revoke:after --project-id $projectId
+# 结果：撤权后三项基础 ACL / 原 D5b1 完整，PostgreSQL READ ONLY 通过。
+
+pnpm run test:published:oidc:revoke:studio:browser --project-id $projectId
+# 结果：React/Vue 通过真实 BFF 登录、Studio 首版只读载入、隔离浏览器本地草稿保存、
+# 未保存图元准备与一次真实发布 GET 404，SVG、JSON、草稿摘要和 CAS 基线均不变。
+# 原命令后逐项检查 $LASTEXITCODE，最终通过。
+```
+
+**仅此项安全结论成立**：这是 Studio 页面内独立真实同源 `fetch` 发布接口 404 后本地数据稳定性验收，并非 Studio 正式发布预检按钮或内部业务组件消费 404、迟到网络响应竞争、跨标签页并发或 IndexedDB 数据库底层文件逐字节比较。脚本仅在隔离浏览器本地创建草稿；服务端工程 API 的非 GET 被初始化前门禁阻断，不新增工程/ACL/发布状态写入。公开文档不收录真实测试工程 UUID、Cookie、Keycloak Token 或工程正文。
+
+**后续测试准入**：如扩展为 React/Vue 同源双标签页竞争，先复用既有已撤权 D5b4 工程的 `project:read`、`version:read`，仅在独立浏览器本地草稿操作并发；所有服务端工程写入继续阻断，任一框架/标签页状态漂移即失败。只有在明确设计并验证真实响应时序控制后，才可把“Studio 自身迟到 200/401/404 处理”列为已覆盖。禁止重复执行撤权 `--apply` 或恢复 `release:read`；新 SQL 写入须另行授权。
+
+**文档变更验证边界**：本次只是补录维护者既有真实 Windows 日志，未在最新文档分支运行 `vp check`、`docs:check` 或完整 `ready`；上述真实验收仅归属于已核验的合并代码，不可冒充文档 PR 的 CI 结果。
