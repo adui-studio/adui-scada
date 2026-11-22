@@ -9,7 +9,12 @@ import {
   startBrowser,
   waitForLogin,
 } from "./test-oidc-dual-cas.mjs";
-import { enterStudioInPage, saveDraftInPage, waitForStudioActionIdleInPage } from "./test-project-browser-oidc.mjs";
+import {
+  enterStudioInPage,
+  saveDraftInPage,
+  waitForStudioActionIdleInPage,
+  resolveProjectBrowserLab,
+} from "./test-project-browser-oidc.mjs";
 import {
   activateStudioTab,
   addStudioSymbolInPage,
@@ -29,7 +34,6 @@ import {
   requireD5b5Prepared,
   requireD5b5Preserved,
 } from "./test-oidc-studio-revoked-draft.mjs";
-import { resolveProjectBrowserLab } from "./test-project-browser-oidc.mjs";
 
 const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const PROJECT_PATTERN =
@@ -157,7 +161,11 @@ async function waitForStudioReady(session, origin, principal) {
     () => session.evaluate(identityInPage, origin),
     "D5b5b 两个标签页必须使用同一可信主体",
   );
-  if (!identity || identity.tenantId !== principal.tenantId || identity.subjectId !== principal.subjectId) {
+  if (
+    !identity ||
+    identity.tenantId !== principal.tenantId ||
+    identity.subjectId !== principal.subjectId
+  ) {
     throw new Error("D5b5b 两个标签页必须使用同一可信主体");
   }
   if (!(await session.evaluate(enterStudioInPage))) {
