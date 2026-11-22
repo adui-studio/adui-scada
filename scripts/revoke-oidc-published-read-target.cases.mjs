@@ -117,7 +117,13 @@ void describe("D5b4g 独立工程单条 release:read 撤销安全门禁", () => 
     });
     assert.deepEqual(
       parseD5b4gRevocationMode([
-        "--project-id", ID, "--apply", "--confirm-lab", "adui_scada", "--confirm-project", ID,
+        "--project-id",
+        ID,
+        "--apply",
+        "--confirm-lab",
+        "adui_scada",
+        "--confirm-project",
+        ID,
       ]),
       { projectId: ID, apply: true },
     );
@@ -138,7 +144,8 @@ void describe("D5b4g 独立工程单条 release:read 撤销安全门禁", () => 
       assert.throws(() => parseD5b4gRevocationMode(args), /仅允许独立专用工程/);
     }
     const { client, calls } = database();
-    return assert.rejects(revokeD5b4PublishedRead(client, TARGET, ORIGINAL), /仅允许独立专用工程/)
+    return assert
+      .rejects(revokeD5b4PublishedRead(client, TARGET, ORIGINAL), /仅允许独立专用工程/)
       .then(() => assert.equal(calls.length, 0));
   });
 
@@ -273,7 +280,9 @@ void describe("D5b4g 独立工程单条 release:read 撤销安全门禁", () => 
 
   void it("COMMIT 失败时不能声称成功，必须提示结果未确认且禁止重试", async () => {
     const { client, calls } = database({
-      onCommit: () => { throw new Error("Cookie=SECRET"); },
+      onCommit: () => {
+        throw new Error("Cookie=SECRET");
+      },
     });
     await assert.rejects(revokeD5b4PublishedRead(client, TARGET, ID), /禁止自动重试或恢复/);
     assert.equal(deletes(calls).length, 1);

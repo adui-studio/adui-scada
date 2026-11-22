@@ -23,11 +23,7 @@ const SAFE_ERRORS = new Set([
 
 /** 默认只读；目标 ID 必须重复确认，才允许进入撤权事务。 */
 export function parseD5b4gRevocationMode(args) {
-  if (
-    !Array.isArray(args) ||
-    args[0] !== "--project-id" ||
-    !PROJECT_PATTERN.test(args[1] ?? "")
-  ) {
+  if (!Array.isArray(args) || args[0] !== "--project-id" || !PROJECT_PATTERN.test(args[1] ?? "")) {
     throw new Error("D5b4g 仅允许独立专用工程的只读预检或完整双重确认");
   }
   if (args.length === 2) return { projectId: args[1], apply: false };
@@ -136,9 +132,7 @@ async function run() {
       return;
     }
     await revokeD5b4PublishedRead(client, target, mode.projectId);
-    process.stdout.write(
-      "D5b4g 单条 release:read 撤销与撤权后数据库只读审计通过。\n",
-    );
+    process.stdout.write("D5b4g 单条 release:read 撤销与撤权后数据库只读审计通过。\n");
     process.stdout.write("尚未执行 React/Vue 双框架真实撤权后验收，不自动恢复授权。\n");
   } finally {
     await client.end();
