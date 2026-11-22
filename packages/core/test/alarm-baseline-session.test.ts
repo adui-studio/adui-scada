@@ -111,11 +111,7 @@ test("旧会话的快照、增量和断连回调不能改变当前会话", () =>
     3000,
   );
   expect(refreshed.status).toBe("BASELINE_ESTABLISHED");
-  for (const action of [
-    snapshot,
-    delta,
-    { kind: "DISCONNECT", generation: 2 } as const,
-  ]) {
+  for (const action of [snapshot, delta, { kind: "DISCONNECT", generation: 2 } as const]) {
     expect(transitionAlarmBaselineSession(refreshed.state, action, nowMs, 3000)).toEqual({
       status: "OTHER_SESSION_IGNORED",
       state: refreshed.state,
