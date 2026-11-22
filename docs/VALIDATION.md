@@ -2750,3 +2750,12 @@ D5b8a 在独立分支对正式 `ProjectReleaseSafetyGate` 增加安全阻塞评�
 维护者在 Windows 执行 `vp check --fix` 时，`apps/server/src/projects/project-release-safety-gate.spec.ts:77` 出现 **1 条 `vitest(require-mock-type-parameters)` 警告、0 条错误**：`const query = vi.fn();` 未声明 Mock 函数泛型。命令随后报告“Formatting completed”，**并不代表零告警的 `vp check` 已通过**。这是已记录的 E-005 同类缺陷复发，新增 E-083。
 
 PR #133 已在原分支将上述单行改为 `const query = vi.fn<() => Promise<unknown[]>>();`，仍只断言 `expect(query).not.toHaveBeenCalled()`，不实际访问事务或数据库，不修改生产 Gate、HTTP 503 错误或发布指针。已完成 GitHub 远程文件回读与差异检查，**尚未取得修复后 Windows `vp check`、Vitest 及完整 `pnpm run ready` 的运行结果**；PR 保持 Draft，Issue #126 不因修复 Lint 就结案。
+
+## 2026-11-22 · D5b8a 修复后 Windows 验收及 503 非空阻塞诊断新增回归
+
+维护者上传 D5b8a Windows 真实日志：`vp check` **412 个格式文件、264 个受检文件零警告/错误**；`pnpm run test:unit` **58/58 文件、688/688 测试**，新服务端门禁 **6/6**；`pnpm run docs:check` **89 个 Markdown**；完整 `pnpm run ready` 已通过核心构建、类型检查、所有离线专项、Vitest 688/688、NestJS HTTP E2E **6/6 文件、62/62 用例**、React/Vue 和 NestJS 构建，末尾退出码检查无异常。E-083 原有 `vi.fn()` 无类型参数警告已由零告警复验关闭。日志没有打印本地 `git rev-parse HEAD`，不得将其直接绑定至 GitHub 最终提交 SHA。
+
+在上述已验收版本之后，继续于原 Draft PR #133 **仅增强既有 HTTP E2E 的一条 503 安全断言**：构造包含 `TAG_SOURCE_UNVERIFIED`、`RUNTIME_ADMISSION_UNAVAILABLE`、`INDUSTRIAL_READ_POLICY_UNAVAILABLE` 的真实错误对象，检查 HTTP 响应仍严格等于 `{ statusCode: 503, message: 固定中文说明 }`，不泄漏内部阻塞代码、字段路径或 Prisma 信息。不修改发布安全门禁实现、正式事务、数据库、权限或设备控制。
+
+**新的 E2E 断言尚未在 Windows 实测**，因此先前 62/62 / 688/688 / 完整 `ready` 的成绩仅作为原修复版本的证据，不能当作本次最终 HEAD 的运行通过。PR #132、#133 仍保持 Draft；Issue #126 的真实已发布独立夹具及 `verified → denied` 仍受安全门禁与独立审批阻塞，不得假装结案。
+
