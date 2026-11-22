@@ -309,7 +309,7 @@ test("旧订阅安装失败不应关闭同步重入启动的新会话", () => {
   let adapter: AlarmSubscriptionAdapter;
   let subscribed = 0;
   let closed = 0;
-  let currentHandlers: Handlers | null = null;
+  const acceptedHandlers: Handlers[] = [];
   const source: AlarmReadonlySubscriptionSource = {
     subscribe(handlers) {
       subscribed += 1;
@@ -318,7 +318,7 @@ test("旧订阅安装失败不应关闭同步重入启动的新会话", () => {
         adapter.start();
         throw new TypeError("旧订阅安装失败");
       }
-      currentHandlers = handlers;
+      acceptedHandlers.push(handlers);
       return () => {
         closed += 1;
       };
@@ -334,7 +334,7 @@ test("旧订阅安装失败不应关闭同步重入启动的新会话", () => {
   expect(() => adapter.start()).toThrow("旧订阅安装失败");
   expect(adapter.isRunning()).toBe(true);
   expect(adapter.snapshot().generation).toBe(1);
-  currentHandlers?.onChange({ kind: "snapshot", values: [value] }, true);
+  acceptedHandlers[0]?.onChange({ kind: "snapshot", values: [value] }, true);
   expect(adapter.snapshot().baseline?.value.sequence).toBe(5);
   adapter.stop();
   expect(closed).toBe(1);
@@ -342,12 +342,12 @@ test("旧订阅安装失败不应关闭同步重入启动的新会话", () => {
 });
 
 test("取消周期和取消订阅均抛错时仍尝试两种清理并撤销会话", () => {
-  let handlers: Handlers | null = null;
+  const acceptedHandlers: Handlers[] = [];
   let closes = 0;
   let cancels = 0;
   const source: AlarmReadonlySubscriptionSource = {
     subscribe(callbacks) {
-      handlers = callbacks;
+      acceptedHandlers.push(callbacks);
       return () => {
         closes += 1;
         throw new TypeError("测试取消订阅失败");
@@ -368,14 +368,14 @@ test("取消周期和取消订阅均抛错时仍尝试两种清理并撤销会�
     nowMs: () => startMs,
   });
   adapter.start();
-  handlers?.onChange({ kind: "snapshot", values: [value] }, true);
+  acceptedHandlers[0]?.onChange({ kind: "snapshot", values: [value] }, true);
   expect(adapter.snapshot().baseline?.value.sequence).toBe(5);
   expect(() => adapter.stop()).toThrow("测试取消订阅失败");
   expect(closes).toBe(1);
   expect(cancels).toBe(1);
   expect(adapter.isRunning()).toBe(false);
   expect(adapter.snapshot().baseline).toBeNull();
-  handlers?.onChange({ kind: "snapshot", values: [value] }, true);
+  acceptedHandlers[0]?.onChange({ kind: "snapshot", values: [value] }, true);
   expect(adapter.snapshot().baseline).toBeNull();
 });
 
