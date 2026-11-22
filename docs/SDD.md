@@ -1251,3 +1251,7 @@ React/Vue 的 `PublishedRuntimePage` 在 `verified` 且快照具有多个页面�
 ## 2026-11-22 · D5b9g 数值报警候选的显式时间窗口（候选）
 
 共享 Core `classifyTimelyNumericAlarmSample(input, nowMs, maxAgeMs)` 复用 D5b9f 数值与质量筛选；只有 `GOOD` 且有限数值才进行 `serverTimestamp` 时间窗口判断。要求调用方显式传入安全整数毫秒时钟及正数最大年龄；未来时间返回 `FUTURE_TIMESTAMP`，年龄严格大于上限返回 `OUTDATED_TIMESTAMP`，等于上限可通过。非 READY 类别保留原有分类，拒绝结果不回传读数。无默认工业超时时长、隐式 `Date.now()`、设备时间替代或自动产生 TRIGGER/RECOVER。`sourceTimestamp` 不参与时间窗口判断；`serverTimestamp` 即使通过格式和窗口检查也**不证明来源可信**。正式网关/服务端仍必须独立验证时间赋值权、Tag 身份、采集会话代次及完整性；FR-011 规则、阈值、迟滞和时延尚未决定。
+
+## 2026-11-22 · D5b9h 同一会话内报警候选序列保护（待验收）
+
+共享 Core `classifyOrderedNumericAlarmSample(input, previous, nowMs, maxAgeMs)` 复用已有质量、有限数值和显式时间窗口校验。只有 READY 的候选继续比较调用方提供的、**同一订阅会话中上一条已接受的 Tag 读数**。无基线返回 `BASELINE_REQUIRED`，Tag ID 不一致返回 `TAG_MISMATCH`，当前序列号小于或等于上次序列返回 `SEQUENCE_NOT_ADVANCED`；拒绝时不泄露候选数值。非法 Tag 元数据通过既有 `validateTagValue` 拒绝。初始快照、断线重连、新会话的基线建立和会话代次检查尚无可信服务端实现，调用方不得复用旧会话基线、不得用此局部比较推断跨进程连续性，也不得将该函数直接用于触发、恢复或确认报警。没有阈值、设备采集、持久化历史或审计 ID。
