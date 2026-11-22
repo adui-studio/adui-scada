@@ -36,10 +36,7 @@ export function classifySessionBoundNumericAlarmSample(
   ) {
     throw new TypeError("报警订阅会话代次无效");
   }
-  if (
-    inputGeneration !== activeGeneration ||
-    baselineGeneration !== activeGeneration
-  ) {
+  if (inputGeneration !== activeGeneration || baselineGeneration !== activeGeneration) {
     return { status: "SESSION_MISMATCH" };
   }
   return classifyOrderedNumericAlarmSample(input, previous, nowMs, maxAgeMs);
