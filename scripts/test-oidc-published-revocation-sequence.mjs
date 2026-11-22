@@ -100,9 +100,7 @@ async function run() {
     process.stdout.write("D5b4f：" + step.name + "，正在执行。\n");
     return launchFixedReadOnlyScript(script, args);
   });
-  process.stdout.write(
-    "D5b4f 本阶段三项只读检查通过；不代表两个阶段均完成或已实际撤销 ACL。\n",
-  );
+  process.stdout.write("D5b4f 本阶段三项只读检查通过；不代表两个阶段均完成或已实际撤销 ACL。\n");
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
