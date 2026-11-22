@@ -1091,3 +1091,12 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `package.json`：`test:published:oidc:revoke:readonly:config` 进入 `ready`；`test:published:oidc:revoke:readonly:browser` 为需要独立授权专用工程/未来真实撤权后的手工运行入口，不加入 `ready`。
 
 本批不变更服务端权限、Prisma Schema/SQL、React/Vue 生产 UI、工程数据、工业设备。当前仅完成候选代码与隔离自检，正式 Windows/Keycloak/PostgreSQL 验收尚待执行。
+
+## 2026-11-22 · D5b4e 撤权后 PostgreSQL 只读审计候选
+
+- `scripts/preflight-oidc-published-revocation-target.mjs`：原 D5b4c 只读 SQL 与前置四项 ACL 默认校验不变；额外导出撤权后目标 ACL 严格三项判定，支持仅内部调用的 `after` 阶段，继续核对原 D5b1 工程与全部安全元数据，始终 READ ONLY/ROLLBACK。
+- `scripts/preflight-oidc-published-revocation-after.mjs`：D5b4e 独立只读 CLI，只接受明确的 `d5b4-revoke-<UUIDv4>` 工程 ID，复用可信本机 OIDC/PG 目标检查和原 SQL，不提供创建、撤权或恢复操作。
+- `scripts/preflight-oidc-published-revocation-after.cases.mjs`：11 项 Node 测试定义，覆盖三项最小权限、旧 D5b1 四项、首版/审计/发布状态、迁移/可信身份、唯一工程、只读事务/回滚、非法参数和错误脱敏。
+- 根 `package.json`：`test:published:oidc:revoke:after:config` 加入 `ready`；`oidc:lab:published:revoke:after` 为人工运行、不会自动触发的真实 PostgreSQL READ ONLY 核验入口。
+
+本批不修改 NestJS 业务、Vue/React Runtime、Prisma Schema/迁移或工业设备读写功能，禁止真实数据库写入。

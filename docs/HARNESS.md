@@ -3773,3 +3773,50 @@ Write-Host "D5b4d 完整质量链退出码：$LASTEXITCODE"
 ```
 
 **未来的真实手工调用（本轮禁止执行）**：先由维护者获得单独授权、记录真实新建专用工程 ID 并完成 D5b4c 数据库只读预检，才允许运行 `pnpm run test:published:oidc:revoke:readonly:browser --phase before --project-id <真实 ID>`；再次获得独立撤权授权并完成实际 ACL 变更后才可运行 `--phase after`。两次浏览器成功也不替代后置数据库 ACL 审计。本次实际只做 GitHub 源码与隔离 V8 静态/纯函数检查（另以受限 V8 模拟执行 15 项测试定义，15/15），**未运行正式 Windows Node、`vp check`、`docs:check`、`ready` 或真实浏览器/数据库专项**。
+
+## 2026-11-22 · D5b4e 撤权后 PostgreSQL 只读审计（Draft 候选）
+
+PR #113 已由维护者 Windows 验收：D5b4d 独立离线安全门禁 **15/15**、`vp check` **388 格式文件/240 受检文件零告警**、`docs:check` **89 份**、完整 `ready` **680/680 单测、62/62 HTTP E2E、React/Vue/NestJS 构建成功、退出码 0**；经本次明确授权 Squash 合并为 `main@19f027838908a385f5966cc4285f41528a436dde`。Windows 日志未单独给出本机 `git rev-parse HEAD`，不作严格 SHA 绑定。
+
+D5b4e 在原 D5b4c `scripts/preflight-oidc-published-revocation-target.mjs` 上复用**相同只读 SQL、身份、迁移与专用工程检查**，另提供 `scripts/preflight-oidc-published-revocation-after.mjs` 独立 CLI。只有 `--project-id d5b4-revoke-<UUIDv4>` 一种参数形态；不接受 `--apply`、`--revoke`、`--restore` 或附加参数。原 D5b4c 命令**默认仍校验撤权前恰好四项 ACL**，不会因为新增阶段而改变。新 D5b4e 命令只能检查撤权后的静态元数据：
+
+- 只允许预绑定可信主体和本机 `adui_scada` / `adui_scada` 数据库用户、已完成发布迁移、零待解决迁移；仍要求租户内唯一 D5b4 专用工程及其首版修订号 1、唯一版本和审计、发布代次 0、无发布指针和事件。
+- D5b4 专用工程只能**恰好存在** `project:read`、`version:read`、`version:append` 三项 `lab-engineer` ACL；`release:read` 仍存在、少掉基础授权、重复授权、其他主体或新增任意权限一律拒绝。
+- 原 D5b1 工程必须仍保持原首版、未发布状态及**恰好四项** ACL。查询固定只针对这两个工程，不读取快照正文。
+- 整个 SQL 流程保持 `BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY`、受控 `SELECT` 和 `ROLLBACK`，仅在所有检查通过后输出安全摘要。**没有 PostgreSQL INSERT/UPDATE/DELETE，也不恢复授权。**
+
+**当前尚无 D5b4 专用工程，也未获创建或撤权写入授权，不能执行真正的撤权后数据库验收。** 即使未来只读脚本发现目标仅有三项 ACL，**也不能单独证明之前确实存在第四项或确实发生了一次经授权撤权**；必须关联此前真实 D5b4c 四项 ACL 预检、D5b4d `before` 双 Origin 真实 200、另行授权的撤权操作证据、D5b4d `after` 真实 404 和本只读结果。原 D5b1 不能用作目标工程。
+
+当前只执行**离线代码安全门禁**；维护者可在 Windows 执行以下命令：
+
+```powershell
+git fetch origin
+git switch test/b35-d5b4e-post-revocation-readonly-audit
+git pull --ff-only
+git rev-parse HEAD
+
+pnpm run test:published:oidc:revoke:target:config
+if ($LASTEXITCODE -ne 0) { throw "D5b4c 原有只读门禁失败" }
+
+pnpm run test:published:oidc:revoke:after:config
+if ($LASTEXITCODE -ne 0) { throw "D5b4e 后置只读门禁失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b4e Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b4e 文档检查失败" }
+
+pnpm run ready
+Write-Host "D5b4e 完整质量链退出码：$LASTEXITCODE"
+```
+
+**仅在未来已得到专用工程创建与真实撤权两项独立明确授权且操作完成后**，才允许使用真实现存 ID 人工执行下面的**只读**命令；本小批禁止执行：
+
+```powershell
+$projectId = "<维护者另行授权创建并撤权的真实 D5b4 工程 ID>"
+pnpm run oidc:lab:published:revoke:after --project-id $projectId
+Write-Host "D5b4e PostgreSQL 只读审计退出码：$LASTEXITCODE"
+```
+
+本批静态编写候选后，仅以隔离 V8 模拟 Node 断言验证**既有 10 + 新增 11 = 21/21** 源测试定义，**不是 Windows `node --test` 或 PostgreSQL 实际测试**。真实 OIDC、权限撤销和设备写入均未执行。
