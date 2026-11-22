@@ -1310,3 +1310,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-tag-freshness.ts`：显式当前时间与最大年龄，先复用数值质量分类，再拒绝未来/超龄 `serverTimestamp`；不产生报警事件。
 - `packages/core/test/alarm-tag-freshness.test.ts`：6 项测试定义覆盖窗口边界、超龄、未来时间、质量与非数值、非法参数、来源时间不代替平台时间和只读输入。
 - `packages/core/src/index.ts`：共享导出，供未来 Vue/React 与服务端共用。未改变 TagStore、Runtime、NestJS、Prisma 或工业网关。
+
+## 2026-11-22 · D5b9h FR-011 同会话报警序列候选
+
+- `packages/core/src/alarm-tag-sequence.ts`：复用数值和时间窗口筛选，检查外部提供的上一条已接受 Tag、同 ID 与严格递增序列；无基线时拒绝。
+- `packages/core/test/alarm-tag-sequence.test.ts`：新增 6 项单测定义，覆盖正向、无基线、重复倒退、跨 Tag、坏质量超龄与非法元数据和只读输入。
+- `packages/core/src/index.ts`：公共导出纯函数和类型；不改变原 TagStore、Vue/React、Runtime、NestJS、Prisma 或正式发布门禁。
