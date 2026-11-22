@@ -4132,3 +4132,37 @@ Write-Host "D5b5c 真实只读专项退出码：$LASTEXITCODE"
 ```
 
 新离线用例使用 Node 原生 `node:test` 和 `node:vm`，覆盖精确工程前缀、单次 GET、两页 pending、逆序释放、错误状态码、缓存、重定向、重复请求、写入阻断与独立 CDP Realm。协作容器 Node **v22.16.0** 的本地原型 **13/13 通过**；正式 GitHub 分支文件仍需维护者在 Windows 复跑上述命令，不能以原型测试替代提交后的质量链或真实浏览器专项。真实浏览器不会被加入根 `ready`。
+
+## 2026-11-22 · D5b5b/D5b5c 浏览器失败后的 E-077 分类诊断复测
+
+维护者 Windows 已完成 D5b5c 离线 13/13、`vp check` 401/253 零告警、`docs:check` 89 份、全量 `ready` 退出码 0；既有撤权工程 PostgreSQL READ ONLY 审计亦成功。但真实 D5b5b 在 React 第一标签页发布 GET 后失败；D5b5c 在 React 第二标签页原始 404 Promise 优先交付后失败，两个浏览器专项均退出码 1。**这些失败不是全链检查通过的反证，仍然是必须单独关闭的业务验收阻塞**。D5b5c 的两个 pending 阶段已严格核对真实 404/no-store/无重定向；尚未得到释放后的精确失败分类。
+
+本轮只调整测试代码的**失败诊断**：共享 `classifyD5b5PreservationFailure` 将原严格断言的失败映射为固定中文类别（工程 GET 数量、响应计数、真实 404/no-store/重定向或 SVG/JSON/IndexedDB/CAS 单项变化）；D5b5c 将该固定类别加入自己的安全白名单。仍须执行 `requireD5b5Preserved` 和所有原有零写入、草稿及 CAS 保护，遇失败照常退出 1；不输出任何工程正文、Hash、身份、Cookie、Token 或原始异常。未知异常仍脱敏。**真实差异根因待本次修补后的浏览器日志确认**，禁止擅自忽略额外 GET 或漂移。
+
+先取得最新 PR #121 HEAD，执行以下离线检查，失败立即中止：
+
+```powershell
+git fetch origin
+git switch test/b35-d5b5c-revoked-late-read
+git pull --ff-only
+git rev-parse HEAD
+
+pnpm run test:published:oidc:revoke:multitab:config
+if ($LASTEXITCODE -ne 0) { throw "D5b5b 修补后离线门禁失败" }
+
+pnpm run test:published:oidc:revoke:late:config
+if ($LASTEXITCODE -ne 0) { throw "D5b5c 修补后离线门禁失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b5c 质量检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b5c 文档检查失败" }
+
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "D5b5c 完整质量链失败" }
+Write-Host "D5b5c 修补后完整质量链退出码：$LASTEXITCODE"
+```
+
+随后继续使用**已经存在且保持撤权状态**的原实际 D5b4 工程，先单独执行 `oidc:lab:published:revoke:after`（仅只读），再运行 `test:published:oidc:revoke:multitab:browser` 和 `test:published:oidc:revoke:late:browser`。**必须先处理 D5b5b 的明确失败类别再评价 D5b5c 的最终状态**；遇失败保留终端固定类别与退出码即可，不收集 Cookie、Token 或完整工程快照。不重新运行撤权 `--apply`、不恢复 ACL、不新增 SQL、不得以开启生产写入或放宽安全断言作为修复。
+
