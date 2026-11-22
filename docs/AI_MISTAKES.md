@@ -690,6 +690,15 @@
 
 > **2026-11-22 · E-074 Windows 修复结案补录**：维护者上传修复后实际执行记录：`pnpm run build:core` 完成；`vp test run apps/server/src/projects/project-api.store.spec.ts` **13/13**（整个文件 122 ms，原超时用例 103 ms）；D5b4c 独立只读安全门禁 **10/10**；`vp check` **386 个文件格式正确、238 个受检文件零警告/错误**；`docs:check` **89 份通过**；完整 `pnpm run ready` **57/57 文件、680/680 单测、6/6 文件、62/62 HTTP E2E、React/Vue 与 NestJS 构建成功**，最终**退出码 0**。该近 2 MiB 用例在全量并行测试中为 **254 ms**，原 5000 ms 超时未再发生，E-074 的已知质量阻塞据此关闭。GitHub 当次核对 PR #112 HEAD 为 `061c42ba756ccbf8d91788a57f615c1faac9b406`；上传日志未包含本机 `git rev-parse HEAD`，不将 Windows 实测严格绑定到该 SHA。本次补录属于后续文档变更，不冒充文档更新后已重跑 `ready`。**未创建 D5b4 专用工程；真实 PostgreSQL 目标只读核验、ACL 撤销和真实服务端拒绝均未执行。**
 
+### E-075 · Node VM 跨 Realm 嵌套请求对象导致 deepStrictEqual 误报（第三十五批 D5b5）
+
+- **现象**：维护者 2026-11-22 Windows 原生执行 `pnpm run test:published:oidc:revoke:studio:config`，新增 **11 项中 10 通过、1 失败**；唯一失败为“独立 CDP 页面函数只发一次同源 GET，不读取工程响应正文”，位置在 `scripts/test-oidc-studio-revoked-draft.cases.mjs:90`，`assert.deepStrictEqual` 报 `Values have same structure but are not reference-equal`。同轮 `vp check` **396 个格式文件、248 个受检文件零警告错误**，`docs:check` **89 份**，Vitest **680/680**；完整 `ready` 在同一个 Node 安全用例处退出码 **1**，未继续完成后续 HTTP E2E 与构建。本轮没有提供本机 `git rev-parse HEAD`，不将结果严格绑定到 GitHub SHA。
+- **已确认根因**：测试通过 `runInNewContext` 创建独立 CDP 函数，函数内部构造的 `fetch` 请求 `options` 对象具有 VM Realm 的 `Object.prototype`。外层 Node Mock 将其存入本地 `requests` 数组；即使键和值完全相同，`assert.deepStrictEqual(requests, expected)` 仍因嵌套对象的原型归属不同而失败。此前协作端隔离 V8/Mock 使用 `JSON.stringify` 模拟 `deepEqual`，**没有真实复现 Node 原生跨 Realm 严格比较语义**，因此 11/11 模拟通过并不代表正式 Node 测试通过。
+- **最小修复**：只在失败用例比较时把 `assert.deepEqual(requests, [...])` 改为 `assert.deepEqual(structuredClone(requests), [...])`，把可序列化的嵌套请求记录完整复制到当前 Node Realm 后，继续对**请求条数、路径、全部选项键值与无额外属性**进行原有严格断言。保持 `runInNewContext`、真实 `fetch` 观察、404/no-store/禁止写入及全部其他安全用例不变；不改生产代码、不关闭 Lint、不替换为只比较字符串或放宽断言。
+- **防复发**：使用 `node:vm` / CDP 独立上下文测试时，不能只对顶层对象展开或使用自行编造的简化断言器替代 Node `assert`。需要区分“跨 Realm 原型不同”与“真正请求参数错误”：保留严格比较，必要时使用受控 `structuredClone` 跨 Realm 归一化，并以字段、额外字段及数量的负向用例证明断言仍有判别力。最终仍须以原生 Node/Windows 全链实测为准。
+- **验证边界**：在协作容器 **Node v22.16.0** 使用真实 `node:vm` 与 `node:assert/strict` 最小复现：原断言抛出 `ERR_ASSERTION`，`structuredClone` 后严格断言通过；另用 6 种请求字段、条数及额外属性篡改复核，均被严格断言拒绝。**这不是仓库完整 `node --test`、Windows `vp check` 或 `ready` 在最新修复 HEAD 的通过证据**，正式复测仍待维护者执行。本次未运行真实 Keycloak/HTTPS 浏览器、数据库写入或 ACL 恢复。
+- **证据**：维护者 2026-11-22 D5b5 Windows 失败日志、`scripts/test-oidc-studio-revoked-draft.cases.mjs`、PR #118、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

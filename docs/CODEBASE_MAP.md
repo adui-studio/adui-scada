@@ -1117,3 +1117,11 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - 根 `package.json`：`test:published:oidc:revoke:single:config` 纳入 `ready`；`oidc:lab:published:revoke:single` 为必须单独授权并人工运行的受控入口，绝不自动调用。
 
 本批没有修改 NestJS ACL 管理服务、Prisma Schema/迁移、React/Vue 业务代码或工业设备，**尚未执行任何数据库写入**。
+
+## 2026-11-22 · D5b5 Studio 同工程撤权发布读取与草稿保护候选
+
+- `scripts/test-oidc-studio-revoked-draft.mjs`：双框架真实只读浏览器入口，仅接收已存在的 `d5b4-revoke-<UUIDv4>`；临时独立浏览器 Profile、BFF 可信登录、Studio 正式项目列表与首版载入、IndexedDB 草稿保存、未保存 SVG/JSON 编辑、同一工程真实发布指针 GET 404/no-store、前后本地数据与 CAS 严格比对。远端工程写请求全部拦截，不能创建工程、撤销/恢复 ACL。
+- `scripts/test-oidc-studio-revoked-draft.cases.mjs`：11 项离线 Node 测试定义，覆盖只读请求白名单、页面 CDP 自包含、响应来源/缓存、草稿准备判别力、编辑/草稿/CAS 漂移、请求多发及错误脱敏。
+- 根 `package.json`：`test:published:oidc:revoke:studio:config` 加入 `ready`；`test:published:oidc:revoke:studio:browser` 仅供真实 Lab 单独人工执行，不自动接入 `ready`。
+
+不修改 React/Vue Studio 生产源码、Schema、NestJS 授权、Prisma SQL 及工业设备功能。

@@ -3924,12 +3924,12 @@ Write-Host "D5b4g 完整质量链退出码：$LASTEXITCODE"
 
 维护者已在本机可信 OIDC/Keycloak HTTPS Lab 使用**唯一新建的 D5b4 测试工程**，按 D5b4b 创建与授权 → D5b4c/f 撤权前只读/双框架 HTTP 200 → D5b4g 定向一次 `release:read` DELETE → D5b4e/f 撤权后只读/双框架 HTTP 404 的顺序完成**真实专项终验**。完整原始输出保存在维护者对话日志；本节只记录固定命令契约与结论，不在公开仓库散布真实 UUID、Cookie、Token、连接串或工程正文。
 
-| 验收时点 | 使用的已有脚本 | 维护者真实结果 |
-| --- | --- | --- |
-| 真实工程准备 | `oidc:lab:published:revoke:fixture --apply --confirm-lab adui_scada` | 新工程、必要授权、首次真实 HTTP 200 成功 |
-| 撤权前两次数据库夹持浏览器 | `oidc:lab:published:revoke:sequence --phase before --project-id <真实工程 ID>` | PostgreSQL 四项 ACL / 原 D5b1 完整；React/Vue 各一次真实 200；停止清理通过 |
-| 唯一一次定向撤权 | `oidc:lab:published:revoke:single --project-id <真实工程 ID> --apply --confirm-lab adui_scada --confirm-project <同一 ID>` | 写入前预检、单条权限撤销、提交后数据库只读审计成功 |
-| 撤权后两次数据库夹持浏览器 | `oidc:lab:published:revoke:sequence --phase after --project-id <同一 ID>` | PostgreSQL 仅三项基础 ACL、原 D5b1 完整；React/Vue 各一次真实 404 / denied；停止清理与末次只读复核通过 |
+| 验收时点                   | 使用的已有脚本                                                                                                             | 维护者真实结果                                                                                         |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 真实工程准备               | `oidc:lab:published:revoke:fixture --apply --confirm-lab adui_scada`                                                       | 新工程、必要授权、首次真实 HTTP 200 成功                                                               |
+| 撤权前两次数据库夹持浏览器 | `oidc:lab:published:revoke:sequence --phase before --project-id <真实工程 ID>`                                             | PostgreSQL 四项 ACL / 原 D5b1 完整；React/Vue 各一次真实 200；停止清理通过                             |
+| 唯一一次定向撤权           | `oidc:lab:published:revoke:single --project-id <真实工程 ID> --apply --confirm-lab adui_scada --confirm-project <同一 ID>` | 写入前预检、单条权限撤销、提交后数据库只读审计成功                                                     |
+| 撤权后两次数据库夹持浏览器 | `oidc:lab:published:revoke:sequence --phase after --project-id <同一 ID>`                                                  | PostgreSQL 仅三项基础 ACL、原 D5b1 完整；React/Vue 各一次真实 404 / denied；停止清理与末次只读复核通过 |
 
 **顺序安全门禁已通过实际负向检验**：若在撤权之前运行 `oidc:lab:published:revoke:after` 或 `--phase after`，仍存在 `release:read`，应拒绝并在首次数据库检查处停止；维护者确实观察到这两条命令返回错误。手工 `Write-Host` 不代表任何测试通过。实际 D5b4g 撤权成功后重新运行后置检查，才得到本节最终通过结论。
 
@@ -3938,3 +3938,76 @@ Write-Host "D5b4g 完整质量链退出码：$LASTEXITCODE"
 **验收不等于全产品安全覆盖**：上述真实浏览器测试检查发布运行页 GET 200/404、no-store、拒绝状态与清理，不会自动检查 Studio IndexedDB 草稿原始字节、未保存画布、双标签页竞态、生产网络或真实 PLC/DCS。下一个独立专项可先采用纯离线设计与双框架草稿/画布保护浏览器测试，但不得为了扩展测试而重新授予目标工程的 `release:read`。如需再次验证撤权前后两态，必须另行审批新测试工程及写入授权。
 
 **证据可追溯性**：用户日志未显式打印 `git rev-parse HEAD` 及每条 `$LASTEXITCODE`，不将这些日志标为 SHA 严格绑定的自动化 CI。最终 D5b4f 正常完成信息与 D5b4g/e 成功信息是实际成功证据；文档追加本身未重新执行 `vp check`、`docs:check` 或 `ready`。
+
+## 2026-11-22 · D5b5 Studio 已撤权发布 GET 与本地草稿保护（Draft，待 Windows 真实验收）
+
+PR #117 已由维护者明确授权 Squash 合并，`main@3c2e51c385ddaacb5015b0ea600610e9f3f764a1`。历史 D5b4 专用工程已真实撤销其唯一 `release:read`，原 D5b1 工程四项权限保留；该专用工程现在仍拥有 `project:read`、`version:read`、`version:append`。**不能把撤销 `release:read` 错写成 Studio 工程载入接口失去权限**。本小批只验证两者的交叉影响，不修改生产 Vue/React 逻辑，不再次创建工程、授予、撤销或恢复 ACL。
+
+新增 `scripts/test-oidc-studio-revoked-draft.mjs`（真实只读浏览器候选）与 `scripts/test-oidc-studio-revoked-draft.cases.mjs`（11 项离线安全测试候选）。脚本只接受 `--project-id d5b4-revoke-<UUIDv4>`，必须引用**已经真实撤销 `release:read` 的同一现存工程**，不能拿 D5b1 或伪造示例 ID 冒充测试数据。其功能仅在独立临时 Chrome/Edge Profile 中验证，分 React/Vue 两个可信本机 HTTPS Origin：
+
+1. 在新页面脚本运行前安装现有 `installPublishedReadGuardInPage`，**拦截全部工程 API 的非 GET、跨 Origin、异常请求体/授权头**；真实 GET 保留正常响应。
+2. 通过正式 Studio 工程管理 UI 分页找到该**同一 D5b4 工程**，确认服务端首版修订号 1，以现有 UI 的“确认载入”只读 GET 打开；本测试不执行服务端工程保存。
+3. 在**隔离浏览器**中通过现有“保存草稿”按钮实际写入本地 IndexedDB，读取草稿记录数及 SHA-256、完整 SVG 内容（排除视口网格）、工程 JSON 导出 SHA-256、自动保存状态和服务端 CAS 基线；随后通过正式“+ 文本”按钮新增**未保存图元**，严格要求画布及工程 JSON 摘要已变化而草稿和 CAS 仍未变化。脚本故意不开启自动保存，防止测试产生非预期本地竞态。
+4. **从 Studio 页面独立调用一次**真正同源 `GET /api/v1/projects/<同一工程 ID>/releases/current`，必须返回服务器的 404、`no-store`、无重定向、精确响应地址；**不注入模拟 404、不读取正文、不执行 POST**。只检查请求结果，不把它伪称为“Studio 自身通过某个按钮消费了发布拒绝响应”。
+5. 读取第二次画布、JSON 摘要、IndexedDB 草稿数/哈希、自动保存标记及 CAS 基线，**逐项完全相等**；独立浏览器只读门禁必须显示恰好新增一条目标 GET 和零阻断写入。任何其他状态码、额外请求、错误路径或本地变化均失败。Node 侧仅打印固定中文进度及通过/失败类别，不向终端输出工程正文、Hash、Token、Cookie 或数据库连接信息。
+
+**覆盖边界**：该专项可证明已撤权发布接口的真实 404 不会因本次**独立同源 Fetch** 改写正在编辑的 Studio 画布与草稿；它**不证明** Studio 自己消费发布失败时的状态机、迟到的 200/401/404 竞争响应、多标签页并发或字节级原始 IndexedDB 文件一致性。草稿测试比较记录数与基于读取值序列化的 SHA-256，并不比较 IndexedDB 底层文件字节。已有的 Studio 401/404 模拟与 CAS 专项仍不能替代未来真实会话/并发专项。当前已撤权工程不应被重新授予 `release:read` 以强行构造 before 阶段。
+
+**本轮可先执行的离线 Windows 质量检查**：
+
+```powershell
+git fetch origin
+git switch test/b35-d5b5-studio-revoked-draft-protection
+git pull --ff-only
+git rev-parse HEAD
+
+pnpm run test:published:oidc:revoke:studio:config
+if ($LASTEXITCODE -ne 0) { throw "D5b5 Studio 草稿保护离线安全测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b5 Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b5 文档检查失败" }
+
+pnpm run ready
+Write-Host "D5b5 完整质量链退出码：$LASTEXITCODE"
+```
+
+**未来单独进行真实只读浏览器验收（本轮未执行）**：仅在上述质量链完成、可信 Keycloak/HTTPS Lab 运行且原 D5b4 工程仍存在的前提下，维护者手动输入原实际 ID 运行：
+
+```powershell
+$projectId = (Read-Host "请输入已撤权的真实 D5b4 专用工程 ID").Trim()
+pnpm run test:published:oidc:revoke:studio:browser --project-id $projectId
+Write-Host "D5b5 真实双框架浏览器退出码：$LASTEXITCODE"
+```
+
+`test:published:oidc:revoke:studio:config` 纳入根 `ready`；`test:published:oidc:revoke:studio:browser` **不纳入 `ready`**，不会在自动质量链中打开真实浏览器。协作端仅从 GitHub 回读并以隔离 V8/Mock 执行新增 11 项源测试定义，**11/11** 符合预期；**不是 Windows Node `node --test` 或真实 Chrome/Edge/PostgreSQL 执行结果**。本批没有连接 Lab 执行任何工程或 ACL 写入。
+
+## 2026-11-22 · E-075：D5b5 Windows 首轮原生 Node 测试失败后的复验顺序
+
+维护者 Windows 首轮 `test:published:oidc:revoke:studio:config` **10/11**；唯一失败为跨 `node:vm` Realm 的嵌套请求参数对象误触发 `deepStrictEqual` 原型比较。原轮 `vp check` **396/248 零错误警告**、`docs:check` **89**、Vitest **680/680**，但完整 `ready` **退出码 1**，没有继续执行 HTTP E2E、构建。当前 PR #118 修复候选对离线用例改为 `assert.deepEqual(structuredClone(requests), expected)`；不更换真实发布 GET、不删除任何断言，不调用数据库。
+
+须先在 Windows 取回最新测试分支，**打印本机 HEAD 并阻断失败**，不得将首轮的 `vp check`、`docs:check` 成功当作本次修正的验收：
+
+```powershell
+git fetch origin
+git switch test/b35-d5b5-studio-revoked-draft-protection
+git pull --ff-only
+git rev-parse HEAD
+
+pnpm run test:published:oidc:revoke:studio:config
+if ($LASTEXITCODE -ne 0) { throw "D5b5 修复后原生 Node 门禁失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b5 修复后 Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b5 修复后文档检查失败" }
+
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "D5b5 修复后完整质量链失败" }
+Write-Host "D5b5 修复后完整质量链退出码：$LASTEXITCODE"
+```
+
+真实 `test:published:oidc:revoke:studio:browser` 仍须在上述全部通过后单独人工执行，且只允许读取**先前已真实撤权的同一现存工程**。本次没有授权恢复 ACL、重新创建测试工程或执行任何数据库写入。协作端只运行了原生 Node 跨 Realm 最小复现与六种负向请求篡改检查，尚不能宣称最新 PR HEAD 的 Windows 11/11 或真实浏览器专项通过。

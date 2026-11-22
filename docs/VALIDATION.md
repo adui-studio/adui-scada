@@ -2563,3 +2563,19 @@ D5b4f 只新建只读编排脚本与 10 项 Node 安全测试，使用同一显�
 **核验证据边界**：用户提交的日志未逐条打印 `$LASTEXITCODE` 或本机 `git rev-parse HEAD`，但 D5b4f 最终成功消息只有在子步骤均返回 0 时才会输出，且没有失败或异常输出。因此记录为**基于本机真实命令成功输出的专项验收通过**，不宣称已独立核验本机提交 SHA。GitHub 记录时 `main@2dd95347c86c15261dfb71f6f0a756d9d0a61362` 是当前已合并实现，但不能据此逆推本机 HEAD 精确一致。本次文档补录没有重新运行 Windows `vp check`、`docs:check`、`ready`。
 
 **未覆盖**：真实发布态 `RELEASED`、Studio 画布/IndexedDB 草稿字节级保护、撤权期间多标签页竞态、长时断网与工业现场控制。因此仅将 **D5b4 独立测试工程的发布运行时真实撤权闭环** 标记通过，不升级为完整 SCADA 工业安全认证。测试工程保持撤权后仅三项基础 ACL 的现状，未获得额外授权前不得恢复权限或对其他工程撤权。
+
+## 2026-11-22 · D5b5 Studio 同工程撤权后发布 GET 与本地草稿保护候选
+
+PR #117 已按维护者明确授权 Squash 合并至 `main@3c2e51c385ddaacb5015b0ea600610e9f3f764a1`，补录 D5b4 真实专用工程创建、单条 `release:read` 撤销、React/Vue 200→404、前后 PostgreSQL 只读终验。该历史成功日志未附本地 Git HEAD 或所有独立退出码，补录文档时亦未重新执行完整质量链。
+
+本小批新增 `scripts/test-oidc-studio-revoked-draft.mjs` 与 **11 项** `scripts/test-oidc-studio-revoked-draft.cases.mjs`，通过现有真实 Studio 工程列表 UI 只读打开同一仍拥有三项基础 ACL 的 D5b4 工程，在隔离浏览器存储本地草稿并形成未保存画布编辑，发起独立同源真实发布指针 GET 404，前后严格比对无网格 SVG、工程 JSON SHA-256、IndexedDB 草稿数及内容摘要、自动保存状态与 CAS 基线。项目 API 的非 GET 在页面脚本执行前被已审核的只读门禁阻断。该 GET **不是 Studio 正式发布状态消费流程**，不得宣称真实 401/404 迟到处理或多标签页竞争已通过。
+
+从 GitHub 候选源码在隔离 V8/Mock 中完成两份脚本语法解析和 **11/11** 测试定义模拟执行，涵盖工程 ID 白名单、请求只读同源、404/no-store/非重定向、真实未保存图元准备、草稿/画布/CAS 漂移、额外请求和脱敏；**不是**原生 Windows Node、`vp check`、`docs:check`、完整 `ready`、真实浏览器或 PostgreSQL 实测。本批未运行任何真实远端写入，未重新授予或撤销 ACL、创建/恢复工程或修改服务端/工业设备。Windows 实际验证与浏览器结果待维护者补证。
+
+## 2026-11-22 · D5b5 Windows 首轮失败与 E-075 跨 Realm 断言最小修复
+
+维护者提供 PR #118 Windows 原始执行日志：`pnpm run test:published:oidc:revoke:studio:config` **11 项中 10 通过、1 失败**，唯一失败为独立 CDP 页面 GET 的请求记录 `assert.deepStrictEqual`，报告 `Values have same structure but are not reference-equal`，位于 `scripts/test-oidc-studio-revoked-draft.cases.mjs:90`。同轮 `vp check` **396 格式文件/248 受检零警告错误**，`docs:check` **89 份**通过；完整 `pnpm run ready` 中 Vitest **680/680** 通过，但在同一 D5b5 Node 用例处停止，**最终退出码 1**，未执行后续 HTTP E2E 和双框架构建。原日志未提供本机 `git rev-parse HEAD`。
+
+**原因**：`runInNewContext` 独立 Realm 中构造的 `fetch` 选项对象被 Node 侧 Mock 缓存为嵌套属性，虽字段相同但严格相等还比较原型；之前隔离 V8/Mock 的简化 `deepEqual` 未覆盖 Node 原生跨 Realm 对象语义，因此此前“11/11 模拟符合预期”不能替代本次原生测试失败。**最小修复只改测试 1 行**，将 `requests` 以 `structuredClone` 转到当前 Node Realm 后继续严格 `assert.deepEqual`，并未修改生产代码、请求内容、参数白名单、GET/404/no-store、草稿保护断言或安全边界。
+
+协作环境用 Node **v22.16.0** 的真实 `node:vm` / `node:assert/strict` 独立复现：旧断言触发 `ERR_ASSERTION`，新断言通过；请求方法、凭据、缓存、重定向、额外请求和多余字段六种负向篡改仍严格拒绝。**本修复 HEAD 的 Windows `node --test`、`vp check`、`docs:check`、完整 `ready` 均待维护者重新执行**。尚未执行 D5b5 真实 Keycloak/HTTPS 双框架浏览器；没有重新创建专用工程、恢复 ACL 或执行数据库写入。
