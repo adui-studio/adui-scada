@@ -2081,7 +2081,6 @@ PR #129 已在维护者 Windows D5b7d 5/5、D5b7c 14/14、Vite+ 409/261、89 份
 
 真实已发布隔离夹具、可信快照摘要/发布来源、真实 React/Vue `verified → denied` 动态撤权和独立恢复审批仍未满足，不能以合成 Mock 结案。新分支质量链需 Windows 复验。
 
-
 ## 2026-11-22 · D5b8a 正式发布安全门禁的第一段实际代码候选
 
 Issue #126 仍无合法真实 `RELEASED` 夹具，D5b7f 本机受控只读发现为 `NOT_FOUND`。维护者已提供 D5b8 Proposed ADR-0070 修复后的 Windows `docs:check` **90**、`vp check` **412/263**、Vitest **682/682**、HTTP E2E **62/62**、React/Vue/Server 构建以及完整 `ready` 的成功日志；该 PR #132 仍为 Draft，未获新的明确合并授权，不能将 ADR 视为工业安全方案已批准。

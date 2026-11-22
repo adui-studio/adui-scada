@@ -1211,7 +1211,6 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 
 不修改原 D5b7b 分类器契约、实际权限、发布状态、Prisma Schema、生产 API 或工业设备。
 
-
 ## 2026-11-22 · D5b8a 发布安全门禁受控阻塞清单
 
 - `apps/server/src/projects/project-release-safety-gate.ts`：新增 `assessProjectReleaseSafety(snapshot, context)`，对真实服务端发布输入汇总固定的上下文、Runtime、Tag 来源及工业安全未交付阻塞类别；`ProjectReleaseSafetyGate.assertReady` 已接入该检查，但仍**无条件**抛 `ProjectReleaseGateUnavailableError`，仅新增不可回传原始正文的结构化内部诊断，绝不打开发布写入。

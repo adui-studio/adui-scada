@@ -2727,7 +2727,6 @@ PR #129 已按维护者明确合并授权 Squash 合并至 `main@fb320f4731cd595
 
 **当前验证级别**：GitHub 远端代码/Schema/已有 D5b4 ACL 契约静态核对，尚未提供本批最新 HEAD 的 Node、`vp check`、`docs:check`、完整 Windows `ready` 实测日志；没有执行真实 PostgreSQL/Keycloak/浏览器操作，仍缺合法 RELEASED 夹具与实时撤权证据。此批不改生产发布安全门禁或 ACL 写入。
 
-
 ## 2026-11-22 · PR #132 Windows 修复验收与 D5b8a 服务端门禁代码候选
 
 维护者提供 PR #132 修复后 Windows 日志：`docs:check` **90 个 Markdown 通过**；`vp check` **412 个格式文件、263 个受检文件零警告或错误**；完整 `pnpm run ready` 已执行并完成 Vitest **682/682**、D5b7f Node **16/16**、D5b7c **17/17**、HTTP E2E **62/62**、Vue/React 构建、NestJS 构建，最终退出码 0（原先 E-082 的 ADR 状态失败已复验关闭）。此次用户日志未包含 HEAD，因此不能把它伪装成与 PR #132 远程最终 SHA 一一绑定；PR #132 保持 Draft，不因用户说“继续”就自动合并。
