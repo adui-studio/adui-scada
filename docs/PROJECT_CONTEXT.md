@@ -2128,3 +2128,11 @@ D5b8c 从上述主线独立分支新增服务端 Tag 数据来源阻塞细分类
 D5b8d 从合并主线独立创建候选分支，只细化服务端 `assessProjectReleaseSafety` 的工业只读风险阻塞：任何图元绑定均不能仅凭 Tag 数据源元数据推断工业通道已获只读授权；任何非空 `rules[]`（包括隐藏及非首屏图元）都属于未经审核的规则/动作面，不能按任意 JSON 内容推断执行语义或放行。新增固定诊断 `INDUSTRIAL_BINDING_POLICY_UNVERIFIED`、`INDUSTRIAL_RULES_UNREVIEWED`，与既有 Tag 来源阻塞、Core 静态规则预检及无条件 `INDUSTRIAL_READ_POLICY_UNAVAILABLE` 互补，不以描述中的“只读/已审核”字样作为可信证明。
 
 本次 **新增 3 项 Vitest 负向用例定义**，预计安全门禁从 9 项至 12 项；所有诊断只携带固定类别和常量字段路径，绝不回显节点/Tag ID、设备地址、规则正文或凭据。无客户端/网关接入、真实规则执行、数据库/ACL/Schema 变更或放行开关；`ProjectReleaseSafetyGate.assertReady` 仍无条件抛错，对外发布仍固定 HTTP 503。该 Draft PR 尚未经 Windows `vp check`、Vitest、HTTP E2E、文档或 `ready` 实测，不能把目标测试数写为通过证据。Issue #126 保持 Open；ADR-0070 继续 Proposed，工业策略审批 S0/S1 和真实 Lab 写入专项未完成。
+
+## 2026-11-22 · D5b8d 合并与 D5b8e 发布安全评估异常兜底候选
+
+维护者 Windows 日志核实 D5b8d PR #136：`test:unit` **58/58 文件、696/696 用例**（正式 Gate 12/12），`vp check` **413 个文件格式正确、264 个文件零警告/错误**，`docs:check` **90 份**，NestJS HTTP E2E **62/62**，React/Vue/NestJS 构建和完整 `ready` 均成功。日志**未打印**实际本地 Git HEAD；不把此运行结果严格绑定到远程 SHA。经维护者本轮明确授权，PR #136 已按精确远端 HEAD `a4103ab8bca6aa4a80ce4d15a6f961d1e55bf4e6` Squash 合并为 `main@e76d82e63fa36c754ed0ce0affb656c5a5bb0efb`。这些是离线质量证据，不是现场工业安全准入。
+
+D5b8e 从上述主线创建独立候选，仅处理正式发布安全评估自身的异常边界：`assessProjectReleaseSafety` 对不完整结构、异常属性读取或其他评估错误抛出原始异常时，`ProjectReleaseSafetyGate.assertReady` 不再向上冒泡原始错误文本，而是生成固定 `SAFETY_ASSESSMENT_UNAVAILABLE` + `assessment` 内部阻塞并抛原有 `ProjectReleaseGateUnavailableError`，继续由 HTTP 层返回固定中文 503。正常评估的阻塞顺序和安全策略一律不变。
+
+新增 **2 项** Vitest 负向用例定义：破损 Tag 目录/零数据库查询、恶意属性读取异常中不泄露原始敏感文本。测试目标是 Gate 由 12 项增至 14 项，全量单测由 696 项增至 698 项，**新分支尚未实测**。服务端发布事务、Prisma、ACL、Client/Runtime、工程 Schema 和工业网关均未修改；正式发布仍无条件拒绝。Issue #126 保持 Open，ADR-0070 继续 Proposed，不批准真实已发布夹具或设备控制。
