@@ -36,7 +36,10 @@ export function assessProjectReleaseSafety(
   if (!context.tenantId || !context.actorId || !context.projectId) {
     blocks.push({ code: "UNTRUSTED_CONTEXT", path: "context" });
   }
-  if (snapshot.projectId !== context.projectId || snapshot.document.projectId !== context.projectId) {
+  if (
+    snapshot.projectId !== context.projectId ||
+    snapshot.document.projectId !== context.projectId
+  ) {
     blocks.push({ code: "PROJECT_MISMATCH", path: "snapshot.projectId" });
   }
   if (!validateProjectReleasePreflight(snapshot.document).passed) {
