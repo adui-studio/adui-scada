@@ -679,6 +679,18 @@
 - **验证边界**：本批源码修复后的 Node 门禁预计由 7 项升至 10 项；需在 Windows 最新 PR HEAD 重新执行 `test:published:oidc:authorized:config`、`vp check`、`docs:check` 和完整 `ready`。真实 Keycloak/HTTPS 的 `UNRELEASED` 仍必须先有**实际存在且已授权**的隔离工程，`RELEASED` 仍需已合法预置发布快照；两种真实浏览器均未通过。无数据库、API、ACL、发布记录、Schema 或工业设备读写更改。
 - **证据**：维护者 2026-11-20 本轮 Windows 真实浏览器日志、先前 D5b1 离线质量日志、PR #107、`scripts/test-oidc-published-runtime-authorized.mjs`、`scripts/test-oidc-published-runtime-authorized.cases.mjs`、`docs/HARNESS.md` 与 `docs/VALIDATION.md`。
 
+### E-074 · 接近 2 MiB 的测试请求在构造期间重复序列化导致 5 秒超时（第三十五批 D5b4c）
+
+- **现象**：维护者 2026-11-22 在 PR #112 Windows 执行 `test:published:oidc:revoke:target:config` **10/10**、`vp check` **386 格式文件 / 238 受检文件零警告错误**、`docs:check` **89** 份均通过；完整 `pnpm run ready` 在全量 Vitest **57 个文件、680 项单测**中，`apps/server/src/projects/project-api.store.spec.ts` 的“接近 2 MiB 的合法请求若最终快照超限则受控拒绝且不写入”触发 `Test timed out in 5000ms`，当轮记录该项耗时约 **14.1 秒**、总数 **679/680**、`ready` 退出码 **1**。后续 E2E、文档和构建步骤因命令链中断未执行。
+- **已确认的测试代码性能风险**：该用例原来每添加一个 `paddingN` 属性，就重新对整份日益接近 2 MiB 的 `{ expectedRevision, document }` 调用 `JSON.stringify` 与 `TextEncoder.encode`，最多执行 256 次完整编码，累计拷贝的数据量远大于最终请求；高负载 Windows 并行测试时容易超过统一 5000 ms 超时。日志无法独立证明所有耗时只由重复编码造成，不应将本次失败归因于 Prisma、真实 PostgreSQL 或生产发布大小校验。
+- **最小修复**：只优化该测试的填充夹具：初始编码一次空 `props` 请求，随后按每个固定 ASCII 字段名的 JSON 引号、冒号、逗号和不超过 8192 的填充值累计字节；结束时再完整编码一次进行独立比对。仍严格断言请求 **`PROJECT_SNAPSHOT_MAX_BYTES - 24` 字节**、创建快照时受控抛出“工程版本快照超过 2 MiB 限制”、Prisma 事务和工程 INSERT **从未发生**。不增大测试超时，不改业务限制、Schema、生产快照构造或权限。
+- **防复发**：临近容量上限的性能/安全边界测试，应先计算固定序列化开销并增量构造，最后只做一次独立全量序列化核验；不在逐项填充循环内重复序列化整个大型对象。必须检查 UTF-8 与 ASCII 长度假设、Schema 单属性 **8192** 和对象 **256** 项限制，不弱化负向拒绝断言。
+- **验证边界**：已对与原测试等价的纯 ASCII 模拟数据比对新旧构造字节数、字段数量和最后字段长度一致；该模拟**不是** Windows TypeScript / 仓库 Vitest 验收。修复后的定向 `vp test`、`vp check`、`docs:check` 与完整 `ready` 仍待维护者复验。PR #112 必须继续保持 Draft，不能依据修复前的 679/680 结果合并。
+- **证据**：维护者 2026-11-22 上传的 `ready` 原始 Vitest 失败日志、`apps/server/src/projects/project-api.store.spec.ts` 及 `packages/core/src/document.ts`、`docs/VALIDATION.md`、PR #112。
+
+
+> **2026-11-22 · E-074 Windows 修复结案补录**：维护者上传修复后实际执行记录：`pnpm run build:core` 完成；`vp test run apps/server/src/projects/project-api.store.spec.ts` **13/13**（整个文件 122 ms，原超时用例 103 ms）；D5b4c 独立只读安全门禁 **10/10**；`vp check` **386 个文件格式正确、238 个受检文件零警告/错误**；`docs:check` **89 份通过**；完整 `pnpm run ready` **57/57 文件、680/680 单测、6/6 文件、62/62 HTTP E2E、React/Vue 与 NestJS 构建成功**，最终**退出码 0**。该近 2 MiB 用例在全量并行测试中为 **254 ms**，原 5000 ms 超时未再发生，E-074 的已知质量阻塞据此关闭。GitHub 当次核对 PR #112 HEAD 为 `061c42ba756ccbf8d91788a57f615c1faac9b406`；上传日志未包含本机 `git rev-parse HEAD`，不将 Windows 实测严格绑定到该 SHA。本次补录属于后续文档变更，不冒充文档更新后已重跑 `ready`。**未创建 D5b4 专用工程；真实 PostgreSQL 目标只读核验、ACL 撤销和真实服务端拒绝均未执行。**
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

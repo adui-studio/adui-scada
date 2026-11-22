@@ -2490,3 +2490,23 @@ E-073 候选改为同时识别成功/拒绝/离线/错误终态，对单一 GET 
 D5b4a 真实本机 PostgreSQL READ ONLY 预检和 Windows 质量链均由维护者确认退出码 **0**。新增 10/10 Node；`vp check` 382/234 零告警，`docs:check` 89 份；完整 `ready` 680/680 单测、62/62 E2E、React/Vue/NestJS 构建成功，退出码 0；PR #110 Squash 合并至 `main@bbcf827b95d609b73052aaa2076d137ae01e92b5`。数据库无 D5b4 工程，原 D5b1 专用工程和四项 ACL 未变。
 
 本批 D5b4b 只新增独立测试工程准备脚本与 11 项 Node 守卫：命令 `oidc:lab:published:revoke:fixture` 默认仅只读检查前置条件，唯一候选写入模式要求 `--apply --confirm-lab adui_scada` 且需维护者另外授权；正式工程 API 仅创建 `d5b4-revoke-<UUIDv4>` 的最小空白首版；新增 ACL 只允许该工程的 `release:read`，整个过程中事务内核对 D5b1 原 ACL 保持完整。真实浏览器在创建后只读验证 200/UNRELEASED。未在本批执行写入、撤权或双框架 HTTP 404 真实验收。候选 Windows `ready` 与真实预检尚待执行，不能计入已通过项。
+
+## 2026-11-22 · D5b4b 已验收合并，D5b4c 单工程只读预检候选
+
+维护者提交 Windows 真实日志：D5b4b 安全门禁 **11/11**、`vp check` **384 格式文件 / 236 受检文件零警告**、`docs:check` **89** 份、完整 `pnpm run ready` **680/680** 单测与 **62/62** E2E，双框架与 NestJS 构建成功，退出码 **0**；真实 PostgreSQL Lab 默认只读预检退出码 **0**。PR #111 Squash 合并到 `main@67526a8972f90325ed534ef8c05a5d43cffd7357`；**尚无 D5b4 工程或真实撤权**。
+
+新增 D5b4c `preflight-oidc-published-revocation-target.mjs` 和 10 项 Node 只读安全测试；严格从参数传入受控 `d5b4-revoke-<UUIDv4>` 工程，PG `REPEATABLE READ READ ONLY` 原子快照比对 D5b4 工程唯一性、首版/审计/未发布、恰好四项权限以及 D5b1 基线工程完整性。结束后 ROLLBACK，拒绝任何工程/ACL 写入。新专用工程尚未创建，真实预检不应被当成已通过；Windows 质量链和 Node 10 项仍待验收。
+
+## 2026-11-22 · D5b4c 首轮 Windows 质量链 5 秒超时与最小修复候选
+
+维护者提交的真实日志显示：`test:published:oidc:revoke:target:config` **10/10 通过**，`vp check` **386 格式文件/238 受检文件零告警**，`docs:check` **89 份**；完整 `ready` 的单元测试运行到 **679/680**，仅原有 `project-api.store.spec.ts` 接近 2 MiB 边界用例在 Vitest 默认 **5000ms** 内没有完成（该用例耗时约 14.1 秒），因此 `ready` **退出码 1**；后续 E2E、文档和构建**没有执行**，不可写成通过。D5b4 独立工程还未创建，实际数据库只读目标核验尚无夹具且未运行。
+
+PR #112 补丁仅优化测试用例构造方式：把循环里最多 256 次整份接近 2 MiB JSON 序列化，改为初始 1 次和完成时 1 次序列化，中间累积 ASCII 字段与填充值的精确字节；保持每字段 8192 字符上限、请求容量 `PROJECT_SNAPSHOT_MAX_BYTES - 24`、受控超限异常、事务和工程 INSERT 零调用的断言。无生产代码、权限、Prisma 或快照上限变更。新逻辑仅作隔离纯 JS 等价性检查；`vp test run apps/server/src/projects/project-api.store.spec.ts`、`vp check`、`docs:check` 和完整 `pnpm run ready` **仍需在 Windows 当前最新 PR HEAD 重新执行**。参见 `docs/AI_MISTAKES.md` E-074。
+
+## 2026-11-22 · D5b4c PR #112 Windows 修复后全量质量链通过（合并前验收）
+
+维护者上传的 Windows PowerShell 原始输出确认：`pnpm run build:core` 成功；`vp test run apps/server/src/projects/project-api.store.spec.ts` **13/13**，其中接近 2 MiB 的合法请求与超限拒绝用例 **103 ms**，整份定向测试 **122 ms**。新增 `pnpm run test:published:oidc:revoke:target:config` **10/10**；`vp check` **386 个文件格式正确、238 个受检文件零警告/Lint/类型错误**；`pnpm run docs:check` **89 个 Markdown 通过**。修复后完整 `pnpm run ready` 包含 **57/57 单元测试文件、680/680 测试**（近 2 MiB 用例全量并行耗时 **254 ms**）、**6/6 HTTP E2E 文件、62/62 测试**、SSE/本机安全配置及 React/Vue 与 NestJS 构建，命令最终打印 **退出码 0**。首轮 **679/680、退出码 1** 的历史失败记录保留，不代表当前仍受该超时阻塞。
+
+GitHub 合并前复核 PR #112 候选 HEAD 为 `061c42ba756ccbf8d91788a57f615c1faac9b406`，对 `main@67526a8972f90325ed534ef8c05a5d43cffd7357` 领先 3 提交、落后 0 提交，Draft 且 Assignee 为 `@adui-dev`。**原始 Windows 复验日志未包含本地 `git rev-parse HEAD`**，因此不把运行结果伪称为对该 SHA 的严格本机绑定。本段属于验收后文档补录，不能视为补录提交再次完成 Windows `docs:check` 或 `ready`。
+
+本小批只完成独立工程**存在后**的只读 SQL 门禁和离线安全测试。维护者尚未授权创建 `d5b4-revoke-<UUIDv4>` 工程，故真实 PostgreSQL 目标预检前置条件不足，**未运行、不得伪造成功**；没有执行 ACL 删除、恢复、真实授权 404、发布状态写入或工业设备操作。后续创建专用工程与真实撤权须分别获得明确授权。

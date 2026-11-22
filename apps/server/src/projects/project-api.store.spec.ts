@@ -236,22 +236,29 @@ describe("工程 API 事务仓储", () => {
     const document = createDocument();
     const props: Record<string, string> = {};
     document.pages[0].nodes[0].props = props;
-    for (let index = 0; index < 256; index += 1) {
-      const field = "padding" + index;
-      props[field] = "";
-      const bytes = new TextEncoder().encode(
-        JSON.stringify({ expectedRevision: null, document }),
-      ).byteLength;
-      const remaining = PROJECT_SNAPSHOT_MAX_BYTES - bytes - 24;
-      if (remaining <= 0) break;
-      props[field] = "a".repeat(Math.min(8_192, remaining));
-      if (remaining <= 8_192) break;
-    }
-
-    const requestBytes = new TextEncoder().encode(
+    const encoder = new TextEncoder();
+    const targetBytes = PROJECT_SNAPSHOT_MAX_BYTES - 24;
+    let estimatedBytes = encoder.encode(
       JSON.stringify({ expectedRevision: null, document }),
     ).byteLength;
-    expect(requestBytes).toBe(PROJECT_SNAPSHOT_MAX_BYTES - 24);
+
+    // 每次只累计新增 ASCII 字段的字节，避免循环重复序列化不断增大的 2 MiB 文档。
+    for (let index = 0; index < 256; index += 1) {
+      const field = "padding" + index;
+      const fieldOverhead = JSON.stringify(field).length + 3 + (index === 0 ? 0 : 1);
+      const remaining = targetBytes - estimatedBytes - fieldOverhead;
+      if (remaining < 0) break;
+      const length = Math.min(8_192, remaining);
+      props[field] = "a".repeat(length);
+      estimatedBytes += fieldOverhead + length;
+      if (length < 8_192) break;
+    }
+
+    const requestBytes = encoder.encode(
+      JSON.stringify({ expectedRevision: null, document }),
+    ).byteLength;
+    expect(requestBytes).toBe(estimatedBytes);
+    expect(requestBytes).toBe(targetBytes);
 
     const harness = createHarness();
     await expect(harness.store.create(PRINCIPAL, { document })).rejects.toThrow(
