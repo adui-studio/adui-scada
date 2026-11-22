@@ -14,6 +14,7 @@ export interface ProjectReleaseSafetyContext {
 export type ProjectReleaseSafetyBlockCode =
   | "UNTRUSTED_CONTEXT"
   | "PROJECT_MISMATCH"
+  | "SAFETY_ASSESSMENT_UNAVAILABLE"
   | "RUNTIME_COMPATIBILITY_UNVERIFIED"
   | "TAG_SOURCE_UNVERIFIED"
   | "TAG_BINDING_SOURCE_UNVERIFIED"
@@ -113,7 +114,13 @@ export class ProjectReleaseSafetyGate {
     snapshot: ProjectSnapshot,
     context: ProjectReleaseSafetyContext,
   ): Promise<void> {
-    const blocks = assessProjectReleaseSafety(snapshot, context);
+    let blocks: readonly ProjectReleaseSafetyBlock[];
+    try {
+      blocks = assessProjectReleaseSafety(snapshot, context);
+    } catch {
+      // 评估器遇到异常数据时不得透传原始错误、工程内容或设备信息。
+      blocks = [{ code: "SAFETY_ASSESSMENT_UNAVAILABLE", path: "assessment" }];
+    }
     throw new ProjectReleaseGateUnavailableError(blocks);
   }
 }

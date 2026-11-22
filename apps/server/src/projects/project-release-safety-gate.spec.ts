@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { createProjectSnapshot, waterTreatmentDemoDocument } from "@adui/scada-core";
-import type { ScadaDocument } from "@adui/scada-core";
+import type { ProjectSnapshot, ScadaDocument } from "@adui/scada-core";
 import type { Prisma } from "../generated/prisma/client.js";
 import {
   assessProjectReleaseSafety,
@@ -221,6 +221,49 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
       "RUNTIME_ADMISSION_UNAVAILABLE",
       "INDUSTRIAL_READ_POLICY_UNAVAILABLE",
     ]);
+  });
+
+  it("破损 Tag 目录使评估失败时仍返回固定拒绝且不调用数据库", async () => {
+    const snapshot = await snapshotOf();
+    const invalid = {
+      ...snapshot,
+      document: { ...snapshot.document, tags: null },
+    } as unknown as ProjectSnapshot;
+    const query = vi.fn<() => Promise<unknown[]>>();
+    const transaction = { $queryRaw: query } as unknown as Prisma.TransactionClient;
+    const gate = new ProjectReleaseSafetyGate();
+
+    await expect(gate.assertReady(transaction, invalid, CONTEXT)).rejects.toMatchObject({
+      name: "ProjectReleaseGateUnavailableError",
+      message: "正式发布安全门禁尚未完成，当前请求已被安全拒绝",
+      blocks: [{ code: "SAFETY_ASSESSMENT_UNAVAILABLE", path: "assessment" }],
+    });
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it("评估抛出的原始敏感错误不得进入正式发布诊断", async () => {
+    const snapshot = await snapshotOf();
+    const sensitive = "测试用不可信设备凭据内容";
+    const document = { ...snapshot.document };
+    Object.defineProperty(document, "tags", {
+      enumerable: true,
+      get() {
+        throw new TypeError("工程数据读取异常：" + sensitive);
+      },
+    });
+    const invalid = { ...snapshot, document } as unknown as ProjectSnapshot;
+    const gate = new ProjectReleaseSafetyGate();
+    const transaction = {} as Prisma.TransactionClient;
+
+    const pending = gate.assertReady(transaction, invalid, CONTEXT);
+    const failure = await pending.catch((cause: unknown) => cause);
+    expect(failure).toBeInstanceOf(ProjectReleaseGateUnavailableError);
+    expect(failure).toMatchObject({
+      name: "ProjectReleaseGateUnavailableError",
+      message: "正式发布安全门禁尚未完成，当前请求已被安全拒绝",
+      blocks: [{ code: "SAFETY_ASSESSMENT_UNAVAILABLE", path: "assessment" }],
+    });
+    expect(JSON.stringify(failure)).not.toContain(sensitive);
   });
 
   it("生产门禁对所有工程抛出原有安全拒绝，且不触发任何数据库操作", async () => {

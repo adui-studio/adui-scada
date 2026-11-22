@@ -2846,3 +2846,31 @@ Write-Host "D5b8d Windows 离线验收通过" -ForegroundColor Green
 ```
 
 该验收不包含真实 `adui_scada_test` PostgreSQL、Keycloak/HTTPS 已发布夹具、工业网关白名单、真实 Tag 质量/时效、规则安全审计或任何发布/撤权操作。ADR-0070 S0～S5 授权不得因单测绿灯而自动获得；生产 HTTP 503、禁止设备写入与 Issue #126 Open 均保持不变。
+
+## 2026-11-22 · D5b8d Windows 实测与 D5b8e 安全评估异常兜底待验收
+
+D5b8d PR #136 已由维护者 Windows 实测 **696/696 Vitest**（Gate **12/12**）、HTTP E2E **62/62**、Vite+ **413 格式文件/264 受检零告警错误**、Markdown **90** 份及完整 `pnpm run ready` 成功，随后凭维护者本轮明确授权 Squash 合并至 `main@e76d82e63fa36c754ed0ce0affb656c5a5bb0efb`。该日志未打印 `git rev-parse HEAD`，不能据此声称本机测试已严格绑定远端 HEAD；也未做真实工业网关或已发布夹具现场验证。
+
+D5b8e 候选只改 `ProjectReleaseSafetyGate.assertReady` 的**评估异常**拒绝分类：发生评估错误时返回唯一固定内部代码 `SAFETY_ASSESSMENT_UNAVAILABLE`，不透出原始属性 getter 异常与工程数据；仍抛既有固定安全错误，对外 HTTP 503 不变。2 项新 Vitest 测试为**定义**而非已运行结果，预计 Gate **14**、全量单测 **698**，必须以本机实际输出为准。
+
+在本地同步 D5b8e Draft PR 后执行：
+
+```powershell
+git rev-parse HEAD
+
+pnpm run test:unit
+if ($LASTEXITCODE -ne 0) { throw "D5b8e 单元测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b8e Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b8e 文档检查失败" }
+
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "D5b8e 完整质量链失败" }
+
+Write-Host "D5b8e Windows 离线验收通过" -ForegroundColor Green
+```
+
+本次静态代码和 GitHub 差异核查不能替代上述实际 Vitest/Vite+。未执行正式发布 POST、ACL 更改、现场只读策略/Tag 数据源验收、真实 OIDC 已发布快照及动态撤权。正式 `assertReady` 在正常和异常路径均固定拒绝；Issue #126 Open、ADR-0070 Proposed。
