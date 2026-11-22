@@ -2081,7 +2081,6 @@ PR #129 已在维护者 Windows D5b7d 5/5、D5b7c 14/14、Vite+ 409/261、89 份
 
 真实已发布隔离夹具、可信快照摘要/发布来源、真实 React/Vue `verified → denied` 动态撤权和独立恢复审批仍未满足，不能以合成 Mock 结案。新分支质量链需 Windows 复验。
 
-
 ## 2026-11-22 · D5b8a 正式发布安全门禁的第一段实际代码候选
 
 Issue #126 仍无合法真实 `RELEASED` 夹具，D5b7f 本机受控只读发现为 `NOT_FOUND`。维护者已提供 D5b8 Proposed ADR-0070 修复后的 Windows `docs:check` **90**、`vp check` **412/263**、Vitest **682/682**、HTTP E2E **62/62**、React/Vue/Server 构建以及完整 `ready` 的成功日志；该 PR #132 仍为 Draft，未获新的明确合并授权，不能将 ADR 视为工业安全方案已批准。
@@ -2105,3 +2104,11 @@ D5b7f 的无 ID 受控只读发现已通过维护者 Windows 16/16 Node、Vite+ 
 针对唯一开放的普通 Issue #126，从最新 main 建立 `chore/d5b8-published-fixture-design`，新增 [ADR-0070](adr/0070-isolated-published-fixture-safety-review.md) 的 **Proposed** 独立 Lab 已发布夹具准入设计。原则是必须先完成并安全验收真正的 `ProjectReleaseSafetyGate`；禁止 SQL 伪造状态、环境开关、仅测试宽松 Provider、复用 D5b1/D5b4 或无条件 Mock。设计了审批职责、最小无设备数据静态快照边界（是否合格须评审）、单次正式 API 发布、真实不可变快照/双框架运行读证据、单项撤权授权以及保留/恢复与 LF-01～LF-12 未来测试矩阵。
 
 **此分支只包含文档候选**；没有新增生产代码、数据库 SQL、迁移、API、运行时、工程权限写入、真实发布或设备动作。ADR 尚未获得维护者工业安全评审批准，不等于任何发布/撤权授权；Windows 文档和质量链待维护者验收，Issue #126 保持 Open。
+
+## 2026-11-22 · D5b8b 已发布 Runtime 兼容性二次准入候选
+
+PR #132、#133 已按维护者明确授权先后 Squash 合并，主线分别为 `86d078b942766d9bac2e5d383e91295385260621` 与 `129f804b2c3ff0055ef3b9d6a554e02c5e8c9aae`；前者仅归档 ADR-0070 Proposed，后者使正式发布门禁能生成内部受控阻塞清单，但仍无条件返回 503。
+
+本轮 D5b8b 在共享 `PublishedRuntime` 接受已验证 RELEASED 快照后、进入 `verified` 前，重新运行现有 Core `validateProjectReleasePreflight`；对静态 `publishedSnapshotSvg` 增加相同的只读兼容性拒绝。有效 SHA-256 但包含当前运行时不支持的图元版本、规则或绑定时不得以 `verified` 展示，也不得静默生成降级静态画面。变更完全位于共享 Runtime，不引入框架分叉、外部数据源、设备写入或发布事务改动。
+
+新增两组负向 Vitest 测试定义，分别覆盖已验证发布状态拒绝及静态 SVG 拒绝。当前 GitHub 分支代码尚无 Windows 原生 `vp check`、Vitest、`docs:check`、完整 `ready` 和 React/Vue 浏览器实测；不能声称已通过。正式发布 `ProjectReleaseSafetyGate` 仍固定拒绝，真实 Tag/资源可用性与工业只读准入及独立审批仍未完成，Issue #126 保持 Open。

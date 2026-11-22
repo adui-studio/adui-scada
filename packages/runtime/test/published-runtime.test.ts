@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { createProjectSnapshot, waterTreatmentDemoDocument } from "@adui/scada-core";
+import type { ScadaDocument } from "@adui/scada-core";
 import { PublishedRuntime, initialPublishedRuntimeState } from "../src/published-runtime.ts";
 import type { PublishedReleaseReader, PublishedRuntimeState } from "../src/published-runtime.ts";
 
@@ -72,6 +73,34 @@ describe("共享正式发布 Runtime 只读加载状态", () => {
       snapshot: { contentHash: data.releasedContentHash, revision: 1 },
     });
     expect(Object.isFrozen(runtime.snapshot().snapshot?.document)).toBe(true);
+  });
+
+  it("摘要真实有效但图元版本不被当前 SVG Runtime 支持时仍拒绝 verified", async () => {
+    const document = JSON.parse(JSON.stringify(waterTreatmentDemoDocument)) as ScadaDocument;
+    document.pages[0]!.nodes[0]!.symbolVersion = "2";
+    const snapshot = await createProjectSnapshot(document, {
+      revision: 1,
+      createdAt: "2026-11-19T00:00:00.000Z",
+    });
+    const response = {
+      ...(await published()),
+      snapshot,
+      releasedContentHash: snapshot.contentHash,
+    };
+    const readCurrentRelease = vi
+      .fn<PublishedReleaseReader["readCurrentRelease"]>()
+      .mockResolvedValue(response);
+    const { runtime, states } = fixture({ readCurrentRelease });
+    await runtime.load(projectId);
+    expect(states.map((state) => state.status)).toEqual(["loading", "error"]);
+    expect(runtime.snapshot()).toMatchObject({
+      status: "error",
+      snapshot: null,
+      releaseGeneration: null,
+      tagQuality: "UNAVAILABLE",
+    });
+    expect(runtime.snapshot().message).not.toContain(document.pages[0]!.nodes[0]!.id);
+    expect(readCurrentRelease).toHaveBeenCalledTimes(1);
   });
 
   it("断网时立即撤去可显示的发布快照，不把旧画面伪装成在线画面", async () => {
