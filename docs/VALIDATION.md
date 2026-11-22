@@ -2667,3 +2667,13 @@ E-079 候选只将这一处 `switchToTab(browser, second)` 延后到两个原始
 **重要限制**：这只证明已撤权工程在运行页真实隐藏重显期间的拒绝和零陈旧显示；不覆盖真实已发布快照从 `verified` 到撤权的竞态、Studio 业务预检迟到拒绝、网络 TCP 级请求乱序、实时 Tag 正常质量、真实发布/回滚写入或工业设备。无写入模式、不新建工程、不变更 ACL、不再次撤权，也不运行现场设备指令。
 
 新增 `test:published:oidc:revoke:visibility:config`（13 项 Node 安全回归定义，纳入 `ready`）和独立的 `test:published:oidc:revoke:visibility:browser`（真实浏览器，需要手动登录，**不纳入 `ready`**）。新代码刚提交 GitHub，协作端无法运行本机 pnpm/Vite+/Keycloak；**本批的 Windows Node/Vite+/docs/ready、真实 React/Vue 专项及数据库事后复核均待实际执行**。本批保持 Draft，未经维护者再次明确授权不得合并。
+
+## 2026-11-22 · D5b6 真实双框架隐藏重显与数据库前后只读审计结案
+
+**已补齐 Windows 真实验收**：维护者在本机完成 `test:published:oidc:revoke:visibility:browser`，脚本启动独立隔离 Chrome/Keycloak 会话，React 和 Vue 两端各自按真实“已发布运行”业务入口完成：初始零 GET → 首次真实 `404 + no-store + 无重定向` 并进入 `denied` → 第二标签使运行页隐藏并清空为 `idle`，无新增 GET → 第一标签恢复可见后发起恰好第二次真实 404 并继续 `denied` → 点击“停止读取”后保持 `idle`、无第三次 GET。原守卫同时核对工程只读、发布快照/代次/修订为空和 Tag 质量不可用。React 和 Vue 各自报告全阶段通过，实际进程结束后 `$LASTEXITCODE` 检查未触发异常，**真实浏览器专项退出码 0**。
+
+**数据库前后对照**：同一已存在的随机 D5b4 专用工程在浏览器执行**前**和执行**后**均实际运行 `pnpm run oidc:lab:published:revoke:after --project-id <既有工程ID>`，两次 PostgreSQL **READ ONLY** 审计都通过：仅缺少 `release:read`，其他三项授权和原 D5b1 基线保持完整；命令明确未执行数据库写入或授权恢复。**只读状态符合预期，不单独证明撤权操作何时发生**。未新建工程、发布版本、恢复 ACL 或执行工业设备操作。
+
+**版本关联**：维护者在浏览器完成后的同一 Windows 仓库明确打印 `git rev-parse HEAD = eda30a5f66930dfbfc9b39f404e1161e157b0613`，与 PR #122 合并前最终 HEAD 一致。PR #122 已按维护者明确授权 Squash 合并为 `main@28c057b5e551c54bc95c0864753718e0a8b348d4`；这是合并对应的内容来源，**并非声称 Windows 真实浏览器直接运行在该 Squash SHA**。此前维护者 Windows 已验证 D5b6 Node **13/13**、`vp check` **403 文件格式正确/255 受检零警告错误**、`docs:check` **89 份**、Vitest **680/680**、HTTP E2E **62/62**、React/Vue/NestJS 构建与完整 `pnpm run ready` **退出码 0**。
+
+**结论与边界**：D5b6 已撤权运行页真实隐藏/重显、再次拒绝、停止清理及数据库前后只读状态的双框架验收完成，可据此结案 Issue #123。该验收仅针对已撤权且无可读取正式发布内容的工程，**不代表**真正已发布 `verified → denied` 运行中授权撤销竞态、迟到响应状态机、真实网络故障、生产发布/回滚写入或工业现场安全验证通过。本次仅补录文档，没有重新执行 Windows `vp check`、`docs:check` 或 `ready`；文档提交需要单独静态验收。
