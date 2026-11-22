@@ -1304,3 +1304,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-tag-quality.ts`：新增 `classifyNumericAlarmSample`，复用 Tag 值校验，仅将 GOOD 且有限数值的数据标记为未来数值规则的输入候选；其余合法样本给出不包含原工艺数值的拒绝原因。
 - `packages/core/test/alarm-tag-quality.test.ts`：5 项单测定义覆盖正常与零值、三种非 GOOD 质量、非数值、非法元数据和只读输入。
 - `packages/core/src/index.ts`：公共导出函数与 `NumericAlarmSample` 类型。无服务端报警 API、Vue/React UI、设备网关、TagStore 行为或发布安全门禁变更。
+
+## 2026-11-22 · D5b9g 数值报警时间窗口筛选
+
+- `packages/core/src/alarm-tag-freshness.ts`：显式当前时间与最大年龄，先复用数值质量分类，再拒绝未来/超龄 `serverTimestamp`；不产生报警事件。
+- `packages/core/test/alarm-tag-freshness.test.ts`：6 项测试定义覆盖窗口边界、超龄、未来时间、质量与非数值、非法参数、来源时间不代替平台时间和只读输入。
+- `packages/core/src/index.ts`：共享导出，供未来 Vue/React 与服务端共用。未改变 TagStore、Runtime、NestJS、Prisma 或工业网关。
