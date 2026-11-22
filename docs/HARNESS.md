@@ -4083,3 +4083,52 @@ Write-Host "D5b5b 双标签页真实只读专项退出码：$LASTEXITCODE"
 ```
 
 协作端仅回读 GitHub 源码、执行新脚本 V8 语法解析和 **11/11 隔离 V8/Mock 测试定义**；**不是 Windows 原生 Node `node --test`、`vp check`、`ready`、真实 Chrome/Edge 或 PostgreSQL 结果**。本小批没有连接 Lab，也没有进行任何远端写入。
+
+## 2026-11-22 · D5b5c React/Vue 双标签真实 404 响应逆序交付（Draft 候选）
+
+PR #120 已经维护者明确授权并 Squash 合并至 `main@eb3fdc5105d3cb5d88593db7fffd7702e91625c8`。维护者 Windows 的 D5b5b 离线门禁 **11/11**、`vp check` **398/250 零错误警告**、`docs:check` **89**、完整 `ready`（Vitest **680/680**、HTTP E2E **62/62**、React/Vue/NestJS 构建成功）**退出码 0**。日志未打印本地 `git rev-parse HEAD`，不把上述通过严格绑定到 GitHub SHA。**D5b5b 的真实 Keycloak/Chrome 双标签页专项尚未提供通过日志**，不得据此宣称浏览器已验收。
+
+本批只扩展 **两个同 Origin、同临时 Chrome Profile 标签页各自独立发起的真实发布 GET 404 的页面交付时序**。复用已撤销 `release:read` 的唯一 D5b4 工程、可信 Keycloak/BFF 会话、Studio 正式 UI 首版只读载入及第一标签页仅一次 IndexedDB 本地草稿保存。两个标签各自追加未保存文本、读取无网格 SVG、工程 JSON、草稿 SHA-256 与 CAS 基线；工程 API 继续由导航前的只读守卫保护。
+
+实现策略：两页分别通过原生 `fetch` 完成真实网络 GET 404，现有守卫先记录实际状态码；新增页面门禁**不模拟 Response，不重写 HTTP 状态，也不阻断底层网络**，仅暂缓 Promise 向各发起页交付已经返回的原始 Response。必须确认第一、第二标签的两个 Promise **同时 pending**，并在两页未保存内容、草稿和 CAS 不变的条件下先释放**第二页**、再释放**第一页**；每次都核对恰好新增一条原始 GET、`404 + no-store + 无重定向`、零工程写入以及完整快照不变。异常只输出脱敏的固定阶段与类别。
+
+**不覆盖**：服务端 TCP/HTTP 网络层同时挂起、两个实际请求的服务端处理顺序、Studio 正式发布预检组件对迟到 200/401/404 的消费、客户端写入 CAS、跨框架共享同一个 Origin 或 IndexedDB 文件字节级比较。两个框架各在自身 Origin 独立测试两标签页。不得为执行专项新建工程、恢复 `release:read`、再次执行撤权、向生产库写入或访问工业设备。
+
+Windows 质量链先单独验收（必须检查 `HEAD` 和退出码）：
+
+```powershell
+git fetch origin
+git switch test/b35-d5b5c-revoked-late-read
+git pull --ff-only
+git rev-parse HEAD
+
+pnpm run test:published:oidc:revoke:late:config
+if ($LASTEXITCODE -ne 0) { throw "D5b5c 离线响应时序测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b5c Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b5c 文档检查失败" }
+
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "D5b5c 完整质量链失败" }
+Write-Host "D5b5c 质量链退出码：$LASTEXITCODE"
+```
+
+质量链通过后，若既有隔离 Lab 中 D5b4 工程的三项基础 ACL 仍完整，先执行 PostgreSQL **只读**后置审计，再在独立浏览器真实执行 D5b5b 顺序回归及 D5b5c 逆序响应专项：
+
+```powershell
+$projectId = (Read-Host "请输入已撤权的真实 D5b4 专用工程 ID").Trim()
+pnpm run oidc:lab:published:revoke:after --project-id $projectId
+if ($LASTEXITCODE -ne 0) { throw "D5b4e 撤权后数据库只读审计失败" }
+
+pnpm run test:published:oidc:revoke:multitab:browser --project-id $projectId
+if ($LASTEXITCODE -ne 0) { throw "D5b5b 真实顺序双标签测试失败" }
+
+pnpm run test:published:oidc:revoke:late:browser --project-id $projectId
+if ($LASTEXITCODE -ne 0) { throw "D5b5c 真实响应逆序交付失败" }
+Write-Host "D5b5c 真实只读专项退出码：$LASTEXITCODE"
+```
+
+新离线用例使用 Node 原生 `node:test` 和 `node:vm`，覆盖精确工程前缀、单次 GET、两页 pending、逆序释放、错误状态码、缓存、重定向、重复请求、写入阻断与独立 CDP Realm。协作容器 Node **v22.16.0** 的本地原型 **13/13 通过**；正式 GitHub 分支文件仍需维护者在 Windows 复跑上述命令，不能以原型测试替代提交后的质量链或真实浏览器专项。真实浏览器不会被加入根 `ready`。
