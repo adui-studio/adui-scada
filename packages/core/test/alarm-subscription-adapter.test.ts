@@ -267,3 +267,147 @@ test("受控时钟读取异常必须释放订阅并禁止迟到快照恢复", ()
   source.emit({ kind: "snapshot", values: [value] });
   expect(adapter.snapshot().baseline).toBeNull();
 });
+
+test("周期取消重入启动新会话时先清空旧基线，不能复用原代次", () => {
+  const source = new TestSource();
+  let adapter: AlarmSubscriptionAdapter;
+  let cancellations = 0;
+  const scheduler: AlarmSubscriptionScheduler = {
+    every(_intervalMs, _callback) {
+      return () => {
+        cancellations += 1;
+        if (cancellations === 1) {
+          expect(adapter.snapshot().baseline).toBeNull();
+          adapter.start();
+        }
+      };
+    },
+  };
+  adapter = new AlarmSubscriptionAdapter("tank.level", source, scheduler, {
+    maxAgeMs: 3000,
+    checkIntervalMs: 1000,
+    nowMs: () => startMs,
+  });
+  adapter.start();
+  source.emit({ kind: "snapshot", values: [value] });
+  const oldCallback = source.handlers[0];
+  adapter.stop();
+
+  expect(adapter.isRunning()).toBe(true);
+  expect(adapter.snapshot().generation).toBe(1);
+  expect(source.handlers).toHaveLength(2);
+  oldCallback?.onChange({ kind: "snapshot", values: [value] }, true);
+  expect(adapter.snapshot().baseline).toBeNull();
+
+  source.emit({ kind: "snapshot", values: [{ ...value, sequence: 1 }] });
+  expect(adapter.snapshot().baseline?.value.sequence).toBe(1);
+  adapter.stop();
+  expect(cancellations).toBe(2);
+});
+
+test("旧订阅安装失败不应关闭同步重入启动的新会话", () => {
+  let adapter: AlarmSubscriptionAdapter;
+  let subscribed = 0;
+  let closed = 0;
+  let currentHandlers: Handlers | null = null;
+  const source: AlarmReadonlySubscriptionSource = {
+    subscribe(handlers) {
+      subscribed += 1;
+      if (subscribed === 1) {
+        handlers.onDisconnect();
+        adapter.start();
+        throw new TypeError("旧订阅安装失败");
+      }
+      currentHandlers = handlers;
+      return () => {
+        closed += 1;
+      };
+    },
+  };
+  const scheduler = new TestScheduler();
+  adapter = new AlarmSubscriptionAdapter("tank.level", source, scheduler, {
+    maxAgeMs: 3000,
+    checkIntervalMs: 1000,
+    nowMs: () => startMs,
+  });
+
+  expect(() => adapter.start()).toThrow("旧订阅安装失败");
+  expect(adapter.isRunning()).toBe(true);
+  expect(adapter.snapshot().generation).toBe(1);
+  currentHandlers?.onChange({ kind: "snapshot", values: [value] }, true);
+  expect(adapter.snapshot().baseline?.value.sequence).toBe(5);
+  adapter.stop();
+  expect(closed).toBe(1);
+  expect(scheduler.cancels).toBe(1);
+});
+
+test("取消周期和取消订阅均抛错时仍尝试两种清理并撤销会话", () => {
+  let handlers: Handlers | null = null;
+  let closes = 0;
+  let cancels = 0;
+  const source: AlarmReadonlySubscriptionSource = {
+    subscribe(callbacks) {
+      handlers = callbacks;
+      return () => {
+        closes += 1;
+        throw new TypeError("测试取消订阅失败");
+      };
+    },
+  };
+  const scheduler: AlarmSubscriptionScheduler = {
+    every() {
+      return () => {
+        cancels += 1;
+        throw new TypeError("测试取消周期失败");
+      };
+    },
+  };
+  const adapter = new AlarmSubscriptionAdapter("tank.level", source, scheduler, {
+    maxAgeMs: 3000,
+    checkIntervalMs: 1000,
+    nowMs: () => startMs,
+  });
+  adapter.start();
+  handlers?.onChange({ kind: "snapshot", values: [value] }, true);
+  expect(adapter.snapshot().baseline?.value.sequence).toBe(5);
+  expect(() => adapter.stop()).toThrow("测试取消订阅失败");
+  expect(closes).toBe(1);
+  expect(cancels).toBe(1);
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+  handlers?.onChange({ kind: "snapshot", values: [value] }, true);
+  expect(adapter.snapshot().baseline).toBeNull();
+});
+
+test("旧会话调度安装完成后若新会话已重入，不覆盖新取消函数", () => {
+  const source = new TestSource();
+  let adapter: AlarmSubscriptionAdapter;
+  let installed = 0;
+  let cancelled = 0;
+  const scheduler: AlarmSubscriptionScheduler = {
+    every(_intervalMs, callback) {
+      installed += 1;
+      if (installed === 1) {
+        source.handlers[0]?.onDisconnect();
+        adapter.start();
+      }
+      return () => {
+        cancelled += 1;
+      };
+    },
+  };
+  adapter = new AlarmSubscriptionAdapter("tank.level", source, scheduler, {
+    maxAgeMs: 3000,
+    checkIntervalMs: 1000,
+    nowMs: () => startMs,
+  });
+  adapter.start();
+  expect(installed).toBe(2);
+  expect(cancelled).toBe(1);
+  expect(adapter.isRunning()).toBe(true);
+  expect(adapter.snapshot().generation).toBe(1);
+  source.emit({ kind: "snapshot", values: [{ ...value, sequence: 1 }] }, true, 1);
+  expect(adapter.snapshot().baseline?.value.sequence).toBe(1);
+  adapter.stop();
+  expect(cancelled).toBe(2);
+});
