@@ -1,6 +1,7 @@
 # ADR-0070：独立已发布 Lab 测试夹具的准入、正式发布路径与安全验收
 
-- 状态：Proposed（待维护者与工业安全专项评审，**未授权实施**）
+- 状态：Proposed
+- 审批：待维护者与工业安全专项评审，**未授权实施**
 - 日期：2026-11-22
 - 关联：[Issue #126](https://github.com/adui-studio/adui-scada/issues/126)、FR-008、FR-013、FR-014、FR-016、NFR-002、NFR-003、NFR-004、NFR-006
 - 前置：[ADR-0069](0069-release-pointer-atomic-publication-design.md)、[正式发布事务评审矩阵](../RELEASE_TRANSACTION_REVIEW.md)
