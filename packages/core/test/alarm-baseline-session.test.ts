@@ -51,7 +51,9 @@ test("创建会话时不带旧数值，初始状态冻结并等待快照", () =>
   const state = beginAlarmBaselineSession("tank.level", 2);
   expect(state).toEqual({ expectedTagId: "tank.level", generation: 2, baseline: null });
   expect(Object.isFrozen(state)).toBe(true);
-  expect(transitionAlarmBaselineSession(state, { kind: "CHECK_FRESHNESS", generation: 2 }, nowMs, 3000)).toEqual({
+  expect(
+    transitionAlarmBaselineSession(state, { kind: "CHECK_FRESHNESS", generation: 2 }, nowMs, 3000),
+  ).toEqual({
     status: "WAITING_SNAPSHOT",
     state,
   });
@@ -100,7 +102,11 @@ test("旧会话的快照、增量和断连回调不能改变当前会话", () =>
   const restarted = restartAlarmBaselineSession(initial, 3);
   const refreshed = transitionAlarmBaselineSession(
     restarted,
-    { ...snapshot, generation: 3, change: { kind: "snapshot", values: [{ ...previous, sequence: 1 }] } },
+    {
+      ...snapshot,
+      generation: 3,
+      change: { kind: "snapshot", values: [{ ...previous, sequence: 1 }] },
+    },
     nowMs,
     3000,
   );
@@ -214,7 +220,12 @@ test("断连清空当前基线并等待新的快照，其他代次断连不影�
     state: { ...initial, baseline: null },
   });
   expect(
-    transitionAlarmBaselineSession(disconnected.state, { kind: "CHECK_FRESHNESS", generation: 2 }, nowMs, 3000),
+    transitionAlarmBaselineSession(
+      disconnected.state,
+      { kind: "CHECK_FRESHNESS", generation: 2 },
+      nowMs,
+      3000,
+    ),
   ).toEqual({ status: "WAITING_SNAPSHOT", state: disconnected.state });
 });
 
@@ -227,7 +238,14 @@ test("无目标增量不能刷新年龄，独立时效检查必须使旧基线�
     3000,
   );
   expect(empty.status).toBe("TAG_NOT_UPDATED");
-  expect(transitionAlarmBaselineSession(empty.state, { kind: "CHECK_FRESHNESS", generation: 2 }, nowMs, 3000)).toEqual({
+  expect(
+    transitionAlarmBaselineSession(
+      empty.state,
+      { kind: "CHECK_FRESHNESS", generation: 2 },
+      nowMs,
+      3000,
+    ),
+  ).toEqual({
     status: "BASELINE_UNCHANGED",
     state: empty.state,
   });
