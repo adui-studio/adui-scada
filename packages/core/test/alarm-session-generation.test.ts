@@ -24,7 +24,9 @@ const generations: AlarmSessionGenerations = {
 };
 
 test("三份显式代次一致且序列前进时才返回数值候选", () => {
-  expect(classifySessionBoundNumericAlarmSample(current, previous, generations, nowMs, 1000)).toEqual({
+  expect(
+    classifySessionBoundNumericAlarmSample(current, previous, generations, nowMs, 1000),
+  ).toEqual({
     status: "READY",
     value: 42,
   });
