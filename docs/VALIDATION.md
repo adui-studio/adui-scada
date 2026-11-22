@@ -2690,3 +2690,13 @@ PR #124 已经维护者同意并在 Windows `docs:check` **89**、`vp check` **4
 这两个测试不引入新生产 API、不访问数据库、Keycloak、网络、浏览器或工业网关，模拟状态**不能**冒称真实 HTTP 403/404、真实 PostgreSQL ACL 变更或生产“正在运行时撤权”场景已经通过。已有正式单测包含基础的 `verified → denied`、自动轮询停止与隐藏重新校验，本次新增覆盖它们之间的异步交错保护。
 
 **验证状态**：代码及文档已推送候选分支并做 GitHub 静态回读，最新分支 Windows 真实 `vp test run packages/runtime/test/published-runtime-refresher.test.ts`（预计原 15 项增至 17 项）、`vp check`、`docs:check`、完整 `pnpm run ready`（Vitest 预计 682 项）均**尚未执行**。真实已发布工程的合法发布快照与受控撤权 Lab 准备、权限操作、浏览器 `verified → denied` 和数据库前后审计均独立待评审，**不得使用已撤权 D5b4 工程去恢复 ACL 或写入发布快照**。
+
+## 2026-11-22 · D5b7b 已发布夹具只读元数据预检候选
+
+从已合并的 `main@834defd4e50ad8f8e199e130e9bfc986a618ff52` 建立 `test/d5b7b-published-fixture-metadata`，只新增 `scripts/audit-published-fixture-metadata.mjs` 及 `.cases.mjs`，并在 `package.json` 加入离线脚本及 `ready`。本次不增加生产 HTTP/API、Prisma 模型或迁移、ACL 操作、Keycloak/Chrome 脚本、真实已发布工程、工业数据源或设备写入。
+
+元数据分类器严格限定显式 `d5b7b-published-<UUID v4>`、可信本机 Lab 数据库用户/租户/主体、独立 `release:read`、安全整数代次及修订、64 位小写 SHA-256、末次事件 UUID、版本/事件与发布指针复合一致性。仅输出 `DENIED`、`UNRELEASED`、`RELEASED_METADATA_ONLY`；输入若夹带快照正文、数据库连接字段或元数据不一致，则返回固定中文拒绝。模拟 `RELEASED_METADATA_ONLY` **绝不等于**生产 `verified` 或实际已发布夹具存在。
+
+**当前实测范围**：独立隔离容器 Node.js v22.16.0 已执行新脚本的 `node --check`，原生 `node --test` **14/14 通过**。第一次独立测试曾暴露 `head_revision` 超出安全整数上限仍被接受；修复安全上限后重新执行 14/14 通过。该运行发生在提交 GitHub 前的隔离代码副本，不是仓库完整工具链，也不等于 Windows 最终 HEAD 的验收。
+
+**仍待维护者 Windows 复验**：记录分支完整 HEAD，运行 `pnpm run test:published:oidc:fixture:metadata:config`、`vp check`、`pnpm run docs:check` 与完整 `pnpm run ready`。未进行 PostgreSQL READ ONLY 实测、真实 Keycloak/Chrome、已发布工程证明或在线 ACL 撤权；生产 `ProjectReleaseSafetyGate` 继续固定 fail-closed。详见 Issue #126。

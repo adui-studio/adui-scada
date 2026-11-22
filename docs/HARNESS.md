@@ -4320,3 +4320,36 @@ E-079 候选将“切回第一标签”移到两次真实响应完成严格交�
 ```
 
 本候选保持 Draft，不新增真实浏览器或 ACL 写入命令。真正 `verified → denied` 端到端实验必须先验证有合法发布快照、独立测试工程、数据库/权限基线和可恢复方案；**需要单独明确许可**，且后续涉及的 PostgreSQL 操作必须在隔离环境附带完整 URL 验证及 `try/finally`。不可用刚通过 D5b6 的已撤权 D5b4 工程直接恢复授权或伪造发布状态。
+
+## 2026-11-22 · D5b7b 已发布夹具元数据离线只读门禁
+
+本批只提供纯函数元数据分类器与原生 Node 负向测试，不连接 PostgreSQL、Keycloak、浏览器或工业设备；不创建已发布夹具，不恢复 ACL，也不调用正式发布 API。测试用的 `d5b7b-published-<UUID v4>` 是**合成标识**，不得当成真实工程 ID。只有未来通过独立许可取得受控数据库只读记录，才能把结果作为下一步审核输入。
+
+- `DENIED`：目标工程不存在或当前可信主体缺少独立 `release:read`；不读取也不暴露发布内容。
+- `UNRELEASED`：授权存在，但代次为零，发布修订、摘要、末次事件均为空。
+- `RELEASED_METADATA_ONLY`：授权、发布指针、目标版本摘要和末次事件元数据匹配；**不是**经过真实快照核验的 `verified`，也不证明夹具确实存在。
+
+仓库内需依次运行下列 PowerShell 7 验收，任一步失败立即退出，不以 `--fix` 代替检查：
+
+```powershell
+& {
+    git switch test/d5b7b-published-fixture-metadata
+    if ($LASTEXITCODE -ne 0) { throw "切换 D5b7b 分支失败" }
+    git pull --ff-only origin test/d5b7b-published-fixture-metadata
+    if ($LASTEXITCODE -ne 0) { throw "更新 D5b7b 分支失败" }
+    $head = (git rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0) { throw "读取 D5b7b HEAD 失败" }
+    Write-Host "D5b7b 验收 HEAD：$head"
+
+    pnpm run test:published:oidc:fixture:metadata:config
+    if ($LASTEXITCODE -ne 0) { throw "D5b7b 离线元数据测试失败" }
+    vp check
+    if ($LASTEXITCODE -ne 0) { throw "D5b7b Vite+ 检查失败" }
+    pnpm run docs:check
+    if ($LASTEXITCODE -ne 0) { throw "D5b7b 文档检查失败" }
+    pnpm run ready
+    if ($LASTEXITCODE -ne 0) { throw "D5b7b 完整质量链失败" }
+}
+```
+
+**禁止执行真实发布或撤权实验。** 真实 `verified → denied` 需要维护者单独确认独立已发布工程、测试主体、隔离数据库、操作权限及恢复方案；若未来只读查询获准，必须使用显式目标、参数化 SQL、`REPEATABLE READ READ ONLY` 与 `ROLLBACK`，不查询快照正文、不回显身份凭据。
