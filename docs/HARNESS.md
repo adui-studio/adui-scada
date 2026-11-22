@@ -4165,3 +4165,35 @@ Write-Host "D5b5c 修补后完整质量链退出码：$LASTEXITCODE"
 ```
 
 随后继续使用**已经存在且保持撤权状态**的原实际 D5b4 工程，先单独执行 `oidc:lab:published:revoke:after`（仅只读），再运行 `test:published:oidc:revoke:multitab:browser` 和 `test:published:oidc:revoke:late:browser`。**必须先处理 D5b5b 的明确失败类别再评价 D5b5c 的最终状态**；遇失败保留终端固定类别与退出码即可，不收集 Cookie、Token 或完整工程快照。不重新运行撤权 `--apply`、不恢复 ACL、不新增 SQL、不得以开启生产写入或放宽安全断言作为修复。
+
+## 2026-11-22 · E-078 已撤权工程双标签只读 GET 响应结算回归
+
+此前 E-077 修补版的 Windows 离线门禁 D5b5b 16/16、D5b5c 14/14、`vp check` 401/253、`docs:check` 89、完整 `ready` 退出码 0。真实撤权后 PostgreSQL READ ONLY 审计通过，但 D5b5b React 在两次 404 成功后最终双页守卫检查失败；D5b5c React 在两个真实 404 Promise 同时挂起、先释放第二页后报告“工程响应数量不符”，均退出码 1，Vue 未覆盖。
+
+新 E-078 候选不修改服务器、数据库、React/Vue 生产业务或真实 HTTP Response。仅让浏览器只读安全测试在比对守卫之前，等待此前已发出的真实 GET 完成；`paths` 比 `statuses` 多代表仍有请求未结算，最多轮询 80 次，每次间隔 150ms。没有返回、响应比路径多、守卫缺失或拦截到工程写入都禁止验收；仍逐次核对目标 GET 404 精确新增 1 次，原画布、工程 JSON、IndexedDB 草稿、自动保存和 CAS 保持不变。当前只能称之为针对**已证实时序机制**的候选修补，实际失败根因仍需真实复验确认。
+
+Windows 先从 PR #121 最新分支读取并记录 HEAD，执行：
+
+```powershell
+git fetch origin
+git switch test/b35-d5b5c-revoked-late-read
+git pull --ff-only
+git rev-parse HEAD
+
+pnpm run test:published:oidc:revoke:multitab:config
+if ($LASTEXITCODE -ne 0) { throw "D5b5b E-078 离线测试失败" }
+
+pnpm run test:published:oidc:revoke:late:config
+if ($LASTEXITCODE -ne 0) { throw "D5b5c 离线测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "E-078 Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "E-078 文档检查失败" }
+
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "E-078 完整质量链失败" }
+```
+
+质量链通过后只对**同一现存、已撤权、经过明确只读审计的 D5b4 专用工程**执行 `oidc:lab:published:revoke:after --project-id <真实ID>`、`test:published:oidc:revoke:multitab:browser --project-id <真实ID>`，成功后再执行 `test:published:oidc:revoke:late:browser --project-id <真实ID>`。脚本需要独立隔离 Chrome/Edge 并手动登录已预绑定 Keycloak 测试身份，不能输入终端密码。真实浏览器仍不进入 `ready`。不得重新撤权、恢复 ACL、创建工程或调用任何生产设备写入。
