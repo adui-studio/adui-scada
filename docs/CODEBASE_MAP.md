@@ -1235,3 +1235,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `docs/PROJECT_CONTEXT.md`、`docs/VALIDATION.md`：记录 D5b7f 本机 `NOT_FOUND` 的真实证据、D5b8 Proposed 状态及未执行/未授权的边界。
 
 生产代码 `apps/server/src/projects/project-release-safety-gate.ts` 仍为 fail-closed；没有新的 Prisma 模型、迁移、NestJS API、客户端、网关或设备写入。
+
+## 2026-11-22 · D5b8b 已发布 Runtime 静态兼容性复核
+
+- `packages/runtime/src/published-runtime.ts`：已通过响应及快照摘要校验的 RELEASED 数据，在 `PublishedRuntime.acceptRelease` 写入发布指针水位和进入 `verified` 前执行共享 Core 运行时兼容性预检；不支持的规则、图元或绑定进入原有 `error` 清空状态。
+- `packages/runtime/src/published-runtime-view.ts`：`publishedSnapshotSvg` 同样核验当前静态 SVG 兼容性，不允许未知图元通过占位渲染冒充正常发布画面；仍只渲染空 Tag 值。
+- `packages/runtime/test/published-runtime.test.ts`、`published-runtime-view.test.ts`：新增有效 SHA-256 下运行时图元版本或规则不兼容的负向测试；尚待本机实测。
+- 发布服务器的 `ProjectReleaseSafetyGate`、PostgreSQL、ACL、工业网关和 Vue/React 应用未改动，正式发布能力继续 fail-closed。
