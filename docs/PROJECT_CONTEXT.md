@@ -2184,3 +2184,11 @@ PR #142 维护者 Windows 在精确 HEAD `36c1ecd6d096e5403559a2f92fa6a50be6b846
 D5b9d 从最新主线独立推进 **FR-011 的首个框架无关 Core 基础能力**，不再扩充同类发布拒绝测试。新增 `packages/core/src/alarm-state.ts`，以 SDD 已确定的四个生命周期状态实现纯函数 `transitionAlarmState`：首次触发、持续激活、确认、工艺条件恢复、恢复后确认及重触发分别区分；不存在报警实例时不能确认或恢复，未知状态和未知事件明确拒绝。共享 `index.ts` 导出稳定的状态、事件、中文标签及函数；新增 **8 项**单元测试定义覆盖正常、重复、重触发与非法操作。
 
 本批不实现阈值、死区、延时、Tag 质量校验、数据源、报警持久化、服务端确认授权、审计或现场告警。没有修改 Vue/React 页面、Runtime 实时数据、Prisma/ACL、发布事务、工业网关与设备写入；**FR-011 总体依然规划中**。新分支的代码尚未在维护者 Windows 执行测试，定向 `alarm-state.test.ts` 和 `vp check` 为唯一必要新检查（有新增中文异常时按需补 `messages:check`），不能冒称通过。Issue #126 保持 Open，ADR-0070 Proposed，正式发布 Gate 不变且继续 fail-closed。
+
+## 2026-11-22 · D5b9d 已验收合并与 D5b9e 报警事件回放候选
+
+维护者 Windows 在 PR #143 最新精确 HEAD `11b8f90689415974a1c74db2d610b471007c4f73`（相对初始 HEAD 多一笔 `packages/core/src/index.ts` 的导出排版调整）执行 `vp test run packages/core/test/alarm-state.test.ts` **8/8** 通过，`vp check` **415 格式文件正确/266 受检零告警或错误**。经维护者明确同意合并，PR #143 Squash 合并到 `main@597a6eabde176f4b5d17dfb7eb685c253c71c2ea`。本轮遵守不做重复验证原则，没有重新运行此前已验收的完整 `ready`、NestJS HTTP E2E 或双端构建。
+
+D5b9e 从最新主线继续 FR-011，新增共享 Core `replayAlarmEvents(events)`：对可信上游给出的报警生命周期事件序列从 `null` 开始确定性重放，输出最终四态与完整转换步骤 `sequence,event,before,after,changed`。重复输入保留事件位置但标记未发生状态变化；非法初始确认/恢复或非法事件整体拒绝，不返回部分轨迹；不修改原事件数组。提供 `index.ts` 公共导出与 **5 项**新定向 Vitest 定义。
+
+本批仅为无副作用的内存回放基础，不是报警数据库、真实触发、持久化审计、权限授予或事故追溯。序列号只对应当前输入数组下标，不可用作服务器全局唯一事件 ID，尚无报警规则与 Tag 质量绑定或生产数据来源。**FR-011 仍未完整交付**。新分支还没有维护者 Windows 测试证据，仅请求 `alarm-replay.test.ts` 定向检查与一次 `vp check`，不重复全链验证。生产发布 Gate 仍无条件 fail-closed，Issue #126 与 ADR-0070 的独立发布安全障碍不因报警 Core 工作改变。
