@@ -2056,3 +2056,11 @@ PR #125 已合并为 `main@834defd4e50ad8f8e199e130e9bfc986a618ff52`；历史 PR
 基于 Issue #126 从最新主线创建 `test/d5b7b-published-fixture-metadata`：只增加无数据库连接的 D5b7b 元数据分类纯函数与 14 项 Node 安全回归。分类严格区分 `DENIED`、`UNRELEASED` 和仅有元数据一致性的 `RELEASED_METADATA_ONLY`，最后者不得解释为真实 `verified`。测试夹具为合成值，不能作为已存在工程或真实发布状态的证据；生产发布安全门禁未修改。
 
 隔离 Node v22.16.0 运行新用例 14/14；Windows `vp check`、`docs:check`、完整 `ready`、真实独立发布工程只读审计、React/Vue 双框架在线撤权均**待验证**。不创建或修改 Lab 工程、ACL、数据库、发布事务或工业设备。
+
+## 2026-11-22 · PR #127 已合并，D5b7c 独立已发布夹具只读审查候选
+
+维护者提供 D5b7b PR #127 Windows 14/14、Vite+ 405/257、文档 89、Vitest 682/682、服务端 E2E 62/62、完整 `ready` 退出至末尾的实际日志，并明确同意合并。GitHub 检查最新 HEAD 后，按 `expected_head_sha` Squash 合并为 `main@0c3d3b2592121c6963c9e7a7112a92a8920b3ef0`。未删除历史分支。
+
+下一批 `test/d5b7c-published-fixture-readonly` 在隔离 Lab 规范下增加**仅显式触发的** PostgreSQL 元数据只读审查入口、带参数 SQL 和事务失败回滚 Node 安全 Mock 测试。要求真实连接目标、已应用发布迁移、可信主体和外部预绑定、独立 `release:read` 与发布指针/事件一致性；无权限不读取发布状态，绝不选取工程快照正文。D5b7b 元数据一致性仅为 `RELEASED_METADATA_ONLY`，不是实际 `verified`。
+
+此批新文件尚待 Windows 离线安全、`vp check`、`docs:check`、完整 `ready` 及独立真实 READ ONLY 实测；未创建已发布工程、未执行发布或权限写入、未改生产安全门禁。
