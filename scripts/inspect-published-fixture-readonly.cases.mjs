@@ -279,9 +279,10 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
   });
 
   void it("完整目标 ACL 允许四项授权或撤权后三项基础授权", async () => {
-    const owner = ["project:read", "version:read", "version:append"].map(
-      (permission) => ({ subject_id: "lab-engineer", permission }),
-    );
+    const owner = ["project:read", "version:read", "version:append"].map((permission) => ({
+      subject_id: "lab-engineer",
+      permission,
+    }));
     assert.deepEqual(
       normalizePublishedFixtureTargetGrants([
         ...owner,
@@ -315,7 +316,7 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
     for (const grants of [
       [...owner, { subject_id: "lab-engineer", permission: "release:publish" }],
       [...owner, { subject_id: "other", permission: "release:read" }],
-      [...owner.slice(1)],
+      owner.slice(1),
       [owner[3]],
       [...owner.slice(0, 3), owner[0]],
       [{ ...owner[0], snapshot: "SECRET" }, ...owner.slice(1)],
