@@ -1951,4 +1951,4 @@ PR #112 已按维护者明确授权 **Squash 合并**，`main@73df3e1debd4cce16c
 
 在 PR #113 分支上新增 `scripts/test-oidc-published-revocation-readonly.mjs` 与 14 项 Node 安全用例候选，并将离线安全门禁接入根 `ready`。新的真实浏览器命令需手工选择撤权前 `before` 或撤权后 `after`，对 React/Vue 同一可信会话、发布 API 唯一 GET、真实 HTTP 200/404 和 no-store、状态清空、停止后零额外请求分别 fail-closed；不自动创建工程、注入 404、撤销或恢复 ACL。任何 HTTP 404 仍必须配合未来真实 PostgreSQL 只读审计证明确有专用工程且只是目标授权缺失。
 
-该候选尚未在 Windows 完整工作区、真实 Keycloak/HTTPS 或 PostgreSQL 实测；当前没有已获授权的 D5b4 专用工程。仅完成远端源码提交、隔离 V8 语法核对和部分纯函数反向检查，不等于新增 Node 14/14 或 `ready` 通过。生产 SCADA 安全策略与旧 D5b1 工程授权保持不变。
+该候选尚未在 Windows 完整工作区、真实 Keycloak/HTTPS 或 PostgreSQL 实测；当前没有已获授权的 D5b4 专用工程。仅完成远端源码提交、隔离 V8 语法核对、12/12 纯函数反向检查及受限 V8 Mock 执行 14/14 用例定义，不等于正式 Node 14/14 或 `ready` 通过。生产 SCADA 安全策略与旧 D5b1 工程授权保持不变。
