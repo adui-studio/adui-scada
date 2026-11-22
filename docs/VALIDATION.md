@@ -2708,3 +2708,13 @@ PR #127 已由维护者提供 Windows 离线 14/14、`vp check` 405/257 零错�
 本批从最新 `main` 建立 `test/d5b7c-published-fixture-readonly`。新增仅用于手动调用的 PostgreSQL **READ ONLY** 审查脚本与原生 Node 安全 Mock 测试，所有 SQL 为带参数的元数据 `SELECT`，查询严格处于 `REPEATABLE READ READ ONLY` + `ROLLBACK`，不选取 `snapshot` 正文、不读取凭据、不触发写入。活动身份与 OIDC 预绑定先于目标工程查询；无 `release:read` 不访问发布状态。根 `package.json` 只把离线用例纳入 `ready`，真实 PostgreSQL 连接为另外的显式命令。
 
 **验收现状**：本次完成 GitHub 源码、Schema 字段与迁移契约静态核对，**尚未在 Windows 正式运行新分支的 Node 离线专项、`vp check`、`docs:check` 或完整 `ready`**；也没有对真实 PostgreSQL 发起查询或证明存在 D5b7b 已发布夹具。只有真正执行后才能填报退出码。生产 `ProjectReleaseSafetyGate` 继续固定拒绝；任何真实 `verified → denied` 和 ACL 操作仍待独立授权。
+
+## 2026-11-22 · D5b7d Issue #126 原 D5b1 只读基线安全门禁候选
+
+PR #128 已经维护者 Windows 离线 12/12、`vp check` 407/259 零告警、`docs:check` 89、全量 Vitest 682/682、HTTP E2E 62/62、React/Vue/NestJS 构建与完整 `ready` 验收，按明确授权 Squash 合并至 `main@bdc35bafb9951b911dccfc4f99976b33e28a24ae`。合并前远程 HEAD `17296dcaaece30a3e35feb911e5e9ba1cbc80a13`，其最后一次提交仅涉及测试/源码格式调整。
+
+本批依据 Issue #126 原工程基线要求，在 `test/d5b7d-baseline-readonly` 新增纯函数 `assertPublishedFixtureBaselineRows`，复核 D5b1 首版、原审计、零发布状态/事件及四项 ACL，并在 PostgreSQL **同一 READ ONLY + ROLLBACK 事务**中于读取目标工程之前执行。扩展 D5b7c 原 Mock 测试，要求原基线漂移时不查询目标工程；所有 SQL 仅为元数据 SELECT，不含 snapshot。
+
+**实际执行**：隔离 Node.js 22.16.0 先对新增的纯函数及其单测文件运行 `node --check`，原生 `node --test` **5/5 通过**（实施前的独立代码副本）。这是新增纯函数的局部验证，**不是**当前 GitHub 完整 HEAD 的实际 Windows 验收。整合后 D5b7c Mock 的 14 项定义、`vp check`、`docs:check`、`pnpm run ready`、真实 PostgreSQL READ ONLY、Keycloak/双框架在线撤权均待执行，不能推断成功。
+
+当前仍未确认存在真正已发布且具备受控授权的独立 D5b7b Lab 工程；不能据此关闭真实 `verified → denied` 阻塞，也不能调整 `ProjectReleaseSafetyGate` 或执行写入。

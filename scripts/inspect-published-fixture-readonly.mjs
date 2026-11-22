@@ -7,6 +7,11 @@ import {
   classifyPublishedFixtureMetadata,
   parsePublishedFixtureMetadataArgs,
 } from "./audit-published-fixture-metadata.mjs";
+import {
+  assertPublishedFixtureBaselineRows,
+  BASELINE_ERROR,
+  BASELINE_PROJECT,
+} from "./assert-published-fixture-baseline.mjs";
 import { resolvePublishedRevocationPreflightTarget } from "./preflight-oidc-published-revocation.mjs";
 
 const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
@@ -24,6 +29,7 @@ const SAFE_ERRORS = new Set([
   METADATA_ERROR,
   "D5b7b 发布夹具只读元数据不完整或不一致",
   "D5b7c 只能连接可信本机 OIDC Lab",
+  BASELINE_ERROR,
 ]);
 
 /** 固定错误类别；数据库错误、身份、SQL 与连接地址不得出现在诊断中。 */
@@ -81,6 +87,41 @@ export async function inspectPublishedFixtureReadonly(client, target, projectId)
       [target.issuer, TENANT, SUBJECT],
     );
     if (identity.length !== 1 || external.length !== 1) throw new Error(METADATA_ERROR);
+    const baselineScope = [TENANT, BASELINE_PROJECT];
+    const baseline = {
+      project: await query(
+        "SELECT head_revision FROM public.scada_projects " +
+          "WHERE tenant_id = $1 AND project_id = $2",
+        baselineScope,
+      ),
+      versions: await query(
+        "SELECT revision, created_by FROM public.scada_project_versions " +
+          "WHERE tenant_id = $1 AND project_id = $2",
+        baselineScope,
+      ),
+      audit: await query(
+        "SELECT revision, actor_id, action FROM public.scada_project_audit " +
+          "WHERE tenant_id = $1 AND project_id = $2",
+        baselineScope,
+      ),
+      state: await query(
+        "SELECT release_generation, released_revision, released_content_hash, " +
+          "last_release_event_id FROM public.scada_project_release_state " +
+          "WHERE tenant_id = $1 AND project_id = $2",
+        baselineScope,
+      ),
+      events: await query(
+        "SELECT COUNT(*)::integer AS count FROM public.scada_project_release_events " +
+          "WHERE tenant_id = $1 AND project_id = $2",
+        baselineScope,
+      ),
+      grants: await query(
+        "SELECT subject_id, permission FROM public.scada_project_grants " +
+          "WHERE tenant_id = $1 AND project_id = $2",
+        baselineScope,
+      ),
+    };
+    assertPublishedFixtureBaselineRows(baseline);
     const scope = [TENANT, projectId];
     const project = await query(
       "SELECT tenant_id, project_id, head_revision FROM public.scada_projects " +

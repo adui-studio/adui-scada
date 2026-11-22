@@ -1193,3 +1193,13 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - `package.json`：增加 `test:published:oidc:fixture:readonly:config` 并加入 `ready`；单独手动入口 `oidc:lab:published:fixture:readonly` 不属于自动质量链。
 
 不修改 React/Vue、NestJS、Runtime、Prisma 迁移、ACL 或发布门禁；无真实已发布夹具或正式撤权验证证据。
+
+## 2026-11-22 · D5b7d 原 D5b1 未发布基线只读保护
+
+- `scripts/assert-published-fixture-baseline.mjs`：纯函数严格核验固定 D5b1 原工程首版、版本保存审计、零发布代次/指针/事件及四项原主体 ACL；只接受最小元数据字段，不读取工程正文。
+- `scripts/assert-published-fixture-baseline.cases.mjs`：原基线完整、漂移/跨主体/额外权限/污染字段和输入不可变性等 5 项 Node 独立安全测试。
+- `scripts/inspect-published-fixture-readonly.mjs`：复用既有事务，在验证身份和读取目标之前查询六类原工程元数据，基线漂移安全拒绝并 ROLLBACK。
+- `scripts/inspect-published-fixture-readonly.cases.mjs`：扩展原 Mock 区分目标与 D5b1 原工程，新增原基线漂移/SQL 故障导致目标查询数为零的测试。
+- 根 `package.json`：新增 `test:published:oidc:fixture:baseline:config` 并纳入 `ready`；真实数据库只读工具仍为独立人工入口。
+
+本轮仅是 Issue #126 的离线安全前置条件，不证明已发布 fixture 存在、快照真实 verified 或已完成在线 ACL 撤权。

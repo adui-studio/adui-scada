@@ -4,6 +4,7 @@ import {
   describePublishedFixtureReadonlyFailure,
   inspectPublishedFixtureReadonly,
 } from "./inspect-published-fixture-readonly.mjs";
+import { BASELINE_ERROR, BASELINE_PROJECT } from "./assert-published-fixture-baseline.mjs";
 
 const PROJECT = "d5b7b-published-12345678-1234-4234-8234-123456789abc";
 const EVENT = "12345678-1234-4234-8234-123456789abc";
@@ -43,6 +44,23 @@ function fixture(change = {}) {
         to_content_hash: HASH,
       },
     ],
+    baseline: {
+      project: [{ head_revision: "1" }],
+      versions: [{ revision: "1", created_by: "lab-engineer" }],
+      audit: [{ revision: "1", actor_id: "lab-engineer", action: "version:append" }],
+      state: [
+        {
+          release_generation: "0",
+          released_revision: null,
+          released_content_hash: null,
+          last_release_event_id: null,
+        },
+      ],
+      events: [{ count: 0 }],
+      grants: ["project:read", "version:read", "version:append", "release:read"].map(
+        (permission) => ({ subject_id: "lab-engineer", permission }),
+      ),
+    },
     ...change,
   };
   const calls = [];
@@ -58,6 +76,7 @@ function fixture(change = {}) {
         ["scada_external_identities", "external"],
         ["scada_identities", "identity"],
         ["scada_project_grants", "grants"],
+        ["scada_project_audit", "audit"],
         ["scada_project_release_state", "releaseState"],
         ["scada_project_release_events", "lastEvent"],
         ["scada_project_versions", "releasedVersion"],
@@ -65,6 +84,19 @@ function fixture(change = {}) {
       ];
       const key = queries.find(([part]) => sql.includes(part))?.[1] ?? "unknown";
       assert.notEqual(key, "unknown", "数据库查询必须只来自已审核的元数据白名单");
+      if (Array.isArray(params) && params[1] === BASELINE_PROJECT) {
+        const keys = {
+          project: "project",
+          releasedVersion: "versions",
+          audit: "audit",
+          releaseState: "state",
+          unresolved: "events",
+          grants: "grants",
+        };
+        const baselineKey = keys[key];
+        assert.ok(baselineKey, "原 D5b1 只能查询六项指定基线元数据");
+        return { rows: rows.baseline[baselineKey] };
+      }
       return { rows: rows[key] };
     },
   };
@@ -91,18 +123,65 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
     const state = await inspectPublishedFixtureReadonly(client, target, PROJECT);
     assert.deepEqual(state, { kind: "RELEASED_METADATA_ONLY" });
     assertReadonly(calls);
-    assert.equal(calls.length, 12);
+    assert.equal(calls.length, 18);
+  });
+
+  void it("原 D5b1 基线漂移时回滚且绝不读取目标工程", async () => {
+    for (const change of [
+      (rows) => {
+        rows.baseline.project = [];
+      },
+      (rows) => {
+        rows.baseline.versions[0].created_by = "other";
+      },
+      (rows) => {
+        rows.baseline.events[0].count = 1;
+      },
+      (rows) => {
+        rows.baseline.grants.pop();
+      },
+      (rows) => {
+        rows.baseline.state[0].released_revision = "1";
+      },
+    ]) {
+      const { client, calls, rows } = fixture();
+      change(rows);
+      await assert.rejects(
+        inspectPublishedFixtureReadonly(client, target, PROJECT),
+        new RegExp(BASELINE_ERROR),
+      );
+      assertReadonly(calls);
+      assert.equal(
+        calls.some((entry) => entry.params?.[1] === PROJECT),
+        false,
+      );
+    }
+  });
+
+  void it("原基线 SQL 失败仍回滚，不读取目标工程或透露敏感错误", async () => {
+    const { client, calls } = fixture({ failOn: "scada_project_audit" });
+    await assert.rejects(inspectPublishedFixtureReadonly(client, target, PROJECT), /Token=SECRET/);
+    assertReadonly(calls);
+    assert.equal(
+      calls.some((entry) => entry.params?.[1] === PROJECT),
+      false,
+    );
+    assert.equal(
+      describePublishedFixtureReadonlyFailure(new Error("Token=SECRET")),
+      "D5b7c 数据库只读审查失败，内部诊断已脱敏",
+    );
   });
 
   void it("实际查询只使用绑定参数与可信工程，不读取快照正文", async () => {
     const { client, calls } = fixture();
     await inspectPublishedFixtureReadonly(client, target, PROJECT);
     assertReadonly(calls);
-    assert.deepEqual(calls.find((entry) => entry.sql.includes("scada_projects")).params, [
-      "lab-tenant",
-      PROJECT,
-    ]);
-    assert.deepEqual(calls.find((entry) => entry.sql.includes("scada_project_grants")).params, [
+    const targetQuery = (table) =>
+      calls.find((entry) => entry.sql.includes(table) && entry.params?.[1] === PROJECT);
+    const baselineQueries = calls.filter((entry) => entry.params?.[1] === BASELINE_PROJECT);
+    assert.equal(baselineQueries.length, 6);
+    assert.deepEqual(targetQuery("scada_projects").params, ["lab-tenant", PROJECT]);
+    assert.deepEqual(targetQuery("scada_project_grants").params, [
       "lab-tenant",
       PROJECT,
       "lab-engineer",
@@ -111,15 +190,12 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
       calls.find((entry) => entry.sql.includes("scada_external_identities")).params,
       [target.issuer, "lab-tenant", "lab-engineer"],
     );
-    assert.deepEqual(calls.find((entry) => entry.sql.includes("scada_project_versions")).params, [
+    assert.deepEqual(targetQuery("scada_project_versions").params, ["lab-tenant", PROJECT, "1"]);
+    assert.deepEqual(targetQuery("scada_project_release_events").params, [
       "lab-tenant",
       PROJECT,
-      "1",
+      EVENT,
     ]);
-    assert.deepEqual(
-      calls.find((entry) => entry.sql.includes("scada_project_release_events")).params,
-      ["lab-tenant", PROJECT, EVENT],
-    );
   });
 
   void it("未发布独立授权工程只返回 UNRELEASED，绝不冒充已发布", async () => {
@@ -138,11 +214,16 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
     });
     assertReadonly(calls);
     assert.equal(
-      calls.some((entry) => entry.sql.includes("scada_project_versions")),
+      calls.some(
+        (entry) => entry.sql.includes("scada_project_versions") && entry.params?.[1] === PROJECT,
+      ),
       false,
     );
     assert.equal(
-      calls.some((entry) => entry.sql.includes("scada_project_release_events")),
+      calls.some(
+        (entry) =>
+          entry.sql.includes("scada_project_release_events") && entry.params?.[1] === PROJECT,
+      ),
       false,
     );
   });
@@ -168,8 +249,12 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
       kind: "DENIED",
     });
     assertReadonly(calls);
+    assert.equal(calls.filter((entry) => entry.params?.[1] === BASELINE_PROJECT).length, 6);
     assert.equal(
-      calls.some((entry) => entry.sql.includes("scada_project_release_state")),
+      calls.some(
+        (entry) =>
+          entry.sql.includes("scada_project_release_state") && entry.params?.[1] === PROJECT,
+      ),
       false,
     );
   });
@@ -180,8 +265,12 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
       kind: "DENIED",
     });
     assertReadonly(calls);
+    assert.equal(calls.filter((entry) => entry.params?.[1] === BASELINE_PROJECT).length, 6);
     assert.equal(
-      calls.some((entry) => entry.sql.includes("scada_project_release_state")),
+      calls.some(
+        (entry) =>
+          entry.sql.includes("scada_project_release_state") && entry.params?.[1] === PROJECT,
+      ),
       false,
     );
   });
