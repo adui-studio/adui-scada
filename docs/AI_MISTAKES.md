@@ -710,6 +710,15 @@
 
 > **2026-11-22 · E-076 Windows 结案补录**：维护者提供 PR #120 修复后的本机实际日志：`test:published:oidc:revoke:multitab:config` **11/11**、`vp check` **398 个格式文件/250 个受检文件零警告错误**、`docs:check` **89 份**、完整 `pnpm run ready` **退出码 0**（Vitest **680/680**、HTTP E2E **62/62**、React/Vue/NestJS 构建成功）。原始日志未打印本地 Git HEAD，不能将本机结果严格绑定到远端提交。维护者已明确授权合并；PR #120 已 Squash 合并到 `main@eb3fdc5105d3cb5d88593db7fffd7702e91625c8`，**E-076 的零警告质量门禁阻塞已关闭**。本轮没有新增 D5b5b 真实 Chrome/Keycloak 双标签页执行证据；该浏览器专项仍待独立验收。此结案补录本身未在 Windows 重新执行完整 `ready`。
 
+### E-077 · D5b5b/D5b5c 真实浏览器保护断言被二次通用脱敏（第三十五批 D5b5c）
+
+- **现象**：维护者 2026-11-22 Windows 已运行 D5b5c 离线 **13/13**、`vp check` **401 个格式文件/253 受检零告警错误**、`docs:check` **89 份**、完整 `ready`（Vitest **680/680**、HTTP E2E **62/62**、双框架及服务端构建）**退出码 0**。随后同一现存 D5b4 工程的撤权后 PostgreSQL **READ ONLY** 审计通过；真实 D5b5b 浏览器停在“React：第一标签页真实发布读取”，报“工程 API 只读约束或发布 GET 404 不符合预期”；D5b5c 在两个真实 404 Promise 同时挂起后，停在“React：先交付第二标签页真实 404”，报“内部异常已脱敏”。**两项真实浏览器退出码均为 1**；Vue 真实浏览器阶段没有执行完。
+- **可确认代码缺陷**：`test-oidc-studio-revoked-multitab.mjs` 的 `verifySingleRevokedGet` 使用无参数 `catch` 把 `requireD5b5Preserved` 的三类已审核失败（工程请求序列、HTTP 404/no-store/重定向、本地 SVG/草稿/CAS 变化）统合成一个错误；`test-oidc-studio-revoked-late-multitab.mjs` 直接复用该严格断言，但它的 `SAFE_ERRORS` 未包含被复用的三类错误，导致已知异常又被映射为“内部异常已脱敏”。**最终导致浏览器失败的具体字段/请求是否真的漂移还没有证据，不应推断为后台请求竞态或生产数据损坏**。
+- **最小修复**：保留 `requireD5b5Preserved` 的全部原始严格条件，不删除任何 GET/HTTP/草稿/CAS 断言；新增只返回固定中文枚举的 `classifyD5b5PreservationFailure`，区分守卫缺失、被阻断写入、额外工程 GET、异步响应计数、原有请求记录变化、目标路径/404、HTTP 缓存/重定向以及 SVG、工程 JSON、IndexedDB、自动保存、CAS 和工程关联变化。D5b5b/D5b5c 分别在原断言抛错后调用分类器，其顶层安全白名单只允许这些固定字符串。未知异常保持脱敏，不输出真实工程 ID、工程正文、摘要、Token、Cookie、数据库连接或异常堆栈。
+- **防复发**：真实 CDP 安全专项不得把**已知保护性断言**无条件折叠成通用异常；复用另一脚本的固定异常时同步核对当前脚本的白名单。分类器仅在断言确实失败后观察安全字段，不得代替/放宽断言或通过忽略背景 GET 使红灯变绿。请求并发顺序需要从下一轮真实阶段分类确认，不从一行错误消息推测。
+- **验证边界**：维护者的 Windows **13/13** 与完整 `ready` 是修补前代码的真实证据。候选已为 D5b5b 增加 **5 项**真实断言负向回归，为 D5b5c 增加 **1 项**白名单透传回归；**修补后的 Windows Node、`vp check`、`docs:check`、`ready`、双框架真实浏览器都待复测**。没有执行数据库写入、恢复 ACL、服务端 POST 或工业设备控制。
+- **证据**：维护者 2026-11-22 D5b5b/D5b5c 真实浏览器失败日志和完整 Windows 质量日志、PR #121、`scripts/test-oidc-studio-revoked-multitab.mjs`、`scripts/test-oidc-studio-revoked-late-multitab.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
