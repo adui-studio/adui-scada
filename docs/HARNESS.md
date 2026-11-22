@@ -3715,3 +3715,61 @@ Write-Host "D5b4c 数据库只读核查退出码：$LASTEXITCODE"
 ```
 
 本小批 10 项新增 Node 安全用例加入 `ready`，真实数据库预检不加入自动质量链；D5b4c 未创建工程、未撤权、不恢复 ACL、不修改发布指针、未操作工业设备。维护者 2026-11-22 Windows 实际运行 Node 安全门禁 **10/10**、工程 API 定向 **13/13**、`vp check` **386/238 零告警**、`docs:check` **89** 份、完整 `ready` **680/680 单测、62/62 HTTP E2E、React/Vue/NestJS 构建成功、退出码 0**。上传日志未包含本机 Git HEAD；本段后续文档提交未经 Windows 再次全量运行。**仍无 D5b4 专用工程**，因此真实 SQL 目标只读核查尚未执行，更不能进行 ACL 撤销或恢复。
+
+## 2026-11-22 · D5b4d 真实撤权前后只读验收契约（设计阶段，禁止写入）
+
+本小批只准备下一阶段安全验收，**不创建** `d5b4-revoke-<UUIDv4>` 工程，**不执行** PostgreSQL INSERT/UPDATE/DELETE、ACL 撤销/恢复、发布写入或工业设备操作。已合并 PR #112 的 D5b4c 脚本只适用于专用工程存在且恰好持有四项权限的撤权前基线；不存在时必须失败，不得使用 D5b1 工程替代。
+
+### 既有入口与信任边界
+
+- 工程创建候选：`scripts/prepare-oidc-published-revocation.mjs`，无参为只读前置检查；其 `--apply --confirm-lab adui_scada` 是**有写入副作用**的独立操作，本阶段禁止使用。
+- 撤权前真实数据库目标核验：`pnpm run oidc:lab:published:revoke:target --project-id <实际存在的专用工程 ID>`；只在已独立授权创建专用工程后允许手工执行，`REPEATABLE READ READ ONLY` / `ROLLBACK`。当前没有合法目标 ID，不得执行带示例 ID 的“成功验收”。
+- 既有浏览器只读能力：`test-oidc-published-runtime-authorized.mjs`、`test-oidc-published-runtime-denied.mjs` 与共享 `installPublishedReadGuardInPage`；前者只接受 `d5b-` 前缀，后者的 404 为浏览器模拟，**不能直接声称已覆盖 D5b4 真实撤权**。后续独立专项须保持精确 `d5b4-revoke-` 前缀，不放宽原有脚本的 ID 白名单。
+
+### 未来真实撤权前后验收矩阵（均未执行）
+
+| 检查点               | 期望证据                                                                                                        | 失败处理                                           |
+| -------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| 撤权前身份/租户      | 可信 Keycloak 同主体、固定 HTTPS 双 Origin；不输出 Cookie/Token                                                 | 身份缺失或不一致立即拒绝                           |
+| 撤权前目标工程       | 已创建的唯一 D5b4 工程、首版/审计/零发布、四项精确 ACL                                                          | 拒绝进入撤权步骤，不自动创建                       |
+| 撤权前旧 D5b1        | 原有工程与四项 ACL 保持原状                                                                                     | 任一漂移立即拒绝                                   |
+| 撤权前双框架读取     | React/Vue 各一次真正同源 `GET /api/v1/projects/:id/releases/current` 返回 200、`UNRELEASED`、`no-store`，无快照 | 禁止以离线 Mock 或浏览器模拟 404 代替              |
+| 经另行授权的撤权     | 必须由独立、经审批的窄范围事务完成，仅作用于该专用工程和单条 `release:read`；同事务重新复核基线                 | 本小批**不提供也不执行**写入口                     |
+| 撤权后双框架读取     | React/Vue 真实同源 GET 返回预期拒绝，页面进入 denied、清空发布指针与快照并维持不可用质量                        | 任一 200、缓存复用、重定向或写请求均失败           |
+| 撤权后数据库只读复核 | 专用工程恰好缺失目标 `release:read`；保留其他三项、首版/审计、零发布；旧 D5b1 四项 ACL 完整                     | 不自动恢复，不进行补偿写入                         |
+| 资源与隐私           | 只记录状态码、计数、布尔安全摘要；停止读取后无额外 GET                                                          | Cookie、Token、工程正文、SQL、原始异常不得进入终端 |
+
+### 本阶段可开发与验证的范围
+
+允许新增 **纯离线** 的参数、阶段、状态码、权限快照及拒绝清理断言，或独立的只读浏览器验证脚本候选；所有请求方法须限定为 GET/HEAD，禁止以任何测试参数启用数据库写操作。必须分别测试“目标不存在时 fail-closed”和“有模拟数据的契约断言通过”，且明确模拟成功不能证明真实 SQL 或真实撤权。后续候选进入 PR 时执行 `vp check`、`docs:check` 与 `ready`；需真实 Windows/Keycloak/数据库的专项仍由维护者在独立授权后执行。本章节目前**只完成设计与仓库脚本核对**，没有执行上述新专项。
+
+### D5b4d 双框架真实只读浏览器候选入口（尚未在 Windows 运行）
+
+新增独立脚本 `scripts/test-oidc-published-revocation-readonly.mjs`，只允许精确的 `--phase before|after --project-id d5b4-revoke-<UUIDv4>`。两个阶段是**两次独立人工运行**，脚本绝不自动创建专用工程、增加或删除 ACL，也不在阶段之间自动修改数据库。沿用真实 Keycloak/BFF 登录、React/Vue HTTPS 双 Origin 和现有 `installPublishedReadGuardInPage`：在发布运行页挂载前加上只读响应观察器，只保留**实际 HTTP 状态码、no-store 和精确同源非重定向布尔值**，不替换响应、不模拟 404、不读取正文或令牌。
+
+- `before`：要求已获另行授权创建的唯一工程先通过 D5b4c `READ ONLY` 数据库预检，随后 React/Vue 各从真实服务端执行**恰好一次 GET**，必须返回 200/no-store、UNRELEASED、代次 0、无快照、Tag 质量 UNAVAILABLE。
+- `after`：只能在未来**另行明确授权并实际完成真实 ACL 撤销**之后执行，双端相同 GET 必须真实返回 404/no-store，UI 为 denied 且发布指针/静态快照清空、质量不可用；401、403、200、HTTP 重定向和额外请求都失败。**单纯 404 不能证明工程确实存在过或 ACL 已撤销**；仍需另行完成撤权后的真实 PostgreSQL 只读状态审计，并核对原 D5b1 工程不变。
+- 两阶段均验证同一可信 BFF 主体、零默认工程 GET、无受控工程写入、停止读取后零新增 GET；只输出固定中文阶段与脱敏错误类别。`after` 不会自动恢复权限，运行失败亦不允许脚本补偿写入。
+
+在**没有** D5b4 专用工程、也**没有**数据库写入授权的当前阶段，只允许使用以下离线质量命令：
+
+```powershell
+git fetch origin
+git switch test/b35-d5b4d-release-revocation-readonly-acceptance
+git pull --ff-only
+git rev-parse HEAD
+
+pnpm run test:published:oidc:revoke:readonly:config
+if ($LASTEXITCODE -ne 0) { throw "D5b4d 只读安全测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b4d Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b4d 文档检查失败" }
+
+pnpm run ready
+Write-Host "D5b4d 完整质量链退出码：$LASTEXITCODE"
+```
+
+**未来的真实手工调用（本轮禁止执行）**：先由维护者获得单独授权、记录真实新建专用工程 ID 并完成 D5b4c 数据库只读预检，才允许运行 `pnpm run test:published:oidc:revoke:readonly:browser --phase before --project-id <真实 ID>`；再次获得独立撤权授权并完成实际 ACL 变更后才可运行 `--phase after`。两次浏览器成功也不替代后置数据库 ACL 审计。本次实际只做 GitHub 源码与隔离 V8 静态/纯函数检查（另以受限 V8 模拟执行 15 项测试定义，15/15），**未运行正式 Windows Node、`vp check`、`docs:check`、`ready` 或真实浏览器/数据库专项**。

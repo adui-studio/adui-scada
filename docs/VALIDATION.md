@@ -2510,3 +2510,17 @@ PR #112 补丁仅优化测试用例构造方式：把循环里最多 256 次整�
 GitHub 合并前复核 PR #112 候选 HEAD 为 `061c42ba756ccbf8d91788a57f615c1faac9b406`，对 `main@67526a8972f90325ed534ef8c05a5d43cffd7357` 领先 3 提交、落后 0 提交，Draft 且 Assignee 为 `@adui-dev`。**原始 Windows 复验日志未包含本地 `git rev-parse HEAD`**，因此不把运行结果伪称为对该 SHA 的严格本机绑定。本段属于验收后文档补录，不能视为补录提交再次完成 Windows `docs:check` 或 `ready`。
 
 本小批只完成独立工程**存在后**的只读 SQL 门禁和离线安全测试。维护者尚未授权创建 `d5b4-revoke-<UUIDv4>` 工程，故真实 PostgreSQL 目标预检前置条件不足，**未运行、不得伪造成功**；没有执行 ACL 删除、恢复、真实授权 404、发布状态写入或工业设备操作。后续创建专用工程与真实撤权须分别获得明确授权。
+
+## 2026-11-22 · D5b4d 真实撤权前后只读验收契约（未执行的测试计划）
+
+已核对 `scripts/preflight-oidc-published-revocation-target.mjs` 的真实只读事务、`scripts/prepare-oidc-published-revocation.mjs` 的显式写入入口，以及既有 D5b1/D5b3 双框架发布读取脚本。当前实现的 D5b4c 目标只读预检必须先有唯一合法专用工程；D5b3 的 404 为浏览器内部模拟，不是生产服务端真实 ACL 撤销后的 404。下一阶段验收矩阵与前置条件详见 `docs/HARNESS.md`。
+
+本次仅更新文档规划，无业务代码/权限/SQL/迁移/脚本变动，未连接数据库、未创建专用工程、未撤销或恢复 ACL、未启动真实 Keycloak 浏览器专项。**没有执行 D5b4d 新增的 Node、Windows `vp check`、`docs:check` 或完整 `ready`；不得将 PR #112 的验证结果记作本分支测试通过。** 后续任何新增写入操作需单独明确授权，且不得复用旧 D5b1 工程。
+
+## 2026-11-22 · PR #113 D5b4d 双阶段真实只读浏览器候选与离线安全门禁
+
+新增 `scripts/test-oidc-published-revocation-readonly.mjs` 与 `scripts/test-oidc-published-revocation-readonly.cases.mjs`，根 `test:published:oidc:revoke:readonly:config` 加入 `ready`，`test:published:oidc:revoke:readonly:browser` 仅人工执行。离线测试定义 **15 项**，包括严格阶段/随机 ID、CDP 自包含原生输入、响应不篡改、真实 Fetch 状态、no-store 与重定向拒绝、POST/跨 Origin 拦截、200/404 不可互换、401/403 拒绝、非法页面状态、额外 GET、资源清理及异常脱敏；这些是**用例定义数量，并非 Node 14/14 通过证据**。
+
+本次从 GitHub 回读脚本并移除 ESM import/export 后，在隔离 V8 中完成两份脚本语法解析；选取主脚本的 12 条纯函数 Mock 路径进行对照，**12/12**；另用隔离 V8 配合受限 Node 断言/测试函数代理执行本批 15 条源测试定义，**15/15**。这两项均**不是**正式 Node `node --test`、Chrome 或 PostgreSQL 实测。这只能作为有限开发自检；**Windows 真实 Node 15 项、`vp check`、`docs:check`、完整 `ready`、React/Vue 登录浏览器与真实数据库只读检查仍未运行**。新增文档提交本身亦未经 Windows 质量链验证，具体 HEAD 需 Windows `git rev-parse HEAD` 对照。
+
+没有创建 D5b4 专用工程、进行数据库 INSERT/DELETE/UPDATE、撤销 ACL、恢复权限、正式发布、工程内容写入或工业设备操作。新浏览器脚本的 `after` 阶段即使返回 HTTP 404，也**不证明 ACL 被真实撤销或工程真实存在**，后续必须单独授权、执行真实 PostgreSQL 撤权后只读审计并核对旧 D5b1 基线完整。

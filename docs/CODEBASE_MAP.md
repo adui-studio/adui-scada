@@ -1083,3 +1083,11 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `scripts/preflight-oidc-published-revocation-target.mjs`：要求明确传入现有 `d5b4-revoke-<UUIDv4>`，只在可信本机 OIDC/PG Lab 的 `REPEATABLE READ READ ONLY` 事务中检查独立工程唯一性、首版/未发布/四项 ACL，并核对原 D5b1 工程和授权完整；零数据写入。
 - `scripts/preflight-oidc-published-revocation-target.cases.mjs`：10 项 Node 测试覆盖严格参数、数据库/迁移/身份、工程唯一性、首版/事件、目标与旧项目 ACL、SQL READ ONLY、回滚及诊断脱敏。
 - `package.json`：`test:published:oidc:revoke:target:config` 加入 `ready`；`oidc:lab:published:revoke:target` 必须在维护者另行授权创建独立工程后手动运行。当前无工程时应安全失败，不得伪造成功。
+
+## 2026-11-22 · D5b4d 双阶段真实只读浏览器安全验收候选
+
+- `scripts/test-oidc-published-revocation-readonly.mjs`：只接受 `--phase before|after --project-id d5b4-revoke-<UUIDv4>`；复用原双框架 OIDC/HTTPS CDP 与只读工程 Fetch 门禁，新增不改响应的 `no-store` 和非重定向同源观察器；严格要求撤权前真实 200/UNRELEASED、撤权后真实 404/denied、零快照与零写入，并检查停止读取后无新增 GET。
+- `scripts/test-oidc-published-revocation-readonly.cases.mjs`：15 项 Node 安全回归定义，覆盖参数拒绝、独立 CDP 函数、GET 及缓存头、跨 Origin/写入拦截、阶段错位、状态清理和诊断脱敏。
+- `package.json`：`test:published:oidc:revoke:readonly:config` 进入 `ready`；`test:published:oidc:revoke:readonly:browser` 为需要独立授权专用工程/未来真实撤权后的手工运行入口，不加入 `ready`。
+
+本批不变更服务端权限、Prisma Schema/SQL、React/Vue 生产 UI、工程数据、工业设备。当前仅完成候选代码与隔离自检，正式 Windows/Keycloak/PostgreSQL 验收尚待执行。
