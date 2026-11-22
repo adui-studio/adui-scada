@@ -4383,4 +4383,4 @@ Windows PowerShell 7 离线验收：
 }
 ```
 
-**真实 DB 只读执行不包含在上面命令中。** 仅当维护者另外核实唯一已存在、已合法发布、已授权、可审计的独立 Lab 工程及可信身份后，才允许手工运行 `pnpm run oidc:lab:published:fixture:readonly -- --project-id <人工核实的工程ID>`。这不是发布事务，也不会调用 ACL 删除/恢复；但即使它输出 `RELEASED_METADATA_ONLY`，仍**不能**将其视为真实快照 SHA-256 验证、受控发布来源证明、已发布运行 UI 通过或撤权授权。未经专项安全审批，不执行发布或撤权写入。
+**真实 DB 只读执行不包含在上面命令中。** 仅当维护者另外核实唯一已存在、已合法发布、已授权、可审计的独立 Lab 工程及可信身份后，才允许手工运行 `pnpm run oidc:lab:published:fixture:readonly --project-id <人工核实的工程ID>`。这不是发布事务，也不会调用 ACL 删除/恢复；但即使它输出 `RELEASED_METADATA_ONLY`，仍**不能**将其视为真实快照 SHA-256 验证、受控发布来源证明、已发布运行 UI 通过或撤权授权。未经专项安全审批，不执行发布或撤权写入。
