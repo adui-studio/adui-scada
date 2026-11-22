@@ -2727,15 +2727,6 @@ PR #129 已按维护者明确合并授权 Squash 合并至 `main@fb320f4731cd595
 
 **当前验证级别**：GitHub 远端代码/Schema/已有 D5b4 ACL 契约静态核对，尚未提供本批最新 HEAD 的 Node、`vp check`、`docs:check`、完整 Windows `ready` 实测日志；没有执行真实 PostgreSQL/Keycloak/浏览器操作，仍缺合法 RELEASED 夹具与实时撤权证据。此批不改生产发布安全门禁或 ACL 写入。
 
-## 2026-11-22 · D5b7f 无 ID 已发布夹具受控只读发现候选
-
-用户没有独立已发布 Lab 工程的真实 ID。针对 Issue #126，从 `main@4a39abc42e267f541c7990b3402d368658307866` 新建 `feat/d5b7f-readonly-discovery`。不把“没有 ID”当作“数据库不存在已发布工程”，也不绕过仍固定 fail-closed 的 `ProjectReleaseSafetyGate`。
-
-本批新增 `scripts/discover-published-fixture-readonly.mjs` 以及 `.cases.mjs`，只允许无参数 CLI，在已验证本机 Lab、发布迁移、活动身份/预绑定和原 D5b1 基线的 `REPEATABLE READ READ ONLY` 事务中，按固定专用工程前缀/租户/主体独立读取授权和非零发布指针过滤，`LIMIT 2`，只查询 `project_id`。零个和多个均不暴露任何 ID；恰好一个符合 UUIDv4 的候选时，仍须使用已合并 D5b7c～D5b7e 审查器**重新开启只读事务**核对 ACL/发布指针/版本/事件，才允许输出该 ID 与 `RELEASED_METADATA_ONLY`。没有实际快照正文检验，不得声称 verified。
-
-离线安全测试定义 **16 项**（参数拒绝、唯一性与上限、原基线漂移、迁移及可信身份、查询范围、SQL 故障回滚、二次复核拒绝、异常信息脱敏），增加 `test:published:oidc:fixture:discover:config` 并纳入 `ready`；**真实数据库命令** `oidc:lab:published:fixture:discover` 保持单独手动运行。本次已从 GitHub 回读代码与配置，但尚未执行 Windows 原生 Node/Vite+/文档/完整 ready，**也没有访问真实 PostgreSQL 或证明任何合法已发布夹具存在**，所有退出码以维护者未来真实日志为准。
-
-无 Vue/React/NestJS 业务变更、SQL 写入、ACL 变更、设备控制或发布门禁调整。真实只读发现需要维护者在本机另行确认隔离 Lab 与只读操作边界，Issue #126 继续 Open。
 
 ## 2026-11-22 · PR #132 Windows 修复验收与 D5b8a 服务端门禁代码候选
 
@@ -2758,3 +2749,13 @@ PR #133 已在原分支将上述单行改为 `const query = vi.fn<() => Promise<
 在上述已验收版本之后，继续于原 Draft PR #133 **仅增强既有 HTTP E2E 的一条 503 安全断言**：构造包含 `TAG_SOURCE_UNVERIFIED`、`RUNTIME_ADMISSION_UNAVAILABLE`、`INDUSTRIAL_READ_POLICY_UNAVAILABLE` 的真实错误对象，检查 HTTP 响应仍严格等于 `{ statusCode: 503, message: 固定中文说明 }`，不泄漏内部阻塞代码、字段路径或 Prisma 信息。不修改发布安全门禁实现、正式事务、数据库、权限或设备控制。
 
 **新的 E2E 断言尚未在 Windows 实测**，因此先前 62/62 / 688/688 / 完整 `ready` 的成绩仅作为原修复版本的证据，不能当作本次最终 HEAD 的运行通过。PR #132、#133 仍保持 Draft；Issue #126 的真实已发布独立夹具及 `verified → denied` 仍受安全门禁与独立审批阻塞，不得假装结案。
+
+## 2026-11-22 · D5b7f 无 ID 已发布夹具受控只读发现候选
+
+用户没有独立已发布 Lab 工程的真实 ID。针对 Issue #126，从 `main@4a39abc42e267f541c7990b3402d368658307866` 新建 `feat/d5b7f-readonly-discovery`。不把“没有 ID”当作“数据库不存在已发布工程”，也不绕过仍固定 fail-closed 的 `ProjectReleaseSafetyGate`。
+
+本批新增 `scripts/discover-published-fixture-readonly.mjs` 以及 `.cases.mjs`，只允许无参数 CLI，在已验证本机 Lab、发布迁移、活动身份/预绑定和原 D5b1 基线的 `REPEATABLE READ READ ONLY` 事务中，按固定专用工程前缀/租户/主体独立读取授权和非零发布指针过滤，`LIMIT 2`，只查询 `project_id`。零个和多个均不暴露任何 ID；恰好一个符合 UUIDv4 的候选时，仍须使用已合并 D5b7c～D5b7e 审查器**重新开启只读事务**核对 ACL/发布指针/版本/事件，才允许输出该 ID 与 `RELEASED_METADATA_ONLY`。没有实际快照正文检验，不得声称 verified。
+
+离线安全测试定义 **16 项**（参数拒绝、唯一性与上限、原基线漂移、迁移及可信身份、查询范围、SQL 故障回滚、二次复核拒绝、异常信息脱敏），增加 `test:published:oidc:fixture:discover:config` 并纳入 `ready`；**真实数据库命令** `oidc:lab:published:fixture:discover` 保持单独手动运行。本次已从 GitHub 回读代码与配置，但尚未执行 Windows 原生 Node/Vite+/文档/完整 ready，**也没有访问真实 PostgreSQL 或证明任何合法已发布夹具存在**，所有退出码以维护者未来真实日志为准。
+
+无 Vue/React/NestJS 业务变更、SQL 写入、ACL 变更、设备控制或发布门禁调整。真实只读发现需要维护者在本机另行确认隔离 Lab 与只读操作边界，Issue #126 继续 Open。
