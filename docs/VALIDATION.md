@@ -2794,3 +2794,29 @@ if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
 ```
 
 此项不能替代真实 Runtime 资源可用性、Tag 数据源、工业只读准入的专项审批；不执行 PostgreSQL、发布 POST、ACL 撤销、设备控制与分支清理。Issue #126 继续 Open。
+
+## 2026-11-22 · D5b8b 合并验收与 D5b8c Tag 安全阻塞候选
+
+维护者 Windows 在 PR #134 合并前实测 **58/58 测试文件、690/690 Vitest**、`vp check` **413 个文件格式通过/264 个受检零警告错误**、文档 **90** 份、服务端 HTTP E2E **62/62** 及 React/Vue/NestJS 完整 `ready` 成功；未附本地 HEAD SHA。PR #134 最新 HEAD `4a5122e5e47590acd501b78967b9e063a7fba83c` 通过维护者本轮明确授权合并到主线 `445424024b7faf82dd94c0a4faa6620a7d3049bd`，并没有测试用安全放行代码。
+
+D5b8c 仅增强 `ProjectReleaseSafetyGate` 的静态 Tag 可信来源与绑定诊断，不新增真实来源记录、数据源认证、写操作、测试用通行证或运行时质量伪造。新增 3 项 Vitest 测试定义，覆盖隐藏绑定、`unknown` 类型、元数据伪造与诊断脱敏；服务端门禁仍在评估后无条件抛错，HTTP 响应继续固定 503 中文消息。**本轮没有执行仓库真实 Vite+ / Vitest / 完整 `ready` 测试，目标用例数不能写成已通过结果**。
+
+维护者在本地同步 D5b8c Draft PR 最新 HEAD 后可执行：
+
+```powershell
+git rev-parse HEAD
+pnpm --filter @adui/scada-server run test
+if ($LASTEXITCODE -ne 0) { throw "D5b8c 服务端测试失败" }
+pnpm run test:unit
+if ($LASTEXITCODE -ne 0) { throw "D5b8c 全量单测失败" }
+pnpm --filter @adui/scada-server run test:e2e
+if ($LASTEXITCODE -ne 0) { throw "D5b8c HTTP E2E 失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b8c Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b8c 文档检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "D5b8c 完整质量链失败" }
+```
+
+离线质量链不含真实已发布夹具、正式发布 POST、ACL 撤权、工业网关与设备数据质量；这些工作需独立工业安全审核及明确操作授权，不能据本批结果改变 Issue #126 未完成状态。
