@@ -1278,3 +1278,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/runtime/src/published-runtime-refresher.ts`：每次在 `refresh()` 启动受控 GET 时建立本地取消完成 Promise，原始网络请求、超时与生命周期取消三路竞速；`setVisible(false)` 与 `stop()` 在废弃旧代次时释放上层等待。底层网络不响应 AbortSignal 也不应导致上层 Promise 永久悬挂；不增加任何真实资源读取或写操作。
 - `packages/runtime/test/published-runtime-refresher.test.ts`：新增 1 项定向测试模拟永久未结算的只读请求，验证页面隐藏/重新显示后停止两次等待均结算、网络信号已取消、旧画面与定时任务均为空。
 - React/Vue 继续复用此刷新器。服务端发布、安全 Gate、Tag 源、数据库、ACL 和正式 Runtime 质量均不变。
+
+## 2026-11-22 · D5b9c 双框架已发布多页面只读预览
+
+- `packages/runtime/src/published-runtime-view.ts`：`publishedSnapshotSvg(snapshot, pageId?)` 将可选页面 ID 传递给既有 `svgDataUrl`；依旧先执行全工程 Schema / 静态 Runtime 兼容性校验，并传入空 Tag 值。未提供页面 ID 时保留首页兼容行为。
+- `packages/runtime/test/published-runtime-view.test.ts`：新增 1 项多页面快照测试：按 ID 生成不同 SVG，不泄漏首页图元内容或模拟质量，未知页面 ID 拒绝。
+- `apps/web-react/src/runtime/PublishedRuntimePage.tsx`、`apps/web-vue/src/runtime/PublishedRuntimePage.vue`：只在 `verified` 多页面快照下提供同构“组态页面”下拉选择。所选页面不在当前快照时自动采用当前首页；开始新工程和停止时清理选择。切换不调用服务端 API。
+- 正式发布服务器、工业采集、Tag 质量模型与 Schema 均无改动，尚未进行真实多页面已发布浏览器 Lab 专项。
