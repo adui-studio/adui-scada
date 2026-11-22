@@ -1334,3 +1334,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-tag-delta.ts`：只读同会话 delta 筛选。显式上游核验/代次，整批 Tag 校验与重复拒绝，复用质量/时效/严格序列契约；有效目标增量返回冻结新基线，其他拒绝不返回旧读数或可使用基线。
 - `packages/core/test/alarm-tag-delta.test.ts`：新增 **9 项定向测试定义**，覆盖快照→多次增量、防御性复制、来源与种类拒绝、会话失配、序列回退、坏质量/超龄、其他 Tag 空更新、整批非法与异常参数。
 - `packages/core/src/index.ts`：增加 `advanceAlarmTagDeltaBaseline` 及结果类型公共导出。TagStore / Runtime、Vue/React、NestJS / Prisma、工业网关和发布 Gate 未改。
+
+## 2026-11-23 · D5b9l FR-011 报警候选会话归约
+
+- `packages/core/src/alarm-baseline-session.ts`：新增 `beginAlarmBaselineSession`、`restartAlarmBaselineSession`、`transitionAlarmBaselineSession`。冻结本地状态、重启代次递增，组合已存在快照与 delta 校验并处理断连、定时检查、无目标更新、拒绝后基线清理及旧回调隔离。
+- `packages/core/test/alarm-baseline-session.test.ts`：新增 **11 项单测定义**，覆盖初始等待、连续增量、非目标 delta、跨会话迟到、重启、来源拒绝、重复序列、批次异常、断连和超时失效。
+- `packages/core/src/index.ts`：共享导出三函数及状态、动作、拒绝与转换类型。Runtime、NestJS、工业网关、双框架组件和正式发布门禁均未修改。
