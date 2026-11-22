@@ -1218,3 +1218,11 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - 根 `package.json`：`test:published:oidc:fixture:discover:config` 仅运行离线 Mock 并加入 `ready`；`oidc:lab:published:fixture:discover` 为单独、须确认 Lab 授权才能手动运行的真实 PostgreSQL 只读入口。
 
 本批没有修改现有业务 API、Schema、迁移、ACL、生产发布门禁、工业设备或 Vue/React 行为。
+
+## 2026-11-22 · D5b8 正式已发布夹具准入方案（仅文档）
+
+- `docs/adr/0070-isolated-published-fixture-safety-review.md`：**Proposed**；定义 Issue #126 真实独立已发布 Lab 夹具合法产生所需的发布安全门禁、设计/操作分层审批、真实版本/事件/HTTP 证据、单项撤权与恢复边界，以及 LF-01～LF-12 未来验收矩阵。没有可执行写入。
+- `docs/RELEASE_TRANSACTION_REVIEW.md`：说明它与已批准 ADR-0069 R-01～R-08、现存固定拒绝门禁之间的关系；新增方案不改变既有正式发布事务和只读发现工具。
+- `docs/PROJECT_CONTEXT.md`、`docs/VALIDATION.md`：记录 D5b7f 本机 `NOT_FOUND` 的真实证据、D5b8 Proposed 状态及未执行/未授权的边界。
+
+生产代码 `apps/server/src/projects/project-release-safety-gate.ts` 仍为 fail-closed；没有新的 Prisma 模型、迁移、NestJS API、客户端、网关或设备写入。
