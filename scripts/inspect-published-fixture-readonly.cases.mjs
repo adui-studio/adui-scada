@@ -47,27 +47,19 @@ function fixture(change = {}) {
       calls.push({ sql, params });
       if (sql.startsWith("BEGIN") || sql === "ROLLBACK") return { rows: [] };
       if (change.failOn && sql.includes(change.failOn)) throw new Error("Token=SECRET");
-      const key = sql.includes("current_database()")
-        ? "database"
-        : sql.includes("SELECT migration_name")
-          ? "migrations"
-          : sql.includes("COUNT(*)")
-            ? "unresolved"
-            : sql.includes("scada_external_identities")
-              ? "external"
-              : sql.includes("scada_identities")
-                ? "identity"
-                : sql.includes("scada_project_grants")
-                  ? "grants"
-                  : sql.includes("scada_project_release_state")
-                    ? "releaseState"
-                    : sql.includes("scada_project_release_events")
-                      ? "lastEvent"
-                      : sql.includes("scada_project_versions")
-                        ? "releasedVersion"
-                        : sql.includes("scada_projects")
-                          ? "project"
-                          : "unknown";
+      const queries = [
+        ["current_database()", "database"],
+        ["SELECT migration_name", "migrations"],
+        ["COUNT(*)", "unresolved"],
+        ["scada_external_identities", "external"],
+        ["scada_identities", "identity"],
+        ["scada_project_grants", "grants"],
+        ["scada_project_release_state", "releaseState"],
+        ["scada_project_release_events", "lastEvent"],
+        ["scada_project_versions", "releasedVersion"],
+        ["scada_projects", "project"],
+      ];
+      const key = queries.find(([part]) => sql.includes(part))?.[1] ?? "unknown";
       assert.notEqual(key, "unknown", "数据库查询必须只来自已审核的元数据白名单");
       return { rows: rows[key] };
     },
@@ -111,21 +103,19 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
       PROJECT,
       "lab-engineer",
     ]);
-    assert.deepEqual(calls.find((entry) => entry.sql.includes("scada_external_identities")).params, [
-      target.issuer,
-      "lab-tenant",
-      "lab-engineer",
-    ]);
+    assert.deepEqual(
+      calls.find((entry) => entry.sql.includes("scada_external_identities")).params,
+      [target.issuer, "lab-tenant", "lab-engineer"],
+    );
     assert.deepEqual(calls.find((entry) => entry.sql.includes("scada_project_versions")).params, [
       "lab-tenant",
       PROJECT,
       "1",
     ]);
-    assert.deepEqual(calls.find((entry) => entry.sql.includes("scada_project_release_events")).params, [
-      "lab-tenant",
-      PROJECT,
-      EVENT,
-    ]);
+    assert.deepEqual(
+      calls.find((entry) => entry.sql.includes("scada_project_release_events")).params,
+      ["lab-tenant", PROJECT, EVENT],
+    );
   });
 
   void it("未发布独立授权工程只返回 UNRELEASED，绝不冒充已发布", async () => {
