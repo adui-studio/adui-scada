@@ -3745,10 +3745,10 @@ Write-Host "D5b4c 数据库只读核查退出码：$LASTEXITCODE"
 
 ### D5b4d 双框架真实只读浏览器候选入口（尚未在 Windows 运行）
 
-新增独立脚本 `scripts/test-oidc-published-revocation-readonly.mjs`，只允许精确的 `--phase before|after --project-id d5b4-revoke-<UUIDv4>`。两个阶段是**两次独立人工运行**，脚本绝不自动创建专用工程、增加或删除 ACL，也不在阶段之间自动修改数据库。沿用真实 Keycloak/BFF 登录、React/Vue HTTPS 双 Origin 和现有 `installPublishedReadGuardInPage`：在发布运行页挂载前加上只读响应观察器，只保留**实际 HTTP 状态码与 no-store 布尔值**，不替换响应、不模拟 404、不读取正文或令牌。
+新增独立脚本 `scripts/test-oidc-published-revocation-readonly.mjs`，只允许精确的 `--phase before|after --project-id d5b4-revoke-<UUIDv4>`。两个阶段是**两次独立人工运行**，脚本绝不自动创建专用工程、增加或删除 ACL，也不在阶段之间自动修改数据库。沿用真实 Keycloak/BFF 登录、React/Vue HTTPS 双 Origin 和现有 `installPublishedReadGuardInPage`：在发布运行页挂载前加上只读响应观察器，只保留**实际 HTTP 状态码、no-store 和精确同源非重定向布尔值**，不替换响应、不模拟 404、不读取正文或令牌。
 
 - `before`：要求已获另行授权创建的唯一工程先通过 D5b4c `READ ONLY` 数据库预检，随后 React/Vue 各从真实服务端执行**恰好一次 GET**，必须返回 200/no-store、UNRELEASED、代次 0、无快照、Tag 质量 UNAVAILABLE。
-- `after`：只能在未来**另行明确授权并实际完成真实 ACL 撤销**之后执行，双端相同 GET 必须真实返回 404/no-store，UI 为 denied 且发布指针/静态快照清空、质量不可用；401、403、200 和额外请求都失败。**单纯 404 不能证明工程确实存在过或 ACL 已撤销**；仍需另行完成撤权后的真实 PostgreSQL 只读状态审计，并核对原 D5b1 工程不变。
+- `after`：只能在未来**另行明确授权并实际完成真实 ACL 撤销**之后执行，双端相同 GET 必须真实返回 404/no-store，UI 为 denied 且发布指针/静态快照清空、质量不可用；401、403、200、HTTP 重定向和额外请求都失败。**单纯 404 不能证明工程确实存在过或 ACL 已撤销**；仍需另行完成撤权后的真实 PostgreSQL 只读状态审计，并核对原 D5b1 工程不变。
 - 两阶段均验证同一可信 BFF 主体、零默认工程 GET、无受控工程写入、停止读取后零新增 GET；只输出固定中文阶段与脱敏错误类别。`after` 不会自动恢复权限，运行失败亦不允许脚本补偿写入。
 
 在**没有** D5b4 专用工程、也**没有**数据库写入授权的当前阶段，只允许使用以下离线质量命令：
@@ -3772,4 +3772,4 @@ pnpm run ready
 Write-Host "D5b4d 完整质量链退出码：$LASTEXITCODE"
 ```
 
-**未来的真实手工调用（本轮禁止执行）**：先由维护者获得单独授权、记录真实新建专用工程 ID 并完成 D5b4c 数据库只读预检，才允许运行 `pnpm run test:published:oidc:revoke:readonly:browser --phase before --project-id <真实 ID>`；再次获得独立撤权授权并完成实际 ACL 变更后才可运行 `--phase after`。两次浏览器成功也不替代后置数据库 ACL 审计。本次实际只做 GitHub 源码与隔离 V8 静态/纯函数检查（另以受限 V8 模拟执行 14 项测试定义，14/14），**未运行正式 Windows Node、`vp check`、`docs:check`、`ready` 或真实浏览器/数据库专项**。
+**未来的真实手工调用（本轮禁止执行）**：先由维护者获得单独授权、记录真实新建专用工程 ID 并完成 D5b4c 数据库只读预检，才允许运行 `pnpm run test:published:oidc:revoke:readonly:browser --phase before --project-id <真实 ID>`；再次获得独立撤权授权并完成实际 ACL 变更后才可运行 `--phase after`。两次浏览器成功也不替代后置数据库 ACL 审计。本次实际只做 GitHub 源码与隔离 V8 静态/纯函数检查（另以受限 V8 模拟执行 15 项测试定义，15/15），**未运行正式 Windows Node、`vp check`、`docs:check`、`ready` 或真实浏览器/数据库专项**。
