@@ -1159,3 +1159,9 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - `scripts/test-oidc-studio-revoked-late-multitab.mjs`：复用同一只读响应结算等待，避免第二页真实 Response 交付后拿未完成的后台 GET 状态做严格数量比较；仍完整执行相同的 404/no-store/无重定向、SVG/JSON/草稿/CAS 与零写入检查。
 - `scripts/test-oidc-studio-revoked-multitab.cases.mjs`：新增 4 项异步响应补齐、只读门禁异常、额外 GET 严格拒绝的离线用例，目标由 16 项变成 20 项。D5b5c 原 14 项未修改。
 - 原有 `scripts/test-oidc-published-runtime-readonly.mjs` 的响应记录机制、业务代码与数据库权限均不变。
+
+## 2026-11-22 · E-079 D5b5c 响应逆序交付与可见性恢复顺序
+
+- `scripts/test-oidc-studio-revoked-late-multitab.mjs`：第二标签先交付并完成单次目标 GET/404 检查后，**第一标签保持隐藏完成后交付及相同严格检查**；随后 `switchToTab(browser, second)` 恢复第一标签可见，执行最终 SVG/JSON/IndexedDB/CAS 和零工程写入复核。可见性切换不会插入两次响应交付的严格请求计数窗口。
+- `scripts/test-oidc-studio-revoked-late-gate.cases.mjs`：新增 1 项 Node 负向边界用例，验证隐藏的第一标签仍能接收真实 Response、第二标签先交付且两页各只发一次只读 GET；总数由 14 增至 15 项。
+- `scripts/test-oidc-studio-revoked-multitab.mjs`、已合并 D5b5b 顺序浏览器行为、原始只读 HTTP 守卫、Vue/React/NestJS 生产代码、Prisma 与 ACL 均未修改。
