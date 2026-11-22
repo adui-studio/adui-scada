@@ -80,6 +80,7 @@ export async function inspectPublishedFixtureReadonly(client, target, projectId)
         "WHERE issuer = $1 AND tenant_id = $2 AND subject_id = $3",
       [target.issuer, TENANT, SUBJECT],
     );
+    if (identity.length !== 1 || external.length !== 1) throw new Error(METADATA_ERROR);
     const scope = [TENANT, projectId];
     const project = await query(
       "SELECT tenant_id, project_id, head_revision FROM public.scada_projects " +
