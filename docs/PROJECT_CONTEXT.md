@@ -2088,3 +2088,11 @@ Issue #126 是当前唯一开放普通 Issue。PR #127～#130 的离线分类、
 从此主线新增 `feat/d5b7f-readonly-discovery`：先核对可信 Lab/迁移/主体/OIDC 映射及原 D5b1 基线，再以固定 `d5b7b-published-%` 范围、独立读取 ACL 和发布指针过滤最多两条工程标识；零条或多条不输出 ID，仅唯一且经过第二次完整只读审查的候选才向本机维护者显示工程 ID，仍仅是 `RELEASED_METADATA_ONLY`。
 
 离线 Node 安全用例纳入 `ready`；真实 DB 发现独立人工执行，不在本轮自动运行。尚无真实 PostgreSQL、快照 SHA-256、受保护 HTTP 200/RELEASED 或在线 `verified → denied` 证据，发布门禁继续固定拒绝，Issue #126 保持 Open。
+
+## 2026-11-22 · D5b8 正式已发布测试夹具准入评审候选
+
+D5b7f 的无 ID 受控只读发现已通过维护者 Windows 16/16 Node、Vite+ 411/263、文档 89、Vitest 682/682、HTTP E2E 62/62、完整 `ready` 验收，并以 PR #131 合并至 `main@53e686d04e7bce5ad360c8901aa965db6e838cfe`。维护者在可信本机 Lab 实际执行 `oidc:lab:published:fixture:discover` 后获得 `NOT_FOUND`、退出码 1，未得到可用的独立已发布测试工程 ID。这不是软件故障，也不证明整个数据库没有工程。
+
+针对唯一开放的普通 Issue #126，从最新 main 建立 `chore/d5b8-published-fixture-design`，新增 [ADR-0070](adr/0070-isolated-published-fixture-safety-review.md) 的 **Proposed** 独立 Lab 已发布夹具准入设计。原则是必须先完成并安全验收真正的 `ProjectReleaseSafetyGate`；禁止 SQL 伪造状态、环境开关、仅测试宽松 Provider、复用 D5b1/D5b4 或无条件 Mock。设计了审批职责、最小无设备数据静态快照边界（是否合格须评审）、单次正式 API 发布、真实不可变快照/双框架运行读证据、单项撤权授权以及保留/恢复与 LF-01～LF-12 未来测试矩阵。
+
+**此分支只包含文档候选**；没有新增生产代码、数据库 SQL、迁移、API、运行时、工程权限写入、真实发布或设备动作。ADR 尚未获得维护者工业安全评审批准，不等于任何发布/撤权授权；Windows 文档和质量链待维护者验收，Issue #126 保持 Open。
