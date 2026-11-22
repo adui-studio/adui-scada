@@ -174,10 +174,14 @@ void describe("D5b7f 无工程 ID 只读候选发现安全门禁", () => {
   void it("二次审查必须重复校验完整元数据才允许输出 ID", async () => {
     const { client, calls } = fixture();
     let received = null;
-    const result = await discoverPublishedFixtureReadonly(client, target, async (_client, _target, id) => {
-      received = id;
-      return { kind: "RELEASED_METADATA_ONLY" };
-    });
+    const result = await discoverPublishedFixtureReadonly(
+      client,
+      target,
+      async (_client, _target, id) => {
+        received = id;
+        return { kind: "RELEASED_METADATA_ONLY" };
+      },
+    );
     assert.equal(received, FIRST);
     assert.deepEqual(result, { kind: "RELEASED_METADATA_ONLY", projectId: FIRST });
     assertReadonly(calls);
