@@ -169,6 +169,105 @@ describe("正式发布 Runtime 指针刷新与失效保护", () => {
     refresher.stop();
   });
 
+  it("已验证发布刷新等待 403 时必须立即撤下旧画面且拒绝后停止轮询", async () => {
+    const current = await published(2, 3);
+    let rejectPending: ((reason?: unknown) => void) | undefined;
+    const readCurrentRelease = vi
+      .fn<PublishedReleaseReader["readCurrentRelease"]>()
+      .mockResolvedValueOnce(current)
+      .mockImplementationOnce(
+        () =>
+          new Promise<unknown>((_resolve, reject) => {
+            rejectPending = reject;
+          }),
+      );
+    const clock = manualClock();
+    const { runtime, refresher } = fixture({ readCurrentRelease }, clock.schedule);
+
+    await refresher.start(projectId);
+    expect(runtime.snapshot()).toMatchObject({
+      status: "verified",
+      snapshot: { revision: 2 },
+      tagQuality: "UNAVAILABLE",
+    });
+    clock.fireNext();
+    expect(runtime.snapshot()).toMatchObject({
+      status: "loading",
+      projectId,
+      snapshot: null,
+      releaseGeneration: null,
+      tagQuality: "UNAVAILABLE",
+    });
+    expect(readCurrentRelease).toHaveBeenCalledTimes(2);
+
+    rejectPending?.({ kind: "forbidden" });
+    await vi.waitFor(() => {
+      expect(runtime.snapshot()).toMatchObject({
+        status: "denied",
+        projectId,
+        snapshot: null,
+        releaseGeneration: null,
+        tagQuality: "UNAVAILABLE",
+      });
+    });
+    expect(clock.pendingDelays()).toEqual([]);
+    expect(readCurrentRelease).toHaveBeenCalledTimes(2);
+    refresher.stop();
+  });
+
+  it("隐藏中的迟到合法 200 不得覆盖重显后收到的撤权 404", async () => {
+    const before = await published(2, 3);
+    const stale = await published(3, 4, "8ce68b7b-4197-4c64-8ddf-3936f9fe95a2");
+    let releaseOld: ((value: unknown) => void) | undefined;
+    let staleSignal: AbortSignal | undefined;
+    const readCurrentRelease = vi
+      .fn<PublishedReleaseReader["readCurrentRelease"]>()
+      .mockResolvedValueOnce(before)
+      .mockImplementationOnce(
+        (_id, signal) =>
+          new Promise<unknown>((resolve) => {
+            staleSignal = signal;
+            releaseOld = resolve;
+          }),
+      )
+      .mockRejectedValueOnce({ kind: "not_found" });
+    const clock = manualClock();
+    const { runtime, refresher } = fixture({ readCurrentRelease }, clock.schedule);
+
+    await refresher.start(projectId);
+    clock.fireNext();
+    expect(runtime.snapshot()).toMatchObject({
+      status: "loading",
+      snapshot: null,
+      tagQuality: "UNAVAILABLE",
+    });
+    await refresher.setVisible(false);
+    expect(staleSignal?.aborted).toBe(true);
+    expect(runtime.snapshot()).toMatchObject({ status: "idle", snapshot: null });
+    expect(clock.pendingDelays()).toEqual([]);
+
+    await refresher.setVisible(true);
+    expect(runtime.snapshot()).toMatchObject({
+      status: "denied",
+      projectId,
+      snapshot: null,
+      releaseGeneration: null,
+      tagQuality: "UNAVAILABLE",
+    });
+    expect(clock.pendingDelays()).toEqual([]);
+    releaseOld?.(stale);
+    await Promise.resolve();
+    expect(runtime.snapshot()).toMatchObject({
+      status: "denied",
+      projectId,
+      snapshot: null,
+      releaseGeneration: null,
+      tagQuality: "UNAVAILABLE",
+    });
+    expect(readCurrentRelease).toHaveBeenCalledTimes(3);
+    refresher.stop();
+  });
+
   it("发布摘要损坏后清空运行画面，禁止自动循环请求损坏正文", async () => {
     const data = await published();
     const tampered = { ...data, releasedContentHash: "0".repeat(64) };
