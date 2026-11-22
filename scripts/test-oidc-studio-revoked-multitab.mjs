@@ -74,7 +74,12 @@ export function classifyD5b5PreservationFailure(
     if (beforeGuard.blocked !== 0 || afterGuard.blocked !== 0) {
       return D5B5_PROTECTION_REASONS[1];
     }
-    const validRecords = [beforeGuard.paths, afterGuard.paths, beforeGuard.statuses, afterGuard.statuses];
+    const validRecords = [
+      beforeGuard.paths,
+      afterGuard.paths,
+      beforeGuard.statuses,
+      afterGuard.statuses,
+    ];
     if (!validRecords.every(Array.isArray)) return D5B5_PROTECTION_REASONS[2];
     if (afterGuard.paths.length !== beforeGuard.paths.length + 1) {
       return D5B5_PROTECTION_REASONS[3];
