@@ -2579,3 +2579,19 @@ PR #117 已按维护者明确授权 Squash 合并至 `main@3c2e51c385ddaacb5015b
 **原因**：`runInNewContext` 独立 Realm 中构造的 `fetch` 选项对象被 Node 侧 Mock 缓存为嵌套属性，虽字段相同但严格相等还比较原型；之前隔离 V8/Mock 的简化 `deepEqual` 未覆盖 Node 原生跨 Realm 对象语义，因此此前“11/11 模拟符合预期”不能替代本次原生测试失败。**最小修复只改测试 1 行**，将 `requests` 以 `structuredClone` 转到当前 Node Realm 后继续严格 `assert.deepEqual`，并未修改生产代码、请求内容、参数白名单、GET/404/no-store、草稿保护断言或安全边界。
 
 协作环境用 Node **v22.16.0** 的真实 `node:vm` / `node:assert/strict` 独立复现：旧断言触发 `ERR_ASSERTION`，新断言通过；请求方法、凭据、缓存、重定向、额外请求和多余字段六种负向篡改仍严格拒绝。**本修复 HEAD 的 Windows `node --test`、`vp check`、`docs:check`、完整 `ready` 均待维护者重新执行**。尚未执行 D5b5 真实 Keycloak/HTTPS 双框架浏览器；没有重新创建专用工程、恢复 ACL 或执行数据库写入。
+
+## 2026-11-22 · D5b5 React/Vue Studio 真实已撤权发布 GET 本地保护专项验收通过
+
+维护者在 Windows 本机 `main` 执行 D5b5 真实 Keycloak/HTTPS 浏览器专项，Git 工作区无未提交变更，`git fetch`、`git switch main`、`git pull --ff-only` 均正常；脚本设置 `expectedHead=039bfd01ecf34e3641556fc5536a6bda377cf732`，读取实际 `git rev-parse HEAD` 并检查相等，未抛出异常。这提供了**通过分支 HEAD 一致性校验**的证据；原始终端没有独立回显 `actualHead` 字符串，不能冒充直接打印的本地 SHA。
+
+此前同一修复版本的 Windows 离线验收已完成：`test:published:oidc:revoke:studio:config` **11/11**、`vp check` **396 格式文件/248 受检零警告错误**、`docs:check` **89 份**、完整 `ready` **680/680 Vitest 单测、62/62 NestJS HTTP E2E、React/Vue/NestJS 构建成功、退出码 0**，已获明确授权合并 PR #118，Squash 后为上述 `main` HEAD。本次文档追加没有重新运行这些离线质量检查。
+
+本次真实专项顺序和结果：
+
+1. `pnpm run oidc:lab:published:revoke:after --project-id <既有已撤权 D5b4 工程 ID>`：D5b4e PostgreSQL 只读审计**通过**，工程仍仅缺少 `release:read`，其余三项工程/版本基础授权和原 D5b1 基线完整；未执行任何 ACL 写入或恢复。
+2. `pnpm run test:published:oidc:revoke:studio:browser --project-id <同一工程 ID>`：真实受控 Keycloak BFF 登录后，**React** 按正式 UI 只读载入首版、在独立隔离浏览器保存 IndexedDB 草稿、新增未保存图元，执行一次同源真实发布 GET 404，逐项检查 SVG、工程 JSON 摘要、草稿数量与内容摘要、自动保存标记及 CAS 基线，全部保持不变；**Vue** 完成同样动作并通过。
+3. 双框架脚本最终报告“同工程跨界面只读回归通过；没有创建工程、恢复 ACL 或写入服务端”；紧随其后的 `$LASTEXITCODE -ne 0` 保护分支未触发，最终人工成功输出只作为辅助，不独立替代脚本真实成功信息。
+
+**正式结论**：D5b5 第一小批“React/Vue Studio 页面独立真实同源发布读取 404 后本地草稿和未保存画布保护”**真实浏览器验收通过**，且已使用先前完成撤权的现存专用工程，未创建新的数据库夹具或再次执行授权撤销。该结果是**真实浏览器与 PostgreSQL 只读回归**，不是浏览器模拟 404。
+
+**不可扩大范围**：发布 GET 是从 Studio 页面发起的独立同源 Fetch，**不是** Studio 业务组件本身消费拒绝响应的发布状态机；草稿比较基于浏览器内读取值的记录数量和 SHA-256，而非 IndexedDB 物理文件字节；也未验证迟到 200/401/404 的真实时序竞态、同源多标签页同时编辑、真正生产设备或完整工业安全认证。后续专项应优先采用同一已撤权工程且零服务端写入的设计，不可为了重复构造撤权前状态恢复 `release:read`。
