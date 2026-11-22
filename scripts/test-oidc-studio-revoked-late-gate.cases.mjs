@@ -234,6 +234,8 @@ void describe("D5b5c 已撤权工程双标签页真实响应逆序交付安全�
       "D5b5c React：先交付第二标签页真实 404失败：" +
         "D5b5 双标签读取期间工程请求数量不符",
     );
+    failure.safeReason = "D5b5c 真实 404 响应挂起或释放时序不符合预期";
+    assert.match(describeD5b5cBrowserFailure(failure), /响应挂起或释放时序不符合预期/);
     failure.safeReason = "Cookie=SECRET Token=SECRET";
     assert.doesNotMatch(describeD5b5cBrowserFailure(failure), /SECRET/);
     failure.stage = "私密工程阶段 Cookie=SECRET";
