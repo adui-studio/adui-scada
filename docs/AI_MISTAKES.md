@@ -739,7 +739,6 @@
 
 > **2026-11-22 · E-079 Windows 结案补录**：维护者提供后续真实 Windows 完整日志，D5b5c Node **15/15**、`vp check` **401/253 零告警错误**、`docs:check` **89 份**、Vitest **680/680**、NestJS HTTP E2E **62/62**、React/Vue/NestJS 构建及完整 `ready` **退出码 0**；相同已撤权 D5b4 工程通过 PostgreSQL **READ ONLY** 审计。D5b5c **React 与 Vue 两端真实 Keycloak/Chrome** 均完成两个真实 404 同时挂起、第二页先交付、第一页面保持隐藏完成后交付、最终可见性恢复以及 SVG/工程 JSON/草稿/CAS 保持不变，真实浏览器无失败退出。D5b5b React/Vue 顺序双标签专项已在此前真实通过。维护者明确同意合并，GitHub 已核实 PR #121 Squash 合并到 `main@87f50a56fdf4372afdf9d65e2ddef9e476b0bcfc`，**E-079 的 D5b5c 真实浏览器阻塞关闭**。附带日志未打印此次本地 Git HEAD，故不将 Windows 日志严格等同于具体 SHA 的直接证明；这仍不涉及工业设备控制与生产发布授权。
 
-
 ### E-080 · D5b7c 元数据只读审查遗漏原 D5b1 基线保护（第三十五批 D5b7d，待 Windows 复验）
 
 - **现象**：Issue #126 要求核对合法发布目标时同时保护原 D5b1 的未发布基线、审计及 ACL。已合并的 PR #128 只在 `READ ONLY` 事务中校验目标工程自身的迁移、身份、授权、版本摘要和末次发布事件，没有查询或核对原 D5b1 基线。因此在目标元数据一致但原工程发生不应有的编辑/发布/授权漂移时，工具仍可能返回 `RELEASED_METADATA_ONLY`。这是审查工具的覆盖缺口，不是已发现原数据库发生真实漂移，也不代表生产 API 存在相同缺陷。
@@ -747,7 +746,6 @@
 - **最小修复**：从 PR #128 合并后的最新主线建立 D5b7d 独立分支，新增纯函数基线校验与 5 项 Node 负向测试；在现有 D5b7c 同一 `REPEATABLE READ READ ONLY` + `ROLLBACK` 事务内，先验证固定原 D5b1 的首版、保存审计、代次 0 / 空发布指针 / 零事件与四项固定 ACL，再查询 D5b7b 目标；原基线不符立即拒绝。扩展原 Mock 区分两工程、验证任意漂移时零目标查询，不改生产服务、数据库、ACL 或发布安全门禁。
 - **防复发**：工业安全预检涉及“新目标 + 不得影响原资产”时，测试必须覆盖目标本身与原资产基线，且使用同一个只读快照和明确的租户/工程参数；不能因为已有事务或权限测试就声称原资产未变。审查报告须区分合成 Mock、真实数据库与真实 HTTP 快照三层证据。
 - **验证边界**：独立 Node.js 22.16.0 已对新纯函数运行 `node --check` 和 5/5 本地负向测试；**D5b7d 最新 GitHub HEAD 的原生 Node 集成回归、Windows `vp check`、`docs:check`、`ready` 与真实 PostgreSQL READ ONLY 均待实测**，不得提前关闭。真实已发布夹具尚未确证存在，生产 `ProjectReleaseSafetyGate` 继续 fail-closed；未执行任何数据库写入、ACL 恢复或正式发布。
-
 
 ## 三、从已发生问题提炼的预防性门禁
 

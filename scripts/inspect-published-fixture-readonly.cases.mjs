@@ -128,11 +128,21 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
 
   void it("原 D5b1 基线漂移时回滚且绝不读取目标工程", async () => {
     for (const change of [
-      (rows) => { rows.baseline.project = []; },
-      (rows) => { rows.baseline.versions[0].created_by = "other"; },
-      (rows) => { rows.baseline.events[0].count = 1; },
-      (rows) => { rows.baseline.grants.pop(); },
-      (rows) => { rows.baseline.state[0].released_revision = "1"; },
+      (rows) => {
+        rows.baseline.project = [];
+      },
+      (rows) => {
+        rows.baseline.versions[0].created_by = "other";
+      },
+      (rows) => {
+        rows.baseline.events[0].count = 1;
+      },
+      (rows) => {
+        rows.baseline.grants.pop();
+      },
+      (rows) => {
+        rows.baseline.state[0].released_revision = "1";
+      },
     ]) {
       const { client, calls, rows } = fixture();
       change(rows);
@@ -141,7 +151,10 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
         new RegExp(BASELINE_ERROR),
       );
       assertReadonly(calls);
-      assert.equal(calls.some((entry) => entry.params?.[1] === PROJECT), false);
+      assert.equal(
+        calls.some((entry) => entry.params?.[1] === PROJECT),
+        false,
+      );
     }
   });
 
@@ -149,7 +162,10 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
     const { client, calls } = fixture({ failOn: "scada_project_audit" });
     await assert.rejects(inspectPublishedFixtureReadonly(client, target, PROJECT), /Token=SECRET/);
     assertReadonly(calls);
-    assert.equal(calls.some((entry) => entry.params?.[1] === PROJECT), false);
+    assert.equal(
+      calls.some((entry) => entry.params?.[1] === PROJECT),
+      false,
+    );
     assert.equal(
       describePublishedFixtureReadonlyFailure(new Error("Token=SECRET")),
       "D5b7c 数据库只读审查失败，内部诊断已脱敏",
@@ -161,9 +177,7 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
     await inspectPublishedFixtureReadonly(client, target, PROJECT);
     assertReadonly(calls);
     const targetQuery = (table) =>
-      calls.find(
-        (entry) => entry.sql.includes(table) && entry.params?.[1] === PROJECT,
-      );
+      calls.find((entry) => entry.sql.includes(table) && entry.params?.[1] === PROJECT);
     const baselineQueries = calls.filter((entry) => entry.params?.[1] === BASELINE_PROJECT);
     assert.equal(baselineQueries.length, 6);
     assert.deepEqual(targetQuery("scada_projects").params, ["lab-tenant", PROJECT]);
