@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
+import pino from "pino";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   createHttpLoggingOptions,
@@ -75,6 +76,37 @@ describe("服务端结构化 HTTP 日志", () => {
     });
     expect(() => options.serializers.err(untrusted)).not.toThrow();
     expect(options.serializers.err(untrusted)).toEqual({ type: "HTTP_ERROR" });
+  });
+
+  it("真实 Pino 失败日志保留请求关联信息而不包含原始异常与 URL", () => {
+    const lines: string[] = [];
+    const stream = {
+      write(chunk: string) {
+        lines.push(chunk);
+      },
+    };
+    const logger = pino({ serializers: createHttpLoggingOptions().serializers }, stream);
+    const sensitive = "测试用不应记录的内部错误正文";
+    logger.error(
+      {
+        req: { id: "request-log-503", method: "POST", url: "/?token=private" },
+        res: { statusCode: 503 },
+        err: new Error(sensitive),
+      },
+      "HTTP 请求失败",
+    );
+
+    expect(lines).toHaveLength(1);
+    const recorded = JSON.parse(lines[0]!) as Record<string, unknown>;
+    expect(recorded).toMatchObject({
+      req: { id: "request-log-503", method: "POST" },
+      res: { statusCode: 503 },
+      err: { type: "HTTP_ERROR" },
+      msg: "HTTP 请求失败",
+    });
+    expect(JSON.stringify(recorded)).not.toContain(sensitive);
+    expect(JSON.stringify(recorded)).not.toContain("stack");
+    expect(JSON.stringify(recorded)).not.toContain("/?token=private");
   });
 
   it("开发交互式终端可美化日志，测试和生产均不得启动 Pretty 工作线程", () => {
