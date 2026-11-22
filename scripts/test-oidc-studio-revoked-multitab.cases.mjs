@@ -145,19 +145,19 @@ void describe("D5b5b 已撤权工程 React/Vue 同源双标签页只读安全门
   void it("两个标签的工程 API 门禁只允许真实 GET，阻断计数必须始终为零", () => {
     const [first, second] = guards();
     assert.equal(requireD5b5NoBlockedWrites(first, second), true);
-    for (const changed of [
-      { blocked: 1 },
-      { paths: first.paths.slice(0, 1) },
-      { statuses: [200] },
-      { paths: null },
-      { statuses: null },
+    for (const corrupt of [
+      (state) => ({ ...state, blocked: 1 }),
+      (state) => ({ ...state, paths: state.paths.slice(1) }),
+      (state) => ({ ...state, statuses: state.statuses.slice(0, -1) }),
+      (state) => ({ ...state, paths: null }),
+      (state) => ({ ...state, statuses: null }),
     ]) {
       assert.throws(
-        () => requireD5b5NoBlockedWrites({ ...first, ...changed }, second),
+        () => requireD5b5NoBlockedWrites(corrupt(first), second),
         /工程 API 只读约束或发布 GET 404 不符合预期/,
       );
       assert.throws(
-        () => requireD5b5NoBlockedWrites(first, { ...second, ...changed }),
+        () => requireD5b5NoBlockedWrites(first, corrupt(second)),
         /工程 API 只读约束或发布 GET 404 不符合预期/,
       );
     }
