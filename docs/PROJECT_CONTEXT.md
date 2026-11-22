@@ -2048,3 +2048,11 @@ PR #122 已按维护者明确授权 Squash 合并到 `main@28c057b5e551c54bc95c0
 维护者 Windows PR #124 HEAD `f7eb8b72f4a6275ae12dc4ec84ce1c20f2415314`、文档检查 89 份和 Vite+ **403/255 零告警**通过，明确同意合并；GitHub 核实其 Squash 合并到 `main@b0f00aa5034cd2f9a7196c506e3affbe4825abe4`。Issue #123 的 React/Vue 正式运行页真实已撤权 404 隐藏重显以及浏览器前后 PostgreSQL READ ONLY 审计已完整登记并按 `completed` 关闭，Assignee 仍为 `@adui-dev`。
 
 下一批 D5b7a 仅补充共享 `PublishedRuntimeRefresher` 纯单测，针对已验证 `RELEASED` 快照的刷新等待期间立即清空画面、后续拒绝自动停止，以及隐藏期间的迟到合法发布 Response 不能覆盖重显后的 `denied`。两个新用例使用受控模拟读取器与已有手动时钟，**不修改生产代码、权限、数据库、发布状态或设备**。本批 Windows 定向测试、`vp check`、`docs:check`、`ready` 待执行；真实已发布工程 `verified → denied` 受控撤权实验还缺隔离已发布 fixture 和单独权限授权，不能从模拟通过推断已真实验收。
+
+## 2026-11-22 · D5b7b 元数据离线预检开发候选
+
+PR #125 已合并为 `main@834defd4e50ad8f8e199e130e9bfc986a618ff52`；历史 PR #98 为关闭未合并的旧堆叠候选，其正式发布 Schema 已由合并的 PR #99 接替，不应重新合并或重复迁移。当前没有开放 PR 需要合并，历史分支清理按维护者最新指令暂停。
+
+基于 Issue #126 从最新主线创建 `test/d5b7b-published-fixture-metadata`：只增加无数据库连接的 D5b7b 元数据分类纯函数与 14 项 Node 安全回归。分类严格区分 `DENIED`、`UNRELEASED` 和仅有元数据一致性的 `RELEASED_METADATA_ONLY`，最后者不得解释为真实 `verified`。测试夹具为合成值，不能作为已存在工程或真实发布状态的证据；生产发布安全门禁未修改。
+
+隔离 Node v22.16.0 运行新用例 14/14；Windows `vp check`、`docs:check`、完整 `ready`、真实独立发布工程只读审计、React/Vue 双框架在线撤权均**待验证**。不创建或修改 Lab 工程、ACL、数据库、发布事务或工业设备。
