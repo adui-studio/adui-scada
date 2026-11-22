@@ -757,13 +757,13 @@
 - **防复发**：涉及 ACL 集合完整性的测试必须使用**不按具体权限预过滤的真实查询形状**，主动注入跨主体与多余权限行并证明读取门禁拒绝。不能只根据过滤后的“命中目标授权”就声称整个 ACL 正常。只读工具与业务权限服务的语义应分别报告，不以离线 Mock 冒充正式运行验收。
 - **验证边界**：已完成 GitHub 源码/Schema/既有 D5b4 ACL 契约核对；新 D5b7e HEAD 的 17 项 Node、Windows Vite+、文档及 `ready` 尚未实测。未执行 PostgreSQL 写入、ACL 恢复、真实发布或撤权，独立已发布夹具仍无存在性证据。
 
-### E-083 · D5b8a 发布门禁测试重复遗漏 Vitest Mock 泛型（第三十五批，待 Windows 复验）
+### E-083 · D5b8a 发布门禁测试重复遗漏 Vitest Mock 泛型（第三十五批，已关闭）
 
 - **现象**：维护者在 Windows 执行 `vp check --fix` 时，对 `apps/server/src/projects/project-release-safety-gate.spec.ts:77` 的 `const query = vi.fn();` 报 `vitest(require-mock-type-parameters)` 警告 1 条、错误 0 条；终端仅显示格式化完成，不能认定 `vp check` 通过。此次无证据表明发布事务或工业设备发生变更。
 - **根因**：新增安全门禁负向测试时未落实已存在的 **E-005**（Vitest Mock 必须显式声明函数签名），在仅检查 SQL 零调用的 Mock 上使用了无泛型 `vi.fn()`。
 - **最小修复**：在原 PR #133 的同一测试文件，仅将其修改为 `vi.fn<() => Promise<unknown[]>>()`；Mock 仍不实际执行，原 `expect(query).not.toHaveBeenCalled()` 保持不变，不改 `ProjectReleaseSafetyGate`、NestJS 接口或任何发布权限。
 - **防复发**：新增 `vi.fn` 时先查看仓库类似测试的签名写法，始终显式传入类型参数；审查提交前搜索新增测试中的裸 `vi.fn()`，执行 `vp check` **无警告**，不要把 `vp check --fix` 的“格式化完成”视为质量链成功。
-- **验证边界**：已在远程 PR #133 静态确认目标裸 Mock 被替换且不含其他 `vi.fn()`。**修复后维护者 Windows `vp check`、`pnpm run test:unit`、`pnpm run ready` 尚未执行**，不能宣称通过。
+- **验证结果**：维护者 2026-11-22 Windows 实测：`vp check` **412 个文件格式正确、264 个受检文件零警告/错误**；`pnpm run test:unit` **58/58 文件、688/688 项**（门禁 6/6），`docs:check` **89**，完整 `pnpm run ready` 包括 NestJS HTTP E2E **62/62**、React/Vue/NestJS 构建均执行成功。该日志未输出本地 HEAD SHA，不能无证据地将测试绑定到远端最终 HEAD；本条原始 Mock 泛型警告已有零告警复验，**E-083 已关闭**。之后对 PR #133 E2E 非空阻塞诊断的新增测试改动，仍需单独重新验收，不能沿用该日志。
 - **证据**：维护者 2026-11-22 Windows Vite+ 警告原文、PR #133、E-005、`docs/VALIDATION.md`。
 
 ## 三、从已发生问题提炼的预防性门禁
