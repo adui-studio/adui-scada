@@ -2758,4 +2758,3 @@ PR #133 已在原分支将上述单行改为 `const query = vi.fn<() => Promise<
 在上述已验收版本之后，继续于原 Draft PR #133 **仅增强既有 HTTP E2E 的一条 503 安全断言**：构造包含 `TAG_SOURCE_UNVERIFIED`、`RUNTIME_ADMISSION_UNAVAILABLE`、`INDUSTRIAL_READ_POLICY_UNAVAILABLE` 的真实错误对象，检查 HTTP 响应仍严格等于 `{ statusCode: 503, message: 固定中文说明 }`，不泄漏内部阻塞代码、字段路径或 Prisma 信息。不修改发布安全门禁实现、正式事务、数据库、权限或设备控制。
 
 **新的 E2E 断言尚未在 Windows 实测**，因此先前 62/62 / 688/688 / 完整 `ready` 的成绩仅作为原修复版本的证据，不能当作本次最终 HEAD 的运行通过。PR #132、#133 仍保持 Draft；Issue #126 的真实已发布独立夹具及 `verified → denied` 仍受安全门禁与独立审批阻塞，不得假装结案。
-
