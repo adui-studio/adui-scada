@@ -4384,3 +4384,37 @@ Windows PowerShell 7 离线验收：
 ```
 
 **真实 DB 只读执行不包含在上面命令中。** 仅当维护者另外核实唯一已存在、已合法发布、已授权、可审计的独立 Lab 工程及可信身份后，才允许手工运行 `pnpm run oidc:lab:published:fixture:readonly --project-id <人工核实的工程ID>`。这不是发布事务，也不会调用 ACL 删除/恢复；但即使它输出 `RELEASED_METADATA_ONLY`，仍**不能**将其视为真实快照 SHA-256 验证、受控发布来源证明、已发布运行 UI 通过或撤权授权。未经专项安全审批，不执行发布或撤权写入。
+
+## 2026-11-22 · D5b7d Issue #126 原 D5b1 只读基线复核
+
+在现有 D5b7c PostgreSQL 只读审查器中补齐**原 D5b1 工程的基线完整性**，所有基线查询与目标发布元数据保持在同一个 `REPEATABLE READ READ ONLY` 事务、统一 `ROLLBACK`。复核固定的原 D5b1 工程 `d5b-unreleased-42c376a0-5bdc-4fd6-80d6-da29e0312aca`：必须恰好一份首版修订、可信操作者保存审计、发布代次 0 / 三项空指针 / 零发布事件、原主体四项固定权限。基线出现任何新增版本、发布、额外 ACL、撤权、审计或表字段异常，均在**查询 D5b7b 目标工程之前**拒绝；不会查询快照正文、执行数据库写入或自动补救。
+
+此检查不证明目标已发布，只确认审查运行期间原 D5b1 基线未漂移。真实 D5b7b 已发布夹具仍没有可信存在证据，真实 `verified → denied` 仍未授权。以下只在 Windows 离线执行，不会连接 PostgreSQL：
+
+```powershell
+& {
+    $ErrorActionPreference = "Stop"
+    if (git status --porcelain) { throw "工作区存在未提交修改，停止切换分支" }
+    git fetch origin
+    if ($LASTEXITCODE -ne 0) { throw "获取远程分支失败" }
+    git switch test/d5b7d-baseline-readonly
+    if ($LASTEXITCODE -ne 0) { throw "切换 D5b7d 分支失败" }
+    git pull --ff-only origin test/d5b7d-baseline-readonly
+    if ($LASTEXITCODE -ne 0) { throw "更新 D5b7d 分支失败" }
+    $head = (git rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0) { throw "读取 HEAD 失败" }
+    Write-Host "D5b7d 验收 HEAD：$head"
+    pnpm run test:published:oidc:fixture:baseline:config
+    if ($LASTEXITCODE -ne 0) { throw "原 D5b1 基线校验测试失败" }
+    pnpm run test:published:oidc:fixture:readonly:config
+    if ($LASTEXITCODE -ne 0) { throw "D5b7c 事务回归失败" }
+    vp check
+    if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+    pnpm run docs:check
+    if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+    pnpm run ready
+    if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+}
+```
+
+**禁止本批运行任何真实发布、回滚或撤权写入。** 如果随后获得真实独立已发布工程存在性、可信隔离目标及专项只读查询授权，再依既有 D5b7c 手动只读入口进行数据验证；不将合成元数据当成真实已发布状态。
