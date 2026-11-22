@@ -1223,3 +1223,11 @@ React `PublishedRuntimePage.tsx` 和 Vue `PublishedRuntimePage.vue` 复用同一
 共享 `PublishedRuntimeRefresher` 保持原有可见性、请求代次、离线超时、服务端发布指针验证及单调性约束。发现的实际生命周期缺口：`setVisible(false)` / `stop()` 原本会取消超时定时器并中止 AbortSignal，但当底层 `readCurrentRelease` Promise **忽略 AbortSignal 且永不结算**时，原 `refresh()` 的 `Promise.race([load, timeout])` 两路都不能完成，导致上层 `start/refresh/setVisible(true)` 等待永久悬挂。
 
 本次在每次新的受控 `refresh` 内添加独立取消完成 Promise；隐藏或停止时先使旧请求代次失效、释放该等待，再调用原有 `suspend/stop` 清理可显示内容；旧请求迟到仍必须通过原 `requestGeneration` 与刷新器 `epoch` 检查，不得恢复发布画面。正常读取、已验证、离线退避、取消定时器、授权拒绝和会话切换契约均不改变。该取消只负责**结束本地调用方等待**，不假设底层无法取消的网络操作真的物理退出。无设备连接、自动发布或可信 Tag 质量提升。
+
+## 2026-11-22 · D5b9c 已发布快照多页面只读预览
+
+复用共享 Core 工程 `pages[]` 和 Runtime `svgDataUrl(document, [], pageId)` 的既有按页 SVG 渲染能力；`publishedSnapshotSvg(snapshot, pageId?)` 新增可选页面 ID，在现有 `parseScadaDocument` 和 `validateProjectReleasePreflight` 全工程兼容性校验后输出指定页面的静态 SVG。未指定页面时保持旧行为，仅显示首页；指定不存在页面时继续由底层渲染器拒绝，不得隐式读取 Studio 草稿、模拟 SSE 或任意外部资源。
+
+React/Vue 的 `PublishedRuntimePage` 在 `verified` 且快照具有多个页面时，提供只读页面下拉选择。候选仅来自当前**已验证发布快照**的 `pages[].id/name`，选择操作仅改变本地 SVG，不触发网络请求、不更改服务器发布指针、CAS/代次或工程正文。新工程开始读取、手动停止和页面离开时清除显式选择；指针更新使所选页面失效时回退到**新快照首页**。未发布、离线、授权拒绝、完整性异常时不展示任何页面列表或旧静态画面。仍传空 Tag 值，`UNAVAILABLE` 不得伪装为现场正常数据。
+
+此能力仅为 **FR-008 已发布组态静态运行预览的可用性补齐**，不代表正式发布可写、动态 Tag 源、工业只读策略或设备命令已获许可。真实多页面 RELEASED 浏览器专项须在独立批准的测试夹具存在后再安排，不因本次 UI 完成而制造发布写入。

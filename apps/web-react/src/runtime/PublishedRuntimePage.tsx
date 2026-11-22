@@ -18,6 +18,7 @@ export default function PublishedRuntimePage() {
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [state, setState] = useState<PublishedRuntimeState>(initialPublishedRuntimeState);
   const [message, setMessage] = useState("");
+  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const refresherRef = useRef<PublishedRuntimeRefresher | null>(null);
 
   useEffect(() => {
@@ -36,7 +37,10 @@ export default function PublishedRuntimePage() {
     };
     const onPageHide = () => {
       refresher.stop();
-      if (!lifetime.signal.aborted) setActiveProjectId(null);
+      if (!lifetime.signal.aborted) {
+        setActiveProjectId(null);
+        setSelectedPageId(null);
+      }
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("pagehide", onPageHide);
@@ -50,10 +54,16 @@ export default function PublishedRuntimePage() {
     };
   }, []);
 
+  const pages = state.status === "verified" ? (state.snapshot?.document.pages ?? []) : [];
+  const activePageId = pages.some((page) => page.id === selectedPageId)
+    ? selectedPageId
+    : (pages[0]?.id ?? null);
   const svg = useMemo(
     () =>
-      state.status === "verified" && state.snapshot ? publishedSnapshotSvg(state.snapshot) : null,
-    [state.status, state.snapshot],
+      state.status === "verified" && state.snapshot && activePageId
+        ? publishedSnapshotSvg(state.snapshot, activePageId)
+        : null,
+    [state.status, state.snapshot, activePageId],
   );
 
   function onStart(event: FormEvent<HTMLFormElement>): void {
@@ -66,6 +76,7 @@ export default function PublishedRuntimePage() {
     const refresher = refresherRef.current;
     if (!refresher) return;
     setMessage("");
+    setSelectedPageId(null);
     setActiveProjectId(id);
     void refresher.start(id).catch(() => {
       setMessage("正式发布读取启动失败，已停止运行会话");
@@ -84,6 +95,7 @@ export default function PublishedRuntimePage() {
   function onStop(): void {
     refresherRef.current?.stop();
     setActiveProjectId(null);
+    setSelectedPageId(null);
     setMessage("");
   }
 
@@ -151,6 +163,23 @@ export default function PublishedRuntimePage() {
       </section>
       <section className="scada-panel" aria-label="已发布静态组态预览">
         <h2>已发布组态静态预览</h2>
+        {pages.length > 1 ? (
+          <div className="scada-published-controls">
+            <label htmlFor="published-react-page-id">组态页面</label>
+            <select
+              id="published-react-page-id"
+              data-testid="published-runtime-page-select"
+              value={activePageId ?? ""}
+              onChange={(event) => setSelectedPageId(event.target.value)}
+            >
+              {pages.map((page) => (
+                <option key={page.id} value={page.id}>
+                  {page.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
         <p className="scada-diagnostics-note">
           此画面只来自已验证的正式发布快照；未连接现场 Tag。 画布内缺失值的 BAD
           占位不代表设备故障诊断。

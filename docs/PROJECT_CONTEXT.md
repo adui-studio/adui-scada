@@ -2168,3 +2168,11 @@ D5b9a PR #140 在维护者 Windows **精确 HEAD `8071ecdbbfcb5ea1cf20e62772f718
 D5b9b 从上述主线独立开发，修复 `PublishedRuntimeRefresher` 页面隐藏或停止时潜在的异步等待悬挂：若底层只读 Reader 忽略 `AbortSignal` 且返回永远不结算的 Promise，原有 `clearWatchdog()` 使超时 Promise 也不再结算，`start()` / `refresh()` 可能无限等待。此次仅在共享刷新器添加单个受控的本地取消完成机制，在 `setVisible(false)` 与 `stop()` 时完成等待，仍由既有 Runtime 撤下画面、废弃迟到结果，且不重新轮询。新建 **1 项**定向 Vitest 用例定义覆盖隐藏后重新显示再停止两条路径，使用故意不响应取消的 Reader 且不触发模拟定时器；此前关于迟到 200、404、超时与资源回收的测试继续沿用。
 
 本轮尚未在维护者 Windows 执行新测试或静态检查，不将测试定义算作通过；只需该刷新器定向文件与 `vp check`，不重复运行完整 `ready`、HTTP E2E 和 React/Vue 构建。React/Vue 共用同一 Runtime，未改前端或工程 Schema。真实发布门禁仍无条件 HTTP 503，ADR-0070 Proposed，Issue #126 Open，不授权数据库、ACL、工业网关或设备写入。
+
+## 2026-11-22 · D5b9b 合并与 D5b9c 双框架已发布多页面预览候选
+
+维护者 Windows 提供 PR #141 精确本地 HEAD `7b8cc314b394d6a850ad5c33b5a7c9e27ecf1c8e`：共享刷新器 Vitest **18/18**，`vp check` **413 格式文件正确/264 文件零警告错误**。本轮明确同意合并，PR #141 已 Squash 合并到 `main@9bbad56e76ae9a9de83c193950ec29fbd2c13979`，没有重复运行上一批已通过的完整 `ready`、HTTP E2E 和双框架构建。
+
+D5b9c 从该最新主线独立开发一项可直接使用的双框架功能：当前 React/Vue 的“已发布工程运行”静态预览始终调用无页面 ID 的 `publishedSnapshotSvg`，仅展示 `pages[0]`；共享 `svgDataUrl` 已经具备可信页面 ID 选择。候选复用此能力，在静态发布预览添加可见的“组态页面”选择器，两套 Web 使用相同的页面集合、切换与失效回退规则；只有经过只读发布响应校验的 `verified` 快照才能提供选项。多页面切换不触发新 GET、不加载编辑 head、本地草稿或模拟数值，也不将 `TagQuality.UNAVAILABLE` 提升为 GOOD。已选择页面在新发布快照中消失则回退该新快照首页；启动新工程/停止会话清除选择。
+
+本批只改共享静态预览函数、共享 Runtime 1 项定向 Vitest 及 React/Vue 的对等页面，未修改服务器 Gate、Prisma、ACL、工业网关或生产发布许可。**尚未在维护者 Windows 执行新测试与双端类型检查**；只安排 `packages/runtime/test/published-runtime-view.test.ts` 的定向单测与一次 `vp check`。不存在已批准的真实多页面 RELEASED Lab 夹具，本次不请求创建。Issue #126 继续 Open、ADR-0070 Proposed，正式发布继续无条件拒绝。
