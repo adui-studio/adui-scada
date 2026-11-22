@@ -51,14 +51,15 @@ export class AlarmSubscriptionAdapter {
       options.maxAgeMs <= 0 ||
       !Number.isSafeInteger(options.checkIntervalMs) ||
       options.checkIntervalMs <= 0 ||
-      options.checkIntervalMs > options.maxAgeMs
+      options.checkIntervalMs > options.maxAgeMs ||
+      typeof options.nowMs !== "function"
     ) {
       throw new TypeError("报警时效检查参数无效");
     }
     this.controller = new AlarmBaselineSessionController(expectedTagId);
     this.source = source;
     this.scheduler = scheduler;
-    this.options = options;
+    this.options = Object.freeze({ ...options });
   }
 
   snapshot(): AlarmBaselineSessionState {
