@@ -138,7 +138,7 @@ export function installD5b4ResponseObserverInPage(origin, projectId, runtime = g
   }
   const previousFetch = runtime.fetch.bind(runtime);
   const targetPath = "/api/v1/projects/" + projectId + "/releases/current";
-  const data = { requests: 0, statuses: [], noStore: [] };
+  const data = { requests: 0, statuses: [], noStore: [], direct: [] };
   runtime.__aduiD5b4ReadObserver = data;
   runtime.fetch = (input, init) => {
     const raw =
@@ -152,6 +152,7 @@ export function installD5b4ResponseObserverInPage(origin, projectId, runtime = g
     return Promise.resolve(previousFetch(input, init)).then((response) => {
       data.statuses.push(response.status);
       data.noStore.push(response.headers?.get("cache-control") === "no-store");
+      data.direct.push(response.redirected === false && response.url === origin + targetPath);
       return response;
     });
   };
@@ -165,6 +166,7 @@ export function d5b4ResponseStateInPage(runtime = globalThis) {
     requests: data.requests,
     statuses: data.statuses.slice(),
     noStore: data.noStore.slice(),
+    direct: data.direct.slice(),
   };
 }
 
@@ -189,6 +191,9 @@ export function requireD5b4ReadonlyResult(phase, projectId, page, guard, observe
     !Array.isArray(observer.noStore) ||
     observer.noStore.length !== 1 ||
     observer.noStore[0] !== true ||
+    !Array.isArray(observer.direct) ||
+    observer.direct.length !== 1 ||
+    observer.direct[0] !== true ||
     guard.statuses[0] !== observer.statuses[0]
   ) {
     throw new Error("D5b4d 发布读取请求不符合只读约束");
@@ -231,7 +236,11 @@ export function requireD5b4Stopped(page, guard, observer, projectId, expectedSta
     guard.statuses[0] !== expectedStatus ||
     observer?.requests !== 1 ||
     observer.statuses?.length !== 1 ||
-    observer.statuses[0] !== expectedStatus
+    observer.statuses[0] !== expectedStatus ||
+    observer.noStore?.length !== 1 ||
+    observer.noStore[0] !== true ||
+    observer.direct?.length !== 1 ||
+    observer.direct[0] !== true
   ) {
     throw new Error("D5b4d 停止读取后仍保留发布状态或产生额外请求");
   }
