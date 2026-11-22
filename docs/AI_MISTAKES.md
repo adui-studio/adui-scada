@@ -788,6 +788,15 @@
 
 ##
 
+# E-084 · HTTP 失败日志默认 err 序列化保留堆栈与本机路径（D5b8g，待 Windows 复验）
+
+- **现象**：维护者 2026-11-22 Windows `ready` / HTTP E2E 日志包含预期的 HTTP 503 拒绝，但 Pino HTTP 失败记录仍自动带有 `err.message` 和 `err.stack`，堆栈中出现本机工程绝对路径。已有日志未证明真实密钥泄漏；风险在于将来某些错误可能携带其他内部细节。该 HTTP 503 属于测试成功覆盖的拒绝行为，不能混淆为 E2E 失败。
+- **根因**：`createHttpLoggingOptions` 已设置 `req` / `res` 白名单序列化和常用键名 `redact`，但缺少 `err` 序列化器；Pino 对失败请求的默认错误序列化会包括原始消息和调用堆栈，常见敏感字段名称的 `redact` 不会自动消除自由文本里的本机路径。
+- **最小修复**：仅在既有 `apps/server/src/observability/http-logging.config.ts` 的 `serializers` 下新增 `err(_error: unknown)`，返回唯一固定 `{ type: "HTTP_ERROR" }`；不读取传入错误、不依赖异常属性、不修改原有请求 ID、方法、响应状态、日志等级、HTTP 状态码或安全拒绝逻辑。新增三项 Vitest 用例覆盖异常消息/堆栈/原因/任意附加字段、恶意 getter，以及实际 Pino JSON 输出对原始异常和 URL 的脱敏。此修复仅保护该 Pino HTTP 序列化入口，不承诺应用其他自定义日志调用的所有自由文本均已审计。
+- **防复发**：修改 Pino / `pino-http` 相关配置时，必须分别检查 `req`、`res`、`err` 三个默认日志对象的输出；不因 `redact` 存在就认定异常消息、堆栈已安全。测试不允许以真实凭据、生产设备地址或生产数据库连接串作为样例。
+- **验证边界**：本 GitHub 候选仅定义测试，**尚未在维护者 Windows 重新执行** `vp check`、定向 Vitest、HTTP E2E 或 `ready`；不得把旧 HTTP 503 日志中的成功验收冒充修复后日志的运行证据。确认端到端日志输出不含堆栈仍需本机复验。
+- **证据**：维护者 D5b8f Windows 验收日志、`http-logging.config.ts`、`http-logging.config.spec.ts`、`docs/VALIDATION.md`。
+
 ## 四、如何持续更新
 
 遇到 AI 造成的新错误时，修复后在「已经发生过的错误」中新增连续编号，至少记录：

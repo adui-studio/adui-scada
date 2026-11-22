@@ -2908,3 +2908,34 @@ Write-Host "D5b8f Windows 离线验收通过" -ForegroundColor Green
 ```
 
 以上是离线质量验收，不代表真实 PostgreSQL、Keycloak HTTPS 双框架 RELEASED、网关策略、工业只读主管审批和动态 `verified → denied` 已交付。正式发布 `assertReady` 仍无条件拒绝；Issue #126 保持 Open、ADR-0070 Proposed，任何创建夹具、真实发布和撤权写入必须单独授权。
+
+## 2026-11-22 · D5b8g HTTP 失败日志脱敏待 Windows 验收
+
+D5b8f 的维护者 Windows 质量日志显示原 HEAD `6012008684253b36e92168312baebcde667cfd11` 上单测 **699/699**、HTTP E2E **63/63**、`vp check` **413/264 零错误或警告**、Markdown **90** 及完整 `ready` 成功。合并前远端 HEAD `1347566d1aef13cfee9875f7ba963d76e6699a91` 仅增加 `docs/VALIDATION.md` 一行列表排版空行，已对比并记录，随后经维护者明确授权 Squash 合并至 `main@a738086b088c025176adcd4d9c49be7ae9414648`；该空行提交没有独立 Windows 全量复验记录。
+
+D5b8g 候选在既有 `pino-http` 配置中新增 `err` 结构化固定序列化。**修复前**的实际 HTTP E2E 日志出现 Pino 默认 `err.stack` 与本机绝对路径，而非发布失败或泄漏真实生产凭据的证据。目标是不再序列化原始 HTTP Error 消息、堆栈、cause 和附加字段；继续保留请求 ID、方法、响应状态及固定中文成功/失败文案。这不意味着其他任意自定义应用日志都已经接受敏感内容专项评审。
+
+新增 **3 项 Vitest 测试定义**，预计全量单测 **702**、HTTP E2E **63**，**本批当前尚未实测**，需核对本机精确 HEAD 后执行：
+
+```powershell
+git rev-parse HEAD
+
+pnpm run test:unit
+if ($LASTEXITCODE -ne 0) { throw "D5b8g 单元测试失败" }
+
+pnpm --filter @adui/scada-server run test:e2e
+if ($LASTEXITCODE -ne 0) { throw "D5b8g HTTP E2E 失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b8g Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b8g 文档检查失败" }
+
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "D5b8g 完整质量链失败" }
+
+Write-Host "D5b8g Windows 离线质量链验收通过" -ForegroundColor Green
+```
+
+验收时还应核对 HTTP 503 日志仅包含受控 `err.type`，不再出现 `err.stack` 与原始异常消息；如果未得到此证据，不得声称真实 HTTP 日志已完成脱敏修复。本小批不包含 PostgreSQL、Keycloak/HTTPS 实际会话、工业网关或真正已发布测试夹具；正式发布 `assertReady()` 仍无条件拒绝。Issue #126 Open、ADR-0070 Proposed。
