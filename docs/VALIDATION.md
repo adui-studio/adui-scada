@@ -2700,3 +2700,11 @@ PR #124 已经维护者同意并在 Windows `docs:check` **89**、`vp check` **4
 **当前实测范围**：独立隔离容器 Node.js v22.16.0 已执行新脚本的 `node --check`，原生 `node --test` **14/14 通过**。第一次独立测试曾暴露 `head_revision` 超出安全整数上限仍被接受；修复安全上限后重新执行 14/14 通过。该运行发生在提交 GitHub 前的隔离代码副本，不是仓库完整工具链，也不等于 Windows 最终 HEAD 的验收。
 
 **仍待维护者 Windows 复验**：记录分支完整 HEAD，运行 `pnpm run test:published:oidc:fixture:metadata:config`、`vp check`、`pnpm run docs:check` 与完整 `pnpm run ready`。未进行 PostgreSQL READ ONLY 实测、真实 Keycloak/Chrome、已发布工程证明或在线 ACL 撤权；生产 `ProjectReleaseSafetyGate` 继续固定 fail-closed。详见 Issue #126。
+
+## 2026-11-22 · D5b7c 已发布夹具 PostgreSQL 只读审查候选
+
+PR #127 已由维护者提供 Windows 离线 14/14、`vp check` 405/257 零错误告警、`docs:check` 89 份、`ready` 682/682 Vitest、62/62 HTTP E2E、双框架/服务端构建完整通过后，按明确授权 Squash 合并到 `main@0c3d3b2592121c6963c9e7a7112a92a8920b3ef0`。合并前 HEAD `98cbe816e0a1aaa91c1af71e4a68f5870611e2ac` 与前次审查相比只包含测试格式调整；未执行历史分支清理。
+
+本批从最新 `main` 建立 `test/d5b7c-published-fixture-readonly`。新增仅用于手动调用的 PostgreSQL **READ ONLY** 审查脚本与原生 Node 安全 Mock 测试，所有 SQL 为带参数的元数据 `SELECT`，查询严格处于 `REPEATABLE READ READ ONLY` + `ROLLBACK`，不选取 `snapshot` 正文、不读取凭据、不触发写入。活动身份与 OIDC 预绑定先于目标工程查询；无 `release:read` 不访问发布状态。根 `package.json` 只把离线用例纳入 `ready`，真实 PostgreSQL 连接为另外的显式命令。
+
+**验收现状**：本次完成 GitHub 源码、Schema 字段与迁移契约静态核对，**尚未在 Windows 正式运行新分支的 Node 离线专项、`vp check`、`docs:check` 或完整 `ready`**；也没有对真实 PostgreSQL 发起查询或证明存在 D5b7b 已发布夹具。只有真正执行后才能填报退出码。生产 `ProjectReleaseSafetyGate` 继续固定拒绝；任何真实 `verified → denied` 和 ACL 操作仍待独立授权。

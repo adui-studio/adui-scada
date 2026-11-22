@@ -4353,3 +4353,34 @@ E-079 候选将“切回第一标签”移到两次真实响应完成严格交�
 ```
 
 **禁止执行真实发布或撤权实验。** 真实 `verified → denied` 需要维护者单独确认独立已发布工程、测试主体、隔离数据库、操作权限及恢复方案；若未来只读查询获准，必须使用显式目标、参数化 SQL、`REPEATABLE READ READ ONLY` 与 `ROLLBACK`，不查询快照正文、不回显身份凭据。
+
+## 2026-11-22 · D5b7c 独立已发布夹具 PostgreSQL 只读审查候选
+
+在 D5b7b 元数据离线分类器基础上新增 `scripts/inspect-published-fixture-readonly.mjs`，但**真实数据库连接不在 `ready` 内执行**。程序只接受 `--project-id` 加一份已经存在的 `d5b7b-published-<UUID v4>` 专用隔离工程；严禁把格式示例当作真实工程。无参数、额外参数及旧 D5b1/D5b4 工程一律在数据库连接之前拒绝。
+
+审查工具沿用 D5b4 现有可信本机 OIDC Lab 目标校验，使用 **`BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY`**，无论成功或失败均执行 `ROLLBACK`。它先核验本机数据库用户、三项已应用发布迁移、无未解决迁移、活动身份与预绑定，再读取同一租户目标工程和独立 `release:read`。没有权限时不读取发布指针、历史版本或事件。确实具有读取权限时仅查询**代次、修订、摘要与末次事件**，从不选择 `snapshot` JSON 正文；将这些元数据交给 D5b7b 纯函数输出 `DENIED`、`UNRELEASED` 或 `RELEASED_METADATA_ONLY`。
+
+Windows PowerShell 7 离线验收：
+
+```powershell
+& {
+    $ErrorActionPreference = "Stop"
+    git fetch origin
+    if ($LASTEXITCODE -ne 0) { throw "拉取远程提交失败" }
+    git switch test/d5b7c-published-fixture-readonly
+    if ($LASTEXITCODE -ne 0) { throw "切换 D5b7c 分支失败" }
+    git pull --ff-only origin test/d5b7c-published-fixture-readonly
+    if ($LASTEXITCODE -ne 0) { throw "更新 D5b7c 分支失败" }
+    git rev-parse HEAD
+    pnpm run test:published:oidc:fixture:readonly:config
+    if ($LASTEXITCODE -ne 0) { throw "D5b7c 只读事务安全测试失败" }
+    vp check
+    if ($LASTEXITCODE -ne 0) { throw "D5b7c Vite+ 检查失败" }
+    pnpm run docs:check
+    if ($LASTEXITCODE -ne 0) { throw "D5b7c 文档检查失败" }
+    pnpm run ready
+    if ($LASTEXITCODE -ne 0) { throw "D5b7c 完整质量链失败" }
+}
+```
+
+**真实 DB 只读执行不包含在上面命令中。** 仅当维护者另外核实唯一已存在、已合法发布、已授权、可审计的独立 Lab 工程及可信身份后，才允许手工运行 `pnpm run oidc:lab:published:fixture:readonly --project-id <人工核实的工程ID>`。这不是发布事务，也不会调用 ACL 删除/恢复；但即使它输出 `RELEASED_METADATA_ONLY`，仍**不能**将其视为真实快照 SHA-256 验证、受控发布来源证明、已发布运行 UI 通过或撤权授权。未经专项安全审批，不执行发布或撤权写入。
