@@ -4287,3 +4287,36 @@ E-079 候选将“切回第一标签”移到两次真实响应完成严格交�
 ```
 
 真实浏览器需要在脚本启动的**独立隔离浏览器**中手动登录现有预绑定 Keycloak 测试用户，**不要在终端输入密码**。必须看到 React/Vue 各自的首次 404、隐藏清空、重显 404 和停止清理四类阶段通过。Node 离线 13 项、Vite+、docs、ready 和真实浏览器尚未获得新提交后的 Windows 执行记录，不能提前标记通过。新专项不测试 `verified → denied` 的真实已发布状态撤权竞争；生产安全门禁和设备写入仍关闭。
+
+## 2026-11-22 · D5b7a 已验证快照撤权与迟到响应共享 Runtime 单测
+
+本次只新增两项纯 Vitest 回归，**不操作任何数据库或工程授权**，不得将模拟的 `forbidden` / `not_found` 读取器错误说成真实 HTTP 或真实 ACL 撤销。先从最新 PR 专用分支明确记录 HEAD，再运行定向测试、无自动修复的 Vite+、文档与完整质量链。任何失败立即退出，不输出无条件“已通过”消息：
+
+```powershell
+& {
+    git fetch origin
+    if ($LASTEXITCODE -ne 0) { throw "远端引用更新失败" }
+    git switch test/b35-d5b7a-published-runtime-denial-race
+    if ($LASTEXITCODE -ne 0) { throw "切换 D5b7a 测试分支失败" }
+    git pull --ff-only
+    if ($LASTEXITCODE -ne 0) { throw "更新 D5b7a 测试分支失败" }
+    $head = (git rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0) { throw "读取 Git HEAD 失败" }
+    Write-Host "D5b7a 验收 HEAD：$head"
+
+    vp test run packages/runtime/test/published-runtime-refresher.test.ts
+    if ($LASTEXITCODE -ne 0) { throw "D5b7a 共享 Runtime 定向测试失败" }
+
+    vp check
+    if ($LASTEXITCODE -ne 0) { throw "D5b7a Vite+ 检查失败" }
+
+    pnpm run docs:check
+    if ($LASTEXITCODE -ne 0) { throw "D5b7a 文档检查失败" }
+
+    pnpm run ready
+    if ($LASTEXITCODE -ne 0) { throw "D5b7a 完整质量链失败" }
+    Write-Host "D5b7a 共享 Runtime 纯单测与质量链通过"
+}
+```
+
+本候选保持 Draft，不新增真实浏览器或 ACL 写入命令。真正 `verified → denied` 端到端实验必须先验证有合法发布快照、独立测试工程、数据库/权限基线和可恢复方案；**需要单独明确许可**，且后续涉及的 PostgreSQL 操作必须在隔离环境附带完整 URL 验证及 `try/finally`。不可用刚通过 D5b6 的已撤权 D5b4 工程直接恢复授权或伪造发布状态。
