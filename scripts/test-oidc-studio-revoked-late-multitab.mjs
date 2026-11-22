@@ -29,6 +29,7 @@ import {
   requireD5b5SharedDraft,
   requireD5b5TabUnchanged,
   switchToTab,
+  waitForD5b5ReadGuardSettled,
   waitForStudioReady,
 } from "./test-oidc-studio-revoked-multitab.mjs";
 import {
@@ -47,6 +48,7 @@ const SAFE_ERRORS = new Set([
   "D5b5c 双标签真实 404 响应未同时挂起",
   "D5b5c 真实 404 响应未按第二标签优先交付",
   "D5b5c 真实 404 响应挂起或释放时序不符合预期",
+  "D5b5b 工程只读响应等待超时",
   "D5b5c 双标签本地状态或只读请求发生漂移",
   ...D5B5_PROTECTION_REASONS,
 ]);
@@ -144,14 +146,14 @@ async function verifyOrigin(browser, second, origin, principal, projectId, name,
   const secondBefore = await inspectD5b5StudioState(second);
   requireD5b5TabUnchanged(projectId, firstEdited, firstBefore);
   requireD5b5TabUnchanged(projectId, secondEdited, secondBefore);
-  const firstGuardBefore = await browser.evaluate(publishedReadGuardStateInPage);
+  const firstGuardBefore = await waitForD5b5ReadGuardSettled(browser);
   assert.equal(await browser.evaluate(installD5b5cLateGateInPage, origin, projectId), true);
   assert.equal(await browser.evaluate(startD5b5cLateReadInPage), true);
   await waitForGate(browser);
 
   report(name + "：第二标签页挂起真实 404");
   await switchToTab(second, browser);
-  const secondGuardBefore = await second.evaluate(publishedReadGuardStateInPage);
+  const secondGuardBefore = await waitForD5b5ReadGuardSettled(second);
   assert.equal(await second.evaluate(installD5b5cLateGateInPage, origin, projectId), true);
   assert.equal(await second.evaluate(startD5b5cLateReadInPage), true);
   await waitForGate(second);
@@ -165,7 +167,7 @@ async function verifyOrigin(browser, second, origin, principal, projectId, name,
   report(name + "：先交付第二标签页真实 404");
   assert.equal(await second.evaluate(releaseD5b5cLateReadInPage), true);
   const secondResult = await waitForRelease(second);
-  const secondGuardAfter = await second.evaluate(publishedReadGuardStateInPage);
+  const secondGuardAfter = await waitForD5b5ReadGuardSettled(second);
   const secondAfter = await inspectD5b5StudioState(second);
   requireD5b5cPreserved(
     projectId,
@@ -181,7 +183,7 @@ async function verifyOrigin(browser, second, origin, principal, projectId, name,
   await switchToTab(browser, second);
   assert.equal(await browser.evaluate(releaseD5b5cLateReadInPage), true);
   const firstResult = await waitForRelease(browser);
-  const firstGuardAfter = await browser.evaluate(publishedReadGuardStateInPage);
+  const firstGuardAfter = await waitForD5b5ReadGuardSettled(browser);
   const firstAfter = await inspectD5b5StudioState(browser);
   requireD5b5cPreserved(
     projectId,
@@ -195,10 +197,11 @@ async function verifyOrigin(browser, second, origin, principal, projectId, name,
   report(name + "：最终两标签页保护复核");
   requireD5b5TabUnchanged(projectId, firstBefore, await inspectD5b5StudioState(browser));
   requireD5b5TabUnchanged(projectId, secondBefore, await inspectD5b5StudioState(second));
-  requireD5b5NoBlockedWrites(
-    await browser.evaluate(publishedReadGuardStateInPage),
-    await second.evaluate(publishedReadGuardStateInPage),
-  );
+  const [firstFinalGuard, secondFinalGuard] = await Promise.all([
+    waitForD5b5ReadGuardSettled(browser),
+    waitForD5b5ReadGuardSettled(second),
+  ]);
+  requireD5b5NoBlockedWrites(firstFinalGuard, secondFinalGuard);
   process.stdout.write(name + "：两个真实 404 已逆序交付，SVG、工程 JSON、草稿与 CAS 保持不变。\n");
 }
 
