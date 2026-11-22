@@ -3035,3 +3035,19 @@ if ($LASTEXITCODE -ne 0) { throw "FR-011 Vite+ 检查失败" }
 ```
 
 避免重复执行已通过且无本批变更的完整 `ready`、HTTP E2E、React/Vue 构建或工业专项。定向测试即使通过也只验证纯内存状态回放：不证明报警规则阈值、真实 Tag 质量、持久化审计、操作者授权、时间顺序和工业安全。FR-011 仍规划中，正式发布 Gate 继续无条件拒绝；Issue #126 与 ADR-0070 维持原有独立安全边界。
+
+## 2026-11-22 · D5b9f 数值报警输入质量筛选待 Windows 验收
+
+PR #144 已由维护者在精确 HEAD `3e44212868462bfbc2f86f64d6f973510429ef9f` 实测事件回放 5/5、Vite+ 417/268 零警告错误，授权 Squash 合并至 `main@ed32c0807148cd3370f8213a7f9d113c34f0c81b`。D5b9f 新增数值质量筛选 **5 项测试定义，未实测**。仅修改共享 Core、公共导出、定向测试和文档；没有服务端或双端运行界面修改。请在本批精确 HEAD 执行：
+
+```powershell
+git rev-parse HEAD
+vp test run packages/core/test/alarm-tag-quality.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警 Tag 质量筛选测试失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+```
+
+有新增自有中文 JSDoc 和异常路径但不新增 throw 文案，需按仓库当前门禁结果补查 `messages:check`。以上定向质量测试不验证可信工业数据源、报警条件、服务端事件持久化和确认权限，不替代生产安全评审；本批不要求重复未改动模块的 HTTP E2E、React/Vue 浏览器与完整 ready。

@@ -1298,3 +1298,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-replay.ts`：纯函数 `replayAlarmEvents` 顺序调用已有 `transitionAlarmState`，返回最终状态及带输入序号、事件名、前后状态、是否真正改变的只读轨迹类型；重复事件可观察、非法序列整体抛错。无持久化与现场数据输入。
 - `packages/core/test/alarm-replay.test.ts`：新增 **5 项**定向 Vitest 测试定义，覆盖空序列、全生命周期回放、重复事件、非法初始/非法类型、只读输入与确定性。
 - `packages/core/src/index.ts`：导出回放纯函数及 `AlarmReplayResult`、`AlarmReplayStep` 类型供未来 Vue/React 与服务端共享，不改原四态状态机、TagStore、工程 Schema、Prisma、Runtime 或已发布画面。
+
+## 2026-11-22 · D5b9f 数值报警输入质量筛选
+
+- `packages/core/src/alarm-tag-quality.ts`：新增 `classifyNumericAlarmSample`，复用 Tag 值校验，仅将 GOOD 且有限数值的数据标记为未来数值规则的输入候选；其余合法样本给出不包含原工艺数值的拒绝原因。
+- `packages/core/test/alarm-tag-quality.test.ts`：5 项单测定义覆盖正常与零值、三种非 GOOD 质量、非数值、非法元数据和只读输入。
+- `packages/core/src/index.ts`：公共导出函数与 `NumericAlarmSample` 类型。无服务端报警 API、Vue/React UI、设备网关、TagStore 行为或发布安全门禁变更。

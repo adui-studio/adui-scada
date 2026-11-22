@@ -2192,3 +2192,9 @@ D5b9d 从最新主线独立推进 **FR-011 的首个框架无关 Core 基础能�
 D5b9e 从最新主线继续 FR-011，新增共享 Core `replayAlarmEvents(events)`：对可信上游给出的报警生命周期事件序列从 `null` 开始确定性重放，输出最终四态与完整转换步骤 `sequence,event,before,after,changed`。重复输入保留事件位置但标记未发生状态变化；非法初始确认/恢复或非法事件整体拒绝，不返回部分轨迹；不修改原事件数组。提供 `index.ts` 公共导出与 **5 项**新定向 Vitest 定义。
 
 本批仅为无副作用的内存回放基础，不是报警数据库、真实触发、持久化审计、权限授予或事故追溯。序列号只对应当前输入数组下标，不可用作服务器全局唯一事件 ID，尚无报警规则与 Tag 质量绑定或生产数据来源。**FR-011 仍未完整交付**。新分支还没有维护者 Windows 测试证据，仅请求 `alarm-replay.test.ts` 定向检查与一次 `vp check`，不重复全链验证。生产发布 Gate 仍无条件 fail-closed，Issue #126 与 ADR-0070 的独立发布安全障碍不因报警 Core 工作改变。
+
+## 2026-11-22 · PR #144 Windows 定向验收、Squash 合并与 D5b9f 候选
+
+维护者在 PR #144 精确 HEAD `3e44212868462bfbc2f86f64d6f973510429ef9f` 执行 `alarm-replay.test.ts` **5/5**、`vp check` **417 格式文件/268 受检零警告错误**，明确授权合并；GitHub 确认 Squash 至 `main@ed32c0807148cd3370f8213a7f9d113c34f0c81b`。没有重复执行完整 ready，也没有 GitHub CI 通过记录。
+
+D5b9f 从已合并主线添加共享 Core 数值报警输入质量分类候选：GOOD 且数值有限方可返回 READY；UNCERTAIN/BAD/STALE 和非数值读数不能误入数值报警规则。新增 5 项测试定义，**尚无本批 Windows 实测**。此筛选不证明数据来源可信、时间新鲜、顺序完整，更不生成 TRIGGER/RECOVER/ACKNOWLEDGE、阈值或持久化审计。FR-011 仍规划中，正式发布门禁继续 fail-closed。

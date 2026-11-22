@@ -1243,3 +1243,7 @@ React `PublishedRuntimePage.tsx` 和 Vue `PublishedRuntimePage.vue` 复用同一
 React/Vue 的 `PublishedRuntimePage` 在 `verified` 且快照具有多个页面时，提供只读页面下拉选择。候选仅来自当前**已验证发布快照**的 `pages[].id/name`，选择操作仅改变本地 SVG，不触发网络请求、不更改服务器发布指针、CAS/代次或工程正文。新工程开始读取、手动停止和页面离开时清除显式选择；指针更新使所选页面失效时回退到**新快照首页**。未发布、离线、授权拒绝、完整性异常时不展示任何页面列表或旧静态画面。仍传空 Tag 值，`UNAVAILABLE` 不得伪装为现场正常数据。
 
 此能力仅为 **FR-008 已发布组态静态运行预览的可用性补齐**，不代表正式发布可写、动态 Tag 源、工业只读策略或设备命令已获许可。真实多页面 RELEASED 浏览器专项须在独立批准的测试夹具存在后再安排，不因本次 UI 完成而制造发布写入。
+
+## 2026-11-22 · D5b9f 数值报警输入质量筛选（候选）
+
+共享 Core `classifyNumericAlarmSample(input)` 先复用 `validateTagValue` 拒绝不合法 Tag 元数据和 NaN/Infinity，再仅对 `quality === GOOD` 且数值类型的输入返回 `{ status: "READY", value }`；质量为 `UNCERTAIN/BAD/STALE` 返回 `QUALITY_NOT_GOOD`，GOOD 但非数值返回 `NOT_NUMERIC`。失败结果不暴露过期工艺数值。此逻辑仅是**数值报警规则将来可复用的候选输入筛选**，并不证明采集源可信、事件顺序可靠或读数在业务允许的时效内。并未规定阈值、死区、延时、恢复语义或将质量异常映射为报警事件，也不改变原 TagStore 的质量与值语义。不得仅因 READY 便触发或恢复报警；服务端来源认证、时效与规则验证均未实现。
