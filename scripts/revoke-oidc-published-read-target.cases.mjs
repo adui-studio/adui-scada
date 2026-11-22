@@ -22,12 +22,14 @@ function project() {
     project: [{ head_revision: "1" }],
     versions: [{ revision: "1", created_by: "lab-engineer" }],
     audit: [{ revision: "1", actor_id: "lab-engineer", action: "version:append" }],
-    state: [{
-      release_generation: "0",
-      released_revision: null,
-      released_content_hash: null,
-      last_release_event_id: null,
-    }],
+    state: [
+      {
+        release_generation: "0",
+        released_revision: null,
+        released_content_hash: null,
+        last_release_event_id: null,
+      },
+    ],
     events: [{ count: 0 }],
     grants: PERMISSIONS.map((permission) => ({ subject_id: "lab-engineer", permission })),
   };
@@ -155,8 +157,9 @@ void describe("D5b4g 独立工程单条 release:read 撤销安全门禁", () => 
     assert.equal(calls.filter(({ sql }) => sql === "COMMIT").length, 1);
     assert.equal(calls.filter(({ sql }) => sql === "BEGIN ISOLATION LEVEL SERIALIZABLE").length, 1);
     assert.equal(
-      calls.filter(({ sql }) => sql === "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
-        .length,
+      calls.filter(
+        ({ sql }) => sql === "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY",
+      ).length,
       2,
     );
     assert.equal(snapshot().target.grants.length, 3);
@@ -169,10 +172,18 @@ void describe("D5b4g 独立工程单条 release:read 撤销安全门禁", () => 
 
   void it("目标根本不存在或原始四项 ACL 不完整时拒绝 DELETE", async () => {
     for (const initial of [
-      (rows) => { rows.dedicated = []; },
-      (rows) => { rows.target.project = []; },
-      (rows) => { rows.target.grants.pop(); },
-      (rows) => { rows.original.grants.pop(); },
+      (rows) => {
+        rows.dedicated = [];
+      },
+      (rows) => {
+        rows.target.project = [];
+      },
+      (rows) => {
+        rows.target.grants.pop();
+      },
+      (rows) => {
+        rows.original.grants.pop();
+      },
     ]) {
       const { client, calls } = database({ initial });
       await assert.rejects(revokeD5b4PublishedRead(client, TARGET, ID));
@@ -182,11 +193,21 @@ void describe("D5b4g 独立工程单条 release:read 撤销安全门禁", () => 
 
   void it("只读预检与行锁之间发生版本或 ACL 漂移必须回滚且零 DELETE", async () => {
     for (const onSerial of [
-      (r) => { r.target.versions[0].revision = "2"; },
-      (r) => { r.target.grants.push({ subject_id: "other", permission: "release:read" }); },
-      (r) => { r.original.grants.pop(); },
-      (r) => { r.target.state[0].release_generation = "1"; },
-      (r) => { r.dedicated.push({ project_id: "d5b4-revoke-extra" }); },
+      (r) => {
+        r.target.versions[0].revision = "2";
+      },
+      (r) => {
+        r.target.grants.push({ subject_id: "other", permission: "release:read" });
+      },
+      (r) => {
+        r.original.grants.pop();
+      },
+      (r) => {
+        r.target.state[0].release_generation = "1";
+      },
+      (r) => {
+        r.dedicated.push({ project_id: "d5b4-revoke-extra" });
+      },
     ]) {
       const { client, calls } = database({ onSerial });
       await assert.rejects(revokeD5b4PublishedRead(client, TARGET, ID), /禁止自动重试或恢复/);
@@ -196,7 +217,11 @@ void describe("D5b4g 独立工程单条 release:read 撤销安全门禁", () => 
   });
 
   void it("事务加锁时工程已消失必须停止，不触碰旧工程", async () => {
-    const { client, calls } = database({ onSerial: (r) => { r.target.project = []; } });
+    const { client, calls } = database({
+      onSerial: (r) => {
+        r.target.project = [];
+      },
+    });
     await assert.rejects(revokeD5b4PublishedRead(client, TARGET, ID), /禁止自动重试或恢复/);
     assert.equal(deletes(calls).length, 0);
     assert.equal(calls.at(-1).sql, "ROLLBACK");
@@ -258,7 +283,9 @@ void describe("D5b4g 独立工程单条 release:read 撤销安全门禁", () => 
 
   void it("提交后只读检查发现漂移仍必须报未确认，不能自动补授权", async () => {
     const { client, calls } = database({
-      onCommit: (rows) => { rows.target.grants.push({ subject_id: "other", permission: "release:read" }); },
+      onCommit: (rows) => {
+        rows.target.grants.push({ subject_id: "other", permission: "release:read" });
+      },
     });
     await assert.rejects(revokeD5b4PublishedRead(client, TARGET, ID), /禁止自动重试或恢复/);
     assert.equal(deletes(calls).length, 1);
