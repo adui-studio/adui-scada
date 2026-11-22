@@ -273,13 +273,10 @@ export function requireD5b5ReadGuardProgress(guard) {
 
 /** 只等待已有 GET 的真实结果；超时或缺失响应均禁止继续验收。 */
 export async function waitForD5b5ReadGuardSettled(session) {
-  return waitForState(
-    async () => {
-      const guard = await session.evaluate(publishedReadGuardStateInPage);
-      return requireD5b5ReadGuardProgress(guard) ? guard : null;
-    },
-    "D5b5b 工程只读响应等待超时",
-  );
+  return waitForState(async () => {
+    const guard = await session.evaluate(publishedReadGuardStateInPage);
+    return requireD5b5ReadGuardProgress(guard) ? guard : null;
+  }, "D5b5b 工程只读响应等待超时");
 }
 
 export async function waitForStudioReady(session, origin, principal) {
