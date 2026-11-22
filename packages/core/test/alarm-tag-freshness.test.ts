@@ -43,9 +43,7 @@ test("未来服务端时间拒绝而不是将负年龄误判为新鲜", () => {
 });
 
 test("非 GOOD 质量和非数值首先由现有候选分类拒绝", () => {
-  expect(
-    classifyTimelyNumericAlarmSample({ ...valid, quality: "STALE" }, nowMs, 1000),
-  ).toEqual({
+  expect(classifyTimelyNumericAlarmSample({ ...valid, quality: "STALE" }, nowMs, 1000)).toEqual({
     status: "QUALITY_NOT_GOOD",
   });
   expect(classifyTimelyNumericAlarmSample({ ...valid, value: null }, nowMs, 1000)).toEqual({
@@ -57,15 +55,11 @@ test("无效时钟参数和 Tag 时间字段必须明确拒绝", () => {
   expect(() => classifyTimelyNumericAlarmSample(valid, Number.NaN, 1000)).toThrow(
     "当前时间参数无效",
   );
-  expect(() => classifyTimelyNumericAlarmSample(valid, -1, 1000)).toThrow(
-    "当前时间参数无效",
-  );
-  expect(() => classifyTimelyNumericAlarmSample(valid, nowMs, 0)).toThrow(
+  expect(() => classifyTimelyNumericAlarmSample(valid, -1, 1000)).toThrow("当前时间参数无效");
+  expect(() => classifyTimelyNumericAlarmSample(valid, nowMs, 0)).toThrow("最大数据年龄参数无效");
+  expect(() => classifyTimelyNumericAlarmSample(valid, nowMs, Number.POSITIVE_INFINITY)).toThrow(
     "最大数据年龄参数无效",
   );
-  expect(() =>
-    classifyTimelyNumericAlarmSample(valid, nowMs, Number.POSITIVE_INFINITY),
-  ).toThrow("最大数据年龄参数无效");
   expect(() =>
     classifyTimelyNumericAlarmSample({ ...valid, serverTimestamp: "invalid" }, nowMs, 1000),
   ).toThrow("服务器时间戳无效");
