@@ -31,6 +31,8 @@ export {
   transitionAlarmState,
 } from "./alarm-state.ts";
 export type { AlarmEvent, AlarmState } from "./alarm-state.ts";
+export { classifyNumericAlarmSample } from "./alarm-tag-quality.ts";
+export type { NumericAlarmSample } from "./alarm-tag-quality.ts";
 export { replayAlarmEvents } from "./alarm-replay.ts";
 export type { AlarmReplayResult, AlarmReplayStep } from "./alarm-replay.ts";
 export { WaterTreatmentSimulator } from "./simulator.ts";
