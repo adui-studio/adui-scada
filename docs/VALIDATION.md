@@ -2874,3 +2874,36 @@ Write-Host "D5b8e Windows 离线验收通过" -ForegroundColor Green
 ```
 
 本次静态代码和 GitHub 差异核查不能替代上述实际 Vitest/Vite+。未执行正式发布 POST、ACL 更改、现场只读策略/Tag 数据源验收、真实 OIDC 已发布快照及动态撤权。正式 `assertReady` 在正常和异常路径均固定拒绝；Issue #126 Open、ADR-0070 Proposed。
+
+## 2026-11-22 · D5b8f 正式发布静态工程与 HTTP 异常跨层回归待验收
+
+D5b8e PR #137 在维护者 Windows **精确 HEAD `88c2c285b8361fd99c51eed48df8e6130484e647`** 实测 Vitest **698/698**、Gate **14/14**、Vite+ **413/264 零错误警告**、文档 **90**、HTTP E2E **62/62**、React/Vue/NestJS 构建及完整 `ready` 成功。获本轮明确授权后已 Squash 合并至 `main@a56549dbe614e4f4c18d17e0d01e7eff6d7a4c70`。
+
+D5b8f 仅新增两项测试定义：
+1. **仓储级**：合法静态快照（零 Tag/绑定/规则）经过现有真实 `publish` 事务及生产 `assertReady`，仍返回两类固定安全阻塞，发布事件不插入，发布指针与代次不更新。
+2. **HTTP E2E**：已有 `ProjectReleaseGateUnavailableError` 携带 `SAFETY_ASSESSMENT_UNAVAILABLE` 时，正式 POST 只响应固定中文 503、`Cache-Control: no-store`，不暴露代码、路径或原始消息；不调用其他工程写入口。
+
+**待验收，未在本轮 GitHub 协作环境执行真实质量链**。预计全量 Vitest **699**、正式发布仓储定向 **19**、HTTP E2E **63**；所有数量以维护者 Windows 实测为准，不能将测试定义冒充运行结果。请在 Draft PR 最新 HEAD 执行：
+
+```powershell
+git rev-parse HEAD
+
+pnpm run test:unit
+if ($LASTEXITCODE -ne 0) { throw "D5b8f 单元测试失败" }
+
+pnpm --filter @adui/scada-server run test:e2e
+if ($LASTEXITCODE -ne 0) { throw "D5b8f HTTP E2E 失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b8f Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b8f 文档检查失败" }
+
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "D5b8f 完整质量链失败" }
+
+Write-Host "D5b8f Windows 离线验收通过" -ForegroundColor Green
+```
+
+以上是离线质量验收，不代表真实 PostgreSQL、Keycloak HTTPS 双框架 RELEASED、网关策略、工业只读主管审批和动态 `verified → denied` 已交付。正式发布 `assertReady` 仍无条件拒绝；Issue #126 保持 Open、ADR-0070 Proposed，任何创建夹具、真实发布和撤权写入必须单独授权。
