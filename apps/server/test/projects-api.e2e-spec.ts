@@ -642,6 +642,36 @@ describe("工程 API HTTP 接口（端到端）", () => {
     expect(JSON.stringify(response.body)).not.toContain("snapshot.document.tags");
   });
 
+  it("安全评估异常经正式发布 HTTP 路由只返回固定 503，不泄漏内部阻塞", async () => {
+    permissions = ["release:publish"];
+    releases.publish.mockRejectedValueOnce(
+      new ProjectReleaseGateUnavailableError([
+        { code: "SAFETY_ASSESSMENT_UNAVAILABLE", path: "assessment" },
+      ]),
+    );
+    const response = await request(app.getHttpServer())
+      .post("/api/v1/projects/" + PROJECT_ID + "/releases")
+      .set("Authorization", "Bearer " + SESSION_TOKEN)
+      .set("Idempotency-Key", "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4ec")
+      .send({
+        expectedHeadRevision: 1,
+        targetRevision: 1,
+        expectedReleaseGeneration: 0,
+      })
+      .expect(503);
+
+    expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.body).toEqual({
+      statusCode: 503,
+      message: "正式发布安全门禁尚未完成，当前请求已被安全拒绝",
+    });
+    expect(JSON.stringify(response.body)).not.toContain("SAFETY_ASSESSMENT_UNAVAILABLE");
+    expect(JSON.stringify(response.body)).not.toContain("assessment");
+    expect(releases.publish).toHaveBeenCalledTimes(1);
+    expect(store.append).not.toHaveBeenCalled();
+    expect(store.create).not.toHaveBeenCalled();
+  });
+
   it("过期修订号返回 409，非法修订号返回 400，均不修改工程", async () => {
     store.preflightRelease.mockRejectedValueOnce(new ProjectRevisionConflictError());
     const stale = await request(app.getHttpServer())

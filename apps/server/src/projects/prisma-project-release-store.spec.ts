@@ -548,6 +548,38 @@ describe("正式发布事务仓储", () => {
     expect(harness.tx.scadaProjectReleaseState.updateMany).not.toHaveBeenCalled();
   });
 
+  it("纯静态无 Tag 工程仍在真实发布仓储门禁处拒绝且不写事件或指针", async () => {
+    const document = createDocument();
+    document.tags = [];
+    for (const page of document.pages) {
+      for (const node of page.nodes) {
+        node.bindings = {};
+        node.rules = [];
+      }
+    }
+    const snapshot = await createProjectSnapshot(document, {
+      revision: 1,
+      createdAt: CREATED_AT,
+    });
+    const harness = await createHarness({ snapshot });
+
+    await expect(
+      harness.store.publish(PRINCIPAL, SESSION_ID, PROJECT_ID, REQUEST, IDEMPOTENCY_KEY),
+    ).rejects.toMatchObject({
+      name: "ProjectReleaseGateUnavailableError",
+      blocks: [
+        { code: "RUNTIME_ADMISSION_UNAVAILABLE", path: "runtime" },
+        { code: "INDUSTRIAL_READ_POLICY_UNAVAILABLE", path: "industrial" },
+      ],
+    });
+    expect(harness.transaction).toHaveBeenCalledTimes(1);
+    expect(harness.tx.scadaProjectVersion.findUnique).toHaveBeenCalledTimes(1);
+    expect(harness.tx.scadaProjectReleaseEvent.create).not.toHaveBeenCalled();
+    expect(harness.tx.scadaProjectReleaseState.updateMany).not.toHaveBeenCalled();
+    expect(harness.steps).not.toContain("追加发布事件");
+    expect(harness.steps).not.toContain("更新发布指针");
+  });
+
   it("通过隔离测试门禁后在同一事务追加事件并 CAS 更新发布指针", async () => {
     const harness = await createHarness({ allowGate: true });
     const result = await harness.store.publish(

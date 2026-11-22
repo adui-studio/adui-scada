@@ -1259,3 +1259,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/projects/project-release-safety-gate.ts`：`ProjectReleaseSafetyGate.assertReady` 只为现有纯函数 `assessProjectReleaseSafety` 添加异常兜底；评估抛错统一归类 `SAFETY_ASSESSMENT_UNAVAILABLE`（固定路径 `assessment`），仍抛 `ProjectReleaseGateUnavailableError`，不暴露原始错误。既有 Runtime/Tag/工业策略检测未改变，无成功发布分支。
 - `apps/server/src/projects/project-release-safety-gate.spec.ts`：新建 2 项负向测试定义，分别覆盖非规范 Tag 结构、含敏感字段的恶意 getter，检查固定代码、固定中文错误和零数据库读写。
 - NestJS 503 HTTP 过滤、发布事务、真实 PostgreSQL、Core/Runtime、Vue/React、工业网关及工程 Schema 均不调整；这是异常路径防御，不是发布安全策略完成证明。
+
+## 2026-11-22 · D5b8f 正式发布跨层安全拒绝回归
+
+- `apps/server/src/projects/prisma-project-release-store.spec.ts`：使用原有事务 Mock 的**真实** `PrismaProjectReleaseStore.publish` 和生产 `ProjectReleaseSafetyGate`，新增无 Tag/绑定/规则纯静态工程的 SHA-256 快照发布拒绝测试，明确核对事务已执行、快照已读取、发布事件与指针均未写入。
+- `apps/server/test/projects-api.e2e-spec.ts`：沿正式 NestJS 路由和错误过滤器新增 `SAFETY_ASSESSMENT_UNAVAILABLE` 异常的固定 503、`no-store` 与内部诊断脱敏断言。只在 HTTP 仓储接口注入固定错误，不尝试真实数据库或发布。
+- 生产 `ProjectReleaseSafetyGate`、`PrismaProjectReleaseStore`、HTTP 过滤器与 Vue/React 均未修改；仅强化已有失败路径的自动验收覆盖。
