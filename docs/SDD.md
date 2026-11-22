@@ -1289,3 +1289,11 @@ React/Vue 的 `PublishedRuntimePage` 在 `verified` 且快照具有多个页面�
 回调令牌仅以**对象引用同一性**比较，而不只比较代次数字：伪造同数字对象、旧订阅迟到 callback 或已失效令牌的 `receive/disconnect/checkFreshness` 均只返回 `STALE_HANDLE_IGNORED`，不执行归约、不回传当前状态或工艺数值。`BASELINE_INVALIDATED`（断连、坏质量、批次非法、时效过期等）会真正保存新的 `baseline:null` 状态，并撤销当前令牌；原令牌不能靠迟到 snapshot 再次恢复，需要受控上游显式 `restart()` 获得新代次并重新建立快照。`TAG_NOT_UPDATED` 不刷新数据年龄；必须由调用方主动以可信时钟执行 `checkFreshness`。同步托管器没有后台定时器、网络订阅、自动恢复或持久化。
 
 该令牌**不是身份认证凭据**，`currentToken()` 的暴露仅用于可信同进程调用方。布尔 `sourceVerified` 仍是外部声明而非真实来源证明，不允许从不可信客户端或设备直接作安全决策。正式来源核验、会话生命周期调度、重连取消、历史报警和确认授权尚未接入；不实现 TRIGGER/RECOVER、阈值、死区、设备写入或发布授权，FR-011 与生产安全门禁状态不变。
+
+## 2026-11-23 · D5b9n FR-011 只读订阅适配与可注入时效调度（候选）
+
+共享 Core 新增 `AlarmSubscriptionAdapter` 以及 `AlarmReadonlySubscriptionSource`、`AlarmSubscriptionScheduler`、`AlarmSubscriptionAdapterOptions`。注入接口分别提供 `subscribe(onChange,onDisconnect)` 及取消订阅函数、`every(intervalMs,callback)` 及取消周期函数、`nowMs()` 和显式 `maxAgeMs/checkIntervalMs`。所有参数均要求正安全整数且检查间隔不大于最大年龄；构造时冻结配置副本，不在 Core 内调用系统时钟、原生计时器、WebSocket 或设备驱动。订阅源可同步交付快照，适配器先安装受控会话令牌，再按先订阅后调度的顺序建立资源；在订阅/调度建立期间同步失效或抛错时，已拿到的取消函数会被释放。
+
+`start()` 订阅外部只读数据源并注册显式周期检查，正常 snapshot/delta 交由 D5b9m `AlarmBaselineSessionController` 实际保存。断连、未核验来源、坏质量、重复/非法批次或显式时效超限使 Core 托管器返回 `BASELINE_INVALIDATED`：适配器立即撤销令牌、调用调度取消及订阅取消，不再允许旧回调写入。`stop()` 幂等并清除当前基线，之后 `start()` 强制新代次；旧会话曾捕获的闭包无法写入新的状态，即使外部错误地延迟调用取消前保存的回调。时钟读取异常也关闭资源并继续抛给受控宿主。定时检查只能尽力按注入调度执行，无法保证实际频率或时钟真实可靠；收到无目标 Tag 的增量仍不会重置目标样本年龄。
+
+这仍是**接口与本地生命周期适配**，并非受信工业数据采集：`sourceVerified` 由注入的数据源提供，只能由未来服务端/网关在完成认证和时钟归属核验后赋真。调用方必须提供真实可靠的周期调度、重连、凭据保护及错误处理；不能把模拟 SSE 或浏览器自行设置的布尔值当作可信采集。无阈值、死区、自动报警事件、确认 API、历史持久化、PLC/DCS 写入或正式发布许可。FR-011 仍规划中，发布安全 Gate 保持 fail-closed。

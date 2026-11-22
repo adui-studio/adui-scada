@@ -1346,3 +1346,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-session-controller.ts`：新增 `AlarmBaselineSessionController` 和引用身份令牌 `AlarmBaselineSessionToken`。通过现有纯归约函数同步保存不可变状态，断连/拒绝后撤销令牌，显式 restart 严格递增代次；旧回调只返回无状态/工艺数值的忽略结果。
 - `packages/core/test/alarm-session-controller.test.ts`：新增 **9 项定向测试定义**，覆盖正常 snapshot/delta、引用同一性、代次重启、断连、质量拒绝、非法批次、时间失效和代次溢出。
 - `packages/core/src/index.ts`：公共导出托管器、令牌及转换结果类型。仅 Core 改动，未修改 TagStore、Runtime、NestJS、Prisma、双框架 UI、网关或正式发布安全门禁。
+
+## 2026-11-23 · D5b9n FR-011 只读报警订阅和周期检查适配
+
+- `packages/core/src/alarm-subscription-adapter.ts`：新增 `AlarmSubscriptionAdapter` 及外部 `AlarmReadonlySubscriptionSource`、`AlarmSubscriptionScheduler`、`AlarmSubscriptionAdapterOptions` 类型。将只读订阅数据、断连和受控时钟周期检查交给已有 `AlarmBaselineSessionController`，在本会话基线失效后立即释放订阅与调度资源。
+- `packages/core/test/alarm-subscription-adapter.test.ts`：新增 **13 项测试定义**，覆盖正常快照/增量、时效过期、断连、重启旧回调、未核验数据、非法批次、同步订阅/同步调度、订阅/调度抛错、幂等停止、无效时间参数、配置外部变更及时钟失败清理。
+- `packages/core/src/index.ts`：增加适配器和接口公共导出；未修改 TagStore、Runtime、Vue/React、NestJS、Prisma、设备网关或发布安全门禁。

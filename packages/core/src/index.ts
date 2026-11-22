@@ -32,6 +32,12 @@ export {
 } from "./alarm-state.ts";
 export type { AlarmEvent, AlarmState } from "./alarm-state.ts";
 export { classifyNumericAlarmSample } from "./alarm-tag-quality.ts";
+export { AlarmSubscriptionAdapter } from "./alarm-subscription-adapter.ts";
+export type {
+  AlarmReadonlySubscriptionSource,
+  AlarmSubscriptionAdapterOptions,
+  AlarmSubscriptionScheduler,
+} from "./alarm-subscription-adapter.ts";
 export { AlarmBaselineSessionController } from "./alarm-session-controller.ts";
 export type {
   AlarmBaselineManagedTransition,
