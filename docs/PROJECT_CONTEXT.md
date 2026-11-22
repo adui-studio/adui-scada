@@ -2144,3 +2144,11 @@ D5b8e 从上述主线创建独立候选，仅处理正式发布安全评估自�
 D5b8f 从该最新 main 独立开发，针对两个尚缺少跨层回归的拒绝分支，仅新增测试：①通过真实 `PrismaProjectReleaseStore.publish` 与现有生产 `ProjectReleaseSafetyGate`，断言合法 SHA-256 的纯静态、零 Tag、零绑定工程在锁内通过现有 Core 静态预检后仍被工业与 Runtime 全局策略拒绝，并且不插入发布事件、不更新发布指针；②通过现有 NestJS 正式发布 HTTP 控制器和异常过滤器，模拟已捕获的 `SAFETY_ASSESSMENT_UNAVAILABLE`，确保只返回固定中文 503、不泄漏内部阻塞代码、路径或设备信息，也不触发其他工程写入入口。
 
 本轮**不修改生产代码、Prisma、ACL、Schema、工程快照、工业网关、前端或生产门禁行为**；不新增已发布测试夹具或任何写入授权。预期全量 Vitest **699**、NestJS HTTP E2E **63**，仅为待实测目标，不能声称已通过。ADR-0069 对已提交结果的同键同语义幂等回放规则仍维持原批准语义，不能把历史结果回放误称为新发布指针写入。正式发布仍默认 fail-closed，ADR-0070 Proposed、Issue #126 Open。
+
+## 2026-11-22 · D5b8f 已合并与 D5b8g HTTP 错误日志原始异常脱敏候选
+
+维护者 Windows 日志记录 D5b8f PR #138 的本地 HEAD `6012008684253b36e92168312baebcde667cfd11`：Vitest **699/699**、NestJS HTTP E2E **63/63**、Vite+ **413 文件格式正确/264 文件零警告或错误**、Markdown **90**、React/Vue/NestJS 构建及完整 `ready` 均通过。合并前远程 HEAD 更新为 `1347566d1aef13cfee9875f7ba963d76e6699a91`，GitHub 比较与逐行回读确认唯一差异是 `docs/VALIDATION.md` 有序列表前新增空行（+1/-0），业务代码和测试未改变。经本轮维护者明确授权，以远程精确 HEAD Squash 合并至 `main@a738086b088c025176adcd4d9c49be7ae9414648`；完整 `ready` 是原 HEAD 的 Windows 实测，不能说在排版提交上重跑。
+
+D5b8g 从最新主线另开候选。既有 `createHttpLoggingOptions` 已对白名单请求 ID/方法与响应状态做序列化，但 HTTP 503 等失败时的 `err` 仍使用 Pino 默认错误序列化。维护者 E2E 输出显示默认 `err.message`、`err.stack` 和本机堆栈路径，虽然没有真实密钥泄漏证据，仍与既有“HTTP 日志只记录受控字段”的安全约束不一致。因此仅为 `serializers.err` 增加不访问错误对象的固定 `{ type: "HTTP_ERROR" }` 输出，保留 `req`/`res`、`x-request-id`、日志等级、HTTP 状态与公开响应原样。
+
+本批新增 **3 项 Vitest 用例定义**：异常正文/堆栈/原因/附加字段不可见、恶意 getter 不执行、实际 Pino JSON 输出保留关联信息且无原始错误及 URL。同步 E-084 复盘与验证边界。预计全量单测从 **699 → 702**、HTTP E2E 保持 **63**；当前未经维护者 Windows 本机实际验证，不能把目标数量写为通过证据。没有修改 Core/Runtime、Vue/React、Prisma/ACL、发布事务、设备接口或发布门禁。ADR-0070 仍 Proposed、Issue #126 Open、正式发布依然无条件 fail-closed。
