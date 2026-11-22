@@ -2042,3 +2042,9 @@ PR #122 已按维护者明确授权 Squash 合并到 `main@28c057b5e551c54bc95c0
 本轮补齐 Issue #123 真实证据：在同一可信 Keycloak/HTTPS 隔离 Chrome 浏览器中，React 与 Vue **正式“已发布运行”页面**均通过首次 404/拒绝、隐藏后清空且不读取、恢复可见后恰好第二次真实 404/拒绝、停止读取后零第三次 GET，含原生 HTTP `no-store`/无重定向、零工程写入、无旧发布快照/水位和不可用 Tag 质量。浏览器专项实际退出码 0。既有已撤销 `release:read` 的 D5b4 专用工程在浏览器前、后两次 **READ ONLY** PostgreSQL 审计均通过，另外三项 ACL 与 D5b1 基线保持完整；无数据库写入或恢复。浏览器完成后维护者打印本地 Git HEAD `eda30a5f66930dfbfc9b39f404e1161e157b0613`，对应 PR #122 合并前最终提交；不将其误称为 Squash 合并 SHA 的本地运行证据。
 
 **已关闭的验证范围**：已撤权工程的双框架已发布运行页隐藏/重显与继续拒绝，Issue #123 可以结案。**仍未验证**：真正已发布 `verified → denied` 的运行中动态撤权、异步授权与缓存竞态、服务端网络故障以及任何发布写入或工业设备控制。下一批应独立设计严格只读预检，生产业务、Prisma 及 ACL 变更必须单独审批。此次仅补录验收文档，未重新运行质量链；新文档变更仍须通过 `docs:check` 后才能合并。
+
+## 2026-11-22 · PR #124 已合并，Issue #123 已关闭；D5b7a 纯单测候选
+
+维护者 Windows PR #124 HEAD `f7eb8b72f4a6275ae12dc4ec84ce1c20f2415314`、文档检查 89 份和 Vite+ **403/255 零告警**通过，明确同意合并；GitHub 核实其 Squash 合并到 `main@b0f00aa5034cd2f9a7196c506e3affbe4825abe4`。Issue #123 的 React/Vue 正式运行页真实已撤权 404 隐藏重显以及浏览器前后 PostgreSQL READ ONLY 审计已完整登记并按 `completed` 关闭，Assignee 仍为 `@adui-dev`。
+
+下一批 D5b7a 仅补充共享 `PublishedRuntimeRefresher` 纯单测，针对已验证 `RELEASED` 快照的刷新等待期间立即清空画面、后续拒绝自动停止，以及隐藏期间的迟到合法发布 Response 不能覆盖重显后的 `denied`。两个新用例使用受控模拟读取器与已有手动时钟，**不修改生产代码、权限、数据库、发布状态或设备**。本批 Windows 定向测试、`vp check`、`docs:check`、`ready` 待执行；真实已发布工程 `verified → denied` 受控撤权实验还缺隔离已发布 fixture 和单独权限授权，不能从模拟通过推断已真实验收。
