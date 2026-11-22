@@ -63,6 +63,10 @@ export function createHttpLoggingOptions() {
       res(res: { statusCode?: number }) {
         return { statusCode: res.statusCode };
       },
+      err(_error: unknown) {
+        // pino-http 默认会输出异常堆栈；HTTP 日志只保留固定失败类别。
+        return { type: "HTTP_ERROR" };
+      },
     },
     redact: {
       paths: [
