@@ -3199,3 +3199,25 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批只增加 Core 同步状态托管、定向测试、公共导出及文档，无 HTTP、真实网络连接、自动定时器、Prisma、Vue/React 或工业网关改动。无需重复未改动模块的完整 ready、HTTP E2E 和双框架浏览器专项。令牌引用检查不是安全认证；没有可信时钟定期调用，已持有的 GOOD 基线不会自行超时；真实工业报警、审计和生产发布门禁不在本轮验收范围。
+
+## 2026-11-23 · D5b9n FR-011 报警订阅适配与时效检查：Windows 待验收
+
+维护者已在 PR #152 Windows 实测本地会话托管器定向单测 **9/9**、`vp check` **433 文件格式正确 / 284 受检零警告错误**、`docs:check` **90 份**、`messages:check` **308 文件**。PR #152 已获授权 Squash 合并至 `main@ae0ed62b9fab5cf2f91a1999bd26603f778d64f0`。本批 D5b9n **13 项测试仅为代码定义，尚未在维护者 Windows 实测**。
+
+维护者可按既定流程先运行 `vp check --fix` 并提交自动格式化差异，不要求手动核对或固定 HEAD；然后在当前 PR 功能分支执行：
+
+```powershell
+vp test run packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警只读订阅适配测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批代码位于 Core 注入适配层，无真实网络/数据库/双框架页面或设备驱动变更，故不重复完整 ready、HTTP E2E 和 React/Vue 浏览器专项；适配器只演示外部回调与调度契约。单测通过也不代表调度实际间隔、系统时间可靠、来源核验真实或工业报警安全可用；正式发布安全 Gate 保持 fail-closed。
