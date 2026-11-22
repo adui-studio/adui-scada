@@ -32,6 +32,11 @@ export {
 } from "./alarm-state.ts";
 export type { AlarmEvent, AlarmState } from "./alarm-state.ts";
 export { classifyNumericAlarmSample } from "./alarm-tag-quality.ts";
+export { AlarmBaselineSessionController } from "./alarm-session-controller.ts";
+export type {
+  AlarmBaselineManagedTransition,
+  AlarmBaselineSessionToken,
+} from "./alarm-session-controller.ts";
 export {
   beginAlarmBaselineSession,
   restartAlarmBaselineSession,
