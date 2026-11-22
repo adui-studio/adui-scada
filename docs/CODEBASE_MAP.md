@@ -1165,3 +1165,10 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - `scripts/test-oidc-studio-revoked-late-multitab.mjs`：第二标签先交付并完成单次目标 GET/404 检查后，**第一标签保持隐藏完成后交付及相同严格检查**；随后 `switchToTab(browser, second)` 恢复第一标签可见，执行最终 SVG/JSON/IndexedDB/CAS 和零工程写入复核。可见性切换不会插入两次响应交付的严格请求计数窗口。
 - `scripts/test-oidc-studio-revoked-late-gate.cases.mjs`：新增 1 项 Node 负向边界用例，验证隐藏的第一标签仍能接收真实 Response、第二标签先交付且两页各只发一次只读 GET；总数由 14 增至 15 项。
 - `scripts/test-oidc-studio-revoked-multitab.mjs`、已合并 D5b5b 顺序浏览器行为、原始只读 HTTP 守卫、Vue/React/NestJS 生产代码、Prisma 与 ACL 均未修改。
+
+## 2026-11-22 · D5b6 已撤权已发布运行页隐藏重显只读验收
+
+- `scripts/test-oidc-published-revoked-visibility.mjs`：真实 React/Vue“已发布运行”业务导航与原生按钮、可信 OIDC/BFF、两个同源 Chrome 标签页可见性切换；复用既有工程 API 只读守卫和 D5b4 状态观察器，逐阶段严格比较首次 404、隐藏清空、重显第二次真实 404、停止后零新增请求及 Tag `UNAVAILABLE`。
+- `scripts/test-oidc-published-revoked-visibility.cases.mjs`：新增 13 项 Node 离线安全门禁，严格拒绝不可信工程 ID、额外 GET/状态码、缓存或重定向、残留发布数据、被阻断写入及诊断敏感泄漏。
+- 根 `package.json`：`test:published:oidc:revoke:visibility:config` 加入 `ready`；`test:published:oidc:revoke:visibility:browser` 需维护者本机可信 HTTPS/Keycloak Lab 手工执行，不自动进 `ready`。
+- 复用 `apps/web-react/src/runtime/PublishedRuntimePage.tsx`、`apps/web-vue/src/runtime/PublishedRuntimePage.vue`、`PublishedRuntimeRefresher` 和已存在 D5b4/D5b5 CDP 辅助函数，不修改生产代码或数据库/ACL。
