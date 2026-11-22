@@ -57,21 +57,13 @@ test("未核验来源或增量消息均不能直接建立初始基线", () => {
 
 test("旧会话快照即使读数有效也不能建立当前代次基线", () => {
   expect(
-    establishAlarmSnapshotBaseline(
-      { ...request, snapshotGeneration: 1 },
-      nowMs,
-      1000,
-    ),
+    establishAlarmSnapshotBaseline({ ...request, snapshotGeneration: 1 }, nowMs, 1000),
   ).toEqual({ status: "SESSION_MISMATCH" });
 });
 
 test("快照缺少目标 Tag 时拒绝，重复或非法其他 Tag 则整体拒绝", () => {
   expect(
-    establishAlarmSnapshotBaseline(
-      { ...request, expectedTagId: "unknown.tag" },
-      nowMs,
-      1000,
-    ),
+    establishAlarmSnapshotBaseline({ ...request, expectedTagId: "unknown.tag" }, nowMs, 1000),
   ).toEqual({ status: "TAG_NOT_FOUND" });
   expect(() =>
     establishAlarmSnapshotBaseline(
@@ -128,11 +120,7 @@ test("质量异常、非数值、过期和未来时间均不能成为基线", ()
 test("非法会话代次、非法时间和 Tag 内容明确拒绝", () => {
   for (const invalid of [-1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1]) {
     expect(() =>
-      establishAlarmSnapshotBaseline(
-        { ...request, activeGeneration: invalid },
-        nowMs,
-        1000,
-      ),
+      establishAlarmSnapshotBaseline({ ...request, activeGeneration: invalid }, nowMs, 1000),
     ).toThrow("报警快照会话代次无效");
   }
   expect(() => establishAlarmSnapshotBaseline(request, Number.NaN, 1000)).toThrow(
