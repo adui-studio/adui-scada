@@ -200,7 +200,7 @@ export function requireD5b5Preserved(projectId, edited, after, response, beforeG
 }
 
 /** 依照已有浏览器草稿摘要、去网格 SVG 和工程 JSON 导出检查真正本地状态。 */
-async function inspectD5b5StudioState(session) {
+export async function inspectD5b5StudioState(session) {
   const view = await inspectStudioState(session);
   const canvas = await session.evaluate(readStudioContentCanvasInPage);
   const exported = await session.evaluate(readStudioDocumentHashInPage);
@@ -216,7 +216,7 @@ async function inspectD5b5StudioState(session) {
   };
 }
 
-async function openD5b5Project(session, projectId) {
+export async function openD5b5Project(session, projectId) {
   assert.equal(await session.evaluate(openProjectBrowserMenuInPage), true);
   let state = await waitForState(async () => {
     const current = await session.evaluate(pageStateInPage);
