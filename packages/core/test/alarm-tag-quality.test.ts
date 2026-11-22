@@ -39,9 +39,7 @@ test("非法数值和不合法的 Tag 元数据必须拒绝而非降级为正常
   expect(() => classifyNumericAlarmSample({ ...valid, value: Number.NaN })).toThrow(
     "Tag 数值必须为有限数",
   );
-  expect(() => classifyNumericAlarmSample({ ...valid, sequence: -1 })).toThrow(
-    "Tag 序列号无效",
-  );
+  expect(() => classifyNumericAlarmSample({ ...valid, sequence: -1 })).toThrow("Tag 序列号无效");
 });
 
 test("分类不修改输入对象并且不创建告警事件", () => {
