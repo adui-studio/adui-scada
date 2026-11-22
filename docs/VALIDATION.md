@@ -2736,3 +2736,11 @@ PR #129 已按维护者明确合并授权 Squash 合并至 `main@fb320f4731cd595
 离线安全测试定义 **16 项**（参数拒绝、唯一性与上限、原基线漂移、迁移及可信身份、查询范围、SQL 故障回滚、二次复核拒绝、异常信息脱敏），增加 `test:published:oidc:fixture:discover:config` 并纳入 `ready`；**真实数据库命令** `oidc:lab:published:fixture:discover` 保持单独手动运行。本次已从 GitHub 回读代码与配置，但尚未执行 Windows 原生 Node/Vite+/文档/完整 ready，**也没有访问真实 PostgreSQL 或证明任何合法已发布夹具存在**，所有退出码以维护者未来真实日志为准。
 
 无 Vue/React/NestJS 业务变更、SQL 写入、ACL 变更、设备控制或发布门禁调整。真实只读发现需要维护者在本机另行确认隔离 Lab 与只读操作边界，Issue #126 继续 Open。
+
+## 2026-11-22 · D5b8 已发布测试夹具正式设计候选的验证边界
+
+本批基于 `main@53e686d04e7bce5ad360c8901aa965db6e838cfe` 新建 `chore/d5b8-published-fixture-design`，只新增状态为 `Proposed` 的 [ADR-0070](adr/0070-isolated-published-fixture-safety-review.md) 并同步正式发布评审矩阵、项目上下文与代码定位。没有代码、数据库连接或写入。用户真实 Windows D5b7f 只读发现结果为 `NOT_FOUND`、退出码 1；这一结果是未发现符合**固定专用筛选条件**的工程，而不是所有发布状态均为空。
+
+**当前仅有仓库代码与文档静态核对证据**：已读取 `AGENTS.md`、`AI_MISTAKES.md`、ADR-0069、`RELEASE_TRANSACTION_REVIEW`，核对正式发布仓储和 `ProjectReleaseSafetyGate`。后者目前固定拒绝是正确安全边界；不因本 ADR 提议而解除。尚未在当前分支 Windows 执行 `pnpm run docs:check`、`vp check` 或完整 `pnpm run ready`；**没有任何真实发布/回滚/撤权成功记录**，LF-01～LF-12 为未来需逐项提供的证据，不能标记通过。
+
+维护者在验收分支后执行：`git rev-parse HEAD`、`pnpm run docs:check`、`vp check`、`pnpm run ready`，逐项核对退出码与 ADR 相对链接。不应运行 `db:migrate`、`test:db`、真实发现、发布、ACL 撤销或其他需额外审批的操作。文档检查成功不代表工业安全设计已被批准，Draft PR 合并也不授予发布权限。
