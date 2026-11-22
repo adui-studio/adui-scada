@@ -2152,3 +2152,11 @@ D5b8f 从该最新 main 独立开发，针对两个尚缺少跨层回归的拒�
 D5b8g 从最新主线另开候选。既有 `createHttpLoggingOptions` 已对白名单请求 ID/方法与响应状态做序列化，但 HTTP 503 等失败时的 `err` 仍使用 Pino 默认错误序列化。维护者 E2E 输出显示默认 `err.message`、`err.stack` 和本机堆栈路径，虽然没有真实密钥泄漏证据，仍与既有“HTTP 日志只记录受控字段”的安全约束不一致。因此仅为 `serializers.err` 增加不访问错误对象的固定 `{ type: "HTTP_ERROR" }` 输出，保留 `req`/`res`、`x-request-id`、日志等级、HTTP 状态与公开响应原样。
 
 本批新增 **3 项 Vitest 用例定义**：异常正文/堆栈/原因/附加字段不可见、恶意 getter 不执行、实际 Pino JSON 输出保留关联信息且无原始错误及 URL。同步 E-084 复盘与验证边界。预计全量单测从 **699 → 702**、HTTP E2E 保持 **63**；当前未经维护者 Windows 本机实际验证，不能把目标数量写为通过证据。没有修改 Core/Runtime、Vue/React、Prisma/ACL、发布事务、设备接口或发布门禁。ADR-0070 仍 Proposed、Issue #126 Open、正式发布依然无条件 fail-closed。
+
+## 2026-11-22 · D5b8g 合并与 D5b9a 已发布 Runtime 不可信错误分类修复候选
+
+维护者 Windows 在 PR #139 **精确 HEAD `dd0c72ec3ddfebde701c4d8bd4fc811454a193bd`** 实测 Vitest **702/702**、HTTP E2E **63/63**、Vite+ **413 格式文件/264 零警告错误**、Markdown **90**、React/Vue/NestJS 构建和完整 `pnpm run ready` 均通过。预期 HTTP 503 记录现仅含 `err: { type: "HTTP_ERROR" }`，不再附带原始堆栈。按本轮维护者明确授权，PR #139 已 Squash 合并为 `main@ba1fa7f896ea57d6dfa9516f645bd460ac7955c0`；E-084 复盘关闭。上述质量结果已验证，**不重复执行旧批次测试**。
+
+D5b9a 直接从最新 main 修复共享 `PublishedRuntime` 的**不可信读取错误分类**：原 `failureStatus(error)` 读取 `error.kind`，若外部数据源抛出的异常对象带恶意 getter / Proxy，读取分类本身可再次抛错，导致 `load()` Promise 非预期拒绝、运行状态停在 `loading`。现在只为错误类别访问加异常隔离，访问失败一律落入原有 `error` 状态；`loading` 开始时已撤去的可显示快照不会复活，输出只用已有固定中文说明，不泄漏原异常。新增**一项**精准 Runtime 测试覆盖已验证快照→恶意错误→固定异常态的状态轨迹。原有 `network` 离线重试、401/403/404 撤权终止行为不变，两套前端通过共享 Runtime 同时受益。
+
+本批**不重复**运行或要求维护者重跑未变动的完整 `ready` / HTTP E2E / React-Vue 构建。候选新用例尚未实测，需只执行 `packages/runtime/test/published-runtime.test.ts` 定向测试与一次 `vp check`；不具备本机执行证据时不得声称通过。没有修改发布 Gate、正式发布事务、ACL、数据库、Tag 来源、工业网关或真实发布夹具；ADR-0070 Proposed，Issue #126 Open，生产发布仍无条件 fail-closed。
