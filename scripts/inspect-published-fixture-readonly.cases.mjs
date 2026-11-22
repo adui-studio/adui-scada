@@ -235,6 +235,7 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
       kind: "DENIED",
     });
     assertReadonly(calls);
+    assert.equal(calls.filter((entry) => entry.params?.[1] === BASELINE_PROJECT).length, 6);
     assert.equal(
       calls.some(
         (entry) =>
@@ -250,6 +251,7 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
       kind: "DENIED",
     });
     assertReadonly(calls);
+    assert.equal(calls.filter((entry) => entry.params?.[1] === BASELINE_PROJECT).length, 6);
     assert.equal(
       calls.some(
         (entry) =>
