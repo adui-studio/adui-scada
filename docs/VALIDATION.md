@@ -2727,6 +2727,29 @@ PR #129 已按维护者明确合并授权 Squash 合并至 `main@fb320f4731cd595
 
 **当前验证级别**：GitHub 远端代码/Schema/已有 D5b4 ACL 契约静态核对，尚未提供本批最新 HEAD 的 Node、`vp check`、`docs:check`、完整 Windows `ready` 实测日志；没有执行真实 PostgreSQL/Keycloak/浏览器操作，仍缺合法 RELEASED 夹具与实时撤权证据。此批不改生产发布安全门禁或 ACL 写入。
 
+
+## 2026-11-22 · PR #132 Windows 修复验收与 D5b8a 服务端门禁代码候选
+
+维护者提供 PR #132 修复后 Windows 日志：`docs:check` **90 个 Markdown 通过**；`vp check` **412 个格式文件、263 个受检文件零警告或错误**；完整 `pnpm run ready` 已执行并完成 Vitest **682/682**、D5b7f Node **16/16**、D5b7c **17/17**、HTTP E2E **62/62**、Vue/React 构建、NestJS 构建，最终退出码 0（原先 E-082 的 ADR 状态失败已复验关闭）。此次用户日志未包含 HEAD，因此不能把它伪装成与 PR #132 远程最终 SHA 一一绑定；PR #132 保持 Draft，不因用户说“继续”就自动合并。
+
+D5b8a 在独立分支对正式 `ProjectReleaseSafetyGate` 增加安全阻塞评估，只输出固定类别、路径并保持原安全拒绝异常；含模拟 Tag 的工程、无 Tag 的纯静态工程均**不能发布**，数据库事务内没有新增任何写入。新增 `apps/server/src/projects/project-release-safety-gate.spec.ts` 六项 Vitest 测试定义，覆盖上下文隔离、Runtime 不兼容、无来源 Tag、静态工程仍拒绝、不触发 SQL 和异常信息脱敏。
+
+**验证边界**：已在 GitHub 对照现存 Core `validateProjectReleasePreflight`、NestJS `PrismaProjectReleaseStore.publish` 调用顺序和严格安全门禁，并静态核对更新后的源码；**当前 D5b8a 最新 HEAD 尚未在 Windows 运行 `vp check`、`pnpm run test:unit`、`docs:check` 或完整 `ready`**。本批代码只是完成门禁审查能力的第一步，真正的 Runtime/Tag/工业资源策略仍需专项设计、实现和真实验收，不允许以 6 项离线测试替代。
+
+## 2026-11-22 · D5b8a 首次 Windows Vite+ Mock 泛型警告与最小修复
+
+维护者在 Windows 执行 `vp check --fix` 时，`apps/server/src/projects/project-release-safety-gate.spec.ts:77` 出现 **1 条 `vitest(require-mock-type-parameters)` 警告、0 条错误**：`const query = vi.fn();` 未声明 Mock 函数泛型。命令随后报告“Formatting completed”，**并不代表零告警的 `vp check` 已通过**。这是已记录的 E-005 同类缺陷复发，新增 E-083。
+
+PR #133 已在原分支将上述单行改为 `const query = vi.fn<() => Promise<unknown[]>>();`，仍只断言 `expect(query).not.toHaveBeenCalled()`，不实际访问事务或数据库，不修改生产 Gate、HTTP 503 错误或发布指针。已完成 GitHub 远程文件回读与差异检查，**尚未取得修复后 Windows `vp check`、Vitest 及完整 `pnpm run ready` 的运行结果**；PR 保持 Draft，Issue #126 不因修复 Lint 就结案。
+
+## 2026-11-22 · D5b8a 修复后 Windows 验收及 503 非空阻塞诊断新增回归
+
+维护者上传 D5b8a Windows 真实日志：`vp check` **412 个格式文件、264 个受检文件零警告/错误**；`pnpm run test:unit` **58/58 文件、688/688 测试**，新服务端门禁 **6/6**；`pnpm run docs:check` **89 个 Markdown**；完整 `pnpm run ready` 已通过核心构建、类型检查、所有离线专项、Vitest 688/688、NestJS HTTP E2E **6/6 文件、62/62 用例**、React/Vue 和 NestJS 构建，末尾退出码检查无异常。E-083 原有 `vi.fn()` 无类型参数警告已由零告警复验关闭。日志没有打印本地 `git rev-parse HEAD`，不得将其直接绑定至 GitHub 最终提交 SHA。
+
+在上述已验收版本之后，继续于原 Draft PR #133 **仅增强既有 HTTP E2E 的一条 503 安全断言**：构造包含 `TAG_SOURCE_UNVERIFIED`、`RUNTIME_ADMISSION_UNAVAILABLE`、`INDUSTRIAL_READ_POLICY_UNAVAILABLE` 的真实错误对象，检查 HTTP 响应仍严格等于 `{ statusCode: 503, message: 固定中文说明 }`，不泄漏内部阻塞代码、字段路径或 Prisma 信息。不修改发布安全门禁实现、正式事务、数据库、权限或设备控制。
+
+**新的 E2E 断言尚未在 Windows 实测**，因此先前 62/62 / 688/688 / 完整 `ready` 的成绩仅作为原修复版本的证据，不能当作本次最终 HEAD 的运行通过。PR #132、#133 仍保持 Draft；Issue #126 的真实已发布独立夹具及 `verified → denied` 仍受安全门禁与独立审批阻塞，不得假装结案。
+
 ## 2026-11-22 · D5b7f 无 ID 已发布夹具受控只读发现候选
 
 用户没有独立已发布 Lab 工程的真实 ID。针对 Issue #126，从 `main@4a39abc42e267f541c7990b3402d368658307866` 新建 `feat/d5b7f-readonly-discovery`。不把“没有 ID”当作“数据库不存在已发布工程”，也不绕过仍固定 fail-closed 的 `ProjectReleaseSafetyGate`。

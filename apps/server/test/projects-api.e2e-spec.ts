@@ -613,7 +613,13 @@ describe("工程 API HTTP 接口（端到端）", () => {
 
   it("工业安全门禁尚未就绪时返回 503 且不泄漏内部细节", async () => {
     permissions = ["release:publish"];
-    releases.publish.mockRejectedValueOnce(new ProjectReleaseGateUnavailableError());
+    releases.publish.mockRejectedValueOnce(
+      new ProjectReleaseGateUnavailableError([
+        { code: "TAG_SOURCE_UNVERIFIED", path: "snapshot.document.tags" },
+        { code: "RUNTIME_ADMISSION_UNAVAILABLE", path: "runtime" },
+        { code: "INDUSTRIAL_READ_POLICY_UNAVAILABLE", path: "industrial" },
+      ]),
+    );
     const response = await request(app.getHttpServer())
       .post("/api/v1/projects/" + PROJECT_ID + "/releases")
       .set("Authorization", "Bearer " + SESSION_TOKEN)
@@ -627,8 +633,13 @@ describe("工程 API HTTP 接口（端到端）", () => {
 
     expect(response.status).toBe(503);
     expect(response.headers["cache-control"]).toBe("no-store");
-    expect(response.body.message).toContain("安全门禁尚未完成");
+    expect(response.body).toEqual({
+      statusCode: 503,
+      message: "正式发布安全门禁尚未完成，当前请求已被安全拒绝",
+    });
     expect(JSON.stringify(response.body)).not.toContain("Prisma");
+    expect(JSON.stringify(response.body)).not.toContain("TAG_SOURCE_UNVERIFIED");
+    expect(JSON.stringify(response.body)).not.toContain("snapshot.document.tags");
   });
 
   it("过期修订号返回 409，非法修订号返回 400，均不修改工程", async () => {

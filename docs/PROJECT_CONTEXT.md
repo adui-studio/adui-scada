@@ -2081,6 +2081,15 @@ PR #129 已在维护者 Windows D5b7d 5/5、D5b7c 14/14、Vite+ 409/261、89 份
 
 真实已发布隔离夹具、可信快照摘要/发布来源、真实 React/Vue `verified → denied` 动态撤权和独立恢复审批仍未满足，不能以合成 Mock 结案。新分支质量链需 Windows 复验。
 
+
+## 2026-11-22 · D5b8a 正式发布安全门禁的第一段实际代码候选
+
+Issue #126 仍无合法真实 `RELEASED` 夹具，D5b7f 本机受控只读发现为 `NOT_FOUND`。维护者已提供 D5b8 Proposed ADR-0070 修复后的 Windows `docs:check` **90**、`vp check` **412/263**、Vitest **682/682**、HTTP E2E **62/62**、React/Vue/Server 构建以及完整 `ready` 的成功日志；该 PR #132 仍为 Draft，未获新的明确合并授权，不能将 ADR 视为工业安全方案已批准。
+
+为真正推进正式发布门禁，从当前 `main@53e686d04e7bce5ad360c8901aa965db6e838cfe` 独立创建 `feat/d5b8a-release-gate-assessment`。在现有生产 `ProjectReleaseSafetyGate.assertReady` 调用路径新增确定性的**安全阻塞清单**：可信租户/主体、工程快照上下文一致性、共享 Core Runtime 兼容性、缺少可信 Tag 来源及尚未交付的 Runtime / 工业只读准入。诊断只返回固定代码和路径，**不包含原始工程内容、凭据或设备地址**。生产门禁始终抛原 `ProjectReleaseGateUnavailableError`，不能因为静态 SVG 没有 Tag 就放行。
+
+新增 6 项 Vitest 用例（仅测试定义，当前分支 Windows 质量链未执行）。没有新增发布/撤权命令、Prisma 模型、数据库迁移、环境绕过、双框架不一致或工业设备写入。该批不代表真正的 Runtime/Tag/数据源策略已实现，也不能据此批准任何真实已发布夹具；Issue #126 保持 Open。
+
 ## 2026-11-22 · D5b7f 无工程 ID 受控发现候选
 
 Issue #126 是当前唯一开放普通 Issue。PR #127～#130 的离线分类、发布元数据只读审查、原 D5b1 基线保护及全量目标 ACL 校验均已验收合并，最新主线 `4a39abc42e267f541c7990b3402d368658307866`。维护者目前无法提供独立已发布工程 ID；不能把 D5b1 未发布工程或 D5b4 已撤权工程冒充真实 `RELEASED`。
