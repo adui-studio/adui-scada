@@ -172,9 +172,9 @@ test("调度器同步发现过期时能补做取消并防止旧回调进入", ()
   const { adapter, source, scheduler, setNow } = setup();
   source.immediate = (handlers) => {
     handlers.onChange({ kind: "snapshot", values: [value] }, true);
+    setNow(startMs + 1001);
   };
   scheduler.immediate = true;
-  setNow(startMs + 1001);
   adapter.start();
   expect(adapter.isRunning()).toBe(false);
   expect(source.closes).toBe(1);
