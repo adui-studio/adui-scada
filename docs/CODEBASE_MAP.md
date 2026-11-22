@@ -1177,3 +1177,11 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 
 - `packages/runtime/test/published-runtime-refresher.test.ts`：沿用 `published()` 合法快照夹具、`manualClock()` 单次调度与 `fixture()` 注入，只新增 2 项 `verified → loading → denied` 和 `verified → loading → hidden → denied → late 200 ignored` 测试。现有 15 项变为预计 17 项；无生产 Runtime 代码变更。
 - 根 `pnpm run ready` 本身已包含共享 Vitest，**无需新增 package.json 命令**。`docs/HARNESS.md` 提供 Windows 定向 `vp test` 与完整质量链指令，不涉及 Keycloak、PostgreSQL、Lab 写入、ACL 恢复或工业设备。
+
+## 2026-11-22 · D5b7b 已发布工程元数据离线分类
+
+- `scripts/audit-published-fixture-metadata.mjs`：纯函数核验显式独立工程 ID、可信本机 Lab 元数据、`release:read` 授权、未发布空指针及已发布版本/事件一致性；只返回 `DENIED`、`UNRELEASED` 或 `RELEASED_METADATA_ONLY`，不读取快照正文、连接数据库或操作 ACL。
+- `scripts/audit-published-fixture-metadata.cases.mjs`：14 项原生 Node 安全回归，含非法参数、租户/主体/授权、版本摘要、事件、未发布状态、额外敏感字段及无副作用保护。
+- 根 `package.json`：新增 `test:published:oidc:fixture:metadata:config` 并纳入 `ready`；没有真实数据库/浏览器自动命令。
+
+此处仅建立 Issue #126 后续只读审查的**离线元数据门禁**，真实已发布夹具、发布快照校验、在线 `verified → denied` 和工业安全审批均未完成。
