@@ -2088,3 +2088,11 @@ Issue #126 是当前唯一开放普通 Issue。PR #127～#130 的离线分类、
 从此主线新增 `feat/d5b7f-readonly-discovery`：先核对可信 Lab/迁移/主体/OIDC 映射及原 D5b1 基线，再以固定 `d5b7b-published-%` 范围、独立读取 ACL 和发布指针过滤最多两条工程标识；零条或多条不输出 ID，仅唯一且经过第二次完整只读审查的候选才向本机维护者显示工程 ID，仍仅是 `RELEASED_METADATA_ONLY`。
 
 离线 Node 安全用例纳入 `ready`；真实 DB 发现独立人工执行，不在本轮自动运行。尚无真实 PostgreSQL、快照 SHA-256、受保护 HTTP 200/RELEASED 或在线 `verified → denied` 证据，发布门禁继续固定拒绝，Issue #126 保持 Open。
+
+## 2026-11-22 · D5b8a 正式发布安全门禁的第一段实际代码候选
+
+Issue #126 仍无合法真实 `RELEASED` 夹具，D5b7f 本机受控只读发现为 `NOT_FOUND`。维护者已提供 D5b8 Proposed ADR-0070 修复后的 Windows `docs:check` **90**、`vp check` **412/263**、Vitest **682/682**、HTTP E2E **62/62**、React/Vue/Server 构建以及完整 `ready` 的成功日志；该 PR #132 仍为 Draft，未获新的明确合并授权，不能将 ADR 视为工业安全方案已批准。
+
+为真正推进正式发布门禁，从当前 `main@53e686d04e7bce5ad360c8901aa965db6e838cfe` 独立创建 `feat/d5b8a-release-gate-assessment`。在现有生产 `ProjectReleaseSafetyGate.assertReady` 调用路径新增确定性的**安全阻塞清单**：可信租户/主体、工程快照上下文一致性、共享 Core Runtime 兼容性、缺少可信 Tag 来源及尚未交付的 Runtime / 工业只读准入。诊断只返回固定代码和路径，**不包含原始工程内容、凭据或设备地址**。生产门禁始终抛原 `ProjectReleaseGateUnavailableError`，不能因为静态 SVG 没有 Tag 就放行。
+
+新增 6 项 Vitest 用例（仅测试定义，当前分支 Windows 质量链未执行）。没有新增发布/撤权命令、Prisma 模型、数据库迁移、环境绕过、双框架不一致或工业设备写入。该批不代表真正的 Runtime/Tag/数据源策略已实现，也不能据此批准任何真实已发布夹具；Issue #126 保持 Open。
