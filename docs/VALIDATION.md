@@ -2775,3 +2775,23 @@ PR #133 已在原分支将上述单行改为 `const query = vi.fn<() => Promise<
 根因与 E-019 相同：原文件使用 `- 状态：Proposed（待维护者与工业安全专项评审，**未授权实施**）`，仓库 `scripts/validate-docs.mjs` 只接受状态行精确匹配枚举。PR #132 本分支已最小修改为 `- 状态：Proposed` 与独立 `- 审批：...`，不放宽正则、不修改业务逻辑；同步 E-082 复盘。远程修正文案已按现有正则静态核对，**尚未获得修复后 Windows `docs:check`、`vp check` 和完整 `ready` 的实际日志**，当前 PR 仍须重新验收且不能自动合并。
 
 Issue #126 仍未结案：D5b7f 真实发现 `NOT_FOUND`，Proposed ADR-0070 只是正式发布安全门禁及独立夹具的待审批设计，未开放任何发布、撤权、数据库写入或现场设备操作。
+
+## 2026-11-22 · D5b8b 已发布 Runtime 二次准入待验收
+
+PR #132 Squash 合并 `86d078b942766d9bac2e5d383e91295385260621`；PR #133 在处理四份重叠文档的冲突后 Squash 合并 `129f804b2c3ff0055ef3b9d6a554e02c5e8c9aae`。维护者的 Windows 日志曾通过 688/688 Vitest、62/62 HTTP E2E、`vp check` 412/264、89 份 Markdown 和完整 `ready`，但日志未打印本地 HEAD；PR #133 后续合并冲突处理只移动文档段落，不将该记录伪称最终合并 SHA 的独立实测。
+
+D5b8b 本轮仅新增共享 Runtime 二次静态兼容性检查：真实有效的已发布快照若与当前 Core SVG Runtime 不兼容，则不进入 `verified`，静态 SVG 渲染函数也拒绝继续输出。新增两项 Vitest 负向用例定义，另有一项循环验证规则/版本不兼容。代码已提交到独立分支，尚未运行 Windows Vitest、Vite+、文档检查、完整 `ready` 或真实双框架浏览器；以下为维护者后续验收命令，不属于已通过证据：
+
+```powershell
+git rev-parse HEAD
+pnpm run test:unit
+if ($LASTEXITCODE -ne 0) { throw "共享 Runtime 单元测试失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+```
+
+此项不能替代真实 Runtime 资源可用性、Tag 数据源、工业只读准入的专项审批；不执行 PostgreSQL、发布 POST、ACL 撤销、设备控制与分支清理。Issue #126 继续 Open。
