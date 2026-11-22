@@ -1077,3 +1077,10 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `scripts/prepare-oidc-published-revocation.mjs`：默认无参只读检查 D5b4a 基线；单独授权后才能使用显式双确认，生成全新 `d5b4-revoke-<UUIDv4>`，通过正式同源 BFF POST / Cookie CSRF 创建唯一空白首版，`SERIALIZABLE` 检查首版/审计、D5b1 原授权并仅给新工程 INSERT 一条 `release:read`，最后只读验证 `200 UNRELEASED`，不做 ACL 删除。
 - `scripts/prepare-oidc-published-revocation.cases.mjs`：11 项 Node 测试覆盖写入参数、跨 Origin、CSRF、工程 ID、授权限域、事务回滚、原工程保护、发布 GET 只读与脱敏。
 - `package.json`：新增 `test:published:oidc:revoke:fixture:config` 并加入 `ready`；新增只读默认入口 `oidc:lab:published:revoke:fixture`，独立真实 Lab 验收必须手动执行，写入仍需额外批准。
+
+
+## 2026-11-22 · D5b4c 实际撤权前的专用工程只读核验
+
+- `scripts/preflight-oidc-published-revocation-target.mjs`：要求明确传入现有 `d5b4-revoke-<UUIDv4>`，只在可信本机 OIDC/PG Lab 的 `REPEATABLE READ READ ONLY` 事务中检查独立工程唯一性、首版/未发布/四项 ACL，并核对原 D5b1 工程和授权完整；零数据写入。
+- `scripts/preflight-oidc-published-revocation-target.cases.mjs`：10 项 Node 测试覆盖严格参数、数据库/迁移/身份、工程唯一性、首版/事件、目标与旧项目 ACL、SQL READ ONLY、回滚及诊断脱敏。
+- `package.json`：`test:published:oidc:revoke:target:config` 加入 `ready`；`oidc:lab:published:revoke:target` 必须在维护者另行授权创建独立工程后手动运行。当前无工程时应安全失败，不得伪造成功。

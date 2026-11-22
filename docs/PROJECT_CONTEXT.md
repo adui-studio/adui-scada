@@ -1926,3 +1926,8 @@ PR #109 真实 Windows 全量 `ready`、D5b3 React/Vue HTTPS 浏览器 404 模�
 ## 2026-11-20 · PR #110 已合并，D5b4b 专用真实撤权夹具准备候选
 
 维护者 D5b4a 本机 READ ONLY 预检与完整 Windows `ready` 均退出码 0，PR #110 已合并到 `main@bbcf827b95d609b73052aaa2076d137ae01e92b5`。下阶段不复用原 D5b1 的 `d5b-unreleased-*` 工程做撤权，而是准备独立 `d5b4-revoke-<UUIDv4>` 工程。新增显式确认创建脚本（默认只读）：只经可信 Keycloak/BFF + 正式 POST/CSRF 新建空白工程，事务内核对新工程初始三项授权、首版/审计/未发布以及旧 D5b1 四项授权，然后仅对新工程添加一条 `release:read`；无数据库 ACL DELETE、无发布/设备操作。真实写入需维护者额外授权；本批只提交候选代码、测试与文档，尚未进行本机写入或完整 Windows 质量验收。
+
+
+## 2026-11-22 · D5b4c 独立撤权工程后置只读核查候选
+
+在 D5b4b Windows 质量链、默认只读真实 PostgreSQL Lab 预检通过并 Squash 合并 PR #111 后，继续 D5b4c。候选只读取未来获单独授权创建的 `d5b4-revoke-<UUIDv4>` 工程，核查专用工程唯一性、首版/发布状态/四项 ACL，并并行核查原 D5b1 工程及四项 ACL 不变。SQL 全程 READ ONLY/ROLLBACK，不含 DELETE/INSERT、无生产发布或工业设备写入。此阶段不能证明真实 ACL 已撤销或服务端 404 已通过；D5b4 创建与撤权均须不同阶段显式授权。

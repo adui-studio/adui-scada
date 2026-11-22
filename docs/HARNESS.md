@@ -3684,3 +3684,35 @@ Write-Host "D5b4b 只读预检退出码：$LASTEXITCODE"
 真实创建、真实撤销和真实双框架撤权后 HTTP 404 均**尚未执行**。只有专用工程创建成功后，才能推进 D5b4c 的真实 ACL 撤销与拒绝验收；撤权步骤必须单独确认备份/恢复边界与执行授权，不能重复执行 D5b4a 的零工程预检当作后续状态已就绪。
 
 D5b4b 候选已做隔离 JavaScript 函数/Mock 行为检查，**11/11 为非 Node、非 PostgreSQL 的静态与隔离测试**；Windows Node、质量链、真实 Lab 预检和任何写操作均待维护者执行。
+
+
+## 2026-11-22 · 第三十五批 D5b4c 实际 ACL 撤销前的独立工程只读核查（Draft 待 Windows 验收）
+
+PR #111 D5b4b 已由维护者在 Windows 实测 `test:published:oidc:revoke:fixture:config` **11/11**、`vp check` **384 格式文件 / 236 受检文件零警告错误**、`docs:check` **89** 份、`ready` **680/680** 单测和 **62/62** 服务端 E2E、最终退出码 **0**；真实 `pnpm run oidc:lab:published:revoke:fixture` 只读预检退出码 **0**，没有创建专用工程或修改授权。经维护者明确同意，PR #111 Squash 合并至 `main@67526a8972f90325ed534ef8c05a5d43cffd7357`。Prisma 更新提示不代表依赖已升级，仍采用仓库锁定版本。
+
+D5b4c 只添加**独立专用工程已创建后的只读核查**：`scripts/preflight-oidc-published-revocation-target.mjs` 要求且只接受 `--project-id d5b4-revoke-<UUIDv4>`，拒绝任何 `--apply`、`--revoke`、`--restore` 和附加参数。复用已审核可信本机 OIDC/双 HTTPS Origin/PG 目标校验器，验证固定 `adui_scada` 数据库及用户、三条发布迁移、零未解决迁移、预绑定可信主体；使用 `BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY` 在一致快照内对照当前租户 **仅有一份** `d5b4-revoke-%` 专用工程、该工程首版修订号 1、唯一版本/审计、`release_generation=0`、零发布事件、恰好四项 `project:read/version:read/version:append/release:read` 授权；再核对旧 D5b1 工程仍有相同四项 ACL、首版及零发布状态。所有 SQL 均只读 SELECT，最后始终 `ROLLBACK`，最终关闭连接；拒绝工程内容/快照/Cookie/Token 输出。
+
+**当前没有 D5b4 工程，因此真实 D5b4c 目标核查预计应失败（安全前置条件未满足）；不要为让它通过而使用 D5b1 工程 ID 或伪造测试数据。** 新工程只有在另行获得维护者明确的本机 Lab 数据库写入授权后，才允许使用已验收 D5b4b 准备脚本创建。即便 D5b4c 通过，也仍不允许直接执行真实 ACL 撤销；撤权时必须**在同一写事务内重新复核**现有状态，不能凭只读预检作写入依据。
+
+可以在未授权写入前执行以下 **纯本地、无真实数据库写入** 的质量检查：
+
+```powershell
+git fetch origin
+git switch --track origin/test/b35-d5b4c-release-revocation-target-preflight
+git rev-parse HEAD
+pnpm run test:published:oidc:revoke:target:config
+vp check
+pnpm run docs:check
+pnpm run ready
+Write-Host "D5b4c 完整质量链退出码：$LASTEXITCODE"
+```
+
+只有真实独立工程已获批准并通过 D5b4b 正式创建且记录其 ID 之后，才执行数据库只读验收：
+
+```powershell
+$projectId = "<实际创建成功的 d5b4-revoke-UUIDv4>"
+pnpm run oidc:lab:published:revoke:target --project-id $projectId
+Write-Host "D5b4c 数据库只读核查退出码：$LASTEXITCODE"
+```
+
+本小批 10 项新增 Node 安全用例加入 `ready`，真实数据库预检不加入自动质量链；D5b4c 未创建工程、未撤权、不恢复 ACL、不修改发布指针、未操作工业设备。隔离 JavaScript 自检 **10/10** 不等于 Windows Node 运行，最新候选 `vp check`、`ready` 和真实 SQL 核查尚待维护者执行。
