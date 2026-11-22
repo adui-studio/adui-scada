@@ -215,7 +215,10 @@ void describe("D5b5b 已撤权工程 React/Vue 同源双标签页只读安全门
     };
     const response = { status: 404, noStore: true, direct: true };
     const cases = [
-      [{ ...after, paths: [...before.paths, "/api/v1/projects/" + ID, after.paths[1]] }, "D5b5 双标签读取期间工程请求数量不符"],
+      [
+        { ...after, paths: [...before.paths, "/api/v1/projects/" + ID, after.paths[1]] },
+        "D5b5 双标签读取期间工程请求数量不符",
+      ],
       [{ ...after, statuses: [200] }, "D5b5 双标签读取期间工程响应数量不符"],
       [{ ...after, statuses: [200, 401] }, "D5b5 双标签发布读取记录未返回 404"],
       [{ ...after, blocked: 1 }, "D5b5 双标签出现非只读工程请求"],
