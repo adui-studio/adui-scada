@@ -3919,3 +3919,22 @@ Write-Host "D5b4g 完整质量链退出码：$LASTEXITCODE"
 **以下写入模式仅为未来技术审查的格式示意，本次严禁执行**：`pnpm run oidc:lab:published:revoke:single --project-id <真实 D5b4 专用工程 ID> --apply --confirm-lab adui_scada --confirm-project <同一真实 ID>`。即使只是独立只读预检，也必须先经单独授权成功创建真实专用工程；禁止把本节占位符当作实际工程 ID。此前用户明确未授权创建 D5b4 工程或执行任何数据库写入，此边界未改变。
 
 本小批隔离 V8/Mock 只完成新增 **13/13** 及旧 D5b4c/e **21/21** 源测试定义复核，均**不是 Windows Node `node --test`、`vp check`、`ready` 或真实 PostgreSQL 写入实测**。正式验证结果需使用 Windows 完整工作区补证。
+
+## 2026-11-22 · D5b4 真实撤权实验室终验（已完成的历史证据）
+
+维护者已在本机可信 OIDC/Keycloak HTTPS Lab 使用**唯一新建的 D5b4 测试工程**，按 D5b4b 创建与授权 → D5b4c/f 撤权前只读/双框架 HTTP 200 → D5b4g 定向一次 `release:read` DELETE → D5b4e/f 撤权后只读/双框架 HTTP 404 的顺序完成**真实专项终验**。完整原始输出保存在维护者对话日志；本节只记录固定命令契约与结论，不在公开仓库散布真实 UUID、Cookie、Token、连接串或工程正文。
+
+| 验收时点 | 使用的已有脚本 | 维护者真实结果 |
+| --- | --- | --- |
+| 真实工程准备 | `oidc:lab:published:revoke:fixture --apply --confirm-lab adui_scada` | 新工程、必要授权、首次真实 HTTP 200 成功 |
+| 撤权前两次数据库夹持浏览器 | `oidc:lab:published:revoke:sequence --phase before --project-id <真实工程 ID>` | PostgreSQL 四项 ACL / 原 D5b1 完整；React/Vue 各一次真实 200；停止清理通过 |
+| 唯一一次定向撤权 | `oidc:lab:published:revoke:single --project-id <真实工程 ID> --apply --confirm-lab adui_scada --confirm-project <同一 ID>` | 写入前预检、单条权限撤销、提交后数据库只读审计成功 |
+| 撤权后两次数据库夹持浏览器 | `oidc:lab:published:revoke:sequence --phase after --project-id <同一 ID>` | PostgreSQL 仅三项基础 ACL、原 D5b1 完整；React/Vue 各一次真实 404 / denied；停止清理与末次只读复核通过 |
+
+**顺序安全门禁已通过实际负向检验**：若在撤权之前运行 `oidc:lab:published:revoke:after` 或 `--phase after`，仍存在 `release:read`，应拒绝并在首次数据库检查处停止；维护者确实观察到这两条命令返回错误。手工 `Write-Host` 不代表任何测试通过。实际 D5b4g 撤权成功后重新运行后置检查，才得到本节最终通过结论。
+
+**禁止复用本次写入步骤**：专用工程已撤权，重复运行 `--apply` 不属于已授权操作，自动恢复 ACL 同样禁止。当前没有进一步数据库写入授权；任何异常仅可先做独立只读审计。原 D5b1 工程与工业设备不在本次写入范围。
+
+**验收不等于全产品安全覆盖**：上述真实浏览器测试检查发布运行页 GET 200/404、no-store、拒绝状态与清理，不会自动检查 Studio IndexedDB 草稿原始字节、未保存画布、双标签页竞态、生产网络或真实 PLC/DCS。下一个独立专项可先采用纯离线设计与双框架草稿/画布保护浏览器测试，但不得为了扩展测试而重新授予目标工程的 `release:read`。如需再次验证撤权前后两态，必须另行审批新测试工程及写入授权。
+
+**证据可追溯性**：用户日志未显式打印 `git rev-parse HEAD` 及每条 `$LASTEXITCODE`，不将这些日志标为 SHA 严格绑定的自动化 CI。最终 D5b4f 正常完成信息与 D5b4g/e 成功信息是实际成功证据；文档追加本身未重新执行 `vp check`、`docs:check` 或 `ready`。
