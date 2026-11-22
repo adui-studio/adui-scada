@@ -719,6 +719,15 @@
 - **验证边界**：维护者的 Windows **13/13** 与完整 `ready` 是修补前代码的真实证据。候选已为 D5b5b 增加 **5 项**真实断言负向回归，为 D5b5c 增加 **1 项**白名单透传回归；**修补后的 Windows Node、`vp check`、`docs:check`、`ready`、双框架真实浏览器都待复测**。没有执行数据库写入、恢复 ACL、服务端 POST 或工业设备控制。
 - **证据**：维护者 2026-11-22 D5b5b/D5b5c 真实浏览器失败日志和完整 Windows 质量日志、PR #121、`scripts/test-oidc-studio-revoked-multitab.mjs`、`scripts/test-oidc-studio-revoked-late-multitab.mjs`、`docs/VALIDATION.md`。
 
+### E-078 · 双标签页只读 GET 先记路径后记响应导致过早断言（第三十五批 D5b5c，待真实复验）
+
+- **现象**：维护者 2026-11-22 Windows 已对 E-077 修补版完成 D5b5b **16/16**、D5b5c **14/14** 离线回归、`vp check` **401/253 零告警错误**、`docs:check` **89**、完整 `ready`（680/680 Vitest、62/62 E2E、React/Vue/NestJS 构建）**退出码 0**。同一已撤权 D5b4 工程再次通过 PostgreSQL **READ ONLY** 审计。真实 D5b5b 的 React 第一、第二标签页发布读取均已通过，却在“切回第一标签页并复核”报“工程 API 只读约束或发布 GET 404 不符合预期”，退出码 1；真实 D5b5c 两页已经持有真实 404 并通过同时 pending 检查，却在第二页优先交付后明确报“工程响应数量不符”，退出码 1。**Vue 阶段未覆盖，不得记为通过**。
+- **已确认的时序机制**：既有页面只读守卫 `installPublishedReadGuardInPage` 在发出原生 `fetch` 前先向 `paths` 追加请求路径，而在 `Promise.resolve(original(...)).then(...)` 中、真实响应完成后才向 `statuses` 追加 HTTP 状态。Studio 的可见性恢复和 UI idle 不保证所有后台只读 GET 已结束。D5b5b 在最后检查时直接要求 `paths.length === statuses.length`；D5b5c 在新 GET 之前没有等待旧记录结算，却立即要求新请求导致两个数组**同时恰好新增 1**。**尚未获得网络级请求时间线和原始计数，不能断言两次真实失败只因已有 GET 未完成；未排除异常请求或生产状态变化。**
+- **最小修复候选**：仅在测试脚本增加 `requireD5b5ReadGuardProgress` 与 `waitForD5b5ReadGuardSettled`，要求守卫存在、`blocked === 0`、两个数组合法且响应数量不反超请求数量；若尚有 `paths` 未对应到 `statuses` 则通过现有 `waitForState` **最多 80 次、每次 150ms** 有界等待真实完成，超时或真实 Fetch 永远未返回仍失败。D5b5b 在每次主动 GET 前后及切回最终对照前结算，D5b5c 在两页分别挂起前、各次释放后和最终检查前结算。保留 `requireD5b5Preserved` 的“每次目标请求与响应严格各增加 1”及原始历史一致检查；保留最终完整 SVG、JSON、IndexedDB 草稿、自动保存、CAS 和零写入断言。**不清理/忽略额外请求，不伪造 404，不允许继续挂起无限等待，不改生产 API/ACL。**
+- **防复发**：异步请求计数型安全测试必须在记录基线前确保先前请求结算；等待只解决时间上的未完成，不允许以宽松的总数比较或清空记录绕过额外目标 GET。通过原生 Node 测试覆盖异步一前一后、阻断写入、破损数组、状态数反超与额外 GET 严格拒绝，最终仍需在真实 Keycloak/Chrome 双框架证明。
+- **验证边界**：本候选新增 D5b5b **4 项**离线门禁定义（总数由 16 增至 **20**），D5b5c 原 **14 项**不变；最新 HEAD 的 Windows Node、Vite+、文档、完整 `ready`、D5b5b 和 D5b5c 真实浏览器**均待维护者重新验收**。上次 Windows 通过记录适用于**修补前**代码。没有修改或恢复数据库授权、创建工程、写入发布版本、设备控制或生产数据。
+- **证据**：本次维护者 D5b4e READ ONLY 与两项真实浏览器失败日志、`scripts/test-oidc-published-runtime-readonly.mjs`、`scripts/test-oidc-studio-revoked-multitab.mjs`、`scripts/test-oidc-studio-revoked-late-multitab.mjs`、PR #121、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
