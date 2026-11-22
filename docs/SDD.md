@@ -1273,3 +1273,11 @@ React/Vue 的 `PublishedRuntimePage` 在 `verified` 且快照具有多个页面�
 对于目标 Tag 增量，复用已合并的 `classifySessionBoundNumericAlarmSample` 校验质量、有限数值、时效、同 Tag、同代次与严格递增序列。只有 `READY` 才返回 `DELTA_ACCEPTED`、数值及冻结的下一条序列基线。其他结果返回 `DELTA_REJECTED` 和固定原因枚举，不包含原值或可继续使用的旧基线。**所有 DELTA_REJECTED 以及任何校验异常均要求调用方丢弃旧基线，重新取得经上游核验的同代次 snapshot；TAG_NOT_UPDATED 不推进序列、不产生新候选。** 此处是无状态纯函数契约，尚未实现自动清理订阅状态或可信来源认证。上游必须负责来源核验、会话管理、时钟归属、故障后的重建与报警规则评估，不能把 `sourceVerified` 当作安全证据。
 
 不新增报警阈值、死区、延时、TRIGGER/RECOVER/ACKNOWLEDGE 判定、PLC/DCS 写入、NestJS 业务路由、Prisma 报警持久化、Vue/React UI 或正式发布许可；FR-011 仍规划中，生产发布 Gate 保持 fail-closed。
+
+## 2026-11-23 · D5b9l FR-011 报警候选基线会话生命周期归约（候选）
+
+共享 Core 新增 `alarm-baseline-session.ts`：`beginAlarmBaselineSession(tagId, generation)` 创建无基线、冻结的候选会话；`restartAlarmBaselineSession(previous, nextGeneration)` 强制新代次严格前进、不能携带旧数值；`transitionAlarmBaselineSession(state, action, nowMs, maxAgeMs)` 以纯函数归约 `CHANGE`（snapshot/delta）、`DISCONNECT`、`CHECK_FRESHNESS`。它只调用已存在的 `establishAlarmSnapshotBaseline`、`advanceAlarmTagDeltaBaseline` 和 `classifyTimelyNumericAlarmSample`，不复制报警触发规则。
+
+本代次合法 snapshot 建立冻结基线；目标 Tag 的合法递增 delta 推进为新冻结基线；不包含目标 Tag 的合法 delta 返回 `TAG_NOT_UPDATED`，不会重发旧数值，也**不能代替定期时效检查**。`CHECK_FRESHNESS` 对已有基线应用显式时间窗口，超时立刻清除基线；当前代次断连、来源未核验、质量/序列拒绝、任何 Tag 批次 TypeError 均以 `BASELINE_INVALIDATED` 返回 `baseline: null`，调用方必须重新获取合法快照。旧/其他代次的迟到操作返回 `OTHER_SESSION_IGNORED`，不覆盖或清空当前会话。操作代次非法明确抛错，不声称已实现真实取消网络请求或身份认证。所有状态都是函数返回值，调用方必须实际替换持有的会话状态才能应用失效保护。
+
+会话代次及 `sourceVerified` 只能由未来受控订阅管理器提供；`sourceVerified` 仍只是调用方布尔声明，不是认证凭据。Core 归约器不接入 PLC/DCS、网关、NestJS、告警规则、阈值/死区/延时、确认 API、不可变审计或正式发布业务。FR-011 完整工业报警仍规划中，正式发布 Gate 保持 fail-closed。

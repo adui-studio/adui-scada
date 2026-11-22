@@ -3155,3 +3155,25 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 仅新增共享 Core 增量纯函数、定向单测、公共导出和对应文档；未修改 HTTP、双框架组件、Prisma 或工业采集，避免重复完整 ready / HTTP E2E / 双端浏览器专项。此测试不能证明 `sourceVerified` 的真实性，`DELTA_REJECTED` 及抛错后的基线废弃由未来上游实现；生产工业报警与发布许可仍未通过验收。
+
+## 2026-11-23 · D5b9l FR-011 报警候选基线会话生命周期：Windows 待验收
+
+PR #150 维护者 Windows 定向测试 **9/9**、`vp check` **429 格式文件/280 受检零警告错误**、`docs:check` **90 份**、`messages:check` **304 份**；经明确授权，Squash 合并至 `main@83cf07da36ced869a26f6ebbdb1b992a6cad92f7`。D5b9l 新增 **11 项测试定义，尚未在 Windows 执行**。
+
+维护者可以先运行 `vp check --fix`，如有格式修改可正常提交；不要求手动检查或锁定 HEAD。在本批功能分支执行：
+
+```powershell
+vp test run packages/core/test/alarm-baseline-session.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警基线会话归约测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批仅修改共享 Core、定向测试、公共导出和文档，未涉及 HTTP、数据库、双端 UI 或协议适配，故不重复未改动模块的完整 ready 与浏览器专项。归约器返回基线清空结果不代表外部调用方已经安装/应用它；来源可信性、会话管理、工业报警与正式发布安全仍未验收。
