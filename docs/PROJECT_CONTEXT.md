@@ -2010,3 +2010,10 @@ D5b5b 当前仅为**同一浏览器 Profile、每个框架独立的同源双标�
 维护者 Windows `D5b5b` 离线 11/11、`vp check` 398/250 零告警、`docs:check` 89、完整 `ready`（680/680 单测、62/62 HTTP E2E、双框架及服务端构建）退出码 0；GitHub 按明确授权 Squash 合并 PR #120 至 `main@eb3fdc5105d3cb5d88593db7fffd7702e91625c8`。真实 D5b5b Chrome/Keycloak 双标签页专项仍待补证。
 
 接续 D5b5c 只读响应逆序交付候选：两标签各自真实 GET 已撤权 404，页面内让两个原始 Response 的 Promise 同时挂起，第二页先释放、第一页后释放；严格比较无网格 SVG、工程 JSON、IndexedDB 草稿摘要、自动保存及 CAS，不修改任何生产组件或 ACL。Node 原型 13/13，最新分支 Windows 质量链和真实浏览器专项待维护者验收；不把 Promise 交付顺序描述成服务端 HTTP 请求时序或 Studio 业务组件迟到响应处理。
+
+## 2026-11-22 · D5b5b/D5b5c 真实浏览器失败，PR #121 保持 Draft
+
+维护者 Windows D5b5c 离线 13/13、`vp check` 401/253 零告警、`docs:check` 89、完整 `ready` 退出码 0（680/680 Vitest、62/62 HTTP E2E、双框架和服务端构建）；D5b4e 原已撤权工程的 PostgreSQL READ ONLY 核验通过。真实 D5b5b React 第一标签页发布 GET 后严格保护断言失败；D5b5c React 第二标签已收到真实 404 且双页 pending 检查通过，但优先释放第二页后失败，两项专项退出码都是 1，Vue 尚未完成。根因（请求数/真实响应/草稿/CAS）尚未获得分类证据。
+
+E-077 修补仅在原严格断言失败后映射固定中文类别，并为 D5b5c 增加白名单，附加 5+1 项离线安全回归；未修改任何业务组件、数据库或 ACL。最新 PR HEAD 的 Windows 门禁及真实浏览器仍需重跑，PR #121 继续 Draft，未经授权不得合并。
+
