@@ -56,13 +56,7 @@ test("快照与连续增量自动写回新基线且不改变旧快照", () => {
   const controller = new AlarmBaselineSessionController("tank.level", 2);
   const token = establish(controller);
   const original = controller.snapshot();
-  const first = controller.receive(
-    token,
-    { kind: "delta", values: [next] },
-    true,
-    nowMs,
-    3000,
-  );
+  const first = controller.receive(token, { kind: "delta", values: [next] }, true, nowMs, 3000);
   expect(first.status).toBe("DELTA_ACCEPTED");
   expect(controller.snapshot().baseline?.value.sequence).toBe(6);
   expect(original.baseline?.value.sequence).toBe(5);
@@ -82,9 +76,9 @@ test("伪造相同数字代次的令牌仍无法读取或修改当前基线", ()
   establish(controller);
   const oldState = controller.snapshot();
   const forged = Object.freeze({ generation: 2 });
-  expect(
-    controller.receive(forged, { kind: "delta", values: [next] }, true, nowMs, 3000),
-  ).toEqual({ status: "STALE_HANDLE_IGNORED" });
+  expect(controller.receive(forged, { kind: "delta", values: [next] }, true, nowMs, 3000)).toEqual({
+    status: "STALE_HANDLE_IGNORED",
+  });
   expect(controller.disconnect(forged, nowMs, 3000)).toEqual({
     status: "STALE_HANDLE_IGNORED",
   });
@@ -181,13 +175,8 @@ test("未更新目标 Tag 不能刷新年龄，显式时效检查会撤销旧令
 });
 
 test("代次溢出和非法初始参数拒绝且不改变旧会话", () => {
-  expect(() => new AlarmBaselineSessionController("bad tag")).toThrow(
-    "报警目标 Tag ID 无效",
-  );
-  const controller = new AlarmBaselineSessionController(
-    "tank.level",
-    Number.MAX_SAFE_INTEGER,
-  );
+  expect(() => new AlarmBaselineSessionController("bad tag")).toThrow("报警目标 Tag ID 无效");
+  const controller = new AlarmBaselineSessionController("tank.level", Number.MAX_SAFE_INTEGER);
   const current = controller.snapshot();
   const token = activeToken(controller);
   expect(() => controller.restart()).toThrow("报警会话重启代次必须递增");
