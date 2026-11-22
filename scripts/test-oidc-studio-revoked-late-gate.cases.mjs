@@ -8,6 +8,8 @@ import {
   requireD5b5cLateReadState,
   startD5b5cLateReadInPage,
 } from "./test-oidc-studio-revoked-late-gate.mjs";
+import { D5B5_PROTECTION_REASONS } from "./test-oidc-studio-revoked-multitab.mjs";
+import { describeD5b5cBrowserFailure } from "./test-oidc-studio-revoked-late-multitab.mjs";
 
 const ORIGIN = "https://127.0.0.1:15173";
 const PROJECT = "d5b4-revoke-12345678-1234-4234-8234-123456789abc";
@@ -221,6 +223,21 @@ void describe("D5b5c 已撤权工程双标签页真实响应逆序交付安全�
       () => requireD5b5cLateReadState(state, "pending"),
       /真实 404 响应挂起或释放时序不符合预期/,
     );
+  });
+
+  void it("真实浏览器保护断言类别必须透传至受审白名单且不泄漏敏感原文", () => {
+    const failure = new Error("D5b5c 浏览器阶段失败");
+    failure.stage = "React：先交付第二标签页真实 404";
+    failure.safeReason = D5B5_PROTECTION_REASONS[3];
+    assert.equal(
+      describeD5b5cBrowserFailure(failure),
+      "D5b5c React：先交付第二标签页真实 404失败：" +
+        "D5b5 双标签读取期间工程请求数量不符",
+    );
+    failure.safeReason = "Cookie=SECRET Token=SECRET";
+    assert.doesNotMatch(describeD5b5cBrowserFailure(failure), /SECRET/);
+    failure.stage = "私密工程阶段 Cookie=SECRET";
+    assert.doesNotMatch(describeD5b5cBrowserFailure(failure), /SECRET/);
   });
 
   void it("四个 CDP 页面函数单独序列化后不依赖 Node 模块闭包", async () => {
