@@ -2064,3 +2064,11 @@ PR #125 已合并为 `main@834defd4e50ad8f8e199e130e9bfc986a618ff52`；历史 PR
 下一批 `test/d5b7c-published-fixture-readonly` 在隔离 Lab 规范下增加**仅显式触发的** PostgreSQL 元数据只读审查入口、带参数 SQL 和事务失败回滚 Node 安全 Mock 测试。要求真实连接目标、已应用发布迁移、可信主体和外部预绑定、独立 `release:read` 与发布指针/事件一致性；无权限不读取发布状态，绝不选取工程快照正文。D5b7b 元数据一致性仅为 `RELEASED_METADATA_ONLY`，不是实际 `verified`。
 
 此批新文件尚待 Windows 离线安全、`vp check`、`docs:check`、完整 `ready` 及独立真实 READ ONLY 实测；未创建已发布工程、未执行发布或权限写入、未改生产安全门禁。
+
+## 2026-11-22 · PR #128 已合并；Issue #126 唯一开放，D5b7d 原基线保护候选
+
+GitHub 重新核实仓库仅有一个开放普通 Issue #126，未发现其他未解决普通 Issue。维护者上传 PR #128 Windows D5b7c 专项 12/12、Vite+ 407/259、文档 89、单测 682/682、HTTP E2E 62/62、完整 `ready` 通过日志；按本次明确授权及预期 HEAD 检查 Squash 合并为 `main@bdc35bafb9951b911dccfc4f99976b33e28a24ae`，没有删除历史分支。
+
+发现 PR #128 的 D5b7c 工具只核对目标发布元数据，尚未覆盖 Issue #126 明确要求的**原 D5b1 未发布基线及 ACL 不漂移**。D5b7d 从最新 main 单独补充纯函数基线门禁，在同一 READ ONLY/ROLLBACK 事务、查询目标之前核验原 D5b1 工程首版、审计、空发布指针、零事件和四项 ACL；异常一律停止、不发目标查询。不修改生产接口/安全门禁/迁移/ACL/工程，也不创建发布快照或连接工业设备。
+
+隔离 Node 新基线单测 5/5 通过；新分支 Windows `vp check`、`docs:check`、完整 `ready` 与真实 Lab 只读验收尚未执行。Issue #126 保持开放，因为没有真实已发布测试夹具的证据，真实 `verified → denied` 仍不能宣称完成。
