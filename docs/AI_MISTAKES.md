@@ -748,6 +748,8 @@
 - **验证边界**：独立 Node.js 22.16.0 已对新纯函数运行 `node --check` 和 5/5 本地负向测试；**D5b7d 最新 GitHub HEAD 的原生 Node 集成回归、Windows `vp check`、`docs:check`、`ready` 与真实 PostgreSQL READ ONLY 均待实测**，不得提前关闭。真实已发布夹具尚未确证存在，生产 `ProjectReleaseSafetyGate` 继续 fail-closed；未执行任何数据库写入、ACL 恢复或正式发布。
 
 
+> **2026-11-22 · E-080 Windows 结案补录**：维护者提供 D5b7d PR #129 的真实 Windows 质量日志：原 D5b1 基线 **5/5**、原只读事务回归 **14/14**、Vite+ **409 文件格式正确 / 261 文件零警告错误**、`docs:check` **89 份**、Vitest **682/682**、HTTP E2E **62/62**、React/Vue/NestJS 构建及完整 `ready` 通过。经最新 HEAD `a3168d553cf030f6bcd5130c4fb7ac6ef9acf549` 与初始审查 HEAD 比较，仅有排版调整；按明确授权 Squash 合并到 `main@fb320f4731cd59535c0bd00222be93ce3fe486b7`，**E-080 离线基线缺口已关闭**。这仍未包含原 D5b1 的本次真实数据库 READ ONLY 审计或任何真实已发布工程的 `verified → denied` 实验，Issue #126 继续开放。
+
 ### E-081 · D5b7c 目标 ACL 在 SQL 层预过滤导致异常授权不可见（第三十五批 D5b7e，待 Windows 复验）
 
 - **现象**：Issue #126 规定真实只读审查必须覆盖授权状态，已合并 D5b7c 的目标 ACL 查询却限定 `subject_id = $3 AND permission = 'release:read'`。当目标工程同时存在其他主体授权、多余正式发布权限或不完整基础 ACL 时，这些行在查询阶段就被剔除，下游 D5b7b 元数据分类器仅看到一行正常读取授权，可能仍给出 `RELEASED_METADATA_ONLY`。原 D5b7d 只保护 D5b1 基线，没有覆盖目标全量 ACL。此次发现是审查脚本缺口，**并无数据库遭到真实越权或发布状态漂移的证据**。
