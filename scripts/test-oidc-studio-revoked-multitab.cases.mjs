@@ -189,7 +189,6 @@ void describe("D5b5b 已撤权工程 React/Vue 同源双标签页只读安全门
     assert.equal(visible(), "visible");
   });
 
-
   void it("原有真实 404 与草稿保护断言保持严格通过条件", () => {
     const original = state("甲");
     const baseline = {
@@ -220,7 +219,10 @@ void describe("D5b5b 已撤权工程 React/Vue 同源双标签页只读安全门
         expected: "D5b5 双标签读取期间工程请求数量不符",
       },
       { changed: { ...after, statuses: [200] }, expected: "D5b5 双标签读取期间工程响应数量不符" },
-      { changed: { ...after, statuses: [200, 401] }, expected: "D5b5 双标签发布读取记录未返回 404" },
+      {
+        changed: { ...after, statuses: [200, 401] },
+        expected: "D5b5 双标签发布读取记录未返回 404",
+      },
       { changed: { ...after, blocked: 1 }, expected: "D5b5 双标签出现非只读工程请求" },
     ];
     for (const { changed, expected } of cases) {

@@ -2635,4 +2635,3 @@ PR #117 已按维护者明确授权 Squash 合并至 `main@3c2e51c385ddaacb5015b
 源码确认 D5b5b 在 `requireD5b5Preserved` 外层合并三种已知错误；D5b5c 没有将复用的保护错误列入安全白名单。修补方案只增加两条浏览器入口共享的固定中文失败分类与 **5+1 项**离线负向回归，原严格断言和 CDP/CDP 网络行为不变。可能出现的“多余工程 GET”“404/no-store 异常”“本地 SVG/IndexedDB/CAS 变化”将分别归类，未知异常仍不能回显敏感内容。
 
 **尚待 Windows 最新 HEAD 重新执行**：`test:published:oidc:revoke:multitab:config`（原 11 项加 5 项），`test:published:oidc:revoke:late:config`（原 13 项加 1 项）、`vp check`、`docs:check`、完整 `ready`；再按 `docs/HARNESS.md` 先只读审计、依次运行真实 D5b5b 和 D5b5c。若首个真实专项仍失败，先用固定类别定位，不需重复 D5b4 授权撤销、不创建工程或修改数据库。失败继续保持 PR #121 Draft，不合并。
-

@@ -4165,4 +4165,3 @@ Write-Host "D5b5c 修补后完整质量链退出码：$LASTEXITCODE"
 ```
 
 随后继续使用**已经存在且保持撤权状态**的原实际 D5b4 工程，先单独执行 `oidc:lab:published:revoke:after`（仅只读），再运行 `test:published:oidc:revoke:multitab:browser` 和 `test:published:oidc:revoke:late:browser`。**必须先处理 D5b5b 的明确失败类别再评价 D5b5c 的最终状态**；遇失败保留终端固定类别与退出码即可，不收集 Cookie、Token 或完整工程快照。不重新运行撤权 `--apply`、不恢复 ACL、不新增 SQL、不得以开启生产写入或放宽安全断言作为修复。
-

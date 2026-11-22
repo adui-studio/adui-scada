@@ -1152,4 +1152,3 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - `scripts/test-oidc-studio-revoked-late-multitab.mjs`：复用同一诊断分类，避免 D5b5c 将 D5b5 的已知固定错误再次泛化；完整原 404/草稿/CAS 断言保留。
 - `scripts/test-oidc-studio-revoked-multitab.cases.mjs`：增加 5 项原严格断言正反向及分类覆盖；`scripts/test-oidc-studio-revoked-late-gate.cases.mjs`：增加 1 项安全白名单透传测试。
 - `scripts/test-oidc-studio-revoked-draft.mjs` 与只读网络守卫、React/Vue Studio、NestJS、Prisma、工程 ACL 均未修改。浏览器失败的实际底层差异仍待 Windows 真实阶段分类。
-
