@@ -472,7 +472,7 @@ class CompanionChromeSession {
   }
 }
 
-async function openCompanionChromeTab(browser) {
+export async function openCompanionChromeTab(browser) {
   const port = Number(
     readFileSync(join(browser.folder, "DevToolsActivePort"), "utf8").split("\n")[0],
   );
