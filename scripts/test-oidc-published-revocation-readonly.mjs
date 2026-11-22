@@ -110,10 +110,7 @@ export function enterD5b4ProjectInPage(projectId, runtime = globalThis) {
   const panel = runtime.document.querySelector('[data-testid="published-runtime-page"]');
   const input = panel?.querySelector('input[placeholder="输入已授权工程 ID"]');
   const prototype = runtime.HTMLInputElement.prototype;
-  if (
-    !input ||
-    typeof Object.getOwnPropertyDescriptor(prototype, "value")?.set !== "function"
-  ) {
+  if (!input || typeof Object.getOwnPropertyDescriptor(prototype, "value")?.set !== "function") {
     throw new Error("D5b4d 独立工程输入不可用");
   }
   Reflect.set(prototype, "value", projectId, input);

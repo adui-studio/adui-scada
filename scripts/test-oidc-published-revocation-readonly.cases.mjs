@@ -174,8 +174,14 @@ void describe("D5b4d 撤权前后双框架只读浏览器验收安全门禁", ()
     const summary = d5b4ResponseStateInPage(runtime);
     assert.equal(summary.direct[0], false);
     assert.throws(
-      () => requireD5b4ReadonlyResult("after", PROJECT_ID, page("after"),
-        publishedReadGuardStateInPage(runtime), summary),
+      () =>
+        requireD5b4ReadonlyResult(
+          "after",
+          PROJECT_ID,
+          page("after"),
+          publishedReadGuardStateInPage(runtime),
+          summary,
+        ),
       /发布读取请求不符合只读约束/,
     );
   });
@@ -187,8 +193,16 @@ void describe("D5b4d 撤权前后双框架只读浏览器验收安全门禁", ()
     assert.equal(response.status, 404);
     assert.equal(calls.length, 1);
     assert.equal(d5b4ResponseStateInPage(runtime).statuses[0], 404);
-    assert.equal(requireD5b4ReadonlyResult("after", PROJECT_ID, page("after"),
-      publishedReadGuardStateInPage(runtime), d5b4ResponseStateInPage(runtime)).status, 404);
+    assert.equal(
+      requireD5b4ReadonlyResult(
+        "after",
+        PROJECT_ID,
+        page("after"),
+        publishedReadGuardStateInPage(runtime),
+        d5b4ResponseStateInPage(runtime),
+      ).status,
+      404,
+    );
   });
 
   void it("所有工程 POST、带请求体或跨 Origin 访问都被既有门禁阻断", async () => {
@@ -211,13 +225,17 @@ void describe("D5b4d 撤权前后双框架只读浏览器验收安全门禁", ()
     const before = readState(200);
     const after = readState(404);
     assert.deepEqual(
-      requireD5b4ReadonlyResult("before", PROJECT_ID, page("before"), before.guard,
-        before.observer),
+      requireD5b4ReadonlyResult(
+        "before",
+        PROJECT_ID,
+        page("before"),
+        before.guard,
+        before.observer,
+      ),
       { phase: "before", status: 200, releaseGeneration: 0 },
     );
     assert.deepEqual(
-      requireD5b4ReadonlyResult("after", PROJECT_ID, page("after"), after.guard,
-        after.observer),
+      requireD5b4ReadonlyResult("after", PROJECT_ID, page("after"), after.guard, after.observer),
       { phase: "after", status: 404, releaseGeneration: null },
     );
   });
@@ -232,8 +250,8 @@ void describe("D5b4d 撤权前后双框架只读浏览器验收安全门禁", ()
     ]) {
       const state = readState(status);
       assert.throws(
-        () => requireD5b4ReadonlyResult(phase, PROJECT_ID, page(phase), state.guard,
-          state.observer),
+        () =>
+          requireD5b4ReadonlyResult(phase, PROJECT_ID, page(phase), state.guard, state.observer),
         phase === "before" ? /撤权前必须真实返回 HTTP 200/ : /撤权后必须真实返回 HTTP 404/,
       );
     }
@@ -241,23 +259,49 @@ void describe("D5b4d 撤权前后双框架只读浏览器验收安全门禁", ()
 
   void it("任何响应缓存、状态码篡改、跨工程请求、额外请求或被阻断写入均失败", () => {
     const candidates = [
-      ({ guard }) => { guard.blocked = 1; },
-      ({ guard }) => { guard.paths[0] = "/api/v1/projects/" + OLD_ID + "/releases/current"; },
-      ({ guard }) => { guard.paths.push(PATH); },
-      ({ guard }) => { guard.statuses[0] = 404; },
-      ({ observer }) => { observer.requests = 2; },
-      ({ observer }) => { observer.statuses.push(200); },
-      ({ observer }) => { observer.noStore[0] = false; },
-      ({ observer }) => { observer.noStore.push(true); },
-      ({ observer }) => { observer.direct[0] = false; },
-      ({ observer }) => { observer.direct.push(true); },
+      ({ guard }) => {
+        guard.blocked = 1;
+      },
+      ({ guard }) => {
+        guard.paths[0] = "/api/v1/projects/" + OLD_ID + "/releases/current";
+      },
+      ({ guard }) => {
+        guard.paths.push(PATH);
+      },
+      ({ guard }) => {
+        guard.statuses[0] = 404;
+      },
+      ({ observer }) => {
+        observer.requests = 2;
+      },
+      ({ observer }) => {
+        observer.statuses.push(200);
+      },
+      ({ observer }) => {
+        observer.noStore[0] = false;
+      },
+      ({ observer }) => {
+        observer.noStore.push(true);
+      },
+      ({ observer }) => {
+        observer.direct[0] = false;
+      },
+      ({ observer }) => {
+        observer.direct.push(true);
+      },
     ];
     for (const change of candidates) {
       const state = readState(200);
       change(state);
       assert.throws(
-        () => requireD5b4ReadonlyResult("before", PROJECT_ID, page("before"),
-          state.guard, state.observer),
+        () =>
+          requireD5b4ReadonlyResult(
+            "before",
+            PROJECT_ID,
+            page("before"),
+            state.guard,
+            state.observer,
+          ),
         /发布读取请求不符合只读约束/,
       );
     }
@@ -274,8 +318,14 @@ void describe("D5b4d 撤权前后双框架只读浏览器验收安全门禁", ()
     ]) {
       const state = readState(404);
       assert.throws(
-        () => requireD5b4ReadonlyResult("after", PROJECT_ID,
-          { ...page("after"), ...changes }, state.guard, state.observer),
+        () =>
+          requireD5b4ReadonlyResult(
+            "after",
+            PROJECT_ID,
+            { ...page("after"), ...changes },
+            state.guard,
+            state.observer,
+          ),
         /发布运行页面状态不符合预期/,
       );
     }
@@ -286,12 +336,24 @@ void describe("D5b4d 撤权前后双框架只读浏览器验收安全门禁", ()
     const idle = { ...page("after"), status: "idle" };
     assert.equal(requireD5b4Stopped(idle, valid.guard, valid.observer, PROJECT_ID, 404), true);
     const invalid = [
-      (view) => { view.status = "denied"; },
-      (view) => { view.snapshot = true; },
-      (view) => { view.releaseGeneration = 1; },
-      (view) => { view.quality = false; },
-      (_view, guard) => { guard.paths.push(PATH); },
-      (_view, _guard, observer) => { observer.requests = 2; },
+      (view) => {
+        view.status = "denied";
+      },
+      (view) => {
+        view.snapshot = true;
+      },
+      (view) => {
+        view.releaseGeneration = 1;
+      },
+      (view) => {
+        view.quality = false;
+      },
+      (_view, guard) => {
+        guard.paths.push(PATH);
+      },
+      (_view, _guard, observer) => {
+        observer.requests = 2;
+      },
     ];
     for (const change of invalid) {
       const { guard, observer } = readState(404);
