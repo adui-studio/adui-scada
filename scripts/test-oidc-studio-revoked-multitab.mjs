@@ -27,7 +27,6 @@ import {
 } from "./test-oidc-published-runtime-readonly.mjs";
 import {
   classifyD5b5LocalChanges,
-  describeD5b5StudioFailure,
   inspectD5b5StudioState,
   openD5b5Project,
   readRevokedReleaseInStudioPage,
