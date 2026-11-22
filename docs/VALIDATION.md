@@ -2979,3 +2979,21 @@ if ($LASTEXITCODE -ne 0) { throw "D5b9b Vite+ 检查失败" }
 ```
 
 不要重复上批完整 `ready`、HTTP E2E、React/Vue 构建或已验证的发布安全门禁测试。定向测试证明的是**本地生命周期回收**，不能宣称忽略 AbortSignal 的第三方网络操作已经物理取消；真实 OIDC/HTTPS、RELEASED Lab 夹具、工业网关审批和 Tag 质量仍不在本批范围。正式发布默认拒绝，ADR-0070 Proposed，Issue #126 Open。
+
+## 2026-11-22 · D5b9c 已发布多页面只读预览差异验收
+
+D5b9b PR #141 已在维护者 Windows **精确 HEAD `7b8cc314b394d6a850ad5c33b5a7c9e27ecf1c8e`** 实测发布刷新器 **18/18**、`vp check` **413/264 零警告错误**，经授权 Squash 合并为 `main@9bbad56e76ae9a9de83c193950ec29fbd2c13979`。不重复执行已通过、且本批未修改的完整 `ready`、HTTP E2E。
+
+D5b9c 新增已验证静态发布快照按页面 ID 渲染，以及 React/Vue 对等“组态页面”切换。共享单测覆盖真实有效多页面快照、默认首页、指定页面、非法页面拒绝和空 Tag 静态质量；双端从当前 `verified` 快照推导列表，切换不会重新访问发布服务器，失效页面回退新快照首页。**本批新测试与双框架静态检查尚未实测**；无需运行上批完整质量链，仅在 PR 最新 HEAD 做以下定向验收：
+
+```powershell
+git rev-parse HEAD
+
+vp test run packages/runtime/test/published-runtime-view.test.ts
+if ($LASTEXITCODE -ne 0) { throw "D5b9c 发布多页面预览定向测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b9c Vite+ 检查失败" }
+```
+
+预计 `published-runtime-view.test.ts` 由 4 项变为 **5 项**，**不是本轮已通过证据**。真实 React/Vue 多页面已发布现场浏览器专项需要独立合法的 RELEASED 夹具，当前生产门禁无条件拒绝，不能为了演示私自创建夹具、修改数据库或临时开启发布。即使定向单测和静态检查通过，也不能据此声称真实 OIDC/HTTPS 多页面浏览器验收完成。Issue #126 Open，ADR-0070 Proposed。
