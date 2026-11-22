@@ -1135,3 +1135,13 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - 根 `package.json`：`test:published:oidc:revoke:multitab:config` 纳入 `ready`；`test:published:oidc:revoke:multitab:browser` 必须手工运行，绝不在自动质量链连接 Keycloak。
 
 **覆盖界限**：这是同一 Origin 的真实双标签页**顺序**只读发布 GET 与本地保护，并非同时挂起多个响应、Studio 内部迟到响应状态机或真实多标签工程写入竞态。未修改 React/Vue 生产逻辑、NestJS/Prisma、工业设备或权限授权。
+
+## 2026-11-22 · D5b5c 双标签页真实 404 逆序交付测试候选
+
+- `scripts/test-oidc-studio-revoked-late-gate.mjs`：独立 CDP 页面函数及纯 Node 断言，只挂起已到达真实 HTTP 404 的 Response 交付，保证同源、单次 GET、禁缓存、零重定向及固定诊断状态；不制造模拟响应。
+- `scripts/test-oidc-studio-revoked-late-gate.cases.mjs`：13 项原生 Node 安全用例，含双页 Promise 同时 pending、逆序释放、重复请求、意外状态、CDP Realm 自包含与敏感信息脱敏。
+- `scripts/test-oidc-studio-revoked-late-multitab.mjs`：React/Vue 两 Origin 各用同一隔离 Profile 的两个真实标签页，在一次本地 IndexedDB 草稿和未保存编辑基础上逆序交付两个真实 GET 404，严格核对 SVG、JSON、草稿与 CAS。
+- `scripts/test-oidc-studio-revoked-multitab.mjs`：仅导出原有 `waitForStudioReady`、`switchToTab` 两个辅助函数供新浏览器脚本复用；原顺序执行逻辑不变。
+- 根 `package.json`：`test:published:oidc:revoke:late:config` 纳入 `ready`，`test:published:oidc:revoke:late:browser` 仅限维护者本机可信 Lab 手工执行。
+
+**不修改** React/Vue/NestJS/Prisma/工程授权或工业设备；测试不会在服务端创建工程、回滚撤权或执行版本 POST。
