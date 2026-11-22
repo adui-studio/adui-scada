@@ -114,16 +114,16 @@ export function classifyD5b5PreservationFailure(
   if (error.message === "D5b5 Studio 画布、IndexedDB 草稿或 CAS 基线发生变化") {
     if (!before || !after) return D5B5_PROTECTION_REASONS[18];
     const changes = classifyD5b5LocalChanges(before, after);
-    const fields = [
-      "canvasChanged",
-      "documentChanged",
-      "draftCountChanged",
-      "draftHashChanged",
-      "autoSaveChanged",
-      "baselineChanged",
-      "projectChanged",
+    const drift = [
+      changes.canvasChanged,
+      changes.documentChanged,
+      changes.draftCountChanged,
+      changes.draftHashChanged,
+      changes.autoSaveChanged,
+      changes.baselineChanged,
+      changes.projectChanged,
     ];
-    const fieldIndex = fields.findIndex((field) => changes[field] === true);
+    const fieldIndex = drift.findIndex((changed) => changed === true);
     if (fieldIndex >= 0) return D5B5_PROTECTION_REASONS[fieldIndex + 11];
     return D5B5_PROTECTION_REASONS[18];
   }
