@@ -4,10 +4,7 @@ import { loadEnvFile } from "node:process";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { executablePath, startBrowser, waitForLogin } from "./test-oidc-dual-cas.mjs";
-import {
-  resolveProjectBrowserLab,
-  saveDraftInPage,
-} from "./test-project-browser-oidc.mjs";
+import { resolveProjectBrowserLab, saveDraftInPage } from "./test-project-browser-oidc.mjs";
 import {
   activateStudioTab,
   addStudioSymbolInPage,
@@ -79,25 +76,19 @@ export function describeD5b5cBrowserFailure(error) {
 }
 
 async function waitForGate(session) {
-  const state = await waitForState(
-    async () => {
-      const current = await session.evaluate(d5b5cLateReadStateInPage);
-      return current?.pending ? current : null;
-    },
-    "D5b5c 双标签真实 404 响应未同时挂起",
-  );
+  const state = await waitForState(async () => {
+    const current = await session.evaluate(d5b5cLateReadStateInPage);
+    return current?.pending ? current : null;
+  }, "D5b5c 双标签真实 404 响应未同时挂起");
   requireD5b5cLateReadState(state, "pending");
   return state;
 }
 
 async function waitForRelease(session) {
-  const state = await waitForState(
-    async () => {
-      const current = await session.evaluate(d5b5cLateReadStateInPage);
-      return current?.settled ? current : null;
-    },
-    "D5b5c 真实 404 响应未按第二标签优先交付",
-  );
+  const state = await waitForState(async () => {
+    const current = await session.evaluate(d5b5cLateReadStateInPage);
+    return current?.settled ? current : null;
+  }, "D5b5c 真实 404 响应未按第二标签优先交付");
   requireD5b5cLateReadState(state, "settled");
   return state;
 }

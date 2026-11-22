@@ -217,7 +217,10 @@ void describe("D5b5c 已撤权工程双标签页真实响应逆序交付安全�
     const state = d5b5cLateReadStateInPage(runtime);
     assert.equal(state.failed, true);
     assert.equal(JSON.stringify(state).includes("SECRET"), false);
-    assert.throws(() => requireD5b5cLateReadState(state, "pending"), /真实 404 响应挂起或释放时序不符合预期/);
+    assert.throws(
+      () => requireD5b5cLateReadState(state, "pending"),
+      /真实 404 响应挂起或释放时序不符合预期/,
+    );
   });
 
   void it("四个 CDP 页面函数单独序列化后不依赖 Node 模块闭包", async () => {
