@@ -23,22 +23,26 @@ function released() {
     },
     project: [{ tenant_id: "lab-tenant", project_id: PROJECT, head_revision: "2" }],
     grants: [{ subject_id: "lab-engineer", permission: "release:read" }],
-    releaseState: [{
-      release_generation: "1",
-      released_revision: "1",
-      released_content_hash: HASH,
-      last_release_event_id: EVENT,
-    }],
+    releaseState: [
+      {
+        release_generation: "1",
+        released_revision: "1",
+        released_content_hash: HASH,
+        last_release_event_id: EVENT,
+      },
+    ],
     releasedVersion: [{ revision: "1", content_hash: HASH }],
-    lastEvent: [{
-      event_id: EVENT,
-      tenant_id: "lab-tenant",
-      project_id: PROJECT,
-      generation: "1",
-      action: "PUBLISH",
-      to_revision: "1",
-      to_content_hash: HASH,
-    }],
+    lastEvent: [
+      {
+        event_id: EVENT,
+        tenant_id: "lab-tenant",
+        project_id: PROJECT,
+        generation: "1",
+        action: "PUBLISH",
+        to_revision: "1",
+        to_content_hash: HASH,
+      },
+    ],
   };
 }
 
@@ -84,12 +88,14 @@ void describe("D5b7b 已发布夹具元数据只读预检安全边界", () => {
 
   void it("有独立读取权限但尚未发布时只返回 UNRELEASED", () => {
     const rows = released();
-    rows.releaseState = [{
-      release_generation: "0",
-      released_revision: null,
-      released_content_hash: null,
-      last_release_event_id: null,
-    }];
+    rows.releaseState = [
+      {
+        release_generation: "0",
+        released_revision: null,
+        released_content_hash: null,
+        last_release_event_id: null,
+      },
+    ];
     rows.releasedVersion = [];
     rows.lastEvent = [];
     assert.deepEqual(classifyPublishedFixtureMetadata(rows, PROJECT), { kind: "UNRELEASED" });
@@ -107,13 +113,41 @@ void describe("D5b7b 已发布夹具元数据只读预检安全边界", () => {
 
   void it("数据库用户租户工程主体及可信身份不符一律拒绝", () => {
     for (const change of [
-      (r) => { r.context.database_name = "adui_scada_test"; },
-      (r) => { r.context.database_user = "postgres"; },
-      (r) => { r.context.tenant_id = "other"; },
-      (r) => { r.context.subject_id = "other"; },
-      (r) => { r.context.project_id = "other"; },
-      (r) => { r.context.identity_count = 0; },
-      (r) => { r.context.external_identity_count = 2; },
+      (r) => {
+
+        r.context.database_name = "adui_scada_test";
+
+      },
+      (r) => {
+
+        r.context.database_user = "postgres";
+
+      },
+      (r) => {
+
+        r.context.tenant_id = "other";
+
+      },
+      (r) => {
+
+        r.context.subject_id = "other";
+
+      },
+      (r) => {
+
+        r.context.project_id = "other";
+
+      },
+      (r) => {
+
+        r.context.identity_count = 0;
+
+      },
+      (r) => {
+
+        r.context.external_identity_count = 2;
+
+      },
     ]) {
       expectInvalid(change);
     }
@@ -121,11 +155,31 @@ void describe("D5b7b 已发布夹具元数据只读预检安全边界", () => {
 
   void it("跨工程引用重复工程和无效 head 必须拒绝", () => {
     for (const change of [
-      (r) => { r.project[0].project_id = "other"; },
-      (r) => { r.project[0].tenant_id = "other"; },
-      (r) => { r.project.push(r.project[0]); },
-      (r) => { r.project[0].head_revision = "0"; },
-      (r) => { r.project[0].head_revision = "9007199254740992"; },
+      (r) => {
+
+        r.project[0].project_id = "other";
+
+      },
+      (r) => {
+
+        r.project[0].tenant_id = "other";
+
+      },
+      (r) => {
+
+        r.project.push(r.project[0]);
+
+      },
+      (r) => {
+
+        r.project[0].head_revision = "0";
+
+      },
+      (r) => {
+
+        r.project[0].head_revision = "9007199254740992";
+
+      },
     ]) {
       expectInvalid(change);
     }
@@ -133,9 +187,21 @@ void describe("D5b7b 已发布夹具元数据只读预检安全边界", () => {
 
   void it("多余或跨主体授权不能等价于 release:read", () => {
     for (const change of [
-      (r) => { r.grants[0].permission = "project:read"; },
-      (r) => { r.grants[0].subject_id = "other"; },
-      (r) => { r.grants.push(r.grants[0]); },
+      (r) => {
+
+        r.grants[0].permission = "project:read";
+
+      },
+      (r) => {
+
+        r.grants[0].subject_id = "other";
+
+      },
+      (r) => {
+
+        r.grants.push(r.grants[0]);
+
+      },
     ]) {
       expectInvalid(change);
     }
@@ -143,11 +209,31 @@ void describe("D5b7b 已发布夹具元数据只读预检安全边界", () => {
 
   void it("未发布状态不允许残留发布指针或末次事件", () => {
     for (const change of [
-      (r) => { r.releaseState[0].release_generation = "0"; },
-      (r) => { r.releaseState[0].released_revision = null; },
-      (r) => { r.releaseState[0].last_release_event_id = null; },
-      (r) => { r.releaseState[0].release_generation = "-1"; },
-      (r) => { r.releaseState[0].release_generation = "9007199254740992"; },
+      (r) => {
+
+        r.releaseState[0].release_generation = "0";
+
+      },
+      (r) => {
+
+        r.releaseState[0].released_revision = null;
+
+      },
+      (r) => {
+
+        r.releaseState[0].last_release_event_id = null;
+
+      },
+      (r) => {
+
+        r.releaseState[0].release_generation = "-1";
+
+      },
+      (r) => {
+
+        r.releaseState[0].release_generation = "9007199254740992";
+
+      },
     ]) {
       expectInvalid(change);
     }
@@ -155,11 +241,31 @@ void describe("D5b7b 已发布夹具元数据只读预检安全边界", () => {
 
   void it("发布版本修订与摘要必须双向匹配", () => {
     for (const change of [
-      (r) => { r.releasedVersion = []; },
-      (r) => { r.releasedVersion[0].revision = "2"; },
-      (r) => { r.releasedVersion[0].content_hash = "b".repeat(64); },
-      (r) => { r.releaseState[0].released_content_hash = "A".repeat(64); },
-      (r) => { r.releaseState[0].released_revision = "9007199254740992"; },
+      (r) => {
+
+        r.releasedVersion = [];
+
+      },
+      (r) => {
+
+        r.releasedVersion[0].revision = "2";
+
+      },
+      (r) => {
+
+        r.releasedVersion[0].content_hash = "b".repeat(64);
+
+      },
+      (r) => {
+
+        r.releaseState[0].released_content_hash = "A".repeat(64);
+
+      },
+      (r) => {
+
+        r.releaseState[0].released_revision = "9007199254740992";
+
+      },
     ]) {
       expectInvalid(change);
     }
@@ -167,15 +273,51 @@ void describe("D5b7b 已发布夹具元数据只读预检安全边界", () => {
 
   void it("末次事件跨租户跨工程代次动作和摘要异常均拒绝", () => {
     for (const change of [
-      (r) => { r.lastEvent = []; },
-      (r) => { r.lastEvent[0].event_id = "bad"; },
-      (r) => { r.lastEvent[0].tenant_id = "other"; },
-      (r) => { r.lastEvent[0].project_id = "other"; },
-      (r) => { r.lastEvent[0].generation = "2"; },
-      (r) => { r.lastEvent[0].action = "DELETE"; },
-      (r) => { r.lastEvent[0].action = "ROLLBACK"; },
-      (r) => { r.lastEvent[0].to_revision = "2"; },
-      (r) => { r.lastEvent[0].to_content_hash = "b".repeat(64); },
+      (r) => {
+
+        r.lastEvent = [];
+
+      },
+      (r) => {
+
+        r.lastEvent[0].event_id = "bad";
+
+      },
+      (r) => {
+
+        r.lastEvent[0].tenant_id = "other";
+
+      },
+      (r) => {
+
+        r.lastEvent[0].project_id = "other";
+
+      },
+      (r) => {
+
+        r.lastEvent[0].generation = "2";
+
+      },
+      (r) => {
+
+        r.lastEvent[0].action = "DELETE";
+
+      },
+      (r) => {
+
+        r.lastEvent[0].action = "ROLLBACK";
+
+      },
+      (r) => {
+
+        r.lastEvent[0].to_revision = "2";
+
+      },
+      (r) => {
+
+        r.lastEvent[0].to_content_hash = "b".repeat(64);
+
+      },
     ]) {
       expectInvalid(change);
     }
@@ -193,9 +335,21 @@ void describe("D5b7b 已发布夹具元数据只读预检安全边界", () => {
 
   void it("禁止夹带工程正文、快照或额外数据库字段", () => {
     for (const change of [
-      (r) => { r.snapshot = { secret: "SECRET" }; },
-      (r) => { r.releasedVersion[0].snapshot = "SECRET"; },
-      (r) => { r.context.connectionString = "SECRET"; },
+      (r) => {
+
+        r.snapshot = { secret: "SECRET" };
+
+      },
+      (r) => {
+
+        r.releasedVersion[0].snapshot = "SECRET";
+
+      },
+      (r) => {
+
+        r.context.connectionString = "SECRET";
+
+      },
     ]) {
       expectInvalid(change);
     }
