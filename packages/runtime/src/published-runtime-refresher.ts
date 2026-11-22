@@ -149,7 +149,7 @@ export class PublishedRuntimeRefresher {
     const expectedEpoch = this.epoch;
     const projectId = this.projectId;
     const cancelled = new Promise<void>((resolve) => {
-      this.resolvePendingCancellation = resolve;
+      this.resolvePendingCancellation = () => resolve();
     });
     const task = (async () => {
       const timeout = new Promise<void>((resolve) => {
