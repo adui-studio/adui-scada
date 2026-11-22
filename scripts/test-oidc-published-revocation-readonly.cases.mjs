@@ -264,25 +264,23 @@ void describe("D5b4d 撤权前后双框架只读浏览器验收安全门禁", ()
   });
 
   void it("停止读取必须清空状态且没有任何新增真实 GET", () => {
-    const state = readState(404);
-    const stopped = { ...page("after"), status: "idle" };
-    assert.equal(requireD5b4Stopped(stopped, state.guard, state.observer, PROJECT_ID, 404), true);
-    for (const change of [
-      () => { stopped.status = "denied"; },
-      () => { stopped.snapshot = true; },
-      () => { state.guard.paths.push(PATH); },
-      () => { state.observer.requests = 2; },
-    ]) {
-      const clean = readState(404);
+    const valid = readState(404);
+    const idle = { ...page("after"), status: "idle" };
+    assert.equal(requireD5b4Stopped(idle, valid.guard, valid.observer, PROJECT_ID, 404), true);
+    const invalid = [
+      (view) => { view.status = "denied"; },
+      (view) => { view.snapshot = true; },
+      (view) => { view.releaseGeneration = 1; },
+      (view) => { view.quality = false; },
+      (_view, guard) => { guard.paths.push(PATH); },
+      (_view, _guard, observer) => { observer.requests = 2; },
+    ];
+    for (const change of invalid) {
+      const { guard, observer } = readState(404);
       const view = { ...page("after"), status: "idle" };
-      if (change.toString().includes("stopped.")) {
-        // 另行对页面字段执行精确反向检查。
-        view.status = "denied";
-      } else {
-        clean.observer.requests = 2;
-      }
+      change(view, guard, observer);
       assert.throws(
-        () => requireD5b4Stopped(view, clean.guard, clean.observer, PROJECT_ID, 404),
+        () => requireD5b4Stopped(view, guard, observer, PROJECT_ID, 404),
         /停止读取后仍保留发布状态或产生额外请求/,
       );
     }
