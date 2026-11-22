@@ -4418,3 +4418,37 @@ Windows PowerShell 7 离线验收：
 ```
 
 **禁止本批运行任何真实发布、回滚或撤权写入。** 如果随后获得真实独立已发布工程存在性、可信隔离目标及专项只读查询授权，再依既有 D5b7c 手动只读入口进行数据验证；不将合成元数据当成真实已发布状态。
+
+## 2026-11-22 · D5b7e Issue #126 全量目标 ACL 只读门禁候选
+
+D5b7d 已经维护者 Windows 完整验收并合并；本次继续修复 D5b7c 原始 SQL 的 ACL 覆盖缺口。旧查询额外限定 `subject_id = $3 AND permission = 'release:read'`，会在 SQL 层隐藏目标工程的其他主体授权、多余的发布权限与重复/缺失基础 ACL。即使 D5b7b 纯函数拒绝非单行输入，该查询也会预先剔除坏数据，使检查结果缺乏全量授权证据。
+
+本批保留 `REPEATABLE READ READ ONLY`、同租户工程参数、D5b1 原基线与统一 `ROLLBACK`，将**目标工程**的 ACL 查询更改为：`SELECT subject_id, permission ... WHERE tenant_id = $1 AND project_id = $2`。进入纯元数据分类器前，必须校验全量 ACL 只能为：无 ACL（拒绝）、固定主体的三项基础 `project:read`/`version:read`/`version:append`（撤权后拒绝），或同一主体再加唯一 `release:read`（继续审查发布元数据）。任何额外权限、其他主体、缺失基础授权、重复或快照污染字段均 fail-closed，不再读取目标发布指针。原分类器仍仅接收零行或一行 `release:read`，不改变对外三态契约。工程不存在但存在孤立 ACL 时拒绝。
+
+Windows 离线验收（**不会连接真实 PostgreSQL**）：
+
+```powershell
+& {
+    $ErrorActionPreference = "Stop"
+    if (git status --porcelain) { throw "工作区存在未提交修改，停止切换分支" }
+    git fetch origin
+    if ($LASTEXITCODE -ne 0) { throw "获取远程提交失败" }
+    git switch test/d5b7e-target-acl-inventory
+    if ($LASTEXITCODE -ne 0) { throw "切换 D5b7e 分支失败" }
+    git pull --ff-only origin test/d5b7e-target-acl-inventory
+    if ($LASTEXITCODE -ne 0) { throw "更新 D5b7e 分支失败" }
+    git rev-parse HEAD
+    pnpm run test:published:oidc:fixture:readonly:config
+    if ($LASTEXITCODE -ne 0) { throw "D5b7e ACL 回归失败" }
+    pnpm run test:published:oidc:fixture:baseline:config
+    if ($LASTEXITCODE -ne 0) { throw "D5b7d 基线回归失败" }
+    vp check
+    if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+    pnpm run docs:check
+    if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+    pnpm run ready
+    if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+}
+```
+
+本批仅安全审查，不调用真实 PostgreSQL、发布、授权、撤权或恢复脚本。实际独立 RELEASED 夹具与真实 `verified → denied` 仍未确认，不因离线 ACL 回归通过而关闭 Issue #126。
