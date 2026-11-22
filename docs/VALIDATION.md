@@ -2548,3 +2548,18 @@ D5b4f 只新建只读编排脚本与 10 项 Node 安全测试，使用同一显�
 新候选仅增加 `scripts/revoke-oidc-published-read-target.mjs` 与 **13 项**对应 Node 安全测试，根 `test:published:oidc:revoke:single:config` 进入 `ready`，真实 `oidc:lab:published:revoke:single` 不进入自动链。它只在明确确认的未来本机 Lab 中，复用 D5b4c/e 原只读查询与完整三/四 ACL 断言；默认只读，未来写入需精确 `--apply --confirm-lab adui_scada --confirm-project <同一目标 ID>`；事务锁内只能删除专用工程单条 `release:read`，对旧 D5b1 和其余三项权限始终只读，失败回滚、未知 COMMIT/后置只读失败禁止自动重试或授权恢复。抽取的共用查询不改变 D5b4c/e 原事务次序和只读性质。
 
 从当前 GitHub 候选源码执行**隔离 V8/Mock 模拟**：新增 D5b4g **13/13**、原 D5b4c/e **21/21**，三项脚本语法解析通过。此项**不是**正式 Windows Node、真实 PostgreSQL、`vp check`、`docs:check` 或完整 `ready` 通过证明；正式质量链与任何真实写入执行均未进行。本轮未创建 D5b4 专用工程、未连接真实数据库、未执行 DELETE/INSERT/UPDATE、未撤销或恢复 ACL、未修改工业设备。
+
+## 2026-11-22 · D5b4 真实单条 ACL 撤销与 React/Vue 前后验收已通过
+
+维护者已明确授权在可信本机 OIDC Lab 中仅为一份新 `d5b4-revoke-<UUIDv4>` 专用工程执行真实创建、独立 `release:read` 授权及一次定向撤销；原 D5b1 工程不得写入。以下结论来自维护者两轮 Windows PowerShell 实际日志，**不是离线 Mock、模拟 404 或本协作端直接连接数据库的结果**。真实测试工程 ID 以维护者本地日志为准，不在公开验收文档完整披露。
+
+- **D5b4b 创建成功**：脚本首先确认无其他 D5b4 专用工程，随后使用真实 Keycloak/BFF 会话经正式工程 API 创建唯一新工程；数据库事务添加该工程一条 `release:read`，真实发布 GET 200 / UNRELEASED 验证通过。创建后未重试，也未自动删除或清理测试工程。
+- **D5b4c/f 撤权前成功**：明确传入同一真实工程 ID，PostgreSQL `REPEATABLE READ READ ONLY` 验证其首版、审计、零发布、恰好四项 ACL 与原 D5b1 四项授权完整；`--phase before` 按数据库只读 → React/Vue 真实 HTTPS 同源读取各一次 HTTP 200 → 数据库只读复核顺序完成，两个框架均通过停止读取后的资源清理。
+- **D5b4g 单条权限撤销成功**：写入前单独只读预检通过；维护者随后明确调用一次 `--apply --confirm-lab adui_scada --confirm-project <同一 ID>`。脚本报告定向 `release:read` 撤销及提交后的独立 PostgreSQL 只读审计通过；没有自动重试、ACL 恢复或发布状态变更。
+- **D5b4e/f 撤权后成功**：单独 `oidc:lab:published:revoke:after` 确认专用工程仅缺少 `release:read`、其余 `project:read` / `version:read` / `version:append` 完整且原 D5b1 工程不变。`--phase after` 按数据库只读 → React/Vue 真实 HTTPS 同源 GET 各一次 HTTP 404 / denied → 停止读取清理 → 数据库再次只读复核完成，最终打印本阶段三项检查通过。
+
+维护者**曾在实际撤权之前提前运行** D5b4e `after` 命令，返回“独立工程 release:read 权限不符合预期”，D5b4f `after` 则在首次数据库核查失败后停止；这是正常 fail-closed，不属于真实撤权失败。随后按顺序执行 D5b4g 单条撤权，再次执行后置审计和双框架检查才真正通过。此前仅打印的“闭环通过”手工 `Write-Host` 不能作为证据；本结论依赖后续真实命令完整成功输出。
+
+**核验证据边界**：用户提交的日志未逐条打印 `$LASTEXITCODE` 或本机 `git rev-parse HEAD`，但 D5b4f 最终成功消息只有在子步骤均返回 0 时才会输出，且没有失败或异常输出。因此记录为**基于本机真实命令成功输出的专项验收通过**，不宣称已独立核验本机提交 SHA。GitHub 记录时 `main@2dd95347c86c15261dfb71f6f0a756d9d0a61362` 是当前已合并实现，但不能据此逆推本机 HEAD 精确一致。本次文档补录没有重新运行 Windows `vp check`、`docs:check`、`ready`。
+
+**未覆盖**：真实发布态 `RELEASED`、Studio 画布/IndexedDB 草稿字节级保护、撤权期间多标签页竞态、长时断网与工业现场控制。因此仅将 **D5b4 独立测试工程的发布运行时真实撤权闭环** 标记通过，不升级为完整 SCADA 工业安全认证。测试工程保持撤权后仅三项基础 ACL 的现状，未获得额外授权前不得恢复权限或对其他工程撤权。
