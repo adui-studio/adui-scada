@@ -15,17 +15,31 @@ const projectId = shallowRef("");
 const activeProjectId = shallowRef<string | null>(null);
 const state = shallowRef<PublishedRuntimeState>(initialPublishedRuntimeState);
 const message = shallowRef("");
+const selectedPageId = shallowRef<string | null>(null);
 
 const runtime = new PublishedRuntime((next) => {
   state.value = next;
 }, createScadaApiClient());
 const refresher = new PublishedRuntimeRefresher(runtime);
 
+const pages = computed(() =>
+  state.value.status === "verified" ? (state.value.snapshot?.document.pages ?? []) : [],
+);
+const activePageId = computed(() =>
+  pages.value.some((page) => page.id === selectedPageId.value)
+    ? selectedPageId.value
+    : (pages.value[0]?.id ?? null),
+);
 const svg = computed(() =>
-  state.value.status === "verified" && state.value.snapshot
-    ? publishedSnapshotSvg(state.value.snapshot)
+  state.value.status === "verified" && state.value.snapshot && activePageId.value
+    ? publishedSnapshotSvg(state.value.snapshot, activePageId.value)
     : null,
 );
+
+function selectPage(event: Event): void {
+  const target = event.target;
+  if (target instanceof HTMLSelectElement) selectedPageId.value = target.value;
+}
 
 function start(): void {
   const id = projectId.value.trim();
@@ -34,6 +48,7 @@ function start(): void {
     return;
   }
   message.value = "";
+  selectedPageId.value = null;
   activeProjectId.value = id;
   void refresher.start(id).catch(() => {
     message.value = "正式发布读取启动失败，已停止运行会话";
@@ -50,6 +65,7 @@ function refresh(): void {
 function stop(): void {
   refresher.stop();
   activeProjectId.value = null;
+  selectedPageId.value = null;
   message.value = "";
 }
 
@@ -133,6 +149,19 @@ onUnmounted(() => {
     </section>
     <section class="scada-panel" aria-label="已发布静态组态预览">
       <h2>已发布组态静态预览</h2>
+      <div v-if="pages.length > 1" class="scada-published-controls">
+        <label for="published-vue-page-id">组态页面</label>
+        <select
+          id="published-vue-page-id"
+          data-testid="published-runtime-page-select"
+          :value="activePageId ?? ''"
+          @change="selectPage"
+        >
+          <option v-for="page in pages" :key="page.id" :value="page.id">
+            {{ page.name }}
+          </option>
+        </select>
+      </div>
       <p class="scada-diagnostics-note">
         此画面只来自已验证的正式发布快照；未连接现场 Tag。 画布内缺失值的 BAD
         占位不代表设备故障诊断。
