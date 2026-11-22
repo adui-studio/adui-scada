@@ -3109,3 +3109,27 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批不改既有网络、数据库及 UI，避免重复 HTTP E2E、React/Vue 浏览器测试与完整 ready。测试即使通过也不代表来源认证、服务端会话代次、不可变审计及生产工业安全完成；正式发布安全门禁仍 fail-closed。
+
+## 2026-11-22 · D5b9j FR-011 初始快照基线：Windows 待验收
+
+维护者已在 PR #148 精确 HEAD `c7b63389bc41a61eb5b29dbb85f107cd9ec303e2` 验收 **6/6** 定向测试、`vp check` **425/276** 零警告错误、文档 **90**、中文文案 **300**。PR #148 获授权 Squash 合并至 `main@9d11fedaf044598ccb57b1bc596ac2f3d2668d20`。D5b9j 本批仅有新增 **7 项测试代码定义**，**未执行 Windows 新增测试及完整 Vite+ 检查**。
+
+在 PR 最新精确 HEAD 上执行：
+
+```powershell
+git rev-parse HEAD
+
+vp test run packages/core/test/alarm-snapshot-baseline.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警初始快照基线测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批不修改浏览器、HTTP、Prisma、工业网关或数据源适配器，暂不重复无差异的完整 ready 与双端浏览器/E2E。定向测试即使通过，也不能证明上游 `sourceVerified` 真实、会话代次可信或生产报警/审计可用；正式发布 Gate 仍保持 fail-closed。
