@@ -282,10 +282,16 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
     const owner = ["project:read", "version:read", "version:append"].map(
       (permission) => ({ subject_id: "lab-engineer", permission }),
     );
-    assert.deepEqual(normalizePublishedFixtureTargetGrants([...owner, {
-      subject_id: "lab-engineer",
-      permission: "release:read",
-    }]), [{ subject_id: "lab-engineer", permission: "release:read" }]);
+    assert.deepEqual(
+      normalizePublishedFixtureTargetGrants([
+        ...owner,
+        {
+          subject_id: "lab-engineer",
+          permission: "release:read",
+        },
+      ]),
+      [{ subject_id: "lab-engineer", permission: "release:read" }],
+    );
     assert.deepEqual(normalizePublishedFixtureTargetGrants(owner), []);
     assert.deepEqual(normalizePublishedFixtureTargetGrants([]), []);
     const { client, calls } = fixture({ grants: owner });
