@@ -130,7 +130,12 @@ export function assertPublishedRevocationAfterRows(rows, projectId) {
  * 唯一允许的数据库事务为 READ ONLY；读取 ACL、版本和发布指针元数据，
  * 不获取工程快照正文、Cookie、Token 或其他租户数据。
  */
-export async function inspectPublishedRevocationTarget(client, target, projectId, phase = "before") {
+export async function inspectPublishedRevocationTarget(
+  client,
+  target,
+  projectId,
+  phase = "before",
+) {
   if (!PROJECT_PATTERN.test(projectId) || !["before", "after"].includes(phase)) {
     throw new Error("D5b4c 参数仅允许现有独立专用工程 ID，禁止写入模式");
   }
