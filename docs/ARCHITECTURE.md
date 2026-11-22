@@ -276,7 +276,7 @@ Prisma `schema.prisma` 的 `///` 为代码生成文档信息，**不会自动创
 
 ## V0.3 第十四批：日志与 HTTP 安全入口（ADR-0046）
 
-本批在现有 NestJS 12 `AppModule` 引入 `LoggerModule.forRoot`，统一将 Nest 内部日志与 `pino-http` 关联，并在 `main.ts` 将 `nestjs-pino` Logger 设置为应用日志入口。`http-logging.config.ts` 约束可配置日志等级、由服务端生成 `x-request-id`，并使用白名单请求/响应序列化和 Pino 敏感字段遮蔽，避免把 `Authorization`、Cookie、查询参数、请求体或密码写进结构化日志。
+本批在现有 NestJS 12 `AppModule` 引入 `LoggerModule.forRoot`，统一将 Nest 内部日志与 `pino-http` 关联，并在 `main.ts` 将 `nestjs-pino` Logger 设置为应用日志入口。`http-logging.config.ts` 约束可配置日志等级、由服务端生成 `x-request-id`，并使用白名单请求/响应序列化和 Pino 敏感字段遮蔽，避免把 `Authorization`、Cookie、查询参数、请求体或密码写进结构化日志。D5b8g 候选进一步在已有 `pino-http` 失败日志的 `err` 字段使用固定 `{ type: "HTTP_ERROR" }` 安全序列化，不读取原始 Error 消息、堆栈、cause 或额外属性；请求 ID、HTTP 方法和响应状态码仍可用于关联诊断。该约束不改变异常过滤器和正式发布 fail-closed 行为，也不等于其他应用日志已全部完成敏感数据审计。
 
 `http-security.ts` 默认启用 Helmet。文档入口使用 `allowLocalOpenApi` 执行显式开关 + 非生产 + 127.0.0.1 三重限制，不满足时**不加载 Swagger、也不注册文档路由**；开发本机有 Swagger UI 时局部调整 CSP，生产默认 Helmet 全部安全头。`/health` 通过 Swagger Decorator 声明只代表进程存活，未挂载 `ScadaIdentityModule` 或 `ProjectPersistenceModule`，不改变工业只读安全边界。
 
