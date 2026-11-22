@@ -2491,7 +2491,6 @@ D5b4a 真实本机 PostgreSQL READ ONLY 预检和 Windows 质量链均由维护�
 
 本批 D5b4b 只新增独立测试工程准备脚本与 11 项 Node 守卫：命令 `oidc:lab:published:revoke:fixture` 默认仅只读检查前置条件，唯一候选写入模式要求 `--apply --confirm-lab adui_scada` 且需维护者另外授权；正式工程 API 仅创建 `d5b4-revoke-<UUIDv4>` 的最小空白首版；新增 ACL 只允许该工程的 `release:read`，整个过程中事务内核对 D5b1 原 ACL 保持完整。真实浏览器在创建后只读验证 200/UNRELEASED。未在本批执行写入、撤权或双框架 HTTP 404 真实验收。候选 Windows `ready` 与真实预检尚待执行，不能计入已通过项。
 
-
 ## 2026-11-22 · D5b4b 已验收合并，D5b4c 单工程只读预检候选
 
 维护者提交 Windows 真实日志：D5b4b 安全门禁 **11/11**、`vp check` **384 格式文件 / 236 受检文件零警告**、`docs:check` **89** 份、完整 `pnpm run ready` **680/680** 单测与 **62/62** E2E，双框架与 NestJS 构建成功，退出码 **0**；真实 PostgreSQL Lab 默认只读预检退出码 **0**。PR #111 Squash 合并到 `main@67526a8972f90325ed534ef8c05a5d43cffd7357`；**尚无 D5b4 工程或真实撤权**。

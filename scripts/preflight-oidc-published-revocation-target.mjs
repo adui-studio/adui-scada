@@ -3,9 +3,7 @@ import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
-import {
-  resolvePublishedRevocationPreflightTarget,
-} from "./preflight-oidc-published-revocation.mjs";
+import { resolvePublishedRevocationPreflightTarget } from "./preflight-oidc-published-revocation.mjs";
 
 const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const SERVER_PACKAGE = fileURLToPath(new URL("../apps/server/package.json", import.meta.url));
@@ -133,28 +131,34 @@ export async function inspectPublishedRevocationTarget(client, target, projectId
       return {
         project: await query(
           "SELECT head_revision FROM public.scada_projects " +
-            "WHERE tenant_id = $1 AND project_id = $2", params,
+            "WHERE tenant_id = $1 AND project_id = $2",
+          params,
         ),
         versions: await query(
           "SELECT revision, created_by FROM public.scada_project_versions " +
-            "WHERE tenant_id = $1 AND project_id = $2", params,
+            "WHERE tenant_id = $1 AND project_id = $2",
+          params,
         ),
         audit: await query(
           "SELECT revision, actor_id, action FROM public.scada_project_audit " +
-            "WHERE tenant_id = $1 AND project_id = $2", params,
+            "WHERE tenant_id = $1 AND project_id = $2",
+          params,
         ),
         state: await query(
           "SELECT release_generation, released_revision, released_content_hash, " +
             "last_release_event_id FROM public.scada_project_release_state " +
-            "WHERE tenant_id = $1 AND project_id = $2", params,
+            "WHERE tenant_id = $1 AND project_id = $2",
+          params,
         ),
         events: await query(
           "SELECT COUNT(*)::integer AS count FROM public.scada_project_release_events " +
-            "WHERE tenant_id = $1 AND project_id = $2", params,
+            "WHERE tenant_id = $1 AND project_id = $2",
+          params,
         ),
         grants: await query(
           "SELECT subject_id, permission FROM public.scada_project_grants " +
-            "WHERE tenant_id = $1 AND project_id = $2", params,
+            "WHERE tenant_id = $1 AND project_id = $2",
+          params,
         ),
       };
     };
@@ -165,7 +169,8 @@ export async function inspectPublishedRevocationTarget(client, target, projectId
       migrations: await query(
         'SELECT migration_name FROM public."_prisma_migrations" ' +
           "WHERE migration_name = ANY($1::text[]) AND finished_at IS NOT NULL " +
-          "AND rolled_back_at IS NULL", [MIGRATIONS],
+          "AND rolled_back_at IS NULL",
+        [MIGRATIONS],
       ),
       unresolved: await query(
         'SELECT COUNT(*)::integer AS count FROM public."_prisma_migrations" ' +

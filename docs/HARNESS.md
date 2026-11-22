@@ -3685,7 +3685,6 @@ Write-Host "D5b4b 只读预检退出码：$LASTEXITCODE"
 
 D5b4b 候选已做隔离 JavaScript 函数/Mock 行为检查，**11/11 为非 Node、非 PostgreSQL 的静态与隔离测试**；Windows Node、质量链、真实 Lab 预检和任何写操作均待维护者执行。
 
-
 ## 2026-11-22 · 第三十五批 D5b4c 实际 ACL 撤销前的独立工程只读核查（Draft 待 Windows 验收）
 
 PR #111 D5b4b 已由维护者在 Windows 实测 `test:published:oidc:revoke:fixture:config` **11/11**、`vp check` **384 格式文件 / 236 受检文件零警告错误**、`docs:check` **89** 份、`ready` **680/680** 单测和 **62/62** 服务端 E2E、最终退出码 **0**；真实 `pnpm run oidc:lab:published:revoke:fixture` 只读预检退出码 **0**，没有创建专用工程或修改授权。经维护者明确同意，PR #111 Squash 合并至 `main@67526a8972f90325ed534ef8c05a5d43cffd7357`。Prisma 更新提示不代表依赖已升级，仍采用仓库锁定版本。

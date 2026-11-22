@@ -1078,7 +1078,6 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - `scripts/prepare-oidc-published-revocation.cases.mjs`：11 项 Node 测试覆盖写入参数、跨 Origin、CSRF、工程 ID、授权限域、事务回滚、原工程保护、发布 GET 只读与脱敏。
 - `package.json`：新增 `test:published:oidc:revoke:fixture:config` 并加入 `ready`；新增只读默认入口 `oidc:lab:published:revoke:fixture`，独立真实 Lab 验收必须手动执行，写入仍需额外批准。
 
-
 ## 2026-11-22 · D5b4c 实际撤权前的专用工程只读核验
 
 - `scripts/preflight-oidc-published-revocation-target.mjs`：要求明确传入现有 `d5b4-revoke-<UUIDv4>`，只在可信本机 OIDC/PG Lab 的 `REPEATABLE READ READ ONLY` 事务中检查独立工程唯一性、首版/未发布/四项 ACL，并核对原 D5b1 工程和授权完整；零数据写入。

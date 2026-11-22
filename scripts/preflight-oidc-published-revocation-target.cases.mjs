@@ -104,12 +104,24 @@ void describe("D5b4c 独立撤权工程真实数据库只读核查安全门禁",
 
   void it("库名、数据库用户、迁移和身份异常时安全拒绝", () => {
     for (const change of [
-      (r) => { r.database[0].database_name = "adui_scada_test"; },
-      (r) => { r.database[0].database_user = "postgres"; },
-      (r) => { r.migrations.pop(); },
-      (r) => { r.unresolved[0].count = 1; },
-      (r) => { r.identity = []; },
-      (r) => { r.externalIdentity = []; },
+      (r) => {
+        r.database[0].database_name = "adui_scada_test";
+      },
+      (r) => {
+        r.database[0].database_user = "postgres";
+      },
+      (r) => {
+        r.migrations.pop();
+      },
+      (r) => {
+        r.unresolved[0].count = 1;
+      },
+      (r) => {
+        r.identity = [];
+      },
+      (r) => {
+        r.externalIdentity = [];
+      },
     ]) {
       const rows = validRows();
       change(rows);
@@ -137,12 +149,24 @@ void describe("D5b4c 独立撤权工程真实数据库只读核查安全门禁",
 
   void it("新工程编辑修订、创建者、审计或发布代次变化都不能开始撤权", () => {
     for (const change of [
-      (r) => { r.target.project[0].head_revision = "2"; },
-      (r) => { r.target.versions.push(r.target.versions[0]); },
-      (r) => { r.target.audit[0].actor_id = "other"; },
-      (r) => { r.target.state[0].release_generation = "1"; },
-      (r) => { r.target.state[0].released_revision = "1"; },
-      (r) => { r.target.events[0].count = 1; },
+      (r) => {
+        r.target.project[0].head_revision = "2";
+      },
+      (r) => {
+        r.target.versions.push(r.target.versions[0]);
+      },
+      (r) => {
+        r.target.audit[0].actor_id = "other";
+      },
+      (r) => {
+        r.target.state[0].release_generation = "1";
+      },
+      (r) => {
+        r.target.state[0].released_revision = "1";
+      },
+      (r) => {
+        r.target.events[0].count = 1;
+      },
     ]) {
       const rows = validRows();
       change(rows);
@@ -155,10 +179,18 @@ void describe("D5b4c 独立撤权工程真实数据库只读核查安全门禁",
 
   void it("目标 release:read 缺失、重复、额外发布授权和其他主体授权全部拒绝", () => {
     for (const change of [
-      (r) => { r.target.grants.pop(); },
-      (r) => { r.target.grants.push(r.target.grants[3]); },
-      (r) => { r.target.grants[3].permission = "release:publish"; },
-      (r) => { r.target.grants[3].subject_id = "other"; },
+      (r) => {
+        r.target.grants.pop();
+      },
+      (r) => {
+        r.target.grants.push(r.target.grants[3]);
+      },
+      (r) => {
+        r.target.grants[3].permission = "release:publish";
+      },
+      (r) => {
+        r.target.grants[3].subject_id = "other";
+      },
     ]) {
       const rows = validRows();
       change(rows);
@@ -171,10 +203,18 @@ void describe("D5b4c 独立撤权工程真实数据库只读核查安全门禁",
 
   void it("旧 D5b1 只要首版或任何权限变化均拒绝", () => {
     for (const change of [
-      (r) => { r.original.project[0].head_revision = "2"; },
-      (r) => { r.original.grants.pop(); },
-      (r) => { r.original.grants[3].subject_id = "other"; },
-      (r) => { r.original.state[0].release_generation = "1"; },
+      (r) => {
+        r.original.project[0].head_revision = "2";
+      },
+      (r) => {
+        r.original.grants.pop();
+      },
+      (r) => {
+        r.original.grants[3].subject_id = "other";
+      },
+      (r) => {
+        r.original.state[0].release_generation = "1";
+      },
     ]) {
       const rows = validRows();
       change(rows);
@@ -189,7 +229,9 @@ void describe("D5b4c 独立撤权工程真实数据库只读核查安全门禁",
     const { client, calls } = database();
     assert.equal(
       await inspectPublishedRevocationTarget(
-        client, { issuer: "https://127.0.0.1:18443/realms/adui-scada" }, ID,
+        client,
+        { issuer: "https://127.0.0.1:18443/realms/adui-scada" },
+        ID,
       ),
       true,
     );
@@ -216,7 +258,9 @@ void describe("D5b4c 独立撤权工程真实数据库只读核查安全门禁",
     const { client, calls } = database({ throwAt: "scada_project_grants" });
     await assert.rejects(
       inspectPublishedRevocationTarget(
-        client, { issuer: "https://127.0.0.1:18443/realms/adui-scada" }, ID,
+        client,
+        { issuer: "https://127.0.0.1:18443/realms/adui-scada" },
+        ID,
       ),
       /Cookie=SECRET/,
     );
