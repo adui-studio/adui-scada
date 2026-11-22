@@ -97,10 +97,7 @@ void describe("D5b4e 撤权后 PostgreSQL 只读审计安全门禁", () => {
       ["--project-id", ID, "--restore"],
       ["--phase", "before", "--project-id", ID],
     ]) {
-      assert.throws(
-        () => parsePublishedRevocationAfterArgs(args),
-        /参数仅允许现有独立专用工程 ID/,
-      );
+      assert.throws(() => parsePublishedRevocationAfterArgs(args), /参数仅允许现有独立专用工程 ID/);
     }
   });
 
