@@ -1930,3 +1930,7 @@ PR #109 真实 Windows 全量 `ready`、D5b3 React/Vue HTTPS 浏览器 404 模�
 ## 2026-11-22 · D5b4c 独立撤权工程后置只读核查候选
 
 在 D5b4b Windows 质量链、默认只读真实 PostgreSQL Lab 预检通过并 Squash 合并 PR #111 后，继续 D5b4c。候选只读取未来获单独授权创建的 `d5b4-revoke-<UUIDv4>` 工程，核查专用工程唯一性、首版/发布状态/四项 ACL，并并行核查原 D5b1 工程及四项 ACL 不变。SQL 全程 READ ONLY/ROLLBACK，不含 DELETE/INSERT、无生产发布或工业设备写入。此阶段不能证明真实 ACL 已撤销或服务端 404 已通过；D5b4 创建与撤权均须不同阶段显式授权。
+
+## 2026-11-22 · D5b4c Windows 首轮质量阻塞：2 MiB 测试夹具构造超时
+
+D5b4c 新增 10 项 Node 安全测试通过、Vite+ 386/238 零警告、文档 89 份通过；但全量 `ready` 中的原有工程 API 近 2 MiB 容量拒绝测试用例超出 5 秒时限，单测实际为 679/680，`ready` 退出码 1。候选最小修复只改变测试数据填充算法，保留原字节边界和零数据库写入拒绝，详见 E-074。最新 HEAD 仍待 Windows 完整 `ready` 验收；PR #112 保持 Draft，真实 D5b4 工程、ACL 撤销和浏览器服务端 404 尚未实施。

@@ -2496,3 +2496,9 @@ D5b4a 真实本机 PostgreSQL READ ONLY 预检和 Windows 质量链均由维护�
 维护者提交 Windows 真实日志：D5b4b 安全门禁 **11/11**、`vp check` **384 格式文件 / 236 受检文件零警告**、`docs:check` **89** 份、完整 `pnpm run ready` **680/680** 单测与 **62/62** E2E，双框架与 NestJS 构建成功，退出码 **0**；真实 PostgreSQL Lab 默认只读预检退出码 **0**。PR #111 Squash 合并到 `main@67526a8972f90325ed534ef8c05a5d43cffd7357`；**尚无 D5b4 工程或真实撤权**。
 
 新增 D5b4c `preflight-oidc-published-revocation-target.mjs` 和 10 项 Node 只读安全测试；严格从参数传入受控 `d5b4-revoke-<UUIDv4>` 工程，PG `REPEATABLE READ READ ONLY` 原子快照比对 D5b4 工程唯一性、首版/审计/未发布、恰好四项权限以及 D5b1 基线工程完整性。结束后 ROLLBACK，拒绝任何工程/ACL 写入。新专用工程尚未创建，真实预检不应被当成已通过；Windows 质量链和 Node 10 项仍待验收。
+
+## 2026-11-22 · D5b4c 首轮 Windows 质量链 5 秒超时与最小修复候选
+
+维护者提交的真实日志显示：`test:published:oidc:revoke:target:config` **10/10 通过**，`vp check` **386 格式文件/238 受检文件零告警**，`docs:check` **89 份**；完整 `ready` 的单元测试运行到 **679/680**，仅原有 `project-api.store.spec.ts` 接近 2 MiB 边界用例在 Vitest 默认 **5000ms** 内没有完成（该用例耗时约 14.1 秒），因此 `ready` **退出码 1**；后续 E2E、文档和构建**没有执行**，不可写成通过。D5b4 独立工程还未创建，实际数据库只读目标核验尚无夹具且未运行。
+
+PR #112 补丁仅优化测试用例构造方式：把循环里最多 256 次整份接近 2 MiB JSON 序列化，改为初始 1 次和完成时 1 次序列化，中间累积 ASCII 字段与填充值的精确字节；保持每字段 8192 字符上限、请求容量 `PROJECT_SNAPSHOT_MAX_BYTES - 24`、受控超限异常、事务和工程 INSERT 零调用的断言。无生产代码、权限、Prisma 或快照上限变更。新逻辑仅作隔离纯 JS 等价性检查；`vp test run apps/server/src/projects/project-api.store.spec.ts`、`vp check`、`docs:check` 和完整 `pnpm run ready` **仍需在 Windows 当前最新 PR HEAD 重新执行**。参见 `docs/AI_MISTAKES.md` E-074。
