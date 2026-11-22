@@ -1946,3 +1946,9 @@ D5b4c 新增 10 项 Node 安全测试通过、Vite+ 386/238 零警告、文档 8
 PR #112 已按维护者明确授权 **Squash 合并**，`main@73df3e1debd4cce16ce9cfd6606196f05541f65c`，GitHub 显示 merged。上一小批 Windows 修复后 `ready` 退出码 0、680/680 单测、62/62 E2E；补录文档提交未再执行完整 Windows 质量链。D5b4c 仅核查**已创建的**独立工程，当前并不存在 D5b4 专用工程。
 
 下一小批 D5b4d 将真实撤权前后核验拆成可独立审查的只读契约，优先明确身份、唯一目标、四项 ACL、真实 React/Vue 首次 200、撤权后真实拒绝、清空本地发布状态、旧 D5b1 不变与零写入门禁。当前只制定测试矩阵，不执行任何数据库或 API 写入，也不修改现有业务安全策略。任何未来创建专用工程、单条 ACL 撤销和可能的恢复均须分别获得维护者明确授权。
+
+## 2026-11-22 · D5b4d 只读浏览器双阶段候选已编写
+
+在 PR #113 分支上新增 `scripts/test-oidc-published-revocation-readonly.mjs` 与 14 项 Node 安全用例候选，并将离线安全门禁接入根 `ready`。新的真实浏览器命令需手工选择撤权前 `before` 或撤权后 `after`，对 React/Vue 同一可信会话、发布 API 唯一 GET、真实 HTTP 200/404 和 no-store、状态清空、停止后零额外请求分别 fail-closed；不自动创建工程、注入 404、撤销或恢复 ACL。任何 HTTP 404 仍必须配合未来真实 PostgreSQL 只读审计证明确有专用工程且只是目标授权缺失。
+
+该候选尚未在 Windows 完整工作区、真实 Keycloak/HTTPS 或 PostgreSQL 实测；当前没有已获授权的 D5b4 专用工程。仅完成远端源码提交、隔离 V8 语法核对和部分纯函数反向检查，不等于新增 Node 14/14 或 `ready` 通过。生产 SCADA 安全策略与旧 D5b1 工程授权保持不变。
