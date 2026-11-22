@@ -32,22 +32,30 @@ test("缺少已接受的同会话基线时不自动接受首条读数", () => {
 });
 
 test("重复与倒退序列均拒绝且不暴露工艺数值", () => {
-  expect(classifyOrderedNumericAlarmSample({ ...current, sequence: 5 }, previous, nowMs, 1000)).toEqual({
+  expect(
+    classifyOrderedNumericAlarmSample({ ...current, sequence: 5 }, previous, nowMs, 1000),
+  ).toEqual({
     status: "SEQUENCE_NOT_ADVANCED",
   });
-  expect(classifyOrderedNumericAlarmSample({ ...current, sequence: 4 }, previous, nowMs, 1000)).toEqual({
+  expect(
+    classifyOrderedNumericAlarmSample({ ...current, sequence: 4 }, previous, nowMs, 1000),
+  ).toEqual({
     status: "SEQUENCE_NOT_ADVANCED",
   });
 });
 
 test("不同 Tag 的序列号不可交叉比较", () => {
-  expect(classifyOrderedNumericAlarmSample({ ...current, tagId: "pump.running" }, previous, nowMs, 1000)).toEqual({
+  expect(
+    classifyOrderedNumericAlarmSample({ ...current, tagId: "pump.running" }, previous, nowMs, 1000),
+  ).toEqual({
     status: "TAG_MISMATCH",
   });
 });
 
 test("无效质量与过期数据仍由既有候选筛选拒绝", () => {
-  expect(classifyOrderedNumericAlarmSample({ ...current, quality: "BAD" }, previous, nowMs, 1000)).toEqual({
+  expect(
+    classifyOrderedNumericAlarmSample({ ...current, quality: "BAD" }, previous, nowMs, 1000),
+  ).toEqual({
     status: "QUALITY_NOT_GOOD",
   });
   expect(classifyOrderedNumericAlarmSample(current, previous, nowMs, 999)).toEqual({
@@ -58,12 +66,12 @@ test("无效质量与过期数据仍由既有候选筛选拒绝", () => {
 test("非法基线与非法当前序列必须拒绝，且不改变入参", () => {
   const baseline = Object.freeze({ ...previous });
   const candidate = Object.freeze({ ...current });
-  expect(() => classifyOrderedNumericAlarmSample(candidate, { ...previous, sequence: -1 }, nowMs, 1000)).toThrow(
-    "Tag 序列号无效",
-  );
-  expect(() => classifyOrderedNumericAlarmSample({ ...current, sequence: -1 }, previous, nowMs, 1000)).toThrow(
-    "Tag 序列号无效",
-  );
+  expect(() =>
+    classifyOrderedNumericAlarmSample(candidate, { ...previous, sequence: -1 }, nowMs, 1000),
+  ).toThrow("Tag 序列号无效");
+  expect(() =>
+    classifyOrderedNumericAlarmSample({ ...current, sequence: -1 }, previous, nowMs, 1000),
+  ).toThrow("Tag 序列号无效");
   expect(classifyOrderedNumericAlarmSample(candidate, baseline, nowMs, 1000)).toEqual({
     status: "READY",
     value: 42,
