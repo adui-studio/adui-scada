@@ -24,18 +24,60 @@ const MIGRATIONS = [
   "20261119180000_release_read_permission",
 ];
 const METADATA_ERROR = "D5b7c 发布夹具只读数据库元数据或迁移不符合预期";
+const TARGET_ACL_ERROR = "D5b7e 目标工程授权元数据不完整或发生漂移";
+const OWNER_PERMISSIONS = ["project:read", "version:read", "version:append"];
+const TARGET_PERMISSIONS = [...OWNER_PERMISSIONS, "release:read"];
+
 const SAFE_ERRORS = new Set([
   "D5b7b 仅允许显式指定独立已发布夹具 ID，禁止写入参数",
   METADATA_ERROR,
   "D5b7b 发布夹具只读元数据不完整或不一致",
   "D5b7c 只能连接可信本机 OIDC Lab",
   BASELINE_ERROR,
+  TARGET_ACL_ERROR,
 ]);
 
 /** 固定错误类别；数据库错误、身份、SQL 与连接地址不得出现在诊断中。 */
 export function describePublishedFixtureReadonlyFailure(error) {
   if (error instanceof Error && SAFE_ERRORS.has(error.message)) return error.message;
   return "D5b7c 数据库只读审查失败，内部诊断已脱敏";
+}
+
+/**
+ * 必须检查工程全量 ACL 元数据，不能先按 release:read 过滤异常授权。
+ * 仅接受无授权、原主体三项基础权限，或再加唯一 release:read。
+ * 转换后的结果保持 D5b7b 分类器原有零项/单项契约。
+ */
+export function normalizePublishedFixtureTargetGrants(grants) {
+  if (!Array.isArray(grants) || grants.length > TARGET_PERMISSIONS.length) {
+    throw new Error(TARGET_ACL_ERROR);
+  }
+  const expectedRows = grants.every(
+    (grant) =>
+      grant !== null &&
+      typeof grant === "object" &&
+      !Array.isArray(grant) &&
+      Object.getPrototypeOf(grant) === Object.prototype &&
+      Object.keys(grant).length === 2 &&
+      Object.hasOwn(grant, "subject_id") &&
+      Object.hasOwn(grant, "permission") &&
+      grant.subject_id === SUBJECT &&
+      TARGET_PERMISSIONS.includes(grant.permission),
+  );
+  if (!expectedRows) throw new Error(TARGET_ACL_ERROR);
+  if (grants.length === 0) return [];
+  const hasOwner = OWNER_PERMISSIONS.every(
+    (permission) => grants.filter((grant) => grant.permission === permission).length === 1,
+  );
+  if (!hasOwner || (grants.length !== 3 && grants.length !== 4)) {
+    throw new Error(TARGET_ACL_ERROR);
+  }
+  const read = grants.filter((grant) => grant.permission === "release:read");
+  if (read.length === 0 && grants.length === 3) return [];
+  if (read.length === 1 && grants.length === 4) {
+    return [{ subject_id: SUBJECT, permission: "release:read" }];
+  }
+  throw new Error(TARGET_ACL_ERROR);
 }
 
 /**
@@ -128,12 +170,15 @@ export async function inspectPublishedFixtureReadonly(client, target, projectId)
         "WHERE tenant_id = $1 AND project_id = $2",
       scope,
     );
-    const grants = await query(
+    const targetGrants = await query(
       "SELECT subject_id, permission FROM public.scada_project_grants " +
-        "WHERE tenant_id = $1 AND project_id = $2 AND subject_id = $3 " +
-        "AND permission = 'release:read'",
-      [...scope, SUBJECT],
+        "WHERE tenant_id = $1 AND project_id = $2",
+      scope,
     );
+    if (project.length === 0 && targetGrants.length > 0) {
+      throw new Error(TARGET_ACL_ERROR);
+    }
+    const grants = normalizePublishedFixtureTargetGrants(targetGrants);
 
     const rows = {
       context: {

@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   describePublishedFixtureReadonlyFailure,
   inspectPublishedFixtureReadonly,
+  normalizePublishedFixtureTargetGrants,
 } from "./inspect-published-fixture-readonly.mjs";
 import { BASELINE_ERROR, BASELINE_PROJECT } from "./assert-published-fixture-baseline.mjs";
 
@@ -23,7 +24,9 @@ function fixture(change = {}) {
     identity: [{ "?column?": 1 }],
     external: [{ "?column?": 1 }],
     project: [{ tenant_id: "lab-tenant", project_id: PROJECT, head_revision: "2" }],
-    grants: [{ subject_id: "lab-engineer", permission: "release:read" }],
+    grants: ["project:read", "version:read", "version:append", "release:read"].map(
+      (permission) => ({ subject_id: "lab-engineer", permission }),
+    ),
     releaseState: [
       {
         release_generation: "1",
@@ -181,11 +184,11 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
     const baselineQueries = calls.filter((entry) => entry.params?.[1] === BASELINE_PROJECT);
     assert.equal(baselineQueries.length, 6);
     assert.deepEqual(targetQuery("scada_projects").params, ["lab-tenant", PROJECT]);
-    assert.deepEqual(targetQuery("scada_project_grants").params, [
-      "lab-tenant",
-      PROJECT,
-      "lab-engineer",
-    ]);
+    assert.deepEqual(targetQuery("scada_project_grants").params, ["lab-tenant", PROJECT]);
+    assert.doesNotMatch(
+      targetQuery("scada_project_grants").sql,
+      /AND subject_id|AND permission|release:read/,
+    );
     assert.deepEqual(
       calls.find((entry) => entry.sql.includes("scada_external_identities")).params,
       [target.issuer, "lab-tenant", "lab-engineer"],
@@ -244,7 +247,7 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
   });
 
   void it("工程不存在直接 DENIED，不读取发布状态", async () => {
-    const { client, calls } = fixture({ project: [] });
+    const { client, calls } = fixture({ project: [], grants: [] });
     assert.deepEqual(await inspectPublishedFixtureReadonly(client, target, PROJECT), {
       kind: "DENIED",
     });
@@ -266,6 +269,81 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
     });
     assertReadonly(calls);
     assert.equal(calls.filter((entry) => entry.params?.[1] === BASELINE_PROJECT).length, 6);
+    assert.equal(
+      calls.some(
+        (entry) =>
+          entry.sql.includes("scada_project_release_state") && entry.params?.[1] === PROJECT,
+      ),
+      false,
+    );
+  });
+
+  void it("完整目标 ACL 允许四项授权或撤权后三项基础授权", async () => {
+    const owner = ["project:read", "version:read", "version:append"].map((permission) => ({
+      subject_id: "lab-engineer",
+      permission,
+    }));
+    assert.deepEqual(
+      normalizePublishedFixtureTargetGrants([
+        ...owner,
+        {
+          subject_id: "lab-engineer",
+          permission: "release:read",
+        },
+      ]),
+      [{ subject_id: "lab-engineer", permission: "release:read" }],
+    );
+    assert.deepEqual(normalizePublishedFixtureTargetGrants(owner), []);
+    assert.deepEqual(normalizePublishedFixtureTargetGrants([]), []);
+    const { client, calls } = fixture({ grants: owner });
+    assert.deepEqual(await inspectPublishedFixtureReadonly(client, target, PROJECT), {
+      kind: "DENIED",
+    });
+    assertReadonly(calls);
+    assert.equal(
+      calls.some(
+        (entry) =>
+          entry.sql.includes("scada_project_release_state") && entry.params?.[1] === PROJECT,
+      ),
+      false,
+    );
+  });
+
+  void it("额外权限、跨主体、缺失基础 ACL 与重复授权不得被 SQL 过滤后误判", async () => {
+    const owner = ["project:read", "version:read", "version:append", "release:read"].map(
+      (permission) => ({ subject_id: "lab-engineer", permission }),
+    );
+    for (const grants of [
+      [...owner, { subject_id: "lab-engineer", permission: "release:publish" }],
+      [...owner, { subject_id: "other", permission: "release:read" }],
+      owner.slice(1),
+      [owner[3]],
+      [...owner.slice(0, 3), owner[0]],
+      [{ ...owner[0], snapshot: "SECRET" }, ...owner.slice(1)],
+    ]) {
+      const { client, calls } = fixture({ grants });
+      await assert.rejects(
+        inspectPublishedFixtureReadonly(client, target, PROJECT),
+        /D5b7e 目标工程授权元数据不完整或发生漂移/,
+      );
+      assertReadonly(calls);
+      assert.equal(
+        calls.some(
+          (entry) =>
+            entry.sql.includes("scada_project_release_state") && entry.params?.[1] === PROJECT,
+        ),
+        false,
+      );
+    }
+  });
+
+  void it("工程不存在但残留 ACL 必须拒绝且不能读取目标发布指针", async () => {
+    const { client, calls } = fixture({ project: [] });
+    await assert.rejects(
+      inspectPublishedFixtureReadonly(client, target, PROJECT),
+      /D5b7e 目标工程授权元数据不完整或发生漂移/,
+    );
+    assertReadonly(calls);
     assert.equal(
       calls.some(
         (entry) =>
