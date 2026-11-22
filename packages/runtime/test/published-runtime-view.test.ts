@@ -40,7 +40,8 @@ describe("双框架已发布运行画面只读预览", () => {
 
   it("同一已验证快照可按页面 ID 切换静态 SVG，且拒绝不存在的页面", async () => {
     const document = JSON.parse(JSON.stringify(waterTreatmentDemoDocument)) as ScadaDocument;
-    const auxiliary = JSON.parse(JSON.stringify(document.pages[0]!)) as ScadaDocument["pages"][number];
+    const originalPage = document.pages[0]!;
+    const auxiliary = JSON.parse(JSON.stringify(originalPage)) as ScadaDocument["pages"][number];
     auxiliary.id = "auxiliary";
     auxiliary.name = "辅助工段";
     auxiliary.nodes = [
@@ -56,7 +57,8 @@ describe("双框架已发布运行画面只读预览", () => {
       createdAt: "2026-11-20T00:00:00.000Z",
     });
     const first = decodeURIComponent(publishedSnapshotSvg(snapshot).split(",")[1] ?? "");
-    const next = decodeURIComponent(publishedSnapshotSvg(snapshot, "auxiliary").split(",")[1] ?? "");
+    const nextSource = publishedSnapshotSvg(snapshot, "auxiliary");
+    const next = decodeURIComponent(nextSource.split(",")[1] ?? "");
 
     expect(first).toContain("水处理系统 / V0.1");
     expect(next).toContain("辅助工段静态画面");
