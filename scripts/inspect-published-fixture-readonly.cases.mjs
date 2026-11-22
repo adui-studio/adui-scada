@@ -95,7 +95,7 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
     const state = await inspectPublishedFixtureReadonly(client, target, PROJECT);
     assert.deepEqual(state, { kind: "RELEASED_METADATA_ONLY" });
     assertReadonly(calls);
-    assert.equal(calls.length, 13);
+    assert.equal(calls.length, 12);
   });
 
   void it("实际查询只使用绑定参数与可信工程，不读取快照正文", async () => {
@@ -143,6 +143,18 @@ void describe("D5b7c 真实发布夹具 PostgreSQL 元数据只读审查", () =>
     assertReadonly(calls);
     assert.equal(calls.some((entry) => entry.sql.includes("scada_project_versions")), false);
     assert.equal(calls.some((entry) => entry.sql.includes("scada_project_release_events")), false);
+  });
+
+  void it("可信身份或 OIDC 预绑定缺失时不得查询工程", async () => {
+    for (const change of [{ identity: [] }, { external: [] }]) {
+      const { client, calls } = fixture(change);
+      await assert.rejects(
+        inspectPublishedFixtureReadonly(client, target, PROJECT),
+        /D5b7c 发布夹具只读数据库元数据或迁移不符合预期/,
+      );
+      assertReadonly(calls);
+      assert.equal(calls.some((entry) => entry.sql.includes("scada_projects")), false);
+    }
   });
 
   void it("工程不存在直接 DENIED，不读取发布状态", async () => {
