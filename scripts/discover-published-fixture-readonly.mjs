@@ -10,7 +10,9 @@ import {
   BASELINE_PROJECT,
 } from "./assert-published-fixture-baseline.mjs";
 import { inspectPublishedFixtureReadonly } from "./inspect-published-fixture-readonly.mjs";
-import { resolvePublishedRevocationPreflightTarget } from "./preflight-oidc-published-revocation.mjs";
+import {
+  resolvePublishedRevocationPreflightTarget,
+} from "./preflight-oidc-published-revocation.mjs";
 
 const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const SERVER_PACKAGE = fileURLToPath(new URL("../apps/server/package.json", import.meta.url));
