@@ -2176,3 +2176,11 @@ D5b9b 从上述主线独立开发，修复 `PublishedRuntimeRefresher` 页面隐
 D5b9c 从该最新主线独立开发一项可直接使用的双框架功能：当前 React/Vue 的“已发布工程运行”静态预览始终调用无页面 ID 的 `publishedSnapshotSvg`，仅展示 `pages[0]`；共享 `svgDataUrl` 已经具备可信页面 ID 选择。候选复用此能力，在静态发布预览添加可见的“组态页面”选择器，两套 Web 使用相同的页面集合、切换与失效回退规则；只有经过只读发布响应校验的 `verified` 快照才能提供选项。多页面切换不触发新 GET、不加载编辑 head、本地草稿或模拟数值，也不将 `TagQuality.UNAVAILABLE` 提升为 GOOD。已选择页面在新发布快照中消失则回退该新快照首页；启动新工程/停止会话清除选择。
 
 本批只改共享静态预览函数、共享 Runtime 1 项定向 Vitest 及 React/Vue 的对等页面，未修改服务器 Gate、Prisma、ACL、工业网关或生产发布许可。**尚未在维护者 Windows 执行新测试与双端类型检查**；只安排 `packages/runtime/test/published-runtime-view.test.ts` 的定向单测与一次 `vp check`。不存在已批准的真实多页面 RELEASED Lab 夹具，本次不请求创建。Issue #126 继续 Open、ADR-0070 Proposed，正式发布继续无条件拒绝。
+
+## 2026-11-22 · D5b9c 已合并与 D5b9d FR-011 共享报警状态机候选
+
+PR #142 维护者 Windows 在精确 HEAD `36c1ecd6d096e5403559a2f92fa6a50be6b846ba` 实测共享已发布多页面 SVG 定向测试 **5/5**、`vp check` **413 文件格式正确、264 受检零警告错误**；本轮明确同意合并，按该 SHA Squash 合并到 `main@228965e702e372d67737a9866f1af77107b3bc55`。没有重复执行此前已通过的完整 `ready`、HTTP E2E 或双框架构建。真实多页面 RELEASED OIDC 浏览器专项仍需独立合法夹具，不能由离线单测推断已通过。
+
+D5b9d 从最新主线独立推进 **FR-011 的首个框架无关 Core 基础能力**，不再扩充同类发布拒绝测试。新增 `packages/core/src/alarm-state.ts`，以 SDD 已确定的四个生命周期状态实现纯函数 `transitionAlarmState`：首次触发、持续激活、确认、工艺条件恢复、恢复后确认及重触发分别区分；不存在报警实例时不能确认或恢复，未知状态和未知事件明确拒绝。共享 `index.ts` 导出稳定的状态、事件、中文标签及函数；新增 **8 项**单元测试定义覆盖正常、重复、重触发与非法操作。
+
+本批不实现阈值、死区、延时、Tag 质量校验、数据源、报警持久化、服务端确认授权、审计或现场告警。没有修改 Vue/React 页面、Runtime 实时数据、Prisma/ACL、发布事务、工业网关与设备写入；**FR-011 总体依然规划中**。新分支的代码尚未在维护者 Windows 执行测试，定向 `alarm-state.test.ts` 和 `vp check` 为唯一必要新检查（有新增中文异常时按需补 `messages:check`），不能冒称通过。Issue #126 保持 Open，ADR-0070 Proposed，正式发布 Gate 不变且继续 fail-closed。
