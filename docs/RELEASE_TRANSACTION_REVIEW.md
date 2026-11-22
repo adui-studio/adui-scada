@@ -143,3 +143,13 @@ C1 的生产 `ProjectReleaseSafetyGate` 仍固定 fail-closed，当前应用请�
 D1 候选新增 `GET /api/v1/projects/:projectId/releases/current`，权限为独立 `release:read`，默认拒绝，不从 `project:read`、`version:read` 或发布写权限继承，也不在工程创建时自动授予。响应使用 `Cache-Control: no-store`，区分 `UNRELEASED` 与 `RELEASED`；已发布状态返回指针修订/摘要/代次、最后事件信息及不可变快照，不暴露编辑 head。
 
 `PrismaProjectReleaseStore.readCurrent` 在同一只读事务中锁定工程身份（只选择 `project_id`，不读取 `head_revision`）、有效会话/主体、ACL、发布状态、不可变版本和最后发布事件；重新验证 SHA-256、快照元数据、最后事件与发布指针。数据库缺少状态行、事件不一致或快照校验失败均不返回快照正文。D1 候选尚未执行隔离 PostgreSQL 迁移/测试、Windows `vp check`、单测、HTTP E2E、`docs:check` 或完整 `ready`。
+
+## 2026-11-22 · D5b8 独立已发布测试夹具正式准入设计（待批准）
+
+关联 [ADR-0070（Proposed）](adr/0070-isolated-published-fixture-safety-review.md)、Issue #126。D5b7f 已由维护者 Windows 验收、通过 PR #131 合并至 `main@53e686d04e7bce5ad360c8901aa965db6e838cfe`；随后在本机 Lab 手动运行无 ID 只读发现，真实结果为 `NOT_FOUND`、退出码 1。该结果仅证明固定命名空间、独立读取 ACL 和已发布指针的综合候选为空，不能等同整个库没有工程或证明发布事务失败。
+
+发布仓储虽已具备 `release:publish`、head/代次双 CAS、不可变快照验证、成功事件/指针原子提交，但当前 `ProjectReleaseSafetyGate.assertReady()` 仍无条件拒绝；它是生产安全不变量，不可为测试临时替换、关闭或允许“模拟通过”。ADR-0069 Accepted 的 R-01～R-08 不等于工业安全门禁已经实现，更不等于测试夹具写入得到批准。
+
+本次 Proposed ADR 明确分为五层独立授权：**设计评审 → 完整安全门禁实现与质量验收 → 明确隔离 Lab/专用主体与可恢复环境 → 单次正式 HTTP 发布 → 双框架只读快照及另行批准的单项撤权**。任何前置未满足，均保持 fail-closed。其 LF-01～LF-12 是**未来**正反向验收矩阵，不得归入已通过的 T-01～T-22 统计。
+
+待决：工业安全/Tag/资源门禁责任人、隔离 Lab 的写入与恢复窗口、独立发布和读取权限的授予来源、真实发布成功后不可变事件及历史的保留/隔离规则。设计合并仅归档评审候选，不新增任何能运行的发布/撤权功能；生产门禁保持固定拒绝、Issue #126 继续 Open。
