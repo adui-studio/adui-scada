@@ -159,7 +159,7 @@ export function requireD5b5NoBlockedWrites(first, second) {
   return true;
 }
 
-async function waitForStudioReady(session, origin, principal) {
+export async function waitForStudioReady(session, origin, principal) {
   const identity = await waitForState(
     () => session.evaluate(identityInPage, origin),
     "D5b5b 两个标签页必须使用同一可信主体",
@@ -183,7 +183,7 @@ async function waitForTabHidden(session) {
   );
 }
 
-async function switchToTab(visible, hidden) {
+export async function switchToTab(visible, hidden) {
   await activateStudioTab(visible);
   await waitForTabHidden(hidden);
   if (!(await visible.evaluate(waitForStudioActionIdleInPage))) {
