@@ -2655,3 +2655,15 @@ D5b5c React 两个已完成网络读取的真实 404 Response 的 Promise 同时
 E-079 候选只将这一处 `switchToTab(browser, second)` 延后到两个原始 404 各自完成**严格单次目标 GET + HTTP 404 + no-store + 无重定向 + 本地完整状态**校验后的最终可见性恢复阶段。第一标签在仍然隐藏时完成原始 Response 交付，不伪造响应、不改变原守卫、不忽略额外 GET；最后仍切回第一标签执行 SVG/工程 JSON/IndexedDB/CAS 和零写入复核。新加 1 项隐藏标签页仍能独立完成逆序交付且两标签各一次 GET 的 Node 测试定义，D5b5c 目标由 **14 增至 15 项**。
 
 本次 E-079 修补**尚未在 Windows 测试或真实 Chrome/Keycloak 复验**。上轮 D5b5b 20/20、D5b5c 14/14、`vp check` 401/253、`docs:check` 89、完整 `ready` 退出码 0 为**旧 HEAD** 的证据，不代表 E-079 新提交已通过。PR #121 保持 Draft；不修改 React/Vue/NestJS 生产代码、不恢复 ACL、不创建工程、不执行数据库或设备写入。
+
+## 2026-11-22 · D5b6 已撤权正式发布运行页隐藏与重显只读候选
+
+**前序真实验收结案**：维护者 Windows 对 PR #121 的 E-079 完整质量链执行 D5b5c Node 15/15、Vite+ 401/253 零警告/错误、文档 89、Vitest 680/680、HTTP E2E 62/62、React/Vue/NestJS 构建及 `pnpm run ready` 退出码 0。原已撤权 D5b4 专用工程通过 PostgreSQL **READ ONLY** 审计，仅缺 `release:read`，其他三项工程 ACL 和旧 D5b1 基线完整。真实 Chrome/Keycloak **D5b5c React 与 Vue 均**完成双页真实 404 同时挂起、第二页先交付、第一页后交付及最终 SVG/工程 JSON/IndexedDB/CAS 不变；D5b5b 顺序双标签 React/Vue 已在上一轮真实通过。上传日志未单独显示本地 HEAD；GitHub 已按维护者明确授权把 PR #121 Squash 合并至 `main@87f50a56fdf4372afdf9d65e2ddef9e476b0bcfc`，该证据不等于现场工业系统验收。
+
+**本批只验证已实现的正式运行页业务生命周期**：不复用 Studio 手工发起 GET 来冒充运行页逻辑。React/Vue 各在自身可信 HTTPS Origin 中，用同一预绑定 Keycloak 会话与一个隔离 Chrome Profile，通过真实“已发布运行”入口、原生输入与“读取正式发布”按钮选择**原已撤权 D5b4 专用工程**。预先安装已有工程 API Fetch 只读守卫和 D5b4 原始响应观察器；运行页应从默认 `idle`、零 GET 开始，首次真实 GET 404 后进入 `denied`、零 SVG、发布代次/修订为空、Tag 质量 `UNAVAILABLE`。
+
+随后打开第二个同源标签页并真实切换前台，第一运行页在真实 `visibilitychange` 后必须清空为 `idle`，**不得产生第二条 GET**。切回第一标签后，已存在的共享 `PublishedRuntimeRefresher.setVisible(true)` 必须重新向同一目标发起**恰好第二条**真实 GET 404，再次进入 `denied`，无快照、无发布水位、质量不可用。最后点击真实“停止读取”并核对 `idle`、运行内容清空且无第三条请求。每个阶段严格核对 `guard.paths/statuses` 与只读 Observer 的真实 `404 + no-store + 无重定向`，`blocked=0`，拒绝任何额外路径、重复请求、状态码错误、被阻断写入或本地残留发布数据。
+
+**重要限制**：这只证明已撤权工程在运行页真实隐藏重显期间的拒绝和零陈旧显示；不覆盖真实已发布快照从 `verified` 到撤权的竞态、Studio 业务预检迟到拒绝、网络 TCP 级请求乱序、实时 Tag 正常质量、真实发布/回滚写入或工业设备。无写入模式、不新建工程、不变更 ACL、不再次撤权，也不运行现场设备指令。
+
+新增 `test:published:oidc:revoke:visibility:config`（13 项 Node 安全回归定义，纳入 `ready`）和独立的 `test:published:oidc:revoke:visibility:browser`（真实浏览器，需要手动登录，**不纳入 `ready`**）。新代码刚提交 GitHub，协作端无法运行本机 pnpm/Vite+/Keycloak；**本批的 Windows Node/Vite+/docs/ready、真实 React/Vue 专项及数据库事后复核均待实际执行**。本批保持 Draft，未经维护者再次明确授权不得合并。

@@ -2028,3 +2028,9 @@ PR #121 E-078 候选复用现有有界轮询在两标签逐次 GET 前后及最�
 维护者明确核对 Windows Git HEAD `baa612ca029ff3f8a3bd6fe75b03ba24c7d85f9b`，D5b4e PostgreSQL READ ONLY 审计通过；D5b5b React/Vue 真实双标签已全部通过两次顺序发布 GET 404、可见性恢复和 SVG/JSON/IndexedDB/CAS 保护。D5b5c React 两页真实 404 同时 pending、第二页先交付通过，但第一标签切回可见后“工程请求数量不符”失败，Vue 未执行，真实 D5b5c 整体阻塞未关闭。
 
 本批候选只调整 D5b5c 测试编排顺序：第一标签先保持隐藏，交付并严格检查第二个原始 Response 后，才切回第一标签作最终完整本地保护复核；不改生产代码、HTTP 状态、ACL 和数据库。新增 1 项 Node 用例（D5b5c 目标 15 项），相关最新 Windows 质量链与真实浏览器待复验；PR #121 仍 Draft 未合并。
+
+## 2026-11-22 · PR #121 已合并；D5b6 正式运行页隐藏重显只读候选
+
+PR #121 D5b5c E-079 已由维护者 Windows 完成离线 15/15、`vp check` 401/253 零警告错误、`docs:check` 89、全量 `ready` 退出码 0；同一已撤权 D5b4 工程 PostgreSQL READ ONLY 审计通过；React/Vue 真实双标签页原始 404 同时 pending、第二页先交付、第一页后交付、画布/工程 JSON/草稿/CAS 无变化均通过。此前 D5b5b React/Vue 顺序双标签也已真实通过。PR #121 按维护者明确授权 Squash 合并到 `main@87f50a56fdf4372afdf9d65e2ddef9e476b0bcfc`。
+
+D5b6 在独立候选分支只新增**正式运行页**已撤权状态的隐藏重显浏览器专项和 Node 安全门禁：双端真实业务按钮首次 GET 404，隐藏页清空无新增 GET，恢复可见重发**仅第二次**真实 404，最终停止清空且零第三次 GET。继续复用原 D5b4 专用工程，要求两标签同源同身份、所有工程只读、无过期画面与 Tag 质量不可用。不改 React/Vue/NestJS、数据库迁移、ACL、发布/回滚写或工业设备。该候选 Windows 完整质量链、数据库只读审计与真实双框架浏览器专项均待维护者执行，必须保持 Draft。

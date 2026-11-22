@@ -737,6 +737,8 @@
 - **验证边界**：新增 D5b5c **1 项**离线测试定义，预计由 **14 增至 15 项**；D5b5b 保持 20 项，E-078 已由维护者 Windows 实测 20/20、14/14、`vp check` 401/253 零告警、`docs:check` 89、完整 `ready` 退出码 0，但它们属于**修补前的 HEAD**。本次候选的 Windows Node、`vp check`、`docs:check`、`ready`、D5b5c React/Vue 真实浏览器均**待重新验收**；不创建或改变数据库、工程 ACL、发布状态和工业设备。
 - **证据**：维护者 2026-11-22 最新真实 Windows 日志、PR #121、`scripts/test-oidc-studio-revoked-late-multitab.mjs`、`scripts/test-oidc-studio-revoked-late-gate.cases.mjs` 与 `docs/VALIDATION.md`。
 
+> **2026-11-22 · E-079 Windows 结案补录**：维护者提供后续真实 Windows 完整日志，D5b5c Node **15/15**、`vp check` **401/253 零告警错误**、`docs:check` **89 份**、Vitest **680/680**、NestJS HTTP E2E **62/62**、React/Vue/NestJS 构建及完整 `ready` **退出码 0**；相同已撤权 D5b4 工程通过 PostgreSQL **READ ONLY** 审计。D5b5c **React 与 Vue 两端真实 Keycloak/Chrome** 均完成两个真实 404 同时挂起、第二页先交付、第一页面保持隐藏完成后交付、最终可见性恢复以及 SVG/工程 JSON/草稿/CAS 保持不变，真实浏览器无失败退出。D5b5b React/Vue 顺序双标签专项已在此前真实通过。维护者明确同意合并，GitHub 已核实 PR #121 Squash 合并到 `main@87f50a56fdf4372afdf9d65e2ddef9e476b0bcfc`，**E-079 的 D5b5c 真实浏览器阻塞关闭**。附带日志未打印此次本地 Git HEAD，故不将 Windows 日志严格等同于具体 SHA 的直接证明；这仍不涉及工业设备控制与生产发布授权。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
