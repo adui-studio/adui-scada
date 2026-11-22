@@ -1284,4 +1284,5 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/runtime/src/published-runtime-view.ts`：`publishedSnapshotSvg(snapshot, pageId?)` 将可选页面 ID 传递给既有 `svgDataUrl`；依旧先执行全工程 Schema / 静态 Runtime 兼容性校验，并传入空 Tag 值。未提供页面 ID 时保留首页兼容行为。
 - `packages/runtime/test/published-runtime-view.test.ts`：新增 1 项多页面快照测试：按 ID 生成不同 SVG，不泄漏首页图元内容或模拟质量，未知页面 ID 拒绝。
 - `apps/web-react/src/runtime/PublishedRuntimePage.tsx`、`apps/web-vue/src/runtime/PublishedRuntimePage.vue`：只在 `verified` 多页面快照下提供同构“组态页面”下拉选择。所选页面不在当前快照时自动采用当前首页；开始新工程和停止时清理选择。切换不调用服务端 API。
+- `packages/runtime/src/runtime.css`：React/Vue 共享发布控制区域的 `select` 复用现有输入框边框、间距、文字及焦点样式，不新增框架专属样式。
 - 正式发布服务器、工业采集、Tag 质量模型与 Schema 均无改动，尚未进行真实多页面已发布浏览器 Lab 专项。
