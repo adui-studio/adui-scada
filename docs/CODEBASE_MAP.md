@@ -1292,3 +1292,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-state.ts`：新增纯函数 `transitionAlarmState`，四态 `ALARM_STATES`、三事件 `ALARM_EVENTS` 与共享中文显示标签；无状态实例用 `null` 表示，未知状态/事件拒绝，确认和恢复相互独立，恢复后重新触发清除上次确认结果。
 - `packages/core/test/alarm-state.test.ts`：新增 8 项定向单元测试定义，包含初次触发、活动期确认、恢复后确认、已确认恢复、重触发、无实例拒绝、未知状态与事件拒绝、标签契约。
 - `packages/core/src/index.ts`：新增公共导出，不更改共享工程 Schema、编辑器或原 TagStore API。报警阈值、规则模型、服务端报警实例/权限/审计、React/Vue 警报界面均未实现。
+
+## 2026-11-22 · D5b9e 共享报警事件序列回放
+
+- `packages/core/src/alarm-replay.ts`：纯函数 `replayAlarmEvents` 顺序调用已有 `transitionAlarmState`，返回最终状态及带输入序号、事件名、前后状态、是否真正改变的只读轨迹类型；重复事件可观察、非法序列整体抛错。无持久化与现场数据输入。
+- `packages/core/test/alarm-replay.test.ts`：新增 **5 项**定向 Vitest 测试定义，覆盖空序列、全生命周期回放、重复事件、非法初始/非法类型、只读输入与确定性。
+- `packages/core/src/index.ts`：导出回放纯函数及 `AlarmReplayResult`、`AlarmReplayStep` 类型供未来 Vue/React 与服务端共享，不改原四态状态机、TagStore、工程 Schema、Prisma、Runtime 或已发布画面。

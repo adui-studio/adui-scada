@@ -83,11 +83,17 @@ interface DriverAdapter {
 
 报警至少区分 ACTIVE_UNACKED、ACTIVE_ACKED、CLEARED_UNACKED、CLEARED_ACKED，阈值、死区、延时和恢复语义单独设计；确认不意味着工艺条件恢复。
 
-### 2026-11-22 · FR-011 最小共享报警生命周期模型（D5b9d 候选）
+### 2026-11-22 · FR-011 最小共享报警生命周期模型（D5b9d 已合并）
 
 `packages/core/src/alarm-state.ts` 提供纯函数 `transitionAlarmState(previous, event)`，不依赖 Vue、React、NestJS 或工业协议，枚举四个既定状态及 `TRIGGER`（触发）、`RECOVER`（工艺条件恢复）、`ACKNOWLEDGE`（确认）三种事件。初始 `null` 表示尚不存在报警实例，只能通过首次 `TRIGGER` 建立 `ACTIVE_UNACKED`；不存在实例时确认或恢复均拒绝。激活期重复触发不重复新建事件，也不会改变已经确认的状态；`RECOVER` 仅结束激活、保留原有确认情况；`ACKNOWLEDGE` 仅更新确认、不改变激活条件；从任一恢复状态重新触发都建立新的 `ACTIVE_UNACKED` 状态。已恢复/已确认状态的重复事件维持幂等；未知状态码或事件类别明确拒绝。
 
 该模块**不接收原始 Tag/PLC 数据作为触发条件**，不计算阈值、死区、延时或数据质量，不提供报警规则配置、实例 ID、事件存储、时间戳、审计、操作权限或真实 `POST /alarms/:id/ack` 路由。调用者必须在未来独立实现可信 Tag 质量与来源检查、阈值/去抖、主体授权和不可变审计后才可接入生产业务。这里的事件命名和状态转换只是 FR-011 的框架无关基础契约；**FR-011 的完整报警与确认功能仍处于规划中**，不允许将 Core 函数当作现场报警系统已可用。
+
+### 2026-11-22 · D5b9e 共享报警事件回放（候选）
+
+`packages/core/src/alarm-replay.ts` 新增纯函数 `replayAlarmEvents(events)`，只消费显式、已经由外部可信业务决定的 `TRIGGER / RECOVER / ACKNOWLEDGE` 事件序列，复用 D5b9d `transitionAlarmState`，返回最终 `state`（无事件时为 `null`）以及每次事件的 `{sequence,event,before,after,changed}` 转换轨迹。重复的触发、确认与恢复**保留输入顺序**，但标识 `changed: false`，避免把重复事件误表示为新的状态变化；恢复后重触发按既有四态规则重新进入 `ACTIVE_UNACKED`。确认或恢复发生在尚无报警实例时，以及未知事件类型，均拒绝整个回放，不返回部分成功结果。函数不修改输入或外部状态，重复回放相同输入应获得相同输出。
+
+本地 `sequence` **只是输入数组从 1 开始的索引**，不是服务端递增事件 ID、设备时间、审计顺序、可信来源或不可变证据；`changed` 也不是现场工艺变化的判断。此工具**不接入真实 Tag / PLC、报警阈值、死区、去抖延时、权限、事件持久化或确认 API**。真正的服务端实例与审计顺序、权限检查、上游数据质量、保留限制和幂等事件 ID 需经 FR-011 后续设计与专项验收，不能把本次内存回放视为正式报警历史。
 
 历史数据保存 Tag ID、源时间/平台时间、类型化数值和质量；归档策略、保留期和数据库分区需基于容量估算。关系数据拟用 Prisma，TimescaleDB Hypertable 使用独立 SQL 迁移。**V0.1 尚未实现报警与历史。**
 

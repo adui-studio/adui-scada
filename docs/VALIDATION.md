@@ -3017,3 +3017,21 @@ if ($LASTEXITCODE -ne 0) { throw "FR-011 Vite+ 检查失败" }
 ```
 
 无需重复上批完整 `pnpm run ready`、HTTP E2E、React/Vue 构建或真实已发布 Lab 浏览器。代码没有真实阈值与工业只读授权，定向单测通过也**不能**把 FR-011 标记为生产报警能力已实现；正式发布 Gate 仍无条件拒绝，Issue #126 Open，ADR-0070 Proposed。
+
+## 2026-11-22 · D5b9e FR-011 报警事件回放：仅新增差异待验收
+
+维护者已在 PR #143 **精确 HEAD `11b8f90689415974a1c74db2d610b471007c4f73`** 实测 Core 四态状态机 8/8，`vp check` **415 格式文件/266 受检零警告错误**；本轮明确授权 Squash 合并至 `main@597a6eabde176f4b5d17dfb7eb685c253c71c2ea`。此结果只属于已验收代码，未重复全量 `ready`。
+
+D5b9e 纯内存 `replayAlarmEvents` 的新增 **5 项** Vitest 用例目前为代码定义，**并未实测**。拟验证空输入、触发→确认→恢复→重触发、有记录但不改变状态的重复事件、非法序列整体拒绝及输入不变。没有 HTTP、Prisma、工业网关、生产报警确认写入或 React/Vue UI 变更。因此仅需在 Draft PR 最新 HEAD 定向执行：
+
+```powershell
+git rev-parse HEAD
+
+vp test run packages/core/test/alarm-replay.test.ts
+if ($LASTEXITCODE -ne 0) { throw "FR-011 报警事件回放定向测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "FR-011 Vite+ 检查失败" }
+```
+
+避免重复执行已通过且无本批变更的完整 `ready`、HTTP E2E、React/Vue 构建或工业专项。定向测试即使通过也只验证纯内存状态回放：不证明报警规则阈值、真实 Tag 质量、持久化审计、操作者授权、时间顺序和工业安全。FR-011 仍规划中，正式发布 Gate 继续无条件拒绝；Issue #126 与 ADR-0070 维持原有独立安全边界。
