@@ -2519,8 +2519,8 @@ GitHub 合并前复核 PR #112 候选 HEAD 为 `061c42ba756ccbf8d91788a57f615c1f
 
 ## 2026-11-22 · PR #113 D5b4d 双阶段真实只读浏览器候选与离线安全门禁
 
-新增 `scripts/test-oidc-published-revocation-readonly.mjs` 与 `scripts/test-oidc-published-revocation-readonly.cases.mjs`，根 `test:published:oidc:revoke:readonly:config` 加入 `ready`，`test:published:oidc:revoke:readonly:browser` 仅人工执行。离线测试定义 **14 项**，包括严格阶段/随机 ID、CDP 自包含原生输入、响应不篡改、真实 Fetch 状态与 no-store、POST/跨 Origin 拦截、200/404 不可互换、401/403 拒绝、非法页面状态、额外 GET、资源清理及异常脱敏；这些是**用例定义数量，并非 Node 14/14 通过证据**。
+新增 `scripts/test-oidc-published-revocation-readonly.mjs` 与 `scripts/test-oidc-published-revocation-readonly.cases.mjs`，根 `test:published:oidc:revoke:readonly:config` 加入 `ready`，`test:published:oidc:revoke:readonly:browser` 仅人工执行。离线测试定义 **15 项**，包括严格阶段/随机 ID、CDP 自包含原生输入、响应不篡改、真实 Fetch 状态、no-store 与重定向拒绝、POST/跨 Origin 拦截、200/404 不可互换、401/403 拒绝、非法页面状态、额外 GET、资源清理及异常脱敏；这些是**用例定义数量，并非 Node 14/14 通过证据**。
 
-本次从 GitHub 回读脚本并移除 ESM import/export 后，在隔离 V8 中完成两份脚本语法解析；选取主脚本的 12 条纯函数 Mock 路径进行对照，**12/12**；另用隔离 V8 配合受限 Node 断言/测试函数代理执行本批 14 条源测试定义，**14/14**。这两项均**不是**正式 Node `node --test`、Chrome 或 PostgreSQL 实测。这只能作为有限开发自检；**Windows 真实 Node 14 项、`vp check`、`docs:check`、完整 `ready`、React/Vue 登录浏览器与真实数据库只读检查仍未运行**。新增文档提交本身亦未经 Windows 质量链验证，具体 HEAD 需 Windows `git rev-parse HEAD` 对照。
+本次从 GitHub 回读脚本并移除 ESM import/export 后，在隔离 V8 中完成两份脚本语法解析；选取主脚本的 12 条纯函数 Mock 路径进行对照，**12/12**；另用隔离 V8 配合受限 Node 断言/测试函数代理执行本批 15 条源测试定义，**15/15**。这两项均**不是**正式 Node `node --test`、Chrome 或 PostgreSQL 实测。这只能作为有限开发自检；**Windows 真实 Node 15 项、`vp check`、`docs:check`、完整 `ready`、React/Vue 登录浏览器与真实数据库只读检查仍未运行**。新增文档提交本身亦未经 Windows 质量链验证，具体 HEAD 需 Windows `git rev-parse HEAD` 对照。
 
 没有创建 D5b4 专用工程、进行数据库 INSERT/DELETE/UPDATE、撤销 ACL、恢复权限、正式发布、工程内容写入或工业设备操作。新浏览器脚本的 `after` 阶段即使返回 HTTP 404，也**不证明 ACL 被真实撤销或工程真实存在**，后续必须单独授权、执行真实 PostgreSQL 撤权后只读审计并核对旧 D5b1 基线完整。
