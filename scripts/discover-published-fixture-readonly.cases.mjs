@@ -30,12 +30,14 @@ function fixture(overrides = {}) {
       project: [{ head_revision: "1" }],
       versions: [{ revision: "1", created_by: "lab-engineer" }],
       audit: [{ revision: "1", actor_id: "lab-engineer", action: "version:append" }],
-      state: [{
-        release_generation: "0",
-        released_revision: null,
-        released_content_hash: null,
-        last_release_event_id: null,
-      }],
+      state: [
+        {
+          release_generation: "0",
+          released_revision: null,
+          released_content_hash: null,
+          last_release_event_id: null,
+        },
+      ],
       events: [{ count: 0 }],
       grants: ["project:read", "version:read", "version:append", "release:read"].map(
         (permission) => ({ subject_id: "lab-engineer", permission }),
@@ -55,7 +57,7 @@ function fixture(overrides = {}) {
       if (sql.startsWith("SELECT p.project_id")) return { rows: rows.candidates };
       if (sql.includes("current_database()")) return { rows: rows.database };
       if (sql.includes("SELECT migration_name")) return { rows: rows.migrations };
-      if (sql.includes("FROM public.\"_prisma_migrations\"")) {
+      if (sql.includes('FROM public."_prisma_migrations"')) {
         return { rows: rows.unresolved };
       }
       if (sql.includes("scada_external_identities")) return { rows: rows.external };
@@ -106,10 +108,10 @@ void describe("D5b7f 无工程 ID 只读候选发现安全门禁", () => {
 
   void it("零个候选只返回 NOT_FOUND，两个候选只返回 AMBIGUOUS", () => {
     assert.deepEqual(classifyPublishedFixtureDiscoveryRows([]), { kind: "NOT_FOUND" });
-    assert.deepEqual(classifyPublishedFixtureDiscoveryRows([
-      { project_id: SECOND },
-      { project_id: FIRST },
-    ]), { kind: "AMBIGUOUS" });
+    assert.deepEqual(
+      classifyPublishedFixtureDiscoveryRows([{ project_id: SECOND }, { project_id: FIRST }]),
+      { kind: "AMBIGUOUS" },
+    );
   });
 
   void it("唯一合法 UUIDv4 才能形成内部候选", () => {
@@ -204,7 +206,10 @@ void describe("D5b7f 无工程 ID 只读候选发现安全门禁", () => {
       const { client, calls } = fixture({ database });
       await assert.rejects(discoverPublishedFixtureCandidatesReadonly(client, target), FAILURE);
       assertReadonly(calls);
-      assert.equal(calls.some(({ sql }) => sql.startsWith("SELECT p.project_id")), false);
+      assert.equal(
+        calls.some(({ sql }) => sql.startsWith("SELECT p.project_id")),
+        false,
+      );
     }
   });
 
@@ -217,7 +222,10 @@ void describe("D5b7f 无工程 ID 只读候选发现安全门禁", () => {
       const { client, calls } = fixture(change);
       await assert.rejects(discoverPublishedFixtureCandidatesReadonly(client, target), FAILURE);
       assertReadonly(calls);
-      assert.equal(calls.some(({ sql }) => sql.startsWith("SELECT p.project_id")), false);
+      assert.equal(
+        calls.some(({ sql }) => sql.startsWith("SELECT p.project_id")),
+        false,
+      );
     }
   });
 
@@ -226,16 +234,27 @@ void describe("D5b7f 无工程 ID 只读候选发现安全门禁", () => {
       const { client, calls } = fixture(change);
       await assert.rejects(discoverPublishedFixtureCandidatesReadonly(client, target), FAILURE);
       assertReadonly(calls);
-      assert.equal(calls.some(({ sql }) => sql.startsWith("SELECT p.project_id")), false);
+      assert.equal(
+        calls.some(({ sql }) => sql.startsWith("SELECT p.project_id")),
+        false,
+      );
     }
   });
 
   void it("原 D5b1 首版、发布空指针或四项 ACL 漂移时不得查询候选", async () => {
     for (const mutate of [
-      (rows) => { rows.baseline.project = []; },
-      (rows) => { rows.baseline.state[0].release_generation = "1"; },
-      (rows) => { rows.baseline.events[0].count = 1; },
-      (rows) => { rows.baseline.grants.pop(); },
+      (rows) => {
+        rows.baseline.project = [];
+      },
+      (rows) => {
+        rows.baseline.state[0].release_generation = "1";
+      },
+      (rows) => {
+        rows.baseline.events[0].count = 1;
+      },
+      (rows) => {
+        rows.baseline.grants.pop();
+      },
     ]) {
       const { client, calls, rows } = fixture();
       mutate(rows);
@@ -244,7 +263,10 @@ void describe("D5b7f 无工程 ID 只读候选发现安全门禁", () => {
         /D5b7d 原 D5b1 只读基线不完整或发生漂移/,
       );
       assertReadonly(calls);
-      assert.equal(calls.some(({ sql }) => sql.startsWith("SELECT p.project_id")), false);
+      assert.equal(
+        calls.some(({ sql }) => sql.startsWith("SELECT p.project_id")),
+        false,
+      );
     }
   });
 
@@ -269,7 +291,9 @@ void describe("D5b7f 无工程 ID 只读候选发现安全门禁", () => {
 
   void it("固定诊断不会泄露原始字段或其他工程 ID", () => {
     assert.equal(
-      describePublishedFixtureDiscoveryFailure(new Error("D5b7f 只读发现环境或候选元数据不符合预期")),
+      describePublishedFixtureDiscoveryFailure(
+        new Error("D5b7f 只读发现环境或候选元数据不符合预期"),
+      ),
       "D5b7f 只读发现环境或候选元数据不符合预期",
     );
     assert.equal(
