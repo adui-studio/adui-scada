@@ -48,6 +48,7 @@ export class PublishedRuntimeRefresher {
   private epoch = 0;
   private offlineFailures = 0;
   private pending: Promise<void> | null = null;
+  private resolvePendingCancellation: (() => void) | null = null;
   private cancelScheduled: (() => void) | null = null;
   private cancelWatchdog: (() => void) | null = null;
 
@@ -76,6 +77,11 @@ export class PublishedRuntimeRefresher {
   private clearWatchdog(): void {
     this.cancelWatchdog?.();
     this.cancelWatchdog = null;
+  }
+
+  private settleCancelledRead(): void {
+    this.resolvePendingCancellation?.();
+    this.resolvePendingCancellation = null;
   }
 
   private scheduleNext(): void {
@@ -142,6 +148,9 @@ export class PublishedRuntimeRefresher {
     this.clearSchedule();
     const expectedEpoch = this.epoch;
     const projectId = this.projectId;
+    const cancelled = new Promise<void>((resolve) => {
+      this.resolvePendingCancellation = () => resolve();
+    });
     const task = (async () => {
       const timeout = new Promise<void>((resolve) => {
         this.cancelWatchdog = this.schedule(() => {
@@ -159,9 +168,10 @@ export class PublishedRuntimeRefresher {
       });
       try {
         // 网络底层忽略 AbortSignal 时也必须按超时上限撤下运行画面。
-        await Promise.race([this.runtime.load(projectId), timeout]);
+        await Promise.race([this.runtime.load(projectId), timeout, cancelled]);
       } finally {
         if (expectedEpoch === this.epoch) {
+          this.resolvePendingCancellation = null;
           this.clearWatchdog();
           this.pending = null;
           this.scheduleNext();
@@ -180,6 +190,7 @@ export class PublishedRuntimeRefresher {
     if (!visible) {
       this.clearWatchdog();
       this.epoch++;
+      this.settleCancelledRead();
       this.pending = null;
       this.offlineFailures = 0;
       this.runtime.suspend();
@@ -193,6 +204,7 @@ export class PublishedRuntimeRefresher {
     this.epoch++;
     this.clearSchedule();
     this.clearWatchdog();
+    this.settleCancelledRead();
     this.active = false;
     this.visible = false;
     this.projectId = null;

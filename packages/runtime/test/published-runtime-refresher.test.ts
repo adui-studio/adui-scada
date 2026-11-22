@@ -448,6 +448,36 @@ describe("正式发布 Runtime 指针刷新与失效保护", () => {
     expect(readCurrentRelease).toHaveBeenCalledTimes(1);
   });
 
+  it("底层请求忽略取消时，隐藏与停止仍结束悬挂的只读刷新等待", async () => {
+    const signals: Array<AbortSignal | undefined> = [];
+    const readCurrentRelease = vi.fn<PublishedReleaseReader["readCurrentRelease"]>(
+      (_id, signal) => {
+        signals.push(signal);
+        // 模拟底层网络永久悬挂，故意不响应 AbortSignal 或超时回调。
+        return new Promise<unknown>(() => {});
+      },
+    );
+    const clock = manualClock();
+    const { runtime, refresher } = fixture({ readCurrentRelease }, clock.schedule);
+
+    const first = refresher.start(projectId);
+    expect(clock.pendingDelays()).toEqual([10_000]);
+    await refresher.setVisible(false);
+    await first;
+    expect(signals[0]?.aborted).toBe(true);
+    expect(clock.pendingDelays()).toEqual([]);
+    expect(runtime.snapshot()).toMatchObject({ status: "idle", snapshot: null });
+
+    const second = refresher.setVisible(true);
+    expect(readCurrentRelease).toHaveBeenCalledTimes(2);
+    expect(clock.pendingDelays()).toEqual([10_000]);
+    refresher.stop();
+    await second;
+    expect(signals[1]?.aborted).toBe(true);
+    expect(clock.pendingDelays()).toEqual([]);
+    expect(runtime.snapshot()).toMatchObject({ status: "idle", snapshot: null });
+  });
+
   it("切换工程的旧响应和已取消定时回调无法覆盖新工程", async () => {
     const firstProject = await published();
     const otherProjectId = "second-project";
