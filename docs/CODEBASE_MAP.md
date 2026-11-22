@@ -1272,3 +1272,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/observability/http-logging.config.spec.ts`：新增 3 项 Vitest 负向测试，覆盖敏感异常对象、恶意属性 getter 与真实 Pino JSON 记录，确保错误原文、路径/URL 不泄露。
 - `docs/AI_MISTAKES.md`：E-084 记录修复前 Windows HTTP 503 失败日志的本机路径暴露风险、根因及待 Windows 验收范围。
 - 不改 NestJS 工程路由/控制器、异常过滤器、Pino 日志等级、Prisma 或正式发布安全门禁；变更只作用于 HTTP 日志序列化。
+
+## 2026-11-22 · D5b9b 已发布 Runtime 取消与本地等待结算
+
+- `packages/runtime/src/published-runtime-refresher.ts`：每次在 `refresh()` 启动受控 GET 时建立本地取消完成 Promise，原始网络请求、超时与生命周期取消三路竞速；`setVisible(false)` 与 `stop()` 在废弃旧代次时释放上层等待。底层网络不响应 AbortSignal 也不应导致上层 Promise 永久悬挂；不增加任何真实资源读取或写操作。
+- `packages/runtime/test/published-runtime-refresher.test.ts`：新增 1 项定向测试模拟永久未结算的只读请求，验证页面隐藏/重新显示后停止两次等待均结算、网络信号已取消、旧画面与定时任务均为空。
+- React/Vue 继续复用此刷新器。服务端发布、安全 Gate、Tag 源、数据库、ACL 和正式 Runtime 质量均不变。
