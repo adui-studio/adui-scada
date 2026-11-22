@@ -1172,3 +1172,8 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - `scripts/test-oidc-published-revoked-visibility.cases.mjs`：新增 13 项 Node 离线安全门禁，严格拒绝不可信工程 ID、额外 GET/状态码、缓存或重定向、残留发布数据、被阻断写入及诊断敏感泄漏。
 - 根 `package.json`：`test:published:oidc:revoke:visibility:config` 加入 `ready`；`test:published:oidc:revoke:visibility:browser` 需维护者本机可信 HTTPS/Keycloak Lab 手工执行，不自动进 `ready`。
 - 复用 `apps/web-react/src/runtime/PublishedRuntimePage.tsx`、`apps/web-vue/src/runtime/PublishedRuntimePage.vue`、`PublishedRuntimeRefresher` 和已存在 D5b4/D5b5 CDP 辅助函数，不修改生产代码或数据库/ACL。
+
+## 2026-11-22 · D5b7a 已发布运行拒绝与迟到合法响应纯测试
+
+- `packages/runtime/test/published-runtime-refresher.test.ts`：沿用 `published()` 合法快照夹具、`manualClock()` 单次调度与 `fixture()` 注入，只新增 2 项 `verified → loading → denied` 和 `verified → loading → hidden → denied → late 200 ignored` 测试。现有 15 项变为预计 17 项；无生产 Runtime 代码变更。
+- 根 `pnpm run ready` 本身已包含共享 Vitest，**无需新增 package.json 命令**。`docs/HARNESS.md` 提供 Windows 定向 `vp test` 与完整质量链指令，不涉及 Keycloak、PostgreSQL、Lab 写入、ACL 恢复或工业设备。
