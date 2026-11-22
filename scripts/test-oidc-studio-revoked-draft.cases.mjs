@@ -87,7 +87,7 @@ void describe("D5b5 真实 Studio 撤权发布读取与本地草稿保护", () =
     const page = runInNewContext("(" + readRevokedReleaseInStudioPage.toString() + ")");
     const result = await page(ORIGIN, ID, runtime);
     assert.deepEqual({ ...result }, response());
-    assert.deepEqual(requests, [
+    assert.deepEqual(structuredClone(requests), [
       {
         path: PATH,
         options: {
