@@ -22,6 +22,8 @@ import {
   requireD5b5Preserved,
 } from "./test-oidc-studio-revoked-draft.mjs";
 import {
+  D5B5_PROTECTION_REASONS,
+  classifyD5b5PreservationFailure,
   parseD5b5MultiTabArgs,
   requireD5b5NoBlockedWrites,
   requireD5b5SharedDraft,
@@ -45,6 +47,7 @@ const SAFE_ERRORS = new Set([
   "D5b5c 双标签真实 404 响应未同时挂起",
   "D5b5c 真实 404 响应未按第二标签优先交付",
   "D5b5c 双标签本地状态或只读请求发生漂移",
+  ...D5B5_PROTECTION_REASONS,
 ]);
 const STAGES = new Set([
   "可信 OIDC 登录",
@@ -91,6 +94,24 @@ async function waitForRelease(session) {
   }, "D5b5c 真实 404 响应未按第二标签优先交付");
   requireD5b5cLateReadState(state, "settled");
   return state;
+}
+
+/** 复用原严格校验，失败时只输出本机安全白名单类别。 */
+function requireD5b5cPreserved(projectId, before, after, response, beforeGuard, afterGuard) {
+  try {
+    requireD5b5Preserved(projectId, before, after, response, beforeGuard, afterGuard);
+  } catch (error) {
+    const category = classifyD5b5PreservationFailure(
+      error,
+      projectId,
+      before,
+      after,
+      response,
+      beforeGuard,
+      afterGuard,
+    );
+    throw new Error(category);
+  }
 }
 
 /** 在浏览器自身的两个标签页分别保留真实响应，只控制交付次序。 */
@@ -145,7 +166,7 @@ async function verifyOrigin(browser, second, origin, principal, projectId, name,
   const secondResult = await waitForRelease(second);
   const secondGuardAfter = await second.evaluate(publishedReadGuardStateInPage);
   const secondAfter = await inspectD5b5StudioState(second);
-  requireD5b5Preserved(
+  requireD5b5cPreserved(
     projectId,
     secondBefore,
     secondAfter,
@@ -161,7 +182,7 @@ async function verifyOrigin(browser, second, origin, principal, projectId, name,
   const firstResult = await waitForRelease(browser);
   const firstGuardAfter = await browser.evaluate(publishedReadGuardStateInPage);
   const firstAfter = await inspectD5b5StudioState(browser);
-  requireD5b5Preserved(
+  requireD5b5cPreserved(
     projectId,
     firstBefore,
     firstAfter,
