@@ -143,6 +143,7 @@ const SAFE_ERRORS = new Set([
   "D5b5b 同源双标签页可见性切换失败",
   "D5b5b SVG、工程 JSON、IndexedDB 草稿或 CAS 基线变化",
   "D5b5b 工程 API 只读约束或发布 GET 404 不符合预期",
+  "D5b5b 工程只读响应等待超时",
   ...D5B5_PROTECTION_REASONS,
 ]);
 const STAGES = new Set([
@@ -256,6 +257,31 @@ export function requireD5b5NoBlockedWrites(first, second) {
   return true;
 }
 
+/** 工程请求可能先登记路径、异步完成后才登记状态；不忽略任何未完成请求。 */
+export function requireD5b5ReadGuardProgress(guard) {
+  if (
+    !guard ||
+    guard.blocked !== 0 ||
+    !Array.isArray(guard.paths) ||
+    !Array.isArray(guard.statuses) ||
+    guard.statuses.length > guard.paths.length
+  ) {
+    throw new Error("D5b5b 工程 API 只读约束或发布 GET 404 不符合预期");
+  }
+  return guard.paths.length === guard.statuses.length;
+}
+
+/** 只等待已有 GET 的真实结果；超时或缺失响应均禁止继续验收。 */
+export async function waitForD5b5ReadGuardSettled(session) {
+  return waitForState(
+    async () => {
+      const guard = await session.evaluate(publishedReadGuardStateInPage);
+      return requireD5b5ReadGuardProgress(guard) ? guard : null;
+    },
+    "D5b5b 工程只读响应等待超时",
+  );
+}
+
 export async function waitForStudioReady(session, origin, principal) {
   const identity = await waitForState(
     () => session.evaluate(identityInPage, origin),
@@ -289,9 +315,9 @@ export async function switchToTab(visible, hidden) {
 }
 
 async function verifySingleRevokedGet(session, origin, projectId, baseline) {
-  const beforeGuard = await session.evaluate(publishedReadGuardStateInPage);
+  const beforeGuard = await waitForD5b5ReadGuardSettled(session);
   const response = await session.evaluate(readRevokedReleaseInStudioPage, origin, projectId);
-  const afterGuard = await session.evaluate(publishedReadGuardStateInPage);
+  const afterGuard = await waitForD5b5ReadGuardSettled(session);
   const after = await inspectD5b5StudioState(session);
   try {
     requireD5b5Preserved(projectId, baseline, after, response, beforeGuard, afterGuard);
@@ -392,8 +418,8 @@ async function run() {
       requireD5b5TabUnchanged(projectId, firstBefore, firstFinal);
       requireD5b5TabUnchanged(projectId, secondBefore, secondFinal);
       const [firstGuard, secondGuard] = await Promise.all([
-        browser.evaluate(publishedReadGuardStateInPage),
-        second.evaluate(publishedReadGuardStateInPage),
+        waitForD5b5ReadGuardSettled(browser),
+        waitForD5b5ReadGuardSettled(second),
       ]);
       requireD5b5NoBlockedWrites(firstGuard, secondGuard);
       process.stdout.write(
