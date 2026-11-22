@@ -121,6 +121,40 @@ describe("共享正式发布 Runtime 只读加载状态", () => {
     });
   });
 
+  it("不可信读取错误的 kind 访问器抛异常时仍清空旧发布画面并转入异常态", async () => {
+    const data = await published();
+    const sensitive = "测试用内部发布读取异常正文";
+    const unsafeError = Object.defineProperty({}, "kind", {
+      get() {
+        throw new Error(sensitive);
+      },
+    });
+    const readCurrentRelease = vi
+      .fn<PublishedReleaseReader["readCurrentRelease"]>()
+      .mockResolvedValueOnce(data)
+      .mockRejectedValueOnce(unsafeError);
+    const { runtime, states } = fixture({ readCurrentRelease });
+    await runtime.load(projectId);
+    expect(runtime.snapshot().status).toBe("verified");
+
+    await expect(runtime.load(projectId)).resolves.toBeUndefined();
+    expect(states.at(-1)).toMatchObject({
+      status: "error",
+      projectId,
+      releaseGeneration: null,
+      snapshot: null,
+      tagQuality: "UNAVAILABLE",
+    });
+    expect(runtime.snapshot().message).not.toContain(sensitive);
+    expect(states.map((state) => state.status)).toEqual([
+      "loading",
+      "verified",
+      "loading",
+      "error",
+    ]);
+    expect(readCurrentRelease).toHaveBeenCalledTimes(2);
+  });
+
   it("401、403、404 均清除发布快照与授权会话水位，不保留跨主体内容", async () => {
     for (const kind of ["unauthenticated", "forbidden", "not_found"]) {
       const data = await published(1, 4);

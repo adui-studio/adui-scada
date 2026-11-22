@@ -54,11 +54,15 @@ function requireProjectId(projectId: string): void {
 /** 网络错误可单独显示离线，授权撤销与其它异常必须清空发布快照。 */
 function failureStatus(error: unknown): PublishedRuntimeStatus {
   if (error !== null && typeof error === "object") {
-    const kind = (error as { kind?: unknown }).kind;
-    if (kind === "unauthenticated" || kind === "forbidden" || kind === "not_found") {
-      return "denied";
+    try {
+      const kind = (error as { kind?: unknown }).kind;
+      if (kind === "unauthenticated" || kind === "forbidden" || kind === "not_found") {
+        return "denied";
+      }
+      if (kind === "network") return "offline";
+    } catch {
+      // 不可信错误对象的 getter 也可能抛错；必须回到固定异常态而非停留在加载中。
     }
-    if (kind === "network") return "offline";
   }
   return "error";
 }

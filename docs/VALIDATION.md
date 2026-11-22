@@ -2939,3 +2939,23 @@ Write-Host "D5b8g Windows 离线质量链验收通过" -ForegroundColor Green
 ```
 
 验收时还应核对 HTTP 503 日志仅包含受控 `err.type`，不再出现 `err.stack` 与原始异常消息；如果未得到此证据，不得声称真实 HTTP 日志已完成脱敏修复。本小批不包含 PostgreSQL、Keycloak/HTTPS 实际会话、工业网关或真正已发布测试夹具；正式发布 `assertReady()` 仍无条件拒绝。Issue #126 Open、ADR-0070 Proposed。
+
+## 2026-11-22 · D5b9a 共享发布 Runtime 错误分类修复：只验新增差异
+
+PR #139 维护者已在**精确 HEAD** `dd0c72ec3ddfebde701c4d8bd4fc811454a193bd` 实测单测 **702/702**、HTTP E2E **63/63**、Vite+ **413 格式/264 零警告错误**、Markdown **90**、完整 `ready` 成功；HTTP 503 失败日志仅 `err.type=HTTP_ERROR`，未出现原始 `err.stack`。该修复已合并为 `main@ba1fa7f896ea57d6dfa9516f645bd460ac7955c0`，不再重复验证。
+
+D5b9a 仅在共享发布 Runtime `failureStatus` 的不可信 `kind` 属性访问处添加异常兜底，并新增 1 项定向 Vitest（原文件 11 → 12 项）：从已校验的发布态刷新遇到抛错 getter，`load` 不再冒泡、旧快照清空、最终状态固定 `error` 且 Tag 质量 `UNAVAILABLE`，不输出异常消息。**本候选测试尚未实际执行**；只针对新变更验收，避免重复跑上批完整安全专项、HTTP E2E、React/Vue 构建或 `ready`。
+
+在本机检出当前 Draft PR 最新 HEAD 后仅需：
+
+```powershell
+git rev-parse HEAD
+
+vp test run packages/runtime/test/published-runtime.test.ts
+if ($LASTEXITCODE -ne 0) { throw "D5b9a 发布 Runtime 定向测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b9a Vite+ 静态检查失败" }
+```
+
+只有这两个命令均成功，才能按新 HEAD 记录 D5b9a 本次修复的验收；并不因此宣称真实 PostgreSQL/Keycloak、双框架发布态浏览器与工业网关已经验收。生产 `ProjectReleaseSafetyGate.assertReady` 保持无条件拒绝，Issue #126 Open、ADR-0070 Proposed。
