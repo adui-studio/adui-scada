@@ -78,7 +78,11 @@ export function parseD5b5MultiTabArgs(args) {
 /** 所有外部异常仅映射为固定中文阶段与类别，不输出真实工程 ID 或身份信息。 */
 export function describeD5b5MultiTabFailure(error) {
   if (error instanceof Error && SAFE_ERRORS.has(error.message)) return error.message;
-  if (error instanceof Error && error.message === "D5b5b 浏览器阶段失败" && STAGES.has(error.stage)) {
+  if (
+    error instanceof Error &&
+    error.message === "D5b5b 浏览器阶段失败" &&
+    STAGES.has(error.stage)
+  ) {
     const reason = SAFE_ERRORS.has(error.safeReason) ? error.safeReason : "内部异常已脱敏";
     return "D5b5b " + error.stage + "失败：" + reason;
   }
