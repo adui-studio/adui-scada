@@ -3820,3 +3820,58 @@ Write-Host "D5b4e PostgreSQL 只读审计退出码：$LASTEXITCODE"
 ```
 
 本批静态编写候选后，仅以隔离 V8 模拟 Node 断言验证**既有 10 + 新增 11 = 21/21** 源测试定义，**不是 Windows `node --test` 或 PostgreSQL 实际测试**。真实 OIDC、权限撤销和设备写入均未执行。
+
+## 2026-11-22 · D5b4f 同一阶段只读验收编排（待 Windows 验收）
+
+维护者在 Windows 执行 D5b4e 质量链：D5b4c **10/10**、D5b4e **11/11**、`vp check` **390 个文件格式正确、242 个受检文件零错误/警告**、`docs:check` **89 份**、`ready` **680/680 单测、62/62 HTTP E2E、React/Vue/NestJS 构建完成、退出码 0**。PR #114 经明确授权 Squash 合并为 `main@aa512cf30d4b524f187d6cb8e46c77840fd72036`。该 Windows 日志没有本地 Git HEAD，不能将实测严格绑定到远端提交。
+
+D5b4f 新增 `scripts/test-oidc-published-revocation-sequence.mjs`，不修改 D5b4c、D5b4d、D5b4e 原有逻辑，只通过 **Node `process.execPath`、固定脚本文件、固定参数数组、`shell: false`** 顺序调用已有三个只读入口。只接受 `--phase before|after --project-id d5b4-revoke-<UUIDv4>`；不允许 `both/revoke/restore`、额外参数或任意脚本路径。两个阶段只能由维护者分别发起，**绝不自动创建工程、执行 ACL 撤销/恢复、切换阶段或写入发布指针**。
+
+每次仅运行三步：**当前阶段 PostgreSQL 只读核查 → React/Vue 真实同源发布 GET → 同一阶段 PostgreSQL 只读复核**。首尾两次 PostgreSQL 都使用原有 `REPEATABLE READ READ ONLY` / `ROLLBACK`，其中 `before` 均要求目标四项 ACL、`after` 均要求目标恰好三项基础 ACL；原 D5b1 四项 ACL 每次均需完整。浏览器由现有 D5b4d 严格区分真实 200/404、未发布/拒绝、禁缓存和无额外写入。任一步退出码非零、进程失败或异常，立即停止剩余步骤并返回固定脱敏错误。浏览器期间任一数据库基线发生漂移，末次核查应拒绝。
+
+**这不是跨阶段可审计原子事务。** 两次实际命令之间存在外部时间窗口；数据库并行事务仍可产生竞态，且“当前三项权限”不独立证明历史上发生授权撤销。完整验收必须使用同一真实专用工程 ID，保留审批与实际撤权操作记录、前后分别执行的原始成功日志，并额外由维护者评估时序和失败时的人工处置；本编排不会自动撤权或恢复，也不将任何 Cookie/Token、数据库连接串、快照正文写入日志。
+
+当前**尚未授权创建 D5b4 专用工程，也尚未进行真实撤权**，因此本轮只允许执行以下离线门禁：
+
+```powershell
+git fetch origin
+git switch test/b35-d5b4f-readonly-acceptance-sequence
+git pull --ff-only
+git rev-parse HEAD
+
+pnpm run test:published:oidc:revoke:sequence:config
+if ($LASTEXITCODE -ne 0) { throw "D5b4f 离线安全门禁失败" }
+
+pnpm run test:published:oidc:revoke:target:config
+if ($LASTEXITCODE -ne 0) { throw "D5b4c 既有门禁失败" }
+
+pnpm run test:published:oidc:revoke:after:config
+if ($LASTEXITCODE -ne 0) { throw "D5b4e 既有门禁失败" }
+
+pnpm run test:published:oidc:revoke:readonly:config
+if ($LASTEXITCODE -ne 0) { throw "D5b4d 既有门禁失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b4f Vite+ 质量检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b4f 文档检查失败" }
+
+pnpm run ready
+Write-Host "D5b4f 完整质量链退出码：$LASTEXITCODE"
+```
+
+以下仅供**未来分别获得真实专用工程创建、真实单项 ACL 撤销授权**之后参考，本小批**禁止执行**。必须在撤权前后使用同一个已真实存在的工程 ID，在两次运行之间由另行批准的独立受控流程完成实际 ACL 变更；本仓库 D5b4f 命令没有这个写入能力：
+
+```powershell
+$projectId = "<维护者已单独批准并创建的真实 D5b4 工程 ID>"
+pnpm run oidc:lab:published:revoke:sequence --phase before --project-id $projectId
+Write-Host "撤权前只读验收退出码：$LASTEXITCODE"
+
+# 这里只允许另行批准、独立审核的实际权限变更，绝不由本脚本自动执行。
+
+pnpm run oidc:lab:published:revoke:sequence --phase after --project-id $projectId
+Write-Host "撤权后只读验收退出码：$LASTEXITCODE"
+```
+
+根 `test:published:oidc:revoke:sequence:config` 只运行 10 项离线测试并加入 `ready`；真实 `oidc:lab:published:revoke:sequence` 需要显式参数、真实 Keycloak/HTTPS/PostgreSQL 环境及维护者单独授权，**不纳入 `ready`**。协作端仅对当前 GitHub 源码隔离 V8 模拟执行新门禁定义 **10/10**，不是 Windows Node `--test`、本机真实浏览器或真实数据库验收。

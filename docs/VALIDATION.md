@@ -2532,3 +2532,11 @@ PR #113 Windows 原始日志：D5b4d Node 15/15、`vp check` 388 个格式文件
 本小批仅在 `scripts/preflight-oidc-published-revocation-target.mjs` 增加撤权后阶段严格 ACL 断言，**复用原 SQL、固定身份/迁移及只读事务**；新建独立 `scripts/preflight-oidc-published-revocation-after.mjs` CLI 和 **11 项** Node 安全用例。原 D5b4c 撤权前默认四项权限检查保持不变。根 `test:published:oidc:revoke:after:config` 加入 `ready`，真实数据库 `oidc:lab:published:revoke:after` 不加入 `ready` 且必须由维护者另行授权准备真实目标工程后手工执行。
 
 协作端从 GitHub 回读新旧源码并以隔离 V8 模拟运行原 10 项与新增 11 项断言，**21/21** 符合预期，相关脚本 V8 语法解析通过。**该结果不是 Node `node --test`、Windows `vp check`、`docs:check`、完整 `ready` 或真实 PostgreSQL 证明**；本 PR 尚无这些独立验收结果。未连接数据库、未创建工程、未撤销/恢复 ACL、未执行 SQL 写入、未修改发布状态或工业设备。单次“恰好三项 ACL”快照也无法独立证明历史撤权操作确实发生。
+
+## 2026-11-22 · D5b4f 同一阶段真实只读验收编排候选
+
+维护者提供的 PR #114 Windows 日志：D5b4c 10/10、D5b4e 11/11、`vp check` 390 格式文件/242 受检零警告、`docs:check` 89 份、完整 `ready` 680/680 单测及 62/62 HTTP E2E，React/Vue/NestJS 构建成功且退出码 0。该 PR 已按维护者明确授权 Squash 合并至 `main@aa512cf30d4b524f187d6cb8e46c77840fd72036`。用户日志未包含 `git rev-parse HEAD`，不虚构本机 SHA 对照。
+
+D5b4f 只新建只读编排脚本与 10 项 Node 安全测试，使用同一显式专用工程 ID，分别对 `before` 和 `after` 执行**已有 PostgreSQL 阶段只读核查、已有 React/Vue 真实只读 GET、重复 PostgreSQL 只读核查**，任一步失败即停止。子进程通过 `process.execPath` 固定 Node 脚本/参数执行且 `shell:false`，不调用数据库写入、工程创建或 ACL 撤销/恢复；真实命令没有纳入 `ready`，只有离线门禁加入。历史 D5b4a～e 的安全契约和生产源码未更改。
+
+已回读 GitHub 脚本并在隔离 V8 以受控 Node Assert 模拟执行新测试定义 **10/10**，两份脚本 V8 语法通过。**尚未运行** Windows 原生 `node --test`、`vp check`、`docs:check`、完整 `ready`，也没有已授权的 D5b4 专用工程、真实撤权、前后浏览器或 PostgreSQL 专项结果。跨阶段验收、真实 ACL 变更及生产/设备安全仍未完成。
