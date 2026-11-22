@@ -2222,3 +2222,9 @@ D5b9i 在此基线上增加纯函数会话代次检查，三份显式代次均�
 维护者 Windows 在 PR #148 精确 HEAD `c7b63389bc41a61eb5b29dbb85f107cd9ec303e2` 执行会话代次定向单测 **6/6**、`vp check` **425 格式文件/276 受检零警告错误**、`docs:check` **90 份**、`messages:check` **300 个自有文件**；经维护者明确同意，PR #148 以 Squash 合并至 `main@9d11fedaf044598ccb57b1bc596ac2f3d2668d20`。
 
 D5b9j 基于该主线增加纯函数初始快照基线建立：显式已核验来源标记、同代次 snapshot、全批合法且无重复、目标 Tag 数值质量与时间窗口通过，才提供只读基线。新增 **7 项定向测试定义，尚无本批 Windows 实测**。上游标记本身不是安全证明；本批不挂载可信服务端采集、工业网关或报警事件，不改变 TagStore、双端 UI、Prisma、权限或正式发布门禁。FR-011 仍规划中，发布 Gate 继续 fail-closed。
+
+## 2026-11-22 · PR #149 合并与 D5b9k 同会话报警增量推进候选
+
+维护者 Windows 对 PR #149 新增 `alarm-snapshot-baseline.test.ts` 完成 **7/7**，`vp check` **427 个文件格式正确/278 受检零警告错误**、`docs:check` **90 份**、`messages:check` **302 个自有文件**。本次远程最终分支在 PR 创建后增加了仅调整测试排版的一笔提交；经审查无业务行为变化。维护者明确同意后，PR #149 Squash 合并到 `main@f5fdc99a8247299aa76f77005594788c916f1ac4`。
+
+D5b9k 基于该主线增加 `advanceAlarmTagDeltaBaseline` 纯函数，消费上游已核验的同代次 delta，整批校验后只在目标 Tag 的有效递增读数上创建新的冻结基线，其他拒绝不带数值或可沿用的旧基线。新增 **9 项定向测试定义，尚未取得 Windows 实测结果**。不改 TagStore、Runtime、Vue/React、NestJS、数据库、工业网关及发布门禁；来源认证、会话续接和失效清理尚待上游实际实现，FR-011 不能认定为生产报警能力。
