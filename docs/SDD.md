@@ -1255,3 +1255,7 @@ React/Vue 的 `PublishedRuntimePage` 在 `verified` 且快照具有多个页面�
 ## 2026-11-22 · D5b9h 同一会话内报警候选序列保护（待验收）
 
 共享 Core `classifyOrderedNumericAlarmSample(input, previous, nowMs, maxAgeMs)` 复用已有质量、有限数值和显式时间窗口校验。只有 READY 的候选继续比较调用方提供的、**同一订阅会话中上一条已接受的 Tag 读数**。无基线返回 `BASELINE_REQUIRED`，Tag ID 不一致返回 `TAG_MISMATCH`，当前序列号小于或等于上次序列返回 `SEQUENCE_NOT_ADVANCED`；拒绝时不泄露候选数值。非法 Tag 元数据通过既有 `validateTagValue` 拒绝。初始快照、断线重连、新会话的基线建立和会话代次检查尚无可信服务端实现，调用方不得复用旧会话基线、不得用此局部比较推断跨进程连续性，也不得将该函数直接用于触发、恢复或确认报警。没有阈值、设备采集、持久化历史或审计 ID。
+
+## 2026-11-22 · D5b9i 报警候选订阅会话代次隔离（候选）
+
+`classifySessionBoundNumericAlarmSample(input, previous, generations, nowMs, maxAgeMs)` 仅在调用方显式提供的 `activeGeneration/inputGeneration/baselineGeneration` 均为非负安全整数且一致时调用原 `classifyOrderedNumericAlarmSample`。当前读数或历史基线属于其他会话时返回 `SESSION_MISMATCH`，不暴露工艺值；代次非法则拒绝。即使代次一致，无基线仍按原规则返回 `BASELINE_REQUIRED`，重复/倒退、坏质量和超龄仍按原函数拒绝。代次不是认证凭据，也不能证明其来自可信订阅管理方；只有后续受控数据源能够分配代次、建立可信基线并对旧订阅回调失效，本函数才有端到端隔离意义。尚无会话管理、工业协议接入、阈值、报警事件、确认权限、数据库审计或设备控制。

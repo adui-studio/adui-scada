@@ -2210,3 +2210,9 @@ D5b9g 基于最新主线新增时间窗口纯函数，使用显式 `nowMs/maxAge
 维护者 Windows 在 PR #146 精确 HEAD `d4d1575e931a40d57a4a9fafe54d12f5c2abefad` 上验收 `alarm-tag-freshness.test.ts` **6/6**、`vp check` **421 格式文件、272 受检零错误或警告**、`docs:check` **90 份**及 `messages:check` **296 份**。经维护者明确同意，PR #146 Squash 合并至 `main@4729211eb48dd1914a4be9e22e1bae6a5dadcc11`，无需重复已通过的其他全链测试。
 
 D5b9h 新增共享 Core 同一订阅会话的候选序列检查：只有外部已建立基线、相同 Tag 且序列号严格前进时才返回 READY。其他情形拒绝，不建立首个可信基线，也不判定跨会话顺序。新增 **6 项定向测试定义，尚无维护者 Windows 实测**。本批不改已存在的 TagStore 和业务端订阅流程，不涉及真实报警、持久化确认审计、阈值、网关或设备写入。FR-011 仍规划中，发布 Gate 继续 fail-closed。
+
+## 2026-11-22 · PR #147 验收合并与 D5b9i 会话代次隔离候选
+
+维护者 Windows 在 PR #147 精确 HEAD `c5ed85ffe34503b9c085ffa02c20433bf79c4a28` 上完成 `alarm-tag-sequence.test.ts` **6/6**、`vp check` **423 格式文件/274 受检零警告错误**、`docs:check` **90 份**及 `messages:check` **298 个自有文件**；GitHub 复核分支无其他提交、无合并冲突或阻塞审查。维护者明确授权后 Squash 合并到 `main@c3444faa00bbb74ffbcb8228e93e1d21cb118126`。
+
+D5b9i 在此基线上增加纯函数会话代次检查，三份显式代次均匹配活跃会话才能继续原有质量/时间/序列筛选，拒绝迟到回调和跨会话旧基线。新增 **6 项测试定义，尚未取得维护者 Windows 实测**。本批不更改 Runtime 订阅或 TagStore，不意味着可信会话已建立、报警已触发或生产安全已验收。FR-011 与正式发布安全门禁状态不变。

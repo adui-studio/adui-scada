@@ -3091,3 +3091,21 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批无协议接入、服务端采集会话、真实可信时间来源、报警触发/确认、数据库落地或工业设备写入；本地单元测试不意味着工业安全验收。未改动的 HTTP E2E、React/Vue 构建及完整 ready 不重复执行。
+
+## 2026-11-22 · D5b9i FR-011 报警候选会话代次隔离待 Windows 验收
+
+PR #147 在精确 HEAD `c5ed85ffe34503b9c085ffa02c20433bf79c4a28` 的维护者 Windows 定向测试 **6/6**，`vp check` **423/274** 零警告错误，文档 **90**、中文文案 **298**，授权 Squash 合并至 `main@c3444faa00bbb74ffbcb8228e93e1d21cb118126`。本轮 D5b9i **6 项测试仅定义，尚未实测**，在本 PR 最新 HEAD 执行：
+
+```powershell
+git rev-parse HEAD
+vp test run packages/core/test/alarm-session-generation.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警会话代次隔离定向测试失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批不改既有网络、数据库及 UI，避免重复 HTTP E2E、React/Vue 浏览器测试与完整 ready。测试即使通过也不代表来源认证、服务端会话代次、不可变审计及生产工业安全完成；正式发布安全门禁仍 fail-closed。
