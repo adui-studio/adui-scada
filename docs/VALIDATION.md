@@ -2677,3 +2677,16 @@ E-079 候选只将这一处 `switchToTab(browser, second)` 延后到两个原始
 **版本关联**：维护者在浏览器完成后的同一 Windows 仓库明确打印 `git rev-parse HEAD = eda30a5f66930dfbfc9b39f404e1161e157b0613`，与 PR #122 合并前最终 HEAD 一致。PR #122 已按维护者明确授权 Squash 合并为 `main@28c057b5e551c54bc95c0864753718e0a8b348d4`；这是合并对应的内容来源，**并非声称 Windows 真实浏览器直接运行在该 Squash SHA**。此前维护者 Windows 已验证 D5b6 Node **13/13**、`vp check` **403 文件格式正确/255 受检零警告错误**、`docs:check` **89 份**、Vitest **680/680**、HTTP E2E **62/62**、React/Vue/NestJS 构建与完整 `pnpm run ready` **退出码 0**。
 
 **结论与边界**：D5b6 已撤权运行页真实隐藏/重显、再次拒绝、停止清理及数据库前后只读状态的双框架验收完成，可据此结案 Issue #123。该验收仅针对已撤权且无可读取正式发布内容的工程，**不代表**真正已发布 `verified → denied` 运行中授权撤销竞态、迟到响应状态机、真实网络故障、生产发布/回滚写入或工业现场安全验证通过。本次仅补录文档，没有重新执行 Windows `vp check`、`docs:check` 或 `ready`；文档提交需要单独静态验收。
+
+## 2026-11-22 · D5b7a 共享已发布 Runtime 刷新撤权与迟到响应的纯单测候选
+
+PR #124 已经维护者同意并在 Windows `docs:check` **89**、`vp check` **403/255 零告警**后 Squash 合并为 `main@b0f00aa5034cd2f9a7196c506e3affbe4825abe4`；Issue #123 已按 `completed` 关闭。D5b6 实测仅证明同一已撤权的未发布隔离工程在正式运行页上的 React/Vue 首次 404、隐藏清空、重显再次 404、停止零新增 GET，以及浏览器前后 PostgreSQL **READ ONLY** 审计；不证明真实已发布工程在线撤权。
+
+本小批 D5b7a 从该主线创建独立分支，**只在既有 `packages/runtime/test/published-runtime-refresher.test.ts` 新增 2 项 Vitest**，复用共享 `PublishedRuntime`、`PublishedRuntimeRefresher`、有效发布快照工厂和 `manualClock`。用注入的只读读取器模拟受控顺序：
+
+1. 首次完整且可校验的 `RELEASED` 响应进入 `verified`；已开始的第二次刷新尚未结束时必须立刻切到 `loading`、撤下旧 snapshot 与发布代次、Tag 质量仍为 `UNAVAILABLE`；随后模拟 `forbidden`（对应 HTTP 403 语义）拒绝，必须进入 `denied`、旧画面及水位保持空、无新定时器或多余读取。
+2. 已校验 `RELEASED` 后的一次自动刷新挂起且底层忽略中止；真实生命周期的 `setVisible(false)` 必须使旧 AbortSignal 失效并立即清空页面。重显后第三次读取模拟 `not_found`（对应 HTTP 404 语义），最终成为 `denied`；此时再向旧已废弃 Promise 释放一个本可验证的合法 `RELEASED` 响应，**绝不能恢复** `verified`、旧 snapshot、发布代次或后台刷新。
+   
+这两个测试不引入新生产 API、不访问数据库、Keycloak、网络、浏览器或工业网关，模拟状态**不能**冒称真实 HTTP 403/404、真实 PostgreSQL ACL 变更或生产“正在运行时撤权”场景已经通过。已有正式单测包含基础的 `verified → denied`、自动轮询停止与隐藏重新校验，本次新增覆盖它们之间的异步交错保护。
+
+**验证状态**：代码及文档已推送候选分支并做 GitHub 静态回读，最新分支 Windows 真实 `vp test run packages/runtime/test/published-runtime-refresher.test.ts`（预计原 15 项增至 17 项）、`vp check`、`docs:check`、完整 `pnpm run ready`（Vitest 预计 682 项）均**尚未执行**。真实已发布工程的合法发布快照与受控撤权 Lab 准备、权限操作、浏览器 `verified → denied` 和数据库前后审计均独立待评审，**不得使用已撤权 D5b4 工程去恢复 ACL 或写入发布快照**。
