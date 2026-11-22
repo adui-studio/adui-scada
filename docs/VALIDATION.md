@@ -2502,3 +2502,11 @@ D5b4a 真实本机 PostgreSQL READ ONLY 预检和 Windows 质量链均由维护�
 维护者提交的真实日志显示：`test:published:oidc:revoke:target:config` **10/10 通过**，`vp check` **386 格式文件/238 受检文件零告警**，`docs:check` **89 份**；完整 `ready` 的单元测试运行到 **679/680**，仅原有 `project-api.store.spec.ts` 接近 2 MiB 边界用例在 Vitest 默认 **5000ms** 内没有完成（该用例耗时约 14.1 秒），因此 `ready` **退出码 1**；后续 E2E、文档和构建**没有执行**，不可写成通过。D5b4 独立工程还未创建，实际数据库只读目标核验尚无夹具且未运行。
 
 PR #112 补丁仅优化测试用例构造方式：把循环里最多 256 次整份接近 2 MiB JSON 序列化，改为初始 1 次和完成时 1 次序列化，中间累积 ASCII 字段与填充值的精确字节；保持每字段 8192 字符上限、请求容量 `PROJECT_SNAPSHOT_MAX_BYTES - 24`、受控超限异常、事务和工程 INSERT 零调用的断言。无生产代码、权限、Prisma 或快照上限变更。新逻辑仅作隔离纯 JS 等价性检查；`vp test run apps/server/src/projects/project-api.store.spec.ts`、`vp check`、`docs:check` 和完整 `pnpm run ready` **仍需在 Windows 当前最新 PR HEAD 重新执行**。参见 `docs/AI_MISTAKES.md` E-074。
+
+## 2026-11-22 · D5b4c PR #112 Windows 修复后全量质量链通过（合并前验收）
+
+维护者上传的 Windows PowerShell 原始输出确认：`pnpm run build:core` 成功；`vp test run apps/server/src/projects/project-api.store.spec.ts` **13/13**，其中接近 2 MiB 的合法请求与超限拒绝用例 **103 ms**，整份定向测试 **122 ms**。新增 `pnpm run test:published:oidc:revoke:target:config` **10/10**；`vp check` **386 个文件格式正确、238 个受检文件零警告/Lint/类型错误**；`pnpm run docs:check` **89 个 Markdown 通过**。修复后完整 `pnpm run ready` 包含 **57/57 单元测试文件、680/680 测试**（近 2 MiB 用例全量并行耗时 **254 ms**）、**6/6 HTTP E2E 文件、62/62 测试**、SSE/本机安全配置及 React/Vue 与 NestJS 构建，命令最终打印 **退出码 0**。首轮 **679/680、退出码 1** 的历史失败记录保留，不代表当前仍受该超时阻塞。
+
+GitHub 合并前复核 PR #112 候选 HEAD 为 `061c42ba756ccbf8d91788a57f615c1faac9b406`，对 `main@67526a8972f90325ed534ef8c05a5d43cffd7357` 领先 3 提交、落后 0 提交，Draft 且 Assignee 为 `@adui-dev`。**原始 Windows 复验日志未包含本地 `git rev-parse HEAD`**，因此不把运行结果伪称为对该 SHA 的严格本机绑定。本段属于验收后文档补录，不能视为补录提交再次完成 Windows `docs:check` 或 `ready`。
+
+本小批只完成独立工程**存在后**的只读 SQL 门禁和离线安全测试。维护者尚未授权创建 `d5b4-revoke-<UUIDv4>` 工程，故真实 PostgreSQL 目标预检前置条件不足，**未运行、不得伪造成功**；没有执行 ACL 删除、恢复、真实授权 404、发布状态写入或工业设备操作。后续创建专用工程与真实撤权须分别获得明确授权。

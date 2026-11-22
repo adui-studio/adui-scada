@@ -3685,7 +3685,7 @@ Write-Host "D5b4b 只读预检退出码：$LASTEXITCODE"
 
 D5b4b 候选已做隔离 JavaScript 函数/Mock 行为检查，**11/11 为非 Node、非 PostgreSQL 的静态与隔离测试**；Windows Node、质量链、真实 Lab 预检和任何写操作均待维护者执行。
 
-## 2026-11-22 · 第三十五批 D5b4c 实际 ACL 撤销前的独立工程只读核查（Draft 待 Windows 验收）
+## 2026-11-22 · 第三十五批 D5b4c 实际 ACL 撤销前的独立工程只读核查（Windows 离线质量已通过）
 
 PR #111 D5b4b 已由维护者在 Windows 实测 `test:published:oidc:revoke:fixture:config` **11/11**、`vp check` **384 格式文件 / 236 受检文件零警告错误**、`docs:check` **89** 份、`ready` **680/680** 单测和 **62/62** 服务端 E2E、最终退出码 **0**；真实 `pnpm run oidc:lab:published:revoke:fixture` 只读预检退出码 **0**，没有创建专用工程或修改授权。经维护者明确同意，PR #111 Squash 合并至 `main@67526a8972f90325ed534ef8c05a5d43cffd7357`。Prisma 更新提示不代表依赖已升级，仍采用仓库锁定版本。
 
@@ -3714,4 +3714,4 @@ pnpm run oidc:lab:published:revoke:target --project-id $projectId
 Write-Host "D5b4c 数据库只读核查退出码：$LASTEXITCODE"
 ```
 
-本小批 10 项新增 Node 安全用例加入 `ready`，真实数据库预检不加入自动质量链；D5b4c 未创建工程、未撤权、不恢复 ACL、不修改发布指针、未操作工业设备。隔离 JavaScript 自检 **10/10** 不等于 Windows Node 运行，最新候选 `vp check`、`ready` 和真实 SQL 核查尚待维护者执行。
+本小批 10 项新增 Node 安全用例加入 `ready`，真实数据库预检不加入自动质量链；D5b4c 未创建工程、未撤权、不恢复 ACL、不修改发布指针、未操作工业设备。维护者 2026-11-22 Windows 实际运行 Node 安全门禁 **10/10**、工程 API 定向 **13/13**、`vp check` **386/238 零告警**、`docs:check` **89** 份、完整 `ready` **680/680 单测、62/62 HTTP E2E、React/Vue/NestJS 构建成功、退出码 0**。上传日志未包含本机 Git HEAD；本段后续文档提交未经 Windows 再次全量运行。**仍无 D5b4 专用工程**，因此真实 SQL 目标只读核查尚未执行，更不能进行 ACL 撤销或恢复。

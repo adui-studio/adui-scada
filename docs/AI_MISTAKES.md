@@ -688,6 +688,9 @@
 - **验证边界**：已对与原测试等价的纯 ASCII 模拟数据比对新旧构造字节数、字段数量和最后字段长度一致；该模拟**不是** Windows TypeScript / 仓库 Vitest 验收。修复后的定向 `vp test`、`vp check`、`docs:check` 与完整 `ready` 仍待维护者复验。PR #112 必须继续保持 Draft，不能依据修复前的 679/680 结果合并。
 - **证据**：维护者 2026-11-22 上传的 `ready` 原始 Vitest 失败日志、`apps/server/src/projects/project-api.store.spec.ts` 及 `packages/core/src/document.ts`、`docs/VALIDATION.md`、PR #112。
 
+
+> **2026-11-22 · E-074 Windows 修复结案补录**：维护者上传修复后实际执行记录：`pnpm run build:core` 完成；`vp test run apps/server/src/projects/project-api.store.spec.ts` **13/13**（整个文件 122 ms，原超时用例 103 ms）；D5b4c 独立只读安全门禁 **10/10**；`vp check` **386 个文件格式正确、238 个受检文件零警告/错误**；`docs:check` **89 份通过**；完整 `pnpm run ready` **57/57 文件、680/680 单测、6/6 文件、62/62 HTTP E2E、React/Vue 与 NestJS 构建成功**，最终**退出码 0**。该近 2 MiB 用例在全量并行测试中为 **254 ms**，原 5000 ms 超时未再发生，E-074 的已知质量阻塞据此关闭。GitHub 当次核对 PR #112 HEAD 为 `061c42ba756ccbf8d91788a57f615c1faac9b406`；上传日志未包含本机 `git rev-parse HEAD`，不将 Windows 实测严格绑定到该 SHA。本次补录属于后续文档变更，不冒充文档更新后已重跑 `ready`。**未创建 D5b4 专用工程；真实 PostgreSQL 目标只读核验、ACL 撤销和真实服务端拒绝均未执行。**
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
