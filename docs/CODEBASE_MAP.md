@@ -1218,3 +1218,11 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - 根 `package.json`：`test:published:oidc:fixture:discover:config` 仅运行离线 Mock 并加入 `ready`；`oidc:lab:published:fixture:discover` 为单独、须确认 Lab 授权才能手动运行的真实 PostgreSQL 只读入口。
 
 本批没有修改现有业务 API、Schema、迁移、ACL、生产发布门禁、工业设备或 Vue/React 行为。
+
+## 2026-11-22 · D5b8a 发布安全门禁受控阻塞清单
+
+- `apps/server/src/projects/project-release-safety-gate.ts`：新增 `assessProjectReleaseSafety(snapshot, context)`，对真实服务端发布输入汇总固定的上下文、Runtime、Tag 来源及工业安全未交付阻塞类别；`ProjectReleaseSafetyGate.assertReady` 已接入该检查，但仍**无条件**抛 `ProjectReleaseGateUnavailableError`，仅新增不可回传原始正文的结构化内部诊断，绝不打开发布写入。
+- `apps/server/src/projects/project-release-safety-gate.spec.ts`：6 项 Vitest 负向测试定义；使用共享 Core 生成真实结构的项目快照，覆盖双框架共用 Runtime 预检与正式门禁默认拒绝、SQL 零调用、主体与工程隔离及诊断脱敏。
+- 现有 `PrismaProjectReleaseStore.publish` 调用点与事务/幂等/CAS/发布事件逻辑未改；Core 与前端未变。新阻塞检查不执行 SQL 或调用工业设备，也不创建、修改或删除测试夹具。
+
+D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 继续 Open。
