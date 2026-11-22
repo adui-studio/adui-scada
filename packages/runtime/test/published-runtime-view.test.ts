@@ -1,4 +1,5 @@
 import { createProjectSnapshot, waterTreatmentDemoDocument } from "@adui/scada-core";
+import type { ScadaDocument } from "@adui/scada-core";
 import { describe, expect, it } from "vite-plus/test";
 import {
   PUBLISHED_RUNTIME_STATUS_LABELS,
@@ -35,6 +36,25 @@ describe("双框架已发布运行画面只读预览", () => {
     expect(svg).not.toContain("onload=");
     expect(svg).not.toContain("GOOD");
     expect(svg).not.toContain("模拟数据连接正常");
+  });
+
+  it("有效 SHA-256 快照包含不支持的规则或图元时拒绝生成静态发布画面", async () => {
+    for (const change of [
+      (document: ScadaDocument) => {
+        document.pages[0]!.nodes[0]!.symbolVersion = "2";
+      },
+      (document: ScadaDocument) => {
+        document.pages[0]!.nodes[0]!.rules = [{ action: "write" }];
+      },
+    ]) {
+      const document = JSON.parse(JSON.stringify(waterTreatmentDemoDocument)) as ScadaDocument;
+      change(document);
+      const snapshot = await createProjectSnapshot(document, {
+        revision: 1,
+        createdAt: "2026-11-20T00:00:00.000Z",
+      });
+      expect(() => publishedSnapshotSvg(snapshot)).toThrow("已发布快照与当前 SVG 运行时不兼容");
+    }
   });
 
   it("无工程页面的已发布快照不能悄悄回退到演示画面", async () => {
