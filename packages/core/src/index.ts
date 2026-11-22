@@ -32,6 +32,11 @@ export {
 } from "./alarm-state.ts";
 export type { AlarmEvent, AlarmState } from "./alarm-state.ts";
 export { classifyNumericAlarmSample } from "./alarm-tag-quality.ts";
+export { classifySessionBoundNumericAlarmSample } from "./alarm-session-generation.ts";
+export type {
+  AlarmSessionGenerations,
+  SessionBoundNumericAlarmSample,
+} from "./alarm-session-generation.ts";
 export { classifyOrderedNumericAlarmSample } from "./alarm-tag-sequence.ts";
 export type { OrderedNumericAlarmSample } from "./alarm-tag-sequence.ts";
 export { classifyTimelyNumericAlarmSample } from "./alarm-tag-freshness.ts";
