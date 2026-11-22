@@ -2611,3 +2611,47 @@ PR #117 已按维护者明确授权 Squash 合并至 `main@3c2e51c385ddaacb5015b
 维护者 Windows 在 PR #120 的 `vp check --fix` 中发现 `scripts/test-oidc-studio-revoked-multitab.mjs:30` 的 `eslint(no-unused-vars)` 警告：导入了未使用的 `describeD5b5StudioFailure`；同轮工具报告 **0 个错误、1 条警告**，并完成格式化，故**不是零警告验收**。
 
 远端候选仅删除这一项多余导入，保留双标签页专用的 `describeD5b5MultiTabFailure` 脱敏函数，未修改生产业务、工程 API、ACL 或测试断言。新增复盘为 E-076。当前协作环境不能执行维护者 Windows 的完整 Vite+/pnpm 与真实 HTTPS/Keycloak/Chrome 专项，因此修复后的原生 Node **11 项离线安全用例**、`vp check` 零警告、`docs:check`、`ready` 及 React/Vue 真实双标签页均**待验证**；此前的 V8/Mock 11/11 结果不能替代正式验收。目标继续只读复用已撤权 D5b4 工程，不恢复授权、不新增工程、不写入服务端。
+
+## 2026-11-22 · PR #120 合并及 D5b5b Windows 全量验收补证
+
+维护者提供的 Windows 日志确认 `pnpm run test:published:oidc:revoke:multitab:config` **11/11**、`vp check` **398 个格式文件/250 个受检文件零警告及错误**、`docs:check` **89 份**、完整 `pnpm run ready` **退出码 0**。其中 Vitest **57/57 文件、680/680 用例**、NestJS HTTP E2E **6/6 文件、62/62 用例**、React/Vue/NestJS 构建完成。E-076 的未使用导入问题由上述质量检查记录关闭。日志未包含本机 HEAD 的明确输出，不把实测严格绑定到某个 GitHub commit。
+
+维护者随后明确授权合并 PR #120；GitHub 已将 `test/b35-d5b5-multitab-revoked-readonly@17fe4520e87d40aa2a31ee79265d9e2bce59e9f3` Squash 合并为 `main@eb3fdc5105d3cb5d88593db7fffd7702e91625c8`。**该日志只证明离线质量链**：D5b5b 真实双标签页 Chrome/Keycloak 测试未提供执行记录，不能在本文件记作通过。
+
+## 2026-11-22 · D5b5c 已撤权发布双标签逆序交付候选
+
+新增只读页面门禁、13 项 Node 测试定义及独立 React/Vue 真实浏览器脚本。目标是两页各真实读取同一已撤权 D5b4 工程的发布接口 404，待底层 `fetch` 获得真实 Response 后让两个页面 Promise 同时保持 pending，**先消费第二页，再消费第一页**。每个阶段需比较无网格 SVG、工程 JSON、IndexedDB 草稿数与摘要、自动保存状态及 CAS 基线，原有守卫必须统计每页精确一条目标 GET、无新增写入。只输出固定脱敏阶段及安全类别。
+
+协作容器 Node 22.16.0 对同用途纯门禁原型执行了 `node --check` 与原生 `node --test`：**13/13 测试通过**，包含独立 VM 序列化与故障反向断言。该运行发生在隔离原型文件上，不冒充 GitHub 提交的正式 Windows `vp check` / `docs:check` / `ready`，也不代表真实 CDP、Keycloak、PostgreSQL 或工业安全验收。新 GitHub 分支的完整质量链和真实浏览器测试均**待维护者执行**。
+
+本次不修改 React/Vue 生产业务、NestJS、Prisma 或工业网关。新增门禁不会模拟 HTTP 404，也不会保留 TCP 层挂起连接；它只控制**已到达响应在页面 Promise 的交付时序**。不能将其称为 Studio 自身处理迟到授权拒绝、真实 HTTP 网络竞态或工程写入 CAS 竞争。复用既有工程，不创建数据、不恢复 ACL、不做服务端写入。
+
+## 2026-11-22 · D5b5c Windows 完整质量通过，但双项真实浏览器失败（E-077）
+
+维护者 Windows 在本机执行 `test:published:oidc:revoke:late:config` **13/13**、`vp check` **401 个格式文件/253 个受检文件零警告错误**、`docs:check` **89 份**、完整 `pnpm run ready` **退出码 0**，包含 **680/680 Vitest 单测**、**62/62 HTTP E2E** 与 React/Vue/NestJS 构建。上传日志没有显示运行时本机 `git rev-parse HEAD` 输出，不能把结果严格绑定到某个远端提交。上述质量链通过不能替代真实 OIDC 浏览器专项。
+
+维护者随后复用已撤销 `release:read` 的既有 D5b4 工程执行 PostgreSQL 撤权后 **READ ONLY** 审计，明确确认三项基础 ACL 和原 D5b1 基线完整，未执行写入或恢复。真实 D5b5b 双标签测试完成 React 双标签首版载入、本地草稿与未保存编辑准备，在**第一标签页发布读取**后的保护断言失败，退出码 **1**。真实 D5b5c 双标签测试进一步运行到两页原始响应都已完成网络读取并通过 pending 阶段严格的 `404 + no-store + 无重定向` 检查，在**第二标签页优先释放**后报告“内部异常已脱敏”，退出码 **1**，未覆盖 Vue。当前不能得出最终草稿、CAS 或后台 GET 一定出错的结论。
+
+源码确认 D5b5b 在 `requireD5b5Preserved` 外层合并三种已知错误；D5b5c 没有将复用的保护错误列入安全白名单。修补方案只增加两条浏览器入口共享的固定中文失败分类与 **5+1 项**离线负向回归，原严格断言和 CDP/CDP 网络行为不变。可能出现的“多余工程 GET”“404/no-store 异常”“本地 SVG/IndexedDB/CAS 变化”将分别归类，未知异常仍不能回显敏感内容。
+
+**尚待 Windows 最新 HEAD 重新执行**：`test:published:oidc:revoke:multitab:config`（原 11 项加 5 项），`test:published:oidc:revoke:late:config`（原 13 项加 1 项）、`vp check`、`docs:check`、完整 `ready`；再按 `docs/HARNESS.md` 先只读审计、依次运行真实 D5b5b 和 D5b5c。若首个真实专项仍失败，先用固定类别定位，不需重复 D5b4 授权撤销、不创建工程或修改数据库。失败继续保持 PR #121 Draft，不合并。
+
+## 2026-11-22 · E-078 双标签真实只读响应结算时序候选
+
+维护者 Windows 对上次 E-077 修补后的源码执行 D5b5b **16/16**、D5b5c **14/14**、`vp check` **401 格式文件/253 受检零警告**、`docs:check` **89**、完整 `ready` **退出码 0**（680/680 Vitest、62/62 NestJS HTTP E2E 与 React/Vue/NestJS 构建）。同一既有 D5b4 专用工程的撤权后 PostgreSQL READ ONLY 审计通过，`release:read` 仍缺失，三项基础权限及原 D5b1 基线未变化；没有执行 SQL 写入或恢复。
+
+真实 Keycloak/Chrome 再次验收：D5b5b React 两标签的真实发布 GET 404 都已通过，最后“切回第一标签页并复核”报告“工程 API 只读约束或发布 GET 404 不符合预期”，退出码 1；D5b5c React 两标签真实 404 都已到达页面，两个 Promise 同时 pending 已验证，第二页优先交付之后报“工程响应数量不符”，退出码 1；**Vue 未执行，仍未通过双框架验收**。这些日志没有输出请求数量与请求生命周期，不能推断有额外写入或后台 GET 一定是根因。
+
+源码证实 `installPublishedReadGuardInPage` 先 push `paths`，待 `fetch` 结束再 push `statuses`；先前脚本没有在记基线前保证旧 GET 的响应已结算。E-078 候选新增共享的有界等待：守卫必须 `blocked === 0`、请求与响应数组存在、状态数量不能反超路径数量；等未完成的原生 GET 补齐后才继续。**原严格每次只增加一条目标 GET/404、请求历史不可变化、最终 SVG/JSON/IndexedDB/自动保存/CAS 完全一致仍全部执行**，等待超时仍失败；不清空或忽略任何记录。新增 D5b5b 4 项离线测试定义（20 项），D5b5c 14 项不变。
+
+**待维护者 Windows 在最新 HEAD 重验**：D5b5b 20/20、D5b5c 14/14、`vp check`、`docs:check`、完整 `ready`，随后 D5b4e 只读审计、D5b5b/D5b5c 真实 React/Vue。上次完整质量链不能替代新补丁测试；未知请求异常、长时间未返回或任何本地漂移均保持 fail-closed。
+
+## 2026-11-22 · E-079 D5b5b 真实双框架通过，D5b5c 第一页逆序交付仍失败
+
+维护者 Windows 明确打印 `git rev-parse HEAD = baa612ca029ff3f8a3bd6fe75b03ba24c7d85f9b` 并通过版本一致性检查；D5b4e PostgreSQL 撤权后只读审计**通过**，原 D5b4 工程仍仅缺少 `release:read`，三项基础 ACL 及 D5b1 基线完整。随后 D5b5b 真实 Keycloak/Chrome **React 与 Vue 各自两标签页**都完成正式 Studio 首版只读载入、第一标签保存一次 IndexedDB 草稿、分别新增未保存图元、顺序真实发布 GET 404、真实页面可见性切换与最终 SVG/JSON/草稿/CAS 不变检查，脚本整体退出码 0；**D5b5b 真实浏览器阻塞本轮关闭**。
+
+D5b5c React 两个已完成网络读取的真实 404 Response 的 Promise 同时 pending、第二页优先交付严格通过；随后在第一标签后交付阶段失败，类别为 `D5b5 双标签读取期间工程请求数量不符`，进程退出码 **1**。Vue 尚未进入 D5b5c 阶段。末尾单独的无条件 `Write-Host` 打印“真实浏览器验收通过”不是测试成功结果，不能据此关闭 D5b5c。原脚本在**第一标签严格核验前主动切回第一可见标签**；可见性恢复可能引入常规背景 GET，但尚无请求数量的原始证据证明这就是唯一根因。
+
+E-079 候选只将这一处 `switchToTab(browser, second)` 延后到两个原始 404 各自完成**严格单次目标 GET + HTTP 404 + no-store + 无重定向 + 本地完整状态**校验后的最终可见性恢复阶段。第一标签在仍然隐藏时完成原始 Response 交付，不伪造响应、不改变原守卫、不忽略额外 GET；最后仍切回第一标签执行 SVG/工程 JSON/IndexedDB/CAS 和零写入复核。新加 1 项隐藏标签页仍能独立完成逆序交付且两标签各一次 GET 的 Node 测试定义，D5b5c 目标由 **14 增至 15 项**。
+
+本次 E-079 修补**尚未在 Windows 测试或真实 Chrome/Keycloak 复验**。上轮 D5b5b 20/20、D5b5c 14/14、`vp check` 401/253、`docs:check` 89、完整 `ready` 退出码 0 为**旧 HEAD** 的证据，不代表 E-079 新提交已通过。PR #121 保持 Draft；不修改 React/Vue/NestJS 生产代码、不恢复 ACL、不创建工程、不执行数据库或设备写入。

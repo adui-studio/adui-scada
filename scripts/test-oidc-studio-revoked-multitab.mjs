@@ -34,6 +34,102 @@ import {
   requireD5b5Preserved,
 } from "./test-oidc-studio-revoked-draft.mjs";
 
+/** 诊断仅使用固定中文类别，不返回工程 ID、请求路径、HTTP 正文和草稿内容。 */
+export const D5B5_PROTECTION_REASONS = Object.freeze([
+  "D5b5 双标签缺少已安装的工程只读守卫",
+  "D5b5 双标签出现非只读工程请求",
+  "D5b5 双标签工程请求记录不完整",
+  "D5b5 双标签读取期间工程请求数量不符",
+  "D5b5 双标签读取期间工程响应数量不符",
+  "D5b5 双标签原有工程请求记录发生变化",
+  "D5b5 双标签发布读取路径不符合预期",
+  "D5b5 双标签发布读取记录未返回 404",
+  "D5b5 双标签真实发布响应不是 404",
+  "D5b5 双标签真实发布响应缺少 no-store",
+  "D5b5 双标签真实发布响应地址不符或发生重定向",
+  "D5b5 双标签业务 SVG 内容变化",
+  "D5b5 双标签工程 JSON 摘要变化",
+  "D5b5 双标签 IndexedDB 草稿数量变化",
+  "D5b5 双标签 IndexedDB 草稿摘要变化",
+  "D5b5 双标签自动保存状态变化",
+  "D5b5 双标签 CAS 基线变化",
+  "D5b5 双标签工程关联发生变化",
+  "D5b5 双标签保护快照字段异常",
+  "D5b5 双标签保护断言异常已脱敏",
+]);
+
+/** 保留既有严格断言，仅在失败后将原因映射为有限、无敏感数据的类别。 */
+export function classifyD5b5PreservationFailure(
+  error,
+  projectId,
+  before,
+  after,
+  response,
+  beforeGuard,
+  afterGuard,
+) {
+  if (!(error instanceof Error)) return D5B5_PROTECTION_REASONS[19];
+  if (error.message === "D5b5 浏览器工程请求不符合零写入约束") {
+    if (!beforeGuard || !afterGuard) return D5B5_PROTECTION_REASONS[0];
+    if (beforeGuard.blocked !== 0 || afterGuard.blocked !== 0) {
+      return D5B5_PROTECTION_REASONS[1];
+    }
+    const validRecords = [
+      beforeGuard.paths,
+      afterGuard.paths,
+      beforeGuard.statuses,
+      afterGuard.statuses,
+    ];
+    if (!validRecords.every(Array.isArray)) return D5B5_PROTECTION_REASONS[2];
+    if (afterGuard.paths.length !== beforeGuard.paths.length + 1) {
+      return D5B5_PROTECTION_REASONS[3];
+    }
+    if (afterGuard.statuses.length !== beforeGuard.statuses.length + 1) {
+      return D5B5_PROTECTION_REASONS[4];
+    }
+    if (
+      !beforeGuard.paths.every((path, index) => afterGuard.paths[index] === path) ||
+      !beforeGuard.statuses.every((status, index) => afterGuard.statuses[index] === status)
+    ) {
+      return D5B5_PROTECTION_REASONS[5];
+    }
+    if (
+      typeof projectId !== "string" ||
+      afterGuard.paths[beforeGuard.paths.length] !==
+        "/api/v1/projects/" + projectId + "/releases/current"
+    ) {
+      return D5B5_PROTECTION_REASONS[6];
+    }
+    if (afterGuard.statuses[beforeGuard.statuses.length] !== 404) {
+      return D5B5_PROTECTION_REASONS[7];
+    }
+    return D5B5_PROTECTION_REASONS[19];
+  }
+  if (error.message === "D5b5 已撤权发布接口未返回真实同源 HTTP 404") {
+    if (response?.status !== 404) return D5B5_PROTECTION_REASONS[8];
+    if (response.noStore !== true) return D5B5_PROTECTION_REASONS[9];
+    if (response.direct !== true) return D5B5_PROTECTION_REASONS[10];
+    return D5B5_PROTECTION_REASONS[19];
+  }
+  if (error.message === "D5b5 Studio 画布、IndexedDB 草稿或 CAS 基线发生变化") {
+    if (!before || !after) return D5B5_PROTECTION_REASONS[18];
+    const changes = classifyD5b5LocalChanges(before, after);
+    const drift = [
+      changes.canvasChanged,
+      changes.documentChanged,
+      changes.draftCountChanged,
+      changes.draftHashChanged,
+      changes.autoSaveChanged,
+      changes.baselineChanged,
+      changes.projectChanged,
+    ];
+    const fieldIndex = drift.findIndex((changed) => changed === true);
+    if (fieldIndex >= 0) return D5B5_PROTECTION_REASONS[fieldIndex + 11];
+    return D5B5_PROTECTION_REASONS[18];
+  }
+  return D5B5_PROTECTION_REASONS[19];
+}
+
 const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const PROJECT_PATTERN =
   /^d5b4-revoke-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -47,6 +143,8 @@ const SAFE_ERRORS = new Set([
   "D5b5b 同源双标签页可见性切换失败",
   "D5b5b SVG、工程 JSON、IndexedDB 草稿或 CAS 基线变化",
   "D5b5b 工程 API 只读约束或发布 GET 404 不符合预期",
+  "D5b5b 工程只读响应等待超时",
+  ...D5B5_PROTECTION_REASONS,
 ]);
 const STAGES = new Set([
   "可信 OIDC 登录",
@@ -159,7 +257,29 @@ export function requireD5b5NoBlockedWrites(first, second) {
   return true;
 }
 
-async function waitForStudioReady(session, origin, principal) {
+/** 工程请求可能先登记路径、异步完成后才登记状态；不忽略任何未完成请求。 */
+export function requireD5b5ReadGuardProgress(guard) {
+  if (
+    !guard ||
+    guard.blocked !== 0 ||
+    !Array.isArray(guard.paths) ||
+    !Array.isArray(guard.statuses) ||
+    guard.statuses.length > guard.paths.length
+  ) {
+    throw new Error("D5b5b 工程 API 只读约束或发布 GET 404 不符合预期");
+  }
+  return guard.paths.length === guard.statuses.length;
+}
+
+/** 只等待已有 GET 的真实结果；超时或缺失响应均禁止继续验收。 */
+export async function waitForD5b5ReadGuardSettled(session) {
+  return waitForState(async () => {
+    const guard = await session.evaluate(publishedReadGuardStateInPage);
+    return requireD5b5ReadGuardProgress(guard) ? guard : null;
+  }, "D5b5b 工程只读响应等待超时");
+}
+
+export async function waitForStudioReady(session, origin, principal) {
   const identity = await waitForState(
     () => session.evaluate(identityInPage, origin),
     "D5b5b 两个标签页必须使用同一可信主体",
@@ -183,7 +303,7 @@ async function waitForTabHidden(session) {
   );
 }
 
-async function switchToTab(visible, hidden) {
+export async function switchToTab(visible, hidden) {
   await activateStudioTab(visible);
   await waitForTabHidden(hidden);
   if (!(await visible.evaluate(waitForStudioActionIdleInPage))) {
@@ -192,14 +312,23 @@ async function switchToTab(visible, hidden) {
 }
 
 async function verifySingleRevokedGet(session, origin, projectId, baseline) {
-  const beforeGuard = await session.evaluate(publishedReadGuardStateInPage);
+  const beforeGuard = await waitForD5b5ReadGuardSettled(session);
   const response = await session.evaluate(readRevokedReleaseInStudioPage, origin, projectId);
-  const afterGuard = await session.evaluate(publishedReadGuardStateInPage);
+  const afterGuard = await waitForD5b5ReadGuardSettled(session);
   const after = await inspectD5b5StudioState(session);
   try {
     requireD5b5Preserved(projectId, baseline, after, response, beforeGuard, afterGuard);
-  } catch {
-    throw new Error("D5b5b 工程 API 只读约束或发布 GET 404 不符合预期");
+  } catch (error) {
+    const category = classifyD5b5PreservationFailure(
+      error,
+      projectId,
+      baseline,
+      after,
+      response,
+      beforeGuard,
+      afterGuard,
+    );
+    throw new Error(category);
   }
   return after;
 }
@@ -286,8 +415,8 @@ async function run() {
       requireD5b5TabUnchanged(projectId, firstBefore, firstFinal);
       requireD5b5TabUnchanged(projectId, secondBefore, secondFinal);
       const [firstGuard, secondGuard] = await Promise.all([
-        browser.evaluate(publishedReadGuardStateInPage),
-        second.evaluate(publishedReadGuardStateInPage),
+        waitForD5b5ReadGuardSettled(browser),
+        waitForD5b5ReadGuardSettled(second),
       ]);
       requireD5b5NoBlockedWrites(firstGuard, secondGuard);
       process.stdout.write(

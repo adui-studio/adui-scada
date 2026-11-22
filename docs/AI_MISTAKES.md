@@ -708,6 +708,35 @@
 - **验证边界**：此条记录基于维护者提供的真实 Windows 警告日志及 GitHub 远端源码；修复后 `pnpm run test:published:oidc:revoke:multitab:config`、`vp check`、`docs:check`、完整 `ready` 和真实 Keycloak/Chrome 双标签页均**待 Windows 复验**，不得记为已通过。本次不执行数据库写入、ACL 恢复或服务端工程写入。
 - **证据**：维护者 2026-11-22 `vp check --fix` 日志、PR #120、`scripts/test-oidc-studio-revoked-multitab.mjs`、`docs/VALIDATION.md`。
 
+> **2026-11-22 · E-076 Windows 结案补录**：维护者提供 PR #120 修复后的本机实际日志：`test:published:oidc:revoke:multitab:config` **11/11**、`vp check` **398 个格式文件/250 个受检文件零警告错误**、`docs:check` **89 份**、完整 `pnpm run ready` **退出码 0**（Vitest **680/680**、HTTP E2E **62/62**、React/Vue/NestJS 构建成功）。原始日志未打印本地 Git HEAD，不能将本机结果严格绑定到远端提交。维护者已明确授权合并；PR #120 已 Squash 合并到 `main@eb3fdc5105d3cb5d88593db7fffd7702e91625c8`，**E-076 的零警告质量门禁阻塞已关闭**。本轮没有新增 D5b5b 真实 Chrome/Keycloak 双标签页执行证据；该浏览器专项仍待独立验收。此结案补录本身未在 Windows 重新执行完整 `ready`。
+
+### E-077 · D5b5b/D5b5c 真实浏览器保护断言被二次通用脱敏（第三十五批 D5b5c）
+
+- **现象**：维护者 2026-11-22 Windows 已运行 D5b5c 离线 **13/13**、`vp check` **401 个格式文件/253 受检零告警错误**、`docs:check` **89 份**、完整 `ready`（Vitest **680/680**、HTTP E2E **62/62**、双框架及服务端构建）**退出码 0**。随后同一现存 D5b4 工程的撤权后 PostgreSQL **READ ONLY** 审计通过；真实 D5b5b 浏览器停在“React：第一标签页真实发布读取”，报“工程 API 只读约束或发布 GET 404 不符合预期”；D5b5c 在两个真实 404 Promise 同时挂起后，停在“React：先交付第二标签页真实 404”，报“内部异常已脱敏”。**两项真实浏览器退出码均为 1**；Vue 真实浏览器阶段没有执行完。
+- **可确认代码缺陷**：`test-oidc-studio-revoked-multitab.mjs` 的 `verifySingleRevokedGet` 使用无参数 `catch` 把 `requireD5b5Preserved` 的三类已审核失败（工程请求序列、HTTP 404/no-store/重定向、本地 SVG/草稿/CAS 变化）统合成一个错误；`test-oidc-studio-revoked-late-multitab.mjs` 直接复用该严格断言，但它的 `SAFE_ERRORS` 未包含被复用的三类错误，导致已知异常又被映射为“内部异常已脱敏”。**最终导致浏览器失败的具体字段/请求是否真的漂移还没有证据，不应推断为后台请求竞态或生产数据损坏**。
+- **最小修复**：保留 `requireD5b5Preserved` 的全部原始严格条件，不删除任何 GET/HTTP/草稿/CAS 断言；新增只返回固定中文枚举的 `classifyD5b5PreservationFailure`，区分守卫缺失、被阻断写入、额外工程 GET、异步响应计数、原有请求记录变化、目标路径/404、HTTP 缓存/重定向以及 SVG、工程 JSON、IndexedDB、自动保存、CAS 和工程关联变化。D5b5b/D5b5c 分别在原断言抛错后调用分类器，其顶层安全白名单只允许这些固定字符串。未知异常保持脱敏，不输出真实工程 ID、工程正文、摘要、Token、Cookie、数据库连接或异常堆栈。
+- **防复发**：真实 CDP 安全专项不得把**已知保护性断言**无条件折叠成通用异常；复用另一脚本的固定异常时同步核对当前脚本的白名单。分类器仅在断言确实失败后观察安全字段，不得代替/放宽断言或通过忽略背景 GET 使红灯变绿。请求并发顺序需要从下一轮真实阶段分类确认，不从一行错误消息推测。
+- **验证边界**：维护者的 Windows **13/13** 与完整 `ready` 是修补前代码的真实证据。候选已为 D5b5b 增加 **5 项**真实断言负向回归，为 D5b5c 增加 **1 项**白名单透传回归；**修补后的 Windows Node、`vp check`、`docs:check`、`ready`、双框架真实浏览器都待复测**。没有执行数据库写入、恢复 ACL、服务端 POST 或工业设备控制。
+- **证据**：维护者 2026-11-22 D5b5b/D5b5c 真实浏览器失败日志和完整 Windows 质量日志、PR #121、`scripts/test-oidc-studio-revoked-multitab.mjs`、`scripts/test-oidc-studio-revoked-late-multitab.mjs`、`docs/VALIDATION.md`。
+
+### E-078 · 双标签页只读 GET 先记路径后记响应导致过早断言（第三十五批 D5b5c，待真实复验）
+
+- **现象**：维护者 2026-11-22 Windows 已对 E-077 修补版完成 D5b5b **16/16**、D5b5c **14/14** 离线回归、`vp check` **401/253 零告警错误**、`docs:check` **89**、完整 `ready`（680/680 Vitest、62/62 E2E、React/Vue/NestJS 构建）**退出码 0**。同一已撤权 D5b4 工程再次通过 PostgreSQL **READ ONLY** 审计。真实 D5b5b 的 React 第一、第二标签页发布读取均已通过，却在“切回第一标签页并复核”报“工程 API 只读约束或发布 GET 404 不符合预期”，退出码 1；真实 D5b5c 两页已经持有真实 404 并通过同时 pending 检查，却在第二页优先交付后明确报“工程响应数量不符”，退出码 1。**Vue 阶段未覆盖，不得记为通过**。
+- **已确认的时序机制**：既有页面只读守卫 `installPublishedReadGuardInPage` 在发出原生 `fetch` 前先向 `paths` 追加请求路径，而在 `Promise.resolve(original(...)).then(...)` 中、真实响应完成后才向 `statuses` 追加 HTTP 状态。Studio 的可见性恢复和 UI idle 不保证所有后台只读 GET 已结束。D5b5b 在最后检查时直接要求 `paths.length === statuses.length`；D5b5c 在新 GET 之前没有等待旧记录结算，却立即要求新请求导致两个数组**同时恰好新增 1**。**尚未获得网络级请求时间线和原始计数，不能断言两次真实失败只因已有 GET 未完成；未排除异常请求或生产状态变化。**
+- **最小修复候选**：仅在测试脚本增加 `requireD5b5ReadGuardProgress` 与 `waitForD5b5ReadGuardSettled`，要求守卫存在、`blocked === 0`、两个数组合法且响应数量不反超请求数量；若尚有 `paths` 未对应到 `statuses` 则通过现有 `waitForState` **最多 80 次、每次 150ms** 有界等待真实完成，超时或真实 Fetch 永远未返回仍失败。D5b5b 在每次主动 GET 前后及切回最终对照前结算，D5b5c 在两页分别挂起前、各次释放后和最终检查前结算。保留 `requireD5b5Preserved` 的“每次目标请求与响应严格各增加 1”及原始历史一致检查；保留最终完整 SVG、JSON、IndexedDB 草稿、自动保存、CAS 和零写入断言。**不清理/忽略额外请求，不伪造 404，不允许继续挂起无限等待，不改生产 API/ACL。**
+- **防复发**：异步请求计数型安全测试必须在记录基线前确保先前请求结算；等待只解决时间上的未完成，不允许以宽松的总数比较或清空记录绕过额外目标 GET。通过原生 Node 测试覆盖异步一前一后、阻断写入、破损数组、状态数反超与额外 GET 严格拒绝，最终仍需在真实 Keycloak/Chrome 双框架证明。
+- **验证边界**：本候选新增 D5b5b **4 项**离线门禁定义（总数由 16 增至 **20**），D5b5c 原 **14 项**不变；最新 HEAD 的 Windows Node、Vite+、文档、完整 `ready`、D5b5b 和 D5b5c 真实浏览器**均待维护者重新验收**。上次 Windows 通过记录适用于**修补前**代码。没有修改或恢复数据库授权、创建工程、写入发布版本、设备控制或生产数据。
+- **证据**：本次维护者 D5b4e READ ONLY 与两项真实浏览器失败日志、`scripts/test-oidc-published-runtime-readonly.mjs`、`scripts/test-oidc-studio-revoked-multitab.mjs`、`scripts/test-oidc-studio-revoked-late-multitab.mjs`、PR #121、`docs/VALIDATION.md`。
+
+### E-079 · D5b5c 在第一响应严格核验前切回可见页，混入标签恢复期工程读取（第三十五批 D5b5c，待真实复验）
+
+- **真实验收结果**：维护者 2026-11-22 Windows 显式打印并验证本地 HEAD 为 `baa612ca029ff3f8a3bd6fe75b03ba24c7d85f9b`；同一已撤权 D5b4 工程的 PostgreSQL `READ ONLY` 审计通过，仅缺少 `release:read`，其他三项 ACL 和 D5b1 基线完整。**D5b5b 真实 Chrome/Keycloak 的 React 与 Vue 各自同源双标签页、顺序真实 404、可见性恢复、SVG/草稿/CAS 与零工程写入全部通过**。D5b5c React 已通过两个真实 404 同时挂起与**第二标签先交付**，随后在“后交付第一标签页真实 404”报 `D5b5 双标签读取期间工程请求数量不符`，进程退出码 1；Vue 未执行。末尾 PowerShell 单独运行的 `Write-Host "D5b5b / D5b5c 真实浏览器验收通过"` 不依赖退出码，**不能用作 D5b5c 成功证据**。
+- **已确认的测试顺序缺陷**：`scripts/test-oidc-studio-revoked-late-multitab.mjs` 先向第二标签释放原始 404 并完成校验，随后**在第一标签的响应交付和“目标 GET 恰好增加一次”严格断言之前**调用 `switchToTab(browser, second)`，使第一标签恢复可见。该调用可能触发 Studio 正常的可见性恢复只读 GET，并混入本次单一发布读取严格记录比较。现有日志没有曝光安全请求数量或生命周期，**不应断言新增 GET 一定由该切换触发**，亦不能认定生产逻辑存在错误。
+- **最小修复候选**：仅将这一处 `switchToTab(browser, second)` **从第一标签的响应交付前移动到两次响应均交付、`requireD5b5Preserved` 均成功之后的最终可见性恢复复核阶段**。第一标签通过真实 CDP 的 `evaluate` 在隐藏状态消费已收到的原始 HTTP 404；浏览器此前已对隐藏第一标签读取 pending 状态，因此无新增执行通道。最终仍切回第一标签检查 SVG、工程 JSON、IndexedDB 草稿摘要、自动保存、CAS 和两个标签零工程写入。保持原有顺序 **先第二页、后第一页**，原始 HTTP 404/no-store/无重定向以及每次**恰好一个**目标 GET/404、守卫日志完整性、所有失败拒绝条件不变。无忽略、清空或篡改背景 GET。
+- **防复发**：当安全断言要求恰好一次主动请求时，避免在取基线与核验该请求的窗口内执行会主动改变页面可见性的附加动作；如果要验证最终可见性恢复，应将其作为两个请求严格核验之后的独立阶段。离线测试增加隐藏页消费真实 Response 的独立模拟，验证两页均精确一次 GET、零被阻断写入；模拟无法证明 Chrome 实际会触发哪些后台 GET。
+- **验证边界**：新增 D5b5c **1 项**离线测试定义，预计由 **14 增至 15 项**；D5b5b 保持 20 项，E-078 已由维护者 Windows 实测 20/20、14/14、`vp check` 401/253 零告警、`docs:check` 89、完整 `ready` 退出码 0，但它们属于**修补前的 HEAD**。本次候选的 Windows Node、`vp check`、`docs:check`、`ready`、D5b5c React/Vue 真实浏览器均**待重新验收**；不创建或改变数据库、工程 ACL、发布状态和工业设备。
+- **证据**：维护者 2026-11-22 最新真实 Windows 日志、PR #121、`scripts/test-oidc-studio-revoked-late-multitab.mjs`、`scripts/test-oidc-studio-revoked-late-gate.cases.mjs` 与 `docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：

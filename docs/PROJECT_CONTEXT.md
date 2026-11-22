@@ -2004,3 +2004,27 @@ PR #118 E-075 修复后 Windows 离线门禁 **11/11**、`vp check` **396/248 �
 维护者提交 PR #119 文档分支 Windows `docs:check` **89 份通过**、`vp check` **396 格式文件/248 受检零错误警告**，明确授权 Squash 合并，主线提交 `main@8855becab403a334231be7b2fb253452a71c0c76`。D5b5 第一小批已由维护者在真实 Keycloak/HTTPS 环境验证：React/Vue Studio 同一既有已撤权 D5b4 工程，独立同源发布 GET 404 后 SVG、工程 JSON、IndexedDB 草稿和 CAS 基线不变。
 
 D5b5b 当前仅为**同一浏览器 Profile、每个框架独立的同源双标签页只读回归**：复用现有真实 CDP 新标签页、身份/页面可见性检查和 D5b5 单页保护，第一标签在隔离浏览器本地保存一次草稿，两标签分别建立未保存图元、顺序执行已撤权发布 GET 404，切回再核对双页本地快照与零工程 API 写入。没有后台工程创建、版本追加、授权恢复、再次撤销或设备操作。新增 11 项离线安全测试候选尚待 Windows 原生完整质量链和真实双框架浏览器复验；HTTP 迟到响应竞态仍未覆盖，不得在此批宣称解决。
+
+## 2026-11-22 · PR #120 已合并，D5b5c 响应交付时序候选
+
+维护者 Windows `D5b5b` 离线 11/11、`vp check` 398/250 零告警、`docs:check` 89、完整 `ready`（680/680 单测、62/62 HTTP E2E、双框架及服务端构建）退出码 0；GitHub 按明确授权 Squash 合并 PR #120 至 `main@eb3fdc5105d3cb5d88593db7fffd7702e91625c8`。真实 D5b5b Chrome/Keycloak 双标签页专项仍待补证。
+
+接续 D5b5c 只读响应逆序交付候选：两标签各自真实 GET 已撤权 404，页面内让两个原始 Response 的 Promise 同时挂起，第二页先释放、第一页后释放；严格比较无网格 SVG、工程 JSON、IndexedDB 草稿摘要、自动保存及 CAS，不修改任何生产组件或 ACL。Node 原型 13/13，最新分支 Windows 质量链和真实浏览器专项待维护者验收；不把 Promise 交付顺序描述成服务端 HTTP 请求时序或 Studio 业务组件迟到响应处理。
+
+## 2026-11-22 · D5b5b/D5b5c 真实浏览器失败，PR #121 保持 Draft
+
+维护者 Windows D5b5c 离线 13/13、`vp check` 401/253 零告警、`docs:check` 89、完整 `ready` 退出码 0（680/680 Vitest、62/62 HTTP E2E、双框架和服务端构建）；D5b4e 原已撤权工程的 PostgreSQL READ ONLY 核验通过。真实 D5b5b React 第一标签页发布 GET 后严格保护断言失败；D5b5c React 第二标签已收到真实 404 且双页 pending 检查通过，但优先释放第二页后失败，两项专项退出码都是 1，Vue 尚未完成。根因（请求数/真实响应/草稿/CAS）尚未获得分类证据。
+
+E-077 修补仅在原严格断言失败后映射固定中文类别，并为 D5b5c 增加白名单，附加 5+1 项离线安全回归；未修改任何业务组件、数据库或 ACL。最新 PR HEAD 的 Windows 门禁及真实浏览器仍需重跑，PR #121 继续 Draft，未经授权不得合并。
+
+## 2026-11-22 · E-078 真实双标签异步只读响应记录结算修补（待复测）
+
+维护者 Windows E-077 离线质量链 D5b5b 16/16、D5b5c 14/14、`vp check` 401/253 零告警、`ready` 退出码 0；撤权后 PostgreSQL READ ONLY 核验通过。真实 D5b5b React 两次 404 后最终守卫检查失败，D5b5c React 双页真实 404 同时 pending 后在第二页先释放时报“工程响应数量不符”，两个浏览器专项均退出码 1，Vue 未验收。只读守卫先登记路径后登记真实响应状态，当前测试缺少异步响应结算等待。
+
+PR #121 E-078 候选复用现有有界轮询在两标签逐次 GET 前后及最终检查时确保守卫请求/响应均完成，但不清除额外请求、也不放宽每次 GET 恰好新增 1 项、零写入或 SVG/JSON/草稿/CAS 保持的严格断言。新增 4 项 Node 测试定义，最新分支正式 Windows 质量链及 Keycloak/Chrome React/Vue 回归待执行，仍保持 Draft 未合并。
+
+## 2026-11-22 · E-079：D5b5b 真实双框架结案，D5b5c 仍需第一标签隐藏交付复测
+
+维护者明确核对 Windows Git HEAD `baa612ca029ff3f8a3bd6fe75b03ba24c7d85f9b`，D5b4e PostgreSQL READ ONLY 审计通过；D5b5b React/Vue 真实双标签已全部通过两次顺序发布 GET 404、可见性恢复和 SVG/JSON/IndexedDB/CAS 保护。D5b5c React 两页真实 404 同时 pending、第二页先交付通过，但第一标签切回可见后“工程请求数量不符”失败，Vue 未执行，真实 D5b5c 整体阻塞未关闭。
+
+本批候选只调整 D5b5c 测试编排顺序：第一标签先保持隐藏，交付并严格检查第二个原始 Response 后，才切回第一标签作最终完整本地保护复核；不改生产代码、HTTP 状态、ACL 和数据库。新增 1 项 Node 用例（D5b5c 目标 15 项），相关最新 Windows 质量链与真实浏览器待复验；PR #121 仍 Draft 未合并。
