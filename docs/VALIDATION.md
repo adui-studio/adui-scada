@@ -2667,4 +2667,3 @@ E-079 候选只将这一处 `switchToTab(browser, second)` 延后到两个原始
 **重要限制**：这只证明已撤权工程在运行页真实隐藏重显期间的拒绝和零陈旧显示；不覆盖真实已发布快照从 `verified` 到撤权的竞态、Studio 业务预检迟到拒绝、网络 TCP 级请求乱序、实时 Tag 正常质量、真实发布/回滚写入或工业设备。无写入模式、不新建工程、不变更 ACL、不再次撤权，也不运行现场设备指令。
 
 新增 `test:published:oidc:revoke:visibility:config`（13 项 Node 安全回归定义，纳入 `ready`）和独立的 `test:published:oidc:revoke:visibility:browser`（真实浏览器，需要手动登录，**不纳入 `ready`**）。新代码刚提交 GitHub，协作端无法运行本机 pnpm/Vite+/Keycloak；**本批的 Windows Node/Vite+/docs/ready、真实 React/Vue 专项及数据库事后复核均待实际执行**。本批保持 Draft，未经维护者再次明确授权不得合并。
-

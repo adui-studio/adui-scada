@@ -52,10 +52,7 @@ void describe("D5b6 已撤权发布运行页面隐藏重显只读安全门禁", 
       ["--phase", "after", "--project-id", ID],
       ["--apply", "--confirm-lab", "adui_scada"],
     ]) {
-      assert.throws(
-        () => parseD5b6VisibilityArgs(args),
-        /只允许已有撤权工程的明确只读回归参数/,
-      );
+      assert.throws(() => parseD5b6VisibilityArgs(args), /只允许已有撤权工程的明确只读回归参数/);
     }
   });
 
@@ -98,10 +95,11 @@ void describe("D5b6 已撤权发布运行页面隐藏重显只读安全门禁", 
     const baseline = fixture("resumed");
     for (const statuses of [[404, 401], [403, 404], [200, 200], [404]]) {
       assert.throws(
-        () => check("resumed", {
-          ...baseline,
-          observer: { ...baseline.observer, statuses },
-        }),
+        () =>
+          check("resumed", {
+            ...baseline,
+            observer: { ...baseline.observer, statuses },
+          }),
         /HTTP 404、只读守卫或本地运行状态不符合预期/,
       );
     }

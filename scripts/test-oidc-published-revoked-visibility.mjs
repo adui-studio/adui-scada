@@ -10,12 +10,8 @@ import {
   waitForLogin,
 } from "./test-oidc-dual-cas.mjs";
 import { resolveProjectBrowserLab } from "./test-project-browser-oidc.mjs";
-import {
-  publishedAuthorizedUiStateInPage,
-} from "./test-oidc-published-runtime-authorized.mjs";
-import {
-  clickPublishedReadControlInPage,
-} from "./test-oidc-published-runtime-denied.mjs";
+import { publishedAuthorizedUiStateInPage } from "./test-oidc-published-runtime-authorized.mjs";
+import { clickPublishedReadControlInPage } from "./test-oidc-published-runtime-denied.mjs";
 import {
   d5b4ResponseStateInPage,
   enterD5b4ProjectInPage,
@@ -28,10 +24,7 @@ import {
   submitPublishedProjectInPage,
   waitForState,
 } from "./test-oidc-published-runtime-readonly.mjs";
-import {
-  activateStudioTab,
-  openCompanionChromeTab,
-} from "./test-oidc-studio-multitab.mjs";
+import { activateStudioTab, openCompanionChromeTab } from "./test-oidc-studio-multitab.mjs";
 import {
   studioVisibilityInPage,
   waitForD5b5ReadGuardSettled,
@@ -173,15 +166,12 @@ async function verifyOrigin(browser, second, origin, principal, projectId, name,
   report(name + "：正式运行首次真实 404");
   assert.equal(await browser.evaluate(enterD5b4ProjectInPage, projectId), true);
   assert.equal(await browser.evaluate(submitPublishedProjectInPage), true);
-  await waitForState(
-    async () => {
-      const observer = await browser.evaluate(d5b4ResponseStateInPage);
-      if (observer?.statuses?.length !== 1) return null;
-      const state = await browser.evaluate(publishedAuthorizedUiStateInPage, projectId);
-      return state?.status === "denied" ? state : null;
-    },
-    "D5b6 运行页面隐藏与重显阶段等待超时",
-  );
+  await waitForState(async () => {
+    const observer = await browser.evaluate(d5b4ResponseStateInPage);
+    if (observer?.statuses?.length !== 1) return null;
+    const state = await browser.evaluate(publishedAuthorizedUiStateInPage, projectId);
+    return state?.status === "denied" ? state : null;
+  }, "D5b6 运行页面隐藏与重显阶段等待超时");
   await captureStage(browser, projectId, "denied");
 
   report(name + "：第二标签页使运行页隐藏");
@@ -211,15 +201,12 @@ async function verifyOrigin(browser, second, origin, principal, projectId, name,
     () => second.evaluate(studioVisibilityInPage).then((state) => state === "hidden"),
     "D5b6 真实发布运行入口或标签页可见性异常",
   );
-  await waitForState(
-    async () => {
-      const observer = await browser.evaluate(d5b4ResponseStateInPage);
-      if (observer?.statuses?.length !== 2) return null;
-      const state = await browser.evaluate(publishedAuthorizedUiStateInPage, projectId);
-      return state?.status === "denied" ? state : null;
-    },
-    "D5b6 运行页面隐藏与重显阶段等待超时",
-  );
+  await waitForState(async () => {
+    const observer = await browser.evaluate(d5b4ResponseStateInPage);
+    if (observer?.statuses?.length !== 2) return null;
+    const state = await browser.evaluate(publishedAuthorizedUiStateInPage, projectId);
+    return state?.status === "denied" ? state : null;
+  }, "D5b6 运行页面隐藏与重显阶段等待超时");
   await captureStage(browser, projectId, "resumed");
 
   report(name + "：停止读取后零新增 GET");
@@ -232,9 +219,7 @@ async function verifyOrigin(browser, second, origin, principal, projectId, name,
     "D5b6 运行页面隐藏与重显阶段等待超时",
   );
   await captureStage(browser, projectId, "stopped");
-  process.stdout.write(
-    name + "：两次真实 404、隐藏清空、重显重新拒绝及停止后零新增 GET 通过。\n",
-  );
+  process.stdout.write(name + "：两次真实 404、隐藏清空、重显重新拒绝及停止后零新增 GET 通过。\n");
 }
 
 async function run() {
