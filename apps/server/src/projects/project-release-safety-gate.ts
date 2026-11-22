@@ -16,6 +16,8 @@ export type ProjectReleaseSafetyBlockCode =
   | "PROJECT_MISMATCH"
   | "RUNTIME_COMPATIBILITY_UNVERIFIED"
   | "TAG_SOURCE_UNVERIFIED"
+  | "TAG_BINDING_SOURCE_UNVERIFIED"
+  | "TAG_BOUND_TYPE_UNRESOLVED"
   | "RUNTIME_ADMISSION_UNAVAILABLE"
   | "INDUSTRIAL_READ_POLICY_UNAVAILABLE";
 
@@ -45,9 +47,30 @@ export function assessProjectReleaseSafety(
   if (!validateProjectReleasePreflight(snapshot.document).passed) {
     blocks.push({ code: "RUNTIME_COMPATIBILITY_UNVERIFIED", path: "snapshot.document" });
   }
-  // 目前 Tag 目录没有工业地址/可信数据源映射；已有 Tag 即不能证明数据安全。
+  // TagDefinition 仅为可编辑元数据，既不携带可信数据源身份，也不证明实时质量。
   if (snapshot.document.tags.length > 0) {
     blocks.push({ code: "TAG_SOURCE_UNVERIFIED", path: "snapshot.document.tags" });
+  }
+  const tagTypes = new Map(snapshot.document.tags.map((tag) => [tag.tagId, tag.dataType]));
+  let hasBindings = false;
+  let hasUnresolvedBoundType = false;
+  // 隐藏页面和图元仍可能在正式运行时被引用，不可跳过其绑定。
+  for (const page of snapshot.document.pages) {
+    for (const node of page.nodes) {
+      for (const binding of Object.values(node.bindings)) {
+        hasBindings = true;
+        const dataType = tagTypes.get(binding.tagId);
+        if (dataType === undefined || dataType === "unknown") {
+          hasUnresolvedBoundType = true;
+        }
+      }
+    }
+  }
+  if (hasBindings) {
+    blocks.push({ code: "TAG_BINDING_SOURCE_UNVERIFIED", path: "snapshot.document.pages" });
+  }
+  if (hasUnresolvedBoundType) {
+    blocks.push({ code: "TAG_BOUND_TYPE_UNRESOLVED", path: "snapshot.document.tags" });
   }
   // Runtime 发布准入与工业网关只读策略仍未完成，任何静态工程也不能自动放行。
   blocks.push({ code: "RUNTIME_ADMISSION_UNAVAILABLE", path: "runtime" });

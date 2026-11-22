@@ -2112,3 +2112,11 @@ PR #132、#133 已按维护者明确授权先后 Squash 合并，主线分别为
 本轮 D5b8b 在共享 `PublishedRuntime` 接受已验证 RELEASED 快照后、进入 `verified` 前，重新运行现有 Core `validateProjectReleasePreflight`；对静态 `publishedSnapshotSvg` 增加相同的只读兼容性拒绝。有效 SHA-256 但包含当前运行时不支持的图元版本、规则或绑定时不得以 `verified` 展示，也不得静默生成降级静态画面。变更完全位于共享 Runtime，不引入框架分叉、外部数据源、设备写入或发布事务改动。
 
 新增两组负向 Vitest 测试定义，分别覆盖已验证发布状态拒绝及静态 SVG 拒绝。当前 GitHub 分支代码尚无 Windows 原生 `vp check`、Vitest、`docs:check`、完整 `ready` 和 React/Vue 浏览器实测；不能声称已通过。正式发布 `ProjectReleaseSafetyGate` 仍固定拒绝，真实 Tag/资源可用性与工业只读准入及独立审批仍未完成，Issue #126 保持 Open。
+
+## 2026-11-22 · D5b8b 已合并与 D5b8c Tag 来源只读安全评估候选
+
+经维护者明确授权，PR #134 以 Squash 合并至 `main@445424024b7faf82dd94c0a4faa6620a7d3049bd`。D5b8b 的 Windows 日志确认 Vitest **690/690**、HTTP E2E **62/62**、Vite+ **413/264 零告警错误**、Markdown **90** 份、React/Vue/NestJS 构建及完整 `ready` 成功；日志未输出本地 HEAD，因此不将其严格绑定到远端 SHA。合并只增强已发布静态快照的兼容性复核，不批准正式发布或工业数据源。
+
+D5b8c 从上述主线独立分支新增服务端 Tag 数据来源阻塞细分类别。当前共享 `TagDefinition` 仅包含 ID、类型、展示名称、单位和描述，**没有可信网关来源绑定、采集主体、来源授权、运行态质量/时效或资源准入元数据**；`description` 和 `displayName` 不得充当可信证明。正式安全门禁只读遍历所有页面/图元（含隐藏图元）绑定，区分 Tag 目录缺少可信源、真实绑定未获来源核验、已绑定未知类型等固定类别，并保留 Core 静态预检原有阻塞。无绑定但存在 `unknown` 的 Tag 不擅自推断已绑定类型；纯静态工程仍由 Runtime 和工业政策缺失阻塞。
+
+本小批新增 **3 项** Vitest 负向用例定义，修改限于服务端 Gate、单测和文档，既有 503 对外固定消息仍不变。所有阻塞包含固定代码和常量字段路径，不回显 Tag ID、设备地址、字段描述和凭据；既不连接 PostgreSQL、网关或现场设备，也不增加客户端脚本、Schema 字段或生产放行开关。**尚未在维护者 Windows 环境执行 `vp check`、Vitest、`docs:check`、`ready` 或真实 Lab 检查**，不标为已通过。工业数据源真实身份、独立授权、白名单、质量与时效审查仍须后续独立设计、评审和实测；Issue #126 继续 Open，ADR-0070 仍 Proposed。

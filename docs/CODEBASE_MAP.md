@@ -1241,3 +1241,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/runtime/src/published-runtime-view.ts`：`publishedSnapshotSvg` 同样核验当前静态 SVG 兼容性，不允许未知图元通过占位渲染冒充正常发布画面；仍只渲染空 Tag 值。
 - `packages/runtime/test/published-runtime.test.ts`、`published-runtime-view.test.ts`：新增有效 SHA-256 下运行时图元版本或规则不兼容的负向测试；尚待本机实测。
 - 发布服务器的 `ProjectReleaseSafetyGate`、PostgreSQL、ACL、工业网关和 Vue/React 应用未改动，正式发布能力继续 fail-closed。
+
+## 2026-11-22 · D5b8c Tag 来源与绑定安全阻塞细分
+
+- `apps/server/src/projects/project-release-safety-gate.ts`：在既有 `assessProjectReleaseSafety` 内只读扫描共享工程快照的全部 Tag 定义、页面及图元绑定；增加 `TAG_BINDING_SOURCE_UNVERIFIED` 和 `TAG_BOUND_TYPE_UNRESOLVED` 两个固定内部阻塞类别，保留 `TAG_SOURCE_UNVERIFIED` 和 `validateProjectReleasePreflight`。没有可信来源/质量证据时不能由 Tag 展示元数据推断现场正常；正式 `assertReady` 仍无条件抛相同错误。
+- `apps/server/src/projects/project-release-safety-gate.spec.ts`：更新已有阻塞清单精确断言，并增加 3 项负向用例，覆盖隐藏图元绑定、已绑定与未绑定 `unknown` 的区别、描述和显示名称伪造来源不造成安全放行或敏感信息输出。
+- 既有 NestJS HTTP 503 过滤器、发布事务、Prisma/ACL、共享 Core/Runtime、React/Vue 与工业网关均未修改。该分类不是可信 Tag 来源认证实现，真实数据质量和工业只读安全准入依旧缺失。
