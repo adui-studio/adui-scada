@@ -2540,3 +2540,11 @@ PR #113 Windows 原始日志：D5b4d Node 15/15、`vp check` 388 个格式文件
 D5b4f 只新建只读编排脚本与 10 项 Node 安全测试，使用同一显式专用工程 ID，分别对 `before` 和 `after` 执行**已有 PostgreSQL 阶段只读核查、已有 React/Vue 真实只读 GET、重复 PostgreSQL 只读核查**，任一步失败即停止。子进程通过 `process.execPath` 固定 Node 脚本/参数执行且 `shell:false`，不调用数据库写入、工程创建或 ACL 撤销/恢复；真实命令没有纳入 `ready`，只有离线门禁加入。历史 D5b4a～e 的安全契约和生产源码未更改。
 
 已回读 GitHub 脚本并在隔离 V8 以受控 Node Assert 模拟执行新测试定义 **10/10**，两份脚本 V8 语法通过。**尚未运行** Windows 原生 `node --test`、`vp check`、`docs:check`、完整 `ready`，也没有已授权的 D5b4 专用工程、真实撤权、前后浏览器或 PostgreSQL 专项结果。跨阶段验收、真实 ACL 变更及生产/设备安全仍未完成。
+
+## 2026-11-22 · D5b4g 单条撤权事务代码候选与验收边界
+
+维护者 PR #115 Windows 日志已确认：D5b4f 离线安全用例 **10/10**，`vp check` **392 个格式文件/244 受检零警告错误**，`docs:check` **89 份**，完整 `pnpm run ready` **680/680 单测、62/62 NestJS HTTP E2E、React/Vue/NestJS 构建成功、退出码 0**。PR #115 经明确授权 Squash 合并至 `main@7fa1ad5734aed653140cb0ec56a1473d036a8cd4`；上传日志未包含本地 `git rev-parse HEAD`，不假设 Windows SHA 完全一致。
+
+新候选仅增加 `scripts/revoke-oidc-published-read-target.mjs` 与 **13 项**对应 Node 安全测试，根 `test:published:oidc:revoke:single:config` 进入 `ready`，真实 `oidc:lab:published:revoke:single` 不进入自动链。它只在明确确认的未来本机 Lab 中，复用 D5b4c/e 原只读查询与完整三/四 ACL 断言；默认只读，未来写入需精确 `--apply --confirm-lab adui_scada --confirm-project <同一目标 ID>`；事务锁内只能删除专用工程单条 `release:read`，对旧 D5b1 和其余三项权限始终只读，失败回滚、未知 COMMIT/后置只读失败禁止自动重试或授权恢复。抽取的共用查询不改变 D5b4c/e 原事务次序和只读性质。
+
+从当前 GitHub 候选源码执行**隔离 V8/Mock 模拟**：新增 D5b4g **13/13**、原 D5b4c/e **21/21**，三项脚本语法解析通过。此项**不是**正式 Windows Node、真实 PostgreSQL、`vp check`、`docs:check` 或完整 `ready` 通过证明；正式质量链与任何真实写入执行均未进行。本轮未创建 D5b4 专用工程、未连接真实数据库、未执行 DELETE/INSERT/UPDATE、未撤销或恢复 ACL、未修改工业设备。
