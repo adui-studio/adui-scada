@@ -2595,3 +2595,19 @@ PR #117 已按维护者明确授权 Squash 合并至 `main@3c2e51c385ddaacb5015b
 **正式结论**：D5b5 第一小批“React/Vue Studio 页面独立真实同源发布读取 404 后本地草稿和未保存画布保护”**真实浏览器验收通过**，且已使用先前完成撤权的现存专用工程，未创建新的数据库夹具或再次执行授权撤销。该结果是**真实浏览器与 PostgreSQL 只读回归**，不是浏览器模拟 404。
 
 **不可扩大范围**：发布 GET 是从 Studio 页面发起的独立同源 Fetch，**不是** Studio 业务组件本身消费拒绝响应的发布状态机；草稿比较基于浏览器内读取值的记录数量和 SHA-256，而非 IndexedDB 物理文件字节；也未验证迟到 200/401/404 的真实时序竞态、同源多标签页同时编辑、真正生产设备或完整工业安全认证。后续专项应优先采用同一已撤权工程且零服务端写入的设计，不可为了重复构造撤权前状态恢复 `release:read`。
+
+## 2026-11-22 · D5b5b 同源双标签页撤权后只读草稿保护候选
+
+维护者 Windows 在 PR #119 文档分支执行 `docs:check` **89 份通过**、`vp check` **396 个格式文件/248 个受检文件零错误警告**，并明确授权合并；GitHub 已将文档 Squash 合并为 `main@8855becab403a334231be7b2fb253452a71c0c76`。用户日志未包含本地 `git rev-parse HEAD`，不把那次 Windows 结果严格绑定到 GitHub SHA，也不把此前 PR #118 的 `ready` 误写为此候选新增脚本的验收。
+
+本小批新增 `scripts/test-oidc-studio-revoked-multitab.mjs` 与 **11 项**离线 `.cases.mjs`：复用已合并的 D5b5 单标签页 Studio 工程列表只读载入、SVG/JSON/IndexedDB 草稿/CAS 快照、真实发布 GET 404 安全断言及同源 Chrome 第二标签页连接/真实可见性切换。每个框架两标签都需属于同一真实 Keycloak/BFF 主体、首版修订号 1；**只在第一标签页手动保存一次本地 IndexedDB 草稿**，第二标签仅读取共享记录并建立自己的未保存图元。依次切换真实可见标签执行真实同源发布 GET 404、返回第一标签复核两页本地数据及零受阻工程 API Fetch。该流程**不调用任何服务端工程写入 API**、不创建测试工程、不恢复 `release:read`。
+
+严格区别：本候选仅覆盖**同源双标签页并存、真实可见性切换、顺序只读 HTTP 404 与本地快照保持**；没有交错挂起多个 GET、模拟迟到 HTTP 200/401/404、验证 Studio 自身发布预检状态机，亦不覆盖 IndexedDB 物理文件字节一致性或工业控制认证。用户既有 D5b4 工程仍缺 `release:read`，原 D5b1 权限保持不变；若已不存在或被改变，脚本必须失败，不能调用写入修复测试状态。
+
+已从 GitHub 分支回读三份相关 JS 脚本并执行**隔离 V8 语法解析**，新增 11 项测试在隔离 V8/Mock 中 **11/11 符合预期**。这个简化模拟无法证明 Node `node:vm` 跨 Realm 的原生 `deepStrictEqual` 或真实 CDP 行为，因此**不是**正式 Windows Node、`vp check`、`docs:check`、`ready`、Keycloak/HTTPS/Chrome 或 PostgreSQL 的通过证据。本分支正式质量链及真实浏览器专项均待维护者验收。
+
+## 2026-11-22 · PR #120 D5b5b 双标签页测试未使用导入修复（待复验）
+
+维护者 Windows 在 PR #120 的 `vp check --fix` 中发现 `scripts/test-oidc-studio-revoked-multitab.mjs:30` 的 `eslint(no-unused-vars)` 警告：导入了未使用的 `describeD5b5StudioFailure`；同轮工具报告 **0 个错误、1 条警告**，并完成格式化，故**不是零警告验收**。
+
+远端候选仅删除这一项多余导入，保留双标签页专用的 `describeD5b5MultiTabFailure` 脱敏函数，未修改生产业务、工程 API、ACL 或测试断言。新增复盘为 E-076。当前协作环境不能执行维护者 Windows 的完整 Vite+/pnpm 与真实 HTTPS/Keycloak/Chrome 专项，因此修复后的原生 Node **11 项离线安全用例**、`vp check` 零警告、`docs:check`、`ready` 及 React/Vue 真实双标签页均**待验证**；此前的 V8/Mock 11/11 结果不能替代正式验收。目标继续只读复用已撤权 D5b4 工程，不恢复授权、不新增工程、不写入服务端。

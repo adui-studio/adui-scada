@@ -699,6 +699,15 @@
 - **验证边界**：在协作容器 **Node v22.16.0** 使用真实 `node:vm` 与 `node:assert/strict` 最小复现：原断言抛出 `ERR_ASSERTION`，`structuredClone` 后严格断言通过；另用 6 种请求字段、条数及额外属性篡改复核，均被严格断言拒绝。**这不是仓库完整 `node --test`、Windows `vp check` 或 `ready` 在最新修复 HEAD 的通过证据**，正式复测仍待维护者执行。本次未运行真实 Keycloak/HTTPS 浏览器、数据库写入或 ACL 恢复。
 - **证据**：维护者 2026-11-22 D5b5 Windows 失败日志、`scripts/test-oidc-studio-revoked-draft.cases.mjs`、PR #118、`docs/VALIDATION.md`。
 
+### E-076 · D5b5b 双标签页测试遗留未使用导入（第三十五批 D5b5b，待 Windows 复验）
+
+- **现象**：维护者 2026-11-22 在 PR #120 分支执行 `vp check --fix`，报告 `scripts/test-oidc-studio-revoked-multitab.mjs:30` 存在 1 条 `eslint(no-unused-vars)` 警告：`describeD5b5StudioFailure` 已导入但未使用；同轮为 0 个错误、1 个警告，并完成格式化。**不能据此判定零警告验收通过**。
+- **根因**：新增同源双标签页脚本复用 D5b5 单标签页的状态读取与安全断言时，同时复制了单标签页的异常描述函数导入；实际双标签页脚本已经定义并调用 `describeD5b5MultiTabFailure`，无需旧异常描述函数。
+- **最小修复**：只移除双标签页脚本中未使用的 `describeD5b5StudioFailure` 导入；保留原有异常脱敏、离线负向断言、浏览器只读守卫及 React/Vue 双标签执行流程。不修改单标签页脚本、生产应用或权限逻辑。
+- **防复发**：新增脚本复制已有 import 列表后，应逐项核对是否使用；提交前运行仓库正式 `vp check`，要求零警告、零错误，不以 `--fix` 格式化完成代替验收。
+- **验证边界**：此条记录基于维护者提供的真实 Windows 警告日志及 GitHub 远端源码；修复后 `pnpm run test:published:oidc:revoke:multitab:config`、`vp check`、`docs:check`、完整 `ready` 和真实 Keycloak/Chrome 双标签页均**待 Windows 复验**，不得记为已通过。本次不执行数据库写入、ACL 恢复或服务端工程写入。
+- **证据**：维护者 2026-11-22 `vp check --fix` 日志、PR #120、`scripts/test-oidc-studio-revoked-multitab.mjs`、`docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
