@@ -20,10 +20,11 @@ export const PUBLISHED_RUNTIME_STATUS_LABELS: Readonly<Record<PublishedRuntimeSt
  * 绝不从模拟 SSE、Studio 编辑 head 或 IndexedDB 草稿补充运行时数值。
  * 图元中缺失 Tag 时的 BAD 占位不是现场设备故障诊断。
  */
-export function publishedSnapshotSvg(snapshot: ProjectSnapshot): string {
+export function publishedSnapshotSvg(snapshot: ProjectSnapshot, pageId?: string): string {
   const document = parseScadaDocument(snapshot.document);
   if (!validateProjectReleasePreflight(document).passed) {
     throw new TypeError("已发布快照与当前 SVG 运行时不兼容");
   }
-  return svgDataUrl(document, []);
+  // 只允许读取当前已验证快照的页面；不访问编辑中的工程或任何实时 Tag 源。
+  return svgDataUrl(document, [], pageId);
 }
