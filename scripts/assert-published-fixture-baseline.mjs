@@ -17,9 +17,7 @@ function exactRow(row, keys) {
 }
 
 function oneRow(rows, keys) {
-  return Array.isArray(rows) && rows.length === 1 && exactRow(rows[0], keys)
-    ? rows[0]
-    : null;
+  return Array.isArray(rows) && rows.length === 1 && exactRow(rows[0], keys) ? rows[0] : null;
 }
 
 /** 保证原未发布工程及四项 ACL 未漂移；不得读取工程快照或更改权限。 */
