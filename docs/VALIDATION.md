@@ -3071,3 +3071,23 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批无现场可信时间来源、自动报警、确认 API、报警持久化、工业网关、发布能力或双端业务组件改动；未改动的 HTTP E2E、浏览器专项与完整 ready 不在本轮增量范围。真实工业报警与发布安全仍不得标为通过。
+
+## 2026-11-22 · D5b9h FR-011 同会话报警序列候选待验收
+
+PR #146 的维护者 Windows 实测精确 HEAD `d4d1575e931a40d57a4a9fafe54d12f5c2abefad`：时间窗口单测 6/6，Vite+ 421 格式文件及 272 受检零警告错误，docs:check 90，messages:check 296。Squash 合并后 `main@4729211eb48dd1914a4be9e22e1bae6a5dadcc11`。本次 D5b9h 新增 **6 项测试只是定义，未在 Windows 实测**。
+
+请在 PR 最新精确 HEAD 运行：
+
+```powershell
+git rev-parse HEAD
+vp test run packages/core/test/alarm-tag-sequence.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警候选序列检查测试失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批无协议接入、服务端采集会话、真实可信时间来源、报警触发/确认、数据库落地或工业设备写入；本地单元测试不意味着工业安全验收。未改动的 HTTP E2E、React/Vue 构建及完整 ready 不重复执行。
