@@ -2120,3 +2120,11 @@ PR #132、#133 已按维护者明确授权先后 Squash 合并，主线分别为
 D5b8c 从上述主线独立分支新增服务端 Tag 数据来源阻塞细分类别。当前共享 `TagDefinition` 仅包含 ID、类型、展示名称、单位和描述，**没有可信网关来源绑定、采集主体、来源授权、运行态质量/时效或资源准入元数据**；`description` 和 `displayName` 不得充当可信证明。正式安全门禁只读遍历所有页面/图元（含隐藏图元）绑定，区分 Tag 目录缺少可信源、真实绑定未获来源核验、已绑定未知类型等固定类别，并保留 Core 静态预检原有阻塞。无绑定但存在 `unknown` 的 Tag 不擅自推断已绑定类型；纯静态工程仍由 Runtime 和工业政策缺失阻塞。
 
 本小批新增 **3 项** Vitest 负向用例定义，修改限于服务端 Gate、单测和文档，既有 503 对外固定消息仍不变。所有阻塞包含固定代码和常量字段路径，不回显 Tag ID、设备地址、字段描述和凭据；既不连接 PostgreSQL、网关或现场设备，也不增加客户端脚本、Schema 字段或生产放行开关。**尚未在维护者 Windows 环境执行 `vp check`、Vitest、`docs:check`、`ready` 或真实 Lab 检查**，不标为已通过。工业数据源真实身份、独立授权、白名单、质量与时效审查仍须后续独立设计、评审和实测；Issue #126 继续 Open，ADR-0070 仍 Proposed。
+
+## 2026-11-22 · D5b8c 已合并与 D5b8d 工业只读安全策略阻塞细分候选
+
+维护者 Windows 日志明确打印本地 HEAD `c555caf56c1208cf46c584aec72dd3533344072e`，与 D5b8c PR #135 HEAD 一致；`test:unit` **693/693**、Vite+ **413 格式文件/264 受检零警告错误**、`docs:check` **90 份**、HTTP E2E **62/62**、React/Vue/NestJS 构建和完整 `ready` 均通过。经本轮明确授权，PR #135 已 Squash 合并至 `main@b0e37d57e6c6c755e1a0ebe4198f3aa0905fbc23`。该结果属于与 HEAD 精确绑定的 Windows 离线质量验收，不表示 PostgreSQL、工业网关和已发布夹具现场认证通过。
+
+D5b8d 从合并主线独立创建候选分支，只细化服务端 `assessProjectReleaseSafety` 的工业只读风险阻塞：任何图元绑定均不能仅凭 Tag 数据源元数据推断工业通道已获只读授权；任何非空 `rules[]`（包括隐藏及非首屏图元）都属于未经审核的规则/动作面，不能按任意 JSON 内容推断执行语义或放行。新增固定诊断 `INDUSTRIAL_BINDING_POLICY_UNVERIFIED`、`INDUSTRIAL_RULES_UNREVIEWED`，与既有 Tag 来源阻塞、Core 静态规则预检及无条件 `INDUSTRIAL_READ_POLICY_UNAVAILABLE` 互补，不以描述中的“只读/已审核”字样作为可信证明。
+
+本次 **新增 3 项 Vitest 负向用例定义**，预计安全门禁从 9 项至 12 项；所有诊断只携带固定类别和常量字段路径，绝不回显节点/Tag ID、设备地址、规则正文或凭据。无客户端/网关接入、真实规则执行、数据库/ACL/Schema 变更或放行开关；`ProjectReleaseSafetyGate.assertReady` 仍无条件抛错，对外发布仍固定 HTTP 503。该 Draft PR 尚未经 Windows `vp check`、Vitest、HTTP E2E、文档或 `ready` 实测，不能把目标测试数写为通过证据。Issue #126 保持 Open；ADR-0070 继续 Proposed，工业策略审批 S0/S1 和真实 Lab 写入专项未完成。
