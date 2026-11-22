@@ -163,6 +163,8 @@ export function requireD5b5Preserved(projectId, edited, after, response, beforeG
     !Array.isArray(afterGuard.statuses) ||
     afterGuard.paths.length !== beforeGuard.paths.length + 1 ||
     afterGuard.statuses.length !== beforeGuard.statuses.length + 1 ||
+    !beforeGuard.paths.every((value, index) => afterGuard.paths[index] === value) ||
+    !beforeGuard.statuses.every((value, index) => afterGuard.statuses[index] === value) ||
     afterGuard.paths[beforeGuard.paths.length] !== path ||
     afterGuard.statuses[beforeGuard.statuses.length] !== 404
   ) {
@@ -171,7 +173,23 @@ export function requireD5b5Preserved(projectId, edited, after, response, beforeG
   if (response?.status !== 404 || response.noStore !== true || response.direct !== true) {
     throw new Error("D5b5 已撤权发布接口未返回真实同源 HTTP 404");
   }
-  if (Object.values(classifyD5b5LocalChanges(edited, after)).some(Boolean)) {
+  if (
+    !edited ||
+    !after ||
+    edited.projectId !== projectId ||
+    after.projectId !== projectId ||
+    edited.baselineRevision !== 1 ||
+    after.baselineRevision !== 1 ||
+    edited.autoSave !== false ||
+    after.autoSave !== false ||
+    !Number.isInteger(edited.draftCount) ||
+    edited.draftCount < 1 ||
+    !/^[0-9a-f]{64}$/.test(edited.draftHash ?? "") ||
+    !/^[0-9a-f]{64}$/.test(after.draftHash ?? "") ||
+    !/^[0-9a-f]{64}$/.test(edited.documentHash ?? "") ||
+    !/^[0-9a-f]{64}$/.test(after.documentHash ?? "") ||
+    Object.values(classifyD5b5LocalChanges(edited, after)).some(Boolean)
+  ) {
     throw new Error("D5b5 Studio 画布、IndexedDB 草稿或 CAS 基线发生变化");
   }
   return true;
