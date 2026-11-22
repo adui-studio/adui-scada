@@ -1145,3 +1145,11 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - 根 `package.json`：`test:published:oidc:revoke:late:config` 纳入 `ready`，`test:published:oidc:revoke:late:browser` 仅限维护者本机可信 Lab 手工执行。
 
 **不修改** React/Vue/NestJS/Prisma/工程授权或工业设备；测试不会在服务端创建工程、回滚撤权或执行版本 POST。
+
+## 2026-11-22 · E-077 D5b5b/D5b5c 已知错误精确诊断
+
+- `scripts/test-oidc-studio-revoked-multitab.mjs`：新增 `D5B5_PROTECTION_REASONS` 与 `classifyD5b5PreservationFailure`；`verifySingleRevokedGet` 在原有 `requireD5b5Preserved` 抛错后输出白名单类别，不合并请求、响应及草稿异常。
+- `scripts/test-oidc-studio-revoked-late-multitab.mjs`：复用同一诊断分类，避免 D5b5c 将 D5b5 的已知固定错误再次泛化；完整原 404/草稿/CAS 断言保留。
+- `scripts/test-oidc-studio-revoked-multitab.cases.mjs`：增加 5 项原严格断言正反向及分类覆盖；`scripts/test-oidc-studio-revoked-late-gate.cases.mjs`：增加 1 项安全白名单透传测试。
+- `scripts/test-oidc-studio-revoked-draft.mjs` 与只读网络守卫、React/Vue Studio、NestJS、Prisma、工程 ACL 均未修改。浏览器失败的实际底层差异仍待 Windows 真实阶段分类。
+
