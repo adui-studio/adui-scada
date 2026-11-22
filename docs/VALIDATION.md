@@ -2510,3 +2510,9 @@ PR #112 补丁仅优化测试用例构造方式：把循环里最多 256 次整�
 GitHub 合并前复核 PR #112 候选 HEAD 为 `061c42ba756ccbf8d91788a57f615c1faac9b406`，对 `main@67526a8972f90325ed534ef8c05a5d43cffd7357` 领先 3 提交、落后 0 提交，Draft 且 Assignee 为 `@adui-dev`。**原始 Windows 复验日志未包含本地 `git rev-parse HEAD`**，因此不把运行结果伪称为对该 SHA 的严格本机绑定。本段属于验收后文档补录，不能视为补录提交再次完成 Windows `docs:check` 或 `ready`。
 
 本小批只完成独立工程**存在后**的只读 SQL 门禁和离线安全测试。维护者尚未授权创建 `d5b4-revoke-<UUIDv4>` 工程，故真实 PostgreSQL 目标预检前置条件不足，**未运行、不得伪造成功**；没有执行 ACL 删除、恢复、真实授权 404、发布状态写入或工业设备操作。后续创建专用工程与真实撤权须分别获得明确授权。
+
+## 2026-11-22 · D5b4d 真实撤权前后只读验收契约（未执行的测试计划）
+
+已核对 `scripts/preflight-oidc-published-revocation-target.mjs` 的真实只读事务、`scripts/prepare-oidc-published-revocation.mjs` 的显式写入入口，以及既有 D5b1/D5b3 双框架发布读取脚本。当前实现的 D5b4c 目标只读预检必须先有唯一合法专用工程；D5b3 的 404 为浏览器内部模拟，不是生产服务端真实 ACL 撤销后的 404。下一阶段验收矩阵与前置条件详见 `docs/HARNESS.md`。
+
+本次仅更新文档规划，无业务代码/权限/SQL/迁移/脚本变动，未连接数据库、未创建专用工程、未撤销或恢复 ACL、未启动真实 Keycloak 浏览器专项。**没有执行 D5b4d 新增的 Node、Windows `vp check`、`docs:check` 或完整 `ready`；不得将 PR #112 的验证结果记作本分支测试通过。** 后续任何新增写入操作需单独明确授权，且不得复用旧 D5b1 工程。
