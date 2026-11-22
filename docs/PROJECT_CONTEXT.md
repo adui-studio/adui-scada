@@ -1990,3 +1990,11 @@ D5b5 候选沿用现有 Studio UI/本地 IndexedDB 数据抽样能力及发布�
 PR #118 的首次 Windows `test:published:oidc:revoke:studio:config` **10/11**，`ready` 在同一用例中止（退出码 **1**）；`vp check` **396/248 零警告错误**、`docs:check` **89**、Vitest **680/680** 成功，但后续 HTTP E2E 与构建未执行。唯一失败由测试 `node:vm` 跨 Realm 嵌套请求对象的原生 `assert.deepStrictEqual` 引起；旧隔离 V8/Mock 未复现此语义，详见 E-075。
 
 已在 PR #118 分支仅修正该测试一行：`structuredClone(requests)` 后仍按原字段及数量严格断言；协作端原生 Node 最小复现及六种负向篡改检查通过，**不代表 Windows 最新 HEAD 的完整质量链已通过**。PR 继续保持 Draft，未合并；D5b4 真实 ACL 撤销仍有效，本小批不恢复权限、不创建新工程、不改动数据库或工业设备。
+
+## 2026-11-22 · D5b5 第一小批真实 React/Vue Studio 草稿保护验收完成
+
+PR #118 E-075 修复后 Windows 离线门禁 **11/11**、`vp check` **396/248 零警告错误**、`docs:check` **89**、完整 `ready` **680/680 Vitest 单测、62/62 HTTP E2E、React/Vue/NestJS 构建成功、退出码 0**；经维护者授权 Squash 合并为 `main@039bfd01ecf34e3641556fc5536a6bda377cf732`。随后维护者在清洁 Windows `main` 中检查了真实 HEAD 与该合并 SHA 相等，未触发异常。
+
+维护者在本机可信 OIDC/Keycloak HTTPS Lab 对**既有已撤销 `release:read` 的 D5b4 专用工程**完成 D5b4e 真实 PostgreSQL 只读后置审计和 D5b5 双框架真实浏览器专项。React/Vue 均通过 Studio 正式 UI 只读载入、IndexedDB 本地草稿保存、新增未保存图元、独立同源真实发布 GET **404**，且 SVG、工程 JSON、草稿数量/摘要、自动保存状态及 CAS 基线**全部保持一致**；最终命令成功并未发生数据库/ACL 写入或恢复。
+
+本次**只**关闭“Studio 页面发起独立发布 GET 404 后本地编辑内容不变”的真实专项，**不**代表 Studio 自身拒绝消费、迟到 200/401/404 交错响应或多标签页并发安全已通过。建议下一小批优先设计无写入的同源多标签页只读浏览器回归；不能重建工程或恢复 `release:read` 伪造前置状态。本次文档更新未重新执行 `ready`。
