@@ -7,9 +7,11 @@ import {
   describeD5b5MultiTabFailure,
   parseD5b5MultiTabArgs,
   requireD5b5NoBlockedWrites,
+  requireD5b5ReadGuardProgress,
   requireD5b5SharedDraft,
   requireD5b5TabUnchanged,
   studioVisibilityInPage,
+  waitForD5b5ReadGuardSettled,
 } from "./test-oidc-studio-revoked-multitab.mjs";
 import { requireD5b5Preserved } from "./test-oidc-studio-revoked-draft.mjs";
 
@@ -187,6 +189,81 @@ void describe("D5b5b 已撤权工程 React/Vue 同源双标签页只读安全门
       document: { visibilityState: "visible" },
     });
     assert.equal(visible(), "visible");
+  });
+
+  void it("正在进行的只读 GET 仅使等待条件暂不满足，不得提前伪造已完成状态", () => {
+    const pending = {
+      paths: ["/api/v1/projects/" + ID],
+      statuses: [],
+      blocked: 0,
+    };
+    assert.equal(requireD5b5ReadGuardProgress(pending), false);
+    const completed = { ...pending, statuses: [200] };
+    assert.equal(requireD5b5ReadGuardProgress(completed), true);
+    assert.deepEqual(pending.statuses, []);
+  });
+
+  void it("守卫等待器必须观察真实异步响应后才返回完整只读记录", async () => {
+    const pathname = "/api/v1/projects/" + ID;
+    const states = [
+      { paths: [pathname], statuses: [], blocked: 0 },
+      { paths: [pathname], statuses: [200], blocked: 0 },
+    ];
+    let reads = 0;
+    const session = {
+      evaluate: async () => {
+        const value = states[Math.min(reads, states.length - 1)];
+        reads += 1;
+        return value;
+      },
+    };
+    const settled = await waitForD5b5ReadGuardSettled(session);
+    assert.equal(reads, 2);
+    assert.deepEqual(settled, states[1]);
+    assert.equal(settled.paths.length, settled.statuses.length);
+  });
+
+  void it("只读守卫阻断写入、结构错误或响应数反超路径数时立即拒绝", async () => {
+    const pathname = "/api/v1/projects/" + ID;
+    const invalidStates = [
+      null,
+      { paths: null, statuses: [404], blocked: 0 },
+      { paths: [pathname], statuses: [200, 404], blocked: 0 },
+      { paths: [pathname], statuses: [200], blocked: 1 },
+    ];
+    for (const guard of invalidStates) {
+      assert.throws(
+        () => requireD5b5ReadGuardProgress(guard),
+        /D5b5b 工程 API 只读约束或发布 GET 404 不符合预期/,
+      );
+      await assert.rejects(
+        waitForD5b5ReadGuardSettled({ evaluate: async () => guard }),
+        /D5b5b 工程 API 只读约束或发布 GET 404 不符合预期/,
+      );
+    }
+  });
+
+  void it("等待已完成异步响应后仍须严格拒绝额外工程 GET", async () => {
+    const pathname = "/api/v1/projects/" + ID;
+    const target = pathname + "/releases/current";
+    const base = { paths: [pathname], statuses: [200], blocked: 0 };
+    const after = { paths: [pathname, target, target], statuses: [200, 404, 404], blocked: 0 };
+    const idle = await waitForD5b5ReadGuardSettled({
+      evaluate: async () => after,
+    });
+    assert.equal(requireD5b5ReadGuardProgress(idle), true);
+    assert.throws(
+      () =>
+        requireD5b5Preserved(
+          ID,
+          state("甲"),
+          state("甲"),
+          { status: 404, noStore: true, direct: true },
+          base,
+          idle,
+        ),
+      /D5b5 浏览器工程请求不符合零写入约束/,
+    );
   });
 
   void it("原有真实 404 与草稿保护断言保持严格通过条件", () => {
