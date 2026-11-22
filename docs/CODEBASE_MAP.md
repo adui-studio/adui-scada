@@ -1322,3 +1322,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-session-generation.ts`：检查活跃会话、当前读数与基线显式代次是否一致，才调用既有同 Tag/严格序列及质量、时效筛选；不创建订阅和报警。
 - `packages/core/test/alarm-session-generation.test.ts`：6 项定向测试定义覆盖同代次、旧读数、旧基线、旧会话伪装、基础拒绝逻辑及非法代次和只读输入。
 - `packages/core/src/index.ts`：共享导出函数和会话代次类型。不更改 Vue/React、Runtime、NestJS、Prisma、Gateway 或发布状态。
+
+## 2026-11-22 · D5b9j FR-011 报警初始快照基线
+
+- `packages/core/src/alarm-snapshot-baseline.ts`：从显式上游核验、同活跃会话代次的 `TagChange.snapshot` 全批校验并选择目标 GOOD 数值 Tag，建立冻结的序列基线；拒绝非 snapshot、旧会话、缺失、重复和无效输入，不创建报警事件。
+- `packages/core/test/alarm-snapshot-baseline.test.ts`：新增 7 项定向测试定义，覆盖初始基线防御性复制、未核验来源与 delta、旧会话、整批校验、坏质量与时间、非法参数及后续同代次增量联动。
+- `packages/core/src/index.ts`：导出 `establishAlarmSnapshotBaseline` 及三种公共类型；原 TagStore/Runtime、React/Vue、NestJS/Prisma 与发布门禁保持不变。
