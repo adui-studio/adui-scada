@@ -1125,3 +1125,13 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - 根 `package.json`：`test:published:oidc:revoke:studio:config` 加入 `ready`；`test:published:oidc:revoke:studio:browser` 仅供真实 Lab 单独人工执行，不自动接入 `ready`。
 
 不修改 React/Vue Studio 生产源码、Schema、NestJS 授权、Prisma SQL 及工业设备功能。
+
+## 2026-11-22 · D5b5b React/Vue 同源双标签页只读回归候选
+
+- `scripts/test-oidc-studio-revoked-multitab.mjs`：严格只接收已撤权 `d5b4-revoke-<UUIDv4>`；复用现有 Chrome/Edge 临时 Profile 和第二标签页 CDP、真实 OIDC 同主体、两标签首版 Studio 只读载入、第一标签本地 IndexedDB 草稿保存、两标签未保存文本、真实页面可见性切换及顺序单次同源发布 GET 404；前后 SVG、JSON SHA-256、草稿摘要、CAS 必须严格不变，工程 API Fetch 写入由已有只读守卫拦截。
+- `scripts/test-oidc-studio-revoked-multitab.cases.mjs`：新增 **11 项** Node 离线安全门禁，覆盖命令参数拒绝、共享草稿数量/哈希、首版 CAS/自动保存、各标签本地数据漂移、守卫阻断及独立 CDP 可见性/安全诊断。
+- `scripts/test-oidc-studio-revoked-draft.mjs`：只导出已有首版载入和 Studio 本地快照函数供第二小批复用，原第一小批运行流程、断言和真实登录契约不变。
+- `scripts/test-oidc-studio-multitab.mjs`：只导出已存在的 `openCompanionChromeTab`，不调用该旧脚本的创建工程、服务端保存或数据库审计流程。
+- 根 `package.json`：`test:published:oidc:revoke:multitab:config` 纳入 `ready`；`test:published:oidc:revoke:multitab:browser` 必须手工运行，绝不在自动质量链连接 Keycloak。
+
+**覆盖界限**：这是同一 Origin 的真实双标签页**顺序**只读发布 GET 与本地保护，并非同时挂起多个响应、Studio 内部迟到响应状态机或真实多标签工程写入竞态。未修改 React/Vue 生产逻辑、NestJS/Prisma、工业设备或权限授权。
