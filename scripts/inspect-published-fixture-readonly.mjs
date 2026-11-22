@@ -7,7 +7,9 @@ import {
   classifyPublishedFixtureMetadata,
   parsePublishedFixtureMetadataArgs,
 } from "./audit-published-fixture-metadata.mjs";
-import { resolvePublishedRevocationPreflightTarget } from "./preflight-oidc-published-revocation.mjs";
+import {
+  resolvePublishedRevocationPreflightTarget,
+} from "./preflight-oidc-published-revocation.mjs";
 
 const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const SERVER_PACKAGE = fileURLToPath(new URL("../apps/server/package.json", import.meta.url));
