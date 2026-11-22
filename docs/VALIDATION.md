@@ -2635,3 +2635,13 @@ PR #117 已按维护者明确授权 Squash 合并至 `main@3c2e51c385ddaacb5015b
 源码确认 D5b5b 在 `requireD5b5Preserved` 外层合并三种已知错误；D5b5c 没有将复用的保护错误列入安全白名单。修补方案只增加两条浏览器入口共享的固定中文失败分类与 **5+1 项**离线负向回归，原严格断言和 CDP/CDP 网络行为不变。可能出现的“多余工程 GET”“404/no-store 异常”“本地 SVG/IndexedDB/CAS 变化”将分别归类，未知异常仍不能回显敏感内容。
 
 **尚待 Windows 最新 HEAD 重新执行**：`test:published:oidc:revoke:multitab:config`（原 11 项加 5 项），`test:published:oidc:revoke:late:config`（原 13 项加 1 项）、`vp check`、`docs:check`、完整 `ready`；再按 `docs/HARNESS.md` 先只读审计、依次运行真实 D5b5b 和 D5b5c。若首个真实专项仍失败，先用固定类别定位，不需重复 D5b4 授权撤销、不创建工程或修改数据库。失败继续保持 PR #121 Draft，不合并。
+
+## 2026-11-22 · E-078 双标签真实只读响应结算时序候选
+
+维护者 Windows 对上次 E-077 修补后的源码执行 D5b5b **16/16**、D5b5c **14/14**、`vp check` **401 格式文件/253 受检零警告**、`docs:check` **89**、完整 `ready` **退出码 0**（680/680 Vitest、62/62 NestJS HTTP E2E 与 React/Vue/NestJS 构建）。同一既有 D5b4 专用工程的撤权后 PostgreSQL READ ONLY 审计通过，`release:read` 仍缺失，三项基础权限及原 D5b1 基线未变化；没有执行 SQL 写入或恢复。
+
+真实 Keycloak/Chrome 再次验收：D5b5b React 两标签的真实发布 GET 404 都已通过，最后“切回第一标签页并复核”报告“工程 API 只读约束或发布 GET 404 不符合预期”，退出码 1；D5b5c React 两标签真实 404 都已到达页面，两个 Promise 同时 pending 已验证，第二页优先交付之后报“工程响应数量不符”，退出码 1；**Vue 未执行，仍未通过双框架验收**。这些日志没有输出请求数量与请求生命周期，不能推断有额外写入或后台 GET 一定是根因。
+
+源码证实 `installPublishedReadGuardInPage` 先 push `paths`，待 `fetch` 结束再 push `statuses`；先前脚本没有在记基线前保证旧 GET 的响应已结算。E-078 候选新增共享的有界等待：守卫必须 `blocked === 0`、请求与响应数组存在、状态数量不能反超路径数量；等未完成的原生 GET 补齐后才继续。**原严格每次只增加一条目标 GET/404、请求历史不可变化、最终 SVG/JSON/IndexedDB/自动保存/CAS 完全一致仍全部执行**，等待超时仍失败；不清空或忽略任何记录。新增 D5b5b 4 项离线测试定义（20 项），D5b5c 14 项不变。
+
+**待维护者 Windows 在最新 HEAD 重验**：D5b5b 20/20、D5b5c 14/14、`vp check`、`docs:check`、完整 `ready`，随后 D5b4e 只读审计、D5b5b/D5b5c 真实 React/Vue。上次完整质量链不能替代新补丁测试；未知请求异常、长时间未返回或任何本地漂移均保持 fail-closed。
