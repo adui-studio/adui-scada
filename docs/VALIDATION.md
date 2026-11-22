@@ -2959,3 +2959,23 @@ if ($LASTEXITCODE -ne 0) { throw "D5b9a Vite+ 静态检查失败" }
 ```
 
 只有这两个命令均成功，才能按新 HEAD 记录 D5b9a 本次修复的验收；并不因此宣称真实 PostgreSQL/Keycloak、双框架发布态浏览器与工业网关已经验收。生产 `ProjectReleaseSafetyGate.assertReady` 保持无条件拒绝，Issue #126 Open、ADR-0070 Proposed。
+
+## 2026-11-22 · D5b9b 发布刷新取消等待：仅针对新增差异验收
+
+上轮 D5b9a PR #140 由维护者 Windows 在精确 HEAD `8071ecdbbfcb5ea1cf20e62772f718f26de27f8d` 实测共享 Runtime **12/12**，`vp check` **413 格式文件、264 受检零警告错误**，据此按明确授权 Squash 合并为 `main@38dea9628c1130f532736ccd76f8d4202d0dfa41`。沿用 PR #139 已验收的完整 `ready` 与 HTTP E2E，不重复运行未改动套件。
+
+本轮 D5b9b 只改共享 `PublishedRuntimeRefresher` 的隐藏/停止**本地等待结算**与定向测试；新用例故意令只读 Reader 永久挂起，断言不需触发超时回调即可在隐藏与停止后结束等待、取消 AbortSignal 并保持旧发布画面清空。变更未运行本机测试，预计目标定向用例由 17 → **18 项**，**不是已通过数量**。
+
+维护者检出本 PR 最新 HEAD 后仅需执行：
+
+```powershell
+git rev-parse HEAD
+
+vp test run packages/runtime/test/published-runtime-refresher.test.ts
+if ($LASTEXITCODE -ne 0) { throw "D5b9b 发布刷新器定向测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b9b Vite+ 检查失败" }
+```
+
+不要重复上批完整 `ready`、HTTP E2E、React/Vue 构建或已验证的发布安全门禁测试。定向测试证明的是**本地生命周期回收**，不能宣称忽略 AbortSignal 的第三方网络操作已经物理取消；真实 OIDC/HTTPS、RELEASED Lab 夹具、工业网关审批和 Tag 质量仍不在本批范围。正式发布默认拒绝，ADR-0070 Proposed，Issue #126 Open。
