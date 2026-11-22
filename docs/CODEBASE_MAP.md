@@ -1100,3 +1100,11 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 - 根 `package.json`：`test:published:oidc:revoke:after:config` 加入 `ready`；`oidc:lab:published:revoke:after` 为人工运行、不会自动触发的真实 PostgreSQL READ ONLY 核验入口。
 
 本批不修改 NestJS 业务、Vue/React Runtime、Prisma Schema/迁移或工业设备读写功能，禁止真实数据库写入。
+
+## 2026-11-22 · D5b4f 同阶段只读验收编排
+
+- `scripts/test-oidc-published-revocation-sequence.mjs`：手工 CLI，阶段仅可为 `before` / `after` 且工程 ID 必须是 `d5b4-revoke-<UUIDv4>`；固定串行调用同阶段 PostgreSQL 只读核验 → React/Vue 真实只读 GET → PostgreSQL 再核验，所有命令使用 Node `process.execPath` / `shell: false`，任意失败立即中止。
+- `scripts/test-oidc-published-revocation-sequence.cases.mjs`：10 项离线安全门禁，覆盖非法参数、固定脚本及顺序、双阶段差异、首次失败/浏览器失败/末次漂移停止、异步串行和异常脱敏。
+- 根 `package.json`：`test:published:oidc:revoke:sequence:config` 纳入 `ready`；真实 `oidc:lab:published:revoke:sequence` 仅供以后获单独授权人工执行，不在自动检查中。
+
+D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React 生产业务代码或工业设备读写能力。
