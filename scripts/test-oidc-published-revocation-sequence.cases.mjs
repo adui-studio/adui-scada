@@ -11,7 +11,7 @@ const ID = "d5b4-revoke-12345678-1234-4234-8234-123456789abc";
 const ORIGINAL = "d5b-unreleased-42c376a0-5bdc-4fd6-80d6-da29e0312aca";
 
 void describe("D5b4f 撤权前后真实只读验收编排门禁", () => {
-  void it("只接受当前阶段和现存专用工程，不开放创建、撤权或恢复参数", () => {
+  void it("只接受明确阶段和专用工程 ID 格式，不开放创建、撤权或恢复参数", () => {
     for (const phase of ["before", "after"]) {
       assert.deepEqual(parseD5b4fSequenceArgs(["--phase", phase, "--project-id", ID]), {
         phase,
@@ -30,10 +30,7 @@ void describe("D5b4f 撤权前后真实只读验收编排门禁", () => {
       ["--phase", "after", "--project-id", ID, "--confirm-lab", "adui_scada"],
       ["--apply", "--confirm-lab", "adui_scada"],
     ]) {
-      assert.throws(
-        () => parseD5b4fSequenceArgs(args),
-        /只允许明确阶段与独立专用工程/,
-      );
+      assert.throws(() => parseD5b4fSequenceArgs(args), /只允许明确阶段与独立专用工程/);
     }
   });
 
@@ -101,9 +98,10 @@ void describe("D5b4f 撤权前后真实只读验收编排门禁", () => {
         }),
         true,
       );
-      assert.deepEqual(executed, planD5b4fSequence({ phase, projectId: ID }).map(
-        ({ script, args }) => ({ script, args }),
-      ));
+      assert.deepEqual(
+        executed,
+        planD5b4fSequence({ phase, projectId: ID }).map(({ script, args }) => ({ script, args })),
+      );
     }
   });
 
@@ -176,9 +174,7 @@ void describe("D5b4f 撤权前后真实只读验收编排门禁", () => {
       /首次数据库只读检查未通过，已停止/,
     );
     assert.equal(
-      describeD5b4fSequenceFailure(
-        new Error("D5b4f 末次数据库只读复核未通过，已停止"),
-      ),
+      describeD5b4fSequenceFailure(new Error("D5b4f 末次数据库只读复核未通过，已停止")),
       "D5b4f 末次数据库只读复核未通过，已停止",
     );
     assert.equal(
