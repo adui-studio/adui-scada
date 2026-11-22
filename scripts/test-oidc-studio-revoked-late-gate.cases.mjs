@@ -147,8 +147,14 @@ void describe("D5b5c 已撤权工程双标签页真实响应逆序交付安全�
       true,
     );
     assert.equal(first.runtime.document.visibilityState, "hidden");
-    assert.deepEqual(first.calls.map(({ path }) => path), [PATH]);
-    assert.deepEqual(second.calls.map(({ path }) => path), [PATH]);
+    assert.deepEqual(
+      first.calls.map(({ path }) => path),
+      [PATH],
+    );
+    assert.deepEqual(
+      second.calls.map(({ path }) => path),
+      [PATH],
+    );
     assert.equal(first.guard.blocked, 0);
     assert.equal(second.guard.blocked, 0);
   });
