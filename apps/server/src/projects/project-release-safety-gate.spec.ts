@@ -98,8 +98,8 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
     expect(failure.message).not.toContain(CONTEXT.projectId);
     expect(failure.blocks.every((block) => Object.isFrozen(block))).toBe(true);
     expect(Object.isFrozen(failure.blocks)).toBe(true);
-    expect(failure.blocks.some((block) => block.code === "INDUSTRIAL_READ_POLICY_UNAVAILABLE")).toBe(
-      true,
-    );
+    expect(
+      failure.blocks.some((block) => block.code === "INDUSTRIAL_READ_POLICY_UNAVAILABLE"),
+    ).toBe(true);
   });
 });
