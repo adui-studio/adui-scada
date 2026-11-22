@@ -2484,3 +2484,9 @@ E-073 候选改为同时识别成功/拒绝/离线/错误终态，对单一 GET 
 维护者提交真实日志：D5b3 Node 安全门禁 **9/9**，Vite+ **380 个格式文件/232 个受检文件零告警**，Markdown **89 份**，完整 `ready` 最终退出码 **0**，包含 **680/680** 单测与 **62/62** 服务端 E2E、React/Vue/NestJS 构建；双框架真实 Keycloak/HTTPS 授权读取、浏览器模拟单次 404、真实授权恢复及停止均退出码 **0**。该实测与“真实 ACL 撤销”有明确区别。PR #109 Squash 合并 `main@33c8d31d8eae6c46b8a3ab5ddaabf44a3f8fa227`。
 
 新增 D5b4a `preflight-oidc-published-revocation.mjs` 和 **10 项** Node 只读安全测试，根 `test:published:oidc:revoke:preflight:config` 纳入 `ready`。真实预检命令为 `pnpm run oidc:lab:published:revoke:preflight`，严格本机 Keycloak/HTTPS 与 PostgreSQL 目标；事务为 `REPEATABLE READ READ ONLY`，在 ROLLBACK 后结束，核对原 D5b1 测试夹具及授权、迁移、预绑定身份，D5b4 工程必须尚不存在。没有 INSERT/UPDATE/DELETE/发布或浏览器写入，不能使用旧 D5b1 工程做真实撤权。新 Node 和本机数据库预检尚未实测，PR 继续保持 Draft，等待维护者验证。
+
+## 2026-11-20 · D5b4a 已验收合并，D5b4b 隔离工程准备候选
+
+D5b4a 真实本机 PostgreSQL READ ONLY 预检和 Windows 质量链均由维护者确认退出码 **0**。新增 10/10 Node；`vp check` 382/234 零告警，`docs:check` 89 份；完整 `ready` 680/680 单测、62/62 E2E、React/Vue/NestJS 构建成功，退出码 0；PR #110 Squash 合并至 `main@bbcf827b95d609b73052aaa2076d137ae01e92b5`。数据库无 D5b4 工程，原 D5b1 专用工程和四项 ACL 未变。
+
+本批 D5b4b 只新增独立测试工程准备脚本与 11 项 Node 守卫：命令 `oidc:lab:published:revoke:fixture` 默认仅只读检查前置条件，唯一候选写入模式要求 `--apply --confirm-lab adui_scada` 且需维护者另外授权；正式工程 API 仅创建 `d5b4-revoke-<UUIDv4>` 的最小空白首版；新增 ACL 只允许该工程的 `release:read`，整个过程中事务内核对 D5b1 原 ACL 保持完整。真实浏览器在创建后只读验证 200/UNRELEASED。未在本批执行写入、撤权或双框架 HTTP 404 真实验收。候选 Windows `ready` 与真实预检尚待执行，不能计入已通过项。
