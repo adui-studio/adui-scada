@@ -34,11 +34,11 @@ function page(phase) {
 function readState(status) {
   return {
     guard: { paths: [PATH], statuses: [status], blocked: 0 },
-    observer: { requests: 1, statuses: [status], noStore: [true] },
+    observer: { requests: 1, statuses: [status], noStore: [true], direct: [true] },
   };
 }
 
-function setup(status = 200, cacheControl = "no-store") {
+function setup(status = 200, cacheControl = "no-store", redirected = false) {
   const calls = [];
   const runtime = {
     location: { origin: ORIGIN },
@@ -46,6 +46,8 @@ function setup(status = 200, cacheControl = "no-store") {
       calls.push({ input, init });
       return {
         status,
+        redirected,
+        url: ORIGIN + PATH,
         headers: {
           get(name) {
             return name.toLowerCase() === "cache-control" ? cacheControl : null;
@@ -161,7 +163,21 @@ void describe("D5b4d 撤权前后双框架只读浏览器验收安全门禁", ()
     assert.equal(summary.requests, 1);
     assert.equal(summary.statuses[0], 200);
     assert.equal(summary.noStore[0], true);
+    assert.equal(summary.direct[0], true);
     assert.notEqual(runtime.__aduiD5b4ReadObserver, summary);
+  });
+
+  void it("HTTP 重定向不得伪装为同源发布接口返回的合法 404", async () => {
+    const { runtime } = setup(404, "no-store", true);
+    isolate(installD5b4ResponseObserverInPage)(ORIGIN, PROJECT_ID, runtime);
+    await runtime.fetch(PATH, { method: "GET" });
+    const summary = d5b4ResponseStateInPage(runtime);
+    assert.equal(summary.direct[0], false);
+    assert.throws(
+      () => requireD5b4ReadonlyResult("after", PROJECT_ID, page("after"),
+        publishedReadGuardStateInPage(runtime), summary),
+      /发布读取请求不符合只读约束/,
+    );
   });
 
   void it("404 必须来自底层真实 Fetch，不允许脚本自行合成拒绝", async () => {
@@ -233,6 +249,8 @@ void describe("D5b4d 撤权前后双框架只读浏览器验收安全门禁", ()
       ({ observer }) => { observer.statuses.push(200); },
       ({ observer }) => { observer.noStore[0] = false; },
       ({ observer }) => { observer.noStore.push(true); },
+      ({ observer }) => { observer.direct[0] = false; },
+      ({ observer }) => { observer.direct.push(true); },
     ];
     for (const change of candidates) {
       const state = readState(200);
