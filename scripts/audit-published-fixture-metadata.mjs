@@ -44,7 +44,7 @@ function singleRow(value, keys) {
   return value[0];
 }
 
-/** 只允许未来明确批准的 D5b7b 独立发布夹具 ID，不接受创建、发布或撤权参数。 */
+/** 只允许未来明确批准的 D5b7b 独立发布夹具 ID。 */
 export function parsePublishedFixtureMetadataArgs(args) {
   if (
     !Array.isArray(args) ||
@@ -64,14 +64,18 @@ export function parsePublishedFixtureMetadataArgs(args) {
  * 不信任外部传入的主体或库名；输入应来自未来受控 READ ONLY 查询。
  */
 export function classifyPublishedFixtureMetadata(rows, projectId) {
-  if (!PROJECT_PATTERN.test(projectId) || !exactKeys(rows, [
-    "context",
-    "project",
-    "grants",
-    "releaseState",
-    "releasedVersion",
-    "lastEvent",
-  ])) {
+  if (
+    typeof projectId !== "string" ||
+    !PROJECT_PATTERN.test(projectId) ||
+    !exactKeys(rows, [
+      "context",
+      "project",
+      "grants",
+      "releaseState",
+      "releasedVersion",
+      "lastEvent",
+    ])
+  ) {
     invalidEvidence();
   }
   const context = rows.context;
@@ -156,7 +160,13 @@ export function classifyPublishedFixtureMetadata(rows, projectId) {
   }
   const version = singleRow(rows.releasedVersion, ["revision", "content_hash"]);
   const event = singleRow(rows.lastEvent, [
-    "event_id", "tenant_id", "project_id", "generation", "action", "to_revision", "to_content_hash",
+    "event_id",
+    "tenant_id",
+    "project_id",
+    "generation",
+    "action",
+    "to_revision",
+    "to_content_hash",
   ]);
   if (
     integer(version.revision) !== revision ||
