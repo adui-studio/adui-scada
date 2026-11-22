@@ -2524,3 +2524,11 @@ GitHub 合并前复核 PR #112 候选 HEAD 为 `061c42ba756ccbf8d91788a57f615c1f
 本次从 GitHub 回读脚本并移除 ESM import/export 后，在隔离 V8 中完成两份脚本语法解析；选取主脚本的 12 条纯函数 Mock 路径进行对照，**12/12**；另用隔离 V8 配合受限 Node 断言/测试函数代理执行本批 15 条源测试定义，**15/15**。这两项均**不是**正式 Node `node --test`、Chrome 或 PostgreSQL 实测。这只能作为有限开发自检；**Windows 真实 Node 15 项、`vp check`、`docs:check`、完整 `ready`、React/Vue 登录浏览器与真实数据库只读检查仍未运行**。新增文档提交本身亦未经 Windows 质量链验证，具体 HEAD 需 Windows `git rev-parse HEAD` 对照。
 
 没有创建 D5b4 专用工程、进行数据库 INSERT/DELETE/UPDATE、撤销 ACL、恢复权限、正式发布、工程内容写入或工业设备操作。新浏览器脚本的 `after` 阶段即使返回 HTTP 404，也**不证明 ACL 被真实撤销或工程真实存在**，后续必须单独授权、执行真实 PostgreSQL 撤权后只读审计并核对旧 D5b1 基线完整。
+
+## 2026-11-22 · D5b4e 撤权后 PostgreSQL 只读审计候选（待 Windows 与真实数据库授权）
+
+PR #113 Windows 原始日志：D5b4d Node 15/15、`vp check` 388 个格式文件/240 受检文件零告警、`docs:check` 89 份、`pnpm run ready` 680/680 单测和 62/62 HTTP E2E、React/Vue/NestJS 构建成功，退出码 0；经维护者明确授权 Squash 合并至 `main@19f027838908a385f5966cc4285f41528a436dde`。日志没有本机 `git rev-parse HEAD`，不得把它写为严格 SHA 验收。真实 D5b4 工程、ACL 撤销和双框架服务端撤权 404 没有执行。
+
+本小批仅在 `scripts/preflight-oidc-published-revocation-target.mjs` 增加撤权后阶段严格 ACL 断言，**复用原 SQL、固定身份/迁移及只读事务**；新建独立 `scripts/preflight-oidc-published-revocation-after.mjs` CLI 和 **11 项** Node 安全用例。原 D5b4c 撤权前默认四项权限检查保持不变。根 `test:published:oidc:revoke:after:config` 加入 `ready`，真实数据库 `oidc:lab:published:revoke:after` 不加入 `ready` 且必须由维护者另行授权准备真实目标工程后手工执行。
+
+协作端从 GitHub 回读新旧源码并以隔离 V8 模拟运行原 10 项与新增 11 项断言，**21/21** 符合预期，相关脚本 V8 语法解析通过。**该结果不是 Node `node --test`、Windows `vp check`、`docs:check`、完整 `ready` 或真实 PostgreSQL 证明**；本 PR 尚无这些独立验收结果。未连接数据库、未创建工程、未撤销/恢复 ACL、未执行 SQL 写入、未修改发布状态或工业设备。单次“恰好三项 ACL”快照也无法独立证明历史撤权操作确实发生。

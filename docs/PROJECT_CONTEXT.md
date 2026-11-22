@@ -1952,3 +1952,9 @@ PR #112 已按维护者明确授权 **Squash 合并**，`main@73df3e1debd4cce16c
 在 PR #113 分支上新增 `scripts/test-oidc-published-revocation-readonly.mjs` 与 15 项 Node 安全用例候选，并将离线安全门禁接入根 `ready`。新的真实浏览器命令需手工选择撤权前 `before` 或撤权后 `after`，对 React/Vue 同一可信会话、发布 API 唯一 GET、真实 HTTP 200/404、no-store、非重定向同源响应、状态清空、停止后零额外请求分别 fail-closed；不自动创建工程、注入 404、撤销或恢复 ACL。任何 HTTP 404 仍必须配合未来真实 PostgreSQL 只读审计证明确有专用工程且只是目标授权缺失。
 
 该候选尚未在 Windows 完整工作区、真实 Keycloak/HTTPS 或 PostgreSQL 实测；当前没有已获授权的 D5b4 专用工程。仅完成远端源码提交、隔离 V8 语法核对、12/12 纯函数反向检查及受限 V8 Mock 执行 15/15 用例定义，不等于正式 Node 15/15 或 `ready` 通过。生产 SCADA 安全策略与旧 D5b1 工程授权保持不变。
+
+## 2026-11-22 · PR #113 D5b4d 已验收合并，D5b4e 后置只读审计候选
+
+维护者 Windows 验证 D5b4d 离线 15/15、`vp check` 388/240 零警告、`docs:check` 89、完整 `ready` 680/680 单测和 62/62 HTTP E2E 且退出码 0。PR #113 经授权 Squash 合并为 `main@19f027838908a385f5966cc4285f41528a436dde`；原始日志未绑定本地 HEAD。真实 D5b4 专用工程仍未创建，尚无真实 ACL 撤销或撤权后浏览器 404 证据。
+
+D5b4e 新候选仅增加撤权后 PostgreSQL `REPEATABLE READ READ ONLY` 审计：对唯一独立专用工程严格要求三项既有基础权限，原 D5b1 保持四项权限，首版/审计/零发布及迁移/身份不变。复用 D5b4c 原只读查询，默认撤权前校验逻辑不变。新增 11 项离线测试定义；真实数据库查询在当前尚无专用工程时不能宣称成功。候选等待维护者 Windows 全量质量链验收，不包含任何数据库写入或工业设备操作。

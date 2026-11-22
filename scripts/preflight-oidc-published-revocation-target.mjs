@@ -11,7 +11,8 @@ const ORIGINAL_PROJECT = "d5b-unreleased-42c376a0-5bdc-4fd6-80d6-da29e0312aca";
 const PROJECT_PATTERN =
   /^d5b4-revoke-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const PRINCIPAL = { tenantId: "lab-tenant", subjectId: "lab-engineer" };
-const PERMISSIONS = ["project:read", "version:read", "version:append", "release:read"];
+const OWNER_PERMISSIONS = ["project:read", "version:read", "version:append"];
+const PERMISSIONS = [...OWNER_PERMISSIONS, "release:read"];
 const MIGRATIONS = [
   "20261118000000_release_state_and_events",
   "20261119000000_release_state_event_integrity",
@@ -45,11 +46,11 @@ export function describePublishedRevocationTargetFailure(error) {
   return "D5b4c 真实撤权前只读核查失败，内部诊断已脱敏";
 }
 
-function validAcl(rows) {
+function validAcl(rows, permissions = PERMISSIONS) {
   return (
     Array.isArray(rows) &&
-    rows.length === PERMISSIONS.length &&
-    PERMISSIONS.every(
+    rows.length === permissions.length &&
+    permissions.every(
       (permission) =>
         rows.filter(
           (entry) => entry.subject_id === PRINCIPAL.subjectId && entry.permission === permission,
@@ -80,9 +81,10 @@ function validVersion(rows) {
 }
 
 /** 每个检查都要通过，避免以单纯 count=4 误判授权或租户。 */
-export function assertPublishedRevocationTargetRows(rows, projectId) {
+function assertPublishedRevocationRows(rows, projectId, phase) {
+  const prefix = phase === "after" ? "D5b4e" : "D5b4c";
   if (!PROJECT_PATTERN.test(projectId)) {
-    throw new Error("D5b4c 参数仅允许现有独立专用工程 ID，禁止写入模式");
+    throw new Error(prefix + " 参数仅允许现有独立专用工程 ID，禁止写入模式");
   }
   if (
     rows?.database?.length !== 1 ||
@@ -96,29 +98,45 @@ export function assertPublishedRevocationTargetRows(rows, projectId) {
     rows.identity?.length !== 1 ||
     rows.externalIdentity?.length !== 1
   ) {
-    throw new Error("D5b4c 目标数据库、迁移或可信身份不符合预期");
+    throw new Error(prefix + " 目标数据库、迁移或可信身份不符合预期");
   }
   if (rows.dedicated?.length !== 1 || rows.dedicated[0].project_id !== projectId) {
-    throw new Error("D5b4c 独立工程不存在、不唯一或出现额外工程");
+    throw new Error(prefix + " 独立工程不存在、不唯一或出现额外工程");
   }
   if (!validVersion(rows.target)) {
-    throw new Error("D5b4c 独立工程首版、审计或未发布状态不符合预期");
+    throw new Error(prefix + " 独立工程首版、审计或未发布状态不符合预期");
   }
-  if (!validAcl(rows.target.grants)) {
-    throw new Error("D5b4c 独立工程 release:read 权限不符合预期");
+  const expected = phase === "after" ? OWNER_PERMISSIONS : PERMISSIONS;
+  if (!validAcl(rows.target.grants, expected)) {
+    throw new Error(prefix + " 独立工程 release:read 权限不符合预期");
   }
   if (!validVersion(rows.original) || !validAcl(rows.original.grants)) {
-    throw new Error("D5b4c 原 D5b1 工程或授权发生变化");
+    throw new Error(prefix + " 原 D5b1 工程或授权发生变化");
   }
   return true;
+}
+
+/** 原 D5b4c 撤权前校验必须保留四项 ACL 和原有错误契约。 */
+export function assertPublishedRevocationTargetRows(rows, projectId) {
+  return assertPublishedRevocationRows(rows, projectId, "before");
+}
+
+/** 撤权后仅允许专用工程缺少 release:read，其他工程与数据必须完整。 */
+export function assertPublishedRevocationAfterRows(rows, projectId) {
+  return assertPublishedRevocationRows(rows, projectId, "after");
 }
 
 /**
  * 唯一允许的数据库事务为 READ ONLY；读取 ACL、版本和发布指针元数据，
  * 不获取工程快照正文、Cookie、Token 或其他租户数据。
  */
-export async function inspectPublishedRevocationTarget(client, target, projectId) {
-  if (!PROJECT_PATTERN.test(projectId)) {
+export async function inspectPublishedRevocationTarget(
+  client,
+  target,
+  projectId,
+  phase = "before",
+) {
+  if (!PROJECT_PATTERN.test(projectId) || !["before", "after"].includes(phase)) {
     throw new Error("D5b4c 参数仅允许现有独立专用工程 ID，禁止写入模式");
   }
   await client.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
@@ -194,7 +212,8 @@ export async function inspectPublishedRevocationTarget(client, target, projectId
       target: await readProject(projectId),
       original: await readProject(ORIGINAL_PROJECT),
     };
-    assertPublishedRevocationTargetRows(rows, projectId);
+    if (phase === "after") assertPublishedRevocationAfterRows(rows, projectId);
+    else assertPublishedRevocationTargetRows(rows, projectId);
     return true;
   } finally {
     await client.query("ROLLBACK");
