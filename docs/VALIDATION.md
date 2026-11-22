@@ -2625,3 +2625,14 @@ PR #117 已按维护者明确授权 Squash 合并至 `main@3c2e51c385ddaacb5015b
 协作容器 Node 22.16.0 对同用途纯门禁原型执行了 `node --check` 与原生 `node --test`：**13/13 测试通过**，包含独立 VM 序列化与故障反向断言。该运行发生在隔离原型文件上，不冒充 GitHub 提交的正式 Windows `vp check` / `docs:check` / `ready`，也不代表真实 CDP、Keycloak、PostgreSQL 或工业安全验收。新 GitHub 分支的完整质量链和真实浏览器测试均**待维护者执行**。
 
 本次不修改 React/Vue 生产业务、NestJS、Prisma 或工业网关。新增门禁不会模拟 HTTP 404，也不会保留 TCP 层挂起连接；它只控制**已到达响应在页面 Promise 的交付时序**。不能将其称为 Studio 自身处理迟到授权拒绝、真实 HTTP 网络竞态或工程写入 CAS 竞争。复用既有工程，不创建数据、不恢复 ACL、不做服务端写入。
+
+## 2026-11-22 · D5b5c Windows 完整质量通过，但双项真实浏览器失败（E-077）
+
+维护者 Windows 在本机执行 `test:published:oidc:revoke:late:config` **13/13**、`vp check` **401 个格式文件/253 个受检文件零警告错误**、`docs:check` **89 份**、完整 `pnpm run ready` **退出码 0**，包含 **680/680 Vitest 单测**、**62/62 HTTP E2E** 与 React/Vue/NestJS 构建。上传日志没有显示运行时本机 `git rev-parse HEAD` 输出，不能把结果严格绑定到某个远端提交。上述质量链通过不能替代真实 OIDC 浏览器专项。
+
+维护者随后复用已撤销 `release:read` 的既有 D5b4 工程执行 PostgreSQL 撤权后 **READ ONLY** 审计，明确确认三项基础 ACL 和原 D5b1 基线完整，未执行写入或恢复。真实 D5b5b 双标签测试完成 React 双标签首版载入、本地草稿与未保存编辑准备，在**第一标签页发布读取**后的保护断言失败，退出码 **1**。真实 D5b5c 双标签测试进一步运行到两页原始响应都已完成网络读取并通过 pending 阶段严格的 `404 + no-store + 无重定向` 检查，在**第二标签页优先释放**后报告“内部异常已脱敏”，退出码 **1**，未覆盖 Vue。当前不能得出最终草稿、CAS 或后台 GET 一定出错的结论。
+
+源码确认 D5b5b 在 `requireD5b5Preserved` 外层合并三种已知错误；D5b5c 没有将复用的保护错误列入安全白名单。修补方案只增加两条浏览器入口共享的固定中文失败分类与 **5+1 项**离线负向回归，原严格断言和 CDP/CDP 网络行为不变。可能出现的“多余工程 GET”“404/no-store 异常”“本地 SVG/IndexedDB/CAS 变化”将分别归类，未知异常仍不能回显敏感内容。
+
+**尚待 Windows 最新 HEAD 重新执行**：`test:published:oidc:revoke:multitab:config`（原 11 项加 5 项），`test:published:oidc:revoke:late:config`（原 13 项加 1 项）、`vp check`、`docs:check`、完整 `ready`；再按 `docs/HARNESS.md` 先只读审计、依次运行真实 D5b5b 和 D5b5c。若首个真实专项仍失败，先用固定类别定位，不需重复 D5b4 授权撤销、不创建工程或修改数据库。失败继续保持 PR #121 Draft，不合并。
+
