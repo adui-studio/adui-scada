@@ -7,9 +7,7 @@ import {
   classifyPublishedFixtureMetadata,
   parsePublishedFixtureMetadataArgs,
 } from "./audit-published-fixture-metadata.mjs";
-import {
-  resolvePublishedRevocationPreflightTarget,
-} from "./preflight-oidc-published-revocation.mjs";
+import { resolvePublishedRevocationPreflightTarget } from "./preflight-oidc-published-revocation.mjs";
 
 const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const SERVER_PACKAGE = fileURLToPath(new URL("../apps/server/package.json", import.meta.url));
@@ -166,9 +164,7 @@ async function run() {
     await client.connect();
     const result = await inspectPublishedFixtureReadonly(client, target, projectId);
     if (result.kind === "RELEASED_METADATA_ONLY") {
-      process.stdout.write(
-        "D5b7c 只读元数据一致：仍需独立核验真实发布快照及可信读取 API。\n",
-      );
+      process.stdout.write("D5b7c 只读元数据一致：仍需独立核验真实发布快照及可信读取 API。\n");
     } else if (result.kind === "UNRELEASED") {
       process.stderr.write("D5b7c 目标仍未发布，不能作为已发布夹具。\n");
       process.exitCode = 1;
