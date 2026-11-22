@@ -27,6 +27,7 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
     const before = JSON.stringify(snapshot);
     expect(assessProjectReleaseSafety(snapshot, CONTEXT)).toEqual([
       { code: "TAG_SOURCE_UNVERIFIED", path: "snapshot.document.tags" },
+      { code: "TAG_BINDING_SOURCE_UNVERIFIED", path: "snapshot.document.pages" },
       { code: "RUNTIME_ADMISSION_UNAVAILABLE", path: "runtime" },
       { code: "INDUSTRIAL_READ_POLICY_UNAVAILABLE", path: "industrial" },
     ]);
@@ -57,6 +58,7 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
       "UNTRUSTED_CONTEXT",
       "PROJECT_MISMATCH",
       "TAG_SOURCE_UNVERIFIED",
+      "TAG_BINDING_SOURCE_UNVERIFIED",
       "RUNTIME_ADMISSION_UNAVAILABLE",
       "INDUSTRIAL_READ_POLICY_UNAVAILABLE",
     ]);
@@ -72,6 +74,77 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
     });
   });
 
+  it("隐藏图元中的有效绑定仍无法证明来源可信，且不得泄漏 Tag ID", async () => {
+    const snapshot = await snapshotOf((document) => {
+      document.tags = [document.tags[0]!];
+      for (const page of document.pages) {
+        for (const node of page.nodes) node.bindings = {};
+      }
+      const hidden = document.pages[0]!.nodes[1]!;
+      hidden.bindings = { level: { tagId: "water.level" } };
+      hidden.props.__scadaStudio = { visible: false };
+    });
+    const issues = assessProjectReleaseSafety(snapshot, CONTEXT);
+    expect(issues.map((issue) => issue.code)).toEqual([
+      "TAG_SOURCE_UNVERIFIED",
+      "TAG_BINDING_SOURCE_UNVERIFIED",
+      "RUNTIME_ADMISSION_UNAVAILABLE",
+      "INDUSTRIAL_READ_POLICY_UNAVAILABLE",
+    ]);
+    expect(JSON.stringify(issues)).not.toContain("water.level");
+  });
+
+  it("未知类型只在真实绑定时单列阻塞，未绑定的历史占位不得凭空推断来源", async () => {
+    const makeUnknown = (document: ScadaDocument) => {
+      document.tags = document.tags.map((tag) =>
+        tag.tagId === "water.level" ? { ...tag, dataType: "unknown" as const } : tag,
+      );
+    };
+    const bound = await snapshotOf(makeUnknown);
+    expect(assessProjectReleaseSafety(bound, CONTEXT).map((issue) => issue.code)).toEqual([
+      "RUNTIME_COMPATIBILITY_UNVERIFIED",
+      "TAG_SOURCE_UNVERIFIED",
+      "TAG_BINDING_SOURCE_UNVERIFIED",
+      "TAG_BOUND_TYPE_UNRESOLVED",
+      "RUNTIME_ADMISSION_UNAVAILABLE",
+      "INDUSTRIAL_READ_POLICY_UNAVAILABLE",
+    ]);
+    const unbound = await snapshotOf((document) => {
+      makeUnknown(document);
+      for (const page of document.pages) {
+        for (const node of page.nodes) node.bindings = {};
+      }
+    });
+    expect(assessProjectReleaseSafety(unbound, CONTEXT).map((issue) => issue.code)).toEqual([
+      "TAG_SOURCE_UNVERIFIED",
+      "RUNTIME_ADMISSION_UNAVAILABLE",
+      "INDUSTRIAL_READ_POLICY_UNAVAILABLE",
+    ]);
+  });
+
+  it("Tag 名称或描述伪造可信来源不能放行，也不能写入内部诊断", async () => {
+    const sensitive = "opc.tcp://private-test-device:4840/token=forbidden";
+    const snapshot = await snapshotOf((document) => {
+      document.tags = document.tags.map((tag) => ({
+        ...tag,
+        displayName: "已审核的真实工业采集",
+        description: sensitive,
+      }));
+    });
+    const before = JSON.stringify(snapshot);
+    const issues = assessProjectReleaseSafety(snapshot, CONTEXT);
+    expect(issues).toContainEqual({
+      code: "TAG_BINDING_SOURCE_UNVERIFIED",
+      path: "snapshot.document.pages",
+    });
+    expect(issues).toContainEqual({
+      code: "TAG_SOURCE_UNVERIFIED",
+      path: "snapshot.document.tags",
+    });
+    expect(JSON.stringify(issues)).not.toContain(sensitive);
+    expect(JSON.stringify(snapshot)).toBe(before);
+  });
+
   it("生产门禁对所有工程抛出原有安全拒绝，且不触发任何数据库操作", async () => {
     const snapshot = await snapshotOf();
     const query = vi.fn<() => Promise<unknown[]>>();
@@ -82,6 +155,7 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
       message: "正式发布安全门禁尚未完成，当前请求已被安全拒绝",
       blocks: [
         { code: "TAG_SOURCE_UNVERIFIED" },
+        { code: "TAG_BINDING_SOURCE_UNVERIFIED" },
         { code: "RUNTIME_ADMISSION_UNAVAILABLE" },
         { code: "INDUSTRIAL_READ_POLICY_UNAVAILABLE" },
       ],
