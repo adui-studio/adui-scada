@@ -3772,4 +3772,4 @@ pnpm run ready
 Write-Host "D5b4d 完整质量链退出码：$LASTEXITCODE"
 ```
 
-**未来的真实手工调用（本轮禁止执行）**：先由维护者获得单独授权、记录真实新建专用工程 ID 并完成 D5b4c 数据库只读预检，才允许运行 `pnpm run test:published:oidc:revoke:readonly:browser --phase before --project-id <真实 ID>`；再次获得独立撤权授权并完成实际 ACL 变更后才可运行 `--phase after`。两次浏览器成功也不替代后置数据库 ACL 审计。本次实际只做 GitHub 源码与隔离 V8 静态/纯函数检查，**未运行正式 Windows Node、`vp check`、`docs:check`、`ready` 或真实浏览器/数据库专项**。
+**未来的真实手工调用（本轮禁止执行）**：先由维护者获得单独授权、记录真实新建专用工程 ID 并完成 D5b4c 数据库只读预检，才允许运行 `pnpm run test:published:oidc:revoke:readonly:browser --phase before --project-id <真实 ID>`；再次获得独立撤权授权并完成实际 ACL 变更后才可运行 `--phase after`。两次浏览器成功也不替代后置数据库 ACL 审计。本次实际只做 GitHub 源码与隔离 V8 静态/纯函数检查（另以受限 V8 模拟执行 14 项测试定义，14/14），**未运行正式 Windows Node、`vp check`、`docs:check`、`ready` 或真实浏览器/数据库专项**。
