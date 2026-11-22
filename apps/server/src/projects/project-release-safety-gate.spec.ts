@@ -28,6 +28,7 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
     expect(assessProjectReleaseSafety(snapshot, CONTEXT)).toEqual([
       { code: "TAG_SOURCE_UNVERIFIED", path: "snapshot.document.tags" },
       { code: "TAG_BINDING_SOURCE_UNVERIFIED", path: "snapshot.document.pages" },
+      { code: "INDUSTRIAL_BINDING_POLICY_UNVERIFIED", path: "snapshot.document.pages" },
       { code: "RUNTIME_ADMISSION_UNAVAILABLE", path: "runtime" },
       { code: "INDUSTRIAL_READ_POLICY_UNAVAILABLE", path: "industrial" },
     ]);
@@ -59,6 +60,7 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
       "PROJECT_MISMATCH",
       "TAG_SOURCE_UNVERIFIED",
       "TAG_BINDING_SOURCE_UNVERIFIED",
+      "INDUSTRIAL_BINDING_POLICY_UNVERIFIED",
       "RUNTIME_ADMISSION_UNAVAILABLE",
       "INDUSTRIAL_READ_POLICY_UNAVAILABLE",
     ]);
@@ -88,6 +90,7 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
     expect(issues.map((issue) => issue.code)).toEqual([
       "TAG_SOURCE_UNVERIFIED",
       "TAG_BINDING_SOURCE_UNVERIFIED",
+      "INDUSTRIAL_BINDING_POLICY_UNVERIFIED",
       "RUNTIME_ADMISSION_UNAVAILABLE",
       "INDUSTRIAL_READ_POLICY_UNAVAILABLE",
     ]);
@@ -106,6 +109,7 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
       "TAG_SOURCE_UNVERIFIED",
       "TAG_BINDING_SOURCE_UNVERIFIED",
       "TAG_BOUND_TYPE_UNRESOLVED",
+      "INDUSTRIAL_BINDING_POLICY_UNVERIFIED",
       "RUNTIME_ADMISSION_UNAVAILABLE",
       "INDUSTRIAL_READ_POLICY_UNAVAILABLE",
     ]);
@@ -145,6 +149,80 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
     expect(JSON.stringify(snapshot)).toBe(before);
   });
 
+  it("隐藏图元携带未审查规则时同时形成 Runtime 与工业策略阻塞且只回传固定路径", async () => {
+    const sensitive = "modbus://test-device/register/7";
+    const snapshot = await snapshotOf((document) => {
+      const hidden = document.pages[0]!.nodes[1]!;
+      hidden.props.__scadaStudio = { visible: false };
+      hidden.rules = [{ action: "write", target: sensitive }];
+    });
+    const before = JSON.stringify(snapshot);
+    const blocks = assessProjectReleaseSafety(snapshot, CONTEXT);
+    expect(blocks).toContainEqual({
+      code: "RUNTIME_COMPATIBILITY_UNVERIFIED",
+      path: "snapshot.document",
+    });
+    expect(blocks).toContainEqual({
+      code: "INDUSTRIAL_RULES_UNREVIEWED",
+      path: "snapshot.document.pages",
+    });
+    expect(blocks).toContainEqual({
+      code: "INDUSTRIAL_BINDING_POLICY_UNVERIFIED",
+      path: "snapshot.document.pages",
+    });
+    expect(JSON.stringify(blocks)).not.toContain(sensitive);
+    expect(JSON.stringify(snapshot)).toBe(before);
+  });
+
+  it("纯静态页面不因缺少规则和绑定就获得工业只读策略的隐式许可", async () => {
+    const snapshot = await snapshotOf((document) => {
+      document.tags = [];
+      for (const page of document.pages) {
+        for (const node of page.nodes) {
+          node.bindings = {};
+          node.rules = [];
+        }
+      }
+      document.pages[0]!.nodes[0]!.props.text = "禁止工业设备写入";
+    });
+    expect(assessProjectReleaseSafety(snapshot, CONTEXT)).toEqual([
+      { code: "RUNTIME_ADMISSION_UNAVAILABLE", path: "runtime" },
+      { code: "INDUSTRIAL_READ_POLICY_UNAVAILABLE", path: "industrial" },
+    ]);
+  });
+
+  it("非首屏图元规则仍必须被工业只读审查发现而不推断任何执行语义", async () => {
+    const snapshot = await snapshotOf((document) => {
+      document.tags = [];
+      for (const page of document.pages) {
+        for (const node of page.nodes) node.bindings = {};
+      }
+      document.pages.push({
+        id: "secondary",
+        name: "维护页面",
+        size: { width: 880, height: 460 },
+        nodes: [
+          {
+            id: "secondary-label",
+            type: "label",
+            symbolVersion: "1",
+            transform: { x: 10, y: 10, width: 100, height: 20, rotation: 0 },
+            props: { text: "只读" },
+            bindings: {},
+            rules: [{ futureOperation: "unknown" }],
+          },
+        ],
+      });
+    });
+    const blocks = assessProjectReleaseSafety(snapshot, CONTEXT);
+    expect(blocks.map((block) => block.code)).toEqual([
+      "RUNTIME_COMPATIBILITY_UNVERIFIED",
+      "INDUSTRIAL_RULES_UNREVIEWED",
+      "RUNTIME_ADMISSION_UNAVAILABLE",
+      "INDUSTRIAL_READ_POLICY_UNAVAILABLE",
+    ]);
+  });
+
   it("生产门禁对所有工程抛出原有安全拒绝，且不触发任何数据库操作", async () => {
     const snapshot = await snapshotOf();
     const query = vi.fn<() => Promise<unknown[]>>();
@@ -156,6 +234,7 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
       blocks: [
         { code: "TAG_SOURCE_UNVERIFIED" },
         { code: "TAG_BINDING_SOURCE_UNVERIFIED" },
+        { code: "INDUSTRIAL_BINDING_POLICY_UNVERIFIED" },
         { code: "RUNTIME_ADMISSION_UNAVAILABLE" },
         { code: "INDUSTRIAL_READ_POLICY_UNAVAILABLE" },
       ],

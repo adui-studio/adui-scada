@@ -2820,3 +2820,29 @@ if ($LASTEXITCODE -ne 0) { throw "D5b8c 完整质量链失败" }
 ```
 
 离线质量链不含真实已发布夹具、正式发布 POST、ACL 撤权、工业网关与设备数据质量；这些工作需独立工业安全审核及明确操作授权，不能据本批结果改变 Issue #126 未完成状态。
+
+## 2026-11-22 · D5b8d 工业只读阻塞细分待 Windows 验收
+
+D5b8c 的维护者 Windows 日志包含明确 `git rev-parse HEAD = c555caf56c1208cf46c584aec72dd3533344072e`，与 PR #135 远程 HEAD 相同；实际 `pnpm run test:unit` **693/693**、`vp check` **413 文件格式通过/264 文件零警告或错误**、`docs:check` **90 份**，完整 `pnpm run ready` 包含 **693/693 Vitest、62/62 HTTP E2E** 和 React/Vue/NestJS 构建成功。维护者本轮明确同意合并后 PR #135 Squash 合并至 `main@b0e37d57e6c6c755e1a0ebe4198f3aa0905fbc23`；不将本次离线结果泛化为现场工业安全评审。
+
+D5b8d 独立候选仅添加两类工业只读风险标记：图元绑定缺少工业只读操作策略证明、`rules[]` 非空表示存在未经审核的潜在执行规则。检查不执行规则、不尝试解释动作字段、不访问网络/数据库/设备，且包含隐藏/非首屏图元；仍无条件抛 `ProjectReleaseGateUnavailableError`。新增 **3 项单测定义**，既有 9 项加 3 项的目标值是 12 项，**不是已运行结果**。当前 GitHub 协作环境未执行 Windows Vite+、Vitest、HTTP E2E 或完整 `ready`；请在 PR 当前 HEAD 上逐一执行：
+
+```powershell
+git rev-parse HEAD
+
+pnpm run test:unit
+if ($LASTEXITCODE -ne 0) { throw "D5b8d 单元测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b8d Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b8d 文档检查失败" }
+
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "D5b8d 完整质量链失败" }
+
+Write-Host "D5b8d Windows 离线验收通过" -ForegroundColor Green
+```
+
+该验收不包含真实 `adui_scada_test` PostgreSQL、Keycloak/HTTPS 已发布夹具、工业网关白名单、真实 Tag 质量/时效、规则安全审计或任何发布/撤权操作。ADR-0070 S0～S5 授权不得因单测绿灯而自动获得；生产 HTTP 503、禁止设备写入与 Issue #126 Open 均保持不变。

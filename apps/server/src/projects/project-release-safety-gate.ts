@@ -19,6 +19,8 @@ export type ProjectReleaseSafetyBlockCode =
   | "TAG_BINDING_SOURCE_UNVERIFIED"
   | "TAG_BOUND_TYPE_UNRESOLVED"
   | "RUNTIME_ADMISSION_UNAVAILABLE"
+  | "INDUSTRIAL_BINDING_POLICY_UNVERIFIED"
+  | "INDUSTRIAL_RULES_UNREVIEWED"
   | "INDUSTRIAL_READ_POLICY_UNAVAILABLE";
 
 export interface ProjectReleaseSafetyBlock {
@@ -54,9 +56,11 @@ export function assessProjectReleaseSafety(
   const tagTypes = new Map(snapshot.document.tags.map((tag) => [tag.tagId, tag.dataType]));
   let hasBindings = false;
   let hasUnresolvedBoundType = false;
+  let hasUnreviewedRules = false;
   // 隐藏页面和图元仍可能在正式运行时被引用，不可跳过其绑定。
   for (const page of snapshot.document.pages) {
     for (const node of page.nodes) {
+      if (node.rules.length > 0) hasUnreviewedRules = true;
       for (const binding of Object.values(node.bindings)) {
         hasBindings = true;
         const dataType = tagTypes.get(binding.tagId);
@@ -71,6 +75,13 @@ export function assessProjectReleaseSafety(
   }
   if (hasUnresolvedBoundType) {
     blocks.push({ code: "TAG_BOUND_TYPE_UNRESOLVED", path: "snapshot.document.tags" });
+  }
+  // 数据源身份并不能证明采集接口只读；规则数组是未知 JSON，不能推断为已审核的安全操作。
+  if (hasBindings) {
+    blocks.push({ code: "INDUSTRIAL_BINDING_POLICY_UNVERIFIED", path: "snapshot.document.pages" });
+  }
+  if (hasUnreviewedRules) {
+    blocks.push({ code: "INDUSTRIAL_RULES_UNREVIEWED", path: "snapshot.document.pages" });
   }
   // Runtime 发布准入与工业网关只读策略仍未完成，任何静态工程也不能自动放行。
   blocks.push({ code: "RUNTIME_ADMISSION_UNAVAILABLE", path: "runtime" });
