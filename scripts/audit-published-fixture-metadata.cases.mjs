@@ -65,10 +65,7 @@ void describe("D5b7b 已发布夹具元数据只读预检安全边界", () => {
       ["--apply", "--confirm-lab", "adui_scada"],
       ["--project-id", PROJECT.toUpperCase()],
     ]) {
-      assert.throws(
-        () => parsePublishedFixtureMetadataArgs(args),
-        /仅允许显式指定独立已发布夹具/,
-      );
+      assert.throws(() => parsePublishedFixtureMetadataArgs(args), /仅允许显式指定独立已发布夹具/);
     }
   });
 
@@ -290,10 +287,13 @@ void describe("D5b7b 已发布夹具元数据只读预检安全边界", () => {
     assert.deepEqual(rows, before);
     const corrupted = released();
     corrupted.lastEvent[0].event_id = "Token=SECRET";
-    assert.throws(() => classifyPublishedFixtureMetadata(corrupted, PROJECT), (error) => {
-      assert.equal(error.message, "D5b7b 发布夹具只读元数据不完整或不一致");
-      assert.equal(error.message.includes("SECRET"), false);
-      return true;
-    });
+    assert.throws(
+      () => classifyPublishedFixtureMetadata(corrupted, PROJECT),
+      (error) => {
+        assert.equal(error.message, "D5b7b 发布夹具只读元数据不完整或不一致");
+        assert.equal(error.message.includes("SECRET"), false);
+        return true;
+      },
+    );
   });
 });
