@@ -74,7 +74,7 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
 
   it("生产门禁对所有工程抛出原有安全拒绝，且不触发任何数据库操作", async () => {
     const snapshot = await snapshotOf();
-    const query = vi.fn();
+    const query = vi.fn<() => Promise<unknown[]>>();
     const transaction = { $queryRaw: query } as unknown as Prisma.TransactionClient;
     const gate = new ProjectReleaseSafetyGate();
     await expect(gate.assertReady(transaction, snapshot, CONTEXT)).rejects.toMatchObject({
