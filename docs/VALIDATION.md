@@ -2686,7 +2686,7 @@ PR #124 已经维护者同意并在 Windows `docs:check` **89**、`vp check` **4
 
 1. 首次完整且可校验的 `RELEASED` 响应进入 `verified`；已开始的第二次刷新尚未结束时必须立刻切到 `loading`、撤下旧 snapshot 与发布代次、Tag 质量仍为 `UNAVAILABLE`；随后模拟 `forbidden`（对应 HTTP 403 语义）拒绝，必须进入 `denied`、旧画面及水位保持空、无新定时器或多余读取。
 2. 已校验 `RELEASED` 后的一次自动刷新挂起且底层忽略中止；真实生命周期的 `setVisible(false)` 必须使旧 AbortSignal 失效并立即清空页面。重显后第三次读取模拟 `not_found`（对应 HTTP 404 语义），最终成为 `denied`；此时再向旧已废弃 Promise 释放一个本可验证的合法 `RELEASED` 响应，**绝不能恢复** `verified`、旧 snapshot、发布代次或后台刷新。
-   
+
 这两个测试不引入新生产 API、不访问数据库、Keycloak、网络、浏览器或工业网关，模拟状态**不能**冒称真实 HTTP 403/404、真实 PostgreSQL ACL 变更或生产“正在运行时撤权”场景已经通过。已有正式单测包含基础的 `verified → denied`、自动轮询停止与隐藏重新校验，本次新增覆盖它们之间的异步交错保护。
 
 **验证状态**：代码及文档已推送候选分支并做 GitHub 静态回读，最新分支 Windows 真实 `vp test run packages/runtime/test/published-runtime-refresher.test.ts`（预计原 15 项增至 17 项）、`vp check`、`docs:check`、完整 `pnpm run ready`（Vitest 预计 682 项）均**尚未执行**。真实已发布工程的合法发布快照与受控撤权 Lab 准备、权限操作、浏览器 `verified → denied` 和数据库前后审计均独立待评审，**不得使用已撤权 D5b4 工程去恢复 ACL 或写入发布快照**。
