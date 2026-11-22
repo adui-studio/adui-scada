@@ -241,6 +241,8 @@ describe("正式发布 Runtime 指针刷新与失效保护", () => {
       snapshot: null,
       tagQuality: "UNAVAILABLE",
     });
+    const pendingOldRequest = refresher.refresh();
+    expect(readCurrentRelease).toHaveBeenCalledTimes(2);
     await refresher.setVisible(false);
     expect(staleSignal?.aborted).toBe(true);
     expect(runtime.snapshot()).toMatchObject({ status: "idle", snapshot: null });
@@ -256,7 +258,7 @@ describe("正式发布 Runtime 指针刷新与失效保护", () => {
     });
     expect(clock.pendingDelays()).toEqual([]);
     releaseOld?.(stale);
-    await Promise.resolve();
+    await pendingOldRequest;
     expect(runtime.snapshot()).toMatchObject({
       status: "denied",
       projectId,
