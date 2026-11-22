@@ -2718,3 +2718,11 @@ PR #128 已经维护者 Windows 离线 12/12、`vp check` 407/259 零告警、`d
 **实际执行**：隔离 Node.js 22.16.0 先对新增的纯函数及其单测文件运行 `node --check`，原生 `node --test` **5/5 通过**（实施前的独立代码副本）。这是新增纯函数的局部验证，**不是**当前 GitHub 完整 HEAD 的实际 Windows 验收。整合后 D5b7c Mock 的 14 项定义、`vp check`、`docs:check`、`pnpm run ready`、真实 PostgreSQL READ ONLY、Keycloak/双框架在线撤权均待执行，不能推断成功。
 
 当前仍未确认存在真正已发布且具备受控授权的独立 D5b7b Lab 工程；不能据此关闭真实 `verified → denied` 阻塞，也不能调整 `ProjectReleaseSafetyGate` 或执行写入。
+
+## 2026-11-22 · D5b7e Issue #126 全量目标 ACL 元数据保护候选
+
+PR #129 已按维护者明确合并授权 Squash 合并至 `main@fb320f4731cd59535c0bd00222be93ce3fe486b7`，合并前 HEAD `a3168d553cf030f6bcd5130c4fb7ac6ef9acf549`；后者相比前次审查 HEAD 只调整了代码和文档格式。维护者 Windows D5b7d 基线专项 **5/5**、D5b7c 事务回归 **14/14**、`vp check` **409/261**、`docs:check` **89**、Vitest **682/682**、HTTP E2E **62/62**、双框架与服务端构建、完整 `ready` **通过**。历史分支清理继续暂停。
+
+在最新主线发现 D5b7c SQL **先筛除非 `release:read` 授权行**，导致纯分类器不能看到异常授权、额外其他主体与多余发布权限的真实数据。D5b7e 最小修改目标 ACL 查询为同租户同工程**全量授权元数据**；先校验受控主体三项基础授权或四项含读取授权，无授权/三项仅返回 DENIED，其他异常 fail-closed；原 D5b1 基线和只读事务不变。D5b7c Mock 回归从 14 项定义扩为 **17 项**，新增完整 ACL 形态、额外/跨主体/重复/缺失权限以及孤立 ACL 拒绝用例。
+
+**当前验证级别**：GitHub 远端代码/Schema/已有 D5b4 ACL 契约静态核对，尚未提供本批最新 HEAD 的 Node、`vp check`、`docs:check`、完整 Windows `ready` 实测日志；没有执行真实 PostgreSQL/Keycloak/浏览器操作，仍缺合法 RELEASED 夹具与实时撤权证据。此批不改生产发布安全门禁或 ACL 写入。
