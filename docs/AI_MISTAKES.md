@@ -708,6 +708,8 @@
 - **验证边界**：此条记录基于维护者提供的真实 Windows 警告日志及 GitHub 远端源码；修复后 `pnpm run test:published:oidc:revoke:multitab:config`、`vp check`、`docs:check`、完整 `ready` 和真实 Keycloak/Chrome 双标签页均**待 Windows 复验**，不得记为已通过。本次不执行数据库写入、ACL 恢复或服务端工程写入。
 - **证据**：维护者 2026-11-22 `vp check --fix` 日志、PR #120、`scripts/test-oidc-studio-revoked-multitab.mjs`、`docs/VALIDATION.md`。
 
+> **2026-11-22 · E-076 Windows 结案补录**：维护者提供 PR #120 修复后的本机实际日志：`test:published:oidc:revoke:multitab:config` **11/11**、`vp check` **398 个格式文件/250 个受检文件零警告错误**、`docs:check` **89 份**、完整 `pnpm run ready` **退出码 0**（Vitest **680/680**、HTTP E2E **62/62**、React/Vue/NestJS 构建成功）。原始日志未打印本地 Git HEAD，不能将本机结果严格绑定到远端提交。维护者已明确授权合并；PR #120 已 Squash 合并到 `main@eb3fdc5105d3cb5d88593db7fffd7702e91625c8`，**E-076 的零警告质量门禁阻塞已关闭**。本轮没有新增 D5b5b 真实 Chrome/Keycloak 双标签页执行证据；该浏览器专项仍待独立验收。此结案补录本身未在 Windows 重新执行完整 `ready`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
