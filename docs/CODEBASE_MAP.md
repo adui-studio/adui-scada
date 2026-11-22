@@ -1340,3 +1340,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-baseline-session.ts`：新增 `beginAlarmBaselineSession`、`restartAlarmBaselineSession`、`transitionAlarmBaselineSession`。冻结本地状态、重启代次递增，组合已存在快照与 delta 校验并处理断连、定时检查、无目标更新、拒绝后基线清理及旧回调隔离。
 - `packages/core/test/alarm-baseline-session.test.ts`：新增 **11 项单测定义**，覆盖初始等待、连续增量、非目标 delta、跨会话迟到、重启、来源拒绝、重复序列、批次异常、断连和超时失效。
 - `packages/core/src/index.ts`：共享导出三函数及状态、动作、拒绝与转换类型。Runtime、NestJS、工业网关、双框架组件和正式发布门禁均未修改。
+
+## 2026-11-23 · D5b9m FR-011 本地报警基线会话托管
+
+- `packages/core/src/alarm-session-controller.ts`：新增 `AlarmBaselineSessionController` 和引用身份令牌 `AlarmBaselineSessionToken`。通过现有纯归约函数同步保存不可变状态，断连/拒绝后撤销令牌，显式 restart 严格递增代次；旧回调只返回无状态/工艺数值的忽略结果。
+- `packages/core/test/alarm-session-controller.test.ts`：新增 **9 项定向测试定义**，覆盖正常 snapshot/delta、引用同一性、代次重启、断连、质量拒绝、非法批次、时间失效和代次溢出。
+- `packages/core/src/index.ts`：公共导出托管器、令牌及转换结果类型。仅 Core 改动，未修改 TagStore、Runtime、NestJS、Prisma、双框架 UI、网关或正式发布安全门禁。

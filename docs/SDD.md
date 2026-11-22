@@ -1281,3 +1281,11 @@ React/Vue 的 `PublishedRuntimePage` 在 `verified` 且快照具有多个页面�
 本代次合法 snapshot 建立冻结基线；目标 Tag 的合法递增 delta 推进为新冻结基线；不包含目标 Tag 的合法 delta 返回 `TAG_NOT_UPDATED`，不会重发旧数值，也**不能代替定期时效检查**。`CHECK_FRESHNESS` 对已有基线应用显式时间窗口，超时立刻清除基线；当前代次断连、来源未核验、质量/序列拒绝、任何 Tag 批次 TypeError 均以 `BASELINE_INVALIDATED` 返回 `baseline: null`，调用方必须重新获取合法快照。旧/其他代次的迟到操作返回 `OTHER_SESSION_IGNORED`，不覆盖或清空当前会话。操作代次非法明确抛错，不声称已实现真实取消网络请求或身份认证。所有状态都是函数返回值，调用方必须实际替换持有的会话状态才能应用失效保护。
 
 会话代次及 `sourceVerified` 只能由未来受控订阅管理器提供；`sourceVerified` 仍只是调用方布尔声明，不是认证凭据。Core 归约器不接入 PLC/DCS、网关、NestJS、告警规则、阈值/死区/延时、确认 API、不可变审计或正式发布业务。FR-011 完整工业报警仍规划中，正式发布 Gate 保持 fail-closed。
+
+## 2026-11-23 · D5b9m FR-011 本地报警候选会话状态托管与回调令牌
+
+共享 Core 新增 `AlarmBaselineSessionController`：持有 D5b9l 纯函数归约后的不可变 `AlarmBaselineSessionState`，通过 `receive(token, change, sourceVerified, nowMs, maxAgeMs)`、`disconnect(token, nowMs, maxAgeMs)`、`checkFreshness(token, nowMs, maxAgeMs)` 更新本地会话。构造时从无基线、非负安全整数代次开始；`restart()` 利用既有 `restartAlarmBaselineSession` 严格递增代次、舍弃旧基线并生成新的冻结令牌，溢出则拒绝且保持原会话。
+
+回调令牌仅以**对象引用同一性**比较，而不只比较代次数字：伪造同数字对象、旧订阅迟到 callback 或已失效令牌的 `receive/disconnect/checkFreshness` 均只返回 `STALE_HANDLE_IGNORED`，不执行归约、不回传当前状态或工艺数值。`BASELINE_INVALIDATED`（断连、坏质量、批次非法、时效过期等）会真正保存新的 `baseline:null` 状态，并撤销当前令牌；原令牌不能靠迟到 snapshot 再次恢复，需要受控上游显式 `restart()` 获得新代次并重新建立快照。`TAG_NOT_UPDATED` 不刷新数据年龄；必须由调用方主动以可信时钟执行 `checkFreshness`。同步托管器没有后台定时器、网络订阅、自动恢复或持久化。
+
+该令牌**不是身份认证凭据**，`currentToken()` 的暴露仅用于可信同进程调用方。布尔 `sourceVerified` 仍是外部声明而非真实来源证明，不允许从不可信客户端或设备直接作安全决策。正式来源核验、会话生命周期调度、重连取消、历史报警和确认授权尚未接入；不实现 TRIGGER/RECOVER、阈值、死区、设备写入或发布授权，FR-011 与生产安全门禁状态不变。

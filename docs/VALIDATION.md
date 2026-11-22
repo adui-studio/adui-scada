@@ -3177,3 +3177,25 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批仅修改共享 Core、定向测试、公共导出和文档，未涉及 HTTP、数据库、双端 UI 或协议适配，故不重复未改动模块的完整 ready 与浏览器专项。归约器返回基线清空结果不代表外部调用方已经安装/应用它；来源可信性、会话管理、工业报警与正式发布安全仍未验收。
+
+## 2026-11-23 · D5b9m FR-011 会话回调令牌与本地状态托管待 Windows 验收
+
+PR #151 维护者 Windows 对新增会话归约单测 **11/11**、`vp check` **431 格式/282 受检零警告错误**、文档 **90**、中文文案 **306** 均实测通过，经明确授权 Squash 合并至 `main@1c27139a205f8074beb83f64ea5b473457dc9c71`。本批 D5b9m 新增 **9 项单测为定义，尚未在 Windows 实测**。
+
+维护者可以先执行 `vp check --fix`，正常提交所需格式化差异，不要求核对 HEAD。在当前 PR 功能分支执行：
+
+```powershell
+vp test run packages/core/test/alarm-session-controller.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警会话托管器定向测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批只增加 Core 同步状态托管、定向测试、公共导出及文档，无 HTTP、真实网络连接、自动定时器、Prisma、Vue/React 或工业网关改动。无需重复未改动模块的完整 ready、HTTP E2E 和双框架浏览器专项。令牌引用检查不是安全认证；没有可信时钟定期调用，已持有的 GOOD 基线不会自行超时；真实工业报警、审计和生产发布门禁不在本轮验收范围。
