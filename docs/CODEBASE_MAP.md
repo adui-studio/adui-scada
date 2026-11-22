@@ -1247,3 +1247,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/projects/project-release-safety-gate.ts`：在既有 `assessProjectReleaseSafety` 内只读扫描共享工程快照的全部 Tag 定义、页面及图元绑定；增加 `TAG_BINDING_SOURCE_UNVERIFIED` 和 `TAG_BOUND_TYPE_UNRESOLVED` 两个固定内部阻塞类别，保留 `TAG_SOURCE_UNVERIFIED` 和 `validateProjectReleasePreflight`。没有可信来源/质量证据时不能由 Tag 展示元数据推断现场正常；正式 `assertReady` 仍无条件抛相同错误。
 - `apps/server/src/projects/project-release-safety-gate.spec.ts`：更新已有阻塞清单精确断言，并增加 3 项负向用例，覆盖隐藏图元绑定、已绑定与未绑定 `unknown` 的区别、描述和显示名称伪造来源不造成安全放行或敏感信息输出。
 - 既有 NestJS HTTP 503 过滤器、发布事务、Prisma/ACL、共享 Core/Runtime、React/Vue 与工业网关均未修改。该分类不是可信 Tag 来源认证实现，真实数据质量和工业只读安全准入依旧缺失。
+
+## 2026-11-22 · D5b8d 工业只读策略诊断细分
+
+- `apps/server/src/projects/project-release-safety-gate.ts`：在现有只读 `assessProjectReleaseSafety` 扫描内识别任一页面（含隐藏、非首屏）的图元绑定与非空 `rules[]`；新增 `INDUSTRIAL_BINDING_POLICY_UNVERIFIED` 和 `INDUSTRIAL_RULES_UNREVIEWED` 固定内部阻塞，保留无条件 `INDUSTRIAL_READ_POLICY_UNAVAILABLE` 与 Gate 的固定拒绝。
+- `apps/server/src/projects/project-release-safety-gate.spec.ts`：更新有绑定工程的预期阻塞顺序，并新增 3 项负向用例，验证隐藏图元未知规则、未审核的非首屏规则、无规则无绑定的静态页面仍未获工业策略审批。防止将规则文本或静态标签作为可信只读证明。
+- 无外部规则执行器、Tag 工业地址白名单、设备驱动、PLC 写入、客户端分支、真实数据库操作或新的 HTTP 响应契约。
