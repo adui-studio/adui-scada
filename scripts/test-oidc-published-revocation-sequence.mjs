@@ -41,11 +41,11 @@ export function planD5b4fSequence(mode) {
     throw new Error("D5b4f 只允许明确阶段与独立专用工程，禁止任何写入或自动撤权");
   }
   const databaseScript = DATABASE_CHECKS[mode.phase];
-  const databaseArgs = ["--project-id", mode.projectId];
+  const databaseArgs = () => ["--project-id", mode.projectId];
   return [
     {
       script: databaseScript,
-      args: databaseArgs,
+      args: databaseArgs(),
       failure: "D5b4f 首次数据库只读检查未通过，已停止",
       name: "首次数据库只读检查",
     },
@@ -57,7 +57,7 @@ export function planD5b4fSequence(mode) {
     },
     {
       script: databaseScript,
-      args: databaseArgs,
+      args: databaseArgs(),
       failure: "D5b4f 末次数据库只读复核未通过，已停止",
       name: "末次数据库只读复核",
     },
