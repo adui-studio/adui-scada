@@ -4452,3 +4452,47 @@ Windows 离线验收（**不会连接真实 PostgreSQL**）：
 ```
 
 本批仅安全审查，不调用真实 PostgreSQL、发布、授权、撤权或恢复脚本。实际独立 RELEASED 夹具与真实 `verified → denied` 仍未确认，不因离线 ACL 回归通过而关闭 Issue #126。
+
+## 2026-11-22 · D5b7f 无工程 ID 的受控只读发现候选
+
+Issue #126 的维护者当前没有已发布独立测试工程 ID；“不知道 ID”不等于真实已发布夹具存在。本批仅新增**人工显式启动**的无 ID 发现入口 `oidc:lab:published:fixture:discover`，不修改生产 API、Prisma Schema、ACL、工程数据或发布安全门禁，也不会进入完整 `ready` 的真实数据库执行路径。
+
+- **可信前置**：固定使用根 `.env` 和既有本机 OIDC Lab 目标解析，必须验证数据库名、数据库用户、三项发布迁移、无未处理迁移、活动可信主体及 OIDC 外部预绑定。检查原 D5b1 首版、审计、发布代次零、零事件和四项授权。
+- **限制发现范围**：始终在 `REPEATABLE READ READ ONLY` 和 `ROLLBACK` 内，仅按租户、常量 `d5b7b-published-%`、同主体 `release:read` 及非零已发布指针查询；只选择 `project_id`，固定 `ORDER BY ... LIMIT 2`。不允许传入 ID、SQL、前缀、身份、其他库或写入参数；不查询工程正文、快照和凭据。
+- **不泄漏**：零候选返回 `NOT_FOUND`；两条及以上返回 `AMBIGUOUS`，均不输出 ID；唯一候选必须匹配 D5b7b 专用 UUIDv4。发现后**另起只读事务**调用已合并的 D5b7c～D5b7e 完整复核，防止候选发现与实际使用之间 ACL 或指针变化；仅当它返回 `RELEASED_METADATA_ONLY` 才向本机维护者终端展示唯一候选 ID。该结果仍**不是**真实快照 SHA-256 验证或 HTTP `RELEASED` 证明。
+- **无自动枚举**：`pnpm run ready` 只执行原生 Node Mock 的安全用例，不会调用数据库连接。旧 D5b1/D5b4 工程不得被选为候选。
+
+Windows PowerShell 7 **离线质量验收（不会连接数据库）**：
+
+```powershell
+& {
+    $ErrorActionPreference = "Stop"
+    if (git status --porcelain) { throw "工作区存在未提交修改" }
+    git fetch origin
+    if ($LASTEXITCODE -ne 0) { throw "获取远程提交失败" }
+    git switch feat/d5b7f-readonly-discovery
+    if ($LASTEXITCODE -ne 0) { throw "切换 D5b7f 分支失败" }
+    git pull --ff-only origin feat/d5b7f-readonly-discovery
+    if ($LASTEXITCODE -ne 0) { throw "更新 D5b7f 分支失败" }
+    $head = (git rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0) { throw "读取 HEAD 失败" }
+    Write-Host "D5b7f 验收 HEAD：$head"
+    pnpm run test:published:oidc:fixture:discover:config
+    if ($LASTEXITCODE -ne 0) { throw "D5b7f 离线发现测试失败" }
+    vp check
+    if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+    pnpm run docs:check
+    if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+    pnpm run ready
+    if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+}
+```
+
+**真实数据库入口须另行确认本机 Lab、可信主体、只读执行授权及运行窗口后才允许人工使用：**
+
+```powershell
+pnpm run oidc:lab:published:fixture:discover
+if ($LASTEXITCODE -ne 0) { throw "D5b7f 未确认唯一合法已发布元数据候选" }
+```
+
+此命令目前未实际执行；不保证有任何候选。即使获得候选工程 ID，仍须独立检查真实快照 SHA-256、受保护 HTTP `200/RELEASED` 和后续在线撤权专项审批。不得据此执行发布、恢复 ACL 或撤权写入。
