@@ -1203,3 +1203,10 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - 根 `package.json`：新增 `test:published:oidc:fixture:baseline:config` 并纳入 `ready`；真实数据库只读工具仍为独立人工入口。
 
 本轮仅是 Issue #126 的离线安全前置条件，不证明已发布 fixture 存在、快照真实 verified 或已完成在线 ACL 撤权。
+
+## 2026-11-22 · D5b7e 目标工程完整 ACL 只读安全核验
+
+- `scripts/inspect-published-fixture-readonly.mjs`：目标 ACL `SELECT subject_id, permission` 只按租户/工程限定，不再 SQL 先过滤指定主体或单个读取权限；`normalizePublishedFixtureTargetGrants` 检查全量权限元数据仅属于可信主体的三项基础权限或四项加唯一读取权限，拒绝重复/多余/跨主体/污染字段、孤立 ACL。保留 D5b7d 原 D5b1 基线、`READ ONLY` 事务与 `ROLLBACK`。
+- `scripts/inspect-published-fixture-readonly.cases.mjs`：原 14 项集成测试扩展为 17 项定义，新增完整授权、撤权仅三项、混入额外发布权限/其他主体/重复/缺失授权和工程不存在但残留 ACL 的失败场景。
+
+不修改原 D5b7b 分类器契约、实际权限、发布状态、Prisma Schema、生产 API 或工业设备。
