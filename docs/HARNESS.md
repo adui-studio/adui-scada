@@ -3924,12 +3924,12 @@ Write-Host "D5b4g 完整质量链退出码：$LASTEXITCODE"
 
 维护者已在本机可信 OIDC/Keycloak HTTPS Lab 使用**唯一新建的 D5b4 测试工程**，按 D5b4b 创建与授权 → D5b4c/f 撤权前只读/双框架 HTTP 200 → D5b4g 定向一次 `release:read` DELETE → D5b4e/f 撤权后只读/双框架 HTTP 404 的顺序完成**真实专项终验**。完整原始输出保存在维护者对话日志；本节只记录固定命令契约与结论，不在公开仓库散布真实 UUID、Cookie、Token、连接串或工程正文。
 
-| 验收时点 | 使用的已有脚本 | 维护者真实结果 |
-| --- | --- | --- |
-| 真实工程准备 | `oidc:lab:published:revoke:fixture --apply --confirm-lab adui_scada` | 新工程、必要授权、首次真实 HTTP 200 成功 |
-| 撤权前两次数据库夹持浏览器 | `oidc:lab:published:revoke:sequence --phase before --project-id <真实工程 ID>` | PostgreSQL 四项 ACL / 原 D5b1 完整；React/Vue 各一次真实 200；停止清理通过 |
-| 唯一一次定向撤权 | `oidc:lab:published:revoke:single --project-id <真实工程 ID> --apply --confirm-lab adui_scada --confirm-project <同一 ID>` | 写入前预检、单条权限撤销、提交后数据库只读审计成功 |
-| 撤权后两次数据库夹持浏览器 | `oidc:lab:published:revoke:sequence --phase after --project-id <同一 ID>` | PostgreSQL 仅三项基础 ACL、原 D5b1 完整；React/Vue 各一次真实 404 / denied；停止清理与末次只读复核通过 |
+| 验收时点                   | 使用的已有脚本                                                                                                             | 维护者真实结果                                                                                         |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 真实工程准备               | `oidc:lab:published:revoke:fixture --apply --confirm-lab adui_scada`                                                       | 新工程、必要授权、首次真实 HTTP 200 成功                                                               |
+| 撤权前两次数据库夹持浏览器 | `oidc:lab:published:revoke:sequence --phase before --project-id <真实工程 ID>`                                             | PostgreSQL 四项 ACL / 原 D5b1 完整；React/Vue 各一次真实 200；停止清理通过                             |
+| 唯一一次定向撤权           | `oidc:lab:published:revoke:single --project-id <真实工程 ID> --apply --confirm-lab adui_scada --confirm-project <同一 ID>` | 写入前预检、单条权限撤销、提交后数据库只读审计成功                                                     |
+| 撤权后两次数据库夹持浏览器 | `oidc:lab:published:revoke:sequence --phase after --project-id <同一 ID>`                                                  | PostgreSQL 仅三项基础 ACL、原 D5b1 完整；React/Vue 各一次真实 404 / denied；停止清理与末次只读复核通过 |
 
 **顺序安全门禁已通过实际负向检验**：若在撤权之前运行 `oidc:lab:published:revoke:after` 或 `--phase after`，仍存在 `release:read`，应拒绝并在首次数据库检查处停止；维护者确实观察到这两条命令返回错误。手工 `Write-Host` 不代表任何测试通过。实际 D5b4g 撤权成功后重新运行后置检查，才得到本节最终通过结论。
 

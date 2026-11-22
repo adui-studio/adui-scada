@@ -75,8 +75,12 @@ void describe("D5b5 真实 Studio 撤权发布读取与本地草稿保护", () =
           redirected: false,
           url: ORIGIN + PATH,
           headers: { get: () => "no-store" },
-          json: () => { throw new Error("不允许读取工程响应正文"); },
-          text: () => { throw new Error("不允许读取工程响应正文"); },
+          json: () => {
+            throw new Error("不允许读取工程响应正文");
+          },
+          text: () => {
+            throw new Error("不允许读取工程响应正文");
+          },
         };
       },
     };
@@ -204,14 +208,15 @@ void describe("D5b5 真实 Studio 撤权发布读取与本地草稿保护", () =
     for (const changes of variants) {
       const { before, after } = guards();
       assert.throws(
-        () => requireD5b5Preserved(
-          ID,
-          editedState(),
-          { ...editedState(), ...changes },
-          response(),
-          before,
-          after,
-        ),
+        () =>
+          requireD5b5Preserved(
+            ID,
+            editedState(),
+            { ...editedState(), ...changes },
+            response(),
+            before,
+            after,
+          ),
         /Studio 画布、IndexedDB 草稿或 CAS 基线发生变化/,
       );
     }
@@ -224,27 +229,44 @@ void describe("D5b5 真实 Studio 撤权发布读取与本地草稿保护", () =
 
   void it("额外 GET、已有请求被篡改、写入受阻或错误工程路径全部拒绝", () => {
     const mutations = [
-      ({ after }) => { after.paths.push(PATH); },
-      ({ after }) => { after.statuses.push(404); },
-      ({ after }) => { after.statuses[1] = 200; },
-      ({ after }) => { after.paths[1] = "/api/v1/projects/" + OLD_ID + "/releases/current"; },
-      ({ after }) => { after.paths[0] = "/api/v1/projects?limit=20"; },
-      ({ before }) => { before.blocked = 1; },
-      ({ after }) => { after.blocked = 1; },
-      ({ after }) => { after.statuses[0] = 500; },
+      ({ after }) => {
+        after.paths.push(PATH);
+      },
+      ({ after }) => {
+        after.statuses.push(404);
+      },
+      ({ after }) => {
+        after.statuses[1] = 200;
+      },
+      ({ after }) => {
+        after.paths[1] = "/api/v1/projects/" + OLD_ID + "/releases/current";
+      },
+      ({ after }) => {
+        after.paths[0] = "/api/v1/projects?limit=20";
+      },
+      ({ before }) => {
+        before.blocked = 1;
+      },
+      ({ after }) => {
+        after.blocked = 1;
+      },
+      ({ after }) => {
+        after.statuses[0] = 500;
+      },
     ];
     for (const modify of mutations) {
       const guard = guards();
       modify(guard);
       assert.throws(
-        () => requireD5b5Preserved(
-          ID,
-          editedState(),
-          editedState(),
-          response(),
-          guard.before,
-          guard.after,
-        ),
+        () =>
+          requireD5b5Preserved(
+            ID,
+            editedState(),
+            editedState(),
+            response(),
+            guard.before,
+            guard.after,
+          ),
         /浏览器工程请求不符合零写入约束/,
       );
     }
@@ -260,14 +282,8 @@ void describe("D5b5 真实 Studio 撤权发布读取与本地草稿保护", () =
     ]) {
       const guard = guards();
       assert.throws(
-        () => requireD5b5Preserved(
-          ID,
-          editedState(),
-          editedState(),
-          fake,
-          guard.before,
-          guard.after,
-        ),
+        () =>
+          requireD5b5Preserved(ID, editedState(), editedState(), fake, guard.before, guard.after),
         /已撤权发布接口未返回真实同源 HTTP 404/,
       );
     }
@@ -281,10 +297,7 @@ void describe("D5b5 真实 Studio 撤权发布读取与本地草稿保护", () =
     const staged = new Error("D5b5 浏览器阶段失败");
     staged.stage = "Vue：核验本地不变";
     staged.safeReason = "Cookie=SECRET";
-    assert.equal(
-      describeD5b5StudioFailure(staged),
-      "D5b5 Vue：核验本地不变失败：内部异常已脱敏",
-    );
+    assert.equal(describeD5b5StudioFailure(staged), "D5b5 Vue：核验本地不变失败：内部异常已脱敏");
     staged.safeReason = "D5b5 Studio 画布、IndexedDB 草稿或 CAS 基线发生变化";
     assert.match(describeD5b5StudioFailure(staged), /IndexedDB 草稿或 CAS 基线发生变化/);
     staged.stage = "未知阶段; Token=SECRET";

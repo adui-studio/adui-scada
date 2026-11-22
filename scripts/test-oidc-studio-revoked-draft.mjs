@@ -77,7 +77,11 @@ export function parseD5b5StudioMode(args) {
 /** 错误诊断只含固定阶段和固定中文类别，不返回工程正文、Cookie 或 Token。 */
 export function describeD5b5StudioFailure(error) {
   if (error instanceof Error && SAFE_ERRORS.has(error.message)) return error.message;
-  if (error instanceof Error && error.message === "D5b5 浏览器阶段失败" && STAGES.has(error.stage)) {
+  if (
+    error instanceof Error &&
+    error.message === "D5b5 浏览器阶段失败" &&
+    STAGES.has(error.stage)
+  ) {
     const category = SAFE_ERRORS.has(error.safeReason) ? error.safeReason : "内部异常已脱敏";
     return "D5b5 " + error.stage + "失败：" + category;
   }
@@ -214,24 +218,18 @@ async function inspectD5b5StudioState(session) {
 
 async function openD5b5Project(session, projectId) {
   assert.equal(await session.evaluate(openProjectBrowserMenuInPage), true);
-  let state = await waitForState(
-    async () => {
-      const current = await session.evaluate(pageStateInPage);
-      return current && !current.busy && current.ids.length > 0 && !current.error ? current : null;
-    },
-    "D5b5 Studio 工程管理入口或首版不可用",
-  );
+  let state = await waitForState(async () => {
+    const current = await session.evaluate(pageStateInPage);
+    return current && !current.busy && current.ids.length > 0 && !current.error ? current : null;
+  }, "D5b5 Studio 工程管理入口或首版不可用");
   let found = state.ids.includes(projectId);
   for (let index = 0; index < 100 && !found && state.nextEnabled; index += 1) {
     const currentPage = state.pageNumber;
     assert.equal(await session.evaluate(clickBrowserControlInPage, "next"), true);
-    state = await waitForState(
-      async () => {
-        const next = await session.evaluate(pageStateInPage);
-        return next && !next.busy && next.pageNumber === currentPage + 1 ? next : null;
-      },
-      "D5b5 Studio 工程管理入口或首版不可用",
-    );
+    state = await waitForState(async () => {
+      const next = await session.evaluate(pageStateInPage);
+      return next && !next.busy && next.pageNumber === currentPage + 1 ? next : null;
+    }, "D5b5 Studio 工程管理入口或首版不可用");
     found = state.ids.includes(projectId);
   }
   if (!found) throw new Error("D5b5 Studio 工程管理入口或首版不可用");
@@ -273,8 +271,11 @@ async function run() {
   try {
     await browser.send("Page.addScriptToEvaluateOnNewDocument", {
       source:
-        "if (" + JSON.stringify(origins) + ".includes(location.origin)) {(" +
-        installPublishedReadGuardInPage.toString() + ")(location.origin);}",
+        "if (" +
+        JSON.stringify(origins) +
+        ".includes(location.origin)) {(" +
+        installPublishedReadGuardInPage.toString() +
+        ")(location.origin);}",
     });
     report(stage);
     const principal = await waitForLogin(browser, origins[0], "D5b5 Studio 草稿只读保护");
