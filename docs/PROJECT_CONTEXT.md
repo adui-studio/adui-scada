@@ -2204,3 +2204,9 @@ D5b9f 从已合并主线添加共享 Core 数值报警输入质量分类候选�
 维护者在 PR #145 `d41a4859fae150031f8fe96d45fd74c2e23e313e` 上执行 `alarm-tag-quality.test.ts` **5/5**、`vp check` **419 格式文件 / 270 受检零警告错误**、`docs:check` **90**。随后 GitHub 远端仅增加 `b896a1ca2b3779bad9c0724f2c05fa0a6111e322` 中测试 `toThrow` 断言的单行排版修改，已审查为无行为变化，但**没有在该远端最终 SHA 上重新 Windows 实测**。维护者明确同意后 PR #145 Squash 合并到 `main@cd7b9df5a92c0876bac02a7e7dda1af1c424f9e8`。
 
 D5b9g 基于最新主线新增时间窗口纯函数，使用显式 `nowMs/maxAgeMs` 检查 `serverTimestamp` 并拒绝超龄与未来读数，复用既有 GOOD/有限数值筛选。新增 **6 项单测定义尚未 Windows 验收**，无默认年龄或工业规则。此步骤不验证来源、时钟赋值权和采集会话，更不实施报警触发、持久化、确认 API 或真实工业采集。FR-011 仍规划中，正式发布 Gate fail-closed 不变。
+
+## 2026-11-22 · PR #146 合并与 D5b9h 同会话序列候选
+
+维护者 Windows 在 PR #146 精确 HEAD `d4d1575e931a40d57a4a9fafe54d12f5c2abefad` 上验收 `alarm-tag-freshness.test.ts` **6/6**、`vp check` **421 格式文件、272 受检零错误或警告**、`docs:check` **90 份**及 `messages:check` **296 份**。经维护者明确同意，PR #146 Squash 合并至 `main@4729211eb48dd1914a4be9e22e1bae6a5dadcc11`，无需重复已通过的其他全链测试。
+
+D5b9h 新增共享 Core 同一订阅会话的候选序列检查：只有外部已建立基线、相同 Tag 且序列号严格前进时才返回 READY。其他情形拒绝，不建立首个可信基线，也不判定跨会话顺序。新增 **6 项定向测试定义，尚无维护者 Windows 实测**。本批不改已存在的 TagStore 和业务端订阅流程，不涉及真实报警、持久化确认审计、阈值、网关或设备写入。FR-011 仍规划中，发布 Gate 继续 fail-closed。
