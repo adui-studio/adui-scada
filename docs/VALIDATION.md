@@ -2726,3 +2726,13 @@ PR #129 已按维护者明确合并授权 Squash 合并至 `main@fb320f4731cd595
 在最新主线发现 D5b7c SQL **先筛除非 `release:read` 授权行**，导致纯分类器不能看到异常授权、额外其他主体与多余发布权限的真实数据。D5b7e 最小修改目标 ACL 查询为同租户同工程**全量授权元数据**；先校验受控主体三项基础授权或四项含读取授权，无授权/三项仅返回 DENIED，其他异常 fail-closed；原 D5b1 基线和只读事务不变。D5b7c Mock 回归从 14 项定义扩为 **17 项**，新增完整 ACL 形态、额外/跨主体/重复/缺失权限以及孤立 ACL 拒绝用例。
 
 **当前验证级别**：GitHub 远端代码/Schema/已有 D5b4 ACL 契约静态核对，尚未提供本批最新 HEAD 的 Node、`vp check`、`docs:check`、完整 Windows `ready` 实测日志；没有执行真实 PostgreSQL/Keycloak/浏览器操作，仍缺合法 RELEASED 夹具与实时撤权证据。此批不改生产发布安全门禁或 ACL 写入。
+
+## 2026-11-22 · D5b7f 无 ID 已发布夹具受控只读发现候选
+
+用户没有独立已发布 Lab 工程的真实 ID。针对 Issue #126，从 `main@4a39abc42e267f541c7990b3402d368658307866` 新建 `feat/d5b7f-readonly-discovery`。不把“没有 ID”当作“数据库不存在已发布工程”，也不绕过仍固定 fail-closed 的 `ProjectReleaseSafetyGate`。
+
+本批新增 `scripts/discover-published-fixture-readonly.mjs` 以及 `.cases.mjs`，只允许无参数 CLI，在已验证本机 Lab、发布迁移、活动身份/预绑定和原 D5b1 基线的 `REPEATABLE READ READ ONLY` 事务中，按固定专用工程前缀/租户/主体独立读取授权和非零发布指针过滤，`LIMIT 2`，只查询 `project_id`。零个和多个均不暴露任何 ID；恰好一个符合 UUIDv4 的候选时，仍须使用已合并 D5b7c～D5b7e 审查器**重新开启只读事务**核对 ACL/发布指针/版本/事件，才允许输出该 ID 与 `RELEASED_METADATA_ONLY`。没有实际快照正文检验，不得声称 verified。
+
+离线安全测试定义 **16 项**（参数拒绝、唯一性与上限、原基线漂移、迁移及可信身份、查询范围、SQL 故障回滚、二次复核拒绝、异常信息脱敏），增加 `test:published:oidc:fixture:discover:config` 并纳入 `ready`；**真实数据库命令** `oidc:lab:published:fixture:discover` 保持单独手动运行。本次已从 GitHub 回读代码与配置，但尚未执行 Windows 原生 Node/Vite+/文档/完整 ready，**也没有访问真实 PostgreSQL 或证明任何合法已发布夹具存在**，所有退出码以维护者未来真实日志为准。
+
+无 Vue/React/NestJS 业务变更、SQL 写入、ACL 变更、设备控制或发布门禁调整。真实只读发现需要维护者在本机另行确认隔离 Lab 与只读操作边界，Issue #126 继续 Open。

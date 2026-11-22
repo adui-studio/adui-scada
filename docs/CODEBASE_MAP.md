@@ -1210,3 +1210,11 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - `scripts/inspect-published-fixture-readonly.cases.mjs`：原 14 项集成测试扩展为 17 项定义，新增完整授权、撤权仅三项、混入额外发布权限/其他主体/重复/缺失授权和工程不存在但残留 ACL 的失败场景。
 
 不修改原 D5b7b 分类器契约、实际权限、发布状态、Prisma Schema、生产 API 或工业设备。
+
+## 2026-11-22 · D5b7f 无工程 ID 受控只读发现
+
+- `scripts/discover-published-fixture-readonly.mjs`：无参数的本机可信 Lab 只读发现器；先核实发布迁移、可信身份和原 D5b1 基线，再限于 `d5b7b-published-%`、独立 `release:read`、非零已发布指针及最多两条 ID 的查询。零条/多条不泄漏 ID；唯一候选通过现有完整只读审查后才显示 ID 和元数据结论。
+- `scripts/discover-published-fixture-readonly.cases.mjs`：16 项 Node Mock 安全回归定义，覆盖非法参数、严格命名空间、只读事务、迁移/主体/基线、查询上限、异常回滚及第二次审查拒绝。
+- 根 `package.json`：`test:published:oidc:fixture:discover:config` 仅运行离线 Mock 并加入 `ready`；`oidc:lab:published:fixture:discover` 为单独、须确认 Lab 授权才能手动运行的真实 PostgreSQL 只读入口。
+
+本批没有修改现有业务 API、Schema、迁移、ACL、生产发布门禁、工业设备或 Vue/React 行为。
