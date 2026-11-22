@@ -32,6 +32,17 @@ export {
 } from "./alarm-state.ts";
 export type { AlarmEvent, AlarmState } from "./alarm-state.ts";
 export { classifyNumericAlarmSample } from "./alarm-tag-quality.ts";
+export {
+  beginAlarmBaselineSession,
+  restartAlarmBaselineSession,
+  transitionAlarmBaselineSession,
+} from "./alarm-baseline-session.ts";
+export type {
+  AlarmBaselineSessionAction,
+  AlarmBaselineSessionRejectReason,
+  AlarmBaselineSessionState,
+  AlarmBaselineSessionTransition,
+} from "./alarm-baseline-session.ts";
 export { advanceAlarmTagDeltaBaseline } from "./alarm-tag-delta.ts";
 export type {
   AlarmTagDeltaRejectReason,
