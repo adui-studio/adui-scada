@@ -255,7 +255,8 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
     const gate = new ProjectReleaseSafetyGate();
     const transaction = {} as Prisma.TransactionClient;
 
-    const failure = await gate.assertReady(transaction, invalid, CONTEXT).catch((cause: unknown) => cause);
+    const pending = gate.assertReady(transaction, invalid, CONTEXT);
+    const failure = await pending.catch((cause: unknown) => cause);
     expect(failure).toBeInstanceOf(ProjectReleaseGateUnavailableError);
     expect(failure).toMatchObject({
       name: "ProjectReleaseGateUnavailableError",
