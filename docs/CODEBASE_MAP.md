@@ -1185,3 +1185,11 @@ D5b4f 不更改 D5b4c/D5b4d/D5b4e 原有安全脚本、NestJS/Prisma、Vue/React
 - 根 `package.json`：新增 `test:published:oidc:fixture:metadata:config` 并纳入 `ready`；没有真实数据库/浏览器自动命令。
 
 此处仅建立 Issue #126 后续只读审查的**离线元数据门禁**，真实已发布夹具、发布快照校验、在线 `verified → denied` 和工业安全审批均未完成。
+
+## 2026-11-22 · D5b7c 发布夹具数据库只读审查入口
+
+- `scripts/inspect-published-fixture-readonly.mjs`：显式独立工程 ID 入口，复用现有可信本机 OIDC Lab 目标校验，查询三项已完成迁移、活动身份/预绑定、工程权限、发布指针/版本/事件最小元数据；严格 `REPEATABLE READ READ ONLY` 和 `ROLLBACK`，不会读取快照正文。
+- `scripts/inspect-published-fixture-readonly.cases.mjs`：原生 Node 离线 Mock 负向测试，覆盖唯一读授权、真实 SQL 参数、发布/未发布/撤权状态、缺失迁移、身份、版本/事件漂移、SQL 故障及脱敏。
+- `package.json`：增加 `test:published:oidc:fixture:readonly:config` 并加入 `ready`；单独手动入口 `oidc:lab:published:fixture:readonly` 不属于自动质量链。
+
+不修改 React/Vue、NestJS、Runtime、Prisma 迁移、ACL 或发布门禁；无真实已发布夹具或正式撤权验证证据。
