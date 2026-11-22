@@ -455,7 +455,8 @@ button:focus-visible {
   color: var(--scada-text-secondary);
   font-size: 13px;
 }
-.scada-published-controls input {
+.scada-published-controls input,
+.scada-published-controls select {
   flex: 1 1 260px;
   min-width: 140px;
   border: 1px solid var(--scada-border-strong);
@@ -464,7 +465,8 @@ button:focus-visible {
   color: var(--scada-text-strong);
   background: var(--scada-canvas);
 }
-.scada-published-controls input:focus-visible {
+.scada-published-controls input:focus-visible,
+.scada-published-controls select:focus-visible {
   outline: 2px solid var(--scada-cyan);
   outline-offset: 2px;
 }
