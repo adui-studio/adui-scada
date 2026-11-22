@@ -24,7 +24,12 @@ export {
 export type { TagDataType, TagDefinition } from "./tag-definition.ts";
 export { TAG_QUALITIES, TAG_QUALITY_LABELS, TagStore, validateTagValue } from "./tag-store.ts";
 export type { TagChange, TagListener, TagQuality, TagScalar, TagValue } from "./tag-store.ts";
-export { ALARM_EVENTS, ALARM_STATES, ALARM_STATE_LABELS, transitionAlarmState } from "./alarm-state.ts";
+export {
+  ALARM_EVENTS,
+  ALARM_STATES,
+  ALARM_STATE_LABELS,
+  transitionAlarmState,
+} from "./alarm-state.ts";
 export type { AlarmEvent, AlarmState } from "./alarm-state.ts";
 export { WaterTreatmentSimulator } from "./simulator.ts";
 export { renderSvgPage } from "./svg.ts";
