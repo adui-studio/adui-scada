@@ -126,11 +126,7 @@ export function assertPublishedRevocationAfterRows(rows, projectId) {
   return assertPublishedRevocationRows(rows, projectId, "after");
 }
 
-/**
- * 唯一允许的数据库事务为 READ ONLY；读取 ACL、版本和发布指针元数据，
- * 不获取工程快照正文、Cookie、Token 或其他租户数据。
- */
-/** 同一受控查询快照供撤权前、撤权后以及专用定向事务复核。 */
+/** 同一受控只读查询快照供撤权前、撤权后与专用事务内重新校验。 */
 export async function readPublishedRevocationRows(client, target, projectId) {
   if (!PROJECT_PATTERN.test(projectId)) {
     throw new Error("D5b4c 参数仅允许现有独立专用工程 ID，禁止写入模式");
@@ -208,6 +204,7 @@ export async function readPublishedRevocationRows(client, target, projectId) {
   };
 }
 
+/** 独立 READ ONLY 事务读取 ACL、版本和发布指针，不获取快照正文。 */
 export async function inspectPublishedRevocationTarget(
   client,
   target,
