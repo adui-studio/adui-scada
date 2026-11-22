@@ -1086,8 +1086,8 @@ PR #100 已合并至 main（`8db55e4b1bb97d69c08dc9238eb61f76071b7e72`）。C1 �
 
 ## 2026-11-22 · D5b4d 双阶段真实只读浏览器安全验收候选
 
-- `scripts/test-oidc-published-revocation-readonly.mjs`：只接受 `--phase before|after --project-id d5b4-revoke-<UUIDv4>`；复用原双框架 OIDC/HTTPS CDP 与只读工程 Fetch 门禁，新增不改响应的 `no-store` 观察器；严格要求撤权前真实 200/UNRELEASED、撤权后真实 404/denied、零快照与零写入，并检查停止读取后无新增 GET。
-- `scripts/test-oidc-published-revocation-readonly.cases.mjs`：14 项 Node 安全回归定义，覆盖参数拒绝、独立 CDP 函数、GET 及缓存头、跨 Origin/写入拦截、阶段错位、状态清理和诊断脱敏。
+- `scripts/test-oidc-published-revocation-readonly.mjs`：只接受 `--phase before|after --project-id d5b4-revoke-<UUIDv4>`；复用原双框架 OIDC/HTTPS CDP 与只读工程 Fetch 门禁，新增不改响应的 `no-store` 和非重定向同源观察器；严格要求撤权前真实 200/UNRELEASED、撤权后真实 404/denied、零快照与零写入，并检查停止读取后无新增 GET。
+- `scripts/test-oidc-published-revocation-readonly.cases.mjs`：15 项 Node 安全回归定义，覆盖参数拒绝、独立 CDP 函数、GET 及缓存头、跨 Origin/写入拦截、阶段错位、状态清理和诊断脱敏。
 - `package.json`：`test:published:oidc:revoke:readonly:config` 进入 `ready`；`test:published:oidc:revoke:readonly:browser` 为需要独立授权专用工程/未来真实撤权后的手工运行入口，不加入 `ready`。
 
 本批不变更服务端权限、Prisma Schema/SQL、React/Vue 生产 UI、工程数据、工业设备。当前仅完成候选代码与隔离自检，正式 Windows/Keycloak/PostgreSQL 验收尚待执行。
