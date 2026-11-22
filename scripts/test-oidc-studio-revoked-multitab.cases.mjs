@@ -215,15 +215,15 @@ void describe("D5b5b 已撤权工程 React/Vue 同源双标签页只读安全门
     };
     const response = { status: 404, noStore: true, direct: true };
     const cases = [
-      [
-        { ...after, paths: [...before.paths, "/api/v1/projects/" + ID, after.paths[1]] },
-        "D5b5 双标签读取期间工程请求数量不符",
-      ],
-      [{ ...after, statuses: [200] }, "D5b5 双标签读取期间工程响应数量不符"],
-      [{ ...after, statuses: [200, 401] }, "D5b5 双标签发布读取记录未返回 404"],
-      [{ ...after, blocked: 1 }, "D5b5 双标签出现非只读工程请求"],
+      {
+        changed: { ...after, paths: [...before.paths, "/api/v1/projects/" + ID, after.paths[1]] },
+        expected: "D5b5 双标签读取期间工程请求数量不符",
+      },
+      { changed: { ...after, statuses: [200] }, expected: "D5b5 双标签读取期间工程响应数量不符" },
+      { changed: { ...after, statuses: [200, 401] }, expected: "D5b5 双标签发布读取记录未返回 404" },
+      { changed: { ...after, blocked: 1 }, expected: "D5b5 双标签出现非只读工程请求" },
     ];
-    for (const [changed, expected] of cases) {
+    for (const { changed, expected } of cases) {
       let failure = null;
       try {
         requireD5b5Preserved(ID, state("甲"), state("甲"), response, before, changed);
@@ -254,11 +254,20 @@ void describe("D5b5b 已撤权工程 React/Vue 同源双标签页只读安全门
       blocked: 0,
     };
     const cases = [
-      [{ status: 200, noStore: true, direct: true }, "D5b5 双标签真实发布响应不是 404"],
-      [{ status: 404, noStore: false, direct: true }, "D5b5 双标签真实发布响应缺少 no-store"],
-      [{ status: 404, noStore: true, direct: false }, "D5b5 双标签真实发布响应地址不符或发生重定向"],
+      {
+        response: { status: 200, noStore: true, direct: true },
+        expected: "D5b5 双标签真实发布响应不是 404",
+      },
+      {
+        response: { status: 404, noStore: false, direct: true },
+        expected: "D5b5 双标签真实发布响应缺少 no-store",
+      },
+      {
+        response: { status: 404, noStore: true, direct: false },
+        expected: "D5b5 双标签真实发布响应地址不符或发生重定向",
+      },
     ];
-    for (const [response, expected] of cases) {
+    for (const { response, expected } of cases) {
       let failure = null;
       try {
         requireD5b5Preserved(ID, state("甲"), state("甲"), response, before, after);
@@ -290,15 +299,15 @@ void describe("D5b5b 已撤权工程 React/Vue 同源双标签页只读安全门
     };
     const response = { status: 404, noStore: true, direct: true };
     const cases = [
-      [{ canvas: "<svg>改</svg>" }, "D5b5 双标签业务 SVG 内容变化"],
-      [{ documentHash: "d".repeat(64) }, "D5b5 双标签工程 JSON 摘要变化"],
-      [{ draftCount: 2 }, "D5b5 双标签 IndexedDB 草稿数量变化"],
-      [{ draftHash: "d".repeat(64) }, "D5b5 双标签 IndexedDB 草稿摘要变化"],
-      [{ autoSave: true }, "D5b5 双标签自动保存状态变化"],
-      [{ baselineRevision: null }, "D5b5 双标签 CAS 基线变化"],
-      [{ projectId: ORIGINAL }, "D5b5 双标签工程关联发生变化"],
+      { change: { canvas: "<svg>改</svg>" }, expected: "D5b5 双标签业务 SVG 内容变化" },
+      { change: { documentHash: "d".repeat(64) }, expected: "D5b5 双标签工程 JSON 摘要变化" },
+      { change: { draftCount: 2 }, expected: "D5b5 双标签 IndexedDB 草稿数量变化" },
+      { change: { draftHash: "d".repeat(64) }, expected: "D5b5 双标签 IndexedDB 草稿摘要变化" },
+      { change: { autoSave: true }, expected: "D5b5 双标签自动保存状态变化" },
+      { change: { baselineRevision: null }, expected: "D5b5 双标签 CAS 基线变化" },
+      { change: { projectId: ORIGINAL }, expected: "D5b5 双标签工程关联发生变化" },
     ];
-    for (const [change, expected] of cases) {
+    for (const { change, expected } of cases) {
       let failure = null;
       const changed = { ...state("甲"), ...change };
       try {
