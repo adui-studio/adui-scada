@@ -1265,3 +1265,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/projects/prisma-project-release-store.spec.ts`：使用原有事务 Mock 的**真实** `PrismaProjectReleaseStore.publish` 和生产 `ProjectReleaseSafetyGate`，新增无 Tag/绑定/规则纯静态工程的 SHA-256 快照发布拒绝测试，明确核对事务已执行、快照已读取、发布事件与指针均未写入。
 - `apps/server/test/projects-api.e2e-spec.ts`：沿正式 NestJS 路由和错误过滤器新增 `SAFETY_ASSESSMENT_UNAVAILABLE` 异常的固定 503、`no-store` 与内部诊断脱敏断言。只在 HTTP 仓储接口注入固定错误，不尝试真实数据库或发布。
 - 生产 `ProjectReleaseSafetyGate`、`PrismaProjectReleaseStore`、HTTP 过滤器与 Vue/React 均未修改；仅强化已有失败路径的自动验收覆盖。
+
+## 2026-11-22 · D5b8g HTTP 错误日志结构化脱敏
+
+- `apps/server/src/observability/http-logging.config.ts`：既有 `createHttpLoggingOptions().serializers` 在 `req`/`res` 之外增加 `err` 的常量安全输出 `{ type: "HTTP_ERROR" }`；屏蔽 Pino 默认错误消息、调用堆栈及附加异常字段，仍由既有 HTTP 状态与请求 ID 提供定位关联。
+- `apps/server/src/observability/http-logging.config.spec.ts`：新增 3 项 Vitest 负向测试，覆盖敏感异常对象、恶意属性 getter 与真实 Pino JSON 记录，确保错误原文、路径/URL 不泄露。
+- `docs/AI_MISTAKES.md`：E-084 记录修复前 Windows HTTP 503 失败日志的本机路径暴露风险、根因及待 Windows 验收范围。
+- 不改 NestJS 工程路由/控制器、异常过滤器、Pino 日志等级、Prisma 或正式发布安全门禁；变更只作用于 HTTP 日志序列化。
