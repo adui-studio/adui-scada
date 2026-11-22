@@ -121,6 +121,38 @@ void describe("D5b5c 已撤权工程双标签页真实响应逆序交付安全�
     );
   });
 
+  void it("第一标签页保持隐藏时仍可后交付真实响应且不会发起额外 GET", async () => {
+    const first = fixture();
+    const second = fixture();
+    first.runtime.document = { visibilityState: "hidden" };
+    second.runtime.document = { visibilityState: "visible" };
+    for (const { runtime } of [first, second]) {
+      installD5b5cLateGateInPage(ORIGIN, PROJECT, runtime);
+      startD5b5cLateReadInPage(runtime);
+    }
+    await until(() =>
+      [first, second].every(({ runtime }) => d5b5cLateReadStateInPage(runtime).pending),
+    );
+    releaseD5b5cLateReadInPage(second.runtime);
+    await until(() => d5b5cLateReadStateInPage(second.runtime).settled);
+    assert.equal(first.runtime.document.visibilityState, "hidden");
+    assert.equal(
+      requireD5b5cLateReadState(d5b5cLateReadStateInPage(first.runtime), "pending"),
+      true,
+    );
+    releaseD5b5cLateReadInPage(first.runtime);
+    await until(() => d5b5cLateReadStateInPage(first.runtime).settled);
+    assert.equal(
+      requireD5b5cLateReadState(d5b5cLateReadStateInPage(first.runtime), "settled"),
+      true,
+    );
+    assert.equal(first.runtime.document.visibilityState, "hidden");
+    assert.deepEqual(first.calls.map(({ path }) => path), [PATH]);
+    assert.deepEqual(second.calls.map(({ path }) => path), [PATH]);
+    assert.equal(first.guard.blocked, 0);
+    assert.equal(second.guard.blocked, 0);
+  });
+
   void it("未发起请求时拒绝提前释放，完成后拒绝重复释放", async () => {
     const { runtime } = fixture();
     installD5b5cLateGateInPage(ORIGIN, PROJECT, runtime);
