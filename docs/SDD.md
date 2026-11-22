@@ -1247,3 +1247,7 @@ React/Vue 的 `PublishedRuntimePage` 在 `verified` 且快照具有多个页面�
 ## 2026-11-22 · D5b9f 数值报警输入质量筛选（候选）
 
 共享 Core `classifyNumericAlarmSample(input)` 先复用 `validateTagValue` 拒绝不合法 Tag 元数据和 NaN/Infinity，再仅对 `quality === GOOD` 且数值类型的输入返回 `{ status: "READY", value }`；质量为 `UNCERTAIN/BAD/STALE` 返回 `QUALITY_NOT_GOOD`，GOOD 但非数值返回 `NOT_NUMERIC`。失败结果不暴露过期工艺数值。此逻辑仅是**数值报警规则将来可复用的候选输入筛选**，并不证明采集源可信、事件顺序可靠或读数在业务允许的时效内。并未规定阈值、死区、延时、恢复语义或将质量异常映射为报警事件，也不改变原 TagStore 的质量与值语义。不得仅因 READY 便触发或恢复报警；服务端来源认证、时效与规则验证均未实现。
+
+## 2026-11-22 · D5b9g 数值报警候选的显式时间窗口（候选）
+
+共享 Core `classifyTimelyNumericAlarmSample(input, nowMs, maxAgeMs)` 复用 D5b9f 数值与质量筛选；只有 `GOOD` 且有限数值才进行 `serverTimestamp` 时间窗口判断。要求调用方显式传入安全整数毫秒时钟及正数最大年龄；未来时间返回 `FUTURE_TIMESTAMP`，年龄严格大于上限返回 `OUTDATED_TIMESTAMP`，等于上限可通过。非 READY 类别保留原有分类，拒绝结果不回传读数。无默认工业超时时长、隐式 `Date.now()`、设备时间替代或自动产生 TRIGGER/RECOVER。`sourceTimestamp` 不参与时间窗口判断；`serverTimestamp` 即使通过格式和窗口检查也**不证明来源可信**。正式网关/服务端仍必须独立验证时间赋值权、Tag 身份、采集会话代次及完整性；FR-011 规则、阈值、迟滞和时延尚未决定。
