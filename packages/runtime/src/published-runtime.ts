@@ -1,4 +1,4 @@
-import { parsePublishedRelease } from "@adui/scada-core";
+import { parsePublishedRelease, validateProjectReleasePreflight } from "@adui/scada-core";
 import type { ProjectSnapshot, PublishedRelease } from "@adui/scada-core";
 
 /** 此处只处理发布快照，不代表已接入实时 Tag，也不提供设备写入能力。 */
@@ -171,6 +171,12 @@ export class PublishedRuntime {
         tagQuality: "UNAVAILABLE",
       });
       return;
+    }
+
+    // 即使发布快照摘要有效，也必须在使用前重新核验当前 SVG Runtime 能力。
+    // 未支持的图元、规则与绑定不得被静态画面占位或忽略后当作 verified。
+    if (!validateProjectReleasePreflight(release.snapshot.document).passed) {
+      throw new TypeError("已发布快照与当前 SVG 运行时不兼容");
     }
 
     const previous = this.lastPointer;
