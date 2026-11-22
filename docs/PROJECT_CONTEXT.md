@@ -2198,3 +2198,9 @@ D5b9e 从最新主线继续 FR-011，新增共享 Core `replayAlarmEvents(events
 维护者在 PR #144 精确 HEAD `3e44212868462bfbc2f86f64d6f973510429ef9f` 执行 `alarm-replay.test.ts` **5/5**、`vp check` **417 格式文件/268 受检零警告错误**，明确授权合并；GitHub 确认 Squash 至 `main@ed32c0807148cd3370f8213a7f9d113c34f0c81b`。没有重复执行完整 ready，也没有 GitHub CI 通过记录。
 
 D5b9f 从已合并主线添加共享 Core 数值报警输入质量分类候选：GOOD 且数值有限方可返回 READY；UNCERTAIN/BAD/STALE 和非数值读数不能误入数值报警规则。新增 5 项测试定义，**尚无本批 Windows 实测**。此筛选不证明数据来源可信、时间新鲜、顺序完整，更不生成 TRIGGER/RECOVER/ACKNOWLEDGE、阈值或持久化审计。FR-011 仍规划中，正式发布门禁继续 fail-closed。
+
+## 2026-11-22 · PR #145 Windows 定向验收与 D5b9g 纯时间窗口候选
+
+维护者在 PR #145 `d41a4859fae150031f8fe96d45fd74c2e23e313e` 上执行 `alarm-tag-quality.test.ts` **5/5**、`vp check` **419 格式文件 / 270 受检零警告错误**、`docs:check` **90**。随后 GitHub 远端仅增加 `b896a1ca2b3779bad9c0724f2c05fa0a6111e322` 中测试 `toThrow` 断言的单行排版修改，已审查为无行为变化，但**没有在该远端最终 SHA 上重新 Windows 实测**。维护者明确同意后 PR #145 Squash 合并到 `main@cd7b9df5a92c0876bac02a7e7dda1af1c424f9e8`。
+
+D5b9g 基于最新主线新增时间窗口纯函数，使用显式 `nowMs/maxAgeMs` 检查 `serverTimestamp` 并拒绝超龄与未来读数，复用既有 GOOD/有限数值筛选。新增 **6 项单测定义尚未 Windows 验收**，无默认年龄或工业规则。此步骤不验证来源、时钟赋值权和采集会话，更不实施报警触发、持久化、确认 API 或真实工业采集。FR-011 仍规划中，正式发布 Gate fail-closed 不变。

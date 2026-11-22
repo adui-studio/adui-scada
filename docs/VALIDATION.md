@@ -3051,3 +3051,23 @@ if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
 ```
 
 有新增自有中文 JSDoc 和异常路径但不新增 throw 文案，需按仓库当前门禁结果补查 `messages:check`。以上定向质量测试不验证可信工业数据源、报警条件、服务端事件持久化和确认权限，不替代生产安全评审；本批不要求重复未改动模块的 HTTP E2E、React/Vue 浏览器与完整 ready。
+
+## 2026-11-22 · D5b9g FR-011 报警时间窗口筛选候选：Windows 待验收
+
+维护者 Windows 在 PR #145 `d41a4859fae150031f8fe96d45fd74c2e23e313e` 验收 5/5、Vite+ 419/270 零警告、文档 90 通过；最终合并源仅有另一次测试断言自动排版，差异已审查但未单独运行 Windows 测试。Squash 合并 `main@cd7b9df5a92c0876bac02a7e7dda1af1c424f9e8`。
+
+D5b9g 新增 **6 项定义，尚未实测**。请在 Draft PR 精确 HEAD 验收：
+
+```powershell
+git rev-parse HEAD
+vp test run packages/core/test/alarm-tag-freshness.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警时间窗口筛选测试失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批无现场可信时间来源、自动报警、确认 API、报警持久化、工业网关、发布能力或双端业务组件改动；未改动的 HTTP E2E、浏览器专项与完整 ready 不在本轮增量范围。真实工业报警与发布安全仍不得标为通过。
