@@ -25,7 +25,6 @@ import {
   installPublishedReadGuardInPage,
   openPublishedRuntimeInPage,
   publishedNavigationReadyInPage,
-  publishedReadGuardStateInPage,
   submitPublishedProjectInPage,
   waitForState,
 } from "./test-oidc-published-runtime-readonly.mjs";
