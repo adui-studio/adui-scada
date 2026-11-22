@@ -3983,3 +3983,31 @@ Write-Host "D5b5 真实双框架浏览器退出码：$LASTEXITCODE"
 ```
 
 `test:published:oidc:revoke:studio:config` 纳入根 `ready`；`test:published:oidc:revoke:studio:browser` **不纳入 `ready`**，不会在自动质量链中打开真实浏览器。协作端仅从 GitHub 回读并以隔离 V8/Mock 执行新增 11 项源测试定义，**11/11** 符合预期；**不是 Windows Node `node --test` 或真实 Chrome/Edge/PostgreSQL 执行结果**。本批没有连接 Lab 执行任何工程或 ACL 写入。
+
+## 2026-11-22 · E-075：D5b5 Windows 首轮原生 Node 测试失败后的复验顺序
+
+维护者 Windows 首轮 `test:published:oidc:revoke:studio:config` **10/11**；唯一失败为跨 `node:vm` Realm 的嵌套请求参数对象误触发 `deepStrictEqual` 原型比较。原轮 `vp check` **396/248 零错误警告**、`docs:check` **89**、Vitest **680/680**，但完整 `ready` **退出码 1**，没有继续执行 HTTP E2E、构建。当前 PR #118 修复候选对离线用例改为 `assert.deepEqual(structuredClone(requests), expected)`；不更换真实发布 GET、不删除任何断言，不调用数据库。
+
+须先在 Windows 取回最新测试分支，**打印本机 HEAD 并阻断失败**，不得将首轮的 `vp check`、`docs:check` 成功当作本次修正的验收：
+
+```powershell
+git fetch origin
+git switch test/b35-d5b5-studio-revoked-draft-protection
+git pull --ff-only
+git rev-parse HEAD
+
+pnpm run test:published:oidc:revoke:studio:config
+if ($LASTEXITCODE -ne 0) { throw "D5b5 修复后原生 Node 门禁失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "D5b5 修复后 Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "D5b5 修复后文档检查失败" }
+
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "D5b5 修复后完整质量链失败" }
+Write-Host "D5b5 修复后完整质量链退出码：$LASTEXITCODE"
+```
+
+真实 `test:published:oidc:revoke:studio:browser` 仍须在上述全部通过后单独人工执行，且只允许读取**先前已真实撤权的同一现存工程**。本次没有授权恢复 ACL、重新创建测试工程或执行任何数据库写入。协作端只运行了原生 Node 跨 Realm 最小复现与六种负向请求篡改检查，尚不能宣称最新 PR HEAD 的 Windows 11/11 或真实浏览器专项通过。
