@@ -2136,3 +2136,11 @@ D5b8d 从合并主线独立创建候选分支，只细化服务端 `assessProjec
 D5b8e 从上述主线创建独立候选，仅处理正式发布安全评估自身的异常边界：`assessProjectReleaseSafety` 对不完整结构、异常属性读取或其他评估错误抛出原始异常时，`ProjectReleaseSafetyGate.assertReady` 不再向上冒泡原始错误文本，而是生成固定 `SAFETY_ASSESSMENT_UNAVAILABLE` + `assessment` 内部阻塞并抛原有 `ProjectReleaseGateUnavailableError`，继续由 HTTP 层返回固定中文 503。正常评估的阻塞顺序和安全策略一律不变。
 
 新增 **2 项** Vitest 负向用例定义：破损 Tag 目录/零数据库查询、恶意属性读取异常中不泄露原始敏感文本。测试目标是 Gate 由 12 项增至 14 项，全量单测由 696 项增至 698 项，**新分支尚未实测**。服务端发布事务、Prisma、ACL、Client/Runtime、工程 Schema 和工业网关均未修改；正式发布仍无条件拒绝。Issue #126 保持 Open，ADR-0070 继续 Proposed，不批准真实已发布夹具或设备控制。
+
+## 2026-11-22 · D5b8e 完成验收合并与 D5b8f 发布跨层负向回归候选
+
+维护者 Windows 日志明确打印 D5b8e PR #137 的本地 HEAD `88c2c285b8361fd99c51eed48df8e6130484e647`，与 GitHub HEAD 精确一致；实际通过 Vitest **698/698**（安全 Gate **14/14**）、Vite+ **413 格式文件/264 受检零告警错误**、Markdown **90 份**、NestJS HTTP E2E **62/62**、React/Vue/NestJS 构建和完整 `ready`。本轮获维护者明确授权，PR #137 Squash 合并至 `main@a56549dbe614e4f4c18d17e0d01e7eff6d7a4c70`。属于离线质量验收，不是工业现场认证。
+
+D5b8f 从该最新 main 独立开发，针对两个尚缺少跨层回归的拒绝分支，仅新增测试：①通过真实 `PrismaProjectReleaseStore.publish` 与现有生产 `ProjectReleaseSafetyGate`，断言合法 SHA-256 的纯静态、零 Tag、零绑定工程在锁内通过现有 Core 静态预检后仍被工业与 Runtime 全局策略拒绝，并且不插入发布事件、不更新发布指针；②通过现有 NestJS 正式发布 HTTP 控制器和异常过滤器，模拟已捕获的 `SAFETY_ASSESSMENT_UNAVAILABLE`，确保只返回固定中文 503、不泄漏内部阻塞代码、路径或设备信息，也不触发其他工程写入入口。
+
+本轮**不修改生产代码、Prisma、ACL、Schema、工程快照、工业网关、前端或生产门禁行为**；不新增已发布测试夹具或任何写入授权。预期全量 Vitest **699**、NestJS HTTP E2E **63**，仅为待实测目标，不能声称已通过。ADR-0069 对已提交结果的同键同语义幂等回放规则仍维持原批准语义，不能把历史结果回放误称为新发布指针写入。正式发布仍默认 fail-closed，ADR-0070 Proposed、Issue #126 Open。
