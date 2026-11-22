@@ -1253,3 +1253,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/projects/project-release-safety-gate.ts`：在现有只读 `assessProjectReleaseSafety` 扫描内识别任一页面（含隐藏、非首屏）的图元绑定与非空 `rules[]`；新增 `INDUSTRIAL_BINDING_POLICY_UNVERIFIED` 和 `INDUSTRIAL_RULES_UNREVIEWED` 固定内部阻塞，保留无条件 `INDUSTRIAL_READ_POLICY_UNAVAILABLE` 与 Gate 的固定拒绝。
 - `apps/server/src/projects/project-release-safety-gate.spec.ts`：更新有绑定工程的预期阻塞顺序，并新增 3 项负向用例，验证隐藏图元未知规则、未审核的非首屏规则、无规则无绑定的静态页面仍未获工业策略审批。防止将规则文本或静态标签作为可信只读证明。
 - 无外部规则执行器、Tag 工业地址白名单、设备驱动、PLC 写入、客户端分支、真实数据库操作或新的 HTTP 响应契约。
+
+## 2026-11-22 · D5b8e 正式发布安全评估异常受控拒绝
+
+- `apps/server/src/projects/project-release-safety-gate.ts`：`ProjectReleaseSafetyGate.assertReady` 只为现有纯函数 `assessProjectReleaseSafety` 添加异常兜底；评估抛错统一归类 `SAFETY_ASSESSMENT_UNAVAILABLE`（固定路径 `assessment`），仍抛 `ProjectReleaseGateUnavailableError`，不暴露原始错误。既有 Runtime/Tag/工业策略检测未改变，无成功发布分支。
+- `apps/server/src/projects/project-release-safety-gate.spec.ts`：新建 2 项负向测试定义，分别覆盖非规范 Tag 结构、含敏感字段的恶意 getter，检查固定代码、固定中文错误和零数据库读写。
+- NestJS 503 HTTP 过滤、发布事务、真实 PostgreSQL、Core/Runtime、Vue/React、工业网关及工程 Schema 均不调整；这是异常路径防御，不是发布安全策略完成证明。
