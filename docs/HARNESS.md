@@ -4197,3 +4197,44 @@ if ($LASTEXITCODE -ne 0) { throw "E-078 完整质量链失败" }
 ```
 
 质量链通过后只对**同一现存、已撤权、经过明确只读审计的 D5b4 专用工程**执行 `oidc:lab:published:revoke:after --project-id <真实ID>`、`test:published:oidc:revoke:multitab:browser --project-id <真实ID>`，成功后再执行 `test:published:oidc:revoke:late:browser --project-id <真实ID>`。脚本需要独立隔离 Chrome/Edge 并手动登录已预绑定 Keycloak 测试身份，不能输入终端密码。真实浏览器仍不进入 `ready`。不得重新撤权、恢复 ACL、创建工程或调用任何生产设备写入。
+
+## 2026-11-22 · E-079 D5b5c 逆序交付隐藏第一页后再切换可见性复验
+
+已验证的 Windows HEAD `baa612ca029ff3f8a3bd6fe75b03ba24c7d85f9b`：D5b4e PostgreSQL READ ONLY 审计通过；**D5b5b React/Vue 双端真实双标签页、顺序发布 GET 404 及 SVG/草稿/CAS 保护全部通过**；D5b5c React 两页真实响应同时 pending、第二页先交付通过，却在**切回第一页后检查第一响应**时报“工程请求数量不符”，退出码 1，Vue 尚未验收。末尾若有单独的 `Write-Host`，它**不能代替**进程退出码 0。
+
+E-079 候选将“切回第一标签”移到两次真实响应完成严格交付和计数检查之后，最后仍真正切回第一标签复核本地状态与完整工程 API 只读守卫。新增隐藏第一标签逆序交付 Node 用例，不跳过 HTTP 404/no-store 或任何额外 GET/写入拒绝。**尚待最新 Windows HEAD 复验**；原 14/14 和 `ready` 通过不自动继承至新 HEAD。
+
+请复制为**一个 PowerShell 脚本块**执行，防止某条测试失败后仍手工执行无条件“通过”输出。先验证本地 HEAD 与最新 PR #121 一致（从 GitHub PR 取当前 SHA），然后执行：
+
+```powershell
+& {
+    git fetch origin
+    if ($LASTEXITCODE -ne 0) { throw "Git 更新远端引用失败" }
+    git switch test/b35-d5b5c-revoked-late-read
+    if ($LASTEXITCODE -ne 0) { throw "切换验收分支失败" }
+    git pull --ff-only
+    if ($LASTEXITCODE -ne 0) { throw "验收分支更新失败" }
+    $actualHead = (git rev-parse HEAD).Trim()
+    Write-Host "本次测试 HEAD：$actualHead"
+
+    pnpm run test:published:oidc:revoke:multitab:config
+    if ($LASTEXITCODE -ne 0) { throw "D5b5b 离线门禁失败" }
+    pnpm run test:published:oidc:revoke:late:config
+    if ($LASTEXITCODE -ne 0) { throw "D5b5c 离线门禁失败" }
+    vp check
+    if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+    pnpm run docs:check
+    if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+    pnpm run ready
+    if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+
+    $projectId = "d5b4-revoke-52c2ad3b-4800-42ca-8769-a7bee5da4d4a"
+    pnpm run oidc:lab:published:revoke:after --project-id $projectId
+    if ($LASTEXITCODE -ne 0) { throw "数据库只读审计失败" }
+    pnpm run test:published:oidc:revoke:late:browser --project-id $projectId
+    if ($LASTEXITCODE -ne 0) { throw "D5b5c 真实双框架浏览器专项失败" }
+    Write-Host "D5b5c 真实浏览器专项退出码：$LASTEXITCODE"
+}
+```
+
+只使用**已经存在且撤权状态未变化**的隔离工程；上轮 D5b5b 已真实双框架通过且本补丁不改变该脚本，可优先单独复测 D5b5c。若最终 D5b5c 通过，再根据维护者验收标准复核整条组合链。严格禁止恢复 `release:read`、再次执行撤权、生产数据库写入和设备控制。
