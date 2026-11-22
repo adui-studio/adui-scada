@@ -2605,3 +2605,9 @@ PR #117 已按维护者明确授权 Squash 合并至 `main@3c2e51c385ddaacb5015b
 严格区别：本候选仅覆盖**同源双标签页并存、真实可见性切换、顺序只读 HTTP 404 与本地快照保持**；没有交错挂起多个 GET、模拟迟到 HTTP 200/401/404、验证 Studio 自身发布预检状态机，亦不覆盖 IndexedDB 物理文件字节一致性或工业控制认证。用户既有 D5b4 工程仍缺 `release:read`，原 D5b1 权限保持不变；若已不存在或被改变，脚本必须失败，不能调用写入修复测试状态。
 
 已从 GitHub 分支回读三份相关 JS 脚本并执行**隔离 V8 语法解析**，新增 11 项测试在隔离 V8/Mock 中 **11/11 符合预期**。这个简化模拟无法证明 Node `node:vm` 跨 Realm 的原生 `deepStrictEqual` 或真实 CDP 行为，因此**不是**正式 Windows Node、`vp check`、`docs:check`、`ready`、Keycloak/HTTPS/Chrome 或 PostgreSQL 的通过证据。本分支正式质量链及真实浏览器专项均待维护者验收。
+
+## 2026-11-22 · PR #120 D5b5b 双标签页测试未使用导入修复（待复验）
+
+维护者 Windows 在 PR #120 的 `vp check --fix` 中发现 `scripts/test-oidc-studio-revoked-multitab.mjs:30` 的 `eslint(no-unused-vars)` 警告：导入了未使用的 `describeD5b5StudioFailure`；同轮工具报告 **0 个错误、1 条警告**，并完成格式化，故**不是零警告验收**。
+
+远端候选仅删除这一项多余导入，保留双标签页专用的 `describeD5b5MultiTabFailure` 脱敏函数，未修改生产业务、工程 API、ACL 或测试断言。新增复盘为 E-076。当前协作环境不能执行维护者 Windows 的完整 Vite+/pnpm 与真实 HTTPS/Keycloak/Chrome 专项，因此修复后的原生 Node **11 项离线安全用例**、`vp check` 零警告、`docs:check`、`ready` 及 React/Vue 真实双标签页均**待验证**；此前的 V8/Mock 11/11 结果不能替代正式验收。目标继续只读复用已撤权 D5b4 工程，不恢复授权、不新增工程、不写入服务端。
