@@ -757,6 +757,17 @@
 - **防复发**：涉及 ACL 集合完整性的测试必须使用**不按具体权限预过滤的真实查询形状**，主动注入跨主体与多余权限行并证明读取门禁拒绝。不能只根据过滤后的“命中目标授权”就声称整个 ACL 正常。只读工具与业务权限服务的语义应分别报告，不以离线 Mock 冒充正式运行验收。
 - **验证边界**：已完成 GitHub 源码/Schema/既有 D5b4 ACL 契约核对；新 D5b7e HEAD 的 17 项 Node、Windows Vite+、文档及 `ready` 尚未实测。未执行 PostgreSQL 写入、ACL 恢复、真实发布或撤权，独立已发布夹具仍无存在性证据。
 
+
+### E-082 · ADR-0070 状态附加审批说明导致 docs:check 再次失败（第三十五批 D5b8，修复待复验）
+
+- **实际现象**：2026-11-22 维护者在 Windows 验收 PR #132 时，`pnpm run docs:check` 报 `ADR 状态无效：0070-isolated-published-fixture-safety-review.md`，退出码 1；`pnpm run ready` 虽通过 Vite+ 格式/Lint、682/682 单测、各项离线专项和 62/62 HTTP E2E，仍在末尾文档检查失败并退出码 1。终端随后独立执行的绿色 `Write-Host` 不能证明 `ready` 通过。没有任何证据显示此次错误涉及数据库或运行时业务。
+- **根因**：ADR-0070 将状态写为 `- 状态：Proposed（待维护者与工业安全专项评审，**未授权实施**）`。仓库现行 `scripts/validate-docs.mjs` 严格要求整行等于 `- 状态：Proposed` 等枚举值。此问题与已经记录的 **E-019** 完全同类；编码前虽重读复盘，却没有将该 ADR 状态的形式校验真正应用到新增文件，导致同类错误复发。
+- **最小修复**：仅把 ADR-0070 状态改为独立的 `- 状态：Proposed` 与下一行 `- 审批：待维护者与工业安全专项评审，**未授权实施**`。不放宽文档校验器、不把 Proposed 改为 Accepted、不修改工业安全门禁、代码、数据库或 ACL。
+- **防复发**：新增 ADR 时在提交前对最终文件应用与 `validate-docs.mjs` 完全相同的枚举行正则，并优先运行真实 `pnpm run docs:check`；任何附加说明必须单独成行。最终质量链的成功信息必须绑定实际 `$LASTEXITCODE -eq 0`，不能把中途单测通过和后续手动打印的绿色提示当成整个 `ready` 成功。
+- **验证边界**：已在 GitHub 修复分支上用**仓库原有严格 ADR 状态正则**检查修正文本符合要求；原 Windows 日志仍是修复前 `docs:check` / `ready` **失败**。**修复后的实际 Windows `docs:check`、`vp check` 与完整 `ready` 尚未执行**，不可声称本批最终质量链通过。
+- **证据**：维护者 2026-11-22 D5b8 Windows 日志、PR #132、ADR-0070、`scripts/validate-docs.mjs`、E-019、`docs/VALIDATION.md`。
+
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
