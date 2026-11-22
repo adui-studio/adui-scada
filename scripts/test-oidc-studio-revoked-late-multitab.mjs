@@ -12,7 +12,6 @@ import {
 } from "./test-oidc-studio-multitab.mjs";
 import {
   installPublishedReadGuardInPage,
-  publishedReadGuardStateInPage,
   waitForState,
 } from "./test-oidc-published-runtime-readonly.mjs";
 import {
