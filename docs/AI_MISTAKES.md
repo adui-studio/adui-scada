@@ -728,6 +728,15 @@
 - **验证边界**：本候选新增 D5b5b **4 项**离线门禁定义（总数由 16 增至 **20**），D5b5c 原 **14 项**不变；最新 HEAD 的 Windows Node、Vite+、文档、完整 `ready`、D5b5b 和 D5b5c 真实浏览器**均待维护者重新验收**。上次 Windows 通过记录适用于**修补前**代码。没有修改或恢复数据库授权、创建工程、写入发布版本、设备控制或生产数据。
 - **证据**：本次维护者 D5b4e READ ONLY 与两项真实浏览器失败日志、`scripts/test-oidc-published-runtime-readonly.mjs`、`scripts/test-oidc-studio-revoked-multitab.mjs`、`scripts/test-oidc-studio-revoked-late-multitab.mjs`、PR #121、`docs/VALIDATION.md`。
 
+### E-079 · D5b5c 在第一响应严格核验前切回可见页，混入标签恢复期工程读取（第三十五批 D5b5c，待真实复验）
+
+- **真实验收结果**：维护者 2026-11-22 Windows 显式打印并验证本地 HEAD 为 `baa612ca029ff3f8a3bd6fe75b03ba24c7d85f9b`；同一已撤权 D5b4 工程的 PostgreSQL `READ ONLY` 审计通过，仅缺少 `release:read`，其他三项 ACL 和 D5b1 基线完整。**D5b5b 真实 Chrome/Keycloak 的 React 与 Vue 各自同源双标签页、顺序真实 404、可见性恢复、SVG/草稿/CAS 与零工程写入全部通过**。D5b5c React 已通过两个真实 404 同时挂起与**第二标签先交付**，随后在“后交付第一标签页真实 404”报 `D5b5 双标签读取期间工程请求数量不符`，进程退出码 1；Vue 未执行。末尾 PowerShell 单独运行的 `Write-Host "D5b5b / D5b5c 真实浏览器验收通过"` 不依赖退出码，**不能用作 D5b5c 成功证据**。
+- **已确认的测试顺序缺陷**：`scripts/test-oidc-studio-revoked-late-multitab.mjs` 先向第二标签释放原始 404 并完成校验，随后**在第一标签的响应交付和“目标 GET 恰好增加一次”严格断言之前**调用 `switchToTab(browser, second)`，使第一标签恢复可见。该调用可能触发 Studio 正常的可见性恢复只读 GET，并混入本次单一发布读取严格记录比较。现有日志没有曝光安全请求数量或生命周期，**不应断言新增 GET 一定由该切换触发**，亦不能认定生产逻辑存在错误。
+- **最小修复候选**：仅将这一处 `switchToTab(browser, second)` **从第一标签的响应交付前移动到两次响应均交付、`requireD5b5Preserved` 均成功之后的最终可见性恢复复核阶段**。第一标签通过真实 CDP 的 `evaluate` 在隐藏状态消费已收到的原始 HTTP 404；浏览器此前已对隐藏第一标签读取 pending 状态，因此无新增执行通道。最终仍切回第一标签检查 SVG、工程 JSON、IndexedDB 草稿摘要、自动保存、CAS 和两个标签零工程写入。保持原有顺序 **先第二页、后第一页**，原始 HTTP 404/no-store/无重定向以及每次**恰好一个**目标 GET/404、守卫日志完整性、所有失败拒绝条件不变。无忽略、清空或篡改背景 GET。
+- **防复发**：当安全断言要求恰好一次主动请求时，避免在取基线与核验该请求的窗口内执行会主动改变页面可见性的附加动作；如果要验证最终可见性恢复，应将其作为两个请求严格核验之后的独立阶段。离线测试增加隐藏页消费真实 Response 的独立模拟，验证两页均精确一次 GET、零被阻断写入；模拟无法证明 Chrome 实际会触发哪些后台 GET。
+- **验证边界**：新增 D5b5c **1 项**离线测试定义，预计由 **14 增至 15 项**；D5b5b 保持 20 项，E-078 已由维护者 Windows 实测 20/20、14/14、`vp check` 401/253 零告警、`docs:check` 89、完整 `ready` 退出码 0，但它们属于**修补前的 HEAD**。本次候选的 Windows Node、`vp check`、`docs:check`、`ready`、D5b5c React/Vue 真实浏览器均**待重新验收**；不创建或改变数据库、工程 ACL、发布状态和工业设备。
+- **证据**：维护者 2026-11-22 最新真实 Windows 日志、PR #121、`scripts/test-oidc-studio-revoked-late-multitab.mjs`、`scripts/test-oidc-studio-revoked-late-gate.cases.mjs` 与 `docs/VALIDATION.md`。
+
 ## 三、从已发生问题提炼的预防性门禁
 
 以下是**防复发规则**，并不表示每项都曾发生真实事故：
