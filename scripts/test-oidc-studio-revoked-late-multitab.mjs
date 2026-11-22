@@ -179,7 +179,7 @@ async function verifyOrigin(browser, second, origin, principal, projectId, name,
   requireD5b5cLateReadState(await browser.evaluate(d5b5cLateReadStateInPage), "pending");
 
   report(name + "：后交付第一标签页真实 404");
-  await switchToTab(browser, second);
+  // 保持第一标签页隐藏，避免可见性恢复的后台 GET 混入本次单一发布读取断言。
   assert.equal(await browser.evaluate(releaseD5b5cLateReadInPage), true);
   const firstResult = await waitForRelease(browser);
   const firstGuardAfter = await waitForD5b5ReadGuardSettled(browser);
@@ -194,6 +194,7 @@ async function verifyOrigin(browser, second, origin, principal, projectId, name,
   );
 
   report(name + "：最终两标签页保护复核");
+  await switchToTab(browser, second);
   requireD5b5TabUnchanged(projectId, firstBefore, await inspectD5b5StudioState(browser));
   requireD5b5TabUnchanged(projectId, secondBefore, await inspectD5b5StudioState(second));
   const [firstFinalGuard, secondFinalGuard] = await Promise.all([
