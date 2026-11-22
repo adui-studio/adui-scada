@@ -98,14 +98,25 @@ void describe("D5b5c 已撤权工程双标签页真实响应逆序交付安全�
       installD5b5cLateGateInPage(ORIGIN, PROJECT, runtime);
       startD5b5cLateReadInPage(runtime);
     }
-    await until(() => [first, second].every(({ runtime }) => d5b5cLateReadStateInPage(runtime).pending));
+    await until(() =>
+      [first, second].every(({ runtime }) => d5b5cLateReadStateInPage(runtime).pending),
+    );
     releaseD5b5cLateReadInPage(second.runtime);
     await until(() => d5b5cLateReadStateInPage(second.runtime).settled);
-    assert.equal(requireD5b5cLateReadState(d5b5cLateReadStateInPage(first.runtime), "pending"), true);
-    assert.equal(requireD5b5cLateReadState(d5b5cLateReadStateInPage(second.runtime), "settled"), true);
+    assert.equal(
+      requireD5b5cLateReadState(d5b5cLateReadStateInPage(first.runtime), "pending"),
+      true,
+    );
+    assert.equal(
+      requireD5b5cLateReadState(d5b5cLateReadStateInPage(second.runtime), "settled"),
+      true,
+    );
     releaseD5b5cLateReadInPage(first.runtime);
     await until(() => d5b5cLateReadStateInPage(first.runtime).settled);
-    assert.equal(requireD5b5cLateReadState(d5b5cLateReadStateInPage(first.runtime), "settled"), true);
+    assert.equal(
+      requireD5b5cLateReadState(d5b5cLateReadStateInPage(first.runtime), "settled"),
+      true,
+    );
   });
 
   void it("未发起请求时拒绝提前释放，完成后拒绝重复释放", async () => {
@@ -136,7 +147,13 @@ void describe("D5b5c 已撤权工程双标签页真实响应逆序交付安全�
     startD5b5cLateReadInPage(runtime);
     await until(() => d5b5cLateReadStateInPage(runtime).pending);
     assert.throws(
-      () => runtime.fetch(PATH, { method: "GET", cache: "no-store", redirect: "error", credentials: "same-origin" }),
+      () =>
+        runtime.fetch(PATH, {
+          method: "GET",
+          cache: "no-store",
+          redirect: "error",
+          credentials: "same-origin",
+        }),
       /只允许一次精确的无缓存同源 GET/,
     );
     assert.equal(calls.length, 1);
