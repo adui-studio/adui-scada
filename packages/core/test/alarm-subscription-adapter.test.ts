@@ -217,12 +217,13 @@ test("错误时效参数必须拒绝且不能启动资源", () => {
     [Number.NaN, 500],
     [1000, 1.5],
   ]) {
-    expect(() =>
-      new AlarmSubscriptionAdapter("tank.level", source, scheduler, {
-        maxAgeMs,
-        checkIntervalMs,
-        nowMs: () => startMs,
-      }),
+    expect(
+      () =>
+        new AlarmSubscriptionAdapter("tank.level", source, scheduler, {
+          maxAgeMs,
+          checkIntervalMs,
+          nowMs: () => startMs,
+        }),
     ).toThrow("报警时效检查参数无效");
   }
   expect(source.handlers).toEqual([]);

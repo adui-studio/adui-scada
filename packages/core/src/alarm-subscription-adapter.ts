@@ -145,7 +145,10 @@ export class AlarmSubscriptionAdapter {
     }
   }
 
-  private forward(token: AlarmBaselineSessionToken, invoke: () => { readonly status: string }): void {
+  private forward(
+    token: AlarmBaselineSessionToken,
+    invoke: () => { readonly status: string },
+  ): void {
     if (!this.running || token !== this.token) return;
     try {
       if (invoke().status === "BASELINE_INVALIDATED") this.stop();
