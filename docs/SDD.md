@@ -1259,3 +1259,9 @@ React/Vue 的 `PublishedRuntimePage` 在 `verified` 且快照具有多个页面�
 ## 2026-11-22 · D5b9i 报警候选订阅会话代次隔离（候选）
 
 `classifySessionBoundNumericAlarmSample(input, previous, generations, nowMs, maxAgeMs)` 仅在调用方显式提供的 `activeGeneration/inputGeneration/baselineGeneration` 均为非负安全整数且一致时调用原 `classifyOrderedNumericAlarmSample`。当前读数或历史基线属于其他会话时返回 `SESSION_MISMATCH`，不暴露工艺值；代次非法则拒绝。即使代次一致，无基线仍按原规则返回 `BASELINE_REQUIRED`，重复/倒退、坏质量和超龄仍按原函数拒绝。代次不是认证凭据，也不能证明其来自可信订阅管理方；只有后续受控数据源能够分配代次、建立可信基线并对旧订阅回调失效，本函数才有端到端隔离意义。尚无会话管理、工业协议接入、阈值、报警事件、确认权限、数据库审计或设备控制。
+
+## 2026-11-22 · D5b9j FR-011 初始快照建立报警序列基线（候选）
+
+共享 Core 新增 `establishAlarmSnapshotBaseline(request, nowMs, maxAgeMs)`：仅当上游标记 `sourceVerified === true`、`change.kind === "snapshot"`，且快照与活跃会话的显式代次一致时，才检查整批 `TagValue` 的合法性及 Tag ID 唯一性，再选出预期 Tag。找不到目标返回 `TAG_NOT_FOUND`；重复 Tag 或任意非法条目**整体拒绝**。目标读数复用既有 GOOD、有限数值与显式时间窗口筛选；通过后返回 `BASELINE_ESTABLISHED` 与冻结的 `{ generation, value }` 防御性副本，供后续 D5b9i 同代次 delta 序列比较。创建快照基线本身**不是报警触发**；首条 delta 仍必须严格递增，重连时需丢弃旧代次基线，并由新快照重新建立。未核验来源、非 snapshot 或旧会话快照分别返回 `UNVERIFIED_SOURCE`、`SNAPSHOT_REQUIRED`、`SESSION_MISMATCH`，拒绝结果不附带工艺值。
+
+`sourceVerified` 只是调用方提供的标志，不具备加密认证、签名验证或主体授权能力，不能由不可信浏览器数据直接赋值为真。可信数据来源、会话代次分配、快照来源核验、断线重连与迟到回调取消均需在未来的服务端/网关订阅层独立完成并测试。本批不定义工业采集规则、报警阈值、死区、延时、历史审计或确认 API；FR-011 仍未具备生产报警能力。
