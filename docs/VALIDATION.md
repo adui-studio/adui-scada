@@ -3133,3 +3133,25 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批不修改浏览器、HTTP、Prisma、工业网关或数据源适配器，暂不重复无差异的完整 ready 与双端浏览器/E2E。定向测试即使通过，也不能证明上游 `sourceVerified` 真实、会话代次可信或生产报警/审计可用；正式发布 Gate 仍保持 fail-closed。
+
+## 2026-11-22 · D5b9k FR-011 同会话增量基线：Windows 待验收
+
+维护者 Windows 提供 PR #149 新增快照基线单测 **7/7**、`vp check` **427 格式文件/278 受检零警告错误**、`docs:check` **90 份**、`messages:check` **302 个自有文件**。PR #149 已经明确授权 Squash 合并至 `main@f5fdc99a8247299aa76f77005594788c916f1ac4`，合并前一笔额外提交只调整单测格式，无业务变化。
+
+D5b9k 新增的 **9 项测试仅为代码定义，尚未 Windows 实测**。维护者可先按既定流程运行 `vp check --fix` 并提交必要格式改动，不要求固定或核对 HEAD；然后在当前 PR 分支执行：
+
+```powershell
+vp test run packages/core/test/alarm-tag-delta.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警增量基线测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+仅新增共享 Core 增量纯函数、定向单测、公共导出和对应文档；未修改 HTTP、双框架组件、Prisma 或工业采集，避免重复完整 ready / HTTP E2E / 双端浏览器专项。此测试不能证明 `sourceVerified` 的真实性，`DELTA_REJECTED` 及抛错后的基线废弃由未来上游实现；生产工业报警与发布许可仍未通过验收。

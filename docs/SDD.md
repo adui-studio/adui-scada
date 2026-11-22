@@ -1265,3 +1265,11 @@ React/Vue 的 `PublishedRuntimePage` 在 `verified` 且快照具有多个页面�
 共享 Core 新增 `establishAlarmSnapshotBaseline(request, nowMs, maxAgeMs)`：仅当上游标记 `sourceVerified === true`、`change.kind === "snapshot"`，且快照与活跃会话的显式代次一致时，才检查整批 `TagValue` 的合法性及 Tag ID 唯一性，再选出预期 Tag。找不到目标返回 `TAG_NOT_FOUND`；重复 Tag 或任意非法条目**整体拒绝**。目标读数复用既有 GOOD、有限数值与显式时间窗口筛选；通过后返回 `BASELINE_ESTABLISHED` 与冻结的 `{ generation, value }` 防御性副本，供后续 D5b9i 同代次 delta 序列比较。创建快照基线本身**不是报警触发**；首条 delta 仍必须严格递增，重连时需丢弃旧代次基线，并由新快照重新建立。未核验来源、非 snapshot 或旧会话快照分别返回 `UNVERIFIED_SOURCE`、`SNAPSHOT_REQUIRED`、`SESSION_MISMATCH`，拒绝结果不附带工艺值。
 
 `sourceVerified` 只是调用方提供的标志，不具备加密认证、签名验证或主体授权能力，不能由不可信浏览器数据直接赋值为真。可信数据来源、会话代次分配、快照来源核验、断线重连与迟到回调取消均需在未来的服务端/网关订阅层独立完成并测试。本批不定义工业采集规则、报警阈值、死区、延时、历史审计或确认 API；FR-011 仍未具备生产报警能力。
+
+## 2026-11-22 · D5b9k FR-011 已建立基线后的同会话增量推进（候选）
+
+共享 Core 新增 `advanceAlarmTagDeltaBaseline(request, nowMs, maxAgeMs)`。仅对上游明确声明已核验的 `TagChange.delta`、非负安全整数会话代次、当前代次匹配的已有快照基线继续检查。基线必须具有目标 Tag ID，随后对**整个增量批次**复用 `validateTagValue`，任何无效 Tag 或重复 Tag ID 均抛出异常、不返回部分成功状态。目标 Tag 不在有效批次中时只返回 `TAG_NOT_UPDATED`，不回传基线、旧数值或新的报警候选；这不等于证明旧基线仍新鲜，调用方必须独立处理时间流逝与断线。
+
+对于目标 Tag 增量，复用已合并的 `classifySessionBoundNumericAlarmSample` 校验质量、有限数值、时效、同 Tag、同代次与严格递增序列。只有 `READY` 才返回 `DELTA_ACCEPTED`、数值及冻结的下一条序列基线。其他结果返回 `DELTA_REJECTED` 和固定原因枚举，不包含原值或可继续使用的旧基线。**所有 DELTA_REJECTED 以及任何校验异常均要求调用方丢弃旧基线，重新取得经上游核验的同代次 snapshot；TAG_NOT_UPDATED 不推进序列、不产生新候选。** 此处是无状态纯函数契约，尚未实现自动清理订阅状态或可信来源认证。上游必须负责来源核验、会话管理、时钟归属、故障后的重建与报警规则评估，不能把 `sourceVerified` 当作安全证据。
+
+不新增报警阈值、死区、延时、TRIGGER/RECOVER/ACKNOWLEDGE 判定、PLC/DCS 写入、NestJS 业务路由、Prisma 报警持久化、Vue/React UI 或正式发布许可；FR-011 仍规划中，生产发布 Gate 保持 fail-closed。
