@@ -2160,3 +2160,11 @@ D5b8g 从最新主线另开候选。既有 `createHttpLoggingOptions` 已对白�
 D5b9a 直接从最新 main 修复共享 `PublishedRuntime` 的**不可信读取错误分类**：原 `failureStatus(error)` 读取 `error.kind`，若外部数据源抛出的异常对象带恶意 getter / Proxy，读取分类本身可再次抛错，导致 `load()` Promise 非预期拒绝、运行状态停在 `loading`。现在只为错误类别访问加异常隔离，访问失败一律落入原有 `error` 状态；`loading` 开始时已撤去的可显示快照不会复活，输出只用已有固定中文说明，不泄漏原异常。新增**一项**精准 Runtime 测试覆盖已验证快照→恶意错误→固定异常态的状态轨迹。原有 `network` 离线重试、401/403/404 撤权终止行为不变，两套前端通过共享 Runtime 同时受益。
 
 本批**不重复**运行或要求维护者重跑未变动的完整 `ready` / HTTP E2E / React-Vue 构建。候选新用例尚未实测，需只执行 `packages/runtime/test/published-runtime.test.ts` 定向测试与一次 `vp check`；不具备本机执行证据时不得声称通过。没有修改发布 Gate、正式发布事务、ACL、数据库、Tag 来源、工业网关或真实发布夹具；ADR-0070 Proposed，Issue #126 Open，生产发布仍无条件 fail-closed。
+
+## 2026-11-22 · D5b9a 验收合并与 D5b9b 发布刷新生命周期修复候选
+
+D5b9a PR #140 在维护者 Windows **精确 HEAD `8071ecdbbfcb5ea1cf20e62772f718f26de27f8d`** 上仅执行改动相关验收：`vp test run packages/runtime/test/published-runtime.test.ts` **12/12**，`vp check` **413 个文件格式通过、264 个文件零告警与类型错误**；均有非零退出保护。用户明确同意合并，PR #140 已 Squash 合并为 `main@38dea9628c1130f532736ccd76f8d4202d0dfa41`。此前 PR #139 的完整 `ready` 和 HTTP E2E 已通过，未重复执行。
+
+D5b9b 从上述主线独立开发，修复 `PublishedRuntimeRefresher` 页面隐藏或停止时潜在的异步等待悬挂：若底层只读 Reader 忽略 `AbortSignal` 且返回永远不结算的 Promise，原有 `clearWatchdog()` 使超时 Promise 也不再结算，`start()` / `refresh()` 可能无限等待。此次仅在共享刷新器添加单个受控的本地取消完成机制，在 `setVisible(false)` 与 `stop()` 时完成等待，仍由既有 Runtime 撤下画面、废弃迟到结果，且不重新轮询。新建 **1 项**定向 Vitest 用例定义覆盖隐藏后重新显示再停止两条路径，使用故意不响应取消的 Reader 且不触发模拟定时器；此前关于迟到 200、404、超时与资源回收的测试继续沿用。
+
+本轮尚未在维护者 Windows 执行新测试或静态检查，不将测试定义算作通过；只需该刷新器定向文件与 `vp check`，不重复运行完整 `ready`、HTTP E2E 和 React/Vue 构建。React/Vue 共用同一 Runtime，未改前端或工程 Schema。真实发布门禁仍无条件 HTTP 503，ADR-0070 Proposed，Issue #126 Open，不授权数据库、ACL、工业网关或设备写入。
