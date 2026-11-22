@@ -2736,3 +2736,11 @@ PR #129 已按维护者明确合并授权 Squash 合并至 `main@fb320f4731cd595
 离线安全测试定义 **16 项**（参数拒绝、唯一性与上限、原基线漂移、迁移及可信身份、查询范围、SQL 故障回滚、二次复核拒绝、异常信息脱敏），增加 `test:published:oidc:fixture:discover:config` 并纳入 `ready`；**真实数据库命令** `oidc:lab:published:fixture:discover` 保持单独手动运行。本次已从 GitHub 回读代码与配置，但尚未执行 Windows 原生 Node/Vite+/文档/完整 ready，**也没有访问真实 PostgreSQL 或证明任何合法已发布夹具存在**，所有退出码以维护者未来真实日志为准。
 
 无 Vue/React/NestJS 业务变更、SQL 写入、ACL 变更、设备控制或发布门禁调整。真实只读发现需要维护者在本机另行确认隔离 Lab 与只读操作边界，Issue #126 继续 Open。
+
+## 2026-11-22 · PR #132 Windows 修复验收与 D5b8a 服务端门禁代码候选
+
+维护者提供 PR #132 修复后 Windows 日志：`docs:check` **90 个 Markdown 通过**；`vp check` **412 个格式文件、263 个受检文件零警告或错误**；完整 `pnpm run ready` 已执行并完成 Vitest **682/682**、D5b7f Node **16/16**、D5b7c **17/17**、HTTP E2E **62/62**、Vue/React 构建、NestJS 构建，最终退出码 0（原先 E-082 的 ADR 状态失败已复验关闭）。此次用户日志未包含 HEAD，因此不能把它伪装成与 PR #132 远程最终 SHA 一一绑定；PR #132 保持 Draft，不因用户说“继续”就自动合并。
+
+D5b8a 在独立分支对正式 `ProjectReleaseSafetyGate` 增加安全阻塞评估，只输出固定类别、路径并保持原安全拒绝异常；含模拟 Tag 的工程、无 Tag 的纯静态工程均**不能发布**，数据库事务内没有新增任何写入。新增 `apps/server/src/projects/project-release-safety-gate.spec.ts` 六项 Vitest 测试定义，覆盖上下文隔离、Runtime 不兼容、无来源 Tag、静态工程仍拒绝、不触发 SQL 和异常信息脱敏。
+
+**验证边界**：已在 GitHub 对照现存 Core `validateProjectReleasePreflight`、NestJS `PrismaProjectReleaseStore.publish` 调用顺序和严格安全门禁，并静态核对更新后的源码；**当前 D5b8a 最新 HEAD 尚未在 Windows 运行 `vp check`、`pnpm run test:unit`、`docs:check` 或完整 `ready`**。本批代码只是完成门禁审查能力的第一步，真正的 Runtime/Tag/工业资源策略仍需专项设计、实现和真实验收，不允许以 6 项离线测试替代。
