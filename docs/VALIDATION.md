@@ -2611,3 +2611,17 @@ PR #117 已按维护者明确授权 Squash 合并至 `main@3c2e51c385ddaacb5015b
 维护者 Windows 在 PR #120 的 `vp check --fix` 中发现 `scripts/test-oidc-studio-revoked-multitab.mjs:30` 的 `eslint(no-unused-vars)` 警告：导入了未使用的 `describeD5b5StudioFailure`；同轮工具报告 **0 个错误、1 条警告**，并完成格式化，故**不是零警告验收**。
 
 远端候选仅删除这一项多余导入，保留双标签页专用的 `describeD5b5MultiTabFailure` 脱敏函数，未修改生产业务、工程 API、ACL 或测试断言。新增复盘为 E-076。当前协作环境不能执行维护者 Windows 的完整 Vite+/pnpm 与真实 HTTPS/Keycloak/Chrome 专项，因此修复后的原生 Node **11 项离线安全用例**、`vp check` 零警告、`docs:check`、`ready` 及 React/Vue 真实双标签页均**待验证**；此前的 V8/Mock 11/11 结果不能替代正式验收。目标继续只读复用已撤权 D5b4 工程，不恢复授权、不新增工程、不写入服务端。
+
+## 2026-11-22 · PR #120 合并及 D5b5b Windows 全量验收补证
+
+维护者提供的 Windows 日志确认 `pnpm run test:published:oidc:revoke:multitab:config` **11/11**、`vp check` **398 个格式文件/250 个受检文件零警告及错误**、`docs:check` **89 份**、完整 `pnpm run ready` **退出码 0**。其中 Vitest **57/57 文件、680/680 用例**、NestJS HTTP E2E **6/6 文件、62/62 用例**、React/Vue/NestJS 构建完成。E-076 的未使用导入问题由上述质量检查记录关闭。日志未包含本机 HEAD 的明确输出，不把实测严格绑定到某个 GitHub commit。
+
+维护者随后明确授权合并 PR #120；GitHub 已将 `test/b35-d5b5-multitab-revoked-readonly@17fe4520e87d40aa2a31ee79265d9e2bce59e9f3` Squash 合并为 `main@eb3fdc5105d3cb5d88593db7fffd7702e91625c8`。**该日志只证明离线质量链**：D5b5b 真实双标签页 Chrome/Keycloak 测试未提供执行记录，不能在本文件记作通过。
+
+## 2026-11-22 · D5b5c 已撤权发布双标签逆序交付候选
+
+新增只读页面门禁、13 项 Node 测试定义及独立 React/Vue 真实浏览器脚本。目标是两页各真实读取同一已撤权 D5b4 工程的发布接口 404，待底层 `fetch` 获得真实 Response 后让两个页面 Promise 同时保持 pending，**先消费第二页，再消费第一页**。每个阶段需比较无网格 SVG、工程 JSON、IndexedDB 草稿数与摘要、自动保存状态及 CAS 基线，原有守卫必须统计每页精确一条目标 GET、无新增写入。只输出固定脱敏阶段及安全类别。
+
+协作容器 Node 22.16.0 对同用途纯门禁原型执行了 `node --check` 与原生 `node --test`：**13/13 测试通过**，包含独立 VM 序列化与故障反向断言。该运行发生在隔离原型文件上，不冒充 GitHub 提交的正式 Windows `vp check` / `docs:check` / `ready`，也不代表真实 CDP、Keycloak、PostgreSQL 或工业安全验收。新 GitHub 分支的完整质量链和真实浏览器测试均**待维护者执行**。
+
+本次不修改 React/Vue 生产业务、NestJS、Prisma 或工业网关。新增门禁不会模拟 HTTP 404，也不会保留 TCP 层挂起连接；它只控制**已到达响应在页面 Promise 的交付时序**。不能将其称为 Studio 自身处理迟到授权拒绝、真实 HTTP 网络竞态或工程写入 CAS 竞争。复用既有工程，不创建数据、不恢复 ACL、不做服务端写入。
