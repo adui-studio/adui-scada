@@ -141,7 +141,8 @@ export function installD5b4ResponseObserverInPage(origin, projectId, runtime = g
   const data = { requests: 0, statuses: [], noStore: [] };
   runtime.__aduiD5b4ReadObserver = data;
   runtime.fetch = (input, init) => {
-    const raw = typeof input === "string" ? input : typeof input?.url === "string" ? input.url : null;
+    const raw =
+      typeof input === "string" ? input : typeof input?.url === "string" ? input.url : null;
     if (!raw) throw new Error("D5b4d 发布读取请求不符合只读约束");
     const url = new URL(raw, runtime.location.origin + "/");
     if (url.origin !== origin || url.pathname + url.search !== targetPath) {
