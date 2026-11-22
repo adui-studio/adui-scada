@@ -2228,3 +2228,9 @@ D5b9j 基于该主线增加纯函数初始快照基线建立：显式已核验�
 维护者 Windows 对 PR #149 新增 `alarm-snapshot-baseline.test.ts` 完成 **7/7**，`vp check` **427 个文件格式正确/278 受检零警告错误**、`docs:check` **90 份**、`messages:check` **302 个自有文件**。本次远程最终分支在 PR 创建后增加了仅调整测试排版的一笔提交；经审查无业务行为变化。维护者明确同意后，PR #149 Squash 合并到 `main@f5fdc99a8247299aa76f77005594788c916f1ac4`。
 
 D5b9k 基于该主线增加 `advanceAlarmTagDeltaBaseline` 纯函数，消费上游已核验的同代次 delta，整批校验后只在目标 Tag 的有效递增读数上创建新的冻结基线，其他拒绝不带数值或可沿用的旧基线。新增 **9 项定向测试定义，尚未取得 Windows 实测结果**。不改 TagStore、Runtime、Vue/React、NestJS、数据库、工业网关及发布门禁；来源认证、会话续接和失效清理尚待上游实际实现，FR-011 不能认定为生产报警能力。
+
+## 2026-11-23 · PR #150 验收合并与 D5b9l 会话归约候选
+
+维护者 Windows 提供 PR #150 定向测试 `alarm-tag-delta.test.ts` **9/9**、`vp check` **429 格式文件/280 受检零警告错误**、`docs:check` **90**、`messages:check` **304**。GitHub 审查 PR #150 远端额外一笔仅调整测试排版的提交，没有改变断言或业务逻辑；经维护者明确同意已 Squash 合并至 `main@83cf07da36ced869a26f6ebbdb1b992a6cad92f7`。该 Windows 日志没有包含 HEAD，不强行将其绑定到特定远程 SHA。
+
+D5b9l 基于上述主线增加共享 Core 纯会话归约：等待快照、快照建基线、同会话增量推进、无目标更新、质量拒绝失效、显式时间超时失效、断连清除和旧会话回调忽略；重启必须使用严格递增代次。新增 **11 项定向测试定义，尚未维护者 Windows 实测**。不变更 TagStore、Runtime、Vue/React、NestJS、数据库或工业网关；仅是共享候选能力，来源认证、实际订阅、报警阈值、权限及不可变审计均未实现。
