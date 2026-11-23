@@ -605,6 +605,7 @@ function watchStudioModuleNetwork(session, target) {
     if (name === "net::ERR_CONNECTION_RESET") return "连接重置";
     if (name === "net::ERR_CONNECTION_REFUSED") return "连接拒绝";
     if (name === "net::ERR_CERT_AUTHORITY_INVALID") return "证书不受信任";
+    if (name === "net::ERR_CACHE_WRITE_FAILURE") return "浏览器HTTP缓存写入失败";
     if (name === "net::ERR_HTTP_RESPONSE_CODE_FAILURE") return "HTTP响应拒绝";
     // 只允许输出 Chromium 的固定错误码格式，避免透出资源地址或异常正文。
     const safeCode = /^net::ERR_[A-Z0-9_]{1,64}$/.exec(String(name));
@@ -1759,6 +1760,11 @@ async function runStudioMultiTabSafety(first, second) {
     const watchers = [];
     if (target.name === "Vue") {
       await Promise.all([first.send("Network.enable"), second.send("Network.enable")]);
+      // 仅绕过两个测试标签页的 HTTP 缓存，不影响 IndexedDB 与 BroadcastChannel。
+      await Promise.all([
+        first.send("Network.setCacheDisabled", { cacheDisabled: true }),
+        second.send("Network.setCacheDisabled", { cacheDisabled: true }),
+      ]);
       watchers.push(watchStudioModuleNetwork(first, target));
       watchers.push(watchStudioModuleNetwork(second, target));
     }
