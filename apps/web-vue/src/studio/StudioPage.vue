@@ -2,6 +2,8 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import {
   Button as TButton,
+  Collapse as TCollapse,
+  CollapsePanel as TCollapsePanel,
   Dropdown as TDropdown,
   Input as TInput,
   Popup as TPopup,
@@ -1907,8 +1909,10 @@ async function importJson(event: Event) {
             </template>
           </TPopup>
         </div>
-        <details class="studio-version-menu">
-          <summary>发布预检</summary>
+        <div class="studio-version-menu studio-release-preflight-menu">
+            <TPopup attach=".studio-release-preflight-menu" trigger="click" placement="bottom-right">
+              <TButton type="button" variant="outline">发布预检</TButton>
+              <template #content>
           <div class="studio-version-panel" aria-label="工程发布前静态兼容性预检">
             <p class="studio-version-help">
               当前工程：{{ state.document.projectId }} · 仅检查 SVG
@@ -1940,7 +1944,9 @@ async function importJson(event: Event) {
               @access-rejected="handleServerPreflightAccessRejected"
             />
           </div>
-        </details>
+        </template>
+            </TPopup>
+          </div>
         <ServerProjectBrowser
           :key="serverAccessRevision"
           :api="serverApi"
@@ -1949,8 +1955,10 @@ async function importJson(event: Event) {
           @open="openServerProject"
           @access-rejected="handleServerBrowserAccessRejected"
         />
-        <details class="studio-version-menu">
-          <summary>服务端工程</summary>
+        <div class="studio-version-menu studio-server-version-menu">
+            <TPopup attach=".studio-server-version-menu" trigger="click" placement="bottom-right">
+              <TButton type="button" variant="outline">服务端工程</TButton>
+              <template #content>
           <div class="studio-version-panel" aria-label="服务端工程版本">
             <p class="studio-version-help">
               当前工程：{{ state.document.projectId }} · 受保护的工程版本保存，不代表正式发布
@@ -2053,7 +2061,9 @@ async function importJson(event: Event) {
               加载更早服务端版本
             </TButton>
           </div>
-        </details>
+        </template>
+            </TPopup>
+          </div>
       </div>
     </header>
     <div class="studio-page-bar" aria-label="工程页面管理">
@@ -2242,8 +2252,9 @@ async function importJson(event: Event) {
             </TButton>
           </template>
         </div>
-        <details class="studio-side-more">
-          <summary>跨页操作与使用帮助</summary>
+        <div class="studio-side-more">
+            <TCollapse :default-value="[]" borderless>
+              <TCollapsePanel value="cross-page" header="跨页操作与使用帮助">
           <div class="studio-copy-tools">
             <label class="studio-field">
               复制选中图元到
@@ -2268,15 +2279,19 @@ async function importJson(event: Event) {
             </TButton>
           </div>
           <p class="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
-        </details>
+        </TCollapsePanel>
+            </TCollapse>
+          </div>
       </aside>
       <section class="studio-stage min-h-0 min-w-0" aria-label="组态画布">
         <div class="studio-stage-caption">
           <span
             >{{ page.name }} · {{ page.size.width }} × {{ page.size.height }} · 静态模拟预览</span
           >
-          <details class="studio-view-menu">
-            <summary aria-label="视图设置">视图设置</summary>
+          <div class="studio-view-menu studio-view-settings-menu">
+            <TPopup attach=".studio-view-settings-menu" trigger="click" placement="bottom-right">
+              <TButton type="button" variant="outline">视图设置</TButton>
+              <template #content>
             <div class="studio-view-popover">
               <div class="studio-view-section">
                 <p>网格与吸附</p>
@@ -2315,7 +2330,9 @@ async function importJson(event: Event) {
                 </div>
               </div>
             </div>
-          </details>
+          </template>
+            </TPopup>
+          </div>
           <div class="studio-zoom" aria-label="画布缩放">
             <TButton type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</TButton>
             <TButton type="button" @click="resetCanvasView">
@@ -2546,8 +2563,9 @@ async function importJson(event: Event) {
           </p>
         </template>
         <p v-else class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
-        <details class="studio-advanced">
-          <summary>项目 Tag 定义（{{ state.document.tags.length }}）</summary>
+        <div class="studio-advanced">
+            <TCollapse :default-value="[]" borderless>
+              <TCollapsePanel value="project-tags" :header="`项目 Tag 定义（${state.document.tags.length}）`">
           <div class="studio-advanced-content">
             <TagManager
               :tags="state.document.tags"
@@ -2556,9 +2574,12 @@ async function importJson(event: Event) {
               :on-remove="removeProjectTag"
             />
           </div>
-        </details>
-        <details class="studio-advanced">
-          <summary>高级图元与图层操作</summary>
+        </TCollapsePanel>
+            </TCollapse>
+          </div>
+        <div class="studio-advanced">
+            <TCollapse :default-value="[]" borderless>
+              <TCollapsePanel value="advanced-tools" header="高级图元与图层操作">
           <div class="studio-advanced-content">
             <div class="studio-toolbox">
               <div class="studio-tool-group" aria-label="图层锁定与可见性">
@@ -2728,7 +2749,9 @@ async function importJson(event: Event) {
               </div>
             </div>
           </div>
-        </details>
+        </TCollapsePanel>
+            </TCollapse>
+          </div>
       </aside>
     </div>
     <footer class="studio-statusbar">
