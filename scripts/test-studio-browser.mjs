@@ -590,7 +590,7 @@ function watchStudioModuleNetwork(session, target) {
     try {
       const url = new URL(address);
       if (url.origin !== origin) return null;
-      if (/\\/src\\/studio\\/StudioPage\\.vue$/.test(url.pathname)) return "Studio模块";
+      if (url.pathname.endsWith("/src/studio/StudioPage.vue")) return "Studio模块";
       if (url.pathname.includes("/.vite/deps/")) return "Vite预构建依赖";
       if (url.pathname.startsWith("/src/")) return "Vue应用模块";
       if (url.pathname.startsWith("/@fs/")) return "工作区模块";
