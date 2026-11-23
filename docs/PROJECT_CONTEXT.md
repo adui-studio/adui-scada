@@ -2480,3 +2480,10 @@ D5c0v 基于合并后的 main，限定本地版本历史一个入口/框架：�
 下一功能分支 `feat/d5c0w-tdesign-unified-ui` 按维护者新要求集中统一全部通用 UI 控件，**完成代码与测试适配后才统一要求 Windows 验收**，不再拆分多个小 PR。React/Vue 对等更换 Button、Popup、Collapse、Input、Select、Checkbox、Textarea、Upload、Dialog，并保持本地 JSON 不上传、旧版 SHA-256、IndexedDB CAS、服务端确认二次校验以及原有 OIDC 拒绝路径。SVG 组态画布及工业特殊交互继续自研；工程 Schema、后端服务、网关与工业写入权限未变。
 
 **当前状态**：该分支代码及相关浏览器测试在 GitHub 提交，仍属静态候选。已阅读固定版本官方组件源码，未运行本机 Windows 浏览器、Vite+、Vue/React 全量类型或 Lab 测试；不得冒充完整验收通过。验收条件及未确认范围见 `docs/VALIDATION.md` 和 `docs/TDESIGN_COMPONENT_AUDIT.md`。
+
+## 2026-11-23 · PR #188 D5c0w 首次 React 组件类型门禁反馈与最小修复
+
+维护者 Windows `vp check --fix` 报 React Studio TDesign Button 拖拽 **3 个 TS2345**、React Studio 和已发布运行页的 Select 值隐式字符串化 **4 个 Lint 告警**（291 个受检文件），仅完成格式化，不能视为通过。已按 `AGENTS.md` 与 `AI_MISTAKES.md` 复盘并核对固定版本 TDesign Select 的联合类型；PR #188 候选只修改 React 两个页面：拖拽函数参数改为 `ReactDragEvent<HTMLElement>`，四处 Select 值回调仅接受字符串 ID。Vue/共享引擎/安全协议及业务流程未改；文档详见 E-109 和 `VALIDATION.md`。
+
+修复尚未由维护者在最新 HEAD 运行 `typecheck:web`、`vp check`、双端浏览器专项；继续保持 Draft 和主理人 `@adui-dev` 指派，未授权合并。
+
