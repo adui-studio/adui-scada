@@ -1092,3 +1092,12 @@
 - **防复发**：引入需要 React Portals / 插件式动态渲染的 UI 库时，必须按当前 React 主版本阅读固定依赖的兼容说明，不能以普通 Button/Input 类型检查通过推断插件式 Dialog 正常。浏览器专项除静态 DOM 选择外必须点击确认与取消两条路径，并验证项目 JSON 未被取消操作修改。
 - **验证边界**：以上为固定版本官方源码与仓库现状的确定性诊断及 GitHub 修复候选，**尚未拿到新 HEAD 的 Windows `typecheck:web`、`vp check`、`test:tags:browser` 或 Vue/React 真实 Dialog 结果，不能声称已复验通过**。后续依次执行质量检查及 `test:browser`、`test:tags:browser`、`test:interop`、`test:versions:safety`、`test:multitab`。
 - **证据**：维护者 2026-11-23 Windows PowerShell 输出、`apps/web-react/src/main.tsx`、`apps/web-react/src/studio/StudioDialog.tsx`、`scripts/test-studio-browser.mjs`、TDesign React `tdesign-react@1.18.6` 官方 `react-render.ts`、`react-19-adapter.ts` 和 `getting-started.md`。
+
+### E-113 · Tag 浏览器验收导航失败缺少 Chromium 级诊断（PR #189）
+
+- **Windows 实测现象**：维护者在 PR #189 最新一轮执行 `pnpm run typecheck:web` 成功、`vp check` **448 格式文件/291 受检零告警错误**、`messages:check` **318 文件**、`docs:check` **94 Markdown** 后，`test:tags:browser` 在第一个 React URL `https://127.0.0.1:15173/?scada_interop_check=tag-management` 导航阶段失败，退出码 1。未到 Tag 删除 Dialog 检查阶段；后续其他浏览器专项未执行。用户日志没有附上当前本地 HEAD，不能将先前 React 19 适配器缺口直接断定为本次导航失败的原因。
+- **定位结果**：`navigateStudioForInterop` 用固定 60 次 × 150ms 读取目标地址和 `document.readyState === "complete"`，失败时仅输出实际 URL，没有 Chromium `Page.navigate.errorText`、文档状态或同源模块网络错误；单凭该异常无法区分 TLS、网络中断、Chromium 缓存、Vite 热重建及其他资源原因。先前 E-106 在隔离多标签页中**实测**出现 `net::ERR_CACHE_WRITE_FAILURE`，通过 CDP `Network.setCacheDisabled` 绕过，但本次 Tag 导航尚未取得同种错误码，不能把 E-106 当成已证实的新根因。
+- **最小候选**：仅改 `scripts/test-studio-browser.mjs`。在 `--tags` 独立临时 Chromium 中调用 `Network.enable` 与 `Network.setCacheDisabled({cacheDisabled:true})`，使本机开发资源不依赖有故障记录的 HTTP 磁盘缓存；**不触碰 IndexedDB、BroadcastChannel、业务 CAS、TLS 校验或设备数据**。对 `--tags` 的真实导航开启已有 `watchStudioModuleNetwork` 观察器，只在失败时附加按同源资源类别脱敏的诊断，在 `finally` 关闭监听。导航失败错误增加白名单 `net::ERR_[A-Z0-9_]{1,64}`、地址匹配布尔值和 `document.readyState`，同时补充 React 入口、React 19 适配器、React/Vue Studio 模块分类；不输出 HTTP 正文、Cookie、授权信息或异常堆栈。
+- **防复发与验收**：不延长原 60 × 150ms 门槛，不重试掩盖失败，不取消真实 Tag 确认/取消和已绑定拒绝断言。若隔离 HTTP 缓存后通过，仅证明该会话可继续验收，不能据此认定本次原失败根因就是缓存；若仍失败，先据新诊断分类查网络/证书/模块再改正式应用。**本批仅已提交 GitHub 候选，尚未运行 Windows `node --check`、`vp check`、`test:tags:browser`，不得声称修复已实测通过。**
+- **证据**：维护者本轮 Windows 原始失败日志、`scripts/test-studio-browser.mjs` 现有导航/网络诊断、历史 E-106 Chromium 缓存实测记录和 PR #189。
+
