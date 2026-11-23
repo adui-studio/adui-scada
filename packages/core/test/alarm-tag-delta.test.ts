@@ -306,7 +306,13 @@ test("直接增量入口不能以更大序列号接受倒退的服务端时间",
   ).toEqual({ status: "DELTA_REJECTED", reason: "SERVER_TIMESTAMP_REGRESSED" });
   expect(
     advanceAlarmTagDeltaBaseline(
-      { ...request, change: { kind: "delta", values: [{ ...regressed, serverTimestamp: previous.serverTimestamp }] } },
+      {
+        ...request,
+        change: {
+          kind: "delta",
+          values: [{ ...regressed, serverTimestamp: previous.serverTimestamp }],
+        },
+      },
       nowMs,
       3000,
     ).status,
