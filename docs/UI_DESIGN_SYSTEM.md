@@ -75,3 +75,13 @@
 - **保留浏览器安全契约**：工程 ID 输入保留原生 `input`、原 `id`/`name` 和受控更新；多页面 `select`、`data-testid`、同源只读 GET、身份/CAS/权限检查、停止读取时清空画面均不变。两个控件的官方迁移以确认对应 TDesign API 和真实 CDP 输入兼容性为前提，不为追求组件覆盖率破坏已发布安全验收。
 - **七种状态空态共用文案**：新增 `PUBLISHED_RUNTIME_EMPTY_HINTS` 与 `PUBLISHED_RUNTIME_STATUS_LABELS` 一一对应，分别提示未启动、读取中、尚未发布、已验证但不可展示、离线、拒绝、错误。React/Vue 直接渲染同一共享文案，不将静态快照误称为 GOOD 实时数据。
 - **视觉与回归**：空态提升至 14px 便于工业桌面阅读，保留预览区域的清晰边界；TDesign 组件仍需 Windows 双框架手工与自动浏览器专项复验。没有新引入 Zod、Day.js 等工具，因为本批不涉及新的通用校验或复杂日期逻辑。
+
+## D5c0o · @adui/theme 全局设计 Token 第一阶段
+
+- **唯一来源**：`packages/theme` 的 `@adui/theme/styles.css` 组合 `tokens.css` 与 `tdesign.css`。Vue/React 继续通过共享 `@adui/scada-runtime/styles.css` 加载；`packages/runtime/src/theme.css` 只保留兼容导入，不再定义自己的颜色。
+- **配色**：品牌 `#0D63F3`、科技青 `#00C8FF`、正常状态 `#00D9A6`、警告 `#F0AE4D`、错误和过期 `#F16C75`；页面背景 `#0B1320`、面板 `#132236`、画布 `#0C1728`。所有 `--scada-*` 与 V7 `--adui-scada-*` 均以别名保留；不能用品牌蓝替换工业报警语义色。
+- **字号**：`--adui-font-size-2xs/xs/sm/md/lg/xl/2xl/3xl` 分别为 **11/12/13/14/16/18/24/28px**，正文默认 14px/1.5；中文系统字体优先，数值仍用现有等宽数字规则，不加载外链字体。
+- **间距**：`--adui-space-0…9` 为 **0/2/4/6/8/12/16/20/24/32px**；圆角 `--adui-radius-sm/md/lg/panel` 为 **4/6/8/10px**，控件高度为 **28/32/36px**。Tailwind v4 通过共享 `@theme inline` 引用基础字体、4px 间距、圆角刻度；不修改 Preflight。
+- **TDesign**：两个 `index.html` 使用 `theme-mode="dark"`，官方 CSS Variables 在 `packages/theme/src/tdesign.css` 统一映射交互色、背景、文字、禁用态、字体及尺寸。采用更具体的 `html:root[theme-mode="dark"]` 以覆盖懒加载的组件默认主题，而非额外重绘 `Button/Input`。官方机制依据：[TDesign Web 主题说明](https://github.com/Tencent/tdesign-common/blob/develop/docs/web/theme.md) 与 [React 自定义主题](https://tdesign.tencent.com/react/custom-theme)。
+- **迁移边界**：本批只替换旧主题入口、两端重复的 TDesign 变量和基础排版/Tailwind Token 映射。Runtime/Studio 中尚存单次写入的像素值，后续逐批替换，**不声称已完成所有历史 CSS 迁移**。Studio 252px/320px 固定侧栏、画布 16:9、报警质量、数据读取与只读权限保持原样。
+- **安装前置**：新增 `@adui/scada-runtime -> @adui/theme` 的 `workspace:*` 依赖；须使用项目 pnpm 12.18.0 **实际生成并提交** `pnpm-lock.yaml` 的工作区 importer 变更，不允许手工猜测锁文件。验证前先重新安装，再运行 `ready`、双端浏览器与 TDesign 禁用/焦点/对比度检查。
