@@ -1398,3 +1398,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/test/alarm-baseline-session.test.ts`：调整既有失效状态断言和重启路径，新增三项终止态回归，文件由 18 项升至 21 项，覆盖首次坏质量失效、所有同代次事件重入、旧代次忽略与新代次低序列快照。
 - `packages/core/test/alarm-session-controller.test.ts`：同步一处严格对象状态断言，既有 10 项不减少。
 - `packages/core/src/alarm-session-controller.ts` 和 `packages/core/src/alarm-subscription-adapter.ts` 无生产逻辑改动；不涉及 TagStore、Runtime、NestJS/Prisma、React/Vue、网关、发布安全门禁。
+
+## 2026-11-23 · D5b9v FR-011 低层序列旧基线质量与时效闭包（候选）
+
+- `packages/core/src/alarm-tag-sequence.ts`：`classifyOrderedNumericAlarmSample` 在当前读数合法、旧 Tag 匹配后直接复查旧基线的 GOOD、有限数值和时间窗口，拒绝超龄、未来、坏质量或非数值旧基线，不再仅依赖上层入口的旧基线校验。
+- `packages/core/test/alarm-tag-sequence.test.ts`：把原有效夹具时间改至既有年龄上限内；新增三项回归，文件由 6 增至 9 项。
+- `packages/core/test/alarm-session-generation.test.ts`：校正同样超龄的旧夹具，新增一项同代次包装无法绕过旧基线失效的回归，由 6 增至 7 项。
+- `packages/core/src/alarm-session-generation.ts` 与上层 `alarm-tag-delta.ts`、`alarm-baseline-session.ts` 不改生产逻辑，现有低层与上层拒绝前置检查并存；不涉及 Vue/React、NestJS/Prisma、网关和设备写入。
