@@ -852,171 +852,412 @@
   cursor: not-allowed;
 }
 
-/* 正式工业工作台：在原有 16:9 画布和固定侧栏语义之上统一视觉密度。 */
+/* D5c1 精密组态编辑器：重做导航层级、资源侧栏、画布焦点和属性面板。 */
 .studio-shell {
   --studio-control-height: 34px;
+  background: var(--scada-bg);
 }
 .studio-toolbar {
-  min-height: 64px;
-  gap: 14px;
-  padding: 10px clamp(12px, 1.4vw, 22px);
-  border-bottom-color: var(--scada-border-strong);
+  min-height: 62px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 18px;
+  padding: 8px clamp(12px, 1.3vw, 22px);
+  border-bottom: 1px solid var(--scada-border);
+  background: var(--scada-surface);
 }
 .studio-toolbar > div:first-child {
-  min-width: 160px;
+  min-width: 136px;
+  max-width: 172px;
+  flex: none;
 }
 .studio-toolbar h1 {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   color: var(--scada-text-strong);
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: 0.012em;
+  font-size: 18px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
 }
 .studio-toolbar .scada-eyebrow {
   color: var(--scada-text-muted);
   font-size: var(--adui-font-size-2xs);
+  letter-spacing: 0.04em;
+}
+.studio-actions {
+  min-width: 0;
+  flex: 1;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+.studio-actions > * {
+  flex: none;
 }
 .studio-history-actions,
 .studio-save-actions {
   gap: var(--adui-space-3);
 }
-.studio-history-actions button,
-.studio-save-actions button {
+.studio-actions button {
   min-height: var(--studio-control-height);
-  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: var(--adui-font-size-xs);
+  white-space: nowrap;
 }
-.studio-save-actions button:first-child {
-  font-weight: 700;
+.studio-save-actions button:first-child:not(:disabled) {
+  border-color: var(--scada-primary);
+  background: var(--scada-primary);
+  color: #fff;
+  font-weight: 750;
+}
+.studio-save-actions button:first-child:not(:disabled):hover {
+  border-color: var(--scada-primary-hover);
+  background: var(--scada-primary-hover);
 }
 .studio-file-popover,
 .studio-version-panel,
 .studio-view-popover {
-  border-color: var(--scada-border-strong);
-  box-shadow: 0 16px 38px rgb(0 0 0 / 32%);
+  border-color: var(--scada-border);
+  border-radius: 12px;
+  background: var(--scada-surface);
+  box-shadow: var(--adui-shadow-floating);
 }
 .studio-page-bar {
-  min-height: 43px;
-  padding-inline: 15px;
-  background: var(--scada-nav);
+  min-height: 44px;
+  padding: 5px 14px;
+  border-bottom: 1px solid var(--scada-border);
+  background: var(--adui-color-surface-muted);
 }
 .studio-page-tabs {
   gap: var(--adui-space-2);
 }
 .studio-page-tabs button {
-  min-height: 32px;
+  min-height: 33px;
+  padding: 6px 13px;
   border: 1px solid transparent;
-  border-radius: 6px 6px 0 0;
+  border-radius: 7px;
+  background: transparent;
   color: var(--scada-text-secondary);
-  font-weight: 600;
+  font-size: var(--adui-font-size-xs);
+  font-weight: 650;
 }
 .studio-page-tabs button:not(:disabled):hover {
-  background: var(--scada-action-hover);
+  border-color: var(--scada-border);
+  background: var(--scada-surface);
   color: var(--scada-text-strong);
 }
 .studio-page-tabs button[aria-current="page"] {
   border-color: var(--scada-border);
-  border-bottom-color: var(--scada-cyan);
   background: var(--scada-surface);
-  color: var(--scada-text-strong);
+  color: var(--scada-primary);
+  box-shadow: inset 0 -2px var(--scada-primary);
 }
 .studio-workspace {
-  background: var(--scada-canvas);
+  background: var(--adui-color-stage);
 }
 .studio-panel {
   background: var(--scada-surface);
 }
+.studio-panel-layers {
+  border-right: 1px solid var(--scada-border);
+}
 .studio-pane-heading,
 .studio-panel-properties > h2 {
   min-height: 48px;
-  border-bottom-color: var(--scada-border-strong);
+  border-bottom: 1px solid var(--scada-border);
   background: var(--scada-surface);
+}
+.studio-pane-heading {
+  gap: var(--adui-space-4);
+  padding: 10px 14px;
 }
 .studio-pane-heading h2,
 .studio-panel-properties > h2 {
   color: var(--scada-text-strong);
   font-size: var(--adui-font-size-sm);
-  font-weight: 700;
-  letter-spacing: 0.015em;
+  font-weight: 750;
+  letter-spacing: 0.012em;
+}
+.studio-count {
+  min-width: 25px;
+  border-radius: 7px;
+  background: var(--scada-active-bg);
+  color: var(--scada-primary);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 750;
+  text-align: center;
 }
 .studio-library-label,
 .studio-tree-section-title {
   color: var(--scada-text-secondary);
-  font-weight: 700;
+  font-size: var(--adui-font-size-2xs);
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+.studio-library-label {
+  padding-top: 14px;
+}
+.studio-add {
+  gap: 7px;
+  padding: 10px 12px 16px;
+  border-bottom: 1px solid var(--scada-border-subtle);
+}
+.studio-add button {
+  min-height: 38px;
+  height: 38px;
+  border: 1px solid var(--scada-border);
+  border-radius: 9px;
+  background: var(--adui-color-surface-muted);
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 650;
+  transition:
+    border-color var(--adui-motion-fast) ease,
+    background-color var(--adui-motion-fast) ease;
+}
+.studio-add button:not(:disabled):hover {
+  border-color: var(--scada-primary);
+  background: var(--scada-active-bg);
+}
+.studio-tree-controls {
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid var(--scada-border-subtle);
+}
+.studio-tree-controls .studio-field {
+  gap: var(--adui-space-3);
+}
+.studio-tree-controls .t-button {
+  border-radius: 7px;
 }
 .studio-layer-tree {
+  padding: 10px 8px;
   scrollbar-width: thin;
   scrollbar-color: var(--scada-border-strong) transparent;
 }
 .studio-layer-tree .studio-layer {
-  min-height: var(--adui-control-height-md);
-  border-radius: var(--adui-radius-md);
+  min-height: 34px;
+  border-radius: 7px;
+  color: var(--scada-text-secondary);
 }
-.studio-layer-tree .studio-layer[data-selected="true"] {
-  box-shadow: inset 2px 0 var(--scada-primary);
+.studio-layer-tree .studio-layer:hover {
+  background: var(--adui-color-surface-muted);
   color: var(--scada-text-strong);
 }
+.studio-layer-tree .studio-layer[data-selected="true"] {
+  border-color: #c8d9f4;
+  background: var(--scada-active-bg);
+  color: var(--scada-primary);
+  box-shadow: inset 3px 0 var(--scada-primary);
+}
+.studio-layer-tree .studio-layer small {
+  color: var(--scada-text-muted);
+}
+.studio-side-more {
+  border-top-color: var(--scada-border-subtle);
+}
+.studio-side-more .t-collapse-panel__header,
+.studio-advanced .t-collapse-panel__header {
+  min-height: 39px;
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 650;
+}
+.studio-stage {
+  background: var(--adui-color-stage);
+}
 .studio-stage-caption {
-  min-height: 48px;
-  padding-inline: 15px;
-  border-bottom-color: var(--scada-border-strong);
-  background: var(--scada-surface);
+  min-height: 46px;
+  padding: 6px 12px;
+  border-bottom: 1px solid #344258;
+  background: var(--adui-color-stage-elevated);
+  font-size: var(--adui-font-size-xs);
 }
 .studio-stage-caption > span {
-  color: var(--scada-text-secondary);
+  color: #dce8f7;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.studio-stage-caption .t-button {
+  min-height: 30px;
+  border: 1px solid #41536a;
+  border-radius: 7px;
+  background: #293b52;
+  color: #eaf2fc;
+}
+.studio-stage-caption .t-button:hover {
+  border-color: #7c9cc6;
+  background: #314761;
+  color: #fff;
+}
+.studio-zoom {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid #40536c;
+  border-radius: 8px;
+  background: #26384c;
+}
+.studio-zoom .t-button {
+  min-width: 28px;
+  min-height: 26px;
+  padding: 4px 7px;
+  border-color: transparent;
+  background: transparent;
 }
 .studio-canvas-scroll,
 .studio-canvas-board,
 .studio-canvas-board > .studio-svg {
-  background: var(--scada-canvas);
+  background: var(--adui-color-stage);
+}
+.studio-canvas-scroll:focus-visible {
+  outline: 2px solid var(--adui-scada-cyan);
+  outline-offset: -3px;
+}
+.studio-page-boundary {
+  stroke: #77b3ff;
+  stroke-opacity: 0.95;
 }
 .studio-panel-properties {
-  padding-bottom: 20px;
+  border-left: 1px solid var(--scada-border);
+  padding-bottom: 18px;
   scrollbar-width: thin;
   scrollbar-color: var(--scada-border-strong) transparent;
 }
 .studio-panel-properties > h2 {
+  margin: 0 -14px var(--adui-space-5);
   padding-block: 15px;
 }
+.studio-panel-properties > p {
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-xs);
+}
 .studio-geometry {
-  background: var(--scada-canvas);
-  border-radius: 8px;
+  margin: var(--adui-space-5) 0;
+  padding: var(--adui-space-5);
+  border-color: var(--scada-border);
+  border-radius: 9px;
+  background: var(--adui-color-surface-muted);
+}
+.studio-advanced {
+  border-color: var(--scada-border-subtle);
+  border-radius: var(--adui-radius-md);
+}
+.studio-advanced-content {
+  background: var(--scada-surface);
+}
+.studio-tag-manager .studio-tag-item {
+  padding: var(--adui-space-4) 0;
+  border-bottom-color: var(--scada-border-subtle);
+}
+.studio-tag-manager .studio-tag-item strong {
+  color: var(--scada-text-strong);
+  font-weight: 700;
+}
+.studio-tag-manager .studio-tag-actions,
+.studio-tag-manager .studio-tag-form-actions {
+  gap: var(--adui-space-3);
+}
+.studio-tag-manager .studio-tag-actions .t-button,
+.studio-tag-manager .studio-tag-form-actions .t-button {
+  height: var(--adui-control-height-sm);
+  min-height: var(--adui-control-height-sm);
+  border-radius: 7px;
+  font-size: var(--adui-font-size-xs);
+}
+.studio-tag-manager .studio-tag-form {
+  border-top-color: var(--scada-border);
+}
+.studio-tag-manager .studio-tag-form > strong {
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-xs);
+}
+.studio-tag-manager .studio-tip {
+  color: var(--scada-text-secondary);
 }
 .studio-statusbar {
   height: 38px;
-  border-top-color: var(--scada-border-strong);
-  background: var(--scada-nav);
+  gap: 14px;
+  border-top: 1px solid var(--scada-border);
+  background: var(--scada-surface);
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-2xs);
   font-variant-numeric: tabular-nums;
 }
 .studio-status-message .studio-notice {
   color: var(--scada-text-secondary);
 }
-/* TDesign 自行绘制输入和按钮的焦点状态；仅为工业图层拖拽入口保留清晰的键盘焦点。 */
+.studio-status-led {
+  width: 7px;
+  height: 7px;
+  background: var(--scada-live);
+}
+.studio-version-item,
+.studio-version-comparison,
+.studio-project-browser-item {
+  border-color: var(--scada-border);
+  border-radius: 9px;
+  background: var(--adui-color-surface-muted);
+}
+.studio-version-error {
+  color: var(--scada-danger);
+}
+.studio-version-heading,
+.studio-version-item code {
+  font-variant-numeric: tabular-nums;
+}
+.studio-project-browser-current {
+  border-color: var(--scada-primary);
+  color: var(--scada-primary);
+}
+.studio-shell :is(button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--adui-color-focus-ring);
+  outline-offset: 2px;
+}
 .studio-shell .studio-layer:focus-visible {
-  outline: 2px solid var(--scada-primary);
+  outline: 2px solid var(--adui-color-focus-ring);
   outline-offset: -2px;
 }
-@media (max-width: 1250px) {
+@media (max-width: 1220px) {
   .studio-toolbar {
-    gap: 10px;
+    gap: 11px;
+    padding-inline: 12px;
+  }
+  .studio-toolbar > div:first-child {
+    min-width: 115px;
+  }
+  .studio-toolbar h1 {
+    font-size: 15px;
   }
 }
 @media (max-width: 930px) {
   .studio-toolbar {
-    min-height: 0;
-    padding-block: 9px;
+    min-height: 70px;
+    flex-wrap: wrap;
+    padding-block: 10px;
+  }
+  .studio-toolbar > div:first-child {
+    max-width: none;
+  }
+  .studio-actions {
+    justify-content: flex-start;
   }
   .studio-panel-layers,
   .studio-panel-properties {
-    min-height: 120px;
+    min-height: 125px;
   }
   .studio-stage {
     min-height: 240px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .studio-shell button,
-  .studio-shell summary {
-    scroll-behavior: auto;
+  .studio-shell *,
+  .studio-shell *::before,
+  .studio-shell *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }
