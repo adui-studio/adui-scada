@@ -290,3 +290,25 @@ test("上游未核验时仍优先拒绝来源而不暴露已超龄基线原因",
     advanceAlarmTagDeltaBaseline({ ...request, sourceVerified: false }, nowMs + 1001, 1000),
   ).toEqual({ status: "DELTA_REJECTED", reason: "UNVERIFIED_SOURCE" });
 });
+
+test("直接增量入口不能以更大序列号接受倒退的服务端时间", () => {
+  const regressed: TagValue = {
+    ...next,
+    sequence: 7,
+    serverTimestamp: "2026-11-22T08:59:58.999Z",
+  };
+  expect(
+    advanceAlarmTagDeltaBaseline(
+      { ...request, change: { kind: "delta", values: [regressed] } },
+      nowMs,
+      3000,
+    ),
+  ).toEqual({ status: "DELTA_REJECTED", reason: "SERVER_TIMESTAMP_REGRESSED" });
+  expect(
+    advanceAlarmTagDeltaBaseline(
+      { ...request, change: { kind: "delta", values: [{ ...regressed, serverTimestamp: previous.serverTimestamp }] } },
+      nowMs,
+      3000,
+    ).status,
+  ).toBe("DELTA_ACCEPTED");
+});
