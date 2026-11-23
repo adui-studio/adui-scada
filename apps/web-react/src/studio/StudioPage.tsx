@@ -65,6 +65,7 @@ import {
   isScadaAccessRejection,
   ScadaApiError,
 } from "@adui/scada-api-client";
+import { confirmStudioAction, promptStudioPageName } from "./StudioDialog.tsx";
 import { TagManager } from "./TagManager.tsx";
 import { ServerProjectBrowser } from "./ServerProjectBrowser.tsx";
 import { ServerReleasePreflight } from "./ServerReleasePreflight.tsx";
@@ -365,15 +366,15 @@ export default function StudioPage() {
     }, "已创建空白页面，可撤销");
   }
 
-  function renamePage() {
+  async function renamePage() {
     if (!page) return;
-    const name = window.prompt("请输入新的页面名称", page.name);
+    const name = await promptStudioPageName("请输入新的页面名称", page.name);
     if (name === null) return;
     apply(() => editor.renamePage(page.id, name), "页面已重命名，可撤销");
   }
 
-  function deletePage() {
-    if (!page || !window.confirm("确定删除页面“" + page.name + "”及其图元吗？可撤销。")) {
+  async function deletePage() {
+    if (!page || !await confirmStudioAction("确定删除页面“" + page.name + "”及其图元吗？可撤销。")) {
       return;
     }
     apply(() => {
@@ -409,10 +410,10 @@ export default function StudioPage() {
         movePage("next");
         break;
       case "rename":
-        renamePage();
+        void renamePage();
         break;
       case "delete":
-        deletePage();
+        void deletePage();
         break;
     }
   };
@@ -1320,7 +1321,7 @@ export default function StudioPage() {
           throw new TypeError("当前工程已切换，拒绝载入其他工程的服务端历史");
         }
         if (
-          !window.confirm(
+          !await confirmStudioAction(
             `载入服务端版本 #${revision} 将替换当前画布并清空撤销历史。IndexedDB 草稿不会被清除，未保存的画布修改可能丢失，建议先保存草稿。确认继续吗？`,
           )
         ) {
@@ -1375,7 +1376,7 @@ export default function StudioPage() {
           );
         }
         if (
-          !window.confirm(
+          !await confirmStudioAction(
             `打开工程“${projectId}”的最新版本 #${headRevision} 将替换当前画布、清空撤销历史并暂停自动保存。未保存的画布修改可能丢失；IndexedDB 草稿及本地历史不会被删除。请先保存需要保留的修改，确认打开吗？`,
           )
         ) {
@@ -1478,7 +1479,7 @@ export default function StudioPage() {
           throw new TypeError("当前工程已切换，拒绝载入其他工程的历史版本");
         }
         if (
-          !window.confirm(
+          !await confirmStudioAction(
             `载入本地历史版本 #${revision} 将替换当前画面并清空撤销历史，未保存的修改可能丢失。建议先导出 JSON 备份。确认继续吗？`,
           )
         ) {
@@ -1515,7 +1516,7 @@ export default function StudioPage() {
       const session = await DraftAutoSaveSession.open(drafts, editor.snapshot().document);
       if (
         session.hasExistingDraft &&
-        !window.confirm("数据库已有草稿，开启自动保存后新修改将覆盖该版本。确认开启吗？")
+        !await confirmStudioAction("数据库已有草稿，开启自动保存后新修改将覆盖该版本。确认开启吗？")
       ) {
         return;
       }
@@ -1536,7 +1537,7 @@ export default function StudioPage() {
       await pauseAutoSave();
       const document = editor.snapshot().document;
       const current = await drafts.get(document.projectId);
-      if (current && !window.confirm("数据库已有草稿，确认使用当前画面覆盖吗？")) return;
+      if (current && !await confirmStudioAction("数据库已有草稿，确认使用当前画面覆盖吗？")) return;
       const saved = await drafts.save(document, current?.revision ?? null);
       setHasSavedDraft(true);
       setNotice(`已保存 IndexedDB 草稿（${saved.savedAt}），并非正式工程发布`);
@@ -1548,7 +1549,7 @@ export default function StudioPage() {
   }
 
   async function restoreDraft() {
-    if (!window.confirm("恢复数据库草稿将替换当前画面并清空撤销历史，确认吗？")) return;
+    if (!await confirmStudioAction("恢复数据库草稿将替换当前画面并清空撤销历史，确认吗？")) return;
     if (draftActionRef.current) return;
     draftActionRef.current = true;
     try {
@@ -1577,7 +1578,7 @@ export default function StudioPage() {
   }
 
   async function clearDraft() {
-    if (!window.confirm("确定清除当前工程的 IndexedDB 草稿吗？当前画面不会改变。")) return;
+    if (!await confirmStudioAction("确定清除当前工程的 IndexedDB 草稿吗？当前画面不会改变。")) return;
     if (draftActionRef.current) return;
     draftActionRef.current = true;
     try {
