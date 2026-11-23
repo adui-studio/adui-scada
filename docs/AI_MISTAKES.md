@@ -1075,4 +1075,3 @@
 - **最小修复候选**：只修改三个 Vue SFC。六处 `@change` 处理函数参数类型统一为 `unknown`，函数内部仍只接收字符串 ID 或限定枚举；拒绝将对象、数组、数字、`bigint` 转成非法 Tag/页面/图层 ID。把 Tag 绑定下拉候选项提为 `<script setup>` 中的 `tagBindingOptions = computed(...)`，模板仅使用 `:options="tagBindingOptions"`。保留“未绑定”、历史缺失 Tag 占位、数据类型中文标签及原有 Tag 类型约束；不触碰 React、Core、Schema、CAS、OIDC 与工业写入边界。
 - **防复发与验证**：双框架 UI 组件事件回调不能按原生 `select` 事件的值域自行缩窄形参；先核对各自固定版本 API，宽接受、窄校验。复杂选项列表放在脚本 `computed`，减少 Volar 模板自动展开的歧义。**目前只完成 GitHub 源码静态核对；修复后的 Windows `pnpm run typecheck:web`、`vp check`、`docs:check` 及双框架浏览器测试仍待真实执行**，不可将本次改动视为质量门禁通过。
 - **证据**：维护者 2026-11-23 Windows PowerShell 中 `vue-tsc` 七条错误及最终失败退出码、PR #188 的三个 Vue SFC、`tdesign-vue-next@1.20.11` 固定官方 `select/type.ts`。
-
