@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button as TButton } from "tdesign-vue-next";
 import { onUnmounted, shallowRef } from "vue";
 import {
   createStudioProjectBrowser,
@@ -67,9 +68,9 @@ function onToggle(event: Event): void {
           <strong>服务端工程</strong>
           <p class="studio-version-help">仅显示已授权工程，不包含完整组态文件</p>
         </div>
-        <button type="button" :disabled="disabled || loading" @click="loadPage('refresh')">
+        <TButton type="button" :disabled="disabled || loading" @click="loadPage('refresh')">
           刷新
-        </button>
+        </TButton>
       </div>
       <p class="studio-version-help">
         打开其他工程前会校验最新修订号；本地草稿不会删除，也不会自动发布。
@@ -104,34 +105,34 @@ function onToggle(event: Event): void {
               </time>
             </small>
           </div>
-          <button
+          <TButton
             type="button"
             :disabled="disabled || loading"
             :aria-label="'打开工程 ' + project.projectId"
             @click="emit('open', project.projectId, project.headRevision)"
           >
             打开
-          </button>
+          </TButton>
         </li>
       </ul>
       <div class="studio-project-browser-pagination">
-        <button
+        <TButton
           type="button"
           :disabled="disabled || loading || !page.hasPrevious"
           @click="loadPage('previous')"
         >
           上一页
-        </button>
+        </TButton>
         <span role="status"
           >第 {{ page.pageNumber }} 页 · 每页 {{ STUDIO_PROJECT_PAGE_SIZE }} 条</span
         >
-        <button
+        <TButton
           type="button"
           :disabled="disabled || loading || !page.hasNext"
           @click="loadPage('next')"
         >
           下一页
-        </button>
+        </TButton>
       </div>
     </section>
   </details>
