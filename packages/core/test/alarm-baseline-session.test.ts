@@ -358,3 +358,37 @@ test("旧基线恰在最大年龄边界时仍可按既有规则接收有效增�
   expect(accepted.status).toBe("DELTA_ACCEPTED");
   expect(accepted.state.baseline?.value.sequence).toBe(6);
 });
+
+test("同代次重复初始快照即使内容完全一致也必须废弃旧基线", () => {
+  const initial = established();
+  const repeated = transitionAlarmBaselineSession(initial, snapshot, nowMs, 3000);
+  expect(repeated).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SNAPSHOT_ALREADY_ESTABLISHED",
+    state: { ...initial, baseline: null },
+  });
+  expect(initial.baseline?.value.sequence).toBe(5);
+});
+
+test("同代次新旧序列的第二次快照都不能重置已建立的序列", () => {
+  for (const sequence of [1, 6]) {
+    const initial = established();
+    const repeated = transitionAlarmBaselineSession(
+      initial,
+      {
+        ...snapshot,
+        change: { kind: "snapshot", values: [{ ...previous, sequence }] },
+      },
+      nowMs,
+      3000,
+    );
+    expect(repeated).toEqual({
+      status: "BASELINE_INVALIDATED",
+      reason: "SNAPSHOT_ALREADY_ESTABLISHED",
+      state: { ...initial, baseline: null },
+    });
+    const pending = transitionAlarmBaselineSession(repeated.state, delta, nowMs, 3000);
+    expect(pending.status).toBe("BASELINE_INVALIDATED");
+    expect(pending.state.baseline).toBeNull();
+  }
+});
