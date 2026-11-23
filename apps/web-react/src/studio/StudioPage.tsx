@@ -1806,7 +1806,6 @@ export default function StudioPage() {
                   <button type="button" onClick={clearDraft} disabled={!hasSavedDraft}>
                     清除草稿
                   </button>
-
                 </div>
               }
             >
