@@ -1,0 +1,3 @@
+/* 双框架共享主题入口：先定义业务 Token，再映射 TDesign 官方变量。 */
+@import "./tokens.css";
+@import "./tdesign.css";
