@@ -2270,3 +2270,9 @@ D5b9q 基于该主线增强 `AlarmSubscriptionAdapter.snapshot()`：正在运行
 维护者 Windows 对 PR #156 `alarm-subscription-adapter.test.ts` 实测 **24/24**、`vp check` **435 格式文件/286 受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个自有文件**。远程 PR HEAD 没有额外提交，审查无未解决线程，在维护者明确同意后 Squash 合并至 `main@fe02273d38d3291c2483061dbe8990b6024deff0`；该日志不提供本地 HEAD，不虚构具体实测提交绑定。
 
 D5b9r 基于上述主线，在共享 Core 会话归约器处理 delta 前先校验**旧基线**的新鲜度，防止周期调度和 `snapshot()` 均未执行时，被一条新鲜增量静默续接超龄序列。修改归约器及两份定向测试：会话归约器 **11→16 项**，订阅适配器 **24→25 项**（共新增 **6 项测试定义**）。同时更新 SDD、PROJECT_CONTEXT、CODEBASE_MAP、VALIDATION、AI_MISTAKES。**D5b9r 本批尚无 Windows 实测结果**，不声称源时钟、来源认证、真实订阅或工业报警已完成。
+
+## 2026-11-23 · PR #157 Windows 验收合并与 D5b9s 底层增量时效候选
+
+维护者 Windows 已对 PR #157 执行 `alarm-baseline-session.test.ts` **16/16**、`alarm-subscription-adapter.test.ts` **25/25**（合计 **41/41**），`vp check` **435 格式文件/286 受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个自有文件**。PR #157 远程增加一笔仅调整测试排版的提交，无审查阻塞；维护者授权后 Squash 合并至 `main@54cec31bd1e7a6c1ae0d1e1a0b3d2a128515e845`。该 Windows 日志未提供本地 HEAD，不假定已对特定远程提交逐字复验。
+
+D5b9s 从这份主线检查独立导出的 `advanceAlarmTagDeltaBaseline`，发现直接调用时仍可跳过 D5b9r 的归约器旧基线时效保护。此次对低层 API 增加既有数值/质量/时间窗口筛选，补充 **6 项单测定义**，原 `alarm-tag-delta.test.ts` **9→15 项**。旧测试夹具基线时间由年龄 2000ms 调整为 1000ms，以确保其「有效增量」测试在既有 1000ms 窗口内合法，避免旧夹具无意依赖违规行为。本批还未取得新增 Windows 实测结果；FR-011 仍不是可用的生产工业报警功能。

@@ -1377,3 +1377,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/test/alarm-baseline-session.test.ts`：从 11 项增至 **16 项测试定义**，覆盖旧基线超龄、无目标 Tag 增量、时钟回拨、未核验来源拒绝优先级、最大年龄边界，以及重新建立 snapshot 后合法推进。
 - `packages/core/test/alarm-subscription-adapter.test.ts`：从 24 项增至 **25 项测试定义**，确保不读取快照且调度未执行时，外部接收新鲜 delta 仍撤销旧基线与订阅资源。
 - Core 以外的 Runtime、双框架 UI、NestJS、Prisma、工业网关及正式发布 Gate 均未修改。
+
+## 2026-11-23 · D5b9s FR-011 底层报警增量旧基线时效校验
+
+- `packages/core/src/alarm-tag-delta.ts`：`advanceAlarmTagDeltaBaseline` 在来源、delta 类型、代次与目标 Tag 核验之后，调用 `classifyTimelyNumericAlarmSample` 复查先前基线的 GOOD、有限数值和时效；旧基线不合法立即拒绝，不允许任何新鲜 delta 绕过已有归约器保护。
+- `packages/core/test/alarm-tag-delta.test.ts`：从 9 项增加 **6 项测试定义，共 15 项**。覆盖超龄旧基线但新鲜输入、空/非目标 delta、未来基线、质量或数值异常、最大年龄端点、来源拒绝优先级；修正原有效基线夹具为窗口内时间。
+- 不修改 `AlarmBaselineSessionController`、`AlarmSubscriptionAdapter`、TagStore、Runtime、Vue/React、NestJS/Prisma、工业网关及正式发布门禁。

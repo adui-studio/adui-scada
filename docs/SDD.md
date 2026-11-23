@@ -1325,3 +1325,11 @@ D5b9o 已先撤销基线与回调令牌，再调用外部 `cancelCheck/unsubscri
 D5b9r 在共享 `alarm-baseline-session.ts` 的同会话 delta 分支增加**旧基线有效性前置检查**：当本次来源标记已核验且已有基线时，先按 `classifyTimelyNumericAlarmSample(state.baseline.value, nowMs, maxAgeMs)` 复查旧基线。若旧基线超龄、位于未来或出现其他非 READY 状态，立即以对应原因返回 `BASELINE_INVALIDATED` 和 `baseline:null`，**不处理当前 delta，即使它本身符合时效和序列条件**；后续 delta 仍因无基线遭拒绝，必须通过同代次且上游核验的 snapshot 重新建立。无目标 Tag 的 delta 同样不能掩盖旧基线超龄。未核验来源仍优先按 `UNVERIFIED_SOURCE` 拒绝，避免额外读取旧数据；在最大年龄边界（年龄等于 `maxAgeMs`）仍保持既有包含端点规则。
 
 此修复在共享状态归约层进行，故直接调用 Core 归约器或经 `AlarmBaselineSessionController`、`AlarmSubscriptionAdapter` 消费 delta 都需遵守，而不仅依赖适配器的周期时效检查或读取时效检查。不修改纯数值候选过滤器、TagStore、外部订阅接口、权限模型、报警阈值/确认业务、网关或发布 Gate。时间及来源的真实性仍由受控宿主提供，FR-011 工业报警完整能力仍未交付。
+
+## 2026-11-23 · D5b9s FR-011 底层增量公共入口复查旧基线时效（候选）
+
+D5b9r 已在 `transitionAlarmBaselineSession` 归约器的 delta 分支复查旧基线时效。但直接调用共享 Core 公共 API `advanceAlarmTagDeltaBaseline(request, nowMs, maxAgeMs)` 时，该函数仍只验证新增量读数的质量、时间和序列，可能绕过归约器并用新鲜 delta 续接超龄的先前基线。此处为静态审查发现的底层契约缺口，尚无生产采集故障证据。
+
+D5b9s 在 `packages/core/src/alarm-tag-delta.ts` 内仅新增既有 `classifyTimelyNumericAlarmSample(previous, nowMs, maxAgeMs)` 检查：在来源明确标记已核验、消息为 delta、已有基线、会话代次与目标 Tag 均匹配后，**对旧基线本身**重新验证 GOOD、有限数值和服务端时间窗口。旧基线质量异常、非数值、未来时间或超龄时返回 `DELTA_REJECTED` 和对应固定原因，不回传当前数值或新基线；即使合法增量不包含目标 Tag，也不能掩盖旧基线失效。对于未核验来源、错误消息种类、无基线、代次不一致及 Tag 不匹配，继续保留现有提前拒绝规则。时间恰好等于 `maxAgeMs` 仍允许正常序列推进。调用方应在任何拒绝后废弃旧基线，并通过上游核验的新 snapshot 重新建立。
+
+该底层检查与 D5b9r 归约器的前置检查暂时并存，以防框架无关公共函数被绕过归约器直接使用；未修改公共函数签名、返回枚举、上游订阅与报警业务。受控时钟、来源认证、真实采集、报警触发/确认和不可变审计仍未交付，正式发布 Gate 继续 fail-closed。

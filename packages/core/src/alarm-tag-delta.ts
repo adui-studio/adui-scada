@@ -1,3 +1,4 @@
+import { classifyTimelyNumericAlarmSample } from "./alarm-tag-freshness.ts";
 import { classifySessionBoundNumericAlarmSample } from "./alarm-session-generation.ts";
 import type { SessionBoundNumericAlarmSample } from "./alarm-session-generation.ts";
 import type { AlarmSnapshotBaseline } from "./alarm-snapshot-baseline.ts";
@@ -69,6 +70,11 @@ export function advanceAlarmTagDeltaBaseline(
   const previous = validateTagValue(request.baseline.value);
   if (previous.tagId !== request.expectedTagId) {
     return { status: "DELTA_REJECTED", reason: "TAG_MISMATCH" };
+  }
+  // 底层入口也必须重新确认旧基线仍有效，不能只验证本次增量。
+  const baselineCheck = classifyTimelyNumericAlarmSample(previous, nowMs, maxAgeMs);
+  if (baselineCheck.status !== "READY") {
+    return { status: "DELTA_REJECTED", reason: baselineCheck.status };
   }
 
   const seen = new Set<string>();
