@@ -330,7 +330,7 @@ export function openProjectBrowserMenuInPage(runtime = globalThis) {
   const panel = runtime.document.querySelector(".studio-project-browser-panel");
   const menu = runtime.document.querySelector(".studio-project-browser-menu");
   const trigger = menu?.querySelector("button.t-button");
-  if (!menu || !(trigger instanceof runtime.HTMLButtonElement)) {
+  if (!menu || trigger?.tagName !== "BUTTON") {
     throw new Error("工程列表刷新入口不可用");
   }
   if (!panel?.getClientRects().length) trigger.click();
