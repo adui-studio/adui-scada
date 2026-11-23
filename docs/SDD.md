@@ -1357,3 +1357,11 @@ D5b9u 为 `AlarmBaselineSessionState` 增加可选的只读 `invalidated?: true`
 D5b9v 只修改 `alarm-tag-sequence.ts`：当新读数 READY 且上一条基线存在、格式有效、Tag ID 一致时，先用原有 `classifyTimelyNumericAlarmSample(previous, nowMs, maxAgeMs)` 验证旧基线，再比较序列。旧基线质量不合格、非数值、超龄或未来时间，返回原有固定拒绝类别且不返回候选值；旧基线年龄恰为最大年龄时仍允许递增序列。当前读数拒绝、无基线、Tag 不匹配、坏序列优先级和非法输入抛错保持原有路径。
 
 会话代次包装自动继承底层防护；上层 `advanceAlarmTagDeltaBaseline` 和会话归约器保留自身已经实现的旧基线复查，以保护各自公共入口和原有拒绝优先级。不引入新枚举、公共签名、默认时钟或隐式重试。纯函数不能认证来源或判断真实报警：FR-011 正式触发、确认权限、不可变审计及网关接入仍未完成，发布 Gate 继续 fail-closed。
+
+## 2026-11-23 · D5b9w FR-011 同会话报警候选服务端时间不得倒退（候选）
+
+D5b9v 已为共享底层 `classifyOrderedNumericAlarmSample` 补齐新旧读数各自的 GOOD、数值及时间窗口校验。然而这些检查只保证两份读数都处于同一有效窗口、当前序列号严格递增；当新的 `serverTimestamp` 比上一条已接受样本更早、但仍处于 `maxAgeMs` 内时，原函数仍返回 `READY`。这是一处可直接构造的序列与时间顺序不一致路径，尚无实际工业采集事故证据。
+
+D5b9w 只在 `packages/core/src/alarm-tag-sequence.ts` 增加服务端时间顺序守卫：新读数与旧基线分别通过原校验、Tag ID 一致且序列号严格增长后，按 `Date.parse(input.serverTimestamp) < Date.parse(previous.serverTimestamp)` 返回新的固定状态 `SERVER_TIMESTAMP_REGRESSED`，不返回候选值。**时间相等允许**，防止同毫秒连续采集被误拒；来源 `sourceTimestamp` 继续不参与报警顺序判断。非法质量、时效、Tag、代次及非递增序列仍保留现有优先拒绝语义。
+
+`classifySessionBoundNumericAlarmSample` 继承该状态，`advanceAlarmTagDeltaBaseline` 将其作为 `DELTA_REJECTED` 原因且不返回新基线，`transitionAlarmBaselineSession` 进一步将本代次终止为 `BASELINE_INVALIDATED`，受控 Controller/Adapter 按原有撤销令牌与取消订阅流程处理。除新增拒绝枚举以外，无公共函数签名、TagStore/SSE、报警规则、工业协议或数据库更改。这是报警候选层保守的 fail-closed 规则：仍须由可信上游保证服务器时间赋值权和会话代次，时间顺序检查不能构成来源认证，也不证明 PLC/DCS 工艺测量真实可靠；正式发布门禁保持 fail-closed。
