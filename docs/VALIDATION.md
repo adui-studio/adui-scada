@@ -4198,3 +4198,128 @@ git status --short
 ```
 
 真实浏览器验收同时人工检查页面菜单 Esc、键盘导航、选项滚动与 1024×768 下贴边定位。本批自动浏览器只验证触发器可聚焦，未声称已完全覆盖键盘导航。菜单关闭行为通过官方组件执行；工程文件、Tag、报警、OIDC、发布和设备写入边界不在本次代码变化中。
+
+## 2026-11-23 · PR #185 质量验收；D5c0u 文件草稿 Popup 定向回归
+
+PR #185：Windows 实测 `pnpm run typecheck:web` 成功、`vp check` **446 个格式文件/289 受检零告警**、`docs:check` **94 份**，React/Vue 1440×900 和 1024×768 四组 Studio 测试分别 **27/27**，总 **108/108**。失败退出检查未触发。GitHub 最终 HEAD `9963000ac0cdd42dd281df928809922582b25c86`、Squash 合并 `main@63cce4d6a0824ae766a4b9f436e65665ad568030`；本机日志未单独提供 HEAD，不能宣称在合并 SHA 上运行。
+
+D5c0u 只迁移「文件与草稿」Popup 容器，TDesign React/Vue 固定版本 API 已核对；JSON 导入仍使用原生文件输入及自有校验，未发生网络上传。`test-studio-browser.mjs` 只更新文件菜单的真实点击入口，并增加 3 项 Popup 断言，原 27 项 Studio 断言全部保留，目标每视口 **30 项 × 4 = 120**。这批牵涉 JSON 互通、自动保存、历史加载竞争，故除了 `test:browser` 还必须独立运行 `test:interop`、`test:versions:safety`、`test:legacy:browser` 和 `test:multitab`（必要时 `test:versions`）。不机械重复无关 NestJS/网关全量 `ready`；若出现代码/安全边界变化再扩大验证。**上述均为待验收目标，不是已执行结果。**
+
+Windows 根目录定向验收（先确认本机可信 HTTPS 证书和测试服务）:
+
+```powershell
+git fetch origin
+git switch feat/d5c0u-tdesign-file-popup
+git pull --ff-only
+git rev-parse HEAD
+pnpm run typecheck:web
+if ($LASTEXITCODE -ne 0) { throw "双框架类型检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run test:browser
+if ($LASTEXITCODE -ne 0) { throw "Studio 双框架 Popup 回归失败" }
+pnpm run test:interop
+if ($LASTEXITCODE -ne 0) { throw "双框架 JSON 互通失败" }
+pnpm run test:versions:safety
+if ($LASTEXITCODE -ne 0) { throw "历史版本并发安全失败" }
+pnpm run test:legacy:browser
+if ($LASTEXITCODE -ne 0) { throw "历史草稿迁移失败" }
+pnpm run test:multitab
+if ($LASTEXITCODE -ne 0) { throw "多标签页 CAS 保护失败" }
+git status --short
+```
+
+人工复核：文件菜单首次开启/反复开合/点击外部/Esc/键盘焦点；导入文件选择和取消、合法/非法/超过 2 MiB JSON，导出 Blob 下载，草稿恢复/清除的确认取消分支，以及 1440×900/1024×768 菜单不被裁切。不得通过关闭 TLS 校验或删除原有工程、权限、CAS 断言让脚本过关。
+
+## 2026-11-23 · D5c0u PR #186 Windows 多标签页阻塞与安全诊断候选
+
+维护者在 Windows 对 PR #186 执行顺序验收：`typecheck:web`、`vp check`（446 格式文件/289 受检零告警）、`docs:check`（94）、`test:browser` React/Vue 四视口 **30/30 × 4 = 120/120**、`test:interop` 完整双框架往返、`test:versions:safety` React/Vue、`test:legacy:browser` React/Vue 迁移与快照校验，均通过。`test:multitab` React 四个阶段通过后，在**首次 Vue 两标签页导航进入 Studio** 时失败：导航按钮已激活但 `.studio-workspace` 未按时出现，`ELIFECYCLE` 退出码 1；**Vue 多标签页未执行，PR 不具备合并条件**。该日志未单独打印本地 HEAD，不能严格绑定 GitHub SHA。
+
+已在现有 Draft 分支仅增强 `scripts/test-studio-browser.mjs` 中异步工作台导航失败的分类诊断：观察模块请求、脚本异常、资源失败和未处理 Promise 拒绝；仍坚持原 15s/5s 工作台/SVG 等待和原多标签页 BroadcastChannel、IndexedDB CAS、墓碑及故障恢复断言，不自动重试、不跳过 Vue、不拉长超时，不输出异常正文或资源 URL。由于原始日志不足以证明具体原因，此修改只是**诊断候选，尚未解决根因，也未重新通过 Windows 验收**。
+
+最新分支建议最小复验（先核对本地 HEAD；不需要重复运行前七项已完成的业务专项）：
+
+```powershell
+git fetch origin
+git switch feat/d5c0u-tdesign-file-popup
+git pull --ff-only
+git rev-parse HEAD
+node --check scripts/test-studio-browser.mjs
+if ($LASTEXITCODE -ne 0) { throw "浏览器脚本语法检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run test:multitab
+if ($LASTEXITCODE -ne 0) { throw "多标签页安全测试仍失败，请保留新增诊断类别" }
+```
+
+若首次 Vue 加载再次失败，提供日志中的**固定布尔诊断项**即可，不必提供原始异常、Cookie、Token 或工程数据。如多标签页通过，后续仍须评估此前是否为不稳定异步加载，必要时多次仅复验该专项；不能在根因未明时声称 E-106 已关闭。
+
+## 2026-11-23 · E-106 第二次失败后补充 CDP 同源模块 HTTP 诊断
+
+Windows 最新日志确认：`node --check`、`vp check`（446 文件格式正确/289 受检零告警）和 `docs:check`（94 份）均通过，但 `test:multitab` 再次在 React 四阶段完成后、首次 Vue 双标签进入 Studio 时失败。页面分类为工作台=false、SVG=false、模块请求=true、模块加载异常=true、脚本异常=false、未处理异步拒绝=true、脚本或样式资源失败=false，命令退出码 **1**。这是对动态 import 失败的证据，**不是 HTTP 504 的证据**。
+
+当前 Draft 仅进一步修改测试脚本：在原本 `Promise.all` 的 Vue 首次双标签导航期间启用 CDP `Network.enable`，观察本地同源的脚本/预构建依赖请求；失败时追加 `首标签`/`次标签` 的 `Studio模块HTTP`、`失败请求`（按请求类别、HTTP 状态或固定网络错误类别），随后仍按原失败退出。关闭观察者并清理请求 Map，不输出资源 URL、正文、私钥、Cookie、Token 或原始网络异常；React/Vue 业务、15s/5s 等待、HTTPS 校验、Studio 几何及全部 CAS 多标签安全断言未变。
+
+如果输出为 `Vite预构建依赖:HTTP504`，再核对 Vue Vite 服务端优化器日志、依赖缓存版本及是否存在动态路由依赖发现；是否使用官方 `optimizeDeps.include` 应结合具体失败模块确定，不能一概调整。若为 4xx/其他 5xx、证书、连接拒绝或网络失败，则分别诊断对应来源；未观察到响应不代表 HTTP 200。
+
+本批仅需在最新 HEAD 运行 `node --check scripts/test-studio-browser.mjs`、`vp check`、`pnpm run docs:check` 和 `pnpm run test:multitab`。前七项业务专项在之前候选中已通过，不机械重复 `ready`。**根因与新提交的测试结果都待 Windows 验证，PR #186 仍为 Draft，不能合并。**
+
+## 2026-11-23 · E-106 第三次网络诊断与 Vue Studio 依赖预构建候选
+
+维护者 Windows 第三次 `test:multitab` 退出 1；React 四组双标签 CAS 安全场景通过后，Vue 首次并发进入 Studio 失败。CDP 网络诊断：首标签 `Studio模块HTTP=200`、`失败请求=Vite预构建依赖:其他网络错误`；次标签 `Studio模块HTTP=200`、`失败请求=其他同源资源:导航中断`。`node --check`、`vp check`（446/289 零告警）和 `docs:check`（94）通过。网络层尚未暴露准确 Chromium 错误码，**不存在已证实的 HTTP 504 或具体依赖文件名**。
+
+本批只在 Vue Vite 配置添加开发期 `optimizeDeps.include: ['tdesign-vue-next', 'tdesign-icons-vue-next']`，因为 Vue `App.vue` 动态加载 Studio 且两个包主要在 Studio 中首次引入。Vite 官方指南说明新依赖被发现时可能触发重新预构建和页面重载；此配置用于**预先发现依赖**，不是关闭优化器、安全验证或动态加载。`test-studio-browser.mjs` 补充受限 Chromium `net::ERR_*` 错误码；不输出资源地址、网络正文、会话标识、原始异常。该修复是待验证假设，React/Vue 业务、Schema、IndexedDB CAS、15s/5s 导航门禁与真实并发完全未变。参考：https://vite.dev/guide/dep-pre-bundling.html。
+
+Windows 验收必须先让原 Vue 开发终端停止并使用新配置重启，建议在该终端执行 `vp dev --force`（先运行 `vp dev --help` 确认当前 Vite+ 1.5.0 接受 `--force`；不能直接改写其他进程）。React 开发服务保持原运行状态。仅当确认 HTTPS 15174 服务启动且可信 CA 正常后，在新的 PowerShell 中运行：
+
+```powershell
+git fetch origin
+git switch feat/d5c0u-tdesign-file-popup
+git pull --ff-only
+git rev-parse HEAD
+node --check scripts/test-studio-browser.mjs
+if ($LASTEXITCODE -ne 0) { throw "浏览器脚本语法检查失败" }
+pnpm run typecheck:web
+if ($LASTEXITCODE -ne 0) { throw "双框架类型检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run test:multitab
+if ($LASTEXITCODE -ne 0) { throw "多标签页安全测试失败，请保留 Chromium 错误码" }
+git status --short
+```
+
+若多标签页通过，应在同一新 HEAD 和干净开发进程下再运行一次该专项验证稳定性，随后复验 `pnpm run test:browser`（当前候选的 Vite 配置影响 Vue 开发构建）。无需重复原已通过的 interop、legacy、versions 或全量 `ready`，除非又有业务/依赖变化。**PR #186 保持 Draft，Vue 多标签 CAS 和修复效果未取得真实通过证据前不合并。**
+
+## 2026-11-23 · E-106 已捕获 Chromium ERR_CACHE_WRITE_FAILURE，改为定向 HTTP 缓存隔离
+
+维护者第四次 Windows 日志：`node --check` 成功，`typecheck:web` React/Vue/API Client/草稿存储通过，`vp check` **446 格式/289 受检零告警**，`docs:check` **94 份**，普通 `test:browser` React/Vue 1440×900、1024×768 **120/120** 通过。独立 `test:multitab` React 四阶段成功，Vue 第一次双标签导航失败、退出码 1；CDP 首标签 `Studio模块HTTP=200`、`Vite预构建依赖:Chromium错误码=net::ERR_CACHE_WRITE_FAILURE`；次标签 `Studio模块HTTP=200` 且无可见失败。HTTP 200 证明 Studio 模块源请求已返回，**实际失败在 Chromium 本地 HTTP 缓存写入**，不是可确认的 504 或数据库 CAS 错误。日志中本地 Git HEAD 没有单独输出。
+
+**当前修复候选**：回滚未能消除错误的 Vue `optimizeDeps.include`，恢复 Vite 配置与 `main` 一致；在 `--multitab` 的 Vue 首次导航前仅对两个 CDP 标签页调用 `Network.setCacheDisabled` 并等待命令成功。Chrome DevTools Protocol 对该参数的定义是“忽略每个请求的 HTTP 缓存”，不是禁止 IndexedDB、CacheStorage、BroadcastChannel 或数据库事务。**无需更改 Vue 页面、TDesign 依赖、业务功能、草稿 CAS、工控安全边界或原有 15s/5s 超时。**
+
+验证只需在 PR #186 最新 HEAD 执行：
+
+```powershell
+git fetch origin
+git switch feat/d5c0u-tdesign-file-popup
+git pull --ff-only
+git rev-parse HEAD
+node --check scripts/test-studio-browser.mjs
+if ($LASTEXITCODE -ne 0) { throw "脚本语法检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 代码检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run test:multitab
+if ($LASTEXITCODE -ne 0) { throw "多标签页安全测试失败" }
+git status --short
+```
+
+前七项类型/业务/浏览器专项已在前轮运行，且这次没有新应用代码或数据模型变更，不机械重复完整 `ready`、Tag、互通、版本安全与普通 Studio 120 项。若本次 `test:multitab` 通过，为排除测试不稳定可再独立复验一次；**新候选仍未 Windows 实测，不能报告修复完成**。
+
+若 Chromium 仍出现 `ERR_CACHE_WRITE_FAILURE`，再检查测试进程临时 Chromium 用户目录的剩余空间/权限/安全软件策略，不要删除用户正常 Chrome Profile；保留安全分类日志即可，不收集原始请求 URL、会话令牌、Cookies 或工程数据。

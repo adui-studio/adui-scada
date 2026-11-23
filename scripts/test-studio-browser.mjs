@@ -144,23 +144,79 @@ async function enterStudioInPage() {
     );
   }
 
-  if (!document.querySelector(".studio-workspace")) editorButton.click();
-  const workspace = await waitFor(".studio-workspace", 15000);
-  const svg = workspace && (await waitFor(".studio-svg", 5000));
-  if (!workspace || !svg) {
-    throw new Error(
-      "点击组态编辑后未能加载工作台；地址：" +
-        location.href +
-        "；标题：" +
-        document.title +
-        "；导航状态：" +
-        (editorButton.getAttribute("aria-current") || "未激活") +
-        "；页面文本：" +
-        (document.querySelector("#root, #app")?.textContent || "").trim().slice(0, 160),
-    );
-  }
+  // 仅采集受控错误类别，不能在诊断中暴露原始异常、资源 URL 或业务数据。
+  const observed = {
+    moduleLoadFailure: false,
+    scriptError: false,
+    unhandledRejection: false,
+    resourceError: false,
+  };
+  const classifyModuleError = (value) => {
+    const message = String(value || "");
+    return [
+      "failed to fetch dynamically imported module",
+      "importing a module script failed",
+      "loading chunk",
+      "failed to load module script",
+    ].some((phrase) => message.toLowerCase().includes(phrase));
+  };
+  const onPageError = (event) => {
+    if (event instanceof ErrorEvent) {
+      observed.scriptError = true;
+      if (classifyModuleError(event.message)) observed.moduleLoadFailure = true;
+    } else if (
+      event.target instanceof HTMLScriptElement ||
+      event.target instanceof HTMLLinkElement
+    ) {
+      observed.resourceError = true;
+    }
+  };
+  const onUnhandledRejection = (event) => {
+    observed.unhandledRejection = true;
+    const reason = event.reason;
+    if (classifyModuleError(reason?.message || reason)) observed.moduleLoadFailure = true;
+  };
+  window.addEventListener("error", onPageError, true);
+  window.addEventListener("unhandledrejection", onUnhandledRejection);
+  try {
+    if (!document.querySelector(".studio-workspace")) editorButton.click();
+    const workspace = await waitFor(".studio-workspace", 15000);
+    const svg = workspace && (await waitFor(".studio-svg", 5000));
+    if (!workspace || !svg) {
+      const requestedStudioModule = performance
+        .getEntriesByType("resource")
+        .some((resource) => /\/studio\/StudioPage\.(vue|tsx)/.test(resource.name));
+      throw new Error(
+        "点击组态编辑后未能加载工作台；地址：" +
+          location.href +
+          "；标题：" +
+          document.title +
+          "；导航状态：" +
+          (editorButton.getAttribute("aria-current") || "未激活") +
+          "；页面文本：" +
+          (document.querySelector("#root, #app")?.textContent || "").trim().slice(0, 160) +
+          "；导航诊断：工作台=" +
+          Boolean(workspace) +
+          "、SVG=" +
+          Boolean(svg) +
+          "、模块请求=" +
+          requestedStudioModule +
+          "、模块加载异常=" +
+          observed.moduleLoadFailure +
+          "、脚本异常=" +
+          observed.scriptError +
+          "、未处理异步拒绝=" +
+          observed.unhandledRejection +
+          "、脚本或样式资源失败=" +
+          observed.resourceError,
+      );
+    }
 
-  return { title: document.title, url: location.href };
+    return { title: document.title, url: location.href };
+  } finally {
+    window.removeEventListener("error", onPageError, true);
+    window.removeEventListener("unhandledrejection", onUnhandledRejection);
+  }
 }
 
 async function checkStudioInPage() {
@@ -363,6 +419,38 @@ async function checkStudioInPage() {
     verify("TDesign 页面菜单触发器可获得键盘焦点", document.activeElement === pageTrigger);
   }
 
+  // 文件与草稿不再使用原生 details，弹层由 TDesign Popup 负责管理。
+  const fileMenu = element(".studio-file-menu");
+  const fileTrigger = fileMenu.querySelector("button.t-button");
+  verify(
+    "文件与草稿复用 TDesign Popup 触发器",
+    fileMenu instanceof HTMLDivElement &&
+      fileTrigger instanceof HTMLButtonElement &&
+      !fileMenu.querySelector("summary"),
+  );
+  if (fileTrigger instanceof HTMLButtonElement) {
+    fileTrigger.click();
+    await settle();
+    const filePanel = fileMenu.querySelector(".studio-file-popover");
+    verify(
+      "TDesign 文件草稿弹层包含原有五项操作",
+      Boolean(filePanel?.getClientRects().length) &&
+        Boolean(filePanel.querySelector('input[type="file"]')) &&
+        ["导出 JSON", "恢复草稿", "清除草稿"].every((label) =>
+          [...filePanel.querySelectorAll("button")].some(
+            (button) => button.textContent.trim() === label,
+          ),
+        ) &&
+        Boolean(filePanel.querySelector("button[aria-pressed]")),
+    );
+    document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    verify(
+      "TDesign 文件草稿弹层可通过外部点击关闭",
+      !fileMenu.querySelector(".studio-file-popover")?.getClientRects().length,
+    );
+  }
+
   return { findings, viewport: { width: innerWidth, height: innerHeight } };
 }
 
@@ -383,7 +471,16 @@ async function addStudioSymbolInPage(label) {
 async function exportStudioJsonInPage() {
   const menu = document.querySelector(".studio-file-menu");
   if (!menu) throw new Error("未找到文件与草稿菜单");
-  menu.open = true;
+  const trigger = menu.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到 TDesign 文件草稿菜单触发器");
+  }
+  if (!menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
+  const opening = Date.now();
+  while (!menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+    if (Date.now() - opening > 5000) throw new TypeError("TDesign 文件草稿弹层展开超时");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const button = [...menu.querySelectorAll("button")].find(
     (item) => item.textContent.trim() === "导出 JSON",
   );
@@ -411,7 +508,9 @@ async function exportStudioJsonInPage() {
   } finally {
     URL.createObjectURL = originalCreate;
     HTMLAnchorElement.prototype.click = originalClick;
-    menu.open = false;
+    if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+      trigger.click();
+    }
   }
 }
 
@@ -419,7 +518,16 @@ async function exportStudioJsonInPage() {
 async function importStudioJsonInPage(json, expectSuccess) {
   const menu = document.querySelector(".studio-file-menu");
   if (!menu) throw new Error("未找到文件与草稿菜单");
-  menu.open = true;
+  const trigger = menu.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到 TDesign 文件草稿菜单触发器");
+  }
+  if (!menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
+  const opening = Date.now();
+  while (!menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+    if (Date.now() - opening > 5000) throw new TypeError("TDesign 文件草稿弹层展开超时");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const input = menu.querySelector(".studio-import input[type=file]");
   if (!input) throw new Error("未找到工程 JSON 文件输入");
   const transfer = new DataTransfer();
@@ -441,7 +549,9 @@ async function importStudioJsonInPage(json, expectSuccess) {
       "导入结果等待超时：" + (document.querySelector(".studio-notice")?.textContent || ""),
     );
   } finally {
-    menu.open = false;
+    if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+      trigger.click();
+    }
   }
 }
 
@@ -467,6 +577,81 @@ async function navigateStudioForInterop(session, target, marker) {
     throw new Error(target.name + " 页面导航失败：" + href);
   }
   await session.evaluate("(" + enterStudioInPage.toString() + ")()");
+}
+
+/** 仅在异常时输出同源模块响应类别，不暴露请求 URL、响应正文或敏感信息。 */
+function watchStudioModuleNetwork(session, target) {
+  const origin = new URL(target.url).origin;
+  const requests = new Map();
+  const failures = [];
+  let studioStatus = "未收到响应";
+
+  const categoryFor = (address) => {
+    try {
+      const url = new URL(address);
+      if (url.origin !== origin) return null;
+      if (url.pathname.endsWith("/src/studio/StudioPage.vue")) return "Studio模块";
+      if (url.pathname.includes("/.vite/deps/")) return "Vite预构建依赖";
+      if (url.pathname.startsWith("/src/")) return "Vue应用模块";
+      if (url.pathname.startsWith("/@fs/")) return "工作区模块";
+      return "其他同源资源";
+    } catch {
+      return null;
+    }
+  };
+  const networkErrorCategory = (name) => {
+    if (name === "net::ERR_ABORTED") return "导航中断";
+    if (name === "net::ERR_FAILED") return "网络失败";
+    if (name === "net::ERR_CONNECTION_RESET") return "连接重置";
+    if (name === "net::ERR_CONNECTION_REFUSED") return "连接拒绝";
+    if (name === "net::ERR_CERT_AUTHORITY_INVALID") return "证书不受信任";
+    if (name === "net::ERR_CACHE_WRITE_FAILURE") return "浏览器HTTP缓存写入失败";
+    if (name === "net::ERR_HTTP_RESPONSE_CODE_FAILURE") return "HTTP响应拒绝";
+    // 只允许输出 Chromium 的固定错误码格式，避免透出资源地址或异常正文。
+    const safeCode = /^net::ERR_[A-Z0-9_]{1,64}$/.exec(String(name));
+    return safeCode ? "Chromium错误码=" + safeCode[0] : "其他网络错误";
+  };
+  const recordFailure = (entry) => {
+    if (failures.length < 8) failures.push(entry);
+  };
+  const onMessage = ({ data }) => {
+    const message = JSON.parse(String(data));
+    const params = message.params;
+    if (message.method === "Network.requestWillBeSent") {
+      const category = categoryFor(params.request?.url);
+      if (category) requests.set(params.requestId, category);
+    } else if (message.method === "Network.responseReceived") {
+      const category = requests.get(params.requestId);
+      if (!category) return;
+      const status = Number(params.response?.status);
+      if (category === "Studio模块" && Number.isInteger(status)) {
+        studioStatus = String(status);
+      }
+      if (Number.isInteger(status) && status >= 400) {
+        recordFailure(category + ":HTTP" + status);
+      }
+    } else if (message.method === "Network.loadingFailed") {
+      const category = requests.get(params.requestId);
+      if (category) {
+        recordFailure(category + ":" + networkErrorCategory(params.errorText));
+        requests.delete(params.requestId);
+      }
+    } else if (message.method === "Network.loadingFinished") {
+      requests.delete(params.requestId);
+    }
+  };
+  session.socket.addEventListener("message", onMessage);
+  return {
+    summary: () =>
+      "Studio模块HTTP=" +
+      studioStatus +
+      "、失败请求=" +
+      (failures.length ? failures.join("、") : "无可见失败"),
+    stop: () => {
+      session.socket.removeEventListener("message", onMessage);
+      requests.clear();
+    },
+  };
 }
 
 async function runStudioInteroperability(session) {
@@ -1164,7 +1349,16 @@ async function studioVersionRowsInPage() {
 async function enableStudioAutoSaveInPage(confirmExisting = false) {
   const menu = document.querySelector(".studio-file-menu");
   if (!menu) throw new TypeError("没有找到文件与草稿菜单");
-  menu.open = true;
+  const trigger = menu.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到 TDesign 文件草稿菜单触发器");
+  }
+  if (!menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
+  const opening = Date.now();
+  while (!menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+    if (Date.now() - opening > 5000) throw new TypeError("TDesign 文件草稿弹层展开超时");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const button = [...menu.querySelectorAll("button")].find(
     (item) => item.textContent.trim() === "开启自动保存",
   );
@@ -1184,7 +1378,9 @@ async function enableStudioAutoSaveInPage(confirmExisting = false) {
     throw new TypeError("开启自动保存超时");
   } finally {
     window.confirm = originalConfirm;
-    menu.open = false;
+    if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+      trigger.click();
+    }
   }
 }
 
@@ -1243,7 +1439,16 @@ async function simulateHistoryDatabaseUnavailableInPage() {
 async function verifyImportHistoryIsolationInPage(json) {
   const fileMenu = document.querySelector(".studio-file-menu");
   const versionMenu = document.querySelector(".studio-version-menu");
-  const input = fileMenu?.querySelector('.studio-import input[type="file"]');
+  if (!fileMenu) throw new TypeError("未找到文件草稿菜单");
+  const trigger = fileMenu.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) throw new TypeError("未找到文件草稿触发器");
+  if (!fileMenu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
+  const opening = Date.now();
+  while (!fileMenu.querySelector(".studio-file-popover")?.getClientRects().length) {
+    if (Date.now() - opening > 5000) throw new TypeError("文件草稿弹层打开超时");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  const input = fileMenu.querySelector('.studio-import input[type="file"]');
   if (!input || !versionMenu) throw new TypeError("没有找到版本或 JSON 导入入口");
   const item = [...versionMenu.querySelectorAll(".studio-version-item")].find(
     (entry) => entry.querySelector("strong")?.textContent.trim() === "版本 #1",
@@ -1295,7 +1500,7 @@ async function verifyImportHistoryIsolationInPage(json) {
     releaseText?.();
     Blob.prototype.text = originalText;
     window.confirm = originalConfirm;
-    fileMenu.open = false;
+    if (fileMenu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
     versionMenu.open = false;
   }
 }
@@ -1419,7 +1624,16 @@ async function waitForStudioAutoSaveStateInPage(enabled, noticeText) {
 async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice = null) {
   const menu = document.querySelector(".studio-file-menu");
   if (!menu) throw new TypeError("未找到文件与草稿菜单");
-  menu.open = true;
+  const trigger = menu.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到 TDesign 文件草稿菜单触发器");
+  }
+  if (!menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
+  const opening = Date.now();
+  while (!menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+    if (Date.now() - opening > 5000) throw new TypeError("TDesign 文件草稿弹层展开超时");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const started = Date.now();
   let button = null;
   while (Date.now() - started < 12000) {
@@ -1444,7 +1658,9 @@ async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice 
     throw new TypeError("草稿操作结果超时：" + label);
   } finally {
     window.confirm = originalConfirm;
-    menu.open = false;
+    if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+      trigger.click();
+    }
   }
 }
 
@@ -1540,10 +1756,37 @@ async function runStudioMultiTabSafety(first, second) {
     second.send("Emulation.setDeviceMetricsOverride", viewport),
   ]);
   for (const target of targets) {
-    await Promise.all([
-      navigateStudioForInterop(first, target, "multitab-first-" + target.name),
-      navigateStudioForInterop(second, target, "multitab-second-" + target.name),
-    ]);
+    // Vue 首次异步模块失败时附上 CDP HTTP/网络类别；不改变双标签并发和断言。
+    const watchers = [];
+    if (target.name === "Vue") {
+      await Promise.all([first.send("Network.enable"), second.send("Network.enable")]);
+      // 仅绕过两个测试标签页的 HTTP 缓存，不影响 IndexedDB 与 BroadcastChannel。
+      await Promise.all([
+        first.send("Network.setCacheDisabled", { cacheDisabled: true }),
+        second.send("Network.setCacheDisabled", { cacheDisabled: true }),
+      ]);
+      watchers.push(watchStudioModuleNetwork(first, target));
+      watchers.push(watchStudioModuleNetwork(second, target));
+    }
+    try {
+      await Promise.all([
+        navigateStudioForInterop(first, target, "multitab-first-" + target.name),
+        navigateStudioForInterop(second, target, "multitab-second-" + target.name),
+      ]);
+    } catch (error) {
+      if (watchers.length) {
+        throw new Error(
+          error.message +
+            "；双标签页网络诊断：首标签=" +
+            watchers[0].summary() +
+            "；次标签=" +
+            watchers[1].summary(),
+        );
+      }
+      throw error;
+    } finally {
+      for (const watcher of watchers) watcher.stop();
+    }
     const initial = JSON.parse(await evaluateStudioPage(first, exportStudioJsonInPage));
     assert.deepStrictEqual(
       JSON.parse(await evaluateStudioPage(second, exportStudioJsonInPage)),

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Dropdown, Input } from "tdesign-react";
+import { Button, Dropdown, Input, Popup } from "tdesign-react";
 import type { DropdownProps } from "tdesign-react";
 import { CloseIcon } from "tdesign-icons-react";
 import "tdesign-react/es/style/index.css";
@@ -1777,33 +1777,43 @@ export default function StudioPage() {
               保存草稿
             </button>
           </div>
-          <details className="studio-file-menu">
-            <summary>文件与草稿</summary>
-            <div className="studio-file-popover">
-              <button type="button" onClick={toggleAutoSave} aria-pressed={autoSaveEnabled}>
-                {autoSaveEnabled ? "暂停自动保存" : "开启自动保存"}
-              </button>
-              <label className="studio-import">
-                导入 JSON
-                <input
-                  type="file"
-                  accept=".json,application/json"
-                  onChange={(event) => {
-                    void importJson(event);
-                  }}
-                />
-              </label>
-              <button type="button" onClick={exportJson}>
-                导出 JSON
-              </button>
-              <button type="button" onClick={restoreDraft} disabled={!hasSavedDraft}>
-                恢复草稿
-              </button>
-              <button type="button" onClick={clearDraft} disabled={!hasSavedDraft}>
-                清除草稿
-              </button>
-            </div>
-          </details>
+          <div className="studio-file-menu">
+            <Popup
+              attach=".studio-file-menu"
+              trigger="click"
+              placement="bottom-right"
+              content={
+                <div className="studio-file-popover">
+                  <button type="button" onClick={toggleAutoSave} aria-pressed={autoSaveEnabled}>
+                    {autoSaveEnabled ? "暂停自动保存" : "开启自动保存"}
+                  </button>
+                  <label className="studio-import">
+                    导入 JSON
+                    <input
+                      type="file"
+                      accept=".json,application/json"
+                      onChange={(event) => {
+                        void importJson(event);
+                      }}
+                    />
+                  </label>
+                  <button type="button" onClick={exportJson}>
+                    导出 JSON
+                  </button>
+                  <button type="button" onClick={restoreDraft} disabled={!hasSavedDraft}>
+                    恢复草稿
+                  </button>
+                  <button type="button" onClick={clearDraft} disabled={!hasSavedDraft}>
+                    清除草稿
+                  </button>
+                </div>
+              }
+            >
+              <Button type="button" variant="outline">
+                文件与草稿
+              </Button>
+            </Popup>
+          </div>
           <details
             className="studio-version-menu"
             onToggle={(event) => {

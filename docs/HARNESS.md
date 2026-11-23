@@ -4515,3 +4515,11 @@ pnpm run lab:alarm
 **安全边界**：两条新命令不建立网络监听、不连接数据库/Keycloak/PLC/DCS、不启动真实定时器、不产生正式报警事件或确认写入；不把 `sourceVerified: true` 当作已认证身份，也不证明丢失数据能完整重放。D1～D5 仍需维护者另行批准。根 `ready` 既有其他步骤的依赖和运行成本不因本批取消。
 
 **待 Windows 复验**：D5c0k 修改的 `package.json`、文档和完整质量链尚未运行；需单独验证两条短命令、`vp check`、`docs:check`、`messages:check` 和 `pnpm run ready` 的最终退出码。历史 PR #175 的 5/5 不能直接记为此分支的通过记录。
+
+## 2026-11-23 · Chromium 多标签页验证中的 HTTP 缓存隔离
+
+`scripts/test-studio-browser.mjs --multitab` 会创建独立的临时 Chromium Profile，并以两个真实标签页共享同一 Origin 验证 BroadcastChannel、IndexedDB、修订号 CAS 和故障保护。维护者 Windows 已观察到在 React 四阶段通过后首次加载 Vue Studio 时，Vite 资源请求返回 **HTTP 200**，但 Chromium 报 `net::ERR_CACHE_WRITE_FAILURE`，导致按需模块无法导入。此错误是浏览器 HTTP 缓存写入故障，**不能解释为业务 CAS 失败或直接认定 Vite 504**。
+
+仅在本测试模式的 Vue 双标签导航开始前，分别调用官方 CDP `Network.enable` 和 `Network.setCacheDisabled({cacheDisabled:true})`，使两页的网络请求不使用 HTTP 缓存。它不等于清空浏览器用户文件、关闭 HTTPS、禁止 IndexedDB/CacheStorage 或影响真实浏览器产品行为；脚本仍会执行全部双标签广播、离线修订冲突、墓碑重建及 IndexedDB 异常恢复测试。任何 CDP 命令失败均原样退出，不可静默跳过。
+
+官方接口：https://chromedevtools.github.io/devtools-protocol/tot/Network/#method-setCacheDisabled 。该行为只在维护者 Windows 新 HEAD 复验成功后才能记为验证通过；若持续失败，转向临时 Profile 目录权限、磁盘空间、受控安全软件等本机环境问题，禁止删除非本任务用户数据。
