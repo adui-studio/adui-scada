@@ -1364,3 +1364,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-subscription-adapter.ts`：`stop()` 独立尝试周期取消和订阅取消，单异常原样传播、多异常用 `AggregateError` 保留；`start/forward` 发生原始故障并伴随清理失败时同时保留诊断原因，不改变公开接口或订阅安全门禁。
 - `packages/core/test/alarm-subscription-adapter.test.ts`：原 17 项更新双清理错误断言并新增 3 项定向测试，覆盖单项取消失败、调度安装加订阅取消双故障、时钟故障加两项取消异常及迟到回调阻断。
 - 本批无 TagStore/Runtime、Vue/React、NestJS、Prisma、网关或生产发布 Gate 变动。
+
+## 2026-11-23 · D5b9q FR-011 报警候选读取时效校验
+
+- `packages/core/src/alarm-subscription-adapter.ts`：在 `AlarmSubscriptionAdapter.snapshot()` 对已有基线以注入时钟进行同步新鲜度校验，过期时复用原有停止与回调隔离流程；未运行或等待初始快照时不访问时钟。接口签名不变，但读取可能使会话失效或传播异常。
+- `packages/core/test/alarm-subscription-adapter.test.ts`：在原 20 项基础上新增 4 项定向测试定义，覆盖漏执行周期回调、正常读取保持状态、读取时钟故障 fail-closed、无初始基线不访问时钟。
+- 共享 Core 以外的 Runtime、React/Vue、NestJS/Prisma、网关与工业发布门禁未修改。

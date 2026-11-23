@@ -62,7 +62,17 @@ export class AlarmSubscriptionAdapter {
     this.options = Object.freeze({ ...options });
   }
 
+  /**
+   * 对外读取前用受控时钟复核基线时效，避免周期调度延迟时暴露过期 GOOD 值。
+   * 检查失败会按现有故障路径停止订阅；非运行会话不会调用时钟。
+   */
   snapshot(): AlarmBaselineSessionState {
+    const token = this.token;
+    if (this.running && token !== null && this.controller.snapshot().baseline !== null) {
+      this.forward(token, () =>
+        this.controller.checkFreshness(token, this.options.nowMs(), this.options.maxAgeMs),
+      );
+    }
     return this.controller.snapshot();
   }
 
