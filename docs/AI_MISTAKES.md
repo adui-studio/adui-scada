@@ -1024,3 +1024,11 @@
 - **证据**：D5c0p 开发分支的 `packages/runtime/test/theme-tokens.test.ts`、`packages/runtime/src/runtime.css`、`packages/tailwind/src/studio.css`。
 
 > **2026-11-23 · E-105 Windows 复验补录**：维护者在 PR #181 的 Windows 日志中实际完成 `theme-tokens.test.ts` **6/6**、`vp check` **445 格式/289 受检零警告错误**，完整 Vitest **870/870**、NestJS E2E **63/63**、文档 **93** 份、React/Vue 构建均通过。最后一次远程提交 `44cd8b562f5b0434172d1823531f7a780f00b919` 仅增加测试格式化修改；经维护者授权 Squash 合并至 `main@66c006de3fb915138ca79608afac5bb1b9c542a7`。因日志未给本地 HEAD、完整命令退出码和浏览器记录，不把这些缺失证据视为已验证；本次确认 CSS 重复选择器断言不再阻断 Windows 主题测试。
+
+### E-106 · D5c0u 双标签页由 React 切换到 Vue 时异步工作台未挂载（PR #186，待定位）
+
+- **维护者 Windows 真实现象**：PR #186 的 `typecheck:web` 通过，`vp check` **446 个格式文件/289 个受检零告警错误**，`docs:check` **94 份**，`test:browser` React/Vue 四组 **120/120**，`test:interop`、`test:versions:safety`、`test:legacy:browser` 均通过。独立 `test:multitab` 中 React 广播停写、无广播 CAS、墓碑重建及 IndexedDB 故障恢复四阶段通过；切换 Vue 时首次 `navigateStudioForInterop` 在 `enterStudioInPage()` 报“点击组态编辑后未能加载工作台”，退出码 **1**。Vue 导航按钮已激活，页面只见导航，未到 Vue 多标签页的业务断言。
+- **已确认的代码背景**：Vue `App.vue` 使用 `defineAsyncComponent(() => import('./studio/StudioPage.vue'))`。`runStudioMultiTabSafety` 用 `Promise.all` 同时导航两个标签页；`enterStudioInPage()` 点击编辑后等待 `.studio-workspace` 和 `.studio-svg`。这个控制流解释失败发生的阶段，**还不能确认是模块网络请求、Vue 运行时、Popup 组件、服务资源或同时导航所致**。其他 Vue 专项通过不等于当前多标签页已经通过。
+- **当前最小诊断候选**：仅修改 `scripts/test-studio-browser.mjs` 的 `enterStudioInPage`，在导航期间监听脚本错误、资源失败与未处理异步拒绝，并通过固定布尔字段说明是否发出 Studio 模块请求、是否观察到模块加载异常。保留原有 **15 秒 + 5 秒** 严格等待和真实双标签页断言；在 `finally` 清除监听器，不输出原始错误或资源 URL，不重试或吞掉失败。未修改正式 Vue/React 页面、草稿 CAS、Popup 或浏览器实例管理。
+- **防复发**：带异步组件的双端浏览器测试，应将“导航已经切换”与“组件实际挂载”区分；定位失败前记录严格白名单诊断，再依据真实证据修复，不得只延长超时、串行化业务断言、禁用安全测试或将其他专项通过冒充当前通过。
+- **待验证**：维护者在 PR #186 最新 HEAD 上执行 `node --check scripts/test-studio-browser.mjs`、`vp check`、`pnpm run test:multitab`。若复现，依据新增分类确定后续最小修复；即使偶发通过，也不能凭一次结果断言根因解决。**本条为已发生的测试阻塞和待核实诊断，非结案。**
