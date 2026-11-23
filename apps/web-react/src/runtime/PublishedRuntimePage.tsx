@@ -122,6 +122,7 @@ export default function PublishedRuntimePage() {
           <label htmlFor="published-react-project-id">工程 ID</label>
           <input
             id="published-react-project-id"
+            name="projectId"
             type="text"
             maxLength={128}
             value={projectId}
