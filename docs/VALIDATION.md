@@ -3637,3 +3637,40 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 未修改 NestJS、Prisma、工业网关、React/Vue、真实 PLC/DCS 或设备写入。当前仅完成远程静态代码检查，D5b9y 的 99/99 与四项质量门禁仍待维护者 Windows 执行；正式发布 Gate 持续 fail-closed。
+
+## 2026-11-23 · D5b9y PR #164 Windows 通过合并与 D5b9z 待验收
+
+维护者 Windows 已执行 PR #164 六份共享 Core 定向测试：序列 **10/10**、会话代次 **8/8**、增量 **16/16**、纯归约 **25/25**、托管 **11/11**、适配 **29/29**，共 **99/99**；`vp check` **435 文件格式正确/286 文件受检零警告错误**，`docs:check` **90 份**，`messages:check` **310 个文件**。GitHub 最终 HEAD `b87985092b60e45623ebcecf1c411526591b29fc` 的附加提交仅为一处测试排版，按维护者授权 Squash 合并至 `main@e8d36863b4887ad151f9e41affed4042556a02a0`。维护者日志未打印本机 HEAD，不宣称该合并 SHA 已被直接实测；这些检查不是完整 ready 或真实现场安全认证。
+
+D5b9z 仅对公共纯归约器的 `invalidated: true` 且仍有非空旧基线的矛盾状态进行入口清理，同代次和旧代次都不得借返回状态继续暴露旧候选值。正常已失效状态仍保留原对象引用，其他路径不变。新增两项纯归约器测试定义，六份关联测试预计：低层序列 **10**、代次 **8**、增量 **16**、会话归约 **27**、托管 **11**、适配 **29**，总计 **101**。该分支目前只完成 GitHub 静态核对，尚无 Windows 实测。
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5b9z-alarm-invalidated-state-leak
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5b9z-alarm-invalidated-state-leak
+}
+if ($LASTEXITCODE -ne 0) { throw "切换功能分支失败" }
+
+git pull --ff-only origin fix/d5b9z-alarm-invalidated-state-leak
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 自动格式化失败" }
+
+vp test run packages/core/test/alarm-tag-sequence.test.ts packages/core/test/alarm-session-generation.test.ts packages/core/test/alarm-tag-delta.test.ts packages/core/test/alarm-baseline-session.test.ts packages/core/test/alarm-session-controller.test.ts packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "矛盾终止态与报警候选安全回归失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批未修改真实设备通信、NestJS、Prisma、Vue/React、报警触发/确认、不可变审计或发布安全 Gate。当前 **101/101** 是新增定义后的验收目标，未经维护者 Windows 运行不能声称通过。PR 保持 Draft，需另一次明确合并授权。
