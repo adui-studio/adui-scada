@@ -29,7 +29,7 @@ onUnmounted(() => runtime.stop());
 </script>
 
 <template>
-  <main id="scada-main-content" class="scada-shell scada-shell--overview">
+  <main id="scada-main-content" tabindex="-1" class="scada-shell scada-shell--overview">
     <header class="scada-header">
       <div>
         <p class="scada-eyebrow">ADui SCADA · V0.1</p>
