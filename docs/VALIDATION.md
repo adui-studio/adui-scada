@@ -3563,3 +3563,40 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 这批只修改 Core 和文档，不涉及网络协议、数据库迁移、UI 或设备写入；暂不把 full ready、现场采集、报警触发与发布 Gate 视为已验收。协作容器无法解析 GitHub 域名，且没有 pnpm/vp 命令，无法在当前容器运行仓库真实质量链；目标 **94/94** 是待 Windows 执行的验收值。PR 默认 Draft，须经维护者另行授权才能合并。
+
+## 2026-11-23 · D5b9w PR #162 Windows 通过合并及 D5b9x 待验收
+
+维护者 Windows 已对 PR #162 六份共享 Core 定向测试 **94/94** 通过：低层序列 10、会话代次 8、增量 16、纯会话归约 22、托管器 10、订阅适配器 28；`vp check` **435 个格式文件/286 个受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个文件**。GitHub 在明确授权下按 HEAD `37a3e5a12521ad52105d0136b7a72edd27cfa29e` Squash 合并 PR #162 至 `main@fd783df24b3748870c4a4b3825886cfb560f7152`。用户日志无本机 HEAD，不冒充合并 SHA 的本机实测，也不把该定向验证视为完整 ready 或工业现场安全认证。
+
+D5b9x 仅新增等待首次快照时显式 `CHECK_FRESHNESS` 的时钟及最大年龄参数校验，任何非法输入都通过已有拒绝结果终止代次。原有正常等待、其他代次忽略、断连时无时钟依赖和无基线被动 `snapshot()` 不读时钟契约保持。新定义三项回归：纯归约器 22→23，托管器 10→11，订阅适配器 28→29；其余低层序列 10、代次包装 8、直接增量 16 不变，六份关联回归目标 **97**。D5b9x 尚未得到 Windows 实测结果。
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5b9x-alarm-pending-freshness-invalid-clock
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5b9x-alarm-pending-freshness-invalid-clock
+}
+if ($LASTEXITCODE -ne 0) { throw "切换功能分支失败" }
+
+git pull --ff-only origin fix/d5b9x-alarm-pending-freshness-invalid-clock
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "自动修正失败" }
+
+vp test run packages/core/test/alarm-tag-sequence.test.ts packages/core/test/alarm-session-generation.test.ts packages/core/test/alarm-tag-delta.test.ts packages/core/test/alarm-baseline-session.test.ts packages/core/test/alarm-session-controller.test.ts packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警等待快照参数安全回归失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批未执行任何数据库迁移、真实工业网关或设备写入。协作端尚未运行项目完整 `vp`/Vitest 或 `ready`，目标 **97/97** 只是计划值；在维护者 Windows 实测与新一轮明确授权前，Draft PR 不得合并。
