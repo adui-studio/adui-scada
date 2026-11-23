@@ -1,3 +1,4 @@
+import { Button, Popup } from "tdesign-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createStudioProjectBrowser,
@@ -64,94 +65,106 @@ export function ServerProjectBrowser({
   }
 
   return (
-    <details
-      className="studio-version-menu studio-project-browser-menu"
-      onToggle={(event) => {
-        if (event.currentTarget.open) void loadPage("refresh");
-      }}
-    >
-      <summary>工程管理</summary>
-      <section
-        className="studio-version-panel studio-project-browser-panel"
-        aria-label="授权工程管理"
-      >
-        <div className="studio-project-browser-heading">
-          <div>
-            <strong>服务端工程</strong>
-            <p className="studio-version-help">仅显示已授权工程，不包含完整组态文件</p>
-          </div>
-          <button
-            type="button"
-            disabled={disabled || loading}
-            onClick={() => void loadPage("refresh")}
+    <div className="studio-version-menu studio-project-browser-menu">
+      <Popup
+        attach=".studio-project-browser-menu"
+        trigger="click"
+        placement="bottom-right"
+        onVisibleChange={(visible) => {
+          if (visible) void loadPage("refresh");
+        }}
+        content={
+          <section
+            className="studio-version-panel studio-project-browser-panel"
+            aria-label="授权工程管理"
           >
-            刷新
-          </button>
-        </div>
-        <p className="studio-version-help">
-          打开其他工程前会校验最新修订号；本地草稿不会删除，也不会自动发布。
-        </p>
-        {loading && (
-          <p role="status" className="studio-version-help">
-            正在读取授权工程…
-          </p>
-        )}
-        {error && (
-          <p role="alert" className="studio-version-error">
-            {error}
-          </p>
-        )}
-        {page.loaded && !loading && page.projects.length === 0 && (
-          <p className="studio-project-browser-empty" role="status">
-            当前页暂无可访问的工程。
-          </p>
-        )}
-        <ul className="studio-project-browser-list">
-          {page.projects.map((project) => (
-            <li key={project.projectId} className="studio-project-browser-item">
-              <div className="studio-project-browser-info">
-                <code title={project.projectId}>{project.projectId}</code>
-                {project.projectId === currentProjectId && (
-                  <span className="studio-project-browser-current">当前编辑</span>
-                )}
-                <small>
-                  修订 #{project.headRevision} · 最近更新：
-                  <time dateTime={project.updatedAt}>
-                    {new Date(project.updatedAt).toLocaleString("zh-CN")}
-                  </time>
-                </small>
+            <div className="studio-project-browser-heading">
+              <div>
+                <strong>服务端工程</strong>
+                <p className="studio-version-help">仅显示已授权工程，不包含完整组态文件</p>
               </div>
-              <button
+              <Button
+                tag="button"
                 type="button"
                 disabled={disabled || loading}
-                aria-label={"打开工程 " + project.projectId}
-                onClick={() => void onOpen(project.projectId, project.headRevision)}
+                onClick={() => void loadPage("refresh")}
               >
-                打开
-              </button>
-            </li>
-          ))}
-        </ul>
-        <div className="studio-project-browser-pagination">
-          <button
-            type="button"
-            disabled={disabled || loading || !page.hasPrevious}
-            onClick={() => void loadPage("previous")}
-          >
-            上一页
-          </button>
-          <span role="status">
-            第 {page.pageNumber} 页 · 每页 {STUDIO_PROJECT_PAGE_SIZE} 条
-          </span>
-          <button
-            type="button"
-            disabled={disabled || loading || !page.hasNext}
-            onClick={() => void loadPage("next")}
-          >
-            下一页
-          </button>
-        </div>
-      </section>
-    </details>
+                刷新
+              </Button>
+            </div>
+            <p className="studio-version-help">
+              打开其他工程前会校验最新修订号；本地草稿不会删除，也不会自动发布。
+            </p>
+            {loading && (
+              <p role="status" className="studio-version-help">
+                正在读取授权工程…
+              </p>
+            )}
+            {error && (
+              <p role="alert" className="studio-version-error">
+                {error}
+              </p>
+            )}
+            {page.loaded && !loading && page.projects.length === 0 && (
+              <p className="studio-project-browser-empty" role="status">
+                当前页暂无可访问的工程。
+              </p>
+            )}
+            <ul className="studio-project-browser-list">
+              {page.projects.map((project) => (
+                <li key={project.projectId} className="studio-project-browser-item">
+                  <div className="studio-project-browser-info">
+                    <code title={project.projectId}>{project.projectId}</code>
+                    {project.projectId === currentProjectId && (
+                      <span className="studio-project-browser-current">当前编辑</span>
+                    )}
+                    <small>
+                      修订 #{project.headRevision} · 最近更新：
+                      <time dateTime={project.updatedAt}>
+                        {new Date(project.updatedAt).toLocaleString("zh-CN")}
+                      </time>
+                    </small>
+                  </div>
+                  <Button
+                    tag="button"
+                    type="button"
+                    disabled={disabled || loading}
+                    aria-label={"打开工程 " + project.projectId}
+                    onClick={() => void onOpen(project.projectId, project.headRevision)}
+                  >
+                    打开
+                  </Button>
+                </li>
+              ))}
+            </ul>
+            <div className="studio-project-browser-pagination">
+              <Button
+                tag="button"
+                type="button"
+                disabled={disabled || loading || !page.hasPrevious}
+                onClick={() => void loadPage("previous")}
+              >
+                上一页
+              </Button>
+              <span role="status">
+                第 {page.pageNumber} 页 · 每页 {STUDIO_PROJECT_PAGE_SIZE} 条
+              </span>
+              <Button
+                tag="button"
+                type="button"
+                disabled={disabled || loading || !page.hasNext}
+                onClick={() => void loadPage("next")}
+              >
+                下一页
+              </Button>
+            </div>
+          </section>
+        }
+      >
+        <Button tag="button" type="button" variant="outline">
+          工程管理
+        </Button>
+      </Popup>
+    </div>
   );
 }

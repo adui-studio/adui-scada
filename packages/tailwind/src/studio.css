@@ -59,41 +59,15 @@
 .studio-page-menu {
   flex: none;
 }
-.studio-version-menu > summary {
-  display: flex;
-  min-height: 32px;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--scada-border-strong);
-  border-radius: 5px;
-  padding: 6px 10px;
-  color: var(--scada-text);
-  background: var(--scada-action-bg);
-  cursor: pointer;
-  font-size: 12px;
-  list-style: none;
-  user-select: none;
+.studio-version-menu > .t-popup > .t-button,
+.studio-view-menu > .t-popup > .t-button {
+  min-height: var(--studio-control-height);
+  border-radius: var(--adui-radius-sm);
+  font-weight: 600;
 }
-.studio-version-menu > summary::-webkit-details-marker,
-.studio-side-more > summary::-webkit-details-marker,
-.studio-advanced > summary::-webkit-details-marker {
-  display: none;
-}
-.studio-version-menu > summary:focus-visible,
-.studio-side-more > summary:focus-visible,
-.studio-advanced > summary:focus-visible,
 .studio-canvas-scroll:focus-visible {
   outline: 2px solid var(--scada-cyan);
   outline-offset: -2px;
-}
-.studio-version-menu > summary::after {
-  content: "▾";
-  font-size: 10px;
-  color: var(--scada-text-muted);
-}
-.studio-version-menu[open] > summary {
-  border-color: var(--scada-primary);
-  color: var(--scada-cyan);
 }
 .studio-file-popover {
   width: 200px;
@@ -114,6 +88,15 @@
   margin: 0;
   font-size: 12px;
   text-align: center;
+}
+.studio-file-popover .studio-import .t-upload,
+.studio-file-popover .studio-import .t-button {
+  width: 100%;
+}
+.studio-side-more .t-collapse,
+.studio-advanced .t-collapse {
+  border: 0;
+  background: transparent;
 }
 .studio-page-bar {
   position: relative;
@@ -289,28 +272,13 @@
   overflow-y: auto;
   border-top: 1px solid var(--scada-border);
 }
-.studio-side-more > summary,
-.studio-advanced > summary {
-  display: flex;
-  align-items: center;
+.studio-side-more .t-collapse-panel__header,
+.studio-advanced .t-collapse-panel__header {
   min-height: 38px;
   padding: 10px 14px;
   color: var(--scada-text-secondary);
-  cursor: pointer;
   font-size: 12px;
   font-weight: 600;
-  list-style: none;
-}
-.studio-side-more > summary::before,
-.studio-advanced > summary::before {
-  content: "▸";
-  display: inline-block;
-  width: 16px;
-  color: var(--scada-text-muted);
-}
-.studio-side-more[open] > summary::before,
-.studio-advanced[open] > summary::before {
-  content: "▾";
 }
 .studio-side-more .studio-tip {
   margin: 0 12px 12px;
@@ -380,41 +348,12 @@
   position: relative;
   flex: none;
 }
-.studio-view-menu > summary {
-  display: flex;
+.studio-view-menu > .t-popup > .t-button {
   min-height: 28px;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 9px;
-  border: 1px solid var(--scada-border-strong);
-  border-radius: 5px;
-  background: var(--scada-action-bg);
-  color: var(--scada-text);
-  cursor: pointer;
-  font-size: 11px;
   white-space: nowrap;
-  list-style: none;
-}
-.studio-view-menu > summary::-webkit-details-marker {
-  display: none;
-}
-.studio-view-menu > summary::after {
-  content: "▾";
-  color: var(--scada-text-muted);
-}
-.studio-view-menu[open] > summary {
-  border-color: var(--scada-primary);
-  color: var(--scada-cyan);
-}
-.studio-view-menu > summary:focus-visible {
-  outline: 2px solid var(--scada-cyan);
-  outline-offset: 2px;
 }
 .studio-view-popover {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 7px);
-  z-index: 35;
+  position: static;
   display: grid;
   width: 236px;
   max-height: min(440px, 60dvh);
@@ -557,7 +496,7 @@
   border: 1px solid var(--scada-border);
   border-radius: var(--adui-radius-md);
 }
-.studio-advanced > summary {
+.studio-advanced .t-collapse-panel__header {
   min-height: 40px;
   padding: 10px 12px;
 }
@@ -680,10 +619,7 @@
 
 /* 浏览器本地工程历史。弹层独立于草稿菜单，不进入有限画布。 */
 .studio-version-panel {
-  position: absolute;
-  z-index: 60;
-  top: calc(100% + var(--adui-space-3));
-  right: 0;
+  position: static;
   display: grid;
   width: min(378px, calc(100vw - 24px));
   max-height: min(70vh, 610px);
@@ -696,10 +632,7 @@
   background: var(--scada-surface);
   box-shadow: 0 14px 36px rgb(0 0 0 / 38%);
 }
-/* 本地历史由 Popup 定位，面板不再相对 Studio 工具栏绝对定位。 */
-.studio-local-history-menu .studio-version-panel {
-  position: static;
-}
+/* 本地历史、服务端工程及发布预检统一由 TDesign Popup 定位。 */
 
 .studio-version-help,
 .studio-version-error {
@@ -898,11 +831,6 @@
 .studio-save-actions button:first-child {
   font-weight: 700;
 }
-.studio-version-menu > summary {
-  min-height: var(--studio-control-height);
-  border-radius: 6px;
-  font-weight: 600;
-}
 .studio-file-popover,
 .studio-version-panel,
 .studio-view-popover {
@@ -1006,14 +934,8 @@
 .studio-status-message .studio-notice {
   color: var(--scada-text-secondary);
 }
-.studio-version-menu > summary:hover,
-.studio-view-menu > summary:hover,
-.studio-side-more > summary:hover,
-.studio-advanced > summary:hover {
-  background: var(--scada-action-hover);
-  color: var(--scada-text-strong);
-}
-.studio-shell :is(button, input, select, textarea, summary):focus-visible {
+/* 组件焦点和悬浮状态由 TDesign 统一提供，SVG 画布继续保留独立焦点指示。 */
+.studio-shell :is(button, input, select, textarea):focus-visible {
   outline: 2px solid var(--scada-cyan);
   outline-offset: 2px;
 }

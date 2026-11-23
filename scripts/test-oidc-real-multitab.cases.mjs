@@ -597,21 +597,26 @@ void describe("OIDC 真实多标签页会话安全门禁", () => {
     assert.equal(requireUnchangedStudioState(snapshot, structuredClone(snapshot)), true);
   });
 
-  void it("工程列表刷新必须点击真实可用按钮", () => {
+  void it("工程列表刷新必须点击真实 TDesign Popup 的可用按钮", async () => {
     let clicks = 0;
-    const button = { textContent: "刷新", disabled: false, click: () => (clicks += 1) };
+    const button = {
+      textContent: "刷新",
+      disabled: false,
+      getClientRects: () => [{}],
+      click: () => (clicks += 1),
+    };
+    const panel = { querySelectorAll: () => [button] };
     const runtime = {
       document: {
-        querySelector: () => ({ querySelectorAll: () => [button] }),
+        querySelector: () => ({ querySelector: () => panel }),
       },
     };
-    assert.equal(refreshProjectListInPage(runtime), true);
+    assert.equal(await refreshProjectListInPage(runtime), true);
     assert.equal(clicks, 1);
-    assert.throws(
-      () =>
-        refreshProjectListInPage({
-          document: { querySelector: () => null },
-        }),
+    await assert.rejects(
+      refreshProjectListInPage({
+        document: { querySelector: () => null },
+      }),
       /工程列表刷新失败/,
     );
   });

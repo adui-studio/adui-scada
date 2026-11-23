@@ -2472,3 +2472,21 @@ PR #186 已回滚上一轮 Vue Vite 预构建配置猜测；最小修复候选�
 维护者 Windows 对 PR #186 完成本批分层验收：`node --check`、`vp check`（446 文件格式正确/289 受检零告警）、`docs:check`（94 份）成功；较早的 `typecheck:web`、正常 Studio **120/120**、JSON 双端互通、版本并发安全和旧草稿迁移专项通过。最后 `test:multitab` 在 Chromium HTTP 缓存隔离后，React 与 Vue 各完成 **4 个安全阶段**（广播停写、无广播 CAS、墓碑重建、IndexedDB 故障恢复），命令无非零退出。GitHub 最终 PR 头 `c67bc33d1520b10a0a046e51d52213a8115bff0c`，经维护者明确授权 Squash 合并到 `main@1faca1a386c83314e24f245b7ea394c80f1c7cb0`；Windows 日志未单独输出本地 HEAD。已证实测试隔离绕过 HTTP 缓存后本轮通过，底层磁盘/权限/安全软件原因仍未证明。
 
 D5c0v 基于合并后的 main，限定本地版本历史一个入口/框架：复用 TDesign Popup，保留原有 IndexedDB 历史业务、导入竞争和确认保护；对应真实浏览器历史辅助函数改为触发官方按钮，并新增 3 项普通 Studio 检查。未更改 Schema、Tag、服务端版本 API、OIDC、已保存发布预检或工业设备边界。仅做了 GitHub 静态源码核对，**本批 Windows 真实测试尚未执行，PR 只作为 Draft 候选**。
+
+## 2026-11-23 · PR #187 已授权合并；D5c0w 全量 TDesign UI 迁移
+
+维护者 Windows 对 PR #187 最终候选执行 `node --check`、`vp check`（446 格式/289 受检零告警错误）、`docs:check`（94 份）、`test:legacy:browser` 双端各三条旧迁移路径、`test:versions`、`test:versions:safety` 和 `test:release:preflight:browser`，均成功；此前普通 Studio 132/132 已通过。维护者明确授权合并，GitHub Squash Merge 至 `main@6c2200fe3d0419bb31f4226eec524e944d0c524e`。日志未单独提供 Windows 本地 HEAD，保留证据边界。
+
+下一功能分支 `feat/d5c0w-tdesign-unified-ui` 按维护者新要求集中统一全部通用 UI 控件，**完成代码与测试适配后才统一要求 Windows 验收**，不再拆分多个小 PR。React/Vue 对等更换 Button、Popup、Collapse、Input、Select、Checkbox、Textarea、Upload、Dialog，并保持本地 JSON 不上传、旧版 SHA-256、IndexedDB CAS、服务端确认二次校验以及原有 OIDC 拒绝路径。SVG 组态画布及工业特殊交互继续自研；工程 Schema、后端服务、网关与工业写入权限未变。
+
+**当前状态**：该分支代码及相关浏览器测试在 GitHub 提交，仍属静态候选。已阅读固定版本官方组件源码，未运行本机 Windows 浏览器、Vite+、Vue/React 全量类型或 Lab 测试；不得冒充完整验收通过。验收条件及未确认范围见 `docs/VALIDATION.md` 和 `docs/TDESIGN_COMPONENT_AUDIT.md`。
+
+## 2026-11-23 · PR #188 D5c0w 首次 React 组件类型门禁反馈与最小修复
+
+维护者 Windows `vp check --fix` 报 React Studio TDesign Button 拖拽 **3 个 TS2345**、React Studio 和已发布运行页的 Select 值隐式字符串化 **4 个 Lint 告警**（291 个受检文件），仅完成格式化，不能视为通过。已按 `AGENTS.md` 与 `AI_MISTAKES.md` 复盘并核对固定版本 TDesign Select 的联合类型；PR #188 候选只修改 React 两个页面：拖拽函数参数改为 `ReactDragEvent<HTMLElement>`，四处 Select 值回调仅接受字符串 ID。Vue/共享引擎/安全协议及业务流程未改；文档详见 E-109 和 `VALIDATION.md`。
+
+修复尚未由维护者在最新 HEAD 运行 `typecheck:web`、`vp check`、双端浏览器专项；继续保持 Draft 和主理人 `@adui-dev` 指派，未授权合并。
+
+## 2026-11-23 · PR #188 Vue 选择器真实类型检查阻塞（E-110）
+
+维护者在 Windows 运行 `pnpm run typecheck:web`，React tsc 命令完成后，Vue `vue-tsc` 共报 **6 个 Select `@change` TS2322** 与 **1 个 Tag 模板 TS2339**，导致验收链提前终止，后续检查未执行。根因是双框架迁移时为 Vue Select 声明了过窄的回调参数类型，且在 Vue 模板中直接计算复杂 Tag 下拉候选项。已按固定版本 `tdesign-vue-next@1.20.11` 值域和项目 Vue 最佳实践，直接提交三处 Vue 文件的最小修复：回调以 `unknown` 接收、严格收窄为 ID/枚举；Tag 绑定选项由脚本 `computed` 生成，模板只绑定结果。保留 Vue/React 工程 Schema、Tag 规则、历史缺失占位和工业安全边界。**只有 GitHub 静态核对，Windows 最新 HEAD 类型/浏览器验收尚待实际执行**。PR #188 仍为 Draft、指派 `@adui-dev`，未经授权不得合并，详见 E-110 与 `VALIDATION.md`。

@@ -301,7 +301,24 @@ export async function enterStudioInPage() {
     if (button) {
       if (!document.querySelector(".studio-workspace")) button.click();
       for (let retry = 0; retry < 75; retry += 1) {
-        if (document.querySelector(".studio-workspace .studio-svg")) return true;
+        if (document.querySelector(".studio-workspace .studio-svg")) {
+          // Popup 首次打开时可能才挂载内容；先经真实按钮初始化只读服务端版本面板。
+          const menu = document.querySelector(".studio-server-version-menu");
+          const trigger = menu?.querySelector("button.t-button");
+          if (trigger?.tagName !== "BUTTON") throw new Error("服务端工程入口不可用");
+          if (!menu.querySelector('[aria-label="服务端工程版本"]')?.getClientRects().length) {
+            trigger.click();
+          }
+          const initializedAt = Date.now();
+          while (Date.now() - initializedAt < 5000) {
+            if (menu.querySelector('[aria-label="服务端工程版本"]')?.getClientRects().length) {
+              trigger.click();
+              return true;
+            }
+            await new Promise((done) => setTimeout(done, 50));
+          }
+          throw new Error("服务端工程弹层初始化超时");
+        }
         await new Promise((done) => setTimeout(done, 100));
       }
     }
@@ -429,23 +446,31 @@ export async function saveDraftInPage() {
 export async function enableAutoSaveInPage() {
   const menu = document.querySelector(".studio-file-menu");
   if (!menu) throw new Error("没有找到草稿操作菜单");
-  menu.open = true;
+  const trigger = menu.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) throw new Error("文件草稿触发器不可用");
+  if (!menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
+  const opened = Date.now();
+  while (!menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+    if (Date.now() - opened > 5000) throw new Error("文件草稿弹层展开超时");
+    await new Promise((done) => setTimeout(done, 50));
+  }
   const button = [...menu.querySelectorAll("button")].find(
     (item) => item.textContent.trim() === "开启自动保存",
   );
   if (!button) throw new Error("自动保存不是关闭状态");
-  const originalConfirm = window.confirm;
-  window.confirm = () => true;
   try {
     button.click();
     for (let retry = 0; retry < 120; retry += 1) {
+      const confirm = document.querySelector(".t-dialog .t-dialog__confirm");
+      if (confirm instanceof HTMLButtonElement && confirm.getClientRects().length) {
+        confirm.click();
+      }
       if (menu.querySelector('button[aria-pressed="true"]')) return true;
       await new Promise((done) => setTimeout(done, 100));
     }
     return false;
   } finally {
-    window.confirm = originalConfirm;
-    menu.open = false;
+    if (menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
   }
 }
 
@@ -579,8 +604,6 @@ export function releaseSaveTimingInPage(runtime = globalThis) {
 /** 使用真实 Studio UI 连续触发两次保存以检验互斥，不直接调用客户端接口。 */
 export function triggerSaveTimingInPage() {
   const panel = document.querySelector('[aria-label="服务端工程版本"]');
-  const menu = panel?.closest("details");
-  if (menu) menu.open = true;
   const button = [...(panel?.querySelectorAll("button") ?? [])].find(
     (item) => item.textContent.trim() === "保存至服务端",
   );
@@ -702,8 +725,9 @@ async function prepareAccessDenialBaseline(session, origin, name, selected) {
   assert.equal(await session.evaluate(enterStudioInPage), true);
   await session.evaluate(function () {
     const menu = document.querySelector(".studio-project-browser-menu");
-    if (!menu) throw new Error("未找到工程管理入口");
-    menu.open = true;
+    const trigger = menu?.querySelector("button.t-button");
+    if (!(trigger instanceof HTMLButtonElement)) throw new Error("未找到工程管理 TDesign 按钮");
+    trigger.click();
   });
   await waitFor(async () => {
     const state = await session.evaluate(pageStateInPage);
@@ -1038,35 +1062,55 @@ export async function confirmPreviewedServerVersionInPage(revision) {
     (item) => item.textContent.trim() === "载入",
   );
   if (!button || button.disabled) throw new Error("冲突恢复确认载入按钮不可用");
-  const originalConfirm = window.confirm;
   let confirmCount = 0;
-  window.confirm = () => {
-    confirmCount += 1;
-    return true;
-  };
-  try {
-    button.click();
-    const until = Date.now() + 20000;
-    while (Date.now() < until) {
-      const notice = document.querySelector(".studio-notice")?.textContent ?? "";
-      const busy = [...(panel?.querySelectorAll(".studio-version-help") ?? [])].some((element) =>
-        element.textContent?.includes("正在处理工程版本"),
-      );
-      if (confirmCount === 1 && !busy && notice.includes("已载入服务端最新版本 #" + revision)) {
-        return { confirmed: true, confirmCount };
-      }
-      if (confirmCount > 0 && !busy && panel?.querySelector('[role="alert"]')) {
-        throw new Error("冲突恢复确认载入未通过受控复核");
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
+  button.click();
+  const until = Date.now() + 20000;
+  while (Date.now() < until) {
+    const confirmButton = document.querySelector(".t-dialog .t-dialog__confirm");
+    if (
+      !confirmCount &&
+      confirmButton?.tagName === "BUTTON" &&
+      confirmButton.getClientRects().length
+    ) {
+      confirmCount += 1;
+      confirmButton.click();
     }
-    throw new Error("冲突恢复确认载入超时");
-  } finally {
-    window.confirm = originalConfirm;
+    const notice = document.querySelector(".studio-notice")?.textContent ?? "";
+    const busy = [...(panel?.querySelectorAll(".studio-version-help") ?? [])].some((element) =>
+      element.textContent?.includes("正在处理工程版本"),
+    );
+    if (confirmCount === 1 && !busy && notice.includes("已载入服务端最新版本 #" + revision)) {
+      return { confirmed: true, confirmCount };
+    }
+    if (confirmCount > 0 && !busy && panel?.querySelector('[role="alert"]')) {
+      throw new Error("冲突恢复确认载入未通过受控复核");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
+  throw new Error("冲突恢复确认载入超时");
 }
 
 export async function openProjectInPage(projectId, headRevision, mode) {
+  // 只在真实 Studio 中操作 Popup；Node 单测按同一业务 DOM 契约注入夹具。
+  const browserMenu = document.querySelector(".studio-project-browser-menu");
+  if (browserMenu) {
+    const trigger = browserMenu.querySelector("button.t-button");
+    if (trigger?.tagName !== "BUTTON") throw new Error("工程打开按钮不可用");
+    if (!browserMenu.querySelector(".studio-project-browser-panel")?.getClientRects().length) {
+      trigger.click();
+    }
+    const opened = Date.now();
+    while (Date.now() - opened < 12000) {
+      const panel = browserMenu.querySelector(".studio-project-browser-panel");
+      const row = [...(panel?.querySelectorAll(".studio-project-browser-item") ?? [])].find(
+        (node) => node.querySelector("code")?.textContent?.trim() === projectId,
+      );
+      if (panel?.getClientRects().length && row?.querySelector("button")?.disabled === false) {
+        break;
+      }
+      await new Promise((done) => setTimeout(done, 100));
+    }
+  }
   const panel = document.querySelector(".studio-project-browser-panel");
   const item = [...(panel?.querySelectorAll(".studio-project-browser-item") || [])].find(
     (node) => node.querySelector("code")?.textContent?.trim() === projectId,
@@ -1075,7 +1119,6 @@ export async function openProjectInPage(projectId, headRevision, mode) {
   if (!button || button.disabled) throw new Error("工程打开按钮不可用");
   let confirmCount = 0;
   const fault = { projectId, calls: 0 };
-  const originalConfirm = window.confirm;
   const versionPanel = document.querySelector('[aria-label="服务端工程版本"]');
   const errorBeforeClick = versionPanel?.querySelector('[role="alert"]')?.textContent ?? "";
   let newActionObserved = false;
@@ -1084,15 +1127,22 @@ export async function openProjectInPage(projectId, headRevision, mode) {
     throw new Error("工程安全载入流程模式不合法");
   }
   if (mode === "conflict") globalThis.__aduiTestProjectRevisionFault = fault;
-  window.confirm = () => {
-    confirmCount += 1;
-    if (mode === "confirm-drift") globalThis.__aduiTestProjectRevisionFault = fault;
-    return mode === "confirm" || mode === "confirm-drift";
-  };
   try {
     button.click();
     const until = Date.now() + 20000;
     while (Date.now() < until) {
+      const dialogChoice = document.querySelector(
+        mode === "cancel" ? ".t-dialog .t-dialog__cancel" : ".t-dialog .t-dialog__confirm",
+      );
+      if (
+        !confirmCount &&
+        dialogChoice?.tagName === "BUTTON" &&
+        dialogChoice.getClientRects().length
+      ) {
+        confirmCount += 1;
+        if (mode === "confirm-drift") globalThis.__aduiTestProjectRevisionFault = fault;
+        dialogChoice.click();
+      }
       const notice = document.querySelector(".studio-notice")?.textContent ?? "";
       const error = versionPanel?.querySelector('[role="alert"]')?.textContent ?? "";
       const busy = [...(versionPanel?.querySelectorAll(".studio-version-help") ?? [])].some(
@@ -1152,7 +1202,6 @@ export async function openProjectInPage(projectId, headRevision, mode) {
     }
     throw new Error("工程安全载入流程超时");
   } finally {
-    window.confirm = originalConfirm;
     delete globalThis.__aduiTestProjectRevisionFault;
   }
 }
@@ -1339,8 +1388,9 @@ async function verifyStudio(session, origin, name, requireMultiPage) {
   report("工程管理菜单与首页摘要");
   await session.evaluate(function () {
     const menu = document.querySelector(".studio-project-browser-menu");
-    if (!menu) throw new Error("未找到工程管理入口");
-    menu.open = true;
+    const trigger = menu?.querySelector("button.t-button");
+    if (!(trigger instanceof HTMLButtonElement)) throw new Error("未找到工程管理 TDesign 按钮");
+    trigger.click();
   });
   const first = await waitFor(async () => {
     const state = await session.evaluate(pageStateInPage);

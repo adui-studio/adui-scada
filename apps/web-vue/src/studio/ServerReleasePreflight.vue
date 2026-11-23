@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button as TButton } from "tdesign-vue-next";
 import { computed, onUnmounted, shallowRef } from "vue";
 import { compareProjectDocuments } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
@@ -82,14 +83,14 @@ async function checkSavedVersion(): Promise<void> {
     <p class="studio-version-help">
       服务端预检仅检查已保存的当前修订，与上方当前画布静态预检不同；不会保存、发布或修改草稿。
     </p>
-    <button
+    <TButton
       type="button"
       class="studio-version-more"
       :disabled="disabled || busy"
       @click="checkSavedVersion"
     >
       {{ busy ? "正在只读检查服务端版本…" : "检查服务端已保存版本" }}
-    </button>
+    </TButton>
     <p v-if="error" class="studio-version-error" role="alert">
       {{ error }}；当前画布与 IndexedDB 草稿不变。
     </p>

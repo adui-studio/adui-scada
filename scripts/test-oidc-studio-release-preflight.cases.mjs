@@ -197,7 +197,7 @@ void describe("真实 Keycloak Studio 发布预检浏览器只读安全门禁", 
     );
   });
 
-  void it("按钮只通过正式面板 DOM 触发，禁用或不存在时明确拒绝", () => {
+  void it("按钮只通过正式 TDesign Popup 触发，禁用或不存在时明确拒绝", async () => {
     const button = {
       disabled: false,
       textContent: "检查服务端已保存版本",
@@ -206,27 +206,34 @@ void describe("真实 Keycloak Studio 发布预检浏览器只读安全门禁", 
         this.clickCount += 1;
       },
     };
-    const menu = { open: false };
     const panel = {
-      closest() {
-        return menu;
+      getClientRects: () => [{}],
+      querySelectorAll: () => [button],
+    };
+    const trigger = {
+      tagName: "BUTTON",
+      clickCount: 0,
+      click() {
+        this.clickCount += 1;
       },
-      querySelectorAll() {
-        return [button];
+    };
+    const menu = {
+      querySelector(selector) {
+        return selector === "button.t-button" ? trigger : panel;
       },
     };
     const runtime = {
       document: {
-        querySelector() {
-          return panel;
+        querySelector(selector) {
+          return selector === ".studio-release-preflight-menu" ? menu : null;
         },
       },
     };
-    assert.equal(clickStudioPreflightInPage(runtime), true);
-    assert.equal(menu.open, true);
+    assert.equal(await clickStudioPreflightInPage(runtime), true);
+    assert.equal(trigger.clickCount, 0);
     assert.equal(button.clickCount, 1);
     button.disabled = true;
-    assert.throws(() => clickStudioPreflightInPage(runtime), /真实 Studio 发布预检按钮不可用/);
+    await assert.rejects(clickStudioPreflightInPage(runtime), /真实 Studio 发布预检按钮不可用/);
   });
 
   void it("未点击的预检面板不能被当作服务端通过，当前修订和错误均为空", () => {

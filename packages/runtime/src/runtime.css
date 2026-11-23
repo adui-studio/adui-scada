@@ -457,18 +457,14 @@ button:focus-visible {
   color: var(--scada-text-secondary);
   font-size: 13px;
 }
-.scada-published-controls input,
-.scada-published-controls select {
-  flex: 1 1 260px;
+.scada-published-controls .t-input,
+.scada-published-controls .t-select {
   min-width: 140px;
-  border: 1px solid var(--scada-border-strong);
-  border-radius: 6px;
-  padding: 10px 12px;
   color: var(--scada-text-strong);
   background: var(--scada-canvas);
 }
-.scada-published-controls input:focus-visible,
-.scada-published-controls select:focus-visible {
+.scada-published-controls .t-input:focus-within,
+.scada-published-controls .t-select:focus-within {
   outline: 2px solid var(--scada-cyan);
   outline-offset: 2px;
 }
@@ -740,8 +736,8 @@ button:focus-visible {
   align-self: center;
   font-weight: 600;
 }
-.scada-published-controls input,
-.scada-published-controls select {
+.scada-published-controls .t-input,
+.scada-published-controls .t-select {
   min-height: 40px;
   background: var(--scada-canvas);
 }
@@ -879,8 +875,7 @@ button:focus-visible {
   .scada-quality-summary {
     grid-template-columns: minmax(0, 1fr);
   }
-  .scada-published-controls input,
-  .scada-published-controls select {
+  .scada-published-controls label {
     flex-basis: 100%;
   }
 }

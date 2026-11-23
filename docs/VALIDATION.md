@@ -4373,3 +4373,59 @@ git status --short
 本次已将 `studioDraftFileActionInPage` 的 5 秒 Popup 关闭等待移至 `finally` 外；`finally` 只恢复测试临时替换的 `window.confirm` 并触发关闭。成功通知改用局部变量保留，正常操作后再检查关闭结果，原有 12 秒业务等待、失败异常传播和关闭超时均保留；未更改正式组件、历史版本仓储及安全断言。详见 E-107。
 
 **最新候选待 Windows 实测**：同步 PR #187 HEAD 后执行 `node --check scripts/test-studio-browser.mjs`、`vp check`、`pnpm run docs:check` 和 `pnpm run test:legacy:browser`。只有完整通过后再运行 `pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:release:preflight:browser`；不得以 `vp check --fix` 的「Formatting completed」代替零告警结论。PR 保持 Draft，未经明确授权不得合并。
+
+## 2026-11-23 · PR #187 最终验收通过；D5c0w 全量 TDesign UI 迁移待验收
+
+维护者在 PR #187 最终 Windows 验收链上运行 `node --check` 成功、`vp check` **446 个格式文件/289 个受检文件零警告/错误**、`docs:check` **94 份**，旧本地数据迁移 React/Vue 各 localStorage、IndexedDB 草稿、历史 Project Snapshot 共 **六条**、`test:versions`、`test:versions:safety`（包含双 Origin 隔离）与 `test:release:preflight:browser` 均通过。合并前一轮普通 Studio **132/132** 通过；用户明确批准，PR #187 Squash 合并为 `main@6c2200fe3d0419bb31f4226eec524e944d0c524e`。本地 HEAD 不在日志中，不将其捏造成对应合并提交直接跑过测试。
+
+### D5c0w · 需对同一最新 HEAD 完成的整批测试
+
+本批改动跨 React/Vue 全部通用组件、真实 Dialog、Upload 和 OIDC 浏览器辅助脚本。**下列测试为要求，不是已经执行成功的结果**。必须先通过前置质量检查，再运行同一最终分支的业务安全和视觉回归。测试中出现的安全确认不可通过恢复 `window.confirm`、降低断言、绕过 OIDC、放宽 CAS 或延长等待上限来掩盖。
+
+```powershell
+git fetch origin
+git switch feat/d5c0w-tdesign-unified-ui
+git pull --ff-only
+git rev-parse HEAD
+
+$checks = @(
+  "pnpm run typecheck:web",
+  "vp check",
+  "pnpm run messages:check",
+  "pnpm run docs:check",
+  "pnpm run test:unit",
+  "pnpm run test:browser",
+  "pnpm run test:tags:browser",
+  "pnpm run test:interop",
+  "pnpm run test:versions",
+  "pnpm run test:versions:safety",
+  "pnpm run test:legacy:browser",
+  "pnpm run test:release:preflight:browser",
+  "pnpm run test:multitab"
+)
+foreach ($check in $checks) {
+  Write-Host "执行：$check"
+  Invoke-Expression $check
+  if ($LASTEXITCODE -ne 0) { throw "验收失败：$check" }
+}
+```
+
+另须在**先前已授权且仍隔离的本机 OIDC HTTPS Lab**，按仓库现有专项入口运行涉及服务端工程管理、确认后版本漂移、延迟拒绝、只读发布预检、真实双标签权限的相关测试；本 PR 未授权新建/删除数据库、修改 ACL、发起设备写入或部署生产。不能把 Node 模拟测试等同真实 IdP/HTTPS/CAS 验证。需要人工核对 React/Vue 的两个视口（1440×900、1024×768）中 Popup 与 Dialog 的 Esc/焦点、取消不写入、长列表滚动和贴边位置，以及 252px/320px 侧栏与 16:9 SVG 画布不回归。
+
+已执行证据仅限 GitHub 源码静态复核、固定版本官方组件 Props 检查及部分 Node 脚本函数语法解析；以上 Windows/真实业务测试均未在本分支执行。只有最终 HEAD 的完整通过输出才能进入合并评审；新 PR 默认 Draft、指派 `@adui-dev`，未经维护者授权不合并。
+
+## 2026-11-23 · PR #188 首次 Windows Vite+ 类型错误（E-109，待修复后验收）
+
+维护者实际运行 `vp check --fix`：在 React Studio 图层拖拽三处报 **TS2345（3 错误）**，已发布运行页及 Studio 的 Select 回调共 **4 条 `no-base-to-string` 告警**；291 个受检文件，格式化阶段完成，但该命令 **未通过质量门禁**。输出未提供本地 HEAD SHA，也没有本轮 Web 类型检查或浏览器结果。
+
+PR #188 已提交最小修复候选：图层拖拽事件签名由 `ReactDragEvent<HTMLButtonElement>` 放宽为符合 TDesign `Button` 回调的 `ReactDragEvent<HTMLElement>`；四处 Select `onChange` 仅对 `typeof value === "string"` 的 ID 更新状态，拒绝对选项对象等使用 `String(value)`。保留既有图层顺序、Tag 绑定、工程页面选择和已发布页面切换逻辑。
+
+**待复验（不代表通过）**：`pnpm run typecheck:web`、`vp check`（不带 `--fix`）、`pnpm run docs:check`；通过后继续 `pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop`、`pnpm run test:versions:safety` 以及 PR #188 原有完整验收列表。需真实检查 React 图层拖拽排序、Tag 绑定/图层目标 Select 和已发布工程多页面切换；不得从类型通过推断交互已验证。PR 保持 Draft，未获完整 Windows 验收与合并授权。
+
+## 2026-11-23 · PR #188 Vue Select 类型检查 7 错误与 E-110 修复候选
+
+维护者 Windows 在 D5c0w PR #188 执行 `pnpm run typecheck:web`，React `tsc --build` 后进入 Vue `vue-tsc --build`，Vue 返回 **TS2322 × 6**（TDesign Select `@change` 值域不兼容，包含 `bigint`）及 **TS2339 × 1**（模板 `TAG_DATA_TYPE_LABELS[option.dataType]` 被检查为不存在的 Record `.value`），合计 **7 个错误**；`pnpm run typecheck:web` 失败并使 PowerShell 验收链停止。**本轮后续 `vp check`、`messages:check`、`docs:check`、`test:unit`、普通浏览器、Tag、互通、版本、安全、旧迁移、发布预检与多标签页均没有运行**，不得借用前一轮不同 HEAD 的结果。
+
+本次已将 `apps/web-vue/src/runtime/PublishedRuntimePage.vue`、`apps/web-vue/src/studio/StudioPage.vue`、`apps/web-vue/src/studio/TagManager.vue` 共六个 `@change` 回调形参改为 `unknown` 并保持具体 ID/枚举的运行时收窄；Studio 标签下拉的内联 `:options` 移为脚本 `computed`。未改已发布页权限、Tag 持久化、图层拖拽或确认载入时 CAS。GitHub 静态检查已确认六处旧签名均已消失、模板仅绑定 `tagBindingOptions`；这是源码候选而非编译或浏览器通过的证据。详见 E-110。
+
+**待在 PR 最新 HEAD Windows 复验**：先执行 `pnpm run typecheck:web`、不带 `--fix` 的 `vp check`、`pnpm run messages:check`、`pnpm run docs:check`；只有全部通过才继续 `pnpm run test:unit`、`pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop`、`pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:legacy:browser`、`pnpm run test:release:preflight:browser`、`pnpm run test:multitab`。需验证 Vue 已发布页面切换、跨页复制、Tag 绑定、图层目标与插入位置、Tag 数据类型的实际选项选择，保留类型与历史缺失占位保护。PR #188 保持 Draft，不合并。

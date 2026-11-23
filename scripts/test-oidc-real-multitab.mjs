@@ -328,18 +328,30 @@ export async function logoutCurrentSessionInPage(expectedOrigin, runtime = globa
 
 export function openProjectBrowserMenuInPage(runtime = globalThis) {
   const panel = runtime.document.querySelector(".studio-project-browser-panel");
-  const menu = panel?.closest("details");
-  if (!panel || !menu) throw new Error("工程列表刷新失败");
-  menu.open = true;
+  const menu = runtime.document.querySelector(".studio-project-browser-menu");
+  const trigger = menu?.querySelector("button.t-button");
+  if (!menu || trigger?.tagName !== "BUTTON") {
+    throw new Error("工程列表刷新入口不可用");
+  }
+  if (!panel?.getClientRects().length) trigger.click();
   return true;
 }
 
-export function refreshProjectListInPage(runtime = globalThis) {
-  const panel = runtime.document.querySelector(".studio-project-browser-panel");
-  const button = [...(panel?.querySelectorAll("button") ?? [])].find(
-    (item) => item.textContent.trim() === "刷新",
-  );
-  if (!button || button.disabled) throw new Error("工程列表刷新失败");
+export async function refreshProjectListInPage(runtime = globalThis) {
+  const menu = runtime.document.querySelector(".studio-project-browser-menu");
+  const started = Date.now();
+  let button = null;
+  while (Date.now() - started < 5000) {
+    const panel = menu?.querySelector(".studio-project-browser-panel");
+    button = [...(panel?.querySelectorAll("button") ?? [])].find(
+      (item) => item.textContent.trim() === "刷新",
+    );
+    if (button?.getClientRects().length) break;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  if (!button || button.disabled || !button.getClientRects().length) {
+    throw new Error("工程列表刷新失败");
+  }
   button.click();
   return true;
 }

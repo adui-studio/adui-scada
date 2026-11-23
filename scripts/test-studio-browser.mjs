@@ -314,8 +314,16 @@ async function checkStudioInPage() {
   verify("适应按钮恢复原始视图", near(svg.viewBox.baseVal.width, originalWidth, 0.01));
 
   const menu = element(".studio-view-menu");
-  menu.open = true;
-  await settle();
+  const viewTrigger = menu.querySelector("button.t-button");
+  if (!(viewTrigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到 TDesign 视图设置触发器");
+  }
+  viewTrigger.click();
+  const viewOpened = Date.now();
+  while (!menu.querySelector(".studio-view-popover")?.getClientRects().length) {
+    if (Date.now() - viewOpened > 5000) throw new TypeError("视图设置弹层展开超时");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const label = [...menu.querySelectorAll("label")].find((item) =>
     item.textContent.includes("显示网格"),
   );
@@ -346,7 +354,7 @@ async function checkStudioInPage() {
   toggle("显示属性")?.click();
   await settle();
   verify("恢复属性后画布宽度恢复", near(bounds(stage).width, initialWidth));
-  menu.open = false;
+  viewTrigger.click();
 
   const firstLayer = document.querySelector(".studio-layer-tree .studio-layer");
   firstLayer?.click();
@@ -741,12 +749,18 @@ async function runStudioInteroperability(session) {
 }
 
 /** 只读取真实 Studio 发布预检面板的状态与问题，不访问网络或工程存储。 */
-function readStudioReleasePreflightInPage() {
-  const menu = [...document.querySelectorAll("details.studio-version-menu")].find(
-    (item) => item.querySelector("summary")?.textContent.trim() === "发布预检",
-  );
-  if (!menu) throw new Error("未找到发布预检入口");
-  menu.open = true;
+async function readStudioReleasePreflightInPage() {
+  const menu = document.querySelector(".studio-release-preflight-menu");
+  const trigger = menu?.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到发布预检 TDesign Popup 触发器");
+  }
+  if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) trigger.click();
+  const started = Date.now();
+  while (!menu.querySelector(".studio-version-panel")?.getClientRects().length) {
+    if (Date.now() - started > 5000) throw new TypeError("发布预检弹层展开超时");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const panel = menu.querySelector('[aria-label="工程发布前静态兼容性预检"]');
   if (!panel) throw new Error("未找到静态预检面板");
   const remotePanel = panel.querySelector('[aria-label="服务端已保存版本发布预检"]');
@@ -763,7 +777,7 @@ function readStudioReleasePreflightInPage() {
     path: item.querySelector("code")?.textContent.trim() ?? "",
     message: item.querySelector("p")?.textContent.trim() ?? "",
   }));
-  menu.open = false;
+  if (menu.querySelector(".studio-version-panel")?.getClientRects().length) trigger.click();
   return {
     passed: status.includes("静态兼容性检查通过"),
     issueCount: issues.length,
@@ -833,22 +847,32 @@ async function runStudioReleasePreflight(session) {
 }
 
 /** 在真实浏览器内定位项目 Tag 管理表单并打开详情区。 */
-function openTagManagerInPage() {
-  const menu = [...document.querySelectorAll("details.studio-advanced")].find((node) =>
-    node.querySelector("summary")?.textContent.includes("项目 Tag 定义"),
+async function openTagManagerInPage() {
+  const menu = [...document.querySelectorAll(".studio-advanced")].find((node) =>
+    node.querySelector(".t-collapse-panel__header")?.textContent.includes("项目 Tag 定义"),
   );
   if (!menu) throw new Error("未找到项目 Tag 定义面板");
-  menu.open = true;
-  if (!menu.querySelector('form[aria-label="项目 Tag 编辑表单"]')) {
-    throw new Error("项目 Tag 管理表单未挂载");
+  const trigger = menu.querySelector(".t-collapse-panel__header");
+  if (!(trigger instanceof HTMLElement)) throw new TypeError("Tag 定义折叠触发器不存在");
+  trigger.click();
+  const started = Date.now();
+  while (Date.now() - started < 5000) {
+    const form = menu.querySelector('form[aria-label="项目 Tag 编辑表单"]');
+    if (form?.getClientRects().length) return true;
+    await new Promise((resolve) => setTimeout(resolve, 50));
   }
-  return true;
+  throw new Error("项目 Tag 管理表单展开超时");
 }
 
 function focusTagFieldInPage(index) {
   const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
-  const field = form?.querySelectorAll("input, textarea")[index];
-  if (!field) throw new Error("项目 Tag 表单字段不存在：" + index);
+  const fields = [...(form?.querySelectorAll("label.studio-field") ?? [])]
+    .filter((label) => !label.textContent.includes("数据类型"))
+    .map((label) => label.querySelector("input, textarea"));
+  const field = fields[index];
+  if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) {
+    throw new Error("项目 Tag 表单字段不存在：" + index);
+  }
   field.focus();
   field.select();
   return true;
@@ -863,7 +887,7 @@ function submitTagFormInPage() {
   return true;
 }
 
-function clickTagRowActionInPage(tagId, action, confirmChoice) {
+async function clickTagRowActionInPage(tagId, action, confirmChoice) {
   const rows = document.querySelectorAll(
     '[role="list"][aria-label="项目 Tag 目录"] [role="listitem"]',
   );
@@ -874,12 +898,20 @@ function clickTagRowActionInPage(tagId, action, confirmChoice) {
     (node) => node.textContent.trim() === action,
   );
   if (!button) throw new Error("未找到项目 Tag 操作：" + tagId + " · " + action);
-  const originalConfirm = window.confirm;
-  if (confirmChoice !== null) window.confirm = () => confirmChoice;
-  try {
-    button.click();
-  } finally {
-    window.confirm = originalConfirm;
+  button.click();
+  if (confirmChoice !== null) {
+    const started = Date.now();
+    let choice = null;
+    while (Date.now() - started < 12000) {
+      choice = [...document.querySelectorAll(".t-dialog .t-button")].find((item) =>
+        item.classList.contains(confirmChoice ? "t-dialog__confirm" : "t-dialog__cancel"),
+      );
+      if (choice?.getClientRects().length) break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    if (!(choice instanceof HTMLButtonElement)) throw new TypeError("Tag 删除确认弹层未出现");
+    choice.click();
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
   return true;
 }
@@ -1281,49 +1313,57 @@ async function studioVersionActionInPage(
   const button = candidates.find((item) => item.textContent.trim() === label);
   if (!button) throw new Error("找不到版本历史操作按钮：" + label);
   if (button.disabled) throw new Error("版本历史操作尚未结束：" + label);
-  const originalConfirm = Reflect.get(window, "confirm");
-  let confirmInvoked;
-  const confirmCall = new Promise((resolve) => {
-    confirmInvoked = resolve;
-  });
-  try {
-    if (confirmChoice !== null) {
-      window.confirm = () => {
-        confirmInvoked();
-        return confirmChoice;
-      };
+  button.click();
+  if (confirmChoice !== null) {
+    const confirmationStarted = Date.now();
+    let choice = null;
+    while (Date.now() - confirmationStarted < 12000) {
+      choice = document.querySelector(
+        confirmChoice ? ".t-dialog .t-dialog__confirm" : ".t-dialog .t-dialog__cancel",
+      );
+      if (choice?.getClientRects().length) break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
-    button.click();
-    if (expectedNotice) {
-      const start = Date.now();
-      while (Date.now() - start < 12000) {
-        const notice = document.querySelector(".studio-notice")?.textContent || "";
-        if (notice.includes(expectedNotice)) break;
-        const error = menu.querySelector(".studio-version-error")?.textContent || "";
-        if (error) throw new Error("版本历史操作失败：" + error);
-        await new Promise((resolve) => setTimeout(resolve, 80));
-      }
-      if (!(document.querySelector(".studio-notice")?.textContent || "").includes(expectedNotice)) {
-        throw new Error("等待版本历史操作结果超时：" + expectedNotice);
-      }
-    } else {
-      await Promise.race([
-        confirmCall,
-        new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("未触发历史版本载入确认")), 12000);
-        }),
-      ]);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+    if (!(choice instanceof HTMLButtonElement)) {
+      throw new TypeError("历史载入确认弹层未出现");
     }
-    return {
-      versions: [...menu.querySelectorAll(".studio-version-item strong")].map((item) =>
-        item.textContent.trim(),
-      ),
-      comparison: menu.querySelector(".studio-version-comparison")?.textContent || "",
-    };
-  } finally {
-    if (confirmChoice !== null) window.confirm = originalConfirm;
+    choice.click();
   }
+  if (expectedNotice) {
+    const start = Date.now();
+    while (Date.now() - start < 12000) {
+      const notice = document.querySelector(".studio-notice")?.textContent || "";
+      if (notice.includes(expectedNotice)) break;
+      const error = menu.querySelector(".studio-version-error")?.textContent || "";
+      if (error) throw new Error("版本历史操作失败：" + error);
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+    if (!(document.querySelector(".studio-notice")?.textContent || "").includes(expectedNotice)) {
+      throw new Error("等待版本历史操作结果超时：" + expectedNotice);
+    }
+  } else {
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+  if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) {
+    trigger.click();
+    const opened = Date.now();
+    while (Date.now() - opened < 12000) {
+      const panel = menu.querySelector(".studio-version-panel");
+      if (
+        panel?.getClientRects().length &&
+        !panel.querySelector(".studio-version-tools button:disabled")
+      ) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+  return {
+    versions: [...menu.querySelectorAll(".studio-version-item strong")].map((item) =>
+      item.textContent.trim(),
+    ),
+    comparison: menu.querySelector(".studio-version-comparison")?.textContent || "",
+  };
 }
 
 async function runStudioVersionHistory(session) {
@@ -1427,9 +1467,20 @@ async function enableStudioAutoSaveInPage(confirmExisting = false) {
     (item) => item.textContent.trim() === "开启自动保存",
   );
   if (!button) throw new TypeError("自动保存开关不是关闭状态");
-  const originalConfirm = window.confirm;
-  if (confirmExisting) window.confirm = () => true;
   button.click();
+  if (confirmExisting) {
+    const confirmStart = Date.now();
+    let confirmButton = null;
+    while (Date.now() - confirmStart < 12000) {
+      confirmButton = document.querySelector(".t-dialog .t-dialog__confirm");
+      if (confirmButton?.getClientRects().length) break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    if (!(confirmButton instanceof HTMLButtonElement)) {
+      throw new TypeError("开启自动保存覆盖确认弹层未出现");
+    }
+    confirmButton.click();
+  }
   const start = Date.now();
   try {
     while (Date.now() - start < 12000) {
@@ -1441,7 +1492,6 @@ async function enableStudioAutoSaveInPage(confirmExisting = false) {
     }
     throw new TypeError("开启自动保存超时");
   } finally {
-    window.confirm = originalConfirm;
     if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
       trigger.click();
     }
@@ -1528,17 +1578,12 @@ async function verifyImportHistoryIsolationInPage(json) {
   );
   if (!load) throw new TypeError("未找到历史版本 #1 的载入操作");
   const originalText = Reflect.get(Blob.prototype, "text");
-  const originalConfirm = Reflect.get(window, "confirm");
   let releaseText = null;
   let confirmations = 0;
   Blob.prototype.text = function () {
     return new Promise((resolve) => {
       releaseText = () => resolve(json);
     });
-  };
-  window.confirm = () => {
-    confirmations += 1;
-    return true;
   };
   try {
     const transfer = new DataTransfer();
@@ -1552,8 +1597,11 @@ async function verifyImportHistoryIsolationInPage(json) {
     if (!releaseText) throw new TypeError("JSON 导入没有进入异步文件读取阶段");
     load.click();
     await new Promise((resolve) => setTimeout(resolve, 120));
+    confirmations = [...document.querySelectorAll(".t-dialog .t-dialog__confirm")].filter(
+      (element) => element.getClientRects().length,
+    ).length;
     if (confirmations !== 0) {
-      throw new TypeError("JSON 导入期间错误地执行了历史覆盖确认");
+      throw new TypeError("JSON 导入期间错误地显示历史覆盖确认");
     }
     releaseText();
     const ready = Date.now();
@@ -1569,7 +1617,6 @@ async function verifyImportHistoryIsolationInPage(json) {
   } finally {
     releaseText?.();
     Blob.prototype.text = originalText;
-    window.confirm = originalConfirm;
     if (fileMenu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
     const versionTrigger = versionMenu?.querySelector("button.t-button");
     if (
@@ -1721,11 +1768,24 @@ async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice 
     await new Promise((resolve) => setTimeout(resolve, 80));
   }
   if (!button || button.disabled) throw new TypeError("草稿操作按钮不可用：" + label);
-  const originalConfirm = window.confirm;
-  if (confirmChoice !== null) window.confirm = () => confirmChoice;
   let resultNotice = null;
   try {
     button.click();
+    if (confirmChoice !== null) {
+      const confirmStart = Date.now();
+      let choice = null;
+      while (Date.now() - confirmStart < 12000) {
+        choice = document.querySelector(
+          confirmChoice ? ".t-dialog .t-dialog__confirm" : ".t-dialog .t-dialog__cancel",
+        );
+        if (choice?.getClientRects().length) break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      if (!(choice instanceof HTMLButtonElement)) {
+        throw new TypeError("草稿确认弹层未出现：" + label);
+      }
+      choice.click();
+    }
     const waiting = Date.now();
     while (Date.now() - waiting < 12000) {
       const notice = document.querySelector(".studio-notice")?.textContent || "";
@@ -1737,7 +1797,6 @@ async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice 
     }
     if (resultNotice === null) throw new TypeError("草稿操作结果超时：" + label);
   } finally {
-    window.confirm = originalConfirm;
     if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
       trigger.click();
     }

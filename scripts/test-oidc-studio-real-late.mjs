@@ -230,23 +230,29 @@ export function studioRealLateStateInPage(runtime = globalThis) {
 }
 
 /** 保存进行时恢复草稿操作必须被现有 UI 互斥锁拒绝。 */
-export function attemptRestoreDuringSaveInPage(runtime = globalThis) {
+export async function attemptRestoreDuringSaveInPage(runtime = globalThis) {
   const menu = runtime.document.querySelector(".studio-file-menu");
-  const button = [...(menu?.querySelectorAll("button") ?? [])].find(
+  const trigger = menu?.querySelector("button.t-button");
+  if (trigger?.tagName !== "BUTTON") throw new Error("真实 Studio 迟到保存未达到受控状态");
+  if (!menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
+  const opened = Date.now();
+  while (Date.now() - opened < 5000) {
+    if (menu.querySelector(".studio-file-popover")?.getClientRects().length) break;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  const button = [...(menu.querySelectorAll("button") ?? [])].find(
     (item) => item.textContent.trim() === "恢复草稿",
   );
-  if (!button || button.disabled) {
+  if (
+    !button ||
+    button.disabled ||
+    !menu.querySelector(".studio-file-popover")?.getClientRects().length
+  ) {
     throw new Error("真实 Studio 迟到保存未达到受控状态");
   }
-  if (menu) menu.open = true;
-  const originalConfirm = runtime.confirm;
-  runtime.confirm = () => true;
-  try {
-    button.click();
-    return true;
-  } finally {
-    runtime.confirm = originalConfirm;
-  }
+  // 保留生产互斥判断：保存进行时不得弹出确认或修改草稿。
+  button.click();
+  return true;
 }
 
 async function waitFor(task, label, tries = 100) {
@@ -307,8 +313,9 @@ async function openDedicatedProject(session, origin, projectId) {
   assert.equal(
     await session.evaluate(function () {
       const menu = document.querySelector(".studio-project-browser-menu");
-      if (!menu) return false;
-      menu.open = true;
+      const trigger = menu?.querySelector("button.t-button");
+      if (trigger?.tagName !== "BUTTON") return false;
+      trigger.click();
       return true;
     }),
     true,

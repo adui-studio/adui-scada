@@ -1052,3 +1052,26 @@
 - **最小修复**：保留原有真实按钮操作、12 秒业务通知等待及异常传播，将成功通知先记录在局部变量；`finally` 只负责恢复 `window.confirm` 和触发关闭；正常完成后在 `finally` 外继续等待面板隐藏，并保留原 5 秒关闭超时与中文报错。业务动作失败时先传播原始错误，不让关闭检查覆盖它；不修改 React/Vue 组件、草稿数据或其他版本安全断言。
 - **防复发及验证**：浏览器测试中的 `finally` 仅执行不改变控制流的清理，不在其中 `throw`、`return` 或 `break`；等待可能失败的关闭流程应安排在正常路径，避免掩盖真正的断言或 I/O 异常。修复已提交 PR #187 功能分支；**修复后的 Windows `node --check`、`vp check`、`docs:check`、`test:legacy:browser`、`test:versions:safety` 及发布预检测试尚待真实复验**，不得写成已通过。
 - **证据**：维护者 2026-11-23 Windows `vp check --fix` 原始输出、`scripts/test-studio-browser.mjs` 和 PR #187。
+
+### E-108 · D5c0w 首次批量迁移未先核对 React Collapse 的面板导出契约
+
+- **发现阶段**：全量 TDesign 迁移候选初稿误将 React `CollapsePanel` 当作 `tdesign-react@1.18.6` 可直接命名导出的组件，套用了与 Vue `CollapsePanel` 相同的写法。随后在正式提交交付前复核固定版本官方源码的 `collapse/index.ts` 与 `Collapse.tsx`，确认 React 应使用 `Collapse.Panel` 静态子组件；Vue Next `1.20.11` 才直接提供 `CollapsePanel`。此为代码候选阶段发现的**真实 API 使用错误**，尚没有 Windows 类型检查失败日志，不得伪称实测报错。
+- **修复**：将 React Studio 三处 `CollapsePanel` 改为 `Collapse.Panel`，移除错误命名导入；Vue 保持 `TCollapsePanel`。React/Vue 通用组件替换仍须分别核对各自固定版本，不凭名称相似假设 API 完全一致。
+- **防复发与验证**：代码批量替换前核对固定版本的组件入口、Props、事件、插槽与真实 HTML 语义；发生 JSX 标签替换时检查首尾配对、残留标签和浏览器测试的旧 DOM 选择器。已在 GitHub 候选分支静态确认误用移除；`pnpm run typecheck:web`、`vp check` 及真实浏览器仍待维护者在最终 PR HEAD 运行。
+- **证据**：D5c0w 分支 `apps/web-react/src/studio/StudioPage.tsx` 历史修改、Tencent TDesign React 固定版本 `Collapse.tsx` 和 `docs/TDESIGN_COMPONENT_AUDIT.md`。
+
+### E-109 · D5c0w React TDesign Button 拖拽事件类型与 Select 值域不一致（PR #188）
+
+- **Windows 实测现象**：维护者执行 `vp check --fix`，在 `apps/web-react/src/studio/StudioPage.tsx` 的 `startLayerDrag`、`overLayer`、`dropLayer` 调用处出现 TypeScript **TS2345 共 3 个错误**；`apps/web-react/src/runtime/PublishedRuntimePage.tsx` 一处、`StudioPage.tsx` 三处 `String(value)` 出现 `typescript(no-base-to-string)` **共 4 条告警**。输出为 291 个受检文件，格式化完成**不能视为类型和 Lint 通过**。
+- **根因**：把原生按钮批量改为 TDesign React `Button` 后，`onDragStart/onDragOver/onDrop` 暴露的是 `DragEvent<HTMLElement>`，原函数仍要求更窄的 `DragEvent<HTMLButtonElement>`。当前固定版本 `tdesign-react@1.18.6` 的 Select `onChange` 返回 `SelectValue`，可能为字符串、数字、布尔、选项对象或数组；对整个联合类型调用 `String(value)` 可能把对象错误转换为 `[object Object]`，重复 E-052 隐式字符串化风险。
+- **最小修复候选**：仅修改 React 两个页面文件：三个现有图层拖拽处理函数参数改为 `ReactDragEvent<HTMLElement>`；四处 Select 回调先检查 `typeof value === "string"`，只接受合法字符串 ID，不转换对象、数组或布尔值。不修改拖拽/命中算法、Vue 适配、Tag/工程 Schema、CAS、已发布工程权限、数据持久化、既有测试或 TDesign 依赖版本。
+- **防复发与复验**：迁移基础 UI 控件时不能假定 TDesign 事件泛型与原生标签完全一致；确认官方回调联合类型后收窄再写入状态，禁止靠类型断言或关闭 Lint 规避。请在最终 PR HEAD 上运行 `pnpm run typecheck:web`、不带 `--fix` 的 `vp check`、`pnpm run docs:check`，并执行图层拖拽与 Select 操作的 React/Vue 浏览器回归。**截至本记录仅完成 GitHub 静态修复，尚未获得修复后的 Windows 检查结果。**
+- **证据**：维护者 2026-11-23 `vp check --fix` 原始输出、PR #188 的 React 代码和固定版本 TDesign React `select/type.ts`。
+
+### E-110 · D5c0w Vue TDesign Select 回调签名遗漏 bigint 与模板类型推断错误（PR #188）
+
+- **Windows 实测现象**：维护者执行 `pnpm run typecheck:web`，React `tsc --build` 后进入 Vue `vue-tsc --build`，共报 **7 个错误**，最终命令退出码 1（Vue 递归脚本退出码 2）。其中六条 TS2322 分布在 Vue 已发布运行页 1 处、Studio 4 处、TagManager 1 处；另有一条 TS2339 位于 Studio 模板 `TAG_DATA_TYPE_LABELS[option.dataType]`。后续 `vp check`、`messages:check`、`docs:check`、单测及浏览器脚本因 PowerShell 失败即中断，**均未在本轮执行**。日志未单独给出本地 HEAD，不伪造验证对应的 SHA。
+- **根因**：D5c0w 首次批量迁移为 TDesign Vue Select 自行声明了 `string | number | (string | number)[]` 类型的回调，但固定 Catalog `tdesign-vue-next@1.20.11` 的官方 `SelectValue` 还包含 `bigint`、布尔值、选项对象与递归列表，回调参数因此不能直接匹配。Tag 候选项在 Vue 模板的多行 `:options` 表达式中拼接导入的 `TAG_DATA_TYPE_LABELS`，触发了 `vue-tsc` 对该 Record 的 `.value` 访问诊断。
+- **最小修复候选**：只修改三个 Vue SFC。六处 `@change` 处理函数参数类型统一为 `unknown`，函数内部仍只接收字符串 ID 或限定枚举；拒绝将对象、数组、数字、`bigint` 转成非法 Tag/页面/图层 ID。把 Tag 绑定下拉候选项提为 `<script setup>` 中的 `tagBindingOptions = computed(...)`，模板仅使用 `:options="tagBindingOptions"`。保留“未绑定”、历史缺失 Tag 占位、数据类型中文标签及原有 Tag 类型约束；不触碰 React、Core、Schema、CAS、OIDC 与工业写入边界。
+- **防复发与验证**：双框架 UI 组件事件回调不能按原生 `select` 事件的值域自行缩窄形参；先核对各自固定版本 API，宽接受、窄校验。复杂选项列表放在脚本 `computed`，减少 Volar 模板自动展开的歧义。**目前只完成 GitHub 源码静态核对；修复后的 Windows `pnpm run typecheck:web`、`vp check`、`docs:check` 及双框架浏览器测试仍待真实执行**，不可将本次改动视为质量门禁通过。
+- **证据**：维护者 2026-11-23 Windows PowerShell 中 `vue-tsc` 七条错误及最终失败退出码、PR #188 的三个 Vue SFC、`tdesign-vue-next@1.20.11` 固定官方 `select/type.ts`。

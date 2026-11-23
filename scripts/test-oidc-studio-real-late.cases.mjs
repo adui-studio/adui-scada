@@ -276,28 +276,33 @@ void describe("真实双框架 Studio 迟到 201 浏览器安全保护", () => {
     assert.equal(studioRealLateStateInPage(runtime).visible, true);
   });
 
-  void it("保存期间尝试恢复草稿只调用现有控件，不修改测试页面和全局确认函数", () => {
+  void it("保存期间恢复草稿经真实 TDesign Popup 触发，不改写全局确认函数", async () => {
     let clicks = 0;
     const originalConfirm = () => false;
-    const runtime = {
-      confirm: originalConfirm,
-      document: {
-        querySelector: () => ({
-          open: false,
-          querySelectorAll: () => [
-            {
-              textContent: "恢复草稿",
-              disabled: false,
-              click: () => {
-                clicks += 1;
-                assert.equal(runtime.confirm(), true);
-              },
-            },
-          ],
-        }),
+    const button = {
+      textContent: "恢复草稿",
+      disabled: false,
+      click: () => {
+        clicks += 1;
       },
     };
-    assert.equal(attemptRestoreDuringSaveInPage(runtime), true);
+    const popup = {
+      querySelector(selector) {
+        if (selector === "button.t-button") {
+          return { tagName: "BUTTON", click: () => undefined };
+        }
+        if (selector === ".studio-file-popover") {
+          return { getClientRects: () => [{}] };
+        }
+        return null;
+      },
+      querySelectorAll: () => [button],
+    };
+    const runtime = {
+      confirm: originalConfirm,
+      document: { querySelector: () => popup },
+    };
+    assert.equal(await attemptRestoreDuringSaveInPage(runtime), true);
     assert.equal(clicks, 1);
     assert.equal(runtime.confirm, originalConfirm);
   });

@@ -234,7 +234,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
   void it("上一轮版本冲突错误残留时，新一轮确认载入不能误报失败", async () => {
     const originalDocument = globalThis.document;
     const originalWindow = globalThis.window;
-    const state = { error: "服务端工程版本已更新", notice: "", busy: false };
+    const state = { error: "服务端工程版本已更新", notice: "", busy: false, dialogReady: false };
     const button = {
       disabled: false,
       click() {
@@ -244,8 +244,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
         }, 10);
         setTimeout(() => {
           state.busy = false;
-          state.notice = "已打开最新服务端版本，CAS 基线已建立";
-          globalThis.window.confirm();
+          state.dialogReady = true;
         }, 30);
       },
     };
@@ -266,6 +265,16 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     };
     globalThis.document = {
       querySelector(selector) {
+        if (selector === ".t-dialog .t-dialog__confirm" && state.dialogReady) {
+          return {
+            tagName: "BUTTON",
+            getClientRects: () => [{}],
+            click: () => {
+              state.dialogReady = false;
+              state.notice = "已打开最新服务端版本，CAS 基线已建立";
+            },
+          };
+        }
         if (selector === ".studio-project-browser-panel") {
           return { querySelectorAll: () => [item] };
         }
@@ -349,7 +358,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
   void it("上一轮错误跨过忙碌阶段残留时仍允许本次正常取消载入", async () => {
     const originalDocument = globalThis.document;
     const originalWindow = globalThis.window;
-    const state = { error: "服务端工程版本已更新", notice: "", busy: false };
+    const state = { error: "服务端工程版本已更新", notice: "", busy: false, dialogReady: false };
     const button = {
       disabled: false,
       click() {
@@ -360,7 +369,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
           state.busy = false;
         }, 150);
         setTimeout(() => {
-          globalThis.window.confirm();
+          state.dialogReady = true;
         }, 260);
       },
     };
@@ -381,6 +390,15 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     };
     globalThis.document = {
       querySelector(selector) {
+        if (selector === ".t-dialog .t-dialog__cancel" && state.dialogReady) {
+          return {
+            tagName: "BUTTON",
+            getClientRects: () => [{}],
+            click: () => {
+              state.dialogReady = false;
+            },
+          };
+        }
         if (selector === ".studio-project-browser-panel") {
           return { querySelectorAll: () => [item] };
         }
@@ -735,7 +753,7 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     try {
       assert.equal(triggerSaveTimingInPage(), true);
       assert.equal(clicks, 2);
-      assert.equal(details.open, true);
+      assert.equal(details.open, false, "TDesign 控件不应操作旧版 details.open");
       assert.deepEqual(saveTimingStateInPage(), {
         hits: 1,
         writeAttempts: 1,
@@ -1053,13 +1071,13 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
     const originalDocument = globalThis.document;
     const originalWindow = globalThis.window;
     let notice = "";
+    let dialogReady = false;
     const button = {
       textContent: "载入",
       disabled: false,
       click: () => {
         clicks += 1;
-        const approved = globalThis.window.confirm("测试用户确认载入");
-        if (approved) notice = "已载入服务端最新版本 #3，自动保存已暂停";
+        dialogReady = true;
       },
     };
     const row = {
@@ -1076,9 +1094,18 @@ void describe("OIDC 工程浏览器专项环境保护", () => {
       querySelector: (selector) =>
         selector === '[aria-label="服务端工程版本"]'
           ? panel
-          : selector === ".studio-notice"
-            ? { textContent: notice }
-            : null,
+          : selector === ".t-dialog .t-dialog__confirm" && dialogReady
+            ? {
+                tagName: "BUTTON",
+                getClientRects: () => [{}],
+                click: () => {
+                  dialogReady = false;
+                  notice = "已载入服务端最新版本 #3，自动保存已暂停";
+                },
+              }
+            : selector === ".studio-notice"
+              ? { textContent: notice }
+              : null,
     };
     try {
       assert.deepEqual(await confirmPreviewedServerVersionInPage(3), {
