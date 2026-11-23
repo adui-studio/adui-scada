@@ -3452,3 +3452,40 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 唯一失败来自已有基线的第二份坏质量 snapshot：测试期望 QUALITY_NOT_GOOD，新安全契约先返回 SNAPSHOT_ALREADY_ESTABLISHED 并清空基线。E-092 最小修复仅调整旧测试，保留未核验来源拒绝，验证重复坏质量快照先按重复初始化拒绝，并独立验证首次坏质量快照仍按质量拒绝。生产归约器及现有测试数量不变。
 
 **修复后待 Windows 验收**：三份定向 Vitest 目标 55/55、vp check 零警告、pnpm run docs:check、pnpm run messages:check。没有修复后实际退出码，不能声称已通过；PR #159 保持 Draft，不提前合并。不涉及 NestJS、Prisma、Vue/React、设备采集或正式发布门禁。
+
+## 2026-11-23 · PR #159 Windows 复验通过与 D5b9u 待验收
+
+维护者本机 Windows 对 PR #159 的会话归约器 **18/18**、托管器 **10/10**、订阅适配器 **27/27**，合计 **55/55**，`vp check` **435 格式文件/286 受检零警告错误**、`pnpm run docs:check` **90 份**、`pnpm run messages:check` **310 个文件**。原 54/55 是修复前 E-092 历史日志，已以本次实际回归关闭；GitHub 按明确授权 Squash 合并 PR #159 至 `main@8cbd1d721f8e2a2c7b83733ff64bdb88b28d0dd6`，并再次确认 merged。该日志未附维护者本机 HEAD，不冒充对具体 SHA 的逐字本机复验，亦不等于完整 ready 或现场工业安全验收。
+
+D5b9u 仅在共享 Core 添加失效态终止标记与固定拒绝结果，更新纯归约器既有测试及托管器一项对象断言；新增三项测试定义后目标 **21+10+27=58** 项。失效前首次正常 snapshot 和递增 delta 的契约不变，失效后的同代次重建路径改为拒绝，必须显式递增代次。**D5b9u 尚无 Windows 实测结果**。
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5b9u-alarm-invalidated-session
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5b9u-alarm-invalidated-session
+}
+if ($LASTEXITCODE -ne 0) { throw "切换分支失败" }
+
+git pull --ff-only origin fix/d5b9u-alarm-invalidated-session
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "自动修正失败" }
+
+vp test run packages/core/test/alarm-baseline-session.test.ts packages/core/test/alarm-session-controller.test.ts packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警会话定向测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批未更改 HTTP、Prisma、Vue/React、真实协议或工业设备写入，当前只要求上述 Core 定向与静态门禁；如出现关联回归失败需扩大覆盖，不把未运行的全量 ready 或浏览器专项算作通过。PR 默认保持 Draft，必须经维护者新一轮验收并明确授权才能合并。
