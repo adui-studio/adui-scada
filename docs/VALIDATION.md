@@ -4421,3 +4421,12 @@ foreach ($check in $checks) {
 PR #188 已提交最小修复候选：图层拖拽事件签名由 `ReactDragEvent<HTMLButtonElement>` 放宽为符合 TDesign `Button` 回调的 `ReactDragEvent<HTMLElement>`；四处 Select `onChange` 仅对 `typeof value === "string"` 的 ID 更新状态，拒绝对选项对象等使用 `String(value)`。保留既有图层顺序、Tag 绑定、工程页面选择和已发布页面切换逻辑。
 
 **待复验（不代表通过）**：`pnpm run typecheck:web`、`vp check`（不带 `--fix`）、`pnpm run docs:check`；通过后继续 `pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop`、`pnpm run test:versions:safety` 以及 PR #188 原有完整验收列表。需真实检查 React 图层拖拽排序、Tag 绑定/图层目标 Select 和已发布工程多页面切换；不得从类型通过推断交互已验证。PR 保持 Draft，未获完整 Windows 验收与合并授权。
+
+## 2026-11-23 · PR #188 Vue Select 类型检查 7 错误与 E-110 修复候选
+
+维护者 Windows 在 D5c0w PR #188 执行 `pnpm run typecheck:web`，React `tsc --build` 后进入 Vue `vue-tsc --build`，Vue 返回 **TS2322 × 6**（TDesign Select `@change` 值域不兼容，包含 `bigint`）及 **TS2339 × 1**（模板 `TAG_DATA_TYPE_LABELS[option.dataType]` 被检查为不存在的 Record `.value`），合计 **7 个错误**；`pnpm run typecheck:web` 失败并使 PowerShell 验收链停止。**本轮后续 `vp check`、`messages:check`、`docs:check`、`test:unit`、普通浏览器、Tag、互通、版本、安全、旧迁移、发布预检与多标签页均没有运行**，不得借用前一轮不同 HEAD 的结果。
+
+本次已将 `apps/web-vue/src/runtime/PublishedRuntimePage.vue`、`apps/web-vue/src/studio/StudioPage.vue`、`apps/web-vue/src/studio/TagManager.vue` 共六个 `@change` 回调形参改为 `unknown` 并保持具体 ID/枚举的运行时收窄；Studio 标签下拉的内联 `:options` 移为脚本 `computed`。未改已发布页权限、Tag 持久化、图层拖拽或确认载入时 CAS。GitHub 静态检查已确认六处旧签名均已消失、模板仅绑定 `tagBindingOptions`；这是源码候选而非编译或浏览器通过的证据。详见 E-110。
+
+**待在 PR 最新 HEAD Windows 复验**：先执行 `pnpm run typecheck:web`、不带 `--fix` 的 `vp check`、`pnpm run messages:check`、`pnpm run docs:check`；只有全部通过才继续 `pnpm run test:unit`、`pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop`、`pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:legacy:browser`、`pnpm run test:release:preflight:browser`、`pnpm run test:multitab`。需验证 Vue 已发布页面切换、跨页复制、Tag 绑定、图层目标与插入位置、Tag 数据类型的实际选项选择，保留类型与历史缺失占位保护。PR #188 保持 Draft，不合并。
+
