@@ -344,7 +344,7 @@ async function checkStudioInPage() {
     menuItem("+ 新建页面")?.click();
     await settle();
     verify("TDesign 菜单可创建页面", pageTabs().length === initialPages.length + 1);
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await new Promise((resolve) => setTimeout(resolve, 500));
     verify("执行页面命令后下拉菜单自动关闭", menuClosed());
 
     pageTrigger.click();
@@ -364,7 +364,7 @@ async function checkStudioInPage() {
         pageTabs().map((tab) => tab.textContent.trim()).join("|") === beforeBlocked,
     );
     document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await new Promise((resolve) => setTimeout(resolve, 500));
     verify("点击弹层外部可收起 TDesign 菜单", menuClosed());
     pageTrigger.focus();
     verify("TDesign 页面菜单触发器可获得键盘焦点", document.activeElement === pageTrigger);
