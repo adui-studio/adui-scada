@@ -2264,3 +2264,9 @@ D5b9p 基于该主线，审查发现取消周期和取消订阅同时抛错时�
 维护者 Windows 实测 PR #155 `alarm-subscription-adapter.test.ts` **20/20**、`vp check` **435 个文件格式正确/286 个受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个自有文件**。远程最终一笔提交仅格式化测试断言，审查无未解决线程，维护者明确同意后 Squash 合并至 `main@bec400c3cb8ad8cef22416712eaaf481e1e9105d`。这些统计来自维护者 Windows 日志，不冒充测试运行在协作环境。
 
 D5b9q 基于该主线增强 `AlarmSubscriptionAdapter.snapshot()`：正在运行且已有基线时，每次对外读取均通过受控时钟重新检查已有时间窗口；即使调度回调延迟，过期数据也在读取时 fail-closed 清理并返回空基线。无基线等待期不读取时钟；时钟错误按原有异常路径停止资源。新增 **4 项单测定义**，本文件共 **24 项**，**尚无 D5b9q Windows 实测**。仍未实现可信设备来源、真实工业调度、报警事件/确认/审计及生产发布许可。
+
+## 2026-11-23 · PR #156 Windows 验收合并与 D5b9r 超龄基线续接阻断候选
+
+维护者 Windows 对 PR #156 `alarm-subscription-adapter.test.ts` 实测 **24/24**、`vp check` **435 格式文件/286 受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个自有文件**。远程 PR HEAD 没有额外提交，审查无未解决线程，在维护者明确同意后 Squash 合并至 `main@fe02273d38d3291c2483061dbe8990b6024deff0`；该日志不提供本地 HEAD，不虚构具体实测提交绑定。
+
+D5b9r 基于上述主线，在共享 Core 会话归约器处理 delta 前先校验**旧基线**的新鲜度，防止周期调度和 `snapshot()` 均未执行时，被一条新鲜增量静默续接超龄序列。修改归约器及两份定向测试：会话归约器 **11→16 项**，订阅适配器 **24→25 项**（共新增 **6 项测试定义**）。同时更新 SDD、PROJECT_CONTEXT、CODEBASE_MAP、VALIDATION、AI_MISTAKES。**D5b9r 本批尚无 Windows 实测结果**，不声称源时钟、来源认证、真实订阅或工业报警已完成。
