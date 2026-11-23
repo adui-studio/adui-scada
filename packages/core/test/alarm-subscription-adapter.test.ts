@@ -272,12 +272,13 @@ test("周期取消重入启动新会话时先清空旧基线，不能复用原�
   const source = new TestSource();
   let adapter: AlarmSubscriptionAdapter;
   let cancellations = 0;
+  let baselineClearedBeforeCancellation = false;
   const scheduler: AlarmSubscriptionScheduler = {
     every(_intervalMs, _callback) {
       return () => {
         cancellations += 1;
         if (cancellations === 1) {
-          expect(adapter.snapshot().baseline).toBeNull();
+          baselineClearedBeforeCancellation = adapter.snapshot().baseline === null;
           adapter.start();
         }
       };
@@ -293,6 +294,7 @@ test("周期取消重入启动新会话时先清空旧基线，不能复用原�
   const oldCallback = source.handlers[0];
   adapter.stop();
 
+  expect(baselineClearedBeforeCancellation).toBe(true);
   expect(adapter.isRunning()).toBe(true);
   expect(adapter.snapshot().generation).toBe(1);
   expect(source.handlers).toHaveLength(2);
