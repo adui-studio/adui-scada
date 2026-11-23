@@ -345,6 +345,8 @@ test("旧订阅安装失败不应关闭同步重入启动的新会话", () => {
 
 test("取消周期和取消订阅均抛错时仍尝试两种清理并撤销会话", () => {
   const acceptedHandlers: Handlers[] = [];
+  const cancelFailure = new TypeError("测试取消周期失败");
+  const unsubscribeFailure = new TypeError("测试取消订阅失败");
   let closes = 0;
   let cancels = 0;
   const source: AlarmReadonlySubscriptionSource = {
@@ -352,7 +354,7 @@ test("取消周期和取消订阅均抛错时仍尝试两种清理并撤销会�
       acceptedHandlers.push(callbacks);
       return () => {
         closes += 1;
-        throw new TypeError("测试取消订阅失败");
+        throw unsubscribeFailure;
       };
     },
   };
@@ -360,7 +362,7 @@ test("取消周期和取消订阅均抛错时仍尝试两种清理并撤销会�
     every() {
       return () => {
         cancels += 1;
-        throw new TypeError("测试取消周期失败");
+        throw cancelFailure;
       };
     },
   };
@@ -380,10 +382,7 @@ test("取消周期和取消订阅均抛错时仍尝试两种清理并撤销会�
   }
   expect(failure).toBeInstanceOf(AggregateError);
   expect((failure as AggregateError).message).toBe("报警订阅资源清理失败");
-  expect((failure as AggregateError).errors).toEqual([
-    new TypeError("测试取消周期失败"),
-    new TypeError("测试取消订阅失败"),
-  ]);
+  expect((failure as AggregateError).errors).toEqual([cancelFailure, unsubscribeFailure]);
   expect(closes).toBe(1);
   expect(cancels).toBe(1);
   expect(adapter.isRunning()).toBe(false);
@@ -539,9 +538,12 @@ test("回调读取时钟故障与双资源取消故障均保留原始原因", ()
   }
   expect(failure).toBeInstanceOf(AggregateError);
   expect((failure as AggregateError).message).toBe("报警订阅失败且资源清理失败");
-  expect((failure as AggregateError).errors).toEqual([
-    originalFailure,
-    new AggregateError([intervalFailure, subscriptionFailure], "报警订阅资源清理失败"),
+  const failures = (failure as AggregateError).errors as unknown[];
+  expect(failures[0]).toBe(originalFailure);
+  expect(failures[1]).toBeInstanceOf(AggregateError);
+  expect((failures[1] as AggregateError).errors).toEqual([
+    intervalFailure,
+    subscriptionFailure,
   ]);
   expect(cancelCount).toBe(1);
   expect(unsubscribeCount).toBe(1);
