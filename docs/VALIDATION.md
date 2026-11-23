@@ -4365,3 +4365,11 @@ git status --short
 **当前最小候选**：仅修改 `scripts/test-studio-browser.mjs`，使文件草稿菜单的真实 TDesign Popup 关闭后等待面板不可见；本地历史库初始化后明确点击关闭并等待隐藏，再向既有 IndexedDB 版本库注入旧快照；版本列表等待超时区分面板未挂载、不可见或忙碌。仍使用真实按钮触发，不调用旧 `details.open`；保留 12 秒列表加载门禁、原始 SHA-256、只读归一化、历史恢复以及 React/Vue 全部安全断言。**异步关闭与后续打开竞争目前是代码层面的怀疑，不是经实测确认的唯一根因。** 未修改正式业务组件、IndexedDB Schema、CAS、权限或工业通信。
 
 **待维护者在最新 HEAD Windows 复验**：`node --check scripts/test-studio-browser.mjs`、`vp check`、`pnpm run docs:check`、`pnpm run test:legacy:browser`；如通过，再运行 `pnpm run test:versions`、`pnpm run test:versions:safety` 和 `pnpm run test:release:preflight:browser`。失败时保留新状态分类，不通过放宽时间、删除断言或覆盖真实迁移数据掩盖问题。PR #187 继续 Draft，未经完整验收及明确授权不得合并。
+
+## 2026-11-23 · PR #187 E-107 修复 finally 抛错导致 Vite+ 告警
+
+维护者对上一版 PR #187 执行 `vp check --fix` 的真实日志：`eslint(no-unsafe-finally)` 报告 `scripts/test-studio-browser.mjs:1743` 在 `finally` 中抛出「TDesign 文件草稿弹层关闭超时」可能覆盖原始异常，**0 错误、1 告警**，格式化完成。因存在告警，本轮不能标记为质量门禁通过，且尚未提供修复后浏览器验收结果。
+
+本次已将 `studioDraftFileActionInPage` 的 5 秒 Popup 关闭等待移至 `finally` 外；`finally` 只恢复测试临时替换的 `window.confirm` 并触发关闭。成功通知改用局部变量保留，正常操作后再检查关闭结果，原有 12 秒业务等待、失败异常传播和关闭超时均保留；未更改正式组件、历史版本仓储及安全断言。详见 E-107。
+
+**最新候选待 Windows 实测**：同步 PR #187 HEAD 后执行 `node --check scripts/test-studio-browser.mjs`、`vp check`、`pnpm run docs:check` 和 `pnpm run test:legacy:browser`。只有完整通过后再运行 `pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:release:preflight:browser`；不得以 `vp check --fix` 的「Formatting completed」代替零告警结论。PR 保持 Draft，未经明确授权不得合并。
