@@ -4,6 +4,8 @@ import {
   Button as TButton,
   Collapse as TCollapse,
   CollapsePanel as TCollapsePanel,
+  Checkbox as TCheckbox,
+  Select as TSelect,
   Dropdown as TDropdown,
   Input as TInput,
   Popup as TPopup,
@@ -709,10 +711,8 @@ const handlePageMenuClick: NonNullable<DropdownProps["onClick"]> = ({ value }) =
   }
 };
 
-function selectCopyTarget(event: Event) {
-  if (event.target instanceof HTMLSelectElement) {
-    preferredCopyTargetPageId.value = event.target.value;
-  }
+function selectCopyTarget(value: string | number | Array<string | number>) {
+  if (typeof value === "string") preferredCopyTargetPageId.value = value;
 }
 
 function copySelectedToPage() {
@@ -723,12 +723,11 @@ function copySelectedToPage() {
   );
 }
 
-function changeTagBinding(event: Event) {
+function changeTagBinding(value: string | number | Array<string | number>) {
   const slot = bindingSlot.value;
-  if (slot === null || !(event.target instanceof HTMLSelectElement)) return;
-  const tagId = event.target.value;
+  if (slot === null || typeof value !== "string") return;
   apply(
-    () => editor.setSelectedBinding(slot, tagId === "" ? null : tagId),
+    () => editor.setSelectedBinding(slot, value === "" ? null : value),
     "已修改模拟 Tag 绑定，可撤销",
   );
 }
@@ -889,17 +888,12 @@ async function locateSelectedLayer() {
   notice.value = "已定位选中图元所在图层";
 }
 
-function selectLayerTarget(event: Event) {
-  if (event.target instanceof HTMLSelectElement) {
-    preferredLayerTargetId.value = event.target.value;
-  }
+function selectLayerTarget(value: string | number | Array<string | number>) {
+  if (typeof value === "string") preferredLayerTargetId.value = value;
 }
 
-function selectLayerPosition(event: Event) {
-  if (!(event.target instanceof HTMLSelectElement)) return;
-  if (event.target.value === "before" || event.target.value === "after") {
-    layerInsertPosition.value = event.target.value;
-  }
+function selectLayerPosition(value: string | number | Array<string | number>) {
+  if (value === "before" || value === "after") layerInsertPosition.value = value;
 }
 
 function moveSelectedLayerPrecisely() {
@@ -2258,17 +2252,14 @@ async function importJson(event: Event) {
           <div class="studio-copy-tools">
             <label class="studio-field">
               复制选中图元到
-              <select
-                aria-label="跨页面复制目标"
-                :value="copyTargetPageId"
-                :disabled="copyTargetPages.length === 0"
-                @change="selectCopyTarget"
-              >
-                <option v-if="copyTargetPages.length === 0" value="">暂无其他页面</option>
-                <option v-for="item in copyTargetPages" :key="item.id" :value="item.id">
-                  {{ item.name }}
-                </option>
-              </select>
+              <TSelect
+                  :value="copyTargetPageId"
+                  :disabled="copyTargetPages.length === 0"
+                  :options="copyTargetPages.length === 0
+                    ? [{ label: '暂无其他页面', value: '' }]
+                    : copyTargetPages.map((item) => ({ label: item.name, value: item.id }))"
+                  @change="selectCopyTarget"
+                />
             </label>
             <TButton
               type="button"
@@ -2296,18 +2287,9 @@ async function importJson(event: Event) {
               <div class="studio-view-section">
                 <p>网格与吸附</p>
                 <div class="studio-canvas-settings">
-                  <label class="studio-canvas-option">
-                    <input v-model="gridVisible" type="checkbox" />
-                    显示网格
-                  </label>
-                  <label class="studio-canvas-option">
-                    <input v-model="gridSnap" type="checkbox" />
-                    网格吸附
-                  </label>
-                  <label class="studio-canvas-option">
-                    <input v-model="nodeSnap" type="checkbox" />
-                    图元吸附
-                  </label>
+                  <TCheckbox v-model="gridVisible" class="studio-canvas-option">显示网格</TCheckbox>
+                  <TCheckbox v-model="gridSnap" class="studio-canvas-option">网格吸附</TCheckbox>
+                  <TCheckbox v-model="nodeSnap" class="studio-canvas-option">图元吸附</TCheckbox>
                 </div>
               </div>
               <div class="studio-view-section">
@@ -2536,21 +2518,22 @@ async function importJson(event: Event) {
           <h3>Tag 绑定（项目数据）</h3>
           <label v-if="bindingSlot" class="studio-field">
             {{ bindingSlot }} · 选择项目 Tag
-            <select
-              :value="selectedTagId"
-              :aria-label="selected.id + ' 的 ' + bindingSlot + ' Tag 绑定'"
-              @change="changeTagBinding"
-            >
-              <option value="">不绑定</option>
-              <option v-if="missingBindingTag" :value="selectedTagId" disabled>
-                {{ selectedTagId }}（当前工程未定义或类型待确认）
-              </option>
-              <option v-for="option in tagCandidates" :key="option.tagId" :value="option.tagId">
-                {{ option.displayName }} · {{ option.tagId }} ·
-                {{ TAG_DATA_TYPE_LABELS[option.dataType]
-                }}{{ option.unit ? " · " + option.unit : "" }}
-              </option>
-            </select>
+            <TSelect
+                :value="selectedTagId"
+                :aria-label="selected.id + ' 的 ' + bindingSlot + ' Tag 绑定'"
+                :options="[
+                  { label: '不绑定', value: '' },
+                  ...(missingBindingTag
+                    ? [{ label: selectedTagId + '（当前工程未定义或类型待确认）', value: selectedTagId, disabled: true }]
+                    : []),
+                  ...tagCandidates.map((option) => ({
+                    label: option.displayName + ' · ' + option.tagId + ' · ' +
+                      TAG_DATA_TYPE_LABELS[option.dataType] + (option.unit ? ' · ' + option.unit : ''),
+                    value: option.tagId,
+                  })),
+                ]"
+                @change="changeTagBinding"
+              />
           </label>
           <p v-if="selectedTagDefinition" class="studio-tip">
             {{ selectedTagDefinition.description }}；质量由实时 Tag 数据动态提供
@@ -2661,28 +2644,29 @@ async function importJson(event: Event) {
               <div class="studio-exact-layer" aria-label="图层精确插入">
                 <label class="studio-field">
                   目标图元
-                  <select
-                    aria-label="图层插入目标"
+                  <TSelect
                     :value="layerTargetId"
                     :disabled="!canPreciselyMove || layerTargetNodes.length === 0"
+                    :options="[
+                      { label: '请选择目标图元', value: '' },
+                      ...layerTargetNodes.map((node) => ({
+                        label: node.id + (node.groupId ? '（组合）' : ''),
+                        value: node.id,
+                      })),
+                    ]"
                     @change="selectLayerTarget"
-                  >
-                    <option value="">请选择目标图元</option>
-                    <option v-for="node in layerTargetNodes" :key="node.id" :value="node.id">
-                      {{ node.id }}{{ node.groupId ? "（组合）" : "" }}
-                    </option>
-                  </select>
+                  />
                 </label>
                 <label class="studio-field">
                   插入位置
-                  <select
-                    aria-label="图层插入位置"
+                  <TSelect
                     :value="layerInsertPosition"
+                    :options="[
+                      { label: '目标上方（更靠前）', value: 'after' },
+                      { label: '目标下方（更靠后）', value: 'before' },
+                    ]"
                     @change="selectLayerPosition"
-                  >
-                    <option value="after">目标上方（更靠前）</option>
-                    <option value="before">目标下方（更靠后）</option>
-                  </select>
+                  />
                 </label>
                 <TButton
                   type="button"
