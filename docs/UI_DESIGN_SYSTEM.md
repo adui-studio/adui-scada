@@ -144,3 +144,14 @@ React 使用 `tdesign-react@1.18.6`，Vue 使用 `tdesign-vue-next@1.20.11`。�
 Studio 旧原生 `details`、`summary`、绝对定位浮层样式已撤换，由 Popup 与 Collapse 处理可见性及焦点；旧版 `window.confirm/prompt` 由可取消的 TDesign Dialog 代替。对话框关闭或 Esc 应相当于取消，确认后的业务逻辑仍执行原有会话/草稿/工程版本安全检查。Upload 仅用于本地 JSON 文件选择并显式禁用自动上传，不对外发送组态工程文件。
 
 工业 SVG 画布、2D 图元、命中层、变换手柄和图层树拖拽继续采用自研实现；侧栏宽度 252px/320px、16:9 画布和固定全屏滚动契约没有有意调整。本批暂为 GitHub 候选，键盘可访问性、视觉与两端运行回归待 Windows 在最终 HEAD 验收。
+
+## D5c0x · Studio 图层与 Tag 紧凑控件视觉收敛
+
+维护者已用正式 Studio 深色截图指出左侧分界线/输入高亮过强、图层列表边框层级不协调，以及右侧 Tag 管理的编辑删除按钮偏大且高度不一致。本批仅修正这些视觉问题；红框是截图标注，不是新的业务状态。
+
+- **统一尺寸**：Tag 项操作及表单动作均为双列等宽、28px 高，复用 `--adui-control-height-sm`、`--adui-font-size-xs` 和 `--adui-space-*`；左侧搜索使用 TDesign `size=small`，图层行延续 32px 视觉目标。不同用途的工具区域可有不同尺寸刻度，但同一组内不混用。
+- **弱化描边**：两端清理原生表单重复描边和所有 TDesign Button 的 `height:auto` 覆盖；聚焦态由 TDesign 负责，不再给所有 button/input 额外叠加亮青色 2px 轮廓。SVG/图层拖拽行的键盘焦点仍显式可见；侧栏和 Tag 折叠区使用现有 `--scada-border-subtle` 而非临时硬编码色值。
+- **保留语义**：Tag「编辑」「删除」使用 TDesign 的 `variant=text`，删除保留 `danger` 语义与原二次确认及绑定保护；表单保存/清空保留原有提交事件、禁用和类型验证。图层行使用 TDesign Text Button，但拖拽、点击、组合和选中状态逻辑全部不变。
+- **双版本同构**：React/Vue Tag 目录共享 `studio-tag-manager`、`studio-tag-actions`、`studio-tag-form-actions` 等视觉类；所有新增视觉 CSS 只维护在共享 `@adui/tailwind/studio.css`，两端原 `studio.css` 仅同步清理已有重复覆盖。左 252px / 右 320px、画布 16:9、外层无滚动契约不调整。
+
+**验证要求**：先运行 `typecheck:web`、`vp check`、`messages:check`、`docs:check`，再执行 React/Vue 四视口 `test:browser` 和双端 `test:tags:browser`（包含 Tag 两组操作按钮实测等高/等宽断言）；还须检查键盘 Tab 焦点与选中态、长 Tag ID 折行、缩放时不溢出。实际运行与截图复验尚待维护者 Windows。
