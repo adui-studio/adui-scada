@@ -1435,3 +1435,13 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-baseline-session.ts`：在事件代次参数基本校验之后、旧代次忽略之前，优先识别 `invalidated === true && baseline !== null` 的矛盾状态，复用 `invalidate(..., "SESSION_INVALIDATED")` 返回冻结且空基线的终止态，不返回残留数值。正常 `invalidated: true, baseline: null` 的原状态对象仍保留。
 - `packages/core/test/alarm-baseline-session.test.ts`：新增两项测试定义，文件 25→27，覆盖同代次及旧代次遇到矛盾失效状态、返回旧基线清空、原对象不变、后续失效持续与其他代次忽略恢复。
 - `AlarmBaselineSessionController` / `AlarmSubscriptionAdapter` 正常生成的失效状态不矛盾，无需生产修改。TagStore、Runtime、NestJS/Prisma、双框架 UI、工业网关和发布门禁均不改变。
+
+## 2026-11-23 · D5c0a FR-011 报警候选时区明确性校验（候选）
+
+- `packages/core/src/alarm-tag-freshness.ts`：在通用 Tag 验证及 GOOD 数值筛选后，要求报警候选 `serverTimestamp` 为包含 `Z` 或 `±HH:mm` 偏移的 ISO 日期时间字符串，避免本地时区解析歧义；无偏移时抛中文 TypeError，不修改通用 `tag-store.ts`。
+- `packages/core/test/alarm-tag-freshness.test.ts`：新增 1 项（6→7），覆盖显式偏移正常转换、无时区或日期格式拒绝、坏质量拒绝优先级及来源时间保持不受此规则限制。
+- `packages/core/test/alarm-snapshot-baseline.test.ts`：新增 1 项（7→8），覆盖直接初始快照不能用无时区时间建立基线。
+- `packages/core/test/alarm-tag-delta.test.ts`：新增 1 项（16→17），覆盖新旧基线无时区时间均被直接增量 API 拒绝。
+- `packages/core/test/alarm-baseline-session.test.ts`：新增 1 项（27→28），覆盖非法快照与增量转化为 `BASELINE_INVALIDATED/INVALID_INPUT`，原代次不能恢复。
+- `packages/core/test/alarm-subscription-adapter.test.ts`：新增 1 项（29→30），覆盖非法首次快照后的关闭订阅、回收定时器及旧回调拒绝。
+- Controller、Adapter、TagStore 的生产代码无改动，功能仍为候选安全过滤而非可信时钟来源认证。

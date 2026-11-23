@@ -1389,3 +1389,11 @@ D5b9u 已使正常失效会话写入 `invalidated: true, baseline: null`，D5b9y
 D5b9z 在校验事件代次合法之后、判断其他代次之前增加一次矛盾终止态清理：若 `state.invalidated === true && state.baseline !== null`，立即调用现有 `invalidate(state, "SESSION_INVALIDATED")`，返回**冻结的新状态**且 `baseline: null`。此处有意优先于旧代次忽略，因为不能将携带旧数值的不一致状态原样返回。对正确的已终止状态（`invalidated: true, baseline: null`），原有同代次拒绝保留原状态引用、旧代次忽略及无额外分配的规则不变。未终止的首次等待、正常快照/增量和显式递增代次重启语义均不变。
 
 此防护只针对已经标记为失效的**矛盾输入状态**，不证明公开纯函数接收到的状态真实可信，也不能阻止攻击者完全构造另一份未失效状态；来源认证、代次分配、服务端时钟及实际报警业务必须由可信上游实现。无新增公共字段、拒绝枚举、工业网关或设备写入，正式发布 Gate 继续 fail-closed。
+
+## 2026-11-23 · D5c0a FR-011 报警候选服务器时间必须携带明确时区（候选）
+
+已合并 D5b9z 后继续审查：通用 `validateTagValue` 对 `serverTimestamp` 仅要求 `Date.parse` 能解析，允许 `2026-11-22T08:59:59.000` 等没有 `Z` 或偏移量的本地日期时间，也允许日期字符串。ECMAScript 对无偏移的日期时间按运行环境本地时区解释；在服务器、Windows 浏览器与其他时区环境中，同一字符串可能对应不同 UTC 毫秒值。报警候选的 `classifyTimelyNumericAlarmSample` 直接用 `Date.parse(serverTimestamp)` 判断时效，从而存在跨宿主解释不一致的公共 API 输入风险。这是代码契约可达的歧义，并无真实工业现场事故证据。
+
+D5c0a 只在 `packages/core/src/alarm-tag-freshness.ts` 的 **GOOD 且有限数值**候选分支，对 `serverTimestamp` 增加显式时区格式要求：`YYYY-MM-DDTHH:mm:ss[.fraction]Z` 或 `YYYY-MM-DDTHH:mm:ss[.fraction]±HH:mm`，日期分量与偏移可解析性继续由原 `validateTagValue` / `Date.parse` 校验。缺少明确时区时抛出既有非法输入模式的 `TypeError("报警服务器时间戳必须包含明确时区")`，不产出 `READY` 或工艺数值；不新增状态枚举。明确 `+09:00` 等偏移换算与等价 UTC 时间可正常接受；先前的 `QUALITY_NOT_GOOD` / `NOT_NUMERIC` 优先拒绝保持不变，`sourceTimestamp` 不作为报警时效或顺序依据。
+
+初始快照与公开增量入口分别继承此校验，非法候选日期在直接调用时抛错；`transitionAlarmBaselineSession` 已有 TypeError 捕获将其转换为 `BASELINE_INVALIDATED/INVALID_INPUT` 并冻结清空基线；`AlarmSubscriptionAdapter` 按原有路径停止订阅及尝试释放资源。没有改动通用 `TagStore` 的历史解析契约、Vue/React Studio、Tag Schema、网络接口或设备写入。本批更严格的报警候选时间格式是**新增加的局部安全前提**，尚需维护者在 Windows 验证并在未来可信网关实现时明确执行服务端时间规范化。解析出有时区的值仍不能证明来源身份、服务端时间赋值权或物理测量真实可信。正式报警规则、确认、不可变审计与发布 Gate 保持未实现或 fail-closed。

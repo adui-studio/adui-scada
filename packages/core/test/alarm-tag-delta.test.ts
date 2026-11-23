@@ -318,3 +318,32 @@ test("直接增量入口不能以更大序列号接受倒退的服务端时间",
     ).status,
   ).toBe("DELTA_ACCEPTED");
 });
+
+test("直接增量入口拒绝新读数或旧基线的无时区服务器时间", () => {
+  expect(() =>
+    advanceAlarmTagDeltaBaseline(
+      {
+        ...request,
+        change: {
+          kind: "delta",
+          values: [{ ...next, serverTimestamp: "2026-11-22T08:59:59.000" }],
+        },
+      },
+      nowMs,
+      1000,
+    ),
+  ).toThrow("报警服务器时间戳必须包含明确时区");
+  expect(() =>
+    advanceAlarmTagDeltaBaseline(
+      {
+        ...request,
+        baseline: {
+          generation: 2,
+          value: { ...previous, serverTimestamp: "2026-11-22T08:59:59.000" },
+        },
+      },
+      nowMs,
+      1000,
+    ),
+  ).toThrow("报警服务器时间戳必须包含明确时区");
+});
