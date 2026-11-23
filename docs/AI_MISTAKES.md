@@ -1075,3 +1075,12 @@
 - **最小修复候选**：只修改三个 Vue SFC。六处 `@change` 处理函数参数类型统一为 `unknown`，函数内部仍只接收字符串 ID 或限定枚举；拒绝将对象、数组、数字、`bigint` 转成非法 Tag/页面/图层 ID。把 Tag 绑定下拉候选项提为 `<script setup>` 中的 `tagBindingOptions = computed(...)`，模板仅使用 `:options="tagBindingOptions"`。保留“未绑定”、历史缺失 Tag 占位、数据类型中文标签及原有 Tag 类型约束；不触碰 React、Core、Schema、CAS、OIDC 与工业写入边界。
 - **防复发与验证**：双框架 UI 组件事件回调不能按原生 `select` 事件的值域自行缩窄形参；先核对各自固定版本 API，宽接受、窄校验。复杂选项列表放在脚本 `computed`，减少 Volar 模板自动展开的歧义。**目前只完成 GitHub 源码静态核对；修复后的 Windows `pnpm run typecheck:web`、`vp check`、`docs:check` 及双框架浏览器测试仍待真实执行**，不可将本次改动视为质量门禁通过。
 - **证据**：维护者 2026-11-23 Windows PowerShell 中 `vue-tsc` 七条错误及最终失败退出码、PR #188 的三个 Vue SFC、`tdesign-vue-next@1.20.11` 固定官方 `select/type.ts`。
+
+### E-111 · D5c0w 全量 TDesign 迁移后残留原生样式导致 Studio 控件视觉不一致
+
+- **真实现象**：2026-11-23 维护者提交 React/Vue TDesign 全量迁移后 Studio 深色页面截图，红框标示左侧图层区的输入描边、图层行与侧栏分界，以及右侧 Tag 定义区的编辑/删除按钮：焦点/边框过亮、右侧按钮纵向大块堆叠、同一区域按钮尺寸不一致。维护者同期 Windows `typecheck:web`、`vp check`（448/291 零告警）、`messages:check`（318 文件）、`docs:check`（94 文档）通过；**这些静态检查并不能证明视觉质量或所有浏览器安全测试通过**。PR #188 经明确授权 Squash 合并为 `main@30d1133e711361640e9b86bd89664a19aee6c085`。
+- **源码原因**：迁移后两套 `apps/web-*/src/studio/studio.css` 仍向全部 TDesign Button 注入 `height:auto` 和最小高度，遗留 `.studio-field input/select/textarea` 的原生边框与填充；`packages/tailwind/src/studio.css` 对所有原生控件无差别应用强烈的青色 `:focus-visible` 轮廓。TagManager 的条目与表单操作沿用未专门布局的 `studio-toolbox`，所以旧式全宽按钮行为与新 TDesign `size=small` 并存；左侧图层选中边框及侧栏边界叠加强调。
+- **修复候选**：新 D5c0x 分支最小范围内，将 Tag 条目和表单动作明确分为各自 2 列并统一 `--adui-control-height-sm`（28px），编辑/删除分别使用现有 TDesign Text Button 及 danger 语义，不再堆叠整列主色按钮；两端图层行复用 TDesign Text Button，搜索使用 `size=small`。清理两端旧按钮通用高度覆盖和原生输入二次描边；共享 CSS 将焦点交给 TDesign 自己管理，仅保留专用图层键盘焦点状态，同时柔化侧栏分界与选中边框。不改 Tag 删除确认、Tag ID、图层命中/拖拽、工程 Schema、CAS 或工业安全边界。
+- **防复发**：迁移 UI 组件时必须同时清理旧原生控件尺寸/轮廓覆盖，而不是仅替换 JSX/Vue 标签；对同一业务区域增加真实 DOM 的尺寸/布局断言。已在 `test:tags:browser` 对两端 Tag 行及表单动作增加双列、等宽、等高约束。**截至候选提交未执行 Windows Vite+/真实浏览器，静态 CSS 和源码检查不等于完成验收**。
+- **证据**：维护者 2026-11-23 Studio 截图、两端 `TagManager` 和 `studio.css`、共享 `@adui/tailwind/studio.css`、原 `scripts/test-studio-browser.mjs` 及 PR #188。
+
