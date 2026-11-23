@@ -106,3 +106,11 @@
 - **等值原则**：12 条 CSS 声明将 6/8/12px 间距、11/12px 字号及 1.5 行高映射到现有 `--adui-space-3/4/5`、`--adui-font-size-2xs/xs`、`--adui-line-height-normal`，计算值保持不变。7/9/10px 等无匹配 Token 的特殊值保留。
 - **不变项**：弹层宽度 `min(378px, calc(100vw - 24px))`、最大高度 `min(70vh, 610px)`、Studio 252px/320px 侧栏、16:9 SVG、版本保存/载入/回滚语义、禁用和键盘焦点规则全部不变。
 - **测试边界**：新增一项静态主题回归检查所用 Token 与弹层几何；Windows Vite+ 和双端浏览器验证仍待执行。
+
+## D5c0s · TDesign 组件复用优先于手工弹层
+
+现阶段暂停继续把原生弹层 CSS 的逐像素 Token 迁移当作 UI 主线；先执行 [TDesign 组件复用审计](TDESIGN_COMPONENT_AUDIT.md)。仓库已安装 `tdesign-react@1.18.6`、`tdesign-vue-next@1.20.11`，对应官方固定标签源码均已核查 Dropdown、Popup、Dialog、Collapse、Upload 等组件能力。两端 Studio 各 9 处手写 `details/summary`，`ServerProjectBrowser` 每端另 1 处，合计 20 处；可复用范围和特殊交互边界见审计矩阵。
+
+**设计门禁**：简单命令菜单优先 Dropdown；含表单、版本列表、授权操作的复杂浮层优先 Popup/Drawer；二次确认优先 Dialog/Popconfirm；属性侧栏行内折叠优先 Collapse；本地 JSON 文件选择可评估 Upload，但必须关闭自动上传并保留原数据校验。TDesign 组件负责弹层定位、禁用态及交互生命周期，不能继续以 `position:absolute + z-index + details/summary` 模拟第三方组件已有能力。
+
+上述结论尚未实施生产组件替换；应先完成相关官方 API 和 Windows 类型/浏览器实测。原有浏览器用例对 `details.open` 的依赖需要随迁移调整为真实 TDesign 触发路径，保留所有工程数据、权限、工业安全及 Studio 几何断言。
