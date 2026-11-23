@@ -918,60 +918,6 @@
   border-top: 1px solid var(--scada-border-subtle);
 }
 
-/* Tag 是工程数据目录而非主导航，紧凑行及等高动作优先使用共享 Token。 */
-.studio-tag-manager {
-  min-width: 0;
-}
-.studio-tag-manager .studio-tag-item {
-  padding: var(--adui-space-3) 0 var(--adui-space-4);
-  border-bottom: 1px solid var(--scada-border-subtle);
-  line-height: var(--adui-line-height-normal);
-}
-.studio-tag-manager .studio-tag-item:last-child {
-  border-bottom: 0;
-}
-.studio-tag-manager .studio-tag-item > p {
-  margin: var(--adui-space-2) 0 0;
-}
-.studio-tag-manager .studio-tag-item strong {
-  color: var(--scada-text-strong);
-  font-weight: var(--adui-font-weight-semibold);
-}
-.studio-tag-manager .studio-tag-actions,
-.studio-tag-manager .studio-tag-form-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--adui-space-3);
-  margin-top: var(--adui-space-3);
-}
-.studio-tag-manager .studio-tag-actions .t-button,
-.studio-tag-manager .studio-tag-form-actions .t-button {
-  min-width: 0;
-  width: 100%;
-  min-height: var(--adui-control-height-sm);
-  height: var(--adui-control-height-sm);
-  padding: 0 var(--adui-space-4);
-  font-size: var(--adui-font-size-xs);
-  white-space: nowrap;
-}
-.studio-tag-manager .studio-tag-form {
-  padding-top: var(--adui-space-4);
-  border-top: 1px solid var(--scada-border-subtle);
-}
-.studio-tag-manager .studio-tag-form > strong {
-  font-size: var(--adui-font-size-xs);
-  color: var(--scada-text-strong);
-}
-.studio-tag-manager .studio-field {
-  gap: var(--adui-space-2);
-  margin: 0;
-  font-size: var(--adui-font-size-xs);
-}
-.studio-tag-manager .studio-tip {
-  font-size: var(--adui-font-size-2xs);
-  line-height: var(--adui-line-height-normal);
-}
-
 .studio-advanced .studio-tool-group {
   gap: var(--adui-space-3);
   margin: 10px 0;
@@ -1562,35 +1508,6 @@
 .studio-advanced-content {
   background: var(--scada-surface);
 }
-.studio-tag-manager .studio-tag-item {
-  padding: var(--adui-space-4) 0;
-  border-bottom-color: var(--scada-border-subtle);
-}
-.studio-tag-manager .studio-tag-item strong {
-  color: var(--scada-text-strong);
-  font-weight: 700;
-}
-.studio-tag-manager .studio-tag-actions,
-.studio-tag-manager .studio-tag-form-actions {
-  gap: var(--adui-space-3);
-}
-.studio-tag-manager .studio-tag-actions .t-button,
-.studio-tag-manager .studio-tag-form-actions .t-button {
-  height: var(--adui-control-height-sm);
-  min-height: var(--adui-control-height-sm);
-  border-radius: 7px;
-  font-size: var(--adui-font-size-xs);
-}
-.studio-tag-manager .studio-tag-form {
-  border-top-color: var(--scada-border);
-}
-.studio-tag-manager .studio-tag-form > strong {
-  color: var(--scada-text-strong);
-  font-size: var(--adui-font-size-xs);
-}
-.studio-tag-manager .studio-tip {
-  color: var(--scada-text-secondary);
-}
 .studio-statusbar {
   height: 38px;
   gap: 14px;
@@ -1672,5 +1589,275 @@
   .studio-shell *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+}
+
+/* D5c1 Tag 工作流：侧栏仅浏览、搜索与选择，完整表单使用独立 TDesign Dialog。 */
+.studio-tag-manager {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+}
+.studio-tag-toolbar {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.studio-tag-toolbar-title {
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-sm);
+  font-weight: 750;
+}
+.studio-tag-toolbar .t-button {
+  flex: none;
+  min-height: 32px;
+  border-radius: 7px;
+  font-size: var(--adui-font-size-xs);
+}
+.studio-tag-search {
+  min-width: 0;
+  width: 100%;
+}
+.studio-tag-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--scada-border-subtle);
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-2xs);
+  font-variant-numeric: tabular-nums;
+}
+.studio-tag-summary span {
+  color: var(--scada-text-muted);
+}
+.studio-tag-list {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+.studio-tag-item {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid var(--scada-border-subtle);
+  border-radius: 9px;
+  background: var(--adui-color-surface-muted);
+  line-height: var(--adui-line-height-normal);
+}
+.studio-tag-item:hover,
+.studio-tag-item:focus-within {
+  border-color: var(--scada-border);
+  background: var(--scada-surface);
+}
+.studio-tag-item-heading {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+.studio-tag-item-heading strong {
+  min-width: 0;
+  flex: 1;
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+.studio-tag-type {
+  flex: none;
+  max-width: 70px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--scada-active-bg);
+  color: var(--scada-primary);
+  font-size: var(--adui-font-size-2xs);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.studio-tag-id {
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-2xs);
+  overflow-wrap: anywhere;
+}
+.studio-tag-item-note {
+  margin: 6px 0 0;
+  color: var(--scada-text-muted);
+  font-size: var(--adui-font-size-2xs);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.studio-tag-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-top: 6px;
+}
+.studio-tag-actions .t-button {
+  width: auto;
+  min-width: 54px;
+  height: 28px;
+  min-height: 28px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: var(--adui-font-size-xs);
+  font-weight: 650;
+}
+.studio-tag-actions .t-button:focus-visible {
+  outline: 2px solid var(--adui-color-focus-ring);
+  outline-offset: 2px;
+}
+.studio-tag-empty {
+  padding: 22px 12px;
+  border: 1px dashed var(--scada-border);
+  border-radius: 9px;
+  background: var(--adui-color-surface-muted);
+  text-align: center;
+}
+.studio-tag-empty strong {
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-xs);
+}
+.studio-tag-empty p {
+  margin: 6px 0 0;
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-2xs);
+}
+.studio-tag-catalog-help {
+  margin: 0;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: var(--adui-color-surface-muted);
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-2xs);
+  line-height: 1.65;
+}
+/* 编辑表单由 Dialog 挂载在页面根节点，不依赖 Studio 右侧栏的 320px 宽度。 */
+.studio-tag-dialog .t-dialog__body {
+  padding-top: 6px;
+}
+.studio-tag-form-intro {
+  margin: 0 0 20px;
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-sm);
+  line-height: 1.6;
+}
+.studio-tag-form {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+.studio-tag-form-grid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 18px 16px;
+}
+.studio-tag-form .studio-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  margin: 0;
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-sm);
+  font-weight: 650;
+  line-height: 1.5;
+}
+.studio-tag-form .studio-field .t-input,
+.studio-tag-form .studio-field .t-select,
+.studio-tag-form .studio-field .t-textarea {
+  min-width: 0;
+  width: 100%;
+}
+.studio-tag-form .studio-field .t-input,
+.studio-tag-form .studio-field .t-select {
+  min-height: 40px;
+}
+.studio-tag-form .studio-field .t-textarea {
+  min-height: 88px;
+}
+.studio-tag-form .studio-field .t-input:focus-within,
+.studio-tag-form .studio-field .t-select:focus-within,
+.studio-tag-form .studio-field .t-textarea:focus-within {
+  outline: 2px solid var(--adui-color-brand-focus);
+  outline-offset: 1px;
+}
+.studio-tag-description-field {
+  grid-column: 1 / -1;
+}
+.studio-tag-required {
+  color: var(--scada-danger);
+}
+.studio-tag-optional,
+.studio-tag-field-help {
+  color: var(--scada-text-muted);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.studio-tag-field-help {
+  display: block;
+}
+.studio-tag-form-error {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--adui-color-danger-border);
+  border-radius: 7px;
+  background: var(--adui-color-danger-bg);
+  color: var(--scada-danger);
+  font-size: var(--adui-font-size-sm);
+  line-height: 1.5;
+}
+.studio-tag-form-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--scada-border);
+}
+.studio-tag-form-footnote {
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-xs);
+}
+.studio-tag-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-left: auto;
+}
+.studio-tag-form-actions .t-button {
+  min-width: 98px;
+  min-height: 38px;
+  padding-inline: 16px;
+  border-radius: 8px;
+  font-size: var(--adui-font-size-sm);
+  font-weight: 650;
+}
+@media (max-width: 620px) {
+  .studio-tag-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .studio-tag-description-field {
+    grid-column: 1;
+  }
+  .studio-tag-form-actions {
+    width: 100%;
+  }
+  .studio-tag-form-actions .t-button {
+    flex: 1;
   }
 }
