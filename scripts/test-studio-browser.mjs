@@ -597,7 +597,7 @@ async function importStudioJsonInPage(json, expectSuccess) {
 async function navigateStudioForInterop(session, target, marker) {
   const url = new URL(target.url);
   url.searchParams.set("scada_interop_check", marker);
-  await session.send("Page.navigate", { url: url.href });
+  const navigation = await session.send("Page.navigate", { url: url.href });
   let loaded = false;
   for (let attempt = 0; attempt < 60; attempt += 1) {
     await pause(150);
@@ -611,8 +611,28 @@ async function navigateStudioForInterop(session, target, marker) {
     }
   }
   if (!loaded) {
-    const href = await session.evaluate("location.href");
-    throw new Error(target.name + " 页面导航失败：" + href);
+    // 只暴露固定导航状态和 Chromium 错误码，不打印浏览器异常、资源 URL 或响应正文。
+    const state = await session
+      .evaluate(
+        "({ addressMatches: location.href === " +
+          JSON.stringify(url.href) +
+          ", readyState: document.readyState })",
+      )
+      .catch(() => ({ addressMatches: false, readyState: "不可读取" }));
+    const errorText = /^net::ERR_[A-Z0-9_]{1,64}$/.test(navigation.errorText ?? "")
+      ? navigation.errorText
+      : "未提供";
+    throw new Error(
+      target.name +
+        " 页面导航失败：" +
+        url.href +
+        "；地址匹配：" +
+        state.addressMatches +
+        "；文档状态：" +
+        state.readyState +
+        "；Chromium导航错误：" +
+        errorText,
+    );
   }
   await session.evaluate("(" + enterStudioInPage.toString() + ")()");
 }
@@ -628,7 +648,11 @@ function watchStudioModuleNetwork(session, target) {
     try {
       const url = new URL(address);
       if (url.origin !== origin) return null;
+      if (url.pathname === "/") return "Web首页";
+      if (url.pathname.endsWith("/src/main.tsx")) return "React应用入口";
       if (url.pathname.endsWith("/src/studio/StudioPage.vue")) return "Studio模块";
+      if (url.pathname.endsWith("/src/studio/StudioPage.tsx")) return "Studio模块";
+      if (url.pathname.includes("react-19-adapter")) return "React19适配器";
       if (url.pathname.includes("/.vite/deps/")) return "Vite预构建依赖";
       if (url.pathname.startsWith("/src/")) return "Vue应用模块";
       if (url.pathname.startsWith("/@fs/")) return "工作区模块";
@@ -953,9 +977,19 @@ async function runStudioTagManagement(session) {
     deviceScaleFactor: 1,
     mobile: false,
   });
+  // 隔离的测试浏览器已在 E-106 确认过 HTTP 缓存写入失败；不触碰 IndexedDB/CAS。
+  await session.send("Network.enable");
+  await session.send("Network.setCacheDisabled", { cacheDisabled: true });
 
   for (const target of targets) {
-    await navigateStudioForInterop(session, target, "tag-management");
+    const network = watchStudioModuleNetwork(session, target);
+    try {
+      await navigateStudioForInterop(session, target, "tag-management");
+    } catch (error) {
+      throw new Error(error.message + "；同源网络诊断：" + network.summary(), { cause: error });
+    } finally {
+      network.stop();
+    }
     await evaluateStudioPage(session, openTagManagerInPage);
     const layout = await evaluateStudioPage(session, inspectTagActionLayoutInPage);
     for (const [kind, actions] of [
