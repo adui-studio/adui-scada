@@ -314,8 +314,16 @@ async function checkStudioInPage() {
   verify("适应按钮恢复原始视图", near(svg.viewBox.baseVal.width, originalWidth, 0.01));
 
   const menu = element(".studio-view-menu");
-  menu.open = true;
-  await settle();
+  const viewTrigger = menu.querySelector("button.t-button");
+  if (!(viewTrigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到 TDesign 视图设置触发器");
+  }
+  viewTrigger.click();
+  const viewOpened = Date.now();
+  while (!menu.querySelector(".studio-view-popover")?.getClientRects().length) {
+    if (Date.now() - viewOpened > 5000) throw new TypeError("视图设置弹层展开超时");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const label = [...menu.querySelectorAll("label")].find((item) =>
     item.textContent.includes("显示网格"),
   );
@@ -346,7 +354,7 @@ async function checkStudioInPage() {
   toggle("显示属性")?.click();
   await settle();
   verify("恢复属性后画布宽度恢复", near(bounds(stage).width, initialWidth));
-  menu.open = false;
+  viewTrigger.click();
 
   const firstLayer = document.querySelector(".studio-layer-tree .studio-layer");
   firstLayer?.click();
@@ -741,12 +749,18 @@ async function runStudioInteroperability(session) {
 }
 
 /** 只读取真实 Studio 发布预检面板的状态与问题，不访问网络或工程存储。 */
-function readStudioReleasePreflightInPage() {
-  const menu = [...document.querySelectorAll("details.studio-version-menu")].find(
-    (item) => item.querySelector("summary")?.textContent.trim() === "发布预检",
-  );
-  if (!menu) throw new Error("未找到发布预检入口");
-  menu.open = true;
+async function readStudioReleasePreflightInPage() {
+  const menu = document.querySelector(".studio-release-preflight-menu");
+  const trigger = menu?.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到发布预检 TDesign Popup 触发器");
+  }
+  if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) trigger.click();
+  const started = Date.now();
+  while (!menu.querySelector(".studio-version-panel")?.getClientRects().length) {
+    if (Date.now() - started > 5000) throw new TypeError("发布预检弹层展开超时");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const panel = menu.querySelector('[aria-label="工程发布前静态兼容性预检"]');
   if (!panel) throw new Error("未找到静态预检面板");
   const remotePanel = panel.querySelector('[aria-label="服务端已保存版本发布预检"]');
@@ -763,7 +777,7 @@ function readStudioReleasePreflightInPage() {
     path: item.querySelector("code")?.textContent.trim() ?? "",
     message: item.querySelector("p")?.textContent.trim() ?? "",
   }));
-  menu.open = false;
+  if (menu.querySelector(".studio-version-panel")?.getClientRects().length) trigger.click();
   return {
     passed: status.includes("静态兼容性检查通过"),
     issueCount: issues.length,
@@ -833,16 +847,21 @@ async function runStudioReleasePreflight(session) {
 }
 
 /** 在真实浏览器内定位项目 Tag 管理表单并打开详情区。 */
-function openTagManagerInPage() {
-  const menu = [...document.querySelectorAll("details.studio-advanced")].find((node) =>
-    node.querySelector("summary")?.textContent.includes("项目 Tag 定义"),
+async function openTagManagerInPage() {
+  const menu = [...document.querySelectorAll(".studio-advanced")].find((node) =>
+    node.querySelector(".t-collapse-panel__header")?.textContent.includes("项目 Tag 定义"),
   );
   if (!menu) throw new Error("未找到项目 Tag 定义面板");
-  menu.open = true;
-  if (!menu.querySelector('form[aria-label="项目 Tag 编辑表单"]')) {
-    throw new Error("项目 Tag 管理表单未挂载");
+  const trigger = menu.querySelector(".t-collapse-panel__header");
+  if (!(trigger instanceof HTMLElement)) throw new TypeError("Tag 定义折叠触发器不存在");
+  trigger.click();
+  const started = Date.now();
+  while (Date.now() - started < 5000) {
+    const form = menu.querySelector('form[aria-label="项目 Tag 编辑表单"]');
+    if (form?.getClientRects().length) return true;
+    await new Promise((resolve) => setTimeout(resolve, 50));
   }
-  return true;
+  throw new Error("项目 Tag 管理表单展开超时");
 }
 
 function focusTagFieldInPage(index) {
