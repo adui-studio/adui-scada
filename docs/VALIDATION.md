@@ -3600,3 +3600,40 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批未执行任何数据库迁移、真实工业网关或设备写入。协作端尚未运行项目完整 `vp`/Vitest 或 `ready`，目标 **97/97** 只是计划值；在维护者 Windows 实测与新一轮明确授权前，Draft PR 不得合并。
+
+## 2026-11-23 · D5b9x PR #163 复验合并与 D5b9y 待验收
+
+维护者 Windows 已对 PR #163 六份共享 Core 定向测试实测 **97/97**：序列10、代次8、增量16、纯归约23、托管11、适配29；`vp check` **435 个文件格式正确/286 个受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个文件**。GitHub 复核最新 HEAD `9364ae11753ba22d642221f27249bf411fc623ec` 的额外差异仅是测试排版，无未解决审查意见，按明确授权 Squash 合并至 `main@2a0834c454e332ae2d9182748503f95039822091`。用户本机日志未打印 HEAD，因此不冒充对该具体合并 SHA 的本地复验；定向质量通过不等于完整 ready 和工业现场安全认证。
+
+D5b9y 只在共享会话归约器明确执行 `CHECK_FRESHNESS` 且已有基线时增加代次和目标 Tag 归属校验，不一致通过既有原因拒绝并冻结终止态。新增两项测试定义：归约器 23→25；序列10、代次8、增量16、托管11、适配29 不变，六份回归目标 **99**。没有实际 D5b9y Windows 测试结果。
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5b9y-alarm-freshness-baseline-identity
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5b9y-alarm-freshness-baseline-identity
+}
+if ($LASTEXITCODE -ne 0) { throw "切换功能分支失败" }
+
+git pull --ff-only origin fix/d5b9y-alarm-freshness-baseline-identity
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "自动修正失败" }
+
+vp test run packages/core/test/alarm-tag-sequence.test.ts packages/core/test/alarm-session-generation.test.ts packages/core/test/alarm-tag-delta.test.ts packages/core/test/alarm-baseline-session.test.ts packages/core/test/alarm-session-controller.test.ts packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警时效基线归属回归测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+未修改 NestJS、Prisma、工业网关、React/Vue、真实 PLC/DCS 或设备写入。当前仅完成远程静态代码检查，D5b9y 的 99/99 与四项质量门禁仍待维护者 Windows 执行；正式发布 Gate 持续 fail-closed。
