@@ -4009,3 +4009,26 @@ pnpm run docs:check
 ```
 
 若上述通过，再按需要运行 `pnpm run ready` 并显式打印 `$LASTEXITCODE`。同时在双框架 1440×900、1024×768 复查画布不溢出、面板内滚动、键盘焦点与 TDesign 控件行为；没有新建等价自定义 UI 组件。当前 PR 继续 Draft，不允许在此待验收状态下合并。
+
+## 2026-11-23 · D5c0m 运行监控首屏与已发布空态布局候选
+
+PR #177 的维护者 Windows 验收在最终候选 HEAD `7611dc27ac8ca70c19d80f29d1b4fae4725faec1` 上运行了完整 `pnpm run ready` 并明确打印 **退出码 0**；其中 Vitest **863/863**、S0 报警 Lab **5/5**、NestJS E2E **63/63**、双框架构建、`vp check` **440/288** 和文档 **93 份**均有通过记录。浏览器专项先前也确认 React/Vue 两个分辨率各 **19/19**、Tag CRUD 和完整双向工程 JSON 往返成功。GitHub 在无未解决线程、Assignee `@adui-dev`、分支可合并的情况下按明确授权 Squash 合并至 `main@76a2e697eba6d8034bc095e498328e68e0482edf`。`ready` 日志打印的是合并前功能 HEAD，不能误写为在 Squash SHA 上直接执行。
+
+维护者提供运行监控、已发布运行和 Studio 的实际截图：Studio 基本保持全宽工作区，运行监控的诊断区占据首屏上方且工艺图较晚出现，已发布页面无有效快照时空状态区域过矮且剩余留白偏多。本次 D5c0m **只调整 Vue/React 共享运行样式及运行页静态展示顺序**：监控页扩大可用宽度，宽屏工艺图置于左侧、链路诊断及 Tag 置于右侧；两端 DOM 也将工艺图置于诊断之前，窄屏自然单列。发布页保持相同受控状态机，只让已存在的静态预览空态获得可辨认的区域与合理最小高度。Studio 的固定 252px/320px 侧栏和 16:9 画布保持不变。
+
+依赖审查：Zod **4.6.7** 已在根 Catalog，现有服务端使用 Zod/Standard Schema；Day.js 当前**未列入 Catalog**，Runtime 页面已复用 `formatRuntimeUpdateTime` 和 `formatRuntimeDataAge`。本批没有新写日期/校验工具，也不引入新包、修改锁文件、改动发布权限或工业数据链路。今后有明确复杂日期/校验需要时先复用已有库，新增依赖须遵循 Catalog 与 pnpm 锁文件真实生成流程。
+
+本批尚未执行项目命令及浏览器视觉测试；**PR #177 的历史通过结果不能等同新分支 D5c0m 已通过**。Windows 在当前分支验收：
+
+```powershell
+git fetch origin &&
+git switch feat/d5c0m-runtime-workspace-layout &&
+git pull --ff-only &&
+git rev-parse HEAD &&
+pnpm run ready &&
+pnpm run test:browser &&
+pnpm run test:tags:browser &&
+pnpm run test:interop
+```
+
+额外需在 React/Vue **1440×900 和 1024×768** 实际查看运行监控工艺图、右侧诊断滚动、Tag 空态、已发布页面的无权限/无快照占位，以及页面是否横向溢出；发布仅显示已验证快照，不能用模拟 Tag 代替。截图视觉评审仍为独立验收项，不应由 CSS 静态检查、Studio 浏览器 19/19 或 `ready` 代替。
