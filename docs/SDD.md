@@ -1341,3 +1341,11 @@ D5b9s 在 `packages/core/src/alarm-tag-delta.ts` 内仅新增既有 `classifyTim
 D5b9t 在会话归约器的 snapshot 分支加入一次性检查：**已有非空基线时，任何同代次第二次 snapshot 都返回 `BASELINE_INVALIDATED`、原因 `SNAPSHOT_ALREADY_ESTABLISHED`，并清空基线**。不管快照数值是否完全相同、序列更高还是更低，都不允许在活跃会话中把 snapshot 当作 delta 使用。既有 `AlarmBaselineSessionController` 因失效结果撤销令牌，`AlarmSubscriptionAdapter` 因失效结果停止只读订阅、尝试释放已安装的调度与订阅资源。重复快照在 `subscribe` 同步安装期间发生时，仍沿用返回后补充调用取消订阅函数的现有逻辑。
 
 首次快照在无基线会话中保持既有整批合法性、来源声明、GOOD/数值/时效验证。**重新订阅必须由受控上游显式重启并分配更高代次，再接收新的首次 snapshot**。已有纯归约器在失效后仍可用 null 基线接收快照，可信托管器和适配器会撤销原令牌，因而不允许旧闭包在原代次复活；真实部署只能使用受控生命周期，不得把纯函数作为来源认证。新拒绝枚举仅属于 Core 本地会话契约，不是报警触发、确认或审计事件；FR-011 生产发布继续 fail-closed。
+
+## 2026-11-23 · D5b9u FR-011 会话失效后同代次不得重新初始化（候选）
+
+在 D5b9t 已合并的重复快照保护之外，公开的纯归约函数仍曾把「已经失效」与「尚未收到首份快照」统一表示为 `baseline: null`。一旦序列倒退、质量拒绝、超龄或断连导致失效，直接使用返回的 `AlarmBaselineSessionState` 再送同代次 snapshot 仍可走首次初始化分支；这与托管器早已实行的「失效后撤销令牌、必须 restart」语义不同。
+
+D5b9u 为 `AlarmBaselineSessionState` 增加可选的只读 `invalidated?: true`：**仅终止态携带该标记**，新会话、有效基线及正常等待快照的原有对象形状不变。所有当前代次的 `BASELINE_INVALIDATED` 结果都冻结地写入 `baseline: null, invalidated: true`；随后同代次 snapshot、delta、CHECK_FRESHNESS 和 DISCONNECT 一律返回 `BASELINE_INVALIDATED/SESSION_INVALIDATED` 并保持原失效状态对象，不再恢复基线。更旧代次继续返回 `OTHER_SESSION_IGNORED`。`restartAlarmBaselineSession(previous, nextGeneration)` 仍要求代次严格递增，产生不带失效标记的新等待状态，此时才允许新的首次快照。断连后在纯归约器直接等待原代次新快照的旧语义被此条明确取代。
+
+本次是 Core 公开状态类型与拒绝原因的增量契约变化；受控 `AlarmBaselineSessionController` 和 `AlarmSubscriptionAdapter` 原有令牌撤销、资源清理与显式重启流程保持不变。纯函数不具备身份认证能力：调用方仍能自行创建另一份新的初始状态，因此该标记只能约束**传入的真实失效状态连续归约**，不能作为跨进程不可伪造的会话凭证。真实上游仍必须认证来源、分配可信代次及可靠时钟。未实现报警规则、确认、审计、PLC/DCS 连接或发布授权；FR-011 与正式发布 Gate 仍 fail-closed。
