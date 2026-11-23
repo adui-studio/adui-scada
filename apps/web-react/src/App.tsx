@@ -1,3 +1,5 @@
+import { Button } from "tdesign-react";
+import "tdesign-react/es/style/index.css";
 import { lazy, Suspense, useState } from "react";
 
 const RuntimePage = lazy(() => import("./runtime/RuntimePage.tsx"));
@@ -22,27 +24,27 @@ export default function App() {
           <img src="/brand/favicon.svg" alt="" aria-hidden="true" />
           ADui SCADA
         </span>
-        <button
+        <Button tag="button"
           type="button"
           aria-current={view === "runtime" ? "page" : undefined}
           onClick={() => setView("runtime")}
         >
           运行监控
-        </button>
-        <button
+        </Button>
+        <Button tag="button"
           type="button"
           aria-current={view === "published" ? "page" : undefined}
           onClick={() => setView("published")}
         >
           已发布运行
-        </button>
-        <button
+        </Button>
+        <Button tag="button"
           type="button"
           aria-current={view === "studio" ? "page" : undefined}
           onClick={() => setView("studio")}
         >
           组态编辑
-        </button>
+        </Button>
         <span className="scada-app-version">研发预览 · 非现场控制</span>
       </nav>
       <Suspense
