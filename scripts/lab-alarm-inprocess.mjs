@@ -9,7 +9,7 @@ import { TagStore } from "../packages/core/src/tag-store.ts";
  */
 export function runAlarmInprocessLab() {
   const nowMs = Date.parse("2026-11-23T09:00:00.000Z");
-  /** @type {import("../packages/core/src/tag-store.ts").TagValue} */
+  /** @type {import("../packages/core/src/tag-store.ts").TagValue} 进程内模拟读数 */
   const base = {
     tagId: "lab.tank.level",
     value: 40,
@@ -24,10 +24,10 @@ export function runAlarmInprocessLab() {
   let sourceVerified = true;
   let unsubscribed = 0;
   let cancelled = 0;
-  /** @type {Parameters<import("../packages/core/src/alarm-subscription-adapter.ts").AlarmReadonlySubscriptionSource["subscribe"]>[0] | null} */
+  /** @type {Parameters<import("../packages/core/src/alarm-subscription-adapter.ts").AlarmReadonlySubscriptionSource["subscribe"]>[0] | null} 旧订阅回调引用 */
   let formerHandlers = null;
 
-  /** @type {import("../packages/core/src/alarm-subscription-adapter.ts").AlarmReadonlySubscriptionSource} */
+  /** @type {import("../packages/core/src/alarm-subscription-adapter.ts").AlarmReadonlySubscriptionSource} 模拟只读来源 */
   const source = {
     subscribe(handlers) {
       formerHandlers = handlers;
@@ -41,7 +41,7 @@ export function runAlarmInprocessLab() {
     },
   };
   // 调度器只记录取消操作；本实验不创建真实定时器。
-  /** @type {import("../packages/core/src/alarm-subscription-adapter.ts").AlarmSubscriptionScheduler} */
+  /** @type {import("../packages/core/src/alarm-subscription-adapter.ts").AlarmSubscriptionScheduler} 模拟检查调度器 */
   const scheduler = {
     every() {
       return () => {
