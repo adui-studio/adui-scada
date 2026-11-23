@@ -187,7 +187,8 @@ async function remove(definition: TagDefinition) {
       定义随工程草稿保存，已绑定的 Tag 不能删除或改为不兼容类型。
     </p>
     <TDialog
-      class="studio-tag-dialog"
+      dialog-class-name="studio-tag-dialog"
+      placement="center"
       :visible="editorOpen"
       :header="editingId ? '编辑 Tag 定义' : '新建 Tag 定义'"
       width="min(700px, calc(100vw - 32px))"
@@ -212,6 +213,11 @@ async function remove(definition: TagDefinition) {
               placeholder="例如 模拟水位"
               @change="formError = ''"
             />
+            <small
+              v-if="formError === '请填写 Tag 显示名称。'"
+              class="studio-tag-field-error"
+              role="alert"
+            >{{ formError }}</small>
           </label>
           <label class="studio-field">
             稳定 Tag ID <span class="studio-tag-required">*</span>
@@ -225,6 +231,11 @@ async function remove(definition: TagDefinition) {
             <small class="studio-tag-field-help">
               {{ editingId ? "创建后不可修改" : "创建后不可更改，将用于工程绑定" }}
             </small>
+            <small
+              v-if="formError === '请填写稳定 Tag ID。' || formError === 'Tag ID 已存在，请使用其他标识。'"
+              class="studio-tag-field-error"
+              role="alert"
+            >{{ formError }}</small>
           </label>
           <label class="studio-field">
             数据类型 <span class="studio-tag-required">*</span>
@@ -261,7 +272,14 @@ async function remove(definition: TagDefinition) {
             />
           </label>
         </div>
-        <p v-if="formError" class="studio-tag-form-error" role="alert">{{ formError }}</p>
+        <p
+          v-if="formError &&
+            formError !== '请填写 Tag 显示名称。' &&
+            formError !== '请填写稳定 Tag ID。' &&
+            formError !== 'Tag ID 已存在，请使用其他标识。'"
+          class="studio-tag-form-error"
+          role="alert"
+        >{{ formError }}</p>
         <div class="studio-tag-form-footer">
           <span class="studio-tag-form-footnote">变更支持工作台撤销 / 重做</span>
           <div class="studio-tag-form-actions">

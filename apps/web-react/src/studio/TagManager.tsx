@@ -188,7 +188,8 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
         定义随工程草稿保存，已绑定的 Tag 不能删除或改为不兼容类型。
       </p>
       <Dialog
-        className="studio-tag-dialog"
+        dialogClassName="studio-tag-dialog"
+        placement="center"
         visible={editorOpen}
         header={editingId ? "编辑 Tag 定义" : "新建 Tag 定义"}
         width="min(700px, calc(100vw - 32px))"
@@ -218,6 +219,9 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
                   setFormError("");
                 }}
               />
+              {formError === "请填写 Tag 显示名称。" && (
+                <small className="studio-tag-field-error" role="alert">{formError}</small>
+              )}
             </label>
             <label className="studio-field">
               稳定 Tag ID <span className="studio-tag-required">*</span>
@@ -234,6 +238,10 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
               <small className="studio-tag-field-help">
                 {editingId ? "创建后不可修改" : "创建后不可更改，将用于工程绑定"}
               </small>
+              {(formError === "请填写稳定 Tag ID。" ||
+                formError === "Tag ID 已存在，请使用其他标识。") && (
+                <small className="studio-tag-field-error" role="alert">{formError}</small>
+              )}
             </label>
             <label className="studio-field">
               数据类型 <span className="studio-tag-required">*</span>
@@ -279,11 +287,14 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
               />
             </label>
           </div>
-          {formError && (
-            <p className="studio-tag-form-error" role="alert">
-              {formError}
-            </p>
-          )}
+          {formError &&
+            formError !== "请填写 Tag 显示名称。" &&
+            formError !== "请填写稳定 Tag ID。" &&
+            formError !== "Tag ID 已存在，请使用其他标识。" && (
+              <p className="studio-tag-form-error" role="alert">
+                {formError}
+              </p>
+            )
           <div className="studio-tag-form-footer">
             <span className="studio-tag-form-footnote">变更支持工作台撤销 / 重做</span>
             <div className="studio-tag-form-actions">

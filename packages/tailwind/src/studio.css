@@ -1861,3 +1861,11 @@
     flex: 1;
   }
 }
+
+.studio-tag-field-error {
+  display: block;
+  color: var(--scada-danger);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 550;
+  line-height: 1.5;
+}
