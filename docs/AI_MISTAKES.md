@@ -1122,3 +1122,5 @@
 - **源码定位（候选）**：`studioDraftFileActionInPage` 完成操作后只要 `.studio-file-popover` 仍有布局矩形，就再次 `trigger.click()`。Dialog 确认可能已使 Popup 逻辑关闭，但 CSS 退出动画期间保留布局；此时点击触发器可能把 Popup 重新打开。TDesign React 1.18.6 与 Vue Next 1.20.11 固定源码均监听文档 `mousedown` 进行外部关闭。
 - **候选修复与防复发**：改为向文档外部区域发送 `mousedown`，无论 Popup 正在关闭或仍展开均只请求关闭，不使用切换开关；继续在 `finally` 只执行清理、在正常控制流等待实际 DOM 收起，保留 5 秒超时，不吞没真实操作异常。同时为连续草稿确认按钮复用 E-114 的新 Dialog 实例定位，原 CAS、墓碑、恢复保存和故障注入断言不变。
 - **验收边界**：仅核验固定版本源码，仍需 Windows `test:multitab` React/Vue 全阶段及相关旧草稿与历史专项；不应把候选路径说成已实测根因。工业设备与生产数据未涉及。
+
+> **2026-11-23 · PR #190 Windows 复验关闭 E-115 / E-116 阻塞**：维护者在修复候选后的真实 Windows 浏览器依次通过 `node --check`、`vp check`（448 格式文件 / 291 受检零警告错误）、`messages:check`（318 文件）、`docs:check`（94 Markdown）、双端 `test:versions`、双端 `test:versions:safety`（含 Origin 隔离）、双端 `test:multitab`（各 4 阶段）、双端 `test:legacy:browser`（各 3 条路径）及普通 Studio 四视口 132/132。原超时路径在本轮未复现，回归阻塞解除；未记录 Dialog/Popup 内部逐帧 DOM，因此不将候选竞态机理上升为已实证的唯一根因。PR #190 经明确授权 Squash 合并至 `main@493a793614dbbe21c7d97a3c6400442de9d88bff`；本轮日志未打印本地完整 HEAD，证据边界保留。
