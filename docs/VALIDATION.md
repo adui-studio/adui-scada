@@ -4267,3 +4267,31 @@ Windows 最新日志确认：`node --check`、`vp check`（446 文件格式正�
 如果输出为 `Vite预构建依赖:HTTP504`，再核对 Vue Vite 服务端优化器日志、依赖缓存版本及是否存在动态路由依赖发现；是否使用官方 `optimizeDeps.include` 应结合具体失败模块确定，不能一概调整。若为 4xx/其他 5xx、证书、连接拒绝或网络失败，则分别诊断对应来源；未观察到响应不代表 HTTP 200。
 
 本批仅需在最新 HEAD 运行 `node --check scripts/test-studio-browser.mjs`、`vp check`、`pnpm run docs:check` 和 `pnpm run test:multitab`。前七项业务专项在之前候选中已通过，不机械重复 `ready`。**根因与新提交的测试结果都待 Windows 验证，PR #186 仍为 Draft，不能合并。**
+
+## 2026-11-23 · E-106 第三次网络诊断与 Vue Studio 依赖预构建候选
+
+维护者 Windows 第三次 `test:multitab` 退出 1；React 四组双标签 CAS 安全场景通过后，Vue 首次并发进入 Studio 失败。CDP 网络诊断：首标签 `Studio模块HTTP=200`、`失败请求=Vite预构建依赖:其他网络错误`；次标签 `Studio模块HTTP=200`、`失败请求=其他同源资源:导航中断`。`node --check`、`vp check`（446/289 零告警）和 `docs:check`（94）通过。网络层尚未暴露准确 Chromium 错误码，**不存在已证实的 HTTP 504 或具体依赖文件名**。
+
+本批只在 Vue Vite 配置添加开发期 `optimizeDeps.include: ['tdesign-vue-next', 'tdesign-icons-vue-next']`，因为 Vue `App.vue` 动态加载 Studio 且两个包主要在 Studio 中首次引入。Vite 官方指南说明新依赖被发现时可能触发重新预构建和页面重载；此配置用于**预先发现依赖**，不是关闭优化器、安全验证或动态加载。`test-studio-browser.mjs` 补充受限 Chromium `net::ERR_*` 错误码；不输出资源地址、网络正文、会话标识、原始异常。该修复是待验证假设，React/Vue 业务、Schema、IndexedDB CAS、15s/5s 导航门禁与真实并发完全未变。参考：https://vite.dev/guide/dep-pre-bundling.html。
+
+Windows 验收必须先让原 Vue 开发终端停止并使用新配置重启，建议在该终端执行 `vp dev --force`（先运行 `vp dev --help` 确认当前 Vite+ 1.5.0 接受 `--force`；不能直接改写其他进程）。React 开发服务保持原运行状态。仅当确认 HTTPS 15174 服务启动且可信 CA 正常后，在新的 PowerShell 中运行：
+
+```powershell
+git fetch origin
+git switch feat/d5c0u-tdesign-file-popup
+git pull --ff-only
+git rev-parse HEAD
+node --check scripts/test-studio-browser.mjs
+if ($LASTEXITCODE -ne 0) { throw "浏览器脚本语法检查失败" }
+pnpm run typecheck:web
+if ($LASTEXITCODE -ne 0) { throw "双框架类型检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run test:multitab
+if ($LASTEXITCODE -ne 0) { throw "多标签页安全测试失败，请保留 Chromium 错误码" }
+git status --short
+```
+
+若多标签页通过，应在同一新 HEAD 和干净开发进程下再运行一次该专项验证稳定性，随后复验 `pnpm run test:browser`（当前候选的 Vite 配置影响 Vue 开发构建）。无需重复原已通过的 interop、legacy、versions 或全量 `ready`，除非又有业务/依赖变化。**PR #186 保持 Draft，Vue 多标签 CAS 和修复效果未取得真实通过证据前不合并。**
