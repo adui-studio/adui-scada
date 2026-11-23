@@ -549,3 +549,75 @@ test("回调读取时钟故障与双资源取消故障均保留原始原因", ()
   handlers[0]?.onChange({ kind: "snapshot", values: [value] }, true);
   expect(adapter.snapshot().baseline).toBeNull();
 });
+
+test("周期调度漏执行时读取快照也会清除过期 GOOD 基线", () => {
+  const { adapter, source, scheduler, setNow } = setup();
+  adapter.start();
+  source.emit({ kind: "snapshot", values: [value] });
+  expect(adapter.snapshot().baseline?.value.sequence).toBe(5);
+  setNow(startMs + 1001);
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(adapter.isRunning()).toBe(false);
+  expect(source.closes).toBe(1);
+  expect(scheduler.cancels).toBe(1);
+  source.emit({ kind: "snapshot", values: [value] }, true, 0);
+  expect(adapter.snapshot().baseline).toBeNull();
+});
+
+test("读取仍新鲜的基线不更改会话和资源，停止后不访问时钟", () => {
+  const source = new TestSource();
+  const scheduler = new TestScheduler();
+  let reads = 0;
+  let clockEnabled = true;
+  const adapter = new AlarmSubscriptionAdapter("tank.level", source, scheduler, {
+    maxAgeMs: 3000,
+    checkIntervalMs: 1000,
+    nowMs: () => {
+      reads += 1;
+      if (!clockEnabled) throw new TypeError("测试停止后不应读取时钟");
+      return startMs;
+    },
+  });
+  adapter.start();
+  source.emit({ kind: "snapshot", values: [value] });
+  const state = adapter.snapshot();
+  expect(state.baseline?.value.sequence).toBe(5);
+  expect(adapter.snapshot()).toBe(state);
+  expect(adapter.isRunning()).toBe(true);
+  expect(scheduler.cancels).toBe(0);
+  expect(source.closes).toBe(0);
+  adapter.stop();
+  clockEnabled = false;
+  const before = reads;
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(reads).toBe(before);
+});
+
+test("读取基线时受控时钟故障会清空状态并停止订阅", () => {
+  const source = new TestSource();
+  const scheduler = new TestScheduler();
+  const clockFailure = new TypeError("测试读取时钟失败");
+  let fails = false;
+  const adapter = new AlarmSubscriptionAdapter("tank.level", source, scheduler, {
+    maxAgeMs: 3000,
+    checkIntervalMs: 1000,
+    nowMs: () => {
+      if (fails) throw clockFailure;
+      return startMs;
+    },
+  });
+  adapter.start();
+  source.emit({ kind: "snapshot", values: [value] });
+  fails = true;
+  let failure: unknown = null;
+  try {
+    adapter.snapshot();
+  } catch (error) {
+    failure = error;
+  }
+  expect(failure).toBe(clockFailure);
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(source.closes).toBe(1);
+  expect(scheduler.cancels).toBe(1);
+});
