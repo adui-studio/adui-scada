@@ -4527,4 +4527,3 @@ if ($LASTEXITCODE -ne 0) { throw "普通 Studio 测试失败" }
 ```
 
 其中 `test:interop` 与 `test:tags:browser` 已在 PR #189 前后运行过，最新 HEAD 如有后续相关变更仍需重跑；本次候选尚未在维护者 Windows 运行。只有真实 React/Vue 全阶段退出码 0 才能关闭 E-115 / E-116。PR 默认 Draft，须验收后由 `@adui-dev` 明确授权合并。
-
