@@ -1405,3 +1405,13 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/test/alarm-tag-sequence.test.ts`：把原有效夹具时间改至既有年龄上限内；新增三项回归，文件由 6 增至 9 项。
 - `packages/core/test/alarm-session-generation.test.ts`：校正同样超龄的旧夹具，新增一项同代次包装无法绕过旧基线失效的回归，由 6 增至 7 项。
 - `packages/core/src/alarm-session-generation.ts` 与上层 `alarm-tag-delta.ts`、`alarm-baseline-session.ts` 不改生产逻辑，现有低层与上层拒绝前置检查并存；不涉及 Vue/React、NestJS/Prisma、网关和设备写入。
+
+## 2026-11-23 · D5b9w FR-011 服务端时间顺序保护（候选）
+
+- `packages/core/src/alarm-tag-sequence.ts`：在已有质量/时效/Tag/序列校验之后增加 `SERVER_TIMESTAMP_REGRESSED` 固定拒绝结果；仅当新 `serverTimestamp` 早于旧基线时拒绝，允许等时刻，保持服务端时间而非 `sourceTimestamp` 为判断依据。
+- `packages/core/test/alarm-tag-sequence.test.ts`：新增 1 项，涵盖倒退拒绝、相等接受和来源时间不影响顺序。
+- `packages/core/test/alarm-session-generation.test.ts`：新增 1 项，验证同代次顺序保护及跨代次拒绝优先级。
+- `packages/core/test/alarm-tag-delta.test.ts`：新增 1 项，确保直接增量 API 不暴露倒退时间候选。
+- `packages/core/test/alarm-baseline-session.test.ts`：新增 1 项，验证时间倒退触发终止态、原代次不能复活。
+- `packages/core/test/alarm-subscription-adapter.test.ts`：新增 1 项，验证订阅停止、资源取消及旧回调不再生效。
+- `alarm-session-controller.ts`、`alarm-tag-delta.ts`、`alarm-baseline-session.ts` 和 `alarm-subscription-adapter.ts` 生产代码无变化，仅经现有返回状态传播新的拒绝原因；不修改实际运行时、网关和设备写入。
