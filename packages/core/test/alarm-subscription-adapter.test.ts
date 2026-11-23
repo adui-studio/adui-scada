@@ -94,6 +94,40 @@ test("启动建立只读订阅和检查计划，快照与增量正常推进", ()
   expect(scheduler.cancels).toBe(1);
 });
 
+test("活动订阅可推进业务序列跳号，未核验来源终止后旧回调不能污染新会话", () => {
+  const { adapter, source, scheduler } = setup();
+  adapter.start();
+  source.emit({ kind: "snapshot", values: [value] });
+  source.emit({
+    kind: "delta",
+    values: [{ ...value, sequence: 7, value: 42, serverTimestamp: "2026-11-22T08:59:59.000Z" }],
+  });
+  expect(adapter.isRunning()).toBe(true);
+  expect(adapter.snapshot().baseline?.value.sequence).toBe(7);
+  expect(adapter.snapshot().baseline?.value.value).toBe(42);
+
+  source.emit({ kind: "delta", values: [{ ...value, sequence: 8 }] }, false);
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(adapter.snapshot().invalidated).toBe(true);
+  expect(source.closes).toBe(1);
+  expect(scheduler.cancels).toBe(1);
+
+  adapter.start();
+  expect(adapter.snapshot().generation).toBe(1);
+  source.emit({ kind: "delta", values: [{ ...value, sequence: 9 }] }, true, 0);
+  source.handlers[0]?.onDisconnect();
+  scheduler.tick(0);
+  expect(adapter.isRunning()).toBe(true);
+  expect(adapter.snapshot().baseline).toBeNull();
+
+  source.emit({ kind: "snapshot", values: [{ ...value, sequence: 1 }] }, true, 1);
+  expect(adapter.snapshot().baseline?.value.sequence).toBe(1);
+  adapter.stop();
+  expect(source.closes).toBe(2);
+  expect(scheduler.cancels).toBe(2);
+});
+
 test("无目标增量不能刷新基线年龄，定时检查过期释放所有资源", () => {
   const { adapter, source, scheduler, setNow } = setup();
   adapter.start();
