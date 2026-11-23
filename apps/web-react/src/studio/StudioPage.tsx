@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Dropdown, Input, Popup } from "tdesign-react";
+import { Button, Collapse, CollapsePanel, Dropdown, Input, Popup } from "tdesign-react";
 import type { DropdownProps } from "tdesign-react";
 import { CloseIcon } from "tdesign-icons-react";
 import "tdesign-react/es/style/index.css";
@@ -1917,8 +1917,8 @@ export default function StudioPage() {
               </Button>
             </Popup>
           </div>
-          <details className="studio-version-menu">
-            <summary>发布预检</summary>
+          <div className="studio-version-menu studio-release-preflight-menu">
+            <Popup attach=".studio-release-preflight-menu" trigger="click" placement="bottom-right" content={
             <div className="studio-version-panel" aria-label="工程发布前静态兼容性预检">
               <p className="studio-version-help">
                 当前工程：{state.document.projectId} · 仅检查 SVG
@@ -1961,7 +1961,10 @@ export default function StudioPage() {
                 }}
               />
             </div>
-          </details>
+          }>
+              <Button tag="button" type="button" variant="outline">发布预检</Button>
+            </Popup>
+          </div>
           <ServerProjectBrowser
             key={serverAccessRevision}
             api={serverApi}
@@ -1970,8 +1973,8 @@ export default function StudioPage() {
             onOpen={openServerProject}
             onAccessRejected={handleServerBrowserAccessRejected}
           />
-          <details className="studio-version-menu">
-            <summary>服务端工程</summary>
+          <div className="studio-version-menu studio-server-version-menu">
+            <Popup attach=".studio-server-version-menu" trigger="click" placement="bottom-right" content={
             <div className="studio-version-panel" aria-label="服务端工程版本">
               <p className="studio-version-help">
                 当前工程：{state.document.projectId} · 受保护的工程版本保存，不代表正式发布
@@ -2087,7 +2090,10 @@ export default function StudioPage() {
                 </Button>
               )}
             </div>
-          </details>
+          }>
+              <Button tag="button" type="button" variant="outline">服务端工程</Button>
+            </Popup>
+          </div>
         </div>
       </header>
       <div className="studio-page-bar" aria-label="工程页面管理">
@@ -2213,8 +2219,9 @@ export default function StudioPage() {
               ),
             )}
           </div>
-          <details className="studio-side-more">
-            <summary>跨页操作与使用帮助</summary>
+          <div className="studio-side-more">
+              <Collapse borderless defaultValue={[]}>
+                <CollapsePanel value="cross-page" header="跨页操作与使用帮助">
             <div className="studio-copy-tools">
               <label className="studio-field">
                 复制选中图元到
@@ -2241,15 +2248,17 @@ export default function StudioPage() {
               </Button>
             </div>
             <p className="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
-          </details>
+          </CollapsePanel>
+              </Collapse>
+            </div>
         </aside>
         <section className="studio-stage min-h-0 min-w-0" aria-label="组态画布">
           <div className="studio-stage-caption">
             <span>
               {page.name} · {page.size.width} × {page.size.height} · 静态模拟预览
             </span>
-            <details className="studio-view-menu">
-              <summary aria-label="视图设置">视图设置</summary>
+            <div className="studio-view-menu studio-view-settings-menu">
+            <Popup attach=".studio-view-settings-menu" trigger="click" placement="bottom-right" content={
               <div className="studio-view-popover">
                 <div className="studio-view-section">
                   <p>网格与吸附</p>
@@ -2300,7 +2309,10 @@ export default function StudioPage() {
                   </div>
                 </div>
               </div>
-            </details>
+            }>
+              <Button tag="button" type="button" variant="outline">视图设置</Button>
+            </Popup>
+          </div>
             <div className="studio-zoom" aria-label="画布缩放">
               <Button tag="button" type="button" onClick={() => changeZoom(-0.25)} disabled={zoom <= 0.5}>
                 −
@@ -2611,8 +2623,9 @@ export default function StudioPage() {
           ) : (
             <p className="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
           )}
-          <details className="studio-advanced">
-            <summary>项目 Tag 定义（{state.document.tags.length}）</summary>
+          <div className="studio-advanced">
+              <Collapse borderless defaultValue={[]}>
+                <CollapsePanel value="project-tags" header={<>项目 Tag 定义（{state.document.tags.length}）</>}>
             <div className="studio-advanced-content">
               <TagManager
                 tags={state.document.tags}
@@ -2636,9 +2649,12 @@ export default function StudioPage() {
                 }
               />
             </div>
-          </details>
-          <details className="studio-advanced">
-            <summary>高级图元与图层操作</summary>
+          </CollapsePanel>
+              </Collapse>
+            </div>
+          <div className="studio-advanced">
+              <Collapse borderless defaultValue={[]}>
+                <CollapsePanel value="advanced-tools" header="高级图元与图层操作">
             <div className="studio-advanced-content">
               <div className="studio-toolbox">
                 <div className="studio-tool-group" aria-label="图层锁定与可见性">
@@ -2797,7 +2813,9 @@ export default function StudioPage() {
                 </div>
               </div>
             </div>
-          </details>
+          </CollapsePanel>
+              </Collapse>
+            </div>
         </aside>
       </div>
       <footer className="studio-statusbar">
