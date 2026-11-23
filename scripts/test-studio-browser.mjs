@@ -305,9 +305,7 @@ async function checkStudioInPage() {
   const menuItem = (label) => menuItems().find((item) => item.textContent.trim() === label);
   const menuClosed = () => menuItems().length === 0;
   const initialPages = pageTabs();
-  const initialIndex = initialPages.findIndex(
-    (tab) => tab.getAttribute("aria-current") === "page",
-  );
+  const initialIndex = initialPages.findIndex((tab) => tab.getAttribute("aria-current") === "page");
   verify(
     "页面管理使用 TDesign 按钮而非原生 details",
     pageTrigger instanceof HTMLButtonElement && !pageMenu.querySelector("summary"),
@@ -315,14 +313,7 @@ async function checkStudioInPage() {
   if (pageTrigger instanceof HTMLButtonElement) {
     pageTrigger.click();
     await settle();
-    const labels = [
-      "+ 新建页面",
-      "复制页面",
-      "页面前移",
-      "页面后移",
-      "重命名",
-      "删除当前页",
-    ];
+    const labels = ["+ 新建页面", "复制页面", "页面前移", "页面后移", "重命名", "删除当前页"];
     verify(
       "TDesign 下拉菜单提供全部六项页面命令",
       labels.every((label) => Boolean(menuItem(label))) && menuItems().length === labels.length,
@@ -361,7 +352,9 @@ async function checkStudioInPage() {
       "最后一页的禁用命令无法修改工程页面",
       currentIndex === createdPages.length - 1 &&
         disabledNext?.classList.contains("t-dropdown__item--disabled") &&
-        pageTabs().map((tab) => tab.textContent.trim()).join("|") === beforeBlocked,
+        pageTabs()
+          .map((tab) => tab.textContent.trim())
+          .join("|") === beforeBlocked,
     );
     document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
     await new Promise((resolve) => setTimeout(resolve, 500));
