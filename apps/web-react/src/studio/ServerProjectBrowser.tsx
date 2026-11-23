@@ -1,4 +1,4 @@
-import { Button } from "tdesign-react";
+import { Button, Popup } from "tdesign-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createStudioProjectBrowser,
@@ -65,13 +65,15 @@ export function ServerProjectBrowser({
   }
 
   return (
-    <details
-      className="studio-version-menu studio-project-browser-menu"
-      onToggle={(event) => {
-        if (event.currentTarget.open) void loadPage("refresh");
-      }}
-    >
-      <summary>工程管理</summary>
+    <div className="studio-version-menu studio-project-browser-menu">
+      <Popup
+        attach=".studio-project-browser-menu"
+        trigger="click"
+        placement="bottom-right"
+        onVisibleChange={(visible) => {
+          if (visible) void loadPage("refresh");
+        }}
+        content={
       <section
         className="studio-version-panel studio-project-browser-panel"
         aria-label="授权工程管理"
@@ -153,6 +155,10 @@ export function ServerProjectBrowser({
           </Button>
         </div>
       </section>
-    </details>
+        }
+      >
+        <Button tag="button" type="button" variant="outline">工程管理</Button>
+      </Popup>
+    </div>
   );
 }
