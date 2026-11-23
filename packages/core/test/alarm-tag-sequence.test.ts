@@ -8,7 +8,7 @@ const previous: TagValue = {
   value: 40,
   quality: "GOOD",
   sourceTimestamp: null,
-  serverTimestamp: "2026-11-22T08:59:58.000Z",
+  serverTimestamp: "2026-11-22T08:59:59.000Z",
   sequence: 5,
 };
 const current: TagValue = {
@@ -78,4 +78,42 @@ test("非法基线与非法当前序列必须拒绝，且不改变入参", () =>
   });
   expect(baseline).toEqual(previous);
   expect(candidate).toEqual(current);
+});
+
+test("低层序列入口不得以新鲜读数续接已经超龄的旧基线", () => {
+  const latest: TagValue = {
+    ...current,
+    serverTimestamp: "2026-11-22T09:00:01.000Z",
+  };
+  expect(classifyOrderedNumericAlarmSample(latest, previous, nowMs + 1001, 1000)).toEqual({
+    status: "OUTDATED_TIMESTAMP",
+  });
+});
+
+test("低层序列入口拒绝旧基线的坏质量、非数值和未来时间", () => {
+  expect(
+    classifyOrderedNumericAlarmSample(current, { ...previous, quality: "BAD" }, nowMs, 1000),
+  ).toEqual({ status: "QUALITY_NOT_GOOD" });
+  expect(
+    classifyOrderedNumericAlarmSample(current, { ...previous, value: null }, nowMs, 1000),
+  ).toEqual({ status: "NOT_NUMERIC" });
+  expect(
+    classifyOrderedNumericAlarmSample(
+      current,
+      { ...previous, serverTimestamp: "2026-11-22T09:00:00.001Z" },
+      nowMs,
+      1000,
+    ),
+  ).toEqual({ status: "FUTURE_TIMESTAMP" });
+});
+
+test("旧基线恰在最大年龄边界可用，但不改变原始冻结输入", () => {
+  const baseline = Object.freeze({ ...previous });
+  const input = Object.freeze({ ...current });
+  expect(classifyOrderedNumericAlarmSample(input, baseline, nowMs, 1000)).toEqual({
+    status: "READY",
+    value: 42,
+  });
+  expect(baseline).toEqual(previous);
+  expect(input).toEqual(current);
 });
