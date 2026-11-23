@@ -122,3 +122,11 @@ Studio 的「页面管理」原本由原生 `details/summary` 和 `.studio-page-
 保留六条现有编辑器命令、页面最多 100 页和首页/末页/单页禁用逻辑。仅移除此菜单独占的手工浮层 CSS，其他文件/草稿、历史版本、服务端预检等原生菜单保持原状，待下一批分别核对 Popup 等官方组件。Studio 固定 252px/320px 侧栏和 SVG 16:9 画布不变。
 
 同步扩充 `test:browser` 的 React/Vue 真实菜单检查，从每组 19 项增至**目标 27 项**。尚未运行 Windows 浏览器或 Vite+；见 [组件复用审计](TDESIGN_COMPONENT_AUDIT.md)。
+
+## D5c0u · 文件与草稿弹层使用 TDesign Popup
+
+共享 Studio 的「文件与草稿」入口由原生 `details/summary` 改为 React/Vue 固定版本的 TDesign `Popup + Button`。两端都使用点击触发、`bottom-right` 定位，并挂载到 `.studio-file-menu`，让 Popup 处理显隐、定位与外部点击；删除此入口的 `position:absolute`/`right`/`top`/`z-index` 等手工定位规则。
+
+保留本地 `<input type="file">`、自动保存按钮、JSON 导入导出、草稿恢复与清除及其现有禁用态，不引入网络上传。TDesign Upload 另做批次，先核对 `autoUpload` 和自有工程验证安全边界；现有文件读取、大小限制、非法输入、CAS、版本并发保护和用户确认行为全部不变。
+
+为 React/Vue 1440×900、1024×768 各增 3 项真实 Popup 测试，目标每组 30 项；具体业务还要运行 JSON 互通、版本安全、旧版草稿迁移和多标签页专项。当前所有 Windows 新分支验证待执行。
