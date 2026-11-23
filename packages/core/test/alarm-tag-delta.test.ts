@@ -287,10 +287,6 @@ test("旧基线恰好到达最大年龄时仍允许严格递增的有效增量",
 
 test("上游未核验时仍优先拒绝来源而不暴露已超龄基线原因", () => {
   expect(
-    advanceAlarmTagDeltaBaseline(
-      { ...request, sourceVerified: false },
-      nowMs + 1001,
-      1000,
-    ),
+    advanceAlarmTagDeltaBaseline({ ...request, sourceVerified: false }, nowMs + 1001, 1000),
   ).toEqual({ status: "DELTA_REJECTED", reason: "UNVERIFIED_SOURCE" });
 });
