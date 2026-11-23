@@ -68,7 +68,7 @@ function submit() {
   if (successful) reset();
 }
 
-function changeTagDataType(value: string | number | Array<string | number>): void {
+function changeTagDataType(value: unknown): void {
   if (value === "number" || value === "boolean" || value === "string" || value === "unknown") {
     draft.value.dataType = value;
   }
