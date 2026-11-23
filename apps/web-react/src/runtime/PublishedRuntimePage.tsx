@@ -100,7 +100,7 @@ export default function PublishedRuntimePage() {
   }
 
   return (
-    <main id="scada-main-content" className="scada-shell scada-shell--published" data-testid="published-runtime-page">
+    <main id="scada-main-content" tabIndex={-1} className="scada-shell scada-shell--published" data-testid="published-runtime-page">
       <header className="scada-header">
         <div>
           <p className="scada-eyebrow">ADui SCADA · 正式发布配置只读监控</p>
