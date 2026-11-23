@@ -1,16 +1,4 @@
-/* TDesign 仅在 Studio 内继承工业深色主题，不修改工程及 Runtime 样式。 */
-.studio-shell {
-  --td-brand-color: var(--scada-primary);
-  --td-brand-color-hover: var(--scada-primary-hover);
-  --td-brand-color-active: var(--scada-primary-active);
-  --td-brand-color-focus: var(--scada-primary-focus);
-  --td-text-color-primary: var(--scada-text);
-  --td-text-color-secondary: var(--scada-text-secondary);
-  --td-bg-color-container: var(--scada-surface);
-  --td-bg-color-container-hover: var(--scada-action-hover);
-  --td-bg-color-container-active: var(--scada-action-bg);
-  --td-component-border: var(--scada-border-strong);
-}
+/* TDesign 颜色、字体、间距由共享 @adui/theme 提供；保留画布专属布局。 */
 .studio-shell .t-button {
   white-space: normal;
   min-height: 30px;
