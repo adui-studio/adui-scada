@@ -2460,3 +2460,9 @@ D5c0u 在新分支将 React/Vue「文件与草稿」原生 details 改为 TDesig
 PR #186 维护者最新 Windows：`node --check`、`vp check`（446 格式/289 受检零告警）、`docs:check`（94）均通过；`test:multitab` React 四场景成功，Vue 首次双标签 Studio 动态导入仍失败并退出 1。CDP 观察首标签 Studio 源模块 HTTP 200、Vite 预构建依赖发生尚未识别具体码的网络失败；次标签 Studio 模块 200、另有同源导航中断。排除“Studio 源文件根本未返回”这一解释，但**不能直接认定 Vite 504、缓存损坏、TDesign 生产组件错误或业务 CAS 问题**。
 
 依照当前 Vue `App.vue` 的按需引入关系及 Vite 官方优化文档，在 PR #186 Draft 仅为 Vue 开发环境新增两个已安装 TDesign 包的 `optimizeDeps.include`，测试诊断额外保留安全格式化的 Chromium 网络错误码；实际双标签并发、CAS、安全门禁、HTTPS、业务应用和 React 配置均未改变。必须在 Windows 重启 Vue Vite 服务使优化选项生效，再执行受影响的类型、代码、文档与多标签页回归。当前所有新增修改均尚未实测，不合并 PR。
+
+## 2026-11-23 · E-106 第四次定位：Chromium HTTP 缓存写入失败
+
+维护者再次在 Windows 实际执行语法、Web 类型、Vite+（446/289 零告警）、文档（94）和普通 Studio React/Vue 120/120 均成功；`test:multitab` 在 React 四阶段完成后，Vue 首次双标签 Studio 导航失败。最新 CDP 明确报告首标签 Studio 源模块 HTTP 200、预构建依赖 `net::ERR_CACHE_WRITE_FAILURE`，次标签 Studio 模块 HTTP 200、未见网络失败。**已锁定失败类别为测试用隔离 Chromium HTTP 缓存写入，底层磁盘/权限/安全软件诱因尚不明**。正常运行监控截图显示过期 Tag 的降级状态，不证明 Studio 已加载，也不能据此判断工业实时采集质量。
+
+PR #186 已回滚上一轮 Vue Vite 预构建配置猜测；最小修复候选只在浏览器多标签 Vue 测试进入导航前对两个 CDP 标签页设置网络缓存忽略，不影响 IndexedDB/BroadcastChannel、原有 CAS 安全测试、真实双标签并发、业务应用或 HTTPS。当前尚未 Windows 复测，保持 Draft 和主理人指派，需实际完成 Vue 多标签页全流程后才评估合并。
