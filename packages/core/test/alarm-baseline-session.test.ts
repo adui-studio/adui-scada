@@ -196,7 +196,12 @@ test("重复或倒退序列终止当前会话，只有递增代次才能重建",
     state: invalid.state,
   });
   const restarted = restartAlarmBaselineSession(invalid.state, 3);
-  const recovered = transitionAlarmBaselineSession(restarted, { ...snapshot, generation: 3 }, nowMs, 3000);
+  const recovered = transitionAlarmBaselineSession(
+    restarted,
+    { ...snapshot, generation: 3 },
+    nowMs,
+    3000,
+  );
   expect(recovered.status).toBe("BASELINE_ESTABLISHED");
 });
 
@@ -462,8 +467,9 @@ test("失效状态对同代次快照增量断连和时效检查一律保持终�
     });
     expect(result.state).toBe(invalid.state);
   }
-  expect(transitionAlarmBaselineSession(invalid.state, { ...snapshot, generation: 1 }, nowMs, 3000))
-    .toEqual({ status: "OTHER_SESSION_IGNORED", state: invalid.state });
+  expect(
+    transitionAlarmBaselineSession(invalid.state, { ...snapshot, generation: 1 }, nowMs, 3000),
+  ).toEqual({ status: "OTHER_SESSION_IGNORED", state: invalid.state });
 });
 
 test("终止后显式递增代次才能接受低序列快照，旧代次仍被忽略", () => {
@@ -477,7 +483,11 @@ test("终止后显式递增代次才能接受低序列快照，旧代次仍被�
   });
   const accepted = transitionAlarmBaselineSession(
     renewed,
-    { ...snapshot, generation: 3, change: { kind: "snapshot", values: [{ ...previous, sequence: 1 }] } },
+    {
+      ...snapshot,
+      generation: 3,
+      change: { kind: "snapshot", values: [{ ...previous, sequence: 1 }] },
+    },
     nowMs,
     3000,
   );
