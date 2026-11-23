@@ -602,6 +602,9 @@ importers:
       '@adui/scada-core':
         specifier: workspace:*
         version: link:../core
+      '@adui/theme':
+        specifier: workspace:*
+        version: link:../theme
     devDependencies:
       '@adui/tsconfig':
         specifier: workspace:*
@@ -625,6 +628,8 @@ importers:
       vite:
         specifier: 'catalog:'
         version: '@voidzero-dev/vite-plus-core@1.5.0(@types/node@24.19.2)(@volar/typescript@2.4.28(typescript@6.0.3))(@vue/language-core@3.3.13)(jiti@2.7.0)(typescript@6.0.3)(vue-tsc@3.3.13(typescript@6.0.3))(yaml@2.9.1)'
+
+  packages/theme: {}
 
   packages/tooling:
     devDependencies:
