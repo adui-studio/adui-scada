@@ -2501,7 +2501,7 @@ async function importJsonFile(file: File | undefined) {
               <TInput
                 type="number"
                 :name="key"
-                :default-value="String(selected.transform[key])"
+                :value="String(selected.transform[key])"
                 :disabled="studioNodeLocked(selected)"
               />
             </label>
