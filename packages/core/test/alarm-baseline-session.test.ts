@@ -526,13 +526,14 @@ test("同代次递增序列附带倒退服务端时间时终止会话，不能�
 
 test("等待首次快照时显式检查非法时钟或最大年龄必须终止本代次", () => {
   const pending = beginAlarmBaselineSession("tank.level", 2);
-  for (const [clock, maxAge] of [
+  const invalidCases: readonly (readonly [number, number])[] = [
     [Number.NaN, 3000],
     [-1, 3000],
     [nowMs + 0.5, 3000],
     [nowMs, 0],
     [nowMs, Number.POSITIVE_INFINITY],
-  ]) {
+  ];
+  for (const [clock, maxAge] of invalidCases) {
     const invalid = transitionAlarmBaselineSession(
       pending,
       { kind: "CHECK_FRESHNESS", generation: 2 },
@@ -551,17 +552,21 @@ test("等待首次快照时显式检查非法时钟或最大年龄必须终止�
       state: invalid.state,
     });
   }
-  expect(transitionAlarmBaselineSession(
-    pending,
-    { kind: "CHECK_FRESHNESS", generation: 1 },
-    Number.NaN,
-    3000,
-  )).toEqual({ status: "OTHER_SESSION_IGNORED", state: pending });
-  expect(transitionAlarmBaselineSession(
-    pending,
-    { kind: "DISCONNECT", generation: 2 },
-    Number.NaN,
-    0,
-  ).status).toBe("BASELINE_INVALIDATED");
+  expect(
+    transitionAlarmBaselineSession(
+      pending,
+      { kind: "CHECK_FRESHNESS", generation: 1 },
+      Number.NaN,
+      3000,
+    ),
+  ).toEqual({ status: "OTHER_SESSION_IGNORED", state: pending });
+  expect(
+    transitionAlarmBaselineSession(
+      pending,
+      { kind: "DISCONNECT", generation: 2 },
+      Number.NaN,
+      0,
+    ).status,
+  ).toBe("BASELINE_INVALIDATED");
   expect(pending).toEqual({ expectedTagId: "tank.level", generation: 2, baseline: null });
 });
