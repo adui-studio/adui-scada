@@ -4232,3 +4232,28 @@ git status --short
 ```
 
 人工复核：文件菜单首次开启/反复开合/点击外部/Esc/键盘焦点；导入文件选择和取消、合法/非法/超过 2 MiB JSON，导出 Blob 下载，草稿恢复/清除的确认取消分支，以及 1440×900/1024×768 菜单不被裁切。不得通过关闭 TLS 校验或删除原有工程、权限、CAS 断言让脚本过关。
+
+## 2026-11-23 · D5c0u PR #186 Windows 多标签页阻塞与安全诊断候选
+
+维护者在 Windows 对 PR #186 执行顺序验收：`typecheck:web`、`vp check`（446 格式文件/289 受检零告警）、`docs:check`（94）、`test:browser` React/Vue 四视口 **30/30 × 4 = 120/120**、`test:interop` 完整双框架往返、`test:versions:safety` React/Vue、`test:legacy:browser` React/Vue 迁移与快照校验，均通过。`test:multitab` React 四个阶段通过后，在**首次 Vue 两标签页导航进入 Studio** 时失败：导航按钮已激活但 `.studio-workspace` 未按时出现，`ELIFECYCLE` 退出码 1；**Vue 多标签页未执行，PR 不具备合并条件**。该日志未单独打印本地 HEAD，不能严格绑定 GitHub SHA。
+
+已在现有 Draft 分支仅增强 `scripts/test-studio-browser.mjs` 中异步工作台导航失败的分类诊断：观察模块请求、脚本异常、资源失败和未处理 Promise 拒绝；仍坚持原 15s/5s 工作台/SVG 等待和原多标签页 BroadcastChannel、IndexedDB CAS、墓碑及故障恢复断言，不自动重试、不跳过 Vue、不拉长超时，不输出异常正文或资源 URL。由于原始日志不足以证明具体原因，此修改只是**诊断候选，尚未解决根因，也未重新通过 Windows 验收**。
+
+最新分支建议最小复验（先核对本地 HEAD；不需要重复运行前七项已完成的业务专项）：
+
+```powershell
+git fetch origin
+git switch feat/d5c0u-tdesign-file-popup
+git pull --ff-only
+git rev-parse HEAD
+node --check scripts/test-studio-browser.mjs
+if ($LASTEXITCODE -ne 0) { throw "浏览器脚本语法检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run test:multitab
+if ($LASTEXITCODE -ne 0) { throw "多标签页安全测试仍失败，请保留新增诊断类别" }
+```
+
+若首次 Vue 加载再次失败，提供日志中的**固定布尔诊断项**即可，不必提供原始异常、Cookie、Token 或工程数据。如多标签页通过，后续仍须评估此前是否为不稳定异步加载，必要时多次仅复验该专项；不能在根因未明时声称 E-106 已关闭。
