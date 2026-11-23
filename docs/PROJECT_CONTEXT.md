@@ -2276,3 +2276,9 @@ D5b9r 基于上述主线，在共享 Core 会话归约器处理 delta 前先校�
 维护者 Windows 已对 PR #157 执行 `alarm-baseline-session.test.ts` **16/16**、`alarm-subscription-adapter.test.ts` **25/25**（合计 **41/41**），`vp check` **435 格式文件/286 受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个自有文件**。PR #157 远程增加一笔仅调整测试排版的提交，无审查阻塞；维护者授权后 Squash 合并至 `main@54cec31bd1e7a6c1ae0d1e1a0b3d2a128515e845`。该 Windows 日志未提供本地 HEAD，不假定已对特定远程提交逐字复验。
 
 D5b9s 从这份主线检查独立导出的 `advanceAlarmTagDeltaBaseline`，发现直接调用时仍可跳过 D5b9r 的归约器旧基线时效保护。此次对低层 API 增加既有数值/质量/时间窗口筛选，补充 **6 项单测定义**，原 `alarm-tag-delta.test.ts` **9→15 项**。旧测试夹具基线时间由年龄 2000ms 调整为 1000ms，以确保其「有效增量」测试在既有 1000ms 窗口内合法，避免旧夹具无意依赖违规行为。本批还未取得新增 Windows 实测结果；FR-011 仍不是可用的生产工业报警功能。
+
+## 2026-11-23 · PR #158 Windows 验收合并与 D5b9t 重复快照保护候选
+
+维护者 Windows 验收 PR #158 的三份定向测试 `alarm-tag-delta.test.ts` **15/15**、`alarm-baseline-session.test.ts` **16/16**、`alarm-subscription-adapter.test.ts` **25/25**（合计 **56/56**），`vp check` **435 格式文件/286 受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个自有文件**。PR 分支增加一笔仅调整测试排版的提交，无业务逻辑变化；维护者明确同意后 Squash 合并至 `main@ac39b5876fa2f255d993b0e8665cad51fe675bff`。这些数据来自维护者 Windows 日志，不冒充协作环境已运行检查。
+
+D5b9t 基于上述主线，发现共享会话归约器在已有基线时仍会用第二次同代次 snapshot 覆盖序列。最小修复增加本地拒绝原因 `SNAPSHOT_ALREADY_ESTABLISHED` 并清空基线，受控托管器/适配器既有失效路径负责撤销令牌和订阅。新增 **5 项单元测试定义**：会话归约器 **16→18**、会话托管器 **9→10**、只读订阅适配器 **25→27**，三份共 **55 项**，**尚无 D5b9t Windows 实测**。不新增设备来源认证、真实工业协议或自动报警、确认、不可变审计能力。
