@@ -663,7 +663,7 @@ function createPage() {
 }
 
 async function renamePage() {
-  const name = await promptStudioPageName("请输入新的页面名称", page.value.name);
+  const name = await promptStudioPageName(page.value.name);
   if (name === null) return;
   apply(() => editor.renamePage(page.value.id, name), "页面已重命名，可撤销");
 }
