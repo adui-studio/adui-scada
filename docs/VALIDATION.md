@@ -4323,3 +4323,37 @@ git status --short
 前七项类型/业务/浏览器专项已在前轮运行，且这次没有新应用代码或数据模型变更，不机械重复完整 `ready`、Tag、互通、版本安全与普通 Studio 120 项。若本次 `test:multitab` 通过，为排除测试不稳定可再独立复验一次；**新候选仍未 Windows 实测，不能报告修复完成**。
 
 若 Chromium 仍出现 `ERR_CACHE_WRITE_FAILURE`，再检查测试进程临时 Chromium 用户目录的剩余空间/权限/安全软件策略，不要删除用户正常 Chrome Profile；保留安全分类日志即可，不收集原始请求 URL、会话令牌、Cookies 或工程数据。
+
+## 2026-11-23 · PR #186 合并验收；D5c0v 本地版本历史 Popup 定向测试
+
+维护者 Windows 最终复测 `node --check`、`vp check`（446 个格式文件/289 个受检零警告或类型错误）、`docs:check`（94）通过；`test:multitab` React 与 Vue 各四个安全场景全部通过，退出检查未触发。之前同 PR 的普通 Studio **120/120**、双框架 JSON 互通、版本安全和旧草稿迁移及 `typecheck:web` 已执行通过。GitHub PR #186 经明确授权从最终 HEAD `c67bc33d1520b10a0a046e51d52213a8115bff0c` Squash 合并到 `main@1faca1a386c83314e24f245b7ea394c80f1c7cb0`；测试日志未单独显示本地 SHA，不能称为在合并 SHA 上直接运行。`ERR_CACHE_WRITE_FAILURE` 的本轮测试阻塞通过隔离 Chromium HTTP 缓存绕过，系统环境诱因仍待定位。
+
+D5c0v 将 React/Vue「本地版本历史」由原生 `details` 改为 TDesign Popup，打开触发原有历史刷新，维护原始 SHA-256、IndexedDB CAS、历史差异、取消/确认载入、旧草稿迁移及导入竞争校验。新版浏览器脚本使用真实 Popup 按钮操作，保留全部版本/安全断言；普通 Studio 四组额外增加 3 项，目标 **33/33 × 4 = 132/132**，尚未实跑。
+
+本批涉及本地版本操作及历史库失败，应在同一最终 HEAD 上执行以下定向验收，而不是机械重跑整套 `ready`：
+
+```powershell
+git fetch origin
+git switch feat/d5c0v-tdesign-local-history-popup
+git pull --ff-only
+git rev-parse HEAD
+pnpm run typecheck:web
+if ($LASTEXITCODE -ne 0) { throw "双框架类型检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run test:browser
+if ($LASTEXITCODE -ne 0) { throw "双框架 Studio 浏览器回归失败" }
+pnpm run test:versions
+if ($LASTEXITCODE -ne 0) { throw "本地历史版本操作失败" }
+pnpm run test:versions:safety
+if ($LASTEXITCODE -ne 0) { throw "历史版本并发安全失败" }
+pnpm run test:legacy:browser
+if ($LASTEXITCODE -ne 0) { throw "旧工程历史快照迁移失败" }
+pnpm run test:release:preflight:browser
+if ($LASTEXITCODE -ne 0) { throw "独立发布预检入口回归失败" }
+git status --short
+```
+
+人工查看 React/Vue 1440×900、1024×768 下的版本历史弹层开合、外部点击、Esc/键盘焦点、长列表滚动、查看差异、取消及确认载入，以及发布预检和服务端版本入口仍可访问。保留本地草稿 CAS、业务错误拒绝与 SVG 画布约束；当前代码仅经 GitHub 静态差异检查，**不能声称测试已通过**。
