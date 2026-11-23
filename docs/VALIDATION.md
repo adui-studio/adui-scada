@@ -4103,3 +4103,33 @@ pnpm run test:interop
 ```
 
 随后执行完整 `pnpm run ready`，检查 `$LASTEXITCODE` 并核对最终 HEAD。手工比较 React/Vue 1440×900、1024×768 的导航、发布空态、状态诊断、工程列表、聚焦/禁用颜色及 16:9 固定侧栏；静态 Token 数值一致不意味着各浏览器的最终计算样式已实测一致。正式工业现场验证、OIDC 真实发布授权专项与生产设备写入均不在本批范围。
+
+## 2026-11-23 · PR #181 Windows 质量链与 D5c0q 下一批验收计划
+
+维护者上传的 PR #181 Windows 日志：`vp check` **445 格式文件/289 受检零告警**，`theme-tokens.test.ts` **6/6**，完整单测 **70/70 文件、870/870 用例**，报警 Lab **5/5**、SSE 客户端 **8/8**、故障代理 **4/4**、NestJS E2E **63/63**，文档 **93** 份、中文扫描 **316** 份、React/Vue 构建均完成。服务端构建输出至 Prisma Client 生成，无进一步输出；日志未单独打印 `ready` 最终退出码、本地 HEAD 或本次浏览器/Tag/互通测试，不能认定这些缺失环节已通过。GitHub 实际核验最终 HEAD `44cd8b562f5b0434172d1823531f7a780f00b919`，审查线程为空、Assignee `@adui-dev`，经维护者明确授权 Squash 合并为 `main@66c006de3fb915138ca79608afac5bb1b9c542a7`。
+
+D5c0q 仅在共享 `studio.css` 对属性面板的现有字体、间距与圆角做**数值等价**的 Token 引用替换，另外让保存草稿、添加图元、页面标签中的本地 hover 强调只针对非禁用按钮；保留 `focus-visible`、TDesign 原生状态、DOM、252px/320px 侧栏及 SVG 几何。主题静态回归从 6 项扩充到目标 **8 项**，新增对等值刻度、禁用 hover 和官方 TDesign 状态变量的检查。此处只是 GitHub 候选代码与静态核对，**未运行 Windows Vite+、Vitest、浏览器或完整 ready**。
+
+Windows 复验（在本项目根目录，先确保当前分支及工作区修改已妥善处理）：
+
+```powershell
+git fetch origin
+git switch feat/d5c0q-theme-property-controls
+git pull --ff-only
+git rev-parse HEAD
+vp test run packages/runtime/test/theme-tokens.test.ts
+if ($LASTEXITCODE -ne 0) { throw "主题回归失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整质量链失败" }
+pnpm run test:browser
+if ($LASTEXITCODE -ne 0) { throw "Studio 浏览器回归失败" }
+pnpm run test:tags:browser
+if ($LASTEXITCODE -ne 0) { throw "Tag 浏览器回归失败" }
+pnpm run test:interop
+if ($LASTEXITCODE -ne 0) { throw "跨框架工程互通失败" }
+git status --short
+```
+
+人工比较 React/Vue 1440×900 和 1024×768：属性面板表单布局及文字密度、不可编辑图元的 TDesign Input/Button 禁用状态、可见键盘焦点、无选中图元空态、工具栏按钮 hover、缩放和侧栏固定宽度。测试不连接现场 PLC/DCS，也不授权任何设备写入。
