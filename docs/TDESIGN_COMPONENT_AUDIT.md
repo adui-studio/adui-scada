@@ -67,3 +67,11 @@
 - 尚无本次迁移后的 Windows `vp check`、`typecheck:web`、React/Vue 浏览器焦点/键盘测试；当前只是版本匹配的官方源码阅读与本项目代码盘点。
 - 尚未通过项目要求的 `tdesign-mcp-server get-component-docs` 查询精确 API，因为当前连接中没有该服务；若继续执行源代码迁移，需先解决查询能力，或者经维护者明确接受以两个**固定 tag** 的 TypeScript 类型与官方示例为替代验收依据。
 - 本文不申请改变工业业务操作，也不要求安装其他组件库、改变依赖或修改 Lockfile。
+
+## 7. D5c0t · 页面管理 Dropdown 迁移候选（待 Windows 验收）
+
+- **React / Vue 对等实现**：仅将 `StudioPage.tsx` 和 `StudioPage.vue` 的「页面管理」原生 `details/summary` 替换为官方 `Dropdown` + `Button`。当前 Catalog 使用 React **1.18.6**、Vue Next **1.20.11**，按各自对应 Git tag 的 `dropdown/type.ts`、`Dropdown/DropdownMenu/DropdownItem`（React）与 `dropdown/dropdown-menu/dropdown-item`（Vue）核对 API 和实际禁用点击处理。两端均采用 `trigger='click'`、`placement='bottom-right'`、`options` 和 `onClick`；未引入其他组件库。
+- **六条命令**：新建页面、复制页面、页面前移、页面后移、重命名、删除当前页均调用原有编辑器方法。达到 100 页禁用新建和复制；第一页禁用前移；末页禁用后移；仅一页禁用删除。原有 `window.prompt`/`window.confirm` 仅作为既有业务流程保留，后续应独立评估 Dialog/Popconfirm，当前批不擅自改变数据覆盖确认。
+- **旧 CSS 清理**：删除 `.studio-page-menu > summary` 和 `.studio-page-actions` 的手工背景、绝对定位、宽度、栅格及 hover 规则。保留 `.studio-page-menu` 布局容器；新菜单的定位、挂载和关闭交由 TDesign Popup 内部实现。
+- **浏览器验收**：在 `scripts/test-studio-browser.mjs` 正常 Studio 双框架双分辨率测试中新增 8 个真实菜单检查（触发器、选项齐全、禁用条件、创建、关闭、禁用阻止、外部关闭、键盘聚焦），原 19 项几何/图层/画布断言全部保留，**目标每组 27 项，四组共 108 项**。确认禁用项 `t-dropdown__item--disabled` 与对应版本源码一致。菜单的 Esc 行为需要 Windows 手工检查，未据此声称已支持完整键盘导航。
+- **验收状态**：本提交仅完成 GitHub 代码变更与静态核对，尚未运行 Windows `vp check`、Web 类型检查或真实浏览器。项目指定的 `tdesign-mcp-server` 当前不可用，本次是对固定官方 tag 类型与组件实现的直接校验，不能等同 MCP 查询成功。
