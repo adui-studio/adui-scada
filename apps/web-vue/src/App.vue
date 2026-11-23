@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Button as TButton } from "tdesign-vue-next";
+import "tdesign-vue-next/es/style/index.css";
 import { defineAsyncComponent, ref } from "vue";
 
 const RuntimePage = defineAsyncComponent(() => import("./runtime/RuntimePage.vue"));
@@ -19,27 +21,27 @@ const view = ref<"runtime" | "published" | "studio">("runtime");
       <span class="scada-app-brand"
         ><img src="/brand/favicon.svg" alt="" aria-hidden="true" />ADui SCADA</span
       >
-      <button
+      <TButton
         type="button"
         :aria-current="view === 'runtime' ? 'page' : undefined"
         @click="view = 'runtime'"
       >
         运行监控
-      </button>
-      <button
+      </TButton>
+      <TButton
         type="button"
         :aria-current="view === 'published' ? 'page' : undefined"
         @click="view = 'published'"
       >
         已发布运行
-      </button>
-      <button
+      </TButton>
+      <TButton
         type="button"
         :aria-current="view === 'studio' ? 'page' : undefined"
         @click="view = 'studio'"
       >
         组态编辑
-      </button>
+      </TButton>
       <span class="scada-app-version">研发预览 · 非现场控制</span>
     </nav>
     <RuntimePage v-if="view === 'runtime'" />
