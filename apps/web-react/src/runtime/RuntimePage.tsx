@@ -29,7 +29,7 @@ export default function RuntimePage() {
     <main id="scada-main-content" tabIndex={-1} className="scada-shell scada-shell--overview">
       <header className="scada-header">
         <div>
-          <p className="scada-eyebrow">ADui SCADA · V0.1</p>
+          <p className="scada-eyebrow">ADui SCADA · 本地模拟运行</p>
           <h1>水处理实时监控</h1>
         </div>
         <span className="scada-status" data-status={state.status}>
@@ -101,6 +101,9 @@ export default function RuntimePage() {
       </section>
       <section className="scada-panel scada-values-panel" aria-label="Tag 质量与最近值">
         <h2>Tag 质量与最近值</h2>
+        {state.values.length === 0 && (
+          <p className="scada-diagnostics-empty">暂无可显示的 Tag 数据</p>
+        )}
         <div className="scada-tags">
           {state.values.map((tag) => (
             <div className="scada-tag" key={tag.tagId}>
