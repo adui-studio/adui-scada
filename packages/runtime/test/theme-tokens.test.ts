@@ -44,6 +44,7 @@ describe("双框架工业主题设计 Token", () => {
     expect(css).toContain("--td-bg-color-container: var(--adui-color-surface);");
     expect(css).toContain("--td-font-size-body-medium: var(--adui-font-size-md);");
     expect(css).toContain("--td-size-6: var(--adui-space-6);");
+    expect(css).toContain("--td-radius-medium: var(--adui-radius-md);");
   });
 
   it("原主题入口和两个 HTML 必须接入统一主题且不影响 Studio 固定尺寸", () => {
