@@ -714,3 +714,26 @@ test("递增序列携带倒退服务器时间会终止订阅并撤销旧回调",
   });
   expect(adapter.snapshot().baseline).toBeNull();
 });
+
+test("等待快照期间调度时钟无效也会停止订阅并清理旧回调", () => {
+  const { adapter, source, scheduler, setNow } = setup();
+  adapter.start();
+  setNow(Number.NaN);
+  scheduler.tick();
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(adapter.snapshot().invalidated).toBe(true);
+  expect(source.closes).toBe(1);
+  expect(scheduler.cancels).toBe(1);
+  source.emit({ kind: "snapshot", values: [value] });
+  expect(adapter.snapshot().baseline).toBeNull();
+
+  const immediate = setup();
+  immediate.scheduler.immediate = true;
+  immediate.setNow(Number.NaN);
+  immediate.adapter.start();
+  expect(immediate.adapter.isRunning()).toBe(false);
+  expect(immediate.adapter.snapshot().invalidated).toBe(true);
+  expect(immediate.source.closes).toBe(1);
+  expect(immediate.scheduler.cancels).toBe(1);
+});
