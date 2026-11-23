@@ -679,3 +679,47 @@ test("矛盾终止态遇到旧代次回调时仍须先清理旧基线", () => {
     ),
   ).toEqual({ status: "OTHER_SESSION_IGNORED", state: rejected.state });
 });
+
+test("无时区服务器时间的快照与增量均终止当前候选会话", () => {
+  const pending = beginAlarmBaselineSession("tank.level", 2);
+  const rejectedSnapshot = transitionAlarmBaselineSession(
+    pending,
+    {
+      ...snapshot,
+      change: {
+        kind: "snapshot",
+        values: [{ ...previous, serverTimestamp: "2026-11-22T08:59:58.000" }],
+      },
+    },
+    nowMs,
+    3000,
+  );
+  expect(rejectedSnapshot).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "INVALID_INPUT",
+    state: { ...pending, invalidated: true },
+  });
+  const initial = established();
+  const rejectedDelta = transitionAlarmBaselineSession(
+    initial,
+    {
+      ...delta,
+      change: {
+        kind: "delta",
+        values: [{ ...next, serverTimestamp: "2026-11-22T08:59:59.000" }],
+      },
+    },
+    nowMs,
+    3000,
+  );
+  expect(rejectedDelta).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "INVALID_INPUT",
+    state: { ...initial, baseline: null, invalidated: true },
+  });
+  expect(transitionAlarmBaselineSession(rejectedDelta.state, snapshot, nowMs, 3000)).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SESSION_INVALIDATED",
+    state: rejectedDelta.state,
+  });
+});
