@@ -3259,3 +3259,40 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ## 2026-11-23 · D5b9o PR #154 条件式断言警告修复待复验
 
 维护者 Windows 在本批运行 `vp check --fix`，报告 `packages/core/test/alarm-subscription-adapter.test.ts:280` 的 `vitest(no-conditional-expect)` **1 条警告、0 个错误**，且显示格式化完成。此输出**不是** `vp check` 零警告通过。现已按 E-003/E-086 将条件中的断言改为仅记录布尔结果，在 `adapter.stop()` 后统一执行断言；不改变实际重入场景和业务代码。该改动**尚未在 Windows 执行或复验**。请在本 PR 分支更新后重新运行定向测试及 `vp check`、`docs:check`、`messages:check`，核对退出码。
+
+## 2026-11-23 · D5b9p FR-011 报警订阅异常原因保留：Windows 待验收
+
+PR #154 已获维护者授权合并：Windows 定向单测 **17/17**、`vp check` **435 格式文件/286 受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 份**；此前 `no-conditional-expect` 警告已复验消除。Squash 进入 `main@255c5a2ec3b88f0dd4dc54894cb6c03dda0aca6d`。本批 D5b9p 更新错误传播逻辑、增加 **3 项单测定义（本文件共 20 项）**，未执行新批 Windows 代码验证。
+
+维护者先获取远程代码、切换功能分支；按既定习惯可运行 `vp check --fix` 并提交实际格式差异，不要求核对 HEAD，然后执行：
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5b9p-alarm-cleanup-error-reporting
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5b9p-alarm-cleanup-error-reporting
+}
+if ($LASTEXITCODE -ne 0) { throw "切换功能分支失败" }
+
+git pull --ff-only origin fix/d5b9p-alarm-cleanup-error-reporting
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "自动修正失败" }
+
+vp test run packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警订阅异常保留定向测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批仅修改框架无关 Core 适配器及其测试和文档，暂不重复无改动的 HTTP E2E、完整 ready 和双框架浏览器专项。异常保留只用于受控诊断，不证明取消函数实际成功释放资源，更不能当作设备来源身份认证或工业报警安全验收；正式发布 Gate 保持 fail-closed。
