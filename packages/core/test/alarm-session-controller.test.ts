@@ -75,8 +75,9 @@ test("托管会话允许业务序列跳号，但未核验增量必须撤销令�
   const controller = new AlarmBaselineSessionController("tank.level", 2);
   const token = establish(controller);
   const jumped = { ...next, sequence: 7 };
-  expect(controller.receive(token, { kind: "delta", values: [jumped] }, true, nowMs, 3000))
-    .toMatchObject({ status: "DELTA_ACCEPTED", value: 42 });
+  expect(
+    controller.receive(token, { kind: "delta", values: [jumped] }, true, nowMs, 3000),
+  ).toMatchObject({ status: "DELTA_ACCEPTED", value: 42 });
   expect(controller.snapshot().baseline?.value.sequence).toBe(7);
 
   expect(
