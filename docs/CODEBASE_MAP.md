@@ -1475,3 +1475,12 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/test/alarm-baseline-session.test.ts`：30→31，错误快照/增量触发原有 `INVALID_INPUT` 终止，不可同代次恢复。
 - `packages/core/test/alarm-subscription-adapter.test.ts`：32→33，受控订阅拒绝并释放定时器/回调。
 - 会话代次 8、托管器 11 保持不变，TagStore、Gateway、NestJS、Prisma、Vue/React 未修改。
+
+## 2026-11-23 · D5c0k FR-011 S0 报警 Lab 自动质量入口
+
+- 根 `package.json`：新增 `lab:alarm`（只读打印进程内模拟诊断）、`test:alarm:lab`（原有 Node 5 项单测）；把 `test:alarm:lab` 放入 `ready`，位置为 `test:unit` 与 `test:sse:clients` 之间。
+- `scripts/lab-alarm-inprocess.mjs` 与 `scripts/lab-alarm-inprocess.cases.mjs`：复用已合并 D5c0j 文件，**本批不修改脚本内容或 Core 算法**。
+- `docs/HARNESS.md`：新增两条根命令、自动门禁位置、独立验证和安全边界。
+- `docs/VALIDATION.md` / `docs/PROJECT_CONTEXT.md`：记录本批进度和待复验范围。
+
+无新增依赖、端口、网络协议、数据源认证、正式报警事件、Vue/React 适配层或 Prisma 数据库写入；D1～D5 尚待正式批准。该自动化只覆盖 S0 进程内实验，不代表完整工业报警可信链路。
