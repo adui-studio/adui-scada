@@ -26,7 +26,11 @@ export default function RuntimePage() {
   const svg = state.document ? svgDataUrl(state.document, state.values) : null;
 
   return (
-    <main id="scada-main-content" tabIndex={-1} className="scada-shell scada-shell--overview">
+    <main
+      id="scada-main-content"
+      tabIndex={-1}
+      className="scada-shell scada-shell--overview"
+    >
       <header className="scada-header">
         <div>
           <p className="scada-eyebrow">ADui SCADA · 本地模拟运行</p>
