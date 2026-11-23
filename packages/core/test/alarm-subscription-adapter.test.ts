@@ -621,3 +621,22 @@ test("读取基线时受控时钟故障会清空状态并停止订阅", () => {
   expect(source.closes).toBe(1);
   expect(scheduler.cancels).toBe(1);
 });
+
+test("尚未收到初始快照时读取等待状态不依赖外部时钟", () => {
+  const source = new TestSource();
+  const scheduler = new TestScheduler();
+  let clockReads = 0;
+  const adapter = new AlarmSubscriptionAdapter("tank.level", source, scheduler, {
+    maxAgeMs: 3000,
+    checkIntervalMs: 1000,
+    nowMs: () => {
+      clockReads += 1;
+      throw new TypeError("测试等待快照不应读取时钟");
+    },
+  });
+  adapter.start();
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(adapter.isRunning()).toBe(true);
+  expect(clockReads).toBe(0);
+  adapter.stop();
+});
