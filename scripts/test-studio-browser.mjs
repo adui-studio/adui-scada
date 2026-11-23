@@ -606,7 +606,9 @@ function watchStudioModuleNetwork(session, target) {
     if (name === "net::ERR_CONNECTION_REFUSED") return "连接拒绝";
     if (name === "net::ERR_CERT_AUTHORITY_INVALID") return "证书不受信任";
     if (name === "net::ERR_HTTP_RESPONSE_CODE_FAILURE") return "HTTP响应拒绝";
-    return "其他网络错误";
+    // 只允许输出 Chromium 的固定错误码格式，避免透出资源地址或异常正文。
+    const safeCode = /^net::ERR_[A-Z0-9_]{1,64}$/.exec(String(name));
+    return safeCode ? "Chromium错误码=" + safeCode[0] : "其他网络错误";
   };
   const recordFailure = (entry) => {
     if (failures.length < 8) failures.push(entry);
