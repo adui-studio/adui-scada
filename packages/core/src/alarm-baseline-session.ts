@@ -144,6 +144,13 @@ export function transitionAlarmBaselineSession(
       };
     }
 
+    // delta 不能依靠新读数把已经过期的旧基线恢复为有效状态。
+    // 失效后必须通过同代次的新 snapshot 重新建立基线。
+    if (action.sourceVerified === true && state.baseline !== null) {
+      const checked = classifyTimelyNumericAlarmSample(state.baseline.value, nowMs, maxAgeMs);
+      if (checked.status !== "READY") return invalidate(state, checked.status);
+    }
+
     const result = advanceAlarmTagDeltaBaseline(
       {
         change: action.change,
