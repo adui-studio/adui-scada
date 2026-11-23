@@ -367,7 +367,7 @@ export default function StudioPage() {
 
   async function renamePage() {
     if (!page) return;
-    const name = await promptStudioPageName("请输入新的页面名称", page.name);
+    const name = await promptStudioPageName(page.name);
     if (name === null) return;
     apply(() => editor.renamePage(page.id, name), "页面已重命名，可撤销");
   }
