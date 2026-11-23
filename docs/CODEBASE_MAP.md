@@ -1454,3 +1454,13 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/test/alarm-tag-delta.test.ts`：17→18，覆盖增量中更大序列号不得携带不存在的日历日期。
 - `packages/core/test/alarm-baseline-session.test.ts`：28→29，覆盖无效首次快照或增量终止本代次并禁止同代次恢复。
 - `packages/core/test/alarm-subscription-adapter.test.ts`：30→31，覆盖非法初始日期造成关闭订阅及定时器释放。Controller/Adapter 生产逻辑保持不变。
+
+## 2026-11-23 · D5c0c FR-011 报警候选禁止二十四时隐式跨日（候选）
+
+- `packages/core/src/alarm-tag-freshness.ts`：在现有有时区时间格式正则中捕获小时并拒绝 `24`，让报警候选按 RFC 3339 §5.6 接受 `00–23` 小时；失败抛中文 TypeError，不引入其他依赖或新的拒绝枚举。已合法的次日 `00:00` 与日末 `23:59:59` 保持可用。
+- `packages/core/test/alarm-tag-freshness.test.ts`：8→9，测试 UTC 和明确偏移的 `24:00` 拒绝，以及规范的日末与次日零点正常接受。
+- `packages/core/test/alarm-snapshot-baseline.test.ts`：9→10，测试直接首次快照不能以二十四时建立新基线。
+- `packages/core/test/alarm-tag-delta.test.ts`：18→19，测试严格递增序列也不能续接隐式跨日时间。
+- `packages/core/test/alarm-baseline-session.test.ts`：29→30，验证错误首份快照、增量的统一失效及同代次不可复活。
+- `packages/core/test/alarm-subscription-adapter.test.ts`：31→32，验证不规范时间使订阅停止并撤销旧回调。
+- 通用 `tag-store.ts`、会话 Controller/Adapter 生产代码、服务端/API/数据库、React/Vue 和工业网关均保持不变。
