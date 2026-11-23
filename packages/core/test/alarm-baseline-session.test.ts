@@ -782,3 +782,56 @@ test("非法公历日期的首次快照与增量都要终止会话", () => {
     state: invalidDelta.state,
   });
 });
+
+test("二十四时跨日输入的快照与增量必须终止当前代次", () => {
+  const midnight = Date.parse("2026-03-01T00:00:00.000Z");
+  const rolled = "2026-02-28T24:00:00.000Z";
+  const pending = beginAlarmBaselineSession("tank.level", 2);
+  const rejectedSnapshot = transitionAlarmBaselineSession(
+    pending,
+    {
+      ...snapshot,
+      change: { kind: "snapshot", values: [{ ...previous, serverTimestamp: rolled }] },
+    },
+    midnight,
+    3000,
+  );
+  expect(rejectedSnapshot).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "INVALID_INPUT",
+    state: { ...pending, invalidated: true },
+  });
+
+  const establishedMidnight = transitionAlarmBaselineSession(
+    pending,
+    {
+      ...snapshot,
+      change: {
+        kind: "snapshot",
+        values: [{ ...previous, serverTimestamp: "2026-02-28T23:59:59.000Z" }],
+      },
+    },
+    midnight,
+    3000,
+  );
+  expect(establishedMidnight.status).toBe("BASELINE_ESTABLISHED");
+  const rejectedDelta = transitionAlarmBaselineSession(
+    establishedMidnight.state,
+    {
+      ...delta,
+      change: { kind: "delta", values: [{ ...next, serverTimestamp: rolled }] },
+    },
+    midnight,
+    3000,
+  );
+  expect(rejectedDelta).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "INVALID_INPUT",
+    state: { ...establishedMidnight.state, baseline: null, invalidated: true },
+  });
+  expect(transitionAlarmBaselineSession(rejectedDelta.state, snapshot, nowMs, 3000)).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SESSION_INVALIDATED",
+    state: rejectedDelta.state,
+  });
+});

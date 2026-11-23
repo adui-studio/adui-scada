@@ -367,3 +367,23 @@ test("无效公历日期不能以更大序列号从直接增量入口推进基�
     ),
   ).toThrow("报警服务器时间戳日期无效");
 });
+
+test("直接增量入口不能使用日末二十四时绕过报警时间排序", () => {
+  expect(() =>
+    advanceAlarmTagDeltaBaseline(
+      {
+        ...request,
+        baseline: {
+          generation: 2,
+          value: { ...previous, serverTimestamp: "2026-02-28T23:59:59.000Z" },
+        },
+        change: {
+          kind: "delta",
+          values: [{ ...next, serverTimestamp: "2026-02-28T24:00:00.000Z" }],
+        },
+      },
+      Date.parse("2026-03-01T00:00:00.000Z"),
+      3000,
+    ),
+  ).toThrow("报警服务器时间戳小时无效");
+});

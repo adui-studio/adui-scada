@@ -1405,3 +1405,11 @@ D5c0a 已要求报警候选服务器时间包含明确的 `Z` 或 `±HH:mm` 时�
 D5c0b **只修改** `packages/core/src/alarm-tag-freshness.ts`：在 D5c0a 的显式时区正则中捕获公历年、月、日；在调用 `Date.parse` 比较时间窗之前，根据各月实际天数和格里高利闰年规则（四年一闰、百年不闰、四百年再闰）验证日期存在。不存在时抛中文 `TypeError("报警服务器时间戳日期无效")`；已有 TypeError→`BASELINE_INVALIDATED/INVALID_INPUT` 的会话终止和 Adapter 取消订阅继续适用。合法闰日、UTC 和显式时区偏移继续正常接受；不新增拒绝枚举或函数签名，不修改原来的质量、数值、时区、服务器时间非倒退优先级。
 
 只处理报警候选，不改通用 `TagStore` 的历史兼容性与 `TagValue` Schema。普通 Tag 的可解析性不等于正式报警时间可信，网关未来仍须由可信服务端规范化时间并保证来源认证。本次不实现报警触发、确认授权、不可变审计、PLC/DCS 连接或设备写入；发布安全 Gate 继续 fail-closed。
+
+## 2026-11-23 · D5c0c FR-011 报警服务器时间采用 00–23 小时以禁止隐式跨日（候选）
+
+D5c0b 已合并的公历日期验证拒绝了二月三十日等不存在的日期，但 `classifyTimelyNumericAlarmSample` 的时间格式正则仍允许任意两位小时，随后依赖 `Date.parse`。Node/V8 可以把 `2026-02-28T24:00:00.000Z` 解析为 `2026-03-01T00:00:00.000Z`。这一写法在 ISO 8601 中有日末语义，却**不属于 RFC 3339 §5.6 的时间格式子集**（小时仅允许 00–23），因此不同时间格式消费者可能对其做不同归一化或直接拒绝。该情况在公开报警候选入口可构造，但尚无真实工业采集事故证据。规范来源：https://www.rfc-editor.org/rfc/rfc3339#section-5.6。
+
+D5c0c 在 `packages/core/src/alarm-tag-freshness.ts` 原有时区和年月日匹配正则中额外捕获小时；当小时大于 23 时抛出固定中文 `TypeError("报警服务器时间戳小时无效")`，禁止通过隐式跨日映射得到 `READY`。**规范的次日 `00:00:00Z`、前一日 `23:59:59.999Z`、合法日期与时区偏移仍然允许**。没有修改公历日期校验、GOOD 数值优先级、最大年龄边界、序列或 `sourceTimestamp` 规则，也不引入新枚举或公共接口。
+
+公开初始快照、直接增量入口继承同一 TypeError；`transitionAlarmBaselineSession` 将非法输入映射为既有 `BASELINE_INVALIDATED/INVALID_INPUT` 终止代次；受控 Adapter 继续按原路径停止只读订阅并清理定时器。通用 `TagStore` 仍保留历史 `Date.parse` 兼容契约；若未来真实网关接收 ISO 8601 日末 24 时表示，应由可信上游明确转换为规范次日零点，不能让 Core 根据宿主行为偷偷归一化。此规则不证明来源认证、时钟可信、真实报警触发、确认或不可变审计，正式发布安全门禁继续 fail-closed。
