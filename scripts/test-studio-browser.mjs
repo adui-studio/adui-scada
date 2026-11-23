@@ -1723,28 +1723,33 @@ async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice 
   if (!button || button.disabled) throw new TypeError("草稿操作按钮不可用：" + label);
   const originalConfirm = window.confirm;
   if (confirmChoice !== null) window.confirm = () => confirmChoice;
+  let resultNotice = null;
   try {
     button.click();
     const waiting = Date.now();
     while (Date.now() - waiting < 12000) {
       const notice = document.querySelector(".studio-notice")?.textContent || "";
-      if (notice.includes(expectedNotice)) return notice;
+      if (notice.includes(expectedNotice)) {
+        resultNotice = notice;
+        break;
+      }
       await new Promise((resolve) => setTimeout(resolve, 80));
     }
-    throw new TypeError("草稿操作结果超时：" + label);
+    if (resultNotice === null) throw new TypeError("草稿操作结果超时：" + label);
   } finally {
     window.confirm = originalConfirm;
     if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
       trigger.click();
     }
-    const closing = Date.now();
-    while (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
-      if (Date.now() - closing > 5000) {
-        throw new TypeError("TDesign 文件草稿弹层关闭超时");
-      }
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
   }
+  const closing = Date.now();
+  while (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+    if (Date.now() - closing > 5000) {
+      throw new TypeError("TDesign 文件草稿弹层关闭超时");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return resultNotice;
 }
 
 /** 等待实际 IndexedDB 提交指定修订号，必要时校验完整工程内容。 */
