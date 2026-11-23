@@ -1182,14 +1182,22 @@ async function runStudioLegacyMigration(session) {
     // 先由真实 Studio/Dexie 打开并初始化历史库，再写入旧快照测试数据。
     const emptyVersions = await evaluateStudioPage(session, studioVersionRowsInPage);
     assert.deepStrictEqual(emptyVersions, [], target.name + " 新建浏览器上下文的历史版本库应为空");
-    await evaluateStudioPage(session, () => {
+    await evaluateStudioPage(session, async () => {
       const menu = document.querySelector(".studio-local-history-menu");
       const trigger = menu?.querySelector("button.t-button");
       if (!(trigger instanceof HTMLButtonElement)) {
         throw new TypeError("未找到本地版本历史 Popup 触发器");
       }
-      if (menu.querySelector(".studio-version-panel")?.getClientRects().length) trigger.click();
-      return true;
+      if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) {
+        throw new TypeError("历史版本库初始化后弹层意外关闭");
+      }
+      trigger.click();
+      const started = Date.now();
+      while (Date.now() - started < 5000) {
+        if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) return true;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      throw new TypeError("写入旧快照前，本地历史弹层关闭超时");
     });
 
     // 历史 Project Snapshot：先验证原 SHA-256，再在只读返回值中归一化，不能改写原记录。
@@ -1391,7 +1399,14 @@ async function studioVersionRowsInPage() {
     }
     await new Promise((resolve) => setTimeout(resolve, 80));
   }
-  throw new TypeError("历史版本列表加载超时");
+  const panel = menu.querySelector(".studio-version-panel");
+  const visibility = panel
+    ? panel.getClientRects().length
+      ? "弹层可见"
+      : "弹层不可见"
+    : "弹层未挂载";
+  const busy = Boolean(panel?.querySelector(".studio-version-tools button:disabled"));
+  throw new TypeError(`历史版本列表加载超时：${visibility}，忙碌=${busy}`);
 }
 
 /** 通过真实开关启动自动保存，不绕过 Studio 的确认和订阅逻辑。 */
@@ -1721,6 +1736,13 @@ async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice 
     window.confirm = originalConfirm;
     if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
       trigger.click();
+    }
+    const closing = Date.now();
+    while (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+      if (Date.now() - closing > 5000) {
+        throw new TypeError("TDesign 文件草稿弹层关闭超时");
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
   }
 }
