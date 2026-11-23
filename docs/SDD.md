@@ -1373,3 +1373,11 @@ D5b9w 已合并的时间顺序防护之后继续检查共享会话归约器：`t
 D5b9x 在原 `CHECK_FRESHNESS` 分支、`WAITING_SNAPSHOT` 返回之前，按原 `classifyTimelyNumericAlarmSample` 的相同边界核对 `nowMs` 必须为非负安全整数、`maxAgeMs` 必须为正安全整数。非法时返回已有 `BASELINE_INVALIDATED/INVALID_INPUT`，通过现有冻结终止态撤销该代次；同代次之后的 snapshot 固定返回 `SESSION_INVALIDATED`，必须显式递增代次重启才能恢复。已有基线的检查与拒绝语义不变，旧代次事件仍先忽略，`DISCONNECT` 仍能不依赖健康时钟立即失效。没有新 API 或拒绝枚举。
 
 `AlarmBaselineSessionController.checkFreshness` 接收到失效结果后照旧撤销令牌；`AlarmSubscriptionAdapter` 经周期调度的时钟失败按既有路径停止订阅、尝试释放定时器和取消回调，包含同步安装时立即执行的调度回调。**`AlarmSubscriptionAdapter.snapshot()` 在没有已建立基线时仍不调用时钟**，此项只约束明确执行的 `CHECK_FRESHNESS`，不变更被动读取行为。服务端时间赋值权、真实来源认证、报警触发/确认/不可变审计以及工业设备连接均不在本批范围；正式发布门禁继续 fail-closed。
+
+## 2026-11-23 · D5b9y FR-011 显式时效检查不得接受错代次或错目标基线（候选）
+
+在已合并的 D5b9x 等待快照参数校验之后，继续审查公共纯状态归约器 `transitionAlarmBaselineSession`：本代次的 `CHECK_FRESHNESS` 在已有非空基线时直接调用 `classifyTimelyNumericAlarmSample(state.baseline.value, nowMs, maxAgeMs)`，只核验旧读数的 GOOD、有限数值和时间窗口，**不验证 `state.baseline.generation` 与 `state.generation` 是否一致，也不验证 `state.baseline.value.tagId` 与 `state.expectedTagId` 是否一致**。因此，直接调用该公开纯函数并传入错代次或错 Tag 的合法新鲜状态，可得到 `BASELINE_UNCHANGED`。内部托管器正常路径会构造正确基线，不能把此问题误述为已在正常采集或工业现场复现。
+
+D5b9y 仅在 `CHECK_FRESHNESS` 已有基线、时钟参数通过既有检查之后复核两项身份归属：代次不同固定 `BASELINE_INVALIDATED/SESSION_MISMATCH`，目标 Tag 不同固定 `BASELINE_INVALIDATED/TAG_MISMATCH`。复用原有只读冻结失效态，清空基线，禁止同代次新 snapshot 或 delta 复活；必须显式递增代次重启。事件自身的其他代次仍在归约入口优先忽略，正常时效检查返回 `BASELINE_UNCHANGED`、等待快照返回 `WAITING_SNAPSHOT` 的契约不变。已存在的 delta 接口仍保留自己的代次和目标检查；不新增公共拒绝枚举、函数参数或网络访问。
+
+两项新纯归约器测试验证错误代次、错误目标、冻结旧状态、失效不可复活及显式重启。此举仅确保**连续传入的本地状态**满足一致性，公开纯函数仍不能鉴定传入状态的真实性；可信源身份、受控服务器时钟、真实报警触发/确认与不可变审计未实现，正式发布 Gate 继续 fail-closed。

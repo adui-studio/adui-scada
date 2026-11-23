@@ -924,3 +924,14 @@
 - **防复发**：状态机的等待阶段不能把外部时钟/配置损坏当成正常无数据；对于明确收到的安全检查命令，必须先核验命令自身参数，再决定是否因没有基线而等待。跨托管器与适配器验证失效令牌、旧闭包、取消资源；不要通过无效时钟下主动读取空基线来伪造检查发生。
 - **验证边界**：该分支只提交 GitHub 源码与测试定义，关联六份定向测试预期 **97 项**，实际 Windows Vitest、`vp check`、`docs:check`、`messages:check` 尚未执行。未涉及可信源认证、PLC/DCS、报警触发、确认授权、不可变审计、数据库或完整 ready，禁止提前关闭 E-096。
 - **证据**：最新主线 `alarm-baseline-session.ts`、D5b9x 分支三份测试、PR #162 与 `docs/VALIDATION.md`。
+
+> **2026-11-23 · E-096 结案补录**：维护者 Windows 实测 PR #163 六份关联测试 **97/97**、`vp check` **435/286 零警告错误**、文档 **90** 份及中文文案 **310** 个文件通过。GitHub 确认最终 HEAD `9364ae11753ba22d642221f27249bf411fc623ec` 仅增加格式化测试排版提交，无未解决审查意见；经明确授权 Squash 合并至 `main@2a0834c454e332ae2d9182748503f95039822091`。E-096 的定向门禁已完成，但不代表现场时钟可信、完整 ready 或生产报警认证。
+
+### E-097 · 显式时效检查会将错代次或错目标基线视为未变化（D5b9y，待 Windows 复验）
+
+- **发现方式**：静态审查 PR #163 合并后的 `transitionAlarmBaselineSession`。公开纯函数在 `CHECK_FRESHNESS` 有基线时只调用质量与时效筛选；可直接构造新鲜且 GOOD 的 `baseline.generation !== state.generation` 或 `baseline.value.tagId !== expectedTagId`，获得 `BASELINE_UNCHANGED`。正常托管器不会主动产生这种错配，尚无工业现场复现证据。
+- **根因**：增量路径已经依赖 `advanceAlarmTagDeltaBaseline` 检查基线的代次与 Tag 归属，但独立的显式时效检查路径未实施同样的一致性前提。
+- **最小修复**：在归约器 `CHECK_FRESHNESS` 的有效时间参数和非空基线分支先复核 `baseline.generation === state.generation` 和 `baseline.value.tagId === expectedTagId`。不一致分别返回已有 `BASELINE_INVALIDATED/SESSION_MISMATCH` 或 `BASELINE_INVALIDATED/TAG_MISMATCH`，冻结清空基线，禁止同代次复活。不增加枚举或改变外部订阅接口。
+- **防复发**：每个公开归约事件的成功结果都应核对其依赖状态的身份归属，不可仅假设已有上游增量入口验证过。分别覆盖错代次、错 Tag、过期、错误质量、旧代次忽略、冻结和显式重启；不将公共纯函数的输入一致性误称作来源认证。
+- **验证边界**：当前仅在 GitHub 候选分支定义两项回归；六份关联测试目标 **99 项**，`vp check`、`docs:check`、`messages:check` 均待 Windows 实测；未执行全量 ready、设备协议采集、报警触发、确认、权限或审计。本批不改变生产发布门禁。
+- **证据**：`packages/core/src/alarm-baseline-session.ts`、`packages/core/test/alarm-baseline-session.test.ts`、D5b9y 分支、PR #163、`docs/VALIDATION.md`。

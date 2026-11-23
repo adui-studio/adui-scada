@@ -564,3 +564,74 @@ test("等待首次快照时显式检查非法时钟或最大年龄必须终止�
   ).toBe("BASELINE_INVALIDATED");
   expect(pending).toEqual({ expectedTagId: "tank.level", generation: 2, baseline: null });
 });
+
+test("时效检查必须拒绝归属其他代次的基线并终止当前会话", () => {
+  const initial = established();
+  if (initial.baseline === null) throw new TypeError("测试基线不存在");
+  const misplaced = Object.freeze({
+    ...initial,
+    baseline: Object.freeze({ ...initial.baseline, generation: 1 }),
+  });
+  expect(
+    transitionAlarmBaselineSession(
+      misplaced,
+      { kind: "CHECK_FRESHNESS", generation: 1 },
+      nowMs,
+      3000,
+    ),
+  ).toEqual({ status: "OTHER_SESSION_IGNORED", state: misplaced });
+
+  const rejected = transitionAlarmBaselineSession(
+    misplaced,
+    { kind: "CHECK_FRESHNESS", generation: 2 },
+    nowMs,
+    3000,
+  );
+  expect(rejected).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SESSION_MISMATCH",
+    state: { ...misplaced, baseline: null, invalidated: true },
+  });
+  expect(Object.isFrozen(rejected.state)).toBe(true);
+  expect(misplaced.baseline.generation).toBe(1);
+  expect(transitionAlarmBaselineSession(rejected.state, snapshot, nowMs, 3000)).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SESSION_INVALIDATED",
+    state: rejected.state,
+  });
+
+  const restarted = restartAlarmBaselineSession(rejected.state, 3);
+  expect(
+    transitionAlarmBaselineSession(restarted, { ...snapshot, generation: 3 }, nowMs, 3000).status,
+  ).toBe("BASELINE_ESTABLISHED");
+});
+
+test("时效检查必须拒绝与目标 Tag 不匹配的已建立基线", () => {
+  const initial = established();
+  if (initial.baseline === null) throw new TypeError("测试基线不存在");
+  const misplaced = Object.freeze({
+    ...initial,
+    baseline: Object.freeze({
+      ...initial.baseline,
+      value: Object.freeze({ ...initial.baseline.value, tagId: "other.tag" }),
+    }),
+  });
+  const rejected = transitionAlarmBaselineSession(
+    misplaced,
+    { kind: "CHECK_FRESHNESS", generation: 2 },
+    nowMs,
+    3000,
+  );
+  expect(rejected).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "TAG_MISMATCH",
+    state: { ...misplaced, baseline: null, invalidated: true },
+  });
+  expect(misplaced.baseline.value.tagId).toBe("other.tag");
+  expect(rejected.state.baseline).toBeNull();
+  expect(transitionAlarmBaselineSession(rejected.state, delta, nowMs, 3000)).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SESSION_INVALIDATED",
+    state: rejected.state,
+  });
+});
