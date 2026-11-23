@@ -337,12 +337,21 @@ export function openProjectBrowserMenuInPage(runtime = globalThis) {
   return true;
 }
 
-export function refreshProjectListInPage(runtime = globalThis) {
-  const panel = runtime.document.querySelector(".studio-project-browser-panel");
-  const button = [...(panel?.querySelectorAll("button") ?? [])].find(
-    (item) => item.textContent.trim() === "刷新",
-  );
-  if (!button || button.disabled) throw new Error("工程列表刷新失败");
+export async function refreshProjectListInPage(runtime = globalThis) {
+  const menu = runtime.document.querySelector(".studio-project-browser-menu");
+  const started = Date.now();
+  let button = null;
+  while (Date.now() - started < 5000) {
+    const panel = menu?.querySelector(".studio-project-browser-panel");
+    button = [...(panel?.querySelectorAll("button") ?? [])].find(
+      (item) => item.textContent.trim() === "刷新",
+    );
+    if (button?.getClientRects().length) break;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  if (!button || button.disabled || !button.getClientRects().length) {
+    throw new Error("工程列表刷新失败");
+  }
   button.click();
   return true;
 }
