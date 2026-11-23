@@ -25,6 +25,22 @@ test("同一 Tag 的递增序列在质量和时间窗口均合格时返回候选
   });
 });
 
+test("业务序列由五跳到七仍可成为候选，但递增不能掩盖服务器时间倒退", () => {
+  const jumped = { ...current, sequence: 7 };
+  expect(classifyOrderedNumericAlarmSample(jumped, previous, nowMs, 1000)).toEqual({
+    status: "READY",
+    value: 42,
+  });
+  expect(
+    classifyOrderedNumericAlarmSample(
+      { ...jumped, serverTimestamp: "2026-11-22T08:59:58.999Z" },
+      previous,
+      nowMs,
+      3000,
+    ),
+  ).toEqual({ status: "SERVER_TIMESTAMP_REGRESSED" });
+});
+
 test("缺少已接受的同会话基线时不自动接受首条读数", () => {
   expect(classifyOrderedNumericAlarmSample(current, null, nowMs, 1000)).toEqual({
     status: "BASELINE_REQUIRED",
