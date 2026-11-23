@@ -179,3 +179,19 @@ test("新会话快照可作为后续增量基线，不能继承旧会话记录",
     baseline: { generation: 3, value: { ...sample, sequence: 1 } },
   });
 });
+
+test("初始快照服务器时间缺少时区不能建立报警候选基线", () => {
+  expect(() =>
+    establishAlarmSnapshotBaseline(
+      {
+        ...request,
+        change: {
+          kind: "snapshot",
+          values: [{ ...sample, serverTimestamp: "2026-11-22T08:59:59.000" }],
+        },
+      },
+      nowMs,
+      1000,
+    ),
+  ).toThrow("报警服务器时间戳必须包含明确时区");
+});
