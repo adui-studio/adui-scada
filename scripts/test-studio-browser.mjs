@@ -153,15 +153,21 @@ async function enterStudioInPage() {
   };
   const classifyModuleError = (value) => {
     const message = String(value || "");
-    return /failed to fetch dynamically imported module|importing a module script failed|loading chunk .* failed|failed to load module script/i.test(
-      message,
-    );
+    return [
+      "failed to fetch dynamically imported module",
+      "importing a module script failed",
+      "loading chunk",
+      "failed to load module script",
+    ].some((phrase) => message.toLowerCase().includes(phrase));
   };
   const onPageError = (event) => {
     if (event instanceof ErrorEvent) {
       observed.scriptError = true;
       if (classifyModuleError(event.message)) observed.moduleLoadFailure = true;
-    } else if (event.target instanceof HTMLScriptElement || event.target instanceof HTMLLinkElement) {
+    } else if (
+      event.target instanceof HTMLScriptElement ||
+      event.target instanceof HTMLLinkElement
+    ) {
       observed.resourceError = true;
     }
   };
