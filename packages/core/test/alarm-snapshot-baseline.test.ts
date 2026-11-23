@@ -211,3 +211,19 @@ test("不存在的公历日期不能在快照中被自动归一化为有效基�
     ),
   ).toThrow("报警服务器时间戳日期无效");
 });
+
+test("日末二十四时不能通过日期解析进入初始报警快照基线", () => {
+  expect(() =>
+    establishAlarmSnapshotBaseline(
+      {
+        ...request,
+        change: {
+          kind: "snapshot",
+          values: [{ ...sample, serverTimestamp: "2026-02-28T24:00:00.000Z" }],
+        },
+      },
+      Date.parse("2026-03-01T00:00:00.000Z"),
+      1000,
+    ),
+  ).toThrow("报警服务器时间戳小时无效");
+});
