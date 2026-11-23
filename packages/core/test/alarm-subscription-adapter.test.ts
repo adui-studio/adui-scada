@@ -385,7 +385,7 @@ test("旧会话调度安装完成后若新会话已重入，不覆盖新取消�
   let installed = 0;
   let cancelled = 0;
   const scheduler: AlarmSubscriptionScheduler = {
-    every(_intervalMs, callback) {
+    every(_intervalMs, _callback) {
       installed += 1;
       if (installed === 1) {
         source.handlers[0]?.onDisconnect();
