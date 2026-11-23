@@ -130,7 +130,7 @@ test("重启必须递增代次并清空基线，不能复用原会话状态", ()
   }
 });
 
-test("本会话来源未核验或类型不合法时立即废弃旧基线", () => {
+test("本会话来源未核验或重复快照均废弃旧基线，首次坏质量快照仍按质量拒绝", () => {
   const initial = established();
   const invalid = transitionAlarmBaselineSession(
     initial,
@@ -143,16 +143,30 @@ test("本会话来源未核验或类型不合法时立即废弃旧基线", () =>
     reason: "UNVERIFIED_SOURCE",
     state: { ...initial, baseline: null },
   });
-  const notDelta = transitionAlarmBaselineSession(
+
+  const repeated = transitionAlarmBaselineSession(
     initial,
-    { ...delta, change: { kind: "snapshot", values: [{ ...next, quality: "BAD" }] } },
+    { ...snapshot, change: { kind: "snapshot", values: [{ ...next, quality: "BAD" }] } },
     nowMs,
     3000,
   );
-  expect(notDelta).toEqual({
+  expect(repeated).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SNAPSHOT_ALREADY_ESTABLISHED",
+    state: { ...initial, baseline: null },
+  });
+
+  const pending = beginAlarmBaselineSession("tank.level", 2);
+  const invalidFirst = transitionAlarmBaselineSession(
+    pending,
+    { ...snapshot, change: { kind: "snapshot", values: [{ ...previous, quality: "BAD" }] } },
+    nowMs,
+    3000,
+  );
+  expect(invalidFirst).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "QUALITY_NOT_GOOD",
-    state: { ...initial, baseline: null },
+    state: pending,
   });
 });
 
