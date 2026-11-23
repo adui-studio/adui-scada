@@ -3296,3 +3296,40 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批仅修改框架无关 Core 适配器及其测试和文档，暂不重复无改动的 HTTP E2E、完整 ready 和双框架浏览器专项。异常保留只用于受控诊断，不证明取消函数实际成功释放资源，更不能当作设备来源身份认证或工业报警安全验收；正式发布 Gate 保持 fail-closed。
+
+## 2026-11-23 · D5b9q FR-011 读取时效防护：Windows 待验收
+
+PR #155 维护者 Windows 实测报警订阅异常保留 **20/20**、`vp check` **435 格式文件/286 受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个自有文件**；经明确授权 Squash 合并至 `main@bec400c3cb8ad8cef22416712eaaf481e1e9105d`。本批 D5b9q 新增 **4 项测试代码定义（同文件合计 24 项）**，**尚未执行本批 Windows 验收**。
+
+请先获取远程分支并切换。可按维护者工作流执行 `vp check --fix`，必要时正常提交格式化差异，不要求手动核对 HEAD：
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5b9q-alarm-snapshot-read-freshness
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5b9q-alarm-snapshot-read-freshness
+}
+if ($LASTEXITCODE -ne 0) { throw "切换功能分支失败" }
+
+git pull --ff-only origin fix/d5b9q-alarm-snapshot-read-freshness
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 自动修正失败" }
+
+vp test run packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警候选读取时效测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批仅调整共享 Core 订阅适配器的状态读取路径、定向测试和文档，没有 HTTP、真实采集、数据库或双端 UI 修改，暂不重复无变更的完整 ready 与浏览器 E2E。读取快照触发过期时可以停止订阅；外部消费者不得缓存旧值宣称仍为可信报警候选。时钟正确性、真实周期调度、可信来源核验和 FR-011 工业安全验收均尚未完成，发布 Gate 仍 fail-closed。
