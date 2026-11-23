@@ -2454,3 +2454,9 @@ D5c0u 在新分支将 React/Vue「文件与草稿」原生 details 改为 TDesig
 ## 2026-11-23 · E-106 动态导入失败已确认、CDP 状态追踪待复验
 
 维护者第二次 Windows 复验 `node --check`、`vp check`（446/289 零告警）、`docs:check`（94）成功；`test:multitab` React 四阶段成功后首次 Vue 导航再次因 Studio 动态模块加载失败退出 1。浏览器观测模块请求=true、模块加载异常=true、未处理异步拒绝=true，但没有 HTTP 响应码，尚不能判定 Vite 预构建过期、HTTPS 或 Dev Server 网络故障。现有 PR #186 Draft 中仅新增双标签 CDP 同源模块 HTTP/网络错误类别观察，真实同时导航、原始超时、Schema、CAS、IndexedDB、授权和工业安全语义未修改。最新候选仍待 Windows 复验，不合并、不谎称根因已修复。
+
+## 2026-11-23 · E-106 第三次定位：Vue Studio 模块 200，预构建依赖网络失败
+
+PR #186 维护者最新 Windows：`node --check`、`vp check`（446 格式/289 受检零告警）、`docs:check`（94）均通过；`test:multitab` React 四场景成功，Vue 首次双标签 Studio 动态导入仍失败并退出 1。CDP 观察首标签 Studio 源模块 HTTP 200、Vite 预构建依赖发生尚未识别具体码的网络失败；次标签 Studio 模块 200、另有同源导航中断。排除“Studio 源文件根本未返回”这一解释，但**不能直接认定 Vite 504、缓存损坏、TDesign 生产组件错误或业务 CAS 问题**。
+
+依照当前 Vue `App.vue` 的按需引入关系及 Vite 官方优化文档，在 PR #186 Draft 仅为 Vue 开发环境新增两个已安装 TDesign 包的 `optimizeDeps.include`，测试诊断额外保留安全格式化的 Chromium 网络错误码；实际双标签并发、CAS、安全门禁、HTTPS、业务应用和 React 配置均未改变。必须在 Windows 重启 Vue Vite 服务使优化选项生效，再执行受影响的类型、代码、文档与多标签页回归。当前所有新增修改均尚未实测，不合并 PR。
