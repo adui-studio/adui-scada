@@ -97,3 +97,26 @@ test("报警候选拒绝无时区服务器时间，同时接受明确 UTC 偏移
     ),
   ).toEqual({ status: "QUALITY_NOT_GOOD" });
 });
+
+test("报警候选拒绝自动归一化的无效公历日期并接受有效闰日", () => {
+  for (const [timestamp, now] of [
+    ["2026-02-30T09:00:00.000Z", "2026-03-02T09:00:00.000Z"],
+    ["2025-02-29T09:00:00.000Z", "2025-03-01T09:00:00.000Z"],
+    ["2026-04-31T09:00:00.000Z", "2026-05-01T09:00:00.000Z"],
+  ]) {
+    expect(() =>
+      classifyTimelyNumericAlarmSample(
+        { ...valid, serverTimestamp: timestamp },
+        Date.parse(now),
+        1000,
+      ),
+    ).toThrow("报警服务器时间戳日期无效");
+  }
+  expect(
+    classifyTimelyNumericAlarmSample(
+      { ...valid, serverTimestamp: "2024-02-29T18:00:00.000+09:00" },
+      Date.parse("2024-02-29T09:00:00.000Z"),
+      1000,
+    ),
+  ).toEqual({ status: "READY", value: 42 });
+});
