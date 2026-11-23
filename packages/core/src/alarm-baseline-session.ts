@@ -136,6 +136,15 @@ export function transitionAlarmBaselineSession(
 
   try {
     if (action.kind === "CHECK_FRESHNESS") {
+      // 尚未接收首份快照时也不能忽略损坏的受控时钟或时效配置。
+      if (
+        !Number.isSafeInteger(nowMs) ||
+        nowMs < 0 ||
+        !Number.isSafeInteger(maxAgeMs) ||
+        maxAgeMs <= 0
+      ) {
+        return invalidate(state, "INVALID_INPUT");
+      }
       if (state.baseline === null) return { status: "WAITING_SNAPSHOT", state };
       const checked = classifyTimelyNumericAlarmSample(state.baseline.value, nowMs, maxAgeMs);
       if (checked.status === "READY") return { status: "BASELINE_UNCHANGED", state };
