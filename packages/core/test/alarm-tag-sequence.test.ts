@@ -117,3 +117,25 @@ test("旧基线恰在最大年龄边界可用，但不改变原始冻结输入",
   expect(baseline).toEqual(previous);
   expect(input).toEqual(current);
 });
+
+test("序列递增但服务端时间倒退时拒绝，等时刻及来源时间变化不触发误拒", () => {
+  const regressed: TagValue = {
+    ...current,
+    serverTimestamp: "2026-11-22T08:59:58.999Z",
+  };
+  expect(classifyOrderedNumericAlarmSample(regressed, previous, nowMs, 3000)).toEqual({
+    status: "SERVER_TIMESTAMP_REGRESSED",
+  });
+  expect(
+    classifyOrderedNumericAlarmSample(
+      { ...current, sourceTimestamp: "2000-01-01T00:00:00.000Z" },
+      previous,
+      nowMs,
+      3000,
+    ),
+  ).toEqual({ status: "READY", value: 42 });
+  expect(classifyOrderedNumericAlarmSample(current, previous, nowMs, 3000)).toEqual({
+    status: "READY",
+    value: 42,
+  });
+});
