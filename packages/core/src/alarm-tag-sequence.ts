@@ -7,12 +7,16 @@ import type { TagValue } from "./tag-store.ts";
 export type OrderedNumericAlarmSample =
   | TimelyNumericAlarmSample
   | {
-      readonly status: "BASELINE_REQUIRED" | "TAG_MISMATCH" | "SEQUENCE_NOT_ADVANCED";
+      readonly status:
+        | "BASELINE_REQUIRED"
+        | "TAG_MISMATCH"
+        | "SEQUENCE_NOT_ADVANCED"
+        | "SERVER_TIMESTAMP_REGRESSED";
     };
 
 /**
  * 要求调用方提供同一可信会话中上一条已接受的 Tag 读数。
- * 没有基线、Tag 不一致、旧基线不再有效或序列号未前进时不暴露数值，也不产生报警事件。
+ * 没有基线、Tag 不一致、旧基线失效、序列号未前进或服务器时间回退时不暴露数值，也不产生报警事件。
  * 跨会话代次、服务端来源与初始快照可信性必须由上游独立校验。
  */
 export function classifyOrderedNumericAlarmSample(
@@ -31,5 +35,9 @@ export function classifyOrderedNumericAlarmSample(
   const baselineCheck = classifyTimelyNumericAlarmSample(baseline, nowMs, maxAgeMs);
   if (baselineCheck.status !== "READY") return baselineCheck;
   if (input.sequence <= baseline.sequence) return { status: "SEQUENCE_NOT_ADVANCED" };
+  // 同代次序列递增也不能接受较旧的服务端时间；相同毫秒时间允许。
+  if (Date.parse(input.serverTimestamp) < Date.parse(baseline.serverTimestamp)) {
+    return { status: "SERVER_TIMESTAMP_REGRESSED" };
+  }
   return current;
 }

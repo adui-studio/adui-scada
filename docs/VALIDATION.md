@@ -3526,3 +3526,40 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批不需要真实 PostgreSQL、工业协议或浏览器写入；所有这些系统保持不变。当前仓库依赖未在协作环境完整安装，未执行本批 `vp` 或完整 `ready`，不得把预期 89/89 冒充验收通过。新的 Draft PR 须经维护者独立验收并另行授权后才允许 Squash 合并。
+
+## 2026-11-23 · D5b9v PR #161 复验合并与 D5b9w 待验收
+
+维护者 Windows 已运行 PR #161 六份定向测试：低层序列 **9/9**、会话代次 **7/7**、底层增量 **15/15**、纯会话归约 **21/21**、托管器 **10/10**、订阅适配器 **27/27**，合计 **89/89**；`vp check` **435 文件格式正确 / 286 文件受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个文件**。GitHub 复核原 PR HEAD `489cb9d101988519c0e75bf5570d4e73343fda7f`、8 个文件和零未解决审查意见后，在明确授权下 Squash 合并至 `main@0db4b4f48511a5d6d6e7606586a16f12c6500088`。用户 Windows 日志无本地 HEAD 输出，不将其误写为本机 SHA 核验结果；未执行完整 `ready`、数据库及工业现场认证。
+
+D5b9w 新增低层有序数值候选的 `SERVER_TIMESTAMP_REGRESSED` 拒绝状态。五项测试定义分别验证低层、同代次包装、直接增量、纯会话归约和适配器失效。原有测试不删除，关联测试目标：序列 **10**、会话代次 **8**、底层增量 **16**、会话归约 **22**、托管器 **10**、适配器 **28**，合计 **94** 项。尚无该新分支 Windows 原生运行结果。
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5b9w-alarm-server-timestamp-regression
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5b9w-alarm-server-timestamp-regression
+}
+if ($LASTEXITCODE -ne 0) { throw "切换功能分支失败" }
+
+git pull --ff-only origin fix/d5b9w-alarm-server-timestamp-regression
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "自动修正失败" }
+
+vp test run packages/core/test/alarm-tag-sequence.test.ts packages/core/test/alarm-session-generation.test.ts packages/core/test/alarm-tag-delta.test.ts packages/core/test/alarm-baseline-session.test.ts packages/core/test/alarm-session-controller.test.ts packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警候选服务端时间顺序回归失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+这批只修改 Core 和文档，不涉及网络协议、数据库迁移、UI 或设备写入；暂不把 full ready、现场采集、报警触发与发布 Gate 视为已验收。协作容器无法解析 GitHub 域名，且没有 pnpm/vp 命令，无法在当前容器运行仓库真实质量链；目标 **94/94** 是待 Windows 执行的验收值。PR 默认 Draft，须经维护者另行授权才能合并。

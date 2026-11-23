@@ -495,3 +495,31 @@ test("终止后显式递增代次才能接受低序列快照，旧代次仍被�
   expect(accepted.state.baseline?.value.sequence).toBe(1);
   expect(accepted.state.invalidated).toBeUndefined();
 });
+
+test("同代次递增序列附带倒退服务端时间时终止会话，不能复活", () => {
+  const initial = established();
+  const regressed = transitionAlarmBaselineSession(
+    initial,
+    {
+      ...delta,
+      change: {
+        kind: "delta",
+        values: [{ ...next, serverTimestamp: "2026-11-22T08:59:57.999Z" }],
+      },
+    },
+    nowMs,
+    3000,
+  );
+  expect(regressed).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SERVER_TIMESTAMP_REGRESSED",
+    state: { ...initial, baseline: null, invalidated: true },
+  });
+  expect(
+    transitionAlarmBaselineSession(regressed.state, snapshot, nowMs, 3000),
+  ).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SESSION_INVALIDATED",
+    state: regressed.state,
+  });
+});

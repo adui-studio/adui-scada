@@ -143,3 +143,22 @@ test("代次一致也不能续接超龄或坏质量的上一条基线", () => {
     ),
   ).toEqual({ status: "SESSION_MISMATCH" });
 });
+
+test("同代次递增序列不允许服务端时间倒退，跨代次仍优先拒绝", () => {
+  const regressed: TagValue = {
+    ...current,
+    serverTimestamp: "2026-11-22T08:59:58.999Z",
+  };
+  expect(
+    classifySessionBoundNumericAlarmSample(regressed, previous, generations, nowMs, 3000),
+  ).toEqual({ status: "SERVER_TIMESTAMP_REGRESSED" });
+  expect(
+    classifySessionBoundNumericAlarmSample(
+      regressed,
+      previous,
+      { ...generations, inputGeneration: 1 },
+      nowMs,
+      3000,
+    ),
+  ).toEqual({ status: "SESSION_MISMATCH" });
+});

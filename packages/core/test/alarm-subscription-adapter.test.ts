@@ -694,3 +694,23 @@ test("订阅安装时同步交付两次快照会失效且补充释放取消函�
   expect(source.closes).toBe(1);
   expect(scheduler.intervals).toEqual([]);
 });
+
+test("递增序列携带倒退服务器时间会终止订阅并撤销旧回调", () => {
+  const { adapter, source, scheduler } = setup();
+  adapter.start();
+  source.emit({ kind: "snapshot", values: [value] });
+  source.emit({
+    kind: "delta",
+    values: [{ ...value, sequence: 6, serverTimestamp: "2026-11-22T08:59:57.999Z" }],
+  });
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(adapter.snapshot().invalidated).toBe(true);
+  expect(source.closes).toBe(1);
+  expect(scheduler.cancels).toBe(1);
+  source.emit({
+    kind: "delta",
+    values: [{ ...value, sequence: 7, serverTimestamp: "2026-11-22T09:00:00.000Z" }],
+  });
+  expect(adapter.snapshot().baseline).toBeNull();
+});
