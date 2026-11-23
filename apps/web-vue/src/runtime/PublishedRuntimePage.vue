@@ -186,7 +186,9 @@ onUnmounted(() => {
         alt="已发布组态静态配置预览，实时 Tag 数据未接入"
         data-testid="published-runtime-svg"
       />
-      <p v-else class="scada-diagnostics-empty">{{ PUBLISHED_RUNTIME_EMPTY_HINTS[state.status] }}</p>
+      <p v-else class="scada-diagnostics-empty">
+        {{ PUBLISHED_RUNTIME_EMPTY_HINTS[state.status] }}
+      </p>
     </section>
     <footer>正式发布只读 · 未接入现场数据 · 不开放设备控制</footer>
   </main>
