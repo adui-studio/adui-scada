@@ -125,7 +125,7 @@ onUnmounted(() => {
             type="text"
             :maxlength="128"
             autocomplete="off"
-            :spellcheck="false"
+            :spell-check="false"
             placeholder="输入已授权工程 ID"
           />
         </label>
