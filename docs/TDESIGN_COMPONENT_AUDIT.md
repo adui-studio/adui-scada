@@ -90,3 +90,26 @@ D5c0s 审计基线：`StudioPage.tsx` 与 `StudioPage.vue` 每端各有 **9 处*
 - **保留业务**：打开面板时触发原 `refreshVersionHistory()`；创建快照、刷新、查询分页、版本差异、取消/确认载入、CAS/自动保存暂停、历史 SHA-256/原记录保留和 IndexedDB 错误处理的生产函数没有改变。面板采用 Popup 负责定位及点击外部关闭，共享 CSS 仅增加对本地面板的 `position: static`，其余两个旧版历史菜单仍使用原 CSS；未动发布预检、OIDC 权限或服务端发布读写。
 - **真实浏览器门禁**：将 `test-studio-browser.mjs` 中针对本地历史的 `menu.open` 修改为真实 Popup 触发器。保持历史库异常、旧 0.2.0 快照、差异/取消/载入/分页和导入期间历史覆盖保护的所有原有断言。新增 3 项普通 Studio Popup 回归，目标每视口 **33 项**，四组 **132 项**；版本历史专项、版本安全、旧版草稿和发布预检还须单独复验。
 - **当前仅是 GitHub 候选**：所有 Windows `typecheck:web`、`vp check`、`docs:check`、`test:browser`、`test:versions`、`test:versions:safety`、`test:legacy:browser` 与 `test:release:preflight:browser` 均待维护者在最终 HEAD 执行，不把早期测试结果冒充本批通过。当前工具没有仓库要求的 `tdesign-mcp-server`，已核对两个安装版本官方源码与 Props，但不能称为 MCP 查询完成。
+
+## 10. D5c0w · 双框架通用 UI 控件全量 TDesign 迁移候选
+
+本批按照维护者「**同一 PR 完成所有通用控件替换，完成后统一验收**」的要求执行。基础分支为 PR #187 已授权并合并后的 main，不继续拆分小型弹层 PR。**以下为候选源码范围，不是 Windows 运行通过的结论。**
+
+| 类型 | React | Vue 3 | 保留的业务边界 |
+| --- | --- | --- | --- |
+| 普通动作及危险操作按钮 | `Button`（原生按钮显式 `tag="button"`） | `TButton` | 原禁用态、提交类型、事件和权限判断 |
+| 文件、历史、发布预检、服务端工程、视图设置 | `Popup` | `TPopup` | 打开刷新、CAS、历史 SHA-256、只读发布预检 |
+| 工程管理 | `Popup` | `TPopup` | 仅在展开时请求授权列表及分页 |
+| 侧栏跨页操作、Tag、高级图层工具 | `Collapse.Panel` | `TCollapsePanel` | 原编辑命令、拖拽/图层状态 |
+| Tag 数据类型、绑定、跨页复制及图层插入目标 | `Select` | `TSelect` | 共享 Tag ID、Schema、类型约束 |
+| 网格与吸附 | `Checkbox` | `TCheckbox` | 原布尔配置和画布渲染 |
+| Tag 描述 | `Textarea` | `TTextarea` | 原 512 字符上限 |
+| 已发布工程 ID/页面、属性几何与常规输入 | `Input`/`Select` | `TInput`/`TSelect` | 输入验证、只读渲染和实际画布几何 |
+| 本地 JSON 导入 | `Upload`，`autoUpload=false` | `TUpload`，`auto-upload=false` | 仅在本机读取；原 2 MiB、JSON/Schema 校验及导入互斥 |
+| 页重命名、删除、草稿覆盖、历史与服务端载入 | `DialogPlugin` + `Input` | `DialogPlugin` + `TInput` | Esc/关闭/取消不执行，确认后沿用原 CAS 和自动保存暂停 |
+
+**自有 UI 与第三方控件的边界**：14 个 React/Vue 入口和页面候选源码中不再保留原生 `button/input/select/textarea/details/summary` 交互标签及 `window.confirm/prompt`；React/Vue 分别通过对应固定版本的 TDesign API 实现。HTML `form`、`label`、语义表格及结构容器不是需要替换的组件。SVG 图元、图层树拖拽命中层、框选、旋转、缩放、网格和 16:9 画布属于工业组态专用交互，继续使用仓库自研 Core/Runtime/Editor 实现；未经功能对等证明不把它们改为通用 TDesign Tree/Canvas 的行为替代品。
+
+**测试同步**：更新 `test-studio-browser.mjs` 中原生菜单、Tag 表单、真实 TDesign Dialog 操作及 JSON 导入竞争辅助函数；更新 OIDC 工程管理、发布预检、多标签页及其 Node 模拟单测，仍保留原有无授权拒绝、版本漂移、CAS、IndexedDB 草稿与旧版迁移断言。浏览器必须通过真实 DOM 触发，而不是绕过用户确认。审计仍须核对 Popup 键盘焦点/外部关闭、Dialog Esc/取消、长列表和 1024px 视口。
+
+**源码检查边界**：已按 `tdesign-react@1.18.6`、`tdesign-vue-next@1.20.11` 固定官方 Git tag 类型/实现确认 Button、Popup、Collapse、Input/Select/Upload、Dialog 的 API；React 的折叠面板使用官方 `Collapse.Panel`，Vue 使用 `TCollapsePanel`。未新增组件库、锁文件或工业接口。本批 GitHub 代码仅进行了静态检索和 Node 脚本源码解析（不执行测试）；真实 Windows `vp check`、TypeScript/Vue 类型检查、单元和浏览器安全回归 **尚未执行，不得标记为通过**。
