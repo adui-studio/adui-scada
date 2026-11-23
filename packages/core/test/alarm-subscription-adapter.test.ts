@@ -425,12 +425,12 @@ test("旧会话调度安装完成后若新会话已重入，不覆盖新取消�
 });
 
 test("只有取消周期失败时仍保留原始异常并完成取消订阅", () => {
-  const source = new TestSource();
+  const handlers: Handlers[] = [];
   const cancelFailure = new TypeError("测试单项周期取消失败");
   let unsubscribed = 0;
   const subscription: AlarmReadonlySubscriptionSource = {
-    subscribe(handlers) {
-      source.subscribe(handlers);
+    subscribe(callbacks) {
+      handlers.push(callbacks);
       return () => {
         unsubscribed += 1;
       };
@@ -449,7 +449,7 @@ test("只有取消周期失败时仍保留原始异常并完成取消订阅", ()
     nowMs: () => startMs,
   });
   adapter.start();
-  source.emit({ kind: "snapshot", values: [value] });
+  handlers[0]?.onChange({ kind: "snapshot", values: [value] }, true);
   let failure: unknown = null;
   try {
     adapter.stop();
