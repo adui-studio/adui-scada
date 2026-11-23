@@ -994,3 +994,12 @@
 > **2026-11-23 · E-102 结案补录**：维护者 Windows 已在 PR #169 提供八份 Core 定向测试 **135/135**、`vp check` **435 文件格式正确/286 受检零警告错误**、文档检查 **90**、中文文案检查 **310** 均通过的日志；GitHub 复核最新 HEAD `b9977f6f2d2cf0506eaa8580e8609b7143ee6b89`，按明确授权 Squash 合并至 `main@50148bfd5ce5f66bdf18c32009ce2b076ddb9e3f`。E-102 的本地时间精度修复已完成定向验收，但不证明完整 ready、可信工业上游或生产报警链路已通过。
 
 > **后续设计风险提示（非新错误编号）**：当前逐 Tag `sequence` 是**严格单调增长**而非已确认连续。未经需求与上游协议确认，不能把任何跳号强制判断为丢包，也不能凭严格增长保证中间报警变化未遗漏。后续 FR-011 开发应先完成来源身份、序列域、跳号/重同步、可信时钟和不可变审计的 ADR 与隔离联调计划；不要把尚未实现的服务端报警身份认证写成已通过的本地测试。
+
+### E-103 · D5c0j 进程内 Lab JSDoc 纯类型行触发中文文案门禁（PR #175，待 Windows 复验）
+
+- **现象**：维护者 Windows 执行 `node --experimental-strip-types --test scripts/lab-alarm-inprocess.cases.mjs` **5/5 通过**，独立 Lab 诊断符合预期；`vp check` **439 个格式文件 / 288 个受检零警告错误**，`docs:check` **92 份 Markdown 通过**。随后 `messages:check` 在 `scripts/lab-alarm-inprocess.mjs` 的四处单行 JSDoc `@type` 注释报告“注释缺少中文”，退出码 **1**，整个 `&&` 命令链失败。本问题不属于 Lab 报警候选运行故障，且不能把前面的成功记成完整门禁通过。
+- **根因**：仓库 `scripts/check-chinese-messages.mjs` 对自有注释按**单行**识别；`/** @type {...} */` 含英文类型、无中文描述，触发已有中文化规则。先前只执行了格式/Lint/运行测试，没有在推送 PR 前独立运行文案门禁。
+- **最小修复**：只在四处原有 JSDoc 的 `@type` 类型表达式后补上中文说明，保留 TypeScript 类型约束、模拟数据、核心逻辑、五项测试、默认无网络/无正式报警安全边界；不修改中文检查器、不关闭规则、不删除类型声明。
+- **防复发**：新增或修改 JSDoc 类型标注时，同一条注释也必须包含简体中文说明。提交前按 `node --experimental-strip-types --test`、`vp check`、`docs:check`、`messages:check` 顺序完整执行；`&&` 链中任何一步失败即为整体失败。
+- **验证边界**：已从 GitHub 最新候选内容逐行对照 `check-chinese-messages.mjs` 的注释判定条件，四处静态扫描不再命中；**修复后 Windows Node/Vite+/文档/中文门禁尚未复验**。PR #175 继续 Draft，不能据此前测试结果合并，也不代表真实网关认证、序列完整性或工业报警验收。
+- **证据**：维护者 2026-11-23 Windows 原始输出、PR #175、`scripts/lab-alarm-inprocess.mjs`、`scripts/check-chinese-messages.mjs`、`docs/VALIDATION.md`。
