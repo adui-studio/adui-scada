@@ -4357,3 +4357,11 @@ git status --short
 ```
 
 人工查看 React/Vue 1440×900、1024×768 下的版本历史弹层开合、外部点击、Esc/键盘焦点、长列表滚动、查看差异、取消及确认载入，以及发布预检和服务端版本入口仍可访问。保留本地草稿 CAS、业务错误拒绝与 SVG 画布约束；当前代码仅经 GitHub 静态差异检查，**不能声称测试已通过**。
+
+## 2026-11-23 · PR #187 Windows 历史迁移超时与 Popup 关闭同步候选
+
+维护者在本次 Windows 定向验收中执行：`typecheck:web` 通过；`vp check` **446 格式/289 受检零警告**；`docs:check` **94 份**；普通 Studio React/Vue 四视口 **132/132**；`test:versions` 两端通过；`test:versions:safety` 两端及不同 Origin 隔离通过。接着 `pnpm run test:legacy:browser` 在 React localStorage 0.2.0 和 IndexedDB 0.2.0 草稿迁移分别通过后，由 `studioVersionRowsInPage` 抛出「历史版本列表加载超时」，命令退出码 **1**。旧 Project Snapshot 与 Vue 三条旧数据迁移路径尚未完成；因为检查链中断，`test:release:preflight:browser` 尚未执行。本轮日志未单独输出本地 HEAD，不能断言通过结果对应 GitHub 的最终分支 SHA。
+
+**当前最小候选**：仅修改 `scripts/test-studio-browser.mjs`，使文件草稿菜单的真实 TDesign Popup 关闭后等待面板不可见；本地历史库初始化后明确点击关闭并等待隐藏，再向既有 IndexedDB 版本库注入旧快照；版本列表等待超时区分面板未挂载、不可见或忙碌。仍使用真实按钮触发，不调用旧 `details.open`；保留 12 秒列表加载门禁、原始 SHA-256、只读归一化、历史恢复以及 React/Vue 全部安全断言。**异步关闭与后续打开竞争目前是代码层面的怀疑，不是经实测确认的唯一根因。** 未修改正式业务组件、IndexedDB Schema、CAS、权限或工业通信。
+
+**待维护者在最新 HEAD Windows 复验**：`node --check scripts/test-studio-browser.mjs`、`vp check`、`pnpm run docs:check`、`pnpm run test:legacy:browser`；如通过，再运行 `pnpm run test:versions`、`pnpm run test:versions:safety` 和 `pnpm run test:release:preflight:browser`。失败时保留新状态分类，不通过放宽时间、删除断言或覆盖真实迁移数据掩盖问题。PR #187 继续 Draft，未经完整验收及明确授权不得合并。
