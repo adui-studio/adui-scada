@@ -1124,3 +1124,9 @@
 - **验收边界**：仅核验固定版本源码，仍需 Windows `test:multitab` React/Vue 全阶段及相关旧草稿与历史专项；不应把候选路径说成已实测根因。工业设备与生产数据未涉及。
 
 > **2026-11-23 · PR #190 Windows 复验关闭 E-115 / E-116 阻塞**：维护者在修复候选后的真实 Windows 浏览器依次通过 `node --check`、`vp check`（448 格式文件 / 291 受检零警告错误）、`messages:check`（318 文件）、`docs:check`（94 Markdown）、双端 `test:versions`、双端 `test:versions:safety`（含 Origin 隔离）、双端 `test:multitab`（各 4 阶段）、双端 `test:legacy:browser`（各 3 条路径）及普通 Studio 四视口 132/132。原超时路径在本轮未复现，回归阻塞解除；未记录 Dialog/Popup 内部逐帧 DOM，因此不将候选竞态机理上升为已实证的唯一根因。PR #190 经明确授权 Squash 合并至 `main@493a793614dbbe21c7d97a3c6400442de9d88bff`；本轮日志未打印本地完整 HEAD，证据边界保留。
+
+### 2026-11-23 · D5c1 跨页面重设计预防性检查（非新错误编号）
+
+- **已完成验收的旧阻塞**：维护者在 PR #190 最新候选真实 Windows 回归中已通过 React/Vue 本地历史、历史安全、多标签页四阶段、旧草稿三路径、普通 Studio 132/132；PR #191 在 HEAD `031f496d68782bbd0beacea87cca171d588dbe9b` 上真实通过双端 Tag 128 字符窄屏和 CDP Tab 焦点、新增/编辑/绑定删除保护/确认删除、四视口 Studio 以及 JSON 互通，已依授权合并至 `main@66c14fd067dea7c20cf69a085ab004a83d307081`。E-114/E-115/E-116 原超时阻塞在相应场景未复现；没有逐帧 DOM 证据能唯一证明此前候选根因。
+- **当前预防性要求**：重新设计页面时，不可将上批固定深色主题静态测试视为新方案必须延续的视觉契约；修改 `@adui/theme`、TDesign `theme-mode`、React/Vue 壳层和共享 CSS 时必须**同步更新**静态主题门禁与真实双端 12 场景 UI 测试；保留 252/320 侧栏、16:9 SVG、TDesign Dialog 旧节点隔离、CAS、只读发布权限与模拟状态。旧的视觉截图/旧 CSS 检查不证明新 UI 可读可用。
+- **不假装完成**：D5c1 设计与测试目前只是功能分支候选，完整 `ready`、React/Vue 浏览器与真实视觉截图尚未运行；不得写成已通过、不得跳过用户最终一次性验收，更不能仅用 CSS 静态检查替代工业安全验收。

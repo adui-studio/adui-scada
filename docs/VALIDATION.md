@@ -4533,3 +4533,40 @@ if ($LASTEXITCODE -ne 0) { throw "普通 Studio 测试失败" }
 维护者本轮 Windows 执行 `node --check`、`vp check`（448 格式/291 受检零错误警告）、`messages:check`（318 文件）、`docs:check`（94 文档），`test:versions`、`test:versions:safety` React/Vue 均通过；`test:multitab` React/Vue 广播停写、无广播 CAS、墓碑重建、模拟故障恢复各四阶段全部通过；`test:legacy:browser` 两端各三条迁移路径通过；普通 Studio 双端 × 两分辨率共 **132/132** 通过。此前 `test:interop` 和 `test:tags:browser` 已在相应主线候选通过。上述日志没有附上本地 HEAD，本轮不据此声称完整 `ready` 或工业安全实测完成。PR #190 经授权 Squash 合并为 `main@493a793614dbbe21c7d97a3c6400442de9d88bff`，Assignee `@adui-dev` 已核对，E-115/E-116 对应阻塞解除。
 
 下一候选 D5c0z 仅扩充已有 `test:tags:browser`：将隔离浏览器改为 1024×768，临时向渲染层注入最大长度 128 的无断点 Tag ID 检查真实 CSS 折行、行容器及按钮不溢出，`finally` 还原原值且不产生输入事件；使用 CDP `Input.dispatchKeyEvent` 发送真实 Tab，检查 TDesign 「编辑→删除」顺序、`:focus-visible` 与按钮仍在视口内，再恢复 1440×900 并运行原有新增、编辑、取消、绑定拒绝、正常删除及 JSON 往返断言。React/Vue 产品源码、工程模型、存储、权限及工业网关都不修改。**新浏览器用例和最新 PR HEAD 尚未在 Windows 运行，不能提前宣称通过。**
+
+## 2026-11-23 · PR #191 Windows 验收与 D5c1 统一 UI/UX 门禁
+
+PR #191 实际 HEAD `031f496d68782bbd0beacea87cca171d588dbe9b`：维护者 Windows `node --check`、`vp check`（448 文件格式、291 受检零警告错误）、`messages:check`（318 文件）、`docs:check`（94 Markdown）通过；`test:tags:browser` React/Vue 长 ID 窄屏换行、Tab 焦点、Tag CRUD 与 JSON 往返均通过；普通 `test:browser` 双端四视口 132/132 通过；`test:interop` 完整 React→Vue→React→Vue 与双端非法 JSON 保护通过。经维护者明确授权，PR #191 Squash 合并至 `main@66c14fd067dea7c20cf69a085ab004a83d307081`，并完成 GitHub 主线 SHA 核对。以上**不**代表新 D5c1 UI 已经验收。
+
+D5c1 新增 `pnpm run test:ui:browser`，在隔离 Chrome/Edge 依次检验 React/Vue × 1440×900/1024×768 × 三页面，共 12 场景：真正的按钮导航/当前页语义、84px 左导航、非现场控制说明、整页无横向溢出、阅读顺序、发布未读取时绝不出现快照、Studio 深浅面板与可读对比度。该入口只读页面 DOM，不修改登录会话、工程、IndexedDB、Tag 或服务端快照。
+
+**唯一最终验收命令**（所有 UI 与测试调整完成后再执行，不拆成多轮）：
+
+```powershell
+git fetch origin
+git switch feat/d5c1-full-ui-ux-rebuild
+git pull --ff-only
+git rev-parse HEAD
+node --check scripts/test-studio-browser.mjs
+if ($LASTEXITCODE -ne 0) { throw "浏览器脚本语法检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整就绪链路失败" }
+pnpm run test:ui:browser
+if ($LASTEXITCODE -ne 0) { throw "三页面 UI/UX 验收失败" }
+pnpm run test:browser
+if ($LASTEXITCODE -ne 0) { throw "Studio 四视口验收失败" }
+pnpm run test:tags:browser
+if ($LASTEXITCODE -ne 0) { throw "Tag 管理回归失败" }
+pnpm run test:interop
+if ($LASTEXITCODE -ne 0) { throw "双框架互通验收失败" }
+pnpm run test:versions
+if ($LASTEXITCODE -ne 0) { throw "本地版本历史验收失败" }
+pnpm run test:versions:safety
+if ($LASTEXITCODE -ne 0) { throw "本地版本安全验收失败" }
+pnpm run test:multitab
+if ($LASTEXITCODE -ne 0) { throw "多标签页安全验收失败" }
+pnpm run test:legacy:browser
+if ($LASTEXITCODE -ne 0) { throw "旧工程迁移验收失败" }
+```
+
+由于协作容器无法访问仓库完整工作区和已有 React/Vue 依赖安装，以上全量质量链及 Windows Chromium **截至本记录均未执行**。不把新主题的静态断言、CSS 差异检查或以往旧设计截图当作真实构建通过；如有编译或可访问性失败，应留在本 PR 内一次修正，不能降低业务、质量或授权断言来掩盖。

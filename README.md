@@ -164,3 +164,9 @@ Vue/React 运行监控页面新增共享的**实时链路诊断**：连接状态
 Core 新增稳定 `tagId`、可变显示名称、数据类型、单位和描述的共享定义目录。TagStore 在显式注入目录时验证实时值类型，并保证整批失败不修改已有数据。水处理 Demo 的水位、泵运行和流量定义由 Web 在线 Runtime、Tauri 离线模拟和独立 SSE 服务共同使用；Studio Vue/React 的 Tag 绑定候选展示类型与单位。质量仍是每条实时 `TagValue` 的动态字段，不是静态定义。
 
 当前目录仅是代码内本机演示元数据，不改变 `ScadaDocument 0.2.0`，重命名不会自动持久化，也不含 OPC UA NodeId、Modbus 寄存器或 MQTT Topic。FR-004 仍为部分实现。见 [ADR-0061](docs/adr/0061-tag-definition-catalog.md)。本批 Windows 测试尚待维护者执行。
+
+## D5c1 · UI/UX 精密工作台整体改版候选
+
+本次针对 React/Vue 的**运行监控、已发布运行、组态编辑及应用导航**重新设计交互和视觉结构：左侧功能导航轨道、浅色高对比数据面板、独立深色 SVG 画布、集中状态提示以及更清晰的只读发布工作流。共享字体、颜色、间距和 TDesign Light 变量统一由 `@adui/theme` 提供。V7 品牌 SVG 未更改，Core/工程 Schema/工业网关和权限边界不变。
+
+完整设计规则参见 [UI/UX 设计系统](docs/UI_DESIGN_SYSTEM.md)。统一浏览器验收入口为 `pnpm run test:ui:browser`，覆盖 React/Vue 双端的三页面与两个桌面分辨率。此部分在 D5c1 分支属于**待统一最终验收**的候选代码，不代表现场生产验收完成。

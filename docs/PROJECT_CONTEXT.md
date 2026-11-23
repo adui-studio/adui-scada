@@ -2516,3 +2516,9 @@ D5c0v 基于合并后的 main，限定本地版本历史一个入口/框架：�
 ## 2026-11-23 · PR #190 已合并，D5c0z Studio Tag 可访问性与窄屏门禁候选
 
 维护者已完成 PR #190 Windows 双端历史版本创建/载入、自动保存安全、Origin 隔离、四阶段多标签页、旧草稿三类迁移及普通 Studio 132/132 回归；`vp check` 448/291 零告警，中文文案 318、文档 94 通过。PR #190 经明确授权 Squash 合入 `main@493a793614dbbe21c7d97a3c6400442de9d88bff`；原 E-115/E-116 浏览器超时阻塞已解除，内部竞态根因仍保留推断边界。D5c0z 新候选只增强 `test:tags:browser` 对两端 TDesign Tag 行的 1024px 最大长度 ID 换行、操作按钮不溢出以及 Chromium 真实 Tab 焦点顺序/`:focus-visible` 检查；使用临时 DOM 压测并恢复，不变更真实数据或生产 UI。最新 Windows 浏览器与完整质量链待验收，PR 只保持 Draft，指派 `@adui-dev`。
+
+## 2026-11-23 · D5c1 全新 UI/UX 单 PR 重设计（待统一最终验收）
+
+维护者已提供 PR #191 最新 HEAD `031f496d68782bbd0beacea87cca171d588dbe9b` 的 Windows 验收：双端 Tag 长 ID/键盘焦点/CRUD、Studio 132/132、跨框架 JSON 往返、Vite+ 448/291、中文文案 318、文档 94 均通过；PR #191 经明确授权 Squash 合并至 `main@66c14fd067dea7c20cf69a085ab004a83d307081`。此后维护者明确要求完全放弃旧版 UI/UX 视觉结构、使用内置 `ui-ux-pro-max`、**所有设计和测试适配在一个 PR 内完成、最终只统一验收一次**。
+
+独立分支 `feat/d5c1-full-ui-ux-rebuild` 以已合并的 #191 主线为基线，重新定义 `@adui/theme` 为浅色工作区与深色 SVG 舞台，重建独立 84px 功能导航、运行监控主工艺画面、已发布运行的只读两栏空间、Studio 图元/画布/属性层级以及 `test:ui:browser` 十二场景浏览器验收。当前仍保留 V7 原始 Logo、TDesign 官方控件、React 19 适配器、Vue 生命周期、共享 Core 和工程 Schema、252/320 侧栏与 viewBox、IndexedDB CAS、OIDC/发布只读边界。新的主设计文档见 `docs/UI_DESIGN_SYSTEM.md`。本批尚无 Windows 新 UI/UX 或完整 ready 实测，不能据先前结果判定其通过；单一 PR 应保持 Draft，指派 `@adui-dev`，未经单独授权禁止合并。
