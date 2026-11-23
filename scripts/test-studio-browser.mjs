@@ -1311,7 +1311,7 @@ async function verifyImportHistoryIsolationInPage(json) {
   if (!fileMenu) throw new TypeError("未找到文件草稿菜单");
   const trigger = fileMenu.querySelector("button.t-button");
   if (!(trigger instanceof HTMLButtonElement)) throw new TypeError("未找到文件草稿触发器");
-  trigger.click();
+  if (!fileMenu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
   const opening = Date.now();
   while (!fileMenu.querySelector(".studio-file-popover")?.getClientRects().length) {
     if (Date.now() - opening > 5000) throw new TypeError("文件草稿弹层打开超时");
