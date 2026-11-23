@@ -1083,3 +1083,13 @@
 - **修复候选**：新 D5c0x 分支最小范围内，将 Tag 条目和表单动作明确分为各自 2 列并统一 `--adui-control-height-sm`（28px），编辑/删除分别使用现有 TDesign Text Button 及 danger 语义，不再堆叠整列主色按钮；两端图层行复用 TDesign Text Button，搜索使用 `size=small`。清理两端旧按钮通用高度覆盖和原生输入二次描边；共享 CSS 将焦点交给 TDesign 自己管理，仅保留专用图层键盘焦点状态，同时柔化侧栏分界与选中边框。不改 Tag 删除确认、Tag ID、图层命中/拖拽、工程 Schema、CAS 或工业安全边界。
 - **防复发**：迁移 UI 组件时必须同时清理旧原生控件尺寸/轮廓覆盖，而不是仅替换 JSX/Vue 标签；对同一业务区域增加真实 DOM 的尺寸/布局断言。已在 `test:tags:browser` 对两端 Tag 行及表单动作增加双列、等宽、等高约束。**截至候选提交未执行 Windows Vite+/真实浏览器，静态 CSS 和源码检查不等于完成验收**。
 - **证据**：维护者 2026-11-23 Studio 截图、两端 `TagManager` 和 `studio.css`、共享 `@adui/tailwind/studio.css`、原 `scripts/test-studio-browser.mjs` 及 PR #188。
+
+### E-112 · React 19 未加载 TDesign 官方适配器导致 DialogPlugin 无法挂载（PR #189）
+
+- **Windows 实测现象**：维护者在 PR #189 分支执行 `pnpm run typecheck:web`、`vp check`（448 格式文件 / 291 受检文件零告警）、`messages:check`（318 文件）、`docs:check`（94 份）和 `test:browser`（React/Vue × 1440×900/1024×768，四组各 **33/33**）均通过，但 `test:tags:browser` 在真实点击 Tag 的「删除」后等待 TDesign Dialog 确认按钮超时，报 `Tag 删除确认弹层未出现`，整个命令链退出码非零。其后 `test:interop`、`test:versions:safety`、`test:multitab` 未执行。日志未单独打印本地 Git HEAD，不能把通过记录绑定为修复后提交。
+- **确定的源码缺口**：根 Catalog 声明 `react@19.3.1`、`react-dom@19.3.1` 与 `tdesign-react@1.18.6`，React 入口 `apps/web-react/src/main.tsx` 未加载官方 React 19 适配器。对照 TDesign 固定版本 `packages/components/_util/react-render.ts`：React 19 下既没有 ReactDOM 旧版 `render`，也不会自动初始化 `legacyCreateRoot`；`DialogPlugin.confirm` 调用该内部渲染函数时可无内容挂载。官方 `packages/tdesign-react/site/docs/getting-started.md` 的「如何在 React 19 中使用」明确要求 `import "tdesign-react/es/_util/react-19-adapter"`。组件按钮、确认文案和原 `.t-dialog__confirm` 选择器不是已证实的根因，不通过弱化测试规避问题。
+- **最小修复**：只在 React 入口 `main.tsx` 的 `createRoot` 导入后、`App` 导入前加入官方适配器副作用 import，不新增依赖、不修改 DialogPlugin Promise 取消/确认契约、不替换为 `window.confirm`、不改 Vue 端。保留 Tag 删除前真实 Dialog 授权和已绑定 Tag 删除保护。针对双框架 `test:tags:browser` 增加「点击取消后工程 JSON 中该 Tag 仍存在」断言，原确认删除/受绑定拒绝用例继续有效。
+- **防复发**：引入需要 React Portals / 插件式动态渲染的 UI 库时，必须按当前 React 主版本阅读固定依赖的兼容说明，不能以普通 Button/Input 类型检查通过推断插件式 Dialog 正常。浏览器专项除静态 DOM 选择外必须点击确认与取消两条路径，并验证项目 JSON 未被取消操作修改。
+- **验证边界**：以上为固定版本官方源码与仓库现状的确定性诊断及 GitHub 修复候选，**尚未拿到新 HEAD 的 Windows `typecheck:web`、`vp check`、`test:tags:browser` 或 Vue/React 真实 Dialog 结果，不能声称已复验通过**。后续依次执行质量检查及 `test:browser`、`test:tags:browser`、`test:interop`、`test:versions:safety`、`test:multitab`。
+- **证据**：维护者 2026-11-23 Windows PowerShell 输出、`apps/web-react/src/main.tsx`、`apps/web-react/src/studio/StudioDialog.tsx`、`scripts/test-studio-browser.mjs`、TDesign React `tdesign-react@1.18.6` 官方 `react-render.ts`、`react-19-adapter.ts` 和 `getting-started.md`。
+
