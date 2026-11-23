@@ -492,6 +492,178 @@ async function checkStudioInPage() {
   return { findings, viewport: { width: innerWidth, height: innerHeight } };
 }
 
+/** 仅通过真实导航切换页面，避免构造不存在的 UI 或伪造发布数据。 */
+async function enterScadaViewInPage(label, selector) {
+  const started = Date.now();
+  let trigger = null;
+  while (Date.now() - started < 12000) {
+    trigger = [...document.querySelectorAll(".scada-app-nav button")].find(
+      (button) => button.textContent.trim() === label,
+    );
+    if (trigger) break;
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  }
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到 UI 工作空间入口：" + label);
+  }
+  if (trigger.getAttribute("aria-current") !== "page") trigger.click();
+  const loading = Date.now();
+  while (Date.now() - loading < 15000) {
+    const main = document.querySelector(selector);
+    if (main?.getClientRects().length) return true;
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  }
+  throw new Error("UI 页面异步挂载超时：" + label);
+}
+
+/** 读取真实主题与布局快照，不读取会话凭据或工程网络正文。 */
+function inspectScadaUIInPage(view) {
+  const app = document.querySelector(".scada-app-frame");
+  const nav = document.querySelector(".scada-app-nav");
+  const topbar = document.querySelector(".scada-app-topbar");
+  const main = document.querySelector("#scada-main-content");
+  if (!(app instanceof HTMLElement) || !(nav instanceof HTMLElement)) {
+    throw new TypeError("工作空间导航未挂载");
+  }
+  if (!(topbar instanceof HTMLElement) || !(main instanceof HTMLElement)) {
+    throw new TypeError("应用顶栏或主内容未挂载");
+  }
+  const links = [...nav.querySelectorAll("button")];
+  const current = links.find((button) => button.getAttribute("aria-current") === "page");
+  const sample = main.querySelector(".scada-header h1, .studio-toolbar h1");
+  const stage = document.querySelector(".studio-stage");
+  const panel = document.querySelector(".studio-panel-layers");
+  const label = stage?.querySelector(".studio-stage-caption > span");
+  const style = (node, property) =>
+    node instanceof Element ? getComputedStyle(node).getPropertyValue(property).trim() : "";
+  return {
+    theme: document.documentElement.getAttribute("theme-mode"),
+    screen: app.getAttribute("data-view"),
+    railWidth: Math.round(nav.getBoundingClientRect().width),
+    railHeight: Math.round(nav.getBoundingClientRect().height),
+    current: current?.textContent.trim() ?? null,
+    buttons: links.map((button) => button.textContent.trim()),
+    safety: topbar.textContent.includes("非现场控制"),
+    noHorizontalOverflow: document.documentElement.scrollWidth <= innerWidth + 2,
+    title: sample?.textContent.trim() ?? "",
+    titleColor: style(sample, "color"),
+    titleBackground: style(main, "background-color"),
+    navColor: style(current, "color"),
+    navBackground: style(current, "background-color"),
+    stageBackground: style(stage, "background-color"),
+    panelBackground: style(panel, "background-color"),
+    stageText: style(label, "color"),
+    stageTextBackground: style(stage?.querySelector(".studio-stage-caption"), "background-color"),
+    process: Boolean(main.querySelector(".scada-monitor-layout .scada-process-panel")),
+    telemetry: Boolean(main.querySelector(".scada-monitor-side .scada-diagnostics")),
+    quality: Boolean(main.querySelector(".scada-quality-summary")),
+    published: Boolean(main.querySelector(".scada-published-layout .scada-published-preview-panel")),
+    readonly: !main.querySelector('[data-testid="published-runtime-svg"]'),
+    studio: Boolean(main.querySelector(".studio-workspace .studio-svg")),
+  };
+}
+
+/** WCAG 2.2 AA 常规文字对比度：仅计算已知的不透明 RGB，异常颜色拒绝通过。 */
+function scadaTextContrast(foreground, background) {
+  const toRgb = (value) => {
+    const numbers = value.match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+    if (numbers.length !== 3) return null;
+    return numbers.slice(0, 3).map((component) => {
+      const normalized = component / 255;
+      return normalized <= 0.04045
+        ? normalized / 12.92
+        : ((normalized + 0.055) / 1.055) ** 2.4;
+    });
+  };
+  const front = toRgb(foreground);
+  const back = toRgb(background);
+  if (!front || !back) return 0;
+  const brightness = (parts) => parts[0] * 0.2126 + parts[1] * 0.7152 + parts[2] * 0.0722;
+  const a = brightness(front);
+  const b = brightness(back);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+/** 最终统一验收入口：双框架 × 双分辨率 × 三种实际页面，共 12 个界面。 */
+async function runScadaUIExperience(session) {
+  await session.send("Network.enable");
+  await session.send("Network.setCacheDisabled", { cacheDisabled: true });
+  for (const target of targets) {
+    for (const viewport of viewports) {
+      await session.send("Emulation.setDeviceMetricsOverride", {
+        width: viewport.width,
+        height: viewport.height,
+        deviceScaleFactor: 1,
+        mobile: false,
+      });
+      const url = new URL(target.url);
+      url.searchParams.set("scada_ui_check", target.name + "-" + viewport.width);
+      await session.send("Page.navigate", { url: url.href });
+      let ready = false;
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        await pause(120);
+        try {
+          ready = await session.evaluate(
+            "document.readyState === 'complete' && Boolean(document.querySelector('.scada-app-nav'))",
+          );
+        } catch {
+          // 导航期间的旧执行上下文可能已销毁。
+        }
+        if (ready) break;
+      }
+      assert.ok(ready, target.name + " UI 工作空间导航未加载");
+      for (const [view, label, selector] of [
+        ["runtime", "运行监控", ".scada-shell--overview"],
+        ["published", "已发布运行", ".scada-shell--published"],
+        ["studio", "组态编辑", ".studio-shell"],
+      ]) {
+        await session.evaluate(
+          "(" + enterScadaViewInPage.toString() + ")(" +
+            JSON.stringify(label) + "," + JSON.stringify(selector) + ")",
+        );
+        const data = await session.evaluate(
+          "(" + inspectScadaUIInPage.toString() + ")(" + JSON.stringify(view) + ")",
+        );
+        const prefix = target.name + " " + viewport.width + "x" + viewport.height + " " + label;
+        assert.equal(data.theme, "light", prefix + " 主题未切换至浅色工作区");
+        assert.equal(data.screen, view, prefix + " 当前视图与导航状态不一致");
+        assert.equal(data.railWidth, 84, prefix + " 左侧导航宽度不一致");
+        assert.ok(data.railHeight >= viewport.height - 2, prefix + " 导航没有撑满视口");
+        assert.deepStrictEqual(
+          data.buttons,
+          ["运行监控", "已发布运行", "组态编辑"],
+          prefix + " 缺少完整工作空间导航",
+        );
+        assert.equal(data.current, label, prefix + " 未标识当前导航");
+        assert.equal(data.safety, true, prefix + " 缺少非现场控制提示");
+        assert.equal(data.noHorizontalOverflow, true, prefix + " 发生整页横向溢出");
+        assert.ok(data.title.length > 0, prefix + " 缺少工作区标题");
+        assert.ok(
+          scadaTextContrast(data.navColor, data.navBackground) >= 4.5,
+          prefix + " 当前导航文字对比度不足",
+        );
+        if (view === "runtime") {
+          assert.ok(data.process && data.telemetry && data.quality, prefix + " 工艺和链路信息缺失");
+        } else if (view === "published") {
+          assert.ok(data.published && data.readonly, prefix + " 静态只读预览边界失效");
+        } else {
+          assert.ok(data.studio, prefix + " 组态画布缺失");
+          assert.notEqual(
+            data.stageBackground,
+            data.panelBackground,
+            prefix + " 深色画布与浅色面板没有区分",
+          );
+          assert.ok(
+            scadaTextContrast(data.stageText, data.stageTextBackground) >= 4.5,
+            prefix + " 画布工具栏文字对比度不足",
+          );
+        }
+        process.stdout.write(prefix + " 新版信息架构、状态与视觉边界通过\n");
+      }
+    }
+  }
+}
+
 /** 只在隔离浏览器中操作真实 Studio DOM，不修改正式应用代码。 */
 async function addStudioSymbolInPage(label) {
   const button = [...document.querySelectorAll(".studio-add button")].find(
@@ -2327,6 +2499,10 @@ async function main() {
     session = new ChromeSession(socket);
     await session.send("Page.enable");
     await session.send("Runtime.enable");
+    if (process.argv.includes("--ui")) {
+      await runScadaUIExperience(session);
+      return;
+    }
     if (process.argv.includes("--interop")) {
       await runStudioInteroperability(session);
       return;
