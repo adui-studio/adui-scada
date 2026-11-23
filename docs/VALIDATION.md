@@ -3748,3 +3748,40 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批未新增 HTTP、数据库迁移、工业网关、双框架页面或设备写入；正式报警触发、确认授权与不可变审计仍未交付。D5c0b 的 **124/124** 仅为测试定义的验收目标，必须取得 Windows 实际结果后才能按新授权合并。
+
+## 2026-11-23 · D5c0b PR #167 Windows 通过合并与 D5c0c 待验收
+
+维护者 Windows 对 PR #167 八份定向测试实测：时效 **8/8**、快照 **9/9**、序列 **10/10**、会话代次 **8/8**、增量 **18/18**、会话归约 **29/29**、托管 **11/11**、适配 **31/31**，合计 **124/124**；`vp check` **435 个文件格式正确 / 286 个受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个文件**。GitHub 在最新 HEAD `1ccf2d7ac7a9fcd7a1cdb17bc71d892fdef9ce87`、零未解决意见且无冲突的条件下，按维护者授权 Squash 合并至 `main@1acb4b1d3750a67f6741ae7899d49c017b8946a8`。本机 Windows 输出没有 HEAD，不伪称合并后的 SHA 被直接测试，也不能由定向结果推导完整 ready 和现场安全认证。
+
+D5c0c 仅补充报警候选服务器时间的规范小时范围：严禁 `24:00` 被 Date.parse 隐式跨日规范化；允许规范次日 `00:00`、日末 `23:59:59.999` 和明确时区的真实时间。新增五项回归定义：时效筛选 **9**、快照 **10**、序列 **10**、代次 **8**、增量 **19**、会话归约 **30**、托管 **11**、订阅适配 **32**；八份关联目标 **129** 项。**当前只有静态 GitHub 复核及独立 Node 日期解析复现，D5c0c 尚无 Windows 项目运行日志。**
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5c0c-alarm-midnight-rollover
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5c0c-alarm-midnight-rollover
+}
+if ($LASTEXITCODE -ne 0) { throw "切换功能分支失败" }
+
+git pull --ff-only origin fix/d5c0c-alarm-midnight-rollover
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 自动修正失败" }
+
+vp test run packages/core/test/alarm-tag-freshness.test.ts packages/core/test/alarm-snapshot-baseline.test.ts packages/core/test/alarm-tag-sequence.test.ts packages/core/test/alarm-session-generation.test.ts packages/core/test/alarm-tag-delta.test.ts packages/core/test/alarm-baseline-session.test.ts packages/core/test/alarm-session-controller.test.ts packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警候选时间规范回归失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+该补丁没有数据库变更、真实网关接入、Vue/React 改动、PLC/DCS 写入或生产报警事件行为。未经维护者 Windows 独立执行不能声称 129/129 已通过，PR 默认 Draft、未获本批明确合并授权前不得合并。
