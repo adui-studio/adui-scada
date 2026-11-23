@@ -745,7 +745,7 @@ export default function StudioPage() {
     setLayerDrop(null);
   }
 
-  function startLayerDrag(event: ReactDragEvent<HTMLButtonElement>, nodeId: string) {
+  function startLayerDrag(event: ReactDragEvent<HTMLElement>, nodeId: string) {
     const node = page?.nodes.find((item) => item.id === nodeId);
     if (
       !page ||
@@ -761,7 +761,7 @@ export default function StudioPage() {
     event.dataTransfer.setData("application/x-adui-scada-layer", nodeId);
   }
 
-  function overLayer(event: ReactDragEvent<HTMLButtonElement>, targetId: string) {
+  function overLayer(event: ReactDragEvent<HTMLElement>, targetId: string) {
     const dragging = layerDragRef.current;
     if (!dragging || dragging.pageId !== state.activePageId || dragging.nodeId === targetId) {
       return;
@@ -780,7 +780,7 @@ export default function StudioPage() {
     );
   }
 
-  function dropLayer(event: ReactDragEvent<HTMLButtonElement>, targetId: string) {
+  function dropLayer(event: ReactDragEvent<HTMLElement>, targetId: string) {
     const dragging = layerDragRef.current;
     if (!dragging || dragging.pageId !== state.activePageId) return;
     event.preventDefault();
@@ -2235,7 +2235,9 @@ export default function StudioPage() {
                       ? [{ label: "暂无其他页面", value: "" }]
                       : copyTargetPages.map((item) => ({ label: item.name, value: item.id }))
                   }
-                  onChange={(value) => setPreferredCopyTargetPageId(String(value))}
+                  onChange={(value) => {
+                    if (typeof value === "string") setPreferredCopyTargetPageId(value);
+                  }}
                 />
               </label>
               <Button tag="button"
@@ -2589,7 +2591,9 @@ export default function StudioPage() {
                           value: option.tagId,
                         })),
                       ]}
-                      onChange={(value) => changeTagBinding(bindingSlot, String(value))}
+                      onChange={(value) => {
+                        if (typeof value === "string") changeTagBinding(bindingSlot, value);
+                      }}
                     />
                   </label>
                   {selectedTagDefinition && (
@@ -2735,7 +2739,9 @@ export default function StudioPage() {
                           value: node.id,
                         })),
                       ]}
-                      onChange={(value) => setPreferredLayerTargetId(String(value))}
+                      onChange={(value) => {
+                        if (typeof value === "string") setPreferredLayerTargetId(value);
+                      }}
                     />
                   </label>
                   <label className="studio-field">
