@@ -3255,3 +3255,7 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 此次仅改适配器资源清理顺序、旧代次回调保护、测试和文档，没有真实网络协议、HTTP、UI、数据库或工业网关变更；定向检查不替代完整生产安全验收。外部取消函数一旦抛错，仅能确认其已尝试调用，**不能宣称真实资源肯定已释放**。正式发布安全 Gate 仍 fail-closed。
+
+## 2026-11-23 · D5b9o PR #154 条件式断言警告修复待复验
+
+维护者 Windows 在本批运行 `vp check --fix`，报告 `packages/core/test/alarm-subscription-adapter.test.ts:280` 的 `vitest(no-conditional-expect)` **1 条警告、0 个错误**，且显示格式化完成。此输出**不是** `vp check` 零警告通过。现已按 E-003/E-086 将条件中的断言改为仅记录布尔结果，在 `adapter.stop()` 后统一执行断言；不改变实际重入场景和业务代码。该改动**尚未在 Windows 执行或复验**。请在本 PR 分支更新后重新运行定向测试及 `vp check`、`docs:check`、`messages:check`，核对退出码。
