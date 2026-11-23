@@ -1415,3 +1415,11 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/test/alarm-baseline-session.test.ts`：新增 1 项，验证时间倒退触发终止态、原代次不能复活。
 - `packages/core/test/alarm-subscription-adapter.test.ts`：新增 1 项，验证订阅停止、资源取消及旧回调不再生效。
 - `alarm-session-controller.ts`、`alarm-tag-delta.ts`、`alarm-baseline-session.ts` 和 `alarm-subscription-adapter.ts` 生产代码无变化，仅经现有返回状态传播新的拒绝原因；不修改实际运行时、网关和设备写入。
+
+## 2026-11-23 · D5b9x FR-011 等待快照阶段非法时效参数拒绝（候选）
+
+- `packages/core/src/alarm-baseline-session.ts`：本代次显式 `CHECK_FRESHNESS` 即使没有首份 snapshot，也先验证 `nowMs` 为非负安全整数、`maxAgeMs` 为正安全整数；否则通过既有 `BASELINE_INVALIDATED/INVALID_INPUT` 终止当前会话。有效参数继续返回 `WAITING_SNAPSHOT`。
+- `packages/core/test/alarm-baseline-session.test.ts`：原 22 项新增 1 项，覆盖 `NaN`、负值、非整数、零及 Infinity、状态冻结、旧代次忽略和断连不依赖时钟。
+- `packages/core/test/alarm-session-controller.test.ts`：原 10 项新增 1 项，覆盖非法等待检查撤销令牌、旧回调拒绝及显式递增代次恢复。
+- `packages/core/test/alarm-subscription-adapter.test.ts`：原 28 项新增 1 项，覆盖周期回调与同步调度立即回调时无效时钟引起的资源清理。
+- `alarm-session-controller.ts` 与 `alarm-subscription-adapter.ts` 生产逻辑不变；`snapshot()` 在等待快照时不主动读取时钟的既有行为保持不变。无新的公共枚举、NestJS、Prisma、Vue/React、网关或发布 Gate 变化。

@@ -1365,3 +1365,11 @@ D5b9v 已为共享底层 `classifyOrderedNumericAlarmSample` 补齐新旧读数�
 D5b9w 只在 `packages/core/src/alarm-tag-sequence.ts` 增加服务端时间顺序守卫：新读数与旧基线分别通过原校验、Tag ID 一致且序列号严格增长后，按 `Date.parse(input.serverTimestamp) < Date.parse(previous.serverTimestamp)` 返回新的固定状态 `SERVER_TIMESTAMP_REGRESSED`，不返回候选值。**时间相等允许**，防止同毫秒连续采集被误拒；来源 `sourceTimestamp` 继续不参与报警顺序判断。非法质量、时效、Tag、代次及非递增序列仍保留现有优先拒绝语义。
 
 `classifySessionBoundNumericAlarmSample` 继承该状态，`advanceAlarmTagDeltaBaseline` 将其作为 `DELTA_REJECTED` 原因且不返回新基线，`transitionAlarmBaselineSession` 进一步将本代次终止为 `BASELINE_INVALIDATED`，受控 Controller/Adapter 按原有撤销令牌与取消订阅流程处理。除新增拒绝枚举以外，无公共函数签名、TagStore/SSE、报警规则、工业协议或数据库更改。这是报警候选层保守的 fail-closed 规则：仍须由可信上游保证服务器时间赋值权和会话代次，时间顺序检查不能构成来源认证，也不证明 PLC/DCS 工艺测量真实可靠；正式发布门禁保持 fail-closed。
+
+## 2026-11-23 · D5b9x FR-011 等待首次快照时非法时钟参数必须终止会话（候选）
+
+D5b9w 已合并的时间顺序防护之后继续检查共享会话归约器：`transitionAlarmBaselineSession` 处理本代次 `CHECK_FRESHNESS` 时，若 `state.baseline === null` 就直接返回 `WAITING_SNAPSHOT`，没有验证由调用方提供的 `nowMs` 与 `maxAgeMs`。而已建立基线后才会通过 `classifyTimelyNumericAlarmSample` 检查两项参数。因此，等待首份 snapshot 时即使显式时效检查得到 `NaN`、负数、非安全整数、零或非有限最大年龄，当前令牌也可能继续可用，随后还能在同代次建立首次快照。这是公共状态归约器与托管定时回调都可达的源代码缺口，并无真实现场时钟事故证据。
+
+D5b9x 在原 `CHECK_FRESHNESS` 分支、`WAITING_SNAPSHOT` 返回之前，按原 `classifyTimelyNumericAlarmSample` 的相同边界核对 `nowMs` 必须为非负安全整数、`maxAgeMs` 必须为正安全整数。非法时返回已有 `BASELINE_INVALIDATED/INVALID_INPUT`，通过现有冻结终止态撤销该代次；同代次之后的 snapshot 固定返回 `SESSION_INVALIDATED`，必须显式递增代次重启才能恢复。已有基线的检查与拒绝语义不变，旧代次事件仍先忽略，`DISCONNECT` 仍能不依赖健康时钟立即失效。没有新 API 或拒绝枚举。
+
+`AlarmBaselineSessionController.checkFreshness` 接收到失效结果后照旧撤销令牌；`AlarmSubscriptionAdapter` 经周期调度的时钟失败按既有路径停止订阅、尝试释放定时器和取消回调，包含同步安装时立即执行的调度回调。**`AlarmSubscriptionAdapter.snapshot()` 在没有已建立基线时仍不调用时钟**，此项只约束明确执行的 `CHECK_FRESHNESS`，不变更被动读取行为。服务端时间赋值权、真实来源认证、报警触发/确认/不可变审计以及工业设备连接均不在本批范围；正式发布门禁继续 fail-closed。
