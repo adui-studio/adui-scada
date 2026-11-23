@@ -882,7 +882,7 @@ function submitTagFormInPage() {
   return true;
 }
 
-function clickTagRowActionInPage(tagId, action, confirmChoice) {
+async function clickTagRowActionInPage(tagId, action, confirmChoice) {
   const rows = document.querySelectorAll(
     '[role="list"][aria-label="项目 Tag 目录"] [role="listitem"]',
   );
@@ -893,12 +893,20 @@ function clickTagRowActionInPage(tagId, action, confirmChoice) {
     (node) => node.textContent.trim() === action,
   );
   if (!button) throw new Error("未找到项目 Tag 操作：" + tagId + " · " + action);
-  const originalConfirm = window.confirm;
-  if (confirmChoice !== null) window.confirm = () => confirmChoice;
-  try {
-    button.click();
-  } finally {
-    window.confirm = originalConfirm;
+  button.click();
+  if (confirmChoice !== null) {
+    const started = Date.now();
+    let choice = null;
+    while (Date.now() - started < 12000) {
+      choice = [...document.querySelectorAll(".t-dialog .t-button")].find((item) =>
+        item.classList.contains(confirmChoice ? "t-dialog__confirm" : "t-dialog__cancel"),
+      );
+      if (choice?.getClientRects().length) break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    if (!(choice instanceof HTMLButtonElement)) throw new TypeError("Tag 删除确认弹层未出现");
+    choice.click();
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
   return true;
 }
@@ -1300,19 +1308,22 @@ async function studioVersionActionInPage(
   const button = candidates.find((item) => item.textContent.trim() === label);
   if (!button) throw new Error("找不到版本历史操作按钮：" + label);
   if (button.disabled) throw new Error("版本历史操作尚未结束：" + label);
-  const originalConfirm = Reflect.get(window, "confirm");
-  let confirmInvoked;
-  const confirmCall = new Promise((resolve) => {
-    confirmInvoked = resolve;
-  });
-  try {
-    if (confirmChoice !== null) {
-      window.confirm = () => {
-        confirmInvoked();
-        return confirmChoice;
-      };
+  button.click();
+  if (confirmChoice !== null) {
+    const confirmationStarted = Date.now();
+    let choice = null;
+    while (Date.now() - confirmationStarted < 12000) {
+      choice = document.querySelector(
+        confirmChoice ? ".t-dialog .t-dialog__confirm" : ".t-dialog .t-dialog__cancel",
+      );
+      if (choice?.getClientRects().length) break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
-    button.click();
+    if (!(choice instanceof HTMLButtonElement)) {
+      throw new TypeError("历史载入确认弹层未出现");
+    }
+    choice.click();
+  }
     if (expectedNotice) {
       const start = Date.now();
       while (Date.now() - start < 12000) {
@@ -1326,13 +1337,7 @@ async function studioVersionActionInPage(
         throw new Error("等待版本历史操作结果超时：" + expectedNotice);
       }
     } else {
-      await Promise.race([
-        confirmCall,
-        new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("未触发历史版本载入确认")), 12000);
-        }),
-      ]);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 120));
     }
     return {
       versions: [...menu.querySelectorAll(".studio-version-item strong")].map((item) =>
@@ -1340,9 +1345,6 @@ async function studioVersionActionInPage(
       ),
       comparison: menu.querySelector(".studio-version-comparison")?.textContent || "",
     };
-  } finally {
-    if (confirmChoice !== null) window.confirm = originalConfirm;
-  }
 }
 
 async function runStudioVersionHistory(session) {
