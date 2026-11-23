@@ -93,9 +93,11 @@ test("托管会话允许业务序列跳号，但未核验增量必须撤销令�
   expect(controller.currentToken()).toBeNull();
 
   const renewed = controller.restart();
-  expect(controller.receive(token, { kind: "delta", values: [jumped] }, true, nowMs, 3000)).toEqual({
-    status: "STALE_HANDLE_IGNORED",
-  });
+  expect(controller.receive(token, { kind: "delta", values: [jumped] }, true, nowMs, 3000)).toEqual(
+    {
+      status: "STALE_HANDLE_IGNORED",
+    },
+  );
   expect(
     controller.receive(
       renewed,
