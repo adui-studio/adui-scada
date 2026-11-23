@@ -4447,4 +4447,3 @@ PR #188 已提交最小修复候选：图层拖拽事件签名由 `ReactDragEven
 已审查固定 `tdesign-react@1.18.6` 的官方 React 19 支持机制，发现生产入口缺少 `tdesign-react/es/_util/react-19-adapter` 副作用导入。其 `react-render.ts` 在 React 19 且未加载适配器时无法进行插件动态渲染，这可以解释 `DialogPlugin.confirm` 没有实际挂载，而非由视觉上按钮变小造成。已在 `apps/web-react/src/main.tsx` 按官方文档添加适配器；原 `test:tags:browser` 继续真实点击确认并新增取消不写入断言，Tag 绑定保护没有删除。详见 AI 错误复盘 E-112。
 
 **修复候选尚未运行 Windows 验收**。待同一最新 HEAD 复验：`pnpm run typecheck:web`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`、`pnpm run test:browser`、`pnpm run test:tags:browser`；通过后继续 `pnpm run test:interop`、`pnpm run test:versions:safety`、`pnpm run test:multitab`。关注 React/Vue Tag 删除确认/取消、已绑定 Tag 拒绝、工程 JSON 往返，及 React 19 各插件式 Dialog（草稿覆盖和历史版本载入）的可见性与安全语义。新 PR 仍保持 Draft，未经维护者明确同意不合并。
-

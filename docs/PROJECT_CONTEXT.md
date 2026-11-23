@@ -2500,4 +2500,3 @@ D5c0v 基于合并后的 main，限定本地版本历史一个入口/框架：�
 ## 2026-11-23 · PR #189 React 19 TDesign DialogPlugin 适配阻塞（E-112）
 
 维护者 Windows 已验证 PR #189 的 React/Vue Web 类型检查、`vp check` 448/291 零告警、中文文案 318、文档 94 和四组普通浏览器 33/33；`test:tags:browser` 却在真实 Tag 删除 Dialog 确认按钮未出现时失败并中断后续测试。根目录 Catalog 使用 React/React DOM 19.3.1、TDesign React 1.18.6；固定官方源码及指南明确要求 React 19 导入 `tdesign-react/es/_util/react-19-adapter`，当前 `main.tsx` 遗漏此步骤，使插件式动态 Dialog 无法挂载。已将官方适配器导入加至 React 应用入口，补充双端 Tag 取消删除不写入浏览器断言，保留已绑定 Tag 删除保护与所有已存在的业务规则。**最新分支修复尚未实际运行 Windows 检查或浏览器验收；以上已通过的原日志不代表新提交已通过**。PR #189 继续保持 Draft，指派 `@adui-dev`，待实测并由维护者另行授权合并。
-

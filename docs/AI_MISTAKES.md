@@ -1092,4 +1092,3 @@
 - **防复发**：引入需要 React Portals / 插件式动态渲染的 UI 库时，必须按当前 React 主版本阅读固定依赖的兼容说明，不能以普通 Button/Input 类型检查通过推断插件式 Dialog 正常。浏览器专项除静态 DOM 选择外必须点击确认与取消两条路径，并验证项目 JSON 未被取消操作修改。
 - **验证边界**：以上为固定版本官方源码与仓库现状的确定性诊断及 GitHub 修复候选，**尚未拿到新 HEAD 的 Windows `typecheck:web`、`vp check`、`test:tags:browser` 或 Vue/React 真实 Dialog 结果，不能声称已复验通过**。后续依次执行质量检查及 `test:browser`、`test:tags:browser`、`test:interop`、`test:versions:safety`、`test:multitab`。
 - **证据**：维护者 2026-11-23 Windows PowerShell 输出、`apps/web-react/src/main.tsx`、`apps/web-react/src/studio/StudioDialog.tsx`、`scripts/test-studio-browser.mjs`、TDesign React `tdesign-react@1.18.6` 官方 `react-render.ts`、`react-19-adapter.ts` 和 `getting-started.md`。
-
