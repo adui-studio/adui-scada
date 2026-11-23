@@ -958,7 +958,10 @@ async function runStudioTagManagement(session) {
     await navigateStudioForInterop(session, target, "tag-management");
     await evaluateStudioPage(session, openTagManagerInPage);
     const layout = await evaluateStudioPage(session, inspectTagActionLayoutInPage);
-    for (const [kind, actions] of [["Tag 条目", layout.item], ["Tag 表单", layout.form]]) {
+    for (const [kind, actions] of [
+      ["Tag 条目", layout.item],
+      ["Tag 表单", layout.form],
+    ]) {
       assert.equal(actions.count, 2, target.name + " " + kind + " 操作按钮数量不正确");
       assert.equal(actions.columns, 2, target.name + " " + kind + " 操作没有保持双列");
       assert.ok(

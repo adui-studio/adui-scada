@@ -85,11 +85,7 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
       >
         {tags.length === 0 && <p className="studio-tip">当前工程尚未定义 Tag</p>}
         {tags.map((tag) => (
-          <div
-            role="listitem"
-            className="studio-binding studio-tag-item min-w-0"
-            key={tag.tagId}
-          >
+          <div role="listitem" className="studio-binding studio-tag-item min-w-0" key={tag.tagId}>
             <strong>{tag.displayName}</strong> · <span className="break-all">{tag.tagId}</span>
             <p className="studio-tip">
               {TAG_DATA_TYPE_LABELS[tag.dataType]}

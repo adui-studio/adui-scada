@@ -1083,4 +1083,3 @@
 - **修复候选**：新 D5c0x 分支最小范围内，将 Tag 条目和表单动作明确分为各自 2 列并统一 `--adui-control-height-sm`（28px），编辑/删除分别使用现有 TDesign Text Button 及 danger 语义，不再堆叠整列主色按钮；两端图层行复用 TDesign Text Button，搜索使用 `size=small`。清理两端旧按钮通用高度覆盖和原生输入二次描边；共享 CSS 将焦点交给 TDesign 自己管理，仅保留专用图层键盘焦点状态，同时柔化侧栏分界与选中边框。不改 Tag 删除确认、Tag ID、图层命中/拖拽、工程 Schema、CAS 或工业安全边界。
 - **防复发**：迁移 UI 组件时必须同时清理旧原生控件尺寸/轮廓覆盖，而不是仅替换 JSX/Vue 标签；对同一业务区域增加真实 DOM 的尺寸/布局断言。已在 `test:tags:browser` 对两端 Tag 行及表单动作增加双列、等宽、等高约束。**截至候选提交未执行 Windows Vite+/真实浏览器，静态 CSS 和源码检查不等于完成验收**。
 - **证据**：维护者 2026-11-23 Studio 截图、两端 `TagManager` 和 `studio.css`、共享 `@adui/tailwind/studio.css`、原 `scripts/test-studio-browser.mjs` 及 PR #188。
-
