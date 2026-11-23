@@ -85,13 +85,13 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  border-bottom: 1px solid var(--adui-color-nav-border);
 }
 .scada-app-brand {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #f6f9ff;
+  color: var(--adui-color-nav-on);
   font-size: 12px;
   letter-spacing: -0.02em;
 }
@@ -105,7 +105,7 @@ textarea {
   font-weight: 750;
 }
 .scada-rail-product {
-  color: #9cb2ca;
+  color: var(--adui-color-nav-muted);
   font-size: 10px;
   font-weight: 650;
   letter-spacing: 0.16em;
@@ -113,7 +113,7 @@ textarea {
 .scada-nav-kicker {
   display: block;
   text-align: center;
-  color: #93a6bd;
+  color: var(--adui-color-nav-kicker);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -154,14 +154,14 @@ textarea {
   flex: none;
 }
 .scada-app-nav .t-button:hover {
-  border-color: rgb(180 209 245 / 14%);
-  background: rgb(255 255 255 / 7%);
-  color: #fff;
+  border-color: var(--adui-color-nav-hover-border);
+  background: var(--adui-color-nav-hover-bg);
+  color: var(--adui-color-brand-on);
 }
 .scada-app-nav .t-button[aria-current="page"] {
-  border-color: rgb(110 175 255 / 30%);
+  border-color: var(--adui-color-nav-active-border);
   background: var(--adui-color-nav-active);
-  color: #fff;
+  color: var(--adui-color-brand-on);
   box-shadow: inset 3px 0 var(--adui-scada-cyan);
 }
 .scada-app-nav .t-button:focus-visible {
@@ -174,17 +174,17 @@ textarea {
   gap: 7px;
   margin-top: auto;
   padding: 16px 2px 3px;
-  border-top: 1px solid rgb(255 255 255 / 10%);
+  border-top: 1px solid var(--adui-color-nav-border);
   text-align: center;
 }
 .scada-rail-environment {
-  color: #b6e8d4;
+  color: var(--adui-color-nav-success);
   font-size: 10px;
   font-weight: 700;
   line-height: 1.4;
 }
 .scada-app-version {
-  color: #9cb2ca;
+  color: var(--adui-color-nav-muted);
   font-size: var(--adui-font-size-xs);
   line-height: 1.4;
   overflow-wrap: anywhere;
@@ -301,22 +301,22 @@ textarea {
 }
 .scada-status[data-status="simulation"],
 .scada-status[data-status="loading"] {
-  border-color: #f1d7a7;
-  background: #fff8eb;
+  border-color: var(--adui-color-warning-border);
+  background: var(--adui-color-warning-bg);
   color: var(--scada-warning);
 }
 .scada-status[data-status="live"],
 .scada-status[data-status="verified"] {
-  border-color: #b8e5d6;
-  background: #effaf5;
+  border-color: var(--adui-color-success-border);
+  background: var(--adui-color-success-bg);
   color: var(--scada-live);
 }
 .scada-status[data-status="error"],
 .scada-status[data-status="reconnecting"],
 .scada-status[data-status="stale"],
 .scada-status[data-status="denied"] {
-  border-color: #f5c8d0;
-  background: #fff2f4;
+  border-color: var(--adui-color-danger-border);
+  background: var(--adui-color-danger-bg);
   color: var(--scada-danger);
 }
 .scada-message {
@@ -326,7 +326,7 @@ textarea {
   border: 1px solid var(--scada-border);
   border-left: 3px solid var(--adui-scada-blue);
   border-radius: 8px;
-  background: #f6f9ff;
+  background: var(--adui-color-nav-on);
   color: var(--scada-text-secondary);
   font-size: var(--adui-font-size-sm);
   line-height: var(--adui-line-height-normal);
@@ -402,7 +402,7 @@ textarea {
   width: 100%;
   max-height: 70dvh;
   height: auto;
-  border: 1px solid #304158;
+  border: 1px solid var(--adui-color-stage-border);
   border-radius: 10px;
   background: var(--adui-color-stage);
   object-fit: contain;
@@ -592,7 +592,7 @@ textarea {
 }
 .scada-published-controls button[type="submit"] {
   background: var(--scada-primary);
-  color: #ffffff;
+  color: var(--adui-color-brand-on);
 }
 .scada-published-controls button[type="submit"]:hover {
   background: var(--scada-primary-hover);

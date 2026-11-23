@@ -909,7 +909,7 @@
 .studio-save-actions button:first-child:not(:disabled) {
   border-color: var(--scada-primary);
   background: var(--scada-primary);
-  color: #fff;
+  color: var(--adui-color-brand-on);
   font-weight: 750;
 }
 .studio-save-actions button:first-child:not(:disabled):hover {
@@ -1047,7 +1047,7 @@
   color: var(--scada-text-strong);
 }
 .studio-layer-tree .studio-layer[data-selected="true"] {
-  border-color: #c8d9f4;
+  border-color: var(--adui-color-layer-active-border);
   background: var(--scada-active-bg);
   color: var(--scada-primary);
   box-shadow: inset 3px 0 var(--scada-primary);
@@ -1071,35 +1071,37 @@
 .studio-stage-caption {
   min-height: 46px;
   padding: 6px 12px;
-  border-bottom: 1px solid #344258;
+  border-bottom: 1px solid var(--adui-color-stage-separator);
   background: var(--adui-color-stage-elevated);
   font-size: var(--adui-font-size-xs);
 }
 .studio-stage-caption > span {
-  color: #dce8f7;
+  color: var(--adui-color-stage-label);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.studio-stage-caption .t-button {
+.studio-stage-caption > .studio-view-menu > .t-popup > .t-button,
+.studio-stage-caption > .studio-zoom .t-button {
   min-height: 30px;
-  border: 1px solid #41536a;
+  border: 1px solid var(--adui-color-stage-button-border);
   border-radius: 7px;
-  background: #293b52;
-  color: #eaf2fc;
+  background: var(--adui-color-stage-button);
+  color: var(--adui-color-stage-on-button);
 }
-.studio-stage-caption .t-button:hover {
-  border-color: #7c9cc6;
-  background: #314761;
-  color: #fff;
+.studio-stage-caption > .studio-view-menu > .t-popup > .t-button:hover,
+.studio-stage-caption > .studio-zoom .t-button:hover {
+  border-color: var(--adui-color-stage-button-hover-border);
+  background: var(--adui-color-stage-button-hover);
+  color: var(--adui-color-brand-on);
 }
 .studio-zoom {
   display: flex;
   align-items: center;
   gap: 3px;
   padding: 3px;
-  border: 1px solid #40536c;
+  border: 1px solid var(--adui-color-stage-zoom-border);
   border-radius: 8px;
-  background: #26384c;
+  background: var(--adui-color-stage-zoom);
 }
 .studio-zoom .t-button {
   min-width: 28px;
@@ -1118,7 +1120,7 @@
   outline-offset: -3px;
 }
 .studio-page-boundary {
-  stroke: #77b3ff;
+  stroke: var(--adui-color-stage-boundary);
   stroke-opacity: 0.95;
 }
 .studio-panel-properties {
