@@ -7,7 +7,11 @@ import type { TagValue } from "./tag-store.ts";
 export type OrderedNumericAlarmSample =
   | TimelyNumericAlarmSample
   | {
-      readonly status: "BASELINE_REQUIRED" | "TAG_MISMATCH" | "SEQUENCE_NOT_ADVANCED" | "SERVER_TIMESTAMP_REGRESSED";
+      readonly status:
+        | "BASELINE_REQUIRED"
+        | "TAG_MISMATCH"
+        | "SEQUENCE_NOT_ADVANCED"
+        | "SERVER_TIMESTAMP_REGRESSED";
     };
 
 /**
