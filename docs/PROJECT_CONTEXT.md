@@ -2396,3 +2396,9 @@ D5c0l 基于现有共享主题和三套仓库设计规范，启动工业 UI 双�
 D5c0m 基于最新 main 只改共享 Runtime CSS 与 React/Vue 运行页展示顺序：宽屏把模拟工艺 SVG 提到首屏左侧，诊断和 Tag 置于右侧；两端 DOM 与视觉保持一致；已发布页在无有效快照时展示具有合理高度的受控空态。无新增 UI 封装、依赖或工业业务逻辑修改，Studio 252px/320px 与 16:9 不动。
 
 维护者明确“工具”包含 **Zod、Day.js 等成熟第三方库**，而不只是 TDesign UI 组件。现有 Zod 4.6.7 已列入 Catalog，但 Day.js 尚未引入；本批已有日期显示可复用 Runtime 格式化入口，因此**不为避免几行既有代码而无条件引入 Day.js**。后续遇到真实重复能力先检查已有 Schema/库/工具链，再做最小迁移，所有新依赖必须准确维护消费者及锁文件。此批 PR 尚无 Windows 测试及实际新布局截图，严格保持 Draft 等待验收。
+
+## 2026-11-23 · PR #178 合并与 D5c0n 发布只读页面 UI 控件复用
+
+PR #178 在本地最终候选 HEAD `3f0998a5728015ea22ff3ffc0a34678e2fc32427` 已由维护者 Windows 执行完整 `ready` 及 Studio 浏览器、Tag 与互通验收，GitHub 按明确授权 Squash 合并至 `main@be5084ef9621f93fa8ede3cc539686d56c248db5`。截图显示全宽运行监控、发布空预览和 Studio 均符合本批改动方向，但未覆盖真实服务端已验证发布内容与身份失效情况。
+
+D5c0n 在新 Draft 分支上直接复用 TDesign React/Vue 的 Button，替换已发布只读页三项原生按钮；现有 `input`、`select` 及 CDP 安全测试定位所依赖属性不改。新增 Runtime 共用的 `PUBLISHED_RUNTIME_EMPTY_HINTS`，七种状态展示具体且不误导为现场数据的提示；只增加静态状态映射测试和样式可读性，不新增依赖或重复封装控件。该分支 Windows 构建/浏览器专项未执行，PR 必须保持 Draft 待新一轮验收。
