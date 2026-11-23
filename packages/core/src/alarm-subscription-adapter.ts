@@ -68,7 +68,7 @@ export class AlarmSubscriptionAdapter {
    */
   snapshot(): AlarmBaselineSessionState {
     const token = this.token;
-    if (this.running && token !== null) {
+    if (this.running && token !== null && this.controller.snapshot().baseline !== null) {
       this.forward(token, () =>
         this.controller.checkFreshness(token, this.options.nowMs(), this.options.maxAgeMs),
       );
