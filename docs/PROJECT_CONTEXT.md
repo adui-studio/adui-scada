@@ -2408,3 +2408,9 @@ D5c0n 在新 Draft 分支上直接复用 TDesign React/Vue 的 Button，替换�
 维护者本次提供 PR #179 的 Windows 日志：`pnpm run ready` 中单测 864/864、NestJS E2E 63/63、双框架 Web 构建及文档 93 份均成功，随后 `test:browser` React/Vue 四组各 19/19、双端 Tag 与 JSON 互通成功；命令链按 `&&` 执行到最后，但日志未给本地 HEAD 和单独的 `$LASTEXITCODE` 数值。GitHub 无未解决 Review、分支可合并、Assignee `@adui-dev`，维护者明确授权后 PR #179 Squash 合并至 `main@33c594c61d6155b2bc782d6114ccae0e43d2e9d8`。截图也发现 Studio Tag 按钮仍重复且强调色过重；需待基础主题统一后另行优化，不以本批强改编辑器按钮行为。
 
 D5c0o 已建立 `packages/theme` 的纯 CSS 工作区包，统一 V7 色板、工业状态语义色、字体刻度/行高、间距、圆角以及官方 TDesign 深色 CSS Variables；原 `packages/runtime/src/theme.css` 保留兼容导入，两个 Web HTML 开启 `theme-mode="dark"`，Studio 之前两份局部 TDesign 变量声明已去重，Tailwind 开始复用基础字号/间距刻度。**新分支仅为 GitHub 代码候选**：本环境不能用 pnpm 12.18.0 真实生成锁文件，必须先在 Windows 更新 `pnpm-lock.yaml`，再做双框架 TDesign 视觉和全部项目测试。发布运行的授权、报警、模拟数据质量与设备写入边界未变。
+
+## 2026-11-23 · PR #180 合并与 D5c0p 共享主题等值迁移候选
+
+维护者提供 PR #180 的 Windows 日志：`pnpm run ready` 执行到末尾，Vitest 70 文件/868 用例通过，其中 `theme-tokens.test.ts` 4/4；NestJS E2E 63/63、Vite+ 445 文件格式正确/289 受检零告警、Web/Server 构建和文档 93 份均通过。其后同一 `&&` 链上 React/Vue 双分辨率 Studio 76/76、Tag 管理与 JSON 双向往返通过。日志未单独打印本地 HEAD，验收绑定 GitHub 最终头 `e93eb74e16325c34e7daf29a793ba7fd17552059` 的差异核对。GitHub 已确认锁文件仅新增工作区 importer、无未解决评论、Assignee `@adui-dev` 且可合并；维护者明确同意后 PR #180 Squash 合并至 `main@8ff4ca82b8f983a32bbd9f98bdf99087b41877c0`。
+
+D5c0p 基于上述 main 在共享 Runtime 样式做 19 处、共享 Studio CSS 做 11 处**原值不变**的字号、间距、字重与圆角 Token 替换；不触碰应用组件、状态、图元和服务器。静态比较两份 CSS 仅 30 行不同，Token 解析均为原数值，并加了导航/发布空态/工程列表回归断言。初版 CSS 断言误以为最后同名选择器就是目标，修复后改为收集所有规则，详见 E-105。**本批尚未运行 Windows Vite+、单元测试和浏览器验收；保持 Draft 待维护者验证。**
