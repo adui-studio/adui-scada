@@ -1093,7 +1093,7 @@ export async function openProjectInPage(projectId, headRevision, mode) {
       const dialogChoice = document.querySelector(
         mode === "cancel" ? ".t-dialog .t-dialog__cancel" : ".t-dialog .t-dialog__confirm",
       );
-      if (!confirmCount && dialogChoice instanceof HTMLButtonElement && dialogChoice.getClientRects().length) {
+      if (!confirmCount && dialogChoice?.tagName === "BUTTON" && dialogChoice.getClientRects().length) {
         confirmCount += 1;
         if (mode === "confirm-drift") globalThis.__aduiTestProjectRevisionFault = fault;
         dialogChoice.click();
