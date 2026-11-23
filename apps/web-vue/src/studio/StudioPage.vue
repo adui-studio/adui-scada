@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
-import { Button as TButton, Input as TInput } from "tdesign-vue-next";
+import { Button as TButton, Dropdown as TDropdown, Input as TInput } from "tdesign-vue-next";
+import type { DropdownProps } from "tdesign-vue-next";
 import { CloseIcon } from "tdesign-icons-vue-next";
 import "tdesign-vue-next/es/style/index.css";
 import {
@@ -265,6 +266,26 @@ const layerTargetId = computed(() =>
 const activePageIndex = computed(() =>
   state.value.document.pages.findIndex((item) => item.id === state.value.activePageId),
 );
+const pageMenuOptions = computed<NonNullable<DropdownProps["options"]>>(() => [
+  {
+    content: "+ 新建页面",
+    value: "create",
+    disabled: state.value.document.pages.length >= 100,
+  },
+  {
+    content: "复制页面",
+    value: "duplicate",
+    disabled: state.value.document.pages.length >= 100,
+  },
+  { content: "页面前移", value: "previous", disabled: activePageIndex.value <= 0 },
+  {
+    content: "页面后移",
+    value: "next",
+    disabled: activePageIndex.value >= state.value.document.pages.length - 1,
+  },
+  { content: "重命名", value: "rename" },
+  { content: "删除当前页", value: "delete", disabled: state.value.document.pages.length <= 1 },
+]);
 const copyTargetPages = computed(() =>
   state.value.document.pages.filter((item) => item.id !== state.value.activePageId),
 );
@@ -657,6 +678,29 @@ function duplicatePage() {
 function movePage(direction: "previous" | "next") {
   apply(() => editor.movePage(state.value.activePageId, direction), "页面顺序已调整，可撤销");
 }
+
+const handlePageMenuClick: NonNullable<DropdownProps["onClick"]> = ({ value }) => {
+  switch (value) {
+    case "create":
+      createPage();
+      break;
+    case "duplicate":
+      duplicatePage();
+      break;
+    case "previous":
+      movePage("previous");
+      break;
+    case "next":
+      movePage("next");
+      break;
+    case "rename":
+      renamePage();
+      break;
+    case "delete":
+      deletePage();
+      break;
+  }
+};
 
 function selectCopyTarget(event: Event) {
   if (event.target instanceof HTMLSelectElement) {
@@ -2000,35 +2044,16 @@ async function importJson(event: Event) {
           {{ item.name }}
         </button>
       </div>
-      <details class="studio-page-menu">
-        <summary>页面管理</summary>
-        <div class="studio-page-actions">
-          <button type="button" :disabled="state.document.pages.length >= 100" @click="createPage">
-            + 新建页面
-          </button>
-          <button
-            type="button"
-            :disabled="state.document.pages.length >= 100"
-            @click="duplicatePage"
-          >
-            复制页面
-          </button>
-          <button type="button" :disabled="activePageIndex <= 0" @click="movePage('previous')">
-            页面前移
-          </button>
-          <button
-            type="button"
-            :disabled="activePageIndex >= state.document.pages.length - 1"
-            @click="movePage('next')"
-          >
-            页面后移
-          </button>
-          <button type="button" @click="renamePage">重命名</button>
-          <button type="button" :disabled="state.document.pages.length <= 1" @click="deletePage">
-            删除当前页
-          </button>
-        </div>
-      </details>
+      <div class="studio-page-menu">
+        <TDropdown
+          :options="pageMenuOptions"
+          trigger="click"
+          placement="bottom-right"
+          @click="handlePageMenuClick"
+        >
+          <TButton type="button" variant="outline">页面管理</TButton>
+        </TDropdown>
+      </div>
     </div>
     <div
       class="studio-workspace"
