@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
-import { Button as TButton, Dropdown as TDropdown, Input as TInput } from "tdesign-vue-next";
+import { Button as TButton, Dropdown as TDropdown, Input as TInput, Popup as TPopup } from "tdesign-vue-next";
 import type { DropdownProps } from "tdesign-vue-next";
 import { CloseIcon } from "tdesign-icons-vue-next";
 import "tdesign-vue-next/es/style/index.css";
@@ -1785,21 +1785,26 @@ async function importJson(event: Event) {
         <div class="studio-save-actions">
           <button type="button" @click="saveDraft">保存草稿</button>
         </div>
-        <details class="studio-file-menu">
-          <summary>文件与草稿</summary>
-          <div class="studio-file-popover">
-            <button type="button" :aria-pressed="autoSaveEnabled" @click="toggleAutoSave">
-              {{ autoSaveEnabled ? "暂停自动保存" : "开启自动保存" }}
-            </button>
-            <label class="studio-import">
-              导入 JSON
-              <input type="file" accept=".json,application/json" @change="importJson" />
-            </label>
-            <button type="button" @click="exportJson">导出 JSON</button>
-            <button type="button" :disabled="!hasSavedDraft" @click="restoreDraft">恢复草稿</button>
-            <button type="button" :disabled="!hasSavedDraft" @click="clearDraft">清除草稿</button>
-          </div>
-        </details>
+        <div class="studio-file-menu">
+          <TPopup attach=".studio-file-menu" trigger="click" placement="bottom-right">
+            <TButton type="button" variant="outline">文件与草稿</TButton>
+            <template #content>
+              <div class="studio-file-popover">
+              <button type="button" :aria-pressed="autoSaveEnabled" @click="toggleAutoSave">
+                {{ autoSaveEnabled ? "暂停自动保存" : "开启自动保存" }}
+              </button>
+              <label class="studio-import">
+                导入 JSON
+                <input type="file" accept=".json,application/json" @change="importJson" />
+              </label>
+              <button type="button" @click="exportJson">导出 JSON</button>
+              <button type="button" :disabled="!hasSavedDraft" @click="restoreDraft">恢复草稿</button>
+              <button type="button" :disabled="!hasSavedDraft" @click="clearDraft">清除草稿</button>
+
+              </div>
+            </template>
+          </TPopup>
+        </div>
         <details class="studio-version-menu" @toggle="onVersionMenuToggle">
           <summary>版本历史</summary>
           <div class="studio-version-panel" aria-label="本地工程历史版本">
