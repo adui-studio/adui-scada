@@ -138,7 +138,7 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
             onChange={(value) =>
               setDraft((current) => ({ ...current, dataType: value as TagDataType }))
             }
-          />/select>
+          />
         </label>
         <label className="studio-field">
           单位（可选）
