@@ -1413,3 +1413,11 @@ D5c0b 已合并的公历日期验证拒绝了二月三十日等不存在的日�
 D5c0c 在 `packages/core/src/alarm-tag-freshness.ts` 原有时区和年月日匹配正则中额外捕获小时；当小时大于 23 时抛出固定中文 `TypeError("报警服务器时间戳小时无效")`，禁止通过隐式跨日映射得到 `READY`。**规范的次日 `00:00:00Z`、前一日 `23:59:59.999Z`、合法日期与时区偏移仍然允许**。没有修改公历日期校验、GOOD 数值优先级、最大年龄边界、序列或 `sourceTimestamp` 规则，也不引入新枚举或公共接口。
 
 公开初始快照、直接增量入口继承同一 TypeError；`transitionAlarmBaselineSession` 将非法输入映射为既有 `BASELINE_INVALIDATED/INVALID_INPUT` 终止代次；受控 Adapter 继续按原路径停止只读订阅并清理定时器。通用 `TagStore` 仍保留历史 `Date.parse` 兼容契约；若未来真实网关接收 ISO 8601 日末 24 时表示，应由可信上游明确转换为规范次日零点，不能让 Core 根据宿主行为偷偷归一化。此规则不证明来源认证、时钟可信、真实报警触发、确认或不可变审计，正式发布安全门禁继续 fail-closed。
+
+## 2026-11-23 · D5c0d FR-011 报警候选服务端时间仅接受可精确表达的毫秒精度（候选）
+
+D5c0c 已限制小时为 RFC 3339 的 00–23，但现有 `alarm-tag-freshness.ts` 的小数秒模式 `(?:\.\d+)?` 仍允许任意长度。JavaScript `Date.parse` 的结果为整数毫秒：例如 `2026-11-22T09:00:00.000900Z` 和 `2026-11-22T09:00:00.000Z` 都解析为同一个毫秒，导致亚毫秒级的未来时间可被视为当前时间；`08:59:59.999900Z` 与 `08:59:59.999100Z` 也归并为同毫秒，严格增长的序列在低层比较时不能识别这 800 微秒的时间倒退。该现象已用独立 JavaScript `Date.parse` 复现，尚无现场采集故障证据。
+
+D5c0d 只在共享 `packages/core/src/alarm-tag-freshness.ts` 的现有匹配表达式中捕获小数秒位数，**GOOD 且有限数值**候选的 `serverTimestamp` 若小数秒超过 3 位，则在 `Date.parse` 之前抛出固定中文 `TypeError("报警服务器时间戳精度超过毫秒")`。无小数秒、1/2/3 位小数秒、明确 UTC/数值时区偏移、有效公历日期与 00–23 小时继续按原有窗口判断。拒绝输入是有意的 fail-closed 精度协议收窄；若将来可信工业网关产生微秒/纳秒值，应由可信上游显式处理精度及顺序语义后再产生毫秒格式，不得静默截断或将本地校验等同来源认证。
+
+底层 `classifyOrderedNumericAlarmSample` 校验新读数及旧基线，故高精度新/旧时间均会抛错；初始快照与直接增量公共入口继承校验；纯会话归约器以原有 TypeError→`BASELINE_INVALIDATED/INVALID_INPUT` 清空基线并终止代次；订阅适配器沿用原有资源取消策略。未新增公共拒绝枚举、签名、依赖，也不修改 `TagStore` 宽松历史时间契约、Controller/Adapter 生产代码、React/Vue、NestJS、Prisma、工业网关、正式报警触发/确认、不可变审计或发布 Gate。
