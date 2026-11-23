@@ -1005,3 +1005,12 @@
 - **证据**：维护者 2026-11-23 Windows 原始输出、PR #175、`scripts/lab-alarm-inprocess.mjs`、`scripts/check-chinese-messages.mjs`、`docs/VALIDATION.md`。
 
 > **2026-11-23 · E-103 Windows 结案补录**：维护者修复四处 JSDoc 中文注释后，在 Windows 实际运行 `pnpm run messages:check` **312 个文件通过**，并执行 `vp check` **439 格式/288 受检零警告错误**、`docs:check` **92 份**、Node 进程内 Lab **5/5** 和独立诊断，均通过。GitHub 复核最后 PR #175 HEAD `9f7fecfab4432f37e9be7ae882f5d481d5c8870f`，按维护者授权 Squash 合并至 `main@54a3d4b9868474e94ecbed81f088cdd8c259710e`。原条目“待 Windows 复验”是历史阶段说明，本次中文文案门禁阻塞已经关闭。Windows 日志未输出本地 HEAD，不将其冒充为合并 SHA 的直接运行证据；FR-011 正式可信采集与报警仍未上线。
+
+### E-104 · D5c0l UI 视觉改造覆盖既有 Studio 侧栏宽度契约（PR #177，待 Windows 复验）
+
+- **现象**：维护者 Windows 对 PR #177 执行 `pnpm run ready`，输出显示 `messages:check` **312 文件**、`vp check` **440 格式/288 受检零警告错误**、Vitest **863/863**、S0 Lab **5/5**、NestJS E2E **63/63**、文档 **93 份**与双框架 Web 构建均成功；但原始日志未单独打印 `ready` 最终退出码。随后 `pnpm run test:browser` 在 React/Vue 的 **1440×900** 和 **1024×768** 四组场景均为 **16/19**：固定左宽 252px、固定右宽 320px 与“画布占据剩余宽度”三项失败，整个命令链退出码 1，`test:tags:browser`、`test:interop` 因 `&&` 未运行。
+- **根因**：新共享 `packages/tailwind/src/studio.css` 的末尾覆盖了既有 `--studio-left-width: 252px` 与 `--studio-right-width: 320px`，设置成 260px/324px，并在不超过 1250px 时再次覆盖为 238px/292px。先前只做了 CSS 括号/双端类名静态核对，没有逐项比对 `scripts/test-studio-browser.mjs` 对工作区几何的实际验收断言。此为视觉改造引入的回归，不能通过改测试宽度或放宽断言消除。
+- **最小修复**：仅删除 D5c0l 新增 CSS 中这两组布局变量覆盖，保留原共享工作区的 **252px/320px** 与画布 `minmax(0,1fr)` 计算。不修改现有脚本、图元、交互、工程文档、React/Vue 页面或组件 API。
+- **防复发**：修改 UI 前先检查现有 CSS Token、可执行浏览器断言、分辨率和真实组件依赖。布局与控件职责分开：复用 `tdesign-react` / `tdesign-vue-next` 及官方 Token，不为 TDesign 已支持的 Button、Input、Select、Tabs、Dialog、Table、Tree 等重新封装同职责控件；Tailwind 管布局，受控 CSS 只用于工业画布等独特交互。尚未查询的 TDesign API 不能猜测。修复浏览器回归时优先修生产 CSS，不降低现成测试要求。
+- **验证边界**：GitHub 已静态核对主线宽度定义及脚本三项几何断言；删除覆盖后的浏览器回归、`vp check`、`docs:check`、`ready` 与后续双端视觉检查 **均待维护者 Windows 在最新 HEAD 重新执行**。此修复不能标记为已通过。
+- **证据**：维护者 2026-11-23 Windows 原始 `ready` 与 `test:browser` 日志、`scripts/test-studio-browser.mjs`、`packages/tailwind/src/studio.css`、PR #177、`docs/VALIDATION.md`。

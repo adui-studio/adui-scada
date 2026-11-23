@@ -3962,3 +3962,50 @@ pnpm run ready
 ```
 
 `ready` 将再次执行 `test:alarm:lab`，需要在完整日志中确认新步骤被执行、原有步骤没有被跳过且最终进程退出码为 0。此处新增自动门禁只是进程内模拟覆盖，不等于 FR-011 正式认证、可靠游标、历史重放、报警事件事务或生产上线验收；D1～D5 仍待维护者专项批准。
+
+## 2026-11-23 · D5c0l 双框架工业 UI 候选与待执行验收
+
+PR #176 在 Windows 已验证 S0 Lab **5/5**（包括 `ready` 中实际运行）、Vitest **863/863**、NestJS E2E **63/63**，以及 React/Vue Web 构建、`vp check` **439/288 零警告错误**、`docs:check` **92 份**、`messages:check` **312 个文件**通过。GitHub 在合并前复核 13 份文件、新增的两套设计 Skill 与 `skills-lock.json`、最终 HEAD `ef26992f43c4eae6da2100a19a8d23be5da97b69`、Assignee `@adui-dev` 及无冲突后，按授权 Squash 合并至 `main@a3bca59ba176eb6d367b12c9d0264405d589d397`。**上传日志尾部没有 `ready` 最终退出码，不能把完整 ready 视为已经验收。** 原终端日志也未打印本地 HEAD，不能绑定到新 Squash 提交直接运行。
+
+D5c0l 修改共享 Runtime 和 Studio UI 层，以及 Vue/React 三类现有页面的少量语义标记：导航焦点跳转、模拟运行响应式工艺与 Tag 面板、发布状态与只读预览、Studio 工作区视觉统一。没有更改 TagStore、报警候选、Runtime 数据解析、工程 Schema、OIDC API、Prisma、PLC/DCS 或正式发布 Gate。
+
+以下命令与人工验收**当前均尚未在 D5c0l 分支实际执行**，不能提前标记通过：
+
+```powershell
+git fetch origin &&
+git switch feat/d5c0l-industrial-ui-shell &&
+git pull --ff-only &&
+git rev-parse HEAD &&
+pnpm run messages:check &&
+vp check &&
+pnpm run docs:check &&
+pnpm run ready
+```
+
+Windows 真实浏览器还需分别在 React/Vue **1440×900 与 1024×768** 验收导航、模拟监控、已发布运行和 Studio：画布比例与网格、左右侧栏独立滚动、Popover、Tag 空状态、键盘 Tab→跳过导航、禁用/错误状态与无横向溢出。已有 `pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop` 可作为功能回归，必要的真实 OIDC 发布专项需要独立受控环境和授权。可访问性与视觉合格需要截图和人工审阅，不得以 `vp check`、Vitest 或本批 CSS 静态核对替代。
+
+相关 UI 基线：`docs/UI_DESIGN_SYSTEM.md`。工业来源认证、服务端正式报警、传输游标和设备控制均不属于本批。
+
+## 2026-11-23 · PR #177 Windows 首轮结果、E-104 Studio 侧栏回归修复候选
+
+维护者 Windows 在本批分支运行 `pnpm run ready`：依赖/配置/环境、中文文案 **312**、`vp check` **440 格式/288 受检零警告错误**、React/Vue 类型检查、Vitest **863/863**、报警 Lab **5/5**、NestJS E2E **63/63**、文档 **93 份**、React/Vue Web 构建均有成功记录；最后显示 NestJS 构建中的 Prisma Client 生成，日志**没有显示完整 `ready` 的最终退出码或本地 HEAD**，不可将其伪写为已证明整体返回 0。
+
+随后 `pnpm run test:browser` 在 React/Vue 两端的 **1440×900、1024×768** 各报告 **16/19**，失败项均为“左侧栏固定 252px”“右侧栏固定 320px”“画布占据剩余宽度”，并以退出码 **1** 停止。该命令与 `test:tags:browser`、`test:interop` 用 `&&` 连接，因此后两项**没有执行**，不能将它们登记为通过或失败。对应问题记录为 **E-104**。
+
+GitHub 远端源码与 `scripts/test-studio-browser.mjs` 的验收条件一致：原 `packages/tailwind/src/studio.css` 的共享基础值是 **252px/320px**，D5c0l 新加覆盖分别改成 260px/324px 和小屏的 238px/292px。修复候选已经**删除这两组新加覆盖**，不修改测试、业务和编辑器行为。此次代码与文档提交只进行远程静态核对，**修复后 Windows 浏览器及质量门禁尚未重新运行**。
+
+请在 **PR #177 最新 HEAD** 执行以下命令；第一步须显示当前 HEAD，以便与 GitHub 验收绑定：
+
+```powershell
+git fetch origin &&
+git switch feat/d5c0l-industrial-ui-shell &&
+git pull --ff-only &&
+git rev-parse HEAD &&
+pnpm run test:browser &&
+pnpm run test:tags:browser &&
+pnpm run test:interop &&
+vp check &&
+pnpm run docs:check
+```
+
+若上述通过，再按需要运行 `pnpm run ready` 并显式打印 `$LASTEXITCODE`。同时在双框架 1440×900、1024×768 复查画布不溢出、面板内滚动、键盘焦点与 TDesign 控件行为；没有新建等价自定义 UI 组件。当前 PR 继续 Draft，不允许在此待验收状态下合并。

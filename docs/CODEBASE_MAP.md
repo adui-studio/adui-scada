@@ -1484,3 +1484,14 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `docs/VALIDATION.md` / `docs/PROJECT_CONTEXT.md`：记录本批进度和待复验范围。
 
 无新增依赖、端口、网络协议、数据源认证、正式报警事件、Vue/React 适配层或 Prisma 数据库写入；D1～D5 尚待正式批准。该自动化只覆盖 S0 进程内实验，不代表完整工业报警可信链路。
+
+## 2026-11-23 · D5c0l 双框架工业工作台 UI 基线（候选）
+
+- `packages/runtime/src/runtime.css`：Vue/React 共用应用导航、只读运行诊断、模拟 SVG + Tag 面板、发布工程输入及静态预览的专业深色布局；只使用现有 `--scada-*` Token。
+- `packages/tailwind/src/studio.css`：Vue/React 共享的 Studio 顶栏、画布工具栏、固定左/右侧栏、图层选中态与状态栏视觉；不更改 SVG viewBox、工程比例、命令或数据。
+- `apps/web-react/src/App.tsx` / `apps/web-vue/src/App.vue`：一致的导航与“跳转到主要内容”键盘入口；明确本地研发预览不是现场控制。
+- 两端 `src/runtime/RuntimePage` / `PublishedRuntimePage`：布局区类名、实际可聚焦主内容、工程输入表单名称和可读 Tag 空状态保持一致。
+- 两端 `src/studio/StudioPage`：只调整工作台语义与焦点目标，既有组态/Tag/草稿/历史行为不变。
+- `docs/UI_DESIGN_SYSTEM.md`：基于 `ui-ux-pro-max`、`web-design-guidelines`、`tdesign-skills` 的视觉基线与 Windows 浏览器验收矩阵。
+
+本批没有新增 TDesign API、依赖、接口、数据库迁移、模拟设备写入或正式报警权限。Windows `vp check`、`ready` 和真实双框架视觉回归待执行。

@@ -26,10 +26,10 @@ export default function RuntimePage() {
   const svg = state.document ? svgDataUrl(state.document, state.values) : null;
 
   return (
-    <main className="scada-shell">
+    <main id="scada-main-content" tabIndex={-1} className="scada-shell scada-shell--overview">
       <header className="scada-header">
         <div>
-          <p className="scada-eyebrow">ADui SCADA · V0.1</p>
+          <p className="scada-eyebrow">ADui SCADA · 本地模拟运行</p>
           <h1>水处理实时监控</h1>
         </div>
         <span className="scada-status" data-status={state.status}>
@@ -90,15 +90,20 @@ export default function RuntimePage() {
           )}
         </section>
       </section>
-      <section className="scada-panel" aria-label="模拟工业监控画面">
+      <section className="scada-panel scada-process-panel" aria-label="模拟工业监控画面">
+        <h2>模拟工艺流程</h2>
+        <p className="scada-panel-subtitle">只读演示画面 · 不代表现场设备数据</p>
         {svg ? (
           <img className="scada-svg" src={svg} alt="水箱、水泵与流量模拟监控" />
         ) : (
-          <p>正在加载工程...</p>
+          <p>正在加载工程…</p>
         )}
       </section>
-      <section className="scada-panel">
+      <section className="scada-panel scada-values-panel" aria-label="Tag 质量与最近值">
         <h2>Tag 质量与最近值</h2>
+        {state.values.length === 0 && (
+          <p className="scada-diagnostics-empty">暂无可显示的 Tag 数据</p>
+        )}
         <div className="scada-tags">
           {state.values.map((tag) => (
             <div className="scada-tag" key={tag.tagId}>

@@ -875,3 +875,188 @@
   opacity: 0.48;
   cursor: not-allowed;
 }
+
+/* 正式工业工作台：在原有 16:9 画布和固定侧栏语义之上统一视觉密度。 */
+.studio-shell {
+  --studio-control-height: 34px;
+}
+.studio-toolbar {
+  min-height: 64px;
+  gap: 14px;
+  padding: 10px clamp(12px, 1.4vw, 22px);
+  border-bottom-color: var(--scada-border-strong);
+}
+.studio-toolbar > div:first-child {
+  min-width: 160px;
+}
+.studio-toolbar h1 {
+  margin: 4px 0 0;
+  color: var(--scada-text-strong);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.012em;
+}
+.studio-toolbar .scada-eyebrow {
+  color: var(--scada-text-muted);
+  font-size: 11px;
+}
+.studio-history-actions,
+.studio-save-actions {
+  gap: 6px;
+}
+.studio-history-actions button,
+.studio-save-actions button {
+  min-height: var(--studio-control-height);
+  padding: 6px 12px;
+}
+.studio-save-actions button:first-child {
+  font-weight: 700;
+}
+.studio-file-menu > summary,
+.studio-page-menu > summary,
+.studio-version-menu > summary {
+  min-height: var(--studio-control-height);
+  border-radius: 6px;
+  font-weight: 600;
+}
+.studio-file-popover,
+.studio-page-actions,
+.studio-version-panel,
+.studio-view-popover {
+  border-color: var(--scada-border-strong);
+  box-shadow: 0 16px 38px rgb(0 0 0 / 32%);
+}
+.studio-page-bar {
+  min-height: 43px;
+  padding-inline: 15px;
+  background: var(--scada-nav);
+}
+.studio-page-tabs {
+  gap: 4px;
+}
+.studio-page-tabs button {
+  min-height: 32px;
+  border: 1px solid transparent;
+  border-radius: 6px 6px 0 0;
+  color: var(--scada-text-secondary);
+  font-weight: 600;
+}
+.studio-page-tabs button:hover {
+  background: var(--scada-action-hover);
+  color: var(--scada-text-strong);
+}
+.studio-page-tabs button[aria-current="page"] {
+  border-color: var(--scada-border);
+  border-bottom-color: var(--scada-cyan);
+  background: var(--scada-surface);
+  color: var(--scada-text-strong);
+}
+.studio-workspace {
+  background: var(--scada-canvas);
+}
+.studio-panel {
+  background: var(--scada-surface);
+}
+.studio-pane-heading,
+.studio-panel-properties > h2 {
+  min-height: 48px;
+  border-bottom-color: var(--scada-border-strong);
+  background: var(--scada-surface);
+}
+.studio-pane-heading h2,
+.studio-panel-properties > h2 {
+  color: var(--scada-text-strong);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+}
+.studio-library-label,
+.studio-tree-section-title {
+  color: var(--scada-text-secondary);
+  font-weight: 700;
+}
+.studio-layer-tree {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scada-border-strong) transparent;
+}
+.studio-layer-tree .studio-layer {
+  min-height: 35px;
+  border-radius: 6px;
+}
+.studio-layer-tree .studio-layer[data-selected="true"] {
+  box-shadow: inset 3px 0 var(--scada-cyan);
+  color: var(--scada-text-strong);
+}
+.studio-stage-caption {
+  min-height: 48px;
+  padding-inline: 15px;
+  border-bottom-color: var(--scada-border-strong);
+  background: var(--scada-surface);
+}
+.studio-stage-caption > span {
+  color: var(--scada-text-secondary);
+  font-weight: 600;
+}
+.studio-canvas-scroll,
+.studio-canvas-board,
+.studio-canvas-board > .studio-svg {
+  background: var(--scada-canvas);
+}
+.studio-panel-properties {
+  padding-bottom: 20px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scada-border-strong) transparent;
+}
+.studio-panel-properties > h2 {
+  padding-block: 15px;
+}
+.studio-geometry {
+  background: var(--scada-canvas);
+  border-radius: 8px;
+}
+.studio-statusbar {
+  height: 38px;
+  border-top-color: var(--scada-border-strong);
+  background: var(--scada-nav);
+  font-variant-numeric: tabular-nums;
+}
+.studio-status-message .studio-notice {
+  color: var(--scada-text-secondary);
+}
+.studio-file-menu > summary:hover,
+.studio-page-menu > summary:hover,
+.studio-version-menu > summary:hover,
+.studio-view-menu > summary:hover,
+.studio-side-more > summary:hover,
+.studio-advanced > summary:hover {
+  background: var(--scada-action-hover);
+  color: var(--scada-text-strong);
+}
+.studio-shell :is(button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--scada-cyan);
+  outline-offset: 2px;
+}
+@media (max-width: 1250px) {
+  .studio-toolbar {
+    gap: 10px;
+  }
+}
+@media (max-width: 930px) {
+  .studio-toolbar {
+    min-height: 0;
+    padding-block: 9px;
+  }
+  .studio-panel-layers,
+  .studio-panel-properties {
+    min-height: 120px;
+  }
+  .studio-stage {
+    min-height: 240px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-shell button,
+  .studio-shell summary {
+    scroll-behavior: auto;
+  }
+}

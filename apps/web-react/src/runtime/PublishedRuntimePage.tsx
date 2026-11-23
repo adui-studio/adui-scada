@@ -100,7 +100,12 @@ export default function PublishedRuntimePage() {
   }
 
   return (
-    <main className="scada-shell" data-testid="published-runtime-page">
+    <main
+      id="scada-main-content"
+      tabIndex={-1}
+      className="scada-shell scada-shell--published"
+      data-testid="published-runtime-page"
+    >
       <header className="scada-header">
         <div>
           <p className="scada-eyebrow">ADui SCADA · 正式发布配置只读监控</p>
@@ -113,7 +118,7 @@ export default function PublishedRuntimePage() {
       <p className="scada-message" role="status" data-testid="published-runtime-status">
         {state.message}
       </p>
-      <section className="scada-panel" aria-label="正式发布工程选择">
+      <section className="scada-panel scada-published-controls-panel" aria-label="正式发布工程选择">
         <h2>读取已发布工程</h2>
         <p className="scada-diagnostics-note">
           独立 release:read 权限 · 仅使用当前登录会话 · 不读取编辑草稿或模拟数据
@@ -122,6 +127,7 @@ export default function PublishedRuntimePage() {
           <label htmlFor="published-react-project-id">工程 ID</label>
           <input
             id="published-react-project-id"
+            name="projectId"
             type="text"
             maxLength={128}
             value={projectId}
@@ -140,7 +146,7 @@ export default function PublishedRuntimePage() {
         </form>
         {message ? <p role="alert">{message}</p> : null}
       </section>
-      <section className="scada-panel" aria-label="正式发布状态">
+      <section className="scada-panel scada-published-summary-panel" aria-label="正式发布状态">
         <h2>已提交发布指针</h2>
         <dl className="scada-diagnostics-grid">
           <div>
@@ -161,7 +167,10 @@ export default function PublishedRuntimePage() {
           </div>
         </dl>
       </section>
-      <section className="scada-panel" aria-label="已发布静态组态预览">
+      <section
+        className="scada-panel scada-published-preview-panel"
+        aria-label="已发布静态组态预览"
+      >
         <h2>已发布组态静态预览</h2>
         {pages.length > 1 ? (
           <div className="scada-published-controls">

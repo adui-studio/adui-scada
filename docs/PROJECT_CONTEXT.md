@@ -2376,3 +2376,15 @@ D5c0j 停止只增加 Core 单一状态的局部回归，改用**无网络、无
 维护者 Windows 最终实测 D5c0j 的 S0 Node **5/5**、独立诊断、`messages:check` **312**、`vp check` **439/288 零错误警告**、`docs:check` **92 份**通过；GitHub 核验最终 PR HEAD `9f7fecfab4432f37e9be7ae882f5d481d5c8870f`，按明确授权 Squash 合并至 `main@54a3d4b9868474e94ecbed81f088cdd8c259710e`。E-103 四处 JSDoc 中文缺失问题已由 Windows 正式文案门禁复验关闭。原终端日志没有本地 HEAD，不能把上述检查声称为在新的合并提交直接执行。
 
 D5c0k 为现有 S0 Lab 配置根命令 `pnpm run test:alarm:lab` / `pnpm run lab:alarm`，并将离线测试接入 `pnpm run ready`，不改变 `TagStore`、`AlarmSubscriptionAdapter` 代码、既有测试、任何公共协议或双框架工程行为。新增流程只演示无网络本地候选，禁止当成已认证工业网关、传输历史完整或正式报警已上线。当前仅生成 GitHub 代码候选，Windows 两条短命令、质量门禁及完整 `ready` 均待运行；D1～D5 仍待维护者明确安全决策批准。
+
+## 2026-11-23 · PR #176 合并与 D5c0l 工业软件 UI 整体基线候选
+
+维护者提交了 PR #176 的 Windows 日志：S0 Lab **5/5**、Vitest **863/863**、NestJS E2E **63/63**、React/Vue Web 构建、`vp check` **439/288**、文档 **92 份**和中文文案 **312 个文件**均有成功输出。GitHub 核对实际 PR #176 HEAD `ef26992f43c4eae6da2100a19a8d23be5da97b69`，包含维护者新增 `web-design-guidelines`、`tdesign-skills` 与锁文件记录（共 13 份文件），无未解决线程或冲突、Assignee `@adui-dev`，按明确授权 Squash 合并至 `main@a3bca59ba176eb6d367b12c9d0264405d589d397`。**上传日志停在 NestJS 最后构建阶段的 Prisma Client 生成，没有 `ready` 最终退出码，不能登记完整 ready 为 0。**
+
+D5c0l 基于现有共享主题和三套仓库设计规范，启动工业 UI 双框架重设计：先覆盖主导航、模拟运行、发布静态只读预览与 SVG Studio 主框架，统一视觉层级、宽屏/窄屏、空态、可聚焦主内容及非现场控制标记。React/Vue 使用相同的共享 Runtime/Tailwind Studio CSS，不改变 TDesign 既有组件 API、16:9 中央画布、项目数据或服务端授权；设计基线见 `docs/UI_DESIGN_SYSTEM.md`。当前仅在 GitHub 候选分支修改样式与页面标记，Windows 构建、浏览器截图、交互及完整 ready 都待专项验收。
+
+## 2026-11-23 · D5c0l PR #177 Windows 首轮浏览器回归与 TDesign 复用约束
+
+维护者 Windows 日志表明 D5c0l `ready` 中的 Vitest **863/863**、Lab **5/5**、E2E **63/63**、双框架 Web 构建及文档 **93 份**等分项成功，但未包含最终 `ready` 退出码或本地 HEAD；随后 `test:browser` 在 React/Vue **1440×900、1024×768** 四组均仅 **16/19**，失败集中于左右固定侧栏及画布剩余宽度。定位到 UI 共享 CSS 末尾新增 260px/324px、≤1250px 的 238px/292px 覆盖原有 252px/320px。E-104 修复候选已撤销新覆盖、保持既有浏览器断言不变；`test:tags:browser` 和 `test:interop` 因命令链提前失败尚未运行。修复后 Windows 回归与质量检查待复验。
+
+维护者进一步明确 **TDesign 已有组件必须优先直接使用，不重复造同职责控件、不无故封装**。设计基线 `docs/UI_DESIGN_SYSTEM.md` 已增加 TDesign/API 工具查证、Tailwind 只负责布局、工业自研 CSS 边界与回归契约。当前尚无可调用的 `tdesign-mcp-server`，不能猜测新组件 API；本轮仅修复布局及规范，不继续替换尚未核实的复杂文件/发布/草稿控件。
