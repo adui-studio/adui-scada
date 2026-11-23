@@ -14,6 +14,9 @@ export default function App() {
           : "flex min-h-dvh flex-col"
       }
     >
+      <a className="scada-skip-link" href="#scada-main-content">
+        跳转到主要内容
+      </a>
       <nav className="scada-app-nav shrink-0" aria-label="功能导航">
         <span className="scada-app-brand">
           <img src="/brand/favicon.svg" alt="" aria-hidden="true" />
@@ -40,12 +43,12 @@ export default function App() {
         >
           组态编辑
         </button>
-        <span className="scada-app-version">V0.2 本地原型</span>
+        <span className="scada-app-version">研发预览 · 非现场控制</span>
       </nav>
       <Suspense
         fallback={
-          <main className="min-h-0 flex-1 p-4" role="status">
-            正在加载页面...
+          <main id="scada-main-content" className="min-h-0 flex-1 p-4" role="status">
+            正在加载页面…
           </main>
         }
       >
