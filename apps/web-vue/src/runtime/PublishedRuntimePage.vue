@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, shallowRef } from "vue";
-import { Button as TButton } from "tdesign-vue-next";
+import { Button as TButton, Input as TInput, Select as TSelect } from "tdesign-vue-next";
 import "tdesign-vue-next/es/style/index.css";
 import { createScadaApiClient } from "@adui/scada-api-client";
 import {
@@ -39,9 +39,8 @@ const svg = computed(() =>
     : null,
 );
 
-function selectPage(event: Event): void {
-  const target = event.target;
-  if (target instanceof HTMLSelectElement) selectedPageId.value = target.value;
+function selectPage(value: string | number | Array<string | number>): void {
+  if (typeof value === "string") selectedPageId.value = value;
 }
 
 function start(): void {
@@ -118,17 +117,18 @@ onUnmounted(() => {
         独立 release:read 权限 · 仅使用当前登录会话 · 不读取编辑草稿或模拟数据
       </p>
       <form class="scada-published-controls" @submit.prevent="start">
-        <label for="published-vue-project-id">工程 ID</label>
-        <input
-          id="published-vue-project-id"
-          name="projectId"
-          v-model="projectId"
-          type="text"
-          :maxlength="128"
-          autocomplete="off"
-          :spellcheck="false"
-          placeholder="输入已授权工程 ID"
-        />
+        <label>
+          工程 ID
+          <TInput
+            name="projectId"
+            v-model="projectId"
+            type="text"
+            :maxlength="128"
+            autocomplete="off"
+            :spellcheck="false"
+            placeholder="输入已授权工程 ID"
+          />
+        </label>
         <TButton type="submit">读取正式发布</TButton>
         <TButton type="button" variant="outline" :disabled="!activeProjectId" @click="refresh">
           立即刷新
@@ -163,17 +163,16 @@ onUnmounted(() => {
     <section class="scada-panel scada-published-preview-panel" aria-label="已发布静态组态预览">
       <h2>已发布组态静态预览</h2>
       <div v-if="pages.length > 1" class="scada-published-controls">
-        <label for="published-vue-page-id">组态页面</label>
-        <select
-          id="published-vue-page-id"
-          data-testid="published-runtime-page-select"
-          :value="activePageId ?? ''"
-          @change="selectPage"
-        >
-          <option v-for="page in pages" :key="page.id" :value="page.id">
-            {{ page.name }}
-          </option>
-        </select>
+        <label>
+          组态页面
+          <div data-testid="published-runtime-page-select">
+            <TSelect
+              :value="activePageId ?? ''"
+              :options="pages.map((page) => ({ label: page.name, value: page.id }))"
+              @change="selectPage"
+            />
+          </div>
+        </label>
       </div>
       <p class="scada-diagnostics-note">
         此画面只来自已验证的正式发布快照；未连接现场 Tag。 画布内缺失值的 BAD
