@@ -916,6 +916,29 @@ async function clickTagRowActionInPage(tagId, action, confirmChoice) {
   return true;
 }
 
+/** 从实际 DOM 度量 Tag 操作行，避免全量 TDesign 化后重现高亮整列按钮。 */
+function inspectTagActionLayoutInPage() {
+  const manager = document.querySelector(".studio-tag-manager");
+  const row = manager?.querySelector(".studio-tag-item");
+  const actions = row?.querySelector(".studio-tag-actions");
+  const formActions = manager?.querySelector(".studio-tag-form-actions");
+  if (!(actions instanceof HTMLElement) || !(formActions instanceof HTMLElement)) {
+    throw new TypeError("项目 Tag 紧凑操作区未挂载");
+  }
+  const measure = (container) => {
+    const buttons = [...container.querySelectorAll(".t-button")];
+    return {
+      columns: getComputedStyle(container).gridTemplateColumns.split(" ").length,
+      count: buttons.length,
+      bounds: buttons.map((button) => {
+        const rect = button.getBoundingClientRect();
+        return { width: rect.width, height: rect.height };
+      }),
+    };
+  };
+  return { item: measure(actions), form: measure(formActions) };
+}
+
 /** 使用 Chrome 输入协议触发真正的框架输入事件，不直接篡改 DOM 值。 */
 async function fillTagField(session, index, value) {
   await evaluateStudioPage(session, focusTagFieldInPage, index);
@@ -934,6 +957,20 @@ async function runStudioTagManagement(session) {
   for (const target of targets) {
     await navigateStudioForInterop(session, target, "tag-management");
     await evaluateStudioPage(session, openTagManagerInPage);
+    const layout = await evaluateStudioPage(session, inspectTagActionLayoutInPage);
+    for (const [kind, actions] of [["Tag 条目", layout.item], ["Tag 表单", layout.form]]) {
+      assert.equal(actions.count, 2, target.name + " " + kind + " 操作按钮数量不正确");
+      assert.equal(actions.columns, 2, target.name + " " + kind + " 操作没有保持双列");
+      assert.ok(
+        actions.bounds.every((button) => button.width > 0 && button.height > 0),
+        target.name + " " + kind + " 存在不可见操作按钮",
+      );
+      assert.ok(
+        Math.abs(actions.bounds[0].height - actions.bounds[1].height) <= 1 &&
+          Math.abs(actions.bounds[0].width - actions.bounds[1].width) <= 1,
+        target.name + " " + kind + " 按钮尺寸不一致",
+      );
+    }
     const tagId = "browser." + target.name.toLowerCase() + ".pressure";
     await fillTagField(session, 0, tagId);
     await fillTagField(session, 1, "浏览器新增压力");
