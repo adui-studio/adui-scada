@@ -1249,9 +1249,18 @@ async function studioVersionActionInPage(
     await new Promise((resolve) => setTimeout(resolve, 120));
     const start = Date.now();
     while (Date.now() - start < 12000) {
-      if (!menu.querySelector(".studio-version-tools button:disabled")) break;
+      const panel = menu.querySelector(".studio-version-panel");
+      if (
+        panel?.getClientRects().length &&
+        !panel.querySelector(".studio-version-tools button:disabled")
+      ) {
+        break;
+      }
       await new Promise((resolve) => setTimeout(resolve, 80));
     }
+  }
+  if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) {
+    throw new TypeError("本地版本历史 Popup 未能展开");
   }
   const candidates =
     label === "载入" || label === "查看差异"
