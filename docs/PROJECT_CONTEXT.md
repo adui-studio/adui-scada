@@ -2486,3 +2486,8 @@ D5c0v 基于合并后的 main，限定本地版本历史一个入口/框架：�
 维护者 Windows `vp check --fix` 报 React Studio TDesign Button 拖拽 **3 个 TS2345**、React Studio 和已发布运行页的 Select 值隐式字符串化 **4 个 Lint 告警**（291 个受检文件），仅完成格式化，不能视为通过。已按 `AGENTS.md` 与 `AI_MISTAKES.md` 复盘并核对固定版本 TDesign Select 的联合类型；PR #188 候选只修改 React 两个页面：拖拽函数参数改为 `ReactDragEvent<HTMLElement>`，四处 Select 值回调仅接受字符串 ID。Vue/共享引擎/安全协议及业务流程未改；文档详见 E-109 和 `VALIDATION.md`。
 
 修复尚未由维护者在最新 HEAD 运行 `typecheck:web`、`vp check`、双端浏览器专项；继续保持 Draft 和主理人 `@adui-dev` 指派，未授权合并。
+
+## 2026-11-23 · PR #188 Vue 选择器真实类型检查阻塞（E-110）
+
+维护者在 Windows 运行 `pnpm run typecheck:web`，React tsc 命令完成后，Vue `vue-tsc` 共报 **6 个 Select `@change` TS2322** 与 **1 个 Tag 模板 TS2339**，导致验收链提前终止，后续检查未执行。根因是双框架迁移时为 Vue Select 声明了过窄的回调参数类型，且在 Vue 模板中直接计算复杂 Tag 下拉候选项。已按固定版本 `tdesign-vue-next@1.20.11` 值域和项目 Vue 最佳实践，直接提交三处 Vue 文件的最小修复：回调以 `unknown` 接收、严格收窄为 ID/枚举；Tag 绑定选项由脚本 `computed` 生成，模板只绑定结果。保留 Vue/React 工程 Schema、Tag 规则、历史缺失占位和工业安全边界。**只有 GitHub 静态核对，Windows 最新 HEAD 类型/浏览器验收尚待实际执行**。PR #188 仍为 Draft、指派 `@adui-dev`，未经授权不得合并，详见 E-110 与 `VALIDATION.md`。
+
