@@ -2466,3 +2466,9 @@ PR #186 维护者最新 Windows：`node --check`、`vp check`（446 格式/289 �
 维护者再次在 Windows 实际执行语法、Web 类型、Vite+（446/289 零告警）、文档（94）和普通 Studio React/Vue 120/120 均成功；`test:multitab` 在 React 四阶段完成后，Vue 首次双标签 Studio 导航失败。最新 CDP 明确报告首标签 Studio 源模块 HTTP 200、预构建依赖 `net::ERR_CACHE_WRITE_FAILURE`，次标签 Studio 模块 HTTP 200、未见网络失败。**已锁定失败类别为测试用隔离 Chromium HTTP 缓存写入，底层磁盘/权限/安全软件诱因尚不明**。正常运行监控截图显示过期 Tag 的降级状态，不证明 Studio 已加载，也不能据此判断工业实时采集质量。
 
 PR #186 已回滚上一轮 Vue Vite 预构建配置猜测；最小修复候选只在浏览器多标签 Vue 测试进入导航前对两个 CDP 标签页设置网络缓存忽略，不影响 IndexedDB/BroadcastChannel、原有 CAS 安全测试、真实双标签并发、业务应用或 HTTPS。当前尚未 Windows 复测，保持 Draft 和主理人指派，需实际完成 Vue 多标签页全流程后才评估合并。
+
+## 2026-11-23 · PR #186 合并与 D5c0v 本地版本历史 Popup 候选
+
+维护者 Windows 对 PR #186 完成本批分层验收：`node --check`、`vp check`（446 文件格式正确/289 受检零告警）、`docs:check`（94 份）成功；较早的 `typecheck:web`、正常 Studio **120/120**、JSON 双端互通、版本并发安全和旧草稿迁移专项通过。最后 `test:multitab` 在 Chromium HTTP 缓存隔离后，React 与 Vue 各完成 **4 个安全阶段**（广播停写、无广播 CAS、墓碑重建、IndexedDB 故障恢复），命令无非零退出。GitHub 最终 PR 头 `c67bc33d1520b10a0a046e51d52213a8115bff0c`，经维护者明确授权 Squash 合并到 `main@1faca1a386c83314e24f245b7ea394c80f1c7cb0`；Windows 日志未单独输出本地 HEAD。已证实测试隔离绕过 HTTP 缓存后本轮通过，底层磁盘/权限/安全软件原因仍未证明。
+
+D5c0v 基于合并后的 main，限定本地版本历史一个入口/框架：复用 TDesign Popup，保留原有 IndexedDB 历史业务、导入竞争和确认保护；对应真实浏览器历史辅助函数改为触发官方按钮，并新增 3 项普通 Studio 检查。未更改 Schema、Tag、服务端版本 API、OIDC、已保存发布预检或工业设备边界。仅做了 GitHub 静态源码核对，**本批 Windows 真实测试尚未执行，PR 只作为 Draft 候选**。

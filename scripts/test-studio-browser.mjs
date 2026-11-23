@@ -451,6 +451,36 @@ async function checkStudioInPage() {
     );
   }
 
+  // 本地版本历史由官方 Popup 展开，仍保留快照与差异操作。
+  const historyMenu = element(".studio-local-history-menu");
+  const historyTrigger = historyMenu.querySelector("button.t-button");
+  verify(
+    "本地版本历史使用 TDesign Popup 而非原生 details",
+    historyMenu instanceof HTMLDivElement &&
+      historyTrigger instanceof HTMLButtonElement &&
+      !historyMenu.querySelector("summary"),
+  );
+  if (historyTrigger instanceof HTMLButtonElement) {
+    historyTrigger.click();
+    await settle();
+    const historyPanel = historyMenu.querySelector(".studio-version-panel");
+    verify(
+      "本地历史弹层可见且保留快照与刷新入口",
+      Boolean(historyPanel?.getClientRects().length) &&
+        ["创建快照", "刷新"].every((label) =>
+          [...historyPanel.querySelectorAll(".studio-version-tools button")].some(
+            (button) => button.textContent.trim() === label,
+          ),
+        ),
+    );
+    document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    verify(
+      "TDesign 本地历史弹层支持点击外部关闭",
+      !historyMenu.querySelector(".studio-version-panel")?.getClientRects().length,
+    );
+  }
+
   return { findings, viewport: { width: innerWidth, height: innerHeight } };
 }
 
@@ -1152,11 +1182,22 @@ async function runStudioLegacyMigration(session) {
     // 先由真实 Studio/Dexie 打开并初始化历史库，再写入旧快照测试数据。
     const emptyVersions = await evaluateStudioPage(session, studioVersionRowsInPage);
     assert.deepStrictEqual(emptyVersions, [], target.name + " 新建浏览器上下文的历史版本库应为空");
-    await evaluateStudioPage(session, () => {
-      const menu = document.querySelector(".studio-version-menu");
-      if (!menu) throw new TypeError("未找到本地工程历史版本菜单");
-      menu.open = false;
-      return true;
+    await evaluateStudioPage(session, async () => {
+      const menu = document.querySelector(".studio-local-history-menu");
+      const trigger = menu?.querySelector("button.t-button");
+      if (!(trigger instanceof HTMLButtonElement)) {
+        throw new TypeError("未找到本地版本历史 Popup 触发器");
+      }
+      if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) {
+        throw new TypeError("历史版本库初始化后弹层意外关闭");
+      }
+      trigger.click();
+      const started = Date.now();
+      while (Date.now() - started < 5000) {
+        if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) return true;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      throw new TypeError("写入旧快照前，本地历史弹层关闭超时");
     });
 
     // 历史 Project Snapshot：先验证原 SHA-256，再在只读返回值中归一化，不能改写原记录。
@@ -1206,16 +1247,28 @@ async function studioVersionActionInPage(
   confirmChoice = null,
   revision = 1,
 ) {
-  const menu = document.querySelector(".studio-version-menu");
-  if (!menu) throw new Error("未找到本地工程版本历史菜单");
-  if (!menu.open) {
-    menu.open = true;
+  const menu = document.querySelector(".studio-local-history-menu");
+  const trigger = menu?.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new Error("未找到本地版本历史 Popup 触发器");
+  }
+  if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) {
+    trigger.click();
     await new Promise((resolve) => setTimeout(resolve, 120));
     const start = Date.now();
     while (Date.now() - start < 12000) {
-      if (!menu.querySelector(".studio-version-tools button:disabled")) break;
+      const panel = menu.querySelector(".studio-version-panel");
+      if (
+        panel?.getClientRects().length &&
+        !panel.querySelector(".studio-version-tools button:disabled")
+      ) {
+        break;
+      }
       await new Promise((resolve) => setTimeout(resolve, 80));
     }
+  }
+  if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) {
+    throw new TypeError("本地版本历史 Popup 未能展开");
   }
   const candidates =
     label === "载入" || label === "查看差异"
@@ -1326,23 +1379,34 @@ async function runStudioVersionHistory(session) {
 
 /** 等待真实 Studio 历史菜单读取数据库完成，用于刷新后持久化及 Origin 隔离。 */
 async function studioVersionRowsInPage() {
-  const menu = document.querySelector(".studio-version-menu");
-  if (!menu) throw new TypeError("没有找到历史版本菜单");
-  menu.open = true;
+  const menu = document.querySelector(".studio-local-history-menu");
+  const trigger = menu?.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到本地版本历史 Popup 触发器");
+  }
+  if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) trigger.click();
   await new Promise((resolve) => setTimeout(resolve, 200));
   const start = Date.now();
   while (Date.now() - start < 12000) {
-    const busy = menu.querySelector(".studio-version-tools button:disabled");
+    const panel = menu.querySelector(".studio-version-panel");
+    const busy = panel?.querySelector(".studio-version-tools button:disabled");
     const error = menu.querySelector(".studio-version-error")?.textContent;
     if (error) throw new TypeError("历史版本查询失败：" + error);
-    if (!busy) {
+    if (panel?.getClientRects().length && !busy) {
       return [...menu.querySelectorAll(".studio-version-item strong")].map((item) =>
         item.textContent.trim(),
       );
     }
     await new Promise((resolve) => setTimeout(resolve, 80));
   }
-  throw new TypeError("历史版本列表加载超时");
+  const panel = menu.querySelector(".studio-version-panel");
+  const visibility = panel
+    ? panel.getClientRects().length
+      ? "弹层可见"
+      : "弹层不可见"
+    : "弹层未挂载";
+  const busy = Boolean(panel?.querySelector(".studio-version-tools button:disabled"));
+  throw new TypeError(`历史版本列表加载超时：${visibility}，忙碌=${busy}`);
 }
 
 /** 通过真实开关启动自动保存，不绕过 Studio 的确认和订阅逻辑。 */
@@ -1410,8 +1474,14 @@ async function readStudioDraftFromDatabaseInPage(projectId) {
 
 /** 版本菜单打开之前模拟浏览器拒绝打开历史库，不修改 IndexedDB 真实记录。 */
 async function simulateHistoryDatabaseUnavailableInPage() {
-  const menu = document.querySelector(".studio-version-menu");
-  if (!menu || menu.open) throw new TypeError("历史版本菜单必须在关闭状态下测试存储失败");
+  const menu = document.querySelector(".studio-local-history-menu");
+  const trigger = menu?.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到本地版本历史 Popup 触发器");
+  }
+  if (menu.querySelector(".studio-version-panel")?.getClientRects().length) {
+    throw new TypeError("历史版本弹层必须在关闭状态下测试存储失败");
+  }
   const originalOpen = Reflect.get(IDBFactory.prototype, "open");
   if (typeof originalOpen !== "function") throw new TypeError("无法读取 IndexedDB 打开方法");
   IDBFactory.prototype.open = function (...args) {
@@ -1421,7 +1491,7 @@ async function simulateHistoryDatabaseUnavailableInPage() {
     return Reflect.apply(originalOpen, this, args);
   };
   try {
-    menu.open = true;
+    trigger.click();
     const start = Date.now();
     while (Date.now() - start < 12000) {
       const error = menu.querySelector(".studio-version-error")?.textContent || "";
@@ -1431,14 +1501,14 @@ async function simulateHistoryDatabaseUnavailableInPage() {
     throw new TypeError("历史库权限异常未显示错误提示");
   } finally {
     IDBFactory.prototype.open = originalOpen;
-    menu.open = false;
+    if (menu.querySelector(".studio-version-panel")?.getClientRects().length) trigger.click();
   }
 }
 
 /** 异步 JSON 文件尚未读完时点击历史载入，不能插入执行或调用覆盖确认。 */
 async function verifyImportHistoryIsolationInPage(json) {
   const fileMenu = document.querySelector(".studio-file-menu");
-  const versionMenu = document.querySelector(".studio-version-menu");
+  const versionMenu = document.querySelector(".studio-local-history-menu");
   if (!fileMenu) throw new TypeError("未找到文件草稿菜单");
   const trigger = fileMenu.querySelector("button.t-button");
   if (!(trigger instanceof HTMLButtonElement)) throw new TypeError("未找到文件草稿触发器");
@@ -1501,7 +1571,13 @@ async function verifyImportHistoryIsolationInPage(json) {
     Blob.prototype.text = originalText;
     window.confirm = originalConfirm;
     if (fileMenu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
-    versionMenu.open = false;
+    const versionTrigger = versionMenu?.querySelector("button.t-button");
+    if (
+      versionTrigger instanceof HTMLButtonElement &&
+      versionMenu.querySelector(".studio-version-panel")?.getClientRects().length
+    ) {
+      versionTrigger.click();
+    }
   }
 }
 
@@ -1647,21 +1723,33 @@ async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice 
   if (!button || button.disabled) throw new TypeError("草稿操作按钮不可用：" + label);
   const originalConfirm = window.confirm;
   if (confirmChoice !== null) window.confirm = () => confirmChoice;
+  let resultNotice = null;
   try {
     button.click();
     const waiting = Date.now();
     while (Date.now() - waiting < 12000) {
       const notice = document.querySelector(".studio-notice")?.textContent || "";
-      if (notice.includes(expectedNotice)) return notice;
+      if (notice.includes(expectedNotice)) {
+        resultNotice = notice;
+        break;
+      }
       await new Promise((resolve) => setTimeout(resolve, 80));
     }
-    throw new TypeError("草稿操作结果超时：" + label);
+    if (resultNotice === null) throw new TypeError("草稿操作结果超时：" + label);
   } finally {
     window.confirm = originalConfirm;
     if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
       trigger.click();
     }
   }
+  const closing = Date.now();
+  while (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+    if (Date.now() - closing > 5000) {
+      throw new TypeError("TDesign 文件草稿弹层关闭超时");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return resultNotice;
 }
 
 /** 等待实际 IndexedDB 提交指定修订号，必要时校验完整工程内容。 */
