@@ -1445,3 +1445,12 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/test/alarm-baseline-session.test.ts`：新增 1 项（27→28），覆盖非法快照与增量转化为 `BASELINE_INVALIDATED/INVALID_INPUT`，原代次不能恢复。
 - `packages/core/test/alarm-subscription-adapter.test.ts`：新增 1 项（29→30），覆盖非法首次快照后的关闭订阅、回收定时器及旧回调拒绝。
 - Controller、Adapter、TagStore 的生产代码无改动，功能仍为候选安全过滤而非可信时钟来源认证。
+
+## 2026-11-23 · D5c0b FR-011 报警候选公历日期有效性检查（候选）
+
+- `packages/core/src/alarm-tag-freshness.ts`：保留有时区的服务器时间格式约束；在 `Date.parse` 前复核年月日是否存在及格里高利闰年规则，避免 2 月 30 日等日期被宿主自动滚动接受；无效日期抛中文 TypeError，不修改 TagStore。
+- `packages/core/test/alarm-tag-freshness.test.ts`：7→8，覆盖无效二月/四月日期、闰年真实二月二十九日和带 `+09:00` 的有效偏移。
+- `packages/core/test/alarm-snapshot-baseline.test.ts`：8→9，覆盖无效日期不能建立首次快照基线。
+- `packages/core/test/alarm-tag-delta.test.ts`：17→18，覆盖增量中更大序列号不得携带不存在的日历日期。
+- `packages/core/test/alarm-baseline-session.test.ts`：28→29，覆盖无效首次快照或增量终止本代次并禁止同代次恢复。
+- `packages/core/test/alarm-subscription-adapter.test.ts`：30→31，覆盖非法初始日期造成关闭订阅及定时器释放。Controller/Adapter 生产逻辑保持不变。
