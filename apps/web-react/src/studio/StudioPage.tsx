@@ -2092,9 +2092,7 @@ export default function StudioPage() {
             options={pageMenuOptions}
             onClick={handlePageMenuClick}
           >
-            <Button type="button" variant="outline">
-              页面管理
-            </Button>
+            <Button type="button" variant="outline">页面管理</Button>
           </Dropdown>
         </div>
       </div>
