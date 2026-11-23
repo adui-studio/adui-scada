@@ -1070,6 +1070,26 @@ export async function confirmPreviewedServerVersionInPage(revision) {
 }
 
 export async function openProjectInPage(projectId, headRevision, mode) {
+  // 只在真实 Studio 中操作 Popup；Node 单测按同一业务 DOM 契约注入夹具。
+  const browserMenu = document.querySelector(".studio-project-browser-menu");
+  if (browserMenu) {
+    const trigger = browserMenu.querySelector("button.t-button");
+    if (trigger?.tagName !== "BUTTON") throw new Error("工程打开按钮不可用");
+    if (!browserMenu.querySelector(".studio-project-browser-panel")?.getClientRects().length) {
+      trigger.click();
+    }
+    const opened = Date.now();
+    while (Date.now() - opened < 12000) {
+      const panel = browserMenu.querySelector(".studio-project-browser-panel");
+      const row = [...(panel?.querySelectorAll(".studio-project-browser-item") ?? [])].find(
+        (node) => node.querySelector("code")?.textContent?.trim() === projectId,
+      );
+      if (panel?.getClientRects().length && row?.querySelector("button")?.disabled === false) {
+        break;
+      }
+      await new Promise((done) => setTimeout(done, 100));
+    }
+  }
   const panel = document.querySelector(".studio-project-browser-panel");
   const item = [...(panel?.querySelectorAll(".studio-project-browser-item") || [])].find(
     (node) => node.querySelector("code")?.textContent?.trim() === projectId,
