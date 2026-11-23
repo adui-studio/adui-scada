@@ -8,7 +8,7 @@ const previous: TagValue = {
   value: 40,
   quality: "GOOD",
   sourceTimestamp: null,
-  serverTimestamp: "2026-11-22T08:59:58.000Z",
+  serverTimestamp: "2026-11-22T08:59:59.000Z",
   sequence: 5,
 };
 const next: TagValue = {
@@ -220,4 +220,77 @@ test("非法会话代次、无效时间参数和非法基线明确拒绝", () =>
       1000,
     ),
   ).toThrow("Tag 序列号无效");
+});
+
+test("底层入口直接调用时拒绝已超龄基线，即使增量是新鲜且序列递增", () => {
+  const fresh = {
+    ...next,
+    serverTimestamp: "2026-11-22T09:00:01.000Z",
+  };
+  const result = advanceAlarmTagDeltaBaseline(
+    { ...request, change: { kind: "delta", values: [fresh] } },
+    nowMs + 1001,
+    1000,
+  );
+  expect(result).toEqual({ status: "DELTA_REJECTED", reason: "OUTDATED_TIMESTAMP" });
+});
+
+test("旧基线已超龄时空增量与其他 Tag 增量也必须拒绝", () => {
+  for (const values of [
+    [],
+    [{ ...next, tagId: "other.tag", serverTimestamp: "2026-11-22T09:00:01.000Z" }],
+  ]) {
+    expect(
+      advanceAlarmTagDeltaBaseline(
+        { ...request, change: { kind: "delta", values } },
+        nowMs + 1001,
+        1000,
+      ),
+    ).toEqual({ status: "DELTA_REJECTED", reason: "OUTDATED_TIMESTAMP" });
+  }
+});
+
+test("旧基线处于未来时间时不能用新鲜增量推进", () => {
+  const futureBaseline: AlarmSnapshotBaseline = {
+    generation: 2,
+    value: { ...previous, serverTimestamp: "2026-11-22T09:00:00.001Z" },
+  };
+  expect(
+    advanceAlarmTagDeltaBaseline({ ...request, baseline: futureBaseline }, nowMs, 1000),
+  ).toEqual({ status: "DELTA_REJECTED", reason: "FUTURE_TIMESTAMP" });
+});
+
+test("旧基线质量异常或不是数值时不能被有效增量掩盖", () => {
+  expect(
+    advanceAlarmTagDeltaBaseline(
+      { ...request, baseline: { generation: 2, value: { ...previous, quality: "STALE" } } },
+      nowMs,
+      1000,
+    ),
+  ).toEqual({ status: "DELTA_REJECTED", reason: "QUALITY_NOT_GOOD" });
+  expect(
+    advanceAlarmTagDeltaBaseline(
+      { ...request, baseline: { generation: 2, value: { ...previous, value: null } } },
+      nowMs,
+      1000,
+    ),
+  ).toEqual({ status: "DELTA_REJECTED", reason: "NOT_NUMERIC" });
+});
+
+test("旧基线恰好到达最大年龄时仍允许严格递增的有效增量", () => {
+  expect(advanceAlarmTagDeltaBaseline(request, nowMs, 1000)).toEqual({
+    status: "DELTA_ACCEPTED",
+    value: 42,
+    baseline: { generation: 2, value: next },
+  });
+});
+
+test("上游未核验时仍优先拒绝来源而不暴露已超龄基线原因", () => {
+  expect(
+    advanceAlarmTagDeltaBaseline(
+      { ...request, sourceVerified: false },
+      nowMs + 1001,
+      1000,
+    ),
+  ).toEqual({ status: "DELTA_REJECTED", reason: "UNVERIFIED_SOURCE" });
 });
