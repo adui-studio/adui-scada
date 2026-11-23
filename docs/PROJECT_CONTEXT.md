@@ -2508,3 +2508,7 @@ D5c0v 基于合并后的 main，限定本地版本历史一个入口/框架：�
 ## 2026-11-23 · PR #189 React Tag 最终删除失败与实例级弹窗定位候选（E-114）
 
 维护者本轮 Windows `node --check` 成功，`vp check` 448/291 零告警；`test:tags:browser` 已通过 React 首次页面导航并运行至最终正常删除，导出工程 JSON 仍含测试 Tag，退出码 1，Vue/其他专项未开始。源码显示连续确认/取消后，测试仍选全局首个 TDesign Dialog 按钮；固定 React 1.18.6 插件销毁存在动画滞后，可能误点旧弹窗，但暂无浏览器实例级证据确认根因。候选补丁仅在真实点击前记录旧 Dialog、定位本轮新弹窗，并等待既有删除成功提示后导出，完整保留取消、绑定保护及 JSON 不存在断言。没有修改 React/Vue UI、Core、权限、持久化或工业安全边界。协作环境只完成 Node 22 选择器 2/2 模拟验证及源码静态检查；最新 HEAD Windows Vite+/浏览器与跨框架回归待维护者复验。PR 仍为 Draft、Assignee `@adui-dev`，未经授权不得合并。
+
+## 2026-11-23 · D5c0y 合并后 Studio 历史和多标签页弹层回归修复候选
+
+维护者在 PR #189 合并后独立运行回归，`test:versions` 和 `test:versions:safety` 均因等待本地版本 #1 载入提示超时而失败；`test:multitab` 在 React 广播和无广播 CAS 两阶段通过后，遇文件草稿 Popup 关闭超时；`test:interop` 以及普通 Studio 四视口各 33/33 通过。本轮日志未明确打印本地 HEAD。经检查固定 React/Vue TDesign 源码和测试，发现两处相符的时序风险：测试可能选择旧 Dialog 的确认按钮，以及 Popup 关闭动画中再次点击触发器而重新打开。分支 `fix/d5c0y-studio-popup-browser-regression` 仅修改浏览器测试的确认实例选择与外部 `mousedown` 幂等关闭，不改变真实工程、旧版本、CAS、IndexedDB 或工业业务。E-115 / E-116 已记录，最新 HEAD Windows 真实浏览器、Vite+ 和文档门禁均待复验；新 PR 保持 Draft 并指派 `@adui-dev`，未经另行授权不得合并。

@@ -1415,14 +1415,19 @@ async function studioVersionActionInPage(
   const button = candidates.find((item) => item.textContent.trim() === label);
   if (!button) throw new Error("找不到版本历史操作按钮：" + label);
   if (button.disabled) throw new Error("版本历史操作尚未结束：" + label);
+  // 连续取消/确认时，旧 Dialog 在退出动画内仍可能保留可点击按钮。
+  const previousDialogs = new Set(document.querySelectorAll(".t-dialog"));
   button.click();
   if (confirmChoice !== null) {
     const confirmationStarted = Date.now();
     let choice = null;
     while (Date.now() - confirmationStarted < 12000) {
-      choice = document.querySelector(
-        confirmChoice ? ".t-dialog .t-dialog__confirm" : ".t-dialog .t-dialog__cancel",
-      );
+      choice = [...document.querySelectorAll(".t-dialog")]
+        .filter((dialog) => !previousDialogs.has(dialog))
+        .flatMap((dialog) => [...dialog.querySelectorAll(".t-button")])
+        .find((item) =>
+          item.classList.contains(confirmChoice ? "t-dialog__confirm" : "t-dialog__cancel"),
+        );
       if (choice?.getClientRects().length) break;
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
@@ -1871,15 +1876,20 @@ async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice 
   }
   if (!button || button.disabled) throw new TypeError("草稿操作按钮不可用：" + label);
   let resultNotice = null;
+  // 清除与覆盖保存都可能在旧 Dialog 退出动画内再次打开确认弹窗。
+  const previousDialogs = new Set(document.querySelectorAll(".t-dialog"));
   try {
     button.click();
     if (confirmChoice !== null) {
       const confirmStart = Date.now();
       let choice = null;
       while (Date.now() - confirmStart < 12000) {
-        choice = document.querySelector(
-          confirmChoice ? ".t-dialog .t-dialog__confirm" : ".t-dialog .t-dialog__cancel",
-        );
+        choice = [...document.querySelectorAll(".t-dialog")]
+          .filter((dialog) => !previousDialogs.has(dialog))
+          .flatMap((dialog) => [...dialog.querySelectorAll(".t-button")])
+          .find((item) =>
+            item.classList.contains(confirmChoice ? "t-dialog__confirm" : "t-dialog__cancel"),
+          );
         if (choice?.getClientRects().length) break;
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
@@ -1900,7 +1910,8 @@ async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice 
     if (resultNotice === null) throw new TypeError("草稿操作结果超时：" + label);
   } finally {
     if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
-      trigger.click();
+      // 弹层可能已经进入关闭动画；外部按下是幂等关闭，不会切换触发器重新打开。
+      document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
     }
   }
   const closing = Date.now();
