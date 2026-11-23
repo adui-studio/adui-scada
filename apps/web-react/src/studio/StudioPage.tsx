@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Checkbox, Collapse, CollapsePanel, Dropdown, Input, Popup, Select, Upload } from "tdesign-react";
+import { Button, Checkbox, Collapse, Dropdown, Input, Popup, Select, Upload } from "tdesign-react";
 import type { DropdownProps } from "tdesign-react";
 import { CloseIcon } from "tdesign-icons-react";
 import "tdesign-react/es/style/index.css";
 import type {
-  ChangeEvent,
   DragEvent as ReactDragEvent,
   FormEvent,
   PointerEvent as ReactPointerEvent,
@@ -2224,7 +2223,7 @@ export default function StudioPage() {
           </div>
           <div className="studio-side-more">
               <Collapse borderless defaultValue={[]}>
-                <CollapsePanel value="cross-page" header="跨页操作与使用帮助">
+                <Collapse.Panel value="cross-page" header="跨页操作与使用帮助">
             <div className="studio-copy-tools">
               <label className="studio-field">
                 复制选中图元到
@@ -2248,7 +2247,7 @@ export default function StudioPage() {
               </Button>
             </div>
             <p className="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
-          </CollapsePanel>
+          </Collapse.Panel>
               </Collapse>
             </div>
         </aside>
@@ -2615,7 +2614,7 @@ export default function StudioPage() {
           )}
           <div className="studio-advanced">
               <Collapse borderless defaultValue={[]}>
-                <CollapsePanel value="project-tags" header={<>项目 Tag 定义（{state.document.tags.length}）</>}>
+                <Collapse.Panel value="project-tags" header={<>项目 Tag 定义（{state.document.tags.length}）</>}>
             <div className="studio-advanced-content">
               <TagManager
                 tags={state.document.tags}
@@ -2639,12 +2638,12 @@ export default function StudioPage() {
                 }
               />
             </div>
-          </CollapsePanel>
+          </Collapse.Panel>
               </Collapse>
             </div>
           <div className="studio-advanced">
               <Collapse borderless defaultValue={[]}>
-                <CollapsePanel value="advanced-tools" header="高级图元与图层操作">
+                <Collapse.Panel value="advanced-tools" header="高级图元与图层操作">
             <div className="studio-advanced-content">
               <div className="studio-toolbox">
                 <div className="studio-tool-group" aria-label="图层锁定与可见性">
@@ -2801,7 +2800,7 @@ export default function StudioPage() {
                 </div>
               </div>
             </div>
-          </CollapsePanel>
+          </Collapse.Panel>
               </Collapse>
             </div>
         </aside>
