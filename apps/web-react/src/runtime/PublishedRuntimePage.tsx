@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { Button } from "tdesign-react";
+import { Button, Input, Select } from "tdesign-react";
 import "tdesign-react/es/style/index.css";
 import { createScadaApiClient } from "@adui/scada-api-client";
 import {
@@ -127,18 +127,19 @@ export default function PublishedRuntimePage() {
           独立 release:read 权限 · 仅使用当前登录会话 · 不读取编辑草稿或模拟数据
         </p>
         <form onSubmit={onStart} className="scada-published-controls">
-          <label htmlFor="published-react-project-id">工程 ID</label>
-          <input
-            id="published-react-project-id"
-            name="projectId"
-            type="text"
-            maxLength={128}
-            value={projectId}
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="输入已授权工程 ID"
-            onChange={(event) => setProjectId(event.target.value)}
-          />
+          <label>
+            工程 ID
+            <Input
+              name="projectId"
+              type="text"
+              maxlength={128}
+              value={projectId}
+              autocomplete="off"
+              spellCheck={false}
+              placeholder="输入已授权工程 ID"
+              onChange={(value) => setProjectId(value)}
+            />
+          </label>
           <Button type="submit">读取正式发布</Button>
           <Button type="button" variant="outline" disabled={!activeProjectId} onClick={onRefresh}>
             立即刷新
@@ -177,19 +178,16 @@ export default function PublishedRuntimePage() {
         <h2>已发布组态静态预览</h2>
         {pages.length > 1 ? (
           <div className="scada-published-controls">
-            <label htmlFor="published-react-page-id">组态页面</label>
-            <select
-              id="published-react-page-id"
-              data-testid="published-runtime-page-select"
-              value={activePageId ?? ""}
-              onChange={(event) => setSelectedPageId(event.target.value)}
-            >
-              {pages.map((page) => (
-                <option key={page.id} value={page.id}>
-                  {page.name}
-                </option>
-              ))}
-            </select>
+            <label>
+              组态页面
+              <div data-testid="published-runtime-page-select">
+                <Select
+                  value={activePageId ?? ""}
+                  options={pages.map((page) => ({ label: page.name, value: page.id }))}
+                  onChange={(value) => setSelectedPageId(String(value))}
+                />
+              </div>
+            </label>
           </div>
         ) : null}
         <p className="scada-diagnostics-note">
