@@ -2,6 +2,7 @@ import { createProjectSnapshot, waterTreatmentDemoDocument } from "@adui/scada-c
 import type { ScadaDocument } from "@adui/scada-core";
 import { describe, expect, it } from "vite-plus/test";
 import {
+  PUBLISHED_RUNTIME_EMPTY_HINTS,
   PUBLISHED_RUNTIME_STATUS_LABELS,
   publishedSnapshotSvg,
 } from "../src/published-runtime-view.ts";
