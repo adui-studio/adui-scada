@@ -4447,3 +4447,24 @@ PR #188 已提交最小修复候选：图层拖拽事件签名由 `ReactDragEven
 已审查固定 `tdesign-react@1.18.6` 的官方 React 19 支持机制，发现生产入口缺少 `tdesign-react/es/_util/react-19-adapter` 副作用导入。其 `react-render.ts` 在 React 19 且未加载适配器时无法进行插件动态渲染，这可以解释 `DialogPlugin.confirm` 没有实际挂载，而非由视觉上按钮变小造成。已在 `apps/web-react/src/main.tsx` 按官方文档添加适配器；原 `test:tags:browser` 继续真实点击确认并新增取消不写入断言，Tag 绑定保护没有删除。详见 AI 错误复盘 E-112。
 
 **修复候选尚未运行 Windows 验收**。待同一最新 HEAD 复验：`pnpm run typecheck:web`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`、`pnpm run test:browser`、`pnpm run test:tags:browser`；通过后继续 `pnpm run test:interop`、`pnpm run test:versions:safety`、`pnpm run test:multitab`。关注 React/Vue Tag 删除确认/取消、已绑定 Tag 拒绝、工程 JSON 往返，及 React 19 各插件式 Dialog（草稿覆盖和历史版本载入）的可见性与安全语义。新 PR 仍保持 Draft，未经维护者明确同意不合并。
+
+## 2026-11-23 · PR #189 React 首次 Tag 导航失败及隔离网络候选（E-113）
+
+维护者新一轮在 Windows 执行 `typecheck:web`、`vp check` **448/291 零错误警告**、`messages:check` **318 文件**与 `docs:check` **94 份**全部通过；`test:tags:browser` 在第一个 React 页面导航阶段失败，报 `React 页面导航失败：https://127.0.0.1:15173/?scada_interop_check=tag-management`，退出码非零。由于失败即中断，本轮尚未运行 `test:versions`、`test:versions:safety`、`test:interop`、`test:multitab` 和 `test:browser`。前一次通过的四视口 `test:browser` 结果不代表当前提交通过。不能把这次导航失败误记为仍发生在删除 Dialog 上。
+
+已提交候选：`--tags` 在临时 Chromium 测试会话中使用 CDP 禁用**HTTP 缓存**，这是 E-106 已有浏览器缓存故障的受控隔离手段；同时为真实导航失败补充地址匹配、加载状态、白名单 Chromium 错误码和同源模块请求失败分类。保留既有导航次数及间隔、真实按钮点击、取消不写入、已绑定 Tag 删除拒绝、IndexedDB 与 HTTPS 约束。**本次故障尚无 Chromium 错误码，不能断言缓存是根因；新的 Windows 运行结果仍待提交。**
+
+复验建议（在 PR 最新 HEAD 且隔离本机开发服务已启动的前提下）：
+
+```powershell
+git fetch origin
+git switch feat/d5c0x-studio-controls-polish
+git pull --ff-only
+git rev-parse HEAD
+node --check scripts/test-studio-browser.mjs
+vp check
+pnpm run test:tags:browser
+```
+
+只有 `test:tags:browser` 通过后，再运行 `pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:interop`、`pnpm run test:multitab`、`pnpm run test:browser`。如果仍导航失败，请保留新输出的「地址匹配 / 文档状态 / Chromium导航错误 / 同源网络诊断」，不修改协议或跳过安全断言。PR 保持 Draft，未经维护者明确授权不合并。
+
