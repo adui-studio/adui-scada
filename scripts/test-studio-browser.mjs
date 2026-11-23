@@ -363,6 +363,38 @@ async function checkStudioInPage() {
     verify("TDesign 页面菜单触发器可获得键盘焦点", document.activeElement === pageTrigger);
   }
 
+  // 文件与草稿不再使用原生 details，弹层由 TDesign Popup 负责管理。
+  const fileMenu = element(".studio-file-menu");
+  const fileTrigger = fileMenu.querySelector("button.t-button");
+  verify(
+    "文件与草稿复用 TDesign Popup 触发器",
+    fileMenu instanceof HTMLDivElement &&
+      fileTrigger instanceof HTMLButtonElement &&
+      !fileMenu.querySelector("summary"),
+  );
+  if (fileTrigger instanceof HTMLButtonElement) {
+    fileTrigger.click();
+    await settle();
+    const filePanel = fileMenu.querySelector(".studio-file-popover");
+    verify(
+      "TDesign 文件草稿弹层包含原有五项操作",
+      Boolean(filePanel?.getClientRects().length) &&
+        Boolean(filePanel.querySelector('input[type="file"]')) &&
+        ["导出 JSON", "恢复草稿", "清除草稿"].every((label) =>
+          [...filePanel.querySelectorAll("button")].some(
+            (button) => button.textContent.trim() === label,
+          ),
+        ) &&
+        Boolean(filePanel.querySelector("button[aria-pressed]")),
+    );
+    document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    verify(
+      "TDesign 文件草稿弹层可通过外部点击关闭",
+      !fileMenu.querySelector(".studio-file-popover")?.getClientRects().length,
+    );
+  }
+
   return { findings, viewport: { width: innerWidth, height: innerHeight } };
 }
 
