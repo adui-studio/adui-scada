@@ -2450,3 +2450,7 @@ D5c0u 在新分支将 React/Vue「文件与草稿」原生 details 改为 TDesig
 维护者已实测 PR #186 的双端类型检查、`vp check`（446 格式/289 受检零告警错误）、文档 94 份、正常 Studio 120/120、JSON 双向互通、版本并发安全、React/Vue 历史草稿迁移均通过。真实 `test:multitab` 的 React 四个子场景成功后，首次切换到 Vue 时异步 `StudioPage` 未在 `.studio-workspace` 门禁内出现，命令退出码 1；**Vue 多标签页未验收**。当前仍为 Draft，不得合并。
 
 源码已确认 Vue App 使用 `defineAsyncComponent`，两页导航通过 `Promise.all` 并发触发，但日志尚不足以把问题归因于 Vue 业务代码、TDesign Popup、Vite 资源、时序或环境。D5c0u 只增强浏览器脚本的异步导航失败分类，保留超时与全部安全断言；记录 E-106 待 Windows 重新运行并依据证据决定真正的最小修复。不重复已通过的前七项业务专项，也不把其他 Vue 浏览器通过冒充本次多标签安全通过。
+
+## 2026-11-23 · E-106 动态导入失败已确认、CDP 状态追踪待复验
+
+维护者第二次 Windows 复验 `node --check`、`vp check`（446/289 零告警）、`docs:check`（94）成功；`test:multitab` React 四阶段成功后首次 Vue 导航再次因 Studio 动态模块加载失败退出 1。浏览器观测模块请求=true、模块加载异常=true、未处理异步拒绝=true，但没有 HTTP 响应码，尚不能判定 Vite 预构建过期、HTTPS 或 Dev Server 网络故障。现有 PR #186 Draft 中仅新增双标签 CDP 同源模块 HTTP/网络错误类别观察，真实同时导航、原始超时、Schema、CAS、IndexedDB、授权和工业安全语义未修改。最新候选仍待 Windows 复验，不合并、不谎称根因已修复。
