@@ -3822,3 +3822,36 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批不涉及 NestJS、Prisma、Vue/React、工业网关、设备写入或发布门禁。目标 **135/135** 仅是测试定义数量，协作端没有运行原生仓库 Vitest、Vite+ 或完整 `ready`；必须取得维护者 Windows 实测后再授权合并。
+
+## 2026-11-23 · PR #169 Windows 验收完成，D5c0e 设计门禁候选
+
+维护者 Windows 提供 PR #169 八份 Core 定向测试 **135/135**：时效10、快照11、序列11、代次8、增量20、归约31、托管11、适配33；`vp check` **435 个文件格式正确/286 个受检文件零警告错误**、`docs:check` **90 份 Markdown**、`messages:check` **310 个文件**通过。GitHub 合并前 HEAD `b9977f6f2d2cf0506eaa8580e8609b7143ee6b89` 无未解决审查意见与冲突；经本轮授权 Squash 合并至 `main@50148bfd5ce5f66bdf18c32009ce2b076ddb9e3f`。本机 Windows 日志未包含 HEAD，不能视为对 Squash SHA 直接运行，也未运行完整 `ready`、数据库、OIDC 或工业现场验收。
+
+D5c0e 仅补录 **FR-011 可信采集、时钟与序列缺口的待决设计门禁**，不修改 Core、TagStore、Runtime、NestJS、Prisma、工程 Schema、双框架 UI、测试源码、HTTP 或工业网关；本批无新增 Vitest 用例，原 135 项测试状态来自**上一批 PR #169**，不能当作 D5c0e 新分支的运行证据。文档核查建议在维护者 Windows 最新分支执行：
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch docs/d5c0e-alarm-trust-sequence-gate
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/docs/d5c0e-alarm-trust-sequence-gate
+}
+if ($LASTEXITCODE -ne 0) { throw "切换功能分支失败" }
+
+git pull --ff-only origin docs/d5c0e-alarm-trust-sequence-gate
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+
+Write-Host "PR 文档门禁 Windows 验收全部通过"
+```
+
+**验收边界**：D5c0e 只要求文档契约明确区分当前“严格增长”与尚未设计的“连续/缺口恢复”，并列出可信来源、时钟、重连、服务端报警状态和不可变审计的待决条件。没有新增业务代码，不需重复八份 Core 定向测试；未经 Windows 运行不能声称本 PR 的 `vp check`、`docs:check`、`messages:check` 通过。正式发布安全 Gate 继续 fail-closed。
