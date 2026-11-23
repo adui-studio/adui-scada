@@ -3444,3 +3444,11 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批没有 HTTP、Prisma、Vue/React 或真实工业采集变动，不重复此前未改模块的完整 ready 与浏览器专项。重复快照在托管器中使会话失效、订阅适配器清理资源，不代表外部取消函数真实完成释放；上游来源与时间仍待认证，正式发布 Gate 继续 fail-closed。
+
+## 2026-11-23 · D5b9t PR #159 Windows 首轮 54/55 与断言修正
+
+维护者 Windows 执行三份 Core 定向测试：alarm-baseline-session.test.ts **17/18**、alarm-session-controller.test.ts **10/10**、alarm-subscription-adapter.test.ts **27/27**；合计 **54/55**，Vitest 命令失败，PowerShell 中断正常触发。尚无本轮 vp check、docs:check 与 messages:check 结果。
+
+唯一失败来自已有基线的第二份坏质量 snapshot：测试期望 QUALITY_NOT_GOOD，新安全契约先返回 SNAPSHOT_ALREADY_ESTABLISHED 并清空基线。E-092 最小修复仅调整旧测试，保留未核验来源拒绝，验证重复坏质量快照先按重复初始化拒绝，并独立验证首次坏质量快照仍按质量拒绝。生产归约器及现有测试数量不变。
+
+**修复后待 Windows 验收**：三份定向 Vitest 目标 55/55、vp check 零警告、pnpm run docs:check、pnpm run messages:check。没有修复后实际退出码，不能声称已通过；PR #159 保持 Draft，不提前合并。不涉及 NestJS、Prisma、Vue/React、设备采集或正式发布门禁。
