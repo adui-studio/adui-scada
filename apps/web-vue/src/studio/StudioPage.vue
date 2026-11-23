@@ -2146,6 +2146,7 @@ async function importJsonFile(file: File | undefined) {
             <TInput
               v-model="layerSearch"
               type="search"
+              size="small"
               aria-label="搜索图层"
               :maxlength="128"
               placeholder="图元 ID、类型、文字或组合 ID"
@@ -2190,6 +2191,8 @@ async function importJsonFile(file: File | undefined) {
                 </TButton>
                 <TButton
                   type="button"
+                  theme="default"
+                  variant="text"
                   class="studio-layer"
                   :data-layer-key="`group:${entry.groupId}`"
                   :data-selected="layerGroupSelected(entry.groupId)"
@@ -2232,6 +2235,8 @@ async function importJsonFile(file: File | undefined) {
                   v-for="node in entry.members"
                   :key="node.id"
                   type="button"
+                  theme="default"
+                  variant="text"
                   class="studio-layer"
                   :data-layer-key="`node:${node.id}`"
                   :data-selected="state.selectedIds.includes(node.id)"
@@ -2260,6 +2265,8 @@ async function importJsonFile(file: File | undefined) {
             <TButton
               v-else
               type="button"
+              theme="default"
+              variant="text"
               class="studio-layer"
               :data-layer-key="`node:${entry.node.id}`"
               :data-selected="state.selectedIds.includes(entry.node.id)"
