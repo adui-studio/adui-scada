@@ -935,3 +935,14 @@
 - **防复发**：每个公开归约事件的成功结果都应核对其依赖状态的身份归属，不可仅假设已有上游增量入口验证过。分别覆盖错代次、错 Tag、过期、错误质量、旧代次忽略、冻结和显式重启；不将公共纯函数的输入一致性误称作来源认证。
 - **验证边界**：当前仅在 GitHub 候选分支定义两项回归；六份关联测试目标 **99 项**，`vp check`、`docs:check`、`messages:check` 均待 Windows 实测；未执行全量 ready、设备协议采集、报警触发、确认、权限或审计。本批不改变生产发布门禁。
 - **证据**：`packages/core/src/alarm-baseline-session.ts`、`packages/core/test/alarm-baseline-session.test.ts`、D5b9y 分支、PR #163、`docs/VALIDATION.md`。
+
+> **2026-11-23 · E-097 结案补录**：维护者 Windows 在 PR #164 实测六份 Core 定向回归 **99/99**、`vp check` **435/286 零警告错误**、文档检查 **90** 份及中文文案检查 **310** 个文件通过。GitHub 复核最后 HEAD `b87985092b60e45623ebcecf1c411526591b29fc` 较上轮仅含测试格式调整；经明确授权 Squash 合并至 `main@e8d36863b4887ad151f9e41affed4042556a02a0`。E-097 定向门禁已关闭，不表示完整 ready 或现场工业报警生产验收。
+
+### E-098 · 矛盾失效态可能通过归约返回值继续暴露旧报警基线（D5b9z，待 Windows 复验）
+
+- **发现方式**：静态审查 PR #164 合并后的 `transitionAlarmBaselineSession`。公开状态允许 `invalidated: true` 同时存在非空 `baseline`。本代次事件命中原终止判断后返回原状态，其他代次事件则优先忽略并返回原状态，因此都能在返回的 `state` 内留下过期工艺候选。受控 Controller 正常不会生成此矛盾对象；没有真实工业现场复现。
+- **根因**：终止态分支假设 `invalidated` 与 `baseline === null` 总是一致，未在公共纯函数边界阻断可能由直接调用者传入的矛盾组合；旧代次优先忽略可能不经清理回传旧数据。
+- **最小修复**：只在归约器完成事件代次合法性校验后、其他代次判断前，检测 `invalidated === true && baseline !== null`，固定返回 `BASELINE_INVALIDATED/SESSION_INVALIDATED` 与新的冻结空基线状态。原有已正确失效状态的对象引用、旧代次忽略、首次快照与递增代次重启语义不变。新增两项纯归约测试定义，未修改其他生产 API。
+- **防复发**：公共状态契约若通过多个可独立设置的字段表达安全不变量，要覆盖字段互相矛盾时的返回值内容，不能只测试正常内部工厂产生的对象；任何拒绝结果都不应携带旧的报警候选值。此本地修复不等于可信数据源认证，也不能防止完全伪造新会话状态。
+- **验证边界**：D5b9z GitHub 分支只含生产守卫、两项测试定义与文档；六份关联测试目标 **101**，`vp check`、`docs:check`、`messages:check` 待 Windows 验收；未执行完整 ready、工业采集、报警触发、确认权限或不可变审计。
+- **证据**：`alarm-baseline-session.ts`、`alarm-baseline-session.test.ts`、D5b9z 分支、PR #164、`docs/VALIDATION.md`。
