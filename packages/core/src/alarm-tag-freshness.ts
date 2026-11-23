@@ -3,7 +3,16 @@ import type { NumericAlarmSample } from "./alarm-tag-quality.ts";
 import type { TagValue } from "./tag-store.ts";
 
 const ZONED_SERVER_TIMESTAMP_PATTERN =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+  /^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const;
+
+function isValidCalendarDate(year: number, month: number, day: number): boolean {
+  const days = DAYS_IN_MONTH[month - 1];
+  if (days === undefined) return false;
+  const leapYear = month === 2 && year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  return day >= 1 && day <= days + (leapYear ? 1 : 0);
+}
 
 /** 有效数值仅是候选；时间窗口检查不能证明数据来源及采集时间可信。 */
 export type TimelyNumericAlarmSample =
@@ -12,7 +21,7 @@ export type TimelyNumericAlarmSample =
 
 /**
  * 按调用方显式提供的时间和最大年龄检查 Tag 的服务端时间。
- * 先执行数值与质量筛选；候选服务器时间必须携带显式时区。
+ * 先执行数值与质量筛选；候选服务器时间必须携带显式时区且日期真实存在。
  * 不自动获取当前时间，不推断阈值或生成报警事件。
  * 调用方仍需校验数据来源、服务端时间可信性与订阅会话代次。
  */
@@ -31,8 +40,13 @@ export function classifyTimelyNumericAlarmSample(
   const candidate = classifyNumericAlarmSample(input);
   if (candidate.status !== "READY") return candidate;
   // 通用 TagStore 接受 Date.parse 可识别的时间；报警候选不能接受依赖宿主时区解释的无偏移时间。
-  if (!ZONED_SERVER_TIMESTAMP_PATTERN.test(input.serverTimestamp)) {
+  const match = ZONED_SERVER_TIMESTAMP_PATTERN.exec(input.serverTimestamp);
+  if (match === null) {
     throw new TypeError("报警服务器时间戳必须包含明确时区");
+  }
+  // Date.parse 可能将不存在的公历日期自动滚动到下个月，候选不能接受这种归一化。
+  if (!isValidCalendarDate(Number(match[1]), Number(match[2]), Number(match[3]))) {
+    throw new TypeError("报警服务器时间戳日期无效");
   }
 
   const sampleMs = Date.parse(input.serverTimestamp);
