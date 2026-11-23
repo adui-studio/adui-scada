@@ -119,8 +119,7 @@ export class AlarmSubscriptionAdapter {
       }
       this.cancelCheck = cancelCheck;
     } catch (error) {
-      if (this.token === token) this.stop();
-      throw error;
+      this.failWithCleanup(token, error);
     }
   }
 
@@ -136,11 +135,21 @@ export class AlarmSubscriptionAdapter {
     this.unsubscribe = null;
     // 在执行可能重入的外部清理函数之前撤销会话基线和令牌。
     if (token !== null) this.controller.disconnect(token, 0, this.options.maxAgeMs);
+    const failures: unknown[] = [];
     try {
       cancelCheck?.();
-    } finally {
-      unsubscribe?.();
+    } catch (error) {
+      failures.push(error);
     }
+    try {
+      unsubscribe?.();
+    } catch (error) {
+      failures.push(error);
+    }
+    if (failures.length > 1) {
+      throw new AggregateError(failures, "报警订阅资源清理失败");
+    }
+    if (failures.length === 1) throw failures[0];
   }
 
   private forward(
@@ -151,8 +160,19 @@ export class AlarmSubscriptionAdapter {
     try {
       if (invoke().status === "BASELINE_INVALIDATED") this.stop();
     } catch (error) {
-      if (this.token === token) this.stop();
-      throw error;
+      this.failWithCleanup(token, error);
     }
+  }
+
+  /** 同时保留原始订阅故障与清理故障，避免外部取消异常掩盖根因。 */
+  private failWithCleanup(token: AlarmBaselineSessionToken, error: unknown): never {
+    if (this.token === token) {
+      try {
+        this.stop();
+      } catch (cleanupError) {
+        throw new AggregateError([error, cleanupError], "报警订阅失败且资源清理失败");
+      }
+    }
+    throw error;
   }
 }
