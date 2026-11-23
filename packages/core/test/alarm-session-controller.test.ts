@@ -71,6 +71,42 @@ test("快照与连续增量自动写回新基线且不改变旧快照", () => {
   expect(controller.snapshot().baseline?.value.sequence).toBe(7);
 });
 
+test("托管会话允许业务序列跳号，但未核验增量必须撤销令牌且旧回调失效", () => {
+  const controller = new AlarmBaselineSessionController("tank.level", 2);
+  const token = establish(controller);
+  const jumped = { ...next, sequence: 7 };
+  expect(controller.receive(token, { kind: "delta", values: [jumped] }, true, nowMs, 3000))
+    .toMatchObject({ status: "DELTA_ACCEPTED", value: 42 });
+  expect(controller.snapshot().baseline?.value.sequence).toBe(7);
+
+  expect(
+    controller.receive(
+      token,
+      { kind: "delta", values: [{ ...jumped, sequence: 8 }] },
+      false,
+      nowMs,
+      3000,
+    ),
+  ).toMatchObject({ status: "BASELINE_INVALIDATED", reason: "UNVERIFIED_SOURCE" });
+  expect(controller.snapshot().baseline).toBeNull();
+  expect(controller.currentToken()).toBeNull();
+
+  const renewed = controller.restart();
+  expect(controller.receive(token, { kind: "delta", values: [jumped] }, true, nowMs, 3000)).toEqual({
+    status: "STALE_HANDLE_IGNORED",
+  });
+  expect(
+    controller.receive(
+      renewed,
+      { kind: "snapshot", values: [{ ...baseline, sequence: 1 }] },
+      true,
+      nowMs,
+      3000,
+    ).status,
+  ).toBe("BASELINE_ESTABLISHED");
+  expect(controller.snapshot().baseline?.value.sequence).toBe(1);
+});
+
 test("伪造相同数字代次的令牌仍无法读取或修改当前基线", () => {
   const controller = new AlarmBaselineSessionController("tank.level", 2);
   establish(controller);
