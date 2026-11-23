@@ -4373,3 +4373,43 @@ git status --short
 本次已将 `studioDraftFileActionInPage` 的 5 秒 Popup 关闭等待移至 `finally` 外；`finally` 只恢复测试临时替换的 `window.confirm` 并触发关闭。成功通知改用局部变量保留，正常操作后再检查关闭结果，原有 12 秒业务等待、失败异常传播和关闭超时均保留；未更改正式组件、历史版本仓储及安全断言。详见 E-107。
 
 **最新候选待 Windows 实测**：同步 PR #187 HEAD 后执行 `node --check scripts/test-studio-browser.mjs`、`vp check`、`pnpm run docs:check` 和 `pnpm run test:legacy:browser`。只有完整通过后再运行 `pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:release:preflight:browser`；不得以 `vp check --fix` 的「Formatting completed」代替零告警结论。PR 保持 Draft，未经明确授权不得合并。
+
+## 2026-11-23 · PR #187 最终验收通过；D5c0w 全量 TDesign UI 迁移待验收
+
+维护者在 PR #187 最终 Windows 验收链上运行 `node --check` 成功、`vp check` **446 个格式文件/289 个受检文件零警告/错误**、`docs:check` **94 份**，旧本地数据迁移 React/Vue 各 localStorage、IndexedDB 草稿、历史 Project Snapshot 共 **六条**、`test:versions`、`test:versions:safety`（包含双 Origin 隔离）与 `test:release:preflight:browser` 均通过。合并前一轮普通 Studio **132/132** 通过；用户明确批准，PR #187 Squash 合并为 `main@6c2200fe3d0419bb31f4226eec524e944d0c524e`。本地 HEAD 不在日志中，不将其捏造成对应合并提交直接跑过测试。
+
+### D5c0w · 需对同一最新 HEAD 完成的整批测试
+
+本批改动跨 React/Vue 全部通用组件、真实 Dialog、Upload 和 OIDC 浏览器辅助脚本。**下列测试为要求，不是已经执行成功的结果**。必须先通过前置质量检查，再运行同一最终分支的业务安全和视觉回归。测试中出现的安全确认不可通过恢复 `window.confirm`、降低断言、绕过 OIDC、放宽 CAS 或延长等待上限来掩盖。
+
+```powershell
+git fetch origin
+git switch feat/d5c0w-tdesign-unified-ui
+git pull --ff-only
+git rev-parse HEAD
+
+$checks = @(
+  "pnpm run typecheck:web",
+  "vp check",
+  "pnpm run messages:check",
+  "pnpm run docs:check",
+  "pnpm run test:unit",
+  "pnpm run test:browser",
+  "pnpm run test:tags:browser",
+  "pnpm run test:interop",
+  "pnpm run test:versions",
+  "pnpm run test:versions:safety",
+  "pnpm run test:legacy:browser",
+  "pnpm run test:release:preflight:browser",
+  "pnpm run test:multitab"
+)
+foreach ($check in $checks) {
+  Write-Host "执行：$check"
+  Invoke-Expression $check
+  if ($LASTEXITCODE -ne 0) { throw "验收失败：$check" }
+}
+```
+
+另须在**先前已授权且仍隔离的本机 OIDC HTTPS Lab**，按仓库现有专项入口运行涉及服务端工程管理、确认后版本漂移、延迟拒绝、只读发布预检、真实双标签权限的相关测试；本 PR 未授权新建/删除数据库、修改 ACL、发起设备写入或部署生产。不能把 Node 模拟测试等同真实 IdP/HTTPS/CAS 验证。需要人工核对 React/Vue 的两个视口（1440×900、1024×768）中 Popup 与 Dialog 的 Esc/焦点、取消不写入、长列表滚动和贴边位置，以及 252px/320px 侧栏与 16:9 SVG 画布不回归。
+
+已执行证据仅限 GitHub 源码静态复核、固定版本官方组件 Props 检查及部分 Node 脚本函数语法解析；以上 Windows/真实业务测试均未在本分支执行。只有最终 HEAD 的完整通过输出才能进入合并评审；新 PR 默认 Draft、指派 `@adui-dev`，未经维护者授权不合并。
