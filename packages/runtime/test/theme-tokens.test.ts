@@ -162,4 +162,35 @@ describe("双框架工业主题设计 Token", () => {
     expect(tdesign).toContain("--td-text-color-disabled: var(--adui-color-text-disabled);");
     expect(tdesign).toContain("--td-bg-color-component-disabled: var(--adui-color-surface);");
   });
+
+  it("Studio 历史版本弹层复用主题字号与间距且不修改布局几何", () => {
+    const css = readFileSync(new URL("../../tailwind/src/studio.css", import.meta.url), "utf8");
+    for (const [selector, declaration] of [
+      [".studio-version-panel", "top: calc(100% + var(--adui-space-3));"],
+      [".studio-version-panel", "padding: var(--adui-space-5);"],
+      [".studio-version-error", "font-size: var(--adui-font-size-xs);"],
+      [".studio-version-error", "line-height: var(--adui-line-height-normal);"],
+      [".studio-version-item-actions", "gap: var(--adui-space-3);"],
+      [".studio-version-more", "font-size: var(--adui-font-size-xs);"],
+      [".studio-version-list", "gap: var(--adui-space-4);"],
+      [".studio-version-heading", "gap: var(--adui-space-3);"],
+      [".studio-version-heading", "font-size: var(--adui-font-size-xs);"],
+      [".studio-version-item code", "font-size: var(--adui-font-size-2xs);"],
+      [".studio-version-comparison strong", "font-size: var(--adui-font-size-xs);"],
+      [".studio-version-comparison p", "font-size: var(--adui-font-size-2xs);"],
+    ] as const) {
+      expect(findRules(css, selector).some((rule) => rule.includes(declaration))).toBe(true);
+    }
+    const tokens = readTheme("tokens.css");
+    expect(tokens).toContain("--adui-space-3: 6px;");
+    expect(tokens).toContain("--adui-space-4: 8px;");
+    expect(tokens).toContain("--adui-space-5: 12px;");
+    expect(tokens).toContain("--adui-font-size-xs: 12px;");
+    expect(tokens).toContain("--adui-font-size-2xs: 11px;");
+    expect(tokens).toContain("--adui-line-height-normal: 1.5;");
+    expect(css).toContain("width: min(378px, calc(100vw - 24px));");
+    expect(css).toContain("max-height: min(70vh, 610px);");
+    expect(css).toContain("--studio-left-width: 252px;");
+    expect(css).toContain("--studio-right-width: 320px;");
+  });
 });
