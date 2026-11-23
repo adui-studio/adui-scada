@@ -1,0 +1,12 @@
+{
+  "name": "@adui/theme",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": ["**/*.css"],
+  "exports": {
+    "./styles.css": "./src/index.css",
+    "./tokens.css": "./src/tokens.css",
+    "./tdesign.css": "./src/tdesign.css"
+  }
+}
