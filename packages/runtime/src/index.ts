@@ -41,4 +41,8 @@ export type {
 } from "./published-runtime-refresher.ts";
 
 /** 静态发布画面不包含现场 Tag 数值。 */
-export { PUBLISHED_RUNTIME_STATUS_LABELS, publishedSnapshotSvg } from "./published-runtime-view.ts";
+export {
+  PUBLISHED_RUNTIME_EMPTY_HINTS,
+  PUBLISHED_RUNTIME_STATUS_LABELS,
+  publishedSnapshotSvg,
+} from "./published-runtime-view.ts";

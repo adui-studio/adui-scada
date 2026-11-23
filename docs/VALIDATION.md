@@ -4032,3 +4032,28 @@ pnpm run test:interop
 ```
 
 额外需在 React/Vue **1440×900 和 1024×768** 实际查看运行监控工艺图、右侧诊断滚动、Tag 空态、已发布页面的无权限/无快照占位，以及页面是否横向溢出；发布仅显示已验证快照，不能用模拟 Tag 代替。截图视觉评审仍为独立验收项，不应由 CSS 静态检查、Studio 浏览器 19/19 或 `ready` 代替。
+
+## 2026-11-23 · PR #178 合并与 D5c0n 正式发布 UI 待验收记录
+
+维护者 Windows 对 PR #178 最终 HEAD `3f0998a5728015ea22ff3ffc0a34678e2fc32427` 执行 `git rev-parse HEAD && pnpm run ready && pnpm run test:browser && pnpm run test:tags:browser && pnpm run test:interop`：Vitest 863/863、S0 Lab 5/5、NestJS E2E 63/63、Vite+ 440/288 零警告错误、文档 93 份、双框架构建、Studio 76/76、Tag CRUD 与工程 JSON 完整互通均显示通过；日志未再次单独打印 `$LASTEXITCODE`，但后续 `&&` 子命令均实际执行且成功。三张新截图覆盖监控、未启动的已发布页面和 Studio，但不能代替真实授权发布快照的 OIDC 浏览器专项。GitHub 最终核对无未解决线程、可合并、Assignee `@adui-dev`，在维护者明确授权下将 PR #178 Squash 合并至 `main@be5084ef9621f93fa8ede3cc539686d56c248db5`。这是合并前 HEAD 的实测，不代表在 Squash SHA 上重新运行。
+
+D5c0n 基于该主线仅调整已发布只读页面的三个可见操作按钮和无快照说明：React/Vue 均直接使用既有 TDesign `Button`；保留测试依赖的原生工程输入和多页选择器，以避免破坏 OIDC/CDP `HTMLInputElement` 原生 setter、表单提交、按钮禁用及 `data-testid` 语义；由 `@adui/scada-runtime` 输出七种受控状态的中文空态提示，拒绝态和离线态不误用一般“无画面”说明。新增针对状态映射的 Runtime Vitest 测试定义，未更改任何服务端发布指针校验、发布刷新时序、设备写入边界或实时 Tag 质量。
+
+**本批尚未运行 Windows Vite+、Vitest、Web Build 或浏览器测试**。Windows 最小验收：
+
+```powershell
+git fetch origin &&
+git switch feat/d5c0n-published-runtime-controls-empty-state &&
+git pull --ff-only &&
+git rev-parse HEAD &&
+vp test run packages/runtime/test/published-runtime-view.test.ts &&
+vp check &&
+pnpm run docs:check &&
+pnpm run messages:check &&
+pnpm run build:web &&
+pnpm run test:browser &&
+pnpm run test:tags:browser &&
+pnpm run test:interop
+```
+
+另需真实浏览器核对双框架未启动、无授权、未发布、离线、服务端异常及已验证快照的文字与按钮状态，确认既有同源 GET 和零写入保护。完整 `ready` 作为最终合并前的全链门禁；不能将 PR #178 的 863/863 作为本批的测试记录。

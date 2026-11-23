@@ -68,3 +68,10 @@
 - 浏览器专项：按仓库现有环境执行 `pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop`；后续正式已发布真实 OIDC 浏览器专项仍按既有人工安全约束，不因 UI 改造自动触发。
 
 **验收边界**：本批当前仅 GitHub 代码静态核对，尚未执行 Windows Web 构建、完整 `ready` 或真实浏览器视觉验收。不能把 PR #176 的历史检查当成本分支质量证明。正式工业网关、报警事件与设备写入不在本批范围。
+
+## D5c0n · 已发布运行控件与空画面语义
+
+- **TDesign 官方控件直接复用**：正式发布只读页面的“读取正式发布 / 立即刷新 / 停止读取”使用 React `tdesign-react/Button` 和 Vue `tdesign-vue-next/Button`，沿用 Studio 中已经存在并验证过的 `type="submit"`、`type="button"`、`variant="outline/text"` 及 `disabled` 写法。不新增 Button 包装组件、额外依赖或一套表单状态机。
+- **保留浏览器安全契约**：工程 ID 输入保留原生 `input`、原 `id`/`name` 和受控更新；多页面 `select`、`data-testid`、同源只读 GET、身份/CAS/权限检查、停止读取时清空画面均不变。两个控件的官方迁移以确认对应 TDesign API 和真实 CDP 输入兼容性为前提，不为追求组件覆盖率破坏已发布安全验收。
+- **七种状态空态共用文案**：新增 `PUBLISHED_RUNTIME_EMPTY_HINTS` 与 `PUBLISHED_RUNTIME_STATUS_LABELS` 一一对应，分别提示未启动、读取中、尚未发布、已验证但不可展示、离线、拒绝、错误。React/Vue 直接渲染同一共享文案，不将静态快照误称为 GOOD 实时数据。
+- **视觉与回归**：空态提升至 14px 便于工业桌面阅读，保留预览区域的清晰边界；TDesign 组件仍需 Windows 双框架手工与自动浏览器专项复验。没有新引入 Zod、Day.js 等工具，因为本批不涉及新的通用校验或复杂日期逻辑。
