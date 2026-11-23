@@ -91,7 +91,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main id="scada-main-content" class="scada-shell scada-shell--published" data-testid="published-runtime-page">
+  <main id="scada-main-content" tabindex="-1" class="scada-shell scada-shell--published" data-testid="published-runtime-page">
     <header class="scada-header">
       <div>
         <p class="scada-eyebrow">ADui SCADA · 正式发布配置只读监控</p>
