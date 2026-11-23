@@ -1391,3 +1391,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/test/alarm-session-controller.test.ts`：新增 1 项，文件共 10 项，覆盖重复快照失效、旧令牌拒绝、显式重启后重新建立低序列基线。
 - `packages/core/test/alarm-subscription-adapter.test.ts`：新增 2 项，文件共 27 项，覆盖活动订阅第二次 snapshot 清理、同步安装时重复快照补偿取消资源。
 - 不改公共函数签名、`AlarmSnapshotBaseline`、TagStore、Runtime、NestJS、Prisma、React/Vue、网关或发布安全 Gate。
+
+## 2026-11-23 · D5b9u FR-011 失效会话终止态（候选）
+
+- `packages/core/src/alarm-baseline-session.ts`：`AlarmBaselineSessionState.invalidated?: true` 仅标记已终止状态；当前代次失效后固定返回 `SESSION_INVALIDATED`，禁止纯归约器通过同代次 snapshot 恢复，保留跨代次忽略与显式更高代次重启。
+- `packages/core/test/alarm-baseline-session.test.ts`：调整既有失效状态断言和重启路径，新增三项终止态回归，文件由 18 项升至 21 项，覆盖首次坏质量失效、所有同代次事件重入、旧代次忽略与新代次低序列快照。
+- `packages/core/test/alarm-session-controller.test.ts`：同步一处严格对象状态断言，既有 10 项不减少。
+- `packages/core/src/alarm-session-controller.ts` 和 `packages/core/src/alarm-subscription-adapter.ts` 无生产逻辑改动；不涉及 TagStore、Runtime、NestJS/Prisma、React/Vue、网关、发布安全门禁。

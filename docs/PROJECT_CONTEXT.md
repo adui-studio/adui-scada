@@ -2282,3 +2282,9 @@ D5b9s 从这份主线检查独立导出的 `advanceAlarmTagDeltaBaseline`，发�
 维护者 Windows 验收 PR #158 的三份定向测试 `alarm-tag-delta.test.ts` **15/15**、`alarm-baseline-session.test.ts` **16/16**、`alarm-subscription-adapter.test.ts` **25/25**（合计 **56/56**），`vp check` **435 格式文件/286 受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个自有文件**。PR 分支增加一笔仅调整测试排版的提交，无业务逻辑变化；维护者明确同意后 Squash 合并至 `main@ac39b5876fa2f255d993b0e8665cad51fe675bff`。这些数据来自维护者 Windows 日志，不冒充协作环境已运行检查。
 
 D5b9t 基于上述主线，发现共享会话归约器在已有基线时仍会用第二次同代次 snapshot 覆盖序列。最小修复增加本地拒绝原因 `SNAPSHOT_ALREADY_ESTABLISHED` 并清空基线，受控托管器/适配器既有失效路径负责撤销令牌和订阅。新增 **5 项单元测试定义**：会话归约器 **16→18**、会话托管器 **9→10**、只读订阅适配器 **25→27**，三份共 **55 项**，**尚无 D5b9t Windows 实测**。不新增设备来源认证、真实工业协议或自动报警、确认、不可变审计能力。
+
+## 2026-11-23 · PR #159 合并与 D5b9u 失效态终止边界
+
+维护者 Windows 对 PR #159 修复后的三个定向测试文件实际执行 **55/55**（18/18、10/10、27/27），`vp check` **435 格式文件/286 受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个文件**。GitHub 已核对 PR 最后仅追加测试排版提交，且无未解决审查线程、无合并冲突。维护者明确授权后 Squash 合并至 `main@8cbd1d721f8e2a2c7b83733ff64bdb88b28d0dd6`；E-091 的重复 snapshot 基线覆盖缺口和 E-092 旧断言阻塞均有本轮 Windows 定向回归证据，不推断全量 ready 或工业现场验收已完成。
+
+D5b9u 从上述 main 继续核对：公开纯归约器在 `BASELINE_INVALIDATED` 后仅有空基线，直接调用者仍可复用同代次新 snapshot 复活状态，而受控 Controller 早已拒绝该路径。本批给失效状态增量增加只读 `invalidated?: true` 及后续固定拒绝 `SESSION_INVALIDATED`；新会话必须显式更高代次重启。归约器测试定义 **18→21**，托管器 **10**、适配器 **27** 不变，合计目标 **58**；当前无 D5b9u Windows 实测，不扩展到真实采集或报警规则。

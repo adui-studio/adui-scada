@@ -13,6 +13,8 @@ export interface AlarmBaselineSessionState {
   readonly expectedTagId: string;
   readonly generation: number;
   readonly baseline: AlarmSnapshotBaseline | null;
+  /** 本代次已经失效；只有显式递增代次重启才能重新建立基线。 */
+  readonly invalidated?: true;
 }
 
 /** 会话操作必须由受控订阅管理器触发并提供对应的代次。 */
@@ -30,6 +32,7 @@ export type AlarmBaselineSessionRejectReason =
   | Exclude<AlarmSnapshotBaselineResult["status"], "BASELINE_ESTABLISHED">
   | "DISCONNECTED"
   | "SNAPSHOT_ALREADY_ESTABLISHED"
+  | "SESSION_INVALIDATED"
   | "INVALID_INPUT";
 
 export type AlarmBaselineSessionTransition =
@@ -95,12 +98,22 @@ function invalidate(
   state: AlarmBaselineSessionState,
   reason: AlarmBaselineSessionRejectReason,
 ): AlarmBaselineSessionTransition {
-  return { status: "BASELINE_INVALIDATED", reason, state: withBaseline(state, null) };
+  return {
+    status: "BASELINE_INVALIDATED",
+    reason,
+    state: Object.freeze({
+      expectedTagId: state.expectedTagId,
+      generation: state.generation,
+      baseline: null,
+      invalidated: true,
+    }),
+  };
 }
 
 /**
  * 归约快照、增量、断连和时间检查，不产生报警事件。
- * 本代次拒绝或非法数据一律清空基线；其他代次的迟到操作不修改当前会话。
+ * 本代次拒绝或非法数据一律标记终止并清空基线；只有递增代次重启才能复用快照。
+ * 其他代次的迟到操作不修改当前会话。
  * 来源核验与会话代次分配属于上游责任；本地 sourceVerified 不是安全证明。
  */
 export function transitionAlarmBaselineSession(
@@ -114,6 +127,10 @@ export function transitionAlarmBaselineSession(
   }
   if (action.generation !== state.generation) {
     return { status: "OTHER_SESSION_IGNORED", state };
+  }
+  // 失效状态不得因 baseline 为 null 被误认作尚未收到首份快照。
+  if (state.invalidated === true) {
+    return { status: "BASELINE_INVALIDATED", reason: "SESSION_INVALIDATED", state };
   }
   if (action.kind === "DISCONNECT") return invalidate(state, "DISCONNECTED");
 
@@ -148,7 +165,7 @@ export function transitionAlarmBaselineSession(
     }
 
     // delta 不能依靠新读数把已经过期的旧基线恢复为有效状态。
-    // 失效后必须通过同代次的新 snapshot 重新建立基线。
+    // 失效后必须显式递增会话代次，并由新会话首份 snapshot 建立基线。
     if (action.sourceVerified === true && state.baseline !== null) {
       const checked = classifyTimelyNumericAlarmSample(state.baseline.value, nowMs, maxAgeMs);
       if (checked.status !== "READY") return invalidate(state, checked.status);

@@ -880,3 +880,14 @@
 - **防复发**：修改状态机拒绝优先级时，应检查旧测试是否错误复用已有基线夹具，将首次初始化和重复初始化的负向场景分开断言；不能为通过而削弱 fail-closed 保护。
 - **验证边界**：54/55 是修复前 Windows 结果，修复后的 55 项 Vitest、vp check、docs:check 和 messages:check 均待 Windows 复测。FR-011 来源认证、报警触发、确认授权和不可变审计仍未实现。
 - **证据**：维护者 Windows 日志、PR #159、packages/core/test/alarm-baseline-session.test.ts、docs/VALIDATION.md。
+
+> **2026-11-23 · E-091 / E-092 结案补录**：维护者 Windows 在修复旧断言后实测三份 Core 定向测试 **55/55**、`vp check` **435/286 零警告错误**、`docs:check` **90**、`messages:check` **310**。GitHub 按明确授权 Squash 合并 PR #159 至 `main@8cbd1d721f8e2a2c7b83733ff64bdb88b28d0dd6`。此前 E-091/E-092 中的“待 Windows 复验”是历史阶段陈述，已由上述单批质量验证关闭；不代表真实数据源认证与工业报警实现。
+
+### E-093 · 失效后的纯归约器仍能在同一代次接受新快照（D5b9u，待 Windows 复验）
+
+- **发现方式**：审查 PR #159 合并后的 `transitionAlarmBaselineSession`：失效时只把 `baseline` 清空。原 `alarm-baseline-session.test.ts` 中的序列倒退和超龄测试甚至明确断言在同一代次通过 snapshot 恢复为 `BASELINE_ESTABLISHED`。这是可达的公开纯函数路径，而不是现场事故或受控托管器已失效的证据。
+- **根因**：归约器使用 `baseline: null` 同时表示「新会话尚未初始化」与「本会话已被拒绝并终止」，导致同代次后续 snapshot 重走初始化逻辑；Controller 和订阅适配器虽有令牌撤销但无法覆盖直接使用纯归约 API 的调用者。
+- **最小修复**：在 `AlarmBaselineSessionState` 增加只读可选终止标记 `invalidated?: true`，所有 `BASELINE_INVALIDATED` 都清空数值并写入该标记；同代次所有后续操作固定 `SESSION_INVALIDATED` 且保留原冻结状态，旧代次保持忽略；只有显式 `restartAlarmBaselineSession` 严格递增代次才可接受新的首次 snapshot。原有直接同代次恢复断言改为拒绝，新增三项纯归约器回归，托管器一处对象断言同步；不修改 Controller/Adapter 生产逻辑。
+- **防复发**：状态机不能单用数据值 `null` 同时表达「尚未初始化」和「明确终止」，否则新的初始化消息可能复活已经失效的会话。对可独立调用的公共层接口同时覆盖首次失败、后续重入、超时、旧代次、显式重启和冻结状态；纯函数终止标记不等于来源身份认证，外部仍需持有受控令牌。
+- **验证边界**：本批仅有源码及测试定义，目标会话归约器 **21 项**、托管器 **10 项**、适配器 **27 项**，合计 **58 项**。D5b9u 最新候选尚无维护者 Windows 定向 Vitest、`vp check`、`docs:check`、`messages:check` 实测；不得提前关闭 E-093。未修改真实工业网关、报警规则、确认、审计或正式发布 Gate。
+- **证据**：PR #159 已合并代码、D5b9u 功能分支、`packages/core/src/alarm-baseline-session.ts`、两份相关测试、`docs/VALIDATION.md`。

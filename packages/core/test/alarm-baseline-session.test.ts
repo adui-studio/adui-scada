@@ -141,7 +141,7 @@ test("本会话来源未核验或重复快照均废弃旧基线，首次坏质�
   expect(invalid).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "UNVERIFIED_SOURCE",
-    state: { ...initial, baseline: null },
+    state: { ...initial, baseline: null, invalidated: true },
   });
 
   const repeated = transitionAlarmBaselineSession(
@@ -153,7 +153,7 @@ test("本会话来源未核验或重复快照均废弃旧基线，首次坏质�
   expect(repeated).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "SNAPSHOT_ALREADY_ESTABLISHED",
-    state: { ...initial, baseline: null },
+    state: { ...initial, baseline: null, invalidated: true },
   });
 
   const pending = beginAlarmBaselineSession("tank.level", 2);
@@ -166,11 +166,11 @@ test("本会话来源未核验或重复快照均废弃旧基线，首次坏质�
   expect(invalidFirst).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "QUALITY_NOT_GOOD",
-    state: pending,
+    state: { ...pending, invalidated: true },
   });
 });
 
-test("重复或倒退序列清空基线，后续增量不能绕过快照重建", () => {
+test("重复或倒退序列终止当前会话，只有递增代次才能重建", () => {
   const initial = established();
   const invalid = transitionAlarmBaselineSession(
     initial,
@@ -181,15 +181,27 @@ test("重复或倒退序列清空基线，后续增量不能绕过快照重建",
   expect(invalid).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "SEQUENCE_NOT_ADVANCED",
-    state: { ...initial, baseline: null },
+    state: { ...initial, baseline: null, invalidated: true },
   });
   const afterward = transitionAlarmBaselineSession(invalid.state, delta, nowMs, 3000);
   expect(afterward).toEqual({
     status: "BASELINE_INVALIDATED",
-    reason: "BASELINE_REQUIRED",
+    reason: "SESSION_INVALIDATED",
     state: invalid.state,
   });
-  const recovered = transitionAlarmBaselineSession(invalid.state, snapshot, nowMs, 3000);
+  const rejectedSnapshot = transitionAlarmBaselineSession(invalid.state, snapshot, nowMs, 3000);
+  expect(rejectedSnapshot).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SESSION_INVALIDATED",
+    state: invalid.state,
+  });
+  const restarted = restartAlarmBaselineSession(invalid.state, 3);
+  const recovered = transitionAlarmBaselineSession(
+    restarted,
+    { ...snapshot, generation: 3 },
+    nowMs,
+    3000,
+  );
   expect(recovered.status).toBe("BASELINE_ESTABLISHED");
 });
 
@@ -204,7 +216,7 @@ test("任一 Tag 校验异常在本会话内都清空基线，不会部分更新
   expect(duplicate).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "INVALID_INPUT",
-    state: { ...initial, baseline: null },
+    state: { ...initial, baseline: null, invalidated: true },
   });
   const malformed = transitionAlarmBaselineSession(
     initial,
@@ -216,7 +228,7 @@ test("任一 Tag 校验异常在本会话内都清空基线，不会部分更新
   expect(malformed.state.baseline).toBeNull();
 });
 
-test("断连清空当前基线并等待新的快照，其他代次断连不影响当前状态", () => {
+test("断连终止当前代次并清空基线，旧会话无法等待新快照", () => {
   const initial = established();
   const disconnected = transitionAlarmBaselineSession(
     initial,
@@ -227,7 +239,7 @@ test("断连清空当前基线并等待新的快照，其他代次断连不影�
   expect(disconnected).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "DISCONNECTED",
-    state: { ...initial, baseline: null },
+    state: { ...initial, baseline: null, invalidated: true },
   });
   expect(
     transitionAlarmBaselineSession(
@@ -236,7 +248,11 @@ test("断连清空当前基线并等待新的快照，其他代次断连不影�
       nowMs,
       3000,
     ),
-  ).toEqual({ status: "WAITING_SNAPSHOT", state: disconnected.state });
+  ).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SESSION_INVALIDATED",
+    state: disconnected.state,
+  });
 });
 
 test("无目标增量不能刷新年龄，独立时效检查必须使旧基线失效", () => {
@@ -268,7 +284,7 @@ test("无目标增量不能刷新年龄，独立时效检查必须使旧基线�
   expect(expired).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "OUTDATED_TIMESTAMP",
-    state: { ...initial, baseline: null },
+    state: { ...initial, baseline: null, invalidated: true },
   });
 });
 
@@ -291,19 +307,19 @@ test("旧基线超龄时即使新增量时效正常也不能直接续接", () =>
   expect(expired).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "OUTDATED_TIMESTAMP",
-    state: { ...initial, baseline: null },
+    state: { ...initial, baseline: null, invalidated: true },
   });
 
   const rejected = transitionAlarmBaselineSession(expired.state, delta, nowMs + 1001, 3000);
   expect(rejected).toEqual({
     status: "BASELINE_INVALIDATED",
-    reason: "BASELINE_REQUIRED",
+    reason: "SESSION_INVALIDATED",
     state: expired.state,
   });
 
   const restored = transitionAlarmBaselineSession(
-    expired.state,
-    { ...snapshot, change: { kind: "snapshot", values: [next] } },
+    restartAlarmBaselineSession(expired.state, 3),
+    { ...snapshot, generation: 3, change: { kind: "snapshot", values: [next] } },
     nowMs + 1001,
     3000,
   );
@@ -312,6 +328,7 @@ test("旧基线超龄时即使新增量时效正常也不能直接续接", () =>
     restored.state,
     {
       ...delta,
+      generation: 3,
       change: {
         kind: "delta",
         values: [{ ...next, value: 43, sequence: 7, serverTimestamp: "2026-11-22T09:00:00.000Z" }],
@@ -337,7 +354,7 @@ test("无目标 Tag 增量无法掩盖旧基线失效", () => {
   expect(rejected).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "OUTDATED_TIMESTAMP",
-    state: { ...initial, baseline: null },
+    state: { ...initial, baseline: null, invalidated: true },
   });
 });
 
@@ -347,7 +364,7 @@ test("时钟回拨造成旧基线处于未来时不能据此推进序列", () =>
   expect(rejected).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "FUTURE_TIMESTAMP",
-    state: { ...initial, baseline: null },
+    state: { ...initial, baseline: null, invalidated: true },
   });
 });
 
@@ -362,7 +379,7 @@ test("旧基线已超龄时来源未核验仍优先按来源拒绝失效", () =>
   expect(rejected).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "UNVERIFIED_SOURCE",
-    state: { ...initial, baseline: null },
+    state: { ...initial, baseline: null, invalidated: true },
   });
 });
 
@@ -379,7 +396,7 @@ test("同代次重复初始快照即使内容完全一致也必须废弃旧基�
   expect(repeated).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "SNAPSHOT_ALREADY_ESTABLISHED",
-    state: { ...initial, baseline: null },
+    state: { ...initial, baseline: null, invalidated: true },
   });
   expect(initial.baseline?.value.sequence).toBe(5);
 });
@@ -399,10 +416,82 @@ test("同代次新旧序列的第二次快照都不能重置已建立的序列",
     expect(repeated).toEqual({
       status: "BASELINE_INVALIDATED",
       reason: "SNAPSHOT_ALREADY_ESTABLISHED",
-      state: { ...initial, baseline: null },
+      state: { ...initial, baseline: null, invalidated: true },
     });
     const pending = transitionAlarmBaselineSession(repeated.state, delta, nowMs, 3000);
     expect(pending.status).toBe("BASELINE_INVALIDATED");
+    expect(pending.state).toBe(repeated.state);
     expect(pending.state.baseline).toBeNull();
   }
+});
+
+test("首次快照校验失败后也不能在同代次补发合法快照", () => {
+  const pending = beginAlarmBaselineSession("tank.level", 2);
+  const failed = transitionAlarmBaselineSession(
+    pending,
+    { ...snapshot, change: { kind: "snapshot", values: [{ ...previous, quality: "BAD" }] } },
+    nowMs,
+    3000,
+  );
+  expect(failed).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "QUALITY_NOT_GOOD",
+    state: { ...pending, invalidated: true },
+  });
+  expect(Object.isFrozen(failed.state)).toBe(true);
+  expect(transitionAlarmBaselineSession(failed.state, snapshot, nowMs, 3000)).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SESSION_INVALIDATED",
+    state: failed.state,
+  });
+});
+
+test("失效状态对同代次快照增量断连和时效检查一律保持终止", () => {
+  const invalid = transitionAlarmBaselineSession(
+    established(),
+    { kind: "DISCONNECT", generation: 2 },
+    nowMs,
+    3000,
+  );
+  for (const action of [
+    snapshot,
+    delta,
+    { kind: "DISCONNECT", generation: 2 } as const,
+    { kind: "CHECK_FRESHNESS", generation: 2 } as const,
+  ]) {
+    const result = transitionAlarmBaselineSession(invalid.state, action, nowMs, 3000);
+    expect(result).toEqual({
+      status: "BASELINE_INVALIDATED",
+      reason: "SESSION_INVALIDATED",
+      state: invalid.state,
+    });
+    expect(result.state).toBe(invalid.state);
+  }
+  expect(
+    transitionAlarmBaselineSession(invalid.state, { ...snapshot, generation: 1 }, nowMs, 3000),
+  ).toEqual({ status: "OTHER_SESSION_IGNORED", state: invalid.state });
+});
+
+test("终止后显式递增代次才能接受低序列快照，旧代次仍被忽略", () => {
+  const old = established();
+  const invalid = transitionAlarmBaselineSession(old, delta, nowMs + 1001, 3000);
+  const renewed = restartAlarmBaselineSession(invalid.state, 3);
+  expect(renewed).toEqual({ expectedTagId: "tank.level", generation: 3, baseline: null });
+  expect(transitionAlarmBaselineSession(renewed, snapshot, nowMs, 3000)).toEqual({
+    status: "OTHER_SESSION_IGNORED",
+    state: renewed,
+  });
+  const accepted = transitionAlarmBaselineSession(
+    renewed,
+    {
+      ...snapshot,
+      generation: 3,
+      change: { kind: "snapshot", values: [{ ...previous, sequence: 1 }] },
+    },
+    nowMs,
+    3000,
+  );
+  expect(accepted.status).toBe("BASELINE_ESTABLISHED");
+  expect(accepted.state.baseline?.value.sequence).toBe(1);
+  expect(accepted.state.invalidated).toBeUndefined();
 });
