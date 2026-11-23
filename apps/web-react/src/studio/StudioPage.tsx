@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Collapse, CollapsePanel, Dropdown, Input, Popup } from "tdesign-react";
+import { Button, Checkbox, Collapse, CollapsePanel, Dropdown, Input, Popup, Select } from "tdesign-react";
 import type { DropdownProps } from "tdesign-react";
 import { CloseIcon } from "tdesign-icons-react";
 import "tdesign-react/es/style/index.css";
@@ -2225,19 +2225,16 @@ export default function StudioPage() {
             <div className="studio-copy-tools">
               <label className="studio-field">
                 复制选中图元到
-                <select
-                  aria-label="跨页面复制目标"
+                <Select
                   value={copyTargetPageId}
-                  onChange={(event) => setPreferredCopyTargetPageId(event.target.value)}
                   disabled={copyTargetPages.length === 0}
-                >
-                  {copyTargetPages.length === 0 && <option value="">暂无其他页面</option>}
-                  {copyTargetPages.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
+                  options={
+                    copyTargetPages.length === 0
+                      ? [{ label: "暂无其他页面", value: "" }]
+                      : copyTargetPages.map((item) => ({ label: item.name, value: item.id }))
+                  }
+                  onChange={(value) => setPreferredCopyTargetPageId(String(value))}
+                />
               </label>
               <Button tag="button"
                 type="button"
@@ -2263,30 +2260,21 @@ export default function StudioPage() {
                 <div className="studio-view-section">
                   <p>网格与吸附</p>
                   <div className="studio-canvas-settings">
-                    <label className="studio-canvas-option">
-                      <input
-                        type="checkbox"
-                        checked={gridVisible}
-                        onChange={(event) => setGridVisible(event.target.checked)}
-                      />
-                      显示网格
-                    </label>
-                    <label className="studio-canvas-option">
-                      <input
-                        type="checkbox"
-                        checked={gridSnap}
-                        onChange={(event) => setGridSnap(event.target.checked)}
-                      />
-                      网格吸附
-                    </label>
-                    <label className="studio-canvas-option">
-                      <input
-                        type="checkbox"
-                        checked={nodeSnap}
-                        onChange={(event) => setNodeSnap(event.target.checked)}
-                      />
-                      图元吸附
-                    </label>
+                    <div className="studio-canvas-option">
+                      <Checkbox checked={gridVisible} onChange={(checked) => setGridVisible(checked)}>
+                        显示网格
+                      </Checkbox>
+                    </div>
+                    <div className="studio-canvas-option">
+                      <Checkbox checked={gridSnap} onChange={(checked) => setGridSnap(checked)}>
+                        网格吸附
+                      </Checkbox>
+                    </div>
+                    <div className="studio-canvas-option">
+                      <Checkbox checked={nodeSnap} onChange={(checked) => setNodeSnap(checked)}>
+                        图元吸附
+                      </Checkbox>
+                    </div>
                   </div>
                 </div>
                 <div className="studio-view-section">
@@ -2583,25 +2571,25 @@ export default function StudioPage() {
                 <>
                   <label className="studio-field">
                     {bindingSlot} · 选择项目 Tag
-                    <select
+                    <Select
                       aria-label={selected.id + " 的 " + bindingSlot + " Tag 绑定"}
                       value={currentBindingTag}
-                      onChange={(event) => changeTagBinding(bindingSlot, event.target.value)}
-                    >
-                      <option value="">不绑定</option>
-                      {missingBindingTag && (
-                        <option value={currentBindingTag} disabled>
-                          {currentBindingTag}（当前工程未定义或类型待确认）
-                        </option>
-                      )}
-                      {tagCandidates.map((option) => (
-                        <option key={option.tagId} value={option.tagId}>
-                          {option.displayName} · {option.tagId} ·
-                          {TAG_DATA_TYPE_LABELS[option.dataType]}
-                          {option.unit ? " · " + option.unit : ""}
-                        </option>
-                      ))}
-                    </select>
+                      options={[
+                        { label: "不绑定", value: "" },
+                        ...(missingBindingTag
+                          ? [{
+                              label: `${currentBindingTag}（当前工程未定义或类型待确认）`,
+                              value: currentBindingTag,
+                              disabled: true,
+                            }]
+                          : []),
+                        ...tagCandidates.map((option) => ({
+                          label: `${option.displayName} · ${option.tagId} · ${TAG_DATA_TYPE_LABELS[option.dataType]}${option.unit ? " · " + option.unit : ""}`,
+                          value: option.tagId,
+                        })),
+                      ]}
+                      onChange={(value) => changeTagBinding(bindingSlot, String(value))}
+                    />
                   </label>
                   {selectedTagDefinition && (
                     <p className="studio-tip">
@@ -2736,33 +2724,31 @@ export default function StudioPage() {
                 <div className="studio-exact-layer" aria-label="图层精确插入">
                   <label className="studio-field">
                     目标图元
-                    <select
-                      aria-label="图层插入目标"
+                    <Select
                       value={layerTargetId}
                       disabled={!canPreciselyMove || layerTargetNodes.length === 0}
-                      onChange={(event) => setPreferredLayerTargetId(event.target.value)}
-                    >
-                      <option value="">请选择目标图元</option>
-                      {layerTargetNodes.map((node) => (
-                        <option key={node.id} value={node.id}>
-                          {node.id}
-                          {node.groupId ? "（组合）" : ""}
-                        </option>
-                      ))}
-                    </select>
+                      options={[
+                        { label: "请选择目标图元", value: "" },
+                        ...layerTargetNodes.map((node) => ({
+                          label: node.id + (node.groupId ? "（组合）" : ""),
+                          value: node.id,
+                        })),
+                      ]}
+                      onChange={(value) => setPreferredLayerTargetId(String(value))}
+                    />
                   </label>
                   <label className="studio-field">
                     插入位置
-                    <select
-                      aria-label="图层插入位置"
+                    <Select
                       value={layerInsertPosition}
-                      onChange={(event) =>
-                        setLayerInsertPosition(event.target.value as "before" | "after")
-                      }
-                    >
-                      <option value="after">目标上方（更靠前）</option>
-                      <option value="before">目标下方（更靠后）</option>
-                    </select>
+                      options={[
+                        { label: "目标上方（更靠前）", value: "after" },
+                        { label: "目标下方（更靠后）", value: "before" },
+                      ]}
+                      onChange={(value) => {
+                        if (value === "after" || value === "before") setLayerInsertPosition(value);
+                      }}
+                    />
                   </label>
                   <Button
                     type="button"
