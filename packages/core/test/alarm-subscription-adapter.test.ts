@@ -770,3 +770,20 @@ test("不存在的公历日期不能经首次快照进入订阅基线", () => {
   source.emit({ kind: "snapshot", values: [value] }, true, 0);
   expect(adapter.snapshot().baseline).toBeNull();
 });
+
+test("二十四时隐式跨日的首份快照必须停止订阅并撤销旧回调", () => {
+  const { adapter, source, scheduler, setNow } = setup();
+  setNow(Date.parse("2026-11-22T00:00:00.000Z"));
+  adapter.start();
+  source.emit({
+    kind: "snapshot",
+    values: [{ ...value, serverTimestamp: "2026-11-21T24:00:00.000Z" }],
+  });
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(adapter.snapshot().invalidated).toBe(true);
+  expect(source.closes).toBe(1);
+  expect(scheduler.cancels).toBe(1);
+  source.emit({ kind: "snapshot", values: [value] }, true, 0);
+  expect(adapter.snapshot().baseline).toBeNull();
+});
