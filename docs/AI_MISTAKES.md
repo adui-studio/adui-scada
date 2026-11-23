@@ -1108,3 +1108,18 @@
 - **最小修复候选**：点击业务按钮前记录已有 `.t-dialog` 节点，只在本次新增的弹窗内定位确认/取消按钮；保持原 12 秒弹窗门槛、真实点击和旧弹窗拒绝。最终删除先等待现有成功提示「项目 Tag 已删除，可撤销」，再导出实际工程 JSON 校验 Tag 不存在；已绑定 Tag 必须拒绝删除，取消必须保留定义，原有断言不变。仅修改 `scripts/test-studio-browser.mjs`，不动 React/Vue UI、Core Tag 规则、持久化、权限或工业边界。
 - **防复发与验证边界**：连续使用插件式 Dialog 的浏览器验收应按弹窗实例隔离定位，不以全局首个按钮或固定延时推断操作已经完成。协作容器仅对选择器模拟场景执行 Node 22 的 2/2 烟雾用例与语法检查；**未执行本仓库完整 `vp check`、Windows React/Vue Chromium `test:tags:browser` 或后续专项**。这些均须在最新 PR HEAD 复验。
 - **证据**：维护者本轮 PowerShell 日志、PR #189 最新源码、`scripts/test-studio-browser.mjs`、`apps/web-react/src/studio/StudioDialog.tsx`、TDesign React 1.18.6 `dialog/plugin.tsx` 与 `Dialog.tsx`。
+
+### E-115 · D5c0y 历史载入确认误点旧 Dialog 的回归风险（PR #189 合并后）
+
+- **Windows 真实现象**：维护者在 PR #189 Squash 合并后的回归中运行 `pnpm run test:versions` 与 `pnpm run test:versions:safety`，均在「等待版本历史操作结果超时：已载入本地版本 #1」处退出 1；未提供新的完整 HEAD、真实 Dialog DOM 快照或历史库内容。同期 `test:interop` React→Vue→React→Vue 与非法 JSON 保护全部通过，普通 `test:browser` 四视口各 33/33 通过。
+- **源码定位（待真实浏览器验证的根因候选）**：`studioVersionActionInPage` 连续点击「取消载入」与「确认载入」时，使用全局第一个 `.t-dialog .t-dialog__confirm`/`.t-dialog__cancel`。固定 TDesign 版本的 Dialog 销毁经过异步关闭动画，旧弹窗节点可能仍有布局，继而误点上一轮按钮。此路径与已修复的 E-114 Tag 删除竞态同类；不能凭超时本身推断真实编辑器、IndexedDB、CAS 或历史快照损坏。
+- **候选修复与防复发**：点击历史载入前快照当前 `.t-dialog` 节点，只在本轮新生成的 Dialog 内定位真实确认/取消按钮；保持原 12 秒等待与成功提示、JSON 复原、自动保存暂停、取消不覆盖、草稿未被改写及存储失败恢复的全部断言。不修改 React/Vue 正式组件或 Core/Schema。
+- **验收边界**：补丁在功能分支提交后仍需 Windows 最新 HEAD 的 `node --check`、`vp check`、`test:versions` 和 `test:versions:safety` 复验；没有运行实机前不能宣布 E-115 关闭。
+
+### E-116 · D5c0y 文件草稿 Popup 退出动画期间切换触发器可能重新打开
+
+- **Windows 真实现象**：PR #189 合并后 `pnpm run test:multitab` 通过 React BroadcastChannel 停写和无广播 IndexedDB CAS 阶段，进入后续草稿操作时抛「TDesign 文件草稿弹层关闭超时」，退出码 1；Vue 尚未执行。用户日志不包含关闭时 Popup 内部 visible 状态，不能将超时认定为草稿删除失败。
+- **源码定位（候选）**：`studioDraftFileActionInPage` 完成操作后只要 `.studio-file-popover` 仍有布局矩形，就再次 `trigger.click()`。Dialog 确认可能已使 Popup 逻辑关闭，但 CSS 退出动画期间保留布局；此时点击触发器可能把 Popup 重新打开。TDesign React 1.18.6 与 Vue Next 1.20.11 固定源码均监听文档 `mousedown` 进行外部关闭。
+- **候选修复与防复发**：改为向文档外部区域发送 `mousedown`，无论 Popup 正在关闭或仍展开均只请求关闭，不使用切换开关；继续在 `finally` 只执行清理、在正常控制流等待实际 DOM 收起，保留 5 秒超时，不吞没真实操作异常。同时为连续草稿确认按钮复用 E-114 的新 Dialog 实例定位，原 CAS、墓碑、恢复保存和故障注入断言不变。
+- **验收边界**：仅核验固定版本源码，仍需 Windows `test:multitab` React/Vue 全阶段及相关旧草稿与历史专项；不应把候选路径说成已实测根因。工业设备与生产数据未涉及。
+

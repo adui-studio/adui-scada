@@ -4490,3 +4490,41 @@ pnpm run test:tags:browser
 ```
 
 只有 Tag 浏览器专项在 React/Vue 两端完全通过后，继续 `pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:interop`、`pnpm run test:multitab`、`pnpm run test:browser`。若再次失败，保留实际错误和本轮业务提示结果，不擅自判定 Core 错误或降低测试约束。PR #189 保持 Draft、指派 `@adui-dev`，未经维护者明确授权不合并。
+
+## 2026-11-23 · D5c0y PR #189 合并后本地历史/多标签页回归阻塞（E-115 / E-116）
+
+维护者 Windows 对 PR #189 合并后的源码回归：`test:versions` 与 `test:versions:safety` 均在本地版本 #1 确认载入后未出现预期提示而失败；`test:multitab` 已通过 React BroadcastChannel 通知与停写保护、无广播 IndexedDB 旧修订拒绝，随后文件草稿 Popup 关闭超时；`test:interop` 完整 React/Vue JSON 往返及非法导入保护通过；`test:browser` React/Vue × 1440×900、1024×768 均 33/33 通过。日志未打印当前本地 HEAD，因此只将上述结果归于维护者反馈的回归轮次。
+
+按固定 `tdesign-react@1.18.6`、`tdesign-vue-next@1.20.11` 源码复核：历史版本与草稿辅助函数使用全局 Dialog 首按钮，可能点击仍在退出动画的旧节点；草稿 Popup 的收尾通过再次点击触发器切换开关，可能在已关闭但动画未结束时重新打开。**属于与源码吻合的候选原因，尚无真实浏览器 DOM 快照最终确认。**
+
+D5c0y 仅修改 `scripts/test-studio-browser.mjs`：两类确认均快照旧 Dialog，只能点击本次新 Dialog；文件草稿 Popup 改为文档外部 `mousedown` 幂等关闭，正常流程继续严格检查面板消失。不改等待时长、真实业务按钮、CAS、删除/恢复、IndexedDB 版本水位、旧版迁移、Schema、OIDC 或工业只读边界。
+
+在最新 Draft PR HEAD、隔离浏览器环境和本地开发服务已正常启动时，依次运行：
+
+```powershell
+git fetch origin
+git switch fix/d5c0y-studio-popup-browser-regression
+git pull --ff-only
+git rev-parse HEAD
+node --check scripts/test-studio-browser.mjs
+if ($LASTEXITCODE -ne 0) { throw "浏览器脚本语法检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "文案检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run test:versions
+if ($LASTEXITCODE -ne 0) { throw "历史版本测试失败" }
+pnpm run test:versions:safety
+if ($LASTEXITCODE -ne 0) { throw "历史版本安全测试失败" }
+pnpm run test:multitab
+if ($LASTEXITCODE -ne 0) { throw "多标签页测试失败" }
+pnpm run test:legacy:browser
+if ($LASTEXITCODE -ne 0) { throw "旧草稿迁移测试失败" }
+pnpm run test:browser
+if ($LASTEXITCODE -ne 0) { throw "普通 Studio 测试失败" }
+```
+
+其中 `test:interop` 与 `test:tags:browser` 已在 PR #189 前后运行过，最新 HEAD 如有后续相关变更仍需重跑；本次候选尚未在维护者 Windows 运行。只有真实 React/Vue 全阶段退出码 0 才能关闭 E-115 / E-116。PR 默认 Draft，须验收后由 `@adui-dev` 明确授权合并。
+
