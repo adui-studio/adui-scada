@@ -866,8 +866,13 @@ async function openTagManagerInPage() {
 
 function focusTagFieldInPage(index) {
   const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
-  const field = form?.querySelectorAll("input, textarea")[index];
-  if (!field) throw new Error("项目 Tag 表单字段不存在：" + index);
+  const fields = [...(form?.querySelectorAll("label.studio-field") ?? [])]
+    .filter((label) => !label.textContent.includes("数据类型"))
+    .map((label) => label.querySelector("input, textarea"));
+  const field = fields[index];
+  if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) {
+    throw new Error("项目 Tag 表单字段不存在：" + index);
+  }
   field.focus();
   field.select();
   return true;
