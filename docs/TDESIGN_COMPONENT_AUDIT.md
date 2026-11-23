@@ -83,3 +83,10 @@ D5c0s 审计基线：`StudioPage.tsx` 与 `StudioPage.vue` 每端各有 **9 处*
 - 本次优先替换 Popup 容器，原生 File input 与 CRUD 按钮暂不更换；后续使用 TDesign `Upload` 时，必须另外验证 `autoUpload=false`、本地文件尺寸、异步防并发和合法/非法工程往返。不得为了组件一致性改变业务验证顺序或擅自上传工程文件。
 - `scripts/test-studio-browser.mjs` 的原始用例以前设置 `details.open`。当前已将文件/草稿相关操作改为点击 TDesign 触发器、等待实际可见面板、完成动作并关闭；版本历史并发用例仍要检查旧逻辑被正确拒绝。独立浏览器 Studio 每视口新增 3 项 Popup 断言，目标从 27 项增加到 30 项，React/Vue 四组目标合计 **120 项**；其他导入导出、旧草稿迁移、版本安全与多标签页集成测试必须另行验收。
 - **验证状态**：仅完成 GitHub 分支源码及固定 TDesign React `1.18.6` / Vue Next `1.20.11` 的 `popup/type.ts`、组件事件与挂载定义核对。尚未实跑 Windows `typecheck:web`、`vp check`、浏览器或真实文件导入；不得将静态匹配表述为正式测试通过。
+
+## 9. D5c0v · 本地版本历史 Popup 双框架迁移候选
+
+- **实际范围**：仅将 React/Vue Studio 工具栏「版本历史」1 处/框架的原生 `details/summary` 更换为当前 Catalog 版本 `tdesign-react@1.18.6`、`tdesign-vue-next@1.20.11` 的 `Popup + Button`。按各版本官方 `popup/type.ts` 核对 `attach`、`trigger`、`placement` 和 `onVisibleChange`；Vue 使用 `#content`，React 使用 `content` JSX。新的唯一挂载选择器为 `.studio-local-history-menu`，不会误挂到同样使用 `.studio-version-menu` 的发布预检和服务端历史。
+- **保留业务**：打开面板时触发原 `refreshVersionHistory()`；创建快照、刷新、查询分页、版本差异、取消/确认载入、CAS/自动保存暂停、历史 SHA-256/原记录保留和 IndexedDB 错误处理的生产函数没有改变。面板采用 Popup 负责定位及点击外部关闭，共享 CSS 仅增加对本地面板的 `position: static`，其余两个旧版历史菜单仍使用原 CSS；未动发布预检、OIDC 权限或服务端发布读写。
+- **真实浏览器门禁**：将 `test-studio-browser.mjs` 中针对本地历史的 `menu.open` 修改为真实 Popup 触发器。保持历史库异常、旧 0.2.0 快照、差异/取消/载入/分页和导入期间历史覆盖保护的所有原有断言。新增 3 项普通 Studio Popup 回归，目标每视口 **33 项**，四组 **132 项**；版本历史专项、版本安全、旧版草稿和发布预检还须单独复验。
+- **当前仅是 GitHub 候选**：所有 Windows `typecheck:web`、`vp check`、`docs:check`、`test:browser`、`test:versions`、`test:versions:safety`、`test:legacy:browser` 与 `test:release:preflight:browser` 均待维护者在最终 HEAD 执行，不把早期测试结果冒充本批通过。当前工具没有仓库要求的 `tdesign-mcp-server`，已核对两个安装版本官方源码与 Props，但不能称为 MCP 查询完成。
