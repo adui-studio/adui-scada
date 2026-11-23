@@ -3489,3 +3489,40 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批未更改 HTTP、Prisma、Vue/React、真实协议或工业设备写入，当前只要求上述 Core 定向与静态门禁；如出现关联回归失败需扩大覆盖，不把未运行的全量 ready 或浏览器专项算作通过。PR 默认保持 Draft，必须经维护者新一轮验收并明确授权才能合并。
+
+## 2026-11-23 · D5b9u PR #160 Windows 通过合并与 D5b9v 待验收
+
+维护者提供 PR #160 Windows 定向结果：`alarm-baseline-session.test.ts` **21/21**、`alarm-session-controller.test.ts` **10/10**、`alarm-subscription-adapter.test.ts` **27/27**，合计 **58/58**；`vp check` **435 个格式文件 / 286 个受检文件零警告错误**；文档检查 **90**、中文文案 **310**。GitHub 合并前核对 `f8a5818` 仅有测试排版提交、无未解决审查意见与冲突；按维护者授权 Squash 合并 PR #160 至 `main@8f09f296fc5c3fc5df1c6633939ce80414e137f8`。Windows 日志未打印本机 HEAD，不把它编造为该提交的直接本机复验；没有完整 ready 及工业现场安全验收。
+
+D5b9v 为底层序列函数补充先前基线复查，修正两份旧夹具并新增 **4 项测试定义**。当前仅静态核对 GitHub 差异，没有 D5b9v Windows 运行记录。验收覆盖序列 **9**、代次 **7**、低层增量 **15**、会话归约器 **21**、托管器 **10**、适配器 **27**，总计目标 **89** 项。
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5b9v-alarm-ordered-baseline-freshness
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5b9v-alarm-ordered-baseline-freshness
+}
+if ($LASTEXITCODE -ne 0) { throw "切换功能分支失败" }
+
+git pull --ff-only origin fix/d5b9v-alarm-ordered-baseline-freshness
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 自动修正失败" }
+
+vp test run packages/core/test/alarm-tag-sequence.test.ts packages/core/test/alarm-session-generation.test.ts packages/core/test/alarm-tag-delta.test.ts packages/core/test/alarm-baseline-session.test.ts packages/core/test/alarm-session-controller.test.ts packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警旧基线质量时效回归失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批不需要真实 PostgreSQL、工业协议或浏览器写入；所有这些系统保持不变。当前仓库依赖未在协作环境完整安装，未执行本批 `vp` 或完整 `ready`，不得把预期 89/89 冒充验收通过。新的 Draft PR 须经维护者独立验收并另行授权后才允许 Squash 合并。
