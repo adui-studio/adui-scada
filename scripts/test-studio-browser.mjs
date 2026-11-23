@@ -1054,7 +1054,7 @@ async function runStudioReleasePreflight(session) {
   }
 }
 
-/** 在真实浏览器内定位项目 Tag 管理表单并打开详情区。 */
+/** 展开项目 Tag 目录；编辑表单只能在明确点击新建或编辑后打开。 */
 async function openTagManagerInPage() {
   const menu = [...document.querySelectorAll(".studio-advanced")].find((node) =>
     node.querySelector(".t-collapse-panel__header")?.textContent.includes("项目 Tag 定义"),
@@ -1065,19 +1065,52 @@ async function openTagManagerInPage() {
   trigger.click();
   const started = Date.now();
   while (Date.now() - started < 5000) {
-    const form = menu.querySelector('form[aria-label="项目 Tag 编辑表单"]');
+    const list = menu.querySelector('[role="list"][aria-label="项目 Tag 目录"]');
+    if (list?.getClientRects().length) return true;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("项目 Tag 目录展开超时");
+}
+
+/** 独立对话框内才包含新建/编辑表单，不能退化为右侧属性栏常驻表单。 */
+async function openNewTagEditorInPage() {
+  const button = [...document.querySelectorAll(".studio-tag-toolbar button")].find(
+    (node) => node.textContent.trim() === "新建 Tag",
+  );
+  if (!(button instanceof HTMLButtonElement)) throw new TypeError("Tag 新建入口缺失");
+  button.click();
+  const started = Date.now();
+  while (Date.now() - started < 5000) {
+    const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
     if (form?.getClientRects().length) return true;
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
-  throw new Error("项目 Tag 管理表单展开超时");
+  throw new Error("Tag 新建对话框打开超时");
+}
+
+function inspectTagFormDialogInPage() {
+  const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
+  if (!(form instanceof HTMLFormElement)) throw new TypeError("Tag 表单未挂载");
+  const modal = form.closest(".t-dialog");
+  if (!(modal instanceof HTMLElement)) throw new TypeError("Tag 表单不在 TDesign 对话框内");
+  const grid = form.querySelector(".studio-tag-form-grid");
+  const buttons = [...form.querySelectorAll(".studio-tag-form-actions button")];
+  return {
+    separateFromSidebar: !form.closest(".studio-panel-properties"),
+    modalWidth: Math.round(modal.getBoundingClientRect().width),
+    columns: grid ? getComputedStyle(grid).gridTemplateColumns.split(" ").length : 0,
+    fieldCount: form.querySelectorAll("label.studio-field").length,
+    buttons: buttons.map((button) => button.textContent.trim()),
+  };
 }
 
 function focusTagFieldInPage(index) {
   const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
-  const fields = [...(form?.querySelectorAll("label.studio-field") ?? [])]
-    .filter((label) => !label.textContent.includes("数据类型"))
-    .map((label) => label.querySelector("input, textarea"));
-  const field = fields[index];
+  const names = ["稳定 Tag ID", "显示名称", "单位", "描述"];
+  const label = [...(form?.querySelectorAll("label.studio-field") ?? [])].find((item) =>
+    item.textContent.trim().startsWith(names[index]),
+  );
+  const field = label?.querySelector("input, textarea");
   if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) {
     throw new Error("项目 Tag 表单字段不存在：" + index);
   }
@@ -1109,6 +1142,15 @@ async function clickTagRowActionInPage(tagId, action, confirmChoice) {
   // TDesign Dialog 退出动画期间仍可能保留旧按钮，后续只允许操作本次新建弹窗。
   const previousDialogs = new Set(document.querySelectorAll(".t-dialog"));
   button.click();
+  if (confirmChoice === null) {
+    const started = Date.now();
+    while (Date.now() - started < 5000) {
+      const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
+      if (form?.getClientRects().length) return true;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    throw new Error("Tag 编辑对话框打开超时：" + tagId);
+  }
   if (confirmChoice !== null) {
     const started = Date.now();
     let choice = null;
@@ -1129,27 +1171,21 @@ async function clickTagRowActionInPage(tagId, action, confirmChoice) {
   return true;
 }
 
-/** 从实际 DOM 度量 Tag 操作行，避免全量 TDesign 化后重现高亮整列按钮。 */
+/** 侧栏行操作保持紧凑，完整表单必须在弹窗内提供足够宽度。 */
 function inspectTagActionLayoutInPage() {
   const manager = document.querySelector(".studio-tag-manager");
-  const row = manager?.querySelector(".studio-tag-item");
-  const actions = row?.querySelector(".studio-tag-actions");
-  const formActions = manager?.querySelector(".studio-tag-form-actions");
-  if (!(actions instanceof HTMLElement) || !(formActions instanceof HTMLElement)) {
-    throw new TypeError("项目 Tag 紧凑操作区未挂载");
-  }
-  const measure = (container) => {
-    const buttons = [...container.querySelectorAll(".t-button")];
-    return {
-      columns: getComputedStyle(container).gridTemplateColumns.split(" ").length,
-      count: buttons.length,
-      bounds: buttons.map((button) => {
-        const rect = button.getBoundingClientRect();
-        return { width: rect.width, height: rect.height };
-      }),
-    };
+  const actions = manager?.querySelector(".studio-tag-item .studio-tag-actions");
+  if (!(actions instanceof HTMLElement)) throw new TypeError("Tag 行操作区未挂载");
+  const buttons = [...actions.querySelectorAll(".t-button")];
+  return {
+    display: getComputedStyle(actions).display,
+    count: buttons.length,
+    compact: buttons.every((button) => {
+      const rect = button.getBoundingClientRect();
+      return rect.width >= 42 && rect.width <= 90 && rect.height >= 26;
+    }),
+    noSidebarForm: !manager?.querySelector('form[aria-label="项目 Tag 编辑表单"]'),
   };
-  return { item: measure(actions), form: measure(formActions) };
 }
 
 /** 用最大合法长度的连续 Tag ID 检查窄屏换行，仅临时改变浏览器 DOM，不触发业务写入。 */
@@ -1242,23 +1278,11 @@ async function runStudioTagManagement(session) {
       network.stop();
     }
     await evaluateStudioPage(session, openTagManagerInPage);
-    const layout = await evaluateStudioPage(session, inspectTagActionLayoutInPage);
-    for (const [kind, actions] of [
-      ["Tag 条目", layout.item],
-      ["Tag 表单", layout.form],
-    ]) {
-      assert.equal(actions.count, 2, target.name + " " + kind + " 操作按钮数量不正确");
-      assert.equal(actions.columns, 2, target.name + " " + kind + " 操作没有保持双列");
-      assert.ok(
-        actions.bounds.every((button) => button.width > 0 && button.height > 0),
-        target.name + " " + kind + " 存在不可见操作按钮",
-      );
-      assert.ok(
-        Math.abs(actions.bounds[0].height - actions.bounds[1].height) <= 1 &&
-          Math.abs(actions.bounds[0].width - actions.bounds[1].width) <= 1,
-        target.name + " " + kind + " 按钮尺寸不一致",
-      );
-    }
+    assert.deepStrictEqual(
+      await evaluateStudioPage(session, inspectTagActionLayoutInPage),
+      { display: "flex", count: 2, compact: true, noSidebarForm: true },
+      target.name + " Tag 侧栏必须只保留紧凑目录，不再嵌入完整表单",
+    );
     // 在窄视口验证长 Tag ID 不撑开侧栏，且 Tab 能顺序聚焦 TDesign 危险操作按钮。
     await session.send("Emulation.setDeviceMetricsOverride", {
       width: 1024,
@@ -1301,6 +1325,18 @@ async function runStudioTagManagement(session) {
       mobile: false,
     });
     await pause(100);
+
+    await evaluateStudioPage(session, openNewTagEditorInPage);
+    const dialogLayout = await evaluateStudioPage(session, inspectTagFormDialogInPage);
+    assert.ok(dialogLayout.separateFromSidebar, target.name + " Tag 表单错误嵌在侧栏中");
+    assert.ok(dialogLayout.modalWidth >= 600, target.name + " Tag 编辑弹窗宽度不足");
+    assert.equal(dialogLayout.columns, 2, target.name + " Tag 主表单不是双列");
+    assert.equal(dialogLayout.fieldCount, 5, target.name + " Tag 主表单字段缺失");
+    assert.deepStrictEqual(
+      dialogLayout.buttons,
+      ["取消", "创建 Tag"],
+      target.name + " Tag 表单操作主次不明确",
+    );
 
     const tagId = "browser." + target.name.toLowerCase() + ".pressure";
     await fillTagField(session, 0, tagId);
@@ -1385,7 +1421,7 @@ async function runStudioTagManagement(session) {
       target.name + " 删除 Tag 后工程仍包含该定义",
     );
     process.stdout.write(
-      target.name + " Tag 窄屏换行、键盘焦点、新增、编辑、绑定删除保护、删除与 JSON 往返通过\n",
+      target.name + " Tag 独立表单、窄屏换行、键盘焦点、新增、编辑、绑定删除保护、删除与 JSON 往返通过\n",
     );
   }
 }
