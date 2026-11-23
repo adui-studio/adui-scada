@@ -149,3 +149,26 @@ test("报警候选拒绝二十四时跨日归一化并接受规范的次日零�
     ),
   ).toEqual({ status: "READY", value: 42 });
 });
+
+test("报警候选拒绝超出毫秒精度的时间戳并保留一至三位小数秒", () => {
+  for (const timestamp of [
+    "2026-11-22T09:00:00.0001Z",
+    "2026-11-22T08:59:59.999900Z",
+    "2026-11-22T17:59:59.999100+09:00",
+  ]) {
+    expect(() =>
+      classifyTimelyNumericAlarmSample({ ...valid, serverTimestamp: timestamp }, nowMs, 1000),
+    ).toThrow("报警服务器时间戳精度超过毫秒");
+  }
+  for (const timestamp of [
+    "2026-11-22T09:00:00Z",
+    "2026-11-22T09:00:00.0Z",
+    "2026-11-22T09:00:00.00Z",
+    "2026-11-22T09:00:00.000Z",
+    "2026-11-22T18:00:00.000+09:00",
+  ]) {
+    expect(
+      classifyTimelyNumericAlarmSample({ ...valid, serverTimestamp: timestamp }, nowMs, 1000),
+    ).toEqual({ status: "READY", value: 42 });
+  }
+});
