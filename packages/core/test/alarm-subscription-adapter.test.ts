@@ -737,3 +737,19 @@ test("等待快照期间调度时钟无效也会停止订阅并清理旧回调",
   expect(immediate.source.closes).toBe(1);
   expect(immediate.scheduler.cancels).toBe(1);
 });
+
+test("无时区服务器时间的首份快照会停止订阅并撤销旧回调", () => {
+  const { adapter, source, scheduler } = setup();
+  adapter.start();
+  source.emit({
+    kind: "snapshot",
+    values: [{ ...value, serverTimestamp: "2026-11-22T08:59:58.000" }],
+  });
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(adapter.snapshot().invalidated).toBe(true);
+  expect(source.closes).toBe(1);
+  expect(scheduler.cancels).toBe(1);
+  source.emit({ kind: "snapshot", values: [value] }, true, 0);
+  expect(adapter.snapshot().baseline).toBeNull();
+});
