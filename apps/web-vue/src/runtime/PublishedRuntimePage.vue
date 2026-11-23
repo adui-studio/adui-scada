@@ -91,7 +91,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="scada-shell" data-testid="published-runtime-page">
+  <main id="scada-main-content" class="scada-shell scada-shell--published" data-testid="published-runtime-page">
     <header class="scada-header">
       <div>
         <p class="scada-eyebrow">ADui SCADA · 正式发布配置只读监控</p>
@@ -104,7 +104,7 @@ onUnmounted(() => {
     <p class="scada-message" role="status" data-testid="published-runtime-status">
       {{ state.message }}
     </p>
-    <section class="scada-panel" aria-label="正式发布工程选择">
+    <section class="scada-panel scada-published-controls-panel" aria-label="正式发布工程选择">
       <h2>读取已发布工程</h2>
       <p class="scada-diagnostics-note">
         独立 release:read 权限 · 仅使用当前登录会话 · 不读取编辑草稿或模拟数据
@@ -126,7 +126,7 @@ onUnmounted(() => {
       </form>
       <p v-if="message" role="alert">{{ message }}</p>
     </section>
-    <section class="scada-panel" aria-label="正式发布状态">
+    <section class="scada-panel scada-published-summary-panel" aria-label="正式发布状态">
       <h2>已提交发布指针</h2>
       <dl class="scada-diagnostics-grid">
         <div>
@@ -147,7 +147,7 @@ onUnmounted(() => {
         </div>
       </dl>
     </section>
-    <section class="scada-panel" aria-label="已发布静态组态预览">
+    <section class="scada-panel scada-published-preview-panel" aria-label="已发布静态组态预览">
       <h2>已发布组态静态预览</h2>
       <div v-if="pages.length > 1" class="scada-published-controls">
         <label for="published-vue-page-id">组态页面</label>
