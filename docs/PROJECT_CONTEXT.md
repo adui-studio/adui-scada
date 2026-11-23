@@ -2504,4 +2504,3 @@ D5c0v 基于合并后的 main，限定本地版本历史一个入口/框架：�
 ## 2026-11-23 · PR #189 Tag 浏览器首次 React 导航阻塞（E-113）
 
 维护者在 React 19 TDesign 适配器候选后执行 Windows `typecheck:web`、`vp check`（448/291 零警告错误）、中文文案（318）及文档（94）均通过；`test:tags:browser` 则在首次 React HTTPS 导航阶段直接失败，未到 Tag 删除确认路径，其后专项未执行。初步定位为浏览器导航诊断不足，尚无实际 Chromium 网络错误码，不能断言是适配器、证书或缓存引起。根据 E-106 先前真实 `ERR_CACHE_WRITE_FAILURE` 证据，现仅在 `--tags` 临时 Chromium 的 HTTP 缓存上使用 CDP 隔离，同时为导航失败补充严格白名单网络/加载状态诊断。保持全部真实 Tag 删除取消/确认、绑定保护、CAS 及 HTTPS 约束。相关文档 E-113；本提交 Windows 实测待补，PR #189 仍为 Draft、Assignee `@adui-dev`、未授权合并。
-

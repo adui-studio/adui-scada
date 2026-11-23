@@ -1100,4 +1100,3 @@
 - **最小候选**：仅改 `scripts/test-studio-browser.mjs`。在 `--tags` 独立临时 Chromium 中调用 `Network.enable` 与 `Network.setCacheDisabled({cacheDisabled:true})`，使本机开发资源不依赖有故障记录的 HTTP 磁盘缓存；**不触碰 IndexedDB、BroadcastChannel、业务 CAS、TLS 校验或设备数据**。对 `--tags` 的真实导航开启已有 `watchStudioModuleNetwork` 观察器，只在失败时附加按同源资源类别脱敏的诊断，在 `finally` 关闭监听。导航失败错误增加白名单 `net::ERR_[A-Z0-9_]{1,64}`、地址匹配布尔值和 `document.readyState`，同时补充 React 入口、React 19 适配器、React/Vue Studio 模块分类；不输出 HTTP 正文、Cookie、授权信息或异常堆栈。
 - **防复发与验收**：不延长原 60 × 150ms 门槛，不重试掩盖失败，不取消真实 Tag 确认/取消和已绑定拒绝断言。若隔离 HTTP 缓存后通过，仅证明该会话可继续验收，不能据此认定本次原失败根因就是缓存；若仍失败，先据新诊断分类查网络/证书/模块再改正式应用。**本批仅已提交 GitHub 候选，尚未运行 Windows `node --check`、`vp check`、`test:tags:browser`，不得声称修复已实测通过。**
 - **证据**：维护者本轮 Windows 原始失败日志、`scripts/test-studio-browser.mjs` 现有导航/网络诊断、历史 E-106 Chromium 缓存实测记录和 PR #189。
-

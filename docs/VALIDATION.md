@@ -4467,4 +4467,3 @@ pnpm run test:tags:browser
 ```
 
 只有 `test:tags:browser` 通过后，再运行 `pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:interop`、`pnpm run test:multitab`、`pnpm run test:browser`。如果仍导航失败，请保留新输出的「地址匹配 / 文档状态 / Chromium导航错误 / 同源网络诊断」，不修改协议或跳过安全断言。PR 保持 Draft，未经维护者明确授权不合并。
-
