@@ -130,3 +130,9 @@ Studio 的「页面管理」原本由原生 `details/summary` 和 `.studio-page-
 保留本地 `<input type="file">`、自动保存按钮、JSON 导入导出、草稿恢复与清除及其现有禁用态，不引入网络上传。TDesign Upload 另做批次，先核对 `autoUpload` 和自有工程验证安全边界；现有文件读取、大小限制、非法输入、CAS、版本并发保护和用户确认行为全部不变。
 
 为 React/Vue 1440×900、1024×768 各增 3 项真实 Popup 测试，目标每组 30 项；具体业务还要运行 JSON 互通、版本安全、旧版草稿迁移和多标签页专项。当前所有 Windows 新分支验证待执行。
+
+## D5c0v · 本地版本历史优先复用 TDesign Popup
+
+React/Vue 的本地「版本历史」原生 `details/summary` 被各自当前固定版本的 TDesign `Popup + Button` 替换。新独立 `.studio-local-history-menu` 解决同组 `.studio-version-menu` 还服务于「发布预检」「服务端工程版本」的挂载冲突；Popup 负责点击触发、定位和外部关闭，面板使用 `position: static` 保持宽度 `min(378px, calc(100vw - 24px))`、最大高度 `min(70vh, 610px)` 和滚动行为。Studio 252px/320px 侧栏及 SVG 16:9 几何不变。
+
+历史列表读取仍只在面板展开时触发原业务函数；快照 SHA-256、CAS、防止导入期间覆盖和危险载入确认都留在原业务层。未迁移的发布预检与服务端工程历史仍是原生 `details`，不能因这次候选宣称全量弹层完成 TDesign 化。Windows 实测待验收。
