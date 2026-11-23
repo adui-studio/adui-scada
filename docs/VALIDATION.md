@@ -4439,3 +4439,12 @@ PR #188 已提交最小修复候选：图层拖拽事件签名由 `ReactDragEven
 **专项新增**：`scripts/test-studio-browser.mjs` 的 `--tags` 流程在真实 React/Vue Tag 面板展开后读取两组按钮实际 `getBoundingClientRect()` 和网格列数，要求各 2 个按钮、双列、可见、每组同高同宽；保留后续 Tag 新增/编辑/绑定删除保护/删除的原始业务断言。
 
 **待维护者 Windows 实测（尚未通过）**：同一最新 HEAD 执行 `pnpm run typecheck:web`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`、`pnpm run test:browser`、`pnpm run test:tags:browser`；再运行 `pnpm run test:interop`、`pnpm run test:versions:safety` 与 `pnpm run test:multitab` 确保跨端/存储安全无意外回归。在 1440×900、1024×768 双版本检查图层选中/键盘焦点、Tag 条目编辑删除、表单提交/重置、长 ID 折行和两侧栏宽度。未获得最终验收结果前新 PR 保持 Draft、指派 `@adui-dev`，不合并。
+
+## 2026-11-23 · PR #189 Tag 删除 Dialog 未挂载与 React 19 官方适配修复候选
+
+维护者本轮 Windows 依次运行以下检查，**仅这些已获得成功证据**：`pnpm run typecheck:web` 成功；`vp check` **448 个格式文件/291 个受检文件零告警错误**；`messages:check` 318 文件；`docs:check` 94 Markdown；`test:browser` React/Vue 在 1440×900、1024×768 **四组各 33/33**。随后 `test:tags:browser` 失败：`clickTagRowActionInPage` 等待 TDesign Tag 删除确认 Dialog 超时。PowerShell 在失败时退出，因此 `test:interop`、`test:versions:safety`、`test:multitab` **未运行**。
+
+已审查固定 `tdesign-react@1.18.6` 的官方 React 19 支持机制，发现生产入口缺少 `tdesign-react/es/_util/react-19-adapter` 副作用导入。其 `react-render.ts` 在 React 19 且未加载适配器时无法进行插件动态渲染，这可以解释 `DialogPlugin.confirm` 没有实际挂载，而非由视觉上按钮变小造成。已在 `apps/web-react/src/main.tsx` 按官方文档添加适配器；原 `test:tags:browser` 继续真实点击确认并新增取消不写入断言，Tag 绑定保护没有删除。详见 AI 错误复盘 E-112。
+
+**修复候选尚未运行 Windows 验收**。待同一最新 HEAD 复验：`pnpm run typecheck:web`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`、`pnpm run test:browser`、`pnpm run test:tags:browser`；通过后继续 `pnpm run test:interop`、`pnpm run test:versions:safety`、`pnpm run test:multitab`。关注 React/Vue Tag 删除确认/取消、已绑定 Tag 拒绝、工程 JSON 往返，及 React 19 各插件式 Dialog（草稿覆盖和历史版本载入）的可见性与安全语义。新 PR 仍保持 Draft，未经维护者明确同意不合并。
+
