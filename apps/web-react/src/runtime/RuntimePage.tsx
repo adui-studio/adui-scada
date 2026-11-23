@@ -39,7 +39,8 @@ export default function RuntimePage() {
       <p role="status" className="scada-message">
         {state.message}
       </p>
-      <section className="scada-panel scada-process-panel" aria-label="模拟工业监控画面">
+      <div className="scada-monitor-layout">
+        <section className="scada-panel scada-process-panel" aria-label="模拟工业监控画面">
         <h2>模拟工艺流程</h2>
         <p className="scada-panel-subtitle">只读演示画面 · 不代表现场设备数据</p>
         {svg ? (
@@ -48,7 +49,8 @@ export default function RuntimePage() {
           <p>正在加载工程…</p>
         )}
       </section>
-      <section className="scada-panel scada-diagnostics" aria-label="本地实时链路诊断">
+        <div className="scada-monitor-side">
+          <section className="scada-panel scada-diagnostics" aria-label="本地实时链路诊断">
         <h2>实时链路诊断</h2>
         <p className="scada-diagnostics-note">
           本机只读观测 · 数据年龄为接受有效 Tag 后经过的时间，并非网络传输延迟
@@ -99,7 +101,7 @@ export default function RuntimePage() {
           )}
         </section>
       </section>
-      <section className="scada-panel scada-values-panel" aria-label="Tag 质量与最近值">
+          <section className="scada-panel scada-values-panel" aria-label="Tag 质量与最近值">
         <h2>Tag 质量与最近值</h2>
         {state.values.length === 0 && (
           <p className="scada-diagnostics-empty">暂无可显示的 Tag 数据</p>
@@ -114,6 +116,8 @@ export default function RuntimePage() {
           ))}
         </div>
       </section>
+        </div>
+      </div>
       <footer>仅模拟数据 · 只读监控 · 不连接 PLC/DCS</footer>
     </main>
   );

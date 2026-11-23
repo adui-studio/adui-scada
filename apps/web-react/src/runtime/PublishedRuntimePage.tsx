@@ -121,7 +121,9 @@ export default function PublishedRuntimePage() {
       <p className="scada-message" role="status" data-testid="published-runtime-status">
         {state.message}
       </p>
-      <section className="scada-panel scada-published-controls-panel" aria-label="正式发布工程选择">
+      <div className="scada-published-layout">
+        <div className="scada-published-sidebar">
+          <section className="scada-panel scada-published-controls-panel" aria-label="正式发布工程选择">
         <h2>读取已发布工程</h2>
         <p className="scada-diagnostics-note">
           独立 release:read 权限 · 仅使用当前登录会话 · 不读取编辑草稿或模拟数据
@@ -150,7 +152,7 @@ export default function PublishedRuntimePage() {
         </form>
         {message ? <p role="alert">{message}</p> : null}
       </section>
-      <section className="scada-panel scada-published-summary-panel" aria-label="正式发布状态">
+          <section className="scada-panel scada-published-summary-panel" aria-label="正式发布状态">
         <h2>已提交发布指针</h2>
         <dl className="scada-diagnostics-grid">
           <div>
@@ -171,6 +173,7 @@ export default function PublishedRuntimePage() {
           </div>
         </dl>
       </section>
+        </div>
       <section
         className="scada-panel scada-published-preview-panel"
         aria-label="已发布静态组态预览"
@@ -207,6 +210,7 @@ export default function PublishedRuntimePage() {
           <p className="scada-diagnostics-empty">{PUBLISHED_RUNTIME_EMPTY_HINTS[state.status]}</p>
         )}
       </section>
+      </div>
       <footer>正式发布只读 · 未接入现场数据 · 不开放设备控制</footer>
     </main>
   );

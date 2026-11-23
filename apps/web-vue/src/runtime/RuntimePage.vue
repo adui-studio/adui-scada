@@ -40,13 +40,15 @@ onUnmounted(() => runtime.stop());
       }}</span>
     </header>
     <p role="status" class="scada-message">{{ state.message }}</p>
-    <section class="scada-panel scada-process-panel" aria-label="模拟工业监控画面">
+    <div class="scada-monitor-layout">
+      <section class="scada-panel scada-process-panel" aria-label="模拟工业监控画面">
       <h2>模拟工艺流程</h2>
       <p class="scada-panel-subtitle">只读演示画面 · 不代表现场设备数据</p>
       <img v-if="svg" class="scada-svg" :src="svg" alt="水箱、水泵与流量模拟监控" />
       <p v-else>正在加载工程…</p>
     </section>
-    <section class="scada-panel scada-diagnostics" aria-label="本地实时链路诊断">
+      <div class="scada-monitor-side">
+        <section class="scada-panel scada-diagnostics" aria-label="本地实时链路诊断">
       <h2>实时链路诊断</h2>
       <p class="scada-diagnostics-note">
         本机只读观测 · 数据年龄为接受有效 Tag 后经过的时间，并非网络传输延迟
@@ -101,7 +103,7 @@ onUnmounted(() => runtime.stop());
         </ol>
       </section>
     </section>
-    <section class="scada-panel scada-values-panel" aria-label="Tag 质量与最近值">
+        <section class="scada-panel scada-values-panel" aria-label="Tag 质量与最近值">
       <h2>Tag 质量与最近值</h2>
       <p v-if="state.values.length === 0" class="scada-diagnostics-empty">暂无可显示的 Tag 数据</p>
       <div class="scada-tags">
@@ -112,6 +114,8 @@ onUnmounted(() => runtime.stop());
         </div>
       </div>
     </section>
+      </div>
+    </div>
     <footer>仅模拟数据 · 只读监控 · 不连接 PLC/DCS</footer>
   </main>
 </template>

@@ -111,7 +111,9 @@ onUnmounted(() => {
     <p class="scada-message" role="status" data-testid="published-runtime-status">
       {{ state.message }}
     </p>
-    <section class="scada-panel scada-published-controls-panel" aria-label="正式发布工程选择">
+    <div class="scada-published-layout">
+      <div class="scada-published-sidebar">
+        <section class="scada-panel scada-published-controls-panel" aria-label="正式发布工程选择">
       <h2>读取已发布工程</h2>
       <p class="scada-diagnostics-note">
         独立 release:read 权限 · 仅使用当前登录会话 · 不读取编辑草稿或模拟数据
@@ -139,7 +141,7 @@ onUnmounted(() => {
       </form>
       <p v-if="message" role="alert">{{ message }}</p>
     </section>
-    <section class="scada-panel scada-published-summary-panel" aria-label="正式发布状态">
+        <section class="scada-panel scada-published-summary-panel" aria-label="正式发布状态">
       <h2>已提交发布指针</h2>
       <dl class="scada-diagnostics-grid">
         <div>
@@ -160,7 +162,8 @@ onUnmounted(() => {
         </div>
       </dl>
     </section>
-    <section class="scada-panel scada-published-preview-panel" aria-label="已发布静态组态预览">
+      </div>
+      <section class="scada-panel scada-published-preview-panel" aria-label="已发布静态组态预览">
       <h2>已发布组态静态预览</h2>
       <div v-if="pages.length > 1" class="scada-published-controls">
         <label>
@@ -189,6 +192,7 @@ onUnmounted(() => {
         {{ PUBLISHED_RUNTIME_EMPTY_HINTS[state.status] }}
       </p>
     </section>
+    </div>
     <footer>正式发布只读 · 未接入现场数据 · 不开放设备控制</footer>
   </main>
 </template>
