@@ -195,3 +195,19 @@ test("初始快照服务器时间缺少时区不能建立报警候选基线", ()
     ),
   ).toThrow("报警服务器时间戳必须包含明确时区");
 });
+
+test("不存在的公历日期不能在快照中被自动归一化为有效基线", () => {
+  expect(() =>
+    establishAlarmSnapshotBaseline(
+      {
+        ...request,
+        change: {
+          kind: "snapshot",
+          values: [{ ...sample, serverTimestamp: "2026-02-30T09:00:00.000Z" }],
+        },
+      },
+      Date.parse("2026-03-02T09:00:00.000Z"),
+      1000,
+    ),
+  ).toThrow("报警服务器时间戳日期无效");
+});
