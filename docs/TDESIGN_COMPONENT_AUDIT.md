@@ -4,9 +4,9 @@
 
 ## 1. 现有依赖与权威依据
 
-| 项目 | 当前固定版本 | 官方源码（与 Catalog 固定版本匹配） |
-| --- | --- | --- |
-| React | `tdesign-react@1.18.6` | [Dropdown](https://github.com/Tencent/tdesign-react/blob/tdesign-react%401.18.6/packages/components/dropdown/type.ts)、[Popup](https://github.com/Tencent/tdesign-react/blob/tdesign-react%401.18.6/packages/components/popup/type.ts)、[Dialog](https://github.com/Tencent/tdesign-react/blob/tdesign-react%401.18.6/packages/components/dialog/type.ts) |
+| 项目  | 当前固定版本               | 官方源码（与 Catalog 固定版本匹配）                                                                                                                                                                                                                                                                                                                                            |
+| ----- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| React | `tdesign-react@1.18.6`     | [Dropdown](https://github.com/Tencent/tdesign-react/blob/tdesign-react%401.18.6/packages/components/dropdown/type.ts)、[Popup](https://github.com/Tencent/tdesign-react/blob/tdesign-react%401.18.6/packages/components/popup/type.ts)、[Dialog](https://github.com/Tencent/tdesign-react/blob/tdesign-react%401.18.6/packages/components/dialog/type.ts)                      |
 | Vue 3 | `tdesign-vue-next@1.20.11` | [Dropdown](https://github.com/Tencent/tdesign-vue-next/blob/tdesign-vue-next%401.20.11/packages/components/dropdown/type.ts)、[Popup](https://github.com/Tencent/tdesign-vue-next/blob/tdesign-vue-next%401.20.11/packages/components/popup/type.ts)、[Dialog](https://github.com/Tencent/tdesign-vue-next/blob/tdesign-vue-next%401.20.11/packages/components/dialog/type.ts) |
 
 版本来源为仓库根目录 [pnpm Catalog](../pnpm-workspace.yaml)，不是当前官网浮动示例。TDesign 官网入口：[React](https://tdesign.tencent.com/react/overview)、[Vue Next](https://tdesign.tencent.com/vue-next/overview)。两端 API 相似但不可假定完全相同；任何交互迁移都要分别检查当前版本的类型、示例及源码。
@@ -15,35 +15,35 @@
 
 ## 2. 已存在、应优先复用的组件能力
 
-| 用途 | TDesign 候选 | 已核验 API/边界 |
-| --- | --- | --- |
-| 简单动作下拉菜单 | `Dropdown` | `options`、`trigger='click'`、`placement`、`disabled`、`hideAfterItemClick`、`onClick`；React/Vue 都存在，回调须按**各自版本**类型处理 |
-| 含表单、列表等复杂浮层 | `Popup` | `visible`、`onVisibleChange`、`trigger`、`placement`、`attach`、`destroyOnClose`、`overlayInnerClassName`；应让组件处理定位及外部关闭 |
-| 高风险确认或需聚焦的对话 | `Dialog` / `Popconfirm` | `visible`、确认/取消回调、Esc/遮罩关闭配置；工程删除、草稿覆盖等业务二次确认逻辑仍属于项目 |
-| 繁多内容的侧面板 | `Drawer` | 有显示状态、遮罩/ESC 关闭选项；适合服务端工程详情或长列表，是否替换必须先看操作流程 |
-| 属性侧栏的展开区块 | `Collapse` | `value/defaultValue`、`CollapsePanel`、`disabled`；替代手工 `details`，但不可把普通块变成模态浮层 |
-| JSON 文件选择 | `Upload` | `accept`、`autoUpload`、`onSelectChange` 已在两个当前版本核实；必须关闭自动上传，保持当前本地文件大小、Schema、权限及回滚校验 |
-| 工程选择/页面切换 | `Select` / `Tabs` | 单/多选及当前值/变化回调；迁移时验证页面数量上限、溢出、切换命令及视图状态 |
-| 图层树 | `Tree` | 存在 `data`、`expanded`、`onClick` 等接口；现有 SVG 选择、拖拽、组合/命中行为复杂，**不能直接替换并假定等价** |
-| 授权工程列表 | `Table` / `Pagination` | 支持列、数据、分页；需先确认服务端游标/页码契约，不能伪造总页数或绕过 ACL |
-| 简短状态说明/禁用解释 | `Tooltip` | React/Vue 都有，不能只靠颜色提示设备质量 |
+| 用途                     | TDesign 候选            | 已核验 API/边界                                                                                                                        |
+| ------------------------ | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 简单动作下拉菜单         | `Dropdown`              | `options`、`trigger='click'`、`placement`、`disabled`、`hideAfterItemClick`、`onClick`；React/Vue 都存在，回调须按**各自版本**类型处理 |
+| 含表单、列表等复杂浮层   | `Popup`                 | `visible`、`onVisibleChange`、`trigger`、`placement`、`attach`、`destroyOnClose`、`overlayInnerClassName`；应让组件处理定位及外部关闭  |
+| 高风险确认或需聚焦的对话 | `Dialog` / `Popconfirm` | `visible`、确认/取消回调、Esc/遮罩关闭配置；工程删除、草稿覆盖等业务二次确认逻辑仍属于项目                                             |
+| 繁多内容的侧面板         | `Drawer`                | 有显示状态、遮罩/ESC 关闭选项；适合服务端工程详情或长列表，是否替换必须先看操作流程                                                    |
+| 属性侧栏的展开区块       | `Collapse`              | `value/defaultValue`、`CollapsePanel`、`disabled`；替代手工 `details`，但不可把普通块变成模态浮层                                      |
+| JSON 文件选择            | `Upload`                | `accept`、`autoUpload`、`onSelectChange` 已在两个当前版本核实；必须关闭自动上传，保持当前本地文件大小、Schema、权限及回滚校验          |
+| 工程选择/页面切换        | `Select` / `Tabs`       | 单/多选及当前值/变化回调；迁移时验证页面数量上限、溢出、切换命令及视图状态                                                             |
+| 图层树                   | `Tree`                  | 存在 `data`、`expanded`、`onClick` 等接口；现有 SVG 选择、拖拽、组合/命中行为复杂，**不能直接替换并假定等价**                          |
+| 授权工程列表             | `Table` / `Pagination`  | 支持列、数据、分页；需先确认服务端游标/页码契约，不能伪造总页数或绕过 ACL                                                              |
+| 简短状态说明/禁用解释    | `Tooltip`               | React/Vue 都有，不能只靠颜色提示设备质量                                                                                               |
 
 ## 3. 当前双框架重复实现盘点
 
 在 `apps/web-react/src/studio/StudioPage.tsx` 与 `apps/web-vue/src/studio/StudioPage.vue` 中，每端各有 **9 处**原生 `details/summary`，`ServerProjectBrowser` 组件每端另有 **1 处**：共 **10 个入口/框架、20 处**。这并不是说全部 20 处都应换成 Dropdown。
 
-| 现有入口（React/Vue 同构） | 目标组件候选 | 风险、需要保留的语义 |
-| --- | --- | --- |
-| 页面管理（6 个命令） | **优先试点：Dropdown** | 禁用项：页数达 100、第一页/最后一页、仅一页禁止删除；菜单项点击后调用现有命令，不重写业务逻辑 |
-| 文件与草稿 | Popup + Upload，简单动作可评估 Dropdown | 导入是本地 `File` 而非网络上传；现有互通/自动保存浏览器用例直接查找 `.studio-file-menu` 的 `details` |
-| 本地版本历史 | **Popup**，长列表再评估 Drawer | 打开时 `refreshVersionHistory`、创建快照、查看差异、载入/分页及 CAS、失败状态必须保留 |
-| 发布预检 | Popup 或 Drawer | 内含服务端发布前只读预检，必须保留当前工程与未保存版本区别、HTTP 401/409/404 拒绝边界 |
-| 服务端工程版本 | Popup 或 Drawer | 登录/ACL、当前 head、版本保存/对比、冲突只读流程和禁止过期结果覆盖 |
-| 工程管理（ServerProjectBrowser） | Popup，必要时配 Pagination | 原有 `onToggle` 发起刷新；不能绕过工程授权或引入自动写操作 |
-| 跨页操作与使用帮助 | Popup | 涉及跨页面图元复制，保留无效目标及命令禁用策略 |
-| 视图设置 | Popup + Checkbox/Switch | 网格、吸附、左右侧栏折叠；现有浏览器测试直接设置 `details.open`，迁移时同步重做**真实点击路径** |
-| 项目 Tag 定义 | **Collapse** | 属于侧栏**行内折叠**，不是浮层；Tag 管理与绑定删除保护必须独立保留 |
-| 高级图元与图层操作 | **Collapse** | 行内折叠；保持几何变换、旋转、层级命令和 SVG 画布指针行为 |
+| 现有入口（React/Vue 同构）       | 目标组件候选                            | 风险、需要保留的语义                                                                                 |
+| -------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 页面管理（6 个命令）             | **优先试点：Dropdown**                  | 禁用项：页数达 100、第一页/最后一页、仅一页禁止删除；菜单项点击后调用现有命令，不重写业务逻辑        |
+| 文件与草稿                       | Popup + Upload，简单动作可评估 Dropdown | 导入是本地 `File` 而非网络上传；现有互通/自动保存浏览器用例直接查找 `.studio-file-menu` 的 `details` |
+| 本地版本历史                     | **Popup**，长列表再评估 Drawer          | 打开时 `refreshVersionHistory`、创建快照、查看差异、载入/分页及 CAS、失败状态必须保留                |
+| 发布预检                         | Popup 或 Drawer                         | 内含服务端发布前只读预检，必须保留当前工程与未保存版本区别、HTTP 401/409/404 拒绝边界                |
+| 服务端工程版本                   | Popup 或 Drawer                         | 登录/ACL、当前 head、版本保存/对比、冲突只读流程和禁止过期结果覆盖                                   |
+| 工程管理（ServerProjectBrowser） | Popup，必要时配 Pagination              | 原有 `onToggle` 发起刷新；不能绕过工程授权或引入自动写操作                                           |
+| 跨页操作与使用帮助               | Popup                                   | 涉及跨页面图元复制，保留无效目标及命令禁用策略                                                       |
+| 视图设置                         | Popup + Checkbox/Switch                 | 网格、吸附、左右侧栏折叠；现有浏览器测试直接设置 `details.open`，迁移时同步重做**真实点击路径**      |
+| 项目 Tag 定义                    | **Collapse**                            | 属于侧栏**行内折叠**，不是浮层；Tag 管理与绑定删除保护必须独立保留                                   |
+| 高级图元与图层操作               | **Collapse**                            | 行内折叠；保持几何变换、旋转、层级命令和 SVG 画布指针行为                                            |
 
 此外，需按模块审查项目中的原生 `button`、`window.confirm/prompt`、表单与手写弹层。不能简单统计元素数量就全部替换，必须保持工业组态编辑器对精度、交互延迟及受控操作的契约。
 
