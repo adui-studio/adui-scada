@@ -2,6 +2,8 @@
 
 :root {
   font-family: var(--adui-font-family);
+  font-size: var(--adui-font-size-md);
+  line-height: var(--adui-line-height-normal);
   color: var(--scada-text);
   background: var(--scada-bg);
   font-synthesis: none;
