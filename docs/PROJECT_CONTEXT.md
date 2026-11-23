@@ -2426,3 +2426,9 @@ D5c0q 在独立功能分支继续等值迁移共享 Studio 属性面板的字号
 维护者 Windows 对 PR #182 的 `ready` 质量链实际执行：`vp check` 445 个格式文件/289 个受检零告警，单测 **872/872**（主题 **8/8**），NestJS E2E **63/63**、文档 **93** 份及 React/Vue/Server 构建完成。第一次真实浏览器运行被本机 HTTPS 根证书信任阻断；恢复可信 CA 后 React/Vue 在 1440×900 和 1024×768 四组 Studio 测试 **76/76**，双端 Tag CRUD 和 React↔Vue JSON 全往返均通过，且失败退出检查未触发。日志未单独包含本地 HEAD，不能宣称直接测过合并 SHA。GitHub 确认 PR 最终头 `54ebf3236c39d2ab66f1ea68b055714a4d8e1ddb`、Assignee `@adui-dev`、零未解决审查；经明确授权 Squash 合并至 `main@62265b14f11d20580c0dd58123977fef8304ccdb`。
 
 D5c0r 在此 main 上仅对共享 Studio 历史版本弹层做 **12 条 CSS 等值 Token 替换**，增加 1 项主题静态回归，保持版本业务动作、UI DOM、工业监控、工程 Schema 与画布尺寸不变；开发分支为 GitHub Draft 候选。GitHub 已逐行核对 CSS 声明及 Token 原值，但 Windows 构建和浏览器验收尚未运行。
+
+## 2026-11-23 · PR #183 合并后转向 TDesign 组件复用审计
+
+维护者在 PR #183 的 Windows 实际执行 `vp check` **445 格式/289 受检零告警**、主题专项 **9/9**、`docs:check` **93 份**及 React/Vue 1440×900、1024×768 四组 Studio 浏览器 **76/76**，相关失败退出检查未触发，`git status --short` 输出为空；日志未单独显示本地 HEAD。GitHub 核对 Draft PR #183 的最终 SHA `3c7cc6800ba095ca6134356ab927317672282a92`，Assignee 为 `@adui-dev`，无未解决审查，经维护者明确授权 Squash 合并至 `main@e252ecce8630e38e12a51bdef088ebb8b905c846`。
+
+维护者明确指出旧 UI 在 TDesign 已有组件能力的情况下仍使用自有弹层和菜单，反复做 CSS Token 等值迁移不是优先方向。本批先以 `docs/TDESIGN_COMPONENT_AUDIT.md` 对应固定 React/Vue TDesign 版本审查组件能力与双端 20 处自定义 `details` 入口，调整 AGENTS 规则，制定从「页面管理 Dropdown」开始的分批替换与浏览器验收计划。**本 PR 为文档审计候选，不包含任何组件重构或 UI 行为变更；TDesign 组件 API 的项目专用 MCP 当前不可用，后续代码更改须先解决 API 验证前置。**
