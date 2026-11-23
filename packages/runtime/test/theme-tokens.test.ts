@@ -114,4 +114,52 @@ describe("双框架工业主题设计 Token", () => {
       "grid-template-columns: var(--studio-left-width) minmax(0, 1fr) var(--studio-right-width);",
     );
   });
+
+  it("Studio 属性面板密度必须使用等值 Token，且不改变固定画布布局", () => {
+    const css = readFileSync(new URL("../../tailwind/src/studio.css", import.meta.url), "utf8");
+    for (const [selector, declaration] of [
+      [".studio-pane-heading", "gap: var(--adui-space-4);"],
+      [".studio-panel-properties > h2", "margin: 0 -14px var(--adui-space-5);"],
+      [".studio-panel-properties > p", "font-size: var(--adui-font-size-xs);"],
+      [".studio-geometry", "padding: var(--adui-space-5);"],
+      [".studio-geometry", "margin: var(--adui-space-5) 0;"],
+      [".studio-advanced", "border-radius: var(--adui-radius-md);"],
+      [".studio-advanced .studio-tool-group", "gap: var(--adui-space-3);"],
+      [".studio-tree-controls .studio-field", "gap: var(--adui-space-3);"],
+    ] as const) {
+      expect(findRules(css, selector).some((rule) => rule.includes(declaration))).toBe(true);
+    }
+    const tokens = readTheme("tokens.css");
+    expect(tokens).toContain("--adui-space-3: 6px;");
+    expect(tokens).toContain("--adui-space-4: 8px;");
+    expect(tokens).toContain("--adui-space-5: 12px;");
+    expect(tokens).toContain("--adui-font-size-xs: 12px;");
+    expect(tokens).toContain("--adui-radius-md: 6px;");
+    expect(css).toContain("--studio-left-width: 252px;");
+    expect(css).toContain("--studio-right-width: 320px;");
+    expect(css).toContain(
+      "grid-template-columns: var(--studio-left-width) minmax(0, 1fr) var(--studio-right-width);",
+    );
+  });
+
+  it("禁用按钮不得响应本地悬停强调，TDesign 焦点与禁用态沿用官方变量", () => {
+    const css = readFileSync(new URL("../../tailwind/src/studio.css", import.meta.url), "utf8");
+    for (const selector of [
+      ".studio-save-actions button:first-child:not(:disabled)",
+      ".studio-save-actions button:first-child:not(:disabled):hover",
+      ".studio-add button:not(:disabled):hover",
+      ".studio-page-tabs button:not(:disabled):hover",
+    ]) {
+      expect(findRules(css, selector).length).toBeGreaterThan(0);
+    }
+    expect(css).toContain(".studio-project-browser-panel button:disabled {");
+    expect(css).toContain(
+      ".studio-shell :is(button, input, select, textarea, summary):focus-visible {",
+    );
+    const tdesign = readTheme("tdesign.css");
+    expect(tdesign).toContain("--td-brand-color-focus: var(--adui-color-brand-focus);");
+    expect(tdesign).toContain("--td-brand-color-disabled: var(--adui-color-brand-disabled);");
+    expect(tdesign).toContain("--td-text-color-disabled: var(--adui-color-text-disabled);");
+    expect(tdesign).toContain("--td-bg-color-component-disabled: var(--adui-color-surface);");
+  });
 });
