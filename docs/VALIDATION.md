@@ -4164,3 +4164,11 @@ git status --short
 ```
 
 人工检查版本弹层的打开/关闭、滚动边界、焦点可见性以及 1440×900、1024×768 下的布局，确保 252px/320px 侧栏和 16:9 SVG 画布不受影响。无工程写入或现场设备操作。
+
+## 2026-11-23 · D5c0s TDesign 组件复用审计和后续真实浏览器验收门禁
+
+维护者对 PR #183 的实测：`vp check` 445 格式/289 受检零告警、主题 9/9、文档 93 份、React/Vue 双分辨率 Studio 76/76；无失败退出检查，工作区 `git status --short` 为空。Windows 未单独输出本地 SHA；PR 最终 HEAD `3c7cc6800ba095ca6134356ab927317672282a92`，明确获准后 Squash 合并至 `main@e252ecce8630e38e12a51bdef088ebb8b905c846`。
+
+组件能力核对见 [TDesign 组件复用审计](TDESIGN_COMPONENT_AUDIT.md)。当前每框架 10 处自定义 `details`（Studio 9 + 工程管理 1），后续改为 Dropdown/Popup/Collapse 等时，既有 `test-studio-browser.mjs`、Tag/互通及 OIDC/发布预检测试中有直接通过 `details.open`、`summary` 和 CSS 类名定位的真实页面操作，**必须随真实 UI 更新测试路径，不能删除业务、安全、几何断言**。
+
+后续首批页面管理 Dropdown 验收需同时覆盖 React/Vue：真实点击菜单打开、选项禁用状态（页数 100、首页/末页、仅一页）、命令后的页面和 JSON 语义、菜单选择后关闭、Esc/外部点击、键盘焦点与 1440×900/1024×768 下无裁切。固定侧栏 252px/320px、16:9 画布、Tag 绑定/保存和工业只读安全边界始终不变。先用 Catalog 固定版本的官方 TDesign 类型/文档核实 API，构建/浏览器实际执行才可宣告通过。本批只有文档修改，未运行 Windows 新分支测试。
