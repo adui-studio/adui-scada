@@ -14,6 +14,7 @@ const view = ref<"runtime" | "published" | "studio">("runtime");
     class="flex flex-col"
     :class="view === 'studio' ? 'h-dvh min-h-0 overflow-hidden' : 'min-h-dvh'"
   >
+    <a class="scada-skip-link" href="#scada-main-content">跳转到主要内容</a>
     <nav class="scada-app-nav shrink-0" aria-label="功能导航">
       <span class="scada-app-brand"
         ><img src="/brand/favicon.svg" alt="" aria-hidden="true" />ADui SCADA</span
@@ -39,7 +40,7 @@ const view = ref<"runtime" | "published" | "studio">("runtime");
       >
         组态编辑
       </button>
-      <span class="scada-app-version">V0.2 本地原型</span>
+      <span class="scada-app-version">研发预览 · 非现场控制</span>
     </nav>
     <RuntimePage v-if="view === 'runtime'" />
     <PublishedRuntimePage v-else-if="view === 'published'" />
