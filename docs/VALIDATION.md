@@ -4257,3 +4257,13 @@ if ($LASTEXITCODE -ne 0) { throw "多标签页安全测试仍失败，请保留�
 ```
 
 若首次 Vue 加载再次失败，提供日志中的**固定布尔诊断项**即可，不必提供原始异常、Cookie、Token 或工程数据。如多标签页通过，后续仍须评估此前是否为不稳定异步加载，必要时多次仅复验该专项；不能在根因未明时声称 E-106 已关闭。
+
+## 2026-11-23 · E-106 第二次失败后补充 CDP 同源模块 HTTP 诊断
+
+Windows 最新日志确认：`node --check`、`vp check`（446 文件格式正确/289 受检零告警）和 `docs:check`（94 份）均通过，但 `test:multitab` 再次在 React 四阶段完成后、首次 Vue 双标签进入 Studio 时失败。页面分类为工作台=false、SVG=false、模块请求=true、模块加载异常=true、脚本异常=false、未处理异步拒绝=true、脚本或样式资源失败=false，命令退出码 **1**。这是对动态 import 失败的证据，**不是 HTTP 504 的证据**。
+
+当前 Draft 仅进一步修改测试脚本：在原本 `Promise.all` 的 Vue 首次双标签导航期间启用 CDP `Network.enable`，观察本地同源的脚本/预构建依赖请求；失败时追加 `首标签`/`次标签` 的 `Studio模块HTTP`、`失败请求`（按请求类别、HTTP 状态或固定网络错误类别），随后仍按原失败退出。关闭观察者并清理请求 Map，不输出资源 URL、正文、私钥、Cookie、Token 或原始网络异常；React/Vue 业务、15s/5s 等待、HTTPS 校验、Studio 几何及全部 CAS 多标签安全断言未变。
+
+如果输出为 `Vite预构建依赖:HTTP504`，再核对 Vue Vite 服务端优化器日志、依赖缓存版本及是否存在动态路由依赖发现；是否使用官方 `optimizeDeps.include` 应结合具体失败模块确定，不能一概调整。若为 4xx/其他 5xx、证书、连接拒绝或网络失败，则分别诊断对应来源；未观察到响应不代表 HTTP 200。
+
+本批仅需在最新 HEAD 运行 `node --check scripts/test-studio-browser.mjs`、`vp check`、`pnpm run docs:check` 和 `pnpm run test:multitab`。前七项业务专项在之前候选中已通过，不机械重复 `ready`。**根因与新提交的测试结果都待 Windows 验证，PR #186 仍为 Draft，不能合并。**
