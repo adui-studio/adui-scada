@@ -23,6 +23,22 @@ describe("双框架已发布运行画面只读预览", () => {
     expect(labels.offline).toBe("发布服务离线");
   });
 
+  it("未启动、未发布、离线、拒绝及错误的空画面说明必须区分且不声称存在实时数据", () => {
+    const hints = PUBLISHED_RUNTIME_EMPTY_HINTS;
+    expect(Object.keys(hints).sort()).toEqual(Object.keys(PUBLISHED_RUNTIME_STATUS_LABELS).sort());
+    expect(hints.idle).toContain("工程 ID");
+    expect(hints.loading).toContain("核验完成前不展示");
+    expect(hints.unreleased).toContain("尚无");
+    expect(hints.offline).toContain("已清空");
+    expect(hints.denied).toContain("无权");
+    expect(hints.error).toContain("校验未通过");
+    expect(hints.verified).toContain("已验证快照");
+    for (const hint of Object.values(hints)) {
+      expect(hint.length).toBeGreaterThan(0);
+      expect(hint).not.toMatch(/实时(?:数据|连接)正常|设备运行正常|已接入现场/);
+    }
+  });
+
   it("静态 SVG 使用已验证工程正文并拒绝填充模拟 Tag 实时值", async () => {
     const snapshot = await createProjectSnapshot(waterTreatmentDemoDocument, {
       revision: 1,
