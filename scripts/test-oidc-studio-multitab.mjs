@@ -286,8 +286,6 @@ export function addStudioSymbolInPage(label) {
 
 export function clickStudioServerSaveInPage() {
   const panel = document.querySelector('[aria-label="服务端工程版本"]');
-  const menu = panel?.closest("details");
-  if (menu) menu.open = true;
   const button = [...(panel?.querySelectorAll("button") ?? [])].find(
     (item) => item.textContent.trim() === "保存至服务端",
   );
@@ -300,8 +298,14 @@ export function clickStudioServerSaveInPage() {
 /** 通过现有导出按钮读取工程 JSON 摘要，避免把 SVG 辅助层当成工程数据。 */
 export async function readStudioDocumentHashInPage() {
   const menu = document.querySelector(".studio-file-menu");
-  if (!menu) throw new Error("同源多标签页页面操作失败");
-  menu.open = true;
+  const trigger = menu?.querySelector("button.t-button");
+  if (trigger?.tagName !== "BUTTON") throw new Error("同源多标签页页面操作失败");
+  if (!menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
+  const opened = Date.now();
+  while (Date.now() - opened < 5000) {
+    if (menu.querySelector(".studio-file-popover")?.getClientRects().length) break;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const button = [...menu.querySelectorAll("button")].find(
     (item) => item.textContent.trim() === "导出 JSON",
   );
@@ -343,7 +347,7 @@ export async function readStudioDocumentHashInPage() {
   } finally {
     URL.createObjectURL = originalCreate;
     HTMLAnchorElement.prototype.click = originalClick;
-    menu.open = false;
+    if (menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
   }
 }
 
@@ -372,11 +376,17 @@ export function studioMultiTabUiStateInPage() {
   };
 }
 
-export function openProjectBrowserMenuInPage() {
+export async function openProjectBrowserMenuInPage() {
   const menu = document.querySelector(".studio-project-browser-menu");
-  if (!menu) throw new Error("同源多标签页页面操作失败");
-  menu.open = true;
-  return true;
+  const trigger = menu?.querySelector("button.t-button");
+  if (trigger?.tagName !== "BUTTON") throw new Error("同源多标签页页面操作失败");
+  if (!menu.querySelector(".studio-project-browser-panel")?.getClientRects().length) trigger.click();
+  const opened = Date.now();
+  while (Date.now() - opened < 5000) {
+    if (menu.querySelector(".studio-project-browser-panel")?.getClientRects().length) return true;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("同源多标签页工程管理弹层展开超时");
 }
 
 export function refreshProjectBrowserInPage() {
