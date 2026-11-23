@@ -85,6 +85,8 @@ V7 Logo 原 SVG 和几何不动，导航缩放使用现有 `/brand/favicon.svg`�
 
 ## 7. 最终一次性验收矩阵（待执行）
 
-`node --check`、`vp check`、`pnpm run ready`、`pnpm run test:ui:browser`（React/Vue × 1440/1024 × 运行/发布/Studio）、`pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop`、`pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:multitab`、`pnpm run test:legacy:browser`。若真实发布/OIDC Lab 需要受保护凭据或专用数据库，必须按原隔离方案执行，不能用视觉测试替代授权验收。
+`node --check`、`vp check`、`pnpm run ready`、`pnpm run test:ui:browser`（React/Vue × 1440/1024 × 运行/发布/Studio，可选输出 12 张本地截图）、`pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop`、`pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:multitab`、`pnpm run test:legacy:browser`。若真实发布/OIDC Lab 需要受保护凭据或专用数据库，必须按原隔离方案执行，不能用视觉测试替代授权验收。
 
 **当前验证事实**：仅 PR #191 在其已记录 HEAD 完成了用户提供的 Windows 验收，并已合并。D5c1 分支的新 UI、浏览器脚本、Vue/React CSS 和构建尚未在维护者 Windows 实际验证；文档不是通过证明。
+
+最终需要视觉复核时可先设置 `SCADA_UI_SCREENSHOTS=1`，再执行唯一一次 `pnpm run test:ui:browser`。脚本在仓库根目录 `.artifacts/ui-review/` 写入 12 张 PNG（双端 × 双分辨率 × 三视图），目录已 Git 忽略；图片只做本机审阅，不上传工程信息。

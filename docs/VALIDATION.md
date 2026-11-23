@@ -4551,6 +4551,7 @@ node --check scripts/test-studio-browser.mjs
 if ($LASTEXITCODE -ne 0) { throw "浏览器脚本语法检查失败" }
 pnpm run ready
 if ($LASTEXITCODE -ne 0) { throw "完整就绪链路失败" }
+$env:SCADA_UI_SCREENSHOTS = "1"
 pnpm run test:ui:browser
 if ($LASTEXITCODE -ne 0) { throw "三页面 UI/UX 验收失败" }
 pnpm run test:browser

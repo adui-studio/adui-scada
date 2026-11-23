@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadEnvFile } from "node:process";
@@ -586,6 +586,9 @@ function scadaTextContrast(foreground, background) {
 
 /** 最终统一验收入口：双框架 × 双分辨率 × 三种实际页面，共 12 个界面。 */
 async function runScadaUIExperience(session) {
+  const captureScreenshots = process.env.SCADA_UI_SCREENSHOTS === "1";
+  const screenshotDirectory = fileURLToPath(new URL("../.artifacts/ui-review/", import.meta.url));
+  if (captureScreenshots) mkdirSync(screenshotDirectory, { recursive: true });
   await session.send("Network.enable");
   await session.send("Network.setCacheDisabled", { cacheDisabled: true });
   for (const target of targets) {
@@ -657,6 +660,16 @@ async function runScadaUIExperience(session) {
             scadaTextContrast(data.stageText, data.stageTextBackground) >= 4.5,
             prefix + " 画布工具栏文字对比度不足",
           );
+        }
+        if (captureScreenshots) {
+          const screenshot = await session.send("Page.captureScreenshot", {
+            format: "png",
+            captureBeyondViewport: false,
+          });
+          assert.ok(screenshot.data, prefix + " 无法保存真实浏览器视口截图");
+          const filename =
+            target.name.toLowerCase() + "-" + viewport.width + "x" + viewport.height + "-" + view + ".png";
+          writeFileSync(join(screenshotDirectory, filename), Buffer.from(screenshot.data, "base64"));
         }
         process.stdout.write(prefix + " 新版信息架构、状态与视觉边界通过\n");
       }
