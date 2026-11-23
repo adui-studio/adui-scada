@@ -484,3 +484,358 @@ button:focus-visible {
 .scada-status[data-status="loading"] {
   color: var(--scada-warning);
 }
+
+/* 工业软件统一界面：仅作用于应用壳与只读监控，不覆盖 TDesign 内部实现。 */
+:root {
+  --scada-ui-radius: 10px;
+  --scada-ui-shadow: 0 10px 30px rgb(0 0 0 / 14%);
+}
+.scada-skip-link {
+  position: fixed;
+  top: 8px;
+  left: 12px;
+  z-index: 200;
+  transform: translateY(-150%);
+  padding: 10px 16px;
+  border: 2px solid var(--scada-cyan);
+  border-radius: 6px;
+  background: var(--scada-nav);
+  color: var(--scada-text-strong);
+  font-weight: 600;
+}
+.scada-skip-link:focus-visible {
+  transform: translateY(0);
+  outline: 2px solid var(--scada-text-strong);
+  outline-offset: 2px;
+}
+.scada-app-nav {
+  min-height: 64px;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 9px clamp(14px, 2vw, 30px);
+  border-bottom: 1px solid var(--scada-border);
+  background: var(--scada-nav);
+}
+.scada-app-brand {
+  gap: 11px;
+  min-width: 0;
+  margin-right: clamp(10px, 2.5vw, 38px);
+  color: var(--scada-text-strong);
+  font-size: 17px;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+}
+.scada-app-brand img {
+  width: 38px;
+  height: 38px;
+}
+.scada-app-nav > button {
+  flex: none;
+  min-height: 38px;
+  padding: 8px 15px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--scada-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+.scada-app-nav > button:hover {
+  border-color: var(--scada-border);
+  background: var(--scada-action-hover);
+  color: var(--scada-text-strong);
+}
+.scada-app-nav > button[aria-current="page"] {
+  border-color: var(--scada-border-strong);
+  background: var(--scada-active-bg);
+  box-shadow: inset 0 -2px var(--scada-cyan);
+  color: var(--scada-text-strong);
+}
+.scada-app-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: auto;
+  padding-left: 16px;
+  border-left: 1px solid var(--scada-border);
+  color: var(--scada-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.scada-app-version::before {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--scada-warning);
+  content: "";
+}
+.scada-shell {
+  width: 100%;
+  max-width: 1600px;
+  min-width: 0;
+  padding: clamp(16px, 2vw, 30px);
+}
+.scada-shell:focus {
+  outline: none;
+}
+.scada-header {
+  min-height: 70px;
+  align-items: center;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--scada-border);
+}
+.scada-header > div {
+  min-width: 0;
+}
+.scada-header h1 {
+  margin: 5px 0 0;
+  color: var(--scada-text-strong);
+  font-size: clamp(21px, 2vw, 27px);
+  font-weight: 700;
+  letter-spacing: 0.012em;
+  text-wrap: balance;
+}
+.scada-eyebrow {
+  color: var(--scada-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.scada-status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 9px;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--scada-border-strong);
+  border-radius: 6px;
+  background: var(--scada-surface);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.scada-status::before {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+.scada-message {
+  min-height: 0;
+  margin: 0;
+  padding: 10px 13px;
+  border-left: 3px solid var(--scada-border-strong);
+  background: var(--scada-surface);
+  color: var(--scada-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.scada-message:empty {
+  display: none;
+}
+.scada-panel {
+  min-width: 0;
+  margin: 0;
+  padding: clamp(14px, 1.4vw, 20px);
+  border: 1px solid var(--scada-border);
+  border-radius: var(--scada-ui-radius);
+  background: var(--scada-surface);
+  box-shadow: var(--scada-ui-shadow);
+}
+.scada-panel h2 {
+  margin: 0 0 12px;
+  color: var(--scada-text-strong);
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.015em;
+}
+.scada-panel-subtitle {
+  margin: -3px 0 14px;
+  color: var(--scada-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.scada-diagnostics-note,
+.scada-diagnostics-total,
+.scada-diagnostics-empty {
+  color: var(--scada-text-secondary);
+  line-height: 1.55;
+}
+.scada-diagnostics-grid,
+.scada-quality-summary {
+  gap: 10px;
+}
+.scada-diagnostics-grid > div,
+.scada-quality-item {
+  padding: 14px;
+  border-color: var(--scada-border);
+  border-radius: 7px;
+  background: var(--scada-canvas);
+}
+.scada-diagnostics-grid dd,
+.scada-quality-item strong,
+.scada-tag span {
+  font-variant-numeric: tabular-nums;
+}
+.scada-diagnostics-grid dd {
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--scada-text-strong);
+}
+.scada-quality-item {
+  min-height: 52px;
+}
+.scada-quality-item strong {
+  font-size: 19px;
+}
+.scada-status-events li {
+  background: var(--scada-canvas);
+}
+.scada-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--scada-border);
+  border-radius: 7px;
+  background: var(--scada-canvas);
+}
+.scada-tag {
+  min-width: 0;
+  min-height: 120px;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 7px;
+  background: var(--scada-canvas);
+}
+.scada-tag strong {
+  color: var(--scada-text-secondary);
+  font-size: 12px;
+}
+.scada-tag span {
+  color: var(--scada-text-strong);
+  font-size: 26px;
+  font-weight: 680;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.scada-tag small {
+  font-size: 12px;
+}
+.scada-published-controls {
+  align-items: end;
+}
+.scada-published-controls label {
+  flex: none;
+  align-self: center;
+  font-weight: 600;
+}
+.scada-published-controls input,
+.scada-published-controls select {
+  min-height: 40px;
+  background: var(--scada-canvas);
+}
+.scada-published-controls button {
+  min-height: 40px;
+  white-space: nowrap;
+}
+.scada-published-controls button[type="submit"] {
+  border-color: var(--scada-primary);
+  background: var(--scada-primary);
+  color: var(--scada-text-strong);
+}
+.scada-published-controls button[type="submit"]:hover {
+  background: var(--scada-primary-hover);
+}
+.scada-shell--overview,
+.scada-shell--published {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 16px;
+}
+.scada-shell--overview > footer,
+.scada-shell--published > footer {
+  margin: 0;
+  padding: 0 0 8px;
+  line-height: 1.6;
+}
+.scada-shell--overview .scada-tags {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+}
+.scada-process-panel {
+  display: flex;
+  flex-direction: column;
+}
+.scada-values-panel .scada-tags:empty::after {
+  content: "当前暂无 Tag 数据";
+  color: var(--scada-text-muted);
+  font-size: 13px;
+}
+@media (min-width: 1100px) {
+  .scada-shell--overview {
+    grid-template-columns: minmax(0, 1.75fr) minmax(300px, 1fr);
+  }
+  .scada-shell--published {
+    grid-template-columns: minmax(0, 1.2fr) minmax(330px, 1fr);
+  }
+  .scada-shell--overview > .scada-header,
+  .scada-shell--overview > .scada-message,
+  .scada-shell--overview > .scada-diagnostics,
+  .scada-shell--overview > footer,
+  .scada-shell--published > .scada-header,
+  .scada-shell--published > .scada-message,
+  .scada-shell--published > .scada-published-preview-panel,
+  .scada-shell--published > footer {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 720px) {
+  .scada-app-nav {
+    flex-wrap: wrap;
+    min-height: 58px;
+    padding: 9px 12px;
+  }
+  .scada-app-brand {
+    width: 100%;
+    margin: 0;
+  }
+  .scada-app-nav > button {
+    flex: 1 1 auto;
+    min-height: 38px;
+    padding-inline: 7px;
+    font-size: 12px;
+  }
+  .scada-app-version {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 0;
+    border: 0;
+  }
+  .scada-header {
+    align-items: flex-start;
+  }
+  .scada-diagnostics-grid,
+  .scada-quality-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 440px) {
+  .scada-diagnostics-grid,
+  .scada-quality-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .scada-published-controls input,
+  .scada-published-controls select {
+    flex-basis: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scada-app-nav > button {
+    transition: none;
+  }
+}
