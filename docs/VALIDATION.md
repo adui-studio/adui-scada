@@ -4490,4 +4490,3 @@ pnpm run test:tags:browser
 ```
 
 只有 Tag 浏览器专项在 React/Vue 两端完全通过后，继续 `pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:interop`、`pnpm run test:multitab`、`pnpm run test:browser`。若再次失败，保留实际错误和本轮业务提示结果，不擅自判定 Core 错误或降低测试约束。PR #189 保持 Draft、指派 `@adui-dev`，未经维护者明确授权不合并。
-

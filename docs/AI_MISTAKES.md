@@ -1108,4 +1108,3 @@
 - **最小修复候选**：点击业务按钮前记录已有 `.t-dialog` 节点，只在本次新增的弹窗内定位确认/取消按钮；保持原 12 秒弹窗门槛、真实点击和旧弹窗拒绝。最终删除先等待现有成功提示「项目 Tag 已删除，可撤销」，再导出实际工程 JSON 校验 Tag 不存在；已绑定 Tag 必须拒绝删除，取消必须保留定义，原有断言不变。仅修改 `scripts/test-studio-browser.mjs`，不动 React/Vue UI、Core Tag 规则、持久化、权限或工业边界。
 - **防复发与验证边界**：连续使用插件式 Dialog 的浏览器验收应按弹窗实例隔离定位，不以全局首个按钮或固定延时推断操作已经完成。协作容器仅对选择器模拟场景执行 Node 22 的 2/2 烟雾用例与语法检查；**未执行本仓库完整 `vp check`、Windows React/Vue Chromium `test:tags:browser` 或后续专项**。这些均须在最新 PR HEAD 复验。
 - **证据**：维护者本轮 PowerShell 日志、PR #189 最新源码、`scripts/test-studio-browser.mjs`、`apps/web-react/src/studio/StudioDialog.tsx`、TDesign React 1.18.6 `dialog/plugin.tsx` 与 `Dialog.tsx`。
-
