@@ -662,3 +662,35 @@ test("无人读取快照且调度未执行时新 delta 不得续接超龄基线"
   expect(source.closes).toBe(1);
   expect(scheduler.cancels).toBe(1);
 });
+
+test("活动订阅第二次快照即使序列更低也终止订阅而非重置基线", () => {
+  const { adapter, source, scheduler } = setup();
+  adapter.start();
+  source.emit({ kind: "snapshot", values: [value] });
+  source.emit({ kind: "snapshot", values: [{ ...value, sequence: 1 }] });
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(source.closes).toBe(1);
+  expect(scheduler.cancels).toBe(1);
+  source.emit({ kind: "delta", values: [{ ...value, sequence: 6 }] }, true, 0);
+  expect(adapter.snapshot().baseline).toBeNull();
+
+  adapter.start();
+  expect(adapter.snapshot().generation).toBe(1);
+  source.emit({ kind: "snapshot", values: [{ ...value, sequence: 1 }] }, true, 1);
+  expect(adapter.snapshot().baseline?.value.sequence).toBe(1);
+  adapter.stop();
+});
+
+test("订阅安装时同步交付两次快照会失效且补充释放取消函数", () => {
+  const { adapter, source, scheduler } = setup();
+  source.immediate = (handlers) => {
+    handlers.onChange({ kind: "snapshot", values: [value] }, true);
+    handlers.onChange({ kind: "snapshot", values: [{ ...value, sequence: 1 }] }, true);
+  };
+  adapter.start();
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(source.closes).toBe(1);
+  expect(scheduler.intervals).toEqual([]);
+});
