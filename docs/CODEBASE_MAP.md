@@ -1358,3 +1358,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-subscription-adapter.ts`：在调用外部 `cancelCheck/unsubscribe` 前撤销旧会话基线与令牌；订阅/调度安装回调结束时必须核对所捕获令牌仍有效，旧代次异常不能停止新会话。
 - `packages/core/test/alarm-subscription-adapter.test.ts`：在原 13 项基础上增加 4 项，覆盖取消周期中重入新会话、旧订阅安装异常不污染新会话、双取消函数抛错仍尝试完整清理、调度同步重入后旧取消函数不能覆盖新资源。
 - 本批不改公共导出、Schema、TagStore、Runtime、Vue/React、NestJS、Prisma、工业网关及发布门禁。
+
+## 2026-11-23 · D5b9p FR-011 报警订阅异常保留
+
+- `packages/core/src/alarm-subscription-adapter.ts`：`stop()` 独立尝试周期取消和订阅取消，单异常原样传播、多异常用 `AggregateError` 保留；`start/forward` 发生原始故障并伴随清理失败时同时保留诊断原因，不改变公开接口或订阅安全门禁。
+- `packages/core/test/alarm-subscription-adapter.test.ts`：原 17 项更新双清理错误断言并新增 3 项定向测试，覆盖单项取消失败、调度安装加订阅取消双故障、时钟故障加两项取消异常及迟到回调阻断。
+- 本批无 TagStore/Runtime、Vue/React、NestJS、Prisma、网关或生产发布 Gate 变动。

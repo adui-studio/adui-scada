@@ -345,6 +345,8 @@ test("旧订阅安装失败不应关闭同步重入启动的新会话", () => {
 
 test("取消周期和取消订阅均抛错时仍尝试两种清理并撤销会话", () => {
   const acceptedHandlers: Handlers[] = [];
+  const cancelFailure = new TypeError("测试取消周期失败");
+  const unsubscribeFailure = new TypeError("测试取消订阅失败");
   let closes = 0;
   let cancels = 0;
   const source: AlarmReadonlySubscriptionSource = {
@@ -352,7 +354,7 @@ test("取消周期和取消订阅均抛错时仍尝试两种清理并撤销会�
       acceptedHandlers.push(callbacks);
       return () => {
         closes += 1;
-        throw new TypeError("测试取消订阅失败");
+        throw unsubscribeFailure;
       };
     },
   };
@@ -360,7 +362,7 @@ test("取消周期和取消订阅均抛错时仍尝试两种清理并撤销会�
     every() {
       return () => {
         cancels += 1;
-        throw new TypeError("测试取消周期失败");
+        throw cancelFailure;
       };
     },
   };
@@ -372,7 +374,15 @@ test("取消周期和取消订阅均抛错时仍尝试两种清理并撤销会�
   adapter.start();
   acceptedHandlers[0]?.onChange({ kind: "snapshot", values: [value] }, true);
   expect(adapter.snapshot().baseline?.value.sequence).toBe(5);
-  expect(() => adapter.stop()).toThrow("测试取消订阅失败");
+  let failure: unknown = null;
+  try {
+    adapter.stop();
+  } catch (error) {
+    failure = error;
+  }
+  expect(failure).toBeInstanceOf(AggregateError);
+  expect((failure as AggregateError).message).toBe("报警订阅资源清理失败");
+  expect((failure as AggregateError).errors).toEqual([cancelFailure, unsubscribeFailure]);
   expect(closes).toBe(1);
   expect(cancels).toBe(1);
   expect(adapter.isRunning()).toBe(false);
@@ -412,4 +422,130 @@ test("旧会话调度安装完成后若新会话已重入，不覆盖新取消�
   expect(adapter.snapshot().baseline?.value.sequence).toBe(1);
   adapter.stop();
   expect(cancelled).toBe(2);
+});
+
+test("只有取消周期失败时仍保留原始异常并完成取消订阅", () => {
+  const handlers: Handlers[] = [];
+  const cancelFailure = new TypeError("测试单项周期取消失败");
+  let unsubscribed = 0;
+  const subscription: AlarmReadonlySubscriptionSource = {
+    subscribe(callbacks) {
+      handlers.push(callbacks);
+      return () => {
+        unsubscribed += 1;
+      };
+    },
+  };
+  const scheduler: AlarmSubscriptionScheduler = {
+    every() {
+      return () => {
+        throw cancelFailure;
+      };
+    },
+  };
+  const adapter = new AlarmSubscriptionAdapter("tank.level", subscription, scheduler, {
+    maxAgeMs: 3000,
+    checkIntervalMs: 1000,
+    nowMs: () => startMs,
+  });
+  adapter.start();
+  handlers[0]?.onChange({ kind: "snapshot", values: [value] }, true);
+  let failure: unknown = null;
+  try {
+    adapter.stop();
+  } catch (error) {
+    failure = error;
+  }
+  expect(failure).toBe(cancelFailure);
+  expect(unsubscribed).toBe(1);
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(adapter.isRunning()).toBe(false);
+});
+
+test("调度安装故障与订阅取消故障同时保留且会话失效", () => {
+  const schedulerFailure = new TypeError("测试调度安装故障");
+  const cleanupFailure = new TypeError("测试取消订阅故障");
+  let unsubscribed = 0;
+  const source: AlarmReadonlySubscriptionSource = {
+    subscribe() {
+      return () => {
+        unsubscribed += 1;
+        throw cleanupFailure;
+      };
+    },
+  };
+  const scheduler: AlarmSubscriptionScheduler = {
+    every() {
+      throw schedulerFailure;
+    },
+  };
+  const adapter = new AlarmSubscriptionAdapter("tank.level", source, scheduler, {
+    maxAgeMs: 3000,
+    checkIntervalMs: 1000,
+    nowMs: () => startMs,
+  });
+  let failure: unknown = null;
+  try {
+    adapter.start();
+  } catch (error) {
+    failure = error;
+  }
+  expect(failure).toBeInstanceOf(AggregateError);
+  expect((failure as AggregateError).message).toBe("报警订阅失败且资源清理失败");
+  expect((failure as AggregateError).errors).toEqual([schedulerFailure, cleanupFailure]);
+  expect(unsubscribed).toBe(1);
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+});
+
+test("回调读取时钟故障与双资源取消故障均保留原始原因", () => {
+  const originalFailure = new TypeError("测试时钟读取故障");
+  const intervalFailure = new TypeError("测试周期取消故障");
+  const subscriptionFailure = new TypeError("测试订阅取消故障");
+  const handlers: Handlers[] = [];
+  let cancelCount = 0;
+  let unsubscribeCount = 0;
+  const source: AlarmReadonlySubscriptionSource = {
+    subscribe(handler) {
+      handlers.push(handler);
+      return () => {
+        unsubscribeCount += 1;
+        throw subscriptionFailure;
+      };
+    },
+  };
+  const scheduler: AlarmSubscriptionScheduler = {
+    every() {
+      return () => {
+        cancelCount += 1;
+        throw intervalFailure;
+      };
+    },
+  };
+  const adapter = new AlarmSubscriptionAdapter("tank.level", source, scheduler, {
+    maxAgeMs: 3000,
+    checkIntervalMs: 1000,
+    nowMs: () => {
+      throw originalFailure;
+    },
+  });
+  adapter.start();
+  let failure: unknown = null;
+  try {
+    handlers[0]?.onChange({ kind: "snapshot", values: [value] }, true);
+  } catch (error) {
+    failure = error;
+  }
+  expect(failure).toBeInstanceOf(AggregateError);
+  expect((failure as AggregateError).message).toBe("报警订阅失败且资源清理失败");
+  const failures = (failure as AggregateError).errors as unknown[];
+  expect(failures[0]).toBe(originalFailure);
+  expect(failures[1]).toBeInstanceOf(AggregateError);
+  expect((failures[1] as AggregateError).errors).toEqual([intervalFailure, subscriptionFailure]);
+  expect(cancelCount).toBe(1);
+  expect(unsubscribeCount).toBe(1);
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+  handlers[0]?.onChange({ kind: "snapshot", values: [value] }, true);
+  expect(adapter.snapshot().baseline).toBeNull();
 });
