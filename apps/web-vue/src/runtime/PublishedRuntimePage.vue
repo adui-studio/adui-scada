@@ -39,7 +39,7 @@ const svg = computed(() =>
     : null,
 );
 
-function selectPage(value: string | number | Array<string | number>): void {
+function selectPage(value: unknown): void {
   if (typeof value === "string") selectedPageId.value = value;
 }
 
