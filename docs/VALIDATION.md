@@ -4413,3 +4413,12 @@ foreach ($check in $checks) {
 另须在**先前已授权且仍隔离的本机 OIDC HTTPS Lab**，按仓库现有专项入口运行涉及服务端工程管理、确认后版本漂移、延迟拒绝、只读发布预检、真实双标签权限的相关测试；本 PR 未授权新建/删除数据库、修改 ACL、发起设备写入或部署生产。不能把 Node 模拟测试等同真实 IdP/HTTPS/CAS 验证。需要人工核对 React/Vue 的两个视口（1440×900、1024×768）中 Popup 与 Dialog 的 Esc/焦点、取消不写入、长列表滚动和贴边位置，以及 252px/320px 侧栏与 16:9 SVG 画布不回归。
 
 已执行证据仅限 GitHub 源码静态复核、固定版本官方组件 Props 检查及部分 Node 脚本函数语法解析；以上 Windows/真实业务测试均未在本分支执行。只有最终 HEAD 的完整通过输出才能进入合并评审；新 PR 默认 Draft、指派 `@adui-dev`，未经维护者授权不合并。
+
+## 2026-11-23 · PR #188 首次 Windows Vite+ 类型错误（E-109，待修复后验收）
+
+维护者实际运行 `vp check --fix`：在 React Studio 图层拖拽三处报 **TS2345（3 错误）**，已发布运行页及 Studio 的 Select 回调共 **4 条 `no-base-to-string` 告警**；291 个受检文件，格式化阶段完成，但该命令 **未通过质量门禁**。输出未提供本地 HEAD SHA，也没有本轮 Web 类型检查或浏览器结果。
+
+PR #188 已提交最小修复候选：图层拖拽事件签名由 `ReactDragEvent<HTMLButtonElement>` 放宽为符合 TDesign `Button` 回调的 `ReactDragEvent<HTMLElement>`；四处 Select `onChange` 仅对 `typeof value === "string"` 的 ID 更新状态，拒绝对选项对象等使用 `String(value)`。保留既有图层顺序、Tag 绑定、工程页面选择和已发布页面切换逻辑。
+
+**待复验（不代表通过）**：`pnpm run typecheck:web`、`vp check`（不带 `--fix`）、`pnpm run docs:check`；通过后继续 `pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop`、`pnpm run test:versions:safety` 以及 PR #188 原有完整验收列表。需真实检查 React 图层拖拽排序、Tag 绑定/图层目标 Select 和已发布工程多页面切换；不得从类型通过推断交互已验证。PR 保持 Draft，未获完整 Windows 验收与合并授权。
+
