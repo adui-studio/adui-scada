@@ -4077,3 +4077,29 @@ git status --short
 ```
 
 人工审查后将真实生成的 `pnpm-lock.yaml` 提交/推送到当前 PR；**不要手工构造、跳过提交或要求 `ready` 忽略锁文件错误**。之后执行 `pnpm run ready && pnpm run test:browser && pnpm run test:tags:browser && pnpm run test:interop`，并在 Windows React/Vue 的 1440×900、1024×768 对比旧新主题：检查背景、字号与行高、操作间距、TDesign Button/TagManager 禁用状态与键盘焦点、画布 16:9、固定侧栏、Tag STALE/GOOD 和已发布 `UNAVAILABLE` 展示。当前 PR 必须保持 Draft；所有测试结果须绑定最终 HEAD。
+
+## 2026-11-23 · PR #180 Windows 通过；D5c0p 共享主题等值迁移待验收
+
+维护者提供的 PR #180 Windows 日志确认：`ready` 的依赖清单 13、中文扫描 316、Vite+ 445 个格式文件及 289 个受检零告警、Vitest **868/868**（其中主题 4/4）、Lab 5/5、NestJS E2E 63/63、Docs 93、React/Vue/NestJS 构建完成；紧接的 React/Vue 两种分辨率 Studio 4 组各 19/19，Tag CRUD 与跨框架 JSON 往返通过。同一 `&&` 命令链各步骤均执行，但日志没有单独列出本地 SHA 和 `$LASTEXITCODE`，不能称为在最终 Squash SHA 上重新实测。经 GitHub 检查 PR #180 `e93eb74e16325c34e7daf29a793ba7fd17552059` 可合并、无未解决审查线程、Assignee `@adui-dev`，锁文件只增加 `packages/theme` importer 和 Runtime 工作区依赖；明确授权后合并至 `main@8ff4ca82b8f983a32bbd9f98bdf99087b41877c0`。
+
+D5c0p 从此主线仅修改 `packages/runtime/src/runtime.css` 的 19 条声明和 `packages/tailwind/src/studio.css` 的 11 条声明，把已存在的等值像素、字号、字重、圆角或行高换成共享 `@adui/theme` CSS Variables，不涉及新增依赖、更新锁文件或任何业务逻辑。GitHub 源码逐行比对证实两份 CSS 行数不变，恰有 **19 + 11** 行不同，所有新 `var()` 展开后均与原始声明完全相等；这只是静态证据，不能代替真实编译、浏览器和桌面运行结果。
+
+新增 `theme-tokens.test.ts` 的两项 CSS 引用回归断言：覆盖 Runtime 导航/空态、Studio 工程列表、既有 Token 数值和固定 252px/320px 侧栏。初版断言误取最后一个同名 CSS 规则，在基础规则之后存在窄屏媒体查询时误报；已调整为扫描所有匹配规则，记录为 E-105。本批尚未实际运行 `vp check` 或测试，不能称为通过。
+
+Windows 最小检查：
+
+```powershell
+git fetch origin &&
+git switch feat/d5c0p-theme-typography-spacing &&
+git pull --ff-only &&
+vp test run packages/runtime/test/theme-tokens.test.ts &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:web &&
+pnpm run test:browser &&
+pnpm run test:tags:browser &&
+pnpm run test:interop
+```
+
+随后执行完整 `pnpm run ready`，检查 `$LASTEXITCODE` 并核对最终 HEAD。手工比较 React/Vue 1440×900、1024×768 的导航、发布空态、状态诊断、工程列表、聚焦/禁用颜色及 16:9 固定侧栏；静态 Token 数值一致不意味着各浏览器的最终计算样式已实测一致。正式工业现场验证、OIDC 真实发布授权专项与生产设备写入均不在本批范围。
