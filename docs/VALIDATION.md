@@ -3407,3 +3407,40 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批只改共享 Core 的底层增量 API 和对应单测、文档，未增加 UI、服务端接口、数据库或工业网关变动。上述检查不代表来源认证、可信时间、真实调度、报警阈值、确认授权或生产安全验收通过；发布 Gate 仍 fail-closed。
+
+## 2026-11-23 · D5b9t FR-011 重复 snapshot 序列重置保护：Windows 待验收
+
+PR #158 已由维护者 Windows 实测三份测试文件 **56/56**、`vp check` **435 格式文件/286 受检零警告错误**、`docs:check` **90**、`messages:check` **310**；经明确授权 Squash 合并至 `main@ac39b5876fa2f255d993b0e8665cad51fe675bff`。本批 D5b9t 仅新增 **5 项测试代码定义**，会话归约器 **18 项**、托管器 **10 项**、订阅适配器 **27 项**，**当前尚未 Windows 实测**。
+
+保留维护者要求的 `git fetch origin` 和 `git switch`；首次切换可用 `--track`，执行 `vp check --fix` 后可正常提交所需的格式化差异，不要求核对 HEAD。请执行：
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5b9t-alarm-duplicate-snapshot
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5b9t-alarm-duplicate-snapshot
+}
+if ($LASTEXITCODE -ne 0) { throw "切换功能分支失败" }
+
+git pull --ff-only origin fix/d5b9t-alarm-duplicate-snapshot
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 自动修正失败" }
+
+vp test run packages/core/test/alarm-baseline-session.test.ts packages/core/test/alarm-session-controller.test.ts packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警快照会话回归测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批没有 HTTP、Prisma、Vue/React 或真实工业采集变动，不重复此前未改模块的完整 ready 与浏览器专项。重复快照在托管器中使会话失效、订阅适配器清理资源，不代表外部取消函数真实完成释放；上游来源与时间仍待认证，正式发布 Gate 继续 fail-closed。
