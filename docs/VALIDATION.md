@@ -3985,3 +3985,27 @@ pnpm run ready
 Windows 真实浏览器还需分别在 React/Vue **1440×900 与 1024×768** 验收导航、模拟监控、已发布运行和 Studio：画布比例与网格、左右侧栏独立滚动、Popover、Tag 空状态、键盘 Tab→跳过导航、禁用/错误状态与无横向溢出。已有 `pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop` 可作为功能回归，必要的真实 OIDC 发布专项需要独立受控环境和授权。可访问性与视觉合格需要截图和人工审阅，不得以 `vp check`、Vitest 或本批 CSS 静态核对替代。
 
 相关 UI 基线：`docs/UI_DESIGN_SYSTEM.md`。工业来源认证、服务端正式报警、传输游标和设备控制均不属于本批。
+
+## 2026-11-23 · PR #177 Windows 首轮结果、E-104 Studio 侧栏回归修复候选
+
+维护者 Windows 在本批分支运行 `pnpm run ready`：依赖/配置/环境、中文文案 **312**、`vp check` **440 格式/288 受检零警告错误**、React/Vue 类型检查、Vitest **863/863**、报警 Lab **5/5**、NestJS E2E **63/63**、文档 **93 份**、React/Vue Web 构建均有成功记录；最后显示 NestJS 构建中的 Prisma Client 生成，日志**没有显示完整 `ready` 的最终退出码或本地 HEAD**，不可将其伪写为已证明整体返回 0。
+
+随后 `pnpm run test:browser` 在 React/Vue 两端的 **1440×900、1024×768** 各报告 **16/19**，失败项均为“左侧栏固定 252px”“右侧栏固定 320px”“画布占据剩余宽度”，并以退出码 **1** 停止。该命令与 `test:tags:browser`、`test:interop` 用 `&&` 连接，因此后两项**没有执行**，不能将它们登记为通过或失败。对应问题记录为 **E-104**。
+
+GitHub 远端源码与 `scripts/test-studio-browser.mjs` 的验收条件一致：原 `packages/tailwind/src/studio.css` 的共享基础值是 **252px/320px**，D5c0l 新加覆盖分别改成 260px/324px 和小屏的 238px/292px。修复候选已经**删除这两组新加覆盖**，不修改测试、业务和编辑器行为。此次代码与文档提交只进行远程静态核对，**修复后 Windows 浏览器及质量门禁尚未重新运行**。
+
+请在 **PR #177 最新 HEAD** 执行以下命令；第一步须显示当前 HEAD，以便与 GitHub 验收绑定：
+
+```powershell
+git fetch origin &&
+git switch feat/d5c0l-industrial-ui-shell &&
+git pull --ff-only &&
+git rev-parse HEAD &&
+pnpm run test:browser &&
+pnpm run test:tags:browser &&
+pnpm run test:interop &&
+vp check &&
+pnpm run docs:check
+```
+
+若上述通过，再按需要运行 `pnpm run ready` 并显式打印 `$LASTEXITCODE`。同时在双框架 1440×900、1024×768 复查画布不溢出、面板内滚动、键盘焦点与 TDesign 控件行为；没有新建等价自定义 UI 组件。当前 PR 继续 Draft，不允许在此待验收状态下合并。
