@@ -1052,3 +1052,10 @@
 - **最小修复**：保留原有真实按钮操作、12 秒业务通知等待及异常传播，将成功通知先记录在局部变量；`finally` 只负责恢复 `window.confirm` 和触发关闭；正常完成后在 `finally` 外继续等待面板隐藏，并保留原 5 秒关闭超时与中文报错。业务动作失败时先传播原始错误，不让关闭检查覆盖它；不修改 React/Vue 组件、草稿数据或其他版本安全断言。
 - **防复发及验证**：浏览器测试中的 `finally` 仅执行不改变控制流的清理，不在其中 `throw`、`return` 或 `break`；等待可能失败的关闭流程应安排在正常路径，避免掩盖真正的断言或 I/O 异常。修复已提交 PR #187 功能分支；**修复后的 Windows `node --check`、`vp check`、`docs:check`、`test:legacy:browser`、`test:versions:safety` 及发布预检测试尚待真实复验**，不得写成已通过。
 - **证据**：维护者 2026-11-23 Windows `vp check --fix` 原始输出、`scripts/test-studio-browser.mjs` 和 PR #187。
+
+### E-108 · D5c0w 首次批量迁移未先核对 React Collapse 的面板导出契约
+
+- **发现阶段**：全量 TDesign 迁移候选初稿误将 React `CollapsePanel` 当作 `tdesign-react@1.18.6` 可直接命名导出的组件，套用了与 Vue `CollapsePanel` 相同的写法。随后在正式提交交付前复核固定版本官方源码的 `collapse/index.ts` 与 `Collapse.tsx`，确认 React 应使用 `Collapse.Panel` 静态子组件；Vue Next `1.20.11` 才直接提供 `CollapsePanel`。此为代码候选阶段发现的**真实 API 使用错误**，尚没有 Windows 类型检查失败日志，不得伪称实测报错。
+- **修复**：将 React Studio 三处 `CollapsePanel` 改为 `Collapse.Panel`，移除错误命名导入；Vue 保持 `TCollapsePanel`。React/Vue 通用组件替换仍须分别核对各自固定版本，不凭名称相似假设 API 完全一致。
+- **防复发与验证**：代码批量替换前核对固定版本的组件入口、Props、事件、插槽与真实 HTML 语义；发生 JSX 标签替换时检查首尾配对、残留标签和浏览器测试的旧 DOM 选择器。已在 GitHub 候选分支静态确认误用移除；`pnpm run typecheck:web`、`vp check` 及真实浏览器仍待维护者在最终 PR HEAD 运行。
+- **证据**：D5c0w 分支 `apps/web-react/src/studio/StudioPage.tsx` 历史修改、Tencent TDesign React 固定版本 `Collapse.tsx` 和 `docs/TDESIGN_COMPONENT_AUDIT.md`。
