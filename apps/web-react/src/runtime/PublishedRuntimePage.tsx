@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { Button } from "tdesign-react";
+import "tdesign-react/es/style/index.css";
 import { createScadaApiClient } from "@adui/scada-api-client";
 import {
+  PUBLISHED_RUNTIME_EMPTY_HINTS,
   PUBLISHED_RUNTIME_STATUS_LABELS,
   PublishedRuntime,
   PublishedRuntimeRefresher,
@@ -136,13 +139,13 @@ export default function PublishedRuntimePage() {
             placeholder="输入已授权工程 ID"
             onChange={(event) => setProjectId(event.target.value)}
           />
-          <button type="submit">读取正式发布</button>
-          <button type="button" disabled={!activeProjectId} onClick={onRefresh}>
+          <Button type="submit">读取正式发布</Button>
+          <Button type="button" variant="outline" disabled={!activeProjectId} onClick={onRefresh}>
             立即刷新
-          </button>
-          <button type="button" disabled={!activeProjectId} onClick={onStop}>
+          </Button>
+          <Button type="button" variant="text" disabled={!activeProjectId} onClick={onStop}>
             停止读取
-          </button>
+          </Button>
         </form>
         {message ? <p role="alert">{message}</p> : null}
       </section>
@@ -201,7 +204,7 @@ export default function PublishedRuntimePage() {
             data-testid="published-runtime-svg"
           />
         ) : (
-          <p className="scada-diagnostics-empty">无可展示的已验证发布画面</p>
+          <p className="scada-diagnostics-empty">{PUBLISHED_RUNTIME_EMPTY_HINTS[state.status]}</p>
         )}
       </section>
       <footer>正式发布只读 · 未接入现场数据 · 不开放设备控制</footer>
