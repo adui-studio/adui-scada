@@ -99,3 +99,10 @@
 - **禁用态**：仅让 Studio 保存草稿强调按钮、图元添加按钮和页面标签的本地 hover 强调规则对 `:not(:disabled)` 生效，避免未来禁用时仍出现可操作的 hover 提示；原生 `disabled`、TDesign `Button/Input` 官方状态处理和鼠标事件全部保留。
 - **焦点与可访问性**：既有 `:focus-visible` 边框不变；TDesign 的 `--td-brand-color-focus`、`--td-brand-color-disabled`、`--td-text-color-disabled` 和禁用组件背景继续从共享主题取值。本批不覆盖 TDesign 组件内部选择器，也不自行实现同职责控件。
 - **验收边界**：新增两项静态回归，检查等值 Token、禁用 hover 守卫及 TDesign 焦点/禁用变量。实际 `vp check`、Vitest、React/Vue 两端 1440×900 和 1024×768 浏览器视觉、键盘焦点和禁用态仍须 Windows 执行。
+
+## D5c0r · 历史版本弹层共享排版 Token
+
+- **范围**：共享 Studio 历史版本弹层的提示/错误文本、版本工具栏、列表、时间戳和比较摘要；React/Vue 自动共用，不另建适配组件。
+- **等值原则**：12 条 CSS 声明将 6/8/12px 间距、11/12px 字号及 1.5 行高映射到现有 `--adui-space-3/4/5`、`--adui-font-size-2xs/xs`、`--adui-line-height-normal`，计算值保持不变。7/9/10px 等无匹配 Token 的特殊值保留。
+- **不变项**：弹层宽度 `min(378px, calc(100vw - 24px))`、最大高度 `min(70vh, 610px)`、Studio 252px/320px 侧栏、16:9 SVG、版本保存/载入/回滚语义、禁用和键盘焦点规则全部不变。
+- **测试边界**：新增一项静态主题回归检查所用 Token 与弹层几何；Windows Vite+ 和双端浏览器验证仍待执行。
