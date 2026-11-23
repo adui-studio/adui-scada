@@ -489,7 +489,7 @@ button:focus-visible {
 
 /* 工业软件统一界面：仅作用于应用壳与只读监控，不覆盖 TDesign 内部实现。 */
 :root {
-  --scada-ui-radius: 10px;
+  --scada-ui-radius: var(--adui-radius-panel);
   --scada-ui-shadow: 0 10px 30px rgb(0 0 0 / 14%);
 }
 .scada-skip-link {
@@ -498,12 +498,12 @@ button:focus-visible {
   left: 12px;
   z-index: 200;
   transform: translateY(-150%);
-  padding: 10px 16px;
+  padding: 10px var(--adui-space-6);
   border: 2px solid var(--scada-cyan);
-  border-radius: 6px;
+  border-radius: var(--adui-radius-md);
   background: var(--scada-nav);
   color: var(--scada-text-strong);
-  font-weight: 600;
+  font-weight: var(--adui-font-weight-semibold);
 }
 .scada-skip-link:focus-visible {
   transform: translateY(0);
@@ -513,7 +513,7 @@ button:focus-visible {
 .scada-app-nav {
   min-height: 64px;
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: var(--adui-space-3);
   padding: 9px clamp(14px, 2vw, 30px);
   border-bottom: 1px solid var(--scada-border);
   background: var(--scada-nav);
@@ -539,7 +539,7 @@ button:focus-visible {
   border-radius: 7px;
   background: transparent;
   color: var(--scada-text-secondary);
-  font-size: 13px;
+  font-size: var(--adui-font-size-sm);
   font-weight: 600;
   transition:
     background-color 140ms ease,
@@ -565,7 +565,7 @@ button:focus-visible {
   padding-left: 16px;
   border-left: 1px solid var(--scada-border);
   color: var(--scada-text-muted);
-  font-size: 12px;
+  font-size: var(--adui-font-size-xs);
   white-space: nowrap;
 }
 .scada-app-version::before {
@@ -605,7 +605,7 @@ button:focus-visible {
 }
 .scada-eyebrow {
   color: var(--scada-text-muted);
-  font-size: 12px;
+  font-size: var(--adui-font-size-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
 }
@@ -617,7 +617,7 @@ button:focus-visible {
   min-height: 34px;
   padding: 7px 12px;
   border: 1px solid var(--scada-border-strong);
-  border-radius: 6px;
+  border-radius: var(--adui-radius-md);
   background: var(--scada-surface);
   font-weight: 600;
   white-space: nowrap;
@@ -637,8 +637,8 @@ button:focus-visible {
   border-left: 3px solid var(--scada-border-strong);
   background: var(--scada-surface);
   color: var(--scada-text-secondary);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--adui-font-size-sm);
+  line-height: var(--adui-line-height-normal);
   overflow-wrap: anywhere;
 }
 .scada-message:empty {
@@ -663,7 +663,7 @@ button:focus-visible {
 .scada-panel-subtitle {
   margin: -3px 0 14px;
   color: var(--scada-text-muted);
-  font-size: 12px;
+  font-size: var(--adui-font-size-xs);
   line-height: 1.6;
 }
 .scada-diagnostics-note,
@@ -689,7 +689,7 @@ button:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 .scada-diagnostics-grid dd {
-  font-size: 18px;
+  font-size: var(--adui-font-size-xl);
   font-weight: 650;
   color: var(--scada-text-strong);
 }
@@ -720,7 +720,7 @@ button:focus-visible {
 }
 .scada-tag strong {
   color: var(--scada-text-secondary);
-  font-size: 12px;
+  font-size: var(--adui-font-size-xs);
 }
 .scada-tag span {
   color: var(--scada-text-strong);
@@ -730,7 +730,7 @@ button:focus-visible {
   overflow-wrap: anywhere;
 }
 .scada-tag small {
-  font-size: 12px;
+  font-size: var(--adui-font-size-xs);
 }
 .scada-published-controls {
   align-items: end;
@@ -762,7 +762,7 @@ button:focus-visible {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
-  gap: 16px;
+  gap: var(--adui-space-6);
 }
 .scada-shell--overview > footer,
 .scada-shell--published > footer {
@@ -788,9 +788,9 @@ button:focus-visible {
   flex: 1;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  font-size: 14px;
-  font-weight: 600;
+  padding: var(--adui-space-8);
+  font-size: var(--adui-font-size-md);
+  font-weight: var(--adui-font-weight-semibold);
   border: 1px dashed var(--scada-border-strong);
   border-radius: 7px;
   background: var(--scada-canvas);

@@ -1,8 +1,14 @@
+/// <reference types="node" />
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
 
 const themeRoot = new URL("../../theme/src/", import.meta.url);
 const readTheme = (name: string) => readFileSync(new URL(name, themeRoot), "utf8");
+
+const findRules = (css: string, selector: string): string[] =>
+  [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter((match) => match[1]?.trim().endsWith(selector))
+    .map((match) => match[2] ?? "");
 
 describe("双框架工业主题设计 Token", () => {
   it("主题颜色、字号和间距必须由 @adui/theme 统一定义且名称不重复", () => {
@@ -63,5 +69,49 @@ describe("双框架工业主题设计 Token", () => {
     expect(vueHtml).toContain('theme-mode="dark"');
     expect(studioStyles).toContain("--studio-left-width: 252px;");
     expect(studioStyles).toContain("--studio-right-width: 320px;");
+  });
+  it("运行页导航、诊断与发布空态必须使用保持原尺寸的统一 Token", () => {
+    const css = readFileSync(new URL("../src/runtime.css", import.meta.url), "utf8");
+    for (const [selector, declaration] of [
+      [".scada-app-nav", "gap: var(--adui-space-3);"],
+      [".scada-app-nav > button", "font-size: var(--adui-font-size-sm);"],
+      [".scada-app-version", "font-size: var(--adui-font-size-xs);"],
+      [".scada-message", "line-height: var(--adui-line-height-normal);"],
+      [".scada-panel-subtitle", "font-size: var(--adui-font-size-xs);"],
+      [".scada-diagnostics-grid dd", "font-size: var(--adui-font-size-xl);"],
+      [".scada-tag strong", "font-size: var(--adui-font-size-xs);"],
+      [
+        ".scada-published-preview-panel > .scada-diagnostics-empty",
+        "padding: var(--adui-space-8);",
+      ],
+    ] as const) {
+      expect(findRules(css, selector).some((rule) => rule.includes(declaration))).toBe(true);
+    }
+    const tokens = readTheme("tokens.css");
+    expect(tokens).toContain("--adui-space-3: 6px;");
+    expect(tokens).toContain("--adui-space-8: 24px;");
+    expect(tokens).toContain("--adui-font-size-xs: 12px;");
+    expect(tokens).toContain("--adui-font-size-sm: 13px;");
+    expect(tokens).toContain("--adui-font-size-xl: 18px;");
+    expect(tokens).toContain("--adui-line-height-normal: 1.5;");
+  });
+
+  it("Studio 工作台与工程列表复用主题字号，保留固定侧栏与缩放结构", () => {
+    const css = readFileSync(new URL("../../tailwind/src/studio.css", import.meta.url), "utf8");
+    for (const [selector, declaration] of [
+      [".studio-toolbar .scada-eyebrow", "font-size: var(--adui-font-size-2xs);"],
+      [".studio-actions button", "font-size: var(--adui-font-size-xs);"],
+      [".studio-page-tabs", "gap: var(--adui-space-2);"],
+      [".studio-project-browser-heading strong", "font-size: var(--adui-font-size-md);"],
+      [".studio-project-browser-info code", "font-size: var(--adui-font-size-xs);"],
+      [".studio-project-browser-pagination span", "font-size: var(--adui-font-size-2xs);"],
+    ] as const) {
+      expect(findRules(css, selector).some((rule) => rule.includes(declaration))).toBe(true);
+    }
+    expect(css).toContain("--studio-left-width: 252px;");
+    expect(css).toContain("--studio-right-width: 320px;");
+    expect(css).toContain(
+      "grid-template-columns: var(--studio-left-width) minmax(0, 1fr) var(--studio-right-width);",
+    );
   });
 });

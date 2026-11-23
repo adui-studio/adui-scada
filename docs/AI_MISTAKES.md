@@ -1014,3 +1014,11 @@
 - **防复发**：修改 UI 前先检查现有 CSS Token、可执行浏览器断言、分辨率和真实组件依赖。布局与控件职责分开：复用 `tdesign-react` / `tdesign-vue-next` 及官方 Token，不为 TDesign 已支持的 Button、Input、Select、Tabs、Dialog、Table、Tree 等重新封装同职责控件；Tailwind 管布局，受控 CSS 只用于工业画布等独特交互。尚未查询的 TDesign API 不能猜测。修复浏览器回归时优先修生产 CSS，不降低现成测试要求。
 - **验证边界**：GitHub 已静态核对主线宽度定义及脚本三项几何断言；删除覆盖后的浏览器回归、`vp check`、`docs:check`、`ready` 与后续双端视觉检查 **均待维护者 Windows 在最新 HEAD 重新执行**。此修复不能标记为已通过。
 - **证据**：维护者 2026-11-23 Windows 原始 `ready` 与 `test:browser` 日志、`scripts/test-studio-browser.mjs`、`packages/tailwind/src/studio.css`、PR #177、`docs/VALIDATION.md`。
+
+### E-105 · D5c0p 主题 CSS 静态测试忽略媒体查询覆盖（待 Windows 复验）
+
+- **现象**：新主题测试最初使用 `findLastRule(css, selector)` 检查某个 CSS 选择器的 Token。静态复核发现 `.scada-app-nav` 和 `.scada-app-nav > button` 在共享样式中同时有基础规则与后面的窄屏 `@media` 规则，最后一条不一定声明正在检查的属性，因此原断言会错误失败。
+- **根因**：把 CSS 中最后出现的同名选择器当作唯一目标规则，忽略媒体查询对不同属性分别设置响应式覆盖的合法写法。
+- **修复**：改为 `findRules(css, selector)` 获取所有匹配规则，再检查至少一条确实声明预期 Token；不改媒体查询、不取消响应式覆盖、不削弱样式原值和 Studio 252px/320px 的独立断言。
+- **规避与验证**：未来写静态 CSS 断言先检查选择器是否在 `@media` 中重现，不能假定最后声明包含所有属性；对样式改动逐行比较原值与替换后的 Token 解析值，确认结果相等。已在 GitHub 源码静态核对 19 处 Runtime、11 处 Studio 替换值不变；Windows `vp test run packages/runtime/test/theme-tokens.test.ts`、`vp check` 和浏览器验收**尚未执行**。
+- **证据**：D5c0p 开发分支的 `packages/runtime/test/theme-tokens.test.ts`、`packages/runtime/src/runtime.css`、`packages/tailwind/src/studio.css`。
