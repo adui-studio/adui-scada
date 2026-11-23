@@ -120,3 +120,32 @@ test("报警候选拒绝自动归一化的无效公历日期并接受有效闰�
     ),
   ).toEqual({ status: "READY", value: 42 });
 });
+
+test("报警候选拒绝二十四时跨日归一化并接受规范的次日零点", () => {
+  for (const [timestamp, time] of [
+    ["2026-02-28T24:00:00.000Z", "2026-03-01T00:00:00.000Z"],
+    ["2026-02-28T24:00:00.000+09:00", "2026-02-28T15:00:00.000Z"],
+  ]) {
+    expect(() =>
+      classifyTimelyNumericAlarmSample(
+        { ...valid, serverTimestamp: timestamp },
+        Date.parse(time),
+        1000,
+      ),
+    ).toThrow("报警服务器时间戳小时无效");
+  }
+  expect(
+    classifyTimelyNumericAlarmSample(
+      { ...valid, serverTimestamp: "2026-03-01T00:00:00.000Z" },
+      Date.parse("2026-03-01T00:00:00.000Z"),
+      1000,
+    ),
+  ).toEqual({ status: "READY", value: 42 });
+  expect(
+    classifyTimelyNumericAlarmSample(
+      { ...valid, serverTimestamp: "2026-02-28T23:59:59.999Z" },
+      Date.parse("2026-03-01T00:00:00.000Z"),
+      1000,
+    ),
+  ).toEqual({ status: "READY", value: 42 });
+});
