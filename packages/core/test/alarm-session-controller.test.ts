@@ -200,7 +200,9 @@ test("同代次重复快照撤销托管令牌，必须重启后才能从低序�
     state: { expectedTagId: "tank.level", generation: 2, baseline: null },
   });
   expect(controller.currentToken()).toBeNull();
-  expect(controller.receive(token, { kind: "snapshot", values: [baseline] }, true, nowMs, 3000)).toEqual({
+  expect(
+    controller.receive(token, { kind: "snapshot", values: [baseline] }, true, nowMs, 3000),
+  ).toEqual({
     status: "STALE_HANDLE_IGNORED",
   });
   const renewed = controller.restart();
