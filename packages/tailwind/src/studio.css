@@ -44,11 +44,11 @@
   white-space: nowrap;
   font-size: var(--adui-font-size-xs);
 }
-.studio-save-actions button:first-child {
+.studio-save-actions button:first-child:not(:disabled) {
   background: var(--scada-primary);
   border-color: var(--scada-primary);
 }
-.studio-save-actions button:first-child:hover {
+.studio-save-actions button:first-child:not(:disabled):hover {
   background: var(--scada-primary-hover);
 }
 .studio-file-menu,
@@ -206,7 +206,7 @@
   min-height: 46px;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--adui-space-4);
   padding: 11px 14px;
   border-bottom: 1px solid var(--scada-border);
 }
@@ -250,7 +250,7 @@
   background: var(--scada-action-bg);
   color: var(--scada-text);
 }
-.studio-add button:hover {
+.studio-add button:not(:disabled):hover {
   border-color: var(--scada-primary);
 }
 .studio-tree-controls {
@@ -263,7 +263,7 @@
 }
 .studio-tree-controls .studio-field {
   grid-column: 1 / -1;
-  gap: 6px;
+  gap: var(--adui-space-3);
   margin: 0;
 }
 .studio-tree-controls .t-button {
@@ -547,7 +547,7 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  margin: 0 -14px 12px;
+  margin: 0 -14px var(--adui-space-5);
   padding: 15px 14px 13px;
   border-bottom: 1px solid var(--scada-border);
   background: var(--scada-surface);
@@ -555,13 +555,13 @@
 .studio-panel-properties > p {
   margin: 9px 0;
   color: var(--scada-text-secondary);
-  font-size: 12px;
+  font-size: var(--adui-font-size-xs);
   overflow-wrap: anywhere;
 }
 .studio-geometry {
   gap: 10px;
-  padding: 12px;
-  margin: 12px 0;
+  padding: var(--adui-space-5);
+  margin: var(--adui-space-5) 0;
   border: 1px solid var(--scada-border);
   border-radius: 7px;
   background: var(--scada-canvas);
@@ -573,7 +573,7 @@
 .studio-advanced {
   margin-top: 18px;
   border: 1px solid var(--scada-border);
-  border-radius: 6px;
+  border-radius: var(--adui-radius-md);
 }
 .studio-advanced > summary {
   min-height: 40px;
@@ -584,7 +584,7 @@
   border-top: 1px solid var(--scada-border);
 }
 .studio-advanced .studio-tool-group {
-  gap: 6px;
+  gap: var(--adui-space-3);
   margin: 10px 0;
 }
 .studio-advanced .studio-tool-group .t-button {
@@ -941,7 +941,7 @@
   color: var(--scada-text-secondary);
   font-weight: 600;
 }
-.studio-page-tabs button:hover {
+.studio-page-tabs button:not(:disabled):hover {
   background: var(--scada-action-hover);
   color: var(--scada-text-strong);
 }

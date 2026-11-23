@@ -92,3 +92,10 @@
 - **等值原则**：本组将 19 处 Runtime 与 11 处 Studio 的原字面值改为已有 `--adui-font-size-*`、`--adui-space-*`、`--adui-radius-*`、`--adui-line-height-normal` 或 `--adui-font-weight-semibold` 引用，**不修改计算后的 px、行高、字重、圆角**。例如 `12px → var(--adui-font-size-xs)`、`13px → var(--adui-font-size-sm)`、`6px → var(--adui-space-3)`、`24px → var(--adui-space-8)`。
 - **保持原样**：浏览器缩放与响应式边界、Studio 固定侧栏 252/320px、16:9 SVG、图层命中层与指针坐标、TDesign API/组件状态、Tag/报警质量及发布只读权限都不变。特殊尺寸（如 15/17/19px 或 34/38px 控件高度）未强行映射到不同档位，以免视觉漂移。
 - **验证**：主题静态测试新增导航与诊断/发布空态 Token 引用、Studio 工程列表及固定侧栏的断言。静态差异复核已确认两份共享 CSS 只有 30 行属性值替换，所有 Token 展开后与原声明相同；但真实 Vite+、React/Vue 构建与 Windows 视觉回归尚待执行。
+
+## D5c0q · 属性面板密度与控件交互状态收敛
+
+- **属性面板密度**：在共享 `studio.css` 内把属性说明的 12px、面板标题下间距及几何表单的 12px、分组标题 8px、工具组 6px、折叠区域圆角 6px 映射到已有 `@adui/theme` Token。只更换数值来源，保留实际像素值、表单结构、SVG 画布与 252px/320px 固定侧栏。
+- **禁用态**：仅让 Studio 保存草稿强调按钮、图元添加按钮和页面标签的本地 hover 强调规则对 `:not(:disabled)` 生效，避免未来禁用时仍出现可操作的 hover 提示；原生 `disabled`、TDesign `Button/Input` 官方状态处理和鼠标事件全部保留。
+- **焦点与可访问性**：既有 `:focus-visible` 边框不变；TDesign 的 `--td-brand-color-focus`、`--td-brand-color-disabled`、`--td-text-color-disabled` 和禁用组件背景继续从共享主题取值。本批不覆盖 TDesign 组件内部选择器，也不自行实现同职责控件。
+- **验收边界**：新增两项静态回归，检查等值 Token、禁用 hover 守卫及 TDesign 焦点/禁用变量。实际 `vp check`、Vitest、React/Vue 两端 1440×900 和 1024×768 浏览器视觉、键盘焦点和禁用态仍须 Windows 执行。

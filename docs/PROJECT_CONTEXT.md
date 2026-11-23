@@ -2414,3 +2414,9 @@ D5c0o 已建立 `packages/theme` 的纯 CSS 工作区包，统一 V7 色板、�
 维护者提供 PR #180 的 Windows 日志：`pnpm run ready` 执行到末尾，Vitest 70 文件/868 用例通过，其中 `theme-tokens.test.ts` 4/4；NestJS E2E 63/63、Vite+ 445 文件格式正确/289 受检零告警、Web/Server 构建和文档 93 份均通过。其后同一 `&&` 链上 React/Vue 双分辨率 Studio 76/76、Tag 管理与 JSON 双向往返通过。日志未单独打印本地 HEAD，验收绑定 GitHub 最终头 `e93eb74e16325c34e7daf29a793ba7fd17552059` 的差异核对。GitHub 已确认锁文件仅新增工作区 importer、无未解决评论、Assignee `@adui-dev` 且可合并；维护者明确同意后 PR #180 Squash 合并至 `main@8ff4ca82b8f983a32bbd9f98bdf99087b41877c0`。
 
 D5c0p 基于上述 main 在共享 Runtime 样式做 19 处、共享 Studio CSS 做 11 处**原值不变**的字号、间距、字重与圆角 Token 替换；不触碰应用组件、状态、图元和服务器。静态比较两份 CSS 仅 30 行不同，Token 解析均为原数值，并加了导航/发布空态/工程列表回归断言。初版 CSS 断言误以为最后同名选择器就是目标，修复后改为收集所有规则，详见 E-105。**本批尚未运行 Windows Vite+、单元测试和浏览器验收；保持 Draft 待维护者验证。**
+
+## 2026-11-23 · PR #181 合并与 D5c0q 属性面板/控件状态小批次
+
+维护者 Windows 日志确认 PR #181 的 `vp check` **445 个格式文件、289 个受检零告警错误**、主题单测 **6/6**、完整 Vitest **870/870**、NestJS E2E **63/63**、文档 **93** 份以及 React/Vue Web 构建通过，服务端构建日志运行至 Prisma Client 生成。原始记录未单独打印最后退出码、机器本地 HEAD 或浏览器回归结果，故不把这些项目虚报为已实测；GitHub 核对 PR 最终头 `44cd8b562f5b0434172d1823531f7a780f00b919`、无未解决审查、Assignee `@adui-dev`，维护者明确授权后 Squash 合并至 `main@66c006de3fb915138ca79608afac5bb1b9c542a7`。
+
+D5c0q 在独立功能分支继续等值迁移共享 Studio 属性面板的字号、间距和圆角，并为本地 hover 强调增加禁用态守卫；不修改 React/Vue 的 DOM、TDesign 组件 API、工程 Schema、工业数据质量、已发布只读读取、侧栏宽度或画布比例。新增两项 Runtime 主题回归定义，实际 Windows 工具链与双框架浏览器尚待维护者验收，PR 保持 Draft。

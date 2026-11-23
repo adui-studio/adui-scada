@@ -1022,3 +1022,5 @@
 - **修复**：改为 `findRules(css, selector)` 获取所有匹配规则，再检查至少一条确实声明预期 Token；不改媒体查询、不取消响应式覆盖、不削弱样式原值和 Studio 252px/320px 的独立断言。
 - **规避与验证**：未来写静态 CSS 断言先检查选择器是否在 `@media` 中重现，不能假定最后声明包含所有属性；对样式改动逐行比较原值与替换后的 Token 解析值，确认结果相等。已在 GitHub 源码静态核对 19 处 Runtime、11 处 Studio 替换值不变；Windows `vp test run packages/runtime/test/theme-tokens.test.ts`、`vp check` 和浏览器验收**尚未执行**。
 - **证据**：D5c0p 开发分支的 `packages/runtime/test/theme-tokens.test.ts`、`packages/runtime/src/runtime.css`、`packages/tailwind/src/studio.css`。
+
+> **2026-11-23 · E-105 Windows 复验补录**：维护者在 PR #181 的 Windows 日志中实际完成 `theme-tokens.test.ts` **6/6**、`vp check` **445 格式/289 受检零警告错误**，完整 Vitest **870/870**、NestJS E2E **63/63**、文档 **93** 份、React/Vue 构建均通过。最后一次远程提交 `44cd8b562f5b0434172d1823531f7a780f00b919` 仅增加测试格式化修改；经维护者授权 Squash 合并至 `main@66c006de3fb915138ca79608afac5bb1b9c542a7`。因日志未给本地 HEAD、完整命令退出码和浏览器记录，不把这些缺失证据视为已验证；本次确认 CSS 重复选择器断言不再阻断 Windows 主题测试。
