@@ -667,8 +667,7 @@ async function runScadaUIExperience(session) {
             captureBeyondViewport: false,
           });
           assert.ok(screenshot.data, prefix + " 无法保存真实浏览器视口截图");
-          const filename =
-            target.name.toLowerCase() + "-" + viewport.width + "x" + viewport.height + "-" + view + ".png";
+          const filename = `${target.name.toLowerCase()}-${viewport.width}x${viewport.height}-${view}.png`;
           writeFileSync(join(screenshotDirectory, filename), Buffer.from(screenshot.data, "base64"));
         }
         process.stdout.write(prefix + " 新版信息架构、状态与视觉边界通过\n");

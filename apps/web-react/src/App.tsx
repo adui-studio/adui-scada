@@ -38,7 +38,13 @@ export default function App() {
             aria-current={view === "runtime" ? "page" : undefined}
             onClick={() => setView("runtime")}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden="true"
+            >
               <path d="M3 19h18M5 16V8m5 8V5m5 11v-6m4 6V7" strokeLinecap="round" />
             </svg>
             <span>运行监控</span>
@@ -49,7 +55,13 @@ export default function App() {
             aria-current={view === "published" ? "page" : undefined}
             onClick={() => setView("published")}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden="true"
+            >
               <rect x="4" y="3" width="16" height="18" rx="2" />
               <path d="M8 8h8M8 12h8M8 16h4" strokeLinecap="round" />
             </svg>
@@ -61,7 +73,13 @@ export default function App() {
             aria-current={view === "studio" ? "page" : undefined}
             onClick={() => setView("studio")}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden="true"
+            >
               <path d="M4 4h16v16H4zM4 9h16M9 9v11" strokeLinejoin="round" />
               <path d="m13 15 2 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
