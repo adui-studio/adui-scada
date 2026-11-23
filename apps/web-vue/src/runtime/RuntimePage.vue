@@ -29,7 +29,7 @@ onUnmounted(() => runtime.stop());
 </script>
 
 <template>
-  <main class="scada-shell">
+  <main id="scada-main-content" class="scada-shell scada-shell--overview">
     <header class="scada-header">
       <div>
         <p class="scada-eyebrow">ADui SCADA · V0.1</p>
@@ -95,11 +95,13 @@ onUnmounted(() => runtime.stop());
         </ol>
       </section>
     </section>
-    <section class="scada-panel" aria-label="模拟工业监控画面">
+    <section class="scada-panel scada-process-panel" aria-label="模拟工业监控画面">
+      <h2>模拟工艺流程</h2>
+      <p class="scada-panel-subtitle">只读演示画面 · 不代表现场设备数据</p>
       <img v-if="svg" class="scada-svg" :src="svg" alt="水箱、水泵与流量模拟监控" />
-      <p v-else>正在加载工程...</p>
+      <p v-else>正在加载工程…</p>
     </section>
-    <section class="scada-panel">
+    <section class="scada-panel scada-values-panel" aria-label="Tag 质量与最近值">
       <h2>Tag 质量与最近值</h2>
       <div class="scada-tags">
         <div v-for="tag in state.values" :key="tag.tagId" class="scada-tag">
