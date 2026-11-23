@@ -1397,3 +1397,11 @@ D5b9z 在校验事件代次合法之后、判断其他代次之前增加一次�
 D5c0a 只在 `packages/core/src/alarm-tag-freshness.ts` 的 **GOOD 且有限数值**候选分支，对 `serverTimestamp` 增加显式时区格式要求：`YYYY-MM-DDTHH:mm:ss[.fraction]Z` 或 `YYYY-MM-DDTHH:mm:ss[.fraction]±HH:mm`，日期分量与偏移可解析性继续由原 `validateTagValue` / `Date.parse` 校验。缺少明确时区时抛出既有非法输入模式的 `TypeError("报警服务器时间戳必须包含明确时区")`，不产出 `READY` 或工艺数值；不新增状态枚举。明确 `+09:00` 等偏移换算与等价 UTC 时间可正常接受；先前的 `QUALITY_NOT_GOOD` / `NOT_NUMERIC` 优先拒绝保持不变，`sourceTimestamp` 不作为报警时效或顺序依据。
 
 初始快照与公开增量入口分别继承此校验，非法候选日期在直接调用时抛错；`transitionAlarmBaselineSession` 已有 TypeError 捕获将其转换为 `BASELINE_INVALIDATED/INVALID_INPUT` 并冻结清空基线；`AlarmSubscriptionAdapter` 按原有路径停止订阅及尝试释放资源。没有改动通用 `TagStore` 的历史解析契约、Vue/React Studio、Tag Schema、网络接口或设备写入。本批更严格的报警候选时间格式是**新增加的局部安全前提**，尚需维护者在 Windows 验证并在未来可信网关实现时明确执行服务端时间规范化。解析出有时区的值仍不能证明来源身份、服务端时间赋值权或物理测量真实可信。正式报警规则、确认、不可变审计与发布 Gate 保持未实现或 fail-closed。
+
+## 2026-11-23 · D5c0b FR-011 报警候选不得将不存在的公历日期规范化为有效时间（候选）
+
+D5c0a 已要求报警候选服务器时间包含明确的 `Z` 或 `±HH:mm` 时区，但其后仍直接信任 `validateTagValue` / `Date.parse` 的可解析性。Node 22 的独立复现证明，`Date.parse("2026-02-30T09:00:00.000Z")` 会返回 `2026-03-02T09:00:00.000Z` 的毫秒值；`2025-02-29` 和 `2026-04-31` 同样会被归一化。这样原始日期实际不存在，却可在归一化后的时间窗口内被判断为 `READY`。这是候选输入的静态可达风险，不是现场报警事故。
+
+D5c0b **只修改** `packages/core/src/alarm-tag-freshness.ts`：在 D5c0a 的显式时区正则中捕获公历年、月、日；在调用 `Date.parse` 比较时间窗之前，根据各月实际天数和格里高利闰年规则（四年一闰、百年不闰、四百年再闰）验证日期存在。不存在时抛中文 `TypeError("报警服务器时间戳日期无效")`；已有 TypeError→`BASELINE_INVALIDATED/INVALID_INPUT` 的会话终止和 Adapter 取消订阅继续适用。合法闰日、UTC 和显式时区偏移继续正常接受；不新增拒绝枚举或函数签名，不修改原来的质量、数值、时区、服务器时间非倒退优先级。
+
+只处理报警候选，不改通用 `TagStore` 的历史兼容性与 `TagValue` Schema。普通 Tag 的可解析性不等于正式报警时间可信，网关未来仍须由可信服务端规范化时间并保证来源认证。本次不实现报警触发、确认授权、不可变审计、PLC/DCS 连接或设备写入；发布安全 Gate 继续 fail-closed。

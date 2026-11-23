@@ -347,3 +347,23 @@ test("直接增量入口拒绝新读数或旧基线的无时区服务器时间",
     ),
   ).toThrow("报警服务器时间戳必须包含明确时区");
 });
+
+test("无效公历日期不能以更大序列号从直接增量入口推进基线", () => {
+  expect(() =>
+    advanceAlarmTagDeltaBaseline(
+      {
+        ...request,
+        baseline: {
+          generation: 2,
+          value: { ...previous, serverTimestamp: "2026-03-02T08:59:59.000Z" },
+        },
+        change: {
+          kind: "delta",
+          values: [{ ...next, serverTimestamp: "2026-02-30T09:00:00.000Z" }],
+        },
+      },
+      Date.parse("2026-03-02T09:00:00.000Z"),
+      3000,
+    ),
+  ).toThrow("报警服务器时间戳日期无效");
+});

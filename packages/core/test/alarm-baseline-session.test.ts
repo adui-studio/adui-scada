@@ -723,3 +723,62 @@ test("无时区服务器时间的快照与增量均终止当前候选会话", ()
     state: rejectedDelta.state,
   });
 });
+
+test("非法公历日期的首次快照与增量都要终止会话", () => {
+  const marchNow = Date.parse("2026-03-02T09:00:00.000Z");
+  const invalidTimestamp = "2026-02-30T09:00:00.000Z";
+  const pending = beginAlarmBaselineSession("tank.level", 2);
+  const invalidSnapshot = transitionAlarmBaselineSession(
+    pending,
+    {
+      ...snapshot,
+      change: {
+        kind: "snapshot",
+        values: [{ ...previous, serverTimestamp: invalidTimestamp }],
+      },
+    },
+    marchNow,
+    3000,
+  );
+  expect(invalidSnapshot).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "INVALID_INPUT",
+    state: { ...pending, invalidated: true },
+  });
+
+  const establishedMarch = transitionAlarmBaselineSession(
+    pending,
+    {
+      ...snapshot,
+      change: {
+        kind: "snapshot",
+        values: [{ ...previous, serverTimestamp: "2026-03-02T08:59:59.000Z" }],
+      },
+    },
+    marchNow,
+    3000,
+  );
+  expect(establishedMarch.status).toBe("BASELINE_ESTABLISHED");
+  const invalidDelta = transitionAlarmBaselineSession(
+    establishedMarch.state,
+    {
+      ...delta,
+      change: {
+        kind: "delta",
+        values: [{ ...next, serverTimestamp: invalidTimestamp }],
+      },
+    },
+    marchNow,
+    3000,
+  );
+  expect(invalidDelta).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "INVALID_INPUT",
+    state: { ...establishedMarch.state, baseline: null, invalidated: true },
+  });
+  expect(transitionAlarmBaselineSession(invalidDelta.state, snapshot, nowMs, 3000)).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SESSION_INVALIDATED",
+    state: invalidDelta.state,
+  });
+});

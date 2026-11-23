@@ -753,3 +753,20 @@ test("无时区服务器时间的首份快照会停止订阅并撤销旧回调",
   source.emit({ kind: "snapshot", values: [value] }, true, 0);
   expect(adapter.snapshot().baseline).toBeNull();
 });
+
+test("不存在的公历日期不能经首次快照进入订阅基线", () => {
+  const { adapter, source, scheduler, setNow } = setup();
+  adapter.start();
+  setNow(Date.parse("2026-03-02T09:00:00.000Z"));
+  source.emit({
+    kind: "snapshot",
+    values: [{ ...value, serverTimestamp: "2026-02-30T09:00:00.000Z" }],
+  });
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(adapter.snapshot().invalidated).toBe(true);
+  expect(source.closes).toBe(1);
+  expect(scheduler.cancels).toBe(1);
+  source.emit({ kind: "snapshot", values: [value] }, true, 0);
+  expect(adapter.snapshot().baseline).toBeNull();
+});
