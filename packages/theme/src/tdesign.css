@@ -1,6 +1,6 @@
-/* TDesign 官方 Web CSS Variables 主题映射；两端通过 html theme-mode=dark 共用。 */
+/* TDesign 官方 Web CSS Variables：React/Vue 共用浅色操作面板。 */
 /* html:root 比 TDesign 默认 :root 具有更高优先级，避免懒加载组件样式覆盖主题。 */
-html:root[theme-mode="dark"] {
+html:root[theme-mode="light"] {
   --td-brand-color: var(--adui-color-brand);
   --td-brand-color-hover: var(--adui-color-brand-hover);
   --td-brand-color-active: var(--adui-color-brand-active);
