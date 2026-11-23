@@ -3226,14 +3226,20 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 
 PR #153 维护者 Windows 已实际通过新增订阅适配单测 **13/13**、`vp check` **435 格式文件/286 受检零警告错误**、`docs:check` **90**、`messages:check` **310**；经明确同意，Squash 合并到 `main@7d82b3d2889db16c4b8423cd140e09e180d40bf0`。本批 D5b9o 在此基础上修改现有适配器及其定向测试，**新增 4 项、当前文件合计 17 项，仅为定义，尚无 Windows 实测**。
 
-先按维护者习惯执行 `vp check --fix` 并提交实际需要的格式化改动；不要求手动核对 HEAD，然后在当前分支执行：
+先更新远程分支并切换到本批分支，再按维护者习惯运行 `vp check --fix`；若有变更，可正常提交。无需手动核对 HEAD。随后执行：
 
 ```powershell
 git fetch origin
 if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
 
 git switch fix/d5b9o-alarm-adapter-reentrant-cleanup
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5b9o-alarm-adapter-reentrant-cleanup
+}
 if ($LASTEXITCODE -ne 0) { throw "切换验收分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 自动修正失败" }
 
 vp test run packages/core/test/alarm-subscription-adapter.test.ts
 if ($LASTEXITCODE -ne 0) { throw "报警订阅资源重入保护测试失败" }
