@@ -1755,8 +1755,8 @@ export default function StudioPage() {
     >
       <header className="studio-toolbar">
         <div>
-          <p className="scada-eyebrow">ADui SCADA · 组态工作台</p>
-          <h1>SVG 组态编辑器</h1>
+          <p className="scada-eyebrow">工程设计 · SVG 画布</p>
+          <h1>组态工作台</h1>
         </div>
         <div className="studio-actions">
           <div className="studio-history-actions">

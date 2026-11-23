@@ -1802,8 +1802,8 @@ async function importJsonFile(file: File | undefined) {
   >
     <header class="studio-toolbar">
       <div>
-        <p class="scada-eyebrow">ADui SCADA · 组态工作台</p>
-        <h1>SVG 组态编辑器</h1>
+        <p class="scada-eyebrow">工程设计 · SVG 画布</p>
+        <h1>组态工作台</h1>
       </div>
       <div class="studio-actions">
         <div class="studio-history-actions">
