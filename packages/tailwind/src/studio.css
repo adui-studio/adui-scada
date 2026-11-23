@@ -952,8 +952,6 @@
   color: var(--scada-text-strong);
 }
 .studio-workspace {
-  --studio-left-width: 260px;
-  --studio-right-width: 324px;
   background: var(--scada-canvas);
 }
 .studio-panel {
@@ -1039,10 +1037,6 @@
   outline-offset: 2px;
 }
 @media (max-width: 1250px) {
-  .studio-workspace {
-    --studio-left-width: 238px;
-    --studio-right-width: 292px;
-  }
   .studio-toolbar {
     gap: 10px;
   }
