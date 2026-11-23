@@ -75,3 +75,11 @@ D5c0s 审计基线：`StudioPage.tsx` 与 `StudioPage.vue` 每端各有 **9 处*
 - **旧 CSS 清理**：删除 `.studio-page-menu > summary` 和 `.studio-page-actions` 的手工背景、绝对定位、宽度、栅格及 hover 规则。保留 `.studio-page-menu` 布局容器；新菜单的定位、挂载和关闭交由 TDesign Popup 内部实现。
 - **浏览器验收**：在 `scripts/test-studio-browser.mjs` 正常 Studio 双框架双分辨率测试中新增 8 个真实菜单检查（触发器、选项齐全、禁用条件、创建、关闭、禁用阻止、外部关闭、键盘聚焦），原 19 项几何/图层/画布断言全部保留，**目标每组 27 项，四组共 108 项**。确认禁用项 `t-dropdown__item--disabled` 与对应版本源码一致。菜单的 Esc 行为需要 Windows 手工检查，未据此声称已支持完整键盘导航。
 - **验收状态**：本提交仅完成 GitHub 代码变更与静态核对，尚未运行 Windows `vp check`、Web 类型检查或真实浏览器。项目指定的 `tdesign-mcp-server` 当前不可用，本次是对固定官方 tag 类型与组件实现的直接校验，不能等同 MCP 查询成功。
+
+## 8. D5c0u · 文件与草稿 TDesign Popup 迁移候选
+
+- React 与 Vue Studio 各将一处 `details/summary` 文件菜单替换为固定版本 `Popup + Button`，使用官方 `trigger='click'`、`placement='bottom-right'`、`attach='.studio-file-menu'` 和 Vue 的 `#content` 插槽 / React 的 `content` 属性。挂载在已有菜单容器内以保留现有只读 DOM 查询契约；可见性、浮层定位与点击外部关闭由 TDesign 负责，不保留手工绝对定位。
+- 五项既有功能保持：自动保存开关、导入 JSON、导出 JSON、恢复草稿、清除草稿。特别保留 `<input type='file' accept='.json,application/json'>` 的本地文件事件与原有 2 MiB 大小限制、工程 Schema 校验、加载失败保护、异步互斥、IndexedDB 修订号 CAS 和危险操作原生确认。**此批没有引入网络 Upload，也未修改业务或历史版本载入。**
+- 本次优先替换 Popup 容器，原生 File input 与 CRUD 按钮暂不更换；后续使用 TDesign `Upload` 时，必须另外验证 `autoUpload=false`、本地文件尺寸、异步防并发和合法/非法工程往返。不得为了组件一致性改变业务验证顺序或擅自上传工程文件。
+- `scripts/test-studio-browser.mjs` 的原始用例以前设置 `details.open`。当前已将文件/草稿相关操作改为点击 TDesign 触发器、等待实际可见面板、完成动作并关闭；版本历史并发用例仍要检查旧逻辑被正确拒绝。独立浏览器 Studio 每视口新增 3 项 Popup 断言，目标从 27 项增加到 30 项，React/Vue 四组目标合计 **120 项**；其他导入导出、旧草稿迁移、版本安全与多标签页集成测试必须另行验收。
+- **验证状态**：仅完成 GitHub 分支源码及固定 TDesign React `1.18.6` / Vue Next `1.20.11` 的 `popup/type.ts`、组件事件与挂载定义核对。尚未实跑 Windows `typecheck:web`、`vp check`、浏览器或真实文件导入；不得将静态匹配表述为正式测试通过。
