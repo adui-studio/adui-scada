@@ -2472,3 +2472,11 @@ PR #186 已回滚上一轮 Vue Vite 预构建配置猜测；最小修复候选�
 维护者 Windows 对 PR #186 完成本批分层验收：`node --check`、`vp check`（446 文件格式正确/289 受检零告警）、`docs:check`（94 份）成功；较早的 `typecheck:web`、正常 Studio **120/120**、JSON 双端互通、版本并发安全和旧草稿迁移专项通过。最后 `test:multitab` 在 Chromium HTTP 缓存隔离后，React 与 Vue 各完成 **4 个安全阶段**（广播停写、无广播 CAS、墓碑重建、IndexedDB 故障恢复），命令无非零退出。GitHub 最终 PR 头 `c67bc33d1520b10a0a046e51d52213a8115bff0c`，经维护者明确授权 Squash 合并到 `main@1faca1a386c83314e24f245b7ea394c80f1c7cb0`；Windows 日志未单独输出本地 HEAD。已证实测试隔离绕过 HTTP 缓存后本轮通过，底层磁盘/权限/安全软件原因仍未证明。
 
 D5c0v 基于合并后的 main，限定本地版本历史一个入口/框架：复用 TDesign Popup，保留原有 IndexedDB 历史业务、导入竞争和确认保护；对应真实浏览器历史辅助函数改为触发官方按钮，并新增 3 项普通 Studio 检查。未更改 Schema、Tag、服务端版本 API、OIDC、已保存发布预检或工业设备边界。仅做了 GitHub 静态源码核对，**本批 Windows 真实测试尚未执行，PR 只作为 Draft 候选**。
+
+## 2026-11-23 · PR #187 已授权合并；D5c0w 全量 TDesign UI 迁移
+
+维护者 Windows 对 PR #187 最终候选执行 `node --check`、`vp check`（446 格式/289 受检零告警错误）、`docs:check`（94 份）、`test:legacy:browser` 双端各三条旧迁移路径、`test:versions`、`test:versions:safety` 和 `test:release:preflight:browser`，均成功；此前普通 Studio 132/132 已通过。维护者明确授权合并，GitHub Squash Merge 至 `main@6c2200fe3d0419bb31f4226eec524e944d0c524e`。日志未单独提供 Windows 本地 HEAD，保留证据边界。
+
+下一功能分支 `feat/d5c0w-tdesign-unified-ui` 按维护者新要求集中统一全部通用 UI 控件，**完成代码与测试适配后才统一要求 Windows 验收**，不再拆分多个小 PR。React/Vue 对等更换 Button、Popup、Collapse、Input、Select、Checkbox、Textarea、Upload、Dialog，并保持本地 JSON 不上传、旧版 SHA-256、IndexedDB CAS、服务端确认二次校验以及原有 OIDC 拒绝路径。SVG 组态画布及工业特殊交互继续自研；工程 Schema、后端服务、网关与工业写入权限未变。
+
+**当前状态**：该分支代码及相关浏览器测试在 GitHub 提交，仍属静态候选。已阅读固定版本官方组件源码，未运行本机 Windows 浏览器、Vite+、Vue/React 全量类型或 Lab 测试；不得冒充完整验收通过。验收条件及未确认范围见 `docs/VALIDATION.md` 和 `docs/TDESIGN_COMPONENT_AUDIT.md`。
