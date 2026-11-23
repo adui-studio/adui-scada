@@ -4133,3 +4133,34 @@ git status --short
 ```
 
 人工比较 React/Vue 1440×900 和 1024×768：属性面板表单布局及文字密度、不可编辑图元的 TDesign Input/Button 禁用状态、可见键盘焦点、无选中图元空态、工具栏按钮 hover、缩放和侧栏固定宽度。测试不连接现场 PLC/DCS，也不授权任何设备写入。
+
+## 2026-11-23 · PR #182 完整验收与 D5c0r 分级复验
+
+PR #182 维护者 Windows 日志：`ready` 质量链的 `vp check` 445 文件格式/289 个受检零告警，Vitest **872/872**（主题 **8/8**）、NestJS E2E **63/63**、文档 **93** 份、双框架 Web 及 Server 构建完成，退出检查未触发。初次浏览器测试因本机 HTTPS CA 不受信任而失败；维护者恢复受信任证书后，React/Vue 1440×900、1024×768 四组各 **19/19**，合计 **76/76**，两端 Tag 管理与 JSON 互通均通过。未关闭 TLS 校验；日志没有单独输出本地 HEAD。GitHub 最终 HEAD `54ebf3236c39d2ab66f1ea68b055714a4d8e1ddb`，获明确授权后 Squash 合并为 `main@62265b14f11d20580c0dd58123977fef8304ccdb`。
+
+**增量验收去重规则**：
+
+- `pnpm run ready` **已包含** `vp check`、完整单测（包括主题专项）、前后端类型检查、离线安全/配置测试、NestJS E2E、`docs:check` 和构建。若同一 HEAD 的 `ready` 已成功，不应重复执行这些被覆盖的命令。
+- `pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop` **不属于** `ready`，需按改动实际影响选择。仅影响 Studio CSS 布局时要跑 `test:browser`；涉及 Tag CRUD 或工程导入导出语义时才额外跑对应专项。
+- 小型 CSS Token 变更采用定向主题测试、`vp check`、`docs:check` 和双端真实浏览器几何回归，不要求每次提交重复完整 `ready`；核心业务、依赖、权限/审计、数据库、安全边界或关键发布路径变更，需升级为完整质量链及相关集成专项。所有执行结果均绑定当前 HEAD，旧 PR 结果不能冒充新代码已实测。
+- HTTPS 测试需要受信任的 CA（可用 `NODE_EXTRA_CA_CERTS`）；禁止 `NODE_TLS_REJECT_UNAUTHORIZED=0` 和忽略证书错误。
+
+D5c0r 本批仅对版本历史弹层进行 12 条 CSS **等值** Token 迁移，并新增 1 项主题静态测试，预计专项 **9 项**。GitHub 已静态检查声明及新断言，但本分支 Windows 测试**尚未执行**。建议在最终 HEAD 运行：
+
+```powershell
+git fetch origin
+git switch feat/d5c0r-theme-version-history
+git pull --ff-only
+git rev-parse HEAD
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码检查失败" }
+vp test run packages/runtime/test/theme-tokens.test.ts
+if ($LASTEXITCODE -ne 0) { throw "主题专项失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run test:browser
+if ($LASTEXITCODE -ne 0) { throw "双框架 Studio 浏览器回归失败" }
+git status --short
+```
+
+人工检查版本弹层的打开/关闭、滚动边界、焦点可见性以及 1440×900、1024×768 下的布局，确保 252px/320px 侧栏和 16:9 SVG 画布不受影响。无工程写入或现场设备操作。
