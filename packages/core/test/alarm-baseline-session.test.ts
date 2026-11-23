@@ -270,3 +270,89 @@ test("参数错误有明确拒绝，且不改变已冻结的当前状态", () =>
   expect(initial.baseline?.value.sequence).toBe(5);
   expect(Object.isFrozen(initial)).toBe(true);
 });
+
+test("旧基线超龄时即使新增量时效正常也不能直接续接", () => {
+  const initial = established();
+  const expired = transitionAlarmBaselineSession(
+    initial,
+    delta,
+    nowMs + 1001,
+    3000,
+  );
+  expect(expired).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "OUTDATED_TIMESTAMP",
+    state: { ...initial, baseline: null },
+  });
+
+  const rejected = transitionAlarmBaselineSession(expired.state, delta, nowMs + 1001, 3000);
+  expect(rejected).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "BASELINE_REQUIRED",
+    state: expired.state,
+  });
+
+  const restored = transitionAlarmBaselineSession(
+    expired.state,
+    { ...snapshot, change: { kind: "snapshot", values: [next] } },
+    nowMs + 1001,
+    3000,
+  );
+  expect(restored.status).toBe("BASELINE_ESTABLISHED");
+  const accepted = transitionAlarmBaselineSession(
+    restored.state,
+    {
+      ...delta,
+      change: {
+        kind: "delta",
+        values: [{ ...next, value: 43, sequence: 7, serverTimestamp: "2026-11-22T09:00:00.000Z" }],
+      },
+    },
+    nowMs + 1001,
+    3000,
+  );
+  expect(accepted.status).toBe("DELTA_ACCEPTED");
+});
+
+test("无目标 Tag 增量无法掩盖旧基线失效", () => {
+  const initial = established();
+  const rejected = transitionAlarmBaselineSession(
+    initial,
+    {
+      ...delta,
+      change: { kind: "delta", values: [{ ...next, tagId: "other.tag" }] },
+    },
+    nowMs + 1001,
+    3000,
+  );
+  expect(rejected).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "OUTDATED_TIMESTAMP",
+    state: { ...initial, baseline: null },
+  });
+});
+
+test("时钟回拨造成旧基线处于未来时不能据此推进序列", () => {
+  const initial = established();
+  const rejected = transitionAlarmBaselineSession(initial, delta, nowMs - 2001, 3000);
+  expect(rejected).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "FUTURE_TIMESTAMP",
+    state: { ...initial, baseline: null },
+  });
+});
+
+test("旧基线已超龄时来源未核验仍优先按来源拒绝失效", () => {
+  const initial = established();
+  const rejected = transitionAlarmBaselineSession(
+    initial,
+    { ...delta, sourceVerified: false },
+    nowMs + 1001,
+    3000,
+  );
+  expect(rejected).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "UNVERIFIED_SOURCE",
+    state: { ...initial, baseline: null },
+  });
+});
