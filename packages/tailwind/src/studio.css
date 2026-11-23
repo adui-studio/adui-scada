@@ -59,7 +59,6 @@
 .studio-page-menu {
   flex: none;
 }
-.studio-file-menu > summary,
 .studio-version-menu > summary {
   display: flex;
   min-height: 32px;
@@ -75,13 +74,11 @@
   list-style: none;
   user-select: none;
 }
-.studio-file-menu > summary::-webkit-details-marker,
 .studio-version-menu > summary::-webkit-details-marker,
 .studio-side-more > summary::-webkit-details-marker,
 .studio-advanced > summary::-webkit-details-marker {
   display: none;
 }
-.studio-file-menu > summary:focus-visible,
 .studio-version-menu > summary:focus-visible,
 .studio-side-more > summary:focus-visible,
 .studio-advanced > summary:focus-visible,
@@ -89,22 +86,16 @@
   outline: 2px solid var(--scada-cyan);
   outline-offset: -2px;
 }
-.studio-file-menu > summary::after,
 .studio-version-menu > summary::after {
   content: "▾";
   font-size: 10px;
   color: var(--scada-text-muted);
 }
-.studio-file-menu[open] > summary,
 .studio-version-menu[open] > summary {
   border-color: var(--scada-primary);
   color: var(--scada-cyan);
 }
 .studio-file-popover {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  z-index: 50;
   width: 200px;
   display: grid;
   gap: 6px;
@@ -903,7 +894,6 @@
 .studio-save-actions button:first-child {
   font-weight: 700;
 }
-.studio-file-menu > summary,
 .studio-version-menu > summary {
   min-height: var(--studio-control-height);
   border-radius: 6px;
@@ -1012,7 +1002,6 @@
 .studio-status-message .studio-notice {
   color: var(--scada-text-secondary);
 }
-.studio-file-menu > summary:hover,
 .studio-version-menu > summary:hover,
 .studio-view-menu > summary:hover,
 .studio-side-more > summary:hover,
