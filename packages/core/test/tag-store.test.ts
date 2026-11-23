@@ -32,6 +32,14 @@ test("忽略乱序及重复序列号且不修改已有数据", () => {
   expect(store.get("water.level")?.sequence).toBe(5);
 });
 
+test("同一 Tag 合法跳号可推进版本，迟到的中间序列不能覆盖新值", () => {
+  const store = new TagStore();
+  store.apply([make(5)]);
+  expect(store.apply([make(7)])).toEqual([make(7)]);
+  expect(store.apply([make(6)])).toEqual([]);
+  expect(store.snapshot()).toEqual([make(7)]);
+});
+
 test("同一批次存在非法或重复 Tag 时原子拒绝", () => {
   const store = new TagStore();
   const bad = { ...make(), value: Number.NaN };

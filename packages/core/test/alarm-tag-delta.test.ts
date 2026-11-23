@@ -52,6 +52,22 @@ test("同代次有效增量返回独立冻结基线且不修改旧读数", () =>
   expect(previous.value).toBe(40);
 });
 
+test("增量入口允许合法跳号，但未核验来源不能以跳号推进基线", () => {
+  const jumped: TagValue = { ...next, sequence: 7 };
+  const skippedRequest: AlarmTagDeltaRequest = {
+    ...request,
+    change: { kind: "delta", values: [jumped] },
+  };
+  expect(advanceAlarmTagDeltaBaseline(skippedRequest, nowMs, 1000)).toEqual({
+    status: "DELTA_ACCEPTED",
+    value: 42,
+    baseline: { generation: 2, value: jumped },
+  });
+  expect(
+    advanceAlarmTagDeltaBaseline({ ...skippedRequest, sourceVerified: false }, nowMs, 1000),
+  ).toEqual({ status: "DELTA_REJECTED", reason: "UNVERIFIED_SOURCE" });
+});
+
 test("初始快照基线支持两次连续增量并保持序列前进", () => {
   const initial = establishAlarmSnapshotBaseline(
     {

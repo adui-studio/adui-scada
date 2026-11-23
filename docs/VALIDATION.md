@@ -3855,3 +3855,24 @@ Write-Host "PR 文档门禁 Windows 验收全部通过"
 ```
 
 **验收边界**：D5c0e 只要求文档契约明确区分当前“严格增长”与尚未设计的“连续/缺口恢复”，并列出可信来源、时钟、重连、服务端报警状态和不可变审计的待决条件。没有新增业务代码，不需重复八份 Core 定向测试；未经 Windows 运行不能声称本 PR 的 `vp check`、`docs:check`、`messages:check` 通过。正式发布安全 Gate 继续 fail-closed。
+
+## 2026-11-23 · D5c0h FR-011 业务序列跳号既有契约回归候选
+
+维护者已在 Windows 对 PR #172 最终 HEAD `ca3bf22a0b9877b6ce3dea5bb809d8a1228f6f23` 运行文档专项：`vp check` **437 个格式文件/286 个受检零警告错误**、`docs:check` **92 份**、`messages:check` **310 个文件**均通过。GitHub 核验仅新增一份决策评审文档、无未解决审查线程、`@adui-dev` 已指派，按明确授权 Squash 合并至 `main@e50d41e6bd546a25082fe889958839eb4199b1c9`。上述记录不代表 D1～D5 技术方案已批准，更不代表正式报警链路上线。
+
+D5c0h 在既有共享 Core **仅追加三个回归用例**：`TagStore` 允许版本从 5 跳至 7，迟到的 6 不覆盖；底层报警候选允许 5→7 但拒绝服务端时间倒退；报警增量允许 5→7 但拒绝 `sourceVerified: false`。这些测试固定**当前严格递增、不要求连续**的业务序列契约，既不证明中间数据没有丢失，也不证明 `sourceVerified: true` 可以鉴别真实身份。没有改变 Core 生产代码、公共协议、网关、正式报警事件或发布安全 Gate。
+
+本批三个目标测试文件原有 5、11、20 项，新增后定义合计 **39 项**；以下命令仍需维护者在 Windows 上针对最新 D5c0h HEAD 实际执行，**不能提前标为通过**：
+
+```powershell
+git fetch origin &&
+git switch test/d5c0h-alarm-sequence-noncontinuous-regression &&
+git pull --ff-only &&
+git rev-parse HEAD &&
+vp test run packages/core/test/tag-store.test.ts packages/core/test/alarm-tag-sequence.test.ts packages/core/test/alarm-tag-delta.test.ts &&
+vp check &&
+pnpm run docs:check &&
+pnpm run messages:check
+```
+
+本批仅为共享 Core 现有语义的定向单测，不等同 FR-011 D1～D5 决策批准、可信工业入口、服务端时间赋值、可靠游标、缺口重放、报警确认/审计、完整 `ready` 或现场安全验收。
