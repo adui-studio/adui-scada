@@ -48,4 +48,9 @@ html:root[theme-mode="dark"] {
   --td-size-7: var(--adui-space-7);
   --td-size-8: var(--adui-space-8);
   --td-size-10: var(--adui-space-9);
+  --td-radius-small: var(--adui-space-1);
+  --td-radius-default: var(--adui-radius-sm);
+  --td-radius-medium: var(--adui-radius-md);
+  --td-radius-large: var(--adui-radius-lg);
+  --td-radius-extraLarge: var(--adui-radius-panel);
 }
