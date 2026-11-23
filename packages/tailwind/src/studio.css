@@ -700,14 +700,14 @@
 .studio-version-panel {
   position: absolute;
   z-index: 60;
-  top: calc(100% + 6px);
+  top: calc(100% + var(--adui-space-3));
   right: 0;
   display: grid;
   width: min(378px, calc(100vw - 24px));
   max-height: min(70vh, 610px);
   overflow-y: auto;
   gap: 10px;
-  padding: 12px;
+  padding: var(--adui-space-5);
   border: 1px solid var(--scada-border-strong);
   border-radius: 7px;
   color: var(--scada-text);
@@ -718,8 +718,8 @@
 .studio-version-help,
 .studio-version-error {
   margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--adui-font-size-xs);
+  line-height: var(--adui-line-height-normal);
   overflow-wrap: anywhere;
 }
 .studio-version-help {
@@ -732,7 +732,7 @@
 .studio-version-item-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--adui-space-3);
 }
 .studio-version-tools button,
 .studio-version-item-actions button,
@@ -740,11 +740,11 @@
   flex: 1;
   min-width: 0;
   padding: 7px 9px;
-  font-size: 12px;
+  font-size: var(--adui-font-size-xs);
 }
 .studio-version-list {
   display: grid;
-  gap: 8px;
+  gap: var(--adui-space-4);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -763,24 +763,24 @@
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: var(--adui-space-3);
+  font-size: var(--adui-font-size-xs);
 }
 .studio-version-heading time,
 .studio-version-item code {
   color: var(--scada-text-muted);
-  font-size: 11px;
+  font-size: var(--adui-font-size-2xs);
 }
 .studio-version-item code {
   overflow-wrap: anywhere;
 }
 .studio-version-comparison strong {
-  font-size: 12px;
+  font-size: var(--adui-font-size-xs);
 }
 .studio-version-comparison p {
   margin: 0;
   color: var(--scada-text-muted);
-  font-size: 11px;
+  font-size: var(--adui-font-size-2xs);
 }
 .studio-version-more {
   width: 100%;
