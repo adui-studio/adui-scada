@@ -2258,3 +2258,9 @@ D5b9o 在代码审查中发现外部取消函数重入可使旧基线在撤销�
 维护者 Windows 对 PR #154（D5b9o）提供 `alarm-subscription-adapter.test.ts` **17/17**、`vp check` **435 格式文件 / 286 受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个自有文件**。原 `vitest(no-conditional-expect)` 警告经 E-086 修复得到后续零告警复验；远程无额外提交与未解决审查线程。维护者明确授权后 PR #154 Squash 合并至 `main@255c5a2ec3b88f0dd4dc54894cb6c03dda0aca6d`，不把没有本地 HEAD 的日志伪绑定特定 SHA。
 
 D5b9p 基于该主线，审查发现取消周期和取消订阅同时抛错时第二个异常可能覆盖第一个，订阅原始失败后清理异常也可能覆盖原始原因。本批仅在现有适配器保留各异常对象，原单测 17 项增至 **20 项测试定义**，同步 SDD、CODEBASE_MAP、VALIDATION、AI_MISTAKES；**尚未运行新批 Windows 测试**。仍不新增工业来源认证、报警规则、数据库、业务授权或生产发布能力。
+
+## 2026-11-23 · PR #155 Windows 验收合并与 D5b9q 读取时效保护候选
+
+维护者 Windows 实测 PR #155 `alarm-subscription-adapter.test.ts` **20/20**、`vp check` **435 个文件格式正确/286 个受检零警告错误**、`docs:check` **90 份**、`messages:check` **310 个自有文件**。远程最终一笔提交仅格式化测试断言，审查无未解决线程，维护者明确同意后 Squash 合并至 `main@bec400c3cb8ad8cef22416712eaaf481e1e9105d`。这些统计来自维护者 Windows 日志，不冒充测试运行在协作环境。
+
+D5b9q 基于该主线增强 `AlarmSubscriptionAdapter.snapshot()`：正在运行且已有基线时，每次对外读取均通过受控时钟重新检查已有时间窗口；即使调度回调延迟，过期数据也在读取时 fail-closed 清理并返回空基线。无基线等待期不读取时钟；时钟错误按原有异常路径停止资源。新增 **4 项单测定义**，本文件共 **24 项**，**尚无 D5b9q Windows 实测**。仍未实现可信设备来源、真实工业调度、报警事件/确认/审计及生产发布许可。
