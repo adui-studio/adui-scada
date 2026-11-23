@@ -227,3 +227,19 @@ test("日末二十四时不能通过日期解析进入初始报警快照基线",
     ),
   ).toThrow("报警服务器时间戳小时无效");
 });
+
+test("亚毫秒时间戳不能通过首份快照隐式截断建立报警基线", () => {
+  expect(() =>
+    establishAlarmSnapshotBaseline(
+      {
+        ...request,
+        change: {
+          kind: "snapshot",
+          values: [{ ...sample, serverTimestamp: "2026-11-22T08:59:59.999900Z" }],
+        },
+      },
+      nowMs,
+      1000,
+    ),
+  ).toThrow("报警服务器时间戳精度超过毫秒");
+});

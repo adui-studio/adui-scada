@@ -787,3 +787,19 @@ test("二十四时隐式跨日的首份快照必须停止订阅并撤销旧回�
   source.emit({ kind: "snapshot", values: [value] }, true, 0);
   expect(adapter.snapshot().baseline).toBeNull();
 });
+
+test("亚毫秒输入不能被订阅适配器截断为可用初始基线", () => {
+  const { adapter, source, scheduler } = setup();
+  adapter.start();
+  source.emit({
+    kind: "snapshot",
+    values: [{ ...value, serverTimestamp: "2026-11-22T08:59:58.000100Z" }],
+  });
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(adapter.snapshot().invalidated).toBe(true);
+  expect(source.closes).toBe(1);
+  expect(scheduler.cancels).toBe(1);
+  source.emit({ kind: "snapshot", values: [value] }, true, 0);
+  expect(adapter.snapshot().baseline).toBeNull();
+});

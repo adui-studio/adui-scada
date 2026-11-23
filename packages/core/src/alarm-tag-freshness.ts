@@ -3,7 +3,7 @@ import type { NumericAlarmSample } from "./alarm-tag-quality.ts";
 import type { TagValue } from "./tag-store.ts";
 
 const ZONED_SERVER_TIMESTAMP_PATTERN =
-  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):\d{2}:\d{2}(?:\.(\d+))?(?:Z|[+-]\d{2}:\d{2})$/;
 
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const;
 
@@ -22,7 +22,7 @@ export type TimelyNumericAlarmSample =
 /**
  * 按调用方显式提供的时间和最大年龄检查 Tag 的服务端时间。
  * 先执行数值与质量筛选；候选服务器时间须包含显式时区和真实公历日期，
- * 且小时采用 RFC 3339 的 00–23 表示，不能隐式滚动到次日。
+ * 小时采用 RFC 3339 的 00–23 表示，小数秒不超过毫秒精度；拒绝隐式舍去时间。
  * 不自动获取当前时间，不推断阈值或生成报警事件。
  * 调用方仍需校验数据来源、服务端时间可信性与订阅会话代次。
  */
@@ -52,6 +52,10 @@ export function classifyTimelyNumericAlarmSample(
   // 某些宿主允许 24:00 表示次日零点，报警候选统一要求规范的 00–23 小时。
   if (Number(match[4]) > 23) {
     throw new TypeError("报警服务器时间戳小时无效");
+  }
+  // Date.parse 会截断第 4 位及之后的小数秒，必须显式拒绝不可表达的精度。
+  if (match[5] !== undefined && match[5].length > 3) {
+    throw new TypeError("报警服务器时间戳精度超过毫秒");
   }
 
   const sampleMs = Date.parse(input.serverTimestamp);

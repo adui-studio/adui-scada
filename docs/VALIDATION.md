@@ -3785,3 +3785,40 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 该补丁没有数据库变更、真实网关接入、Vue/React 改动、PLC/DCS 写入或生产报警事件行为。未经维护者 Windows 独立执行不能声称 129/129 已通过，PR 默认 Draft、未获本批明确合并授权前不得合并。
+
+## 2026-11-23 · D5c0c PR #168 Windows 合并与 D5c0d 待验收
+
+维护者 Windows 对 PR #168 八份定向测试实测：时效 **9/9**、快照 **10/10**、序列 **10/10**、代次 **8/8**、增量 **19/19**、归约 **30/30**、托管 **11/11**、适配 **32/32**，共 **129/129**。`vp check` **435 个文件格式正确/286 个受检文件零告警错误**；`docs:check` **90 份**、`messages:check` **310 个文件**。GitHub 确认最终 PR HEAD `97cc7e91eae4de44253e0319554fed64d5033c69`，无冲突和审查阻塞；经明确授权 Squash 合并至 `main@93d3fe63b47c37a2c9ad72901920cbfe4ef33104`。用户 Windows 日志未打印本地 HEAD，不能冒充合并提交在 Windows 实际测试，以上验收不代表完整 ready 或现场工业安全认证。
+
+D5c0d 只在报警候选对服务端时间毫秒精度增加显式边界：无小数秒、1/2/3 位小数秒继续允许，4 位及更多小数秒不能在 `Date.parse` 中被静默截断后参与未来时间或递增序列判断。仅 Core 一处生产文件变更，六项新增测试定义，使八份关联目标达到：时效 **10**、快照 **11**、序列 **11**、代次 **8**、增量 **20**、归约 **31**、托管 **11**、适配 **33**，合计 **135** 项。**D5c0d 尚未进行 Windows 项目验收**。
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5c0d-alarm-submillisecond-truncation
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5c0d-alarm-submillisecond-truncation
+}
+if ($LASTEXITCODE -ne 0) { throw "切换功能分支失败" }
+
+git pull --ff-only origin fix/d5c0d-alarm-submillisecond-truncation
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 自动格式化失败" }
+
+vp test run packages/core/test/alarm-tag-freshness.test.ts packages/core/test/alarm-snapshot-baseline.test.ts packages/core/test/alarm-tag-sequence.test.ts packages/core/test/alarm-session-generation.test.ts packages/core/test/alarm-tag-delta.test.ts packages/core/test/alarm-baseline-session.test.ts packages/core/test/alarm-session-controller.test.ts packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警毫秒精度与会话安全回归失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批不涉及 NestJS、Prisma、Vue/React、工业网关、设备写入或发布门禁。目标 **135/135** 仅是测试定义数量，协作端没有运行原生仓库 Vitest、Vite+ 或完整 `ready`；必须取得维护者 Windows 实测后再授权合并。
