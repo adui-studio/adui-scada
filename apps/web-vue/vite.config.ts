@@ -37,6 +37,10 @@ export default defineConfig(({ mode, command }) => {
   return {
     envDir,
     plugins: lazyPlugins(() => [vue(), tailwindcss()]),
+    // Studio 按需加载 TDesign；预先发现其依赖，避免双标签首次打开时触发二次优化。
+    optimizeDeps: {
+      include: ["tdesign-vue-next", "tdesign-icons-vue-next"],
+    },
     server: {
       host,
       port,
