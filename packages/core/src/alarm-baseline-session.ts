@@ -125,6 +125,10 @@ export function transitionAlarmBaselineSession(
   if (!Number.isSafeInteger(action.generation) || action.generation < 0) {
     throw new TypeError("报警会话事件代次无效");
   }
+  // 终止态本不应携带任何旧读数。先清除矛盾状态，避免旧代次忽略时返回旧值。
+  if (state.invalidated === true && state.baseline !== null) {
+    return invalidate(state, "SESSION_INVALIDATED");
+  }
   if (action.generation !== state.generation) {
     return { status: "OTHER_SESSION_IGNORED", state };
   }

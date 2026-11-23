@@ -1381,3 +1381,11 @@ D5b9x 在原 `CHECK_FRESHNESS` 分支、`WAITING_SNAPSHOT` 返回之前，按原
 D5b9y 仅在 `CHECK_FRESHNESS` 已有基线、时钟参数通过既有检查之后复核两项身份归属：代次不同固定 `BASELINE_INVALIDATED/SESSION_MISMATCH`，目标 Tag 不同固定 `BASELINE_INVALIDATED/TAG_MISMATCH`。复用原有只读冻结失效态，清空基线，禁止同代次新 snapshot 或 delta 复活；必须显式递增代次重启。事件自身的其他代次仍在归约入口优先忽略，正常时效检查返回 `BASELINE_UNCHANGED`、等待快照返回 `WAITING_SNAPSHOT` 的契约不变。已存在的 delta 接口仍保留自己的代次和目标检查；不新增公共拒绝枚举、函数参数或网络访问。
 
 两项新纯归约器测试验证错误代次、错误目标、冻结旧状态、失效不可复活及显式重启。此举仅确保**连续传入的本地状态**满足一致性，公开纯函数仍不能鉴定传入状态的真实性；可信源身份、受控服务器时钟、真实报警触发/确认与不可变审计未实现，正式发布 Gate 继续 fail-closed。
+
+## 2026-11-23 · D5b9z FR-011 矛盾终止态不得返回残留报警候选基线（候选）
+
+D5b9u 已使正常失效会话写入 `invalidated: true, baseline: null`，D5b9y 已确保显式时效检查验证基线身份。但公开的 `AlarmBaselineSessionState` 类型中，`invalidated?: true` 与 `baseline: AlarmSnapshotBaseline | null` 是相互独立的字段。若直接调用方传入 `invalidated: true` 且 `baseline` 仍非空的矛盾状态，`transitionAlarmBaselineSession` 以前在同代次直接返回 `BASELINE_INVALIDATED/SESSION_INVALIDATED` 和**原状态对象**，在旧代次则返回 `OTHER_SESSION_IGNORED` 和原状态，均会继续暴露旧候选值。这是公开纯函数可以构造的本地输入边界，正常受控 Controller/Adapter 不会生成该状态，也无现场事故证据。
+
+D5b9z 在校验事件代次合法之后、判断其他代次之前增加一次矛盾终止态清理：若 `state.invalidated === true && state.baseline !== null`，立即调用现有 `invalidate(state, "SESSION_INVALIDATED")`，返回**冻结的新状态**且 `baseline: null`。此处有意优先于旧代次忽略，因为不能将携带旧数值的不一致状态原样返回。对正确的已终止状态（`invalidated: true, baseline: null`），原有同代次拒绝保留原状态引用、旧代次忽略及无额外分配的规则不变。未终止的首次等待、正常快照/增量和显式递增代次重启语义均不变。
+
+此防护只针对已经标记为失效的**矛盾输入状态**，不证明公开纯函数接收到的状态真实可信，也不能阻止攻击者完全构造另一份未失效状态；来源认证、代次分配、服务端时钟及实际报警业务必须由可信上游实现。无新增公共字段、拒绝枚举、工业网关或设备写入，正式发布 Gate 继续 fail-closed。

@@ -635,3 +635,47 @@ test("时效检查必须拒绝与目标 Tag 不匹配的已建立基线", () => 
     state: rejected.state,
   });
 });
+
+test("矛盾终止态仍残留旧基线时必须清空而不能泄露工艺值", () => {
+  const initial = established();
+  const inconsistent = Object.freeze({ ...initial, invalidated: true as const });
+  const rejected = transitionAlarmBaselineSession(inconsistent, delta, nowMs, 3000);
+  expect(rejected).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SESSION_INVALIDATED",
+    state: { ...initial, baseline: null, invalidated: true },
+  });
+  expect(rejected.state).not.toBe(inconsistent);
+  expect(Object.isFrozen(rejected.state)).toBe(true);
+  expect(inconsistent.baseline?.value.sequence).toBe(5);
+  expect(transitionAlarmBaselineSession(rejected.state, snapshot, nowMs, 3000)).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SESSION_INVALIDATED",
+    state: rejected.state,
+  });
+});
+
+test("矛盾终止态遇到旧代次回调时仍须先清理旧基线", () => {
+  const inconsistent = Object.freeze({ ...established(), invalidated: true as const });
+  const rejected = transitionAlarmBaselineSession(
+    inconsistent,
+    { kind: "CHECK_FRESHNESS", generation: 1 },
+    nowMs,
+    3000,
+  );
+  expect(rejected).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SESSION_INVALIDATED",
+    state: { ...inconsistent, baseline: null },
+  });
+  expect(Object.isFrozen(rejected.state)).toBe(true);
+  expect(rejected.state.baseline).toBeNull();
+  expect(
+    transitionAlarmBaselineSession(
+      rejected.state,
+      { kind: "CHECK_FRESHNESS", generation: 1 },
+      nowMs,
+      3000,
+    ),
+  ).toEqual({ status: "OTHER_SESSION_IGNORED", state: rejected.state });
+});

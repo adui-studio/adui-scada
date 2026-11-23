@@ -1429,3 +1429,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-baseline-session.ts`：本代次 `CHECK_FRESHNESS` 已有基线时，在 GOOD/时效检查前要求 `baseline.generation === state.generation`、`baseline.value.tagId === state.expectedTagId`；不一致沿用 `SESSION_MISMATCH`、`TAG_MISMATCH` 和冻结终止态。
 - `packages/core/test/alarm-baseline-session.test.ts`：新增两项回归定义（23→25），涵盖错误代次与错误目标 Tag、其他代次忽略、旧状态冻结、同代次不可恢复及显式增代次恢复。
 - `packages/core/src/alarm-session-controller.ts`、`packages/core/src/alarm-subscription-adapter.ts` 不改生产逻辑；直接增量入口原有归属校验保持。不涉及 TagStore、Runtime、NestJS/Prisma、Vue/React、工业网关或设备写入。
+
+## 2026-11-23 · D5b9z FR-011 矛盾失效状态清理（候选）
+
+- `packages/core/src/alarm-baseline-session.ts`：在事件代次参数基本校验之后、旧代次忽略之前，优先识别 `invalidated === true && baseline !== null` 的矛盾状态，复用 `invalidate(..., "SESSION_INVALIDATED")` 返回冻结且空基线的终止态，不返回残留数值。正常 `invalidated: true, baseline: null` 的原状态对象仍保留。
+- `packages/core/test/alarm-baseline-session.test.ts`：新增两项测试定义，文件 25→27，覆盖同代次及旧代次遇到矛盾失效状态、返回旧基线清空、原对象不变、后续失效持续与其他代次忽略恢复。
+- `AlarmBaselineSessionController` / `AlarmSubscriptionAdapter` 正常生成的失效状态不矛盾，无需生产修改。TagStore、Runtime、NestJS/Prisma、双框架 UI、工业网关和发布门禁均不改变。
