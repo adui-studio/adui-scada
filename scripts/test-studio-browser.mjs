@@ -1104,6 +1104,45 @@ function inspectTagFormDialogInPage() {
   };
 }
 
+/** Tag 目录搜索沿用 TDesign 输入，不能用直接改 DOM 值模拟框架事件。 */
+function focusTagSearchInPage() {
+  const input = document.querySelector(".studio-tag-search input");
+  if (!(input instanceof HTMLInputElement)) throw new TypeError("Tag 目录搜索输入不存在");
+  input.focus();
+  input.select();
+  return true;
+}
+
+function inspectTagSearchInPage() {
+  const list = document.querySelector('[role="list"][aria-label="项目 Tag 目录"]');
+  if (!(list instanceof HTMLElement)) throw new TypeError("Tag 目录未挂载");
+  return [...list.querySelectorAll(".studio-tag-id")].map((node) => node.textContent.trim());
+}
+
+function inspectTagFieldErrorInPage() {
+  const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
+  if (!(form instanceof HTMLFormElement)) throw new TypeError("Tag 表单未挂载");
+  const label = [...form.querySelectorAll("label.studio-field")].find((item) =>
+    item.textContent.trim().startsWith("显示名称"),
+  );
+  return {
+    inlineError: label?.querySelector(".studio-tag-field-error")?.textContent?.trim() ?? "",
+    formStillOpen: form.getClientRects().length > 0,
+  };
+}
+
+function inspectTagEditingIdInPage() {
+  const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
+  if (!(form instanceof HTMLFormElement)) throw new TypeError("Tag 编辑表单未挂载");
+  const label = [...form.querySelectorAll("label.studio-field")].find((item) =>
+    item.textContent.trim().startsWith("稳定 Tag ID"),
+  );
+  return {
+    immutable: Boolean(label?.querySelector("input")?.disabled),
+    submitLabel: form.querySelector('button[type="submit"]')?.textContent.trim() ?? "",
+  };
+}
+
 function focusTagFieldInPage(index) {
   const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
   const names = ["稳定 Tag ID", "显示名称", "单位", "描述"];
@@ -1283,6 +1322,33 @@ async function runStudioTagManagement(session) {
       { display: "flex", count: 2, compact: true, noSidebarForm: true },
       target.name + " Tag 侧栏必须只保留紧凑目录，不再嵌入完整表单",
     );
+    // 真实输入目录检索必须过滤列表，之后通过键盘清空恢复原始 Tag。
+    await evaluateStudioPage(session, focusTagSearchInPage);
+    await session.send("Input.insertText", { text: "water.pump" });
+    await pause(120);
+    assert.deepStrictEqual(
+      await evaluateStudioPage(session, inspectTagSearchInPage),
+      ["water.pump.running"],
+      target.name + " Tag 目录检索没有过滤到正确的 ID",
+    );
+    await evaluateStudioPage(session, focusTagSearchInPage);
+    await session.send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "Backspace",
+      code: "Backspace",
+      windowsVirtualKeyCode: 8,
+    });
+    await session.send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "Backspace",
+      code: "Backspace",
+      windowsVirtualKeyCode: 8,
+    });
+    await pause(120);
+    assert.ok(
+      (await evaluateStudioPage(session, inspectTagSearchInPage)).includes("water.level"),
+      target.name + " 搜索清空后 Tag 目录未恢复",
+    );
     // 在窄视口验证长 Tag ID 不撑开侧栏，且 Tab 能顺序聚焦 TDesign 危险操作按钮。
     await session.send("Emulation.setDeviceMetricsOverride", {
       width: 1024,
@@ -1338,6 +1404,15 @@ async function runStudioTagManagement(session) {
       target.name + " Tag 表单操作主次不明确",
     );
 
+    // 未填必填项时给出字段旁提示，不能直接提交空 Tag。
+    await evaluateStudioPage(session, submitTagFormInPage);
+    await pause(120);
+    assert.deepStrictEqual(
+      await evaluateStudioPage(session, inspectTagFieldErrorInPage),
+      { inlineError: "请填写 Tag 显示名称。", formStillOpen: true },
+      target.name + " Tag 必填错误未就近呈现",
+    );
+
     const tagId = "browser." + target.name.toLowerCase() + ".pressure";
     await fillTagField(session, 0, tagId);
     await fillTagField(session, 1, "浏览器新增压力");
@@ -1359,6 +1434,11 @@ async function runStudioTagManagement(session) {
     );
 
     await evaluateStudioPage(session, clickTagRowActionInPage, tagId, "编辑", null);
+    assert.deepStrictEqual(
+      await evaluateStudioPage(session, inspectTagEditingIdInPage),
+      { immutable: true, submitLabel: "保存修改" },
+      target.name + " 编辑 Tag 时 ID 未锁定或操作文案不正确",
+    );
     await fillTagField(session, 1, "浏览器编辑压力");
     await fillTagField(session, 2, "MPa");
     await evaluateStudioPage(session, submitTagFormInPage);
@@ -1421,7 +1501,7 @@ async function runStudioTagManagement(session) {
       target.name + " 删除 Tag 后工程仍包含该定义",
     );
     process.stdout.write(
-      target.name + " Tag 独立表单、窄屏换行、键盘焦点、新增、编辑、绑定删除保护、删除与 JSON 往返通过\n",
+      target.name + " Tag 目录检索、独立表单、就近校验、窄屏与键盘、新增/编辑/删除保护及 JSON 往返通过\n",
     );
   }
 }
