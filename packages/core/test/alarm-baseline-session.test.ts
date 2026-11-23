@@ -515,9 +515,7 @@ test("同代次递增序列附带倒退服务端时间时终止会话，不能�
     reason: "SERVER_TIMESTAMP_REGRESSED",
     state: { ...initial, baseline: null, invalidated: true },
   });
-  expect(
-    transitionAlarmBaselineSession(regressed.state, snapshot, nowMs, 3000),
-  ).toEqual({
+  expect(transitionAlarmBaselineSession(regressed.state, snapshot, nowMs, 3000)).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "SESSION_INVALIDATED",
     state: regressed.state,
@@ -561,12 +559,8 @@ test("等待首次快照时显式检查非法时钟或最大年龄必须终止�
     ),
   ).toEqual({ status: "OTHER_SESSION_IGNORED", state: pending });
   expect(
-    transitionAlarmBaselineSession(
-      pending,
-      { kind: "DISCONNECT", generation: 2 },
-      Number.NaN,
-      0,
-    ).status,
+    transitionAlarmBaselineSession(pending, { kind: "DISCONNECT", generation: 2 }, Number.NaN, 0)
+      .status,
   ).toBe("BASELINE_INVALIDATED");
   expect(pending).toEqual({ expectedTagId: "tank.level", generation: 2, baseline: null });
 });
