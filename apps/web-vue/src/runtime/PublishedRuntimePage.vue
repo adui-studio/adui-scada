@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, shallowRef } from "vue";
+import { Button as TButton } from "tdesign-vue-next";
+import "tdesign-vue-next/es/style/index.css";
 import { createScadaApiClient } from "@adui/scada-api-client";
 import {
+  PUBLISHED_RUNTIME_EMPTY_HINTS,
   PUBLISHED_RUNTIME_STATUS_LABELS,
   PublishedRuntime,
   PublishedRuntimeRefresher,
@@ -126,9 +129,13 @@ onUnmounted(() => {
           :spellcheck="false"
           placeholder="输入已授权工程 ID"
         />
-        <button type="submit">读取正式发布</button>
-        <button type="button" :disabled="!activeProjectId" @click="refresh">立即刷新</button>
-        <button type="button" :disabled="!activeProjectId" @click="stop">停止读取</button>
+        <TButton type="submit">读取正式发布</TButton>
+        <TButton type="button" variant="outline" :disabled="!activeProjectId" @click="refresh">
+          立即刷新
+        </TButton>
+        <TButton type="button" variant="text" :disabled="!activeProjectId" @click="stop">
+          停止读取
+        </TButton>
       </form>
       <p v-if="message" role="alert">{{ message }}</p>
     </section>
@@ -179,7 +186,7 @@ onUnmounted(() => {
         alt="已发布组态静态配置预览，实时 Tag 数据未接入"
         data-testid="published-runtime-svg"
       />
-      <p v-else class="scada-diagnostics-empty">无可展示的已验证发布画面</p>
+      <p v-else class="scada-diagnostics-empty">{{ PUBLISHED_RUNTIME_EMPTY_HINTS[state.status] }}</p>
     </section>
     <footer>正式发布只读 · 未接入现场数据 · 不开放设备控制</footer>
   </main>
