@@ -429,7 +429,14 @@ export async function saveDraftInPage() {
 export async function enableAutoSaveInPage() {
   const menu = document.querySelector(".studio-file-menu");
   if (!menu) throw new Error("没有找到草稿操作菜单");
-  menu.open = true;
+  const trigger = menu.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) throw new Error("文件草稿触发器不可用");
+  if (!menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
+  const opened = Date.now();
+  while (!menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+    if (Date.now() - opened > 5000) throw new Error("文件草稿弹层展开超时");
+    await new Promise((done) => setTimeout(done, 50));
+  }
   const button = [...menu.querySelectorAll("button")].find(
     (item) => item.textContent.trim() === "开启自动保存",
   );
@@ -445,7 +452,7 @@ export async function enableAutoSaveInPage() {
     return false;
   } finally {
     window.confirm = originalConfirm;
-    menu.open = false;
+    if (menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
   }
 }
 
@@ -579,8 +586,6 @@ export function releaseSaveTimingInPage(runtime = globalThis) {
 /** 使用真实 Studio UI 连续触发两次保存以检验互斥，不直接调用客户端接口。 */
 export function triggerSaveTimingInPage() {
   const panel = document.querySelector('[aria-label="服务端工程版本"]');
-  const menu = panel?.closest("details");
-  if (menu) menu.open = true;
   const button = [...(panel?.querySelectorAll("button") ?? [])].find(
     (item) => item.textContent.trim() === "保存至服务端",
   );
@@ -702,8 +707,9 @@ async function prepareAccessDenialBaseline(session, origin, name, selected) {
   assert.equal(await session.evaluate(enterStudioInPage), true);
   await session.evaluate(function () {
     const menu = document.querySelector(".studio-project-browser-menu");
-    if (!menu) throw new Error("未找到工程管理入口");
-    menu.open = true;
+    const trigger = menu?.querySelector("button.t-button");
+    if (!(trigger instanceof HTMLButtonElement)) throw new Error("未找到工程管理 TDesign 按钮");
+    trigger.click();
   });
   await waitFor(async () => {
     const state = await session.evaluate(pageStateInPage);
@@ -1339,8 +1345,9 @@ async function verifyStudio(session, origin, name, requireMultiPage) {
   report("工程管理菜单与首页摘要");
   await session.evaluate(function () {
     const menu = document.querySelector(".studio-project-browser-menu");
-    if (!menu) throw new Error("未找到工程管理入口");
-    menu.open = true;
+    const trigger = menu?.querySelector("button.t-button");
+    if (!(trigger instanceof HTMLButtonElement)) throw new Error("未找到工程管理 TDesign 按钮");
+    trigger.click();
   });
   const first = await waitFor(async () => {
     const state = await session.evaluate(pageStateInPage);
