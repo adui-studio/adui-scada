@@ -1153,9 +1153,12 @@ async function runStudioLegacyMigration(session) {
     const emptyVersions = await evaluateStudioPage(session, studioVersionRowsInPage);
     assert.deepStrictEqual(emptyVersions, [], target.name + " 新建浏览器上下文的历史版本库应为空");
     await evaluateStudioPage(session, () => {
-      const menu = document.querySelector(".studio-version-menu");
-      if (!menu) throw new TypeError("未找到本地工程历史版本菜单");
-      menu.open = false;
+      const menu = document.querySelector(".studio-local-history-menu");
+      const trigger = menu?.querySelector("button.t-button");
+      if (!(trigger instanceof HTMLButtonElement)) {
+        throw new TypeError("未找到本地版本历史 Popup 触发器");
+      }
+      if (menu.querySelector(".studio-version-panel")?.getClientRects().length) trigger.click();
       return true;
     });
 
@@ -1206,10 +1209,13 @@ async function studioVersionActionInPage(
   confirmChoice = null,
   revision = 1,
 ) {
-  const menu = document.querySelector(".studio-version-menu");
-  if (!menu) throw new Error("未找到本地工程版本历史菜单");
-  if (!menu.open) {
-    menu.open = true;
+  const menu = document.querySelector(".studio-local-history-menu");
+  const trigger = menu?.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new Error("未找到本地版本历史 Popup 触发器");
+  }
+  if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) {
+    trigger.click();
     await new Promise((resolve) => setTimeout(resolve, 120));
     const start = Date.now();
     while (Date.now() - start < 12000) {
@@ -1326,16 +1332,20 @@ async function runStudioVersionHistory(session) {
 
 /** 等待真实 Studio 历史菜单读取数据库完成，用于刷新后持久化及 Origin 隔离。 */
 async function studioVersionRowsInPage() {
-  const menu = document.querySelector(".studio-version-menu");
-  if (!menu) throw new TypeError("没有找到历史版本菜单");
-  menu.open = true;
+  const menu = document.querySelector(".studio-local-history-menu");
+  const trigger = menu?.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到本地版本历史 Popup 触发器");
+  }
+  if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) trigger.click();
   await new Promise((resolve) => setTimeout(resolve, 200));
   const start = Date.now();
   while (Date.now() - start < 12000) {
-    const busy = menu.querySelector(".studio-version-tools button:disabled");
+    const panel = menu.querySelector(".studio-version-panel");
+    const busy = panel?.querySelector(".studio-version-tools button:disabled");
     const error = menu.querySelector(".studio-version-error")?.textContent;
     if (error) throw new TypeError("历史版本查询失败：" + error);
-    if (!busy) {
+    if (panel?.getClientRects().length && !busy) {
       return [...menu.querySelectorAll(".studio-version-item strong")].map((item) =>
         item.textContent.trim(),
       );
