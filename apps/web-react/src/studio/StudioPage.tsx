@@ -1814,101 +1814,107 @@ export default function StudioPage() {
               </Button>
             </Popup>
           </div>
-          <details
-            className="studio-version-menu"
-            onToggle={(event) => {
-              if (event.currentTarget.open) void refreshVersionHistory();
-            }}
-          >
-            <summary>版本历史</summary>
-            <div className="studio-version-panel" aria-label="本地工程历史版本">
-              <p className="studio-version-help">
-                当前工程：{state.document.projectId} · 浏览器本地历史，不是正式发布
-              </p>
-              <div className="studio-version-tools">
-                <button
-                  type="button"
-                  disabled={historyBusy}
-                  onClick={() => void createHistoryVersion()}
-                >
-                  创建快照
-                </button>
-                <button
-                  type="button"
-                  disabled={historyBusy}
-                  onClick={() => void refreshVersionHistory()}
-                >
-                  刷新
-                </button>
-              </div>
-              {historyBusy && <p className="studio-version-help">正在处理历史版本…</p>}
-              {historyError && (
-                <p className="studio-version-error" role="alert">
-                  {historyError}
-                </p>
-              )}
-              {!historyBusy && visibleHistoryRows.length === 0 && (
-                <p className="studio-version-help">当前工程暂无本地历史版本。</p>
-              )}
-              <ol className="studio-version-list">
-                {visibleHistoryRows.map((item) => (
-                  <li key={item.revision} className="studio-version-item">
-                    <div className="studio-version-heading">
-                      <strong>版本 #{item.revision}</strong>
-                      <time dateTime={item.createdAt}>
-                        {new Date(item.createdAt).toLocaleString("zh-CN")}
-                      </time>
-                    </div>
-                    <code title={item.contentHash}>{item.contentHash.slice(0, 16)}…</code>
-                    <div className="studio-version-item-actions">
-                      <button
-                        type="button"
-                        disabled={historyBusy}
-                        onClick={() => void inspectHistoryVersion(item.revision)}
-                      >
-                        查看差异
-                      </button>
-                      <button
-                        type="button"
-                        disabled={historyBusy}
-                        onClick={() => void loadHistoryVersion(item.revision)}
-                      >
-                        载入
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-              {historyComparison && inspectedVersion && (
-                <div className="studio-version-comparison" role="status">
-                  <strong>
-                    版本 #{inspectedVersion.revision} ·
-                    {historyComparison.sameContent ? " 内容与当前一致" : " 与当前内容不同"}
-                  </strong>
-                  <p>
-                    当前：{historyComparison.current.pageCount} 页 /
-                    {historyComparison.current.nodeCount} 图元 /
-                    {historyComparison.current.bindingCount} 绑定
+          <div className="studio-version-menu studio-local-history-menu">
+            <Popup
+              attach=".studio-local-history-menu"
+              trigger="click"
+              placement="bottom-right"
+              onVisibleChange={(visible) => {
+                if (visible) void refreshVersionHistory();
+              }}
+              content={
+                <div className="studio-version-panel" aria-label="本地工程历史版本">
+                  <p className="studio-version-help">
+                    当前工程：{state.document.projectId} · 浏览器本地历史，不是正式发布
                   </p>
-                  <p>
-                    历史：{historyComparison.historical.pageCount} 页 /
-                    {historyComparison.historical.nodeCount} 图元 /
-                    {historyComparison.historical.bindingCount} 绑定
-                  </p>
+                  <div className="studio-version-tools">
+                    <button
+                      type="button"
+                      disabled={historyBusy}
+                      onClick={() => void createHistoryVersion()}
+                    >
+                      创建快照
+                    </button>
+                    <button
+                      type="button"
+                      disabled={historyBusy}
+                      onClick={() => void refreshVersionHistory()}
+                    >
+                      刷新
+                    </button>
+                  </div>
+                  {historyBusy && <p className="studio-version-help">正在处理历史版本…</p>}
+                  {historyError && (
+                    <p className="studio-version-error" role="alert">
+                      {historyError}
+                    </p>
+                  )}
+                  {!historyBusy && visibleHistoryRows.length === 0 && (
+                    <p className="studio-version-help">当前工程暂无本地历史版本。</p>
+                  )}
+                  <ol className="studio-version-list">
+                    {visibleHistoryRows.map((item) => (
+                      <li key={item.revision} className="studio-version-item">
+                        <div className="studio-version-heading">
+                          <strong>版本 #{item.revision}</strong>
+                          <time dateTime={item.createdAt}>
+                            {new Date(item.createdAt).toLocaleString("zh-CN")}
+                          </time>
+                        </div>
+                        <code title={item.contentHash}>{item.contentHash.slice(0, 16)}…</code>
+                        <div className="studio-version-item-actions">
+                          <button
+                            type="button"
+                            disabled={historyBusy}
+                            onClick={() => void inspectHistoryVersion(item.revision)}
+                          >
+                            查看差异
+                          </button>
+                          <button
+                            type="button"
+                            disabled={historyBusy}
+                            onClick={() => void loadHistoryVersion(item.revision)}
+                          >
+                            载入
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                  {historyComparison && inspectedVersion && (
+                    <div className="studio-version-comparison" role="status">
+                      <strong>
+                        版本 #{inspectedVersion.revision} ·
+                        {historyComparison.sameContent ? " 内容与当前一致" : " 与当前内容不同"}
+                      </strong>
+                      <p>
+                        当前：{historyComparison.current.pageCount} 页 /
+                        {historyComparison.current.nodeCount} 图元 /
+                        {historyComparison.current.bindingCount} 绑定
+                      </p>
+                      <p>
+                        历史：{historyComparison.historical.pageCount} 页 /
+                        {historyComparison.historical.nodeCount} 图元 /
+                        {historyComparison.historical.bindingCount} 绑定
+                      </p>
+                    </div>
+                  )}
+                  {visibleHistoryRows.length > 0 && historyHasMore && (
+                    <button
+                      type="button"
+                      className="studio-version-more"
+                      disabled={historyBusy}
+                      onClick={() => void loadMoreVersions()}
+                    >
+                      加载更早版本
+                    </button>
+                  )}
                 </div>
-              )}
-              {visibleHistoryRows.length > 0 && historyHasMore && (
-                <button
-                  type="button"
-                  className="studio-version-more"
-                  disabled={historyBusy}
-                  onClick={() => void loadMoreVersions()}
-                >
-                  加载更早版本
-                </button>
-              )}
-            </div>
-          </details>
+              }
+            >
+              <Button type="button" variant="outline">版本历史</Button>
+            </Popup>
+          </div>
           <details className="studio-version-menu">
             <summary>发布预检</summary>
             <div className="studio-version-panel" aria-label="工程发布前静态兼容性预检">
