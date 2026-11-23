@@ -1004,6 +1004,15 @@ async function runStudioTagManagement(session) {
     assert.equal(updated.tags.find((tag) => tag.tagId === tagId)?.unit, "MPa");
     assert.equal(updated.tags.find((tag) => tag.tagId === tagId)?.dataType, "number");
 
+    // 真实点击 TDesign 取消按钮必须保留原 Tag，避免仅覆盖确认路径。
+    await evaluateStudioPage(session, clickTagRowActionInPage, tagId, "删除", false);
+    await pause(350);
+    const cancelled = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
+    assert.ok(
+      cancelled.tags.some((tag) => tag.tagId === tagId),
+      target.name + " 取消删除后 Tag 被意外移除",
+    );
+
     await evaluateStudioPage(session, clickTagRowActionInPage, "water.level", "删除", true);
     let guardNotice = "";
     const guardStarted = Date.now();
