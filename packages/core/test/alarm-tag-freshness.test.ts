@@ -73,3 +73,31 @@ test("函数只读且只检查服务端时间字段，不把来源时间当成�
   });
   expect(input).toEqual({ ...valid, sourceTimestamp: "2000-01-01T00:00:00.000Z" });
 });
+
+test("报警候选拒绝无时区服务器时间，同时接受明确 UTC 偏移", () => {
+  const offset = {
+    ...valid,
+    serverTimestamp: "2026-11-22T17:59:59.000+09:00",
+    sourceTimestamp: "2026-11-22T08:59:59",
+  };
+  expect(classifyTimelyNumericAlarmSample(offset, nowMs, 1000)).toEqual({
+    status: "READY",
+    value: 42,
+  });
+  for (const timestamp of [
+    "2026-11-22T08:59:59.000",
+    "2026-11-22",
+    "11/22/2026 08:59:59",
+  ]) {
+    expect(() =>
+      classifyTimelyNumericAlarmSample({ ...valid, serverTimestamp: timestamp }, nowMs, 1000),
+    ).toThrow("报警服务器时间戳必须包含明确时区");
+  }
+  expect(
+    classifyTimelyNumericAlarmSample(
+      { ...valid, quality: "BAD", serverTimestamp: "2026-11-22T08:59:59.000" },
+      nowMs,
+      1000,
+    ),
+  ).toEqual({ status: "QUALITY_NOT_GOOD" });
+});
