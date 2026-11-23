@@ -113,6 +113,7 @@ onUnmounted(() => {
         <label for="published-vue-project-id">工程 ID</label>
         <input
           id="published-vue-project-id"
+          name="projectId"
           v-model="projectId"
           type="text"
           :maxlength="128"
