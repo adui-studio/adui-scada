@@ -451,6 +451,36 @@ async function checkStudioInPage() {
     );
   }
 
+  // 本地版本历史由官方 Popup 展开，仍保留快照与差异操作。
+  const historyMenu = element(".studio-local-history-menu");
+  const historyTrigger = historyMenu.querySelector("button.t-button");
+  verify(
+    "本地版本历史使用 TDesign Popup 而非原生 details",
+    historyMenu instanceof HTMLDivElement &&
+      historyTrigger instanceof HTMLButtonElement &&
+      !historyMenu.querySelector("summary"),
+  );
+  if (historyTrigger instanceof HTMLButtonElement) {
+    historyTrigger.click();
+    await settle();
+    const historyPanel = historyMenu.querySelector(".studio-version-panel");
+    verify(
+      "本地历史弹层可见且保留快照与刷新入口",
+      Boolean(historyPanel?.getClientRects().length) &&
+        ["创建快照", "刷新"].every((label) =>
+          [...historyPanel.querySelectorAll(".studio-version-tools button")].some(
+            (button) => button.textContent.trim() === label,
+          ),
+        ),
+    );
+    document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    verify(
+      "TDesign 本地历史弹层支持点击外部关闭",
+      !historyMenu.querySelector(".studio-version-panel")?.getClientRects().length,
+    );
+  }
+
   return { findings, viewport: { width: innerWidth, height: innerHeight } };
 }
 
