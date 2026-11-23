@@ -1317,3 +1317,11 @@ D5b9o 已先撤销基线与回调令牌，再调用外部 `cancelCheck/unsubscri
 共享 Core `AlarmSubscriptionAdapter.snapshot()` 在**正在运行且已建立基线**时，通过现有依赖注入 `nowMs()` 和 `AlarmBaselineSessionController.checkFreshness()` 于返回状态之前再次执行质量与时效校验，不能仅信赖外部 `AlarmSubscriptionScheduler.every()` 按时运行。基线仍在时间窗口内时返回现有冻结状态；已过期或未来时间异常时，原有 `BASELINE_INVALIDATED` 路径同步清空持有的基线与回调令牌，并按已有顺序取消调度和只读订阅，最终返回 `baseline:null`。若时钟访问或外部取消函数抛错，仍采用 D5b9p 已有的故障保留逻辑传播异常并禁止旧回调恢复。停止或尚未获得快照基线时的读取不调用外部时钟，避免在无数据的等待期制造额外故障。
 
 此改动保持原 `snapshot(): AlarmBaselineSessionState` 方法签名，但读取**不再保证无副作用**：有效期复核可能停止订阅，也可能传播受控时钟或清理异常；调用方必须按可抛错的受控读操作处理。它加强了**通过适配器读取基线**时的保护，不保证绕过该接口而直接缓存旧 `AlarmBaselineSessionState` 的其他消费者自动失效，也不能弥补宿主时钟不可置信、未运行真实调度或缺失可信来源认证。未更改 TagStore、报警触发/确认业务、NestJS、Prisma、Vue/React、工业网关及正式发布 Gate；FR-011 生产安全仍 fail-closed。
+
+## 2026-11-23 · D5b9r FR-011 旧基线超龄时禁止以新 delta 续接（候选）
+
+此前 D5b9k 的 `advanceAlarmTagDeltaBaseline` 只对**当前输入增量**执行 GOOD、有限数值、时间窗口与序列校验；D5b9l `transitionAlarmBaselineSession` 直接使用已有基线比较序列。若外部时效检查未执行、且没有调用 D5b9q 的适配器 `snapshot()` 读取保护，前一条旧基线可已超过 `maxAgeMs`，却被一条新鲜且严格递增的 delta 接续。这是源码可达的风险路径，尚无真实工业采集事故证据。
+
+D5b9r 在共享 `alarm-baseline-session.ts` 的同会话 delta 分支增加**旧基线有效性前置检查**：当本次来源标记已核验且已有基线时，先按 `classifyTimelyNumericAlarmSample(state.baseline.value, nowMs, maxAgeMs)` 复查旧基线。若旧基线超龄、位于未来或出现其他非 READY 状态，立即以对应原因返回 `BASELINE_INVALIDATED` 和 `baseline:null`，**不处理当前 delta，即使它本身符合时效和序列条件**；后续 delta 仍因无基线遭拒绝，必须通过同代次且上游核验的 snapshot 重新建立。无目标 Tag 的 delta 同样不能掩盖旧基线超龄。未核验来源仍优先按 `UNVERIFIED_SOURCE` 拒绝，避免额外读取旧数据；在最大年龄边界（年龄等于 `maxAgeMs`）仍保持既有包含端点规则。
+
+此修复在共享状态归约层进行，故直接调用 Core 归约器或经 `AlarmBaselineSessionController`、`AlarmSubscriptionAdapter` 消费 delta 都需遵守，而不仅依赖适配器的周期时效检查或读取时效检查。不修改纯数值候选过滤器、TagStore、外部订阅接口、权限模型、报警阈值/确认业务、网关或发布 Gate。时间及来源的真实性仍由受控宿主提供，FR-011 工业报警完整能力仍未交付。
