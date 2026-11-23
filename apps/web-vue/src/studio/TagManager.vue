@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { confirmStudioAction } from "./StudioDialog";
 import { ref } from "vue";
 import { Button as TButton, Input as TInput, Select as TSelect, Textarea as TTextarea } from "tdesign-vue-next";
 import { TAG_DATA_TYPE_LABELS } from "@adui/scada-core";
@@ -68,11 +69,11 @@ function changeTagDataType(value: string | number | Array<string | number>): voi
   }
 }
 
-function remove(definition: TagDefinition) {
+async function remove(definition: TagDefinition) {
   if (
-    !window.confirm(
+    !(await confirmStudioAction(
       "确定删除项目 Tag“" + definition.displayName + "”吗？被图元绑定的 Tag 不允许删除。",
-    )
+    ))
   ) {
     return;
   }
@@ -94,7 +95,7 @@ function remove(definition: TagDefinition) {
         <p v-if="tag.description" class="studio-tip">{{ tag.description }}</p>
         <div class="studio-toolbox">
           <TButton type="button" size="small" @click="edit(tag)">编辑</TButton>
-          <TButton type="button" size="small" @click="remove(tag)">删除</TButton>
+          <TButton type="button" size="small" @click="() => void remove(tag)">删除</TButton>
         </div>
       </div>
     </div>
