@@ -68,7 +68,6 @@ import { confirmStudioAction, promptStudioPageName } from "./StudioDialog.tsx";
 import { TagManager } from "./TagManager.tsx";
 import { ServerProjectBrowser } from "./ServerProjectBrowser.tsx";
 import { ServerReleasePreflight } from "./ServerReleasePreflight.tsx";
-import "./studio.css";
 import "@adui/tailwind/studio.css";
 
 const previewTags = new WaterTreatmentSimulator().next(new Date("2026-11-09T00:00:00Z"));

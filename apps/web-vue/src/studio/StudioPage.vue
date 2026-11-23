@@ -72,7 +72,6 @@ import { confirmStudioAction, promptStudioPageName } from "./StudioDialog";
 import TagManager from "./TagManager.vue";
 import ServerProjectBrowser from "./ServerProjectBrowser.vue";
 import ServerReleasePreflight from "./ServerReleasePreflight.vue";
-import "./studio.css";
 import "@adui/tailwind/studio.css";
 
 const previewTags = new WaterTreatmentSimulator().next(new Date("2026-11-09T00:00:00Z"));

@@ -90,3 +90,5 @@ V7 Logo 原 SVG 和几何不动，导航缩放使用现有 `/brand/favicon.svg`�
 **当前验证事实**：仅 PR #191 在其已记录 HEAD 完成了用户提供的 Windows 验收，并已合并。D5c1 分支的新 UI、浏览器脚本、Vue/React CSS 和构建尚未在维护者 Windows 实际验证；文档不是通过证明。
 
 最终需要视觉复核时可先设置 `SCADA_UI_SCREENSHOTS=1`，再执行唯一一次 `pnpm run test:ui:browser`。脚本在仓库根目录 `.artifacts/ui-review/` 写入 12 张 PNG（双端 × 双分辨率 × 三视图），目录已 Git 忽略；图片只做本机审阅，不上传工程信息。
+
+**样式单一来源**：原 React/Vue 两份逐字相同的 `src/studio/studio.css` 已迁移进统一 `@adui/tailwind/studio.css`，只保留后者导入；原旋转光标的相对 URL 根据 CSS 真实路径调整为 `../../../assets/cursors/rotate.svg`。这不会修改 SVG 手柄或指针事件，但仍必须通过真实 Vite 构建与 Chrome 光标回归确认资源可解析。
