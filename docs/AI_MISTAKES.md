@@ -871,3 +871,12 @@
 - **最小修复候选**：在共享归约器已有基线的 snapshot 分支直接返回 `BASELINE_INVALIDATED/SNAPSHOT_ALREADY_ESTABLISHED`，不接受完全相同、更低或更高序列的二次快照。复用现有托管器撤销令牌、订阅适配器清理资源的路径。允许受控上游在显式重启并递增代次后重新接受新的首次快照。新增 5 项测试定义，覆盖纯归约、托管器、活动订阅及同步初始化回调。
 - **防复发**：所有以 snapshot 初始化严格递增数据流的状态机都必须区分“首次初始化”和“已建立后重复初始化”；同代次重同步应作为异常信号 fail-closed，真实重新订阅必须明确分配新代次。
 - **验证边界**：D5b9t 仅提交代码与测试定义，尚无维护者 Windows 定向测试或 `vp check`、文档和中文文案检查结果。此处令牌身份仅用于本进程回调隔离，不是来源身份认证；FR-011 生产报警仍未实现。
+
+### E-092 · D5b9t 旧测试未同步重复快照拒绝优先级（PR #159，待 Windows 复验）
+
+- **现象**：维护者 2026-11-23 Windows 定向回归，会话归约器 17/18、托管器 10/10、订阅适配器 27/27，合计 **54/55**，命令失败。原测试在已有基线时再次输入坏质量 snapshot，期望 QUALITY_NOT_GOOD，实际 SNAPSHOT_ALREADY_ESTABLISHED；基线已清空。没有本轮后续检查结果。
+- **根因**：D5b9t 已将同代次第二份 snapshot 视为非法重初始化，安全拒绝优先于其数值质量检查；旧测试断言仍依赖先前优先级，测试未与新契约同步。此失败不能证明生产快照防护失效。
+- **最小修复**：仅调整 packages/core/test/alarm-baseline-session.test.ts 原用例，保留未核验 delta 的拒绝断言；为已有基线重复坏质量快照断言 SNAPSHOT_ALREADY_ESTABLISHED；为无基线首次坏质量快照独立断言 QUALITY_NOT_GOOD。两种路径都必须保持 baseline 为 null。生产代码、公共 API、其余用例均不改。
+- **防复发**：修改状态机拒绝优先级时，应检查旧测试是否错误复用已有基线夹具，将首次初始化和重复初始化的负向场景分开断言；不能为通过而削弱 fail-closed 保护。
+- **验证边界**：54/55 是修复前 Windows 结果，修复后的 55 项 Vitest、vp check、docs:check 和 messages:check 均待 Windows 复测。FR-011 来源认证、报警触发、确认授权和不可变审计仍未实现。
+- **证据**：维护者 Windows 日志、PR #159、packages/core/test/alarm-baseline-session.test.ts、docs/VALIDATION.md。
