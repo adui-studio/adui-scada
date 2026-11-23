@@ -383,7 +383,16 @@ async function addStudioSymbolInPage(label) {
 async function exportStudioJsonInPage() {
   const menu = document.querySelector(".studio-file-menu");
   if (!menu) throw new Error("未找到文件与草稿菜单");
-  menu.open = true;
+  const trigger = menu.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到 TDesign 文件草稿菜单触发器");
+  }
+  if (!menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
+  const opening = Date.now();
+  while (!menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+    if (Date.now() - opening > 5000) throw new TypeError("TDesign 文件草稿弹层展开超时");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const button = [...menu.querySelectorAll("button")].find(
     (item) => item.textContent.trim() === "导出 JSON",
   );
@@ -411,7 +420,9 @@ async function exportStudioJsonInPage() {
   } finally {
     URL.createObjectURL = originalCreate;
     HTMLAnchorElement.prototype.click = originalClick;
-    menu.open = false;
+    if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+      trigger.click();
+    }
   }
 }
 
@@ -419,7 +430,16 @@ async function exportStudioJsonInPage() {
 async function importStudioJsonInPage(json, expectSuccess) {
   const menu = document.querySelector(".studio-file-menu");
   if (!menu) throw new Error("未找到文件与草稿菜单");
-  menu.open = true;
+  const trigger = menu.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到 TDesign 文件草稿菜单触发器");
+  }
+  if (!menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
+  const opening = Date.now();
+  while (!menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+    if (Date.now() - opening > 5000) throw new TypeError("TDesign 文件草稿弹层展开超时");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const input = menu.querySelector(".studio-import input[type=file]");
   if (!input) throw new Error("未找到工程 JSON 文件输入");
   const transfer = new DataTransfer();
@@ -441,7 +461,9 @@ async function importStudioJsonInPage(json, expectSuccess) {
       "导入结果等待超时：" + (document.querySelector(".studio-notice")?.textContent || ""),
     );
   } finally {
-    menu.open = false;
+    if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+      trigger.click();
+    }
   }
 }
 
@@ -1164,7 +1186,16 @@ async function studioVersionRowsInPage() {
 async function enableStudioAutoSaveInPage(confirmExisting = false) {
   const menu = document.querySelector(".studio-file-menu");
   if (!menu) throw new TypeError("没有找到文件与草稿菜单");
-  menu.open = true;
+  const trigger = menu.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到 TDesign 文件草稿菜单触发器");
+  }
+  if (!menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
+  const opening = Date.now();
+  while (!menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+    if (Date.now() - opening > 5000) throw new TypeError("TDesign 文件草稿弹层展开超时");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const button = [...menu.querySelectorAll("button")].find(
     (item) => item.textContent.trim() === "开启自动保存",
   );
@@ -1184,7 +1215,9 @@ async function enableStudioAutoSaveInPage(confirmExisting = false) {
     throw new TypeError("开启自动保存超时");
   } finally {
     window.confirm = originalConfirm;
-    menu.open = false;
+    if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+      trigger.click();
+    }
   }
 }
 
@@ -1243,7 +1276,16 @@ async function simulateHistoryDatabaseUnavailableInPage() {
 async function verifyImportHistoryIsolationInPage(json) {
   const fileMenu = document.querySelector(".studio-file-menu");
   const versionMenu = document.querySelector(".studio-version-menu");
-  const input = fileMenu?.querySelector('.studio-import input[type="file"]');
+  if (!fileMenu) throw new TypeError("未找到文件草稿菜单");
+  const trigger = fileMenu.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) throw new TypeError("未找到文件草稿触发器");
+  trigger.click();
+  const opening = Date.now();
+  while (!fileMenu.querySelector(".studio-file-popover")?.getClientRects().length) {
+    if (Date.now() - opening > 5000) throw new TypeError("文件草稿弹层打开超时");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  const input = fileMenu.querySelector('.studio-import input[type="file"]');
   if (!input || !versionMenu) throw new TypeError("没有找到版本或 JSON 导入入口");
   const item = [...versionMenu.querySelectorAll(".studio-version-item")].find(
     (entry) => entry.querySelector("strong")?.textContent.trim() === "版本 #1",
@@ -1295,7 +1337,7 @@ async function verifyImportHistoryIsolationInPage(json) {
     releaseText?.();
     Blob.prototype.text = originalText;
     window.confirm = originalConfirm;
-    fileMenu.open = false;
+    if (fileMenu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
     versionMenu.open = false;
   }
 }
@@ -1419,7 +1461,16 @@ async function waitForStudioAutoSaveStateInPage(enabled, noticeText) {
 async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice = null) {
   const menu = document.querySelector(".studio-file-menu");
   if (!menu) throw new TypeError("未找到文件与草稿菜单");
-  menu.open = true;
+  const trigger = menu.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到 TDesign 文件草稿菜单触发器");
+  }
+  if (!menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
+  const opening = Date.now();
+  while (!menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+    if (Date.now() - opening > 5000) throw new TypeError("TDesign 文件草稿弹层展开超时");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const started = Date.now();
   let button = null;
   while (Date.now() - started < 12000) {
@@ -1444,7 +1495,9 @@ async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice 
     throw new TypeError("草稿操作结果超时：" + label);
   } finally {
     window.confirm = originalConfirm;
-    menu.open = false;
+    if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+      trigger.click();
+    }
   }
 }
 
