@@ -1059,3 +1059,12 @@
 - **修复**：将 React Studio 三处 `CollapsePanel` 改为 `Collapse.Panel`，移除错误命名导入；Vue 保持 `TCollapsePanel`。React/Vue 通用组件替换仍须分别核对各自固定版本，不凭名称相似假设 API 完全一致。
 - **防复发与验证**：代码批量替换前核对固定版本的组件入口、Props、事件、插槽与真实 HTML 语义；发生 JSX 标签替换时检查首尾配对、残留标签和浏览器测试的旧 DOM 选择器。已在 GitHub 候选分支静态确认误用移除；`pnpm run typecheck:web`、`vp check` 及真实浏览器仍待维护者在最终 PR HEAD 运行。
 - **证据**：D5c0w 分支 `apps/web-react/src/studio/StudioPage.tsx` 历史修改、Tencent TDesign React 固定版本 `Collapse.tsx` 和 `docs/TDESIGN_COMPONENT_AUDIT.md`。
+
+### E-109 · D5c0w React TDesign Button 拖拽事件类型与 Select 值域不一致（PR #188）
+
+- **Windows 实测现象**：维护者执行 `vp check --fix`，在 `apps/web-react/src/studio/StudioPage.tsx` 的 `startLayerDrag`、`overLayer`、`dropLayer` 调用处出现 TypeScript **TS2345 共 3 个错误**；`apps/web-react/src/runtime/PublishedRuntimePage.tsx` 一处、`StudioPage.tsx` 三处 `String(value)` 出现 `typescript(no-base-to-string)` **共 4 条告警**。输出为 291 个受检文件，格式化完成**不能视为类型和 Lint 通过**。
+- **根因**：把原生按钮批量改为 TDesign React `Button` 后，`onDragStart/onDragOver/onDrop` 暴露的是 `DragEvent<HTMLElement>`，原函数仍要求更窄的 `DragEvent<HTMLButtonElement>`。当前固定版本 `tdesign-react@1.18.6` 的 Select `onChange` 返回 `SelectValue`，可能为字符串、数字、布尔、选项对象或数组；对整个联合类型调用 `String(value)` 可能把对象错误转换为 `[object Object]`，重复 E-052 隐式字符串化风险。
+- **最小修复候选**：仅修改 React 两个页面文件：三个现有图层拖拽处理函数参数改为 `ReactDragEvent<HTMLElement>`；四处 Select 回调先检查 `typeof value === "string"`，只接受合法字符串 ID，不转换对象、数组或布尔值。不修改拖拽/命中算法、Vue 适配、Tag/工程 Schema、CAS、已发布工程权限、数据持久化、既有测试或 TDesign 依赖版本。
+- **防复发与复验**：迁移基础 UI 控件时不能假定 TDesign 事件泛型与原生标签完全一致；确认官方回调联合类型后收窄再写入状态，禁止靠类型断言或关闭 Lint 规避。请在最终 PR HEAD 上运行 `pnpm run typecheck:web`、不带 `--fix` 的 `vp check`、`pnpm run docs:check`，并执行图层拖拽与 Select 操作的 React/Vue 浏览器回归。**截至本记录仅完成 GitHub 静态修复，尚未获得修复后的 Windows 检查结果。**
+- **证据**：维护者 2026-11-23 `vp check --fix` 原始输出、PR #188 的 React 代码和固定版本 TDesign React `select/type.ts`。
+
