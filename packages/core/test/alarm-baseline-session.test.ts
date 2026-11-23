@@ -602,8 +602,7 @@ test("时效检查必须拒绝归属其他代次的基线并终止当前会话",
 
   const restarted = restartAlarmBaselineSession(rejected.state, 3);
   expect(
-    transitionAlarmBaselineSession(restarted, { ...snapshot, generation: 3 }, nowMs, 3000)
-      .status,
+    transitionAlarmBaselineSession(restarted, { ...snapshot, generation: 3 }, nowMs, 3000).status,
   ).toBe("BASELINE_ESTABLISHED");
 });
 
