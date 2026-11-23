@@ -6,6 +6,7 @@ import {
   CollapsePanel as TCollapsePanel,
   Checkbox as TCheckbox,
   Select as TSelect,
+  Upload as TUpload,
   Dropdown as TDropdown,
   Input as TInput,
   Popup as TPopup,
@@ -1732,10 +1733,11 @@ function exportJson() {
   notice.value = "已导出本地 JSON 草稿（并非工程发布）";
 }
 
-async function importJson(event: Event) {
-  const input = event.currentTarget as HTMLInputElement;
-  const file = input.files?.[0];
-  input.value = "";
+function onJsonSelected(files: File[]): void {
+  void importJsonFile(files[0]);
+}
+
+async function importJsonFile(file: File | undefined) {
   if (!file) return;
   if (historyActionInProgress || draftActionInProgress) {
     notice.value = "已有工程操作正在进行，请完成后再导入 JSON";
@@ -1793,10 +1795,18 @@ async function importJson(event: Event) {
                 <TButton type="button" :aria-pressed="autoSaveEnabled" @click="toggleAutoSave">
                   {{ autoSaveEnabled ? "暂停自动保存" : "开启自动保存" }}
                 </TButton>
-                <label class="studio-import">
-                  导入 JSON
-                  <input type="file" accept=".json,application/json" @change="importJson" />
-                </label>
+                <div class="studio-import">
+                  <TUpload
+                    theme="custom"
+                    accept=".json,application/json"
+                    :auto-upload="false"
+                    :files="[]"
+                    allow-upload-duplicate-file
+                    @select-change="onJsonSelected"
+                  >
+                    <TButton type="button" variant="outline">导入 JSON</TButton>
+                  </TUpload>
+                </div>
                 <TButton type="button" @click="exportJson">导出 JSON</TButton>
                 <TButton type="button" :disabled="!hasSavedDraft" @click="restoreDraft">
                   恢复草稿
