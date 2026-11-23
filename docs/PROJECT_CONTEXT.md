@@ -2432,3 +2432,9 @@ D5c0r 在此 main 上仅对共享 Studio 历史版本弹层做 **12 条 CSS 等�
 维护者在 PR #183 的 Windows 实际执行 `vp check` **445 格式/289 受检零告警**、主题专项 **9/9**、`docs:check` **93 份**及 React/Vue 1440×900、1024×768 四组 Studio 浏览器 **76/76**，相关失败退出检查未触发，`git status --short` 输出为空；日志未单独显示本地 HEAD。GitHub 核对 Draft PR #183 的最终 SHA `3c7cc6800ba095ca6134356ab927317672282a92`，Assignee 为 `@adui-dev`，无未解决审查，经维护者明确授权 Squash 合并至 `main@e252ecce8630e38e12a51bdef088ebb8b905c846`。
 
 维护者明确指出旧 UI 在 TDesign 已有组件能力的情况下仍使用自有弹层和菜单，反复做 CSS Token 等值迁移不是优先方向。本批先以 `docs/TDESIGN_COMPONENT_AUDIT.md` 对应固定 React/Vue TDesign 版本审查组件能力与双端 20 处自定义 `details` 入口，调整 AGENTS 规则，制定从「页面管理 Dropdown」开始的分批替换与浏览器验收计划。**本 PR 为文档审计候选，不包含任何组件重构或 UI 行为变更；TDesign 组件 API 的项目专用 MCP 当前不可用，后续代码更改须先解决 API 验证前置。**
+
+## 2026-11-23 · PR #184 合并与 D5c0t 页面管理 Dropdown 候选
+
+维护者的 PR #184 文档验收日志确认 `docs:check` **94 个 Markdown 文件通过**。GitHub 核对该 PR 最终 HEAD 为 `1f41a45783b0f827060a805003bb5d0e7161efe4`（比初稿仅多一次表格格式化），Assignee 为 `@adui-dev`、无未解决审查且可合并。维护者明确同意后已 Squash 合并到 `main@343120d9019e28d59a254977c3bc6e70c5f7c4b1`。
+
+D5c0t 从这个 main 创建独立分支，将 React/Vue 「页面管理」各 1 处原生 `details/summary` 改为本仓库已安装的 TDesign Dropdown + Button，并删除此入口的手工菜单定位 CSS。六条命令委托原有 Core 编辑器行为且保留禁用条件，未改工程 JSON/Tag/权限/安全边界；新增 8 项实际浏览器检查，历史版本、发布预检和文件草稿弹层暂不动。官方对应固定 tag 的组件 API/菜单项禁用行为已直接核对，但项目 `tdesign-mcp-server` 当前不可用；尚未在 Windows 执行本批 Vite+、类型或浏览器测试，PR 只作为 Draft 候选。
