@@ -29,6 +29,7 @@ export type AlarmBaselineSessionRejectReason =
   | AlarmTagDeltaRejectReason
   | Exclude<AlarmSnapshotBaselineResult["status"], "BASELINE_ESTABLISHED">
   | "DISCONNECTED"
+  | "SNAPSHOT_ALREADY_ESTABLISHED"
   | "INVALID_INPUT";
 
 export type AlarmBaselineSessionTransition =
@@ -126,6 +127,8 @@ export function transitionAlarmBaselineSession(
     if (action.kind !== "CHANGE") return invalidate(state, "INVALID_INPUT");
 
     if (action.change.kind === "snapshot") {
+      // 初始快照只能为当前会话建立一次基线，重复快照不能重置递增序列。
+      if (state.baseline !== null) return invalidate(state, "SNAPSHOT_ALREADY_ESTABLISHED");
       const result = establishAlarmSnapshotBaseline(
         {
           change: action.change,
