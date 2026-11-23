@@ -80,7 +80,10 @@ describe("双框架工业主题设计 Token", () => {
       [".scada-panel-subtitle", "font-size: var(--adui-font-size-xs);"],
       [".scada-diagnostics-grid dd", "font-size: var(--adui-font-size-xl);"],
       [".scada-tag strong", "font-size: var(--adui-font-size-xs);"],
-      [".scada-published-preview-panel > .scada-diagnostics-empty", "padding: var(--adui-space-8);"],
+      [
+        ".scada-published-preview-panel > .scada-diagnostics-empty",
+        "padding: var(--adui-space-8);",
+      ],
     ] as const) {
       expect(findRules(css, selector).some((rule) => rule.includes(declaration))).toBe(true);
     }
@@ -107,6 +110,8 @@ describe("双框架工业主题设计 Token", () => {
     }
     expect(css).toContain("--studio-left-width: 252px;");
     expect(css).toContain("--studio-right-width: 320px;");
-    expect(css).toContain("grid-template-columns: var(--studio-left-width) minmax(0, 1fr) var(--studio-right-width);");
+    expect(css).toContain(
+      "grid-template-columns: var(--studio-left-width) minmax(0, 1fr) var(--studio-right-width);",
+    );
   });
 });
