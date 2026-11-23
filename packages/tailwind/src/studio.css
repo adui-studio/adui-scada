@@ -42,7 +42,7 @@
 }
 .studio-actions button {
   white-space: nowrap;
-  font-size: 12px;
+  font-size: var(--adui-font-size-xs);
 }
 .studio-save-actions button:first-child {
   background: var(--scada-primary);
@@ -159,7 +159,7 @@
   flex: none;
   padding: 6px 12px;
   border-radius: 4px 4px 0 0;
-  font-size: 12px;
+  font-size: var(--adui-font-size-xs);
   white-space: nowrap;
 }
 .studio-workspace {
@@ -800,7 +800,7 @@
 }
 .studio-project-browser-heading strong {
   color: var(--scada-text-strong);
-  font-size: 14px;
+  font-size: var(--adui-font-size-md);
 }
 .studio-project-browser-heading button,
 .studio-project-browser-pagination button {
@@ -836,11 +836,11 @@
   max-width: 100%;
   color: var(--scada-text-strong);
   overflow-wrap: anywhere;
-  font-size: 12px;
+  font-size: var(--adui-font-size-xs);
 }
 .studio-project-browser-info small {
   flex-basis: 100%;
-  font-size: 11px;
+  font-size: var(--adui-font-size-2xs);
   line-height: 1.5;
   color: var(--scada-text-muted);
 }
@@ -861,7 +861,7 @@
 }
 .studio-project-browser-pagination span {
   color: var(--scada-text-secondary);
-  font-size: 11px;
+  font-size: var(--adui-font-size-2xs);
   text-align: center;
 }
 .studio-project-browser-empty {
@@ -869,7 +869,7 @@
   padding: 18px 10px;
   color: var(--scada-text-muted);
   text-align: center;
-  font-size: 12px;
+  font-size: var(--adui-font-size-xs);
 }
 .studio-project-browser-panel button:disabled {
   opacity: 0.48;
@@ -898,11 +898,11 @@
 }
 .studio-toolbar .scada-eyebrow {
   color: var(--scada-text-muted);
-  font-size: 11px;
+  font-size: var(--adui-font-size-2xs);
 }
 .studio-history-actions,
 .studio-save-actions {
-  gap: 6px;
+  gap: var(--adui-space-3);
 }
 .studio-history-actions button,
 .studio-save-actions button {
@@ -932,7 +932,7 @@
   background: var(--scada-nav);
 }
 .studio-page-tabs {
-  gap: 4px;
+  gap: var(--adui-space-2);
 }
 .studio-page-tabs button {
   min-height: 32px;
@@ -966,7 +966,7 @@
 .studio-pane-heading h2,
 .studio-panel-properties > h2 {
   color: var(--scada-text-strong);
-  font-size: 13px;
+  font-size: var(--adui-font-size-sm);
   font-weight: 700;
   letter-spacing: 0.015em;
 }
