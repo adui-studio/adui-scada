@@ -356,3 +356,10 @@ test("旧基线已超龄时来源未核验仍优先按来源拒绝失效", () =>
     state: { ...initial, baseline: null },
   });
 });
+
+test("旧基线恰在最大年龄边界时仍可按既有规则接收有效增量", () => {
+  const initial = established();
+  const accepted = transitionAlarmBaselineSession(initial, delta, nowMs + 1000, 3000);
+  expect(accepted.status).toBe("DELTA_ACCEPTED");
+  expect(accepted.state.baseline?.value.sequence).toBe(6);
+});
