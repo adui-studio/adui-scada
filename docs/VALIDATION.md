@@ -3711,3 +3711,40 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批未改变数据库、真实设备协议、NestJS、Vue/React 或工业写入。当前协作端没有执行 D5c0a 的原生 Vite+/Vitest，**119/119 为预计验收目标**，只有维护者 Windows 运行记录才能将其标记为通过。Draft PR 须另行验收和授权后才能合并。
+
+## 2026-11-23 · D5c0a PR #166 Windows 通过合并与 D5c0b 待验收
+
+维护者 Windows 已实测 PR #166 八份共享 Core 定向测试：时效 **7/7**、快照 **8/8**、序列 **10/10**、代次 **8/8**、增量 **17/17**、归约 **28/28**、托管 **11/11**、适配 **30/30**，合计 **119/119**；`vp check` **435 个格式文件正确/286 个受检零警告错误**，文档 **90** 份及中文文案 **310** 个文件通过。GitHub 最终 HEAD `319e424005cf0bb6a6c77f74037e85f5a93f8678` 额外提交仅格式化测试数组，经维护者明确授权 Squash 合并至 `main@abc6c0913c1510da0797c2a6dd9acd6761c9370c`。用户本机日志没有 HEAD，不把合并 SHA 冒充为本机精确实测，也不能将定向测试等同完整 ready 或工业安全专项。
+
+D5c0b 新增报警候选日期实际存在性检查，避免 `2026-02-30` 等不存在的日期被 `Date.parse` 归一化后当作新鲜采集值。通用 TagStore、已有 UTC/偏移时间和质量/时效顺序不变。五项新增测试使八份回归定义目标成为：时效 **8**、快照 **9**、序列 **10**、代次 **8**、增量 **18**、归约 **29**、托管 **11**、适配 **31**，合计 **124 项**。**D5c0b 尚无 Windows 实测**；仅独立 Node 22 复现了隐式日期滚动并验证 7 个日历样例。
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5c0b-alarm-invalid-calendar-date
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5c0b-alarm-invalid-calendar-date
+}
+if ($LASTEXITCODE -ne 0) { throw "切换功能分支失败" }
+
+git pull --ff-only origin fix/d5c0b-alarm-invalid-calendar-date
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 自动修正失败" }
+
+vp test run packages/core/test/alarm-tag-freshness.test.ts packages/core/test/alarm-snapshot-baseline.test.ts packages/core/test/alarm-tag-sequence.test.ts packages/core/test/alarm-session-generation.test.ts packages/core/test/alarm-tag-delta.test.ts packages/core/test/alarm-baseline-session.test.ts packages/core/test/alarm-session-controller.test.ts packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警候选公历日期有效性回归失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批未新增 HTTP、数据库迁移、工业网关、双框架页面或设备写入；正式报警触发、确认授权与不可变审计仍未交付。D5c0b 的 **124/124** 仅为测试定义的验收目标，必须取得 Windows 实际结果后才能按新授权合并。
