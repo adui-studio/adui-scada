@@ -1803,8 +1803,12 @@ async function importJson(event: Event) {
                   <input type="file" accept=".json,application/json" @change="importJson" />
                 </label>
                 <button type="button" @click="exportJson">导出 JSON</button>
-                <button type="button" :disabled="!hasSavedDraft" @click="restoreDraft">恢复草稿</button>
-                <button type="button" :disabled="!hasSavedDraft" @click="clearDraft">清除草稿</button>
+                <button type="button" :disabled="!hasSavedDraft" @click="restoreDraft">
+                  恢复草稿
+                </button>
+                <button type="button" :disabled="!hasSavedDraft" @click="clearDraft">
+                  清除草稿
+                </button>
               </div>
             </template>
           </TPopup>
