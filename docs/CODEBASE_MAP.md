@@ -1352,3 +1352,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-subscription-adapter.ts`：新增 `AlarmSubscriptionAdapter` 及外部 `AlarmReadonlySubscriptionSource`、`AlarmSubscriptionScheduler`、`AlarmSubscriptionAdapterOptions` 类型。将只读订阅数据、断连和受控时钟周期检查交给已有 `AlarmBaselineSessionController`，在本会话基线失效后立即释放订阅与调度资源。
 - `packages/core/test/alarm-subscription-adapter.test.ts`：新增 **13 项测试定义**，覆盖正常快照/增量、时效过期、断连、重启旧回调、未核验数据、非法批次、同步订阅/同步调度、订阅/调度抛错、幂等停止、无效时间参数、配置外部变更及时钟失败清理。
 - `packages/core/src/index.ts`：增加适配器和接口公共导出；未修改 TagStore、Runtime、Vue/React、NestJS、Prisma、设备网关或发布安全门禁。
+
+## 2026-11-23 · D5b9o FR-011 报警订阅重入清理保护
+
+- `packages/core/src/alarm-subscription-adapter.ts`：在调用外部 `cancelCheck/unsubscribe` 前撤销旧会话基线与令牌；订阅/调度安装回调结束时必须核对所捕获令牌仍有效，旧代次异常不能停止新会话。
+- `packages/core/test/alarm-subscription-adapter.test.ts`：在原 13 项基础上增加 4 项，覆盖取消周期中重入新会话、旧订阅安装异常不污染新会话、双取消函数抛错仍尝试完整清理、调度同步重入后旧取消函数不能覆盖新资源。
+- 本批不改公共导出、Schema、TagStore、Runtime、Vue/React、NestJS、Prisma、工业网关及发布门禁。

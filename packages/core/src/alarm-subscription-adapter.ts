@@ -99,7 +99,7 @@ export class AlarmSubscriptionAdapter {
       if (typeof unsubscribe !== "function") {
         throw new TypeError("报警数据源未返回取消订阅函数");
       }
-      if (!this.running) {
+      if (!this.running || this.token !== token) {
         unsubscribe();
         return;
       }
@@ -113,13 +113,13 @@ export class AlarmSubscriptionAdapter {
       if (typeof cancelCheck !== "function") {
         throw new TypeError("报警调度器未返回取消函数");
       }
-      if (!this.running) {
+      if (!this.running || this.token !== token) {
         cancelCheck();
         return;
       }
       this.cancelCheck = cancelCheck;
     } catch (error) {
-      this.stop();
+      if (this.token === token) this.stop();
       throw error;
     }
   }
@@ -134,14 +134,12 @@ export class AlarmSubscriptionAdapter {
     const unsubscribe = this.unsubscribe;
     this.cancelCheck = null;
     this.unsubscribe = null;
+    // 在执行可能重入的外部清理函数之前撤销会话基线和令牌。
+    if (token !== null) this.controller.disconnect(token, 0, this.options.maxAgeMs);
     try {
       cancelCheck?.();
     } finally {
-      try {
-        unsubscribe?.();
-      } finally {
-        if (token !== null) this.controller.disconnect(token, 0, this.options.maxAgeMs);
-      }
+      unsubscribe?.();
     }
   }
 
@@ -153,7 +151,7 @@ export class AlarmSubscriptionAdapter {
     try {
       if (invoke().status === "BASELINE_INVALIDATED") this.stop();
     } catch (error) {
-      this.stop();
+      if (this.token === token) this.stop();
       throw error;
     }
   }
