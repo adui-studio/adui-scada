@@ -2444,3 +2444,9 @@ D5c0t 从这个 main 创建独立分支，将 React/Vue 「页面管理」各 1 
 维护者 Windows 对 PR #185 最终候选代码执行 `typecheck:web`（React/Vue/草稿存储/API Client 类型检查通过）、`vp check`（446 格式文件/289 受检零告警错误）、`docs:check`（94 Markdown 通过），React/Vue 1440×900、1024×768 Studio 四组真实浏览器分别 **27/27**（总 **108/108**），失败退出检查未触发。GitHub 最终 HEAD `9963000ac0cdd42dd281df928809922582b25c86` 比前一提交只变动 React 模板和浏览器脚本格式；Assignee `@adui-dev`、零未解决审查，维护者明确授权后 Squash 合并为 `main@63cce4d6a0824ae766a4b9f436e65665ad568030`。日志没有单独打印本机 SHA。
 
 D5c0u 在新分支将 React/Vue「文件与草稿」原生 details 改为 TDesign Popup（固定版本 React 1.18.6、Vue 1.20.11）并清理旧浮层定位 CSS。保留所有原有按钮、本地文件输入、2 MiB 大小限制、IndexedDB CAS 和历史版本并发安全。同步更新文件导入导出、自动保存、并发与草稿 DOM 浏览器入口，新加 3 个普通 Studio Popup 回归点。静态核对仅确认源码范围，未在 Windows 完成新分支验证，仍为 Draft 候选。
+
+## 2026-11-23 · PR #186 D5c0u 首次 Windows 回归与待诊断阻塞
+
+维护者已实测 PR #186 的双端类型检查、`vp check`（446 格式/289 受检零告警错误）、文档 94 份、正常 Studio 120/120、JSON 双向互通、版本并发安全、React/Vue 历史草稿迁移均通过。真实 `test:multitab` 的 React 四个子场景成功后，首次切换到 Vue 时异步 `StudioPage` 未在 `.studio-workspace` 门禁内出现，命令退出码 1；**Vue 多标签页未验收**。当前仍为 Draft，不得合并。
+
+源码已确认 Vue App 使用 `defineAsyncComponent`，两页导航通过 `Promise.all` 并发触发，但日志尚不足以把问题归因于 Vue 业务代码、TDesign Popup、Vite 资源、时序或环境。D5c0u 只增强浏览器脚本的异步导航失败分类，保留超时与全部安全断言；记录 E-106 待 Windows 重新运行并依据证据决定真正的最小修复。不重复已通过的前七项业务专项，也不把其他 Vue 浏览器通过冒充本次多标签安全通过。
