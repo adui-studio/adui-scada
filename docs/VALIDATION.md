@@ -4172,3 +4172,29 @@ git status --short
 组件能力核对见 [TDesign 组件复用审计](TDESIGN_COMPONENT_AUDIT.md)。当前每框架 10 处自定义 `details`（Studio 9 + 工程管理 1），后续改为 Dropdown/Popup/Collapse 等时，既有 `test-studio-browser.mjs`、Tag/互通及 OIDC/发布预检测试中有直接通过 `details.open`、`summary` 和 CSS 类名定位的真实页面操作，**必须随真实 UI 更新测试路径，不能删除业务、安全、几何断言**。
 
 后续首批页面管理 Dropdown 验收需同时覆盖 React/Vue：真实点击菜单打开、选项禁用状态（页数 100、首页/末页、仅一页）、命令后的页面和 JSON 语义、菜单选择后关闭、Esc/外部点击、键盘焦点与 1440×900/1024×768 下无裁切。固定侧栏 252px/320px、16:9 画布、Tag 绑定/保存和工业只读安全边界始终不变。先用 Catalog 固定版本的官方 TDesign 类型/文档核实 API，构建/浏览器实际执行才可宣告通过。本批只有文档修改，未运行 Windows 新分支测试。
+
+## 2026-11-23 · PR #184 文档验收；D5c0t TDesign 页面菜单双端候选
+
+PR #184 维护者 Windows `docs:check`：**94 份 Markdown 通过**，不能据此推断 UI 或业务测试。GitHub 最终头 `1f41a45783b0f827060a805003bb5d0e7161efe4`，经授权 Squash 合并为 `main@343120d9019e28d59a254977c3bc6e70c5f7c4b1`。
+
+D5c0t 仅替换页面管理 `details/summary + 绝对定位菜单` 为 React/Vue 官方 TDesign Dropdown（对应 Catalog 版本 `1.18.6` / `1.20.11`），未动其他弹层或页面 CRUD 实现。浏览器脚本的原 19 个断言全部保留并新增 8 个：TDesign 触发按钮、六项命令、禁用边界、创建页面、执行后关闭、禁用命令不修改工程、点击外部收起、键盘焦点。双端四视口**预期 27/27 × 4 = 108**；只是验收目标，**尚未运行**。
+
+本小批建议 Windows 根目录依次检查最新 PR HEAD、Web 类型、Vite+、文档与实际浏览器，不机械重复上批 `ready`/Tag/互通：
+
+```powershell
+git fetch origin
+git switch feat/d5c0t-tdesign-page-dropdown
+git pull --ff-only
+git rev-parse HEAD
+pnpm run typecheck:web
+if ($LASTEXITCODE -ne 0) { throw "前端类型检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run test:browser
+if ($LASTEXITCODE -ne 0) { throw "Studio 双框架浏览器测试失败" }
+git status --short
+```
+
+真实浏览器验收同时人工检查页面菜单 Esc、键盘导航、选项滚动与 1024×768 下贴边定位。本批自动浏览器只验证触发器可聚焦，未声称已完全覆盖键盘导航。菜单关闭行为通过官方组件执行；工程文件、Tag、报警、OIDC、发布和设备写入边界不在本次代码变化中。

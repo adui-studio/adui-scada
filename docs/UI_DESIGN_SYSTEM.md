@@ -114,3 +114,11 @@
 **设计门禁**：简单命令菜单优先 Dropdown；含表单、版本列表、授权操作的复杂浮层优先 Popup/Drawer；二次确认优先 Dialog/Popconfirm；属性侧栏行内折叠优先 Collapse；本地 JSON 文件选择可评估 Upload，但必须关闭自动上传并保留原数据校验。TDesign 组件负责弹层定位、禁用态及交互生命周期，不能继续以 `position:absolute + z-index + details/summary` 模拟第三方组件已有能力。
 
 上述结论尚未实施生产组件替换；应先完成相关官方 API 和 Windows 类型/浏览器实测。原有浏览器用例对 `details.open` 的依赖需要随迁移调整为真实 TDesign 触发路径，保留所有工程数据、权限、工业安全及 Studio 几何断言。
+
+## D5c0t · 官方 Dropdown 取代页面管理手工菜单
+
+Studio 的「页面管理」原本由原生 `details/summary` 和 `.studio-page-actions` 的绝对定位栅格实现。React/Vue 现在分别使用其固定版本的 TDesign `Dropdown` + `Button`，统一点击触发和右下定位；禁用项由官方 Dropdown 处理，不另外实现悬停、焦点或外部点击生命周期。
+
+保留六条现有编辑器命令、页面最多 100 页和首页/末页/单页禁用逻辑。仅移除此菜单独占的手工浮层 CSS，其他文件/草稿、历史版本、服务端预检等原生菜单保持原状，待下一批分别核对 Popup 等官方组件。Studio 固定 252px/320px 侧栏和 SVG 16:9 画布不变。
+
+同步扩充 `test:browser` 的 React/Vue 真实菜单检查，从每组 19 项增至**目标 27 项**。尚未运行 Windows 浏览器或 Vite+；见 [组件复用审计](TDESIGN_COMPONENT_AUDIT.md)。

@@ -297,6 +297,72 @@ async function checkStudioInPage() {
   await settle();
   verify("点击图层可更新属性面板", Boolean(firstLayer) && /已选\s*1/.test(properties.textContent));
 
+  // 使用真实 TDesign 触发器验证页面菜单，而不是修改 details.open。
+  const pageMenu = element(".studio-page-menu");
+  const pageTrigger = pageMenu.querySelector("button.t-button");
+  const pageTabs = () => [...document.querySelectorAll(".studio-page-tabs > button")];
+  const menuItems = () => [...document.querySelectorAll(".t-dropdown__item")];
+  const menuItem = (label) => menuItems().find((item) => item.textContent.trim() === label);
+  const menuClosed = () => menuItems().length === 0;
+  const initialPages = pageTabs();
+  const initialIndex = initialPages.findIndex((tab) => tab.getAttribute("aria-current") === "page");
+  verify(
+    "页面管理使用 TDesign 按钮而非原生 details",
+    pageTrigger instanceof HTMLButtonElement && !pageMenu.querySelector("summary"),
+  );
+  if (pageTrigger instanceof HTMLButtonElement) {
+    pageTrigger.click();
+    await settle();
+    const labels = ["+ 新建页面", "复制页面", "页面前移", "页面后移", "重命名", "删除当前页"];
+    verify(
+      "TDesign 下拉菜单提供全部六项页面命令",
+      labels.every((label) => Boolean(menuItem(label))) && menuItems().length === labels.length,
+    );
+    const expectedDisabled = [
+      ["+ 新建页面", initialPages.length >= 100],
+      ["复制页面", initialPages.length >= 100],
+      ["页面前移", initialIndex <= 0],
+      ["页面后移", initialIndex >= initialPages.length - 1],
+      ["删除当前页", initialPages.length <= 1],
+    ];
+    verify(
+      "页面命令禁用态与页数和当前位置一致",
+      expectedDisabled.every(
+        ([label, disabled]) =>
+          menuItem(label)?.classList.contains("t-dropdown__item--disabled") === disabled,
+      ),
+    );
+    menuItem("+ 新建页面")?.click();
+    await settle();
+    verify("TDesign 菜单可创建页面", pageTabs().length === initialPages.length + 1);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    verify("执行页面命令后下拉菜单自动关闭", menuClosed());
+
+    pageTrigger.click();
+    await settle();
+    const createdPages = pageTabs();
+    const currentIndex = createdPages.findIndex(
+      (tab) => tab.getAttribute("aria-current") === "page",
+    );
+    const disabledNext = menuItem("页面后移");
+    const beforeBlocked = createdPages.map((tab) => tab.textContent.trim()).join("|");
+    disabledNext?.click();
+    await settle();
+    verify(
+      "最后一页的禁用命令无法修改工程页面",
+      currentIndex === createdPages.length - 1 &&
+        disabledNext?.classList.contains("t-dropdown__item--disabled") &&
+        pageTabs()
+          .map((tab) => tab.textContent.trim())
+          .join("|") === beforeBlocked,
+    );
+    document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    verify("点击弹层外部可收起 TDesign 菜单", menuClosed());
+    pageTrigger.focus();
+    verify("TDesign 页面菜单触发器可获得键盘焦点", document.activeElement === pageTrigger);
+  }
+
   return { findings, viewport: { width: innerWidth, height: innerHeight } };
 }
 

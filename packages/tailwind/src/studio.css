@@ -52,13 +52,14 @@
   background: var(--scada-primary-hover);
 }
 .studio-file-menu,
-.studio-page-menu,
 .studio-version-menu {
   position: relative;
   flex: none;
 }
+.studio-page-menu {
+  flex: none;
+}
 .studio-file-menu > summary,
-.studio-page-menu > summary,
 .studio-version-menu > summary {
   display: flex;
   min-height: 32px;
@@ -75,14 +76,12 @@
   user-select: none;
 }
 .studio-file-menu > summary::-webkit-details-marker,
-.studio-page-menu > summary::-webkit-details-marker,
 .studio-version-menu > summary::-webkit-details-marker,
 .studio-side-more > summary::-webkit-details-marker,
 .studio-advanced > summary::-webkit-details-marker {
   display: none;
 }
 .studio-file-menu > summary:focus-visible,
-.studio-page-menu > summary:focus-visible,
 .studio-version-menu > summary:focus-visible,
 .studio-side-more > summary:focus-visible,
 .studio-advanced > summary:focus-visible,
@@ -91,20 +90,17 @@
   outline-offset: -2px;
 }
 .studio-file-menu > summary::after,
-.studio-page-menu > summary::after,
 .studio-version-menu > summary::after {
   content: "▾";
   font-size: 10px;
   color: var(--scada-text-muted);
 }
 .studio-file-menu[open] > summary,
-.studio-page-menu[open] > summary,
 .studio-version-menu[open] > summary {
   border-color: var(--scada-primary);
   color: var(--scada-cyan);
 }
-.studio-file-popover,
-.studio-page-actions {
+.studio-file-popover {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
@@ -119,8 +115,7 @@
   box-shadow: 0 14px 36px rgb(0 0 0 / 38%);
 }
 .studio-file-popover button,
-.studio-file-popover .studio-import,
-.studio-page-actions button {
+.studio-file-popover .studio-import {
   display: flex;
   width: 100%;
   align-items: center;
@@ -128,10 +123,6 @@
   margin: 0;
   font-size: 12px;
   text-align: center;
-}
-.studio-page-actions {
-  width: 230px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .studio-page-bar {
   position: relative;
@@ -913,14 +904,12 @@
   font-weight: 700;
 }
 .studio-file-menu > summary,
-.studio-page-menu > summary,
 .studio-version-menu > summary {
   min-height: var(--studio-control-height);
   border-radius: 6px;
   font-weight: 600;
 }
 .studio-file-popover,
-.studio-page-actions,
 .studio-version-panel,
 .studio-view-popover {
   border-color: var(--scada-border-strong);
@@ -1024,7 +1013,6 @@
   color: var(--scada-text-secondary);
 }
 .studio-file-menu > summary:hover,
-.studio-page-menu > summary:hover,
 .studio-version-menu > summary:hover,
 .studio-view-menu > summary:hover,
 .studio-side-more > summary:hover,
