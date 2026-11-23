@@ -1344,6 +1344,20 @@ async function studioVersionActionInPage(
     } else {
       await new Promise((resolve) => setTimeout(resolve, 120));
     }
+    if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) {
+      trigger.click();
+      const opened = Date.now();
+      while (Date.now() - opened < 12000) {
+        const panel = menu.querySelector(".studio-version-panel");
+        if (
+          panel?.getClientRects().length &&
+          !panel.querySelector(".studio-version-tools button:disabled")
+        ) {
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    }
     return {
       versions: [...menu.querySelectorAll(".studio-version-item strong")].map((item) =>
         item.textContent.trim(),
