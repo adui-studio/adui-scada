@@ -146,6 +146,13 @@ export function transitionAlarmBaselineSession(
         return invalidate(state, "INVALID_INPUT");
       }
       if (state.baseline === null) return { status: "WAITING_SNAPSHOT", state };
+      // 显式检查不得把其他代次或其他 Tag 的基线视作当前会话的有效状态。
+      if (state.baseline.generation !== state.generation) {
+        return invalidate(state, "SESSION_MISMATCH");
+      }
+      if (state.baseline.value.tagId !== state.expectedTagId) {
+        return invalidate(state, "TAG_MISMATCH");
+      }
       const checked = classifyTimelyNumericAlarmSample(state.baseline.value, nowMs, maxAgeMs);
       if (checked.status === "READY") return { status: "BASELINE_UNCHANGED", state };
       return invalidate(state, checked.status);
