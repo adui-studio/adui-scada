@@ -1067,3 +1067,12 @@
 - **最小修复候选**：仅修改 React 两个页面文件：三个现有图层拖拽处理函数参数改为 `ReactDragEvent<HTMLElement>`；四处 Select 回调先检查 `typeof value === "string"`，只接受合法字符串 ID，不转换对象、数组或布尔值。不修改拖拽/命中算法、Vue 适配、Tag/工程 Schema、CAS、已发布工程权限、数据持久化、既有测试或 TDesign 依赖版本。
 - **防复发与复验**：迁移基础 UI 控件时不能假定 TDesign 事件泛型与原生标签完全一致；确认官方回调联合类型后收窄再写入状态，禁止靠类型断言或关闭 Lint 规避。请在最终 PR HEAD 上运行 `pnpm run typecheck:web`、不带 `--fix` 的 `vp check`、`pnpm run docs:check`，并执行图层拖拽与 Select 操作的 React/Vue 浏览器回归。**截至本记录仅完成 GitHub 静态修复，尚未获得修复后的 Windows 检查结果。**
 - **证据**：维护者 2026-11-23 `vp check --fix` 原始输出、PR #188 的 React 代码和固定版本 TDesign React `select/type.ts`。
+
+### E-110 · D5c0w Vue TDesign Select 回调签名遗漏 bigint 与模板类型推断错误（PR #188）
+
+- **Windows 实测现象**：维护者执行 `pnpm run typecheck:web`，React `tsc --build` 后进入 Vue `vue-tsc --build`，共报 **7 个错误**，最终命令退出码 1（Vue 递归脚本退出码 2）。其中六条 TS2322 分布在 Vue 已发布运行页 1 处、Studio 4 处、TagManager 1 处；另有一条 TS2339 位于 Studio 模板 `TAG_DATA_TYPE_LABELS[option.dataType]`。后续 `vp check`、`messages:check`、`docs:check`、单测及浏览器脚本因 PowerShell 失败即中断，**均未在本轮执行**。日志未单独给出本地 HEAD，不伪造验证对应的 SHA。
+- **根因**：D5c0w 首次批量迁移为 TDesign Vue Select 自行声明了 `string | number | (string | number)[]` 类型的回调，但固定 Catalog `tdesign-vue-next@1.20.11` 的官方 `SelectValue` 还包含 `bigint`、布尔值、选项对象与递归列表，回调参数因此不能直接匹配。Tag 候选项在 Vue 模板的多行 `:options` 表达式中拼接导入的 `TAG_DATA_TYPE_LABELS`，触发了 `vue-tsc` 对该 Record 的 `.value` 访问诊断。
+- **最小修复候选**：只修改三个 Vue SFC。六处 `@change` 处理函数参数类型统一为 `unknown`，函数内部仍只接收字符串 ID 或限定枚举；拒绝将对象、数组、数字、`bigint` 转成非法 Tag/页面/图层 ID。把 Tag 绑定下拉候选项提为 `<script setup>` 中的 `tagBindingOptions = computed(...)`，模板仅使用 `:options="tagBindingOptions"`。保留“未绑定”、历史缺失 Tag 占位、数据类型中文标签及原有 Tag 类型约束；不触碰 React、Core、Schema、CAS、OIDC 与工业写入边界。
+- **防复发与验证**：双框架 UI 组件事件回调不能按原生 `select` 事件的值域自行缩窄形参；先核对各自固定版本 API，宽接受、窄校验。复杂选项列表放在脚本 `computed`，减少 Volar 模板自动展开的歧义。**目前只完成 GitHub 源码静态核对；修复后的 Windows `pnpm run typecheck:web`、`vp check`、`docs:check` 及双框架浏览器测试仍待真实执行**，不可将本次改动视为质量门禁通过。
+- **证据**：维护者 2026-11-23 Windows PowerShell 中 `vue-tsc` 七条错误及最终失败退出码、PR #188 的三个 Vue SFC、`tdesign-vue-next@1.20.11` 固定官方 `select/type.ts`。
+
