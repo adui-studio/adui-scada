@@ -2388,3 +2388,11 @@ D5c0l 基于现有共享主题和三套仓库设计规范，启动工业 UI 双�
 维护者 Windows 日志表明 D5c0l `ready` 中的 Vitest **863/863**、Lab **5/5**、E2E **63/63**、双框架 Web 构建及文档 **93 份**等分项成功，但未包含最终 `ready` 退出码或本地 HEAD；随后 `test:browser` 在 React/Vue **1440×900、1024×768** 四组均仅 **16/19**，失败集中于左右固定侧栏及画布剩余宽度。定位到 UI 共享 CSS 末尾新增 260px/324px、≤1250px 的 238px/292px 覆盖原有 252px/320px。E-104 修复候选已撤销新覆盖、保持既有浏览器断言不变；`test:tags:browser` 和 `test:interop` 因命令链提前失败尚未运行。修复后 Windows 回归与质量检查待复验。
 
 维护者进一步明确 **TDesign 已有组件必须优先直接使用，不重复造同职责控件、不无故封装**。设计基线 `docs/UI_DESIGN_SYSTEM.md` 已增加 TDesign/API 工具查证、Tailwind 只负责布局、工业自研 CSS 边界与回归契约。当前尚无可调用的 `tdesign-mcp-server`，不能猜测新组件 API；本轮仅修复布局及规范，不继续替换尚未核实的复杂文件/发布/草稿控件。
+
+## 2026-11-23 · PR #177 合并与 D5c0m 全宽运行工作区及通用工具复用边界
+
+维护者在 PR #177 的 Windows 最终 HEAD `7611dc27ac8ca70c19d80f29d1b4fae4725faec1` 运行 `pnpm run ready`，明确打印 **退出码 0**，此前 76/76 Studio 浏览器、双端 Tag CRUD/互通亦通过；GitHub 经明确授权 Squash 合并到 `main@76a2e697eba6d8034bc095e498328e68e0482edf`。三张真实截图显示运行与已发布页面留白、信息层级不够合理，Studio 固定侧栏和画布布局则须保留。
+
+D5c0m 基于最新 main 只改共享 Runtime CSS 与 React/Vue 运行页展示顺序：宽屏把模拟工艺 SVG 提到首屏左侧，诊断和 Tag 置于右侧；两端 DOM 与视觉保持一致；已发布页在无有效快照时展示具有合理高度的受控空态。无新增 UI 封装、依赖或工业业务逻辑修改，Studio 252px/320px 与 16:9 不动。
+
+维护者明确“工具”包含 **Zod、Day.js 等成熟第三方库**，而不只是 TDesign UI 组件。现有 Zod 4.6.7 已列入 Catalog，但 Day.js 尚未引入；本批已有日期显示可复用 Runtime 格式化入口，因此**不为避免几行既有代码而无条件引入 Day.js**。后续遇到真实重复能力先检查已有 Schema/库/工具链，再做最小迁移，所有新依赖必须准确维护消费者及锁文件。此批 PR 尚无 Windows 测试及实际新布局截图，严格保持 Draft 等待验收。
