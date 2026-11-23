@@ -184,7 +184,9 @@ export default function PublishedRuntimePage() {
                 <Select
                   value={activePageId ?? ""}
                   options={pages.map((page) => ({ label: page.name, value: page.id }))}
-                  onChange={(value) => setSelectedPageId(String(value))}
+                  onChange={(value) => {
+                    if (typeof value === "string") setSelectedPageId(value);
+                  }}
                 />
               </div>
             </label>
