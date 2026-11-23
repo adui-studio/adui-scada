@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Input } from "tdesign-react";
+import { Button, Input, Select, Textarea } from "tdesign-react";
 import type { FormEvent } from "react";
 import { TAG_DATA_TYPE_LABELS } from "@adui/scada-core";
 import type { TagDefinition } from "@adui/scada-core";
@@ -125,20 +125,20 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
         </label>
         <label className="studio-field">
           数据类型
-          <select
-            aria-label="项目 Tag 数据类型"
+          <Select
             value={draft.dataType}
-            onChange={(event) =>
-              setDraft((current) => ({ ...current, dataType: event.target.value as TagDataType }))
+            options={[
+              ...(editingId && draft.dataType === "unknown"
+                ? [{ label: "待确认（历史迁移占位）", value: "unknown" }]
+                : []),
+              { label: "数值", value: "number" },
+              { label: "布尔值", value: "boolean" },
+              { label: "文本", value: "string" },
+            ]}
+            onChange={(value) =>
+              setDraft((current) => ({ ...current, dataType: value as TagDataType }))
             }
-          >
-            {editingId && draft.dataType === "unknown" && (
-              <option value="unknown">待确认（历史迁移占位）</option>
-            )}
-            <option value="number">数值</option>
-            <option value="boolean">布尔值</option>
-            <option value="string">文本</option>
-          </select>
+          />/select>
         </label>
         <label className="studio-field">
           单位（可选）
@@ -151,13 +151,11 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
         </label>
         <label className="studio-field">
           描述（可选）
-          <textarea
-            rows={3}
-            maxLength={512}
+          <Textarea
+            autosize={{ minRows: 3, maxRows: 6 }}
+            maxlength={512}
             value={draft.description}
-            onChange={(event) =>
-              setDraft((current) => ({ ...current, description: event.target.value }))
-            }
+            onChange={(value) => setDraft((current) => ({ ...current, description: value }))}
           />
         </label>
         <div className="studio-toolbox">
