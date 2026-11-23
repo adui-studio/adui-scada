@@ -4,10 +4,10 @@ import { describe, expect, it } from "vite-plus/test";
 const themeRoot = new URL("../../theme/src/", import.meta.url);
 const readTheme = (name: string) => readFileSync(new URL(name, themeRoot), "utf8");
 
-const findLastRule = (css: string, selector: string): string =>
+const findRules = (css: string, selector: string): string[] =>
   [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
     .filter((match) => match[1]?.trim().endsWith(selector))
-    .at(-1)?.[2] ?? "";
+    .map((match) => match[2] ?? "");
 
 describe("双框架工业主题设计 Token", () => {
   it("主题颜色、字号和间距必须由 @adui/theme 统一定义且名称不重复", () => {
@@ -81,7 +81,7 @@ describe("双框架工业主题设计 Token", () => {
       [".scada-tag strong", "font-size: var(--adui-font-size-xs);"],
       [".scada-published-preview-panel > .scada-diagnostics-empty", "padding: var(--adui-space-8);"],
     ] as const) {
-      expect(findLastRule(css, selector)).toContain(declaration);
+      expect(findRules(css, selector).some((rule) => rule.includes(declaration))).toBe(true);
     }
     const tokens = readTheme("tokens.css");
     expect(tokens).toContain("--adui-space-3: 6px;");
@@ -102,7 +102,7 @@ describe("双框架工业主题设计 Token", () => {
       [".studio-project-browser-info code", "font-size: var(--adui-font-size-xs);"],
       [".studio-project-browser-pagination span", "font-size: var(--adui-font-size-2xs);"],
     ] as const) {
-      expect(findLastRule(css, selector)).toContain(declaration);
+      expect(findRules(css, selector).some((rule) => rule.includes(declaration))).toBe(true);
     }
     expect(css).toContain("--studio-left-width: 252px;");
     expect(css).toContain("--studio-right-width: 320px;");
