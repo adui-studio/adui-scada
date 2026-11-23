@@ -167,7 +167,10 @@ export default function PublishedRuntimePage() {
           </div>
         </dl>
       </section>
-      <section className="scada-panel scada-published-preview-panel" aria-label="已发布静态组态预览">
+      <section
+        className="scada-panel scada-published-preview-panel"
+        aria-label="已发布静态组态预览"
+      >
         <h2>已发布组态静态预览</h2>
         {pages.length > 1 ? (
           <div className="scada-published-controls">
