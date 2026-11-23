@@ -90,7 +90,12 @@ async function remove(definition: TagDefinition) {
   <div class="studio-tag-manager flex min-w-0 flex-col gap-3">
     <div class="studio-tag-list flex min-w-0 flex-col gap-2" role="list" aria-label="项目 Tag 目录">
       <p v-if="tags.length === 0" class="studio-tip">当前工程尚未定义 Tag</p>
-      <div v-for="tag in tags" :key="tag.tagId" class="studio-binding studio-tag-item min-w-0" role="listitem">
+      <div
+        v-for="tag in tags"
+        :key="tag.tagId"
+        class="studio-binding studio-tag-item min-w-0"
+        role="listitem"
+      >
         <strong>{{ tag.displayName }}</strong> ·
         <span class="break-all">{{ tag.tagId }}</span>
         <p class="studio-tip">
@@ -99,8 +104,18 @@ async function remove(definition: TagDefinition) {
         </p>
         <p v-if="tag.description" class="studio-tip">{{ tag.description }}</p>
         <div class="studio-toolbox studio-tag-actions">
-          <TButton type="button" size="small" theme="default" variant="text" @click="edit(tag)">编辑</TButton>
-          <TButton type="button" size="small" theme="danger" variant="text" @click="() => void remove(tag)">删除</TButton>
+          <TButton type="button" size="small" theme="default" variant="text" @click="edit(tag)">
+            编辑
+          </TButton>
+          <TButton
+            type="button"
+            size="small"
+            theme="danger"
+            variant="text"
+            @click="() => void remove(tag)"
+          >
+            删除
+          </TButton>
         </div>
       </div>
     </div>
@@ -153,7 +168,9 @@ async function remove(definition: TagDefinition) {
       </label>
       <div class="studio-toolbox studio-tag-form-actions">
         <TButton type="submit" size="small">{{ editingId ? "保存修改" : "新增 Tag" }}</TButton>
-        <TButton type="button" size="small" theme="default" variant="base" @click="reset">{{ editingId ? "取消编辑" : "清空" }}</TButton>
+        <TButton type="button" size="small" theme="default" variant="base" @click="reset">
+          {{ editingId ? "取消编辑" : "清空" }}
+        </TButton>
       </div>
     </form>
     <p class="studio-tip">
