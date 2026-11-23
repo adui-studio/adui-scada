@@ -42,78 +42,78 @@ onUnmounted(() => runtime.stop());
     <p role="status" class="scada-message">{{ state.message }}</p>
     <div class="scada-monitor-layout">
       <section class="scada-panel scada-process-panel" aria-label="模拟工业监控画面">
-      <h2>模拟工艺流程</h2>
-      <p class="scada-panel-subtitle">只读演示画面 · 不代表现场设备数据</p>
-      <img v-if="svg" class="scada-svg" :src="svg" alt="水箱、水泵与流量模拟监控" />
-      <p v-else>正在加载工程…</p>
-    </section>
+        <h2>模拟工艺流程</h2>
+        <p class="scada-panel-subtitle">只读演示画面 · 不代表现场设备数据</p>
+        <img v-if="svg" class="scada-svg" :src="svg" alt="水箱、水泵与流量模拟监控" />
+        <p v-else>正在加载工程…</p>
+      </section>
       <div class="scada-monitor-side">
         <section class="scada-panel scada-diagnostics" aria-label="本地实时链路诊断">
-      <h2>实时链路诊断</h2>
-      <p class="scada-diagnostics-note">
-        本机只读观测 · 数据年龄为接受有效 Tag 后经过的时间，并非网络传输延迟
-      </p>
-      <dl class="scada-diagnostics-grid">
-        <div>
-          <dt>连接状态</dt>
-          <dd>{{ RUNTIME_STATUS_LABELS[state.status] }}</dd>
-        </div>
-        <div>
-          <dt>断连过程次数</dt>
-          <dd>{{ state.diagnostics.reconnectCount }}</dd>
-        </div>
-        <div>
-          <dt>最近有效更新</dt>
-          <dd>{{ formatRuntimeUpdateTime(state.diagnostics.lastTagReceivedAt) }}</dd>
-        </div>
-        <div>
-          <dt>观测时数据年龄</dt>
-          <dd>{{ formatRuntimeDataAge(state.diagnostics.dataAgeMs) }}</dd>
-        </div>
-      </dl>
-      <div class="scada-quality-summary" role="group" aria-label="Tag 质量分布">
-        <div
-          v-for="quality in TAG_QUALITIES"
-          :key="quality"
-          class="scada-quality-item"
-          :data-quality="quality"
-        >
-          <span>{{ TAG_QUALITY_LABELS[quality] }}</span>
-          <strong>{{ state.diagnostics.qualityCounts[quality] }}</strong>
-        </div>
-      </div>
-      <p class="scada-diagnostics-total">当前 Tag 总数：{{ state.diagnostics.tagCount }}</p>
-      <section class="scada-status-history" aria-label="最近状态变化">
-        <h3>最近状态变化</h3>
-        <p class="scada-diagnostics-note">最多 20 条 · 仅当前会话 · 非报警历史</p>
-        <p v-if="state.diagnostics.statusEvents.length === 0" class="scada-diagnostics-empty">
-          暂无状态变化
-        </p>
-        <ol v-else class="scada-status-events">
-          <li
-            v-for="event in state.diagnostics.statusEvents"
-            :key="event.sequence"
-            :data-status="event.status"
-          >
-            <span>{{ RUNTIME_STATUS_LABELS[event.status] }}</span>
-            <time :datetime="new Date(event.occurredAt).toISOString()">
-              {{ formatRuntimeUpdateTime(event.occurredAt) }}
-            </time>
-          </li>
-        </ol>
-      </section>
-    </section>
+          <h2>实时链路诊断</h2>
+          <p class="scada-diagnostics-note">
+            本机只读观测 · 数据年龄为接受有效 Tag 后经过的时间，并非网络传输延迟
+          </p>
+          <dl class="scada-diagnostics-grid">
+            <div>
+              <dt>连接状态</dt>
+              <dd>{{ RUNTIME_STATUS_LABELS[state.status] }}</dd>
+            </div>
+            <div>
+              <dt>断连过程次数</dt>
+              <dd>{{ state.diagnostics.reconnectCount }}</dd>
+            </div>
+            <div>
+              <dt>最近有效更新</dt>
+              <dd>{{ formatRuntimeUpdateTime(state.diagnostics.lastTagReceivedAt) }}</dd>
+            </div>
+            <div>
+              <dt>观测时数据年龄</dt>
+              <dd>{{ formatRuntimeDataAge(state.diagnostics.dataAgeMs) }}</dd>
+            </div>
+          </dl>
+          <div class="scada-quality-summary" role="group" aria-label="Tag 质量分布">
+            <div
+              v-for="quality in TAG_QUALITIES"
+              :key="quality"
+              class="scada-quality-item"
+              :data-quality="quality"
+            >
+              <span>{{ TAG_QUALITY_LABELS[quality] }}</span>
+              <strong>{{ state.diagnostics.qualityCounts[quality] }}</strong>
+            </div>
+          </div>
+          <p class="scada-diagnostics-total">当前 Tag 总数：{{ state.diagnostics.tagCount }}</p>
+          <section class="scada-status-history" aria-label="最近状态变化">
+            <h3>最近状态变化</h3>
+            <p class="scada-diagnostics-note">最多 20 条 · 仅当前会话 · 非报警历史</p>
+            <p v-if="state.diagnostics.statusEvents.length === 0" class="scada-diagnostics-empty">
+              暂无状态变化
+            </p>
+            <ol v-else class="scada-status-events">
+              <li
+                v-for="event in state.diagnostics.statusEvents"
+                :key="event.sequence"
+                :data-status="event.status"
+              >
+                <span>{{ RUNTIME_STATUS_LABELS[event.status] }}</span>
+                <time :datetime="new Date(event.occurredAt).toISOString()">
+                  {{ formatRuntimeUpdateTime(event.occurredAt) }}
+                </time>
+              </li>
+            </ol>
+          </section>
+        </section>
         <section class="scada-panel scada-values-panel" aria-label="Tag 质量与最近值">
-      <h2>Tag 质量与最近值</h2>
-      <p v-if="state.values.length === 0" class="scada-diagnostics-empty">暂无可显示的 Tag 数据</p>
-      <div class="scada-tags">
-        <div v-for="tag in state.values" :key="tag.tagId" class="scada-tag">
-          <strong>{{ tag.tagId }}</strong>
-          <span>{{ tag.quality === "GOOD" ? String(tag.value ?? "--") : "--" }}</span>
-          <small :data-quality="tag.quality">{{ TAG_QUALITY_LABELS[tag.quality] }}</small>
-        </div>
-      </div>
-    </section>
+          <h2>Tag 质量与最近值</h2>
+          <p v-if="state.values.length === 0" class="scada-diagnostics-empty">暂无可显示的 Tag 数据</p>
+          <div class="scada-tags">
+            <div v-for="tag in state.values" :key="tag.tagId" class="scada-tag">
+              <strong>{{ tag.tagId }}</strong>
+              <span>{{ tag.quality === "GOOD" ? String(tag.value ?? "--") : "--" }}</span>
+              <small :data-quality="tag.quality">{{ TAG_QUALITY_LABELS[tag.quality] }}</small>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
     <footer>仅模拟数据 · 只读监控 · 不连接 PLC/DCS</footer>

@@ -124,92 +124,92 @@ export default function PublishedRuntimePage() {
       <div className="scada-published-layout">
         <div className="scada-published-sidebar">
           <section className="scada-panel scada-published-controls-panel" aria-label="正式发布工程选择">
-        <h2>读取已发布工程</h2>
-        <p className="scada-diagnostics-note">
-          独立 release:read 权限 · 仅使用当前登录会话 · 不读取编辑草稿或模拟数据
-        </p>
-        <form onSubmit={onStart} className="scada-published-controls">
-          <label>
-            工程 ID
-            <Input
-              name="projectId"
-              type="text"
-              maxlength={128}
-              value={projectId}
-              autocomplete="off"
-              spellCheck={false}
-              placeholder="输入已授权工程 ID"
-              onChange={(value) => setProjectId(value)}
-            />
-          </label>
-          <Button type="submit">读取正式发布</Button>
-          <Button type="button" variant="outline" disabled={!activeProjectId} onClick={onRefresh}>
-            立即刷新
-          </Button>
-          <Button type="button" variant="text" disabled={!activeProjectId} onClick={onStop}>
-            停止读取
-          </Button>
-        </form>
-        {message ? <p role="alert">{message}</p> : null}
-      </section>
-          <section className="scada-panel scada-published-summary-panel" aria-label="正式发布状态">
-        <h2>已提交发布指针</h2>
-        <dl className="scada-diagnostics-grid">
-          <div>
-            <dt>工程</dt>
-            <dd>{state.projectId ?? "未选择"}</dd>
-          </div>
-          <div>
-            <dt>发布代次</dt>
-            <dd>{state.releaseGeneration ?? "--"}</dd>
-          </div>
-          <div>
-            <dt>发布修订</dt>
-            <dd>{state.snapshot?.revision ?? "--"}</dd>
-          </div>
-          <div>
-            <dt>实时 Tag 质量</dt>
-            <dd>不可用 · UNAVAILABLE</dd>
-          </div>
-        </dl>
-      </section>
-        </div>
-      <section
-        className="scada-panel scada-published-preview-panel"
-        aria-label="已发布静态组态预览"
-      >
-        <h2>已发布组态静态预览</h2>
-        {pages.length > 1 ? (
-          <div className="scada-published-controls">
-            <label>
-              组态页面
-              <div data-testid="published-runtime-page-select">
-                <Select
-                  value={activePageId ?? ""}
-                  options={pages.map((page) => ({ label: page.name, value: page.id }))}
-                  onChange={(value) => {
-                    if (typeof value === "string") setSelectedPageId(value);
-                  }}
+            <h2>读取已发布工程</h2>
+            <p className="scada-diagnostics-note">
+              独立 release:read 权限 · 仅使用当前登录会话 · 不读取编辑草稿或模拟数据
+            </p>
+            <form onSubmit={onStart} className="scada-published-controls">
+              <label>
+                工程 ID
+                <Input
+                  name="projectId"
+                  type="text"
+                  maxlength={128}
+                  value={projectId}
+                  autocomplete="off"
+                  spellCheck={false}
+                  placeholder="输入已授权工程 ID"
+                  onChange={(value) => setProjectId(value)}
                 />
+              </label>
+              <Button type="submit">读取正式发布</Button>
+              <Button type="button" variant="outline" disabled={!activeProjectId} onClick={onRefresh}>
+                立即刷新
+              </Button>
+              <Button type="button" variant="text" disabled={!activeProjectId} onClick={onStop}>
+                停止读取
+              </Button>
+            </form>
+            {message ? <p role="alert">{message}</p> : null}
+          </section>
+          <section className="scada-panel scada-published-summary-panel" aria-label="正式发布状态">
+            <h2>已提交发布指针</h2>
+            <dl className="scada-diagnostics-grid">
+              <div>
+                <dt>工程</dt>
+                <dd>{state.projectId ?? "未选择"}</dd>
               </div>
-            </label>
-          </div>
-        ) : null}
-        <p className="scada-diagnostics-note">
-          此画面只来自已验证的正式发布快照；未连接现场 Tag。 画布内缺失值的 BAD
-          占位不代表设备故障诊断。
-        </p>
-        {svg ? (
-          <img
-            className="scada-svg"
-            src={svg}
-            alt="已发布组态静态配置预览，实时 Tag 数据未接入"
-            data-testid="published-runtime-svg"
-          />
-        ) : (
-          <p className="scada-diagnostics-empty">{PUBLISHED_RUNTIME_EMPTY_HINTS[state.status]}</p>
-        )}
-      </section>
+              <div>
+                <dt>发布代次</dt>
+                <dd>{state.releaseGeneration ?? "--"}</dd>
+              </div>
+              <div>
+                <dt>发布修订</dt>
+                <dd>{state.snapshot?.revision ?? "--"}</dd>
+              </div>
+              <div>
+                <dt>实时 Tag 质量</dt>
+                <dd>不可用 · UNAVAILABLE</dd>
+              </div>
+            </dl>
+          </section>
+        </div>
+        <section
+          className="scada-panel scada-published-preview-panel"
+          aria-label="已发布静态组态预览"
+        >
+          <h2>已发布组态静态预览</h2>
+          {pages.length > 1 ? (
+            <div className="scada-published-controls">
+              <label>
+                组态页面
+                <div data-testid="published-runtime-page-select">
+                  <Select
+                    value={activePageId ?? ""}
+                    options={pages.map((page) => ({ label: page.name, value: page.id }))}
+                    onChange={(value) => {
+                      if (typeof value === "string") setSelectedPageId(value);
+                    }}
+                  />
+                </div>
+              </label>
+            </div>
+          ) : null}
+          <p className="scada-diagnostics-note">
+            此画面只来自已验证的正式发布快照；未连接现场 Tag。 画布内缺失值的 BAD
+            占位不代表设备故障诊断。
+          </p>
+          {svg ? (
+            <img
+              className="scada-svg"
+              src={svg}
+              alt="已发布组态静态配置预览，实时 Tag 数据未接入"
+              data-testid="published-runtime-svg"
+            />
+          ) : (
+            <p className="scada-diagnostics-empty">{PUBLISHED_RUNTIME_EMPTY_HINTS[state.status]}</p>
+          )}
+        </section>
       </div>
       <footer>正式发布只读 · 未接入现场数据 · 不开放设备控制</footer>
     </main>
