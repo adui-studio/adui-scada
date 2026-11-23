@@ -4057,3 +4057,23 @@ pnpm run test:interop
 ```
 
 另需真实浏览器核对双框架未启动、无授权、未发布、离线、服务端异常及已验证快照的文字与按钮状态，确认既有同源 GET 和零写入保护。完整 `ready` 作为最终合并前的全链门禁；不能将 PR #178 的 863/863 作为本批的测试记录。
+
+## 2026-11-23 · PR #179 Windows 回归及 D5c0o @adui/theme 待验收
+
+PR #179 Windows 日志显示完整 `ready` 的 Vitest **864/864**、Lab **5/5**、NestJS E2E **63/63**、双 Web 构建、文档 **93** 份等步骤成功；后续通过同一个 `&&` 命令链继续运行 `test:browser` 双框架两种分辨率各 **19/19**、`test:tags:browser`、`test:interop` 均成功。**日志未单独打印本地 HEAD 和最终退出码**，但后续子命令的成功足以确认它们被实际执行；不能将其描述为在 GitHub Squash SHA 上直接测试。GitHub 复核 PR #179 头 `3b1ebfbb89fd67ff52404a19352d735869e693e6`、Assignee `@adui-dev`、无未解决评论且无合并冲突；经明确授权 Squash 合并至 `main@33c594c61d6155b2bc782d6114ccae0e43d2e9d8`。
+
+D5c0o 基于上述 main 新增 `@adui/theme` CSS-only 包及 Runtime `workspace:*` 引用，将老主题入口改为兼容导入；两个 Web 的 TDesign 深色根选择器、Tailwind 基础字体间距和对等 Studio 局部变量迁移同步完成。新增静态单测验证 Token 唯一性、原颜色别名、双端主题加载和 Studio 左右固定侧栏。当前只完成 GitHub 远端源码静态检查，**未运行 Windows 构建或本批新单元测试，真实锁文件也尚未生成**。
+
+先在当前分支使用仓库 pnpm 12.18.0 更新锁文件（这次仅为新工作区包和本地 workspace 链接，不应出现新增网络包）：
+
+```powershell
+git fetch origin &&
+git switch feat/d5c0o-shared-theme-tokens &&
+git pull --ff-only &&
+pnpm install --lockfile-only &&
+pnpm install --frozen-lockfile &&
+git diff -- pnpm-lock.yaml &&
+git status --short
+```
+
+人工审查后将真实生成的 `pnpm-lock.yaml` 提交/推送到当前 PR；**不要手工构造、跳过提交或要求 `ready` 忽略锁文件错误**。之后执行 `pnpm run ready && pnpm run test:browser && pnpm run test:tags:browser && pnpm run test:interop`，并在 Windows React/Vue 的 1440×900、1024×768 对比旧新主题：检查背景、字号与行高、操作间距、TDesign Button/TagManager 禁用状态与键盘焦点、画布 16:9、固定侧栏、Tag STALE/GOOD 和已发布 `UNAVAILABLE` 展示。当前 PR 必须保持 Draft；所有测试结果须绑定最终 HEAD。

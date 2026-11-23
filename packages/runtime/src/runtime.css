@@ -1,7 +1,9 @@
 @import "./theme.css";
 
 :root {
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--adui-font-family);
+  font-size: var(--adui-font-size-md);
+  line-height: var(--adui-line-height-normal);
   color: var(--scada-text);
   background: var(--scada-bg);
   font-synthesis: none;

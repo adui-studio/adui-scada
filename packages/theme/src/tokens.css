@@ -1,0 +1,102 @@
+/* ADui SCADA V7 工业深色主题的唯一业务 Token 来源。 */
+:root {
+  /* V7 品牌颜色：不改写原有 SVG Logo 的颜色与几何。 */
+  --adui-scada-blue: #0d63f3;
+  --adui-scada-cyan: #00c8ff;
+  --adui-scada-teal: #00d9a6;
+  --adui-scada-ink: #111827;
+  --adui-scada-paper: #edf2f7;
+  --adui-scada-app-bg: #061e4e;
+  --adui-scada-brand-text: #111b32;
+
+  /* 品牌、工业质量和警告使用独立语义，不能仅凭颜色判断设备状态。 */
+  --adui-color-brand: var(--adui-scada-blue);
+  --adui-color-brand-hover: #2c7cfb;
+  --adui-color-brand-active: #084dbb;
+  --adui-color-brand-focus: #0c2e62;
+  --adui-color-brand-disabled: #29476c;
+  --adui-color-accent: var(--adui-scada-cyan);
+  --adui-color-success: var(--adui-scada-teal);
+  --adui-color-warning: #f0ae4d;
+  --adui-color-danger: #f16c75;
+  --adui-color-bg: #0b1320;
+  --adui-color-nav: #101f30;
+  --adui-color-surface: #132236;
+  --adui-color-canvas: #0c1728;
+  --adui-color-selected: #0c2e62;
+  --adui-color-action: #1e3448;
+  --adui-color-action-hover: #2e475c;
+  --adui-color-border-subtle: #293a4d;
+  --adui-color-border: #294057;
+  --adui-color-border-strong: #46667d;
+  --adui-color-text: #e8f1ff;
+  --adui-color-text-strong: #ecf6ff;
+  --adui-color-text-secondary: #adc2d4;
+  --adui-color-text-muted: #91a8bd;
+  --adui-color-text-dim: #66869d;
+  --adui-color-text-disabled: #8fa4b9;
+
+  /* 统一字号刻度：不通过修改字号改变报警/Tag 原始数值。 */
+  --adui-font-family:
+    Inter, "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --adui-font-size-2xs: 11px;
+  --adui-font-size-xs: 12px;
+  --adui-font-size-sm: 13px;
+  --adui-font-size-md: 14px;
+  --adui-font-size-lg: 16px;
+  --adui-font-size-xl: 18px;
+  --adui-font-size-2xl: 24px;
+  --adui-font-size-3xl: 28px;
+  --adui-line-height-tight: 1.3;
+  --adui-line-height-normal: 1.5;
+  --adui-line-height-relaxed: 1.65;
+  --adui-font-weight-regular: 400;
+  --adui-font-weight-medium: 500;
+  --adui-font-weight-semibold: 600;
+  --adui-font-weight-bold: 700;
+
+  /* 2/4/6/8/12/16/20/24/32px 间距刻度，供 Runtime、Studio 和 Tailwind 共用。 */
+  --adui-space-0: 0;
+  --adui-space-1: 2px;
+  --adui-space-2: 4px;
+  --adui-space-3: 6px;
+  --adui-space-4: 8px;
+  --adui-space-5: 12px;
+  --adui-space-6: 16px;
+  --adui-space-7: 20px;
+  --adui-space-8: 24px;
+  --adui-space-9: 32px;
+  --adui-radius-sm: 4px;
+  --adui-radius-md: 6px;
+  --adui-radius-lg: 8px;
+  --adui-radius-panel: 10px;
+  --adui-control-height-sm: 28px;
+  --adui-control-height-md: 32px;
+  --adui-control-height-lg: 36px;
+
+  /* 老的 --scada-* 变量保留为映射，避免双框架与第三方控件回归。 */
+  --scada-primary: var(--adui-color-brand);
+  --scada-primary-hover: var(--adui-color-brand-hover);
+  --scada-primary-active: var(--adui-color-brand-active);
+  --scada-primary-focus: var(--adui-color-brand-focus);
+  --scada-cyan: var(--adui-color-accent);
+  --scada-live: var(--adui-color-success);
+  --scada-bg: var(--adui-color-bg);
+  --scada-nav: var(--adui-color-nav);
+  --scada-surface: var(--adui-color-surface);
+  --scada-canvas: var(--adui-color-canvas);
+  --scada-active-bg: var(--adui-color-selected);
+  --scada-action-bg: var(--adui-color-action);
+  --scada-action-hover: var(--adui-color-action-hover);
+  --scada-border-subtle: var(--adui-color-border-subtle);
+  --scada-border: var(--adui-color-border);
+  --scada-border-strong: var(--adui-color-border-strong);
+  --scada-text: var(--adui-color-text);
+  --scada-text-strong: var(--adui-color-text-strong);
+  --scada-text-secondary: var(--adui-color-text-secondary);
+  --scada-text-muted: var(--adui-color-text-muted);
+  --scada-text-dim: var(--adui-color-text-dim);
+  --scada-warning: var(--adui-color-warning);
+  --scada-danger: var(--adui-color-danger);
+  color-scheme: dark;
+}

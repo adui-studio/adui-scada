@@ -2402,3 +2402,9 @@ D5c0m 基于最新 main 只改共享 Runtime CSS 与 React/Vue 运行页展示�
 PR #178 在本地最终候选 HEAD `3f0998a5728015ea22ff3ffc0a34678e2fc32427` 已由维护者 Windows 执行完整 `ready` 及 Studio 浏览器、Tag 与互通验收，GitHub 按明确授权 Squash 合并至 `main@be5084ef9621f93fa8ede3cc539686d56c248db5`。截图显示全宽运行监控、发布空预览和 Studio 均符合本批改动方向，但未覆盖真实服务端已验证发布内容与身份失效情况。
 
 D5c0n 在新 Draft 分支上直接复用 TDesign React/Vue 的 Button，替换已发布只读页三项原生按钮；现有 `input`、`select` 及 CDP 安全测试定位所依赖属性不改。新增 Runtime 共用的 `PUBLISHED_RUNTIME_EMPTY_HINTS`，七种状态展示具体且不误导为现场数据的提示；只增加静态状态映射测试和样式可读性，不新增依赖或重复封装控件。该分支 Windows 构建/浏览器专项未执行，PR 必须保持 Draft 待新一轮验收。
+
+## 2026-11-23 · PR #179 合并，D5c0o 统一 @adui/theme 设计 Token 候选
+
+维护者本次提供 PR #179 的 Windows 日志：`pnpm run ready` 中单测 864/864、NestJS E2E 63/63、双框架 Web 构建及文档 93 份均成功，随后 `test:browser` React/Vue 四组各 19/19、双端 Tag 与 JSON 互通成功；命令链按 `&&` 执行到最后，但日志未给本地 HEAD 和单独的 `$LASTEXITCODE` 数值。GitHub 无未解决 Review、分支可合并、Assignee `@adui-dev`，维护者明确授权后 PR #179 Squash 合并至 `main@33c594c61d6155b2bc782d6114ccae0e43d2e9d8`。截图也发现 Studio Tag 按钮仍重复且强调色过重；需待基础主题统一后另行优化，不以本批强改编辑器按钮行为。
+
+D5c0o 已建立 `packages/theme` 的纯 CSS 工作区包，统一 V7 色板、工业状态语义色、字体刻度/行高、间距、圆角以及官方 TDesign 深色 CSS Variables；原 `packages/runtime/src/theme.css` 保留兼容导入，两个 Web HTML 开启 `theme-mode="dark"`，Studio 之前两份局部 TDesign 变量声明已去重，Tailwind 开始复用基础字号/间距刻度。**新分支仅为 GitHub 代码候选**：本环境不能用 pnpm 12.18.0 真实生成锁文件，必须先在 Windows 更新 `pnpm-lock.yaml`，再做双框架 TDesign 视觉和全部项目测试。发布运行的授权、报警、模拟数据质量与设备写入边界未变。

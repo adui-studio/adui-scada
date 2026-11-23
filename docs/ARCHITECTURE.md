@@ -47,7 +47,7 @@ Tauri 并非同时运行两种前端；将按构建目标分别选择。Server �
 | -------- | --------------------------------------- | ---------------------------------------- |
 | 工程     | Vite+ 1.5、pnpm workspace               | 已配置；原锁文件待目标环境复验           |
 | Web      | Vue 3、React 19、TypeScript             | 已创建两个最小 Web Runtime               |
-| UI       | TDesign Vue Next、Ant Design            | 候选                                     |
+| UI       | TDesign React/Vue Next + @adui/theme    | 双框架已使用，主题包待 Windows 验收      |
 | 2D       | SVG + 自研独立编辑/渲染核心             | V0.1 只读；V0.2 首批本地 Studio 编辑命令 |
 | 共享数据 | Document / TagValue / 质量状态          | V0.1 已实现本地模拟核心，未持久化        |
 | 3D       | Three.js 自研 Core + Vue/React adapters | 后续，非 V1 前置                         |
@@ -457,3 +457,9 @@ D2a 已由 PR #103 合并至 `main`（`5f45bacbc90dd841dfb8b1992605d4652464361a`
 PR #105 已合并（main `637ebbce3191c998b3264733645da947a3739e9f`）。D5a 在现有受控本机 OIDC/HTTPS CDP 测试架构上复用浏览器、可信身份和同源 Lab 验证；新增专用**只读零写入** Fetch 门禁和双框架真实页面动作验收。只读取随机不存在工程的发布指针，要求服务端 404 显示拒绝、不回退到 Demo、草稿或编辑 head；不读取响应正文，不向 Node 输出任何会话秘密。
 
 该候选没有改动共享 Core、Runtime、Vue/React 页面、NestJS API、Prisma、网关或生产发布门禁。D5a 不会创建已发布快照，也不进行 ACL 赋权；显式授权、实际发布指针和长连接/页面可见性恢复属于后续隔离专项。
+
+## D5c0o · 前端视觉主题模块边界
+
+`@adui/theme` 是独立 CSS-only 工作区包，按设计 Token → TDesign CSS Variables → 共享 Runtime 样式 → React/Vue 的方向单向使用，不依赖编辑 Core、NestJS、工业协议或任何设备写入。TDesign React/Vue Next 均通过官方 `theme-mode="dark"` 和全局 CSS Variables 使用相同颜色、字体、间距及圆角；Tailwind 只承接布局原子类与基础 Token，避免复制 UI 组件的行为。
+
+第一批只迁移品牌 Token 与全局入口，旧的 `--scada-*` 别名继续兼容；Studio 固定侧栏 252px/320px、SVG 16:9、数据质量及正式发布的只读授权边界不改变。新增 `workspace:*` 依赖需要 pnpm 锁文件在 Windows 真实重新生成后，才可运行冻结安装与全链质量验收。详见 [ADR-0029](adr/0029-brand-theme-v7.md) 与 [UI 设计基线](UI_DESIGN_SYSTEM.md)。

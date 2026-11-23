@@ -1495,3 +1495,16 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `docs/UI_DESIGN_SYSTEM.md`：基于 `ui-ux-pro-max`、`web-design-guidelines`、`tdesign-skills` 的视觉基线与 Windows 浏览器验收矩阵。
 
 本批没有新增 TDesign API、依赖、接口、数据库迁移、模拟设备写入或正式报警权限。Windows `vp check`、`ready` 和真实双框架视觉回归待执行。
+
+## D5c0o · 新增共享 @adui/theme 工作区主题
+
+- `packages/theme/package.json`：CSS-only 工作区包 `@adui/theme`，提供 `./styles.css`、`./tokens.css`、`./tdesign.css`；无 React/Vue、NestJS 或工业 Core 依赖。
+- `packages/theme/src/tokens.css`：V7 工业颜色、字体字号/行高、间距、圆角、控件高度及历史 `--scada-*` 兼容别名的唯一来源。
+- `packages/theme/src/tdesign.css`：TDesign 官方 CSS Variables 深色模式映射；包括主色、成功/警告/错误、文字、禁用态、面板背景及官方字体/尺寸 Token。
+- `packages/theme/src/index.css`：在样式入口按顺序加载业务 Token 和 TDesign 映射。
+- `packages/runtime/src/theme.css`、`packages/runtime/package.json`：旧样式导入路径保留为兼容层，增加 `workspace:*` 主题包依赖，由两套 Web 共享 Runtime 样式加载。
+- `apps/web-react/index.html`、`apps/web-vue/index.html`：根 `theme-mode="dark"`，不新建 JS 主题状态机。
+- `packages/tailwind/src/styles.css`：基础字体、间距及圆角值引用共享 Token，不启用 Preflight。
+- `packages/runtime/test/theme-tokens.test.ts`：统一主题、TDesign 映射、旧变量及 Studio 固定侧栏的源码契约检查。
+
+依赖锁文件必须在联网 Windows 真实运行 `pnpm install --lockfile-only` 后提交；在该前置完成之前，不允许把本批描述为通过完整构建。参见 [ADR-0029](adr/0029-brand-theme-v7.md)。

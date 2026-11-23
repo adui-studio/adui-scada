@@ -8,7 +8,8 @@
     "./styles.css": "./src/runtime.css"
   },
   "dependencies": {
-    "@adui/scada-core": "workspace:*"
+    "@adui/scada-core": "workspace:*",
+    "@adui/theme": "workspace:*"
   },
   "devDependencies": {
     "@adui/tsconfig": "workspace:*",
