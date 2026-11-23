@@ -2300,3 +2300,9 @@ D5b9v 基于该主线审查公开序列 API：`classifyOrderedNumericAlarmSample
 维护者 Windows 已对 D5b9v PR #161 执行六份关联测试 **89/89**，`vp check` **435 个格式文件 / 286 个受检零警告错误**，`docs:check` **90 份**、`messages:check` **310 个文件**。GitHub 已核验 PR 原 HEAD `489cb9d101988519c0e75bf5570d4e73343fda7f`、8 个修改文件、无审查阻塞，按维护者明确授权 Squash 合并至 `main@0db4b4f48511a5d6d6e7606586a16f12c6500088`。Windows 日志未打印本机 HEAD，不虚构 SHA 直接绑定，也不把定向检查等同完整 `ready` 或工业现场验收。
 
 D5b9w 基于上述最新主线发现：同代次较大序列号仍可能携带**更早但尚在有效窗口内**的 `serverTimestamp`，低层函数返回 READY，上层也会正常推进基线。拟在 FR-011 报警候选低层仅阻止服务端时间倒退，允许相同毫秒，`sourceTimestamp` 不参与排序。新增 5 项回归测试，预期六份关联测试由 **89→94**；无网关/PLC、NestJS/Prisma、React/Vue、报警触发或确认审计变更。D5b9w Windows 检查尚未实测。
+
+## 2026-11-23 · PR #162 合并与 D5b9x 等待快照时效参数防护候选
+
+维护者 Windows 已对 PR #162 的六份 Core 定向回归实际执行 **94/94**（序列 10、代次 8、增量 16、会话归约 22、托管器 10、适配器 28），`vp check` **435 个格式文件/286 个受检零告警错误**，`docs:check` **90 份**、`messages:check` **310 个文件**。GitHub 复核最后 HEAD `37a3e5a12521ad52105d0136b7a72edd27cfa29e`、11 个修改文件、无审查阻塞，维护者明确授权后 Squash 合并至 `main@fd783df24b3748870c4a4b3825886cfb560f7152`。用户 Windows 日志未提供本机 HEAD，不能虚构 SHA 绑定，也不能由定向测试推断完整 `ready` 或真实工业安全认证。
+
+D5b9x 基于上述主线检查：等待首次快照时的 `CHECK_FRESHNESS` 绕过了 `nowMs/maxAgeMs` 参数校验，可能把无效调度时钟视作正常等待。此批仅在 Core 归约器显式检查这两项，非法参数立即终止代次；新增归约器、托管器、订阅适配器各一项回归，目标从 **94→97**，沿用原令牌失效及资源释放行为。尚未完成 D5b9x Windows 实测，不修改 TagStore、网关、双框架、NestJS、数据库或工业报警业务。
