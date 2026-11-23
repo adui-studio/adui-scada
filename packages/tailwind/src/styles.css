@@ -19,4 +19,14 @@
   --color-scada-border-strong: var(--scada-border-strong);
   --color-scada-text: var(--scada-text);
   --color-scada-muted: var(--scada-text-muted);
+  /* Tailwind 的间距与基础排版直接读取 @adui/theme，避免另一套数值。 */
+  --spacing: var(--adui-space-2);
+  --font-sans: var(--adui-font-family);
+  --text-xs: var(--adui-font-size-xs);
+  --text-sm: var(--adui-font-size-md);
+  --text-base: var(--adui-font-size-lg);
+  --text-lg: var(--adui-font-size-xl);
+  --radius-sm: var(--adui-radius-sm);
+  --radius-md: var(--adui-radius-md);
+  --radius-lg: var(--adui-radius-lg);
 }
