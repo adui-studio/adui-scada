@@ -968,6 +968,68 @@ function inspectTagActionLayoutInPage() {
   return { item: measure(actions), form: measure(formActions) };
 }
 
+/** 用最大合法长度的连续 Tag ID 检查窄屏换行，仅临时改变浏览器 DOM，不触发业务写入。 */
+function inspectTagNarrowLayoutInPage() {
+  const row = document.querySelector(".studio-tag-manager .studio-tag-item");
+  const tagId = row?.querySelector("span.break-all");
+  const actions = row?.querySelector(".studio-tag-actions");
+  if (
+    !(row instanceof HTMLElement) ||
+    !(tagId instanceof HTMLElement) ||
+    !(actions instanceof HTMLElement)
+  ) {
+    throw new TypeError("窄屏 Tag 行与操作区未挂载");
+  }
+  const original = tagId.textContent;
+  try {
+    tagId.textContent = "W".repeat(128);
+    const rowRect = row.getBoundingClientRect();
+    const buttons = [...actions.querySelectorAll("button")];
+    return {
+      wrapped: tagId.getClientRects().length > 1,
+      rowFits: row.scrollWidth <= row.clientWidth + 2,
+      buttonsFit:
+        buttons.length === 2 &&
+        buttons.every((button) => {
+          const rect = button.getBoundingClientRect();
+          return rect.width > 0 && rect.left >= rowRect.left - 1 && rect.right <= rowRect.right + 1;
+        }),
+    };
+  } finally {
+    tagId.textContent = original;
+  }
+}
+
+/** 通过实际 Chromium Tab 输入检查 Tag 按钮顺序，不点击删除也不修改工程。 */
+function focusTagEditActionInPage() {
+  const edit = document.querySelector(".studio-tag-manager .studio-tag-actions button");
+  if (!(edit instanceof HTMLButtonElement)) {
+    throw new TypeError("项目 Tag 编辑按钮不可聚焦");
+  }
+  edit.focus();
+  return document.activeElement === edit;
+}
+
+function inspectTagKeyboardFocusInPage() {
+  const buttons = document.querySelectorAll(".studio-tag-manager .studio-tag-actions button");
+  const remove = buttons[1];
+  if (!(remove instanceof HTMLButtonElement)) {
+    throw new TypeError("项目 Tag 删除按钮不存在");
+  }
+  const rect = remove.getBoundingClientRect();
+  return {
+    tabReachedRemove: document.activeElement === remove,
+    focusVisible: remove.matches(":focus-visible"),
+    insideViewport:
+      rect.width > 0 &&
+      rect.height > 0 &&
+      rect.left >= 0 &&
+      rect.right <= innerWidth &&
+      rect.top >= 0 &&
+      rect.bottom <= innerHeight,
+  };
+}
+
 /** 使用 Chrome 输入协议触发真正的框架输入事件，不直接篡改 DOM 值。 */
 async function fillTagField(session, index, value) {
   await evaluateStudioPage(session, focusTagFieldInPage, index);
@@ -1013,6 +1075,49 @@ async function runStudioTagManagement(session) {
         target.name + " " + kind + " 按钮尺寸不一致",
       );
     }
+    // 在窄视口验证长 Tag ID 不撑开侧栏，且 Tab 能顺序聚焦 TDesign 危险操作按钮。
+    await session.send("Emulation.setDeviceMetricsOverride", {
+      width: 1024,
+      height: 768,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+    await pause(150);
+    assert.deepStrictEqual(
+      await evaluateStudioPage(session, inspectTagNarrowLayoutInPage),
+      { wrapped: true, rowFits: true, buttonsFit: true },
+      target.name + " 1024px 下长 Tag ID 或操作按钮溢出",
+    );
+    assert.equal(
+      await evaluateStudioPage(session, focusTagEditActionInPage),
+      true,
+      target.name + " Tag 编辑按钮无法获得焦点",
+    );
+    await session.send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "Tab",
+      code: "Tab",
+      windowsVirtualKeyCode: 9,
+    });
+    await session.send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "Tab",
+      code: "Tab",
+      windowsVirtualKeyCode: 9,
+    });
+    assert.deepStrictEqual(
+      await evaluateStudioPage(session, inspectTagKeyboardFocusInPage),
+      { tabReachedRemove: true, focusVisible: true, insideViewport: true },
+      target.name + " Tag 操作无法通过 Tab 访问或焦点不可见",
+    );
+    await session.send("Emulation.setDeviceMetricsOverride", {
+      width: 1440,
+      height: 900,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+    await pause(100);
+
     const tagId = "browser." + target.name.toLowerCase() + ".pressure";
     await fillTagField(session, 0, tagId);
     await fillTagField(session, 1, "浏览器新增压力");
@@ -1096,7 +1201,7 @@ async function runStudioTagManagement(session) {
       target.name + " 删除 Tag 后工程仍包含该定义",
     );
     process.stdout.write(
-      target.name + " 项目 Tag 新增、编辑、绑定删除保护、删除与 JSON 往返通过\n",
+      target.name + " Tag 窄屏换行、键盘焦点、新增、编辑、绑定删除保护、删除与 JSON 往返通过\n",
     );
   }
 }

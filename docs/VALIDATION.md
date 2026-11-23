@@ -4527,3 +4527,9 @@ if ($LASTEXITCODE -ne 0) { throw "普通 Studio 测试失败" }
 ```
 
 其中 `test:interop` 与 `test:tags:browser` 已在 PR #189 前后运行过，最新 HEAD 如有后续相关变更仍需重跑；本次候选尚未在维护者 Windows 运行。只有真实 React/Vue 全阶段退出码 0 才能关闭 E-115 / E-116。PR 默认 Draft，须验收后由 `@adui-dev` 明确授权合并。
+
+## 2026-11-23 · PR #190 已验收合并；D5c0z Tag 窄屏与键盘回归候选
+
+维护者本轮 Windows 执行 `node --check`、`vp check`（448 格式/291 受检零错误警告）、`messages:check`（318 文件）、`docs:check`（94 文档），`test:versions`、`test:versions:safety` React/Vue 均通过；`test:multitab` React/Vue 广播停写、无广播 CAS、墓碑重建、模拟故障恢复各四阶段全部通过；`test:legacy:browser` 两端各三条迁移路径通过；普通 Studio 双端 × 两分辨率共 **132/132** 通过。此前 `test:interop` 和 `test:tags:browser` 已在相应主线候选通过。上述日志没有附上本地 HEAD，本轮不据此声称完整 `ready` 或工业安全实测完成。PR #190 经授权 Squash 合并为 `main@493a793614dbbe21c7d97a3c6400442de9d88bff`，Assignee `@adui-dev` 已核对，E-115/E-116 对应阻塞解除。
+
+下一候选 D5c0z 仅扩充已有 `test:tags:browser`：将隔离浏览器改为 1024×768，临时向渲染层注入最大长度 128 的无断点 Tag ID 检查真实 CSS 折行、行容器及按钮不溢出，`finally` 还原原值且不产生输入事件；使用 CDP `Input.dispatchKeyEvent` 发送真实 Tab，检查 TDesign 「编辑→删除」顺序、`:focus-visible` 与按钮仍在视口内，再恢复 1440×900 并运行原有新增、编辑、取消、绑定拒绝、正常删除及 JSON 往返断言。React/Vue 产品源码、工程模型、存储、权限及工业网关都不修改。**新浏览器用例和最新 PR HEAD 尚未在 Windows 运行，不能提前宣称通过。**

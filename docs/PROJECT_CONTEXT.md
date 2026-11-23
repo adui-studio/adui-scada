@@ -2512,3 +2512,7 @@ D5c0v 基于合并后的 main，限定本地版本历史一个入口/框架：�
 ## 2026-11-23 · D5c0y 合并后 Studio 历史和多标签页弹层回归修复候选
 
 维护者在 PR #189 合并后独立运行回归，`test:versions` 和 `test:versions:safety` 均因等待本地版本 #1 载入提示超时而失败；`test:multitab` 在 React 广播和无广播 CAS 两阶段通过后，遇文件草稿 Popup 关闭超时；`test:interop` 以及普通 Studio 四视口各 33/33 通过。本轮日志未明确打印本地 HEAD。经检查固定 React/Vue TDesign 源码和测试，发现两处相符的时序风险：测试可能选择旧 Dialog 的确认按钮，以及 Popup 关闭动画中再次点击触发器而重新打开。分支 `fix/d5c0y-studio-popup-browser-regression` 仅修改浏览器测试的确认实例选择与外部 `mousedown` 幂等关闭，不改变真实工程、旧版本、CAS、IndexedDB 或工业业务。E-115 / E-116 已记录，最新 HEAD Windows 真实浏览器、Vite+ 和文档门禁均待复验；新 PR 保持 Draft 并指派 `@adui-dev`，未经另行授权不得合并。
+
+## 2026-11-23 · PR #190 已合并，D5c0z Studio Tag 可访问性与窄屏门禁候选
+
+维护者已完成 PR #190 Windows 双端历史版本创建/载入、自动保存安全、Origin 隔离、四阶段多标签页、旧草稿三类迁移及普通 Studio 132/132 回归；`vp check` 448/291 零告警，中文文案 318、文档 94 通过。PR #190 经明确授权 Squash 合入 `main@493a793614dbbe21c7d97a3c6400442de9d88bff`；原 E-115/E-116 浏览器超时阻塞已解除，内部竞态根因仍保留推断边界。D5c0z 新候选只增强 `test:tags:browser` 对两端 TDesign Tag 行的 1024px 最大长度 ID 换行、操作按钮不溢出以及 Chromium 真实 Tab 焦点顺序/`:focus-visible` 检查；使用临时 DOM 压测并恢复，不变更真实数据或生产 UI。最新 Windows 浏览器与完整质量链待验收，PR 只保持 Draft，指派 `@adui-dev`。
