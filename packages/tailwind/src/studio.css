@@ -163,7 +163,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-right: 1px solid var(--scada-border);
+  border-right: 1px solid var(--scada-border-subtle);
 }
 .studio-pane-heading {
   display: flex;
@@ -208,7 +208,8 @@
   border-bottom: 1px solid var(--scada-border);
 }
 .studio-add button {
-  min-height: 33px;
+  min-height: var(--adui-control-height-md);
+  height: var(--adui-control-height-md);
   padding: 7px 6px;
   border-radius: 5px;
   border-color: var(--scada-border);
@@ -234,7 +235,8 @@
 .studio-tree-controls .t-button {
   min-width: 0;
   width: 100%;
-  min-height: 28px;
+  height: var(--adui-control-height-sm);
+  min-height: var(--adui-control-height-sm);
   padding: 5px 6px;
   font-size: 11px;
 }
@@ -259,7 +261,7 @@
   background: var(--scada-action-hover);
 }
 .studio-layer-tree .studio-layer[data-selected="true"] {
-  border-color: var(--scada-primary);
+  border-color: var(--scada-border);
   background: var(--scada-active-bg);
 }
 .studio-layer-tree .studio-layer small {
@@ -492,8 +494,8 @@
   font-variant-numeric: tabular-nums;
 }
 .studio-advanced {
-  margin-top: 18px;
-  border: 1px solid var(--scada-border);
+  margin-top: var(--adui-space-5);
+  border: 1px solid var(--scada-border-subtle);
   border-radius: var(--adui-radius-md);
 }
 .studio-advanced .t-collapse-panel__header {
@@ -501,9 +503,64 @@
   padding: 10px 12px;
 }
 .studio-advanced-content {
-  padding: 0 10px 10px;
-  border-top: 1px solid var(--scada-border);
+  padding: var(--adui-space-4) var(--adui-space-5) var(--adui-space-5);
+  border-top: 1px solid var(--scada-border-subtle);
 }
+
+/* Tag 是工程数据目录而非主导航，紧凑行及等高动作优先使用共享 Token。 */
+.studio-tag-manager {
+  min-width: 0;
+}
+.studio-tag-manager .studio-tag-item {
+  padding: var(--adui-space-3) 0 var(--adui-space-4);
+  border-bottom: 1px solid var(--scada-border-subtle);
+  line-height: var(--adui-line-height-normal);
+}
+.studio-tag-manager .studio-tag-item:last-child {
+  border-bottom: 0;
+}
+.studio-tag-manager .studio-tag-item > p {
+  margin: var(--adui-space-2) 0 0;
+}
+.studio-tag-manager .studio-tag-item strong {
+  color: var(--scada-text-strong);
+  font-weight: var(--adui-font-weight-semibold);
+}
+.studio-tag-manager .studio-tag-actions,
+.studio-tag-manager .studio-tag-form-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--adui-space-3);
+  margin-top: var(--adui-space-3);
+}
+.studio-tag-manager .studio-tag-actions .t-button,
+.studio-tag-manager .studio-tag-form-actions .t-button {
+  min-width: 0;
+  width: 100%;
+  min-height: var(--adui-control-height-sm);
+  height: var(--adui-control-height-sm);
+  padding: 0 var(--adui-space-4);
+  font-size: var(--adui-font-size-xs);
+  white-space: nowrap;
+}
+.studio-tag-manager .studio-tag-form {
+  padding-top: var(--adui-space-4);
+  border-top: 1px solid var(--scada-border-subtle);
+}
+.studio-tag-manager .studio-tag-form > strong {
+  font-size: var(--adui-font-size-xs);
+  color: var(--scada-text-strong);
+}
+.studio-tag-manager .studio-field {
+  gap: var(--adui-space-2);
+  margin: 0;
+  font-size: var(--adui-font-size-xs);
+}
+.studio-tag-manager .studio-tip {
+  font-size: var(--adui-font-size-2xs);
+  line-height: var(--adui-line-height-normal);
+}
+
 .studio-advanced .studio-tool-group {
   gap: var(--adui-space-3);
   margin: 10px 0;
@@ -891,11 +948,11 @@
   scrollbar-color: var(--scada-border-strong) transparent;
 }
 .studio-layer-tree .studio-layer {
-  min-height: 35px;
-  border-radius: 6px;
+  min-height: var(--adui-control-height-md);
+  border-radius: var(--adui-radius-md);
 }
 .studio-layer-tree .studio-layer[data-selected="true"] {
-  box-shadow: inset 3px 0 var(--scada-cyan);
+  box-shadow: inset 2px 0 var(--scada-primary);
   color: var(--scada-text-strong);
 }
 .studio-stage-caption {
@@ -934,10 +991,10 @@
 .studio-status-message .studio-notice {
   color: var(--scada-text-secondary);
 }
-/* 组件焦点和悬浮状态由 TDesign 统一提供，SVG 画布继续保留独立焦点指示。 */
-.studio-shell :is(button, input, select, textarea):focus-visible {
-  outline: 2px solid var(--scada-cyan);
-  outline-offset: 2px;
+/* TDesign 自行绘制输入和按钮的焦点状态；仅为工业图层拖拽入口保留清晰的键盘焦点。 */
+.studio-shell .studio-layer:focus-visible {
+  outline: 2px solid var(--scada-primary);
+  outline-offset: -2px;
 }
 @media (max-width: 1250px) {
   .studio-toolbar {
