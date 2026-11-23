@@ -1003,3 +1003,5 @@
 - **防复发**：新增或修改 JSDoc 类型标注时，同一条注释也必须包含简体中文说明。提交前按 `node --experimental-strip-types --test`、`vp check`、`docs:check`、`messages:check` 顺序完整执行；`&&` 链中任何一步失败即为整体失败。
 - **验证边界**：已从 GitHub 最新候选内容逐行对照 `check-chinese-messages.mjs` 的注释判定条件，四处静态扫描不再命中；**修复后 Windows Node/Vite+/文档/中文门禁尚未复验**。PR #175 继续 Draft，不能据此前测试结果合并，也不代表真实网关认证、序列完整性或工业报警验收。
 - **证据**：维护者 2026-11-23 Windows 原始输出、PR #175、`scripts/lab-alarm-inprocess.mjs`、`scripts/check-chinese-messages.mjs`、`docs/VALIDATION.md`。
+
+> **2026-11-23 · E-103 Windows 结案补录**：维护者修复四处 JSDoc 中文注释后，在 Windows 实际运行 `pnpm run messages:check` **312 个文件通过**，并执行 `vp check` **439 格式/288 受检零警告错误**、`docs:check` **92 份**、Node 进程内 Lab **5/5** 和独立诊断，均通过。GitHub 复核最后 PR #175 HEAD `9f7fecfab4432f37e9be7ae882f5d481d5c8870f`，按维护者授权 Squash 合并至 `main@54a3d4b9868474e94ecbed81f088cdd8c259710e`。原条目“待 Windows 复验”是历史阶段说明，本次中文文案门禁阻塞已经关闭。Windows 日志未输出本地 HEAD，不将其冒充为合并 SHA 的直接运行证据；FR-011 正式可信采集与报警仍未上线。
