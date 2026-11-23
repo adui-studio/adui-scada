@@ -2366,3 +2366,7 @@ D5c0i 在现有业务 Tag 序列允许 5→7 的前提下，进一步补充托�
 维护者 Windows 实测 D5c0i 的两份 Core 定向回归 **46/46**、`vp check` **437/286 零警告错误**、文档 **92 份**、中文文案 **310 个文件**通过。GitHub 确认 PR #174 最新 HEAD `82f2300102c7be5fc4d8b4e16555cae735266a74`，经授权 Squash 合并至 `main@0297a74bd67a87a985f195b0d7c40d6697b886e2`；维护者本地日志未打印 HEAD，不能将 Windows 结果冒充合并提交的直接测试。
 
 D5c0j 停止只增加 Core 单一状态的局部回归，改用**无网络、无真实设备、无业务写入**的独立 Node Lab，实际串联 `TagStore → AlarmSubscriptionAdapter`：进程内 GOOD 快照、合法跳号、过时序列过滤、未核验来源停止订阅、旧回调无效，显式返回身份与历史完整性**未证明**。新增一个 `.mjs` Lab 脚本与五项 Node 内置测试定义，不添加生产 API、认证字段、网络或工业网关，不修改共享核心行为、NestJS、Vue/React、数据库和发布安全 Gate。D1～D5 仍为待审批技术方案；Windows Node/Vite+/文档/中文专项待独立验收。
+
+## 2026-11-23 · D5c0j PR #175 中文文案阻塞与 E-103 修复候选
+
+维护者 Windows 首轮对进程内 Lab 实测 **5/5 Node 测试通过**，模拟诊断符合设计；`vp check` **439/288 零警告错误**，`docs:check` **92 份**，但 `messages:check` 因四个 JSDoc 类型注释缺中文失败（退出码 1），故 PR #175 **未完成全部门禁、尚不能合并**。D5c0j 仅为四处 `@type` 增加中文说明，保持原有模拟入口与测试不变；根因、防复发和待复验范围记入 E-103 / `docs/VALIDATION.md`。后续需在 Windows 最新 HEAD 重跑 Node 5 项、独立 Lab、Vite+、文档与中文门禁，再进行 PR 复核和新合并授权。生产工业认证、正式报警和设备控制仍未开放。
