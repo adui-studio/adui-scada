@@ -2487,11 +2487,10 @@ async function importJson(event: Event) {
           >
             <label v-for="[key, label] in GEOMETRY_PROPERTY_FIELDS" :key="key">
               {{ label }}
-              <input
+              <TInput
                 type="number"
                 :name="key"
-                step="any"
-                :value="selected.transform[key]"
+                :default-value="String(selected.transform[key])"
                 :disabled="studioNodeLocked(selected)"
               />
             </label>
