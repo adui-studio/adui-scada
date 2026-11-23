@@ -1783,31 +1783,31 @@ async function importJson(event: Event) {
       </div>
       <div class="studio-actions">
         <div class="studio-history-actions">
-          <button type="button" :disabled="!state.canUndo" @click="undo">撤销</button>
-          <button type="button" :disabled="!state.canRedo" @click="redo">重做</button>
+          <TButton type="button" :disabled="!state.canUndo" @click="undo">撤销</TButton>
+          <TButton type="button" :disabled="!state.canRedo" @click="redo">重做</TButton>
         </div>
         <div class="studio-save-actions">
-          <button type="button" @click="saveDraft">保存草稿</button>
+          <TButton type="button" @click="saveDraft">保存草稿</TButton>
         </div>
         <div class="studio-file-menu">
           <TPopup attach=".studio-file-menu" trigger="click" placement="bottom-right">
             <TButton type="button" variant="outline">文件与草稿</TButton>
             <template #content>
               <div class="studio-file-popover">
-                <button type="button" :aria-pressed="autoSaveEnabled" @click="toggleAutoSave">
+                <TButton type="button" :aria-pressed="autoSaveEnabled" @click="toggleAutoSave">
                   {{ autoSaveEnabled ? "暂停自动保存" : "开启自动保存" }}
-                </button>
+                </TButton>
                 <label class="studio-import">
                   导入 JSON
                   <input type="file" accept=".json,application/json" @change="importJson" />
                 </label>
-                <button type="button" @click="exportJson">导出 JSON</button>
-                <button type="button" :disabled="!hasSavedDraft" @click="restoreDraft">
+                <TButton type="button" @click="exportJson">导出 JSON</TButton>
+                <TButton type="button" :disabled="!hasSavedDraft" @click="restoreDraft">
                   恢复草稿
-                </button>
-                <button type="button" :disabled="!hasSavedDraft" @click="clearDraft">
+                </TButton>
+                <TButton type="button" :disabled="!hasSavedDraft" @click="clearDraft">
                   清除草稿
-                </button>
+                </TButton>
               </div>
             </template>
           </TPopup>
@@ -1826,12 +1826,12 @@ async function importJson(event: Event) {
                   当前工程：{{ state.document.projectId }} · 浏览器本地历史，不是正式发布
                 </p>
                 <div class="studio-version-tools">
-                  <button type="button" :disabled="historyBusy" @click="createHistoryVersion">
+                  <TButton type="button" :disabled="historyBusy" @click="createHistoryVersion">
                     创建快照
-                  </button>
-                  <button type="button" :disabled="historyBusy" @click="refreshVersionHistory">
+                  </TButton>
+                  <TButton type="button" :disabled="historyBusy" @click="refreshVersionHistory">
                     刷新
-                  </button>
+                  </TButton>
                 </div>
                 <p v-if="historyBusy" class="studio-version-help">正在处理历史版本…</p>
                 <p v-if="historyError" class="studio-version-error" role="alert">
@@ -1857,20 +1857,20 @@ async function importJson(event: Event) {
                     </div>
                     <code :title="item.contentHash">{{ item.contentHash.slice(0, 16) }}…</code>
                     <div class="studio-version-item-actions">
-                      <button
+                      <TButton
                         type="button"
                         :disabled="historyBusy"
                         @click="inspectHistoryVersion(item.revision)"
                       >
                         查看差异
-                      </button>
-                      <button
+                      </TButton>
+                      <TButton
                         type="button"
                         :disabled="historyBusy"
                         @click="loadHistoryVersion(item.revision)"
                       >
                         载入
-                      </button>
+                      </TButton>
                     </div>
                   </li>
                 </ol>
@@ -1894,7 +1894,7 @@ async function importJson(event: Event) {
                     {{ historyComparison.historical.bindingCount }} 绑定
                   </p>
                 </div>
-                <button
+                <TButton
                   v-if="visibleHistoryRows.length > 0 && historyHasMore"
                   type="button"
                   class="studio-version-more"
@@ -1902,7 +1902,7 @@ async function importJson(event: Event) {
                   @click="loadMoreVersions"
                 >
                   加载更早版本
-                </button>
+                </TButton>
               </div>
             </template>
           </TPopup>
@@ -1965,15 +1965,15 @@ async function importJson(event: Event) {
               · CAS 基线：{{ activeServerBaseline ?? "未建立" }}
             </p>
             <div class="studio-version-tools">
-              <button type="button" :disabled="historyBusy" @click="checkServerIdentity">
+              <TButton type="button" :disabled="historyBusy" @click="checkServerIdentity">
                 检查登录
-              </button>
-              <button type="button" :disabled="historyBusy" @click="saveServerProject">
+              </TButton>
+              <TButton type="button" :disabled="historyBusy" @click="saveServerProject">
                 保存至服务端
-              </button>
-              <button type="button" :disabled="historyBusy" @click="refreshServerHistory">
+              </TButton>
+              <TButton type="button" :disabled="historyBusy" @click="refreshServerHistory">
                 查询服务端历史
-              </button>
+              </TButton>
             </div>
             <p class="studio-version-help">
               服务器已有工程时，请先显式载入最新服务端版本再保存；冲突不会自动重试，草稿始终保留。
@@ -1987,9 +1987,9 @@ async function importJson(event: Event) {
               class="studio-version-help"
             >
               <p>当前画布与 IndexedDB 草稿已保留。可先只读对比最新版本，再决定是否载入。</p>
-              <button type="button" :disabled="historyBusy" @click="previewServerConflict">
+              <TButton type="button" :disabled="historyBusy" @click="previewServerConflict">
                 只读预览最新版本
-              </button>
+              </TButton>
             </div>
             <p v-if="!historyBusy && visibleServerRows.length === 0" class="studio-version-help">
               尚无已查询的服务端历史版本。
@@ -2008,20 +2008,20 @@ async function importJson(event: Event) {
                 </div>
                 <code :title="item.contentHash">{{ item.contentHash.slice(0, 16) }}…</code>
                 <div class="studio-version-item-actions">
-                  <button
+                  <TButton
                     type="button"
                     :disabled="historyBusy"
                     @click="inspectServerVersion(item.revision)"
                   >
                     查看差异
-                  </button>
-                  <button
+                  </TButton>
+                  <TButton
                     type="button"
                     :disabled="historyBusy"
                     @click="loadServerVersion(item.revision)"
                   >
                     载入
-                  </button>
+                  </TButton>
                 </div>
               </li>
             </ol>
@@ -2043,7 +2043,7 @@ async function importJson(event: Event) {
                 {{ serverComparison.historical.nodeCount }} 图元
               </p>
             </div>
-            <button
+            <TButton
               v-if="visibleServerRows.length > 0 && serverHasMore"
               type="button"
               class="studio-version-more"
@@ -2051,14 +2051,14 @@ async function importJson(event: Event) {
               @click="loadMoreServerVersions"
             >
               加载更早服务端版本
-            </button>
+            </TButton>
           </div>
         </details>
       </div>
     </header>
     <div class="studio-page-bar" aria-label="工程页面管理">
       <div class="studio-page-tabs" aria-label="工程页面">
-        <button
+        <TButton
           v-for="item in state.document.pages"
           :key="item.id"
           type="button"
@@ -2066,7 +2066,7 @@ async function importJson(event: Event) {
           @click="switchPage(item.id)"
         >
           {{ item.name }}
-        </button>
+        </TButton>
       </div>
       <div class="studio-page-menu">
         <TDropdown
@@ -2091,10 +2091,10 @@ async function importJson(event: Event) {
         </div>
         <div class="studio-library-label">图元库 · 点击添加</div>
         <div class="studio-add">
-          <button type="button" @click="addSymbol('tank')">+ 水箱</button>
-          <button type="button" @click="addSymbol('pump')">+ 水泵</button>
-          <button type="button" @click="addSymbol('pipe')">+ 管道</button>
-          <button type="button" @click="addSymbol('label')">+ 文本</button>
+          <TButton type="button" @click="addSymbol('tank')">+ 水箱</TButton>
+          <TButton type="button" @click="addSymbol('pump')">+ 水泵</TButton>
+          <TButton type="button" @click="addSymbol('pipe')">+ 管道</TButton>
+          <TButton type="button" @click="addSymbol('label')">+ 文本</TButton>
         </div>
         <div class="studio-tree-section-title">图层列表</div>
         <div class="studio-tree-controls">
@@ -2135,7 +2135,7 @@ async function importJson(event: Event) {
           >
             <div v-if="entry.kind === 'group'" class="studio-tree-group">
               <div class="studio-tree-group-heading">
-                <button
+                <TButton
                   type="button"
                   class="studio-tree-toggle"
                   :aria-label="`${groupExpanded(entry.groupId) ? '折叠' : '展开'}组合 ${entry.groupId}`"
@@ -2144,8 +2144,8 @@ async function importJson(event: Event) {
                   @click="toggleLayerGroup(entry.groupId)"
                 >
                   {{ groupExpanded(entry.groupId) ? "▾" : "▸" }}
-                </button>
-                <button
+                </TButton>
+                <TButton
                   type="button"
                   class="studio-layer"
                   :data-layer-key="`group:${entry.groupId}`"
@@ -2177,7 +2177,7 @@ async function importJson(event: Event) {
                     {{ entry.hasLockedMember ? " · 有锁定成员" : "" }}
                     {{ entry.hiddenCount > 0 ? ` · 隐藏 ${entry.hiddenCount}` : "" }}
                   </small>
-                </button>
+                </TButton>
               </div>
               <div
                 v-if="groupExpanded(entry.groupId)"
@@ -2185,7 +2185,7 @@ async function importJson(event: Event) {
                 role="group"
                 :aria-label="`组合 ${entry.groupId} 的成员`"
               >
-                <button
+                <TButton
                   v-for="node in entry.members"
                   :key="node.id"
                   type="button"
@@ -2211,10 +2211,10 @@ async function importJson(event: Event) {
                     {{ studioNodeLocked(node) ? " · 已锁定" : "" }}
                     {{ !studioNodeVisible(node) ? " · 已隐藏" : "" }}
                   </small>
-                </button>
+                </TButton>
               </div>
             </div>
-            <button
+            <TButton
               v-else
               type="button"
               class="studio-layer"
@@ -2239,7 +2239,7 @@ async function importJson(event: Event) {
                 {{ studioNodeLocked(entry.node) ? " · 已锁定" : "" }}
                 {{ !studioNodeVisible(entry.node) ? " · 已隐藏" : "" }}
               </small>
-            </button>
+            </TButton>
           </template>
         </div>
         <details class="studio-side-more">
@@ -2259,13 +2259,13 @@ async function importJson(event: Event) {
                 </option>
               </select>
             </label>
-            <button
+            <TButton
               type="button"
               :disabled="state.selectedIds.length === 0 || !copyTargetPageId"
               @click="copySelectedToPage"
             >
               复制选中图元
-            </button>
+            </TButton>
           </div>
           <p class="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
         </details>
@@ -2298,30 +2298,30 @@ async function importJson(event: Event) {
               <div class="studio-view-section">
                 <p>侧栏显示</p>
                 <div class="studio-panel-toggles" aria-label="面板显示">
-                  <button
+                  <TButton
                     type="button"
                     :aria-pressed="leftPanelVisible"
                     @click="leftPanelVisible = !leftPanelVisible"
                   >
                     {{ leftPanelVisible ? "隐藏图层" : "显示图层" }}
-                  </button>
-                  <button
+                  </TButton>
+                  <TButton
                     type="button"
                     :aria-pressed="rightPanelVisible"
                     @click="rightPanelVisible = !rightPanelVisible"
                   >
                     {{ rightPanelVisible ? "隐藏属性" : "显示属性" }}
-                  </button>
+                  </TButton>
                 </div>
               </div>
             </div>
           </details>
           <div class="studio-zoom" aria-label="画布缩放">
-            <button type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</button>
-            <button type="button" @click="resetCanvasView">
+            <TButton type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</TButton>
+            <TButton type="button" @click="resetCanvasView">
               {{ zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%` }}
-            </button>
-            <button type="button" :disabled="zoom >= 2" @click="changeZoom(0.25)">+</button>
+            </TButton>
+            <TButton type="button" :disabled="zoom >= 2" @click="changeZoom(0.25)">+</TButton>
           </div>
         </div>
         <div class="studio-canvas-scroll" tabindex="0" aria-label="组态网格工作区">
