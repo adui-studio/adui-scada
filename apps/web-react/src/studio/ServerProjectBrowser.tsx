@@ -1,3 +1,4 @@
+import { Button } from "tdesign-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createStudioProjectBrowser,
@@ -80,13 +81,13 @@ export function ServerProjectBrowser({
             <strong>服务端工程</strong>
             <p className="studio-version-help">仅显示已授权工程，不包含完整组态文件</p>
           </div>
-          <button
+          <Button tag="button"
             type="button"
             disabled={disabled || loading}
             onClick={() => void loadPage("refresh")}
           >
             刷新
-          </button>
+          </Button>
         </div>
         <p className="studio-version-help">
           打开其他工程前会校验最新修订号；本地草稿不会删除，也不会自动发布。
@@ -121,35 +122,35 @@ export function ServerProjectBrowser({
                   </time>
                 </small>
               </div>
-              <button
+              <Button tag="button"
                 type="button"
                 disabled={disabled || loading}
                 aria-label={"打开工程 " + project.projectId}
                 onClick={() => void onOpen(project.projectId, project.headRevision)}
               >
                 打开
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
         <div className="studio-project-browser-pagination">
-          <button
+          <Button tag="button"
             type="button"
             disabled={disabled || loading || !page.hasPrevious}
             onClick={() => void loadPage("previous")}
           >
             上一页
-          </button>
+          </Button>
           <span role="status">
             第 {page.pageNumber} 页 · 每页 {STUDIO_PROJECT_PAGE_SIZE} 条
           </span>
-          <button
+          <Button tag="button"
             type="button"
             disabled={disabled || loading || !page.hasNext}
             onClick={() => void loadPage("next")}
           >
             下一页
-          </button>
+          </Button>
         </div>
       </section>
     </details>
