@@ -3897,3 +3897,45 @@ pnpm run messages:check
 ```
 
 D1～D5 仍需维护者逐项确认。此处 `sourceVerified` 只是 Core 已有布尔输入，不是网络机器身份凭据；不启用任何正式报警事件生成、确认权限或工业设备写入。
+
+## 2026-11-23 · D5c0j FR-011 进程内只读报警候选 Lab（待 Windows 验收）
+
+维护者在 Windows 对 D5c0i 两份 Core 测试实测 **46/46**（托管器 12/12、订阅适配器 34/34）、`vp check` **437 个格式文件/286 个受检零警告错误**、`docs:check` **92 份**及 `messages:check` **310 个文件**通过。GitHub 对 PR #174 核对最新 HEAD `82f2300102c7be5fc4d8b4e16555cae735266a74`、四份差异、`@adui-dev` 指派、无未解决线程与冲突后，按维护者授权 Squash 合并至 `main@0297a74bd67a87a985f195b0d7c40d6697b886e2`。用户原始终端日志未包含 `git rev-parse HEAD`，不能把该结果写成在 Squash SHA 上直接执行的记录。
+
+D5c0j 新增独立的 `scripts/lab-alarm-inprocess.mjs` 和 `scripts/lab-alarm-inprocess.cases.mjs`，只在单个 Node 进程中复用现有 `TagStore` 与 `AlarmSubscriptionAdapter`：模拟 GOOD 初始快照（序列 5）、合法业务跳号至 7、迟到序列 6 被 TagStore 忽略、将**本地实验标志**切为未核验后通过 8 终止候选并清理订阅、之后 Store 继续收到 9 但旧回调无法恢复候选。报告明确标记 `machineIdentityAuthenticated: false`、`transportHistoryComplete: false`、`formalAlarmEvents: 0`。模拟标志为 true 也**不构成机器来源认证**；TagStore 仍可存储输入，不能作为可信工业报警入口或传输完整性证据。
+
+本批未新增网络监听、真实定时器、设备 I/O、数据库访问、凭据、告警触发/确认、正式服务端入口或 Web UI；仅增加独立 Lab 脚本、五项 Node 测试和文档。Windows 在最新分支执行以下命令（不需启动数据库、Docker、Keycloak 或工业设备）：
+
+```powershell
+git fetch origin &&
+git switch test/d5c0j-alarm-inprocess-lab &&
+git pull --ff-only &&
+git rev-parse HEAD &&
+node --experimental-strip-types --test scripts/lab-alarm-inprocess.cases.mjs &&
+node --experimental-strip-types scripts/lab-alarm-inprocess.mjs &&
+vp check &&
+pnpm run docs:check &&
+pnpm run messages:check
+```
+
+**验收边界**：五项测试是当前分支定义数量，并非已通过。协作容器无法通过网络获取 GitHub 仓库，未执行这组项目 Node 测试、`vp check`、文档及中文门禁。未来 D1～D5 的认证、服务端时间权威、独立传输游标、缺口恢复和报警事务仍待维护者专项审批；该 Lab 不属于正式实现，也不改变默认 fail-closed 发布门禁。
+
+## 2026-11-23 · PR #175 D5c0j Windows 首轮结果与 JSDoc 中文门禁修复
+
+维护者在 Windows 提供 D5c0j 首轮实测：`node --experimental-strip-types --test scripts/lab-alarm-inprocess.cases.mjs` **5/5 通过**；独立执行 `scripts/lab-alarm-inprocess.mjs` 的报告为初始序列 5、接受 7、迟到 6 不覆盖、来源模拟撤销后候选终止、资源各清理一次、Store 继续到 9、来源身份与历史完整性均未证明、正式报警事件为 0；`vp check` **439 格式文件 / 288 受检零警告错误**，`docs:check` **92 份通过**。最后 `messages:check` 因 Lab 的四处单行 JSDoc `@type` 缺少中文说明失败，退出码 **1**，因此**本批整条质量链未通过**。原终端日志未提供本地 HEAD，不能将这组成功结果严格绑定到远程最新提交。
+
+针对上述真实错误，D5c0j 在 `scripts/lab-alarm-inprocess.mjs` 的四个 `@type` 注释后增补中文说明，并在 `docs/AI_MISTAKES.md` 记录 **E-103**。无测试、逻辑、类型表达式或工业安全条件变化；已按照仓库中文检查器同样的行匹配规则静态确认原四处不再触发，但**修改后未在 Windows 复验，不可标记通过**。
+
+请在 PR #175 最终 HEAD 上重新运行：
+
+```powershell
+git pull --ff-only &&
+git rev-parse HEAD &&
+node --experimental-strip-types --test scripts/lab-alarm-inprocess.cases.mjs &&
+node --experimental-strip-types scripts/lab-alarm-inprocess.mjs &&
+vp check &&
+pnpm run docs:check &&
+pnpm run messages:check
+```
+
+本批仍仅为 FR-011 S0 进程内模拟与候选验证，不涉及任何已认证工业网关、真实采样时间权威、传输连续游标、报警事件持久化、确认授权或现场验收。
