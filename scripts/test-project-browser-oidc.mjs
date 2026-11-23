@@ -1050,7 +1050,7 @@ export async function confirmPreviewedServerVersionInPage(revision) {
   const until = Date.now() + 20000;
   while (Date.now() < until) {
       const confirmButton = document.querySelector(".t-dialog .t-dialog__confirm");
-      if (!confirmCount && confirmButton instanceof HTMLButtonElement && confirmButton.getClientRects().length) {
+      if (!confirmCount && confirmButton?.tagName === "BUTTON" && confirmButton.getClientRects().length) {
         confirmCount += 1;
         confirmButton.click();
       }
