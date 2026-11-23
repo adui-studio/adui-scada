@@ -211,8 +211,10 @@ export function studioPreflightGuardStateInPage(runtime = globalThis) {
 /** 仅操作正式页面按钮；不调用 React/Vue 的内部函数或写入接口。 */
 export function clickStudioPreflightInPage(runtime = globalThis) {
   const panel = runtime.document.querySelector('[aria-label="服务端已保存版本发布预检"]');
-  const menu = panel?.closest("details");
-  if (menu) menu.open = true;
+  const menu = runtime.document.querySelector(".studio-release-preflight-menu");
+  const trigger = menu?.querySelector("button.t-button");
+  if (!(trigger instanceof runtime.HTMLButtonElement)) throw new Error("发布预检触发器不可用");
+  if (!panel?.getClientRects().length) trigger.click();
   const button = [...(panel?.querySelectorAll("button") ?? [])].find(
     (item) => item.textContent.trim() === "检查服务端已保存版本",
   );
