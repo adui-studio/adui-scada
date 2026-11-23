@@ -301,7 +301,24 @@ export async function enterStudioInPage() {
     if (button) {
       if (!document.querySelector(".studio-workspace")) button.click();
       for (let retry = 0; retry < 75; retry += 1) {
-        if (document.querySelector(".studio-workspace .studio-svg")) return true;
+        if (document.querySelector(".studio-workspace .studio-svg")) {
+          // Popup 首次打开时可能才挂载内容；先经真实按钮初始化只读服务端版本面板。
+          const menu = document.querySelector(".studio-server-version-menu");
+          const trigger = menu?.querySelector("button.t-button");
+          if (trigger?.tagName !== "BUTTON") throw new Error("服务端工程入口不可用");
+          if (!menu.querySelector('[aria-label="服务端工程版本"]')?.getClientRects().length) {
+            trigger.click();
+          }
+          const initializedAt = Date.now();
+          while (Date.now() - initializedAt < 5000) {
+            if (menu.querySelector('[aria-label="服务端工程版本"]')?.getClientRects().length) {
+              trigger.click();
+              return true;
+            }
+            await new Promise((done) => setTimeout(done, 50));
+          }
+          throw new Error("服务端工程弹层初始化超时");
+        }
         await new Promise((done) => setTimeout(done, 100));
       }
     }
