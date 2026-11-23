@@ -441,17 +441,18 @@ export async function enableAutoSaveInPage() {
     (item) => item.textContent.trim() === "开启自动保存",
   );
   if (!button) throw new Error("自动保存不是关闭状态");
-  const originalConfirm = window.confirm;
-  window.confirm = () => true;
   try {
     button.click();
     for (let retry = 0; retry < 120; retry += 1) {
+      const confirm = document.querySelector(".t-dialog .t-dialog__confirm");
+      if (confirm instanceof HTMLButtonElement && confirm.getClientRects().length) {
+        confirm.click();
+      }
       if (menu.querySelector('button[aria-pressed="true"]')) return true;
       await new Promise((done) => setTimeout(done, 100));
     }
     return false;
   } finally {
-    window.confirm = originalConfirm;
     if (menu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
   }
 }
@@ -1044,16 +1045,15 @@ export async function confirmPreviewedServerVersionInPage(revision) {
     (item) => item.textContent.trim() === "载入",
   );
   if (!button || button.disabled) throw new Error("冲突恢复确认载入按钮不可用");
-  const originalConfirm = window.confirm;
   let confirmCount = 0;
-  window.confirm = () => {
-    confirmCount += 1;
-    return true;
-  };
-  try {
-    button.click();
-    const until = Date.now() + 20000;
-    while (Date.now() < until) {
+  button.click();
+  const until = Date.now() + 20000;
+  while (Date.now() < until) {
+      const confirmButton = document.querySelector(".t-dialog .t-dialog__confirm");
+      if (!confirmCount && confirmButton instanceof HTMLButtonElement && confirmButton.getClientRects().length) {
+        confirmCount += 1;
+        confirmButton.click();
+      }
       const notice = document.querySelector(".studio-notice")?.textContent ?? "";
       const busy = [...(panel?.querySelectorAll(".studio-version-help") ?? [])].some((element) =>
         element.textContent?.includes("正在处理工程版本"),
@@ -1067,9 +1067,6 @@ export async function confirmPreviewedServerVersionInPage(revision) {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     throw new Error("冲突恢复确认载入超时");
-  } finally {
-    window.confirm = originalConfirm;
-  }
 }
 
 export async function openProjectInPage(projectId, headRevision, mode) {
@@ -1081,7 +1078,6 @@ export async function openProjectInPage(projectId, headRevision, mode) {
   if (!button || button.disabled) throw new Error("工程打开按钮不可用");
   let confirmCount = 0;
   const fault = { projectId, calls: 0 };
-  const originalConfirm = window.confirm;
   const versionPanel = document.querySelector('[aria-label="服务端工程版本"]');
   const errorBeforeClick = versionPanel?.querySelector('[role="alert"]')?.textContent ?? "";
   let newActionObserved = false;
@@ -1090,15 +1086,18 @@ export async function openProjectInPage(projectId, headRevision, mode) {
     throw new Error("工程安全载入流程模式不合法");
   }
   if (mode === "conflict") globalThis.__aduiTestProjectRevisionFault = fault;
-  window.confirm = () => {
-    confirmCount += 1;
-    if (mode === "confirm-drift") globalThis.__aduiTestProjectRevisionFault = fault;
-    return mode === "confirm" || mode === "confirm-drift";
-  };
   try {
     button.click();
     const until = Date.now() + 20000;
     while (Date.now() < until) {
+      const dialogChoice = document.querySelector(
+        mode === "cancel" ? ".t-dialog .t-dialog__cancel" : ".t-dialog .t-dialog__confirm",
+      );
+      if (!confirmCount && dialogChoice instanceof HTMLButtonElement && dialogChoice.getClientRects().length) {
+        confirmCount += 1;
+        if (mode === "confirm-drift") globalThis.__aduiTestProjectRevisionFault = fault;
+        dialogChoice.click();
+      }
       const notice = document.querySelector(".studio-notice")?.textContent ?? "";
       const error = versionPanel?.querySelector('[role="alert"]')?.textContent ?? "";
       const busy = [...(versionPanel?.querySelectorAll(".studio-version-help") ?? [])].some(
@@ -1158,7 +1157,6 @@ export async function openProjectInPage(projectId, headRevision, mode) {
     }
     throw new Error("工程安全载入流程超时");
   } finally {
-    window.confirm = originalConfirm;
     delete globalThis.__aduiTestProjectRevisionFault;
   }
 }
