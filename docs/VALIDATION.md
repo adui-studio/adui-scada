@@ -3221,3 +3221,31 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批代码位于 Core 注入适配层，无真实网络/数据库/双框架页面或设备驱动变更，故不重复完整 ready、HTTP E2E 和 React/Vue 浏览器专项；适配器只演示外部回调与调度契约。单测通过也不代表调度实际间隔、系统时间可靠、来源核验真实或工业报警安全可用；正式发布安全 Gate 保持 fail-closed。
+
+## 2026-11-23 · D5b9o FR-011 订阅资源取消重入保护：Windows 待验收
+
+PR #153 维护者 Windows 已实际通过新增订阅适配单测 **13/13**、`vp check` **435 格式文件/286 受检零警告错误**、`docs:check` **90**、`messages:check` **310**；经明确同意，Squash 合并到 `main@7d82b3d2889db16c4b8423cd140e09e180d40bf0`。本批 D5b9o 在此基础上修改现有适配器及其定向测试，**新增 4 项、当前文件合计 17 项，仅为定义，尚无 Windows 实测**。
+
+先按维护者习惯执行 `vp check --fix` 并提交实际需要的格式化改动；不要求手动核对 HEAD，然后在当前分支执行：
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5b9o-alarm-adapter-reentrant-cleanup
+if ($LASTEXITCODE -ne 0) { throw "切换验收分支失败" }
+
+vp test run packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警订阅资源重入保护测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+此次仅改适配器资源清理顺序、旧代次回调保护、测试和文档，没有真实网络协议、HTTP、UI、数据库或工业网关变更；定向检查不替代完整生产安全验收。外部取消函数一旦抛错，仅能确认其已尝试调用，**不能宣称真实资源肯定已释放**。正式发布安全 Gate 仍 fail-closed。
