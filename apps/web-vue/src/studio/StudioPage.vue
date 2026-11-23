@@ -1837,7 +1837,10 @@ async function importJson(event: Event) {
                 <p v-if="historyError" class="studio-version-error" role="alert">
                   {{ historyError }}
                 </p>
-                <p v-if="!historyBusy && visibleHistoryRows.length === 0" class="studio-version-help">
+                <p
+                  v-if="!historyBusy && visibleHistoryRows.length === 0"
+                  class="studio-version-help"
+                >
                   当前工程暂无本地历史版本。
                 </p>
                 <ol class="studio-version-list">

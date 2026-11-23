@@ -1912,7 +1912,9 @@ export default function StudioPage() {
                 </div>
               }
             >
-              <Button type="button" variant="outline">版本历史</Button>
+              <Button type="button" variant="outline">
+                版本历史
+              </Button>
             </Popup>
           </div>
           <details className="studio-version-menu">
