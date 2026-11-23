@@ -1044,3 +1044,11 @@
 > **待 Windows 验证**：运行 `node --check scripts/test-studio-browser.mjs`、`vp check`、`pnpm run docs:check`、`pnpm run test:multitab`。若仍报告 `ERR_CACHE_WRITE_FAILURE`，进一步检查 Chromium 临时配置目录所在盘的剩余空间、系统安全软件和本机文件权限，不删除任何个人浏览器配置、不关闭 TLS、不跳过 Vue 多标签。未经复验不能关闭 E-106 或合并 PR #186。
 
 > **2026-11-23 · E-106 Windows 验收补录（阻塞已绕过，系统诱因仍待查）**：维护者在 PR #186 最终候选实测 `node --check`、`vp check`（446 格式/289 受检零告警）、`docs:check`（94）和多标签页专项。此前反复出现的 Vue Studio `net::ERR_CACHE_WRITE_FAILURE` 在测试 CDP 为 Vue 双标签调用 `Network.setCacheDisabled({cacheDisabled:true})` 后，本轮 React 与 Vue 各 4 阶段（BroadcastChannel、无广播过期 CAS、墓碑修订号、模拟 IndexedDB 故障恢复）全部通过，失败退出检查未触发。**确认的是受控测试环境 HTTP 缓存隔离有效，不意味着 Windows 磁盘权限或 Chromium 缓存的系统成因已修复，也不证明永远不会复发**。GitHub PR #186 最终 HEAD `c67bc33d1520b10a0a046e51d52213a8115bff0c`，经维护者授权 Squash 合并 `main@1faca1a386c83314e24f245b7ea394c80f1c7cb0`。日志没有单独提供本地 HEAD；历史四次失败证据保留，后续发现同类异常仍须按分类复诊。
+
+### E-107 · D5c0v 测试 Popup 关闭超时在 finally 内抛出异常（PR #187）
+
+- **维护者 Windows 现象**：PR #187 在追加本地历史迁移 Popup 关闭同步后，执行 `vp check --fix` 报 `eslint(no-unsafe-finally)`：`scripts/test-studio-browser.mjs:1743` 的 `finally` 内抛出「TDesign 文件草稿弹层关闭超时」。Vite+ 报 **0 错误、1 告警**，格式化阶段完成；不能将其记录为零告警通过。
+- **根因**：`studioDraftFileActionInPage` 为等待 TDesign 弹层关闭，把 5 秒轮询与 `throw` 放在恢复 `window.confirm` 的 `finally` 中；如果此前点击操作已经失败，`finally` 再抛出异常会覆盖原始失败，并违反仓库 `no-unsafe-finally` 约束。
+- **最小修复**：保留原有真实按钮操作、12 秒业务通知等待及异常传播，将成功通知先记录在局部变量；`finally` 只负责恢复 `window.confirm` 和触发关闭；正常完成后在 `finally` 外继续等待面板隐藏，并保留原 5 秒关闭超时与中文报错。业务动作失败时先传播原始错误，不让关闭检查覆盖它；不修改 React/Vue 组件、草稿数据或其他版本安全断言。
+- **防复发及验证**：浏览器测试中的 `finally` 仅执行不改变控制流的清理，不在其中 `throw`、`return` 或 `break`；等待可能失败的关闭流程应安排在正常路径，避免掩盖真正的断言或 I/O 异常。修复已提交 PR #187 功能分支；**修复后的 Windows `node --check`、`vp check`、`docs:check`、`test:legacy:browser`、`test:versions:safety` 及发布预检测试尚待真实复验**，不得写成已通过。
+- **证据**：维护者 2026-11-23 Windows `vp check --fix` 原始输出、`scripts/test-studio-browser.mjs` 和 PR #187。
