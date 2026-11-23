@@ -3939,3 +3939,26 @@ pnpm run messages:check
 ```
 
 本批仍仅为 FR-011 S0 进程内模拟与候选验证，不涉及任何已认证工业网关、真实采样时间权威、传输连续游标、报警事件持久化、确认授权或现场验收。
+
+## 2026-11-23 · PR #175 完成 Windows 验收、D5c0k S0 自动质量门禁候选
+
+维护者 Windows 对 D5c0j 最终修复候选重新执行 `pnpm run messages:check` **312 个文件通过**、`vp check` **439 格式文件 / 288 受检零警告错误**、`pnpm run docs:check` **92 份通过**、Node 原生 S0 Lab **5/5 通过**，并独立运行 Lab 得到初始 5、跳号 7、迟到 6 不覆盖、候选失效清理、Store 仍推进到 9 且身份/历史完整性均未证明、正式报警事件 0 的诊断。GitHub 检查 PR #175 的最终 HEAD 为 `9f7fecfab4432f37e9be7ae882f5d481d5c8870f`，仅涉及 5 份已审文件、`@adui-dev` 已指派、没有未解决意见或冲突，按维护者授权 Squash 合并到 `main@54a3d4b9868474e94ecbed81f088cdd8c259710e`。本批原始 Windows 日志**未打印本地 HEAD**，不能声称这些检查直接运行在合并提交。E-103 的中文注释修复已通过 Windows `messages:check` 实际复验。
+
+D5c0k 仅在根 `package.json` 新增 `test:alarm:lab` 和 `lab:alarm`，将原有 **5 项 S0 Node 测试**固定纳入 `ready` 的 `test:unit` 之后、SSE 客户端检查之前；不改 Lab 源码、Core 生产代码或任何安全决策。新增质量门禁为同步离线验证，不应自动执行现场设备、真实 OIDC、PostgreSQL、工业网关、正式报警或其他带副作用操作。
+
+**D5c0k 待执行的 Windows 检查**（需在最新分支执行；不代表已通过）：
+
+```powershell
+git fetch origin &&
+git switch test/d5c0k-alarm-lab-ready-gate &&
+git pull --ff-only &&
+git rev-parse HEAD &&
+pnpm run test:alarm:lab &&
+pnpm run lab:alarm &&
+pnpm run messages:check &&
+vp check &&
+pnpm run docs:check &&
+pnpm run ready
+```
+
+`ready` 将再次执行 `test:alarm:lab`，需要在完整日志中确认新步骤被执行、原有步骤没有被跳过且最终进程退出码为 0。此处新增自动门禁只是进程内模拟覆盖，不等于 FR-011 正式认证、可靠游标、历史重放、报警事件事务或生产上线验收；D1～D5 仍待维护者专项批准。

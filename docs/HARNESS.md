@@ -4496,3 +4496,22 @@ if ($LASTEXITCODE -ne 0) { throw "D5b7f 未确认唯一合法已发布元数据�
 ```
 
 此命令目前未实际执行；不保证有任何候选。即使获得候选工程 ID，仍须独立检查真实快照 SHA-256、受保护 HTTP `200/RELEASED` 和后续在线撤权专项审批。不得据此执行发布、恢复 ACL 或撤权写入。
+
+## 2026-11-23 · FR-011 S0 进程内报警候选 Lab 的自动质量门禁（D5c0k）
+
+D5c0j 已在 PR #175 以 Windows 原生 Node **5/5**、模拟诊断、`messages:check` **312 个文件**、`vp check` **439 格式/288 受检零警告错误**、`docs:check` **92 份**独立验收；D5c0k 将它固化为根脚本入口，不改变 Lab 业务逻辑。
+
+在项目根目录直接执行：
+
+```powershell
+pnpm run test:alarm:lab
+pnpm run lab:alarm
+```
+
+- `test:alarm:lab`：复用原有 Node `--experimental-strip-types --test`，运行 `scripts/lab-alarm-inprocess.cases.mjs`；固定验证快照、合法业务跳号、迟到版本过滤、未核验来源引发候选停止及资源释放等 **5 项**。
+- `lab:alarm`：直接运行 `scripts/lab-alarm-inprocess.mjs`，只打印进程内模拟诊断；本脚本不会建立工业可信源身份。
+- `pnpm run ready`：在原有 `test:unit` 后、`test:sse:clients` 前增加 `test:alarm:lab`，确保离线 S0 回归纳入默认门禁。既有检查顺序与默认 fail-closed 工业边界保持不变。
+
+**安全边界**：两条新命令不建立网络监听、不连接数据库/Keycloak/PLC/DCS、不启动真实定时器、不产生正式报警事件或确认写入；不把 `sourceVerified: true` 当作已认证身份，也不证明丢失数据能完整重放。D1～D5 仍需维护者另行批准。根 `ready` 既有其他步骤的依赖和运行成本不因本批取消。
+
+**待 Windows 复验**：D5c0k 修改的 `package.json`、文档和完整质量链尚未运行；需单独验证两条短命令、`vp check`、`docs:check`、`messages:check` 和 `pnpm run ready` 的最终退出码。历史 PR #175 的 5/5 不能直接记为此分支的通过记录。

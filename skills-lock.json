@@ -133,6 +133,13 @@
       "skillPath": "prisma-postgres-upgrade/SKILL.md",
       "computedHash": "bfe9cb9f1eb53df56d5c7ad758ad080054979de865cb26adc3a6564c9d2a1d2f"
     },
+    "tdesign-skills": {
+      "source": "liweijie0812/tdesign-skills",
+      "commit": "8dd5a9c9115c40d4294884127de44c2872592c95",
+      "sourceType": "github",
+      "skillPath": "skills/tdesign-skills/SKILL.md",
+      "computedHash": "c740d76ce03e5e02a98183b142363be08a0b084d551a7430bab156310b0a3930"
+    },
     "ui-ux-pro-max": {
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",
       "sourceType": "github",
@@ -222,6 +229,13 @@
       "sourceType": "github",
       "skillPath": "skills/vue-testing-best-practices/SKILL.md",
       "computedHash": ""
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "commit": "5a37a6329fbad3666c3207392a6a7c0110e92efb",
+      "sourceType": "github",
+      "skillPath": "skills/web-design-guidelines/SKILL.md",
+      "computedHash": "5994e4cfd86144903d2ba750f862b9e36af15e3297aac983679e347b99f6cb71"
     }
   }
 }
