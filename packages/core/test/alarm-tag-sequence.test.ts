@@ -139,3 +139,12 @@ test("序列递增但服务端时间倒退时拒绝，等时刻及来源时间�
     value: 42,
   });
 });
+
+test("低层序列排序不能把亚毫秒倒退当成同毫秒有效增量", () => {
+  const baseline = { ...previous, serverTimestamp: "2026-11-22T08:59:59.999900Z" };
+  const incoming = { ...current, serverTimestamp: "2026-11-22T08:59:59.999100Z" };
+  expect(Date.parse(baseline.serverTimestamp)).toBe(Date.parse(incoming.serverTimestamp));
+  expect(() => classifyOrderedNumericAlarmSample(incoming, baseline, nowMs, 1000)).toThrow(
+    "报警服务器时间戳精度超过毫秒",
+  );
+});
