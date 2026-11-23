@@ -1420,8 +1420,14 @@ async function readStudioDraftFromDatabaseInPage(projectId) {
 
 /** 版本菜单打开之前模拟浏览器拒绝打开历史库，不修改 IndexedDB 真实记录。 */
 async function simulateHistoryDatabaseUnavailableInPage() {
-  const menu = document.querySelector(".studio-version-menu");
-  if (!menu || menu.open) throw new TypeError("历史版本菜单必须在关闭状态下测试存储失败");
+  const menu = document.querySelector(".studio-local-history-menu");
+  const trigger = menu?.querySelector("button.t-button");
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到本地版本历史 Popup 触发器");
+  }
+  if (menu.querySelector(".studio-version-panel")?.getClientRects().length) {
+    throw new TypeError("历史版本弹层必须在关闭状态下测试存储失败");
+  }
   const originalOpen = Reflect.get(IDBFactory.prototype, "open");
   if (typeof originalOpen !== "function") throw new TypeError("无法读取 IndexedDB 打开方法");
   IDBFactory.prototype.open = function (...args) {
@@ -1431,7 +1437,7 @@ async function simulateHistoryDatabaseUnavailableInPage() {
     return Reflect.apply(originalOpen, this, args);
   };
   try {
-    menu.open = true;
+    trigger.click();
     const start = Date.now();
     while (Date.now() - start < 12000) {
       const error = menu.querySelector(".studio-version-error")?.textContent || "";
@@ -1441,14 +1447,14 @@ async function simulateHistoryDatabaseUnavailableInPage() {
     throw new TypeError("历史库权限异常未显示错误提示");
   } finally {
     IDBFactory.prototype.open = originalOpen;
-    menu.open = false;
+    if (menu.querySelector(".studio-version-panel")?.getClientRects().length) trigger.click();
   }
 }
 
 /** 异步 JSON 文件尚未读完时点击历史载入，不能插入执行或调用覆盖确认。 */
 async function verifyImportHistoryIsolationInPage(json) {
   const fileMenu = document.querySelector(".studio-file-menu");
-  const versionMenu = document.querySelector(".studio-version-menu");
+  const versionMenu = document.querySelector(".studio-local-history-menu");
   if (!fileMenu) throw new TypeError("未找到文件草稿菜单");
   const trigger = fileMenu.querySelector("button.t-button");
   if (!(trigger instanceof HTMLButtonElement)) throw new TypeError("未找到文件草稿触发器");
@@ -1511,7 +1517,13 @@ async function verifyImportHistoryIsolationInPage(json) {
     Blob.prototype.text = originalText;
     window.confirm = originalConfirm;
     if (fileMenu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
-    versionMenu.open = false;
+    const versionTrigger = versionMenu?.querySelector("button.t-button");
+    if (
+      versionTrigger instanceof HTMLButtonElement &&
+      versionMenu.querySelector(".studio-version-panel")?.getClientRects().length
+    ) {
+      versionTrigger.click();
+    }
   }
 }
 
