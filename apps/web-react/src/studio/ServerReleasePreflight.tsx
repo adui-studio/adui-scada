@@ -89,7 +89,8 @@ export function ServerReleasePreflight({
       <p className="studio-version-help">
         服务端预检仅检查已保存的当前修订，与上方当前画布静态预检不同；不会保存、发布或修改草稿。
       </p>
-      <Button tag="button"
+      <Button
+        tag="button"
         type="button"
         className="studio-version-more"
         disabled={disabled || busy}

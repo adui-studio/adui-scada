@@ -210,7 +210,13 @@ void describe("真实 Keycloak Studio 发布预检浏览器只读安全门禁", 
       getClientRects: () => [{}],
       querySelectorAll: () => [button],
     };
-    const trigger = { tagName: "BUTTON", clickCount: 0, click() { this.clickCount += 1; } };
+    const trigger = {
+      tagName: "BUTTON",
+      clickCount: 0,
+      click() {
+        this.clickCount += 1;
+      },
+    };
     const menu = {
       querySelector(selector) {
         return selector === "button.t-button" ? trigger : panel;

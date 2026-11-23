@@ -669,7 +669,7 @@ async function renamePage() {
 }
 
 async function deletePage() {
-  if (!await confirmStudioAction("确定删除页面“" + page.value.name + "”及其图元吗？可撤销。")) {
+  if (!(await confirmStudioAction("确定删除页面“" + page.value.name + "”及其图元吗？可撤销。"))) {
     return;
   }
   apply(() => {
@@ -1451,9 +1451,9 @@ async function loadServerVersion(revision: number): Promise<void> {
         throw new TypeError("当前工程已切换，拒绝载入其他工程的服务端历史");
       }
       if (
-        !await confirmStudioAction(
+        !(await confirmStudioAction(
           `载入服务端版本 #${revision} 将替换当前画布并清空撤销历史。IndexedDB 草稿不会被清除，未保存的画布修改可能丢失，建议先保存草稿。确认继续吗？`,
-        )
+        ))
       ) {
         return;
       }
@@ -1500,9 +1500,9 @@ async function openServerProject(projectId: string, headRevision: number): Promi
         throw new ScadaApiError("服务端工程版本已更新，请刷新工程列表后重新选择", "conflict", 409);
       }
       if (
-        !await confirmStudioAction(
+        !(await confirmStudioAction(
           `打开工程“${projectId}”的最新版本 #${headRevision} 将替换当前画布、清空撤销历史并暂停自动保存。未保存的画布修改可能丢失；IndexedDB 草稿及本地历史不会被删除。请先保存需要保留的修改，确认打开吗？`,
-        )
+        ))
       ) {
         return;
       }
@@ -1600,9 +1600,9 @@ async function loadHistoryVersion(revision: number): Promise<void> {
         throw new TypeError("当前工程已切换，拒绝载入其他工程的历史版本");
       }
       if (
-        !await confirmStudioAction(
+        !(await confirmStudioAction(
           `载入本地历史版本 #${revision} 将替换当前画面并清空撤销历史，未保存的修改可能丢失。建议先导出 JSON 备份。确认继续吗？`,
-        )
+        ))
       ) {
         return;
       }
@@ -1639,7 +1639,7 @@ async function toggleAutoSave() {
     const session = await DraftAutoSaveSession.open(drafts, editor.snapshot().document);
     if (
       session.hasExistingDraft &&
-      !await confirmStudioAction("数据库已有草稿，开启自动保存后新修改将覆盖该版本。确认开启吗？")
+      !(await confirmStudioAction("数据库已有草稿，开启自动保存后新修改将覆盖该版本。确认开启吗？"))
     ) {
       return;
     }
@@ -1660,7 +1660,7 @@ async function saveDraft() {
     await pauseAutoSave();
     const document = editor.snapshot().document;
     const current = await drafts.get(document.projectId);
-    if (current && !await confirmStudioAction("数据库已有草稿，确认使用当前画面覆盖吗？")) return;
+    if (current && !(await confirmStudioAction("数据库已有草稿，确认使用当前画面覆盖吗？"))) return;
     const saved = await drafts.save(document, current?.revision ?? null);
     hasSavedDraft.value = true;
     notice.value = `已保存 IndexedDB 草稿（${saved.savedAt}），并非正式工程发布`;
@@ -1672,7 +1672,7 @@ async function saveDraft() {
 }
 
 async function restoreDraft() {
-  if (!await confirmStudioAction("恢复数据库草稿将替换当前画面并清空撤销历史，确认吗？")) return;
+  if (!(await confirmStudioAction("恢复数据库草稿将替换当前画面并清空撤销历史，确认吗？"))) return;
   if (draftActionInProgress) return;
   draftActionInProgress = true;
   try {
@@ -1701,7 +1701,8 @@ async function restoreDraft() {
 }
 
 async function clearDraft() {
-  if (!await confirmStudioAction("确定清除当前工程的 IndexedDB 草稿吗？当前画面不会改变。")) return;
+  if (!(await confirmStudioAction("确定清除当前工程的 IndexedDB 草稿吗？当前画面不会改变。")))
+    return;
   if (draftActionInProgress) return;
   draftActionInProgress = true;
   try {
@@ -1915,43 +1916,43 @@ async function importJsonFile(file: File | undefined) {
           </TPopup>
         </div>
         <div class="studio-version-menu studio-release-preflight-menu">
-            <TPopup attach=".studio-release-preflight-menu" trigger="click" placement="bottom-right">
-              <TButton type="button" variant="outline">发布预检</TButton>
-              <template #content>
-          <div class="studio-version-panel" aria-label="工程发布前静态兼容性预检">
-            <p class="studio-version-help">
-              当前工程：{{ state.document.projectId }} · 仅检查 SVG
-              静态兼容性，不保存、不发布，也不改动草稿。
-            </p>
-            <p v-if="releasePreflight.passed" class="studio-version-help" role="status">
-              静态兼容性检查通过；仍须完成服务端授权、数据源和正式发布事务校验。
-            </p>
-            <div v-else>
-              <p class="studio-version-error" role="status">
-                发现 {{ releasePreflight.issues.length }} 项兼容性问题，当前工程不能视为可发布。
-              </p>
-              <ol class="studio-version-list" aria-label="发布预检问题">
-                <li
-                  v-for="(issue, index) in releasePreflight.issues"
-                  :key="`${issue.code}:${issue.path}:${index}`"
-                  class="studio-version-item"
-                >
-                  <code>{{ issue.path }}</code>
-                  <p class="studio-version-help">{{ issue.message }}</p>
-                </li>
-              </ol>
-            </div>
-            <ServerReleasePreflight
-              :key="`${state.document.projectId}:${serverHeadRevision ?? '未查询'}:${serverAccessRevision}`"
-              :api="serverApi"
-              :document="state.document"
-              :disabled="historyBusy"
-              @access-rejected="handleServerPreflightAccessRejected"
-            />
-          </div>
-        </template>
-            </TPopup>
-          </div>
+          <TPopup attach=".studio-release-preflight-menu" trigger="click" placement="bottom-right">
+            <TButton type="button" variant="outline">发布预检</TButton>
+            <template #content>
+              <div class="studio-version-panel" aria-label="工程发布前静态兼容性预检">
+                <p class="studio-version-help">
+                  当前工程：{{ state.document.projectId }} · 仅检查 SVG
+                  静态兼容性，不保存、不发布，也不改动草稿。
+                </p>
+                <p v-if="releasePreflight.passed" class="studio-version-help" role="status">
+                  静态兼容性检查通过；仍须完成服务端授权、数据源和正式发布事务校验。
+                </p>
+                <div v-else>
+                  <p class="studio-version-error" role="status">
+                    发现 {{ releasePreflight.issues.length }} 项兼容性问题，当前工程不能视为可发布。
+                  </p>
+                  <ol class="studio-version-list" aria-label="发布预检问题">
+                    <li
+                      v-for="(issue, index) in releasePreflight.issues"
+                      :key="`${issue.code}:${issue.path}:${index}`"
+                      class="studio-version-item"
+                    >
+                      <code>{{ issue.path }}</code>
+                      <p class="studio-version-help">{{ issue.message }}</p>
+                    </li>
+                  </ol>
+                </div>
+                <ServerReleasePreflight
+                  :key="`${state.document.projectId}:${serverHeadRevision ?? '未查询'}:${serverAccessRevision}`"
+                  :api="serverApi"
+                  :document="state.document"
+                  :disabled="historyBusy"
+                  @access-rejected="handleServerPreflightAccessRejected"
+                />
+              </div>
+            </template>
+          </TPopup>
+        </div>
         <ServerProjectBrowser
           :key="serverAccessRevision"
           :api="serverApi"
@@ -1961,114 +1962,117 @@ async function importJsonFile(file: File | undefined) {
           @access-rejected="handleServerBrowserAccessRejected"
         />
         <div class="studio-version-menu studio-server-version-menu">
-            <TPopup attach=".studio-server-version-menu" trigger="click" placement="bottom-right">
-              <TButton type="button" variant="outline">服务端工程</TButton>
-              <template #content>
-          <div class="studio-version-panel" aria-label="服务端工程版本">
-            <p class="studio-version-help">
-              当前工程：{{ state.document.projectId }} · 受保护的工程版本保存，不代表正式发布
-            </p>
-            <p class="studio-version-help" role="status">
-              {{ serverIdentity }} · 服务端最新修订号：
-              {{
-                serverProjectId === state.document.projectId && serverHeadRevision !== null
-                  ? serverHeadRevision
-                  : "未查询"
-              }}
-              · CAS 基线：{{ activeServerBaseline ?? "未建立" }}
-            </p>
-            <div class="studio-version-tools">
-              <TButton type="button" :disabled="historyBusy" @click="checkServerIdentity">
-                检查登录
-              </TButton>
-              <TButton type="button" :disabled="historyBusy" @click="saveServerProject">
-                保存至服务端
-              </TButton>
-              <TButton type="button" :disabled="historyBusy" @click="refreshServerHistory">
-                查询服务端历史
-              </TButton>
-            </div>
-            <p class="studio-version-help">
-              服务器已有工程时，请先显式载入最新服务端版本再保存；冲突不会自动重试，草稿始终保留。
-            </p>
-            <p v-if="historyBusy" class="studio-version-help">正在处理工程版本…</p>
-            <p v-if="serverError" class="studio-version-error" role="alert">
-              {{ serverError }}
-            </p>
-            <div
-              v-if="serverError && serverRecoveryProjectId === state.document.projectId"
-              class="studio-version-help"
-            >
-              <p>当前画布与 IndexedDB 草稿已保留。可先只读对比最新版本，再决定是否载入。</p>
-              <TButton type="button" :disabled="historyBusy" @click="previewServerConflict">
-                只读预览最新版本
-              </TButton>
-            </div>
-            <p v-if="!historyBusy && visibleServerRows.length === 0" class="studio-version-help">
-              尚无已查询的服务端历史版本。
-            </p>
-            <ol class="studio-version-list">
-              <li
-                v-for="item in visibleServerRows"
-                :key="item.revision"
-                class="studio-version-item"
-              >
-                <div class="studio-version-heading">
-                  <strong>服务端版本 #{{ item.revision }}</strong>
-                  <time :datetime="item.createdAt">
-                    {{ new Date(item.createdAt).toLocaleString("zh-CN") }}
-                  </time>
-                </div>
-                <code :title="item.contentHash">{{ item.contentHash.slice(0, 16) }}…</code>
-                <div class="studio-version-item-actions">
-                  <TButton
-                    type="button"
-                    :disabled="historyBusy"
-                    @click="inspectServerVersion(item.revision)"
-                  >
-                    查看差异
+          <TPopup attach=".studio-server-version-menu" trigger="click" placement="bottom-right">
+            <TButton type="button" variant="outline">服务端工程</TButton>
+            <template #content>
+              <div class="studio-version-panel" aria-label="服务端工程版本">
+                <p class="studio-version-help">
+                  当前工程：{{ state.document.projectId }} · 受保护的工程版本保存，不代表正式发布
+                </p>
+                <p class="studio-version-help" role="status">
+                  {{ serverIdentity }} · 服务端最新修订号：
+                  {{
+                    serverProjectId === state.document.projectId && serverHeadRevision !== null
+                      ? serverHeadRevision
+                      : "未查询"
+                  }}
+                  · CAS 基线：{{ activeServerBaseline ?? "未建立" }}
+                </p>
+                <div class="studio-version-tools">
+                  <TButton type="button" :disabled="historyBusy" @click="checkServerIdentity">
+                    检查登录
                   </TButton>
-                  <TButton
-                    type="button"
-                    :disabled="historyBusy"
-                    @click="loadServerVersion(item.revision)"
-                  >
-                    载入
+                  <TButton type="button" :disabled="historyBusy" @click="saveServerProject">
+                    保存至服务端
+                  </TButton>
+                  <TButton type="button" :disabled="historyBusy" @click="refreshServerHistory">
+                    查询服务端历史
                   </TButton>
                 </div>
-              </li>
-            </ol>
-            <div
-              v-if="serverComparison && serverInspectedVersion"
-              class="studio-version-comparison"
-              role="status"
-            >
-              <strong>
-                服务端版本 #{{ serverInspectedVersion.revision }} ·
-                {{ serverComparison.sameContent ? "内容与当前一致" : "与当前内容不同" }}
-              </strong>
-              <p>
-                当前：{{ serverComparison.current.pageCount }} 页 /
-                {{ serverComparison.current.nodeCount }} 图元
-              </p>
-              <p>
-                历史：{{ serverComparison.historical.pageCount }} 页 /
-                {{ serverComparison.historical.nodeCount }} 图元
-              </p>
-            </div>
-            <TButton
-              v-if="visibleServerRows.length > 0 && serverHasMore"
-              type="button"
-              class="studio-version-more"
-              :disabled="historyBusy"
-              @click="loadMoreServerVersions"
-            >
-              加载更早服务端版本
-            </TButton>
-          </div>
-        </template>
-            </TPopup>
-          </div>
+                <p class="studio-version-help">
+                  服务器已有工程时，请先显式载入最新服务端版本再保存；冲突不会自动重试，草稿始终保留。
+                </p>
+                <p v-if="historyBusy" class="studio-version-help">正在处理工程版本…</p>
+                <p v-if="serverError" class="studio-version-error" role="alert">
+                  {{ serverError }}
+                </p>
+                <div
+                  v-if="serverError && serverRecoveryProjectId === state.document.projectId"
+                  class="studio-version-help"
+                >
+                  <p>当前画布与 IndexedDB 草稿已保留。可先只读对比最新版本，再决定是否载入。</p>
+                  <TButton type="button" :disabled="historyBusy" @click="previewServerConflict">
+                    只读预览最新版本
+                  </TButton>
+                </div>
+                <p
+                  v-if="!historyBusy && visibleServerRows.length === 0"
+                  class="studio-version-help"
+                >
+                  尚无已查询的服务端历史版本。
+                </p>
+                <ol class="studio-version-list">
+                  <li
+                    v-for="item in visibleServerRows"
+                    :key="item.revision"
+                    class="studio-version-item"
+                  >
+                    <div class="studio-version-heading">
+                      <strong>服务端版本 #{{ item.revision }}</strong>
+                      <time :datetime="item.createdAt">
+                        {{ new Date(item.createdAt).toLocaleString("zh-CN") }}
+                      </time>
+                    </div>
+                    <code :title="item.contentHash">{{ item.contentHash.slice(0, 16) }}…</code>
+                    <div class="studio-version-item-actions">
+                      <TButton
+                        type="button"
+                        :disabled="historyBusy"
+                        @click="inspectServerVersion(item.revision)"
+                      >
+                        查看差异
+                      </TButton>
+                      <TButton
+                        type="button"
+                        :disabled="historyBusy"
+                        @click="loadServerVersion(item.revision)"
+                      >
+                        载入
+                      </TButton>
+                    </div>
+                  </li>
+                </ol>
+                <div
+                  v-if="serverComparison && serverInspectedVersion"
+                  class="studio-version-comparison"
+                  role="status"
+                >
+                  <strong>
+                    服务端版本 #{{ serverInspectedVersion.revision }} ·
+                    {{ serverComparison.sameContent ? "内容与当前一致" : "与当前内容不同" }}
+                  </strong>
+                  <p>
+                    当前：{{ serverComparison.current.pageCount }} 页 /
+                    {{ serverComparison.current.nodeCount }} 图元
+                  </p>
+                  <p>
+                    历史：{{ serverComparison.historical.pageCount }} 页 /
+                    {{ serverComparison.historical.nodeCount }} 图元
+                  </p>
+                </div>
+                <TButton
+                  v-if="visibleServerRows.length > 0 && serverHasMore"
+                  type="button"
+                  class="studio-version-more"
+                  :disabled="historyBusy"
+                  @click="loadMoreServerVersions"
+                >
+                  加载更早服务端版本
+                </TButton>
+              </div>
+            </template>
+          </TPopup>
+        </div>
       </div>
     </header>
     <div class="studio-page-bar" aria-label="工程页面管理">
@@ -2258,32 +2262,34 @@ async function importJsonFile(file: File | undefined) {
           </template>
         </div>
         <div class="studio-side-more">
-            <TCollapse :default-value="[]" borderless>
-              <TCollapsePanel value="cross-page" header="跨页操作与使用帮助">
-          <div class="studio-copy-tools">
-            <label class="studio-field">
-              复制选中图元到
-              <TSelect
-                  :value="copyTargetPageId"
-                  :disabled="copyTargetPages.length === 0"
-                  :options="copyTargetPages.length === 0
-                    ? [{ label: '暂无其他页面', value: '' }]
-                    : copyTargetPages.map((item) => ({ label: item.name, value: item.id }))"
-                  @change="selectCopyTarget"
-                />
-            </label>
-            <TButton
-              type="button"
-              :disabled="state.selectedIds.length === 0 || !copyTargetPageId"
-              @click="copySelectedToPage"
-            >
-              复制选中图元
-            </TButton>
-          </div>
-          <p class="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
-        </TCollapsePanel>
-            </TCollapse>
-          </div>
+          <TCollapse :default-value="[]" borderless>
+            <TCollapsePanel value="cross-page" header="跨页操作与使用帮助">
+              <div class="studio-copy-tools">
+                <label class="studio-field">
+                  复制选中图元到
+                  <TSelect
+                    :value="copyTargetPageId"
+                    :disabled="copyTargetPages.length === 0"
+                    :options="
+                      copyTargetPages.length === 0
+                        ? [{ label: '暂无其他页面', value: '' }]
+                        : copyTargetPages.map((item) => ({ label: item.name, value: item.id }))
+                    "
+                    @change="selectCopyTarget"
+                  />
+                </label>
+                <TButton
+                  type="button"
+                  :disabled="state.selectedIds.length === 0 || !copyTargetPageId"
+                  @click="copySelectedToPage"
+                >
+                  复制选中图元
+                </TButton>
+              </div>
+              <p class="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
+            </TCollapsePanel>
+          </TCollapse>
+        </div>
       </aside>
       <section class="studio-stage min-h-0 min-w-0" aria-label="组态画布">
         <div class="studio-stage-caption">
@@ -2294,36 +2300,42 @@ async function importJsonFile(file: File | undefined) {
             <TPopup attach=".studio-view-settings-menu" trigger="click" placement="bottom-right">
               <TButton type="button" variant="outline">视图设置</TButton>
               <template #content>
-            <div class="studio-view-popover">
-              <div class="studio-view-section">
-                <p>网格与吸附</p>
-                <div class="studio-canvas-settings">
-                  <TCheckbox v-model="gridVisible" class="studio-canvas-option">显示网格</TCheckbox>
-                  <TCheckbox v-model="gridSnap" class="studio-canvas-option">网格吸附</TCheckbox>
-                  <TCheckbox v-model="nodeSnap" class="studio-canvas-option">图元吸附</TCheckbox>
+                <div class="studio-view-popover">
+                  <div class="studio-view-section">
+                    <p>网格与吸附</p>
+                    <div class="studio-canvas-settings">
+                      <TCheckbox v-model="gridVisible" class="studio-canvas-option"
+                        >显示网格</TCheckbox
+                      >
+                      <TCheckbox v-model="gridSnap" class="studio-canvas-option"
+                        >网格吸附</TCheckbox
+                      >
+                      <TCheckbox v-model="nodeSnap" class="studio-canvas-option"
+                        >图元吸附</TCheckbox
+                      >
+                    </div>
+                  </div>
+                  <div class="studio-view-section">
+                    <p>侧栏显示</p>
+                    <div class="studio-panel-toggles" aria-label="面板显示">
+                      <TButton
+                        type="button"
+                        :aria-pressed="leftPanelVisible"
+                        @click="leftPanelVisible = !leftPanelVisible"
+                      >
+                        {{ leftPanelVisible ? "隐藏图层" : "显示图层" }}
+                      </TButton>
+                      <TButton
+                        type="button"
+                        :aria-pressed="rightPanelVisible"
+                        @click="rightPanelVisible = !rightPanelVisible"
+                      >
+                        {{ rightPanelVisible ? "隐藏属性" : "显示属性" }}
+                      </TButton>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div class="studio-view-section">
-                <p>侧栏显示</p>
-                <div class="studio-panel-toggles" aria-label="面板显示">
-                  <TButton
-                    type="button"
-                    :aria-pressed="leftPanelVisible"
-                    @click="leftPanelVisible = !leftPanelVisible"
-                  >
-                    {{ leftPanelVisible ? "隐藏图层" : "显示图层" }}
-                  </TButton>
-                  <TButton
-                    type="button"
-                    :aria-pressed="rightPanelVisible"
-                    @click="rightPanelVisible = !rightPanelVisible"
-                  >
-                    {{ rightPanelVisible ? "隐藏属性" : "显示属性" }}
-                  </TButton>
-                </div>
-              </div>
-            </div>
-          </template>
+              </template>
             </TPopup>
           </div>
           <div class="studio-zoom" aria-label="画布缩放">
@@ -2529,21 +2541,32 @@ async function importJsonFile(file: File | undefined) {
           <label v-if="bindingSlot" class="studio-field">
             {{ bindingSlot }} · 选择项目 Tag
             <TSelect
-                :value="selectedTagId"
-                :aria-label="selected.id + ' 的 ' + bindingSlot + ' Tag 绑定'"
-                :options="[
-                  { label: '不绑定', value: '' },
-                  ...(missingBindingTag
-                    ? [{ label: selectedTagId + '（当前工程未定义或类型待确认）', value: selectedTagId, disabled: true }]
-                    : []),
-                  ...tagCandidates.map((option) => ({
-                    label: option.displayName + ' · ' + option.tagId + ' · ' +
-                      TAG_DATA_TYPE_LABELS[option.dataType] + (option.unit ? ' · ' + option.unit : ''),
-                    value: option.tagId,
-                  })),
-                ]"
-                @change="changeTagBinding"
-              />
+              :value="selectedTagId"
+              :aria-label="selected.id + ' 的 ' + bindingSlot + ' Tag 绑定'"
+              :options="[
+                { label: '不绑定', value: '' },
+                ...(missingBindingTag
+                  ? [
+                      {
+                        label: selectedTagId + '（当前工程未定义或类型待确认）',
+                        value: selectedTagId,
+                        disabled: true,
+                      },
+                    ]
+                  : []),
+                ...tagCandidates.map((option) => ({
+                  label:
+                    option.displayName +
+                    ' · ' +
+                    option.tagId +
+                    ' · ' +
+                    TAG_DATA_TYPE_LABELS[option.dataType] +
+                    (option.unit ? ' · ' + option.unit : ''),
+                  value: option.tagId,
+                })),
+              ]"
+              @change="changeTagBinding"
+            />
           </label>
           <p v-if="selectedTagDefinition" class="studio-tip">
             {{ selectedTagDefinition.description }}；质量由实时 Tag 数据动态提供
@@ -2557,195 +2580,202 @@ async function importJsonFile(file: File | undefined) {
         </template>
         <p v-else class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
         <div class="studio-advanced">
-            <TCollapse :default-value="[]" borderless>
-              <TCollapsePanel value="project-tags" :header="`项目 Tag 定义（${state.document.tags.length}）`">
-          <div class="studio-advanced-content">
-            <TagManager
-              :tags="state.document.tags"
-              :on-create="createProjectTag"
-              :on-update="updateProjectTag"
-              :on-remove="removeProjectTag"
-            />
-          </div>
-        </TCollapsePanel>
-            </TCollapse>
-          </div>
+          <TCollapse :default-value="[]" borderless>
+            <TCollapsePanel
+              value="project-tags"
+              :header="`项目 Tag 定义（${state.document.tags.length}）`"
+            >
+              <div class="studio-advanced-content">
+                <TagManager
+                  :tags="state.document.tags"
+                  :on-create="createProjectTag"
+                  :on-update="updateProjectTag"
+                  :on-remove="removeProjectTag"
+                />
+              </div>
+            </TCollapsePanel>
+          </TCollapse>
+        </div>
         <div class="studio-advanced">
-            <TCollapse :default-value="[]" borderless>
-              <TCollapsePanel value="advanced-tools" header="高级图元与图层操作">
-          <div class="studio-advanced-content">
-            <div class="studio-toolbox">
-              <div class="studio-tool-group" aria-label="图层锁定与可见性">
-                <TButton
-                  type="button"
-                  :disabled="state.selectedIds.length === 0"
-                  @click="changeSelectedLocked(true)"
-                >
-                  锁定所选
-                </TButton>
-                <TButton
-                  type="button"
-                  :disabled="state.selectedIds.length === 0"
-                  @click="changeSelectedLocked(false)"
-                >
-                  解锁所选
-                </TButton>
-                <TButton
-                  type="button"
-                  :disabled="state.selectedIds.length === 0 || hasLockedSelection"
-                  @click="changeSelectedVisible(false)"
-                >
-                  隐藏所选
-                </TButton>
-                <TButton
-                  type="button"
-                  :disabled="state.selectedIds.length === 0 || hasLockedSelection"
-                  @click="changeSelectedVisible(true)"
-                >
-                  显示所选
-                </TButton>
+          <TCollapse :default-value="[]" borderless>
+            <TCollapsePanel value="advanced-tools" header="高级图元与图层操作">
+              <div class="studio-advanced-content">
+                <div class="studio-toolbox">
+                  <div class="studio-tool-group" aria-label="图层锁定与可见性">
+                    <TButton
+                      type="button"
+                      :disabled="state.selectedIds.length === 0"
+                      @click="changeSelectedLocked(true)"
+                    >
+                      锁定所选
+                    </TButton>
+                    <TButton
+                      type="button"
+                      :disabled="state.selectedIds.length === 0"
+                      @click="changeSelectedLocked(false)"
+                    >
+                      解锁所选
+                    </TButton>
+                    <TButton
+                      type="button"
+                      :disabled="state.selectedIds.length === 0 || hasLockedSelection"
+                      @click="changeSelectedVisible(false)"
+                    >
+                      隐藏所选
+                    </TButton>
+                    <TButton
+                      type="button"
+                      :disabled="state.selectedIds.length === 0 || hasLockedSelection"
+                      @click="changeSelectedVisible(true)"
+                    >
+                      显示所选
+                    </TButton>
+                  </div>
+                  <div class="studio-tool-group" aria-label="图元组合">
+                    <TButton
+                      type="button"
+                      :disabled="!canGroup"
+                      @click="apply(() => editor.groupSelected(), '已组合所选图元，可撤销')"
+                    >
+                      组合所选
+                    </TButton>
+                    <TButton
+                      type="button"
+                      :disabled="!hasGroupedSelection"
+                      @click="apply(() => editor.ungroupSelected(), '已解组，可撤销')"
+                    >
+                      解组
+                    </TButton>
+                  </div>
+                  <div class="studio-tool-group" aria-label="图元剪贴板">
+                    <TButton
+                      type="button"
+                      :disabled="state.selectedIds.length === 0"
+                      @click="apply(() => editor.copySelected(), '已复制所选图元到会话剪贴板')"
+                    >
+                      复制所选
+                    </TButton>
+                    <TButton
+                      type="button"
+                      :disabled="state.selectedIds.length === 0"
+                      @click="apply(() => editor.cutSelected(), '已剪切图元，可撤销')"
+                    >
+                      剪切所选
+                    </TButton>
+                    <TButton
+                      type="button"
+                      :disabled="!state.hasClipboard"
+                      @click="apply(() => editor.pasteClipboard(), '已粘贴图元，可撤销')"
+                    >
+                      粘贴图元
+                    </TButton>
+                    <TButton
+                      type="button"
+                      :disabled="state.selectedIds.length === 0"
+                      @click="apply(() => editor.deleteSelected(), '已删除图元，可撤销')"
+                    >
+                      删除所选
+                    </TButton>
+                  </div>
+                  <div class="studio-exact-layer" aria-label="图层精确插入">
+                    <label class="studio-field">
+                      目标图元
+                      <TSelect
+                        :value="layerTargetId"
+                        :disabled="!canPreciselyMove || layerTargetNodes.length === 0"
+                        :options="[
+                          { label: '请选择目标图元', value: '' },
+                          ...layerTargetNodes.map((node) => ({
+                            label: node.id + (node.groupId ? '（组合）' : ''),
+                            value: node.id,
+                          })),
+                        ]"
+                        @change="selectLayerTarget"
+                      />
+                    </label>
+                    <label class="studio-field">
+                      插入位置
+                      <TSelect
+                        :value="layerInsertPosition"
+                        :options="[
+                          { label: '目标上方（更靠前）', value: 'after' },
+                          { label: '目标下方（更靠后）', value: 'before' },
+                        ]"
+                        @change="selectLayerPosition"
+                      />
+                    </label>
+                    <TButton
+                      type="button"
+                      :disabled="!canPreciselyMove || !layerTargetId"
+                      @click="moveSelectedLayerPrecisely"
+                    >
+                      移动到指定层
+                    </TButton>
+                  </div>
+                  <div class="studio-tool-group" aria-label="图层排序">
+                    <TButton type="button" :disabled="!selected" @click="layer('back')"
+                      >置底</TButton
+                    >
+                    <TButton type="button" :disabled="!selected" @click="layer('backward')"
+                      >下移层</TButton
+                    >
+                    <TButton type="button" :disabled="!selected" @click="layer('forward')"
+                      >上移层</TButton
+                    >
+                    <TButton type="button" :disabled="!selected" @click="layer('front')"
+                      >置顶</TButton
+                    >
+                  </div>
+                  <h3>多选对齐（以最后选中的图元为准）</h3>
+                  <div class="studio-tool-group" aria-label="图元对齐">
+                    <TButton
+                      type="button"
+                      :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                      @click="align('left')"
+                    >
+                      左
+                    </TButton>
+                    <TButton
+                      type="button"
+                      :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                      @click="align('hcenter')"
+                    >
+                      水平居中
+                    </TButton>
+                    <TButton
+                      type="button"
+                      :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                      @click="align('right')"
+                    >
+                      右
+                    </TButton>
+                    <TButton
+                      type="button"
+                      :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                      @click="align('top')"
+                    >
+                      上
+                    </TButton>
+                    <TButton
+                      type="button"
+                      :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                      @click="align('vcenter')"
+                    >
+                      垂直居中
+                    </TButton>
+                    <TButton
+                      type="button"
+                      :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                      @click="align('bottom')"
+                    >
+                      下
+                    </TButton>
+                  </div>
+                </div>
               </div>
-              <div class="studio-tool-group" aria-label="图元组合">
-                <TButton
-                  type="button"
-                  :disabled="!canGroup"
-                  @click="apply(() => editor.groupSelected(), '已组合所选图元，可撤销')"
-                >
-                  组合所选
-                </TButton>
-                <TButton
-                  type="button"
-                  :disabled="!hasGroupedSelection"
-                  @click="apply(() => editor.ungroupSelected(), '已解组，可撤销')"
-                >
-                  解组
-                </TButton>
-              </div>
-              <div class="studio-tool-group" aria-label="图元剪贴板">
-                <TButton
-                  type="button"
-                  :disabled="state.selectedIds.length === 0"
-                  @click="apply(() => editor.copySelected(), '已复制所选图元到会话剪贴板')"
-                >
-                  复制所选
-                </TButton>
-                <TButton
-                  type="button"
-                  :disabled="state.selectedIds.length === 0"
-                  @click="apply(() => editor.cutSelected(), '已剪切图元，可撤销')"
-                >
-                  剪切所选
-                </TButton>
-                <TButton
-                  type="button"
-                  :disabled="!state.hasClipboard"
-                  @click="apply(() => editor.pasteClipboard(), '已粘贴图元，可撤销')"
-                >
-                  粘贴图元
-                </TButton>
-                <TButton
-                  type="button"
-                  :disabled="state.selectedIds.length === 0"
-                  @click="apply(() => editor.deleteSelected(), '已删除图元，可撤销')"
-                >
-                  删除所选
-                </TButton>
-              </div>
-              <div class="studio-exact-layer" aria-label="图层精确插入">
-                <label class="studio-field">
-                  目标图元
-                  <TSelect
-                    :value="layerTargetId"
-                    :disabled="!canPreciselyMove || layerTargetNodes.length === 0"
-                    :options="[
-                      { label: '请选择目标图元', value: '' },
-                      ...layerTargetNodes.map((node) => ({
-                        label: node.id + (node.groupId ? '（组合）' : ''),
-                        value: node.id,
-                      })),
-                    ]"
-                    @change="selectLayerTarget"
-                  />
-                </label>
-                <label class="studio-field">
-                  插入位置
-                  <TSelect
-                    :value="layerInsertPosition"
-                    :options="[
-                      { label: '目标上方（更靠前）', value: 'after' },
-                      { label: '目标下方（更靠后）', value: 'before' },
-                    ]"
-                    @change="selectLayerPosition"
-                  />
-                </label>
-                <TButton
-                  type="button"
-                  :disabled="!canPreciselyMove || !layerTargetId"
-                  @click="moveSelectedLayerPrecisely"
-                >
-                  移动到指定层
-                </TButton>
-              </div>
-              <div class="studio-tool-group" aria-label="图层排序">
-                <TButton type="button" :disabled="!selected" @click="layer('back')">置底</TButton>
-                <TButton type="button" :disabled="!selected" @click="layer('backward')"
-                  >下移层</TButton
-                >
-                <TButton type="button" :disabled="!selected" @click="layer('forward')"
-                  >上移层</TButton
-                >
-                <TButton type="button" :disabled="!selected" @click="layer('front')">置顶</TButton>
-              </div>
-              <h3>多选对齐（以最后选中的图元为准）</h3>
-              <div class="studio-tool-group" aria-label="图元对齐">
-                <TButton
-                  type="button"
-                  :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-                  @click="align('left')"
-                >
-                  左
-                </TButton>
-                <TButton
-                  type="button"
-                  :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-                  @click="align('hcenter')"
-                >
-                  水平居中
-                </TButton>
-                <TButton
-                  type="button"
-                  :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-                  @click="align('right')"
-                >
-                  右
-                </TButton>
-                <TButton
-                  type="button"
-                  :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-                  @click="align('top')"
-                >
-                  上
-                </TButton>
-                <TButton
-                  type="button"
-                  :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-                  @click="align('vcenter')"
-                >
-                  垂直居中
-                </TButton>
-                <TButton
-                  type="button"
-                  :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-                  @click="align('bottom')"
-                >
-                  下
-                </TButton>
-              </div>
-            </div>
-          </div>
-        </TCollapsePanel>
-            </TCollapse>
-          </div>
+            </TCollapsePanel>
+          </TCollapse>
+        </div>
       </aside>
     </div>
     <footer class="studio-statusbar">

@@ -1329,41 +1329,41 @@ async function studioVersionActionInPage(
     }
     choice.click();
   }
-    if (expectedNotice) {
-      const start = Date.now();
-      while (Date.now() - start < 12000) {
-        const notice = document.querySelector(".studio-notice")?.textContent || "";
-        if (notice.includes(expectedNotice)) break;
-        const error = menu.querySelector(".studio-version-error")?.textContent || "";
-        if (error) throw new Error("版本历史操作失败：" + error);
-        await new Promise((resolve) => setTimeout(resolve, 80));
-      }
-      if (!(document.querySelector(".studio-notice")?.textContent || "").includes(expectedNotice)) {
-        throw new Error("等待版本历史操作结果超时：" + expectedNotice);
-      }
-    } else {
-      await new Promise((resolve) => setTimeout(resolve, 120));
+  if (expectedNotice) {
+    const start = Date.now();
+    while (Date.now() - start < 12000) {
+      const notice = document.querySelector(".studio-notice")?.textContent || "";
+      if (notice.includes(expectedNotice)) break;
+      const error = menu.querySelector(".studio-version-error")?.textContent || "";
+      if (error) throw new Error("版本历史操作失败：" + error);
+      await new Promise((resolve) => setTimeout(resolve, 80));
     }
-    if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) {
-      trigger.click();
-      const opened = Date.now();
-      while (Date.now() - opened < 12000) {
-        const panel = menu.querySelector(".studio-version-panel");
-        if (
-          panel?.getClientRects().length &&
-          !panel.querySelector(".studio-version-tools button:disabled")
-        ) {
-          break;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      }
+    if (!(document.querySelector(".studio-notice")?.textContent || "").includes(expectedNotice)) {
+      throw new Error("等待版本历史操作结果超时：" + expectedNotice);
     }
-    return {
-      versions: [...menu.querySelectorAll(".studio-version-item strong")].map((item) =>
-        item.textContent.trim(),
-      ),
-      comparison: menu.querySelector(".studio-version-comparison")?.textContent || "",
-    };
+  } else {
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+  if (!menu.querySelector(".studio-version-panel")?.getClientRects().length) {
+    trigger.click();
+    const opened = Date.now();
+    while (Date.now() - opened < 12000) {
+      const panel = menu.querySelector(".studio-version-panel");
+      if (
+        panel?.getClientRects().length &&
+        !panel.querySelector(".studio-version-tools button:disabled")
+      ) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+  return {
+    versions: [...menu.querySelectorAll(".studio-version-item strong")].map((item) =>
+      item.textContent.trim(),
+    ),
+    comparison: menu.querySelector(".studio-version-comparison")?.textContent || "",
+  };
 }
 
 async function runStudioVersionHistory(session) {

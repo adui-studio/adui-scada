@@ -95,18 +95,18 @@ D5c0s 审计基线：`StudioPage.tsx` 与 `StudioPage.vue` 每端各有 **9 处*
 
 本批按照维护者「**同一 PR 完成所有通用控件替换，完成后统一验收**」的要求执行。基础分支为 PR #187 已授权并合并后的 main，不继续拆分小型弹层 PR。**以下为候选源码范围，不是 Windows 运行通过的结论。**
 
-| 类型 | React | Vue 3 | 保留的业务边界 |
-| --- | --- | --- | --- |
-| 普通动作及危险操作按钮 | `Button`（原生按钮显式 `tag="button"`） | `TButton` | 原禁用态、提交类型、事件和权限判断 |
-| 文件、历史、发布预检、服务端工程、视图设置 | `Popup` | `TPopup` | 打开刷新、CAS、历史 SHA-256、只读发布预检 |
-| 工程管理 | `Popup` | `TPopup` | 仅在展开时请求授权列表及分页 |
-| 侧栏跨页操作、Tag、高级图层工具 | `Collapse.Panel` | `TCollapsePanel` | 原编辑命令、拖拽/图层状态 |
-| Tag 数据类型、绑定、跨页复制及图层插入目标 | `Select` | `TSelect` | 共享 Tag ID、Schema、类型约束 |
-| 网格与吸附 | `Checkbox` | `TCheckbox` | 原布尔配置和画布渲染 |
-| Tag 描述 | `Textarea` | `TTextarea` | 原 512 字符上限 |
-| 已发布工程 ID/页面、属性几何与常规输入 | `Input`/`Select` | `TInput`/`TSelect` | 输入验证、只读渲染和实际画布几何 |
-| 本地 JSON 导入 | `Upload`，`autoUpload=false` | `TUpload`，`auto-upload=false` | 仅在本机读取；原 2 MiB、JSON/Schema 校验及导入互斥 |
-| 页重命名、删除、草稿覆盖、历史与服务端载入 | `DialogPlugin` + `Input` | `DialogPlugin` + `TInput` | Esc/关闭/取消不执行，确认后沿用原 CAS 和自动保存暂停 |
+| 类型                                       | React                                   | Vue 3                          | 保留的业务边界                                       |
+| ------------------------------------------ | --------------------------------------- | ------------------------------ | ---------------------------------------------------- |
+| 普通动作及危险操作按钮                     | `Button`（原生按钮显式 `tag="button"`） | `TButton`                      | 原禁用态、提交类型、事件和权限判断                   |
+| 文件、历史、发布预检、服务端工程、视图设置 | `Popup`                                 | `TPopup`                       | 打开刷新、CAS、历史 SHA-256、只读发布预检            |
+| 工程管理                                   | `Popup`                                 | `TPopup`                       | 仅在展开时请求授权列表及分页                         |
+| 侧栏跨页操作、Tag、高级图层工具            | `Collapse.Panel`                        | `TCollapsePanel`               | 原编辑命令、拖拽/图层状态                            |
+| Tag 数据类型、绑定、跨页复制及图层插入目标 | `Select`                                | `TSelect`                      | 共享 Tag ID、Schema、类型约束                        |
+| 网格与吸附                                 | `Checkbox`                              | `TCheckbox`                    | 原布尔配置和画布渲染                                 |
+| Tag 描述                                   | `Textarea`                              | `TTextarea`                    | 原 512 字符上限                                      |
+| 已发布工程 ID/页面、属性几何与常规输入     | `Input`/`Select`                        | `TInput`/`TSelect`             | 输入验证、只读渲染和实际画布几何                     |
+| 本地 JSON 导入                             | `Upload`，`autoUpload=false`            | `TUpload`，`auto-upload=false` | 仅在本机读取；原 2 MiB、JSON/Schema 校验及导入互斥   |
+| 页重命名、删除、草稿覆盖、历史与服务端载入 | `DialogPlugin` + `Input`                | `DialogPlugin` + `TInput`      | Esc/关闭/取消不执行，确认后沿用原 CAS 和自动保存暂停 |
 
 **自有 UI 与第三方控件的边界**：14 个 React/Vue 入口和页面候选源码中不再保留原生 `button/input/select/textarea/details/summary` 交互标签及 `window.confirm/prompt`；React/Vue 分别通过对应固定版本的 TDesign API 实现。HTML `form`、`label`、语义表格及结构容器不是需要替换的组件。SVG 图元、图层树拖拽命中层、框选、旋转、缩放、网格和 16:9 画布属于工业组态专用交互，继续使用仓库自研 Core/Runtime/Editor 实现；未经功能对等证明不把它们改为通用 TDesign Tree/Canvas 的行为替代品。
 

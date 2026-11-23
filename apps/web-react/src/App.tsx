@@ -24,21 +24,24 @@ export default function App() {
           <img src="/brand/favicon.svg" alt="" aria-hidden="true" />
           ADui SCADA
         </span>
-        <Button tag="button"
+        <Button
+          tag="button"
           type="button"
           aria-current={view === "runtime" ? "page" : undefined}
           onClick={() => setView("runtime")}
         >
           运行监控
         </Button>
-        <Button tag="button"
+        <Button
+          tag="button"
           type="button"
           aria-current={view === "published" ? "page" : undefined}
           onClick={() => setView("published")}
         >
           已发布运行
         </Button>
-        <Button tag="button"
+        <Button
+          tag="button"
           type="button"
           aria-current={view === "studio" ? "page" : undefined}
           onClick={() => setView("studio")}

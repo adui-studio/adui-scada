@@ -1066,24 +1066,28 @@ export async function confirmPreviewedServerVersionInPage(revision) {
   button.click();
   const until = Date.now() + 20000;
   while (Date.now() < until) {
-      const confirmButton = document.querySelector(".t-dialog .t-dialog__confirm");
-      if (!confirmCount && confirmButton?.tagName === "BUTTON" && confirmButton.getClientRects().length) {
-        confirmCount += 1;
-        confirmButton.click();
-      }
-      const notice = document.querySelector(".studio-notice")?.textContent ?? "";
-      const busy = [...(panel?.querySelectorAll(".studio-version-help") ?? [])].some((element) =>
-        element.textContent?.includes("正在处理工程版本"),
-      );
-      if (confirmCount === 1 && !busy && notice.includes("已载入服务端最新版本 #" + revision)) {
-        return { confirmed: true, confirmCount };
-      }
-      if (confirmCount > 0 && !busy && panel?.querySelector('[role="alert"]')) {
-        throw new Error("冲突恢复确认载入未通过受控复核");
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
+    const confirmButton = document.querySelector(".t-dialog .t-dialog__confirm");
+    if (
+      !confirmCount &&
+      confirmButton?.tagName === "BUTTON" &&
+      confirmButton.getClientRects().length
+    ) {
+      confirmCount += 1;
+      confirmButton.click();
     }
-    throw new Error("冲突恢复确认载入超时");
+    const notice = document.querySelector(".studio-notice")?.textContent ?? "";
+    const busy = [...(panel?.querySelectorAll(".studio-version-help") ?? [])].some((element) =>
+      element.textContent?.includes("正在处理工程版本"),
+    );
+    if (confirmCount === 1 && !busy && notice.includes("已载入服务端最新版本 #" + revision)) {
+      return { confirmed: true, confirmCount };
+    }
+    if (confirmCount > 0 && !busy && panel?.querySelector('[role="alert"]')) {
+      throw new Error("冲突恢复确认载入未通过受控复核");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error("冲突恢复确认载入超时");
 }
 
 export async function openProjectInPage(projectId, headRevision, mode) {
@@ -1130,7 +1134,11 @@ export async function openProjectInPage(projectId, headRevision, mode) {
       const dialogChoice = document.querySelector(
         mode === "cancel" ? ".t-dialog .t-dialog__cancel" : ".t-dialog .t-dialog__confirm",
       );
-      if (!confirmCount && dialogChoice?.tagName === "BUTTON" && dialogChoice.getClientRects().length) {
+      if (
+        !confirmCount &&
+        dialogChoice?.tagName === "BUTTON" &&
+        dialogChoice.getClientRects().length
+      ) {
         confirmCount += 1;
         if (mode === "confirm-drift") globalThis.__aduiTestProjectRevisionFault = fault;
         dialogChoice.click();

@@ -1067,4 +1067,3 @@
 - **最小修复候选**：仅修改 React 两个页面文件：三个现有图层拖拽处理函数参数改为 `ReactDragEvent<HTMLElement>`；四处 Select 回调先检查 `typeof value === "string"`，只接受合法字符串 ID，不转换对象、数组或布尔值。不修改拖拽/命中算法、Vue 适配、Tag/工程 Schema、CAS、已发布工程权限、数据持久化、既有测试或 TDesign 依赖版本。
 - **防复发与复验**：迁移基础 UI 控件时不能假定 TDesign 事件泛型与原生标签完全一致；确认官方回调联合类型后收窄再写入状态，禁止靠类型断言或关闭 Lint 规避。请在最终 PR HEAD 上运行 `pnpm run typecheck:web`、不带 `--fix` 的 `vp check`、`pnpm run docs:check`，并执行图层拖拽与 Select 操作的 React/Vue 浏览器回归。**截至本记录仅完成 GitHub 静态修复，尚未获得修复后的 Windows 检查结果。**
 - **证据**：维护者 2026-11-23 `vp check --fix` 原始输出、PR #188 的 React 代码和固定版本 TDesign React `select/type.ts`。
-

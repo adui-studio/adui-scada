@@ -2486,4 +2486,3 @@ D5c0v 基于合并后的 main，限定本地版本历史一个入口/框架：�
 维护者 Windows `vp check --fix` 报 React Studio TDesign Button 拖拽 **3 个 TS2345**、React Studio 和已发布运行页的 Select 值隐式字符串化 **4 个 Lint 告警**（291 个受检文件），仅完成格式化，不能视为通过。已按 `AGENTS.md` 与 `AI_MISTAKES.md` 复盘并核对固定版本 TDesign Select 的联合类型；PR #188 候选只修改 React 两个页面：拖拽函数参数改为 `ReactDragEvent<HTMLElement>`，四处 Select 值回调仅接受字符串 ID。Vue/共享引擎/安全协议及业务流程未改；文档详见 E-109 和 `VALIDATION.md`。
 
 修复尚未由维护者在最新 HEAD 运行 `typecheck:web`、`vp check`、双端浏览器专项；继续保持 Draft 和主理人 `@adui-dev` 指派，未授权合并。
-

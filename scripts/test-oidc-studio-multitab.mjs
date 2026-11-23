@@ -380,7 +380,8 @@ export async function openProjectBrowserMenuInPage() {
   const menu = document.querySelector(".studio-project-browser-menu");
   const trigger = menu?.querySelector("button.t-button");
   if (trigger?.tagName !== "BUTTON") throw new Error("同源多标签页页面操作失败");
-  if (!menu.querySelector(".studio-project-browser-panel")?.getClientRects().length) trigger.click();
+  if (!menu.querySelector(".studio-project-browser-panel")?.getClientRects().length)
+    trigger.click();
   const opened = Date.now();
   while (Date.now() - opened < 5000) {
     if (menu.querySelector(".studio-project-browser-panel")?.getClientRects().length) return true;

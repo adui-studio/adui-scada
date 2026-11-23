@@ -4421,4 +4421,3 @@ foreach ($check in $checks) {
 PR #188 已提交最小修复候选：图层拖拽事件签名由 `ReactDragEvent<HTMLButtonElement>` 放宽为符合 TDesign `Button` 回调的 `ReactDragEvent<HTMLElement>`；四处 Select `onChange` 仅对 `typeof value === "string"` 的 ID 更新状态，拒绝对选项对象等使用 `String(value)`。保留既有图层顺序、Tag 绑定、工程页面选择和已发布页面切换逻辑。
 
 **待复验（不代表通过）**：`pnpm run typecheck:web`、`vp check`（不带 `--fix`）、`pnpm run docs:check`；通过后继续 `pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop`、`pnpm run test:versions:safety` 以及 PR #188 原有完整验收列表。需真实检查 React 图层拖拽排序、Tag 绑定/图层目标 Select 和已发布工程多页面切换；不得从类型通过推断交互已验证。PR 保持 Draft，未获完整 Windows 验收与合并授权。
-

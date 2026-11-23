@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { confirmStudioAction } from "./StudioDialog";
 import { ref } from "vue";
-import { Button as TButton, Input as TInput, Select as TSelect, Textarea as TTextarea } from "tdesign-vue-next";
+import {
+  Button as TButton,
+  Input as TInput,
+  Select as TSelect,
+  Textarea as TTextarea,
+} from "tdesign-vue-next";
 import { TAG_DATA_TYPE_LABELS } from "@adui/scada-core";
 import type { TagDefinition } from "@adui/scada-core";
 
@@ -140,7 +145,11 @@ async function remove(definition: TagDefinition) {
       </label>
       <label class="studio-field">
         描述（可选）
-        <TTextarea v-model="draft.description" :autosize="{ minRows: 3, maxRows: 6 }" :maxlength="512" />
+        <TTextarea
+          v-model="draft.description"
+          :autosize="{ minRows: 3, maxRows: 6 }"
+          :maxlength="512"
+        />
       </label>
       <div class="studio-toolbox">
         <TButton type="submit">{{ editingId ? "保存修改" : "新增 Tag" }}</TButton>

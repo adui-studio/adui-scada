@@ -243,7 +243,11 @@ export async function attemptRestoreDuringSaveInPage(runtime = globalThis) {
   const button = [...(menu.querySelectorAll("button") ?? [])].find(
     (item) => item.textContent.trim() === "恢复草稿",
   );
-  if (!button || button.disabled || !menu.querySelector(".studio-file-popover")?.getClientRects().length) {
+  if (
+    !button ||
+    button.disabled ||
+    !menu.querySelector(".studio-file-popover")?.getClientRects().length
+  ) {
     throw new Error("真实 Studio 迟到保存未达到受控状态");
   }
   // 保留生产互斥判断：保存进行时不得弹出确认或修改草稿。
