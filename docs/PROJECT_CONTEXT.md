@@ -2438,3 +2438,9 @@ D5c0r 在此 main 上仅对共享 Studio 历史版本弹层做 **12 条 CSS 等�
 维护者的 PR #184 文档验收日志确认 `docs:check` **94 个 Markdown 文件通过**。GitHub 核对该 PR 最终 HEAD 为 `1f41a45783b0f827060a805003bb5d0e7161efe4`（比初稿仅多一次表格格式化），Assignee 为 `@adui-dev`、无未解决审查且可合并。维护者明确同意后已 Squash 合并到 `main@343120d9019e28d59a254977c3bc6e70c5f7c4b1`。
 
 D5c0t 从这个 main 创建独立分支，将 React/Vue 「页面管理」各 1 处原生 `details/summary` 改为本仓库已安装的 TDesign Dropdown + Button，并删除此入口的手工菜单定位 CSS。六条命令委托原有 Core 编辑器行为且保留禁用条件，未改工程 JSON/Tag/权限/安全边界；新增 8 项实际浏览器检查，历史版本、发布预检和文件草稿弹层暂不动。官方对应固定 tag 的组件 API/菜单项禁用行为已直接核对，但项目 `tdesign-mcp-server` 当前不可用；尚未在 Windows 执行本批 Vite+、类型或浏览器测试，PR 只作为 Draft 候选。
+
+## 2026-11-23 · PR #185 合并；D5c0u 文件草稿 TDesign Popup 候选
+
+维护者 Windows 对 PR #185 最终候选代码执行 `typecheck:web`（React/Vue/草稿存储/API Client 类型检查通过）、`vp check`（446 格式文件/289 受检零告警错误）、`docs:check`（94 Markdown 通过），React/Vue 1440×900、1024×768 Studio 四组真实浏览器分别 **27/27**（总 **108/108**），失败退出检查未触发。GitHub 最终 HEAD `9963000ac0cdd42dd281df928809922582b25c86` 比前一提交只变动 React 模板和浏览器脚本格式；Assignee `@adui-dev`、零未解决审查，维护者明确授权后 Squash 合并为 `main@63cce4d6a0824ae766a4b9f436e65665ad568030`。日志没有单独打印本机 SHA。
+
+D5c0u 在新分支将 React/Vue「文件与草稿」原生 details 改为 TDesign Popup（固定版本 React 1.18.6、Vue 1.20.11）并清理旧浮层定位 CSS。保留所有原有按钮、本地文件输入、2 MiB 大小限制、IndexedDB CAS 和历史版本并发安全。同步更新文件导入导出、自动保存、并发与草稿 DOM 浏览器入口，新加 3 个普通 Studio Popup 回归点。静态核对仅确认源码范围，未在 Windows 完成新分支验证，仍为 Draft 候选。
