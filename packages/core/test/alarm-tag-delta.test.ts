@@ -64,11 +64,7 @@ test("增量入口允许合法跳号，但未核验来源不能以跳号推进�
     baseline: { generation: 2, value: jumped },
   });
   expect(
-    advanceAlarmTagDeltaBaseline(
-      { ...skippedRequest, sourceVerified: false },
-      nowMs,
-      1000,
-    ),
+    advanceAlarmTagDeltaBaseline({ ...skippedRequest, sourceVerified: false }, nowMs, 1000),
   ).toEqual({ status: "DELTA_REJECTED", reason: "UNVERIFIED_SOURCE" });
 });
 
