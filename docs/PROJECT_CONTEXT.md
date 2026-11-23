@@ -2370,3 +2370,9 @@ D5c0j 停止只增加 Core 单一状态的局部回归，改用**无网络、无
 ## 2026-11-23 · D5c0j PR #175 中文文案阻塞与 E-103 修复候选
 
 维护者 Windows 首轮对进程内 Lab 实测 **5/5 Node 测试通过**，模拟诊断符合设计；`vp check` **439/288 零警告错误**，`docs:check` **92 份**，但 `messages:check` 因四个 JSDoc 类型注释缺中文失败（退出码 1），故 PR #175 **未完成全部门禁、尚不能合并**。D5c0j 仅为四处 `@type` 增加中文说明，保持原有模拟入口与测试不变；根因、防复发和待复验范围记入 E-103 / `docs/VALIDATION.md`。后续需在 Windows 最新 HEAD 重跑 Node 5 项、独立 Lab、Vite+、文档与中文门禁，再进行 PR 复核和新合并授权。生产工业认证、正式报警和设备控制仍未开放。
+
+## 2026-11-23 · PR #175 合并、E-103 复验关闭与 D5c0k 自动 Lab 门禁
+
+维护者 Windows 最终实测 D5c0j 的 S0 Node **5/5**、独立诊断、`messages:check` **312**、`vp check` **439/288 零错误警告**、`docs:check` **92 份**通过；GitHub 核验最终 PR HEAD `9f7fecfab4432f37e9be7ae882f5d481d5c8870f`，按明确授权 Squash 合并至 `main@54a3d4b9868474e94ecbed81f088cdd8c259710e`。E-103 四处 JSDoc 中文缺失问题已由 Windows 正式文案门禁复验关闭。原终端日志没有本地 HEAD，不能把上述检查声称为在新的合并提交直接执行。
+
+D5c0k 为现有 S0 Lab 配置根命令 `pnpm run test:alarm:lab` / `pnpm run lab:alarm`，并将离线测试接入 `pnpm run ready`，不改变 `TagStore`、`AlarmSubscriptionAdapter` 代码、既有测试、任何公共协议或双框架工程行为。新增流程只演示无网络本地候选，禁止当成已认证工业网关、传输历史完整或正式报警已上线。当前仅生成 GitHub 代码候选，Windows 两条短命令、质量门禁及完整 `ready` 均待运行；D1～D5 仍待维护者明确安全决策批准。
