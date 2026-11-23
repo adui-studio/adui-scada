@@ -3919,3 +3919,23 @@ pnpm run messages:check
 ```
 
 **验收边界**：五项测试是当前分支定义数量，并非已通过。协作容器无法通过网络获取 GitHub 仓库，未执行这组项目 Node 测试、`vp check`、文档及中文门禁。未来 D1～D5 的认证、服务端时间权威、独立传输游标、缺口恢复和报警事务仍待维护者专项审批；该 Lab 不属于正式实现，也不改变默认 fail-closed 发布门禁。
+
+## 2026-11-23 · PR #175 D5c0j Windows 首轮结果与 JSDoc 中文门禁修复
+
+维护者在 Windows 提供 D5c0j 首轮实测：`node --experimental-strip-types --test scripts/lab-alarm-inprocess.cases.mjs` **5/5 通过**；独立执行 `scripts/lab-alarm-inprocess.mjs` 的报告为初始序列 5、接受 7、迟到 6 不覆盖、来源模拟撤销后候选终止、资源各清理一次、Store 继续到 9、来源身份与历史完整性均未证明、正式报警事件为 0；`vp check` **439 格式文件 / 288 受检零警告错误**，`docs:check` **92 份通过**。最后 `messages:check` 因 Lab 的四处单行 JSDoc `@type` 缺少中文说明失败，退出码 **1**，因此**本批整条质量链未通过**。原终端日志未提供本地 HEAD，不能将这组成功结果严格绑定到远程最新提交。
+
+针对上述真实错误，D5c0j 在 `scripts/lab-alarm-inprocess.mjs` 的四个 `@type` 注释后增补中文说明，并在 `docs/AI_MISTAKES.md` 记录 **E-103**。无测试、逻辑、类型表达式或工业安全条件变化；已按照仓库中文检查器同样的行匹配规则静态确认原四处不再触发，但**修改后未在 Windows 复验，不可标记通过**。
+
+请在 PR #175 最终 HEAD 上重新运行：
+
+```powershell
+git pull --ff-only &&
+git rev-parse HEAD &&
+node --experimental-strip-types --test scripts/lab-alarm-inprocess.cases.mjs &&
+node --experimental-strip-types scripts/lab-alarm-inprocess.mjs &&
+vp check &&
+pnpm run docs:check &&
+pnpm run messages:check
+```
+
+本批仍仅为 FR-011 S0 进程内模拟与候选验证，不涉及任何已认证工业网关、真实采样时间权威、传输连续游标、报警事件持久化、确认授权或现场验收。
