@@ -4295,3 +4295,31 @@ git status --short
 ```
 
 若多标签页通过，应在同一新 HEAD 和干净开发进程下再运行一次该专项验证稳定性，随后复验 `pnpm run test:browser`（当前候选的 Vite 配置影响 Vue 开发构建）。无需重复原已通过的 interop、legacy、versions 或全量 `ready`，除非又有业务/依赖变化。**PR #186 保持 Draft，Vue 多标签 CAS 和修复效果未取得真实通过证据前不合并。**
+
+## 2026-11-23 · E-106 已捕获 Chromium ERR_CACHE_WRITE_FAILURE，改为定向 HTTP 缓存隔离
+
+维护者第四次 Windows 日志：`node --check` 成功，`typecheck:web` React/Vue/API Client/草稿存储通过，`vp check` **446 格式/289 受检零告警**，`docs:check` **94 份**，普通 `test:browser` React/Vue 1440×900、1024×768 **120/120** 通过。独立 `test:multitab` React 四阶段成功，Vue 第一次双标签导航失败、退出码 1；CDP 首标签 `Studio模块HTTP=200`、`Vite预构建依赖:Chromium错误码=net::ERR_CACHE_WRITE_FAILURE`；次标签 `Studio模块HTTP=200` 且无可见失败。HTTP 200 证明 Studio 模块源请求已返回，**实际失败在 Chromium 本地 HTTP 缓存写入**，不是可确认的 504 或数据库 CAS 错误。日志中本地 Git HEAD 没有单独输出。
+
+**当前修复候选**：回滚未能消除错误的 Vue `optimizeDeps.include`，恢复 Vite 配置与 `main` 一致；在 `--multitab` 的 Vue 首次导航前仅对两个 CDP 标签页调用 `Network.setCacheDisabled` 并等待命令成功。Chrome DevTools Protocol 对该参数的定义是“忽略每个请求的 HTTP 缓存”，不是禁止 IndexedDB、CacheStorage、BroadcastChannel 或数据库事务。**无需更改 Vue 页面、TDesign 依赖、业务功能、草稿 CAS、工控安全边界或原有 15s/5s 超时。**
+
+验证只需在 PR #186 最新 HEAD 执行：
+
+```powershell
+git fetch origin
+git switch feat/d5c0u-tdesign-file-popup
+git pull --ff-only
+git rev-parse HEAD
+node --check scripts/test-studio-browser.mjs
+if ($LASTEXITCODE -ne 0) { throw "脚本语法检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 代码检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run test:multitab
+if ($LASTEXITCODE -ne 0) { throw "多标签页安全测试失败" }
+git status --short
+```
+
+前七项类型/业务/浏览器专项已在前轮运行，且这次没有新应用代码或数据模型变更，不机械重复完整 `ready`、Tag、互通、版本安全与普通 Studio 120 项。若本次 `test:multitab` 通过，为排除测试不稳定可再独立复验一次；**新候选仍未 Windows 实测，不能报告修复完成**。
+
+若 Chromium 仍出现 `ERR_CACHE_WRITE_FAILURE`，再检查测试进程临时 Chromium 用户目录的剩余空间/权限/安全软件策略，不要删除用户正常 Chrome Profile；保留安全分类日志即可，不收集原始请求 URL、会话令牌、Cookies 或工程数据。
