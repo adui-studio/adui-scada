@@ -197,7 +197,7 @@ test("同代次重复快照撤销托管令牌，必须重启后才能从低序�
   expect(rejected).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "SNAPSHOT_ALREADY_ESTABLISHED",
-    state: { expectedTagId: "tank.level", generation: 2, baseline: null },
+    state: { expectedTagId: "tank.level", generation: 2, baseline: null, invalidated: true },
   });
   expect(controller.currentToken()).toBeNull();
   expect(
