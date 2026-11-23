@@ -696,6 +696,10 @@
   background: var(--scada-surface);
   box-shadow: 0 14px 36px rgb(0 0 0 / 38%);
 }
+/* 本地历史由 Popup 定位，面板不再相对 Studio 工具栏绝对定位。 */
+.studio-local-history-menu .studio-version-panel {
+  position: static;
+}
 
 .studio-version-help,
 .studio-version-error {
