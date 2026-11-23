@@ -136,3 +136,11 @@ Studio 的「页面管理」原本由原生 `details/summary` 和 `.studio-page-
 React/Vue 的本地「版本历史」原生 `details/summary` 被各自当前固定版本的 TDesign `Popup + Button` 替换。新独立 `.studio-local-history-menu` 解决同组 `.studio-version-menu` 还服务于「发布预检」「服务端工程版本」的挂载冲突；Popup 负责点击触发、定位和外部关闭，面板使用 `position: static` 保持宽度 `min(378px, calc(100vw - 24px))`、最大高度 `min(70vh, 610px)` 和滚动行为。Studio 252px/320px 侧栏及 SVG 16:9 几何不变。
 
 历史列表读取仍只在面板展开时触发原业务函数；快照 SHA-256、CAS、防止导入期间覆盖和危险载入确认都留在原业务层。未迁移的发布预检与服务端工程历史仍是原生 `details`，不能因这次候选宣称全量弹层完成 TDesign 化。Windows 实测待验收。
+
+## D5c0w · 双框架 TDesign 统一交互控件
+
+React 使用 `tdesign-react@1.18.6`，Vue 使用 `tdesign-vue-next@1.20.11`。通用交互按钮、输入、选择器、复选框、展开面板、浮层、文件选择及确认弹窗由官方组件承担。工程品牌色、字号及间距仍复用 `@adui/theme`、`@adui/tailwind` 既有 Token，不能二次创建并行主题。
+
+Studio 旧原生 `details`、`summary`、绝对定位浮层样式已撤换，由 Popup 与 Collapse 处理可见性及焦点；旧版 `window.confirm/prompt` 由可取消的 TDesign Dialog 代替。对话框关闭或 Esc 应相当于取消，确认后的业务逻辑仍执行原有会话/草稿/工程版本安全检查。Upload 仅用于本地 JSON 文件选择并显式禁用自动上传，不对外发送组态工程文件。
+
+工业 SVG 画布、2D 图元、命中层、变换手柄和图层树拖拽继续采用自研实现；侧栏宽度 252px/320px、16:9 画布和固定全屏滚动契约没有有意调整。本批暂为 GitHub 候选，键盘可访问性、视觉与两端运行回归待 Windows 在最终 HEAD 验收。
