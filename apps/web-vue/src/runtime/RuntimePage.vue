@@ -32,7 +32,7 @@ onUnmounted(() => runtime.stop());
   <main id="scada-main-content" tabindex="-1" class="scada-shell scada-shell--overview">
     <header class="scada-header">
       <div>
-        <p class="scada-eyebrow">ADui SCADA · V0.1</p>
+        <p class="scada-eyebrow">ADui SCADA · 本地模拟运行</p>
         <h1>水处理实时监控</h1>
       </div>
       <span class="scada-status" :data-status="state.status">{{
@@ -103,6 +103,9 @@ onUnmounted(() => runtime.stop());
     </section>
     <section class="scada-panel scada-values-panel" aria-label="Tag 质量与最近值">
       <h2>Tag 质量与最近值</h2>
+      <p v-if="state.values.length === 0" class="scada-diagnostics-empty">
+        暂无可显示的 Tag 数据
+      </p>
       <div class="scada-tags">
         <div v-for="tag in state.values" :key="tag.tagId" class="scada-tag">
           <strong>{{ tag.tagId }}</strong>
