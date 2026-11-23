@@ -144,23 +144,73 @@ async function enterStudioInPage() {
     );
   }
 
-  if (!document.querySelector(".studio-workspace")) editorButton.click();
-  const workspace = await waitFor(".studio-workspace", 15000);
-  const svg = workspace && (await waitFor(".studio-svg", 5000));
-  if (!workspace || !svg) {
-    throw new Error(
-      "点击组态编辑后未能加载工作台；地址：" +
-        location.href +
-        "；标题：" +
-        document.title +
-        "；导航状态：" +
-        (editorButton.getAttribute("aria-current") || "未激活") +
-        "；页面文本：" +
-        (document.querySelector("#root, #app")?.textContent || "").trim().slice(0, 160),
+  // 仅采集受控错误类别，不能在诊断中暴露原始异常、资源 URL 或业务数据。
+  const observed = {
+    moduleLoadFailure: false,
+    scriptError: false,
+    unhandledRejection: false,
+    resourceError: false,
+  };
+  const classifyModuleError = (value) => {
+    const message = String(value || "");
+    return /failed to fetch dynamically imported module|importing a module script failed|loading chunk .* failed|failed to load module script/i.test(
+      message,
     );
-  }
+  };
+  const onPageError = (event) => {
+    if (event instanceof ErrorEvent) {
+      observed.scriptError = true;
+      if (classifyModuleError(event.message)) observed.moduleLoadFailure = true;
+    } else if (event.target instanceof HTMLScriptElement || event.target instanceof HTMLLinkElement) {
+      observed.resourceError = true;
+    }
+  };
+  const onUnhandledRejection = (event) => {
+    observed.unhandledRejection = true;
+    const reason = event.reason;
+    if (classifyModuleError(reason?.message || reason)) observed.moduleLoadFailure = true;
+  };
+  window.addEventListener("error", onPageError, true);
+  window.addEventListener("unhandledrejection", onUnhandledRejection);
+  try {
+    if (!document.querySelector(".studio-workspace")) editorButton.click();
+    const workspace = await waitFor(".studio-workspace", 15000);
+    const svg = workspace && (await waitFor(".studio-svg", 5000));
+    if (!workspace || !svg) {
+      const requestedStudioModule = performance
+        .getEntriesByType("resource")
+        .some((resource) => /\/studio\/StudioPage\.(vue|tsx)/.test(resource.name));
+      throw new Error(
+        "点击组态编辑后未能加载工作台；地址：" +
+          location.href +
+          "；标题：" +
+          document.title +
+          "；导航状态：" +
+          (editorButton.getAttribute("aria-current") || "未激活") +
+          "；页面文本：" +
+          (document.querySelector("#root, #app")?.textContent || "").trim().slice(0, 160) +
+          "；导航诊断：工作台=" +
+          Boolean(workspace) +
+          "、SVG=" +
+          Boolean(svg) +
+          "、模块请求=" +
+          requestedStudioModule +
+          "、模块加载异常=" +
+          observed.moduleLoadFailure +
+          "、脚本异常=" +
+          observed.scriptError +
+          "、未处理异步拒绝=" +
+          observed.unhandledRejection +
+          "、脚本或样式资源失败=" +
+          observed.resourceError,
+      );
+    }
 
-  return { title: document.title, url: location.href };
+    return { title: document.title, url: location.href };
+  } finally {
+    window.removeEventListener("error", onPageError, true);
+    window.removeEventListener("unhandledrejection", onUnhandledRejection);
+  }
 }
 
 async function checkStudioInPage() {
