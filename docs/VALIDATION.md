@@ -3370,3 +3370,40 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批只修改共享 Core 会话归约器及定向测试与文档，不涉及 HTTP、Vue/React 页面、Prisma 或工业设备接入；不重复完整 ready 与浏览器专项。静态代码检查不能证明时钟可信、订阅调度有效、来源确实核验或 FR-011 生产报警安全。正式发布 Gate 保持 fail-closed。
+
+## 2026-11-23 · D5b9s FR-011 底层报警增量旧基线时效：Windows 待验收
+
+PR #157 维护者 Windows 已执行 `alarm-baseline-session.test.ts` **16/16**、`alarm-subscription-adapter.test.ts` **25/25**（合计 **41/41**），`vp check` **435 格式文件/286 受检零警告错误**、`docs:check` **90**、`messages:check` **310**；维护者明确授权后 Squash 合并至 `main@54cec31bd1e7a6c1ae0d1e1a0b3d2a128515e845`。D5b9s 本批新增 **6 项测试定义**，`alarm-tag-delta.test.ts` 共 **15 项**，尚未进行本批 Windows 实测。
+
+维护者流程保留 `git fetch origin` 与 `git switch`，首次切换支持 `--track`，执行 `vp check --fix` 后可以提交必要格式修正；不要求手动核对 HEAD：
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5b9s-alarm-direct-delta-freshness
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5b9s-alarm-direct-delta-freshness
+}
+if ($LASTEXITCODE -ne 0) { throw "切换功能分支失败" }
+
+git pull --ff-only origin fix/d5b9s-alarm-direct-delta-freshness
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "自动修正失败" }
+
+vp test run packages/core/test/alarm-tag-delta.test.ts packages/core/test/alarm-baseline-session.test.ts packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警增量与会话回归测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批只改共享 Core 的底层增量 API 和对应单测、文档，未增加 UI、服务端接口、数据库或工业网关变动。上述检查不代表来源认证、可信时间、真实调度、报警阈值、确认授权或生产安全验收通过；发布 Gate 仍 fail-closed。
