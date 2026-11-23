@@ -1703,7 +1703,7 @@ export default function StudioPage() {
       (node.groupId === undefined || !lockedLayerGroups.has(node.groupId));
 
     return (
-      <button
+      <Button tag="button"
         key={rowKey}
         type="button"
         className="studio-layer"
@@ -1734,7 +1734,7 @@ export default function StudioPage() {
           {!groupHeader && studioNodeLocked(node) ? " · 已锁定" : ""}
           {!groupHeader && !studioNodeVisible(node) ? " · 已隐藏" : ""}
         </small>
-      </button>
+      </Button>
     );
   }
 
@@ -1751,7 +1751,7 @@ export default function StudioPage() {
         </div>
         <div className="studio-actions">
           <div className="studio-history-actions">
-            <button
+            <Button tag="button"
               type="button"
               onClick={() => {
                 editor.undo();
@@ -1760,8 +1760,8 @@ export default function StudioPage() {
               disabled={!state.canUndo}
             >
               撤销
-            </button>
-            <button
+            </Button>
+            <Button tag="button"
               type="button"
               onClick={() => {
                 editor.redo();
@@ -1770,12 +1770,12 @@ export default function StudioPage() {
               disabled={!state.canRedo}
             >
               重做
-            </button>
+            </Button>
           </div>
           <div className="studio-save-actions">
-            <button type="button" onClick={saveDraft}>
+            <Button tag="button" type="button" onClick={saveDraft}>
               保存草稿
-            </button>
+            </Button>
           </div>
           <div className="studio-file-menu">
             <Popup
@@ -1784,9 +1784,9 @@ export default function StudioPage() {
               placement="bottom-right"
               content={
                 <div className="studio-file-popover">
-                  <button type="button" onClick={toggleAutoSave} aria-pressed={autoSaveEnabled}>
+                  <Button tag="button" type="button" onClick={toggleAutoSave} aria-pressed={autoSaveEnabled}>
                     {autoSaveEnabled ? "暂停自动保存" : "开启自动保存"}
-                  </button>
+                  </Button>
                   <label className="studio-import">
                     导入 JSON
                     <input
@@ -1797,15 +1797,15 @@ export default function StudioPage() {
                       }}
                     />
                   </label>
-                  <button type="button" onClick={exportJson}>
+                  <Button tag="button" type="button" onClick={exportJson}>
                     导出 JSON
-                  </button>
-                  <button type="button" onClick={restoreDraft} disabled={!hasSavedDraft}>
+                  </Button>
+                  <Button tag="button" type="button" onClick={restoreDraft} disabled={!hasSavedDraft}>
                     恢复草稿
-                  </button>
-                  <button type="button" onClick={clearDraft} disabled={!hasSavedDraft}>
+                  </Button>
+                  <Button tag="button" type="button" onClick={clearDraft} disabled={!hasSavedDraft}>
                     清除草稿
-                  </button>
+                  </Button>
                 </div>
               }
             >
@@ -1828,20 +1828,20 @@ export default function StudioPage() {
                     当前工程：{state.document.projectId} · 浏览器本地历史，不是正式发布
                   </p>
                   <div className="studio-version-tools">
-                    <button
+                    <Button tag="button"
                       type="button"
                       disabled={historyBusy}
                       onClick={() => void createHistoryVersion()}
                     >
                       创建快照
-                    </button>
-                    <button
+                    </Button>
+                    <Button tag="button"
                       type="button"
                       disabled={historyBusy}
                       onClick={() => void refreshVersionHistory()}
                     >
                       刷新
-                    </button>
+                    </Button>
                   </div>
                   {historyBusy && <p className="studio-version-help">正在处理历史版本…</p>}
                   {historyError && (
@@ -1863,20 +1863,20 @@ export default function StudioPage() {
                         </div>
                         <code title={item.contentHash}>{item.contentHash.slice(0, 16)}…</code>
                         <div className="studio-version-item-actions">
-                          <button
+                          <Button tag="button"
                             type="button"
                             disabled={historyBusy}
                             onClick={() => void inspectHistoryVersion(item.revision)}
                           >
                             查看差异
-                          </button>
-                          <button
+                          </Button>
+                          <Button tag="button"
                             type="button"
                             disabled={historyBusy}
                             onClick={() => void loadHistoryVersion(item.revision)}
                           >
                             载入
-                          </button>
+                          </Button>
                         </div>
                       </li>
                     ))}
@@ -1900,14 +1900,14 @@ export default function StudioPage() {
                     </div>
                   )}
                   {visibleHistoryRows.length > 0 && historyHasMore && (
-                    <button
+                    <Button tag="button"
                       type="button"
                       className="studio-version-more"
                       disabled={historyBusy}
                       onClick={() => void loadMoreVersions()}
                     >
                       加载更早版本
-                    </button>
+                    </Button>
                   )}
                 </div>
               }
@@ -1985,27 +1985,27 @@ export default function StudioPage() {
                 {activeServerBaseline ?? "未建立"}
               </p>
               <div className="studio-version-tools">
-                <button
+                <Button tag="button"
                   type="button"
                   disabled={historyBusy}
                   onClick={() => void checkServerIdentity()}
                 >
                   检查登录
-                </button>
-                <button
+                </Button>
+                <Button tag="button"
                   type="button"
                   disabled={historyBusy}
                   onClick={() => void saveServerProject()}
                 >
                   保存至服务端
-                </button>
-                <button
+                </Button>
+                <Button tag="button"
                   type="button"
                   disabled={historyBusy}
                   onClick={() => void refreshServerHistory()}
                 >
                   查询服务端历史
-                </button>
+                </Button>
               </div>
               <p className="studio-version-help">
                 服务器已有工程时，请先显式载入最新服务端版本再保存；冲突不会自动重试，草稿始终保留。
@@ -2019,13 +2019,13 @@ export default function StudioPage() {
               {serverError && serverRecoveryProjectId === state.document.projectId && (
                 <div className="studio-version-help">
                   <p>当前画布与 IndexedDB 草稿已保留。可先只读对比最新版本，再决定是否载入。</p>
-                  <button
+                  <Button tag="button"
                     type="button"
                     disabled={historyBusy}
                     onClick={() => void previewServerConflict()}
                   >
                     只读预览最新版本
-                  </button>
+                  </Button>
                 </div>
               )}
               {!historyBusy && visibleServerRows.length === 0 && (
@@ -2042,20 +2042,20 @@ export default function StudioPage() {
                     </div>
                     <code title={item.contentHash}>{item.contentHash.slice(0, 16)}…</code>
                     <div className="studio-version-item-actions">
-                      <button
+                      <Button tag="button"
                         type="button"
                         disabled={historyBusy}
                         onClick={() => void inspectServerVersion(item.revision)}
                       >
                         查看差异
-                      </button>
-                      <button
+                      </Button>
+                      <Button tag="button"
                         type="button"
                         disabled={historyBusy}
                         onClick={() => void loadServerVersion(item.revision)}
                       >
                         载入
-                      </button>
+                      </Button>
                     </div>
                   </li>
                 ))}
@@ -2077,14 +2077,14 @@ export default function StudioPage() {
                 </div>
               )}
               {visibleServerRows.length > 0 && serverHasMore && (
-                <button
+                <Button tag="button"
                   type="button"
                   className="studio-version-more"
                   disabled={historyBusy}
                   onClick={() => void loadMoreServerVersions()}
                 >
                   加载更早服务端版本
-                </button>
+                </Button>
               )}
             </div>
           </details>
@@ -2093,14 +2093,14 @@ export default function StudioPage() {
       <div className="studio-page-bar" aria-label="工程页面管理">
         <div className="studio-page-tabs" aria-label="工程页面">
           {state.document.pages.map((item) => (
-            <button
+            <Button tag="button"
               key={item.id}
               type="button"
               aria-current={item.id === state.activePageId ? "page" : undefined}
               onClick={() => switchPage(item.id)}
             >
               {item.name}
-            </button>
+            </Button>
           ))}
         </div>
         <div className="studio-page-menu">
@@ -2128,18 +2128,18 @@ export default function StudioPage() {
           </div>
           <div className="studio-library-label">图元库 · 点击添加</div>
           <div className="studio-add">
-            <button type="button" onClick={() => addSymbol("tank")}>
+            <Button tag="button" type="button" onClick={() => addSymbol("tank")}>
               + 水箱
-            </button>
-            <button type="button" onClick={() => addSymbol("pump")}>
+            </Button>
+            <Button tag="button" type="button" onClick={() => addSymbol("pump")}>
               + 水泵
-            </button>
-            <button type="button" onClick={() => addSymbol("pipe")}>
+            </Button>
+            <Button tag="button" type="button" onClick={() => addSymbol("pipe")}>
               + 管道
-            </button>
-            <button type="button" onClick={() => addSymbol("label")}>
+            </Button>
+            <Button tag="button" type="button" onClick={() => addSymbol("label")}>
               + 文本
-            </button>
+            </Button>
           </div>
           <div className="studio-tree-section-title">图层列表</div>
           <div className="studio-tree-controls">
@@ -2183,7 +2183,7 @@ export default function StudioPage() {
               ) : (
                 <div className="studio-tree-group" key={entry.groupId}>
                   <div className="studio-tree-group-heading">
-                    <button
+                    <Button tag="button"
                       type="button"
                       className="studio-tree-toggle"
                       aria-label={groupToggleLabel(entry.groupId)}
@@ -2192,7 +2192,7 @@ export default function StudioPage() {
                       onClick={() => toggleLayerGroup(entry.groupId)}
                     >
                       {groupExpanded(entry.groupId) ? "▾" : "▸"}
-                    </button>
+                    </Button>
                     {renderLayerButton(
                       page.nodes.find((node) => node.id === entry.anchorNodeId) ??
                         entry.members[0]!,
@@ -2232,13 +2232,13 @@ export default function StudioPage() {
                   ))}
                 </select>
               </label>
-              <button
+              <Button tag="button"
                 type="button"
                 onClick={copySelectedToPage}
                 disabled={state.selectedIds.length === 0 || !copyTargetPageId}
               >
                 复制选中图元
-              </button>
+              </Button>
             </div>
             <p className="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
           </details>
@@ -2283,34 +2283,34 @@ export default function StudioPage() {
                 <div className="studio-view-section">
                   <p>侧栏显示</p>
                   <div className="studio-panel-toggles" aria-label="面板显示">
-                    <button
+                    <Button tag="button"
                       type="button"
                       aria-pressed={leftPanelVisible}
                       onClick={() => setLeftPanelVisible((value) => !value)}
                     >
                       {leftPanelVisible ? "隐藏图层" : "显示图层"}
-                    </button>
-                    <button
+                    </Button>
+                    <Button tag="button"
                       type="button"
                       aria-pressed={rightPanelVisible}
                       onClick={() => setRightPanelVisible((value) => !value)}
                     >
                       {rightPanelVisible ? "隐藏属性" : "显示属性"}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
             </details>
             <div className="studio-zoom" aria-label="画布缩放">
-              <button type="button" onClick={() => changeZoom(-0.25)} disabled={zoom <= 0.5}>
+              <Button tag="button" type="button" onClick={() => changeZoom(-0.25)} disabled={zoom <= 0.5}>
                 −
-              </button>
-              <button type="button" onClick={resetCanvasView}>
+              </Button>
+              <Button tag="button" type="button" onClick={resetCanvasView}>
                 {zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%`}
-              </button>
-              <button type="button" onClick={() => changeZoom(0.25)} disabled={zoom >= 2}>
+              </Button>
+              <Button tag="button" type="button" onClick={() => changeZoom(0.25)} disabled={zoom >= 2}>
                 +
-              </button>
+              </Button>
             </div>
           </div>
           <div className="studio-canvas-scroll" tabIndex={0} aria-label="组态网格工作区">
