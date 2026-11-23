@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button as TButton } from "tdesign-vue-next";
+import { Button as TButton, Popup as TPopup } from "tdesign-vue-next";
 import { onUnmounted, shallowRef } from "vue";
 import {
   createStudioProjectBrowser,
@@ -54,14 +54,21 @@ async function loadPage(action: "refresh" | "next" | "previous"): Promise<void> 
   }
 }
 
-function onToggle(event: Event): void {
-  if ((event.currentTarget as HTMLDetailsElement).open) void loadPage("refresh");
+function onPopupVisibleChange(visible: boolean): void {
+  if (visible) void loadPage("refresh");
 }
 </script>
 
 <template>
-  <details class="studio-version-menu studio-project-browser-menu" @toggle="onToggle">
-    <summary>工程管理</summary>
+  <div class="studio-version-menu studio-project-browser-menu">
+    <TPopup
+      attach=".studio-project-browser-menu"
+      trigger="click"
+      placement="bottom-right"
+      @visible-change="onPopupVisibleChange"
+    >
+      <TButton type="button" variant="outline">工程管理</TButton>
+      <template #content>
     <section class="studio-version-panel studio-project-browser-panel" aria-label="授权工程管理">
       <div class="studio-project-browser-heading">
         <div>
@@ -135,5 +142,7 @@ function onToggle(event: Event): void {
         </TButton>
       </div>
     </section>
-  </details>
+      </template>
+    </TPopup>
+  </div>
 </template>
