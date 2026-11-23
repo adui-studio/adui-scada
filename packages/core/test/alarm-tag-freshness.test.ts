@@ -84,11 +84,7 @@ test("报警候选拒绝无时区服务器时间，同时接受明确 UTC 偏移
     status: "READY",
     value: 42,
   });
-  for (const timestamp of [
-    "2026-11-22T08:59:59.000",
-    "2026-11-22",
-    "11/22/2026 08:59:59",
-  ]) {
+  for (const timestamp of ["2026-11-22T08:59:59.000", "2026-11-22", "11/22/2026 08:59:59"]) {
     expect(() =>
       classifyTimelyNumericAlarmSample({ ...valid, serverTimestamp: timestamp }, nowMs, 1000),
     ).toThrow("报警服务器时间戳必须包含明确时区");
