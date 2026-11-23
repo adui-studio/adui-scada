@@ -2500,3 +2500,8 @@ D5c0v 基于合并后的 main，限定本地版本历史一个入口/框架：�
 ## 2026-11-23 · PR #189 React 19 TDesign DialogPlugin 适配阻塞（E-112）
 
 维护者 Windows 已验证 PR #189 的 React/Vue Web 类型检查、`vp check` 448/291 零告警、中文文案 318、文档 94 和四组普通浏览器 33/33；`test:tags:browser` 却在真实 Tag 删除 Dialog 确认按钮未出现时失败并中断后续测试。根目录 Catalog 使用 React/React DOM 19.3.1、TDesign React 1.18.6；固定官方源码及指南明确要求 React 19 导入 `tdesign-react/es/_util/react-19-adapter`，当前 `main.tsx` 遗漏此步骤，使插件式动态 Dialog 无法挂载。已将官方适配器导入加至 React 应用入口，补充双端 Tag 取消删除不写入浏览器断言，保留已绑定 Tag 删除保护与所有已存在的业务规则。**最新分支修复尚未实际运行 Windows 检查或浏览器验收；以上已通过的原日志不代表新提交已通过**。PR #189 继续保持 Draft，指派 `@adui-dev`，待实测并由维护者另行授权合并。
+
+## 2026-11-23 · PR #189 Tag 浏览器首次 React 导航阻塞（E-113）
+
+维护者在 React 19 TDesign 适配器候选后执行 Windows `typecheck:web`、`vp check`（448/291 零警告错误）、中文文案（318）及文档（94）均通过；`test:tags:browser` 则在首次 React HTTPS 导航阶段直接失败，未到 Tag 删除确认路径，其后专项未执行。初步定位为浏览器导航诊断不足，尚无实际 Chromium 网络错误码，不能断言是适配器、证书或缓存引起。根据 E-106 先前真实 `ERR_CACHE_WRITE_FAILURE` 证据，现仅在 `--tags` 临时 Chromium 的 HTTP 缓存上使用 CDP 隔离，同时为导航失败补充严格白名单网络/加载状态诊断。保持全部真实 Tag 删除取消/确认、绑定保护、CAS 及 HTTPS 约束。相关文档 E-113；本提交 Windows 实测待补，PR #189 仍为 Draft、Assignee `@adui-dev`、未授权合并。
+
