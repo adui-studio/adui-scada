@@ -387,3 +387,32 @@ test("直接增量入口不能使用日末二十四时绕过报警时间排序",
     ),
   ).toThrow("报警服务器时间戳小时无效");
 });
+
+test("直接增量入口拒绝新样本与旧基线的亚毫秒时间戳", () => {
+  expect(() =>
+    advanceAlarmTagDeltaBaseline(
+      {
+        ...request,
+        change: {
+          kind: "delta",
+          values: [{ ...next, serverTimestamp: "2026-11-22T08:59:59.999100Z" }],
+        },
+      },
+      nowMs,
+      1000,
+    ),
+  ).toThrow("报警服务器时间戳精度超过毫秒");
+  expect(() =>
+    advanceAlarmTagDeltaBaseline(
+      {
+        ...request,
+        baseline: {
+          generation: 2,
+          value: { ...previous, serverTimestamp: "2026-11-22T08:59:59.999900Z" },
+        },
+      },
+      nowMs,
+      1000,
+    ),
+  ).toThrow("报警服务器时间戳精度超过毫秒");
+});
