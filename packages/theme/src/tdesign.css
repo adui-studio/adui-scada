@@ -1,0 +1,51 @@
+/* TDesign 官方 Web CSS Variables 主题映射；两端通过 html theme-mode=dark 共用。 */
+/* html:root 比 TDesign 默认 :root 具有更高优先级，避免懒加载组件样式覆盖主题。 */
+html:root[theme-mode="dark"] {
+  --td-brand-color: var(--adui-color-brand);
+  --td-brand-color-hover: var(--adui-color-brand-hover);
+  --td-brand-color-active: var(--adui-color-brand-active);
+  --td-brand-color-focus: var(--adui-color-brand-focus);
+  --td-brand-color-disabled: var(--adui-color-brand-disabled);
+  --td-brand-color-light: var(--adui-color-selected);
+  --td-brand-color-light-hover: var(--adui-color-action-hover);
+  --td-text-color-primary: var(--adui-color-text);
+  --td-text-color-secondary: var(--adui-color-text-secondary);
+  --td-text-color-placeholder: var(--adui-color-text-muted);
+  --td-text-color-disabled: var(--adui-color-text-disabled);
+  --td-text-color-anti: var(--adui-color-text-strong);
+  --td-text-color-brand: var(--adui-color-brand-hover);
+  --td-bg-color-page: var(--adui-color-bg);
+  --td-bg-color-container: var(--adui-color-surface);
+  --td-bg-color-container-hover: var(--adui-color-action-hover);
+  --td-bg-color-container-active: var(--adui-color-action);
+  --td-bg-color-secondarycontainer: var(--adui-color-canvas);
+  --td-bg-color-component: var(--adui-color-action);
+  --td-bg-color-component-hover: var(--adui-color-action-hover);
+  --td-bg-color-component-disabled: var(--adui-color-surface);
+  --td-component-border: var(--adui-color-border-strong);
+  --td-component-stroke: var(--adui-color-border);
+  --td-border-level-1-color: var(--adui-color-border-subtle);
+  --td-border-level-2-color: var(--adui-color-border);
+  --td-success-color: var(--adui-color-success);
+  --td-warning-color: var(--adui-color-warning);
+  --td-error-color: var(--adui-color-danger);
+
+  /* 字体和组件尺寸使用官方 Token，不复写 TDesign Button/Input 样式。 */
+  --td-font-family: var(--adui-font-family);
+  --td-font-family-medium: var(--adui-font-family);
+  --td-font-size-body-small: var(--adui-font-size-xs);
+  --td-font-size-body-medium: var(--adui-font-size-md);
+  --td-font-size-body-large: var(--adui-font-size-lg);
+  --td-font-size-title-small: var(--adui-font-size-md);
+  --td-font-size-title-medium: var(--adui-font-size-lg);
+  --td-font-size-title-large: var(--adui-font-size-xl);
+  --td-size-1: var(--adui-space-1);
+  --td-size-2: var(--adui-space-2);
+  --td-size-3: var(--adui-space-3);
+  --td-size-4: var(--adui-space-4);
+  --td-size-5: var(--adui-space-5);
+  --td-size-6: var(--adui-space-6);
+  --td-size-7: var(--adui-space-7);
+  --td-size-8: var(--adui-space-8);
+  --td-size-10: var(--adui-space-9);
+}
