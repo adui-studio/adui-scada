@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { Button as TButton, Input as TInput } from "tdesign-vue-next";
+import { Button as TButton, Input as TInput, Select as TSelect, Textarea as TTextarea } from "tdesign-vue-next";
 import { TAG_DATA_TYPE_LABELS } from "@adui/scada-core";
 import type { TagDefinition } from "@adui/scada-core";
 
@@ -62,6 +62,12 @@ function submit() {
   if (successful) reset();
 }
 
+function changeTagDataType(value: string | number | Array<string | number>): void {
+  if (value === "number" || value === "boolean" || value === "string" || value === "unknown") {
+    draft.value.dataType = value;
+  }
+}
+
 function remove(definition: TagDefinition) {
   if (
     !window.confirm(
@@ -113,14 +119,19 @@ function remove(definition: TagDefinition) {
       </label>
       <label class="studio-field">
         数据类型
-        <select v-model="draft.dataType" aria-label="项目 Tag 数据类型">
-          <option v-if="editingId !== null && draft.dataType === 'unknown'" value="unknown">
-            待确认（历史迁移占位）
-          </option>
-          <option value="number">数值</option>
-          <option value="boolean">布尔值</option>
-          <option value="string">文本</option>
-        </select>
+        <TSelect
+          :value="draft.dataType"
+          aria-label="项目 Tag 数据类型"
+          :options="[
+            ...(editingId !== null && draft.dataType === 'unknown'
+              ? [{ label: '待确认（历史迁移占位）', value: 'unknown' }]
+              : []),
+            { label: '数值', value: 'number' },
+            { label: '布尔值', value: 'boolean' },
+            { label: '文本', value: 'string' },
+          ]"
+          @change="changeTagDataType"
+        />
       </label>
       <label class="studio-field">
         单位（可选）
@@ -128,7 +139,7 @@ function remove(definition: TagDefinition) {
       </label>
       <label class="studio-field">
         描述（可选）
-        <textarea v-model="draft.description" rows="3" maxlength="512" />
+        <TTextarea v-model="draft.description" :autosize="{ minRows: 3, maxRows: 6 }" :maxlength="512" />
       </label>
       <div class="studio-toolbox">
         <TButton type="submit">{{ editingId ? "保存修改" : "新增 Tag" }}</TButton>
