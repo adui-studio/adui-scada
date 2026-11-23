@@ -218,3 +218,23 @@ test("同代次重复快照撤销托管令牌，必须重启后才能从低序�
   ).toBe("BASELINE_ESTABLISHED");
   expect(controller.snapshot().baseline?.value.sequence).toBe(1);
 });
+
+test("等待快照期间的非法时钟检查撤销令牌，必须重启后才能接受快照", () => {
+  const controller = new AlarmBaselineSessionController("tank.level", 2);
+  const token = activeToken(controller);
+  expect(controller.checkFreshness(token, Number.NaN, 3000)).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "INVALID_INPUT",
+    state: { expectedTagId: "tank.level", generation: 2, baseline: null, invalidated: true },
+  });
+  expect(controller.currentToken()).toBeNull();
+  expect(
+    controller.receive(token, { kind: "snapshot", values: [baseline] }, true, nowMs, 3000),
+  ).toEqual({ status: "STALE_HANDLE_IGNORED" });
+  const restarted = controller.restart();
+  expect(restarted.generation).toBe(3);
+  expect(
+    controller.receive(restarted, { kind: "snapshot", values: [baseline] }, true, nowMs, 3000)
+      .status,
+  ).toBe("BASELINE_ESTABLISHED");
+});
