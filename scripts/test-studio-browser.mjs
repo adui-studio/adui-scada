@@ -579,6 +579,78 @@ async function navigateStudioForInterop(session, target, marker) {
   await session.evaluate("(" + enterStudioInPage.toString() + ")()");
 }
 
+/** 仅在异常时输出同源模块响应类别，不暴露请求 URL、响应正文或敏感信息。 */
+function watchStudioModuleNetwork(session, target) {
+  const origin = new URL(target.url).origin;
+  const requests = new Map();
+  const failures = [];
+  let studioStatus = "未收到响应";
+
+  const categoryFor = (address) => {
+    try {
+      const url = new URL(address);
+      if (url.origin !== origin) return null;
+      if (/\\/src\\/studio\\/StudioPage\\.vue$/.test(url.pathname)) return "Studio模块";
+      if (url.pathname.includes("/.vite/deps/")) return "Vite预构建依赖";
+      if (url.pathname.startsWith("/src/")) return "Vue应用模块";
+      if (url.pathname.startsWith("/@fs/")) return "工作区模块";
+      return "其他同源资源";
+    } catch {
+      return null;
+    }
+  };
+  const networkErrorCategory = (name) => {
+    if (name === "net::ERR_ABORTED") return "导航中断";
+    if (name === "net::ERR_FAILED") return "网络失败";
+    if (name === "net::ERR_CONNECTION_RESET") return "连接重置";
+    if (name === "net::ERR_CONNECTION_REFUSED") return "连接拒绝";
+    if (name === "net::ERR_CERT_AUTHORITY_INVALID") return "证书不受信任";
+    if (name === "net::ERR_HTTP_RESPONSE_CODE_FAILURE") return "HTTP响应拒绝";
+    return "其他网络错误";
+  };
+  const recordFailure = (entry) => {
+    if (failures.length < 8) failures.push(entry);
+  };
+  const onMessage = ({ data }) => {
+    const message = JSON.parse(String(data));
+    const params = message.params;
+    if (message.method === "Network.requestWillBeSent") {
+      const category = categoryFor(params.request?.url);
+      if (category) requests.set(params.requestId, category);
+    } else if (message.method === "Network.responseReceived") {
+      const category = requests.get(params.requestId);
+      if (!category) return;
+      const status = Number(params.response?.status);
+      if (category === "Studio模块" && Number.isInteger(status)) {
+        studioStatus = String(status);
+      }
+      if (Number.isInteger(status) && status >= 400) {
+        recordFailure(category + ":HTTP" + status);
+      }
+    } else if (message.method === "Network.loadingFailed") {
+      const category = requests.get(params.requestId);
+      if (category) {
+        recordFailure(category + ":" + networkErrorCategory(params.errorText));
+        requests.delete(params.requestId);
+      }
+    } else if (message.method === "Network.loadingFinished") {
+      requests.delete(params.requestId);
+    }
+  };
+  session.socket.addEventListener("message", onMessage);
+  return {
+    summary: () =>
+      "Studio模块HTTP=" +
+      studioStatus +
+      "、失败请求=" +
+      (failures.length ? failures.join("、") : "无可见失败"),
+    stop: () => {
+      session.socket.removeEventListener("message", onMessage);
+      requests.clear();
+    },
+  };
+}
+
 async function runStudioInteroperability(session) {
   const react = targets[0];
   const vue = targets[1];
@@ -1681,10 +1753,32 @@ async function runStudioMultiTabSafety(first, second) {
     second.send("Emulation.setDeviceMetricsOverride", viewport),
   ]);
   for (const target of targets) {
-    await Promise.all([
-      navigateStudioForInterop(first, target, "multitab-first-" + target.name),
-      navigateStudioForInterop(second, target, "multitab-second-" + target.name),
-    ]);
+    // Vue 首次异步模块失败时附上 CDP HTTP/网络类别；不改变双标签并发和断言。
+    const watchers = [];
+    if (target.name === "Vue") {
+      await Promise.all([first.send("Network.enable"), second.send("Network.enable")]);
+      watchers.push(watchStudioModuleNetwork(first, target));
+      watchers.push(watchStudioModuleNetwork(second, target));
+    }
+    try {
+      await Promise.all([
+        navigateStudioForInterop(first, target, "multitab-first-" + target.name),
+        navigateStudioForInterop(second, target, "multitab-second-" + target.name),
+      ]);
+    } catch (error) {
+      if (watchers.length) {
+        throw new Error(
+          error.message +
+            "；双标签页网络诊断：首标签=" +
+            watchers[0].summary() +
+            "；次标签=" +
+            watchers[1].summary(),
+        );
+      }
+      throw error;
+    } finally {
+      for (const watcher of watchers) watcher.stop();
+    }
     const initial = JSON.parse(await evaluateStudioPage(first, exportStudioJsonInPage));
     assert.deepStrictEqual(
       JSON.parse(await evaluateStudioPage(second, exportStudioJsonInPage)),
