@@ -4429,3 +4429,13 @@ PR #188 已提交最小修复候选：图层拖拽事件签名由 `ReactDragEven
 本次已将 `apps/web-vue/src/runtime/PublishedRuntimePage.vue`、`apps/web-vue/src/studio/StudioPage.vue`、`apps/web-vue/src/studio/TagManager.vue` 共六个 `@change` 回调形参改为 `unknown` 并保持具体 ID/枚举的运行时收窄；Studio 标签下拉的内联 `:options` 移为脚本 `computed`。未改已发布页权限、Tag 持久化、图层拖拽或确认载入时 CAS。GitHub 静态检查已确认六处旧签名均已消失、模板仅绑定 `tagBindingOptions`；这是源码候选而非编译或浏览器通过的证据。详见 E-110。
 
 **待在 PR 最新 HEAD Windows 复验**：先执行 `pnpm run typecheck:web`、不带 `--fix` 的 `vp check`、`pnpm run messages:check`、`pnpm run docs:check`；只有全部通过才继续 `pnpm run test:unit`、`pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop`、`pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:legacy:browser`、`pnpm run test:release:preflight:browser`、`pnpm run test:multitab`。需验证 Vue 已发布页面切换、跨页复制、Tag 绑定、图层目标与插入位置、Tag 数据类型的实际选项选择，保留类型与历史缺失占位保护。PR #188 保持 Draft，不合并。
+
+## 2026-11-23 · PR #188 授权合并与 D5c0x Studio 控件视觉回归待验收
+
+维护者提供 Windows 四项检查通过：`pnpm run typecheck:web`（React/Vue/草稿及 API Client）、`vp check`（448 个格式文件，291 个受检文件零告警/错误）、`messages:check`（318 文件）、`docs:check`（94 Markdown）。维护者同时明确「同意合并，继续」，PR #188 经 GitHub Squash Merge 至 `main@30d1133e711361640e9b86bd89664a19aee6c085`。**本轮未提供单元测试、普通/Tag/互通/历史版本/多标签浏览器专项的成功输出，也未提供本地 HEAD；不能把上述四项静态检查当作全量安全回归通过。**
+
+新分支 `feat/d5c0x-studio-controls-polish` 针对截图红框做视觉收敛：两端 Tag 操作统一为 TDesign Text Button/28px 双列，图层行改 Text Button、搜索尺寸对齐；清理旧样式的按钮自动高度、原生输入边框及全局亮青焦点环；弱化侧栏和 Tag 边界。保持当前已有的左 252px/右 320px、SVG 16:9、Tag ID、CAS、删除保护等现有门禁。
+
+**专项新增**：`scripts/test-studio-browser.mjs` 的 `--tags` 流程在真实 React/Vue Tag 面板展开后读取两组按钮实际 `getBoundingClientRect()` 和网格列数，要求各 2 个按钮、双列、可见、每组同高同宽；保留后续 Tag 新增/编辑/绑定删除保护/删除的原始业务断言。
+
+**待维护者 Windows 实测（尚未通过）**：同一最新 HEAD 执行 `pnpm run typecheck:web`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`、`pnpm run test:browser`、`pnpm run test:tags:browser`；再运行 `pnpm run test:interop`、`pnpm run test:versions:safety` 与 `pnpm run test:multitab` 确保跨端/存储安全无意外回归。在 1440×900、1024×768 双版本检查图层选中/键盘焦点、Tag 条目编辑删除、表单提交/重置、长 ID 折行和两侧栏宽度。未获得最终验收结果前新 PR 保持 Draft、指派 `@adui-dev`，不合并。
