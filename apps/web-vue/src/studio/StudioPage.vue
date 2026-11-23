@@ -1726,7 +1726,7 @@ async function importJson(event: Event) {
   <main id="scada-main-content" tabindex="-1" class="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
     <header class="studio-toolbar">
       <div>
-        <p class="scada-eyebrow">ADui SCADA · V0.3 Studio</p>
+        <p class="scada-eyebrow">ADui SCADA · 组态工作台</p>
         <h1>SVG 组态编辑器</h1>
       </div>
       <div class="studio-actions">
