@@ -273,12 +273,7 @@ test("参数错误有明确拒绝，且不改变已冻结的当前状态", () =>
 
 test("旧基线超龄时即使新增量时效正常也不能直接续接", () => {
   const initial = established();
-  const expired = transitionAlarmBaselineSession(
-    initial,
-    delta,
-    nowMs + 1001,
-    3000,
-  );
+  const expired = transitionAlarmBaselineSession(initial, delta, nowMs + 1001, 3000);
   expect(expired).toEqual({
     status: "BASELINE_INVALIDATED",
     reason: "OUTDATED_TIMESTAMP",
