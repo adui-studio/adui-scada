@@ -327,6 +327,30 @@ const missingBindingTag = computed(
     selectedTagId.value !== "" &&
     !tagCandidates.value.some((option) => option.tagId === selectedTagId.value),
 );
+/** 数据类型标签在脚本中计算，避免 Vue 模板复杂表达式的类型展开偏差。 */
+const tagBindingOptions = computed(() => [
+  { label: "不绑定", value: "" },
+  ...(missingBindingTag.value
+    ? [
+        {
+          label: selectedTagId.value + "（当前工程未定义或类型待确认）",
+          value: selectedTagId.value,
+          disabled: true,
+        },
+      ]
+    : []),
+  ...tagCandidates.value.map((option) => ({
+    label:
+      option.displayName +
+      " · " +
+      option.tagId +
+      " · " +
+      TAG_DATA_TYPE_LABELS[option.dataType] +
+      (option.unit ? " · " + option.unit : ""),
+    value: option.tagId,
+  })),
+]);
+
 const selectedTagDefinition = computed(() =>
   state.value.document.tags.find((definition) => definition.tagId === selectedTagId.value),
 );
@@ -713,7 +737,7 @@ const handlePageMenuClick: NonNullable<DropdownProps["onClick"]> = ({ value }) =
   }
 };
 
-function selectCopyTarget(value: string | number | Array<string | number>) {
+function selectCopyTarget(value: unknown) {
   if (typeof value === "string") preferredCopyTargetPageId.value = value;
 }
 
@@ -725,7 +749,7 @@ function copySelectedToPage() {
   );
 }
 
-function changeTagBinding(value: string | number | Array<string | number>) {
+function changeTagBinding(value: unknown) {
   const slot = bindingSlot.value;
   if (slot === null || typeof value !== "string") return;
   apply(
@@ -890,11 +914,11 @@ async function locateSelectedLayer() {
   notice.value = "已定位选中图元所在图层";
 }
 
-function selectLayerTarget(value: string | number | Array<string | number>) {
+function selectLayerTarget(value: unknown) {
   if (typeof value === "string") preferredLayerTargetId.value = value;
 }
 
-function selectLayerPosition(value: string | number | Array<string | number>) {
+function selectLayerPosition(value: unknown) {
   if (value === "before" || value === "after") layerInsertPosition.value = value;
 }
 
@@ -2543,28 +2567,7 @@ async function importJsonFile(file: File | undefined) {
             <TSelect
               :value="selectedTagId"
               :aria-label="selected.id + ' 的 ' + bindingSlot + ' Tag 绑定'"
-              :options="[
-                { label: '不绑定', value: '' },
-                ...(missingBindingTag
-                  ? [
-                      {
-                        label: selectedTagId + '（当前工程未定义或类型待确认）',
-                        value: selectedTagId,
-                        disabled: true,
-                      },
-                    ]
-                  : []),
-                ...tagCandidates.map((option) => ({
-                  label:
-                    option.displayName +
-                    ' · ' +
-                    option.tagId +
-                    ' · ' +
-                    TAG_DATA_TYPE_LABELS[option.dataType] +
-                    (option.unit ? ' · ' + option.unit : ''),
-                  value: option.tagId,
-                })),
-              ]"
+              :options="tagBindingOptions"
               @change="changeTagBinding"
             />
           </label>
