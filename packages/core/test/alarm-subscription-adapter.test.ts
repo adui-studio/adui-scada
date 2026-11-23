@@ -541,10 +541,7 @@ test("回调读取时钟故障与双资源取消故障均保留原始原因", ()
   const failures = (failure as AggregateError).errors as unknown[];
   expect(failures[0]).toBe(originalFailure);
   expect(failures[1]).toBeInstanceOf(AggregateError);
-  expect((failures[1] as AggregateError).errors).toEqual([
-    intervalFailure,
-    subscriptionFailure,
-  ]);
+  expect((failures[1] as AggregateError).errors).toEqual([intervalFailure, subscriptionFailure]);
   expect(cancelCount).toBe(1);
   expect(unsubscribeCount).toBe(1);
   expect(adapter.isRunning()).toBe(false);
