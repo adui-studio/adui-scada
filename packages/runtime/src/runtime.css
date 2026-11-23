@@ -576,7 +576,7 @@ button:focus-visible {
 }
 .scada-shell {
   width: 100%;
-  max-width: 1600px;
+  max-width: none;
   min-width: 0;
   padding: clamp(16px, 2vw, 30px);
 }
@@ -775,22 +775,69 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
 }
+.scada-published-preview-panel {
+  display: flex;
+  min-height: clamp(320px, 42dvh, 580px);
+  flex-direction: column;
+}
+.scada-published-preview-panel > .scada-diagnostics-empty {
+  display: flex;
+  min-height: 220px;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border: 1px dashed var(--scada-border-strong);
+  border-radius: 7px;
+  background: var(--scada-canvas);
+  text-align: center;
+}
 @media (min-width: 1100px) {
-  .scada-shell--overview {
-    grid-template-columns: minmax(0, 1.75fr) minmax(300px, 1fr);
-  }
   .scada-shell--published {
     grid-template-columns: minmax(0, 1.2fr) minmax(330px, 1fr);
   }
-  .scada-shell--overview > .scada-header,
-  .scada-shell--overview > .scada-message,
-  .scada-shell--overview > .scada-diagnostics,
-  .scada-shell--overview > footer,
   .scada-shell--published > .scada-header,
   .scada-shell--published > .scada-message,
   .scada-shell--published > .scada-published-preview-panel,
   .scada-shell--published > footer {
     grid-column: 1 / -1;
+  }
+}
+@media (min-width: 1200px) {
+  .scada-shell--overview {
+    grid-template-columns: minmax(0, 1.8fr) minmax(340px, 1fr);
+    grid-template-areas:
+      "header header"
+      "message message"
+      "process diagnostics"
+      "process values"
+      "footer footer";
+  }
+  .scada-shell--overview > .scada-header {
+    grid-area: header;
+  }
+  .scada-shell--overview > .scada-message {
+    grid-area: message;
+  }
+  .scada-shell--overview > .scada-process-panel {
+    grid-area: process;
+  }
+  .scada-shell--overview > .scada-diagnostics {
+    grid-area: diagnostics;
+  }
+  .scada-shell--overview > .scada-values-panel {
+    grid-area: values;
+  }
+  .scada-shell--overview > footer {
+    grid-area: footer;
+  }
+  .scada-shell--overview .scada-diagnostics-grid,
+  .scada-shell--overview .scada-quality-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .scada-shell--overview .scada-status-events {
+    grid-template-columns: minmax(0, 1fr);
+    max-height: 200px;
   }
 }
 @media (max-width: 720px) {
