@@ -1,3 +1,4 @@
+import { Button } from "tdesign-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { compareProjectDocuments } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
@@ -88,14 +89,14 @@ export function ServerReleasePreflight({
       <p className="studio-version-help">
         服务端预检仅检查已保存的当前修订，与上方当前画布静态预检不同；不会保存、发布或修改草稿。
       </p>
-      <button
+      <Button tag="button"
         type="button"
         className="studio-version-more"
         disabled={disabled || busy}
         onClick={() => void checkSavedVersion()}
       >
         {busy ? "正在只读检查服务端版本…" : "检查服务端已保存版本"}
-      </button>
+      </Button>
       {error && (
         <p className="studio-version-error" role="alert">
           {error}；当前画布与 IndexedDB 草稿不变。
