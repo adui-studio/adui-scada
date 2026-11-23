@@ -1695,7 +1695,7 @@ export default function StudioPage() {
   }
 
   return (
-    <main className="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
+    <main id="scada-main-content" className="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
       <header className="studio-toolbar">
         <div>
           <p className="scada-eyebrow">ADui SCADA · V0.3 Studio</p>
