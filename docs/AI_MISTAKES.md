@@ -823,3 +823,11 @@
 - **最小修复候选**：先清空当前运行标记、资源引用，再通过 `controller.disconnect` 撤销旧基线和令牌，最后用 `try/finally` 依次尝试两项取消。订阅和调度返回后同时核对运行标记及原令牌；旧会话的异常处理只有在令牌仍匹配时才停止。新增 4 项测试，包含重入、安装异常和两次取消均抛错。外部取消函数抛错时不声称其实际完成释放。
 - **防复发**：任何第三方 `unsubscribe/cancel/close`、回调或定时器清理都应按**先使内部会话失效、再调用外部回调**检查，并增加同步重入和旧初始化返回的回归测试；不可仅通过代次数字识别回调身份。
 - **验证边界**：本批测试仍待维护者 Windows 执行，`vp check`、`docs:check` 和 `messages:check` 尚未提供新结果。FR-011 的来源认证、实际订阅可靠性及工业安全仍未完成。
+
+### E-086 · D5b9o 重入测试在条件分支内使用 expect（PR #154，待复验）
+
+- **现象与证据**：维护者 Windows 执行 `vp check --fix` 时，`packages/core/test/alarm-subscription-adapter.test.ts:280` 报 `vitest(no-conditional-expect)` **1 条警告、0 错误**。格式化完成不等于零警告通过；没有本批定向测试或再次 `vp check` 成功证据。
+- **根因**：为检查周期取消回调重入时“旧基线已清空”，将 `expect(adapter.snapshot().baseline).toBeNull()` 直接写进 `if (cancellations === 1)` 内，重复违反既有 E-003 的 Vitest 规则。
+- **最小修复候选**：保持原有重入测试逻辑，在第一次取消的分支内只记录布尔值 `baselineClearedBeforeCancellation`，在 `adapter.stop()` 返回后的测试主流程以 `expect(...).toBe(true)` 断言；若首次取消未发生，默认 `false` 亦使测试失败，不能把未发生重入误判通过。不改业务函数、令牌顺序及公共接口。
+- **防复发**：在嵌套回调、条件或循环中先收集结果，`expect` 放在测试主体；编码前必须复查 E-003，`vp check --fix` 出警告时单独修复并运行不带 `--fix` 的 `vp check`。
+- **验证状态**：当前仅已提交源码修复，维护者 Windows 的定向测试、`vp check`、文档与中文文案检查均待重跑；不得声明警告已在 Windows 实测消除。
