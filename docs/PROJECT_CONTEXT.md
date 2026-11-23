@@ -2490,3 +2490,21 @@ D5c0v 基于合并后的 main，限定本地版本历史一个入口/框架：�
 ## 2026-11-23 · PR #188 Vue 选择器真实类型检查阻塞（E-110）
 
 维护者在 Windows 运行 `pnpm run typecheck:web`，React tsc 命令完成后，Vue `vue-tsc` 共报 **6 个 Select `@change` TS2322** 与 **1 个 Tag 模板 TS2339**，导致验收链提前终止，后续检查未执行。根因是双框架迁移时为 Vue Select 声明了过窄的回调参数类型，且在 Vue 模板中直接计算复杂 Tag 下拉候选项。已按固定版本 `tdesign-vue-next@1.20.11` 值域和项目 Vue 最佳实践，直接提交三处 Vue 文件的最小修复：回调以 `unknown` 接收、严格收窄为 ID/枚举；Tag 绑定选项由脚本 `computed` 生成，模板只绑定结果。保留 Vue/React 工程 Schema、Tag 规则、历史缺失占位和工业安全边界。**只有 GitHub 静态核对，Windows 最新 HEAD 类型/浏览器验收尚待实际执行**。PR #188 仍为 Draft、指派 `@adui-dev`，未经授权不得合并，详见 E-110 与 `VALIDATION.md`。
+
+## 2026-11-23 · D5c0x Studio TDesign 控件密度与边框优化候选
+
+维护者提交 PR #188 完成后的 Studio 截图，指出左侧图层区边框/焦点过于明显、右侧 Tag 行操作按钮过大及按钮尺寸不齐；本轮 `typecheck:web`、`vp check`、`messages:check`、`docs:check` 实测通过，并明确授权合并。PR #188 经 Squash Merge 合入 `main@30d1133e711361640e9b86bd89664a19aee6c085`，浏览器/安全专项仍待复验。
+
+已建立 `feat/d5c0x-studio-controls-polish`，同步清理双端原生控件覆盖，按共享 Token 收敛 Tag 动作 28px 双列、输入边框、图层选中态和侧栏边界；增加 React/Vue 真实 DOM 的 Tag 按钮尺寸验收。不改工程 Schema、工业只读、OIDC/CAS、SVG 画布几何与 Core。新分支源码仅静态复核，Windows Vite+/浏览器尚未运行；后续在 PR 中维护 Draft 直至真实验收并另获合并授权。
+
+## 2026-11-23 · PR #189 React 19 TDesign DialogPlugin 适配阻塞（E-112）
+
+维护者 Windows 已验证 PR #189 的 React/Vue Web 类型检查、`vp check` 448/291 零告警、中文文案 318、文档 94 和四组普通浏览器 33/33；`test:tags:browser` 却在真实 Tag 删除 Dialog 确认按钮未出现时失败并中断后续测试。根目录 Catalog 使用 React/React DOM 19.3.1、TDesign React 1.18.6；固定官方源码及指南明确要求 React 19 导入 `tdesign-react/es/_util/react-19-adapter`，当前 `main.tsx` 遗漏此步骤，使插件式动态 Dialog 无法挂载。已将官方适配器导入加至 React 应用入口，补充双端 Tag 取消删除不写入浏览器断言，保留已绑定 Tag 删除保护与所有已存在的业务规则。**最新分支修复尚未实际运行 Windows 检查或浏览器验收；以上已通过的原日志不代表新提交已通过**。PR #189 继续保持 Draft，指派 `@adui-dev`，待实测并由维护者另行授权合并。
+
+## 2026-11-23 · PR #189 Tag 浏览器首次 React 导航阻塞（E-113）
+
+维护者在 React 19 TDesign 适配器候选后执行 Windows `typecheck:web`、`vp check`（448/291 零警告错误）、中文文案（318）及文档（94）均通过；`test:tags:browser` 则在首次 React HTTPS 导航阶段直接失败，未到 Tag 删除确认路径，其后专项未执行。初步定位为浏览器导航诊断不足，尚无实际 Chromium 网络错误码，不能断言是适配器、证书或缓存引起。根据 E-106 先前真实 `ERR_CACHE_WRITE_FAILURE` 证据，现仅在 `--tags` 临时 Chromium 的 HTTP 缓存上使用 CDP 隔离，同时为导航失败补充严格白名单网络/加载状态诊断。保持全部真实 Tag 删除取消/确认、绑定保护、CAS 及 HTTPS 约束。相关文档 E-113；本提交 Windows 实测待补，PR #189 仍为 Draft、Assignee `@adui-dev`、未授权合并。
+
+## 2026-11-23 · PR #189 React Tag 最终删除失败与实例级弹窗定位候选（E-114）
+
+维护者本轮 Windows `node --check` 成功，`vp check` 448/291 零告警；`test:tags:browser` 已通过 React 首次页面导航并运行至最终正常删除，导出工程 JSON 仍含测试 Tag，退出码 1，Vue/其他专项未开始。源码显示连续确认/取消后，测试仍选全局首个 TDesign Dialog 按钮；固定 React 1.18.6 插件销毁存在动画滞后，可能误点旧弹窗，但暂无浏览器实例级证据确认根因。候选补丁仅在真实点击前记录旧 Dialog、定位本轮新弹窗，并等待既有删除成功提示后导出，完整保留取消、绑定保护及 JSON 不存在断言。没有修改 React/Vue UI、Core、权限、持久化或工业安全边界。协作环境只完成 Node 22 选择器 2/2 模拟验证及源码静态检查；最新 HEAD Windows Vite+/浏览器与跨框架回归待维护者复验。PR 仍为 Draft、Assignee `@adui-dev`，未经授权不得合并。

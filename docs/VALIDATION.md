@@ -4429,3 +4429,64 @@ PR #188 已提交最小修复候选：图层拖拽事件签名由 `ReactDragEven
 本次已将 `apps/web-vue/src/runtime/PublishedRuntimePage.vue`、`apps/web-vue/src/studio/StudioPage.vue`、`apps/web-vue/src/studio/TagManager.vue` 共六个 `@change` 回调形参改为 `unknown` 并保持具体 ID/枚举的运行时收窄；Studio 标签下拉的内联 `:options` 移为脚本 `computed`。未改已发布页权限、Tag 持久化、图层拖拽或确认载入时 CAS。GitHub 静态检查已确认六处旧签名均已消失、模板仅绑定 `tagBindingOptions`；这是源码候选而非编译或浏览器通过的证据。详见 E-110。
 
 **待在 PR 最新 HEAD Windows 复验**：先执行 `pnpm run typecheck:web`、不带 `--fix` 的 `vp check`、`pnpm run messages:check`、`pnpm run docs:check`；只有全部通过才继续 `pnpm run test:unit`、`pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop`、`pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:legacy:browser`、`pnpm run test:release:preflight:browser`、`pnpm run test:multitab`。需验证 Vue 已发布页面切换、跨页复制、Tag 绑定、图层目标与插入位置、Tag 数据类型的实际选项选择，保留类型与历史缺失占位保护。PR #188 保持 Draft，不合并。
+
+## 2026-11-23 · PR #188 授权合并与 D5c0x Studio 控件视觉回归待验收
+
+维护者提供 Windows 四项检查通过：`pnpm run typecheck:web`（React/Vue/草稿及 API Client）、`vp check`（448 个格式文件，291 个受检文件零告警/错误）、`messages:check`（318 文件）、`docs:check`（94 Markdown）。维护者同时明确「同意合并，继续」，PR #188 经 GitHub Squash Merge 至 `main@30d1133e711361640e9b86bd89664a19aee6c085`。**本轮未提供单元测试、普通/Tag/互通/历史版本/多标签浏览器专项的成功输出，也未提供本地 HEAD；不能把上述四项静态检查当作全量安全回归通过。**
+
+新分支 `feat/d5c0x-studio-controls-polish` 针对截图红框做视觉收敛：两端 Tag 操作统一为 TDesign Text Button/28px 双列，图层行改 Text Button、搜索尺寸对齐；清理旧样式的按钮自动高度、原生输入边框及全局亮青焦点环；弱化侧栏和 Tag 边界。保持当前已有的左 252px/右 320px、SVG 16:9、Tag ID、CAS、删除保护等现有门禁。
+
+**专项新增**：`scripts/test-studio-browser.mjs` 的 `--tags` 流程在真实 React/Vue Tag 面板展开后读取两组按钮实际 `getBoundingClientRect()` 和网格列数，要求各 2 个按钮、双列、可见、每组同高同宽；保留后续 Tag 新增/编辑/绑定删除保护/删除的原始业务断言。
+
+**待维护者 Windows 实测（尚未通过）**：同一最新 HEAD 执行 `pnpm run typecheck:web`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`、`pnpm run test:browser`、`pnpm run test:tags:browser`；再运行 `pnpm run test:interop`、`pnpm run test:versions:safety` 与 `pnpm run test:multitab` 确保跨端/存储安全无意外回归。在 1440×900、1024×768 双版本检查图层选中/键盘焦点、Tag 条目编辑删除、表单提交/重置、长 ID 折行和两侧栏宽度。未获得最终验收结果前新 PR 保持 Draft、指派 `@adui-dev`，不合并。
+
+## 2026-11-23 · PR #189 Tag 删除 Dialog 未挂载与 React 19 官方适配修复候选
+
+维护者本轮 Windows 依次运行以下检查，**仅这些已获得成功证据**：`pnpm run typecheck:web` 成功；`vp check` **448 个格式文件/291 个受检文件零告警错误**；`messages:check` 318 文件；`docs:check` 94 Markdown；`test:browser` React/Vue 在 1440×900、1024×768 **四组各 33/33**。随后 `test:tags:browser` 失败：`clickTagRowActionInPage` 等待 TDesign Tag 删除确认 Dialog 超时。PowerShell 在失败时退出，因此 `test:interop`、`test:versions:safety`、`test:multitab` **未运行**。
+
+已审查固定 `tdesign-react@1.18.6` 的官方 React 19 支持机制，发现生产入口缺少 `tdesign-react/es/_util/react-19-adapter` 副作用导入。其 `react-render.ts` 在 React 19 且未加载适配器时无法进行插件动态渲染，这可以解释 `DialogPlugin.confirm` 没有实际挂载，而非由视觉上按钮变小造成。已在 `apps/web-react/src/main.tsx` 按官方文档添加适配器；原 `test:tags:browser` 继续真实点击确认并新增取消不写入断言，Tag 绑定保护没有删除。详见 AI 错误复盘 E-112。
+
+**修复候选尚未运行 Windows 验收**。待同一最新 HEAD 复验：`pnpm run typecheck:web`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`、`pnpm run test:browser`、`pnpm run test:tags:browser`；通过后继续 `pnpm run test:interop`、`pnpm run test:versions:safety`、`pnpm run test:multitab`。关注 React/Vue Tag 删除确认/取消、已绑定 Tag 拒绝、工程 JSON 往返，及 React 19 各插件式 Dialog（草稿覆盖和历史版本载入）的可见性与安全语义。新 PR 仍保持 Draft，未经维护者明确同意不合并。
+
+## 2026-11-23 · PR #189 React 首次 Tag 导航失败及隔离网络候选（E-113）
+
+维护者新一轮在 Windows 执行 `typecheck:web`、`vp check` **448/291 零错误警告**、`messages:check` **318 文件**与 `docs:check` **94 份**全部通过；`test:tags:browser` 在第一个 React 页面导航阶段失败，报 `React 页面导航失败：https://127.0.0.1:15173/?scada_interop_check=tag-management`，退出码非零。由于失败即中断，本轮尚未运行 `test:versions`、`test:versions:safety`、`test:interop`、`test:multitab` 和 `test:browser`。前一次通过的四视口 `test:browser` 结果不代表当前提交通过。不能把这次导航失败误记为仍发生在删除 Dialog 上。
+
+已提交候选：`--tags` 在临时 Chromium 测试会话中使用 CDP 禁用**HTTP 缓存**，这是 E-106 已有浏览器缓存故障的受控隔离手段；同时为真实导航失败补充地址匹配、加载状态、白名单 Chromium 错误码和同源模块请求失败分类。保留既有导航次数及间隔、真实按钮点击、取消不写入、已绑定 Tag 删除拒绝、IndexedDB 与 HTTPS 约束。**本次故障尚无 Chromium 错误码，不能断言缓存是根因；新的 Windows 运行结果仍待提交。**
+
+复验建议（在 PR 最新 HEAD 且隔离本机开发服务已启动的前提下）：
+
+```powershell
+git fetch origin
+git switch feat/d5c0x-studio-controls-polish
+git pull --ff-only
+git rev-parse HEAD
+node --check scripts/test-studio-browser.mjs
+vp check
+pnpm run test:tags:browser
+```
+
+只有 `test:tags:browser` 通过后，再运行 `pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:interop`、`pnpm run test:multitab`、`pnpm run test:browser`。如果仍导航失败，请保留新输出的「地址匹配 / 文档状态 / Chromium导航错误 / 同源网络诊断」，不修改协议或跳过安全断言。PR 保持 Draft，未经维护者明确授权不合并。
+
+## 2026-11-23 · PR #189 React Tag 确认删除断言与旧 Dialog 竞态（E-114）
+
+维护者 Windows 在先前 E-113 导航诊断候选后，`node --check` 成功、`vp check` 448/291 零错误告警；真实 `test:tags:browser` 已执行到 React 最后「删除 Tag 后工程仍包含该定义」断言失败（退出码 1），不再是首次导航失败。新增/编辑、取消删除与已绑定 Tag 删除保护已跨过对应断言；**未证明最终删除成功或 Vue 端通过**。
+
+代码检查发现：`clickTagRowActionInPage` 在多次 Dialog 之间选择全局首个 `.t-dialog` 确认/取消按钮；TDesign 1.18.6 Dialog 异步销毁存在退出动画，旧弹窗可能残留。候选修复仅记录点击前旧 Dialog，限定新建弹窗按钮，再等待实际「项目 Tag 已删除，可撤销」业务提示后导出 JSON；不放松取消/绑定拒绝/最终定义消失的安全断言，也不变更 UI、Core 和工业只读边界。**当前尚无本机 Chromium DOM 证据断定旧按钮就是实际根因。**
+
+候选改动仅完成 GitHub 源码静态复核及独立 Node 22 选择器烟雾验证 **2/2**，**Windows 最新 HEAD 尚未验收**。请在本机开发服务启动后依次执行：
+
+```powershell
+git fetch origin
+git switch feat/d5c0x-studio-controls-polish
+git pull --ff-only
+git rev-parse HEAD
+node --check scripts/test-studio-browser.mjs
+pnpm run typecheck:web
+vp check
+pnpm run messages:check
+pnpm run docs:check
+pnpm run test:tags:browser
+```
+
+只有 Tag 浏览器专项在 React/Vue 两端完全通过后，继续 `pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:interop`、`pnpm run test:multitab`、`pnpm run test:browser`。若再次失败，保留实际错误和本轮业务提示结果，不擅自判定 Core 错误或降低测试约束。PR #189 保持 Draft、指派 `@adui-dev`，未经维护者明确授权不合并。

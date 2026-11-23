@@ -1713,6 +1713,8 @@ export default function StudioPage() {
         tag="button"
         key={rowKey}
         type="button"
+        theme="default"
+        variant="text"
         className="studio-layer"
         data-layer-key={rowKey}
         data-selected={selectedRow}
@@ -2207,6 +2209,7 @@ export default function StudioPage() {
               搜索图元或组合
               <Input
                 type="search"
+                size="small"
                 aria-label="搜索图层"
                 maxlength={128}
                 value={layerSearch}

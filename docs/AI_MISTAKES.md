@@ -1075,3 +1075,36 @@
 - **最小修复候选**：只修改三个 Vue SFC。六处 `@change` 处理函数参数类型统一为 `unknown`，函数内部仍只接收字符串 ID 或限定枚举；拒绝将对象、数组、数字、`bigint` 转成非法 Tag/页面/图层 ID。把 Tag 绑定下拉候选项提为 `<script setup>` 中的 `tagBindingOptions = computed(...)`，模板仅使用 `:options="tagBindingOptions"`。保留“未绑定”、历史缺失 Tag 占位、数据类型中文标签及原有 Tag 类型约束；不触碰 React、Core、Schema、CAS、OIDC 与工业写入边界。
 - **防复发与验证**：双框架 UI 组件事件回调不能按原生 `select` 事件的值域自行缩窄形参；先核对各自固定版本 API，宽接受、窄校验。复杂选项列表放在脚本 `computed`，减少 Volar 模板自动展开的歧义。**目前只完成 GitHub 源码静态核对；修复后的 Windows `pnpm run typecheck:web`、`vp check`、`docs:check` 及双框架浏览器测试仍待真实执行**，不可将本次改动视为质量门禁通过。
 - **证据**：维护者 2026-11-23 Windows PowerShell 中 `vue-tsc` 七条错误及最终失败退出码、PR #188 的三个 Vue SFC、`tdesign-vue-next@1.20.11` 固定官方 `select/type.ts`。
+
+### E-111 · D5c0w 全量 TDesign 迁移后残留原生样式导致 Studio 控件视觉不一致
+
+- **真实现象**：2026-11-23 维护者提交 React/Vue TDesign 全量迁移后 Studio 深色页面截图，红框标示左侧图层区的输入描边、图层行与侧栏分界，以及右侧 Tag 定义区的编辑/删除按钮：焦点/边框过亮、右侧按钮纵向大块堆叠、同一区域按钮尺寸不一致。维护者同期 Windows `typecheck:web`、`vp check`（448/291 零告警）、`messages:check`（318 文件）、`docs:check`（94 文档）通过；**这些静态检查并不能证明视觉质量或所有浏览器安全测试通过**。PR #188 经明确授权 Squash 合并为 `main@30d1133e711361640e9b86bd89664a19aee6c085`。
+- **源码原因**：迁移后两套 `apps/web-*/src/studio/studio.css` 仍向全部 TDesign Button 注入 `height:auto` 和最小高度，遗留 `.studio-field input/select/textarea` 的原生边框与填充；`packages/tailwind/src/studio.css` 对所有原生控件无差别应用强烈的青色 `:focus-visible` 轮廓。TagManager 的条目与表单操作沿用未专门布局的 `studio-toolbox`，所以旧式全宽按钮行为与新 TDesign `size=small` 并存；左侧图层选中边框及侧栏边界叠加强调。
+- **修复候选**：新 D5c0x 分支最小范围内，将 Tag 条目和表单动作明确分为各自 2 列并统一 `--adui-control-height-sm`（28px），编辑/删除分别使用现有 TDesign Text Button 及 danger 语义，不再堆叠整列主色按钮；两端图层行复用 TDesign Text Button，搜索使用 `size=small`。清理两端旧按钮通用高度覆盖和原生输入二次描边；共享 CSS 将焦点交给 TDesign 自己管理，仅保留专用图层键盘焦点状态，同时柔化侧栏分界与选中边框。不改 Tag 删除确认、Tag ID、图层命中/拖拽、工程 Schema、CAS 或工业安全边界。
+- **防复发**：迁移 UI 组件时必须同时清理旧原生控件尺寸/轮廓覆盖，而不是仅替换 JSX/Vue 标签；对同一业务区域增加真实 DOM 的尺寸/布局断言。已在 `test:tags:browser` 对两端 Tag 行及表单动作增加双列、等宽、等高约束。**截至候选提交未执行 Windows Vite+/真实浏览器，静态 CSS 和源码检查不等于完成验收**。
+- **证据**：维护者 2026-11-23 Studio 截图、两端 `TagManager` 和 `studio.css`、共享 `@adui/tailwind/studio.css`、原 `scripts/test-studio-browser.mjs` 及 PR #188。
+
+### E-112 · React 19 未加载 TDesign 官方适配器导致 DialogPlugin 无法挂载（PR #189）
+
+- **Windows 实测现象**：维护者在 PR #189 分支执行 `pnpm run typecheck:web`、`vp check`（448 格式文件 / 291 受检文件零告警）、`messages:check`（318 文件）、`docs:check`（94 份）和 `test:browser`（React/Vue × 1440×900/1024×768，四组各 **33/33**）均通过，但 `test:tags:browser` 在真实点击 Tag 的「删除」后等待 TDesign Dialog 确认按钮超时，报 `Tag 删除确认弹层未出现`，整个命令链退出码非零。其后 `test:interop`、`test:versions:safety`、`test:multitab` 未执行。日志未单独打印本地 Git HEAD，不能把通过记录绑定为修复后提交。
+- **确定的源码缺口**：根 Catalog 声明 `react@19.3.1`、`react-dom@19.3.1` 与 `tdesign-react@1.18.6`，React 入口 `apps/web-react/src/main.tsx` 未加载官方 React 19 适配器。对照 TDesign 固定版本 `packages/components/_util/react-render.ts`：React 19 下既没有 ReactDOM 旧版 `render`，也不会自动初始化 `legacyCreateRoot`；`DialogPlugin.confirm` 调用该内部渲染函数时可无内容挂载。官方 `packages/tdesign-react/site/docs/getting-started.md` 的「如何在 React 19 中使用」明确要求 `import "tdesign-react/es/_util/react-19-adapter"`。组件按钮、确认文案和原 `.t-dialog__confirm` 选择器不是已证实的根因，不通过弱化测试规避问题。
+- **最小修复**：只在 React 入口 `main.tsx` 的 `createRoot` 导入后、`App` 导入前加入官方适配器副作用 import，不新增依赖、不修改 DialogPlugin Promise 取消/确认契约、不替换为 `window.confirm`、不改 Vue 端。保留 Tag 删除前真实 Dialog 授权和已绑定 Tag 删除保护。针对双框架 `test:tags:browser` 增加「点击取消后工程 JSON 中该 Tag 仍存在」断言，原确认删除/受绑定拒绝用例继续有效。
+- **防复发**：引入需要 React Portals / 插件式动态渲染的 UI 库时，必须按当前 React 主版本阅读固定依赖的兼容说明，不能以普通 Button/Input 类型检查通过推断插件式 Dialog 正常。浏览器专项除静态 DOM 选择外必须点击确认与取消两条路径，并验证项目 JSON 未被取消操作修改。
+- **验证边界**：以上为固定版本官方源码与仓库现状的确定性诊断及 GitHub 修复候选，**尚未拿到新 HEAD 的 Windows `typecheck:web`、`vp check`、`test:tags:browser` 或 Vue/React 真实 Dialog 结果，不能声称已复验通过**。后续依次执行质量检查及 `test:browser`、`test:tags:browser`、`test:interop`、`test:versions:safety`、`test:multitab`。
+- **证据**：维护者 2026-11-23 Windows PowerShell 输出、`apps/web-react/src/main.tsx`、`apps/web-react/src/studio/StudioDialog.tsx`、`scripts/test-studio-browser.mjs`、TDesign React `tdesign-react@1.18.6` 官方 `react-render.ts`、`react-19-adapter.ts` 和 `getting-started.md`。
+
+### E-113 · Tag 浏览器验收导航失败缺少 Chromium 级诊断（PR #189）
+
+- **Windows 实测现象**：维护者在 PR #189 最新一轮执行 `pnpm run typecheck:web` 成功、`vp check` **448 格式文件/291 受检零告警错误**、`messages:check` **318 文件**、`docs:check` **94 Markdown** 后，`test:tags:browser` 在第一个 React URL `https://127.0.0.1:15173/?scada_interop_check=tag-management` 导航阶段失败，退出码 1。未到 Tag 删除 Dialog 检查阶段；后续其他浏览器专项未执行。用户日志没有附上当前本地 HEAD，不能将先前 React 19 适配器缺口直接断定为本次导航失败的原因。
+- **定位结果**：`navigateStudioForInterop` 用固定 60 次 × 150ms 读取目标地址和 `document.readyState === "complete"`，失败时仅输出实际 URL，没有 Chromium `Page.navigate.errorText`、文档状态或同源模块网络错误；单凭该异常无法区分 TLS、网络中断、Chromium 缓存、Vite 热重建及其他资源原因。先前 E-106 在隔离多标签页中**实测**出现 `net::ERR_CACHE_WRITE_FAILURE`，通过 CDP `Network.setCacheDisabled` 绕过，但本次 Tag 导航尚未取得同种错误码，不能把 E-106 当成已证实的新根因。
+- **最小候选**：仅改 `scripts/test-studio-browser.mjs`。在 `--tags` 独立临时 Chromium 中调用 `Network.enable` 与 `Network.setCacheDisabled({cacheDisabled:true})`，使本机开发资源不依赖有故障记录的 HTTP 磁盘缓存；**不触碰 IndexedDB、BroadcastChannel、业务 CAS、TLS 校验或设备数据**。对 `--tags` 的真实导航开启已有 `watchStudioModuleNetwork` 观察器，只在失败时附加按同源资源类别脱敏的诊断，在 `finally` 关闭监听。导航失败错误增加白名单 `net::ERR_[A-Z0-9_]{1,64}`、地址匹配布尔值和 `document.readyState`，同时补充 React 入口、React 19 适配器、React/Vue Studio 模块分类；不输出 HTTP 正文、Cookie、授权信息或异常堆栈。
+- **防复发与验收**：不延长原 60 × 150ms 门槛，不重试掩盖失败，不取消真实 Tag 确认/取消和已绑定拒绝断言。若隔离 HTTP 缓存后通过，仅证明该会话可继续验收，不能据此认定本次原失败根因就是缓存；若仍失败，先据新诊断分类查网络/证书/模块再改正式应用。**本批仅已提交 GitHub 候选，尚未运行 Windows `node --check`、`vp check`、`test:tags:browser`，不得声称修复已实测通过。**
+- **证据**：维护者本轮 Windows 原始失败日志、`scripts/test-studio-browser.mjs` 现有导航/网络诊断、历史 E-106 Chromium 缓存实测记录和 PR #189。
+
+### E-114 · Tag 浏览器脚本可能点击退出动画中的旧 Dialog（PR #189，待 Windows 复验）
+
+- **真实现象**：2026-11-23 维护者在 PR #189 上执行 `node --check scripts/test-studio-browser.mjs` 与 `vp check`（448 个格式文件/291 个受检文件，零告警错误）通过；`pnpm run test:tags:browser` 已越过 React 首次导航、新建/编辑、取消删除及已绑定 Tag 删除保护，最终失败于「React 删除 Tag 后工程仍包含该定义」，退出码 1。Vue 端及后续专项未执行。该日志只说明最终导出仍含 Tag，不能单独证明 Core 删除功能有缺陷。
+- **源码分析（候选根因）**：浏览器函数 `clickTagRowActionInPage` 在连续三次 Dialog 确认/取消之间从整个文档选取首个带 `t-dialog__confirm`/`t-dialog__cancel` 的可见按钮；固定版本 `tdesign-react@1.18.6` 的插件 `destroy` 经 `requestAnimationFrame` 调用，Dialog 具有约 300ms 退出动画。前次弹窗残留节点可能被再次命中，导致脚本没有确认新一轮删除。当前无 Chromium DOM 快照，故仅属与源码及症状一致的竞态推断，不视为实证根因。
+- **最小修复候选**：点击业务按钮前记录已有 `.t-dialog` 节点，只在本次新增的弹窗内定位确认/取消按钮；保持原 12 秒弹窗门槛、真实点击和旧弹窗拒绝。最终删除先等待现有成功提示「项目 Tag 已删除，可撤销」，再导出实际工程 JSON 校验 Tag 不存在；已绑定 Tag 必须拒绝删除，取消必须保留定义，原有断言不变。仅修改 `scripts/test-studio-browser.mjs`，不动 React/Vue UI、Core Tag 规则、持久化、权限或工业边界。
+- **防复发与验证边界**：连续使用插件式 Dialog 的浏览器验收应按弹窗实例隔离定位，不以全局首个按钮或固定延时推断操作已经完成。协作容器仅对选择器模拟场景执行 Node 22 的 2/2 烟雾用例与语法检查；**未执行本仓库完整 `vp check`、Windows React/Vue Chromium `test:tags:browser` 或后续专项**。这些均须在最新 PR HEAD 复验。
+- **证据**：维护者本轮 PowerShell 日志、PR #189 最新源码、`scripts/test-studio-browser.mjs`、`apps/web-react/src/studio/StudioDialog.tsx`、TDesign React 1.18.6 `dialog/plugin.tsx` 与 `Dialog.tsx`。

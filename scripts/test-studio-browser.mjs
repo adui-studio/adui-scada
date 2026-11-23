@@ -597,7 +597,7 @@ async function importStudioJsonInPage(json, expectSuccess) {
 async function navigateStudioForInterop(session, target, marker) {
   const url = new URL(target.url);
   url.searchParams.set("scada_interop_check", marker);
-  await session.send("Page.navigate", { url: url.href });
+  const navigation = await session.send("Page.navigate", { url: url.href });
   let loaded = false;
   for (let attempt = 0; attempt < 60; attempt += 1) {
     await pause(150);
@@ -611,8 +611,28 @@ async function navigateStudioForInterop(session, target, marker) {
     }
   }
   if (!loaded) {
-    const href = await session.evaluate("location.href");
-    throw new Error(target.name + " 页面导航失败：" + href);
+    // 只暴露固定导航状态和 Chromium 错误码，不打印浏览器异常、资源 URL 或响应正文。
+    const state = await session
+      .evaluate(
+        "({ addressMatches: location.href === " +
+          JSON.stringify(url.href) +
+          ", readyState: document.readyState })",
+      )
+      .catch(() => ({ addressMatches: false, readyState: "不可读取" }));
+    const errorText = /^net::ERR_[A-Z0-9_]{1,64}$/.test(navigation.errorText ?? "")
+      ? navigation.errorText
+      : "未提供";
+    throw new Error(
+      target.name +
+        " 页面导航失败：" +
+        url.href +
+        "；地址匹配：" +
+        state.addressMatches +
+        "；文档状态：" +
+        state.readyState +
+        "；Chromium导航错误：" +
+        errorText,
+    );
   }
   await session.evaluate("(" + enterStudioInPage.toString() + ")()");
 }
@@ -628,7 +648,11 @@ function watchStudioModuleNetwork(session, target) {
     try {
       const url = new URL(address);
       if (url.origin !== origin) return null;
+      if (url.pathname === "/") return "Web首页";
+      if (url.pathname.endsWith("/src/main.tsx")) return "React应用入口";
       if (url.pathname.endsWith("/src/studio/StudioPage.vue")) return "Studio模块";
+      if (url.pathname.endsWith("/src/studio/StudioPage.tsx")) return "Studio模块";
+      if (url.pathname.includes("react-19-adapter")) return "React19适配器";
       if (url.pathname.includes("/.vite/deps/")) return "Vite预构建依赖";
       if (url.pathname.startsWith("/src/")) return "Vue应用模块";
       if (url.pathname.startsWith("/@fs/")) return "工作区模块";
@@ -898,14 +922,19 @@ async function clickTagRowActionInPage(tagId, action, confirmChoice) {
     (node) => node.textContent.trim() === action,
   );
   if (!button) throw new Error("未找到项目 Tag 操作：" + tagId + " · " + action);
+  // TDesign Dialog 退出动画期间仍可能保留旧按钮，后续只允许操作本次新建弹窗。
+  const previousDialogs = new Set(document.querySelectorAll(".t-dialog"));
   button.click();
   if (confirmChoice !== null) {
     const started = Date.now();
     let choice = null;
     while (Date.now() - started < 12000) {
-      choice = [...document.querySelectorAll(".t-dialog .t-button")].find((item) =>
-        item.classList.contains(confirmChoice ? "t-dialog__confirm" : "t-dialog__cancel"),
-      );
+      choice = [...document.querySelectorAll(".t-dialog")]
+        .filter((dialog) => !previousDialogs.has(dialog))
+        .flatMap((dialog) => [...dialog.querySelectorAll(".t-button")])
+        .find((item) =>
+          item.classList.contains(confirmChoice ? "t-dialog__confirm" : "t-dialog__cancel"),
+        );
       if (choice?.getClientRects().length) break;
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
@@ -914,6 +943,29 @@ async function clickTagRowActionInPage(tagId, action, confirmChoice) {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   return true;
+}
+
+/** 从实际 DOM 度量 Tag 操作行，避免全量 TDesign 化后重现高亮整列按钮。 */
+function inspectTagActionLayoutInPage() {
+  const manager = document.querySelector(".studio-tag-manager");
+  const row = manager?.querySelector(".studio-tag-item");
+  const actions = row?.querySelector(".studio-tag-actions");
+  const formActions = manager?.querySelector(".studio-tag-form-actions");
+  if (!(actions instanceof HTMLElement) || !(formActions instanceof HTMLElement)) {
+    throw new TypeError("项目 Tag 紧凑操作区未挂载");
+  }
+  const measure = (container) => {
+    const buttons = [...container.querySelectorAll(".t-button")];
+    return {
+      columns: getComputedStyle(container).gridTemplateColumns.split(" ").length,
+      count: buttons.length,
+      bounds: buttons.map((button) => {
+        const rect = button.getBoundingClientRect();
+        return { width: rect.width, height: rect.height };
+      }),
+    };
+  };
+  return { item: measure(actions), form: measure(formActions) };
 }
 
 /** 使用 Chrome 输入协议触发真正的框架输入事件，不直接篡改 DOM 值。 */
@@ -930,10 +982,37 @@ async function runStudioTagManagement(session) {
     deviceScaleFactor: 1,
     mobile: false,
   });
+  // 隔离的测试浏览器已在 E-106 确认过 HTTP 缓存写入失败；不触碰 IndexedDB/CAS。
+  await session.send("Network.enable");
+  await session.send("Network.setCacheDisabled", { cacheDisabled: true });
 
   for (const target of targets) {
-    await navigateStudioForInterop(session, target, "tag-management");
+    const network = watchStudioModuleNetwork(session, target);
+    try {
+      await navigateStudioForInterop(session, target, "tag-management");
+    } catch (error) {
+      throw new Error(error.message + "；同源网络诊断：" + network.summary(), { cause: error });
+    } finally {
+      network.stop();
+    }
     await evaluateStudioPage(session, openTagManagerInPage);
+    const layout = await evaluateStudioPage(session, inspectTagActionLayoutInPage);
+    for (const [kind, actions] of [
+      ["Tag 条目", layout.item],
+      ["Tag 表单", layout.form],
+    ]) {
+      assert.equal(actions.count, 2, target.name + " " + kind + " 操作按钮数量不正确");
+      assert.equal(actions.columns, 2, target.name + " " + kind + " 操作没有保持双列");
+      assert.ok(
+        actions.bounds.every((button) => button.width > 0 && button.height > 0),
+        target.name + " " + kind + " 存在不可见操作按钮",
+      );
+      assert.ok(
+        Math.abs(actions.bounds[0].height - actions.bounds[1].height) <= 1 &&
+          Math.abs(actions.bounds[0].width - actions.bounds[1].width) <= 1,
+        target.name + " " + kind + " 按钮尺寸不一致",
+      );
+    }
     const tagId = "browser." + target.name.toLowerCase() + ".pressure";
     await fillTagField(session, 0, tagId);
     await fillTagField(session, 1, "浏览器新增压力");
@@ -964,6 +1043,15 @@ async function runStudioTagManagement(session) {
     assert.equal(updated.tags.find((tag) => tag.tagId === tagId)?.unit, "MPa");
     assert.equal(updated.tags.find((tag) => tag.tagId === tagId)?.dataType, "number");
 
+    // 真实点击 TDesign 取消按钮必须保留原 Tag，避免仅覆盖确认路径。
+    await evaluateStudioPage(session, clickTagRowActionInPage, tagId, "删除", false);
+    await pause(350);
+    const cancelled = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
+    assert.ok(
+      cancelled.tags.some((tag) => tag.tagId === tagId),
+      target.name + " 取消删除后 Tag 被意外移除",
+    );
+
     await evaluateStudioPage(session, clickTagRowActionInPage, "water.level", "删除", true);
     let guardNotice = "";
     const guardStarted = Date.now();
@@ -987,7 +1075,21 @@ async function runStudioTagManagement(session) {
     );
 
     await evaluateStudioPage(session, clickTagRowActionInPage, tagId, "删除", true);
-    await pause(180);
+    // 本次删除命令成功后才能检查工程 JSON，不能以固定等待代替业务完成信号。
+    let removeNotice = "";
+    const removeStarted = Date.now();
+    while (Date.now() - removeStarted < 3000) {
+      removeNotice = await session.evaluate(
+        "document.querySelector('.studio-notice')?.textContent ?? ''",
+      );
+      if (removeNotice.includes("项目 Tag 已删除，可撤销")) break;
+      await pause(50);
+    }
+    assert.match(
+      removeNotice,
+      /项目 Tag 已删除，可撤销/,
+      target.name + " Tag 删除命令未完成：" + removeNotice,
+    );
     const removed = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
     assert.ok(
       !removed.tags.some((tag) => tag.tagId === tagId),

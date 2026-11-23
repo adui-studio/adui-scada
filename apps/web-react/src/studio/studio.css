@@ -1,17 +1,12 @@
-/* TDesign 颜色、字体、间距由共享 @adui/theme 提供；保留画布专属布局。 */
-.studio-shell .t-button {
-  white-space: normal;
-  min-height: 30px;
-  height: auto;
-}
+/* TDesign 按钮尺寸由组件 size 和共享布局规则负责，不统一强制 height:auto。 */
 .studio-shell .studio-tool-group .t-button {
   width: 100%;
 }
 .studio-shell .t-input {
   width: 100%;
   min-width: 0;
-  border: 1px solid var(--scada-border-strong);
-  border-radius: 4px;
+  border: 1px solid var(--scada-border);
+  border-radius: var(--adui-radius-sm);
   background: var(--scada-canvas);
   color: var(--scada-text);
 }
@@ -263,16 +258,7 @@
   margin: 18px 0;
   font-size: 13px;
 }
-.studio-field input,
-.studio-field select,
-.studio-field textarea {
-  min-width: 0;
-  color: var(--scada-text);
-  background: var(--scada-canvas);
-  border: 1px solid var(--scada-border-strong);
-  padding: 8px;
-  border-radius: 4px;
-}
+/* 输入框及下拉框边框由 TDesign 控件承载，避免原生 input 二次描边。 */
 .studio-binding {
   overflow-wrap: anywhere;
   font-size: 12px;
