@@ -2521,11 +2521,10 @@ export default function StudioPage() {
                   {GEOMETRY_PROPERTY_FIELDS.map(([key, label]) => (
                     <label key={key}>
                       {label}
-                      <input
+                      <Input
                         type="number"
                         name={key}
-                        step="any"
-                        defaultValue={selected.transform[key]}
+                        defaultValue={String(selected.transform[key])}
                         disabled={studioNodeLocked(selected)}
                       />
                     </label>
