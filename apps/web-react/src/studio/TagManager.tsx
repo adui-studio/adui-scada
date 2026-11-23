@@ -77,11 +77,11 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-3">
-      <div className="flex min-w-0 flex-col gap-2" role="list" aria-label="项目 Tag 目录">
+    <div className="studio-tag-manager flex min-w-0 flex-col gap-3">
+      <div className="studio-tag-list flex min-w-0 flex-col gap-2" role="list" aria-label="项目 Tag 目录">
         {tags.length === 0 && <p className="studio-tip">当前工程尚未定义 Tag</p>}
         {tags.map((tag) => (
-          <div role="listitem" className="studio-binding min-w-0" key={tag.tagId}>
+          <div role="listitem" className="studio-binding studio-tag-item min-w-0" key={tag.tagId}>
             <strong>{tag.displayName}</strong> · <span className="break-all">{tag.tagId}</span>
             <p className="studio-tip">
               {TAG_DATA_TYPE_LABELS[tag.dataType]}
@@ -89,11 +89,11 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
               {tag.dataType === "unknown" ? " · 需要确认数据类型" : ""}
             </p>
             {tag.description && <p className="studio-tip">{tag.description}</p>}
-            <div className="studio-toolbox">
-              <Button type="button" size="small" onClick={() => edit(tag)}>
+            <div className="studio-toolbox studio-tag-actions">
+              <Button tag="button" type="button" size="small" theme="default" variant="text" onClick={() => edit(tag)}>
                 编辑
               </Button>
-              <Button type="button" size="small" onClick={() => void remove(tag)}>
+              <Button tag="button" type="button" size="small" theme="danger" variant="text" onClick={() => void remove(tag)}>
                 删除
               </Button>
             </div>
@@ -101,7 +101,7 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
         ))}
       </div>
       <form
-        className="flex min-w-0 flex-col gap-2"
+        className="studio-tag-form flex min-w-0 flex-col gap-2"
         onSubmit={submit}
         aria-label="项目 Tag 编辑表单"
       >
@@ -159,9 +159,9 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
             onChange={(value) => setDraft((current) => ({ ...current, description: value }))}
           />
         </label>
-        <div className="studio-toolbox">
-          <Button type="submit">{editingId ? "保存修改" : "新增 Tag"}</Button>
-          <Button type="button" onClick={reset}>
+        <div className="studio-toolbox studio-tag-form-actions">
+          <Button tag="button" type="submit" size="small">{editingId ? "保存修改" : "新增 Tag"}</Button>
+          <Button tag="button" type="button" size="small" theme="default" variant="base" onClick={reset}>
             {editingId ? "取消编辑" : "清空"}
           </Button>
         </div>
