@@ -1790,17 +1790,16 @@ async function importJson(event: Event) {
             <TButton type="button" variant="outline">文件与草稿</TButton>
             <template #content>
               <div class="studio-file-popover">
-              <button type="button" :aria-pressed="autoSaveEnabled" @click="toggleAutoSave">
-                {{ autoSaveEnabled ? "暂停自动保存" : "开启自动保存" }}
-              </button>
-              <label class="studio-import">
-                导入 JSON
-                <input type="file" accept=".json,application/json" @change="importJson" />
-              </label>
-              <button type="button" @click="exportJson">导出 JSON</button>
-              <button type="button" :disabled="!hasSavedDraft" @click="restoreDraft">恢复草稿</button>
-              <button type="button" :disabled="!hasSavedDraft" @click="clearDraft">清除草稿</button>
-
+                <button type="button" :aria-pressed="autoSaveEnabled" @click="toggleAutoSave">
+                  {{ autoSaveEnabled ? "暂停自动保存" : "开启自动保存" }}
+                </button>
+                <label class="studio-import">
+                  导入 JSON
+                  <input type="file" accept=".json,application/json" @change="importJson" />
+                </label>
+                <button type="button" @click="exportJson">导出 JSON</button>
+                <button type="button" :disabled="!hasSavedDraft" @click="restoreDraft">恢复草稿</button>
+                <button type="button" :disabled="!hasSavedDraft" @click="clearDraft">清除草稿</button>
               </div>
             </template>
           </TPopup>
