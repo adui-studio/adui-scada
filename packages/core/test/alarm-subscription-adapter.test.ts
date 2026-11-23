@@ -640,3 +640,25 @@ test("尚未收到初始快照时读取等待状态不依赖外部时钟", () =>
   expect(clockReads).toBe(0);
   adapter.stop();
 });
+
+test("无人读取快照且调度未执行时新 delta 不得续接超龄基线", () => {
+  const { adapter, source, scheduler, setNow } = setup();
+  adapter.start();
+  source.emit({ kind: "snapshot", values: [value] });
+  setNow(startMs + 1001);
+  source.emit({
+    kind: "delta",
+    values: [
+      {
+        ...value,
+        value: 42,
+        sequence: 6,
+        serverTimestamp: "2026-11-22T09:00:00.000Z",
+      },
+    ],
+  });
+  expect(adapter.isRunning()).toBe(false);
+  expect(adapter.snapshot().baseline).toBeNull();
+  expect(source.closes).toBe(1);
+  expect(scheduler.cancels).toBe(1);
+});

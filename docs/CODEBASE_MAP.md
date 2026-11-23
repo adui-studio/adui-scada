@@ -1370,3 +1370,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-subscription-adapter.ts`：在 `AlarmSubscriptionAdapter.snapshot()` 对已有基线以注入时钟进行同步新鲜度校验，过期时复用原有停止与回调隔离流程；未运行或等待初始快照时不访问时钟。接口签名不变，但读取可能使会话失效或传播异常。
 - `packages/core/test/alarm-subscription-adapter.test.ts`：在原 20 项基础上新增 4 项定向测试定义，覆盖漏执行周期回调、正常读取保持状态、读取时钟故障 fail-closed、无初始基线不访问时钟。
 - 共享 Core 以外的 Runtime、React/Vue、NestJS/Prisma、网关与工业发布门禁未修改。
+
+## 2026-11-23 · D5b9r FR-011 旧基线超龄拒绝增量续接
+
+- `packages/core/src/alarm-baseline-session.ts`：`transitionAlarmBaselineSession` 同会话 delta 路径在递增序列比较前，复用 `classifyTimelyNumericAlarmSample` 检查**已有基线**的新鲜度；若旧基线超龄或未来时间，返回 `BASELINE_INVALIDATED` 与空基线，不允许用新 delta 自动恢复。
+- `packages/core/test/alarm-baseline-session.test.ts`：从 11 项增至 **16 项测试定义**，覆盖旧基线超龄、无目标 Tag 增量、时钟回拨、未核验来源拒绝优先级、最大年龄边界，以及重新建立 snapshot 后合法推进。
+- `packages/core/test/alarm-subscription-adapter.test.ts`：从 24 项增至 **25 项测试定义**，确保不读取快照且调度未执行时，外部接收新鲜 delta 仍撤销旧基线与订阅资源。
+- Core 以外的 Runtime、双框架 UI、NestJS、Prisma、工业网关及正式发布 Gate 均未修改。

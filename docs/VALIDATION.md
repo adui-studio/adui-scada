@@ -3333,3 +3333,40 @@ if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
 ```
 
 本批仅调整共享 Core 订阅适配器的状态读取路径、定向测试和文档，没有 HTTP、真实采集、数据库或双端 UI 修改，暂不重复无变更的完整 ready 与浏览器 E2E。读取快照触发过期时可以停止订阅；外部消费者不得缓存旧值宣称仍为可信报警候选。时钟正确性、真实周期调度、可信来源核验和 FR-011 工业安全验收均尚未完成，发布 Gate 仍 fail-closed。
+
+## 2026-11-23 · D5b9r FR-011 旧基线超龄续接阻断：Windows 待验收
+
+PR #156 已经维护者 Windows 实测：订阅适配单测 **24/24**，`vp check` **435 格式文件/286 受检零警告错误**，`docs:check` **90 份**、`messages:check` **310 份**；按维护者明确授权 Squash 合并至 `main@fe02273d38d3291c2483061dbe8990b6024deff0`。本批 D5b9r 在此基础上新增 **6 项测试定义**，会话归约器 **16 项**、订阅适配器 **25 项**，**尚无 Windows 实测记录**。
+
+保留维护者要求的 `git fetch origin` 和 `git switch`；可以在分支上先运行 `vp check --fix`，必要时提交格式变更，不要求核对 HEAD。后续验收：
+
+```powershell
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw "获取远程代码失败" }
+
+git switch fix/d5b9r-alarm-stale-baseline-delta
+if ($LASTEXITCODE -ne 0) {
+    git switch --track origin/fix/d5b9r-alarm-stale-baseline-delta
+}
+if ($LASTEXITCODE -ne 0) { throw "切换功能分支失败" }
+
+git pull --ff-only origin fix/d5b9r-alarm-stale-baseline-delta
+if ($LASTEXITCODE -ne 0) { throw "更新功能分支失败" }
+
+vp check --fix
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 自动修正失败" }
+
+vp test run packages/core/test/alarm-baseline-session.test.ts packages/core/test/alarm-subscription-adapter.test.ts
+if ($LASTEXITCODE -ne 0) { throw "报警基线与订阅适配定向测试失败" }
+
+vp check
+if ($LASTEXITCODE -ne 0) { throw "Vite+ 检查失败" }
+
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+
+pnpm run messages:check
+if ($LASTEXITCODE -ne 0) { throw "中文文案检查失败" }
+```
+
+本批只修改共享 Core 会话归约器及定向测试与文档，不涉及 HTTP、Vue/React 页面、Prisma 或工业设备接入；不重复完整 ready 与浏览器专项。静态代码检查不能证明时钟可信、订阅调度有效、来源确实核验或 FR-011 生产报警安全。正式发布 Gate 保持 fail-closed。
