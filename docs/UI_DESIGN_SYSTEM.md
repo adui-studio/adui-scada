@@ -85,3 +85,10 @@
 - **TDesign**：两个 `index.html` 使用 `theme-mode="dark"`，官方 CSS Variables 在 `packages/theme/src/tdesign.css` 统一映射交互色、背景、文字、禁用态、字体及尺寸。采用更具体的 `html:root[theme-mode="dark"]` 以覆盖懒加载的组件默认主题，而非额外重绘 `Button/Input`。官方机制依据：[TDesign Web 主题说明](https://github.com/Tencent/tdesign-common/blob/develop/docs/web/theme.md) 与 [React 自定义主题](https://tdesign.tencent.com/react/custom-theme)。
 - **迁移边界**：本批只替换旧主题入口、两端重复的 TDesign 变量和基础排版/Tailwind Token 映射。Runtime/Studio 中尚存单次写入的像素值，后续逐批替换，**不声称已完成所有历史 CSS 迁移**。Studio 252px/320px 固定侧栏、画布 16:9、报警质量、数据读取与只读权限保持原样。
 - **安装前置**：新增 `@adui/scada-runtime -> @adui/theme` 的 `workspace:*` 依赖；须使用项目 pnpm 12.18.0 **实际生成并提交** `pnpm-lock.yaml` 的工作区 importer 变更，不允许手工猜测锁文件。验证前先重新安装，再运行 `ready`、双端浏览器与 TDesign 禁用/焦点/对比度检查。
+
+## D5c0p · 共享字号与间距的等值迁移
+
+- **策略**：在已经合并的 `@adui/theme` 基础上逐批替换历史散落的字号、间距与圆角；第一组仅针对共享 Runtime 的导航、状态提示、诊断卡片、正式发布空态，以及共享 Studio 的导航/工程列表等低风险视觉元素。
+- **等值原则**：本组将 19 处 Runtime 与 11 处 Studio 的原字面值改为已有 `--adui-font-size-*`、`--adui-space-*`、`--adui-radius-*`、`--adui-line-height-normal` 或 `--adui-font-weight-semibold` 引用，**不修改计算后的 px、行高、字重、圆角**。例如 `12px → var(--adui-font-size-xs)`、`13px → var(--adui-font-size-sm)`、`6px → var(--adui-space-3)`、`24px → var(--adui-space-8)`。
+- **保持原样**：浏览器缩放与响应式边界、Studio 固定侧栏 252/320px、16:9 SVG、图层命中层与指针坐标、TDesign API/组件状态、Tag/报警质量及发布只读权限都不变。特殊尺寸（如 15/17/19px 或 34/38px 控件高度）未强行映射到不同档位，以免视觉漂移。
+- **验证**：主题静态测试新增导航与诊断/发布空态 Token 引用、Studio 工程列表及固定侧栏的断言。静态差异复核已确认两份共享 CSS 只有 30 行属性值替换，所有 Token 展开后与原声明相同；但真实 Vite+、React/Vue 构建与 Windows 视觉回归尚待执行。
