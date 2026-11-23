@@ -92,3 +92,19 @@ V7 Logo 原 SVG 和几何不动，导航缩放使用现有 `/brand/favicon.svg`�
 最终需要视觉复核时可先设置 `SCADA_UI_SCREENSHOTS=1`，再执行唯一一次 `pnpm run test:ui:browser`。脚本在仓库根目录 `.artifacts/ui-review/` 写入 12 张 PNG（双端 × 双分辨率 × 三视图），目录已 Git 忽略；图片只做本机审阅，不上传工程信息。
 
 **样式单一来源**：原 React/Vue 两份逐字相同的 `src/studio/studio.css` 已迁移进统一 `@adui/tailwind/studio.css`，只保留后者导入；原旋转光标的相对 URL 根据 CSS 真实路径调整为 `../../../assets/cursors/rotate.svg`。这不会修改 SVG 手柄或指针事件，但仍必须通过真实 Vite 构建与 Chrome 光标回归确认资源可解析。
+
+## 8. FUXA 参考与 Tag 管理交互整体重构（D5c1）
+
+维护者提供 https://github.com/frangoteam/FUXA 作为竞品参考。已研究 FUXA 的 screenshot/fuxa-editor.png、docs/HowTo-Devices-and-Tags.md 和 docs/HowTo-UI-Layout.md：重点借鉴画布与配置任务分离、资源目录可搜索和独立编辑工作空间。仅对照信息架构，不复制 FUXA 的 Angular 源码、品牌素材或受限制资源。FUXA 有真实工业协议设备配置能力；ADui SCADA 当前工程 Tag 只是静态定义，不能因此开放客户端 PLC/DCS 连接或设备写入。
+
+维护者提供的旧版截图显示：320px 属性面板同时塞入 3 条 Tag 目录、逐项按钮、五字段常驻表单与长段说明，滚动距离过长、字段和主操作远离，缺少新建/编辑的独立任务状态。只改配色、边框和按钮大小不是 UX 改进。
+
+新的 Tag 流程：
+1. 属性侧栏只保留紧凑目录：新建入口、名称/ID/描述搜索、数量、类型标记、ID 与简洁的行级编辑/删除操作；不再常驻完整表单。
+2. 点击新建或编辑打开 TDesign Dialog。桌面使用 700px 左右可读宽度，显示名称与稳定 ID、数据类型与单位采用两列，描述跨两列；取消和保存并排固定在表单操作区。窄视口降为单列。
+3. 必填字段有标签与字段旁错误。重复 Tag ID 就近提示；编辑锁定已创建的 ID。共享 Core 拒绝时保留输入并展示原工作台状态，不绕过业务验证。
+4. 删除仍通过真实 TDesign 二次确认，Core 负责图元绑定删除拒绝。草稿、历史、撤销与重做、JSON、工业只读边界和 Tag 质量完全保留。
+5. 新增 React/Vue 真浏览器回归：搜索与清空、侧栏无表单、宽 Dialog 双列表单、必填错误、编辑不可变 ID、128 字符窄屏折行与 Tab、CRUD、确认取消与绑定保护、JSON 往返。
+
+本设计属于现有唯一 Draft PR #192 的候选；完整 Windows ready、Chromium 与截图尚未验证，不能声称视觉交付已验收。
+
