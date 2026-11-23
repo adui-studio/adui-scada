@@ -4198,3 +4198,37 @@ git status --short
 ```
 
 真实浏览器验收同时人工检查页面菜单 Esc、键盘导航、选项滚动与 1024×768 下贴边定位。本批自动浏览器只验证触发器可聚焦，未声称已完全覆盖键盘导航。菜单关闭行为通过官方组件执行；工程文件、Tag、报警、OIDC、发布和设备写入边界不在本次代码变化中。
+
+## 2026-11-23 · PR #185 质量验收；D5c0u 文件草稿 Popup 定向回归
+
+PR #185：Windows 实测 `pnpm run typecheck:web` 成功、`vp check` **446 个格式文件/289 受检零告警**、`docs:check` **94 份**，React/Vue 1440×900 和 1024×768 四组 Studio 测试分别 **27/27**，总 **108/108**。失败退出检查未触发。GitHub 最终 HEAD `9963000ac0cdd42dd281df928809922582b25c86`、Squash 合并 `main@63cce4d6a0824ae766a4b9f436e65665ad568030`；本机日志未单独提供 HEAD，不能宣称在合并 SHA 上运行。
+
+D5c0u 只迁移「文件与草稿」Popup 容器，TDesign React/Vue 固定版本 API 已核对；JSON 导入仍使用原生文件输入及自有校验，未发生网络上传。`test-studio-browser.mjs` 只更新文件菜单的真实点击入口，并增加 3 项 Popup 断言，原 27 项 Studio 断言全部保留，目标每视口 **30 项 × 4 = 120**。这批牵涉 JSON 互通、自动保存、历史加载竞争，故除了 `test:browser` 还必须独立运行 `test:interop`、`test:versions:safety`、`test:legacy:browser` 和 `test:multitab`（必要时 `test:versions`）。不机械重复无关 NestJS/网关全量 `ready`；若出现代码/安全边界变化再扩大验证。**上述均为待验收目标，不是已执行结果。**
+
+Windows 根目录定向验收（先确认本机可信 HTTPS 证书和测试服务）:
+
+```powershell
+git fetch origin
+git switch feat/d5c0u-tdesign-file-popup
+git pull --ff-only
+git rev-parse HEAD
+pnpm run typecheck:web
+if ($LASTEXITCODE -ne 0) { throw "双框架类型检查失败" }
+vp check
+if ($LASTEXITCODE -ne 0) { throw "代码检查失败" }
+pnpm run docs:check
+if ($LASTEXITCODE -ne 0) { throw "文档检查失败" }
+pnpm run test:browser
+if ($LASTEXITCODE -ne 0) { throw "Studio 双框架 Popup 回归失败" }
+pnpm run test:interop
+if ($LASTEXITCODE -ne 0) { throw "双框架 JSON 互通失败" }
+pnpm run test:versions:safety
+if ($LASTEXITCODE -ne 0) { throw "历史版本并发安全失败" }
+pnpm run test:legacy:browser
+if ($LASTEXITCODE -ne 0) { throw "历史草稿迁移失败" }
+pnpm run test:multitab
+if ($LASTEXITCODE -ne 0) { throw "多标签页 CAS 保护失败" }
+git status --short
+```
+
+人工复核：文件菜单首次开启/反复开合/点击外部/Esc/键盘焦点；导入文件选择和取消、合法/非法/超过 2 MiB JSON，导出 Blob 下载，草稿恢复/清除的确认取消分支，以及 1440×900/1024×768 菜单不被裁切。不得通过关闭 TLS 校验或删除原有工程、权限、CAS 断言让脚本过关。
