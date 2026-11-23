@@ -1448,9 +1448,20 @@ async function enableStudioAutoSaveInPage(confirmExisting = false) {
     (item) => item.textContent.trim() === "开启自动保存",
   );
   if (!button) throw new TypeError("自动保存开关不是关闭状态");
-  const originalConfirm = window.confirm;
-  if (confirmExisting) window.confirm = () => true;
   button.click();
+  if (confirmExisting) {
+    const confirmStart = Date.now();
+    let confirmButton = null;
+    while (Date.now() - confirmStart < 12000) {
+      confirmButton = document.querySelector(".t-dialog .t-dialog__confirm");
+      if (confirmButton?.getClientRects().length) break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    if (!(confirmButton instanceof HTMLButtonElement)) {
+      throw new TypeError("开启自动保存覆盖确认弹层未出现");
+    }
+    confirmButton.click();
+  }
   const start = Date.now();
   try {
     while (Date.now() - start < 12000) {
@@ -1462,7 +1473,6 @@ async function enableStudioAutoSaveInPage(confirmExisting = false) {
     }
     throw new TypeError("开启自动保存超时");
   } finally {
-    window.confirm = originalConfirm;
     if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
       trigger.click();
     }
@@ -1549,17 +1559,12 @@ async function verifyImportHistoryIsolationInPage(json) {
   );
   if (!load) throw new TypeError("未找到历史版本 #1 的载入操作");
   const originalText = Reflect.get(Blob.prototype, "text");
-  const originalConfirm = Reflect.get(window, "confirm");
   let releaseText = null;
   let confirmations = 0;
   Blob.prototype.text = function () {
     return new Promise((resolve) => {
       releaseText = () => resolve(json);
     });
-  };
-  window.confirm = () => {
-    confirmations += 1;
-    return true;
   };
   try {
     const transfer = new DataTransfer();
@@ -1573,8 +1578,11 @@ async function verifyImportHistoryIsolationInPage(json) {
     if (!releaseText) throw new TypeError("JSON 导入没有进入异步文件读取阶段");
     load.click();
     await new Promise((resolve) => setTimeout(resolve, 120));
+    confirmations = [...document.querySelectorAll(".t-dialog .t-dialog__confirm")].filter(
+      (element) => element.getClientRects().length,
+    ).length;
     if (confirmations !== 0) {
-      throw new TypeError("JSON 导入期间错误地执行了历史覆盖确认");
+      throw new TypeError("JSON 导入期间错误地显示历史覆盖确认");
     }
     releaseText();
     const ready = Date.now();
@@ -1590,7 +1598,6 @@ async function verifyImportHistoryIsolationInPage(json) {
   } finally {
     releaseText?.();
     Blob.prototype.text = originalText;
-    window.confirm = originalConfirm;
     if (fileMenu.querySelector(".studio-file-popover")?.getClientRects().length) trigger.click();
     const versionTrigger = versionMenu?.querySelector("button.t-button");
     if (
@@ -1742,11 +1749,24 @@ async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice 
     await new Promise((resolve) => setTimeout(resolve, 80));
   }
   if (!button || button.disabled) throw new TypeError("草稿操作按钮不可用：" + label);
-  const originalConfirm = window.confirm;
-  if (confirmChoice !== null) window.confirm = () => confirmChoice;
   let resultNotice = null;
   try {
     button.click();
+    if (confirmChoice !== null) {
+      const confirmStart = Date.now();
+      let choice = null;
+      while (Date.now() - confirmStart < 12000) {
+        choice = document.querySelector(
+          confirmChoice ? ".t-dialog .t-dialog__confirm" : ".t-dialog .t-dialog__cancel",
+        );
+        if (choice?.getClientRects().length) break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      if (!(choice instanceof HTMLButtonElement)) {
+        throw new TypeError("草稿确认弹层未出现：" + label);
+      }
+      choice.click();
+    }
     const waiting = Date.now();
     while (Date.now() - waiting < 12000) {
       const notice = document.querySelector(".studio-notice")?.textContent || "";
@@ -1758,7 +1778,6 @@ async function studioDraftFileActionInPage(label, expectedNotice, confirmChoice 
     }
     if (resultNotice === null) throw new TypeError("草稿操作结果超时：" + label);
   } finally {
-    window.confirm = originalConfirm;
     if (menu.querySelector(".studio-file-popover")?.getClientRects().length) {
       trigger.click();
     }
