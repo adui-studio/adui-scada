@@ -3876,3 +3876,24 @@ pnpm run messages:check
 ```
 
 本批仅为共享 Core 现有语义的定向单测，不等同 FR-011 D1～D5 决策批准、可信工业入口、服务端时间赋值、可靠游标、缺口重放、报警确认/审计、完整 `ready` 或现场安全验收。
+
+## 2026-11-23 · PR #173 Windows 验收完成与 D5c0i 会话级跳号回归候选
+
+维护者 Windows 运行 D5c0h 的三份 Core 定向测试，`TagStore` **6/6**、底层报警序列 **12/12**、直接报警增量 **21/21**，合计 **39/39**。后续 `vp check` **437 个格式文件/286 个受检文件零警告错误**、`docs:check` **92 份**、`messages:check` **310 个文件**均通过。GitHub 检查 PR #173 的最后 HEAD 为 `beffe5089bf475340f5a04078c2ee53eaffda8c6`、五份差异、无未解决线程或冲突、Assignee `@adui-dev`，经明确授权 Squash 合并至 `main@6cee05def85e2d9026d43a633dca577ddbff2c96`。**维护者这批日志未打印本机 HEAD**，不能冒充在合并 SHA 或确定同一 HEAD 上直接实测，也不代表完整 `ready`。
+
+D5c0i 在上述已有低层回归基础上，只为 `AlarmBaselineSessionController` 与 `AlarmSubscriptionAdapter` 各增加一项跨层回归：当前同代次 GOOD 且服务器时间不回退时允许 Tag 业务序列 **5→7**；随后未核验来源的增量要终止当前候选，清空基线、撤销令牌或释放订阅资源；显式重新启动新代次后，旧订阅的迟到增量、断连、调度回调不能污染新会话。**只验证现有状态机，不能据此证明来源认证、传输完整性、报警事件持久化或可靠历史重放。**
+
+本批只修改这两份已有测试及验收进度文档，Core 生产代码、公开协议、工程 Schema、React/Vue、NestJS、Prisma、工业网关与发布安全 Gate 均不变。两份目标测试原有 11 与 33 项，新测试定义合计 **46 项**，但 D5c0i 的 Vitest、`vp check`、`docs:check`、`messages:check` 均**待 Windows 实测**：
+
+```powershell
+git fetch origin &&
+git switch test/d5c0i-alarm-session-jump-lifecycle &&
+git pull --ff-only &&
+git rev-parse HEAD &&
+vp test run packages/core/test/alarm-session-controller.test.ts packages/core/test/alarm-subscription-adapter.test.ts &&
+vp check &&
+pnpm run docs:check &&
+pnpm run messages:check
+```
+
+D1～D5 仍需维护者逐项确认。此处 `sourceVerified` 只是 Core 已有布尔输入，不是网络机器身份凭据；不启用任何正式报警事件生成、确认权限或工业设备写入。
