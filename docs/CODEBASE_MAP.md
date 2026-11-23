@@ -1423,3 +1423,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/test/alarm-session-controller.test.ts`：原 10 项新增 1 项，覆盖非法等待检查撤销令牌、旧回调拒绝及显式递增代次恢复。
 - `packages/core/test/alarm-subscription-adapter.test.ts`：原 28 项新增 1 项，覆盖周期回调与同步调度立即回调时无效时钟引起的资源清理。
 - `alarm-session-controller.ts` 与 `alarm-subscription-adapter.ts` 生产逻辑不变；`snapshot()` 在等待快照时不主动读取时钟的既有行为保持不变。无新的公共枚举、NestJS、Prisma、Vue/React、网关或发布 Gate 变化。
+
+## 2026-11-23 · D5b9y FR-011 显式时效检查的基线归属校验（候选）
+
+- `packages/core/src/alarm-baseline-session.ts`：本代次 `CHECK_FRESHNESS` 已有基线时，在 GOOD/时效检查前要求 `baseline.generation === state.generation`、`baseline.value.tagId === state.expectedTagId`；不一致沿用 `SESSION_MISMATCH`、`TAG_MISMATCH` 和冻结终止态。
+- `packages/core/test/alarm-baseline-session.test.ts`：新增两项回归定义（23→25），涵盖错误代次与错误目标 Tag、其他代次忽略、旧状态冻结、同代次不可恢复及显式增代次恢复。
+- `packages/core/src/alarm-session-controller.ts`、`packages/core/src/alarm-subscription-adapter.ts` 不改生产逻辑；直接增量入口原有归属校验保持。不涉及 TagStore、Runtime、NestJS/Prisma、Vue/React、工业网关或设备写入。
