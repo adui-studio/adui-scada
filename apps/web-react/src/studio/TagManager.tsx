@@ -1,3 +1,4 @@
+import { confirmStudioAction } from "./StudioDialog.tsx";
 import { useState } from "react";
 import { Button, Input, Select, Textarea } from "tdesign-react";
 import type { FormEvent } from "react";
@@ -64,11 +65,11 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
     if (successful) reset();
   }
 
-  function remove(definition: TagDefinition) {
+  async function remove(definition: TagDefinition) {
     if (
-      !window.confirm(
+      !(await confirmStudioAction(
         "确定删除项目 Tag“" + definition.displayName + "”吗？被图元绑定的 Tag 不允许删除。",
-      )
+      ))
     ) {
       return;
     }
@@ -92,7 +93,7 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
               <Button type="button" size="small" onClick={() => edit(tag)}>
                 编辑
               </Button>
-              <Button type="button" size="small" onClick={() => remove(tag)}>
+              <Button type="button" size="small" onClick={() => void remove(tag)}>
                 删除
               </Button>
             </div>
