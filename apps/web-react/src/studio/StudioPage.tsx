@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Checkbox, Collapse, CollapsePanel, Dropdown, Input, Popup, Select } from "tdesign-react";
+import { Button, Checkbox, Collapse, CollapsePanel, Dropdown, Input, Popup, Select, Upload } from "tdesign-react";
 import type { DropdownProps } from "tdesign-react";
 import { CloseIcon } from "tdesign-icons-react";
 import "tdesign-react/es/style/index.css";
@@ -1610,9 +1610,7 @@ export default function StudioPage() {
     setNotice("已导出本地 JSON 草稿（并非工程发布）");
   }
 
-  async function importJson(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.currentTarget.files?.[0];
-    event.currentTarget.value = "";
+  async function importJsonFile(file: File | undefined) {
     if (!file) return;
     if (historyActionRef.current || draftActionRef.current) {
       setNotice("已有工程操作正在进行，请完成后再导入 JSON");
@@ -1787,16 +1785,20 @@ export default function StudioPage() {
                   <Button tag="button" type="button" onClick={toggleAutoSave} aria-pressed={autoSaveEnabled}>
                     {autoSaveEnabled ? "暂停自动保存" : "开启自动保存"}
                   </Button>
-                  <label className="studio-import">
-                    导入 JSON
-                    <input
-                      type="file"
+                  <div className="studio-import">
+                    <Upload
+                      theme="custom"
                       accept=".json,application/json"
-                      onChange={(event) => {
-                        void importJson(event);
+                      autoUpload={false}
+                      files={[]}
+                      allowUploadDuplicateFile
+                      onSelectChange={(files) => {
+                        void importJsonFile(files[0]);
                       }}
-                    />
-                  </label>
+                    >
+                      <Button tag="button" type="button" variant="outline">导入 JSON</Button>
+                    </Upload>
+                  </div>
                   <Button tag="button" type="button" onClick={exportJson}>
                     导出 JSON
                   </Button>
