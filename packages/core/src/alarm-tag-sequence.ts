@@ -12,7 +12,7 @@ export type OrderedNumericAlarmSample =
 
 /**
  * 要求调用方提供同一可信会话中上一条已接受的 Tag 读数。
- * 没有基线、Tag 不一致或序列号未前进时不暴露数值，也不产生报警事件。
+ * 没有基线、Tag 不一致、旧基线不再有效或序列号未前进时不暴露数值，也不产生报警事件。
  * 跨会话代次、服务端来源与初始快照可信性必须由上游独立校验。
  */
 export function classifyOrderedNumericAlarmSample(
@@ -27,6 +27,9 @@ export function classifyOrderedNumericAlarmSample(
 
   const baseline = validateTagValue(previous);
   if (baseline.tagId !== input.tagId) return { status: "TAG_MISMATCH" };
+  // 直接调用底层序列校验时，也必须复核所依赖的旧基线是否仍然有效。
+  const baselineCheck = classifyTimelyNumericAlarmSample(baseline, nowMs, maxAgeMs);
+  if (baselineCheck.status !== "READY") return baselineCheck;
   if (input.sequence <= baseline.sequence) return { status: "SEQUENCE_NOT_ADVANCED" };
   return current;
 }

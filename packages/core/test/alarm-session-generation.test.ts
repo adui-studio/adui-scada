@@ -8,7 +8,7 @@ const previous: TagValue = {
   value: 40,
   quality: "GOOD",
   sourceTimestamp: null,
-  serverTimestamp: "2026-11-22T08:59:58.000Z",
+  serverTimestamp: "2026-11-22T08:59:59.000Z",
   sequence: 5,
 };
 const current: TagValue = {
@@ -114,4 +114,32 @@ test("非法代次拒绝且不会修改冻结的读数和会话标记", () => {
   expect(input).toEqual(current);
   expect(baseline).toEqual(previous);
   expect(session).toEqual(generations);
+});
+
+test("代次一致也不能续接超龄或坏质量的上一条基线", () => {
+  const fresh: TagValue = {
+    ...current,
+    serverTimestamp: "2026-11-22T09:00:01.000Z",
+  };
+  expect(
+    classifySessionBoundNumericAlarmSample(fresh, previous, generations, nowMs + 1001, 1000),
+  ).toEqual({ status: "OUTDATED_TIMESTAMP" });
+  expect(
+    classifySessionBoundNumericAlarmSample(
+      current,
+      { ...previous, quality: "STALE" },
+      generations,
+      nowMs,
+      1000,
+    ),
+  ).toEqual({ status: "QUALITY_NOT_GOOD" });
+  expect(
+    classifySessionBoundNumericAlarmSample(
+      current,
+      { ...previous, quality: "STALE" },
+      { ...generations, inputGeneration: 1 },
+      nowMs,
+      1000,
+    ),
+  ).toEqual({ status: "SESSION_MISMATCH" });
 });
