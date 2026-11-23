@@ -1383,3 +1383,11 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/alarm-tag-delta.ts`：`advanceAlarmTagDeltaBaseline` 在来源、delta 类型、代次与目标 Tag 核验之后，调用 `classifyTimelyNumericAlarmSample` 复查先前基线的 GOOD、有限数值和时效；旧基线不合法立即拒绝，不允许任何新鲜 delta 绕过已有归约器保护。
 - `packages/core/test/alarm-tag-delta.test.ts`：从 9 项增加 **6 项测试定义，共 15 项**。覆盖超龄旧基线但新鲜输入、空/非目标 delta、未来基线、质量或数值异常、最大年龄端点、来源拒绝优先级；修正原有效基线夹具为窗口内时间。
 - 不修改 `AlarmBaselineSessionController`、`AlarmSubscriptionAdapter`、TagStore、Runtime、Vue/React、NestJS/Prisma、工业网关及正式发布门禁。
+
+## 2026-11-23 · D5b9t FR-011 同代次重复快照拒绝
+
+- `packages/core/src/alarm-baseline-session.ts`：`transitionAlarmBaselineSession` 首次 snapshot 建立基线后，第二次同代次 snapshot 返回 `BASELINE_INVALIDATED/SNAPSHOT_ALREADY_ESTABLISHED` 和空基线，阻止在当前会话重置严格递增序列。
+- `packages/core/test/alarm-baseline-session.test.ts`：新增 2 项，文件共 18 项，覆盖完全重复以及较低/较高序列的第二次 snapshot。
+- `packages/core/test/alarm-session-controller.test.ts`：新增 1 项，文件共 10 项，覆盖重复快照失效、旧令牌拒绝、显式重启后重新建立低序列基线。
+- `packages/core/test/alarm-subscription-adapter.test.ts`：新增 2 项，文件共 27 项，覆盖活动订阅第二次 snapshot 清理、同步安装时重复快照补偿取消资源。
+- 不改公共函数签名、`AlarmSnapshotBaseline`、TagStore、Runtime、NestJS、Prisma、React/Vue、网关或发布安全 Gate。
