@@ -212,7 +212,7 @@ export function studioPreflightGuardStateInPage(runtime = globalThis) {
 export async function clickStudioPreflightInPage(runtime = globalThis) {
   const menu = runtime.document.querySelector(".studio-release-preflight-menu");
   const trigger = menu?.querySelector("button.t-button");
-  if (!(trigger instanceof runtime.HTMLButtonElement)) throw new Error("发布预检触发器不可用");
+  if (trigger?.tagName !== "BUTTON") throw new Error("发布预检触发器不可用");
   let panel = menu.querySelector('[aria-label="服务端已保存版本发布预检"]');
   if (!panel?.getClientRects().length) trigger.click();
   const started = Date.now();
