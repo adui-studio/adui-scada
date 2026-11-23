@@ -1333,3 +1333,11 @@ D5b9r 已在 `transitionAlarmBaselineSession` 归约器的 delta 分支复查旧
 D5b9s 在 `packages/core/src/alarm-tag-delta.ts` 内仅新增既有 `classifyTimelyNumericAlarmSample(previous, nowMs, maxAgeMs)` 检查：在来源明确标记已核验、消息为 delta、已有基线、会话代次与目标 Tag 均匹配后，**对旧基线本身**重新验证 GOOD、有限数值和服务端时间窗口。旧基线质量异常、非数值、未来时间或超龄时返回 `DELTA_REJECTED` 和对应固定原因，不回传当前数值或新基线；即使合法增量不包含目标 Tag，也不能掩盖旧基线失效。对于未核验来源、错误消息种类、无基线、代次不一致及 Tag 不匹配，继续保留现有提前拒绝规则。时间恰好等于 `maxAgeMs` 仍允许正常序列推进。调用方应在任何拒绝后废弃旧基线，并通过上游核验的新 snapshot 重新建立。
 
 该底层检查与 D5b9r 归约器的前置检查暂时并存，以防框架无关公共函数被绕过归约器直接使用；未修改公共函数签名、返回枚举、上游订阅与报警业务。受控时钟、来源认证、真实采集、报警触发/确认和不可变审计仍未交付，正式发布 Gate 继续 fail-closed。
+
+## 2026-11-23 · D5b9t FR-011 同代次重复初始快照不得重置报警候选基线（候选）
+
+共享 Core 的 `transitionAlarmBaselineSession` 此前在本代次每次收到 `TagChange.snapshot` 时都会重新执行 `establishAlarmSnapshotBaseline`，即使当前会话已经保存了有效基线。由于快照允许独立序列，重复或意外同步快照可能将 `sequence=5` 的活动基线改写为 `sequence=1`，随后接受原本应当拒绝的旧序列 delta；这不符合已建立的订阅代次和增量严格递增契约。该风险由静态源码控制流确认，尚无真实采集事故证据。
+
+D5b9t 在会话归约器的 snapshot 分支加入一次性检查：**已有非空基线时，任何同代次第二次 snapshot 都返回 `BASELINE_INVALIDATED`、原因 `SNAPSHOT_ALREADY_ESTABLISHED`，并清空基线**。不管快照数值是否完全相同、序列更高还是更低，都不允许在活跃会话中把 snapshot 当作 delta 使用。既有 `AlarmBaselineSessionController` 因失效结果撤销令牌，`AlarmSubscriptionAdapter` 因失效结果停止只读订阅、尝试释放已安装的调度与订阅资源。重复快照在 `subscribe` 同步安装期间发生时，仍沿用返回后补充调用取消订阅函数的现有逻辑。
+
+首次快照在无基线会话中保持既有整批合法性、来源声明、GOOD/数值/时效验证。**重新订阅必须由受控上游显式重启并分配更高代次，再接收新的首次 snapshot**。已有纯归约器在失效后仍可用 null 基线接收快照，可信托管器和适配器会撤销原令牌，因而不允许旧闭包在原代次复活；真实部署只能使用受控生命周期，不得把纯函数作为来源认证。新拒绝枚举仅属于 Core 本地会话契约，不是报警触发、确认或审计事件；FR-011 生产发布继续 fail-closed。

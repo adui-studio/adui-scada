@@ -183,3 +183,38 @@ test("代次溢出和非法初始参数拒绝且不改变旧会话", () => {
   expect(controller.snapshot()).toBe(current);
   expect(controller.currentToken()).toBe(token);
 });
+
+test("同代次重复快照撤销托管令牌，必须重启后才能从低序列重新建立基线", () => {
+  const controller = new AlarmBaselineSessionController("tank.level", 2);
+  const token = establish(controller);
+  const rejected = controller.receive(
+    token,
+    { kind: "snapshot", values: [{ ...baseline, sequence: 1 }] },
+    true,
+    nowMs,
+    3000,
+  );
+  expect(rejected).toEqual({
+    status: "BASELINE_INVALIDATED",
+    reason: "SNAPSHOT_ALREADY_ESTABLISHED",
+    state: { expectedTagId: "tank.level", generation: 2, baseline: null },
+  });
+  expect(controller.currentToken()).toBeNull();
+  expect(
+    controller.receive(token, { kind: "snapshot", values: [baseline] }, true, nowMs, 3000),
+  ).toEqual({
+    status: "STALE_HANDLE_IGNORED",
+  });
+  const renewed = controller.restart();
+  expect(renewed.generation).toBe(3);
+  expect(
+    controller.receive(
+      renewed,
+      { kind: "snapshot", values: [{ ...baseline, sequence: 1 }] },
+      true,
+      nowMs,
+      3000,
+    ).status,
+  ).toBe("BASELINE_ESTABLISHED");
+  expect(controller.snapshot().baseline?.value.sequence).toBe(1);
+});
