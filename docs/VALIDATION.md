@@ -4467,3 +4467,27 @@ pnpm run test:tags:browser
 ```
 
 只有 `test:tags:browser` 通过后，再运行 `pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:interop`、`pnpm run test:multitab`、`pnpm run test:browser`。如果仍导航失败，请保留新输出的「地址匹配 / 文档状态 / Chromium导航错误 / 同源网络诊断」，不修改协议或跳过安全断言。PR 保持 Draft，未经维护者明确授权不合并。
+
+## 2026-11-23 · PR #189 React Tag 确认删除断言与旧 Dialog 竞态（E-114）
+
+维护者 Windows 在先前 E-113 导航诊断候选后，`node --check` 成功、`vp check` 448/291 零错误告警；真实 `test:tags:browser` 已执行到 React 最后「删除 Tag 后工程仍包含该定义」断言失败（退出码 1），不再是首次导航失败。新增/编辑、取消删除与已绑定 Tag 删除保护已跨过对应断言；**未证明最终删除成功或 Vue 端通过**。
+
+代码检查发现：`clickTagRowActionInPage` 在多次 Dialog 之间选择全局首个 `.t-dialog` 确认/取消按钮；TDesign 1.18.6 Dialog 异步销毁存在退出动画，旧弹窗可能残留。候选修复仅记录点击前旧 Dialog，限定新建弹窗按钮，再等待实际「项目 Tag 已删除，可撤销」业务提示后导出 JSON；不放松取消/绑定拒绝/最终定义消失的安全断言，也不变更 UI、Core 和工业只读边界。**当前尚无本机 Chromium DOM 证据断定旧按钮就是实际根因。**
+
+候选改动仅完成 GitHub 源码静态复核及独立 Node 22 选择器烟雾验证 **2/2**，**Windows 最新 HEAD 尚未验收**。请在本机开发服务启动后依次执行：
+
+```powershell
+git fetch origin
+git switch feat/d5c0x-studio-controls-polish
+git pull --ff-only
+git rev-parse HEAD
+node --check scripts/test-studio-browser.mjs
+pnpm run typecheck:web
+vp check
+pnpm run messages:check
+pnpm run docs:check
+pnpm run test:tags:browser
+```
+
+只有 Tag 浏览器专项在 React/Vue 两端完全通过后，继续 `pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:interop`、`pnpm run test:multitab`、`pnpm run test:browser`。若再次失败，保留实际错误和本轮业务提示结果，不擅自判定 Core 错误或降低测试约束。PR #189 保持 Draft、指派 `@adui-dev`，未经维护者明确授权不合并。
+

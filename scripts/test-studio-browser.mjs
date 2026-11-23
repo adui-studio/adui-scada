@@ -922,14 +922,19 @@ async function clickTagRowActionInPage(tagId, action, confirmChoice) {
     (node) => node.textContent.trim() === action,
   );
   if (!button) throw new Error("未找到项目 Tag 操作：" + tagId + " · " + action);
+  // TDesign Dialog 退出动画期间仍可能保留旧按钮，后续只允许操作本次新建弹窗。
+  const previousDialogs = new Set(document.querySelectorAll(".t-dialog"));
   button.click();
   if (confirmChoice !== null) {
     const started = Date.now();
     let choice = null;
     while (Date.now() - started < 12000) {
-      choice = [...document.querySelectorAll(".t-dialog .t-button")].find((item) =>
-        item.classList.contains(confirmChoice ? "t-dialog__confirm" : "t-dialog__cancel"),
-      );
+      choice = [...document.querySelectorAll(".t-dialog")]
+        .filter((dialog) => !previousDialogs.has(dialog))
+        .flatMap((dialog) => [...dialog.querySelectorAll(".t-button")])
+        .find((item) =>
+          item.classList.contains(confirmChoice ? "t-dialog__confirm" : "t-dialog__cancel"),
+        );
       if (choice?.getClientRects().length) break;
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
@@ -1070,7 +1075,21 @@ async function runStudioTagManagement(session) {
     );
 
     await evaluateStudioPage(session, clickTagRowActionInPage, tagId, "删除", true);
-    await pause(180);
+    // 本次删除命令成功后才能检查工程 JSON，不能以固定等待代替业务完成信号。
+    let removeNotice = "";
+    const removeStarted = Date.now();
+    while (Date.now() - removeStarted < 3000) {
+      removeNotice = await session.evaluate(
+        "document.querySelector('.studio-notice')?.textContent ?? ''",
+      );
+      if (removeNotice.includes("项目 Tag 已删除，可撤销")) break;
+      await pause(50);
+    }
+    assert.match(
+      removeNotice,
+      /项目 Tag 已删除，可撤销/,
+      target.name + " Tag 删除命令未完成：" + removeNotice,
+    );
     const removed = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
     assert.ok(
       !removed.tags.some((tag) => tag.tagId === tagId),

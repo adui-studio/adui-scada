@@ -1100,3 +1100,12 @@
 - **最小候选**：仅改 `scripts/test-studio-browser.mjs`。在 `--tags` 独立临时 Chromium 中调用 `Network.enable` 与 `Network.setCacheDisabled({cacheDisabled:true})`，使本机开发资源不依赖有故障记录的 HTTP 磁盘缓存；**不触碰 IndexedDB、BroadcastChannel、业务 CAS、TLS 校验或设备数据**。对 `--tags` 的真实导航开启已有 `watchStudioModuleNetwork` 观察器，只在失败时附加按同源资源类别脱敏的诊断，在 `finally` 关闭监听。导航失败错误增加白名单 `net::ERR_[A-Z0-9_]{1,64}`、地址匹配布尔值和 `document.readyState`，同时补充 React 入口、React 19 适配器、React/Vue Studio 模块分类；不输出 HTTP 正文、Cookie、授权信息或异常堆栈。
 - **防复发与验收**：不延长原 60 × 150ms 门槛，不重试掩盖失败，不取消真实 Tag 确认/取消和已绑定拒绝断言。若隔离 HTTP 缓存后通过，仅证明该会话可继续验收，不能据此认定本次原失败根因就是缓存；若仍失败，先据新诊断分类查网络/证书/模块再改正式应用。**本批仅已提交 GitHub 候选，尚未运行 Windows `node --check`、`vp check`、`test:tags:browser`，不得声称修复已实测通过。**
 - **证据**：维护者本轮 Windows 原始失败日志、`scripts/test-studio-browser.mjs` 现有导航/网络诊断、历史 E-106 Chromium 缓存实测记录和 PR #189。
+
+### E-114 · Tag 浏览器脚本可能点击退出动画中的旧 Dialog（PR #189，待 Windows 复验）
+
+- **真实现象**：2026-11-23 维护者在 PR #189 上执行 `node --check scripts/test-studio-browser.mjs` 与 `vp check`（448 个格式文件/291 个受检文件，零告警错误）通过；`pnpm run test:tags:browser` 已越过 React 首次导航、新建/编辑、取消删除及已绑定 Tag 删除保护，最终失败于「React 删除 Tag 后工程仍包含该定义」，退出码 1。Vue 端及后续专项未执行。该日志只说明最终导出仍含 Tag，不能单独证明 Core 删除功能有缺陷。
+- **源码分析（候选根因）**：浏览器函数 `clickTagRowActionInPage` 在连续三次 Dialog 确认/取消之间从整个文档选取首个带 `t-dialog__confirm`/`t-dialog__cancel` 的可见按钮；固定版本 `tdesign-react@1.18.6` 的插件 `destroy` 经 `requestAnimationFrame` 调用，Dialog 具有约 300ms 退出动画。前次弹窗残留节点可能被再次命中，导致脚本没有确认新一轮删除。当前无 Chromium DOM 快照，故仅属与源码及症状一致的竞态推断，不视为实证根因。
+- **最小修复候选**：点击业务按钮前记录已有 `.t-dialog` 节点，只在本次新增的弹窗内定位确认/取消按钮；保持原 12 秒弹窗门槛、真实点击和旧弹窗拒绝。最终删除先等待现有成功提示「项目 Tag 已删除，可撤销」，再导出实际工程 JSON 校验 Tag 不存在；已绑定 Tag 必须拒绝删除，取消必须保留定义，原有断言不变。仅修改 `scripts/test-studio-browser.mjs`，不动 React/Vue UI、Core Tag 规则、持久化、权限或工业边界。
+- **防复发与验证边界**：连续使用插件式 Dialog 的浏览器验收应按弹窗实例隔离定位，不以全局首个按钮或固定延时推断操作已经完成。协作容器仅对选择器模拟场景执行 Node 22 的 2/2 烟雾用例与语法检查；**未执行本仓库完整 `vp check`、Windows React/Vue Chromium `test:tags:browser` 或后续专项**。这些均须在最新 PR HEAD 复验。
+- **证据**：维护者本轮 PowerShell 日志、PR #189 最新源码、`scripts/test-studio-browser.mjs`、`apps/web-react/src/studio/StudioDialog.tsx`、TDesign React 1.18.6 `dialog/plugin.tsx` 与 `Dialog.tsx`。
+

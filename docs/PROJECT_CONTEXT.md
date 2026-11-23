@@ -2504,3 +2504,8 @@ D5c0v 基于合并后的 main，限定本地版本历史一个入口/框架：�
 ## 2026-11-23 · PR #189 Tag 浏览器首次 React 导航阻塞（E-113）
 
 维护者在 React 19 TDesign 适配器候选后执行 Windows `typecheck:web`、`vp check`（448/291 零警告错误）、中文文案（318）及文档（94）均通过；`test:tags:browser` 则在首次 React HTTPS 导航阶段直接失败，未到 Tag 删除确认路径，其后专项未执行。初步定位为浏览器导航诊断不足，尚无实际 Chromium 网络错误码，不能断言是适配器、证书或缓存引起。根据 E-106 先前真实 `ERR_CACHE_WRITE_FAILURE` 证据，现仅在 `--tags` 临时 Chromium 的 HTTP 缓存上使用 CDP 隔离，同时为导航失败补充严格白名单网络/加载状态诊断。保持全部真实 Tag 删除取消/确认、绑定保护、CAS 及 HTTPS 约束。相关文档 E-113；本提交 Windows 实测待补，PR #189 仍为 Draft、Assignee `@adui-dev`、未授权合并。
+
+## 2026-11-23 · PR #189 React Tag 最终删除失败与实例级弹窗定位候选（E-114）
+
+维护者本轮 Windows `node --check` 成功，`vp check` 448/291 零告警；`test:tags:browser` 已通过 React 首次页面导航并运行至最终正常删除，导出工程 JSON 仍含测试 Tag，退出码 1，Vue/其他专项未开始。源码显示连续确认/取消后，测试仍选全局首个 TDesign Dialog 按钮；固定 React 1.18.6 插件销毁存在动画滞后，可能误点旧弹窗，但暂无浏览器实例级证据确认根因。候选补丁仅在真实点击前记录旧 Dialog、定位本轮新弹窗，并等待既有删除成功提示后导出，完整保留取消、绑定保护及 JSON 不存在断言。没有修改 React/Vue UI、Core、权限、持久化或工业安全边界。协作环境只完成 Node 22 选择器 2/2 模拟验证及源码静态检查；最新 HEAD Windows Vite+/浏览器与跨框架回归待维护者复验。PR 仍为 Draft、Assignee `@adui-dev`，未经授权不得合并。
+
