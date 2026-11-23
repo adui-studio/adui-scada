@@ -1464,3 +1464,14 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/test/alarm-baseline-session.test.ts`：29→30，验证错误首份快照、增量的统一失效及同代次不可复活。
 - `packages/core/test/alarm-subscription-adapter.test.ts`：31→32，验证不规范时间使订阅停止并撤销旧回调。
 - 通用 `tag-store.ts`、会话 Controller/Adapter 生产代码、服务端/API/数据库、React/Vue 和工业网关均保持不变。
+
+## 2026-11-23 · D5c0d FR-011 报警候选毫秒精度边界（候选）
+
+- `packages/core/src/alarm-tag-freshness.ts`：现有 ISO 显式时区正则捕获可选小数秒，小数位大于 3 时，在 `Date.parse` 前抛中文 TypeError；已有时区、公历日期、小时和时效保护不变。
+- `packages/core/test/alarm-tag-freshness.test.ts`：9→10，拒绝四位/六位小数秒、保留无小数秒及一至三位和明确偏移。
+- `packages/core/test/alarm-snapshot-baseline.test.ts`：10→11，首次快照不得静默截断高精度时间以建立基线。
+- `packages/core/test/alarm-tag-sequence.test.ts`：10→11，直接复现亚毫秒倒退在 `Date.parse` 下同毫秒的序列歧义，并拒绝。
+- `packages/core/test/alarm-tag-delta.test.ts`：19→20，直接增量入口对新读数和旧基线高精度时间均拒绝。
+- `packages/core/test/alarm-baseline-session.test.ts`：30→31，错误快照/增量触发原有 `INVALID_INPUT` 终止，不可同代次恢复。
+- `packages/core/test/alarm-subscription-adapter.test.ts`：32→33，受控订阅拒绝并释放定时器/回调。
+- 会话代次 8、托管器 11 保持不变，TagStore、Gateway、NestJS、Prisma、Vue/React 未修改。
