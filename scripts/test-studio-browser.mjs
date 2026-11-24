@@ -1839,20 +1839,52 @@ async function openNewTagEditorInPage() {
   throw new Error("Tag 新建对话框打开超时");
 }
 
-function inspectTagFormDialogInPage() {
+async function inspectTagFormDialogInPage() {
   const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
   if (!(form instanceof HTMLFormElement)) throw new TypeError("Tag 表单未挂载");
   const modal = form.closest(".t-dialog");
   if (!(modal instanceof HTMLElement)) throw new TypeError("Tag 表单不在 TDesign 对话框内");
-  const grid = form.querySelector(".studio-tag-form-grid");
-  const buttons = [...form.querySelectorAll(".studio-tag-form-actions button")];
-  return {
-    separateFromSidebar: !form.closest(".studio-panel-properties"),
-    modalWidth: Math.round(modal.getBoundingClientRect().width),
-    columns: grid ? getComputedStyle(grid).gridTemplateColumns.split(" ").length : 0,
-    fieldCount: form.querySelectorAll("label.studio-field").length,
-    buttons: buttons.map((button) => button.textContent.trim()),
-  };
+  // TDesign 缩放入场期间，布局宽度与屏幕上的边界矩形不同。
+  // 等待实际动画结束及连续两次稳定测量，不以预期宽度作为等待条件。
+  const started = Date.now();
+  let previousWidth = null;
+  let metrics = null;
+  while (Date.now() - started < 5000) {
+    const style = getComputedStyle(modal);
+    const rect = modal.getBoundingClientRect();
+    metrics = {
+      width: rect.width,
+      layoutWidth: modal.offsetWidth,
+      computedWidth: style.width,
+      transform: style.transform,
+      opacity: style.opacity,
+      animating: modal
+        .getAnimations()
+        .some((animation) => animation.pending || animation.playState === "running"),
+    };
+    const settled =
+      modal.isConnected &&
+      metrics.layoutWidth > 0 &&
+      !metrics.animating &&
+      style.visibility === "visible" &&
+      Number(style.opacity) === 1 &&
+      Math.abs(metrics.width - metrics.layoutWidth) <= 1;
+    if (settled && previousWidth !== null && Math.abs(metrics.width - previousWidth) <= 0.5) {
+      const grid = form.querySelector(".studio-tag-form-grid");
+      const buttons = [...form.querySelectorAll(".studio-tag-form-actions button")];
+      return {
+        separateFromSidebar: !form.closest(".studio-panel-properties"),
+        modalWidth: Math.round(rect.width),
+        modalMetrics: metrics,
+        columns: grid ? getComputedStyle(grid).gridTemplateColumns.split(" ").length : 0,
+        fieldCount: form.querySelectorAll("label.studio-field").length,
+        buttons: buttons.map((button) => button.textContent.trim()),
+      };
+    }
+    previousWidth = settled ? metrics.width : null;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("Tag 编辑弹窗未达到稳定可见状态：" + JSON.stringify(metrics));
 }
 
 /** Tag 目录搜索沿用 TDesign 输入，不能用直接改 DOM 值模拟框架事件。 */
@@ -2146,7 +2178,10 @@ async function runStudioTagManagement(session) {
     await evaluateStudioPage(session, openNewTagEditorInPage);
     const dialogLayout = await evaluateStudioPage(session, inspectTagFormDialogInPage);
     assert.ok(dialogLayout.separateFromSidebar, target.name + " Tag 表单错误嵌在侧栏中");
-    assert.ok(dialogLayout.modalWidth >= 600, target.name + " Tag 编辑弹窗宽度不足");
+    assert.ok(
+      dialogLayout.modalWidth >= 600,
+      target.name + " Tag 编辑弹窗宽度不足：" + JSON.stringify(dialogLayout.modalMetrics),
+    );
     assert.equal(dialogLayout.columns, 2, target.name + " Tag 主表单不是双列");
     assert.equal(dialogLayout.fieldCount, 5, target.name + " Tag 主表单字段缺失");
     assert.deepStrictEqual(

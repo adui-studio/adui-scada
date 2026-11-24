@@ -2610,3 +2610,7 @@ PR #192 内统一 React/Vue Studio 通用操作图标为 TDesign，工业设备�
 ### D5c1 · E-125 对齐诊断已定位
 
 维护者本机最新诊断确认 20 个按钮尺寸等全部符合规范，失败为浏览器起始对齐计算值 flow-start 与测试预期 flex-start 不一致。候选修正测试序列化兼容并追加真实文本位置验证，正式 UI 不变。仍保持 PR #192 Draft，等待真实浏览器四视口及剩余专项回归。
+
+### D5c1 · 普通 Studio 312/312 与 Tag 专项阻塞
+
+维护者在 Windows HEAD `c31c86ef1bf25e51987251fe277bade1de38c027` 通过 Vite+、95 份 Markdown 及双端四视口普通 Studio 全部 312 项断言，关闭 E-125。Tag 专项首次失败于 React Dialog 宽度，E-126 候选仅等待稳定视觉尺寸并增强诊断，600px 门槛及正式 UI 不变。PR #192 保持 Draft，剩余专项未完成。
