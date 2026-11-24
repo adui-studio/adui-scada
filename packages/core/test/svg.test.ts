@@ -1,6 +1,7 @@
 import { expect, test } from "vite-plus/test";
 import { SCADA_SCHEMA_VERSION, parseScadaDocument } from "../src/document.ts";
 import { renderSvgPage } from "../src/svg.ts";
+import { waterTreatmentShowcaseDocument } from "../src/demo-document.ts";
 import type { TagValue } from "../src/tag-store.ts";
 
 const source = {
@@ -94,4 +95,82 @@ test("锁定只作用于编辑器，Runtime 仍显示可见的锁定图元", () 
   const svg = renderSvgPage(locked, "main", new Map([["water.level", tag("GOOD", 60)]]));
   expect(svg).toContain('data-node-id="tank"');
   expect(svg).toContain("60%");
+});
+
+test("Studio 专用浅色 SVG 仅改变外观，不修改 Tag 质量或原运行时深色渲染", () => {
+  const dark = renderSvgPage(document, "main", new Map());
+  const light = renderSvgPage(document, "main", new Map(), "light");
+  expect(dark).toContain('fill="#0c1728"');
+  expect(light).toContain('fill="#ffffff"');
+  expect(light).toContain('fill="#142338"');
+  expect(light).toContain('data-node-id="tank"');
+  expect(light).toContain("异常");
+  expect(renderSvgPage(document, "main", new Map())).toBe(dark);
+});
+
+test("浅色水箱采用可缩放设备图形且异常读数保持占位", () => {
+  const good = renderSvgPage(
+    document,
+    "main",
+    new Map([["water.level", tag("GOOD", 75)]]),
+    "light",
+  );
+  const stale = renderSvgPage(
+    document,
+    "main",
+    new Map([["water.level", tag("STALE", 75)]]),
+    "light",
+  );
+  expect(good).toContain('viewBox="0 0 100 150"');
+  expect(good).toContain('fill="url(#scada-metal)"');
+  expect(good).toContain("75%");
+  expect(stale).toContain("已过期");
+  expect(stale).toContain("--");
+  expect(stale).not.toContain("75%");
+});
+
+test("总览指标卡使用真实绑定值且过期时不显示历史读数", () => {
+  const good = renderSvgPage(
+    waterTreatmentShowcaseDocument,
+    "main",
+    new Map([["water.level", tag("GOOD", 75)]]),
+    "light",
+  );
+  const stale = renderSvgPage(
+    waterTreatmentShowcaseDocument,
+    "main",
+    new Map([["water.level", tag("STALE", 75)]]),
+    "light",
+  );
+  expect(good).toContain('data-node-id="level-metric"');
+  expect(good).toContain('viewBox="0 0 320 92"');
+  expect(good).toContain("75 %");
+  expect(stale).toContain("已过期");
+  expect(stale).not.toContain("75 %");
+  expect(stale).not.toContain("75%");
+});
+
+test("Studio 深色预览保留工业设备和指标卡造型且不改动工程或默认运行时", () => {
+  const source = JSON.stringify(waterTreatmentShowcaseDocument);
+  const values = new Map([["water.level", tag("GOOD", 75)]]);
+  const darkRuntime = renderSvgPage(waterTreatmentShowcaseDocument, "main", values);
+  const studioDark = renderSvgPage(waterTreatmentShowcaseDocument, "main", values, "studio-dark");
+  expect(studioDark).toContain('<rect width="100%" height="100%" fill="#0c1728"/>');
+  expect(studioDark).toContain('fill="#e6edf6"');
+  expect(studioDark).toContain('fill="#192333"');
+  expect(studioDark).toContain('id="scada-metal"');
+  expect(studioDark).toContain('viewBox="0 0 120 100"');
+  expect(studioDark).toContain('viewBox="0 0 320 92"');
+  expect(studioDark).toContain("75 %");
+  const stale = renderSvgPage(
+    waterTreatmentShowcaseDocument,
+    "main",
+    new Map([["water.level", tag("STALE", 75)]]),
+    "studio-dark",
+  );
+  expect(stale).toContain("已过期");
+  expect(stale).not.toContain("75 %");
+  expect(stale).not.toContain("75%");
+  expect(JSON.stringify(waterTreatmentShowcaseDocument)).toBe(source);
+  expect(renderSvgPage(waterTreatmentShowcaseDocument, "main", values)).toBe(darkRuntime);
 });

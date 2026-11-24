@@ -1,3 +1,408 @@
+/* TDesign 按钮尺寸由组件 size 和共享布局规则负责，不统一强制 height:auto。 */
+.studio-shell .studio-tool-group .t-button {
+  width: 100%;
+}
+.studio-shell .t-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--scada-border);
+  border-radius: var(--adui-radius-sm);
+  background: var(--scada-canvas);
+  color: var(--scada-text);
+}
+.studio-shell .studio-field .t-input input {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+.studio-shell .t-input--focused {
+  border-color: var(--scada-primary);
+}
+.studio-tree-controls .t-button {
+  width: 100%;
+  justify-content: center;
+}
+.studio-toolbar h1 {
+  margin: 4px 0;
+  font-size: 24px;
+}
+.studio-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.studio-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+.studio-import {
+  min-width: 0;
+}
+.studio-import input {
+  display: none;
+}
+.studio-notice {
+  min-height: 20px;
+  color: var(--scada-text-muted);
+  font-size: 13px;
+}
+/* 页面管理仅修改 Studio 当前编辑视图，选中态不写入工程 JSON。 */
+.studio-page-tabs,
+.studio-page-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.studio-page-tabs button[aria-current="page"] {
+  border-color: var(--scada-primary);
+  color: var(--scada-cyan);
+  background: var(--scada-active-bg);
+}
+.studio-page-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+.studio-panel h2 {
+  margin: 0 0 14px;
+  font-size: 15px;
+}
+.studio-panel h3 {
+  margin: 18px 0 8px;
+  font-size: 13px;
+}
+/* 跨页面复制明确显示目标页，避免误复制到当前页面。 */
+.studio-copy-tools {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--scada-border);
+  border-bottom: 1px solid var(--scada-border);
+}
+.studio-copy-tools .studio-field {
+  margin: 0;
+}
+.studio-copy-tools button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+.studio-layer {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 0;
+  text-align: left;
+}
+/* 平面组合的树形视图仅影响 Studio 会话，不改变 SVG 层序或工程 JSON。 */
+.studio-tree-controls {
+  display: grid;
+  gap: 7px;
+  margin: 12px 0 10px;
+}
+.studio-tree-controls .studio-field {
+  margin: 0;
+}
+.studio-tree-controls .t-input {
+  width: 100%;
+  min-width: 0;
+}
+.studio-tree-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.studio-tree-group {
+  margin: 5px 0;
+}
+.studio-tree-group-heading {
+  display: flex;
+  align-items: stretch;
+  gap: 5px;
+}
+.studio-tree-group-heading .studio-layer {
+  min-width: 0;
+  flex: 1;
+  margin: 0;
+}
+.studio-tree-toggle {
+  width: 24px;
+  min-width: 24px;
+  padding: 0;
+  border: 1px solid var(--scada-border);
+  border-radius: 4px;
+  background: var(--scada-action-bg);
+  color: var(--scada-text);
+}
+.studio-tree-toggle:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+.studio-tree-members {
+  margin-left: 12px;
+  padding-left: 14px;
+  border-left: 1px solid var(--scada-border-strong);
+}
+.studio-tree-members .studio-layer {
+  margin: 3px 0;
+}
+.studio-tree-empty {
+  margin: 12px 0;
+  color: var(--scada-text-muted);
+  font-size: 12px;
+}
+.studio-layer-tree .studio-layer {
+  flex-wrap: wrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.studio-layer[draggable="true"] {
+  cursor: grab;
+}
+.studio-layer[data-drop-position="after"] {
+  box-shadow: inset 0 3px var(--scada-cyan);
+}
+.studio-layer[data-drop-position="before"] {
+  box-shadow: inset 0 -3px var(--scada-cyan);
+}
+.studio-layer-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.studio-layer-identity > .t-icon {
+  flex: none;
+  color: var(--scada-text-muted);
+  font-size: 16px;
+}
+.studio-exact-layer {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--scada-border);
+  border-bottom: 1px solid var(--scada-border);
+}
+.studio-exact-layer .studio-field {
+  margin: 0;
+}
+.studio-layer small {
+  color: var(--scada-text-muted);
+}
+.studio-layer[data-selected="true"] {
+  border-color: var(--scada-primary);
+}
+.studio-layer[data-hidden="true"] {
+  opacity: 0.62;
+  border-style: dashed;
+}
+.studio-layer[data-locked="true"] small {
+  color: var(--scada-warning);
+}
+.studio-hitbox[data-locked="true"] {
+  cursor: not-allowed;
+}
+.studio-stage-caption {
+  color: var(--scada-text-secondary);
+  margin: 2px 0 12px;
+  font-size: 12px;
+}
+.studio-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: var(--scada-canvas);
+  border: 1px solid var(--scada-border-strong);
+  border-radius: 4px;
+  touch-action: none;
+  user-select: none;
+}
+.studio-hitbox {
+  cursor: move;
+  outline: none;
+}
+.studio-hitbox:focus {
+  stroke: var(--scada-primary);
+}
+.studio-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 12px;
+}
+.studio-tip {
+  color: var(--scada-text-muted);
+  line-height: 1.6;
+  font-size: 12px;
+}
+.studio-nudge {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.studio-nudge button {
+  min-width: 36px;
+}
+.studio-field {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+  font-size: 13px;
+}
+/* 输入框及下拉框边框由 TDesign 控件承载，避免原生 input 二次描边。 */
+.studio-binding {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  color: var(--scada-text-secondary);
+}
+/* V0.2 画布操作：缩放仅改变视图，不改变工程坐标。 */
+.studio-stage-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.studio-zoom {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.studio-zoom button {
+  min-width: 35px;
+  padding: 4px 7px;
+}
+.studio-add,
+.studio-tool-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 10px 0 14px;
+}
+.studio-add button,
+.studio-tool-group button {
+  min-width: 0;
+  padding: 7px 4px;
+  font-size: 12px;
+}
+.studio-toolbox > button {
+  width: 100%;
+}
+.studio-toolbox button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* 框选矩形仅是视图叠加层，不会写入工程 JSON。 */
+.studio-marquee {
+  fill: rgb(13 99 243 / 14%);
+  stroke: var(--scada-primary);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+
+/* 画布显示与吸附开关只影响当前编辑会话，不写入工程文件。 */
+.studio-canvas-settings {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.studio-canvas-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  color: var(--scada-text-secondary);
+  cursor: pointer;
+}
+.studio-canvas-option input {
+  margin: 0;
+  accent-color: var(--adui-color-brand-text);
+}
+.studio-alignment-guide {
+  stroke: var(--scada-cyan);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 3;
+}
+
+/* 几何属性面板两列布局；只在确认提交后修改共享工程。 */
+.studio-geometry {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin: 12px 0 18px;
+}
+.studio-geometry label {
+  display: grid;
+  gap: 5px;
+  color: var(--scada-text-secondary);
+  font-size: 12px;
+}
+.studio-geometry input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 7px;
+  color: var(--scada-text);
+  background: var(--scada-canvas);
+  border: 1px solid var(--scada-border-strong);
+  border-radius: 4px;
+}
+.studio-geometry button {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+/* 八方向缩放与旋转手柄只属于 Studio 视图，不写入工程文件。 */
+.studio-resize-handle {
+  fill: var(--scada-text-strong);
+  stroke: var(--scada-primary);
+  stroke-width: 1.6;
+  cursor: nwse-resize;
+}
+.studio-resize-handle[data-handle="ne"],
+.studio-resize-handle[data-handle="sw"] {
+  cursor: nesw-resize;
+}
+.studio-resize-handle[data-handle="n"],
+.studio-resize-handle[data-handle="s"] {
+  cursor: ns-resize;
+}
+.studio-resize-handle[data-handle="e"],
+.studio-resize-handle[data-handle="w"] {
+  cursor: ew-resize;
+}
+.studio-resize-handle:hover,
+.studio-rotation-handle:hover {
+  fill: var(--scada-primary);
+}
+.studio-rotation-stem {
+  stroke: var(--scada-primary);
+  stroke-width: 1.5;
+}
+.studio-rotation-handle {
+  fill: var(--scada-primary);
+  stroke: var(--scada-canvas);
+  stroke-width: 1.5;
+}
+.studio-rotation-handle,
+.studio-svg[data-rotating="true"],
+.studio-svg[data-rotating="true"] * {
+  cursor:
+    url("../../../assets/cursors/rotate.svg") 16 16,
+    grab;
+}
+
+/* 工具栏占用视口内固定空间，面板内独立滚动，不使浏览器页面溢出。 */
+.studio-shell > footer {
+  padding: 0;
+}
+
+/* 两套 Web 共享的 Studio 结构布局与 D5c1 重设计视觉层。 */
 /* 组态编辑工作台：界面分区优先，复杂绘图逻辑仍由共享 Core 负责。 */
 .studio-shell {
   gap: 0;
@@ -69,28 +474,17 @@
   outline: 2px solid var(--scada-cyan);
   outline-offset: -2px;
 }
+/* Popup 本身提供浮层外观；内容只负责排列，不再嵌套卡片。 */
 .studio-file-popover {
-  width: 200px;
+  width: min(200px, calc(100vw - 32px));
   display: grid;
-  gap: 6px;
-  padding: 10px;
-  border: 1px solid var(--scada-border-strong);
-  border-radius: 7px;
-  background: var(--scada-surface);
-  box-shadow: 0 14px 36px rgb(0 0 0 / 38%);
+  gap: var(--adui-space-1);
 }
-.studio-file-popover button,
-.studio-file-popover .studio-import {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-  font-size: 12px;
-  text-align: center;
-}
+.studio-file-popover .studio-import,
 .studio-file-popover .studio-import .t-upload,
-.studio-file-popover .studio-import .t-button {
+.studio-file-popover .studio-import .t-upload__trigger {
+  display: block;
+  min-width: 0;
   width: 100%;
 }
 .studio-side-more .t-collapse,
@@ -222,7 +616,7 @@
 .studio-tree-controls {
   display: grid;
   flex: none;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   padding: 7px 12px 10px;
   border-bottom: 1px solid var(--scada-border);
@@ -361,11 +755,7 @@
   max-height: min(440px, 60dvh);
   gap: 8px;
   overflow-y: auto;
-  padding: 12px;
-  border: 1px solid var(--scada-border-strong);
-  border-radius: 7px;
-  background: var(--scada-surface);
-  box-shadow: 0 16px 36px rgb(0 0 0 / 45%);
+  padding: 0;
 }
 .studio-view-section {
   display: grid;
@@ -507,60 +897,6 @@
   border-top: 1px solid var(--scada-border-subtle);
 }
 
-/* Tag 是工程数据目录而非主导航，紧凑行及等高动作优先使用共享 Token。 */
-.studio-tag-manager {
-  min-width: 0;
-}
-.studio-tag-manager .studio-tag-item {
-  padding: var(--adui-space-3) 0 var(--adui-space-4);
-  border-bottom: 1px solid var(--scada-border-subtle);
-  line-height: var(--adui-line-height-normal);
-}
-.studio-tag-manager .studio-tag-item:last-child {
-  border-bottom: 0;
-}
-.studio-tag-manager .studio-tag-item > p {
-  margin: var(--adui-space-2) 0 0;
-}
-.studio-tag-manager .studio-tag-item strong {
-  color: var(--scada-text-strong);
-  font-weight: var(--adui-font-weight-semibold);
-}
-.studio-tag-manager .studio-tag-actions,
-.studio-tag-manager .studio-tag-form-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--adui-space-3);
-  margin-top: var(--adui-space-3);
-}
-.studio-tag-manager .studio-tag-actions .t-button,
-.studio-tag-manager .studio-tag-form-actions .t-button {
-  min-width: 0;
-  width: 100%;
-  min-height: var(--adui-control-height-sm);
-  height: var(--adui-control-height-sm);
-  padding: 0 var(--adui-space-4);
-  font-size: var(--adui-font-size-xs);
-  white-space: nowrap;
-}
-.studio-tag-manager .studio-tag-form {
-  padding-top: var(--adui-space-4);
-  border-top: 1px solid var(--scada-border-subtle);
-}
-.studio-tag-manager .studio-tag-form > strong {
-  font-size: var(--adui-font-size-xs);
-  color: var(--scada-text-strong);
-}
-.studio-tag-manager .studio-field {
-  gap: var(--adui-space-2);
-  margin: 0;
-  font-size: var(--adui-font-size-xs);
-}
-.studio-tag-manager .studio-tip {
-  font-size: var(--adui-font-size-2xs);
-  line-height: var(--adui-line-height-normal);
-}
-
 .studio-advanced .studio-tool-group {
   gap: var(--adui-space-3);
   margin: 10px 0;
@@ -682,12 +1018,8 @@
   max-height: min(70vh, 610px);
   overflow-y: auto;
   gap: 10px;
-  padding: var(--adui-space-5);
-  border: 1px solid var(--scada-border-strong);
-  border-radius: 7px;
+  padding: 0;
   color: var(--scada-text);
-  background: var(--scada-surface);
-  box-shadow: 0 14px 36px rgb(0 0 0 / 38%);
 }
 /* 本地历史、服务端工程及发布预检统一由 TDesign Popup 定位。 */
 
@@ -729,10 +1061,8 @@
 .studio-version-comparison {
   display: grid;
   gap: 7px;
-  padding: 10px;
-  border: 1px solid var(--scada-border);
-  border-radius: 5px;
-  background: var(--scada-bg);
+  padding: var(--adui-space-3) 0;
+  border-top: 1px solid var(--scada-border);
 }
 .studio-version-heading {
   display: flex;
@@ -794,10 +1124,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px;
-  border: 1px solid var(--scada-border);
-  border-radius: 5px;
-  background: var(--scada-bg);
+  padding: var(--adui-space-3) 0;
+  border-top: 1px solid var(--scada-border);
 }
 .studio-project-browser-info {
   flex: 1;
@@ -852,171 +1180,1515 @@
   cursor: not-allowed;
 }
 
-/* 正式工业工作台：在原有 16:9 画布和固定侧栏语义之上统一视觉密度。 */
+/* D5c1 精密组态编辑器：重做导航层级、资源侧栏、画布焦点和属性面板。 */
 .studio-shell {
   --studio-control-height: 34px;
+  background: var(--scada-bg);
 }
 .studio-toolbar {
-  min-height: 64px;
-  gap: 14px;
-  padding: 10px clamp(12px, 1.4vw, 22px);
-  border-bottom-color: var(--scada-border-strong);
+  min-height: 62px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 18px;
+  padding: 8px clamp(12px, 1.3vw, 22px);
+  border-bottom: 1px solid var(--scada-border);
+  background: var(--scada-surface);
 }
 .studio-toolbar > div:first-child {
-  min-width: 160px;
+  min-width: 136px;
+  max-width: 172px;
+  flex: none;
 }
 .studio-toolbar h1 {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   color: var(--scada-text-strong);
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: 0.012em;
+  font-size: 18px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
 }
 .studio-toolbar .scada-eyebrow {
   color: var(--scada-text-muted);
   font-size: var(--adui-font-size-2xs);
+  letter-spacing: 0.04em;
+}
+.studio-actions {
+  min-width: 0;
+  flex: 1;
+  /* 菜单浮层挂载在工具栏内，不能由滚动容器裁剪；空间不足时换行。 */
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  overflow: visible;
+}
+.studio-actions > * {
+  flex: none;
 }
 .studio-history-actions,
 .studio-save-actions {
   gap: var(--adui-space-3);
 }
-.studio-history-actions button,
-.studio-save-actions button {
+.studio-actions button {
   min-height: var(--studio-control-height);
-  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: var(--adui-font-size-xs);
+  white-space: nowrap;
 }
-.studio-save-actions button:first-child {
-  font-weight: 700;
+.studio-save-actions button:first-child:not(:disabled) {
+  border-color: var(--scada-primary);
+  background: var(--scada-primary);
+  color: var(--adui-color-brand-on);
+  font-weight: 750;
 }
+.studio-save-actions button:first-child:not(:disabled):hover {
+  border-color: var(--scada-primary);
+  background: var(--scada-primary-hover);
+}
+/* 统一为单层 TDesign 浮层，内部容器不拥有背景、描边或阴影。 */
 .studio-file-popover,
 .studio-version-panel,
 .studio-view-popover {
-  border-color: var(--scada-border-strong);
-  box-shadow: 0 16px 38px rgb(0 0 0 / 32%);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .studio-page-bar {
-  min-height: 43px;
-  padding-inline: 15px;
-  background: var(--scada-nav);
+  min-height: 44px;
+  padding: 5px 14px;
+  border-bottom: 1px solid var(--scada-border);
+  background: var(--adui-color-surface-muted);
 }
 .studio-page-tabs {
   gap: var(--adui-space-2);
 }
 .studio-page-tabs button {
-  min-height: 32px;
+  min-height: 33px;
+  padding: 6px 13px;
   border: 1px solid transparent;
-  border-radius: 6px 6px 0 0;
+  border-radius: 7px;
+  background: transparent;
   color: var(--scada-text-secondary);
-  font-weight: 600;
+  font-size: var(--adui-font-size-xs);
+  font-weight: 650;
 }
 .studio-page-tabs button:not(:disabled):hover {
-  background: var(--scada-action-hover);
+  border-color: var(--scada-border);
+  background: var(--scada-surface);
   color: var(--scada-text-strong);
 }
 .studio-page-tabs button[aria-current="page"] {
   border-color: var(--scada-border);
-  border-bottom-color: var(--scada-cyan);
   background: var(--scada-surface);
-  color: var(--scada-text-strong);
+  color: var(--adui-color-brand-text);
+  box-shadow: inset 0 -2px var(--scada-primary);
 }
 .studio-workspace {
-  background: var(--scada-canvas);
+  background: var(--adui-color-stage);
 }
 .studio-panel {
   background: var(--scada-surface);
 }
+.studio-panel-layers {
+  border-right: 1px solid var(--scada-border);
+}
 .studio-pane-heading,
 .studio-panel-properties > h2 {
   min-height: 48px;
-  border-bottom-color: var(--scada-border-strong);
+  border-bottom: 1px solid var(--scada-border);
   background: var(--scada-surface);
+}
+.studio-pane-heading {
+  gap: var(--adui-space-4);
+  padding: 10px 14px;
 }
 .studio-pane-heading h2,
 .studio-panel-properties > h2 {
   color: var(--scada-text-strong);
   font-size: var(--adui-font-size-sm);
-  font-weight: 700;
-  letter-spacing: 0.015em;
+  font-weight: 750;
+  letter-spacing: 0.012em;
+}
+.studio-count {
+  min-width: 25px;
+  border-radius: 7px;
+  background: var(--scada-active-bg);
+  color: var(--adui-color-brand-text);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 750;
+  text-align: center;
 }
 .studio-library-label,
 .studio-tree-section-title {
   color: var(--scada-text-secondary);
-  font-weight: 700;
+  font-size: var(--adui-font-size-2xs);
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+.studio-library-label {
+  padding-top: 14px;
+}
+.studio-add {
+  gap: 7px;
+  padding: 10px 12px 16px;
+  border-bottom: 1px solid var(--scada-border-subtle);
+}
+.studio-add button {
+  min-height: 38px;
+  height: 38px;
+  border: 1px solid var(--scada-border);
+  border-radius: 9px;
+  background: var(--adui-color-surface-muted);
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 650;
+  transition:
+    border-color var(--adui-motion-fast) ease,
+    background-color var(--adui-motion-fast) ease;
+}
+.studio-add button:not(:disabled):hover {
+  border-color: var(--scada-primary);
+  background: var(--scada-active-bg);
+}
+.studio-tree-controls {
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid var(--scada-border-subtle);
+}
+.studio-tree-controls .studio-field {
+  gap: var(--adui-space-3);
+}
+.studio-tree-controls .t-button {
+  border-radius: 7px;
 }
 .studio-layer-tree {
+  padding: 10px 8px;
   scrollbar-width: thin;
   scrollbar-color: var(--scada-border-strong) transparent;
 }
 .studio-layer-tree .studio-layer {
-  min-height: var(--adui-control-height-md);
-  border-radius: var(--adui-radius-md);
+  min-height: 34px;
+  border-radius: 7px;
+  color: var(--scada-text-secondary);
 }
-.studio-layer-tree .studio-layer[data-selected="true"] {
-  box-shadow: inset 2px 0 var(--scada-primary);
+.studio-layer-tree .studio-layer:hover {
+  background: var(--adui-color-surface-muted);
   color: var(--scada-text-strong);
 }
+.studio-layer-tree .studio-layer[data-selected="true"] {
+  border-color: var(--adui-color-layer-active-border);
+  background: var(--scada-active-bg);
+  color: var(--adui-color-brand-text);
+  box-shadow: inset 3px 0 var(--scada-primary);
+}
+.studio-layer-tree .studio-layer small {
+  color: var(--scada-text-muted);
+}
+.studio-side-more {
+  border-top-color: var(--scada-border-subtle);
+}
+.studio-side-more .t-collapse-panel__header,
+.studio-advanced .t-collapse-panel__header {
+  min-height: 39px;
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 650;
+}
+.studio-stage {
+  background: var(--adui-color-stage);
+}
 .studio-stage-caption {
-  min-height: 48px;
-  padding-inline: 15px;
-  border-bottom-color: var(--scada-border-strong);
-  background: var(--scada-surface);
+  min-height: 46px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--adui-color-stage-separator);
+  background: var(--adui-color-stage-elevated);
+  font-size: var(--adui-font-size-xs);
 }
 .studio-stage-caption > span {
-  color: var(--scada-text-secondary);
+  color: var(--adui-color-stage-label);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.studio-stage-caption > .studio-view-menu > .t-popup > .t-button,
+.studio-stage-caption > .studio-zoom .t-button {
+  min-height: 30px;
+  border: 1px solid var(--adui-color-stage-button-border);
+  border-radius: 7px;
+  background: var(--adui-color-stage-button);
+  color: var(--adui-color-stage-on-button);
+}
+.studio-stage-caption > .studio-view-menu > .t-popup > .t-button:hover,
+.studio-stage-caption > .studio-zoom .t-button:hover {
+  border-color: var(--adui-color-stage-button-hover-border);
+  background: var(--adui-color-stage-button-hover);
+  color: var(--adui-color-brand-on);
+}
+.studio-zoom {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--adui-color-stage-zoom-border);
+  border-radius: 8px;
+  background: var(--adui-color-stage-zoom);
+}
+.studio-zoom .t-button {
+  min-width: 28px;
+  min-height: 26px;
+  padding: 4px 7px;
+  border-color: transparent;
+  background: transparent;
 }
 .studio-canvas-scroll,
 .studio-canvas-board,
 .studio-canvas-board > .studio-svg {
-  background: var(--scada-canvas);
+  background: var(--adui-color-stage);
+}
+.studio-canvas-scroll:focus-visible {
+  outline: 2px solid var(--adui-scada-cyan);
+  outline-offset: -3px;
+}
+.studio-page-boundary {
+  stroke: var(--adui-color-stage-boundary);
+  stroke-opacity: 0.95;
 }
 .studio-panel-properties {
-  padding-bottom: 20px;
+  border-left: 1px solid var(--scada-border);
+  padding-bottom: 18px;
   scrollbar-width: thin;
   scrollbar-color: var(--scada-border-strong) transparent;
 }
 .studio-panel-properties > h2 {
+  margin: 0 -14px var(--adui-space-5);
   padding-block: 15px;
 }
+.studio-panel-properties > p {
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-xs);
+}
 .studio-geometry {
-  background: var(--scada-canvas);
-  border-radius: 8px;
+  margin: var(--adui-space-5) 0;
+  padding: var(--adui-space-5);
+  border-color: var(--scada-border);
+  border-radius: 9px;
+  background: var(--adui-color-surface-muted);
+}
+.studio-advanced {
+  border-color: var(--scada-border-subtle);
+  border-radius: var(--adui-radius-md);
+}
+.studio-advanced-content {
+  background: var(--scada-surface);
 }
 .studio-statusbar {
   height: 38px;
-  border-top-color: var(--scada-border-strong);
-  background: var(--scada-nav);
+  gap: 14px;
+  border-top: 1px solid var(--scada-border);
+  background: var(--scada-surface);
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-2xs);
   font-variant-numeric: tabular-nums;
 }
 .studio-status-message .studio-notice {
   color: var(--scada-text-secondary);
 }
-/* TDesign 自行绘制输入和按钮的焦点状态；仅为工业图层拖拽入口保留清晰的键盘焦点。 */
+.studio-status-led {
+  width: 7px;
+  height: 7px;
+  background: var(--scada-live);
+}
+.studio-version-item,
+.studio-version-comparison,
+.studio-project-browser-item {
+  padding: var(--adui-space-3) 0;
+  border: 0;
+  border-top: 1px solid var(--scada-border);
+  border-radius: 0;
+  background: transparent;
+}
+.studio-version-error {
+  color: var(--scada-danger);
+}
+.studio-version-heading,
+.studio-version-item code {
+  font-variant-numeric: tabular-nums;
+}
+.studio-project-browser-current {
+  border-color: var(--scada-primary);
+  color: var(--adui-color-brand-text);
+}
+.studio-shell :is(button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--adui-color-focus-ring);
+  outline-offset: 2px;
+}
 .studio-shell .studio-layer:focus-visible {
-  outline: 2px solid var(--scada-primary);
+  outline: 2px solid var(--adui-color-focus-ring);
   outline-offset: -2px;
 }
-@media (max-width: 1250px) {
+@media (max-width: 1220px) {
   .studio-toolbar {
-    gap: 10px;
+    gap: 11px;
+    padding-inline: 12px;
+  }
+  .studio-toolbar > div:first-child {
+    min-width: 115px;
+  }
+  .studio-toolbar h1 {
+    font-size: 15px;
   }
 }
 @media (max-width: 930px) {
   .studio-toolbar {
-    min-height: 0;
-    padding-block: 9px;
+    min-height: 70px;
+    flex-wrap: wrap;
+    padding-block: 10px;
+  }
+  .studio-toolbar > div:first-child {
+    max-width: none;
+  }
+  .studio-actions {
+    justify-content: flex-start;
   }
   .studio-panel-layers,
   .studio-panel-properties {
-    min-height: 120px;
+    min-height: 125px;
   }
   .studio-stage {
     min-height: 240px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .studio-shell button,
-  .studio-shell summary {
-    scroll-behavior: auto;
+  .studio-shell *,
+  .studio-shell *::before,
+  .studio-shell *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
+}
+
+/* D5c1 Tag 工作流：侧栏仅浏览、搜索与选择，完整表单使用独立 TDesign Dialog。 */
+.studio-tag-manager {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+}
+.studio-tag-toolbar {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.studio-tag-toolbar-title {
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-sm);
+  font-weight: 750;
+}
+.studio-tag-toolbar .t-button {
+  flex: none;
+  min-height: 32px;
+  border-radius: 7px;
+  font-size: var(--adui-font-size-xs);
+}
+.studio-tag-search {
+  min-width: 0;
+  width: 100%;
+}
+.studio-tag-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--scada-border-subtle);
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-2xs);
+  font-variant-numeric: tabular-nums;
+}
+.studio-tag-summary span {
+  color: var(--scada-text-muted);
+}
+.studio-tag-list {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+.studio-tag-item {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid var(--scada-border-subtle);
+  border-radius: 9px;
+  background: var(--adui-color-surface-muted);
+  line-height: var(--adui-line-height-normal);
+}
+.studio-tag-item:hover,
+.studio-tag-item:focus-within {
+  border-color: var(--scada-border);
+  background: var(--scada-surface);
+}
+.studio-tag-item-heading {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+.studio-tag-item-heading strong {
+  min-width: 0;
+  flex: 1;
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+.studio-tag-type {
+  flex: none;
+  max-width: 70px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--scada-active-bg);
+  color: var(--adui-color-brand-text);
+  font-size: var(--adui-font-size-2xs);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.studio-tag-id {
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-2xs);
+  overflow-wrap: anywhere;
+}
+.studio-tag-item-note {
+  margin: 6px 0 0;
+  color: var(--scada-text-muted);
+  font-size: var(--adui-font-size-2xs);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.studio-tag-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-top: 6px;
+}
+.studio-tag-actions .t-button {
+  width: auto;
+  min-width: 54px;
+  height: 28px;
+  min-height: 28px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: var(--adui-font-size-xs);
+  font-weight: 650;
+}
+.studio-tag-actions .t-button:focus-visible {
+  outline: 2px solid var(--adui-color-focus-ring);
+  outline-offset: 2px;
+}
+.studio-tag-empty {
+  padding: 22px 12px;
+  border: 1px dashed var(--scada-border);
+  border-radius: 9px;
+  background: var(--adui-color-surface-muted);
+  text-align: center;
+}
+.studio-tag-empty strong {
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-xs);
+}
+.studio-tag-empty p {
+  margin: 6px 0 0;
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-2xs);
+}
+.studio-tag-catalog-help {
+  margin: 0;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: var(--adui-color-surface-muted);
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-2xs);
+  line-height: 1.65;
+}
+/* 编辑表单由 Dialog 挂载在页面根节点，不依赖 Studio 右侧栏的 320px 宽度。 */
+.studio-tag-dialog .t-dialog__body {
+  padding-top: 6px;
+}
+.studio-tag-form-intro {
+  margin: 0 0 20px;
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-sm);
+  line-height: 1.6;
+}
+.studio-tag-form {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+.studio-tag-form-grid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 18px 16px;
+}
+.studio-tag-form .studio-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  margin: 0;
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-sm);
+  font-weight: 650;
+  line-height: 1.5;
+}
+.studio-tag-form .studio-field .t-input,
+.studio-tag-form .studio-field .t-select,
+.studio-tag-form .studio-field .t-textarea {
+  min-width: 0;
+  width: 100%;
+}
+.studio-tag-form .studio-field .t-input,
+.studio-tag-form .studio-field .t-select {
+  min-height: 40px;
+}
+.studio-tag-form .studio-field .t-textarea {
+  min-height: 88px;
+}
+.studio-tag-form .studio-field .t-input:focus-within,
+.studio-tag-form .studio-field .t-select:focus-within,
+.studio-tag-form .studio-field .t-textarea:focus-within {
+  outline: 2px solid var(--adui-color-brand-focus);
+  outline-offset: 1px;
+}
+.studio-tag-description-field {
+  grid-column: 1 / -1;
+}
+.studio-tag-required {
+  color: var(--scada-danger);
+}
+.studio-tag-optional,
+.studio-tag-field-help {
+  color: var(--scada-text-muted);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.studio-tag-field-help {
+  display: block;
+}
+.studio-tag-form-error {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--adui-color-danger-border);
+  border-radius: 7px;
+  background: var(--adui-color-danger-bg);
+  color: var(--scada-danger);
+  font-size: var(--adui-font-size-sm);
+  line-height: 1.5;
+}
+.studio-tag-form-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--scada-border);
+}
+.studio-tag-form-footnote {
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-xs);
+}
+.studio-tag-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-left: auto;
+}
+.studio-tag-form-actions .t-button {
+  min-width: 98px;
+  min-height: 38px;
+  padding-inline: 16px;
+  border-radius: 8px;
+  font-size: var(--adui-font-size-sm);
+  font-weight: 650;
+}
+@media (max-width: 620px) {
+  .studio-tag-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .studio-tag-description-field {
+    grid-column: 1;
+  }
+  .studio-tag-form-actions {
+    width: 100%;
+  }
+  .studio-tag-form-actions .t-button {
+    flex: 1;
+  }
+}
+
+.studio-tag-field-error {
+  display: block;
+  color: var(--scada-danger);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+/* 属性编辑与 Tag 目录是互斥工作任务，不让两种信息继续垂直堆叠。 */
+.studio-inspector-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 4px;
+  min-height: 53px;
+  margin: 0 -14px 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--scada-border);
+  background: var(--scada-surface);
+}
+.studio-inspector-tabs .t-button {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  min-height: 34px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 650;
+  white-space: nowrap;
+}
+.studio-inspector-tabs .t-button[aria-pressed="true"] {
+  border-color: var(--scada-border);
+  background: var(--scada-active-bg);
+  color: var(--adui-color-brand-text);
+  box-shadow: inset 0 -2px var(--scada-primary);
+}
+.studio-inspector-tabs .t-button:hover {
+  background: var(--adui-color-surface-muted);
+  color: var(--scada-text-strong);
+}
+.studio-inspector-content {
+  min-width: 0;
+}
+.studio-inspector-content[hidden] {
+  display: none;
+}
+.studio-inspector-content > h2 {
+  margin: 0 0 14px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--scada-border-subtle);
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-sm);
+  font-weight: 750;
+}
+.studio-inspector-content > p {
+  margin: 9px 0;
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-xs);
+  overflow-wrap: anywhere;
+}
+
+/* D5c1 · Figma UI3 任务型画布：页面/图层左置、轻量属性右置、创建工具底部。 */
+.studio-workspace {
+  --studio-left-width: min(var(--studio-left-preferred, 256px), 34vw);
+  --studio-right-width: min(var(--studio-right-preferred, 320px), 40vw);
+  background: var(--adui-color-editor-workspace);
+}
+.studio-toolbar {
+  min-height: 46px;
+  gap: 12px;
+  padding: 6px 12px;
+  background: var(--scada-surface);
+}
+.studio-toolbar > div:first-child {
+  flex: none;
+  max-width: 160px;
+  min-width: 115px;
+}
+.studio-toolbar h1 {
+  margin-top: 2px;
+  color: var(--scada-text-strong);
+  font-size: 13px;
+  font-weight: 740;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio-toolbar .scada-eyebrow {
+  font-size: 10px;
+}
+.studio-actions {
+  gap: 6px;
+}
+.studio-actions button {
+  min-height: 30px;
+  font-size: var(--adui-font-size-2xs);
+}
+.studio-history-actions,
+.studio-save-actions {
+  gap: 4px;
+}
+.studio-panel-layers {
+  border-right: 1px solid var(--scada-border);
+  background: var(--scada-surface);
+}
+.studio-page-bar {
+  flex: none;
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--scada-border);
+  background: var(--scada-surface);
+}
+.studio-page-bar::before {
+  content: "页面";
+  color: var(--scada-text-muted);
+  font-size: var(--adui-font-size-2xs);
+  font-weight: 750;
+}
+.studio-page-tabs {
+  display: flex;
+  max-height: 136px;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.studio-page-tabs .t-button {
+  width: 100%;
+  min-height: 29px;
+  justify-content: flex-start;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 5px;
+  text-align: left;
+}
+.studio-page-tabs .t-button[aria-current="page"] {
+  color: var(--adui-color-brand-text);
+  background: var(--scada-active-bg);
+  box-shadow: inset 2px 0 var(--scada-primary);
+}
+.studio-page-menu {
+  align-self: flex-start;
+}
+.studio-page-menu .t-button {
+  min-height: 27px;
+  font-size: 11px;
+}
+.studio-pane-heading {
+  min-height: 40px;
+  padding: 8px 12px;
+}
+.studio-pane-heading h2 {
+  font-size: 12px;
+}
+.studio-tree-section-title {
+  padding-top: 12px;
+}
+.studio-tree-controls {
+  padding: 8px 10px;
+}
+.studio-layer-tree {
+  padding: 6px;
+}
+.studio-layer-tree .studio-layer {
+  min-height: 30px;
+}
+.studio-stage {
+  position: relative;
+  background: var(--adui-color-editor-workspace);
+}
+.studio-stage-caption {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex: none;
+  width: auto;
+  min-height: 42px;
+  margin: 0;
+  padding: 4px 8px 4px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--scada-border);
+  border-radius: 0;
+  background: var(--scada-surface);
+  box-shadow: none;
+  color: var(--scada-text);
+}
+.studio-stage-caption > span {
+  color: var(--scada-text-strong);
+  font-weight: 650;
+}
+.studio-stage-caption > .studio-view-menu > .t-popup > .t-button,
+.studio-stage-caption > .studio-zoom .t-button {
+  min-height: 27px;
+  border-color: var(--scada-border);
+  background: var(--scada-surface);
+  color: var(--scada-text-strong);
+}
+.studio-stage-caption > .studio-view-menu > .t-popup > .t-button:hover,
+.studio-stage-caption > .studio-zoom .t-button:hover {
+  background: var(--scada-action-hover);
+  color: var(--scada-text-strong);
+}
+.studio-zoom {
+  border-color: var(--scada-border);
+  background: var(--adui-color-surface-muted);
+}
+.studio-zoom .t-button {
+  color: var(--scada-text-strong);
+  background: transparent;
+}
+.studio-canvas-scroll,
+.studio-canvas-board,
+.studio-canvas-board > .studio-svg {
+  background: var(--adui-color-editor-workspace);
+}
+.studio-artboard-surface {
+  fill: var(--adui-color-editor-artboard);
+  filter: drop-shadow(0 12px 18px rgb(31 47 64 / 14%));
+}
+.studio-page-boundary {
+  stroke: var(--scada-border-strong);
+  stroke-width: 1;
+  stroke-dasharray: none;
+  stroke-opacity: 1;
+}
+.studio-canvas-dock {
+  position: relative;
+  z-index: 6;
+  display: flex;
+  flex: none;
+  align-self: center;
+  min-width: 0;
+  max-width: calc(100% - 24px);
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 0 auto;
+  padding: 6px;
+  border: 1px solid var(--scada-border);
+  border-radius: 12px;
+  background: var(--scada-surface);
+  box-shadow: var(--adui-shadow-floating);
+}
+.studio-canvas-scroll {
+  flex: 1 1 0;
+  height: auto;
+}
+.studio-canvas-modes {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  padding-right: 6px;
+  border-right: 1px solid var(--scada-border);
+}
+.studio-canvas-modes .t-button {
+  min-width: 44px;
+  height: 35px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-xs);
+}
+.studio-canvas-modes .t-button[aria-pressed="true"] {
+  background: var(--scada-active-bg);
+  color: var(--adui-color-brand-text);
+}
+.studio-svg[data-canvas-tool="hand"],
+.studio-svg[data-canvas-tool="hand"] * {
+  cursor: grab;
+}
+.studio-svg[data-canvas-tool="hand"]:active,
+.studio-svg[data-canvas-tool="hand"]:active * {
+  cursor: grabbing;
+}
+.studio-svg[data-canvas-tool="hand"]
+  :is(.studio-hitbox, .studio-resize-handle, .studio-rotation-handle) {
+  pointer-events: none;
+}
+.studio-canvas-dock .studio-library-label {
+  display: none;
+}
+.studio-canvas-dock .studio-add {
+  display: flex;
+  min-width: 0;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.studio-canvas-dock .studio-add .t-button {
+  flex: none;
+  width: auto;
+  min-width: 62px;
+  min-height: 35px;
+  height: 35px;
+  padding: 6px 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 650;
+}
+.studio-canvas-dock .studio-add .t-button:hover {
+  background: var(--scada-active-bg);
+  color: var(--adui-color-brand-text);
+}
+.studio-panel-properties {
+  border-left: 1px solid var(--scada-border);
+  padding-inline: 12px;
+  background: var(--scada-surface);
+}
+.studio-inspector-tabs {
+  margin-inline: -12px;
+  padding-inline: 12px;
+}
+.studio-inspector-content > h2 {
+  margin: 0 0 12px;
+  font-size: 12px;
+}
+.studio-geometry {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px;
+  background: var(--adui-color-surface-muted);
+}
+.studio-geometry label {
+  min-width: 0;
+}
+.studio-geometry .t-button[type="submit"] {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+.studio-statusbar {
+  height: 30px;
+  border-color: var(--scada-border);
+  background: var(--scada-surface);
+}
+@media (max-width: 1220px) {
+  .studio-stage-caption {
+    gap: 5px;
+    padding-inline: 8px;
+  }
+  .studio-stage-caption > span {
+    max-width: 48%;
+    font-size: 10px;
+  }
+  .studio-canvas-dock .studio-add .t-button {
+    min-width: 55px;
+    padding-inline: 7px;
+  }
+}
+@media (max-width: 930px) {
+  .studio-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(300px, 1fr) auto;
+    overflow-y: auto;
+  }
+  .studio-panel-layers,
+  .studio-stage,
+  .studio-panel-properties {
+    grid-column: 1;
+    min-height: 0;
+  }
+  .studio-panel-layers {
+    grid-row: 1;
+    max-height: 250px;
+  }
+  .studio-stage {
+    grid-row: 2;
+    min-height: 300px;
+  }
+  .studio-panel-properties {
+    grid-row: 3;
+    max-height: 250px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-canvas-dock .t-button {
+    transition: none;
+  }
+}
+
+/* 工具模式与缩放分离；图层和属性均可调整，不再固定宽度。 */
+.studio-panel-size {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: var(--scada-text);
+  font-size: var(--adui-font-size-xs);
+}
+.studio-panel-size input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--adui-color-brand-text);
+}
+.studio-stage-caption > span {
+  flex: 1;
+  max-width: none;
+}
+.studio-stage-caption .studio-zoom {
+  margin-left: 0;
+}
+.studio-toolbar .scada-eyebrow {
+  display: none;
+}
+.studio-toolbar > div:first-child {
+  max-width: 25%;
+}
+.studio-toolbar h1 {
+  margin: 0;
+}
+.studio-workspace {
+  background: var(--adui-color-editor-workspace);
+}
+.studio-panel-layers .studio-pane-heading,
+.studio-panel-layers .studio-tree-controls {
+  border-bottom: 0;
+}
+.studio-layer-tree {
+  padding-inline: 4px;
+}
+.studio-layer-tree .studio-layer {
+  border-radius: 4px;
+}
+.studio-panel-properties .studio-geometry {
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.studio-inspector-tabs .t-button[aria-pressed="true"] {
+  border-color: transparent;
+  background: transparent;
+}
+.studio-inspector-tabs {
+  min-height: 42px;
+  padding-block: 4px;
+}
+@media (max-width: 930px) {
+  .studio-stage-caption > span {
+    flex-basis: auto;
+  }
+}
+
+/* 选区与手柄按屏幕像素呈现，工程几何继续使用逻辑坐标。 */
+.studio-hitbox {
+  stroke: transparent;
+}
+.studio-hitbox[data-selected="true"],
+.studio-hitbox:focus-visible {
+  stroke: var(--scada-primary);
+}
+.studio-hitbox[data-selected="true"][data-locked="true"] {
+  stroke-dasharray: 4 3;
+}
+.studio-hitbox[data-primary="true"] {
+  stroke-width: 2;
+}
+.studio-resize-handle {
+  fill: var(--scada-surface);
+  stroke: var(--scada-primary);
+  stroke-width: 1.5;
+}
+.studio-rotation-handle {
+  fill: var(--scada-surface);
+  stroke: var(--scada-primary);
+}
+.studio-rotation-handle:hover {
+  fill: var(--scada-primary);
+}
+.studio-stage-caption .studio-focus-selection {
+  white-space: nowrap;
+}
+.studio-stage-caption .studio-zoom {
+  gap: 2px;
+}
+.studio-stage-caption .studio-zoom .t-button {
+  min-width: 26px;
+  padding-inline: 4px;
+}
+.studio-stage-caption .studio-zoom .t-button[aria-label="适应画板"] {
+  min-width: 40px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 面板分隔条只调整观察工作区，支持指针捕获及方向键操作。 */
+.studio-workspace {
+  position: relative;
+}
+.studio-panel-resizer {
+  position: absolute;
+  z-index: 10;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.studio-panel-resizer[data-side="left"] {
+  left: calc(var(--studio-left-width) - 4px);
+}
+.studio-panel-resizer[data-side="right"] {
+  right: calc(var(--studio-right-width) - 4px);
+}
+.studio-panel-resizer {
+  background: transparent;
+}
+.studio-panel-resizer:hover,
+.studio-panel-resizer:focus-visible {
+  outline: 0;
+}
+.studio-panel-resizer:hover::after,
+.studio-panel-resizer:focus-visible::after {
+  position: absolute;
+  inset-block: 0;
+  left: calc(50% - 1px);
+  width: 2px;
+  background: var(--scada-primary);
+  content: "";
+  pointer-events: none;
+}
+@media (max-width: 930px) {
+  .studio-panel-resizer {
+    display: none;
+  }
+}
+
+/* Pixso 参考：工具直接浮在唯一 SVG 网格上，不再占据独立底栏。 */
+.studio-canvas-dock {
+  position: absolute;
+  z-index: 6;
+  inset-inline-start: 50%;
+  bottom: 6px;
+  width: max-content;
+  max-width: calc(100% - 16px);
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: var(--adui-space-2);
+  margin: 0;
+  padding: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  transform: translateX(-50%);
+  border-radius: var(--adui-radius-panel);
+  box-shadow: var(--adui-shadow-panel);
+}
+.studio-canvas-dock .studio-add {
+  flex: none;
+}
+.studio-canvas-dock .studio-canvas-modes .t-button,
+.studio-canvas-dock .studio-add .t-button {
+  min-height: 30px;
+  height: 30px;
+  padding-block: 0;
+}
+.studio-canvas-dock .t-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.studio-canvas-dock .t-button svg,
+.studio-canvas-dock .studio-equipment-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.studio-inspector-tabs {
+  border-bottom: 1px solid var(--scada-border);
+}
+.studio-inspector-tabs .t-button[aria-pressed="true"] {
+  color: var(--adui-color-brand-text);
+  box-shadow: inset 0 -2px var(--scada-primary);
+}
+.studio-panel-properties .studio-geometry .t-input {
+  background: var(--adui-color-surface-muted);
+}
+.studio-page-boundary,
+.studio-hitbox[data-selected="true"],
+.studio-resize-handle,
+.studio-rotation-handle {
+  stroke: var(--adui-color-focus-ring);
+}
+.studio-artboard-surface {
+  filter: drop-shadow(0 4px 12px rgb(31 47 64 / 10%));
+}
+
+/* 左侧图层与真实工业图元库独立，切换不清空选择或工程状态。 */
+.studio-library-tabs {
+  display: flex;
+  flex: none;
+  min-height: 42px;
+  gap: var(--adui-space-3);
+  padding-inline: var(--adui-space-5);
+  border-bottom: 1px solid var(--scada-border);
+}
+.studio-library-tabs .t-button {
+  min-height: 36px;
+  padding-inline: var(--adui-space-5);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-sm);
+}
+.studio-library-tabs .t-button[aria-pressed="true"] {
+  color: var(--adui-color-brand-text);
+  box-shadow: inset 0 -2px var(--scada-primary);
+}
+.studio-layer-content {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+.studio-layer-content[hidden],
+.studio-symbol-library[hidden] {
+  display: none;
+}
+.studio-symbol-library {
+  min-height: 0;
+  padding: var(--adui-space-5);
+  overflow-y: auto;
+}
+.studio-symbol-library > h2 {
+  margin: 0 0 var(--adui-space-4);
+  font-size: var(--adui-font-size-sm);
+}
+.studio-symbol-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--adui-space-4);
+  margin-top: var(--adui-space-5);
+}
+.studio-symbol-grid .t-button {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 92px;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--adui-space-3);
+  padding: var(--adui-space-3);
+  white-space: normal;
+}
+.studio-symbol-grid .t-button > .t-button__text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--adui-space-2);
+}
+.studio-symbol-grid svg,
+.studio-symbol-grid .studio-equipment-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--adui-color-brand-text);
+}
+.studio-symbol-grid strong {
+  font-size: var(--adui-font-size-sm);
+}
+.studio-symbol-grid small {
+  font-size: var(--adui-font-size-2xs);
+  color: var(--scada-text-muted);
+  line-height: var(--adui-line-height-normal);
+}
+.studio-property-section-title {
+  margin: var(--adui-space-5) 0 var(--adui-space-3);
+  padding-top: var(--adui-space-5);
+  border-top: 1px solid var(--scada-border-subtle);
+  font-size: var(--adui-font-size-sm);
+}
+.studio-page-summary {
+  display: grid;
+  gap: var(--adui-space-4);
+}
+.studio-page-summary > h3 {
+  margin: 0;
+  font-size: var(--adui-font-size-sm);
+}
+.studio-page-summary > strong {
+  overflow-wrap: anywhere;
+}
+.studio-page-summary > dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--adui-space-3);
+  margin: 0;
+}
+.studio-page-summary > dl > div {
+  min-width: 0;
+  padding: var(--adui-space-4);
+  border-radius: var(--adui-radius-md);
+  background: var(--adui-color-surface-muted);
+}
+.studio-page-summary dt {
+  color: var(--scada-text-muted);
+  font-size: var(--adui-font-size-xs);
+}
+.studio-page-summary dd {
+  margin: var(--adui-space-2) 0 0;
+  font-size: var(--adui-font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 编辑器高频操作采用中性弱按钮，主操作仍为 V7 科技蓝。 */
+.studio-page-tabs .t-button:not([aria-current="page"]),
+.studio-nudge .t-button:not(:disabled),
+.studio-advanced .studio-tool-group .t-button:not(:disabled):not(.t-button--theme-danger) {
+  border-color: var(--scada-border);
+  background: var(--adui-color-surface-muted);
+  color: var(--scada-text);
+}
+.studio-page-tabs .t-button:not([aria-current="page"]):hover,
+.studio-nudge .t-button:not(:disabled):hover,
+.studio-advanced .studio-tool-group .t-button:not(:disabled):not(.t-button--theme-danger):hover {
+  border-color: var(--scada-border-strong);
+  background: var(--scada-action-hover);
+  color: var(--scada-text-strong);
+}
+.studio-geometry .t-button[type="submit"]:not(:disabled),
+.studio-save-actions .t-button:not(:disabled) {
+  border-color: var(--scada-primary);
+  background: var(--scada-primary);
+  color: var(--adui-color-brand-on);
+}
+.studio-geometry .t-button[type="submit"]:not(:disabled):hover,
+.studio-save-actions .t-button:not(:disabled):hover {
+  border-color: var(--scada-primary-hover);
+  background: var(--scada-primary-hover);
+  color: var(--adui-color-brand-on);
+}
+
+/* 三列标题共用同一基线；分隔条仅在操作时显示细线。 */
+.studio-stage-caption,
+.studio-library-tabs,
+.studio-inspector-tabs {
+  box-sizing: border-box;
+}
+@media (min-width: 931px) {
+  .studio-stage-caption,
+  .studio-library-tabs,
+  .studio-inspector-tabs {
+    height: 42px;
+    min-height: 42px;
+    flex-shrink: 0;
+  }
+}
+
+/* 工程名称、图层搜索和视图工具保持双端一致的紧凑布局。 */
+.studio-project-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--adui-space-2);
+}
+.studio-project-title h1 {
+  min-width: 0;
+}
+.studio-project-title .studio-rename-project {
+  flex: none;
+  width: var(--adui-control-height-sm);
+  height: var(--adui-control-height-sm);
+  min-height: var(--adui-control-height-sm);
+  padding: 0;
+}
+.studio-stage-caption .studio-view-settings-menu > .t-popup > .t-button,
+.studio-stage-caption .studio-view-settings-menu > .t-button,
+.studio-stage-caption .studio-zoom .t-button {
+  box-sizing: border-box;
+  height: var(--adui-control-height-sm);
+  min-height: var(--adui-control-height-sm);
+  padding-block: 0;
+}
+.studio-stage-caption .studio-zoom {
+  gap: var(--adui-space-1);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.studio-stage-caption .studio-zoom .t-button {
+  min-width: var(--adui-control-height-sm);
+  padding-inline: var(--adui-space-2);
+}
+.studio-stage-caption .studio-zoom .t-button[aria-label="适应画板"] {
+  min-width: 48px;
+}
+.studio-stage-caption .studio-zoom .studio-focus-selection {
+  padding-inline: var(--adui-space-3);
+}
+
+/* TDesign 无对应工业图标时，仅使用本地共享矢量图形；颜色继承当前主题。 */
+.studio-equipment-icon {
+  display: block;
+  flex: none;
+  width: 1em;
+  height: 1em;
+  background-color: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+.studio-equipment-icon[data-equipment="tank"] {
+  mask-image: url("../../../assets/icons/studio-tank.svg");
+}
+.studio-equipment-icon[data-equipment="pump"] {
+  mask-image: url("../../../assets/icons/studio-pump.svg");
+}
+.studio-equipment-icon[data-equipment="pipe"] {
+  mask-image: url("../../../assets/icons/studio-pipe.svg");
+}
+.studio-stage-caption .t-icon,
+.studio-tree-toggle .t-icon,
+.studio-tree-controls .t-icon,
+.studio-nudge .t-icon {
+  flex: none;
+  font-size: 16px;
+}
+
+/* 五项文件操作统一边框盒尺寸，避免组件默认尺寸及过渡影响布局。 */
+.studio-actions .studio-file-popover button.t-button {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: var(--adui-control-height-sm);
+  min-height: var(--adui-control-height-sm);
+  max-height: var(--adui-control-height-sm);
+  align-items: center;
+  justify-content: flex-start;
+  margin: 0;
+  padding-inline: var(--adui-space-3);
+  padding-block: 0;
+  font-size: var(--adui-font-size-xs);
+  text-align: left;
+  transition: none;
 }

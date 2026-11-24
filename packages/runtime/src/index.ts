@@ -46,3 +46,24 @@ export {
   PUBLISHED_RUNTIME_STATUS_LABELS,
   publishedSnapshotSvg,
 } from "./published-runtime-view.ts";
+
+/** 双框架共享的真实工作台入口。 */
+export { WORKSPACE_HOME_ENTRIES, filterWorkspaceHomeEntries } from "./workspace-home.ts";
+export type { WorkspaceHomeEntry, WorkspaceHomeView } from "./workspace-home.ts";
+
+export {
+  normalizeWorkspaceTheme,
+  readWorkspaceTheme,
+  applyWorkspaceTheme,
+  transitionWorkspaceTheme,
+} from "./workspace-theme.ts";
+export type { WorkspaceThemeMode } from "./workspace-theme.ts";
+
+export {
+  WORKSPACE_ROUTE_PATHS,
+  workspaceViewFromRouteName,
+  workspaceStudioPath,
+  stageWorkspaceStudioEntry,
+  takeWorkspaceStudioEntry,
+} from "./workspace-routes.ts";
+export type { WorkspaceView, WorkspaceStudioEntry } from "./workspace-routes.ts";

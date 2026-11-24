@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadEnvFile } from "node:process";
@@ -221,8 +221,8 @@ async function enterStudioInPage() {
 
 async function checkStudioInPage() {
   const findings = [];
-  function verify(name, passed) {
-    findings.push({ name, passed: Boolean(passed) });
+  function verify(name, passed, detail = "") {
+    findings.push({ name, passed: Boolean(passed), detail });
   }
   function element(selector) {
     const found = document.querySelector(selector);
@@ -276,9 +276,14 @@ async function checkStudioInPage() {
       near(boardRect.top, svgRect.top) &&
       near(boardRect.bottom, svgRect.bottom),
   );
-  verify("左侧栏固定 252px", near(bounds(layers).width, 252));
-  verify("右侧栏固定 320px", near(bounds(properties).width, 320));
-  verify("画布占据剩余宽度", near(bounds(workspace).width - 252 - 320, bounds(stage).width));
+  const leftWidth = bounds(layers).width;
+  const rightWidth = bounds(properties).width;
+  verify("左侧面板处于可用宽度范围", leftWidth >= 200 && leftWidth <= 340);
+  verify("右侧面板处于可用宽度范围", rightWidth >= 260 && rightWidth <= 420);
+  verify(
+    "画布占据剩余宽度",
+    near(bounds(workspace).width - leftWidth - rightWidth, bounds(stage).width),
+  );
 
   const viewBox = svg.viewBox.baseVal;
   const grid = svg.querySelector('rect[fill="url(#scada-studio-grid)"]');
@@ -301,7 +306,142 @@ async function checkStudioInPage() {
       Number(boundary.getAttribute("height")) > 0,
   );
 
+  const artboardRect = bounds(element(".studio-artboard-surface"));
+  verify(
+    "默认适应画板保留安全边距",
+    near(Math.min(svgRect.width - artboardRect.width, svgRect.height - artboardRect.height), 96, 2),
+  );
+  verify(
+    "画板完整显示且保持工程比例",
+    artboardRect.left >= svgRect.left - 1 &&
+      artboardRect.right <= svgRect.right + 1 &&
+      artboardRect.top >= svgRect.top - 1 &&
+      artboardRect.bottom <= svgRect.bottom + 1 &&
+      near(
+        artboardRect.width / artboardRect.height,
+        Number(boundary?.getAttribute("width")) / Number(boundary?.getAttribute("height")),
+        0.002,
+      ),
+  );
+  const dock = element(".studio-canvas-dock");
+  const equipmentIcons = [...dock.querySelectorAll(".studio-equipment-icon")];
+  verify(
+    "底部通用操作采用 TDesign，工业设备采用专用共享图标",
+    dock.querySelectorAll(".t-icon").length === 3 &&
+      equipmentIcons.length === 3 &&
+      ["tank", "pump", "pipe"].every((kind) =>
+        equipmentIcons.some((icon) => icon.getAttribute("data-equipment") === kind),
+      ) &&
+      equipmentIcons.every(
+        (icon) =>
+          bounds(icon).width === 16 &&
+          bounds(icon).height === 16 &&
+          getComputedStyle(icon).maskImage !== "none",
+      ),
+  );
   const zoomButtons = [...element(".studio-zoom").querySelectorAll("button")];
+  const viewSettingsButton = element(".studio-view-settings-menu").querySelector("button");
+  verify(
+    "视图设置与缩放、适应及定位按钮等高",
+    Boolean(viewSettingsButton) &&
+      zoomButtons.every(
+        (button) => Math.abs(bounds(button).height - bounds(viewSettingsButton).height) <= 1,
+      ),
+  );
+  verify(
+    "视图操作使用有可访问名称的 TDesign 图标",
+    Boolean(viewSettingsButton?.querySelector(".t-icon")) &&
+      ["缩小", "放大", "定位选中图元"].every((label) =>
+        zoomButtons.some(
+          (button) =>
+            button.getAttribute("aria-label") === label && Boolean(button.querySelector(".t-icon")),
+        ),
+      ),
+  );
+  verify("创建工具集中在画布底部", Boolean(stage.querySelector(".studio-canvas-dock .studio-add")));
+  verify(
+    "页面导航位于左侧面板",
+    Boolean(layers.querySelector(".studio-page-bar .studio-page-tabs")),
+  );
+  verify("独立工程画板存在", Boolean(svg.querySelector(".studio-artboard-surface")));
+  const captionRect = bounds(element(".studio-stage-caption"));
+  const dockRect = bounds(element(".studio-canvas-dock"));
+  const stageRect = bounds(stage);
+  const gridMatchesViewport = () => {
+    const visible = svg.viewBox.baseVal;
+    const grids = svg.querySelectorAll('rect[fill="url(#scada-studio-grid)"]');
+    const currentGrid = grids[0];
+    if (grids.length !== 1 || !currentGrid) return false;
+    const gridRect = bounds(currentGrid);
+    const viewportRect = bounds(svg);
+    return (
+      ["x", "y", "width", "height"].every((key) =>
+        near(Number(currentGrid.getAttribute(key)), visible[key], 0.001),
+      ) &&
+      near(gridRect.left, viewportRect.left) &&
+      near(gridRect.right, viewportRect.right) &&
+      near(gridRect.top, viewportRect.top) &&
+      near(gridRect.bottom, viewportRect.bottom) &&
+      near(viewportRect.bottom, bounds(stage).bottom)
+    );
+  };
+  verify(
+    "中央 SVG 自标题栏下沿连续铺至工作区底边，不存在独立工具带",
+    near(captionRect.bottom, svgRect.top) &&
+      near(svgRect.left, stageRect.left) &&
+      near(svgRect.right, stageRect.right) &&
+      near(svgRect.bottom, stageRect.bottom) &&
+      !stage.querySelector(".studio-canvas-footer") &&
+      gridMatchesViewport(),
+  );
+  verify(
+    "底部工具栏悬浮在同一网格上且默认不遮挡工程画板",
+    getComputedStyle(element(".studio-canvas-dock")).position === "absolute" &&
+      dockRect.top >= artboardRect.bottom - 1 &&
+      dockRect.bottom <= svgRect.bottom &&
+      dockRect.left >= svgRect.left &&
+      dockRect.right <= svgRect.right &&
+      near((dockRect.left + dockRect.right) / 2, (svgRect.left + svgRect.right) / 2),
+  );
+  if (window.innerWidth > 930) {
+    const libraryRect = bounds(element(".studio-library-tabs"));
+    const inspectorRect = bounds(element(".studio-inspector-tabs"));
+    verify(
+      "左中右标题栏共用上下边缘且无横向布局缝隙",
+      near(libraryRect.top, captionRect.top) &&
+        near(inspectorRect.top, captionRect.top) &&
+        near(libraryRect.bottom, captionRect.bottom) &&
+        near(inspectorRect.bottom, captionRect.bottom) &&
+        near(bounds(layers).right, stageRect.left) &&
+        near(bounds(properties).left, stageRect.right),
+    );
+  }
+  verify(
+    "缩放工具位于画布视图栏",
+    Boolean(stage.querySelector(".studio-stage-caption .studio-zoom")),
+  );
+  const modes = [...element(".studio-canvas-modes").querySelectorAll("button")];
+  verify(
+    "默认使用选择工具",
+    modes[0]?.getAttribute("aria-pressed") === "true" && svg.dataset.canvasTool === "select",
+  );
+  modes[1]?.click();
+  await settle();
+  const hitbox = element(".studio-hitbox");
+  verify(
+    "抓手模式禁止图元指针编辑",
+    modes[1]?.getAttribute("aria-pressed") === "true" &&
+      svg.dataset.canvasTool === "hand" &&
+      getComputedStyle(hitbox).pointerEvents === "none",
+  );
+  modes[0]?.click();
+  await settle();
+  verify(
+    "恢复选择工具后图元可操作",
+    modes[0]?.getAttribute("aria-pressed") === "true" &&
+      svg.dataset.canvasTool === "select" &&
+      getComputedStyle(hitbox).pointerEvents !== "none",
+  );
   const originalWidth = svg.viewBox.baseVal.width;
   zoomButtons[2]?.click();
   await settle();
@@ -309,9 +449,11 @@ async function checkStudioInPage() {
     "放大只改变视图，不改变 SVG DOM 尺寸",
     svg.viewBox.baseVal.width < originalWidth && near(bounds(svg).width, svgRect.width),
   );
+  verify("缩放后唯一网格仍铺满工作区至底边", gridMatchesViewport());
   zoomButtons[1]?.click();
   await settle();
   verify("适应按钮恢复原始视图", near(svg.viewBox.baseVal.width, originalWidth, 0.01));
+  verify("显示实际画板缩放百分比", (zoomButtons[1]?.textContent.trim() ?? "").endsWith("%"));
 
   const menu = element(".studio-view-menu");
   const viewTrigger = menu.querySelector("button.t-button");
@@ -332,34 +474,123 @@ async function checkStudioInPage() {
     gridInput.click();
     await settle();
     verify("网格可关闭", !svg.querySelector('rect[fill="url(#scada-studio-grid)"]'));
+    verify(
+      "关闭网格后整个工作区不保留独立网格背景",
+      !stage.querySelector(".studio-canvas-footer") &&
+        getComputedStyle(stage).backgroundImage === "none" &&
+        getComputedStyle(svg).backgroundImage === "none",
+    );
     gridInput.click();
     await settle();
     verify("网格可恢复", Boolean(svg.querySelector('rect[fill="url(#scada-studio-grid)"]')));
+    verify("恢复网格后连续覆盖工作区至底边", gridMatchesViewport());
   } else {
     verify("存在网格显示控制", Boolean(gridInput));
   }
 
   const toggle = (name) =>
     [...menu.querySelectorAll("button")].find((item) => item.textContent.trim() === name);
+  const widths = [...menu.querySelectorAll('input[type="range"]')];
+  verify("存在左右侧栏宽度控制", widths.length === 2);
+  if (widths.length === 2) {
+    const setWidth = (input, width) => {
+      const inputPrototype = HTMLInputElement.prototype;
+      if (
+        typeof Object.getOwnPropertyDescriptor(inputPrototype, "value")?.set !== "function" ||
+        !Reflect.set(inputPrototype, "value", String(width), input)
+      ) {
+        throw new TypeError("未找到可用的原生范围输入值设置器");
+      }
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    const initialLeft = Number(widths[0].value);
+    const initialRight = Number(widths[1].value);
+    setWidth(widths[0], 300);
+    await settle();
+    verify(
+      "调整图层宽度后画布同步适应",
+      near(bounds(layers).width, 300) &&
+        near(bounds(workspace).width - 300 - rightWidth, bounds(stage).width),
+    );
+    setWidth(widths[1], 360);
+    await settle();
+    verify(
+      "调整属性宽度后画布同步适应",
+      near(bounds(properties).width, 360) &&
+        near(bounds(workspace).width - 300 - 360, bounds(stage).width),
+    );
+    setWidth(widths[0], initialLeft);
+    setWidth(widths[1], initialRight);
+    await settle();
+    verify(
+      "恢复原面板宽度",
+      near(bounds(layers).width, leftWidth) && near(bounds(properties).width, rightWidth),
+    );
+  }
   const initialWidth = bounds(stage).width;
   toggle("隐藏图层")?.click();
   await settle();
-  verify("隐藏图层后画布自动扩展", bounds(stage).width > initialWidth + 200);
+  verify("隐藏图层后画布自动扩展", near(bounds(stage).width, initialWidth + leftWidth));
   toggle("显示图层")?.click();
   await settle();
   verify("恢复图层后画布宽度恢复", near(bounds(stage).width, initialWidth));
   toggle("隐藏属性")?.click();
   await settle();
-  verify("隐藏属性后画布自动扩展", bounds(stage).width > initialWidth + 260);
+  verify("隐藏属性后画布自动扩展", near(bounds(stage).width, initialWidth + rightWidth));
   toggle("显示属性")?.click();
   await settle();
   verify("恢复属性后画布宽度恢复", near(bounds(stage).width, initialWidth));
   viewTrigger.click();
 
+  const leftResizer = element('.studio-panel-resizer[data-side="left"]');
+  const rightResizer = element('.studio-panel-resizer[data-side="right"]');
+  leftResizer.focus();
+  leftResizer.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  await settle();
+  verify("左面板分隔条方向键调整宽度", near(bounds(layers).width, leftWidth + 10));
+  leftResizer.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+  rightResizer.focus();
+  rightResizer.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+  await settle();
+  verify("右面板分隔条方向键调整宽度", near(bounds(properties).width, rightWidth + 10));
+  rightResizer.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  await settle();
+  verify(
+    "分隔条恢复原面板宽度",
+    near(bounds(layers).width, leftWidth) && near(bounds(properties).width, rightWidth),
+  );
+
   const firstLayer = document.querySelector(".studio-layer-tree .studio-layer");
   firstLayer?.click();
   await settle();
   verify("点击图层可更新属性面板", Boolean(firstLayer) && /已选\s*1/.test(properties.textContent));
+  verify(
+    "图层拖拽与方向微调使用 TDesign 图标",
+    Boolean(firstLayer?.querySelector(".studio-layer-identity .t-icon")) &&
+      ["向左微调", "向上微调", "向下微调", "向右微调"].every((label) =>
+        Boolean(properties.querySelector(`.studio-nudge button[aria-label="${label}"] .t-icon`)),
+      ),
+  );
+  const resizeHandle = svg.querySelector(".studio-resize-handle");
+  verify("单选图元具有缩放手柄", Boolean(resizeHandle));
+  if (resizeHandle) {
+    const handleWidth = bounds(resizeHandle).width;
+    verify("选中手柄在适应画板时保持屏幕可操作尺寸", handleWidth >= 7 && handleWidth <= 14);
+    element(".studio-focus-selection").click();
+    await settle();
+    verify("定位选中图元改变视区", svg.viewBox.baseVal.width < originalWidth);
+    verify("放大后缩放手柄屏幕尺寸稳定", near(bounds(resizeHandle).width, handleWidth));
+    zoomButtons[1]?.click();
+    await settle();
+  }
+  canvas.focus();
+  canvas.dispatchEvent(new KeyboardEvent("keydown", { key: "h", bubbles: true }));
+  await settle();
+  verify("画布焦点支持抓手快捷键", svg.dataset.canvasTool === "hand");
+  canvas.dispatchEvent(new KeyboardEvent("keydown", { key: "v", bubbles: true }));
+  await settle();
+  verify("画布焦点支持选择快捷键", svg.dataset.canvasTool === "select");
 
   // 使用真实 TDesign 触发器验证页面菜单，而不是修改 details.open。
   const pageMenu = element(".studio-page-menu");
@@ -427,6 +658,37 @@ async function checkStudioInPage() {
     verify("TDesign 页面菜单触发器可获得键盘焦点", document.activeElement === pageTrigger);
   }
 
+  // 仅有布局矩形不代表浮层可见：同时验证浏览器实际命中，防止工具栏裁剪。
+  const popupHit = (panel) => {
+    if (!(panel instanceof HTMLElement) || !panel.getClientRects().length) return false;
+    const rect = bounds(panel);
+    const x = (rect.left + rect.right) / 2;
+    const y = rect.top + Math.min(12, rect.height / 2);
+    const hit = document.elementFromPoint(x, y);
+    return rect.width > 0 && rect.height > 0 && hit !== null && panel.contains(hit);
+  };
+  const flatPopup = (panel) => {
+    if (!(panel instanceof HTMLElement) || !panel.closest(".t-popup__content")) return false;
+    const style = getComputedStyle(panel);
+    return (
+      style.boxShadow === "none" &&
+      style.backgroundColor === "rgba(0, 0, 0, 0)" &&
+      [
+        style.borderTopWidth,
+        style.borderRightWidth,
+        style.borderBottomWidth,
+        style.borderLeftWidth,
+      ].every((width) => width === "0px")
+    );
+  };
+  const actionsStyle = getComputedStyle(element(".studio-actions"));
+  verify(
+    "工具栏换行且不裁剪下拉浮层",
+    actionsStyle.flexWrap === "wrap" &&
+      actionsStyle.overflowX === "visible" &&
+      actionsStyle.overflowY === "visible",
+  );
+
   // 文件与草稿不再使用原生 details，弹层由 TDesign Popup 负责管理。
   const fileMenu = element(".studio-file-menu");
   const fileTrigger = fileMenu.querySelector("button.t-button");
@@ -441,8 +703,8 @@ async function checkStudioInPage() {
     await settle();
     const filePanel = fileMenu.querySelector(".studio-file-popover");
     verify(
-      "TDesign 文件草稿弹层包含原有五项操作",
-      Boolean(filePanel?.getClientRects().length) &&
+      "TDesign 文件草稿弹层实际可见且包含原有五项操作",
+      popupHit(filePanel) &&
         Boolean(filePanel.querySelector('input[type="file"]')) &&
         ["导出 JSON", "恢复草稿", "清除草稿"].every((label) =>
           [...filePanel.querySelectorAll("button")].some(
@@ -451,6 +713,69 @@ async function checkStudioInPage() {
         ) &&
         Boolean(filePanel.querySelector("button[aria-pressed]")),
     );
+    const fileButtons = [...(filePanel?.querySelectorAll("button.t-button") ?? [])];
+    const filePanelFlat = flatPopup(filePanel);
+    const menuMetrics = fileButtons.map((button) => {
+      const style = getComputedStyle(button);
+      const buttonRect = bounds(button);
+      // 测量真实文本而非可能占满按钮的组件包装层。
+      const walker = document.createTreeWalker(button, NodeFilter.SHOW_TEXT);
+      let textRect = null;
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (!node.textContent?.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const rect = range.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          textRect = rect;
+          break;
+        }
+      }
+      return {
+        textVariant: button.classList.contains("t-button--variant-text"),
+        alignment: style.justifyContent,
+        direction: style.direction,
+        flexDirection: style.flexDirection,
+        writingMode: style.writingMode,
+        boxSizing: style.boxSizing,
+        height: style.height,
+        minHeight: style.minHeight,
+        maxHeight: style.maxHeight,
+        renderedHeight: buttonRect.height,
+        textOffset: textRect ? textRect.left - buttonRect.left : null,
+        expectedTextOffset:
+          Number.parseFloat(style.borderLeftWidth) + Number.parseFloat(style.paddingLeft),
+      };
+    });
+    verify(
+      "文件草稿为单层浮层且五项操作统一使用文本菜单",
+      filePanelFlat &&
+        fileButtons.length === 5 &&
+        menuMetrics.every(
+          (item) =>
+            item.textVariant &&
+            // Chromium 的计算值可能将 flex-start 序列化为 flow-start。
+            ["flex-start", "flow-start", "start"].includes(item.alignment) &&
+            item.direction === "ltr" &&
+            item.flexDirection === "row" &&
+            item.writingMode === "horizontal-tb" &&
+            item.textOffset !== null &&
+            near(item.textOffset, item.expectedTextOffset, 1) &&
+            item.boxSizing === "border-box" &&
+            item.height === "28px" &&
+            item.minHeight === "28px" &&
+            item.maxHeight === "28px" &&
+            near(item.renderedHeight, 28, 0.5),
+        ),
+      "单层浮层：" +
+        filePanelFlat +
+        "；按钮数：" +
+        fileButtons.length +
+        "；按菜单顺序的计算样式：" +
+        JSON.stringify(menuMetrics),
+    );
+    const importLayout = filePanel?.querySelector(".studio-import");
+    verify("导入 JSON 不再嵌套卡片或额外描边", flatPopup(importLayout));
     document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
     await new Promise((resolve) => setTimeout(resolve, 350));
     verify(
@@ -474,7 +799,8 @@ async function checkStudioInPage() {
     const historyPanel = historyMenu.querySelector(".studio-version-panel");
     verify(
       "本地历史弹层可见且保留快照与刷新入口",
-      Boolean(historyPanel?.getClientRects().length) &&
+      popupHit(historyPanel) &&
+        flatPopup(historyPanel) &&
         ["创建快照", "刷新"].every((label) =>
           [...historyPanel.querySelectorAll(".studio-version-tools button")].some(
             (button) => button.textContent.trim() === label,
@@ -489,7 +815,614 @@ async function checkStudioInPage() {
     );
   }
 
+  for (const [selector, label] of [
+    [".studio-release-preflight-menu", "发布预检"],
+    [".studio-project-browser-menu", "工程管理"],
+    [".studio-server-version-menu", "服务端工程"],
+  ]) {
+    const menu = element(selector);
+    const trigger = menu.querySelector("button.t-button");
+    const rect = trigger?.getBoundingClientRect();
+    const hit = rect
+      ? document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+      : null;
+    verify(label + "触发器可见且可点击", Boolean(hit && trigger?.contains(hit)));
+    trigger?.click();
+    await settle();
+    const panel = menu.querySelector(".studio-version-panel");
+    verify(label + "弹层实际可见且无嵌套卡片", popupHit(panel) && flatPopup(panel));
+    document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    verify(
+      label + "弹层可通过外部点击关闭",
+      !popupHit(menu.querySelector(".studio-version-panel")),
+    );
+  }
+
   return { findings, viewport: { width: innerWidth, height: innerHeight } };
+}
+
+/** 仅通过真实导航切换页面，避免构造不存在的 UI 或伪造发布数据。 */
+async function enterScadaViewInPage(label, selector) {
+  const started = Date.now();
+  let trigger = null;
+  while (Date.now() - started < 12000) {
+    trigger = [...document.querySelectorAll(".scada-app-nav button")].find(
+      (button) => button.textContent.trim() === label,
+    );
+    if (trigger) break;
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  }
+  if (!(trigger instanceof HTMLButtonElement)) {
+    throw new TypeError("未找到 UI 工作空间入口：" + label);
+  }
+  if (trigger.getAttribute("aria-current") !== "page") trigger.click();
+  const loading = Date.now();
+  while (Date.now() - loading < 15000) {
+    const main = document.querySelector(selector);
+    if (main?.getClientRects().length) return true;
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  }
+  throw new Error("UI 页面异步挂载超时：" + label);
+}
+
+/** 读取真实主题与布局快照，不读取会话凭据或工程网络正文。 */
+function inspectScadaUIInPage() {
+  const app = document.querySelector(".scada-app-frame");
+  const nav = document.querySelector(".scada-app-nav");
+  const topbar = document.querySelector(".scada-app-topbar");
+  const main = document.querySelector("#scada-main-content");
+  if (!(app instanceof HTMLElement) || !(nav instanceof HTMLElement)) {
+    throw new TypeError("工作空间导航未挂载");
+  }
+  if (!(topbar instanceof HTMLElement) || !(main instanceof HTMLElement)) {
+    throw new TypeError("应用顶栏或主内容未挂载");
+  }
+  const links = [...nav.querySelectorAll("button")];
+  const current = links.find((button) => button.getAttribute("aria-current") === "page");
+  const sample = main.querySelector(".scada-home-heading h1, .scada-header h1, .studio-toolbar h1");
+  const stage = document.querySelector(".studio-stage");
+  const panel = document.querySelector(".studio-panel-layers");
+  const label = stage?.querySelector(".studio-stage-caption > span");
+  const style = (node, property) =>
+    node instanceof Element ? getComputedStyle(node).getPropertyValue(property).trim() : "";
+  return {
+    theme: document.documentElement.getAttribute("theme-mode"),
+    screen: app.getAttribute("data-view"),
+    railWidth: Math.round(nav.getBoundingClientRect().width),
+    railHeight: Math.round(nav.getBoundingClientRect().height),
+    current: current?.textContent.trim() ?? null,
+    buttons: links.map((button) => button.textContent.trim()),
+    safety: topbar.textContent.includes("非现场控制"),
+    noHorizontalOverflow: document.documentElement.scrollWidth <= innerWidth + 2,
+    title: sample?.textContent.trim() ?? "",
+    titleColor: style(sample, "color"),
+    titleBackground: style(main, "background-color"),
+    navIcons: links.filter((button) => Boolean(button.querySelector(".t-icon"))).length,
+    alignedButtonContents: [
+      ...document.querySelectorAll(
+        ".scada-app-nav .scada-button-content, .studio-canvas-dock .scada-button-content",
+      ),
+    ].map((content) => {
+      const icon = content.querySelector(".t-icon, .studio-equipment-icon");
+      const label = content.querySelector(".scada-button-label");
+      if (!icon || !label) return false;
+      const iconRect = icon.getBoundingClientRect();
+      const labelRect = label.getBoundingClientRect();
+      const buttonRect = content.closest("button")?.getBoundingClientRect();
+      if (!buttonRect || !iconRect.width || !iconRect.height || !labelRect.height) return false;
+      return (
+        Math.abs(iconRect.top + iconRect.height / 2 - labelRect.top - labelRect.height / 2) <= 1 &&
+        Math.abs(iconRect.top + iconRect.height / 2 - buttonRect.top - buttonRect.height / 2) <= 1
+      );
+    }),
+    messageColor: style(main.querySelector(".scada-message:not(:empty)"), "color"),
+    messageBackground: style(main.querySelector(".scada-message:not(:empty)"), "background-color"),
+    navColor: style(current?.querySelector(".scada-button-label") ?? current, "color"),
+    navBackground: style(current, "background-color"),
+    stageBackground: style(stage, "background-color"),
+    panelBackground: style(panel, "background-color"),
+    stageText: style(label, "color"),
+    stageTextBackground: style(stage?.querySelector(".studio-stage-caption"), "background-color"),
+    process: Boolean(main.querySelector(".scada-monitor-layout .scada-process-panel")),
+    telemetry: Boolean(main.querySelector(".scada-monitor-side .scada-diagnostics")),
+    quality: Boolean(main.querySelector(".scada-quality-summary")),
+    published: Boolean(
+      main.querySelector(".scada-published-layout .scada-published-preview-panel"),
+    ),
+    readonly: !main.querySelector('[data-testid="published-runtime-svg"]'),
+    studio: Boolean(main.querySelector(".studio-workspace .studio-svg")),
+    home: Boolean(main.querySelector(".scada-home-card-grid .scada-home-card")),
+    artboardFill: style(main.querySelector(".studio-artboard-surface"), "fill"),
+    artboardImage: main.querySelector(".studio-svg image")?.getAttribute("href") ?? "",
+    saveColor: style(main.querySelector(".studio-save-actions button"), "color"),
+    saveBackground: style(main.querySelector(".studio-save-actions button"), "background-color"),
+    artboardWidth: Number(main.querySelector(".studio-page-boundary")?.getAttribute("width")),
+    artboardHeight: Number(main.querySelector(".studio-page-boundary")?.getAttribute("height")),
+  };
+}
+
+/** 检查首页真实搜索、空态和静态缩略图，不伪造工程数据。 */
+async function inspectWorkspaceHomeInPage() {
+  const input = document.querySelector(".scada-home-search input");
+  const preview = document.querySelector(".scada-home-thumbnail img");
+  if (!(input instanceof HTMLInputElement) || !(preview instanceof HTMLImageElement)) {
+    throw new TypeError("工作台搜索或工程缩略图未挂载");
+  }
+  const titles = () =>
+    [...document.querySelectorAll(".scada-home-card > strong")].map((node) =>
+      node.textContent.trim(),
+    );
+  const change = (value) => {
+    const prototype = HTMLInputElement.prototype;
+    if (
+      !Object.getOwnPropertyDescriptor(prototype, "value")?.set ||
+      !Reflect.set(prototype, "value", value, input)
+    ) {
+      throw new Error("无法设置工作台搜索输入");
+    }
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  const waitForCount = async (count) => {
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      if (titles().length === count) return titles();
+      await new Promise((resolve) => setTimeout(resolve, 40));
+    }
+    throw new Error("工作台搜索结果数量不符合预期：" + count);
+  };
+  const initial = await waitForCount(3);
+  for (let attempt = 0; attempt < 50 && !preview.complete; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 40));
+  }
+  const staticPreview = preview.src.startsWith("data:image/svg+xml") && preview.naturalWidth > 0;
+  const quickCount = document.querySelectorAll(".scada-home-quick").length;
+  change("已发布");
+  const filtered = await waitForCount(1);
+  change("不存在的工程");
+  await waitForCount(0);
+  const empty = Boolean(document.querySelector(".scada-home-card-grid + [role='status']"));
+  change("");
+  const restored = await waitForCount(3);
+  return { initial, staticPreview, quickCount, filtered, empty, restored };
+}
+
+/** 新建真实空白工程并验证图元库可添加、保存后可从工作台重新打开。 */
+async function verifyWorkspaceProjectInPage() {
+  const waitFor = async (read, message) => {
+    for (let attempt = 0; attempt < 150; attempt += 1) {
+      const result = read();
+      if (result) return result;
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+    throw new Error(message);
+  };
+  const nav = (label) =>
+    [...document.querySelectorAll(".scada-app-nav button")].find(
+      (button) => button.textContent.trim() === label,
+    );
+  const click = (button, message) => {
+    if (!(button instanceof HTMLButtonElement) || button.disabled) throw new Error(message);
+    button.click();
+  };
+  click(nav("工作台"), "无法返回工作台");
+  const create = await waitFor(
+    () =>
+      [...document.querySelectorAll(".scada-home-quick")].find((button) =>
+        button.textContent.includes("新建组态工程"),
+      ),
+    "新建工程入口未挂载",
+  );
+  click(create, "无法新建工程");
+  const projectId = await waitFor(() => {
+    const id = document.querySelector(".studio-toolbar h1")?.getAttribute("data-project-id");
+    return id?.startsWith("project-") ? id : null;
+  }, "新建工程未进入编辑器");
+  if (location.hash !== "#/studio/" + projectId) throw new Error("新建工程路由 ID 不一致");
+  const boundary = await waitFor(
+    () => document.querySelector(".studio-page-boundary"),
+    "新建工程画板未挂载",
+  );
+  const heading = document.querySelector(".studio-toolbar h1");
+  if (heading?.textContent.trim() !== "未命名工程") {
+    throw new Error("新工程默认名称不正确");
+  }
+  const oldDialogs = new Set(document.querySelectorAll(".t-dialog"));
+  click(document.querySelector(".studio-rename-project"), "工程重命名入口缺失");
+  const dialog = await waitFor(
+    () =>
+      [...document.querySelectorAll(".t-dialog")].find(
+        (item) => !oldDialogs.has(item) && item.querySelector("input"),
+      ),
+    "工程重命名弹窗未挂载",
+  );
+  const name = "浏览器验收工程";
+  const nameInput = dialog.querySelector("input");
+  if (!(nameInput instanceof HTMLInputElement)) throw new Error("工程名称输入框缺失");
+  if (!Reflect.set(HTMLInputElement.prototype, "value", name, nameInput)) {
+    throw new Error("工程名称输入失败");
+  }
+  nameInput.dispatchEvent(new Event("input", { bubbles: true }));
+  nameInput.dispatchEvent(new Event("change", { bubbles: true }));
+  click(
+    [...dialog.querySelectorAll("button")].find(
+      (button) => button.textContent.trim() === "保存名称",
+    ),
+    "工程名称保存入口缺失",
+  );
+  await waitFor(
+    () =>
+      heading.textContent.trim() === name && heading.getAttribute("data-project-id") === projectId,
+    "重命名没有保留工程 ID",
+  );
+  const width = Number(boundary.getAttribute("width"));
+  const height = Number(boundary.getAttribute("height"));
+  const initialNodes = document.querySelectorAll(".studio-hitbox").length;
+  const library = [...document.querySelectorAll(".studio-library-tabs button")].find(
+    (button) => button.textContent.trim() === "图元库",
+  );
+  click(library, "图元库入口缺失");
+  const tank = await waitFor(
+    () =>
+      [...document.querySelectorAll(".studio-symbol-grid button")].find((button) =>
+        button.textContent.includes("水箱"),
+      ),
+    "水箱图元入口缺失",
+  );
+  click(tank, "无法添加水箱图元");
+  await waitFor(
+    () => document.querySelectorAll(".studio-hitbox").length === 1,
+    "新建水箱未显示在画板",
+  );
+  click(nav("工作台"), "无法验证编辑离开保护");
+  const leaveDialog = await waitFor(
+    () =>
+      [...document.querySelectorAll(".t-dialog")].find(
+        (node) =>
+          node.getClientRects().length && node.textContent.includes("当前工程可能有未保存内容"),
+      ),
+    "未保存编辑离开时未显示确认",
+  );
+  click(leaveDialog.querySelector(".t-dialog__cancel"), "缺少继续编辑入口");
+  await waitFor(
+    () => !leaveDialog.getClientRects().length && location.hash === "#/studio/" + projectId,
+    "取消离开后工程路由未保留",
+  );
+  const previousDialogs = new Set(document.querySelectorAll(".t-dialog"));
+  click(
+    [...document.querySelectorAll(".studio-save-actions button")].find(
+      (button) => button.textContent.trim() === "保存草稿",
+    ),
+    "无法保存新建工程",
+  );
+  const saveDialog = await waitFor(
+    () =>
+      [...document.querySelectorAll(".t-dialog")].find(
+        (node) =>
+          !previousDialogs.has(node) &&
+          node.getClientRects().length &&
+          node.textContent.includes("数据库已有草稿"),
+      ),
+    "已有草稿覆盖确认未显示",
+  );
+  click(saveDialog.querySelector(".t-dialog__confirm"), "缺少保存草稿确认入口");
+  await waitFor(
+    () => document.querySelector(".studio-notice")?.textContent.includes("已保存"),
+    "新建工程保存未完成",
+  );
+  click(nav("工作台"), "无法返回本地工程目录");
+  const draft = await waitFor(
+    () =>
+      [...document.querySelectorAll(".scada-home-draft")].find(
+        (button) =>
+          button.querySelector("strong")?.getAttribute("title") === projectId &&
+          button.querySelector("strong")?.textContent === name,
+      ),
+    "真实草稿目录未显示新建工程",
+  );
+  click(draft, "无法打开本地工程");
+  await waitFor(
+    () =>
+      document.querySelector(".studio-toolbar h1")?.getAttribute("data-project-id") === projectId &&
+      document.querySelector(".studio-toolbar h1")?.textContent.trim() === name &&
+      document.querySelectorAll(".studio-hitbox").length === 1,
+    "恢复工程后图元不一致",
+  );
+  history.back();
+  await waitFor(
+    () => location.hash === "#/" && document.querySelector(".scada-home"),
+    "浏览器后退未回到工作台",
+  );
+  history.forward();
+  await waitFor(
+    () =>
+      location.hash === "#/studio/" + projectId &&
+      document.querySelector(".studio-toolbar h1")?.getAttribute("data-project-id") === projectId &&
+      document.querySelectorAll(".studio-hitbox").length === 1,
+    "浏览器前进未恢复对应草稿",
+  );
+  return {
+    projectId,
+    width,
+    height,
+    initialNodes,
+    restoredNodes: document.querySelectorAll(".studio-hitbox").length,
+  };
+}
+
+/** 使用真实 TDesign 主题开关，等待框架渲染标识及根属性。 */
+async function selectWorkspaceThemeInPage(mode) {
+  const root = document.documentElement;
+  const toggle = document.querySelector('.scada-theme-toggle.t-switch[role="switch"]');
+  if (!(toggle instanceof HTMLElement)) throw new Error("主题开关入口缺失");
+  if (root.getAttribute("theme-mode") !== mode) toggle.click();
+  const logoSuffix = mode === "dark" ? "/brand/mark-dark.svg" : "/brand/mark-primary.svg";
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const logo = document.querySelector(".scada-app-brand img");
+    if (
+      root.getAttribute("theme-mode") === mode &&
+      !root.hasAttribute("data-theme-transition") &&
+      toggle.getAttribute("aria-checked") === String(mode === "dark") &&
+      toggle.classList.contains("t-is-checked") === (mode === "dark") &&
+      logo instanceof HTMLImageElement &&
+      logo.src.endsWith(logoSuffix) &&
+      logo.complete &&
+      logo.naturalWidth > 0
+    ) {
+      return {
+        saved: localStorage.getItem("adui-scada:theme-mode"),
+        scheme: getComputedStyle(root).colorScheme,
+        themeIcons: document.querySelectorAll(".scada-theme-icons .t-icon").length,
+      };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 40));
+  }
+  throw new Error("主题切换或品牌标识加载超时：" + mode);
+}
+
+/** WCAG 2.2 AA 常规文字对比度：仅计算已知的不透明 RGB，异常颜色拒绝通过。 */
+function scadaTextContrast(foreground, background) {
+  const toRgb = (value) => {
+    const numbers = value.match(/\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+    if (numbers.length !== 3) return null;
+    return numbers.slice(0, 3).map((component) => {
+      const normalized = component / 255;
+      return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+    });
+  };
+  const front = toRgb(foreground);
+  const back = toRgb(background);
+  if (!front || !back) return 0;
+  const brightness = (parts) => parts[0] * 0.2126 + parts[1] * 0.7152 + parts[2] * 0.0722;
+  const a = brightness(front);
+  const b = brightness(back);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+/** 统一验收：双框架 × 双分辨率 × 双主题 × 四个工作区，共 32 个场景。 */
+async function runScadaUIExperience(session) {
+  const captureScreenshots = process.env.SCADA_UI_SCREENSHOTS === "1";
+  const screenshotDirectory = fileURLToPath(new URL("../.artifacts/ui-review/", import.meta.url));
+  if (captureScreenshots) mkdirSync(screenshotDirectory, { recursive: true });
+  await session.send("Network.enable");
+  await session.send("Network.setCacheDisabled", { cacheDisabled: true });
+  for (const target of targets) {
+    for (const viewport of viewports) {
+      await session.send("Emulation.setDeviceMetricsOverride", {
+        width: viewport.width,
+        height: viewport.height,
+        deviceScaleFactor: 1,
+        mobile: false,
+      });
+      const url = new URL(target.url);
+      url.searchParams.set("scada_ui_check", target.name + "-" + viewport.width);
+      url.hash = "/";
+      await session.send("Page.navigate", { url: url.href });
+      let ready = false;
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        await pause(120);
+        try {
+          ready = await session.evaluate(
+            "document.readyState === 'complete' && Boolean(document.querySelector('.scada-app-nav'))",
+          );
+        } catch {
+          // 导航期间的旧执行上下文可能已销毁。
+        }
+        if (ready) break;
+      }
+      assert.ok(ready, target.name + " UI 工作空间导航未加载");
+      for (const mode of ["light", "dark"]) {
+        const theme = await session.evaluate(
+          "(" + selectWorkspaceThemeInPage.toString() + ")(" + JSON.stringify(mode) + ")",
+        );
+        assert.equal(theme.saved ?? "light", mode, target.name + " 主题偏好未保存");
+        assert.equal(theme.scheme, mode, target.name + " 浏览器主题未同步");
+        assert.equal(theme.themeIcons, 2, target.name + " 主题双图标缺失");
+        for (const [view, label, selector] of [
+          ["home", "工作台", ".scada-home"],
+          ["runtime", "运行监控", ".scada-shell--overview"],
+          ["published", "已发布运行", ".scada-shell--published"],
+          ["studio", "组态编辑", ".studio-shell"],
+        ]) {
+          await session.evaluate(
+            "(" +
+              enterScadaViewInPage.toString() +
+              ")(" +
+              JSON.stringify(label) +
+              "," +
+              JSON.stringify(selector) +
+              ")",
+          );
+          const data = await session.evaluate("(" + inspectScadaUIInPage.toString() + ")()");
+          const prefix =
+            target.name + " " + viewport.width + "x" + viewport.height + " " + label + " " + mode;
+          assert.equal(data.theme, mode, prefix + " 根主题不一致");
+          assert.equal(data.screen, view, prefix + " 当前视图与导航状态不一致");
+          const routeHash = await session.evaluate("location.hash");
+          assert.equal(routeHash, view === "home" ? "#/" : "#/" + view, prefix + " 路由地址不一致");
+          if (view !== "home") {
+            assert.ok(
+              data.railHeight <= 48 && data.railWidth > viewport.width / 2,
+              prefix + " 操作工作区未采用顶部切换栏",
+            );
+          } else {
+            assert.ok(
+              data.railHeight >= viewport.height - 2,
+              prefix + " 文件工作区导航没有撑满视口",
+            );
+          }
+          assert.deepStrictEqual(
+            data.buttons,
+            ["工作台", "运行监控", "已发布运行", "组态编辑"],
+            prefix + " 缺少完整工作空间导航",
+          );
+          assert.equal(data.current, label, prefix + " 未标识当前导航");
+          assert.equal(data.navIcons, 4, prefix + " 导航未使用 TDesign 图标");
+          assert.equal(
+            data.alignedButtonContents.length,
+            view === "studio" ? 10 : 4,
+            prefix + " 图标文字组合数量不一致",
+          );
+          assert.ok(
+            data.alignedButtonContents.every(Boolean),
+            prefix + " 按钮图标或文字未垂直居中",
+          );
+          if (data.messageColor && data.messageBackground) {
+            assert.ok(
+              scadaTextContrast(data.messageColor, data.messageBackground) >= 4.5,
+              prefix + " 运行提示栏文字对比度不足",
+            );
+          }
+          assert.equal(data.safety, true, prefix + " 缺少非现场控制提示");
+          assert.equal(data.noHorizontalOverflow, true, prefix + " 发生整页横向溢出");
+          assert.ok(data.title.length > 0, prefix + " 缺少工作区标题");
+          const navContrast = scadaTextContrast(data.navColor, data.navBackground);
+          assert.ok(
+            navContrast >= 4.5,
+            prefix +
+              " 当前导航文字对比度不足：" +
+              navContrast.toFixed(2) +
+              "，文字 " +
+              data.navColor +
+              "，背景 " +
+              data.navBackground,
+          );
+          if (view === "home") {
+            assert.ok(data.home, prefix + " 工作台功能入口缺失");
+            const home = await session.evaluate(
+              "(" + inspectWorkspaceHomeInPage.toString() + ")()",
+            );
+            assert.deepStrictEqual(
+              home.initial,
+              ["水处理演示工程", "水处理模拟监控", "已发布工程预览"],
+              prefix + " 工作台真实目录不一致",
+            );
+            assert.equal(home.quickCount, 5, prefix + " 快速入口数量不一致");
+            assert.equal(home.staticPreview, true, prefix + " 内置工程 SVG 缩略图未显示");
+            assert.deepStrictEqual(home.filtered, ["已发布工程预览"], prefix + " 搜索结果不一致");
+            assert.equal(home.empty, true, prefix + " 搜索空态缺失");
+            assert.deepStrictEqual(home.restored, home.initial, prefix + " 清空搜索未恢复目录");
+          } else if (view === "runtime") {
+            assert.ok(
+              data.process && data.telemetry && data.quality,
+              prefix + " 工艺和链路信息缺失",
+            );
+          } else if (view === "published") {
+            assert.ok(data.published && data.readonly, prefix + " 静态只读预览边界失效");
+          } else {
+            assert.ok(data.studio, prefix + " 组态画布缺失");
+            assert.equal(
+              data.artboardFill,
+              mode === "dark" ? "rgb(12, 23, 40)" : "rgb(255, 255, 255)",
+              prefix + " 工程画板底色未跟随主题",
+            );
+            const artwork = decodeURIComponent(data.artboardImage.split(",").slice(1).join(","));
+            assert.ok(
+              artwork.includes(
+                mode === "dark"
+                  ? '<rect width="100%" height="100%" fill="#0c1728"/>'
+                  : '<rect width="100%" height="100%" fill="#ffffff"/>',
+              ),
+              prefix + " SVG 内嵌画面背景未跟随主题",
+            );
+            assert.ok(artwork.includes('id="scada-metal"'), prefix + " 工业图元造型未保留");
+            assert.ok(
+              scadaTextContrast(data.saveColor, data.saveBackground) >= 4.5,
+              prefix + " 保存按钮文字对比度不足",
+            );
+            assert.deepStrictEqual(
+              [data.artboardWidth, data.artboardHeight],
+              [1920, 1080],
+              prefix + " 新建 Studio 默认画板必须为 1920×1080",
+            );
+            assert.notEqual(
+              data.stageBackground,
+              data.panelBackground,
+              prefix + " 画布工作区与面板没有区分",
+            );
+            assert.ok(
+              scadaTextContrast(data.stageText, data.stageTextBackground) >= 4.5,
+              prefix + " 画布工具栏文字对比度不足",
+            );
+          }
+          if (captureScreenshots) {
+            const screenshot = await session.send("Page.captureScreenshot", {
+              format: "png",
+              captureBeyondViewport: false,
+            });
+            assert.ok(screenshot.data, prefix + " 无法保存真实浏览器视口截图");
+            const filename = `${target.name.toLowerCase()}-${viewport.width}x${viewport.height}-${view}-${mode}.png`;
+            writeFileSync(
+              join(screenshotDirectory, filename),
+              Buffer.from(screenshot.data, "base64"),
+            );
+          }
+          process.stdout.write(prefix + " 新版信息架构、状态与视觉边界通过\n");
+        }
+      }
+      await session.send("Page.reload");
+      let restoredTheme = false;
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        await pause(120);
+        try {
+          restoredTheme = await session.evaluate(
+            "document.readyState === 'complete' && document.documentElement.getAttribute('theme-mode') === 'dark' && Boolean(document.querySelector('.scada-theme-toggle.t-switch[role=switch][aria-checked=true]'))",
+          );
+        } catch {
+          // 刷新期间旧执行上下文可能已销毁。
+        }
+        if (restoredTheme) break;
+      }
+      assert.ok(restoredTheme, target.name + " 刷新后未恢复深色主题");
+      await session.evaluate(
+        "(" + selectWorkspaceThemeInPage.toString() + ")(" + JSON.stringify("light") + ")",
+      );
+      const created = await session.evaluate("(" + verifyWorkspaceProjectInPage.toString() + ")()");
+      assert.deepStrictEqual(
+        [created.width, created.height, created.initialNodes, created.restoredNodes],
+        [1920, 1080, 0, 1],
+        target.name + " 新建工程、图元库和本地草稿往返不一致",
+      );
+      await session.send("Page.reload");
+      let restoredProject = false;
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        await pause(120);
+        try {
+          restoredProject = await session.evaluate(
+            "location.hash === " +
+              JSON.stringify("#/studio/" + created.projectId) +
+              " && document.querySelector('.studio-toolbar h1')?.getAttribute('data-project-id') === " +
+              JSON.stringify(created.projectId) +
+              " && document.querySelectorAll('.studio-hitbox').length === 1",
+          );
+        } catch {
+          // 刷新期间执行上下文暂不可用。
+        }
+        if (restoredProject) break;
+      }
+      assert.ok(restoredProject, target.name + " 工程专属路由刷新未恢复对应草稿");
+    }
+  }
 }
 
 /** 只在隔离浏览器中操作真实 Studio DOM，不修改正式应用代码。 */
@@ -597,6 +1530,7 @@ async function importStudioJsonInPage(json, expectSuccess) {
 async function navigateStudioForInterop(session, target, marker) {
   const url = new URL(target.url);
   url.searchParams.set("scada_interop_check", marker);
+  url.hash = "/";
   const navigation = await session.send("Page.navigate", { url: url.href });
   let loaded = false;
   for (let attempt = 0; attempt < 60; attempt += 1) {
@@ -870,36 +1804,151 @@ async function runStudioReleasePreflight(session) {
   }
 }
 
-/** 在真实浏览器内定位项目 Tag 管理表单并打开详情区。 */
+/** 真正切换右侧「项目 Tag」模式；目录与图元属性不可同时堆叠在侧栏。 */
 async function openTagManagerInPage() {
-  const menu = [...document.querySelectorAll(".studio-advanced")].find((node) =>
-    node.querySelector(".t-collapse-panel__header")?.textContent.includes("项目 Tag 定义"),
+  const tabs = document.querySelector(".studio-inspector-tabs");
+  const button = [...(tabs?.querySelectorAll("button") ?? [])].find((item) =>
+    item.textContent.includes("项目 Tag"),
   );
-  if (!menu) throw new Error("未找到项目 Tag 定义面板");
-  const trigger = menu.querySelector(".t-collapse-panel__header");
-  if (!(trigger instanceof HTMLElement)) throw new TypeError("Tag 定义折叠触发器不存在");
-  trigger.click();
+  if (!(button instanceof HTMLButtonElement)) throw new TypeError("Tag 工作区切换按钮不存在");
+  button.click();
   const started = Date.now();
   while (Date.now() - started < 5000) {
-    const form = menu.querySelector('form[aria-label="项目 Tag 编辑表单"]');
+    const list = document.querySelector('[role="list"][aria-label="项目 Tag 目录"]');
+    if (button.getAttribute("aria-pressed") === "true" && list?.getClientRects().length) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("项目 Tag 工作区切换超时");
+}
+
+/** 独立对话框内才包含新建/编辑表单，不能退化为右侧属性栏常驻表单。 */
+async function openNewTagEditorInPage() {
+  const button = [...document.querySelectorAll(".studio-tag-toolbar button")].find(
+    (node) => node.textContent.trim() === "新建 Tag",
+  );
+  if (!(button instanceof HTMLButtonElement)) throw new TypeError("Tag 新建入口缺失");
+  button.click();
+  const started = Date.now();
+  while (Date.now() - started < 5000) {
+    const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
     if (form?.getClientRects().length) return true;
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
-  throw new Error("项目 Tag 管理表单展开超时");
+  throw new Error("Tag 新建对话框打开超时");
+}
+
+async function inspectTagFormDialogInPage() {
+  const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
+  if (!(form instanceof HTMLFormElement)) throw new TypeError("Tag 表单未挂载");
+  const modal = form.closest(".t-dialog");
+  if (!(modal instanceof HTMLElement)) throw new TypeError("Tag 表单不在 TDesign 对话框内");
+  // TDesign 缩放入场期间，布局宽度与屏幕上的边界矩形不同。
+  // 等待实际动画结束及连续两次稳定测量，不以预期宽度作为等待条件。
+  const started = Date.now();
+  let previousWidth = null;
+  let metrics = null;
+  while (Date.now() - started < 5000) {
+    const style = getComputedStyle(modal);
+    const rect = modal.getBoundingClientRect();
+    metrics = {
+      width: rect.width,
+      layoutWidth: modal.offsetWidth,
+      computedWidth: style.width,
+      transform: style.transform,
+      opacity: style.opacity,
+      animating: modal
+        .getAnimations()
+        .some((animation) => animation.pending || animation.playState === "running"),
+    };
+    const settled =
+      modal.isConnected &&
+      metrics.layoutWidth > 0 &&
+      !metrics.animating &&
+      style.visibility === "visible" &&
+      Number(style.opacity) === 1 &&
+      Math.abs(metrics.width - metrics.layoutWidth) <= 1;
+    if (settled && previousWidth !== null && Math.abs(metrics.width - previousWidth) <= 0.5) {
+      const grid = form.querySelector(".studio-tag-form-grid");
+      const buttons = [...form.querySelectorAll(".studio-tag-form-actions button")];
+      return {
+        separateFromSidebar: !form.closest(".studio-panel-properties"),
+        modalWidth: Math.round(rect.width),
+        modalMetrics: metrics,
+        columns: grid ? getComputedStyle(grid).gridTemplateColumns.split(" ").length : 0,
+        fieldCount: form.querySelectorAll("label.studio-field").length,
+        buttons: buttons.map((button) => button.textContent.trim()),
+      };
+    }
+    previousWidth = settled ? metrics.width : null;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("Tag 编辑弹窗未达到稳定可见状态：" + JSON.stringify(metrics));
+}
+
+/** Tag 目录搜索沿用 TDesign 输入，不能用直接改 DOM 值模拟框架事件。 */
+function focusTagSearchInPage() {
+  const input = document.querySelector(".studio-tag-search input");
+  if (!(input instanceof HTMLInputElement)) throw new TypeError("Tag 目录搜索输入不存在");
+  input.focus();
+  input.select();
+  return true;
+}
+
+function inspectTagSearchInPage() {
+  const list = document.querySelector('[role="list"][aria-label="项目 Tag 目录"]');
+  if (!(list instanceof HTMLElement)) throw new TypeError("Tag 目录未挂载");
+  return [...list.querySelectorAll(".studio-tag-id")].map((node) => node.textContent.trim());
+}
+
+function inspectTagFieldErrorInPage() {
+  const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
+  if (!(form instanceof HTMLFormElement)) throw new TypeError("Tag 表单未挂载");
+  const label = [...form.querySelectorAll("label.studio-field")].find((item) =>
+    item.textContent.trim().startsWith("显示名称"),
+  );
+  return {
+    inlineError: label?.querySelector(".studio-tag-field-error")?.textContent?.trim() ?? "",
+    formStillOpen: form.getClientRects().length > 0,
+  };
+}
+
+function inspectTagEditingIdInPage() {
+  const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
+  if (!(form instanceof HTMLFormElement)) throw new TypeError("Tag 编辑表单未挂载");
+  const label = [...form.querySelectorAll("label.studio-field")].find((item) =>
+    item.textContent.trim().startsWith("稳定 Tag ID"),
+  );
+  return {
+    immutable: Boolean(label?.querySelector("input")?.disabled),
+    submitLabel: form.querySelector('button[type="submit"]')?.textContent.trim() ?? "",
+  };
 }
 
 function focusTagFieldInPage(index) {
   const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
-  const fields = [...(form?.querySelectorAll("label.studio-field") ?? [])]
-    .filter((label) => !label.textContent.includes("数据类型"))
-    .map((label) => label.querySelector("input, textarea"));
-  const field = fields[index];
+  const names = ["稳定 Tag ID", "显示名称", "单位", "描述"];
+  const label = [...(form?.querySelectorAll("label.studio-field") ?? [])].find((item) =>
+    item.textContent.trim().startsWith(names[index]),
+  );
+  const field = label?.querySelector("input, textarea");
   if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) {
     throw new Error("项目 Tag 表单字段不存在：" + index);
   }
   field.focus();
   field.select();
   return true;
+}
+
+/** 成功保存后等待旧表单销毁，避免在离场动画期间重开或误取旧字段。 */
+async function waitForTagEditorClosedInPage() {
+  const started = Date.now();
+  while (Date.now() - started < 5000) {
+    if (!document.querySelector('form[aria-label="项目 Tag 编辑表单"]')) return true;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("Tag 编辑对话框关闭后表单未销毁");
 }
 
 function submitTagFormInPage() {
@@ -925,6 +1974,15 @@ async function clickTagRowActionInPage(tagId, action, confirmChoice) {
   // TDesign Dialog 退出动画期间仍可能保留旧按钮，后续只允许操作本次新建弹窗。
   const previousDialogs = new Set(document.querySelectorAll(".t-dialog"));
   button.click();
+  if (confirmChoice === null) {
+    const started = Date.now();
+    while (Date.now() - started < 5000) {
+      const form = document.querySelector('form[aria-label="项目 Tag 编辑表单"]');
+      if (form?.getClientRects().length) return true;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    throw new Error("Tag 编辑对话框打开超时：" + tagId);
+  }
   if (confirmChoice !== null) {
     const started = Date.now();
     let choice = null;
@@ -945,27 +2003,21 @@ async function clickTagRowActionInPage(tagId, action, confirmChoice) {
   return true;
 }
 
-/** 从实际 DOM 度量 Tag 操作行，避免全量 TDesign 化后重现高亮整列按钮。 */
+/** 侧栏行操作保持紧凑，完整表单必须在弹窗内提供足够宽度。 */
 function inspectTagActionLayoutInPage() {
   const manager = document.querySelector(".studio-tag-manager");
-  const row = manager?.querySelector(".studio-tag-item");
-  const actions = row?.querySelector(".studio-tag-actions");
-  const formActions = manager?.querySelector(".studio-tag-form-actions");
-  if (!(actions instanceof HTMLElement) || !(formActions instanceof HTMLElement)) {
-    throw new TypeError("项目 Tag 紧凑操作区未挂载");
-  }
-  const measure = (container) => {
-    const buttons = [...container.querySelectorAll(".t-button")];
-    return {
-      columns: getComputedStyle(container).gridTemplateColumns.split(" ").length,
-      count: buttons.length,
-      bounds: buttons.map((button) => {
-        const rect = button.getBoundingClientRect();
-        return { width: rect.width, height: rect.height };
-      }),
-    };
+  const actions = manager?.querySelector(".studio-tag-item .studio-tag-actions");
+  if (!(actions instanceof HTMLElement)) throw new TypeError("Tag 行操作区未挂载");
+  const buttons = [...actions.querySelectorAll(".t-button")];
+  return {
+    display: getComputedStyle(actions).display,
+    count: buttons.length,
+    compact: buttons.every((button) => {
+      const rect = button.getBoundingClientRect();
+      return rect.width >= 42 && rect.width <= 90 && rect.height >= 26;
+    }),
+    noSidebarForm: !manager?.querySelector('form[aria-label="项目 Tag 编辑表单"]'),
   };
-  return { item: measure(actions), form: measure(formActions) };
 }
 
 /** 用最大合法长度的连续 Tag ID 检查窄屏换行，仅临时改变浏览器 DOM，不触发业务写入。 */
@@ -1058,23 +2110,38 @@ async function runStudioTagManagement(session) {
       network.stop();
     }
     await evaluateStudioPage(session, openTagManagerInPage);
-    const layout = await evaluateStudioPage(session, inspectTagActionLayoutInPage);
-    for (const [kind, actions] of [
-      ["Tag 条目", layout.item],
-      ["Tag 表单", layout.form],
-    ]) {
-      assert.equal(actions.count, 2, target.name + " " + kind + " 操作按钮数量不正确");
-      assert.equal(actions.columns, 2, target.name + " " + kind + " 操作没有保持双列");
-      assert.ok(
-        actions.bounds.every((button) => button.width > 0 && button.height > 0),
-        target.name + " " + kind + " 存在不可见操作按钮",
-      );
-      assert.ok(
-        Math.abs(actions.bounds[0].height - actions.bounds[1].height) <= 1 &&
-          Math.abs(actions.bounds[0].width - actions.bounds[1].width) <= 1,
-        target.name + " " + kind + " 按钮尺寸不一致",
-      );
-    }
+    assert.deepStrictEqual(
+      await evaluateStudioPage(session, inspectTagActionLayoutInPage),
+      { display: "flex", count: 2, compact: true, noSidebarForm: true },
+      target.name + " Tag 侧栏必须只保留紧凑目录，不再嵌入完整表单",
+    );
+    // 真实输入目录检索必须过滤列表，之后通过键盘清空恢复原始 Tag。
+    await evaluateStudioPage(session, focusTagSearchInPage);
+    await session.send("Input.insertText", { text: "water.pump" });
+    await pause(120);
+    assert.deepStrictEqual(
+      await evaluateStudioPage(session, inspectTagSearchInPage),
+      ["water.pump.running"],
+      target.name + " Tag 目录检索没有过滤到正确的 ID",
+    );
+    await evaluateStudioPage(session, focusTagSearchInPage);
+    await session.send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "Backspace",
+      code: "Backspace",
+      windowsVirtualKeyCode: 8,
+    });
+    await session.send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "Backspace",
+      code: "Backspace",
+      windowsVirtualKeyCode: 8,
+    });
+    await pause(120);
+    assert.ok(
+      (await evaluateStudioPage(session, inspectTagSearchInPage)).includes("water.level"),
+      target.name + " 搜索清空后 Tag 目录未恢复",
+    );
     // 在窄视口验证长 Tag ID 不撑开侧栏，且 Tab 能顺序聚焦 TDesign 危险操作按钮。
     await session.send("Emulation.setDeviceMetricsOverride", {
       width: 1024,
@@ -1118,6 +2185,30 @@ async function runStudioTagManagement(session) {
     });
     await pause(100);
 
+    await evaluateStudioPage(session, openNewTagEditorInPage);
+    const dialogLayout = await evaluateStudioPage(session, inspectTagFormDialogInPage);
+    assert.ok(dialogLayout.separateFromSidebar, target.name + " Tag 表单错误嵌在侧栏中");
+    assert.ok(
+      dialogLayout.modalWidth >= 600,
+      target.name + " Tag 编辑弹窗宽度不足：" + JSON.stringify(dialogLayout.modalMetrics),
+    );
+    assert.equal(dialogLayout.columns, 2, target.name + " Tag 主表单不是双列");
+    assert.equal(dialogLayout.fieldCount, 5, target.name + " Tag 主表单字段缺失");
+    assert.deepStrictEqual(
+      dialogLayout.buttons,
+      ["取消", "创建 Tag"],
+      target.name + " Tag 表单操作主次不明确",
+    );
+
+    // 未填必填项时给出字段旁提示，不能直接提交空 Tag。
+    await evaluateStudioPage(session, submitTagFormInPage);
+    await pause(120);
+    assert.deepStrictEqual(
+      await evaluateStudioPage(session, inspectTagFieldErrorInPage),
+      { inlineError: "请填写 Tag 显示名称。", formStillOpen: true },
+      target.name + " Tag 必填错误未就近呈现",
+    );
+
     const tagId = "browser." + target.name.toLowerCase() + ".pressure";
     await fillTagField(session, 0, tagId);
     await fillTagField(session, 1, "浏览器新增压力");
@@ -1125,6 +2216,7 @@ async function runStudioTagManagement(session) {
     await fillTagField(session, 3, "双框架 Tag 管理回归");
     await evaluateStudioPage(session, submitTagFormInPage);
     await pause(180);
+    await evaluateStudioPage(session, waitForTagEditorClosedInPage);
     const created = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
     assert.deepStrictEqual(
       created.tags.find((tag) => tag.tagId === tagId),
@@ -1139,10 +2231,22 @@ async function runStudioTagManagement(session) {
     );
 
     await evaluateStudioPage(session, clickTagRowActionInPage, tagId, "编辑", null);
+    const editDialogLayout = await evaluateStudioPage(session, inspectTagFormDialogInPage);
+    assert.ok(editDialogLayout.separateFromSidebar, target.name + " Tag 编辑表单错误嵌在侧栏中");
+    assert.ok(
+      editDialogLayout.modalWidth >= 600,
+      target.name + " Tag 编辑弹窗宽度不足：" + JSON.stringify(editDialogLayout.modalMetrics),
+    );
+    assert.deepStrictEqual(
+      await evaluateStudioPage(session, inspectTagEditingIdInPage),
+      { immutable: true, submitLabel: "保存修改" },
+      target.name + " 编辑 Tag 时 ID 未锁定或操作文案不正确",
+    );
     await fillTagField(session, 1, "浏览器编辑压力");
     await fillTagField(session, 2, "MPa");
     await evaluateStudioPage(session, submitTagFormInPage);
     await pause(180);
+    await evaluateStudioPage(session, waitForTagEditorClosedInPage);
     const updated = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
     assert.equal(updated.tags.find((tag) => tag.tagId === tagId)?.displayName, "浏览器编辑压力");
     assert.equal(updated.tags.find((tag) => tag.tagId === tagId)?.unit, "MPa");
@@ -1201,7 +2305,8 @@ async function runStudioTagManagement(session) {
       target.name + " 删除 Tag 后工程仍包含该定义",
     );
     process.stdout.write(
-      target.name + " Tag 窄屏换行、键盘焦点、新增、编辑、绑定删除保护、删除与 JSON 往返通过\n",
+      target.name +
+        " Tag 目录检索、独立表单、就近校验、窄屏与键盘、新增/编辑/删除保护及 JSON 往返通过\n",
     );
   }
 }
@@ -2327,6 +3432,10 @@ async function main() {
     session = new ChromeSession(socket);
     await session.send("Page.enable");
     await session.send("Runtime.enable");
+    if (process.argv.includes("--ui")) {
+      await runScadaUIExperience(session);
+      return;
+    }
     if (process.argv.includes("--interop")) {
       await runStudioInteroperability(session);
       return;
@@ -2371,6 +3480,7 @@ async function main() {
           "scada_browser_check",
           `${target.name}-${viewport.width}x${viewport.height}`,
         );
+        navigationUrl.hash = "/";
         await session.send("Page.navigate", { url: navigationUrl.href });
         let loaded = false;
         for (let attempt = 0; attempt < 40; attempt += 1) {
@@ -2410,7 +3520,10 @@ async function main() {
             data.findings.length +
             ")\n",
         );
-        for (const error of errors) process.stderr.write("  - " + error.name + "\n");
+        for (const error of errors) {
+          process.stderr.write("  - " + error.name + "\n");
+          if (error.detail) process.stderr.write("    " + error.detail + "\n");
+        }
       }
     }
     assert.equal(failed, 0, "浏览器回归项存在失败");

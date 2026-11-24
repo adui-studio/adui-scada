@@ -19,7 +19,8 @@
     "@adui/tailwind": "workspace:*",
     "tdesign-icons-vue-next": "catalog:",
     "tdesign-vue-next": "catalog:",
-    "vue": "catalog:"
+    "vue": "catalog:",
+    "vue-router": "catalog:"
   },
   "devDependencies": {
     "@adui/tsconfig": "workspace:*",

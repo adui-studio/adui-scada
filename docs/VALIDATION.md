@@ -4533,3 +4533,177 @@ if ($LASTEXITCODE -ne 0) { throw "普通 Studio 测试失败" }
 维护者本轮 Windows 执行 `node --check`、`vp check`（448 格式/291 受检零错误警告）、`messages:check`（318 文件）、`docs:check`（94 文档），`test:versions`、`test:versions:safety` React/Vue 均通过；`test:multitab` React/Vue 广播停写、无广播 CAS、墓碑重建、模拟故障恢复各四阶段全部通过；`test:legacy:browser` 两端各三条迁移路径通过；普通 Studio 双端 × 两分辨率共 **132/132** 通过。此前 `test:interop` 和 `test:tags:browser` 已在相应主线候选通过。上述日志没有附上本地 HEAD，本轮不据此声称完整 `ready` 或工业安全实测完成。PR #190 经授权 Squash 合并为 `main@493a793614dbbe21c7d97a3c6400442de9d88bff`，Assignee `@adui-dev` 已核对，E-115/E-116 对应阻塞解除。
 
 下一候选 D5c0z 仅扩充已有 `test:tags:browser`：将隔离浏览器改为 1024×768，临时向渲染层注入最大长度 128 的无断点 Tag ID 检查真实 CSS 折行、行容器及按钮不溢出，`finally` 还原原值且不产生输入事件；使用 CDP `Input.dispatchKeyEvent` 发送真实 Tab，检查 TDesign 「编辑→删除」顺序、`:focus-visible` 与按钮仍在视口内，再恢复 1440×900 并运行原有新增、编辑、取消、绑定拒绝、正常删除及 JSON 往返断言。React/Vue 产品源码、工程模型、存储、权限及工业网关都不修改。**新浏览器用例和最新 PR HEAD 尚未在 Windows 运行，不能提前宣称通过。**
+
+## 2026-11-23 · PR #191 Windows 验收与 D5c1 统一 UI/UX 门禁
+
+PR #191 实际 HEAD `031f496d68782bbd0beacea87cca171d588dbe9b`：维护者 Windows `node --check`、`vp check`（448 文件格式、291 受检零警告错误）、`messages:check`（318 文件）、`docs:check`（94 Markdown）通过；`test:tags:browser` React/Vue 长 ID 窄屏换行、Tab 焦点、Tag CRUD 与 JSON 往返均通过；普通 `test:browser` 双端四视口 132/132 通过；`test:interop` 完整 React→Vue→React→Vue 与双端非法 JSON 保护通过。经维护者明确授权，PR #191 Squash 合并至 `main@66c14fd067dea7c20cf69a085ab004a83d307081`，并完成 GitHub 主线 SHA 核对。以上**不**代表新 D5c1 UI 已经验收。
+
+D5c1 新增 `pnpm run test:ui:browser`，在隔离 Chrome/Edge 依次检验 React/Vue × 1440×900/1024×768 × 三页面，共 12 场景：真正的按钮导航/当前页语义、84px 左导航、非现场控制说明、整页无横向溢出、阅读顺序、发布未读取时绝不出现快照、Studio 深浅面板与可读对比度。该入口只读页面 DOM，不修改登录会话、工程、IndexedDB、Tag 或服务端快照。
+
+**唯一最终验收命令**（所有 UI 与测试调整完成后再执行，不拆成多轮）：
+
+```powershell
+git fetch origin
+git switch feat/d5c1-full-ui-ux-rebuild
+git pull --ff-only
+git rev-parse HEAD
+node --check scripts/test-studio-browser.mjs
+if ($LASTEXITCODE -ne 0) { throw "浏览器脚本语法检查失败" }
+pnpm run ready
+if ($LASTEXITCODE -ne 0) { throw "完整就绪链路失败" }
+$env:SCADA_UI_SCREENSHOTS = "1"
+pnpm run test:ui:browser
+if ($LASTEXITCODE -ne 0) { throw "三页面 UI/UX 验收失败" }
+pnpm run test:browser
+if ($LASTEXITCODE -ne 0) { throw "Studio 四视口验收失败" }
+pnpm run test:tags:browser
+if ($LASTEXITCODE -ne 0) { throw "Tag 管理回归失败" }
+pnpm run test:interop
+if ($LASTEXITCODE -ne 0) { throw "双框架互通验收失败" }
+pnpm run test:versions
+if ($LASTEXITCODE -ne 0) { throw "本地版本历史验收失败" }
+pnpm run test:versions:safety
+if ($LASTEXITCODE -ne 0) { throw "本地版本安全验收失败" }
+pnpm run test:multitab
+if ($LASTEXITCODE -ne 0) { throw "多标签页安全验收失败" }
+pnpm run test:legacy:browser
+if ($LASTEXITCODE -ne 0) { throw "旧工程迁移验收失败" }
+```
+
+由于协作容器无法访问仓库完整工作区和已有 React/Vue 依赖安装，以上全量质量链及 Windows Chromium **截至本记录均未执行**。不把新主题的静态断言、CSS 差异检查或以往旧设计截图当作真实构建通过；如有编译或可访问性失败，应留在本 PR 内一次修正，不能降低业务、质量或授权断言来掩盖。
+
+## 2026-11-24 · PR #192 FUXA 参考下的 Tag 独立编辑器（待最终统一验收）
+
+用户提供实际截图，证明旧 320px 属性栏将 Tag 目录、说明、操作按钮和五字段表单堆在同一纵向滚动区域，存在明显的阅读与操作层级问题；并指定 FUXA 为竞品参考。根据其公开的 Editor、Connections 和布局文档，仅借鉴任务隔离方式，不复制其源代码，也不引入真实设备连接。
+
+React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dialog 编辑器，表单按双列布局、字段旁错误与底部主次操作组织，编辑时保持稳定 Tag ID 禁用。共享 Studio CSS 移除旧常驻表单与宽行级按钮样式，沿用原共享 Core 的新增/更新/绑定删除保护/JSON/CAS。浏览器 --tags 专项同步检查列表搜索、对话框宽度与双列、字段旁错误、ID 锁定、窄屏、真实 Tab 和已有全部业务断言。
+
+这只是远端提交与固定版本 TDesign API 的静态核对；新变更尚未实际运行 Windows vp check、ready 或 Chrome 视觉回归。遵从用户要求，不分批请求验收，继续在唯一 PR #192 内完成设计与测试调整，最终一次集中验证。
+
+## 2026-11-24 · PR #192 新增 Figma 画板思路与 1920×1080 默认页面
+
+维护者明确补充：竞品可同时参考 Figma，不应只研究 SCADA；新 Studio 画板默认 **1920×1080**。按共享 Core 方案实现 `STUDIO_DEFAULT_PAGE_SIZE` 和 `waterTreatmentStudioDocument`：把原本 880×460 的演示布局等比例放大且居中，仅改变 React/Vue 新进 Studio 的默认页面，**不重写**原 880×460 只读水处理演示、不改变已有工程尺寸或 `createPage` 继承当前页面尺寸的业务规则。浏览器窗口仍通过 SVG viewBox 按需适应，不设置固定 DOM 1920px。
+
+增加 `packages/core/test/studio-default-document.test.ts` 三组预防性断言、`test:ui:browser` 对双端 × 1440×900/1024×768 的默认画板实际宽高断言，并在双端界面显示 `px` 单位。合入与此前 FUXA 任务型 Tag 面板修复同一个 PR #192，仍保持 Draft。**本次仅远端代码/静态结构核对，尚未获得 Windows `ready`、真实浏览器与截图的最终验收**；没有另开 PR、没有要求阶段性验收。
+
+## 2026-11-24 · PR #192 Figma UI3 参考后的统一验收扩展（尚未执行）
+
+本轮在 FUXA/Tag 改版的基础上，对照维护者提供的 Figma 首页和编辑器截图，调整了四个工作模式：新增**真实入口**的首页，左导航宽度非编辑 184px、编辑 52px；Studio 页面列表移至左 236px 图层区，右 288px 属性面板；中性灰画布、白色画板、底部图元工具组与 48px 适应留白。新增 Core/Runtime 的轻量 SVG 外观可选参数，确保仅 Studio 浅色预览而真实运行默认仍深色。两个框架使用相同的共享核心画板/渲染契约。
+
+本批测试源代码已同步：`test:ui:browser` 新增首页并更新导航宽度，场景矩阵从 12 增至 **16**；普通 Studio 浏览器检查真实左页面条、底部工具岛与 SVG 白色画板以及 236/288 面板；Core `studio-viewport-rect.test.ts` 覆盖只读缩放留白；SVG Core/Runtime 单测验证 light/dark 严格隔离；SSE/TCP 浏览器测试改为从新首页实际导航到运行监控，并继续要求有效真实数据及连接回收。
+
+**全部尚未在实际 Windows 环境运行；请在 #192 其余 UI 收敛完成后一次性执行原统一验收链并审阅 `SCADA_UI_SCREENSHOTS=1` 产生的 16 张截图。** 不应将静态检查写成实际通过，也不得为使浏览器测试变绿而删除工业安全或数据保真断言。
+
+### D5c1 · Figma 工具模式与不遮挡画布补充验收（PR #192 Draft）
+
+- Core 适应留白的像素变量与世界坐标变量分离；原视区单测仍需执行。
+- 双端 Studio 普通浏览器四视口新增：顶部视图栏及底部工具栏不覆盖 SVG、默认选择模式、抓手禁止图元指针编辑、恢复选择可交互、缩放入口归位底部工具栏。
+- 抓手放大后平移、图元上拖动不改变几何、添加后恢复选择以及界面截图由最终实机复验确认。当前未运行全量 Windows 门禁或 Chromium，不得标记通过。
+
+### D5c1 · 维护者重新设计授权后的布局验收变更
+
+旧固定宽度及 Studio 纵向全局轨道验收被替换为：顶部横向工作空间切换、可调整左右面板宽度、画布占据剩余空间、折叠后准确扩展、缩放位于视图栏、真实工程入口及安全说明。保留既有工程数据、Tag、草稿、权限、运行时及图元业务回归，不因视觉变化放宽安全断言。待最终实机验证。
+
+### D5c1 · 操作工作区与精密画布候选验证
+
+新增定位旋转图元及最大倍率限制单测；真实浏览器验证选择手柄适应与放大后的 CSS 像素尺寸、主选图元定位、实际缩放显示及画布 V/H 工具模式切换。运行和发布工作区改为顶部导航与独立画面/诊断面板，继续执行原 SSE、断连恢复、只读预览与权限检查。未执行的实机验证不得记为通过。
+
+共享视区数学候选 Blob `2f387e1bc7e50b26b83c9cc7a5c58c75d79e1d11` 在协作容器中重建并核对 Git Blob 哈希一致，Node.js 22.16.0 TypeScript strip-types 独立测试 10/10 通过（含边界、旋转定位、四角度与两视区手柄数学）；非仓库 Vitest、非双框架构建。新增真实浏览器分隔条方向键及宽度恢复断言；完整 pnpm/Vite+ 工程与真实浏览器尚未运行。
+
+### D5c1 · React Tag 表单 JSX 格式化阻塞 E-120
+
+维护者在 HEAD `eadc44fdc8b76e41fe16e37068dc9fcb4679c65b` 实测 `vp check --fix` 因 TagManager.tsx 条件表达式缺少闭合花括号中止。最小修复将第 297 行 `)` 改为 `)}`；原始局部 TSX 片段经 TypeScript 5.8.3 解析 5 条错误，修正后 0 条，未运行完整文件、仓库格式化、类型检查及 Chromium。保留原业务和安全断言；PR #192 继续 Draft，完整验收待复验。
+
+### D5c1 · 浏览器脚本 Lint 警告 E-121
+
+维护者报告 E-120 修复后 `vp check --fix` 格式化完成，292 个受检文件零错误、3 条警告。候选修复仅修改 `scripts/test-studio-browser.mjs` 中未使用参数、百分比后缀判断、原生 setter 调用，沿用 E-070 的 `Reflect.set` 方案。实际修改后的局部函数独立 JavaScript 模拟通过，未执行完整 Vite+ 与 Chromium，PR #192 保持 Draft。
+
+### D5c1 · Pixso 参考视觉调整
+
+维护者已提供上一候选的 Windows 格式、Lint、前端类型和文档检查通过日志；本次新候选改为共享真实工作台目录、搜索、SVG 缩略图、工程卡片网格与 Studio 工具图标，并新增工作台搜索、空态、恢复和实际 SVG 图片加载断言。此前的检查不能证明新提交通过。当前协作环境实测 GitHub 域名无法解析，未能拉取完整工作树；未执行新候选的 Vite+、完整 ready、Chromium 或截图审阅，仍需 Windows 统一验收。
+
+### D5c1 · 工程工作台与总览候选验证范围
+
+在 GitHub HEAD `96dafd4b6463d286569748ad1b4f5557c18656aa` 核对了新增工程、真实草稿接口、双端图元库及静态总览。新增两个浏览器辅助函数经 V8 语法解析通过；完整 3026 行浏览器脚本主体在仅移除静态 import、替换 import.meta.url 后也经 V8 语法解析通过，未执行脚本。新测试候选覆盖空白工程 Schema、指标卡质量占位、真实浏览器新建/添加图元/保存/重新打开；尚未执行这些仓库测试。当前环境实际尝试 GitHub Git 拉取因域名解析失败；完整 pnpm/Vite+、双端 Chromium 及截图未验证。维护者无需进行分批验收，最终按统一质量门禁执行。
+
+### D5c1 · V7 明暗双主题
+
+维护者提供 Windows vp check（448 格式文件、293 受检文件零警告错误）、typecheck:web 和 docs:check（94 份）通过日志，未给本地 SHA，不绑定为本轮新提交通过。真实截图显示紫色按钮正文对比度不足；源码确认 TDesign anti 前景被映射为深色正文。候选恢复 V7 科技蓝、独立实色按钮白字及状态按钮色，新增深色语义覆盖、双端主题切换、偏好持久化、原版透明标识及中性弱按钮。
+
+本轮实测：品牌包 mark-primary.svg 的 Git Blob 为 3d55e6c9e9f7ac5f54804b33585a5e860fee470d，mark-dark.svg 为 4938c0a49a0d9b26100035fc13d386be6ace52d7，远程双端文件均逐一匹配。37 个深色覆盖变量均有基础定义，Runtime/Studio 使用的 adui 变量均已定义。按 WCAG 相对亮度计算，浅色/深色正文对比度分别为 12.14/12.91，主按钮均为 5.13，选中项为 5.80/5.61，三种状态文本均不低于 4.84。浏览器脚本主体经 V8 语法解析，未执行脚本。新增双框架 × 双分辨率 × 双主题 × 四工作区共 32 场景和刷新恢复断言，仍需 Windows 实际执行。
+
+### D5c1 · 图标、深色提示与适应画板
+
+本轮根据真实截图修改现有 PR #192。源码确认 Catalog 固定版本为 tdesign-icons-react 0.6.11、tdesign-icons-vue-next 0.4.11；官方图标仓库存在所选 SVG 名称，固定版本包的 TypeScript 导出仍需本机类型检查确认。双端应用首页无手写 SVG 图标，Studio 保留实际工业 SVG。适应画板共享边距改为 8 CSS px，并新增共享视区单测和真实 DOM 图标、限制轴间距及提示栏对比度断言。当前环境 npm 域名解析失败，未执行 Vite+、Vitest 或 Chromium；最终 Windows 验收待执行。
+
+### D5c1 · 工作区底部网格连续性
+
+维护者截图澄清：问题为网格没有覆盖工具带周围，而非画板尺寸。已提交双端工具带网格、共享相位计算及原 48px 适应边距恢复。新增核心相位断言及 DOM 覆盖范围、缩放对齐、显隐同步断言，保留原不遮挡、画板尺寸及编辑交互验证。未实际执行 Windows Vitest、Vite+、Chromium 或截图检查，不能认定实机通过。
+
+### D5c1 · 工作区视觉连续性
+
+维护者截图指出底部双渲染层与左上标题区域视觉割裂。本轮删除独立工具带、双端 CSS 补画逻辑及仅供其使用的 Core 相位函数，改为单一 SVG 网格和浮动工具栏。新增实际 DOM 边界、唯一网格、标题基线、默认画板无遮挡及缩放/网格开关断言；保留既有工程尺寸及图元、面板交互检查。远程提交已写入原 PR #192；完整 Vite+、真实浏览器与截图尚未执行，不能以源码核对替代。
+
+### D5c1 · 图标文案对齐与主题开关
+
+维护者截图显示工具按钮内图标、文案未垂直居中，并要求主题使用 Switch。已核对 Catalog 固定版本 React/Vue Next Switch 的 value、label、change 及根元素源码，候选统一内容层和开关受控状态，浏览器断言改为 aria-checked、实际 checked class、刷新恢复，并检查导航和底部按钮图标/文案与按钮中线误差不超过 1 CSS px。完整类型检查、Vite+ 与真实 Chromium 尚未执行。
+
+### D5c1 · TDesign 官网式主题过渡
+
+已查阅 Tencent/tdesign 的 packages/site-components/src/components/td-theme-tabs/index.ts 与 style.less：官网使用双图标、滑动选中块及 document.startViewTransition，不另加圆形扩散。本候选保留真实 TDesign Switch 并共享原生过渡与减少动效降级路径。补充源码断言及浏览器双图标、真实开关状态、过渡完成后的主题和刷新检查；实际浏览器、类型及格式检查待执行。
+
+### D5c1 · 官网斜切主题动画与深色画板
+
+维护者上传暗色画板仍白色截图及官网主题录屏。附件在当前环境仅为一帧 PNG，无法逐帧复验；进一步查阅官网 td-theme-tabs 及 animation.less，确认真实动效为 8 度斜切遮罩、1 秒双向扫屏，并非默认交叉淡入淡出。已提交共享 CSS，新增 studio-dark 预览及双端主题传递，替换旧白色画板断言，补充内嵌 SVG 背景、金属设备、指标卡、数据质量及原运行渲染兼容性测试。尚未执行 Vite+、Vitest、Chromium 或实际录屏对比。
+
+### D5c1 · 图层搜索清空入口
+
+维护者标出独立清除搜索按钮。核对现有双端 Input 及固定版本官方清空实现后，改用 clearable，删除独立按钮及未使用 CloseIcon，定位按钮独占一行；补充双端源码契约断言。尚未执行 Vite+、类型检查或真实浏览器清空回归。
+
+### D5c1 · 工程重命名与视图按钮
+
+新增工程可选名称、撤销重做、JSON/快照摘要和草稿目录展示，保留无名称文档的原结构及工程身份。补充 Core 名称校验、编辑历史、快照摘要及真实浏览器重命名保存重开、按钮等高断言。源码已提交候选，未执行完整 Vite+、Vitest、Chromium，待实机复验。旧版严格 Schema 读取器不接受新增字段，命名文档须与本次更新的 Core/服务端配套使用。
+
+### D5c1 · 双端图标统一
+
+基于两套固定版本官方图标源码核对通用图标名称。替换字符式缩放、展开、拖拽与微调，视图设置及定位采用 TDesign 图标；三个工业设备图标采用共享本地矢量资源。浏览器候选继续验证底部六项操作的实际图标、图标与文字对齐、共享工业资源尺寸、视图按钮等高及可访问名称，并补充微调与拖拽图标断言。完整 Vite+、类型检查、真实 Chromium 与视觉验收尚未执行。
+
+### D5c1 · 顶部菜单裁剪回归
+
+维护者报告顶部五个菜单点击无效果。源码确认工具栏使用 overflow-x:auto 与 overflow-y:hidden，而五个 Popup 挂载在其内部；改为 flex-wrap:wrap 与 overflow:visible。浏览器候选增加五个弹层实际命中检查，避免仅以 getClientRects 判定可见；保留原业务回归和外部关闭断言。工程管理自身授权拒绝时继续清空授权缓存和 CAS，仅保留已清空的目录组件以展示错误。完整 Windows Vite+ 与真实双端浏览器仍待验证。
+
+### D5c1 · 双框架 Router 候选
+
+已核对 React Router 7.18.5 / Vue Router 4.6.5 固定版本官方包 peer 声明。候选新增四个真实工作区路由、工程 ID 路径、本地工程解析、路由离开与刷新保护及共享路由单测，浏览器断言同步检查实际 Hash 地址、取消离开、前进后退和刷新草稿。当前 npm 无法连接且缺少 pnpm 12.18.0，锁文件未生成，冻结安装、Vite+、类型检查、构建、真实 Chromium 与 Tauri 均待验收。禁止把候选源码提交描述为已通过。
+
+### D5c1 · 单层浮层视觉回归
+
+维护者截图显示 Popup 内重复背景、圆角、描边和阴影，导入 JSON 还存在额外带边框包裹层。候选移除重复外观，文件五项改为统一文本按钮，复杂面板使用轻量分隔线。已核对两套固定版本官方 Button 的 theme / variant / size 与 Popup 的 content 容器；保留真实文件选择、禁用及危险确认。浏览器新增计算样式断言（透明内容、无内边框、无内阴影、等高文本按钮），原五项实际命中与关闭断言保留。完整 Vite+、类型和真实 Chromium 尚未执行。
+
+### D5c1 · 首轮集中验收与 E-123 / E-124 修复
+
+维护者在 Windows HEAD `6c756a48cd0a268e545f3282438e8f0cc5cfba12` 完成 pnpm 12.18.0 安装、冻结安装、两份浏览器脚本语法及 13 清单 / 54 Catalog 检查。本地 pnpm-lock.yaml 有修改、尚未同步到远端。完整 ready 因旧 Studio CSS 路径 ENOENT 中止；UI 浏览器通过 React 1440×900 浅色工作台，随后运行监控导航对比度不足而中止。候选修复共享样式检查、统一选中色并增加计算样式诊断，保持 4.5:1 门槛。完整配置、Vite+、类型、构建及真实浏览器复验待执行，不继承先前 HEAD 的验证结果。
+
+### D5c1 · E-125 文件菜单尺寸复验候选
+
+维护者在 Windows HEAD `3729db9a4966bfc07216a5d2f3ed65516b85fe84` 普通 Studio 四视口均为 77/78（308/312），唯一失败为文件草稿五项文本菜单联合断言。已核对官方 Button 类名，候选将共享菜单样式集中为 28px 边框盒等高、左对齐且无尺寸过渡，Upload 触发容器满宽；新增分项计算样式诊断，保留单层浮层与五项按钮及原功能断言。真实浏览器待复验，不将源码检查作为通过证据。
+
+### D5c1 · E-125 对齐计算值误判修正
+
+维护者在 Windows HEAD `66ed77bf29063b4364560546f9ea36d3a1db78dd` 验证 Vite+ 456/298 零警告错误、文档 95 份通过，普通 Studio 四视口仍为 308/312。逐项诊断确认全部 20 个按钮的单层、数量、文本变体和 28px 尺寸均符合预期，唯一失败属性为计算值 flow-start，而原断言仅允许 flex-start。候选只修改测试：兼容起始对齐的计算值并使用 DOM Range 测量真实文本左侧位置，保留精确 28px、按钮数及单层断言。待最新 HEAD 的真实四视口复验；未修改正式 UI、依赖或锁文件。
+
+### D5c1 · E-125 关闭与 E-126 Tag 弹窗候选
+
+维护者 Windows HEAD `c31c86ef1bf25e51987251fe277bade1de38c027`：脚本语法、Vite+ 456/298 零警告错误、95 Markdown、普通 Studio 四视口 312/312 均通过，E-125 关闭。随后 React Tag 专项弹窗宽度不足而中止。核对固定版本官方 Dialog 宽度转换和缩放入场动画后，候选仅修改测量时机，等待实际稳定边界并保留 600px、双列、五字段及全部业务门槛，失败输出计算尺寸及动画诊断。真实 Tag React/Vue 复验尚未执行，不能宣布 E-126 关闭。
+
+### D5c1 · E-126 React 通过与 E-127 Vue Tag 初始挂载候选
+
+维护者 Windows HEAD `bd9e699d95890a5a06ec0d10d4ccc5e09e476ab6`：脚本语法、Vite+ 456/298 零警告错误、95 Markdown、React Tag 专项通过；Vue 首次紧凑目录断言仅 noSidebarForm 失败，后续八项未运行。候选依据固定版 TDesign Vue Next 1.20.11 Dialog 源码显式指定 attach=body、lazy，保留 destroyOnClose；测试仍要求无侧栏表单，成功保存后等表单实际销毁，再次编辑时复核独立弹窗与稳定宽度。最新候选尚未实测，不改变 Tag 数据、依赖或安全门槛。普通 Studio 312/312 是此前 HEAD 的已完成验收证据，不重复运行未受影响的普通场景。
+
+### D5c1 · 七项功能回归通过与 E-128 SSE 协议阻塞
+
+维护者在 Windows HEAD `a5ff6a855e79d8b6d8a4306545c138ec752f96b8` 实测脚本语法、Vite+ 456/298 零警告错误、95 份 Markdown、双端 Tag 全流程、双框架 JSON 互通、历史版本及安全、多标签页各四阶段、历史迁移各三路径、发布预检双端全部通过。E-126/E-127 原验收阻塞已解除。 普通 SSE 首页预检仍使用 HTTP，但实际 Vite+ 为 HTTPS；候选复用已有安全回环地址解析、严格 TLS 预检、真实 Hash 路由检查，并补充本机双段 TLS SSE 故障代理，明文 Docker 路径不变。原下行阻断、Tag 过期、重连及资源回收门槛不变；HTTPS 代理仅用于隔离浏览器模拟验收，不作 OIDC 或工业生产测试。最新代理单测、Vite+、文档及两项 SSE 浏览器尚未实测。
+
+### D5c1 · 最终分层验收完成（PR #192）
+
+维护者 Windows 最终日志：两份 SSE 脚本语法检查、Vite+（456 格式文件、298 受检零警告错误）、95 Markdown、协议配置 6/6、代理单测 5/5 均通过；React/Vue HTTPS 15173/15174 的普通 SSE 心跳、Tag 过期、静默重连、资源清理及真实下行阻断、STALE、主动重连、连接回收均通过，九项功能专项累计完成。最终日志未单独打印本地 SHA；GitHub 核对候选 HEAD ae249f55d372fc3babb2aec8011fdca45c62f99e 相对 85f30ff7 仅有条件语句格式化，无语义改动。维护者明确同意合并。 此前分层日志已记录 900/900 单测、63/63 HTTP E2E、32/32 UI 场景及 312/312 Studio 断言；七项专项在 a5ff6a85 完成。以上为多次提交的累计验收，不宣称最终 HEAD 单次完整 ready 已重新执行。E-123 至 E-128 的对应回归阻塞已解除。此记录仅补充文档，不改源码；不代表生产安全认证、真实设备协议或生产发布验收。

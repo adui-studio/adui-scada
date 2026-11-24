@@ -1,18 +1,17 @@
 # ADui SCADA
 
-ADui Studio 维护的工业 SCADA / HMI 开源项目。**当前 V0.1 是模拟数据与只读监控原型，不是可用于生产的 SCADA 系统。**
+ADui Studio 维护的开源工业 SCADA / HMI 研发项目。**当前提供模拟运行、受控的发布快照只读预览与双框架组态编辑子集，不是可用于现场生产控制的 SCADA 系统。**
 
-## 已实现（V0.1 开发分支）
+## 已实现的主要研发子集
 
-- **apps/web-react**：React 19 Web 应用，当前仅提供 Runtime 监控页面。
-- **apps/web-vue**：Vue 3 Web 应用，当前仅提供 Runtime 监控页面。
-- **packages/core**：框架无关的工程 Schema、TagStore、质量状态、SVG 序列化和水处理模拟器。
-- **packages/runtime**：浏览器 SSE 诊断客户端，带断线质量标记及自动重连。
-- **examples/water-treatment**：本机模拟数据服务器；不连接 PLC/DCS。
-- **apps/server**：NestJS 12 ESM 服务，正式默认仅提供 `GET /health` 与 `GET /health/ready`；本机开发可显式开启只读模拟 Tag/SSE 接口，生产不注册该路由。
-- **apps/desktop**：Tauri 2 Windows 优先桌面壳，默认 React，可切换 Vue。
+- **apps/web-react / apps/web-vue**：React 19、Vue 3 两个正式 Web 版本，包含运行监控、已发布只读预览和 SVG Studio；共享工程 Schema、编辑器契约、运行时规则、主题以及工业质量语义。
+- **Studio**：本地图元/图层编辑、Tag 定义与绑定、页面、JSON 导入导出、IndexedDB 草稿、版本历史与双框架往返；涉及服务端工程和发布时继续使用原有受控读写及授权边界。
+- **packages/theme、packages/tailwind**：跨框架统一视觉 Token、TDesign 主题映射和 Studio 布局。D5c1 候选整体重设计使用浅色工作区、深色 SVG 画布与独立导航轨道。
+- **packages/core / packages/runtime**：框架无关工程模型、Tag 质量、模拟数据、只读 SSE 与只读发布快照渲染。
+- **apps/server**：NestJS 模块化服务；OIDC/BFF、工程与发布接口按现有配置和权限控制启用，不能等同于现场工业接入。
+- **examples/water-treatment / apps/desktop**：本机水处理模拟器与 Tauri Windows 桌面壳。
 
-Studio（组态编辑器）、真实工业网关、生产业务 API、数据库及 Three.js 尚未实现。NestJS 与 Tauri 目前仅完成最小工程。
+真实工业协议网关、生产级报警确认及历史归档等能力仍按需求与安全评审逐步开发；规划中模块不视为已交付。
 
 ## 模板与依赖
 
@@ -164,3 +163,11 @@ Vue/React 运行监控页面新增共享的**实时链路诊断**：连接状态
 Core 新增稳定 `tagId`、可变显示名称、数据类型、单位和描述的共享定义目录。TagStore 在显式注入目录时验证实时值类型，并保证整批失败不修改已有数据。水处理 Demo 的水位、泵运行和流量定义由 Web 在线 Runtime、Tauri 离线模拟和独立 SSE 服务共同使用；Studio Vue/React 的 Tag 绑定候选展示类型与单位。质量仍是每条实时 `TagValue` 的动态字段，不是静态定义。
 
 当前目录仅是代码内本机演示元数据，不改变 `ScadaDocument 0.2.0`，重命名不会自动持久化，也不含 OPC UA NodeId、Modbus 寄存器或 MQTT Topic。FR-004 仍为部分实现。见 [ADR-0061](docs/adr/0061-tag-definition-catalog.md)。本批 Windows 测试尚待维护者执行。
+
+## D5c1 · Figma UI3 / FUXA 参考下的完整工作区改版候选
+
+React/Vue 双框架正在统一重设计：浅色工作台首页、实际存在的模块入口、运行监控与只读发布页，以及专用 Studio 编辑工作区。Studio 学习 Figma 的任务布局：左侧页面/图层，中央中性灰工作区和**白色 1920×1080 逻辑画板**，底部真实图元工具岛，右侧互斥图元属性/Tag 目录与独立的 Tag 编辑窗口。并借鉴 FUXA 的工业工程配置分工。此处不复制第三方代码、商标、截图或专有资源。
+
+共享 `@adui/theme` 和 TDesign 官方 Light 变量负责视觉语义；共享 Core 新增 Studio 默认画板定义、适应视图留白及 Studio 专用浅色 SVG 预览。旧只读 Runtime 默认深色输出不变，项目 Schema、既有工程画布、Tag 质量与工业安全边界保持兼容。不虚构最近文件、设备连接或多人协作功能。
+
+完整设计参见 [UI/UX 设计系统](docs/UI_DESIGN_SYSTEM.md)。`pnpm run test:ui:browser` 规划覆盖 **React/Vue × 1440×900 / 1024×768 × 首页/监控/发布/Studio 共 16 场景**。新设计与浏览器验收仍是 PR #192 Draft 候选，尚未执行最新 Windows `ready` / Chromium / 截图审阅，不代表生产现场或完整用户体验已验收。

@@ -5,8 +5,21 @@ import {
   readLocalDraft,
   migrateScadaDocument,
   parseScadaDocument,
+  createBlankStudioDocument,
+  waterTreatmentStudioDocument,
+  waterTreatmentShowcaseDocument,
 } from "@adui/scada-core";
 import type { DraftRecord, DraftRepository, LocalDraft, LocalDraftStorage } from "@adui/scada-core";
+
+/** 工作台仅展示草稿摘要，不把完整工程作为列表状态。 */
+export interface WorkspaceDraftSummary {
+  readonly projectId: string;
+  readonly projectName: string;
+  readonly savedAt: string;
+  readonly revision: number;
+  readonly pageCount: number;
+  readonly tagCount: number;
+}
 
 interface MigrationMarker {
   projectId: string;
@@ -109,6 +122,22 @@ export class DexieDraftRepository implements DraftRepository {
     // 广播只通知其他数据库实例；当前页面由操作结果更新状态，
     // 避免自己的写入反过来触发“外部冲突”提示。
     this.channel?.postMessage({ projectId, revision });
+  }
+
+  /** 读取最多 50 个真实草稿，列表不触发迁移写入。 */
+  async listRecent(): Promise<readonly WorkspaceDraftSummary[]> {
+    const rows = await this.drafts.orderBy("savedAt").reverse().limit(50).toArray();
+    return rows.map((row) => {
+      const { record } = this.validate(row, row.projectId);
+      return {
+        projectId: record.projectId,
+        projectName: record.document.projectName ?? record.projectId,
+        savedAt: record.savedAt,
+        revision: record.revision,
+        pageCount: record.document.pages.length,
+        tagCount: record.document.tags.length,
+      };
+    });
   }
 
   async get(projectId: string): Promise<DraftRecord | null> {
@@ -269,3 +298,69 @@ export {
   DexieProjectVersionRepository,
   ProjectVersionConflictError,
 } from "./version-repository.ts";
+
+/** 工作台读操作使用短生命周期连接，不保留广播通道。 */
+export async function listWorkspaceDrafts(): Promise<readonly WorkspaceDraftSummary[]> {
+  const repository = new DexieDraftRepository({ broadcast: false });
+  try {
+    return await repository.listRecent();
+  } finally {
+    repository.close();
+  }
+}
+
+/** 打开时重新读取最新草稿，不能用过期的目录摘要替代工程。 */
+export async function readWorkspaceDraft(projectId: string): Promise<DraftRecord> {
+  const repository = new DexieDraftRepository();
+  try {
+    const record = await repository.get(projectId);
+    if (!record) throw new Error("该草稿已不存在，请刷新工作台");
+    return record;
+  } finally {
+    repository.close();
+  }
+}
+
+/** 显式创建时以空修订号 CAS 写入，随机 ID 冲突也不得覆盖旧草稿。 */
+export async function createWorkspaceDraft(): Promise<DraftRecord> {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const id = "project-" + Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const repository = new DexieDraftRepository();
+  try {
+    return await repository.save(createBlankStudioDocument(id), null);
+  } finally {
+    repository.close();
+  }
+}
+
+/** 工作台导入只返回已校验的文档，不覆盖 IndexedDB 或正式发布工程。 */
+export async function readWorkspaceJson(file: File) {
+  if (file.size > 2 * 1024 * 1024) throw new RangeError("JSON 文件不能超过 2 MiB");
+  return migrateScadaDocument(JSON.parse(await file.text()) as unknown);
+}
+
+/** 按稳定 ID 打开本地草稿或内置示例；缺失工程不能冒充默认示例。 */
+export async function readWorkspaceStudioRoute(projectId: string | undefined) {
+  if (projectId === undefined) {
+    return { document: waterTreatmentStudioDocument, notice: "", clean: true };
+  }
+  localDraftKey(projectId);
+  const repository = new DexieDraftRepository({ broadcast: false });
+  try {
+    const saved = await repository.get(projectId);
+    if (saved) return { document: saved.document, notice: "已打开最新本地草稿", clean: true };
+    if (projectId === waterTreatmentStudioDocument.projectId) {
+      return { document: waterTreatmentStudioDocument, notice: "已打开内置模拟工程", clean: true };
+    }
+    if (projectId === waterTreatmentShowcaseDocument.projectId) {
+      return {
+        document: waterTreatmentShowcaseDocument,
+        notice: "已打开水处理总览示例",
+        clean: true,
+      };
+    }
+    throw new Error("当前浏览器没有该工程的草稿，请返回工作台选择工程或重新导入");
+  } finally {
+    repository.close();
+  }
+}

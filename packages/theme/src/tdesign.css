@@ -1,5 +1,6 @@
-/* TDesign 官方 Web CSS Variables 主题映射；两端通过 html theme-mode=dark 共用。 */
+/* TDesign 官方 Web CSS Variables：React/Vue 共用明暗操作面板。 */
 /* html:root 比 TDesign 默认 :root 具有更高优先级，避免懒加载组件样式覆盖主题。 */
+html:root[theme-mode="light"],
 html:root[theme-mode="dark"] {
   --td-brand-color: var(--adui-color-brand);
   --td-brand-color-hover: var(--adui-color-brand-hover);
@@ -12,8 +13,8 @@ html:root[theme-mode="dark"] {
   --td-text-color-secondary: var(--adui-color-text-secondary);
   --td-text-color-placeholder: var(--adui-color-text-muted);
   --td-text-color-disabled: var(--adui-color-text-disabled);
-  --td-text-color-anti: var(--adui-color-text-strong);
-  --td-text-color-brand: var(--adui-color-brand-hover);
+  --td-text-color-anti: var(--adui-color-brand-on);
+  --td-text-color-brand: var(--adui-color-brand-text);
   --td-bg-color-page: var(--adui-color-bg);
   --td-bg-color-container: var(--adui-color-surface);
   --td-bg-color-container-hover: var(--adui-color-action-hover);
@@ -26,9 +27,9 @@ html:root[theme-mode="dark"] {
   --td-component-stroke: var(--adui-color-border);
   --td-border-level-1-color: var(--adui-color-border-subtle);
   --td-border-level-2-color: var(--adui-color-border);
-  --td-success-color: var(--adui-color-success);
-  --td-warning-color: var(--adui-color-warning);
-  --td-error-color: var(--adui-color-danger);
+  --td-success-color: var(--adui-color-success-solid);
+  --td-warning-color: var(--adui-color-warning-solid);
+  --td-error-color: var(--adui-color-danger-solid);
 
   /* 字体和组件尺寸使用官方 Token，不复写 TDesign Button/Input 样式。 */
   --td-font-family: var(--adui-font-family);
@@ -53,4 +54,23 @@ html:root[theme-mode="dark"] {
   --td-radius-medium: var(--adui-radius-md);
   --td-radius-large: var(--adui-radius-lg);
   --td-radius-extraLarge: var(--adui-radius-panel);
+}
+
+/* 图标与文案在同一内容层居中，不依赖组件插槽的行内基线。 */
+.scada-button-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--adui-space-2);
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.scada-button-content > .t-icon {
+  display: block;
+  flex: none;
+  margin: 0;
+}
+.scada-button-content > .scada-button-label {
+  display: block;
+  line-height: inherit;
 }

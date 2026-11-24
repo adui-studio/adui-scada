@@ -51,10 +51,20 @@ async function waitUntil(condition, message, timeoutMs = 3000) {
   throw new Error(message);
 }
 
-await test("故障代理只允许回环 HTTP 地址，不接受外部目标", async () => {
+await test("故障代理拒绝外部目标及没有显式证书的 HTTPS 地址", async () => {
   await assert.rejects(startSseFaultProxy("http://example.com:8080/"), /只允许转发/);
   await assert.rejects(startSseFaultProxy("https://127.0.0.1:8080/"), /只允许转发/);
   await assert.rejects(startSseFaultProxy("http://127.0.0.1:8080/abc"), /只允许转发/);
+});
+
+await test("故障代理拒绝不匹配的协议配置及无效 TLS 证书", async () => {
+  const invalid = { cert: Buffer.from("无效证书"), key: Buffer.from("无效私钥") };
+  await assert.rejects(startSseFaultProxy("http://127.0.0.1:8080/", invalid), /只允许转发/);
+  await assert.rejects(startSseFaultProxy("https://example.com:8080/", invalid), /只允许转发/);
+  await assert.rejects(
+    startSseFaultProxy("https://127.0.0.1:8080/", invalid),
+    /本机 TLS 证书或私钥无法校验/,
+  );
 });
 
 await test("故障代理透传普通 HTTP 页面，不干扰非 SSE 请求", async () => {

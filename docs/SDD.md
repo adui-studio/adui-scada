@@ -1447,3 +1447,42 @@ D5b9 至 D5c0d 的共享 Core 候选筛选已经具备 GOOD/有限数值、明�
 4. 最后执行 React/Vue 工程一致性、真实 OIDC 角色、隔离 PostgreSQL 事件事务、网关断流、反向代理和 Windows/Docker 集成专项；未实际运行的测试不得记录为通过。
 
 本节是**非规范性设计待决清单**，不改变任何现有 `TagStore`、Core、SSE、NestJS、Prisma 或 Vue/React API；尤其**不改变**当前严格递增但未要求连续的序列行为。FR-011 状态保持规划中。
+
+## 2026-11-24 · D5c1 默认 Studio 画板 1920×1080 的共享数据与兼容策略
+
+- `packages/core/src/demo-document.ts` 保留 `waterTreatmentDemoDocument` 的原有 880×460 只读演示工程，新增 `STUDIO_DEFAULT_PAGE_SIZE = { width: 1920, height: 1080 }` 和 `waterTreatmentStudioDocument`。后者用 `parseScadaDocument` 生成符合当前 Schema 的新工程，基于原演示页面和图元以统一缩放系数居中（预留左右上下各至少 80 逻辑像素），仅用于新进入 Studio 的默认内容。
+- React/Vue 两套 `StudioPage` 都直接从共享 Core 引入同一个 `waterTreatmentStudioDocument` 初始化 `DocumentEditor`，画板标签动态显示真实 `page.size` 和 `px`；没有框架各自的页面尺寸默认值。
+- `DocumentEditor.createPage` **不修改原有语义**：新建空白页继承当前页 `size`，复制保留源页 `size`；旧 880×460、任意合法用户自定义尺寸、已发布快照均不会被新默认值覆盖。视口由 `studioViewportRect` 依据实际 CSS 宽高等比适应，再通过 SVG `viewBox` 改变观察视区；逻辑画板 1920×1080 不代表创建 DOM 1920×1080 的溢出元素。
+- 增加 `packages/core/test/studio-default-document.test.ts` 对新默认、图元统一缩放/绑定、页面继承/复制/撤销、旧尺寸原样保留进行断言；`scripts/test-studio-browser.mjs --ui` 在 React/Vue × 两种桌面视口时直接读取 `.studio-page-boundary` 的 width/height 断言 1920×1080。
+- Figma 公开 Frame/Zoom 文档仅作交互理念参照：https://help.figma.com/hc/en-us/articles/360041539473-Frames-in-Figma-Design 、https://help.figma.com/hc/en-us/articles/360041065034-Adjust-your-zoom-and-view-options 。无新依赖、无产品素材复制、无工业设备写入。
+
+本条仅是 D5c1 草案与代码契约，尚未在维护者 Windows 完整 `ready` / Chromium / 生产部署验证；必须在 PR #192 最终统一验收中确认。
+
+## 2026-11-24 · D5c1 工程画板渲染外观与 UI3 观察视区
+
+- `studioViewportRect(page,viewport,zoom,pan,fitMargin=0)` 新增最后一位可选、有限非负 `fitMargin`（CSS 像素）。默认 0 保证旧调用一致。新 Studio 调用共享 `STUDIO_CANVAS_FIT_MARGIN=48`，基于扣除两侧留白的可用范围计算 fitScale，但输出完整 SVG 视区宽高比例仍等于真实 viewport；不改变 `page.size`、图元位置或工程 JSON。
+- `renderSvgPage(document,pageId,values,appearance="dark")` 和 `svgDataUrl(document,values,pageId?,appearance="dark")` 只新增可选浅色渲染样式。默认值与原默认深色渲染逐字兼容；选择 light 时只改变背景、标签与图元填充对比度，不改变 Tag 质量、绑定、禁用规则或设备数据。
+- React/Vue Studio 仅向新本地编辑预览传 `light`，保留原只读模拟 Runtime、已发布快照渲染、外部工程页面以及跨框架 Schema 的兼容性。
+- Figma 首页与编辑器结构只影响 UI 展现，新增工作台视图与三个实际模块切换不新增持久化状态或服务端权限。UI16场景与现有 Studio/SSE 浏览器安全门禁需在最终统一验收时运行。
+
+## 2026-11-24 · D5c1 本地工程工作台及浅色图元
+
+`createBlankStudioDocument(projectId)` 通过原工程 Schema 解析产生单页空白 1920×1080 工程。Dexie 草稿仓储 `listRecent()` 只读 savedAt 索引、限制 50 项并验证记录，返回摘要而非工程内容。工作台新建以随机稳定 ID 调用原 `save(document, null)`，打开通过 `get` 重新校验，导入文件上限 2 MiB 并调用原显式迁移，导入不触发自动保存。操作连接短生命周期，离开工作台不消费迟到的异步视图结果。
+
+浅色 SVG 增加固定内置渐变设备造型和 `label.props.presentation === "metric"` 白名单外观，仍以安全转义输出原 Tag 值/质量；无有效读数显示占位，不执行任意 SVG 或 JavaScript。原默认深色渲染路径及工程 Schema 不修改。新增独立示例 `water-showcase`，只使用已存在的三个模拟 Tag 以及原四种基础图元类型；图层、选择、几何、撤销及持久化继续走原 Editor。实际 Windows 验收待执行。
+
+## 2026-11-24 · D5c1 最大化画板适应与 UI 图标
+
+共享 `STUDIO_CANVAS_FIT_MARGIN` 从 48 调整为 8 CSS px，仍通过既有 `studioViewportRect` 的最小轴等比缩放计算，默认 1920×1080 在限制轴保留合计 16px，不引入裁切或非等比拉伸。定位、平移及 SVG 世界坐标计算仍复用原函数。既有工程文件、历史草稿、运行时文档、权限和 Tag 不变。UI 图标仅复用已安装的 TDesign 图标依赖。
+
+## 2026-11-24 · 底部工具带网格连续性
+
+工具带布局独立于 SVG 交互视区。共享 `studioGridContinuation` 使用世界坐标原点、视区底部、worldPerPixel 和网格步长计算像素周期及相位，CSS 仅绘制工具带的视觉延伸，不建立独立固定坐标网格。默认适应边距恢复 48px；页面大小、命中与导出不变。工具带网格随 SVG 网格显隐及视图变化同步。
+
+## 2026-11-24 · 单一 SVG 工作区
+
+前一轮独立工具带网格方案撤回。Studio SVG 视口由原 ResizeObserver 测量，布局使其覆盖标题栏下沿至工作区底部，原世界坐标网格矩形负责全部网格显示；浮动工具栏只拦截自身区域的指针事件，不引入第二层网格、工程节点或持久化属性。删除仅用于补画工具带的相位函数，保持视区和工程数据算法不变。默认适应边距仍为 48 CSS px。
+
+### D5c1 · 工程显示名称
+
+当前工程 Schema 0.3.0 增加可选字符串 `projectName`，长度 1–128，不允许首尾空白或 C0/DEL 控制字符；编辑命令先去除首尾空白。无字段的旧文档不自动补字段，保持旧快照摘要。新增字段属于版本内容并参与快照摘要，两个框架共享同一解析器；旧版严格读取器不接受该新增字段，部署须同步更新 Core 和服务端，不宣称向前兼容。名称不修改 `projectId`、服务端工程目录元数据、授权或发布状态；仍由原保存流程生成修订，重命名支持撤销及重做。

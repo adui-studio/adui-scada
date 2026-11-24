@@ -1,4 +1,4 @@
-/* ADui SCADA V7 工业深色主题的唯一业务 Token 来源。 */
+/* ADui SCADA V7：默认浅色语义与两种主题共享的尺寸、品牌及画板契约。 */
 :root {
   /* V7 品牌颜色：不改写原有 SVG Logo 的颜色与几何。 */
   --adui-scada-blue: #0d63f3;
@@ -9,32 +9,81 @@
   --adui-scada-app-bg: #061e4e;
   --adui-scada-brand-text: #111b32;
 
+  /* V7 品牌资产不修改；工业状态颜色对浅色面板独立适配。 */
+  --adui-color-stage: #101a29;
+  --adui-color-editor-workspace: #e8ebf0;
+  --adui-color-editor-artboard: #ffffff;
+  --adui-color-editor-grid: #c4cbd4;
+  --adui-color-stage-elevated: #182538;
+  --adui-color-stage-grid: #304158;
+  --adui-color-nav-text: #c1d0e1;
+  --adui-color-nav-on: #f6f9ff;
+  --adui-color-brand-on: #ffffff;
+  --adui-color-brand-text: #0a54c9;
+  --adui-color-nav-muted: #9cb2ca;
+  --adui-color-nav-kicker: #93a6bd;
+  --adui-color-nav-success: #b6e8d4;
+  --adui-color-nav-border: rgb(255 255 255 / 10%);
+  --adui-color-nav-hover-border: rgb(180 209 245 / 14%);
+  --adui-color-nav-hover-bg: rgb(255 255 255 / 7%);
+  --adui-color-nav-active-border: rgb(110 175 255 / 30%);
+  --adui-color-warning-border: #f1d7a7;
+  --adui-color-warning-bg: #fff8eb;
+  --adui-color-success-border: #b8e5d6;
+  --adui-color-success-bg: #effaf5;
+  --adui-color-danger-border: #f5c8d0;
+  --adui-color-danger-bg: #fff2f4;
+  --adui-color-stage-border: #304158;
+  --adui-color-stage-label: #dce8f7;
+  --adui-color-stage-on-button: #eaf2fc;
+  --adui-color-stage-button: #293b52;
+  --adui-color-stage-button-hover: #314761;
+  --adui-color-stage-button-border: #41536a;
+  --adui-color-stage-zoom: #26384c;
+  --adui-color-stage-zoom-border: #40536c;
+  --adui-color-stage-button-hover-border: #7c9cc6;
+  --adui-color-stage-boundary: #77b3ff;
+  --adui-color-stage-separator: #344258;
+  --adui-color-layer-active-border: #c8d9f4;
+  --adui-color-nav-active: #263a59;
+  --adui-color-surface-muted: #f5f7fa;
+  --adui-color-surface-raised: #ffffff;
+  --adui-color-focus-ring: #0d63f3;
+  --adui-shadow-panel: 0 1px 3px rgb(26 51 81 / 5%);
+  --adui-shadow-floating: 0 20px 58px rgb(19 34 54 / 16%);
+  --adui-motion-fast: 120ms;
+  --adui-motion-normal: 180ms;
+
   /* 品牌、工业质量和警告使用独立语义，不能仅凭颜色判断设备状态。 */
   --adui-color-brand: var(--adui-scada-blue);
-  --adui-color-brand-hover: #2c7cfb;
-  --adui-color-brand-active: #084dbb;
-  --adui-color-brand-focus: #0c2e62;
-  --adui-color-brand-disabled: #29476c;
-  --adui-color-accent: var(--adui-scada-cyan);
-  --adui-color-success: var(--adui-scada-teal);
-  --adui-color-warning: #f0ae4d;
-  --adui-color-danger: #f16c75;
-  --adui-color-bg: #0b1320;
-  --adui-color-nav: #101f30;
-  --adui-color-surface: #132236;
-  --adui-color-canvas: #0c1728;
-  --adui-color-selected: #0c2e62;
-  --adui-color-action: #1e3448;
-  --adui-color-action-hover: #2e475c;
-  --adui-color-border-subtle: #293a4d;
-  --adui-color-border: #294057;
-  --adui-color-border-strong: #46667d;
-  --adui-color-text: #e8f1ff;
-  --adui-color-text-strong: #ecf6ff;
-  --adui-color-text-secondary: #adc2d4;
-  --adui-color-text-muted: #91a8bd;
-  --adui-color-text-dim: #66869d;
-  --adui-color-text-disabled: #8fa4b9;
+  --adui-color-brand-hover: #0954cf;
+  --adui-color-brand-active: #0845ad;
+  --adui-color-brand-focus: #dceaff;
+  --adui-color-brand-disabled: #b6cdf4;
+  --adui-color-accent: #007ea3;
+  --adui-color-success: #087c61;
+  --adui-color-warning: #996009;
+  --adui-color-danger: #bd3043;
+  /* 实色状态按钮保持白字对比度，状态文字可以随主题提亮。 */
+  --adui-color-success-solid: #087c61;
+  --adui-color-warning-solid: #996009;
+  --adui-color-danger-solid: #bd3043;
+  --adui-color-bg: #edf1f5;
+  --adui-color-nav: #151e2c;
+  --adui-color-surface: #ffffff;
+  --adui-color-canvas: #f5f7fa;
+  --adui-color-selected: #e5efff;
+  --adui-color-action: #ebf0f6;
+  --adui-color-action-hover: #dfe8f2;
+  --adui-color-border-subtle: #e5eaf1;
+  --adui-color-border: #d5dfe9;
+  --adui-color-border-strong: #a6b7ca;
+  --adui-color-text: #26374b;
+  --adui-color-text-strong: #142338;
+  --adui-color-text-secondary: #4d6176;
+  --adui-color-text-muted: #61758a;
+  --adui-color-text-dim: #718296;
+  --adui-color-text-disabled: #8998a7;
 
   /* 统一字号刻度：不通过修改字号改变报警/Tag 原始数值。 */
   --adui-font-family:
@@ -98,5 +147,5 @@
   --scada-text-dim: var(--adui-color-text-dim);
   --scada-warning: var(--adui-color-warning);
   --scada-danger: var(--adui-color-danger);
-  color-scheme: dark;
+  color-scheme: light;
 }

@@ -1,6 +1,9 @@
 import type { StudioPageSize, StudioPan } from "./studio-viewport.ts";
 
 /** 浏览器工作区的实际 CSS 像素大小，不属于组态工程 Schema。 */
+/** 只影响 Studio 的画板适应视图，不能写入工程 Schema。 */
+export const STUDIO_CANVAS_FIT_MARGIN = 48;
+
 export interface StudioViewportSize {
   width: number;
   height: number;
@@ -24,6 +27,7 @@ export function studioViewportRect(
   viewport: StudioViewportSize,
   zoom: number,
   pan: StudioPan,
+  fitMargin = 0,
 ): StudioViewportRect {
   if (
     !Number.isFinite(page.width) ||
@@ -48,7 +52,12 @@ export function studioViewportRect(
     throw new RangeError("视图平移坐标必须为有效的数字");
   }
 
-  const fitScale = Math.min(viewport.width / page.width, viewport.height / page.height);
+  if (!Number.isFinite(fitMargin) || fitMargin < 0) {
+    throw new RangeError("适应画布留白必须为非负有限数");
+  }
+  const availableWidth = Math.max(1, viewport.width - fitMargin * 2);
+  const availableHeight = Math.max(1, viewport.height - fitMargin * 2);
+  const fitScale = Math.min(availableWidth / page.width, availableHeight / page.height);
   const width = viewport.width / fitScale / zoom;
   const height = viewport.height / fitScale / zoom;
   const limitX = Math.max(0, (page.width - width) / 2);
@@ -67,4 +76,48 @@ export function studioViewportRect(
     height,
     pan: constrainedPan,
   };
+}
+
+/** 将当前图元（含旋转）作为视图焦点，不修改工程坐标。 */
+export function studioFocusTransform(
+  page: StudioPageSize,
+  viewport: StudioViewportSize,
+  transform: StudioPan & StudioPageSize & { rotation: number },
+  fitMargin = 0,
+): { zoom: number; pan: StudioPan } {
+  if (
+    !Number.isFinite(transform.x) ||
+    !Number.isFinite(transform.y) ||
+    !Number.isFinite(transform.width) ||
+    !Number.isFinite(transform.height) ||
+    !Number.isFinite(transform.rotation) ||
+    transform.width <= 0 ||
+    transform.height <= 0
+  ) {
+    throw new RangeError("定位图元的几何参数无效");
+  }
+  const fit = studioViewportRect(page, viewport, 1, { x: 0, y: 0 }, fitMargin);
+  const radians = (transform.rotation * Math.PI) / 180;
+  const width =
+    Math.abs(Math.cos(radians)) * transform.width + Math.abs(Math.sin(radians)) * transform.height;
+  const height =
+    Math.abs(Math.sin(radians)) * transform.width + Math.abs(Math.cos(radians)) * transform.height;
+  const availableWidth = Math.max(1, viewport.width - fitMargin * 2);
+  const availableHeight = Math.max(1, viewport.height - fitMargin * 2);
+  const fitScale = viewport.width / fit.width;
+  const zoom = Math.max(
+    0.5,
+    Math.min(8, Math.min(availableWidth / width, availableHeight / height) / fitScale),
+  );
+  const pan = studioViewportRect(
+    page,
+    viewport,
+    zoom,
+    {
+      x: transform.x + transform.width / 2 - page.width / 2,
+      y: transform.y + transform.height / 2 - page.height / 2,
+    },
+    fitMargin,
+  ).pan;
+  return { zoom, pan };
 }

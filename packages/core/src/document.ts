@@ -55,6 +55,8 @@ export interface ScadaPage {
 export interface ScadaDocument {
   schemaVersion: typeof SCADA_SCHEMA_VERSION;
   projectId: string;
+  /** 可选显示名称，不作为工程身份或授权依据。 */
+  projectName?: string;
   /** 项目级 Tag 元数据随工程 JSON、草稿和历史快照一起持久化。 */
   tags: TagDefinition[];
   pages: ScadaPage[];
@@ -160,11 +162,22 @@ function parseVersionedDocument(input: unknown, sourceVersion: string): ScadaDoc
   knownFields(
     root,
     sourceVersion === SCADA_SCHEMA_VERSION
-      ? ["schemaVersion", "projectId", "tags", "pages"]
+      ? ["schemaVersion", "projectId", "projectName", "tags", "pages"]
       : ["schemaVersion", "projectId", "pages"],
     "文档",
   );
   const projectId = identifier(root.projectId, "projectId");
+  let projectName: string | undefined;
+  if (Object.hasOwn(root, "projectName")) {
+    projectName = nonemptyText(root.projectName, "projectName", 128);
+    const hasControl = Array.from(projectName).some((character) => {
+      const code = character.charCodeAt(0);
+      return code < 32 || code === 127;
+    });
+    if (!projectName.trim() || projectName !== projectName.trim() || hasControl) {
+      fail("projectName", "工程名称不得为空、包含控制字符或首尾空白");
+    }
+  }
   if (!Array.isArray(root.pages) || root.pages.length === 0 || root.pages.length > MAX_PAGES) {
     fail("pages", `页面数量必须在 1～${MAX_PAGES} 之间`);
   }
@@ -307,7 +320,13 @@ function parseVersionedDocument(input: unknown, sourceVersion: string): ScadaDoc
     }
   }
 
-  return { schemaVersion: SCADA_SCHEMA_VERSION, projectId, tags, pages };
+  return {
+    schemaVersion: SCADA_SCHEMA_VERSION,
+    projectId,
+    ...(projectName === undefined ? {} : { projectName }),
+    tags,
+    pages,
+  };
 }
 
 /** 内部调用及 Runtime 只允许当前 Schema；旧版本必须走显式迁移入口。 */

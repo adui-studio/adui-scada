@@ -182,3 +182,13 @@ test("超出 2 MiB 的合法工程内容不得创建快照", async () => {
   }));
   await expect(createProjectSnapshot(large, options)).rejects.toThrow(/超过 2 MiB/);
 });
+
+test("工程名称进入快照摘要且不改变工程身份", async () => {
+  const original = waterTreatmentDemoDocument;
+  const before = await createProjectSnapshot(original, options);
+  const renamed = await createProjectSnapshot({ ...original, projectName: "新工程名称" }, options);
+  expect(renamed.projectId).toBe(before.projectId);
+  expect(renamed.contentHash).not.toBe(before.contentHash);
+  expect((await readProjectSnapshot(renamed)).document.projectName).toBe("新工程名称");
+  expect((await readProjectSnapshot(before)).document).toEqual(original);
+});

@@ -42,6 +42,9 @@ dist-ssr
 
 *.zip
 *.patch
+
+# 本地 UI/UX 实测截图，可能包含开发工程画面，不提交仓库
+.artifacts/
 # Tauri 与 Rust 构建产物
 apps/desktop/src-tauri/target/
 apps/desktop/src-tauri/gen/

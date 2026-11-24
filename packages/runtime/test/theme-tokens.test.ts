@@ -1,196 +1,352 @@
 /// <reference types="node" />
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
+import { WORKSPACE_HOME_ENTRIES, filterWorkspaceHomeEntries } from "../src/workspace-home.ts";
+import { normalizeWorkspaceTheme } from "../src/workspace-theme.ts";
 
 const themeRoot = new URL("../../theme/src/", import.meta.url);
 const readTheme = (name: string) => readFileSync(new URL(name, themeRoot), "utf8");
+const readRelative = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
-const findRules = (css: string, selector: string): string[] =>
-  [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
-    .filter((match) => match[1]?.trim().endsWith(selector))
-    .map((match) => match[2] ?? "");
-
-describe("双框架工业主题设计 Token", () => {
-  it("主题颜色、字号和间距必须由 @adui/theme 统一定义且名称不重复", () => {
+describe("精密工程工作台设计系统", () => {
+  it("保留 V7 品牌色并以新的浅色语义 Token 构建编辑工作区", () => {
     const tokens = readTheme("tokens.css");
-    const names = [...tokens.matchAll(/^\s*(--[a-z][a-z\d-]+):/gm)].map((item) => item[1]);
-    expect(names.length).toBeGreaterThan(65);
+    const names = [...tokens.matchAll(/^\s*(--[a-z][a-z\d-]+):/gm)].map((match) => match[1]);
+    expect(names.length).toBeGreaterThan(75);
     expect(new Set(names).size).toBe(names.length);
-    for (const name of [
-      "--adui-color-brand",
-      "--adui-color-success",
-      "--adui-color-warning",
-      "--adui-color-danger",
-      "--adui-font-family",
-      "--adui-font-size-md",
-      "--adui-space-6",
-      "--adui-radius-panel",
-      "--scada-primary",
-      "--scada-live",
-    ]) {
-      expect(names).toContain(name);
-    }
-  });
-
-  it("原有 V7 品牌与工业状态颜色必须保持兼容且不能混用警告语义", () => {
-    const tokens = readTheme("tokens.css");
     expect(tokens).toContain("--adui-scada-blue: #0d63f3;");
     expect(tokens).toContain("--adui-scada-cyan: #00c8ff;");
     expect(tokens).toContain("--adui-scada-teal: #00d9a6;");
+    expect(tokens).toContain("--adui-color-bg: #edf1f5;");
+    expect(tokens).toContain("--adui-color-surface: #ffffff;");
+    expect(tokens).toContain("--adui-color-stage: #101a29;");
+    expect(tokens).toContain("--adui-color-editor-workspace: #e8ebf0;");
+    expect(tokens).toContain("--adui-color-editor-artboard: #ffffff;");
     expect(tokens).toContain("--scada-live: var(--adui-color-success);");
     expect(tokens).toContain("--scada-danger: var(--adui-color-danger);");
     expect(tokens).toContain("--scada-primary: var(--adui-color-brand);");
+    expect(tokens).toContain("color-scheme: light;");
   });
 
-  it("TDesign 必须采用同一深色根主题并映射颜色字号间距", () => {
+  it("TDesign React/Vue 在明暗根主题下复用字体、字号和禁用态", () => {
     const css = readTheme("tdesign.css");
+    expect(css).toContain('html:root[theme-mode="light"]');
     expect(css).toContain('html:root[theme-mode="dark"]');
-    expect(css).toContain("--td-brand-color: var(--adui-color-brand);");
-    expect(css).toContain("--td-text-color-disabled: var(--adui-color-text-disabled);");
-    expect(css).toContain("--td-bg-color-container: var(--adui-color-surface);");
-    expect(css).toContain("--td-font-size-body-medium: var(--adui-font-size-md);");
-    expect(css).toContain("--td-size-6: var(--adui-space-6);");
-    expect(css).toContain("--td-radius-medium: var(--adui-radius-md);");
-  });
-
-  it("原主题入口和两个 HTML 必须接入统一主题且不影响 Studio 固定尺寸", () => {
-    const runtimeTheme = readFileSync(new URL("../src/theme.css", import.meta.url), "utf8");
-    const runtimeStyles = readFileSync(new URL("../src/runtime.css", import.meta.url), "utf8");
-    const studioStyles = readFileSync(
-      new URL("../../tailwind/src/studio.css", import.meta.url),
-      "utf8",
-    );
-    const webRoot = new URL("../../../apps/", import.meta.url);
-    const reactHtml = readFileSync(new URL("web-react/index.html", webRoot), "utf8");
-    const vueHtml = readFileSync(new URL("web-vue/index.html", webRoot), "utf8");
-    expect(runtimeTheme).toContain('@import "@adui/theme/styles.css";');
-    expect(runtimeStyles).toContain("font-family: var(--adui-font-family);");
-    expect(reactHtml).toContain('theme-mode="dark"');
-    expect(vueHtml).toContain('theme-mode="dark"');
-    expect(studioStyles).toContain("--studio-left-width: 252px;");
-    expect(studioStyles).toContain("--studio-right-width: 320px;");
-  });
-  it("运行页导航、诊断与发布空态必须使用保持原尺寸的统一 Token", () => {
-    const css = readFileSync(new URL("../src/runtime.css", import.meta.url), "utf8");
-    for (const [selector, declaration] of [
-      [".scada-app-nav", "gap: var(--adui-space-3);"],
-      [".scada-app-nav > button", "font-size: var(--adui-font-size-sm);"],
-      [".scada-app-version", "font-size: var(--adui-font-size-xs);"],
-      [".scada-message", "line-height: var(--adui-line-height-normal);"],
-      [".scada-panel-subtitle", "font-size: var(--adui-font-size-xs);"],
-      [".scada-diagnostics-grid dd", "font-size: var(--adui-font-size-xl);"],
-      [".scada-tag strong", "font-size: var(--adui-font-size-xs);"],
-      [
-        ".scada-published-preview-panel > .scada-diagnostics-empty",
-        "padding: var(--adui-space-8);",
-      ],
-    ] as const) {
-      expect(findRules(css, selector).some((rule) => rule.includes(declaration))).toBe(true);
-    }
-    const tokens = readTheme("tokens.css");
-    expect(tokens).toContain("--adui-space-3: 6px;");
-    expect(tokens).toContain("--adui-space-8: 24px;");
-    expect(tokens).toContain("--adui-font-size-xs: 12px;");
-    expect(tokens).toContain("--adui-font-size-sm: 13px;");
-    expect(tokens).toContain("--adui-font-size-xl: 18px;");
-    expect(tokens).toContain("--adui-line-height-normal: 1.5;");
-  });
-
-  it("Studio 工作台与工程列表复用主题字号，保留固定侧栏与缩放结构", () => {
-    const css = readFileSync(new URL("../../tailwind/src/studio.css", import.meta.url), "utf8");
-    for (const [selector, declaration] of [
-      [".studio-toolbar .scada-eyebrow", "font-size: var(--adui-font-size-2xs);"],
-      [".studio-actions button", "font-size: var(--adui-font-size-xs);"],
-      [".studio-page-tabs", "gap: var(--adui-space-2);"],
-      [".studio-project-browser-heading strong", "font-size: var(--adui-font-size-md);"],
-      [".studio-project-browser-info code", "font-size: var(--adui-font-size-xs);"],
-      [".studio-project-browser-pagination span", "font-size: var(--adui-font-size-2xs);"],
-    ] as const) {
-      expect(findRules(css, selector).some((rule) => rule.includes(declaration))).toBe(true);
-    }
-    expect(css).toContain("--studio-left-width: 252px;");
-    expect(css).toContain("--studio-right-width: 320px;");
-    expect(css).toContain(
-      "grid-template-columns: var(--studio-left-width) minmax(0, 1fr) var(--studio-right-width);",
-    );
-  });
-
-  it("Studio 属性面板密度必须使用等值 Token，且不改变固定画布布局", () => {
-    const css = readFileSync(new URL("../../tailwind/src/studio.css", import.meta.url), "utf8");
-    for (const [selector, declaration] of [
-      [".studio-pane-heading", "gap: var(--adui-space-4);"],
-      [".studio-panel-properties > h2", "margin: 0 -14px var(--adui-space-5);"],
-      [".studio-panel-properties > p", "font-size: var(--adui-font-size-xs);"],
-      [".studio-geometry", "padding: var(--adui-space-5);"],
-      [".studio-geometry", "margin: var(--adui-space-5) 0;"],
-      [".studio-advanced", "border-radius: var(--adui-radius-md);"],
-      [".studio-advanced .studio-tool-group", "gap: var(--adui-space-3);"],
-      [".studio-tree-controls .studio-field", "gap: var(--adui-space-3);"],
-    ] as const) {
-      expect(findRules(css, selector).some((rule) => rule.includes(declaration))).toBe(true);
-    }
-    const tokens = readTheme("tokens.css");
-    expect(tokens).toContain("--adui-space-3: 6px;");
-    expect(tokens).toContain("--adui-space-4: 8px;");
-    expect(tokens).toContain("--adui-space-5: 12px;");
-    expect(tokens).toContain("--adui-font-size-xs: 12px;");
-    expect(tokens).toContain("--adui-radius-md: 6px;");
-    expect(css).toContain("--studio-left-width: 252px;");
-    expect(css).toContain("--studio-right-width: 320px;");
-    expect(css).toContain(
-      "grid-template-columns: var(--studio-left-width) minmax(0, 1fr) var(--studio-right-width);",
-    );
-  });
-
-  it("禁用按钮不得响应本地悬停强调，TDesign 焦点与禁用态沿用官方变量", () => {
-    const css = readFileSync(new URL("../../tailwind/src/studio.css", import.meta.url), "utf8");
-    for (const selector of [
-      ".studio-save-actions button:first-child:not(:disabled)",
-      ".studio-save-actions button:first-child:not(:disabled):hover",
-      ".studio-add button:not(:disabled):hover",
-      ".studio-page-tabs button:not(:disabled):hover",
+    for (const token of [
+      "--td-brand-color: var(--adui-color-brand);",
+      "--td-text-color-anti: var(--adui-color-brand-on);",
+      "--td-brand-color-focus: var(--adui-color-brand-focus);",
+      "--td-brand-color-disabled: var(--adui-color-brand-disabled);",
+      "--td-text-color-disabled: var(--adui-color-text-disabled);",
+      "--td-bg-color-container: var(--adui-color-surface);",
+      "--td-font-size-body-medium: var(--adui-font-size-md);",
+      "--td-size-6: var(--adui-space-6);",
+      "--td-radius-medium: var(--adui-radius-md);",
     ]) {
-      expect(findRules(css, selector).length).toBeGreaterThan(0);
+      expect(css).toContain(token);
     }
-    expect(css).toContain(".studio-project-browser-panel button:disabled {");
-    expect(css).toContain(
-      ".studio-shell :is(button, input, select, textarea, summary):focus-visible {",
-    );
-    const tdesign = readTheme("tdesign.css");
-    expect(tdesign).toContain("--td-brand-color-focus: var(--adui-color-brand-focus);");
-    expect(tdesign).toContain("--td-brand-color-disabled: var(--adui-color-brand-disabled);");
-    expect(tdesign).toContain("--td-text-color-disabled: var(--adui-color-text-disabled);");
-    expect(tdesign).toContain("--td-bg-color-component-disabled: var(--adui-color-surface);");
+    for (const path of ["../../../apps/web-react/index.html", "../../../apps/web-vue/index.html"]) {
+      expect(readRelative(path)).toContain('theme-mode="light"');
+    }
   });
 
-  it("Studio 历史版本弹层复用主题字号与间距且不修改布局几何", () => {
-    const css = readFileSync(new URL("../../tailwind/src/studio.css", import.meta.url), "utf8");
-    for (const [selector, declaration] of [
-      [".studio-version-panel", "top: calc(100% + var(--adui-space-3));"],
-      [".studio-version-panel", "padding: var(--adui-space-5);"],
-      [".studio-version-error", "font-size: var(--adui-font-size-xs);"],
-      [".studio-version-error", "line-height: var(--adui-line-height-normal);"],
-      [".studio-version-item-actions", "gap: var(--adui-space-3);"],
-      [".studio-version-more", "font-size: var(--adui-font-size-xs);"],
-      [".studio-version-list", "gap: var(--adui-space-4);"],
-      [".studio-version-heading", "gap: var(--adui-space-3);"],
-      [".studio-version-heading", "font-size: var(--adui-font-size-xs);"],
-      [".studio-version-item code", "font-size: var(--adui-font-size-2xs);"],
-      [".studio-version-comparison strong", "font-size: var(--adui-font-size-xs);"],
-      [".studio-version-comparison p", "font-size: var(--adui-font-size-2xs);"],
-    ] as const) {
-      expect(findRules(css, selector).some((rule) => rule.includes(declaration))).toBe(true);
+  it("双框架从运行、发布到组态共享垂直导航与清晰的安全模式标识", () => {
+    const css = readRelative("../src/runtime.css");
+    expect(css).toContain("grid-template-columns: 184px minmax(0, 1fr);");
+    expect(css).toContain("grid-template-rows: 42px minmax(0, 1fr);");
+    expect(css).toContain(".scada-home-card-grid {");
+    expect(css).toContain('.scada-app-nav .t-button[aria-current="page"]');
+    expect(css).toContain(".scada-app-nav .t-button:focus-visible");
+    expect(css).toContain('.scada-app-frame[data-view="studio"]');
+    expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+    for (const path of [
+      "../../../apps/web-react/src/App.tsx",
+      "../../../apps/web-vue/src/App.vue",
+    ]) {
+      const app = readRelative(path);
+      expect(app).toContain("scada-app-frame");
+      expect(app).toContain("scada-app-topbar");
+      expect(app).toContain("scada-skip-link");
+      expect(app).toContain("仅供开发验证");
+      for (const label of ["工作台", "运行监控", "已发布运行", "组态编辑"]) {
+        expect(app).toContain(label);
+      }
     }
-    const tokens = readTheme("tokens.css");
-    expect(tokens).toContain("--adui-space-3: 6px;");
-    expect(tokens).toContain("--adui-space-4: 8px;");
-    expect(tokens).toContain("--adui-space-5: 12px;");
-    expect(tokens).toContain("--adui-font-size-xs: 12px;");
-    expect(tokens).toContain("--adui-font-size-2xs: 11px;");
-    expect(tokens).toContain("--adui-line-height-normal: 1.5;");
-    expect(css).toContain("width: min(378px, calc(100vw - 24px));");
-    expect(css).toContain("max-height: min(70vh, 610px);");
-    expect(css).toContain("--studio-left-width: 252px;");
-    expect(css).toContain("--studio-right-width: 320px;");
   });
+
+  it("所有工作区的导航选中态立即使用同一组不透明主题色", () => {
+    const css = readRelative("../src/runtime.css");
+    expect(css).toContain(".scada-app-frame .scada-app-nav .t-button {\n  transition: none;\n}");
+    expect(css).toContain(
+      '.scada-app-frame .scada-app-nav .t-button[aria-current="page"] {\n' +
+        "  background: var(--scada-active-bg);\n" +
+        "  color: var(--adui-color-brand-text);\n}",
+    );
+    for (const name of ["tokens.css", "dark.css"]) {
+      const theme = readTheme(name);
+      expect(theme).toMatch(/--adui-color-brand-text: #[\da-f]{6};/i);
+      expect(theme).toMatch(/--adui-color-selected: #[\da-f]{6};/i);
+    }
+  });
+
+  it("运行监控优先展示工艺画面，已发布运行保留独立只读预览", () => {
+    const css = readRelative("../src/runtime.css");
+    for (const selector of [
+      ".scada-monitor-layout",
+      ".scada-monitor-side",
+      ".scada-published-layout",
+      ".scada-published-sidebar",
+      ".scada-published-preview-panel > .scada-diagnostics-empty",
+      '.scada-quality-item[data-quality="GOOD"] strong',
+      '.scada-quality-item[data-quality="BAD"] strong',
+    ]) {
+      expect(css).toContain(selector);
+    }
+    for (const page of [
+      "../../../apps/web-react/src/runtime/RuntimePage.tsx",
+      "../../../apps/web-vue/src/runtime/RuntimePage.vue",
+    ]) {
+      const source = readRelative(page);
+      expect(source).toContain("scada-monitor-layout");
+      expect(source).toContain("scada-monitor-side");
+      expect(source).toContain("不连接 PLC/DCS");
+    }
+    for (const page of [
+      "../../../apps/web-react/src/runtime/PublishedRuntimePage.tsx",
+      "../../../apps/web-vue/src/runtime/PublishedRuntimePage.vue",
+    ]) {
+      const source = readRelative(page);
+      expect(source).toContain("scada-published-layout");
+      expect(source).toContain('data-testid="published-runtime-svg"');
+      expect(source).toContain("不开放设备控制");
+    }
+  });
+
+  it("Studio 共享左侧页面、白色画板和底部图元工具区布局", () => {
+    const css = readRelative("../../tailwind/src/studio.css");
+    expect(css).toContain("--studio-left-preferred");
+    expect(css).toContain("--studio-right-preferred");
+    expect(css).toContain(".studio-panel-size input");
+    expect(css).toContain('.studio-hitbox[data-selected="true"]');
+    expect(css).toContain(".studio-focus-selection");
+    expect(css).toContain(
+      "grid-template-columns: var(--studio-left-width) minmax(0, 1fr) var(--studio-right-width);",
+    );
+    expect(css).toContain(".studio-canvas-board > .studio-svg");
+    expect(css).toContain(".studio-canvas-dock {");
+    expect(css).toContain(".studio-artboard-surface {");
+    expect(css).toContain("background: var(--adui-color-editor-workspace);");
+    expect(css).toContain("fill: var(--adui-color-editor-artboard);");
+    expect(css).toContain(".studio-page-bar::before {");
+    expect(css).toContain(
+      ".studio-shell :is(button, input, select, textarea, summary):focus-visible",
+    );
+    expect(css).toContain(".studio-inspector-tabs {");
+    expect(css).toContain(".studio-inspector-content[hidden] {");
+    expect(css).toContain(".studio-tag-toolbar {");
+    expect(css).toContain(".studio-tag-search {");
+    expect(css).toContain(".studio-tag-actions {");
+    expect(css).toContain(".studio-tag-form-grid {");
+    expect(css).toContain(".studio-tag-form-actions {");
+    expect(css).not.toContain(".studio-tag-manager .studio-tag-form {");
+  });
+
+  it("双端 Tag 目录与独立 TDesign 编辑对话框分离，不再把完整表单塞进侧栏", () => {
+    const css = readRelative("../../tailwind/src/studio.css");
+    expect(css).toContain(".studio-tag-item {");
+    expect(css).toContain(".studio-tag-form-grid {");
+    expect(css).toContain(".studio-tag-form-error {");
+    expect(css).toContain(".studio-tag-field-error {");
+    expect(css).not.toContain(".studio-tag-manager .studio-tag-form {");
+
+    for (const [path, dialogProp] of [
+      ["../../../apps/web-react/src/studio/TagManager.tsx", 'dialogClassName="studio-tag-dialog"'],
+      ["../../../apps/web-vue/src/studio/TagManager.vue", 'dialog-class-name="studio-tag-dialog"'],
+    ]) {
+      const source = readRelative(path);
+      expect(source).toContain("studio-tag-search");
+      expect(source).toContain("studio-tag-list");
+      expect(source).toContain("studio-tag-form-grid");
+      expect(source).toContain("studio-tag-field-error");
+      expect(source).toContain(dialogProp);
+      expect(source).toContain("confirmStudioAction");
+    }
+  });
+
+  it("字号与间距保留统一刻度，长标识和数据可以折行且无强制外部字体", () => {
+    const tokens = readTheme("tokens.css");
+    for (const declaration of [
+      "--adui-font-size-xs: 12px;",
+      "--adui-font-size-sm: 13px;",
+      "--adui-font-size-xl: 18px;",
+      "--adui-space-3: 6px;",
+      "--adui-space-4: 8px;",
+      "--adui-space-5: 12px;",
+      "--adui-space-8: 24px;",
+      "--adui-line-height-normal: 1.5;",
+    ]) {
+      expect(tokens).toContain(declaration);
+    }
+    const css = readRelative("../src/runtime.css");
+    expect(css).toContain("overflow-wrap: anywhere;");
+    expect(css).toContain("font-variant-numeric: tabular-nums;");
+    expect(css).not.toMatch(/@import\s+url\s*\(/);
+  });
+});
+
+describe("Pixso 参考工作台", () => {
+  it("只提供真实入口并根据名称与说明搜索", () => {
+    expect(filterWorkspaceHomeEntries("  ")).toEqual(WORKSPACE_HOME_ENTRIES);
+    expect(WORKSPACE_HOME_ENTRIES.map((entry) => entry.view)).toEqual([
+      "studio",
+      "runtime",
+      "published",
+    ]);
+    expect(filterWorkspaceHomeEntries("TAG").map((entry) => entry.view)).toEqual(["studio"]);
+    expect(filterWorkspaceHomeEntries("不存在的工程")).toEqual([]);
+    expect(WORKSPACE_HOME_ENTRIES[0]?.preview).toContain("data:image/svg+xml");
+    expect(WORKSPACE_HOME_ENTRIES[2]?.preview).toBeUndefined();
+  });
+
+  it("双端复用工作台数据和搜索并保留真实静态预览", () => {
+    for (const path of [
+      "../../../apps/web-react/src/App.tsx",
+      "../../../apps/web-vue/src/WorkspaceHome.vue",
+    ]) {
+      const source = readRelative(path);
+      expect(source).toContain("WORKSPACE_HOME_ENTRIES");
+      expect(source).toContain("filterWorkspaceHomeEntries");
+      expect(source).toContain("scada-home-quick-grid");
+      expect(source).toContain("scada-home-banner-grid");
+      expect(source).toContain("createWorkspaceDraft");
+      expect(source).toContain("readWorkspaceJson");
+      expect(source).toContain("listWorkspaceDrafts");
+      expect(source).toContain("readWorkspaceDraft");
+      expect(source).toContain("内置水处理工程静态预览，无实时值");
+    }
+    const css = readRelative("../src/runtime.css");
+    expect(css).toContain(".scada-home-thumbnail");
+    expect(css).toContain("aspect-ratio: 16 / 9;");
+    expect(readTheme("tokens.css")).toContain("--adui-color-brand: var(--adui-scada-blue);");
+  });
+});
+
+describe("V7 明暗主题", () => {
+  it("仅接受合法主题并对缺失或损坏偏好回退浅色", () => {
+    expect(normalizeWorkspaceTheme("dark")).toBe("dark");
+    expect(normalizeWorkspaceTheme("light")).toBe("light");
+    for (const value of [null, undefined, "", "unknown", {}]) {
+      expect(normalizeWorkspaceTheme(value)).toBe("light");
+    }
+  });
+
+  it("深色覆盖已定义语义变量及画板外观，不改写品牌几何", () => {
+    const light = readTheme("tokens.css");
+    const dark = readTheme("dark.css");
+    const names = [...dark.matchAll(/^\s*(--[a-z][a-z\d-]+):/gm)].map((match) => match[1]);
+    expect(new Set(names).size).toBe(names.length);
+    for (const name of names) expect(light).toContain(name + ":");
+    expect(dark).toContain('theme-mode="dark"');
+    expect(dark).toContain("color-scheme: dark;");
+    expect(dark).toContain("--adui-color-editor-artboard: #0c1728;");
+    expect(dark).not.toContain("--adui-scada-blue:");
+    expect(readTheme("index.css")).toContain('@import "./dark.css";');
+    for (const name of ["mark-primary.svg", "mark-dark.svg"]) {
+      const react = readRelative("../../../apps/web-react/public/brand/" + name);
+      const vue = readRelative("../../../apps/web-vue/public/brand/" + name);
+      expect(react).toBe(vue);
+      expect(react).toContain('id="brand-core"');
+      expect(react).toContain('stroke-linejoin="miter"');
+    }
+  });
+
+  it("双端启动与切换均使用共享本地主题逻辑", () => {
+    for (const path of [
+      "../../../apps/web-react/src/main.tsx",
+      "../../../apps/web-vue/src/main.ts",
+    ]) {
+      expect(readRelative(path)).toContain("applyWorkspaceTheme(readWorkspaceTheme())");
+    }
+    for (const path of [
+      "../../../apps/web-react/src/App.tsx",
+      "../../../apps/web-vue/src/App.vue",
+    ]) {
+      const source = readRelative(path);
+      expect(source).toContain("scada-theme-toggle");
+      expect(source).toContain("aria-checked");
+      expect(source).not.toContain("toggleTheme()");
+      expect(source).toContain("transitionWorkspaceTheme(next");
+      expect(source).toContain("scada-theme-sun");
+      expect(source).toContain("scada-theme-moon");
+      expect(source).toContain("/brand/mark-primary.svg");
+      expect(source).toContain("/brand/mark-dark.svg");
+    }
+  });
+});
+
+describe("双端图标与明暗界面收尾", () => {
+  it("导航和画布操作使用已有 TDesign 图标，工业 SVG 画布仍独立", () => {
+    for (const [app, extension, pkg] of [
+      ["web-react", "tsx", "tdesign-icons-react"],
+      ["web-vue", "vue", "tdesign-icons-vue-next"],
+    ]) {
+      const home = readRelative(`../../../apps/${app}/src/App.${extension}`);
+      const studio = readRelative(`../../../apps/${app}/src/studio/StudioPage.${extension}`);
+      expect(home).toContain(pkg);
+      expect(studio).toContain(pkg);
+      expect(home).not.toContain("<svg");
+      expect(studio.match(/<svg\b/g)).toHaveLength(1);
+      expect(studio).toContain("studio-svg");
+    }
+    const css = readRelative("../src/runtime.css");
+    expect(css).toContain("background: var(--adui-color-surface-muted);");
+    expect(css).toContain("color: var(--adui-color-brand-text);");
+  });
+});
+
+describe("TDesign 官网主题过渡", () => {
+  it("双框架共享原生整页过渡并尊重减少动效偏好", () => {
+    const source = readRelative("../src/workspace-theme.ts");
+    expect(source).toContain("document.startViewTransition(update)");
+    expect(source).toContain("(prefers-reduced-motion: reduce)");
+    expect(source).toContain("await transition.updateCallbackDone");
+    expect(source).toContain('root.removeAttribute("data-theme-transition")');
+    const css = readRelative("../src/runtime.css");
+    expect(css).toContain(".scada-theme-icons");
+    expect(css).toContain("translateX(28px)");
+    const animation = readTheme("theme-transition.css");
+    expect(readTheme("index.css")).toContain('@import "./theme-transition.css";');
+    expect(animation).toContain("tan(8deg)");
+    expect(animation).toContain("animation-duration: 1s;");
+    expect(animation).toContain("animation-name: scada-light-to-dark;");
+    expect(animation).toContain("animation-name: scada-dark-to-light;");
+    expect(animation).toContain("mix-blend-mode: normal;");
+    expect(animation).toContain("animation: none;");
+    for (const path of [
+      "../../../apps/web-react/src/studio/StudioPage.tsx",
+      "../../../apps/web-vue/src/studio/StudioPage.vue",
+    ]) {
+      expect(readRelative(path)).toContain('"studio-dark" : "light"');
+    }
+  });
+});
+
+it("图层搜索复用输入框清空能力并保留独立定位操作", () => {
+  for (const path of [
+    "../../../apps/web-react/src/studio/StudioPage.tsx",
+    "../../../apps/web-vue/src/studio/StudioPage.vue",
+  ]) {
+    const source = readRelative(path);
+    const start = source.indexOf(
+      "class" + (path.endsWith(".tsx") ? "Name" : "") + '="studio-tree-controls"',
+    );
+    expect(start).toBeGreaterThanOrEqual(0);
+    const end = source.indexOf("studio-layer-tree min-w-0", start);
+    expect(end).toBeGreaterThan(start);
+    const controls = source.slice(start, end);
+    expect(controls).toContain("clearable");
+    expect(controls).toContain('type="text"');
+    expect(controls).toContain("定位选中图层");
+    expect(controls).not.toContain("清除搜索");
+  }
 });

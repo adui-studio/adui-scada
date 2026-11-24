@@ -1,24 +1,55 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Checkbox, Collapse, Dropdown, Input, Popup, Select, Upload } from "tdesign-react";
+import {
+  Button,
+  Checkbox,
+  Collapse,
+  Dialog,
+  Dropdown,
+  Input,
+  Popup,
+  Select,
+  Upload,
+} from "tdesign-react";
+import { useBlocker } from "react-router";
 import type { DropdownProps } from "tdesign-react";
-import { CloseIcon } from "tdesign-icons-react";
+import {
+  EditIcon,
+  AddIcon,
+  ArrowDownIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowUpIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  DragMoveIcon,
+  FocusIcon,
+  RemoveIcon,
+  SettingIcon,
+  TextboxIcon,
+  CursorIcon,
+  GestureOpenIcon,
+} from "tdesign-icons-react";
 import "tdesign-react/es/style/index.css";
 import type {
   DragEvent as ReactDragEvent,
+  CSSProperties,
   FormEvent,
+  KeyboardEvent as ReactKeyboardEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
 import {
   TAG_DATA_TYPE_LABELS,
   tagDefinitionSupportsSlot,
   WaterTreatmentSimulator,
-  waterTreatmentDemoDocument,
+  waterTreatmentStudioDocument,
   DraftAutoSaveSession,
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
   studioNodeLocked,
   studioNodeVisible,
   buildLayerTree,
   studioViewportRect,
+  studioFocusTransform,
+  STUDIO_CANVAS_FIT_MARGIN,
   compareProjectDocuments,
   validateProjectReleasePreflight,
 } from "@adui/scada-core";
@@ -57,7 +88,7 @@ import type {
   NodeTransformPatch,
   ResizeHandle,
 } from "@adui/scada-core/editor";
-import { svgDataUrl } from "@adui/scada-runtime";
+import { svgDataUrl, workspaceStudioPath } from "@adui/scada-runtime";
 import {
   createScadaApiClient,
   createStudioServerProjectSession,
@@ -68,7 +99,6 @@ import { confirmStudioAction, promptStudioPageName } from "./StudioDialog.tsx";
 import { TagManager } from "./TagManager.tsx";
 import { ServerProjectBrowser } from "./ServerProjectBrowser.tsx";
 import { ServerReleasePreflight } from "./ServerReleasePreflight.tsx";
-import "./studio.css";
 import "@adui/tailwind/studio.css";
 
 const previewTags = new WaterTreatmentSimulator().next(new Date("2026-11-09T00:00:00Z"));
@@ -113,11 +143,33 @@ interface GeometryDragState {
   lastPatch: NodeTransformPatch | null;
 }
 
-export default function StudioPage() {
-  const editor = useMemo(() => new DocumentEditor(waterTreatmentDemoDocument), []);
+export default function StudioPage({
+  initialDocument = null,
+  initialNotice = "",
+  initialClean = true,
+  themeMode = "light",
+  onProjectChange,
+}: {
+  initialDocument?: ScadaDocument | null;
+  initialNotice?: string;
+  initialClean?: boolean;
+  themeMode?: "light" | "dark";
+  onProjectChange?: (projectId: string) => void;
+}) {
+  const editor = useMemo(
+    () => new DocumentEditor(initialDocument ?? waterTreatmentStudioDocument),
+    [initialDocument],
+  );
   const serverApi = useMemo(() => createScadaApiClient(), []);
   const serverSession = useMemo(() => createStudioServerProjectSession(serverApi), [serverApi]);
   const [state, setState] = useState<EditorSnapshot>(() => editor.snapshot());
+  const routeBaseline = useRef(initialClean ? JSON.stringify(editor.snapshot().document) : null);
+  const routeProject = useRef(state.document.projectId);
+  useEffect(() => {
+    if (routeProject.current === state.document.projectId) return;
+    routeProject.current = state.document.projectId;
+    onProjectChange?.(state.document.projectId);
+  }, [state.document.projectId, onProjectChange]);
   const [preview, setPreview] = useState<{ id: string; x: number; y: number } | null>(null);
   const [geometryPreview, setGeometryPreview] = useState<ScadaDocument | null>(null);
   const [rotating, setRotating] = useState(false);
@@ -126,13 +178,17 @@ export default function StudioPage() {
   const [preferredCopyTargetPageId, setPreferredCopyTargetPageId] = useState("");
   const [preferredLayerTargetId, setPreferredLayerTargetId] = useState("");
   const [layerSearch, setLayerSearch] = useState("");
+  const [inspectorTab, setInspectorTab] = useState<"properties" | "tags">("properties");
+  const [libraryTab, setLibraryTab] = useState<"layers" | "symbols">("layers");
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(() => new Set());
   const [locateLayerRequest, setLocateLayerRequest] = useState<{ key: string } | null>(null);
   const [layerInsertPosition, setLayerInsertPosition] = useState<"before" | "after">("after");
   const [layerDrop, setLayerDrop] = useState<{ id: string; position: "before" | "after" } | null>(
     null,
   );
-  const [notice, setNotice] = useState("可保存浏览器本地草稿 · 服务端工程需单独验证登录");
+  const [notice, setNotice] = useState(
+    initialNotice || "可保存浏览器本地草稿 · 服务端工程需单独验证登录",
+  );
   const [hasSavedDraft, setHasSavedDraft] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
   const [historyRows, setHistoryRows] = useState<readonly ProjectVersionSummary[]>([]);
@@ -149,6 +205,7 @@ export default function StudioPage() {
   const [serverError, setServerError] = useState("");
   const [serverRecoveryProjectId, setServerRecoveryProjectId] = useState("");
   const [serverAccessRevision, setServerAccessRevision] = useState(0);
+  const [serverBrowserRevision, setServerBrowserRevision] = useState(0);
   const [serverInspectedVersion, setServerInspectedVersion] = useState<ProjectSnapshot | null>(
     null,
   );
@@ -156,14 +213,47 @@ export default function StudioPage() {
   const historyActionRef = useRef(false);
   const autoSaveSessionRef = useRef<DraftAutoSaveSession | null>(null);
   const draftActionRef = useRef(false);
+  const routeBlocker = useBlocker(({ currentLocation, nextLocation, historyAction }) => {
+    if (currentLocation.pathname === nextLocation.pathname) return false;
+    const current = editor.snapshot().document;
+    // 编辑器已完成内部工程切换，只同步 URL，不重复加载工程或丢弃 CAS。
+    if (
+      historyAction === "REPLACE" &&
+      nextLocation.pathname === workspaceStudioPath(current.projectId)
+    )
+      return false;
+    return (
+      historyActionRef.current ||
+      draftActionRef.current ||
+      routeBaseline.current !== JSON.stringify(current)
+    );
+  });
+  useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (
+        historyActionRef.current ||
+        draftActionRef.current ||
+        routeBaseline.current !== JSON.stringify(editor.snapshot().document)
+      ) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => window.removeEventListener("beforeunload", beforeUnload);
+  }, [editor]);
   const [zoom, setZoom] = useState(1);
+  const [canvasTool, setCanvasTool] = useState<"select" | "hand">("select");
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [gridVisible, setGridVisible] = useState(true);
   const [gridSnap, setGridSnap] = useState(true);
   const [nodeSnap, setNodeSnap] = useState(true);
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(256);
+  const [rightPanelWidth, setRightPanelWidth] = useState(320);
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
+  const panelResizeRef = useRef<{ pointerId: number; x: number; width: number } | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const panDragRef = useRef<{
     pointerId: number;
@@ -236,8 +326,14 @@ export default function StudioPage() {
     [geometryPreview, snapResult, state.document, state.activePageId, state.selectedIds],
   );
   const image = useMemo(
-    () => svgDataUrl(displayDocument, previewTags, state.activePageId),
-    [displayDocument, state.activePageId],
+    () =>
+      svgDataUrl(
+        displayDocument,
+        previewTags,
+        state.activePageId,
+        themeMode === "dark" ? "studio-dark" : "light",
+      ),
+    [displayDocument, state.activePageId, themeMode],
   );
 
   if (!page) throw new Error("工程文档不包含页面");
@@ -245,7 +341,15 @@ export default function StudioPage() {
     width: viewportSize.width || page.size.width,
     height: viewportSize.height || page.size.height,
   };
-  const visibleRect = studioViewportRect(page.size, canvasViewport, zoom, pan);
+  const visibleRect = studioViewportRect(
+    page.size,
+    canvasViewport,
+    zoom,
+    pan,
+    STUDIO_CANVAS_FIT_MARGIN,
+  );
+  const worldPerPixel = visibleRect.width / canvasViewport.width;
+  const actualZoomPercent = Math.max(1, Math.round(100 / worldPerPixel));
 
   const hasGroupedSelection = page.nodes.some(
     (node) => node.groupId !== undefined && state.selectedIds.includes(node.id),
@@ -363,6 +467,13 @@ export default function StudioPage() {
       setLayerSearch("");
       cancelDrag();
     }, "已创建空白页面，可撤销");
+  }
+
+  async function renameProject() {
+    const current = editor.snapshot().document;
+    const name = await promptStudioPageName(current.projectName ?? current.projectId, "工程");
+    if (name === null || editor.snapshot().document.projectId !== current.projectId) return;
+    apply(() => editor.renameProject(name), "工程名称已更新，可撤销");
   }
 
   async function renamePage() {
@@ -501,6 +612,7 @@ export default function StudioPage() {
     const unsubscribe = drafts.subscribe(state.document.projectId, (revision) => {
       if (controller.signal.aborted) return;
       setHasSavedDraft(revision !== null);
+      routeBaseline.current = null;
       const session = autoSaveSessionRef.current;
       if (session && revision !== session.currentRevision) {
         autoSaveSessionRef.current = null;
@@ -525,6 +637,7 @@ export default function StudioPage() {
       void session.saveIfDirty(document).then(
         (saved) => {
           if (controller.signal.aborted || autoSaveSessionRef.current !== session || !saved) return;
+          routeBaseline.current = JSON.stringify(saved.document);
           setHasSavedDraft(true);
           setNotice(`本地草稿已自动保存（${saved.savedAt}）`);
         },
@@ -593,7 +706,18 @@ export default function StudioPage() {
             handled = true;
           }
         } else if (!command && !event.altKey) {
+          if (
+            (key === "v" || key === "h") &&
+            !event.shiftKey &&
+            event.target instanceof Element &&
+            event.target.closest(".studio-canvas-scroll")
+          ) {
+            setCanvasTool(key === "v" ? "select" : "hand");
+            event.preventDefault();
+            return;
+          }
           if (key === "escape") {
+            panDragRef.current = null;
             dragRef.current = null;
             marqueeRef.current = null;
             geometryRef.current = null;
@@ -706,6 +830,7 @@ export default function StudioPage() {
   }
 
   function addSymbol(type: EditableSymbol) {
+    setCanvasTool("select");
     apply(() => editor.addNode(type), "已新增图元（未绑定任何设备）");
   }
 
@@ -800,9 +925,66 @@ export default function StudioPage() {
   function changeZoom(delta: number) {
     const pageSize = page?.size;
     if (!pageSize) return;
-    const nextZoom = Math.max(0.5, Math.min(2, Math.round((zoom + delta) * 100) / 100));
+    const nextZoom = Math.max(0.5, Math.min(8, Math.round((zoom + delta) * 100) / 100));
     setZoom(nextZoom);
-    setPan((current) => studioViewportRect(pageSize, canvasViewport, nextZoom, current).pan);
+    setPan(
+      (current) =>
+        studioViewportRect(pageSize, canvasViewport, nextZoom, current, STUDIO_CANVAS_FIT_MARGIN)
+          .pan,
+    );
+  }
+
+  function resizePanel(side: "left" | "right", width: number) {
+    const next = Math.round(width);
+    if (side === "left") setLeftPanelWidth(Math.max(200, Math.min(340, next)));
+    else setRightPanelWidth(Math.max(260, Math.min(420, next)));
+  }
+
+  function beginPanelResize(event: ReactPointerEvent<HTMLDivElement>, side: "left" | "right") {
+    if (event.button !== 0) return;
+    const panel = event.currentTarget.parentElement?.querySelector(
+      side === "left" ? ".studio-panel-layers" : ".studio-panel-properties",
+    );
+    if (!panel) return;
+    panelResizeRef.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      width: panel.getBoundingClientRect().width,
+    };
+    event.currentTarget.focus({ preventScroll: true });
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+
+  function updatePanelResize(event: ReactPointerEvent<HTMLDivElement>, side: "left" | "right") {
+    const drag = panelResizeRef.current;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    resizePanel(side, drag.width + (event.clientX - drag.x) * (side === "left" ? 1 : -1));
+  }
+
+  function endPanelResize(event: ReactPointerEvent<HTMLDivElement>) {
+    if (panelResizeRef.current?.pointerId === event.pointerId) panelResizeRef.current = null;
+  }
+
+  function resizePanelByKey(event: ReactKeyboardEvent<HTMLDivElement>, side: "left" | "right") {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+    const width = side === "left" ? leftPanelWidth : rightPanelWidth;
+    resizePanel(side, width + direction * (side === "left" ? 10 : -10));
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function focusSelectedNode() {
+    if (!page || !selected || !studioNodeVisible(selected)) return;
+    const focus = studioFocusTransform(
+      page.size,
+      canvasViewport,
+      selected.transform,
+      STUDIO_CANVAS_FIT_MARGIN,
+    );
+    setZoom(focus.zoom);
+    setPan(focus.pan);
   }
 
   function resetCanvasView() {
@@ -810,13 +992,13 @@ export default function StudioPage() {
     setPan({ x: 0, y: 0 });
   }
 
-  // 中键或 Alt + 画布空白处拖动，只修改视图区间。
+  // 抓手、中键或 Alt + 空白处拖动只修改视区；捕获阶段先于图元编辑。
   function beginCanvasPan(event: ReactPointerEvent<SVGSVGElement>): boolean {
     if (
-      zoom <= 1 ||
       !(
         event.button === 1 ||
-        (event.button === 0 && event.altKey && event.target === event.currentTarget)
+        (event.button === 0 &&
+          (canvasTool === "hand" || (event.altKey && event.target === event.currentTarget)))
       )
     ) {
       return false;
@@ -841,10 +1023,16 @@ export default function StudioPage() {
     const pageSize = page?.size;
     if (!dragging || dragging.pointerId !== event.pointerId || !pageSize) return false;
     setPan(
-      studioViewportRect(pageSize, canvasViewport, zoom, {
-        x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
-        y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
-      }).pan,
+      studioViewportRect(
+        pageSize,
+        canvasViewport,
+        zoom,
+        {
+          x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
+          y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
+        },
+        STUDIO_CANVAS_FIT_MARGIN,
+      ).pan,
     );
     return true;
   }
@@ -1104,16 +1292,20 @@ export default function StudioPage() {
   }
 
   /** 工程管理、版本查询和保存共用的授权缓存失效处理。 */
-  const invalidateServerAccess = useCallback((): void => {
-    serverSession.invalidateAccess();
-    setServerProjectId("");
-    setServerHeadRevision(null);
-    setServerRows([]);
-    setServerHasMore(false);
-    setServerInspectedVersion(null);
-    setServerRecoveryProjectId("");
-    setServerAccessRevision((revision) => revision + 1);
-  }, [serverSession]);
+  const invalidateServerAccess = useCallback(
+    (resetBrowser = true): void => {
+      serverSession.invalidateAccess();
+      setServerProjectId("");
+      setServerHeadRevision(null);
+      setServerRows([]);
+      setServerHasMore(false);
+      setServerInspectedVersion(null);
+      setServerRecoveryProjectId("");
+      setServerAccessRevision((revision) => revision + 1);
+      if (resetBrowser) setServerBrowserRevision((revision) => revision + 1);
+    },
+    [serverSession],
+  );
 
   /** 从其他标签页返回时以真实服务端只读核对旧 CAS，不依赖本地跨页身份消息。 */
   useEffect(() => {
@@ -1170,7 +1362,8 @@ export default function StudioPage() {
   }, [editor, invalidateServerAccess, serverSession]);
 
   function handleServerBrowserAccessRejected(error: ScadaApiError): void {
-    invalidateServerAccess();
+    // 工程目录已清空自身授权缓存，保留当前弹层以显示拒绝原因。
+    invalidateServerAccess(false);
     setServerError(error.message);
     setNotice("授权工程列表访问失败：" + error.message + "；本地画布与草稿不变");
     if (error.kind === "unauthenticated" || error.kind === "not_found") {
@@ -1544,6 +1737,7 @@ export default function StudioPage() {
       if (current && !(await confirmStudioAction("数据库已有草稿，确认使用当前画面覆盖吗？")))
         return;
       const saved = await drafts.save(document, current?.revision ?? null);
+      routeBaseline.current = JSON.stringify(saved.document);
       setHasSavedDraft(true);
       setNotice(`已保存 IndexedDB 草稿（${saved.savedAt}），并非正式工程发布`);
     } catch (error) {
@@ -1567,6 +1761,7 @@ export default function StudioPage() {
         return;
       }
       editor.loadDocument(saved.document);
+      routeBaseline.current = JSON.stringify(editor.snapshot().document);
       serverSession.reset();
       clearLayerDrag();
       setLayerSearch("");
@@ -1598,6 +1793,7 @@ export default function StudioPage() {
         // 已经获得用户确认，允许清理损坏旧草稿；事务版本核对继续保护数据库。
       }
       await drafts.remove(state.document.projectId, current?.revision ?? null);
+      routeBaseline.current = null;
       setHasSavedDraft(false);
       setNotice("数据库草稿已清除，当前编辑画面保持不变");
     } catch (error) {
@@ -1730,7 +1926,7 @@ export default function StudioPage() {
         onClick={(event) => select(node.id, event.shiftKey)}
       >
         <span className="studio-layer-identity">
-          <span aria-hidden="true">⋮⋮</span> {groupHeader ? `组合 ${groupId}` : node.id}
+          <DragMoveIcon aria-hidden="true" /> {groupHeader ? `组合 ${groupId}` : node.id}
         </span>
         <small>
           {groupHeader ? `${groupHeader.totalCount} 个成员` : node.type}
@@ -1753,10 +1949,44 @@ export default function StudioPage() {
       tabIndex={-1}
       className="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden"
     >
+      {routeBlocker.state === "blocked" && (
+        <Dialog
+          visible
+          header="离开组态编辑？"
+          body="当前工程可能有未保存内容。确认离开将放弃未保存的编辑，已保存草稿不受影响。"
+          confirmBtn="确认离开"
+          cancelBtn="继续编辑"
+          closeOnOverlayClick={false}
+          onConfirm={() => {
+            if (historyActionRef.current || draftActionRef.current) {
+              setNotice("工程操作尚未完成，请稍后再切换工作区");
+              routeBlocker.reset();
+              return;
+            }
+            routeBlocker.proceed();
+          }}
+          onClose={() => routeBlocker.reset()}
+        />
+      )}
       <header className="studio-toolbar">
         <div>
-          <p className="scada-eyebrow">ADui SCADA · 组态工作台</p>
-          <h1>SVG 组态编辑器</h1>
+          <p className="scada-eyebrow">组态编辑 / 本地工作区</p>
+          <div className="studio-project-title">
+            <h1 data-project-id={state.document.projectId} title={state.document.projectId}>
+              {state.document.projectName ?? state.document.projectId}
+            </h1>
+            <Button
+              type="button"
+              size="small"
+              variant="text"
+              className="studio-rename-project"
+              aria-label="重命名工程"
+              title="重命名工程"
+              onClick={() => void renameProject()}
+            >
+              <EditIcon aria-hidden="true" />
+            </Button>
+          </div>
         </div>
         <div className="studio-actions">
           <div className="studio-history-actions">
@@ -1798,6 +2028,9 @@ export default function StudioPage() {
                   <Button
                     tag="button"
                     type="button"
+                    theme="default"
+                    variant="text"
+                    size="small"
                     onClick={toggleAutoSave}
                     aria-pressed={autoSaveEnabled}
                   >
@@ -1814,23 +2047,47 @@ export default function StudioPage() {
                         void importJsonFile(files[0]);
                       }}
                     >
-                      <Button tag="button" type="button" variant="outline">
+                      <Button
+                        tag="button"
+                        type="button"
+                        theme="default"
+                        variant="text"
+                        size="small"
+                      >
                         导入 JSON
                       </Button>
                     </Upload>
                   </div>
-                  <Button tag="button" type="button" onClick={exportJson}>
+                  <Button
+                    tag="button"
+                    type="button"
+                    theme="default"
+                    variant="text"
+                    size="small"
+                    onClick={exportJson}
+                  >
                     导出 JSON
                   </Button>
                   <Button
                     tag="button"
                     type="button"
+                    theme="default"
+                    variant="text"
+                    size="small"
                     onClick={restoreDraft}
                     disabled={!hasSavedDraft}
                   >
                     恢复草稿
                   </Button>
-                  <Button tag="button" type="button" onClick={clearDraft} disabled={!hasSavedDraft}>
+                  <Button
+                    tag="button"
+                    type="button"
+                    theme="danger"
+                    variant="text"
+                    size="small"
+                    onClick={clearDraft}
+                    disabled={!hasSavedDraft}
+                  >
                     清除草稿
                   </Button>
                 </div>
@@ -2007,7 +2264,7 @@ export default function StudioPage() {
             </Popup>
           </div>
           <ServerProjectBrowser
-            key={serverAccessRevision}
+            key={serverBrowserRevision}
             api={serverApi}
             currentProjectId={state.document.projectId}
             disabled={historyBusy}
@@ -2151,171 +2408,255 @@ export default function StudioPage() {
           </div>
         </div>
       </header>
-      <div className="studio-page-bar" aria-label="工程页面管理">
-        <div className="studio-page-tabs" aria-label="工程页面">
-          {state.document.pages.map((item) => (
-            <Button
-              tag="button"
-              key={item.id}
-              type="button"
-              aria-current={item.id === state.activePageId ? "page" : undefined}
-              onClick={() => switchPage(item.id)}
-            >
-              {item.name}
-            </Button>
-          ))}
-        </div>
-        <div className="studio-page-menu">
-          <Dropdown
-            trigger="click"
-            placement="bottom-right"
-            options={pageMenuOptions}
-            onClick={handlePageMenuClick}
-          >
-            <Button type="button" variant="outline">
-              页面管理
-            </Button>
-          </Dropdown>
-        </div>
-      </div>
       <div
         className="studio-workspace"
         data-left-collapsed={!leftPanelVisible}
         data-right-collapsed={!rightPanelVisible}
+        style={
+          {
+            "--studio-left-preferred": `${leftPanelWidth}px`,
+            "--studio-right-preferred": `${rightPanelWidth}px`,
+          } as CSSProperties
+        }
       >
         <aside className="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
-          <div className="studio-pane-heading">
-            <h2>资源与图层</h2>
-            <span className="studio-count">{page.nodes.length}</span>
-          </div>
-          <div className="studio-library-label">图元库 · 点击添加</div>
-          <div className="studio-add">
-            <Button tag="button" type="button" onClick={() => addSymbol("tank")}>
-              + 水箱
+          <div className="studio-library-tabs" role="group" aria-label="左侧工作区">
+            <Button
+              type="button"
+              aria-pressed={libraryTab === "layers"}
+              onClick={() => setLibraryTab("layers")}
+            >
+              图层
             </Button>
-            <Button tag="button" type="button" onClick={() => addSymbol("pump")}>
-              + 水泵
-            </Button>
-            <Button tag="button" type="button" onClick={() => addSymbol("pipe")}>
-              + 管道
-            </Button>
-            <Button tag="button" type="button" onClick={() => addSymbol("label")}>
-              + 文本
+            <Button
+              type="button"
+              aria-pressed={libraryTab === "symbols"}
+              onClick={() => setLibraryTab("symbols")}
+            >
+              图元库
             </Button>
           </div>
-          <div className="studio-tree-section-title">图层列表</div>
-          <div className="studio-tree-controls">
-            <label className="studio-field">
-              搜索图元或组合
-              <Input
-                type="search"
+          <div className="studio-symbol-library" hidden={libraryTab !== "symbols"}>
+            <h2>基础工业图元</h2>
+            <p className="studio-tip">点击添加到当前画板，之后可编辑几何属性和数据绑定。</p>
+            <div className="studio-symbol-grid">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  addSymbol("tank");
+                  setLibraryTab("layers");
+                }}
+              >
+                <span className="studio-equipment-icon" data-equipment="tank" aria-hidden="true" />
+                <strong>水箱</strong>
+                <small>显示液位与质量</small>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  addSymbol("pump");
+                  setLibraryTab("layers");
+                }}
+              >
+                <span className="studio-equipment-icon" data-equipment="pump" aria-hidden="true" />
+                <strong>水泵</strong>
+                <small>显示运行状态</small>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  addSymbol("pipe");
+                  setLibraryTab("layers");
+                }}
+              >
+                <span className="studio-equipment-icon" data-equipment="pipe" aria-hidden="true" />
+                <strong>管道</strong>
+                <small>绘制静态工艺管线</small>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  addSymbol("label");
+                  setLibraryTab("layers");
+                }}
+              >
+                <TextboxIcon aria-hidden="true" />
+                <strong>文本</strong>
+                <small>显示文案或 Tag 值</small>
+              </Button>
+            </div>
+          </div>
+          <div className="studio-layer-content" hidden={libraryTab !== "layers"}>
+            <div className="studio-page-bar" aria-label="工程页面管理">
+              <div className="studio-page-tabs" aria-label="工程页面">
+                {state.document.pages.map((item) => (
+                  <Button
+                    tag="button"
+                    key={item.id}
+                    type="button"
+                    aria-current={item.id === state.activePageId ? "page" : undefined}
+                    onClick={() => switchPage(item.id)}
+                  >
+                    {item.name}
+                  </Button>
+                ))}
+              </div>
+              <div className="studio-page-menu">
+                <Dropdown
+                  trigger="click"
+                  placement="bottom-right"
+                  options={pageMenuOptions}
+                  onClick={handlePageMenuClick}
+                >
+                  <Button type="button" variant="outline">
+                    页面管理
+                  </Button>
+                </Dropdown>
+              </div>
+            </div>
+            <div className="studio-pane-heading">
+              <h2>图层</h2>
+              <span className="studio-count">{page.nodes.length}</span>
+            </div>
+            <div className="studio-tree-controls">
+              <label className="studio-field">
+                搜索图元或组合
+                <Input
+                  type="text"
+                  clearable
+                  size="small"
+                  aria-label="搜索图层"
+                  maxlength={128}
+                  value={layerSearch}
+                  placeholder="图元 ID、类型、文字或组合 ID"
+                  onChange={(value) => setLayerSearch(value)}
+                />
+              </label>
+              <Button
+                variant="outline"
                 size="small"
-                aria-label="搜索图层"
-                maxlength={128}
-                value={layerSearch}
-                placeholder="图元 ID、类型、文字或组合 ID"
-                onChange={(value) => setLayerSearch(value)}
-              />
-            </label>
-            <Button
-              variant="outline"
-              size="small"
-              disabled={state.selectedIds.length === 0}
-              onClick={locateSelectedLayer}
-            >
-              定位选中图层
-            </Button>
-            <Button
-              variant="text"
-              size="small"
-              disabled={layerSearch.length === 0}
-              onClick={() => setLayerSearch("")}
-            >
-              <CloseIcon /> 清除搜索
-            </Button>
-          </div>
-          <div className="studio-layer-tree min-w-0" ref={layerTreeRef} aria-label="图层树">
-            {layerEntries.length === 0 && (
-              <p className="studio-tree-empty">
-                {page.nodes.length === 0 ? "当前页面暂无图元" : "没有匹配的图元或组合"}
-              </p>
-            )}
-            {layerEntries.map((entry) =>
-              entry.kind === "node" ? (
-                renderLayerButton(entry.node, "node")
-              ) : (
-                <div className="studio-tree-group" key={entry.groupId}>
-                  <div className="studio-tree-group-heading">
+                disabled={state.selectedIds.length === 0}
+                onClick={locateSelectedLayer}
+              >
+                <span className="scada-button-content">
+                  <FocusIcon aria-hidden="true" />
+                  <span className="scada-button-label">定位选中图层</span>
+                </span>
+              </Button>
+            </div>
+            <div className="studio-layer-tree min-w-0" ref={layerTreeRef} aria-label="图层树">
+              {layerEntries.length === 0 && (
+                <p className="studio-tree-empty">
+                  {page.nodes.length === 0 ? "当前页面暂无图元" : "没有匹配的图元或组合"}
+                </p>
+              )}
+              {layerEntries.map((entry) =>
+                entry.kind === "node" ? (
+                  renderLayerButton(entry.node, "node")
+                ) : (
+                  <div className="studio-tree-group" key={entry.groupId}>
+                    <div className="studio-tree-group-heading">
+                      <Button
+                        tag="button"
+                        type="button"
+                        className="studio-tree-toggle"
+                        aria-label={groupToggleLabel(entry.groupId)}
+                        aria-expanded={groupExpanded(entry.groupId)}
+                        disabled={isLayerSearching}
+                        onClick={() => toggleLayerGroup(entry.groupId)}
+                      >
+                        {groupExpanded(entry.groupId) ? (
+                          <ChevronDownIcon aria-hidden="true" />
+                        ) : (
+                          <ChevronRightIcon aria-hidden="true" />
+                        )}
+                      </Button>
+                      {renderLayerButton(
+                        page.nodes.find((node) => node.id === entry.anchorNodeId) ??
+                          entry.members[0]!,
+                        "group",
+                        entry,
+                      )}
+                    </div>
+                    {groupExpanded(entry.groupId) && (
+                      <div
+                        className="studio-tree-members"
+                        role="group"
+                        aria-label={`组合 ${entry.groupId} 的成员`}
+                      >
+                        {entry.members.map((node) => renderLayerButton(node, "member"))}
+                      </div>
+                    )}
+                  </div>
+                ),
+              )}
+            </div>
+            <div className="studio-side-more">
+              <Collapse borderless defaultValue={[]}>
+                <Collapse.Panel value="cross-page" header="跨页操作与使用帮助">
+                  <div className="studio-copy-tools">
+                    <label className="studio-field">
+                      复制选中图元到
+                      <Select
+                        value={copyTargetPageId}
+                        disabled={copyTargetPages.length === 0}
+                        options={
+                          copyTargetPages.length === 0
+                            ? [{ label: "暂无其他页面", value: "" }]
+                            : copyTargetPages.map((item) => ({ label: item.name, value: item.id }))
+                        }
+                        onChange={(value) => {
+                          if (typeof value === "string") setPreferredCopyTargetPageId(value);
+                        }}
+                      />
+                    </label>
                     <Button
                       tag="button"
                       type="button"
-                      className="studio-tree-toggle"
-                      aria-label={groupToggleLabel(entry.groupId)}
-                      aria-expanded={groupExpanded(entry.groupId)}
-                      disabled={isLayerSearching}
-                      onClick={() => toggleLayerGroup(entry.groupId)}
+                      onClick={copySelectedToPage}
+                      disabled={state.selectedIds.length === 0 || !copyTargetPageId}
                     >
-                      {groupExpanded(entry.groupId) ? "▾" : "▸"}
+                      复制选中图元
                     </Button>
-                    {renderLayerButton(
-                      page.nodes.find((node) => node.id === entry.anchorNodeId) ??
-                        entry.members[0]!,
-                      "group",
-                      entry,
-                    )}
                   </div>
-                  {groupExpanded(entry.groupId) && (
-                    <div
-                      className="studio-tree-members"
-                      role="group"
-                      aria-label={`组合 ${entry.groupId} 的成员`}
-                    >
-                      {entry.members.map((node) => renderLayerButton(node, "member"))}
-                    </div>
-                  )}
-                </div>
-              ),
-            )}
-          </div>
-          <div className="studio-side-more">
-            <Collapse borderless defaultValue={[]}>
-              <Collapse.Panel value="cross-page" header="跨页操作与使用帮助">
-                <div className="studio-copy-tools">
-                  <label className="studio-field">
-                    复制选中图元到
-                    <Select
-                      value={copyTargetPageId}
-                      disabled={copyTargetPages.length === 0}
-                      options={
-                        copyTargetPages.length === 0
-                          ? [{ label: "暂无其他页面", value: "" }]
-                          : copyTargetPages.map((item) => ({ label: item.name, value: item.id }))
-                      }
-                      onChange={(value) => {
-                        if (typeof value === "string") setPreferredCopyTargetPageId(value);
-                      }}
-                    />
-                  </label>
-                  <Button
-                    tag="button"
-                    type="button"
-                    onClick={copySelectedToPage}
-                    disabled={state.selectedIds.length === 0 || !copyTargetPageId}
-                  >
-                    复制选中图元
-                  </Button>
-                </div>
-                <p className="studio-tip">
-                  Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。
-                </p>
-              </Collapse.Panel>
-            </Collapse>
+                  <p className="studio-tip">
+                    Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。
+                  </p>
+                </Collapse.Panel>
+              </Collapse>
+            </div>
           </div>
         </aside>
+        {(["left", "right"] as const).map((side) =>
+          (side === "left" ? leftPanelVisible : rightPanelVisible) ? (
+            <div
+              key={side}
+              className="studio-panel-resizer"
+              data-side={side}
+              role="separator"
+              tabIndex={0}
+              aria-label={side === "left" ? "调整图层面板宽度" : "调整属性面板宽度"}
+              aria-orientation="vertical"
+              aria-valuemin={side === "left" ? 200 : 260}
+              aria-valuemax={side === "left" ? 340 : 420}
+              aria-valuenow={side === "left" ? leftPanelWidth : rightPanelWidth}
+              onPointerDown={(event) => beginPanelResize(event, side)}
+              onPointerMove={(event) => updatePanelResize(event, side)}
+              onPointerUp={endPanelResize}
+              onPointerCancel={endPanelResize}
+              onLostPointerCapture={endPanelResize}
+              onKeyDown={(event) => resizePanelByKey(event, side)}
+            />
+          ) : null,
+        )}
         <section className="studio-stage min-h-0 min-w-0" aria-label="组态画布">
           <div className="studio-stage-caption">
             <span>
-              {page.name} · {page.size.width} × {page.size.height} · 静态模拟预览
+              {page.name} · {page.size.width} × {page.size.height} px · 静态模拟预览
             </span>
             <div className="studio-view-menu studio-view-settings-menu">
               <Popup
@@ -2348,7 +2689,31 @@ export default function StudioPage() {
                       </div>
                     </div>
                     <div className="studio-view-section">
-                      <p>侧栏显示</p>
+                      <p>工作区面板</p>
+                      <label className="studio-panel-size">
+                        <span>图层宽度 · {leftPanelWidth}px</span>
+                        <input
+                          type="range"
+                          min={200}
+                          max={340}
+                          step={1}
+                          value={leftPanelWidth}
+                          onChange={(event) => setLeftPanelWidth(event.currentTarget.valueAsNumber)}
+                        />
+                      </label>
+                      <label className="studio-panel-size">
+                        <span>属性宽度 · {rightPanelWidth}px</span>
+                        <input
+                          type="range"
+                          min={260}
+                          max={420}
+                          step={1}
+                          value={rightPanelWidth}
+                          onChange={(event) =>
+                            setRightPanelWidth(event.currentTarget.valueAsNumber)
+                          }
+                        />
+                      </label>
                       <div className="studio-panel-toggles" aria-label="面板显示">
                         <Button
                           tag="button"
@@ -2371,8 +2736,11 @@ export default function StudioPage() {
                   </div>
                 }
               >
-                <Button tag="button" type="button" variant="outline">
-                  视图设置
+                <Button tag="button" type="button" variant="outline" size="small">
+                  <span className="scada-button-content">
+                    <SettingIcon aria-hidden="true" />
+                    <span className="scada-button-label">视图设置</span>
+                  </span>
                 </Button>
               </Popup>
             </div>
@@ -2380,21 +2748,49 @@ export default function StudioPage() {
               <Button
                 tag="button"
                 type="button"
+                size="small"
+                title="缩小"
+                aria-label="缩小"
                 onClick={() => changeZoom(-0.25)}
                 disabled={zoom <= 0.5}
               >
-                −
-              </Button>
-              <Button tag="button" type="button" onClick={resetCanvasView}>
-                {zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%`}
+                <RemoveIcon aria-hidden="true" />
               </Button>
               <Button
                 tag="button"
                 type="button"
-                onClick={() => changeZoom(0.25)}
-                disabled={zoom >= 2}
+                size="small"
+                title="适应画板"
+                aria-label="适应画板"
+                onClick={resetCanvasView}
               >
-                +
+                {actualZoomPercent}%
+              </Button>
+              <Button
+                tag="button"
+                type="button"
+                size="small"
+                title="放大"
+                aria-label="放大"
+                onClick={() => changeZoom(0.25)}
+                disabled={zoom >= 8}
+              >
+                <AddIcon aria-hidden="true" />
+              </Button>
+              <Button
+                tag="button"
+                type="button"
+                size="small"
+                className="studio-focus-selection"
+                title="定位选中图元"
+                aria-label="定位选中图元"
+                disabled={!selected || !studioNodeVisible(selected)}
+                onClick={focusSelectedNode}
+              >
+                <span className="scada-button-content">
+                  <FocusIcon aria-hidden="true" />
+                  <span className="scada-button-label">定位</span>
+                </span>
               </Button>
             </div>
           </div>
@@ -2404,6 +2800,7 @@ export default function StudioPage() {
                 ref={svgRef}
                 className="studio-svg"
                 data-rotating={rotating ? "true" : undefined}
+                data-canvas-tool={canvasTool}
                 viewBox={`${visibleRect.x} ${visibleRect.y} ${visibleRect.width} ${visibleRect.height}`}
                 preserveAspectRatio="xMidYMid meet"
                 onPointerMove={(event) => {
@@ -2419,10 +2816,15 @@ export default function StudioPage() {
                   finishGeometry(event);
                 }}
                 onPointerCancel={cancelDrag}
-                onPointerDown={(event) => {
-                  if (!beginCanvasPan(event)) startMarquee(event);
+                onPointerDownCapture={(event) => {
+                  if (event.button === 0) {
+                    const canvas = event.currentTarget.closest(".studio-canvas-scroll");
+                    if (canvas instanceof HTMLElement) canvas.focus({ preventScroll: true });
+                  }
+                  if (beginCanvasPan(event)) event.stopPropagation();
                 }}
-                aria-label="可编辑 SVG 画布；放大后可用中键或 Alt 加空白处拖动平移"
+                onPointerDown={startMarquee}
+                aria-label="可编辑 SVG 画布；使用抓手、中键或 Alt 加空白处拖动平移"
               >
                 <defs>
                   <pattern
@@ -2440,6 +2842,14 @@ export default function StudioPage() {
                     />
                   </pattern>
                 </defs>
+                <rect
+                  className="studio-artboard-surface"
+                  x={0}
+                  y={0}
+                  width={page.size.width}
+                  height={page.size.height}
+                  pointerEvents="none"
+                />
                 <image
                   href={image}
                   width={page.size.width}
@@ -2491,15 +2901,10 @@ export default function StudioPage() {
                         width={t.width}
                         height={t.height}
                         fill="transparent"
-                        stroke={
-                          state.selectedId === node.id
-                            ? "#f0ae4d"
-                            : state.selectedIds.includes(node.id)
-                              ? "#39c9ba"
-                              : "transparent"
-                        }
-                        strokeWidth={2}
-                        strokeDasharray="6 4"
+                        data-selected={state.selectedIds.includes(node.id)}
+                        data-primary={state.selectedId === node.id}
+                        strokeWidth={1.5}
+                        vectorEffect="non-scaling-stroke"
                         className="studio-hitbox"
                         onPointerDown={(event) => beginDrag(event, node.id)}
                         onKeyDown={(event) => {
@@ -2521,10 +2926,11 @@ export default function StudioPage() {
                                   className="studio-resize-handle"
                                   data-handle={handle}
                                   aria-label={`缩放图元${RESIZE_HANDLE_LABELS[handle]}`}
-                                  x={position.x - 5}
-                                  y={position.y - 5}
-                                  width={10}
-                                  height={10}
+                                  x={position.x - 4 * worldPerPixel}
+                                  y={position.y - 4 * worldPerPixel}
+                                  width={8 * worldPerPixel}
+                                  height={8 * worldPerPixel}
+                                  vectorEffect="non-scaling-stroke"
                                   onPointerDown={(event) => beginGeometry(event, handle)}
                                 >
                                   <title>按住 Shift 保持宽高比</title>
@@ -2536,15 +2942,17 @@ export default function StudioPage() {
                               x1={t.x + t.width / 2}
                               x2={t.x + t.width / 2}
                               y1={t.y}
-                              y2={t.y - 26}
+                              y2={t.y - 24 * worldPerPixel}
+                              vectorEffect="non-scaling-stroke"
                               pointerEvents="none"
                             />
                             <circle
                               className="studio-rotation-handle"
                               aria-label="旋转图元，按住 Shift 可按 15 度吸附"
                               cx={t.x + t.width / 2}
-                              cy={t.y - 26}
-                              r={7}
+                              cy={t.y - 24 * worldPerPixel}
+                              r={5 * worldPerPixel}
+                              vectorEffect="non-scaling-stroke"
                               onPointerDown={(event) => beginGeometry(event, "rotate")}
                             />
                           </>
@@ -2585,320 +2993,443 @@ export default function StudioPage() {
               </svg>
             </div>
           </div>
+          <div className="studio-canvas-dock" aria-label="画布工具">
+            <div className="studio-canvas-modes" role="group" aria-label="画布操作模式">
+              <Button
+                tag="button"
+                type="button"
+                title="选择工具（V）"
+                aria-pressed={canvasTool === "select"}
+                onClick={() => setCanvasTool("select")}
+              >
+                <span className="scada-button-content">
+                  <CursorIcon aria-hidden="true" />
+                  <span className="scada-button-label">选择</span>
+                </span>
+              </Button>
+              <Button
+                tag="button"
+                type="button"
+                title="抓手工具（H）"
+                aria-pressed={canvasTool === "hand"}
+                onClick={() => setCanvasTool("hand")}
+              >
+                <span className="scada-button-content">
+                  <GestureOpenIcon aria-hidden="true" />
+                  <span className="scada-button-label">抓手</span>
+                </span>
+              </Button>
+            </div>
+            <div className="studio-library-label">图元库 · 点击添加</div>
+            <div className="studio-add">
+              <Button tag="button" type="button" onClick={() => addSymbol("tank")}>
+                <span className="scada-button-content">
+                  <span
+                    className="studio-equipment-icon"
+                    data-equipment="tank"
+                    aria-hidden="true"
+                  />
+                  <span className="scada-button-label">+ 水箱</span>
+                </span>
+              </Button>
+              <Button tag="button" type="button" onClick={() => addSymbol("pump")}>
+                <span className="scada-button-content">
+                  <span
+                    className="studio-equipment-icon"
+                    data-equipment="pump"
+                    aria-hidden="true"
+                  />
+                  <span className="scada-button-label">+ 水泵</span>
+                </span>
+              </Button>
+              <Button tag="button" type="button" onClick={() => addSymbol("pipe")}>
+                <span className="scada-button-content">
+                  <span
+                    className="studio-equipment-icon"
+                    data-equipment="pipe"
+                    aria-hidden="true"
+                  />
+                  <span className="scada-button-label">+ 管道</span>
+                </span>
+              </Button>
+              <Button tag="button" type="button" onClick={() => addSymbol("label")}>
+                <span className="scada-button-content">
+                  <TextboxIcon aria-hidden="true" />
+                  <span className="scada-button-label">+ 文本</span>
+                </span>
+              </Button>
+            </div>
+          </div>
         </section>
         <aside
           className="studio-panel studio-panel-properties min-h-0 min-w-0"
-          aria-label="图元属性"
+          aria-label="属性与 Tag 工作区"
         >
-          <h2>属性 · 已选 {state.selectedIds.length}</h2>
-          {selected ? (
-            <>
-              <p>
-                <strong>{selected.id}</strong> · {selected.type}
-              </p>
-              {state.selectedIds.length === 1 ? (
-                <form
-                  key={`${selected.id}:${JSON.stringify(selected.transform)}`}
-                  className="studio-geometry"
-                  onSubmit={changeGeometry}
-                  noValidate
-                >
-                  {GEOMETRY_PROPERTY_FIELDS.map(([key, label]) => (
-                    <label key={key}>
-                      {label}
-                      <Input
-                        type="number"
-                        name={key}
-                        defaultValue={String(selected.transform[key])}
-                        disabled={studioNodeLocked(selected)}
+          <div className="studio-inspector-tabs" role="group" aria-label="右侧工作区">
+            <Button
+              type="button"
+              aria-pressed={inspectorTab === "properties"}
+              onClick={() => setInspectorTab("properties")}
+            >
+              属性
+            </Button>
+            <Button
+              type="button"
+              aria-pressed={inspectorTab === "tags"}
+              onClick={() => setInspectorTab("tags")}
+            >
+              项目 Tag（{state.document.tags.length}）
+            </Button>
+          </div>
+          <div className="studio-inspector-content" hidden={inspectorTab !== "properties"}>
+            <h2>属性 · 已选 {state.selectedIds.length}</h2>
+            {selected ? (
+              <>
+                <p>
+                  <strong>{selected.id}</strong> · {selected.type}
+                </p>
+                <h3 className="studio-property-section-title">位置与尺寸</h3>
+                {state.selectedIds.length === 1 ? (
+                  <form
+                    key={`${selected.id}:${JSON.stringify(selected.transform)}`}
+                    className="studio-geometry"
+                    onSubmit={changeGeometry}
+                    noValidate
+                  >
+                    {GEOMETRY_PROPERTY_FIELDS.map(([key, label]) => (
+                      <label key={key}>
+                        {label}
+                        <Input
+                          type="number"
+                          name={key}
+                          defaultValue={String(selected.transform[key])}
+                          disabled={studioNodeLocked(selected)}
+                        />
+                      </label>
+                    ))}
+                    <Button type="submit" disabled={studioNodeLocked(selected)}>
+                      应用几何属性
+                    </Button>
+                  </form>
+                ) : (
+                  <p className="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
+                )}
+                <p className="studio-tip">
+                  拖动画布中的虚线框，或使用方向按钮微调。每次操作可撤销。
+                </p>
+                <div className="studio-nudge">
+                  <Button
+                    type="button"
+                    title="向左微调"
+                    aria-label="向左微调"
+                    onClick={() => nudge(-1, 0)}
+                  >
+                    <ArrowLeftIcon aria-hidden="true" />
+                  </Button>
+                  <Button
+                    type="button"
+                    title="向上微调"
+                    aria-label="向上微调"
+                    onClick={() => nudge(0, -1)}
+                  >
+                    <ArrowUpIcon aria-hidden="true" />
+                  </Button>
+                  <Button
+                    type="button"
+                    title="向下微调"
+                    aria-label="向下微调"
+                    onClick={() => nudge(0, 1)}
+                  >
+                    <ArrowDownIcon aria-hidden="true" />
+                  </Button>
+                  <Button
+                    type="button"
+                    title="向右微调"
+                    aria-label="向右微调"
+                    onClick={() => nudge(1, 0)}
+                  >
+                    <ArrowRightIcon aria-hidden="true" />
+                  </Button>
+                </div>
+                {selected.type === "label" && state.selectedIds.length === 1 && (
+                  <label className="studio-field">
+                    显示文案
+                    <Input
+                      value={labelDraft}
+                      maxlength={256}
+                      disabled={studioNodeLocked(selected)}
+                      onChange={(value) => setLabelDraft(value)}
+                    />
+                    <Button
+                      type="button"
+                      onClick={changeLabel}
+                      disabled={studioNodeLocked(selected)}
+                    >
+                      应用文案
+                    </Button>
+                  </label>
+                )}
+                <h3>Tag 绑定（项目数据）</h3>
+                {bindingSlot ? (
+                  <>
+                    <label className="studio-field">
+                      {bindingSlot} · 选择项目 Tag
+                      <Select
+                        aria-label={selected.id + " 的 " + bindingSlot + " Tag 绑定"}
+                        value={currentBindingTag}
+                        options={[
+                          { label: "不绑定", value: "" },
+                          ...(missingBindingTag
+                            ? [
+                                {
+                                  label: `${currentBindingTag}（当前工程未定义或类型待确认）`,
+                                  value: currentBindingTag,
+                                  disabled: true,
+                                },
+                              ]
+                            : []),
+                          ...tagCandidates.map((option) => ({
+                            label: `${option.displayName} · ${option.tagId} · ${TAG_DATA_TYPE_LABELS[option.dataType]}${option.unit ? " · " + option.unit : ""}`,
+                            value: option.tagId,
+                          })),
+                        ]}
+                        onChange={(value) => {
+                          if (typeof value === "string") changeTagBinding(bindingSlot, value);
+                        }}
                       />
                     </label>
-                  ))}
-                  <Button type="submit" disabled={studioNodeLocked(selected)}>
-                    应用几何属性
-                  </Button>
-                </form>
-              ) : (
-                <p className="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
-              )}
-              <p className="studio-tip">拖动画布中的虚线框，或使用方向按钮微调。每次操作可撤销。</p>
-              <div className="studio-nudge">
-                <Button type="button" onClick={() => nudge(-1, 0)}>
-                  ←
-                </Button>
-                <Button type="button" onClick={() => nudge(0, -1)}>
-                  ↑
-                </Button>
-                <Button type="button" onClick={() => nudge(0, 1)}>
-                  ↓
-                </Button>
-                <Button type="button" onClick={() => nudge(1, 0)}>
-                  →
-                </Button>
+                    {selectedTagDefinition && (
+                      <p className="studio-tip">
+                        {selectedTagDefinition.description}；质量由实时 Tag 数据动态提供
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="studio-tip">
+                    请单选未组合的水箱、水泵或文本图元；管道暂不支持动态 Tag 绑定。
+                  </p>
+                )}
+                {Object.entries(selected.bindings).map(([slot, binding]) => (
+                  <p className="studio-binding" key={slot}>
+                    {slot} → {binding.tagId}
+                  </p>
+                ))}
+              </>
+            ) : (
+              <div className="studio-page-summary">
+                <h3>当前画板</h3>
+                <strong>{page.name}</strong>
+                <dl>
+                  <div>
+                    <dt>宽度</dt>
+                    <dd>{page.size.width} px</dd>
+                  </div>
+                  <div>
+                    <dt>高度</dt>
+                    <dd>{page.size.height} px</dd>
+                  </div>
+                  <div>
+                    <dt>图元</dt>
+                    <dd>{page.nodes.length}</dd>
+                  </div>
+                </dl>
+                <p className="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
               </div>
-              {selected.type === "label" && state.selectedIds.length === 1 && (
-                <label className="studio-field">
-                  显示文案
-                  <Input
-                    value={labelDraft}
-                    maxlength={256}
-                    disabled={studioNodeLocked(selected)}
-                    onChange={(value) => setLabelDraft(value)}
-                  />
-                  <Button type="button" onClick={changeLabel} disabled={studioNodeLocked(selected)}>
-                    应用文案
-                  </Button>
-                </label>
-              )}
-              <h3>Tag 绑定（项目数据）</h3>
-              {bindingSlot ? (
-                <>
-                  <label className="studio-field">
-                    {bindingSlot} · 选择项目 Tag
-                    <Select
-                      aria-label={selected.id + " 的 " + bindingSlot + " Tag 绑定"}
-                      value={currentBindingTag}
-                      options={[
-                        { label: "不绑定", value: "" },
-                        ...(missingBindingTag
-                          ? [
-                              {
-                                label: `${currentBindingTag}（当前工程未定义或类型待确认）`,
-                                value: currentBindingTag,
-                                disabled: true,
-                              },
-                            ]
-                          : []),
-                        ...tagCandidates.map((option) => ({
-                          label: `${option.displayName} · ${option.tagId} · ${TAG_DATA_TYPE_LABELS[option.dataType]}${option.unit ? " · " + option.unit : ""}`,
-                          value: option.tagId,
-                        })),
-                      ]}
-                      onChange={(value) => {
-                        if (typeof value === "string") changeTagBinding(bindingSlot, value);
-                      }}
-                    />
-                  </label>
-                  {selectedTagDefinition && (
-                    <p className="studio-tip">
-                      {selectedTagDefinition.description}；质量由实时 Tag 数据动态提供
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p className="studio-tip">
-                  请单选未组合的水箱、水泵或文本图元；管道暂不支持动态 Tag 绑定。
-                </p>
-              )}
-              {Object.entries(selected.bindings).map(([slot, binding]) => (
-                <p className="studio-binding" key={slot}>
-                  {slot} → {binding.tagId}
-                </p>
-              ))}
-            </>
-          ) : (
-            <p className="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
-          )}
-          <div className="studio-advanced">
-            <Collapse borderless defaultValue={[]}>
-              <Collapse.Panel
-                value="project-tags"
-                header={<>项目 Tag 定义（{state.document.tags.length}）</>}
-              >
-                <div className="studio-advanced-content">
-                  <TagManager
-                    tags={state.document.tags}
-                    onCreate={(definition) =>
-                      changeProjectTag(
-                        () => editor.addTagDefinition(definition),
-                        "项目 Tag 已新增，可撤销",
-                      )
-                    }
-                    onUpdate={(tagId, changes) =>
-                      changeProjectTag(
-                        () => editor.updateTagDefinition(tagId, changes),
-                        "项目 Tag 已更新，可撤销",
-                      )
-                    }
-                    onRemove={(tagId) =>
-                      changeProjectTag(
-                        () => editor.removeTagDefinition(tagId),
-                        "项目 Tag 已删除，可撤销",
-                      )
-                    }
-                  />
-                </div>
-              </Collapse.Panel>
-            </Collapse>
-          </div>
-          <div className="studio-advanced">
-            <Collapse borderless defaultValue={[]}>
-              <Collapse.Panel value="advanced-tools" header="高级图元与图层操作">
-                <div className="studio-advanced-content">
-                  <div className="studio-toolbox">
-                    <div className="studio-tool-group" aria-label="图层锁定与可见性">
-                      <Button
-                        type="button"
-                        disabled={state.selectedIds.length === 0}
-                        onClick={() => changeSelectedLocked(true)}
-                      >
-                        锁定所选
-                      </Button>
-                      <Button
-                        type="button"
-                        disabled={state.selectedIds.length === 0}
-                        onClick={() => changeSelectedLocked(false)}
-                      >
-                        解锁所选
-                      </Button>
-                      <Button
-                        type="button"
-                        disabled={state.selectedIds.length === 0 || hasLockedSelection}
-                        onClick={() => changeSelectedVisible(false)}
-                      >
-                        隐藏所选
-                      </Button>
-                      <Button
-                        type="button"
-                        disabled={state.selectedIds.length === 0 || hasLockedSelection}
-                        onClick={() => changeSelectedVisible(true)}
-                      >
-                        显示所选
-                      </Button>
-                    </div>
-                    <div className="studio-tool-group" aria-label="图元组合">
-                      <Button
-                        type="button"
-                        disabled={!canGroup}
-                        onClick={() =>
-                          apply(() => editor.groupSelected(), "已组合所选图元，可撤销")
-                        }
-                      >
-                        组合所选
-                      </Button>
-                      <Button
-                        type="button"
-                        disabled={!hasGroupedSelection}
-                        onClick={() => apply(() => editor.ungroupSelected(), "已解组，可撤销")}
-                      >
-                        解组
-                      </Button>
-                    </div>
-                    <div className="studio-tool-group" aria-label="图元剪贴板">
-                      <Button
-                        type="button"
-                        disabled={state.selectedIds.length === 0}
-                        onClick={() =>
-                          apply(() => editor.copySelected(), "已复制所选图元到会话剪贴板")
-                        }
-                      >
-                        复制所选
-                      </Button>
-                      <Button
-                        type="button"
-                        disabled={state.selectedIds.length === 0}
-                        onClick={() => apply(() => editor.cutSelected(), "已剪切图元，可撤销")}
-                      >
-                        剪切所选
-                      </Button>
-                      <Button
-                        type="button"
-                        disabled={!state.hasClipboard}
-                        onClick={() => apply(() => editor.pasteClipboard(), "已粘贴图元，可撤销")}
-                      >
-                        粘贴图元
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => apply(() => editor.deleteSelected(), "已删除图元，可撤销")}
-                        disabled={state.selectedIds.length === 0}
-                      >
-                        删除所选
-                      </Button>
-                    </div>
-                    <div className="studio-exact-layer" aria-label="图层精确插入">
-                      <label className="studio-field">
-                        目标图元
-                        <Select
-                          value={layerTargetId}
-                          disabled={!canPreciselyMove || layerTargetNodes.length === 0}
-                          options={[
-                            { label: "请选择目标图元", value: "" },
-                            ...layerTargetNodes.map((node) => ({
-                              label: node.id + (node.groupId ? "（组合）" : ""),
-                              value: node.id,
-                            })),
-                          ]}
-                          onChange={(value) => {
-                            if (typeof value === "string") setPreferredLayerTargetId(value);
-                          }}
-                        />
-                      </label>
-                      <label className="studio-field">
-                        插入位置
-                        <Select
-                          value={layerInsertPosition}
-                          options={[
-                            { label: "目标上方（更靠前）", value: "after" },
-                            { label: "目标下方（更靠后）", value: "before" },
-                          ]}
-                          onChange={(value) => {
-                            if (value === "after" || value === "before")
-                              setLayerInsertPosition(value);
-                          }}
-                        />
-                      </label>
-                      <Button
-                        type="button"
-                        disabled={!canPreciselyMove || !layerTargetId || !selected}
-                        onClick={() =>
-                          selected &&
-                          moveLayerPrecisely(selected.id, layerTargetId, layerInsertPosition)
-                        }
-                      >
-                        移动到指定层
-                      </Button>
-                    </div>
-                    <div className="studio-tool-group" aria-label="图层排序">
-                      <Button type="button" onClick={() => layer("back")} disabled={!selected}>
-                        置底
-                      </Button>
-                      <Button type="button" onClick={() => layer("backward")} disabled={!selected}>
-                        下移层
-                      </Button>
-                      <Button type="button" onClick={() => layer("forward")} disabled={!selected}>
-                        上移层
-                      </Button>
-                      <Button type="button" onClick={() => layer("front")} disabled={!selected}>
-                        置顶
-                      </Button>
-                    </div>
-                    <h3>多选对齐（以最后选中的图元为准）</h3>
-                    <div className="studio-tool-group" aria-label="图元对齐">
-                      {(
-                        [
-                          ["left", "左"],
-                          ["hcenter", "水平居中"],
-                          ["right", "右"],
-                          ["top", "上"],
-                          ["vcenter", "垂直居中"],
-                          ["bottom", "下"],
-                        ] as const
-                      ).map(([mode, label]) => (
+            )}
+            <div className="studio-advanced">
+              <Collapse borderless defaultValue={[]}>
+                <Collapse.Panel value="advanced-tools" header="高级图元与图层操作">
+                  <div className="studio-advanced-content">
+                    <div className="studio-toolbox">
+                      <div className="studio-tool-group" aria-label="图层锁定与可见性">
                         <Button
                           type="button"
-                          key={mode}
-                          onClick={() => align(mode)}
-                          disabled={state.selectedIds.length < 2 || hasGroupedSelection}
+                          disabled={state.selectedIds.length === 0}
+                          onClick={() => changeSelectedLocked(true)}
                         >
-                          {label}
+                          锁定所选
                         </Button>
-                      ))}
+                        <Button
+                          type="button"
+                          disabled={state.selectedIds.length === 0}
+                          onClick={() => changeSelectedLocked(false)}
+                        >
+                          解锁所选
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={state.selectedIds.length === 0 || hasLockedSelection}
+                          onClick={() => changeSelectedVisible(false)}
+                        >
+                          隐藏所选
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={state.selectedIds.length === 0 || hasLockedSelection}
+                          onClick={() => changeSelectedVisible(true)}
+                        >
+                          显示所选
+                        </Button>
+                      </div>
+                      <div className="studio-tool-group" aria-label="图元组合">
+                        <Button
+                          type="button"
+                          disabled={!canGroup}
+                          onClick={() =>
+                            apply(() => editor.groupSelected(), "已组合所选图元，可撤销")
+                          }
+                        >
+                          组合所选
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={!hasGroupedSelection}
+                          onClick={() => apply(() => editor.ungroupSelected(), "已解组，可撤销")}
+                        >
+                          解组
+                        </Button>
+                      </div>
+                      <div className="studio-tool-group" aria-label="图元剪贴板">
+                        <Button
+                          type="button"
+                          disabled={state.selectedIds.length === 0}
+                          onClick={() =>
+                            apply(() => editor.copySelected(), "已复制所选图元到会话剪贴板")
+                          }
+                        >
+                          复制所选
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={state.selectedIds.length === 0}
+                          onClick={() => apply(() => editor.cutSelected(), "已剪切图元，可撤销")}
+                        >
+                          剪切所选
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={!state.hasClipboard}
+                          onClick={() => apply(() => editor.pasteClipboard(), "已粘贴图元，可撤销")}
+                        >
+                          粘贴图元
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => apply(() => editor.deleteSelected(), "已删除图元，可撤销")}
+                          disabled={state.selectedIds.length === 0}
+                        >
+                          删除所选
+                        </Button>
+                      </div>
+                      <div className="studio-exact-layer" aria-label="图层精确插入">
+                        <label className="studio-field">
+                          目标图元
+                          <Select
+                            value={layerTargetId}
+                            disabled={!canPreciselyMove || layerTargetNodes.length === 0}
+                            options={[
+                              { label: "请选择目标图元", value: "" },
+                              ...layerTargetNodes.map((node) => ({
+                                label: node.id + (node.groupId ? "（组合）" : ""),
+                                value: node.id,
+                              })),
+                            ]}
+                            onChange={(value) => {
+                              if (typeof value === "string") setPreferredLayerTargetId(value);
+                            }}
+                          />
+                        </label>
+                        <label className="studio-field">
+                          插入位置
+                          <Select
+                            value={layerInsertPosition}
+                            options={[
+                              { label: "目标上方（更靠前）", value: "after" },
+                              { label: "目标下方（更靠后）", value: "before" },
+                            ]}
+                            onChange={(value) => {
+                              if (value === "after" || value === "before")
+                                setLayerInsertPosition(value);
+                            }}
+                          />
+                        </label>
+                        <Button
+                          type="button"
+                          disabled={!canPreciselyMove || !layerTargetId || !selected}
+                          onClick={() =>
+                            selected &&
+                            moveLayerPrecisely(selected.id, layerTargetId, layerInsertPosition)
+                          }
+                        >
+                          移动到指定层
+                        </Button>
+                      </div>
+                      <div className="studio-tool-group" aria-label="图层排序">
+                        <Button type="button" onClick={() => layer("back")} disabled={!selected}>
+                          置底
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => layer("backward")}
+                          disabled={!selected}
+                        >
+                          下移层
+                        </Button>
+                        <Button type="button" onClick={() => layer("forward")} disabled={!selected}>
+                          上移层
+                        </Button>
+                        <Button type="button" onClick={() => layer("front")} disabled={!selected}>
+                          置顶
+                        </Button>
+                      </div>
+                      <h3>多选对齐（以最后选中的图元为准）</h3>
+                      <div className="studio-tool-group" aria-label="图元对齐">
+                        {(
+                          [
+                            ["left", "左"],
+                            ["hcenter", "水平居中"],
+                            ["right", "右"],
+                            ["top", "上"],
+                            ["vcenter", "垂直居中"],
+                            ["bottom", "下"],
+                          ] as const
+                        ).map(([mode, label]) => (
+                          <Button
+                            type="button"
+                            key={mode}
+                            onClick={() => align(mode)}
+                            disabled={state.selectedIds.length < 2 || hasGroupedSelection}
+                          >
+                            {label}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Collapse.Panel>
-            </Collapse>
+                </Collapse.Panel>
+              </Collapse>
+            </div>
+          </div>
+          <div className="studio-inspector-content" hidden={inspectorTab !== "tags"}>
+            <h2>项目 Tag 定义</h2>
+            <TagManager
+              tags={state.document.tags}
+              onCreate={(definition) =>
+                changeProjectTag(
+                  () => editor.addTagDefinition(definition),
+                  "项目 Tag 已新增，可撤销",
+                )
+              }
+              onUpdate={(tagId, changes) =>
+                changeProjectTag(
+                  () => editor.updateTagDefinition(tagId, changes),
+                  "项目 Tag 已更新，可撤销",
+                )
+              }
+              onRemove={(tagId) =>
+                changeProjectTag(() => editor.removeTagDefinition(tagId), "项目 Tag 已删除，可撤销")
+              }
+            />
           </div>
         </aside>
       </div>

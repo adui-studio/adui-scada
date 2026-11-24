@@ -15,6 +15,7 @@
     "lab:alarm": "node --experimental-strip-types scripts/lab-alarm-inprocess.mjs",
     "test:alarm:lab": "node --experimental-strip-types --test scripts/lab-alarm-inprocess.cases.mjs",
     "test:browser": "node scripts/test-studio-browser.mjs",
+    "test:ui:browser": "node scripts/test-studio-browser.mjs --ui",
     "test:studio:browser:config": "node --test scripts/studio-browser-targets.cases.mjs",
     "test:release:preflight:browser": "node scripts/test-studio-browser.mjs --release-preflight",
     "test:release:preflight:oidc:config": "node --test scripts/test-oidc-release-preflight.cases.mjs",

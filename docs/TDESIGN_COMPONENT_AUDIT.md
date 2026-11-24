@@ -113,3 +113,19 @@ D5c0s 审计基线：`StudioPage.tsx` 与 `StudioPage.vue` 每端各有 **9 处*
 **测试同步**：更新 `test-studio-browser.mjs` 中原生菜单、Tag 表单、真实 TDesign Dialog 操作及 JSON 导入竞争辅助函数；更新 OIDC 工程管理、发布预检、多标签页及其 Node 模拟单测，仍保留原有无授权拒绝、版本漂移、CAS、IndexedDB 草稿与旧版迁移断言。浏览器必须通过真实 DOM 触发，而不是绕过用户确认。审计仍须核对 Popup 键盘焦点/外部关闭、Dialog Esc/取消、长列表和 1024px 视口。
 
 **源码检查边界**：已按 `tdesign-react@1.18.6`、`tdesign-vue-next@1.20.11` 固定官方 Git tag 类型/实现确认 Button、Popup、Collapse、Input/Select/Upload、Dialog 的 API；React 的折叠面板使用官方 `Collapse.Panel`，Vue 使用 `TCollapsePanel`。未新增组件库、锁文件或工业接口。本批 GitHub 代码仅进行了静态检索和 Node 脚本源码解析（不执行测试）；真实 Windows `vp check`、TypeScript/Vue 类型检查、单元和浏览器安全回归 **尚未执行，不得标记为通过**。
+
+## 11. D5c1 · Tag 目录与表单任务分离及 FUXA 参考
+
+维护者要求停止在 320px 右侧属性栏内常驻五字段 Tag 表单，并提供 FUXA 的公开项目作为参考。参考其 Editor 和 Connections 的任务组织方式，而不复制第三方实现。当前 ADui SCADA 项目 Tag 仍是工程元数据定义，并非实际 PLC 设备 Tag 采集或写入面板。
+
+React/Vue 对等采用官方 TDesign Button、Input、Select、Textarea 与 Dialog/TDialog。已核对固定版本 React 1.18.6、Vue Next 1.20.11 的 Dialog visible、width、dialogClassName、footer、destroyOnClose、closeOnEscKeydown、closeOnOverlayClick 和 onClose API。目录常驻侧栏，支持搜索、紧凑行和新建入口；编辑表单在独立 Dialog 内以两列排布，错误就近提示，编辑时稳定 ID 不可变。危险删除仍调用原 confirmStudioAction，并由共享 Editor 拒绝已绑定 Tag。
+
+浏览器测试覆盖真实按钮流程、目录搜索、弹窗所在位置和宽度、主表单两列、字段错误、不可变 ID、长 ID 与 Tab 焦点，保留原工程 CRUD 和 JSON 往返断言。尚未执行新 HEAD 的 Windows vp check/类型检查/真实浏览器，不能宣称已经完成验收。
+
+## 12. D5c1 · 明暗主题 Switch 与按钮内容对齐
+
+固定版本 React 1.18.6 与 Vue Next 1.20.11 Switch 支持 value、label、change，React 根节点是 role=switch 的原生 button，Vue 根节点为 div，故 Vue 补充 role、tabindex、aria-checked 和键盘操作。沿用既有主题持久化，不自行绘制开关，不添加依赖。导航和底部工具继续使用 TDesign Button 与官方图标，仅统一内部内容对齐。实际双端浏览器验收待执行。
+
+## 13. D5c1 · 官网主题切换动效
+
+对照 Tencent/tdesign 官网 td-theme-tabs 源码，而非假定 Switch 自带整页动效。业务仍使用固定版本 TDesign Switch，双图标来自现有图标包，整页过渡由原生 View Transition API 处理；减少动态效果及不支持该 API 时直接切换。未引入动画库。双框架实际视觉验收待执行。

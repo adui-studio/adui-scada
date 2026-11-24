@@ -115,3 +115,125 @@ export const waterTreatmentDemoDocument = parseScadaDocument({
     },
   ],
 });
+
+/** 新建 Studio 工作区的默认画板；工程 Schema 本身允许导入其他合法尺寸。 */
+export const STUDIO_DEFAULT_PAGE_SIZE = { width: 1920, height: 1080 } as const;
+
+/**
+ * 新建 Studio 的演示工作区使用 1920×1080 画板。
+ * 仅对演示图元做等比缩放和居中，不改变原只读 Runtime 演示文档或既有工程。
+ */
+export const waterTreatmentStudioDocument = parseScadaDocument({
+  ...waterTreatmentDemoDocument,
+  pages: waterTreatmentDemoDocument.pages.map((page) => {
+    const inset = 80;
+    const scale = Math.min(
+      (STUDIO_DEFAULT_PAGE_SIZE.width - inset * 2) / page.size.width,
+      (STUDIO_DEFAULT_PAGE_SIZE.height - inset * 2) / page.size.height,
+    );
+    const offsetX = (STUDIO_DEFAULT_PAGE_SIZE.width - page.size.width * scale) / 2;
+    const offsetY = (STUDIO_DEFAULT_PAGE_SIZE.height - page.size.height * scale) / 2;
+    return {
+      ...page,
+      size: { ...STUDIO_DEFAULT_PAGE_SIZE },
+      nodes: page.nodes.map((node) => ({
+        ...node,
+        transform: {
+          ...node.transform,
+          x: node.transform.x * scale + offsetX,
+          y: node.transform.y * scale + offsetY,
+          width: node.transform.width * scale,
+          height: node.transform.height * scale,
+        },
+      })),
+    };
+  }),
+});
+
+/** 新建独立空白工程，不覆盖水处理示例或历史工程。 */
+export function createBlankStudioDocument(projectId: string) {
+  return parseScadaDocument({
+    schemaVersion: SCADA_SCHEMA_VERSION,
+    projectId,
+    projectName: "未命名工程",
+    tags: [],
+    pages: [
+      {
+        id: "main",
+        name: "页面 1",
+        size: { ...STUDIO_DEFAULT_PAGE_SIZE },
+        nodes: [],
+      },
+    ],
+  });
+}
+
+/** 独立水处理总览示例，仅使用现有图元与三个真实模拟 Tag。 */
+export const waterTreatmentShowcaseDocument = parseScadaDocument({
+  schemaVersion: SCADA_SCHEMA_VERSION,
+  projectId: "water-showcase",
+  tags: waterTreatmentDemoTagDefinitions,
+  pages: [
+    {
+      id: "main",
+      name: "水处理系统 · 总览",
+      size: { ...STUDIO_DEFAULT_PAGE_SIZE },
+      nodes: [
+        node("overview-title", "label", 64, 42, 1000, 68, { text: "水处理系统 · 总览画面" }),
+        node("overview-status", "label", 1310, 58, 544, 36, { text: "静态模拟预览 · 非现场控制" }),
+        node(
+          "level-metric",
+          "label",
+          64,
+          138,
+          570,
+          164,
+          { text: "原水液位", unit: "%", presentation: "metric" },
+          { value: { tagId: "water.level" } },
+        ),
+        node(
+          "pump-metric",
+          "label",
+          674,
+          138,
+          570,
+          164,
+          { text: "水泵运行", presentation: "metric" },
+          { value: { tagId: "water.pump.running" } },
+        ),
+        node(
+          "flow-metric",
+          "label",
+          1284,
+          138,
+          570,
+          164,
+          { text: "处理流量", unit: "m³/h", presentation: "metric" },
+          { value: { tagId: "water.flow" } },
+        ),
+        node("process-title", "label", 64, 354, 680, 52, { text: "工艺流程" }),
+        node("inlet", "label", 64, 532, 200, 52, { text: "原水进水" }),
+        node("inlet-pipe", "pipe", 64, 590, 340, 24),
+        node("transfer-pipe", "pipe", 526, 590, 575, 24),
+        node("outlet-pipe", "pipe", 1262, 590, 592, 24),
+        node("raw-tank", "tank", 324, 420, 320, 370, {}, { level: { tagId: "water.level" } }),
+        node(
+          "transfer-pump",
+          "pump",
+          1012,
+          470,
+          300,
+          250,
+          {},
+          { running: { tagId: "water.pump.running" } },
+        ),
+        node("tank-name", "label", 366, 804, 250, 52, { text: "原水箱" }),
+        node("pump-name", "label", 1024, 744, 284, 52, { text: "输送水泵" }),
+        node("outlet", "label", 1516, 532, 338, 52, { text: "出水监测" }),
+        node("overview-note", "label", 64, 906, 1790, 66, {
+          text: "数据说明 · 本画面仅为编辑器模拟示例，未连接现场设备。实时质量须以实际数据源为准。",
+        }),
+      ],
+    },
+  ],
+});

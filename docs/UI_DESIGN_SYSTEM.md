@@ -1,157 +1,254 @@
-# ADui SCADA · 工业 Web 界面设计基线（D5c0l）
+# ADui SCADA · 精密工程工作台 UI/UX 设计系统（D5c1）
 
-> 范围：React/Vue 应用导航、模拟运行监控、正式发布只读预览及 SVG Studio 工作台。本文件记录 **UI 候选实现**，不是新的工业协议或安全审批。
+> 状态：**单 PR 整体重设计候选**。本基线替换原 D5c0l 至 D5c0x 深蓝水平导航视觉方案；只有最终统一验收成功才可合并。此处不定义或开放任何新工业写入、报警或发布权限。
 
-## 设计目标与依据
+## 1. 设计依据与决策
 
-- **定位**：面向工程师、工艺监控人员和项目维护者的正式工业软件，不以消费级营销大屏、炫技动效或游戏化卡片作为默认视觉语言。
-- **参考规范**：仓库 `ui-ux-pro-max` 的可访问性、信息密度、交互和响应式规则；`web-design-guidelines` 的语义控件、焦点、空状态、键盘路径和无障碍审查；`tdesign-skills` 的跨框架识别、当前组件优先和不猜测 API 原则。
-- **现有实现**：Vue 3 使用 `tdesign-vue-next`，React 使用 `tdesign-react`；两套 Studio 既有 TDesign `Button/Input` 保持不变。当前协作环境没有 `tdesign-mcp-server`，本批不引入未经查询的组件 props、事件或新组件，只重用现有能力和项目自有布局类。
-- **品牌与主题**：保留现有 Logo、品牌资源、`packages/runtime/src/theme.css` 的工业深色语义 Token；不猜测修改 V7 Logo SVG 路径，不更换第三方组件库，不新增外链字体或图标资源。
+本次使用仓库内 `.agents/skills/ui-ux-pro-max/SKILL.md`、`references/quick-reference.md`、`references/pro-rules.md` 与技能自带 `products.csv` / `styles.csv` / `colors.csv` / `typography.csv` / `ui-reasoning.csv` 的工业相邻类别进行设计筛选。对应的可核对匹配为：
 
-## 信息架构
+- **产品特征**：Smart Home/IoT Dashboard 的实时状态、Status Page / Incident Management 的事故与状态可识别性、RPA / Automation Dashboard 的高密度运营界面；
+- **风格基线**：Real-Time Monitoring + Data-Dense Dashboard，辅以 Minimalism & Swiss Style 和 Accessible & Ethical；
+- **适配理由**：本产品不是营销大屏，也不是全屏游戏化 HUD。组态工程师需要更适合阅读长文本、辨识按钮与检查权限的浅色操作区域；中央 SVG 绘图应与监控背景隔离，采用不抢夺注意力的深色专用画布；
+- **最终差异化方案**：技能中的 IoT 类别偏好深色监控，但本项目是“编辑器 + 实时观测”的双用途软件，因此主动选择**浅色精密工作区 + 深色组态画布**，而不是机械套用推荐色板。品牌严格采用 V7 原标识与颜色，不重绘 SVG 几何。
 
-| 页面       | 主要区域                                                              | 阅读和操作顺序                            | 关键约束                                               |
-| ---------- | --------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------ |
-| 应用导航   | 产品识别、运行监控、已发布运行、组态编辑、研发模式说明                | 自左至右，当前页面可识别                  | 导航不暗示连接现场设备                                 |
-| 模拟监控   | 状态/连接诊断、Tag 质量、工艺 SVG、Tag 实时值、状态变化               | 首先标明模拟和数据质量，再阅读工艺画面    | 5→7 的序列变化不意味着数据完整                         |
-| 已发布运行 | 工程选择/受控读取、发布代次摘要、静态 SVG 预览                        | 先确认受保护工程，再只读预览              | 静态发布快照不等于现场实时 Tag                         |
-| Studio     | 主工具栏、工程页面标签、固定图元侧栏、16:9 编辑画布、属性侧栏、状态栏 | 常用撤销/草稿优先，高风险操作保持已有流程 | 不改工程 Schema、SVG viewBox、命令、画布比例和外层滚动 |
+用户职责优先级：**核查数据可信度 → 找到当前工程和页面 → 执行受控命令 → 收到反馈 → 复核结果**。不以装饰性动画、彩色光晕或虚构指标替代以上流程。
 
-## 视觉基线
+## 2. 全局信息架构
 
-1. **专业层级**：统一 64px 应用顶栏、标题/状态分区、10px 面板圆角、12–16px 控件间距；不滥用彩虹渐变、强发光和大面积图标。
-2. **语义颜色**：主操作继续使用现有 `--scada-primary`；实时、告警、过期等显示使用已有 live/warning/danger Token；文字始终同时提供状态文本，不仅凭颜色区分。
-3. **工业数据**：Tag 数值、序列、代次使用等宽数字；长 Tag ID 和服务端信息允许换行，不截断关键错误。显示当前质量及模拟/只读边界。
-4. **响应式**：宽屏运行监控使用工艺 SVG + Tag 指标并列、发布页工程选择与发布状态并列；较窄屏幕改为单列。Studio 桌面工作区保留左侧栏 **252px**、右侧栏 **320px**，中央画布占据剩余宽度；小屏继续使用既有工作区折叠/纵向处理。
-5. **可访问性**：加入“跳转到主要内容”入口和 `tabindex=-1` 目标、可见焦点；状态文本保留 `role=status/alert`；无 Tag 显示文字空状态；保留所有原生按钮/标签的键盘事件和禁用语义。
-6. **动效**：仅应用轻微背景/边框/文字色交互过渡，尊重 `prefers-reduced-motion`；不在 SVG 画布上增加滚动视差或装饰循环。
-7. **双框架对等**：页面类名、字段名称、导航语义、文案、布局断点在 React/Vue 对齐；CSS 主规则只维护在共享 `@adui/scada-runtime/styles.css` 与 `@adui/tailwind/studio.css`，不复制新样式到两个应用包。
+| 区域       | 新结构                                                                                          | UX 要求                                                                               |
+| ---------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 应用外壳   | 左侧 84px 独立功能导航轨道 + 顶部 54px 当前页面路径                                             | 导航只含运行监控、已发布运行、组态编辑三项真实能力；当前态和键盘焦点明确              |
+| 模拟运行   | 页面标题/连接状态 → 明确的模拟声明 → 工艺画面主区域 → 右侧质量、最近状态与 Tag 值               | 工艺画面永远优先，质量文本与状态时间线不可被绿色样式代替；数据过期依旧显示原真实质量  |
+| 已发布运行 | 左侧只读工程选择与发布指针元数据，右侧独立验证快照画面                                          | 未授权、未发布、离线、校验失败均只显示对应空态；无正式快照不得显示模拟 SVG            |
+| 组态编辑   | 工程命令工具栏 → 页面标签 → 固定资源/图层侧栏 → 深色 16:9 SVG 画布 → 属性/Tag 侧栏 → 会话状态栏 | 关键保存/撤销随时可见，工具栏窄屏内部滚动；左右侧栏宽度 252px / 320px，画布占其余宽度 |
+| 组件浮层   | TDesign Dropdown / Popup / Dialog / Collapse / Upload                                           | 沿用经过确认的官方 API；取消、Esc、退出动画、幂等关闭的真实语义不改变                 |
+| 底部反馈   | 状态消息、模拟/只读警示、图元与选中数量                                                         | 保持具体中文反馈；不会把本地草稿/模拟服务冒称正式发布或设备控制                       |
 
-## TDesign 组件复用约束
+三条功能路由继续沿用现有懒加载与原本的业务事件处理。React 19 适配器、Vue 生命周期、Core 编辑器、IndexedDB CAS、OIDC 拒绝与发布快照校验均不更改。
 
-- **优先使用现成组件**：按钮、表单控件、标签页、导航、卡片、描述列表、表格、树、弹窗、消息提示等先查对应技术栈的 TDesign 能力；已满足需求时直接使用官方组件，不新建同职责的自定义组件或样式套壳。
-- **先查再写**：先读仓库已有 React/Vue 使用代码，再按 `tdesign-skills` 路由到相应专项资料，通过 `tdesign-mcp-server` 确认组件存在与具体 API；工具不可用时不臆造 props、事件或插槽，本批不开展无法验证的新组件迁移。
-- **职责划分**：TDesign 负责控件、交互和自身设计变量，Tailwind v4 负责工作区布局、间距和响应式；自定义 CSS 只保留工业 SVG 画布、图元手柄和官方组件无法表达的特有结构，不重复维护两个框架的等价样式。
-- **回归契约**：`scripts/test-studio-browser.mjs` 已要求 Studio 左侧栏固定 **252px**、右侧栏固定 **320px**，中央画布等于剩余宽度；视觉升级不得修改这些计算，也不得为美化而调整测试预期。
-- **现存债务**：原应用中仍有原生 `button/input/select/details` 等控件；它们不是本批新增的封装。后续按实际可用的官方 API 分批迁移，不通过新增自制控件过渡，不以推测替换高风险的文件、草稿与发布交互。
+## 3. 色彩和排版 Token
 
-## 通用能力与依赖复用规则
+所有色彩、字号、间距统一由 `@adui/theme` 定义，再通过 TDesign 官方 CSS Variables 映射；应用与 Studio 仅消费语义变量。
 
-- **先查已有能力，再决定依赖**：先搜索仓库包和共享 API，使用已有实现或成熟库处理通用日期、校验、解析、缓存、请求与状态管理；不为了包装而包装，不新增与 TDesign/现有库等价的工具。
-- **Zod**：根 Catalog 已声明 `zod@4.6.7`，后端的 Standard Schema 校验已使用它。新增结构化输入校验时先检查是否能复用已有 Schema；前端包如果确实需要直接使用 Zod，须声明消费端依赖、通过 pnpm 生成真实锁文件并完成跨端验证。不能因为 Catalog 已有就假定前端可以直接导入。
-- **日期时间**：目前两个运行页面复用 Runtime 的 `formatRuntimeUpdateTime` / `formatRuntimeDataAge`；根 Catalog 未声明 Day.js。简单既有显示继续使用共享格式化入口，只有出现真正的跨时区、时长或日历计算需求，才评估引入 Day.js，且不得用显示格式化工具修改报警服务器时间的毫秒精度与来源信任语义。
-- **TDesign**：现有 Button、Input、Select 等直接使用官方组件和版本 API；只有工业专用的 SVG 画布、命中层、实时工艺布局等组件库不提供的领域能力才自行实现。通用界面不重复封装官方控件。
-- **依赖流程**：任何新增第三方库先核对许可证、体积、维护状态、已有 Catalog 和消费者，再按仓库 `pnpm` 规范更新工作区清单及锁文件，执行 `deps:check`、类型检查与双框架回归。没有明确收益时不新增依赖。
+| 用途         | Token                                 | 值/规则                                                        |
+| ------------ | ------------------------------------- | -------------------------------------------------------------- |
+| V7 主品牌    | `--adui-scada-blue`                   | `#0D63F3`，**原品牌不变**                                      |
+| V7 科技青    | `--adui-scada-cyan`                   | `#00C8FF`，原品牌不变                                          |
+| V7 信号绿    | `--adui-scada-teal`                   | `#00D9A6`，原品牌不变                                          |
+| 工作区底     | `--adui-color-bg`                     | `#EDF1F5`                                                      |
+| 正文面板     | `--adui-color-surface`                | `#FFFFFF`                                                      |
+| 导航轨道     | `--adui-color-nav`                    | `#151E2C`                                                      |
+| SVG 专用画布 | `--adui-color-stage`                  | `#101A29`                                                      |
+| 画布命令条   | `--adui-color-stage-elevated`         | `#182538`                                                      |
+| 主文字       | `--adui-color-text-strong`            | `#142338`                                                      |
+| 次级文字     | `--adui-color-text-secondary`         | `#4D6176`                                                      |
+| 状态         | `--adui-color-success/warning/danger` | 浅色背景上可读的独立语义色，永远配套文字                       |
+| 焦点         | `--adui-color-focus-ring`             | `#0D63F3`，不得删除键盘轮廓                                    |
+| 字体         | `--adui-font-family`                  | Inter + 中文系统字体回退；不依赖在线字体                       |
+| 排版         | `--adui-font-size-*`                  | 既有 11/12/13/14/16/18/24/28px 刻度，标签与正文按场景使用      |
+| 空间         | `--adui-space-*`                      | 0/2/4/6/8/12/16/20/24/32px 刻度，禁止新增第二套 Tailwind Token |
+| 浮层         | `--adui-shadow-floating`              | 仅浮层使用明显阴影；其他内容通过分组和边界识别                 |
 
-## D5c0m · 运行页实际截图反馈与布局修正
+V7 Logo 原 SVG 和几何不动，导航缩放使用现有 `/brand/favicon.svg`。不下载或分发字体文件，不引入新图标库。背景保持不透明，避免监控关键数值被模糊玻璃或透视效果降低可读性。
 
-- **监控页**：现有截图中诊断独占首屏上半区，SVG 工艺流程被推到下方。宽屏（不小于 1200px）改为**左侧工艺画面、右侧链路诊断及 Tag**，顶部仍保留状态/错误说明。质量概览和最近状态变化沿用已有字段，不引入虚构 KPI。
-- **已发布运行**：未读取有效发布快照时，既有空态只占很窄的一行，下方有大量无用途留白。共享发布预览卡片设置合理的最小高度、边界和居中空状态；仍只在 `verified` 且有受信快照时显示 SVG，绝不以模拟图代替正式发布。
-- **宽度**：运行与发布页不再受共享外层 1600px 固定最大宽度限制，随视口宽度扩展；较小屏幕保持原单列。Studio 的 252px/320px 固定侧栏、16:9 画布与独立滚动**完全不变**。
-- **技术与测试**：本批只改共享 `packages/runtime/src/runtime.css`、React/Vue 运行页的同一段静态展示顺序和文档。两端把工艺画面提前到诊断之前，避免窄屏 DOM 阅读顺序与视觉顺序不一致；不重新封装 UI 组件、不引入 Day.js 或新的 CSS 工具，也不修改 Zod、API、运行时订阅、发布鉴权和工业安全判断。CSS 静态检查不能代替真实浏览器截图验收。
+## 4. 关键 UX 流程
 
-## 本批实际修改
+1. **运行监控**：进入应用首先看到「水处理实时监控」、真实运行状态和「模拟运行」说明；工艺 SVG 占主区域，侧边依次展示连接状态、断线次数、最新有效更新、数据年龄、质量分布、状态变化和 Tag 质量值。BAD/STALE 仍以占位和文字表达。
+2. **已发布运行**：进入后先看到工程 ID 表单和 `release:read` 限制说明；未选工程时预览空态完整占位，点击读取只能触发原受控会话，切换页面只显示已验证快照。停止后清空画面。
+3. **组态设计**：功能轨道进入 Studio；工具栏将撤销/重做、保存草稿、文件/版本/服务端操作分组，水平空间不足时仅工具栏滚动；页面标签可辨认当前页；左侧图元/图层独立滚动，右侧属性和 Tag 独立滚动，中间网格占剩余画布；所有编辑继续使用共享 Core 命令。
+4. **高风险操作**：原确认弹窗、删除绑定拒绝、历史版本载入、自动保存 CAS 和跨标签页防写仍保持原始业务处理与文案。重设计不跳过确认，也不自动进行设备操作。
+5. **反馈**：读取/刷新/保存的现有异步提示与错误继续出现在语义 `role=status/alert` 区域；失效/拒绝不呈现 GOOD 假象。
 
-- `packages/runtime/src/runtime.css`：共享应用导航、Status、诊断/Tag 卡片、发布表单、桌面双列与移动单列布局。
-- `packages/tailwind/src/studio.css`：共用 Studio 操作区、画布顶栏、图层选中态、左右侧栏、状态栏和焦点规范。
-- `apps/web-react/src/App.tsx` / `apps/web-vue/src/App.vue`：跳转主内容入口、明确“研发预览 · 非现场控制”模式。
-- 两端 `RuntimePage` / `PublishedRuntimePage`：添加页面语义类、工艺区域标题、Tag 空状态、工程表单名称及可聚焦主区域。
-- 两端 `StudioPage`：只更新工作台说明与主内容焦点，不触碰编辑命令、草稿、版本、图元或事件处理。
+## 5. 键盘、可访问性与响应式
 
-## Windows / 浏览器验收要求（D5c0l 待执行）
+- 应用保持可聚焦的「跳转到主要内容」入口；导航三项真实按钮、`aria-current=page`、清楚的 `:focus-visible`。
+- Studio 图层/Tag 真实 Tab 顺序沿用 PR #191 已验证交互；不可通过视觉改造把图元拖拽变成唯一选择方式。
+- 本批文字对比度目标 **WCAG AA 常规文字 4.5:1**，深色画布和浅色操作区分别检测；真实场景见浏览器统一验收。
+- 1440×900、1024×768 同时检查 React/Vue 的三张主视图，共 12 个状态矩阵；不足 740px 时导航收至 72px，运行/发布内容自动堆叠。桌面 Studio 不因响应式而修改持久化的画布尺寸或 viewBox。
+- 长 Tag ID、错误消息和工程 ID 应自然换行；按钮禁用必须可识别，不能只用颜色区分状态。
+- 动效仅用于按钮悬停/导航激活等轻量状态；尊重 `prefers-reduced-motion`，不出现长循环呼吸灯或背景视差。
+- 所有真实图元选中、缩放、旋转、框选、辅助线及图层拖拽仍由现有领域组件处理，通用控件继续交给 TDesign。
 
-- 基本质量：`pnpm run messages:check`、`vp check`、`pnpm run docs:check`、`pnpm run ready`，所有检查成功才算静态与构建门禁完成。
-- 实际布局：在 Chrome/Edge Windows 实测 **1440×900、1024×768**，分别进入 React 和 Vue 的模拟监控、已发布运行、Studio；检查水平溢出、焦点遮挡、侧栏滚动和中央画布比例。
-- 键盘：按 Tab 访问“跳转到主要内容”，Enter 后焦点到当前主区域；导航、工具栏、页面标签和可见弹层须有焦点状态。
-- 运行安全：模拟运行显示状态与质量、离线不显示伪 GOOD；发布页在无授权/无发布/断线时仍显示只读拒绝及空画面；两端 Studio 的 JSON 导入导出、草稿和视图操作不回归。
-- 浏览器专项：按仓库现有环境执行 `pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop`；后续正式已发布真实 OIDC 浏览器专项仍按既有人工安全约束，不因 UI 改造自动触发。
+## 6. 修改地图和唯一 PR 边界
 
-**验收边界**：本批当前仅 GitHub 代码静态核对，尚未执行 Windows Web 构建、完整 `ready` 或真实浏览器视觉验收。不能把 PR #176 的历史检查当成本分支质量证明。正式工业网关、报警事件与设备写入不在本批范围。
+| 模块                                         | 设计修改                                      | 严禁修改                                 |
+| -------------------------------------------- | --------------------------------------------- | ---------------------------------------- |
+| `packages/theme`                             | 共享明亮工作区 Token、官方 TDesign Light 映射 | V7 Logo 几何与原始品牌色                 |
+| `apps/web-{react,vue}/src/App`               | 全新功能轨道、当前视图路径、模式提醒          | 业务权限判断、非预期路由                 |
+| `apps/web-{react,vue}/src/runtime`           | 模拟工艺大画布布局与发布读取/预览两栏结构     | TagStore、网络订阅、发布快照校验         |
+| `packages/runtime/src/runtime.css`           | 从零重建应用与监控/发布页面 CSS               | 底层运行时 API                           |
+| `packages/tailwind/src/studio.css`           | 全新 Studio 视觉层级与舞台皮肤                | SVG 变换坐标、252/320 侧栏和固定 viewBox |
+| `packages/runtime/test/theme-tokens.test.ts` | 重设计 Token、语义样式、双框架同构静态检查    | 放宽已有工业安全逻辑                     |
+| `scripts/test-studio-browser.mjs --ui`       | 新增 12 场景三页面真实浏览器视觉语义门禁      | 真实告警、危险写入或测试环境伪数据       |
 
-## D5c0n · 已发布运行控件与空画面语义
+**提交策略**：所有界面均在 `feat/d5c1-full-ui-ux-rebuild` 中汇总，最终只创建一个 Draft PR，立刻指派 `@adui-dev`。不再拆批要求维护者重复验收；先完成实现与现有测试适配，再集中进行一次质量和视觉回归。PR 必须等待最终显式授权才可合并。
 
-- **TDesign 官方控件直接复用**：正式发布只读页面的“读取正式发布 / 立即刷新 / 停止读取”使用 React `tdesign-react/Button` 和 Vue `tdesign-vue-next/Button`，沿用 Studio 中已经存在并验证过的 `type="submit"`、`type="button"`、`variant="outline/text"` 及 `disabled` 写法。不新增 Button 包装组件、额外依赖或一套表单状态机。
-- **保留浏览器安全契约**：工程 ID 输入保留原生 `input`、原 `id`/`name` 和受控更新；多页面 `select`、`data-testid`、同源只读 GET、身份/CAS/权限检查、停止读取时清空画面均不变。两个控件的官方迁移以确认对应 TDesign API 和真实 CDP 输入兼容性为前提，不为追求组件覆盖率破坏已发布安全验收。
-- **七种状态空态共用文案**：新增 `PUBLISHED_RUNTIME_EMPTY_HINTS` 与 `PUBLISHED_RUNTIME_STATUS_LABELS` 一一对应，分别提示未启动、读取中、尚未发布、已验证但不可展示、离线、拒绝、错误。React/Vue 直接渲染同一共享文案，不将静态快照误称为 GOOD 实时数据。
-- **视觉与回归**：空态提升至 14px 便于工业桌面阅读，保留预览区域的清晰边界；TDesign 组件仍需 Windows 双框架手工与自动浏览器专项复验。没有新引入 Zod、Day.js 等工具，因为本批不涉及新的通用校验或复杂日期逻辑。
+## 7. 最终一次性验收矩阵（待执行）
 
-## D5c0o · @adui/theme 全局设计 Token 第一阶段
+`node --check`、`vp check`、`pnpm run ready`、`pnpm run test:ui:browser`（React/Vue × 1440/1024 × 运行/发布/Studio，可选输出 12 张本地截图）、`pnpm run test:browser`、`pnpm run test:tags:browser`、`pnpm run test:interop`、`pnpm run test:versions`、`pnpm run test:versions:safety`、`pnpm run test:multitab`、`pnpm run test:legacy:browser`。若真实发布/OIDC Lab 需要受保护凭据或专用数据库，必须按原隔离方案执行，不能用视觉测试替代授权验收。
 
-- **唯一来源**：`packages/theme` 的 `@adui/theme/styles.css` 组合 `tokens.css` 与 `tdesign.css`。Vue/React 继续通过共享 `@adui/scada-runtime/styles.css` 加载；`packages/runtime/src/theme.css` 只保留兼容导入，不再定义自己的颜色。
-- **配色**：品牌 `#0D63F3`、科技青 `#00C8FF`、正常状态 `#00D9A6`、警告 `#F0AE4D`、错误和过期 `#F16C75`；页面背景 `#0B1320`、面板 `#132236`、画布 `#0C1728`。所有 `--scada-*` 与 V7 `--adui-scada-*` 均以别名保留；不能用品牌蓝替换工业报警语义色。
-- **字号**：`--adui-font-size-2xs/xs/sm/md/lg/xl/2xl/3xl` 分别为 **11/12/13/14/16/18/24/28px**，正文默认 14px/1.5；中文系统字体优先，数值仍用现有等宽数字规则，不加载外链字体。
-- **间距**：`--adui-space-0…9` 为 **0/2/4/6/8/12/16/20/24/32px**；圆角 `--adui-radius-sm/md/lg/panel` 为 **4/6/8/10px**，控件高度为 **28/32/36px**。Tailwind v4 通过共享 `@theme inline` 引用基础字体、4px 间距、圆角刻度；不修改 Preflight。
-- **TDesign**：两个 `index.html` 使用 `theme-mode="dark"`，官方 CSS Variables 在 `packages/theme/src/tdesign.css` 统一映射交互色、背景、文字、禁用态、字体及尺寸。采用更具体的 `html:root[theme-mode="dark"]` 以覆盖懒加载的组件默认主题，而非额外重绘 `Button/Input`。官方机制依据：[TDesign Web 主题说明](https://github.com/Tencent/tdesign-common/blob/develop/docs/web/theme.md) 与 [React 自定义主题](https://tdesign.tencent.com/react/custom-theme)。
-- **迁移边界**：本批只替换旧主题入口、两端重复的 TDesign 变量和基础排版/Tailwind Token 映射。Runtime/Studio 中尚存单次写入的像素值，后续逐批替换，**不声称已完成所有历史 CSS 迁移**。Studio 252px/320px 固定侧栏、画布 16:9、报警质量、数据读取与只读权限保持原样。
-- **安装前置**：新增 `@adui/scada-runtime -> @adui/theme` 的 `workspace:*` 依赖；须使用项目 pnpm 12.18.0 **实际生成并提交** `pnpm-lock.yaml` 的工作区 importer 变更，不允许手工猜测锁文件。验证前先重新安装，再运行 `ready`、双端浏览器与 TDesign 禁用/焦点/对比度检查。
+**当前验证事实**：仅 PR #191 在其已记录 HEAD 完成了用户提供的 Windows 验收，并已合并。D5c1 分支的新 UI、浏览器脚本、Vue/React CSS 和构建尚未在维护者 Windows 实际验证；文档不是通过证明。
 
-## D5c0p · 共享字号与间距的等值迁移
+最终需要视觉复核时可先设置 `SCADA_UI_SCREENSHOTS=1`，再执行唯一一次 `pnpm run test:ui:browser`。脚本在仓库根目录 `.artifacts/ui-review/` 写入 12 张 PNG（双端 × 双分辨率 × 三视图），目录已 Git 忽略；图片只做本机审阅，不上传工程信息。
 
-- **策略**：在已经合并的 `@adui/theme` 基础上逐批替换历史散落的字号、间距与圆角；第一组仅针对共享 Runtime 的导航、状态提示、诊断卡片、正式发布空态，以及共享 Studio 的导航/工程列表等低风险视觉元素。
-- **等值原则**：本组将 19 处 Runtime 与 11 处 Studio 的原字面值改为已有 `--adui-font-size-*`、`--adui-space-*`、`--adui-radius-*`、`--adui-line-height-normal` 或 `--adui-font-weight-semibold` 引用，**不修改计算后的 px、行高、字重、圆角**。例如 `12px → var(--adui-font-size-xs)`、`13px → var(--adui-font-size-sm)`、`6px → var(--adui-space-3)`、`24px → var(--adui-space-8)`。
-- **保持原样**：浏览器缩放与响应式边界、Studio 固定侧栏 252/320px、16:9 SVG、图层命中层与指针坐标、TDesign API/组件状态、Tag/报警质量及发布只读权限都不变。特殊尺寸（如 15/17/19px 或 34/38px 控件高度）未强行映射到不同档位，以免视觉漂移。
-- **验证**：主题静态测试新增导航与诊断/发布空态 Token 引用、Studio 工程列表及固定侧栏的断言。静态差异复核已确认两份共享 CSS 只有 30 行属性值替换，所有 Token 展开后与原声明相同；但真实 Vite+、React/Vue 构建与 Windows 视觉回归尚待执行。
+**样式单一来源**：原 React/Vue 两份逐字相同的 `src/studio/studio.css` 已迁移进统一 `@adui/tailwind/studio.css`，只保留后者导入；原旋转光标的相对 URL 根据 CSS 真实路径调整为 `../../../assets/cursors/rotate.svg`。这不会修改 SVG 手柄或指针事件，但仍必须通过真实 Vite 构建与 Chrome 光标回归确认资源可解析。
 
-## D5c0q · 属性面板密度与控件交互状态收敛
+## 8. FUXA 参考与 Tag 管理交互整体重构（D5c1）
 
-- **属性面板密度**：在共享 `studio.css` 内把属性说明的 12px、面板标题下间距及几何表单的 12px、分组标题 8px、工具组 6px、折叠区域圆角 6px 映射到已有 `@adui/theme` Token。只更换数值来源，保留实际像素值、表单结构、SVG 画布与 252px/320px 固定侧栏。
-- **禁用态**：仅让 Studio 保存草稿强调按钮、图元添加按钮和页面标签的本地 hover 强调规则对 `:not(:disabled)` 生效，避免未来禁用时仍出现可操作的 hover 提示；原生 `disabled`、TDesign `Button/Input` 官方状态处理和鼠标事件全部保留。
-- **焦点与可访问性**：既有 `:focus-visible` 边框不变；TDesign 的 `--td-brand-color-focus`、`--td-brand-color-disabled`、`--td-text-color-disabled` 和禁用组件背景继续从共享主题取值。本批不覆盖 TDesign 组件内部选择器，也不自行实现同职责控件。
-- **验收边界**：新增两项静态回归，检查等值 Token、禁用 hover 守卫及 TDesign 焦点/禁用变量。实际 `vp check`、Vitest、React/Vue 两端 1440×900 和 1024×768 浏览器视觉、键盘焦点和禁用态仍须 Windows 执行。
+维护者提供 https://github.com/frangoteam/FUXA 作为竞品参考。已研究 FUXA 的 screenshot/fuxa-editor.png、docs/HowTo-Devices-and-Tags.md 和 docs/HowTo-UI-Layout.md：重点借鉴画布与配置任务分离、资源目录可搜索和独立编辑工作空间。仅对照信息架构，不复制 FUXA 的 Angular 源码、品牌素材或受限制资源。FUXA 有真实工业协议设备配置能力；ADui SCADA 当前工程 Tag 只是静态定义，不能因此开放客户端 PLC/DCS 连接或设备写入。
 
-## D5c0r · 历史版本弹层共享排版 Token
+维护者提供的旧版截图显示：320px 属性面板同时塞入 3 条 Tag 目录、逐项按钮、五字段常驻表单与长段说明，滚动距离过长、字段和主操作远离，缺少新建/编辑的独立任务状态。只改配色、边框和按钮大小不是 UX 改进。
 
-- **范围**：共享 Studio 历史版本弹层的提示/错误文本、版本工具栏、列表、时间戳和比较摘要；React/Vue 自动共用，不另建适配组件。
-- **等值原则**：12 条 CSS 声明将 6/8/12px 间距、11/12px 字号及 1.5 行高映射到现有 `--adui-space-3/4/5`、`--adui-font-size-2xs/xs`、`--adui-line-height-normal`，计算值保持不变。7/9/10px 等无匹配 Token 的特殊值保留。
-- **不变项**：弹层宽度 `min(378px, calc(100vw - 24px))`、最大高度 `min(70vh, 610px)`、Studio 252px/320px 侧栏、16:9 SVG、版本保存/载入/回滚语义、禁用和键盘焦点规则全部不变。
-- **测试边界**：新增一项静态主题回归检查所用 Token 与弹层几何；Windows Vite+ 和双端浏览器验证仍待执行。
+新的 Tag 流程：
 
-## D5c0s · TDesign 组件复用优先于手工弹层
+1. 属性侧栏只保留紧凑目录：新建入口、名称/ID/描述搜索、数量、类型标记、ID 与简洁的行级编辑/删除操作；不再常驻完整表单。
+2. 点击新建或编辑打开 TDesign Dialog。桌面使用 700px 左右可读宽度，显示名称与稳定 ID、数据类型与单位采用两列，描述跨两列；取消和保存并排固定在表单操作区。窄视口降为单列。
+3. 必填字段有标签与字段旁错误。重复 Tag ID 就近提示；编辑锁定已创建的 ID。共享 Core 拒绝时保留输入并展示原工作台状态，不绕过业务验证。
+4. 删除仍通过真实 TDesign 二次确认，Core 负责图元绑定删除拒绝。草稿、历史、撤销与重做、JSON、工业只读边界和 Tag 质量完全保留。
+5. 新增 React/Vue 真浏览器回归：搜索与清空、侧栏无表单、宽 Dialog 双列表单、必填错误、编辑不可变 ID、128 字符窄屏折行与 Tab、CRUD、确认取消与绑定保护、JSON 往返。
 
-现阶段暂停继续把原生弹层 CSS 的逐像素 Token 迁移当作 UI 主线；先执行 [TDesign 组件复用审计](TDESIGN_COMPONENT_AUDIT.md)。仓库已安装 `tdesign-react@1.18.6`、`tdesign-vue-next@1.20.11`，对应官方固定标签源码均已核查 Dropdown、Popup、Dialog、Collapse、Upload 等组件能力。两端 Studio 各 9 处手写 `details/summary`，`ServerProjectBrowser` 每端另 1 处，合计 20 处；可复用范围和特殊交互边界见审计矩阵。
+本设计属于现有唯一 Draft PR #192 的候选；完整 Windows ready、Chromium 与截图尚未验证，不能声称视觉交付已验收。
 
-**设计门禁**：简单命令菜单优先 Dropdown；含表单、版本列表、授权操作的复杂浮层优先 Popup/Drawer；二次确认优先 Dialog/Popconfirm；属性侧栏行内折叠优先 Collapse；本地 JSON 文件选择可评估 Upload，但必须关闭自动上传并保留原数据校验。TDesign 组件负责弹层定位、禁用态及交互生命周期，不能继续以 `position:absolute + z-index + details/summary` 模拟第三方组件已有能力。
+## 9. Figma 画板工作流参考：默认 1920×1080、缩放与图层解耦
 
-上述结论尚未实施生产组件替换；应先完成相关官方 API 和 Windows 类型/浏览器实测。原有浏览器用例对 `details.open` 的依赖需要随迁移调整为真实 TDesign 触发路径，保留所有工程数据、权限、工业安全及 Studio 几何断言。
+新增参考：[Figma Frame 使用说明](https://help.figma.com/hc/en-us/articles/360041539473-Frames-in-Figma-Design)、[Figma Zoom / View Options](https://help.figma.com/hc/en-us/articles/360041065034-Adjust-your-zoom-and-view-options)、[Figma Properties Panel](https://help.figma.com/hc/en-us/articles/360039832014-Design-prototype-and-explore-layer-properties-in-the-right-sidebar)。从中借鉴的是**可编辑页面画板（Frame）与无限观察工作区的职责分离**、左图层与右属性分工以及“适应视图”优先。ADui SCADA 目前不声称具备 Figma 的完整无限画布、多 Frame 协作或所有快捷键。
 
-## D5c0t · 官方 Dropdown 取代页面管理手工菜单
+### 默认画板的验收定义
 
-Studio 的「页面管理」原本由原生 `details/summary` 和 `.studio-page-actions` 的绝对定位栅格实现。React/Vue 现在分别使用其固定版本的 TDesign `Dropdown` + `Button`，统一点击触发和右下定位；禁用项由官方 Dropdown 处理，不另外实现悬停、焦点或外部点击生命周期。
+- 全新进入 Studio 的工程主页面尺寸为 **1920 × 1080 逻辑像素**（16:9），标题栏显示实际数值与 px。该尺寸取自共享 `@adui/scada-core`，非分别在 Vue/React 中硬编码。
+- 当前演示页面旧版为 880×460。新 Studio 专用演示文档将图元按一致倍数缩放并居中填入 1920×1080；原水处理只读演示仍以原文档运行，避免影响工业模拟数据与既有单测基线。
+- 浏览器工作区仍铺满可用尺寸，中央 SVG 通过 `studioViewportRect` 进行等比视口映射；浏览器窗口变小不改变 `ScadaDocument.pages[].size`，不对图元进行隐式挤压。
+- 编辑器中新建页面沿用当前页面的 `size`；复制页面继承源页面尺寸。导入 880×460 或其他合法画布时仍按原尺寸显示，不自动升级或覆盖已有持久化工程。
+- 双端 12 场景实测同时核对画板边界的 `width=1920` / `height=1080`、深浅背景和无横向页面滚动；Core 专项校验图元变换比例、原有绑定、页面复制/撤销及旧尺寸保留。
 
-保留六条现有编辑器命令、页面最多 100 页和首页/末页/单页禁用逻辑。仅移除此菜单独占的手工浮层 CSS，其他文件/草稿、历史版本、服务端预检等原生菜单保持原状，待下一批分别核对 Popup 等官方组件。Studio 固定 252px/320px 侧栏和 SVG 16:9 画布不变。
+视觉参考是**方法而不是像素复制**：保留 ADui V7 品牌、TDesign 和工业只读安全边界，最终整个 PR #192 仅在统一完成后验收。
 
-同步扩充 `test:browser` 的 React/Vue 真实菜单检查，从每组 19 项增至**目标 27 项**。尚未运行 Windows 浏览器或 Vite+；见 [组件复用审计](TDESIGN_COMPONENT_AUDIT.md)。
+## 10. 参考用户 Figma UI3 实际截图后的工作区重构
 
-## D5c0u · 文件与草稿弹层使用 TDesign Popup
+本轮根据维护者提供的两张 Figma 截图对照官方说明：
 
-共享 Studio 的「文件与草稿」入口由原生 `details/summary` 改为 React/Vue 固定版本的 TDesign `Popup + Button`。两端都使用点击触发、`bottom-right` 定位，并挂载到 `.studio-file-menu`，让 Popup 处理显隐、定位与外部点击；删除此入口的 `position:absolute`/`right`/`top`/`z-index` 等手工定位规则。
+- [Explore design files](https://help.figma.com/hc/en-us/articles/15297425105303-Explore-design-files)：导航栏、左侧页面/图层、中央画布、右侧属性以及底部创建工具的职责。
+- [Inside Figma’s redesigned interface](https://www.figma.com/blog/behind-our-redesign-ui3/)：优先释放画布空间，工具集中底部，面板根据工作任务组织。
+- [Navigation and left sidebar](https://help.figma.com/hc/en-us/articles/360039831974-Explore-the-navigation-bar-and-left-sidebar)：层级树、页面切换与工具入口的分离。
+- [Properties panel](https://help.figma.com/hc/en-us/articles/360039832014-Design-prototype-and-explore-layer-properties-in-the-right-sidebar)：右侧根据选中对象显示属性。
+- [Zoom/view](https://help.figma.com/hc/en-us/articles/360041065034-Adjust-your-zoom-and-view-options)：页面逻辑尺寸不随浏览器视区缩放变化。
 
-保留本地 `<input type="file">`、自动保存按钮、JSON 导入导出、草稿恢复与清除及其现有禁用态，不引入网络上传。TDesign Upload 另做批次，先核对 `autoUpload` 和自有工程验证安全边界；现有文件读取、大小限制、非法输入、CAS、版本并发保护和用户确认行为全部不变。
+**取舍与边界**：学习布局、交互信息架构与视觉密度，不照搬 Figma UI、Logo、字体、资产或原生图元实现；本产品所有编辑操作仍执行共享 Core，工业安全判断绝不委托于前端视觉状态。
 
-为 React/Vue 1440×900、1024×768 各增 3 项真实 Popup 测试，目标每组 30 项；具体业务还要运行 JSON 互通、版本安全、旧版草稿迁移和多标签页专项。当前所有 Windows 新分支验证待执行。
+新结构：
 
-## D5c0v · 本地版本历史优先复用 TDesign Popup
+| 界面          | 重新设计的实际交互                                                                | 不做的事                                        |
+| ------------- | --------------------------------------------------------------------------------- | ----------------------------------------------- |
+| 工作台首页    | 浅色文件工作区、184px 侧栏、真实模块入口与内置水处理演示入口                      | 不虚构最近文件、共享文件、在线协作、AI 生成项目 |
+| Studio 外壳   | 左侧 52px 紧凑导航轨道 + 项目文件名与分组操作菜单                                 | 不把首页的大导航占用编辑画布宽度                |
+| Studio 左侧   | 236px，页面列表与管理入口、图层树/搜索/定位                                       | 不将所有图元创建按钮长期塞进图层列表            |
+| Studio 中央   | 中性灰背景、白色 1920×1080 工作画板、适应视图 48px 留白；底部四种真实图元创建按钮 | 不将 1920×1080 当固定 DOM 宽高，不虚构无限画布  |
+| Studio 右侧   | 288px，选中图元的上下文属性或独立 Tag 目录，Tag 表单另用宽幅 Dialog               | 不把全部项目 Tag 表单永久塞在图元属性下方       |
+| 模拟监控/发布 | 原链路数据、质量及只读快照权限不变                                                | 不因设计重排绕过安全闸门                        |
 
-React/Vue 的本地「版本历史」原生 `details/summary` 被各自当前固定版本的 TDesign `Popup + Button` 替换。新独立 `.studio-local-history-menu` 解决同组 `.studio-version-menu` 还服务于「发布预检」「服务端工程版本」的挂载冲突；Popup 负责点击触发、定位和外部关闭，面板使用 `position: static` 保持宽度 `min(378px, calc(100vw - 24px))`、最大高度 `min(70vh, 610px)` 和滚动行为。Studio 252px/320px 侧栏及 SVG 16:9 几何不变。
+**新增受控外观接口**：`renderSvgPage(document,pageId,values,appearance?)` 及 `svgDataUrl(document,values,pageId?,appearance?)` 默认保持 `dark`，仅 Studio 传入 `light` 以显示白色工程画板、深色图元文字。真实运行时、已发布页面及质量标签的原始语义完全保留。Core `studioViewportRect` 新增可选 `fitMargin`，编辑器使用统一 `STUDIO_CANVAS_FIT_MARGIN=48`，计算视区但不更改工程 Schema、图元位置或缩放记录。
 
-历史列表读取仍只在面板展开时触发原业务函数；快照 SHA-256、CAS、防止导入期间覆盖和危险载入确认都留在原业务层。未迁移的发布预检与服务端工程历史仍是原生 `details`，不能因这次候选宣称全量弹层完成 TDesign 化。Windows 实测待验收。
+双端实际质量门禁已同步改为 **React/Vue × 1440×900 与 1024×768 × 工作台首页/运行监控/已发布运行/Studio 共 16 场景**；Studio 另保留左 236px、右 288px、底部图元岛、页面在左、白色画板、网格、真实 Tag 操作和现有 Core 回归。SSE 浏览器专项现在从首页真实点击「运行监控」后才等待原有效快照，不缩短质量、断线、恢复或资源回收断言。
 
-## D5c0w · 双框架 TDesign 统一交互控件
+**验证事实**：截至目前只完成 GitHub 分支代码提交、源码结构与颜色对比度计算。全量 `vp check`、`ready`、Windows Chromium 16 场景、PNG 与图元渲染效果尚未实测。根据维护者要求，全部调整都汇集在 PR #192 Draft，不分批请求验收。
 
-React 使用 `tdesign-react@1.18.6`，Vue 使用 `tdesign-vue-next@1.20.11`。通用交互按钮、输入、选择器、复选框、展开面板、浮层、文件选择及确认弹窗由官方组件承担。工程品牌色、字号及间距仍复用 `@adui/theme`、`@adui/tailwind` 既有 Token，不能二次创建并行主题。
+## 11. Figma UI3 工具模式与画布空间进一步解耦
 
-Studio 旧原生 `details`、`summary`、绝对定位浮层样式已撤换，由 Popup 与 Collapse 处理可见性及焦点；旧版 `window.confirm/prompt` 由可取消的 TDesign Dialog 代替。对话框关闭或 Esc 应相当于取消，确认后的业务逻辑仍执行原有会话/草稿/工程版本安全检查。Upload 仅用于本地 JSON 文件选择并显式禁用自动上传，不对外发送组态工程文件。
+参考 [Figma 工具栏](https://help.figma.com/hc/en-us/articles/360041064174-Access-design-tools-from-the-toolbar) 的选择与抓手模式分离：底部真实工具栏增加「选择」「抓手」，默认选择；抓手模式的指针拖动只改变受限视区，不移动、选中、缩放或旋转图元。添加图元后恢复选择工具。原中键、Alt 加空白处平移仍保留；当前不声称支持无限画布或 Figma 全部快捷键。
 
-工业 SVG 画布、2D 图元、命中层、变换手柄和图层树拖拽继续采用自研实现；侧栏宽度 252px/320px、16:9 画布和固定全屏滚动契约没有有意调整。本批暂为 GitHub 候选，键盘可访问性、视觉与两端运行回归待 Windows 在最终 HEAD 验收。
+中央区域将顶部页面信息与视图设置、SVG 工作区、底部工具岛（选择、抓手、创建及缩放）分为三个实际布局区域。工具保持悬浮视觉，但不覆盖 SVG 可编辑区域；ResizeObserver 继续使用实际 SVG 尺寸计算视区。新默认画板仍为 1920×1080，旧工程尺寸、共享 Core 编辑命令和持久化契约不变。
 
-## D5c0x · Studio 图层与 Tag 紧凑控件视觉收敛
+双端浏览器回归新增工具条不遮挡、默认选择、抓手模式禁用图元指针编辑及恢复选择及缩放工具归位五项断言。完整 Windows 浏览器操作和截图仍待统一验收。
 
-维护者已用正式 Studio 深色截图指出左侧分界线/输入高亮过强、图层列表边框层级不协调，以及右侧 Tag 管理的编辑删除按钮偏大且高度不一致。本批仅修正这些视觉问题；红框是截图标注，不是新的业务状态。
+## 12. 维护者授权重新设计：替代历史界面布局约束
 
-- **统一尺寸**：Tag 项操作及表单动作均为双列等宽、28px 高，复用 `--adui-control-height-sm`、`--adui-font-size-xs` 和 `--adui-space-*`；左侧搜索使用 TDesign `size=small`，图层行延续 32px 视觉目标。不同用途的工具区域可有不同尺寸刻度，但同一组内不混用。
-- **弱化描边**：两端清理原生表单重复描边和所有 TDesign Button 的 `height:auto` 覆盖；聚焦态由 TDesign 负责，不再给所有 button/input 额外叠加亮青色 2px 轮廓。SVG/图层拖拽行的键盘焦点仍显式可见；侧栏和 Tag 折叠区使用现有 `--scada-border-subtle` 而非临时硬编码色值。
-- **保留语义**：Tag「编辑」「删除」使用 TDesign 的 `variant=text`，删除保留 `danger` 语义与原二次确认及绑定保护；表单保存/清空保留原有提交事件、禁用和类型验证。图层行使用 TDesign Text Button，但拖拽、点击、组合和选中状态逻辑全部不变。
-- **双版本同构**：React/Vue Tag 目录共享 `studio-tag-manager`、`studio-tag-actions`、`studio-tag-form-actions` 等视觉类；所有新增视觉 CSS 只维护在共享 `@adui/tailwind/studio.css`，两端原 `studio.css` 仅同步清理已有重复覆盖。左 252px / 右 320px、画布 16:9、外层无滚动契约不调整。
+2026-11-24 维护者明确要求推倒历史 UI 设定，不再沿用 AGENTS.md 中旧界面像素约束。本节是当前候选设计，优先于前文历史方案中的固定宽度、全局导航轨道与缩放位置；不替代 Core、Schema、权限、工业安全及双端互通规则。
 
-**验证要求**：先运行 `typecheck:web`、`vp check`、`messages:check`、`docs:check`，再执行 React/Vue 四视口 `test:browser` 和双端 `test:tags:browser`（包含 Tag 两组操作按钮实测等高/等宽断言）；还须检查键盘 Tab 焦点与选中态、长 Tag ID 折行、缩放时不溢出。实际运行与截图复验尚待维护者 Windows。
+- 文件工作区改为工程示例优先，真实模块入口以紧凑列表呈现；不使用虚构文件或示意工艺缩略图冒充工程截图。
+- Studio 不再保留左侧全局功能轨道，顶部横向切换工作空间，安全提示仍同屏可见。左侧仅页面和图层；中央独立 SVG；右侧上下文属性和项目 Tag。底部保留真实选择、抓手与图元命令，缩放归回顶部视图控制区。
+- 左右侧栏为会话宽度偏好，默认 256/320 CSS 像素，实际宽度受视口约束，可在视图设置使用键盘可操作的范围控件调整或隐藏；浏览器回归实际修改左右宽度并恢复，验证画布剩余空间。不保存到工程 JSON。取消旧固定宽度作为验收条件，保留视口适应、无外层溢出、折叠恢复与业务断言。
+- 参考 [Figma Design 编辑器](https://help.figma.com/hc/en-us/articles/15297425105303-Explore-design-files) 与 [UI3 设计过程](https://www.figma.com/blog/behind-our-redesign-ui3/)，不复刻专有资产，也不声明具备尚未实现的协作、无限画布或边缘拖动调整。
+
+当前候选仍需真实双框架构建、Chromium、截图与人工视觉验收；不是已完成的视觉交付。
+
+## 13. 操作工作区与精密画布交互
+
+设计、模拟监控、正式发布预览使用同一顶部工作空间切换栏；只有工程首页保留文件导航。运行工作区使用独立主画面与连续诊断面板、紧凑 Tag 行，发布工作区保留真实授权读取、状态与静态预览，侧栏独立滚动。窄屏按内容堆叠。状态质量和安全说明保持原文字，不改变运行订阅或权限行为。
+
+Studio 显示实际 CSS 像素缩放百分比，点击百分比恢复适应画板；定位主选图元由共享 Core 计算旋转后的包围盒及有界视区，缩放倍率允许至适应视图的 8 倍。缩放手柄为固定 8 CSS 像素、旋转手柄半径 5 CSS 像素、旋转杆长度 24 CSS 像素，SVG 描边不随视区缩放；不修改图元坐标。画布获得焦点时 V/H 切换选择与抓手；输入框中原键盘行为不受影响。上述交互不持久化到工程文件。
+
+新增 Core 定位数学测试与四视口浏览器定位、手柄屏幕尺寸、快捷键回归。完整构建、浏览器和截图审阅仍须实际执行。
+
+面板边缘补充真实可拖动的 8px 分隔条，支持指针捕获、取消/释放及左右方向键调整；原视图设置范围输入保留。画布点击自动获得焦点，工具快捷键可直接使用；折叠面板时对应分隔条消失，窄屏堆叠布局不显示分隔条。此功能仅改变会话布局，不进入工程 Schema。
+
+## 14. Pixso 参考与维护者确认的工作台视觉方向
+
+本轮按维护者确认的两张设计效果图调整真实 React/Vue 界面：工程首页采用横向快速入口、绿紫功能介绍区和带 16:9 缩略图的工程卡片网格；搜索复用共享运行包中的工作区目录。内置演示缩略图来自共享 Core 的实际 SVG，不填入模拟实时数值。正式发布入口没有经过授权的快照时只显示功能标识，不伪造已发布工程。团队协作、驱动配置、历史趋势等效果图中超出现有能力的功能不作为可用入口展示。
+
+共享主题以品牌紫作为交互色，保留原 V7 品牌资产、原 SCADA 颜色常量及工业状态颜色。Studio 白色画板保留实际 1920×1080 默认尺寸、原图元、工程格式、面板拖动及选择/抓手操作；底部工具增加可见矢量图标，属性选项采用明确的选中强调。效果图中的复杂设备、趋势和告警画板组件仍需真实图元和数据能力支持，不将设计图当成运行结果。
+
+本节替代前文紧凑列表形式的首页视觉方案。所有修改仍属于唯一 PR #192；真实构建、浏览器与截图审阅待执行。
+
+## 15. 工程文件工作台与工业总览候选
+
+工作台新增五个真实快捷入口：新建独立组态工程、导入 JSON、打开水处理总览示例、模拟监控及受控发布预览。已保存草稿按 IndexedDB 的真实保存时间读取最近 50 个摘要，显示工程 ID、页面、Tag、修订号；搜索同时过滤功能目录和草稿 ID。新建使用随机 ASCII ID 与空修订 CAS 持久化，导入经过原 Schema 迁移校验且不自动覆盖草稿；打开草稿时重新读取最新记录。首页与 Studio 之间的切换仍是独立任务，不宣称自动保存所有未提交的编辑。
+
+Studio 新增图层与图元库两种真实模式，基础水箱、水泵、管道、文本均复用原编辑命令，添加后返回图层列表；属性栏未选中时显示实际页面尺寸和图元数量。浅色 SVG 水箱、水泵和管道采用内置矢量造型，新增白名单指标卡文本表现，不引入外部 SVG、脚本、设备地址或未实现的图元操作。独立示例 `water-showcase` 以 1920×1080 画板组织工艺流程和三个真实模拟 Tag 指标，原 `water-demo` 和历史工程不变。总览缩略图无实时值，Studio 显式标注静态模拟预览。历史趋势、真实阀门、工业设备驱动及 AI 协作等尚未实现能力不伪装为可用。
+
+## 16. V7 品牌明暗双主题（覆盖前述紫色候选）
+
+以维护者上传的 ADui-SCADA-Brand-Kit-v7.zip 中 BRAND-GUIDELINES.md、brand-colors.json、README.md 为依据，恢复主色科技蓝 `#0D63F3`、科技青 `#00C8FF`、信号绿 `#00D9A6`。界面使用独立状态语义色，不以高亮青绿作为大面积按钮或告警文字。浅色表面为白色，深色表面为 `#192333`，工作区为 `#101722`，正文和次级文字分别提亮；工程画板仍保持白色，运行/已发布 SVG 渲染契约不变。
+
+顶部提供明暗切换，根元素 theme-mode 驱动共享 Token、TDesign 及弹层；本地存储键 adui-scada:theme-mode 保存偏好，缺失或非法值回退浅色，存储失败不阻断当前切换。该偏好不进入工程 Schema，不触发编辑命令或持久化工程。实色品牌和状态按钮使用白色前景，普通页面、微调和高级图层工具使用中性弱按钮。
+
+导航采用品牌包的透明 mark-primary.svg / mark-dark.svg 原件，分别用于明暗背景。两端的 Git Blob 与 ZIP 对应文件一致；原 favicon 保留浏览器图标用途，不改变几何、信号折点、圆环及四根柱形。字号、间距和既有工程布局继续共享。静态对比度核对不替代真实浏览器验收。
+
+## 17. TDesign 图标与最大化适应画板
+
+维护者指出现有图标包未充分复用、适应画板留白过大，以及深色导航和运行提示栏对比度问题。双端工作台、导航、主题切换、图元库和底部工具改为现有 TDesign 图标组件，工业 SVG 画布、命中层和品牌 Logo 不替换。适应视图共享边距从每侧 48 CSS px 调整为 8 CSS px，在不裁切、不拉伸且保持工具栏独立的条件下最大化 16:9 画板；视口比例不同必然保留另一轴的余量。新建工程与默认 Studio 演示仍为 1920×1080，旧工程、导入工程及既有只读 Runtime 演示不强制改尺寸。当前导航前景使用明暗自适应品牌文字 Token，运行提示栏背景使用语义弱表面而非固定浅色导航前景。
+
+## 18. 工作区网格连续性（维护者截图澄清）
+
+维护者明确指出缺陷是底部工具栏两侧及下方的网格断层，而非白色画板大小。撤回第 17 节候选的 8px 适应边距，恢复原 48 CSS px；默认新建画板仍为 1920×1080。底部工具带保留独立布局，由共享 `studioGridContinuation` 根据当前 SVG 可见世界坐标计算网格像素周期、线宽及相位，延续至工作区底边；网格显隐、缩放和平移同步。工具栏不遮挡可编辑 SVG，不增加额外工程图元或导出网格。
+
+## 19. 连续编辑工作区与统一标题基线
+
+维护者再次明确指出底部 CSS 网格补画与主 SVG 存在视觉割裂，且左上标题与侧栏分隔区域不连续。以本节替代第 18 节的独立工具带方案：移除工具带容器及 CSS 渐变网格、撤回仅服务于该工具带的网格相位计算函数。中央 SVG 从标题栏下沿完整铺至工作区底边，唯一 SVG 网格自然延续至悬浮工具栏下方及两侧；保留原网格开关、世界坐标、缩放和平移。底部工具栏绝对定位，按钮高度 30px、上下内边距 4px、底部间距 6px；窄工作区横向滚动，避免换行产生独立底栏。保留 48px 适应边距与 1920×1080 默认工程画板，不改历史工程。桌面布局的左中右标题栏统一 42px 高，面板宽度、拖动及键盘交互不变，分隔条平时透明，悬停或焦点仅显示 2px 指示线。
+
+## 20. 图标文案垂直对齐与主题开关
+
+导航和 Studio 底部六个工具按钮使用统一的图标文案内容层，采用 inline-flex 居中、固定图标布局和一致行高，避免 TDesign 默认插槽内部行内基线错位。明暗切换改用现有 TDesign Switch，显示当前浅色或深色，开启为深色，保持共享偏好、Logo 和工程不变；Vue 固定版本根元素为 div，补充 switch 语义、焦点和空格/回车操作。
+
+## 21. TDesign 官网式主题切换动效
+
+参考 https://tdesign.tencent.com/react/custom-theme 对应的 Tencent/tdesign 官网 td-theme-tabs 实现，采用太阳/月亮双图标与中性背景滑动选中块，仍由官方 TDesign Switch 提供实际受控交互。共享主题逻辑在支持 View Transition API 时使用 document.startViewTransition 进行整页过渡；React flushSync、Vue nextTick 确保框架状态与主题根属性在过渡回调内同步。不支持或用户减少动态效果时直接切换。保留 V7 主题、Logo、偏好存储及工程数据，启动恢复不触发动画。
+
+## 22. 官网斜切扫屏与深色画板（覆盖前述白色画板约定）
+
+维护者明确要求深色模式的 Studio 画板也随主题切换，并以 TDesign 官网首页录屏为动效参考。官方站点 animation.less 使用 8 度斜切 clip-path 与 1 秒 View Transition 动画：浅入深由左向右，深入浅由右向左；旧视图禁用淡出，新视图以遮罩揭示。项目共享主题入口引入对应样式，仅在用户主动主题过渡期间生效。源码参考：https://github.com/Tencent/tdesign/blob/main/packages/site-components/src/styles/animation.less 。
+
+深色画板外层与内嵌 SVG 同步使用 #0C1728，正文和状态色适配；新 studio-dark 外观保留金属设备、管道、指标卡几何，原默认 dark 运行渲染保持不变。切换只作用于预览，不修改工程文档、画板尺寸、保存修订或现场 Tag；两端 Studio 保持挂载，不重建编辑器。
+
+## 23. 图层搜索清空入口
+
+图层搜索采用 TDesign Input 的 clearable，移除重复的清除搜索按钮，避免原生 search 清除控件和组件清除控件叠加。定位选中图层保留并独占一行，搜索条件仍为受控状态，清空后恢复原过滤结果，不改变当前选择及工程数据。
+
+## D5c1 · 工程名称与视图操作尺寸
+
+Studio 顶部显示工程名称并提供编辑入口，沿用 TDesign 重命名对话框，稳定工程 ID 只用于身份校验及索引，悬停标题可查看。新工程默认名称为“未命名工程”，旧工程无名称时回退到 ID。工作台草稿名称与搜索同步使用真实工程文档。视图设置、缩小、适应、放大及定位按钮使用共享 small 高度，移除缩放组重复外框；保留前一提交的输入框原生清空能力。
+
+## D5c1 · TDesign 图标优先与工业图标例外
+
+React/Vue 按 Catalog 固定版本（tdesign-icons-react 0.6.11 / tdesign-icons-vue-next 0.4.11）按需引入官方 SVG 图标。通用操作统一使用 TDesign：缩放、方向微调、图层展开/收起、拖拽、视图设置和定位；保留文字标签、禁用态、键盘焦点和 aria-label，不用 Unicode 字符充当控件图标。水箱、水泵、管道未找到恰当的官方工业图标，改用 assets/icons 下三份本地共享 SVG，以 CSS mask 继承主题前景，在图元库与悬浮工具栏复用；不将播放键误作水泵，不引入第二套图标依赖。工业图元实际渲染、网格、手柄、旋转光标和品牌 Logo 不变。参考 https://tdesign.tencent.com/react/components/icon 与 https://tdesign.tencent.com/icons 。
+
+## D5c1 · 顶部菜单可见性
+
+工具栏原横向滚动与纵向隐藏会裁剪挂载于菜单容器内的 TDesign Popup。改用自动换行和可见溢出，保持工具栏与画布独立，不改官方 Popup 的挂载、事件或业务操作。工程管理收到自身授权拒绝时已清空目录缓存，不再因父组件的授权修订号立即卸载当前菜单；其他授权失效仍重建目录，服务端 CAS、预检和缓存清理保持原规则。
+
+## D5c1 · 工作区正式路由
+
+参见 [ADR-0071](adr/0071-dual-framework-workspace-router.md)。保持现有导航、主题与业务页面，React Outlet 和 Vue RouterView 按 URL 挂载工作区，工程专属路由以稳定 ID 查找本地工程，不冒称服务端授权。未保存离开需要明确确认，离开运行页依靠既有卸载释放订阅。
+
+## D5c1 · 单层下拉浮层
+
+顶部五个菜单和视图设置统一由 TDesign Popup 提供外层背景、圆角和阴影，内部容器只负责排列；不重复绘制卡片外观。文件与草稿使用五个等高（共享 small 28px）、左对齐的 TDesign Text Button，清除草稿保留 danger 语义和原确认机制，Upload 保持实际文件选择但不增加包裹边框。版本与工程目录列表采用分隔线而非独立卡片。保留原浮层挂载点、可见性、权限及全部草稿、预检、历史业务操作。

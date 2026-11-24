@@ -437,6 +437,16 @@ export class DocumentEditor {
     );
   }
 
+  /** 重命名仅修改可显示名称，复用工程历史并保留稳定 ID。 */
+  renameProject(name: string): boolean {
+    if (typeof name !== "string" || !name.trim()) {
+      throw new TypeError("工程名称不能为空");
+    }
+    const projectName = name.trim();
+    if (projectName === (this.current.projectName ?? this.current.projectId)) return false;
+    return this.commit(parseScadaDocument({ ...this.current, projectName }));
+  }
+
   /** 至少保留一页；删除当前页后切换到相邻页，撤销可完整恢复内容。 */
   deletePage(pageId: string): boolean {
     const index = this.current.pages.findIndex((page) => page.id === pageId);

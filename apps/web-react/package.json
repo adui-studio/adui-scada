@@ -19,6 +19,7 @@
     "@adui/tailwind": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-router": "catalog:",
     "tdesign-icons-react": "catalog:",
     "tdesign-react": "catalog:"
   },

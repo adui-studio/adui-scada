@@ -1508,3 +1508,46 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/runtime/test/theme-tokens.test.ts`：统一主题、TDesign 映射、旧变量及 Studio 固定侧栏的源码契约检查。
 
 依赖锁文件必须在联网 Windows 真实运行 `pnpm install --lockfile-only` 后提交；在该前置完成之前，不允许把本批描述为通过完整构建。参见 [ADR-0029](adr/0029-brand-theme-v7.md)。
+
+## 2026-11-24 · D5c1 画板默认尺寸共享 Core 导出与前端挂载地图
+
+- `packages/core/src/demo-document.ts`：保留旧的 `waterTreatmentDemoDocument` 880×460，新增 `STUDIO_DEFAULT_PAGE_SIZE` 1920×1080 和从原水处理示例等比缩放/居中的 `waterTreatmentStudioDocument`。两个常量经 `packages/core/src/index.ts` 统一对外导出。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：新建 Studio 用相同 Core 默认文档构造 `DocumentEditor`；页面实际画板尺寸仍由 `page.size` 渲染，不改变从 JSON / IndexedDB 恢复的工程。
+- `packages/core/test/studio-default-document.test.ts`：新画板尺寸、Tag 绑定几何保真、继承/复制/撤销、旧项目 880×460 的测试覆盖。
+- `scripts/test-studio-browser.mjs --ui`：新 Studio 三页面 UI 场景中的两个框架、两个视口校验真实 SVG 页面边界尺寸；不代替最终浏览器截图与手动操作体验验收。
+- 此项延续 `docs/REQUIREMENTS.md` 的“新建页面继承当前页面尺寸”既定规则，并将 Figma Frame/Zoom 概念仅作为交互参照；禁止导入时自动调整画板或打破旧工程 JSON。
+
+## 2026-11-24 · Figma 式工作区 UI3 入口与共享渲染地图
+
+- `apps/web-react/src/App.tsx`、`apps/web-vue/src/App.vue`：默认真实工作台首页（不编造最近文件），真实入口切至运行/发布/Studio；应用导航在编辑与非编辑两种布局下切换密度。
+- `packages/runtime/src/runtime.css`：工作台主页、184px 白色功能导航和 Studio 52px 紧凑图标导航，仍与官方 TDesign Light 共用 Token。
+- `apps/web-{react,vue}/src/studio/StudioPage`：左侧页面/图层、中央 1920×1080 画板与底部插入工具、右侧互斥属性/Tag 目录。布局通过共享 `packages/tailwind/src/studio.css` 维护。
+- `packages/core/src/studio-viewport-rect.ts`：新增可选只读 `fitMargin` 和固定 `STUDIO_CANVAS_FIT_MARGIN=48`，仍维持浏览器 SVG 视口比例及 Schema 原尺寸。
+- `packages/core/src/svg.ts`、`packages/runtime/src/runtime.ts`：新增 optional light SVG appearance，由 Studio 专用，原 Runtime/发布默认为 dark。
+- `scripts/test-studio-browser.mjs`：UI 16 视图、Studio 页面/图元工具与画板结构；`scripts/test-runtime-sse-browser.mjs`：从首页真实跳转运行监控再验证有效流/真实网络断线/连接回收。
+- `packages/core/test/{studio-viewport-rect.test.ts,svg.test.ts}`、`packages/runtime/test/runtime.test.ts`：对应兼容与外观分离测试源码。完整 Windows `ready`/浏览器仍待统一最终验收。
+
+### D5c1 · 当前工作空间布局（覆盖前述历史布局）
+
+- `apps/web-{react,vue}/src/App` 与 `packages/runtime/src/runtime.css`：文件列表首页、Studio 横向工作空间切换栏。
+- 双端 `StudioPage` 与 `packages/tailwind/src/studio.css`：可调整面板宽度、左页面与图层、右属性与 Tag、中央 SVG、上方视图缩放及底部工具。
+- `scripts/test-studio-browser.mjs`：以实际宽度、调整与折叠操作检验布局；不再要求旧固定像素。
+
+- `packages/core/src/studio-viewport-rect.ts`：共享旋转图元定位及有界视区数学，双端使用实际 CSS 像素比例绘制手柄；运行与发布工作区的顶部导航和主画面布局统一在 `packages/runtime/src/runtime.css`。
+
+- 双端 `StudioPage`：原生面板分隔条指针捕获和键盘调整，仅修改视图宽度状态；共享 Studio CSS 提供定位与焦点视觉。
+
+### D5c1 · 文件工作台与独立总览
+
+- `packages/draft-storage/src/index.ts`：真实草稿摘要列表、新建独立本地工程、最新记录读取及文件校验导入。
+- `packages/core/src/demo-document.ts`：`createBlankStudioDocument` 与独立 `waterTreatmentShowcaseDocument`，保留旧示例。
+- `packages/core/src/svg.ts`：浅色设备图元及指标卡安全渲染。
+- `packages/runtime/src/workspace-home.ts`：共享工作台真实入口与静态总览缩略图。
+- React/Vue 的 App 和 Studio：同源草稿目录、文件打开、图层/图元库及画板属性；共享 CSS 维护视觉层。
+
+### D5c1 · 双端工作区 Router
+
+- `apps/web-react/src/main.tsx`、`apps/web-vue/src/main.ts`：正式 Hash Router 注册与应用挂载。
+- `apps/web-react/src/App.tsx`、`apps/web-vue/src/App.vue`：公共导航壳层及 Outlet / RouterView。
+- `apps/web-vue/src/WorkspaceHome.vue`、`apps/web-vue/src/studio/StudioWorkspaceRoute.vue`：独立工作台和工程路由载入组件。
+- `packages/runtime/src/workspace-routes.ts`：共享路径、稳定 ID 校验及一次性内存交接；`packages/draft-storage/src/index.ts`：本地工程按 ID 解析。

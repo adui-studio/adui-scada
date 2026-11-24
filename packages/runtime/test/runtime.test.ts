@@ -137,3 +137,15 @@ test("SVG 预览可以指定第二页，默认仍保持第一页兼容", () => {
   expect(second).not.toContain('data-node-id="tank"');
   expect(() => svgDataUrl(document, [], "missing")).toThrow(/未找到页面/);
 });
+
+test("Studio 浅色图元预览不改变真实 Runtime 的默认深色背景", () => {
+  const runtimeSvg = decodeURIComponent(svgDataUrl(waterTreatmentDemoDocument, []).split(",")[1]!);
+  const editorSvg = decodeURIComponent(
+    svgDataUrl(waterTreatmentDemoDocument, [], "main", "light").split(",")[1]!,
+  );
+  expect(runtimeSvg).toContain('fill="#0c1728"');
+  expect(editorSvg).toContain('fill="#ffffff"');
+  expect(editorSvg).toContain('fill="#142338"');
+  expect(editorSvg).toContain('data-node-id="tank"');
+  expect(editorSvg).toContain("异常");
+});
