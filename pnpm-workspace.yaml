@@ -71,6 +71,7 @@ peerDependencyRules:
 allowBuilds:
   "@prisma/engines": true
   "@scarf/scarf": true
+  esbuild: true
   prisma: true
 minimumReleaseAgeExclude:
   - "@voidzero-dev/vite-plus-core@8.3.8001"

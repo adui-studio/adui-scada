@@ -10,7 +10,7 @@ export function resolvePrisma7Cli(serverRoot) {
     if (
       manifest.name !== "@prisma/prisma7" ||
       typeof manifest.version !== "string" ||
-      !/^7\./.test(manifest.version) ||
+      !manifest.version.startsWith("7.") ||
       typeof bin !== "string" ||
       !bin ||
       isAbsolute(bin)
