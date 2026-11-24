@@ -5,6 +5,9 @@ import App from "./App.tsx";
 import "@adui/normalize.css/all.css";
 import "@adui/tailwind/styles.css";
 import "@adui/scada-runtime/styles.css";
+import { applyWorkspaceTheme, readWorkspaceTheme } from "@adui/scada-runtime";
+
+applyWorkspaceTheme(readWorkspaceTheme());
 
 const mount = document.getElementById("root");
 if (!mount) throw new Error("未找到页面挂载节点 #root");

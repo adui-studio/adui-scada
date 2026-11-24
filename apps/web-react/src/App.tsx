@@ -8,7 +8,12 @@ import {
   readWorkspaceJson,
 } from "@adui/scada-draft-storage";
 import type { WorkspaceDraftSummary } from "@adui/scada-draft-storage";
-import { WORKSPACE_HOME_ENTRIES, filterWorkspaceHomeEntries } from "@adui/scada-runtime";
+import {
+  WORKSPACE_HOME_ENTRIES,
+  filterWorkspaceHomeEntries,
+  readWorkspaceTheme,
+  applyWorkspaceTheme,
+} from "@adui/scada-runtime";
 import "tdesign-react/es/style/index.css";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
@@ -28,6 +33,13 @@ const viewLabels: Record<AppView, string> = {
 /** 双端同一信息架构：主功能导航独立于工程工作区，运行与编辑不会混淆。 */
 export default function App() {
   const [view, setView] = useState<AppView>("home");
+  const [themeMode, setThemeMode] = useState(readWorkspaceTheme);
+
+  function toggleTheme() {
+    const next = themeMode === "light" ? "dark" : "light";
+    applyWorkspaceTheme(next);
+    setThemeMode(next);
+  }
   const [initialDocument, setInitialDocument] = useState<ScadaDocument | null>(null);
   const [initialNotice, setInitialNotice] = useState("");
 
@@ -52,7 +64,11 @@ export default function App() {
       <nav className="scada-app-nav" aria-label="功能导航">
         <div className="scada-rail-brand">
           <span className="scada-app-brand">
-            <img src="/brand/favicon.svg" alt="" aria-hidden="true" />
+            <img
+              src={themeMode === "dark" ? "/brand/mark-dark.svg" : "/brand/mark-primary.svg"}
+              alt=""
+              aria-hidden="true"
+            />
             <strong>ADui SCADA</strong>
           </span>
           <span className="scada-rail-product">ADui Studio</span>
@@ -149,6 +165,7 @@ export default function App() {
             <span aria-hidden="true">/</span>
             <strong>{viewLabels[view]}</strong>
           </div>
+          <div className="scada-app-header-actions">
           <span className="scada-app-safety">
             {view === "studio"
               ? "本地组态编辑 · 非现场控制"
@@ -158,6 +175,26 @@ export default function App() {
                   ? "模拟只读监控 · 非现场控制"
                   : "开发工作台 · 非现场控制"}
           </span>
+          <Button
+            type="button"
+            theme="default"
+            variant="text"
+            className="scada-theme-toggle"
+            aria-label="切换深色主题"
+            aria-pressed={themeMode === "dark"}
+            title={themeMode === "dark" ? "切换浅色主题" : "切换深色主题"}
+            onClick={toggleTheme}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+              {themeMode === "dark" ? (
+                <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></>
+              ) : (
+                <path d="M20 15.5A9 9 0 0 1 8.5 4 9 9 0 1 0 20 15.5Z" />
+              )}
+            </svg>
+            {themeMode === "dark" ? "浅色" : "深色"}
+          </Button>
+          </div>
         </header>
         <Suspense
           fallback={
@@ -333,7 +370,7 @@ function WorkspaceHome({
               <p>工业组态 · 实时监控</p>
               <small>从工艺画面开始构建工程</small>
             </div>
-            <img src="/brand/favicon.svg" alt="" />
+            <img className="scada-home-brand-mark" src="/brand/mark-primary.svg" alt="" />
           </article>
           <article className="scada-home-banner">
             <div>

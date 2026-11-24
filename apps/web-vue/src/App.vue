@@ -9,7 +9,12 @@ import {
   readWorkspaceJson,
 } from "@adui/scada-draft-storage";
 import type { WorkspaceDraftSummary } from "@adui/scada-draft-storage";
-import { WORKSPACE_HOME_ENTRIES, filterWorkspaceHomeEntries } from "@adui/scada-runtime";
+import {
+  WORKSPACE_HOME_ENTRIES,
+  filterWorkspaceHomeEntries,
+  readWorkspaceTheme,
+  applyWorkspaceTheme,
+} from "@adui/scada-runtime";
 import "tdesign-vue-next/es/style/index.css";
 import { computed, defineAsyncComponent, ref, shallowRef, watch } from "vue";
 
@@ -19,6 +24,14 @@ const PublishedRuntimePage = defineAsyncComponent(
 );
 const StudioPage = defineAsyncComponent(() => import("./studio/StudioPage.vue"));
 const view = ref<"home" | "runtime" | "published" | "studio">("home");
+const themeMode = ref(readWorkspaceTheme());
+
+function toggleTheme() {
+  const next = themeMode.value === "light" ? "dark" : "light";
+  applyWorkspaceTheme(next);
+  themeMode.value = next;
+}
+
 const query = ref("");
 const entries = computed(() => filterWorkspaceHomeEntries(query.value));
 const initialDocument = shallowRef<ScadaDocument | null>(null);
@@ -154,7 +167,11 @@ const viewLabels = {
     <nav class="scada-app-nav" aria-label="功能导航">
       <div class="scada-rail-brand">
         <span class="scada-app-brand">
-          <img src="/brand/favicon.svg" alt="" aria-hidden="true" />
+          <img
+            :src="themeMode === 'dark' ? '/brand/mark-dark.svg' : '/brand/mark-primary.svg'"
+            alt=""
+            aria-hidden="true"
+          />
           <strong>ADui SCADA</strong>
         </span>
         <span class="scada-rail-product">ADui Studio</span>
@@ -247,7 +264,28 @@ const viewLabels = {
           <span aria-hidden="true">/</span>
           <strong>{{ viewLabels[view] }}</strong>
         </div>
-        <span class="scada-app-safety">{{ safetyLabel }}</span>
+        <div class="scada-app-header-actions">
+          <span class="scada-app-safety">{{ safetyLabel }}</span>
+          <TButton
+            type="button"
+            theme="default"
+            variant="text"
+            class="scada-theme-toggle"
+            aria-label="切换深色主题"
+            :aria-pressed="themeMode === 'dark'"
+            :title="themeMode === 'dark' ? '切换浅色主题' : '切换深色主题'"
+            @click="toggleTheme"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+              <template v-if="themeMode === 'dark'">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" />
+              </template>
+              <path v-else d="M20 15.5A9 9 0 0 1 8.5 4 9 9 0 1 0 20 15.5Z" />
+            </svg>
+            {{ themeMode === 'dark' ? '浅色' : '深色' }}
+          </TButton>
+        </div>
       </header>
       <main v-if="view === 'home'" id="scada-main-content" class="scada-home flex min-w-0 flex-col">
         <div class="scada-home-heading flex flex-wrap items-center justify-between">
@@ -333,7 +371,7 @@ const viewLabels = {
                 <p>工业组态 · 实时监控</p>
                 <small>从工艺画面开始构建工程</small>
               </div>
-              <img src="/brand/favicon.svg" alt="" />
+              <img class="scada-home-brand-mark" :src="themeMode === 'dark' ? '/brand/mark-dark.svg' : '/brand/mark-primary.svg'" alt="" />
             </article>
             <article class="scada-home-banner">
               <div>
