@@ -25,13 +25,7 @@ function sample(offset: number, changes: Partial<TagValue> = {}): TagValue {
 
 test("历史查询仅返回指定 Tag 和左闭右开时间范围内的记录", () => {
   const points = selectTagHistory(
-    [
-      sample(1000),
-      sample(999),
-      sample(-1),
-      sample(0),
-      sample(10, { tagId: "water.flow" }),
-    ],
+    [sample(1000), sample(999), sample(-1), sample(0), sample(10, { tagId: "water.flow" })],
     query,
   );
   expect(points.map((point) => point.timestampMs)).toEqual([start, start + 999]);
@@ -51,7 +45,15 @@ test("历史趋势保留四种质量和原值，只有正常数值生成绘图�
     ],
     query,
   );
-  expect(points.map((point) => point.numericValue)).toEqual([0, null, null, null, null, null, null]);
+  expect(points.map((point) => point.numericValue)).toEqual([
+    0,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+  ]);
   expect(points.map((point) => point.value)).toEqual([0, 55, 55, 55, true, "55", null]);
   expect(points.map((point) => point.quality)).toEqual([
     "GOOD",
