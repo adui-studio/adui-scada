@@ -1251,3 +1251,11 @@
 - **验证与防复发**：Node.js 22.16.0 独立实验确认冻结对象的 Reflect.set 返回 false、原值不变、Object.assign 抛出 TypeError；并非完整仓库测试。编写异常断言前核对 E-003，原生不可写属性可使用 Reflect.set 的布尔结果验证，禁止禁用规则或删除行为断言。Windows 最新候选零警告检查、46 项定向测试、中文文案及文档待复验。
 
 > **2026-11-24 · E-130 Windows 复验关闭**：维护者 Windows 实测 D5c5：Vite+ 461 文件格式正确、303 个受检文件零警告和错误；归档 8/8、采样 13/13、历史缓冲区 11/11、历史查询 8/8、TagStore 6/6，共 46/46；中文文案 330 文件及 Markdown 95 份全部通过。日志未独立打印本地 SHA，当前远端候选为 73a06349e114a73465dd6551723820eb02cd589b。维护者明确授权合并。定向测试不代表完整 ready、生产采集、真实数据库持久化或现场工业安全验收。 冻结对象拒绝写入及数据不变断言通过，原 Lint 阻塞解除。
+
+### E-131 · React 运行页替换时保留旧 Effect 尾部和重复变量（PR #198，待 Windows 复验）
+
+- **Windows 实测**：维护者执行 `vp check --fix`，格式化在 `apps/web-react/src/runtime/RuntimePage.tsx:123:4` 报 Unexpected token 并中止。日志未打印本地 HEAD，远端文件 Blob d2a50e98e4d0277990dacbbc87e6025deba83811 确有同一残留。
+- **根因**：扩展 RuntimeMonitor 时使用首次匹配的 return 作为旧组件替换边界，误匹配 Effect 的清理回调，遗留旧回调结束语句与同作用域第二个 svg 声明。与 E-013、E-055、E-119、E-120 同类，独立核心逻辑检查不能代替最终 TSX 解析。
+- **最小修复**：删除旧回调及重复 svg 声明所在的五行（含分隔空行），保留当前 Effect 的清理函数、project 依赖及含 pageId 的 SVG 渲染。Vue、共享模拟源、历史事务和工业安全门禁不变。
+- **实际复验**：协作容器 Node.js 22.16.0 / TypeScript 5.8.3 对完整修复前文件（git hash-object 与原 GitHub Blob 一致）以 ScriptKind.TSX 解析，得到 3 条语法诊断，其中 123:4 与维护者报错位置一致；修复后完整文件为 0 条。修复 Blob 5ce8ad1f52d20b72a3d0c7ce5f7d8ca845e148fb 与 GitHub 回读一致。正式 TypeScript 6、Vite+、Lint、类型检查及浏览器仍待 Windows 实测。
+- **防复发**：组件重构不得以首个通用 return 字符串确定替换边界；必须使用唯一的结构化定位、检查完整差异、解析每个变更 TSX 文件，并对提交后 Blob 回读校验。无真实项目工具链时明确记录局部验证范围，不能用独立 Core 测试结果替代页面解析。
