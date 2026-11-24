@@ -918,3 +918,5 @@ textarea {
   .scada-home { padding: 20px 16px; }
 }
 @media (prefers-reduced-motion: reduce) { .scada-home-card { transition: none; } }
+
+.scada-home-card-icon svg { width: 23px; height: 23px; }

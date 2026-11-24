@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Button as TButton } from "tdesign-vue-next";
 import "tdesign-vue-next/es/style/index.css";
-import { defineAsyncComponent, ref } from "vue";
+import { computed, defineAsyncComponent, ref } from "vue";
 
 const RuntimePage = defineAsyncComponent(() => import("./runtime/RuntimePage.vue"));
 const PublishedRuntimePage = defineAsyncComponent(
@@ -9,6 +9,19 @@ const PublishedRuntimePage = defineAsyncComponent(
 );
 const StudioPage = defineAsyncComponent(() => import("./studio/StudioPage.vue"));
 const view = ref<"home" | "runtime" | "published" | "studio">("home");
+
+const safetyLabel = computed(() => {
+  switch (view.value) {
+    case "studio":
+      return "本地组态编辑 · 非现场控制";
+    case "published":
+      return "受控只读预览 · 非现场控制";
+    case "runtime":
+      return "模拟只读监控 · 非现场控制";
+    default:
+      return "开发工作台 · 非现场控制";
+  }
+});
 
 const viewLabels = {
   home: "工作台",
@@ -111,7 +124,7 @@ const viewLabels = {
           <span aria-hidden="true">/</span>
           <strong>{{ viewLabels[view] }}</strong>
         </div>
-        <span class="scada-app-safety">只读演示 · 非现场控制</span>
+        <span class="scada-app-safety">{{ safetyLabel }}</span>
       </header>
       <main v-if="view === 'home'" id="scada-main-content" class="scada-home">
         <div class="scada-home-heading">
@@ -126,19 +139,19 @@ const viewLabels = {
           </div>
           <div class="scada-home-card-grid">
             <button type="button" class="scada-home-card" @click="view = 'studio'">
-              <span class="scada-home-card-icon" aria-hidden="true">▣</span>
+              <span class="scada-home-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 8h18M9 8v13" /></svg></span>
               <strong>打开组态编辑器</strong>
               <span>设计 1920 × 1080 画板，管理图层和 Tag</span>
               <small>打开 ↗</small>
             </button>
             <button type="button" class="scada-home-card" @click="view = 'runtime'">
-              <span class="scada-home-card-icon" aria-hidden="true">◉</span>
+              <span class="scada-home-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 19h18M5 16V9m5 7V5m5 11v-4m4 4V7" stroke-linecap="round" /></svg></span>
               <strong>查看模拟运行</strong>
               <span>监控水处理模拟状态、链路和质量</span>
               <small>打开 ↗</small>
             </button>
             <button type="button" class="scada-home-card" @click="view = 'published'">
-              <span class="scada-home-card-icon" aria-hidden="true">▤</span>
+              <span class="scada-home-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h4" stroke-linecap="round" /></svg></span>
               <strong>查看已发布工程</strong>
               <span>经受控接口读取只读发布快照</span>
               <small>打开 ↗</small>

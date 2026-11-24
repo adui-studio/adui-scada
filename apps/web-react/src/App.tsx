@@ -117,7 +117,15 @@ export default function App() {
             <span aria-hidden="true">/</span>
             <strong>{viewLabels[view]}</strong>
           </div>
-          <span className="scada-app-safety">只读演示 · 非现场控制</span>
+          <span className="scada-app-safety">
+            {view === "studio"
+              ? "本地组态编辑 · 非现场控制"
+              : view === "published"
+                ? "受控只读预览 · 非现场控制"
+                : view === "runtime"
+                  ? "模拟只读监控 · 非现场控制"
+                  : "开发工作台 · 非现场控制"}
+          </span>
         </header>
         <Suspense
           fallback={
@@ -168,7 +176,7 @@ function WorkspaceHome({ onNavigate }: { onNavigate: (view: AppView) => void }) 
               className="scada-home-card"
               onClick={() => onNavigate(entry.view)}
             >
-              <span className="scada-home-card-icon" aria-hidden="true">{entry.icon}</span>
+              <span className="scada-home-card-icon" aria-hidden="true"><HomeCardIcon view={entry.view} /></span>
               <strong>{entry.title}</strong>
               <span>{entry.description}</span>
               <small>打开 <span aria-hidden="true">↗</span></small>
@@ -198,5 +206,30 @@ function WorkspaceHome({ onNavigate }: { onNavigate: (view: AppView) => void }) 
         本页不开放现场设备控制。
       </p>
     </main>
+  );
+}
+
+/** 仅使用通用矢量图形标识实际入口，不引入第三方专有图标资产。 */
+function HomeCardIcon({ view }: { view: AppView }) {
+  const drawing =
+    view === "studio" ? (
+      <>
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M3 8h18M9 8v13" />
+      </>
+    ) : view === "runtime" ? (
+      <>
+        <path d="M3 19h18M5 16V9m5 7V5m5 11v-4m4 4V7" strokeLinecap="round" />
+      </>
+    ) : (
+      <>
+        <rect x="5" y="3" width="14" height="18" rx="2" />
+        <path d="M8 8h8M8 12h8M8 16h4" strokeLinecap="round" />
+      </>
+    );
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      {drawing}
+    </svg>
   );
 }
