@@ -4783,3 +4783,11 @@ D5c7 候选新增规范编码 4 项、真实 PostgreSQL 归档 5 项、共享模
 修复共享 Core 两个历史类的四个参数属性，改为显式只读字段赋值；远端提交 b0c1d7f7fc4eccbe91d9c46431f34a3bd599290e、1098b214e4d89fa98719ce017aca99765510dc37。协作端使用 Node.js 22.16.0/TypeScript 5.8.3，对实际构造函数摘录（最小依赖类型声明）执行启用 erasableSyntaxOnly 的严格编译实验，修复前四项 TS1294、退出码 2，修复后零项、退出码 0；Node 原生类型擦除构造验证通过。该实验不代替完整 TypeScript 6 项目检查。
 
 本次复验顺序：db:validate、db:generate、build:core、vp check --fix、vp check、typecheck:web、typecheck:server、messages:check、docs:check。前序门禁通过后再运行原有历史专项、ready 与隔离数据库及双端浏览器验收。禁止根据本次局部检查执行自动合并或生产数据库操作。
+
+#### MVP · 依赖升级独立分支验收门禁（待执行）
+
+维护者此前 Windows 日志显示旧依赖下 Prisma 校验及生成、Core 构建、Vite+ 469 格式文件及 311 受检零警告错误、独立 Web/Server 类型检查、79 文件 956/956 单测、6 文件 63/63 HTTP E2E、React/Vue 构建通过；该记录不能覆盖新依赖。
+
+升级候选按维护者 Registry 输出更新 Catalog，普通外部 npm 依赖采用 ^，TypeScript 固定 6.x 范围。Vite/Vitest 保留与已安装 Vite+ 精确配套的版本，依赖检查脚本将核对其实际 package.json 声明。Prisma 8 RC 需要单独迁移，不改变现有 Schema、迁移、事务或安全门禁。Node 26.13.1、pnpm 12.23.0、Tauri Rust 依赖、Docker 镜像声明均为待解析或待运行候选。
+
+实际验收顺序：Node 26.x 与 pnpm 12.23.0 → pnpm install --no-frozen-lockfile → pnpm install --frozen-lockfile → pnpm run deps:check → Prisma Schema 校验/Client 生成 → Core 构建 → vp check --fix / vp check → 独立 Web/Server 类型检查及完整 ready。桌面端在原 Cargo.toml 所在目录执行 cargo update、cargo check --locked，并复验两端 MSI 构建。提交真实生成的两份锁文件前不得合并。Docker 镜像仅配置升级，禁止启动已有数据库卷；备份恢复演练、PostgreSQL 主版本迁移、Redis 数据兼容、Keycloak 登录与隔离库测试另行验证。协作端没有实际执行 Registry 解析、Cargo、Docker 或正式测试。
