@@ -139,7 +139,7 @@ describe("精密工程工作台设计系统", () => {
       expect(source).toContain("studio-tag-form-grid");
       expect(source).toContain("studio-tag-field-error");
       expect(source).toContain(dialogProp);
-      expect(source).toContain("确认");
+      expect(source).toContain("confirmStudioAction");
     }
   });
 
