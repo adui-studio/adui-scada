@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Button as TButton, Input as TInput, Upload as TUpload } from "tdesign-vue-next";
+import { AppIcon, ChartBarIcon, FileIcon, EditIcon, SunnyIcon, MoonIcon, AddIcon, UploadIcon, ChevronRightIcon } from "tdesign-icons-vue-next";
 import { waterTreatmentShowcaseDocument } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import {
@@ -184,18 +185,7 @@ const viewLabels = {
           :aria-current="view === 'home' ? 'page' : undefined"
           @click="navigate('home')"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            aria-hidden="true"
-          >
-            <rect x="3.5" y="3.5" width="7" height="7" rx="1" />
-            <rect x="13.5" y="3.5" width="7" height="7" rx="1" />
-            <rect x="3.5" y="13.5" width="7" height="7" rx="1" />
-            <rect x="13.5" y="13.5" width="7" height="7" rx="1" />
-          </svg>
+          <AppIcon aria-hidden="true" />
           <span>工作台</span>
         </TButton>
         <TButton
@@ -204,15 +194,7 @@ const viewLabels = {
           :aria-current="view === 'runtime' ? 'page' : undefined"
           @click="navigate('runtime')"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            aria-hidden="true"
-          >
-            <path d="M3 19h18M5 16V8m5 8V5m5 11v-6m4 6V7" stroke-linecap="round" />
-          </svg>
+          <ChartBarIcon aria-hidden="true" />
           <span>运行监控</span>
         </TButton>
         <TButton
@@ -221,16 +203,7 @@ const viewLabels = {
           :aria-current="view === 'published' ? 'page' : undefined"
           @click="navigate('published')"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            aria-hidden="true"
-          >
-            <rect x="4" y="3" width="16" height="18" rx="2" />
-            <path d="M8 8h8M8 12h8M8 16h4" stroke-linecap="round" />
-          </svg>
+          <FileIcon aria-hidden="true" />
           <span>已发布运行</span>
         </TButton>
         <TButton
@@ -239,16 +212,7 @@ const viewLabels = {
           :aria-current="view === 'studio' ? 'page' : undefined"
           @click="navigate('studio')"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            aria-hidden="true"
-          >
-            <path d="M4 4h16v16H4zM4 9h16M9 9v11" stroke-linejoin="round" />
-            <path d="m13 15 2 2 4-5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
+          <EditIcon aria-hidden="true" />
           <span>组态编辑</span>
         </TButton>
       </div>
@@ -276,21 +240,8 @@ const viewLabels = {
             :title="themeMode === 'dark' ? '切换浅色主题' : '切换深色主题'"
             @click="toggleTheme"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.7"
-              aria-hidden="true"
-            >
-              <template v-if="themeMode === 'dark'">
-                <circle cx="12" cy="12" r="4" />
-                <path
-                  d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"
-                />
-              </template>
-              <path v-else d="M20 15.5A9 9 0 0 1 8.5 4 9 9 0 1 0 20 15.5Z" />
-            </svg>
+            <SunnyIcon v-if="themeMode === 'dark'" aria-hidden="true" />
+            <MoonIcon v-else aria-hidden="true" />
             {{ themeMode === "dark" ? "浅色" : "深色" }}
           </TButton>
         </div>
@@ -312,9 +263,9 @@ const viewLabels = {
         </div>
         <div class="scada-home-quick-grid grid">
           <button type="button" class="scada-home-quick" :disabled="busy" @click="newProject">
-            <span class="scada-home-card-icon" aria-hidden="true">+</span>
+            <span class="scada-home-card-icon" aria-hidden="true"><AddIcon /></span>
             <strong>新建组态工程</strong>
-            <span aria-hidden="true">↗</span>
+            <ChevronRightIcon aria-hidden="true" />
           </button>
           <div class="scada-home-upload">
             <TUpload
@@ -327,9 +278,9 @@ const viewLabels = {
               @select-change="importProject"
             >
               <button type="button" class="scada-home-quick" :disabled="busy">
-                <span class="scada-home-card-icon" aria-hidden="true">↥</span>
+                <span class="scada-home-card-icon" aria-hidden="true"><UploadIcon /></span>
                 <strong>导入 JSON 工程</strong>
-                <span aria-hidden="true">↗</span>
+                <ChevronRightIcon aria-hidden="true" />
               </button>
             </TUpload>
           </div>
@@ -341,30 +292,12 @@ const viewLabels = {
             @click="openEntry(entry.view)"
           >
             <span class="scada-home-card-icon" aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                aria-hidden="true"
-              >
-                <template v-if="entry.view === 'studio'">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <path d="M3 8h18M9 8v13" />
-                </template>
-                <path
-                  v-else-if="entry.view === 'runtime'"
-                  d="M3 19h18M5 16V9m5 7V5m5 11v-4m4 4V7"
-                  stroke-linecap="round"
-                />
-                <template v-else>
-                  <rect x="5" y="3" width="14" height="18" rx="2" />
-                  <path d="M8 8h8M8 12h8M8 16h4" stroke-linecap="round" />
-                </template>
-              </svg>
+              <EditIcon v-if="entry.view === 'studio'" aria-hidden="true" />
+              <ChartBarIcon v-else-if="entry.view === 'runtime'" aria-hidden="true" />
+              <FileIcon v-else aria-hidden="true" />
             </span>
             <strong>{{ entry.action }}</strong>
-            <span aria-hidden="true">↗</span>
+            <ChevronRightIcon aria-hidden="true" />
           </button>
         </div>
         <section class="scada-home-section" aria-labelledby="scada-home-explore">
@@ -391,16 +324,7 @@ const viewLabels = {
                 <p>1920 × 1080 默认画板</p>
                 <small>图层、图元、属性与 Tag</small>
               </div>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                aria-hidden="true"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <path d="M3 8h18M9 8v13" />
-              </svg>
+              <EditIcon aria-hidden="true" />
             </article>
             <article class="scada-home-banner scada-home-banner-runtime">
               <div>
@@ -408,15 +332,7 @@ const viewLabels = {
                 <p>模拟数据与正式发布分离</p>
                 <small>设备写入未开放</small>
               </div>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                aria-hidden="true"
-              >
-                <path d="M3 19h18M5 16V9m5 7V5m5 11v-4m4 4V7" stroke-linecap="round" />
-              </svg>
+              <ChartBarIcon aria-hidden="true" />
             </article>
           </div>
         </section>
@@ -440,27 +356,9 @@ const viewLabels = {
                   alt="内置水处理工程静态预览，无实时值"
                 />
                 <span v-else aria-hidden="true">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    aria-hidden="true"
-                  >
-                    <template v-if="entry.view === 'studio'">
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <path d="M3 8h18M9 8v13" />
-                    </template>
-                    <path
-                      v-else-if="entry.view === 'runtime'"
-                      d="M3 19h18M5 16V9m5 7V5m5 11v-4m4 4V7"
-                      stroke-linecap="round"
-                    />
-                    <template v-else>
-                      <rect x="5" y="3" width="14" height="18" rx="2" />
-                      <path d="M8 8h8M8 12h8M8 16h4" stroke-linecap="round" />
-                    </template>
-                  </svg>
+                  <EditIcon v-if="entry.view === 'studio'" aria-hidden="true" />
+              <ChartBarIcon v-else-if="entry.view === 'runtime'" aria-hidden="true" />
+              <FileIcon v-else aria-hidden="true" />
                 </span>
               </span>
               <strong>{{ entry.title }}</strong>

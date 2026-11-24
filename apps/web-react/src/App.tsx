@@ -1,4 +1,5 @@
 import { Button, Input, Upload } from "tdesign-react";
+import { AppIcon, ChartBarIcon, FileIcon, EditIcon, SunnyIcon, MoonIcon, AddIcon, UploadIcon, ChevronRightIcon } from "tdesign-icons-react";
 import { waterTreatmentShowcaseDocument } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import {
@@ -82,18 +83,7 @@ export default function App() {
             aria-current={view === "home" ? "page" : undefined}
             onClick={() => navigate("home")}
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              aria-hidden="true"
-            >
-              <rect x="3.5" y="3.5" width="7" height="7" rx="1" />
-              <rect x="13.5" y="3.5" width="7" height="7" rx="1" />
-              <rect x="3.5" y="13.5" width="7" height="7" rx="1" />
-              <rect x="13.5" y="13.5" width="7" height="7" rx="1" />
-            </svg>
+            <AppIcon aria-hidden="true" />
             <span>工作台</span>
           </Button>
           <Button
@@ -103,15 +93,7 @@ export default function App() {
             aria-current={view === "runtime" ? "page" : undefined}
             onClick={() => navigate("runtime")}
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              aria-hidden="true"
-            >
-              <path d="M3 19h18M5 16V8m5 8V5m5 11v-6m4 6V7" strokeLinecap="round" />
-            </svg>
+            <ChartBarIcon aria-hidden="true" />
             <span>运行监控</span>
           </Button>
           <Button
@@ -121,16 +103,7 @@ export default function App() {
             aria-current={view === "published" ? "page" : undefined}
             onClick={() => navigate("published")}
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              aria-hidden="true"
-            >
-              <rect x="4" y="3" width="16" height="18" rx="2" />
-              <path d="M8 8h8M8 12h8M8 16h4" strokeLinecap="round" />
-            </svg>
+            <FileIcon aria-hidden="true" />
             <span>已发布运行</span>
           </Button>
           <Button
@@ -140,16 +113,7 @@ export default function App() {
             aria-current={view === "studio" ? "page" : undefined}
             onClick={() => navigate("studio")}
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              aria-hidden="true"
-            >
-              <path d="M4 4h16v16H4zM4 9h16M9 9v11" strokeLinejoin="round" />
-              <path d="m13 15 2 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <EditIcon aria-hidden="true" />
             <span>组态编辑</span>
           </Button>
         </div>
@@ -185,22 +149,7 @@ export default function App() {
               title={themeMode === "dark" ? "切换浅色主题" : "切换深色主题"}
               onClick={toggleTheme}
             >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                aria-hidden="true"
-              >
-                {themeMode === "dark" ? (
-                  <>
-                    <circle cx="12" cy="12" r="4" />
-                    <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" />
-                  </>
-                ) : (
-                  <path d="M20 15.5A9 9 0 0 1 8.5 4 9 9 0 1 0 20 15.5Z" />
-                )}
-              </svg>
+              {themeMode === "dark" ? <SunnyIcon aria-hidden="true" /> : <MoonIcon aria-hidden="true" />}
               {themeMode === "dark" ? "浅色" : "深色"}
             </Button>
           </div>
@@ -322,10 +271,10 @@ function WorkspaceHome({
           }}
         >
           <span className="scada-home-card-icon" aria-hidden="true">
-            +
+            <AddIcon />
           </span>
           <strong>新建组态工程</strong>
-          <span aria-hidden="true">↗</span>
+          <ChevronRightIcon aria-hidden="true" />
         </button>
         <div className="scada-home-upload">
           <Upload
@@ -351,10 +300,10 @@ function WorkspaceHome({
           >
             <button type="button" className="scada-home-quick" disabled={busy}>
               <span className="scada-home-card-icon" aria-hidden="true">
-                ↥
+                <UploadIcon />
               </span>
               <strong>导入 JSON 工程</strong>
-              <span aria-hidden="true">↗</span>
+              <ChevronRightIcon aria-hidden="true" />
             </button>
           </Upload>
         </div>
@@ -369,7 +318,7 @@ function WorkspaceHome({
               <HomeCardIcon view={entry.view} />
             </span>
             <strong>{entry.action}</strong>
-            <span aria-hidden="true">↗</span>
+            <ChevronRightIcon aria-hidden="true" />
           </button>
         ))}
       </div>
@@ -479,27 +428,9 @@ function WorkspaceHome({
   );
 }
 
-/** 仅使用通用矢量图形标识实际入口，不引入第三方专有图标资产。 */
+/** 复用已安装的 TDesign 图标，标识真实功能入口。 */
 function HomeCardIcon({ view }: { view: AppView }) {
-  const drawing =
-    view === "studio" ? (
-      <>
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <path d="M3 8h18M9 8v13" />
-      </>
-    ) : view === "runtime" ? (
-      <>
-        <path d="M3 19h18M5 16V9m5 7V5m5 11v-4m4 4V7" strokeLinecap="round" />
-      </>
-    ) : (
-      <>
-        <rect x="5" y="3" width="14" height="18" rx="2" />
-        <path d="M8 8h8M8 12h8M8 16h4" strokeLinecap="round" />
-      </>
-    );
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      {drawing}
-    </svg>
-  );
+  if (view === "studio") return <EditIcon aria-hidden="true" />;
+  if (view === "runtime") return <ChartBarIcon aria-hidden="true" />;
+  return <FileIcon aria-hidden="true" />;
 }

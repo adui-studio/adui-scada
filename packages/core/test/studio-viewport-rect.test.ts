@@ -1,5 +1,5 @@
 import { expect, test } from "vite-plus/test";
-import { studioFocusTransform, studioViewportRect } from "../src/studio-viewport-rect.ts";
+import { STUDIO_CANVAS_FIT_MARGIN, studioFocusTransform, studioViewportRect } from "../src/studio-viewport-rect.ts";
 
 const page = { width: 880, height: 460 };
 const center = { x: 0, y: 0 };
@@ -117,4 +117,18 @@ test("定位极小图元时限制最大缩放并拒绝无效几何", () => {
   expect(() => studioFocusTransform(page, viewport, { ...tiny, rotation: Infinity }, 48)).toThrow(
     "定位图元的几何参数无效",
   );
+});
+
+test("默认 1920×1080 画板适应视口时仅保留最小安全边距且不变形", () => {
+  const page = { width: 1920, height: 1080 };
+  for (const viewport of [{ width: 900, height: 600 }, { width: 1200, height: 650 }, { width: 600, height: 500 }]) {
+    const rect = studioViewportRect(page, viewport, 1, center, STUDIO_CANVAS_FIT_MARGIN);
+    const scale = viewport.width / rect.width;
+    const horizontalGap = viewport.width - page.width * scale;
+    const verticalGap = viewport.height - page.height * scale;
+    expect(Math.min(horizontalGap, verticalGap)).toBeCloseTo(16);
+    expect(rect.width / rect.height).toBeCloseTo(viewport.width / viewport.height);
+    expect(horizontalGap).toBeGreaterThanOrEqual(15.99);
+    expect(verticalGap).toBeGreaterThanOrEqual(15.99);
+  }
 });
