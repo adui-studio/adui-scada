@@ -1563,3 +1563,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/tag-history.ts`：TagHistoryBuffer 的显式采样批次、总容量、保留边界与共享查询。
 - `packages/core/src/index.ts`：新增缓冲区、批次类型及本地容量上限导出。
 - `packages/core/test/tag-history-buffer.test.ts`：容量、原子性、质量来源、隔离及清理回归。
+
+## D5c4 · FR-012 历史采样策略
+
+- `packages/core/src/tag-history.ts`：TagHistorySampler 单 Tag 显式采样、成功写入基线、跳过观测时间及共享缓冲校验。
+- `packages/core/src/index.ts`：公共采样器与策略、输入、决策类型。
+- `packages/core/test/tag-history-sampler.test.ts`：周期、变化阈值、质量、写入失败、时间顺序及隔离回归。

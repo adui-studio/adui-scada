@@ -27,9 +27,17 @@ export type { TagChange, TagListener, TagQuality, TagScalar, TagValue } from "./
 export {
   MAX_TAG_HISTORY_BUFFER_SAMPLES,
   TagHistoryBuffer,
+  TagHistorySampler,
   selectTagHistory,
 } from "./tag-history.ts";
-export type { TagHistoryBatch, TagHistoryPoint, TagHistoryQuery } from "./tag-history.ts";
+export type {
+  TagHistoryBatch,
+  TagHistoryPoint,
+  TagHistoryQuery,
+  TagHistorySampleInput,
+  TagHistorySamplingDecision,
+  TagHistorySamplingPolicy,
+} from "./tag-history.ts";
 export {
   ALARM_EVENTS,
   ALARM_STATES,
