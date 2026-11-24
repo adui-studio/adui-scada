@@ -55,3 +55,7 @@ Prisma Postgres 云服务、Compute 与升级兼容技能并非自建 PostgreSQL
 ## 2026-11-24 · Prisma 8 渐进迁移技能补充
 
 维护者确认 Prisma 8 官方包提供的 Skills 已安装并授权同步，PR #200 已合入 MVP 集成分支。上述 37 项为原有锁文件索引，并非当前本地包提供技能的完整计数。Prisma 8 包内同步的技能可能按仓库忽略规则不进入 Git；开发必须以实际安装版本的技能、生成 Contract 和官方 [渐进迁移指南](https://www.prisma.io/docs/guides/upgrade-prisma-orm/postgresql-incremental) 与 [运行时参考](https://www.prisma.io/docs/orm/reference/transactions-and-runtime) 为准。旧版 CLI/事务仍遵循 Prisma 7 技能及仓库规则。当前自建 PostgreSQL 迁移不需要 Prisma Composer、托管 Prisma Postgres 或 Compute，不擅自启用相关服务。
+
+### Prisma 8 工作区同步
+
+新增根脚本 `pnpm run db:prisma8:skills`，在 `@adui/scada-server` 工作区调用当前已安装的 Prisma 8 CLI `skills sync`，与契约生成的工作目录保持一致。维护者已安装技能文件，但 PR #201 的生成日志仍报告 `synced none`；同步记录或作用域尚待实测确认，不视为依赖安装错误，不通过关闭警告规避。执行后检查 `prisma skills list`、契约生成日志及 Git 差异；不手工提交生成的第三方技能目录。
