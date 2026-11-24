@@ -5,15 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm run dev:demo",
-    "dev:demo": "node --experimental-strip-types examples/water-treatment/server.mjs",
+    "dev:demo": "node examples/water-treatment/server.mjs",
     "dev:react": "vp -C apps/web-react dev",
     "dev:vue": "vp -C apps/web-vue dev",
     "build:web": "vp -C apps/web-react build && vp -C apps/web-vue build",
     "typecheck:web": "pnpm --filter @adui/scada-web-react run typecheck && pnpm --filter @adui/scada-web-vue run typecheck && pnpm --filter @adui/scada-draft-storage run typecheck && pnpm --filter @adui/scada-api-client run typecheck",
     "test": "pnpm run build:core && vp test run",
     "test:unit": "pnpm run build:core && pnpm run db:generate && vp test run",
-    "lab:alarm": "node --experimental-strip-types scripts/lab-alarm-inprocess.mjs",
-    "test:alarm:lab": "node --experimental-strip-types --test scripts/lab-alarm-inprocess.cases.mjs",
+    "lab:alarm": "node scripts/lab-alarm-inprocess.mjs",
+    "test:alarm:lab": "node --test scripts/lab-alarm-inprocess.cases.mjs",
     "test:browser": "node scripts/test-studio-browser.mjs",
     "test:ui:browser": "node scripts/test-studio-browser.mjs --ui",
     "test:studio:browser:config": "node --test scripts/studio-browser-targets.cases.mjs",
@@ -149,11 +149,11 @@
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
-      "version": "12.18.0",
+      "version": "12.23.0",
       "onFail": "download"
     }
   },
   "engines": {
-    "node": ">=22.18.0"
+    "node": "24.18.0"
   }
 }

@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1
 # 仅包含 NestJS 进程存活检查的最小容器，不是生产 SCADA API。
-FROM node:24.22.2-bookworm AS build
+FROM node:24.18.0-bookworm AS build
 WORKDIR /workspace
-RUN npm install --global pnpm@12.18.0
+RUN npm install --global pnpm@12.23.0
 COPY . .
 RUN pnpm install --frozen-lockfile \
     && pnpm --filter @adui/scada-server run build
 
-FROM node:24.22.2-bookworm-slim
+FROM node:24.18.0-bookworm-slim
 ENV NODE_ENV=production
 WORKDIR /workspace
 # pnpm Workspace 符号链接指向根目录 .pnpm 存储，因此需要复制两级依赖。
