@@ -1597,3 +1597,11 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/prisma7-cli.mjs`、`scripts/prisma7-cli.cases.mjs`：已安装兼容 CLI 入口解析与拒绝异常包的独立测试。
 - `scripts/init-docker-db.mjs`、`scripts/verify-fresh-postgres-migrations.mjs`：保留原迁移安全边界，显式解析 Prisma 7 兼容入口。
 - 根及服务端 `package.json`：新增 db:prisma8:emit，纳入 ready；其余数据库命令仍使用 Prisma 7。生成的新版契约目录为 `apps/server/src/generated/prisma8/`。
+
+## Prisma 8 渐进迁移 · 阶段二候选
+
+- `apps/server/src/database/prisma8-readonly-target.ts`：隔离数据库 URL 校验。
+- `apps/server/src/database/prisma8-readonly-probe.ts`：强类型 Contract、外部 pg 连接池、原生 SQL / Prisma 8 工程联合查询比对，按所有权释放资源。
+- `apps/server/src/database/prisma8-readonly-target.spec.ts`：连接目标正反向单测。
+- `apps/server/test/prisma8-readonly.db-spec.ts`：独立 PostgreSQL 只读专项；空库明确区分 EMPTY，不冒充正向样本验收。
+- `apps/server/tsconfig.json`：服务端显式启用 resolveJsonModule。未修改前端、旧版数据库服务、Prisma Schema、生成契约、依赖或迁移记录。

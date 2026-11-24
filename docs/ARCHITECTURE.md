@@ -485,3 +485,7 @@ PR #105 已合并（main `637ebbce3191c998b3264733645da947a3739e9f`）。D5a 在
 沿用 PostgreSQL 和既有 `prisma/schema.prisma`。引入 Prisma 8 CLI 与 `@prisma/orm-postgres`；`prisma7Schema` 读取同一 Schema，生成独立的 `src/generated/prisma8/contract.json` 与 `contract.d.ts`。迁移阶段一只提供无数据库连接配置的 Contract 生成入口，原 NestJS 数据库服务、ACL、发布事务和历史归档仍使用 Prisma 7 Client；既有 SQL 迁移及其校验和保持不变，唯一迁移执行者仍是 Prisma 7。参见 [Prisma 官方渐进迁移指南](https://www.prisma.io/docs/guides/upgrade-prisma-orm/postgresql-incremental)。
 
 后续先验证类型、只读查询和双客户端等价性，再逐模块迁移事务、CAS、幂等键与资源释放，最后专项评审迁移所有权。必须保留现有自定义 CHECK、复合外键、索引、中文注释及已应用迁移记录。Prisma 8 RC 未经完整验证不用于正式部署。
+
+## MVP · Prisma 8 阶段二：独立只读运行时（候选）
+
+依照官方 [运行时与事务参考](https://www.prisma.io/docs/orm/reference/transactions-and-runtime)，以已生成的强类型 Contract、contractFromJson、postgres 和调用方持有的 pg.Pool 构建 Prisma 8 客户端。新增独立探针，未注册 NestJS Provider、未切换任何生产仓储或路由。探针只允许本机 15432 端口的 adui_scada_test，连接池上限 1，连接及 SQL 执行超时各 5 秒，连接默认事务只读。先核验 current_database 和 transaction_read_only；关闭顺序为 ORM 客户端、外部连接池。默认严格模式不关闭。仅使用固定只读查询，不执行 db sign、DDL、DML 或迁移。既有 Prisma 7 服务仍是唯一业务与迁移路径。

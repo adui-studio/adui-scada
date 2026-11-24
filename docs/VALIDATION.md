@@ -4803,3 +4803,7 @@ Rust Cargo.lock 未更新，仍锁定 tauri 2.12.5 与 tauri-build 2.7.4；恢�
 基线为 PR #199 合并提交 9424b167a78f8ab3b4a85683ce03249ed8786d80。已读取 Prisma 官方 PostgreSQL 渐进迁移指南，新增双版本配置与独立契约生成入口。协作容器 Node.js 22.16.0 运行新兼容 CLI 解析测试 `node --test prisma7-cli.cases.mjs`，4/4 通过、退出码 0；实际测试为临时模拟安装包目录中的清单及入口解析，不执行 Prisma CLI、不连接数据库。源码 Git Blob c5428de111a2463fc242120ff8d705a7fe997cec、测试 Blob 7beb2e40b76c883871cebf3ef1a209a63b7810a2 与远端一致。
 
 正式验收顺序：在 Node.js 24.18.0 与 pnpm 12.23.0 环境通过真实 Registry 安装并生成锁文件，冻结安装，核对 prisma 和 prisma7 CLI 主版本；执行 db:validate、db:generate、db:prisma8:emit、test:docker:db、空库迁移脚本的离线保护用例与完整 ready。需要提交真实生成的 pnpm-lock.yaml 和 Prisma 8 契约文件，检查生成物不包含连接凭据。尚未实际执行新版 CLI、生成契约、数据库迁移、正式 Vite+ 及项目回归，不标记通过。真实 PostgreSQL 测试须明确绑定隔离库，禁止操作现有业务库；迁移所有权仍属 Prisma 7。
+
+#### MVP · Prisma 8 阶段二验证（候选）
+
+PR #200 获明确授权后合并至 MVP 集成分支 e75a763821d6215c6b66a1e01a43051d7c7275b3。前一批 Windows 实际结果仅适用于合并前工具链与业务基线，不自动覆盖本批。协作容器 Node.js 22.16.0 对新 URL 校验源码进行独立断言验证，源码 Blob 42ecba9ee018495c466457e739e1717f351c7b34 与远端一致；接受 4 种合法地址、拒绝 17 种异常地址，21/21 断言通过，退出码 0。该运行未使用正式 Vite+/Vitest、未安装 Prisma 8 依赖、未连接数据库。Windows 待执行冻结安装、两版生成、Core 构建、定向 URL 单测、独立类型检查与完整 ready 并打印最终退出码。真实 PostgreSQL 独立专项需显式提供已存在且已迁移的本机隔离库，遵守 HARNESS；本阶段不运行任何迁移。EMPTY 仅证明不存在工程查询，不证明已有样本及单项错配过滤。
