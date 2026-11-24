@@ -1634,3 +1634,45 @@ textarea {
     white-space: normal;
   }
 }
+
+/* 本地工程模拟与会话趋势，沿用共享运行工作区主题。 */
+.scada-simulation-tools {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-xs);
+  overflow-wrap: anywhere;
+}
+.scada-process-panel .scada-simulation-tools {
+  padding: 0;
+}
+.scada-process-panel .scada-simulation-tools .t-select {
+  width: min(100%, 240px);
+}
+.scada-simulation-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 150px;
+  color: var(--scada-text-secondary);
+}
+.scada-simulation-grid {
+  stroke: currentColor;
+  stroke-opacity: 0.25;
+  fill: none;
+}
+.scada-simulation-line {
+  stroke: var(--td-brand-color, currentColor);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  fill: none;
+}
+.scada-simulation-history a {
+  color: var(--td-brand-color, currentColor);
+  font-size: var(--adui-font-size-xs);
+}
