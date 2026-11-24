@@ -4529,3 +4529,26 @@ pnpm run lab:alarm
 本阶段的 `pnpm run db:prisma8:emit` 只调用 Prisma 8 Contract 生成器，不读取数据库连接。旧版生成、校验和迁移仍由 `prisma7` 与 `apps/server/prisma7.config.ts` 执行。历史文档中的直接 `prisma migrate` 命令是旧版本记录，不得在当前双版本分支使用普通 prisma 命令替代。数据库接管尚未授权，禁止执行 Prisma 8 的 db sign、db migrate、db update 或迁移计划落地。
 
 首次安装后先检查两套 CLI 版本、旧版 Schema 校验和 Client 生成、新版 Contract 生成，再运行现有 ready。新增的脚本解析测试包含于 test:docker:db，不访问数据库。所有真实迁移测试继续使用既有隔离数据库安全模板；不得因 ORM 升级省略隔离目标、失败记录检查或备份。
+
+## Prisma 8 阶段二 · 本机隔离库只读探针（候选）
+
+先执行既有完整质量链，随后在已存在且已完成既有迁移、无并发写入的 15432 端口 adui_scada_test 上单独执行下列只读专项。不要启动新版 Docker 镜像或执行任何数据库迁移。仅设置探针使用的测试 URL，执行后恢复原环境；不使用 SCADA_DATABASE_URL，不输出凭据。
+
+```powershell
+$previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+try {
+    if (-not $env:SCADA_TEST_DATABASE_URL) {
+        $env:SCADA_TEST_DATABASE_URL = Read-Host "输入本机 15432 端口 adui_scada_test 的连接地址" -MaskInput
+    }
+    pnpm --filter @adui/scada-server exec vp test run --config vitest.config.db.ts test/prisma8-readonly.db-spec.ts
+    if ($LASTEXITCODE -ne 0) { throw "Prisma 8 只读专项失败" }
+} finally {
+    if ($null -eq $previousTestUrl) {
+        Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+    } else {
+        $env:SCADA_TEST_DATABASE_URL = $previousTestUrl
+    }
+}
+```
+
+探针自身在创建连接池前拒绝非指定目标及异常参数，并核验实际库名与事务只读状态。已有工程样本比对通过与空库结果分别打印固定中文说明。空库只能确认缺失作用域查询，不能据此切换业务仓储。若提示契约、只读连接或运行时错误，先定位；禁止使用宽松模式或 db sign 等有写入副作用的命令绕过验收。
