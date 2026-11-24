@@ -2674,3 +2674,9 @@ PR #196 的归档冻结测试无参数 toThrow 触发 E-003 同类警告；改�
 ### D5c6 · FR-012 历史持久化协调候选
 
 PR #196 经维护者授权 Squash 合并至 `main@98bfc2791e8c1f231107f2408bf1e2e18b83f661`，E-130 关闭。本批新增本地异步协调器、复合幂等键与持久化端口，9 项新增定向用例。协作容器 Node.js 22.16.0 独立 node:test 共 30/30（新增持久化 9 项、既有归档 8 项、采样 13 项）通过，0 失败。新增测试采用原 Vitest 用例逻辑及 Node 断言适配（仅替换测试入口及相对导入）；既有归档、采样为此前独立对应场景。源码本地 Git Blob：tag-history-persistence.ts 9a9d52cfbaec98c7ca82cee942a762df953b0d54、tag-history.ts 28a2cc4e90135ebdf658ed9ff67ed701dd77632b、tag-store.ts 78e22557523275fecb9e6172cc6b02230c60c58b；新增仓库测试还原导入后的 Blob f5e514878ad8306431c4d107149bfc3665e07dce。未运行正式 Vitest、Vite+ 或完整 ready；模拟端口不代表真实数据库事务、幂等约束或崩溃恢复。 Windows 正式定向门禁待验收。
+
+### D5c6 Windows 定向验收与合并；首个 MVP 集成候选
+
+维护者 Windows 实测 D5c6：Vite+ 463 格式文件、305 受检零警告错误；六份 Core 历史及 TagStore 测试 55/55，中文文案 332 文件、文档 95 份通过。PR #197 经维护者明确授权 Squash 合并至 main@4aabaa8a49e944daa3fe3c4232edc3f22cc7dd0c。定向记录不是完整 ready 或真实数据库验收。
+
+维护者要求继续开发至第一个 MVP 完成后集中验收。建立 feat/mvp-first-integration 分支，先追加 D5c7 归档事务模型、规范编码、内部查询、隔离数据库回归，再增加双端导入工程本地模拟、页面选择、会话趋势及 CSV。该分支保持 Draft，不自动合并；迁移、正式 Vitest/Vite+、真实 Chromium、完整 ready 尚待实际运行。未开放正式历史 API、真实工业协议或生产发布，不宣称 MVP 已验收。
