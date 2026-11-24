@@ -1,7 +1,13 @@
 /** 仅允许 Prisma 8 探针连接本机专用验收库，不回退到业务库。 */
 export function requirePrisma8ReadOnlyTestUrl(input: string | undefined): string {
   const message = "Prisma 8 只读探针仅允许连接本机 15432 端口的 adui_scada_test 数据库";
-  if (!input || input.trim() !== input || /[\u0000-\u0020\u007f]/u.test(input)) {
+  if (
+    !input ||
+    Array.from(input).some((character) => {
+      const code = character.charCodeAt(0);
+      return code <= 32 || code === 127;
+    })
+  ) {
     throw new Error(message);
   }
 
