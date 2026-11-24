@@ -4718,4 +4718,4 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 
 ### D5c3 · FR-012 有界历史缓冲区候选
 
-新增 9 项定向测试定义，覆盖非法容量、跨 Tag 总容量、整批拒绝、质量保留及派生质量拒绝、全部记录校验、引用隔离、显式清理、迟到保护、空记录与实例隔离。原历史查询 8 项与 TagStore 6 项继续回归；目标三份测试共 23 项。Windows 待执行 `vp test run packages/core/test/tag-history-buffer.test.ts packages/core/test/tag-history.test.ts packages/core/test/tag-store.test.ts`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`。不宣称完整 ready 或工业历史归档验收。
+新增 11 项定向测试定义，覆盖非法容量、跨 Tag 总容量、整批拒绝、质量保留及派生质量拒绝、全部记录校验、引用隔离、显式清理、迟到保护、空记录与实例隔离、稀疏数组拒绝和源时间长度上限。原历史查询 8 项与 TagStore 6 项继续回归；目标三份测试共 25 项。Windows 待执行 `vp test run packages/core/test/tag-history-buffer.test.ts packages/core/test/tag-history.test.ts packages/core/test/tag-store.test.ts`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`。不宣称完整 ready 或工业历史归档验收。

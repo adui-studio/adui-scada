@@ -144,3 +144,24 @@ test("不同缓冲区彼此隔离，空采样和空查询不生成历史数据",
   expect(right.query(query)).toEqual([]);
   expect(right.size).toBe(0);
 });
+
+test("稀疏采样数组的空位不能绕过原子校验", () => {
+  const buffer = new TagHistoryBuffer(3);
+  buffer.append({ kind: "sample", values: [sample(0)] });
+  const values = new Array<TagValue>(2);
+  values[0] = sample(1);
+  expect(() => buffer.append({ kind: "sample", values })).toThrow(/历史记录必须为对象/);
+  expect(buffer.size).toBe(1);
+  expect(buffer.query(query)[0].timestampMs).toBe(start);
+});
+
+test("过长源时间在解析前拒绝，整批记录不写入", () => {
+  const buffer = new TagHistoryBuffer(2);
+  expect(() =>
+    buffer.append({
+      kind: "sample",
+      values: [sample(0), sample(1, { sourceTimestamp: " ".repeat(129) })],
+    }),
+  ).toThrow(/源时间文本过长/);
+  expect(buffer.size).toBe(0);
+});

@@ -21,6 +21,9 @@ const MAX_DATE_MS = 8_640_000_000_000_000;
 
 /** 将记录复制为仅含历史契约字段的独立点。 */
 function toTagHistoryPoint(input: TagValue): TagHistoryPoint {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    throw new TypeError("历史记录必须为对象");
+  }
   if (typeof input.tagId !== "string") throw new TypeError("Tag ID 无效");
   const sample = validateTagValue(input);
   const timestampMs = Date.parse(sample.serverTimestamp);
@@ -127,17 +130,20 @@ export class TagHistoryBuffer {
     if (batch.values.length > this.capacity - this.records.length) {
       throw new RangeError("历史缓冲区容量不足，未写入本批数据");
     }
-    const checked = batch.values.map((input: TagValue) => {
-      const point = toTagHistoryPoint(input);
+    const values: readonly TagValue[] = batch.values;
+    const checked: TagHistoryPoint[] = [];
+    // 逐项遍历，避免稀疏数组的 map 跳过空位而破坏批次原子性。
+    for (const input of values) {
       // 源时间原样保留，但限制内存候选的单条记录文本大小。
-      if (point.sourceTimestamp !== null && point.sourceTimestamp.length > 128) {
+      if (typeof input?.sourceTimestamp === "string" && input.sourceTimestamp.length > 128) {
         throw new RangeError("历史记录源时间文本过长");
       }
+      const point = toTagHistoryPoint(input);
       if (this.retentionStartMs !== undefined && point.timestampMs < this.retentionStartMs) {
         throw new RangeError("历史记录早于保留边界");
       }
-      return point;
-    });
+      checked.push(point);
+    }
     for (const point of checked) this.records.push(point);
   }
 
