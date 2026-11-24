@@ -19,7 +19,17 @@ function withFixture(manifest, run) {
     writeFileSync(join(packageRoot, "package.json"), JSON.stringify(manifest));
     writeFileSync(
       join(packageRoot, "cli.mjs"),
-      'console.log(JSON.stringify({ cwd: process.cwd(), args: process.argv.slice(2) }));\nprocess.exitCode = 7;\n',
+      [
+        'const args = process.argv.slice(2);',
+        'const commands = new Set(["skills sync", "skills list", "contract emit"]);',
+        'if (!commands.has(args.slice(0, 2).join(" ")) || args.length !== 4 || args[2] !== "--config") {',
+        '  process.exitCode = 2;',
+        '} else {',
+        '  console.log(JSON.stringify({ cwd: process.cwd(), args }));',
+        '  process.exitCode = 7;',
+        '}',
+        '',
+      ].join("\n"),
     );
     writeFileSync(join(packageRoot, "..", "outside.mjs"), "// 包外测试占位入口\n");
     run(root, server, launcher);
@@ -29,7 +39,7 @@ function withFixture(manifest, run) {
 }
 
 void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
-  void it("三种入口均从仓库根目录运行并保留服务端配置及退出码", () => {
+  void it("三种入口均以命令在前的顺序在根目录运行并保留配置及退出码", () => {
     withFixture(valid, (root, server, launcher) => {
       for (const args of [["skills", "sync"], ["skills", "list"], ["contract", "emit"]]) {
         const result = spawnSync(process.execPath, [launcher, ...args], {
@@ -39,7 +49,7 @@ void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
         assert.equal(result.status, 7);
         assert.deepEqual(JSON.parse(result.stdout), {
           cwd: root,
-          args: ["--config", join(server, "prisma.config.ts"), ...args],
+          args: [...args, "--config", join(server, "prisma.config.ts")],
         });
       }
     });

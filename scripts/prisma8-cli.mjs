@@ -47,7 +47,7 @@ try {
   // CLI 按进程工作目录同步和检查 Skills；配置内路径仍相对于服务端配置文件。
   const result = spawnSync(
     process.execPath,
-    [entry, "--config", join(root, "apps", "server", "prisma.config.ts"), ...args],
+    [entry, ...args, "--config", join(root, "apps", "server", "prisma.config.ts")],
     { cwd: root, stdio: "inherit" },
   );
   if (result.error || result.status === null) {

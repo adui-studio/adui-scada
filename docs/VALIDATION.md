@@ -4819,3 +4819,9 @@ PR #201 的维护者 Windows 日志记录 HEAD `3fe7985a0f5553ee73fb91efff21f7a9
 维护者 Windows 日志确认 HEAD `81ac5185e6d8f990a65b0a5d0a2b365ed93ff688` 的冻结安装、三项 Skills 同步至服务端四目录、Prisma 7 校验/生成、Prisma 8 契约生成和 Core 构建完成。随后的 Vite+ 报 317 个错误、68 个警告（498 个受检文件），命令链退出码 1；979 项预期单测、63 项 E2E、完整 ready 与真实 PostgreSQL 专项均未获得本批执行结果。
 
 修复候选统一根目录 Skills 同步与列表及契约生成，保留版本检查、现有质量规则和原契约输出路径；共享配置检查拒绝旧的重复副本。另使用固定 ORM PostgreSQL 8.0.0-rc.25 官方公开客户端类型消除 TS2883 候选根因。协作容器 Node.js 22.16.0 执行模拟 CLI 三项测试（3/3，退出码 0），覆盖三个命令的根 cwd、固定配置、子进程退出码、禁止数据库写入与不可信入口；两个脚本的 Git Blob 分别为 e026a2cbedd397eb8c59a415b258d36cc2832cd2 和 eed6146573cd73aeb0360b6c3a7c9c98b345fec6。未执行真实 Prisma CLI、Vite+、正式类型检查或真实数据库。需先迁出本地重复副本（若仍存在），再运行根脚本、核对 Skills 列表和契约哈希、执行完整 ready 及已授权隔离库只读专项。
+
+### 2026-11-25 · PR #202 Prisma 8 CLI 参数顺序复验
+
+维护者 Windows 在 HEAD `5be430a6dec9d071fc1827ee8b47a4f7f6671977` 实际通过 pnpm 冻结安装和原入口测试 3/3；真实 Skills 同步报 `CLI.UNKNOWN_COMMAND`（`--config`），退出码 2。后续列表、配置检查、完整 ready 及数据库专项未执行。E-134/E-135 尚未关闭。
+
+本次按固定 CLI 上游测试修正参数顺序为命令在前、配置选项在后。协作环境 Node.js 22.16.0 加强模拟后复现原入口测试 2/3（退出码 1），修复后 3/3（退出码 0），两脚本语法检查通过；远端候选文件 Blob 与局部实测一致。npm Registry DNS EAI_AGAIN，真实 CLI 未能在协作环境运行。Windows 应先运行 `pnpm run db:prisma8:skills:list` 验证配置解析及根目录，再运行同步、列表、配置检查和原有完整验收。

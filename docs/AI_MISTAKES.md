@@ -1290,3 +1290,11 @@
 - **Windows 实测**：同一日志在 `prisma8-readonly-client.ts` 触发 TS2883，工厂推断返回类型无法脱离 pnpm 中 @prisma/orm-family-sql 的 NoCollectionClasses 命名。
 - **根因与候选修复**：Prisma ORM PostgreSQL 8.0.0-rc.25 的 runtime 公开导出 `PostgresClient<TContract>`，默认集合泛型由库内部处理。将项目类型别名改为 `PostgresClient<Contract>` 并显式声明工厂返回值，保留同一强类型 Contract、连接池与关闭语义；不使用 any、传递依赖深层路径或关闭类型检查。
 - **验证**：固定版本公开类型源码已核对，正式 TypeScript 6、Vite+、Vitest 与真实 PostgreSQL 只读对照尚待维护者复验。
+
+### E-136 · Prisma 8 CLI 前置配置参数导致命令解析失败（PR #202，待 Windows 复验）
+
+- **Windows 实测**：HEAD `5be430a6dec9d071fc1827ee8b47a4f7f6671977`；pnpm 12.23.0 冻结安装、原三项模拟 CLI 测试通过，但真实 `db:prisma8:skills` 报 `CLI.UNKNOWN_COMMAND`，将 `--config` 识别为命令，退出码 2；后续列表与配置检查未执行。
+- **根因**：入口把共享配置选项放在命令路径之前，模拟 CLI 只回显参数，未验证真实解析语法。固定 Prisma CLI 8.0.0-rc.35 的上游 `packages/cli-engine/tests/config.test.ts`（`--config on the command line`）验证命令在前、配置选项在后；Skills 上游测试同样先传入命令路径。
+- **最小修复**：保持根 cwd、显式服务端配置、无 Shell、固定命令白名单及退出码传递，仅调整子进程参数顺序为命令路径、`--config`、配置路径。模拟 CLI 现在拒绝错误命令顺序并返回 2，保留原有安全用例。
+- **局部复验**：Node.js 22.16.0 使用加强后的三项模拟测试，原入口 2/3 通过（退出码 1），修复后 3/3 通过（退出码 0），两个脚本语法检查通过。脚本 Git Blob 分别为 `bb4fae533f364b2a982370ca6c34103810efa160`、`189da799cae43b3cc2cd3f7c208b197207fdbca3`。协作环境访问 npm Registry 发生 DNS EAI_AGAIN，无法执行固定版本真实 CLI。真实 Skills 列表、同步、契约生成及完整 ready 尚待复验。
+- **防复发**：包装第三方 CLI 时核对已锁定版本的命令语法及官方测试；模拟必须拒绝实际不合法的参数顺序，不能只检查回显与自设预期一致。先执行真实无写入的 Skills 列表，再执行同步及离线生成，随后进行完整质量门禁。
