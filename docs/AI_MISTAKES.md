@@ -1158,3 +1158,11 @@
 - **最小修复**：将扣除留白的 CSS 像素变量命名为 `availableWidth` / `availableHeight`，世界坐标计算及平移约束不变。
 - **防复发**：视口像素、逻辑页面尺寸与世界坐标采用不同语义变量名；最终执行 `vp check` 和 `studio-viewport-rect.test.ts`，不能以 GitHub 文件提交替代编译验收。
 - **验证边界**：当前根据源码确认重复声明并提供修复候选，Windows 完整门禁仍待执行。
+
+### E-120 · React Tag 编辑表单条件 JSX 缺少闭合花括号（PR #192）
+
+- **Windows 真实现象**：维护者拉取 HEAD `eadc44fdc8b76e41fe16e37068dc9fcb4679c65b` 后运行 `vp check --fix`，在 `apps/web-react/src/studio/TagManager.tsx:298` 报 Expected `}` but found Identifier，格式化中止，尚未进入后续 Lint/类型检查。
+- **确定根因及最小修复**：第 290–297 行全局表单错误条件渲染以 `{formError && ... && (` 开始，却只以 `)` 结束，缺少闭合 `}`；补为 `)}`。Vue 对应的 `v-if` 块无此缺口，保持不变。Tag 验证、提交、取消、删除保护及共享 Core 不变。
+- **局部实测**：协作容器 Node.js 22.16.0、TypeScript 5.8.3 使用 `createSourceFile` 的 TSX 模式解析从仓库取出的错误区域（外包最小函数和表单）：原片段复现 `'}' expected` 等 5 条语法诊断，修正后 0 条。不是完整文件或项目类型检查，不代表 Windows 格式化、构建和浏览器通过。
+- **防复发**：修改 JSX 条件渲染必须核对括号与花括号配对；涉及双端大批修改时，先运行实际语法/格式检查再声称开发候选完成。不能用标签计数替代 TSX 解析；未取得完整工具链时须标注验证范围。
+- **待验收**：Windows 最新 HEAD 的 `vp check --fix`、`vp check`、`typecheck:web` 与最终统一回归。当前不得宣称 E-120 已通过项目实测。

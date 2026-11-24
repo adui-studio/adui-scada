@@ -294,7 +294,7 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
               <p className="studio-tag-form-error" role="alert">
                 {formError}
               </p>
-            )
+            )}
           <div className="studio-tag-form-footer">
             <span className="studio-tag-form-footnote">变更支持工作台撤销 / 重做</span>
             <div className="studio-tag-form-actions">
