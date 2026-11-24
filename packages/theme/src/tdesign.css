@@ -1,6 +1,7 @@
-/* TDesign 官方 Web CSS Variables：React/Vue 共用浅色操作面板。 */
+/* TDesign 官方 Web CSS Variables：React/Vue 共用明暗操作面板。 */
 /* html:root 比 TDesign 默认 :root 具有更高优先级，避免懒加载组件样式覆盖主题。 */
-html:root[theme-mode="light"] {
+html:root[theme-mode="light"],
+html:root[theme-mode="dark"] {
   --td-brand-color: var(--adui-color-brand);
   --td-brand-color-hover: var(--adui-color-brand-hover);
   --td-brand-color-active: var(--adui-color-brand-active);
@@ -12,8 +13,8 @@ html:root[theme-mode="light"] {
   --td-text-color-secondary: var(--adui-color-text-secondary);
   --td-text-color-placeholder: var(--adui-color-text-muted);
   --td-text-color-disabled: var(--adui-color-text-disabled);
-  --td-text-color-anti: var(--adui-color-text-strong);
-  --td-text-color-brand: var(--adui-color-brand-hover);
+  --td-text-color-anti: var(--adui-color-brand-on);
+  --td-text-color-brand: var(--adui-color-brand-text);
   --td-bg-color-page: var(--adui-color-bg);
   --td-bg-color-container: var(--adui-color-surface);
   --td-bg-color-container-hover: var(--adui-color-action-hover);

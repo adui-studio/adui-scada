@@ -1,4 +1,4 @@
-/* ADui SCADA D5c1：工程浅色工作区与深色画布的唯一主题来源。 */
+/* ADui SCADA V7：默认浅色语义与两种主题共享的尺寸、品牌及画板契约。 */
 :root {
   /* V7 品牌颜色：不改写原有 SVG Logo 的颜色与几何。 */
   --adui-scada-blue: #0d63f3;
@@ -19,6 +19,7 @@
   --adui-color-nav-text: #c1d0e1;
   --adui-color-nav-on: #f6f9ff;
   --adui-color-brand-on: #ffffff;
+  --adui-color-brand-text: #0a54c9;
   --adui-color-nav-muted: #9cb2ca;
   --adui-color-nav-kicker: #93a6bd;
   --adui-color-nav-success: #b6e8d4;
@@ -54,11 +55,11 @@
   --adui-motion-normal: 180ms;
 
   /* 品牌、工业质量和警告使用独立语义，不能仅凭颜色判断设备状态。 */
-  --adui-color-brand: #5b2b82;
-  --adui-color-brand-hover: #6d3998;
-  --adui-color-brand-active: #472069;
-  --adui-color-brand-focus: #eee3f6;
-  --adui-color-brand-disabled: #c9b8db;
+  --adui-color-brand: var(--adui-scada-blue);
+  --adui-color-brand-hover: #0954cf;
+  --adui-color-brand-active: #0845ad;
+  --adui-color-brand-focus: #dceaff;
+  --adui-color-brand-disabled: #b6cdf4;
   --adui-color-accent: #007ea3;
   --adui-color-success: #087c61;
   --adui-color-warning: #996009;
@@ -67,7 +68,7 @@
   --adui-color-nav: #151e2c;
   --adui-color-surface: #ffffff;
   --adui-color-canvas: #f5f7fa;
-  --adui-color-selected: #f0e9f8;
+  --adui-color-selected: #e5efff;
   --adui-color-action: #ebf0f6;
   --adui-color-action-hover: #dfe8f2;
   --adui-color-border-subtle: #e5eaf1;

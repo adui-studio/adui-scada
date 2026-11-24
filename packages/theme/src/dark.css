@@ -1,0 +1,41 @@
+/* 深色仅改变应用外壳和编辑工作区，不改写白色工程画板或运行时 SVG。 */
+:root[theme-mode="dark"] {
+  --adui-color-brand-text: #8bbaff;
+  --adui-color-brand-focus: #29446a;
+  --adui-color-brand-disabled: #334967;
+  --adui-color-accent: #69d8f5;
+  --adui-color-success: #58d9b2;
+  --adui-color-warning: #f5c36b;
+  --adui-color-danger: #ff9aa8;
+  --adui-color-warning-border: #674c28;
+  --adui-color-warning-bg: #352b20;
+  --adui-color-success-border: #285b4c;
+  --adui-color-success-bg: #15362f;
+  --adui-color-danger-border: #713c49;
+  --adui-color-danger-bg: #3e2730;
+  --adui-color-bg: #111827;
+  --adui-color-nav: #111827;
+  --adui-color-surface: #192333;
+  --adui-color-surface-muted: #202d3e;
+  --adui-color-surface-raised: #202d3e;
+  --adui-color-canvas: #151e2c;
+  --adui-color-editor-workspace: #101722;
+  --adui-color-editor-grid: #465367;
+  --adui-color-selected: #223c60;
+  --adui-color-action: #263447;
+  --adui-color-action-hover: #30435c;
+  --adui-color-border-subtle: #2b394c;
+  --adui-color-border: #36475c;
+  --adui-color-border-strong: #586d86;
+  --adui-color-layer-active-border: #426a9f;
+  --adui-color-focus-ring: #80b3ff;
+  --adui-color-text: #e1e9f4;
+  --adui-color-text-strong: #f3f6fb;
+  --adui-color-text-secondary: #bbcadd;
+  --adui-color-text-muted: #9dafc4;
+  --adui-color-text-dim: #91a4bc;
+  --adui-color-text-disabled: #75869b;
+  --adui-shadow-panel: 0 1px 3px rgb(0 0 0 / 24%);
+  --adui-shadow-floating: 0 20px 58px rgb(0 0 0 / 38%);
+  color-scheme: dark;
+}
