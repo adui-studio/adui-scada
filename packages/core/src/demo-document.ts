@@ -149,3 +149,20 @@ export const waterTreatmentStudioDocument = parseScadaDocument({
     };
   }),
 });
+
+/** 新建独立空白工程，不覆盖水处理示例或历史工程。 */
+export function createBlankStudioDocument(projectId: string) {
+  return parseScadaDocument({
+    schemaVersion: SCADA_SCHEMA_VERSION,
+    projectId,
+    tags: [],
+    pages: [
+      {
+        id: "main",
+        name: "页面 1",
+        size: { ...STUDIO_DEFAULT_PAGE_SIZE },
+        nodes: [],
+      },
+    ],
+  });
+}

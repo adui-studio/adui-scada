@@ -84,6 +84,7 @@ export {
   waterTreatmentDemoDocument,
   waterTreatmentStudioDocument,
   STUDIO_DEFAULT_PAGE_SIZE,
+  createBlankStudioDocument,
   waterTreatmentDemoTagDefinitions,
   waterTreatmentDemoTagCatalog,
   waterTreatmentDemoTagOptions,
