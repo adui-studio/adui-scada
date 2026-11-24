@@ -84,3 +84,11 @@ minimumReleaseAgeExclude:
   - "@voidzero-dev/vite-plus-win32-arm64-msvc@1.8.0"
   - "@voidzero-dev/vite-plus-win32-x64-msvc@1.8.0"
   - vite-plus@1.8.0
+permissions:
+  "@prisma/orm-postgres":
+    skills: true
+  prisma:
+    skills: true
+skills:
+  dirs:
+    - .agents/skills
