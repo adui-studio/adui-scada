@@ -658,6 +658,23 @@ async function checkStudioInPage() {
     verify("TDesign 页面菜单触发器可获得键盘焦点", document.activeElement === pageTrigger);
   }
 
+  // 仅有布局矩形不代表浮层可见：同时验证浏览器实际命中，防止工具栏裁剪。
+  const popupHit = (panel) => {
+    if (!(panel instanceof HTMLElement) || !panel.getClientRects().length) return false;
+    const rect = bounds(panel);
+    const x = (rect.left + rect.right) / 2;
+    const y = rect.top + Math.min(12, rect.height / 2);
+    const hit = document.elementFromPoint(x, y);
+    return rect.width > 0 && rect.height > 0 && hit !== null && panel.contains(hit);
+  };
+  const actionsStyle = getComputedStyle(element(".studio-actions"));
+  verify(
+    "工具栏换行且不裁剪下拉浮层",
+    actionsStyle.flexWrap === "wrap" &&
+      actionsStyle.overflowX === "visible" &&
+      actionsStyle.overflowY === "visible",
+  );
+
   // 文件与草稿不再使用原生 details，弹层由 TDesign Popup 负责管理。
   const fileMenu = element(".studio-file-menu");
   const fileTrigger = fileMenu.querySelector("button.t-button");
@@ -672,8 +689,8 @@ async function checkStudioInPage() {
     await settle();
     const filePanel = fileMenu.querySelector(".studio-file-popover");
     verify(
-      "TDesign 文件草稿弹层包含原有五项操作",
-      Boolean(filePanel?.getClientRects().length) &&
+      "TDesign 文件草稿弹层实际可见且包含原有五项操作",
+      popupHit(filePanel) &&
         Boolean(filePanel.querySelector('input[type="file"]')) &&
         ["导出 JSON", "恢复草稿", "清除草稿"].every((label) =>
           [...filePanel.querySelectorAll("button")].some(
@@ -705,7 +722,7 @@ async function checkStudioInPage() {
     const historyPanel = historyMenu.querySelector(".studio-version-panel");
     verify(
       "本地历史弹层可见且保留快照与刷新入口",
-      Boolean(historyPanel?.getClientRects().length) &&
+      popupHit(historyPanel) &&
         ["创建快照", "刷新"].every((label) =>
           [...historyPanel.querySelectorAll(".studio-version-tools button")].some(
             (button) => button.textContent.trim() === label,
@@ -718,6 +735,26 @@ async function checkStudioInPage() {
       "TDesign 本地历史弹层支持点击外部关闭",
       !historyMenu.querySelector(".studio-version-panel")?.getClientRects().length,
     );
+  }
+
+  for (const [selector, label] of [
+    [".studio-release-preflight-menu", "发布预检"],
+    [".studio-project-browser-menu", "工程管理"],
+    [".studio-server-version-menu", "服务端工程"],
+  ]) {
+    const menu = element(selector);
+    const trigger = menu.querySelector("button.t-button");
+    const rect = trigger?.getBoundingClientRect();
+    const hit = rect
+      ? document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+      : null;
+    verify(label + "触发器可见且可点击", Boolean(hit && trigger?.contains(hit)));
+    trigger?.click();
+    await settle();
+    verify(label + "弹层实际可见", popupHit(menu.querySelector(".studio-version-panel")));
+    document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    verify(label + "弹层可通过外部点击关闭", !popupHit(menu.querySelector(".studio-version-panel")));
   }
 
   return { findings, viewport: { width: innerWidth, height: innerHeight } };

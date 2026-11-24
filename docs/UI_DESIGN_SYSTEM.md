@@ -240,3 +240,7 @@ Studio 顶部显示工程名称并提供编辑入口，沿用 TDesign 重命名�
 ## D5c1 · TDesign 图标优先与工业图标例外
 
 React/Vue 按 Catalog 固定版本（tdesign-icons-react 0.6.11 / tdesign-icons-vue-next 0.4.11）按需引入官方 SVG 图标。通用操作统一使用 TDesign：缩放、方向微调、图层展开/收起、拖拽、视图设置和定位；保留文字标签、禁用态、键盘焦点和 aria-label，不用 Unicode 字符充当控件图标。水箱、水泵、管道未找到恰当的官方工业图标，改用 assets/icons 下三份本地共享 SVG，以 CSS mask 继承主题前景，在图元库与悬浮工具栏复用；不将播放键误作水泵，不引入第二套图标依赖。工业图元实际渲染、网格、手柄、旋转光标和品牌 Logo 不变。参考 https://tdesign.tencent.com/react/components/icon 与 https://tdesign.tencent.com/icons 。
+
+## D5c1 · 顶部菜单可见性
+
+工具栏原横向滚动与纵向隐藏会裁剪挂载于菜单容器内的 TDesign Popup。改用自动换行和可见溢出，保持工具栏与画布独立，不改官方 Popup 的挂载、事件或业务操作。工程管理收到自身授权拒绝时已清空目录缓存，不再因父组件的授权修订号立即卸载当前菜单；其他授权失效仍重建目录，服务端 CAS、预检和缓存清理保持原规则。

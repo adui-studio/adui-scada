@@ -146,6 +146,7 @@ const serverHasMore = ref(false);
 const serverError = ref("");
 const serverRecoveryProjectId = ref("");
 const serverAccessRevision = ref(0);
+const serverBrowserRevision = ref(0);
 const serverInspectedVersion = shallowRef<ProjectSnapshot | null>(null);
 let resumeValidationInProgress = false;
 let studioMounted = false;
@@ -1378,7 +1379,7 @@ async function runHistoryAction(
 }
 
 /** 工程列表和版本操作共用的服务端授权缓存失效保护。 */
-function invalidateServerAccess(): void {
+function invalidateServerAccess(resetBrowser = true): void {
   serverSession.invalidateAccess();
   serverProjectId.value = "";
   serverHeadRevision.value = null;
@@ -1388,6 +1389,7 @@ function invalidateServerAccess(): void {
   serverInspectedVersion.value = null;
   serverRecoveryProjectId.value = "";
   serverAccessRevision.value += 1;
+  if (resetBrowser) serverBrowserRevision.value += 1;
 }
 
 /** 从其他标签页返回时只通过 BFF 的真实身份和工程授权结果复核旧 CAS。 */
@@ -1440,7 +1442,8 @@ function onStudioVisible(): void {
 }
 
 function handleServerBrowserAccessRejected(error: ScadaApiError): void {
-  invalidateServerAccess();
+  // 工程目录已清空自身授权缓存，保留当前弹层以显示拒绝原因。
+  invalidateServerAccess(false);
   serverError.value = error.message;
   notice.value = "授权工程列表访问失败：" + error.message + "；本地画布与草稿不变";
   if (error.kind === "unauthenticated" || error.kind === "not_found") {
@@ -2122,7 +2125,7 @@ async function importJsonFile(file: File | undefined) {
           </TPopup>
         </div>
         <ServerProjectBrowser
-          :key="serverAccessRevision"
+          :key="serverBrowserRevision"
           :api="serverApi"
           :current-project-id="state.document.projectId"
           :disabled="historyBusy"

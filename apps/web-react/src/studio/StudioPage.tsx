@@ -183,6 +183,7 @@ export default function StudioPage({
   const [serverError, setServerError] = useState("");
   const [serverRecoveryProjectId, setServerRecoveryProjectId] = useState("");
   const [serverAccessRevision, setServerAccessRevision] = useState(0);
+  const [serverBrowserRevision, setServerBrowserRevision] = useState(0);
   const [serverInspectedVersion, setServerInspectedVersion] = useState<ProjectSnapshot | null>(
     null,
   );
@@ -1238,7 +1239,7 @@ export default function StudioPage({
   }
 
   /** 工程管理、版本查询和保存共用的授权缓存失效处理。 */
-  const invalidateServerAccess = useCallback((): void => {
+  const invalidateServerAccess = useCallback((resetBrowser = true): void => {
     serverSession.invalidateAccess();
     setServerProjectId("");
     setServerHeadRevision(null);
@@ -1247,6 +1248,7 @@ export default function StudioPage({
     setServerInspectedVersion(null);
     setServerRecoveryProjectId("");
     setServerAccessRevision((revision) => revision + 1);
+    if (resetBrowser) setServerBrowserRevision((revision) => revision + 1);
   }, [serverSession]);
 
   /** 从其他标签页返回时以真实服务端只读核对旧 CAS，不依赖本地跨页身份消息。 */
@@ -1304,7 +1306,8 @@ export default function StudioPage({
   }, [editor, invalidateServerAccess, serverSession]);
 
   function handleServerBrowserAccessRejected(error: ScadaApiError): void {
-    invalidateServerAccess();
+    // 工程目录已清空自身授权缓存，保留当前弹层以显示拒绝原因。
+    invalidateServerAccess(false);
     setServerError(error.message);
     setNotice("授权工程列表访问失败：" + error.message + "；本地画布与草稿不变");
     if (error.kind === "unauthenticated" || error.kind === "not_found") {
@@ -2156,7 +2159,7 @@ export default function StudioPage({
             </Popup>
           </div>
           <ServerProjectBrowser
-            key={serverAccessRevision}
+            key={serverBrowserRevision}
             api={serverApi}
             currentProjectId={state.document.projectId}
             disabled={historyBusy}

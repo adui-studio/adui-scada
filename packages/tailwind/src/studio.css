@@ -1244,12 +1244,11 @@
 .studio-actions {
   min-width: 0;
   flex: 1;
-  flex-wrap: nowrap;
+  /* 菜单浮层挂载在工具栏内，不能由滚动容器裁剪；空间不足时换行。 */
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
+  overflow: visible;
 }
 .studio-actions > * {
   flex: none;
