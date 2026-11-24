@@ -4763,3 +4763,11 @@ Windows 待执行 `vp check`、`vp test run packages/core/test/tag-history-persi
 D5c6 的维护者实际定向结果：vp check 463 格式/305 受检零警告错误，六文件 55/55，messages:check 332 文件，docs:check 95 份。合并提交 4aabaa8a49e944daa3fe3c4232edc3f22cc7dd0c。
 
 D5c7 候选新增规范编码 4 项、真实 PostgreSQL 归档 5 项、共享模拟 Runtime 3 项。真实数据库测试仅允许显式 SCADA_TEST_DATABASE_URL 指向本机 adui_scada_test，新增迁移须先验证 Prisma Schema、生成 Client，再经明确隔离环境授权部署；不执行 reset，不使用普通开发库/生产库。完整门禁包含 ready、UI/Studio、Tag CRUD、工程互通、草稿安全、版本及多标签、历史迁移、发布预检、SSE 与故障恢复。新增双端导入模拟验收：由 Studio 导出同一工程，另一框架导入运行；选择多页面，验证类型匹配、unknown BAD、不访问服务器、趋势单 Tag 和 CSV 真实质量；错误 JSON 保持当前会话，切换/返回/离开清理定时器，正式发布路由不变。模拟导出不代表数据库历史查询。未执行的门禁一律标为待执行，不要求维护者逐小批复验。
+
+#### D5c7 独立契约检查记录
+
+协作环境通过 GitHub 读取当前源码，针对实际历史缓冲、规范编码与本地模拟模块仅擦除 TypeScript 类型后进行独立 JavaScript 执行，工程解析使用已校验形状的替身，时钟与定时器采用可控替身。8/8 场景通过：原始值及质量往返、负零保留、批次与派生字段边界、损坏记录拒绝、模拟快照类型、单订阅及 120 秒窗口、切换隔离与停止回收、趋势断点及 CSV 文本保护。来源 Blob：tag-store.ts 78e22557523275fecb9e6172cc6b02230c60c58b、tag-history.ts 28a2cc4e90135ebdf658ed9ff67ed701dd77632b、tag-history-record-codec.ts 5f6eefe3c3ef2c28a726b1b3ef4a606e4f132110、local-project-simulation.ts 6d8ff8b7d342f4152d4a0d06986ba93a6942050c。
+
+另外对 schema.prisma b4d60d7122f13a0e8f3da9fc3fa54c79c9372816 与 migration.sql 8eafcbee4bb2c7c7101b7f1e68d8834ccd7db9d6 独立静态检查 8/8：单事务、两表及 15 个物理字段中文注释、关联说明、复合外键名称、查询索引和反向关系。现有全新库迁移验证脚本动态枚举迁移目录，无须固定数量调整。
+
+以上不是正式 Vitest、Prisma validate、Vite+、类型检查、真实数据库或浏览器验收。协作容器 Node.js 22.16.0 低于仓库最低 22.18.0，未安装 pnpm/Vite+，无法解析 GitHub 与 npm Registry 域名；PR #198 初始提交未返回 CI 运行记录。保留 Draft，继续将完整质量链及实际浏览器作为统一验收前置条件，不请求维护者执行中间定向验收。
