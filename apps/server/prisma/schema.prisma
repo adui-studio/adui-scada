@@ -296,7 +296,7 @@ model ScadaTagHistoryBatch {
   /// 服务端批次提交时间。
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   /// 所属工程，不允许跨工程归档。
-  project       ScadaProject @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict, onUpdate: Cascade)
+  project       ScadaProject @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict, onUpdate: Cascade, map: "scada_tag_history_batches_project_fkey")
   /// 按原始批次顺序保存的历史记录。
   records       ScadaTagHistoryRecord[]
 
@@ -323,7 +323,7 @@ model ScadaTagHistoryRecord {
   /// 版本化规范记录文本，保留完整原始数据及负零。
   payload       String @db.Text
   /// 历史点所属已提交批次。
-  batch         ScadaTagHistoryBatch @relation(fields: [tenantId, projectId, streamId, batchSequence], references: [tenantId, projectId, streamId, batchSequence], onDelete: Restrict, onUpdate: Cascade)
+  batch         ScadaTagHistoryBatch @relation(fields: [tenantId, projectId, streamId, batchSequence], references: [tenantId, projectId, streamId, batchSequence], onDelete: Restrict, onUpdate: Cascade, map: "scada_tag_history_records_batch_fkey")
 
   @@id([tenantId, projectId, streamId, batchSequence, ordinal])
   @@index([tenantId, projectId, tagId, timestampMs, streamId, batchSequence, ordinal], map: "scada_tag_history_records_lookup_idx")
