@@ -1241,3 +1241,5 @@
 - **Windows 实测**：维护者运行 `vp check --fix`，301 个受检文件零错误、1 项 `unicorn(no-new-array)` 警告，位于 `packages/core/test/tag-history-buffer.test.ts` 的 `new Array<TagValue>(2)`；格式化已完成。日志未单独打印本地 HEAD，当前远端候选仍存在该写法，尚未提供本轮 25 项测试结果。
 - **根因与候选修复**：单参数 Array 构造器违反项目 Lint 规则。普通 `Array.from({ length: 2 })` 会创建含显式 undefined 的稠密数组，不能等价覆盖稀疏数组空位。改为数组字面量包含首个采样，再扩展 length 至 2；增加长度及 `Object.hasOwn(values, 1) === false` 断言，仍要求拒绝整批、已有历史不变。
 - **防复发**：构造稀疏数组测试须同时符合 Lint 和真正空位语义，不禁用规则，不把空位替换为普通 undefined，不放宽原子性断言。不修改生产代码；最新 HEAD 的 Windows Vite+、25 项定向测试、中文文案和文档检查待复验。
+
+> **2026-11-24 · E-129 Windows 复验关闭**：维护者 Windows 实测：Vite+ 459 文件格式正确、301 个受检文件零警告和错误；历史缓冲区 11/11、历史查询 8/8、TagStore 6/6，共 25/25；中文文案 328 文件及 Markdown 95 份全部通过。日志未独立打印本地 SHA；GitHub 最终候选 54b116e64a96acad12d0af75bbe9c23898c9b4f7 相对 069c63b9 仅三份 TypeScript 文件格式化，无业务或测试语义变化。维护者明确授权合并。 稀疏数组空位和批次原子性用例已通过，原 Lint 阻塞解除。
