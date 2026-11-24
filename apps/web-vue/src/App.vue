@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Button as TButton } from "tdesign-vue-next";
+import { Button as TButton, Input as TInput } from "tdesign-vue-next";
+import { WORKSPACE_HOME_ENTRIES, filterWorkspaceHomeEntries } from "@adui/scada-runtime";
 import "tdesign-vue-next/es/style/index.css";
 import { computed, defineAsyncComponent, ref } from "vue";
 
@@ -9,6 +10,8 @@ const PublishedRuntimePage = defineAsyncComponent(
 );
 const StudioPage = defineAsyncComponent(() => import("./studio/StudioPage.vue"));
 const view = ref<"home" | "runtime" | "published" | "studio">("home");
+const query = ref("");
+const entries = computed(() => filterWorkspaceHomeEntries(query.value));
 
 const safetyLabel = computed(() => {
   switch (view.value) {
@@ -38,9 +41,9 @@ const viewLabels = {
       <div class="scada-rail-brand">
         <span class="scada-app-brand">
           <img src="/brand/favicon.svg" alt="" aria-hidden="true" />
-          <strong>ADui</strong>
+          <strong>ADui SCADA</strong>
         </span>
-        <span class="scada-rail-product">SCADA</span>
+        <span class="scada-rail-product">ADui Studio</span>
       </div>
       <span class="scada-nav-kicker">工作空间</span>
       <div class="scada-nav-items">
@@ -132,70 +135,122 @@ const viewLabels = {
         </div>
         <span class="scada-app-safety">{{ safetyLabel }}</span>
       </header>
-      <main v-if="view === 'home'" id="scada-main-content" class="scada-home">
-        <div class="scada-home-heading">
-          <span class="scada-home-eyebrow">ADui Studio / 工作空间</span>
-          <h1>工程工作区</h1>
-          <p>打开工程进行设计，或进入独立的只读运行环境。</p>
-        </div>
-        <section class="scada-home-section" aria-labelledby="scada-home-demo">
-          <div class="scada-home-section-head">
-            <h2 id="scada-home-demo">工程示例</h2>
-            <span>内置 · 本地模拟</span>
+      <main v-if="view === 'home'" id="scada-main-content" class="scada-home flex min-w-0 flex-col">
+        <div class="scada-home-heading flex flex-wrap items-center justify-between">
+          <div>
+            <h1>工程工作区</h1>
+            <p>设计、管理与只读监控</p>
           </div>
-          <button type="button" class="scada-home-project" @click="view = 'studio'">
-            <span class="scada-home-project-preview" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <div class="scada-home-search">
+            <TInput
+              v-model="query"
+              placeholder="搜索工作区、工程、Tag"
+              aria-label="搜索工作区"
+              clearable
+            />
+          </div>
+        </div>
+        <div class="scada-home-quick-grid grid">
+          <button
+            v-for="entry in WORKSPACE_HOME_ENTRIES"
+            :key="entry.view"
+            type="button"
+            class="scada-home-quick"
+            @click="view = entry.view"
+          >
+            <span class="scada-home-card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <template v-if="entry.view === 'studio'">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M3 8h18M9 8v13" />
+                </template>
+                <path v-else-if="entry.view === 'runtime'" d="M3 19h18M5 16V9m5 7V5m5 11v-4m4 4V7" stroke-linecap="round" />
+                <template v-else>
+                  <rect x="5" y="3" width="14" height="18" rx="2" />
+                  <path d="M8 8h8M8 12h8M8 16h4" stroke-linecap="round" />
+                </template>
+              </svg>
+            </span>
+            <strong>{{ entry.action }}</strong>
+            <span aria-hidden="true">↗</span>
+          </button>
+        </div>
+        <section class="scada-home-section" aria-labelledby="scada-home-explore">
+          <div class="scada-home-section-head">
+            <h2 id="scada-home-explore">探索 ADui SCADA</h2>
+            <span>工业可视化与组态</span>
+          </div>
+          <div class="scada-home-banner-grid grid">
+            <article class="scada-home-banner scada-home-banner-brand">
+              <div>
+                <strong>ADui SCADA</strong>
+                <p>工业组态 · 实时监控</p>
+                <small>从工艺画面开始构建工程</small>
+              </div>
+              <img src="/brand/favicon.svg" alt="" />
+            </article>
+            <article class="scada-home-banner">
+              <div>
+                <strong>精密组态设计</strong>
+                <p>1920 × 1080 默认画板</p>
+                <small>图层、图元、属性与 Tag</small>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                 <rect x="3" y="3" width="18" height="18" rx="2" />
                 <path d="M3 8h18M9 8v13" />
               </svg>
-            </span>
-            <span class="scada-home-project-detail">
-              <strong>水处理演示工程</strong>
-              <span>本地模拟 · Studio 默认画板 1920 × 1080</span>
-            </span>
-          </button>
+            </article>
+            <article class="scada-home-banner scada-home-banner-runtime">
+              <div>
+                <strong>只读运行监控</strong>
+                <p>模拟数据与正式发布分离</p>
+                <small>设备写入未开放</small>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M3 19h18M5 16V9m5 7V5m5 11v-4m4 4V7" stroke-linecap="round" />
+              </svg>
+            </article>
+          </div>
         </section>
         <section class="scada-home-section" aria-labelledby="scada-home-start">
           <div class="scada-home-section-head">
-            <h2 id="scada-home-start">其他工作区</h2>
-            <span>选择现有功能</span>
+            <h2 id="scada-home-start">工程与工作区</h2>
+            <span>共 {{ entries.length }} 个入口</span>
           </div>
-          <div class="scada-home-card-grid">
-            <button type="button" class="scada-home-card" @click="view = 'studio'">
-              <span class="scada-home-card-icon" aria-hidden="true"
-                ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <div class="scada-home-card-grid grid">
+            <button
+              v-for="entry in entries"
+              :key="entry.view"
+              type="button"
+              class="scada-home-card"
+              @click="view = entry.view"
+            >
+              <span class="scada-home-thumbnail" :data-kind="entry.view">
+                <img v-if="entry.preview" :src="entry.preview" alt="内置水处理工程静态预览，无实时值" />
+                <span v-else aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <template v-if="entry.view === 'studio'">
                   <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <path d="M3 8h18M9 8v13" /></svg
-              ></span>
-              <strong>打开组态编辑器</strong>
-              <span>设计 1920 × 1080 画板，管理图层和 Tag</span>
-              <small>打开 ↗</small>
-            </button>
-            <button type="button" class="scada-home-card" @click="view = 'runtime'">
-              <span class="scada-home-card-icon" aria-hidden="true"
-                ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <path d="M3 19h18M5 16V9m5 7V5m5 11v-4m4 4V7" stroke-linecap="round" /></svg
-              ></span>
-              <strong>查看模拟运行</strong>
-              <span>监控水处理模拟状态、链路和质量</span>
-              <small>打开 ↗</small>
-            </button>
-            <button type="button" class="scada-home-card" @click="view = 'published'">
-              <span class="scada-home-card-icon" aria-hidden="true"
-                ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M3 8h18M9 8v13" />
+                </template>
+                <path v-else-if="entry.view === 'runtime'" d="M3 19h18M5 16V9m5 7V5m5 11v-4m4 4V7" stroke-linecap="round" />
+                <template v-else>
                   <rect x="5" y="3" width="14" height="18" rx="2" />
-                  <path d="M8 8h8M8 12h8M8 16h4" stroke-linecap="round" /></svg
-              ></span>
-              <strong>查看已发布工程</strong>
-              <span>经受控接口读取只读发布快照</span>
-              <small>打开 ↗</small>
+                  <path d="M8 8h8M8 12h8M8 16h4" stroke-linecap="round" />
+                </template>
+              </svg>
+                </span>
+              </span>
+              <strong>{{ entry.title }}</strong>
+              <span class="scada-home-status" :data-kind="entry.view">{{ entry.status }}</span>
+              <span class="scada-home-description">{{ entry.description }}</span>
+              <small>{{ entry.detail }}</small>
             </button>
           </div>
+          <p v-if="entries.length === 0" role="status">没有匹配的工作区，请尝试其他关键词。</p>
         </section>
         <p class="scada-home-footnote">
-          最近文件尚无可信统一数据源。已有浏览器草稿请在 Studio 文件菜单中查看和恢复；
-          本页不开放现场设备控制。
+          已有浏览器草稿请在 Studio 文件菜单中查看和恢复。本页不展示未经核实的最近文件或发布状态。
         </p>
       </main>
       <RuntimePage v-else-if="view === 'runtime'" />

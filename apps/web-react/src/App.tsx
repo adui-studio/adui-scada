@@ -1,4 +1,5 @@
-import { Button } from "tdesign-react";
+import { Button, Input } from "tdesign-react";
+import { WORKSPACE_HOME_ENTRIES, filterWorkspaceHomeEntries } from "@adui/scada-runtime";
 import "tdesign-react/es/style/index.css";
 import { lazy, Suspense, useState } from "react";
 
@@ -27,9 +28,9 @@ export default function App() {
         <div className="scada-rail-brand">
           <span className="scada-app-brand">
             <img src="/brand/favicon.svg" alt="" aria-hidden="true" />
-            <strong>ADui</strong>
+            <strong>ADui SCADA</strong>
           </span>
-          <span className="scada-rail-product">SCADA</span>
+          <span className="scada-rail-product">ADui Studio</span>
         </div>
         <span className="scada-nav-kicker">工作空间</span>
         <div className="scada-nav-items">
@@ -157,54 +158,80 @@ export default function App() {
 
 /** 不虚构最近文件，只展示真实存在的工作入口与内置模拟工程。 */
 function WorkspaceHome({ onNavigate }: { onNavigate: (view: AppView) => void }) {
-  const entries: { view: AppView; icon: string; title: string; description: string }[] = [
-    {
-      view: "studio",
-      icon: "▣",
-      title: "打开组态编辑器",
-      description: "设计 1920 × 1080 画板，管理图层和 Tag",
-    },
-    {
-      view: "runtime",
-      icon: "◉",
-      title: "查看模拟运行",
-      description: "监控水处理模拟状态、链路和质量",
-    },
-    {
-      view: "published",
-      icon: "▤",
-      title: "查看已发布工程",
-      description: "经受控接口读取只读发布快照",
-    },
-  ];
+  const [query, setQuery] = useState("");
+  const entries = filterWorkspaceHomeEntries(query);
+
   return (
-    <main id="scada-main-content" className="scada-home">
-      <div className="scada-home-heading">
-        <span className="scada-home-eyebrow">ADui Studio / 工作空间</span>
-        <h1>工程工作区</h1>
-        <p>打开工程进行设计，或进入独立的只读运行环境。</p>
-      </div>
-      <section className="scada-home-section" aria-labelledby="scada-home-demo">
-        <div className="scada-home-section-head">
-          <h2 id="scada-home-demo">工程示例</h2>
-          <span>内置 · 本地模拟</span>
+    <main id="scada-main-content" className="scada-home flex min-w-0 flex-col">
+      <div className="scada-home-heading flex flex-wrap items-center justify-between">
+        <div>
+          <h1>工程工作区</h1>
+          <p>设计、管理与只读监控</p>
         </div>
-        <button type="button" className="scada-home-project" onClick={() => onNavigate("studio")}>
-          <span className="scada-home-project-preview" aria-hidden="true">
+        <div className="scada-home-search">
+          <Input
+            value={query}
+            onChange={setQuery}
+            placeholder="搜索工作区、工程、Tag"
+            aria-label="搜索工作区"
+            clearable
+          />
+        </div>
+      </div>
+      <div className="scada-home-quick-grid grid">
+        {WORKSPACE_HOME_ENTRIES.map((entry) => (
+          <button
+            key={entry.view}
+            type="button"
+            className="scada-home-quick"
+            onClick={() => onNavigate(entry.view)}
+          >
+            <span className="scada-home-card-icon" aria-hidden="true">
+              <HomeCardIcon view={entry.view} />
+            </span>
+            <strong>{entry.action}</strong>
+            <span aria-hidden="true">↗</span>
+          </button>
+        ))}
+      </div>
+      <section className="scada-home-section" aria-labelledby="scada-home-explore">
+        <div className="scada-home-section-head">
+          <h2 id="scada-home-explore">探索 ADui SCADA</h2>
+          <span>工业可视化与组态</span>
+        </div>
+        <div className="scada-home-banner-grid grid">
+          <article className="scada-home-banner scada-home-banner-brand">
+            <div>
+              <strong>ADui SCADA</strong>
+              <p>工业组态 · 实时监控</p>
+              <small>从工艺画面开始构建工程</small>
+            </div>
+            <img src="/brand/favicon.svg" alt="" />
+          </article>
+          <article className="scada-home-banner">
+            <div>
+              <strong>精密组态设计</strong>
+              <p>1920 × 1080 默认画板</p>
+              <small>图层、图元、属性与 Tag</small>
+            </div>
             <HomeCardIcon view="studio" />
-          </span>
-          <span className="scada-home-project-detail">
-            <strong>水处理演示工程</strong>
-            <span>本地模拟 · Studio 默认画板 1920 × 1080</span>
-          </span>
-        </button>
+          </article>
+          <article className="scada-home-banner scada-home-banner-runtime">
+            <div>
+              <strong>只读运行监控</strong>
+              <p>模拟数据与正式发布分离</p>
+              <small>设备写入未开放</small>
+            </div>
+            <HomeCardIcon view="runtime" />
+          </article>
+        </div>
       </section>
       <section className="scada-home-section" aria-labelledby="scada-home-start">
         <div className="scada-home-section-head">
-          <h2 id="scada-home-start">其他工作区</h2>
-          <span>选择现有功能</span>
+          <h2 id="scada-home-start">工程与工作区</h2>
+          <span>共 {entries.length} 个入口</span>
         </div>
-        <div className="scada-home-card-grid">
+        <div className="scada-home-card-grid grid">
           {entries.map((entry) => (
             <button
               key={entry.view}
@@ -212,21 +239,28 @@ function WorkspaceHome({ onNavigate }: { onNavigate: (view: AppView) => void }) 
               className="scada-home-card"
               onClick={() => onNavigate(entry.view)}
             >
-              <span className="scada-home-card-icon" aria-hidden="true">
-                <HomeCardIcon view={entry.view} />
+              <span className="scada-home-thumbnail" data-kind={entry.view}>
+                {entry.preview ? (
+                  <img src={entry.preview} alt="内置水处理工程静态预览，无实时值" />
+                ) : (
+                  <span aria-hidden="true">
+                    <HomeCardIcon view={entry.view} />
+                  </span>
+                )}
               </span>
               <strong>{entry.title}</strong>
-              <span>{entry.description}</span>
-              <small>
-                打开 <span aria-hidden="true">↗</span>
-              </small>
+              <span className="scada-home-status" data-kind={entry.view}>
+                {entry.status}
+              </span>
+              <span className="scada-home-description">{entry.description}</span>
+              <small>{entry.detail}</small>
             </button>
           ))}
         </div>
+        {entries.length === 0 && <p role="status">没有匹配的工作区，请尝试其他关键词。</p>}
       </section>
       <p className="scada-home-footnote">
-        最近文件尚无可信统一数据源。已有浏览器草稿请在 Studio 文件菜单中查看和恢复；
-        本页不开放现场设备控制。
+        已有浏览器草稿请在 Studio 文件菜单中查看和恢复。本页不展示未经核实的最近文件或发布状态。
       </p>
     </main>
   );
@@ -251,7 +285,7 @@ function HomeCardIcon({ view }: { view: AppView }) {
       </>
     );
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
       {drawing}
     </svg>
   );
