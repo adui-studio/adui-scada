@@ -1581,3 +1581,11 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/tag-history-persistence.ts`：复合键、持久化端口、回执严格匹配、单缓冲单写入协调与同批重试。
 - `packages/core/src/index.ts`：新增公共协调器、范围、请求、回执与端口类型。
 - `packages/core/test/tag-history-persistence.test.ts`：模拟回执丢失、错配、并发、身份范围与外部改变等定向用例。
+
+## D5c7 · 归档事务与首个 MVP 模拟集成候选
+
+- `apps/server/prisma/schema.prisma`、`apps/server/prisma/migrations/20261124100000_tag_history_archive/migration.sql`：独立历史批次及记录复合键、索引和中文注释。
+- `apps/server/src/history/tag-history-record-codec.ts`、`apps/server/src/history/prisma-tag-history-store.ts`：规范记录、幂等事务、内部有界查询；无公开路由。
+- `apps/server/src/history/tag-history-record-codec.spec.ts`、`apps/server/test/prisma-tag-history.db-spec.ts`：规范编码与隔离数据库回归候选。
+- `packages/runtime/src/local-project-simulation.ts`、`packages/runtime/test/local-project-simulation.test.ts`：共享本地模拟、原始会话趋势、CSV 与测试。
+- React/Vue 的 `src/runtime/RuntimePage` 及共享 `packages/runtime/src/runtime.css`：导入、模拟、页面与 Tag 选择、趋势及下载。
