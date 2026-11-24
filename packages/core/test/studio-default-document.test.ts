@@ -78,6 +78,7 @@ test("新建独立工程采用共享默认画板且不携带演示 Tag 或图元
   const first = createBlankStudioDocument("project-first");
   const second = createBlankStudioDocument("project-second");
   expect(first.projectId).toBe("project-first");
+  expect(first.projectName).toBe("未命名工程");
   expect(second.projectId).toBe("project-second");
   expect(first.pages[0]?.size).toEqual(STUDIO_DEFAULT_PAGE_SIZE);
   expect(first.pages[0]?.nodes).toEqual([]);

@@ -2008,3 +2008,19 @@ test("几何属性面板字段由共享 Core 定义并保持双框架顺序一�
   const keys = GEOMETRY_PROPERTY_FIELDS.map(([key]) => key);
   expect(new Set(keys).size).toBe(keys.length);
 });
+
+test("工程重命名可撤销和重做且不改变 ID、图元及 Tag", () => {
+  const e = editor();
+  const before = e.snapshot().document;
+  expect(e.renameProject(" 新的水处理工程 ")).toBe(true);
+  const renamed = e.snapshot().document;
+  expect(renamed).toEqual({ ...before, projectName: "新的水处理工程" });
+  expect(e.renameProject("新的水处理工程")).toBe(false);
+  expect(() => e.renameProject(" ")).toThrow(/工程名称/);
+  expect(() => e.renameProject("字".repeat(129))).toThrow(/projectName/);
+  expect(e.snapshot().document).toEqual(renamed);
+  expect(e.undo()).toBe(true);
+  expect(e.snapshot().document).toEqual(before);
+  expect(e.redo()).toBe(true);
+  expect(e.snapshot().document).toEqual(renamed);
+});

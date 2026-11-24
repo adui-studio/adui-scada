@@ -314,3 +314,14 @@ test("旧工程无扩展状态仍可校验和迁移，不要求修改版本号",
   expect(parsed.pages[0]?.nodes[0]?.props.__scadaStudio).toBeUndefined();
   expect(migrateScadaDocument(source).document).toEqual(parsed);
 });
+
+test("工程显示名称独立于稳定 ID，旧文档结构保持原样", () => {
+  const original = fixture();
+  expect(parseScadaDocument(original)).toEqual(original);
+  expect(parseScadaDocument({ ...original, projectName: "水处理工程" }).projectName).toBe(
+    "水处理工程",
+  );
+  for (const projectName of ["", " ", " 前置空白", "a\nb", "字".repeat(129), null, 1]) {
+    expect(() => parseScadaDocument({ ...original, projectName })).toThrow(/projectName/);
+  }
+});

@@ -328,6 +328,14 @@ async function checkStudioInPage() {
     element(".studio-canvas-dock").querySelectorAll(".t-icon").length === 6,
   );
   const zoomButtons = [...element(".studio-zoom").querySelectorAll("button")];
+  const viewSettingsButton = element(".studio-view-settings-menu").querySelector("button");
+  verify(
+    "视图设置与缩放、适应及定位按钮等高",
+    Boolean(viewSettingsButton) &&
+      zoomButtons.every(
+        (button) => Math.abs(bounds(button).height - bounds(viewSettingsButton).height) <= 1,
+      ),
+  );
   verify("创建工具集中在画布底部", Boolean(stage.querySelector(".studio-canvas-dock .studio-add")));
   verify(
     "页面导航位于左侧面板",
@@ -859,12 +867,41 @@ async function verifyWorkspaceProjectInPage() {
   );
   click(create, "无法新建工程");
   const projectId = await waitFor(() => {
-    const id = document.querySelector(".studio-toolbar h1")?.textContent.trim();
+    const id = document.querySelector(".studio-toolbar h1")?.getAttribute("data-project-id");
     return id?.startsWith("project-") ? id : null;
   }, "新建工程未进入编辑器");
   const boundary = await waitFor(
     () => document.querySelector(".studio-page-boundary"),
     "新建工程画板未挂载",
+  );
+  const heading = document.querySelector(".studio-toolbar h1");
+  if (heading?.textContent.trim() !== "未命名工程") {
+    throw new Error("新工程默认名称不正确");
+  }
+  const oldDialogs = new Set(document.querySelectorAll(".t-dialog"));
+  click(document.querySelector(".studio-rename-project"), "工程重命名入口缺失");
+  const dialog = await waitFor(
+    () =>
+      [...document.querySelectorAll(".t-dialog")].find(
+        (item) => !oldDialogs.has(item) && item.querySelector("input"),
+      ),
+    "工程重命名弹窗未挂载",
+  );
+  const name = "浏览器验收工程";
+  const nameInput = dialog.querySelector("input");
+  if (!(nameInput instanceof HTMLInputElement)) throw new Error("工程名称输入框缺失");
+  if (!Reflect.set(HTMLInputElement.prototype, "value", name, nameInput)) {
+    throw new Error("工程名称输入失败");
+  }
+  nameInput.dispatchEvent(new Event("input", { bubbles: true }));
+  nameInput.dispatchEvent(new Event("change", { bubbles: true }));
+  click(
+    [...dialog.querySelectorAll("button")].find((button) => button.textContent.trim() === "保存名称"),
+    "工程名称保存入口缺失",
+  );
+  await waitFor(
+    () => heading.textContent.trim() === name && heading.getAttribute("data-project-id") === projectId,
+    "重命名没有保留工程 ID",
   );
   const width = Number(boundary.getAttribute("width"));
   const height = Number(boundary.getAttribute("height"));
@@ -899,14 +936,17 @@ async function verifyWorkspaceProjectInPage() {
   const draft = await waitFor(
     () =>
       [...document.querySelectorAll(".scada-home-draft")].find(
-        (button) => button.querySelector("strong")?.textContent === projectId,
+        (button) =>
+          button.querySelector("strong")?.getAttribute("title") === projectId &&
+          button.querySelector("strong")?.textContent === name,
       ),
     "真实草稿目录未显示新建工程",
   );
   click(draft, "无法打开本地工程");
   await waitFor(
     () =>
-      document.querySelector(".studio-toolbar h1")?.textContent.trim() === projectId &&
+      document.querySelector(".studio-toolbar h1")?.getAttribute("data-project-id") === projectId &&
+      document.querySelector(".studio-toolbar h1")?.textContent.trim() === name &&
       document.querySelectorAll(".studio-hitbox").length === 1,
     "恢复工程后图元不一致",
   );
