@@ -4523,3 +4523,9 @@ pnpm run lab:alarm
 仅在本测试模式的 Vue 双标签导航开始前，分别调用官方 CDP `Network.enable` 和 `Network.setCacheDisabled({cacheDisabled:true})`，使两页的网络请求不使用 HTTP 缓存。它不等于清空浏览器用户文件、关闭 HTTPS、禁止 IndexedDB/CacheStorage 或影响真实浏览器产品行为；脚本仍会执行全部双标签广播、离线修订冲突、墓碑重建及 IndexedDB 异常恢复测试。任何 CDP 命令失败均原样退出，不可静默跳过。
 
 官方接口：https://chromedevtools.github.io/devtools-protocol/tot/Network/#method-setCacheDisabled 。该行为只在维护者 Windows 新 HEAD 复验成功后才能记为验证通过；若持续失败，转向临时 Profile 目录权限、磁盘空间、受控安全软件等本机环境问题，禁止删除非本任务用户数据。
+
+## Prisma 8 渐进迁移 · 第一阶段离线生成
+
+本阶段的 `pnpm run db:prisma8:emit` 只调用 Prisma 8 Contract 生成器，不读取数据库连接。旧版生成、校验和迁移仍由 `prisma7` 与 `apps/server/prisma7.config.ts` 执行。历史文档中的直接 `prisma migrate` 命令是旧版本记录，不得在当前双版本分支使用普通 prisma 命令替代。数据库接管尚未授权，禁止执行 Prisma 8 的 db sign、db migrate、db update 或迁移计划落地。
+
+首次安装后先检查两套 CLI 版本、旧版 Schema 校验和 Client 生成、新版 Contract 生成，再运行现有 ready。新增的脚本解析测试包含于 test:docker:db，不访问数据库。所有真实迁移测试继续使用既有隔离数据库安全模板；不得因 ORM 升级省略隔离目标、失败记录检查或备份。
