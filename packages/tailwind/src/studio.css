@@ -113,7 +113,7 @@
 .studio-tree-controls .studio-field {
   margin: 0;
 }
-.studio-tree-controls input[type="search"] {
+.studio-tree-controls .t-input {
   width: 100%;
   min-width: 0;
 }
@@ -633,7 +633,7 @@
 .studio-tree-controls {
   display: grid;
   flex: none;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   padding: 7px 12px 10px;
   border-bottom: 1px solid var(--scada-border);

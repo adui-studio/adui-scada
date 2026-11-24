@@ -228,3 +228,7 @@ Studio 新增图层与图元库两种真实模式，基础水箱、水泵、管�
 维护者明确要求深色模式的 Studio 画板也随主题切换，并以 TDesign 官网首页录屏为动效参考。官方站点 animation.less 使用 8 度斜切 clip-path 与 1 秒 View Transition 动画：浅入深由左向右，深入浅由右向左；旧视图禁用淡出，新视图以遮罩揭示。项目共享主题入口引入对应样式，仅在用户主动主题过渡期间生效。源码参考：https://github.com/Tencent/tdesign/blob/main/packages/site-components/src/styles/animation.less 。
 
 深色画板外层与内嵌 SVG 同步使用 #0C1728，正文和状态色适配；新 studio-dark 外观保留金属设备、管道、指标卡几何，原默认 dark 运行渲染保持不变。切换只作用于预览，不修改工程文档、画板尺寸、保存修订或现场 Tag；两端 Studio 保持挂载，不重建编辑器。
+
+## 23. 图层搜索清空入口
+
+图层搜索采用 TDesign Input 的 clearable，移除重复的清除搜索按钮，避免原生 search 清除控件和组件清除控件叠加。定位选中图层保留并独占一行，搜索条件仍为受控状态，清空后恢复原过滤结果，不改变当前选择及工程数据。

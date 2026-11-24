@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Checkbox, Collapse, Dropdown, Input, Popup, Select, Upload } from "tdesign-react";
 import type { DropdownProps } from "tdesign-react";
 import {
-  CloseIcon,
   RectangleIcon,
   PlayCircleIcon,
   SlashIcon,
@@ -2388,7 +2387,8 @@ export default function StudioPage({
               <label className="studio-field">
                 搜索图元或组合
                 <Input
-                  type="search"
+                  type="text"
+                  clearable
                   size="small"
                   aria-label="搜索图层"
                   maxlength={128}
@@ -2404,14 +2404,6 @@ export default function StudioPage({
                 onClick={locateSelectedLayer}
               >
                 定位选中图层
-              </Button>
-              <Button
-                variant="text"
-                size="small"
-                disabled={layerSearch.length === 0}
-                onClick={() => setLayerSearch("")}
-              >
-                <CloseIcon /> 清除搜索
               </Button>
             </div>
             <div className="studio-layer-tree min-w-0" ref={layerTreeRef} aria-label="图层树">

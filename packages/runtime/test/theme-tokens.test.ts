@@ -315,3 +315,21 @@ describe("TDesign 官网主题过渡", () => {
     }
   });
 });
+
+it("图层搜索复用输入框清空能力并保留独立定位操作", () => {
+  for (const path of [
+    "../../../apps/web-react/src/studio/StudioPage.tsx",
+    "../../../apps/web-vue/src/studio/StudioPage.vue",
+  ]) {
+    const source = readRelative(path);
+    const start = source.indexOf('class' + (path.endsWith(".tsx") ? 'Name' : '') + '="studio-tree-controls"');
+    expect(start).toBeGreaterThanOrEqual(0);
+    const end = source.indexOf('studio-layer-tree min-w-0', start);
+    expect(end).toBeGreaterThan(start);
+    const controls = source.slice(start, end);
+    expect(controls).toContain("clearable");
+    expect(controls).toContain('type="text"');
+    expect(controls).toContain("定位选中图层");
+    expect(controls).not.toContain("清除搜索");
+  }
+});

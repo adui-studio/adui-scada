@@ -13,7 +13,6 @@ import {
 } from "tdesign-vue-next";
 import type { DropdownProps } from "tdesign-vue-next";
 import {
-  CloseIcon,
   RectangleIcon,
   PlayCircleIcon,
   SlashIcon,
@@ -2324,7 +2323,8 @@ async function importJsonFile(file: File | undefined) {
               搜索图元或组合
               <TInput
                 v-model="layerSearch"
-                type="search"
+                type="text"
+                clearable
                 size="small"
                 aria-label="搜索图层"
                 :maxlength="128"
@@ -2338,14 +2338,6 @@ async function importJsonFile(file: File | undefined) {
               @click="locateSelectedLayer"
             >
               定位选中图层
-            </TButton>
-            <TButton
-              variant="text"
-              size="small"
-              :disabled="layerSearch.length === 0"
-              @click="layerSearch = ''"
-            >
-              <CloseIcon /> 清除搜索
             </TButton>
           </div>
           <div ref="layerTreeRef" class="studio-layer-tree min-w-0" aria-label="图层树">
