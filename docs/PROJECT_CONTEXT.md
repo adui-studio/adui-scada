@@ -2702,3 +2702,9 @@ Prisma 8 当前为不同 API 与 CLI 的 RC；既有 Prisma Client、适配器�
 维护者明确授权 PR #199 合入 MVP 集成分支，Squash 结果 9424b167a78f8ab3b4a85683ce03249ed8786d80；PR #198 仍为 Draft，未合入 main。按维护者继续升级 Prisma 8 的要求，建立 feat/mvp-prisma8-migration。Catalog 声明 prisma ^8.0.0-rc.35、@prisma/orm-postgres ^8.0.0-rc.25，官方兼容包 @prisma/prisma7 ^7.10.1；Node 24.18.0、TypeScript ^6.0.3、pnpm 12.23.0、Vite+ 配套约束不变。旧版 Client、适配器和已应用迁移暂保留，Prisma 8 第一阶段只生成契约，不初始化运行时连接或接管迁移。
 
 协作环境未安装新依赖；真实 npm 锁文件、Contract 生成、完整质量门禁与数据库回归仍待执行。禁止在此阶段运行 Prisma 8 数据库签名或迁移、替换现有迁移记录、启动未迁移数据卷。后续先验证实际契约及包入口，再迁移有界只读查询、身份及事务模块，最后专项评审数据库迁移接管。
+
+### MVP · Prisma 8 阶段一合并与阶段二候选（2026-11-24）
+
+维护者提交 npm 锁文件、Prisma 8 Contract、Cargo.lock，并实际在 Windows 完成双版本 CLI、冻结安装、956/956 单测、63/63 HTTP E2E、472 格式文件及 314 受检文件零警告错误、Docker 数据库脚本 13/13、双端构建与文档 95 份检查。用户确认 Skills 安装完成并授权 PR #200 合入 MVP 集成分支；合并提交 e75a763821d6215c6b66a1e01a43051d7c7275b3，PR #198 仍为 Draft。日志没有独立 ready 最终退出码，未实际验证新版 ORM 查询、数据库迁移、桌面构建或生产运行。
+
+阶段二从上述合并提交建立 feat/mvp-prisma8-runtime，新增实际 Prisma 8 只读客户端探针，独立验证连接池所有权及租户工程联合主键查询。所有旧业务仓储保持 Prisma 7；不接管数据库迁移，不启动新 Docker 镜像，不改变设备访问或发布安全门禁。下一步取决于真实隔离库查询结果，不以空库通过冒充正向数据等价性。
