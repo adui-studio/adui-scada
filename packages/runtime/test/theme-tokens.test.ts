@@ -4,8 +4,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 const themeRoot = new URL("../../theme/src/", import.meta.url);
 const readTheme = (name: string) => readFileSync(new URL(name, themeRoot), "utf8");
-const readRelative = (path: string) =>
-  readFileSync(new URL(path, import.meta.url), "utf8");
+const readRelative = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
 describe("精密工程工作台设计系统", () => {
   it("保留 V7 品牌色并以新的浅色语义 Token 构建编辑工作区", () => {
@@ -42,10 +41,7 @@ describe("精密工程工作台设计系统", () => {
     ]) {
       expect(css).toContain(token);
     }
-    for (const path of [
-      "../../../apps/web-react/index.html",
-      "../../../apps/web-vue/index.html",
-    ]) {
+    for (const path of ["../../../apps/web-react/index.html", "../../../apps/web-vue/index.html"]) {
       expect(readRelative(path)).toContain('theme-mode="light"');
     }
   });
@@ -55,9 +51,9 @@ describe("精密工程工作台设计系统", () => {
     expect(css).toContain("grid-template-columns: 184px minmax(0, 1fr);");
     expect(css).toContain("grid-template-rows: 42px minmax(0, 1fr);");
     expect(css).toContain(".scada-home-card-grid {");
-    expect(css).toContain(".scada-app-nav .t-button[aria-current=\"page\"]");
+    expect(css).toContain('.scada-app-nav .t-button[aria-current="page"]');
     expect(css).toContain(".scada-app-nav .t-button:focus-visible");
-    expect(css).toContain(".scada-app-frame[data-view=\"studio\"]");
+    expect(css).toContain('.scada-app-frame[data-view="studio"]');
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     for (const path of [
       "../../../apps/web-react/src/App.tsx",
@@ -82,8 +78,8 @@ describe("精密工程工作台设计系统", () => {
       ".scada-published-layout",
       ".scada-published-sidebar",
       ".scada-published-preview-panel > .scada-diagnostics-empty",
-      ".scada-quality-item[data-quality=\"GOOD\"] strong",
-      ".scada-quality-item[data-quality=\"BAD\"] strong",
+      '.scada-quality-item[data-quality="GOOD"] strong',
+      '.scada-quality-item[data-quality="BAD"] strong',
     ]) {
       expect(css).toContain(selector);
     }
@@ -102,7 +98,7 @@ describe("精密工程工作台设计系统", () => {
     ]) {
       const source = readRelative(page);
       expect(source).toContain("scada-published-layout");
-      expect(source).toContain("data-testid=\"published-runtime-svg\"");
+      expect(source).toContain('data-testid="published-runtime-svg"');
       expect(source).toContain("不开放设备控制");
     }
   });
@@ -123,7 +119,9 @@ describe("精密工程工作台设计系统", () => {
     expect(css).toContain("background: var(--adui-color-editor-workspace);");
     expect(css).toContain("fill: var(--adui-color-editor-artboard);");
     expect(css).toContain(".studio-page-bar::before {");
-    expect(css).toContain(".studio-shell :is(button, input, select, textarea, summary):focus-visible");
+    expect(css).toContain(
+      ".studio-shell :is(button, input, select, textarea, summary):focus-visible",
+    );
     expect(css).toContain(".studio-inspector-tabs {");
     expect(css).toContain(".studio-inspector-content[hidden] {");
     expect(css).toContain(".studio-tag-toolbar {");

@@ -114,7 +114,7 @@ test("定位极小图元时限制最大缩放并拒绝无效几何", () => {
   const viewport = { width: 800, height: 800 };
   const tiny = { x: 400, y: 200, width: 1, height: 1, rotation: 0 };
   expect(studioFocusTransform(page, viewport, tiny, 48).zoom).toBe(8);
-  expect(() =>
-    studioFocusTransform(page, viewport, { ...tiny, rotation: Infinity }, 48),
-  ).toThrow("定位图元的几何参数无效");
+  expect(() => studioFocusTransform(page, viewport, { ...tiny, rotation: Infinity }, 48)).toThrow(
+    "定位图元的几何参数无效",
+  );
 });

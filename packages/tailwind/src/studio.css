@@ -1929,7 +1929,6 @@
   overflow-wrap: anywhere;
 }
 
-
 /* D5c1 · Figma UI3 任务型画布：页面/图层左置、轻量属性右置、创建工具底部。 */
 .studio-workspace {
   --studio-left-width: min(var(--studio-left-preferred, 256px), 34vw);
@@ -1956,14 +1955,20 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.studio-toolbar .scada-eyebrow { font-size: 10px; }
-.studio-actions { gap: 6px; }
+.studio-toolbar .scada-eyebrow {
+  font-size: 10px;
+}
+.studio-actions {
+  gap: 6px;
+}
 .studio-actions button {
   min-height: 30px;
   font-size: var(--adui-font-size-2xs);
 }
 .studio-history-actions,
-.studio-save-actions { gap: 4px; }
+.studio-save-actions {
+  gap: 4px;
+}
 .studio-panel-layers {
   border-right: 1px solid var(--scada-border);
   background: var(--scada-surface);
@@ -2007,14 +2012,32 @@
   background: var(--scada-active-bg);
   box-shadow: inset 2px 0 var(--scada-primary);
 }
-.studio-page-menu { align-self: flex-start; }
-.studio-page-menu .t-button { min-height: 27px; font-size: 11px; }
-.studio-pane-heading { min-height: 40px; padding: 8px 12px; }
-.studio-pane-heading h2 { font-size: 12px; }
-.studio-tree-section-title { padding-top: 12px; }
-.studio-tree-controls { padding: 8px 10px; }
-.studio-layer-tree { padding: 6px; }
-.studio-layer-tree .studio-layer { min-height: 30px; }
+.studio-page-menu {
+  align-self: flex-start;
+}
+.studio-page-menu .t-button {
+  min-height: 27px;
+  font-size: 11px;
+}
+.studio-pane-heading {
+  min-height: 40px;
+  padding: 8px 12px;
+}
+.studio-pane-heading h2 {
+  font-size: 12px;
+}
+.studio-tree-section-title {
+  padding-top: 12px;
+}
+.studio-tree-controls {
+  padding: 8px 10px;
+}
+.studio-layer-tree {
+  padding: 6px;
+}
+.studio-layer-tree .studio-layer {
+  min-height: 30px;
+}
 .studio-stage {
   position: relative;
   background: var(--adui-color-editor-workspace);
@@ -2035,7 +2058,10 @@
   box-shadow: none;
   color: var(--scada-text);
 }
-.studio-stage-caption > span { color: var(--scada-text-strong); font-weight: 650; }
+.studio-stage-caption > span {
+  color: var(--scada-text-strong);
+  font-weight: 650;
+}
 .studio-stage-caption > .studio-view-menu > .t-popup > .t-button,
 .studio-stage-caption > .studio-zoom .t-button {
   min-height: 27px;
@@ -2123,7 +2149,8 @@
 .studio-svg[data-canvas-tool="hand"]:active * {
   cursor: grabbing;
 }
-.studio-svg[data-canvas-tool="hand"] :is(.studio-hitbox, .studio-resize-handle, .studio-rotation-handle) {
+.studio-svg[data-canvas-tool="hand"]
+  :is(.studio-hitbox, .studio-resize-handle, .studio-rotation-handle) {
   pointer-events: none;
 }
 .studio-canvas-dock .studio-library-label {
@@ -2177,7 +2204,9 @@
   padding: 10px;
   background: var(--adui-color-surface-muted);
 }
-.studio-geometry label { min-width: 0; }
+.studio-geometry label {
+  min-width: 0;
+}
 .studio-geometry .t-button[type="submit"] {
   grid-column: 1 / -1;
   width: 100%;
@@ -2214,12 +2243,23 @@
     grid-column: 1;
     min-height: 0;
   }
-  .studio-panel-layers { grid-row: 1; max-height: 250px; }
-  .studio-stage { grid-row: 2; min-height: 300px; }
-  .studio-panel-properties { grid-row: 3; max-height: 250px; }
+  .studio-panel-layers {
+    grid-row: 1;
+    max-height: 250px;
+  }
+  .studio-stage {
+    grid-row: 2;
+    min-height: 300px;
+  }
+  .studio-panel-properties {
+    grid-row: 3;
+    max-height: 250px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .studio-canvas-dock .t-button { transition: none; }
+  .studio-canvas-dock .t-button {
+    transition: none;
+  }
 }
 
 /* 工具模式与缩放分离；图层和属性均可调整，不再固定宽度。 */

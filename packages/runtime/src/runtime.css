@@ -684,9 +684,10 @@ textarea {
   }
 }
 
-
 /* 文件首页导航及共享工作空间入口。 */
-.scada-app-frame { grid-template-columns: 184px minmax(0, 1fr); }
+.scada-app-frame {
+  grid-template-columns: 184px minmax(0, 1fr);
+}
 .scada-app-nav {
   gap: 16px;
   padding: 12px 9px;
@@ -702,16 +703,27 @@ textarea {
   padding: 0 7px 9px;
   border-bottom-color: var(--scada-border-subtle);
 }
-.scada-app-brand { color: var(--scada-text-strong); font-size: 13px; }
-.scada-app-brand img { width: 26px; height: 26px; }
-.scada-rail-product { color: var(--scada-text-muted); font-size: 10px; }
+.scada-app-brand {
+  color: var(--scada-text-strong);
+  font-size: 13px;
+}
+.scada-app-brand img {
+  width: 26px;
+  height: 26px;
+}
+.scada-rail-product {
+  color: var(--scada-text-muted);
+  font-size: 10px;
+}
 .scada-nav-kicker {
   padding-inline: 11px;
   color: var(--scada-text-muted);
   font-size: 11px;
   text-align: left;
 }
-.scada-nav-items { gap: 4px; }
+.scada-nav-items {
+  gap: 4px;
+}
 .scada-app-nav .t-button {
   min-height: 40px;
   flex-direction: row;
@@ -723,7 +735,10 @@ textarea {
   font-size: 12px;
   text-align: left;
 }
-.scada-app-nav .t-button svg { width: 18px; height: 18px; }
+.scada-app-nav .t-button svg {
+  width: 18px;
+  height: 18px;
+}
 .scada-app-nav .t-button:hover {
   border-color: transparent;
   background: var(--adui-color-surface-muted);
@@ -735,27 +750,43 @@ textarea {
   box-shadow: inset 3px 0 var(--scada-primary);
   color: var(--adui-color-brand-active);
 }
-.scada-app-nav .t-button:focus-visible { outline-color: var(--adui-color-focus-ring); }
+.scada-app-nav .t-button:focus-visible {
+  outline-color: var(--adui-color-focus-ring);
+}
 .scada-rail-footer {
   align-items: flex-start;
   padding: 12px 8px 4px;
   border-top-color: var(--scada-border-subtle);
   text-align: left;
 }
-.scada-rail-environment { color: var(--scada-live); }
-.scada-app-topbar { min-height: 42px; padding-inline: 20px; }
-.scada-app-frame[data-view="studio"] .scada-app-nav { padding: 10px 5px; }
+.scada-rail-environment {
+  color: var(--scada-live);
+}
+.scada-app-topbar {
+  min-height: 42px;
+  padding-inline: 20px;
+}
+.scada-app-frame[data-view="studio"] .scada-app-nav {
+  padding: 10px 5px;
+}
 .scada-app-frame[data-view="studio"] .scada-rail-brand {
   justify-content: center;
   min-height: 44px;
   padding: 0 0 8px;
 }
-.scada-app-frame[data-view="studio"] .scada-app-brand img { width: 25px; height: 25px; }
+.scada-app-frame[data-view="studio"] .scada-app-brand img {
+  width: 25px;
+  height: 25px;
+}
 .scada-app-frame[data-view="studio"] .scada-app-brand strong,
 .scada-app-frame[data-view="studio"] .scada-rail-product,
 .scada-app-frame[data-view="studio"] .scada-nav-kicker,
-.scada-app-frame[data-view="studio"] .scada-rail-footer { display: none; }
-.scada-app-frame[data-view="studio"] .scada-nav-items { gap: 8px; }
+.scada-app-frame[data-view="studio"] .scada-rail-footer {
+  display: none;
+}
+.scada-app-frame[data-view="studio"] .scada-nav-items {
+  gap: 8px;
+}
 .scada-app-frame[data-view="studio"] .scada-app-nav .t-button {
   width: 40px;
   height: 42px;
@@ -763,7 +794,10 @@ textarea {
   padding: 9px;
   justify-content: center;
 }
-.scada-app-frame[data-view="studio"] .scada-app-nav .t-button svg { width: 21px; height: 21px; }
+.scada-app-frame[data-view="studio"] .scada-app-nav .t-button svg {
+  width: 21px;
+  height: 21px;
+}
 .scada-app-frame[data-view="studio"] .scada-app-nav .t-button span {
   position: absolute;
   width: 1px;
@@ -778,8 +812,14 @@ textarea {
   margin: 0 auto;
   padding: clamp(24px, 4vw, 56px);
 }
-.scada-home-heading { margin-bottom: 38px; }
-.scada-home-eyebrow { color: var(--scada-text-muted); font-size: 12px; font-weight: 650; }
+.scada-home-heading {
+  margin-bottom: 38px;
+}
+.scada-home-eyebrow {
+  color: var(--scada-text-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
 .scada-home-heading h1 {
   margin: 12px 0 10px;
   color: var(--scada-text-strong);
@@ -793,7 +833,9 @@ textarea {
   font-size: 14px;
   line-height: 1.7;
 }
-.scada-home-section { margin-bottom: 34px; }
+.scada-home-section {
+  margin-bottom: 34px;
+}
 .scada-home-section-head {
   display: flex;
   justify-content: space-between;
@@ -801,9 +843,16 @@ textarea {
   gap: 12px;
   margin-bottom: 14px;
 }
-.scada-home-section-head h2 { margin: 0; color: var(--scada-text-strong); font-size: 16px; }
+.scada-home-section-head h2 {
+  margin: 0;
+  color: var(--scada-text-strong);
+  font-size: 16px;
+}
 .scada-home-section-head span,
-.scada-home-footnote { color: var(--scada-text-muted); font-size: 12px; }
+.scada-home-footnote {
+  color: var(--scada-text-muted);
+  font-size: 12px;
+}
 .scada-home-card-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -825,7 +874,9 @@ textarea {
   transition: border-color var(--adui-motion-fast) ease;
 }
 .scada-home-card:hover,
-.scada-home-project:hover { border-color: var(--scada-primary); }
+.scada-home-project:hover {
+  border-color: var(--scada-primary);
+}
 .scada-home-card:focus-visible,
 .scada-home-project:focus-visible {
   outline: 2px solid var(--adui-color-focus-ring);
@@ -841,7 +892,10 @@ textarea {
   color: var(--scada-primary);
   font-size: 21px;
 }
-.scada-home-card strong { color: var(--scada-text-strong); font-size: 15px; }
+.scada-home-card strong {
+  color: var(--scada-text-strong);
+  font-size: 15px;
+}
 .scada-home-card > span:not(.scada-home-card-icon) {
   color: var(--scada-text-secondary);
   font-size: 12px;
@@ -864,31 +918,67 @@ textarea {
   background: var(--scada-surface);
   text-align: left;
 }
-.scada-home-project-preview { position: relative; display: block; height: 170px; background: var(--adui-color-surface-muted); }
-.scada-home-project-detail { display: flex; flex-direction: column; gap: 6px; padding: 15px 18px 18px; }
-.scada-home-project-detail strong { color: var(--scada-text-strong); font-size: 14px; }
-.scada-home-project-detail span { color: var(--scada-text-muted); font-size: 12px; }
-.scada-home-footnote { margin-top: 26px; line-height: 1.8; }
+.scada-home-project-preview {
+  position: relative;
+  display: block;
+  height: 170px;
+  background: var(--adui-color-surface-muted);
+}
+.scada-home-project-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 15px 18px 18px;
+}
+.scada-home-project-detail strong {
+  color: var(--scada-text-strong);
+  font-size: 14px;
+}
+.scada-home-project-detail span {
+  color: var(--scada-text-muted);
+  font-size: 12px;
+}
+.scada-home-footnote {
+  margin-top: 26px;
+  line-height: 1.8;
+}
 @media (max-width: 1080px) {
-  .scada-home-card-grid { grid-template-columns: minmax(0, 1fr); }
-  .scada-home-card { min-height: 145px; }
+  .scada-home-card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .scada-home-card {
+    min-height: 145px;
+  }
 }
 @media (max-width: 660px) {
-  .scada-app-frame { grid-template-columns: 64px minmax(0, 1fr); }
-    .scada-app-frame:not([data-view="studio"]) .scada-app-nav .t-button span,
+  .scada-app-frame {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+  .scada-app-frame:not([data-view="studio"]) .scada-app-nav .t-button span,
   .scada-app-frame:not([data-view="studio"]) .scada-rail-product,
   .scada-app-frame:not([data-view="studio"]) .scada-nav-kicker,
   .scada-app-frame:not([data-view="studio"]) .scada-rail-footer,
-  .scada-app-frame:not([data-view="studio"]) .scada-app-brand strong { display: none; }
+  .scada-app-frame:not([data-view="studio"]) .scada-app-brand strong {
+    display: none;
+  }
   .scada-app-frame:not([data-view="studio"]) .scada-app-nav .t-button {
     justify-content: center;
     padding: 10px;
   }
-  .scada-home { padding: 20px 16px; }
+  .scada-home {
+    padding: 20px 16px;
+  }
 }
-@media (prefers-reduced-motion: reduce) { .scada-home-card { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .scada-home-card {
+    transition: none;
+  }
+}
 
-.scada-home-card-icon svg { width: 23px; height: 23px; }
+.scada-home-card-icon svg {
+  width: 23px;
+  height: 23px;
+}
 
 /* 文件工作台与独立操作工作区分离：设计与运行统一顶部工作空间切换栏。 */
 .scada-app-frame:not([data-view="home"]) {

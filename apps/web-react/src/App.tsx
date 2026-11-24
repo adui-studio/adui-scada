@@ -40,7 +40,13 @@ export default function App() {
             aria-current={view === "home" ? "page" : undefined}
             onClick={() => setView("home")}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden="true"
+            >
               <rect x="3.5" y="3.5" width="7" height="7" rx="1" />
               <rect x="13.5" y="3.5" width="7" height="7" rx="1" />
               <rect x="3.5" y="13.5" width="7" height="7" rx="1" />
@@ -152,9 +158,24 @@ export default function App() {
 /** 不虚构最近文件，只展示真实存在的工作入口与内置模拟工程。 */
 function WorkspaceHome({ onNavigate }: { onNavigate: (view: AppView) => void }) {
   const entries: { view: AppView; icon: string; title: string; description: string }[] = [
-    { view: "studio", icon: "▣", title: "打开组态编辑器", description: "设计 1920 × 1080 画板，管理图层和 Tag" },
-    { view: "runtime", icon: "◉", title: "查看模拟运行", description: "监控水处理模拟状态、链路和质量" },
-    { view: "published", icon: "▤", title: "查看已发布工程", description: "经受控接口读取只读发布快照" },
+    {
+      view: "studio",
+      icon: "▣",
+      title: "打开组态编辑器",
+      description: "设计 1920 × 1080 画板，管理图层和 Tag",
+    },
+    {
+      view: "runtime",
+      icon: "◉",
+      title: "查看模拟运行",
+      description: "监控水处理模拟状态、链路和质量",
+    },
+    {
+      view: "published",
+      icon: "▤",
+      title: "查看已发布工程",
+      description: "经受控接口读取只读发布快照",
+    },
   ];
   return (
     <main id="scada-main-content" className="scada-home">
@@ -191,10 +212,14 @@ function WorkspaceHome({ onNavigate }: { onNavigate: (view: AppView) => void }) 
               className="scada-home-card"
               onClick={() => onNavigate(entry.view)}
             >
-              <span className="scada-home-card-icon" aria-hidden="true"><HomeCardIcon view={entry.view} /></span>
+              <span className="scada-home-card-icon" aria-hidden="true">
+                <HomeCardIcon view={entry.view} />
+              </span>
               <strong>{entry.title}</strong>
               <span>{entry.description}</span>
-              <small>打开 <span aria-hidden="true">↗</span></small>
+              <small>
+                打开 <span aria-hidden="true">↗</span>
+              </small>
             </button>
           ))}
         </div>

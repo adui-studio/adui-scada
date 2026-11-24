@@ -121,4 +121,3 @@ D5c0s 审计基线：`StudioPage.tsx` 与 `StudioPage.vue` 每端各有 **9 处*
 React/Vue 对等采用官方 TDesign Button、Input、Select、Textarea 与 Dialog/TDialog。已核对固定版本 React 1.18.6、Vue Next 1.20.11 的 Dialog visible、width、dialogClassName、footer、destroyOnClose、closeOnEscKeydown、closeOnOverlayClick 和 onClose API。目录常驻侧栏，支持搜索、紧凑行和新建入口；编辑表单在独立 Dialog 内以两列排布，错误就近提示，编辑时稳定 ID 不可变。危险删除仍调用原 confirmStudioAction，并由共享 Editor 拒绝已绑定 Tag。
 
 浏览器测试覆盖真实按钮流程、目录搜索、弹窗所在位置和宽度、主表单两列、字段错误、不可变 ID、长 ID 与 Tab 焦点，保留原工程 CRUD 和 JSON 往返断言。尚未执行新 HEAD 的 Windows vp check/类型检查/真实浏览器，不能宣称已经完成验收。
-

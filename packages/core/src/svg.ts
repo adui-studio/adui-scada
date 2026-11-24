@@ -48,7 +48,11 @@ function quality(tag: TagValue | undefined): string {
   return TAG_QUALITY_LABELS[tag?.quality ?? "BAD"];
 }
 
-function renderTank(node: ScadaNode, tags: ReadonlyMap<string, TagValue>, appearance: "dark" | "light"): string {
+function renderTank(
+  node: ScadaNode,
+  tags: ReadonlyMap<string, TagValue>,
+  appearance: "dark" | "light",
+): string {
   const { width: w, height: h } = node.transform;
   const tag = tagFor(node, "level", tags);
   const valid = tag?.quality === "GOOD" || tag?.quality === "UNCERTAIN";
@@ -64,7 +68,11 @@ function renderTank(node: ScadaNode, tags: ReadonlyMap<string, TagValue>, appear
   );
 }
 
-function renderPump(node: ScadaNode, tags: ReadonlyMap<string, TagValue>, appearance: "dark" | "light"): string {
+function renderPump(
+  node: ScadaNode,
+  tags: ReadonlyMap<string, TagValue>,
+  appearance: "dark" | "light",
+): string {
   const { width: w, height: h } = node.transform;
   const tag = tagFor(node, "running", tags);
   const running = tag?.quality === "GOOD" && tag.value === true;
@@ -81,7 +89,11 @@ function renderPipe(node: ScadaNode): string {
   return `<path d="M 0 ${number(h / 2)} L ${number(w)} ${number(h / 2)}" stroke="#3e6687" stroke-width="${number(Math.max(4, Math.min(h, 24)))}" stroke-linecap="round" fill="none"/>`;
 }
 
-function renderLabel(node: ScadaNode, tags: ReadonlyMap<string, TagValue>, appearance: "dark" | "light"): string {
+function renderLabel(
+  node: ScadaNode,
+  tags: ReadonlyMap<string, TagValue>,
+  appearance: "dark" | "light",
+): string {
   const text = typeof node.props.text === "string" ? node.props.text : "";
   const value = tagFor(node, "value", tags);
   const suffix = typeof node.props.unit === "string" ? node.props.unit : "";
@@ -92,7 +104,11 @@ function renderLabel(node: ScadaNode, tags: ReadonlyMap<string, TagValue>, appea
   return `<text x="0" y="${number(Math.min(24, node.transform.height))}" font-size="20" fill="${appearance === "light" ? "#142338" : "#e6edf6"}">${xml(text + dynamic)}</text>`;
 }
 
-function renderNode(node: ScadaNode, tags: ReadonlyMap<string, TagValue>, appearance: "dark" | "light"): string {
+function renderNode(
+  node: ScadaNode,
+  tags: ReadonlyMap<string, TagValue>,
+  appearance: "dark" | "light",
+): string {
   const t = node.transform;
   let body: string;
   switch (node.type) {

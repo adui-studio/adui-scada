@@ -163,7 +163,7 @@ onUnmounted(() => {
           </dl>
         </section>
       </div>
-        <section class="scada-panel scada-published-preview-panel" aria-label="已发布静态组态预览">
+      <section class="scada-panel scada-published-preview-panel" aria-label="已发布静态组态预览">
         <h2>已发布组态静态预览</h2>
         <div v-if="pages.length > 1" class="scada-published-controls">
           <label>

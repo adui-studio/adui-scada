@@ -308,7 +308,10 @@ async function checkStudioInPage() {
 
   const zoomButtons = [...element(".studio-zoom").querySelectorAll("button")];
   verify("创建工具集中在画布底部", Boolean(stage.querySelector(".studio-canvas-dock .studio-add")));
-  verify("页面导航位于左侧面板", Boolean(layers.querySelector(".studio-page-bar .studio-page-tabs")));
+  verify(
+    "页面导航位于左侧面板",
+    Boolean(layers.querySelector(".studio-page-bar .studio-page-tabs")),
+  );
   verify("独立白色画板存在", Boolean(svg.querySelector(".studio-artboard-surface")));
   const captionRect = bounds(element(".studio-stage-caption"));
   const dockRect = bounds(element(".studio-canvas-dock"));
@@ -316,7 +319,10 @@ async function checkStudioInPage() {
     "上下工具条不遮挡可编辑 SVG",
     captionRect.bottom <= svgRect.top + 2 && dockRect.top >= svgRect.bottom - 2,
   );
-  verify("缩放工具位于画布视图栏", Boolean(stage.querySelector(".studio-stage-caption .studio-zoom")));
+  verify(
+    "缩放工具位于画布视图栏",
+    Boolean(stage.querySelector(".studio-stage-caption .studio-zoom")),
+  );
   const modes = [...element(".studio-canvas-modes").querySelectorAll("button")];
   verify(
     "默认使用选择工具",
@@ -445,7 +451,10 @@ async function checkStudioInPage() {
   verify("右面板分隔条方向键调整宽度", near(bounds(properties).width, rightWidth + 10));
   rightResizer.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
   await settle();
-  verify("分隔条恢复原面板宽度", near(bounds(layers).width, leftWidth) && near(bounds(properties).width, rightWidth));
+  verify(
+    "分隔条恢复原面板宽度",
+    near(bounds(layers).width, leftWidth) && near(bounds(properties).width, rightWidth),
+  );
 
   const firstLayer = document.querySelector(".studio-layer-tree .studio-layer");
   firstLayer?.click();
@@ -667,7 +676,9 @@ function inspectScadaUIInPage() {
     process: Boolean(main.querySelector(".scada-monitor-layout .scada-process-panel")),
     telemetry: Boolean(main.querySelector(".scada-monitor-side .scada-diagnostics")),
     quality: Boolean(main.querySelector(".scada-quality-summary")),
-    published: Boolean(main.querySelector(".scada-published-layout .scada-published-preview-panel")),
+    published: Boolean(
+      main.querySelector(".scada-published-layout .scada-published-preview-panel"),
+    ),
     readonly: !main.querySelector('[data-testid="published-runtime-svg"]'),
     studio: Boolean(main.querySelector(".studio-workspace .studio-svg")),
     home: Boolean(main.querySelector(".scada-home-card-grid .scada-home-card")),
@@ -683,9 +694,7 @@ function scadaTextContrast(foreground, background) {
     if (numbers.length !== 3) return null;
     return numbers.slice(0, 3).map((component) => {
       const normalized = component / 255;
-      return normalized <= 0.04045
-        ? normalized / 12.92
-        : ((normalized + 0.055) / 1.055) ** 2.4;
+      return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
     });
   };
   const front = toRgb(foreground);
@@ -735,17 +744,23 @@ async function runScadaUIExperience(session) {
         ["studio", "组态编辑", ".studio-shell"],
       ]) {
         await session.evaluate(
-          "(" + enterScadaViewInPage.toString() + ")(" +
-            JSON.stringify(label) + "," + JSON.stringify(selector) + ")",
+          "(" +
+            enterScadaViewInPage.toString() +
+            ")(" +
+            JSON.stringify(label) +
+            "," +
+            JSON.stringify(selector) +
+            ")",
         );
-        const data = await session.evaluate(
-          "(" + inspectScadaUIInPage.toString() + ")()",
-        );
+        const data = await session.evaluate("(" + inspectScadaUIInPage.toString() + ")()");
         const prefix = target.name + " " + viewport.width + "x" + viewport.height + " " + label;
         assert.equal(data.theme, "light", prefix + " 主题未切换至浅色工作区");
         assert.equal(data.screen, view, prefix + " 当前视图与导航状态不一致");
         if (view !== "home") {
-          assert.ok(data.railHeight <= 48 && data.railWidth > viewport.width / 2, prefix + " 操作工作区未采用顶部切换栏");
+          assert.ok(
+            data.railHeight <= 48 && data.railWidth > viewport.width / 2,
+            prefix + " 操作工作区未采用顶部切换栏",
+          );
         } else {
           assert.ok(data.railHeight >= viewport.height - 2, prefix + " 文件工作区导航没有撑满视口");
         }
@@ -792,7 +807,10 @@ async function runScadaUIExperience(session) {
           });
           assert.ok(screenshot.data, prefix + " 无法保存真实浏览器视口截图");
           const filename = `${target.name.toLowerCase()}-${viewport.width}x${viewport.height}-${view}.png`;
-          writeFileSync(join(screenshotDirectory, filename), Buffer.from(screenshot.data, "base64"));
+          writeFileSync(
+            join(screenshotDirectory, filename),
+            Buffer.from(screenshot.data, "base64"),
+          );
         }
         process.stdout.write(prefix + " 新版信息架构、状态与视觉边界通过\n");
       }
@@ -1189,10 +1207,7 @@ async function openTagManagerInPage() {
   const started = Date.now();
   while (Date.now() - started < 5000) {
     const list = document.querySelector('[role="list"][aria-label="项目 Tag 目录"]');
-    if (
-      button.getAttribute("aria-pressed") === "true" &&
-      list?.getClientRects().length
-    ) {
+    if (button.getAttribute("aria-pressed") === "true" && list?.getClientRects().length) {
       return true;
     }
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -1629,7 +1644,8 @@ async function runStudioTagManagement(session) {
       target.name + " 删除 Tag 后工程仍包含该定义",
     );
     process.stdout.write(
-      target.name + " Tag 目录检索、独立表单、就近校验、窄屏与键盘、新增/编辑/删除保护及 JSON 往返通过\n",
+      target.name +
+        " Tag 目录检索、独立表单、就近校验、窄屏与键盘、新增/编辑/删除保护及 JSON 往返通过\n",
     );
   }
 }

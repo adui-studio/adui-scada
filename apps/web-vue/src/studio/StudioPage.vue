@@ -217,7 +217,13 @@ const canvasViewport = computed(() => ({
   height: viewportSize.value.height || page.value.size.height,
 }));
 const visibleRect = computed(() =>
-  studioViewportRect(page.value.size, canvasViewport.value, zoom.value, pan.value, STUDIO_CANVAS_FIT_MARGIN),
+  studioViewportRect(
+    page.value.size,
+    canvasViewport.value,
+    zoom.value,
+    pan.value,
+    STUDIO_CANVAS_FIT_MARGIN,
+  ),
 );
 const worldPerPixel = computed(() => visibleRect.value.width / canvasViewport.value.width);
 const actualZoomPercent = computed(() => Math.max(1, Math.round(100 / worldPerPixel.value)));
@@ -452,8 +458,12 @@ function handleKey(event: KeyboardEvent) {
         handled = true;
       }
     } else if (!command && !event.altKey) {
-      if ((key === "v" || key === "h") && !event.shiftKey &&
-        event.target instanceof Element && event.target.closest(".studio-canvas-scroll")) {
+      if (
+        (key === "v" || key === "h") &&
+        !event.shiftKey &&
+        event.target instanceof Element &&
+        event.target.closest(".studio-canvas-scroll")
+      ) {
         canvasTool.value = key === "v" ? "select" : "hand";
         event.preventDefault();
         return;
@@ -1047,10 +1057,16 @@ function beginCanvasPan(event: PointerEvent): boolean {
 function updateCanvasPan(event: PointerEvent): boolean {
   const dragging = activePan;
   if (!dragging || dragging.pointerId !== event.pointerId) return false;
-  pan.value = studioViewportRect(page.value.size, canvasViewport.value, zoom.value, {
-    x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
-    y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
-  }, STUDIO_CANVAS_FIT_MARGIN).pan;
+  pan.value = studioViewportRect(
+    page.value.size,
+    canvasViewport.value,
+    zoom.value,
+    {
+      x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
+      y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
+    },
+    STUDIO_CANVAS_FIT_MARGIN,
+  ).pan;
   return true;
 }
 
@@ -2397,7 +2413,7 @@ async function importJsonFile(file: File | undefined) {
           </TCollapse>
         </div>
       </aside>
-      <template v-for="side in (['left', 'right'] as const)" :key="side">
+      <template v-for="side in ['left', 'right'] as const" :key="side">
         <div
           v-if="side === 'left' ? leftPanelVisible : rightPanelVisible"
           class="studio-panel-resizer"
@@ -2420,7 +2436,8 @@ async function importJsonFile(file: File | undefined) {
       <section class="studio-stage min-h-0 min-w-0" aria-label="组态画布">
         <div class="studio-stage-caption">
           <span
-            >{{ page.name }} · {{ page.size.width }} × {{ page.size.height }} px · 静态模拟预览</span
+            >{{ page.name }} · {{ page.size.width }} × {{ page.size.height }} px ·
+            静态模拟预览</span
           >
           <div class="studio-view-menu studio-view-settings-menu">
             <TPopup attach=".studio-view-settings-menu" trigger="click" placement="bottom-right">
@@ -2445,11 +2462,23 @@ async function importJsonFile(file: File | undefined) {
                     <p>工作区面板</p>
                     <label class="studio-panel-size">
                       <span>图层宽度 · {{ leftPanelWidth }}px</span>
-                      <input v-model.number="leftPanelWidth" type="range" min="200" max="340" step="1" />
+                      <input
+                        v-model.number="leftPanelWidth"
+                        type="range"
+                        min="200"
+                        max="340"
+                        step="1"
+                      />
                     </label>
                     <label class="studio-panel-size">
                       <span>属性宽度 · {{ rightPanelWidth }}px</span>
-                      <input v-model.number="rightPanelWidth" type="range" min="260" max="420" step="1" />
+                      <input
+                        v-model.number="rightPanelWidth"
+                        type="range"
+                        min="260"
+                        max="420"
+                        step="1"
+                      />
                     </label>
                     <div class="studio-panel-toggles" aria-label="面板显示">
                       <TButton
@@ -2485,7 +2514,8 @@ async function importJsonFile(file: File | undefined) {
               aria-label="定位选中图元"
               :disabled="!selected || !studioNodeVisible(selected)"
               @click="focusSelectedNode"
-            >定位</TButton>
+              >定位</TButton
+            >
           </div>
         </div>
         <div class="studio-canvas-scroll" tabindex="0" aria-label="组态网格工作区">
@@ -2557,7 +2587,9 @@ async function importJsonFile(file: File | undefined) {
                 <rect
                   role="button"
                   tabindex="0"
-                  :aria-label="studioNodeLocked(node) ? `选择已锁定图元 ${node.id}` : `选择并拖动 ${node.id}`"
+                  :aria-label="
+                    studioNodeLocked(node) ? `选择已锁定图元 ${node.id}` : `选择并拖动 ${node.id}`
+                  "
                   :data-locked="studioNodeLocked(node)"
                   :x="node.transform.x"
                   :y="node.transform.y"
@@ -2652,13 +2684,15 @@ async function importJsonFile(file: File | undefined) {
               title="选择工具（V）"
               :aria-pressed="canvasTool === 'select'"
               @click="canvasTool = 'select'"
-            >选择</TButton>
+              >选择</TButton
+            >
             <TButton
               type="button"
               title="抓手工具（H）"
               :aria-pressed="canvasTool === 'hand'"
               @click="canvasTool = 'hand'"
-            >抓手</TButton>
+              >抓手</TButton
+            >
           </div>
           <div class="studio-library-label">图元库 · 点击添加</div>
           <div class="studio-add">
@@ -2669,271 +2703,280 @@ async function importJsonFile(file: File | undefined) {
           </div>
         </div>
       </section>
-      <aside class="studio-panel studio-panel-properties min-h-0 min-w-0" aria-label="属性与 Tag 工作区">
+      <aside
+        class="studio-panel studio-panel-properties min-h-0 min-w-0"
+        aria-label="属性与 Tag 工作区"
+      >
         <div class="studio-inspector-tabs" role="group" aria-label="右侧工作区">
           <TButton
             type="button"
             :aria-pressed="inspectorTab === 'properties'"
             @click="inspectorTab = 'properties'"
-          >属性</TButton>
+            >属性</TButton
+          >
           <TButton
             type="button"
             :aria-pressed="inspectorTab === 'tags'"
             @click="inspectorTab = 'tags'"
-          >项目 Tag（{{ state.document.tags.length }}）</TButton>
+            >项目 Tag（{{ state.document.tags.length }}）</TButton
+          >
         </div>
         <div class="studio-inspector-content" :hidden="inspectorTab !== 'properties'">
           <h2>属性 · 已选 {{ state.selectedIds.length }}</h2>
-        <template v-if="selected">
-          <p>
-            <strong>{{ selected.id }}</strong> · {{ selected.type }}
-          </p>
-          <form
-            v-if="state.selectedIds.length === 1"
-            :key="`${selected.id}:${JSON.stringify(selected.transform)}`"
-            class="studio-geometry"
-            novalidate
-            @submit.prevent="changeGeometry"
-          >
-            <label v-for="[key, label] in GEOMETRY_PROPERTY_FIELDS" :key="key">
-              {{ label }}
+          <template v-if="selected">
+            <p>
+              <strong>{{ selected.id }}</strong> · {{ selected.type }}
+            </p>
+            <form
+              v-if="state.selectedIds.length === 1"
+              :key="`${selected.id}:${JSON.stringify(selected.transform)}`"
+              class="studio-geometry"
+              novalidate
+              @submit.prevent="changeGeometry"
+            >
+              <label v-for="[key, label] in GEOMETRY_PROPERTY_FIELDS" :key="key">
+                {{ label }}
+                <TInput
+                  type="number"
+                  :name="key"
+                  :value="String(selected.transform[key])"
+                  :disabled="studioNodeLocked(selected)"
+                />
+              </label>
+              <TButton type="submit" :disabled="studioNodeLocked(selected)">应用几何属性</TButton>
+            </form>
+            <p v-else class="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
+            <p class="studio-tip">拖动画布中的虚线框，或使用方向按钮微调。每次操作可撤销。</p>
+            <div class="studio-nudge">
+              <TButton type="button" @click="nudge(-1, 0)">←</TButton>
+              <TButton type="button" @click="nudge(0, -1)">↑</TButton>
+              <TButton type="button" @click="nudge(0, 1)">↓</TButton>
+              <TButton type="button" @click="nudge(1, 0)">→</TButton>
+            </div>
+            <label
+              v-if="selected.type === 'label' && state.selectedIds.length === 1"
+              class="studio-field"
+            >
+              显示文案
               <TInput
-                type="number"
-                :name="key"
-                :value="String(selected.transform[key])"
+                v-model="labelDraft"
+                :maxlength="256"
                 :disabled="studioNodeLocked(selected)"
               />
+              <TButton type="button" :disabled="studioNodeLocked(selected)" @click="changeLabel">
+                应用文案
+              </TButton>
             </label>
-            <TButton type="submit" :disabled="studioNodeLocked(selected)">应用几何属性</TButton>
-          </form>
-          <p v-else class="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
-          <p class="studio-tip">拖动画布中的虚线框，或使用方向按钮微调。每次操作可撤销。</p>
-          <div class="studio-nudge">
-            <TButton type="button" @click="nudge(-1, 0)">←</TButton>
-            <TButton type="button" @click="nudge(0, -1)">↑</TButton>
-            <TButton type="button" @click="nudge(0, 1)">↓</TButton>
-            <TButton type="button" @click="nudge(1, 0)">→</TButton>
-          </div>
-          <label
-            v-if="selected.type === 'label' && state.selectedIds.length === 1"
-            class="studio-field"
-          >
-            显示文案
-            <TInput v-model="labelDraft" :maxlength="256" :disabled="studioNodeLocked(selected)" />
-            <TButton type="button" :disabled="studioNodeLocked(selected)" @click="changeLabel">
-              应用文案
-            </TButton>
-          </label>
-          <h3>Tag 绑定（项目数据）</h3>
-          <label v-if="bindingSlot" class="studio-field">
-            {{ bindingSlot }} · 选择项目 Tag
-            <TSelect
-              :value="selectedTagId"
-              :aria-label="selected.id + ' 的 ' + bindingSlot + ' Tag 绑定'"
-              :options="tagBindingOptions"
-              @change="changeTagBinding"
-            />
-          </label>
-          <p v-if="selectedTagDefinition" class="studio-tip">
-            {{ selectedTagDefinition.description }}；质量由实时 Tag 数据动态提供
-          </p>
-          <p v-else-if="!bindingSlot" class="studio-tip">
-            请单选未组合的水箱、水泵或文本图元；管道暂不支持动态 Tag 绑定。
-          </p>
-          <p v-for="(binding, slot) in selected.bindings" :key="slot" class="studio-binding">
-            {{ slot }} → {{ binding.tagId }}
-          </p>
-        </template>
-        <p v-else class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
-        <div class="studio-advanced">
-          <TCollapse :default-value="[]" borderless>
-            <TCollapsePanel value="advanced-tools" header="高级图元与图层操作">
-              <div class="studio-advanced-content">
-                <div class="studio-toolbox">
-                  <div class="studio-tool-group" aria-label="图层锁定与可见性">
-                    <TButton
-                      type="button"
-                      :disabled="state.selectedIds.length === 0"
-                      @click="changeSelectedLocked(true)"
-                    >
-                      锁定所选
-                    </TButton>
-                    <TButton
-                      type="button"
-                      :disabled="state.selectedIds.length === 0"
-                      @click="changeSelectedLocked(false)"
-                    >
-                      解锁所选
-                    </TButton>
-                    <TButton
-                      type="button"
-                      :disabled="state.selectedIds.length === 0 || hasLockedSelection"
-                      @click="changeSelectedVisible(false)"
-                    >
-                      隐藏所选
-                    </TButton>
-                    <TButton
-                      type="button"
-                      :disabled="state.selectedIds.length === 0 || hasLockedSelection"
-                      @click="changeSelectedVisible(true)"
-                    >
-                      显示所选
-                    </TButton>
-                  </div>
-                  <div class="studio-tool-group" aria-label="图元组合">
-                    <TButton
-                      type="button"
-                      :disabled="!canGroup"
-                      @click="apply(() => editor.groupSelected(), '已组合所选图元，可撤销')"
-                    >
-                      组合所选
-                    </TButton>
-                    <TButton
-                      type="button"
-                      :disabled="!hasGroupedSelection"
-                      @click="apply(() => editor.ungroupSelected(), '已解组，可撤销')"
-                    >
-                      解组
-                    </TButton>
-                  </div>
-                  <div class="studio-tool-group" aria-label="图元剪贴板">
-                    <TButton
-                      type="button"
-                      :disabled="state.selectedIds.length === 0"
-                      @click="apply(() => editor.copySelected(), '已复制所选图元到会话剪贴板')"
-                    >
-                      复制所选
-                    </TButton>
-                    <TButton
-                      type="button"
-                      :disabled="state.selectedIds.length === 0"
-                      @click="apply(() => editor.cutSelected(), '已剪切图元，可撤销')"
-                    >
-                      剪切所选
-                    </TButton>
-                    <TButton
-                      type="button"
-                      :disabled="!state.hasClipboard"
-                      @click="apply(() => editor.pasteClipboard(), '已粘贴图元，可撤销')"
-                    >
-                      粘贴图元
-                    </TButton>
-                    <TButton
-                      type="button"
-                      :disabled="state.selectedIds.length === 0"
-                      @click="apply(() => editor.deleteSelected(), '已删除图元，可撤销')"
-                    >
-                      删除所选
-                    </TButton>
-                  </div>
-                  <div class="studio-exact-layer" aria-label="图层精确插入">
-                    <label class="studio-field">
-                      目标图元
-                      <TSelect
-                        :value="layerTargetId"
-                        :disabled="!canPreciselyMove || layerTargetNodes.length === 0"
-                        :options="[
-                          { label: '请选择目标图元', value: '' },
-                          ...layerTargetNodes.map((node) => ({
-                            label: node.id + (node.groupId ? '（组合）' : ''),
-                            value: node.id,
-                          })),
-                        ]"
-                        @change="selectLayerTarget"
-                      />
-                    </label>
-                    <label class="studio-field">
-                      插入位置
-                      <TSelect
-                        :value="layerInsertPosition"
-                        :options="[
-                          { label: '目标上方（更靠前）', value: 'after' },
-                          { label: '目标下方（更靠后）', value: 'before' },
-                        ]"
-                        @change="selectLayerPosition"
-                      />
-                    </label>
-                    <TButton
-                      type="button"
-                      :disabled="!canPreciselyMove || !layerTargetId"
-                      @click="moveSelectedLayerPrecisely"
-                    >
-                      移动到指定层
-                    </TButton>
-                  </div>
-                  <div class="studio-tool-group" aria-label="图层排序">
-                    <TButton type="button" :disabled="!selected" @click="layer('back')"
-                      >置底</TButton
-                    >
-                    <TButton type="button" :disabled="!selected" @click="layer('backward')"
-                      >下移层</TButton
-                    >
-                    <TButton type="button" :disabled="!selected" @click="layer('forward')"
-                      >上移层</TButton
-                    >
-                    <TButton type="button" :disabled="!selected" @click="layer('front')"
-                      >置顶</TButton
-                    >
-                  </div>
-                  <h3>多选对齐（以最后选中的图元为准）</h3>
-                  <div class="studio-tool-group" aria-label="图元对齐">
-                    <TButton
-                      type="button"
-                      :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-                      @click="align('left')"
-                    >
-                      左
-                    </TButton>
-                    <TButton
-                      type="button"
-                      :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-                      @click="align('hcenter')"
-                    >
-                      水平居中
-                    </TButton>
-                    <TButton
-                      type="button"
-                      :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-                      @click="align('right')"
-                    >
-                      右
-                    </TButton>
-                    <TButton
-                      type="button"
-                      :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-                      @click="align('top')"
-                    >
-                      上
-                    </TButton>
-                    <TButton
-                      type="button"
-                      :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-                      @click="align('vcenter')"
-                    >
-                      垂直居中
-                    </TButton>
-                    <TButton
-                      type="button"
-                      :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
-                      @click="align('bottom')"
-                    >
-                      下
-                    </TButton>
+            <h3>Tag 绑定（项目数据）</h3>
+            <label v-if="bindingSlot" class="studio-field">
+              {{ bindingSlot }} · 选择项目 Tag
+              <TSelect
+                :value="selectedTagId"
+                :aria-label="selected.id + ' 的 ' + bindingSlot + ' Tag 绑定'"
+                :options="tagBindingOptions"
+                @change="changeTagBinding"
+              />
+            </label>
+            <p v-if="selectedTagDefinition" class="studio-tip">
+              {{ selectedTagDefinition.description }}；质量由实时 Tag 数据动态提供
+            </p>
+            <p v-else-if="!bindingSlot" class="studio-tip">
+              请单选未组合的水箱、水泵或文本图元；管道暂不支持动态 Tag 绑定。
+            </p>
+            <p v-for="(binding, slot) in selected.bindings" :key="slot" class="studio-binding">
+              {{ slot }} → {{ binding.tagId }}
+            </p>
+          </template>
+          <p v-else class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
+          <div class="studio-advanced">
+            <TCollapse :default-value="[]" borderless>
+              <TCollapsePanel value="advanced-tools" header="高级图元与图层操作">
+                <div class="studio-advanced-content">
+                  <div class="studio-toolbox">
+                    <div class="studio-tool-group" aria-label="图层锁定与可见性">
+                      <TButton
+                        type="button"
+                        :disabled="state.selectedIds.length === 0"
+                        @click="changeSelectedLocked(true)"
+                      >
+                        锁定所选
+                      </TButton>
+                      <TButton
+                        type="button"
+                        :disabled="state.selectedIds.length === 0"
+                        @click="changeSelectedLocked(false)"
+                      >
+                        解锁所选
+                      </TButton>
+                      <TButton
+                        type="button"
+                        :disabled="state.selectedIds.length === 0 || hasLockedSelection"
+                        @click="changeSelectedVisible(false)"
+                      >
+                        隐藏所选
+                      </TButton>
+                      <TButton
+                        type="button"
+                        :disabled="state.selectedIds.length === 0 || hasLockedSelection"
+                        @click="changeSelectedVisible(true)"
+                      >
+                        显示所选
+                      </TButton>
+                    </div>
+                    <div class="studio-tool-group" aria-label="图元组合">
+                      <TButton
+                        type="button"
+                        :disabled="!canGroup"
+                        @click="apply(() => editor.groupSelected(), '已组合所选图元，可撤销')"
+                      >
+                        组合所选
+                      </TButton>
+                      <TButton
+                        type="button"
+                        :disabled="!hasGroupedSelection"
+                        @click="apply(() => editor.ungroupSelected(), '已解组，可撤销')"
+                      >
+                        解组
+                      </TButton>
+                    </div>
+                    <div class="studio-tool-group" aria-label="图元剪贴板">
+                      <TButton
+                        type="button"
+                        :disabled="state.selectedIds.length === 0"
+                        @click="apply(() => editor.copySelected(), '已复制所选图元到会话剪贴板')"
+                      >
+                        复制所选
+                      </TButton>
+                      <TButton
+                        type="button"
+                        :disabled="state.selectedIds.length === 0"
+                        @click="apply(() => editor.cutSelected(), '已剪切图元，可撤销')"
+                      >
+                        剪切所选
+                      </TButton>
+                      <TButton
+                        type="button"
+                        :disabled="!state.hasClipboard"
+                        @click="apply(() => editor.pasteClipboard(), '已粘贴图元，可撤销')"
+                      >
+                        粘贴图元
+                      </TButton>
+                      <TButton
+                        type="button"
+                        :disabled="state.selectedIds.length === 0"
+                        @click="apply(() => editor.deleteSelected(), '已删除图元，可撤销')"
+                      >
+                        删除所选
+                      </TButton>
+                    </div>
+                    <div class="studio-exact-layer" aria-label="图层精确插入">
+                      <label class="studio-field">
+                        目标图元
+                        <TSelect
+                          :value="layerTargetId"
+                          :disabled="!canPreciselyMove || layerTargetNodes.length === 0"
+                          :options="[
+                            { label: '请选择目标图元', value: '' },
+                            ...layerTargetNodes.map((node) => ({
+                              label: node.id + (node.groupId ? '（组合）' : ''),
+                              value: node.id,
+                            })),
+                          ]"
+                          @change="selectLayerTarget"
+                        />
+                      </label>
+                      <label class="studio-field">
+                        插入位置
+                        <TSelect
+                          :value="layerInsertPosition"
+                          :options="[
+                            { label: '目标上方（更靠前）', value: 'after' },
+                            { label: '目标下方（更靠后）', value: 'before' },
+                          ]"
+                          @change="selectLayerPosition"
+                        />
+                      </label>
+                      <TButton
+                        type="button"
+                        :disabled="!canPreciselyMove || !layerTargetId"
+                        @click="moveSelectedLayerPrecisely"
+                      >
+                        移动到指定层
+                      </TButton>
+                    </div>
+                    <div class="studio-tool-group" aria-label="图层排序">
+                      <TButton type="button" :disabled="!selected" @click="layer('back')"
+                        >置底</TButton
+                      >
+                      <TButton type="button" :disabled="!selected" @click="layer('backward')"
+                        >下移层</TButton
+                      >
+                      <TButton type="button" :disabled="!selected" @click="layer('forward')"
+                        >上移层</TButton
+                      >
+                      <TButton type="button" :disabled="!selected" @click="layer('front')"
+                        >置顶</TButton
+                      >
+                    </div>
+                    <h3>多选对齐（以最后选中的图元为准）</h3>
+                    <div class="studio-tool-group" aria-label="图元对齐">
+                      <TButton
+                        type="button"
+                        :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                        @click="align('left')"
+                      >
+                        左
+                      </TButton>
+                      <TButton
+                        type="button"
+                        :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                        @click="align('hcenter')"
+                      >
+                        水平居中
+                      </TButton>
+                      <TButton
+                        type="button"
+                        :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                        @click="align('right')"
+                      >
+                        右
+                      </TButton>
+                      <TButton
+                        type="button"
+                        :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                        @click="align('top')"
+                      >
+                        上
+                      </TButton>
+                      <TButton
+                        type="button"
+                        :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                        @click="align('vcenter')"
+                      >
+                        垂直居中
+                      </TButton>
+                      <TButton
+                        type="button"
+                        :disabled="state.selectedIds.length < 2 || hasGroupedSelection"
+                        @click="align('bottom')"
+                      >
+                        下
+                      </TButton>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </TCollapsePanel>
-          </TCollapse>
-        </div>
+              </TCollapsePanel>
+            </TCollapse>
+          </div>
         </div>
         <div class="studio-inspector-content" :hidden="inspectorTab !== 'tags'">
           <h2>项目 Tag 定义</h2>
           <TagManager
-                  :tags="state.document.tags"
-                  :on-create="createProjectTag"
-                  :on-update="updateProjectTag"
-                  :on-remove="removeProjectTag"
-                />
+            :tags="state.document.tags"
+            :on-create="createProjectTag"
+            :on-update="updateProjectTag"
+            :on-remove="removeProjectTag"
+          />
         </div>
       </aside>
     </div>

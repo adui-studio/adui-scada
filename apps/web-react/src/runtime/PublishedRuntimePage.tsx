@@ -123,7 +123,10 @@ export default function PublishedRuntimePage() {
       </p>
       <div className="scada-published-layout">
         <div className="scada-published-sidebar">
-          <section className="scada-panel scada-published-controls-panel" aria-label="正式发布工程选择">
+          <section
+            className="scada-panel scada-published-controls-panel"
+            aria-label="正式发布工程选择"
+          >
             <h2>读取已发布工程</h2>
             <p className="scada-diagnostics-note">
               独立 release:read 权限 · 仅使用当前登录会话 · 不读取编辑草稿或模拟数据
@@ -143,7 +146,12 @@ export default function PublishedRuntimePage() {
                 />
               </label>
               <Button type="submit">读取正式发布</Button>
-              <Button type="button" variant="outline" disabled={!activeProjectId} onClick={onRefresh}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!activeProjectId}
+                onClick={onRefresh}
+              >
                 立即刷新
               </Button>
               <Button type="button" variant="text" disabled={!activeProjectId} onClick={onStop}>

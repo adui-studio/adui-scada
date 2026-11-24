@@ -105,7 +105,9 @@ onUnmounted(() => runtime.stop());
         </section>
         <section class="scada-panel scada-values-panel" aria-label="Tag 质量与最近值">
           <h2>Tag 质量与最近值</h2>
-          <p v-if="state.values.length === 0" class="scada-diagnostics-empty">暂无可显示的 Tag 数据</p>
+          <p v-if="state.values.length === 0" class="scada-diagnostics-empty">
+            暂无可显示的 Tag 数据
+          </p>
           <div class="scada-tags">
             <div v-for="tag in state.values" :key="tag.tagId" class="scada-tag">
               <strong>{{ tag.tagId }}</strong>

@@ -96,9 +96,7 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
       unit: draft.unit.trim() || null,
       description: draft.description,
     };
-    const successful = editingId
-      ? onUpdate(editingId, changes)
-      : onCreate({ tagId, ...changes });
+    const successful = editingId ? onUpdate(editingId, changes) : onCreate({ tagId, ...changes });
     if (successful) closeEditor();
     else setFormError("保存未完成，请检查工作台状态提示和字段内容。");
   }
@@ -131,23 +129,25 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
         onChange={setQuery}
       />
       <div className="studio-tag-summary" role="status">
-        {search ? "找到 " + visibleTags.length + " / " + tags.length + " 项" : "共 " + tags.length + " 项定义"}
+        {search
+          ? "找到 " + visibleTags.length + " / " + tags.length + " 项"
+          : "共 " + tags.length + " 项定义"}
         <span>工程内元数据</span>
       </div>
       <div className="studio-tag-list" role="list" aria-label="项目 Tag 目录">
         {visibleTags.length === 0 ? (
           <div className="studio-tag-empty">
             <strong>{tags.length === 0 ? "还没有 Tag 定义" : "没有匹配的 Tag"}</strong>
-            <p>{tags.length === 0 ? "点击「新建 Tag」添加工程数据定义。" : "尝试修改搜索关键词。"}</p>
+            <p>
+              {tags.length === 0 ? "点击「新建 Tag」添加工程数据定义。" : "尝试修改搜索关键词。"}
+            </p>
           </div>
         ) : (
           visibleTags.map((tag) => (
             <div role="listitem" className="studio-tag-item" key={tag.tagId}>
               <div className="studio-tag-item-heading">
                 <strong title={tag.displayName}>{tag.displayName}</strong>
-                <span className="studio-tag-type">
-                  {TAG_DATA_TYPE_LABELS[tag.dataType]}
-                </span>
+                <span className="studio-tag-type">{TAG_DATA_TYPE_LABELS[tag.dataType]}</span>
               </div>
               <span className="break-all studio-tag-id" title={tag.tagId}>
                 {tag.tagId}
@@ -199,14 +199,8 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
         closeOnOverlayClick={false}
         onClose={closeEditor}
       >
-        <p className="studio-tag-form-intro">
-          配置工程内的数据定义，不涉及现场设备连接或写入。
-        </p>
-        <form
-          className="studio-tag-form"
-          onSubmit={submit}
-          aria-label="项目 Tag 编辑表单"
-        >
+        <p className="studio-tag-form-intro">配置工程内的数据定义，不涉及现场设备连接或写入。</p>
+        <form className="studio-tag-form" onSubmit={submit} aria-label="项目 Tag 编辑表单">
           <div className="studio-tag-form-grid">
             <label className="studio-field">
               显示名称 <span className="studio-tag-required">*</span>
@@ -220,7 +214,9 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
                 }}
               />
               {formError === "请填写 Tag 显示名称。" && (
-                <small className="studio-tag-field-error" role="alert">{formError}</small>
+                <small className="studio-tag-field-error" role="alert">
+                  {formError}
+                </small>
               )}
             </label>
             <label className="studio-field">
@@ -240,7 +236,9 @@ export function TagManager({ tags, onCreate, onUpdate, onRemove }: TagManagerPro
               </small>
               {(formError === "请填写稳定 Tag ID。" ||
                 formError === "Tag ID 已存在，请使用其他标识。") && (
-                <small className="studio-tag-field-error" role="alert">{formError}</small>
+                <small className="studio-tag-field-error" role="alert">
+                  {formError}
+                </small>
               )}
             </label>
             <label className="studio-field">

@@ -152,7 +152,9 @@ async function remove(definition: TagDefinition) {
     <div class="studio-tag-list" role="list" aria-label="项目 Tag 目录">
       <div v-if="visibleTags.length === 0" class="studio-tag-empty">
         <strong>{{ tags.length === 0 ? "还没有 Tag 定义" : "没有匹配的 Tag" }}</strong>
-        <p>{{ tags.length === 0 ? "点击「新建 Tag」添加工程数据定义。" : "尝试修改搜索关键词。" }}</p>
+        <p>
+          {{ tags.length === 0 ? "点击「新建 Tag」添加工程数据定义。" : "尝试修改搜索关键词。" }}
+        </p>
       </div>
       <div v-for="tag in visibleTags" :key="tag.tagId" role="listitem" class="studio-tag-item">
         <div class="studio-tag-item-heading">
@@ -199,11 +201,7 @@ async function remove(definition: TagDefinition) {
       @close="closeEditor"
     >
       <p class="studio-tag-form-intro">配置工程内的数据定义，不涉及现场设备连接或写入。</p>
-      <form
-        class="studio-tag-form"
-        aria-label="项目 Tag 编辑表单"
-        @submit.prevent="submit"
-      >
+      <form class="studio-tag-form" aria-label="项目 Tag 编辑表单" @submit.prevent="submit">
         <div class="studio-tag-form-grid">
           <label class="studio-field">
             显示名称 <span class="studio-tag-required">*</span>
@@ -217,7 +215,8 @@ async function remove(definition: TagDefinition) {
               v-if="formError === '请填写 Tag 显示名称。'"
               class="studio-tag-field-error"
               role="alert"
-            >{{ formError }}</small>
+              >{{ formError }}</small
+            >
           </label>
           <label class="studio-field">
             稳定 Tag ID <span class="studio-tag-required">*</span>
@@ -232,10 +231,14 @@ async function remove(definition: TagDefinition) {
               {{ editingId ? "创建后不可修改" : "创建后不可更改，将用于工程绑定" }}
             </small>
             <small
-              v-if="formError === '请填写稳定 Tag ID。' || formError === 'Tag ID 已存在，请使用其他标识。'"
+              v-if="
+                formError === '请填写稳定 Tag ID。' ||
+                formError === 'Tag ID 已存在，请使用其他标识。'
+              "
               class="studio-tag-field-error"
               role="alert"
-            >{{ formError }}</small>
+              >{{ formError }}</small
+            >
           </label>
           <label class="studio-field">
             数据类型 <span class="studio-tag-required">*</span>
@@ -273,13 +276,17 @@ async function remove(definition: TagDefinition) {
           </label>
         </div>
         <p
-          v-if="formError &&
+          v-if="
+            formError &&
             formError !== '请填写 Tag 显示名称。' &&
             formError !== '请填写稳定 Tag ID。' &&
-            formError !== 'Tag ID 已存在，请使用其他标识。'"
+            formError !== 'Tag ID 已存在，请使用其他标识。'
+          "
           class="studio-tag-form-error"
           role="alert"
-        >{{ formError }}</p>
+        >
+          {{ formError }}
+        </p>
         <div class="studio-tag-form-footer">
           <span class="studio-tag-form-footnote">变更支持工作台撤销 / 重做</span>
           <div class="studio-tag-form-actions">

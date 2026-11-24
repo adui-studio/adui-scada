@@ -99,11 +99,9 @@ export function studioFocusTransform(
   const fit = studioViewportRect(page, viewport, 1, { x: 0, y: 0 }, fitMargin);
   const radians = (transform.rotation * Math.PI) / 180;
   const width =
-    Math.abs(Math.cos(radians)) * transform.width +
-    Math.abs(Math.sin(radians)) * transform.height;
+    Math.abs(Math.cos(radians)) * transform.width + Math.abs(Math.sin(radians)) * transform.height;
   const height =
-    Math.abs(Math.sin(radians)) * transform.width +
-    Math.abs(Math.cos(radians)) * transform.height;
+    Math.abs(Math.sin(radians)) * transform.width + Math.abs(Math.cos(radians)) * transform.height;
   const availableWidth = Math.max(1, viewport.width - fitMargin * 2);
   const availableHeight = Math.max(1, viewport.height - fitMargin * 2);
   const fitScale = viewport.width / fit.width;

@@ -1464,4 +1464,3 @@ D5b9 至 D5c0d 的共享 Core 候选筛选已经具备 GOOD/有限数值、明�
 - `renderSvgPage(document,pageId,values,appearance="dark")` 和 `svgDataUrl(document,values,pageId?,appearance="dark")` 只新增可选浅色渲染样式。默认值与原默认深色渲染逐字兼容；选择 light 时只改变背景、标签与图元填充对比度，不改变 Tag 质量、绑定、禁用规则或设备数据。
 - React/Vue Studio 仅向新本地编辑预览传 `light`，保留原只读模拟 Runtime、已发布快照渲染、外部工程页面以及跨框架 Schema 的兼容性。
 - Figma 首页与编辑器结构只影响 UI 展现，新增工作台视图与三个实际模块切换不新增持久化状态或服务端权限。UI16场景与现有 Studio/SSE 浏览器安全门禁需在最终统一验收时运行。
-
