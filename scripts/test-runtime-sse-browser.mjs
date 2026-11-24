@@ -531,10 +531,7 @@ async function checkService(target, path, command, expectedContentType) {
       `${target.name} 接口返回 HTTP ${response.status}：${url.href}。请检查 ${command} 的启动日志。`,
     );
   }
-  if (
-    expectedContentType &&
-    !response.contentType.toLowerCase().includes(expectedContentType)
-  ) {
+  if (expectedContentType && !response.contentType.toLowerCase().includes(expectedContentType)) {
     throw new Error(
       `${target.name} 接口内容类型异常：${url.href}，预期 ${expectedContentType}，实际 ${response.contentType || "未提供"}。请检查模拟服务和 Vite 代理。`,
     );
