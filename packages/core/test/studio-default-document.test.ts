@@ -10,6 +10,7 @@ import { DocumentEditor } from "../src/editor.ts";
 test("全新 Studio 演示画板默认 1920×1080，且展示图元按相同比例缩放", () => {
   expect(STUDIO_DEFAULT_PAGE_SIZE).toEqual({ width: 1920, height: 1080 });
   expect(waterTreatmentStudioDocument.pages[0]?.size).toEqual(STUDIO_DEFAULT_PAGE_SIZE);
+  expect(STUDIO_DEFAULT_PAGE_SIZE.width / STUDIO_DEFAULT_PAGE_SIZE.height).toBeCloseTo(16 / 9);
   const source = waterTreatmentDemoDocument.pages[0];
   const studio = waterTreatmentStudioDocument.pages[0];
   expect(source).toBeDefined();
@@ -28,6 +29,16 @@ test("全新 Studio 演示画板默认 1920×1080，且展示图元按相同比�
   expect(studioPipe?.transform.width).toBe(sourcePipe!.transform.width * 2);
   expect(studioPipe?.transform.height).toBe(sourcePipe!.transform.height * 2);
   expect(studioTank?.bindings).toEqual(sourceTank?.bindings);
+  for (const node of studio!.nodes) {
+    expect(node.transform.x).toBeGreaterThanOrEqual(0);
+    expect(node.transform.y).toBeGreaterThanOrEqual(0);
+    expect(node.transform.x + node.transform.width).toBeLessThanOrEqual(
+      STUDIO_DEFAULT_PAGE_SIZE.width,
+    );
+    expect(node.transform.y + node.transform.height).toBeLessThanOrEqual(
+      STUDIO_DEFAULT_PAGE_SIZE.height,
+    );
+  }
   expect(parseScadaDocument(waterTreatmentStudioDocument)).toEqual(waterTreatmentStudioDocument);
 });
 
