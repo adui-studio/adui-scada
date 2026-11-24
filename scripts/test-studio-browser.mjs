@@ -682,6 +682,9 @@ function inspectScadaUIInPage() {
     readonly: !main.querySelector('[data-testid="published-runtime-svg"]'),
     studio: Boolean(main.querySelector(".studio-workspace .studio-svg")),
     home: Boolean(main.querySelector(".scada-home-card-grid .scada-home-card")),
+    artboardFill: style(main.querySelector(".studio-artboard-surface"), "fill"),
+    saveColor: style(main.querySelector(".studio-save-actions button"), "color"),
+    saveBackground: style(main.querySelector(".studio-save-actions button"), "background-color"),
     artboardWidth: Number(main.querySelector(".studio-page-boundary")?.getAttribute("width")),
     artboardHeight: Number(main.querySelector(".studio-page-boundary")?.getAttribute("height")),
   };
@@ -819,6 +822,33 @@ async function verifyWorkspaceProjectInPage() {
   };
 }
 
+/** 使用真实主题按钮切换，等待框架渲染标识及根属性。 */
+async function selectWorkspaceThemeInPage(mode) {
+  const root = document.documentElement;
+  const toggle = document.querySelector(".scada-theme-toggle");
+  if (!(toggle instanceof HTMLButtonElement)) throw new Error("主题切换入口缺失");
+  if (root.getAttribute("theme-mode") !== mode) toggle.click();
+  const logoSuffix = mode === "dark" ? "/brand/mark-dark.svg" : "/brand/mark-primary.svg";
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const logo = document.querySelector(".scada-app-brand img");
+    if (
+      root.getAttribute("theme-mode") === mode &&
+      toggle.getAttribute("aria-pressed") === String(mode === "dark") &&
+      logo instanceof HTMLImageElement &&
+      logo.src.endsWith(logoSuffix) &&
+      logo.complete &&
+      logo.naturalWidth > 0
+    ) {
+      return {
+        saved: localStorage.getItem("adui-scada:theme-mode"),
+        scheme: getComputedStyle(root).colorScheme,
+      };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 40));
+  }
+  throw new Error("主题切换或品牌标识加载超时：" + mode);
+}
+
 /** WCAG 2.2 AA 常规文字对比度：仅计算已知的不透明 RGB，异常颜色拒绝通过。 */
 function scadaTextContrast(foreground, background) {
   const toRgb = (value) => {
@@ -838,7 +868,7 @@ function scadaTextContrast(foreground, background) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-/** 统一验收：双框架 × 双分辨率 × 工作台/监控/发布/Studio，共 16 个场景。 */
+/** 统一验收：双框架 × 双分辨率 × 双主题 × 四个工作区，共 32 个场景。 */
 async function runScadaUIExperience(session) {
   const captureScreenshots = process.env.SCADA_UI_SCREENSHOTS === "1";
   const screenshotDirectory = fileURLToPath(new URL("../.artifacts/ui-review/", import.meta.url));
@@ -869,94 +899,104 @@ async function runScadaUIExperience(session) {
         if (ready) break;
       }
       assert.ok(ready, target.name + " UI 工作空间导航未加载");
-      for (const [view, label, selector] of [
-        ["home", "工作台", ".scada-home"],
-        ["runtime", "运行监控", ".scada-shell--overview"],
-        ["published", "已发布运行", ".scada-shell--published"],
-        ["studio", "组态编辑", ".studio-shell"],
-      ]) {
-        await session.evaluate(
-          "(" +
-            enterScadaViewInPage.toString() +
-            ")(" +
-            JSON.stringify(label) +
-            "," +
-            JSON.stringify(selector) +
-            ")",
+      for (const mode of ["light", "dark"]) {
+        const theme = await session.evaluate(
+          "(" + selectWorkspaceThemeInPage.toString() + ")(" + JSON.stringify(mode) + ")",
         );
-        const data = await session.evaluate("(" + inspectScadaUIInPage.toString() + ")()");
-        const prefix = target.name + " " + viewport.width + "x" + viewport.height + " " + label;
-        assert.equal(data.theme, "light", prefix + " 主题未切换至浅色工作区");
-        assert.equal(data.screen, view, prefix + " 当前视图与导航状态不一致");
-        if (view !== "home") {
-          assert.ok(
-            data.railHeight <= 48 && data.railWidth > viewport.width / 2,
-            prefix + " 操作工作区未采用顶部切换栏",
+        assert.equal(theme.saved ?? "light", mode, target.name + " 主题偏好未保存");
+        assert.equal(theme.scheme, mode, target.name + " 浏览器主题未同步");
+        for (const [view, label, selector] of [
+          ["home", "工作台", ".scada-home"],
+          ["runtime", "运行监控", ".scada-shell--overview"],
+          ["published", "已发布运行", ".scada-shell--published"],
+          ["studio", "组态编辑", ".studio-shell"],
+        ]) {
+          await session.evaluate(
+            "(" +
+              enterScadaViewInPage.toString() +
+              ")(" +
+              JSON.stringify(label) +
+              "," +
+              JSON.stringify(selector) +
+              ")",
           );
-        } else {
-          assert.ok(data.railHeight >= viewport.height - 2, prefix + " 文件工作区导航没有撑满视口");
-        }
-        assert.deepStrictEqual(
-          data.buttons,
-          ["工作台", "运行监控", "已发布运行", "组态编辑"],
-          prefix + " 缺少完整工作空间导航",
-        );
-        assert.equal(data.current, label, prefix + " 未标识当前导航");
-        assert.equal(data.safety, true, prefix + " 缺少非现场控制提示");
-        assert.equal(data.noHorizontalOverflow, true, prefix + " 发生整页横向溢出");
-        assert.ok(data.title.length > 0, prefix + " 缺少工作区标题");
-        assert.ok(
-          scadaTextContrast(data.navColor, data.navBackground) >= 4.5,
-          prefix + " 当前导航文字对比度不足",
-        );
-        if (view === "home") {
-          assert.ok(data.home, prefix + " 工作台功能入口缺失");
-          const home = await session.evaluate("(" + inspectWorkspaceHomeInPage.toString() + ")()");
+          const data = await session.evaluate("(" + inspectScadaUIInPage.toString() + ")()");
+          const prefix = target.name + " " + viewport.width + "x" + viewport.height + " " + label + " " + mode;
+          assert.equal(data.theme, mode, prefix + " 根主题不一致");
+          assert.equal(data.screen, view, prefix + " 当前视图与导航状态不一致");
+          if (view !== "home") {
+            assert.ok(
+              data.railHeight <= 48 && data.railWidth > viewport.width / 2,
+              prefix + " 操作工作区未采用顶部切换栏",
+            );
+          } else {
+            assert.ok(data.railHeight >= viewport.height - 2, prefix + " 文件工作区导航没有撑满视口");
+          }
           assert.deepStrictEqual(
-            home.initial,
-            ["水处理演示工程", "水处理模拟监控", "已发布工程预览"],
-            prefix + " 工作台真实目录不一致",
+            data.buttons,
+            ["工作台", "运行监控", "已发布运行", "组态编辑"],
+            prefix + " 缺少完整工作空间导航",
           );
-          assert.equal(home.quickCount, 5, prefix + " 快速入口数量不一致");
-          assert.equal(home.staticPreview, true, prefix + " 内置工程 SVG 缩略图未显示");
-          assert.deepStrictEqual(home.filtered, ["已发布工程预览"], prefix + " 搜索结果不一致");
-          assert.equal(home.empty, true, prefix + " 搜索空态缺失");
-          assert.deepStrictEqual(home.restored, home.initial, prefix + " 清空搜索未恢复目录");
-        } else if (view === "runtime") {
-          assert.ok(data.process && data.telemetry && data.quality, prefix + " 工艺和链路信息缺失");
-        } else if (view === "published") {
-          assert.ok(data.published && data.readonly, prefix + " 静态只读预览边界失效");
-        } else {
-          assert.ok(data.studio, prefix + " 组态画布缺失");
-          assert.deepStrictEqual(
-            [data.artboardWidth, data.artboardHeight],
-            [1920, 1080],
-            prefix + " 新建 Studio 默认画板必须为 1920×1080",
-          );
-          assert.notEqual(
-            data.stageBackground,
-            data.panelBackground,
-            prefix + " 深色画布与浅色面板没有区分",
-          );
+          assert.equal(data.current, label, prefix + " 未标识当前导航");
+          assert.equal(data.safety, true, prefix + " 缺少非现场控制提示");
+          assert.equal(data.noHorizontalOverflow, true, prefix + " 发生整页横向溢出");
+          assert.ok(data.title.length > 0, prefix + " 缺少工作区标题");
           assert.ok(
-            scadaTextContrast(data.stageText, data.stageTextBackground) >= 4.5,
-            prefix + " 画布工具栏文字对比度不足",
+            scadaTextContrast(data.navColor, data.navBackground) >= 4.5,
+            prefix + " 当前导航文字对比度不足",
           );
+          if (view === "home") {
+            assert.ok(data.home, prefix + " 工作台功能入口缺失");
+            const home = await session.evaluate("(" + inspectWorkspaceHomeInPage.toString() + ")()");
+            assert.deepStrictEqual(
+              home.initial,
+              ["水处理演示工程", "水处理模拟监控", "已发布工程预览"],
+              prefix + " 工作台真实目录不一致",
+            );
+            assert.equal(home.quickCount, 5, prefix + " 快速入口数量不一致");
+            assert.equal(home.staticPreview, true, prefix + " 内置工程 SVG 缩略图未显示");
+            assert.deepStrictEqual(home.filtered, ["已发布工程预览"], prefix + " 搜索结果不一致");
+            assert.equal(home.empty, true, prefix + " 搜索空态缺失");
+            assert.deepStrictEqual(home.restored, home.initial, prefix + " 清空搜索未恢复目录");
+          } else if (view === "runtime") {
+            assert.ok(data.process && data.telemetry && data.quality, prefix + " 工艺和链路信息缺失");
+          } else if (view === "published") {
+            assert.ok(data.published && data.readonly, prefix + " 静态只读预览边界失效");
+          } else {
+            assert.ok(data.studio, prefix + " 组态画布缺失");
+            assert.equal(data.artboardFill, "rgb(255, 255, 255)", prefix + " 工程白色画板被主题改写");
+            assert.ok(scadaTextContrast(data.saveColor, data.saveBackground) >= 4.5, prefix + " 保存按钮文字对比度不足");
+            assert.deepStrictEqual(
+              [data.artboardWidth, data.artboardHeight],
+              [1920, 1080],
+              prefix + " 新建 Studio 默认画板必须为 1920×1080",
+            );
+            assert.notEqual(
+              data.stageBackground,
+              data.panelBackground,
+              prefix + " 画布工作区与面板没有区分",
+            );
+            assert.ok(
+              scadaTextContrast(data.stageText, data.stageTextBackground) >= 4.5,
+              prefix + " 画布工具栏文字对比度不足",
+            );
+          }
+          if (captureScreenshots) {
+            const screenshot = await session.send("Page.captureScreenshot", {
+              format: "png",
+              captureBeyondViewport: false,
+            });
+            assert.ok(screenshot.data, prefix + " 无法保存真实浏览器视口截图");
+            const filename = `${target.name.toLowerCase()}-${viewport.width}x${viewport.height}-${view}-${mode}.png`;
+            writeFileSync(
+              join(screenshotDirectory, filename),
+              Buffer.from(screenshot.data, "base64"),
+            );
+          }
+          process.stdout.write(prefix + " 新版信息架构、状态与视觉边界通过\n");
         }
-        if (captureScreenshots) {
-          const screenshot = await session.send("Page.captureScreenshot", {
-            format: "png",
-            captureBeyondViewport: false,
-          });
-          assert.ok(screenshot.data, prefix + " 无法保存真实浏览器视口截图");
-          const filename = `${target.name.toLowerCase()}-${viewport.width}x${viewport.height}-${view}.png`;
-          writeFileSync(
-            join(screenshotDirectory, filename),
-            Buffer.from(screenshot.data, "base64"),
-          );
-        }
-        process.stdout.write(prefix + " 新版信息架构、状态与视觉边界通过\n");
       }
+      await session.evaluate("(" + selectWorkspaceThemeInPage.toString() + ")(" + JSON.stringify("light") + ")");
       const created = await session.evaluate("(" + verifyWorkspaceProjectInPage.toString() + ")()");
       assert.deepStrictEqual(
         [created.width, created.height, created.initialNodes, created.restoredNodes],

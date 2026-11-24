@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
 import { WORKSPACE_HOME_ENTRIES, filterWorkspaceHomeEntries } from "../src/workspace-home.ts";
+import { normalizeWorkspaceTheme } from "../src/workspace-theme.ts";
 
 const themeRoot = new URL("../../theme/src/", import.meta.url);
 const readTheme = (name: string) => readFileSync(new URL(name, themeRoot), "utf8");
@@ -27,11 +28,13 @@ describe("精密工程工作台设计系统", () => {
     expect(tokens).toContain("color-scheme: light;");
   });
 
-  it("TDesign React/Vue 在统一浅色根主题下复用字体、字号和禁用态", () => {
+  it("TDesign React/Vue 在明暗根主题下复用字体、字号和禁用态", () => {
     const css = readTheme("tdesign.css");
     expect(css).toContain('html:root[theme-mode="light"]');
+    expect(css).toContain('html:root[theme-mode="dark"]');
     for (const token of [
       "--td-brand-color: var(--adui-color-brand);",
+      "--td-text-color-anti: var(--adui-color-brand-on);",
       "--td-brand-color-focus: var(--adui-color-brand-focus);",
       "--td-brand-color-disabled: var(--adui-color-brand-disabled);",
       "--td-text-color-disabled: var(--adui-color-text-disabled);",
@@ -209,6 +212,55 @@ describe("Pixso 参考工作台", () => {
     const css = readRelative("../src/runtime.css");
     expect(css).toContain(".scada-home-thumbnail");
     expect(css).toContain("aspect-ratio: 16 / 9;");
-    expect(readTheme("tokens.css")).toContain("--adui-color-brand: #5b2b82;");
+    expect(readTheme("tokens.css")).toContain("--adui-color-brand: var(--adui-scada-blue);");
+  });
+});
+
+describe("V7 明暗主题", () => {
+  it("仅接受合法主题并对缺失或损坏偏好回退浅色", () => {
+    expect(normalizeWorkspaceTheme("dark")).toBe("dark");
+    expect(normalizeWorkspaceTheme("light")).toBe("light");
+    for (const value of [null, undefined, "", "unknown", {}]) {
+      expect(normalizeWorkspaceTheme(value)).toBe("light");
+    }
+  });
+
+  it("深色只覆盖已定义语义变量，不改写白色工程画板或品牌几何", () => {
+    const light = readTheme("tokens.css");
+    const dark = readTheme("dark.css");
+    const names = [...dark.matchAll(/^\s*(--[a-z][a-z\d-]+):/gm)].map((match) => match[1]);
+    expect(new Set(names).size).toBe(names.length);
+    for (const name of names) expect(light).toContain(name + ":");
+    expect(dark).toContain('theme-mode="dark"');
+    expect(dark).toContain("color-scheme: dark;");
+    expect(dark).not.toContain("--adui-color-editor-artboard:");
+    expect(dark).not.toContain("--adui-scada-blue:");
+    expect(readTheme("index.css")).toContain('@import "./dark.css";');
+    for (const name of ["mark-primary.svg", "mark-dark.svg"]) {
+      const react = readRelative("../../../apps/web-react/public/brand/" + name);
+      const vue = readRelative("../../../apps/web-vue/public/brand/" + name);
+      expect(react).toBe(vue);
+      expect(react).toContain('id="brand-core"');
+      expect(react).toContain('stroke-linejoin="miter"');
+    }
+  });
+
+  it("双端启动与切换均使用共享本地主题逻辑", () => {
+    for (const path of [
+      "../../../apps/web-react/src/main.tsx",
+      "../../../apps/web-vue/src/main.ts",
+    ]) {
+      expect(readRelative(path)).toContain("applyWorkspaceTheme(readWorkspaceTheme())");
+    }
+    for (const path of [
+      "../../../apps/web-react/src/App.tsx",
+      "../../../apps/web-vue/src/App.vue",
+    ]) {
+      const source = readRelative(path);
+      expect(source).toContain("scada-theme-toggle");
+      expect(source).toContain("applyWorkspaceTheme(next)");
+      expect(source).toContain("/brand/mark-primary.svg");
+      expect(source).toContain("/brand/mark-dark.svg");
+    }
   });
 });
