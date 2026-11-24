@@ -869,7 +869,7 @@ function inspectScadaUIInPage() {
     }),
     messageColor: style(main.querySelector(".scada-message:not(:empty)"), "color"),
     messageBackground: style(main.querySelector(".scada-message:not(:empty)"), "background-color"),
-    navColor: style(current, "color"),
+    navColor: style(current?.querySelector(".scada-button-label") ?? current, "color"),
     navBackground: style(current, "background-color"),
     stageBackground: style(stage, "background-color"),
     panelBackground: style(panel, "background-color"),
@@ -1247,9 +1247,16 @@ async function runScadaUIExperience(session) {
           assert.equal(data.safety, true, prefix + " 缺少非现场控制提示");
           assert.equal(data.noHorizontalOverflow, true, prefix + " 发生整页横向溢出");
           assert.ok(data.title.length > 0, prefix + " 缺少工作区标题");
+          const navContrast = scadaTextContrast(data.navColor, data.navBackground);
           assert.ok(
-            scadaTextContrast(data.navColor, data.navBackground) >= 4.5,
-            prefix + " 当前导航文字对比度不足",
+            navContrast >= 4.5,
+            prefix +
+              " 当前导航文字对比度不足：" +
+              navContrast.toFixed(2) +
+              "，文字 " +
+              data.navColor +
+              "，背景 " +
+              data.navBackground,
           );
           if (view === "home") {
             assert.ok(data.home, prefix + " 工作台功能入口缺失");

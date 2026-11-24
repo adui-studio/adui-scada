@@ -74,6 +74,23 @@ describe("精密工程工作台设计系统", () => {
     }
   });
 
+  it("所有工作区的导航选中态立即使用同一组不透明主题色", () => {
+    const css = readRelative("../src/runtime.css");
+    expect(css).toContain(
+      ".scada-app-frame .scada-app-nav .t-button {\n  transition: none;\n}",
+    );
+    expect(css).toContain(
+      '.scada-app-frame .scada-app-nav .t-button[aria-current="page"] {\n' +
+        "  background: var(--scada-active-bg);\n" +
+        "  color: var(--adui-color-brand-text);\n}",
+    );
+    for (const name of ["tokens.css", "dark.css"]) {
+      const theme = readTheme(name);
+      expect(theme).toMatch(/--adui-color-brand-text: #[\da-f]{6};/i);
+      expect(theme).toMatch(/--adui-color-selected: #[\da-f]{6};/i);
+    }
+  });
+
   it("运行监控优先展示工艺画面，已发布运行保留独立只读预览", () => {
     const css = readRelative("../src/runtime.css");
     for (const selector of [

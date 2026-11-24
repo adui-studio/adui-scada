@@ -144,9 +144,7 @@ textarea {
   line-height: 1.3;
   text-align: center;
   white-space: normal;
-  transition:
-    background-color var(--adui-motion-normal) ease,
-    color var(--adui-motion-normal) ease;
+  transition: none;
 }
 .scada-app-nav .t-button svg {
   width: 23px;
@@ -1063,11 +1061,6 @@ textarea {
   margin-left: 30px;
   letter-spacing: normal;
 }
-.scada-app-frame[data-view="home"] .scada-app-nav .t-button[aria-current="page"] {
-  background: var(--adui-color-success-bg);
-  color: var(--scada-live);
-  box-shadow: inset 3px 0 var(--scada-live);
-}
 .scada-app-frame[data-view="home"] .scada-app-content {
   background: var(--scada-surface);
 }
@@ -1627,10 +1620,13 @@ textarea {
   outline: 2px solid var(--adui-color-focus-ring);
   outline-offset: 2px;
 }
-.scada-app-frame[data-view="home"] .scada-app-nav .t-button[aria-current="page"] {
+/* 路由选中态应立即呈现不透明、成对的语义色，不受组件默认按钮过渡影响。 */
+.scada-app-frame .scada-app-nav .t-button {
+  transition: none;
+}
+.scada-app-frame .scada-app-nav .t-button[aria-current="page"] {
   background: var(--scada-active-bg);
   color: var(--adui-color-brand-text);
-  box-shadow: inset 3px 0 var(--scada-primary);
 }
 @media (max-width: 760px) {
   .scada-app-header-actions .scada-app-safety {

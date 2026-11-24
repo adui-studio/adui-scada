@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
@@ -239,17 +239,29 @@ assert.match(
   /\.studio-canvas-board\s*>\s*\.studio-svg\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;[^}]*border:\s*0;/,
   "SVG 必须满宽满高且无边框",
 );
-assert.match(viewportCss, /--studio-left-width:\s*252px/, "左侧栏必须固定宽度");
-assert.match(viewportCss, /--studio-right-width:\s*320px/, "右侧栏必须固定宽度");
+assert.match(
+  viewportCss,
+  /--studio-left-width:\s*min\(var\(--studio-left-preferred,\s*256px\),\s*34vw\)/,
+  "左侧栏必须支持用户调整并限制视口占比",
+);
+assert.match(
+  viewportCss,
+  /--studio-right-width:\s*min\(var\(--studio-right-preferred,\s*320px\),\s*40vw\)/,
+  "右侧栏必须支持用户调整并限制视口占比",
+);
 
+// 双端旧样式已迁移至共享包，不能继续读取已删除的文件。
 for (const framework of ["react", "vue"]) {
-  const localStudioCss = text(`apps/web-${framework}/src/studio/studio.css`);
-  assert.doesNotMatch(
-    localStudioCss,
-    /\.studio-panel,\s*\.studio-stage\s*\{[^}]*scrollbar-gutter\s*:/,
-    `web-${framework} 不得为中央画布预留滚动条槽位`,
+  assert.ok(
+    !existsSync(resolve(root, `apps/web-${framework}/src/studio/studio.css`)),
+    `web-${framework} 不得恢复重复的 Studio 样式文件`,
   );
 }
+assert.doesNotMatch(
+  viewportCss,
+  /(?:\.studio-panel,\s*)?\.studio-stage\s*\{[^}]*scrollbar-gutter\s*:/,
+  "共享 Studio 不得为中央画布预留滚动条槽位",
+);
 
 assert.ok(
   viewportCss.includes(".studio-page-boundary"),
