@@ -20,7 +20,7 @@ ADui Studio 维护的开源工业 SCADA / HMI 研发项目。**当前提供模�
 
 所有第三方依赖版本在 `pnpm-workspace.yaml` Catalog 中维护，包间使用 `workspace:*`。TypeScript 采用 6.0.3，测试统一使用 Vite+ 集成的 Vitest。
 
-环境按仓库 package.json：Node >= 22.18.0，pnpm 12.18.0，Vite+ 1.5.0。新依赖必须执行 `pnpm install` 后更新并审查锁文件。
+环境按仓库 package.json 与 Catalog：Node.js 24.18.0，pnpm 12.23.0，Vite+ ^1.8.0（配套 Vite 与 Vitest 精确匹配）。新依赖必须执行 `pnpm install` 后更新并审查锁文件。
 
 ```powershell
 pnpm install
