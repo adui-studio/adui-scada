@@ -55,9 +55,9 @@ export function studioViewportRect(
   if (!Number.isFinite(fitMargin) || fitMargin < 0) {
     throw new RangeError("适应画布留白必须为非负有限数");
   }
-  const width = Math.max(1, viewport.width - fitMargin * 2);
-  const height = Math.max(1, viewport.height - fitMargin * 2);
-  const fitScale = Math.min(width / page.width, height / page.height);
+  const availableWidth = Math.max(1, viewport.width - fitMargin * 2);
+  const availableHeight = Math.max(1, viewport.height - fitMargin * 2);
+  const fitScale = Math.min(availableWidth / page.width, availableHeight / page.height);
   const width = viewport.width / fitScale / zoom;
   const height = viewport.height / fitScale / zoom;
   const limitX = Math.max(0, (page.width - width) / 2);

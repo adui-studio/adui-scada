@@ -2020,15 +2020,13 @@
   background: var(--adui-color-editor-workspace);
 }
 .studio-stage-caption {
-  position: absolute;
+  position: relative;
   z-index: 5;
-  top: 12px;
-  right: 14px;
-  left: 14px;
   display: flex;
+  flex: none;
   width: auto;
   min-height: 37px;
-  margin: 0;
+  margin: 8px 10px 0;
   padding: 4px 7px 4px 12px;
   border: 1px solid var(--scada-border);
   border-radius: 9px;
@@ -2073,22 +2071,72 @@
   stroke-opacity: 1;
 }
 .studio-canvas-dock {
-  position: absolute;
+  position: relative;
   z-index: 6;
-  bottom: 18px;
-  left: 50%;
   display: flex;
+  flex: none;
+  align-self: center;
   min-width: 0;
   max-width: calc(100% - 24px);
-  transform: translateX(-50%);
   align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 0 auto 10px;
   padding: 6px;
   border: 1px solid var(--scada-border);
   border-radius: 12px;
   background: var(--scada-surface);
   box-shadow: var(--adui-shadow-floating);
 }
-.studio-canvas-dock .studio-library-label { display: none; }
+.studio-canvas-scroll {
+  flex: 1 1 0;
+  height: auto;
+}
+.studio-canvas-dock .studio-zoom {
+  gap: 2px;
+  padding-left: 6px;
+  border-left: 1px solid var(--scada-border);
+}
+.studio-canvas-dock .studio-zoom .t-button {
+  min-width: 27px;
+  padding-inline: 4px;
+}
+.studio-canvas-modes {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  padding-right: 6px;
+  border-right: 1px solid var(--scada-border);
+}
+.studio-canvas-modes .t-button {
+  min-width: 44px;
+  height: 35px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-xs);
+}
+.studio-canvas-modes .t-button[aria-pressed="true"] {
+  background: var(--scada-active-bg);
+  color: var(--scada-primary);
+}
+.studio-svg[data-canvas-tool="hand"],
+.studio-svg[data-canvas-tool="hand"] * {
+  cursor: grab;
+}
+.studio-svg[data-canvas-tool="hand"]:active,
+.studio-svg[data-canvas-tool="hand"]:active * {
+  cursor: grabbing;
+}
+.studio-svg[data-canvas-tool="hand"] :is(.studio-hitbox, .studio-resize-handle, .studio-rotation-handle) {
+  pointer-events: none;
+}
+.studio-canvas-dock .studio-library-label {
+  display: none;
+}
 .studio-canvas-dock .studio-add {
   display: flex;
   min-width: 0;

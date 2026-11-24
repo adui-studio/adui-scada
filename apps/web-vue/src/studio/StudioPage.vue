@@ -131,6 +131,7 @@ let autoSaveSession: DraftAutoSaveSession | null = null;
 let draftActionInProgress = false;
 let unsubscribeDraft: (() => void) | null = null;
 const zoom = ref(1);
+const canvasTool = ref<"select" | "hand">("select");
 const pan = ref({ x: 0, y: 0 });
 const viewportSize = ref({ width: 0, height: 0 });
 const gridVisible = ref(true);
@@ -790,6 +791,7 @@ function removeProjectTag(tagId: string): boolean {
 }
 
 function addSymbol(type: EditableSymbol) {
+  canvasTool.value = "select";
   apply(() => editor.addNode(type), "已新增图元（未绑定任何设备）");
 }
 
@@ -950,13 +952,13 @@ function resetCanvasView() {
   pan.value = { x: 0, y: 0 };
 }
 
-// 中键或 Alt + 画布空白处拖动，避免改变工程图元坐标。
+// 抓手、中键或 Alt + 空白处拖动只修改视区；捕获阶段先于图元编辑。
 function beginCanvasPan(event: PointerEvent): boolean {
   if (
-    zoom.value <= 1 ||
     !(
       event.button === 1 ||
-      (event.button === 0 && event.altKey && event.target === event.currentTarget)
+      (event.button === 0 &&
+        (canvasTool.value === "hand" || (event.altKey && event.target === event.currentTarget)))
     )
   ) {
     return false;
@@ -992,8 +994,8 @@ function finishCanvasPan(event: PointerEvent): boolean {
   return true;
 }
 
-function startCanvasPointer(event: PointerEvent) {
-  if (!beginCanvasPan(event)) startMarquee(event);
+function captureCanvasPointer(event: PointerEvent) {
+  if (beginCanvasPan(event)) event.stopPropagation();
 }
 
 function canvasPoint(clientX: number, clientY: number) {
@@ -2369,13 +2371,6 @@ async function importJsonFile(file: File | undefined) {
               </template>
             </TPopup>
           </div>
-          <div class="studio-zoom" aria-label="画布缩放">
-            <TButton type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</TButton>
-            <TButton type="button" @click="resetCanvasView">
-              {{ zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%` }}
-            </TButton>
-            <TButton type="button" :disabled="zoom >= 2" @click="changeZoom(0.25)">+</TButton>
-          </div>
         </div>
         <div class="studio-canvas-scroll" tabindex="0" aria-label="组态网格工作区">
           <div class="studio-canvas-board">
@@ -2383,13 +2378,15 @@ async function importJsonFile(file: File | undefined) {
               ref="svgRef"
               class="studio-svg"
               :data-rotating="rotating ? 'true' : undefined"
+              :data-canvas-tool="canvasTool"
               :viewBox="`${visibleRect.x} ${visibleRect.y} ${visibleRect.width} ${visibleRect.height}`"
               preserveAspectRatio="xMidYMid meet"
-              aria-label="可编辑 SVG 画布；放大后可用中键或 Alt 加空白处拖动平移"
+              aria-label="可编辑 SVG 画布；使用抓手、中键或 Alt 加空白处拖动平移"
               @pointermove="updatePointer"
               @pointerup="finishPointer"
               @pointercancel="cancelDrag"
-              @pointerdown="startCanvasPointer"
+              @pointerdown.capture="captureCanvasPointer"
+              @pointerdown="startMarquee"
             >
               <defs>
                 <pattern
@@ -2533,13 +2530,32 @@ async function importJsonFile(file: File | undefined) {
             </svg>
           </div>
         </div>
-        <div class="studio-canvas-dock" aria-label="图元创建工具">
+        <div class="studio-canvas-dock" aria-label="画布工具">
+          <div class="studio-canvas-modes" role="group" aria-label="画布操作模式">
+            <TButton
+              type="button"
+              :aria-pressed="canvasTool === 'select'"
+              @click="canvasTool = 'select'"
+            >选择</TButton>
+            <TButton
+              type="button"
+              :aria-pressed="canvasTool === 'hand'"
+              @click="canvasTool = 'hand'"
+            >抓手</TButton>
+          </div>
           <div class="studio-library-label">图元库 · 点击添加</div>
           <div class="studio-add">
             <TButton type="button" @click="addSymbol('tank')">+ 水箱</TButton>
             <TButton type="button" @click="addSymbol('pump')">+ 水泵</TButton>
             <TButton type="button" @click="addSymbol('pipe')">+ 管道</TButton>
             <TButton type="button" @click="addSymbol('label')">+ 文本</TButton>
+          </div>
+          <div class="studio-zoom" aria-label="画布缩放">
+            <TButton type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</TButton>
+            <TButton type="button" @click="resetCanvasView">
+              {{ zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%` }}
+            </TButton>
+            <TButton type="button" :disabled="zoom >= 2" @click="changeZoom(0.25)">+</TButton>
           </div>
         </div>
       </section>

@@ -158,6 +158,7 @@ export default function StudioPage() {
   const autoSaveSessionRef = useRef<DraftAutoSaveSession | null>(null);
   const draftActionRef = useRef(false);
   const [zoom, setZoom] = useState(1);
+  const [canvasTool, setCanvasTool] = useState<"select" | "hand">("select");
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [gridVisible, setGridVisible] = useState(true);
@@ -707,6 +708,7 @@ export default function StudioPage() {
   }
 
   function addSymbol(type: EditableSymbol) {
+    setCanvasTool("select");
     apply(() => editor.addNode(type), "已新增图元（未绑定任何设备）");
   }
 
@@ -820,13 +822,13 @@ export default function StudioPage() {
     setPan({ x: 0, y: 0 });
   }
 
-  // 中键或 Alt + 画布空白处拖动，只修改视图区间。
+  // 抓手、中键或 Alt + 空白处拖动只修改视区；捕获阶段先于图元编辑。
   function beginCanvasPan(event: ReactPointerEvent<SVGSVGElement>): boolean {
     if (
-      zoom <= 1 ||
       !(
         event.button === 1 ||
-        (event.button === 0 && event.altKey && event.target === event.currentTarget)
+        (event.button === 0 &&
+          (canvasTool === "hand" || (event.altKey && event.target === event.currentTarget)))
       )
     ) {
       return false;
@@ -2371,7 +2373,6 @@ export default function StudioPage() {
                 </Button>
               </Popup>
             </div>
-
           </div>
           <div className="studio-canvas-scroll" tabIndex={0} aria-label="组态网格工作区">
             <div className="studio-canvas-board">
@@ -2379,6 +2380,7 @@ export default function StudioPage() {
                 ref={svgRef}
                 className="studio-svg"
                 data-rotating={rotating ? "true" : undefined}
+                data-canvas-tool={canvasTool}
                 viewBox={`${visibleRect.x} ${visibleRect.y} ${visibleRect.width} ${visibleRect.height}`}
                 preserveAspectRatio="xMidYMid meet"
                 onPointerMove={(event) => {
@@ -2394,10 +2396,11 @@ export default function StudioPage() {
                   finishGeometry(event);
                 }}
                 onPointerCancel={cancelDrag}
-                onPointerDown={(event) => {
-                  if (!beginCanvasPan(event)) startMarquee(event);
+                onPointerDownCapture={(event) => {
+                  if (beginCanvasPan(event)) event.stopPropagation();
                 }}
-                aria-label="可编辑 SVG 画布；放大后可用中键或 Alt 加空白处拖动平移"
+                onPointerDown={startMarquee}
+                aria-label="可编辑 SVG 画布；使用抓手、中键或 Alt 加空白处拖动平移"
               >
                 <defs>
                   <pattern
@@ -2568,7 +2571,25 @@ export default function StudioPage() {
               </svg>
             </div>
           </div>
-          <div className="studio-canvas-dock" aria-label="画布编辑工具">
+          <div className="studio-canvas-dock" aria-label="画布工具">
+            <div className="studio-canvas-modes" role="group" aria-label="画布操作模式">
+              <Button
+                tag="button"
+                type="button"
+                aria-pressed={canvasTool === "select"}
+                onClick={() => setCanvasTool("select")}
+              >
+                选择
+              </Button>
+              <Button
+                tag="button"
+                type="button"
+                aria-pressed={canvasTool === "hand"}
+                onClick={() => setCanvasTool("hand")}
+              >
+                抓手
+              </Button>
+            </div>
             <div className="studio-library-label">图元库 · 点击添加</div>
             <div className="studio-add">
               <Button tag="button" type="button" onClick={() => addSymbol("tank")}>

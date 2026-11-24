@@ -305,6 +305,35 @@ async function checkStudioInPage() {
   verify("创建工具集中在画布底部", Boolean(stage.querySelector(".studio-canvas-dock .studio-add")));
   verify("页面导航位于左侧面板", Boolean(layers.querySelector(".studio-page-bar .studio-page-tabs")));
   verify("独立白色画板存在", Boolean(svg.querySelector(".studio-artboard-surface")));
+  const captionRect = bounds(element(".studio-stage-caption"));
+  const dockRect = bounds(element(".studio-canvas-dock"));
+  verify(
+    "上下工具条不遮挡可编辑 SVG",
+    captionRect.bottom <= svgRect.top + 2 && dockRect.top >= svgRect.bottom - 2,
+  );
+  verify("缩放工具位于底部工具栏", Boolean(stage.querySelector(".studio-canvas-dock .studio-zoom")));
+  const modes = [...element(".studio-canvas-modes").querySelectorAll("button")];
+  verify(
+    "默认使用选择工具",
+    modes[0]?.getAttribute("aria-pressed") === "true" && svg.dataset.canvasTool === "select",
+  );
+  modes[1]?.click();
+  await settle();
+  const hitbox = element(".studio-hitbox");
+  verify(
+    "抓手模式禁止图元指针编辑",
+    modes[1]?.getAttribute("aria-pressed") === "true" &&
+      svg.dataset.canvasTool === "hand" &&
+      getComputedStyle(hitbox).pointerEvents === "none",
+  );
+  modes[0]?.click();
+  await settle();
+  verify(
+    "恢复选择工具后图元可操作",
+    modes[0]?.getAttribute("aria-pressed") === "true" &&
+      svg.dataset.canvasTool === "select" &&
+      getComputedStyle(hitbox).pointerEvents !== "none",
+  );
   const originalWidth = svg.viewBox.baseVal.width;
   zoomButtons[2]?.click();
   await settle();
