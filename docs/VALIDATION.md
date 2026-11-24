@@ -4788,6 +4788,6 @@ D5c7 候选新增规范编码 4 项、真实 PostgreSQL 归档 5 项、共享模
 
 维护者此前 Windows 日志显示旧依赖下 Prisma 校验及生成、Core 构建、Vite+ 469 格式文件及 311 受检零警告错误、独立 Web/Server 类型检查、79 文件 956/956 单测、6 文件 63/63 HTTP E2E、React/Vue 构建通过；该记录不能覆盖新依赖。
 
-升级候选按维护者 Registry 输出更新 Catalog，普通外部 npm 依赖采用 ^，TypeScript 固定 6.x 范围。Vite/Vitest 保留与已安装 Vite+ 精确配套的版本，依赖检查脚本将核对其实际 package.json 声明。Prisma 8 RC 需要单独迁移，不改变现有 Schema、迁移、事务或安全门禁。Node 26.13.1、pnpm 12.23.0、Tauri Rust 依赖、Docker 镜像声明均为待解析或待运行候选。
+升级候选按维护者 Registry 输出更新 Catalog，普通外部 npm 依赖采用 ^，TypeScript 固定 6.x 范围。Vite/Vitest 保留与已安装 Vite+ 精确配套的版本，依赖检查脚本将核对其实际 package.json 声明。Prisma 8 RC 需要单独迁移，不改变现有 Schema、迁移、事务或安全门禁。按维护者最新要求保留 Node.js 24.18.0、Node 类型 ^24.19.2，三个 Dockerfile 使用 Node 24.18.0 基础镜像。维护者已报告全局 vp upgrade 从 1.5.0 成功更新为 1.8.0，项目内依赖安装、pnpm 12.23.0、Tauri Rust 依赖及新版 Docker 镜像仍待实际验证。
 
-实际验收顺序：Node 26.x 与 pnpm 12.23.0 → pnpm install --no-frozen-lockfile → pnpm install --frozen-lockfile → pnpm run deps:check → Prisma Schema 校验/Client 生成 → Core 构建 → vp check --fix / vp check → 独立 Web/Server 类型检查及完整 ready。桌面端在原 Cargo.toml 所在目录执行 cargo update、cargo check --locked，并复验两端 MSI 构建。提交真实生成的两份锁文件前不得合并。Docker 镜像仅配置升级，禁止启动已有数据库卷；备份恢复演练、PostgreSQL 主版本迁移、Redis 数据兼容、Keycloak 登录与隔离库测试另行验证。协作端没有实际执行 Registry 解析、Cargo、Docker 或正式测试。
+实际验收顺序：Node.js 24.18.0 与 pnpm 12.23.0 → pnpm install --no-frozen-lockfile → pnpm install --frozen-lockfile → pnpm run deps:check → Prisma Schema 校验/Client 生成 → Core 构建 → vp check --fix / vp check → 独立 Web/Server 类型检查及完整 ready。桌面端在原 Cargo.toml 所在目录执行 cargo update、cargo check --locked，并复验两端 MSI 构建。提交真实生成的两份锁文件前不得合并。Docker 镜像仅配置升级，禁止启动已有数据库卷；备份恢复演练、PostgreSQL 主版本迁移、Redis 数据兼容、Keycloak 登录与隔离库测试另行验证。协作端没有实际执行 Registry 解析、Cargo、Docker 或正式测试。
