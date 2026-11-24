@@ -4733,3 +4733,7 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 新增 13 项定向用例定义，覆盖首次、周期边界、变化累积和双向阈值、周期重计、四种质量、数值可用性、非数值及非 GOOD、不启用阈值、两类写入失败基线保护、跳过后的时间顺序、输入校验、策略复制及实例隔离。既有 25 项历史缓冲、历史查询及 TagStore 继续回归，目标四份测试共 38 项。Windows 待执行 `vp test run packages/core/test/tag-history-sampler.test.ts packages/core/test/tag-history-buffer.test.ts packages/core/test/tag-history.test.ts packages/core/test/tag-store.test.ts`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`；完整 ready 独立待执行。本批不代表生产历史、来源认证或数据库归档验收。
 
 协作容器 Node.js 22.16.0 使用独立 node:test 驱动运行 13 个对应采样场景，13/13 通过、0 失败、0 跳过；受测 tag-history.ts 与 tag-store.ts 的 Git Blob SHA 分别为 372572d59850f021e5b732ade763bef9b9566c2b 和 78e22557523275fecb9e6172cc6b02230c60c58b，均与远端候选一致。GitHub 域名在容器无法解析，未直接克隆完整仓库；独立 Node 测试不等同正式 Vitest、Vite+、全量 ready 或真实工业归档验收。
+
+### D5c4 · Windows 定向验收完成（PR #195）
+
+维护者 Windows 实测 D5c4：Vite+ 460 文件格式正确、302 个受检文件零警告和错误；采样策略 13/13、历史缓冲区 11/11、历史查询 8/8、TagStore 6/6，共 38/38；中文文案 329 文件、Markdown 95 份全部通过。日志未独立打印本地 SHA；GitHub 最终候选 27786fc8ec54fd7fc43ca19863158840520c6f1c 相对 62f59651 仅测试格式化。维护者明确授权合并。定向测试不代表完整 ready、生产采集、持久化归档或现场工业安全验收。
