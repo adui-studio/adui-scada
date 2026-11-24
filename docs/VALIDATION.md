@@ -4791,3 +4791,9 @@ D5c7 候选新增规范编码 4 项、真实 PostgreSQL 归档 5 项、共享模
 升级候选按维护者 Registry 输出更新 Catalog，普通外部 npm 依赖采用 ^，TypeScript 固定 6.x 范围。Vite/Vitest 保留与已安装 Vite+ 精确配套的版本，依赖检查脚本将核对其实际 package.json 声明。Prisma 8 RC 需要单独迁移，不改变现有 Schema、迁移、事务或安全门禁。按维护者最新要求保留 Node.js 24.18.0、Node 类型 ^24.19.2，三个 Dockerfile 使用 Node 24.18.0 基础镜像。维护者已报告全局 vp upgrade 从 1.5.0 成功更新为 1.8.0，项目内依赖安装、pnpm 12.23.0、Tauri Rust 依赖及新版 Docker 镜像仍待实际验证。
 
 实际验收顺序：Node.js 24.18.0 与 pnpm 12.23.0 → pnpm install --no-frozen-lockfile → pnpm install --frozen-lockfile → pnpm run deps:check → Prisma Schema 校验/Client 生成 → Core 构建 → vp check --fix / vp check → 独立 Web/Server 类型检查及完整 ready。桌面端在原 Cargo.toml 所在目录执行 cargo update、cargo check --locked，并复验两端 MSI 构建。提交真实生成的两份锁文件前不得合并。Docker 镜像仅配置升级，禁止启动已有数据库卷；备份恢复演练、PostgreSQL 主版本迁移、Redis 数据兼容、Keycloak 登录与隔离库测试另行验证。协作端没有实际执行 Registry 解析、Cargo、Docker 或正式测试。
+
+#### MVP · 依赖升级 Windows 实测与合并范围
+
+维护者 Windows 在 f99b2a483037041346e6269c0728bdeb2b64254a 拉取后使用 Node.js 24.18.0、pnpm 12.23.0、Vite+ 1.8.0 实际完成依赖安装与冻结锁文件复验，依赖目录 13 清单 / 54 Catalog 项通过，Vite+ 469 格式文件 / 311 受检零警告错误，独立 Web 与 Server 类型检查通过，Vitest 5.1.1 单元 79 文件 956/956、HTTP E2E 6 文件 63/63、文档 95 份及 React/Vue 构建通过。日志末尾显示 NestJS 构建的 Prisma Client 生成完成，未独立打印 ready 最终退出码。维护者随后提交 9f1ff67f1230c1d27051fa564d685be4463dd96e，锁文件、供应链精确例外清单与 Vue 格式调整已在 GitHub 核对。React 有一个超过 500 kB 的分包警告，不影响该次构建成功。
+
+Rust Cargo.lock 未更新，仍锁定 tauri 2.12.5 与 tauri-build 2.7.4；恢复原 Cargo.toml 的 2.x 声明，避免合入已知不匹配的冻结锁文件。桌面 Rust 升级另行执行真实 Cargo 解析与构建。维护者明确授权 PR #199 合入 MVP 集成分支，而非 main；该授权不等价于真实 PostgreSQL、Redis、Keycloak、浏览器、桌面或生产环境升级验收。未启动新 Docker 镜像、未迁移或清空数据库。Prisma 8 将在独立候选分支渐进迁移。
