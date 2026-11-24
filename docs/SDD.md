@@ -1464,3 +1464,9 @@ D5b9 至 D5c0d 的共享 Core 候选筛选已经具备 GOOD/有限数值、明�
 - `renderSvgPage(document,pageId,values,appearance="dark")` 和 `svgDataUrl(document,values,pageId?,appearance="dark")` 只新增可选浅色渲染样式。默认值与原默认深色渲染逐字兼容；选择 light 时只改变背景、标签与图元填充对比度，不改变 Tag 质量、绑定、禁用规则或设备数据。
 - React/Vue Studio 仅向新本地编辑预览传 `light`，保留原只读模拟 Runtime、已发布快照渲染、外部工程页面以及跨框架 Schema 的兼容性。
 - Figma 首页与编辑器结构只影响 UI 展现，新增工作台视图与三个实际模块切换不新增持久化状态或服务端权限。UI16场景与现有 Studio/SSE 浏览器安全门禁需在最终统一验收时运行。
+
+## 2026-11-24 · D5c1 本地工程工作台及浅色图元
+
+`createBlankStudioDocument(projectId)` 通过原工程 Schema 解析产生单页空白 1920×1080 工程。Dexie 草稿仓储 `listRecent()` 只读 savedAt 索引、限制 50 项并验证记录，返回摘要而非工程内容。工作台新建以随机稳定 ID 调用原 `save(document, null)`，打开通过 `get` 重新校验，导入文件上限 2 MiB 并调用原显式迁移，导入不触发自动保存。操作连接短生命周期，离开工作台不消费迟到的异步视图结果。
+
+浅色 SVG 增加固定内置渐变设备造型和 `label.props.presentation === "metric"` 白名单外观，仍以安全转义输出原 Tag 值/质量；无有效读数显示占位，不执行任意 SVG 或 JavaScript。原默认深色渲染路径及工程 Schema 不修改。新增独立示例 `water-showcase`，只使用已存在的三个模拟 Tag 以及原四种基础图元类型；图层、选择、几何、撤销及持久化继续走原 Editor。实际 Windows 验收待执行。

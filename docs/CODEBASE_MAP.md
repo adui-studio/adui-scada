@@ -1536,3 +1536,11 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/studio-viewport-rect.ts`：共享旋转图元定位及有界视区数学，双端使用实际 CSS 像素比例绘制手柄；运行与发布工作区的顶部导航和主画面布局统一在 `packages/runtime/src/runtime.css`。
 
 - 双端 `StudioPage`：原生面板分隔条指针捕获和键盘调整，仅修改视图宽度状态；共享 Studio CSS 提供定位与焦点视觉。
+
+### D5c1 · 文件工作台与独立总览
+
+- `packages/draft-storage/src/index.ts`：真实草稿摘要列表、新建独立本地工程、最新记录读取及文件校验导入。
+- `packages/core/src/demo-document.ts`：`createBlankStudioDocument` 与独立 `waterTreatmentShowcaseDocument`，保留旧示例。
+- `packages/core/src/svg.ts`：浅色设备图元及指标卡安全渲染。
+- `packages/runtime/src/workspace-home.ts`：共享工作台真实入口与静态总览缩略图。
+- React/Vue 的 App 和 Studio：同源草稿目录、文件打开、图层/图元库及画板属性；共享 CSS 维护视觉层。
