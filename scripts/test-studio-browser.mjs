@@ -720,8 +720,7 @@ async function inspectWorkspaceHomeInPage() {
   for (let attempt = 0; attempt < 50 && !preview.complete; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 40));
   }
-  const staticPreview =
-    preview.src.startsWith("data:image/svg+xml") && preview.naturalWidth > 0;
+  const staticPreview = preview.src.startsWith("data:image/svg+xml") && preview.naturalWidth > 0;
   const quickCount = document.querySelectorAll(".scada-home-quick").length;
   change("已发布");
   const filtered = await waitForCount(1);
@@ -753,19 +752,17 @@ async function verifyWorkspaceProjectInPage() {
   };
   click(nav("工作台"), "无法返回工作台");
   const create = await waitFor(
-    () => [...document.querySelectorAll(".scada-home-quick")].find(
-      (button) => button.textContent.includes("新建组态工程"),
-    ),
+    () =>
+      [...document.querySelectorAll(".scada-home-quick")].find((button) =>
+        button.textContent.includes("新建组态工程"),
+      ),
     "新建工程入口未挂载",
   );
   click(create, "无法新建工程");
-  const projectId = await waitFor(
-    () => {
-      const id = document.querySelector(".studio-toolbar h1")?.textContent.trim();
-      return id?.startsWith("project-") ? id : null;
-    },
-    "新建工程未进入编辑器",
-  );
+  const projectId = await waitFor(() => {
+    const id = document.querySelector(".studio-toolbar h1")?.textContent.trim();
+    return id?.startsWith("project-") ? id : null;
+  }, "新建工程未进入编辑器");
   const boundary = await waitFor(
     () => document.querySelector(".studio-page-boundary"),
     "新建工程画板未挂载",
@@ -778,9 +775,10 @@ async function verifyWorkspaceProjectInPage() {
   );
   click(library, "图元库入口缺失");
   const tank = await waitFor(
-    () => [...document.querySelectorAll(".studio-symbol-grid button")].find(
-      (button) => button.textContent.includes("水箱"),
-    ),
+    () =>
+      [...document.querySelectorAll(".studio-symbol-grid button")].find((button) =>
+        button.textContent.includes("水箱"),
+      ),
     "水箱图元入口缺失",
   );
   click(tank, "无法添加水箱图元");
@@ -800,18 +798,25 @@ async function verifyWorkspaceProjectInPage() {
   );
   click(nav("工作台"), "无法返回本地工程目录");
   const draft = await waitFor(
-    () => [...document.querySelectorAll(".scada-home-draft")].find(
-      (button) => button.querySelector("strong")?.textContent === projectId,
-    ),
+    () =>
+      [...document.querySelectorAll(".scada-home-draft")].find(
+        (button) => button.querySelector("strong")?.textContent === projectId,
+      ),
     "真实草稿目录未显示新建工程",
   );
   click(draft, "无法打开本地工程");
   await waitFor(
-    () => document.querySelector(".studio-toolbar h1")?.textContent.trim() === projectId &&
+    () =>
+      document.querySelector(".studio-toolbar h1")?.textContent.trim() === projectId &&
       document.querySelectorAll(".studio-hitbox").length === 1,
     "恢复工程后图元不一致",
   );
-  return { width, height, initialNodes, restoredNodes: document.querySelectorAll(".studio-hitbox").length };
+  return {
+    width,
+    height,
+    initialNodes,
+    restoredNodes: document.querySelectorAll(".studio-hitbox").length,
+  };
 }
 
 /** WCAG 2.2 AA 常规文字对比度：仅计算已知的不透明 RGB，异常颜色拒绝通过。 */

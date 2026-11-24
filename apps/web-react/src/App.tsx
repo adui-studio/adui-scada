@@ -224,9 +224,7 @@ function WorkspaceHome({
     }
   }
 
-  async function openFromHome(
-    load: () => Promise<{ document: ScadaDocument; notice: string }>,
-  ) {
+  async function openFromHome(load: () => Promise<{ document: ScadaDocument; notice: string }>) {
     const controller = lifetime.current;
     if (!controller || controller.signal.aborted || operation.current) return;
     operation.current = true;
@@ -271,7 +269,9 @@ function WorkspaceHome({
             });
           }}
         >
-          <span className="scada-home-card-icon" aria-hidden="true">+</span>
+          <span className="scada-home-card-icon" aria-hidden="true">
+            +
+          </span>
           <strong>新建组态工程</strong>
           <span aria-hidden="true">↗</span>
         </button>
@@ -298,7 +298,9 @@ function WorkspaceHome({
             }}
           >
             <button type="button" className="scada-home-quick" disabled={busy}>
-              <span className="scada-home-card-icon" aria-hidden="true">↥</span>
+              <span className="scada-home-card-icon" aria-hidden="true">
+                ↥
+              </span>
               <strong>导入 JSON 工程</strong>
               <span aria-hidden="true">↗</span>
             </button>
@@ -406,15 +408,17 @@ function WorkspaceHome({
               }}
             >
               <strong>{draft.projectId}</strong>
-              <span>{draft.pageCount} 个页面 · {draft.tagCount} 个 Tag</span>
-              <small>修订 {draft.revision} · {new Date(draft.savedAt).toLocaleString("zh-CN")}</small>
+              <span>
+                {draft.pageCount} 个页面 · {draft.tagCount} 个 Tag
+              </span>
+              <small>
+                修订 {draft.revision} · {new Date(draft.savedAt).toLocaleString("zh-CN")}
+              </small>
             </button>
           ))}
         </div>
       </section>
-      <p className="scada-home-footnote">
-        草稿仅保存在当前浏览器；本页不展示未经核实的发布状态。
-      </p>
+      <p className="scada-home-footnote">草稿仅保存在当前浏览器；本页不展示未经核实的发布状态。</p>
     </main>
   );
 }

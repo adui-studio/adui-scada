@@ -2207,36 +2207,98 @@ async function importJsonFile(file: File | undefined) {
     >
       <aside class="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
         <div class="studio-library-tabs" role="group" aria-label="左侧工作区">
-          <TButton type="button" :aria-pressed="libraryTab === 'layers'" @click="libraryTab = 'layers'">图层</TButton>
-          <TButton type="button" :aria-pressed="libraryTab === 'symbols'" @click="libraryTab = 'symbols'">图元库</TButton>
+          <TButton
+            type="button"
+            :aria-pressed="libraryTab === 'layers'"
+            @click="libraryTab = 'layers'"
+            >图层</TButton
+          >
+          <TButton
+            type="button"
+            :aria-pressed="libraryTab === 'symbols'"
+            @click="libraryTab = 'symbols'"
+            >图元库</TButton
+          >
         </div>
         <div class="studio-symbol-library" :hidden="libraryTab !== 'symbols'">
           <h2>基础工业图元</h2>
           <p class="studio-tip">点击添加到当前画板，之后可编辑几何属性和数据绑定。</p>
           <div class="studio-symbol-grid">
-            <TButton type="button" variant="outline" @click="addSymbol('tank'); libraryTab = 'layers'">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <TButton
+              type="button"
+              variant="outline"
+              @click="
+                addSymbol('tank');
+                libraryTab = 'layers';
+              "
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                aria-hidden="true"
+              >
                 <path d="M4 5h16v14H4zM4 12h16M8 5V3m8 2V3" />
               </svg>
               <strong>水箱</strong>
               <small>显示液位与质量</small>
             </TButton>
-            <TButton type="button" variant="outline" @click="addSymbol('pump'); libraryTab = 'layers'">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <TButton
+              type="button"
+              variant="outline"
+              @click="
+                addSymbol('pump');
+                libraryTab = 'layers';
+              "
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                aria-hidden="true"
+              >
                 <path d="M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18zM9 8l6 4-6 4z" />
               </svg>
               <strong>水泵</strong>
               <small>显示运行状态</small>
             </TButton>
-            <TButton type="button" variant="outline" @click="addSymbol('pipe'); libraryTab = 'layers'">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <TButton
+              type="button"
+              variant="outline"
+              @click="
+                addSymbol('pipe');
+                libraryTab = 'layers';
+              "
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                aria-hidden="true"
+              >
                 <path d="M3 17h7V7h11" />
               </svg>
               <strong>管道</strong>
               <small>绘制静态工艺管线</small>
             </TButton>
-            <TButton type="button" variant="outline" @click="addSymbol('label'); libraryTab = 'layers'">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <TButton
+              type="button"
+              variant="outline"
+              @click="
+                addSymbol('label');
+                libraryTab = 'layers';
+              "
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                aria-hidden="true"
+              >
                 <path d="M4 5h16M12 5v14M8 19h8" />
               </svg>
               <strong>文本</strong>
@@ -2245,215 +2307,217 @@ async function importJsonFile(file: File | undefined) {
           </div>
         </div>
         <div class="studio-layer-content" :hidden="libraryTab !== 'layers'">
-        <div class="studio-page-bar" aria-label="工程页面管理">
-          <div class="studio-page-tabs" aria-label="工程页面">
-            <TButton
-              v-for="item in state.document.pages"
-              :key="item.id"
-              type="button"
-              :aria-current="item.id === state.activePageId ? 'page' : undefined"
-              @click="switchPage(item.id)"
-            >
-              {{ item.name }}
-            </TButton>
-          </div>
-          <div class="studio-page-menu">
-            <TDropdown
-              :options="pageMenuOptions"
-              trigger="click"
-              placement="bottom-right"
-              @click="handlePageMenuClick"
-            >
-              <TButton type="button" variant="outline">页面管理</TButton>
-            </TDropdown>
-          </div>
-        </div>
-        <div class="studio-pane-heading">
-          <h2>图层</h2>
-          <span class="studio-count">{{ page.nodes.length }}</span>
-        </div>
-        <div class="studio-tree-controls">
-          <label class="studio-field">
-            搜索图元或组合
-            <TInput
-              v-model="layerSearch"
-              type="search"
-              size="small"
-              aria-label="搜索图层"
-              :maxlength="128"
-              placeholder="图元 ID、类型、文字或组合 ID"
-            />
-          </label>
-          <TButton
-            variant="outline"
-            size="small"
-            :disabled="state.selectedIds.length === 0"
-            @click="locateSelectedLayer"
-          >
-            定位选中图层
-          </TButton>
-          <TButton
-            variant="text"
-            size="small"
-            :disabled="layerSearch.length === 0"
-            @click="layerSearch = ''"
-          >
-            <CloseIcon /> 清除搜索
-          </TButton>
-        </div>
-        <div ref="layerTreeRef" class="studio-layer-tree min-w-0" aria-label="图层树">
-          <p v-if="layerEntries.length === 0" class="studio-tree-empty">
-            {{ page.nodes.length === 0 ? "当前页面暂无图元" : "没有匹配的图元或组合" }}
-          </p>
-          <template
-            v-for="entry in layerEntries"
-            :key="entry.kind === 'group' ? entry.groupId : entry.node.id"
-          >
-            <div v-if="entry.kind === 'group'" class="studio-tree-group">
-              <div class="studio-tree-group-heading">
-                <TButton
-                  type="button"
-                  class="studio-tree-toggle"
-                  :aria-label="`${groupExpanded(entry.groupId) ? '折叠' : '展开'}组合 ${entry.groupId}`"
-                  :aria-expanded="groupExpanded(entry.groupId)"
-                  :disabled="isLayerSearching"
-                  @click="toggleLayerGroup(entry.groupId)"
-                >
-                  {{ groupExpanded(entry.groupId) ? "▾" : "▸" }}
-                </TButton>
-                <TButton
-                  type="button"
-                  theme="default"
-                  variant="text"
-                  class="studio-layer"
-                  :data-layer-key="`group:${entry.groupId}`"
-                  :data-selected="layerGroupSelected(entry.groupId)"
-                  :data-hidden="entry.hiddenCount === entry.totalCount"
-                  :data-locked="entry.hasLockedMember"
-                  :data-drop-position="
-                    layerDrop?.id === entry.anchorNodeId ? layerDrop.position : undefined
-                  "
-                  :draggable="!entry.hasLockedMember"
-                  title="拖动整个组合调整图层"
-                  @dragstart="startLayerDrag($event, entry.anchorNodeId)"
-                  @dragover="overLayer($event, entry.anchorNodeId)"
-                  @drop="dropLayer($event, entry.anchorNodeId)"
-                  @dragend="clearLayerDrag"
-                  @click="selectNode(entry.anchorNodeId, $event.shiftKey)"
-                >
-                  <span class="studio-layer-identity">
-                    <span aria-hidden="true">⋮⋮</span> 组合 {{ entry.groupId }}
-                  </span>
-                  <small>
-                    {{ entry.totalCount }} 个成员
-                    {{
-                      entry.members.length !== entry.totalCount
-                        ? ` · 匹配 ${entry.members.length}`
-                        : ""
-                    }}
-                    {{ entry.fragmented ? " · 层序不连续" : "" }}
-                    {{ entry.hasLockedMember ? " · 有锁定成员" : "" }}
-                    {{ entry.hiddenCount > 0 ? ` · 隐藏 ${entry.hiddenCount}` : "" }}
-                  </small>
-                </TButton>
-              </div>
-              <div
-                v-if="groupExpanded(entry.groupId)"
-                class="studio-tree-members"
-                role="group"
-                :aria-label="`组合 ${entry.groupId} 的成员`"
+          <div class="studio-page-bar" aria-label="工程页面管理">
+            <div class="studio-page-tabs" aria-label="工程页面">
+              <TButton
+                v-for="item in state.document.pages"
+                :key="item.id"
+                type="button"
+                :aria-current="item.id === state.activePageId ? 'page' : undefined"
+                @click="switchPage(item.id)"
               >
-                <TButton
-                  v-for="node in entry.members"
-                  :key="node.id"
-                  type="button"
-                  theme="default"
-                  variant="text"
-                  class="studio-layer"
-                  :data-layer-key="`node:${node.id}`"
-                  :data-selected="state.selectedIds.includes(node.id)"
-                  :data-hidden="!studioNodeVisible(node)"
-                  :data-locked="studioNodeLocked(node)"
-                  :data-drop-position="layerDrop?.id === node.id ? layerDrop.position : undefined"
-                  :draggable="!studioNodeLocked(node) && !lockedLayerGroups.has(entry.groupId)"
-                  title="拖动成员时移动整个组合"
-                  @dragstart="startLayerDrag($event, node.id)"
-                  @dragover="overLayer($event, node.id)"
-                  @drop="dropLayer($event, node.id)"
-                  @dragend="clearLayerDrag"
-                  @click="selectNode(node.id, $event.shiftKey)"
-                >
-                  <span class="studio-layer-identity">
-                    <span aria-hidden="true">⋮⋮</span> {{ node.id }}
-                  </span>
-                  <small>
-                    {{ node.type }}
-                    {{ studioNodeLocked(node) ? " · 已锁定" : "" }}
-                    {{ !studioNodeVisible(node) ? " · 已隐藏" : "" }}
-                  </small>
-                </TButton>
-              </div>
+                {{ item.name }}
+              </TButton>
             </div>
+            <div class="studio-page-menu">
+              <TDropdown
+                :options="pageMenuOptions"
+                trigger="click"
+                placement="bottom-right"
+                @click="handlePageMenuClick"
+              >
+                <TButton type="button" variant="outline">页面管理</TButton>
+              </TDropdown>
+            </div>
+          </div>
+          <div class="studio-pane-heading">
+            <h2>图层</h2>
+            <span class="studio-count">{{ page.nodes.length }}</span>
+          </div>
+          <div class="studio-tree-controls">
+            <label class="studio-field">
+              搜索图元或组合
+              <TInput
+                v-model="layerSearch"
+                type="search"
+                size="small"
+                aria-label="搜索图层"
+                :maxlength="128"
+                placeholder="图元 ID、类型、文字或组合 ID"
+              />
+            </label>
             <TButton
-              v-else
-              type="button"
-              theme="default"
-              variant="text"
-              class="studio-layer"
-              :data-layer-key="`node:${entry.node.id}`"
-              :data-selected="state.selectedIds.includes(entry.node.id)"
-              :data-hidden="!studioNodeVisible(entry.node)"
-              :data-locked="studioNodeLocked(entry.node)"
-              :data-drop-position="layerDrop?.id === entry.node.id ? layerDrop.position : undefined"
-              :draggable="!studioNodeLocked(entry.node)"
-              title="拖动调整图层"
-              @dragstart="startLayerDrag($event, entry.node.id)"
-              @dragover="overLayer($event, entry.node.id)"
-              @drop="dropLayer($event, entry.node.id)"
-              @dragend="clearLayerDrag"
-              @click="selectNode(entry.node.id, $event.shiftKey)"
+              variant="outline"
+              size="small"
+              :disabled="state.selectedIds.length === 0"
+              @click="locateSelectedLayer"
             >
-              <span class="studio-layer-identity">
-                <span aria-hidden="true">⋮⋮</span> {{ entry.node.id }}
-              </span>
-              <small>
-                {{ entry.node.type }}
-                {{ studioNodeLocked(entry.node) ? " · 已锁定" : "" }}
-                {{ !studioNodeVisible(entry.node) ? " · 已隐藏" : "" }}
-              </small>
+              定位选中图层
             </TButton>
-          </template>
-        </div>
-        <div class="studio-side-more">
-          <TCollapse :default-value="[]" borderless>
-            <TCollapsePanel value="cross-page" header="跨页操作与使用帮助">
-              <div class="studio-copy-tools">
-                <label class="studio-field">
-                  复制选中图元到
-                  <TSelect
-                    :value="copyTargetPageId"
-                    :disabled="copyTargetPages.length === 0"
-                    :options="
-                      copyTargetPages.length === 0
-                        ? [{ label: '暂无其他页面', value: '' }]
-                        : copyTargetPages.map((item) => ({ label: item.name, value: item.id }))
+            <TButton
+              variant="text"
+              size="small"
+              :disabled="layerSearch.length === 0"
+              @click="layerSearch = ''"
+            >
+              <CloseIcon /> 清除搜索
+            </TButton>
+          </div>
+          <div ref="layerTreeRef" class="studio-layer-tree min-w-0" aria-label="图层树">
+            <p v-if="layerEntries.length === 0" class="studio-tree-empty">
+              {{ page.nodes.length === 0 ? "当前页面暂无图元" : "没有匹配的图元或组合" }}
+            </p>
+            <template
+              v-for="entry in layerEntries"
+              :key="entry.kind === 'group' ? entry.groupId : entry.node.id"
+            >
+              <div v-if="entry.kind === 'group'" class="studio-tree-group">
+                <div class="studio-tree-group-heading">
+                  <TButton
+                    type="button"
+                    class="studio-tree-toggle"
+                    :aria-label="`${groupExpanded(entry.groupId) ? '折叠' : '展开'}组合 ${entry.groupId}`"
+                    :aria-expanded="groupExpanded(entry.groupId)"
+                    :disabled="isLayerSearching"
+                    @click="toggleLayerGroup(entry.groupId)"
+                  >
+                    {{ groupExpanded(entry.groupId) ? "▾" : "▸" }}
+                  </TButton>
+                  <TButton
+                    type="button"
+                    theme="default"
+                    variant="text"
+                    class="studio-layer"
+                    :data-layer-key="`group:${entry.groupId}`"
+                    :data-selected="layerGroupSelected(entry.groupId)"
+                    :data-hidden="entry.hiddenCount === entry.totalCount"
+                    :data-locked="entry.hasLockedMember"
+                    :data-drop-position="
+                      layerDrop?.id === entry.anchorNodeId ? layerDrop.position : undefined
                     "
-                    @change="selectCopyTarget"
-                  />
-                </label>
-                <TButton
-                  type="button"
-                  :disabled="state.selectedIds.length === 0 || !copyTargetPageId"
-                  @click="copySelectedToPage"
+                    :draggable="!entry.hasLockedMember"
+                    title="拖动整个组合调整图层"
+                    @dragstart="startLayerDrag($event, entry.anchorNodeId)"
+                    @dragover="overLayer($event, entry.anchorNodeId)"
+                    @drop="dropLayer($event, entry.anchorNodeId)"
+                    @dragend="clearLayerDrag"
+                    @click="selectNode(entry.anchorNodeId, $event.shiftKey)"
+                  >
+                    <span class="studio-layer-identity">
+                      <span aria-hidden="true">⋮⋮</span> 组合 {{ entry.groupId }}
+                    </span>
+                    <small>
+                      {{ entry.totalCount }} 个成员
+                      {{
+                        entry.members.length !== entry.totalCount
+                          ? ` · 匹配 ${entry.members.length}`
+                          : ""
+                      }}
+                      {{ entry.fragmented ? " · 层序不连续" : "" }}
+                      {{ entry.hasLockedMember ? " · 有锁定成员" : "" }}
+                      {{ entry.hiddenCount > 0 ? ` · 隐藏 ${entry.hiddenCount}` : "" }}
+                    </small>
+                  </TButton>
+                </div>
+                <div
+                  v-if="groupExpanded(entry.groupId)"
+                  class="studio-tree-members"
+                  role="group"
+                  :aria-label="`组合 ${entry.groupId} 的成员`"
                 >
-                  复制选中图元
-                </TButton>
+                  <TButton
+                    v-for="node in entry.members"
+                    :key="node.id"
+                    type="button"
+                    theme="default"
+                    variant="text"
+                    class="studio-layer"
+                    :data-layer-key="`node:${node.id}`"
+                    :data-selected="state.selectedIds.includes(node.id)"
+                    :data-hidden="!studioNodeVisible(node)"
+                    :data-locked="studioNodeLocked(node)"
+                    :data-drop-position="layerDrop?.id === node.id ? layerDrop.position : undefined"
+                    :draggable="!studioNodeLocked(node) && !lockedLayerGroups.has(entry.groupId)"
+                    title="拖动成员时移动整个组合"
+                    @dragstart="startLayerDrag($event, node.id)"
+                    @dragover="overLayer($event, node.id)"
+                    @drop="dropLayer($event, node.id)"
+                    @dragend="clearLayerDrag"
+                    @click="selectNode(node.id, $event.shiftKey)"
+                  >
+                    <span class="studio-layer-identity">
+                      <span aria-hidden="true">⋮⋮</span> {{ node.id }}
+                    </span>
+                    <small>
+                      {{ node.type }}
+                      {{ studioNodeLocked(node) ? " · 已锁定" : "" }}
+                      {{ !studioNodeVisible(node) ? " · 已隐藏" : "" }}
+                    </small>
+                  </TButton>
+                </div>
               </div>
-              <p class="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
-            </TCollapsePanel>
-          </TCollapse>
+              <TButton
+                v-else
+                type="button"
+                theme="default"
+                variant="text"
+                class="studio-layer"
+                :data-layer-key="`node:${entry.node.id}`"
+                :data-selected="state.selectedIds.includes(entry.node.id)"
+                :data-hidden="!studioNodeVisible(entry.node)"
+                :data-locked="studioNodeLocked(entry.node)"
+                :data-drop-position="
+                  layerDrop?.id === entry.node.id ? layerDrop.position : undefined
+                "
+                :draggable="!studioNodeLocked(entry.node)"
+                title="拖动调整图层"
+                @dragstart="startLayerDrag($event, entry.node.id)"
+                @dragover="overLayer($event, entry.node.id)"
+                @drop="dropLayer($event, entry.node.id)"
+                @dragend="clearLayerDrag"
+                @click="selectNode(entry.node.id, $event.shiftKey)"
+              >
+                <span class="studio-layer-identity">
+                  <span aria-hidden="true">⋮⋮</span> {{ entry.node.id }}
+                </span>
+                <small>
+                  {{ entry.node.type }}
+                  {{ studioNodeLocked(entry.node) ? " · 已锁定" : "" }}
+                  {{ !studioNodeVisible(entry.node) ? " · 已隐藏" : "" }}
+                </small>
+              </TButton>
+            </template>
+          </div>
+          <div class="studio-side-more">
+            <TCollapse :default-value="[]" borderless>
+              <TCollapsePanel value="cross-page" header="跨页操作与使用帮助">
+                <div class="studio-copy-tools">
+                  <label class="studio-field">
+                    复制选中图元到
+                    <TSelect
+                      :value="copyTargetPageId"
+                      :disabled="copyTargetPages.length === 0"
+                      :options="
+                        copyTargetPages.length === 0
+                          ? [{ label: '暂无其他页面', value: '' }]
+                          : copyTargetPages.map((item) => ({ label: item.name, value: item.id }))
+                      "
+                      @change="selectCopyTarget"
+                    />
+                  </label>
+                  <TButton
+                    type="button"
+                    :disabled="state.selectedIds.length === 0 || !copyTargetPageId"
+                    @click="copySelectedToPage"
+                  >
+                    复制选中图元
+                  </TButton>
+                </div>
+                <p class="studio-tip">Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。</p>
+              </TCollapsePanel>
+            </TCollapse>
+          </div>
         </div>
-              </div>
       </aside>
       <template v-for="side in ['left', 'right'] as const" :key="side">
         <div
@@ -2726,7 +2790,7 @@ async function importJsonFile(file: File | undefined) {
               title="选择工具（V）"
               :aria-pressed="canvasTool === 'select'"
               @click="canvasTool = 'select'"
-              >
+            >
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -2739,14 +2803,13 @@ async function importJsonFile(file: File | undefined) {
                 <path d="M4 3l14 10-7 1-3 7z" />
               </svg>
               选择
-            </TButton
-            >
+            </TButton>
             <TButton
               type="button"
               title="抓手工具（H）"
               :aria-pressed="canvasTool === 'hand'"
               @click="canvasTool = 'hand'"
-              >
+            >
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -2756,11 +2819,12 @@ async function importJsonFile(file: File | undefined) {
                 stroke-linejoin="round"
                 aria-hidden="true"
               >
-                <path d="M8 13V7a2 2 0 0 1 4 0v5-7a2 2 0 0 1 4 0v7-4a2 2 0 0 1 4 0v7a7 7 0 0 1-14 0l-2-3a2 2 0 0 1 3-2z" />
+                <path
+                  d="M8 13V7a2 2 0 0 1 4 0v5-7a2 2 0 0 1 4 0v7-4a2 2 0 0 1 4 0v7a7 7 0 0 1-14 0l-2-3a2 2 0 0 1 3-2z"
+                />
               </svg>
               抓手
-            </TButton
-            >
+            </TButton>
           </div>
           <div class="studio-library-label">图元库 · 点击添加</div>
           <div class="studio-add">
@@ -2912,9 +2976,18 @@ async function importJsonFile(file: File | undefined) {
             <h3>当前画板</h3>
             <strong>{{ page.name }}</strong>
             <dl>
-              <div><dt>宽度</dt><dd>{{ page.size.width }} px</dd></div>
-              <div><dt>高度</dt><dd>{{ page.size.height }} px</dd></div>
-              <div><dt>图元</dt><dd>{{ page.nodes.length }}</dd></div>
+              <div>
+                <dt>宽度</dt>
+                <dd>{{ page.size.width }} px</dd>
+              </div>
+              <div>
+                <dt>高度</dt>
+                <dd>{{ page.size.height }} px</dd>
+              </div>
+              <div>
+                <dt>图元</dt>
+                <dd>{{ page.nodes.length }}</dd>
+              </div>
             </dl>
             <p class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
           </div>

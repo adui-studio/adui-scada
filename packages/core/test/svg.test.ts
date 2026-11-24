@@ -109,8 +109,18 @@ test("Studio 专用浅色 SVG 仅改变外观，不修改 Tag 质量或原运行
 });
 
 test("浅色水箱采用可缩放设备图形且异常读数保持占位", () => {
-  const good = renderSvgPage(document, "main", new Map([["water.level", tag("GOOD", 75)]]), "light");
-  const stale = renderSvgPage(document, "main", new Map([["water.level", tag("STALE", 75)]]), "light");
+  const good = renderSvgPage(
+    document,
+    "main",
+    new Map([["water.level", tag("GOOD", 75)]]),
+    "light",
+  );
+  const stale = renderSvgPage(
+    document,
+    "main",
+    new Map([["water.level", tag("STALE", 75)]]),
+    "light",
+  );
   expect(good).toContain('viewBox="0 0 100 150"');
   expect(good).toContain('fill="url(#scada-metal)"');
   expect(good).toContain("75%");

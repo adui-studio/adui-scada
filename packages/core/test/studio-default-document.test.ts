@@ -92,7 +92,9 @@ test("独立总览示例保留真实模拟 Tag 定义且不覆盖历史水处理
   expect(showcase.projectId).toBe("water-showcase");
   expect(showcase.tags).toEqual(waterTreatmentDemoDocument.tags);
   expect(showcase.pages[0]?.size).toEqual(STUDIO_DEFAULT_PAGE_SIZE);
-  expect(showcase.pages[0]?.nodes.filter((node) => node.props.presentation === "metric")).toHaveLength(3);
+  expect(
+    showcase.pages[0]?.nodes.filter((node) => node.props.presentation === "metric"),
+  ).toHaveLength(3);
   expect(parseScadaDocument(showcase)).toEqual(showcase);
   for (const node of showcase.pages[0]!.nodes) {
     expect(node.transform.x + node.transform.width).toBeLessThanOrEqual(1920);

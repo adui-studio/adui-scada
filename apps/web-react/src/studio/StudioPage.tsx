@@ -2267,10 +2267,18 @@ export default function StudioPage({
       >
         <aside className="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
           <div className="studio-library-tabs" role="group" aria-label="左侧工作区">
-            <Button type="button" aria-pressed={libraryTab === "layers"} onClick={() => setLibraryTab("layers")}>
+            <Button
+              type="button"
+              aria-pressed={libraryTab === "layers"}
+              onClick={() => setLibraryTab("layers")}
+            >
               图层
             </Button>
-            <Button type="button" aria-pressed={libraryTab === "symbols"} onClick={() => setLibraryTab("symbols")}>
+            <Button
+              type="button"
+              aria-pressed={libraryTab === "symbols"}
+              onClick={() => setLibraryTab("symbols")}
+            >
               图元库
             </Button>
           </div>
@@ -2278,29 +2286,81 @@ export default function StudioPage({
             <h2>基础工业图元</h2>
             <p className="studio-tip">点击添加到当前画板，之后可编辑几何属性和数据绑定。</p>
             <div className="studio-symbol-grid">
-              <Button type="button" variant="outline" onClick={() => { addSymbol("tank"); setLibraryTab("layers"); }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  addSymbol("tank");
+                  setLibraryTab("layers");
+                }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  aria-hidden="true"
+                >
                   <path d="M4 5h16v14H4zM4 12h16M8 5V3m8 2V3" />
                 </svg>
                 <strong>水箱</strong>
                 <small>显示液位与质量</small>
               </Button>
-              <Button type="button" variant="outline" onClick={() => { addSymbol("pump"); setLibraryTab("layers"); }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  addSymbol("pump");
+                  setLibraryTab("layers");
+                }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  aria-hidden="true"
+                >
                   <path d="M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18zM9 8l6 4-6 4z" />
                 </svg>
                 <strong>水泵</strong>
                 <small>显示运行状态</small>
               </Button>
-              <Button type="button" variant="outline" onClick={() => { addSymbol("pipe"); setLibraryTab("layers"); }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  addSymbol("pipe");
+                  setLibraryTab("layers");
+                }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  aria-hidden="true"
+                >
                   <path d="M3 17h7V7h11" />
                 </svg>
                 <strong>管道</strong>
                 <small>绘制静态工艺管线</small>
               </Button>
-              <Button type="button" variant="outline" onClick={() => { addSymbol("label"); setLibraryTab("layers"); }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  addSymbol("label");
+                  setLibraryTab("layers");
+                }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  aria-hidden="true"
+                >
                   <path d="M4 5h16M12 5v14M8 19h8" />
                 </svg>
                 <strong>文本</strong>
@@ -2309,145 +2369,145 @@ export default function StudioPage({
             </div>
           </div>
           <div className="studio-layer-content" hidden={libraryTab !== "layers"}>
-          <div className="studio-page-bar" aria-label="工程页面管理">
-            <div className="studio-page-tabs" aria-label="工程页面">
-              {state.document.pages.map((item) => (
-                <Button
-                  tag="button"
-                  key={item.id}
-                  type="button"
-                  aria-current={item.id === state.activePageId ? "page" : undefined}
-                  onClick={() => switchPage(item.id)}
+            <div className="studio-page-bar" aria-label="工程页面管理">
+              <div className="studio-page-tabs" aria-label="工程页面">
+                {state.document.pages.map((item) => (
+                  <Button
+                    tag="button"
+                    key={item.id}
+                    type="button"
+                    aria-current={item.id === state.activePageId ? "page" : undefined}
+                    onClick={() => switchPage(item.id)}
+                  >
+                    {item.name}
+                  </Button>
+                ))}
+              </div>
+              <div className="studio-page-menu">
+                <Dropdown
+                  trigger="click"
+                  placement="bottom-right"
+                  options={pageMenuOptions}
+                  onClick={handlePageMenuClick}
                 >
-                  {item.name}
-                </Button>
-              ))}
+                  <Button type="button" variant="outline">
+                    页面管理
+                  </Button>
+                </Dropdown>
+              </div>
             </div>
-            <div className="studio-page-menu">
-              <Dropdown
-                trigger="click"
-                placement="bottom-right"
-                options={pageMenuOptions}
-                onClick={handlePageMenuClick}
-              >
-                <Button type="button" variant="outline">
-                  页面管理
-                </Button>
-              </Dropdown>
+            <div className="studio-pane-heading">
+              <h2>图层</h2>
+              <span className="studio-count">{page.nodes.length}</span>
             </div>
-          </div>
-          <div className="studio-pane-heading">
-            <h2>图层</h2>
-            <span className="studio-count">{page.nodes.length}</span>
-          </div>
-          <div className="studio-tree-controls">
-            <label className="studio-field">
-              搜索图元或组合
-              <Input
-                type="search"
+            <div className="studio-tree-controls">
+              <label className="studio-field">
+                搜索图元或组合
+                <Input
+                  type="search"
+                  size="small"
+                  aria-label="搜索图层"
+                  maxlength={128}
+                  value={layerSearch}
+                  placeholder="图元 ID、类型、文字或组合 ID"
+                  onChange={(value) => setLayerSearch(value)}
+                />
+              </label>
+              <Button
+                variant="outline"
                 size="small"
-                aria-label="搜索图层"
-                maxlength={128}
-                value={layerSearch}
-                placeholder="图元 ID、类型、文字或组合 ID"
-                onChange={(value) => setLayerSearch(value)}
-              />
-            </label>
-            <Button
-              variant="outline"
-              size="small"
-              disabled={state.selectedIds.length === 0}
-              onClick={locateSelectedLayer}
-            >
-              定位选中图层
-            </Button>
-            <Button
-              variant="text"
-              size="small"
-              disabled={layerSearch.length === 0}
-              onClick={() => setLayerSearch("")}
-            >
-              <CloseIcon /> 清除搜索
-            </Button>
-          </div>
-          <div className="studio-layer-tree min-w-0" ref={layerTreeRef} aria-label="图层树">
-            {layerEntries.length === 0 && (
-              <p className="studio-tree-empty">
-                {page.nodes.length === 0 ? "当前页面暂无图元" : "没有匹配的图元或组合"}
-              </p>
-            )}
-            {layerEntries.map((entry) =>
-              entry.kind === "node" ? (
-                renderLayerButton(entry.node, "node")
-              ) : (
-                <div className="studio-tree-group" key={entry.groupId}>
-                  <div className="studio-tree-group-heading">
+                disabled={state.selectedIds.length === 0}
+                onClick={locateSelectedLayer}
+              >
+                定位选中图层
+              </Button>
+              <Button
+                variant="text"
+                size="small"
+                disabled={layerSearch.length === 0}
+                onClick={() => setLayerSearch("")}
+              >
+                <CloseIcon /> 清除搜索
+              </Button>
+            </div>
+            <div className="studio-layer-tree min-w-0" ref={layerTreeRef} aria-label="图层树">
+              {layerEntries.length === 0 && (
+                <p className="studio-tree-empty">
+                  {page.nodes.length === 0 ? "当前页面暂无图元" : "没有匹配的图元或组合"}
+                </p>
+              )}
+              {layerEntries.map((entry) =>
+                entry.kind === "node" ? (
+                  renderLayerButton(entry.node, "node")
+                ) : (
+                  <div className="studio-tree-group" key={entry.groupId}>
+                    <div className="studio-tree-group-heading">
+                      <Button
+                        tag="button"
+                        type="button"
+                        className="studio-tree-toggle"
+                        aria-label={groupToggleLabel(entry.groupId)}
+                        aria-expanded={groupExpanded(entry.groupId)}
+                        disabled={isLayerSearching}
+                        onClick={() => toggleLayerGroup(entry.groupId)}
+                      >
+                        {groupExpanded(entry.groupId) ? "▾" : "▸"}
+                      </Button>
+                      {renderLayerButton(
+                        page.nodes.find((node) => node.id === entry.anchorNodeId) ??
+                          entry.members[0]!,
+                        "group",
+                        entry,
+                      )}
+                    </div>
+                    {groupExpanded(entry.groupId) && (
+                      <div
+                        className="studio-tree-members"
+                        role="group"
+                        aria-label={`组合 ${entry.groupId} 的成员`}
+                      >
+                        {entry.members.map((node) => renderLayerButton(node, "member"))}
+                      </div>
+                    )}
+                  </div>
+                ),
+              )}
+            </div>
+            <div className="studio-side-more">
+              <Collapse borderless defaultValue={[]}>
+                <Collapse.Panel value="cross-page" header="跨页操作与使用帮助">
+                  <div className="studio-copy-tools">
+                    <label className="studio-field">
+                      复制选中图元到
+                      <Select
+                        value={copyTargetPageId}
+                        disabled={copyTargetPages.length === 0}
+                        options={
+                          copyTargetPages.length === 0
+                            ? [{ label: "暂无其他页面", value: "" }]
+                            : copyTargetPages.map((item) => ({ label: item.name, value: item.id }))
+                        }
+                        onChange={(value) => {
+                          if (typeof value === "string") setPreferredCopyTargetPageId(value);
+                        }}
+                      />
+                    </label>
                     <Button
                       tag="button"
                       type="button"
-                      className="studio-tree-toggle"
-                      aria-label={groupToggleLabel(entry.groupId)}
-                      aria-expanded={groupExpanded(entry.groupId)}
-                      disabled={isLayerSearching}
-                      onClick={() => toggleLayerGroup(entry.groupId)}
+                      onClick={copySelectedToPage}
+                      disabled={state.selectedIds.length === 0 || !copyTargetPageId}
                     >
-                      {groupExpanded(entry.groupId) ? "▾" : "▸"}
+                      复制选中图元
                     </Button>
-                    {renderLayerButton(
-                      page.nodes.find((node) => node.id === entry.anchorNodeId) ??
-                        entry.members[0]!,
-                      "group",
-                      entry,
-                    )}
                   </div>
-                  {groupExpanded(entry.groupId) && (
-                    <div
-                      className="studio-tree-members"
-                      role="group"
-                      aria-label={`组合 ${entry.groupId} 的成员`}
-                    >
-                      {entry.members.map((node) => renderLayerButton(node, "member"))}
-                    </div>
-                  )}
-                </div>
-              ),
-            )}
+                  <p className="studio-tip">
+                    Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。
+                  </p>
+                </Collapse.Panel>
+              </Collapse>
+            </div>
           </div>
-          <div className="studio-side-more">
-            <Collapse borderless defaultValue={[]}>
-              <Collapse.Panel value="cross-page" header="跨页操作与使用帮助">
-                <div className="studio-copy-tools">
-                  <label className="studio-field">
-                    复制选中图元到
-                    <Select
-                      value={copyTargetPageId}
-                      disabled={copyTargetPages.length === 0}
-                      options={
-                        copyTargetPages.length === 0
-                          ? [{ label: "暂无其他页面", value: "" }]
-                          : copyTargetPages.map((item) => ({ label: item.name, value: item.id }))
-                      }
-                      onChange={(value) => {
-                        if (typeof value === "string") setPreferredCopyTargetPageId(value);
-                      }}
-                    />
-                  </label>
-                  <Button
-                    tag="button"
-                    type="button"
-                    onClick={copySelectedToPage}
-                    disabled={state.selectedIds.length === 0 || !copyTargetPageId}
-                  >
-                    复制选中图元
-                  </Button>
-                </div>
-                <p className="studio-tip">
-                  Shift+点击多选；拖动空白区域框选；Ctrl+A 全选，Del 删除。
-                </p>
-              </Collapse.Panel>
-            </Collapse>
-          </div>
-                  </div>
         </aside>
         {(["left", "right"] as const).map((side) =>
           (side === "left" ? leftPanelVisible : rightPanelVisible) ? (
@@ -3040,9 +3100,18 @@ export default function StudioPage({
                 <h3>当前画板</h3>
                 <strong>{page.name}</strong>
                 <dl>
-                  <div><dt>宽度</dt><dd>{page.size.width} px</dd></div>
-                  <div><dt>高度</dt><dd>{page.size.height} px</dd></div>
-                  <div><dt>图元</dt><dd>{page.nodes.length}</dd></div>
+                  <div>
+                    <dt>宽度</dt>
+                    <dd>{page.size.width} px</dd>
+                  </div>
+                  <div>
+                    <dt>高度</dt>
+                    <dd>{page.size.height} px</dd>
+                  </div>
+                  <div>
+                    <dt>图元</dt>
+                    <dd>{page.nodes.length}</dd>
+                  </div>
                 </dl>
                 <p className="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
               </div>
