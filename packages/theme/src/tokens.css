@@ -11,6 +11,9 @@
 
   /* V7 品牌资产不修改；工业状态颜色对浅色面板独立适配。 */
   --adui-color-stage: #101a29;
+  --adui-color-editor-workspace: #e8ebf0;
+  --adui-color-editor-artboard: #ffffff;
+  --adui-color-editor-grid: #c4cbd4;
   --adui-color-stage-elevated: #182538;
   --adui-color-stage-grid: #304158;
   --adui-color-nav-text: #c1d0e1;

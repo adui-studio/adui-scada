@@ -105,12 +105,14 @@ describe("精密工程工作台设计系统", () => {
 
   it("组态画布固定比例和侧栏宽度不因重设计而改变", () => {
     const css = readRelative("../../tailwind/src/studio.css");
-    expect(css).toContain("--studio-left-width: 252px;");
-    expect(css).toContain("--studio-right-width: 320px;");
+    expect(css).toContain("--studio-left-width: 236px;");
+    expect(css).toContain("--studio-right-width: 288px;");
     expect(css).toContain(
       "grid-template-columns: var(--studio-left-width) minmax(0, 1fr) var(--studio-right-width);",
     );
     expect(css).toContain(".studio-canvas-board > .studio-svg");
+    expect(css).toContain(".studio-canvas-dock {");
+    expect(css).toContain(".studio-artboard-surface {");
     expect(css).toContain("background: var(--adui-color-stage);");
     expect(css).toContain(".studio-shell :is(button, input, select, textarea, summary):focus-visible");
     expect(css).toContain(".studio-inspector-tabs {");

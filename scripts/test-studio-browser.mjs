@@ -276,9 +276,9 @@ async function checkStudioInPage() {
       near(boardRect.top, svgRect.top) &&
       near(boardRect.bottom, svgRect.bottom),
   );
-  verify("左侧栏固定 252px", near(bounds(layers).width, 252));
-  verify("右侧栏固定 320px", near(bounds(properties).width, 320));
-  verify("画布占据剩余宽度", near(bounds(workspace).width - 252 - 320, bounds(stage).width));
+  verify("左侧栏固定 236px", near(bounds(layers).width, 236));
+  verify("右侧栏固定 288px", near(bounds(properties).width, 288));
+  verify("画布占据剩余宽度", near(bounds(workspace).width - 236 - 288, bounds(stage).width));
 
   const viewBox = svg.viewBox.baseVal;
   const grid = svg.querySelector('rect[fill="url(#scada-studio-grid)"]');
@@ -302,6 +302,9 @@ async function checkStudioInPage() {
   );
 
   const zoomButtons = [...element(".studio-zoom").querySelectorAll("button")];
+  verify("创建工具集中在画布底部", Boolean(stage.querySelector(".studio-canvas-dock .studio-add")));
+  verify("页面导航位于左侧面板", Boolean(layers.querySelector(".studio-page-bar .studio-page-tabs")));
+  verify("独立白色画板存在", Boolean(svg.querySelector(".studio-artboard-surface")));
   const originalWidth = svg.viewBox.baseVal.width;
   zoomButtons[2]?.click();
   await settle();

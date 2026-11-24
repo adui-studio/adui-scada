@@ -1928,3 +1928,256 @@
   font-size: var(--adui-font-size-xs);
   overflow-wrap: anywhere;
 }
+
+
+/* D5c1 · Figma UI3 任务型画布：页面/图层左置、轻量属性右置、创建工具底部。 */
+.studio-workspace {
+  --studio-left-width: 236px;
+  --studio-right-width: 288px;
+  background: var(--adui-color-editor-workspace);
+}
+.studio-toolbar {
+  min-height: 46px;
+  gap: 12px;
+  padding: 6px 12px;
+  background: var(--scada-surface);
+}
+.studio-toolbar > div:first-child {
+  flex: none;
+  max-width: 160px;
+  min-width: 115px;
+}
+.studio-toolbar h1 {
+  margin-top: 2px;
+  color: var(--scada-text-strong);
+  font-size: 13px;
+  font-weight: 740;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio-toolbar .scada-eyebrow { font-size: 10px; }
+.studio-actions { gap: 6px; }
+.studio-actions button {
+  min-height: 30px;
+  font-size: var(--adui-font-size-2xs);
+}
+.studio-history-actions,
+.studio-save-actions { gap: 4px; }
+.studio-panel-layers {
+  border-right: 1px solid var(--scada-border);
+  background: var(--scada-surface);
+}
+.studio-page-bar {
+  flex: none;
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--scada-border);
+  background: var(--scada-surface);
+}
+.studio-page-bar::before {
+  content: "页面";
+  color: var(--scada-text-muted);
+  font-size: var(--adui-font-size-2xs);
+  font-weight: 750;
+}
+.studio-page-tabs {
+  display: flex;
+  max-height: 136px;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.studio-page-tabs .t-button {
+  width: 100%;
+  min-height: 29px;
+  justify-content: flex-start;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 5px;
+  text-align: left;
+}
+.studio-page-tabs .t-button[aria-current="page"] {
+  color: var(--scada-primary);
+  background: var(--scada-active-bg);
+  box-shadow: inset 2px 0 var(--scada-primary);
+}
+.studio-page-menu { align-self: flex-start; }
+.studio-page-menu .t-button { min-height: 27px; font-size: 11px; }
+.studio-pane-heading { min-height: 40px; padding: 8px 12px; }
+.studio-pane-heading h2 { font-size: 12px; }
+.studio-tree-section-title { padding-top: 12px; }
+.studio-tree-controls { padding: 8px 10px; }
+.studio-layer-tree { padding: 6px; }
+.studio-layer-tree .studio-layer { min-height: 30px; }
+.studio-stage {
+  position: relative;
+  background: var(--adui-color-editor-workspace);
+}
+.studio-stage-caption {
+  position: absolute;
+  z-index: 5;
+  top: 12px;
+  right: 14px;
+  left: 14px;
+  display: flex;
+  width: auto;
+  min-height: 37px;
+  margin: 0;
+  padding: 4px 7px 4px 12px;
+  border: 1px solid var(--scada-border);
+  border-radius: 9px;
+  background: var(--scada-surface);
+  box-shadow: var(--adui-shadow-panel);
+  color: var(--scada-text);
+}
+.studio-stage-caption > span { color: var(--scada-text-strong); font-weight: 650; }
+.studio-stage-caption > .studio-view-menu > .t-popup > .t-button,
+.studio-stage-caption > .studio-zoom .t-button {
+  min-height: 27px;
+  border-color: var(--scada-border);
+  background: var(--scada-surface);
+  color: var(--scada-text-strong);
+}
+.studio-stage-caption > .studio-view-menu > .t-popup > .t-button:hover,
+.studio-stage-caption > .studio-zoom .t-button:hover {
+  background: var(--scada-action-hover);
+  color: var(--scada-text-strong);
+}
+.studio-zoom {
+  border-color: var(--scada-border);
+  background: var(--adui-color-surface-muted);
+}
+.studio-zoom .t-button {
+  color: var(--scada-text-strong);
+  background: transparent;
+}
+.studio-canvas-scroll,
+.studio-canvas-board,
+.studio-canvas-board > .studio-svg {
+  background: var(--adui-color-editor-workspace);
+}
+.studio-artboard-surface {
+  fill: var(--adui-color-editor-artboard);
+  filter: drop-shadow(0 12px 18px rgb(31 47 64 / 14%));
+}
+.studio-page-boundary {
+  stroke: var(--scada-border-strong);
+  stroke-width: 1;
+  stroke-dasharray: none;
+  stroke-opacity: 1;
+}
+.studio-canvas-dock {
+  position: absolute;
+  z-index: 6;
+  bottom: 18px;
+  left: 50%;
+  display: flex;
+  min-width: 0;
+  max-width: calc(100% - 24px);
+  transform: translateX(-50%);
+  align-items: center;
+  padding: 6px;
+  border: 1px solid var(--scada-border);
+  border-radius: 12px;
+  background: var(--scada-surface);
+  box-shadow: var(--adui-shadow-floating);
+}
+.studio-canvas-dock .studio-library-label { display: none; }
+.studio-canvas-dock .studio-add {
+  display: flex;
+  min-width: 0;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.studio-canvas-dock .studio-add .t-button {
+  flex: none;
+  width: auto;
+  min-width: 62px;
+  min-height: 35px;
+  height: 35px;
+  padding: 6px 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 650;
+}
+.studio-canvas-dock .studio-add .t-button:hover {
+  background: var(--scada-active-bg);
+  color: var(--scada-primary);
+}
+.studio-panel-properties {
+  border-left: 1px solid var(--scada-border);
+  padding-inline: 12px;
+  background: var(--scada-surface);
+}
+.studio-inspector-tabs {
+  margin-inline: -12px;
+  padding-inline: 12px;
+}
+.studio-inspector-content > h2 {
+  margin: 0 0 12px;
+  font-size: 12px;
+}
+.studio-geometry {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px;
+  background: var(--adui-color-surface-muted);
+}
+.studio-geometry label { min-width: 0; }
+.studio-geometry .t-button[type="submit"] {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+.studio-statusbar {
+  height: 30px;
+  border-color: var(--scada-border);
+  background: var(--scada-surface);
+}
+@media (max-width: 1220px) {
+  .studio-stage-caption {
+    gap: 5px;
+    padding-inline: 8px;
+  }
+  .studio-stage-caption > span {
+    max-width: 48%;
+    font-size: 10px;
+  }
+  .studio-canvas-dock .studio-add .t-button {
+    min-width: 55px;
+    padding-inline: 7px;
+  }
+}
+@media (max-width: 930px) {
+  .studio-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(300px, 1fr) auto;
+    overflow-y: auto;
+  }
+  .studio-panel-layers,
+  .studio-stage,
+  .studio-panel-properties {
+    grid-column: 1;
+    min-height: 0;
+  }
+  .studio-panel-layers { grid-row: 1; max-height: 250px; }
+  .studio-stage { grid-row: 2; min-height: 300px; }
+  .studio-panel-properties { grid-row: 3; max-height: 250px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-canvas-dock .t-button { transition: none; }
+}
