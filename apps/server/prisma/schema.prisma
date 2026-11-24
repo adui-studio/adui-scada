@@ -28,6 +28,8 @@ model ScadaProject {
   releaseState  ScadaProjectReleaseState?
   /// 该工程只追加的正式发布与回滚事件。
   releaseEvents ScadaProjectReleaseEvent[]
+  /// 该工程内部采集流已提交的历史批次。
+  tagHistoryBatches ScadaTagHistoryBatch[]
 
   @@id([tenantId, projectId])
   @@map("scada_projects")
@@ -275,4 +277,55 @@ model ScadaOidcTransaction {
   @@index([expiresAt, consumedAt], map: "scada_oidc_transactions_expiry_idx")
   @@index([browserBindingHash, expiresAt], map: "scada_oidc_transactions_browser_idx")
   @@map("scada_oidc_transactions")
+}
+
+/// 已原子提交的工程历史归档批次，租户和工程共同限定幂等键。
+model ScadaTagHistoryBatch {
+  /// 可信服务端绑定的租户标识。
+  tenantId      String   @map("tenant_id") @db.VarChar(128)
+  /// 工程标识。
+  projectId     String   @map("project_id") @db.VarChar(128)
+  /// 每个写入者生命周期唯一的采集流标识。
+  streamId      String   @map("stream_id") @db.VarChar(128)
+  /// 采集流内正安全整数批次序号。
+  batchSequence BigInt   @map("batch_sequence")
+  /// 规范历史记录编码版本。
+  formatVersion Int      @map("format_version")
+  /// 已提交的完整批次记录数。
+  recordCount   Int      @map("record_count")
+  /// 服务端批次提交时间。
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// 所属工程，不允许跨工程归档。
+  project       ScadaProject @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict, onUpdate: Cascade)
+  /// 按原始批次顺序保存的历史记录。
+  records       ScadaTagHistoryRecord[]
+
+  @@id([tenantId, projectId, streamId, batchSequence])
+  @@map("scada_tag_history_batches")
+}
+
+/// 历史归档点，保留原始标量、质量与时间，不按实时序号去重。
+model ScadaTagHistoryRecord {
+  /// 历史点所属租户标识。
+  tenantId      String @map("tenant_id") @db.VarChar(128)
+  /// 历史点所属工程标识。
+  projectId     String @map("project_id") @db.VarChar(128)
+  /// 原始采集流标识。
+  streamId      String @map("stream_id") @db.VarChar(128)
+  /// 原始批次序号。
+  batchSequence BigInt @map("batch_sequence")
+  /// 批次内从零开始的原始顺序。
+  ordinal       Int
+  /// 工程内稳定的 Tag 标识。
+  tagId         String @map("tag_id") @db.VarChar(128)
+  /// 原始服务器时间对应的 UTC 毫秒，用于范围查询。
+  timestampMs   BigInt @map("timestamp_ms")
+  /// 版本化规范记录文本，保留完整原始数据及负零。
+  payload       String @db.Text
+  /// 历史点所属已提交批次。
+  batch         ScadaTagHistoryBatch @relation(fields: [tenantId, projectId, streamId, batchSequence], references: [tenantId, projectId, streamId, batchSequence], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([tenantId, projectId, streamId, batchSequence, ordinal])
+  @@index([tenantId, projectId, tagId, timestampMs, streamId, batchSequence, ordinal], map: "scada_tag_history_records_lookup_idx")
+  @@map("scada_tag_history_records")
 }
