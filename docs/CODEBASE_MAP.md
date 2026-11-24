@@ -1605,3 +1605,13 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/database/prisma8-readonly-target.spec.ts`：连接目标正反向单测。
 - `apps/server/test/prisma8-readonly.db-spec.ts`：独立 PostgreSQL 只读专项；空库明确区分 EMPTY，不冒充正向样本验收。
 - `apps/server/tsconfig.json`：服务端显式启用 resolveJsonModule。未修改前端、旧版数据库服务、Prisma Schema、生成契约、依赖或迁移记录。
+
+### Prisma 8 历史只读候选入口
+
+- `apps/server/src/database/prisma8-readonly-client.ts`：共享只读探针客户端工厂。
+- `apps/server/src/database/prisma8-readonly-probe.ts`：独立工程查询和可选历史对照入口。
+- `apps/server/src/history/prisma8-tag-history-reader.ts`：有界历史查询及结果解码校验。
+- `apps/server/src/history/prisma8-history-readonly.ts`：实际历史样本与参数化原生 SQL 对照。
+- `apps/server/src/history/prisma8-tag-history-reader.spec.ts`：历史查询边界单测。
+- `apps/server/test/prisma8-readonly.db-spec.ts`：本机隔离数据库只读专项。
+- 根脚本 `db:prisma8:skills`、`test:db:prisma8:readonly`：工作区同步及专项执行入口。
