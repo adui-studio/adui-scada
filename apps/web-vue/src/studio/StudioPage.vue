@@ -389,7 +389,7 @@ const displayNodes = computed(() => {
   return (nodes ?? []).filter(studioNodeVisible);
 });
 const imageUrl = computed(() =>
-  svgDataUrl(displayDocument.value, previewTags, state.value.activePageId),
+  svgDataUrl(displayDocument.value, previewTags, state.value.activePageId, "light"),
 );
 
 watch(

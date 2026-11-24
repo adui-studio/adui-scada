@@ -237,7 +237,7 @@ export default function StudioPage() {
     [geometryPreview, snapResult, state.document, state.activePageId, state.selectedIds],
   );
   const image = useMemo(
-    () => svgDataUrl(displayDocument, previewTags, state.activePageId),
+    () => svgDataUrl(displayDocument, previewTags, state.activePageId, "light"),
     [displayDocument, state.activePageId],
   );
 

@@ -72,6 +72,7 @@ export function svgDataUrl(
   document: ScadaDocument,
   values: readonly TagValue[],
   pageId?: string,
+  appearance: "dark" | "light" = "dark",
 ): string {
   const page =
     pageId === undefined ? document.pages[0] : document.pages.find((item) => item.id === pageId);
@@ -80,7 +81,7 @@ export function svgDataUrl(
   const snapshot = new Map(values.map((v) => [v.tagId, v]));
   return (
     "data:image/svg+xml;charset=utf-8," +
-    encodeURIComponent(renderSvgPage(document, page.id, snapshot))
+    encodeURIComponent(renderSvgPage(document, page.id, snapshot, appearance))
   );
 }
 
