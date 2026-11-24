@@ -560,6 +560,8 @@ function inspectScadaUIInPage(view) {
     published: Boolean(main.querySelector(".scada-published-layout .scada-published-preview-panel")),
     readonly: !main.querySelector('[data-testid="published-runtime-svg"]'),
     studio: Boolean(main.querySelector(".studio-workspace .studio-svg")),
+    artboardWidth: Number(main.querySelector(".studio-page-boundary")?.getAttribute("width")),
+    artboardHeight: Number(main.querySelector(".studio-page-boundary")?.getAttribute("height")),
   };
 }
 
@@ -651,6 +653,11 @@ async function runScadaUIExperience(session) {
           assert.ok(data.published && data.readonly, prefix + " 静态只读预览边界失效");
         } else {
           assert.ok(data.studio, prefix + " 组态画布缺失");
+          assert.deepStrictEqual(
+            [data.artboardWidth, data.artboardHeight],
+            [1920, 1080],
+            prefix + " 新建 Studio 默认画板必须为 1920×1080",
+          );
           assert.notEqual(
             data.stageBackground,
             data.panelBackground,

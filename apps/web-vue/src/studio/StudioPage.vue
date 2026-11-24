@@ -18,7 +18,7 @@ import {
   TAG_DATA_TYPE_LABELS,
   tagDefinitionSupportsSlot,
   WaterTreatmentSimulator,
-  waterTreatmentDemoDocument,
+  waterTreatmentStudioDocument,
   DraftAutoSaveSession,
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
   studioNodeLocked,
@@ -88,7 +88,7 @@ const serverApi = createScadaApiClient();
 const serverSession = createStudioServerProjectSession(serverApi);
 const HISTORY_PAGE_SIZE = 10;
 const maxFileSize = 2 * 1024 * 1024;
-const editor = new DocumentEditor(waterTreatmentDemoDocument);
+const editor = new DocumentEditor(waterTreatmentStudioDocument);
 const state = shallowRef(editor.snapshot());
 const preview = shallowRef<{ id: string; x: number; y: number } | null>(null);
 const geometryPreview = shallowRef<ScadaDocument | null>(null);
@@ -2325,7 +2325,7 @@ async function importJsonFile(file: File | undefined) {
       <section class="studio-stage min-h-0 min-w-0" aria-label="组态画布">
         <div class="studio-stage-caption">
           <span
-            >{{ page.name }} · {{ page.size.width }} × {{ page.size.height }} · 静态模拟预览</span
+            >{{ page.name }} · {{ page.size.width }} × {{ page.size.height }} px · 静态模拟预览</span
           >
           <div class="studio-view-menu studio-view-settings-menu">
             <TPopup attach=".studio-view-settings-menu" trigger="click" placement="bottom-right">

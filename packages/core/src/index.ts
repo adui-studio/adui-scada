@@ -82,6 +82,8 @@ export { WaterTreatmentSimulator } from "./simulator.ts";
 export { renderSvgPage } from "./svg.ts";
 export {
   waterTreatmentDemoDocument,
+  waterTreatmentStudioDocument,
+  STUDIO_DEFAULT_PAGE_SIZE,
   waterTreatmentDemoTagDefinitions,
   waterTreatmentDemoTagCatalog,
   waterTreatmentDemoTagOptions,

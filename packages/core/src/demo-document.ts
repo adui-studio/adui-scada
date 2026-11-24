@@ -115,3 +115,38 @@ export const waterTreatmentDemoDocument = parseScadaDocument({
     },
   ],
 });
+
+/** 新建 Studio 工作区的默认画板；工程 Schema 本身允许导入其他合法尺寸。 */
+export const STUDIO_DEFAULT_PAGE_SIZE = { width: 1920, height: 1080 } as const;
+
+/**
+ * 新建 Studio 的演示工作区使用 1920×1080 画板。
+ * 仅对演示图元做等比缩放和居中，不改变原只读 Runtime 演示文档或既有工程。
+ */
+export const waterTreatmentStudioDocument = parseScadaDocument({
+  ...waterTreatmentDemoDocument,
+  pages: waterTreatmentDemoDocument.pages.map((page) => {
+    const inset = 80;
+    const scale = Math.min(
+      (STUDIO_DEFAULT_PAGE_SIZE.width - inset * 2) / page.size.width,
+      (STUDIO_DEFAULT_PAGE_SIZE.height - inset * 2) / page.size.height,
+    );
+    const offsetX = (STUDIO_DEFAULT_PAGE_SIZE.width - page.size.width * scale) / 2;
+    const offsetY = (STUDIO_DEFAULT_PAGE_SIZE.height - page.size.height * scale) / 2;
+    return {
+      ...page,
+      size: { ...STUDIO_DEFAULT_PAGE_SIZE },
+      nodes: page.nodes.map((node) => ({
+        ...node,
+        transform: {
+          ...node.transform,
+          x: node.transform.x * scale + offsetX,
+          y: node.transform.y * scale + offsetY,
+          width: node.transform.width * scale,
+          height: node.transform.height * scale,
+        },
+      })),
+    };
+  }),
+});
+

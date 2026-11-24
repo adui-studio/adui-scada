@@ -12,7 +12,7 @@ import {
   TAG_DATA_TYPE_LABELS,
   tagDefinitionSupportsSlot,
   WaterTreatmentSimulator,
-  waterTreatmentDemoDocument,
+  waterTreatmentStudioDocument,
   DraftAutoSaveSession,
   LOCAL_DRAFT_AUTO_SAVE_DELAY_MS,
   studioNodeLocked,
@@ -113,7 +113,7 @@ interface GeometryDragState {
 }
 
 export default function StudioPage() {
-  const editor = useMemo(() => new DocumentEditor(waterTreatmentDemoDocument), []);
+  const editor = useMemo(() => new DocumentEditor(waterTreatmentStudioDocument), []);
   const serverApi = useMemo(() => createScadaApiClient(), []);
   const serverSession = useMemo(() => createStudioServerProjectSession(serverApi), [serverApi]);
   const [state, setState] = useState<EditorSnapshot>(() => editor.snapshot());
@@ -2315,7 +2315,7 @@ export default function StudioPage() {
         <section className="studio-stage min-h-0 min-w-0" aria-label="组态画布">
           <div className="studio-stage-caption">
             <span>
-              {page.name} · {page.size.width} × {page.size.height} · 静态模拟预览
+              {page.name} · {page.size.width} × {page.size.height} px · 静态模拟预览
             </span>
             <div className="studio-view-menu studio-view-settings-menu">
               <Popup
