@@ -14,7 +14,7 @@ import {
 } from "./tag-history-record-codec.js";
 
 const ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
-const MAX_QUERY_POINTS = 10_000;
+const MAX_QUERY_POINTS = 1_000;
 
 interface HistoryProjectScope {
   readonly tenantId: string;
