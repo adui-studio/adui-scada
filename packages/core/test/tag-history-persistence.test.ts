@@ -115,8 +115,7 @@ test("错误工程、写入流、序号、版本、数量、状态与空回执�
     persist(request) {
       requests.push(request);
       const index = requests.length - 1;
-      const response =
-        index === invalid.length ? null : { ...receipt(request), ...invalid[index] };
+      const response = index === invalid.length ? null : { ...receipt(request), ...invalid[index] };
       return Promise.resolve(response as TagHistoryPersistenceReceipt);
     },
   });
