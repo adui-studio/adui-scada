@@ -144,9 +144,9 @@ test("拒绝派生质量、错 Tag 与无效记录，即使本应跳过也必须
   expect(() => sampler.record({ ...sample(1), kind: "runtime-quality" })).toThrow(/派生质量/);
   expect(() => sampler.record(sample(1, { tagId: "water.flow" }))).toThrow(/Tag ID 不匹配/);
   expect(() => sampler.record(sample(1, { value: Number.NaN }))).toThrow(/有限数/);
-  expect(() =>
-    sampler.record(sample(1, { serverTimestamp: "2026-02-30T00:00:00.000Z" })),
-  ).toThrow(/规范 UTC 毫秒时间/);
+  expect(() => sampler.record(sample(1, { serverTimestamp: "2026-02-30T00:00:00.000Z" }))).toThrow(
+    /规范 UTC 毫秒时间/,
+  );
   expect(() => sampler.record(sample(1, { sourceTimestamp: " ".repeat(129) }))).toThrow(
     /源时间文本过长/,
   );
@@ -159,9 +159,9 @@ test("拒绝非法策略，固定策略值及输入记录不受外部修改影�
     expect(() => new TagHistorySampler(buffer, tagId, { intervalMs })).toThrow(/周期无效/);
   }
   for (const numericDeadband of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
-    expect(() => new TagHistorySampler(buffer, tagId, { intervalMs: 1000, numericDeadband })).toThrow(
-      /变化阈值无效/,
-    );
+    expect(
+      () => new TagHistorySampler(buffer, tagId, { intervalMs: 1000, numericDeadband }),
+    ).toThrow(/变化阈值无效/);
   }
   expect(() => new TagHistorySampler(buffer, "../tag", policy)).toThrow(/Tag ID 无效/);
   const options = { intervalMs: 1000, numericDeadband: 5 };
