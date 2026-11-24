@@ -1589,3 +1589,11 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/history/tag-history-record-codec.spec.ts`、`apps/server/test/prisma-tag-history.db-spec.ts`：规范编码与隔离数据库回归候选。
 - `packages/runtime/src/local-project-simulation.ts`、`packages/runtime/test/local-project-simulation.test.ts`：共享本地模拟、原始会话趋势、CSV 与测试。
 - React/Vue 的 `src/runtime/RuntimePage` 及共享 `packages/runtime/src/runtime.css`：导入、模拟、页面与 Tag 选择、趋势及下载。
+
+## Prisma 8 渐进迁移 · 第一阶段
+
+- `apps/server/prisma.config.ts`：新版 CLI 的无连接契约生成配置，共享原 Schema。
+- `apps/server/prisma7.config.ts`：旧版 Client 生成及原迁移配置，继续读取根 .env。
+- `scripts/prisma7-cli.mjs`、`scripts/prisma7-cli.cases.mjs`：已安装兼容 CLI 入口解析与拒绝异常包的独立测试。
+- `scripts/init-docker-db.mjs`、`scripts/verify-fresh-postgres-migrations.mjs`：保留原迁移安全边界，显式解析 Prisma 7 兼容入口。
+- 根及服务端 `package.json`：新增 db:prisma8:emit，纳入 ready；其余数据库命令仍使用 Prisma 7。生成的新版契约目录为 `apps/server/src/generated/prisma8/`。
