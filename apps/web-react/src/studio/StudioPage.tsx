@@ -2371,27 +2371,7 @@ export default function StudioPage() {
                 </Button>
               </Popup>
             </div>
-            <div className="studio-zoom" aria-label="画布缩放">
-              <Button
-                tag="button"
-                type="button"
-                onClick={() => changeZoom(-0.25)}
-                disabled={zoom <= 0.5}
-              >
-                −
-              </Button>
-              <Button tag="button" type="button" onClick={resetCanvasView}>
-                {zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%`}
-              </Button>
-              <Button
-                tag="button"
-                type="button"
-                onClick={() => changeZoom(0.25)}
-                disabled={zoom >= 2}
-              >
-                +
-              </Button>
-            </div>
+
           </div>
           <div className="studio-canvas-scroll" tabIndex={0} aria-label="组态网格工作区">
             <div className="studio-canvas-board">
@@ -2588,7 +2568,7 @@ export default function StudioPage() {
               </svg>
             </div>
           </div>
-          <div className="studio-canvas-dock" aria-label="图元创建工具">
+          <div className="studio-canvas-dock" aria-label="画布编辑工具">
             <div className="studio-library-label">图元库 · 点击添加</div>
             <div className="studio-add">
               <Button tag="button" type="button" onClick={() => addSymbol("tank")}>
@@ -2602,6 +2582,27 @@ export default function StudioPage() {
               </Button>
               <Button tag="button" type="button" onClick={() => addSymbol("label")}>
                 + 文本
+              </Button>
+            </div>
+            <div className="studio-zoom" aria-label="画布缩放">
+              <Button
+                tag="button"
+                type="button"
+                onClick={() => changeZoom(-0.25)}
+                disabled={zoom <= 0.5}
+              >
+                −
+              </Button>
+              <Button tag="button" type="button" onClick={resetCanvasView}>
+                {zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%`}
+              </Button>
+              <Button
+                tag="button"
+                type="button"
+                onClick={() => changeZoom(0.25)}
+                disabled={zoom >= 2}
+              >
+                +
               </Button>
             </div>
           </div>
