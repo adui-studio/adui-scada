@@ -19,6 +19,8 @@ describe("精密工程工作台设计系统", () => {
     expect(tokens).toContain("--adui-color-bg: #edf1f5;");
     expect(tokens).toContain("--adui-color-surface: #ffffff;");
     expect(tokens).toContain("--adui-color-stage: #101a29;");
+    expect(tokens).toContain("--adui-color-editor-workspace: #e8ebf0;");
+    expect(tokens).toContain("--adui-color-editor-artboard: #ffffff;");
     expect(tokens).toContain("--scada-live: var(--adui-color-success);");
     expect(tokens).toContain("--scada-danger: var(--adui-color-danger);");
     expect(tokens).toContain("--scada-primary: var(--adui-color-brand);");
@@ -50,7 +52,9 @@ describe("精密工程工作台设计系统", () => {
 
   it("双框架从运行、发布到组态共享垂直导航与清晰的安全模式标识", () => {
     const css = readRelative("../src/runtime.css");
-    expect(css).toContain("grid-template-columns: 84px minmax(0, 1fr);");
+    expect(css).toContain("grid-template-columns: 184px minmax(0, 1fr);");
+    expect(css).toContain("grid-template-columns: 52px minmax(0, 1fr);");
+    expect(css).toContain(".scada-home-card-grid {");
     expect(css).toContain(".scada-app-nav .t-button[aria-current=\"page\"]");
     expect(css).toContain(".scada-app-nav .t-button:focus-visible");
     expect(css).toContain(".scada-app-frame[data-view=\"studio\"]");
@@ -64,7 +68,7 @@ describe("精密工程工作台设计系统", () => {
       expect(app).toContain("scada-app-topbar");
       expect(app).toContain("scada-skip-link");
       expect(app).toContain("仅供开发验证");
-      for (const label of ["运行监控", "已发布运行", "组态编辑"]) {
+      for (const label of ["工作台", "运行监控", "已发布运行", "组态编辑"]) {
         expect(app).toContain(label);
       }
     }
@@ -103,7 +107,7 @@ describe("精密工程工作台设计系统", () => {
     }
   });
 
-  it("组态画布固定比例和侧栏宽度不因重设计而改变", () => {
+  it("Studio 共享左侧页面、白色画板和底部图元工具区布局", () => {
     const css = readRelative("../../tailwind/src/studio.css");
     expect(css).toContain("--studio-left-width: 236px;");
     expect(css).toContain("--studio-right-width: 288px;");
@@ -113,7 +117,9 @@ describe("精密工程工作台设计系统", () => {
     expect(css).toContain(".studio-canvas-board > .studio-svg");
     expect(css).toContain(".studio-canvas-dock {");
     expect(css).toContain(".studio-artboard-surface {");
-    expect(css).toContain("background: var(--adui-color-stage);");
+    expect(css).toContain("background: var(--adui-color-editor-workspace);");
+    expect(css).toContain("fill: var(--adui-color-editor-artboard);");
+    expect(css).toContain(".studio-page-bar::before {");
     expect(css).toContain(".studio-shell :is(button, input, select, textarea, summary):focus-visible");
     expect(css).toContain(".studio-inspector-tabs {");
     expect(css).toContain(".studio-inspector-content[hidden] {");

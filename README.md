@@ -164,8 +164,10 @@ Core 新增稳定 `tagId`、可变显示名称、数据类型、单位和描述�
 
 当前目录仅是代码内本机演示元数据，不改变 `ScadaDocument 0.2.0`，重命名不会自动持久化，也不含 OPC UA NodeId、Modbus 寄存器或 MQTT Topic。FR-004 仍为部分实现。见 [ADR-0061](docs/adr/0061-tag-definition-catalog.md)。本批 Windows 测试尚待维护者执行。
 
-## D5c1 · UI/UX 精密工作台整体改版候选
+## D5c1 · Figma UI3 / FUXA 参考下的完整工作区改版候选
 
-本次针对 React/Vue 的**运行监控、已发布运行、组态编辑及应用导航**重新设计交互和视觉结构：左侧功能导航轨道、浅色高对比数据面板、独立深色 SVG 画布、集中状态提示以及更清晰的只读发布工作流。共享字体、颜色、间距和 TDesign Light 变量统一由 `@adui/theme` 提供。V7 品牌 SVG 未更改，Core/工程 Schema/工业网关和权限边界不变。
+React/Vue 双框架正在统一重设计：浅色工作台首页、实际存在的模块入口、运行监控与只读发布页，以及专用 Studio 编辑工作区。Studio 学习 Figma 的任务布局：左侧页面/图层，中央中性灰工作区和**白色 1920×1080 逻辑画板**，底部真实图元工具岛，右侧互斥图元属性/Tag 目录与独立的 Tag 编辑窗口。并借鉴 FUXA 的工业工程配置分工。此处不复制第三方代码、商标、截图或专有资源。
 
-完整设计规则参见 [UI/UX 设计系统](docs/UI_DESIGN_SYSTEM.md)。统一浏览器验收入口为 `pnpm run test:ui:browser`，覆盖 React/Vue 双端的三页面与两个桌面分辨率。此部分在 D5c1 分支属于**待统一最终验收**的候选代码，不代表现场生产验收完成。
+共享 `@adui/theme` 和 TDesign 官方 Light 变量负责视觉语义；共享 Core 新增 Studio 默认画板定义、适应视图留白及 Studio 专用浅色 SVG 预览。旧只读 Runtime 默认深色输出不变，项目 Schema、既有工程画布、Tag 质量与工业安全边界保持兼容。不虚构最近文件、设备连接或多人协作功能。
+
+完整设计参见 [UI/UX 设计系统](docs/UI_DESIGN_SYSTEM.md)。`pnpm run test:ui:browser` 规划覆盖 **React/Vue × 1440×900 / 1024×768 × 首页/监控/发布/Studio 共 16 场景**。新设计与浏览器验收仍是 PR #192 Draft 候选，尚未执行最新 Windows `ready` / Chromium / 截图审阅，不代表生产现场或完整用户体验已验收。
