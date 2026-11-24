@@ -222,6 +222,25 @@ async function waitFor(session, description, predicate, timeoutMs) {
   throw new Error(description + "超时：" + JSON.stringify(last));
 }
 
+/** 在真实浏览器导航到运行监控，避免因新增首页导致 SSE 测试误认为订阅失败。 */
+async function activateRuntimeView(session) {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    try {
+      const ready = await session.evaluate(
+        "(() => { const nav = document.querySelector('.scada-app-nav'); " +
+          "const button = [...(nav?.querySelectorAll('button') ?? [])].find(" +
+          "(node) => node.textContent.trim() === '运行监控'); " +
+          "if (!button) return false; button.click(); return true; })()",
+      );
+      if (ready === true) return;
+    } catch {
+      // 初次导航期间旧执行上下文失效，下一次轮询重试。
+    }
+    await pause(100);
+  }
+  throw new Error("运行监控导航入口超时");
+}
+
 async function checkTarget(session, target) {
   const url = validateLocalUrl(target.url);
   url.searchParams.set("scada_sse_browser_check", target.name.toLowerCase());
@@ -229,6 +248,7 @@ async function checkTarget(session, target) {
   if (navigation.errorText) {
     throw new Error(target.name + " 浏览器导航失败：" + navigation.errorText);
   }
+  await activateRuntimeView(session);
   const ready = await waitFor(
     session,
     target.name + " 初始 SSE 快照",
@@ -332,6 +352,7 @@ async function checkTransportFaultTarget(session, target, proxy) {
   const navigation = await session.send("Page.navigate", { url: url.href });
   if (navigation.errorText)
     throw new Error(target.name + " 浏览器导航失败：" + navigation.errorText);
+  await activateRuntimeView(session);
 
   let stableSince = 0;
   const ready = await waitFor(

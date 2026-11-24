@@ -530,7 +530,7 @@ function inspectScadaUIInPage(view) {
   }
   const links = [...nav.querySelectorAll("button")];
   const current = links.find((button) => button.getAttribute("aria-current") === "page");
-  const sample = main.querySelector(".scada-header h1, .studio-toolbar h1");
+  const sample = main.querySelector(".scada-home-heading h1, .scada-header h1, .studio-toolbar h1");
   const stage = document.querySelector(".studio-stage");
   const panel = document.querySelector(".studio-panel-layers");
   const label = stage?.querySelector(".studio-stage-caption > span");
@@ -560,6 +560,7 @@ function inspectScadaUIInPage(view) {
     published: Boolean(main.querySelector(".scada-published-layout .scada-published-preview-panel")),
     readonly: !main.querySelector('[data-testid="published-runtime-svg"]'),
     studio: Boolean(main.querySelector(".studio-workspace .studio-svg")),
+    home: Boolean(main.querySelector(".scada-home-card-grid .scada-home-card")),
     artboardWidth: Number(main.querySelector(".studio-page-boundary")?.getAttribute("width")),
     artboardHeight: Number(main.querySelector(".studio-page-boundary")?.getAttribute("height")),
   };
@@ -586,7 +587,7 @@ function scadaTextContrast(foreground, background) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-/** 最终统一验收入口：双框架 × 双分辨率 × 三种实际页面，共 12 个界面。 */
+/** 统一验收：双框架 × 双分辨率 × 工作台/监控/发布/Studio，共 16 个场景。 */
 async function runScadaUIExperience(session) {
   const captureScreenshots = process.env.SCADA_UI_SCREENSHOTS === "1";
   const screenshotDirectory = fileURLToPath(new URL("../.artifacts/ui-review/", import.meta.url));
@@ -618,6 +619,7 @@ async function runScadaUIExperience(session) {
       }
       assert.ok(ready, target.name + " UI 工作空间导航未加载");
       for (const [view, label, selector] of [
+        ["home", "工作台", ".scada-home"],
         ["runtime", "运行监控", ".scada-shell--overview"],
         ["published", "已发布运行", ".scada-shell--published"],
         ["studio", "组态编辑", ".studio-shell"],
@@ -632,11 +634,11 @@ async function runScadaUIExperience(session) {
         const prefix = target.name + " " + viewport.width + "x" + viewport.height + " " + label;
         assert.equal(data.theme, "light", prefix + " 主题未切换至浅色工作区");
         assert.equal(data.screen, view, prefix + " 当前视图与导航状态不一致");
-        assert.equal(data.railWidth, 84, prefix + " 左侧导航宽度不一致");
+        assert.equal(data.railWidth, view === "studio" ? 52 : 184, prefix + " 左侧导航宽度不一致");
         assert.ok(data.railHeight >= viewport.height - 2, prefix + " 导航没有撑满视口");
         assert.deepStrictEqual(
           data.buttons,
-          ["运行监控", "已发布运行", "组态编辑"],
+          ["工作台", "运行监控", "已发布运行", "组态编辑"],
           prefix + " 缺少完整工作空间导航",
         );
         assert.equal(data.current, label, prefix + " 未标识当前导航");
@@ -647,7 +649,9 @@ async function runScadaUIExperience(session) {
           scadaTextContrast(data.navColor, data.navBackground) >= 4.5,
           prefix + " 当前导航文字对比度不足",
         );
-        if (view === "runtime") {
+        if (view === "home") {
+          assert.ok(data.home, prefix + " 工作台功能入口缺失");
+        } else if (view === "runtime") {
           assert.ok(data.process && data.telemetry && data.quality, prefix + " 工艺和链路信息缺失");
         } else if (view === "published") {
           assert.ok(data.published && data.readonly, prefix + " 静态只读预览边界失效");
