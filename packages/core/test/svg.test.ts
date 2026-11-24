@@ -149,3 +149,23 @@ test("总览指标卡使用真实绑定值且过期时不显示历史读数", ()
   expect(stale).not.toContain("75 %");
   expect(stale).not.toContain("75%");
 });
+
+test("Studio 深色预览保留工业设备和指标卡造型且不改动工程或默认运行时", () => {
+  const source = JSON.stringify(waterTreatmentShowcaseDocument);
+  const values = new Map([["water.level", tag("GOOD", 75)]]);
+  const darkRuntime = renderSvgPage(waterTreatmentShowcaseDocument, "main", values);
+  const studioDark = renderSvgPage(waterTreatmentShowcaseDocument, "main", values, "studio-dark");
+  expect(studioDark).toContain('<rect width="100%" height="100%" fill="#0c1728"/>');
+  expect(studioDark).toContain('fill="#e6edf6"');
+  expect(studioDark).toContain('fill="#192333"');
+  expect(studioDark).toContain('id="scada-metal"');
+  expect(studioDark).toContain('viewBox="0 0 120 100"');
+  expect(studioDark).toContain('viewBox="0 0 320 92"');
+  expect(studioDark).toContain("75 %");
+  const stale = renderSvgPage(waterTreatmentShowcaseDocument, "main", new Map([["water.level", tag("STALE", 75)]]), "studio-dark");
+  expect(stale).toContain("已过期");
+  expect(stale).not.toContain("75 %");
+  expect(stale).not.toContain("75%");
+  expect(JSON.stringify(waterTreatmentShowcaseDocument)).toBe(source);
+  expect(renderSvgPage(waterTreatmentShowcaseDocument, "main", values)).toBe(darkRuntime);
+});

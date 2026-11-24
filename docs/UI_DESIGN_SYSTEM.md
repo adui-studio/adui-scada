@@ -222,3 +222,9 @@ Studio 新增图层与图元库两种真实模式，基础水箱、水泵、管�
 ## 21. TDesign 官网式主题切换动效
 
 参考 https://tdesign.tencent.com/react/custom-theme 对应的 Tencent/tdesign 官网 td-theme-tabs 实现，采用太阳/月亮双图标与中性背景滑动选中块，仍由官方 TDesign Switch 提供实际受控交互。共享主题逻辑在支持 View Transition API 时使用 document.startViewTransition 进行整页过渡；React flushSync、Vue nextTick 确保框架状态与主题根属性在过渡回调内同步。不支持或用户减少动态效果时直接切换。保留 V7 主题、Logo、偏好存储及工程数据，启动恢复不触发动画。
+
+## 22. 官网斜切扫屏与深色画板（覆盖前述白色画板约定）
+
+维护者明确要求深色模式的 Studio 画板也随主题切换，并以 TDesign 官网首页录屏为动效参考。官方站点 animation.less 使用 8 度斜切 clip-path 与 1 秒 View Transition 动画：浅入深由左向右，深入浅由右向左；旧视图禁用淡出，新视图以遮罩揭示。项目共享主题入口引入对应样式，仅在用户主动主题过渡期间生效。源码参考：https://github.com/Tencent/tdesign/blob/main/packages/site-components/src/styles/animation.less 。
+
+深色画板外层与内嵌 SVG 同步使用 #0C1728，正文和状态色适配；新 studio-dark 外观保留金属设备、管道、指标卡几何，原默认 dark 运行渲染保持不变。切换只作用于预览，不修改工程文档、画板尺寸、保存修订或现场 Tag；两端 Studio 保持挂载，不重建编辑器。

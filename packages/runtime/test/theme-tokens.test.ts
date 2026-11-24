@@ -225,7 +225,7 @@ describe("V7 明暗主题", () => {
     }
   });
 
-  it("深色只覆盖已定义语义变量，不改写白色工程画板或品牌几何", () => {
+  it("深色覆盖已定义语义变量及画板外观，不改写品牌几何", () => {
     const light = readTheme("tokens.css");
     const dark = readTheme("dark.css");
     const names = [...dark.matchAll(/^\s*(--[a-z][a-z\d-]+):/gm)].map((match) => match[1]);
@@ -233,7 +233,7 @@ describe("V7 明暗主题", () => {
     for (const name of names) expect(light).toContain(name + ":");
     expect(dark).toContain('theme-mode="dark"');
     expect(dark).toContain("color-scheme: dark;");
-    expect(dark).not.toContain("--adui-color-editor-artboard:");
+    expect(dark).toContain("--adui-color-editor-artboard: #0c1728;");
     expect(dark).not.toContain("--adui-scada-blue:");
     expect(readTheme("index.css")).toContain('@import "./dark.css";');
     for (const name of ["mark-primary.svg", "mark-dark.svg"]) {
@@ -299,5 +299,19 @@ describe("TDesign 官网主题过渡", () => {
     const css = readRelative("../src/runtime.css");
     expect(css).toContain(".scada-theme-icons");
     expect(css).toContain("translateX(28px)");
+    const animation = readTheme("theme-transition.css");
+    expect(readTheme("index.css")).toContain('@import "./theme-transition.css";');
+    expect(animation).toContain("tan(8deg)");
+    expect(animation).toContain("animation-duration: 1s;");
+    expect(animation).toContain("animation-name: scada-light-to-dark;");
+    expect(animation).toContain("animation-name: scada-dark-to-light;");
+    expect(animation).toContain("mix-blend-mode: normal;");
+    expect(animation).toContain("animation: none;");
+    for (const path of [
+      "../../../apps/web-react/src/studio/StudioPage.tsx",
+      "../../../apps/web-vue/src/studio/StudioPage.vue",
+    ]) {
+      expect(readRelative(path)).toContain('"studio-dark" : "light"');
+    }
   });
 });

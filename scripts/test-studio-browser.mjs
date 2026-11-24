@@ -329,7 +329,7 @@ async function checkStudioInPage() {
     "页面导航位于左侧面板",
     Boolean(layers.querySelector(".studio-page-bar .studio-page-tabs")),
   );
-  verify("独立白色画板存在", Boolean(svg.querySelector(".studio-artboard-surface")));
+  verify("独立工程画板存在", Boolean(svg.querySelector(".studio-artboard-surface")));
   const captionRect = bounds(element(".studio-stage-caption"));
   const dockRect = bounds(element(".studio-canvas-dock"));
   const stageRect = bounds(stage);
@@ -770,6 +770,7 @@ function inspectScadaUIInPage() {
     studio: Boolean(main.querySelector(".studio-workspace .studio-svg")),
     home: Boolean(main.querySelector(".scada-home-card-grid .scada-home-card")),
     artboardFill: style(main.querySelector(".studio-artboard-surface"), "fill"),
+    artboardImage: main.querySelector(".studio-svg image")?.getAttribute("href") ?? "",
     saveColor: style(main.querySelector(".studio-save-actions button"), "color"),
     saveBackground: style(main.querySelector(".studio-save-actions button"), "background-color"),
     artboardWidth: Number(main.querySelector(".studio-page-boundary")?.getAttribute("width")),
@@ -1075,9 +1076,19 @@ async function runScadaUIExperience(session) {
             assert.ok(data.studio, prefix + " 组态画布缺失");
             assert.equal(
               data.artboardFill,
-              "rgb(255, 255, 255)",
-              prefix + " 工程白色画板被主题改写",
+              mode === "dark" ? "rgb(12, 23, 40)" : "rgb(255, 255, 255)",
+              prefix + " 工程画板底色未跟随主题",
             );
+            const artwork = decodeURIComponent(data.artboardImage.split(",").slice(1).join(","));
+            assert.ok(
+              artwork.includes(
+                mode === "dark"
+                  ? '<rect width="100%" height="100%" fill="#0c1728"/>'
+                  : '<rect width="100%" height="100%" fill="#ffffff"/>',
+              ),
+              prefix + " SVG 内嵌画面背景未跟随主题",
+            );
+            assert.ok(artwork.includes('id="scada-metal"'), prefix + " 工业图元造型未保留");
             assert.ok(
               scadaTextContrast(data.saveColor, data.saveBackground) >= 4.5,
               prefix + " 保存按钮文字对比度不足",

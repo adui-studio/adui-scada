@@ -4651,3 +4651,7 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 ### D5c1 · TDesign 官网式主题过渡
 
 已查阅 Tencent/tdesign 的 packages/site-components/src/components/td-theme-tabs/index.ts 与 style.less：官网使用双图标、滑动选中块及 document.startViewTransition，不另加圆形扩散。本候选保留真实 TDesign Switch 并共享原生过渡与减少动效降级路径。补充源码断言及浏览器双图标、真实开关状态、过渡完成后的主题和刷新检查；实际浏览器、类型及格式检查待执行。
+
+### D5c1 · 官网斜切主题动画与深色画板
+
+维护者上传暗色画板仍白色截图及官网主题录屏。附件在当前环境仅为一帧 PNG，无法逐帧复验；进一步查阅官网 td-theme-tabs 及 animation.less，确认真实动效为 8 度斜切遮罩、1 秒双向扫屏，并非默认交叉淡入淡出。已提交共享 CSS，新增 studio-dark 预览及双端主题传递，替换旧白色画板断言，补充内嵌 SVG 背景、金属设备、指标卡、数据质量及原运行渲染兼容性测试。尚未执行 Vite+、Vitest、Chromium 或实际录屏对比。
