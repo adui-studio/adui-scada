@@ -1527,3 +1527,8 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/test-studio-browser.mjs`：UI 16 视图、Studio 页面/图元工具与画板结构；`scripts/test-runtime-sse-browser.mjs`：从首页真实跳转运行监控再验证有效流/真实网络断线/连接回收。
 - `packages/core/test/{studio-viewport-rect.test.ts,svg.test.ts}`、`packages/runtime/test/runtime.test.ts`：对应兼容与外观分离测试源码。完整 Windows `ready`/浏览器仍待统一最终验收。
 
+### D5c1 · 当前工作空间布局（覆盖前述历史布局）
+
+- `apps/web-{react,vue}/src/App` 与 `packages/runtime/src/runtime.css`：文件列表首页、Studio 横向工作空间切换栏。
+- 双端 `StudioPage` 与 `packages/tailwind/src/studio.css`：可调整面板宽度、左页面与图层、右属性与 Tag、中央 SVG、上方视图缩放及底部工具。
+- `scripts/test-studio-browser.mjs`：以实际宽度、调整与折叠操作检验布局；不再要求旧固定像素。

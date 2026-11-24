@@ -160,12 +160,27 @@ function WorkspaceHome({ onNavigate }: { onNavigate: (view: AppView) => void }) 
     <main id="scada-main-content" className="scada-home">
       <div className="scada-home-heading">
         <span className="scada-home-eyebrow">ADui Studio / 工作空间</span>
-        <h1>你的工业设计工作台</h1>
-        <p>从组态画布到只读监控，在同一个工作区完成开发与验证。</p>
+        <h1>工程工作区</h1>
+        <p>打开工程进行设计，或进入独立的只读运行环境。</p>
       </div>
+      <section className="scada-home-section" aria-labelledby="scada-home-demo">
+        <div className="scada-home-section-head">
+          <h2 id="scada-home-demo">工程示例</h2>
+          <span>内置 · 本地模拟</span>
+        </div>
+        <button type="button" className="scada-home-project" onClick={() => onNavigate("studio")}>
+          <span className="scada-home-project-preview" aria-hidden="true">
+            <HomeCardIcon view="studio" />
+          </span>
+          <span className="scada-home-project-detail">
+            <strong>水处理演示工程</strong>
+            <span>本地模拟 · Studio 默认画板 1920 × 1080</span>
+          </span>
+        </button>
+      </section>
       <section className="scada-home-section" aria-labelledby="scada-home-start">
         <div className="scada-home-section-head">
-          <h2 id="scada-home-start">开始工作</h2>
+          <h2 id="scada-home-start">其他工作区</h2>
           <span>选择现有功能</span>
         </div>
         <div className="scada-home-card-grid">
@@ -183,23 +198,6 @@ function WorkspaceHome({ onNavigate }: { onNavigate: (view: AppView) => void }) 
             </button>
           ))}
         </div>
-      </section>
-      <section className="scada-home-section" aria-labelledby="scada-home-demo">
-        <div className="scada-home-section-head">
-          <h2 id="scada-home-demo">内置演示</h2>
-          <span>本地示例，不代表最近打开的真实工程</span>
-        </div>
-        <button type="button" className="scada-home-project" onClick={() => onNavigate("studio")}>
-          <span className="scada-home-project-preview" aria-hidden="true">
-            <span className="scada-home-preview-tank" />
-            <span className="scada-home-preview-pipe" />
-            <span className="scada-home-preview-pump" />
-          </span>
-          <span className="scada-home-project-detail">
-            <strong>水处理演示工程</strong>
-            <span>本地模拟 · Studio 默认画板 1920 × 1080</span>
-          </span>
-        </button>
       </section>
       <p className="scada-home-footnote">
         最近文件尚无可信统一数据源。已有浏览器草稿请在 Studio 文件菜单中查看和恢复；

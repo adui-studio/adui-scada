@@ -276,9 +276,14 @@ async function checkStudioInPage() {
       near(boardRect.top, svgRect.top) &&
       near(boardRect.bottom, svgRect.bottom),
   );
-  verify("左侧栏固定 236px", near(bounds(layers).width, 236));
-  verify("右侧栏固定 288px", near(bounds(properties).width, 288));
-  verify("画布占据剩余宽度", near(bounds(workspace).width - 236 - 288, bounds(stage).width));
+  const leftWidth = bounds(layers).width;
+  const rightWidth = bounds(properties).width;
+  verify("左侧面板处于可用宽度范围", leftWidth >= 200 && leftWidth <= 340);
+  verify("右侧面板处于可用宽度范围", rightWidth >= 260 && rightWidth <= 420);
+  verify(
+    "画布占据剩余宽度",
+    near(bounds(workspace).width - leftWidth - rightWidth, bounds(stage).width),
+  );
 
   const viewBox = svg.viewBox.baseVal;
   const grid = svg.querySelector('rect[fill="url(#scada-studio-grid)"]');
@@ -311,7 +316,7 @@ async function checkStudioInPage() {
     "上下工具条不遮挡可编辑 SVG",
     captionRect.bottom <= svgRect.top + 2 && dockRect.top >= svgRect.bottom - 2,
   );
-  verify("缩放工具位于底部工具栏", Boolean(stage.querySelector(".studio-canvas-dock .studio-zoom")));
+  verify("缩放工具位于画布视图栏", Boolean(stage.querySelector(".studio-stage-caption .studio-zoom")));
   const modes = [...element(".studio-canvas-modes").querySelectorAll("button")];
   verify(
     "默认使用选择工具",
@@ -373,16 +378,50 @@ async function checkStudioInPage() {
 
   const toggle = (name) =>
     [...menu.querySelectorAll("button")].find((item) => item.textContent.trim() === name);
+  const widths = [...menu.querySelectorAll('input[type="range"]')];
+  verify("存在左右侧栏宽度控制", widths.length === 2);
+  if (widths.length === 2) {
+    const setWidth = (input, width) => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+      if (!setter) throw new TypeError("未找到原生范围输入值设置器");
+      setter.call(input, String(width));
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    const initialLeft = Number(widths[0].value);
+    const initialRight = Number(widths[1].value);
+    setWidth(widths[0], 300);
+    await settle();
+    verify(
+      "调整图层宽度后画布同步适应",
+      near(bounds(layers).width, 300) &&
+        near(bounds(workspace).width - 300 - rightWidth, bounds(stage).width),
+    );
+    setWidth(widths[1], 360);
+    await settle();
+    verify(
+      "调整属性宽度后画布同步适应",
+      near(bounds(properties).width, 360) &&
+        near(bounds(workspace).width - 300 - 360, bounds(stage).width),
+    );
+    setWidth(widths[0], initialLeft);
+    setWidth(widths[1], initialRight);
+    await settle();
+    verify(
+      "恢复原面板宽度",
+      near(bounds(layers).width, leftWidth) && near(bounds(properties).width, rightWidth),
+    );
+  }
   const initialWidth = bounds(stage).width;
   toggle("隐藏图层")?.click();
   await settle();
-  verify("隐藏图层后画布自动扩展", bounds(stage).width > initialWidth + 200);
+  verify("隐藏图层后画布自动扩展", near(bounds(stage).width, initialWidth + leftWidth));
   toggle("显示图层")?.click();
   await settle();
   verify("恢复图层后画布宽度恢复", near(bounds(stage).width, initialWidth));
   toggle("隐藏属性")?.click();
   await settle();
-  verify("隐藏属性后画布自动扩展", bounds(stage).width > initialWidth + 260);
+  verify("隐藏属性后画布自动扩展", near(bounds(stage).width, initialWidth + rightWidth));
   toggle("显示属性")?.click();
   await settle();
   verify("恢复属性后画布宽度恢复", near(bounds(stage).width, initialWidth));
@@ -666,8 +705,11 @@ async function runScadaUIExperience(session) {
         const prefix = target.name + " " + viewport.width + "x" + viewport.height + " " + label;
         assert.equal(data.theme, "light", prefix + " 主题未切换至浅色工作区");
         assert.equal(data.screen, view, prefix + " 当前视图与导航状态不一致");
-        assert.equal(data.railWidth, view === "studio" ? 52 : 184, prefix + " 左侧导航宽度不一致");
-        assert.ok(data.railHeight >= viewport.height - 2, prefix + " 导航没有撑满视口");
+        if (view === "studio") {
+          assert.ok(data.railHeight <= 48 && data.railWidth > viewport.width / 2, prefix + " 编辑器未采用顶部工作空间切换栏");
+        } else {
+          assert.ok(data.railHeight >= viewport.height - 2, prefix + " 文件工作区导航没有撑满视口");
+        }
         assert.deepStrictEqual(
           data.buttons,
           ["工作台", "运行监控", "已发布运行", "组态编辑"],

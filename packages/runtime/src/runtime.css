@@ -685,9 +685,8 @@ textarea {
 }
 
 
-/* Figma UI3 结构借鉴：文件首页使用宽导航，编辑态使用紧凑图标轨道。 */
+/* 文件首页导航及共享工作空间入口。 */
 .scada-app-frame { grid-template-columns: 184px minmax(0, 1fr); }
-.scada-app-frame[data-view="studio"] { grid-template-columns: 52px minmax(0, 1fr); }
 .scada-app-nav {
   gap: 16px;
   padding: 12px 9px;
@@ -866,35 +865,6 @@ textarea {
   text-align: left;
 }
 .scada-home-project-preview { position: relative; display: block; height: 170px; background: var(--adui-color-surface-muted); }
-.scada-home-preview-tank {
-  position: absolute;
-  top: 20%;
-  left: 22%;
-  width: 19%;
-  height: 62%;
-  border: 3px solid var(--scada-border-strong);
-  border-radius: 4px 4px 13px 13px;
-  background: linear-gradient(0deg, #b7dfef 0 56%, #fff 56%);
-}
-.scada-home-preview-pipe {
-  position: absolute;
-  top: 51%;
-  left: 41%;
-  width: 24%;
-  height: 9px;
-  border: 2px solid var(--scada-border-strong);
-  background: var(--scada-active-bg);
-}
-.scada-home-preview-pump {
-  position: absolute;
-  top: 41%;
-  left: 65%;
-  width: 18%;
-  aspect-ratio: 1;
-  border: 5px solid var(--scada-border-strong);
-  border-radius: 50%;
-  background: var(--scada-active-bg);
-}
 .scada-home-project-detail { display: flex; flex-direction: column; gap: 6px; padding: 15px 18px 18px; }
 .scada-home-project-detail strong { color: var(--scada-text-strong); font-size: 14px; }
 .scada-home-project-detail span { color: var(--scada-text-muted); font-size: 12px; }
@@ -905,8 +875,7 @@ textarea {
 }
 @media (max-width: 660px) {
   .scada-app-frame { grid-template-columns: 64px minmax(0, 1fr); }
-  .scada-app-frame[data-view="studio"] { grid-template-columns: 52px minmax(0, 1fr); }
-  .scada-app-frame:not([data-view="studio"]) .scada-app-nav .t-button span,
+    .scada-app-frame:not([data-view="studio"]) .scada-app-nav .t-button span,
   .scada-app-frame:not([data-view="studio"]) .scada-rail-product,
   .scada-app-frame:not([data-view="studio"]) .scada-nav-kicker,
   .scada-app-frame:not([data-view="studio"]) .scada-rail-footer,
@@ -920,3 +889,169 @@ textarea {
 @media (prefers-reduced-motion: reduce) { .scada-home-card { transition: none; } }
 
 .scada-home-card-icon svg { width: 23px; height: 23px; }
+
+/* 文件工作台与全屏编辑器分离：编辑态只保留一个横向工作空间切换栏。 */
+.scada-app-frame[data-view="studio"] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: 42px minmax(0, 1fr);
+}
+.scada-app-frame[data-view="studio"] .scada-app-content {
+  display: contents;
+}
+.scada-app-frame[data-view="studio"] .scada-app-nav {
+  position: relative;
+  grid-row: 1;
+  grid-column: 1;
+  height: 42px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  overflow: auto hidden;
+  border-right: 0;
+  border-bottom: 1px solid var(--scada-border);
+}
+.scada-app-frame[data-view="studio"] .scada-rail-brand {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+}
+.scada-app-frame[data-view="studio"] .scada-nav-items {
+  flex-direction: row;
+  gap: 4px;
+}
+.scada-app-frame[data-view="studio"] .scada-app-nav .t-button {
+  width: auto;
+  height: 32px;
+  min-height: 32px;
+  gap: 6px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+.scada-app-frame[data-view="studio"] .scada-app-nav .t-button svg {
+  width: 16px;
+  height: 16px;
+}
+.scada-app-frame[data-view="studio"] .scada-app-nav .t-button span {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+}
+.scada-app-frame[data-view="studio"] .scada-app-nav .t-button[aria-current="page"] {
+  box-shadow: inset 0 -2px var(--scada-primary);
+}
+.scada-app-frame[data-view="studio"] .scada-app-topbar {
+  grid-row: 1;
+  grid-column: 2;
+  min-height: 0;
+  padding: 0 12px;
+}
+.scada-app-frame[data-view="studio"] .scada-app-breadcrumb {
+  display: none;
+}
+.scada-app-frame[data-view="studio"] #scada-main-content {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+.scada-home {
+  max-width: none;
+  padding: 28px 32px;
+  background: var(--scada-surface);
+}
+.scada-home-heading {
+  margin-bottom: 28px;
+}
+.scada-home-heading h1 {
+  margin: 8px 0;
+  font-size: var(--adui-font-size-xl);
+  letter-spacing: normal;
+}
+.scada-home-section {
+  margin-bottom: 28px;
+}
+.scada-home-section-head {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--scada-border);
+}
+.scada-home-card-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+.scada-home-card {
+  display: grid;
+  grid-template-columns: 32px minmax(110px, 0.7fr) minmax(0, 1fr) auto;
+  min-height: 58px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--scada-border);
+  border-radius: 0;
+  box-shadow: none;
+}
+.scada-home-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 5px;
+}
+.scada-home-card strong {
+  font-size: var(--adui-font-size-sm);
+}
+.scada-home-card small {
+  margin: 0;
+}
+.scada-home-card:hover,
+.scada-home-project:hover {
+  background: var(--adui-color-surface-muted);
+}
+.scada-home-project {
+  width: 100%;
+  min-height: 76px;
+  flex-direction: row;
+  align-items: center;
+  padding: 12px;
+  border-radius: 6px;
+}
+.scada-home-project-preview {
+  position: static;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--scada-primary);
+  background: var(--scada-active-bg);
+}
+.scada-home-project-preview svg {
+  width: 26px;
+  height: 26px;
+}
+.scada-home-project-detail {
+  min-width: 0;
+  padding: 0 12px;
+}
+@media (max-width: 660px) {
+  .scada-app-frame[data-view="studio"] .scada-app-nav {
+    padding-inline: 6px;
+  }
+  .scada-app-frame[data-view="studio"] .scada-app-nav .t-button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .scada-home {
+    padding: 16px;
+  }
+  .scada-home-card {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+  }
+  .scada-home-card > span:not(.scada-home-card-icon) {
+    display: none;
+  }
+}

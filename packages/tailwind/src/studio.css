@@ -1932,8 +1932,8 @@
 
 /* D5c1 · Figma UI3 任务型画布：页面/图层左置、轻量属性右置、创建工具底部。 */
 .studio-workspace {
-  --studio-left-width: 236px;
-  --studio-right-width: 288px;
+  --studio-left-width: min(var(--studio-left-preferred, 256px), 34vw);
+  --studio-right-width: min(var(--studio-right-preferred, 320px), 40vw);
   background: var(--adui-color-editor-workspace);
 }
 .studio-toolbar {
@@ -2026,12 +2026,13 @@
   flex: none;
   width: auto;
   min-height: 37px;
-  margin: 8px 10px 0;
-  padding: 4px 7px 4px 12px;
-  border: 1px solid var(--scada-border);
-  border-radius: 9px;
+  margin: 0;
+  padding: 4px 8px 4px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--scada-border);
+  border-radius: 0;
   background: var(--scada-surface);
-  box-shadow: var(--adui-shadow-panel);
+  box-shadow: none;
   color: var(--scada-text);
 }
 .studio-stage-caption > span { color: var(--scada-text-strong); font-weight: 650; }
@@ -2092,15 +2093,6 @@
 .studio-canvas-scroll {
   flex: 1 1 0;
   height: auto;
-}
-.studio-canvas-dock .studio-zoom {
-  gap: 2px;
-  padding-left: 6px;
-  border-left: 1px solid var(--scada-border);
-}
-.studio-canvas-dock .studio-zoom .t-button {
-  min-width: 27px;
-  padding-inline: 4px;
 }
 .studio-canvas-modes {
   display: flex;
@@ -2228,4 +2220,67 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .studio-canvas-dock .t-button { transition: none; }
+}
+
+/* 工具模式与缩放分离；图层和属性均可调整，不再固定宽度。 */
+.studio-panel-size {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: var(--scada-text);
+  font-size: var(--adui-font-size-xs);
+}
+.studio-panel-size input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--scada-primary);
+}
+.studio-stage-caption > span {
+  flex: 1;
+  max-width: none;
+}
+.studio-stage-caption .studio-zoom {
+  margin-left: 0;
+}
+.studio-toolbar .scada-eyebrow {
+  display: none;
+}
+.studio-toolbar > div:first-child {
+  max-width: 25%;
+}
+.studio-toolbar h1 {
+  margin: 0;
+}
+.studio-workspace {
+  background: var(--adui-color-editor-workspace);
+}
+.studio-panel-layers .studio-pane-heading,
+.studio-panel-layers .studio-tree-controls {
+  border-bottom: 0;
+}
+.studio-layer-tree {
+  padding-inline: 4px;
+}
+.studio-layer-tree .studio-layer {
+  border-radius: 4px;
+}
+.studio-panel-properties .studio-geometry {
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.studio-inspector-tabs .t-button[aria-pressed="true"] {
+  border-color: transparent;
+  background: transparent;
+}
+.studio-inspector-tabs {
+  min-height: 42px;
+  padding-block: 4px;
+}
+@media (max-width: 930px) {
+  .studio-stage-caption > span {
+    flex-basis: auto;
+  }
 }

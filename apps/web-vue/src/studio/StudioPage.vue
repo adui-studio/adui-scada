@@ -138,6 +138,8 @@ const gridVisible = ref(true);
 const gridSnap = ref(true);
 const nodeSnap = ref(true);
 const leftPanelVisible = ref(true);
+const leftPanelWidth = ref(256);
+const rightPanelWidth = ref(320);
 const rightPanelVisible = ref(true);
 const svgRef = ref<SVGSVGElement | null>(null);
 let canvasResizeObserver: ResizeObserver | null = null;
@@ -2112,6 +2114,10 @@ async function importJsonFile(file: File | undefined) {
       class="studio-workspace"
       :data-left-collapsed="!leftPanelVisible"
       :data-right-collapsed="!rightPanelVisible"
+      :style="{
+        '--studio-left-preferred': `${leftPanelWidth}px`,
+        '--studio-right-preferred': `${rightPanelWidth}px`,
+      }"
     >
       <aside class="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
         <div class="studio-page-bar" aria-label="工程页面管理">
@@ -2138,10 +2144,9 @@ async function importJsonFile(file: File | undefined) {
           </div>
         </div>
         <div class="studio-pane-heading">
-          <h2>资源与图层</h2>
+          <h2>图层</h2>
           <span class="studio-count">{{ page.nodes.length }}</span>
         </div>
-        <div class="studio-tree-section-title">图层列表</div>
         <div class="studio-tree-controls">
           <label class="studio-field">
             搜索图元或组合
@@ -2349,7 +2354,15 @@ async function importJsonFile(file: File | undefined) {
                     </div>
                   </div>
                   <div class="studio-view-section">
-                    <p>侧栏显示</p>
+                    <p>工作区面板</p>
+                    <label class="studio-panel-size">
+                      <span>图层宽度 · {{ leftPanelWidth }}px</span>
+                      <input v-model.number="leftPanelWidth" type="range" min="200" max="340" step="2" />
+                    </label>
+                    <label class="studio-panel-size">
+                      <span>属性宽度 · {{ rightPanelWidth }}px</span>
+                      <input v-model.number="rightPanelWidth" type="range" min="260" max="420" step="10" />
+                    </label>
                     <div class="studio-panel-toggles" aria-label="面板显示">
                       <TButton
                         type="button"
@@ -2370,6 +2383,13 @@ async function importJsonFile(file: File | undefined) {
                 </div>
               </template>
             </TPopup>
+          </div>
+          <div class="studio-zoom" aria-label="画布缩放">
+            <TButton type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</TButton>
+            <TButton type="button" @click="resetCanvasView">
+              {{ zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%` }}
+            </TButton>
+            <TButton type="button" :disabled="zoom >= 2" @click="changeZoom(0.25)">+</TButton>
           </div>
         </div>
         <div class="studio-canvas-scroll" tabindex="0" aria-label="组态网格工作区">
@@ -2549,13 +2569,6 @@ async function importJsonFile(file: File | undefined) {
             <TButton type="button" @click="addSymbol('pump')">+ 水泵</TButton>
             <TButton type="button" @click="addSymbol('pipe')">+ 管道</TButton>
             <TButton type="button" @click="addSymbol('label')">+ 文本</TButton>
-          </div>
-          <div class="studio-zoom" aria-label="画布缩放">
-            <TButton type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</TButton>
-            <TButton type="button" @click="resetCanvasView">
-              {{ zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%` }}
-            </TButton>
-            <TButton type="button" :disabled="zoom >= 2" @click="changeZoom(0.25)">+</TButton>
           </div>
         </div>
       </section>

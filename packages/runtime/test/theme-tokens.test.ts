@@ -53,7 +53,7 @@ describe("精密工程工作台设计系统", () => {
   it("双框架从运行、发布到组态共享垂直导航与清晰的安全模式标识", () => {
     const css = readRelative("../src/runtime.css");
     expect(css).toContain("grid-template-columns: 184px minmax(0, 1fr);");
-    expect(css).toContain("grid-template-columns: 52px minmax(0, 1fr);");
+    expect(css).toContain("grid-template-rows: 42px minmax(0, 1fr);");
     expect(css).toContain(".scada-home-card-grid {");
     expect(css).toContain(".scada-app-nav .t-button[aria-current=\"page\"]");
     expect(css).toContain(".scada-app-nav .t-button:focus-visible");
@@ -109,8 +109,9 @@ describe("精密工程工作台设计系统", () => {
 
   it("Studio 共享左侧页面、白色画板和底部图元工具区布局", () => {
     const css = readRelative("../../tailwind/src/studio.css");
-    expect(css).toContain("--studio-left-width: 236px;");
-    expect(css).toContain("--studio-right-width: 288px;");
+    expect(css).toContain("--studio-left-preferred");
+    expect(css).toContain("--studio-right-preferred");
+    expect(css).toContain(".studio-panel-size input");
     expect(css).toContain(
       "grid-template-columns: var(--studio-left-width) minmax(0, 1fr) var(--studio-right-width);",
     );

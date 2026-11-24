@@ -5,6 +5,7 @@ import { CloseIcon } from "tdesign-icons-react";
 import "tdesign-react/es/style/index.css";
 import type {
   DragEvent as ReactDragEvent,
+  CSSProperties,
   FormEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
@@ -165,6 +166,8 @@ export default function StudioPage() {
   const [gridSnap, setGridSnap] = useState(true);
   const [nodeSnap, setNodeSnap] = useState(true);
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(256);
+  const [rightPanelWidth, setRightPanelWidth] = useState(320);
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const panDragRef = useRef<{
@@ -2167,6 +2170,12 @@ export default function StudioPage() {
         className="studio-workspace"
         data-left-collapsed={!leftPanelVisible}
         data-right-collapsed={!rightPanelVisible}
+        style={
+          {
+            "--studio-left-preferred": `${leftPanelWidth}px`,
+            "--studio-right-preferred": `${rightPanelWidth}px`,
+          } as CSSProperties
+        }
       >
         <aside className="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
           <div className="studio-page-bar" aria-label="工程页面管理">
@@ -2197,10 +2206,9 @@ export default function StudioPage() {
             </div>
           </div>
           <div className="studio-pane-heading">
-            <h2>资源与图层</h2>
+            <h2>图层</h2>
             <span className="studio-count">{page.nodes.length}</span>
           </div>
-          <div className="studio-tree-section-title">图层列表</div>
           <div className="studio-tree-controls">
             <label className="studio-field">
               搜索图元或组合
@@ -2345,7 +2353,29 @@ export default function StudioPage() {
                       </div>
                     </div>
                     <div className="studio-view-section">
-                      <p>侧栏显示</p>
+                      <p>工作区面板</p>
+                      <label className="studio-panel-size">
+                        <span>图层宽度 · {leftPanelWidth}px</span>
+                        <input
+                          type="range"
+                          min={200}
+                          max={340}
+                          step={2}
+                          value={leftPanelWidth}
+                          onChange={(event) => setLeftPanelWidth(event.currentTarget.valueAsNumber)}
+                        />
+                      </label>
+                      <label className="studio-panel-size">
+                        <span>属性宽度 · {rightPanelWidth}px</span>
+                        <input
+                          type="range"
+                          min={260}
+                          max={420}
+                          step={10}
+                          value={rightPanelWidth}
+                          onChange={(event) => setRightPanelWidth(event.currentTarget.valueAsNumber)}
+                        />
+                      </label>
                       <div className="studio-panel-toggles" aria-label="面板显示">
                         <Button
                           tag="button"
@@ -2372,6 +2402,27 @@ export default function StudioPage() {
                   视图设置
                 </Button>
               </Popup>
+            </div>
+            <div className="studio-zoom" aria-label="画布缩放">
+              <Button
+                tag="button"
+                type="button"
+                onClick={() => changeZoom(-0.25)}
+                disabled={zoom <= 0.5}
+              >
+                −
+              </Button>
+              <Button tag="button" type="button" onClick={resetCanvasView}>
+                {zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%`}
+              </Button>
+              <Button
+                tag="button"
+                type="button"
+                onClick={() => changeZoom(0.25)}
+                disabled={zoom >= 2}
+              >
+                +
+              </Button>
             </div>
           </div>
           <div className="studio-canvas-scroll" tabIndex={0} aria-label="组态网格工作区">
@@ -2603,27 +2654,6 @@ export default function StudioPage() {
               </Button>
               <Button tag="button" type="button" onClick={() => addSymbol("label")}>
                 + 文本
-              </Button>
-            </div>
-            <div className="studio-zoom" aria-label="画布缩放">
-              <Button
-                tag="button"
-                type="button"
-                onClick={() => changeZoom(-0.25)}
-                disabled={zoom <= 0.5}
-              >
-                −
-              </Button>
-              <Button tag="button" type="button" onClick={resetCanvasView}>
-                {zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%`}
-              </Button>
-              <Button
-                tag="button"
-                type="button"
-                onClick={() => changeZoom(0.25)}
-                disabled={zoom >= 2}
-              >
-                +
               </Button>
             </div>
           </div>

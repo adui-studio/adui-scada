@@ -52,7 +52,7 @@ ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双�
 - 依赖版本以根 `pnpm-workspace.yaml` Catalog 为准，组件和图标使用各自官方 API，优先按需引入，不使用 CDN、臆造组件或混用 Vue 2 版本。
 - V0.2 采取小批次迁移，已迁移的 TDesign 控件与尚未迁移的原生表单可暂时共存；不得将“已选定组件库”描述为“全应用已完成组件替换”。Core、Runtime、工程 Schema 和工业只读边界不依赖 UI 框架。细节见 [ADR-0028](docs/adr/0028-tdesign-dual-framework-ui.md)。
 - **先查组件再实现交互**：更改菜单、弹层、确认、表单、侧栏折叠、文件选择、分页或图层树前，必须先核对本仓库 Catalog 固定版本对应的 TDesign React/Vue 组件及类型/官方文档，优先使用 Dropdown、Popup、Dialog/Popconfirm、Upload、Collapse、Tabs、Tree 等既有能力。禁止无依据地用 `details/summary`、绝对定位弹层、手写菜单键盘/外部点击关闭逻辑或 `window.confirm` 重复实现 TDesign 已覆盖的职责。仅当现有组件不满足 SVG 工业画布等特殊场景时保留原生实现，并在 [TDesign 组件审计](docs/TDESIGN_COMPONENT_AUDIT.md) 说明理由。
-- **跨框架验收**：TDesign 两个包版本、Props、事件和插槽分别核对；迁移既有手写入口时同步维护依赖其 DOM 的浏览器测试，不删减安全/业务断言；确保主题、键盘焦点、禁用态、弹层定位、252px/320px 侧栏与 16:9 画布不回归。
+- **跨框架验收**：TDesign 两个包版本、Props、事件和插槽分别核对；迁移既有手写入口时同步维护依赖其 DOM 的浏览器测试，不删减安全/业务断言；确保主题、键盘焦点、禁用态、弹层定位、可调整侧栏与工程逻辑画板正确显示。界面布局和面板宽度由最新设计规范及实际可用性验收决定，不再将历史像素值作为不变约束。
 
 - **两套 Web 统一使用 Tailwind CSS v4** 处理页面结构、布局、间距及响应式工具类，品牌颜色继续使用共享 V7 主题 Token；TDesign 负责控件实现，不能以 Tailwind 替换业务 UI 组件契约。对 SVG 命中层、缩放手柄及 TDesign 覆盖等复杂样式允许保留受控的同构 CSS。Tailwind Preflight 不引入，避免与 `@adui/normalize.css` 及 TDesign 样式重复重置。Tailwind CSS 的主题和 Vite 插件统一由工作区包 `@adui/tailwind` 提供，两套应用不得重复维护配置；见 [ADR-0030](docs/adr/0030-tailwind-fullscreen-studio.md)。
 
