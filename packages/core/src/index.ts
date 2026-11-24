@@ -31,6 +31,7 @@ export {
   selectTagHistory,
 } from "./tag-history.ts";
 export type {
+  TagHistoryArchiveBatch,
   TagHistoryBatch,
   TagHistoryPoint,
   TagHistoryQuery,

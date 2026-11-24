@@ -4737,3 +4737,7 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 ### D5c4 · Windows 定向验收完成（PR #195）
 
 维护者 Windows 实测 D5c4：Vite+ 460 文件格式正确、302 个受检文件零警告和错误；采样策略 13/13、历史缓冲区 11/11、历史查询 8/8、TagStore 6/6，共 38/38；中文文案 329 文件、Markdown 95 份全部通过。日志未独立打印本地 SHA；GitHub 最终候选 27786fc8ec54fd7fc43ca19863158840520c6f1c 相对 62f59651 仅测试格式化。维护者明确授权合并。定向测试不代表完整 ready、生产采集、持久化归档或现场工业安全验收。
+
+### D5c5 · FR-012 本地归档批次候选
+
+新增 8 项定向测试定义，覆盖空批次及上限、跨 Tag 入缓冲顺序与质量保留、不可变性、同批次重试、追加及迟到记录保护、跨实例/伪造/重复确认拒绝、待确认清理保护、确认释放容量后采样器重试。原四份 38 项测试继续回归，目标五份测试共 46 项。Windows 待执行 `vp test run packages/core/test/tag-history-archive.test.ts packages/core/test/tag-history-sampler.test.ts packages/core/test/tag-history-buffer.test.ts packages/core/test/tag-history.test.ts packages/core/test/tag-store.test.ts`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`。完整 ready 待运行，不宣称真实归档、数据库事务或持久化幂等验收。
