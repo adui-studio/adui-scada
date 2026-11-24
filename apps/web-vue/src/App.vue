@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Button as TButton, Input as TInput, Upload as TUpload } from "tdesign-vue-next";
+import { waterTreatmentShowcaseDocument } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import {
   createWorkspaceDraft,
@@ -85,6 +86,16 @@ async function openFromHome(load: () => Promise<{ document: ScadaDocument; notic
     }
   } finally {
     if (!controller.signal.aborted) busy.value = false;
+  }
+}
+
+function openEntry(next: AppView) {
+  if (next === "studio") {
+    initialDocument.value = waterTreatmentShowcaseDocument;
+    initialNotice.value = "已打开水处理总览示例 · 静态模拟预览";
+    view.value = "studio";
+  } else {
+    navigate(next);
   }
 }
 
@@ -281,7 +292,7 @@ const viewLabels = {
             :key="entry.view"
             type="button"
             class="scada-home-quick"
-            @click="navigate(entry.view)"
+            @click="openEntry(entry.view)"
           >
             <span class="scada-home-card-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -348,7 +359,7 @@ const viewLabels = {
               :key="entry.view"
               type="button"
               class="scada-home-card"
-              @click="navigate(entry.view)"
+              @click="openEntry(entry.view)"
             >
               <span class="scada-home-thumbnail" :data-kind="entry.view">
                 <img v-if="entry.preview" :src="entry.preview" alt="内置水处理工程静态预览，无实时值" />

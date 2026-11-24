@@ -102,6 +102,7 @@ const preferredCopyTargetPageId = ref("");
 const preferredLayerTargetId = ref("");
 const layerSearch = ref("");
 const inspectorTab = ref<"properties" | "tags">("properties");
+const libraryTab = ref<"layers" | "symbols">("layers");
 const collapsedGroupIds = shallowRef<Set<string>>(new Set());
 const layerTreeRef = ref<HTMLElement | null>(null);
 const layerInsertPosition = ref<"before" | "after">("after");
@@ -2205,6 +2206,45 @@ async function importJsonFile(file: File | undefined) {
       }"
     >
       <aside class="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
+        <div class="studio-library-tabs" role="group" aria-label="左侧工作区">
+          <TButton type="button" :aria-pressed="libraryTab === 'layers'" @click="libraryTab = 'layers'">图层</TButton>
+          <TButton type="button" :aria-pressed="libraryTab === 'symbols'" @click="libraryTab = 'symbols'">图元库</TButton>
+        </div>
+        <div class="studio-symbol-library" :hidden="libraryTab !== 'symbols'">
+          <h2>基础工业图元</h2>
+          <p class="studio-tip">点击添加到当前画板，之后可编辑几何属性和数据绑定。</p>
+          <div class="studio-symbol-grid">
+            <TButton type="button" variant="outline" @click="addSymbol('tank'); libraryTab = 'layers'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <path d="M4 5h16v14H4zM4 12h16M8 5V3m8 2V3" />
+              </svg>
+              <strong>水箱</strong>
+              <small>显示液位与质量</small>
+            </TButton>
+            <TButton type="button" variant="outline" @click="addSymbol('pump'); libraryTab = 'layers'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <path d="M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18zM9 8l6 4-6 4z" />
+              </svg>
+              <strong>水泵</strong>
+              <small>显示运行状态</small>
+            </TButton>
+            <TButton type="button" variant="outline" @click="addSymbol('pipe'); libraryTab = 'layers'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <path d="M3 17h7V7h11" />
+              </svg>
+              <strong>管道</strong>
+              <small>绘制静态工艺管线</small>
+            </TButton>
+            <TButton type="button" variant="outline" @click="addSymbol('label'); libraryTab = 'layers'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <path d="M4 5h16M12 5v14M8 19h8" />
+              </svg>
+              <strong>文本</strong>
+              <small>显示文案或 Tag 值</small>
+            </TButton>
+          </div>
+        </div>
+        <div class="studio-layer-content" :hidden="libraryTab !== 'layers'">
         <div class="studio-page-bar" aria-label="工程页面管理">
           <div class="studio-page-tabs" aria-label="工程页面">
             <TButton
@@ -2413,6 +2453,7 @@ async function importJsonFile(file: File | undefined) {
             </TCollapsePanel>
           </TCollapse>
         </div>
+              </div>
       </aside>
       <template v-for="side in ['left', 'right'] as const" :key="side">
         <div
@@ -2806,6 +2847,7 @@ async function importJsonFile(file: File | undefined) {
             <p>
               <strong>{{ selected.id }}</strong> · {{ selected.type }}
             </p>
+            <h3 class="studio-property-section-title">位置与尺寸</h3>
             <form
               v-if="state.selectedIds.length === 1"
               :key="`${selected.id}:${JSON.stringify(selected.transform)}`"
@@ -2866,7 +2908,16 @@ async function importJsonFile(file: File | undefined) {
               {{ slot }} → {{ binding.tagId }}
             </p>
           </template>
-          <p v-else class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
+          <div v-else class="studio-page-summary">
+            <h3>当前画板</h3>
+            <strong>{{ page.name }}</strong>
+            <dl>
+              <div><dt>宽度</dt><dd>{{ page.size.width }} px</dd></div>
+              <div><dt>高度</dt><dd>{{ page.size.height }} px</dd></div>
+              <div><dt>图元</dt><dd>{{ page.nodes.length }}</dd></div>
+            </dl>
+            <p class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
+          </div>
           <div class="studio-advanced">
             <TCollapse :default-value="[]" borderless>
               <TCollapsePanel value="advanced-tools" header="高级图元与图层操作">

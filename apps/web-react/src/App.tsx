@@ -1,4 +1,5 @@
 import { Button, Input, Upload } from "tdesign-react";
+import { waterTreatmentShowcaseDocument } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import {
   createWorkspaceDraft,
@@ -215,6 +216,14 @@ function WorkspaceHome({
     return () => controller.abort();
   }, []);
 
+  function openEntry(view: AppView) {
+    if (view === "studio") {
+      onOpenDocument(waterTreatmentShowcaseDocument, "已打开水处理总览示例 · 静态模拟预览");
+    } else {
+      onNavigate(view);
+    }
+  }
+
   async function openFromHome(
     load: () => Promise<{ document: ScadaDocument; notice: string }>,
   ) {
@@ -300,7 +309,7 @@ function WorkspaceHome({
             key={entry.view}
             type="button"
             className="scada-home-quick"
-            onClick={() => onNavigate(entry.view)}
+            onClick={() => openEntry(entry.view)}
           >
             <span className="scada-home-card-icon" aria-hidden="true">
               <HomeCardIcon view={entry.view} />
@@ -353,7 +362,7 @@ function WorkspaceHome({
               key={entry.view}
               type="button"
               className="scada-home-card"
-              onClick={() => onNavigate(entry.view)}
+              onClick={() => openEntry(entry.view)}
             >
               <span className="scada-home-thumbnail" data-kind={entry.view}>
                 {entry.preview ? (

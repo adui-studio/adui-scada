@@ -139,6 +139,7 @@ export default function StudioPage({
   const [preferredLayerTargetId, setPreferredLayerTargetId] = useState("");
   const [layerSearch, setLayerSearch] = useState("");
   const [inspectorTab, setInspectorTab] = useState<"properties" | "tags">("properties");
+  const [libraryTab, setLibraryTab] = useState<"layers" | "symbols">("layers");
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(() => new Set());
   const [locateLayerRequest, setLocateLayerRequest] = useState<{ key: string } | null>(null);
   const [layerInsertPosition, setLayerInsertPosition] = useState<"before" | "after">("after");
@@ -2265,6 +2266,49 @@ export default function StudioPage({
         }
       >
         <aside className="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
+          <div className="studio-library-tabs" role="group" aria-label="左侧工作区">
+            <Button type="button" aria-pressed={libraryTab === "layers"} onClick={() => setLibraryTab("layers")}>
+              图层
+            </Button>
+            <Button type="button" aria-pressed={libraryTab === "symbols"} onClick={() => setLibraryTab("symbols")}>
+              图元库
+            </Button>
+          </div>
+          <div className="studio-symbol-library" hidden={libraryTab !== "symbols"}>
+            <h2>基础工业图元</h2>
+            <p className="studio-tip">点击添加到当前画板，之后可编辑几何属性和数据绑定。</p>
+            <div className="studio-symbol-grid">
+              <Button type="button" variant="outline" onClick={() => { addSymbol("tank"); setLibraryTab("layers"); }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                  <path d="M4 5h16v14H4zM4 12h16M8 5V3m8 2V3" />
+                </svg>
+                <strong>水箱</strong>
+                <small>显示液位与质量</small>
+              </Button>
+              <Button type="button" variant="outline" onClick={() => { addSymbol("pump"); setLibraryTab("layers"); }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                  <path d="M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18zM9 8l6 4-6 4z" />
+                </svg>
+                <strong>水泵</strong>
+                <small>显示运行状态</small>
+              </Button>
+              <Button type="button" variant="outline" onClick={() => { addSymbol("pipe"); setLibraryTab("layers"); }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                  <path d="M3 17h7V7h11" />
+                </svg>
+                <strong>管道</strong>
+                <small>绘制静态工艺管线</small>
+              </Button>
+              <Button type="button" variant="outline" onClick={() => { addSymbol("label"); setLibraryTab("layers"); }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                  <path d="M4 5h16M12 5v14M8 19h8" />
+                </svg>
+                <strong>文本</strong>
+                <small>显示文案或 Tag 值</small>
+              </Button>
+            </div>
+          </div>
+          <div className="studio-layer-content" hidden={libraryTab !== "layers"}>
           <div className="studio-page-bar" aria-label="工程页面管理">
             <div className="studio-page-tabs" aria-label="工程页面">
               {state.document.pages.map((item) => (
@@ -2403,6 +2447,7 @@ export default function StudioPage({
               </Collapse.Panel>
             </Collapse>
           </div>
+                  </div>
         </aside>
         {(["left", "right"] as const).map((side) =>
           (side === "left" ? leftPanelVisible : rightPanelVisible) ? (
@@ -2883,6 +2928,7 @@ export default function StudioPage({
                 <p>
                   <strong>{selected.id}</strong> · {selected.type}
                 </p>
+                <h3 className="studio-property-section-title">位置与尺寸</h3>
                 {state.selectedIds.length === 1 ? (
                   <form
                     key={`${selected.id}:${JSON.stringify(selected.transform)}`}
@@ -2990,7 +3036,16 @@ export default function StudioPage({
                 ))}
               </>
             ) : (
-              <p className="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
+              <div className="studio-page-summary">
+                <h3>当前画板</h3>
+                <strong>{page.name}</strong>
+                <dl>
+                  <div><dt>宽度</dt><dd>{page.size.width} px</dd></div>
+                  <div><dt>高度</dt><dd>{page.size.height} px</dd></div>
+                  <div><dt>图元</dt><dd>{page.nodes.length}</dd></div>
+                </dl>
+                <p className="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
+              </div>
             )}
             <div className="studio-advanced">
               <Collapse borderless defaultValue={[]}>
