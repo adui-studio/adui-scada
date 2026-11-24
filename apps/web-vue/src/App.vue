@@ -1,8 +1,16 @@
 <script setup lang="ts">
-import { Button as TButton, Input as TInput } from "tdesign-vue-next";
+import { Button as TButton, Input as TInput, Upload as TUpload } from "tdesign-vue-next";
+import type { ScadaDocument } from "@adui/scada-core";
+import {
+  createWorkspaceDraft,
+  listWorkspaceDrafts,
+  readWorkspaceDraft,
+  readWorkspaceJson,
+} from "@adui/scada-draft-storage";
+import type { WorkspaceDraftSummary } from "@adui/scada-draft-storage";
 import { WORKSPACE_HOME_ENTRIES, filterWorkspaceHomeEntries } from "@adui/scada-runtime";
 import "tdesign-vue-next/es/style/index.css";
-import { computed, defineAsyncComponent, ref } from "vue";
+import { computed, defineAsyncComponent, ref, shallowRef, watch } from "vue";
 
 const RuntimePage = defineAsyncComponent(() => import("./runtime/RuntimePage.vue"));
 const PublishedRuntimePage = defineAsyncComponent(
@@ -12,6 +20,101 @@ const StudioPage = defineAsyncComponent(() => import("./studio/StudioPage.vue"))
 const view = ref<"home" | "runtime" | "published" | "studio">("home");
 const query = ref("");
 const entries = computed(() => filterWorkspaceHomeEntries(query.value));
+const initialDocument = shallowRef<ScadaDocument | null>(null);
+const initialNotice = ref("");
+const drafts = shallowRef<readonly WorkspaceDraftSummary[]>([]);
+const draftStatus = ref("正在读取本地草稿…");
+const busy = ref(false);
+const visibleDrafts = computed(() =>
+  drafts.value.filter((draft) =>
+    draft.projectId.toLowerCase().includes(query.value.trim().toLowerCase()),
+  ),
+);
+let lifetime: AbortController | null = null;
+
+type AppView = typeof view.value;
+
+function navigate(next: AppView) {
+  if (next === "studio" && view.value !== "studio") {
+    initialDocument.value = null;
+    initialNotice.value = "";
+  }
+  view.value = next;
+}
+
+watch(
+  view,
+  (next, _previous, onCleanup) => {
+    if (next !== "home") return;
+    const controller = new AbortController();
+    lifetime = controller;
+    query.value = "";
+    busy.value = false;
+    drafts.value = [];
+    draftStatus.value = "正在读取本地草稿…";
+    onCleanup(() => controller.abort());
+    void listWorkspaceDrafts().then(
+      (rows) => {
+        if (controller.signal.aborted) return;
+        drafts.value = rows;
+        draftStatus.value = rows.length ? "" : "暂无已保存的本地草稿";
+      },
+      () => {
+        if (!controller.signal.aborted) {
+          draftStatus.value = "本地草稿读取失败，请检查浏览器存储权限";
+        }
+      },
+    );
+  },
+  { immediate: true },
+);
+
+async function openFromHome(load: () => Promise<{ document: ScadaDocument; notice: string }>) {
+  const controller = lifetime;
+  if (!controller || controller.signal.aborted || busy.value || view.value !== "home") return;
+  busy.value = true;
+  try {
+    const result = await load();
+    if (controller.signal.aborted || view.value !== "home") return;
+    initialDocument.value = result.document;
+    initialNotice.value = result.notice;
+    view.value = "studio";
+  } catch {
+    if (!controller.signal.aborted) {
+      draftStatus.value = "工程操作失败，请检查文件或本地存储";
+    }
+  } finally {
+    if (!controller.signal.aborted) busy.value = false;
+  }
+}
+
+function newProject() {
+  void openFromHome(async () => {
+    const draft = await createWorkspaceDraft();
+    return { document: draft.document, notice: "已创建并保存独立本地工程" };
+  });
+}
+
+function importProject(files: File[]) {
+  const file = files[0];
+  if (!file) return;
+  void openFromHome(async () => {
+    const result = await readWorkspaceJson(file);
+    return {
+      document: result.document,
+      notice: result.migratedFrom
+        ? `已从 ${result.migratedFrom} 迁移工程，请重新保存或导出`
+        : "工程 JSON 已校验，请按需保存本地草稿",
+    };
+  });
+}
+
+function openDraft(projectId: string) {
+  void openFromHome(async () => {
+    const latest = await readWorkspaceDraft(projectId);
+    return { document: latest.document, notice: "已打开最新本地草稿" };
+  });
+}
 
 const safetyLabel = computed(() => {
   switch (view.value) {
@@ -51,7 +154,7 @@ const viewLabels = {
           type="button"
           title="工作台"
           :aria-current="view === 'home' ? 'page' : undefined"
-          @click="view = 'home'"
+          @click="navigate('home')"
         >
           <svg
             viewBox="0 0 24 24"
@@ -71,7 +174,7 @@ const viewLabels = {
           type="button"
           title="运行监控"
           :aria-current="view === 'runtime' ? 'page' : undefined"
-          @click="view = 'runtime'"
+          @click="navigate('runtime')"
         >
           <svg
             viewBox="0 0 24 24"
@@ -88,7 +191,7 @@ const viewLabels = {
           type="button"
           title="已发布运行"
           :aria-current="view === 'published' ? 'page' : undefined"
-          @click="view = 'published'"
+          @click="navigate('published')"
         >
           <svg
             viewBox="0 0 24 24"
@@ -106,7 +209,7 @@ const viewLabels = {
           type="button"
           title="组态编辑"
           :aria-current="view === 'studio' ? 'page' : undefined"
-          @click="view = 'studio'"
+          @click="navigate('studio')"
         >
           <svg
             viewBox="0 0 24 24"
@@ -151,12 +254,34 @@ const viewLabels = {
           </div>
         </div>
         <div class="scada-home-quick-grid grid">
+          <button type="button" class="scada-home-quick" :disabled="busy" @click="newProject">
+            <span class="scada-home-card-icon" aria-hidden="true">+</span>
+            <strong>新建组态工程</strong>
+            <span aria-hidden="true">↗</span>
+          </button>
+          <div class="scada-home-upload">
+            <TUpload
+              theme="custom"
+              accept=".json,application/json"
+              :auto-upload="false"
+              :files="[]"
+              allow-upload-duplicate-file
+              :disabled="busy"
+              @select-change="importProject"
+            >
+              <button type="button" class="scada-home-quick" :disabled="busy">
+                <span class="scada-home-card-icon" aria-hidden="true">↥</span>
+                <strong>导入 JSON 工程</strong>
+                <span aria-hidden="true">↗</span>
+              </button>
+            </TUpload>
+          </div>
           <button
             v-for="entry in WORKSPACE_HOME_ENTRIES"
             :key="entry.view"
             type="button"
             class="scada-home-quick"
-            @click="view = entry.view"
+            @click="navigate(entry.view)"
           >
             <span class="scada-home-card-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -223,7 +348,7 @@ const viewLabels = {
               :key="entry.view"
               type="button"
               class="scada-home-card"
-              @click="view = entry.view"
+              @click="navigate(entry.view)"
             >
               <span class="scada-home-thumbnail" :data-kind="entry.view">
                 <img v-if="entry.preview" :src="entry.preview" alt="内置水处理工程静态预览，无实时值" />
@@ -249,13 +374,35 @@ const viewLabels = {
           </div>
           <p v-if="entries.length === 0" role="status">没有匹配的工作区，请尝试其他关键词。</p>
         </section>
+        <section class="scada-home-section" aria-labelledby="scada-home-drafts">
+          <div class="scada-home-section-head">
+            <h2 id="scada-home-drafts">我的草稿</h2>
+            <span>最近 50 个已保存的本地工程</span>
+          </div>
+          <p v-if="draftStatus" role="status">{{ draftStatus }}</p>
+          <p v-if="drafts.length > 0 && visibleDrafts.length === 0">没有匹配的本地草稿</p>
+          <div class="scada-home-draft-grid">
+            <button
+              v-for="draft in visibleDrafts"
+              :key="draft.projectId"
+              type="button"
+              class="scada-home-draft"
+              :disabled="busy"
+              @click="openDraft(draft.projectId)"
+            >
+              <strong>{{ draft.projectId }}</strong>
+              <span>{{ draft.pageCount }} 个页面 · {{ draft.tagCount }} 个 Tag</span>
+              <small>修订 {{ draft.revision }} · {{ new Date(draft.savedAt).toLocaleString("zh-CN") }}</small>
+            </button>
+          </div>
+        </section>
         <p class="scada-home-footnote">
-          已有浏览器草稿请在 Studio 文件菜单中查看和恢复。本页不展示未经核实的最近文件或发布状态。
+          草稿仅保存在当前浏览器；本页不展示未经核实的发布状态。
         </p>
       </main>
       <RuntimePage v-else-if="view === 'runtime'" />
       <PublishedRuntimePage v-else-if="view === 'published'" />
-      <StudioPage v-else />
+      <StudioPage v-else :initial-document="initialDocument" :initial-notice="initialNotice" />
     </div>
   </div>
 </template>
