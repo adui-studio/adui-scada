@@ -1,8 +1,8 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolvePrisma7Cli } from "./prisma7-cli.mjs";
 import { validateLabSecrets } from "./prepare-oidc-lab.mjs";
 import { validateDockerEnv } from "./docker-stack.mjs";
 
@@ -62,11 +62,10 @@ function runDockerDatabasePrisma(action, root, run) {
     readFileSync(secretFile, "utf8"),
   );
   const server = resolve(root, "apps", "server");
-  const serverRequire = createRequire(join(server, "package.json"));
-  const prismaCli = serverRequire.resolve("prisma/build/index.js");
+  const prismaCli = resolvePrisma7Cli(server);
   const result = run(
     process.execPath,
-    [prismaCli, "migrate", action, "--config", "prisma.config.ts"],
+    [prismaCli, "migrate", action, "--config", "prisma7.config.ts"],
     {
       cwd: server,
       env: environment,

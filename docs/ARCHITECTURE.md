@@ -479,3 +479,9 @@ PR #105 已合并（main `637ebbce3191c998b3264733645da947a3739e9f`）。D5a 在
 ### D5c7 · 归档存储及 MVP 本地模拟集成
 
 沿用既有 NestJS/Prisma/PostgreSQL，不新增数据库扩展或依赖。历史持久化适配器与原始记录编码放入 server/history，使用租户工程复合外键及独立时间查询索引，尚不注册模块或路由。保留策略、跨进程恢复、可信采集来源和访问授权继续单独设计。本地模拟闭环使用共享 runtime 的独立工程模拟数据源；仅在 React/Vue 导入工程后的会话内启用，不修改正式发布 Runtime、服务器发布指针、设备访问或原有模拟 SSE。
+
+## MVP · Prisma ORM 8 渐进迁移（候选）
+
+沿用 PostgreSQL 和既有 `prisma/schema.prisma`。引入 Prisma 8 CLI 与 `@prisma/orm-postgres`；`prisma7Schema` 读取同一 Schema，生成独立的 `src/generated/prisma8/contract.json` 与 `contract.d.ts`。迁移阶段一只提供无数据库连接配置的 Contract 生成入口，原 NestJS 数据库服务、ACL、发布事务和历史归档仍使用 Prisma 7 Client；既有 SQL 迁移及其校验和保持不变，唯一迁移执行者仍是 Prisma 7。参见 [Prisma 官方渐进迁移指南](https://www.prisma.io/docs/guides/upgrade-prisma-orm/postgresql-incremental)。
+
+后续先验证类型、只读查询和双客户端等价性，再逐模块迁移事务、CAS、幂等键与资源释放，最后专项评审迁移所有权。必须保留现有自定义 CHECK、复合外键、索引、中文注释及已应用迁移记录。Prisma 8 RC 未经完整验证不用于正式部署。

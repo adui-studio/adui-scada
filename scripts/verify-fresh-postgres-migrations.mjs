@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { loadEnvFile } from "node:process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolvePrisma7Cli } from "./prisma7-cli.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const server = join(root, "apps", "server");
@@ -80,8 +81,7 @@ async function inspectEmptyDatabase(Client, connectionString) {
 }
 
 function runPrismaCommand(command, connectionString) {
-  const serverRequire = createRequire(join(server, "package.json"));
-  const prismaCli = serverRequire.resolve("prisma/build/index.js");
+  const prismaCli = resolvePrisma7Cli(server);
   const action =
     command === "db:migrate:deploy" ? "deploy" : command === "db:migrate:status" ? "status" : null;
   if (action === null) {
@@ -89,7 +89,7 @@ function runPrismaCommand(command, connectionString) {
   }
   const result = spawnSync(
     process.execPath,
-    [prismaCli, "migrate", action, "--config", "prisma.config.ts"],
+    [prismaCli, "migrate", action, "--config", "prisma7.config.ts"],
     {
       cwd: server,
       env: { ...process.env, SCADA_DATABASE_URL: connectionString },

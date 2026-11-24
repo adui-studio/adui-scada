@@ -2696,3 +2696,9 @@ PR #196 经维护者授权 Squash 合并至 `main@98bfc2791e8c1f231107f2408bf1e2
 Prisma 8 当前为不同 API 与 CLI 的 RC；既有 Prisma Client、适配器和迁移仍使用 ^7.10.1，不能直接替换 CLI。Docker 单项目及七服务拓扑保持，PostgreSQL、Redis、Keycloak、Nginx 使用 latest，PostgreSQL 卷名称不变、挂载改为 /var/lib/postgresql。该候选禁止直接启动现有数据环境：须先备份、恢复验证并专项迁移 PostgreSQL 17 数据目录，核对 Redis AOF、Keycloak 数据和版本兼容，不删除或重置已有卷，不应用 Prisma 迁移。
 
 当前仅版本声明和配套配置已提交；协作环境无可用 Registry 网络、pnpm、Cargo、Docker，维护者 Windows 已生成 npm 锁文件并完成本轮冻结安装、Vite+、独立类型检查、956 项单测、63 项 HTTP E2E 及双端 Web 构建，GitHub 已收到锁文件提交。Rust 版本声明恢复与原锁文件一致；真实数据库、双端浏览器和桌面构建仍待统一验收，禁止以此宣称 MVP 完成。未声明升级运行成功。
+
+### MVP · Prisma 8 渐进升级第一阶段（2026-11-24）
+
+维护者明确授权 PR #199 合入 MVP 集成分支，Squash 结果 9424b167a78f8ab3b4a85683ce03249ed8786d80；PR #198 仍为 Draft，未合入 main。按维护者继续升级 Prisma 8 的要求，建立 feat/mvp-prisma8-migration。Catalog 声明 prisma ^8.0.0-rc.35、@prisma/orm-postgres ^8.0.0-rc.25，官方兼容包 @prisma/prisma7 ^7.10.1；Node 24.18.0、TypeScript ^6.0.3、pnpm 12.23.0、Vite+ 配套约束不变。旧版 Client、适配器和已应用迁移暂保留，Prisma 8 第一阶段只生成契约，不初始化运行时连接或接管迁移。
+
+协作环境未安装新依赖；真实 npm 锁文件、Contract 生成、完整质量门禁与数据库回归仍待执行。禁止在此阶段运行 Prisma 8 数据库签名或迁移、替换现有迁移记录、启动未迁移数据卷。后续先验证实际契约及包入口，再迁移有界只读查询、身份及事务模块，最后专项评审数据库迁移接管。
