@@ -271,7 +271,7 @@ const viewLabels = {
             theme="default"
             variant="text"
             class="scada-theme-toggle"
-            aria-label="切换深色主题"
+            aria-label="深色主题"
             :aria-pressed="themeMode === 'dark'"
             :title="themeMode === 'dark' ? '切换浅色主题' : '切换深色主题'"
             @click="toggleTheme"

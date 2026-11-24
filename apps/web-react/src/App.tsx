@@ -180,7 +180,7 @@ export default function App() {
             theme="default"
             variant="text"
             className="scada-theme-toggle"
-            aria-label="切换深色主题"
+            aria-label="深色主题"
             aria-pressed={themeMode === "dark"}
             title={themeMode === "dark" ? "切换浅色主题" : "切换深色主题"}
             onClick={toggleTheme}
@@ -204,7 +204,7 @@ export default function App() {
           }
         >
           {view === "home" ? (
-            <WorkspaceHome onNavigate={navigate} onOpenDocument={openDocument} />
+            <WorkspaceHome onNavigate={navigate} onOpenDocument={openDocument} themeMode={themeMode} />
           ) : view === "runtime" ? (
             <RuntimePage />
           ) : view === "published" ? (
@@ -222,7 +222,9 @@ export default function App() {
 function WorkspaceHome({
   onNavigate,
   onOpenDocument,
+  themeMode,
 }: {
+  themeMode: "light" | "dark";
   onNavigate: (view: AppView) => void;
   onOpenDocument: (document: ScadaDocument, notice: string) => void;
 }) {
@@ -370,7 +372,7 @@ function WorkspaceHome({
               <p>工业组态 · 实时监控</p>
               <small>从工艺画面开始构建工程</small>
             </div>
-            <img className="scada-home-brand-mark" src="/brand/mark-primary.svg" alt="" />
+            <img className="scada-home-brand-mark" src={themeMode === "dark" ? "/brand/mark-dark.svg" : "/brand/mark-primary.svg"} alt="" />
           </article>
           <article className="scada-home-banner">
             <div>

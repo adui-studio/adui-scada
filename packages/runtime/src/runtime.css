@@ -889,7 +889,7 @@ textarea {
   place-items: center;
   border-radius: 9px;
   background: var(--scada-active-bg);
-  color: var(--scada-primary);
+  color: var(--adui-color-brand-text);
   font-size: 21px;
 }
 .scada-home-card strong {
@@ -903,7 +903,7 @@ textarea {
 }
 .scada-home-card small {
   margin-top: auto;
-  color: var(--scada-primary);
+  color: var(--adui-color-brand-text);
   font-size: 12px;
   font-weight: 700;
 }
@@ -1176,7 +1176,7 @@ textarea {
   width: clamp(34px, 4vw, 64px);
   height: clamp(34px, 4vw, 64px);
   flex: none;
-  color: var(--scada-primary);
+  color: var(--adui-color-brand-text);
 }
 .scada-home-banner-runtime > svg {
   color: var(--scada-live);
@@ -1226,7 +1226,7 @@ textarea {
   place-items: center;
   border-radius: var(--adui-radius-panel);
   background: var(--scada-active-bg);
-  color: var(--scada-primary);
+  color: var(--adui-color-brand-text);
 }
 .scada-home-thumbnail svg {
   width: 32px;
@@ -1240,7 +1240,7 @@ textarea {
   padding: var(--adui-space-1) var(--adui-space-3);
   border-radius: var(--adui-radius-sm);
   background: var(--scada-active-bg);
-  color: var(--scada-primary);
+  color: var(--adui-color-brand-text);
   font-weight: 600;
 }
 .scada-home-card > .scada-home-status[data-kind="runtime"] {
@@ -1528,5 +1528,58 @@ textarea {
 @media (max-width: 660px) {
   .scada-home-quick-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* V7 透明标识按界面背景切换；导航不使用应用图标方形底板。 */
+.scada-app-brand img {
+  width: 42px;
+  height: 28px;
+  object-fit: contain;
+}
+.scada-app-frame[data-view="home"] .scada-app-brand img {
+  width: 45px;
+  height: 32px;
+}
+.scada-app-frame[data-view="home"] .scada-rail-product {
+  margin-left: 49px;
+}
+.scada-app-frame:not([data-view="home"]) .scada-app-brand img {
+  width: 42px;
+  height: 28px;
+}
+.scada-app-header-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--adui-space-4);
+  margin-left: auto;
+}
+.scada-app-header-actions .scada-theme-toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--adui-space-2);
+  color: var(--scada-text-secondary);
+}
+.scada-theme-toggle svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.scada-theme-toggle:focus-visible {
+  outline: 2px solid var(--adui-color-focus-ring);
+  outline-offset: 2px;
+}
+.scada-app-frame[data-view="home"] .scada-app-nav .t-button[aria-current="page"] {
+  background: var(--scada-active-bg);
+  color: var(--adui-color-brand-text);
+  box-shadow: inset 3px 0 var(--scada-primary);
+}
+@media (max-width: 760px) {
+  .scada-app-header-actions .scada-app-safety {
+    font-size: var(--adui-font-size-2xs);
+    white-space: normal;
   }
 }
