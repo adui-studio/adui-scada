@@ -33,8 +33,10 @@ const svg = computed(() =>
   state.value.document ? svgDataUrl(state.value.document, state.value.values, pageId.value) : null,
 );
 const paths = computed(() => simulationTrendPaths(history.value));
-const csvUrl = computed(() =>
-  "data:text/csv;charset=utf-8," + encodeURIComponent("\uFEFF" + simulationHistoryCsv(history.value)),
+const csvUrl = computed(
+  () =>
+    "data:text/csv;charset=utf-8," +
+    encodeURIComponent("\uFEFF" + simulationHistoryCsv(history.value)),
 );
 
 function startRuntime(document: ScadaDocument | null): void {
@@ -42,8 +44,8 @@ function startRuntime(document: ScadaDocument | null): void {
   state.value = initialRuntimeState;
   project.value = document;
   pageId.value = document?.pages[0]?.id;
-  historyTag.value = document?.tags.find((tag) => tag.dataType === "number")?.tagId ??
-    document?.tags[0]?.tagId;
+  historyTag.value =
+    document?.tags.find((tag) => tag.dataType === "number")?.tagId ?? document?.tags[0]?.tagId;
   history.value = [];
   source = document ? createLocalProjectSimulationSource(document) : null;
   const currentSource = source;
@@ -99,11 +101,11 @@ function changeHistoryTag(value: unknown): void {
   history.value = [];
 }
 
-const pageOptions = computed(() =>
-  project.value?.pages.map((page) => ({ label: page.name, value: page.id })) ?? [],
+const pageOptions = computed(
+  () => project.value?.pages.map((page) => ({ label: page.name, value: page.id })) ?? [],
 );
-const historyOptions = computed(() =>
-  project.value?.tags.map((tag) => ({ label: tag.displayName, value: tag.tagId })) ?? [],
+const historyOptions = computed(
+  () => project.value?.tags.map((tag) => ({ label: tag.displayName, value: tag.tagId })) ?? [],
 );
 
 onMounted(() => startRuntime(null));
@@ -118,7 +120,7 @@ onUnmounted(() => {
     <header class="scada-header">
       <div>
         <p class="scada-eyebrow">ADui SCADA · 本地模拟运行</p>
-        <h1>{{ project ? project.projectName ?? project.projectId : "水处理实时监控" }}</h1>
+        <h1>{{ project ? (project.projectName ?? project.projectId) : "水处理实时监控" }}</h1>
       </div>
       <span class="scada-status" :data-status="state.status">{{
         RUNTIME_STATUS_LABELS[state.status]
@@ -150,7 +152,12 @@ onUnmounted(() => {
           <span>页面</span>
           <TSelect size="small" :value="pageId" :options="pageOptions" @change="changePage" />
         </div>
-        <img v-if="svg" class="scada-svg" :src="svg" :alt="project ? '导入工程模拟监控' : '水箱、水泵与流量模拟监控'" />
+        <img
+          v-if="svg"
+          class="scada-svg"
+          :src="svg"
+          :alt="project ? '导入工程模拟监控' : '水箱、水泵与流量模拟监控'"
+        />
         <p v-else>正在加载工程…</p>
       </section>
       <div class="scada-monitor-side">
@@ -209,16 +216,37 @@ onUnmounted(() => {
             </ol>
           </section>
         </section>
-        <section v-if="project" class="scada-panel scada-simulation-history" aria-label="本地模拟趋势">
+        <section
+          v-if="project"
+          class="scada-panel scada-simulation-history"
+          aria-label="本地模拟趋势"
+        >
           <h2>本地模拟趋势</h2>
           <p class="scada-panel-subtitle">最近 120 秒 · 单 Tag · 当前会话 · 不写入数据库</p>
-          <TSelect v-if="project.tags.length > 0" size="small" :value="historyTag" :options="historyOptions" @change="changeHistoryTag" />
-          <svg viewBox="0 0 320 120" role="img" aria-label="模拟数值趋势，范围零至一百" class="scada-simulation-chart">
+          <TSelect
+            v-if="project.tags.length > 0"
+            size="small"
+            :value="historyTag"
+            :options="historyOptions"
+            @change="changeHistoryTag"
+          />
+          <svg
+            viewBox="0 0 320 120"
+            role="img"
+            aria-label="模拟数值趋势，范围零至一百"
+            class="scada-simulation-chart"
+          >
             <path d="M 8 8 H 312 M 8 60 H 312 M 8 112 H 312" class="scada-simulation-grid" />
             <path v-for="path in paths" :key="path" :d="path" class="scada-simulation-line" />
           </svg>
           <p class="scada-panel-subtitle">
-            {{ history.length === 0 ? "暂无采样" : paths.length === 0 ? "当前没有正常数值点" : "合成数值范围 0～100，非工程量程" }}
+            {{
+              history.length === 0
+                ? "暂无采样"
+                : paths.length === 0
+                  ? "当前没有正常数值点"
+                  : "合成数值范围 0～100，非工程量程"
+            }}
           </p>
           <a v-if="history.length > 0" download="本地模拟历史.csv" :href="csvUrl">
             导出当前模拟历史 CSV（{{ history.length }} 条）

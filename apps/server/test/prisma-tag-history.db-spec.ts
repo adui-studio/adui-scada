@@ -123,9 +123,9 @@ describe("真实 PostgreSQL 历史归档事务", () => {
     const rows = await readPersistedTagHistory(service.client, scope, query);
     expect(rows).toEqual(input.records);
     expect(rows.map((row) => row.numericValue)).toEqual([10, null]);
-    expect(await readPersistedTagHistory(service.client, scope, { ...query, endMs: time + 2 })).toEqual(
-      input.records,
-    );
+    expect(
+      await readPersistedTagHistory(service.client, scope, { ...query, endMs: time + 2 }),
+    ).toEqual(input.records);
     await expect(
       readPersistedTagHistory(service.client, scope, { ...query, maxPoints: 1 }),
     ).rejects.toThrow("历史查询结果超过点数上限");
@@ -143,9 +143,9 @@ describe("真实 PostgreSQL 历史归档事务", () => {
     const store = writer();
     await store.persist(input);
     await expect(store.persist(request(2, [3, 5]))).rejects.toThrow("历史归档幂等键内容冲突");
-    await expect(store.persist({ ...input, records: [...input.records].reverse() })).rejects.toThrow(
-      "历史归档幂等键内容冲突",
-    );
+    await expect(
+      store.persist({ ...input, records: [...input.records].reverse() }),
+    ).rejects.toThrow("历史归档幂等键内容冲突");
     expect((await store.persist(input)).status).toBe("ALREADY_COMMITTED");
   });
 
@@ -189,7 +189,9 @@ describe("真实 PostgreSQL 历史归档事务", () => {
 
   it("不存在的工程及非法派生字段不产生归档批次", async () => {
     await expect(
-      writer(streamId, tenantA, "missing-project").persist(request(1, [1], streamId, "missing-project")),
+      writer(streamId, tenantA, "missing-project").persist(
+        request(1, [1], streamId, "missing-project"),
+      ),
     ).rejects.toThrow(/foreign key|Foreign key|外键|constraint|约束/);
     const input = request(99, [8]);
     await expect(

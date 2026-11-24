@@ -16,8 +16,20 @@ function project() {
     projectName: "本地模拟测试工程",
     tags: [
       ...waterTreatmentDemoDocument.tags,
-      { tagId: "test.text", displayName: "模拟文本", dataType: "string", unit: null, description: "" },
-      { tagId: "test.unknown", displayName: "待确认", dataType: "unknown", unit: null, description: "" },
+      {
+        tagId: "test.text",
+        displayName: "模拟文本",
+        dataType: "string",
+        unit: null,
+        description: "",
+      },
+      {
+        tagId: "test.unknown",
+        displayName: "待确认",
+        dataType: "unknown",
+        unit: null,
+        description: "",
+      },
     ],
   });
 }
@@ -65,9 +77,9 @@ test("趋势选择隔离历史且窗口内仅保留最近原始采样", () => {
   });
   try {
     expect(events[0]?.kind).toBe("snapshot");
-    expect(() => source.subscribe({ onMessage: () => undefined, onDisconnected: () => undefined })).toThrow(
-      "本地模拟源已有活动订阅",
-    );
+    expect(() =>
+      source.subscribe({ onMessage: () => undefined, onDisconnected: () => undefined }),
+    ).toThrow("本地模拟源已有活动订阅");
     vi.advanceTimersByTime(125_000);
     expect(source.history()).toHaveLength(121);
     expect(events.at(-1)?.kind).toBe("delta");
@@ -75,7 +87,11 @@ test("趋势选择隔离历史且窗口内仅保留最近原始采样", () => {
     expect(source.history()).toEqual([]);
     vi.advanceTimersByTime(1000);
     expect(source.history()).toHaveLength(1);
-    expect(source.history()[0]).toMatchObject({ tagId: "test.unknown", quality: "BAD", numericValue: null });
+    expect(source.history()[0]).toMatchObject({
+      tagId: "test.unknown",
+      quality: "BAD",
+      numericValue: null,
+    });
     expect(simulationTrendPaths(source.history())).toEqual([]);
     expect(() => source.selectHistoryTag("missing.tag")).toThrow("本地模拟历史 Tag 不存在");
   } finally {
@@ -86,7 +102,11 @@ test("趋势选择隔离历史且窗口内仅保留最近原始采样", () => {
 
 test("趋势不跨坏质量与采样缺口，导出保留质量和安全的原始文本", () => {
   const time = Date.parse("2026-11-24T00:00:00.000Z");
-  const make = (offset: number, value: number | string, quality: TagHistoryPoint["quality"]): TagHistoryPoint => ({
+  const make = (
+    offset: number,
+    value: number | string,
+    quality: TagHistoryPoint["quality"],
+  ): TagHistoryPoint => ({
     tagId: "water.level",
     timestampMs: time + offset,
     numericValue: quality === "GOOD" && typeof value === "number" ? value : null,

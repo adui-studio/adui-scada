@@ -93,11 +93,7 @@ export class PrismaTagHistoryStore implements TagHistoryPersistencePort {
           where: { tenantId_projectId_streamId_batchSequence: key },
           select: { formatVersion: true, recordCount: true },
         });
-        if (
-          !existing ||
-          existing.formatVersion !== 1 ||
-          existing.recordCount !== records.length
-        ) {
+        if (!existing || existing.formatVersion !== 1 || existing.recordCount !== records.length) {
           throw new Error("历史归档幂等键内容冲突");
         }
         const stored = await transaction.scadaTagHistoryRecord.findMany({

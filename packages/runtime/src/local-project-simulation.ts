@@ -14,8 +14,8 @@ export interface LocalProjectSimulationSource extends ReadonlyTagSource {
 /** 将用户已校验的工程作为独立本地只读模拟快照；不读取或改写草稿及发布指针。 */
 export function createLocalProjectSimulationSource(input: unknown): LocalProjectSimulationSource {
   const project = parseScadaDocument(input);
-  let selectedTag = project.tags.find((tag) => tag.dataType === "number")?.tagId ??
-    project.tags[0]?.tagId;
+  let selectedTag =
+    project.tags.find((tag) => tag.dataType === "number")?.tagId ?? project.tags[0]?.tagId;
   let buffer = new TagHistoryBuffer(HISTORY_CAPACITY);
   let lastSampleMs: number | undefined;
   let subscribed = false;
@@ -151,7 +151,9 @@ export function simulationHistoryCsv(points: readonly TagHistoryPoint[]): string
       point.quality,
       Object.is(point.value, -0) ? "-0" : JSON.stringify(point.value),
       String(point.sequence),
-    ].map(quote).join(","),
+    ]
+      .map(quote)
+      .join(","),
   );
   return ["Tag ID,服务器时间（UTC）,质量,原始值（JSON）,序列号", ...rows].join("\r\n") + "\r\n";
 }
