@@ -687,6 +687,52 @@ function inspectScadaUIInPage() {
   };
 }
 
+/** 检查首页真实搜索、空态和静态缩略图，不伪造工程数据。 */
+async function inspectWorkspaceHomeInPage() {
+  const input = document.querySelector(".scada-home-search input");
+  const preview = document.querySelector(".scada-home-thumbnail img");
+  if (!(input instanceof HTMLInputElement) || !(preview instanceof HTMLImageElement)) {
+    throw new TypeError("工作台搜索或工程缩略图未挂载");
+  }
+  const titles = () =>
+    [...document.querySelectorAll(".scada-home-card > strong")].map((node) =>
+      node.textContent.trim(),
+    );
+  const change = (value) => {
+    const prototype = HTMLInputElement.prototype;
+    if (
+      !Object.getOwnPropertyDescriptor(prototype, "value")?.set ||
+      !Reflect.set(prototype, "value", value, input)
+    ) {
+      throw new Error("无法设置工作台搜索输入");
+    }
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  const waitForCount = async (count) => {
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      if (titles().length === count) return titles();
+      await new Promise((resolve) => setTimeout(resolve, 40));
+    }
+    throw new Error("工作台搜索结果数量不符合预期：" + count);
+  };
+  const initial = await waitForCount(3);
+  for (let attempt = 0; attempt < 50 && !preview.complete; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 40));
+  }
+  const staticPreview =
+    preview.src.startsWith("data:image/svg+xml") && preview.naturalWidth > 0;
+  const quickCount = document.querySelectorAll(".scada-home-quick").length;
+  change("已发布");
+  const filtered = await waitForCount(1);
+  change("不存在的工程");
+  await waitForCount(0);
+  const empty = Boolean(document.querySelector(".scada-home-section [role='status']"));
+  change("");
+  const restored = await waitForCount(3);
+  return { initial, staticPreview, quickCount, filtered, empty, restored };
+}
+
 /** WCAG 2.2 AA 常规文字对比度：仅计算已知的不透明 RGB，异常颜色拒绝通过。 */
 function scadaTextContrast(foreground, background) {
   const toRgb = (value) => {
@@ -779,6 +825,17 @@ async function runScadaUIExperience(session) {
         );
         if (view === "home") {
           assert.ok(data.home, prefix + " 工作台功能入口缺失");
+          const home = await session.evaluate("(" + inspectWorkspaceHomeInPage.toString() + ")()");
+          assert.deepStrictEqual(
+            home.initial,
+            ["水处理演示工程", "水处理模拟监控", "已发布工程预览"],
+            prefix + " 工作台真实目录不一致",
+          );
+          assert.equal(home.quickCount, 3, prefix + " 快速入口数量不一致");
+          assert.equal(home.staticPreview, true, prefix + " 内置工程 SVG 缩略图未显示");
+          assert.deepStrictEqual(home.filtered, ["已发布工程预览"], prefix + " 搜索结果不一致");
+          assert.equal(home.empty, true, prefix + " 搜索空态缺失");
+          assert.deepStrictEqual(home.restored, home.initial, prefix + " 清空搜索未恢复目录");
         } else if (view === "runtime") {
           assert.ok(data.process && data.telemetry && data.quality, prefix + " 工艺和链路信息缺失");
         } else if (view === "published") {

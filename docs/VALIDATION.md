@@ -4617,3 +4617,7 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 ### D5c1 · 浏览器脚本 Lint 警告 E-121
 
 维护者报告 E-120 修复后 `vp check --fix` 格式化完成，292 个受检文件零错误、3 条警告。候选修复仅修改 `scripts/test-studio-browser.mjs` 中未使用参数、百分比后缀判断、原生 setter 调用，沿用 E-070 的 `Reflect.set` 方案。实际修改后的局部函数独立 JavaScript 模拟通过，未执行完整 Vite+ 与 Chromium，PR #192 保持 Draft。
+
+### D5c1 · Pixso 参考视觉调整
+
+维护者已提供上一候选的 Windows 格式、Lint、前端类型和文档检查通过日志；本次新候选改为共享真实工作台目录、搜索、SVG 缩略图、工程卡片网格与 Studio 工具图标，并新增工作台搜索、空态、恢复和实际 SVG 图片加载断言。此前的检查不能证明新提交通过。当前协作环境实测 GitHub 域名无法解析，未能拉取完整工作树；未执行新候选的 Vite+、完整 ready、Chromium 或截图审阅，仍需 Windows 统一验收。
