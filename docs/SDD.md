@@ -1528,3 +1528,7 @@ flush(maxRecords) 使用既有有界 prepareArchive，空缓冲返回 0。每缓
 内部 PrismaTagHistoryStore 固定可信租户/工程/流作用域，先完整校验派生字段再开启 ReadCommitted 事务（最大等待 2 秒、事务超时 10 秒）。唯一键首次插入后写完整记录，失败整批回滚；重复键读回批次版本、数量及按 ordinal 排序的所有记录，逐项比较完整内容和索引，冲突拒绝。成功事务返回后才生成回执，结果未知不确认。内部 readPersistedTagHistory 按租户、工程、Tag 和左闭右开时间窗口读取，按时间、流、批次与顺序稳定排序，单次上限 1000 点，超量拒绝。尚未挂载路由、权限服务、采集、恢复或保留清理，不能将内部固定作用域当作用户授权。未证明数据库事务实际执行通过。
 
 React/Vue 运行页可显式导入当前或可迁移 Schema 的最大 2 MiB JSON。复用 readWorkspaceJson 和 Core 解析；新会话不访问或覆盖 IndexedDB、工程版本和发布指针，文件校验失败保持当前会话，退出或切换时停止定时器与旧 Runtime。仅本地模拟源以一秒周期生成类型匹配的合成值（数值 0～100、布尔、文本，unknown 为 BAD/null，sourceTimestamp=null），不读取网络和真实设备。用户可选择页面，选中的 Tag 保留最近 120 秒实际合成采样，最多 240 条，切换 Tag 清空该窗口；不将 Runtime 派生 STALE 作为采样。趋势坏质量、非数值和超过两秒间隔断线，合成量程明确标注，不插补。CSV 导出原始标量 JSON、质量、UTC 时间、序号；文本以 JSON 字符串表示防止公式解释。旧内置 SSE、离线桌面、正式发布读取保持原有机制。首次 MVP 是非生产演示候选，正式发布、可信采集和历史服务仍有独立门禁。
+
+## MVP · Prisma 8 阶段一工具链契约
+
+`prisma.config.ts` 使用官方 Prisma 8 `definePrismaConfig`、PostgreSQL 配置辅助函数及 `prisma7Schema`，禁止配置继承且不配置数据库连接；`db:prisma8:emit` 仅生成独立契约，不执行数据库写入。旧配置移至 `prisma7.config.ts`，保持根 .env 读取方式与迁移目录，所有既有 db:validate、db:generate、db:migrate:* 脚本仍显式调用官方 prisma7 CLI。Docker 初始化与全新隔离库迁移脚本从已安装的兼容包元数据解析 prisma7 二进制脚本，核对包名、主版本、入口存在及真实路径边界；拒绝退回普通 prisma 命令。原安全参数与目标数据库保护不放宽。生成物排除在自有代码格式、Lint、中文文案检查之外，不修改自动生成契约。当前阶段不挂载 Prisma 8 运行时客户端，不增加业务路由，不改变现有数据库模型、SQL 迁移、事务及工业安全边界。
