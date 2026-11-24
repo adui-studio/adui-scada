@@ -1,5 +1,10 @@
 import { expect, test } from "vite-plus/test";
-import { STUDIO_CANVAS_FIT_MARGIN, studioFocusTransform, studioViewportRect } from "../src/studio-viewport-rect.ts";
+import {
+  STUDIO_CANVAS_FIT_MARGIN,
+  studioFocusTransform,
+  studioGridContinuation,
+  studioViewportRect,
+} from "../src/studio-viewport-rect.ts";
 
 const page = { width: 880, height: 460 };
 const center = { x: 0, y: 0 };
@@ -119,16 +124,37 @@ test("定位极小图元时限制最大缩放并拒绝无效几何", () => {
   );
 });
 
-test("默认 1920×1080 画板适应视口时仅保留最小安全边距且不变形", () => {
+test("默认 1920×1080 画板适应视口时保留安全边距且不变形", () => {
   const page = { width: 1920, height: 1080 };
   for (const viewport of [{ width: 900, height: 600 }, { width: 1200, height: 650 }, { width: 600, height: 500 }]) {
     const rect = studioViewportRect(page, viewport, 1, center, STUDIO_CANVAS_FIT_MARGIN);
     const scale = viewport.width / rect.width;
     const horizontalGap = viewport.width - page.width * scale;
     const verticalGap = viewport.height - page.height * scale;
-    expect(Math.min(horizontalGap, verticalGap)).toBeCloseTo(16);
+    expect(Math.min(horizontalGap, verticalGap)).toBeCloseTo(STUDIO_CANVAS_FIT_MARGIN * 2);
     expect(rect.width / rect.height).toBeCloseTo(viewport.width / viewport.height);
-    expect(horizontalGap).toBeGreaterThanOrEqual(15.99);
-    expect(verticalGap).toBeGreaterThanOrEqual(15.99);
+    expect(horizontalGap).toBeGreaterThanOrEqual(STUDIO_CANVAS_FIT_MARGIN * 2 - 0.01);
+    expect(verticalGap).toBeGreaterThanOrEqual(STUDIO_CANVAS_FIT_MARGIN * 2 - 0.01);
+  }
+});
+
+test("工具带网格在适应、缩放与平移时延续 SVG 世界坐标相位", () => {
+  const page = { width: 1920, height: 1080 };
+  const viewport = { width: 900, height: 600 };
+  const gridSize = 20;
+  for (const [zoom, pan] of [
+    [1, { x: 0, y: 0 }],
+    [2, { x: 125, y: -45 }],
+    [3, { x: -200, y: 100 }],
+  ] as const) {
+    const rect = studioViewportRect(page, viewport, zoom, pan, STUDIO_CANVAS_FIT_MARGIN);
+    const worldPerPixel = rect.width / viewport.width;
+    const grid = studioGridContinuation(rect, worldPerPixel, gridSize);
+    expect(grid.spacing * worldPerPixel).toBeCloseTo(gridSize);
+    expect(grid.stroke * worldPerPixel).toBeCloseTo(0.8);
+    const worldX = rect.x + (grid.x + grid.stroke / 2) * worldPerPixel;
+    const worldY = rect.y + rect.height + (grid.y + grid.stroke / 2) * worldPerPixel;
+    expect(worldX / gridSize).toBeCloseTo(Math.round(worldX / gridSize));
+    expect(worldY / gridSize).toBeCloseTo(Math.round(worldY / gridSize));
   }
 });

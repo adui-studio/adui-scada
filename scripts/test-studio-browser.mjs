@@ -308,8 +308,8 @@ async function checkStudioInPage() {
 
   const artboardRect = bounds(element(".studio-artboard-surface"));
   verify(
-    "默认适应画板在限制轴只保留最小边距",
-    near(Math.min(svgRect.width - artboardRect.width, svgRect.height - artboardRect.height), 16, 2),
+    "默认适应画板保留安全边距",
+    near(Math.min(svgRect.width - artboardRect.width, svgRect.height - artboardRect.height), 96, 2),
   );
   verify(
     "画板完整显示且保持工程比例",
@@ -332,6 +332,33 @@ async function checkStudioInPage() {
   verify("独立白色画板存在", Boolean(svg.querySelector(".studio-artboard-surface")));
   const captionRect = bounds(element(".studio-stage-caption"));
   const dockRect = bounds(element(".studio-canvas-dock"));
+  const footer = element(".studio-canvas-footer");
+  const footerRect = bounds(footer);
+  verify(
+    "网格工具带覆盖 SVG 下沿至工作区底边",
+    near(footerRect.left, svgRect.left) &&
+      near(footerRect.right, svgRect.right) &&
+      near(footerRect.top, svgRect.bottom) &&
+      near(footerRect.bottom, bounds(stage).bottom) &&
+      getComputedStyle(footer).backgroundImage !== "none",
+  );
+  const gridMatchesViewport = () => {
+    const visible = svg.viewBox.baseVal;
+    const size = Number(svg.querySelector("#scada-studio-grid")?.getAttribute("width"));
+    const scale = visible.width / bounds(svg).width;
+    const spacing = size / scale;
+    const style = getComputedStyle(footer);
+    const [x, y] = style.backgroundPosition.split(" ").map(Number.parseFloat);
+    const stroke = Number.parseFloat(style.getPropertyValue("--studio-grid-stroke"));
+    const worldX = (visible.x + (x + stroke / 2) * scale) / size;
+    const worldY = (visible.y + visible.height + (y + stroke / 2) * scale) / size;
+    return (
+      near(Number.parseFloat(style.backgroundSize), spacing, 0.02) &&
+      near(worldX, Math.round(worldX), 0.002) &&
+      near(worldY, Math.round(worldY), 0.002)
+    );
+  };
+  verify("底部网格与 SVG 网格相位一致", gridMatchesViewport());
   verify(
     "上下工具条不遮挡可编辑 SVG",
     captionRect.bottom <= svgRect.top + 2 && dockRect.top >= svgRect.bottom - 2,
@@ -369,6 +396,7 @@ async function checkStudioInPage() {
     "放大只改变视图，不改变 SVG DOM 尺寸",
     svg.viewBox.baseVal.width < originalWidth && near(bounds(svg).width, svgRect.width),
   );
+  verify("缩放后底部网格继续与 SVG 对齐", gridMatchesViewport());
   zoomButtons[1]?.click();
   await settle();
   verify("适应按钮恢复原始视图", near(svg.viewBox.baseVal.width, originalWidth, 0.01));
@@ -393,9 +421,11 @@ async function checkStudioInPage() {
     gridInput.click();
     await settle();
     verify("网格可关闭", !svg.querySelector('rect[fill="url(#scada-studio-grid)"]'));
+    verify("关闭网格同步隐藏工具带网格", getComputedStyle(footer).backgroundImage === "none");
     gridInput.click();
     await settle();
     verify("网格可恢复", Boolean(svg.querySelector('rect[fill="url(#scada-studio-grid)"]')));
+    verify("恢复网格同步恢复工具带网格", getComputedStyle(footer).backgroundImage !== "none" && gridMatchesViewport());
   } else {
     verify("存在网格显示控制", Boolean(gridInput));
   }

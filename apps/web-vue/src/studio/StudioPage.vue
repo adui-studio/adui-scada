@@ -25,6 +25,7 @@ import {
   studioNodeVisible,
   buildLayerTree,
   studioViewportRect,
+  studioGridContinuation,
   studioFocusTransform,
   STUDIO_CANVAS_FIT_MARGIN,
   compareProjectDocuments,
@@ -228,6 +229,9 @@ const visibleRect = computed(() =>
   ),
 );
 const worldPerPixel = computed(() => visibleRect.value.width / canvasViewport.value.width);
+const dockGrid = computed(() =>
+  studioGridContinuation(visibleRect.value, worldPerPixel.value, DEFAULT_GRID_SIZE),
+);
 const actualZoomPercent = computed(() => Math.max(1, Math.round(100 / worldPerPixel.value)));
 const selected = computed(() =>
   page.value.nodes.find((node) => node.id === state.value.selectedId),
@@ -2751,45 +2755,55 @@ async function importJsonFile(file: File | undefined) {
             </svg>
           </div>
         </div>
-        <div class="studio-canvas-dock" aria-label="画布工具">
-          <div class="studio-canvas-modes" role="group" aria-label="画布操作模式">
-            <TButton
-              type="button"
-              title="选择工具（V）"
-              :aria-pressed="canvasTool === 'select'"
-              @click="canvasTool = 'select'"
-            >
-              <CursorIcon aria-hidden="true" />
-              选择
-            </TButton>
-            <TButton
-              type="button"
-              title="抓手工具（H）"
-              :aria-pressed="canvasTool === 'hand'"
-              @click="canvasTool = 'hand'"
-            >
-              <GestureOpenIcon aria-hidden="true" />
-              抓手
-            </TButton>
-          </div>
-          <div class="studio-library-label">图元库 · 点击添加</div>
-          <div class="studio-add">
-            <TButton type="button" @click="addSymbol('tank')">
-              <RectangleIcon aria-hidden="true" />
-              + 水箱
-            </TButton>
-            <TButton type="button" @click="addSymbol('pump')">
-              <PlayCircleIcon aria-hidden="true" />
-              + 水泵
-            </TButton>
-            <TButton type="button" @click="addSymbol('pipe')">
-              <SlashIcon aria-hidden="true" />
-              + 管道
-            </TButton>
-            <TButton type="button" @click="addSymbol('label')">
-              <TextboxIcon aria-hidden="true" />
-              + 文本
-            </TButton>
+        <div
+          class="studio-canvas-footer"
+          :data-grid-visible="gridVisible"
+          :style="{
+            backgroundSize: `${dockGrid.spacing}px ${dockGrid.spacing}px`,
+            backgroundPosition: `${dockGrid.x}px ${dockGrid.y}px`,
+            '--studio-grid-stroke': `${dockGrid.stroke}px`,
+          }"
+        >
+          <div class="studio-canvas-dock" aria-label="画布工具">
+            <div class="studio-canvas-modes" role="group" aria-label="画布操作模式">
+              <TButton
+                type="button"
+                title="选择工具（V）"
+                :aria-pressed="canvasTool === 'select'"
+                @click="canvasTool = 'select'"
+              >
+                <CursorIcon aria-hidden="true" />
+                选择
+              </TButton>
+              <TButton
+                type="button"
+                title="抓手工具（H）"
+                :aria-pressed="canvasTool === 'hand'"
+                @click="canvasTool = 'hand'"
+              >
+                <GestureOpenIcon aria-hidden="true" />
+                抓手
+              </TButton>
+            </div>
+            <div class="studio-library-label">图元库 · 点击添加</div>
+            <div class="studio-add">
+              <TButton type="button" @click="addSymbol('tank')">
+                <RectangleIcon aria-hidden="true" />
+                + 水箱
+              </TButton>
+              <TButton type="button" @click="addSymbol('pump')">
+                <PlayCircleIcon aria-hidden="true" />
+                + 水泵
+              </TButton>
+              <TButton type="button" @click="addSymbol('pipe')">
+                <SlashIcon aria-hidden="true" />
+                + 管道
+              </TButton>
+              <TButton type="button" @click="addSymbol('label')">
+                <TextboxIcon aria-hidden="true" />
+                + 文本
+              </TButton>
+            </div>
           </div>
         </div>
       </section>

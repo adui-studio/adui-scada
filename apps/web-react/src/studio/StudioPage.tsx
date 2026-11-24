@@ -21,6 +21,7 @@ import {
   studioNodeVisible,
   buildLayerTree,
   studioViewportRect,
+  studioGridContinuation,
   studioFocusTransform,
   STUDIO_CANVAS_FIT_MARGIN,
   compareProjectDocuments,
@@ -273,6 +274,7 @@ export default function StudioPage({
     STUDIO_CANVAS_FIT_MARGIN,
   );
   const worldPerPixel = visibleRect.width / canvasViewport.width;
+  const dockGrid = studioGridContinuation(visibleRect, worldPerPixel, DEFAULT_GRID_SIZE);
   const actualZoomPercent = Math.max(1, Math.round(100 / worldPerPixel));
 
   const hasGroupedSelection = page.nodes.some(
@@ -2825,47 +2827,59 @@ export default function StudioPage({
               </svg>
             </div>
           </div>
-          <div className="studio-canvas-dock" aria-label="画布工具">
-            <div className="studio-canvas-modes" role="group" aria-label="画布操作模式">
-              <Button
-                tag="button"
-                type="button"
-                title="选择工具（V）"
-                aria-pressed={canvasTool === "select"}
-                onClick={() => setCanvasTool("select")}
-              >
-                <CursorIcon aria-hidden="true" />
-                选择
-              </Button>
-              <Button
-                tag="button"
-                type="button"
-                title="抓手工具（H）"
-                aria-pressed={canvasTool === "hand"}
-                onClick={() => setCanvasTool("hand")}
-              >
-                <GestureOpenIcon aria-hidden="true" />
-                抓手
-              </Button>
-            </div>
-            <div className="studio-library-label">图元库 · 点击添加</div>
-            <div className="studio-add">
-              <Button tag="button" type="button" onClick={() => addSymbol("tank")}>
-                <RectangleIcon aria-hidden="true" />
-                + 水箱
-              </Button>
-              <Button tag="button" type="button" onClick={() => addSymbol("pump")}>
-                <PlayCircleIcon aria-hidden="true" />
-                + 水泵
-              </Button>
-              <Button tag="button" type="button" onClick={() => addSymbol("pipe")}>
-                <SlashIcon aria-hidden="true" />
-                + 管道
-              </Button>
-              <Button tag="button" type="button" onClick={() => addSymbol("label")}>
-                <TextboxIcon aria-hidden="true" />
-                + 文本
-              </Button>
+          <div
+            className="studio-canvas-footer"
+            data-grid-visible={gridVisible}
+            style={
+              {
+                backgroundSize: `${dockGrid.spacing}px ${dockGrid.spacing}px`,
+                backgroundPosition: `${dockGrid.x}px ${dockGrid.y}px`,
+                "--studio-grid-stroke": `${dockGrid.stroke}px`,
+              } as CSSProperties
+            }
+          >
+            <div className="studio-canvas-dock" aria-label="画布工具">
+              <div className="studio-canvas-modes" role="group" aria-label="画布操作模式">
+                <Button
+                  tag="button"
+                  type="button"
+                  title="选择工具（V）"
+                  aria-pressed={canvasTool === "select"}
+                  onClick={() => setCanvasTool("select")}
+                >
+                  <CursorIcon aria-hidden="true" />
+                  选择
+                </Button>
+                <Button
+                  tag="button"
+                  type="button"
+                  title="抓手工具（H）"
+                  aria-pressed={canvasTool === "hand"}
+                  onClick={() => setCanvasTool("hand")}
+                >
+                  <GestureOpenIcon aria-hidden="true" />
+                  抓手
+                </Button>
+              </div>
+              <div className="studio-library-label">图元库 · 点击添加</div>
+              <div className="studio-add">
+                <Button tag="button" type="button" onClick={() => addSymbol("tank")}>
+                  <RectangleIcon aria-hidden="true" />
+                  + 水箱
+                </Button>
+                <Button tag="button" type="button" onClick={() => addSymbol("pump")}>
+                  <PlayCircleIcon aria-hidden="true" />
+                  + 水泵
+                </Button>
+                <Button tag="button" type="button" onClick={() => addSymbol("pipe")}>
+                  <SlashIcon aria-hidden="true" />
+                  + 管道
+                </Button>
+                <Button tag="button" type="button" onClick={() => addSymbol("label")}>
+                  <TextboxIcon aria-hidden="true" />
+                  + 文本
+                </Button>
+              </div>
             </div>
           </div>
         </section>

@@ -2109,7 +2109,7 @@
   gap: 6px;
   flex-wrap: wrap;
   justify-content: center;
-  margin: 0 auto 10px;
+  margin: 0 auto;
   padding: 6px;
   border: 1px solid var(--scada-border);
   border-radius: 12px;
@@ -2577,4 +2577,20 @@
   border-color: var(--scada-primary-hover);
   background: var(--scada-primary-hover);
   color: var(--adui-color-brand-on);
+}
+
+/* 工具带与 SVG 使用相同网格周期及相位，底部不再露出纯色断层。 */
+.studio-canvas-footer {
+  display: flex;
+  flex: none;
+  min-width: 0;
+  width: 100%;
+  justify-content: center;
+  padding-bottom: 10px;
+  background-color: var(--adui-color-editor-workspace);
+}
+.studio-canvas-footer[data-grid-visible="true"] {
+  background-image:
+    linear-gradient(to right, rgb(130 149 172 / 45%) var(--studio-grid-stroke), transparent var(--studio-grid-stroke)),
+    linear-gradient(to bottom, rgb(130 149 172 / 45%) var(--studio-grid-stroke), transparent var(--studio-grid-stroke));
 }

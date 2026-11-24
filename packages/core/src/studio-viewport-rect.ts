@@ -2,7 +2,7 @@ import type { StudioPageSize, StudioPan } from "./studio-viewport.ts";
 
 /** 浏览器工作区的实际 CSS 像素大小，不属于组态工程 Schema。 */
 /** 只影响 Studio 的画板适应视图，不能写入工程 Schema。 */
-export const STUDIO_CANVAS_FIT_MARGIN = 8;
+export const STUDIO_CANVAS_FIT_MARGIN = 48;
 
 export interface StudioViewportSize {
   width: number;
@@ -120,4 +120,24 @@ export function studioFocusTransform(
     fitMargin,
   ).pan;
   return { zoom, pan };
+}
+
+/** 底部工具带延续同一世界坐标网格，不参与工程内容或命中计算。 */
+export function studioGridContinuation(
+  rect: StudioViewportRect,
+  worldPerPixel: number,
+  gridSize: number,
+) {
+  const spacing = gridSize / worldPerPixel;
+  const stroke = 0.8 / worldPerPixel;
+  const phase = (world: number) => {
+    const offset = (-world / worldPerPixel - stroke / 2) % spacing;
+    return (offset + spacing) % spacing;
+  };
+  return {
+    spacing,
+    stroke,
+    x: phase(rect.x),
+    y: phase(rect.y + rect.height),
+  };
 }
