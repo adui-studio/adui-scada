@@ -235,7 +235,7 @@ function RuntimeMonitor({ project, controls }: { project: ScadaDocument | null; 
               )}
               <svg viewBox="0 0 320 120" role="img" aria-label="模拟数值趋势，范围零至一百" className="scada-simulation-chart">
                 <path d="M 8 8 H 312 M 8 60 H 312 M 8 112 H 312" className="scada-simulation-grid" />
-                {paths.map((path, index) => <path key={index} d={path} className="scada-simulation-line" />)}
+                {paths.map((path) => <path key={path} d={path} className="scada-simulation-line" />)}
               </svg>
               <p className="scada-panel-subtitle">
                 {history.length === 0 ? "暂无采样" : paths.length === 0 ? "当前没有正常数值点" : "合成数值范围 0～100，非工程量程"}
