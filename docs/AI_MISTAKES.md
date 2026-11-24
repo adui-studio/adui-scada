@@ -1259,3 +1259,21 @@
 - **最小修复**：删除旧回调及重复 svg 声明所在的五行（含分隔空行），保留当前 Effect 的清理函数、project 依赖及含 pageId 的 SVG 渲染。Vue、共享模拟源、历史事务和工业安全门禁不变。
 - **实际复验**：协作容器 Node.js 22.16.0 / TypeScript 5.8.3 对完整修复前文件（git hash-object 与原 GitHub Blob 一致）以 ScriptKind.TSX 解析，得到 3 条语法诊断，其中 123:4 与维护者报错位置一致；修复后完整文件为 0 条。修复 Blob 5ce8ad1f52d20b72a3d0c7ce5f7d8ca845e148fb 与 GitHub 回读一致。正式 TypeScript 6、Vite+、Lint、类型检查及浏览器仍待 Windows 实测。
 - **防复发**：组件重构不得以首个通用 return 字符串确定替换边界；必须使用唯一的结构化定位、检查完整差异、解析每个变更 TSX 文件，并对提交后 Blob 回读校验。无真实项目工具链时明确记录局部验证范围，不能用独立 Core 测试结果替代页面解析。
+
+> **2026-11-24 · E-131 语法阻塞复验通过**：维护者后续 Windows 日志显示 Prisma Schema、Client 生成、Core 编译完成，`vp check --fix` 格式化完成，`vp check` 469 个文件格式正确、311 个受检文件零警告、Lint 或类型错误。原 TSX 解析阻塞不再出现。独立 Web 类型检查另报 E-133，不能据此认定完整质量链通过；维护者日志未打印 HEAD。
+
+### E-132 · PR #198 验收顺序未先刷新生成产物（E-054 同类复发，已关闭）
+
+- **现象**：维护者先运行 `vp check --fix`，出现 25 个类型错误、零警告；服务端无法识别 Core 历史导出和新 Prisma 模型，随之出现隐式 any。重新拉取源码后直接检查仍报相同错误。
+- **根因**：验收指令把 Vite+ 类型检查放在 Prisma Client 生成与 Core Node 构建之前。Core 的 Node 条件导出读取 dist 声明，Prisma Client 亦由本地生成，Git 拉取不会同步这些产物。不是源码缺少相关导出。
+- **修复和实际复验**：维护者依次执行 db:validate、db:generate、build:core、vp check --fix 和 vp check；Prisma 7.10.1 成功生成，Core 编译成功，469 个格式文件、311 个受检文件零警告错误，原 25 项错误消失。未执行数据库迁移，不新增依赖，不以 any 或重复导出掩盖错误。
+- **防复发**：凡涉及 Core 公共导出或 Prisma Schema，给出验收指令时先校验 Schema、生成 Client、构建 Core，再做 Vite+ 与双端独立类型检查。保留现有 ready 的产物准备顺序。
+
+### E-133 · 共享历史类的构造函数参数属性违反前端 erasableSyntaxOnly（E-006 同类复发，待 Windows 复验）
+
+- **Windows 实测**：修复生成产物顺序后，Prisma 校验/生成、Core 编译与 Vite+ 均通过，`pnpm run typecheck:web` 在 React 的 tsc --build 阶段报四项 TS1294。TagHistoryArchiveWriter 的 buffer/storage 以及 TagHistorySampler 的 buffer/tagId 使用 private readonly 参数属性。Web 后续检查及文案、文档尚未执行。
+- **根因**：共享 Core 使用 NodeNext 构建配置，未启用 erasableSyntaxOnly；浏览器共享 TSConfig 启用该限制，React/Vue 直接消费 Core 源码。因此 Core 编译成功和根 Vite+ 检查通过不足以证明前端独立类型检查通过。
+- **最小修复**：两个类分别改为显式 private readonly 字段与构造函数赋值，保留参数顺序、类型、初始化和校验顺序、采样判定、归档幂等与回执语义。后端专用类、TSConfig、依赖、数据库 Schema 和迁移不变。
+- **实际局部复验**：Node.js 22.16.0、TypeScript 5.8.3 对修复前后 GitHub 构造函数摘录（其余依赖为最小类型声明）使用 strict、ES2023、Bundler 与 erasableSyntaxOnly 执行 tsc --noEmit，修复前复现 4 项 TS1294、退出码 2；修复后 0 项、退出码 0。Node 原生类型擦除实际验证字段绑定、非法采样配置拒绝、工程范围冻结及重复归档写入者拒绝。不是完整仓库编译或 Vitest；Windows TypeScript 6、双端类型检查、正式单测与 ready 仍待运行。
+- **远端修复证据**：TagHistoryArchiveWriter 提交 b0c1d7f7fc4eccbe91d9c46431f34a3bd599290e，Blob b9ac92dd13a62611b2b3e3f346810dd3d1431738；TagHistorySampler 提交 1098b214e4d89fa98719ce017aca99765510dc37，Blob e0d7dbbe53cd40d5ebf2bba76aa763c6e914bddc。均回读与预期最小修改一致。
+- **防复发**：所有供浏览器消费的共享包使用可擦除 TypeScript 语法，不采用参数属性简写，不为兼容修复而关闭严格配置；把独立 Web 类型检查与 Core 编译均视为必须通过的门禁。不能将仅面向 Node 的构建或根 Vite+ 通过视为全链完成。
