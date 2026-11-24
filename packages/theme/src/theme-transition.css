@@ -4,15 +4,30 @@
     clip-path: polygon(0 0, 0 0, calc(tan(8deg) * -100vh) 100%, calc(tan(8deg) * -100vh) 100%);
   }
   to {
-    clip-path: polygon(0 0, calc(tan(8deg) * 100vh + 100%) 0, 100% 100%, calc(tan(8deg) * -100vh) 100%);
+    clip-path: polygon(
+      0 0,
+      calc(tan(8deg) * 100vh + 100%) 0,
+      100% 100%,
+      calc(tan(8deg) * -100vh) 100%
+    );
   }
 }
 @keyframes scada-dark-to-light {
   from {
-    clip-path: polygon(calc(tan(8deg) * 100vh + 100%) 0, calc(tan(8deg) * 100vh + 100%) 0, 100% 100%, 100% 100%);
+    clip-path: polygon(
+      calc(tan(8deg) * 100vh + 100%) 0,
+      calc(tan(8deg) * 100vh + 100%) 0,
+      100% 100%,
+      100% 100%
+    );
   }
   to {
-    clip-path: polygon(0 0, calc(tan(8deg) * 100vh + 100%) 0, 100% 100%, calc(tan(8deg) * -100vh) 100%);
+    clip-path: polygon(
+      0 0,
+      calc(tan(8deg) * 100vh + 100%) 0,
+      100% 100%,
+      calc(tan(8deg) * -100vh) 100%
+    );
   }
 }
 :root[data-theme-transition]::view-transition-group(root) {

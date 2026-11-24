@@ -1,6 +1,21 @@
 <script setup lang="ts">
-import { Button as TButton, Input as TInput, Switch as TSwitch, Upload as TUpload } from "tdesign-vue-next";
-import { AppIcon, ChartBarIcon, FileIcon, EditIcon, SunnyIcon, MoonIcon, AddIcon, UploadIcon, ChevronRightIcon } from "tdesign-icons-vue-next";
+import {
+  Button as TButton,
+  Input as TInput,
+  Switch as TSwitch,
+  Upload as TUpload,
+} from "tdesign-vue-next";
+import {
+  AppIcon,
+  ChartBarIcon,
+  FileIcon,
+  EditIcon,
+  SunnyIcon,
+  MoonIcon,
+  AddIcon,
+  UploadIcon,
+  ChevronRightIcon,
+} from "tdesign-icons-vue-next";
 import { waterTreatmentShowcaseDocument } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import {
@@ -372,8 +387,8 @@ const viewLabels = {
                 />
                 <span v-else aria-hidden="true">
                   <EditIcon v-if="entry.view === 'studio'" aria-hidden="true" />
-              <ChartBarIcon v-else-if="entry.view === 'runtime'" aria-hidden="true" />
-              <FileIcon v-else aria-hidden="true" />
+                  <ChartBarIcon v-else-if="entry.view === 'runtime'" aria-hidden="true" />
+                  <FileIcon v-else aria-hidden="true" />
                 </span>
               </span>
               <strong>{{ entry.title }}</strong>
@@ -413,7 +428,12 @@ const viewLabels = {
       </main>
       <RuntimePage v-else-if="view === 'runtime'" />
       <PublishedRuntimePage v-else-if="view === 'published'" />
-      <StudioPage v-else :initial-document="initialDocument" :initial-notice="initialNotice" :theme-mode="themeMode" />
+      <StudioPage
+        v-else
+        :initial-document="initialDocument"
+        :initial-notice="initialNotice"
+        :theme-mode="themeMode"
+      />
     </div>
   </div>
 </template>

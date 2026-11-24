@@ -162,7 +162,12 @@ test("Studio 深色预览保留工业设备和指标卡造型且不改动工程�
   expect(studioDark).toContain('viewBox="0 0 120 100"');
   expect(studioDark).toContain('viewBox="0 0 320 92"');
   expect(studioDark).toContain("75 %");
-  const stale = renderSvgPage(waterTreatmentShowcaseDocument, "main", new Map([["water.level", tag("STALE", 75)]]), "studio-dark");
+  const stale = renderSvgPage(
+    waterTreatmentShowcaseDocument,
+    "main",
+    new Map([["water.level", tag("STALE", 75)]]),
+    "studio-dark",
+  );
   expect(stale).toContain("已过期");
   expect(stale).not.toContain("75 %");
   expect(stale).not.toContain("75%");

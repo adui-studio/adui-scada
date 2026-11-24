@@ -1581,7 +1581,9 @@ textarea {
   border-radius: var(--adui-radius-md);
   box-shadow: var(--adui-shadow-panel);
   transform: translateX(0);
-  transition: transform 0.2s ease, background-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease;
 }
 .scada-theme-control .scada-theme-toggle.t-switch[aria-checked="true"] .t-switch__handle {
   left: 2px;

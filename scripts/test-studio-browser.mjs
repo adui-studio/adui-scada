@@ -317,7 +317,11 @@ async function checkStudioInPage() {
       artboardRect.right <= svgRect.right + 1 &&
       artboardRect.top >= svgRect.top - 1 &&
       artboardRect.bottom <= svgRect.bottom + 1 &&
-      near(artboardRect.width / artboardRect.height, Number(boundary?.getAttribute("width")) / Number(boundary?.getAttribute("height")), 0.002),
+      near(
+        artboardRect.width / artboardRect.height,
+        Number(boundary?.getAttribute("width")) / Number(boundary?.getAttribute("height")),
+        0.002,
+      ),
   );
   verify(
     "底部操作使用六个 TDesign 图标",
@@ -739,7 +743,11 @@ function inspectScadaUIInPage() {
     titleColor: style(sample, "color"),
     titleBackground: style(main, "background-color"),
     navIcons: links.filter((button) => Boolean(button.querySelector(".t-icon"))).length,
-    alignedButtonContents: [...document.querySelectorAll(".scada-app-nav .scada-button-content, .studio-canvas-dock .scada-button-content")].map((content) => {
+    alignedButtonContents: [
+      ...document.querySelectorAll(
+        ".scada-app-nav .scada-button-content, .studio-canvas-dock .scada-button-content",
+      ),
+    ].map((content) => {
       const icon = content.querySelector(".t-icon");
       const label = content.querySelector(".scada-button-label");
       if (!icon || !label) return false;
@@ -1035,8 +1043,15 @@ async function runScadaUIExperience(session) {
           );
           assert.equal(data.current, label, prefix + " 未标识当前导航");
           assert.equal(data.navIcons, 4, prefix + " 导航未使用 TDesign 图标");
-          assert.equal(data.alignedButtonContents.length, view === "studio" ? 10 : 4, prefix + " 图标文字组合数量不一致");
-          assert.ok(data.alignedButtonContents.every(Boolean), prefix + " 按钮图标或文字未垂直居中");
+          assert.equal(
+            data.alignedButtonContents.length,
+            view === "studio" ? 10 : 4,
+            prefix + " 图标文字组合数量不一致",
+          );
+          assert.ok(
+            data.alignedButtonContents.every(Boolean),
+            prefix + " 按钮图标或文字未垂直居中",
+          );
           if (data.messageColor && data.messageBackground) {
             assert.ok(
               scadaTextContrast(data.messageColor, data.messageBackground) >= 4.5,

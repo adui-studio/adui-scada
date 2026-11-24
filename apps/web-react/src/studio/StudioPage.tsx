@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Checkbox, Collapse, Dropdown, Input, Popup, Select, Upload } from "tdesign-react";
 import type { DropdownProps } from "tdesign-react";
-import { CloseIcon, RectangleIcon, PlayCircleIcon, SlashIcon, TextboxIcon, CursorIcon, GestureOpenIcon } from "tdesign-icons-react";
+import {
+  CloseIcon,
+  RectangleIcon,
+  PlayCircleIcon,
+  SlashIcon,
+  TextboxIcon,
+  CursorIcon,
+  GestureOpenIcon,
+} from "tdesign-icons-react";
 import "tdesign-react/es/style/index.css";
 import type {
   DragEvent as ReactDragEvent,
@@ -258,7 +266,13 @@ export default function StudioPage({
     [geometryPreview, snapResult, state.document, state.activePageId, state.selectedIds],
   );
   const image = useMemo(
-    () => svgDataUrl(displayDocument, previewTags, state.activePageId, themeMode === "dark" ? "studio-dark" : "light"),
+    () =>
+      svgDataUrl(
+        displayDocument,
+        previewTags,
+        state.activePageId,
+        themeMode === "dark" ? "studio-dark" : "light",
+      ),
     [displayDocument, state.activePageId, themeMode],
   );
 

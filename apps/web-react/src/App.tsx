@@ -1,5 +1,15 @@
 import { Button, Input, Switch, Upload } from "tdesign-react";
-import { AppIcon, ChartBarIcon, FileIcon, EditIcon, SunnyIcon, MoonIcon, AddIcon, UploadIcon, ChevronRightIcon } from "tdesign-icons-react";
+import {
+  AppIcon,
+  ChartBarIcon,
+  FileIcon,
+  EditIcon,
+  SunnyIcon,
+  MoonIcon,
+  AddIcon,
+  UploadIcon,
+  ChevronRightIcon,
+} from "tdesign-icons-react";
 import { waterTreatmentShowcaseDocument } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import {
@@ -184,7 +194,11 @@ export default function App() {
           ) : view === "published" ? (
             <PublishedRuntimePage />
           ) : (
-            <StudioPage initialDocument={initialDocument} initialNotice={initialNotice} themeMode={themeMode} />
+            <StudioPage
+              initialDocument={initialDocument}
+              initialNotice={initialNotice}
+              themeMode={themeMode}
+            />
           )}
         </Suspense>
       </div>

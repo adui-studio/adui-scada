@@ -125,7 +125,11 @@ test("定位极小图元时限制最大缩放并拒绝无效几何", () => {
 
 test("默认 1920×1080 画板适应视口时保留安全边距且不变形", () => {
   const page = { width: 1920, height: 1080 };
-  for (const viewport of [{ width: 900, height: 600 }, { width: 1200, height: 650 }, { width: 600, height: 500 }]) {
+  for (const viewport of [
+    { width: 900, height: 600 },
+    { width: 1200, height: 650 },
+    { width: 600, height: 500 },
+  ]) {
     const rect = studioViewportRect(page, viewport, 1, center, STUDIO_CANVAS_FIT_MARGIN);
     const scale = viewport.width / rect.width;
     const horizontalGap = viewport.width - page.width * scale;

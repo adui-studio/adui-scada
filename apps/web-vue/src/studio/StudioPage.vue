@@ -12,7 +12,15 @@ import {
   Popup as TPopup,
 } from "tdesign-vue-next";
 import type { DropdownProps } from "tdesign-vue-next";
-import { CloseIcon, RectangleIcon, PlayCircleIcon, SlashIcon, TextboxIcon, CursorIcon, GestureOpenIcon } from "tdesign-icons-vue-next";
+import {
+  CloseIcon,
+  RectangleIcon,
+  PlayCircleIcon,
+  SlashIcon,
+  TextboxIcon,
+  CursorIcon,
+  GestureOpenIcon,
+} from "tdesign-icons-vue-next";
 import "tdesign-vue-next/es/style/index.css";
 import {
   TAG_DATA_TYPE_LABELS,
@@ -90,7 +98,11 @@ const serverApi = createScadaApiClient();
 const serverSession = createStudioServerProjectSession(serverApi);
 const HISTORY_PAGE_SIZE = 10;
 const maxFileSize = 2 * 1024 * 1024;
-const props = defineProps<{ initialDocument?: ScadaDocument | null; initialNotice?: string; themeMode?: "light" | "dark" }>();
+const props = defineProps<{
+  initialDocument?: ScadaDocument | null;
+  initialNotice?: string;
+  themeMode?: "light" | "dark";
+}>();
 const editor = new DocumentEditor(props.initialDocument ?? waterTreatmentStudioDocument);
 const state = shallowRef(editor.snapshot());
 const preview = shallowRef<{ id: string; x: number; y: number } | null>(null);
@@ -404,7 +416,12 @@ const displayNodes = computed(() => {
   return (nodes ?? []).filter(studioNodeVisible);
 });
 const imageUrl = computed(() =>
-  svgDataUrl(displayDocument.value, previewTags, state.value.activePageId, props.themeMode === "dark" ? "studio-dark" : "light"),
+  svgDataUrl(
+    displayDocument.value,
+    previewTags,
+    state.value.activePageId,
+    props.themeMode === "dark" ? "studio-dark" : "light",
+  ),
 );
 
 watch(

@@ -34,7 +34,8 @@ export async function transitionWorkspaceTheme(
   commit: () => void | Promise<void>,
 ): Promise<void> {
   const root = document.documentElement;
-  if (root.getAttribute("theme-mode") === mode || root.hasAttribute("data-theme-transition")) return;
+  if (root.getAttribute("theme-mode") === mode || root.hasAttribute("data-theme-transition"))
+    return;
 
   const update = async () => {
     applyWorkspaceTheme(mode);
