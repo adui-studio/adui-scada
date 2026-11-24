@@ -1458,3 +1458,10 @@ D5b9 至 D5c0d 的共享 Core 候选筛选已经具备 GOOD/有限数值、明�
 
 本条仅是 D5c1 草案与代码契约，尚未在维护者 Windows 完整 `ready` / Chromium / 生产部署验证；必须在 PR #192 最终统一验收中确认。
 
+## 2026-11-24 · D5c1 工程画板渲染外观与 UI3 观察视区
+
+- `studioViewportRect(page,viewport,zoom,pan,fitMargin=0)` 新增最后一位可选、有限非负 `fitMargin`（CSS 像素）。默认 0 保证旧调用一致。新 Studio 调用共享 `STUDIO_CANVAS_FIT_MARGIN=48`，基于扣除两侧留白的可用范围计算 fitScale，但输出完整 SVG 视区宽高比例仍等于真实 viewport；不改变 `page.size`、图元位置或工程 JSON。
+- `renderSvgPage(document,pageId,values,appearance="dark")` 和 `svgDataUrl(document,values,pageId?,appearance="dark")` 只新增可选浅色渲染样式。默认值与原默认深色渲染逐字兼容；选择 light 时只改变背景、标签与图元填充对比度，不改变 Tag 质量、绑定、禁用规则或设备数据。
+- React/Vue Studio 仅向新本地编辑预览传 `light`，保留原只读模拟 Runtime、已发布快照渲染、外部工程页面以及跨框架 Schema 的兼容性。
+- Figma 首页与编辑器结构只影响 UI 展现，新增工作台视图与三个实际模块切换不新增持久化状态或服务端权限。UI16场景与现有 Studio/SSE 浏览器安全门禁需在最终统一验收时运行。
+

@@ -4586,3 +4586,11 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 
 增加 `packages/core/test/studio-default-document.test.ts` 三组预防性断言、`test:ui:browser` 对双端 × 1440×900/1024×768 的默认画板实际宽高断言，并在双端界面显示 `px` 单位。合入与此前 FUXA 任务型 Tag 面板修复同一个 PR #192，仍保持 Draft。**本次仅远端代码/静态结构核对，尚未获得 Windows `ready`、真实浏览器与截图的最终验收**；没有另开 PR、没有要求阶段性验收。
 
+## 2026-11-24 · PR #192 Figma UI3 参考后的统一验收扩展（尚未执行）
+
+本轮在 FUXA/Tag 改版的基础上，对照维护者提供的 Figma 首页和编辑器截图，调整了四个工作模式：新增**真实入口**的首页，左导航宽度非编辑 184px、编辑 52px；Studio 页面列表移至左 236px 图层区，右 288px 属性面板；中性灰画布、白色画板、底部图元工具组与 48px 适应留白。新增 Core/Runtime 的轻量 SVG 外观可选参数，确保仅 Studio 浅色预览而真实运行默认仍深色。两个框架使用相同的共享核心画板/渲染契约。
+
+本批测试源代码已同步：`test:ui:browser` 新增首页并更新导航宽度，场景矩阵从 12 增至 **16**；普通 Studio 浏览器检查真实左页面条、底部工具岛与 SVG 白色画板以及 236/288 面板；Core `studio-viewport-rect.test.ts` 覆盖只读缩放留白；SVG Core/Runtime 单测验证 light/dark 严格隔离；SSE/TCP 浏览器测试改为从新首页实际导航到运行监控，并继续要求有效真实数据及连接回收。
+
+**全部尚未在实际 Windows 环境运行；请在 #192 其余 UI 收敛完成后一次性执行原统一验收链并审阅 `SCADA_UI_SCREENSHOTS=1` 产生的 16 张截图。** 不应将静态检查写成实际通过，也不得为使浏览器测试变绿而删除工业安全或数据保真断言。
+

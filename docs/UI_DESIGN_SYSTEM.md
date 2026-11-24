@@ -122,3 +122,31 @@ V7 Logo 原 SVG 和几何不动，导航缩放使用现有 `/brand/favicon.svg`�
 
 视觉参考是**方法而不是像素复制**：保留 ADui V7 品牌、TDesign 和工业只读安全边界，最终整个 PR #192 仅在统一完成后验收。
 
+## 10. 参考用户 Figma UI3 实际截图后的工作区重构
+
+本轮根据维护者提供的两张 Figma 截图对照官方说明：
+- [Explore design files](https://help.figma.com/hc/en-us/articles/15297425105303-Explore-design-files)：导航栏、左侧页面/图层、中央画布、右侧属性以及底部创建工具的职责。
+- [Inside Figma’s redesigned interface](https://www.figma.com/blog/behind-our-redesign-ui3/)：优先释放画布空间，工具集中底部，面板根据工作任务组织。
+- [Navigation and left sidebar](https://help.figma.com/hc/en-us/articles/360039831974-Explore-the-navigation-bar-and-left-sidebar)：层级树、页面切换与工具入口的分离。
+- [Properties panel](https://help.figma.com/hc/en-us/articles/360039832014-Design-prototype-and-explore-layer-properties-in-the-right-sidebar)：右侧根据选中对象显示属性。
+- [Zoom/view](https://help.figma.com/hc/en-us/articles/360041065034-Adjust-your-zoom-and-view-options)：页面逻辑尺寸不随浏览器视区缩放变化。
+
+**取舍与边界**：学习布局、交互信息架构与视觉密度，不照搬 Figma UI、Logo、字体、资产或原生图元实现；本产品所有编辑操作仍执行共享 Core，工业安全判断绝不委托于前端视觉状态。
+
+新结构：
+
+| 界面 | 重新设计的实际交互 | 不做的事 |
+| --- | --- | --- |
+| 工作台首页 | 浅色文件工作区、184px 侧栏、真实模块入口与内置水处理演示入口 | 不虚构最近文件、共享文件、在线协作、AI 生成项目 |
+| Studio 外壳 | 左侧 52px 紧凑导航轨道 + 项目文件名与分组操作菜单 | 不把首页的大导航占用编辑画布宽度 |
+| Studio 左侧 | 236px，页面列表与管理入口、图层树/搜索/定位 | 不将所有图元创建按钮长期塞进图层列表 |
+| Studio 中央 | 中性灰背景、白色 1920×1080 工作画板、适应视图 48px 留白；底部四种真实图元创建按钮 | 不将 1920×1080 当固定 DOM 宽高，不虚构无限画布 |
+| Studio 右侧 | 288px，选中图元的上下文属性或独立 Tag 目录，Tag 表单另用宽幅 Dialog | 不把全部项目 Tag 表单永久塞在图元属性下方 |
+| 模拟监控/发布 | 原链路数据、质量及只读快照权限不变 | 不因设计重排绕过安全闸门 |
+
+**新增受控外观接口**：`renderSvgPage(document,pageId,values,appearance?)` 及 `svgDataUrl(document,values,pageId?,appearance?)` 默认保持 `dark`，仅 Studio 传入 `light` 以显示白色工程画板、深色图元文字。真实运行时、已发布页面及质量标签的原始语义完全保留。Core `studioViewportRect` 新增可选 `fitMargin`，编辑器使用统一 `STUDIO_CANVAS_FIT_MARGIN=48`，计算视区但不更改工程 Schema、图元位置或缩放记录。
+
+双端实际质量门禁已同步改为 **React/Vue × 1440×900 与 1024×768 × 工作台首页/运行监控/已发布运行/Studio 共 16 场景**；Studio 另保留左 236px、右 288px、底部图元岛、页面在左、白色画板、网格、真实 Tag 操作和现有 Core 回归。SSE 浏览器专项现在从首页真实点击「运行监控」后才等待原有效快照，不缩短质量、断线、恢复或资源回收断言。
+
+**验证事实**：截至目前只完成 GitHub 分支代码提交、源码结构与颜色对比度计算。全量 `vp check`、`ready`、Windows Chromium 16 场景、PNG 与图元渲染效果尚未实测。根据维护者要求，全部调整都汇集在 PR #192 Draft，不分批请求验收。
+

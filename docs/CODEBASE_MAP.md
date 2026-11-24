@@ -1517,3 +1517,13 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/test-studio-browser.mjs --ui`：新 Studio 三页面 UI 场景中的两个框架、两个视口校验真实 SVG 页面边界尺寸；不代替最终浏览器截图与手动操作体验验收。
 - 此项延续 `docs/REQUIREMENTS.md` 的“新建页面继承当前页面尺寸”既定规则，并将 Figma Frame/Zoom 概念仅作为交互参照；禁止导入时自动调整画板或打破旧工程 JSON。
 
+## 2026-11-24 · Figma 式工作区 UI3 入口与共享渲染地图
+
+- `apps/web-react/src/App.tsx`、`apps/web-vue/src/App.vue`：默认真实工作台首页（不编造最近文件），真实入口切至运行/发布/Studio；应用导航在编辑与非编辑两种布局下切换密度。
+- `packages/runtime/src/runtime.css`：工作台主页、184px 白色功能导航和 Studio 52px 紧凑图标导航，仍与官方 TDesign Light 共用 Token。
+- `apps/web-{react,vue}/src/studio/StudioPage`：左侧页面/图层、中央 1920×1080 画板与底部插入工具、右侧互斥属性/Tag 目录。布局通过共享 `packages/tailwind/src/studio.css` 维护。
+- `packages/core/src/studio-viewport-rect.ts`：新增可选只读 `fitMargin` 和固定 `STUDIO_CANVAS_FIT_MARGIN=48`，仍维持浏览器 SVG 视口比例及 Schema 原尺寸。
+- `packages/core/src/svg.ts`、`packages/runtime/src/runtime.ts`：新增 optional light SVG appearance，由 Studio 专用，原 Runtime/发布默认为 dark。
+- `scripts/test-studio-browser.mjs`：UI 16 视图、Studio 页面/图元工具与画板结构；`scripts/test-runtime-sse-browser.mjs`：从首页真实跳转运行监控再验证有效流/真实网络断线/连接回收。
+- `packages/core/test/{studio-viewport-rect.test.ts,svg.test.ts}`、`packages/runtime/test/runtime.test.ts`：对应兼容与外观分离测试源码。完整 Windows `ready`/浏览器仍待统一最终验收。
+
