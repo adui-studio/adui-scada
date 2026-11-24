@@ -113,8 +113,34 @@ describe("精密工程工作台设计系统", () => {
     expect(css).toContain(".studio-canvas-board > .studio-svg");
     expect(css).toContain("background: var(--adui-color-stage);");
     expect(css).toContain(".studio-shell :is(button, input, select, textarea, summary):focus-visible");
-    expect(css).toContain(".studio-tag-manager .studio-tag-actions");
-    expect(css).toContain(".studio-tag-manager .studio-tag-form-actions");
+    expect(css).toContain(".studio-tag-toolbar {");
+    expect(css).toContain(".studio-tag-search {");
+    expect(css).toContain(".studio-tag-actions {");
+    expect(css).toContain(".studio-tag-form-grid {");
+    expect(css).toContain(".studio-tag-form-actions {");
+    expect(css).not.toContain(".studio-tag-manager .studio-tag-form {");
+  });
+
+  it("双端 Tag 目录与独立 TDesign 编辑对话框分离，不再把完整表单塞进侧栏", () => {
+    const css = readRelative("../../tailwind/src/studio.css");
+    expect(css).toContain(".studio-tag-item {");
+    expect(css).toContain(".studio-tag-form-grid {");
+    expect(css).toContain(".studio-tag-form-error {");
+    expect(css).toContain(".studio-tag-field-error {");
+    expect(css).not.toContain(".studio-tag-manager .studio-tag-form {");
+
+    for (const [path, dialogProp] of [
+      ["../../../apps/web-react/src/studio/TagManager.tsx", 'dialogClassName="studio-tag-dialog"'],
+      ["../../../apps/web-vue/src/studio/TagManager.vue", 'dialog-class-name="studio-tag-dialog"'],
+    ]) {
+      const source = readRelative(path);
+      expect(source).toContain("studio-tag-search");
+      expect(source).toContain("studio-tag-list");
+      expect(source).toContain("studio-tag-form-grid");
+      expect(source).toContain("studio-tag-field-error");
+      expect(source).toContain(dialogProp);
+      expect(source).toContain("确认");
+    }
   });
 
   it("字号与间距保留统一刻度，长标识和数据可以折行且无强制外部字体", () => {
