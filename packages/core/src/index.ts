@@ -111,7 +111,6 @@ export { clampStudioPan, studioViewBox } from "./studio-viewport.ts";
 export type { StudioPan, StudioPageSize } from "./studio-viewport.ts";
 export {
   studioViewportRect,
-  studioGridContinuation,
   studioFocusTransform,
   STUDIO_CANVAS_FIT_MARGIN,
 } from "./studio-viewport-rect.ts";

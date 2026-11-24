@@ -2048,7 +2048,7 @@
   display: flex;
   flex: none;
   width: auto;
-  min-height: 37px;
+  min-height: 42px;
   margin: 0;
   padding: 4px 8px 4px 12px;
   border: 0;
@@ -2385,10 +2385,22 @@
 .studio-panel-resizer[data-side="right"] {
   right: calc(var(--studio-right-width) - 4px);
 }
+.studio-panel-resizer {
+  background: transparent;
+}
 .studio-panel-resizer:hover,
 .studio-panel-resizer:focus-visible {
-  background: var(--scada-primary);
   outline: 0;
+}
+.studio-panel-resizer:hover::after,
+.studio-panel-resizer:focus-visible::after {
+  position: absolute;
+  inset-block: 0;
+  left: calc(50% - 1px);
+  width: 2px;
+  background: var(--scada-primary);
+  content: "";
+  pointer-events: none;
 }
 @media (max-width: 930px) {
   .studio-panel-resizer {
@@ -2396,12 +2408,33 @@
   }
 }
 
-/* Pixso 参考：紧凑图标工具、独立属性区和精密选中反馈。 */
+/* Pixso 参考：工具直接浮在唯一 SVG 网格上，不再占据独立底栏。 */
 .studio-canvas-dock {
+  position: absolute;
+  z-index: 6;
+  inset-inline-start: 50%;
+  bottom: 6px;
+  width: max-content;
+  max-width: calc(100% - 16px);
+  flex-wrap: nowrap;
+  justify-content: flex-start;
   gap: var(--adui-space-2);
-  padding: var(--adui-space-3);
+  margin: 0;
+  padding: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  transform: translateX(-50%);
   border-radius: var(--adui-radius-panel);
-  box-shadow: 0 4px 16px rgb(19 34 54 / 12%);
+  box-shadow: var(--adui-shadow-panel);
+}
+.studio-canvas-dock .studio-add {
+  flex: none;
+}
+.studio-canvas-dock .studio-canvas-modes .t-button,
+.studio-canvas-dock .studio-add .t-button {
+  min-height: 30px;
+  height: 30px;
+  padding-block: 0;
 }
 .studio-canvas-dock .t-button {
   display: inline-flex;
@@ -2579,18 +2612,18 @@
   color: var(--adui-color-brand-on);
 }
 
-/* 工具带与 SVG 使用相同网格周期及相位，底部不再露出纯色断层。 */
-.studio-canvas-footer {
-  display: flex;
-  flex: none;
-  min-width: 0;
-  width: 100%;
-  justify-content: center;
-  padding-bottom: 10px;
-  background-color: var(--adui-color-editor-workspace);
+/* 三列标题共用同一基线；分隔条仅在操作时显示细线。 */
+.studio-stage-caption,
+.studio-library-tabs,
+.studio-inspector-tabs {
+  box-sizing: border-box;
 }
-.studio-canvas-footer[data-grid-visible="true"] {
-  background-image:
-    linear-gradient(to right, rgb(130 149 172 / 45%) var(--studio-grid-stroke), transparent var(--studio-grid-stroke)),
-    linear-gradient(to bottom, rgb(130 149 172 / 45%) var(--studio-grid-stroke), transparent var(--studio-grid-stroke));
+@media (min-width: 931px) {
+  .studio-stage-caption,
+  .studio-library-tabs,
+  .studio-inspector-tabs {
+    height: 42px;
+    min-height: 42px;
+    flex-shrink: 0;
+  }
 }

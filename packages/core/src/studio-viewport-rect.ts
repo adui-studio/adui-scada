@@ -121,23 +121,3 @@ export function studioFocusTransform(
   ).pan;
   return { zoom, pan };
 }
-
-/** 底部工具带延续同一世界坐标网格，不参与工程内容或命中计算。 */
-export function studioGridContinuation(
-  rect: StudioViewportRect,
-  worldPerPixel: number,
-  gridSize: number,
-) {
-  const spacing = gridSize / worldPerPixel;
-  const stroke = 0.8 / worldPerPixel;
-  const phase = (world: number) => {
-    const offset = (-world / worldPerPixel - stroke / 2) % spacing;
-    return (offset + spacing) % spacing;
-  };
-  return {
-    spacing,
-    stroke,
-    x: phase(rect.x),
-    y: phase(rect.y + rect.height),
-  };
-}

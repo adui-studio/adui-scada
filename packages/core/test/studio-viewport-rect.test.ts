@@ -2,7 +2,6 @@ import { expect, test } from "vite-plus/test";
 import {
   STUDIO_CANVAS_FIT_MARGIN,
   studioFocusTransform,
-  studioGridContinuation,
   studioViewportRect,
 } from "../src/studio-viewport-rect.ts";
 
@@ -135,26 +134,5 @@ test("默认 1920×1080 画板适应视口时保留安全边距且不变形", ()
     expect(rect.width / rect.height).toBeCloseTo(viewport.width / viewport.height);
     expect(horizontalGap).toBeGreaterThanOrEqual(STUDIO_CANVAS_FIT_MARGIN * 2 - 0.01);
     expect(verticalGap).toBeGreaterThanOrEqual(STUDIO_CANVAS_FIT_MARGIN * 2 - 0.01);
-  }
-});
-
-test("工具带网格在适应、缩放与平移时延续 SVG 世界坐标相位", () => {
-  const page = { width: 1920, height: 1080 };
-  const viewport = { width: 900, height: 600 };
-  const gridSize = 20;
-  for (const [zoom, pan] of [
-    [1, { x: 0, y: 0 }],
-    [2, { x: 125, y: -45 }],
-    [3, { x: -200, y: 100 }],
-  ] as const) {
-    const rect = studioViewportRect(page, viewport, zoom, pan, STUDIO_CANVAS_FIT_MARGIN);
-    const worldPerPixel = rect.width / viewport.width;
-    const grid = studioGridContinuation(rect, worldPerPixel, gridSize);
-    expect(grid.spacing * worldPerPixel).toBeCloseTo(gridSize);
-    expect(grid.stroke * worldPerPixel).toBeCloseTo(0.8);
-    const worldX = rect.x + (grid.x + grid.stroke / 2) * worldPerPixel;
-    const worldY = rect.y + rect.height + (grid.y + grid.stroke / 2) * worldPerPixel;
-    expect(worldX / gridSize).toBeCloseTo(Math.round(worldX / gridSize));
-    expect(worldY / gridSize).toBeCloseTo(Math.round(worldY / gridSize));
   }
 });
