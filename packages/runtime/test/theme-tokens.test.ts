@@ -76,9 +76,7 @@ describe("精密工程工作台设计系统", () => {
 
   it("所有工作区的导航选中态立即使用同一组不透明主题色", () => {
     const css = readRelative("../src/runtime.css");
-    expect(css).toContain(
-      ".scada-app-frame .scada-app-nav .t-button {\n  transition: none;\n}",
-    );
+    expect(css).toContain(".scada-app-frame .scada-app-nav .t-button {\n  transition: none;\n}");
     expect(css).toContain(
       '.scada-app-frame .scada-app-nav .t-button[aria-current="page"] {\n' +
         "  background: var(--scada-active-bg);\n" +
