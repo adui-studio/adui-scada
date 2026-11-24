@@ -921,7 +921,8 @@ async function runScadaUIExperience(session) {
               ")",
           );
           const data = await session.evaluate("(" + inspectScadaUIInPage.toString() + ")()");
-          const prefix = target.name + " " + viewport.width + "x" + viewport.height + " " + label + " " + mode;
+          const prefix =
+            target.name + " " + viewport.width + "x" + viewport.height + " " + label + " " + mode;
           assert.equal(data.theme, mode, prefix + " 根主题不一致");
           assert.equal(data.screen, view, prefix + " 当前视图与导航状态不一致");
           if (view !== "home") {
@@ -930,7 +931,10 @@ async function runScadaUIExperience(session) {
               prefix + " 操作工作区未采用顶部切换栏",
             );
           } else {
-            assert.ok(data.railHeight >= viewport.height - 2, prefix + " 文件工作区导航没有撑满视口");
+            assert.ok(
+              data.railHeight >= viewport.height - 2,
+              prefix + " 文件工作区导航没有撑满视口",
+            );
           }
           assert.deepStrictEqual(
             data.buttons,
@@ -947,7 +951,9 @@ async function runScadaUIExperience(session) {
           );
           if (view === "home") {
             assert.ok(data.home, prefix + " 工作台功能入口缺失");
-            const home = await session.evaluate("(" + inspectWorkspaceHomeInPage.toString() + ")()");
+            const home = await session.evaluate(
+              "(" + inspectWorkspaceHomeInPage.toString() + ")()",
+            );
             assert.deepStrictEqual(
               home.initial,
               ["水处理演示工程", "水处理模拟监控", "已发布工程预览"],
@@ -959,13 +965,23 @@ async function runScadaUIExperience(session) {
             assert.equal(home.empty, true, prefix + " 搜索空态缺失");
             assert.deepStrictEqual(home.restored, home.initial, prefix + " 清空搜索未恢复目录");
           } else if (view === "runtime") {
-            assert.ok(data.process && data.telemetry && data.quality, prefix + " 工艺和链路信息缺失");
+            assert.ok(
+              data.process && data.telemetry && data.quality,
+              prefix + " 工艺和链路信息缺失",
+            );
           } else if (view === "published") {
             assert.ok(data.published && data.readonly, prefix + " 静态只读预览边界失效");
           } else {
             assert.ok(data.studio, prefix + " 组态画布缺失");
-            assert.equal(data.artboardFill, "rgb(255, 255, 255)", prefix + " 工程白色画板被主题改写");
-            assert.ok(scadaTextContrast(data.saveColor, data.saveBackground) >= 4.5, prefix + " 保存按钮文字对比度不足");
+            assert.equal(
+              data.artboardFill,
+              "rgb(255, 255, 255)",
+              prefix + " 工程白色画板被主题改写",
+            );
+            assert.ok(
+              scadaTextContrast(data.saveColor, data.saveBackground) >= 4.5,
+              prefix + " 保存按钮文字对比度不足",
+            );
             assert.deepStrictEqual(
               [data.artboardWidth, data.artboardHeight],
               [1920, 1080],

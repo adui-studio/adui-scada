@@ -51,5 +51,9 @@ export {
 export { WORKSPACE_HOME_ENTRIES, filterWorkspaceHomeEntries } from "./workspace-home.ts";
 export type { WorkspaceHomeEntry, WorkspaceHomeView } from "./workspace-home.ts";
 
-export { normalizeWorkspaceTheme, readWorkspaceTheme, applyWorkspaceTheme } from "./workspace-theme.ts";
+export {
+  normalizeWorkspaceTheme,
+  readWorkspaceTheme,
+  applyWorkspaceTheme,
+} from "./workspace-theme.ts";
 export type { WorkspaceThemeMode } from "./workspace-theme.ts";
