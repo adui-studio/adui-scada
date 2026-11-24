@@ -2618,3 +2618,7 @@ PR #192 内统一 React/Vue Studio 通用操作图标为 TDesign，工业设备�
 ### D5c1 · Vue Tag 初始挂载阻塞
 
 维护者 Windows HEAD `bd9e699d95890a5a06ec0d10d4ccc5e09e476ab6` 通过 Vite+、95 Markdown 和 React Tag 专项；Vue 仅初始目录 noSidebarForm 断言失败。E-127 候选明确 Vue Dialog 的 body 挂载与懒加载，补充关闭销毁等待及编辑弹窗复核，保留所有原业务断言。PR #192 保持 Draft，双端 Tag 与后续八项专项待真实复验。
+
+### D5c1 · 七项专项通过，剩余 SSE 双项
+
+维护者在 Windows HEAD `a5ff6a855e79d8b6d8a4306545c138ec752f96b8` 实测脚本语法、Vite+ 456/298 零警告错误、95 份 Markdown、双端 Tag 全流程、双框架 JSON 互通、历史版本及安全、多标签页各四阶段、历史迁移各三路径、发布预检双端全部通过。E-126/E-127 原验收阻塞已解除。 SSE 在 HTTP 首页预检处失败，而两端本机 Vite+ 均为 HTTPS。E-128 候选统一目标协议、修正运行监控 Hash 路由并补齐本机 HTTPS 故障代理；PR #192 保持 Draft，待代理单测与两个 SSE 专项实机通过。

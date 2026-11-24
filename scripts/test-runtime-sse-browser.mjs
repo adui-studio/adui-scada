@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { request as httpsRequest } from "node:https";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as pause } from "node:timers/promises";
 import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
+import { resolveLoopbackOidcHttpsProxy } from "./oidc-https-dev-proxy.mjs";
 import { startSseFaultProxy } from "./sse-fault-proxy.mjs";
+import { resolveStudioBrowserTargets } from "./studio-browser-targets.mjs";
 
 // 读取仓库根目录的统一 .env；显式传入的进程环境变量优先。
 const envPath = fileURLToPath(new URL("../.env", import.meta.url));
@@ -34,22 +37,10 @@ const targets = dockerMode
         command: "pnpm run docker:demo:up",
       },
     ]
-  : [
-      {
-        name: "React",
-        url:
-          process.env.SCADA_REACT_URL ||
-          `http://${process.env.SCADA_WEB_HOST || "127.0.0.1"}:${process.env.SCADA_REACT_DEV_PORT || "15173"}/`,
-        command: "pnpm run dev:react",
-      },
-      {
-        name: "Vue",
-        url:
-          process.env.SCADA_VUE_URL ||
-          `http://${process.env.SCADA_WEB_HOST || "127.0.0.1"}:${process.env.SCADA_VUE_DEV_PORT || "15174"}/`,
-        command: "pnpm run dev:vue",
-      },
-    ];
+  : resolveStudioBrowserTargets(process.env).map((target) => ({
+      ...target,
+      command: target.name === "React" ? "pnpm run dev:react" : "pnpm run dev:vue",
+    }));
 
 function validateLocalUrl(value) {
   const url = new URL(value);
@@ -265,6 +256,8 @@ async function checkTarget(session, target) {
     throw new Error(target.name + " 浏览器导航失败：" + navigation.errorText);
   }
   await activateRuntimeView(session);
+  // 正式 Hash 路由切换后校验完整 Origin、查询标记及运行监控路径。
+  url.hash = "/runtime";
   const ready = await waitFor(
     session,
     target.name + " 初始 SSE 快照",
@@ -369,6 +362,8 @@ async function checkTransportFaultTarget(session, target, proxy) {
   if (navigation.errorText)
     throw new Error(target.name + " 浏览器导航失败：" + navigation.errorText);
   await activateRuntimeView(session);
+  // 正式 Hash 路由切换后校验完整 Origin、查询标记及运行监控路径。
+  url.hash = "/runtime";
 
   let stableSince = 0;
   const ready = await waitFor(
@@ -456,37 +451,98 @@ async function checkTransportFaultTarget(session, target, proxy) {
   process.stdout.write(target.name + " 真实 TCP 下行阻断、STALE、主动重连及连接回收通过\n");
 }
 
+/** 根 .env 在 Node 启动后加载，HTTPS 请求必须显式应用已配置的可信根证书。 */
+async function readServiceResponse(url) {
+  if (url.protocol !== "https:") {
+    const response = await fetch(url, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(5000),
+    });
+    return {
+      status: response.status,
+      contentType: response.headers.get("content-type") ?? "",
+      body: await response.text(),
+    };
+  }
+
+  const ca = process.env.NODE_EXTRA_CA_CERTS
+    ? readFileSync(process.env.NODE_EXTRA_CA_CERTS)
+    : undefined;
+  return new Promise((resolve, reject) => {
+    const request = httpsRequest(
+      url,
+      {
+        method: "GET",
+        rejectUnauthorized: true,
+        signal: AbortSignal.timeout(5000),
+        ...(ca ? { ca } : {}),
+      },
+      (response) => {
+        const chunks = [];
+        let size = 0;
+        response.on("data", (chunk) => {
+          size += chunk.length;
+          if (size > 4 * 1024 * 1024) {
+            request.destroy(new Error("本机接口预检响应超过大小限制"));
+            return;
+          }
+          chunks.push(chunk);
+        });
+        response.on("error", reject);
+        response.on("end", () =>
+          resolve({
+            status: response.statusCode ?? 0,
+            contentType: response.headers["content-type"] ?? "",
+            body: Buffer.concat(chunks).toString("utf8"),
+          }),
+        );
+      },
+    );
+    request.on("error", reject);
+    request.end();
+  });
+}
+
 async function checkService(target, path, command, expectedContentType) {
   const url = new URL(path, validateLocalUrl(target.url));
   let response;
   try {
-    response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    response = await readServiceResponse(url);
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    const cause = error instanceof Error && error.cause instanceof Error ? error.cause.message : "";
+    const code = error && typeof error === "object" ? (error.cause?.code ?? error.code) : undefined;
+    const reason = ["ENOENT", "EACCES"].includes(code)
+      ? "本机根证书文件不可读取"
+      : [
+            "DEPTH_ZERO_SELF_SIGNED_CERT",
+            "SELF_SIGNED_CERT_IN_CHAIN",
+            "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+            "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+            "ERR_TLS_CERT_ALTNAME_INVALID",
+            "CERT_HAS_EXPIRED",
+          ].includes(code)
+        ? "HTTPS 证书校验失败，请检查可信 NODE_EXTRA_CA_CERTS 或系统 CA"
+        : "连接或响应读取失败";
     throw new Error(
-      `${target.name} 本机服务不可访问：${url.href}；${reason}` +
-        (cause ? `（${cause}）` : "") +
-        `。请在另一个终端执行 ${command}，确认端口未被占用并检查根目录 .env。`,
+      `${target.name} 本机服务不可访问：${url.href}；${reason}。请检查 ${command} 的启动日志、协议和根目录 .env。`,
     );
   }
-  if (!response.ok) {
+  if (response.status < 200 || response.status >= 300) {
     throw new Error(
       `${target.name} 接口返回 HTTP ${response.status}：${url.href}。请检查 ${command} 的启动日志。`,
     );
   }
   if (
     expectedContentType &&
-    !response.headers.get("content-type")?.toLowerCase().includes(expectedContentType)
+    !response.contentType.toLowerCase().includes(expectedContentType)
   ) {
     throw new Error(
-      `${target.name} 接口内容类型异常：${url.href}，预期 ${expectedContentType}，实际 ${response.headers.get("content-type") ?? "未提供"}。请检查模拟服务和 Vite 代理。`,
+      `${target.name} 接口内容类型异常：${url.href}，预期 ${expectedContentType}，实际 ${response.contentType || "未提供"}。请检查模拟服务和 Vite 代理。`,
     );
   }
   if (path === "/demo/project") {
     let project;
     try {
-      project = await response.json();
+      project = JSON.parse(response.body);
     } catch {
       throw new Error(`${target.name} 模拟工程接口返回的 JSON 无法解析：${url.href}`);
     }
@@ -549,7 +605,21 @@ async function main() {
     for (const target of targets) {
       if (transportFaultMode) {
         const origin = validateLocalUrl(target.url);
-        const proxy = await startSseFaultProxy(origin.origin + "/");
+        const httpsConfig =
+          origin.protocol === "https:"
+            ? resolveLoopbackOidcHttpsProxy(process.env, Number(origin.port))
+            : null;
+        const proxy = await startSseFaultProxy(
+          origin.origin + "/",
+          httpsConfig
+            ? {
+                ...httpsConfig.https,
+                ca: process.env.NODE_EXTRA_CA_CERTS
+                  ? readFileSync(process.env.NODE_EXTRA_CA_CERTS)
+                  : undefined,
+              }
+            : undefined,
+        );
         proxies.push(proxy);
         await checkTransportFaultTarget(session, target, proxy);
       } else {

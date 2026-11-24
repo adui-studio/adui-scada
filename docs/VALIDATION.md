@@ -4699,3 +4699,7 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 ### D5c1 · E-126 React 通过与 E-127 Vue Tag 初始挂载候选
 
 维护者 Windows HEAD `bd9e699d95890a5a06ec0d10d4ccc5e09e476ab6`：脚本语法、Vite+ 456/298 零警告错误、95 Markdown、React Tag 专项通过；Vue 首次紧凑目录断言仅 noSidebarForm 失败，后续八项未运行。候选依据固定版 TDesign Vue Next 1.20.11 Dialog 源码显式指定 attach=body、lazy，保留 destroyOnClose；测试仍要求无侧栏表单，成功保存后等表单实际销毁，再次编辑时复核独立弹窗与稳定宽度。最新候选尚未实测，不改变 Tag 数据、依赖或安全门槛。普通 Studio 312/312 是此前 HEAD 的已完成验收证据，不重复运行未受影响的普通场景。
+
+### D5c1 · 七项功能回归通过与 E-128 SSE 协议阻塞
+
+维护者在 Windows HEAD `a5ff6a855e79d8b6d8a4306545c138ec752f96b8` 实测脚本语法、Vite+ 456/298 零警告错误、95 份 Markdown、双端 Tag 全流程、双框架 JSON 互通、历史版本及安全、多标签页各四阶段、历史迁移各三路径、发布预检双端全部通过。E-126/E-127 原验收阻塞已解除。 普通 SSE 首页预检仍使用 HTTP，但实际 Vite+ 为 HTTPS；候选复用已有安全回环地址解析、严格 TLS 预检、真实 Hash 路由检查，并补充本机双段 TLS SSE 故障代理，明文 Docker 路径不变。原下行阻断、Tag 过期、重连及资源回收门槛不变；HTTPS 代理仅用于隔离浏览器模拟验收，不作 OIDC 或工业生产测试。最新代理单测、Vite+、文档及两项 SSE 浏览器尚未实测。

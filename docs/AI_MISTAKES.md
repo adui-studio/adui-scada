@@ -1224,3 +1224,12 @@
 - **源码定位**：固定版 TDesign Vue Next 1.20.11 的 `dialog.tsx` 初始化 `cardVisible = !props.lazy || props.visible`，首次 `shouldRender` 返回 `!lazy`，Teleport 在无有效挂载目标时禁用；仅设置 destroyOnClose 不能阻止首次隐藏表单渲染。原 Vue TagManager 未指定 attach 和 lazy。这解释 DOM 断言失败的候选机制，不证明用户看见常驻表单。
 - **最小修复**：Vue TagManager 显式使用官方 `attach="body"` 与 `lazy`，保留关闭销毁、Esc、遮罩保护、700px 配置、原 CRUD 与共享 Core。浏览器保留目录无表单断言；成功新建和编辑后等待旧表单实际销毁，编辑时也检查弹窗脱离侧栏及稳定宽度，避免关闭动画与再次打开竞争。
 - **防复发与验收**：跨框架 Dialog 须分别核对固定版本的挂载、初次渲染及关闭销毁语义，不能将隐藏 DOM 当成可见布局，也不能通过放宽断言掩盖实际挂载错误。Vue 真实浏览器与最新 HEAD Vite+、文档和剩余专项待复验；不提前关闭 E-126/E-127 或合并。
+
+> **2026-11-24 · E-126/E-127 Windows 复验关闭**：维护者在 Windows HEAD `a5ff6a855e79d8b6d8a4306545c138ec752f96b8` 实测脚本语法、Vite+ 456/298 零警告错误、95 份 Markdown、双端 Tag 全流程、双框架 JSON 互通、历史版本及安全、多标签页各四阶段、历史迁移各三路径、发布预检双端全部通过。E-126/E-127 原验收阻塞已解除。
+
+### E-128 · SSE 浏览器专项遗留 HTTP 地址与正式路由（PR #192）
+
+- **Windows 实测**：同一 HEAD 七项浏览器专项通过后，普通 SSE 在 React 首页预检使用 http://127.0.0.1:15173/，fetch failed（other side closed），退出码 1；维护者 JetBrains 截图明确 React 15173、Vue 15174 均已启动 HTTPS。故障专项尚未运行。
+- **确定根因**：两项 SSE 命令共用 test-runtime-sse-browser.mjs，开发地址仍硬编码 HTTP，未复用 E-049 已实现的本机 HTTPS 开关和目标解析。另静态发现 Hash 路由切换后仍比较旧首页 URL；原故障代理只接受 HTTP，不可直接转发 TLS 密文。这两项是源码预防性修复，不是已实测后续失败。
+- **修复候选**：普通和故障浏览器复用 resolveStudioBrowserTargets；预检 HTTPS 显式严格校验证书和配置 CA，读取首页与模拟工程响应，保留内容类型和 Schema 校验。真实导航后按完整 URL 的 #/runtime 路由检查。故障代理继续限定 127.0.0.1，HTTPS 使用已有本机联调证书建立两段 TLS/HTTP1.1 连接，在代理内部识别 SSE 请求并阻断真实解密下行字节，保留旧 socket、STALE、重建及回收断言；Docker HTTP 不变。不关闭证书校验、不提交证书或私钥，不用于认证或生产流量。
+- **防复发**：所有本机浏览器入口需统一协议解析、保留真实路由和目标检查；故障注入必须明确 TLS 边界，不能对 TLS 密文使用 HTTP 请求行匹配，不以忽略证书或协议降级绕过测试。Windows 新 HEAD 的代理单测、配置单测及两个真实 SSE 专项待复验，不提前关闭 E-128。

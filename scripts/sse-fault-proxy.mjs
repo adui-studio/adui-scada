@@ -1,14 +1,19 @@
 import { randomInt } from "node:crypto";
 import { connect, createServer } from "node:net";
+import { connect as connectTls, createServer as createTlsServer } from "node:tls";
 
 /**
- * 只用于本机自动化的透明 TCP 代理。可暂停单条 SSE 连接的下行字节，
+ * 只用于本机隔离模拟运行验收的 TCP 代理。可暂停单条 SSE 连接的下行字节，
  * 但保持双方 socket 存活，以复现网络层无 FIN/RST 的传输静默。
+ * HTTPS 使用双向 TLS 连接，仅在代理内部识别 HTTP/1.1 请求与阻断解密后的下行字节。
  */
-export async function startSseFaultProxy(targetUrl) {
+export async function startSseFaultProxy(targetUrl, tlsOptions) {
   const target = new URL(targetUrl);
+  const secure = target.protocol === "https:";
   if (
-    target.protocol !== "http:" ||
+    (target.protocol !== "http:" && !secure) ||
+    (secure && (!tlsOptions?.cert || !tlsOptions?.key)) ||
+    (!secure && tlsOptions) ||
     target.hostname !== "127.0.0.1" ||
     target.username ||
     target.password ||
@@ -19,13 +24,22 @@ export async function startSseFaultProxy(targetUrl) {
     Number(target.port) < 1 ||
     Number(target.port) > 65535
   ) {
-    throw new TypeError("故障代理只允许转发到 127.0.0.1 上的本机 HTTP 端口");
+    throw new TypeError("故障代理只允许转发到 127.0.0.1 的本机 HTTP 或显式可信 HTTPS 端口");
   }
 
   const sessions = [];
+  const sockets = new Set();
   let nextId = 0;
-  const server = createServer((downstream) => {
-    const upstream = connect({ host: "127.0.0.1", port: Number(target.port) });
+  const onConnection = (downstream) => {
+    const address = { host: "127.0.0.1", port: Number(target.port) };
+    const upstream = secure
+      ? connectTls({
+          ...address,
+          rejectUnauthorized: true,
+          ALPNProtocols: ["http/1.1"],
+          ...(tlsOptions.ca ? { ca: tlsOptions.ca } : {}),
+        })
+      : connect(address);
     const session = {
       id: ++nextId,
       upstream,
@@ -69,6 +83,27 @@ export async function startSseFaultProxy(targetUrl) {
     upstream.on("close", destroy);
     downstream.on("error", destroy);
     upstream.on("error", destroy);
+  };
+  let server;
+  try {
+    server = secure
+      ? createTlsServer(
+          {
+            cert: tlsOptions.cert,
+            key: tlsOptions.key,
+            ALPNProtocols: ["http/1.1"],
+            handshakeTimeout: 5000,
+          },
+          onConnection,
+        )
+      : createServer(onConnection);
+  } catch {
+    throw new Error("故障代理本机 TLS 证书或私钥无法校验");
+  }
+  // 关闭时也要回收尚未完成 TLS 握手的底层 socket。
+  server.on("connection", (socket) => {
+    sockets.add(socket);
+    socket.once("close", () => sockets.delete(socket));
   });
   // Fetch 标准会拒绝部分随机端口；仅在不包含禁用端口的范围监听本机代理。
   // 遇到 Windows 端口保留或并发占用时重新选择，不降级 HTTP 安全检查。
@@ -89,12 +124,12 @@ export async function startSseFaultProxy(targetUrl) {
       if (error?.code !== "EADDRINUSE" && error?.code !== "EACCES") throw error;
     }
   }
-  if (!listening) throw new Error("故障代理未找到可用的本机 HTTP 监听端口");
+  if (!listening) throw new Error("故障代理未找到可用的本机监听端口");
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("故障代理无法读取监听端口");
 
   return {
-    url: "http://127.0.0.1:" + address.port + "/",
+    url: target.protocol + "//127.0.0.1:" + address.port + "/",
     activeSseCount() {
       return sessions.filter((session) => session.isSse && !session.closed).length;
     },
@@ -120,6 +155,7 @@ export async function startSseFaultProxy(targetUrl) {
         if (!session.downstream.destroyed) session.downstream.destroy();
         if (!session.upstream.destroyed) session.upstream.destroy();
       }
+      for (const socket of sockets) socket.destroy();
       await new Promise((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
       });
