@@ -69,7 +69,7 @@ test("批次及记录不可变且与原始采样和查询结果隔离", () => {
   expect(Object.isFrozen(batch)).toBe(true);
   expect(Object.isFrozen(batch.records)).toBe(true);
   expect(Object.isFrozen(batch.records[0])).toBe(true);
-  expect(() => Object.assign(batch.records[0], { value: 300 })).toThrow();
+  expect(Reflect.set(batch.records[0], "value", 300)).toBe(false);
   expect(batch.records[0].value).toBe(50);
   expect(buffer.query(query)[0].value).toBe(50);
 });
