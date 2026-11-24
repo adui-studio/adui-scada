@@ -2834,8 +2834,10 @@ export default function StudioPage({
                 aria-pressed={canvasTool === "select"}
                 onClick={() => setCanvasTool("select")}
               >
-                <CursorIcon aria-hidden="true" />
-                选择
+                <span className="scada-button-content">
+                  <CursorIcon aria-hidden="true" />
+                  <span className="scada-button-label">选择</span>
+                </span>
               </Button>
               <Button
                 tag="button"
@@ -2844,27 +2846,37 @@ export default function StudioPage({
                 aria-pressed={canvasTool === "hand"}
                 onClick={() => setCanvasTool("hand")}
               >
-                <GestureOpenIcon aria-hidden="true" />
-                抓手
+                <span className="scada-button-content">
+                  <GestureOpenIcon aria-hidden="true" />
+                  <span className="scada-button-label">抓手</span>
+                </span>
               </Button>
             </div>
             <div className="studio-library-label">图元库 · 点击添加</div>
             <div className="studio-add">
               <Button tag="button" type="button" onClick={() => addSymbol("tank")}>
-                <RectangleIcon aria-hidden="true" />
-                + 水箱
+                <span className="scada-button-content">
+                  <RectangleIcon aria-hidden="true" />
+                  <span className="scada-button-label">+ 水箱</span>
+                </span>
               </Button>
               <Button tag="button" type="button" onClick={() => addSymbol("pump")}>
-                <PlayCircleIcon aria-hidden="true" />
-                + 水泵
+                <span className="scada-button-content">
+                  <PlayCircleIcon aria-hidden="true" />
+                  <span className="scada-button-label">+ 水泵</span>
+                </span>
               </Button>
               <Button tag="button" type="button" onClick={() => addSymbol("pipe")}>
-                <SlashIcon aria-hidden="true" />
-                + 管道
+                <span className="scada-button-content">
+                  <SlashIcon aria-hidden="true" />
+                  <span className="scada-button-label">+ 管道</span>
+                </span>
               </Button>
               <Button tag="button" type="button" onClick={() => addSymbol("label")}>
-                <TextboxIcon aria-hidden="true" />
-                + 文本
+                <span className="scada-button-content">
+                  <TextboxIcon aria-hidden="true" />
+                  <span className="scada-button-label">+ 文本</span>
+                </span>
               </Button>
             </div>
           </div>

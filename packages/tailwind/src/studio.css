@@ -2439,7 +2439,7 @@
 .studio-canvas-dock .t-button {
   display: inline-flex;
   align-items: center;
-  gap: var(--adui-space-2);
+  justify-content: center;
 }
 .studio-canvas-dock .t-button svg {
   width: 16px;

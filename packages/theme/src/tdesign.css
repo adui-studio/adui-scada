@@ -55,3 +55,22 @@ html:root[theme-mode="dark"] {
   --td-radius-large: var(--adui-radius-lg);
   --td-radius-extraLarge: var(--adui-radius-panel);
 }
+
+/* 图标与文案在同一内容层居中，不依赖组件插槽的行内基线。 */
+.scada-button-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--adui-space-2);
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.scada-button-content > .t-icon {
+  display: block;
+  flex: none;
+  margin: 0;
+}
+.scada-button-content > .scada-button-label {
+  display: block;
+  line-height: inherit;
+}

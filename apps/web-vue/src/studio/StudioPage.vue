@@ -2759,8 +2759,10 @@ async function importJsonFile(file: File | undefined) {
               :aria-pressed="canvasTool === 'select'"
               @click="canvasTool = 'select'"
             >
-              <CursorIcon aria-hidden="true" />
-              选择
+              <span class="scada-button-content">
+                <CursorIcon aria-hidden="true" />
+                <span class="scada-button-label">选择</span>
+              </span>
             </TButton>
             <TButton
               type="button"
@@ -2768,27 +2770,37 @@ async function importJsonFile(file: File | undefined) {
               :aria-pressed="canvasTool === 'hand'"
               @click="canvasTool = 'hand'"
             >
-              <GestureOpenIcon aria-hidden="true" />
-              抓手
+              <span class="scada-button-content">
+                <GestureOpenIcon aria-hidden="true" />
+                <span class="scada-button-label">抓手</span>
+              </span>
             </TButton>
           </div>
           <div class="studio-library-label">图元库 · 点击添加</div>
           <div class="studio-add">
             <TButton type="button" @click="addSymbol('tank')">
-              <RectangleIcon aria-hidden="true" />
-              + 水箱
+              <span class="scada-button-content">
+                <RectangleIcon aria-hidden="true" />
+                <span class="scada-button-label">+ 水箱</span>
+              </span>
             </TButton>
             <TButton type="button" @click="addSymbol('pump')">
-              <PlayCircleIcon aria-hidden="true" />
-              + 水泵
+              <span class="scada-button-content">
+                <PlayCircleIcon aria-hidden="true" />
+                <span class="scada-button-label">+ 水泵</span>
+              </span>
             </TButton>
             <TButton type="button" @click="addSymbol('pipe')">
-              <SlashIcon aria-hidden="true" />
-              + 管道
+              <span class="scada-button-content">
+                <SlashIcon aria-hidden="true" />
+                <span class="scada-button-label">+ 管道</span>
+              </span>
             </TButton>
             <TButton type="button" @click="addSymbol('label')">
-              <TextboxIcon aria-hidden="true" />
-              + 文本
+              <span class="scada-button-content">
+                <TextboxIcon aria-hidden="true" />
+                <span class="scada-button-label">+ 文本</span>
+              </span>
             </TButton>
           </div>
         </div>

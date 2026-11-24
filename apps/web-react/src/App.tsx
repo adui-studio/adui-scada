@@ -1,5 +1,5 @@
-import { Button, Input, Upload } from "tdesign-react";
-import { AppIcon, ChartBarIcon, FileIcon, EditIcon, SunnyIcon, MoonIcon, AddIcon, UploadIcon, ChevronRightIcon } from "tdesign-icons-react";
+import { Button, Input, Switch, Upload } from "tdesign-react";
+import { AppIcon, ChartBarIcon, FileIcon, EditIcon, AddIcon, UploadIcon, ChevronRightIcon } from "tdesign-icons-react";
 import { waterTreatmentShowcaseDocument } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import {
@@ -36,8 +36,9 @@ export default function App() {
   const [view, setView] = useState<AppView>("home");
   const [themeMode, setThemeMode] = useState(readWorkspaceTheme);
 
-  function toggleTheme() {
-    const next = themeMode === "light" ? "dark" : "light";
+  function changeTheme(checked: unknown) {
+    if (typeof checked !== "boolean") return;
+    const next = checked ? "dark" : "light";
     applyWorkspaceTheme(next);
     setThemeMode(next);
   }
@@ -83,8 +84,10 @@ export default function App() {
             aria-current={view === "home" ? "page" : undefined}
             onClick={() => navigate("home")}
           >
-            <AppIcon aria-hidden="true" />
-            <span>工作台</span>
+            <span className="scada-button-content">
+              <AppIcon aria-hidden="true" />
+              <span className="scada-button-label">工作台</span>
+            </span>
           </Button>
           <Button
             tag="button"
@@ -93,8 +96,10 @@ export default function App() {
             aria-current={view === "runtime" ? "page" : undefined}
             onClick={() => navigate("runtime")}
           >
-            <ChartBarIcon aria-hidden="true" />
-            <span>运行监控</span>
+            <span className="scada-button-content">
+              <ChartBarIcon aria-hidden="true" />
+              <span className="scada-button-label">运行监控</span>
+            </span>
           </Button>
           <Button
             tag="button"
@@ -103,8 +108,10 @@ export default function App() {
             aria-current={view === "published" ? "page" : undefined}
             onClick={() => navigate("published")}
           >
-            <FileIcon aria-hidden="true" />
-            <span>已发布运行</span>
+            <span className="scada-button-content">
+              <FileIcon aria-hidden="true" />
+              <span className="scada-button-label">已发布运行</span>
+            </span>
           </Button>
           <Button
             tag="button"
@@ -113,8 +120,10 @@ export default function App() {
             aria-current={view === "studio" ? "page" : undefined}
             onClick={() => navigate("studio")}
           >
-            <EditIcon aria-hidden="true" />
-            <span>组态编辑</span>
+            <span className="scada-button-content">
+              <EditIcon aria-hidden="true" />
+              <span className="scada-button-label">组态编辑</span>
+            </span>
           </Button>
         </div>
         <div className="scada-rail-footer">
@@ -139,19 +148,15 @@ export default function App() {
                     ? "模拟只读监控 · 非现场控制"
                     : "开发工作台 · 非现场控制"}
             </span>
-            <Button
-              type="button"
-              theme="default"
-              variant="text"
+            <Switch
               className="scada-theme-toggle"
+              size="medium"
+              value={themeMode === "dark"}
+              label={["深色", "浅色"]}
               aria-label="深色主题"
-              aria-pressed={themeMode === "dark"}
-              title={themeMode === "dark" ? "切换浅色主题" : "切换深色主题"}
-              onClick={toggleTheme}
-            >
-              {themeMode === "dark" ? <SunnyIcon aria-hidden="true" /> : <MoonIcon aria-hidden="true" />}
-              {themeMode === "dark" ? "浅色" : "深色"}
-            </Button>
+              aria-checked={themeMode === "dark"}
+              onChange={changeTheme}
+            />
           </div>
         </header>
         <Suspense

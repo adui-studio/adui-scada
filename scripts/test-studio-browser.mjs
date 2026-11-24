@@ -739,6 +739,19 @@ function inspectScadaUIInPage() {
     titleColor: style(sample, "color"),
     titleBackground: style(main, "background-color"),
     navIcons: links.filter((button) => Boolean(button.querySelector(".t-icon"))).length,
+    alignedButtonContents: [...document.querySelectorAll(".scada-app-nav .scada-button-content, .studio-canvas-dock .scada-button-content")].map((content) => {
+      const icon = content.querySelector(".t-icon");
+      const label = content.querySelector(".scada-button-label");
+      if (!icon || !label) return false;
+      const iconRect = icon.getBoundingClientRect();
+      const labelRect = label.getBoundingClientRect();
+      const buttonRect = content.closest("button")?.getBoundingClientRect();
+      if (!buttonRect || !iconRect.width || !iconRect.height || !labelRect.height) return false;
+      return (
+        Math.abs(iconRect.top + iconRect.height / 2 - labelRect.top - labelRect.height / 2) <= 1 &&
+        Math.abs(iconRect.top + iconRect.height / 2 - buttonRect.top - buttonRect.height / 2) <= 1
+      );
+    }),
     messageColor: style(main.querySelector(".scada-message:not(:empty)"), "color"),
     messageBackground: style(main.querySelector(".scada-message:not(:empty)"), "background-color"),
     navColor: style(current, "color"),
@@ -896,18 +909,19 @@ async function verifyWorkspaceProjectInPage() {
   };
 }
 
-/** 使用真实主题按钮切换，等待框架渲染标识及根属性。 */
+/** 使用真实 TDesign 主题开关，等待框架渲染标识及根属性。 */
 async function selectWorkspaceThemeInPage(mode) {
   const root = document.documentElement;
-  const toggle = document.querySelector(".scada-theme-toggle");
-  if (!(toggle instanceof HTMLButtonElement)) throw new Error("主题切换入口缺失");
+  const toggle = document.querySelector('.scada-theme-toggle.t-switch[role="switch"]');
+  if (!(toggle instanceof HTMLElement)) throw new Error("主题开关入口缺失");
   if (root.getAttribute("theme-mode") !== mode) toggle.click();
   const logoSuffix = mode === "dark" ? "/brand/mark-dark.svg" : "/brand/mark-primary.svg";
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const logo = document.querySelector(".scada-app-brand img");
     if (
       root.getAttribute("theme-mode") === mode &&
-      toggle.getAttribute("aria-pressed") === String(mode === "dark") &&
+      toggle.getAttribute("aria-checked") === String(mode === "dark") &&
+      toggle.classList.contains("t-is-checked") === (mode === "dark") &&
       logo instanceof HTMLImageElement &&
       logo.src.endsWith(logoSuffix) &&
       logo.complete &&
@@ -1017,6 +1031,8 @@ async function runScadaUIExperience(session) {
           );
           assert.equal(data.current, label, prefix + " 未标识当前导航");
           assert.equal(data.navIcons, 4, prefix + " 导航未使用 TDesign 图标");
+          assert.equal(data.alignedButtonContents.length, view === "studio" ? 10 : 4, prefix + " 图标文字组合数量不一致");
+          assert.ok(data.alignedButtonContents.every(Boolean), prefix + " 按钮图标或文字未垂直居中");
           if (data.messageColor && data.messageBackground) {
             assert.ok(
               scadaTextContrast(data.messageColor, data.messageBackground) >= 4.5,
@@ -1099,7 +1115,7 @@ async function runScadaUIExperience(session) {
         await pause(120);
         try {
           restoredTheme = await session.evaluate(
-            "document.readyState === 'complete' && document.documentElement.getAttribute('theme-mode') === 'dark' && Boolean(document.querySelector('.scada-theme-toggle[aria-pressed=true]'))",
+            "document.readyState === 'complete' && document.documentElement.getAttribute('theme-mode') === 'dark' && Boolean(document.querySelector('.scada-theme-toggle.t-switch[role=switch][aria-checked=true]'))",
           );
         } catch {
           // 刷新期间旧执行上下文可能已销毁。

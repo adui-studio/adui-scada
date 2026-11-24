@@ -798,7 +798,7 @@ textarea {
   width: 21px;
   height: 21px;
 }
-.scada-app-frame[data-view="studio"] .scada-app-nav .t-button span {
+.scada-app-frame[data-view="studio"] .scada-app-nav .t-button .scada-button-label {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -954,7 +954,7 @@ textarea {
   .scada-app-frame {
     grid-template-columns: 64px minmax(0, 1fr);
   }
-  .scada-app-frame:not([data-view="studio"]) .scada-app-nav .t-button span,
+  .scada-app-frame:not([data-view="studio"]) .scada-app-nav .t-button .scada-button-label,
   .scada-app-frame:not([data-view="studio"]) .scada-rail-product,
   .scada-app-frame:not([data-view="studio"]) .scada-nav-kicker,
   .scada-app-frame:not([data-view="studio"]) .scada-rail-footer,
@@ -1028,7 +1028,7 @@ textarea {
   width: 16px;
   height: 16px;
 }
-.scada-app-frame:not([data-view="home"]) .scada-app-nav .t-button span {
+.scada-app-frame:not([data-view="home"]) .scada-app-nav .t-button .scada-button-label {
   position: static;
   width: auto;
   height: auto;
@@ -1286,7 +1286,7 @@ textarea {
   .scada-app-frame:not([data-view="home"]) .scada-app-nav {
     padding-inline: 6px;
   }
-  .scada-app-frame:not([data-view="home"]) .scada-app-nav .t-button span {
+  .scada-app-frame:not([data-view="home"]) .scada-app-nav .t-button .scada-button-label {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -1557,15 +1557,6 @@ textarea {
   margin-left: auto;
 }
 .scada-app-header-actions .scada-theme-toggle {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: var(--adui-space-2);
-  color: var(--scada-text-secondary);
-}
-.scada-theme-toggle svg {
-  width: 16px;
-  height: 16px;
   flex: none;
 }
 .scada-theme-toggle:focus-visible {

@@ -258,6 +258,8 @@ describe("V7 明暗主题", () => {
     ]) {
       const source = readRelative(path);
       expect(source).toContain("scada-theme-toggle");
+      expect(source).toContain("aria-checked");
+      expect(source).not.toContain("toggleTheme()");
       expect(source).toContain("applyWorkspaceTheme(next)");
       expect(source).toContain("/brand/mark-primary.svg");
       expect(source).toContain("/brand/mark-dark.svg");

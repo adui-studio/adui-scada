@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Button as TButton, Input as TInput, Upload as TUpload } from "tdesign-vue-next";
-import { AppIcon, ChartBarIcon, FileIcon, EditIcon, SunnyIcon, MoonIcon, AddIcon, UploadIcon, ChevronRightIcon } from "tdesign-icons-vue-next";
+import { Button as TButton, Input as TInput, Switch as TSwitch, Upload as TUpload } from "tdesign-vue-next";
+import { AppIcon, ChartBarIcon, FileIcon, EditIcon, AddIcon, UploadIcon, ChevronRightIcon } from "tdesign-icons-vue-next";
 import { waterTreatmentShowcaseDocument } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import {
@@ -27,8 +27,9 @@ const StudioPage = defineAsyncComponent(() => import("./studio/StudioPage.vue"))
 const view = ref<"home" | "runtime" | "published" | "studio">("home");
 const themeMode = ref(readWorkspaceTheme());
 
-function toggleTheme() {
-  const next = themeMode.value === "light" ? "dark" : "light";
+function changeTheme(checked: unknown) {
+  if (typeof checked !== "boolean") return;
+  const next = checked ? "dark" : "light";
   applyWorkspaceTheme(next);
   themeMode.value = next;
 }
@@ -185,8 +186,10 @@ const viewLabels = {
           :aria-current="view === 'home' ? 'page' : undefined"
           @click="navigate('home')"
         >
-          <AppIcon aria-hidden="true" />
-          <span>工作台</span>
+          <span class="scada-button-content">
+            <AppIcon aria-hidden="true" />
+            <span class="scada-button-label">工作台</span>
+          </span>
         </TButton>
         <TButton
           type="button"
@@ -194,8 +197,10 @@ const viewLabels = {
           :aria-current="view === 'runtime' ? 'page' : undefined"
           @click="navigate('runtime')"
         >
-          <ChartBarIcon aria-hidden="true" />
-          <span>运行监控</span>
+          <span class="scada-button-content">
+            <ChartBarIcon aria-hidden="true" />
+            <span class="scada-button-label">运行监控</span>
+          </span>
         </TButton>
         <TButton
           type="button"
@@ -203,8 +208,10 @@ const viewLabels = {
           :aria-current="view === 'published' ? 'page' : undefined"
           @click="navigate('published')"
         >
-          <FileIcon aria-hidden="true" />
-          <span>已发布运行</span>
+          <span class="scada-button-content">
+            <FileIcon aria-hidden="true" />
+            <span class="scada-button-label">已发布运行</span>
+          </span>
         </TButton>
         <TButton
           type="button"
@@ -212,8 +219,10 @@ const viewLabels = {
           :aria-current="view === 'studio' ? 'page' : undefined"
           @click="navigate('studio')"
         >
-          <EditIcon aria-hidden="true" />
-          <span>组态编辑</span>
+          <span class="scada-button-content">
+            <EditIcon aria-hidden="true" />
+            <span class="scada-button-label">组态编辑</span>
+          </span>
         </TButton>
       </div>
       <div class="scada-rail-footer">
@@ -230,20 +239,19 @@ const viewLabels = {
         </div>
         <div class="scada-app-header-actions">
           <span class="scada-app-safety">{{ safetyLabel }}</span>
-          <TButton
-            type="button"
-            theme="default"
-            variant="text"
+          <TSwitch
             class="scada-theme-toggle"
+            size="medium"
+            :value="themeMode === 'dark'"
+            :label="['深色', '浅色']"
+            role="switch"
+            tabindex="0"
             aria-label="深色主题"
-            :aria-pressed="themeMode === 'dark'"
-            :title="themeMode === 'dark' ? '切换浅色主题' : '切换深色主题'"
-            @click="toggleTheme"
-          >
-            <SunnyIcon v-if="themeMode === 'dark'" aria-hidden="true" />
-            <MoonIcon v-else aria-hidden="true" />
-            {{ themeMode === "dark" ? "浅色" : "深色" }}
-          </TButton>
+            :aria-checked="themeMode === 'dark'"
+            @change="changeTheme"
+            @keydown.space.prevent="changeTheme(themeMode !== 'dark')"
+            @keydown.enter.prevent="changeTheme(themeMode !== 'dark')"
+          />
         </div>
       </header>
       <main v-if="view === 'home'" id="scada-main-content" class="scada-home flex min-w-0 flex-col">
