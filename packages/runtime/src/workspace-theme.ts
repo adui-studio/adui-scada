@@ -27,3 +27,34 @@ export function applyWorkspaceTheme(mode: WorkspaceThemeMode): void {
     // 浏览器可能禁用本地存储，本次界面仍正常使用。
   }
 }
+
+/** 参考 TDesign 官网主题切换：原生整页 View Transition，旧浏览器和减少动效设置直接切换。 */
+export async function transitionWorkspaceTheme(
+  mode: WorkspaceThemeMode,
+  commit: () => void | Promise<void>,
+): Promise<void> {
+  const root = document.documentElement;
+  if (root.getAttribute("theme-mode") === mode || root.hasAttribute("data-theme-transition")) return;
+
+  const update = async () => {
+    applyWorkspaceTheme(mode);
+    await commit();
+  };
+  if (
+    typeof document.startViewTransition !== "function" ||
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    await update();
+    return;
+  }
+
+  root.setAttribute("data-theme-transition", "");
+  try {
+    const transition = document.startViewTransition(update);
+    await transition.updateCallbackDone;
+    // 浏览器可因窗口不可见等原因跳过动画，主题状态仍已提交。
+    await transition.finished.catch(() => {});
+  } finally {
+    root.removeAttribute("data-theme-transition");
+  }
+}

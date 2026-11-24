@@ -4647,3 +4647,7 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 ### D5c1 · 图标文案对齐与主题开关
 
 维护者截图显示工具按钮内图标、文案未垂直居中，并要求主题使用 Switch。已核对 Catalog 固定版本 React/Vue Next Switch 的 value、label、change 及根元素源码，候选统一内容层和开关受控状态，浏览器断言改为 aria-checked、实际 checked class、刷新恢复，并检查导航和底部按钮图标/文案与按钮中线误差不超过 1 CSS px。完整类型检查、Vite+ 与真实 Chromium 尚未执行。
+
+### D5c1 · TDesign 官网式主题过渡
+
+已查阅 Tencent/tdesign 的 packages/site-components/src/components/td-theme-tabs/index.ts 与 style.less：官网使用双图标、滑动选中块及 document.startViewTransition，不另加圆形扩散。本候选保留真实 TDesign Switch 并共享原生过渡与减少动效降级路径。补充源码断言及浏览器双图标、真实开关状态、过渡完成后的主题和刷新检查；实际浏览器、类型及格式检查待执行。

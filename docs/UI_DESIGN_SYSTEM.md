@@ -218,3 +218,7 @@ Studio 新增图层与图元库两种真实模式，基础水箱、水泵、管�
 ## 20. 图标文案垂直对齐与主题开关
 
 导航和 Studio 底部六个工具按钮使用统一的图标文案内容层，采用 inline-flex 居中、固定图标布局和一致行高，避免 TDesign 默认插槽内部行内基线错位。明暗切换改用现有 TDesign Switch，显示当前浅色或深色，开启为深色，保持共享偏好、Logo 和工程不变；Vue 固定版本根元素为 div，补充 switch 语义、焦点和空格/回车操作。
+
+## 21. TDesign 官网式主题切换动效
+
+参考 https://tdesign.tencent.com/react/custom-theme 对应的 Tencent/tdesign 官网 td-theme-tabs 实现，采用太阳/月亮双图标与中性背景滑动选中块，仍由官方 TDesign Switch 提供实际受控交互。共享主题逻辑在支持 View Transition API 时使用 document.startViewTransition 进行整页过渡；React flushSync、Vue nextTick 确保框架状态与主题根属性在过渡回调内同步。不支持或用户减少动态效果时直接切换。保留 V7 主题、Logo、偏好存储及工程数据，启动恢复不触发动画。

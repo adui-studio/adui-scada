@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Button as TButton, Input as TInput, Switch as TSwitch, Upload as TUpload } from "tdesign-vue-next";
-import { AppIcon, ChartBarIcon, FileIcon, EditIcon, AddIcon, UploadIcon, ChevronRightIcon } from "tdesign-icons-vue-next";
+import { AppIcon, ChartBarIcon, FileIcon, EditIcon, SunnyIcon, MoonIcon, AddIcon, UploadIcon, ChevronRightIcon } from "tdesign-icons-vue-next";
 import { waterTreatmentShowcaseDocument } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import {
@@ -14,10 +14,10 @@ import {
   WORKSPACE_HOME_ENTRIES,
   filterWorkspaceHomeEntries,
   readWorkspaceTheme,
-  applyWorkspaceTheme,
+  transitionWorkspaceTheme,
 } from "@adui/scada-runtime";
 import "tdesign-vue-next/es/style/index.css";
-import { computed, defineAsyncComponent, ref, shallowRef, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, ref, shallowRef, watch } from "vue";
 
 const RuntimePage = defineAsyncComponent(() => import("./runtime/RuntimePage.vue"));
 const PublishedRuntimePage = defineAsyncComponent(
@@ -30,8 +30,10 @@ const themeMode = ref(readWorkspaceTheme());
 function changeTheme(checked: unknown) {
   if (typeof checked !== "boolean") return;
   const next = checked ? "dark" : "light";
-  applyWorkspaceTheme(next);
-  themeMode.value = next;
+  void transitionWorkspaceTheme(next, async () => {
+    themeMode.value = next;
+    await nextTick();
+  });
 }
 
 const query = ref("");
@@ -239,19 +241,24 @@ const viewLabels = {
         </div>
         <div class="scada-app-header-actions">
           <span class="scada-app-safety">{{ safetyLabel }}</span>
-          <TSwitch
-            class="scada-theme-toggle"
-            size="medium"
-            :value="themeMode === 'dark'"
-            :label="['深色', '浅色']"
-            role="switch"
-            tabindex="0"
-            aria-label="深色主题"
-            :aria-checked="themeMode === 'dark'"
-            @change="changeTheme"
-            @keydown.space.prevent="changeTheme(themeMode !== 'dark')"
-            @keydown.enter.prevent="changeTheme(themeMode !== 'dark')"
-          />
+          <span class="scada-theme-control">
+            <TSwitch
+              class="scada-theme-toggle"
+              size="medium"
+              :value="themeMode === 'dark'"
+              role="switch"
+              tabindex="0"
+              aria-label="深色主题"
+              :aria-checked="themeMode === 'dark'"
+              @change="changeTheme"
+              @keydown.space.prevent="changeTheme(themeMode !== 'dark')"
+              @keydown.enter.prevent="changeTheme(themeMode !== 'dark')"
+            />
+            <span class="scada-theme-icons" aria-hidden="true">
+              <SunnyIcon class="scada-theme-sun" />
+              <MoonIcon class="scada-theme-moon" />
+            </span>
+          </span>
         </div>
       </header>
       <main v-if="view === 'home'" id="scada-main-content" class="scada-home flex min-w-0 flex-col">

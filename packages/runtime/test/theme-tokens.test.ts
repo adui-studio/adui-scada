@@ -260,7 +260,9 @@ describe("V7 明暗主题", () => {
       expect(source).toContain("scada-theme-toggle");
       expect(source).toContain("aria-checked");
       expect(source).not.toContain("toggleTheme()");
-      expect(source).toContain("applyWorkspaceTheme(next)");
+      expect(source).toContain("transitionWorkspaceTheme(next");
+      expect(source).toContain("scada-theme-sun");
+      expect(source).toContain("scada-theme-moon");
       expect(source).toContain("/brand/mark-primary.svg");
       expect(source).toContain("/brand/mark-dark.svg");
     }
@@ -284,5 +286,18 @@ describe("双端图标与明暗界面收尾", () => {
     const css = readRelative("../src/runtime.css");
     expect(css).toContain("background: var(--adui-color-surface-muted);");
     expect(css).toContain("color: var(--adui-color-brand-text);");
+  });
+});
+
+describe("TDesign 官网主题过渡", () => {
+  it("双框架共享原生整页过渡并尊重减少动效偏好", () => {
+    const source = readRelative("../src/workspace-theme.ts");
+    expect(source).toContain("document.startViewTransition(update)");
+    expect(source).toContain("(prefers-reduced-motion: reduce)");
+    expect(source).toContain("await transition.updateCallbackDone");
+    expect(source).toContain('root.removeAttribute("data-theme-transition")');
+    const css = readRelative("../src/runtime.css");
+    expect(css).toContain(".scada-theme-icons");
+    expect(css).toContain("translateX(28px)");
   });
 });

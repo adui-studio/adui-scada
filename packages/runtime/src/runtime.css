@@ -1556,8 +1556,70 @@ textarea {
   gap: var(--adui-space-4);
   margin-left: auto;
 }
-.scada-app-header-actions .scada-theme-toggle {
+/* 官网主题控件的双图标、滑块视觉，真实交互仍由 TDesign Switch 处理。 */
+.scada-theme-control {
+  position: relative;
+  display: inline-flex;
   flex: none;
+  align-items: center;
+}
+.scada-theme-control .scada-theme-toggle.t-switch,
+.scada-theme-control .scada-theme-toggle.t-switch:hover,
+.scada-theme-control .scada-theme-toggle.t-switch.t-is-checked {
+  width: 60px;
+  min-width: 60px;
+  height: 32px;
+  padding: 2px;
+  border-radius: var(--adui-radius-md);
+  background: var(--td-bg-color-component);
+}
+.scada-theme-control .scada-theme-toggle.t-switch .t-switch__handle {
+  top: 2px;
+  left: 2px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--adui-radius-md);
+  box-shadow: var(--adui-shadow-panel);
+  transform: translateX(0);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+.scada-theme-control .scada-theme-toggle.t-switch[aria-checked="true"] .t-switch__handle {
+  left: 2px;
+  transform: translateX(28px);
+}
+.scada-theme-control .scada-theme-toggle.t-switch .t-switch__handle::before {
+  inset: 0;
+  border-radius: inherit;
+  background: var(--adui-color-surface);
+}
+.scada-theme-control .scada-theme-toggle.t-switch .t-switch__content {
+  display: none;
+}
+.scada-theme-icons {
+  position: absolute;
+  inset: 2px;
+  display: grid;
+  grid-template-columns: repeat(2, 28px);
+  align-items: center;
+  justify-items: center;
+  pointer-events: none;
+  color: var(--scada-text-muted);
+}
+.scada-theme-icons > .t-icon {
+  width: 16px;
+  height: 16px;
+}
+:root[theme-mode="light"] .scada-theme-sun {
+  color: var(--adui-color-warning);
+}
+:root[theme-mode="dark"] .scada-theme-moon {
+  color: var(--scada-text-strong);
+}
+@media (prefers-reduced-motion: reduce) {
+  .scada-theme-control .scada-theme-toggle.t-switch,
+  .scada-theme-control .scada-theme-toggle.t-switch .t-switch__handle {
+    transition: none;
+  }
 }
 .scada-theme-toggle:focus-visible {
   outline: 2px solid var(--adui-color-focus-ring);

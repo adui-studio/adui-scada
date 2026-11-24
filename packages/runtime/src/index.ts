@@ -55,5 +55,6 @@ export {
   normalizeWorkspaceTheme,
   readWorkspaceTheme,
   applyWorkspaceTheme,
+  transitionWorkspaceTheme,
 } from "./workspace-theme.ts";
 export type { WorkspaceThemeMode } from "./workspace-theme.ts";

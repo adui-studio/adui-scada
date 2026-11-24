@@ -1,5 +1,5 @@
 import { Button, Input, Switch, Upload } from "tdesign-react";
-import { AppIcon, ChartBarIcon, FileIcon, EditIcon, AddIcon, UploadIcon, ChevronRightIcon } from "tdesign-icons-react";
+import { AppIcon, ChartBarIcon, FileIcon, EditIcon, SunnyIcon, MoonIcon, AddIcon, UploadIcon, ChevronRightIcon } from "tdesign-icons-react";
 import { waterTreatmentShowcaseDocument } from "@adui/scada-core";
 import type { ScadaDocument } from "@adui/scada-core";
 import {
@@ -13,10 +13,11 @@ import {
   WORKSPACE_HOME_ENTRIES,
   filterWorkspaceHomeEntries,
   readWorkspaceTheme,
-  applyWorkspaceTheme,
+  transitionWorkspaceTheme,
 } from "@adui/scada-runtime";
 import "tdesign-react/es/style/index.css";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 const RuntimePage = lazy(() => import("./runtime/RuntimePage.tsx"));
 const PublishedRuntimePage = lazy(() => import("./runtime/PublishedRuntimePage.tsx"));
@@ -39,8 +40,9 @@ export default function App() {
   function changeTheme(checked: unknown) {
     if (typeof checked !== "boolean") return;
     const next = checked ? "dark" : "light";
-    applyWorkspaceTheme(next);
-    setThemeMode(next);
+    void transitionWorkspaceTheme(next, () => {
+      flushSync(() => setThemeMode(next));
+    });
   }
   const [initialDocument, setInitialDocument] = useState<ScadaDocument | null>(null);
   const [initialNotice, setInitialNotice] = useState("");
@@ -148,15 +150,20 @@ export default function App() {
                     ? "模拟只读监控 · 非现场控制"
                     : "开发工作台 · 非现场控制"}
             </span>
-            <Switch
-              className="scada-theme-toggle"
-              size="medium"
-              value={themeMode === "dark"}
-              label={["深色", "浅色"]}
-              aria-label="深色主题"
-              aria-checked={themeMode === "dark"}
-              onChange={changeTheme}
-            />
+            <span className="scada-theme-control">
+              <Switch
+                className="scada-theme-toggle"
+                size="medium"
+                value={themeMode === "dark"}
+                aria-label="深色主题"
+                aria-checked={themeMode === "dark"}
+                onChange={changeTheme}
+              />
+              <span className="scada-theme-icons" aria-hidden="true">
+                <SunnyIcon className="scada-theme-sun" />
+                <MoonIcon className="scada-theme-moon" />
+              </span>
+            </span>
           </div>
         </header>
         <Suspense

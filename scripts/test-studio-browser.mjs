@@ -920,6 +920,7 @@ async function selectWorkspaceThemeInPage(mode) {
     const logo = document.querySelector(".scada-app-brand img");
     if (
       root.getAttribute("theme-mode") === mode &&
+      !root.hasAttribute("data-theme-transition") &&
       toggle.getAttribute("aria-checked") === String(mode === "dark") &&
       toggle.classList.contains("t-is-checked") === (mode === "dark") &&
       logo instanceof HTMLImageElement &&
@@ -930,6 +931,7 @@ async function selectWorkspaceThemeInPage(mode) {
       return {
         saved: localStorage.getItem("adui-scada:theme-mode"),
         scheme: getComputedStyle(root).colorScheme,
+        themeIcons: document.querySelectorAll(".scada-theme-icons .t-icon").length,
       };
     }
     await new Promise((resolve) => setTimeout(resolve, 40));
@@ -993,6 +995,7 @@ async function runScadaUIExperience(session) {
         );
         assert.equal(theme.saved ?? "light", mode, target.name + " 主题偏好未保存");
         assert.equal(theme.scheme, mode, target.name + " 浏览器主题未同步");
+        assert.equal(theme.themeIcons, 2, target.name + " 主题双图标缺失");
         for (const [view, label, selector] of [
           ["home", "工作台", ".scada-home"],
           ["runtime", "运行监控", ".scada-shell--overview"],

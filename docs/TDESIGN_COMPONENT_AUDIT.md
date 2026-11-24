@@ -125,3 +125,7 @@ React/Vue 对等采用官方 TDesign Button、Input、Select、Textarea 与 Dial
 ## 12. D5c1 · 明暗主题 Switch 与按钮内容对齐
 
 固定版本 React 1.18.6 与 Vue Next 1.20.11 Switch 支持 value、label、change，React 根节点是 role=switch 的原生 button，Vue 根节点为 div，故 Vue 补充 role、tabindex、aria-checked 和键盘操作。沿用既有主题持久化，不自行绘制开关，不添加依赖。导航和底部工具继续使用 TDesign Button 与官方图标，仅统一内部内容对齐。实际双端浏览器验收待执行。
+
+## 13. D5c1 · 官网主题切换动效
+
+对照 Tencent/tdesign 官网 td-theme-tabs 源码，而非假定 Switch 自带整页动效。业务仍使用固定版本 TDesign Switch，双图标来自现有图标包，整页过渡由原生 View Transition API 处理；减少动态效果及不支持该 API 时直接切换。未引入动画库。双框架实际视觉验收待执行。
