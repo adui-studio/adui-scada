@@ -2680,3 +2680,7 @@ PR #196 经维护者授权 Squash 合并至 `main@98bfc2791e8c1f231107f2408bf1e2
 维护者 Windows 实测 D5c6：Vite+ 463 格式文件、305 受检零警告错误；六份 Core 历史及 TagStore 测试 55/55，中文文案 332 文件、文档 95 份通过。PR #197 经维护者明确授权 Squash 合并至 main@4aabaa8a49e944daa3fe3c4232edc3f22cc7dd0c。定向记录不是完整 ready 或真实数据库验收。
 
 维护者要求继续开发至第一个 MVP 完成后集中验收。建立 feat/mvp-first-integration 分支，先追加 D5c7 归档事务模型、规范编码、内部查询、隔离数据库回归，再增加双端导入工程本地模拟、页面选择、会话趋势及 CSV。该分支保持 Draft，不自动合并；迁移、正式 Vitest/Vite+、真实 Chromium、完整 ready 尚待实际运行。未开放正式历史 API、真实工业协议或生产发布，不宣称 MVP 已验收。
+
+### D5c7 · E-131 运行页语法阻塞
+
+维护者在 PR #198 Windows 格式化时报告 React RuntimePage.tsx 第 123 行 Unexpected token。最小修复已提交 15f98671dfe5f8a01c35f463b0b1cdeb040faef2；完整 TSX 文件独立语法解析由 3 条诊断降至 0 条，远端修复 Blob 与容器验证一致。Vue、共享模拟、归档模型及安全门禁未修改。E-131 待 Windows Vite+ 与完整质量链复验；PR 保持 Draft，不视为首个 MVP 已完成。
