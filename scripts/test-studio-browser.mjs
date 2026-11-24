@@ -717,14 +717,34 @@ async function checkStudioInPage() {
     const filePanelFlat = flatPopup(filePanel);
     const menuMetrics = fileButtons.map((button) => {
       const style = getComputedStyle(button);
+      const buttonRect = bounds(button);
+      // 测量真实文本而非可能占满按钮的组件包装层。
+      const walker = document.createTreeWalker(button, NodeFilter.SHOW_TEXT);
+      let textRect = null;
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (!node.textContent?.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const rect = range.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          textRect = rect;
+          break;
+        }
+      }
       return {
         textVariant: button.classList.contains("t-button--variant-text"),
         alignment: style.justifyContent,
+        direction: style.direction,
+        flexDirection: style.flexDirection,
+        writingMode: style.writingMode,
         boxSizing: style.boxSizing,
         height: style.height,
         minHeight: style.minHeight,
         maxHeight: style.maxHeight,
-        renderedHeight: bounds(button).height,
+        renderedHeight: buttonRect.height,
+        textOffset: textRect ? textRect.left - buttonRect.left : null,
+        expectedTextOffset:
+          Number.parseFloat(style.borderLeftWidth) + Number.parseFloat(style.paddingLeft),
       };
     });
     verify(
@@ -734,7 +754,13 @@ async function checkStudioInPage() {
         menuMetrics.every(
           (item) =>
             item.textVariant &&
-            item.alignment === "flex-start" &&
+            // Chromium 的计算值可能将 flex-start 序列化为 flow-start。
+            ["flex-start", "flow-start", "start"].includes(item.alignment) &&
+            item.direction === "ltr" &&
+            item.flexDirection === "row" &&
+            item.writingMode === "horizontal-tb" &&
+            item.textOffset !== null &&
+            near(item.textOffset, item.expectedTextOffset, 1) &&
             item.boxSizing === "border-box" &&
             item.height === "28px" &&
             item.minHeight === "28px" &&
