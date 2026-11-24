@@ -1,6 +1,7 @@
 import { expect, test } from "vite-plus/test";
 import { SCADA_SCHEMA_VERSION, parseScadaDocument } from "../src/document.ts";
 import { renderSvgPage } from "../src/svg.ts";
+import { waterTreatmentShowcaseDocument } from "../src/demo-document.ts";
 import type { TagValue } from "../src/tag-store.ts";
 
 const source = {
@@ -115,5 +116,26 @@ test("浅色水箱采用可缩放设备图形且异常读数保持占位", () =>
   expect(good).toContain("75%");
   expect(stale).toContain("已过期");
   expect(stale).toContain("--");
+  expect(stale).not.toContain("75%");
+});
+
+test("总览指标卡使用真实绑定值且过期时不显示历史读数", () => {
+  const good = renderSvgPage(
+    waterTreatmentShowcaseDocument,
+    "main",
+    new Map([["water.level", tag("GOOD", 75)]]),
+    "light",
+  );
+  const stale = renderSvgPage(
+    waterTreatmentShowcaseDocument,
+    "main",
+    new Map([["water.level", tag("STALE", 75)]]),
+    "light",
+  );
+  expect(good).toContain('data-node-id="level-metric"');
+  expect(good).toContain('viewBox="0 0 320 92"');
+  expect(good).toContain("75 %");
+  expect(stale).toContain("已过期");
+  expect(stale).not.toContain("75 %");
   expect(stale).not.toContain("75%");
 });

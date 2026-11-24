@@ -162,7 +162,7 @@ function renderLabel(
   if (appearance === "light" && node.props.presentation === "metric") {
     const raw = value?.quality === "GOOD" ? value.value : null;
     const reading =
-      raw === null || raw === undefined ? "--" : typeof raw === "boolean" ? (raw ? "是" : "否") : String(raw);
+      raw === null ? "--" : typeof raw === "boolean" ? (raw ? "是" : "否") : String(raw);
     const color = LIGHT_COLORS[value?.quality ?? "BAD"];
     const content = reading + (suffix ? " " + suffix : "");
     return (
