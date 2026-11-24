@@ -4737,3 +4737,17 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 ### D5c4 · Windows 定向验收完成（PR #195）
 
 维护者 Windows 实测 D5c4：Vite+ 460 文件格式正确、302 个受检文件零警告和错误；采样策略 13/13、历史缓冲区 11/11、历史查询 8/8、TagStore 6/6，共 38/38；中文文案 329 文件、Markdown 95 份全部通过。日志未独立打印本地 SHA；GitHub 最终候选 27786fc8ec54fd7fc43ca19863158840520c6f1c 相对 62f59651 仅测试格式化。维护者明确授权合并。定向测试不代表完整 ready、生产采集、持久化归档或现场工业安全验收。
+
+### D5c5 · FR-012 本地归档批次候选
+
+新增 8 项定向测试定义，覆盖空批次及上限、跨 Tag 入缓冲顺序与质量保留、不可变性、同批次重试、追加及迟到记录保护、跨实例/伪造/重复确认拒绝、待确认清理保护、确认释放容量后采样器重试。原四份 38 项测试继续回归，目标五份测试共 46 项。Windows 待执行 `vp test run packages/core/test/tag-history-archive.test.ts packages/core/test/tag-history-sampler.test.ts packages/core/test/tag-history-buffer.test.ts packages/core/test/tag-history.test.ts packages/core/test/tag-store.test.ts`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`。完整 ready 待运行，不宣称真实归档、数据库事务或持久化幂等验收。
+
+协作容器 Node.js 22.16.0 独立 node:test 验证：新增归档对应 8 项及既有采样对应 13 项，共 21/21 通过、0 失败、0 跳过。受测 tag-history.ts、tag-store.ts 的 Git Blob SHA 分别为 28a2cc4e90135ebdf658ed9ff67ed701dd77632b、78e22557523275fecb9e6172cc6b02230c60c58b，与远端完全一致。首次仅 strip-types 参数不能处理已存在的 TypeScript 参数属性，未执行用例；切换 Node 支持的 experimental-transform-types 后实际通过。容器 GitHub 域名解析失败、无 Vite+，独立原生断言测试不等同仓库 Vitest 或完整 ready。
+
+### D5c5 · E-130 不可变性测试 Lint 候选修复
+
+维护者 Windows Vite+ 461 文件格式正确、303 个受检文件零错误、1 项 require-to-throw-message 警告。仅改归档不可变性测试为 Reflect.set 返回 false 的显式拒绝断言，保留三层冻结及原值不变验证；Node.js 22.16.0 独立冻结对象实验通过，未执行正式 Vitest 或 Vite+。五份定向测试 46 项、零警告、中文文案和文档仍待复验。
+
+### D5c5 · Windows 定向验收完成（PR #196）
+
+维护者 Windows 实测 D5c5：Vite+ 461 文件格式正确、303 个受检文件零警告和错误；归档 8/8、采样 13/13、历史缓冲区 11/11、历史查询 8/8、TagStore 6/6，共 46/46；中文文案 330 文件及 Markdown 95 份全部通过。日志未独立打印本地 SHA，当前远端候选为 73a06349e114a73465dd6551723820eb02cd589b。维护者明确授权合并。定向测试不代表完整 ready、生产采集、真实数据库持久化或现场工业安全验收。 E-130 关闭。

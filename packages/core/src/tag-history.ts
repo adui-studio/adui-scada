@@ -103,6 +103,11 @@ export interface TagHistoryBatch {
   readonly values: readonly TagValue[];
 }
 
+/** 单次待归档批次的不可变快照，仅以当前缓冲区内对象身份确认。 */
+export interface TagHistoryArchiveBatch {
+  readonly records: readonly TagHistoryPoint[];
+}
+
 /**
  * 单个已隔离工程的本地有界缓冲区，不自动订阅 TagStore。
  * 满容量、无效批次和超出保留边界的采样均整批拒绝，不覆盖已有记录。
@@ -111,6 +116,7 @@ export interface TagHistoryBatch {
 export class TagHistoryBuffer {
   private records: TagHistoryPoint[] = [];
   private retentionStartMs: number | undefined;
+  private pendingArchive: TagHistoryArchiveBatch | undefined;
   private readonly capacity: number;
 
   constructor(capacity: number) {
@@ -157,8 +163,53 @@ export class TagHistoryBuffer {
     return selectTagHistory(this.records, query);
   }
 
+  /**
+   * 按入缓冲顺序准备有限批次，未确认时始终保留原记录。
+   * 重试返回同一不可变批次；调用方须独立保证持久化幂等性。
+   */
+  prepareArchive(maxRecords: number): TagHistoryArchiveBatch | undefined {
+    if (
+      !Number.isSafeInteger(maxRecords) ||
+      maxRecords <= 0 ||
+      maxRecords > MAX_TAG_HISTORY_BUFFER_SAMPLES
+    ) {
+      throw new RangeError("历史归档批次上限无效");
+    }
+    if (this.pendingArchive) {
+      if (this.pendingArchive.records.length > maxRecords) {
+        throw new RangeError("历史待归档批次不能缩小后重试");
+      }
+      return this.pendingArchive;
+    }
+    if (this.records.length === 0) return undefined;
+
+    const records = Object.freeze(
+      this.records.slice(0, maxRecords).map((point) => Object.freeze({ ...point })),
+    );
+    const batch = Object.freeze({ records });
+    this.pendingArchive = batch;
+    return batch;
+  }
+
+  /**
+   * 仅在可信调用方确认整批持久化成功后调用。
+   * 本地对象身份不是持久化凭证；只移除当前批次对应的记录前缀。
+   */
+  confirmArchive(batch: TagHistoryArchiveBatch): number {
+    if (!this.pendingArchive || batch !== this.pendingArchive) {
+      throw new TypeError("历史归档批次无效、已确认或不属于当前缓冲区");
+    }
+    const count = this.pendingArchive.records.length;
+    this.records = this.records.slice(count);
+    this.pendingArchive = undefined;
+    return count;
+  }
+
   /** 移除严格早于边界的记录，并禁止迟到记录重新填入已清理区间。 */
   pruneBefore(cutoffMs: number): number {
+    if (this.pendingArchive) {
+      throw new Error("存在待确认历史归档批次，不能清理缓冲区");
+    }
     if (
       !Number.isSafeInteger(cutoffMs) ||
       Math.abs(cutoffMs) > MAX_DATE_MS ||

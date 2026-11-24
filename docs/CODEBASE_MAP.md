@@ -1569,3 +1569,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/tag-history.ts`：TagHistorySampler 单 Tag 显式采样、成功写入基线、跳过观测时间及共享缓冲校验。
 - `packages/core/src/index.ts`：公共采样器与策略、输入、决策类型。
 - `packages/core/test/tag-history-sampler.test.ts`：周期、变化阈值、质量、写入失败、时间顺序及隔离回归。
+
+## D5c5 · FR-012 本地归档批次
+
+- `packages/core/src/tag-history.ts`：TagHistoryBuffer 准备、重试、确认及待确认清理保护。
+- `packages/core/src/index.ts`：新增 TagHistoryArchiveBatch 类型导出。
+- `packages/core/test/tag-history-archive.test.ts`：批次上限、不可变性、身份隔离、确认、迟到记录、清理及采样器背压回归。
