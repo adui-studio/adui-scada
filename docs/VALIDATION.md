@@ -4775,3 +4775,11 @@ D5c7 候选新增规范编码 4 项、真实 PostgreSQL 归档 5 项、共享模
 #### D5c7 · E-131 React 运行页语法阻塞修复
 
 维护者 Windows 首次执行 PR #198 的 vp check --fix 在 RuntimePage.tsx:123:4 遇到 Unexpected token，格式化失败，后续质量门禁未执行。远端旧 Blob d2a50e98e4d0277990dacbbc87e6025deba83811 经完整文件回读确认残留旧 Effect 和重复 svg 声明。仅删除残留；修复提交 15f98671dfe5f8a01c35f463b0b1cdeb040faef2 的 Blob 5ce8ad1f52d20b72a3d0c7ce5f7d8ca845e148fb 与容器完整文件 git hash-object 一致。Node.js 22.16.0 / TypeScript 5.8.3 的 TSX createSourceFile 解析诊断由 3 条降至 0 条；未执行项目真实 TypeScript 6、Vite+、Lint、Vitest、数据库和浏览器。维护者先在最新分支执行 vp check --fix、vp check 与 pnpm run typecheck:web，再继续统一验收。
+
+#### D5c7 · E-131/E-132 实测及 E-133 修复
+
+维护者 Windows 按 db:validate → db:generate → build:core → vp check --fix → vp check 执行，Prisma 7.10.1 Schema 校验/Client 生成、Core 编译完成；469 文件格式正确、311 受检文件零警告错误。原 TSX 语法阻塞与因旧生成产物造成的 25 项类型错误消失。独立 Web 检查在 React tsc --build 报 4 项 TS1294，后续检查尚未运行；日志无 HEAD，不将结果严格绑定到某提交。
+
+修复共享 Core 两个历史类的四个参数属性，改为显式只读字段赋值；远端提交 b0c1d7f7fc4eccbe91d9c46431f34a3bd599290e、1098b214e4d89fa98719ce017aca99765510dc37。协作端使用 Node.js 22.16.0/TypeScript 5.8.3，对实际构造函数摘录（最小依赖类型声明）执行启用 erasableSyntaxOnly 的严格编译实验，修复前四项 TS1294、退出码 2，修复后零项、退出码 0；Node 原生类型擦除构造验证通过。该实验不代替完整 TypeScript 6 项目检查。
+
+本次复验顺序：db:validate、db:generate、build:core、vp check --fix、vp check、typecheck:web、typecheck:server、messages:check、docs:check。前序门禁通过后再运行原有历史专项、ready 与隔离数据库及双端浏览器验收。禁止根据本次局部检查执行自动合并或生产数据库操作。
