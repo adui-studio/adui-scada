@@ -2708,3 +2708,9 @@ Prisma 8 当前为不同 API 与 CLI 的 RC；既有 Prisma Client、适配器�
 维护者提交 npm 锁文件、Prisma 8 Contract、Cargo.lock，并实际在 Windows 完成双版本 CLI、冻结安装、956/956 单测、63/63 HTTP E2E、472 格式文件及 314 受检文件零警告错误、Docker 数据库脚本 13/13、双端构建与文档 95 份检查。用户确认 Skills 安装完成并授权 PR #200 合入 MVP 集成分支；合并提交 e75a763821d6215c6b66a1e01a43051d7c7275b3，PR #198 仍为 Draft。日志没有独立 ready 最终退出码，未实际验证新版 ORM 查询、数据库迁移、桌面构建或生产运行。
 
 阶段二从上述合并提交建立 feat/mvp-prisma8-runtime，新增实际 Prisma 8 只读客户端探针，独立验证连接池所有权及租户工程联合主键查询。所有旧业务仓储保持 Prisma 7；不接管数据库迁移，不启动新 Docker 镜像，不改变设备访问或发布安全门禁。下一步取决于真实隔离库查询结果，不以空库通过冒充正向数据等价性。
+
+### 2026-11-24 · Prisma 8 第二阶段验收及历史查询候选
+
+- PR #201 在 Windows HEAD `3fe7985a0f5553ee73fb91efff21f7a9330c8a3e` 验收：974/974 单测、63/63 HTTP E2E、476 文件格式检查、318 文件 Lint/类型检查零警告零错误、345 个自有文案文件、95 份 Markdown、React/Vue/NestJS 构建及 `ready` 退出码 0。获维护者授权后合入 MVP 集成分支，提交 `dca35d38f3e14592e8755e6d41966740a6f90b8a`。
+- 新分支 `feat/mvp-prisma8-history-read` 增加独立历史只读查询及原生 SQL 对照探针，沿用现有历史规范编码和数据隔离边界，不切换生产历史仓储、归档事务或迁移所有权。
+- Prisma 8 真实数据库探针仍待 Windows 本机隔离数据库运行；空库不算正向样本对照通过。Skills 同步提示与 React 591.62 kB 分包提示仍待处理。MVP 集成 PR #198 保持 Draft。
