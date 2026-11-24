@@ -125,6 +125,7 @@ export default function StudioPage() {
   const [preferredCopyTargetPageId, setPreferredCopyTargetPageId] = useState("");
   const [preferredLayerTargetId, setPreferredLayerTargetId] = useState("");
   const [layerSearch, setLayerSearch] = useState("");
+  const [inspectorTab, setInspectorTab] = useState<"properties" | "tags">("properties");
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(() => new Set());
   const [locateLayerRequest, setLocateLayerRequest] = useState<{ key: string } | null>(null);
   const [layerInsertPosition, setLayerInsertPosition] = useState<"before" | "after">("after");
@@ -2587,9 +2588,26 @@ export default function StudioPage() {
         </section>
         <aside
           className="studio-panel studio-panel-properties min-h-0 min-w-0"
-          aria-label="图元属性"
+          aria-label="属性与 Tag 工作区"
         >
-          <h2>属性 · 已选 {state.selectedIds.length}</h2>
+          <div className="studio-inspector-tabs" role="group" aria-label="右侧工作区">
+            <Button
+              type="button"
+              aria-pressed={inspectorTab === "properties"}
+              onClick={() => setInspectorTab("properties")}
+            >
+              属性
+            </Button>
+            <Button
+              type="button"
+              aria-pressed={inspectorTab === "tags"}
+              onClick={() => setInspectorTab("tags")}
+            >
+              项目 Tag（{state.document.tags.length}）
+            </Button>
+          </div>
+          <div className="studio-inspector-content" hidden={inspectorTab !== "properties"}>
+            <h2>属性 · 已选 {state.selectedIds.length}</h2>
           {selected ? (
             <>
               <p>
@@ -2698,38 +2716,6 @@ export default function StudioPage() {
           ) : (
             <p className="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
           )}
-          <div className="studio-advanced">
-            <Collapse borderless defaultValue={[]}>
-              <Collapse.Panel
-                value="project-tags"
-                header={<>项目 Tag 定义（{state.document.tags.length}）</>}
-              >
-                <div className="studio-advanced-content">
-                  <TagManager
-                    tags={state.document.tags}
-                    onCreate={(definition) =>
-                      changeProjectTag(
-                        () => editor.addTagDefinition(definition),
-                        "项目 Tag 已新增，可撤销",
-                      )
-                    }
-                    onUpdate={(tagId, changes) =>
-                      changeProjectTag(
-                        () => editor.updateTagDefinition(tagId, changes),
-                        "项目 Tag 已更新，可撤销",
-                      )
-                    }
-                    onRemove={(tagId) =>
-                      changeProjectTag(
-                        () => editor.removeTagDefinition(tagId),
-                        "项目 Tag 已删除，可撤销",
-                      )
-                    }
-                  />
-                </div>
-              </Collapse.Panel>
-            </Collapse>
-          </div>
           <div className="studio-advanced">
             <Collapse borderless defaultValue={[]}>
               <Collapse.Panel value="advanced-tools" header="高级图元与图层操作">
@@ -2898,6 +2884,31 @@ export default function StudioPage() {
                 </div>
               </Collapse.Panel>
             </Collapse>
+          </div>
+          </div>
+          <div className="studio-inspector-content" hidden={inspectorTab !== "tags"}>
+            <h2>项目 Tag 定义</h2>
+            <TagManager
+                    tags={state.document.tags}
+                    onCreate={(definition) =>
+                      changeProjectTag(
+                        () => editor.addTagDefinition(definition),
+                        "项目 Tag 已新增，可撤销",
+                      )
+                    }
+                    onUpdate={(tagId, changes) =>
+                      changeProjectTag(
+                        () => editor.updateTagDefinition(tagId, changes),
+                        "项目 Tag 已更新，可撤销",
+                      )
+                    }
+                    onRemove={(tagId) =>
+                      changeProjectTag(
+                        () => editor.removeTagDefinition(tagId),
+                        "项目 Tag 已删除，可撤销",
+                      )
+                    }
+                  />
           </div>
         </aside>
       </div>

@@ -98,6 +98,7 @@ const labelDraft = ref("");
 const preferredCopyTargetPageId = ref("");
 const preferredLayerTargetId = ref("");
 const layerSearch = ref("");
+const inspectorTab = ref<"properties" | "tags">("properties");
 const collapsedGroupIds = shallowRef<Set<string>>(new Set());
 const layerTreeRef = ref<HTMLElement | null>(null);
 const layerInsertPosition = ref<"before" | "after">("after");
@@ -2525,8 +2526,21 @@ async function importJsonFile(file: File | undefined) {
           </div>
         </div>
       </section>
-      <aside class="studio-panel studio-panel-properties min-h-0 min-w-0" aria-label="图元属性">
-        <h2>属性 · 已选 {{ state.selectedIds.length }}</h2>
+      <aside class="studio-panel studio-panel-properties min-h-0 min-w-0" aria-label="属性与 Tag 工作区">
+        <div class="studio-inspector-tabs" role="group" aria-label="右侧工作区">
+          <TButton
+            type="button"
+            :aria-pressed="inspectorTab === 'properties'"
+            @click="inspectorTab = 'properties'"
+          >属性</TButton>
+          <TButton
+            type="button"
+            :aria-pressed="inspectorTab === 'tags'"
+            @click="inspectorTab = 'tags'"
+          >项目 Tag（{{ state.document.tags.length }}）</TButton>
+        </div>
+        <div class="studio-inspector-content" :hidden="inspectorTab !== 'properties'">
+          <h2>属性 · 已选 {{ state.selectedIds.length }}</h2>
         <template v-if="selected">
           <p>
             <strong>{{ selected.id }}</strong> · {{ selected.type }}
@@ -2588,23 +2602,6 @@ async function importJsonFile(file: File | undefined) {
           </p>
         </template>
         <p v-else class="studio-tip">选择左侧图元或画布中的图元查看属性。</p>
-        <div class="studio-advanced">
-          <TCollapse :default-value="[]" borderless>
-            <TCollapsePanel
-              value="project-tags"
-              :header="`项目 Tag 定义（${state.document.tags.length}）`"
-            >
-              <div class="studio-advanced-content">
-                <TagManager
-                  :tags="state.document.tags"
-                  :on-create="createProjectTag"
-                  :on-update="updateProjectTag"
-                  :on-remove="removeProjectTag"
-                />
-              </div>
-            </TCollapsePanel>
-          </TCollapse>
-        </div>
         <div class="studio-advanced">
           <TCollapse :default-value="[]" borderless>
             <TCollapsePanel value="advanced-tools" header="高级图元与图层操作">
@@ -2784,6 +2781,16 @@ async function importJsonFile(file: File | undefined) {
               </div>
             </TCollapsePanel>
           </TCollapse>
+        </div>
+        </div>
+        <div class="studio-inspector-content" :hidden="inspectorTab !== 'tags'">
+          <h2>项目 Tag 定义</h2>
+          <TagManager
+                  :tags="state.document.tags"
+                  :on-create="createProjectTag"
+                  :on-update="updateProjectTag"
+                  :on-remove="removeProjectTag"
+                />
         </div>
       </aside>
     </div>
