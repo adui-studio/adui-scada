@@ -54,6 +54,8 @@ function verifyReceipt(request: TagHistoryPersistenceRequest, receipt: unknown):
  * 不负责数据库事务、跨进程恢复、超时取消或自动重试。
  */
 export class TagHistoryArchiveWriter {
+  private readonly buffer: TagHistoryBuffer;
+  private readonly storage: TagHistoryPersistencePort;
   private readonly scope: TagHistoryArchiveScope;
   private nextSequence = 1;
   private writing = false;
@@ -62,10 +64,12 @@ export class TagHistoryArchiveWriter {
     | undefined;
 
   constructor(
-    private readonly buffer: TagHistoryBuffer,
+    buffer: TagHistoryBuffer,
     scope: TagHistoryArchiveScope,
-    private readonly storage: TagHistoryPersistencePort,
+    storage: TagHistoryPersistencePort,
   ) {
+    this.buffer = buffer;
+    this.storage = storage;
     if (
       typeof scope.projectId !== "string" ||
       !ID_PATTERN.test(scope.projectId) ||
