@@ -1,6 +1,9 @@
 import type { StudioPageSize, StudioPan } from "./studio-viewport.ts";
 
 /** 浏览器工作区的实际 CSS 像素大小，不属于组态工程 Schema。 */
+/** 只影响 Studio 的画板适应视图，不能写入工程 Schema。 */
+export const STUDIO_CANVAS_FIT_MARGIN = 48;
+
 export interface StudioViewportSize {
   width: number;
   height: number;
@@ -24,6 +27,7 @@ export function studioViewportRect(
   viewport: StudioViewportSize,
   zoom: number,
   pan: StudioPan,
+  fitMargin = 0,
 ): StudioViewportRect {
   if (
     !Number.isFinite(page.width) ||
@@ -48,7 +52,12 @@ export function studioViewportRect(
     throw new RangeError("视图平移坐标必须为有效的数字");
   }
 
-  const fitScale = Math.min(viewport.width / page.width, viewport.height / page.height);
+  if (!Number.isFinite(fitMargin) || fitMargin < 0) {
+    throw new RangeError("适应画布留白必须为非负有限数");
+  }
+  const width = Math.max(1, viewport.width - fitMargin * 2);
+  const height = Math.max(1, viewport.height - fitMargin * 2);
+  const fitScale = Math.min(width / page.width, height / page.height);
   const width = viewport.width / fitScale / zoom;
   const height = viewport.height / fitScale / zoom;
   const limitX = Math.max(0, (page.width - width) / 2);

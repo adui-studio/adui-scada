@@ -82,3 +82,16 @@ test("拒绝无效尺寸、缩放和平移参数", () => {
     studioViewportRect(page, { width: 800, height: 800 }, 1, { x: Infinity, y: 0 }),
   ).toThrow("视图平移坐标");
 });
+
+test("Figma 式适应画布留白只改变观察视区，不修改工程页面或纵横比例", () => {
+  const page = { width: 1920, height: 1080 };
+  const viewport = { width: 900, height: 600 };
+  const pan = { x: 0, y: 0 };
+  const fitted = studioViewportRect(page, viewport, 1, pan, 48);
+  expect(fitted.width / fitted.height).toBeCloseTo(viewport.width / viewport.height);
+  expect(fitted.width).toBeGreaterThan(page.width);
+  expect(fitted.height).toBeGreaterThan(page.height);
+  expect(fitted.x).toBeLessThan(0);
+  expect(page).toEqual({ width: 1920, height: 1080 });
+  expect(() => studioViewportRect(page, viewport, 1, pan, -1)).toThrow(/留白/);
+});

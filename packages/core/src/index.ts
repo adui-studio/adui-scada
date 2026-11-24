@@ -107,7 +107,7 @@ export { DraftAutoSaveSession } from "./draft-repository.ts";
 export type { DraftRepository, DraftRecord } from "./draft-repository.ts";
 export { clampStudioPan, studioViewBox } from "./studio-viewport.ts";
 export type { StudioPan, StudioPageSize } from "./studio-viewport.ts";
-export { studioViewportRect } from "./studio-viewport-rect.ts";
+export { studioViewportRect, STUDIO_CANVAS_FIT_MARGIN } from "./studio-viewport-rect.ts";
 export type { StudioViewportRect, StudioViewportSize } from "./studio-viewport-rect.ts";
 export {
   PROJECT_SNAPSHOT_FORMAT_VERSION,
