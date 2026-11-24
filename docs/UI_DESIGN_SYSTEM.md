@@ -108,3 +108,17 @@ V7 Logo 原 SVG 和几何不动，导航缩放使用现有 `/brand/favicon.svg`�
 
 本设计属于现有唯一 Draft PR #192 的候选；完整 Windows ready、Chromium 与截图尚未验证，不能声称视觉交付已验收。
 
+## 9. Figma 画板工作流参考：默认 1920×1080、缩放与图层解耦
+
+新增参考：[Figma Frame 使用说明](https://help.figma.com/hc/en-us/articles/360041539473-Frames-in-Figma-Design)、[Figma Zoom / View Options](https://help.figma.com/hc/en-us/articles/360041065034-Adjust-your-zoom-and-view-options)、[Figma Properties Panel](https://help.figma.com/hc/en-us/articles/360039832014-Design-prototype-and-explore-layer-properties-in-the-right-sidebar)。从中借鉴的是**可编辑页面画板（Frame）与无限观察工作区的职责分离**、左图层与右属性分工以及“适应视图”优先。ADui SCADA 目前不声称具备 Figma 的完整无限画布、多 Frame 协作或所有快捷键。
+
+### 默认画板的验收定义
+
+- 全新进入 Studio 的工程主页面尺寸为 **1920 × 1080 逻辑像素**（16:9），标题栏显示实际数值与 px。该尺寸取自共享 `@adui/scada-core`，非分别在 Vue/React 中硬编码。
+- 当前演示页面旧版为 880×460。新 Studio 专用演示文档将图元按一致倍数缩放并居中填入 1920×1080；原水处理只读演示仍以原文档运行，避免影响工业模拟数据与既有单测基线。
+- 浏览器工作区仍铺满可用尺寸，中央 SVG 通过 `studioViewportRect` 进行等比视口映射；浏览器窗口变小不改变 `ScadaDocument.pages[].size`，不对图元进行隐式挤压。
+- 编辑器中新建页面沿用当前页面的 `size`；复制页面继承源页面尺寸。导入 880×460 或其他合法画布时仍按原尺寸显示，不自动升级或覆盖已有持久化工程。
+- 双端 12 场景实测同时核对画板边界的 `width=1920` / `height=1080`、深浅背景和无横向页面滚动；Core 专项校验图元变换比例、原有绑定、页面复制/撤销及旧尺寸保留。
+
+视觉参考是**方法而不是像素复制**：保留 ADui V7 品牌、TDesign 和工业只读安全边界，最终整个 PR #192 仅在统一完成后验收。
+

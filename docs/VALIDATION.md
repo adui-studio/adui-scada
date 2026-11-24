@@ -4580,3 +4580,9 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 
 这只是远端提交与固定版本 TDesign API 的静态核对；新变更尚未实际运行 Windows vp check、ready 或 Chrome 视觉回归。遵从用户要求，不分批请求验收，继续在唯一 PR #192 内完成设计与测试调整，最终一次集中验证。
 
+## 2026-11-24 · PR #192 新增 Figma 画板思路与 1920×1080 默认页面
+
+维护者明确补充：竞品可同时参考 Figma，不应只研究 SCADA；新 Studio 画板默认 **1920×1080**。按共享 Core 方案实现 `STUDIO_DEFAULT_PAGE_SIZE` 和 `waterTreatmentStudioDocument`：把原本 880×460 的演示布局等比例放大且居中，仅改变 React/Vue 新进 Studio 的默认页面，**不重写**原 880×460 只读水处理演示、不改变已有工程尺寸或 `createPage` 继承当前页面尺寸的业务规则。浏览器窗口仍通过 SVG viewBox 按需适应，不设置固定 DOM 1920px。
+
+增加 `packages/core/test/studio-default-document.test.ts` 三组预防性断言、`test:ui:browser` 对双端 × 1440×900/1024×768 的默认画板实际宽高断言，并在双端界面显示 `px` 单位。合入与此前 FUXA 任务型 Tag 面板修复同一个 PR #192，仍保持 Draft。**本次仅远端代码/静态结构核对，尚未获得 Windows `ready`、真实浏览器与截图的最终验收**；没有另开 PR、没有要求阶段性验收。
+

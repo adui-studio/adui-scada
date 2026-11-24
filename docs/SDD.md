@@ -1447,3 +1447,14 @@ D5b9 至 D5c0d 的共享 Core 候选筛选已经具备 GOOD/有限数值、明�
 4. 最后执行 React/Vue 工程一致性、真实 OIDC 角色、隔离 PostgreSQL 事件事务、网关断流、反向代理和 Windows/Docker 集成专项；未实际运行的测试不得记录为通过。
 
 本节是**非规范性设计待决清单**，不改变任何现有 `TagStore`、Core、SSE、NestJS、Prisma 或 Vue/React API；尤其**不改变**当前严格递增但未要求连续的序列行为。FR-011 状态保持规划中。
+
+## 2026-11-24 · D5c1 默认 Studio 画板 1920×1080 的共享数据与兼容策略
+
+- `packages/core/src/demo-document.ts` 保留 `waterTreatmentDemoDocument` 的原有 880×460 只读演示工程，新增 `STUDIO_DEFAULT_PAGE_SIZE = { width: 1920, height: 1080 }` 和 `waterTreatmentStudioDocument`。后者用 `parseScadaDocument` 生成符合当前 Schema 的新工程，基于原演示页面和图元以统一缩放系数居中（预留左右上下各至少 80 逻辑像素），仅用于新进入 Studio 的默认内容。
+- React/Vue 两套 `StudioPage` 都直接从共享 Core 引入同一个 `waterTreatmentStudioDocument` 初始化 `DocumentEditor`，画板标签动态显示真实 `page.size` 和 `px`；没有框架各自的页面尺寸默认值。
+- `DocumentEditor.createPage` **不修改原有语义**：新建空白页继承当前页 `size`，复制保留源页 `size`；旧 880×460、任意合法用户自定义尺寸、已发布快照均不会被新默认值覆盖。视口由 `studioViewportRect` 依据实际 CSS 宽高等比适应，再通过 SVG `viewBox` 改变观察视区；逻辑画板 1920×1080 不代表创建 DOM 1920×1080 的溢出元素。
+- 增加 `packages/core/test/studio-default-document.test.ts` 对新默认、图元统一缩放/绑定、页面继承/复制/撤销、旧尺寸原样保留进行断言；`scripts/test-studio-browser.mjs --ui` 在 React/Vue × 两种桌面视口时直接读取 `.studio-page-boundary` 的 width/height 断言 1920×1080。
+- Figma 公开 Frame/Zoom 文档仅作交互理念参照：https://help.figma.com/hc/en-us/articles/360041539473-Frames-in-Figma-Design 、https://help.figma.com/hc/en-us/articles/360041065034-Adjust-your-zoom-and-view-options 。无新依赖、无产品素材复制、无工业设备写入。
+
+本条仅是 D5c1 草案与代码契约，尚未在维护者 Windows 完整 `ready` / Chromium / 生产部署验证；必须在 PR #192 最终统一验收中确认。
+

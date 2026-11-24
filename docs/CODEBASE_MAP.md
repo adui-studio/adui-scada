@@ -1508,3 +1508,12 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/runtime/test/theme-tokens.test.ts`：统一主题、TDesign 映射、旧变量及 Studio 固定侧栏的源码契约检查。
 
 依赖锁文件必须在联网 Windows 真实运行 `pnpm install --lockfile-only` 后提交；在该前置完成之前，不允许把本批描述为通过完整构建。参见 [ADR-0029](adr/0029-brand-theme-v7.md)。
+
+## 2026-11-24 · D5c1 画板默认尺寸共享 Core 导出与前端挂载地图
+
+- `packages/core/src/demo-document.ts`：保留旧的 `waterTreatmentDemoDocument` 880×460，新增 `STUDIO_DEFAULT_PAGE_SIZE` 1920×1080 和从原水处理示例等比缩放/居中的 `waterTreatmentStudioDocument`。两个常量经 `packages/core/src/index.ts` 统一对外导出。
+- `apps/web-react/src/studio/StudioPage.tsx`、`apps/web-vue/src/studio/StudioPage.vue`：新建 Studio 用相同 Core 默认文档构造 `DocumentEditor`；页面实际画板尺寸仍由 `page.size` 渲染，不改变从 JSON / IndexedDB 恢复的工程。
+- `packages/core/test/studio-default-document.test.ts`：新画板尺寸、Tag 绑定几何保真、继承/复制/撤销、旧项目 880×460 的测试覆盖。
+- `scripts/test-studio-browser.mjs --ui`：新 Studio 三页面 UI 场景中的两个框架、两个视口校验真实 SVG 页面边界尺寸；不代替最终浏览器截图与手动操作体验验收。
+- 此项延续 `docs/REQUIREMENTS.md` 的“新建页面继承当前页面尺寸”既定规则，并将 Figma Frame/Zoom 概念仅作为交互参照；禁止导入时自动调整画板或打破旧工程 JSON。
+
