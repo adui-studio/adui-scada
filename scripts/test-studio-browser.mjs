@@ -727,7 +727,7 @@ async function inspectWorkspaceHomeInPage() {
   const filtered = await waitForCount(1);
   change("不存在的工程");
   await waitForCount(0);
-  const empty = Boolean(document.querySelector(".scada-home-section [role='status']"));
+  const empty = Boolean(document.querySelector(".scada-home-card-grid + [role='status']"));
   change("");
   const restored = await waitForCount(3);
   return { initial, staticPreview, quickCount, filtered, empty, restored };
@@ -831,7 +831,7 @@ async function runScadaUIExperience(session) {
             ["水处理演示工程", "水处理模拟监控", "已发布工程预览"],
             prefix + " 工作台真实目录不一致",
           );
-          assert.equal(home.quickCount, 3, prefix + " 快速入口数量不一致");
+          assert.equal(home.quickCount, 5, prefix + " 快速入口数量不一致");
           assert.equal(home.staticPreview, true, prefix + " 内置工程 SVG 缩略图未显示");
           assert.deepStrictEqual(home.filtered, ["已发布工程预览"], prefix + " 搜索结果不一致");
           assert.equal(home.empty, true, prefix + " 搜索空态缺失");

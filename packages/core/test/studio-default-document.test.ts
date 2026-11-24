@@ -1,6 +1,7 @@
 import { expect, test } from "vite-plus/test";
 import {
   STUDIO_DEFAULT_PAGE_SIZE,
+  createBlankStudioDocument,
   waterTreatmentDemoDocument,
   waterTreatmentStudioDocument,
 } from "../src/demo-document.ts";
@@ -70,4 +71,17 @@ test("既有工程仍保留 880×460 原始尺寸，导入不会被默认值覆�
     width: 600,
     height: 36,
   });
+});
+
+test("新建独立工程采用共享默认画板且不携带演示 Tag 或图元", () => {
+  const first = createBlankStudioDocument("project-first");
+  const second = createBlankStudioDocument("project-second");
+  expect(first.projectId).toBe("project-first");
+  expect(second.projectId).toBe("project-second");
+  expect(first.pages[0]?.size).toEqual(STUDIO_DEFAULT_PAGE_SIZE);
+  expect(first.pages[0]?.nodes).toEqual([]);
+  expect(first.tags).toEqual([]);
+  expect(parseScadaDocument(first)).toEqual(first);
+  expect(() => createBlankStudioDocument("../invalid")).toThrow(/稳定 ASCII 标识符/);
+  expect(waterTreatmentStudioDocument.projectId).toBe("water-demo");
 });

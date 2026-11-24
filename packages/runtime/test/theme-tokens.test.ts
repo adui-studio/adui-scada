@@ -200,6 +200,10 @@ describe("Pixso 参考工作台", () => {
       expect(source).toContain("filterWorkspaceHomeEntries");
       expect(source).toContain("scada-home-quick-grid");
       expect(source).toContain("scada-home-banner-grid");
+      expect(source).toContain("createWorkspaceDraft");
+      expect(source).toContain("readWorkspaceJson");
+      expect(source).toContain("listWorkspaceDrafts");
+      expect(source).toContain("readWorkspaceDraft");
       expect(source).toContain("内置水处理工程静态预览，无实时值");
     }
     const css = readRelative("../src/runtime.css");
