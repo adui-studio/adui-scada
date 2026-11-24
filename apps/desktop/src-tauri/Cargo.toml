@@ -10,10 +10,10 @@ name = "adui_scada_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "^2.7.6", features = [] }
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "^2.12.7", features = [] }
+tauri = { version = "2", features = [] }
 
 [profile.release]
 codegen-units = 1
