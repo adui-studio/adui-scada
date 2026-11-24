@@ -4635,3 +4635,7 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 ### D5c1 · 图标、深色提示与适应画板
 
 本轮根据真实截图修改现有 PR #192。源码确认 Catalog 固定版本为 tdesign-icons-react 0.6.11、tdesign-icons-vue-next 0.4.11；官方图标仓库存在所选 SVG 名称，固定版本包的 TypeScript 导出仍需本机类型检查确认。双端应用首页无手写 SVG 图标，Studio 保留实际工业 SVG。适应画板共享边距改为 8 CSS px，并新增共享视区单测和真实 DOM 图标、限制轴间距及提示栏对比度断言。当前环境 npm 域名解析失败，未执行 Vite+、Vitest 或 Chromium；最终 Windows 验收待执行。
+
+### D5c1 · 工作区底部网格连续性
+
+维护者截图澄清：问题为网格没有覆盖工具带周围，而非画板尺寸。已提交双端工具带网格、共享相位计算及原 48px 适应边距恢复。新增核心相位断言及 DOM 覆盖范围、缩放对齐、显隐同步断言，保留原不遮挡、画板尺寸及编辑交互验证。未实际执行 Windows Vitest、Vite+、Chromium 或截图检查，不能认定实机通过。
