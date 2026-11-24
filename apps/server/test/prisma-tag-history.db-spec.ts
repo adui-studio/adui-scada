@@ -81,7 +81,7 @@ function request(
   const buffer = new TagHistoryBuffer(values.length);
   buffer.append({
     kind: "sample",
-    values: values.map((value, sequence) => ({
+    values: values.map((value, sequence): TagValue => ({
       tagId: query.tagId,
       value,
       quality: sequence === 0 ? "GOOD" : "BAD",
