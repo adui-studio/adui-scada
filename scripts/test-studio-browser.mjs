@@ -673,9 +673,12 @@ async function checkStudioInPage() {
     return (
       style.boxShadow === "none" &&
       style.backgroundColor === "rgba(0, 0, 0, 0)" &&
-      [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth].every(
-        (width) => width === "0px",
-      )
+      [
+        style.borderTopWidth,
+        style.borderRightWidth,
+        style.borderBottomWidth,
+        style.borderLeftWidth,
+      ].every((width) => width === "0px")
     );
   };
   const actionsStyle = getComputedStyle(element(".studio-actions"));
@@ -723,10 +726,7 @@ async function checkStudioInPage() {
         ),
     );
     const importLayout = filePanel?.querySelector(".studio-import");
-    verify(
-      "导入 JSON 不再嵌套卡片或额外描边",
-      flatPopup(importLayout),
-    );
+    verify("导入 JSON 不再嵌套卡片或额外描边", flatPopup(importLayout));
     document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
     await new Promise((resolve) => setTimeout(resolve, 350));
     verify(
@@ -784,7 +784,10 @@ async function checkStudioInPage() {
     verify(label + "弹层实际可见且无嵌套卡片", popupHit(panel) && flatPopup(panel));
     document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
     await new Promise((resolve) => setTimeout(resolve, 350));
-    verify(label + "弹层可通过外部点击关闭", !popupHit(menu.querySelector(".studio-version-panel")));
+    verify(
+      label + "弹层可通过外部点击关闭",
+      !popupHit(menu.querySelector(".studio-version-panel")),
+    );
   }
 
   return { findings, viewport: { width: innerWidth, height: innerHeight } };
@@ -1024,7 +1027,11 @@ async function verifyWorkspaceProjectInPage() {
   );
   click(nav("工作台"), "无法验证编辑离开保护");
   const leaveDialog = await waitFor(
-    () => [...document.querySelectorAll(".t-dialog")].find((node) => node.getClientRects().length && node.textContent.includes("当前工程可能有未保存内容")),
+    () =>
+      [...document.querySelectorAll(".t-dialog")].find(
+        (node) =>
+          node.getClientRects().length && node.textContent.includes("当前工程可能有未保存内容"),
+      ),
     "未保存编辑离开时未显示确认",
   );
   click(leaveDialog.querySelector(".t-dialog__cancel"), "缺少继续编辑入口");
@@ -1040,7 +1047,13 @@ async function verifyWorkspaceProjectInPage() {
     "无法保存新建工程",
   );
   const saveDialog = await waitFor(
-    () => [...document.querySelectorAll(".t-dialog")].find((node) => !previousDialogs.has(node) && node.getClientRects().length && node.textContent.includes("数据库已有草稿")),
+    () =>
+      [...document.querySelectorAll(".t-dialog")].find(
+        (node) =>
+          !previousDialogs.has(node) &&
+          node.getClientRects().length &&
+          node.textContent.includes("数据库已有草稿"),
+      ),
     "已有草稿覆盖确认未显示",
   );
   click(saveDialog.querySelector(".t-dialog__confirm"), "缺少保存草稿确认入口");
@@ -1067,10 +1080,16 @@ async function verifyWorkspaceProjectInPage() {
     "恢复工程后图元不一致",
   );
   history.back();
-  await waitFor(() => location.hash === "#/" && document.querySelector(".scada-home"), "浏览器后退未回到工作台");
+  await waitFor(
+    () => location.hash === "#/" && document.querySelector(".scada-home"),
+    "浏览器后退未回到工作台",
+  );
   history.forward();
   await waitFor(
-    () => location.hash === "#/studio/" + projectId && document.querySelector(".studio-toolbar h1")?.getAttribute("data-project-id") === projectId && document.querySelectorAll(".studio-hitbox").length === 1,
+    () =>
+      location.hash === "#/studio/" + projectId &&
+      document.querySelector(".studio-toolbar h1")?.getAttribute("data-project-id") === projectId &&
+      document.querySelectorAll(".studio-hitbox").length === 1,
     "浏览器前进未恢复对应草稿",
   );
   return {
@@ -1334,7 +1353,11 @@ async function runScadaUIExperience(session) {
         await pause(120);
         try {
           restoredProject = await session.evaluate(
-            "location.hash === " + JSON.stringify("#/studio/" + created.projectId) + " && document.querySelector('.studio-toolbar h1')?.getAttribute('data-project-id') === " + JSON.stringify(created.projectId) + " && document.querySelectorAll('.studio-hitbox').length === 1",
+            "location.hash === " +
+              JSON.stringify("#/studio/" + created.projectId) +
+              " && document.querySelector('.studio-toolbar h1')?.getAttribute('data-project-id') === " +
+              JSON.stringify(created.projectId) +
+              " && document.querySelectorAll('.studio-hitbox').length === 1",
           );
         } catch {
           // 刷新期间执行上下文暂不可用。

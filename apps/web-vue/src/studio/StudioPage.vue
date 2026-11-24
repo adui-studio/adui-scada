@@ -117,10 +117,14 @@ const emit = defineEmits<{ projectChange: [projectId: string] }>();
 const router = useRouter();
 const editor = new DocumentEditor(props.initialDocument ?? waterTreatmentStudioDocument);
 const state = shallowRef(editor.snapshot());
-let routeBaseline = props.initialClean === false ? null : JSON.stringify(editor.snapshot().document);
-watch(() => state.value.document.projectId, (id, previous) => {
-  if (id !== previous) emit("projectChange", id);
-});
+let routeBaseline =
+  props.initialClean === false ? null : JSON.stringify(editor.snapshot().document);
+watch(
+  () => state.value.document.projectId,
+  (id, previous) => {
+    if (id !== previous) emit("projectChange", id);
+  },
+);
 const preview = shallowRef<{ id: string; x: number; y: number } | null>(null);
 const geometryPreview = shallowRef<ScadaDocument | null>(null);
 const rotating = ref(false);
@@ -163,7 +167,11 @@ let autoSaveSession: DraftAutoSaveSession | null = null;
 let draftActionInProgress = false;
 let routeConfirmationPending = false;
 const removeRouteGuard = router.beforeEach(async (to, from) => {
-  if (to.path === from.path || to.path === workspaceStudioPath(editor.snapshot().document.projectId)) return true;
+  if (
+    to.path === from.path ||
+    to.path === workspaceStudioPath(editor.snapshot().document.projectId)
+  )
+    return true;
   if (historyActionInProgress || draftActionInProgress) {
     notice.value = "工程操作尚未完成，请稍后再切换工作区";
     return false;
@@ -178,7 +186,11 @@ const removeRouteGuard = router.beforeEach(async (to, from) => {
   }
 });
 function beforeUnload(event: BeforeUnloadEvent) {
-  if (historyActionInProgress || draftActionInProgress || routeBaseline !== JSON.stringify(editor.snapshot().document)) {
+  if (
+    historyActionInProgress ||
+    draftActionInProgress ||
+    routeBaseline !== JSON.stringify(editor.snapshot().document)
+  ) {
     event.preventDefault();
     event.returnValue = "";
   }
@@ -2022,10 +2034,18 @@ async function importJsonFile(file: File | undefined) {
                     allow-upload-duplicate-file
                     @select-change="onJsonSelected"
                   >
-                    <TButton type="button" theme="default" variant="text" size="small">导入 JSON</TButton>
+                    <TButton type="button" theme="default" variant="text" size="small"
+                      >导入 JSON</TButton
+                    >
                   </TUpload>
                 </div>
-                <TButton type="button" theme="default" variant="text" size="small" @click="exportJson">
+                <TButton
+                  type="button"
+                  theme="default"
+                  variant="text"
+                  size="small"
+                  @click="exportJson"
+                >
                   导出 JSON
                 </TButton>
                 <TButton

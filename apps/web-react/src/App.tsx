@@ -215,7 +215,9 @@ export function StudioWorkspaceRoute() {
   const { projectId } = useParams<"projectId">();
   const themeMode = useOutletContext<"light" | "dark">();
   const navigate = useNavigate();
-  const [loaded, setLoaded] = useState<{ entry: WorkspaceStudioEntry; session: number } | null>(null);
+  const [loaded, setLoaded] = useState<{ entry: WorkspaceStudioEntry; session: number } | null>(
+    null,
+  );
   const [error, setError] = useState("");
   const session = useRef(0);
   const activeRoute = useRef<string | null>(null);
@@ -236,7 +238,8 @@ export function StudioWorkspaceRoute() {
     void Promise.resolve().then(async () => {
       if (controller.signal.aborted) return;
       try {
-        const entry = takeWorkspaceStudioEntry(projectId) ?? (await readWorkspaceStudioRoute(projectId));
+        const entry =
+          takeWorkspaceStudioEntry(projectId) ?? (await readWorkspaceStudioRoute(projectId));
         if (controller.signal.aborted) return;
         activeRoute.current = routeId;
         activeProject.current = entry.document.projectId;

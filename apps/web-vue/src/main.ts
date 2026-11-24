@@ -13,8 +13,16 @@ const router = createRouter({
   routes: [
     { path: "/", name: "home", component: () => import("./WorkspaceHome.vue") },
     { path: "/runtime", name: "runtime", component: () => import("./runtime/RuntimePage.vue") },
-    { path: "/published", name: "published", component: () => import("./runtime/PublishedRuntimePage.vue") },
-    { path: "/studio/:projectId?", name: "studio", component: () => import("./studio/StudioWorkspaceRoute.vue") },
+    {
+      path: "/published",
+      name: "published",
+      component: () => import("./runtime/PublishedRuntimePage.vue"),
+    },
+    {
+      path: "/studio/:projectId?",
+      name: "studio",
+      component: () => import("./studio/StudioWorkspaceRoute.vue"),
+    },
     { path: "/:pathMatch(.*)*", redirect: "/" },
   ],
 });

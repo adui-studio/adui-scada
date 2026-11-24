@@ -353,7 +353,11 @@ export async function readWorkspaceStudioRoute(projectId: string | undefined) {
       return { document: waterTreatmentStudioDocument, notice: "已打开内置模拟工程", clean: true };
     }
     if (projectId === waterTreatmentShowcaseDocument.projectId) {
-      return { document: waterTreatmentShowcaseDocument, notice: "已打开水处理总览示例", clean: true };
+      return {
+        document: waterTreatmentShowcaseDocument,
+        notice: "已打开水处理总览示例",
+        clean: true,
+      };
     }
     throw new Error("当前浏览器没有该工程的草稿，请返回工作台选择工程或重新导入");
   } finally {

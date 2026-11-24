@@ -36,7 +36,9 @@ export function stageWorkspaceStudioEntry(entry: WorkspaceStudioEntry): void {
   pendingStudioEntry = entry;
 }
 
-export function takeWorkspaceStudioEntry(projectId: string | undefined): WorkspaceStudioEntry | null {
+export function takeWorkspaceStudioEntry(
+  projectId: string | undefined,
+): WorkspaceStudioEntry | null {
   const pending = pendingStudioEntry;
   pendingStudioEntry = null;
   return pending && pending.document.projectId === projectId ? pending : null;

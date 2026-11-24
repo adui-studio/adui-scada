@@ -11,7 +11,9 @@ defineProps<{ themeMode: "light" | "dark" }>();
 const route = useRoute();
 const router = useRouter();
 const projectId = computed(() =>
-  typeof route.params.projectId === "string" && route.params.projectId ? route.params.projectId : undefined,
+  typeof route.params.projectId === "string" && route.params.projectId
+    ? route.params.projectId
+    : undefined,
 );
 const loaded = shallowRef<{ entry: WorkspaceStudioEntry; session: number } | null>(null);
 const error = ref("");

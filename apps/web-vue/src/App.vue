@@ -1,7 +1,19 @@
 <script setup lang="ts">
 import { Button as TButton, Switch as TSwitch } from "tdesign-vue-next";
-import { AppIcon, ChartBarIcon, FileIcon, EditIcon, SunnyIcon, MoonIcon } from "tdesign-icons-vue-next";
-import { WORKSPACE_ROUTE_PATHS, workspaceViewFromRouteName, readWorkspaceTheme, transitionWorkspaceTheme } from "@adui/scada-runtime";
+import {
+  AppIcon,
+  ChartBarIcon,
+  FileIcon,
+  EditIcon,
+  SunnyIcon,
+  MoonIcon,
+} from "tdesign-icons-vue-next";
+import {
+  WORKSPACE_ROUTE_PATHS,
+  workspaceViewFromRouteName,
+  readWorkspaceTheme,
+  transitionWorkspaceTheme,
+} from "@adui/scada-runtime";
 import type { WorkspaceView } from "@adui/scada-runtime";
 import "tdesign-vue-next/es/style/index.css";
 import { computed, nextTick, ref } from "vue";
@@ -149,7 +161,11 @@ const viewLabels = {
         </div>
       </header>
       <RouterView v-slot="{ Component }">
-        <component v-if="view === 'home' || view === 'studio'" :is="Component" :theme-mode="themeMode" />
+        <component
+          v-if="view === 'home' || view === 'studio'"
+          :is="Component"
+          :theme-mode="themeMode"
+        />
         <component v-else :is="Component" />
       </RouterView>
     </div>

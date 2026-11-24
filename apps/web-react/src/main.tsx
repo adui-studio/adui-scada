@@ -27,7 +27,9 @@ const router = createHashRouter([
       {
         path: "published",
         id: "published",
-        lazy: async () => ({ Component: (await import("./runtime/PublishedRuntimePage.tsx")).default }),
+        lazy: async () => ({
+          Component: (await import("./runtime/PublishedRuntimePage.tsx")).default,
+        }),
       },
       { path: "studio/:projectId?", id: "studio", Component: StudioWorkspaceRoute },
       { path: "*", element: <Navigate to="/" replace /> },

@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Checkbox, Collapse, Dialog, Dropdown, Input, Popup, Select, Upload } from "tdesign-react";
+import {
+  Button,
+  Checkbox,
+  Collapse,
+  Dialog,
+  Dropdown,
+  Input,
+  Popup,
+  Select,
+  Upload,
+} from "tdesign-react";
 import { useBlocker } from "react-router";
 import type { DropdownProps } from "tdesign-react";
 import {
@@ -207,12 +217,24 @@ export default function StudioPage({
     if (currentLocation.pathname === nextLocation.pathname) return false;
     const current = editor.snapshot().document;
     // 编辑器已完成内部工程切换，只同步 URL，不重复加载工程或丢弃 CAS。
-    if (historyAction === "REPLACE" && nextLocation.pathname === workspaceStudioPath(current.projectId)) return false;
-    return historyActionRef.current || draftActionRef.current || routeBaseline.current !== JSON.stringify(current);
+    if (
+      historyAction === "REPLACE" &&
+      nextLocation.pathname === workspaceStudioPath(current.projectId)
+    )
+      return false;
+    return (
+      historyActionRef.current ||
+      draftActionRef.current ||
+      routeBaseline.current !== JSON.stringify(current)
+    );
   });
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
-      if (historyActionRef.current || draftActionRef.current || routeBaseline.current !== JSON.stringify(editor.snapshot().document)) {
+      if (
+        historyActionRef.current ||
+        draftActionRef.current ||
+        routeBaseline.current !== JSON.stringify(editor.snapshot().document)
+      ) {
         event.preventDefault();
         event.returnValue = "";
       }
@@ -1270,17 +1292,20 @@ export default function StudioPage({
   }
 
   /** 工程管理、版本查询和保存共用的授权缓存失效处理。 */
-  const invalidateServerAccess = useCallback((resetBrowser = true): void => {
-    serverSession.invalidateAccess();
-    setServerProjectId("");
-    setServerHeadRevision(null);
-    setServerRows([]);
-    setServerHasMore(false);
-    setServerInspectedVersion(null);
-    setServerRecoveryProjectId("");
-    setServerAccessRevision((revision) => revision + 1);
-    if (resetBrowser) setServerBrowserRevision((revision) => revision + 1);
-  }, [serverSession]);
+  const invalidateServerAccess = useCallback(
+    (resetBrowser = true): void => {
+      serverSession.invalidateAccess();
+      setServerProjectId("");
+      setServerHeadRevision(null);
+      setServerRows([]);
+      setServerHasMore(false);
+      setServerInspectedVersion(null);
+      setServerRecoveryProjectId("");
+      setServerAccessRevision((revision) => revision + 1);
+      if (resetBrowser) setServerBrowserRevision((revision) => revision + 1);
+    },
+    [serverSession],
+  );
 
   /** 从其他标签页返回时以真实服务端只读核对旧 CAS，不依赖本地跨页身份消息。 */
   useEffect(() => {
@@ -2022,7 +2047,13 @@ export default function StudioPage({
                         void importJsonFile(files[0]);
                       }}
                     >
-                      <Button tag="button" type="button" theme="default" variant="text" size="small">
+                      <Button
+                        tag="button"
+                        type="button"
+                        theme="default"
+                        variant="text"
+                        size="small"
+                      >
                         导入 JSON
                       </Button>
                     </Upload>

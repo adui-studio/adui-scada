@@ -1,10 +1,28 @@
 <script setup lang="ts">
 import { Input as TInput, Upload as TUpload } from "tdesign-vue-next";
-import { ChartBarIcon, FileIcon, EditIcon, AddIcon, UploadIcon, ChevronRightIcon } from "tdesign-icons-vue-next";
+import {
+  ChartBarIcon,
+  FileIcon,
+  EditIcon,
+  AddIcon,
+  UploadIcon,
+  ChevronRightIcon,
+} from "tdesign-icons-vue-next";
 import { waterTreatmentShowcaseDocument } from "@adui/scada-core";
-import { createWorkspaceDraft, listWorkspaceDrafts, readWorkspaceDraft, readWorkspaceJson } from "@adui/scada-draft-storage";
+import {
+  createWorkspaceDraft,
+  listWorkspaceDrafts,
+  readWorkspaceDraft,
+  readWorkspaceJson,
+} from "@adui/scada-draft-storage";
 import type { WorkspaceDraftSummary } from "@adui/scada-draft-storage";
-import { WORKSPACE_HOME_ENTRIES, filterWorkspaceHomeEntries, WORKSPACE_ROUTE_PATHS, workspaceStudioPath, stageWorkspaceStudioEntry } from "@adui/scada-runtime";
+import {
+  WORKSPACE_HOME_ENTRIES,
+  filterWorkspaceHomeEntries,
+  WORKSPACE_ROUTE_PATHS,
+  workspaceStudioPath,
+  stageWorkspaceStudioEntry,
+} from "@adui/scada-runtime";
 import type { WorkspaceView, WorkspaceStudioEntry } from "@adui/scada-runtime";
 import { computed, onMounted, onUnmounted, ref, shallowRef } from "vue";
 import { useRouter } from "vue-router";
@@ -110,7 +128,6 @@ function openDraft(projectId: string) {
     return { document: latest.document, notice: "已打开最新本地草稿", clean: true };
   });
 }
-
 </script>
 
 <template>
@@ -218,11 +235,7 @@ function openDraft(projectId: string) {
           @click="openEntry(entry.view)"
         >
           <span class="scada-home-thumbnail" :data-kind="entry.view">
-            <img
-              v-if="entry.preview"
-              :src="entry.preview"
-              alt="内置水处理工程静态预览，无实时值"
-            />
+            <img v-if="entry.preview" :src="entry.preview" alt="内置水处理工程静态预览，无实时值" />
             <span v-else aria-hidden="true">
               <EditIcon v-if="entry.view === 'studio'" aria-hidden="true" />
               <ChartBarIcon v-else-if="entry.view === 'runtime'" aria-hidden="true" />

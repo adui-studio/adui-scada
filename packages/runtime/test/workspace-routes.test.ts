@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { waterTreatmentStudioDocument } from "@adui/scada-core";
 import {
   WORKSPACE_ROUTE_PATHS,
@@ -10,7 +10,12 @@ import {
 
 describe("双端工作区路由", () => {
   it("仅登记四个真实功能入口", () => {
-    expect(Object.values(WORKSPACE_ROUTE_PATHS)).toEqual(["/", "/runtime", "/published", "/studio"]);
+    expect(Object.values(WORKSPACE_ROUTE_PATHS)).toEqual([
+      "/",
+      "/runtime",
+      "/published",
+      "/studio",
+    ]);
     expect(workspaceViewFromRouteName("studio")).toBe("studio");
     expect(workspaceViewFromRouteName("unknown")).toBe("home");
   });
