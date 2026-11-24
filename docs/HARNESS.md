@@ -4552,3 +4552,28 @@ try {
 ```
 
 探针自身在创建连接池前拒绝非指定目标及异常参数，并核验实际库名与事务只读状态。已有工程样本比对通过与空库结果分别打印固定中文说明。空库只能确认缺失作用域查询，不能据此切换业务仓储。若提示契约、只读连接或运行时错误，先定位；禁止使用宽松模式或 db sign 等有写入副作用的命令绕过验收。
+
+### Prisma 8 Skills 同步和历史只读专项
+
+在仓库根目录执行 `pnpm run db:prisma8:skills`，再执行 `pnpm --filter @adui/scada-server exec prisma skills list` 和 `pnpm run db:prisma8:emit`，检查同步提示及工作区差异。同步与契约生成使用同一服务端工作区，不禁用提示；实际效果待本机确认。
+
+仅使用已准备且已应用对应迁移的本机 15432 端口 `adui_scada_test` 隔离库。运行期间停止其他写入，不创建历史样本。PowerShell 临时设置专项连接地址，不覆盖生产连接地址：
+
+```powershell
+$previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+try {
+    if (-not $env:SCADA_TEST_DATABASE_URL) {
+        $env:SCADA_TEST_DATABASE_URL = Read-Host "输入本机 15432 端口 adui_scada_test 连接地址" -MaskInput
+    }
+    pnpm run test:db:prisma8:readonly
+    if ($LASTEXITCODE -ne 0) { throw "Prisma 8 只读专项失败" }
+} finally {
+    if ($null -eq $previousTestUrl) {
+        Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+    } else {
+        $env:SCADA_TEST_DATABASE_URL = $previousTestUrl
+    }
+}
+```
+
+已有工程和历史样本均对照成功方可确认正向读取；EMPTY 不计为正向通过。缺表或连接失败应保留日志，不执行签名、迁移、清库或重建容器。
