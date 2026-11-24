@@ -1869,3 +1869,62 @@
   font-weight: 550;
   line-height: 1.5;
 }
+
+/* 属性编辑与 Tag 目录是互斥工作任务，不让两种信息继续垂直堆叠。 */
+.studio-inspector-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 4px;
+  min-height: 53px;
+  margin: 0 -14px 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--scada-border);
+  background: var(--scada-surface);
+}
+.studio-inspector-tabs .t-button {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  min-height: 34px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-xs);
+  font-weight: 650;
+  white-space: nowrap;
+}
+.studio-inspector-tabs .t-button[aria-pressed="true"] {
+  border-color: var(--scada-border);
+  background: var(--scada-active-bg);
+  color: var(--scada-primary);
+  box-shadow: inset 0 -2px var(--scada-primary);
+}
+.studio-inspector-tabs .t-button:hover {
+  background: var(--adui-color-surface-muted);
+  color: var(--scada-text-strong);
+}
+.studio-inspector-content {
+  min-width: 0;
+}
+.studio-inspector-content[hidden] {
+  display: none;
+}
+.studio-inspector-content > h2 {
+  margin: 0 0 14px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--scada-border-subtle);
+  color: var(--scada-text-strong);
+  font-size: var(--adui-font-size-sm);
+  font-weight: 750;
+}
+.studio-inspector-content > p {
+  margin: 9px 0;
+  color: var(--scada-text-secondary);
+  font-size: var(--adui-font-size-xs);
+  overflow-wrap: anywhere;
+}

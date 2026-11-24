@@ -113,6 +113,8 @@ describe("精密工程工作台设计系统", () => {
     expect(css).toContain(".studio-canvas-board > .studio-svg");
     expect(css).toContain("background: var(--adui-color-stage);");
     expect(css).toContain(".studio-shell :is(button, input, select, textarea, summary):focus-visible");
+    expect(css).toContain(".studio-inspector-tabs {");
+    expect(css).toContain(".studio-inspector-content[hidden] {");
     expect(css).toContain(".studio-tag-toolbar {");
     expect(css).toContain(".studio-tag-search {");
     expect(css).toContain(".studio-tag-actions {");

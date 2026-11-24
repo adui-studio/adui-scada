@@ -1054,22 +1054,26 @@ async function runStudioReleasePreflight(session) {
   }
 }
 
-/** 展开项目 Tag 目录；编辑表单只能在明确点击新建或编辑后打开。 */
+/** 真正切换右侧「项目 Tag」模式；目录与图元属性不可同时堆叠在侧栏。 */
 async function openTagManagerInPage() {
-  const menu = [...document.querySelectorAll(".studio-advanced")].find((node) =>
-    node.querySelector(".t-collapse-panel__header")?.textContent.includes("项目 Tag 定义"),
+  const tabs = document.querySelector(".studio-inspector-tabs");
+  const button = [...(tabs?.querySelectorAll("button") ?? [])].find((item) =>
+    item.textContent.includes("项目 Tag"),
   );
-  if (!menu) throw new Error("未找到项目 Tag 定义面板");
-  const trigger = menu.querySelector(".t-collapse-panel__header");
-  if (!(trigger instanceof HTMLElement)) throw new TypeError("Tag 定义折叠触发器不存在");
-  trigger.click();
+  if (!(button instanceof HTMLButtonElement)) throw new TypeError("Tag 工作区切换按钮不存在");
+  button.click();
   const started = Date.now();
   while (Date.now() - started < 5000) {
-    const list = menu.querySelector('[role="list"][aria-label="项目 Tag 目录"]');
-    if (list?.getClientRects().length) return true;
+    const list = document.querySelector('[role="list"][aria-label="项目 Tag 目录"]');
+    if (
+      button.getAttribute("aria-pressed") === "true" &&
+      list?.getClientRects().length
+    ) {
+      return true;
+    }
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
-  throw new Error("项目 Tag 目录展开超时");
+  throw new Error("项目 Tag 工作区切换超时");
 }
 
 /** 独立对话框内才包含新建/编辑表单，不能退化为右侧属性栏常驻表单。 */
