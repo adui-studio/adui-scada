@@ -1,7 +1,15 @@
-import { Button, Input } from "tdesign-react";
+import { Button, Input, Upload } from "tdesign-react";
+import type { ScadaDocument } from "@adui/scada-core";
+import {
+  createWorkspaceDraft,
+  listWorkspaceDrafts,
+  readWorkspaceDraft,
+  readWorkspaceJson,
+} from "@adui/scada-draft-storage";
+import type { WorkspaceDraftSummary } from "@adui/scada-draft-storage";
 import { WORKSPACE_HOME_ENTRIES, filterWorkspaceHomeEntries } from "@adui/scada-runtime";
 import "tdesign-react/es/style/index.css";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 const RuntimePage = lazy(() => import("./runtime/RuntimePage.tsx"));
 const PublishedRuntimePage = lazy(() => import("./runtime/PublishedRuntimePage.tsx"));
@@ -19,6 +27,22 @@ const viewLabels: Record<AppView, string> = {
 /** 双端同一信息架构：主功能导航独立于工程工作区，运行与编辑不会混淆。 */
 export default function App() {
   const [view, setView] = useState<AppView>("home");
+  const [initialDocument, setInitialDocument] = useState<ScadaDocument | null>(null);
+  const [initialNotice, setInitialNotice] = useState("");
+
+  function navigate(next: AppView) {
+    if (next === "studio" && view !== "studio") {
+      setInitialDocument(null);
+      setInitialNotice("");
+    }
+    setView(next);
+  }
+
+  function openDocument(document: ScadaDocument, notice: string) {
+    setInitialDocument(document);
+    setInitialNotice(notice);
+    setView("studio");
+  }
   return (
     <div className="scada-app-frame" data-view={view}>
       <a className="scada-skip-link" href="#scada-main-content">
@@ -39,7 +63,7 @@ export default function App() {
             type="button"
             title="工作台"
             aria-current={view === "home" ? "page" : undefined}
-            onClick={() => setView("home")}
+            onClick={() => navigate("home")}
           >
             <svg
               viewBox="0 0 24 24"
@@ -60,7 +84,7 @@ export default function App() {
             type="button"
             title="运行监控"
             aria-current={view === "runtime" ? "page" : undefined}
-            onClick={() => setView("runtime")}
+            onClick={() => navigate("runtime")}
           >
             <svg
               viewBox="0 0 24 24"
@@ -78,7 +102,7 @@ export default function App() {
             type="button"
             title="已发布运行"
             aria-current={view === "published" ? "page" : undefined}
-            onClick={() => setView("published")}
+            onClick={() => navigate("published")}
           >
             <svg
               viewBox="0 0 24 24"
@@ -97,7 +121,7 @@ export default function App() {
             type="button"
             title="组态编辑"
             aria-current={view === "studio" ? "page" : undefined}
-            onClick={() => setView("studio")}
+            onClick={() => navigate("studio")}
           >
             <svg
               viewBox="0 0 24 24"
@@ -142,13 +166,13 @@ export default function App() {
           }
         >
           {view === "home" ? (
-            <WorkspaceHome onNavigate={setView} />
+            <WorkspaceHome onNavigate={navigate} onOpenDocument={openDocument} />
           ) : view === "runtime" ? (
             <RuntimePage />
           ) : view === "published" ? (
             <PublishedRuntimePage />
           ) : (
-            <StudioPage />
+            <StudioPage initialDocument={initialDocument} initialNotice={initialNotice} />
           )}
         </Suspense>
       </div>
@@ -157,9 +181,57 @@ export default function App() {
 }
 
 /** 不虚构最近文件，只展示真实存在的工作入口与内置模拟工程。 */
-function WorkspaceHome({ onNavigate }: { onNavigate: (view: AppView) => void }) {
+function WorkspaceHome({
+  onNavigate,
+  onOpenDocument,
+}: {
+  onNavigate: (view: AppView) => void;
+  onOpenDocument: (document: ScadaDocument, notice: string) => void;
+}) {
   const [query, setQuery] = useState("");
+  const [drafts, setDrafts] = useState<readonly WorkspaceDraftSummary[]>([]);
+  const [draftStatus, setDraftStatus] = useState("正在读取本地草稿…");
+  const [busy, setBusy] = useState(false);
+  const lifetime = useRef<AbortController | null>(null);
+  const operation = useRef(false);
   const entries = filterWorkspaceHomeEntries(query);
+  const visibleDrafts = drafts.filter((draft) =>
+    draft.projectId.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    lifetime.current = controller;
+    void listWorkspaceDrafts().then(
+      (rows) => {
+        if (controller.signal.aborted) return;
+        setDrafts(rows);
+        setDraftStatus(rows.length ? "" : "暂无已保存的本地草稿");
+      },
+      () => {
+        if (!controller.signal.aborted) setDraftStatus("本地草稿读取失败，请检查浏览器存储权限");
+      },
+    );
+    return () => controller.abort();
+  }, []);
+
+  async function openFromHome(
+    load: () => Promise<{ document: ScadaDocument; notice: string }>,
+  ) {
+    const controller = lifetime.current;
+    if (!controller || controller.signal.aborted || operation.current) return;
+    operation.current = true;
+    setBusy(true);
+    try {
+      const result = await load();
+      if (!controller.signal.aborted) onOpenDocument(result.document, result.notice);
+    } catch {
+      if (!controller.signal.aborted) setDraftStatus("工程操作失败，请检查文件或本地存储");
+    } finally {
+      operation.current = false;
+      if (!controller.signal.aborted) setBusy(false);
+    }
+  }
 
   return (
     <main id="scada-main-content" className="scada-home flex min-w-0 flex-col">
@@ -179,6 +251,50 @@ function WorkspaceHome({ onNavigate }: { onNavigate: (view: AppView) => void }) 
         </div>
       </div>
       <div className="scada-home-quick-grid grid">
+        <button
+          type="button"
+          className="scada-home-quick"
+          disabled={busy}
+          onClick={() => {
+            void openFromHome(async () => {
+              const draft = await createWorkspaceDraft();
+              return { document: draft.document, notice: "已创建并保存独立本地工程" };
+            });
+          }}
+        >
+          <span className="scada-home-card-icon" aria-hidden="true">+</span>
+          <strong>新建组态工程</strong>
+          <span aria-hidden="true">↗</span>
+        </button>
+        <div className="scada-home-upload">
+          <Upload
+            theme="custom"
+            accept=".json,application/json"
+            autoUpload={false}
+            files={[]}
+            allowUploadDuplicateFile
+            disabled={busy}
+            onSelectChange={(files) => {
+              const file = files[0];
+              if (!file) return;
+              void openFromHome(async () => {
+                const result = await readWorkspaceJson(file);
+                return {
+                  document: result.document,
+                  notice: result.migratedFrom
+                    ? `已从 ${result.migratedFrom} 迁移工程，请重新保存或导出`
+                    : "工程 JSON 已校验，请按需保存本地草稿",
+                };
+              });
+            }}
+          >
+            <button type="button" className="scada-home-quick" disabled={busy}>
+              <span className="scada-home-card-icon" aria-hidden="true">↥</span>
+              <strong>导入 JSON 工程</strong>
+              <span aria-hidden="true">↗</span>
+            </button>
+          </Upload>
+        </div>
         {WORKSPACE_HOME_ENTRIES.map((entry) => (
           <button
             key={entry.view}
@@ -259,8 +375,36 @@ function WorkspaceHome({ onNavigate }: { onNavigate: (view: AppView) => void }) 
         </div>
         {entries.length === 0 && <p role="status">没有匹配的工作区，请尝试其他关键词。</p>}
       </section>
+      <section className="scada-home-section" aria-labelledby="scada-home-drafts">
+        <div className="scada-home-section-head">
+          <h2 id="scada-home-drafts">我的草稿</h2>
+          <span>最近 50 个已保存的本地工程</span>
+        </div>
+        {draftStatus && <p role="status">{draftStatus}</p>}
+        {drafts.length > 0 && visibleDrafts.length === 0 && <p>没有匹配的本地草稿</p>}
+        <div className="scada-home-draft-grid">
+          {visibleDrafts.map((draft) => (
+            <button
+              key={draft.projectId}
+              type="button"
+              className="scada-home-draft"
+              disabled={busy}
+              onClick={() => {
+                void openFromHome(async () => {
+                  const latest = await readWorkspaceDraft(draft.projectId);
+                  return { document: latest.document, notice: "已打开最新本地草稿" };
+                });
+              }}
+            >
+              <strong>{draft.projectId}</strong>
+              <span>{draft.pageCount} 个页面 · {draft.tagCount} 个 Tag</span>
+              <small>修订 {draft.revision} · {new Date(draft.savedAt).toLocaleString("zh-CN")}</small>
+            </button>
+          ))}
+        </div>
+      </section>
       <p className="scada-home-footnote">
-        已有浏览器草稿请在 Studio 文件菜单中查看和恢复。本页不展示未经核实的最近文件或发布状态。
+        草稿仅保存在当前浏览器；本页不展示未经核实的发布状态。
       </p>
     </main>
   );

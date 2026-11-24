@@ -116,8 +116,17 @@ interface GeometryDragState {
   lastPatch: NodeTransformPatch | null;
 }
 
-export default function StudioPage() {
-  const editor = useMemo(() => new DocumentEditor(waterTreatmentStudioDocument), []);
+export default function StudioPage({
+  initialDocument = null,
+  initialNotice = "",
+}: {
+  initialDocument?: ScadaDocument | null;
+  initialNotice?: string;
+}) {
+  const editor = useMemo(
+    () => new DocumentEditor(initialDocument ?? waterTreatmentStudioDocument),
+    [initialDocument],
+  );
   const serverApi = useMemo(() => createScadaApiClient(), []);
   const serverSession = useMemo(() => createStudioServerProjectSession(serverApi), [serverApi]);
   const [state, setState] = useState<EditorSnapshot>(() => editor.snapshot());
@@ -136,7 +145,9 @@ export default function StudioPage() {
   const [layerDrop, setLayerDrop] = useState<{ id: string; position: "before" | "after" } | null>(
     null,
   );
-  const [notice, setNotice] = useState("可保存浏览器本地草稿 · 服务端工程需单独验证登录");
+  const [notice, setNotice] = useState(
+    initialNotice || "可保存浏览器本地草稿 · 服务端工程需单独验证登录",
+  );
   const [hasSavedDraft, setHasSavedDraft] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
   const [historyRows, setHistoryRows] = useState<readonly ProjectVersionSummary[]>([]);
