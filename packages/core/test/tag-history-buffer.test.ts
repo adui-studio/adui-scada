@@ -148,8 +148,10 @@ test("不同缓冲区彼此隔离，空采样和空查询不生成历史数据",
 test("稀疏采样数组的空位不能绕过原子校验", () => {
   const buffer = new TagHistoryBuffer(3);
   buffer.append({ kind: "sample", values: [sample(0)] });
-  const values = new Array<TagValue>(2);
-  values[0] = sample(1);
+  const values = [sample(1)];
+  values.length = 2;
+  expect(values).toHaveLength(2);
+  expect(Object.hasOwn(values, 1)).toBe(false);
   expect(() => buffer.append({ kind: "sample", values })).toThrow(/历史记录必须为对象/);
   expect(buffer.size).toBe(1);
   expect(buffer.query(query)[0].timestampMs).toBe(start);
