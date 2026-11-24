@@ -127,9 +127,9 @@ test("清理边界不得倒退，迟到旧点整批拒绝且边界点可写入",
   expect(() => buffer.pruneBefore(start + 9)).toThrow(/保留边界无效或倒退/);
   expect(() => buffer.pruneBefore(Number.NaN)).toThrow(/保留边界无效或倒退/);
   expect(() => buffer.pruneBefore(Number.MAX_SAFE_INTEGER)).toThrow(/保留边界无效或倒退/);
-  expect(() =>
-    buffer.append({ kind: "sample", values: [sample(11), sample(9)] }),
-  ).toThrow(/早于保留边界/);
+  expect(() => buffer.append({ kind: "sample", values: [sample(11), sample(9)] })).toThrow(
+    /早于保留边界/,
+  );
   expect(buffer.size).toBe(0);
   buffer.append({ kind: "sample", values: [sample(10)] });
   expect(buffer.size).toBe(1);

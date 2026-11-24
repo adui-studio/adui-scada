@@ -41,7 +41,8 @@ function toTagHistoryPoint(input: TagValue): TagHistoryPoint {
     serverTimestamp: sample.serverTimestamp,
     sequence: sample.sequence,
     timestampMs,
-    numericValue: sample.quality === "GOOD" && typeof sample.value === "number" ? sample.value : null,
+    numericValue:
+      sample.quality === "GOOD" && typeof sample.value === "number" ? sample.value : null,
   };
 }
 
