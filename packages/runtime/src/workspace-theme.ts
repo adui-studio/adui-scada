@@ -51,6 +51,8 @@ export async function transitionWorkspaceTheme(
   root.setAttribute("data-theme-transition", "");
   try {
     const transition = document.startViewTransition(update);
+    // 跳过动画时 ready 可能拒绝，避免产生未处理的 Promise。
+    void transition.ready.catch(() => {});
     await transition.updateCallbackDone;
     // 浏览器可因窗口不可见等原因跳过动画，主题状态仍已提交。
     await transition.finished.catch(() => {});

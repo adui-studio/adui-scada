@@ -1,0 +1,33 @@
+/* 参考 TDesign 官方站点 animation.less（MIT）：8 度斜切双向扫屏。 */
+@keyframes scada-light-to-dark {
+  from {
+    clip-path: polygon(0 0, 0 0, calc(tan(8deg) * -100vh) 100%, calc(tan(8deg) * -100vh) 100%);
+  }
+  to {
+    clip-path: polygon(0 0, calc(tan(8deg) * 100vh + 100%) 0, 100% 100%, calc(tan(8deg) * -100vh) 100%);
+  }
+}
+@keyframes scada-dark-to-light {
+  from {
+    clip-path: polygon(calc(tan(8deg) * 100vh + 100%) 0, calc(tan(8deg) * 100vh + 100%) 0, 100% 100%, 100% 100%);
+  }
+  to {
+    clip-path: polygon(0 0, calc(tan(8deg) * 100vh + 100%) 0, 100% 100%, calc(tan(8deg) * -100vh) 100%);
+  }
+}
+:root[data-theme-transition]::view-transition-group(root) {
+  animation-duration: 1s;
+}
+:root[data-theme-transition]::view-transition-old(root),
+:root[data-theme-transition]::view-transition-new(root) {
+  mix-blend-mode: normal;
+}
+:root[data-theme-transition]::view-transition-old(root) {
+  animation: none;
+}
+:root[data-theme-transition]::view-transition-new(root) {
+  animation-name: scada-dark-to-light;
+}
+:root[data-theme-transition][theme-mode="dark"]::view-transition-new(root) {
+  animation-name: scada-light-to-dark;
+}

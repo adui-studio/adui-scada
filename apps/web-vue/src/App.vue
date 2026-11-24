@@ -413,7 +413,7 @@ const viewLabels = {
       </main>
       <RuntimePage v-else-if="view === 'runtime'" />
       <PublishedRuntimePage v-else-if="view === 'published'" />
-      <StudioPage v-else :initial-document="initialDocument" :initial-notice="initialNotice" />
+      <StudioPage v-else :initial-document="initialDocument" :initial-notice="initialNotice" :theme-mode="themeMode" />
     </div>
   </div>
 </template>

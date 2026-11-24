@@ -184,7 +184,7 @@ export default function App() {
           ) : view === "published" ? (
             <PublishedRuntimePage />
           ) : (
-            <StudioPage initialDocument={initialDocument} initialNotice={initialNotice} />
+            <StudioPage initialDocument={initialDocument} initialNotice={initialNotice} themeMode={themeMode} />
           )}
         </Suspense>
       </div>

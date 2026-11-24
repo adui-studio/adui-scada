@@ -119,9 +119,11 @@ interface GeometryDragState {
 export default function StudioPage({
   initialDocument = null,
   initialNotice = "",
+  themeMode = "light",
 }: {
   initialDocument?: ScadaDocument | null;
   initialNotice?: string;
+  themeMode?: "light" | "dark";
 }) {
   const editor = useMemo(
     () => new DocumentEditor(initialDocument ?? waterTreatmentStudioDocument),
@@ -256,8 +258,8 @@ export default function StudioPage({
     [geometryPreview, snapResult, state.document, state.activePageId, state.selectedIds],
   );
   const image = useMemo(
-    () => svgDataUrl(displayDocument, previewTags, state.activePageId, "light"),
-    [displayDocument, state.activePageId],
+    () => svgDataUrl(displayDocument, previewTags, state.activePageId, themeMode === "dark" ? "studio-dark" : "light"),
+    [displayDocument, state.activePageId, themeMode],
   );
 
   if (!page) throw new Error("工程文档不包含页面");

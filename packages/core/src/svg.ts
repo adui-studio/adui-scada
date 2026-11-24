@@ -67,7 +67,7 @@ function quality(tag: TagValue | undefined): string {
 function renderTank(
   node: ScadaNode,
   tags: ReadonlyMap<string, TagValue>,
-  appearance: "dark" | "light",
+  appearance: "dark" | "light" | "studio-dark",
 ): string {
   const { width: w, height: h } = node.transform;
   const tag = tagFor(node, "level", tags);
@@ -76,9 +76,9 @@ function renderTank(
     valid && typeof tag.value === "number" ? Math.min(100, Math.max(0, tag.value)) : null;
   const innerHeight = percent === null ? 0 : ((h - 10) * percent) / 100;
   const label = percent === null ? "--" : `${number(percent)}%`;
-  if (appearance === "light") {
+  if (appearance !== "dark") {
     const levelHeight = percent === null ? 0 : (78 * percent) / 100;
-    const color = LIGHT_COLORS[tag?.quality ?? "BAD"];
+    const color = (appearance === "studio-dark" ? COLORS : LIGHT_COLORS)[tag?.quality ?? "BAD"];
     return (
       `<svg width="${number(w)}" height="${number(h)}" viewBox="0 0 100 150" preserveAspectRatio="none">` +
       '<rect x="22" y="8" width="56" height="12" rx="4" fill="url(#scada-metal)" stroke="#8699ad"/>' +
@@ -103,14 +103,14 @@ function renderTank(
 function renderPump(
   node: ScadaNode,
   tags: ReadonlyMap<string, TagValue>,
-  appearance: "dark" | "light",
+  appearance: "dark" | "light" | "studio-dark",
 ): string {
   const { width: w, height: h } = node.transform;
   const tag = tagFor(node, "running", tags);
   const running = tag?.quality === "GOOD" && tag.value === true;
   const valueText = tag?.quality !== "GOOD" ? quality(tag) : running ? "运行中" : "已停止";
-  if (appearance === "light") {
-    const color = LIGHT_COLORS[tag?.quality ?? "BAD"];
+  if (appearance !== "dark") {
+    const color = (appearance === "studio-dark" ? COLORS : LIGHT_COLORS)[tag?.quality ?? "BAD"];
     const motor = running ? "#b7e9d2" : "#d5dde7";
     return (
       `<svg width="${number(w)}" height="${number(h)}" viewBox="0 0 120 100" preserveAspectRatio="xMidYMid meet">` +
@@ -134,9 +134,9 @@ function renderPump(
   );
 }
 
-function renderPipe(node: ScadaNode, appearance: "dark" | "light"): string {
+function renderPipe(node: ScadaNode, appearance: "dark" | "light" | "studio-dark"): string {
   const { width: w, height: h } = node.transform;
-  if (appearance === "light") {
+  if (appearance !== "dark") {
     const line = `M 0 ${number(h / 2)} L ${number(w)} ${number(h / 2)}`;
     const thickness = Math.max(0.1, Math.min(h, 24));
     return (
@@ -150,7 +150,7 @@ function renderPipe(node: ScadaNode, appearance: "dark" | "light"): string {
 function renderLabel(
   node: ScadaNode,
   tags: ReadonlyMap<string, TagValue>,
-  appearance: "dark" | "light",
+  appearance: "dark" | "light" | "studio-dark",
 ): string {
   const text = typeof node.props.text === "string" ? node.props.text : "";
   const value = tagFor(node, "value", tags);
@@ -159,22 +159,22 @@ function renderLabel(
     value === undefined
       ? ""
       : `: ${value.quality === "GOOD" ? String(value.value ?? "--") : "--"} ${suffix}`;
-  if (appearance === "light" && node.props.presentation === "metric") {
+  if (appearance !== "dark" && node.props.presentation === "metric") {
     const raw = value?.quality === "GOOD" ? value.value : null;
     const reading =
       raw === null ? "--" : typeof raw === "boolean" ? (raw ? "是" : "否") : String(raw);
-    const color = LIGHT_COLORS[value?.quality ?? "BAD"];
+    const color = (appearance === "studio-dark" ? COLORS : LIGHT_COLORS)[value?.quality ?? "BAD"];
     const content = reading + (suffix ? " " + suffix : "");
     return (
       `<svg width="${number(node.transform.width)}" height="${number(node.transform.height)}" viewBox="0 0 320 92" preserveAspectRatio="none">` +
-      '<rect x="1" y="1" width="318" height="90" rx="9" fill="#f5f7fa" stroke="#d5dfe9"/>' +
-      `<text x="16" y="25" font-size="${number(Math.min(13, 280 / Math.max(1, text.length)))}" fill="#4d6176">${xml(text)}</text>` +
-      `<text x="16" y="58" font-size="${number(Math.min(25, 280 / Math.max(1, content.length)))}" font-weight="700" fill="#142338">${xml(content)}</text>` +
+      `<rect x="1" y="1" width="318" height="90" rx="9" fill="${appearance === "studio-dark" ? "#192333" : "#f5f7fa"}" stroke="${appearance === "studio-dark" ? "#36475c" : "#d5dfe9"}"/>` +
+      `<text x="16" y="25" font-size="${number(Math.min(13, 280 / Math.max(1, text.length)))}" fill="${appearance === "studio-dark" ? "#bbcadd" : "#4d6176"}">${xml(text)}</text>` +
+      `<text x="16" y="58" font-size="${number(Math.min(25, 280 / Math.max(1, content.length)))}" font-weight="700" fill="${appearance === "studio-dark" ? "#e6edf6" : "#142338"}">${xml(content)}</text>` +
       `<text x="16" y="78" font-size="10" fill="${color}">${quality(value)}</text>` +
       "</svg>"
     );
   }
-  if (appearance === "light") {
+  if (appearance !== "dark") {
     const content =
       value === undefined && node.bindings.value ? `${text}: -- ${suffix}` : text + dynamic;
     const fontSize = Math.min(
@@ -182,7 +182,7 @@ function renderLabel(
       node.transform.height * 0.72,
       node.transform.width / Math.max(1, content.length),
     );
-    return `<text x="0" y="${number(fontSize)}" font-size="${number(fontSize)}" fill="#142338">${xml(content)}</text>`;
+    return `<text x="0" y="${number(fontSize)}" font-size="${number(fontSize)}" fill="${appearance === "studio-dark" ? "#e6edf6" : "#142338"}">${xml(content)}</text>`;
   }
   return `<text x="0" y="${number(Math.min(24, node.transform.height))}" font-size="20" fill="#e6edf6">${xml(text + dynamic)}</text>`;
 }
@@ -190,7 +190,7 @@ function renderLabel(
 function renderNode(
   node: ScadaNode,
   tags: ReadonlyMap<string, TagValue>,
-  appearance: "dark" | "light",
+  appearance: "dark" | "light" | "studio-dark",
 ): string {
   const t = node.transform;
   let body: string;
@@ -223,7 +223,7 @@ export function renderSvgPage(
   document: ScadaDocument,
   pageId: string,
   values: ReadonlyMap<string, TagValue>,
-  appearance: "dark" | "light" = "dark",
+  appearance: "dark" | "light" | "studio-dark" = "dark",
 ): string {
   const page = document.pages.find((candidate) => candidate.id === pageId);
   if (!page) throw new RangeError(`未找到页面：${pageId}`);
@@ -231,7 +231,7 @@ export function renderSvgPage(
     `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${xml(page.name)}" ` +
     `viewBox="0 0 ${number(page.size.width)} ${number(page.size.height)}">` +
     `<rect width="100%" height="100%" fill="${appearance === "light" ? "#ffffff" : "#0c1728"}"/>` +
-    (appearance === "light" ? LIGHT_DEFINITIONS : "") +
+    (appearance !== "dark" ? LIGHT_DEFINITIONS : "") +
     page.nodes
       .filter(studioNodeVisible)
       .map((node) => renderNode(node, values, appearance))

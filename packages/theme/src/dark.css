@@ -1,4 +1,4 @@
-/* 深色仅改变应用外壳和编辑工作区，不改写白色工程画板或运行时 SVG。 */
+/* 深色主题同时适配 Studio 预览，不改变工程数据及默认运行时 SVG。 */
 :root[theme-mode="dark"] {
   --adui-color-brand-text: #8bbaff;
   --adui-color-brand-focus: #29446a;
@@ -20,6 +20,7 @@
   --adui-color-surface-raised: #202d3e;
   --adui-color-canvas: #151e2c;
   --adui-color-editor-workspace: #101722;
+  --adui-color-editor-artboard: #0c1728;
   --adui-color-editor-grid: #465367;
   --adui-color-selected: #223c60;
   --adui-color-action: #263447;

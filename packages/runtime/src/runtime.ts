@@ -72,7 +72,7 @@ export function svgDataUrl(
   document: ScadaDocument,
   values: readonly TagValue[],
   pageId?: string,
-  appearance: "dark" | "light" = "dark",
+  appearance: "dark" | "light" | "studio-dark" = "dark",
 ): string {
   const page =
     pageId === undefined ? document.pages[0] : document.pages.find((item) => item.id === pageId);
