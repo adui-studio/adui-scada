@@ -1614,4 +1614,5 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/history/prisma8-history-readonly.ts`：实际历史样本与参数化原生 SQL 对照。
 - `apps/server/src/history/prisma8-tag-history-reader.spec.ts`：历史查询边界单测。
 - `apps/server/test/prisma8-readonly.db-spec.ts`：本机隔离数据库只读专项。
-- 根脚本 `db:prisma8:skills`、`test:db:prisma8:readonly`：工作区同步及专项执行入口。
+- `scripts/prisma8-cli.mjs`、`scripts/prisma8-cli.cases.mjs`：复用服务端已安装的 Prisma 8 CLI，从根目录执行 Skills 同步、列表及离线契约生成，拒绝其他命令。
+- 根脚本 `db:prisma8:skills`、`db:prisma8:skills:list`、`test:prisma8:cli`、`test:db:prisma8:readonly`：根目录统一同步、入口保护测试及真实数据库专项。

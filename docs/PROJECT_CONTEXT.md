@@ -2714,3 +2714,7 @@ Prisma 8 当前为不同 API 与 CLI 的 RC；既有 Prisma Client、适配器�
 - PR #201 在 Windows HEAD `3fe7985a0f5553ee73fb91efff21f7a9330c8a3e` 验收：974/974 单测、63/63 HTTP E2E、476 文件格式检查、318 文件 Lint/类型检查零警告零错误、345 个自有文案文件、95 份 Markdown、React/Vue/NestJS 构建及 `ready` 退出码 0。获维护者授权后合入 MVP 集成分支，提交 `dca35d38f3e14592e8755e6d41966740a6f90b8a`。
 - 新分支 `feat/mvp-prisma8-history-read` 增加独立历史只读查询及原生 SQL 对照探针，沿用现有历史规范编码和数据隔离边界，不切换生产历史仓储、归档事务或迁移所有权。
 - Prisma 8 真实数据库探针仍待 Windows 本机隔离数据库运行；空库不算正向样本对照通过。Skills 同步提示与 React 591.62 kB 分包提示仍待处理。MVP 集成 PR #198 保持 Draft。
+
+### 2026-11-25 · Prisma 8 Skills 根目录治理与只读类型修复（PR #202）
+
+维护者要求所有 Skills 统一在根 `.agents/skills/`，并提交 Windows 验收日志：服务端四份第三方技能造成 Vite+ 大量报错，另有只读客户端 TS2883；命令退出码 1。本批在既有 Draft PR #202 补充根目录 CLI 入口、三项入口保护测试、共享配置门禁、官方公开客户端类型及文档；不变更依赖、锁文件、契约 Schema、迁移或业务查询。真实 Skills 同步、完整 ready、979 项预期单测和数据库对照仍待复验，PR #198 与 #202 均不提前合并。

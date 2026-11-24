@@ -1277,3 +1277,16 @@
 - **实际局部复验**：Node.js 22.16.0、TypeScript 5.8.3 对修复前后 GitHub 构造函数摘录（其余依赖为最小类型声明）使用 strict、ES2023、Bundler 与 erasableSyntaxOnly 执行 tsc --noEmit，修复前复现 4 项 TS1294、退出码 2；修复后 0 项、退出码 0。Node 原生类型擦除实际验证字段绑定、非法采样配置拒绝、工程范围冻结及重复归档写入者拒绝。不是完整仓库编译或 Vitest；Windows TypeScript 6、双端类型检查、正式单测与 ready 仍待运行。
 - **远端修复证据**：TagHistoryArchiveWriter 提交 b0c1d7f7fc4eccbe91d9c46431f34a3bd599290e，Blob b9ac92dd13a62611b2b3e3f346810dd3d1431738；TagHistorySampler 提交 1098b214e4d89fa98719ce017aca99765510dc37，Blob e0d7dbbe53cd40d5ebf2bba76aa763c6e914bddc。均回读与预期最小修改一致。
 - **防复发**：所有供浏览器消费的共享包使用可擦除 TypeScript 语法，不采用参数属性简写，不为兼容修复而关闭严格配置；把独立 Web 类型检查与 Core 编译均视为必须通过的门禁。不能将仅面向 Node 的构建或根 Vite+ 通过视为全链完成。
+
+### E-134 · Prisma Skills 重复生成进入工作区质量检查（PR #202，待 Windows 复验）
+
+- **Windows 实测**：HEAD `81ac5185e6d8f990a65b0a5d0a2b365ed93ff688`，固定依赖安装、Skills 同步和两版 Prisma 生成成功。Skills 列表显示三项技能分别写入服务端四个 Agent 目录；`vp check --fix` 报 317 个错误、68 个警告（498 个受检文件），命令链退出码 1，后续 ready 未执行。
+- **根因**：原根脚本使用 pnpm filter 将 CLI 运行目录切换到 apps/server，且未限制 agents；第三方脚本进入项目自有代码检查。已核对 CLI 8.0.0-rc.35 源码，Skills 以进程 cwd 为根，配置路径不改变 cwd。
+- **最小修复**：统一从仓库根启动已安装的 Prisma 8 CLI，显式指向原服务端配置，限制 agents 为 agents 并保留 check；只允许同步、列表、离线生成，沿用根目录已有格式化/Lint 排除规则。旧的本机重复副本需备份移出且撤销对应新增路径暂存；共享配置检查拒绝残留。无依赖、锁文件、Schema、迁移或正式查询语义变更。
+- **防复发与验证**：Node.js 22.16.0 使用模拟 CLI 的三项独立入口测试通过；须 Windows 真实 Skills 同步、列表、两版生成及完整 ready 复验。不得通过关闭第三方过期检查或修改其代码消除告警。
+
+### E-135 · Prisma 8 公开客户端工厂泄漏传递依赖类型（PR #202，待 Windows 复验）
+
+- **Windows 实测**：同一日志在 `prisma8-readonly-client.ts` 触发 TS2883，工厂推断返回类型无法脱离 pnpm 中 @prisma/orm-family-sql 的 NoCollectionClasses 命名。
+- **根因与候选修复**：Prisma ORM PostgreSQL 8.0.0-rc.25 的 runtime 公开导出 `PostgresClient<TContract>`，默认集合泛型由库内部处理。将项目类型别名改为 `PostgresClient<Contract>` 并显式声明工厂返回值，保留同一强类型 Contract、连接池与关闭语义；不使用 any、传递依赖深层路径或关闭类型检查。
+- **验证**：固定版本公开类型源码已核对，正式 TypeScript 6、Vite+、Vitest 与真实 PostgreSQL 只读对照尚待维护者复验。

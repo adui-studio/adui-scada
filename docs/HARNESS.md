@@ -4555,7 +4555,7 @@ try {
 
 ### Prisma 8 Skills 同步和历史只读专项
 
-在仓库根目录执行 `pnpm run db:prisma8:skills`，再执行 `pnpm --filter @adui/scada-server exec prisma skills list` 和 `pnpm run db:prisma8:emit`，检查同步提示及工作区差异。同步与契约生成使用同一服务端工作区，不禁用提示；实际效果待本机确认。
+在仓库根目录执行 `pnpm run db:prisma8:skills`、`pnpm run db:prisma8:skills:list` 和 `pnpm run db:prisma8:emit`。三个命令统一由 `scripts/prisma8-cli.mjs` 从仓库根目录启动服务端已安装的 Prisma 8 CLI，显式读取原服务端配置；只同步根 `.agents/skills/`，保留过期检查。禁止再次直接从服务端工作区执行 Skills 同步；若已有四组重复副本，先备份迁出并仅撤销对应新增路径的暂存。运行 `pnpm run config:check` 验证入口及旧副本不存在，并运行 `pnpm run test:prisma8:cli` 检查根工作目录、固定配置、命令边界及退出码转发（已纳入 ready）。真实 CLI 同步及契约生成一致性待 Windows 复验。
 
 仅使用已准备且已应用对应迁移的本机 15432 端口 `adui_scada_test` 隔离库。运行期间停止其他写入，不创建历史样本。PowerShell 临时设置专项连接地址，不覆盖生产连接地址：
 
