@@ -4771,3 +4771,7 @@ D5c7 候选新增规范编码 4 项、真实 PostgreSQL 归档 5 项、共享模
 另外对 schema.prisma b4d60d7122f13a0e8f3da9fc3fa54c79c9372816 与 migration.sql 8eafcbee4bb2c7c7101b7f1e68d8834ccd7db9d6 独立静态检查 8/8：单事务、两表及 15 个物理字段中文注释、关联说明、复合外键名称、查询索引和反向关系。现有全新库迁移验证脚本动态枚举迁移目录，无须固定数量调整。
 
 以上不是正式 Vitest、Prisma validate、Vite+、类型检查、真实数据库或浏览器验收。协作容器 Node.js 22.16.0 低于仓库最低 22.18.0，未安装 pnpm/Vite+，无法解析 GitHub 与 npm Registry 域名；PR #198 初始提交未返回 CI 运行记录。保留 Draft，继续将完整质量链及实际浏览器作为统一验收前置条件，不请求维护者执行中间定向验收。
+
+#### D5c7 · E-131 React 运行页语法阻塞修复
+
+维护者 Windows 首次执行 PR #198 的 vp check --fix 在 RuntimePage.tsx:123:4 遇到 Unexpected token，格式化失败，后续质量门禁未执行。远端旧 Blob d2a50e98e4d0277990dacbbc87e6025deba83811 经完整文件回读确认残留旧 Effect 和重复 svg 声明。仅删除残留；修复提交 15f98671dfe5f8a01c35f463b0b1cdeb040faef2 的 Blob 5ce8ad1f52d20b72a3d0c7ce5f7d8ca845e148fb 与容器完整文件 git hash-object 一致。Node.js 22.16.0 / TypeScript 5.8.3 的 TSX createSourceFile 解析诊断由 3 条降至 0 条；未执行项目真实 TypeScript 6、Vite+、Lint、Vitest、数据库和浏览器。维护者先在最新分支执行 vp check --fix、vp check 与 pnpm run typecheck:web，再继续统一验收。
