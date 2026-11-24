@@ -2630,3 +2630,7 @@ PR #192 内统一 React/Vue Studio 通用操作图标为 TDesign，工业设备�
 ### D5c2 · FR-012 只读历史趋势前置
 
 PR #192 已按维护者授权 Squash 合并至 `main@c1d61982b13dc4bc61d31845e21795ce521ad614`。下一批仅推进共享 Core 的本地只读历史选择与质量保留投影；FR-011 D1～D5 保持待批准。未增加实际归档、服务端 API、数据库、真实工业网关或 UI；目标 8 项定向测试，尚待 Windows Vite+、Vitest、文档与中文门禁。
+
+### D5c2 · Windows 定向验收完成（PR #193）
+
+维护者 Windows 实测 D5c2 定向验收通过：Vite+ 458 个格式文件、300 个受检文件零警告错误，历史查询 8/8、TagStore 6/6，合计 14/14；中文文案 327 文件、Markdown 95 份均通过。最终日志未打印本地 HEAD；GitHub 候选 b51b8e9e6ce40a8a886c261d011ff186cf1c9c4e 相对初始候选 7f6bbe1d 仅测试排版变化。维护者明确同意合并。仅证明定向本地契约及既有 TagStore 回归，不代表全量 ready、持久化历史或现场工业验收。
