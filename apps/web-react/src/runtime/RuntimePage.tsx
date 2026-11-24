@@ -1,7 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { Button, Select, Upload } from "tdesign-react";
+import { readWorkspaceJson } from "@adui/scada-draft-storage";
+import type { ScadaDocument, TagHistoryPoint } from "@adui/scada-core";
 import { TAG_QUALITIES, TAG_QUALITY_LABELS } from "@adui/scada-core";
 import {
   DemoRuntime,
+  createLocalProjectSimulationSource,
+  simulationHistoryCsv,
+  simulationTrendPaths,
   OfflineDemoRuntime,
   formatRuntimeDataAge,
   formatRuntimeUpdateTime,
@@ -9,18 +16,110 @@ import {
   RUNTIME_STATUS_LABELS,
   svgDataUrl,
 } from "@adui/scada-runtime";
-import type { RuntimeState } from "@adui/scada-runtime";
+import type { LocalProjectSimulationSource, RuntimeState } from "@adui/scada-runtime";
 
 export default function RuntimePage() {
+  const [selection, setSelection] = useState<{ project: ScadaDocument | null; revision: number }>({
+    project: null,
+    revision: 0,
+  });
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const generation = useRef(0);
+
+  useEffect(() => () => {
+    generation.current += 1;
+  }, []);
+
+  async function importProject(file: File): Promise<void> {
+    const token = ++generation.current;
+    setBusy(true);
+    try {
+      const result = await readWorkspaceJson(file);
+      if (token !== generation.current) return;
+      setSelection((previous) => ({ project: result.document, revision: previous.revision + 1 }));
+      setNotice("工程已校验，当前仅为本地模拟运行，未执行正式发布");
+    } catch {
+      if (token === generation.current) setNotice("工程文件无效，保留当前运行会话");
+    } finally {
+      if (token === generation.current) setBusy(false);
+    }
+  }
+
+  function resetProject(): void {
+    generation.current += 1;
+    setBusy(false);
+    setSelection((previous) => ({ project: null, revision: previous.revision + 1 }));
+    setNotice("");
+  }
+
+  return (
+    <RuntimeMonitor
+      key={selection.revision}
+      project={selection.project}
+      controls={
+        <div className="scada-simulation-tools">
+          <Upload
+            theme="custom"
+            accept=".json,application/json"
+            autoUpload={false}
+            files={[]}
+            allowUploadDuplicateFile
+            disabled={busy}
+            onSelectChange={(files) => {
+              const file = files[0];
+              if (file) void importProject(file);
+            }}
+          >
+            <Button size="small" variant="outline" disabled={busy}>导入工程模拟运行</Button>
+          </Upload>
+          {selection.project && (
+            <Button size="small" theme="default" variant="outline" onClick={resetProject}>
+              返回内置示例
+            </Button>
+          )}
+          {notice && <span role="status">{notice}</span>}
+        </div>
+      }
+    />
+  );
+}
+
+function RuntimeMonitor({ project, controls }: { project: ScadaDocument | null; controls: ReactNode }) {
   const [state, setState] = useState<RuntimeState>(initialRuntimeState);
+  const [pageId, setPageId] = useState(project?.pages[0]?.id);
+  const [historyTag, setHistoryTag] = useState(
+    project?.tags.find((tag) => tag.dataType === "number")?.tagId ?? project?.tags[0]?.tagId,
+  );
+  const [history, setHistory] = useState<readonly TagHistoryPoint[]>([]);
+  const sourceRef = useRef<LocalProjectSimulationSource | null>(null);
 
   useEffect(() => {
+    if (project) {
+      const source = createLocalProjectSimulationSource(project);
+      sourceRef.current = source;
+      const runtime = new DemoRuntime((next) => {
+        setState(next);
+        setHistory(source.history());
+      }, source);
+      void runtime.start();
+      return () => {
+        sourceRef.current = null;
+        runtime.stop();
+      };
+    }
     const runtime =
       import.meta.env.MODE === "desktop"
         ? new OfflineDemoRuntime(setState)
         : new DemoRuntime(setState);
     void runtime.start();
     return () => runtime.stop();
+  }, [project]);
+
+  const svg = state.document ? svgDataUrl(state.document, state.values, pageId) : null;
+  const paths = simulationTrendPaths(history);
+
+  return () => runtime.stop();
   }, []);
 
   const svg = state.document ? svgDataUrl(state.document, state.values) : null;
@@ -30,21 +129,37 @@ export default function RuntimePage() {
       <header className="scada-header">
         <div>
           <p className="scada-eyebrow">ADui SCADA · 本地模拟运行</p>
-          <h1>水处理实时监控</h1>
+          <h1>{project ? project.projectName ?? project.projectId : "水处理实时监控"}</h1>
         </div>
         <span className="scada-status" data-status={state.status}>
           {RUNTIME_STATUS_LABELS[state.status]}
         </span>
       </header>
+      {controls}
       <p role="status" className="scada-message">
         {state.message}
       </p>
       <div className="scada-monitor-layout">
         <section className="scada-panel scada-process-panel" aria-label="模拟工业监控画面">
-          <h2>模拟工艺流程</h2>
+          <h2>{project ? "导入工程只读模拟" : "模拟工艺流程"}</h2>
           <p className="scada-panel-subtitle">只读演示画面 · 不代表现场设备数据</p>
+          {project && (
+            <div className="scada-simulation-tools">
+              <span>页面</span>
+              <Select
+                size="small"
+                value={pageId}
+                options={project.pages.map((page) => ({ label: page.name, value: page.id }))}
+                onChange={(value) => {
+                  if (typeof value === "string" && project.pages.some((page) => page.id === value)) {
+                    setPageId(value);
+                  }
+                }}
+              />
+            </div>
+          )}
           {svg ? (
-            <img className="scada-svg" src={svg} alt="水箱、水泵与流量模拟监控" />
+            <img className="scada-svg" src={svg} alt={project ? "导入工程模拟监控" : "水箱、水泵与流量模拟监控"} />
           ) : (
             <p>正在加载工程…</p>
           )}
@@ -101,6 +216,37 @@ export default function RuntimePage() {
               )}
             </section>
           </section>
+          {project && (
+            <section className="scada-panel scada-simulation-history" aria-label="本地模拟趋势">
+              <h2>本地模拟趋势</h2>
+              <p className="scada-panel-subtitle">最近 120 秒 · 单 Tag · 当前会话 · 不写入数据库</p>
+              {project.tags.length > 0 && (
+                <Select
+                  size="small"
+                  value={historyTag}
+                  options={project.tags.map((tag) => ({ label: tag.displayName, value: tag.tagId }))}
+                  onChange={(value) => {
+                    if (typeof value !== "string" || !project.tags.some((tag) => tag.tagId === value)) return;
+                    sourceRef.current?.selectHistoryTag(value);
+                    setHistoryTag(value);
+                    setHistory([]);
+                  }}
+                />
+              )}
+              <svg viewBox="0 0 320 120" role="img" aria-label="模拟数值趋势，范围零至一百" className="scada-simulation-chart">
+                <path d="M 8 8 H 312 M 8 60 H 312 M 8 112 H 312" className="scada-simulation-grid" />
+                {paths.map((path, index) => <path key={index} d={path} className="scada-simulation-line" />)}
+              </svg>
+              <p className="scada-panel-subtitle">
+                {history.length === 0 ? "暂无采样" : paths.length === 0 ? "当前没有正常数值点" : "合成数值范围 0～100，非工程量程"}
+              </p>
+              {history.length > 0 && (
+                <a download="本地模拟历史.csv" href={"data:text/csv;charset=utf-8," + encodeURIComponent("\uFEFF" + simulationHistoryCsv(history))}>
+                  导出当前模拟历史 CSV（{history.length} 条）
+                </a>
+              )}
+            </section>
+          )}
           <section className="scada-panel scada-values-panel" aria-label="Tag 质量与最近值">
             <h2>Tag 质量与最近值</h2>
             {state.values.length === 0 && (
