@@ -2684,22 +2684,100 @@ async function importJsonFile(file: File | undefined) {
               title="选择工具（V）"
               :aria-pressed="canvasTool === 'select'"
               @click="canvasTool = 'select'"
-              >选择</TButton
+              >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 3l14 10-7 1-3 7z" />
+              </svg>
+              选择
+            </TButton
             >
             <TButton
               type="button"
               title="抓手工具（H）"
               :aria-pressed="canvasTool === 'hand'"
               @click="canvasTool = 'hand'"
-              >抓手</TButton
+              >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M8 13V7a2 2 0 0 1 4 0v5-7a2 2 0 0 1 4 0v7-4a2 2 0 0 1 4 0v7a7 7 0 0 1-14 0l-2-3a2 2 0 0 1 3-2z" />
+              </svg>
+              抓手
+            </TButton
             >
           </div>
           <div class="studio-library-label">图元库 · 点击添加</div>
           <div class="studio-add">
-            <TButton type="button" @click="addSymbol('tank')">+ 水箱</TButton>
-            <TButton type="button" @click="addSymbol('pump')">+ 水泵</TButton>
-            <TButton type="button" @click="addSymbol('pipe')">+ 管道</TButton>
-            <TButton type="button" @click="addSymbol('label')">+ 文本</TButton>
+            <TButton type="button" @click="addSymbol('tank')">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 5h16v14H4zM4 12h16M8 5V3m8 2V3" />
+              </svg>
+              + 水箱
+            </TButton>
+            <TButton type="button" @click="addSymbol('pump')">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18zM9 8l6 4-6 4z" />
+              </svg>
+              + 水泵
+            </TButton>
+            <TButton type="button" @click="addSymbol('pipe')">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 17h7V7h11" />
+              </svg>
+              + 管道
+            </TButton>
+            <TButton type="button" @click="addSymbol('label')">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 5h16M12 5v14M8 19h8" />
+              </svg>
+              + 文本
+            </TButton>
           </div>
         </div>
       </section>

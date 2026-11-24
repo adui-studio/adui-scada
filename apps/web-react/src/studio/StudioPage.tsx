@@ -2750,6 +2750,17 @@ export default function StudioPage() {
                 aria-pressed={canvasTool === "select"}
                 onClick={() => setCanvasTool("select")}
               >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 3l14 10-7 1-3 7z" />
+                </svg>
                 选择
               </Button>
               <Button
@@ -2759,21 +2770,76 @@ export default function StudioPage() {
                 aria-pressed={canvasTool === "hand"}
                 onClick={() => setCanvasTool("hand")}
               >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M8 13V7a2 2 0 0 1 4 0v5-7a2 2 0 0 1 4 0v7-4a2 2 0 0 1 4 0v7a7 7 0 0 1-14 0l-2-3a2 2 0 0 1 3-2z" />
+                </svg>
                 抓手
               </Button>
             </div>
             <div className="studio-library-label">图元库 · 点击添加</div>
             <div className="studio-add">
               <Button tag="button" type="button" onClick={() => addSymbol("tank")}>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 5h16v14H4zM4 12h16M8 5V3m8 2V3" />
+                </svg>
                 + 水箱
               </Button>
               <Button tag="button" type="button" onClick={() => addSymbol("pump")}>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18zM9 8l6 4-6 4z" />
+                </svg>
                 + 水泵
               </Button>
               <Button tag="button" type="button" onClick={() => addSymbol("pipe")}>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3 17h7V7h11" />
+                </svg>
                 + 管道
               </Button>
               <Button tag="button" type="button" onClick={() => addSymbol("label")}>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 5h16M12 5v14M8 19h8" />
+                </svg>
                 + 文本
               </Button>
             </div>

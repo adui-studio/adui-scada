@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
+import { WORKSPACE_HOME_ENTRIES, filterWorkspaceHomeEntries } from "../src/workspace-home.ts";
 
 const themeRoot = new URL("../../theme/src/", import.meta.url);
 const readTheme = (name: string) => readFileSync(new URL(name, themeRoot), "utf8");
@@ -172,5 +173,38 @@ describe("精密工程工作台设计系统", () => {
     expect(css).toContain("overflow-wrap: anywhere;");
     expect(css).toContain("font-variant-numeric: tabular-nums;");
     expect(css).not.toMatch(/@import\s+url\s*\(/);
+  });
+});
+
+describe("Pixso 参考工作台", () => {
+  it("只提供真实入口并根据名称与说明搜索", () => {
+    expect(filterWorkspaceHomeEntries("  ")).toEqual(WORKSPACE_HOME_ENTRIES);
+    expect(WORKSPACE_HOME_ENTRIES.map((entry) => entry.view)).toEqual([
+      "studio",
+      "runtime",
+      "published",
+    ]);
+    expect(filterWorkspaceHomeEntries("TAG").map((entry) => entry.view)).toEqual(["studio"]);
+    expect(filterWorkspaceHomeEntries("不存在的工程")).toEqual([]);
+    expect(WORKSPACE_HOME_ENTRIES[0]?.preview).toContain("data:image/svg+xml");
+    expect(WORKSPACE_HOME_ENTRIES[2]?.preview).toBeUndefined();
+  });
+
+  it("双端复用工作台数据和搜索并保留真实静态预览", () => {
+    for (const path of [
+      "../../../apps/web-react/src/App.tsx",
+      "../../../apps/web-vue/src/App.vue",
+    ]) {
+      const source = readRelative(path);
+      expect(source).toContain("WORKSPACE_HOME_ENTRIES");
+      expect(source).toContain("filterWorkspaceHomeEntries");
+      expect(source).toContain("scada-home-quick-grid");
+      expect(source).toContain("scada-home-banner-grid");
+      expect(source).toContain("内置水处理工程静态预览，无实时值");
+    }
+    const css = readRelative("../src/runtime.css");
+    expect(css).toContain(".scada-home-thumbnail");
+    expect(css).toContain("aspect-ratio: 16 / 9;");
+    expect(readTheme("tokens.css")).toContain("--adui-color-brand: #5b2b82;");
   });
 });
