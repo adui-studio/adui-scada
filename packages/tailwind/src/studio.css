@@ -38,14 +38,7 @@
   opacity: 0.42;
 }
 .studio-import {
-  display: inline-block;
-  border: 1px solid var(--scada-border-strong);
-  border-radius: 6px;
-  background: var(--scada-action-bg);
-  padding: 8px 12px;
-  color: var(--scada-text-strong);
-  cursor: pointer;
-  font-size: 14px;
+  min-width: 0;
 }
 .studio-import input {
   display: none;
@@ -481,28 +474,28 @@
   outline: 2px solid var(--scada-cyan);
   outline-offset: -2px;
 }
+/* Popup 本身提供浮层外观；内容只负责排列，不再嵌套卡片。 */
 .studio-file-popover {
-  width: 200px;
+  width: min(200px, calc(100vw - 32px));
   display: grid;
-  gap: 6px;
-  padding: 10px;
-  border: 1px solid var(--scada-border-strong);
-  border-radius: 7px;
-  background: var(--scada-surface);
-  box-shadow: 0 14px 36px rgb(0 0 0 / 38%);
+  gap: var(--adui-space-1);
 }
-.studio-file-popover button,
-.studio-file-popover .studio-import {
+.studio-file-popover .t-button {
   display: flex;
   width: 100%;
+  height: var(--adui-control-height-sm);
+  min-height: var(--adui-control-height-sm);
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   margin: 0;
-  font-size: 12px;
-  text-align: center;
+  padding-inline: var(--adui-space-3);
+  padding-block: 0;
+  font-size: var(--adui-font-size-xs);
+  text-align: left;
 }
-.studio-file-popover .studio-import .t-upload,
-.studio-file-popover .studio-import .t-button {
+.studio-file-popover .studio-import,
+.studio-file-popover .studio-import .t-upload {
+  display: block;
   width: 100%;
 }
 .studio-side-more .t-collapse,
@@ -773,11 +766,7 @@
   max-height: min(440px, 60dvh);
   gap: 8px;
   overflow-y: auto;
-  padding: 12px;
-  border: 1px solid var(--scada-border-strong);
-  border-radius: 7px;
-  background: var(--scada-surface);
-  box-shadow: 0 16px 36px rgb(0 0 0 / 45%);
+  padding: 0;
 }
 .studio-view-section {
   display: grid;
@@ -1040,12 +1029,8 @@
   max-height: min(70vh, 610px);
   overflow-y: auto;
   gap: 10px;
-  padding: var(--adui-space-5);
-  border: 1px solid var(--scada-border-strong);
-  border-radius: 7px;
+  padding: 0;
   color: var(--scada-text);
-  background: var(--scada-surface);
-  box-shadow: 0 14px 36px rgb(0 0 0 / 38%);
 }
 /* 本地历史、服务端工程及发布预检统一由 TDesign Popup 定位。 */
 
@@ -1087,10 +1072,8 @@
 .studio-version-comparison {
   display: grid;
   gap: 7px;
-  padding: 10px;
-  border: 1px solid var(--scada-border);
-  border-radius: 5px;
-  background: var(--scada-bg);
+  padding: var(--adui-space-3) 0;
+  border-top: 1px solid var(--scada-border);
 }
 .studio-version-heading {
   display: flex;
@@ -1152,10 +1135,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px;
-  border: 1px solid var(--scada-border);
-  border-radius: 5px;
-  background: var(--scada-bg);
+  padding: var(--adui-space-3) 0;
+  border-top: 1px solid var(--scada-border);
 }
 .studio-project-browser-info {
   flex: 1;
@@ -1273,13 +1254,15 @@
   border-color: var(--scada-primary);
   background: var(--scada-primary-hover);
 }
+/* 统一为单层 TDesign 浮层，内部容器不拥有背景、描边或阴影。 */
 .studio-file-popover,
 .studio-version-panel,
 .studio-view-popover {
-  border-color: var(--scada-border);
-  border-radius: 12px;
-  background: var(--scada-surface);
-  box-shadow: var(--adui-shadow-floating);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .studio-page-bar {
   min-height: 44px;
@@ -1528,9 +1511,11 @@
 .studio-version-item,
 .studio-version-comparison,
 .studio-project-browser-item {
-  border-color: var(--scada-border);
-  border-radius: 9px;
-  background: var(--adui-color-surface-muted);
+  padding: var(--adui-space-3) 0;
+  border: 0;
+  border-top: 1px solid var(--scada-border);
+  border-radius: 0;
+  background: transparent;
 }
 .studio-version-error {
   color: var(--scada-danger);
@@ -2698,4 +2683,11 @@
 .studio-nudge .t-icon {
   flex: none;
   font-size: 16px;
+}
+
+/* 工具栏的外部按钮尺寸不应覆盖内部菜单项。 */
+.studio-actions .studio-file-popover .t-button {
+  height: var(--adui-control-height-sm);
+  min-height: var(--adui-control-height-sm);
+  font-size: var(--adui-font-size-xs);
 }

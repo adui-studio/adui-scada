@@ -248,3 +248,7 @@ React/Vue 按 Catalog 固定版本（tdesign-icons-react 0.6.11 / tdesign-icons-
 ## D5c1 · 工作区正式路由
 
 参见 [ADR-0071](adr/0071-dual-framework-workspace-router.md)。保持现有导航、主题与业务页面，React Outlet 和 Vue RouterView 按 URL 挂载工作区，工程专属路由以稳定 ID 查找本地工程，不冒称服务端授权。未保存离开需要明确确认，离开运行页依靠既有卸载释放订阅。
+
+## D5c1 · 单层下拉浮层
+
+顶部五个菜单和视图设置统一由 TDesign Popup 提供外层背景、圆角和阴影，内部容器只负责排列；不重复绘制卡片外观。文件与草稿使用五个等高（共享 small 28px）、左对齐的 TDesign Text Button，清除草稿保留 danger 语义和原确认机制，Upload 保持实际文件选择但不增加包裹边框。版本与工程目录列表采用分隔线而非独立卡片。保留原浮层挂载点、可见性、权限及全部草稿、预检、历史业务操作。

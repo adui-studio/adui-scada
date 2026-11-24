@@ -667,6 +667,17 @@ async function checkStudioInPage() {
     const hit = document.elementFromPoint(x, y);
     return rect.width > 0 && rect.height > 0 && hit !== null && panel.contains(hit);
   };
+  const flatPopup = (panel) => {
+    if (!(panel instanceof HTMLElement) || !panel.closest(".t-popup__content")) return false;
+    const style = getComputedStyle(panel);
+    return (
+      style.boxShadow === "none" &&
+      style.backgroundColor === "rgba(0, 0, 0, 0)" &&
+      [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth].every(
+        (width) => width === "0px",
+      )
+    );
+  };
   const actionsStyle = getComputedStyle(element(".studio-actions"));
   verify(
     "工具栏换行且不裁剪下拉浮层",
@@ -699,6 +710,23 @@ async function checkStudioInPage() {
         ) &&
         Boolean(filePanel.querySelector("button[aria-pressed]")),
     );
+    const fileButtons = [...(filePanel?.querySelectorAll("button.t-button") ?? [])];
+    verify(
+      "文件草稿为单层浮层且五项操作统一使用文本菜单",
+      flatPopup(filePanel) &&
+        fileButtons.length === 5 &&
+        fileButtons.every(
+          (button) =>
+            button.classList.contains("t-button--variant-text") &&
+            getComputedStyle(button).justifyContent === "flex-start" &&
+            bounds(button).height === 28,
+        ),
+    );
+    const importLayout = filePanel?.querySelector(".studio-import");
+    verify(
+      "导入 JSON 不再嵌套卡片或额外描边",
+      flatPopup(importLayout),
+    );
     document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
     await new Promise((resolve) => setTimeout(resolve, 350));
     verify(
@@ -723,6 +751,7 @@ async function checkStudioInPage() {
     verify(
       "本地历史弹层可见且保留快照与刷新入口",
       popupHit(historyPanel) &&
+        flatPopup(historyPanel) &&
         ["创建快照", "刷新"].every((label) =>
           [...historyPanel.querySelectorAll(".studio-version-tools button")].some(
             (button) => button.textContent.trim() === label,
@@ -751,7 +780,8 @@ async function checkStudioInPage() {
     verify(label + "触发器可见且可点击", Boolean(hit && trigger?.contains(hit)));
     trigger?.click();
     await settle();
-    verify(label + "弹层实际可见", popupHit(menu.querySelector(".studio-version-panel")));
+    const panel = menu.querySelector(".studio-version-panel");
+    verify(label + "弹层实际可见且无嵌套卡片", popupHit(panel) && flatPopup(panel));
     document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
     await new Promise((resolve) => setTimeout(resolve, 350));
     verify(label + "弹层可通过外部点击关闭", !popupHit(menu.querySelector(".studio-version-panel")));

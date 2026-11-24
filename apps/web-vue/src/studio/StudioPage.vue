@@ -2003,7 +2003,14 @@ async function importJsonFile(file: File | undefined) {
             <TButton type="button" variant="outline">文件与草稿</TButton>
             <template #content>
               <div class="studio-file-popover">
-                <TButton type="button" :aria-pressed="autoSaveEnabled" @click="toggleAutoSave">
+                <TButton
+                  type="button"
+                  theme="default"
+                  variant="text"
+                  size="small"
+                  :aria-pressed="autoSaveEnabled"
+                  @click="toggleAutoSave"
+                >
                   {{ autoSaveEnabled ? "暂停自动保存" : "开启自动保存" }}
                 </TButton>
                 <div class="studio-import">
@@ -2015,14 +2022,30 @@ async function importJsonFile(file: File | undefined) {
                     allow-upload-duplicate-file
                     @select-change="onJsonSelected"
                   >
-                    <TButton type="button" variant="outline">导入 JSON</TButton>
+                    <TButton type="button" theme="default" variant="text" size="small">导入 JSON</TButton>
                   </TUpload>
                 </div>
-                <TButton type="button" @click="exportJson">导出 JSON</TButton>
-                <TButton type="button" :disabled="!hasSavedDraft" @click="restoreDraft">
+                <TButton type="button" theme="default" variant="text" size="small" @click="exportJson">
+                  导出 JSON
+                </TButton>
+                <TButton
+                  type="button"
+                  theme="default"
+                  variant="text"
+                  size="small"
+                  :disabled="!hasSavedDraft"
+                  @click="restoreDraft"
+                >
                   恢复草稿
                 </TButton>
-                <TButton type="button" :disabled="!hasSavedDraft" @click="clearDraft">
+                <TButton
+                  type="button"
+                  theme="danger"
+                  variant="text"
+                  size="small"
+                  :disabled="!hasSavedDraft"
+                  @click="clearDraft"
+                >
                   清除草稿
                 </TButton>
               </div>

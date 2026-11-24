@@ -2003,6 +2003,9 @@ export default function StudioPage({
                   <Button
                     tag="button"
                     type="button"
+                    theme="default"
+                    variant="text"
+                    size="small"
                     onClick={toggleAutoSave}
                     aria-pressed={autoSaveEnabled}
                   >
@@ -2019,23 +2022,41 @@ export default function StudioPage({
                         void importJsonFile(files[0]);
                       }}
                     >
-                      <Button tag="button" type="button" variant="outline">
+                      <Button tag="button" type="button" theme="default" variant="text" size="small">
                         导入 JSON
                       </Button>
                     </Upload>
                   </div>
-                  <Button tag="button" type="button" onClick={exportJson}>
+                  <Button
+                    tag="button"
+                    type="button"
+                    theme="default"
+                    variant="text"
+                    size="small"
+                    onClick={exportJson}
+                  >
                     导出 JSON
                   </Button>
                   <Button
                     tag="button"
                     type="button"
+                    theme="default"
+                    variant="text"
+                    size="small"
                     onClick={restoreDraft}
                     disabled={!hasSavedDraft}
                   >
                     恢复草稿
                   </Button>
-                  <Button tag="button" type="button" onClick={clearDraft} disabled={!hasSavedDraft}>
+                  <Button
+                    tag="button"
+                    type="button"
+                    theme="danger"
+                    variant="text"
+                    size="small"
+                    onClick={clearDraft}
+                    disabled={!hasSavedDraft}
+                  >
                     清除草稿
                   </Button>
                 </div>
