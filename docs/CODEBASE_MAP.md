@@ -1575,3 +1575,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/tag-history.ts`：TagHistoryBuffer 准备、重试、确认及待确认清理保护。
 - `packages/core/src/index.ts`：新增 TagHistoryArchiveBatch 类型导出。
 - `packages/core/test/tag-history-archive.test.ts`：批次上限、不可变性、身份隔离、确认、迟到记录、清理及采样器背压回归。
+
+## D5c6 · FR-012 持久化端口与幂等协调
+
+- `packages/core/src/tag-history-persistence.ts`：复合键、持久化端口、回执严格匹配、单缓冲单写入协调与同批重试。
+- `packages/core/src/index.ts`：新增公共协调器、范围、请求、回执与端口类型。
+- `packages/core/test/tag-history-persistence.test.ts`：模拟回执丢失、错配、并发、身份范围与外部改变等定向用例。

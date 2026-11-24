@@ -39,6 +39,13 @@ export type {
   TagHistorySamplingDecision,
   TagHistorySamplingPolicy,
 } from "./tag-history.ts";
+export { TagHistoryArchiveWriter } from "./tag-history-persistence.ts";
+export type {
+  TagHistoryArchiveScope,
+  TagHistoryPersistencePort,
+  TagHistoryPersistenceReceipt,
+  TagHistoryPersistenceRequest,
+} from "./tag-history-persistence.ts";
 export {
   ALARM_EVENTS,
   ALARM_STATES,
