@@ -1,7 +1,4 @@
-import {
-  parseScadaDocument,
-  TagHistoryBuffer,
-} from "@adui/scada-core";
+import { parseScadaDocument, TagHistoryBuffer } from "@adui/scada-core";
 import type { TagChange, TagHistoryPoint, TagValue } from "@adui/scada-core";
 import type { ReadonlyTagSource } from "./tag-source.ts";
 
@@ -21,6 +18,7 @@ export function createLocalProjectSimulationSource(input: unknown): LocalProject
     project.tags[0]?.tagId;
   let buffer = new TagHistoryBuffer(HISTORY_CAPACITY);
   let lastSampleMs: number | undefined;
+  let subscribed = false;
 
   function resetHistory(): void {
     buffer = new TagHistoryBuffer(HISTORY_CAPACITY);
@@ -33,6 +31,8 @@ export function createLocalProjectSimulationSource(input: unknown): LocalProject
       return parseScadaDocument(project);
     },
     subscribe(handlers) {
+      if (subscribed) throw new Error("本地模拟源已有活动订阅");
+      subscribed = true;
       let closed = false;
       let sequence = 0;
       resetHistory();
@@ -43,7 +43,7 @@ export function createLocalProjectSimulationSource(input: unknown): LocalProject
         if (lastSampleMs !== undefined && now <= lastSampleMs) return;
         sequence += 1;
         const timestamp = new Date(now).toISOString();
-        const values: TagValue[] = project.tags.map((tag, index) => {
+        const values: TagValue[] = project.tags.map((tag, index): TagValue => {
           let value: TagValue["value"] = null;
           switch (tag.dataType) {
             case "number":
@@ -75,12 +75,18 @@ export function createLocalProjectSimulationSource(input: unknown): LocalProject
       };
 
       // 先同步发出快照，后续只产生增量；同步异常不能留下定时器。
-      publish("snapshot");
+      try {
+        publish("snapshot");
+      } catch (error) {
+        subscribed = false;
+        throw error;
+      }
       const timer = setInterval(() => publish("delta"), 1000);
       return {
         close(): void {
           if (closed) return;
           closed = true;
+          subscribed = false;
           clearInterval(timer);
         },
       };
