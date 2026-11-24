@@ -1532,3 +1532,7 @@ React/Vue 运行页可显式导入当前或可迁移 Schema 的最大 2 MiB JSON
 ## MVP · Prisma 8 阶段一工具链契约
 
 `prisma.config.ts` 使用官方 Prisma 8 `definePrismaConfig`、PostgreSQL 配置辅助函数及 `prisma7Schema`，禁止配置继承且不配置数据库连接；`db:prisma8:emit` 仅生成独立契约，不执行数据库写入。旧配置移至 `prisma7.config.ts`，保持根 .env 读取方式与迁移目录，所有既有 db:validate、db:generate、db:migrate:* 脚本仍显式调用官方 prisma7 CLI。Docker 初始化与全新隔离库迁移脚本从已安装的兼容包元数据解析 prisma7 二进制脚本，核对包名、主版本、入口存在及真实路径边界；拒绝退回普通 prisma 命令。原安全参数与目标数据库保护不放宽。生成物排除在自有代码格式、Lint、中文文案检查之外，不修改自动生成契约。当前阶段不挂载 Prisma 8 运行时客户端，不增加业务路由，不改变现有数据库模型、SQL 迁移、事务及工业安全边界。
+
+## MVP · Prisma 8 阶段二探针契约（候选）
+
+独立探针显式接收 SCADA_TEST_DATABASE_URL；缺失、远端、非 15432 端口、非 adui_scada_test、非 PostgreSQL 协议、异常参数与控制字符均拒绝。仅兼容单个 schema=public 参数并在传入 pg 前移除。原始 SQL 最多读取一个已有工程的租户 ID、工程 ID 和修订号；新版 ORM 使用两个等值条件、三个投影字段及 first() 查询，对照原始 SQL 的联合键和 BigInt 十进制表示。不存在的随机作用域必须返回 null；有样本时另测单独错配租户、单独错配工程均为空。空库只返回 EMPTY，不算正向样本一致性通过；有样本且一致时返回 MATCHED。两次查询不是同一事务快照，验收需停止隔离库的并发写入，发生修订变化时拒绝而非忽略。返回值仅含样本状态与缺失作用域核验标记，不输出实际工程数据、连接串或第三方异常。任何连接/查询/资源关闭失败均拒绝。本探针不是 ACL、生产数据库服务或迁移接管授权。
