@@ -46,6 +46,14 @@ function toTagHistoryPoint(input: TagValue): TagHistoryPoint {
   };
 }
 
+/** 采样候选与缓冲区共用单条记录的大小和字段校验。 */
+function toBufferedHistoryPoint(input: TagValue): TagHistoryPoint {
+  if (typeof input?.sourceTimestamp === "string" && input.sourceTimestamp.length > 128) {
+    throw new RangeError("历史记录源时间文本过长");
+  }
+  return toTagHistoryPoint(input);
+}
+
 /**
  * 从调用方已隔离的内存记录中选择一个 Tag 的历史点。
  * 不采集、不持久化、不推断数据连续性，不按实时序列去重。
@@ -135,11 +143,7 @@ export class TagHistoryBuffer {
     const checked: TagHistoryPoint[] = [];
     // 逐项遍历，避免稀疏数组的 map 跳过空位而破坏批次原子性。
     for (const input of values) {
-      // 源时间原样保留，但限制内存候选的单条记录文本大小。
-      if (typeof input?.sourceTimestamp === "string" && input.sourceTimestamp.length > 128) {
-        throw new RangeError("历史记录源时间文本过长");
-      }
-      const point = toTagHistoryPoint(input);
+      const point = toBufferedHistoryPoint(input);
       if (this.retentionStartMs !== undefined && point.timestampMs < this.retentionStartMs) {
         throw new RangeError("历史记录早于保留边界");
       }
@@ -166,5 +170,96 @@ export class TagHistoryBuffer {
     this.records = this.records.filter((point) => point.timestampMs >= cutoffMs);
     this.retentionStartMs = cutoffMs;
     return previousSize - this.records.length;
+  }
+}
+
+/** 显式周期与可选绝对数值变化阈值，不包含生产采样参数默认值。 */
+export interface TagHistorySamplingPolicy {
+  readonly intervalMs: number;
+  readonly numericDeadband?: number;
+}
+
+/** 单个采样输入，来源类别不能代替可信网关认证。 */
+export interface TagHistorySampleInput {
+  readonly kind: TagHistoryBatch["kind"];
+  readonly value: TagValue;
+}
+
+export type TagHistorySamplingDecision =
+  | "INITIAL"
+  | "QUALITY_CHANGE"
+  | "VALUE_AVAILABILITY_CHANGE"
+  | "VALUE_CHANGE"
+  | "PERIODIC"
+  | "SKIPPED";
+
+/**
+ * 单 Tag 的本地历史采样策略，每次处理一个调用方明确提供的采样。
+ * 不开启定时器、不自动订阅、不补造历史数据；实例须由调用方按工程和 Tag 隔离。
+ * 基线以成功进入内存缓冲区的记录为准，不表示已经持久化。
+ */
+export class TagHistorySampler {
+  private readonly intervalMs: number;
+  private readonly numericDeadband: number | undefined;
+  private lastRecorded: TagHistoryPoint | undefined;
+  private lastSeenMs: number | undefined;
+
+  constructor(
+    private readonly buffer: TagHistoryBuffer,
+    private readonly tagId: string,
+    policy: TagHistorySamplingPolicy,
+  ) {
+    if (typeof tagId !== "string" || !TAG_ID_PATTERN.test(tagId)) {
+      throw new TypeError("历史采样 Tag ID 无效");
+    }
+    if (!Number.isSafeInteger(policy.intervalMs) || policy.intervalMs <= 0) {
+      throw new RangeError("历史采样周期无效");
+    }
+    if (
+      policy.numericDeadband !== undefined &&
+      (!Number.isFinite(policy.numericDeadband) || policy.numericDeadband <= 0)
+    ) {
+      throw new RangeError("历史采样数值变化阈值无效");
+    }
+    this.intervalMs = policy.intervalMs;
+    this.numericDeadband = policy.numericDeadband;
+  }
+
+  /** 写入成功或明确跳过后才推进观测时间；写入失败不推进任何基线。 */
+  record(input: TagHistorySampleInput): TagHistorySamplingDecision {
+    if (input.kind !== "sample") {
+      throw new TypeError("历史采样不接受运行时派生质量或未知来源类别");
+    }
+    const point = toBufferedHistoryPoint(input.value);
+    if (point.tagId !== this.tagId) throw new TypeError("历史采样 Tag ID 不匹配");
+    if (this.lastSeenMs !== undefined && point.timestampMs < this.lastSeenMs) {
+      throw new RangeError("历史采样服务器时间倒退");
+    }
+
+    const previous = this.lastRecorded;
+    let decision: TagHistorySamplingDecision = "SKIPPED";
+    if (!previous) {
+      decision = "INITIAL";
+    } else if (point.quality !== previous.quality) {
+      decision = "QUALITY_CHANGE";
+    } else if ((point.numericValue === null) !== (previous.numericValue === null)) {
+      decision = "VALUE_AVAILABILITY_CHANGE";
+    } else if (
+      this.numericDeadband !== undefined &&
+      previous.numericValue !== null &&
+      point.numericValue !== null &&
+      Math.abs(point.numericValue - previous.numericValue) >= this.numericDeadband
+    ) {
+      decision = "VALUE_CHANGE";
+    } else if (point.timestampMs - previous.timestampMs >= this.intervalMs) {
+      decision = "PERIODIC";
+    }
+
+    if (decision !== "SKIPPED") {
+      this.buffer.append({ kind: "sample", values: [point] });
+      this.lastRecorded = point;
+    }
+    this.lastSeenMs = point.timestampMs;
+    return decision;
   }
 }
