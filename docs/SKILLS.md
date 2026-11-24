@@ -62,4 +62,6 @@ Prisma Postgres 云服务、Compute 与升级兼容技能并非自建 PostgreSQL
 
 根脚本 `pnpm run db:prisma8:skills`、`pnpm run db:prisma8:skills:list` 与服务端离线契约生成统一调用 `scripts/prisma8-cli.mjs`。它从服务端已安装的 Prisma 8 包解析 CLI 入口，以仓库根目录为工作目录并显式读取 `apps/server/prisma.config.ts`。配置仅选择 `agents: ["agents"]`，保留 `check: true`；不再使用 `pnpm --filter @adui/scada-server exec prisma skills sync/list`。
 
-预期根目录包含 `prisma-8`、`prisma-composer-core-concepts`、`prisma-platform-core-concepts` 三项官方包内技能。原有 `skills-lock.json` 索引及 pnpm Skills 目录规则不变；已有忽略规则与已跟踪的 Composer 技能保持不变。第三方源码不参与项目自有代码格式化或 Lint，不执行技能中的升级脚本。旧副本若已被暂存，应仅撤销这些新增路径的暂存并移出工作区，不删除其他 Agent 配置。真实 Windows 同步、列表与生成物一致性待复验。
+维护者在 Windows HEAD `a141b5a58eba622fb89a6f09f1a23fc2640b79a0` 实际运行列表、同步和再次列表：项目根为仓库根目录，版本检查启用；当前包内技能仅有 `prisma-8`（@prisma/orm-postgres 8.0.0-rc.25）与 `prisma-platform-core-concepts`（prisma 8.0.0-rc.35），两者均为 synced 且只指向 `.agents/skills`。此前跟踪的 `prisma-composer-core-concepts/SKILL.md` 已被官方同步识别为孤立技能并删除；仓库同步移除该旧文件，不为保留它而安装 Composer 或恢复生成副本。原有 `skills-lock.json` 索引、pnpm Skills 目录规则及两项包内技能的忽略规则不变。
+
+旧工作区中的 Prisma 重复副本不属于远端 Git 跟踪内容，切换分支不会清除；仅将旧的三个已知 Prisma 技能目录（若存在）备份迁出仓库，不移动或删除其他 Agent 配置。`config:check` 保留失败保护。第三方源码不参与项目自有代码格式化或 Lint，不执行技能中的升级脚本。根目录同步已实测成功；本机残留清理、完整质量链及契约生成一致性仍待复验。

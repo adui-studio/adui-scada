@@ -1298,3 +1298,12 @@
 - **最小修复**：保持根 cwd、显式服务端配置、无 Shell、固定命令白名单及退出码传递，仅调整子进程参数顺序为命令路径、`--config`、配置路径。模拟 CLI 现在拒绝错误命令顺序并返回 2，保留原有安全用例。
 - **局部复验**：Node.js 22.16.0 使用加强后的三项模拟测试，原入口 2/3 通过（退出码 1），修复后 3/3 通过（退出码 0），两个脚本语法检查通过。脚本 Git Blob 分别为 `bb4fae533f364b2a982370ca6c34103810efa160`、`189da799cae43b3cc2cd3f7c208b197207fdbca3`。协作环境访问 npm Registry 发生 DNS EAI_AGAIN，无法执行固定版本真实 CLI。真实 Skills 列表、同步、契约生成及完整 ready 尚待复验。
 - **防复发**：包装第三方 CLI 时核对已锁定版本的命令语法及官方测试；模拟必须拒绝实际不合法的参数顺序，不能只检查回显与自设预期一致。先执行真实无写入的 Skills 列表，再执行同步及离线生成，随后进行完整质量门禁。
+
+> **2026-11-25 · E-136 Skills 命令解析复验通过**：维护者 Windows 在 HEAD `a141b5a58eba622fb89a6f09f1a23fc2640b79a0` 通过加强后的模拟入口测试 3/3、真实 Skills 列表、同步及再次列表。CLI 报告根目录 D:\Workspace\adui-studio\adui-scada、check enabled，两项当前包内技能均为 synced；原 UNKNOWN_COMMAND 阻塞已解除。后续 config:check 因本地旧副本保护而退出 1；契约生成入口、E-134 完整质量验收和 E-135 类型检查尚未复验。
+
+### E-137 · 包内 Skills 孤立副本被 Git 跟踪且本地重复目录残留（PR #202）
+
+- **Windows 实测**：同一 HEAD 同步成功后，CLI 删除根目录的 `prisma-composer-core-concepts`；Git 显示其 SKILL.md 被删除。共享配置检查在 `apps/server/.agents/skills/prisma-8` 正确拒绝本地旧副本，退出码 1；不能认定其他旧目录全部存在或已清理。
+- **根因**：此前保留了已跟踪的 Composer 生成技能，但当前仓库根 CLI 只识别 Prisma ORM PostgreSQL 与 prisma 两个技能来源。官方同步按已安装来源、配置 Agent 和元数据识别孤立技能并清理；Git 快进不会清除未跟踪的旧工作区目录。远端完整 Git 树核实服务端四个 Agent 目录未被跟踪，旧 Composer 文件不属于 skills-lock.json 的索引。
+- **最小修复**：从候选分支移除该单一孤立 Composer 文件，更新 Skills 索引说明和验证记录；不安装额外依赖，不改 pnpm 配置、锁文件或质量检查。维护者仅备份迁出本机已知旧 Prisma 目录，保留其他 Agent 配置及原有根 Skills。
+- **防复发与验收**：包内生成 Skills 的实际列表以固定依赖在仓库根运行的 CLI 为准，不能因过去的安装日志而保留失效生成文件；先核实 Git 跟踪状态，再处理本地残留。同步后应无重复副本且不产生孤立 Composer 删除记录。完整 config:check、ready 和只读数据库专项尚待实测。

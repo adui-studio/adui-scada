@@ -4825,3 +4825,9 @@ PR #201 的维护者 Windows 日志记录 HEAD `3fe7985a0f5553ee73fb91efff21f7a9
 维护者 Windows 在 HEAD `5be430a6dec9d071fc1827ee8b47a4f7f6671977` 实际通过 pnpm 冻结安装和原入口测试 3/3；真实 Skills 同步报 `CLI.UNKNOWN_COMMAND`（`--config`），退出码 2。后续列表、配置检查、完整 ready 及数据库专项未执行。E-134/E-135 尚未关闭。
 
 本次按固定 CLI 上游测试修正参数顺序为命令在前、配置选项在后。协作环境 Node.js 22.16.0 加强模拟后复现原入口测试 2/3（退出码 1），修复后 3/3（退出码 0），两脚本语法检查通过；远端候选文件 Blob 与局部实测一致。npm Registry DNS EAI_AGAIN，真实 CLI 未能在协作环境运行。Windows 应先运行 `pnpm run db:prisma8:skills:list` 验证配置解析及根目录，再运行同步、列表、配置检查和原有完整验收。
+
+### 2026-11-25 · Prisma 8 根目录 Skills 真实同步通过及本地残留
+
+维护者 Windows HEAD `a141b5a58eba622fb89a6f09f1a23fc2640b79a0` 的 Node.js 24.18.0 环境实际通过 CLI 入口测试 3/3、真实 Skills 列表、同步和再次列表。项目目录为仓库根，check enabled；prisma-8（8.0.0-rc.25）和 prisma-platform-core-concepts（8.0.0-rc.35）均指向 .agents/skills 且 synced。原 CLI.UNKNOWN_COMMAND 阻塞解除。同步自动移除孤立 Composer Skill；Git 显示其单一跟踪文件被删除。config:check 正确拒绝 apps/server/.agents/skills/prisma-8 本机残留，整条命令链退出 1。
+
+远端完整 Git 树核对：四个服务端 Agent 目录均没有跟踪文件；Composer Skill 不在 skills-lock.json 中，当前实际同步列表未包含该技能。候选分支仅删除根目录这一孤立跟踪文件并更新文档，保留全部脚本、依赖和质量保护。需维护者备份迁出本机旧副本，再验证列表、重复同步、配置检查、契约生成及完整 ready；未执行数据库迁移或真实只读专项。
