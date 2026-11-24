@@ -7,6 +7,7 @@ import type {
   DragEvent as ReactDragEvent,
   CSSProperties,
   FormEvent,
+  KeyboardEvent as ReactKeyboardEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
 import {
@@ -20,6 +21,7 @@ import {
   studioNodeVisible,
   buildLayerTree,
   studioViewportRect,
+  studioFocusTransform,
   STUDIO_CANVAS_FIT_MARGIN,
   compareProjectDocuments,
   validateProjectReleasePreflight,
@@ -169,6 +171,7 @@ export default function StudioPage() {
   const [leftPanelWidth, setLeftPanelWidth] = useState(256);
   const [rightPanelWidth, setRightPanelWidth] = useState(320);
   const [rightPanelVisible, setRightPanelVisible] = useState(true);
+  const panelResizeRef = useRef<{ pointerId: number; x: number; width: number } | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const panDragRef = useRef<{
     pointerId: number;
@@ -250,7 +253,15 @@ export default function StudioPage() {
     width: viewportSize.width || page.size.width,
     height: viewportSize.height || page.size.height,
   };
-  const visibleRect = studioViewportRect(page.size, canvasViewport, zoom, pan, STUDIO_CANVAS_FIT_MARGIN);
+  const visibleRect = studioViewportRect(
+    page.size,
+    canvasViewport,
+    zoom,
+    pan,
+    STUDIO_CANVAS_FIT_MARGIN,
+  );
+  const worldPerPixel = visibleRect.width / canvasViewport.width;
+  const actualZoomPercent = Math.max(1, Math.round(100 / worldPerPixel));
 
   const hasGroupedSelection = page.nodes.some(
     (node) => node.groupId !== undefined && state.selectedIds.includes(node.id),
@@ -598,7 +609,14 @@ export default function StudioPage() {
             handled = true;
           }
         } else if (!command && !event.altKey) {
+          if ((key === "v" || key === "h") && !event.shiftKey &&
+            event.target instanceof Element && event.target.closest(".studio-canvas-scroll")) {
+            setCanvasTool(key === "v" ? "select" : "hand");
+            event.preventDefault();
+            return;
+          }
           if (key === "escape") {
+            panDragRef.current = null;
             dragRef.current = null;
             marqueeRef.current = null;
             geometryRef.current = null;
@@ -806,7 +824,7 @@ export default function StudioPage() {
   function changeZoom(delta: number) {
     const pageSize = page?.size;
     if (!pageSize) return;
-    const nextZoom = Math.max(0.5, Math.min(2, Math.round((zoom + delta) * 100) / 100));
+    const nextZoom = Math.max(0.5, Math.min(8, Math.round((zoom + delta) * 100) / 100));
     setZoom(nextZoom);
     setPan(
       (current) =>
@@ -818,6 +836,59 @@ export default function StudioPage() {
           STUDIO_CANVAS_FIT_MARGIN,
         ).pan,
     );
+  }
+
+  function resizePanel(side: "left" | "right", width: number) {
+    const next = Math.round(width);
+    if (side === "left") setLeftPanelWidth(Math.max(200, Math.min(340, next)));
+    else setRightPanelWidth(Math.max(260, Math.min(420, next)));
+  }
+
+  function beginPanelResize(event: ReactPointerEvent<HTMLDivElement>, side: "left" | "right") {
+    if (event.button !== 0) return;
+    const panel = event.currentTarget.parentElement?.querySelector(
+      side === "left" ? ".studio-panel-layers" : ".studio-panel-properties",
+    );
+    if (!panel) return;
+    panelResizeRef.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      width: panel.getBoundingClientRect().width,
+    };
+    event.currentTarget.focus({ preventScroll: true });
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+
+  function updatePanelResize(event: ReactPointerEvent<HTMLDivElement>, side: "left" | "right") {
+    const drag = panelResizeRef.current;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    resizePanel(side, drag.width + (event.clientX - drag.x) * (side === "left" ? 1 : -1));
+  }
+
+  function endPanelResize(event: ReactPointerEvent<HTMLDivElement>) {
+    if (panelResizeRef.current?.pointerId === event.pointerId) panelResizeRef.current = null;
+  }
+
+  function resizePanelByKey(event: ReactKeyboardEvent<HTMLDivElement>, side: "left" | "right") {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+    const width = side === "left" ? leftPanelWidth : rightPanelWidth;
+    resizePanel(side, width + direction * (side === "left" ? 10 : -10));
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function focusSelectedNode() {
+    if (!page || !selected || !studioNodeVisible(selected)) return;
+    const focus = studioFocusTransform(
+      page.size,
+      canvasViewport,
+      selected.transform,
+      STUDIO_CANVAS_FIT_MARGIN,
+    );
+    setZoom(focus.zoom);
+    setPan(focus.pan);
   }
 
   function resetCanvasView() {
@@ -2317,6 +2388,28 @@ export default function StudioPage() {
             </Collapse>
           </div>
         </aside>
+        {(["left", "right"] as const).map((side) =>
+          (side === "left" ? leftPanelVisible : rightPanelVisible) ? (
+            <div
+              key={side}
+              className="studio-panel-resizer"
+              data-side={side}
+              role="separator"
+              tabIndex={0}
+              aria-label={side === "left" ? "调整图层面板宽度" : "调整属性面板宽度"}
+              aria-orientation="vertical"
+              aria-valuemin={side === "left" ? 200 : 260}
+              aria-valuemax={side === "left" ? 340 : 420}
+              aria-valuenow={side === "left" ? leftPanelWidth : rightPanelWidth}
+              onPointerDown={(event) => beginPanelResize(event, side)}
+              onPointerMove={(event) => updatePanelResize(event, side)}
+              onPointerUp={endPanelResize}
+              onPointerCancel={endPanelResize}
+              onLostPointerCapture={endPanelResize}
+              onKeyDown={(event) => resizePanelByKey(event, side)}
+            />
+          ) : null,
+        )}
         <section className="studio-stage min-h-0 min-w-0" aria-label="组态画布">
           <div className="studio-stage-caption">
             <span>
@@ -2360,7 +2453,7 @@ export default function StudioPage() {
                           type="range"
                           min={200}
                           max={340}
-                          step={2}
+                          step={1}
                           value={leftPanelWidth}
                           onChange={(event) => setLeftPanelWidth(event.currentTarget.valueAsNumber)}
                         />
@@ -2371,7 +2464,7 @@ export default function StudioPage() {
                           type="range"
                           min={260}
                           max={420}
-                          step={10}
+                          step={1}
                           value={rightPanelWidth}
                           onChange={(event) => setRightPanelWidth(event.currentTarget.valueAsNumber)}
                         />
@@ -2412,16 +2505,27 @@ export default function StudioPage() {
               >
                 −
               </Button>
-              <Button tag="button" type="button" onClick={resetCanvasView}>
-                {zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%`}
+              <Button tag="button" type="button" title="适应画板" aria-label="适应画板" onClick={resetCanvasView}>
+                {actualZoomPercent}%
               </Button>
               <Button
                 tag="button"
                 type="button"
                 onClick={() => changeZoom(0.25)}
-                disabled={zoom >= 2}
+                disabled={zoom >= 8}
               >
                 +
+              </Button>
+              <Button
+                tag="button"
+                type="button"
+                className="studio-focus-selection"
+                title="定位选中图元"
+                aria-label="定位选中图元"
+                disabled={!selected || !studioNodeVisible(selected)}
+                onClick={focusSelectedNode}
+              >
+                定位
               </Button>
             </div>
           </div>
@@ -2448,6 +2552,10 @@ export default function StudioPage() {
                 }}
                 onPointerCancel={cancelDrag}
                 onPointerDownCapture={(event) => {
+                  if (event.button === 0) {
+                    const canvas = event.currentTarget.closest(".studio-canvas-scroll");
+                    if (canvas instanceof HTMLElement) canvas.focus({ preventScroll: true });
+                  }
                   if (beginCanvasPan(event)) event.stopPropagation();
                 }}
                 onPointerDown={startMarquee}
@@ -2528,15 +2636,10 @@ export default function StudioPage() {
                         width={t.width}
                         height={t.height}
                         fill="transparent"
-                        stroke={
-                          state.selectedId === node.id
-                            ? "#f0ae4d"
-                            : state.selectedIds.includes(node.id)
-                              ? "#39c9ba"
-                              : "transparent"
-                        }
-                        strokeWidth={2}
-                        strokeDasharray="6 4"
+                        data-selected={state.selectedIds.includes(node.id)}
+                        data-primary={state.selectedId === node.id}
+                        strokeWidth={1.5}
+                        vectorEffect="non-scaling-stroke"
                         className="studio-hitbox"
                         onPointerDown={(event) => beginDrag(event, node.id)}
                         onKeyDown={(event) => {
@@ -2558,10 +2661,11 @@ export default function StudioPage() {
                                   className="studio-resize-handle"
                                   data-handle={handle}
                                   aria-label={`缩放图元${RESIZE_HANDLE_LABELS[handle]}`}
-                                  x={position.x - 5}
-                                  y={position.y - 5}
-                                  width={10}
-                                  height={10}
+                                  x={position.x - 4 * worldPerPixel}
+                                  y={position.y - 4 * worldPerPixel}
+                                  width={8 * worldPerPixel}
+                                  height={8 * worldPerPixel}
+                                  vectorEffect="non-scaling-stroke"
                                   onPointerDown={(event) => beginGeometry(event, handle)}
                                 >
                                   <title>按住 Shift 保持宽高比</title>
@@ -2573,15 +2677,17 @@ export default function StudioPage() {
                               x1={t.x + t.width / 2}
                               x2={t.x + t.width / 2}
                               y1={t.y}
-                              y2={t.y - 26}
+                              y2={t.y - 24 * worldPerPixel}
+                              vectorEffect="non-scaling-stroke"
                               pointerEvents="none"
                             />
                             <circle
                               className="studio-rotation-handle"
                               aria-label="旋转图元，按住 Shift 可按 15 度吸附"
                               cx={t.x + t.width / 2}
-                              cy={t.y - 26}
-                              r={7}
+                              cy={t.y - 24 * worldPerPixel}
+                              r={5 * worldPerPixel}
+                              vectorEffect="non-scaling-stroke"
                               onPointerDown={(event) => beginGeometry(event, "rotate")}
                             />
                           </>
@@ -2627,6 +2733,7 @@ export default function StudioPage() {
               <Button
                 tag="button"
                 type="button"
+                title="选择工具（V）"
                 aria-pressed={canvasTool === "select"}
                 onClick={() => setCanvasTool("select")}
               >
@@ -2635,6 +2742,7 @@ export default function StudioPage() {
               <Button
                 tag="button"
                 type="button"
+                title="抓手工具（H）"
                 aria-pressed={canvasTool === "hand"}
                 onClick={() => setCanvasTool("hand")}
               >

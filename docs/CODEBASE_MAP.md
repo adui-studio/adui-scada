@@ -1532,3 +1532,7 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/web-{react,vue}/src/App` 与 `packages/runtime/src/runtime.css`：文件列表首页、Studio 横向工作空间切换栏。
 - 双端 `StudioPage` 与 `packages/tailwind/src/studio.css`：可调整面板宽度、左页面与图层、右属性与 Tag、中央 SVG、上方视图缩放及底部工具。
 - `scripts/test-studio-browser.mjs`：以实际宽度、调整与折叠操作检验布局；不再要求旧固定像素。
+
+- `packages/core/src/studio-viewport-rect.ts`：共享旋转图元定位及有界视区数学，双端使用实际 CSS 像素比例绘制手柄；运行与发布工作区的顶部导航和主画面布局统一在 `packages/runtime/src/runtime.css`。
+
+- 双端 `StudioPage`：原生面板分隔条指针捕获和键盘调整，仅修改视图宽度状态；共享 Studio CSS 提供定位与焦点视觉。

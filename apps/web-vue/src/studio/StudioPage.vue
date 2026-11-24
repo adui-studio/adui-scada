@@ -25,6 +25,7 @@ import {
   studioNodeVisible,
   buildLayerTree,
   studioViewportRect,
+  studioFocusTransform,
   STUDIO_CANVAS_FIT_MARGIN,
   compareProjectDocuments,
   validateProjectReleasePreflight,
@@ -141,6 +142,7 @@ const leftPanelVisible = ref(true);
 const leftPanelWidth = ref(256);
 const rightPanelWidth = ref(320);
 const rightPanelVisible = ref(true);
+let panelResize: { pointerId: number; x: number; width: number } | null = null;
 const svgRef = ref<SVGSVGElement | null>(null);
 let canvasResizeObserver: ResizeObserver | null = null;
 let activePan: {
@@ -217,6 +219,8 @@ const canvasViewport = computed(() => ({
 const visibleRect = computed(() =>
   studioViewportRect(page.value.size, canvasViewport.value, zoom.value, pan.value, STUDIO_CANVAS_FIT_MARGIN),
 );
+const worldPerPixel = computed(() => visibleRect.value.width / canvasViewport.value.width);
+const actualZoomPercent = computed(() => Math.max(1, Math.round(100 / worldPerPixel.value)));
 const selected = computed(() =>
   page.value.nodes.find((node) => node.id === state.value.selectedId),
 );
@@ -448,7 +452,14 @@ function handleKey(event: KeyboardEvent) {
         handled = true;
       }
     } else if (!command && !event.altKey) {
+      if ((key === "v" || key === "h") && !event.shiftKey &&
+        event.target instanceof Element && event.target.closest(".studio-canvas-scroll")) {
+        canvasTool.value = key === "v" ? "select" : "hand";
+        event.preventDefault();
+        return;
+      }
       if (key === "escape") {
+        activePan = null;
         activeDrag = null;
         activeMarquee = null;
         activeGeometry = null;
@@ -938,7 +949,7 @@ function layer(action: LayerAction) {
 }
 
 function changeZoom(delta: number) {
-  const nextZoom = Math.max(0.5, Math.min(2, Math.round((zoom.value + delta) * 100) / 100));
+  const nextZoom = Math.max(0.5, Math.min(8, Math.round((zoom.value + delta) * 100) / 100));
   zoom.value = nextZoom;
   pan.value = studioViewportRect(
     page.value.size,
@@ -947,6 +958,59 @@ function changeZoom(delta: number) {
     pan.value,
     STUDIO_CANVAS_FIT_MARGIN,
   ).pan;
+}
+
+function resizePanel(side: "left" | "right", width: number) {
+  const next = Math.round(width);
+  if (side === "left") leftPanelWidth.value = Math.max(200, Math.min(340, next));
+  else rightPanelWidth.value = Math.max(260, Math.min(420, next));
+}
+
+function beginPanelResize(event: PointerEvent, side: "left" | "right") {
+  if (event.button !== 0 || !(event.currentTarget instanceof HTMLElement)) return;
+  const panel = event.currentTarget.parentElement?.querySelector(
+    side === "left" ? ".studio-panel-layers" : ".studio-panel-properties",
+  );
+  if (!panel) return;
+  panelResize = {
+    pointerId: event.pointerId,
+    x: event.clientX,
+    width: panel.getBoundingClientRect().width,
+  };
+  event.currentTarget.focus({ preventScroll: true });
+  event.currentTarget.setPointerCapture(event.pointerId);
+  event.preventDefault();
+}
+
+function updatePanelResize(event: PointerEvent, side: "left" | "right") {
+  const drag = panelResize;
+  if (!drag || event.pointerId !== drag.pointerId) return;
+  resizePanel(side, drag.width + (event.clientX - drag.x) * (side === "left" ? 1 : -1));
+}
+
+function endPanelResize(event: PointerEvent) {
+  if (panelResize?.pointerId === event.pointerId) panelResize = null;
+}
+
+function resizePanelByKey(event: KeyboardEvent, side: "left" | "right") {
+  if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+  const direction = event.key === "ArrowRight" ? 1 : -1;
+  const width = side === "left" ? leftPanelWidth.value : rightPanelWidth.value;
+  resizePanel(side, width + direction * (side === "left" ? 10 : -10));
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function focusSelectedNode() {
+  if (!selected.value || !studioNodeVisible(selected.value)) return;
+  const focus = studioFocusTransform(
+    page.value.size,
+    canvasViewport.value,
+    selected.value.transform,
+    STUDIO_CANVAS_FIT_MARGIN,
+  );
+  zoom.value = focus.zoom;
+  pan.value = focus.pan;
 }
 
 function resetCanvasView() {
@@ -997,6 +1061,10 @@ function finishCanvasPan(event: PointerEvent): boolean {
 }
 
 function captureCanvasPointer(event: PointerEvent) {
+  if (event.button === 0 && event.currentTarget instanceof Element) {
+    const canvas = event.currentTarget.closest(".studio-canvas-scroll");
+    if (canvas instanceof HTMLElement) canvas.focus({ preventScroll: true });
+  }
   if (beginCanvasPan(event)) event.stopPropagation();
 }
 
@@ -2329,6 +2397,26 @@ async function importJsonFile(file: File | undefined) {
           </TCollapse>
         </div>
       </aside>
+      <template v-for="side in (['left', 'right'] as const)" :key="side">
+        <div
+          v-if="side === 'left' ? leftPanelVisible : rightPanelVisible"
+          class="studio-panel-resizer"
+          :data-side="side"
+          role="separator"
+          tabindex="0"
+          :aria-label="side === 'left' ? '调整图层面板宽度' : '调整属性面板宽度'"
+          aria-orientation="vertical"
+          :aria-valuemin="side === 'left' ? 200 : 260"
+          :aria-valuemax="side === 'left' ? 340 : 420"
+          :aria-valuenow="side === 'left' ? leftPanelWidth : rightPanelWidth"
+          @pointerdown="beginPanelResize($event, side)"
+          @pointermove="updatePanelResize($event, side)"
+          @pointerup="endPanelResize"
+          @pointercancel="endPanelResize"
+          @lostpointercapture="endPanelResize"
+          @keydown="resizePanelByKey($event, side)"
+        />
+      </template>
       <section class="studio-stage min-h-0 min-w-0" aria-label="组态画布">
         <div class="studio-stage-caption">
           <span
@@ -2357,11 +2445,11 @@ async function importJsonFile(file: File | undefined) {
                     <p>工作区面板</p>
                     <label class="studio-panel-size">
                       <span>图层宽度 · {{ leftPanelWidth }}px</span>
-                      <input v-model.number="leftPanelWidth" type="range" min="200" max="340" step="2" />
+                      <input v-model.number="leftPanelWidth" type="range" min="200" max="340" step="1" />
                     </label>
                     <label class="studio-panel-size">
                       <span>属性宽度 · {{ rightPanelWidth }}px</span>
-                      <input v-model.number="rightPanelWidth" type="range" min="260" max="420" step="10" />
+                      <input v-model.number="rightPanelWidth" type="range" min="260" max="420" step="1" />
                     </label>
                     <div class="studio-panel-toggles" aria-label="面板显示">
                       <TButton
@@ -2386,10 +2474,18 @@ async function importJsonFile(file: File | undefined) {
           </div>
           <div class="studio-zoom" aria-label="画布缩放">
             <TButton type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</TButton>
-            <TButton type="button" @click="resetCanvasView">
-              {{ zoom === 1 ? "适应" : `${Math.round(zoom * 100)}%` }}
+            <TButton type="button" title="适应画板" aria-label="适应画板" @click="resetCanvasView">
+              {{ actualZoomPercent }}%
             </TButton>
-            <TButton type="button" :disabled="zoom >= 2" @click="changeZoom(0.25)">+</TButton>
+            <TButton type="button" :disabled="zoom >= 8" @click="changeZoom(0.25)">+</TButton>
+            <TButton
+              type="button"
+              class="studio-focus-selection"
+              title="定位选中图元"
+              aria-label="定位选中图元"
+              :disabled="!selected || !studioNodeVisible(selected)"
+              @click="focusSelectedNode"
+            >定位</TButton>
           </div>
         </div>
         <div class="studio-canvas-scroll" tabindex="0" aria-label="组态网格工作区">
@@ -2461,21 +2557,17 @@ async function importJsonFile(file: File | undefined) {
                 <rect
                   role="button"
                   tabindex="0"
-                  :aria-label="`选择并拖动 ${node.id}`"
+                  :aria-label="studioNodeLocked(node) ? `选择已锁定图元 ${node.id}` : `选择并拖动 ${node.id}`"
+                  :data-locked="studioNodeLocked(node)"
                   :x="node.transform.x"
                   :y="node.transform.y"
                   :width="node.transform.width"
                   :height="node.transform.height"
                   fill="transparent"
-                  :stroke="
-                    state.selectedId === node.id
-                      ? '#f0ae4d'
-                      : state.selectedIds.includes(node.id)
-                        ? '#39c9ba'
-                        : 'transparent'
-                  "
-                  stroke-width="2"
-                  stroke-dasharray="6 4"
+                  :data-selected="state.selectedIds.includes(node.id)"
+                  :data-primary="state.selectedId === node.id"
+                  stroke-width="1.5"
+                  vector-effect="non-scaling-stroke"
                   class="studio-hitbox"
                   @pointerdown="beginDrag($event, node.id)"
                   @keydown.enter.prevent="selectNode(node.id, $event.shiftKey)"
@@ -2494,10 +2586,11 @@ async function importJsonFile(file: File | undefined) {
                     class="studio-resize-handle"
                     :data-handle="handle"
                     :aria-label="`缩放图元${RESIZE_HANDLE_LABELS[handle]}`"
-                    :x="resizeHandlePosition(node.transform, handle).x - 5"
-                    :y="resizeHandlePosition(node.transform, handle).y - 5"
-                    :width="10"
-                    :height="10"
+                    :x="resizeHandlePosition(node.transform, handle).x - 4 * worldPerPixel"
+                    :y="resizeHandlePosition(node.transform, handle).y - 4 * worldPerPixel"
+                    :width="8 * worldPerPixel"
+                    :height="8 * worldPerPixel"
+                    vector-effect="non-scaling-stroke"
                     @pointerdown.stop="beginGeometry($event, handle)"
                   >
                     <title>按住 Shift 保持宽高比</title>
@@ -2507,15 +2600,17 @@ async function importJsonFile(file: File | undefined) {
                     :x1="node.transform.x + node.transform.width / 2"
                     :x2="node.transform.x + node.transform.width / 2"
                     :y1="node.transform.y"
-                    :y2="node.transform.y - 26"
+                    :y2="node.transform.y - 24 * worldPerPixel"
+                    vector-effect="non-scaling-stroke"
                     pointer-events="none"
                   />
                   <circle
                     class="studio-rotation-handle"
                     aria-label="旋转图元，按住 Shift 可按 15 度吸附"
                     :cx="node.transform.x + node.transform.width / 2"
-                    :cy="node.transform.y - 26"
-                    :r="7"
+                    :cy="node.transform.y - 24 * worldPerPixel"
+                    :r="5 * worldPerPixel"
+                    vector-effect="non-scaling-stroke"
                     @pointerdown.stop="beginGeometry($event, 'rotate')"
                   />
                 </template>
@@ -2554,11 +2649,13 @@ async function importJsonFile(file: File | undefined) {
           <div class="studio-canvas-modes" role="group" aria-label="画布操作模式">
             <TButton
               type="button"
+              title="选择工具（V）"
               :aria-pressed="canvasTool === 'select'"
               @click="canvasTool = 'select'"
             >选择</TButton>
             <TButton
               type="button"
+              title="抓手工具（H）"
               :aria-pressed="canvasTool === 'hand'"
               @click="canvasTool = 'hand'"
             >抓手</TButton>

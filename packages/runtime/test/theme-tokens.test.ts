@@ -112,6 +112,8 @@ describe("精密工程工作台设计系统", () => {
     expect(css).toContain("--studio-left-preferred");
     expect(css).toContain("--studio-right-preferred");
     expect(css).toContain(".studio-panel-size input");
+    expect(css).toContain('.studio-hitbox[data-selected="true"]');
+    expect(css).toContain(".studio-focus-selection");
     expect(css).toContain(
       "grid-template-columns: var(--studio-left-width) minmax(0, 1fr) var(--studio-right-width);",
     );

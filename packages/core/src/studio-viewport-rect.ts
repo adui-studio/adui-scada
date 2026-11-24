@@ -77,3 +77,49 @@ export function studioViewportRect(
     pan: constrainedPan,
   };
 }
+
+/** 将当前图元（含旋转）作为视图焦点，不修改工程坐标。 */
+export function studioFocusTransform(
+  page: StudioPageSize,
+  viewport: StudioViewportSize,
+  transform: StudioPan & StudioPageSize & { rotation: number },
+  fitMargin = 0,
+): { zoom: number; pan: StudioPan } {
+  if (
+    !Number.isFinite(transform.x) ||
+    !Number.isFinite(transform.y) ||
+    !Number.isFinite(transform.width) ||
+    !Number.isFinite(transform.height) ||
+    !Number.isFinite(transform.rotation) ||
+    transform.width <= 0 ||
+    transform.height <= 0
+  ) {
+    throw new RangeError("定位图元的几何参数无效");
+  }
+  const fit = studioViewportRect(page, viewport, 1, { x: 0, y: 0 }, fitMargin);
+  const radians = (transform.rotation * Math.PI) / 180;
+  const width =
+    Math.abs(Math.cos(radians)) * transform.width +
+    Math.abs(Math.sin(radians)) * transform.height;
+  const height =
+    Math.abs(Math.sin(radians)) * transform.width +
+    Math.abs(Math.cos(radians)) * transform.height;
+  const availableWidth = Math.max(1, viewport.width - fitMargin * 2);
+  const availableHeight = Math.max(1, viewport.height - fitMargin * 2);
+  const fitScale = viewport.width / fit.width;
+  const zoom = Math.max(
+    0.5,
+    Math.min(8, Math.min(availableWidth / width, availableHeight / height) / fitScale),
+  );
+  const pan = studioViewportRect(
+    page,
+    viewport,
+    zoom,
+    {
+      x: transform.x + transform.width / 2 - page.width / 2,
+      y: transform.y + transform.height / 2 - page.height / 2,
+    },
+    fitMargin,
+  ).pan;
+  return { zoom, pan };
+}

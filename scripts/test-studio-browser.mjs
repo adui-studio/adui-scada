@@ -349,6 +349,7 @@ async function checkStudioInPage() {
   zoomButtons[1]?.click();
   await settle();
   verify("适应按钮恢复原始视图", near(svg.viewBox.baseVal.width, originalWidth, 0.01));
+  verify("显示实际画板缩放百分比", /%$/.test(zoomButtons[1]?.textContent.trim() ?? ""));
 
   const menu = element(".studio-view-menu");
   const viewTrigger = menu.querySelector("button.t-button");
@@ -427,10 +428,44 @@ async function checkStudioInPage() {
   verify("恢复属性后画布宽度恢复", near(bounds(stage).width, initialWidth));
   viewTrigger.click();
 
+  const leftResizer = element('.studio-panel-resizer[data-side="left"]');
+  const rightResizer = element('.studio-panel-resizer[data-side="right"]');
+  leftResizer.focus();
+  leftResizer.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  await settle();
+  verify("左面板分隔条方向键调整宽度", near(bounds(layers).width, leftWidth + 10));
+  leftResizer.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+  rightResizer.focus();
+  rightResizer.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+  await settle();
+  verify("右面板分隔条方向键调整宽度", near(bounds(properties).width, rightWidth + 10));
+  rightResizer.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  await settle();
+  verify("分隔条恢复原面板宽度", near(bounds(layers).width, leftWidth) && near(bounds(properties).width, rightWidth));
+
   const firstLayer = document.querySelector(".studio-layer-tree .studio-layer");
   firstLayer?.click();
   await settle();
   verify("点击图层可更新属性面板", Boolean(firstLayer) && /已选\s*1/.test(properties.textContent));
+  const resizeHandle = svg.querySelector(".studio-resize-handle");
+  verify("单选图元具有缩放手柄", Boolean(resizeHandle));
+  if (resizeHandle) {
+    const handleWidth = bounds(resizeHandle).width;
+    verify("选中手柄在适应画板时保持屏幕可操作尺寸", handleWidth >= 7 && handleWidth <= 14);
+    element(".studio-focus-selection").click();
+    await settle();
+    verify("定位选中图元改变视区", svg.viewBox.baseVal.width < originalWidth);
+    verify("放大后缩放手柄屏幕尺寸稳定", near(bounds(resizeHandle).width, handleWidth));
+    zoomButtons[1]?.click();
+    await settle();
+  }
+  canvas.focus();
+  canvas.dispatchEvent(new KeyboardEvent("keydown", { key: "h", bubbles: true }));
+  await settle();
+  verify("画布焦点支持抓手快捷键", svg.dataset.canvasTool === "hand");
+  canvas.dispatchEvent(new KeyboardEvent("keydown", { key: "v", bubbles: true }));
+  await settle();
+  verify("画布焦点支持选择快捷键", svg.dataset.canvasTool === "select");
 
   // 使用真实 TDesign 触发器验证页面菜单，而不是修改 details.open。
   const pageMenu = element(".studio-page-menu");
@@ -705,8 +740,8 @@ async function runScadaUIExperience(session) {
         const prefix = target.name + " " + viewport.width + "x" + viewport.height + " " + label;
         assert.equal(data.theme, "light", prefix + " 主题未切换至浅色工作区");
         assert.equal(data.screen, view, prefix + " 当前视图与导航状态不一致");
-        if (view === "studio") {
-          assert.ok(data.railHeight <= 48 && data.railWidth > viewport.width / 2, prefix + " 编辑器未采用顶部工作空间切换栏");
+        if (view !== "home") {
+          assert.ok(data.railHeight <= 48 && data.railWidth > viewport.width / 2, prefix + " 操作工作区未采用顶部切换栏");
         } else {
           assert.ok(data.railHeight >= viewport.height - 2, prefix + " 文件工作区导航没有撑满视口");
         }

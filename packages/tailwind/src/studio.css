@@ -2284,3 +2284,74 @@
     flex-basis: auto;
   }
 }
+
+/* 选区与手柄按屏幕像素呈现，工程几何继续使用逻辑坐标。 */
+.studio-hitbox {
+  stroke: transparent;
+}
+.studio-hitbox[data-selected="true"],
+.studio-hitbox:focus-visible {
+  stroke: var(--scada-primary);
+}
+.studio-hitbox[data-selected="true"][data-locked="true"] {
+  stroke-dasharray: 4 3;
+}
+.studio-hitbox[data-primary="true"] {
+  stroke-width: 2;
+}
+.studio-resize-handle {
+  fill: var(--scada-surface);
+  stroke: var(--scada-primary);
+  stroke-width: 1.5;
+}
+.studio-rotation-handle {
+  fill: var(--scada-surface);
+  stroke: var(--scada-primary);
+}
+.studio-rotation-handle:hover {
+  fill: var(--scada-primary);
+}
+.studio-stage-caption .studio-focus-selection {
+  white-space: nowrap;
+}
+.studio-stage-caption .studio-zoom {
+  gap: 2px;
+}
+.studio-stage-caption .studio-zoom .t-button {
+  min-width: 26px;
+  padding-inline: 4px;
+}
+.studio-stage-caption .studio-zoom .t-button[aria-label="适应画板"] {
+  min-width: 40px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 面板分隔条只调整观察工作区，支持指针捕获及方向键操作。 */
+.studio-workspace {
+  position: relative;
+}
+.studio-panel-resizer {
+  position: absolute;
+  z-index: 10;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.studio-panel-resizer[data-side="left"] {
+  left: calc(var(--studio-left-width) - 4px);
+}
+.studio-panel-resizer[data-side="right"] {
+  right: calc(var(--studio-right-width) - 4px);
+}
+.studio-panel-resizer:hover,
+.studio-panel-resizer:focus-visible {
+  background: var(--scada-primary);
+  outline: 0;
+}
+@media (max-width: 930px) {
+  .studio-panel-resizer {
+    display: none;
+  }
+}
