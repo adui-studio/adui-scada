@@ -224,7 +224,9 @@ function WorkspaceHome({
   const operation = useRef(false);
   const entries = filterWorkspaceHomeEntries(query);
   const visibleDrafts = drafts.filter((draft) =>
-    draft.projectId.toLowerCase().includes(query.trim().toLowerCase()),
+    [draft.projectName, draft.projectId].some((value) =>
+      value.toLowerCase().includes(query.trim().toLowerCase()),
+    ),
   );
 
   useEffect(() => {
@@ -438,7 +440,7 @@ function WorkspaceHome({
                 });
               }}
             >
-              <strong>{draft.projectId}</strong>
+              <strong title={draft.projectId}>{draft.projectName}</strong>
               <span>
                 {draft.pageCount} 个页面 · {draft.tagCount} 个 Tag
               </span>

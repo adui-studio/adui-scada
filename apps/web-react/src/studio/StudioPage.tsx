@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Checkbox, Collapse, Dropdown, Input, Popup, Select, Upload } from "tdesign-react";
 import type { DropdownProps } from "tdesign-react";
 import {
+  EditIcon,
   RectangleIcon,
   PlayCircleIcon,
   SlashIcon,
@@ -406,6 +407,13 @@ export default function StudioPage({
       setLayerSearch("");
       cancelDrag();
     }, "已创建空白页面，可撤销");
+  }
+
+  async function renameProject() {
+    const current = editor.snapshot().document;
+    const name = await promptStudioPageName(current.projectName ?? current.projectId, "工程");
+    if (name === null || editor.snapshot().document.projectId !== current.projectId) return;
+    apply(() => editor.renameProject(name), "工程名称已更新，可撤销");
   }
 
   async function renamePage() {
@@ -1874,7 +1882,22 @@ export default function StudioPage({
       <header className="studio-toolbar">
         <div>
           <p className="scada-eyebrow">组态编辑 / 本地工作区</p>
-          <h1>{state.document.projectId}</h1>
+          <div className="studio-project-title">
+            <h1 data-project-id={state.document.projectId} title={state.document.projectId}>
+              {state.document.projectName ?? state.document.projectId}
+            </h1>
+            <Button
+              type="button"
+              size="small"
+              variant="text"
+              className="studio-rename-project"
+              aria-label="重命名工程"
+              title="重命名工程"
+              onClick={() => void renameProject()}
+            >
+              <EditIcon aria-hidden="true" />
+            </Button>
+          </div>
         </div>
         <div className="studio-actions">
           <div className="studio-history-actions">
@@ -2590,7 +2613,7 @@ export default function StudioPage({
                   </div>
                 }
               >
-                <Button tag="button" type="button" variant="outline">
+                <Button tag="button" type="button" variant="outline" size="small">
                   视图设置
                 </Button>
               </Popup>
@@ -2599,6 +2622,7 @@ export default function StudioPage({
               <Button
                 tag="button"
                 type="button"
+                size="small"
                 onClick={() => changeZoom(-0.25)}
                 disabled={zoom <= 0.5}
               >
@@ -2607,6 +2631,7 @@ export default function StudioPage({
               <Button
                 tag="button"
                 type="button"
+                size="small"
                 title="适应画板"
                 aria-label="适应画板"
                 onClick={resetCanvasView}
@@ -2616,6 +2641,7 @@ export default function StudioPage({
               <Button
                 tag="button"
                 type="button"
+                size="small"
                 onClick={() => changeZoom(0.25)}
                 disabled={zoom >= 8}
               >
@@ -2624,6 +2650,7 @@ export default function StudioPage({
               <Button
                 tag="button"
                 type="button"
+                size="small"
                 className="studio-focus-selection"
                 title="定位选中图元"
                 aria-label="定位选中图元"

@@ -12,6 +12,7 @@ import type { DraftRecord, DraftRepository, LocalDraft, LocalDraftStorage } from
 /** 工作台仅展示草稿摘要，不把完整工程作为列表状态。 */
 export interface WorkspaceDraftSummary {
   readonly projectId: string;
+  readonly projectName: string;
   readonly savedAt: string;
   readonly revision: number;
   readonly pageCount: number;
@@ -128,6 +129,7 @@ export class DexieDraftRepository implements DraftRepository {
       const { record } = this.validate(row, row.projectId);
       return {
         projectId: record.projectId,
+        projectName: record.document.projectName ?? record.projectId,
         savedAt: record.savedAt,
         revision: record.revision,
         pageCount: record.document.pages.length,

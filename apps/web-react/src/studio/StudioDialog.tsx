@@ -26,7 +26,10 @@ export function confirmStudioAction(message: string): Promise<boolean> {
 }
 
 /** 页面重命名使用 TDesign 输入控件，不将取消视为空字符串。 */
-export function promptStudioPageName(current: string): Promise<string | null> {
+export function promptStudioPageName(
+  current: string,
+  kind: "页面" | "工程" = "页面",
+): Promise<string | null> {
   return new Promise((resolve) => {
     let name = current;
     let finished = false;
@@ -38,12 +41,12 @@ export function promptStudioPageName(current: string): Promise<string | null> {
       resolve(value);
     };
     dialog = DialogPlugin.confirm({
-      header: "重命名页面",
+      header: "重命名" + kind,
       body: (
         <Input
           defaultValue={current}
           maxlength={128}
-          placeholder="请输入新的页面名称"
+          placeholder={"请输入新的" + kind + "名称"}
           onChange={(value) => {
             name = value;
           }}

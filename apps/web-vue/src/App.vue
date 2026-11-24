@@ -60,7 +60,9 @@ const draftStatus = ref("正在读取本地草稿…");
 const busy = ref(false);
 const visibleDrafts = computed(() =>
   drafts.value.filter((draft) =>
-    draft.projectId.toLowerCase().includes(query.value.trim().toLowerCase()),
+    [draft.projectName, draft.projectId].some((value) =>
+      value.toLowerCase().includes(query.value.trim().toLowerCase()),
+    ),
   ),
 );
 let lifetime: AbortController | null = null;
@@ -415,7 +417,7 @@ const viewLabels = {
               :disabled="busy"
               @click="openDraft(draft.projectId)"
             >
-              <strong>{{ draft.projectId }}</strong>
+              <strong :title="draft.projectId">{{ draft.projectName }}</strong>
               <span>{{ draft.pageCount }} 个页面 · {{ draft.tagCount }} 个 Tag</span>
               <small
                 >修订 {{ draft.revision }} ·

@@ -13,6 +13,7 @@ import {
 } from "tdesign-vue-next";
 import type { DropdownProps } from "tdesign-vue-next";
 import {
+  EditIcon,
   RectangleIcon,
   PlayCircleIcon,
   SlashIcon,
@@ -727,6 +728,13 @@ function createPage() {
     layerSearch.value = "";
     cancelDrag();
   }, "已创建空白页面，可撤销");
+}
+
+async function renameProject() {
+  const current = editor.snapshot().document;
+  const name = await promptStudioPageName(current.projectName ?? current.projectId, "工程");
+  if (name === null || editor.snapshot().document.projectId !== current.projectId) return;
+  apply(() => editor.renameProject(name), "工程名称已更新，可撤销");
 }
 
 async function renamePage() {
@@ -1916,7 +1924,22 @@ async function importJsonFile(file: File | undefined) {
     <header class="studio-toolbar">
       <div>
         <p class="scada-eyebrow">组态编辑 / 本地工作区</p>
-        <h1>{{ state.document.projectId }}</h1>
+        <div class="studio-project-title">
+          <h1 :data-project-id="state.document.projectId" :title="state.document.projectId">
+            {{ state.document.projectName ?? state.document.projectId }}
+          </h1>
+          <TButton
+            type="button"
+            size="small"
+            variant="text"
+            class="studio-rename-project"
+            aria-label="重命名工程"
+            title="重命名工程"
+            @click="renameProject"
+          >
+            <EditIcon aria-hidden="true" />
+          </TButton>
+        </div>
       </div>
       <div class="studio-actions">
         <div class="studio-history-actions">
@@ -2524,7 +2547,7 @@ async function importJsonFile(file: File | undefined) {
           >
           <div class="studio-view-menu studio-view-settings-menu">
             <TPopup attach=".studio-view-settings-menu" trigger="click" placement="bottom-right">
-              <TButton type="button" variant="outline">视图设置</TButton>
+              <TButton type="button" variant="outline" size="small">视图设置</TButton>
               <template #content>
                 <div class="studio-view-popover">
                   <div class="studio-view-section">
@@ -2585,13 +2608,13 @@ async function importJsonFile(file: File | undefined) {
             </TPopup>
           </div>
           <div class="studio-zoom" aria-label="画布缩放">
-            <TButton type="button" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</TButton>
-            <TButton type="button" title="适应画板" aria-label="适应画板" @click="resetCanvasView">
+            <TButton type="button" size="small" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</TButton>
+            <TButton type="button" size="small" title="适应画板" aria-label="适应画板" @click="resetCanvasView">
               {{ actualZoomPercent }}%
             </TButton>
-            <TButton type="button" :disabled="zoom >= 8" @click="changeZoom(0.25)">+</TButton>
+            <TButton type="button" size="small" :disabled="zoom >= 8" @click="changeZoom(0.25)">+</TButton>
             <TButton
-              type="button"
+              type="button" size="small"
               class="studio-focus-selection"
               title="定位选中图元"
               aria-label="定位选中图元"

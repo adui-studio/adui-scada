@@ -155,6 +155,7 @@ export function createBlankStudioDocument(projectId: string) {
   return parseScadaDocument({
     schemaVersion: SCADA_SCHEMA_VERSION,
     projectId,
+    projectName: "未命名工程",
     tags: [],
     pages: [
       {

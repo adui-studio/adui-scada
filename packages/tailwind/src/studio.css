@@ -2627,3 +2627,45 @@
     flex-shrink: 0;
   }
 }
+
+/* 工程名称、图层搜索和视图工具保持双端一致的紧凑布局。 */
+.studio-project-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--adui-space-2);
+}
+.studio-project-title h1 {
+  min-width: 0;
+}
+.studio-project-title .studio-rename-project {
+  flex: none;
+  width: var(--adui-control-height-sm);
+  height: var(--adui-control-height-sm);
+  min-height: var(--adui-control-height-sm);
+  padding: 0;
+}
+.studio-stage-caption .studio-view-settings-menu > .t-popup > .t-button,
+.studio-stage-caption .studio-view-settings-menu > .t-button,
+.studio-stage-caption .studio-zoom .t-button {
+  box-sizing: border-box;
+  height: var(--adui-control-height-sm);
+  min-height: var(--adui-control-height-sm);
+  padding-block: 0;
+}
+.studio-stage-caption .studio-zoom {
+  gap: var(--adui-space-1);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.studio-stage-caption .studio-zoom .t-button {
+  min-width: var(--adui-control-height-sm);
+  padding-inline: var(--adui-space-2);
+}
+.studio-stage-caption .studio-zoom .t-button[aria-label="适应画板"] {
+  min-width: 48px;
+}
+.studio-stage-caption .studio-zoom .studio-focus-selection {
+  padding-inline: var(--adui-space-3);
+}
