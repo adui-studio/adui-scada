@@ -925,11 +925,14 @@ async function verifyWorkspaceProjectInPage() {
   nameInput.dispatchEvent(new Event("input", { bubbles: true }));
   nameInput.dispatchEvent(new Event("change", { bubbles: true }));
   click(
-    [...dialog.querySelectorAll("button")].find((button) => button.textContent.trim() === "保存名称"),
+    [...dialog.querySelectorAll("button")].find(
+      (button) => button.textContent.trim() === "保存名称",
+    ),
     "工程名称保存入口缺失",
   );
   await waitFor(
-    () => heading.textContent.trim() === name && heading.getAttribute("data-project-id") === projectId,
+    () =>
+      heading.textContent.trim() === name && heading.getAttribute("data-project-id") === projectId,
     "重命名没有保留工程 ID",
   );
   const width = Number(boundary.getAttribute("width"));

@@ -2916,19 +2916,31 @@ export default function StudioPage({
             <div className="studio-add">
               <Button tag="button" type="button" onClick={() => addSymbol("tank")}>
                 <span className="scada-button-content">
-                  <span className="studio-equipment-icon" data-equipment="tank" aria-hidden="true" />
+                  <span
+                    className="studio-equipment-icon"
+                    data-equipment="tank"
+                    aria-hidden="true"
+                  />
                   <span className="scada-button-label">+ 水箱</span>
                 </span>
               </Button>
               <Button tag="button" type="button" onClick={() => addSymbol("pump")}>
                 <span className="scada-button-content">
-                  <span className="studio-equipment-icon" data-equipment="pump" aria-hidden="true" />
+                  <span
+                    className="studio-equipment-icon"
+                    data-equipment="pump"
+                    aria-hidden="true"
+                  />
                   <span className="scada-button-label">+ 水泵</span>
                 </span>
               </Button>
               <Button tag="button" type="button" onClick={() => addSymbol("pipe")}>
                 <span className="scada-button-content">
-                  <span className="studio-equipment-icon" data-equipment="pipe" aria-hidden="true" />
+                  <span
+                    className="studio-equipment-icon"
+                    data-equipment="pipe"
+                    aria-hidden="true"
+                  />
                   <span className="scada-button-label">+ 管道</span>
                 </span>
               </Button>

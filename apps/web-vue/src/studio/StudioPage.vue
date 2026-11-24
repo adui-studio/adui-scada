@@ -2635,7 +2635,13 @@ async function importJsonFile(file: File | undefined) {
             >
               <RemoveIcon aria-hidden="true" />
             </TButton>
-            <TButton type="button" size="small" title="适应画板" aria-label="适应画板" @click="resetCanvasView">
+            <TButton
+              type="button"
+              size="small"
+              title="适应画板"
+              aria-label="适应画板"
+              @click="resetCanvasView"
+            >
               {{ actualZoomPercent }}%
             </TButton>
             <TButton
@@ -2649,7 +2655,8 @@ async function importJsonFile(file: File | undefined) {
               <AddIcon aria-hidden="true" />
             </TButton>
             <TButton
-              type="button" size="small"
+              type="button"
+              size="small"
               class="studio-focus-selection"
               title="定位选中图元"
               aria-label="定位选中图元"
@@ -2922,36 +2929,16 @@ async function importJsonFile(file: File | undefined) {
             <p v-else class="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
             <p class="studio-tip">拖动画布中的虚线框，或使用方向按钮微调。每次操作可撤销。</p>
             <div class="studio-nudge">
-              <TButton
-                type="button"
-                title="向左微调"
-                aria-label="向左微调"
-                @click="nudge(-1, 0)"
-              >
+              <TButton type="button" title="向左微调" aria-label="向左微调" @click="nudge(-1, 0)">
                 <ArrowLeftIcon aria-hidden="true" />
               </TButton>
-              <TButton
-                type="button"
-                title="向上微调"
-                aria-label="向上微调"
-                @click="nudge(0, -1)"
-              >
+              <TButton type="button" title="向上微调" aria-label="向上微调" @click="nudge(0, -1)">
                 <ArrowUpIcon aria-hidden="true" />
               </TButton>
-              <TButton
-                type="button"
-                title="向下微调"
-                aria-label="向下微调"
-                @click="nudge(0, 1)"
-              >
+              <TButton type="button" title="向下微调" aria-label="向下微调" @click="nudge(0, 1)">
                 <ArrowDownIcon aria-hidden="true" />
               </TButton>
-              <TButton
-                type="button"
-                title="向右微调"
-                aria-label="向右微调"
-                @click="nudge(1, 0)"
-              >
+              <TButton type="button" title="向右微调" aria-label="向右微调" @click="nudge(1, 0)">
                 <ArrowRightIcon aria-hidden="true" />
               </TButton>
             </div>
