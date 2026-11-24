@@ -119,11 +119,6 @@ function RuntimeMonitor({ project, controls }: { project: ScadaDocument | null; 
   const svg = state.document ? svgDataUrl(state.document, state.values, pageId) : null;
   const paths = simulationTrendPaths(history);
 
-  return () => runtime.stop();
-  }, []);
-
-  const svg = state.document ? svgDataUrl(state.document, state.values) : null;
-
   return (
     <main id="scada-main-content" tabIndex={-1} className="scada-shell scada-shell--overview">
       <header className="scada-header">
