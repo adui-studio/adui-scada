@@ -67,3 +67,10 @@ export {
   takeWorkspaceStudioEntry,
 } from "./workspace-routes.ts";
 export type { WorkspaceView, WorkspaceStudioEntry } from "./workspace-routes.ts";
+
+export {
+  createLocalProjectSimulationSource,
+  simulationHistoryCsv,
+  simulationTrendPaths,
+} from "./local-project-simulation.ts";
+export type { LocalProjectSimulationSource } from "./local-project-simulation.ts";
