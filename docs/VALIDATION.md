@@ -4757,3 +4757,9 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 新增 9 项正式测试定义，覆盖空缓冲/上限、成功确认及序号、模拟提交后回执丢失、七类错配回执、同步异常、并发提交、单写入者、复合键范围及外部批次改变。既有五份 46 项继续回归，目标六份共 55 项。协作容器 Node.js 22.16.0 独立 node:test 共 30/30（新增持久化 9 项、既有归档 8 项、采样 13 项）通过，0 失败。新增测试采用原 Vitest 用例逻辑及 Node 断言适配（仅替换测试入口及相对导入）；既有归档、采样为此前独立对应场景。源码本地 Git Blob：tag-history-persistence.ts 9a9d52cfbaec98c7ca82cee942a762df953b0d54、tag-history.ts 28a2cc4e90135ebdf658ed9ff67ed701dd77632b、tag-store.ts 78e22557523275fecb9e6172cc6b02230c60c58b；新增仓库测试还原导入后的 Blob f5e514878ad8306431c4d107149bfc3665e07dce。未运行正式 Vitest、Vite+ 或完整 ready；模拟端口不代表真实数据库事务、幂等约束或崩溃恢复。
 
 Windows 待执行 `vp check`、`vp test run packages/core/test/tag-history-persistence.test.ts packages/core/test/tag-history-archive.test.ts packages/core/test/tag-history-sampler.test.ts packages/core/test/tag-history-buffer.test.ts packages/core/test/tag-history.test.ts packages/core/test/tag-store.test.ts`、`pnpm run messages:check`、`pnpm run docs:check`；完整 ready 待执行。
+
+### D5c7 首个 MVP 集成分支验收矩阵（待执行）
+
+D5c6 的维护者实际定向结果：vp check 463 格式/305 受检零警告错误，六文件 55/55，messages:check 332 文件，docs:check 95 份。合并提交 4aabaa8a49e944daa3fe3c4232edc3f22cc7dd0c。
+
+D5c7 候选新增规范编码 4 项、真实 PostgreSQL 归档 5 项、共享模拟 Runtime 3 项。真实数据库测试仅允许显式 SCADA_TEST_DATABASE_URL 指向本机 adui_scada_test，新增迁移须先验证 Prisma Schema、生成 Client，再经明确隔离环境授权部署；不执行 reset，不使用普通开发库/生产库。完整门禁包含 ready、UI/Studio、Tag CRUD、工程互通、草稿安全、版本及多标签、历史迁移、发布预检、SSE 与故障恢复。新增双端导入模拟验收：由 Studio 导出同一工程，另一框架导入运行；选择多页面，验证类型匹配、unknown BAD、不访问服务器、趋势单 Tag 和 CSV 真实质量；错误 JSON 保持当前会话，切换/返回/离开清理定时器，正式发布路由不变。模拟导出不代表数据库历史查询。未执行的门禁一律标为待执行，不要求维护者逐小批复验。
