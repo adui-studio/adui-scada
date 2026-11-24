@@ -221,8 +221,8 @@ async function enterStudioInPage() {
 
 async function checkStudioInPage() {
   const findings = [];
-  function verify(name, passed) {
-    findings.push({ name, passed: Boolean(passed) });
+  function verify(name, passed, detail = "") {
+    findings.push({ name, passed: Boolean(passed), detail });
   }
   function element(selector) {
     const found = document.querySelector(selector);
@@ -714,16 +714,39 @@ async function checkStudioInPage() {
         Boolean(filePanel.querySelector("button[aria-pressed]")),
     );
     const fileButtons = [...(filePanel?.querySelectorAll("button.t-button") ?? [])];
+    const filePanelFlat = flatPopup(filePanel);
+    const menuMetrics = fileButtons.map((button) => {
+      const style = getComputedStyle(button);
+      return {
+        textVariant: button.classList.contains("t-button--variant-text"),
+        alignment: style.justifyContent,
+        boxSizing: style.boxSizing,
+        height: style.height,
+        minHeight: style.minHeight,
+        maxHeight: style.maxHeight,
+        renderedHeight: bounds(button).height,
+      };
+    });
     verify(
       "文件草稿为单层浮层且五项操作统一使用文本菜单",
-      flatPopup(filePanel) &&
+      filePanelFlat &&
         fileButtons.length === 5 &&
-        fileButtons.every(
-          (button) =>
-            button.classList.contains("t-button--variant-text") &&
-            getComputedStyle(button).justifyContent === "flex-start" &&
-            bounds(button).height === 28,
+        menuMetrics.every(
+          (item) =>
+            item.textVariant &&
+            item.alignment === "flex-start" &&
+            item.boxSizing === "border-box" &&
+            item.height === "28px" &&
+            item.minHeight === "28px" &&
+            item.maxHeight === "28px" &&
+            near(item.renderedHeight, 28, 0.5),
         ),
+      "单层浮层：" +
+        filePanelFlat +
+        "；按钮数：" +
+        fileButtons.length +
+        "；按菜单顺序的计算样式：" +
+        JSON.stringify(menuMetrics),
     );
     const importLayout = filePanel?.querySelector(".studio-import");
     verify("导入 JSON 不再嵌套卡片或额外描边", flatPopup(importLayout));
@@ -3418,7 +3441,10 @@ async function main() {
             data.findings.length +
             ")\n",
         );
-        for (const error of errors) process.stderr.write("  - " + error.name + "\n");
+        for (const error of errors) {
+          process.stderr.write("  - " + error.name + "\n");
+          if (error.detail) process.stderr.write("    " + error.detail + "\n");
+        }
       }
     }
     assert.equal(failed, 0, "浏览器回归项存在失败");

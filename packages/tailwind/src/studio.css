@@ -480,22 +480,11 @@
   display: grid;
   gap: var(--adui-space-1);
 }
-.studio-file-popover .t-button {
-  display: flex;
-  width: 100%;
-  height: var(--adui-control-height-sm);
-  min-height: var(--adui-control-height-sm);
-  align-items: center;
-  justify-content: flex-start;
-  margin: 0;
-  padding-inline: var(--adui-space-3);
-  padding-block: 0;
-  font-size: var(--adui-font-size-xs);
-  text-align: left;
-}
 .studio-file-popover .studio-import,
-.studio-file-popover .studio-import .t-upload {
+.studio-file-popover .studio-import .t-upload,
+.studio-file-popover .studio-import .t-upload__trigger {
   display: block;
+  min-width: 0;
   width: 100%;
 }
 .studio-side-more .t-collapse,
@@ -2685,9 +2674,21 @@
   font-size: 16px;
 }
 
-/* 工具栏的外部按钮尺寸不应覆盖内部菜单项。 */
-.studio-actions .studio-file-popover .t-button {
+/* 五项文件操作统一边框盒尺寸，避免组件默认尺寸及过渡影响布局。 */
+.studio-actions .studio-file-popover button.t-button {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  min-width: 0;
   height: var(--adui-control-height-sm);
   min-height: var(--adui-control-height-sm);
+  max-height: var(--adui-control-height-sm);
+  align-items: center;
+  justify-content: flex-start;
+  margin: 0;
+  padding-inline: var(--adui-space-3);
+  padding-block: 0;
   font-size: var(--adui-font-size-xs);
+  text-align: left;
+  transition: none;
 }
