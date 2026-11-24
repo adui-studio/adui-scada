@@ -1551,3 +1551,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/web-react/src/App.tsx`、`apps/web-vue/src/App.vue`：公共导航壳层及 Outlet / RouterView。
 - `apps/web-vue/src/WorkspaceHome.vue`、`apps/web-vue/src/studio/StudioWorkspaceRoute.vue`：独立工作台和工程路由载入组件。
 - `packages/runtime/src/workspace-routes.ts`：共享路径、稳定 ID 校验及一次性内存交接；`packages/draft-storage/src/index.ts`：本地工程按 ID 解析。
+
+## D5c2 · FR-012 历史趋势前置
+
+- `packages/core/src/tag-history.ts`：单 Tag 本地历史查询及质量保留投影。
+- `packages/core/src/index.ts`：公共函数与查询/结果类型。
+- `packages/core/test/tag-history.test.ts`：时间范围、质量、排序、点数及拒绝边界的定向测试。

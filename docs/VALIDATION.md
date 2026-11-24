@@ -4707,3 +4707,11 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 ### D5c1 · 最终分层验收完成（PR #192）
 
 维护者 Windows 最终日志：两份 SSE 脚本语法检查、Vite+（456 格式文件、298 受检零警告错误）、95 Markdown、协议配置 6/6、代理单测 5/5 均通过；React/Vue HTTPS 15173/15174 的普通 SSE 心跳、Tag 过期、静默重连、资源清理及真实下行阻断、STALE、主动重连、连接回收均通过，九项功能专项累计完成。最终日志未单独打印本地 SHA；GitHub 核对候选 HEAD ae249f55d372fc3babb2aec8011fdca45c62f99e 相对 85f30ff7 仅有条件语句格式化，无语义改动。维护者明确同意合并。 此前分层日志已记录 900/900 单测、63/63 HTTP E2E、32/32 UI 场景及 312/312 Studio 断言；七项专项在 a5ff6a85 完成。以上为多次提交的累计验收，不宣称最终 HEAD 单次完整 ready 已重新执行。E-123 至 E-128 的对应回归阻塞已解除。此记录仅补充文档，不改源码；不代表生产安全认证、真实设备协议或生产发布验收。
+
+### D5c2 · FR-012 历史趋势共享 Core 候选
+
+新增 8 项定向用例定义，覆盖 Tag 隔离、左闭右开区间、四种质量、原值/源时间保留、重复及跳号序列、同毫秒顺序、无数据/超点数、查询参数、非规范 UTC 时间及非法标量/质量。Windows 待运行 `vp test run packages/core/test/tag-history.test.ts packages/core/test/tag-store.test.ts`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`。仅验证本地纯数据契约，不宣称已实现数据库归档、历史完整性、可信来源或趋势 UI。
+
+### D5c2 · Windows 定向验收完成（PR #193）
+
+维护者 Windows 实测 D5c2 定向验收通过：Vite+ 458 个格式文件、300 个受检文件零警告错误，历史查询 8/8、TagStore 6/6，合计 14/14；中文文案 327 文件、Markdown 95 份均通过。最终日志未打印本地 HEAD；GitHub 候选 b51b8e9e6ce40a8a886c261d011ff186cf1c9c4e 相对初始候选 7f6bbe1d 仅测试排版变化。维护者明确同意合并。仅证明定向本地契约及既有 TagStore 回归，不代表全量 ready、持久化历史或现场工业验收。
