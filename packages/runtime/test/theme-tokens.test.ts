@@ -196,7 +196,7 @@ describe("Pixso 参考工作台", () => {
   it("双端复用工作台数据和搜索并保留真实静态预览", () => {
     for (const path of [
       "../../../apps/web-react/src/App.tsx",
-      "../../../apps/web-vue/src/App.vue",
+      "../../../apps/web-vue/src/WorkspaceHome.vue",
     ]) {
       const source = readRelative(path);
       expect(source).toContain("WORKSPACE_HOME_ENTRIES");

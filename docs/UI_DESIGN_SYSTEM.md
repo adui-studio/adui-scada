@@ -244,3 +244,7 @@ React/Vue 按 Catalog 固定版本（tdesign-icons-react 0.6.11 / tdesign-icons-
 ## D5c1 · 顶部菜单可见性
 
 工具栏原横向滚动与纵向隐藏会裁剪挂载于菜单容器内的 TDesign Popup。改用自动换行和可见溢出，保持工具栏与画布独立，不改官方 Popup 的挂载、事件或业务操作。工程管理收到自身授权拒绝时已清空目录缓存，不再因父组件的授权修订号立即卸载当前菜单；其他授权失效仍重建目录，服务端 CAS、预检和缓存清理保持原规则。
+
+## D5c1 · 工作区正式路由
+
+参见 [ADR-0071](adr/0071-dual-framework-workspace-router.md)。保持现有导航、主题与业务页面，React Outlet 和 Vue RouterView 按 URL 挂载工作区，工程专属路由以稳定 ID 查找本地工程，不冒称服务端授权。未保存离开需要明确确认，离开运行页依靠既有卸载释放订阅。

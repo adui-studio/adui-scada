@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
+import { useRouter } from "vue-router";
 import {
   Button as TButton,
   Collapse as TCollapse,
@@ -79,7 +80,7 @@ import type {
   NodeTransformPatch,
   ResizeHandle,
 } from "@adui/scada-core/editor";
-import { svgDataUrl } from "@adui/scada-runtime";
+import { svgDataUrl, workspaceStudioPath } from "@adui/scada-runtime";
 import {
   createScadaApiClient,
   createStudioServerProjectSession,
@@ -109,10 +110,17 @@ const maxFileSize = 2 * 1024 * 1024;
 const props = defineProps<{
   initialDocument?: ScadaDocument | null;
   initialNotice?: string;
+  initialClean?: boolean;
   themeMode?: "light" | "dark";
 }>();
+const emit = defineEmits<{ projectChange: [projectId: string] }>();
+const router = useRouter();
 const editor = new DocumentEditor(props.initialDocument ?? waterTreatmentStudioDocument);
 const state = shallowRef(editor.snapshot());
+let routeBaseline = props.initialClean === false ? null : JSON.stringify(editor.snapshot().document);
+watch(() => state.value.document.projectId, (id, previous) => {
+  if (id !== previous) emit("projectChange", id);
+});
 const preview = shallowRef<{ id: string; x: number; y: number } | null>(null);
 const geometryPreview = shallowRef<ScadaDocument | null>(null);
 const rotating = ref(false);
@@ -153,6 +161,28 @@ let studioMounted = false;
 let historyActionInProgress = false;
 let autoSaveSession: DraftAutoSaveSession | null = null;
 let draftActionInProgress = false;
+let routeConfirmationPending = false;
+const removeRouteGuard = router.beforeEach(async (to, from) => {
+  if (to.path === from.path || to.path === workspaceStudioPath(editor.snapshot().document.projectId)) return true;
+  if (historyActionInProgress || draftActionInProgress) {
+    notice.value = "工程操作尚未完成，请稍后再切换工作区";
+    return false;
+  }
+  if (routeBaseline === JSON.stringify(editor.snapshot().document)) return true;
+  if (routeConfirmationPending) return false;
+  routeConfirmationPending = true;
+  try {
+    return await confirmStudioAction("当前工程可能有未保存内容，确认离开组态编辑吗？");
+  } finally {
+    routeConfirmationPending = false;
+  }
+});
+function beforeUnload(event: BeforeUnloadEvent) {
+  if (historyActionInProgress || draftActionInProgress || routeBaseline !== JSON.stringify(editor.snapshot().document)) {
+    event.preventDefault();
+    event.returnValue = "";
+  }
+}
 let unsubscribeDraft: (() => void) | null = null;
 const zoom = ref(1);
 const canvasTool = ref<"select" | "hand">("select");
@@ -555,6 +585,7 @@ function subscribeDraft() {
   unsubscribeDraft?.();
   unsubscribeDraft = drafts.subscribe(state.value.document.projectId, (revision) => {
     hasSavedDraft.value = revision !== null;
+    routeBaseline = null;
     const session = autoSaveSession;
     if (session && revision !== session.currentRevision) {
       void pauseAutoSave();
@@ -574,6 +605,7 @@ watch(
 
 onMounted(() => {
   studioMounted = true;
+  window.addEventListener("beforeunload", beforeUnload);
   document.addEventListener("visibilitychange", onStudioVisible);
   window.addEventListener("keydown", handleKey);
   subscribeDraft();
@@ -592,6 +624,8 @@ onMounted(() => {
 });
 onUnmounted(() => {
   studioMounted = false;
+  removeRouteGuard();
+  window.removeEventListener("beforeunload", beforeUnload);
   document.removeEventListener("visibilitychange", onStudioVisible);
   canvasResizeObserver?.disconnect();
   canvasResizeObserver = null;
@@ -618,6 +652,7 @@ watch(
       void session.saveIfDirty(document).then(
         (saved) => {
           if (!active || autoSaveSession !== session || !saved) return;
+          routeBaseline = JSON.stringify(saved.document);
           hasSavedDraft.value = true;
           notice.value = `本地草稿已自动保存（${saved.savedAt}）`;
         },
@@ -1818,6 +1853,7 @@ async function saveDraft() {
     const current = await drafts.get(document.projectId);
     if (current && !(await confirmStudioAction("数据库已有草稿，确认使用当前画面覆盖吗？"))) return;
     const saved = await drafts.save(document, current?.revision ?? null);
+    routeBaseline = JSON.stringify(saved.document);
     hasSavedDraft.value = true;
     notice.value = `已保存 IndexedDB 草稿（${saved.savedAt}），并非正式工程发布`;
   } catch (error) {
@@ -1840,6 +1876,7 @@ async function restoreDraft() {
       return;
     }
     editor.loadDocument(saved.document);
+    routeBaseline = JSON.stringify(editor.snapshot().document);
     serverSession.reset();
     serverBaselineRevision.value = null;
     clearLayerDrag();
@@ -1871,6 +1908,7 @@ async function clearDraft() {
       // 用户已明确确认清理损坏旧草稿，数据库修订号不一致仍会拒绝清除。
     }
     await drafts.remove(state.value.document.projectId, current?.revision ?? null);
+    routeBaseline = null;
     hasSavedDraft.value = false;
     notice.value = "数据库草稿已清除，当前编辑画面保持不变";
   } catch (error) {

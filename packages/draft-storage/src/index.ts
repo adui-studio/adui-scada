@@ -6,6 +6,8 @@ import {
   migrateScadaDocument,
   parseScadaDocument,
   createBlankStudioDocument,
+  waterTreatmentStudioDocument,
+  waterTreatmentShowcaseDocument,
 } from "@adui/scada-core";
 import type { DraftRecord, DraftRepository, LocalDraft, LocalDraftStorage } from "@adui/scada-core";
 
@@ -335,4 +337,26 @@ export async function createWorkspaceDraft(): Promise<DraftRecord> {
 export async function readWorkspaceJson(file: File) {
   if (file.size > 2 * 1024 * 1024) throw new RangeError("JSON 文件不能超过 2 MiB");
   return migrateScadaDocument(JSON.parse(await file.text()) as unknown);
+}
+
+/** 按稳定 ID 打开本地草稿或内置示例；缺失工程不能冒充默认示例。 */
+export async function readWorkspaceStudioRoute(projectId: string | undefined) {
+  if (projectId === undefined) {
+    return { document: waterTreatmentStudioDocument, notice: "", clean: true };
+  }
+  localDraftKey(projectId);
+  const repository = new DexieDraftRepository({ broadcast: false });
+  try {
+    const saved = await repository.get(projectId);
+    if (saved) return { document: saved.document, notice: "已打开最新本地草稿", clean: true };
+    if (projectId === waterTreatmentStudioDocument.projectId) {
+      return { document: waterTreatmentStudioDocument, notice: "已打开内置模拟工程", clean: true };
+    }
+    if (projectId === waterTreatmentShowcaseDocument.projectId) {
+      return { document: waterTreatmentShowcaseDocument, notice: "已打开水处理总览示例", clean: true };
+    }
+    throw new Error("当前浏览器没有该工程的草稿，请返回工作台选择工程或重新导入");
+  } finally {
+    repository.close();
+  }
 }

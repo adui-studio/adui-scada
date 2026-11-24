@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Checkbox, Collapse, Dropdown, Input, Popup, Select, Upload } from "tdesign-react";
+import { Button, Checkbox, Collapse, Dialog, Dropdown, Input, Popup, Select, Upload } from "tdesign-react";
+import { useBlocker } from "react-router";
 import type { DropdownProps } from "tdesign-react";
 import {
   EditIcon,
@@ -77,7 +78,7 @@ import type {
   NodeTransformPatch,
   ResizeHandle,
 } from "@adui/scada-core/editor";
-import { svgDataUrl } from "@adui/scada-runtime";
+import { svgDataUrl, workspaceStudioPath } from "@adui/scada-runtime";
 import {
   createScadaApiClient,
   createStudioServerProjectSession,
@@ -135,11 +136,15 @@ interface GeometryDragState {
 export default function StudioPage({
   initialDocument = null,
   initialNotice = "",
+  initialClean = true,
   themeMode = "light",
+  onProjectChange,
 }: {
   initialDocument?: ScadaDocument | null;
   initialNotice?: string;
+  initialClean?: boolean;
   themeMode?: "light" | "dark";
+  onProjectChange?: (projectId: string) => void;
 }) {
   const editor = useMemo(
     () => new DocumentEditor(initialDocument ?? waterTreatmentStudioDocument),
@@ -148,6 +153,13 @@ export default function StudioPage({
   const serverApi = useMemo(() => createScadaApiClient(), []);
   const serverSession = useMemo(() => createStudioServerProjectSession(serverApi), [serverApi]);
   const [state, setState] = useState<EditorSnapshot>(() => editor.snapshot());
+  const routeBaseline = useRef(initialClean ? JSON.stringify(editor.snapshot().document) : null);
+  const routeProject = useRef(state.document.projectId);
+  useEffect(() => {
+    if (routeProject.current === state.document.projectId) return;
+    routeProject.current = state.document.projectId;
+    onProjectChange?.(state.document.projectId);
+  }, [state.document.projectId, onProjectChange]);
   const [preview, setPreview] = useState<{ id: string; x: number; y: number } | null>(null);
   const [geometryPreview, setGeometryPreview] = useState<ScadaDocument | null>(null);
   const [rotating, setRotating] = useState(false);
@@ -191,6 +203,23 @@ export default function StudioPage({
   const historyActionRef = useRef(false);
   const autoSaveSessionRef = useRef<DraftAutoSaveSession | null>(null);
   const draftActionRef = useRef(false);
+  const routeBlocker = useBlocker(({ currentLocation, nextLocation, historyAction }) => {
+    if (currentLocation.pathname === nextLocation.pathname) return false;
+    const current = editor.snapshot().document;
+    // 编辑器已完成内部工程切换，只同步 URL，不重复加载工程或丢弃 CAS。
+    if (historyAction === "REPLACE" && nextLocation.pathname === workspaceStudioPath(current.projectId)) return false;
+    return historyActionRef.current || draftActionRef.current || routeBaseline.current !== JSON.stringify(current);
+  });
+  useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (historyActionRef.current || draftActionRef.current || routeBaseline.current !== JSON.stringify(editor.snapshot().document)) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => window.removeEventListener("beforeunload", beforeUnload);
+  }, [editor]);
   const [zoom, setZoom] = useState(1);
   const [canvasTool, setCanvasTool] = useState<"select" | "hand">("select");
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -561,6 +590,7 @@ export default function StudioPage({
     const unsubscribe = drafts.subscribe(state.document.projectId, (revision) => {
       if (controller.signal.aborted) return;
       setHasSavedDraft(revision !== null);
+      routeBaseline.current = null;
       const session = autoSaveSessionRef.current;
       if (session && revision !== session.currentRevision) {
         autoSaveSessionRef.current = null;
@@ -585,6 +615,7 @@ export default function StudioPage({
       void session.saveIfDirty(document).then(
         (saved) => {
           if (controller.signal.aborted || autoSaveSessionRef.current !== session || !saved) return;
+          routeBaseline.current = JSON.stringify(saved.document);
           setHasSavedDraft(true);
           setNotice(`本地草稿已自动保存（${saved.savedAt}）`);
         },
@@ -1681,6 +1712,7 @@ export default function StudioPage({
       if (current && !(await confirmStudioAction("数据库已有草稿，确认使用当前画面覆盖吗？")))
         return;
       const saved = await drafts.save(document, current?.revision ?? null);
+      routeBaseline.current = JSON.stringify(saved.document);
       setHasSavedDraft(true);
       setNotice(`已保存 IndexedDB 草稿（${saved.savedAt}），并非正式工程发布`);
     } catch (error) {
@@ -1704,6 +1736,7 @@ export default function StudioPage({
         return;
       }
       editor.loadDocument(saved.document);
+      routeBaseline.current = JSON.stringify(editor.snapshot().document);
       serverSession.reset();
       clearLayerDrag();
       setLayerSearch("");
@@ -1735,6 +1768,7 @@ export default function StudioPage({
         // 已经获得用户确认，允许清理损坏旧草稿；事务版本核对继续保护数据库。
       }
       await drafts.remove(state.document.projectId, current?.revision ?? null);
+      routeBaseline.current = null;
       setHasSavedDraft(false);
       setNotice("数据库草稿已清除，当前编辑画面保持不变");
     } catch (error) {
@@ -1890,6 +1924,25 @@ export default function StudioPage({
       tabIndex={-1}
       className="studio-shell flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden"
     >
+      {routeBlocker.state === "blocked" && (
+        <Dialog
+          visible
+          header="离开组态编辑？"
+          body="当前工程可能有未保存内容。确认离开将放弃未保存的编辑，已保存草稿不受影响。"
+          confirmBtn="确认离开"
+          cancelBtn="继续编辑"
+          closeOnOverlayClick={false}
+          onConfirm={() => {
+            if (historyActionRef.current || draftActionRef.current) {
+              setNotice("工程操作尚未完成，请稍后再切换工作区");
+              routeBlocker.reset();
+              return;
+            }
+            routeBlocker.proceed();
+          }}
+          onClose={() => routeBlocker.reset()}
+        />
+      )}
       <header className="studio-toolbar">
         <div>
           <p className="scada-eyebrow">组态编辑 / 本地工作区</p>

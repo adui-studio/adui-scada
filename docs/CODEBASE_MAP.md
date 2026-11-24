@@ -1544,3 +1544,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/svg.ts`：浅色设备图元及指标卡安全渲染。
 - `packages/runtime/src/workspace-home.ts`：共享工作台真实入口与静态总览缩略图。
 - React/Vue 的 App 和 Studio：同源草稿目录、文件打开、图层/图元库及画板属性；共享 CSS 维护视觉层。
+
+### D5c1 · 双端工作区 Router
+
+- `apps/web-react/src/main.tsx`、`apps/web-vue/src/main.ts`：正式 Hash Router 注册与应用挂载。
+- `apps/web-react/src/App.tsx`、`apps/web-vue/src/App.vue`：公共导航壳层及 Outlet / RouterView。
+- `apps/web-vue/src/WorkspaceHome.vue`、`apps/web-vue/src/studio/StudioWorkspaceRoute.vue`：独立工作台和工程路由载入组件。
+- `packages/runtime/src/workspace-routes.ts`：共享路径、稳定 ID 校验及一次性内存交接；`packages/draft-storage/src/index.ts`：本地工程按 ID 解析。

@@ -17,6 +17,7 @@ import {
   listWorkspaceDrafts,
   readWorkspaceDraft,
   readWorkspaceJson,
+  readWorkspaceStudioRoute,
 } from "@adui/scada-draft-storage";
 import type { WorkspaceDraftSummary } from "@adui/scada-draft-storage";
 import {
@@ -24,16 +25,21 @@ import {
   filterWorkspaceHomeEntries,
   readWorkspaceTheme,
   transitionWorkspaceTheme,
+  WORKSPACE_ROUTE_PATHS,
+  workspaceViewFromRouteName,
+  workspaceStudioPath,
+  stageWorkspaceStudioEntry,
+  takeWorkspaceStudioEntry,
 } from "@adui/scada-runtime";
+import type { WorkspaceView, WorkspaceStudioEntry } from "@adui/scada-runtime";
 import "tdesign-react/es/style/index.css";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { Outlet, useMatches, useNavigate, useOutletContext, useParams } from "react-router";
 
-const RuntimePage = lazy(() => import("./runtime/RuntimePage.tsx"));
-const PublishedRuntimePage = lazy(() => import("./runtime/PublishedRuntimePage.tsx"));
 const StudioPage = lazy(() => import("./studio/StudioPage.tsx"));
 
-type AppView = "home" | "runtime" | "published" | "studio";
+type AppView = WorkspaceView;
 
 const viewLabels: Record<AppView, string> = {
   home: "工作台",
@@ -44,7 +50,8 @@ const viewLabels: Record<AppView, string> = {
 
 /** 双端同一信息架构：主功能导航独立于工程工作区，运行与编辑不会混淆。 */
 export default function App() {
-  const [view, setView] = useState<AppView>("home");
+  const view = workspaceViewFromRouteName(useMatches().at(-1)?.id);
+  const routerNavigate = useNavigate();
   const [themeMode, setThemeMode] = useState(readWorkspaceTheme);
 
   function changeTheme(checked: unknown) {
@@ -54,27 +61,24 @@ export default function App() {
       flushSync(() => setThemeMode(next));
     });
   }
-  const [initialDocument, setInitialDocument] = useState<ScadaDocument | null>(null);
-  const [initialNotice, setInitialNotice] = useState("");
-
   function navigate(next: AppView) {
-    if (next === "studio" && view !== "studio") {
-      setInitialDocument(null);
-      setInitialNotice("");
-    }
-    setView(next);
-  }
-
-  function openDocument(document: ScadaDocument, notice: string) {
-    setInitialDocument(document);
-    setInitialNotice(notice);
-    setView("studio");
+    if (next !== view) void routerNavigate(WORKSPACE_ROUTE_PATHS[next]);
   }
   return (
     <div className="scada-app-frame" data-view={view}>
-      <a className="scada-skip-link" href="#scada-main-content">
+      <button
+        className="scada-skip-link"
+        type="button"
+        onClick={() => {
+          const main = document.getElementById("scada-main-content");
+          if (main) {
+            main.tabIndex = -1;
+            main.focus();
+          }
+        }}
+      >
         跳转到主要内容
-      </a>
+      </button>
       <nav className="scada-app-nav" aria-label="功能导航">
         <div className="scada-rail-brand">
           <span className="scada-app-brand">
@@ -183,26 +187,91 @@ export default function App() {
             </main>
           }
         >
-          {view === "home" ? (
-            <WorkspaceHome
-              onNavigate={navigate}
-              onOpenDocument={openDocument}
-              themeMode={themeMode}
-            />
-          ) : view === "runtime" ? (
-            <RuntimePage />
-          ) : view === "published" ? (
-            <PublishedRuntimePage />
-          ) : (
-            <StudioPage
-              initialDocument={initialDocument}
-              initialNotice={initialNotice}
-              themeMode={themeMode}
-            />
-          )}
+          <Outlet context={themeMode} />
         </Suspense>
       </div>
     </div>
+  );
+}
+
+/** 工作台只负责显式工程入口，路由与 URL 不保存工程正文。 */
+export function WorkspaceHomeRoute() {
+  const themeMode = useOutletContext<"light" | "dark">();
+  const navigate = useNavigate();
+  return (
+    <WorkspaceHome
+      themeMode={themeMode}
+      onNavigate={(view) => void navigate(WORKSPACE_ROUTE_PATHS[view])}
+      onOpenDocument={(document, notice, clean) => {
+        stageWorkspaceStudioEntry({ document, notice, clean });
+        void navigate(workspaceStudioPath(document.projectId));
+      }}
+    />
+  );
+}
+
+/** 编辑器内部切换工程只替换地址，不重建编辑器。 */
+export function StudioWorkspaceRoute() {
+  const { projectId } = useParams<"projectId">();
+  const themeMode = useOutletContext<"light" | "dark">();
+  const navigate = useNavigate();
+  const [loaded, setLoaded] = useState<{ entry: WorkspaceStudioEntry; session: number } | null>(null);
+  const [error, setError] = useState("");
+  const session = useRef(0);
+  const activeRoute = useRef<string | null>(null);
+  const activeProject = useRef<string | null>(null);
+
+  useEffect(() => {
+    const routeId = projectId ?? "";
+    if (activeRoute.current === routeId) return;
+    if (projectId !== undefined && activeProject.current === projectId) {
+      activeRoute.current = routeId;
+      return;
+    }
+    const controller = new AbortController();
+    setLoaded(null);
+    setError("");
+    activeRoute.current = null;
+    activeProject.current = null;
+    void Promise.resolve().then(async () => {
+      if (controller.signal.aborted) return;
+      try {
+        const entry = takeWorkspaceStudioEntry(projectId) ?? (await readWorkspaceStudioRoute(projectId));
+        if (controller.signal.aborted) return;
+        activeRoute.current = routeId;
+        activeProject.current = entry.document.projectId;
+        session.current += 1;
+        setLoaded({ entry, session: session.current });
+      } catch (cause) {
+        if (!controller.signal.aborted) {
+          setError(cause instanceof Error ? cause.message : "工程载入失败");
+        }
+      }
+    });
+    return () => controller.abort();
+  }, [projectId]);
+
+  if (!loaded) {
+    return (
+      <main id="scada-main-content" className="scada-loading" role={error ? "alert" : "status"}>
+        {error || "正在读取组态工程…"}
+        {error && <Button onClick={() => void navigate("/")}>返回工作台</Button>}
+      </main>
+    );
+  }
+  return (
+    <StudioPage
+      key={loaded.session}
+      initialDocument={loaded.entry.document}
+      initialNotice={loaded.entry.notice}
+      initialClean={loaded.entry.clean}
+      themeMode={themeMode}
+      onProjectChange={(id) => {
+        activeProject.current = id;
+        activeRoute.current = id;
+        void navigate(workspaceStudioPath(id), { replace: true });
+      }}
+    />
   );
 }
 
@@ -214,7 +283,7 @@ function WorkspaceHome({
 }: {
   themeMode: "light" | "dark";
   onNavigate: (view: AppView) => void;
-  onOpenDocument: (document: ScadaDocument, notice: string) => void;
+  onOpenDocument: (document: ScadaDocument, notice: string, clean: boolean) => void;
 }) {
   const [query, setQuery] = useState("");
   const [drafts, setDrafts] = useState<readonly WorkspaceDraftSummary[]>([]);
@@ -247,20 +316,20 @@ function WorkspaceHome({
 
   function openEntry(view: AppView) {
     if (view === "studio") {
-      onOpenDocument(waterTreatmentShowcaseDocument, "已打开水处理总览示例 · 静态模拟预览");
+      onOpenDocument(waterTreatmentShowcaseDocument, "已打开水处理总览示例 · 静态模拟预览", true);
     } else {
       onNavigate(view);
     }
   }
 
-  async function openFromHome(load: () => Promise<{ document: ScadaDocument; notice: string }>) {
+  async function openFromHome(load: () => Promise<WorkspaceStudioEntry>) {
     const controller = lifetime.current;
     if (!controller || controller.signal.aborted || operation.current) return;
     operation.current = true;
     setBusy(true);
     try {
       const result = await load();
-      if (!controller.signal.aborted) onOpenDocument(result.document, result.notice);
+      if (!controller.signal.aborted) onOpenDocument(result.document, result.notice, result.clean);
     } catch {
       if (!controller.signal.aborted) setDraftStatus("工程操作失败，请检查文件或本地存储");
     } finally {
@@ -294,7 +363,7 @@ function WorkspaceHome({
           onClick={() => {
             void openFromHome(async () => {
               const draft = await createWorkspaceDraft();
-              return { document: draft.document, notice: "已创建并保存独立本地工程" };
+              return { document: draft.document, notice: "已创建并保存独立本地工程", clean: true };
             });
           }}
         >
@@ -319,6 +388,7 @@ function WorkspaceHome({
                 const result = await readWorkspaceJson(file);
                 return {
                   document: result.document,
+                  clean: false,
                   notice: result.migratedFrom
                     ? `已从 ${result.migratedFrom} 迁移工程，请重新保存或导出`
                     : "工程 JSON 已校验，请按需保存本地草稿",
@@ -436,7 +506,7 @@ function WorkspaceHome({
               onClick={() => {
                 void openFromHome(async () => {
                   const latest = await readWorkspaceDraft(draft.projectId);
-                  return { document: latest.document, notice: "已打开最新本地草稿" };
+                  return { document: latest.document, notice: "已打开最新本地草稿", clean: true };
                 });
               }}
             >

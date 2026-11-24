@@ -2590,3 +2590,7 @@ PR #192 内统一 React/Vue Studio 通用操作图标为 TDesign，工业设备�
 ### D5c1 · 菜单交互与路由评估
 
 顶部菜单裁剪及工程管理拒绝后弹层卸载候选已修复，保持 PR #192 Draft。当前应用导航仍是 React state / Vue ref 的视图切换，不是真正 URL 路由。建议正式引入 React Router / Vue Router，共享路由语义、直接访问和刷新策略、离开编辑时草稿保护及运行订阅释放；依赖 Catalog 和锁文件需由实际 pnpm 解析生成，不手写锁文件。路由尚未实施。
+
+### D5c1 · 工作区路由候选实施
+
+维护者授权直接修改仓库。原 PR #192 接入 React Router / Vue Router Hash 模式，统一实际工作区路径与本地工程路由，保留安全边界。Catalog 已声明版本，锁文件须经真实 pnpm 更新；当前不满足最终质量门禁，保持 Draft。

@@ -936,6 +936,7 @@ async function verifyWorkspaceProjectInPage() {
     const id = document.querySelector(".studio-toolbar h1")?.getAttribute("data-project-id");
     return id?.startsWith("project-") ? id : null;
   }, "新建工程未进入编辑器");
+  if (location.hash !== "#/studio/" + projectId) throw new Error("新建工程路由 ID 不一致");
   const boundary = await waitFor(
     () => document.querySelector(".studio-page-boundary"),
     "新建工程画板未挂载",
@@ -991,12 +992,28 @@ async function verifyWorkspaceProjectInPage() {
     () => document.querySelectorAll(".studio-hitbox").length === 1,
     "新建水箱未显示在画板",
   );
+  click(nav("工作台"), "无法验证编辑离开保护");
+  const leaveDialog = await waitFor(
+    () => [...document.querySelectorAll(".t-dialog")].find((node) => node.getClientRects().length && node.textContent.includes("当前工程可能有未保存内容")),
+    "未保存编辑离开时未显示确认",
+  );
+  click(leaveDialog.querySelector(".t-dialog__cancel"), "缺少继续编辑入口");
+  await waitFor(
+    () => !leaveDialog.getClientRects().length && location.hash === "#/studio/" + projectId,
+    "取消离开后工程路由未保留",
+  );
+  const previousDialogs = new Set(document.querySelectorAll(".t-dialog"));
   click(
     [...document.querySelectorAll(".studio-save-actions button")].find(
       (button) => button.textContent.trim() === "保存草稿",
     ),
     "无法保存新建工程",
   );
+  const saveDialog = await waitFor(
+    () => [...document.querySelectorAll(".t-dialog")].find((node) => !previousDialogs.has(node) && node.getClientRects().length && node.textContent.includes("数据库已有草稿")),
+    "已有草稿覆盖确认未显示",
+  );
+  click(saveDialog.querySelector(".t-dialog__confirm"), "缺少保存草稿确认入口");
   await waitFor(
     () => document.querySelector(".studio-notice")?.textContent.includes("已保存"),
     "新建工程保存未完成",
@@ -1019,7 +1036,15 @@ async function verifyWorkspaceProjectInPage() {
       document.querySelectorAll(".studio-hitbox").length === 1,
     "恢复工程后图元不一致",
   );
+  history.back();
+  await waitFor(() => location.hash === "#/" && document.querySelector(".scada-home"), "浏览器后退未回到工作台");
+  history.forward();
+  await waitFor(
+    () => location.hash === "#/studio/" + projectId && document.querySelector(".studio-toolbar h1")?.getAttribute("data-project-id") === projectId && document.querySelectorAll(".studio-hitbox").length === 1,
+    "浏览器前进未恢复对应草稿",
+  );
   return {
+    projectId,
     width,
     height,
     initialNodes,
@@ -1093,6 +1118,7 @@ async function runScadaUIExperience(session) {
       });
       const url = new URL(target.url);
       url.searchParams.set("scada_ui_check", target.name + "-" + viewport.width);
+      url.hash = "/";
       await session.send("Page.navigate", { url: url.href });
       let ready = false;
       for (let attempt = 0; attempt < 80; attempt += 1) {
@@ -1134,6 +1160,8 @@ async function runScadaUIExperience(session) {
             target.name + " " + viewport.width + "x" + viewport.height + " " + label + " " + mode;
           assert.equal(data.theme, mode, prefix + " 根主题不一致");
           assert.equal(data.screen, view, prefix + " 当前视图与导航状态不一致");
+          const routeHash = await session.evaluate("location.hash");
+          assert.equal(routeHash, view === "home" ? "#/" : "#/" + view, prefix + " 路由地址不一致");
           if (view !== "home") {
             assert.ok(
               data.railHeight <= 48 && data.railWidth > viewport.width / 2,
@@ -1270,6 +1298,20 @@ async function runScadaUIExperience(session) {
         [1920, 1080, 0, 1],
         target.name + " 新建工程、图元库和本地草稿往返不一致",
       );
+      await session.send("Page.reload");
+      let restoredProject = false;
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        await pause(120);
+        try {
+          restoredProject = await session.evaluate(
+            "location.hash === " + JSON.stringify("#/studio/" + created.projectId) + " && document.querySelector('.studio-toolbar h1')?.getAttribute('data-project-id') === " + JSON.stringify(created.projectId) + " && document.querySelectorAll('.studio-hitbox').length === 1",
+          );
+        } catch {
+          // 刷新期间执行上下文暂不可用。
+        }
+        if (restoredProject) break;
+      }
+      assert.ok(restoredProject, target.name + " 工程专属路由刷新未恢复对应草稿");
     }
   }
 }
@@ -1379,6 +1421,7 @@ async function importStudioJsonInPage(json, expectSuccess) {
 async function navigateStudioForInterop(session, target, marker) {
   const url = new URL(target.url);
   url.searchParams.set("scada_interop_check", marker);
+  url.hash = "/";
   const navigation = await session.send("Page.navigate", { url: url.href });
   let loaded = false;
   for (let attempt = 0; attempt < 60; attempt += 1) {
@@ -3275,6 +3318,7 @@ async function main() {
           "scada_browser_check",
           `${target.name}-${viewport.width}x${viewport.height}`,
         );
+        navigationUrl.hash = "/";
         await session.send("Page.navigate", { url: navigationUrl.href });
         let loaded = false;
         for (let attempt = 0; attempt < 40; attempt += 1) {

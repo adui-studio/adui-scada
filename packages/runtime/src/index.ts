@@ -58,3 +58,12 @@ export {
   transitionWorkspaceTheme,
 } from "./workspace-theme.ts";
 export type { WorkspaceThemeMode } from "./workspace-theme.ts";
+
+export {
+  WORKSPACE_ROUTE_PATHS,
+  workspaceViewFromRouteName,
+  workspaceStudioPath,
+  stageWorkspaceStudioEntry,
+  takeWorkspaceStudioEntry,
+} from "./workspace-routes.ts";
+export type { WorkspaceView, WorkspaceStudioEntry } from "./workspace-routes.ts";

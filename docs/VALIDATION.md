@@ -4671,3 +4671,7 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 ### D5c1 · 顶部菜单裁剪回归
 
 维护者报告顶部五个菜单点击无效果。源码确认工具栏使用 overflow-x:auto 与 overflow-y:hidden，而五个 Popup 挂载在其内部；改为 flex-wrap:wrap 与 overflow:visible。浏览器候选增加五个弹层实际命中检查，避免仅以 getClientRects 判定可见；保留原业务回归和外部关闭断言。工程管理自身授权拒绝时继续清空授权缓存和 CAS，仅保留已清空的目录组件以展示错误。完整 Windows Vite+ 与真实双端浏览器仍待验证。
+
+### D5c1 · 双框架 Router 候选
+
+已核对 React Router 7.18.5 / Vue Router 4.6.5 固定版本官方包 peer 声明。候选新增四个真实工作区路由、工程 ID 路径、本地工程解析、路由离开与刷新保护及共享路由单测，浏览器断言同步检查实际 Hash 地址、取消离开、前进后退和刷新草稿。当前 npm 无法连接且缺少 pnpm 12.18.0，锁文件未生成，冻结安装、Vite+、类型检查、构建、真实 Chromium 与 Tauri 均待验收。禁止把候选源码提交描述为已通过。

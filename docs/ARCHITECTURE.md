@@ -463,3 +463,7 @@ PR #105 已合并（main `637ebbce3191c998b3264733645da947a3739e9f`）。D5a 在
 `@adui/theme` 是独立 CSS-only 工作区包，按设计 Token → TDesign CSS Variables → 共享 Runtime 样式 → React/Vue 的方向单向使用，不依赖编辑 Core、NestJS、工业协议或任何设备写入。TDesign React/Vue Next 均通过官方 `theme-mode="dark"` 和全局 CSS Variables 使用相同颜色、字体、间距及圆角；Tailwind 只承接布局原子类与基础 Token，避免复制 UI 组件的行为。
 
 第一批只迁移品牌 Token 与全局入口，旧的 `--scada-*` 别名继续兼容；Studio 固定侧栏 252px/320px、SVG 16:9、数据质量及正式发布的只读授权边界不改变。新增 `workspace:*` 依赖需要 pnpm 锁文件在 Windows 真实重新生成后，才可运行冻结安装与全链质量验收。详见 [ADR-0029](adr/0029-brand-theme-v7.md) 与 [UI 设计基线](UI_DESIGN_SYSTEM.md)。
+
+### D5c1 · Web / Tauri 工作区路由
+
+双端采用独立官方 Router 适配，统一共享 Hash 路径与工程 ID 语义，详见 [ADR-0071](adr/0071-dual-framework-workspace-router.md)。客户端路由不构成工程 ACL，不改受控服务端授权和工业只读边界。依赖锁定及完整实机验收待完成。
