@@ -467,3 +467,7 @@ PR #105 已合并（main `637ebbce3191c998b3264733645da947a3739e9f`）。D5a 在
 ### D5c1 · Web / Tauri 工作区路由
 
 双端采用独立官方 Router 适配，统一共享 Hash 路径与工程 ID 语义，详见 [ADR-0071](adr/0071-dual-framework-workspace-router.md)。客户端路由不构成工程 ACL，不改受控服务端授权和工业只读边界。依赖锁定及完整实机验收待完成。
+
+### D5c3 · FR-012 内存历史缓冲前置
+
+共享 Core 持有单工程本地有界记录；调用方负责工程隔离、采样来源标记、容量背压与清理决策。历史查询复用 D5c2，不改 TagStore、Runtime 或设备边界。生产历史归档、服务端授权、TimescaleDB 选型与保留期限另行设计。

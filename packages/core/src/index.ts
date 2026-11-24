@@ -24,8 +24,8 @@ export {
 export type { TagDataType, TagDefinition } from "./tag-definition.ts";
 export { TAG_QUALITIES, TAG_QUALITY_LABELS, TagStore, validateTagValue } from "./tag-store.ts";
 export type { TagChange, TagListener, TagQuality, TagScalar, TagValue } from "./tag-store.ts";
-export { selectTagHistory } from "./tag-history.ts";
-export type { TagHistoryPoint, TagHistoryQuery } from "./tag-history.ts";
+export { MAX_TAG_HISTORY_BUFFER_SAMPLES, TagHistoryBuffer, selectTagHistory } from "./tag-history.ts";
+export type { TagHistoryBatch, TagHistoryPoint, TagHistoryQuery } from "./tag-history.ts";
 export {
   ALARM_EVENTS,
   ALARM_STATES,
