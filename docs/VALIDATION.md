@@ -4751,3 +4751,9 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 ### D5c5 · Windows 定向验收完成（PR #196）
 
 维护者 Windows 实测 D5c5：Vite+ 461 文件格式正确、303 个受检文件零警告和错误；归档 8/8、采样 13/13、历史缓冲区 11/11、历史查询 8/8、TagStore 6/6，共 46/46；中文文案 330 文件及 Markdown 95 份全部通过。日志未独立打印本地 SHA，当前远端候选为 73a06349e114a73465dd6551723820eb02cd589b。维护者明确授权合并。定向测试不代表完整 ready、生产采集、真实数据库持久化或现场工业安全验收。 E-130 关闭。
+
+### D5c6 · FR-012 历史持久化端口候选
+
+新增 9 项正式测试定义，覆盖空缓冲/上限、成功确认及序号、模拟提交后回执丢失、七类错配回执、同步异常、并发提交、单写入者、复合键范围及外部批次改变。既有五份 46 项继续回归，目标六份共 55 项。协作容器 Node.js 22.16.0 独立 node:test 共 30/30（新增持久化 9 项、既有归档 8 项、采样 13 项）通过，0 失败。新增测试采用原 Vitest 用例逻辑及 Node 断言适配（仅替换测试入口及相对导入）；既有归档、采样为此前独立对应场景。源码本地 Git Blob：tag-history-persistence.ts 9a9d52cfbaec98c7ca82cee942a762df953b0d54、tag-history.ts 28a2cc4e90135ebdf658ed9ff67ed701dd77632b、tag-store.ts 78e22557523275fecb9e6172cc6b02230c60c58b；新增仓库测试还原导入后的 Blob f5e514878ad8306431c4d107149bfc3665e07dce。未运行正式 Vitest、Vite+ 或完整 ready；模拟端口不代表真实数据库事务、幂等约束或崩溃恢复。
+
+Windows 待执行 `vp check`、`vp test run packages/core/test/tag-history-persistence.test.ts packages/core/test/tag-history-archive.test.ts packages/core/test/tag-history-sampler.test.ts packages/core/test/tag-history-buffer.test.ts packages/core/test/tag-history.test.ts packages/core/test/tag-store.test.ts`、`pnpm run messages:check`、`pnpm run docs:check`；完整 ready 待执行。
