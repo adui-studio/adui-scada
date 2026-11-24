@@ -27,9 +27,9 @@ html:root[theme-mode="dark"] {
   --td-component-stroke: var(--adui-color-border);
   --td-border-level-1-color: var(--adui-color-border-subtle);
   --td-border-level-2-color: var(--adui-color-border);
-  --td-success-color: var(--adui-color-success);
-  --td-warning-color: var(--adui-color-warning);
-  --td-error-color: var(--adui-color-danger);
+  --td-success-color: var(--adui-color-success-solid);
+  --td-warning-color: var(--adui-color-warning-solid);
+  --td-error-color: var(--adui-color-danger-solid);
 
   /* 字体和组件尺寸使用官方 Token，不复写 TDesign Button/Input 样式。 */
   --td-font-family: var(--adui-font-family);

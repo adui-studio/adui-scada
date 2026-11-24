@@ -64,6 +64,10 @@
   --adui-color-success: #087c61;
   --adui-color-warning: #996009;
   --adui-color-danger: #bd3043;
+  /* 实色状态按钮保持白字对比度，状态文字可以随主题提亮。 */
+  --adui-color-success-solid: #087c61;
+  --adui-color-warning-solid: #996009;
+  --adui-color-danger-solid: #bd3043;
   --adui-color-bg: #edf1f5;
   --adui-color-nav: #151e2c;
   --adui-color-surface: #ffffff;

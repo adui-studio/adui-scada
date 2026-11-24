@@ -996,7 +996,23 @@ async function runScadaUIExperience(session) {
           process.stdout.write(prefix + " 新版信息架构、状态与视觉边界通过\n");
         }
       }
-      await session.evaluate("(" + selectWorkspaceThemeInPage.toString() + ")(" + JSON.stringify("light") + ")");
+      await session.send("Page.reload");
+      let restoredTheme = false;
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        await pause(120);
+        try {
+          restoredTheme = await session.evaluate(
+            "document.readyState === 'complete' && document.documentElement.getAttribute('theme-mode') === 'dark' && Boolean(document.querySelector('.scada-theme-toggle[aria-pressed=true]'))",
+          );
+        } catch {
+          // 刷新期间旧执行上下文可能已销毁。
+        }
+        if (restoredTheme) break;
+      }
+      assert.ok(restoredTheme, target.name + " 刷新后未恢复深色主题");
+      await session.evaluate(
+        "(" + selectWorkspaceThemeInPage.toString() + ")(" + JSON.stringify("light") + ")",
+      );
       const created = await session.evaluate("(" + verifyWorkspaceProjectInPage.toString() + ")()");
       assert.deepStrictEqual(
         [created.width, created.height, created.initialNodes, created.restoredNodes],
