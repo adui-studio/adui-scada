@@ -349,7 +349,7 @@ async function checkStudioInPage() {
   zoomButtons[1]?.click();
   await settle();
   verify("适应按钮恢复原始视图", near(svg.viewBox.baseVal.width, originalWidth, 0.01));
-  verify("显示实际画板缩放百分比", /%$/.test(zoomButtons[1]?.textContent.trim() ?? ""));
+  verify("显示实际画板缩放百分比", (zoomButtons[1]?.textContent.trim() ?? "").endsWith("%"));
 
   const menu = element(".studio-view-menu");
   const viewTrigger = menu.querySelector("button.t-button");
@@ -383,9 +383,13 @@ async function checkStudioInPage() {
   verify("存在左右侧栏宽度控制", widths.length === 2);
   if (widths.length === 2) {
     const setWidth = (input, width) => {
-      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-      if (!setter) throw new TypeError("未找到原生范围输入值设置器");
-      setter.call(input, String(width));
+      const inputPrototype = HTMLInputElement.prototype;
+      if (
+        typeof Object.getOwnPropertyDescriptor(inputPrototype, "value")?.set !== "function" ||
+        !Reflect.set(inputPrototype, "value", String(width), input)
+      ) {
+        throw new TypeError("未找到可用的原生范围输入值设置器");
+      }
       input.dispatchEvent(new Event("input", { bubbles: true }));
       input.dispatchEvent(new Event("change", { bubbles: true }));
     };
@@ -623,7 +627,7 @@ async function enterScadaViewInPage(label, selector) {
 }
 
 /** 读取真实主题与布局快照，不读取会话凭据或工程网络正文。 */
-function inspectScadaUIInPage(view) {
+function inspectScadaUIInPage() {
   const app = document.querySelector(".scada-app-frame");
   const nav = document.querySelector(".scada-app-nav");
   const topbar = document.querySelector(".scada-app-topbar");
@@ -735,7 +739,7 @@ async function runScadaUIExperience(session) {
             JSON.stringify(label) + "," + JSON.stringify(selector) + ")",
         );
         const data = await session.evaluate(
-          "(" + inspectScadaUIInPage.toString() + ")(" + JSON.stringify(view) + ")",
+          "(" + inspectScadaUIInPage.toString() + ")()",
         );
         const prefix = target.name + " " + viewport.width + "x" + viewport.height + " " + label;
         assert.equal(data.theme, "light", prefix + " 主题未切换至浅色工作区");

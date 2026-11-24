@@ -4613,3 +4613,7 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 ### D5c1 · React Tag 表单 JSX 格式化阻塞 E-120
 
 维护者在 HEAD `eadc44fdc8b76e41fe16e37068dc9fcb4679c65b` 实测 `vp check --fix` 因 TagManager.tsx 条件表达式缺少闭合花括号中止。最小修复将第 297 行 `)` 改为 `)}`；原始局部 TSX 片段经 TypeScript 5.8.3 解析 5 条错误，修正后 0 条，未运行完整文件、仓库格式化、类型检查及 Chromium。保留原业务和安全断言；PR #192 继续 Draft，完整验收待复验。
+
+### D5c1 · 浏览器脚本 Lint 警告 E-121
+
+维护者报告 E-120 修复后 `vp check --fix` 格式化完成，292 个受检文件零错误、3 条警告。候选修复仅修改 `scripts/test-studio-browser.mjs` 中未使用参数、百分比后缀判断、原生 setter 调用，沿用 E-070 的 `Reflect.set` 方案。实际修改后的局部函数独立 JavaScript 模拟通过，未执行完整 Vite+ 与 Chromium，PR #192 保持 Draft。
