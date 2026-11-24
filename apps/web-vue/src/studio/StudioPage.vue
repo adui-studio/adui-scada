@@ -14,9 +14,17 @@ import {
 import type { DropdownProps } from "tdesign-vue-next";
 import {
   EditIcon,
-  RectangleIcon,
-  PlayCircleIcon,
-  SlashIcon,
+  AddIcon,
+  ArrowDownIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowUpIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  DragMoveIcon,
+  FocusIcon,
+  RemoveIcon,
+  SettingIcon,
   TextboxIcon,
   CursorIcon,
   GestureOpenIcon,
@@ -2271,7 +2279,7 @@ async function importJsonFile(file: File | undefined) {
                 libraryTab = 'layers';
               "
             >
-              <RectangleIcon aria-hidden="true" />
+              <span class="studio-equipment-icon" data-equipment="tank" aria-hidden="true" />
               <strong>水箱</strong>
               <small>显示液位与质量</small>
             </TButton>
@@ -2283,7 +2291,7 @@ async function importJsonFile(file: File | undefined) {
                 libraryTab = 'layers';
               "
             >
-              <PlayCircleIcon aria-hidden="true" />
+              <span class="studio-equipment-icon" data-equipment="pump" aria-hidden="true" />
               <strong>水泵</strong>
               <small>显示运行状态</small>
             </TButton>
@@ -2295,7 +2303,7 @@ async function importJsonFile(file: File | undefined) {
                 libraryTab = 'layers';
               "
             >
-              <SlashIcon aria-hidden="true" />
+              <span class="studio-equipment-icon" data-equipment="pipe" aria-hidden="true" />
               <strong>管道</strong>
               <small>绘制静态工艺管线</small>
             </TButton>
@@ -2360,7 +2368,10 @@ async function importJsonFile(file: File | undefined) {
               :disabled="state.selectedIds.length === 0"
               @click="locateSelectedLayer"
             >
-              定位选中图层
+              <span class="scada-button-content">
+                <FocusIcon aria-hidden="true" />
+                <span class="scada-button-label">定位选中图层</span>
+              </span>
             </TButton>
           </div>
           <div ref="layerTreeRef" class="studio-layer-tree min-w-0" aria-label="图层树">
@@ -2381,7 +2392,8 @@ async function importJsonFile(file: File | undefined) {
                     :disabled="isLayerSearching"
                     @click="toggleLayerGroup(entry.groupId)"
                   >
-                    {{ groupExpanded(entry.groupId) ? "▾" : "▸" }}
+                    <ChevronDownIcon v-if="groupExpanded(entry.groupId)" aria-hidden="true" />
+                    <ChevronRightIcon v-else aria-hidden="true" />
                   </TButton>
                   <TButton
                     type="button"
@@ -2404,7 +2416,7 @@ async function importJsonFile(file: File | undefined) {
                     @click="selectNode(entry.anchorNodeId, $event.shiftKey)"
                   >
                     <span class="studio-layer-identity">
-                      <span aria-hidden="true">⋮⋮</span> 组合 {{ entry.groupId }}
+                      <DragMoveIcon aria-hidden="true" /> 组合 {{ entry.groupId }}
                     </span>
                     <small>
                       {{ entry.totalCount }} 个成员
@@ -2446,7 +2458,7 @@ async function importJsonFile(file: File | undefined) {
                     @click="selectNode(node.id, $event.shiftKey)"
                   >
                     <span class="studio-layer-identity">
-                      <span aria-hidden="true">⋮⋮</span> {{ node.id }}
+                      <DragMoveIcon aria-hidden="true" /> {{ node.id }}
                     </span>
                     <small>
                       {{ node.type }}
@@ -2478,7 +2490,7 @@ async function importJsonFile(file: File | undefined) {
                 @click="selectNode(entry.node.id, $event.shiftKey)"
               >
                 <span class="studio-layer-identity">
-                  <span aria-hidden="true">⋮⋮</span> {{ entry.node.id }}
+                  <DragMoveIcon aria-hidden="true" /> {{ entry.node.id }}
                 </span>
                 <small>
                   {{ entry.node.type }}
@@ -2547,7 +2559,12 @@ async function importJsonFile(file: File | undefined) {
           >
           <div class="studio-view-menu studio-view-settings-menu">
             <TPopup attach=".studio-view-settings-menu" trigger="click" placement="bottom-right">
-              <TButton type="button" variant="outline" size="small">视图设置</TButton>
+              <TButton type="button" variant="outline" size="small">
+                <span class="scada-button-content">
+                  <SettingIcon aria-hidden="true" />
+                  <span class="scada-button-label">视图设置</span>
+                </span>
+              </TButton>
               <template #content>
                 <div class="studio-view-popover">
                   <div class="studio-view-section">
@@ -2608,11 +2625,29 @@ async function importJsonFile(file: File | undefined) {
             </TPopup>
           </div>
           <div class="studio-zoom" aria-label="画布缩放">
-            <TButton type="button" size="small" :disabled="zoom <= 0.5" @click="changeZoom(-0.25)">−</TButton>
+            <TButton
+              type="button"
+              size="small"
+              title="缩小"
+              aria-label="缩小"
+              :disabled="zoom <= 0.5"
+              @click="changeZoom(-0.25)"
+            >
+              <RemoveIcon aria-hidden="true" />
+            </TButton>
             <TButton type="button" size="small" title="适应画板" aria-label="适应画板" @click="resetCanvasView">
               {{ actualZoomPercent }}%
             </TButton>
-            <TButton type="button" size="small" :disabled="zoom >= 8" @click="changeZoom(0.25)">+</TButton>
+            <TButton
+              type="button"
+              size="small"
+              title="放大"
+              aria-label="放大"
+              :disabled="zoom >= 8"
+              @click="changeZoom(0.25)"
+            >
+              <AddIcon aria-hidden="true" />
+            </TButton>
             <TButton
               type="button" size="small"
               class="studio-focus-selection"
@@ -2620,8 +2655,12 @@ async function importJsonFile(file: File | undefined) {
               aria-label="定位选中图元"
               :disabled="!selected || !studioNodeVisible(selected)"
               @click="focusSelectedNode"
-              >定位</TButton
             >
+              <span class="scada-button-content">
+                <FocusIcon aria-hidden="true" />
+                <span class="scada-button-label">定位</span>
+              </span>
+            </TButton>
           </div>
         </div>
         <div class="studio-canvas-scroll" tabindex="0" aria-label="组态网格工作区">
@@ -2812,19 +2851,19 @@ async function importJsonFile(file: File | undefined) {
           <div class="studio-add">
             <TButton type="button" @click="addSymbol('tank')">
               <span class="scada-button-content">
-                <RectangleIcon aria-hidden="true" />
+                <span class="studio-equipment-icon" data-equipment="tank" aria-hidden="true" />
                 <span class="scada-button-label">+ 水箱</span>
               </span>
             </TButton>
             <TButton type="button" @click="addSymbol('pump')">
               <span class="scada-button-content">
-                <PlayCircleIcon aria-hidden="true" />
+                <span class="studio-equipment-icon" data-equipment="pump" aria-hidden="true" />
                 <span class="scada-button-label">+ 水泵</span>
               </span>
             </TButton>
             <TButton type="button" @click="addSymbol('pipe')">
               <span class="scada-button-content">
-                <SlashIcon aria-hidden="true" />
+                <span class="studio-equipment-icon" data-equipment="pipe" aria-hidden="true" />
                 <span class="scada-button-label">+ 管道</span>
               </span>
             </TButton>
@@ -2883,10 +2922,38 @@ async function importJsonFile(file: File | undefined) {
             <p v-else class="studio-tip">当前为多选状态，请单选一个图元编辑几何属性。</p>
             <p class="studio-tip">拖动画布中的虚线框，或使用方向按钮微调。每次操作可撤销。</p>
             <div class="studio-nudge">
-              <TButton type="button" @click="nudge(-1, 0)">←</TButton>
-              <TButton type="button" @click="nudge(0, -1)">↑</TButton>
-              <TButton type="button" @click="nudge(0, 1)">↓</TButton>
-              <TButton type="button" @click="nudge(1, 0)">→</TButton>
+              <TButton
+                type="button"
+                title="向左微调"
+                aria-label="向左微调"
+                @click="nudge(-1, 0)"
+              >
+                <ArrowLeftIcon aria-hidden="true" />
+              </TButton>
+              <TButton
+                type="button"
+                title="向上微调"
+                aria-label="向上微调"
+                @click="nudge(0, -1)"
+              >
+                <ArrowUpIcon aria-hidden="true" />
+              </TButton>
+              <TButton
+                type="button"
+                title="向下微调"
+                aria-label="向下微调"
+                @click="nudge(0, 1)"
+              >
+                <ArrowDownIcon aria-hidden="true" />
+              </TButton>
+              <TButton
+                type="button"
+                title="向右微调"
+                aria-label="向右微调"
+                @click="nudge(1, 0)"
+              >
+                <ArrowRightIcon aria-hidden="true" />
+              </TButton>
             </div>
             <label
               v-if="selected.type === 'label' && state.selectedIds.length === 1"

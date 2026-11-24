@@ -180,9 +180,10 @@
   gap: 5px;
   min-width: 0;
 }
-.studio-layer-identity > span {
+.studio-layer-identity > .t-icon {
+  flex: none;
   color: var(--scada-text-muted);
-  font-size: 13px;
+  font-size: 16px;
 }
 .studio-exact-layer {
   display: grid;
@@ -2441,7 +2442,8 @@
   align-items: center;
   justify-content: center;
 }
-.studio-canvas-dock .t-button svg {
+.studio-canvas-dock .t-button svg,
+.studio-canvas-dock .studio-equipment-icon {
   width: 16px;
   height: 16px;
   flex: none;
@@ -2532,7 +2534,8 @@
   align-items: center;
   gap: var(--adui-space-2);
 }
-.studio-symbol-grid svg {
+.studio-symbol-grid svg,
+.studio-symbol-grid .studio-equipment-icon {
   width: 28px;
   height: 28px;
   color: var(--adui-color-brand-text);
@@ -2668,4 +2671,32 @@
 }
 .studio-stage-caption .studio-zoom .studio-focus-selection {
   padding-inline: var(--adui-space-3);
+}
+
+/* TDesign 无对应工业图标时，仅使用本地共享矢量图形；颜色继承当前主题。 */
+.studio-equipment-icon {
+  display: block;
+  flex: none;
+  width: 1em;
+  height: 1em;
+  background-color: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+.studio-equipment-icon[data-equipment="tank"] {
+  mask-image: url("../../../assets/icons/studio-tank.svg");
+}
+.studio-equipment-icon[data-equipment="pump"] {
+  mask-image: url("../../../assets/icons/studio-pump.svg");
+}
+.studio-equipment-icon[data-equipment="pipe"] {
+  mask-image: url("../../../assets/icons/studio-pipe.svg");
+}
+.studio-stage-caption .t-icon,
+.studio-tree-toggle .t-icon,
+.studio-tree-controls .t-icon,
+.studio-nudge .t-icon {
+  flex: none;
+  font-size: 16px;
 }

@@ -323,9 +323,21 @@ async function checkStudioInPage() {
         0.002,
       ),
   );
+  const dock = element(".studio-canvas-dock");
+  const equipmentIcons = [...dock.querySelectorAll(".studio-equipment-icon")];
   verify(
-    "底部操作使用六个 TDesign 图标",
-    element(".studio-canvas-dock").querySelectorAll(".t-icon").length === 6,
+    "底部通用操作采用 TDesign，工业设备采用专用共享图标",
+    dock.querySelectorAll(".t-icon").length === 3 &&
+      equipmentIcons.length === 3 &&
+      ["tank", "pump", "pipe"].every((kind) =>
+        equipmentIcons.some((icon) => icon.getAttribute("data-equipment") === kind),
+      ) &&
+      equipmentIcons.every(
+        (icon) =>
+          bounds(icon).width === 16 &&
+          bounds(icon).height === 16 &&
+          getComputedStyle(icon).maskImage !== "none",
+      ),
   );
   const zoomButtons = [...element(".studio-zoom").querySelectorAll("button")];
   const viewSettingsButton = element(".studio-view-settings-menu").querySelector("button");
@@ -334,6 +346,16 @@ async function checkStudioInPage() {
     Boolean(viewSettingsButton) &&
       zoomButtons.every(
         (button) => Math.abs(bounds(button).height - bounds(viewSettingsButton).height) <= 1,
+      ),
+  );
+  verify(
+    "视图操作使用有可访问名称的 TDesign 图标",
+    Boolean(viewSettingsButton?.querySelector(".t-icon")) &&
+      ["缩小", "放大", "定位选中图元"].every((label) =>
+        zoomButtons.some(
+          (button) =>
+            button.getAttribute("aria-label") === label && Boolean(button.querySelector(".t-icon")),
+        ),
       ),
   );
   verify("创建工具集中在画布底部", Boolean(stage.querySelector(".studio-canvas-dock .studio-add")));
@@ -543,6 +565,13 @@ async function checkStudioInPage() {
   firstLayer?.click();
   await settle();
   verify("点击图层可更新属性面板", Boolean(firstLayer) && /已选\s*1/.test(properties.textContent));
+  verify(
+    "图层拖拽与方向微调使用 TDesign 图标",
+    Boolean(firstLayer?.querySelector(".studio-layer-identity .t-icon")) &&
+      ["向左微调", "向上微调", "向下微调", "向右微调"].every((label) =>
+        Boolean(properties.querySelector(`.studio-nudge button[aria-label="${label}"] .t-icon`)),
+      ),
+  );
   const resizeHandle = svg.querySelector(".studio-resize-handle");
   verify("单选图元具有缩放手柄", Boolean(resizeHandle));
   if (resizeHandle) {
@@ -756,7 +785,7 @@ function inspectScadaUIInPage() {
         ".scada-app-nav .scada-button-content, .studio-canvas-dock .scada-button-content",
       ),
     ].map((content) => {
-      const icon = content.querySelector(".t-icon");
+      const icon = content.querySelector(".t-icon, .studio-equipment-icon");
       const label = content.querySelector(".scada-button-label");
       if (!icon || !label) return false;
       const iconRect = icon.getBoundingClientRect();

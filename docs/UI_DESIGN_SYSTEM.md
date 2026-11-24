@@ -236,3 +236,7 @@ Studio 新增图层与图元库两种真实模式，基础水箱、水泵、管�
 ## D5c1 · 工程名称与视图操作尺寸
 
 Studio 顶部显示工程名称并提供编辑入口，沿用 TDesign 重命名对话框，稳定工程 ID 只用于身份校验及索引，悬停标题可查看。新工程默认名称为“未命名工程”，旧工程无名称时回退到 ID。工作台草稿名称与搜索同步使用真实工程文档。视图设置、缩小、适应、放大及定位按钮使用共享 small 高度，移除缩放组重复外框；保留前一提交的输入框原生清空能力。
+
+## D5c1 · TDesign 图标优先与工业图标例外
+
+React/Vue 按 Catalog 固定版本（tdesign-icons-react 0.6.11 / tdesign-icons-vue-next 0.4.11）按需引入官方 SVG 图标。通用操作统一使用 TDesign：缩放、方向微调、图层展开/收起、拖拽、视图设置和定位；保留文字标签、禁用态、键盘焦点和 aria-label，不用 Unicode 字符充当控件图标。水箱、水泵、管道未找到恰当的官方工业图标，改用 assets/icons 下三份本地共享 SVG，以 CSS mask 继承主题前景，在图元库与悬浮工具栏复用；不将播放键误作水泵，不引入第二套图标依赖。工业图元实际渲染、网格、手柄、旋转光标和品牌 Logo 不变。参考 https://tdesign.tencent.com/react/components/icon 与 https://tdesign.tencent.com/icons 。

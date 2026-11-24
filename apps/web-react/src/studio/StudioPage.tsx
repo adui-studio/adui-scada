@@ -3,9 +3,17 @@ import { Button, Checkbox, Collapse, Dropdown, Input, Popup, Select, Upload } fr
 import type { DropdownProps } from "tdesign-react";
 import {
   EditIcon,
-  RectangleIcon,
-  PlayCircleIcon,
-  SlashIcon,
+  AddIcon,
+  ArrowDownIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowUpIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  DragMoveIcon,
+  FocusIcon,
+  RemoveIcon,
+  SettingIcon,
   TextboxIcon,
   CursorIcon,
   GestureOpenIcon,
@@ -1856,7 +1864,7 @@ export default function StudioPage({
         onClick={(event) => select(node.id, event.shiftKey)}
       >
         <span className="studio-layer-identity">
-          <span aria-hidden="true">⋮⋮</span> {groupHeader ? `组合 ${groupId}` : node.id}
+          <DragMoveIcon aria-hidden="true" /> {groupHeader ? `组合 ${groupId}` : node.id}
         </span>
         <small>
           {groupHeader ? `${groupHeader.totalCount} 个成员` : node.type}
@@ -2332,7 +2340,7 @@ export default function StudioPage({
                   setLibraryTab("layers");
                 }}
               >
-                <RectangleIcon aria-hidden="true" />
+                <span className="studio-equipment-icon" data-equipment="tank" aria-hidden="true" />
                 <strong>水箱</strong>
                 <small>显示液位与质量</small>
               </Button>
@@ -2344,7 +2352,7 @@ export default function StudioPage({
                   setLibraryTab("layers");
                 }}
               >
-                <PlayCircleIcon aria-hidden="true" />
+                <span className="studio-equipment-icon" data-equipment="pump" aria-hidden="true" />
                 <strong>水泵</strong>
                 <small>显示运行状态</small>
               </Button>
@@ -2356,7 +2364,7 @@ export default function StudioPage({
                   setLibraryTab("layers");
                 }}
               >
-                <SlashIcon aria-hidden="true" />
+                <span className="studio-equipment-icon" data-equipment="pipe" aria-hidden="true" />
                 <strong>管道</strong>
                 <small>绘制静态工艺管线</small>
               </Button>
@@ -2426,7 +2434,10 @@ export default function StudioPage({
                 disabled={state.selectedIds.length === 0}
                 onClick={locateSelectedLayer}
               >
-                定位选中图层
+                <span className="scada-button-content">
+                  <FocusIcon aria-hidden="true" />
+                  <span className="scada-button-label">定位选中图层</span>
+                </span>
               </Button>
             </div>
             <div className="studio-layer-tree min-w-0" ref={layerTreeRef} aria-label="图层树">
@@ -2450,7 +2461,11 @@ export default function StudioPage({
                         disabled={isLayerSearching}
                         onClick={() => toggleLayerGroup(entry.groupId)}
                       >
-                        {groupExpanded(entry.groupId) ? "▾" : "▸"}
+                        {groupExpanded(entry.groupId) ? (
+                          <ChevronDownIcon aria-hidden="true" />
+                        ) : (
+                          <ChevronRightIcon aria-hidden="true" />
+                        )}
                       </Button>
                       {renderLayerButton(
                         page.nodes.find((node) => node.id === entry.anchorNodeId) ??
@@ -2614,7 +2629,10 @@ export default function StudioPage({
                 }
               >
                 <Button tag="button" type="button" variant="outline" size="small">
-                  视图设置
+                  <span className="scada-button-content">
+                    <SettingIcon aria-hidden="true" />
+                    <span className="scada-button-label">视图设置</span>
+                  </span>
                 </Button>
               </Popup>
             </div>
@@ -2623,10 +2641,12 @@ export default function StudioPage({
                 tag="button"
                 type="button"
                 size="small"
+                title="缩小"
+                aria-label="缩小"
                 onClick={() => changeZoom(-0.25)}
                 disabled={zoom <= 0.5}
               >
-                −
+                <RemoveIcon aria-hidden="true" />
               </Button>
               <Button
                 tag="button"
@@ -2642,10 +2662,12 @@ export default function StudioPage({
                 tag="button"
                 type="button"
                 size="small"
+                title="放大"
+                aria-label="放大"
                 onClick={() => changeZoom(0.25)}
                 disabled={zoom >= 8}
               >
-                +
+                <AddIcon aria-hidden="true" />
               </Button>
               <Button
                 tag="button"
@@ -2657,7 +2679,10 @@ export default function StudioPage({
                 disabled={!selected || !studioNodeVisible(selected)}
                 onClick={focusSelectedNode}
               >
-                定位
+                <span className="scada-button-content">
+                  <FocusIcon aria-hidden="true" />
+                  <span className="scada-button-label">定位</span>
+                </span>
               </Button>
             </div>
           </div>
@@ -2891,19 +2916,19 @@ export default function StudioPage({
             <div className="studio-add">
               <Button tag="button" type="button" onClick={() => addSymbol("tank")}>
                 <span className="scada-button-content">
-                  <RectangleIcon aria-hidden="true" />
+                  <span className="studio-equipment-icon" data-equipment="tank" aria-hidden="true" />
                   <span className="scada-button-label">+ 水箱</span>
                 </span>
               </Button>
               <Button tag="button" type="button" onClick={() => addSymbol("pump")}>
                 <span className="scada-button-content">
-                  <PlayCircleIcon aria-hidden="true" />
+                  <span className="studio-equipment-icon" data-equipment="pump" aria-hidden="true" />
                   <span className="scada-button-label">+ 水泵</span>
                 </span>
               </Button>
               <Button tag="button" type="button" onClick={() => addSymbol("pipe")}>
                 <span className="scada-button-content">
-                  <SlashIcon aria-hidden="true" />
+                  <span className="studio-equipment-icon" data-equipment="pipe" aria-hidden="true" />
                   <span className="scada-button-label">+ 管道</span>
                 </span>
               </Button>
@@ -2973,17 +2998,37 @@ export default function StudioPage({
                   拖动画布中的虚线框，或使用方向按钮微调。每次操作可撤销。
                 </p>
                 <div className="studio-nudge">
-                  <Button type="button" onClick={() => nudge(-1, 0)}>
-                    ←
+                  <Button
+                    type="button"
+                    title="向左微调"
+                    aria-label="向左微调"
+                    onClick={() => nudge(-1, 0)}
+                  >
+                    <ArrowLeftIcon aria-hidden="true" />
                   </Button>
-                  <Button type="button" onClick={() => nudge(0, -1)}>
-                    ↑
+                  <Button
+                    type="button"
+                    title="向上微调"
+                    aria-label="向上微调"
+                    onClick={() => nudge(0, -1)}
+                  >
+                    <ArrowUpIcon aria-hidden="true" />
                   </Button>
-                  <Button type="button" onClick={() => nudge(0, 1)}>
-                    ↓
+                  <Button
+                    type="button"
+                    title="向下微调"
+                    aria-label="向下微调"
+                    onClick={() => nudge(0, 1)}
+                  >
+                    <ArrowDownIcon aria-hidden="true" />
                   </Button>
-                  <Button type="button" onClick={() => nudge(1, 0)}>
-                    →
+                  <Button
+                    type="button"
+                    title="向右微调"
+                    aria-label="向右微调"
+                    onClick={() => nudge(1, 0)}
+                  >
+                    <ArrowRightIcon aria-hidden="true" />
                   </Button>
                 </div>
                 {selected.type === "label" && state.selectedIds.length === 1 && (
