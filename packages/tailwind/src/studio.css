@@ -2395,3 +2395,40 @@
     display: none;
   }
 }
+
+/* Pixso 参考：紧凑图标工具、独立属性区和精密选中反馈。 */
+.studio-canvas-dock {
+  gap: var(--adui-space-2);
+  padding: var(--adui-space-3);
+  border-radius: var(--adui-radius-panel);
+  box-shadow: 0 4px 16px rgb(19 34 54 / 12%);
+}
+.studio-canvas-dock .t-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--adui-space-2);
+}
+.studio-canvas-dock .t-button svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.studio-inspector-tabs {
+  border-bottom: 1px solid var(--scada-border);
+}
+.studio-inspector-tabs .t-button[aria-pressed="true"] {
+  color: var(--scada-primary);
+  box-shadow: inset 0 -2px var(--scada-primary);
+}
+.studio-panel-properties .studio-geometry .t-input {
+  background: var(--adui-color-surface-muted);
+}
+.studio-page-boundary,
+.studio-hitbox[data-selected="true"],
+.studio-resize-handle,
+.studio-rotation-handle {
+  stroke: var(--adui-color-focus-ring);
+}
+.studio-artboard-surface {
+  filter: drop-shadow(0 4px 12px rgb(31 47 64 / 10%));
+}

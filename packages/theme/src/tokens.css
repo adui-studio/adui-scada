@@ -54,11 +54,11 @@
   --adui-motion-normal: 180ms;
 
   /* 品牌、工业质量和警告使用独立语义，不能仅凭颜色判断设备状态。 */
-  --adui-color-brand: var(--adui-scada-blue);
-  --adui-color-brand-hover: #1052c8;
-  --adui-color-brand-active: #0a3da4;
-  --adui-color-brand-focus: #dceaff;
-  --adui-color-brand-disabled: #a8bfeb;
+  --adui-color-brand: #5b2b82;
+  --adui-color-brand-hover: #6d3998;
+  --adui-color-brand-active: #472069;
+  --adui-color-brand-focus: #eee3f6;
+  --adui-color-brand-disabled: #c9b8db;
   --adui-color-accent: #007ea3;
   --adui-color-success: #087c61;
   --adui-color-warning: #996009;
@@ -67,7 +67,7 @@
   --adui-color-nav: #151e2c;
   --adui-color-surface: #ffffff;
   --adui-color-canvas: #f5f7fa;
-  --adui-color-selected: #e5efff;
+  --adui-color-selected: #f0e9f8;
   --adui-color-action: #ebf0f6;
   --adui-color-action-hover: #dfe8f2;
   --adui-color-border-subtle: #e5eaf1;
