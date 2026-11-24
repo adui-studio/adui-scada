@@ -51,6 +51,7 @@ export default function App() {
           <Button
             tag="button"
             type="button"
+            title="运行监控"
             aria-current={view === "runtime" ? "page" : undefined}
             onClick={() => setView("runtime")}
           >
@@ -68,6 +69,7 @@ export default function App() {
           <Button
             tag="button"
             type="button"
+            title="已发布运行"
             aria-current={view === "published" ? "page" : undefined}
             onClick={() => setView("published")}
           >
@@ -86,6 +88,7 @@ export default function App() {
           <Button
             tag="button"
             type="button"
+            title="组态编辑"
             aria-current={view === "studio" ? "page" : undefined}
             onClick={() => setView("studio")}
           >

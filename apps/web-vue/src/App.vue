@@ -47,6 +47,7 @@ const viewLabels = {
         </TButton>
         <TButton
           type="button"
+          title="运行监控"
           :aria-current="view === 'runtime' ? 'page' : undefined"
           @click="view = 'runtime'"
         >
@@ -63,6 +64,7 @@ const viewLabels = {
         </TButton>
         <TButton
           type="button"
+          title="已发布运行"
           :aria-current="view === 'published' ? 'page' : undefined"
           @click="view = 'published'"
         >
@@ -80,6 +82,7 @@ const viewLabels = {
         </TButton>
         <TButton
           type="button"
+          title="组态编辑"
           :aria-current="view === 'studio' ? 'page' : undefined"
           @click="view = 'studio'"
         >

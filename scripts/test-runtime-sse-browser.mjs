@@ -232,7 +232,23 @@ async function activateRuntimeView(session) {
           "(node) => node.textContent.trim() === '运行监控'); " +
           "if (!button) return false; button.click(); return true; })()",
       );
-      if (ready === true) return;
+      if (ready === true) {
+        for (let readyAttempt = 0; readyAttempt < 60; readyAttempt += 1) {
+          try {
+            if (
+              (await session.evaluate(
+                "Boolean(document.querySelector('.scada-app-frame[data-view=\"runtime\"] .scada-shell--overview'))",
+              )) === true
+            ) {
+              return;
+            }
+          } catch {
+            // 等待异步框架渲染完成，而不是点击后立即假设路由已生效。
+          }
+          await pause(100);
+        }
+        throw new Error("运行监控页面加载超时");
+      }
     } catch {
       // 初次导航期间旧执行上下文失效，下一次轮询重试。
     }
