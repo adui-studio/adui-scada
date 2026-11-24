@@ -189,6 +189,8 @@ async function remove(definition: TagDefinition) {
       定义随工程草稿保存，已绑定的 Tag 不能删除或改为不兼容类型。
     </p>
     <TDialog
+      attach="body"
+      lazy
       dialog-class-name="studio-tag-dialog"
       placement="center"
       :visible="editorOpen"

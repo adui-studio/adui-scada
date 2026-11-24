@@ -4695,3 +4695,7 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 ### D5c1 · E-125 关闭与 E-126 Tag 弹窗候选
 
 维护者 Windows HEAD `c31c86ef1bf25e51987251fe277bade1de38c027`：脚本语法、Vite+ 456/298 零警告错误、95 Markdown、普通 Studio 四视口 312/312 均通过，E-125 关闭。随后 React Tag 专项弹窗宽度不足而中止。核对固定版本官方 Dialog 宽度转换和缩放入场动画后，候选仅修改测量时机，等待实际稳定边界并保留 600px、双列、五字段及全部业务门槛，失败输出计算尺寸及动画诊断。真实 Tag React/Vue 复验尚未执行，不能宣布 E-126 关闭。
+
+### D5c1 · E-126 React 通过与 E-127 Vue Tag 初始挂载候选
+
+维护者 Windows HEAD `bd9e699d95890a5a06ec0d10d4ccc5e09e476ab6`：脚本语法、Vite+ 456/298 零警告错误、95 Markdown、React Tag 专项通过；Vue 首次紧凑目录断言仅 noSidebarForm 失败，后续八项未运行。候选依据固定版 TDesign Vue Next 1.20.11 Dialog 源码显式指定 attach=body、lazy，保留 destroyOnClose；测试仍要求无侧栏表单，成功保存后等表单实际销毁，再次编辑时复核独立弹窗与稳定宽度。最新候选尚未实测，不改变 Tag 数据、依赖或安全门槛。普通 Studio 312/312 是此前 HEAD 的已完成验收证据，不重复运行未受影响的普通场景。

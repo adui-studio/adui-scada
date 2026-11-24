@@ -1217,3 +1217,10 @@
 - **源码定位**：React/Vue TagManager 都设置 `min(700px, calc(100vw - 32px))`，固定版本官方 Dialog 的宽度转换均保留该 CSS 字符串。官方共同样式 `tDialogZoomIn` 从 scale(.01) 开始，组件入场时长约 300ms；测试只等表单拥有布局矩形即读取 `getBoundingClientRect().width`，可能测得动画中间尺寸。这是有源码依据的候选原因，并非已经实测的唯一根因。
 - **最小修复**：仅在测试测量函数中等待 Dialog 动画不再运行、可见且不透明、实际边界宽度与布局宽度相符，以及连续两次稳定采样；仍使用最终实际边界矩形断言至少 600px，不以通过宽度门槛作为等待条件。保留双列、五字段、操作主次、CRUD、删除保护与 JSON 断言。超时或宽度不足时输出实际宽度、布局宽度、CSS 计算宽度、变换、不透明度及动画状态，不输出业务正文。
 - **防复发与验收**：测量具有入场动画的组件时，DOM 存在不代表最终视觉几何稳定；不得缩小验收阈值或为测试关闭正式动效。最新补丁的语法、Vite+ 和真实双端 Tag 浏览器仍须复验，正式 UI 与依赖不变。
+
+### E-127 · Vue Tag Dialog 初始隐藏内容仍挂载在目录内（PR #192）
+
+- **Windows 实测**：维护者在 HEAD `bd9e699d95890a5a06ec0d10d4ccc5e09e476ab6` 通过脚本语法、Vite+（456 格式文件、298 受检零警告错误）、95 份 Markdown；React Tag 专项完整通过，E-126 的 React 宽度阻塞解除。Vue 在首次目录检查时仅 `noSidebarForm: false` 失败，行操作 flex、两个按钮及紧凑尺寸均符合要求，后续八项专项未执行。
+- **源码定位**：固定版 TDesign Vue Next 1.20.11 的 `dialog.tsx` 初始化 `cardVisible = !props.lazy || props.visible`，首次 `shouldRender` 返回 `!lazy`，Teleport 在无有效挂载目标时禁用；仅设置 destroyOnClose 不能阻止首次隐藏表单渲染。原 Vue TagManager 未指定 attach 和 lazy。这解释 DOM 断言失败的候选机制，不证明用户看见常驻表单。
+- **最小修复**：Vue TagManager 显式使用官方 `attach="body"` 与 `lazy`，保留关闭销毁、Esc、遮罩保护、700px 配置、原 CRUD 与共享 Core。浏览器保留目录无表单断言；成功新建和编辑后等待旧表单实际销毁，编辑时也检查弹窗脱离侧栏及稳定宽度，避免关闭动画与再次打开竞争。
+- **防复发与验收**：跨框架 Dialog 须分别核对固定版本的挂载、初次渲染及关闭销毁语义，不能将隐藏 DOM 当成可见布局，也不能通过放宽断言掩盖实际挂载错误。Vue 真实浏览器与最新 HEAD Vite+、文档和剩余专项待复验；不提前关闭 E-126/E-127 或合并。

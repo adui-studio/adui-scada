@@ -1941,6 +1941,16 @@ function focusTagFieldInPage(index) {
   return true;
 }
 
+/** 成功保存后等待旧表单销毁，避免在离场动画期间重开或误取旧字段。 */
+async function waitForTagEditorClosedInPage() {
+  const started = Date.now();
+  while (Date.now() - started < 5000) {
+    if (!document.querySelector('form[aria-label="项目 Tag 编辑表单"]')) return true;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("Tag 编辑对话框关闭后表单未销毁");
+}
+
 function submitTagFormInPage() {
   const button = document.querySelector(
     'form[aria-label="项目 Tag 编辑表单"] button[type="submit"]',
@@ -2206,6 +2216,7 @@ async function runStudioTagManagement(session) {
     await fillTagField(session, 3, "双框架 Tag 管理回归");
     await evaluateStudioPage(session, submitTagFormInPage);
     await pause(180);
+    await evaluateStudioPage(session, waitForTagEditorClosedInPage);
     const created = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
     assert.deepStrictEqual(
       created.tags.find((tag) => tag.tagId === tagId),
@@ -2220,6 +2231,12 @@ async function runStudioTagManagement(session) {
     );
 
     await evaluateStudioPage(session, clickTagRowActionInPage, tagId, "编辑", null);
+    const editDialogLayout = await evaluateStudioPage(session, inspectTagFormDialogInPage);
+    assert.ok(editDialogLayout.separateFromSidebar, target.name + " Tag 编辑表单错误嵌在侧栏中");
+    assert.ok(
+      editDialogLayout.modalWidth >= 600,
+      target.name + " Tag 编辑弹窗宽度不足：" + JSON.stringify(editDialogLayout.modalMetrics),
+    );
     assert.deepStrictEqual(
       await evaluateStudioPage(session, inspectTagEditingIdInPage),
       { immutable: true, submitLabel: "保存修改" },
@@ -2229,6 +2246,7 @@ async function runStudioTagManagement(session) {
     await fillTagField(session, 2, "MPa");
     await evaluateStudioPage(session, submitTagFormInPage);
     await pause(180);
+    await evaluateStudioPage(session, waitForTagEditorClosedInPage);
     const updated = JSON.parse(await evaluateStudioPage(session, exportStudioJsonInPage));
     assert.equal(updated.tags.find((tag) => tag.tagId === tagId)?.displayName, "浏览器编辑压力");
     assert.equal(updated.tags.find((tag) => tag.tagId === tagId)?.unit, "MPa");

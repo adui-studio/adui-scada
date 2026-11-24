@@ -2614,3 +2614,7 @@ PR #192 内统一 React/Vue Studio 通用操作图标为 TDesign，工业设备�
 ### D5c1 · 普通 Studio 312/312 与 Tag 专项阻塞
 
 维护者在 Windows HEAD `c31c86ef1bf25e51987251fe277bade1de38c027` 通过 Vite+、95 份 Markdown 及双端四视口普通 Studio 全部 312 项断言，关闭 E-125。Tag 专项首次失败于 React Dialog 宽度，E-126 候选仅等待稳定视觉尺寸并增强诊断，600px 门槛及正式 UI 不变。PR #192 保持 Draft，剩余专项未完成。
+
+### D5c1 · Vue Tag 初始挂载阻塞
+
+维护者 Windows HEAD `bd9e699d95890a5a06ec0d10d4ccc5e09e476ab6` 通过 Vite+、95 Markdown 和 React Tag 专项；Vue 仅初始目录 noSidebarForm 断言失败。E-127 候选明确 Vue Dialog 的 body 挂载与懒加载，补充关闭销毁等待及编辑弹窗复核，保留所有原业务断言。PR #192 保持 Draft，双端 Tag 与后续八项专项待真实复验。
