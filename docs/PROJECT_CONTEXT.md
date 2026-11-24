@@ -2691,8 +2691,8 @@ PR #196 经维护者授权 Squash 合并至 `main@98bfc2791e8c1f231107f2408bf1e2
 
 ### MVP · 全量依赖升级候选（2026-11-24）
 
-维护者要求所有可兼容升级的第三方依赖采用当前 latest 对应的插入符范围，TypeScript 保留 6.x，PostgreSQL、Redis 同样纳入升级。为隔离未完成的新依赖解析，从 PR #198 的 f0261a93afbfdee635d27a851f1b610c7c1570d7 建立 chore/mvp-latest-dependencies-20261124，保留已通过的原质量基线。按维护者提供的实际 Registry 查询升级 NestJS、React/Vue 路由、Vue、Vite+、TDesign 图标等；TypeScript ^6.0.3，Vite+ ^1.8.0 与官方配套 Vite alias 8.3.8001、Vitest 5.1.1 精确一致，新增安装后的配套检查。维护者随后明确保留 Node.js 24.18.0，根 engines.node 与三个 Dockerfile 基础镜像固定到该版本；Node 类型保留 ^24.19.2，不引入仅 Node 26 支持的 API，运行时兼容性以 24.18.0 实测为准。pnpm 12.23.0；Tauri CLI ^2.12.6、Rust Tauri ^2.12.7、tauri-build ^2.7.6。保留 workspace:* 和构建许可白名单。
+维护者要求所有可兼容升级的第三方依赖采用当前 latest 对应的插入符范围，TypeScript 保留 6.x，PostgreSQL、Redis 同样纳入升级。为隔离未完成的新依赖解析，从 PR #198 的 f0261a93afbfdee635d27a851f1b610c7c1570d7 建立 chore/mvp-latest-dependencies-20261124，保留已通过的原质量基线。按维护者提供的实际 Registry 查询升级 NestJS、React/Vue 路由、Vue、Vite+、TDesign 图标等；TypeScript ^6.0.3，Vite+ ^1.8.0 与官方配套 Vite alias 8.3.8001、Vitest 5.1.1 精确一致，新增安装后的配套检查。维护者随后明确保留 Node.js 24.18.0，根 engines.node 与三个 Dockerfile 基础镜像固定到该版本；Node 类型保留 ^24.19.2，不引入仅 Node 26 支持的 API，运行时兼容性以 24.18.0 实测为准。pnpm 12.23.0；Tauri CLI ^2.12.6；Rust Tauri 和 tauri-build 保留原 2.x 声明与 Cargo.lock（2.12.5、2.7.4），其升级另行验证。保留 workspace:* 和构建许可白名单。
 
 Prisma 8 当前为不同 API 与 CLI 的 RC；既有 Prisma Client、适配器和迁移仍使用 ^7.10.1，不能直接替换 CLI。Docker 单项目及七服务拓扑保持，PostgreSQL、Redis、Keycloak、Nginx 使用 latest，PostgreSQL 卷名称不变、挂载改为 /var/lib/postgresql。该候选禁止直接启动现有数据环境：须先备份、恢复验证并专项迁移 PostgreSQL 17 数据目录，核对 Redis AOF、Keycloak 数据和版本兼容，不删除或重置已有卷，不应用 Prisma 迁移。
 
-当前仅版本声明和配套配置已提交；协作环境无可用 Registry 网络、pnpm、Cargo、Docker，pnpm-lock.yaml 和 Cargo.lock 尚未重新生成。需 Windows 使用真实 Registry 解析及安装，冻结安装、完整 ready、真实数据库、双端浏览器和桌面构建通过后才能合入 MVP 分支。未声明升级运行成功。
+当前仅版本声明和配套配置已提交；协作环境无可用 Registry 网络、pnpm、Cargo、Docker，维护者 Windows 已生成 npm 锁文件并完成本轮冻结安装、Vite+、独立类型检查、956 项单测、63 项 HTTP E2E 及双端 Web 构建，GitHub 已收到锁文件提交。Rust 版本声明恢复与原锁文件一致；真实数据库、双端浏览器和桌面构建仍待统一验收，禁止以此宣称 MVP 完成。未声明升级运行成功。
