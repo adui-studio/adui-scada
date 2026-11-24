@@ -4,6 +4,7 @@ import {
   createBlankStudioDocument,
   waterTreatmentDemoDocument,
   waterTreatmentStudioDocument,
+  waterTreatmentShowcaseDocument,
 } from "../src/demo-document.ts";
 import { parseScadaDocument } from "../src/document.ts";
 import { DocumentEditor } from "../src/editor.ts";
@@ -83,5 +84,19 @@ test("新建独立工程采用共享默认画板且不携带演示 Tag 或图元
   expect(first.tags).toEqual([]);
   expect(parseScadaDocument(first)).toEqual(first);
   expect(() => createBlankStudioDocument("../invalid")).toThrow(/稳定 ASCII 标识符/);
+  expect(waterTreatmentStudioDocument.projectId).toBe("water-demo");
+});
+
+test("独立总览示例保留真实模拟 Tag 定义且不覆盖历史水处理工程", () => {
+  const showcase = waterTreatmentShowcaseDocument;
+  expect(showcase.projectId).toBe("water-showcase");
+  expect(showcase.tags).toEqual(waterTreatmentDemoDocument.tags);
+  expect(showcase.pages[0]?.size).toEqual(STUDIO_DEFAULT_PAGE_SIZE);
+  expect(showcase.pages[0]?.nodes.filter((node) => node.props.presentation === "metric")).toHaveLength(3);
+  expect(parseScadaDocument(showcase)).toEqual(showcase);
+  for (const node of showcase.pages[0]!.nodes) {
+    expect(node.transform.x + node.transform.width).toBeLessThanOrEqual(1920);
+    expect(node.transform.y + node.transform.height).toBeLessThanOrEqual(1080);
+  }
   expect(waterTreatmentStudioDocument.projectId).toBe("water-demo");
 });

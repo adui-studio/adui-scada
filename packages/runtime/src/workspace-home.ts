@@ -1,4 +1,4 @@
-import { waterTreatmentStudioDocument } from "@adui/scada-core";
+import { waterTreatmentShowcaseDocument } from "@adui/scada-core";
 import { svgDataUrl } from "./runtime.ts";
 
 export type WorkspaceHomeView = "studio" | "runtime" | "published";
@@ -21,8 +21,8 @@ export const WORKSPACE_HOME_ENTRIES: readonly WorkspaceHomeEntry[] = [
     title: "水处理演示工程",
     description: "设计工艺画面，管理图层、图元与项目 Tag。",
     status: "内置示例",
-    detail: `${waterTreatmentStudioDocument.pages.length} 个页面 · ${waterTreatmentStudioDocument.tags.length} 个 Tag 定义`,
-    preview: svgDataUrl(waterTreatmentStudioDocument, [], undefined, "light"),
+    detail: `${waterTreatmentShowcaseDocument.pages.length} 个页面 · ${waterTreatmentShowcaseDocument.tags.length} 个 Tag 定义`,
+    preview: svgDataUrl(waterTreatmentShowcaseDocument, [], undefined, "light"),
   },
   {
     view: "runtime",

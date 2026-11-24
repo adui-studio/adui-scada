@@ -159,6 +159,21 @@ function renderLabel(
     value === undefined
       ? ""
       : `: ${value.quality === "GOOD" ? String(value.value ?? "--") : "--"} ${suffix}`;
+  if (appearance === "light" && node.props.presentation === "metric") {
+    const raw = value?.quality === "GOOD" ? value.value : null;
+    const reading =
+      raw === null || raw === undefined ? "--" : typeof raw === "boolean" ? (raw ? "是" : "否") : String(raw);
+    const color = LIGHT_COLORS[value?.quality ?? "BAD"];
+    const content = reading + (suffix ? " " + suffix : "");
+    return (
+      `<svg width="${number(node.transform.width)}" height="${number(node.transform.height)}" viewBox="0 0 320 92" preserveAspectRatio="none">` +
+      '<rect x="1" y="1" width="318" height="90" rx="9" fill="#f5f7fa" stroke="#d5dfe9"/>' +
+      `<text x="16" y="25" font-size="${number(Math.min(13, 280 / Math.max(1, text.length)))}" fill="#4d6176">${xml(text)}</text>` +
+      `<text x="16" y="58" font-size="${number(Math.min(25, 280 / Math.max(1, content.length)))}" font-weight="700" fill="#142338">${xml(content)}</text>` +
+      `<text x="16" y="78" font-size="10" fill="${color}">${quality(value)}</text>` +
+      "</svg>"
+    );
+  }
   if (appearance === "light") {
     const content =
       value === undefined && node.bindings.value ? `${text}: -- ${suffix}` : text + dynamic;

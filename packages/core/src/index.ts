@@ -83,6 +83,7 @@ export { renderSvgPage } from "./svg.ts";
 export {
   waterTreatmentDemoDocument,
   waterTreatmentStudioDocument,
+  waterTreatmentShowcaseDocument,
   STUDIO_DEFAULT_PAGE_SIZE,
   createBlankStudioDocument,
   waterTreatmentDemoTagDefinitions,
