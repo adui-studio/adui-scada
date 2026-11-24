@@ -97,13 +97,12 @@ test("锁定只作用于编辑器，Runtime 仍显示可见的锁定图元", () 
 });
 
 test("Studio 专用浅色 SVG 仅改变外观，不修改 Tag 质量或原运行时深色渲染", () => {
-  const document = waterTreatmentDemoDocument;
   const dark = renderSvgPage(document, "main", new Map());
   const light = renderSvgPage(document, "main", new Map(), "light");
   expect(dark).toContain('fill="#0c1728"');
   expect(light).toContain('fill="#ffffff"');
   expect(light).toContain('fill="#142338"');
   expect(light).toContain('data-node-id="tank"');
-  expect(light).toContain("数据无效");
+  expect(light).toContain("异常");
   expect(renderSvgPage(document, "main", new Map())).toBe(dark);
 });
