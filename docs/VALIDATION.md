@@ -4741,3 +4741,5 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 ### D5c5 · FR-012 本地归档批次候选
 
 新增 8 项定向测试定义，覆盖空批次及上限、跨 Tag 入缓冲顺序与质量保留、不可变性、同批次重试、追加及迟到记录保护、跨实例/伪造/重复确认拒绝、待确认清理保护、确认释放容量后采样器重试。原四份 38 项测试继续回归，目标五份测试共 46 项。Windows 待执行 `vp test run packages/core/test/tag-history-archive.test.ts packages/core/test/tag-history-sampler.test.ts packages/core/test/tag-history-buffer.test.ts packages/core/test/tag-history.test.ts packages/core/test/tag-store.test.ts`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`。完整 ready 待运行，不宣称真实归档、数据库事务或持久化幂等验收。
+
+协作容器 Node.js 22.16.0 独立 node:test 验证：新增归档对应 8 项及既有采样对应 13 项，共 21/21 通过、0 失败、0 跳过。受测 tag-history.ts、tag-store.ts 的 Git Blob SHA 分别为 28a2cc4e90135ebdf658ed9ff67ed701dd77632b、78e22557523275fecb9e6172cc6b02230c60c58b，与远端完全一致。首次仅 strip-types 参数不能处理已存在的 TypeScript 参数属性，未执行用例；切换 Node 支持的 experimental-transform-types 后实际通过。容器 GitHub 域名解析失败、无 Vite+，独立原生断言测试不等同仓库 Vitest 或完整 ready。

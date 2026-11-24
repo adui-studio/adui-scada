@@ -2660,3 +2660,5 @@ PR #194 已经维护者授权 Squash 合并至 `main@b4a29b89b74be37c2cc63aee607
 ### D5c5 · FR-012 本地归档确认候选
 
 PR #195 经维护者授权 Squash 合并至 `main@cadf44b854688be2ae8b4bb40633b32dfdcc3751`。本批新增不可变单在途归档批次及本地身份确认，未确认记录保留，确认只移除前缀。新增 8 项定向测试定义；未引入依赖、数据库、API、设备写入、正式报警、Runtime 或 UI 修改。尚待 Windows 正式验收；对象身份不证明实际持久化。
+
+协作容器 Node.js 22.16.0 独立 node:test 验证：新增归档对应 8 项及既有采样对应 13 项，共 21/21 通过、0 失败、0 跳过。受测 tag-history.ts、tag-store.ts 的 Git Blob SHA 分别为 28a2cc4e90135ebdf658ed9ff67ed701dd77632b、78e22557523275fecb9e6172cc6b02230c60c58b，与远端完全一致。首次仅 strip-types 参数不能处理已存在的 TypeScript 参数属性，未执行用例；切换 Node 支持的 experimental-transform-types 后实际通过。容器 GitHub 域名解析失败、无 Vite+，独立原生断言测试不等同仓库 Vitest 或完整 ready。
