@@ -19,6 +19,7 @@ import {
   studioNodeVisible,
   buildLayerTree,
   studioViewportRect,
+  STUDIO_CANVAS_FIT_MARGIN,
   compareProjectDocuments,
   validateProjectReleasePreflight,
 } from "@adui/scada-core";
@@ -245,7 +246,7 @@ export default function StudioPage() {
     width: viewportSize.width || page.size.width,
     height: viewportSize.height || page.size.height,
   };
-  const visibleRect = studioViewportRect(page.size, canvasViewport, zoom, pan);
+  const visibleRect = studioViewportRect(page.size, canvasViewport, zoom, pan, STUDIO_CANVAS_FIT_MARGIN);
 
   const hasGroupedSelection = page.nodes.some(
     (node) => node.groupId !== undefined && state.selectedIds.includes(node.id),
@@ -802,7 +803,7 @@ export default function StudioPage() {
     if (!pageSize) return;
     const nextZoom = Math.max(0.5, Math.min(2, Math.round((zoom + delta) * 100) / 100));
     setZoom(nextZoom);
-    setPan((current) => studioViewportRect(pageSize, canvasViewport, nextZoom, current).pan);
+    setPan((current) => studioViewportRect(pageSize, canvasViewport, nextZoom, current, STUDIO_CANVAS_FIT_MARGIN).pan);
   }
 
   function resetCanvasView() {
@@ -844,7 +845,7 @@ export default function StudioPage() {
       studioViewportRect(pageSize, canvasViewport, zoom, {
         x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
         y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
-      }).pan,
+      }, STUDIO_CANVAS_FIT_MARGIN).pan,
     );
     return true;
   }
@@ -1755,8 +1756,8 @@ export default function StudioPage() {
     >
       <header className="studio-toolbar">
         <div>
-          <p className="scada-eyebrow">工程设计 · SVG 画布</p>
-          <h1>组态工作台</h1>
+          <p className="scada-eyebrow">组态编辑 / 本地工作区</p>
+          <h1>{state.document.projectId}</h1>
         </div>
         <div className="studio-actions">
           <div className="studio-history-actions">
@@ -2151,6 +2152,12 @@ export default function StudioPage() {
           </div>
         </div>
       </header>
+      <div
+        className="studio-workspace"
+        data-left-collapsed={!leftPanelVisible}
+        data-right-collapsed={!rightPanelVisible}
+      >
+        <aside className="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
       <div className="studio-page-bar" aria-label="工程页面管理">
         <div className="studio-page-tabs" aria-label="工程页面">
           {state.document.pages.map((item) => (
@@ -2178,30 +2185,9 @@ export default function StudioPage() {
           </Dropdown>
         </div>
       </div>
-      <div
-        className="studio-workspace"
-        data-left-collapsed={!leftPanelVisible}
-        data-right-collapsed={!rightPanelVisible}
-      >
-        <aside className="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
           <div className="studio-pane-heading">
             <h2>资源与图层</h2>
             <span className="studio-count">{page.nodes.length}</span>
-          </div>
-          <div className="studio-library-label">图元库 · 点击添加</div>
-          <div className="studio-add">
-            <Button tag="button" type="button" onClick={() => addSymbol("tank")}>
-              + 水箱
-            </Button>
-            <Button tag="button" type="button" onClick={() => addSymbol("pump")}>
-              + 水泵
-            </Button>
-            <Button tag="button" type="button" onClick={() => addSymbol("pipe")}>
-              + 管道
-            </Button>
-            <Button tag="button" type="button" onClick={() => addSymbol("label")}>
-              + 文本
-            </Button>
           </div>
           <div className="studio-tree-section-title">图层列表</div>
           <div className="studio-tree-controls">
@@ -2440,6 +2426,7 @@ export default function StudioPage() {
                     />
                   </pattern>
                 </defs>
+                <rect className="studio-artboard-surface" x={0} y={0} width={page.size.width} height={page.size.height} pointerEvents="none" />
                 <image
                   href={image}
                   width={page.size.width}
@@ -2584,6 +2571,23 @@ export default function StudioPage() {
                 )}
               </svg>
             </div>
+          </div>
+          <div className="studio-canvas-dock" aria-label="图元创建工具">
+          <div className="studio-library-label">图元库 · 点击添加</div>
+          <div className="studio-add">
+            <Button tag="button" type="button" onClick={() => addSymbol("tank")}>
+              + 水箱
+            </Button>
+            <Button tag="button" type="button" onClick={() => addSymbol("pump")}>
+              + 水泵
+            </Button>
+            <Button tag="button" type="button" onClick={() => addSymbol("pipe")}>
+              + 管道
+            </Button>
+            <Button tag="button" type="button" onClick={() => addSymbol("label")}>
+              + 文本
+            </Button>
+          </div>
           </div>
         </section>
         <aside

@@ -25,6 +25,7 @@ import {
   studioNodeVisible,
   buildLayerTree,
   studioViewportRect,
+  STUDIO_CANVAS_FIT_MARGIN,
   compareProjectDocuments,
   validateProjectReleasePreflight,
 } from "@adui/scada-core";
@@ -211,7 +212,7 @@ const canvasViewport = computed(() => ({
   height: viewportSize.value.height || page.value.size.height,
 }));
 const visibleRect = computed(() =>
-  studioViewportRect(page.value.size, canvasViewport.value, zoom.value, pan.value),
+  studioViewportRect(page.value.size, canvasViewport.value, zoom.value, pan.value, STUDIO_CANVAS_FIT_MARGIN),
 );
 const selected = computed(() =>
   page.value.nodes.find((node) => node.id === state.value.selectedId),
@@ -935,7 +936,7 @@ function layer(action: LayerAction) {
 function changeZoom(delta: number) {
   const nextZoom = Math.max(0.5, Math.min(2, Math.round((zoom.value + delta) * 100) / 100));
   zoom.value = nextZoom;
-  pan.value = studioViewportRect(page.value.size, canvasViewport.value, nextZoom, pan.value).pan;
+  pan.value = studioViewportRect(page.value.size, canvasViewport.value, nextZoom, pan.value, STUDIO_CANVAS_FIT_MARGIN).pan;
 }
 
 function resetCanvasView() {
@@ -975,7 +976,7 @@ function updateCanvasPan(event: PointerEvent): boolean {
   pan.value = studioViewportRect(page.value.size, canvasViewport.value, zoom.value, {
     x: dragging.originX - (event.clientX - dragging.startX) / dragging.scale,
     y: dragging.originY - (event.clientY - dragging.startY) / dragging.scale,
-  }).pan;
+  }, STUDIO_CANVAS_FIT_MARGIN).pan;
   return true;
 }
 
@@ -1802,8 +1803,8 @@ async function importJsonFile(file: File | undefined) {
   >
     <header class="studio-toolbar">
       <div>
-        <p class="scada-eyebrow">工程设计 · SVG 画布</p>
-        <h1>组态工作台</h1>
+        <p class="scada-eyebrow">组态编辑 / 本地工作区</p>
+        <h1>{{ state.document.projectId }}</h1>
       </div>
       <div class="studio-actions">
         <div class="studio-history-actions">
@@ -2099,6 +2100,12 @@ async function importJsonFile(file: File | undefined) {
         </div>
       </div>
     </header>
+    <div
+      class="studio-workspace"
+      :data-left-collapsed="!leftPanelVisible"
+      :data-right-collapsed="!rightPanelVisible"
+    >
+      <aside class="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
     <div class="studio-page-bar" aria-label="工程页面管理">
       <div class="studio-page-tabs" aria-label="工程页面">
         <TButton
@@ -2122,22 +2129,9 @@ async function importJsonFile(file: File | undefined) {
         </TDropdown>
       </div>
     </div>
-    <div
-      class="studio-workspace"
-      :data-left-collapsed="!leftPanelVisible"
-      :data-right-collapsed="!rightPanelVisible"
-    >
-      <aside class="studio-panel studio-panel-layers min-h-0 min-w-0" aria-label="图元列表">
         <div class="studio-pane-heading">
           <h2>资源与图层</h2>
           <span class="studio-count">{{ page.nodes.length }}</span>
-        </div>
-        <div class="studio-library-label">图元库 · 点击添加</div>
-        <div class="studio-add">
-          <TButton type="button" @click="addSymbol('tank')">+ 水箱</TButton>
-          <TButton type="button" @click="addSymbol('pump')">+ 水泵</TButton>
-          <TButton type="button" @click="addSymbol('pipe')">+ 管道</TButton>
-          <TButton type="button" @click="addSymbol('label')">+ 文本</TButton>
         </div>
         <div class="studio-tree-section-title">图层列表</div>
         <div class="studio-tree-controls">
@@ -2407,6 +2401,7 @@ async function importJsonFile(file: File | undefined) {
                   />
                 </pattern>
               </defs>
+              <rect class="studio-artboard-surface" x="0" y="0" :width="page.size.width" :height="page.size.height" pointer-events="none" />
               <image
                 :href="imageUrl"
                 :width="page.size.width"
@@ -2524,6 +2519,15 @@ async function importJsonFile(file: File | undefined) {
               />
             </svg>
           </div>
+        </div>
+        <div class="studio-canvas-dock" aria-label="图元创建工具">
+        <div class="studio-library-label">图元库 · 点击添加</div>
+        <div class="studio-add">
+          <TButton type="button" @click="addSymbol('tank')">+ 水箱</TButton>
+          <TButton type="button" @click="addSymbol('pump')">+ 水泵</TButton>
+          <TButton type="button" @click="addSymbol('pipe')">+ 管道</TButton>
+          <TButton type="button" @click="addSymbol('label')">+ 文本</TButton>
+        </div>
         </div>
       </section>
       <aside class="studio-panel studio-panel-properties min-h-0 min-w-0" aria-label="属性与 Tag 工作区">
