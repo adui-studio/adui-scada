@@ -306,6 +306,23 @@ async function checkStudioInPage() {
       Number(boundary.getAttribute("height")) > 0,
   );
 
+  const artboardRect = bounds(element(".studio-artboard-surface"));
+  verify(
+    "默认适应画板在限制轴只保留最小边距",
+    near(Math.min(svgRect.width - artboardRect.width, svgRect.height - artboardRect.height), 16, 2),
+  );
+  verify(
+    "画板完整显示且保持工程比例",
+    artboardRect.left >= svgRect.left - 1 &&
+      artboardRect.right <= svgRect.right + 1 &&
+      artboardRect.top >= svgRect.top - 1 &&
+      artboardRect.bottom <= svgRect.bottom + 1 &&
+      near(artboardRect.width / artboardRect.height, Number(boundary?.getAttribute("width")) / Number(boundary?.getAttribute("height")), 0.002),
+  );
+  verify(
+    "底部操作使用六个 TDesign 图标",
+    element(".studio-canvas-dock").querySelectorAll(".t-icon").length === 6,
+  );
   const zoomButtons = [...element(".studio-zoom").querySelectorAll("button")];
   verify("创建工具集中在画布底部", Boolean(stage.querySelector(".studio-canvas-dock .studio-add")));
   verify(
@@ -667,6 +684,9 @@ function inspectScadaUIInPage() {
     title: sample?.textContent.trim() ?? "",
     titleColor: style(sample, "color"),
     titleBackground: style(main, "background-color"),
+    navIcons: links.filter((button) => Boolean(button.querySelector(".t-icon"))).length,
+    messageColor: style(main.querySelector(".scada-message:not(:empty)"), "color"),
+    messageBackground: style(main.querySelector(".scada-message:not(:empty)"), "background-color"),
     navColor: style(current, "color"),
     navBackground: style(current, "background-color"),
     stageBackground: style(stage, "background-color"),
@@ -942,6 +962,13 @@ async function runScadaUIExperience(session) {
             prefix + " 缺少完整工作空间导航",
           );
           assert.equal(data.current, label, prefix + " 未标识当前导航");
+          assert.equal(data.navIcons, 4, prefix + " 导航未使用 TDesign 图标");
+          if (data.messageColor && data.messageBackground) {
+            assert.ok(
+              scadaTextContrast(data.messageColor, data.messageBackground) >= 4.5,
+              prefix + " 运行提示栏文字对比度不足",
+            );
+          }
           assert.equal(data.safety, true, prefix + " 缺少非现场控制提示");
           assert.equal(data.noHorizontalOverflow, true, prefix + " 发生整页横向溢出");
           assert.ok(data.title.length > 0, prefix + " 缺少工作区标题");

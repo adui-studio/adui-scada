@@ -4631,3 +4631,7 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 维护者提供 Windows vp check（448 格式文件、293 受检文件零警告错误）、typecheck:web 和 docs:check（94 份）通过日志，未给本地 SHA，不绑定为本轮新提交通过。真实截图显示紫色按钮正文对比度不足；源码确认 TDesign anti 前景被映射为深色正文。候选恢复 V7 科技蓝、独立实色按钮白字及状态按钮色，新增深色语义覆盖、双端主题切换、偏好持久化、原版透明标识及中性弱按钮。
 
 本轮实测：品牌包 mark-primary.svg 的 Git Blob 为 3d55e6c9e9f7ac5f54804b33585a5e860fee470d，mark-dark.svg 为 4938c0a49a0d9b26100035fc13d386be6ace52d7，远程双端文件均逐一匹配。37 个深色覆盖变量均有基础定义，Runtime/Studio 使用的 adui 变量均已定义。按 WCAG 相对亮度计算，浅色/深色正文对比度分别为 12.14/12.91，主按钮均为 5.13，选中项为 5.80/5.61，三种状态文本均不低于 4.84。浏览器脚本主体经 V8 语法解析，未执行脚本。新增双框架 × 双分辨率 × 双主题 × 四工作区共 32 场景和刷新恢复断言，仍需 Windows 实际执行。
+
+### D5c1 · 图标、深色提示与适应画板
+
+本轮根据真实截图修改现有 PR #192。源码确认 Catalog 固定版本为 tdesign-icons-react 0.6.11、tdesign-icons-vue-next 0.4.11；官方图标仓库存在所选 SVG 名称，固定版本包的 TypeScript 导出仍需本机类型检查确认。双端应用首页无手写 SVG 图标，Studio 保留实际工业 SVG。适应画板共享边距改为 8 CSS px，并新增共享视区单测和真实 DOM 图标、限制轴间距及提示栏对比度断言。当前环境 npm 域名解析失败，未执行 Vite+、Vitest 或 Chromium；最终 Windows 验收待执行。

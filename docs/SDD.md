@@ -1470,3 +1470,7 @@ D5b9 至 D5c0d 的共享 Core 候选筛选已经具备 GOOD/有限数值、明�
 `createBlankStudioDocument(projectId)` 通过原工程 Schema 解析产生单页空白 1920×1080 工程。Dexie 草稿仓储 `listRecent()` 只读 savedAt 索引、限制 50 项并验证记录，返回摘要而非工程内容。工作台新建以随机稳定 ID 调用原 `save(document, null)`，打开通过 `get` 重新校验，导入文件上限 2 MiB 并调用原显式迁移，导入不触发自动保存。操作连接短生命周期，离开工作台不消费迟到的异步视图结果。
 
 浅色 SVG 增加固定内置渐变设备造型和 `label.props.presentation === "metric"` 白名单外观，仍以安全转义输出原 Tag 值/质量；无有效读数显示占位，不执行任意 SVG 或 JavaScript。原默认深色渲染路径及工程 Schema 不修改。新增独立示例 `water-showcase`，只使用已存在的三个模拟 Tag 以及原四种基础图元类型；图层、选择、几何、撤销及持久化继续走原 Editor。实际 Windows 验收待执行。
+
+## 2026-11-24 · D5c1 最大化画板适应与 UI 图标
+
+共享 `STUDIO_CANVAS_FIT_MARGIN` 从 48 调整为 8 CSS px，仍通过既有 `studioViewportRect` 的最小轴等比缩放计算，默认 1920×1080 在限制轴保留合计 16px，不引入裁切或非等比拉伸。定位、平移及 SVG 世界坐标计算仍复用原函数。既有工程文件、历史草稿、运行时文档、权限和 Tag 不变。UI 图标仅复用已安装的 TDesign 图标依赖。

@@ -264,3 +264,23 @@ describe("V7 明暗主题", () => {
     }
   });
 });
+
+describe("双端图标与明暗界面收尾", () => {
+  it("导航和画布操作使用已有 TDesign 图标，工业 SVG 画布仍独立", () => {
+    for (const [app, extension, pkg] of [
+      ["web-react", "tsx", "tdesign-icons-react"],
+      ["web-vue", "vue", "tdesign-icons-vue-next"],
+    ]) {
+      const home = readRelative(`../../../apps/${app}/src/App.${extension}`);
+      const studio = readRelative(`../../../apps/${app}/src/studio/StudioPage.${extension}`);
+      expect(home).toContain(pkg);
+      expect(studio).toContain(pkg);
+      expect(home).not.toContain("<svg");
+      expect(studio.match(/<svg\b/g)).toHaveLength(1);
+      expect(studio).toContain("studio-svg");
+    }
+    const css = readRelative("../src/runtime.css");
+    expect(css).toContain("background: var(--adui-color-surface-muted);");
+    expect(css).toContain("color: var(--adui-color-brand-text);");
+  });
+});
