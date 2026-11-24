@@ -4715,3 +4715,15 @@ React/Vue 已同步重写 TagManager 为轻量搜索目录与独立 TDesign Dial
 ### D5c2 · Windows 定向验收完成（PR #193）
 
 维护者 Windows 实测 D5c2 定向验收通过：Vite+ 458 个格式文件、300 个受检文件零警告错误，历史查询 8/8、TagStore 6/6，合计 14/14；中文文案 327 文件、Markdown 95 份均通过。最终日志未打印本地 HEAD；GitHub 候选 b51b8e9e6ce40a8a886c261d011ff186cf1c9c4e 相对初始候选 7f6bbe1d 仅测试排版变化。维护者明确同意合并。仅证明定向本地契约及既有 TagStore 回归，不代表全量 ready、持久化历史或现场工业验收。
+
+### D5c3 · FR-012 有界历史缓冲区候选
+
+新增 11 项定向测试定义，覆盖非法容量、跨 Tag 总容量、整批拒绝、质量保留及派生质量拒绝、全部记录校验、引用隔离、显式清理、迟到保护、空记录与实例隔离、稀疏数组拒绝和源时间长度上限。原历史查询 8 项与 TagStore 6 项继续回归；目标三份测试共 25 项。Windows 待执行 `vp test run packages/core/test/tag-history-buffer.test.ts packages/core/test/tag-history.test.ts packages/core/test/tag-store.test.ts`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`。不宣称完整 ready 或工业历史归档验收。
+
+### D5c3 · E-129 稀疏数组构造 Lint 警告
+
+维护者 Windows `vp check --fix` 报 301 文件零错误、1 项 no-new-array 警告。候选仅调整稀疏数组测试构造，使用字面量后扩展 length，并断言真实空位存在；保留整批拒绝与已有记录不变断言，不修改正式历史缓冲区实现。仍需 Windows `vp check` 零警告、三份定向测试 25 项、中文文案与文档检查。
+
+### D5c3 · Windows 定向验收完成（PR #194）
+
+维护者 Windows 实测：Vite+ 459 文件格式正确、301 个受检文件零警告和错误；历史缓冲区 11/11、历史查询 8/8、TagStore 6/6，共 25/25；中文文案 328 文件及 Markdown 95 份全部通过。日志未独立打印本地 SHA；GitHub 最终候选 54b116e64a96acad12d0af75bbe9c23898c9b4f7 相对 069c63b9 仅三份 TypeScript 文件格式化，无业务或测试语义变化。维护者明确授权合并。 E-129 关闭。本轮证明本地缓冲与查询契约回归，不代表持久化归档、生产采集或最终全量 ready。

@@ -1557,3 +1557,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `packages/core/src/tag-history.ts`：单 Tag 本地历史查询及质量保留投影。
 - `packages/core/src/index.ts`：公共函数与查询/结果类型。
 - `packages/core/test/tag-history.test.ts`：时间范围、质量、排序、点数及拒绝边界的定向测试。
+
+## D5c3 · FR-012 有界本地历史缓冲区
+
+- `packages/core/src/tag-history.ts`：TagHistoryBuffer 的显式采样批次、总容量、保留边界与共享查询。
+- `packages/core/src/index.ts`：新增缓冲区、批次类型及本地容量上限导出。
+- `packages/core/test/tag-history-buffer.test.ts`：容量、原子性、质量来源、隔离及清理回归。
