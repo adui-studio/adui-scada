@@ -32,8 +32,20 @@ for (const path of manifests) {
     }
   }
 }
-if (!yaml.includes('typescript: "6.0.3"')) errors.push("TypeScript 6.0.3 未锁定版本");
-if (!yaml.includes('vitest: "5.1.0"')) errors.push("Vitest 5.1.0 未锁定版本");
+if (!/^  typescript: "\^6\.\d+\.\d+"$/m.test(yaml)) {
+  errors.push("TypeScript 必须使用 6.x 的插入符版本范围");
+}
+const viteCore = /^  vite: "([^"]+)"$/m.exec(yaml)?.[1];
+const vitest = /^  vitest: "(\d+\.\d+\.\d+)"$/m.exec(yaml)?.[1];
+const vitePlusManifest = join(root, "node_modules", "vite-plus", "package.json");
+if (!existsSync(vitePlusManifest)) {
+  errors.push("请先安装依赖再检查 Vite+ 配套版本");
+} else {
+  const bundled = JSON.parse(readFileSync(vitePlusManifest, "utf8")).dependencies ?? {};
+  if (!viteCore || !vitest || bundled.vite !== viteCore || bundled.vitest !== vitest) {
+    errors.push("Vite 和 Vitest 必须精确匹配已安装 Vite+ 的配套版本");
+  }
+}
 for (const f of ["react", "vue"])
   if (!existsSync(join(root, "apps", "web-" + f, "package.json")))
     errors.push("缺少 Web 应用 web-" + f);
