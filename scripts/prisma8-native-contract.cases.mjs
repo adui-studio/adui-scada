@@ -83,7 +83,7 @@ void describe("Prisma 8 原生 Contract 候选只读生成与结构评审", () =
     const { baseline, checks } = fixture();
     assert.deepEqual(checks, [{ table: "scada_state", name: checkName, expression }]);
     const actual = materializeNativeContract(template, baseline, checks);
-    assert.equal(actual, template.replace('  @@map("scada_state")',
+    assert.equal(actual, template.replace('  @@map("scada_state")', () =>
       '  @@check(expression: sql`' + expression + '`, map: "' + checkName + '")\n  @@map("scada_state")'));
   });
 
