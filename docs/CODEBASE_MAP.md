@@ -1616,3 +1616,6 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/test/prisma8-readonly.db-spec.ts`：本机隔离数据库只读专项。
 - `scripts/prisma8-cli.mjs`、`scripts/prisma8-cli.cases.mjs`：复用服务端已安装的 Prisma 8 CLI，从根目录执行 Skills 同步、列表及离线契约生成，拒绝其他命令。
 - 根脚本 `db:prisma8:skills`、`db:prisma8:skills:list`、`test:prisma8:cli`、`test:db:prisma8:readonly`：根目录统一同步、入口保护测试及真实数据库专项。
+
+- `apps/server/test/prisma8-history-compare.db-spec.ts`：独立真实数据库非空三方对照；复用 Prisma 7 历史归档仓储写合成夹具、原生参数化 SQL 与 Prisma 7 / 8 各自查询，逐项对照独立预期；先校验隔离目标，结束仅按三个随机联合工程主键事务清理并核对零残留。
+- 根命令 `test:db:prisma8:history:compare`：只运行该真实数据库测试。其写入明确区别于原只读探针，不纳入 ready；默认 test:db 真实数据库套件包含该用例。

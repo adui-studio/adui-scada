@@ -4839,3 +4839,15 @@ PR #201 的维护者 Windows 日志记录 HEAD `3fe7985a0f5553ee73fb91efff21f7a9
 ready 在依赖目录检查（13 清单、57 Catalog）、共享配置检查（10 TSConfig）、环境与 LF 检查通过后，因模拟 CLI JSON 日志触发 messages:check 退出码 1。正式 979 项预期单测、63 项 HTTP E2E、独立类型检查、文档检查、最终构建及真实数据库专项未执行。维护者后续提交 ff92a98167ce01507d43ec45ca80e876d8a4887c，纳入 132 个根 Skills 文件及已格式化的四份自有源码，保留该提交。
 
 本次仅修改模拟 CLI 的 JSON 输出方式及文档。协作端 Node.js 22.16.0 以真实检查器和两个远端一致的入口脚本构造最小目录，复现文案检查退出 1，修改后局部检查 8 文件、入口测试 3/3、语法检查均通过（退出码 0）；不是完整仓库检查。修复后脚本 Blob 为 10aed9bfe70cf8905d82cb23c98daf55d9704bcb。仍须 Windows 全仓 messages:check、两版生成、独立类型检查、完整 ready 及隔离库只读专项复验。
+
+### 2026-11-25 · PR #202 完整 ready 与真实隔离库迁移/只读验收
+
+维护者 Windows HEAD `06a38de6680308a1ed49644450b43e5256f69922` 全仓中文文案 351 文件、CLI 独立测试 3/3、共享配置 10 TSConfig、依赖 13 清单及 57 Catalog、统一环境与 LF、Prisma 7 Schema/Client 7.10.1、Prisma 8 Contract、Core 构建均通过；vp check 为 482 个格式文件、324 个受检文件零警告及错误；React/Vue/服务端独立类型检查、81 文件 979/979 单测（历史候选 5/5、URL 安全 18/18）、6 文件 63/63 HTTP E2E、95 份 Markdown 和 React/Vue/NestJS 构建通过，完整 ready 退出码 0，工作区干净。React 主分包 591.62 kB 超过 500 kB 警告是独立非阻塞优化项，不扩大本批范围。E-134 至 E-138 已完成相应 Windows 工程质量复验。
+
+真实只读专项首次因 URL 门禁拒绝未进入数据库，改为屏蔽输入原始密码、URL 编码并构造隔离地址后，已有工程查询真实 MATCHED；历史阶段仍失败。只读预检确认本机 15432/adui_scada_test、readonly on、迁移表存在，但历史两表及索引不存在，20261124100000_tag_history_archive 未应用。维护者显式确认 DEPLOY adui_scada_test，Prisma 7 migrate status 仅有第八项待应用，deploy 成功，复查 8 项迁移且 schema up to date。随后 Prisma 8 真实只读专项 1 文件 2/2，退出码 0；已有工程 MATCHED，历史为 EMPTY，仅证明缺失作用域查询，不是非空数据验收。未执行 Prisma 8 签名或数据库接管。
+
+### 2026-11-25 · Prisma 7 / 8 / PostgreSQL 历史非空对照候选
+
+维护者明确授权在同一隔离库使用随机专用工程和合成历史数据、结束后清理且暂不合并。新增独立测试覆盖五批十点、四种质量、负零、数值、文本、布尔和 null；十一组严格查询对照（主窗口、首/次毫秒、左右边界、两个真实隔离工程、不同 Tag 及三个缺失作用域），另核对 maxPoints 恰好五条、原生超量哨兵、两版超量与 1001 上限拒绝。原只读专项、业务仓储、Schema、依赖及锁文件不变。写入客户端只接受显式隔离连接、实际数据库与 Schema 预检；只读池独立。夹具清理严格限定三个联合主键，外键顺序及事务内零残留；创建/清理结果未知时不得自动扩大清理或重试，失败诊断脱敏。
+
+协作容器 Node.js 22.16.0、TypeScript 5.8.3 对新增测试语法解析及转换零诊断，LF 通过；与仓库原检查器 Blob 00127f6ba4d622de026246be6fc0eca011099d5d 一致的局部中文文案检查 7 文件通过。独立内存模拟执行候选测试的正常路径、错误数据库、非法 URL、创建结果不明、写入失败、排序错误、隔离错误及清理失败八条路径均通过；模拟不是 Prisma 或 PostgreSQL 实测。候选测试 Blob 为 f1e180cacb5467b3f65da48efac684f49b1d38f1。当前容器无固定依赖、pnpm、PostgreSQL 实例且 npm Registry 无法解析，未执行正式 Vite+、TypeScript 6、Vitest、完整 ready 或真实新专项；必须由 Windows 复验后方可认定非空 MATCHED。
