@@ -4657,3 +4657,9 @@ try {
 ### Prisma 8 工程 ACL Guard 真实数据库专项
 
 沿用现有两版 Prisma 生成产物、Core 构建及已经应用八项迁移的本机隔离库，通过屏蔽输入密码、显式 SCADA_TEST_DATABASE_URL（127.0.0.1:15432/adui_scada_test）、try/finally 恢复环境变量流程运行 `pnpm run test:db:prisma8:project:acl`。专项先核验实际数据库、Schema、表、索引及 release:read 迁移；只对随机合成身份、会话、工程和授权进行测试，前置 Guard 仅执行查询。受控撤权限定已创建专用工程和两条授权复合条件，并先取得工程排他锁，不新增授权管理接口。校验两版 Guard 和仓储拒绝及无额外状态变化，按外键依赖顺序清理已确认的精确工程、会话及身份键，核对零残留。创建或清理结果不明时禁止自动重试；不执行迁移、签名、依赖安装、容器重建或生产发布。本批只执行增量质量、关联身份/权限策略单测与新增真实数据库专项。
+
+### Prisma 8 迁移接管只读专项
+
+先执行 `pnpm run db:prisma8:emit` 确认固定生成契约，再执行 `pnpm run test:prisma8:cli` 与 `pnpm run test:prisma8:migration:preflight`、Vite+、中文文案、文档检查。新增离线测试纳入未来阶段完整 ready，但真实预检保持人工独立运行。
+
+使用前述屏蔽密码、显式 SCADA_TEST_DATABASE_URL 指向 127.0.0.1:15432/adui_scada_test 及 try/finally 环境恢复流程执行 `pnpm run db:prisma8:migration:preflight`。禁止使用业务库 URL 或根 .env；连接默认只读，REPEATABLE READ READ ONLY 快照内核对历史迁移、实际标记和系统目录，最终 ROLLBACK 并关闭。无需创建夹具，不读取业务行；输出固定统计、Contract 存储哈希及目录定义指纹。现有标记、迁移校验和不匹配、异常登记、缺失或弱化约束均停止，不自动修复或重试。即使退出码 0，REVIEW_REQUIRED 也不授予签名或迁移许可。下一批须按 ADR-0072 评审原生约束保留及独立参考库方案。
