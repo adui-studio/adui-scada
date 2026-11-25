@@ -2796,3 +2796,9 @@ PR #207 的维护者 Windows 最终 HEAD `7ac87c77a2e8a6ae3577bc631f1ecd7c885f79
 PR #211 Windows 增量验收：CLI 3/3、离线预检/对照 15/15、Vite+ 508/349 零警告错误、服务端独立类型检查、376 中文文案文件、96 Markdown、现有隔离库真实只读预检回归退出码 0，目录指纹 `73079d85974ddc9cbabf59741f2a4a94dd7bfff3d70a23bab27a7283456e8c52` 保持不变，最终工作区干净。最终 HEAD `a50077a417959520ab6dd5790116b17f1cbc75a9` 两份脚本格式化差异核对后按授权 Squash 合入 `ce8c1fefe1a3a8bcd56fb42f30274cdd6109d97d`。MVP PR #198 仍为 Draft。
 
 新分支 `feat/mvp-prisma8-reference-replay` 增加独立参考库历史重放入口及九项安全门禁离线测试，采用手工建立空库、严格双 URL 和显式确认、固定 Prisma 7.10.1 deploy/status、两次真实目录对照与迁移登记稳定性验证。局部 Node 9/9、配置输入模拟 8/8、限定文案检查通过，尚待维护者 Windows 固定工具链及参考库实测。仍未生成原生 Prisma 8 Contract 候选、签名或正式基线；ADR-0072 Proposed，Prisma 7 唯一正式迁移执行者。
+
+### 2026-11-25 · PR #212 结案及原生 Prisma 8 Contract 候选
+
+PR #212 Windows 离线 27/27、Vite+ 511/352 零警告错误、服务端类型检查、379 中文文案文件、96 Markdown、增量退出码 0；真实独立参考库八项历史重放及二次部署、迁移登记稳定性通过，双方目录指纹 `73079d85974ddc9cbabf59741f2a4a94dd7bfff3d70a23bab27a7283456e8c52`，退出码 0，签名许可否。最终远端格式提交核对后按授权 Squash 合入 `e4afdd4040dca4ebcdfb3a1abfcdb6ff2b86a473`。保留参考库。MVP PR #198 仍为 Draft。
+
+新分支 `feat/mvp-prisma8-native-contract` 新增独立原生 PSL 模板及真实双库只读 CHECK 采集、独立离线生成和物理/运行时 IR 评审入口。模板静态含十二模型、八十五物理字段、十二主键、十三外键（含六字段末次事件）及二十索引；生成时从已核对目录取得三十六 CHECK 精确谓词，不假造 PostgreSQL 重打印。正式过渡 Contract/Provider 保持不变；候选不定义事件反向单值导航，记录兼容性阻塞，不新增冗余唯一约束。局部 Node 新增测试 8/8、CLI 回归 4/4、编排脚本语法通过；真实候选 emit、物理 IR 与运行时差异和完整固定工具链待 Windows 验收。Prisma 7 唯一正式迁移执行者，ADR-0072 Proposed，签名禁止。
