@@ -151,7 +151,7 @@ export function validateMigrationLedger(baseline, rows) {
   for (const migration of baseline.migrations) {
     const row = byName.get(migration.name);
     requireCondition(row?.finished === true && row.rolled_back === false &&
-      row.applied_steps_count > 0, "Prisma 7 迁移缺失、未完成或存在回滚");
+      Number.isInteger(row.applied_steps_count) && row.applied_steps_count > 0, "Prisma 7 迁移缺失、未完成或存在回滚");
     requireCondition(row.checksum === migration.checksum, "Prisma 7 历史迁移校验和不一致");
   }
 }
@@ -232,7 +232,6 @@ export function validateMigrationCatalog(baseline, catalog) {
   validateIndexes(baseline, catalog.indexes);
   return {
     status: "REVIEW_REQUIRED",
-    marker: "ABSENT",
     migrations: baseline.migrations.length,
     tables: baseline.tableNames.length,
     columns: baseline.columnCount,
@@ -289,7 +288,7 @@ const sql = Object.freeze({
     WHERE n.nspname = 'public' AND c.relname = ANY($1::text[])
     ORDER BY c.relname, con.conname`,
   indexes: `SELECT c.relname::text AS table_name, ic.relname::text AS index_name,
-    i.indisunique AS unique, i.indisvalid AS valid, i.indisready AS ready,
+    i.indisunique AS "unique", i.indisvalid AS valid, i.indisready AS ready,
     (i.indpred IS NULL AND i.indexprs IS NULL AND i.indnatts = i.indnkeyatts) AS simple,
     am.amname::text AS method, pg_get_indexdef(i.indexrelid) AS definition,
     obj_description(i.indexrelid, 'pg_class') AS comment,
@@ -331,7 +330,7 @@ export async function inspectMigrationDatabase(client, baseline) {
       constraints: (await client.query(sql.constraints, [baseline.tableNames])).rows,
       indexes: (await client.query(sql.indexes, [baseline.tableNames])).rows,
     };
-    result = { ...validateMigrationCatalog(baseline, catalog),
+    result = { ...validateMigrationCatalog(baseline, catalog), marker: "ABSENT",
       timezoneUtc: ["UTC", "Etc/UTC", "GMT"].includes(row.timezone) };
   } catch (error) {
     failures.push(error instanceof PreflightError ? error.message : stage + "失败");
