@@ -13,7 +13,10 @@ import type { PostgresClient, PostgresTransactionContext } from "@prisma/orm-pos
 import type { Contract } from "../generated/prisma8/contract.d.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import type { OidcProviderDiscoveryService } from "./oidc-provider-discovery.service.js";
-import type { ConsumedOidcLoginTransaction, OidcLoginStartResult } from "./oidc-login-transaction.service.js";
+import type {
+  ConsumedOidcLoginTransaction,
+  OidcLoginStartResult,
+} from "./oidc-login-transaction.service.js";
 
 const TRANSACTION_DURATION_MS = 5 * 60 * 1000;
 const TRANSACTION_DATABASE_TIMEOUT_MS = 5_000;
@@ -32,8 +35,12 @@ const TRANSACTION_CREATE_FAILURE = "OIDC 登录事务创建失败，请稍后重
 const TRANSACTION_CONSUME_FAILURE = "OIDC 登录事务验证失败，请稍后重试";
 
 type Tx = PostgresTransactionContext<Contract>;
-const OPTIONS = { isolationLevel: "ReadCommitted", timeout: TRANSACTION_DATABASE_TIMEOUT_MS } as const;
-const TEST_ISSUER_PATTERN = /^https:\/\/id\.example\.org\/realms\/prisma8-oidc-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const OPTIONS = {
+  isolationLevel: "ReadCommitted",
+  timeout: TRANSACTION_DATABASE_TIMEOUT_MS,
+} as const;
+const TEST_ISSUER_PATTERN =
+  /^https:\/\/id\.example\.org\/realms\/prisma8-oidc-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 async function requireBoundary(tx: Tx): Promise<void> {
   const rows = await tx
@@ -246,7 +253,9 @@ export class Prisma8OidcLoginTransactionService implements OnModuleInit, OnModul
                   SELECT state_hash FROM public.scada_oidc_transactions
                   WHERE issuer = ${this.issuer} AND expires_at <= ${cutoff}::timestamptz
                   ORDER BY expires_at ASC, state_hash ASC LIMIT ${CLEANUP_BATCH_SIZE}::integer
-                )`.affectedCount().build(),
+                )`
+              .affectedCount()
+              .build(),
           );
           if (result.affectedRows < 0 || result.affectedRows > CLEANUP_BATCH_SIZE) {
             throw new Error("OIDC 登录事务清理影响行数异常");
@@ -318,7 +327,9 @@ export class Prisma8OidcLoginTransactionService implements OnModuleInit, OnModul
               (state_hash, issuer, nonce, verifier_ciphertext, browser_binding_hash, return_path, created_at, expires_at)
               VALUES (${stateHash}, ${this.issuer}, ${nonce}, ${verifierCiphertext},
                 ${browserBindingHash}, ${safeReturnPath}, ${createdAt.toISOString()}::timestamptz,
-                ${expiresAt.toISOString()}::timestamptz)`.affectedCount().build(),
+                ${expiresAt.toISOString()}::timestamptz)`
+              .affectedCount()
+              .build(),
           );
           if (result.affectedRows !== 1) throw new Error(TRANSACTION_CREATE_FAILURE);
         }, OPTIONS);
@@ -370,20 +381,24 @@ export class Prisma8OidcLoginTransactionService implements OnModuleInit, OnModul
         await requireBoundary(tx);
         const cutoff = now.toISOString();
         // 锁定满足完整条件的同一行，兼容旧版条件更新；竞争者不能重新消费。
-        const rows = await tx.query(
-          tx.raw.sql`SELECT issuer::text AS issuer, nonce::text AS nonce,
+        const rows = await tx
+          .query(
+            tx.raw.sql`SELECT issuer::text AS issuer, nonce::text AS nonce,
             verifier_ciphertext::text AS verifier_ciphertext, return_path::text AS return_path
             FROM public.scada_oidc_transactions
             WHERE state_hash = ${stateHash} AND issuer = ${this.issuer}
               AND browser_binding_hash = ${browserBindingHash} AND consumed_at IS NULL
               AND expires_at > ${cutoff}::timestamptz AND created_at <= ${cutoff}::timestamptz
-            FOR UPDATE`.returnsRow({
-              issuer: "pg/text@1",
-              nonce: "pg/text@1",
-              verifier_ciphertext: "pg/text@1",
-              return_path: "pg/text@1",
-            }).build(),
-        ).toArray();
+            FOR UPDATE`
+              .returnsRow({
+                issuer: "pg/text@1",
+                nonce: "pg/text@1",
+                verifier_ciphertext: "pg/text@1",
+                return_path: "pg/text@1",
+              })
+              .build(),
+          )
+          .toArray();
         const record = rows[0];
         if (!record) return null;
         if (rows.length !== 1) throw new Error(TRANSACTION_CONSUME_FAILURE);
@@ -392,7 +407,8 @@ export class Prisma8OidcLoginTransactionService implements OnModuleInit, OnModul
             WHERE state_hash = ${stateHash} AND issuer = ${this.issuer}
               AND browser_binding_hash = ${browserBindingHash} AND consumed_at IS NULL
               AND expires_at > ${cutoff}::timestamptz AND created_at <= ${cutoff}::timestamptz`
-            .affectedCount().build(),
+            .affectedCount()
+            .build(),
         );
         if (result.affectedRows !== 1) throw new Error(TRANSACTION_CONSUME_FAILURE);
         return {

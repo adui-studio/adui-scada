@@ -29,7 +29,9 @@ function createHarness(issuer = "https://id.example.org/realms/prisma8-oidc-" + 
     { client_secret: config.clientSecret, id_token_signed_response_alg: "RS256" },
     oidc.ClientSecretBasic(config.clientSecret),
   );
-  const transaction = vi.fn<() => Promise<never>>().mockRejectedValue(new Error("模拟内部数据库错误"));
+  const transaction = vi
+    .fn<() => Promise<never>>()
+    .mockRejectedValue(new Error("模拟内部数据库错误"));
   const getConfiguration = vi.fn<() => Promise<oidc.Configuration>>().mockResolvedValue(provider);
   const service = new Prisma8OidcLoginTransactionService(
     { transaction } as unknown as PostgresClient<Contract>,
@@ -41,10 +43,12 @@ function createHarness(issuer = "https://id.example.org/realms/prisma8-oidc-" + 
 
 describe("Prisma 8 OIDC 登录事务候选输入与脱敏", () => {
   it("拒绝非专用 Issuer 及伪造专用前缀", () => {
-    expect(() => createHarness("https://id.example.org/realms/scada"))
-      .toThrow("Prisma 8 OIDC 候选仅允许随机专用测试 Issuer");
-    expect(() => createHarness("https://id.example.org/realms/prisma8-oidc-invalid"))
-      .toThrow("Prisma 8 OIDC 候选仅允许随机专用测试 Issuer");
+    expect(() => createHarness("https://id.example.org/realms/scada")).toThrow(
+      "Prisma 8 OIDC 候选仅允许随机专用测试 Issuer",
+    );
+    expect(() => createHarness("https://id.example.org/realms/prisma8-oidc-invalid")).toThrow(
+      "Prisma 8 OIDC 候选仅允许随机专用测试 Issuer",
+    );
   });
 
   it("非法回跳路径在 Discovery 与数据库前拒绝", async () => {
@@ -76,9 +80,15 @@ describe("Prisma 8 OIDC 登录事务候选输入与脱敏", () => {
     const { service, transaction } = createHarness();
     const state = randomBytes(32).toString("base64url");
     const binding = "scada_oidc_b_" + randomBytes(32).toString("base64url");
-    await expect(service.consume(state, binding)).rejects.toThrow("OIDC 登录事务验证失败，请稍后重试");
-    await expect(service.cleanupExpiredTransactions()).rejects.toThrow("OIDC 登录事务清理失败，请稍后重试");
-    await expect(service.cleanupExpiredTransactions()).rejects.toThrow("OIDC 登录事务清理失败，请稍后重试");
+    await expect(service.consume(state, binding)).rejects.toThrow(
+      "OIDC 登录事务验证失败，请稍后重试",
+    );
+    await expect(service.cleanupExpiredTransactions()).rejects.toThrow(
+      "OIDC 登录事务清理失败，请稍后重试",
+    );
+    await expect(service.cleanupExpiredTransactions()).rejects.toThrow(
+      "OIDC 登录事务清理失败，请稍后重试",
+    );
     expect(transaction).toHaveBeenCalledTimes(3);
   });
 });
