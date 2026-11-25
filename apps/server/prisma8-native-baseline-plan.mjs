@@ -20,7 +20,10 @@ import {
   reviewExistingBaseline,
   runBaselinePlanner,
 } from "../../scripts/prisma8-native-baseline.mjs";
-import { DdlReviewError, reviewAuditedBaseline } from "../../scripts/prisma8-native-baseline-ddl.mjs";
+import {
+  DdlReviewError,
+  reviewAuditedBaseline,
+} from "../../scripts/prisma8-native-baseline-ddl.mjs";
 
 function requireCondition(condition, message) {
   if (!condition) throw new BaselineError(message);
