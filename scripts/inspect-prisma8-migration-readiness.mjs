@@ -420,10 +420,30 @@ const sql = Object.freeze({
     JOIN pg_am am ON am.oid = ic.relam
     WHERE n.nspname = 'public' AND c.relname = ANY($1::text[]) AND NOT i.indisprimary
     ORDER BY c.relname, ic.relname`,
+  primaryIndexes: `SELECT c.relname::text AS table_name, ic.relname::text AS index_name,
+    con.conname::text AS constraint_name, ni.nspname::text AS index_schema,
+    i.indisprimary AS "primary", i.indisunique AS "unique", i.indisvalid AS valid, i.indisready AS ready,
+    i.indislive AS live, i.indimmediate AS immediate,
+    (i.indpred IS NULL AND i.indexprs IS NULL AND i.indnatts = i.indnkeyatts) AS simple,
+    am.amname::text AS method, pg_get_indexdef(i.indexrelid) AS definition,
+    obj_description(i.indexrelid, 'pg_class') AS comment,
+    ARRAY(SELECT a.attname::text FROM unnest(i.indkey::smallint[]) WITH ORDINALITY k(attnum, ord)
+      JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = k.attnum ORDER BY k.ord) AS columns
+    FROM pg_index i JOIN pg_class c ON c.oid = i.indrelid
+    JOIN pg_namespace n ON n.oid = c.relnamespace JOIN pg_class ic ON ic.oid = i.indexrelid
+    JOIN pg_namespace ni ON ni.oid = ic.relnamespace JOIN pg_am am ON am.oid = ic.relam
+    LEFT JOIN pg_constraint con ON con.conindid = i.indexrelid AND con.conrelid = c.oid AND con.contype = 'p'
+    WHERE n.nspname = 'public' AND c.relname = ANY($1::text[]) AND i.indisprimary
+    ORDER BY c.relname, ic.relname`,
 });
 
 /** 固定只读查询序列；任何阶段失败均尝试回滚、关闭连接，且不输出原始第三方错误。 */
-async function inspectMigrationSnapshot(client, baseline, databaseName) {
+async function inspectMigrationSnapshot(
+  client,
+  baseline,
+  databaseName,
+  includePrimaryIndexes = false,
+) {
   let begun = false;
   let stage = "连接初始化";
   let result;
@@ -459,13 +479,20 @@ async function inspectMigrationSnapshot(client, baseline, databaseName) {
       constraints: (await client.query(sql.constraints, [baseline.tableNames])).rows,
       indexes: (await client.query(sql.indexes, [baseline.tableNames])).rows,
     };
+    const report = validateMigrationCatalog(baseline, catalog);
+    let primaryIndexes;
+    if (includePrimaryIndexes) {
+      stage = "主键索引目录元数据";
+      primaryIndexes = (await client.query(sql.primaryIndexes, [baseline.tableNames])).rows;
+    }
     result = {
       report: {
-        ...validateMigrationCatalog(baseline, catalog),
+        ...report,
         marker: "ABSENT",
         timezoneUtc: ["UTC", "Etc/UTC", "GMT"].includes(row.timezone),
       },
       catalog,
+      primaryIndexes,
       context: {
         serverVersion: row.server_version,
         serverEncoding: row.server_encoding,
@@ -516,13 +543,24 @@ function requireComparisonContext(snapshot) {
 }
 
 /** 对照通过后才向内部候选生成器提供参考库目录，保持原对照入口的返回值。 */
-async function readMatchedMigrationSnapshots(testClient, referenceClient, baseline) {
-  const actual = await inspectMigrationSnapshot(testClient, baseline, "adui_scada_test");
+async function readMatchedMigrationSnapshots(
+  testClient,
+  referenceClient,
+  baseline,
+  includePrimaryIndexes = false,
+) {
+  const actual = await inspectMigrationSnapshot(
+    testClient,
+    baseline,
+    "adui_scada_test",
+    includePrimaryIndexes,
+  );
   requireComparisonContext(actual);
   const reference = await inspectMigrationSnapshot(
     referenceClient,
     baseline,
     "adui_scada_fresh_prisma8_ref",
+    includePrimaryIndexes,
   );
   requireComparisonContext(reference);
   same(actual.context, reference.context, "验收库与参考库 PostgreSQL 查询上下文不一致");
@@ -540,6 +578,11 @@ async function readMatchedMigrationSnapshots(testClient, referenceClient, baseli
     "验收库与参考库目录指纹不一致",
   );
   return { actual, reference };
+}
+
+/** 仅补充专项读取同一只读快照的主键索引；旧目录及指纹范围不变。 */
+export async function readSupplementalMigrationCatalog(testClient, referenceClient, baseline) {
+  return readMatchedMigrationSnapshots(testClient, referenceClient, baseline, true);
 }
 
 /** 原对照入口仍只返回固定诊断和指纹，不输出数据库原始定义。 */

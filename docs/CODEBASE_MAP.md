@@ -1719,4 +1719,12 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 ### 原生迁移基线与注释补充评审（规划）
 
 - 现有 `scripts/inspect-prisma8-migration-readiness.mjs` 的非主键索引目录查询不包含底层主键索引；历史 SQL 已确认两个归档主键索引有中文注释，需独立补充只读检查。
-- [ADR-0072](adr/0072-prisma8-migration-adoption-review.md) 定义最终 119 个注释对象、主键索引补充核验、独立空迁移图的离线候选生成及后续真实重放门禁；这些新增专项尚无执行脚本。当前官方 schema-only 入口已通过维护者 Windows 真库验收，禁止签名及正式接管。
+- [ADR-0072](adr/0072-prisma8-migration-adoption-review.md) 定义最终 119 个注释对象、主键索引补充核验、独立空迁移图的离线候选生成及后续真实重放门禁；补充只读核验入口见下节；离线候选生成及真实重放尚无执行脚本。当前官方 schema-only 入口已通过维护者 Windows 真库验收，禁止签名及正式接管。
+
+### Prisma 8 主键索引与最终中文注释补充核验
+
+- `scripts/prisma8-native-catalog-supplement.mjs`：当前八项历史 SQL 固定字面量注释提取、最终注释对象检查、主键索引结构与双库定义对照、独立范围指纹。
+- `scripts/inspect-prisma8-migration-readiness.mjs`：新增独立补充快照入口，仅该入口增加主键索引 SELECT；原非主键目录及指纹、既有报告和查询顺序保持。
+- `scripts/compare-prisma8-catalog-supplement.mjs` / `pnpm run db:prisma8:native:catalog`：真实双库只读专项，校验历史原文 SHA-256、明确隔离 URL、旧指纹及补充证据，不输出数据库行或凭据。
+- `scripts/prisma8-native-catalog-supplement.cases.mjs` / `pnpm run test:prisma8:native:catalog`：七项离线判定测试；原 `test:prisma8:migration:preflight` 扩至十九项，均纳入 ready，真实专项不纳入 ready。
+- 离线基线候选生成及重放入口尚未开放，须单独批准。

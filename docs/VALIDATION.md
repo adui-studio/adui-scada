@@ -4977,3 +4977,9 @@ E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回
 维护者 Windows 实测 CLI 8/8、520 个格式文件及 361 个受检文件零警告/Lint/类型错误、中文文案 388 文件、Markdown 96 份、增量退出码 0。官方 verifier 实测读取 .artifacts/prisma8-native/contract.json，schema only (tolerant)，隔离库 URL 脱敏且显示只读会话参数，Database schema satisfies contract，退出码 0。远端最终 HEAD `adec9fa04873263ac35eef06b22974c24c460667` 与先前提交的差异为三份文件格式化，维护者日志未给出本机 HEAD；按授权合入 `647fd455d901d4786b2fb2c7b4d179290804d3f7`。这不等同严格目录等价或实际基线重放。
 
 协作端直接读取合并提交中八份 migration.sql，按当前历史字面量 COMMENT ON 形状静态提取（非通用 SQL 解析器），确认 121 条注释语句覆盖 119 个不同对象：表 12/12、列 87 条对应 85 字段、索引 22 个，均含中文。permission 字段注释出现三次，最后一次来自 release_read_permission 迁移。两个带注释主键索引分别为 scada_tag_history_batches_pkey 和 scada_tag_history_records_pkey。现有目录查询明确排除 indisprimary，因此已有 20 个非主键索引目录及指纹不覆盖这两项；主键列检查不是底层索引检查。未来独立补充只读核验及负向回归定义见 ADR-0072；真实目录补充查询、离线基线生成、迁移包检查、新空库重放、全量 Windows 质量门禁均尚未执行。协作容器 Node 22.16.0，缺 pnpm/vp，GitHub 域名解析失败，无法在本地完整检出并执行 docs:check。本批仅文档审查，不新增运行时或脚本。
+
+### 2026-11-25 · PR #217 合入与主键索引、精确中文注释补充核验
+
+维护者 Windows `pnpm run docs:check && vp check` 实测 96 份 Markdown、520 个格式文件和 361 个受检文件零警告错误；增量退出码 0、git status --short 无输出，日志未单列本机 HEAD。PR #217 已按授权 Squash 合入 `c228eff92d12f9b643128d6020ef0af239efc43f`。
+
+协作容器 Node.js 22.16.0：新独立补充判定核心和七项合成目录测试实际 7/7 通过，入口语法检查通过；核心 Blob `d36ab0e8e00217ae6a2ef973e528af359d2a88f1`、测试 Blob `d8b83185554eda152f715aa79e0c393042dd4dd4`、真实入口 Blob `28576419e50327d4c983f352613c6d0319d70fed` 均与本地验证文件一致。再次从合并提交真实八项 SQL 静态核对得到 121 条注释、119 个最终对象、permission 三次覆盖及两个主键索引准确文案。原预检增加三项测试定义，共十九项；七项补充测试及十九项预检测试纳入 ready，真实双库补充核验保持独立执行。未运行 Windows 全仓 Vite+、messages:check、docs:check、十九项预检回归或真实 PostgreSQL 双库专项；容器无 pnpm/vp 且 GitHub 域名解析失败。无真实补充指纹，不能宣布实际目录补充通过。保留旧指纹、原候选及两库，禁止签名、迁移、重放、DDL、生产接管。
