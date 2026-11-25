@@ -162,7 +162,8 @@
     "docker:logs": "node scripts/docker-stack.mjs logs",
     "test:docker:db": "node --test scripts/init-docker-db.cases.mjs scripts/prisma7-cli.cases.mjs",
     "docker:db:init": "node scripts/init-docker-db.mjs",
-    "docker:db:status": "node scripts/init-docker-db.mjs --status"
+    "docker:db:status": "node scripts/init-docker-db.mjs --status",
+    "db:prisma8:native:schema:verify": "node scripts/prisma8-cli.mjs db native-schema-verify"
   },
   "devDependencies": {
     "@adui/tooling": "workspace:*",

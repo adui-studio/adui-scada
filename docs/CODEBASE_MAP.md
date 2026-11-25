@@ -1710,3 +1710,8 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/prisma8-native-query-probe.mjs` / `pnpm run db:prisma8:native:query`：只连接已验收本机测试库，复用目录预检、保留契约和六字段关系差异门禁；在同一只读事务内比较独立 SQL、正式 ORM 和原生 ORM 发布状态/末次事件，不输出业务记录。
 - `scripts/prisma8-native-query-review.mjs`：六字段闭包、bigint、空关联、显式事件读取与隔离范围结果的独立比较器。
 - `scripts/prisma8-native-query.cases.mjs` / `pnpm run test:prisma8:native:query`：七项离线回归，纳入 ready；真实库查询仍为单独手工专项。
+
+### Prisma 8 原生候选官方结构验证
+
+- scripts/prisma8-cli.mjs / pnpm run db:prisma8:native:schema:verify：根目录精确白名单包装 Prisma 8 官方 db verify --schema-only；仅允许本机 adui_scada_test，连接强制只读、超时与 public search_path，不将凭据放入 CLI 参数。
+- scripts/prisma8-cli.cases.mjs：CLI 离线模拟回归扩展为八项，验证 schema-only 参数、隔离库 URL 守卫、只读连接选项、离线生成不继承数据库 URL及拒绝写入命令。真实官方 verifier 仍需 Windows 单独执行。

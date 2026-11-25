@@ -68,3 +68,9 @@ PR #213 已通过维护者 Windows 零警告增量验收并按授权合入 `4bad
 维护者 Windows 在 `c3a03056f7375d9dd4d42969720cb8e6ae6de625` 实测 CLI 5/5、物理评审 9/9、运行时评审 6/6；正式与原生候选服务端离线类型检查均通过；Prisma 两项根 Skills 已同步（ORM Postgres 8.0.0-rc.25、CLI 8.0.0-rc.35）。Vite+ 517 个格式文件、358 个受检文件零警告错误，中文文案 385、Markdown 96，增量退出码 0。最终 HEAD `8310c986a1619a47b9b121d6e3db172b8d8f30cb` 仅两份脚本排版变化，按授权 Squash 合入 `63cdc5d9ff5fca03267a3a52d15cdb9189f3447f`。
 
 先独立只读复验已验收测试库目录及 UTC 时区，拒绝标记或目录漂移；再使用一个调用方持有的 pg.Client，于 REPEATABLE READ READ ONLY 事务内使用独立 SQL 六字段关联为基准，分别执行正式和保留原生候选的状态正向 include 和按租户/工程/事件 ID 显式读取。最多抽取一条已发布和一条未发布，不改业务数据；EMPTY 明确为缺少覆盖。目录预检和查询是不同快照，专项期间不得并发 DDL。六字段真实行为对照尚待维护者运行；没有证明全部查询、写入、反向导航或官方 verifier 等价。保留 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED，ADR 状态 Proposed，禁止签名、迁移和正式 Provider 切换。
+
+## 2026-11-25 · 官方 Schema-only verifier 入口候选
+
+固定版本 Prisma 8 Skill 的 migrations 参考明确将 db verify 定义为独立诊断，--schema-only 跳过 marker，--strict 才会把 Contract 之外的数据库对象视为错误。当前测试库尚无 Prisma 8 marker，且必须保留 Prisma 7 历史迁移元数据，因此候选入口仅运行 db verify --schema-only，不启用 strict。通过根 CLI 精确白名单只允许原生配置验证；复用现有本机测试库 URL 守卫，并将连接参数限制为 PostgreSQL 默认事务只读、5 秒 statement timeout、2 秒 lock timeout、public search_path。连接 URL 通过配置环境注入，不进入子进程命令参数；非验证的离线 emit/Skills 命令主动移除测试数据库 URL。该入口没有任何签名、迁移、基线规划或 DDL 命令映射。
+
+当前只增加 CLI 入口、八项模拟测试和操作文档；模拟测试不证明 Prisma 8 RC 官方 verifier 的实际行为。维护者须在 Windows 对 adui_scada_test 单独运行官方验证，保留退出码及 schemaIssues。若官方 verifier 返回 4，停止并人工审查物理差异，不自动修改 Contract/数据库；返回 2 则诊断执行环境。原生候选真实发布状态样本仍为 EMPTY，非空发布关系未验收。ADR 状态保持 Proposed；Prisma 7 继续唯一正式迁移执行者，禁止签名、迁移、基线规划和 Provider 切换。
