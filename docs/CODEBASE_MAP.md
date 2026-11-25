@@ -1693,7 +1693,7 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 ### 原生 Prisma 8 Contract 独立候选
 
 - `apps/server/prisma/native-contract.template.prisma`：物理结构优先的原生 PSL 模板；运行时从已匹配的参考库目录补齐 36 个精确命名的 CHECK。候选恢复六字段末次事件外键，反向单值导航兼容性单独评审。
-- `apps/server/prisma8-native.config.ts`：无数据库连接的独立候选配置，源码和生成物仅在根忽略目录 .artifacts/prisma8-native，正式配置与生成物保持不变。
+- `apps/server/prisma8-native.config.ts`：独立候选配置，离线命令不传数据库连接，官方只读验证入口临时注入受限测试库连接；源码和生成物仅在根忽略目录 .artifacts/prisma8-native，正式配置与生成物保持不变。
 - `scripts/inspect-prisma8-migration-readiness.mjs`：内部复用双库只读目录匹配流程供候选提取，原入口报告形状、指纹及查询序列不变。
 - `scripts/prisma8-native-contract-review.mjs`：普通 CHECK 谓词提取、PSL 模板填充、物理 IR 和运行时领域模型/映射/关系/生成器对照。
 - `scripts/prisma8-native-contract.mjs` / `pnpm run db:prisma8:native:review`：显式双库只读采集、锁定已验收指纹与 Prisma 8 版本、独立离线 emit 和评审；禁止覆盖旧产物或签名。
@@ -1715,3 +1715,8 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 
 - scripts/prisma8-cli.mjs / pnpm run db:prisma8:native:schema:verify：根目录精确白名单包装 Prisma 8 官方 db verify --schema-only；仅允许本机 adui_scada_test，连接强制只读、超时与 public search_path，不将凭据放入 CLI 参数。
 - scripts/prisma8-cli.cases.mjs：CLI 离线模拟回归扩展为八项，验证 schema-only 参数、隔离库 URL 守卫、只读连接选项、离线生成不继承数据库 URL及拒绝写入命令。真实官方 verifier 仍需 Windows 单独执行。
+
+### 原生迁移基线与注释补充评审（规划）
+
+- 现有 `scripts/inspect-prisma8-migration-readiness.mjs` 的非主键索引目录查询不包含底层主键索引；历史 SQL 已确认两个归档主键索引有中文注释，需独立补充只读检查。
+- [ADR-0072](adr/0072-prisma8-migration-adoption-review.md) 定义最终 119 个注释对象、主键索引补充核验、独立空迁移图的离线候选生成及后续真实重放门禁；这些新增专项尚无执行脚本。当前官方 schema-only 入口已通过维护者 Windows 真库验收，禁止签名及正式接管。

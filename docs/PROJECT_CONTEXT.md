@@ -2826,3 +2826,9 @@ PR #213 已通过维护者 Windows 九项原生候选测试及 Vite+ 515/356 零
 PR #215 已合入 c11e7ae5f37a37736c77d38050e5fcfe3ec21cea。维护者真实查询只读结果：未发布样本 MATCHED，已发布样本 EMPTY；退出码 0。EMPTY 不代表非空发布关系已验收，不自动创建发布夹具。
 
 下一批增加固定 Prisma 8 Skill 的官方 db verify --schema-only 诊断入口，复用已验收原生候选及 adui_scada_test 只读 URL 守卫；连接层强制 PostgreSQL 默认事务只读、超时与 public search_path，连接 URL 不进入命令行。Schema-only 跳过缺失 marker，未使用 strict 以允许保留的 Prisma 7 元数据。根 CLI 仅开放精确命令，写入/签名/迁移命令仍拒绝。官方 verifier 尚未在 Windows 实际运行，需维护者执行新增命令并提供 exit code 与 schema findings；不执行签名、迁移、DDL 或 Provider 切换。
+
+### 2026-11-25 · PR #216 结案与原生基线专项评审方案
+
+维护者 Windows CLI 8/8、Vite+ 520/361 零警告错误、中文文案 388、Markdown 96、增量退出码 0；真实官方 schema-only (tolerant) 对原生候选报告 Database schema satisfies contract，退出码 0。远端最终 HEAD `adec9fa04873263ac35eef06b22974c24c460667` 相对原提交仅三份文件格式变化（本次日志未单列本机 HEAD）；按授权 Squash 合入 `647fd455d901d4786b2fb2c7b4d179290804d3f7`。
+
+对八项历史 SQL 实际静态提取 12 项表、85 项最终列、22 项索引中文注释；其中归档批次和记录的两个主键索引被现有非主键索引目录查询排除，现有指纹未覆盖其底层定义与注释。未证明实际注释缺失。下一阶段先补齐独立主键索引及精确注释只读验收，再按 ADR-0072 评审无数据库连接、独立空迁移图的离线候选生成与操作审查；基线生成范围须明确批准，第三座隔离空库部署、真实非空夹具和签名分别另行授权。PR #215 的已发布样本 EMPTY 仍未关闭。当前只提交评审文档，未修改代码、生成物、历史迁移或数据库。

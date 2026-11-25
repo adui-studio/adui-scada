@@ -74,3 +74,22 @@ PR #213 已通过维护者 Windows 零警告增量验收并按授权合入 `4bad
 固定版本 Prisma 8 Skill 的 migrations 参考明确将 db verify 定义为独立诊断，--schema-only 跳过 marker，--strict 才会把 Contract 之外的数据库对象视为错误。当前测试库尚无 Prisma 8 marker，且必须保留 Prisma 7 历史迁移元数据，因此候选入口仅运行 db verify --schema-only，不启用 strict。通过根 CLI 精确白名单只允许原生配置验证；复用现有本机测试库 URL 守卫，并将连接参数限制为 PostgreSQL 默认事务只读、5 秒 statement timeout、2 秒 lock timeout、public search_path。连接 URL 通过配置环境注入，不进入子进程命令参数；非验证的离线 emit/Skills 命令主动移除测试数据库 URL。该入口没有任何签名、迁移、基线规划或 DDL 命令映射。
 
 当前只增加 CLI 入口、八项模拟测试和操作文档；模拟测试不证明 Prisma 8 RC 官方 verifier 的实际行为。维护者须在 Windows 对 adui_scada_test 单独运行官方验证，保留退出码及 schemaIssues。若官方 verifier 返回 4，停止并人工审查物理差异，不自动修改 Contract/数据库；返回 2 则诊断执行环境。原生候选真实发布状态样本仍为 EMPTY，非空发布关系未验收。ADR 状态保持 Proposed；Prisma 7 继续唯一正式迁移执行者，禁止签名、迁移、基线规划和 Provider 切换。
+
+## 2026-11-25 · 官方结构验收及离线基线候选专项方案（待批准）
+
+PR #215 已按授权合入 `c11e7ae5f37a37736c77d38050e5fcfe3ec21cea`；真实只读发布查询未发布样本 MATCHED、已发布样本 EMPTY、退出码 0。PR #216 已按授权合入 `647fd455d901d4786b2fb2c7b4d179290804d3f7`；维护者 Windows CLI 8/8、Vite+ 520 个格式文件与 361 个受检文件零警告错误、中文文案 388 文件、Markdown 96 份，增量退出码 0。固定 RC 官方 verifier 对保留的原生 Contract 及本机验收库报告 schema only (tolerant)、Database schema satisfies contract、退出码 0，连接诊断已脱敏并显示只读连接选项。该结果仅证明本次候选结构满足关系，不证明所有额外对象、标记状态、注释精确等价、基线 DDL 或非空发布关系。
+
+本批直接读取合并提交中的八份历史 SQL，静态提取全部 COMMENT ON TABLE/COLUMN/INDEX 字面量：12 条表注释、87 条列注释（85 个不同字段）、22 条索引注释，共 121 条语句对应 119 个不同对象；均含中文。工程授权表 permission 的三次注释以 20261119180000_release_read_permission 中最终文案为准。22 个已注释索引包括 20 个非主键索引和两个归档表主键索引：`scada_tag_history_batches_pkey`（归档批次复合幂等键）、`scada_tag_history_records_pkey`（归档批次内记录唯一键）。既有 `inspect-prisma8-migration-readiness.mjs` 的 indexes 查询明确排除 indisprimary；constraints 查询检查主键列但未读取主键索引注释及完整索引定义。因此既有目录指纹仍是有效的限定范围证据，不能证明两项主键索引注释。这里只发现覆盖缺口，没有证据表明实际数据库缺少注释。
+
+下一批建议先实现独立只读补充目录核验：在两个既有隔离库验证十二个主键约束与其底层索引的关联、物理名称、列顺序、唯一性、有效性、访问方法、完整定义及注释；按八项历史迁移最终 COMMENT 文案核对 12/85/22 个对象，并逐项比较两库主键索引目录。未声明注释的其他十个主键索引不强制新增注释，但比较其实际定义和注释。补充证据采用独立范围标识和指纹，不改写既有 `73079d85974ddc9cbabf59741f2a4a94dd7bfff3d70a23bab27a7283456e8c52`；只读事务、同一查询上下文、无并发 DDL，保留原历史登记和标记门禁。覆盖缺失主键索引、错误 conindid 关联、列序或索引属性漂移、注释缺失或更改、历史覆盖顺序错误及连接异常等负向回归。当前尚未实现或运行补充探针。
+
+依据固定包内 [迁移模型](../../.agents/skills/prisma-8/references/migration-model.md) 和 [迁移参考](../../.agents/skills/prisma-8/references/migrations.md)，真正的空起点基线可先离线生成而无需数据库签名：`migration plan --from @empty --name scada_native_baseline`。本项目拟使用独立、无数据库连接的基线配置，独立忽略目录 `.artifacts/prisma8-native-baseline/` 下空迁移图，不复用当前带可选测试库连接的 native 配置；候选 Contract 必须复用已验收且保留的原生生成物，并复核已知物理与运行时差异、版本及内容标识。生成前拒绝已有输出、路径逃逸或迁移图/ref/snapshot 污染，不加载 .env，不回退任何业务连接；不改变历史迁移、正式生成物和已保留候选，不引入额外依赖。不开放任意 CLI 参数。该命令仅为待批准的离线方案，不是当前可执行的仓库入口，不允许直接绕过包装器执行。
+
+离线基线评审要求：
+
+- 唯一应用基线边的 manifest 起点为 null，目标存储哈希为已验收原生候选 `6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc`；保留官方生成的 migration.ts、migration.json、ops.json、目标 snapshot 及计划预览，确认无未填充 placeholder。核对框架渲染路径及迁移包对固定版本的依赖解析，不手工改 JSON、哈希或快照。
+- 按实际 operation 和 SQL 预览逐项审查 12 表、85 字段、12 主键、13 外键、36 CHECK、20 非主键索引，以及主键底层索引和 119 项最终注释。拒绝未审查的破坏、数据改写、权限扩大、删除或弱化约束；不使用数据丢失许可绕过阻塞。历史 20261118000000 的 INSERT SELECT 是对既有工程的发布状态回填，空库基线不需要照搬该数据回填；现有库接管时也不得重新执行。
+- 若官方规划未产生所需中文注释，先验证固定 RC 的受支持迁移操作和自发射能力，再独立评审补充方案；不得编辑生成的 ops.json 或 migrationHash，不得假定单次 rawSql 足以保障未来迁移保留。审查额外对象、索引、默认表达式、所有约束验证状态及权限/RLS/触发器等尚未覆盖元数据。
+- 离线候选通过静态评审后，才另行提议由维护者明确批准的第三座新隔离空库重放和真实负向约束测试。不得以已存在的 adui_scada_test 或 adui_scada_fresh_prisma8_ref 作为原生空起点基线部署目标。独立空库证明、历史保留策略、标记/幂等性、数据与权限回归和已发布非空样本均为后续单独验收门禁。
+
+本批只更新评审文档并记录静态发现，不生成迁移包、不新增 CLI 入口、不执行 SQL、签名、建库、重放、DDL 或数据库写入。下一步需要维护者明确批准离线候选生成范围；真实基线部署、写入夹具及签名分别另行授权。ADR 保持 Proposed，Prisma 7 仍为唯一正式迁移执行者，原生候选继续 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED。
