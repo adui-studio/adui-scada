@@ -52,3 +52,7 @@ PR #212 已通过 Windows 27 项离线回归及真实独立参考库八项历史
 本批采用独立原生 PSL 模板及已匹配目录的 CHECK 谓词填充。模板明确保留历史十二表、八十五列、十二主键、十三外键及二十非主键索引；唯一索引仍使用 @@index(..., unique: true, map: ...) 而非新增唯一约束，六字段末次事件 FK 以物理原名和完整列及动作表达。依据固定包内 Contract 参考及上游当前实现源码（仅辅助参考，不能替代固定 RC 实测），单值反向关系可能要求与 FK 完全相同的唯一列集；历史结构已有较小唯一键，不能因此增加冗余物理唯一约束或把正式一对一改为一对多。本物理优先候选暂不声明 ScadaProjectReleaseEvent.currentReleaseState 反向导航；正式过渡契约及关系不动。候选运行时元数据变化是明确阻塞，不因物理匹配消除。后续须评审固定版本 TS builder/PSL 能力及现有查询、类型、生成器实际兼容性。
 
 候选生成时重新执行双库只读完整匹配，锁定已有目录指纹及正式存储哈希，提取 36 项普通 CHECK 定义内 PostgreSQL 原始重打印谓词并按原名填入原生 PSL；独立无数据库连接的固定配置只离线生成至根忽略目录，拒绝覆盖现有结果，不改生成 JSON 或正式生成物。生成 IR 与已审查基线核对所选物理结构和运行时元数据；物理一致不证明官方 schema verifier 或实际迁移 DDL、中文注释、RLS、触发器、权限等全部等价。此阶段还未运行真实固定 RC emit，也未执行官方 db verify、签名、基线生成或部署。ADR 保持 Proposed，Prisma 7 唯一正式迁移执行者。
+
+## 2026-11-25 · 原生 PSL 实测结果与运行时兼容阻塞
+
+PR #213 维护者 Windows 使用固定 Prisma 8 实际生成独立原生候选，并通过受检物理 IR 审查（36 个精确命名 CHECK、13 个外键含六字段末次事件、12 张表、85 字段、12 主键与 20 非主键索引），候选存储哈希 `6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc`，正式生成物不变，execution/profile 哈希相同。原名称 SQL 谓词的 PN_EXACT_NAME_BODY_COMPARISON 提示符合此前预期，尚未完成官方结构验证。实际返回 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED，报告 ScadaProjectReleaseEvent.currentReleaseState 及 ScadaProjectReleaseState.lastReleaseEvent 两个运行时关系差异，不能凭 executionHash 相同认定运行时等价；候选 d.ts 依赖可见性及独立配置 Skills 提示也待核验。E-142 排序警告最小修复及九项离线专项待 Windows 复验。候选及两隔离库均须保留，不修改正式 Contract、历史 SQL、Provider 或数据库，不批准签名、迁移规划或部署，后续需确认运行时关系兼容及官方结构验证、新基线 DDL 与全部约束和注释的等价性。ADR 状态仍为 Proposed。
