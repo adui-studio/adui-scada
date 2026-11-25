@@ -130,6 +130,23 @@ void describe("Prisma 8 原生 Contract 候选只读生成与结构评审", () =
     );
   });
 
+  void it("物理表映射按历史基线字典序比较且保留模板顺序", () => {
+    const source = [
+      "// use prisma-8",
+      "model B {",
+      '  @@map("scada_a_b")',
+      "}",
+      "model A {",
+      '  @@map("scada_a1")',
+      "}",
+      "",
+    ].join("\n");
+    assert.equal(
+      materializeNativeContract(source, { tableNames: ["scada_a1", "scada_a_b"] }, []),
+      source,
+    );
+  });
+
   void it("缺失、重复、未验证或非普通 CHECK 定义均拒绝生成", () => {
     const { baseline, catalog } = fixture();
     assert.throws(() => nativeChecks(baseline, { constraints: [] }), /数量或名称重复/);
