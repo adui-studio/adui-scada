@@ -46,10 +46,19 @@ const boundarySql = `SELECT current_database()::text AS database_name,
     current_setting('transaction_isolation') AS isolation,
     pg_is_in_recovery() AS in_recovery`;
 const emptySql = `SELECT
-    EXISTS (SELECT 1 FROM pg_namespace WHERE nspname NOT IN ('public', 'pg_catalog', 'information_schema') AND nspname NOT LIKE 'pg_%') AS extra_schema,
+    EXISTS (SELECT 1 FROM pg_namespace WHERE nspname NOT IN ('public', 'pg_catalog', 'information_schema') AND left(nspname, 3) <> 'pg_') AS extra_schema,
     EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public') AS relations,
     EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public') AS routines,
     EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace WHERE n.nspname = 'public') AS types,
+    EXISTS (SELECT 1 FROM pg_operator o JOIN pg_namespace n ON n.oid = o.oprnamespace WHERE n.nspname = 'public') AS operators,
+    EXISTS (SELECT 1 FROM pg_collation c JOIN pg_namespace n ON n.oid = c.collnamespace WHERE n.nspname = 'public') AS collations,
+    EXISTS (SELECT 1 FROM pg_conversion c JOIN pg_namespace n ON n.oid = c.connamespace WHERE n.nspname = 'public') AS conversions,
+    EXISTS (SELECT 1 FROM pg_opclass c JOIN pg_namespace n ON n.oid = c.opcnamespace WHERE n.nspname = 'public') AS operator_classes,
+    EXISTS (SELECT 1 FROM pg_opfamily f JOIN pg_namespace n ON n.oid = f.opfnamespace WHERE n.nspname = 'public') AS operator_families,
+    EXISTS (SELECT 1 FROM pg_ts_config c JOIN pg_namespace n ON n.oid = c.cfgnamespace WHERE n.nspname = 'public') AS text_search_configs,
+    EXISTS (SELECT 1 FROM pg_ts_dict d JOIN pg_namespace n ON n.oid = d.dictnamespace WHERE n.nspname = 'public') AS text_search_dictionaries,
+    EXISTS (SELECT 1 FROM pg_ts_parser p JOIN pg_namespace n ON n.oid = p.prsnamespace WHERE n.nspname = 'public') AS text_search_parsers,
+    EXISTS (SELECT 1 FROM pg_ts_template t JOIN pg_namespace n ON n.oid = t.tmplnamespace WHERE n.nspname = 'public') AS text_search_templates,
     EXISTS (SELECT 1 FROM pg_extension WHERE extname <> 'plpgsql') AS extensions,
     EXISTS (SELECT 1 FROM pg_event_trigger) AS event_triggers,
     EXISTS (SELECT 1 FROM pg_publication) AS publications,
@@ -112,6 +121,15 @@ export async function inspectEmptyReferenceDatabase(client) {
         row.relations === false &&
         row.routines === false &&
         row.types === false &&
+        row.operators === false &&
+        row.collations === false &&
+        row.conversions === false &&
+        row.operator_classes === false &&
+        row.operator_families === false &&
+        row.text_search_configs === false &&
+        row.text_search_dictionaries === false &&
+        row.text_search_parsers === false &&
+        row.text_search_templates === false &&
         row.extensions === false &&
         row.event_triggers === false &&
         row.publications === false &&
