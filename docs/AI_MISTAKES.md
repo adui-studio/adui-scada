@@ -1307,3 +1307,13 @@
 - **根因**：此前保留了已跟踪的 Composer 生成技能，但当前仓库根 CLI 只识别 Prisma ORM PostgreSQL 与 prisma 两个技能来源。官方同步按已安装来源、配置 Agent 和元数据识别孤立技能并清理；Git 快进不会清除未跟踪的旧工作区目录。远端完整 Git 树核实服务端四个 Agent 目录未被跟踪，旧 Composer 文件不属于 skills-lock.json 的索引。
 - **最小修复**：从候选分支移除该单一孤立 Composer 文件，更新 Skills 索引说明和验证记录；不安装额外依赖，不改 pnpm 配置、锁文件或质量检查。维护者仅备份迁出本机已知旧 Prisma 目录，保留其他 Agent 配置及原有根 Skills。
 - **防复发与验收**：包内生成 Skills 的实际列表以固定依赖在仓库根运行的 CLI 为准，不能因过去的安装日志而保留失效生成文件；先核实 Git 跟踪状态，再处理本地残留。同步后应无重复副本且不产生孤立 Composer 删除记录。完整 config:check、ready 和只读数据库专项尚待实测。
+
+> **2026-11-25 · E-134/E-135/E-136/E-137 局部门禁复验**：维护者在 Windows HEAD `e281d595efec99724798b837a1dc646435e8bdff` 备份迁出 12 个旧 Prisma 技能目录，CLI 入口测试 3/3、根目录重复同步及列表、config:check 退出码 0，Git 当时干净。Prisma 7 Schema 校验、Client 7.10.1 生成、Prisma 8 Contract 生成和 Core Node 构建通过；vp check --fix 及 vp check 均无警告、Lint 或类型错误（482 格式文件、324 受检文件），原 TS2883 未再出现，未报告 Skills 过期。旧副本与 CLI 入口阻塞解除；独立服务端类型检查、完整 ready 和真实数据库仍需验收。
+
+### E-138 · 模拟 CLI 的机器输出触发中文文案门禁（E-022 同类复发，PR #202）
+
+- **Windows 实测**：同一 HEAD 执行 ready，在 deps:check、config:check、env:check 和 LF 检查通过后，messages:check 在 scripts/prisma8-cli.cases.mjs:28 报一处日志文案缺少中文，整体退出码 1；后续单测、HTTP E2E 和构建未执行。格式化后 Git 出现四份自有源码及 pnpm Skills 忽略文件差异；维护者随后提交 ff92a981，纳入根目录两项包内技能的 132 个文件并保留自有源码格式化。
+- **根因**：测试把模拟子进程的 JSON 数据输出写成字符串形式的 console.log，单行扫描器同时识别 console 调用和字符串字面量，误判为面向用户的日志。此前局部入口测试未独立执行实际文案检查。
+- **最小修复**：仅将该模拟进程改为 process.stdout.write 输出 JSON，并添加中文说明；保留 JSON.parse、命令参数、退出码断言及全部安全用例。检查器不变，不关闭中文门禁，不修改第三方技能或覆盖维护者格式化。
+- **局部复验**：Node.js 22.16.0 最小目录中使用与 ff92a981 Git Blob 一致的真实文案检查器和两个入口脚本；修复前复现唯一报错（退出码 1），修复后局部文案检查 8 个文件通过（退出码 0），Node 语法检查及三项入口测试 3/3 通过。修复后测试脚本 Blob 为 10aed9bfe70cf8905d82cb23c98daf55d9704bcb。未运行全仓文案检查、Vite+、完整 ready 或真实 PostgreSQL。
+- **防复发**：测试进程的机器协议数据使用标准输出直接写入，面向用户的日志继续中文化；修改脚本后先执行 messages:check 和对应专项测试，再运行完整 ready。不能将局部复现通过记录为全仓验收。

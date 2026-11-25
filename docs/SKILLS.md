@@ -65,3 +65,9 @@ Prisma Postgres 云服务、Compute 与升级兼容技能并非自建 PostgreSQL
 维护者在 Windows HEAD `a141b5a58eba622fb89a6f09f1a23fc2640b79a0` 实际运行列表、同步和再次列表：项目根为仓库根目录，版本检查启用；当前包内技能仅有 `prisma-8`（@prisma/orm-postgres 8.0.0-rc.25）与 `prisma-platform-core-concepts`（prisma 8.0.0-rc.35），两者均为 synced 且只指向 `.agents/skills`。此前跟踪的 `prisma-composer-core-concepts/SKILL.md` 已被官方同步识别为孤立技能并删除；仓库同步移除该旧文件，不为保留它而安装 Composer 或恢复生成副本。原有 `skills-lock.json` 索引、pnpm Skills 目录规则及两项包内技能的忽略规则不变。
 
 旧工作区中的 Prisma 重复副本不属于远端 Git 跟踪内容，切换分支不会清除；仅将旧的三个已知 Prisma 技能目录（若存在）备份迁出仓库，不移动或删除其他 Agent 配置。`config:check` 保留失败保护。第三方源码不参与项目自有代码格式化或 Lint，不执行技能中的升级脚本。根目录同步已实测成功；本机残留清理、完整质量链及契约生成一致性仍待复验。
+
+### 2026-11-25 · 根目录 Skills 复验及版本管理
+
+维护者 Windows 在 HEAD `e281d595efec99724798b837a1dc646435e8bdff` 备份迁出服务端四个旧 Agent 目录下共 12 份 Prisma 技能副本；再次同步、列表及共享配置检查均通过，退出码 0，Git 工作区当时干净。Prisma 8 契约已从根目录成功输出至原服务端目录，无 Skills 过期提示。
+
+随后维护者提交 `ff92a98167ce01507d43ec45ca80e876d8a4887c`，纳入根目录两项包内技能的 132 个文件，并更新 .agents/skills/.gitignore 中 pnpm 管理区及四份自有源码的格式。保留维护者已提交的根 Skills 和格式，不恢复此前的忽略行，不重新添加 Composer 孤立技能。原 skills-lock.json 仍为原有来源索引；两项包内技能的当前版本由已安装 Prisma 包及根 CLI 列表核对。供应方文件仍排除于自有代码检查，不执行其升级脚本；后续同步若产生版本或 Git 差异，须审查后处理。

@@ -4555,7 +4555,7 @@ try {
 
 ### Prisma 8 Skills 同步和历史只读专项
 
-在仓库根目录执行 `pnpm run db:prisma8:skills`、`pnpm run db:prisma8:skills:list` 和 `pnpm run db:prisma8:emit`。三个命令统一由 `scripts/prisma8-cli.mjs` 从仓库根目录启动服务端已安装的 Prisma 8 CLI，按固定 CLI 语法先传命令路径，再传 `--config` 与原服务端配置路径；首次验收先运行 `pnpm run db:prisma8:skills:list` 确认解析成功，再同步并复查；只同步根 `.agents/skills/`，保留过期检查。禁止再次直接从服务端工作区执行 Skills 同步；若已有重复副本，仅备份迁出各旧 Agent 的 skills 目录下 `prisma-8`、`prisma-platform-core-concepts`、`prisma-composer-core-concepts` 三个已知目录（若存在），确认 Git 无跟踪文件，且不删除其他配置。当前 CLI 在仓库根仅识别两项已同步的 Prisma 8 包内技能，自动移除孤立的 Composer 技能属预期行为，仓库移除相应旧跟踪文件。运行 `pnpm run config:check` 验证入口及旧副本不存在，并运行 `pnpm run test:prisma8:cli` 检查根工作目录、固定配置、命令边界及退出码转发（已纳入 ready）。Windows 已实际通过根目录 CLI 列表、同步与再次列表；旧副本清理、完整配置检查与契约生成一致性仍待复验。
+在仓库根目录执行 `pnpm run db:prisma8:skills`、`pnpm run db:prisma8:skills:list` 和 `pnpm run db:prisma8:emit`。三个命令统一由 `scripts/prisma8-cli.mjs` 从仓库根目录启动服务端已安装的 Prisma 8 CLI，按固定 CLI 语法先传命令路径，再传 `--config` 与原服务端配置路径；首次验收先运行 `pnpm run db:prisma8:skills:list` 确认解析成功，再同步并复查；只同步根 `.agents/skills/`，保留过期检查。禁止再次直接从服务端工作区执行 Skills 同步；若已有重复副本，仅备份迁出各旧 Agent 的 skills 目录下 `prisma-8`、`prisma-platform-core-concepts`、`prisma-composer-core-concepts` 三个已知目录（若存在），确认 Git 无跟踪文件，且不删除其他配置。当前 CLI 在仓库根仅识别两项已同步的 Prisma 8 包内技能，自动移除孤立的 Composer 技能属预期行为，仓库移除相应旧跟踪文件。运行 `pnpm run config:check` 验证入口及旧副本不存在，并运行 `pnpm run test:prisma8:cli` 检查根工作目录、固定配置、命令边界及退出码转发（已纳入 ready）。Windows HEAD e281d595 已实际通过旧副本备份迁出、根目录 CLI 列表及同步、共享配置检查和两版 Prisma 生成；随后 Vite+ 482 个格式文件、324 个受检文件零警告错误。维护者后续提交 ff92a981 保留两项根 Skills 与格式化成果。复验先执行 messages:check、test:prisma8:cli，再验证两版生成、Core 构建、完整 ready 和隔离库只读专项。
 
 仅使用已准备且已应用对应迁移的本机 15432 端口 `adui_scada_test` 隔离库。运行期间停止其他写入，不创建历史样本。PowerShell 临时设置专项连接地址，不覆盖生产连接地址：
 

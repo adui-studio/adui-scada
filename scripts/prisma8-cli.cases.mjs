@@ -25,7 +25,8 @@ function withFixture(manifest, run) {
         'if (!commands.has(args.slice(0, 2).join(" ")) || args.length !== 4 || args[2] !== "--config") {',
         "  process.exitCode = 2;",
         "} else {",
-        "  console.log(JSON.stringify({ cwd: process.cwd(), args }));",
+        // 模拟进程返回供测试解析的 JSON 协议数据，不输出面向用户的日志。
+        "  process.stdout.write(JSON.stringify({ cwd: process.cwd(), args }));",
         "  process.exitCode = 7;",
         "}",
         "",

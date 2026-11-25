@@ -4831,3 +4831,11 @@ PR #201 的维护者 Windows 日志记录 HEAD `3fe7985a0f5553ee73fb91efff21f7a9
 维护者 Windows HEAD `a141b5a58eba622fb89a6f09f1a23fc2640b79a0` 的 Node.js 24.18.0 环境实际通过 CLI 入口测试 3/3、真实 Skills 列表、同步和再次列表。项目目录为仓库根，check enabled；prisma-8（8.0.0-rc.25）和 prisma-platform-core-concepts（8.0.0-rc.35）均指向 .agents/skills 且 synced。原 CLI.UNKNOWN_COMMAND 阻塞解除。同步自动移除孤立 Composer Skill；Git 显示其单一跟踪文件被删除。config:check 正确拒绝 apps/server/.agents/skills/prisma-8 本机残留，整条命令链退出 1。
 
 远端完整 Git 树核对：四个服务端 Agent 目录均没有跟踪文件；Composer Skill 不在 skills-lock.json 中，当前实际同步列表未包含该技能。候选分支仅删除根目录这一孤立跟踪文件并更新文档，保留全部脚本、依赖和质量保护。需维护者备份迁出本机旧副本，再验证列表、重复同步、配置检查、契约生成及完整 ready；未执行数据库迁移或真实只读专项。
+
+### 2026-11-25 · PR #202 根目录治理及类型检查通过，文案门禁修复
+
+维护者 Windows HEAD `e281d595efec99724798b837a1dc646435e8bdff` 实际备份迁出 12 个旧 Prisma 技能目录；CLI 3/3、真实根目录同步和列表、config:check 退出码 0，Git 当时干净。两项包内技能均 synced，check enabled。Prisma 7 校验及 Client 7.10.1 生成、Prisma 8 Contract 生成和 Core Node 构建通过；Contract 输出仍在 apps/server/src/generated/prisma8，storageHash 为 054113c40b1e6f3b7609641e09868e45c0e969d8035e6e1376d10ac3e5148424，未见 Skills 过期提示。vp check --fix 与 vp check 均通过，482 个格式文件、324 个受检文件零警告、Lint 或类型错误。原 TS2883 不再出现。
+
+ready 在依赖目录检查（13 清单、57 Catalog）、共享配置检查（10 TSConfig）、环境与 LF 检查通过后，因模拟 CLI JSON 日志触发 messages:check 退出码 1。正式 979 项预期单测、63 项 HTTP E2E、独立类型检查、文档检查、最终构建及真实数据库专项未执行。维护者后续提交 ff92a98167ce01507d43ec45ca80e876d8a4887c，纳入 132 个根 Skills 文件及已格式化的四份自有源码，保留该提交。
+
+本次仅修改模拟 CLI 的 JSON 输出方式及文档。协作端 Node.js 22.16.0 以真实检查器和两个远端一致的入口脚本构造最小目录，复现文案检查退出 1，修改后局部检查 8 文件、入口测试 3/3、语法检查均通过（退出码 0）；不是完整仓库检查。修复后脚本 Blob 为 10aed9bfe70cf8905d82cb23c98daf55d9704bcb。仍须 Windows 全仓 messages:check、两版生成、独立类型检查、完整 ready 及隔离库只读专项复验。
