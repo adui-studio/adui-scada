@@ -59,6 +59,7 @@ export function materializeNativeContract(template, baseline, checks) {
       !template.includes("@@check("),
     "原生 PSL 模板头或现有约束不符合预期",
   );
+  /** @type {Set<string>} */
   const mapped = new Set();
   let inserted = 0;
   const source = template.replace(/^  @@map\("([a-z_][a-z0-9_]*)"\)$/gm, (line, table) => {
@@ -78,7 +79,11 @@ export function materializeNativeContract(template, baseline, checks) {
       });
     return [...attributes, line].join("\n");
   });
-  same([...mapped].sort(), baseline.tableNames, "原生 PSL 模板物理表清单不一致");
+  same(
+    [...mapped].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)),
+    baseline.tableNames,
+    "原生 PSL 模板物理表清单不一致",
+  );
   requireCondition(inserted === checks.length, "原生 PSL 模板未覆盖全部 CHECK");
   return source;
 }
