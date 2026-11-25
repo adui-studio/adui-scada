@@ -517,3 +517,7 @@ PR #202 已在真实隔离库完成 Prisma 7 写入后的 Prisma 7/8/原生 SQL 
 ### Prisma 8 OIDC 登录事务候选（隔离验证）
 
 新增独立 `Prisma8OidcLoginTransactionService`，沿用已验证的授权请求构造、State/浏览器绑定摘要、AES-256-GCM 与 State 摘要 AAD、五分钟有效期及进程内匿名限流规则。Prisma 8 参数化事务负责创建、带行锁的一次性消费和有界过期清理；消费提交后才解密并返回 PKCE verifier，保持异常事务已消费的拒绝语义。仅允许本机隔离库和随机专用测试 Issuer；清理限定该 Issuer，不接管原服务全局过期清理，不注册正式 Provider、路由或真实身份提供方联调。正式 Prisma 7 登录事务、认证与工程安全边界不变。
+
+### Prisma 8 工程 ACL Guard 候选（隔离验证）
+
+现有工程创建事务已迁移三项创建者基础 ACL，工程版本、查询及发布仓储的锁内授权复核亦已有独立候选。本批补齐剩余正式 ScadaProjectGuard 的前置权限查询：独立 Prisma8ScadaProjectGuard 复用同一权限元数据、可信主体、hasProjectPermission 和固定安全审计原因码，在隔离库 ReadCommitted 事务内按租户、工程、主体查询完整显式权限集合，不执行 DML。无权限与不存在统一拒绝；数据库不可用时仅候选返回固定脱敏 503。Guard 不是会话认证或锁内授权的替代，不将一次通过结果缓存为持续有效授权。不新增管理员特权、授权/撤权管理接口或回滚执行入口，不注册生产 Provider。

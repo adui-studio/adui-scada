@@ -1661,3 +1661,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/auth/prisma8-oidc-login-transaction.service.spec.ts`：五项输入门禁及固定错误脱敏单测定义。
 - `apps/server/test/prisma8-oidc-login-transaction.db-spec.ts`：真实 PostgreSQL 双版本创建与消费、跨版本竞争、时效、密文绑定、篡改拒绝和有界清理专项。
 - `pnpm run test:db:prisma8:auth:oidc`：独立隔离库专项；不替换正式 OIDC 登录事务服务。
+
+### Prisma 8 工程 ACL Guard 候选
+
+- `apps/server/src/auth/prisma8-scada-project.guard.ts`：独立前置 ACL 候选，隔离事务边界、可信复合范围、完整权限集合与固定审计。
+- `apps/server/src/auth/prisma8-scada-project.guard.spec.ts`：七项输入、范围、完整权限集、未知动作、隔离边界和异常脱敏测试定义。
+- `apps/server/test/prisma8-project-acl.db-spec.ts`：两个随机租户、四个身份、三个工程的六项权限双版本对照、专用撤权与仓储锁内复核、精确夹具清理。
+- `pnpm run test:db:prisma8:project:acl`：独立真实专项，不接管正式授权管理或生产路由。

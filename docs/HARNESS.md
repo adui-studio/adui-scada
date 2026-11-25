@@ -4653,3 +4653,7 @@ try {
 ### Prisma 8 OIDC 登录事务真实数据库专项
 
 在现有 Prisma 7 Client、Prisma 8 Contract 和 Core 构建产物齐备且本机隔离库八项既有迁移已应用的前提下，沿用前述屏蔽输入密码、显式 SCADA_TEST_DATABASE_URL、127.0.0.1:15432/adui_scada_test、try/finally 恢复环境变量的完整 PowerShell 流程，将专项命令替换为 `pnpm run test:db:prisma8:auth:oidc`。测试使用两个随机专用 Issuer、随机合成密钥及本地 Discovery 元数据；先核验 OIDC 迁移、表与索引，禁止真实 IdP 网络请求。验证双版本加密事务互认、一次性竞争、过期及篡改拒绝和专用 Issuer 128 条分批清理；结束仅删除已确认的 Issuer/State 摘要联合条件对应记录并核对零残留。创建/清理结果不明时禁止自动重试或扩大删除范围，错误仅输出固定阶段与必要随机测试标识。不执行迁移、签名、依赖安装或容器重建；日常验收执行适用增量检查，不要求重复完整 ready。
+
+### Prisma 8 工程 ACL Guard 真实数据库专项
+
+沿用现有两版 Prisma 生成产物、Core 构建及已经应用八项迁移的本机隔离库，通过屏蔽输入密码、显式 SCADA_TEST_DATABASE_URL（127.0.0.1:15432/adui_scada_test）、try/finally 恢复环境变量流程运行 `pnpm run test:db:prisma8:project:acl`。专项先核验实际数据库、Schema、表、索引及 release:read 迁移；只对随机合成身份、会话、工程和授权进行测试，前置 Guard 仅执行查询。受控撤权限定已创建专用工程和两条授权复合条件，并先取得工程排他锁，不新增授权管理接口。校验两版 Guard 和仓储拒绝及无额外状态变化，按外键依赖顺序清理已确认的精确工程、会话及身份键，核对零残留。创建或清理结果不明时禁止自动重试；不执行迁移、签名、依赖安装、容器重建或生产发布。本批只执行增量质量、关联身份/权限策略单测与新增真实数据库专项。
