@@ -1654,3 +1654,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/auth/prisma8-auth-session.service.spec.ts`：四项非法输入与零数据库调用单测定义。
 - `apps/server/test/prisma8-auth-session.db-spec.ts`：双版本真实 PostgreSQL 会话互认、外部身份映射、摘要与有效期、CSRF、跨租户拒绝、并发撤销、过期、未来签发、停用及精确清理。
 - `pnpm run test:db:prisma8:auth:session`：独立真实专项，正式 Prisma 7 认证服务不变。
+
+### Prisma 8 OIDC 登录事务候选
+
+- `apps/server/src/auth/prisma8-oidc-login-transaction.service.ts`：隔离创建、一次性消费、AES-GCM/PKCE 兼容及专用 Issuer 过期清理候选。
+- `apps/server/src/auth/prisma8-oidc-login-transaction.service.spec.ts`：五项输入门禁及固定错误脱敏单测定义。
+- `apps/server/test/prisma8-oidc-login-transaction.db-spec.ts`：真实 PostgreSQL 双版本创建与消费、跨版本竞争、时效、密文绑定、篡改拒绝和有界清理专项。
+- `pnpm run test:db:prisma8:auth:oidc`：独立隔离库专项；不替换正式 OIDC 登录事务服务。
