@@ -1558,3 +1558,10 @@ React/Vue 运行页可显式导入当前或可迁移 Schema 的最大 2 MiB JSON
 - 创建与追加分别复用现有请求白名单和共享 Core 校验，主体由调用方可信会话提供，复制主体后使用复合键参数化查询。创建持有主体共享锁，重名由联合主键冲突判定；初始未发布代次为零，创建者仅有 project:read、version:read、version:append。
 - 追加使用工程排他行锁，先核验 ACL 再判定 CAS，修订号不超过安全整数边界；新增快照、条件更新 head、成功审计同属一个 ReadCommitted 事务。验证影响行数及事务内快照摘要、修订号、时间、操作主体与审计事件；事务成功提交后才交付结果，异常不自动重试。
 - 候选当前只提供 create 与 append，不迁移 list/getProject/listVersions/read/preflightRelease；真实专项通过正式 Prisma 7 读取及数据库回查验证互操作。正式版本仓储与发布仓储保持不变。
+
+### Prisma 8 工程查询候选（待验收）
+
+- 列表按租户、主体和 project:read 过滤，使用参数化查询及稳定工程 ID 升序游标，每页最多 100 项；详情与版本查询在工程 FOR SHARE 锁内分别复核 project:read、version:read。
+- 历史版本使用数值修订号降序及严格小于游标，摘要不读取快照正文；完整读取核验 Core SHA-256、工程 ID、修订号及时间元数据。缺少 ACL 与工程不存在沿用原统一拒绝契约。
+- 预检只读取当前编辑 head，复用 Core 静态兼容性检查，旧修订号拒绝；预检通过不代表发布授权。独立候选限定 adui_scada_test、public、ReadCommitted，允许共享锁但不执行 DML，不注册生产 Provider 或路由。
+- PR #204 写入候选已完成维护者 Windows 验收并合入集成分支；查询候选与正式 Prisma 7 仓储进行独立对照，未替换正式实现。
