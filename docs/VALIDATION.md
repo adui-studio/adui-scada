@@ -4889,3 +4889,11 @@ PR #204 维护者 Windows 实测最终 HEAD `07983561cf1bc87a84e9ba3f5519423ee01
 维护者 Windows 在 PR #206 最终 HEAD `ecdb4abec813b2f93fec48970214f5d9c97edaf1` 实测 38/38 定向单测（新版发布 5、旧版发布 19、安全门禁 14）、1/1 真实 PostgreSQL 发布专项（1229 ms）、495 格式文件、337 受检文件零错误警告、服务端类型检查、364 中文文案、95 Markdown，工作区干净。按明确授权 Squash 合并至 `be332e87977b60ee6fae13de33d8d0c9f0fd0f39`。按增量验收约定未重复执行完整 ready。
 
 本批定义四项输入单测及一项真实 PostgreSQL 综合专项：两个随机租户、同名主体、随机 Issuer 下精确外部身份绑定，双版本会话互认、摘要与时效、旧 Bearer 不升级、跨会话 CSRF 拒绝、跨租户及并发撤销、过期、未来签发、主体停用、专用夹具精确清理。固定阶段脱敏失败，不自动重试。GitHub 源码写入回读一致性和脚本 JSON 检查属于静态协作检查；本批未实际执行 Vite+、项目 TypeScript、Vitest 或 PostgreSQL，待维护者执行增量验收后方能认定通过。OIDC 登录事务、生产认证 Provider 和真实 IdP 端到端不在本批范围。
+
+### 2026-11-25 · Prisma 8 身份会话结案与 OIDC 登录事务验证范围
+
+维护者 Windows PR #207 最终 HEAD `7ac87c77a2e8a6ae3577bc631f1ecd7c885f79f4` 实测 498 格式文件、340 受检文件零错误警告、服务端类型检查、367 中文文案、95 Markdown、39/39 定向单测（候选 4、身份 13、Guard 10、回调 12）、真实 PostgreSQL 专项 1/1（738 ms），工作区干净。按明确授权 Squash 合入 `46d3142ae6afa156baf4de0771127ad553a51b6f`。本批未重复完整 ready。
+
+新批定义五项输入及脱敏测试、一项真实 PostgreSQL 综合专项；真实专项先核对现有 OIDC 迁移登记与表、索引，使用两个随机专用 Issuer 和合成 Discovery 元数据。验证 Prisma 7/8 互相创建及消费、独立 PKCE challenge 复核、摘要与五分钟时效、跨浏览器及 Issuer 拒绝、跨版本并发恰好一次成功、过期与未来创建、跨 State 密文/Nonce/路径篡改的拒绝及不可恢复消费、138 条本 Issuer 过期记录按 128+10 回收、其他 Issuer 及未过期记录保护、已确认主键精确清理。测试不启动后台清理定时器，不连接真实 IdP，不读取任何真实凭据。
+
+协作端已通过 GitHub 源码写入回读与根脚本 JSON 检查；本地 Node 22.16.0 环境无 pnpm 且 GitHub 域名解析失败，未执行仓库固定 TypeScript/Vite+/Vitest 或 PostgreSQL。新候选的增量质量、相关单测及真实数据库专项仍待维护者 Windows 执行，不以旧 PR 成功代替本批实测。
