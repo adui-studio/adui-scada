@@ -76,8 +76,11 @@ function hasSqlState(error: unknown, state: string): boolean {
   let current = error;
   for (let depth = 0; depth < 5; depth += 1) {
     if (current === null || typeof current !== "object") return false;
-    if (("sqlState" in current && current.sqlState === state) ||
-        ("code" in current && current.code === state)) return true;
+    if (
+      ("sqlState" in current && current.sqlState === state) ||
+      ("code" in current && current.code === state)
+    )
+      return true;
     current = "cause" in current ? current.cause : undefined;
   }
   return false;
@@ -87,10 +90,17 @@ function hasSqlState(error: unknown, state: string): boolean {
 async function verifyWrite(): Promise<"MATCHED"> {
   const connectionString = requirePrisma8ReadOnlyTestUrl(process.env.SCADA_TEST_DATABASE_URL);
   const id = randomUUID();
-  const scope = { tenantId: "prisma8-write-" + id, projectId: "project-" + id, streamId: "stream-" + id };
+  const scope = {
+    tenantId: "prisma8-write-" + id,
+    projectId: "project-" + id,
+    streamId: "stream-" + id,
+  };
   const otherTenant = { ...scope, tenantId: "prisma8-other-" + id };
   const otherProject = { ...scope, projectId: "other-" + id };
-  const scopes = [scope, otherTenant, otherProject].map(({ tenantId, projectId }) => ({ tenantId, projectId }));
+  const scopes = [scope, otherTenant, otherProject].map(({ tenantId, projectId }) => ({
+    tenantId,
+    projectId,
+  }));
   let legacy: PrismaClient | undefined;
   let writerPool: Pool | undefined;
   let readPool: Pool | undefined;
@@ -105,31 +115,48 @@ async function verifyWrite(): Promise<"MATCHED"> {
   try {
     const base = { connectionString, connectionTimeoutMillis: 2000, idleTimeoutMillis: 5000 };
     const pgOptions = "-c statement_timeout=5000 -c lock_timeout=2000";
-    const readOnlyPool = new Pool({ ...base, max: 1, options: pgOptions + " -c default_transaction_read_only=on" });
+    const readOnlyPool = new Pool({
+      ...base,
+      max: 1,
+      options: pgOptions + " -c default_transaction_read_only=on",
+    });
     readPool = readOnlyPool;
     const writablePool = new Pool({ ...base, max: 2, options: pgOptions });
     writerPool = writablePool;
     for (const pool of [readOnlyPool, writablePool]) {
-      pool.on("error", () => { poolFailed = true; });
+      pool.on("error", () => {
+        poolFailed = true;
+      });
     }
-    const old = new PrismaClient({ adapter: new PrismaPg({ ...base, max: 2, options: pgOptions }) });
+    const old = new PrismaClient({
+      adapter: new PrismaPg({ ...base, max: 2, options: pgOptions }),
+    });
     legacy = old;
     await old.$connect();
     stage = "隔离库及历史结构预检";
-    const boundary = await old.$queryRaw<Array<{ database_name: string; schema_name: string; read_only: string; ready: boolean }>>`
+    const boundary = await old.$queryRaw<
+      Array<{ database_name: string; schema_name: string; read_only: string; ready: boolean }>
+    >`
       SELECT current_database()::text AS database_name, current_schema()::text AS schema_name,
              current_setting('transaction_read_only') AS read_only,
              (to_regclass('public.scada_tag_history_batches') IS NOT NULL AND
               to_regclass('public.scada_tag_history_records') IS NOT NULL AND
               to_regclass('public.scada_tag_history_records_lookup_idx') IS NOT NULL) AS ready
     `;
-    same(boundary, [{ database_name: "adui_scada_test", schema_name: "public", read_only: "off", ready: true }]);
+    same(boundary, [
+      { database_name: "adui_scada_test", schema_name: "public", read_only: "off", ready: true },
+    ]);
     const readBoundary = await readOnlyPool.query(`SELECT current_database()::text AS database_name,
       current_schema()::text AS schema_name, current_setting('transaction_read_only') AS read_only`);
-    same(readBoundary.rows, [{ database_name: "adui_scada_test", schema_name: "public", read_only: "on" }]);
-    const writeBoundary = await writablePool.query(`SELECT current_database()::text AS database_name,
+    same(readBoundary.rows, [
+      { database_name: "adui_scada_test", schema_name: "public", read_only: "on" },
+    ]);
+    const writeBoundary =
+      await writablePool.query(`SELECT current_database()::text AS database_name,
       current_schema()::text AS schema_name, current_setting('transaction_read_only') AS read_only`);
-    same(writeBoundary.rows, [{ database_name: "adui_scada_test", schema_name: "public", read_only: "off" }]);
+    same(writeBoundary.rows, [
+      { database_name: "adui_scada_test", schema_name: "public", read_only: "off" },
+    ]);
     const next = postgres({ contract, pg: writablePool });
     writer = next;
     const read = createPrisma8ReadOnlyClient(readOnlyPool);
@@ -143,17 +170,37 @@ async function verifyWrite(): Promise<"MATCHED"> {
     const modern = (target = scope) => new Prisma8TagHistoryStore(next, target);
     const previous = (target = scope) => new PrismaTagHistoryStore(old, target);
 
-    async function check(target: Prisma8HistoryWriterScope, input: TagHistoryPersistenceRequest): Promise<void> {
-      const params = [target.tenantId, target.projectId, target.streamId, BigInt(input.batchSequence).toString()];
-      const batch = await readOnlyPool.query(`SELECT format_version, record_count FROM public.scada_tag_history_batches
-        WHERE tenant_id=$1 AND project_id=$2 AND stream_id=$3 AND batch_sequence=$4`, params);
+    async function check(
+      target: Prisma8HistoryWriterScope,
+      input: TagHistoryPersistenceRequest,
+    ): Promise<void> {
+      const params = [
+        target.tenantId,
+        target.projectId,
+        target.streamId,
+        BigInt(input.batchSequence).toString(),
+      ];
+      const batch = await readOnlyPool.query(
+        `SELECT format_version, record_count FROM public.scada_tag_history_batches
+        WHERE tenant_id=$1 AND project_id=$2 AND stream_id=$3 AND batch_sequence=$4`,
+        params,
+      );
       same(batch.rows, [{ format_version: 1, record_count: input.records.length }]);
-      const records = await readOnlyPool.query(`SELECT ordinal, tag_id, timestamp_ms::text AS timestamp_ms, payload
+      const records = await readOnlyPool.query(
+        `SELECT ordinal, tag_id, timestamp_ms::text AS timestamp_ms, payload
         FROM public.scada_tag_history_records WHERE tenant_id=$1 AND project_id=$2 AND stream_id=$3 AND batch_sequence=$4
-        ORDER BY ordinal`, params);
-      same(records.rows, input.records.map((point, ordinal) => ({
-        ordinal, tag_id: point.tagId, timestamp_ms: BigInt(point.timestampMs).toString(), payload: encodeHistoryPoint(point),
-      })));
+        ORDER BY ordinal`,
+        params,
+      );
+      same(
+        records.rows,
+        input.records.map((point, ordinal) => ({
+          ordinal,
+          tag_id: point.tagId,
+          timestamp_ms: BigInt(point.timestampMs).toString(),
+          payload: encodeHistoryPoint(point),
+        })),
+      );
       const startMs = input.records[0]!.timestampMs;
       const query = { tagId, startMs, endMs: startMs + 1, maxPoints: 256 };
       same(await readPersistedTagHistory(old, target, query), input.records);
@@ -168,12 +215,24 @@ async function verifyWrite(): Promise<"MATCHED"> {
 
     stage = "新版首次写入及双版本重放";
     const initial = request(scope, 1, [-0, "合成历史", true, null]);
-    same(await modern().persist(initial), { projectId: scope.projectId, streamId: scope.streamId,
-      batchSequence: 1, formatVersion: 1, recordCount: 4, status: "COMMITTED" });
+    same(await modern().persist(initial), {
+      projectId: scope.projectId,
+      streamId: scope.streamId,
+      batchSequence: 1,
+      formatVersion: 1,
+      recordCount: 4,
+      status: "COMMITTED",
+    });
     same((await previous().persist(initial)).status, "ALREADY_COMMITTED");
     same((await modern().persist(initial)).status, "ALREADY_COMMITTED");
-    await rejected(() => modern().persist(request(scope, 1, [0, "合成历史", true, null])), "历史归档幂等键内容冲突");
-    await rejected(() => modern().persist({ ...initial, records: [...initial.records].reverse() }), "历史归档幂等键内容冲突");
+    await rejected(
+      () => modern().persist(request(scope, 1, [0, "合成历史", true, null])),
+      "历史归档幂等键内容冲突",
+    );
+    await rejected(
+      () => modern().persist({ ...initial, records: [...initial.records].reverse() }),
+      "历史归档幂等键内容冲突",
+    );
     await check(scope, initial);
     const legacyFirst = request(scope, 2, [12.5]);
     same((await previous().persist(legacyFirst)).status, "COMMITTED");
@@ -182,15 +241,31 @@ async function verifyWrite(): Promise<"MATCHED"> {
 
     stage = "同键相同内容跨版本并发";
     const identical = request(scope, 3, [33, 44]);
-    const sameRace = await Promise.allSettled([modern().persist(identical), previous().persist(identical)]);
-    same(sameRace.map((result) => result.status === "fulfilled" ? result.value.status : "REJECTED").sort(), ["ALREADY_COMMITTED", "COMMITTED"]);
+    const sameRace = await Promise.allSettled([
+      modern().persist(identical),
+      previous().persist(identical),
+    ]);
+    same(
+      sameRace
+        .map((result) => (result.status === "fulfilled" ? result.value.status : "REJECTED"))
+        .sort(),
+      ["ALREADY_COMMITTED", "COMMITTED"],
+    );
     await check(scope, identical);
 
     stage = "同键不同内容新版并发";
     const competitors = [request(scope, 4, [50]), request(scope, 4, [60])];
     const race = await Promise.allSettled(competitors.map((input) => modern().persist(input)));
     same(race.filter((result) => result.status === "fulfilled").length, 1);
-    same(race.filter((result) => result.status === "rejected" && result.reason instanceof Error && result.reason.message === "历史归档幂等键内容冲突").length, 1);
+    same(
+      race.filter(
+        (result) =>
+          result.status === "rejected" &&
+          result.reason instanceof Error &&
+          result.reason.message === "历史归档幂等键内容冲突",
+      ).length,
+      1,
+    );
     const winner = race.findIndex((result) => result.status === "fulfilled");
     const committed = race[winner];
     same(committed?.status === "fulfilled" ? committed.value.status : null, "COMMITTED");
@@ -199,11 +274,17 @@ async function verifyWrite(): Promise<"MATCHED"> {
     stage = "真实复合外键及只读边界拒绝";
     const missing = { ...scope, projectId: "missing-" + id };
     let foreignKeyRejected = false;
-    try { await modern(missing).persist(request(missing, 1, [7])); }
-    catch (error) { foreignKeyRejected = hasSqlState(error, "23503"); }
+    try {
+      await modern(missing).persist(request(missing, 1, [7]));
+    } catch (error) {
+      foreignKeyRejected = hasSqlState(error, "23503");
+    }
     same(foreignKeyRejected, true);
     await absent(missing, 1);
-    await rejected(() => new Prisma8TagHistoryStore(read, scope).persist(request(scope, 5, [7])), "Prisma 8 历史写入候选仅允许隔离库读已提交事务");
+    await rejected(
+      () => new Prisma8TagHistoryStore(read, scope).persist(request(scope, 5, [7])),
+      "Prisma 8 历史写入候选仅允许隔离库读已提交事务",
+    );
     await absent(scope, 5);
 
     stage = "同事务真实唯一约束故障及整批回滚";
@@ -211,22 +292,28 @@ async function verifyWrite(): Promise<"MATCHED"> {
     const prepared = preparePrisma8HistoryBatch(scope, rollback);
     let tentative = false;
     let constraintRejected = false;
-    await rejected(() => next.transaction(async (tx) => {
-      same(await writePrisma8HistoryBatchInTransaction(tx, prepared), "COMMITTED");
-      tentative = true;
-      try {
-        await tx.execute(tx.raw.sql`INSERT INTO public.scada_tag_history_records
+    await rejected(() =>
+      next.transaction(async (tx) => {
+        same(await writePrisma8HistoryBatchInTransaction(tx, prepared), "COMMITTED");
+        tentative = true;
+        try {
+          await tx.execute(
+            tx.raw.sql`INSERT INTO public.scada_tag_history_records
           (tenant_id, project_id, stream_id, batch_sequence, ordinal, tag_id, timestamp_ms, payload)
           SELECT tenant_id, project_id, stream_id, batch_sequence, ordinal, tag_id, timestamp_ms, payload
           FROM public.scada_tag_history_records
           WHERE tenant_id=${scope.tenantId} AND project_id=${scope.projectId} AND stream_id=${scope.streamId}
-            AND batch_sequence=${prepared.key.batchSequence} AND ordinal=0`.affectedCount().build());
-      } catch (error) {
-        constraintRejected = hasSqlState(error, "23505");
-        throw new Error("专用事务唯一约束拒绝");
-      }
-      throw new Error("专用事务未触发预期唯一约束");
-    }, options));
+            AND batch_sequence=${prepared.key.batchSequence} AND ordinal=0`
+              .affectedCount()
+              .build(),
+          );
+        } catch (error) {
+          constraintRejected = hasSqlState(error, "23505");
+          throw new Error("专用事务唯一约束拒绝");
+        }
+        throw new Error("专用事务未触发预期唯一约束");
+      }, options),
+    );
     same(tentative, true);
     same(constraintRejected, true);
     await absent(scope, 6);
@@ -246,10 +333,18 @@ async function verifyWrite(): Promise<"MATCHED"> {
     failures.push(stage);
   } finally {
     for (const client of [reader, writer]) {
-      try { await client?.close(); } catch { failures.push("Prisma 8 客户端关闭失败"); }
+      try {
+        await client?.close();
+      } catch {
+        failures.push("Prisma 8 客户端关闭失败");
+      }
     }
     for (const pool of [readPool, writerPool]) {
-      try { await pool?.end(); } catch { failures.push("外部连接池关闭失败"); }
+      try {
+        await pool?.end();
+      } catch {
+        failures.push("外部连接池关闭失败");
+      }
     }
     if (poolFailed) failures.push("外部连接池发生异常");
     if (legacy && ownsFixture) {
@@ -263,11 +358,17 @@ async function verifyWrite(): Promise<"MATCHED"> {
           same(await tx.scadaTagHistoryBatch.count({ where }), 0);
           same(await tx.scadaProject.count({ where }), 0);
         });
-      } catch { failures.push("专用夹具清理未确认，禁止自动重试，测试标识：" + id); }
+      } catch {
+        failures.push("专用夹具清理未确认，禁止自动重试，测试标识：" + id);
+      }
     } else if (createUnconfirmed) {
       failures.push("专用工程创建未确认，禁止自动清理，测试标识：" + id);
     }
-    try { await legacy?.$disconnect(); } catch { failures.push("Prisma 7 客户端关闭失败"); }
+    try {
+      await legacy?.$disconnect();
+    } catch {
+      failures.push("Prisma 7 客户端关闭失败");
+    }
   }
   if (failures.length) throw new Error("历史写入事务专项未通过：" + failures.join("；"));
   return "MATCHED";

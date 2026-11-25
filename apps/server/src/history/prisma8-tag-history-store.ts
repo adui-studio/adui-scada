@@ -38,7 +38,9 @@ interface PreparedBatch {
 
 function checkedScope(scope: Prisma8HistoryWriterScope): Prisma8HistoryWriterScope {
   const { tenantId, projectId, streamId } = scope;
-  if (![tenantId, projectId, streamId].every((id) => typeof id === "string" && ID_PATTERN.test(id))) {
+  if (
+    ![tenantId, projectId, streamId].every((id) => typeof id === "string" && ID_PATTERN.test(id))
+  ) {
     throw new TypeError("历史归档作用域标识无效");
   }
   return Object.freeze({ tenantId, projectId, streamId });
@@ -179,7 +181,16 @@ export async function writePrisma8HistoryBatchInTransaction(
   const stored = await tx.orm.public.ScadaTagHistoryRecord.where(key)
     .orderBy((row) => row.ordinal.asc())
     .limit(records.length + 1)
-    .select("tenantId", "projectId", "streamId", "batchSequence", "ordinal", "tagId", "timestampMs", "payload")
+    .select(
+      "tenantId",
+      "projectId",
+      "streamId",
+      "batchSequence",
+      "ordinal",
+      "tagId",
+      "timestampMs",
+      "payload",
+    )
     .all();
   assertPrisma8HistoryBatch(prepared, batch, stored);
   return claim.affectedRows === 1 ? "COMMITTED" : "ALREADY_COMMITTED";

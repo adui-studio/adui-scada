@@ -61,13 +61,15 @@ describe("Prisma 8 历史归档候选校验", () => {
     const prepared = preparePrisma8HistoryBatch(scope, { ...input, records });
     expect(prepared.records).toHaveLength(256);
     expect(prepared.records[255]?.ordinal).toBe(255);
-    expect(() => preparePrisma8HistoryBatch(scope, { ...input, records: [...records, sample] })).toThrow(
-      "历史持久化批次记录数无效",
-    );
-    expect(() => preparePrisma8HistoryBatch(scope, {
-      ...input,
-      records: [{ ...sample, numericValue: 0 }],
-    })).toThrow("历史记录派生字段不匹配");
+    expect(() =>
+      preparePrisma8HistoryBatch(scope, { ...input, records: [...records, sample] }),
+    ).toThrow("历史持久化批次记录数无效");
+    expect(() =>
+      preparePrisma8HistoryBatch(scope, {
+        ...input,
+        records: [{ ...sample, numericValue: 0 }],
+      }),
+    ).toThrow("历史记录派生字段不匹配");
   });
 
   it("仅允许完整一致的批次元数据和记录", () => {
