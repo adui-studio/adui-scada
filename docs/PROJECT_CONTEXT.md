@@ -2762,3 +2762,9 @@ PR #205 的维护者 Windows 最终 HEAD `37f5d89761bf51c8fa5b48e153e0f3e7b91f6e
 PR #206 的维护者 Windows 最终 HEAD `ecdb4abec813b2f93fec48970214f5d9c97edaf1` 已通过 38/38 定向单测、1/1 真实 PostgreSQL 发布事务专项、495 格式文件、337 受检文件零警告错误、服务端独立类型检查、364 中文文案及 95 Markdown，工作区干净。明确授权后 Squash 合入集成分支 `be332e87977b60ee6fae13de33d8d0c9f0fd0f39`；MVP PR #198 仍为 Draft，正式发布安全门禁不变。
 
 新候选分支 feat/mvp-prisma8-auth-session 聚焦预绑定身份查询和会话签发、认证、撤销；登录事务加密 PKCE 与一次性消费留待独立批次。四项新单测与一项真实数据库综合专项待 Windows 增量验收。正式 Prisma 7 认证服务、迁移管理及工业设备写入边界保持不变。
+
+### 2026-11-25 · Prisma 8 身份会话结案与 OIDC 登录事务候选
+
+PR #207 的维护者 Windows 最终 HEAD `7ac87c77a2e8a6ae3577bc631f1ecd7c885f79f4` 已通过 39/39 关联认证单测、1/1 真实 PostgreSQL 身份会话专项（738 ms）、498 格式文件、340 受检文件零警告错误、服务端独立类型检查、367 中文文案及 95 Markdown，工作区干净；最后提交与初始候选相比仅三份文件格式化。维护者明确授权后 Squash 合入集成分支 `46d3142ae6afa156baf4de0771127ad553a51b6f`；MVP PR #198 继续 Draft。
+
+新候选分支 feat/mvp-prisma8-oidc-transactions 迁移登录事务创建、一次性消费和专用 Issuer 清理；原 AES-GCM/PKCE、State、Nonce、浏览器绑定、回跳路径和限流语义保持。五项新单测定义及真实 PostgreSQL 双版本综合专项待 Windows 增量验收。正式身份 Provider、真实 IdP 协议、ACL、数据库迁移及工业安全边界不变。
