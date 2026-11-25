@@ -214,12 +214,12 @@ void describe("Prisma 8 迁移接管只读预检", () => {
   });
 
   void it("实际连接边界或 Prisma 8 标记异常时停止历史与目录查询", async () => {
-    for (const [changes, expected] of [
-      [{ database_name: "adui_scada" }, /实际数据库或只读事务边界/],
-      [{ read_only: "off" }, /实际数据库或只读事务边界/],
-      [{ marker_schema: true }, /发现 Prisma 8 标记/],
-      [{ marker_table: true }, /发现 Prisma 8 标记/],
-      [{ legacy_ledger: false }, /缺少 Prisma 7 历史迁移登记/],
+    for (const { changes, expected } of [
+      { changes: { database_name: "adui_scada" }, expected: /实际数据库或只读事务边界/ },
+      { changes: { read_only: "off" }, expected: /实际数据库或只读事务边界/ },
+      { changes: { marker_schema: true }, expected: /发现 Prisma 8 标记/ },
+      { changes: { marker_table: true }, expected: /发现 Prisma 8 标记/ },
+      { changes: { legacy_ledger: false }, expected: /缺少 Prisma 7 历史迁移登记/ },
     ]) {
       const { client, calls } = mockClient({ boundaryRow: { ...boundary, ...changes } });
       await assert.rejects(() => inspectMigrationDatabase(client, baseline), expected);
