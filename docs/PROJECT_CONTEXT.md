@@ -2744,3 +2744,9 @@ PR #202 真实非空三方对照 1/1、只读专项 2/2、979 单测、63 HTTP E
 PR #203 历史归档事务候选由维护者 Windows 验收：984/984 单测、63/63 HTTP E2E、四项真实 PostgreSQL 专项及 ready 退出码 0；最终工作区干净，日志未独立输出最终 HEAD。远端最终提交 9cdc4b9aead2334277b12805a5d5b6fd0e05bfa2 与初始候选的差异为格式化。维护者明确授权后 squash 合并至 MVP 集成分支 2b0030232a32745f944373cdeb68cc559e208ffd；主 MVP PR #198 仍为 Draft。
 
 新增独立工程版本写入候选分支 feat/mvp-prisma8-project-version，当前覆盖创建和追加，不替换生产仓储；新单测和真实数据库专项待实际执行。发布 CAS、OIDC/ACL 模块迁移及 Prisma 8 数据库标记、迁移管理均未接管。
+
+### 2026-11-25 · Prisma 8 工程版本写入结案与查询候选
+
+维护者 Windows 在 PR #204 最终 HEAD `07983561cf1bc87a84e9ba3f5519423ee01750c0` 验收 989/989 单测、63/63 HTTP E2E、5/5 Prisma 8 真实数据库测试、完整 ready 退出码 0，工作区干净；明确授权后 Squash 合入 MVP 集成分支 `e7718de45e77f40bb46acfe44989d5924c4f75b9`，MVP PR #198 继续 Draft。
+
+新候选分支 feat/mvp-prisma8-project-query 增加五项工程查询入口和六项单测定义、一个真实数据库综合测试定义。沿用 Prisma 7 正式 ACL、发布预检与快照语义，不切换生产仓储；尚待 Windows 完整验收。后续仍需发布/回滚、身份与会话、迁移管理及生产切换独立评审。

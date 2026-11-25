@@ -1633,3 +1633,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/projects/prisma8-project-version-store.spec.ts`：五项请求边界测试定义。
 - `apps/server/test/prisma8-project-version.db-spec.ts`：真实 PostgreSQL 双版本创建与追加、并发、约束回滚及随机夹具清理专项。
 - `pnpm run test:db:prisma8:project:version`：仅运行上述真实数据库测试。正式 Prisma 7 工程仓储不变。
+
+### Prisma 8 工程查询候选
+
+- `apps/server/src/projects/prisma8-project-query-store.ts`：独立列表、详情、版本分页、快照、发布预检查询候选及输入、权限、元数据校验。
+- `apps/server/src/projects/prisma8-project-query-store.spec.ts`：六项输入边界和快照完整性测试定义。
+- `apps/server/test/prisma8-project-query.db-spec.ts`：双版本真实数据库查询对照、两位数修订分页、租户及权限隔离、元数据篡改、撤权和精确清理。
+- `pnpm run test:db:prisma8:project:query`：仅运行查询专项，不替换正式 Prisma 7 仓储。
