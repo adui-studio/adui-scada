@@ -1647,3 +1647,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/projects/prisma8-project-release-store.spec.ts`：五项输入边界和默认安全拒绝测试定义。
 - `apps/server/test/prisma8-project-release.db-spec.ts`：真实 PostgreSQL 专项，隔离测试门禁、双版本读取及发布、并发 CAS、回滚、授权与会话失效、精确清理。
 - `pnpm run test:db:prisma8:project:release`：仅运行新增真实专项；正式 Prisma 7 仓储、回滚写入口及生产安全门禁不变。
+
+### Prisma 8 身份会话候选
+
+- `apps/server/src/auth/prisma8-auth-session.service.ts`：预绑定身份查询、会话签发、Bearer/Cookie 认证、CSRF、撤销及隔离事务边界。
+- `apps/server/src/auth/prisma8-auth-session.service.spec.ts`：四项非法输入与零数据库调用单测定义。
+- `apps/server/test/prisma8-auth-session.db-spec.ts`：双版本真实 PostgreSQL 会话互认、外部身份映射、摘要与有效期、CSRF、跨租户拒绝、并发撤销、过期、未来签发、停用及精确清理。
+- `pnpm run test:db:prisma8:auth:session`：独立真实专项，正式 Prisma 7 认证服务不变。
