@@ -22,7 +22,7 @@ ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双�
 2. 定位最小改动范围；未确认的技术参数只标注提议，不擅自提升为已决定。
 3. 开发遵守共享核心不依赖 Vue/React、Runtime 不依赖 Editor、Gateway 独立的边界。
 4. 核心需求以 `FR-*` / `NFR-*` 追踪至设计和测试；重要架构调整记录 ADR。
-5. 运行适用的检查与测试；未运行、不具备环境或失败均如实说明。
+5. 按变更影响范围运行适用的检查、定向测试及必要真实专项；未运行、不具备环境或失败均如实说明。日常小批次不重复要求完整 `pnpm run ready`；阶段集成、跨模块重大变更及 MVP 验收时执行完整质量链。
 6. 按变更内容更新对应文档，再交付文件、变更原因、实测结果和遗留问题。
 
 ## 4. 工业安全
@@ -43,7 +43,7 @@ ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双�
 - 面向操作人员、开发者和维护者的**自有提示与说明**一律使用简体中文，包括前端界面、SVG 文案、`throw new Error/TypeError/RangeError`、`console`、`assert` 的说明、测试 `test/it/describe` 名称、代码注释、JSDoc、CLI 检查脚本输出、部署配置注释及项目文档。
 - **技术契约不翻译**：代码标识符、JSON 字段名、Tag ID、工程 Schema、图元类型、API URL、状态枚举（`GOOD/UNCERTAIN/BAD/STALE`）、环境变量和第三方包名称保持原值。界面应通过共享中文显示名称呈现，不修改协议值。
 - 依赖库、Node/Vite+、Git、Docker、Rust 等**第三方工具自动生成的输出**不属于项目可控制文案，不能为强行翻译而修改底层协议或依赖源码。
-- 修改异常文案时必须同步修改对应单元测试中的错误文本断言；新增文案应运行 `pnpm run messages:check` 和 `pnpm run ready`。
+- 修改异常文案时必须同步修改对应单元测试中的错误文本断言；新增文案应运行 `pnpm run messages:check` 及受影响的定向测试；完整 `pnpm run ready` 按阶段集成和 MVP 验收安排。
 - 详见 [中文文案规范](docs/LOCALIZATION.md)。
 
 ## 5.2 双框架 UI 技术选型
