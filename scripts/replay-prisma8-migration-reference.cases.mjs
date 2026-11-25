@@ -53,7 +53,12 @@ const comparison = {
   referenceFingerprint: fingerprint,
 };
 
-function mockReference({ boundaryRow = boundary, emptyRow = empty, failAt = "", closeFails = false } = {}) {
+function mockReference({
+  boundaryRow = boundary,
+  emptyRow = empty,
+  failAt = "",
+  closeFails = false,
+} = {}) {
   const calls = [];
   const client = {
     connect: () => {
@@ -117,7 +122,10 @@ function mockSteps({
 
 void describe("独立参考库历史重放安全门禁", () => {
   void it("仅接受固定参考库与唯一显式确认参数", () => {
-    assert.equal(requireReferenceReplayTarget(referenceUrl + "?schema=public", [confirmation]), referenceUrl);
+    assert.equal(
+      requireReferenceReplayTarget(referenceUrl + "?schema=public", [confirmation]),
+      referenceUrl,
+    );
     for (const args of [[], ["--yes"], [confirmation, "--extra"]]) {
       assert.throws(() => requireReferenceReplayTarget(referenceUrl, args), /显式确认/);
     }
@@ -140,8 +148,14 @@ void describe("独立参考库历史重放安全门禁", () => {
     const { client, calls } = mockReference();
     assert.equal(await inspectEmptyReferenceDatabase(client), true);
     assert.equal(calls.length, 6);
-    assert.deepEqual(calls.slice(0, 2), ["连接", "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"]);
-    assert.equal(calls.slice(2, -2).every((query) => query.startsWith("SELECT")), true);
+    assert.deepEqual(calls.slice(0, 2), [
+      "连接",
+      "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY",
+    ]);
+    assert.equal(
+      calls.slice(2, -2).every((query) => query.startsWith("SELECT")),
+      true,
+    );
     assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
   });
 
@@ -163,15 +177,24 @@ void describe("独立参考库历史重放安全门禁", () => {
   void it("存在用户对象或其他连接即拒绝重放", async () => {
     for (const key of Object.keys(empty)) {
       const { client, calls } = mockReference({ emptyRow: { ...empty, [key]: true } });
-      await assert.rejects(() => inspectEmptyReferenceDatabase(client), /不是独立空库或存在其他连接/);
+      await assert.rejects(
+        () => inspectEmptyReferenceDatabase(client),
+        /不是独立空库或存在其他连接/,
+      );
       assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
     }
   });
 
   void it("只读查询、回滚及关闭失败不会返回成功或泄漏内部错误", async () => {
-    for (const options of [{ failAt: "pg_stat_activity" }, { failAt: "ROLLBACK" }, { closeFails: true }]) {
+    for (const options of [
+      { failAt: "pg_stat_activity" },
+      { failAt: "ROLLBACK" },
+      { closeFails: true },
+    ]) {
       const { client, calls } = mockReference(options);
-      await assert.rejects(() => inspectEmptyReferenceDatabase(client), { message: /^参考库.*失败/ });
+      await assert.rejects(() => inspectEmptyReferenceDatabase(client), {
+        message: /^参考库.*失败/,
+      });
       assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
     }
   });
@@ -180,7 +203,16 @@ void describe("独立参考库历史重放安全门禁", () => {
     const { steps, calls } = mockSteps();
     const result = await runReferenceReplay(steps);
     assert.deepEqual(calls, [
-      "验收库", "空库", "deploy", "status", "对照", "登记", "deploy", "status", "对照", "登记",
+      "验收库",
+      "空库",
+      "deploy",
+      "status",
+      "对照",
+      "登记",
+      "deploy",
+      "status",
+      "对照",
+      "登记",
     ]);
     assert.equal(result.status, "MATCHED_REVIEW_REQUIRED");
     assert.equal(result.signingAllowed, false);
@@ -199,14 +231,21 @@ void describe("独立参考库历史重放安全门禁", () => {
     const failure = mockSteps({ failCommandAt: 1 });
     await assert.rejects(() => runReferenceReplay(failure.steps), /测试迁移命令失败/);
     assert.deepEqual(failure.calls, ["验收库", "空库", "deploy"]);
-    const drift = mockSteps({ comparisons: [{ ...comparison, referenceFingerprint: "0".repeat(64) }] });
+    const drift = mockSteps({
+      comparisons: [{ ...comparison, referenceFingerprint: "0".repeat(64) }],
+    });
     await assert.rejects(() => runReferenceReplay(drift.steps), /双库目录与已验收指纹不一致/);
     assert.deepEqual(drift.calls, ["验收库", "空库", "deploy", "status", "对照"]);
   });
 
   void it("二次部署后目录漂移或历史登记变化均拒绝成功", async () => {
-    const changedCatalog = mockSteps({ comparisons: [comparison, { ...comparison, signingAllowed: true }] });
-    await assert.rejects(() => runReferenceReplay(changedCatalog.steps), /双库目录与已验收指纹不一致/);
+    const changedCatalog = mockSteps({
+      comparisons: [comparison, { ...comparison, signingAllowed: true }],
+    });
+    await assert.rejects(
+      () => runReferenceReplay(changedCatalog.steps),
+      /双库目录与已验收指纹不一致/,
+    );
     assert.equal(changedCatalog.calls.at(-1), "对照");
     const changedLedger = mockSteps({ ledgers: [[{ id: "first" }], [{ id: "changed" }]] });
     await assert.rejects(() => runReferenceReplay(changedLedger.steps), /二次部署改变了迁移登记/);

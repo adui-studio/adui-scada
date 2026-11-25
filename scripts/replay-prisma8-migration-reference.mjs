@@ -173,7 +173,7 @@ export async function runReferenceReplay(steps) {
       initial.catalogFingerprint === reviewedFingerprint,
     "验收库与已审查指纹不一致，禁止重放",
   );
-  requireCondition(await steps.inspectEmpty() === true, "参考库空库检查未通过");
+  requireCondition((await steps.inspectEmpty()) === true, "参考库空库检查未通过");
   steps.runPrisma("deploy");
   steps.runPrisma("status");
   const first = await steps.compare();
@@ -205,7 +205,10 @@ function runPrisma7(server, cli, action, referenceUrl) {
       timeout: 120000,
     },
   );
-  requireCondition(!result.error && result.status === 0, "参考库 Prisma 7 执行失败或超时：" + action);
+  requireCondition(
+    !result.error && result.status === 0,
+    "参考库 Prisma 7 执行失败或超时：" + action,
+  );
   console.info("参考库 Prisma 7 命令通过：" + action);
 }
 
