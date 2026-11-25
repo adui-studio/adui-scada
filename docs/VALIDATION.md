@@ -4807,3 +4807,47 @@ Rust Cargo.lock 未更新，仍锁定 tauri 2.12.5 与 tauri-build 2.7.4；恢�
 #### MVP · Prisma 8 阶段二验证（候选）
 
 PR #200 获明确授权后合并至 MVP 集成分支 e75a763821d6215c6b66a1e01a43051d7c7275b3。前一批 Windows 实际结果仅适用于合并前工具链与业务基线，不自动覆盖本批。协作容器 Node.js 22.16.0 对新 URL 校验源码进行独立断言验证，源码 Blob 42ecba9ee018495c466457e739e1717f351c7b34 与远端一致；接受 4 种合法地址、拒绝 17 种异常地址，21/21 断言通过，退出码 0。该运行未使用正式 Vite+/Vitest、未安装 Prisma 8 依赖、未连接数据库。Windows 待执行冻结安装、两版生成、Core 构建、定向 URL 单测、独立类型检查与完整 ready 并打印最终退出码。真实 PostgreSQL 独立专项需显式提供已存在且已迁移的本机隔离库，遵守 HARNESS；本阶段不运行任何迁移。EMPTY 仅证明不存在工程查询，不证明已有样本及单项错配过滤。
+
+### 2026-11-24 · Prisma 8 只读运行时及历史查询候选
+
+PR #201 的维护者 Windows 日志记录 HEAD `3fe7985a0f5553ee73fb91efff21f7a9330c8a3e`，冻结安装、Prisma 7/8 生成、独立类型检查、974/974 单测、63/63 HTTP E2E、全部构建与 `ready` 退出码 0；真实隔离库专项未提供执行记录。Skills `synced none` 提示仍存在；React 主分包 591.62 kB 提示非构建失败。
+
+下一批新增历史查询候选的五项单测及两项真实数据库专项定义，尚未执行正式 Vitest、Vite+ 或数据库验收。协作环境仅对从远端取得且 Git blob SHA 核对一致的历史读取器、历史对照探针、客户端工厂和数据库专项文件执行 TypeScript 5.8.3 语法解析，四文件零语法诊断；不等价于 TypeScript 6 类型检查或实际运行。真实对照仅针对选中样本所在的 1 ms 时间窗口；空库只验证缺失作用域，不证明已有数据读取一致性。需在本机已准备好的 `adui_scada_test` 隔离库验证，不为制造样本而写入或迁移数据库。
+
+### 2026-11-25 · PR #202 Skills 目录及客户端类型修复候选
+
+维护者 Windows 日志确认 HEAD `81ac5185e6d8f990a65b0a5d0a2b365ed93ff688` 的冻结安装、三项 Skills 同步至服务端四目录、Prisma 7 校验/生成、Prisma 8 契约生成和 Core 构建完成。随后的 Vite+ 报 317 个错误、68 个警告（498 个受检文件），命令链退出码 1；979 项预期单测、63 项 E2E、完整 ready 与真实 PostgreSQL 专项均未获得本批执行结果。
+
+修复候选统一根目录 Skills 同步与列表及契约生成，保留版本检查、现有质量规则和原契约输出路径；共享配置检查拒绝旧的重复副本。另使用固定 ORM PostgreSQL 8.0.0-rc.25 官方公开客户端类型消除 TS2883 候选根因。协作容器 Node.js 22.16.0 执行模拟 CLI 三项测试（3/3，退出码 0），覆盖三个命令的根 cwd、固定配置、子进程退出码、禁止数据库写入与不可信入口；两个脚本的 Git Blob 分别为 e026a2cbedd397eb8c59a415b258d36cc2832cd2 和 eed6146573cd73aeb0360b6c3a7c9c98b345fec6。未执行真实 Prisma CLI、Vite+、正式类型检查或真实数据库。需先迁出本地重复副本（若仍存在），再运行根脚本、核对 Skills 列表和契约哈希、执行完整 ready 及已授权隔离库只读专项。
+
+### 2026-11-25 · PR #202 Prisma 8 CLI 参数顺序复验
+
+维护者 Windows 在 HEAD `5be430a6dec9d071fc1827ee8b47a4f7f6671977` 实际通过 pnpm 冻结安装和原入口测试 3/3；真实 Skills 同步报 `CLI.UNKNOWN_COMMAND`（`--config`），退出码 2。后续列表、配置检查、完整 ready 及数据库专项未执行。E-134/E-135 尚未关闭。
+
+本次按固定 CLI 上游测试修正参数顺序为命令在前、配置选项在后。协作环境 Node.js 22.16.0 加强模拟后复现原入口测试 2/3（退出码 1），修复后 3/3（退出码 0），两脚本语法检查通过；远端候选文件 Blob 与局部实测一致。npm Registry DNS EAI_AGAIN，真实 CLI 未能在协作环境运行。Windows 应先运行 `pnpm run db:prisma8:skills:list` 验证配置解析及根目录，再运行同步、列表、配置检查和原有完整验收。
+
+### 2026-11-25 · Prisma 8 根目录 Skills 真实同步通过及本地残留
+
+维护者 Windows HEAD `a141b5a58eba622fb89a6f09f1a23fc2640b79a0` 的 Node.js 24.18.0 环境实际通过 CLI 入口测试 3/3、真实 Skills 列表、同步和再次列表。项目目录为仓库根，check enabled；prisma-8（8.0.0-rc.25）和 prisma-platform-core-concepts（8.0.0-rc.35）均指向 .agents/skills 且 synced。原 CLI.UNKNOWN_COMMAND 阻塞解除。同步自动移除孤立 Composer Skill；Git 显示其单一跟踪文件被删除。config:check 正确拒绝 apps/server/.agents/skills/prisma-8 本机残留，整条命令链退出 1。
+
+远端完整 Git 树核对：四个服务端 Agent 目录均没有跟踪文件；Composer Skill 不在 skills-lock.json 中，当前实际同步列表未包含该技能。候选分支仅删除根目录这一孤立跟踪文件并更新文档，保留全部脚本、依赖和质量保护。需维护者备份迁出本机旧副本，再验证列表、重复同步、配置检查、契约生成及完整 ready；未执行数据库迁移或真实只读专项。
+
+### 2026-11-25 · PR #202 根目录治理及类型检查通过，文案门禁修复
+
+维护者 Windows HEAD `e281d595efec99724798b837a1dc646435e8bdff` 实际备份迁出 12 个旧 Prisma 技能目录；CLI 3/3、真实根目录同步和列表、config:check 退出码 0，Git 当时干净。两项包内技能均 synced，check enabled。Prisma 7 校验及 Client 7.10.1 生成、Prisma 8 Contract 生成和 Core Node 构建通过；Contract 输出仍在 apps/server/src/generated/prisma8，storageHash 为 054113c40b1e6f3b7609641e09868e45c0e969d8035e6e1376d10ac3e5148424，未见 Skills 过期提示。vp check --fix 与 vp check 均通过，482 个格式文件、324 个受检文件零警告、Lint 或类型错误。原 TS2883 不再出现。
+
+ready 在依赖目录检查（13 清单、57 Catalog）、共享配置检查（10 TSConfig）、环境与 LF 检查通过后，因模拟 CLI JSON 日志触发 messages:check 退出码 1。正式 979 项预期单测、63 项 HTTP E2E、独立类型检查、文档检查、最终构建及真实数据库专项未执行。维护者后续提交 ff92a98167ce01507d43ec45ca80e876d8a4887c，纳入 132 个根 Skills 文件及已格式化的四份自有源码，保留该提交。
+
+本次仅修改模拟 CLI 的 JSON 输出方式及文档。协作端 Node.js 22.16.0 以真实检查器和两个远端一致的入口脚本构造最小目录，复现文案检查退出 1，修改后局部检查 8 文件、入口测试 3/3、语法检查均通过（退出码 0）；不是完整仓库检查。修复后脚本 Blob 为 10aed9bfe70cf8905d82cb23c98daf55d9704bcb。仍须 Windows 全仓 messages:check、两版生成、独立类型检查、完整 ready 及隔离库只读专项复验。
+
+### 2026-11-25 · PR #202 完整 ready 与真实隔离库迁移/只读验收
+
+维护者 Windows HEAD `06a38de6680308a1ed49644450b43e5256f69922` 全仓中文文案 351 文件、CLI 独立测试 3/3、共享配置 10 TSConfig、依赖 13 清单及 57 Catalog、统一环境与 LF、Prisma 7 Schema/Client 7.10.1、Prisma 8 Contract、Core 构建均通过；vp check 为 482 个格式文件、324 个受检文件零警告及错误；React/Vue/服务端独立类型检查、81 文件 979/979 单测（历史候选 5/5、URL 安全 18/18）、6 文件 63/63 HTTP E2E、95 份 Markdown 和 React/Vue/NestJS 构建通过，完整 ready 退出码 0，工作区干净。React 主分包 591.62 kB 超过 500 kB 警告是独立非阻塞优化项，不扩大本批范围。E-134 至 E-138 已完成相应 Windows 工程质量复验。
+
+真实只读专项首次因 URL 门禁拒绝未进入数据库，改为屏蔽输入原始密码、URL 编码并构造隔离地址后，已有工程查询真实 MATCHED；历史阶段仍失败。只读预检确认本机 15432/adui_scada_test、readonly on、迁移表存在，但历史两表及索引不存在，20261124100000_tag_history_archive 未应用。维护者显式确认 DEPLOY adui_scada_test，Prisma 7 migrate status 仅有第八项待应用，deploy 成功，复查 8 项迁移且 schema up to date。随后 Prisma 8 真实只读专项 1 文件 2/2，退出码 0；已有工程 MATCHED，历史为 EMPTY，仅证明缺失作用域查询，不是非空数据验收。未执行 Prisma 8 签名或数据库接管。
+
+### 2026-11-25 · Prisma 7 / 8 / PostgreSQL 历史非空对照候选
+
+维护者明确授权在同一隔离库使用随机专用工程和合成历史数据、结束后清理且暂不合并。新增独立测试覆盖五批十点、四种质量、负零、数值、文本、布尔和 null；十一组严格查询对照（主窗口、首/次毫秒、左右边界、两个真实隔离工程、不同 Tag 及三个缺失作用域），另核对 maxPoints 恰好五条、原生超量哨兵、两版超量与 1001 上限拒绝。原只读专项、业务仓储、Schema、依赖及锁文件不变。写入客户端只接受显式隔离连接、实际数据库与 Schema 预检；只读池独立。夹具清理严格限定三个联合主键，外键顺序及事务内零残留；创建/清理结果未知时不得自动扩大清理或重试，失败诊断脱敏。
+
+协作容器 Node.js 22.16.0、TypeScript 5.8.3 对新增测试语法解析及转换零诊断，LF 通过；与仓库原检查器 Blob 00127f6ba4d622de026246be6fc0eca011099d5d 一致的局部中文文案检查 7 文件通过。独立内存模拟执行候选测试的正常路径、错误数据库、非法 URL、创建结果不明、写入失败、排序错误、隔离错误及清理失败八条路径均通过；模拟不是 Prisma 或 PostgreSQL 实测。候选测试 Blob 为 f1e180cacb5467b3f65da48efac684f49b1d38f1。当前容器无固定依赖、pnpm、PostgreSQL 实例且 npm Registry 无法解析，未执行正式 Vite+、TypeScript 6、Vitest、完整 ready 或真实新专项；必须由 Windows 复验后方可认定非空 MATCHED。

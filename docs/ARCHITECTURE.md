@@ -489,3 +489,7 @@ PR #105 已合并（main `637ebbce3191c998b3264733645da947a3739e9f`）。D5a 在
 ## MVP · Prisma 8 阶段二：独立只读运行时（候选）
 
 依照官方 [运行时与事务参考](https://www.prisma.io/docs/orm/reference/transactions-and-runtime)，以已生成的强类型 Contract、contractFromJson、postgres 和调用方持有的 pg.Pool 构建 Prisma 8 客户端。新增独立探针，未注册 NestJS Provider、未切换任何生产仓储或路由。探针只允许本机 15432 端口的 adui_scada_test，连接池上限 1，连接及 SQL 执行超时各 5 秒，连接默认事务只读。先核验 current_database 和 transaction_read_only；关闭顺序为 ORM 客户端、外部连接池。默认严格模式不关闭。仅使用固定只读查询，不执行 db sign、DDL、DML 或迁移。既有 Prisma 7 服务仍是唯一业务与迁移路径。
+
+### Prisma 8 渐进迁移：历史只读对照
+
+Prisma 8 客户端工厂与历史只读读取器在隔离验收路径中复用现有生成契约和历史记录解码器。生产历史仓储仍为 Prisma 7；不将 Prisma 8 探针视为生产授权边界，连接池默认只读设置亦不等同独立数据库角色的权限隔离。暂不变更现有迁移记录、数据库标记、正式发布门禁及设备写入边界。真实已有样本对照及数据库验收完成后，方可评估生产读取路径切换。

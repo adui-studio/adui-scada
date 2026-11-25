@@ -97,6 +97,37 @@ assert.ok(
   "Lint 工具必须忽略第三方 Skill 文档",
 );
 
+// Prisma 8 CLI 的工作目录必须统一为仓库根目录，禁止重复生成第三方 Skills。
+assert.equal(scripts["db:prisma8:skills"], "node scripts/prisma8-cli.mjs skills sync");
+assert.equal(scripts["db:prisma8:skills:list"], "node scripts/prisma8-cli.mjs skills list");
+assert.equal(
+  json("apps/server/package.json").scripts?.["db:prisma8:emit"],
+  "node ../../scripts/prisma8-cli.mjs contract emit",
+);
+assert.match(
+  text("apps/server/prisma.config.ts"),
+  /skills:\s*\{\s*agents:\s*\["agents"\]\s*,\s*check:\s*true\s*\}/,
+  "Prisma 8 Skills 必须仅同步到 .agents 并保留版本检查",
+);
+for (const directory of [
+  "apps/server/.agents",
+  "apps/server/.claude",
+  "apps/server/.cursor",
+  "apps/server/.devin",
+  ".claude",
+  ".cursor",
+  ".devin",
+]) {
+  for (const skill of [
+    "prisma-8",
+    "prisma-composer-core-concepts",
+    "prisma-platform-core-concepts",
+  ]) {
+    const path = `${directory}/skills/${skill}`;
+    assert.ok(!existsSync(resolve(root, path)), `${path} 是旧版重复副本，请先迁出工作区`);
+  }
+}
+
 // Tailwind 主题与 Vite 插件仅由共享包提供，避免双框架配置漂移。
 const tailwindPackage = json("packages/tailwind/package.json");
 assert.equal(tailwindPackage.name, "@adui/tailwind");

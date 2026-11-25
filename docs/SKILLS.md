@@ -55,3 +55,19 @@ Prisma Postgres 云服务、Compute 与升级兼容技能并非自建 PostgreSQL
 ## 2026-11-24 · Prisma 8 渐进迁移技能补充
 
 维护者确认 Prisma 8 官方包提供的 Skills 已安装并授权同步，PR #200 已合入 MVP 集成分支。上述 37 项为原有锁文件索引，并非当前本地包提供技能的完整计数。Prisma 8 包内同步的技能可能按仓库忽略规则不进入 Git；开发必须以实际安装版本的技能、生成 Contract 和官方 [渐进迁移指南](https://www.prisma.io/docs/guides/upgrade-prisma-orm/postgresql-incremental) 与 [运行时参考](https://www.prisma.io/docs/orm/reference/transactions-and-runtime) 为准。旧版 CLI/事务仍遵循 Prisma 7 技能及仓库规则。当前自建 PostgreSQL 迁移不需要 Prisma Composer、托管 Prisma Postgres 或 Compute，不擅自启用相关服务。
+
+### Prisma 8 根目录统一同步
+
+根据维护者 2026-11-25 要求，Prisma 8 包内技能只允许存放在根目录 `.agents/skills/`，不在 `apps/server/.agents`、`apps/server/.claude`、`apps/server/.cursor`、`apps/server/.devin` 或其他 Agent 目录重复维护。已核对固定 CLI 8.0.0-rc.35 的源码，Skills 使用进程工作目录作为项目根；服务端配置的相对契约路径仍以配置文件所在目录解析。
+
+根脚本 `pnpm run db:prisma8:skills`、`pnpm run db:prisma8:skills:list` 与服务端离线契约生成统一调用 `scripts/prisma8-cli.mjs`。它从服务端已安装的 Prisma 8 包解析 CLI 入口，以仓库根目录为工作目录并显式读取 `apps/server/prisma.config.ts`。配置仅选择 `agents: ["agents"]`，保留 `check: true`；不再使用 `pnpm --filter @adui/scada-server exec prisma skills sync/list`。
+
+维护者在 Windows HEAD `a141b5a58eba622fb89a6f09f1a23fc2640b79a0` 实际运行列表、同步和再次列表：项目根为仓库根目录，版本检查启用；当前包内技能仅有 `prisma-8`（@prisma/orm-postgres 8.0.0-rc.25）与 `prisma-platform-core-concepts`（prisma 8.0.0-rc.35），两者均为 synced 且只指向 `.agents/skills`。此前跟踪的 `prisma-composer-core-concepts/SKILL.md` 已被官方同步识别为孤立技能并删除；仓库同步移除该旧文件，不为保留它而安装 Composer 或恢复生成副本。原有 `skills-lock.json` 索引、pnpm Skills 目录规则及两项包内技能的忽略规则不变。
+
+旧工作区中的 Prisma 重复副本不属于远端 Git 跟踪内容，切换分支不会清除；仅将旧的三个已知 Prisma 技能目录（若存在）备份迁出仓库，不移动或删除其他 Agent 配置。`config:check` 保留失败保护。第三方源码不参与项目自有代码格式化或 Lint，不执行技能中的升级脚本。根目录同步已实测成功；本机残留清理、完整质量链及契约生成一致性仍待复验。
+
+### 2026-11-25 · 根目录 Skills 复验及版本管理
+
+维护者 Windows 在 HEAD `e281d595efec99724798b837a1dc646435e8bdff` 备份迁出服务端四个旧 Agent 目录下共 12 份 Prisma 技能副本；再次同步、列表及共享配置检查均通过，退出码 0，Git 工作区当时干净。Prisma 8 契约已从根目录成功输出至原服务端目录，无 Skills 过期提示。
+
+随后维护者提交 `ff92a98167ce01507d43ec45ca80e876d8a4887c`，纳入根目录两项包内技能的 132 个文件，并更新 .agents/skills/.gitignore 中 pnpm 管理区及四份自有源码的格式。保留维护者已提交的根 Skills 和格式，不恢复此前的忽略行，不重新添加 Composer 孤立技能。原 skills-lock.json 仍为原有来源索引；两项包内技能的当前版本由已安装 Prisma 包及根 CLI 列表核对。供应方文件仍排除于自有代码检查，不执行其升级脚本；后续同步若产生版本或 Git 差异，须审查后处理。

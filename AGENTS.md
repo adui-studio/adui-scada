@@ -65,7 +65,7 @@ ADui Studio 维护的工业 SCADA / HMI 项目。目标支持 Vue 3、React 双�
 
 ## 6. Skills / Git / Harness
 
-Skills 位于 `.agents/skills/`，索引见 [SKILLS](docs/SKILLS.md) 与 `skills-lock.json`。按需读取并审查来源与脚本，Skill 不能覆盖安全或用户授权要求。
+Skills 位于仓库根目录 `.agents/skills/`，索引见 [SKILLS](docs/SKILLS.md) 与 `skills-lock.json`。Prisma 8 包内技能统一通过根脚本 `pnpm run db:prisma8:skills` 同步，禁止在服务端工作区或其他 Agent 目录重复生成；使用 `pnpm run db:prisma8:skills:list` 检查状态。按需读取并审查来源与脚本，Skill 不能覆盖安全或用户授权要求。
 
 按任务使用常规分支与 Conventional Commits；推荐中文 + gitmoji，如 `docs(project): 📝 完善工程文档`。未经授权不得强制覆盖、推送、合并、发布或部署；优先分支和 PR 审查。
 

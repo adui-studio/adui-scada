@@ -4552,3 +4552,56 @@ try {
 ```
 
 探针自身在创建连接池前拒绝非指定目标及异常参数，并核验实际库名与事务只读状态。已有工程样本比对通过与空库结果分别打印固定中文说明。空库只能确认缺失作用域查询，不能据此切换业务仓储。若提示契约、只读连接或运行时错误，先定位；禁止使用宽松模式或 db sign 等有写入副作用的命令绕过验收。
+
+### Prisma 8 Skills 同步和历史只读专项
+
+在仓库根目录执行 `pnpm run db:prisma8:skills`、`pnpm run db:prisma8:skills:list` 和 `pnpm run db:prisma8:emit`。三个命令统一由 `scripts/prisma8-cli.mjs` 从仓库根目录启动服务端已安装的 Prisma 8 CLI，按固定 CLI 语法先传命令路径，再传 `--config` 与原服务端配置路径；首次验收先运行 `pnpm run db:prisma8:skills:list` 确认解析成功，再同步并复查；只同步根 `.agents/skills/`，保留过期检查。禁止再次直接从服务端工作区执行 Skills 同步；若已有重复副本，仅备份迁出各旧 Agent 的 skills 目录下 `prisma-8`、`prisma-platform-core-concepts`、`prisma-composer-core-concepts` 三个已知目录（若存在），确认 Git 无跟踪文件，且不删除其他配置。当前 CLI 在仓库根仅识别两项已同步的 Prisma 8 包内技能，自动移除孤立的 Composer 技能属预期行为，仓库移除相应旧跟踪文件。运行 `pnpm run config:check` 验证入口及旧副本不存在，并运行 `pnpm run test:prisma8:cli` 检查根工作目录、固定配置、命令边界及退出码转发（已纳入 ready）。Windows HEAD e281d595 已实际通过旧副本备份迁出、根目录 CLI 列表及同步、共享配置检查和两版 Prisma 生成；随后 Vite+ 482 个格式文件、324 个受检文件零警告错误。维护者后续提交 ff92a981 保留两项根 Skills 与格式化成果。复验先执行 messages:check、test:prisma8:cli，再验证两版生成、Core 构建、完整 ready 和隔离库只读专项。
+
+仅使用已准备且已应用对应迁移的本机 15432 端口 `adui_scada_test` 隔离库。运行期间停止其他写入，不创建历史样本。PowerShell 临时设置专项连接地址，不覆盖生产连接地址：
+
+```powershell
+$previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+try {
+    if (-not $env:SCADA_TEST_DATABASE_URL) {
+        $env:SCADA_TEST_DATABASE_URL = Read-Host "输入本机 15432 端口 adui_scada_test 连接地址" -MaskInput
+    }
+    pnpm run test:db:prisma8:readonly
+    if ($LASTEXITCODE -ne 0) { throw "Prisma 8 只读专项失败" }
+} finally {
+    if ($null -eq $previousTestUrl) {
+        Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+    } else {
+        $env:SCADA_TEST_DATABASE_URL = $previousTestUrl
+    }
+}
+```
+
+已有工程和历史样本均对照成功方可确认正向读取；EMPTY 不计为正向通过。缺表或连接失败应保留日志，不执行签名、迁移、清库或重建容器。
+
+### Prisma 7 / 8 历史归档非空三方对照（PR #202）
+
+维护者已于 2026-11-25 明确授权仅在本机 15432 端口的 `adui_scada_test` 执行随机合成夹具测试。原 `test:db:prisma8:readonly` 仍严格只读，不自动创建历史。新增 `pnpm run test:db:prisma8:history:compare` 单独运行 `apps/server/test/prisma8-history-compare.db-spec.ts`；它也属于本机真实数据库 test:db 套件，不进入 ready 或 test:unit。
+
+前置条件：当前分支的 Core Node 产物、Prisma 7 Client 和 Prisma 8 Contract 已生成，八项 Prisma 7 增量迁移均已应用至隔离库；不要再次迁移、签名或重建容器。显式设置 SCADA_TEST_DATABASE_URL，禁止回退至 SCADA_DATABASE_URL，禁止将凭据作为 Read-Host 提示或输出完整 URL。根目录执行：
+
+```powershell
+$previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+try {
+    $password = Read-Host "请输入隔离数据库密码" -MaskInput
+    if ([string]::IsNullOrEmpty($password)) { throw "数据库密码不能为空" }
+    $encodedPassword = [Uri]::EscapeDataString($password)
+    $env:SCADA_TEST_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_test?schema=public"
+    pnpm run test:db:prisma8:history:compare
+    if ($LASTEXITCODE -ne 0) { throw "历史非空三方对照失败，禁止自动重试" }
+    Write-Host "历史非空三方对照退出码：0"
+} finally {
+    if ($null -eq $previousTestUrl) {
+        Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+    } else {
+        $env:SCADA_TEST_DATABASE_URL = $previousTestUrl
+    }
+    Remove-Variable password, encodedPassword -ErrorAction SilentlyContinue
+}
+```
+
+测试先校验实际连接的数据库名、public Schema、读写/只读状态与两张历史表及查询索引。Prisma 7 创建三个随机专用工程（两个租户），使用正式归档仓储写入五批共十个合成点；Prisma 8 和原生 SQL 只使用受控只读 pg 池。十一组窗口/租户/工程/Tag 查询及超量门禁必须逐项满足独立预期；只有非空严格对照、精确联合主键事务清理、零残留与资源关闭都通过才返回 MATCHED。创建结果或清理未确认时返回固定脱敏诊断及本次随机测试标识，禁止自动删除不确定归属的工程或自动重试；异常终止可能留下专用夹具，需要单独只读审查。所有代码仍只用于隔离测试，不注册 HTTP 或生产模块，不进行真实设备采集。

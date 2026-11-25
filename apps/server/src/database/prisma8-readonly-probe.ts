@@ -1,16 +1,13 @@
 import { randomUUID } from "node:crypto";
-import postgres from "@prisma/orm-postgres/runtime";
-import { contractFromJson } from "@prisma/orm-postgres/static";
 import { Pool } from "pg";
-import type { Contract } from "../generated/prisma8/contract.d.js";
-import contractJson from "../generated/prisma8/contract.json" with { type: "json" };
+import { verifyPrisma8HistoryReadOnly } from "../history/prisma8-history-readonly.js";
+import { createPrisma8ReadOnlyClient } from "./prisma8-readonly-client.js";
 import { requirePrisma8ReadOnlyTestUrl } from "./prisma8-readonly-target.js";
-
-const contract = contractFromJson<Contract>(contractJson);
 
 export interface Prisma8ReadOnlyProbeResult {
   sampleStatus: "MATCHED" | "EMPTY";
   missingScopeVerified: true;
+  historySampleStatus: "NOT_REQUESTED" | "MATCHED" | "EMPTY";
 }
 
 interface ProjectHeadSample {
@@ -22,6 +19,7 @@ interface ProjectHeadSample {
 /** 独立验收入口，不注册到生产模块，不返回工程数据或数据库连接。 */
 export async function probePrisma8ReadOnly(
   testUrl: string | undefined,
+  includeHistory = false,
 ): Promise<Prisma8ReadOnlyProbeResult> {
   const connectionString = requirePrisma8ReadOnlyTestUrl(testUrl);
   let stage = "连接初始化";
@@ -68,7 +66,7 @@ export async function probePrisma8ReadOnly(
       const sample = baseline.rows[0];
 
       stage = "Prisma 8 客户端初始化";
-      const db = postgres({ contract, pg: pool });
+      const db = createPrisma8ReadOnlyClient(pool);
       try {
         const readHead = (tenantId: string, projectId: string) =>
           db.orm.public.ScadaProject.where({ tenantId, projectId })
@@ -104,9 +102,14 @@ export async function probePrisma8ReadOnly(
           }
         }
 
+        stage = "历史归档只读查询对照";
+        const historySampleStatus = includeHistory
+          ? await verifyPrisma8HistoryReadOnly(pool, db, absentTenant, absentProject)
+          : "NOT_REQUESTED";
         result = {
           sampleStatus: sample ? "MATCHED" : "EMPTY",
           missingScopeVerified: true,
+          historySampleStatus,
         };
       } finally {
         // Prisma 8 不负责关闭调用方传入的连接池。
