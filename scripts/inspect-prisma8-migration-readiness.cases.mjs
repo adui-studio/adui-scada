@@ -148,7 +148,6 @@ void describe("Prisma 8 迁移接管只读预检", () => {
     const metadata = catalog();
     const result = validateMigrationCatalog(baseline, metadata);
     assert.equal(result.status, "REVIEW_REQUIRED");
-    assert.equal(result.marker, "ABSENT");
     assert.equal(result.signingAllowed, false);
     assert.equal(result.contractForeignKeyGap, lastEventKey);
     assert.match(result.catalogFingerprint, /^[0-9a-f]{64}$/);
@@ -206,6 +205,7 @@ void describe("Prisma 8 迁移接管只读预检", () => {
     const { client, calls } = mockClient();
     const result = await inspectMigrationDatabase(client, baseline);
     assert.equal(result.signingAllowed, false);
+    assert.equal(result.marker, "ABSENT");
     assert.equal(result.timezoneUtc, true);
     assert.equal(calls.length, 10);
     assert.deepEqual(calls.slice(0, 2), ["连接", "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"]);
