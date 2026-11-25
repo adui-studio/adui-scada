@@ -4893,7 +4893,7 @@ pnpm run docs:check
 Write-Host "离线门禁验收退出码：$LASTEXITCODE"
 ```
 
-目标九项新增门禁、九项原生评审、六项运行时评审均通过，Vite+ 零警告错误。只有维护者明确批准实际生成离线候选、确认没有并发文件修改且 .artifacts/prisma8-native-baseline 不存在时，才执行以下单独命令；确认参数只授权离线生成，不授权数据库访问、签名、部署或任何 DDL 执行：
+原生成验收目标九项新增门禁、九项原生评审、六项运行时评审均通过（E-144 修复后采用下节十二项门禁），Vite+ 零警告错误。只有维护者明确批准实际生成离线候选、确认没有并发文件修改且 .artifacts/prisma8-native-baseline 不存在时，才执行以下单独命令；确认参数只授权离线生成，不授权数据库访问、签名、部署或任何 DDL 执行：
 
 ```powershell
 pnpm run db:prisma8:native:baseline:plan --confirm-offline-baseline
@@ -4902,3 +4902,22 @@ git status --short
 ```
 
 包装器不使用通用 CLI 参数，不读取连接配置或加载 dotenv，只以固定空起点规划、独立配置和系统环境白名单启动本地已安装 CLI。不属于操作系统网络沙箱；禁止改变配置或并发修改输入/输出。生成目录 .artifacts/prisma8-native-baseline 保留三份原文副本、官方 plan.json、plan.stderr.txt、迁移包 migration.ts/migration.json/ops.json 与目标 snapshot。成功须出现目标存储哈希 `6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc`、实际原文 SHA-256、实际迁移标识、实际计划操作数量和 BASELINE_ARTIFACT_REVIEW_REQUIRED；签名许可否，部署许可否。若 JSON、目录、操作类别（当前只接受 additive）、占位符、目标快照或任何输入变化导致失败，保留全部文件和诊断，禁止自动删除、重试、改 JSON、改哈希、补写注释或执行迁移。真实固定 RC 结果可能与模拟的形状不同，须依据实际诊断进一步评审，不通过放宽门禁绕过。下一步单独审查操作和 DDL 以及全部 119 项中文注释，不视生成成功为等价证明。
+
+### 原生离线基线 E-144 已有候选复验（替代重复生成）
+
+实际独立目录已生成，禁止再运行 plan、删除或覆盖原目录。保留正式与原生候选、官方 plan.json、ops.json、迁移源码和快照；不要设置数据库 URL，也不要执行迁移源码。拉取 PR #219 修复 HEAD 后运行：
+
+~~~powershell
+git rev-parse HEAD
+pnpm run test:prisma8:native:baseline &&
+pnpm run test:prisma8:native &&
+pnpm run test:prisma8:native:runtime &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run db:prisma8:native:baseline:review
+Write-Host "只读复验链退出码：$LASTEXITCODE"
+git status --short
+~~~
+
+目标分别为 12/12、9/9、6/6，Vite+ 零警告错误；复验输出目标存储哈希 6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc、原文指纹 850ef15fcfc0455491ba73f66419f42a394f963b1a99a02870bad5cae964cffa、迁移标识 f2878cca953d47c94a4eca5b500165a1e623d49ef5a8a6c3e730ddf818bd24bd、46 项操作、BASELINE_ARTIFACT_REVIEW_REQUIRED、签名许可否、部署许可否、退出码 0。上述为实际归档已确认的预期值，不是 Windows 修复 HEAD 的实测输出。若失败保留原件和诊断，不重试规划，不更改 JSON 或哈希。实际 SQL 缺少 119 项中文注释，禁止部署；后续完整物理及注释评审、第三库重放和非空样本分别审批。

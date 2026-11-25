@@ -17,6 +17,7 @@ import {
   readBaselineInputs,
   requireBaselineApproval,
   resolveBaselineCli,
+  reviewExistingBaseline,
   runBaselinePlanner,
 } from "../../scripts/prisma8-native-baseline.mjs";
 
@@ -27,10 +28,12 @@ function requireCondition(condition, message) {
 let stage = "确认离线授权";
 
 function main() {
-  requireBaselineApproval(process.argv.slice(2));
+  const args = process.argv.slice(2);
+  const reviewExisting = args.length === 1 && args[0] === "--review-existing-baseline";
+  if (!reviewExisting) requireBaselineApproval(args);
   const root = realpathSync(resolve(import.meta.dirname, "../.."));
   stage = "隔离路径与固定依赖";
-  const inputs = readBaselineInputs(root);
+  const inputs = readBaselineInputs(root, reviewExisting);
   const entry = resolveBaselineCli(root);
   stage = "历史基线及保留候选物理与运行时核对";
   const baseline = loadMigrationBaseline();
@@ -82,7 +85,9 @@ function main() {
   let result;
   let failure;
   try {
-    result = runBaselinePlanner(root, inputs, entry);
+    result = reviewExisting
+      ? reviewExistingBaseline(root, inputs)
+      : runBaselinePlanner(root, inputs, entry);
   } catch (error) {
     failure = error instanceof Error ? error : new BaselineError("离线规划发生未知失败");
   }

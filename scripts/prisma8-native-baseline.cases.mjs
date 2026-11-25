@@ -19,6 +19,7 @@ import {
   requireBaselineApproval,
   requirePreservedInputs,
   resolveBaselineCli,
+  reviewExistingBaseline,
   runBaselinePlanner,
 } from "./prisma8-native-baseline.mjs";
 
@@ -66,11 +67,13 @@ function fixture(run) {
         'const snapshot = join(output, "migrations", "snapshots", hash);',
         "mkdirSync(dir, { recursive: true });",
         "mkdirSync(snapshot, { recursive: true });",
-        'writeFileSync(join(dir, "migration.json"), JSON.stringify({ from: null, to: hash, migrationHash: "a".repeat(64) }));',
-        'writeFileSync(join(dir, "ops.json"), JSON.stringify([{ operationClass: "additive" }]));',
+        'writeFileSync(join(dir, "migration.json"), JSON.stringify({ from: null, to: hash, providedInvariants: [], migrationHash: "a".repeat(64) }));',
+        'const operation = { id: "table.example", label: "Create table", operationClass: "additive" };',
+        'const sql = "CREATE TABLE example ()";',
+        'writeFileSync(join(dir, "ops.json"), JSON.stringify([{ ...operation, target: { id: "postgres" }, precheck: [], execute: [{ sql, params: [] }], postcheck: [] }]));',
         'writeFileSync(join(dir, "migration.ts"), "// 模拟生成源码\\n");',
         'for (const name of ["contract.json", "contract.d.ts"]) writeFileSync(join(snapshot, name), readFileSync(join(output, name)));',
-        'process.stdout.write(JSON.stringify({ dir, pendingPlaceholders: false, operations: [{ operationClass: "additive" }], preview: { statements: ["CREATE TABLE example ()"] } }));',
+        'process.stdout.write(JSON.stringify({ kind: "result", commandId: "migration.plan", envelope: { ok: true, commandId: "migration.plan", exitCode: 0, diagnostics: [], result: { ok: true, noOp: false, from: null, to: hash, dir, operations: [operation], preview: { statements: [{ text: sql, language: "sql" }] }, appliedStatements: [], temporaryValues: [], emittedExtensionDirs: [] } } }));',
       ].join("\n"),
     );
     run({ root, native, output, formal, cli, orm });
@@ -170,10 +173,10 @@ void test("拒绝占位符、非新增操作及缺少预览", () => {
       { operations: [{ operationClass: "widening" }] },
       { preview: { statements: [] } },
     ]) {
-      writeFileSync(path, JSON.stringify({ ...original, ...patch }));
+      writeFileSync(path, JSON.stringify({ ...original, envelope: { ...original.envelope, result: { ...original.envelope.result, ...patch } } }));
       assert.throws(
         () => inspectBaselinePackage(root, inputs.native[1]),
-        /未填充、非新增操作或缺少预览/,
+        /未填充占位符|非新增操作|缺少有效 SQL 预览/,
       );
     }
   });
@@ -185,14 +188,14 @@ void test("拒绝错误起点、目标、路径、额外迁移和快照漂移", 
     runBaselinePlanner(root, inputs, resolveBaselineCli(root));
     const planPath = join(output, "plan.json");
     const plan = JSON.parse(readFileSync(planPath, "utf8"));
-    const manifestPath = join(plan.dir, "migration.json");
+    const manifestPath = join(plan.envelope.result.dir, "migration.json");
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
     for (const patch of [{ from: nativeHash }, { to: "wrong" }]) {
       writeFileSync(manifestPath, JSON.stringify({ ...manifest, ...patch }));
       assert.throws(() => inspectBaselinePackage(root, inputs.native[1]), /起点、目标或迁移标识/);
     }
     writeFileSync(manifestPath, JSON.stringify(manifest));
-    writeFileSync(planPath, JSON.stringify({ ...plan, dir: root }));
+    writeFileSync(planPath, JSON.stringify({ ...plan, envelope: { ...plan.envelope, result: { ...plan.envelope.result, dir: root } } }));
     assert.throws(() => inspectBaselinePackage(root, inputs.native[1]), /规划返回路径/);
     writeFileSync(planPath, JSON.stringify(plan));
     const extra = join(output, "migrations", "app", "extra");
@@ -236,7 +239,74 @@ void test("拒绝非空引用、额外输出及源码占位符", () => {
     writeFileSync(extra, "额外证据");
     assert.throws(() => inspectBaselinePackage(root, inputs.native[1]), /缺失或额外对象/);
     rmSync(extra);
-    writeFileSync(join(plan.dir, "migration.ts"), 'placeholder("测试占位");');
+    writeFileSync(join(plan.envelope.result.dir, "migration.ts"), 'placeholder("测试占位");');
     assert.throws(() => inspectBaselinePackage(root, inputs.native[1]), /未填充占位符/);
+  });
+});
+
+void test("拒绝失败封装、错误命令、诊断及非离线结果", () => {
+  fixture(({ root, output }) => {
+    const inputs = readBaselineInputs(root);
+    runBaselinePlanner(root, inputs, resolveBaselineCli(root));
+    const path = join(output, "plan.json");
+    const original = JSON.parse(readFileSync(path, "utf8"));
+    for (const patch of [
+      { ok: false },
+      { exitCode: 1 },
+      { commandId: "migration.apply" },
+      { diagnostics: [{ message: "模拟诊断" }] },
+    ]) {
+      writeFileSync(path, JSON.stringify({ ...original, envelope: { ...original.envelope, ...patch } }));
+      assert.throws(() => inspectBaselinePackage(root, inputs.native[1]), /封装或诊断/);
+    }
+    writeFileSync(path, JSON.stringify(original.envelope.result));
+    assert.throws(() => inspectBaselinePackage(root, inputs.native[1]), /封装或诊断/);
+    for (const patch of [
+      { noOp: true },
+      { from: nativeHash },
+      { to: "wrong" },
+      { appliedStatements: ["模拟已执行语句"] },
+      { temporaryValues: [1] },
+      { emittedExtensionDirs: ["模拟额外目录"] },
+      { pendingPlaceholders: null },
+    ]) {
+      writeFileSync(path, JSON.stringify({ ...original, envelope: { ...original.envelope, result: { ...original.envelope.result, ...patch } } }));
+      assert.throws(() => inspectBaselinePackage(root, inputs.native[1]), /起点、目标或结果|已应用语句|未填充占位符/);
+    }
+  });
+});
+
+void test("实际操作与预览不一致、非新增操作及参数必须拒绝", () => {
+  fixture(({ root, output }) => {
+    const inputs = readBaselineInputs(root);
+    runBaselinePlanner(root, inputs, resolveBaselineCli(root));
+    const plan = JSON.parse(readFileSync(join(output, "plan.json"), "utf8")).envelope.result;
+    const path = join(plan.dir, "ops.json");
+    const [original] = JSON.parse(readFileSync(path, "utf8"));
+    for (const patch of [
+      { id: "other" },
+      { operationClass: "destructive" },
+      { target: { id: "other" } },
+      { execute: [{ sql: "DROP TABLE example" }] },
+      { execute: [{ sql: plan.preview.statements[0].text, params: [1] }] },
+    ]) {
+      writeFileSync(path, JSON.stringify([{ ...original, ...patch }]));
+      assert.throws(() => inspectBaselinePackage(root, inputs.native[1]), /实际操作类型|操作摘要|实际执行语句/);
+    }
+  });
+});
+
+void test("已有候选只读复验不重跑规划且拒绝副本变化", () => {
+  fixture(({ root, output, cli }) => {
+    const inputs = readBaselineInputs(root);
+    const result = runBaselinePlanner(root, inputs, resolveBaselineCli(root));
+    writeFileSync(join(cli, "cli.mjs"), 'process.exitCode = 91;');
+    const plan = readFileSync(join(output, "plan.json"), "utf8");
+    const preserved = readBaselineInputs(root, true);
+    assert.deepEqual(reviewExistingBaseline(root, preserved), result);
+    assert.equal(readFileSync(join(output, "plan.json"), "utf8"), plan);
+    assert.throws(() => readBaselineInputs(root), /禁止覆盖/);
+    writeFileSync(join(output, "contract.prisma"), "// 模拟副本变化\n");
+    assert.throws(() => reviewExistingBaseline(root, preserved), /发生变化/);
   });
 });

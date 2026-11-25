@@ -70,8 +70,8 @@ function readRegular(path) {
   return text;
 }
 
-/** 读取保留候选和正式生成物，同时拒绝任何已有基线目录，包括悬空链接。 */
-export function readBaselineInputs(root) {
+/** 读取保留候选和正式生成物；仅明确的复验模式允许已有真实目录。 */
+export function readBaselineInputs(root, reviewExisting = false) {
   const artifacts = join(root, ".artifacts");
   const native = join(artifacts, "prisma8-native");
   const output = join(artifacts, "prisma8-native-baseline");
@@ -79,10 +79,12 @@ export function readBaselineInputs(root) {
   requireDirectory(artifacts);
   requireDirectory(native);
   requireDirectory(formal);
-  requireCondition(
-    !lstatSync(output, { throwIfNoEntry: false }),
-    "独立基线输出已存在，禁止覆盖或自动清理",
-  );
+  if (reviewExisting) requireDirectory(output);
+  else
+    requireCondition(
+      !lstatSync(output, { throwIfNoEntry: false }),
+      "独立基线输出已存在，禁止覆盖或自动清理",
+    );
   return {
     native: files.map((name) => readRegular(join(native, name))),
     formal: files.slice(1).map((name) => readRegular(join(formal, name))),
@@ -204,20 +206,120 @@ function requireNames(path, expected) {
   );
 }
 
+/** 固定 RC 的机器输出必须是成功的规划封装，不接受旧模拟结构或失败诊断。 */
+export function parseBaselinePlan(document) {
+  const envelope = document?.envelope;
+  requireCondition(
+    document?.kind === "result" &&
+      document.commandId === "migration.plan" &&
+      envelope?.commandId === "migration.plan" &&
+      envelope.ok === true &&
+      envelope.exitCode === 0 &&
+      Array.isArray(envelope.diagnostics) &&
+      envelope.diagnostics.length === 0,
+    "官方离线规划封装或诊断不符合成功条件",
+  );
+  const plan = envelope.result;
+  requireCondition(
+    plan?.ok === true && plan.noOp === false && plan.from === null && plan.to === nativeHash,
+    "官方离线规划起点、目标或结果不一致",
+  );
+  requireCondition(
+    !Object.hasOwn(plan, "pendingPlaceholders") || plan.pendingPlaceholders === false,
+    "官方离线规划包含未填充占位符或未知状态",
+  );
+  requireCondition(
+    [plan.appliedStatements, plan.temporaryValues, plan.emittedExtensionDirs].every(
+      (items) => Array.isArray(items) && items.length === 0,
+    ),
+    "离线规划包含已应用语句、临时值或扩展目录",
+  );
+  requireCondition(
+    Array.isArray(plan.operations) &&
+      plan.operations.length > 0 &&
+      plan.operations.every(
+        (operation) =>
+          typeof operation?.id === "string" &&
+          operation.id.length > 0 &&
+          typeof operation.label === "string" &&
+          operation.label.length > 0 &&
+          operation.operationClass === "additive",
+      ) &&
+      new Set(plan.operations.map((operation) => operation.id)).size === plan.operations.length,
+    "离线规划包含非新增操作、重复标识或空清单",
+  );
+  requireCondition(
+    Array.isArray(plan.preview?.statements) &&
+      plan.preview.statements.length > 0 &&
+      plan.preview.statements.every(
+        (statement) =>
+          statement?.language === "sql" &&
+          typeof statement.text === "string" &&
+          statement.text.trim().length > 0,
+      ),
+    "离线规划缺少有效 SQL 预览",
+  );
+  return plan;
+}
+
+/** 对照官方计划和实际操作清单；这里只验证一致性，不判定 SQL 可部署。 */
+function requireMatchingOperations(plan, ops) {
+  requireCondition(
+    Array.isArray(ops) &&
+      ops.length === plan.operations.length &&
+      ops.every(
+        (operation) =>
+          operation?.operationClass === "additive" &&
+          operation.target?.id === "postgres" &&
+          Array.isArray(operation.precheck) &&
+          Array.isArray(operation.postcheck) &&
+          Array.isArray(operation.execute) &&
+          operation.execute.length > 0 &&
+          operation.execute.every(
+            (statement) =>
+              typeof statement?.sql === "string" &&
+              statement.sql.trim().length > 0 &&
+              (!Object.hasOwn(statement, "params") ||
+                (Array.isArray(statement.params) && statement.params.length === 0)),
+          ),
+      ),
+    "离线基线实际操作类型、目标或执行语句不一致",
+  );
+  requireCondition(
+    isDeepStrictEqual(
+      ops.map(({ id, label, operationClass }) => ({ id, label, operationClass })),
+      plan.operations,
+    ),
+    "离线基线计划与操作摘要不一致",
+  );
+  requireCondition(
+    isDeepStrictEqual(
+      ops.flatMap((operation) =>
+        operation.execute.map(({ sql }) => ({ text: sql, language: "sql" })),
+      ),
+      plan.preview.statements,
+    ),
+    "离线基线预览与实际执行语句不一致",
+  );
+}
+
+/** 复验已经保留的候选，不启动规划器、不写入任何文件。 */
+export function reviewExistingBaseline(root, inputs) {
+  requireCondition(
+    isDeepStrictEqual(readBaselineInputs(root, true), inputs),
+    "离线基线复验输入发生变化",
+  );
+  requirePreservedInputs(root, inputs);
+  const result = inspectBaselinePackage(root, inputs.native[1]);
+  requirePreservedInputs(root, inputs);
+  return result;
+}
+
 /** 仅验收生成物形状、空起点及目标内容；完整 DDL、注释及哈希算法另行评审。 */
 export function inspectBaselinePackage(root, nativeText) {
   const output = join(root, ".artifacts", "prisma8-native-baseline");
   requireNames(output, [...files, "migrations", "plan.json", "plan.stderr.txt"]);
-  const plan = JSON.parse(readRegular(join(output, "plan.json")));
-  requireCondition(
-    plan.pendingPlaceholders === false &&
-      Array.isArray(plan.operations) &&
-      plan.operations.length > 0 &&
-      plan.operations.every((operation) => operation.operationClass === "additive") &&
-      Array.isArray(plan.preview?.statements) &&
-      plan.preview.statements.length > 0,
-    "离线规划包含未填充、非新增操作或缺少预览",
-  );
+  const plan = parseBaselinePlan(JSON.parse(readRegular(join(output, "plan.json"))));
   const graph = join(output, "migrations");
   requireNames(graph, ["app", "snapshots"]);
   const app = join(graph, "app");
@@ -238,6 +340,8 @@ export function inspectBaselinePackage(root, nativeText) {
   requireCondition(
     manifest.from === null &&
       manifest.to === nativeHash &&
+      Array.isArray(manifest.providedInvariants) &&
+      manifest.providedInvariants.length === 0 &&
       typeof manifest.migrationHash === "string" &&
       /^(?:sha256:)?[a-f0-9]{64}$/.test(manifest.migrationHash),
     "离线基线起点、目标或迁移标识不一致",
@@ -245,10 +349,7 @@ export function inspectBaselinePackage(root, nativeText) {
   const authoring = readRegular(join(migration, "migration.ts"));
   requireCondition(!/\bplaceholder\s*\(/.test(authoring), "离线基线包含未填充占位符");
   const ops = JSON.parse(readRegular(join(migration, "ops.json")));
-  requireCondition(
-    ops !== null && typeof ops === "object" && Object.keys(ops).length > 0,
-    "离线基线操作清单为空",
-  );
+  requireMatchingOperations(plan, ops);
   const snapshots = join(graph, "snapshots");
   requireNames(snapshots, [nativeHash]);
   const snapshot = join(snapshots, nativeHash);

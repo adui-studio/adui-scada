@@ -1734,4 +1734,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/prisma8-native-baseline.config.ts`：独立无数据库连接、无 dotenv 配置，消费根忽略目录 .artifacts/prisma8-native-baseline 中的保留候选副本及全新 migrations 图。
 - `apps/server/prisma8-native-baseline-plan.mjs` / `pnpm run db:prisma8:native:baseline:plan --confirm-offline-baseline`：仅明确确认后进入真实离线规划。复核原生契约与正式契约物理及运行时评审、声明标识、历史迁移，保留两个原始生成目录。
 - `scripts/prisma8-native-baseline.mjs`：固定版本与包内 CLI 路径、安全目录及环境白名单、独立原文副本、固定空起点规划、生成物形状与目标快照内容门禁；只返回 BASELINE_ARTIFACT_REVIEW_REQUIRED、签名和部署许可均否。
-- `scripts/prisma8-native-baseline.cases.mjs` / `pnpm run test:prisma8:native:baseline`：九项模拟 CLI 与本地文件系统测试，纳入 ready；真实离线规划不纳入 ready。生成包 DDL、操作内容、注释、依赖解析及新空库重放仍须独立审查。
+- `scripts/prisma8-native-baseline.cases.mjs` / `pnpm run test:prisma8:native:baseline`：原九项模拟 CLI 与本地文件系统测试已更新为十二项，纳入 ready；真实离线规划不纳入 ready。生成包 DDL、操作内容、注释、依赖解析及新空库重放仍须独立审查。
+
+### 原生离线基线 E-144 复验入口
+
+- scripts/prisma8-native-baseline.mjs：固定 RC 成功 Envelope、实际操作摘要及执行预览对照；拒绝非新增、诊断、临时值、扩展、已应用语句和异常目录，保留完整目标快照比较。
+- pnpm run db:prisma8:native:baseline:review：复用 apps/server/prisma8-native-baseline-plan.mjs 的历史和原生评审，仅只读验收已有独立基线，不启动生成 CLI。生成入口原确认参数及禁止覆盖保护保持。
+- 原九项模拟门禁更新真实形状并增加三项回归，共十二项，继续纳入 ready。真实候选缺少全部 119 项注释，待独立 DDL 评审。

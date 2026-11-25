@@ -141,6 +141,7 @@
     "db:prisma8:native:catalog": "node scripts/compare-prisma8-catalog-supplement.mjs",
     "test:prisma8:native:baseline": "node --test scripts/prisma8-native-baseline.cases.mjs",
     "db:prisma8:native:baseline:plan": "node apps/server/prisma8-native-baseline-plan.mjs",
+    "db:prisma8:native:baseline:review": "node apps/server/prisma8-native-baseline-plan.mjs --review-existing-baseline",
     "test:prisma8:native": "node --test scripts/prisma8-native-contract.cases.mjs",
     "test:prisma8:migration:replay": "node --test scripts/replay-prisma8-migration-reference.cases.mjs",
     "db:prisma8:migration:replay": "node scripts/replay-prisma8-migration-reference.mjs",
