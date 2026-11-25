@@ -1689,3 +1689,12 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/replay-prisma8-migration-reference.mjs`：固定验收指纹和 Contract、空库/其他连接只读门禁、Prisma 7.10.1 固定 deploy/status、首次/二次目录与迁移登记比较。
 - `scripts/replay-prisma8-migration-reference.cases.mjs`：九项安全门禁及模拟重放控制流测试；`pnpm run test:prisma8:migration:replay` 纳入后续完整 ready。
 - `pnpm run db:prisma8:migration:replay --confirm-adui-scada-fresh-prisma8-ref`：人工确认、手工建立的专用空库才允许执行真实历史重放；不创建、重置、删除数据库，不授予签名许可。
+
+### 原生 Prisma 8 Contract 独立候选
+
+- `apps/server/prisma/native-contract.template.prisma`：物理结构优先的原生 PSL 模板；运行时从已匹配的参考库目录补齐 36 个精确命名的 CHECK。候选恢复六字段末次事件外键，反向单值导航兼容性单独评审。
+- `apps/server/prisma8-native.config.ts`：无数据库连接的独立候选配置，源码和生成物仅在根忽略目录 .artifacts/prisma8-native，正式配置与生成物保持不变。
+- `scripts/inspect-prisma8-migration-readiness.mjs`：内部复用双库只读目录匹配流程供候选提取，原入口报告形状、指纹及查询序列不变。
+- `scripts/prisma8-native-contract-review.mjs`：普通 CHECK 谓词提取、PSL 模板填充、物理 IR 和运行时领域模型/映射/关系/生成器对照。
+- `scripts/prisma8-native-contract.mjs` / `pnpm run db:prisma8:native:review`：显式双库只读采集、锁定已验收指纹与 Prisma 8 版本、独立离线 emit 和评审；禁止覆盖旧产物或签名。
+- `scripts/prisma8-native-contract.cases.mjs` / `pnpm run test:prisma8:native`：九项离线模拟回归（含表名 UTF-16 字典序）；CLI 四项、迁移预检十六项及重放门禁九项，均纳入未来完整 ready，真实候选生成保持人工独立执行。

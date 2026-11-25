@@ -4933,3 +4933,25 @@ PR #208 维护者 Windows 实测 501 格式文件、343 受检文件零错误警
 新批定义独立参考库重放门禁：仅已由维护者手工建立的本机 127.0.0.1:15432/adui_scada_fresh_prisma8_ref，显式确认参数、独立 Prisma 7 配置、锁定 7.10.1、已验收指纹和契约、实际只读空库/其他会话检查、固定 deploy/status 子进程。两次部署均需双库目录与已验收指纹一致，并比较八项迁移登记的 ID、名称、校验和、开始/完成/回滚时间及步数；失败即停止，无自动重试、恢复、清理或签名。空库元数据检查不是所有 PostgreSQL 对象的完整枚举，也不是跨 Prisma CLI 的原子排他锁，必须由维护者确认全新建立且无并发 DDL/连接。
 
 协作容器 Node.js 22.16.0 已使用与远端 Git Blob 一致的重放脚本 `8121c6edc1d38fa1db82bc66d84571461dbc498f`、九项测试 `1c44c68bd14033fde4b96686b9e3994ab60d3a6c`、专用配置 `9fa6eaf7cde1d10ec829a98c61f50e92f8a5cca7`，及实际原 URL 门禁和 Prisma 7 CLI 解析器。Node 语法检查通过，新增九项测试 9/9；该局部重建目录中的未调用原预检集成导出使用拒绝执行替身（异常类原样保留），不等同完整仓库回归。专用配置使用 defineConfig 恒等替身完成八个输入保护路径 8/8，缺少 CLI 显式连接退出 1；用原中文文案检查逻辑限定三份新增文件检查通过。未执行真实 Prisma CLI 配置加载、pnpm、Vite+、固定 TypeScript 6、真实 PostgreSQL 或完整 ready，待 Windows 验收。未创建、迁移或重置任何数据库。
+
+### 2026-11-25 · PR #212 结案与原生 Contract 候选评审
+
+维护者 Windows 初始 HEAD `ec5a5b3056fae4e0fbb262b5eebdd615f61a88d3` 实际通过 CLI 3/3、预检/对照 15/15、重放门禁 9/9、Vite+ 511 个格式文件及 352 个受检文件零警告错误、服务端类型检查、379 个中文文案文件、96 份 Markdown，增量退出码 0。真实独立参考库八项迁移首次/二次 deploy/status、双库目录对照及迁移登记稳定性验证通过，双方指纹 `73079d85974ddc9cbabf59741f2a4a94dd7bfff3d70a23bab27a7283456e8c52`，MATCHED_REVIEW_REQUIRED、签名许可否，专项退出码 0。远端最终 HEAD `25bc208392f296e7bfc343008b8b6e4259f4f3ad` 额外两份脚本的完整 diff 为格式、尾逗号及 await 括号调整；用户日志未提供最后本地 HEAD 与状态。维护者明确授权后 Squash 合入 `e4afdd4040dca4ebcdfb3a1abfcdb6ff2b86a473`。保留参考库，不再次重放。
+
+新批以物理结构优先建立原生 PSL 模板，静态核对十二模型、八十五物理字段、十三外键、十二主键、二十非主键索引，明确恢复历史六字段外键，不增设冗余唯一约束。运行时采集使用已有双库只读事务与已审查目录指纹，提取普通 pg_get_constraintdef 的 CHECK 外包装内精确谓词并以 map 原名插入 36 项；独立离线生成并审查物理 IR、根、领域字段/映射、关系及生成器。故意不在本候选定义事件反向 currentReleaseState 单值导航，正式过渡 Contract 仍保留原关系；是否支持固定版本替代写法和实际运行时类型兼容待验证。输出位于根忽略目录 .artifacts/prisma8-native，拒绝覆盖旧结果，禁止签名、迁移、Provider 切换或改写正式生成物。
+
+协作容器 Node.js 22.16.0：新增评审模块与测试文件的本地 Git Blob 与远端一致，首次 7/8（E-141），修复后语法检查和实际离线测试 8/8；真实 CLI 包装器及 Mock CLI 测试 Blob `5589af7aa288f1939d75f026008bb176f89987ef`、`76c6b7d80c3f0e896ba824f48bf13553314fcea4` 与远端一致，语法检查、四项进程回归 4/4；新增编排脚本 Blob `4f27db066967d26f80bfe94b41fe217502ce4586` 与远端一致，Node 语法检查通过。以上为真实 Node 运行的离线模拟，不是 Prisma 8 原生 PSL 编译、生成类型应用编译、真实双库采集或完整仓库验收。协作容器缺 pnpm/vp 且 GitHub/npm 域名解析不可用；预检新增第十六项与其余原测试、Windows 固定工具链及真实候选生成待维护者运行。未进行数据库写入。
+
+### 2026-11-25 · PR #213 原生候选真实生成验收与排序警告修复
+
+维护者 Windows HEAD `6fbc054ad0627520c44cc7765a696f68723735d7` 实测正式 Contract emit、CLI 4/4、迁移预检及对照 16/16、重放门禁 9/9、原生评审 8/8，合计 37/37；515 个格式文件、356 个受检文件零错误但 E-142 排序告警一条，服务端类型检查通过，383 中文文案文件与 96 Markdown 通过，增量退出码 0。最终日志 HEAD 同上且 status 未输出修改。随后远端 HEAD `2bedb38ab479a9b650f0f1bbccb4afb673fb7f93` 相对实测 HEAD 的五份脚本差异已核对为格式、尾逗号和引号风格调整，未发现语义变化。
+
+真实原生候选生成成功、受检物理 IR 核验通过，CHECK 36/36，存储哈希 `6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc`，executionHash `a4d7e4794290fb3681a486309f2b191b6a804c75c010f175cdf453bcfc66df79`、profileHash `3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2` 与正式一致，正式生成物不变，评审退出码 0。结果 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED，差异仅报告 ScadaProjectReleaseEvent.currentReleaseState 和 ScadaProjectReleaseState.lastReleaseEvent，签名许可否。Prisma 输出 PN_EXACT_NAME_BODY_COMPARISON 的 36 个已采用 CHECK 提示（预期，仍需后续官方验证），另提示候选 d.ts 无法找到 @prisma/orm-postgres、独立配置的 Skills synced none。该包实际在服务端清单而非根清单，候选位于根忽略目录，类型依赖可见性及独立配置 Skills 作用域需要后续核验；本次不新增根依赖、不关闭 Skills 检查、不迁移产物路径，服务端现有类型检查通过不等于候选 d.ts 应用类型检查通过。
+
+E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回归 `17cf375756e5cc6c05c6a437296d860362e52d38`，局部 Node.js 22.16.0 提取函数四项测试 4/4、语法检查通过，提取片段本地/远端字节数及校验值一致（1624 字节、FNV-1a f02ba9ae）。正式 Windows 新九项测试及 Vite+ 零警告仍待复验。只改变表名排序的显式类型及等价比较器和新增测试，无 PSL、历史 SQL 或数据库变更；保留此前真实候选产物，无须重复重放或重建候选。PR #213 保持 Draft，未获得本次合并授权。
+
+### 2026-11-25 · PR #213 E-142 复验及 E-143 中文注释修复
+
+维护者 Windows HEAD `8252e1fc058b8f517f46efa5d93b7c71a4393633`：原生候选 9/9，Vite+ 515 个格式文件、356 个受检文件零警告/Lint/类型错误，E-142 关闭。中文检查在脚本第 62 行报告一处 JSDoc 缺少中文，增量退出码 1；后续 docs:check 未执行，日志最后工作区干净。E-143 仅补充同一行中文说明，修复提交 `a19457229be7c590850f329f8c0af36f3ef64a9e`，远端 Blob `f187b89caa8e952bbaa08bdd8db7d0b6ef6cc9a0` 回读确认仅一行注释变化。
+
+协作容器 Node.js 22.16.0：原中文检查器 Blob `00127f6ba4d622de026246be6fc0eca011099d5d` 与远端一致，在独立七文件最小夹具实测修复前退出码 1（单处 JSDoc 失败），修复后退出码 0、Node 语法检查通过；按原扫描器单行判定逻辑核对完整远端目标源码，前一处后零处。未执行修复后全仓 Vite+、九项测试、messages:check 或 docs:check，需 Windows 增量复验。仅注释修复，不改变物理 IR 或运行时关系阻塞，不重复真实生成、数据库重放或完整 ready，保持 Draft 和签名禁止。

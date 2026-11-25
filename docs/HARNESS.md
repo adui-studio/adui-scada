@@ -4711,3 +4711,40 @@ try {
 ```
 
 脚本先核验已审查的验收库目录指纹与生成 Contract，再查参考库真实库名、public、只读事务、恢复状态、非系统 Schema、public 关系/函数/类型/操作符/排序规则/转换/操作符类及族/文本检索对象、额外扩展、事件触发器、publication、foreign server 及其他会话。确认空库后，仅以独立 `prisma7-reference.config.ts`（不读取业务 URL 或根 .env）调用 Prisma 7.10.1 的固定 migrate deploy/status；不透传第三方原始错误。首次及二次部署均执行 PR #211 双库只读对照，并核验两次迁移登记相等。仅 MATCHED_REVIEW_REQUIRED，不授予签名许可。若任一步失败，保留参考库现状和日志，由维护者检查；禁止自动重试、重置、清库、修改历史、签名或执行 Prisma 8 迁移。已成功重放的参考库再次对照应使用既有只读 compare 命令，而非重复执行 replay。
+
+### 原生 Prisma 8 Contract 候选独立生成与审查
+
+PR #212 已完成独立参考库首次与二次迁移验收，禁止重复执行 replay。先执行 `pnpm run db:prisma8:emit`（正式过渡契约）、`pnpm run test:prisma8:cli`（4 项）、`pnpm run test:prisma8:migration:preflight`（16 项）、`pnpm run test:prisma8:migration:replay`（9 项）、`pnpm run test:prisma8:native`（9 项）、Vite+、服务端类型检查、中文文案、文档检查。新离线测试进入完整 ready，真实候选生成不进入 ready。真实入口只接受两份明确隔离 URL；两库已重放的迁移、目录指纹和 PostgreSQL 查询上下文须保持一致，期间禁止并发 DDL。候选输出目录已存在时先人工保留旧结果，不自动覆盖或清理。
+
+```powershell
+& {
+    $ErrorActionPreference = "Stop"
+    $previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+    $previousReferenceUrl = $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL
+    try {
+        if (Test-Path ".artifacts/prisma8-native") {
+            throw "已有原生候选目录，请先手工保留旧结果"
+        }
+        $password = Read-Host "请输入隔离数据库密码" -MaskInput
+        if ([string]::IsNullOrEmpty($password)) { throw "数据库密码不能为空" }
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_TEST_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_test?schema=public"
+        $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_fresh_prisma8_ref?schema=public"
+        pnpm run db:prisma8:native:review
+        if ($LASTEXITCODE -ne 0) { throw "原生候选生成或评审失败，请保留现场" }
+        Write-Host "原生候选评审退出码：0"
+    } finally {
+        if ($null -eq $previousTestUrl) {
+            Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+        } else { $env:SCADA_TEST_DATABASE_URL = $previousTestUrl }
+        if ($null -eq $previousReferenceUrl) {
+            Remove-Item Env:SCADA_MIGRATION_REFERENCE_DATABASE_URL -ErrorAction SilentlyContinue
+        } else { $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL = $previousReferenceUrl }
+        Remove-Variable password, encodedPassword -ErrorAction SilentlyContinue
+    }
+}
+```
+
+新入口先核验固定 CLI 8.0.0-rc.35 / ORM Postgres 8.0.0-rc.25、正式契约存储哈希及两库只读匹配的已审查目录指纹；由 pg_get_constraintdef 的普通 CHECK 外包装提取原谓词，以 map 原名写入忽略目录中的候选 PSL，调用固定独立配置的离线 contract emit，子进程移除业务和隔离数据库连接环境变量，核对正式 JSON 和 d.ts 字节不变。候选生成后核对列、主键、CHECK 名称/谓词、唯一性与索引、外键完整名称/源列/目标列/动作；同时独立列出运行时根、模型、字段/映射、导航及生成器差异。原生候选目前不定义发布事件反向单值导航，未改正式关系；若物理 IR 完全匹配但运行时元数据不一致，返回 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED；若二者一致则 STORAGE_REVIEW_REQUIRED。两个状态均不批准签名，退出码 0 仅代表候选物理 IR 审查及报告完成。任何物理差异或生成错误必须以非零退出停止，保留候选源码/产物及固定诊断，不自动修改或重试。真实 CLI 生成及官方 verifier/DDL/运行时类型应用验证仍是后续门禁；当前不调用 db verify、contract infer、migration plan、db sign 或 db migrate。PN_EXACT_NAME_BODY_COMPARISON 属于包内文档描述的原名称谓词精确比较提示，不得忽略真实差异。
+
+PR #213 已实测真实候选生成与 36 个 CHECK 物理 IR 检查通过，两个运行时关系差异仍阻塞；E-142 仅补齐表名类型与等价排序比较器，已成功生成的 .artifacts/prisma8-native 目录保留，不需要为此次排序修复重复真实生成或重新重放。维护者拉取修复后执行 `node --check scripts/prisma8-native-contract-review.mjs`、`node --check scripts/prisma8-native-contract.cases.mjs`、`pnpm run test:prisma8:native`（9 项）、`vp check --fix`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`，要求零警告错误。候选 d.ts 依赖与独立配置 Skills 的提示待专门评审；不为消除提示新增根依赖、关闭检查或删除候选产物。

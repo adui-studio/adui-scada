@@ -8,6 +8,7 @@ import {
   compareMigrationDatabases,
   inspectMigrationDatabase,
   loadMigrationBaseline,
+  readNativeContractCatalog,
   validateMigrationCatalog,
   validateMigrationLedger,
 } from "./inspect-prisma8-migration-readiness.mjs";
@@ -402,6 +403,31 @@ void describe("Prisma 8 独立参考库只读目录对照", () => {
         true,
       );
     }
+  });
+
+  void it("仅在两库目录完整匹配并关闭后提供原生候选元数据", async () => {
+    const actual = mockClient();
+    const reference = mockClient({ boundaryRow: referenceBoundary });
+    const result = await readNativeContractCatalog(actual.client, reference.client, baseline);
+    assert.deepEqual(result.catalog, catalog());
+    assert.equal(
+      result.report.catalogFingerprint,
+      validateMigrationCatalog(baseline, catalog()).catalogFingerprint,
+    );
+    assert.equal(result.report.signingAllowed, false);
+    assert.deepEqual(actual.calls.slice(-2), ["ROLLBACK", "关闭"]);
+    assert.deepEqual(reference.calls.slice(-2), ["ROLLBACK", "关闭"]);
+
+    const drift = catalog();
+    drift.tables[0].comment = "不同中文表注释";
+    const anotherActual = mockClient();
+    const anotherReference = mockClient({ boundaryRow: referenceBoundary, metadata: drift });
+    await assert.rejects(
+      () => readNativeContractCatalog(anotherActual.client, anotherReference.client, baseline),
+      /业务表定义或注释不一致/,
+    );
+    assert.deepEqual(anotherActual.calls.slice(-2), ["ROLLBACK", "关闭"]);
+    assert.deepEqual(anotherReference.calls.slice(-2), ["ROLLBACK", "关闭"]);
   });
 
   void it("拒绝预检能通过但原生定义或注释不一致的参考库", async () => {
