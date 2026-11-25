@@ -4941,3 +4941,11 @@ PR #208 维护者 Windows 实测 501 格式文件、343 受检文件零错误警
 新批以物理结构优先建立原生 PSL 模板，静态核对十二模型、八十五物理字段、十三外键、十二主键、二十非主键索引，明确恢复历史六字段外键，不增设冗余唯一约束。运行时采集使用已有双库只读事务与已审查目录指纹，提取普通 pg_get_constraintdef 的 CHECK 外包装内精确谓词并以 map 原名插入 36 项；独立离线生成并审查物理 IR、根、领域字段/映射、关系及生成器。故意不在本候选定义事件反向 currentReleaseState 单值导航，正式过渡 Contract 仍保留原关系；是否支持固定版本替代写法和实际运行时类型兼容待验证。输出位于根忽略目录 .artifacts/prisma8-native，拒绝覆盖旧结果，禁止签名、迁移、Provider 切换或改写正式生成物。
 
 协作容器 Node.js 22.16.0：新增评审模块与测试文件的本地 Git Blob 与远端一致，首次 7/8（E-141），修复后语法检查和实际离线测试 8/8；真实 CLI 包装器及 Mock CLI 测试 Blob `5589af7aa288f1939d75f026008bb176f89987ef`、`76c6b7d80c3f0e896ba824f48bf13553314fcea4` 与远端一致，语法检查、四项进程回归 4/4；新增编排脚本 Blob `4f27db066967d26f80bfe94b41fe217502ce4586` 与远端一致，Node 语法检查通过。以上为真实 Node 运行的离线模拟，不是 Prisma 8 原生 PSL 编译、生成类型应用编译、真实双库采集或完整仓库验收。协作容器缺 pnpm/vp 且 GitHub/npm 域名解析不可用；预检新增第十六项与其余原测试、Windows 固定工具链及真实候选生成待维护者运行。未进行数据库写入。
+
+### 2026-11-25 · PR #213 原生候选真实生成验收与排序警告修复
+
+维护者 Windows HEAD `6fbc054ad0627520c44cc7765a696f68723735d7` 实测正式 Contract emit、CLI 4/4、迁移预检及对照 16/16、重放门禁 9/9、原生评审 8/8，合计 37/37；515 个格式文件、356 个受检文件零错误但 E-142 排序告警一条，服务端类型检查通过，383 中文文案文件与 96 Markdown 通过，增量退出码 0。最终日志 HEAD 同上且 status 未输出修改。随后远端 HEAD `2bedb38ab479a9b650f0f1bbccb4afb673fb7f93` 相对实测 HEAD 的五份脚本差异已核对为格式、尾逗号和引号风格调整，未发现语义变化。
+
+真实原生候选生成成功、受检物理 IR 核验通过，CHECK 36/36，存储哈希 `6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc`，executionHash `a4d7e4794290fb3681a486309f2b191b6a804c75c010f175cdf453bcfc66df79`、profileHash `3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2` 与正式一致，正式生成物不变，评审退出码 0。结果 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED，差异仅报告 ScadaProjectReleaseEvent.currentReleaseState 和 ScadaProjectReleaseState.lastReleaseEvent，签名许可否。Prisma 输出 PN_EXACT_NAME_BODY_COMPARISON 的 36 个已采用 CHECK 提示（预期，仍需后续官方验证），另提示候选 d.ts 无法找到 @prisma/orm-postgres、独立配置的 Skills synced none。该包实际在服务端清单而非根清单，候选位于根忽略目录，类型依赖可见性及独立配置 Skills 作用域需要后续核验；本次不新增根依赖、不关闭 Skills 检查、不迁移产物路径，服务端现有类型检查通过不等于候选 d.ts 应用类型检查通过。
+
+E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回归 `17cf375756e5cc6c05c6a437296d860362e52d38`，局部 Node.js 22.16.0 提取函数四项测试 4/4、语法检查通过，提取片段本地/远端字节数及校验值一致（1624 字节、FNV-1a f02ba9ae）。正式 Windows 新九项测试及 Vite+ 零警告仍待复验。只改变表名排序的显式类型及等价比较器和新增测试，无 PSL、历史 SQL 或数据库变更；保留此前真实候选产物，无须重复重放或重建候选。PR #213 保持 Draft，未获得本次合并授权。
