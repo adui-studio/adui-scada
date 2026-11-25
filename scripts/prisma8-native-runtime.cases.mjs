@@ -90,8 +90,9 @@ void describe("原生候选离线运行时兼容评审", () => {
 
   void it("拒绝恢复反向导航或新增根模型等未审查差异", () => {
     const { formal, native } = fixture();
-    native.domain.namespaces.public.models.ScadaProjectReleaseEvent.relations =
-      structuredClone(formal.domain.namespaces.public.models.ScadaProjectReleaseEvent.relations);
+    native.domain.namespaces.public.models.ScadaProjectReleaseEvent.relations = structuredClone(
+      formal.domain.namespaces.public.models.ScadaProjectReleaseEvent.relations,
+    );
     assert.throws(() => reviewRuntimeRelations(formal, native), /未评审的运行时差异/);
     const second = fixture();
     second.native.roots = { extra: true };
@@ -150,7 +151,9 @@ void describe("原生候选离线运行时兼容评审", () => {
         options,
         host: mismatched,
       });
-      assert.ok(ts.getPreEmitDiagnostics(mismatchedProgram).some((diagnostic) => diagnostic.code === 2322));
+      assert.ok(
+        ts.getPreEmitDiagnostics(mismatchedProgram).some((diagnostic) => diagnostic.code === 2322),
+      );
       assert.equal(readFileSync(declaration, "utf8"), "export type Contract = string;\n");
       assert.equal(readFileSync(json, "utf8"), '{"value":"正式"}');
       assert.throws(() => host.writeFile(), /禁止写入/);

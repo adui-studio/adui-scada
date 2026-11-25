@@ -77,10 +77,7 @@ export function requireDeclarationHashes(declaration, contract) {
     ["ExecutionHashBase", contract.execution.executionHash],
     ["ProfileHashBase", contract.profileHash],
   ]) {
-    requireCondition(
-      declaration.includes(`${type}<'${hash}'>`),
-      "契约声明与 JSON 哈希标识不一致",
-    );
+    requireCondition(declaration.includes(`${type}<'${hash}'>`), "契约声明与 JSON 哈希标识不一致");
   }
 }
 
