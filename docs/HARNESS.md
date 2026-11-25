@@ -4649,3 +4649,7 @@ try {
 ### Prisma 8 身份会话真实数据库专项
 
 沿用已生成两版 Prisma 契约、已应用八项迁移的本机隔离库及既有显式 SCADA_TEST_DATABASE_URL / PowerShell try/finally 恢复流程，执行 `pnpm run test:db:prisma8:auth:session`。测试核验实际连接与身份、映射、会话表，创建两个随机租户及专用绑定与会话；校验双版本互认、摘要与时效、CSRF、并发撤销及停用拒绝，只清理已确认的精确会话和映射/主体键，核对零残留。创建或清理不明确时先核查，不自动重试。诊断不打印会话令牌、摘要、密码或第三方异常。该专项独立运行，不纳入日常 ready；本批执行增量质量与相关认证回归，不新增迁移、不签名、不重建容器。
+
+### Prisma 8 OIDC 登录事务真实数据库专项
+
+在现有 Prisma 7 Client、Prisma 8 Contract 和 Core 构建产物齐备且本机隔离库八项既有迁移已应用的前提下，沿用前述屏蔽输入密码、显式 SCADA_TEST_DATABASE_URL、127.0.0.1:15432/adui_scada_test、try/finally 恢复环境变量的完整 PowerShell 流程，将专项命令替换为 `pnpm run test:db:prisma8:auth:oidc`。测试使用两个随机专用 Issuer、随机合成密钥及本地 Discovery 元数据；先核验 OIDC 迁移、表与索引，禁止真实 IdP 网络请求。验证双版本加密事务互认、一次性竞争、过期及篡改拒绝和专用 Issuer 128 条分批清理；结束仅删除已确认的 Issuer/State 摘要联合条件对应记录并核对零残留。创建/清理结果不明时禁止自动重试或扩大删除范围，错误仅输出固定阶段与必要随机测试标识。不执行迁移、签名、依赖安装或容器重建；日常验收执行适用增量检查，不要求重复完整 ready。
