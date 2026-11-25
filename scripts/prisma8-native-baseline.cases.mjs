@@ -173,7 +173,13 @@ void test("拒绝占位符、非新增操作及缺少预览", () => {
       { operations: [{ operationClass: "widening" }] },
       { preview: { statements: [] } },
     ]) {
-      writeFileSync(path, JSON.stringify({ ...original, envelope: { ...original.envelope, result: { ...original.envelope.result, ...patch } } }));
+      writeFileSync(
+        path,
+        JSON.stringify({
+          ...original,
+          envelope: { ...original.envelope, result: { ...original.envelope.result, ...patch } },
+        }),
+      );
       assert.throws(
         () => inspectBaselinePackage(root, inputs.native[1]),
         /未填充占位符|非新增操作|缺少有效 SQL 预览/,
@@ -195,7 +201,13 @@ void test("拒绝错误起点、目标、路径、额外迁移和快照漂移", 
       assert.throws(() => inspectBaselinePackage(root, inputs.native[1]), /起点、目标或迁移标识/);
     }
     writeFileSync(manifestPath, JSON.stringify(manifest));
-    writeFileSync(planPath, JSON.stringify({ ...plan, envelope: { ...plan.envelope, result: { ...plan.envelope.result, dir: root } } }));
+    writeFileSync(
+      planPath,
+      JSON.stringify({
+        ...plan,
+        envelope: { ...plan.envelope, result: { ...plan.envelope.result, dir: root } },
+      }),
+    );
     assert.throws(() => inspectBaselinePackage(root, inputs.native[1]), /规划返回路径/);
     writeFileSync(planPath, JSON.stringify(plan));
     const extra = join(output, "migrations", "app", "extra");
@@ -256,7 +268,10 @@ void test("拒绝失败封装、错误命令、诊断及非离线结果", () => 
       { commandId: "migration.apply" },
       { diagnostics: [{ message: "模拟诊断" }] },
     ]) {
-      writeFileSync(path, JSON.stringify({ ...original, envelope: { ...original.envelope, ...patch } }));
+      writeFileSync(
+        path,
+        JSON.stringify({ ...original, envelope: { ...original.envelope, ...patch } }),
+      );
       assert.throws(() => inspectBaselinePackage(root, inputs.native[1]), /封装或诊断/);
     }
     writeFileSync(path, JSON.stringify(original.envelope.result));
@@ -270,8 +285,17 @@ void test("拒绝失败封装、错误命令、诊断及非离线结果", () => 
       { emittedExtensionDirs: ["模拟额外目录"] },
       { pendingPlaceholders: null },
     ]) {
-      writeFileSync(path, JSON.stringify({ ...original, envelope: { ...original.envelope, result: { ...original.envelope.result, ...patch } } }));
-      assert.throws(() => inspectBaselinePackage(root, inputs.native[1]), /起点、目标或结果|已应用语句|未填充占位符/);
+      writeFileSync(
+        path,
+        JSON.stringify({
+          ...original,
+          envelope: { ...original.envelope, result: { ...original.envelope.result, ...patch } },
+        }),
+      );
+      assert.throws(
+        () => inspectBaselinePackage(root, inputs.native[1]),
+        /起点、目标或结果|已应用语句|未填充占位符/,
+      );
     }
   });
 });
@@ -291,7 +315,10 @@ void test("实际操作与预览不一致、非新增操作及参数必须拒绝
       { execute: [{ sql: plan.preview.statements[0].text, params: [1] }] },
     ]) {
       writeFileSync(path, JSON.stringify([{ ...original, ...patch }]));
-      assert.throws(() => inspectBaselinePackage(root, inputs.native[1]), /实际操作类型|操作摘要|实际执行语句/);
+      assert.throws(
+        () => inspectBaselinePackage(root, inputs.native[1]),
+        /实际操作类型|操作摘要|实际执行语句/,
+      );
     }
   });
 });
@@ -300,7 +327,7 @@ void test("已有候选只读复验不重跑规划且拒绝副本变化", () => 
   fixture(({ root, output, cli }) => {
     const inputs = readBaselineInputs(root);
     const result = runBaselinePlanner(root, inputs, resolveBaselineCli(root));
-    writeFileSync(join(cli, "cli.mjs"), 'process.exitCode = 91;');
+    writeFileSync(join(cli, "cli.mjs"), "process.exitCode = 91;");
     const plan = readFileSync(join(output, "plan.json"), "utf8");
     const preserved = readBaselineInputs(root, true);
     assert.deepEqual(reviewExistingBaseline(root, preserved), result);

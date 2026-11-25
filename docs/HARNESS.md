@@ -4907,7 +4907,7 @@ git status --short
 
 实际独立目录已生成，禁止再运行 plan、删除或覆盖原目录。保留正式与原生候选、官方 plan.json、ops.json、迁移源码和快照；不要设置数据库 URL，也不要执行迁移源码。拉取 PR #219 修复 HEAD 后运行：
 
-~~~powershell
+```powershell
 git rev-parse HEAD
 pnpm run test:prisma8:native:baseline &&
 pnpm run test:prisma8:native &&
@@ -4918,6 +4918,6 @@ pnpm run docs:check &&
 pnpm run db:prisma8:native:baseline:review
 Write-Host "只读复验链退出码：$LASTEXITCODE"
 git status --short
-~~~
+```
 
 目标分别为 12/12、9/9、6/6，Vite+ 零警告错误；复验输出目标存储哈希 6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc、原文指纹 850ef15fcfc0455491ba73f66419f42a394f963b1a99a02870bad5cae964cffa、迁移标识 f2878cca953d47c94a4eca5b500165a1e623d49ef5a8a6c3e730ddf818bd24bd、46 项操作、BASELINE_ARTIFACT_REVIEW_REQUIRED、签名许可否、部署许可否、退出码 0。上述为实际归档已确认的预期值，不是 Windows 修复 HEAD 的实测输出。若失败保留原件和诊断，不重试规划，不更改 JSON 或哈希。实际 SQL 缺少 119 项中文注释，禁止部署；后续完整物理及注释评审、第三库重放和非空样本分别审批。
