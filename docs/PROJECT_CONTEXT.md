@@ -2806,3 +2806,7 @@ PR #212 Windows 离线 27/27、Vite+ 511/352 零警告错误、服务端类型�
 ### 2026-11-25 · PR #213 真实原生候选物理 IR 通过，运行时兼容仍阻塞
 
 维护者 Windows 37/37 离线测试、515/356 Vite+ 零错误但一条 E-142 排序警告、服务端类型检查、383 中文文案文件、96 Markdown 及增量退出码 0。真实原生候选生成及 36 个 CHECK 受检物理 IR 核验退出码 0，存储哈希 `6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc`，正式生成物不变，execution/profile 哈希一致。明确返回 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED、签名许可否，两个关系差异为 ScadaProjectReleaseEvent.currentReleaseState 与 ScadaProjectReleaseState.lastReleaseEvent。候选 d.ts 依赖可见性及独立配置 Skills 提示亦待审查。E-142 修复保持历史 UTF-16 表名排序，新增第九项离线测试，局部 4/4 通过，待 Windows 零警告复验。PR #213 Draft；后续专门验证关系与候选类型兼容、官方结构验证及新基线等价性。保留现有两库和候选证据，禁止重放、签名、迁移或正式 Provider 切换；Prisma 7 唯一正式迁移执行者，ADR-0072 Proposed。
+
+### 2026-11-25 · PR #213 排序复验通过与中文注释门禁
+
+维护者 Windows 在 `8252e1fc058b8f517f46efa5d93b7c71a4393633` 实测原生候选 9/9、Vite+ 515/356 零警告错误，E-142 关闭；中文检查失败一处，增量退出码 1，docs:check 未执行。E-143 修复提交 `a19457229be7c590850f329f8c0af36f3ef64a9e` 仅补充集合 JSDoc 中文说明，真实扫描器最小夹具修复后通过，完整仓库复验待执行。PR #213 保持 Draft；此前已验收原生物理 IR 和两库保持不变，两个运行时关系差异、候选类型依赖可见性及独立配置 Skills 仍待下一专项，签名许可否。
