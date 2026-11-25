@@ -4897,3 +4897,11 @@ PR #204 维护者 Windows 实测最终 HEAD `07983561cf1bc87a84e9ba3f5519423ee01
 新批定义五项输入及脱敏测试、一项真实 PostgreSQL 综合专项；真实专项先核对现有 OIDC 迁移登记与表、索引，使用两个随机专用 Issuer 和合成 Discovery 元数据。验证 Prisma 7/8 互相创建及消费、独立 PKCE challenge 复核、摘要与五分钟时效、跨浏览器及 Issuer 拒绝、跨版本并发恰好一次成功、过期与未来创建、跨 State 密文/Nonce/路径篡改的拒绝及不可恢复消费、138 条本 Issuer 过期记录按 128+10 回收、其他 Issuer 及未过期记录保护、已确认主键精确清理。测试不启动后台清理定时器，不连接真实 IdP，不读取任何真实凭据。
 
 协作端已通过 GitHub 源码写入回读与根脚本 JSON 检查；本地 Node 22.16.0 环境无 pnpm 且 GitHub 域名解析失败，未执行仓库固定 TypeScript/Vite+/Vitest 或 PostgreSQL。新候选的增量质量、相关单测及真实数据库专项仍待维护者 Windows 执行，不以旧 PR 成功代替本批实测。
+
+### 2026-11-25 · Prisma 8 OIDC 登录事务结案与工程 ACL 专项
+
+PR #208 维护者 Windows 实测 501 格式文件、343 受检文件零错误警告、服务端类型检查、370 中文文案、95 Markdown、30/30 单测（候选 5、现有登录事务 13、回调 12）、真实 PostgreSQL OIDC 专项 1/1（1178 ms），日志末尾 HEAD 为 `30a58668771a8c687ba2fad9435e093efecec34e` 且 Git 工作区无输出；远端最终 HEAD `f032c8ec0eb7778e420f666562b020b594baede5` 多一次三文件排版提交，已核对未发现业务逻辑变化。按明确授权 Squash 合入 `920c95d1669bc4a0e8e9f5cb8617caae60d67318`。本批不重复完整 ready。
+
+新批定义七项 ACL Guard 单测和一项真实 PostgreSQL 综合专项。测试核对实际隔离库及 release:read 迁移登记、授权索引、工程/身份/会话/发布结构，构造两个随机租户、四个身份和三个工程；比较两版 Guard 六项独立权限、同名工程、同名主体、跨租户/跨工程拒绝、缺失权限及未知动作、固定审计码，正常查询前后对照全部专用工程记录。在专用工程排他行锁内仅撤销指定版本追加和发布读取权限，验证两版 Guard 再次拒绝、两版仓储拒绝已通过 Guard 的过时请求、编辑及发布状态和其他权限不变，最后按确认创建的复合键精确清理。测试不执行发布、回滚、真实 IdP 或设备操作。
+
+协作容器实查 Node.js 22.16.0、TypeScript 5.8.3，pnpm、vp 不在 PATH，GitHub 域名解析无结果；通过 GitHub 接口写入回读、LF、根脚本 JSON 和差异范围核对，不等于运行项目类型检查、Vite+、Vitest 或真实 PostgreSQL。新候选须经维护者 Windows 增量验收，未替换正式 Prisma 7 Guard 或迁移管理。
