@@ -4949,3 +4949,9 @@ PR #208 维护者 Windows 实测 501 格式文件、343 受检文件零错误警
 真实原生候选生成成功、受检物理 IR 核验通过，CHECK 36/36，存储哈希 `6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc`，executionHash `a4d7e4794290fb3681a486309f2b191b6a804c75c010f175cdf453bcfc66df79`、profileHash `3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2` 与正式一致，正式生成物不变，评审退出码 0。结果 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED，差异仅报告 ScadaProjectReleaseEvent.currentReleaseState 和 ScadaProjectReleaseState.lastReleaseEvent，签名许可否。Prisma 输出 PN_EXACT_NAME_BODY_COMPARISON 的 36 个已采用 CHECK 提示（预期，仍需后续官方验证），另提示候选 d.ts 无法找到 @prisma/orm-postgres、独立配置的 Skills synced none。该包实际在服务端清单而非根清单，候选位于根忽略目录，类型依赖可见性及独立配置 Skills 作用域需要后续核验；本次不新增根依赖、不关闭 Skills 检查、不迁移产物路径，服务端现有类型检查通过不等于候选 d.ts 应用类型检查通过。
 
 E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回归 `17cf375756e5cc6c05c6a437296d860362e52d38`，局部 Node.js 22.16.0 提取函数四项测试 4/4、语法检查通过，提取片段本地/远端字节数及校验值一致（1624 字节、FNV-1a f02ba9ae）。正式 Windows 新九项测试及 Vite+ 零警告仍待复验。只改变表名排序的显式类型及等价比较器和新增测试，无 PSL、历史 SQL 或数据库变更；保留此前真实候选产物，无须重复重放或重建候选。PR #213 保持 Draft，未获得本次合并授权。
+
+### 2026-11-25 · PR #213 E-142 复验及 E-143 中文注释修复
+
+维护者 Windows HEAD `8252e1fc058b8f517f46efa5d93b7c71a4393633`：原生候选 9/9，Vite+ 515 个格式文件、356 个受检文件零警告/Lint/类型错误，E-142 关闭。中文检查在脚本第 62 行报告一处 JSDoc 缺少中文，增量退出码 1；后续 docs:check 未执行，日志最后工作区干净。E-143 仅补充同一行中文说明，修复提交 `a19457229be7c590850f329f8c0af36f3ef64a9e`，远端 Blob `f187b89caa8e952bbaa08bdd8db7d0b6ef6cc9a0` 回读确认仅一行注释变化。
+
+协作容器 Node.js 22.16.0：原中文检查器 Blob `00127f6ba4d622de026246be6fc0eca011099d5d` 与远端一致，在独立七文件最小夹具实测修复前退出码 1（单处 JSDoc 失败），修复后退出码 0、Node 语法检查通过；按原扫描器单行判定逻辑核对完整远端目标源码，前一处后零处。未执行修复后全仓 Vite+、九项测试、messages:check 或 docs:check，需 Windows 增量复验。仅注释修复，不改变物理 IR 或运行时关系阻塞，不重复真实生成、数据库重放或完整 ready，保持 Draft 和签名禁止。
