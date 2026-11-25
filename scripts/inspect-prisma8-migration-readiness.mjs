@@ -23,7 +23,12 @@ const lastEventKey = "scada_project_release_state_last_event_fkey";
 const chinese = /[\u3400-\u9fff]/u;
 const hexHash = /^[0-9a-f]{64}$/;
 const permissionValues = [
-  "project:read", "version:read", "version:append", "release:publish", "release:rollback", "release:read",
+  "project:read",
+  "version:read",
+  "version:append",
+  "release:publish",
+  "release:rollback",
+  "release:read",
 ];
 
 class PreflightError extends Error {}
@@ -50,7 +55,8 @@ function sqlColumns(source) {
 
 /** 只针对当前八项历史迁移的已核对 DDL 形状提取最终命名约束；不是通用 SQL 解析器。 */
 function readConstraints(sql, constraints) {
-  const tokens = /(?:CREATE TABLE|ALTER TABLE)\s+"(scada_[a-z0-9_]+)"|\bCONSTRAINT\s+"(scada_[a-z0-9_]+)"\s+(PRIMARY KEY|FOREIGN KEY|CHECK)\b/g;
+  const tokens =
+    /(?:CREATE TABLE|ALTER TABLE)\s+"(scada_[a-z0-9_]+)"|\bCONSTRAINT\s+"(scada_[a-z0-9_]+)"\s+(PRIMARY KEY|FOREIGN KEY|CHECK)\b/g;
   let table = "";
   for (const token of sql.matchAll(tokens)) {
     if (token[1]) {
@@ -63,7 +69,9 @@ function readConstraints(sql, constraints) {
     const entry = { name, table, kind };
     if (kind === "f") {
       const tail = sql.slice(token.index + token[0].length);
-      const shape = tail.match(/^\s*\(([^)]+)\)\s+REFERENCES\s+"([a-z0-9_]+)"\s*\(([^)]+)\)\s+ON DELETE RESTRICT\s+ON UPDATE CASCADE/);
+      const shape = tail.match(
+        /^\s*\(([^)]+)\)\s+REFERENCES\s+"([a-z0-9_]+)"\s*\(([^)]+)\)\s+ON DELETE RESTRICT\s+ON UPDATE CASCADE/,
+      );
       requireCondition(shape !== null, "历史外键超出受控提取范围");
       entry.source = sqlColumns(shape[1]);
       entry.target = shape[2];
@@ -82,11 +90,16 @@ function contractForeignKeys(tables) {
   for (const [table, model] of Object.entries(tables)) {
     for (const key of model.foreignKeys) {
       requireCondition(
-        key.source.namespaceId === "public" && key.source.tableName === table &&
-          key.target.namespaceId === "public" && key.onDelete === "restrict" && key.onUpdate === "cascade",
+        key.source.namespaceId === "public" &&
+          key.source.tableName === table &&
+          key.target.namespaceId === "public" &&
+          key.onDelete === "restrict" &&
+          key.onUpdate === "cascade",
         "契约外键命名空间或引用规则发生变化",
       );
-      result.add(foreignKeyShape(table, key.source.columns, key.target.tableName, key.target.columns));
+      result.add(
+        foreignKeyShape(table, key.source.columns, key.target.tableName, key.target.columns),
+      );
     }
   }
   return result;
@@ -95,7 +108,9 @@ function contractForeignKeys(tables) {
 /** 仅读取本仓库已跟踪的历史迁移与生成契约，不生成文件或改写历史。 */
 export function loadMigrationBaseline() {
   const directories = readdirSync(migrationRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
   same(directories, expectedMigrations, "历史迁移清单变化，必须重新审查接管基线");
   const lock = readFileSync(join(migrationRoot, "migration_lock.toml"), "utf8");
   requireCondition(/^provider = "postgresql"$/m.test(lock), "历史迁移数据库类型锁不匹配");
@@ -106,41 +121,93 @@ export function loadMigrationBaseline() {
     readConstraints(sql, constraints);
     return { name, checksum: digest(sql) };
   });
-  const contract = JSON.parse(readFileSync(join(server, "src", "generated", "prisma8", "contract.json"), "utf8"));
+  const contract = JSON.parse(
+    readFileSync(join(server, "src", "generated", "prisma8", "contract.json"), "utf8"),
+  );
   const storage = contract.storage;
-  requireCondition(contract.targetFamily === "sql" && contract.target === "postgres" &&
-    hexHash.test(storage?.storageHash ?? ""), "生成的 Prisma 8 PostgreSQL 契约无效");
+  requireCondition(
+    contract.targetFamily === "sql" &&
+      contract.target === "postgres" &&
+      hexHash.test(storage?.storageHash ?? ""),
+    "生成的 Prisma 8 PostgreSQL 契约无效",
+  );
   same(Object.keys(storage.namespaces), ["public"], "契约命名空间发生变化");
   const tables = storage.namespaces.public.entries.table;
   const tableNames = Object.keys(tables).sort();
   same(Object.keys(contract.roots).sort(), tableNames, "契约根模型与物理表不一致");
-  requireCondition(tableNames.length === 12 &&
-    tableNames.every((name) => /^scada_[a-z0-9_]+$/.test(name)), "业务表基线发生变化");
+  requireCondition(
+    tableNames.length === 12 && tableNames.every((name) => /^scada_[a-z0-9_]+$/.test(name)),
+    "业务表基线发生变化",
+  );
   const checks = [...constraints.values()].filter((entry) => entry.kind === "c");
   const primaryKeys = [...constraints.values()].filter((entry) => entry.kind === "p");
   const foreignKeys = [...constraints.values()].filter((entry) => entry.kind === "f");
-  requireCondition(checks.length === 36 && primaryKeys.length === 12 && foreignKeys.length === 13,
-    "历史主键、外键或 CHECK 清单发生变化");
+  requireCondition(
+    checks.length === 36 && primaryKeys.length === 12 && foreignKeys.length === 13,
+    "历史主键、外键或 CHECK 清单发生变化",
+  );
   const emittedKeys = contractForeignKeys(tables);
-  const nativeKeys = new Set(foreignKeys.map((key) => foreignKeyShape(key.table, key.source, key.target, key.targetColumns)));
+  const nativeKeys = new Set(
+    foreignKeys.map((key) => foreignKeyShape(key.table, key.source, key.target, key.targetColumns)),
+  );
   requireCondition(emittedKeys.size === 13 && nativeKeys.size === 13, "外键数量与基线不一致");
-  const gap = foreignKeys.filter((key) => !emittedKeys.has(foreignKeyShape(key.table, key.source, key.target, key.targetColumns)));
-  same(gap.map((key) => key.name), [lastEventKey], "契约与历史外键出现新的差异");
+  const gap = foreignKeys.filter(
+    (key) =>
+      !emittedKeys.has(foreignKeyShape(key.table, key.source, key.target, key.targetColumns)),
+  );
+  same(
+    gap.map((key) => key.name),
+    [lastEventKey],
+    "契约与历史外键出现新的差异",
+  );
   const nativeLastEvent = constraints.get(lastEventKey);
-  same(nativeLastEvent?.source,
-    ["tenant_id", "project_id", "release_generation", "released_revision", "released_content_hash", "last_release_event_id"],
-    "末次事件历史复合外键源列发生变化");
-  same(nativeLastEvent?.targetColumns,
+  same(
+    nativeLastEvent?.source,
+    [
+      "tenant_id",
+      "project_id",
+      "release_generation",
+      "released_revision",
+      "released_content_hash",
+      "last_release_event_id",
+    ],
+    "末次事件历史复合外键源列发生变化",
+  );
+  same(
+    nativeLastEvent?.targetColumns,
     ["tenant_id", "project_id", "generation", "to_revision", "to_content_hash", "event_id"],
-    "末次事件历史复合外键目标列发生变化");
-  const simplified = foreignKeyShape("scada_project_release_state", ["last_release_event_id"], "scada_project_release_events", ["event_id"]);
-  same([...emittedKeys].filter((key) => !nativeKeys.has(key)), [simplified], "契约末次事件关联差异发生变化");
-  requireCondition(Object.values(tables).every((table) => !table.checks || Object.keys(table.checks).length === 0),
-    "契约 CHECK 表达已变化，必须重新审查差异");
-  const columnCount = Object.values(tables).reduce((sum, table) => sum + Object.keys(table.columns).length, 0);
+    "末次事件历史复合外键目标列发生变化",
+  );
+  const simplified = foreignKeyShape(
+    "scada_project_release_state",
+    ["last_release_event_id"],
+    "scada_project_release_events",
+    ["event_id"],
+  );
+  same(
+    [...emittedKeys].filter((key) => !nativeKeys.has(key)),
+    [simplified],
+    "契约末次事件关联差异发生变化",
+  );
+  requireCondition(
+    Object.values(tables).every((table) => !table.checks || Object.keys(table.checks).length === 0),
+    "契约 CHECK 表达已变化，必须重新审查差异",
+  );
+  const columnCount = Object.values(tables).reduce(
+    (sum, table) => sum + Object.keys(table.columns).length,
+    0,
+  );
   const indexCount = Object.values(tables).reduce((sum, table) => sum + table.indexes.length, 0);
   requireCondition(columnCount === 85 && indexCount === 20, "物理字段或索引基线发生变化");
-  return { migrations, tables, tableNames, constraints, columnCount, indexCount, contractHash: storage.storageHash };
+  return {
+    migrations,
+    tables,
+    tableNames,
+    constraints,
+    columnCount,
+    indexCount,
+    contractHash: storage.storageHash,
+  };
 }
 
 /** 严格比对实际已完成记录与本地 LF 原文 SHA-256；异常历史一律停止，不自动修复。 */
@@ -150,14 +217,22 @@ export function validateMigrationLedger(baseline, rows) {
   requireCondition(byName.size === rows.length, "Prisma 7 迁移登记存在重复记录");
   for (const migration of baseline.migrations) {
     const row = byName.get(migration.name);
-    requireCondition(row?.finished === true && row.rolled_back === false &&
-      Number.isInteger(row.applied_steps_count) && row.applied_steps_count > 0, "Prisma 7 迁移缺失、未完成或存在回滚");
+    requireCondition(
+      row?.finished === true &&
+        row.rolled_back === false &&
+        Number.isInteger(row.applied_steps_count) &&
+        row.applied_steps_count > 0,
+      "Prisma 7 迁移缺失、未完成或存在回滚",
+    );
     requireCondition(row.checksum === migration.checksum, "Prisma 7 历史迁移校验和不一致");
   }
 }
 
 function requireComment(value) {
-  requireCondition(typeof value === "string" && chinese.test(value), "业务表、字段或非主键索引缺少中文数据库注释");
+  requireCondition(
+    typeof value === "string" && chinese.test(value),
+    "业务表、字段或非主键索引缺少中文数据库注释",
+  );
 }
 
 function validateColumns(baseline, columns) {
@@ -167,12 +242,17 @@ function validateColumns(baseline, columns) {
   for (const [tableName, table] of Object.entries(baseline.tables)) {
     for (const [name, expected] of Object.entries(table.columns)) {
       const row = byKey.get(tableName + "." + name);
-      requireCondition(row && expected.dataType === "pg/" + row.udt_name &&
-        row.nullable === expected.nullable &&
-        (expected.typeParams?.length === undefined || row.character_length === expected.typeParams.length) &&
-        (expected.typeParams?.precision === undefined || row.datetime_precision === expected.typeParams.precision) &&
-        (row.default_expression !== null) === Boolean(expected.default),
-        "实际业务字段类型、长度、精度、空值或默认值存在性不一致");
+      requireCondition(
+        row &&
+          expected.dataType === "pg/" + row.udt_name &&
+          row.nullable === expected.nullable &&
+          (expected.typeParams?.length === undefined ||
+            row.character_length === expected.typeParams.length) &&
+          (expected.typeParams?.precision === undefined ||
+            row.datetime_precision === expected.typeParams.precision) &&
+          (row.default_expression !== null) === Boolean(expected.default),
+        "实际业务字段类型、长度、精度、空值或默认值存在性不一致",
+      );
       requireComment(row.comment);
     }
   }
@@ -182,8 +262,11 @@ function validatePermissionCheck(definition) {
   // 只接受 PostgreSQL 展开的六项固定白名单表达式；不以约束名称存在替代定义核验。
   const normalized = definition.replace(/[\s()"]/g, "").replaceAll("::text", "");
   const values = permissionValues.map((value) => "'" + value + "'").join(",");
-  requireCondition(normalized === "CHECKpermission=ANYARRAY[" + values + "]" ||
-    normalized === "CHECKpermissionIN" + values, "工程 ACL 实际权限白名单定义不一致");
+  requireCondition(
+    normalized === "CHECKpermission=ANYARRAY[" + values + "]" ||
+      normalized === "CHECKpermissionIN" + values,
+    "工程 ACL 实际权限白名单定义不一致",
+  );
 }
 
 function validateConstraints(baseline, rows) {
@@ -192,18 +275,39 @@ function validateConstraints(baseline, rows) {
   requireCondition(byName.size === rows.length, "实际业务约束名称重复");
   for (const expected of baseline.constraints.values()) {
     const row = byName.get(expected.name);
-    requireCondition(row?.table_name === expected.table && row.kind === expected.kind &&
-      row.validated === true && row.deferrable === false && row.deferred === false &&
-      typeof row.definition === "string" && row.definition.length > 0, "实际命名约束缺失、未验证或规则不一致");
+    requireCondition(
+      row?.table_name === expected.table &&
+        row.kind === expected.kind &&
+        row.validated === true &&
+        row.deferrable === false &&
+        row.deferred === false &&
+        typeof row.definition === "string" &&
+        row.definition.length > 0,
+      "实际命名约束缺失、未验证或规则不一致",
+    );
     if (expected.kind === "p") {
-      same(row.source_columns, baseline.tables[expected.table].primaryKey.columns, "实际主键字段或顺序不一致");
+      same(
+        row.source_columns,
+        baseline.tables[expected.table].primaryKey.columns,
+        "实际主键字段或顺序不一致",
+      );
     } else if (expected.kind === "f") {
-      same([row.source_columns, row.target_schema, row.target_table, row.target_columns,
-        row.delete_rule, row.update_rule, row.match_type],
-      [expected.source, "public", expected.target, expected.targetColumns, "r", "c", "s"],
-      "实际外键字段、顺序、引用范围或动作不一致");
+      same(
+        [
+          row.source_columns,
+          row.target_schema,
+          row.target_table,
+          row.target_columns,
+          row.delete_rule,
+          row.update_rule,
+          row.match_type,
+        ],
+        [expected.source, "public", expected.target, expected.targetColumns, "r", "c", "s"],
+        "实际外键字段、顺序、引用范围或动作不一致",
+      );
     }
-    if (expected.name === "scada_project_grants_permission_check") validatePermissionCheck(row.definition);
+    if (expected.name === "scada_project_grants_permission_check")
+      validatePermissionCheck(row.definition);
   }
 }
 
@@ -214,9 +318,15 @@ function validateIndexes(baseline, rows) {
   for (const [tableName, table] of Object.entries(baseline.tables)) {
     for (const index of table.indexes) {
       const row = byName.get(index.name);
-      requireCondition(row?.table_name === tableName && row.unique === index.unique &&
-        row.valid === true && row.ready === true && row.simple === true && row.method === "btree",
-        "实际索引所属表、唯一性、可用性或方法不一致");
+      requireCondition(
+        row?.table_name === tableName &&
+          row.unique === index.unique &&
+          row.valid === true &&
+          row.ready === true &&
+          row.simple === true &&
+          row.method === "btree",
+        "实际索引所属表、唯一性、可用性或方法不一致",
+      );
       same(row.columns, index.columns, "实际索引字段或顺序不一致");
       requireComment(row.comment);
     }
@@ -225,7 +335,11 @@ function validateIndexes(baseline, rows) {
 
 /** 只证明选定元数据检查通过；完整 CHECK 语义、默认表达式和基线重放仍待审查。 */
 export function validateMigrationCatalog(baseline, catalog) {
-  same(catalog.tables.map((row) => row.table_name).sort(), baseline.tableNames, "实际业务表清单不一致");
+  same(
+    catalog.tables.map((row) => row.table_name).sort(),
+    baseline.tableNames,
+    "实际业务表清单不一致",
+  );
   for (const row of catalog.tables) requireComment(row.comment);
   validateColumns(baseline, catalog.columns);
   validateConstraints(baseline, catalog.constraints);
@@ -315,10 +429,18 @@ export async function inspectMigrationDatabase(client, baseline) {
     stage = "隔离库与数据库标记";
     const boundary = (await client.query(sql.boundary)).rows;
     const row = boundary[0];
-    requireCondition(boundary.length === 1 && row?.database_name === "adui_scada_test" &&
-      row.schema_name === "public" && row.read_only === "on" && row.isolation === "repeatable read",
-      "实际数据库或只读事务边界不符合预期");
-    requireCondition(row.marker_schema === false && row.marker_table === false, "发现 Prisma 8 标记或保留命名空间，必须人工审查");
+    requireCondition(
+      boundary.length === 1 &&
+        row?.database_name === "adui_scada_test" &&
+        row.schema_name === "public" &&
+        row.read_only === "on" &&
+        row.isolation === "repeatable read",
+      "实际数据库或只读事务边界不符合预期",
+    );
+    requireCondition(
+      row.marker_schema === false && row.marker_table === false,
+      "发现 Prisma 8 标记或保留命名空间，必须人工审查",
+    );
     requireCondition(row.legacy_ledger === true, "缺少 Prisma 7 历史迁移登记");
     stage = "历史迁移登记";
     const ledger = (await client.query(sql.ledger, [baseline.migrations.length + 1])).rows;
@@ -330,15 +452,26 @@ export async function inspectMigrationDatabase(client, baseline) {
       constraints: (await client.query(sql.constraints, [baseline.tableNames])).rows,
       indexes: (await client.query(sql.indexes, [baseline.tableNames])).rows,
     };
-    result = { ...validateMigrationCatalog(baseline, catalog), marker: "ABSENT",
-      timezoneUtc: ["UTC", "Etc/UTC", "GMT"].includes(row.timezone) };
+    result = {
+      ...validateMigrationCatalog(baseline, catalog),
+      marker: "ABSENT",
+      timezoneUtc: ["UTC", "Etc/UTC", "GMT"].includes(row.timezone),
+    };
   } catch (error) {
     failures.push(error instanceof PreflightError ? error.message : stage + "失败");
   } finally {
     if (begun) {
-      try { await client.query(sql.rollback); } catch { failures.push("只读快照回滚失败"); }
+      try {
+        await client.query(sql.rollback);
+      } catch {
+        failures.push("只读快照回滚失败");
+      }
     }
-    try { await client.end(); } catch { failures.push("数据库连接关闭失败"); }
+    try {
+      await client.end();
+    } catch {
+      failures.push("数据库连接关闭失败");
+    }
   }
   if (failures.length > 0) throw new PreflightError("迁移接管只读预检失败：" + failures.join("；"));
   requireCondition(result !== undefined, "迁移接管只读预检未产生有效结果");
@@ -359,12 +492,22 @@ async function main() {
   const client = new Client({
     connectionString,
     connectionTimeoutMillis: 5000,
-    options: "-c default_transaction_read_only=on -c statement_timeout=5000 -c lock_timeout=2000 -c search_path=public",
+    options:
+      "-c default_transaction_read_only=on -c statement_timeout=5000 -c lock_timeout=2000 -c search_path=public",
   });
   const result = await inspectMigrationDatabase(client, baseline);
   console.info("Prisma 8 接管只读预检通过，仍须专项审查；未执行签名、迁移或业务写入");
-  console.info("历史迁移：" + result.migrations + "；业务表：" + result.tables + "；字段：" + result.columns);
-  console.info("原生 CHECK：" + result.checks + "；外键：" + result.foreignKeys + "；非主键索引：" + result.indexes);
+  console.info(
+    "历史迁移：" + result.migrations + "；业务表：" + result.tables + "；字段：" + result.columns,
+  );
+  console.info(
+    "原生 CHECK：" +
+      result.checks +
+      "；外键：" +
+      result.foreignKeys +
+      "；非主键索引：" +
+      result.indexes,
+  );
   console.info("Prisma 8 标记不存在；UTC 会话时区：" + (result.timezoneUtc ? "是" : "否，待审查"));
   console.info("契约存储哈希：" + result.contractHash);
   console.info("实际目录结构指纹：" + result.catalogFingerprint);
