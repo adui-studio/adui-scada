@@ -1,7 +1,9 @@
 import { isDeepStrictEqual } from "node:util";
 
+export class NativeContractReviewError extends Error {}
+
 function requireCondition(condition, message) {
-  if (!condition) throw new Error(message);
+  if (!condition) throw new NativeContractReviewError(message);
 }
 
 function same(actual, expected, message) {
@@ -89,6 +91,7 @@ export function reviewNativeContract(formal, candidate, baseline, checks) {
   same(candidate.targetFamily, formal.targetFamily, "候选目标数据库族不一致");
   same(candidate.target, formal.target, "候选目标数据库不一致");
   same(names(candidate.storage.namespaces), ["public"], "候选物理命名空间不一致");
+  same(names(candidate.storage.namespaces.public.entries), names(formal.storage.namespaces.public.entries), "候选物理对象种类不一致");
   const tables = candidate.storage.namespaces.public.entries.table;
   same(names(tables), baseline.tableNames, "候选物理表清单不一致");
   for (const tableName of baseline.tableNames) {
