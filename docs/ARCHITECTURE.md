@@ -513,3 +513,7 @@ PR #202 已在真实隔离库完成 Prisma 7 写入后的 Prisma 7/8/原生 SQL 
 ### Prisma 8 身份与会话候选（隔离验证）
 
 新增独立 `Prisma8AuthSessionService`，在可信 Issuer 与已验签主体的调用方前提下查询现有外部身份映射，不创建身份或绑定。签发在主体共享锁内核验 active 状态，沿用现有随机令牌、CSRF 摘要及十五分钟有效期；认证兼容原 Bearer/Cookie 语义，撤销按租户、主体、会话精确条件执行。候选只供本机隔离库事务验证，不替换正式 NestJS 认证 Provider、OIDC 回调、Guard 或发布安全门禁。OIDC 登录事务持久化与一次性消费另批迁移。
+
+### Prisma 8 OIDC 登录事务候选（隔离验证）
+
+新增独立 `Prisma8OidcLoginTransactionService`，沿用已验证的授权请求构造、State/浏览器绑定摘要、AES-256-GCM 与 State 摘要 AAD、五分钟有效期及进程内匿名限流规则。Prisma 8 参数化事务负责创建、带行锁的一次性消费和有界过期清理；消费提交后才解密并返回 PKCE verifier，保持异常事务已消费的拒绝语义。仅允许本机隔离库和随机专用测试 Issuer；清理限定该 Issuer，不接管原服务全局过期清理，不注册正式 Provider、路由或真实身份提供方联调。正式 Prisma 7 登录事务、认证与工程安全边界不变。
