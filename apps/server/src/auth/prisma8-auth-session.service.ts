@@ -4,7 +4,11 @@ import { ForbiddenException } from "@nestjs/common";
 import type { PostgresClient, PostgresTransactionContext } from "@prisma/orm-postgres/runtime";
 import type { Contract } from "../generated/prisma8/contract.d.js";
 import type { AuthenticatedProjectPrincipal } from "../projects/project-access-policy.js";
-import type { AuthenticatedSession, CookieSessionAuthenticationResult, IssuedAuthSession } from "./auth-session.service.js";
+import type {
+  AuthenticatedSession,
+  CookieSessionAuthenticationResult,
+  IssuedAuthSession,
+} from "./auth-session.service.js";
 
 type Tx = PostgresTransactionContext<Contract>;
 const OPTIONS = { isolationLevel: "ReadCommitted", timeout: 10000 } as const;
@@ -94,17 +98,26 @@ export class Prisma8AuthSessionService {
     issuer: unknown,
     subject: unknown,
   ): Promise<AuthenticatedProjectPrincipal | null> {
-    if (typeof issuer !== "string" || issuer !== expectedIssuer || issuer.length === 0 ||
-        issuer.length > 512 || !isValidSubject(subject)) return null;
+    if (
+      typeof issuer !== "string" ||
+      issuer !== expectedIssuer ||
+      issuer.length === 0 ||
+      issuer.length > 512 ||
+      !isValidSubject(subject)
+    )
+      return null;
     return this.client.transaction(async (tx) => {
       await requireBoundary(tx);
-      const rows = await tx.query(
-        tx.raw.sql`SELECT e.tenant_id::text AS tenant_id, e.subject_id::text AS subject_id
+      const rows = await tx
+        .query(
+          tx.raw.sql`SELECT e.tenant_id::text AS tenant_id, e.subject_id::text AS subject_id
           FROM public.scada_external_identities e
           JOIN public.scada_identities i ON i.tenant_id = e.tenant_id AND i.subject_id = e.subject_id
           WHERE e.issuer = ${issuer} AND e.subject = ${subject} AND i.status = 'active'`
-          .returnsRow({ tenant_id: "pg/text@1", subject_id: "pg/text@1" }).build(),
-      ).toArray();
+            .returnsRow({ tenant_id: "pg/text@1", subject_id: "pg/text@1" })
+            .build(),
+        )
+        .toArray();
       const row = rows[0];
       if (rows.length !== 1 || !row) return null;
       const principal = { tenantId: row.tenant_id, subjectId: row.subject_id };
@@ -112,16 +125,21 @@ export class Prisma8AuthSessionService {
     }, OPTIONS);
   }
 
-  async issueForVerifiedSubject(principal: AuthenticatedProjectPrincipal): Promise<IssuedAuthSession> {
+  async issueForVerifiedSubject(
+    principal: AuthenticatedProjectPrincipal,
+  ): Promise<IssuedAuthSession> {
     if (!validPrincipal(principal)) throw new ForbiddenException("无效的可信主体，禁止签发会话");
     const { tenantId, subjectId } = principal;
     return this.client.transaction(async (tx) => {
       await requireBoundary(tx);
-      const identities = await tx.query(
-        tx.raw.sql`SELECT status::text AS status FROM public.scada_identities
+      const identities = await tx
+        .query(
+          tx.raw.sql`SELECT status::text AS status FROM public.scada_identities
           WHERE tenant_id = ${tenantId} AND subject_id = ${subjectId} FOR SHARE`
-          .returnsRow({ status: "pg/text@1" }).build(),
-      ).toArray();
+            .returnsRow({ status: "pg/text@1" })
+            .build(),
+        )
+        .toArray();
       if (identities.length !== 1 || identities[0]?.status !== "active") {
         throw new ForbiddenException("主体不存在或已停用，禁止签发会话");
       }
@@ -138,7 +156,8 @@ export class Prisma8AuthSessionService {
           (session_id, tenant_id, subject_id, token_hash, csrf_token_hash, issued_at, expires_at)
           VALUES (${sessionId}::uuid, ${tenantId}, ${subjectId}, ${tokenHash}, ${csrfTokenHash},
             ${issuedAt.toISOString()}::timestamptz, ${expiresAt.toISOString()}::timestamptz)`
-          .affectedCount().build(),
+          .affectedCount()
+          .build(),
       );
       if (result.affectedRows !== 1) throw new Error("本地会话创建失败，请稍后重试");
       return { sessionId, token, csrfToken, expiresAt };
@@ -208,17 +227,27 @@ export class Prisma8AuthSessionService {
   }
 
   /** 只按可信租户、主体与会话联合条件撤销，重复撤销返回 false。 */
-  async revokeForVerifiedSubject(principal: AuthenticatedProjectPrincipal, sessionId: string): Promise<boolean> {
-    if (!validPrincipal(principal) || typeof sessionId !== "string" || !SESSION_ID_PATTERN.test(sessionId)) {
+  async revokeForVerifiedSubject(
+    principal: AuthenticatedProjectPrincipal,
+    sessionId: string,
+  ): Promise<boolean> {
+    if (
+      !validPrincipal(principal) ||
+      typeof sessionId !== "string" ||
+      !SESSION_ID_PATTERN.test(sessionId)
+    ) {
       throw new ForbiddenException("撤销会话的主体或标识无效");
     }
     const { tenantId, subjectId } = principal;
     return this.client.transaction(async (tx) => {
       await requireBoundary(tx);
       const result = await tx.execute(
-        tx.raw.sql`UPDATE public.scada_auth_sessions SET revoked_at = ${new Date().toISOString()}::timestamptz
+        tx.raw
+          .sql`UPDATE public.scada_auth_sessions SET revoked_at = ${new Date().toISOString()}::timestamptz
           WHERE session_id = ${sessionId}::uuid AND tenant_id = ${tenantId} AND subject_id = ${subjectId}
-            AND revoked_at IS NULL`.affectedCount().build(),
+            AND revoked_at IS NULL`
+          .affectedCount()
+          .build(),
       );
       if (result.affectedRows > 1) throw new Error("会话撤销影响行数异常");
       return result.affectedRows === 1;
@@ -229,28 +258,46 @@ export class Prisma8AuthSessionService {
     const tokenHash = hashToken(token);
     return this.client.transaction(async (tx) => {
       await requireBoundary(tx);
-      const rows = await tx.query(
-        tx.raw.sql`SELECT s.session_id::text AS session_id, s.tenant_id::text AS tenant_id,
+      const rows = await tx
+        .query(
+          tx.raw.sql`SELECT s.session_id::text AS session_id, s.tenant_id::text AS tenant_id,
           s.subject_id::text AS subject_id, COALESCE(s.csrf_token_hash, '')::text AS csrf_hash,
           (s.csrf_token_hash IS NULL)::text AS csrf_is_null,
           s.issued_at::text AS issued_at, s.expires_at::text AS expires_at
           FROM public.scada_auth_sessions s
           JOIN public.scada_identities i ON i.tenant_id = s.tenant_id AND i.subject_id = s.subject_id
           WHERE s.token_hash = ${tokenHash} AND s.revoked_at IS NULL AND i.status = 'active'`
-          .returnsRow({
-            session_id: "pg/text@1", tenant_id: "pg/text@1", subject_id: "pg/text@1",
-            csrf_hash: "pg/text@1", csrf_is_null: "pg/text@1", issued_at: "pg/text@1", expires_at: "pg/text@1",
-          }).build(),
-      ).toArray();
+            .returnsRow({
+              session_id: "pg/text@1",
+              tenant_id: "pg/text@1",
+              subject_id: "pg/text@1",
+              csrf_hash: "pg/text@1",
+              csrf_is_null: "pg/text@1",
+              issued_at: "pg/text@1",
+              expires_at: "pg/text@1",
+            })
+            .build(),
+        )
+        .toArray();
       const row = rows[0];
       if (rows.length !== 1 || !row) return null;
       const now = Date.now();
       const issuedAt = Date.parse(row.issued_at);
       const expiresAt = Date.parse(row.expires_at);
-      if (!Number.isFinite(issuedAt) || !Number.isFinite(expiresAt) || issuedAt > now || expiresAt <= now) return null;
+      if (
+        !Number.isFinite(issuedAt) ||
+        !Number.isFinite(expiresAt) ||
+        issuedAt > now ||
+        expiresAt <= now
+      )
+        return null;
       if (row.csrf_is_null !== "true" && row.csrf_is_null !== "false") return null;
-      return { sessionId: row.session_id, tenantId: row.tenant_id, subjectId: row.subject_id,
-        csrfTokenHash: row.csrf_is_null === "true" ? null : row.csrf_hash };
+      return {
+        sessionId: row.session_id,
+        tenantId: row.tenant_id,
+        subjectId: row.subject_id,
+        csrfTokenHash: row.csrf_is_null === "true" ? null : row.csrf_hash,
+      };
     }, OPTIONS);
   }
 }

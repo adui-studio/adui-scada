@@ -58,21 +58,31 @@ async function verifySessions(): Promise<"MATCHED"> {
     const options = "-c statement_timeout=5000 -c lock_timeout=2000";
     const writable = new Pool({ ...base, max: 2, options });
     pool = writable;
-    writable.on("error", () => { poolFailed = true; });
+    writable.on("error", () => {
+      poolFailed = true;
+    });
     const legacy = new PrismaClient({ adapter: new PrismaPg({ ...base, max: 2, options }) });
     old = legacy;
     await legacy.$connect();
     stage = "隔离库及身份结构预检";
-    const boundary = await legacy.$queryRaw<Array<{ database_name: string; schema_name: string; read_only: string; ready: boolean }>>`
+    const boundary = await legacy.$queryRaw<
+      Array<{ database_name: string; schema_name: string; read_only: string; ready: boolean }>
+    >`
       SELECT current_database()::text AS database_name, current_schema()::text AS schema_name,
         current_setting('transaction_read_only') AS read_only,
         (to_regclass('public.scada_identities') IS NOT NULL AND
          to_regclass('public.scada_external_identities') IS NOT NULL AND
          to_regclass('public.scada_auth_sessions') IS NOT NULL) AS ready
     `;
-    same(boundary, [{ database_name: "adui_scada_test", schema_name: "public", read_only: "off", ready: true }]);
-    const poolBoundary = await writable.query("SELECT current_database()::text AS database_name, current_schema()::text AS schema_name, current_setting('transaction_read_only') AS read_only");
-    same(poolBoundary.rows, [{ database_name: "adui_scada_test", schema_name: "public", read_only: "off" }]);
+    same(boundary, [
+      { database_name: "adui_scada_test", schema_name: "public", read_only: "off", ready: true },
+    ]);
+    const poolBoundary = await writable.query(
+      "SELECT current_database()::text AS database_name, current_schema()::text AS schema_name, current_setting('transaction_read_only') AS read_only",
+    );
+    same(poolBoundary.rows, [
+      { database_name: "adui_scada_test", schema_name: "public", read_only: "off" },
+    ]);
     const next = postgres({ contract, pg: writable });
     client = next;
     const previous = new AuthSessionService({
@@ -88,10 +98,17 @@ async function verifySessions(): Promise<"MATCHED"> {
       same(await tx.scadaIdentity.count({ where: { OR: identities } }), 0);
       same(await tx.scadaExternalIdentity.count({ where: { OR: bindings } }), 0);
       same((await tx.scadaIdentity.createMany({ data: identities })).count, 2);
-      same((await tx.scadaExternalIdentity.createMany({ data: [
-        { ...binding, ...actor },
-        { ...secondBinding, ...other },
-      ] })).count, 2);
+      same(
+        (
+          await tx.scadaExternalIdentity.createMany({
+            data: [
+              { ...binding, ...actor },
+              { ...secondBinding, ...other },
+            ],
+          })
+        ).count,
+        2,
+      );
     });
     ownsIdentities = true;
     ownsBindings = true;
@@ -101,22 +118,50 @@ async function verifySessions(): Promise<"MATCHED"> {
     const mapped = await candidate.resolveVerifiedExternalIdentity(issuer, issuer, binding.subject);
     same(mapped, actor);
     const oldMapped = await legacy.scadaExternalIdentity.findUniqueOrThrow({
-      where: { issuer_subject: binding }, select: { tenantId: true, subjectId: true },
+      where: { issuer_subject: binding },
+      select: { tenantId: true, subjectId: true },
     });
     same(mapped, oldMapped);
-    same(await candidate.resolveVerifiedExternalIdentity(issuer, issuer, secondBinding.subject), other);
-    same(await candidate.resolveVerifiedExternalIdentity(issuer, issuer + "/other", binding.subject), null);
+    same(
+      await candidate.resolveVerifiedExternalIdentity(issuer, issuer, secondBinding.subject),
+      other,
+    );
+    same(
+      await candidate.resolveVerifiedExternalIdentity(issuer, issuer + "/other", binding.subject),
+      null,
+    );
     same(await candidate.resolveVerifiedExternalIdentity(issuer, issuer, "missing-" + id), null);
     same(await legacy.scadaExternalIdentity.count({ where: { issuer } }), 2);
 
-    const issue = async (service: AuthSessionService | Prisma8AuthSessionService, principal = actor): Promise<IssuedAuthSession> => {
+    const issue = async (
+      service: AuthSessionService | Prisma8AuthSessionService,
+      principal = actor,
+    ): Promise<IssuedAuthSession> => {
       creationUnconfirmed = true;
       const result = await service.issueForVerifiedSubject(principal);
       sessionKeys.push({ ...principal, sessionId: result.sessionId });
       creationUnconfirmed = false;
-      const stored = await legacy.scadaAuthSession.findUniqueOrThrow({ where: { sessionId: result.sessionId } });
-      same([stored.tenantId, stored.subjectId, stored.tokenHash, stored.csrfTokenHash, stored.revokedAt, stored.expiresAt],
-        [principal.tenantId, principal.subjectId, hash(result.token), hash(result.csrfToken), null, result.expiresAt]);
+      const stored = await legacy.scadaAuthSession.findUniqueOrThrow({
+        where: { sessionId: result.sessionId },
+      });
+      same(
+        [
+          stored.tenantId,
+          stored.subjectId,
+          stored.tokenHash,
+          stored.csrfTokenHash,
+          stored.revokedAt,
+          stored.expiresAt,
+        ],
+        [
+          principal.tenantId,
+          principal.subjectId,
+          hash(result.token),
+          hash(result.csrfToken),
+          null,
+          result.expiresAt,
+        ],
+      );
       same(/^[a-f0-9]{64}$/.test(stored.tokenHash), true);
       same(stored.tokenHash === stored.csrfTokenHash, false);
       const duration = stored.expiresAt.getTime() - stored.issuedAt.getTime();
@@ -133,13 +178,22 @@ async function verifySessions(): Promise<"MATCHED"> {
       same(await previous.authenticateWithSession(session.token), expected);
       same(await candidate.authenticateWithSession(session.token), expected);
       same(await candidate.authenticate(session.token), actor);
-      same(await candidate.authenticateCookieSession(session.token), { authenticated: true, ...expected });
-      same(await candidate.authenticateCookieSession(session.token, session.csrfToken),
-        await previous.authenticateCookieSession(session.token, session.csrfToken));
-      same(await candidate.authenticateCookieSession(session.token, foreign.csrfToken),
-        { authenticated: false, reason: "csrf_rejected" });
-      same(await candidate.authenticateCookieSession(session.token, "invalid"),
-        { authenticated: false, reason: "csrf_rejected" });
+      same(await candidate.authenticateCookieSession(session.token), {
+        authenticated: true,
+        ...expected,
+      });
+      same(
+        await candidate.authenticateCookieSession(session.token, session.csrfToken),
+        await previous.authenticateCookieSession(session.token, session.csrfToken),
+      );
+      same(await candidate.authenticateCookieSession(session.token, foreign.csrfToken), {
+        authenticated: false,
+        reason: "csrf_rejected",
+      });
+      same(await candidate.authenticateCookieSession(session.token, "invalid"), {
+        authenticated: false,
+        reason: "csrf_rejected",
+      });
     }
     same(await candidate.authenticate(foreign.token), other);
     same(await candidate.authenticate("scada_s_" + randomBytes(32).toString("base64url")), null);
@@ -149,13 +203,24 @@ async function verifySessions(): Promise<"MATCHED"> {
     const bearerId = randomUUID();
     creationUnconfirmed = true;
     await legacy.scadaAuthSession.create({
-      data: { ...actor, sessionId: bearerId, tokenHash: hash(bearerToken), expiresAt: new Date(Date.now() + 600_000) },
+      data: {
+        ...actor,
+        sessionId: bearerId,
+        tokenHash: hash(bearerToken),
+        expiresAt: new Date(Date.now() + 600_000),
+      },
     });
     sessionKeys.push({ ...actor, sessionId: bearerId });
     creationUnconfirmed = false;
     same(await candidate.authenticate(bearerToken), actor);
-    same(await candidate.authenticateCookieSession(bearerToken), { authenticated: false, reason: "invalid_session" });
-    same(await candidate.authenticateCookieSession(bearerToken), await previous.authenticateCookieSession(bearerToken));
+    same(await candidate.authenticateCookieSession(bearerToken), {
+      authenticated: false,
+      reason: "invalid_session",
+    });
+    same(
+      await candidate.authenticateCookieSession(bearerToken),
+      await previous.authenticateCookieSession(bearerToken),
+    );
 
     stage = "跨租户撤销拒绝与双版本并发撤销";
     same(await candidate.revokeForVerifiedSubject(other, first.sessionId), false);
@@ -165,11 +230,17 @@ async function verifySessions(): Promise<"MATCHED"> {
       previous.revokeForVerifiedSubject(actor, first.sessionId),
     ]);
     same(race.filter((result) => result.status === "fulfilled" && result.value === true).length, 1);
-    same(race.filter((result) => result.status === "fulfilled" && result.value === false).length, 1);
+    same(
+      race.filter((result) => result.status === "fulfilled" && result.value === false).length,
+      1,
+    );
     same(await candidate.revokeForVerifiedSubject(actor, first.sessionId), false);
     same(await previous.authenticate(first.token), null);
     same(await candidate.authenticate(first.token), null);
-    same(await candidate.authenticateCookieSession(first.token, first.csrfToken), { authenticated: false, reason: "invalid_session" });
+    same(await candidate.authenticateCookieSession(first.token, first.csrfToken), {
+      authenticated: false,
+      reason: "invalid_session",
+    });
 
     stage = "精确过期及未来签发拒绝";
     const expired = await issue(candidate);
@@ -186,26 +257,49 @@ async function verifySessions(): Promise<"MATCHED"> {
     for (const session of [expired, future]) {
       same(await candidate.authenticate(session.token), null);
       same(await previous.authenticate(session.token), null);
-      same(await candidate.authenticateCookieSession(session.token, session.csrfToken), { authenticated: false, reason: "invalid_session" });
+      same(await candidate.authenticateCookieSession(session.token, session.csrfToken), {
+        authenticated: false,
+        reason: "invalid_session",
+      });
     }
 
     stage = "主体停用、签发拒绝及预绑定保留";
-    await legacy.scadaIdentity.update({ where: { tenantId_subjectId: actor }, data: { status: "disabled" } });
+    await legacy.scadaIdentity.update({
+      where: { tenantId_subjectId: actor },
+      data: { status: "disabled" },
+    });
     same(await candidate.authenticate(second.token), null);
     same(await previous.authenticate(second.token), null);
     same(await candidate.resolveVerifiedExternalIdentity(issuer, issuer, binding.subject), null);
-    same(await candidate.resolveVerifiedExternalIdentity(issuer, issuer, secondBinding.subject), other);
+    same(
+      await candidate.resolveVerifiedExternalIdentity(issuer, issuer, secondBinding.subject),
+      other,
+    );
     same(await candidate.authenticate(foreign.token), other);
-    await rejected(() => candidate.issueForVerifiedSubject(actor), "主体不存在或已停用，禁止签发会话");
-    await rejected(() => candidate.issueForVerifiedSubject({ ...actor, subjectId: "missing-" + id }), "主体不存在或已停用，禁止签发会话");
+    await rejected(
+      () => candidate.issueForVerifiedSubject(actor),
+      "主体不存在或已停用，禁止签发会话",
+    );
+    await rejected(
+      () => candidate.issueForVerifiedSubject({ ...actor, subjectId: "missing-" + id }),
+      "主体不存在或已停用，禁止签发会话",
+    );
     same(await legacy.scadaIdentity.count({ where: { OR: identities } }), 2);
     same(await legacy.scadaExternalIdentity.count({ where: { OR: bindings } }), 2);
     same(await legacy.scadaAuthSession.count({ where: { OR: identities } }), sessionKeys.length);
   } catch {
     failures.push(stage);
   } finally {
-    try { await client?.close(); } catch { failures.push("Prisma 8 客户端关闭失败"); }
-    try { await pool?.end(); } catch { failures.push("外部连接池关闭失败"); }
+    try {
+      await client?.close();
+    } catch {
+      failures.push("Prisma 8 客户端关闭失败");
+    }
+    try {
+      await pool?.end();
+    } catch {
+      failures.push("外部连接池关闭失败");
+    }
     if (poolFailed) failures.push("外部连接池发生异常");
     if (creationUnconfirmed) {
       failures.push("专用夹具创建未确认，禁止自动清理，测试标识：" + id);
@@ -218,7 +312,12 @@ async function verifySessions(): Promise<"MATCHED"> {
             same(await tx.scadaAuthSession.count({ where }), 0);
           }
           if (ownsBindings) {
-            const where = { OR: [{ ...binding, ...actor }, { ...secondBinding, ...other }] };
+            const where = {
+              OR: [
+                { ...binding, ...actor },
+                { ...secondBinding, ...other },
+              ],
+            };
             same((await tx.scadaExternalIdentity.deleteMany({ where })).count, 2);
             same(await tx.scadaExternalIdentity.count({ where }), 0);
           }
@@ -232,7 +331,11 @@ async function verifySessions(): Promise<"MATCHED"> {
         failures.push("专用夹具清理未确认，禁止自动重试，测试标识：" + id);
       }
     }
-    try { await old?.$disconnect(); } catch { failures.push("Prisma 7 客户端关闭失败"); }
+    try {
+      await old?.$disconnect();
+    } catch {
+      failures.push("Prisma 7 客户端关闭失败");
+    }
   }
   if (failures.length) throw new Error("身份会话专项未通过：" + failures.join("；"));
   return "MATCHED";
