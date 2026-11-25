@@ -162,7 +162,7 @@ async function verifyQueries(): Promise<"MATCHED"> {
     same(older, await previous.listVersions(actor, projectId, { limit: 3, beforeRevision: 10 }));
     same(await reader.listVersions(actor, projectId, { beforeRevision: 1 }), []);
     same((await reader.listVersions(other, projectId)).map((item) => item.revision), [1]);
-    same(Object.keys(newest[0]!).toSorted(), ["contentHash", "createdAt", "projectId", "revision"]);
+    same(Object.keys(newest[0]!).toSorted((left, right) => left.localeCompare(right)), ["contentHash", "createdAt", "projectId", "revision"]);
 
     stage = "完整快照、发布预检及拒绝等价性";
     same(await reader.read(actor, projectId, 12), await previous.read(actor, projectId, 12));
@@ -170,7 +170,7 @@ async function verifyQueries(): Promise<"MATCHED"> {
     const report = await reader.preflightRelease(actor, projectId, 12);
     same(report, await previous.preflightRelease(actor, projectId, 12));
     same([report.revision, report.headRevision, report.contentHash], [12, 12, newest[0]!.contentHash]);
-    same(Object.keys(report).toSorted(), ["contentHash", "headRevision", "issues", "passed", "projectId", "revision"]);
+    same(Object.keys(report).toSorted((left, right) => left.localeCompare(right)), ["contentHash", "headRevision", "issues", "passed", "projectId", "revision"]);
     await rejected(() => reader.preflightRelease(actor, projectId, 11), "工程版本已变化，请重新获取最新修订号");
     await rejected(() => reader.read(actor, projectId, 13), "指定工程版本不存在");
     await rejected(() => reader.getProject(actor, hiddenId), denied);
