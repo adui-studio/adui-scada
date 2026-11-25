@@ -1,6 +1,8 @@
-/** 仅允许 Prisma 8 探针连接本机专用验收库，不回退到业务库。 */
-export function requirePrisma8ReadOnlyTestUrl(input: string | undefined): string {
-  const message = "Prisma 8 只读探针仅允许连接本机 15432 端口的 adui_scada_test 数据库";
+function requireReadOnlyUrl(
+  input: string | undefined,
+  databaseName: "adui_scada_test" | "adui_scada_fresh_prisma8_ref",
+  message: string,
+): string {
   if (
     !input ||
     Array.from(input).some((character) => {
@@ -23,7 +25,7 @@ export function requirePrisma8ReadOnlyTestUrl(input: string | undefined): string
     (url.protocol !== "postgresql:" && url.protocol !== "postgres:") ||
     (url.hostname !== "127.0.0.1" && url.hostname !== "localhost") ||
     url.port !== "15432" ||
-    url.pathname !== "/adui_scada_test" ||
+    url.pathname !== "/" + databaseName ||
     !url.username ||
     url.hash ||
     parameters.length > 1 ||
@@ -35,4 +37,22 @@ export function requirePrisma8ReadOnlyTestUrl(input: string | undefined): string
   // Prisma 7 的 schema 参数不传递给 node-postgres。
   url.search = "";
   return url.toString();
+}
+
+/** 仅允许 Prisma 8 探针连接本机专用验收库，不回退到业务库。 */
+export function requirePrisma8ReadOnlyTestUrl(input: string | undefined): string {
+  return requireReadOnlyUrl(
+    input,
+    "adui_scada_test",
+    "Prisma 8 只读探针仅允许连接本机 15432 端口的 adui_scada_test 数据库",
+  );
+}
+
+/** 仅供迁移目录对照使用，不扩大既有业务探针的连接白名单。 */
+export function requirePrisma8ReadOnlyReferenceUrl(input: string | undefined): string {
+  return requireReadOnlyUrl(
+    input,
+    "adui_scada_fresh_prisma8_ref",
+    "Prisma 8 目录对照仅允许连接本机 15432 端口的 adui_scada_fresh_prisma8_ref 参考库",
+  );
 }
