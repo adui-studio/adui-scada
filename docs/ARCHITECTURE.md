@@ -497,3 +497,7 @@ Prisma 8 客户端工厂与历史只读读取器在隔离验收路径中复用�
 ### Prisma 8 渐进迁移：历史写入事务隔离候选
 
 PR #202 已在真实隔离库完成 Prisma 7 写入后的 Prisma 7/8/原生 SQL 非空严格对照，经维护者授权合入 feat/mvp-first-integration。新增 Prisma8TagHistoryStore 只供隔离验收，沿用既有 Core 持久化端口、规范编码和联合主键。Prisma 8 回调事务负责全部 DML 与复核，批次竞争通过固定参数化 PostgreSQL 冲突语句，明细使用强类型 SQL builder，重放使用 ORM；不修改正式 Prisma 7 归档或读取仓储。真实测试使用隔离的可写池和独立只读池；校验目标、精确随机工程清理及结果脱敏。本阶段不更改任何部署配置、数据库标记、迁移历史或设备写入边界；生产切换另行评审。
+
+### Prisma 8 工程版本持久化候选（隔离验证）
+
+新增独立 Prisma 8 工程版本仓储候选，沿用共享 Core 工程文档、快照 SHA-256、正式 Prisma 7 仓储的可信主体与权限判定及现有 PostgreSQL 约束。创建事务复核 active 主体、建立工程与初始未发布指针、三项基础 ACL、首版快照及审计；追加事务按租户和工程复合键获取与正式仓储一致的 FOR UPDATE 行锁，在锁内复核 version:append 与 CAS，原子写入不可变快照、推进水位并记录审计。事务提交前回读快照、元数据和审计。只允许 adui_scada_test、public、读已提交写事务；不接入 NestJS Provider、正式接口或生产库，不改变发布、回滚、身份认证、工业设备访问或迁移策略。

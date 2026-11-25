@@ -1626,3 +1626,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/history/prisma8-tag-history-store.spec.ts`：五项输入、边界及完整内容校验测试。
 - `apps/server/test/prisma8-history-write.db-spec.ts`：显式隔离库真实候选写入、双版本互相重放与并发、SQLSTATE 约束故障回滚、三方结果及精确清理。
 - 根命令 `test:db:prisma8:history:write`：仅该真实专项。保留原只读专项与历史非空三方对照；不切换 Prisma 7 正式实现。
+
+### Prisma 8 工程版本写入候选
+
+- `apps/server/src/projects/prisma8-project-version-store.ts`：独立创建/追加事务候选、请求校验、隔离库边界、ACL/CAS、快照与审计回读。
+- `apps/server/src/projects/prisma8-project-version-store.spec.ts`：五项请求边界测试定义。
+- `apps/server/test/prisma8-project-version.db-spec.ts`：真实 PostgreSQL 双版本创建与追加、并发、约束回滚及随机夹具清理专项。
+- `pnpm run test:db:prisma8:project:version`：仅运行上述真实数据库测试。正式 Prisma 7 工程仓储不变。
