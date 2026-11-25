@@ -2774,3 +2774,9 @@ PR #207 的维护者 Windows 最终 HEAD `7ac87c77a2e8a6ae3577bc631f1ecd7c885f79
 维护者 Windows 在 PR #208 初始候选 HEAD `30a58668771a8c687ba2fad9435e093efecec34e` 拉取并执行增量验收：501 格式文件、343 受检文件零警告错误、服务端独立类型检查、370 中文文案、95 Markdown、30/30 关联单测、1/1 真实 PostgreSQL OIDC 专项（1178 ms），日志末尾工作区无变更。远端随后为 `f032c8ec0eb7778e420f666562b020b594baede5`，对三份格式化文件归一化空白与尾逗号核对，未发现业务逻辑变化；维护者明确授权后 Squash 合入集成分支 `920c95d1669bc4a0e8e9f5cb8617caae60d67318`。MVP PR #198 继续 Draft。
 
 检查实际 ACL 代码确认，既有工程创建授权与仓储锁内 ACL 候选已在前批实现，不存在独立公开授权管理仓储。新分支 feat/mvp-prisma8-project-acl 补齐工程前置 Guard 的 Prisma 8 查询候选，不擅自实现授权/撤权管理功能。新增七项单测定义和一项真实数据库双版本综合专项，待 Windows 增量验收。后续进入数据库迁移管理的专项审查、正式 Provider 切换与旧依赖退出；不得把候选合并描述为生产切换。
+
+### 2026-11-25 · Prisma 8 ACL 候选结案及迁移接管预检
+
+维护者 Windows 在 PR #209 初始 HEAD `1289802eca1d442cc13b8a63cd88dcb90cd922c7` 完成 504 格式文件、346 受检文件零警告错误、服务端独立类型检查、373 中文文案、95 Markdown、43/43 定向单测和 1/1 真实 PostgreSQL ACL 专项（1013 ms），日志末尾工作区无输出。远端最终 HEAD `7b9d0e0cbedf392259d18ffddefefa39248abf57` 多一个三文件排版提交，差异核对未发现业务逻辑变化；维护者明确授权后 Squash 合入 `8bc5458deb13541c90f7b8b2e298ca2b94a296c5`，MVP PR #198 保持 Draft。
+
+新分支 feat/mvp-prisma8-migration-preflight 进入迁移管理评审，当前八项迁移和生成 Contract 确认存在三十六个原生 CHECK 的表达缺口及末次事件六字段外键与单字段关联差异。ADR-0072 Proposed；只读预检及九项离线测试定义待本机验收，签名、基线生成、新库重放、正式迁移所有权及生产 Provider 切换均未执行。
