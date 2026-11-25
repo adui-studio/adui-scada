@@ -1704,3 +1704,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/prisma8-native-runtime-review.mjs` / `pnpm run db:prisma8:native:runtime`：验证已验收候选标识和唯一允许的关系差异；服务端 TypeScript 双契约内存编译，禁止写回生成物或接管数据库，依赖保留的原生候选。
 - `scripts/prisma8-native-runtime.cases.mjs` / `pnpm run test:prisma8:native:runtime`：六项离线回归，含真实 TypeScript 最小编译夹具，纳入 ready，不依赖候选或数据库。
 - `pnpm run db:prisma8:native:skills:list`：通过现有 CLI 固定映射查询独立原生配置的根目录 Skills 列表；CLI 五项回归，正式同步入口不变。
+
+### 原生候选发布关系只读查询评审
+
+- `apps/server/prisma8-native-query-probe.mjs` / `pnpm run db:prisma8:native:query`：只连接已验收本机测试库，复用目录预检、保留契约和六字段关系差异门禁；在同一只读事务内比较独立 SQL、正式 ORM 和原生 ORM 发布状态/末次事件，不输出业务记录。
+- `scripts/prisma8-native-query-review.mjs`：六字段闭包、bigint、空关联、显式事件读取与隔离范围结果的独立比较器。
+- `scripts/prisma8-native-query.cases.mjs` / `pnpm run test:prisma8:native:query`：七项离线回归，纳入 ready；真实库查询仍为单独手工专项。

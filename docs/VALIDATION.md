@@ -4961,3 +4961,9 @@ E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回
 维护者 Windows 原生候选 9/9、Vite+ 515/356 零警告错误、messages:check 383 文件、docs:check 96 份、增量退出码 0；E-143 关闭，PR #213 按授权 Squash 合入 `4bada62a85fd099eb7a24857f66e2b411eb6a2bf`，本机 HEAD 已确认。
 
 新批复用已保留的 .artifacts/prisma8-native 真实候选，不运行 emit 或数据库命令。远端静态检查十二个名称含 prisma8 的非测试服务端生产模块未发现两个关系名的直接引用；发布仓储显式读取 lastReleaseEventId 对应事件并验证完整性。新增六项离线测试，协作容器 Node.js 22.16.0 / TypeScript 5.8.3 使用最小独立编译夹具实测 6/6，验证两种关系差异白名单、哈希标识拒绝、虚拟声明和 JSON 实际装载、类型不匹配拒绝、磁盘原件不变及禁止写入。新脚本 Blob `f0c8dcb15b1012513b6fe70a9d72818bb200d46e` 和测试 Blob `2b828b98e8a97c225b9d518df05e9a94c2334a75` 与本地实测一致。CLI 新增原生配置 Skills 只读列表及模拟回归；真实固定版本 Skills 列表、真实候选与正式契约双轮服务端类型检查、全仓 vp check、messages:check、docs:check 尚待维护者 Windows 实测。局部编译器测试不代表实际仓库或固定 RC 类型兼容。仍保持 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED，禁止签名、迁移、重放、DDL 和正式 Provider 切换。
+
+### 2026-11-25 · PR #214 关闭与原生候选实际查询评审
+
+维护者 Windows 在 `c3a03056f7375d9dd4d42969720cb8e6ae6de625` 实测 CLI 5/5、物理评审 9/9、运行时评审 6/6；正式与原生候选服务端离线类型检查均通过；Prisma 两项根 Skills 已同步（ORM Postgres 8.0.0-rc.25、CLI 8.0.0-rc.35）。Vite+ 517 个格式文件、358 个受检文件零警告错误，中文文案 385、Markdown 96，增量退出码 0。最终 HEAD `8310c986a1619a47b9b121d6e3db172b8d8f30cb` 仅两份脚本排版变化，按授权 Squash 合入 `63cdc5d9ff5fca03267a3a52d15cdb9189f3447f`。
+
+本批新增发布关系查询只读探针与七项离线回归。协作容器 Node.js 22.16.0 实测 `node --test scripts/prisma8-native-query.cases.mjs` 7/7、`node --check` 新探针及核心脚本通过；三个远端 Git blob 与本地测试文件一致。离线回归覆盖 bigint、六字段逐项漂移、空关联、事件类型、显式读取差异及错误租户/工程拒绝。真实候选及隔离 PostgreSQL 仅位于维护者本机，真实查询、项目 Node 24、Vite+、中文文案和文档检查待验收。没有执行数据库写入、签名、迁移、重放、生成物覆盖或 Provider 切换。
