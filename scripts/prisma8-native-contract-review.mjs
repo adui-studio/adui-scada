@@ -59,7 +59,7 @@ export function materializeNativeContract(template, baseline, checks) {
       !template.includes("@@check("),
     "原生 PSL 模板头或现有约束不符合预期",
   );
-  /** @type {Set<string>} */
+  /** @type {Set<string>} 已映射的物理表名称集合 */
   const mapped = new Set();
   let inserted = 0;
   const source = template.replace(/^  @@map\("([a-z_][a-z0-9_]*)"\)$/gm, (line, table) => {
