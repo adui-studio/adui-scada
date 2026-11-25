@@ -4714,7 +4714,7 @@ try {
 
 ### 原生 Prisma 8 Contract 候选独立生成与审查
 
-PR #212 已完成独立参考库首次与二次迁移验收，禁止重复执行 replay。先执行 `pnpm run db:prisma8:emit`（正式过渡契约）、`pnpm run test:prisma8:cli`（4 项）、`pnpm run test:prisma8:migration:preflight`（16 项）、`pnpm run test:prisma8:migration:replay`（9 项）、`pnpm run test:prisma8:native`（8 项）、Vite+、服务端类型检查、中文文案、文档检查。新离线测试进入完整 ready，真实候选生成不进入 ready。真实入口只接受两份明确隔离 URL；两库已重放的迁移、目录指纹和 PostgreSQL 查询上下文须保持一致，期间禁止并发 DDL。候选输出目录已存在时先人工保留旧结果，不自动覆盖或清理。
+PR #212 已完成独立参考库首次与二次迁移验收，禁止重复执行 replay。先执行 `pnpm run db:prisma8:emit`（正式过渡契约）、`pnpm run test:prisma8:cli`（4 项）、`pnpm run test:prisma8:migration:preflight`（16 项）、`pnpm run test:prisma8:migration:replay`（9 项）、`pnpm run test:prisma8:native`（9 项）、Vite+、服务端类型检查、中文文案、文档检查。新离线测试进入完整 ready，真实候选生成不进入 ready。真实入口只接受两份明确隔离 URL；两库已重放的迁移、目录指纹和 PostgreSQL 查询上下文须保持一致，期间禁止并发 DDL。候选输出目录已存在时先人工保留旧结果，不自动覆盖或清理。
 
 ```powershell
 & {
@@ -4746,3 +4746,5 @@ PR #212 已完成独立参考库首次与二次迁移验收，禁止重复执行
 ```
 
 新入口先核验固定 CLI 8.0.0-rc.35 / ORM Postgres 8.0.0-rc.25、正式契约存储哈希及两库只读匹配的已审查目录指纹；由 pg_get_constraintdef 的普通 CHECK 外包装提取原谓词，以 map 原名写入忽略目录中的候选 PSL，调用固定独立配置的离线 contract emit，子进程移除业务和隔离数据库连接环境变量，核对正式 JSON 和 d.ts 字节不变。候选生成后核对列、主键、CHECK 名称/谓词、唯一性与索引、外键完整名称/源列/目标列/动作；同时独立列出运行时根、模型、字段/映射、导航及生成器差异。原生候选目前不定义发布事件反向单值导航，未改正式关系；若物理 IR 完全匹配但运行时元数据不一致，返回 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED；若二者一致则 STORAGE_REVIEW_REQUIRED。两个状态均不批准签名，退出码 0 仅代表候选物理 IR 审查及报告完成。任何物理差异或生成错误必须以非零退出停止，保留候选源码/产物及固定诊断，不自动修改或重试。真实 CLI 生成及官方 verifier/DDL/运行时类型应用验证仍是后续门禁；当前不调用 db verify、contract infer、migration plan、db sign 或 db migrate。PN_EXACT_NAME_BODY_COMPARISON 属于包内文档描述的原名称谓词精确比较提示，不得忽略真实差异。
+
+PR #213 已实测真实候选生成与 36 个 CHECK 物理 IR 检查通过，两个运行时关系差异仍阻塞；E-142 仅补齐表名类型与等价排序比较器，已成功生成的 .artifacts/prisma8-native 目录保留，不需要为此次排序修复重复真实生成或重新重放。维护者拉取修复后执行 `node --check scripts/prisma8-native-contract-review.mjs`、`node --check scripts/prisma8-native-contract.cases.mjs`、`pnpm run test:prisma8:native`（9 项）、`vp check --fix`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`，要求零警告错误。候选 d.ts 依赖与独立配置 Skills 的提示待专门评审；不为消除提示新增根依赖、关闭检查或删除候选产物。
