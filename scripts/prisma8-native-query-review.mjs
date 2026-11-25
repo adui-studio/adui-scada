@@ -21,15 +21,20 @@ export function expectedReleaseSample(state, event) {
   };
   if (result.releaseGeneration === 0n) {
     requireMatch(
-      result.releasedRevision === null && result.releasedContentHash === null &&
-        result.lastReleaseEventId === null && event === null,
+      result.releasedRevision === null &&
+        result.releasedContentHash === null &&
+        result.lastReleaseEventId === null &&
+        event === null,
       "未发布状态必须具有空关联",
     );
     return result;
   }
   requireMatch(
-    result.releaseGeneration > 0n && result.releasedRevision !== null &&
-      result.releasedContentHash !== null && result.lastReleaseEventId !== null && event !== null,
+    result.releaseGeneration > 0n &&
+      result.releasedRevision !== null &&
+      result.releasedContentHash !== null &&
+      result.lastReleaseEventId !== null &&
+      event !== null,
     "已发布状态缺少完整的末次事件",
   );
   const related = {
@@ -42,9 +47,12 @@ export function expectedReleaseSample(state, event) {
     action: event.action,
   };
   requireMatch(
-    related.tenantId === result.tenantId && related.projectId === result.projectId &&
-      related.generation === result.releaseGeneration && related.toRevision === result.releasedRevision &&
-      related.toContentHash === result.releasedContentHash && related.eventId === result.lastReleaseEventId &&
+    related.tenantId === result.tenantId &&
+      related.projectId === result.projectId &&
+      related.generation === result.releaseGeneration &&
+      related.toRevision === result.releasedRevision &&
+      related.toContentHash === result.releasedContentHash &&
+      related.eventId === result.lastReleaseEventId &&
       (related.action === "PUBLISH" || related.action === "ROLLBACK"),
     "末次事件不满足六字段闭包或事件类型约束",
   );
@@ -53,17 +61,32 @@ export function expectedReleaseSample(state, event) {
 
 /** 同一 SQL 基准分别核对两个契约；空样本不得计为非空通过。 */
 export async function reviewReleaseQueries(reader, expected, absentTenant, absentProject) {
-  requireMatch(await reader.state(absentTenant, absentProject) === null, "不存在的发布状态查询未返回空值");
+  requireMatch(
+    (await reader.state(absentTenant, absentProject)) === null,
+    "不存在的发布状态查询未返回空值",
+  );
   if (expected === null) return "EMPTY";
   const { tenantId, projectId, lastReleaseEvent } = expected;
-  requireMatch(isDeepStrictEqual(await reader.state(tenantId, projectId), expected), "发布状态及关联事件查询结果不一致");
-  requireMatch(await reader.state(absentTenant, projectId) === null, "错误租户返回发布状态");
-  requireMatch(await reader.state(tenantId, absentProject) === null, "错误工程返回发布状态");
+  requireMatch(
+    isDeepStrictEqual(await reader.state(tenantId, projectId), expected),
+    "发布状态及关联事件查询结果不一致",
+  );
+  requireMatch((await reader.state(absentTenant, projectId)) === null, "错误租户返回发布状态");
+  requireMatch((await reader.state(tenantId, absentProject)) === null, "错误工程返回发布状态");
   if (lastReleaseEvent !== null) {
     const { eventId } = lastReleaseEvent;
-    requireMatch(isDeepStrictEqual(await reader.event(tenantId, projectId, eventId), lastReleaseEvent), "显式末次事件查询结果不一致");
-    requireMatch(await reader.event(absentTenant, projectId, eventId) === null, "错误租户返回末次事件");
-    requireMatch(await reader.event(tenantId, absentProject, eventId) === null, "错误工程返回末次事件");
+    requireMatch(
+      isDeepStrictEqual(await reader.event(tenantId, projectId, eventId), lastReleaseEvent),
+      "显式末次事件查询结果不一致",
+    );
+    requireMatch(
+      (await reader.event(absentTenant, projectId, eventId)) === null,
+      "错误租户返回末次事件",
+    );
+    requireMatch(
+      (await reader.event(tenantId, absentProject, eventId)) === null,
+      "错误工程返回末次事件",
+    );
   }
   return "MATCHED";
 }

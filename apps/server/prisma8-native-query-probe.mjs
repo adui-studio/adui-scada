@@ -4,9 +4,18 @@ import { resolve } from "node:path";
 import postgres from "@prisma/orm-postgres/runtime";
 import { contractFromJson } from "@prisma/orm-postgres/static";
 import { Client } from "pg";
-import { inspectMigrationDatabase, loadMigrationBaseline } from "../../scripts/inspect-prisma8-migration-readiness.mjs";
-import { expectedReleaseSample, reviewReleaseQueries } from "../../scripts/prisma8-native-query-review.mjs";
-import { requireDeclarationHashes, reviewRuntimeRelations } from "../../scripts/prisma8-native-runtime-review.mjs";
+import {
+  inspectMigrationDatabase,
+  loadMigrationBaseline,
+} from "../../scripts/inspect-prisma8-migration-readiness.mjs";
+import {
+  expectedReleaseSample,
+  reviewReleaseQueries,
+} from "../../scripts/prisma8-native-query-review.mjs";
+import {
+  requireDeclarationHashes,
+  reviewRuntimeRelations,
+} from "../../scripts/prisma8-native-runtime-review.mjs";
 import { requirePrisma8ReadOnlyTestUrl } from "./src/database/prisma8-readonly-target.ts";
 
 const root = resolve(import.meta.dirname, "../..");
@@ -26,7 +35,8 @@ function createConnection(connectionString) {
   return new Client({
     connectionString,
     connectionTimeoutMillis: 5000,
-    options: "-c default_transaction_read_only=on -c statement_timeout=5000 -c lock_timeout=2000 -c search_path=public",
+    options:
+      "-c default_transaction_read_only=on -c statement_timeout=5000 -c lock_timeout=2000 -c search_path=public",
   });
 }
 
@@ -34,13 +44,42 @@ function readerFor(db) {
   const states = db.orm.public.ScadaProjectReleaseState;
   const events = db.orm.public.ScadaProjectReleaseEvent;
   return {
-    state: (tenantId, projectId) => states.where({ tenantId, projectId })
-      .select("tenantId", "projectId", "releaseGeneration", "releasedRevision", "releasedContentHash", "lastReleaseEventId")
-      .include("lastReleaseEvent", (event) => event.select("tenantId", "projectId", "generation", "toRevision", "toContentHash", "eventId", "action"))
-      .first(),
-    event: (tenantId, projectId, eventId) => events.where({ tenantId, projectId, eventId })
-      .select("tenantId", "projectId", "generation", "toRevision", "toContentHash", "eventId", "action")
-      .first(),
+    state: (tenantId, projectId) =>
+      states
+        .where({ tenantId, projectId })
+        .select(
+          "tenantId",
+          "projectId",
+          "releaseGeneration",
+          "releasedRevision",
+          "releasedContentHash",
+          "lastReleaseEventId",
+        )
+        .include("lastReleaseEvent", (event) =>
+          event.select(
+            "tenantId",
+            "projectId",
+            "generation",
+            "toRevision",
+            "toContentHash",
+            "eventId",
+            "action",
+          ),
+        )
+        .first(),
+    event: (tenantId, projectId, eventId) =>
+      events
+        .where({ tenantId, projectId, eventId })
+        .select(
+          "tenantId",
+          "projectId",
+          "generation",
+          "toRevision",
+          "toContentHash",
+          "eventId",
+          "action",
+        )
+        .first(),
   };
 }
 
@@ -52,13 +91,21 @@ async function readSample(client, released) {
     [released],
   );
   const state = rows[0] ?? null;
-  if (state === null || state.lastReleaseEventId === null) return expectedReleaseSample(state, null);
+  if (state === null || state.lastReleaseEventId === null)
+    return expectedReleaseSample(state, null);
   const related = await client.query(
     'SELECT tenant_id AS "tenantId", project_id AS "projectId", generation::text AS generation, ' +
       'to_revision::text AS "toRevision", to_content_hash AS "toContentHash", event_id::text AS "eventId", action ' +
       "FROM public.scada_project_release_events WHERE tenant_id = $1 AND project_id = $2 AND generation = $3 " +
       "AND to_revision = $4 AND to_content_hash = $5 AND event_id = $6 LIMIT 2",
-    [state.tenantId, state.projectId, state.releaseGeneration, state.releasedRevision, state.releasedContentHash, state.lastReleaseEventId],
+    [
+      state.tenantId,
+      state.projectId,
+      state.releaseGeneration,
+      state.releasedRevision,
+      state.releasedContentHash,
+      state.lastReleaseEventId,
+    ],
   );
   if (related.rows.length !== 1) throw new Error("末次发布事件六字段 SQL 关联数量不正确");
   return expectedReleaseSample(state, related.rows[0]);
@@ -72,15 +119,24 @@ async function runQueries(connectionString, formal, native) {
   let began = false;
   let connectionError = false;
   let report;
-  client.on("error", () => { connectionError = true; });
+  client.on("error", () => {
+    connectionError = true;
+  });
   try {
     await client.connect();
     stage = "开启只读快照";
     await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
     began = true;
-    const boundary = await client.query("SELECT current_database() AS db, current_schema() AS schema, current_setting('transaction_read_only') AS readonly, current_setting('transaction_isolation') AS isolation");
+    const boundary = await client.query(
+      "SELECT current_database() AS db, current_schema() AS schema, current_setting('transaction_read_only') AS readonly, current_setting('transaction_isolation') AS isolation",
+    );
     const row = boundary.rows[0];
-    if (row?.db !== "adui_scada_test" || row.schema !== "public" || row.readonly !== "on" || row.isolation !== "repeatable read") {
+    if (
+      row?.db !== "adui_scada_test" ||
+      row.schema !== "public" ||
+      row.readonly !== "on" ||
+      row.isolation !== "repeatable read"
+    ) {
       throw new Error("隔离库只读快照校验失败");
     }
     stage = "读取独立 SQL 样本";
@@ -97,20 +153,36 @@ async function runQueries(connectionString, formal, native) {
       await reviewReleaseQueries(reader, unreleased, absentTenant, absentProject);
       await reviewReleaseQueries(reader, released, absentTenant, absentProject);
     }
-    report = { unreleased: unreleased === null ? "EMPTY" : "MATCHED", released: released === null ? "EMPTY" : "MATCHED" };
+    report = {
+      unreleased: unreleased === null ? "EMPTY" : "MATCHED",
+      released: released === null ? "EMPTY" : "MATCHED",
+    };
   } catch {
     failures.push(stage + "失败");
   } finally {
     for (const db of clients) {
-      try { await db.close(); } catch { failures.push("契约客户端释放失败"); }
+      try {
+        await db.close();
+      } catch {
+        failures.push("契约客户端释放失败");
+      }
     }
     if (began) {
-      try { await client.query("ROLLBACK"); } catch { failures.push("只读快照回滚失败"); }
+      try {
+        await client.query("ROLLBACK");
+      } catch {
+        failures.push("只读快照回滚失败");
+      }
     }
-    try { await client.end(); } catch { failures.push("隔离库连接关闭失败"); }
+    try {
+      await client.end();
+    } catch {
+      failures.push("隔离库连接关闭失败");
+    }
   }
   if (connectionError) failures.push("隔离库连接异常");
-  if (failures.length > 0 || !report) throw new QueryReviewError(failures.join("；") || "查询对照未生成报告");
+  if (failures.length > 0 || !report)
+    throw new QueryReviewError(failures.join("；") || "查询对照未生成报告");
   return report;
 }
 
@@ -119,7 +191,10 @@ async function main() {
   const formal = loadContract(formalPath);
   const native = loadContract(nativePath);
   const status = reviewRuntimeRelations(formal, native);
-  const preflight = await inspectMigrationDatabase(createConnection(connectionString), loadMigrationBaseline());
+  const preflight = await inspectMigrationDatabase(
+    createConnection(connectionString),
+    loadMigrationBaseline(),
+  );
   if (preflight.catalogFingerprint !== fingerprint || !preflight.timezoneUtc) {
     throw new QueryReviewError("隔离库已验收目录指纹或时区不一致");
   }
@@ -132,6 +207,10 @@ async function main() {
 }
 
 void main().catch((error) => {
-  console.error(error instanceof QueryReviewError ? error.message : "原生候选只读查询评审失败，请核对隔离库、保留的候选契约及目录指纹");
+  console.error(
+    error instanceof QueryReviewError
+      ? error.message
+      : "原生候选只读查询评审失败，请核对隔离库、保留的候选契约及目录指纹",
+  );
   process.exitCode = 1;
 });
