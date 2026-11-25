@@ -35,8 +35,9 @@ Node、Vite+、Vitest、pnpm、Docker、Rust 编译器等第三方工具**自行
 
 ```powershell
 pnpm run messages:check
-pnpm run ready
 ```
+
+日常批次同时执行受影响的定向测试与质量检查；`pnpm run ready` 保留在阶段集成和 MVP 验收，不因单次文案修改重复执行完整链路。
 
 `messages:check` 扫描自有源码及部署配置中的异常文本、测试名称、注释和日志，发现疑似纯英文文案时返回非零退出码。它是启发式静态门禁，不能自动证明所有页面和运行时文本均已中文化；发布前仍需检查 React/Vue、桌面端、SVG 画面和模拟服务器。
 

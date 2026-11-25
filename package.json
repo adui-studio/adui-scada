@@ -137,6 +137,7 @@
     "test:db:prisma8:history:write": "pnpm --filter @adui/scada-server exec vp test run --config vitest.config.db.ts test/prisma8-history-write.db-spec.ts",
     "test:db:prisma8:project:version": "pnpm --filter @adui/scada-server exec vp test run --config vitest.config.db.ts test/prisma8-project-version.db-spec.ts",
     "test:db:prisma8:project:query": "pnpm --filter @adui/scada-server exec vp test run --config vitest.config.db.ts test/prisma8-project-query.db-spec.ts",
+    "test:db:prisma8:project:release": "pnpm --filter @adui/scada-server exec vp test run --config vitest.config.db.ts test/prisma8-project-release.db-spec.ts",
     "build:core": "pnpm --filter @adui/scada-core run build:node",
     "test:docker:server": "node scripts/test-server-container.mjs",
     "docker:plan": "pnpm run env:check && node scripts/prepare-oidc-lab.mjs && node scripts/docker-stack.mjs plan",
