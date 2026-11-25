@@ -56,3 +56,9 @@ PR #212 已通过 Windows 27 项离线回归及真实独立参考库八项历史
 ## 2026-11-25 · 原生 PSL 实测结果与运行时兼容阻塞
 
 PR #213 维护者 Windows 使用固定 Prisma 8 实际生成独立原生候选，并通过受检物理 IR 审查（36 个精确命名 CHECK、13 个外键含六字段末次事件、12 张表、85 字段、12 主键与 20 非主键索引），候选存储哈希 `6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc`，正式生成物不变，execution/profile 哈希相同。原名称 SQL 谓词的 PN_EXACT_NAME_BODY_COMPARISON 提示符合此前预期，尚未完成官方结构验证。实际返回 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED，报告 ScadaProjectReleaseEvent.currentReleaseState 及 ScadaProjectReleaseState.lastReleaseEvent 两个运行时关系差异，不能凭 executionHash 相同认定运行时等价；候选 d.ts 依赖可见性及独立配置 Skills 提示也待核验。E-142 排序警告最小修复及九项离线专项待 Windows 复验。候选及两隔离库均须保留，不修改正式 Contract、历史 SQL、Provider 或数据库，不批准签名、迁移规划或部署，后续需确认运行时关系兼容及官方结构验证、新基线 DDL 与全部约束和注释的等价性。ADR 状态仍为 Proposed。
+
+## 2026-11-25 · 运行时兼容性离线评审候选
+
+PR #213 已通过维护者 Windows 零警告增量验收并按授权合入 `4bada62a85fd099eb7a24857f66e2b411eb6a2bf`。当前十二个名称含 prisma8 的非测试服务端生产模块未发现两个关系名直接引用；发布仓储按租户/工程与 lastReleaseEventId 显式读取事件并校验代次、修订和摘要。此静态检查不证明动态调用或未来代码不会依赖导航。优先验证现有查询和类型，而非增加冗余唯一约束或将一对一改为一对多。
+
+新离线探针仅接受已验收正式及候选哈希标识，并比较完整领域模型、根及执行信息，唯一允许差异为正向可空六字段关联和缺少事件反向单值导航。哈希标识检查不是内容真实性证明或目录复验。复用服务端已安装的 TypeScript 和现有 tsconfig，通过编译器内存 Host 将保留候选 JSON/d.ts 原文映射至正式生成物路径，分别执行正式基线和候选 noEmit 类型检查，确认编译器确实读取对应原文并解析服务端已有契约类型包。沿用现有类型检查配置（含 skipLibCheck），不声称单独验证第三方声明内部全部类型或真实数据库执行；正式与候选文件均不改写。独立配置补齐同样的根目录 Skills 设置，仅增加固定列表查询入口，不执行同步或关闭版本检查。即使双轮类型检查通过也保留 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED，仍需真实隔离库查询语义、官方 verifier、新基线 DDL 和所有历史约束等价性独立评审。当前不授权签名、迁移、接管或数据库修改，ADR 保持 Proposed。

@@ -4,7 +4,13 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const args = process.argv.slice(2);
-const allowed = new Set(["skills sync", "skills list", "contract emit", "contract native-emit"]);
+const allowed = new Set([
+  "skills sync",
+  "skills list",
+  "skills native-list",
+  "contract emit",
+  "contract native-emit",
+]);
 
 /** 从已安装的服务端 Prisma 8 官方包解析入口，不下载依赖、不调用 Shell。 */
 function resolveCli() {
@@ -44,9 +50,11 @@ try {
     throw new Error("Prisma 8 入口仅允许 Skills 同步、列表和离线契约生成");
   }
   const entry = resolveCli();
-  // 独立候选仅映射到固定的离线生成命令和配置，不接受用户提供配置路径。
-  const native = args.join(" ") === "contract native-emit";
-  const command = native ? ["contract", "emit"] : args;
+  // 独立候选仅映射到固定的离线生成或 Skills 列表命令，不接受自定义配置。
+  const nativeEmit = args.join(" ") === "contract native-emit";
+  const nativeList = args.join(" ") === "skills native-list";
+  const native = nativeEmit || nativeList;
+  const command = nativeEmit ? ["contract", "emit"] : nativeList ? ["skills", "list"] : args;
   const config = native ? "prisma8-native.config.ts" : "prisma.config.ts";
   // CLI 按进程工作目录同步和检查 Skills；配置内路径仍相对于服务端配置文件。
   const result = spawnSync(
