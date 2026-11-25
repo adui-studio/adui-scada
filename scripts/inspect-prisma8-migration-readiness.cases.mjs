@@ -531,16 +531,29 @@ void describe("Prisma 8 独立参考库只读目录对照", () => {
     const rows = [{ index_name: "scada_tag_history_batches_pkey" }];
     const actual = mockClient({ primaryIndexes: rows });
     const reference = mockClient({ boundaryRow: referenceBoundary, primaryIndexes: rows });
-    const result = await readSupplementalMigrationCatalog(actual.client, reference.client, baseline);
+    const result = await readSupplementalMigrationCatalog(
+      actual.client,
+      reference.client,
+      baseline,
+    );
     assert.deepEqual(result.actual.primaryIndexes, rows);
     assert.deepEqual(result.reference.primaryIndexes, rows);
-    assert.equal(result.actual.report.catalogFingerprint, validateMigrationCatalog(baseline, catalog()).catalogFingerprint);
-    assert.equal(result.actual.report.catalogFingerprint, result.reference.report.catalogFingerprint);
+    assert.equal(
+      result.actual.report.catalogFingerprint,
+      validateMigrationCatalog(baseline, catalog()).catalogFingerprint,
+    );
+    assert.equal(
+      result.actual.report.catalogFingerprint,
+      result.reference.report.catalogFingerprint,
+    );
     for (const calls of [actual.calls, reference.calls]) {
       assert.equal(calls.length, 11);
       assert.match(calls.at(-3), /con\.conindid = i\.indexrelid/);
       assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
-      assert.equal(calls.slice(2, -2).every((query) => query.startsWith("SELECT")), true);
+      assert.equal(
+        calls.slice(2, -2).every((query) => query.startsWith("SELECT")),
+        true,
+      );
     }
   });
 
@@ -557,15 +570,24 @@ void describe("Prisma 8 独立参考库只读目录对照", () => {
 
   void it("真实八项历史 SQL 注释覆盖全部固定对象并采用最终权限文案", () => {
     const sources = baseline.migrations.map(({ name }) =>
-      readFileSync(new URL("../apps/server/prisma/migrations/" + name + "/migration.sql", import.meta.url), "utf8"),
+      readFileSync(
+        new URL("../apps/server/prisma/migrations/" + name + "/migration.sql", import.meta.url),
+        "utf8",
+      ),
     );
     const history = collectHistoricalComments(sources);
     assert.equal(history.statements, 121);
     assert.equal(history.entries.size, 119);
     assert.equal(history.permissionUpdates, 3);
-    assert.equal(history.entries.get("COLUMN scada_project_grants.permission"), "明确授予的工程读取、版本读取、版本追加、正式发布、正式回滚或已发布快照读取权限。");
+    assert.equal(
+      history.entries.get("COLUMN scada_project_grants.permission"),
+      "明确授予的工程读取、版本读取、版本追加、正式发布、正式回滚或已发布快照读取权限。",
+    );
     assert.equal(history.entries.get("INDEX scada_tag_history_batches_pkey"), "归档批次复合幂等键");
-    assert.equal(history.entries.get("INDEX scada_tag_history_records_pkey"), "归档批次内记录唯一键");
+    assert.equal(
+      history.entries.get("INDEX scada_tag_history_records_pkey"),
+      "归档批次内记录唯一键",
+    );
     for (const [name, table] of Object.entries(baseline.tables)) {
       assert.equal(history.entries.has("TABLE " + name), true);
       for (const column of Object.keys(table.columns)) {

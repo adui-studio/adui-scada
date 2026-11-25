@@ -42,20 +42,35 @@ export function collectHistoricalComments(sources) {
 
 function validatePrimaryIndexes(baseline, rows) {
   const expected = [...baseline.constraints.values()].filter((entry) => entry.kind === "p");
-  requireMatch(Array.isArray(rows) && expected.length === 12 && rows.length === expected.length, "主键索引数量不一致");
+  requireMatch(
+    Array.isArray(rows) && expected.length === 12 && rows.length === expected.length,
+    "主键索引数量不一致",
+  );
   const byName = new Map(rows.map((row) => [row.index_name, row]));
   requireMatch(byName.size === rows.length, "主键索引名称重复");
   for (const key of expected) {
     const row = byName.get(key.name);
     requireMatch(
-      row?.constraint_name === key.name && row.table_name === key.table && row.index_schema === "public" &&
-        row.primary === true && row.unique === true && row.valid === true && row.ready === true &&
-        row.live === true && row.immediate === true && row.simple === true && row.method === "btree" &&
-        typeof row.definition === "string" && row.definition.length > 0 &&
+      row?.constraint_name === key.name &&
+        row.table_name === key.table &&
+        row.index_schema === "public" &&
+        row.primary === true &&
+        row.unique === true &&
+        row.valid === true &&
+        row.ready === true &&
+        row.live === true &&
+        row.immediate === true &&
+        row.simple === true &&
+        row.method === "btree" &&
+        typeof row.definition === "string" &&
+        row.definition.length > 0 &&
         (row.comment === null || typeof row.comment === "string"),
       "主键索引所属约束、物理属性或定义不一致",
     );
-    requireMatch(isDeepStrictEqual(row.columns, baseline.tables[key.table].primaryKey.columns), "主键索引列或顺序不一致");
+    requireMatch(
+      isDeepStrictEqual(row.columns, baseline.tables[key.table].primaryKey.columns),
+      "主键索引列或顺序不一致",
+    );
   }
 }
 
@@ -63,18 +78,24 @@ function validateComments(baseline, snapshot, history) {
   const expectedKeys = new Set(primaryCommentNames.map((name) => "INDEX " + name));
   for (const [name, table] of Object.entries(baseline.tables)) {
     expectedKeys.add("TABLE " + name);
-    for (const column of Object.keys(table.columns)) expectedKeys.add("COLUMN " + name + "." + column);
+    for (const column of Object.keys(table.columns))
+      expectedKeys.add("COLUMN " + name + "." + column);
     for (const index of table.indexes) expectedKeys.add("INDEX " + index.name);
   }
   requireMatch(
-    history.statements === 121 && history.permissionUpdates === 3 && expectedKeys.size === 119 &&
-      history.entries.size === expectedKeys.size && [...expectedKeys].every((key) => history.entries.has(key)),
+    history.statements === 121 &&
+      history.permissionUpdates === 3 &&
+      expectedKeys.size === 119 &&
+      history.entries.size === expectedKeys.size &&
+      [...expectedKeys].every((key) => history.entries.has(key)),
     "历史最终注释对象、语句数量或覆盖范围不一致",
   );
   const actual = new Map();
   for (const row of snapshot.catalog.tables) actual.set("TABLE " + row.table_name, row.comment);
-  for (const row of snapshot.catalog.columns) actual.set("COLUMN " + row.table_name + "." + row.column_name, row.comment);
-  for (const row of [...snapshot.catalog.indexes, ...snapshot.primaryIndexes]) actual.set("INDEX " + row.index_name, row.comment);
+  for (const row of snapshot.catalog.columns)
+    actual.set("COLUMN " + row.table_name + "." + row.column_name, row.comment);
+  for (const row of [...snapshot.catalog.indexes, ...snapshot.primaryIndexes])
+    actual.set("INDEX " + row.index_name, row.comment);
   for (const [key, comment] of history.entries) {
     requireMatch(actual.has(key) && actual.get(key) === comment, "数据库注释与历史最终文案不一致");
   }
@@ -83,16 +104,28 @@ function validateComments(baseline, snapshot, history) {
 /** 仅在既有目录指纹和两库补充证据均匹配后返回独立指纹，始终禁止签名。 */
 export function reviewCatalogSupplement(baseline, actual, reference, history) {
   requireMatch(
-    actual.report.catalogFingerprint === legacyFingerprint && reference.report.catalogFingerprint === legacyFingerprint,
+    actual.report.catalogFingerprint === legacyFingerprint &&
+      reference.report.catalogFingerprint === legacyFingerprint,
     "既有目录指纹与验收基线不一致",
   );
   for (const snapshot of [actual, reference]) {
     validatePrimaryIndexes(baseline, snapshot.primaryIndexes);
     validateComments(baseline, snapshot, history);
   }
-  requireMatch(isDeepStrictEqual(actual.primaryIndexes, reference.primaryIndexes), "两库主键索引完整定义或注释不一致");
+  requireMatch(
+    isDeepStrictEqual(actual.primaryIndexes, reference.primaryIndexes),
+    "两库主键索引完整定义或注释不一致",
+  );
   const fingerprint = createHash("sha256")
     .update(JSON.stringify({ scope, legacyFingerprint, primaryIndexes: actual.primaryIndexes }))
     .digest("hex");
-  return { scope, fingerprint, legacyFingerprint, primaryIndexes: 12, comments: 119, signingAllowed: false, status: "MATCHED_REVIEW_REQUIRED" };
+  return {
+    scope,
+    fingerprint,
+    legacyFingerprint,
+    primaryIndexes: 12,
+    comments: 119,
+    signingAllowed: false,
+    status: "MATCHED_REVIEW_REQUIRED",
+  };
 }

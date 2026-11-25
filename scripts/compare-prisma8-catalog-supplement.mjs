@@ -47,9 +47,21 @@ async function main() {
   const { Client } = serverRequire("pg");
   const options =
     "-c default_transaction_read_only=on -c statement_timeout=5000 -c lock_timeout=2000 -c search_path=public";
-  const testClient = new Client({ connectionString: testUrl, connectionTimeoutMillis: 5000, options });
-  const referenceClient = new Client({ connectionString: referenceUrl, connectionTimeoutMillis: 5000, options });
-  const { actual, reference } = await readSupplementalMigrationCatalog(testClient, referenceClient, baseline);
+  const testClient = new Client({
+    connectionString: testUrl,
+    connectionTimeoutMillis: 5000,
+    options,
+  });
+  const referenceClient = new Client({
+    connectionString: referenceUrl,
+    connectionTimeoutMillis: 5000,
+    options,
+  });
+  const { actual, reference } = await readSupplementalMigrationCatalog(
+    testClient,
+    referenceClient,
+    baseline,
+  );
   const result = reviewCatalogSupplement(baseline, actual, reference, history);
   console.info("原目录指纹：" + result.legacyFingerprint);
   console.info("补充范围：" + result.scope);
@@ -59,9 +71,10 @@ async function main() {
 }
 
 void main().catch((error) => {
-  const message = error instanceof PreflightError || error instanceof SupplementError
-    ? error.message
-    : "目录补充核验初始化失败";
+  const message =
+    error instanceof PreflightError || error instanceof SupplementError
+      ? error.message
+      : "目录补充核验初始化失败";
   console.error(message);
   process.exitCode = 1;
 });

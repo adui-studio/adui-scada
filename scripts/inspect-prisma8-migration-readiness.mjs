@@ -438,7 +438,12 @@ const sql = Object.freeze({
 });
 
 /** 固定只读查询序列；任何阶段失败均尝试回滚、关闭连接，且不输出原始第三方错误。 */
-async function inspectMigrationSnapshot(client, baseline, databaseName, includePrimaryIndexes = false) {
+async function inspectMigrationSnapshot(
+  client,
+  baseline,
+  databaseName,
+  includePrimaryIndexes = false,
+) {
   let begun = false;
   let stage = "连接初始化";
   let result;
@@ -538,8 +543,18 @@ function requireComparisonContext(snapshot) {
 }
 
 /** 对照通过后才向内部候选生成器提供参考库目录，保持原对照入口的返回值。 */
-async function readMatchedMigrationSnapshots(testClient, referenceClient, baseline, includePrimaryIndexes = false) {
-  const actual = await inspectMigrationSnapshot(testClient, baseline, "adui_scada_test", includePrimaryIndexes);
+async function readMatchedMigrationSnapshots(
+  testClient,
+  referenceClient,
+  baseline,
+  includePrimaryIndexes = false,
+) {
+  const actual = await inspectMigrationSnapshot(
+    testClient,
+    baseline,
+    "adui_scada_test",
+    includePrimaryIndexes,
+  );
   requireComparisonContext(actual);
   const reference = await inspectMigrationSnapshot(
     referenceClient,
