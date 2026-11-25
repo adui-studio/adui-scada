@@ -4861,3 +4861,9 @@ ready 在依赖目录检查（13 清单、57 Catalog）、共享配置检查（1
 新增独立候选仓储、五项 Vitest 单测源文件和真实隔离库写入专项一项；正式 Prisma 7 仓储、只读探针及三方对照、依赖与锁文件、Schema 和迁移保持不变。写入使用 Prisma 8 固定版本 rc.25 官方公开事务类型，已核对该版本的 raw.sql/affectedCount、SQL builder insert、事务 ReadCommitted/timeout、原生 SQLSTATE 归一化及默认标记警告源码与测试。真实专项覆盖首次与重复提交、两版互相重放、跨版本同内容竞争、新版不同内容竞争、负零与内容/顺序冲突、只读拒绝、复合外键、真实唯一约束回滚、回滚后同键正常提交、真实租户/工程隔离、清理与释放；尚未运行。
 
 协作容器 Node.js 22.16.0 / TypeScript 5.8.3 对三个新增 TS 文件语法解析和转换零诊断、LF 通过；复用原中文文案检查器（Blob 00127f6ba4d622de026246be6fc0eca011099d5d）局部检查 9 文件通过。使用模拟 Core 编码器及测试接口执行五项候选校验源用例 5/5；用模拟 Prisma 事务接口执行首次/重放、错误库、只读、异常计数、部分写入、明细异常、缺失批次、缺失记录、未知提交结果及无效输入的 11 条控制路径 11/11。以上为局部和模拟验证，未运行正式 Vitest、TypeScript 6、Vite+、完整 ready 或 PostgreSQL。npm Registry DNS EAI_AGAIN，容器无固定依赖、pnpm 或 PostgreSQL。新增文件远端 Blob 须与局部验证版本一致；Windows 需先生成两版客户端、构建 Core 并通过格式/类型/文案/文档，正式定向五项单测、真实写入专项及原只读/历史三方对照、完整 ready，才能进入合并验收。
+
+### 2026-11-25 · Prisma 8 工程版本持久化候选验收
+
+PR #203 的维护者 Windows 实际验收记录：984/984 单测、63/63 HTTP E2E、四项真实数据库专项、完整 ready 退出码 0，最终工作区干净；最终测试对应 SHA 未单独打印。已按授权合并为 2b0030232a32745f944373cdeb68cc559e208ffd。
+
+新批次新增五项请求边界单测定义及一项真实 PostgreSQL 综合专项定义，覆盖双版本创建/追加、三项 ACL、初始未发布状态、CAS、SHA-256、成功审计、唯一约束故障回滚、跨租户与只读拒绝、精确清理。已通过 GitHub 接口回读源码并核对写入一致；协作容器 Node.js 22.16.0、TypeScript 5.8.3，无 pnpm，GitHub 域名解析失败，未执行固定版本 TypeScript 6、Vite+、Vitest、ready 或 PostgreSQL。必须由维护者 Windows 实测后才能认定新候选通过；不得自动重试或执行迁移、签名。
