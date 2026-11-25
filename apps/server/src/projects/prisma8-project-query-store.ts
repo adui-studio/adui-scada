@@ -303,7 +303,7 @@ export class Prisma8ProjectQueryStore {
           FROM public.scada_project_versions
           WHERE tenant_id = ${actor.tenantId} AND project_id = ${projectId}
             AND (${cursor}::bigint = 0 OR revision < ${cursor})
-          ORDER BY revision DESC LIMIT ${query.limit}::integer`
+          ORDER BY scada_project_versions.revision DESC LIMIT ${query.limit}::integer`
           .returnsRow(VERSION_COLUMNS).build(),
       ).toArray();
       return rows.map(versionSummary);
