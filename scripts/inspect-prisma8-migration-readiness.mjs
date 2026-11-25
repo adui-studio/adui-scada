@@ -31,7 +31,7 @@ const permissionValues = [
   "release:read",
 ];
 
-class PreflightError extends Error {}
+export class PreflightError extends Error {}
 
 function requireCondition(condition, message) {
   if (!condition) throw new PreflightError(message);
@@ -367,6 +367,13 @@ const sql = Object.freeze({
     current_setting('transaction_read_only') AS read_only,
     current_setting('transaction_isolation') AS isolation,
     current_setting('TimeZone') AS timezone,
+    current_setting('server_version_num') AS server_version,
+    current_setting('server_encoding') AS server_encoding,
+    current_setting('search_path') AS search_path,
+    current_setting('DateStyle') AS date_style,
+    current_setting('standard_conforming_strings') AS standard_strings,
+    (SELECT datcollate FROM pg_database WHERE datname = current_database()) AS database_collation,
+    (SELECT datctype FROM pg_database WHERE datname = current_database()) AS database_ctype,
     to_regclass('public._prisma_migrations') IS NOT NULL AS legacy_ledger,
     to_regnamespace('prisma_contract') IS NOT NULL AS marker_schema,
     to_regclass('prisma_contract.marker') IS NOT NULL AS marker_table`,
@@ -416,7 +423,7 @@ const sql = Object.freeze({
 });
 
 /** 固定只读查询序列；任何阶段失败均尝试回滚、关闭连接，且不输出原始第三方错误。 */
-export async function inspectMigrationDatabase(client, baseline) {
+async function inspectMigrationSnapshot(client, baseline, databaseName) {
   let begun = false;
   let stage = "连接初始化";
   let result;
@@ -431,7 +438,7 @@ export async function inspectMigrationDatabase(client, baseline) {
     const row = boundary[0];
     requireCondition(
       boundary.length === 1 &&
-        row?.database_name === "adui_scada_test" &&
+        row?.database_name === databaseName &&
         row.schema_name === "public" &&
         row.read_only === "on" &&
         row.isolation === "repeatable read",
@@ -453,9 +460,22 @@ export async function inspectMigrationDatabase(client, baseline) {
       indexes: (await client.query(sql.indexes, [baseline.tableNames])).rows,
     };
     result = {
-      ...validateMigrationCatalog(baseline, catalog),
-      marker: "ABSENT",
-      timezoneUtc: ["UTC", "Etc/UTC", "GMT"].includes(row.timezone),
+      report: {
+        ...validateMigrationCatalog(baseline, catalog),
+        marker: "ABSENT",
+        timezoneUtc: ["UTC", "Etc/UTC", "GMT"].includes(row.timezone),
+      },
+      catalog,
+      context: {
+        serverVersion: row.server_version,
+        serverEncoding: row.server_encoding,
+        searchPath: row.search_path,
+        dateStyle: row.date_style,
+        standardStrings: row.standard_strings,
+        databaseCollation: row.database_collation,
+        databaseCtype: row.database_ctype,
+        timezone: row.timezone,
+      },
     };
   } catch (error) {
     failures.push(error instanceof PreflightError ? error.message : stage + "失败");
@@ -476,6 +496,52 @@ export async function inspectMigrationDatabase(client, baseline) {
   if (failures.length > 0) throw new PreflightError("迁移接管只读预检失败：" + failures.join("；"));
   requireCondition(result !== undefined, "迁移接管只读预检未产生有效结果");
   return result;
+}
+
+/** 保留原预检返回值、固定验收库及拒绝签名语义。 */
+export async function inspectMigrationDatabase(client, baseline) {
+  const snapshot = await inspectMigrationSnapshot(client, baseline, "adui_scada_test");
+  return snapshot.report;
+}
+
+function requireComparisonContext(snapshot) {
+  const context = snapshot.context;
+  requireCondition(
+    snapshot.report.timezoneUtc &&
+      context.searchPath === "public" &&
+      context.standardStrings === "on" &&
+      Object.values(context).every((value) => typeof value === "string" && value.length > 0),
+    "目录对照要求完整、受控的 PostgreSQL 查询上下文",
+  );
+}
+
+/** 逐项比较两库已预检的目录行；仅返回固定诊断和指纹，不输出数据库原始定义。 */
+export async function compareMigrationDatabases(testClient, referenceClient, baseline) {
+  const actual = await inspectMigrationSnapshot(testClient, baseline, "adui_scada_test");
+  requireComparisonContext(actual);
+  const reference = await inspectMigrationSnapshot(
+    referenceClient,
+    baseline,
+    "adui_scada_fresh_prisma8_ref",
+  );
+  requireComparisonContext(reference);
+  same(actual.context, reference.context, "验收库与参考库 PostgreSQL 查询上下文不一致");
+  same(actual.catalog.tables, reference.catalog.tables, "验收库与参考库业务表定义或注释不一致");
+  same(actual.catalog.columns, reference.catalog.columns, "验收库与参考库字段定义或注释不一致");
+  same(actual.catalog.constraints, reference.catalog.constraints, "验收库与参考库原生约束定义不一致");
+  same(actual.catalog.indexes, reference.catalog.indexes, "验收库与参考库索引定义或注释不一致");
+  same(
+    actual.report.catalogFingerprint,
+    reference.report.catalogFingerprint,
+    "验收库与参考库目录指纹不一致",
+  );
+  return {
+    status: "MATCHED_REVIEW_REQUIRED",
+    signingAllowed: false,
+    catalogFingerprint: actual.report.catalogFingerprint,
+    referenceFingerprint: reference.report.catalogFingerprint,
+    contractHash: baseline.contractHash,
+  };
 }
 
 async function main() {
