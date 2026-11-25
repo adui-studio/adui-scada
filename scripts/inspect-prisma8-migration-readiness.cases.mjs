@@ -410,7 +410,10 @@ void describe("Prisma 8 独立参考库只读目录对照", () => {
     const reference = mockClient({ boundaryRow: referenceBoundary });
     const result = await readNativeContractCatalog(actual.client, reference.client, baseline);
     assert.deepEqual(result.catalog, catalog());
-    assert.equal(result.report.catalogFingerprint, validateMigrationCatalog(baseline, catalog()).catalogFingerprint);
+    assert.equal(
+      result.report.catalogFingerprint,
+      validateMigrationCatalog(baseline, catalog()).catalogFingerprint,
+    );
     assert.equal(result.report.signingAllowed, false);
     assert.deepEqual(actual.calls.slice(-2), ["ROLLBACK", "关闭"]);
     assert.deepEqual(reference.calls.slice(-2), ["ROLLBACK", "关闭"]);

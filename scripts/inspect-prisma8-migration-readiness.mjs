@@ -544,7 +544,11 @@ async function readMatchedMigrationSnapshots(testClient, referenceClient, baseli
 
 /** 原对照入口仍只返回固定诊断和指纹，不输出数据库原始定义。 */
 export async function compareMigrationDatabases(testClient, referenceClient, baseline) {
-  const { actual, reference } = await readMatchedMigrationSnapshots(testClient, referenceClient, baseline);
+  const { actual, reference } = await readMatchedMigrationSnapshots(
+    testClient,
+    referenceClient,
+    baseline,
+  );
   return {
     status: "MATCHED_REVIEW_REQUIRED",
     signingAllowed: false,

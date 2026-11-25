@@ -6,8 +6,17 @@ import {
   requirePrisma8ReadOnlyReferenceUrl,
   requirePrisma8ReadOnlyTestUrl,
 } from "../apps/server/src/database/prisma8-readonly-target.ts";
-import { loadMigrationBaseline, PreflightError, readNativeContractCatalog } from "./inspect-prisma8-migration-readiness.mjs";
-import { materializeNativeContract, nativeChecks, NativeContractReviewError, reviewNativeContract } from "./prisma8-native-contract-review.mjs";
+import {
+  loadMigrationBaseline,
+  PreflightError,
+  readNativeContractCatalog,
+} from "./inspect-prisma8-migration-readiness.mjs";
+import {
+  materializeNativeContract,
+  nativeChecks,
+  NativeContractReviewError,
+  reviewNativeContract,
+} from "./prisma8-native-contract-review.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const server = join(root, "apps", "server");
@@ -25,7 +34,9 @@ async function main() {
   let referenceUrl;
   try {
     testUrl = requirePrisma8ReadOnlyTestUrl(process.env.SCADA_TEST_DATABASE_URL);
-    referenceUrl = requirePrisma8ReadOnlyReferenceUrl(process.env.SCADA_MIGRATION_REFERENCE_DATABASE_URL);
+    referenceUrl = requirePrisma8ReadOnlyReferenceUrl(
+      process.env.SCADA_MIGRATION_REFERENCE_DATABASE_URL,
+    );
   } catch {
     throw new PreflightError("原生候选评审必须显式提供两个本机隔离库连接");
   }
@@ -36,17 +47,31 @@ async function main() {
     { name: "prisma", version: "8.0.0-rc.35" },
     { name: "@prisma/orm-postgres", version: "8.0.0-rc.25" },
   ]) {
-    const manifest = JSON.parse(readFileSync(join(server, "node_modules", name, "package.json"), "utf8"));
-    requireCondition(manifest.name === name && manifest.version === version, "原生候选必须使用已审查的固定 Prisma 8 版本");
+    const manifest = JSON.parse(
+      readFileSync(join(server, "node_modules", name, "package.json"), "utf8"),
+    );
+    requireCondition(
+      manifest.name === name && manifest.version === version,
+      "原生候选必须使用已审查的固定 Prisma 8 版本",
+    );
   }
   const { Client } = createRequire(join(server, "package.json"))("pg");
-  const client = (connectionString) => new Client({
-    connectionString,
-    connectionTimeoutMillis: 5000,
-    options: "-c default_transaction_read_only=on -c statement_timeout=5000 -c lock_timeout=2000 -c search_path=public",
-  });
-  const { report, catalog } = await readNativeContractCatalog(client(testUrl), client(referenceUrl), baseline);
-  requireCondition(report.catalogFingerprint === reviewedFingerprint && report.signingAllowed === false, "目录指纹已变化，禁止生成原生候选");
+  const client = (connectionString) =>
+    new Client({
+      connectionString,
+      connectionTimeoutMillis: 5000,
+      options:
+        "-c default_transaction_read_only=on -c statement_timeout=5000 -c lock_timeout=2000 -c search_path=public",
+    });
+  const { report, catalog } = await readNativeContractCatalog(
+    client(testUrl),
+    client(referenceUrl),
+    baseline,
+  );
+  requireCondition(
+    report.catalogFingerprint === reviewedFingerprint && report.signingAllowed === false,
+    "目录指纹已变化，禁止生成原生候选",
+  );
 
   const checks = nativeChecks(baseline, catalog);
   requireCondition(checks.length === 36, "原生 CHECK 必须完整覆盖三十六项");
@@ -64,19 +89,29 @@ async function main() {
   delete env.SCADA_MIGRATION_REFERENCE_DATABASE_URL;
   delete env.SCADA_DATABASE_URL;
   delete env.DATABASE_URL;
-  const result = spawnSync(process.execPath, [join(root, "scripts", "prisma8-cli.mjs"), "contract", "native-emit"], {
-    cwd: root,
-    env,
-    stdio: "inherit",
-    timeout: 120000,
-  });
+  const result = spawnSync(
+    process.execPath,
+    [join(root, "scripts", "prisma8-cli.mjs"), "contract", "native-emit"],
+    {
+      cwd: root,
+      env,
+      stdio: "inherit",
+      timeout: 120000,
+    },
+  );
   requireCondition(
     readFileSync(join(formalPath, "contract.json"), "utf8") === formalJson &&
       readFileSync(join(formalPath, "contract.d.ts"), "utf8") === formalTypes,
     "正式契约生成物发生变化，停止评审",
   );
-  requireCondition(!result.error && result.status === 0, "原生 PSL 生成失败，保留候选文件供人工评审");
-  requireCondition(readFileSync(join(artifact, "contract.d.ts"), "utf8").length > 0, "候选类型生成物为空");
+  requireCondition(
+    !result.error && result.status === 0,
+    "原生 PSL 生成失败，保留候选文件供人工评审",
+  );
+  requireCondition(
+    readFileSync(join(artifact, "contract.d.ts"), "utf8").length > 0,
+    "候选类型生成物为空",
+  );
   const candidate = JSON.parse(readFileSync(join(artifact, "contract.json"), "utf8"));
   const review = reviewNativeContract(JSON.parse(formalJson), candidate, baseline, checks);
   console.info("原生候选物理结构检查通过，CHECK 数量：" + review.checks);
@@ -89,7 +124,10 @@ async function main() {
 }
 
 void main().catch((error) => {
-  const message = error instanceof PreflightError || error instanceof NativeContractReviewError ? error.message : "原生候选生成或物理结构评审失败";
+  const message =
+    error instanceof PreflightError || error instanceof NativeContractReviewError
+      ? error.message
+      : "原生候选生成或物理结构评审失败";
   console.error(message);
   process.exitCode = 1;
 });
