@@ -1,6 +1,11 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
 import {
+  requirePrisma8ReadOnlyReferenceUrl,
+  requirePrisma8ReadOnlyTestUrl,
+} from "../apps/server/src/database/prisma8-readonly-target.ts";
+import {
+  compareMigrationDatabases,
   inspectMigrationDatabase,
   loadMigrationBaseline,
   validateMigrationCatalog,
@@ -17,6 +22,13 @@ const boundary = {
   read_only: "on",
   isolation: "repeatable read",
   timezone: "UTC",
+  server_version: "170004",
+  server_encoding: "UTF8",
+  search_path: "public",
+  date_style: "ISO, MDY",
+  standard_strings: "on",
+  database_collation: "C",
+  database_ctype: "C",
   legacy_ledger: true,
   marker_schema: false,
   marker_table: false,
@@ -338,5 +350,146 @@ void describe("Prisma 8 迁移接管只读预检", () => {
       message: "迁移接管只读预检失败：只读快照回滚失败；数据库连接关闭失败",
     });
     assert.deepEqual(second.calls.slice(-2), ["ROLLBACK", "关闭"]);
+  });
+});
+
+const referenceBoundary = { ...boundary, database_name: "adui_scada_fresh_prisma8_ref" };
+
+void describe("Prisma 8 独立参考库只读目录对照", () => {
+  void it("两个固定目标的 URL 门禁互相隔离且拒绝业务库和额外参数", () => {
+    const testUrl = "postgresql://test_user@127.0.0.1:15432/adui_scada_test";
+    const referenceUrl = "postgresql://test_user@127.0.0.1:15432/adui_scada_fresh_prisma8_ref";
+    assert.equal(requirePrisma8ReadOnlyTestUrl(testUrl + "?schema=public"), testUrl);
+    assert.equal(requirePrisma8ReadOnlyReferenceUrl(referenceUrl + "?schema=public"), referenceUrl);
+    assert.throws(() => requirePrisma8ReadOnlyTestUrl(referenceUrl), /只读探针仅允许/);
+    for (const invalid of [
+      undefined,
+      testUrl,
+      referenceUrl.replace("127.0.0.1", "example.invalid"),
+      referenceUrl.replace("15432", "5432"),
+      referenceUrl.replace("adui_scada_fresh_prisma8_ref", "adui_scada"),
+      referenceUrl + "?schema=private",
+      referenceUrl + "?options=unsafe",
+      referenceUrl + "?schema=public&schema=public",
+      referenceUrl + "#fragment",
+      referenceUrl + "\n",
+    ]) {
+      assert.throws(() => requirePrisma8ReadOnlyReferenceUrl(invalid), /目录对照仅允许/);
+    }
+  });
+
+  void it("两库目录定义逐项一致且分别回滚关闭仍禁止签名", async () => {
+    const actual = mockClient();
+    const reference = mockClient({ boundaryRow: referenceBoundary });
+    const result = await compareMigrationDatabases(actual.client, reference.client, baseline);
+    assert.equal(result.status, "MATCHED_REVIEW_REQUIRED");
+    assert.equal(result.signingAllowed, false);
+    assert.equal(result.contractHash, baseline.contractHash);
+    assert.equal(result.catalogFingerprint, result.referenceFingerprint);
+    assert.equal(
+      result.catalogFingerprint,
+      validateMigrationCatalog(baseline, catalog()).catalogFingerprint,
+    );
+    for (const calls of [actual.calls, reference.calls]) {
+      assert.equal(calls.length, 10);
+      assert.deepEqual(calls.slice(0, 2), [
+        "连接",
+        "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY",
+      ]);
+      assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
+      assert.equal(
+        calls.slice(2, -2).every((query) => query.startsWith("SELECT")),
+        true,
+      );
+    }
+  });
+
+  void it("拒绝预检能通过但原生定义或注释不一致的参考库", async () => {
+    const tableComment = catalog();
+    tableComment.tables[0].comment = "不同中文表注释";
+    const defaultValue = catalog();
+    const column = defaultValue.columns.find((row) => row.default_expression !== null);
+    assert.ok(column, "默认值测试夹具必须存在");
+    column.default_expression = "模拟另一种默认值表达式";
+    const check = catalog();
+    const nativeCheck = check.constraints.find(
+      (row) => row.constraint_name === "scada_projects_head_revision_check",
+    );
+    assert.ok(nativeCheck, "原生检查约束测试夹具必须存在");
+    nativeCheck.definition = "模拟另一种原生约束定义";
+    const indexDefinition = catalog();
+    indexDefinition.indexes[0].definition = "模拟另一种索引排序定义";
+    const indexComment = catalog();
+    indexComment.indexes[0].comment = "不同中文索引注释";
+    for (const { metadata, expected } of [
+      { metadata: tableComment, expected: /业务表定义或注释不一致/ },
+      { metadata: defaultValue, expected: /字段定义或注释不一致/ },
+      { metadata: check, expected: /原生约束定义不一致/ },
+      { metadata: indexDefinition, expected: /索引定义或注释不一致/ },
+      { metadata: indexComment, expected: /索引定义或注释不一致/ },
+    ]) {
+      assert.equal(validateMigrationCatalog(baseline, metadata).status, "REVIEW_REQUIRED");
+      const actual = mockClient();
+      const reference = mockClient({ boundaryRow: referenceBoundary, metadata });
+      await assert.rejects(
+        () => compareMigrationDatabases(actual.client, reference.client, baseline),
+        expected,
+      );
+      assert.deepEqual(actual.calls.slice(-2), ["ROLLBACK", "关闭"]);
+      assert.deepEqual(reference.calls.slice(-2), ["ROLLBACK", "关闭"]);
+    }
+  });
+
+  void it("参考库实际库名错误或标记异常时拒绝继续读取", async () => {
+    for (const { changes, expected } of [
+      { changes: { database_name: "adui_scada_test" }, expected: /实际数据库或只读事务边界/ },
+      { changes: { marker_schema: true }, expected: /发现 Prisma 8 标记/ },
+      { changes: { legacy_ledger: false }, expected: /缺少 Prisma 7 历史迁移登记/ },
+    ]) {
+      const actual = mockClient();
+      const reference = mockClient({ boundaryRow: { ...referenceBoundary, ...changes } });
+      await assert.rejects(
+        () => compareMigrationDatabases(actual.client, reference.client, baseline),
+        expected,
+      );
+      assert.equal(reference.calls.length, 5);
+      assert.deepEqual(actual.calls.slice(-2), ["ROLLBACK", "关闭"]);
+      assert.deepEqual(reference.calls.slice(-2), ["ROLLBACK", "关闭"]);
+    }
+  });
+
+  void it("拒绝查询上下文不完整、不受控或不同的参考库", async () => {
+    for (const { changes, expected } of [
+      { changes: { server_version: "170005" }, expected: /查询上下文不一致/ },
+      { changes: { database_collation: "C.UTF-8" }, expected: /查询上下文不一致/ },
+      { changes: { date_style: "ISO, DMY" }, expected: /查询上下文不一致/ },
+      { changes: { server_encoding: "" }, expected: /完整、受控的 PostgreSQL 查询上下文/ },
+      {
+        changes: { search_path: "public, pg_catalog" },
+        expected: /完整、受控的 PostgreSQL 查询上下文/,
+      },
+      { changes: { timezone: "Asia/Shanghai" }, expected: /完整、受控的 PostgreSQL 查询上下文/ },
+      { changes: { standard_strings: "off" }, expected: /完整、受控的 PostgreSQL 查询上下文/ },
+    ]) {
+      const actual = mockClient();
+      const reference = mockClient({ boundaryRow: { ...referenceBoundary, ...changes } });
+      await assert.rejects(
+        () => compareMigrationDatabases(actual.client, reference.client, baseline),
+        expected,
+      );
+      assert.deepEqual(actual.calls.slice(-2), ["ROLLBACK", "关闭"]);
+      assert.deepEqual(reference.calls.slice(-2), ["ROLLBACK", "关闭"]);
+    }
+  });
+
+  void it("验收库预检失败则不连接参考库且不输出第三方错误", async () => {
+    const actual = mockClient({ failAt: "FROM pg_constraint" });
+    const reference = mockClient({ boundaryRow: referenceBoundary });
+    await assert.rejects(
+      () => compareMigrationDatabases(actual.client, reference.client, baseline),
+      { message: "迁移接管只读预检失败：业务目录元数据失败" },
+    );
+    assert.deepEqual(actual.calls.slice(-2), ["ROLLBACK", "关闭"]);
+    assert.equal(reference.calls.length, 0);
   });
 });

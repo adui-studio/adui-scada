@@ -130,6 +130,7 @@
     "test:prisma8:cli": "node --test scripts/prisma8-cli.cases.mjs",
     "test:prisma8:migration:preflight": "node --test scripts/inspect-prisma8-migration-readiness.cases.mjs",
     "db:prisma8:migration:preflight": "node scripts/inspect-prisma8-migration-readiness.mjs",
+    "db:prisma8:migration:compare": "node scripts/compare-prisma8-migration-reference.mjs",
     "db:migrate:dev": "pnpm --filter @adui/scada-server run db:migrate:dev",
     "db:migrate:deploy": "pnpm --filter @adui/scada-server run db:migrate:deploy",
     "db:migrate:status": "pnpm --filter @adui/scada-server run db:migrate:status",

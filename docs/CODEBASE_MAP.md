@@ -1675,3 +1675,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/inspect-prisma8-migration-readiness.cases.mjs`：九项离线测试定义，真实仓库文件静态基线及模拟数据库负向/关闭边界。
 - `pnpm run test:prisma8:migration:preflight`：离线测试，纳入后续完整 ready；`pnpm run db:prisma8:migration:preflight`：人工运行真实只读专项，不纳入 ready。
 - [ADR-0072](adr/0072-prisma8-migration-adoption-review.md)：原生约束保留、签名与迁移基线、后续唯一所有权接管的待评审方案。
+
+### Prisma 8 原生约束保留评审与参考库对照
+
+- `apps/server/src/database/prisma8-readonly-target.ts`：保留原只读验收库入口，增加仅供迁移目录对照的独立参考库白名单入口，不扩展其他业务探针权限。
+- `scripts/inspect-prisma8-migration-readiness.mjs`：共享只读快照读取，原预检输出不变；独立参考库对照逐项比较受检目录和查询上下文，不将原始数据库定义写入日志。
+- `scripts/compare-prisma8-migration-reference.mjs` / `pnpm run db:prisma8:migration:compare`：人工双库只读对照入口，仅允许两个显式本机隔离库，禁止签名。参考库需另行明确授权建立并独立重放。
+- `scripts/inspect-prisma8-migration-readiness.cases.mjs`：原九项加新增六项离线定义，继续通过原 test:prisma8:migration:preflight 入口纳入未来完整 ready。

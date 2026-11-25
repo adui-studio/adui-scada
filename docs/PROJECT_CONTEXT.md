@@ -2784,3 +2784,9 @@ PR #207 的维护者 Windows 最终 HEAD `7ac87c77a2e8a6ae3577bc631f1ecd7c885f79
 ### 2026-11-25 · PR #210 只读预检 Lint 修复候选
 
 维护者 Windows 首轮 Vite+ 出现一条对象展开警告，格式、中文文案及文档检查已通过。E-140 修复提交 `5cee243361a1ebfac7560b019b5e59a05db0fe0e` 仅调整测试参数为具名对象，保留全部原断言；独立参数等价性 5/5 及类型推断复核通过。正式增量验收及真实数据库目录指纹仍待核对，PR #210 保持 Draft，ADR-0072 Proposed，Prisma 7 继续作为唯一正式迁移执行者。
+
+### 2026-11-25 · PR #210 只读预检结案与原生约束保留评审候选
+
+维护者 Windows 已通过九项离线预检、CLI 三项、Vite+ 507/348 零警告错误、375 中文文案文件、96 Markdown、增量退出码 0、真实 PostgreSQL 只读预检退出码 0。目录指纹 `73079d85974ddc9cbabf59741f2a4a94dd7bfff3d70a23bab27a7283456e8c52`；REVIEW_REQUIRED 且无签名许可。最终格式化提交已核对，按授权 Squash 合入集成分支 `24391af99df003f19dbcec5a46d891874df03be7`。E-140 关闭；MVP PR #198 保持 Draft。
+
+新分支 `feat/mvp-prisma8-native-constraint-review` 在原预检基础上新增独立参考库目录对照及六项离线测试定义，现有 Prisma 7 迁移和 Prisma 8 Contract/运行时不改。固定包内文档支持 PostgreSQL 原生 CHECK 的精确名称采用方式 `@@check(..., map: ...)`，后续须独立候选 Contract 验证 36 个 CHECK、六字段外键及其运行时关系兼容性，中文注释和其他原生定义继续单独核对。ADR-0072 保持 Proposed。独立空库建立及历史重放尚未授权；现有目录对照只读，不执行迁移、签名或接管。
