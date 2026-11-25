@@ -95,8 +95,8 @@ async function verifyRelease(): Promise<"MATCHED"> {
     const previous = new PrismaProjectReleaseStore(database, new ProjectReleaseSafetyGate());
     const candidate = new Prisma8ProjectReleaseStore(next);
     // 唯一允许成功发布的门禁仅存在于此隔离数据库测试中。
-    const legacyTest = new PrismaProjectReleaseStore(database, { assertReady: async () => {} });
-    const nextTest = new Prisma8ProjectReleaseStore(next, async () => {});
+    const legacyTest = new PrismaProjectReleaseStore(database, { assertReady: () => Promise.resolve() });
+    const nextTest = new Prisma8ProjectReleaseStore(next, () => Promise.resolve());
 
     stage = "随机身份、会话与工程准备";
     creationUnconfirmed = true;
