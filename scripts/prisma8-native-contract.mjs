@@ -7,7 +7,7 @@ import {
   requirePrisma8ReadOnlyTestUrl,
 } from "../apps/server/src/database/prisma8-readonly-target.ts";
 import { loadMigrationBaseline, PreflightError, readNativeContractCatalog } from "./inspect-prisma8-migration-readiness.mjs";
-import { materializeNativeContract, nativeChecks, reviewNativeContract } from "./prisma8-native-contract-review.mjs";
+import { materializeNativeContract, nativeChecks, NativeContractReviewError, reviewNativeContract } from "./prisma8-native-contract-review.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const server = join(root, "apps", "server");
@@ -89,7 +89,7 @@ async function main() {
 }
 
 void main().catch((error) => {
-  const message = error instanceof PreflightError ? error.message : "原生候选生成或物理结构评审失败";
+  const message = error instanceof PreflightError || error instanceof NativeContractReviewError ? error.message : "原生候选生成或物理结构评审失败";
   console.error(message);
   process.exitCode = 1;
 });
