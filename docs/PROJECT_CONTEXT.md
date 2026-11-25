@@ -2802,3 +2802,7 @@ PR #211 Windows 增量验收：CLI 3/3、离线预检/对照 15/15、Vite+ 508/3
 PR #212 Windows 离线 27/27、Vite+ 511/352 零警告错误、服务端类型检查、379 中文文案文件、96 Markdown、增量退出码 0；真实独立参考库八项历史重放及二次部署、迁移登记稳定性通过，双方目录指纹 `73079d85974ddc9cbabf59741f2a4a94dd7bfff3d70a23bab27a7283456e8c52`，退出码 0，签名许可否。最终远端格式提交核对后按授权 Squash 合入 `e4afdd4040dca4ebcdfb3a1abfcdb6ff2b86a473`。保留参考库。MVP PR #198 仍为 Draft。
 
 新分支 `feat/mvp-prisma8-native-contract` 新增独立原生 PSL 模板及真实双库只读 CHECK 采集、独立离线生成和物理/运行时 IR 评审入口。模板静态含十二模型、八十五物理字段、十二主键、十三外键（含六字段末次事件）及二十索引；生成时从已核对目录取得三十六 CHECK 精确谓词，不假造 PostgreSQL 重打印。正式过渡 Contract/Provider 保持不变；候选不定义事件反向单值导航，记录兼容性阻塞，不新增冗余唯一约束。局部 Node 新增测试 8/8、CLI 回归 4/4、编排脚本语法通过；真实候选 emit、物理 IR 与运行时差异和完整固定工具链待 Windows 验收。Prisma 7 唯一正式迁移执行者，ADR-0072 Proposed，签名禁止。
+
+### 2026-11-25 · PR #213 真实原生候选物理 IR 通过，运行时兼容仍阻塞
+
+维护者 Windows 37/37 离线测试、515/356 Vite+ 零错误但一条 E-142 排序警告、服务端类型检查、383 中文文案文件、96 Markdown 及增量退出码 0。真实原生候选生成及 36 个 CHECK 受检物理 IR 核验退出码 0，存储哈希 `6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc`，正式生成物不变，execution/profile 哈希一致。明确返回 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED、签名许可否，两个关系差异为 ScadaProjectReleaseEvent.currentReleaseState 与 ScadaProjectReleaseState.lastReleaseEvent。候选 d.ts 依赖可见性及独立配置 Skills 提示亦待审查。E-142 修复保持历史 UTF-16 表名排序，新增第九项离线测试，局部 4/4 通过，待 Windows 零警告复验。PR #213 Draft；后续专门验证关系与候选类型兼容、官方结构验证及新基线等价性。保留现有两库和候选证据，禁止重放、签名、迁移或正式 Provider 切换；Prisma 7 唯一正式迁移执行者，ADR-0072 Proposed。
