@@ -2780,3 +2780,7 @@ PR #207 的维护者 Windows 最终 HEAD `7ac87c77a2e8a6ae3577bc631f1ecd7c885f79
 维护者 Windows 在 PR #209 初始 HEAD `1289802eca1d442cc13b8a63cd88dcb90cd922c7` 完成 504 格式文件、346 受检文件零警告错误、服务端独立类型检查、373 中文文案、95 Markdown、43/43 定向单测和 1/1 真实 PostgreSQL ACL 专项（1013 ms），日志末尾工作区无输出。远端最终 HEAD `7b9d0e0cbedf392259d18ffddefefa39248abf57` 多一个三文件排版提交，差异核对未发现业务逻辑变化；维护者明确授权后 Squash 合入 `8bc5458deb13541c90f7b8b2e298ca2b94a296c5`，MVP PR #198 保持 Draft。
 
 新分支 feat/mvp-prisma8-migration-preflight 进入迁移管理评审，当前八项迁移和生成 Contract 确认存在三十六个原生 CHECK 的表达缺口及末次事件六字段外键与单字段关联差异。ADR-0072 Proposed；只读预检及九项离线测试定义待本机验收，签名、基线生成、新库重放、正式迁移所有权及生产 Provider 切换均未执行。
+
+### 2026-11-25 · PR #210 只读预检 Lint 修复候选
+
+维护者 Windows 首轮 Vite+ 出现一条对象展开警告，格式、中文文案及文档检查已通过。E-140 修复提交 `5cee243361a1ebfac7560b019b5e59a05db0fe0e` 仅调整测试参数为具名对象，保留全部原断言；独立参数等价性 5/5 及类型推断复核通过。正式增量验收及真实数据库目录指纹仍待核对，PR #210 保持 Draft，ADR-0072 Proposed，Prisma 7 继续作为唯一正式迁移执行者。
