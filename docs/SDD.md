@@ -1594,3 +1594,11 @@ React/Vue 运行页可显式导入当前或可迁移 Schema 的最大 2 MiB JSON
 - 候选事务核对 adui_scada_test、public、可写连接与 ReadCommitted，使用参数化 Prisma 8 ORM 查询租户、工程、主体的完整 permission 投影，不按某项 action 预过滤，不写入授权或读取其他工程。纯策略继续对未知权限、未知动作、缺失授权默认拒绝，六项权限互相独立。技术查询异常返回固定中文 503，不泄漏数据库异常或生成授权成功日志。
 - 已验证的原工程创建只授予 project:read、version:read、version:append；release:read、release:publish、release:rollback 必须各自显式授予，后者仅表示权限值而非已有正式回滚执行接口。候选 Guard 通过仍必须经仓储事务锁内重新查询权限。真实专项在同一随机专用工程行锁内撤去指定版本追加和发布读取授权，验证两版仓储均拒绝，其他主体、租户、工程和既有状态保持不变。
 - 正式 Prisma 7 Guard、组合装饰器、NestJS 身份模块、生产发布安全门禁、Schema 与迁移均保持不变。
+
+### Prisma 8 迁移接管预检（待 Windows 验收）
+
+- 从固定八项历史 LF SQL 计算 SHA-256，并核对每条迁移完成、非回滚、影响步骤数和校验和；拒绝未知或重复历史。只允许显式 SCADA_TEST_DATABASE_URL、本机 15432/adui_scada_test，禁止加载业务库凭据或回退。
+- 在实际 public Schema 开启 REPEATABLE READ READ ONLY，核对隔离库、只读状态、Prisma 7 历史表、Prisma 8 标记及命名空间不存在。仅读系统目录与迁移元数据，最终 ROLLBACK，关闭连接；原始第三方异常脱敏。
+- 对照生成 Contract 的十二表、八十五字段和二十非主键索引；核对类型、长度/精度、可空性、默认值存在性、索引列序及唯一性/有效性、中文注释。对照历史 SQL 的十二主键、十三外键及三十六 CHECK 名称、所属表、验证状态，校验主外键字段、顺序、引用及动作，并核对实际 ACL 六项白名单表达式。
+- 历史六字段末次事件外键与生成 Contract 单字段关联存在已确认差异，全部 CHECK 在当前生成 Contract 中缺少对应表达。指纹包含数据库原生定义与注释；普通 CHECK 完整语义、默认表达式及索引细节仍待独立参考库对照。返回 REVIEW_REQUIRED、signingAllowed=false，不等同于官方 db verify 或接管审批。
+- 不改 Schema、生成 Contract、迁移 SQL、Prisma 8 CLI 白名单、正式 Provider、工业只读或发布安全门禁。

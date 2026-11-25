@@ -1668,3 +1668,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/auth/prisma8-scada-project.guard.spec.ts`：七项输入、范围、完整权限集、未知动作、隔离边界和异常脱敏测试定义。
 - `apps/server/test/prisma8-project-acl.db-spec.ts`：两个随机租户、四个身份、三个工程的六项权限双版本对照、专用撤权与仓储锁内复核、精确夹具清理。
 - `pnpm run test:db:prisma8:project:acl`：独立真实专项，不接管正式授权管理或生产路由。
+
+### Prisma 8 迁移接管只读预检
+
+- `scripts/inspect-prisma8-migration-readiness.mjs`：现有迁移/Contract 静态基线提取、显式隔离连接、只读迁移登记与系统目录核对、目录指纹及待审查结论。
+- `scripts/inspect-prisma8-migration-readiness.cases.mjs`：九项离线测试定义，真实仓库文件静态基线及模拟数据库负向/关闭边界。
+- `pnpm run test:prisma8:migration:preflight`：离线测试，纳入后续完整 ready；`pnpm run db:prisma8:migration:preflight`：人工运行真实只读专项，不纳入 ready。
+- [ADR-0072](adr/0072-prisma8-migration-adoption-review.md)：原生约束保留、签名与迁移基线、后续唯一所有权接管的待评审方案。
