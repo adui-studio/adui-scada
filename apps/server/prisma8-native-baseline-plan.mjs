@@ -24,6 +24,8 @@ import {
   DdlReviewError,
   reviewAuditedBaseline,
 } from "../../scripts/prisma8-native-baseline-ddl.mjs";
+import { CommentEmissionError } from "../../scripts/prisma8-native-baseline-comments.mjs";
+import { runCommentEmission } from "../../scripts/prisma8-native-baseline-comment-emission.mjs";
 
 function requireCondition(condition, message) {
   if (!condition) throw new BaselineError(message);
@@ -35,8 +37,12 @@ function main() {
   const args = process.argv.slice(2);
   const reviewDdl = args.length === 1 && args[0] === "--review-baseline-ddl";
   const reviewComments = args.length === 1 && args[0] === "--review-baseline-comments";
+  const emitComments = args.length === 1 && args[0] === "--confirm-offline-comments";
   const reviewExisting =
-    reviewDdl || reviewComments || (args.length === 1 && args[0] === "--review-existing-baseline");
+    reviewDdl ||
+    reviewComments ||
+    emitComments ||
+    (args.length === 1 && args[0] === "--review-existing-baseline");
   if (!reviewExisting) requireBaselineApproval(args);
   const root = realpathSync(resolve(import.meta.dirname, "../.."));
   stage = "隔离路径与固定依赖";
@@ -130,7 +136,7 @@ function main() {
   console.info("计划操作数量：" + result.operations);
   console.info("基线状态：BASELINE_ARTIFACT_REVIEW_REQUIRED；签名许可：否；部署许可：否");
   console.info("物理 DDL、中文注释、操作及依赖解析仍须独立评审");
-  if (reviewDdl || reviewComments) {
+  if (reviewDdl || reviewComments || emitComments) {
     stage = "固定候选 DDL 与历史中文注释审查";
     const audited = reviewAuditedBaseline(root, baseline, nativeText);
     console.info("固定候选原件指纹：10 项匹配");
@@ -142,6 +148,20 @@ function main() {
       console.info("以下仅为注释审查文本，不是可部署迁移包");
       process.stdout.write(audited.preview);
     }
+    if (emitComments) {
+      stage = "独立注释候选自发射与官方完整性检查";
+      let emitted;
+      try {
+        emitted = runCommentEmission(root, entry, audited);
+      } finally {
+        reviewExistingBaseline(root, inputs);
+        reviewAuditedBaseline(root, loadMigrationBaseline(), nativeText);
+      }
+      console.info("原始候选、历史迁移及正式契约复核通过");
+      console.info("独立注释候选操作数量：" + emitted.operations);
+      console.info("独立注释候选官方迁移标识：" + emitted.migrationHash);
+      console.info("离线状态：COMMENTS_EMITTED_REVIEW_REQUIRED；签名许可：否；部署许可：否");
+    }
   }
 }
 
@@ -149,7 +169,9 @@ try {
   main();
 } catch (error) {
   console.error(
-    error instanceof BaselineError || error instanceof DdlReviewError
+    error instanceof BaselineError ||
+    error instanceof DdlReviewError ||
+    error instanceof CommentEmissionError
       ? error.message
       : "离线原生基线阶段失败：" + stage + "；保留证据供人工检查",
   );

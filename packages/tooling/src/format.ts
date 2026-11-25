@@ -5,6 +5,7 @@ export const sharedFormat = {
     ".agents/skills/**",
     "apps/server/src/generated/prisma/**",
     "apps/server/src/generated/prisma8/**",
+    "apps/server/.artifacts/prisma8-native-baseline-comments/**",
   ],
   printWidth: 100,
   tabWidth: 2,

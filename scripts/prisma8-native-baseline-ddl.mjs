@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { collectHistoricalComments } from "./prisma8-native-catalog-supplement.mjs";
 
-const packageDirectory = "migrations/app/20261125T0918_scada_native_baseline";
+export const packageDirectory = "migrations/app/20261125T0918_scada_native_baseline";
 const snapshotDirectory =
   "migrations/snapshots/6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc";
 const auditedFiles = {

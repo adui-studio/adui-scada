@@ -4,6 +4,7 @@ export const sharedLint = {
     ".agents/skills/**",
     "apps/server/src/generated/prisma/**",
     "apps/server/src/generated/prisma8/**",
+    "apps/server/.artifacts/prisma8-native-baseline-comments/**",
   ],
   jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
   rules: { "vite-plus/prefer-vite-plus-imports": "error" as const },
