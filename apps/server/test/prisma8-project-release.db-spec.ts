@@ -36,7 +36,11 @@ async function rejected(operation: () => Promise<unknown>, message: string): Pro
 }
 
 function request(revision: number, generation: number) {
-  return { expectedHeadRevision: revision, targetRevision: revision, expectedReleaseGeneration: generation };
+  return {
+    expectedHeadRevision: revision,
+    targetRevision: revision,
+    expectedReleaseGeneration: generation,
+  };
 }
 
 /** 仅对随机隔离工程验证事务；测试门禁不注册 NestJS Provider 或正式路由。 */
@@ -63,12 +67,16 @@ async function verifyRelease(): Promise<"MATCHED"> {
     const options = "-c statement_timeout=5000 -c lock_timeout=2000";
     const writable = new Pool({ ...base, max: 2, options });
     pool = writable;
-    writable.on("error", () => { poolFailed = true; });
+    writable.on("error", () => {
+      poolFailed = true;
+    });
     const legacy = new PrismaClient({ adapter: new PrismaPg({ ...base, max: 2, options }) });
     old = legacy;
     await legacy.$connect();
     stage = "隔离库及发布结构预检";
-    const boundary = await legacy.$queryRaw<Array<{ database_name: string; schema_name: string; read_only: string; ready: boolean }>>`
+    const boundary = await legacy.$queryRaw<
+      Array<{ database_name: string; schema_name: string; read_only: string; ready: boolean }>
+    >`
       SELECT current_database()::text AS database_name, current_schema()::text AS schema_name,
         current_setting('transaction_read_only') AS read_only,
         (to_regclass('public.scada_projects') IS NOT NULL AND
@@ -80,9 +88,15 @@ async function verifyRelease(): Promise<"MATCHED"> {
          to_regclass('public.scada_project_release_state') IS NOT NULL AND
          to_regclass('public.scada_project_release_events') IS NOT NULL) AS ready
     `;
-    same(boundary, [{ database_name: "adui_scada_test", schema_name: "public", read_only: "off", ready: true }]);
-    const otherBoundary = await writable.query("SELECT current_database()::text AS database_name, current_schema()::text AS schema_name, current_setting('transaction_read_only') AS read_only");
-    same(otherBoundary.rows, [{ database_name: "adui_scada_test", schema_name: "public", read_only: "off" }]);
+    same(boundary, [
+      { database_name: "adui_scada_test", schema_name: "public", read_only: "off", ready: true },
+    ]);
+    const otherBoundary = await writable.query(
+      "SELECT current_database()::text AS database_name, current_schema()::text AS schema_name, current_setting('transaction_read_only') AS read_only",
+    );
+    same(otherBoundary.rows, [
+      { database_name: "adui_scada_test", schema_name: "public", read_only: "off" },
+    ]);
     const next = postgres({ contract, pg: writable });
     client = next;
     const database = {
@@ -95,7 +109,9 @@ async function verifyRelease(): Promise<"MATCHED"> {
     const previous = new PrismaProjectReleaseStore(database, new ProjectReleaseSafetyGate());
     const candidate = new Prisma8ProjectReleaseStore(next);
     // 唯一允许成功发布的门禁仅存在于此隔离数据库测试中。
-    const legacyTest = new PrismaProjectReleaseStore(database, { assertReady: () => Promise.resolve() });
+    const legacyTest = new PrismaProjectReleaseStore(database, {
+      assertReady: () => Promise.resolve(),
+    });
     const nextTest = new Prisma8ProjectReleaseStore(next, () => Promise.resolve());
 
     stage = "随机身份、会话与工程准备";
@@ -116,25 +132,54 @@ async function verifyRelease(): Promise<"MATCHED"> {
     creationUnconfirmed = false;
     same([created.projectId, created.headRevision], [projectId, 1]);
     const sid = issued.sessionId;
-    same((await legacy.scadaProjectGrant.createMany({ data: [
-      { ...scope, subjectId: actor.subjectId, permission: "release:read" },
-      { ...scope, subjectId: actor.subjectId, permission: "release:publish" },
-    ] })).count, 2);
-    const inspect = () => legacy.$transaction(async (tx) => ({
-      project: await tx.scadaProject.findUniqueOrThrow({ where: { tenantId_projectId: scope } }),
-      state: await tx.scadaProjectReleaseState.findUniqueOrThrow({ where: { tenantId_projectId: scope } }),
-      events: await tx.scadaProjectReleaseEvent.findMany({ where: scope, orderBy: { generation: "asc" } }),
-      versions: await tx.scadaProjectVersion.findMany({ where: scope, orderBy: { revision: "asc" } }),
-      audits: await tx.scadaProjectAudit.findMany({ where: scope, orderBy: { revision: "asc" } }),
-    }));
+    same(
+      (
+        await legacy.scadaProjectGrant.createMany({
+          data: [
+            { ...scope, subjectId: actor.subjectId, permission: "release:read" },
+            { ...scope, subjectId: actor.subjectId, permission: "release:publish" },
+          ],
+        })
+      ).count,
+      2,
+    );
+    const inspect = () =>
+      legacy.$transaction(async (tx) => ({
+        project: await tx.scadaProject.findUniqueOrThrow({ where: { tenantId_projectId: scope } }),
+        state: await tx.scadaProjectReleaseState.findUniqueOrThrow({
+          where: { tenantId_projectId: scope },
+        }),
+        events: await tx.scadaProjectReleaseEvent.findMany({
+          where: scope,
+          orderBy: { generation: "asc" },
+        }),
+        versions: await tx.scadaProjectVersion.findMany({
+          where: scope,
+          orderBy: { revision: "asc" },
+        }),
+        audits: await tx.scadaProjectAudit.findMany({ where: scope, orderBy: { revision: "asc" } }),
+      }));
 
     stage = "未发布读取及真实默认门禁";
     const before = await inspect();
-    same(await candidate.readCurrent(actor, sid, projectId), { status: "UNRELEASED", projectId, releaseGeneration: 0 });
-    same(await candidate.readCurrent(actor, sid, projectId), await previous.readCurrent(actor, sid, projectId));
+    same(await candidate.readCurrent(actor, sid, projectId), {
+      status: "UNRELEASED",
+      projectId,
+      releaseGeneration: 0,
+    });
+    same(
+      await candidate.readCurrent(actor, sid, projectId),
+      await previous.readCurrent(actor, sid, projectId),
+    );
     const firstKey = randomUUID();
-    await rejected(() => candidate.publish(actor, sid, projectId, request(1, 0), firstKey), gateDenied);
-    await rejected(() => previous.publish(actor, sid, projectId, request(1, 0), firstKey), gateDenied);
+    await rejected(
+      () => candidate.publish(actor, sid, projectId, request(1, 0), firstKey),
+      gateDenied,
+    );
+    await rejected(
+      () => previous.publish(actor, sid, projectId, request(1, 0), firstKey),
+      gateDenied,
+    );
     same(await inspect(), before);
 
     stage = "双版本首次提交及幂等重放";
@@ -145,13 +190,22 @@ async function verifyRelease(): Promise<"MATCHED"> {
     const released = await candidate.readCurrent(actor, sid, projectId);
     same(released, await previous.readCurrent(actor, sid, projectId));
     same(released.status, "RELEASED");
-    await rejected(() => nextTest.publish(actor, sid, projectId, request(1, 1), firstKey), releaseConflict);
-    await rejected(() => nextTest.publish(actor, sid, projectId, request(1, 1), randomUUID()), releaseConflict);
+    await rejected(
+      () => nextTest.publish(actor, sid, projectId, request(1, 1), firstKey),
+      releaseConflict,
+    );
+    await rejected(
+      () => nextTest.publish(actor, sid, projectId, request(1, 1), randomUUID()),
+      releaseConflict,
+    );
 
     stage = "编辑版本与发布指针分离";
     await versions.append(actor, projectId, { document, expectedRevision: 1 });
     same(await candidate.readCurrent(actor, sid, projectId), released);
-    await rejected(() => nextTest.publish(actor, sid, projectId, request(1, 1), randomUUID()), "工程版本已变化，请重新获取最新修订号");
+    await rejected(
+      () => nextTest.publish(actor, sid, projectId, request(1, 1), randomUUID()),
+      "工程版本已变化，请重新获取最新修订号",
+    );
 
     stage = "跨版本并发 CAS";
     const concurrent = await Promise.allSettled([
@@ -160,12 +214,27 @@ async function verifyRelease(): Promise<"MATCHED"> {
     ]);
     same(concurrent.filter((item) => item.status === "fulfilled").length, 1);
     const rejectedResult = concurrent.find((item) => item.status === "rejected");
-    if (!rejectedResult || !(rejectedResult.reason instanceof Error)) throw new Error("缺少预期 CAS 冲突");
+    if (!rejectedResult || !(rejectedResult.reason instanceof Error))
+      throw new Error("缺少预期 CAS 冲突");
     same(rejectedResult.reason.message, releaseConflict);
     const second = await inspect();
-    same([second.project.headRevision, second.state.releaseGeneration, second.state.releasedRevision, second.events.length], [2n, 2n, 2n, 2]);
-    same([second.events[1]?.fromRevision, second.events[1]?.fromContentHash], [1n, first.releasedContentHash]);
-    same(await candidate.readCurrent(actor, sid, projectId), await previous.readCurrent(actor, sid, projectId));
+    same(
+      [
+        second.project.headRevision,
+        second.state.releaseGeneration,
+        second.state.releasedRevision,
+        second.events.length,
+      ],
+      [2n, 2n, 2n, 2],
+    );
+    same(
+      [second.events[1]?.fromRevision, second.events[1]?.fromContentHash],
+      [1n, first.releasedContentHash],
+    );
+    same(
+      await candidate.readCurrent(actor, sid, projectId),
+      await previous.readCurrent(actor, sid, projectId),
+    );
 
     stage = "真实指针 CAS 失败后整体回滚";
     await versions.append(actor, projectId, { document, expectedRevision: 2 });
@@ -176,28 +245,55 @@ async function verifyRelease(): Promise<"MATCHED"> {
         tx.raw.sql`UPDATE public.scada_project_release_state
           SET released_revision = NULL, released_content_hash = NULL, release_generation = 0, last_release_event_id = NULL
           WHERE tenant_id = ${scope.tenantId} AND project_id = ${scope.projectId} AND release_generation = 2`
-          .affectedCount().build(),
+          .affectedCount()
+          .build(),
       );
       same(changed.affectedRows, 1);
     });
     const thirdKey = randomUUID();
-    await rejected(() => conflictTest.publish(actor, sid, projectId, request(3, 2), thirdKey), releaseConflict);
+    await rejected(
+      () => conflictTest.publish(actor, sid, projectId, request(3, 2), thirdKey),
+      releaseConflict,
+    );
     same(await inspect(), baseline);
     const third = await nextTest.publish(actor, sid, projectId, request(3, 2), thirdKey);
     same([third.releaseGeneration, third.releasedRevision], [3, 3]);
     const final = await inspect();
-    same([final.project.headRevision, final.events.length, final.state.lastReleaseEventId], [3n, 3, third.eventId]);
+    same(
+      [final.project.headRevision, final.events.length, final.state.lastReleaseEventId],
+      [3n, 3, third.eventId],
+    );
     same(final.versions, baseline.versions);
     same(final.audits, baseline.audits);
 
     stage = "当前发布读取独立授权及会话失效";
-    same(await candidate.readCurrent(actor, sid, projectId), await previous.readCurrent(actor, sid, projectId));
-    await rejected(() => candidate.readCurrent({ ...actor, tenantId: "missing-" + id }, sid, projectId), denied);
+    same(
+      await candidate.readCurrent(actor, sid, projectId),
+      await previous.readCurrent(actor, sid, projectId),
+    );
+    await rejected(
+      () => candidate.readCurrent({ ...actor, tenantId: "missing-" + id }, sid, projectId),
+      denied,
+    );
     await rejected(() => candidate.readCurrent(actor, randomUUID(), projectId), invalidSession);
-    same((await legacy.scadaProjectGrant.deleteMany({ where: { ...scope, subjectId: actor.subjectId, permission: "release:read" } })).count, 1);
+    same(
+      (
+        await legacy.scadaProjectGrant.deleteMany({
+          where: { ...scope, subjectId: actor.subjectId, permission: "release:read" },
+        })
+      ).count,
+      1,
+    );
     await rejected(() => candidate.readCurrent(actor, sid, projectId), denied);
     await rejected(() => previous.readCurrent(actor, sid, projectId), denied);
-    same((await legacy.scadaProjectGrant.deleteMany({ where: { ...scope, subjectId: actor.subjectId, permission: "release:publish" } })).count, 1);
+    same(
+      (
+        await legacy.scadaProjectGrant.deleteMany({
+          where: { ...scope, subjectId: actor.subjectId, permission: "release:publish" },
+        })
+      ).count,
+      1,
+    );
     await rejected(() => nextTest.publish(actor, sid, projectId, request(3, 2), thirdKey), denied);
     same(await sessions.revokeForVerifiedSubject(actor, sid), true);
     await rejected(() => candidate.readCurrent(actor, sid, projectId), invalidSession);
@@ -205,8 +301,16 @@ async function verifyRelease(): Promise<"MATCHED"> {
   } catch {
     failures.push(stage);
   } finally {
-    try { await client?.close(); } catch { failures.push("Prisma 8 客户端关闭失败"); }
-    try { await pool?.end(); } catch { failures.push("外部连接池关闭失败"); }
+    try {
+      await client?.close();
+    } catch {
+      failures.push("Prisma 8 客户端关闭失败");
+    }
+    try {
+      await pool?.end();
+    } catch {
+      failures.push("外部连接池关闭失败");
+    }
     if (poolFailed) failures.push("外部连接池发生异常");
     if (creationUnconfirmed) {
       failures.push("专用夹具创建未确认，禁止自动清理，测试标识：" + id);
@@ -239,7 +343,11 @@ async function verifyRelease(): Promise<"MATCHED"> {
         failures.push("专用夹具清理未确认，禁止自动重试，测试标识：" + id);
       }
     }
-    try { await old?.$disconnect(); } catch { failures.push("Prisma 7 客户端关闭失败"); }
+    try {
+      await old?.$disconnect();
+    } catch {
+      failures.push("Prisma 7 客户端关闭失败");
+    }
   }
   if (failures.length) throw new Error("发布事务专项未通过：" + failures.join("；"));
   return "MATCHED";
