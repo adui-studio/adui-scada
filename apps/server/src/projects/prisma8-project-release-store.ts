@@ -236,7 +236,7 @@ async function lockSessionAndPermission(
 }
 
 const STATE_COLUMNS = {
-  generation: "pg/text@1", revision: "pg/text@1", hash: "pg/text@1", event_id: "pg/text@1",
+  generation: "pg/text@1", revision: "pg/text@1", hash: "pg/text@1", event_id: "pg/text@1", hash_is_null: "pg/text@1",
 } as const;
 
 async function lockState(tx: Tx, tenantId: string, projectId: string, write: boolean): Promise<ReleaseState> {
@@ -244,14 +244,14 @@ async function lockState(tx: Tx, tenantId: string, projectId: string, write: boo
     ? await tx.query(
         tx.raw.sql`SELECT release_generation::text AS generation,
           COALESCE(released_revision::text, '') AS revision, COALESCE(released_content_hash::text, '') AS hash,
-          COALESCE(last_release_event_id::text, '') AS event_id
+          COALESCE(last_release_event_id::text, '') AS event_id, (released_content_hash IS NULL)::text AS hash_is_null
           FROM public.scada_project_release_state WHERE tenant_id = ${tenantId} AND project_id = ${projectId}
           FOR UPDATE`.returnsRow(STATE_COLUMNS).build(),
       ).toArray()
     : await tx.query(
         tx.raw.sql`SELECT release_generation::text AS generation,
           COALESCE(released_revision::text, '') AS revision, COALESCE(released_content_hash::text, '') AS hash,
-          COALESCE(last_release_event_id::text, '') AS event_id
+          COALESCE(last_release_event_id::text, '') AS event_id, (released_content_hash IS NULL)::text AS hash_is_null
           FROM public.scada_project_release_state WHERE tenant_id = ${tenantId} AND project_id = ${projectId}
           FOR SHARE`.returnsRow(STATE_COLUMNS).build(),
       ).toArray();
@@ -259,7 +259,7 @@ async function lockState(tx: Tx, tenantId: string, projectId: string, write: boo
   if (rows.length !== 1 || !row) throw new TypeError("数据库工程正式发布状态记录缺失");
   const state = {
     releaseGeneration: BigInt(row.generation), releasedRevision: row.revision === "" ? null : BigInt(row.revision),
-    releasedContentHash: row.hash === "" ? null : row.hash, lastReleaseEventId: row.event_id === "" ? null : row.event_id,
+    releasedContentHash: row.hash_is_null === "true" ? null : row.hash, lastReleaseEventId: row.event_id === "" ? null : row.event_id,
   };
   validateReleaseState(state);
   return state;
