@@ -4921,3 +4921,21 @@ git status --short
 ```
 
 目标分别为 12/12、9/9、6/6，Vite+ 零警告错误；复验输出目标存储哈希 6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc、原文指纹 850ef15fcfc0455491ba73f66419f42a394f963b1a99a02870bad5cae964cffa、迁移标识 f2878cca953d47c94a4eca5b500165a1e623d49ef5a8a6c3e730ddf818bd24bd、46 项操作、BASELINE_ARTIFACT_REVIEW_REQUIRED、签名许可否、部署许可否、退出码 0。上述为实际归档已确认的预期值，不是 Windows 修复 HEAD 的实测输出。若失败保留原件和诊断，不重试规划，不更改 JSON 或哈希。实际 SQL 缺少 119 项中文注释，禁止部署；后续完整物理及注释评审、第三库重放和非空样本分别审批。
+
+### 原生基线固定原件 DDL/注释文本专项
+
+PR #219 原包复验已通过，继续保留 .artifacts/prisma8-native、.artifacts/prisma8-native-baseline、正式生成物及两个既有隔离库。不得重新规划、覆盖、移动候选包或设置数据库连接；本批固定维护者原包十份文件的字节指纹，任何变化或另一次生成须独立评审。不执行迁移源码。
+
+```powershell
+git rev-parse HEAD
+pnpm run test:prisma8:native:baseline:ddl &&
+pnpm run test:prisma8:native:baseline &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run db:prisma8:native:baseline:ddl
+Write-Host "增量验收退出码：$LASTEXITCODE"
+git status --short
+```
+
+目标 8/8 与 12/12、Vite+ 零警告错误、增量退出码 0；原候选复验后须显示固定原件十项匹配、实际 DDL 46 项、历史最终中文注释 119 项而原包 0 项、独立注释审查文本指纹 06a47418f3477c263cb19c7a3550a6be3810a4ffd9c22afada7ecd28f6322fb7、DDL_TEXT_MATCHED_COMMENTS_BLOCKED、签名与部署许可均否。该指纹来自实际历史文件的独立文本提取，完整 Windows 集成入口尚待实测。若希望查看完整注释审查文本，可另行执行 pnpm run db:prisma8:native:baseline:comments；仅标准输出预览，禁止将其管道送入数据库或改写官方生成物。失败保留证据，不自动重试规划或放宽门禁。此检查不等于 PostgreSQL 约束负向、官方迁移哈希重算、依赖解析或自发射验收。

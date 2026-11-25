@@ -20,6 +20,10 @@ import {
   reviewExistingBaseline,
   runBaselinePlanner,
 } from "../../scripts/prisma8-native-baseline.mjs";
+import {
+  DdlReviewError,
+  reviewAuditedBaseline,
+} from "../../scripts/prisma8-native-baseline-ddl.mjs";
 
 function requireCondition(condition, message) {
   if (!condition) throw new BaselineError(message);
@@ -29,7 +33,10 @@ let stage = "确认离线授权";
 
 function main() {
   const args = process.argv.slice(2);
-  const reviewExisting = args.length === 1 && args[0] === "--review-existing-baseline";
+  const reviewDdl = args.length === 1 && args[0] === "--review-baseline-ddl";
+  const reviewComments = args.length === 1 && args[0] === "--review-baseline-comments";
+  const reviewExisting =
+    reviewDdl || reviewComments || (args.length === 1 && args[0] === "--review-existing-baseline");
   if (!reviewExisting) requireBaselineApproval(args);
   const root = realpathSync(resolve(import.meta.dirname, "../.."));
   stage = "隔离路径与固定依赖";
@@ -123,13 +130,26 @@ function main() {
   console.info("计划操作数量：" + result.operations);
   console.info("基线状态：BASELINE_ARTIFACT_REVIEW_REQUIRED；签名许可：否；部署许可：否");
   console.info("物理 DDL、中文注释、操作及依赖解析仍须独立评审");
+  if (reviewDdl || reviewComments) {
+    stage = "固定候选 DDL 与历史中文注释审查";
+    const audited = reviewAuditedBaseline(root, baseline, nativeText);
+    console.info("固定候选原件指纹：10 项匹配");
+    console.info("实际 DDL 逐项全文对照：" + audited.operations + " 项");
+    console.info("历史最终中文注释：" + audited.comments + " 项；原包注释：0 项");
+    console.info("独立注释审查文本指纹：" + audited.previewHash);
+    console.info("审查状态：DDL_TEXT_MATCHED_COMMENTS_BLOCKED；签名许可：否；部署许可：否");
+    if (reviewComments) {
+      console.info("以下仅为注释审查文本，不是可部署迁移包");
+      process.stdout.write(audited.preview);
+    }
+  }
 }
 
 try {
   main();
 } catch (error) {
   console.error(
-    error instanceof BaselineError
+    error instanceof BaselineError || error instanceof DdlReviewError
       ? error.message
       : "离线原生基线阶段失败：" + stage + "；保留证据供人工检查",
   );

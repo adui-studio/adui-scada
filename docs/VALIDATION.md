@@ -4997,3 +4997,13 @@ E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回
 维护者上传原始 ZIP（SHA-256 55c1cc0c899095cdcdee3be8bd4e197592706e08b593dda302fa382bbd5b2af2）。实际为 kind=result、commandId=migration.plan、envelope.ok=true、exitCode=0、diagnostics=[]，envelope.result.ok=true/noOp=false、from=null、to=既有原生存储哈希；无 pendingPlaceholders 字段，源码无 placeholder 调用。46 项 additive，包含 1 schema、12 建表、20 非主键索引和 13 外键操作；预览文本统计 12 主键及 36 CHECK，六字段末次事件外键存在，未见 COMMENT ON。完整 JSON 深度相等，三项声明哈希一致。原始迁移标识 f2878cca953d47c94a4eca5b500165a1e623d49ef5a8a6c3e730ddf818bd24bd，原生 JSON 文件 SHA-256 850ef15fcfc0455491ba73f66419f42a394f963b1a99a02870bad5cae964cffa，计划文件 SHA-256 048606f3358a11647bc5abdac19bc516a2145a9e44ad33acf9cc9b54836ee360。上述标识仅记录实物，不代表迁移哈希独立重算、全部 DDL 语义或部署验收。
 
 协作容器 Node.js 22.16.0 在原本地源码施加同逻辑修复（远端保留维护者格式）执行核心、入口语法检查及十二项回归，12/12 通过；独立解包原 ZIP，直接运行修正核心 inspectBaselinePackage，返回 BASELINE_ARTIFACT_REVIEW_REQUIRED、46、签名/部署许可否；计划与 ops 摘要及预览与执行语句逐项一致，声明三个哈希匹配，十个文件复验前后 SHA-256 均一致。未运行完整项目入口或真实 Prisma 子进程、Windows pnpm/vp/全仓中文及文档检查；必须在最新 HEAD 复验 12+9+6 项及 db:prisma8:native:baseline:review。未上传生成物到 Git，不执行 SQL、签名、重放、数据库变更或 Provider 切换。119 个注释仍缺失，非空发布样本及完整 DDL/依赖评审仍阻塞。
+
+### 2026-11-25 · PR #219 结案与固定原生基线 DDL/注释文本审查
+
+维护者 Windows 实测 12/12 基线、9/9 原生、6/6 运行时、Vite+ 527 格式/368 受检零警告错误、中文文案 395、文档 96、真实已有候选复验 46 项，目标、原文及迁移标识与原包一致，退出码 0。日志未单独打印本机 HEAD；远端最终 `fbe2fc2e370ab3cca807311fbb134a40022f5e0e` 相对 `21fcc5472fc0a91a283d924186ba8161fb50fbc8` 仅两份文件排版。经维护者授权 PR #219 Squash 合入 `55688fe7e261bdade6f7f72cb80329d31b1d478b`，E-144 关闭。
+
+协作容器 Node.js 22.16.0 新增 DDL/注释文本回归 8/8，核心语法检查通过。新模块 Git Blob 9e7198de6a190431398e0cdc07e1ad2fb1872d03、测试 Blob fd59ce2feb90cdbd01ff83e42d6676cc6143c904 与实际本地执行源码一致；复用本地此前已验证的注释提取模块等逻辑源码。直接读取维护者上传原 ZIP（SHA-256 55c1cc0c899095cdcdee3be8bd4e197592706e08b593dda302fa382bbd5b2af2）解包的独立副本，十文件 SHA-256 全部匹配，46 项 execute SQL 与根据原生 IR 独立构造的全文逐项匹配，统计 12 表、85 列、12 主键、36 CHECK、20 非主键索引、13 外键；仅篡改临时副本 stderr 一文件后拒绝、恢复后十文件再次匹配，原 ZIP SHA-256 不变。原包无 COMMENT ON。
+
+协作端另从当前合并提交实际读取八份历史 SQL，按顺序提取 121 条 COMMENT ON，permission 三次覆盖，最终 119 项（12 表、85 列、22 索引）。使用 UTF-8 SHA-256（已用空串和 abc 标准向量校验的独立实现）计算八份原文及按对象键字典序、public 限定、LF 结尾的 119 条最终注释审查文本；文本 14907 字节，SHA-256 为 06a47418f3477c263cb19c7a3550a6be3810a4ffd9c22afada7ecd28f6322fb7。用实际原生 IR 的合成注释字典在 Node 核对 119 项对象覆盖；尚未在完整仓库用真实历史 SQL 运行新集成入口，不将独立提取和局部实测冒充完整 Windows 专项。新测试纳入 ready，真实固定包专项不纳入 ready。协作环境无 pnpm/vp 且无法完整检出，Windows 最新 HEAD 的 8/8、12/12、Vite+、中文、文档、DDL/注释集成入口仍待实测。
+
+固定原包字节指纹检查不是官方 migrationHash 算法重算；全文对照不是 PostgreSQL 解析、数据库目录证明、预/后置检查语义或依赖解析证明。未执行迁移源码、自发射、SQL、写库、签名、部署或 Provider 切换。

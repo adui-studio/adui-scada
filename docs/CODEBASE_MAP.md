@@ -1741,3 +1741,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - scripts/prisma8-native-baseline.mjs：固定 RC 成功 Envelope、实际操作摘要及执行预览对照；拒绝非新增、诊断、临时值、扩展、已应用语句和异常目录，保留完整目标快照比较。
 - pnpm run db:prisma8:native:baseline:review：复用 apps/server/prisma8-native-baseline-plan.mjs 的历史和原生评审，仅只读验收已有独立基线，不启动生成 CLI。生成入口原确认参数及禁止覆盖保护保持。
 - 原九项模拟门禁更新真实形状并增加三项回归，共十二项，继续纳入 ready。真实候选缺少全部 119 项注释，待独立 DDL 评审。
+
+### 原生基线固定原件 DDL/注释文本专项
+
+- scripts/prisma8-native-baseline-ddl.mjs：固定实际原包十文件及历史八份 SQL 指纹；复用已验收物理 IR，独立生成受控类型、默认值、主键、CHECK、索引及外键的精确文本；按 ID、依赖阶段及全文核对 46 条实际 execute SQL，不执行 SQL。复用历史注释提取器生成 119 项 public 限定独立审查文本与指纹。
+- pnpm run db:prisma8:native:baseline:ddl：复用既有候选只读复验入口，输出固定原包与 DDL/注释审查状态；pnpm run db:prisma8:native:baseline:comments：同门禁后向标准输出附加注释审查文本，不写入迁移目录。两个入口不运行规划、自发射或数据库。
+- pnpm run test:prisma8:native:baseline:ddl：八项离线回归，纳入 ready；真实固定候选专项仍独立运行。原包仍缺 119 项注释，状态 DDL_TEXT_MATCHED_COMMENTS_BLOCKED，签名及部署许可否。
