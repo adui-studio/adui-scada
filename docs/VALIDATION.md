@@ -4971,3 +4971,9 @@ E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回
 ### 2026-11-25 · 原生候选官方 Schema-only 验证入口
 
 固定 Prisma 8 Skill 的 db verify 为独立诊断；--schema-only 跳过当前尚不存在的 Prisma 8 marker，只检查候选 Contract 对应的数据库结构。新增根目录白名单入口 pnpm run db:prisma8:native:schema:verify，仅使用独立原生配置和受限的本机 adui_scada_test，不接受通用 CLI 参数或 --db URL 命令行参数。包装器先复用现有只读目标 URL 守卫，再通过连接参数强制 default_transaction_read_only=on、5 秒 statement timeout、2 秒 lock timeout 和 search_path=public；密码不进入子进程参数。非验证命令删除测试库环境变量，保持离线 emit 与 Skills 列表离线。未使用 --strict，允许数据库保留不属于 Prisma 8 Contract 的 Prisma 7 历史元数据。CLI 模拟回归扩展为 8 项，覆盖命令顺序、目标白名单、只读会话参数、离线命令隔离及写入命令拒绝。当前仅新增入口与模拟测试，真实 Prisma 8 固定 RC 官方 verifier、Windows Vite+、文案和文档检查尚待维护者执行；未运行 verifier、签名、迁移、基线规划或任何数据库写入。
+
+### 2026-11-25 · PR #216 结案与基线静态覆盖审查
+
+维护者 Windows 实测 CLI 8/8、520 个格式文件及 361 个受检文件零警告/Lint/类型错误、中文文案 388 文件、Markdown 96 份、增量退出码 0。官方 verifier 实测读取 .artifacts/prisma8-native/contract.json，schema only (tolerant)，隔离库 URL 脱敏且显示只读会话参数，Database schema satisfies contract，退出码 0。远端最终 HEAD `adec9fa04873263ac35eef06b22974c24c460667` 与先前提交的差异为三份文件格式化，维护者日志未给出本机 HEAD；按授权合入 `647fd455d901d4786b2fb2c7b4d179290804d3f7`。这不等同严格目录等价或实际基线重放。
+
+协作端直接读取合并提交中八份 migration.sql，按当前历史字面量 COMMENT ON 形状静态提取（非通用 SQL 解析器），确认 121 条注释语句覆盖 119 个不同对象：表 12/12、列 87 条对应 85 字段、索引 22 个，均含中文。permission 字段注释出现三次，最后一次来自 release_read_permission 迁移。两个带注释主键索引分别为 scada_tag_history_batches_pkey 和 scada_tag_history_records_pkey。现有目录查询明确排除 indisprimary，因此已有 20 个非主键索引目录及指纹不覆盖这两项；主键列检查不是底层索引检查。未来独立补充只读核验及负向回归定义见 ADR-0072；真实目录补充查询、离线基线生成、迁移包检查、新空库重放、全量 Windows 质量门禁均尚未执行。协作容器 Node 22.16.0，缺 pnpm/vp，GitHub 域名解析失败，无法在本地完整检出并执行 docs:check。本批仅文档审查，不新增运行时或脚本。
