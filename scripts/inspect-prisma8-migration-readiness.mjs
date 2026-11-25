@@ -515,8 +515,8 @@ function requireComparisonContext(snapshot) {
   );
 }
 
-/** 逐项比较两库已预检的目录行；仅返回固定诊断和指纹，不输出数据库原始定义。 */
-export async function compareMigrationDatabases(testClient, referenceClient, baseline) {
+/** 对照通过后才向内部候选生成器提供参考库目录，保持原对照入口的返回值。 */
+async function readMatchedMigrationSnapshots(testClient, referenceClient, baseline) {
   const actual = await inspectMigrationSnapshot(testClient, baseline, "adui_scada_test");
   requireComparisonContext(actual);
   const reference = await inspectMigrationSnapshot(
@@ -539,6 +539,12 @@ export async function compareMigrationDatabases(testClient, referenceClient, bas
     reference.report.catalogFingerprint,
     "验收库与参考库目录指纹不一致",
   );
+  return { actual, reference };
+}
+
+/** 原对照入口仍只返回固定诊断和指纹，不输出数据库原始定义。 */
+export async function compareMigrationDatabases(testClient, referenceClient, baseline) {
+  const { actual, reference } = await readMatchedMigrationSnapshots(testClient, referenceClient, baseline);
   return {
     status: "MATCHED_REVIEW_REQUIRED",
     signingAllowed: false,
@@ -546,6 +552,12 @@ export async function compareMigrationDatabases(testClient, referenceClient, bas
     referenceFingerprint: reference.report.catalogFingerprint,
     contractHash: baseline.contractHash,
   };
+}
+
+/** 仅供原生候选生成器读取已经匹配的参考库元数据，不读取业务记录。 */
+export async function readNativeContractCatalog(testClient, referenceClient, baseline) {
+  const { reference } = await readMatchedMigrationSnapshots(testClient, referenceClient, baseline);
+  return { report: reference.report, catalog: reference.catalog };
 }
 
 async function main() {
