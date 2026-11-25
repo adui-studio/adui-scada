@@ -22,6 +22,15 @@ const empty = {
   relations: false,
   routines: false,
   types: false,
+  operators: false,
+  collations: false,
+  conversions: false,
+  operator_classes: false,
+  operator_families: false,
+  text_search_configs: false,
+  text_search_dictionaries: false,
+  text_search_parsers: false,
+  text_search_templates: false,
   extensions: false,
   event_triggers: false,
   publications: false,
@@ -162,7 +171,7 @@ void describe("独立参考库历史重放安全门禁", () => {
   void it("只读查询、回滚及关闭失败不会返回成功或泄漏内部错误", async () => {
     for (const options of [{ failAt: "pg_stat_activity" }, { failAt: "ROLLBACK" }, { closeFails: true }]) {
       const { client, calls } = mockReference(options);
-      await assert.rejects(() => inspectEmptyReferenceDatabase(client), /^参考库.*失败/);
+      await assert.rejects(() => inspectEmptyReferenceDatabase(client), { message: /^参考库.*失败/ });
       assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
     }
   });
