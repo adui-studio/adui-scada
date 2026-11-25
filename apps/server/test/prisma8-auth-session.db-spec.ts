@@ -160,11 +160,12 @@ async function verifySessions(): Promise<"MATCHED"> {
     stage = "跨租户撤销拒绝与双版本并发撤销";
     same(await candidate.revokeForVerifiedSubject(other, first.sessionId), false);
     same(await candidate.authenticate(first.token), actor);
-    const race = await Promise.all([
+    const race = await Promise.allSettled([
       candidate.revokeForVerifiedSubject(actor, first.sessionId),
       previous.revokeForVerifiedSubject(actor, first.sessionId),
     ]);
-    same(race.filter(Boolean).length, 1);
+    same(race.filter((result) => result.status === "fulfilled" && result.value === true).length, 1);
+    same(race.filter((result) => result.status === "fulfilled" && result.value === false).length, 1);
     same(await candidate.revokeForVerifiedSubject(actor, first.sessionId), false);
     same(await previous.authenticate(first.token), null);
     same(await candidate.authenticate(first.token), null);
