@@ -175,9 +175,8 @@ async function verifyTransactions(): Promise<"MATCHED"> {
     ]);
     same(race.filter((item) => item.status === "fulfilled" && item.value !== null).length, 1);
     same(race.filter((item) => item.status === "fulfilled" && item.value === null).length, 1);
-    const winner = race.find((item) => item.status === "fulfilled" && item.value !== null);
-    if (!winner || winner.status !== "fulfilled") throw new Error("并发消费缺少唯一成功回执");
-    await verifyConsumed(winner.value, racing, issuer, "/");
+    const winners = race.flatMap((item) => item.status === "fulfilled" && item.value !== null ? [item.value] : []);
+    await verifyConsumed(winners[0] ?? null, racing, issuer, "/");
     same((await legacy.scadaOidcTransaction.findUniqueOrThrow({ where: { stateHash: racing.stateHash } })).consumedAt instanceof Date, true);
     same(await candidate.consume(racing.state, racing.result.browserBindingCookie), null);
 
@@ -221,6 +220,7 @@ async function verifyTransactions(): Promise<"MATCHED"> {
       returnPath: "/",
       createdAt: new Date("2000-01-01T00:00:00.000Z"),
       expiresAt: new Date("2000-01-01T00:05:00.000Z"),
+      consumedAt: index % 2 === 0 ? new Date("2000-01-01T00:01:00.000Z") : null,
     }));
     creationUnconfirmed = true;
     const inserted = await legacy.scadaOidcTransaction.createMany({ data: seed });
