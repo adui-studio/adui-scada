@@ -102,7 +102,9 @@ export function parsePrisma8VersionQuery(
   return { limit, ...(beforeRevision === undefined ? {} : { beforeRevision }) };
 }
 
-function bindPrincipal(principal: AuthenticatedProjectPrincipal | null): AuthenticatedProjectPrincipal {
+function bindPrincipal(
+  principal: AuthenticatedProjectPrincipal | null,
+): AuthenticatedProjectPrincipal {
   requirePrincipal(principal);
   return Object.freeze({ tenantId: principal.tenantId, subjectId: principal.subjectId });
 }
@@ -186,18 +188,21 @@ export async function validatePrisma8ProjectSnapshot(
 
 /** PostgreSQL 只读事务不能取得 FOR SHARE；此候选需要隔离库普通事务，但仅执行查询。 */
 async function requireBoundary(tx: Tx): Promise<void> {
-  const rows = await tx.query(
-    tx.raw.sql`SELECT current_database()::text AS database_name,
+  const rows = await tx
+    .query(
+      tx.raw.sql`SELECT current_database()::text AS database_name,
       current_schema()::text AS schema_name,
       current_setting('transaction_read_only') AS read_only,
       current_setting('transaction_isolation') AS isolation`
-      .returnsRow({
-        database_name: "pg/text@1",
-        schema_name: "pg/text@1",
-        read_only: "pg/text@1",
-        isolation: "pg/text@1",
-      }).build(),
-  ).toArray();
+        .returnsRow({
+          database_name: "pg/text@1",
+          schema_name: "pg/text@1",
+          read_only: "pg/text@1",
+          isolation: "pg/text@1",
+        })
+        .build(),
+    )
+    .toArray();
   const row = rows[0];
   if (
     rows.length !== 1 ||
@@ -205,7 +210,8 @@ async function requireBoundary(tx: Tx): Promise<void> {
     row.schema_name !== "public" ||
     row.read_only !== "off" ||
     row.isolation !== "read committed"
-  ) throw new Error("Prisma 8 工程查询候选仅允许隔离库读已提交事务");
+  )
+    throw new Error("Prisma 8 工程查询候选仅允许隔离库读已提交事务");
 }
 
 async function lockAndAuthorize(
@@ -215,48 +221,86 @@ async function lockAndAuthorize(
   action: "project:read" | "version:read",
 ): Promise<bigint> {
   const { tenantId, subjectId } = actor;
-  const rows = await tx.query(
-    tx.raw.sql`SELECT head_revision::text AS head_revision FROM public.scada_projects
+  const rows = await tx
+    .query(
+      tx.raw.sql`SELECT head_revision::text AS head_revision FROM public.scada_projects
       WHERE tenant_id = ${tenantId} AND project_id = ${projectId} FOR SHARE`
-      .returnsRow({ head_revision: "pg/text@1" }).build(),
-  ).toArray();
+        .returnsRow({ head_revision: "pg/text@1" })
+        .build(),
+    )
+    .toArray();
   if (rows.length !== 1 || !rows[0]) throw new ProjectVersionAccessDeniedError();
   const head = BigInt(rows[0].head_revision);
   if (head < 0n) throw new TypeError("数据库工程修订号异常");
   // 不按单项权限预过滤，完整核对当前可信主体的权限集合。
   const grants = await tx.orm.public.ScadaProjectGrant.where({ tenantId, projectId, subjectId })
-    .select("permission").all();
-  if (!hasProjectPermission(actor, { tenantId, projectId }, {
-    tenantId, projectId, subjectId, permissions: grants.map((grant) => grant.permission as ProjectAccessAction),
-  }, action)) throw new ProjectVersionAccessDeniedError();
+    .select("permission")
+    .all();
+  if (
+    !hasProjectPermission(
+      actor,
+      { tenantId, projectId },
+      {
+        tenantId,
+        projectId,
+        subjectId,
+        permissions: grants.map((grant) => grant.permission as ProjectAccessAction),
+      },
+      action,
+    )
+  )
+    throw new ProjectVersionAccessDeniedError();
   return head;
 }
 
-async function readSnapshot(tx: Tx, tenantId: string, projectId: string, revision: number): Promise<ProjectSnapshot> {
-  const rows = await tx.query(
-    tx.raw.sql`SELECT snapshot::text AS snapshot_data, content_hash::text AS content_hash,
+async function readSnapshot(
+  tx: Tx,
+  tenantId: string,
+  projectId: string,
+  revision: number,
+): Promise<ProjectSnapshot> {
+  const rows = await tx
+    .query(
+      tx.raw.sql`SELECT snapshot::text AS snapshot_data, content_hash::text AS content_hash,
       created_at::text AS created_at FROM public.scada_project_versions
       WHERE tenant_id = ${tenantId} AND project_id = ${projectId} AND revision = ${BigInt(revision)}`
-      .returnsRow({ snapshot_data: "pg/text@1", content_hash: "pg/text@1", created_at: "pg/text@1" }).build(),
-  ).toArray();
+        .returnsRow({
+          snapshot_data: "pg/text@1",
+          content_hash: "pg/text@1",
+          created_at: "pg/text@1",
+        })
+        .build(),
+    )
+    .toArray();
   if (rows.length !== 1 || !rows[0]) throw new ProjectRevisionNotFoundError();
   const row = rows[0];
   const data: unknown = JSON.parse(row.snapshot_data);
-  return validatePrisma8ProjectSnapshot(projectId, revision, row.content_hash, row.created_at, data);
+  return validatePrisma8ProjectSnapshot(
+    projectId,
+    revision,
+    row.content_hash,
+    row.created_at,
+    data,
+  );
 }
 
 /** 独立查询候选，不接入正式路由，不执行 DML、发布或数据库迁移。 */
 export class Prisma8ProjectQueryStore {
   constructor(private readonly client: PostgresClient<Contract>) {}
 
-  async list(principal: AuthenticatedProjectPrincipal | null, input?: unknown): Promise<readonly ProjectSummary[]> {
+  async list(
+    principal: AuthenticatedProjectPrincipal | null,
+    input?: unknown,
+  ): Promise<readonly ProjectSummary[]> {
     const actor = bindPrincipal(principal);
     const query = parsePrisma8ProjectListQuery(input);
     const cursor = query.afterProjectId ?? "";
     return this.client.transaction(async (tx) => {
       await requireBoundary(tx);
-      const rows = await tx.query(
-        tx.raw.sql`SELECT p.project_id::text AS project_id, p.head_revision::text AS head_revision,
+      const rows = await tx
+        .query(
+          tx.raw
+            .sql`SELECT p.project_id::text AS project_id, p.head_revision::text AS head_revision,
           p.created_at::text AS created_at, p.updated_at::text AS updated_at
           FROM public.scada_projects p
           WHERE p.tenant_id = ${actor.tenantId}
@@ -265,31 +309,43 @@ export class Prisma8ProjectQueryStore {
               WHERE g.tenant_id = p.tenant_id AND g.project_id = p.project_id
                 AND g.subject_id = ${actor.subjectId} AND g.permission = 'project:read')
           ORDER BY p.project_id ASC LIMIT ${query.limit}::integer`
-          .returnsRow(PROJECT_COLUMNS).build(),
-      ).toArray();
+            .returnsRow(PROJECT_COLUMNS)
+            .build(),
+        )
+        .toArray();
       return rows.map(projectSummary);
     }, OPTIONS);
   }
 
-  async getProject(principal: AuthenticatedProjectPrincipal | null, projectId: string): Promise<ProjectSummary> {
+  async getProject(
+    principal: AuthenticatedProjectPrincipal | null,
+    projectId: string,
+  ): Promise<ProjectSummary> {
     const actor = bindPrincipal(principal);
     requireProjectId(projectId);
     return this.client.transaction(async (tx) => {
       await requireBoundary(tx);
       await lockAndAuthorize(tx, actor, projectId, "project:read");
-      const rows = await tx.query(
-        tx.raw.sql`SELECT project_id::text AS project_id, head_revision::text AS head_revision,
+      const rows = await tx
+        .query(
+          tx.raw.sql`SELECT project_id::text AS project_id, head_revision::text AS head_revision,
           created_at::text AS created_at, updated_at::text AS updated_at
           FROM public.scada_projects
           WHERE tenant_id = ${actor.tenantId} AND project_id = ${projectId}`
-          .returnsRow(PROJECT_COLUMNS).build(),
-      ).toArray();
+            .returnsRow(PROJECT_COLUMNS)
+            .build(),
+        )
+        .toArray();
       if (rows.length !== 1 || !rows[0]) throw new ProjectVersionAccessDeniedError();
       return projectSummary(rows[0]);
     }, OPTIONS);
   }
 
-  async listVersions(principal: AuthenticatedProjectPrincipal | null, projectId: string, input?: unknown): Promise<readonly ProjectVersionSummary[]> {
+  async listVersions(
+    principal: AuthenticatedProjectPrincipal | null,
+    projectId: string,
+    input?: unknown,
+  ): Promise<readonly ProjectVersionSummary[]> {
     const actor = bindPrincipal(principal);
     requireProjectId(projectId);
     const query = parsePrisma8VersionQuery(input);
@@ -297,20 +353,27 @@ export class Prisma8ProjectQueryStore {
     return this.client.transaction(async (tx) => {
       await requireBoundary(tx);
       await lockAndAuthorize(tx, actor, projectId, "version:read");
-      const rows = await tx.query(
-        tx.raw.sql`SELECT project_id::text AS project_id, revision::text AS revision,
+      const rows = await tx
+        .query(
+          tx.raw.sql`SELECT project_id::text AS project_id, revision::text AS revision,
           created_at::text AS created_at, content_hash::text AS content_hash
           FROM public.scada_project_versions
           WHERE tenant_id = ${actor.tenantId} AND project_id = ${projectId}
             AND (${cursor}::bigint = 0 OR revision < ${cursor})
           ORDER BY scada_project_versions.revision DESC LIMIT ${query.limit}::integer`
-          .returnsRow(VERSION_COLUMNS).build(),
-      ).toArray();
+            .returnsRow(VERSION_COLUMNS)
+            .build(),
+        )
+        .toArray();
       return rows.map(versionSummary);
     }, OPTIONS);
   }
 
-  async read(principal: AuthenticatedProjectPrincipal | null, projectId: string, revision: number): Promise<ProjectSnapshot> {
+  async read(
+    principal: AuthenticatedProjectPrincipal | null,
+    projectId: string,
+    revision: number,
+  ): Promise<ProjectSnapshot> {
     const actor = bindPrincipal(principal);
     requireProjectId(projectId);
     requireRevision(revision, "查询修订号");
@@ -321,7 +384,11 @@ export class Prisma8ProjectQueryStore {
     }, OPTIONS);
   }
 
-  async preflightRelease(principal: AuthenticatedProjectPrincipal | null, projectId: string, revision: number): Promise<ProjectReleasePreflightSummary> {
+  async preflightRelease(
+    principal: AuthenticatedProjectPrincipal | null,
+    projectId: string,
+    revision: number,
+  ): Promise<ProjectReleasePreflightSummary> {
     const actor = bindPrincipal(principal);
     requireProjectId(projectId);
     requireRevision(revision, "发布预检修订号");
@@ -331,8 +398,14 @@ export class Prisma8ProjectQueryStore {
       if (head !== BigInt(revision)) throw new ProjectRevisionConflictError();
       const snapshot = await readSnapshot(tx, actor.tenantId, projectId, revision);
       const report = validateProjectReleasePreflight(snapshot.document);
-      return { projectId, revision, headRevision: revision, contentHash: snapshot.contentHash,
-        passed: report.passed, issues: report.issues };
+      return {
+        projectId,
+        revision,
+        headRevision: revision,
+        contentHash: snapshot.contentHash,
+        passed: report.passed,
+        issues: report.issues,
+      };
     }, OPTIONS);
   }
 }

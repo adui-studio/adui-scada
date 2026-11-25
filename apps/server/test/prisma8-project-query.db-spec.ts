@@ -46,7 +46,10 @@ async function verifyQueries(): Promise<"MATCHED"> {
     { actor: hiddenActor, projectId: hiddenId },
     { actor: other, projectId },
   ];
-  const scopes = fixtures.map((fixture) => ({ tenantId: fixture.actor.tenantId, projectId: fixture.projectId }));
+  const scopes = fixtures.map((fixture) => ({
+    tenantId: fixture.actor.tenantId,
+    projectId: fixture.projectId,
+  }));
   const identities = [actor, hiddenActor, other];
   const confirmedProjects: typeof scopes = [];
   const failures: string[] = [];
@@ -63,12 +66,18 @@ async function verifyQueries(): Promise<"MATCHED"> {
     const pgOptions = "-c statement_timeout=5000 -c lock_timeout=2000";
     const writable = new Pool({ ...base, max: 2, options: pgOptions });
     pool = writable;
-    writable.on("error", () => { poolFailed = true; });
-    const legacy = new PrismaClient({ adapter: new PrismaPg({ ...base, max: 2, options: pgOptions }) });
+    writable.on("error", () => {
+      poolFailed = true;
+    });
+    const legacy = new PrismaClient({
+      adapter: new PrismaPg({ ...base, max: 2, options: pgOptions }),
+    });
     old = legacy;
     await legacy.$connect();
     stage = "隔离库及工程结构预检";
-    const boundary = await legacy.$queryRaw<Array<{ database_name: string; schema_name: string; read_only: string; ready: boolean }>>`
+    const boundary = await legacy.$queryRaw<
+      Array<{ database_name: string; schema_name: string; read_only: string; ready: boolean }>
+    >`
       SELECT current_database()::text AS database_name, current_schema()::text AS schema_name,
         current_setting('transaction_read_only') AS read_only,
         (to_regclass('public.scada_projects') IS NOT NULL AND
@@ -78,9 +87,15 @@ async function verifyQueries(): Promise<"MATCHED"> {
          to_regclass('public.scada_project_audit') IS NOT NULL AND
          to_regclass('public.scada_project_release_state') IS NOT NULL) AS ready
     `;
-    same(boundary, [{ database_name: "adui_scada_test", schema_name: "public", read_only: "off", ready: true }]);
-    const poolBoundary = await writable.query("SELECT current_database()::text AS database_name, current_schema()::text AS schema_name, current_setting('transaction_read_only') AS read_only");
-    same(poolBoundary.rows, [{ database_name: "adui_scada_test", schema_name: "public", read_only: "off" }]);
+    same(boundary, [
+      { database_name: "adui_scada_test", schema_name: "public", read_only: "off", ready: true },
+    ]);
+    const poolBoundary = await writable.query(
+      "SELECT current_database()::text AS database_name, current_schema()::text AS schema_name, current_setting('transaction_read_only') AS read_only",
+    );
+    same(poolBoundary.rows, [
+      { database_name: "adui_scada_test", schema_name: "public", read_only: "off" },
+    ]);
     const next = postgres({ contract, pg: writable });
     client = next;
     const previous = new PrismaProjectVersionStore({
@@ -122,11 +137,31 @@ async function verifyQueries(): Promise<"MATCHED"> {
     const inspect = async () => {
       const where = { OR: scopes };
       return legacy.$transaction(async (tx) => {
-        const projects = await tx.scadaProject.findMany({ where, orderBy: [{ tenantId: "asc" }, { projectId: "asc" }] });
-        const grants = await tx.scadaProjectGrant.findMany({ where, orderBy: [{ tenantId: "asc" }, { projectId: "asc" }, { subjectId: "asc" }, { permission: "asc" }] });
-        const versions = await tx.scadaProjectVersion.findMany({ where, orderBy: [{ tenantId: "asc" }, { projectId: "asc" }, { revision: "asc" }] });
-        const audits = await tx.scadaProjectAudit.findMany({ where, orderBy: [{ tenantId: "asc" }, { projectId: "asc" }, { revision: "asc" }] });
-        const releases = await tx.scadaProjectReleaseState.findMany({ where, orderBy: [{ tenantId: "asc" }, { projectId: "asc" }] });
+        const projects = await tx.scadaProject.findMany({
+          where,
+          orderBy: [{ tenantId: "asc" }, { projectId: "asc" }],
+        });
+        const grants = await tx.scadaProjectGrant.findMany({
+          where,
+          orderBy: [
+            { tenantId: "asc" },
+            { projectId: "asc" },
+            { subjectId: "asc" },
+            { permission: "asc" },
+          ],
+        });
+        const versions = await tx.scadaProjectVersion.findMany({
+          where,
+          orderBy: [{ tenantId: "asc" }, { projectId: "asc" }, { revision: "asc" }],
+        });
+        const audits = await tx.scadaProjectAudit.findMany({
+          where,
+          orderBy: [{ tenantId: "asc" }, { projectId: "asc" }, { revision: "asc" }],
+        });
+        const releases = await tx.scadaProjectReleaseState.findMany({
+          where,
+          orderBy: [{ tenantId: "asc" }, { projectId: "asc" }],
+        });
         const events = await tx.scadaProjectReleaseEvent.count({ where });
         return { projects, grants, versions, audits, releases, events };
       });
@@ -139,15 +174,30 @@ async function verifyQueries(): Promise<"MATCHED"> {
 
     stage = "工程列表有界分页和租户隔离";
     const first = await reader.list(actor, { limit: 1 });
-    same(first.map((item) => item.projectId), [projectId]);
+    same(
+      first.map((item) => item.projectId),
+      [projectId],
+    );
     same(first, await previous.list(actor, { limit: 1 }));
     const second = await reader.list(actor, { limit: 1, afterProjectId: projectId });
-    same(second.map((item) => item.projectId), [secondId]);
+    same(
+      second.map((item) => item.projectId),
+      [secondId],
+    );
     same(second, await previous.list(actor, { limit: 1, afterProjectId: projectId }));
     same(await reader.list(actor, { afterProjectId: secondId }), []);
-    same((await reader.list(actor)).map((item) => item.projectId), [projectId, secondId]);
-    same((await reader.list(hiddenActor)).map((item) => item.projectId), [hiddenId]);
-    same((await reader.list(other)).map((item) => [item.projectId, item.headRevision]), [[projectId, 1]]);
+    same(
+      (await reader.list(actor)).map((item) => item.projectId),
+      [projectId, secondId],
+    );
+    same(
+      (await reader.list(hiddenActor)).map((item) => item.projectId),
+      [hiddenId],
+    );
+    same(
+      (await reader.list(other)).map((item) => [item.projectId, item.headRevision]),
+      [[projectId, 1]],
+    );
     same(await reader.list({ ...actor, subjectId: "missing" }), []);
 
     stage = "工程详情和历史数值游标分页";
@@ -155,52 +205,102 @@ async function verifyQueries(): Promise<"MATCHED"> {
     same((await reader.getProject(actor, projectId)).headRevision, 12);
     same((await reader.getProject(other, projectId)).headRevision, 1);
     const newest = await reader.listVersions(actor, projectId, { limit: 3 });
-    same(newest.map((item) => item.revision), [12, 11, 10]);
+    same(
+      newest.map((item) => item.revision),
+      [12, 11, 10],
+    );
     same(newest, await previous.listVersions(actor, projectId, { limit: 3 }));
     const older = await reader.listVersions(actor, projectId, { limit: 3, beforeRevision: 10 });
-    same(older.map((item) => item.revision), [9, 8, 7]);
+    same(
+      older.map((item) => item.revision),
+      [9, 8, 7],
+    );
     same(older, await previous.listVersions(actor, projectId, { limit: 3, beforeRevision: 10 }));
     same(await reader.listVersions(actor, projectId, { beforeRevision: 1 }), []);
-    same((await reader.listVersions(other, projectId)).map((item) => item.revision), [1]);
-    same(Object.keys(newest[0]!).toSorted((left, right) => left.localeCompare(right)), ["contentHash", "createdAt", "projectId", "revision"]);
+    same(
+      (await reader.listVersions(other, projectId)).map((item) => item.revision),
+      [1],
+    );
+    same(
+      Object.keys(newest[0]!).toSorted((left, right) => left.localeCompare(right)),
+      ["contentHash", "createdAt", "projectId", "revision"],
+    );
 
     stage = "完整快照、发布预检及拒绝等价性";
     same(await reader.read(actor, projectId, 12), await previous.read(actor, projectId, 12));
     same(await reader.read(actor, projectId, 1), await previous.read(actor, projectId, 1));
     const report = await reader.preflightRelease(actor, projectId, 12);
     same(report, await previous.preflightRelease(actor, projectId, 12));
-    same([report.revision, report.headRevision, report.contentHash], [12, 12, newest[0]!.contentHash]);
-    same(Object.keys(report).toSorted((left, right) => left.localeCompare(right)), ["contentHash", "headRevision", "issues", "passed", "projectId", "revision"]);
-    await rejected(() => reader.preflightRelease(actor, projectId, 11), "工程版本已变化，请重新获取最新修订号");
+    same(
+      [report.revision, report.headRevision, report.contentHash],
+      [12, 12, newest[0]!.contentHash],
+    );
+    same(
+      Object.keys(report).toSorted((left, right) => left.localeCompare(right)),
+      ["contentHash", "headRevision", "issues", "passed", "projectId", "revision"],
+    );
+    await rejected(
+      () => reader.preflightRelease(actor, projectId, 11),
+      "工程版本已变化，请重新获取最新修订号",
+    );
     await rejected(() => reader.read(actor, projectId, 13), "指定工程版本不存在");
     await rejected(() => reader.getProject(actor, hiddenId), denied);
     await rejected(() => reader.listVersions(actor, hiddenId), denied);
     await rejected(() => reader.read(actor, hiddenId, 1), denied);
     await rejected(() => reader.preflightRelease(actor, hiddenId, 1), denied);
-    await rejected(() => reader.getProject({ ...actor, tenantId: "missing-" + id }, projectId), denied);
+    await rejected(
+      () => reader.getProject({ ...actor, tenantId: "missing-" + id }, projectId),
+      denied,
+    );
     same(await inspect(), before);
 
     stage = "专用工程元数据篡改拒绝及精确恢复";
-    const key = { tenantId_projectId_revision: { tenantId: actor.tenantId, projectId, revision: 12n } };
+    const key = {
+      tenantId_projectId_revision: { tenantId: actor.tenantId, projectId, revision: 12n },
+    };
     const original = await legacy.scadaProjectVersion.findUniqueOrThrow({ where: key });
     await legacy.scadaProjectVersion.update({
-      where: key, data: { contentHash: "0".repeat(64) },
+      where: key,
+      data: { contentHash: "0".repeat(64) },
     });
     await rejected(() => reader.read(actor, projectId, 12), "数据库工程版本元数据与快照不一致");
-    await rejected(() => reader.preflightRelease(actor, projectId, 12), "数据库工程版本元数据与快照不一致");
+    await rejected(
+      () => reader.preflightRelease(actor, projectId, 12),
+      "数据库工程版本元数据与快照不一致",
+    );
     await rejected(() => previous.read(actor, projectId, 12), "数据库工程版本元数据与快照不一致");
-    await legacy.scadaProjectVersion.update({ where: key, data: { contentHash: original.contentHash } });
+    await legacy.scadaProjectVersion.update({
+      where: key,
+      data: { contentHash: original.contentHash },
+    });
     same(await inspect(), before);
 
     stage = "专用工程权限撤销后重新查询";
     const target = { tenantId: actor.tenantId, projectId, subjectId: actor.subjectId };
-    same((await legacy.scadaProjectGrant.deleteMany({ where: { ...target, permission: "version:read" } })).count, 1);
+    same(
+      (
+        await legacy.scadaProjectGrant.deleteMany({
+          where: { ...target, permission: "version:read" },
+        })
+      ).count,
+      1,
+    );
     same((await reader.getProject(actor, projectId)).headRevision, 12);
     await rejected(() => reader.listVersions(actor, projectId), denied);
     await rejected(() => reader.read(actor, projectId, 12), denied);
     await rejected(() => reader.preflightRelease(actor, projectId, 12), denied);
-    same((await legacy.scadaProjectGrant.deleteMany({ where: { ...target, permission: "project:read" } })).count, 1);
-    same((await reader.list(actor)).map((item) => item.projectId), [secondId]);
+    same(
+      (
+        await legacy.scadaProjectGrant.deleteMany({
+          where: { ...target, permission: "project:read" },
+        })
+      ).count,
+      1,
+    );
+    same(
+      (await reader.list(actor)).map((item) => item.projectId),
+      [secondId],
+    );
     same(await reader.list(actor), await previous.list(actor));
     await rejected(() => reader.getProject(actor, projectId), denied);
     await rejected(() => previous.getProject(actor, projectId), denied);
@@ -211,14 +311,31 @@ async function verifyQueries(): Promise<"MATCHED"> {
     same(after.audits, before.audits);
     same(after.releases, before.releases);
     same(after.events, before.events);
-    same(after.grants, before.grants.filter((grant) =>
-      !(grant.tenantId === target.tenantId && grant.projectId === projectId &&
-        grant.subjectId === target.subjectId && ["version:read", "project:read"].includes(grant.permission))));
+    same(
+      after.grants,
+      before.grants.filter(
+        (grant) =>
+          !(
+            grant.tenantId === target.tenantId &&
+            grant.projectId === projectId &&
+            grant.subjectId === target.subjectId &&
+            ["version:read", "project:read"].includes(grant.permission)
+          ),
+      ),
+    );
   } catch {
     failures.push(stage);
   } finally {
-    try { await client?.close(); } catch { failures.push("Prisma 8 客户端关闭失败"); }
-    try { await pool?.end(); } catch { failures.push("外部连接池关闭失败"); }
+    try {
+      await client?.close();
+    } catch {
+      failures.push("Prisma 8 客户端关闭失败");
+    }
+    try {
+      await pool?.end();
+    } catch {
+      failures.push("外部连接池关闭失败");
+    }
     if (poolFailed) failures.push("外部连接池发生异常");
     if (creationUnconfirmed) {
       failures.push("专用夹具创建未确认，禁止自动清理，测试标识：" + id);
@@ -247,7 +364,11 @@ async function verifyQueries(): Promise<"MATCHED"> {
         failures.push("专用夹具清理未确认，禁止自动重试，测试标识：" + id);
       }
     }
-    try { await old?.$disconnect(); } catch { failures.push("Prisma 7 客户端关闭失败"); }
+    try {
+      await old?.$disconnect();
+    } catch {
+      failures.push("Prisma 7 客户端关闭失败");
+    }
   }
   if (failures.length) throw new Error("工程查询专项未通过：" + failures.join("；"));
   return "MATCHED";
