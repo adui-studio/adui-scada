@@ -1,4 +1,8 @@
-import { NotFoundException, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
+import {
+  NotFoundException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from "@nestjs/common";
 import type { CanActivate, ExecutionContext } from "@nestjs/common";
 import type { Reflector } from "@nestjs/core";
 import type { PostgresClient, PostgresTransactionContext } from "@prisma/orm-postgres/runtime";
@@ -121,7 +125,8 @@ export class Prisma8ScadaProjectGuard implements CanActivate {
         await requireBoundary(tx);
         // 不按 action 预过滤，完整权限集合交由原纯策略判定。
         return await tx.orm.public.ScadaProjectGrant.where({ tenantId, projectId, subjectId })
-          .select("permission").all();
+          .select("permission")
+          .all();
       }, OPTIONS);
     } catch {
       // 不将原始连接异常、请求字段或授权行写入诊断。
