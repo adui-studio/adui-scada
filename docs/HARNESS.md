@@ -4791,3 +4791,45 @@ pnpm run docs:check
 ```
 
 真实查询要求两份契约哈希标识、声明标识和领域关系差异符合此前验收，且测试库目录指纹及 UTC 会话校验通过。目录预检是独立只读快照；随后 ORM 与原始 SQL 共用单一连接的可重复读只读事务，结束回滚。输出未发布样本与已发布样本各自 MATCHED 或 EMPTY；两者 MATCHED 才表明本次两类实际样本覆盖完成，EMPTY 不等于对应实际关系通过，也不自动创建数据。对存在样本比较正向关系、标量、六字段末次事件闭包及错误租户/工程过滤，不验证原生候选缺失的反向导航；不输出业务行或连接串。无论结果均不允许签名、迁移或切换正式 Provider，评审状态仍为 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED。真实查询专项不纳入 ready。
+
+### Prisma 8 原生候选官方 Schema-only 验证（只读诊断）
+
+固定 Prisma 8 Skill 将 db verify 定义为独立诊断；本项目当前没有 Prisma 8 marker，因此只运行 --schema-only，跳过 marker 检查。未传 --strict，允许数据库中保留不属于 Contract 的 Prisma 7 历史元数据。根目录包装器只允许固定命令 db native-schema-verify，仅接受现有 URL 守卫允许的本机 127.0.0.1/localhost:15432/adui_scada_test。包装器不把 URL 放入进程参数，临时向原生配置注入连接，并添加 PostgreSQL default_transaction_read_only=on、statement_timeout=5000、lock_timeout=2000、search_path=public。不会执行 db sign、db update、db migrate、migration plan 或 DDL。
+
+先执行离线 CLI 回归与静态门禁：
+
+~~~powershell
+pnpm run test:prisma8:cli
+vp check
+pnpm run messages:check
+pnpm run docs:check
+~~~
+
+再执行真实官方 verifier：
+
+~~~powershell
+& {
+    $ErrorActionPreference = "Stop"
+    $previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+    try {
+        $password = Read-Host "请输入隔离数据库密码" -MaskInput
+        if ([string]::IsNullOrEmpty($password)) { throw "数据库密码不能为空" }
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_TEST_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_test?schema=public"
+        pnpm run db:prisma8:native:schema:verify
+        $verifyExitCode = $LASTEXITCODE
+        Write-Host "Prisma 8 官方 Schema-only 验证退出码：$verifyExitCode"
+        if ($verifyExitCode -ne 0) { throw "官方结构验证发现差异或无法执行；保留诊断，不自动修复" }
+    }
+    finally {
+        if ($null -eq $previousTestUrl) {
+            Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+        } else {
+            $env:SCADA_TEST_DATABASE_URL = $previousTestUrl
+        }
+        Remove-Variable password, encodedPassword -ErrorAction SilentlyContinue
+    }
+}
+~~~
+
+官方 db verify 预期退出码：0 表示符合候选 Contract；4 表示已执行但发现结构差异；2 表示无法执行。必须保留完整官方诊断，不能自动运行修复、签名或迁移。该命令只检查原生候选对现有测试库的 schema 满足关系，不证明发布非空关系样本、反向导航、迁移 DDL 等价或生产接管。真实验证期间禁止并发 DDL。

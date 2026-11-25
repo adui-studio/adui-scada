@@ -2820,3 +2820,9 @@ PR #213 已通过维护者 Windows 九项原生候选测试及 Vite+ 515/356 零
 维护者 Windows 在 `c3a03056f7375d9dd4d42969720cb8e6ae6de625` 实测 CLI 5/5、物理评审 9/9、运行时评审 6/6；正式与原生候选服务端离线类型检查均通过；Prisma 两项根 Skills 已同步（ORM Postgres 8.0.0-rc.25、CLI 8.0.0-rc.35）。Vite+ 517 个格式文件、358 个受检文件零警告错误，中文文案 385、Markdown 96，增量退出码 0。最终 HEAD `8310c986a1619a47b9b121d6e3db172b8d8f30cb` 仅两份脚本排版变化，按授权 Squash 合入 `63cdc5d9ff5fca03267a3a52d15cdb9189f3447f`。
 
 新分支 `feat/prisma8-native-query-review` 复用正式与保留原生契约，先验收测试库目录，再于同一只读可重复读事务内抽取最多一条已发布和一条未发布状态，独立 SQL 六字段关联结果与两个 ORM 的正向导航、标量和显式末次事件读取比较。错误租户/工程不得返回对应记录，未发现样本报告 EMPTY，不计为非空通过。无反向导航的阻塞仍保留；独立 SQL 快照与 ORM 共用单一连接，目录预检为前置独立快照，要求期间无并发 DDL。Prisma 7 唯一正式迁移执行者，ADR-0072 Proposed，真实查询待 Windows 验收。
+
+### 2026-11-25 · Prisma 8 官方只读结构验证入口候选
+
+PR #215 已合入 c11e7ae5f37a37736c77d38050e5fcfe3ec21cea。维护者真实查询只读结果：未发布样本 MATCHED，已发布样本 EMPTY；退出码 0。EMPTY 不代表非空发布关系已验收，不自动创建发布夹具。
+
+下一批增加固定 Prisma 8 Skill 的官方 db verify --schema-only 诊断入口，复用已验收原生候选及 adui_scada_test 只读 URL 守卫；连接层强制 PostgreSQL 默认事务只读、超时与 public search_path，连接 URL 不进入命令行。Schema-only 跳过缺失 marker，未使用 strict 以允许保留的 Prisma 7 元数据。根 CLI 仅开放精确命令，写入/签名/迁移命令仍拒绝。官方 verifier 尚未在 Windows 实际运行，需维护者执行新增命令并提供 exit code 与 schema findings；不执行签名、迁移、DDL 或 Provider 切换。

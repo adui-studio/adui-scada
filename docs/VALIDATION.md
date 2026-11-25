@@ -4967,3 +4967,7 @@ E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回
 维护者 Windows 在 `c3a03056f7375d9dd4d42969720cb8e6ae6de625` 实测 CLI 5/5、物理评审 9/9、运行时评审 6/6；正式与原生候选服务端离线类型检查均通过；Prisma 两项根 Skills 已同步（ORM Postgres 8.0.0-rc.25、CLI 8.0.0-rc.35）。Vite+ 517 个格式文件、358 个受检文件零警告错误，中文文案 385、Markdown 96，增量退出码 0。最终 HEAD `8310c986a1619a47b9b121d6e3db172b8d8f30cb` 仅两份脚本排版变化，按授权 Squash 合入 `63cdc5d9ff5fca03267a3a52d15cdb9189f3447f`。
 
 本批新增发布关系查询只读探针与七项离线回归。协作容器 Node.js 22.16.0 实测 `node --test scripts/prisma8-native-query.cases.mjs` 7/7、`node --check` 新探针及核心脚本通过；三个远端 Git blob 与本地测试文件一致。离线回归覆盖 bigint、六字段逐项漂移、空关联、事件类型、显式读取差异及错误租户/工程拒绝。真实候选及隔离 PostgreSQL 仅位于维护者本机，真实查询、项目 Node 24、Vite+、中文文案和文档检查待验收。没有执行数据库写入、签名、迁移、重放、生成物覆盖或 Provider 切换。
+
+### 2026-11-25 · 原生候选官方 Schema-only 验证入口
+
+固定 Prisma 8 Skill 的 db verify 为独立诊断；--schema-only 跳过当前尚不存在的 Prisma 8 marker，只检查候选 Contract 对应的数据库结构。新增根目录白名单入口 pnpm run db:prisma8:native:schema:verify，仅使用独立原生配置和受限的本机 adui_scada_test，不接受通用 CLI 参数或 --db URL 命令行参数。包装器先复用现有只读目标 URL 守卫，再通过连接参数强制 default_transaction_read_only=on、5 秒 statement timeout、2 秒 lock timeout 和 search_path=public；密码不进入子进程参数。非验证命令删除测试库环境变量，保持离线 emit 与 Skills 列表离线。未使用 --strict，允许数据库保留不属于 Prisma 8 Contract 的 Prisma 7 历史元数据。CLI 模拟回归扩展为 8 项，覆盖命令顺序、目标白名单、只读会话参数、离线命令隔离及写入命令拒绝。当前仅新增入口与模拟测试，真实 Prisma 8 固定 RC 官方 verifier、Windows Vite+、文案和文档检查尚待维护者执行；未运行 verifier、签名、迁移、基线规划或任何数据库写入。
