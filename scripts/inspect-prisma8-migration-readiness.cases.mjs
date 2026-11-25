@@ -386,12 +386,21 @@ void describe("Prisma 8 独立参考库只读目录对照", () => {
     assert.equal(result.signingAllowed, false);
     assert.equal(result.contractHash, baseline.contractHash);
     assert.equal(result.catalogFingerprint, result.referenceFingerprint);
-    assert.equal(result.catalogFingerprint, validateMigrationCatalog(baseline, catalog()).catalogFingerprint);
+    assert.equal(
+      result.catalogFingerprint,
+      validateMigrationCatalog(baseline, catalog()).catalogFingerprint,
+    );
     for (const calls of [actual.calls, reference.calls]) {
       assert.equal(calls.length, 10);
-      assert.deepEqual(calls.slice(0, 2), ["连接", "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"]);
+      assert.deepEqual(calls.slice(0, 2), [
+        "连接",
+        "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY",
+      ]);
       assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
-      assert.equal(calls.slice(2, -2).every((query) => query.startsWith("SELECT")), true);
+      assert.equal(
+        calls.slice(2, -2).every((query) => query.startsWith("SELECT")),
+        true,
+      );
     }
   });
 
@@ -403,7 +412,9 @@ void describe("Prisma 8 独立参考库只读目录对照", () => {
     assert.ok(column, "默认值测试夹具必须存在");
     column.default_expression = "模拟另一种默认值表达式";
     const check = catalog();
-    const nativeCheck = check.constraints.find((row) => row.constraint_name === "scada_projects_head_revision_check");
+    const nativeCheck = check.constraints.find(
+      (row) => row.constraint_name === "scada_projects_head_revision_check",
+    );
     assert.ok(nativeCheck, "原生检查约束测试夹具必须存在");
     nativeCheck.definition = "模拟另一种原生约束定义";
     const indexDefinition = catalog();
@@ -453,7 +464,10 @@ void describe("Prisma 8 独立参考库只读目录对照", () => {
       { changes: { database_collation: "C.UTF-8" }, expected: /查询上下文不一致/ },
       { changes: { date_style: "ISO, DMY" }, expected: /查询上下文不一致/ },
       { changes: { server_encoding: "" }, expected: /完整、受控的 PostgreSQL 查询上下文/ },
-      { changes: { search_path: "public, pg_catalog" }, expected: /完整、受控的 PostgreSQL 查询上下文/ },
+      {
+        changes: { search_path: "public, pg_catalog" },
+        expected: /完整、受控的 PostgreSQL 查询上下文/,
+      },
       { changes: { timezone: "Asia/Shanghai" }, expected: /完整、受控的 PostgreSQL 查询上下文/ },
       { changes: { standard_strings: "off" }, expected: /完整、受控的 PostgreSQL 查询上下文/ },
     ]) {

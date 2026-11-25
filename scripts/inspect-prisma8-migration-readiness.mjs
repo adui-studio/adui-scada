@@ -528,7 +528,11 @@ export async function compareMigrationDatabases(testClient, referenceClient, bas
   same(actual.context, reference.context, "验收库与参考库 PostgreSQL 查询上下文不一致");
   same(actual.catalog.tables, reference.catalog.tables, "验收库与参考库业务表定义或注释不一致");
   same(actual.catalog.columns, reference.catalog.columns, "验收库与参考库字段定义或注释不一致");
-  same(actual.catalog.constraints, reference.catalog.constraints, "验收库与参考库原生约束定义不一致");
+  same(
+    actual.catalog.constraints,
+    reference.catalog.constraints,
+    "验收库与参考库原生约束定义不一致",
+  );
   same(actual.catalog.indexes, reference.catalog.indexes, "验收库与参考库索引定义或注释不一致");
   same(
     actual.report.catalogFingerprint,
