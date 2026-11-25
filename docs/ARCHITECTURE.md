@@ -521,3 +521,7 @@ PR #202 已在真实隔离库完成 Prisma 7 写入后的 Prisma 7/8/原生 SQL 
 ### Prisma 8 工程 ACL Guard 候选（隔离验证）
 
 现有工程创建事务已迁移三项创建者基础 ACL，工程版本、查询及发布仓储的锁内授权复核亦已有独立候选。本批补齐剩余正式 ScadaProjectGuard 的前置权限查询：独立 Prisma8ScadaProjectGuard 复用同一权限元数据、可信主体、hasProjectPermission 和固定安全审计原因码，在隔离库 ReadCommitted 事务内按租户、工程、主体查询完整显式权限集合，不执行 DML。无权限与不存在统一拒绝；数据库不可用时仅候选返回固定脱敏 503。Guard 不是会话认证或锁内授权的替代，不将一次通过结果缓存为持续有效授权。不新增管理员特权、授权/撤权管理接口或回滚执行入口，不注册生产 Provider。
+
+### Prisma 8 迁移接管前只读预检（隔离候选）
+
+现有 Prisma 7 迁移仍是唯一数据库变更来源。新增 [ADR-0072](adr/0072-prisma8-migration-adoption-review.md)（Proposed），明确原生 SQL 的三十六个 CHECK 与发布状态到最后事件的六字段外键不能由当前生成 Contract 完整表达；签名和迁移基线的生成、原生约束保留以及新库重放需要另行专项。新增独立只读预检按隔离连接、历史迁移校验和、标记、物理表列、命名约束、主外键、实际 ACL 白名单、非主键索引和中文注释核验目录，输出定义指纹及 REVIEW_REQUIRED，不改变任何数据库或运行时配置。
