@@ -1682,3 +1682,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/inspect-prisma8-migration-readiness.mjs`：共享只读快照读取，原预检输出不变；独立参考库对照逐项比较受检目录和查询上下文，不将原始数据库定义写入日志。
 - `scripts/compare-prisma8-migration-reference.mjs` / `pnpm run db:prisma8:migration:compare`：人工双库只读对照入口，仅允许两个显式本机隔离库，禁止签名。参考库需另行明确授权建立并独立重放。
 - `scripts/inspect-prisma8-migration-readiness.cases.mjs`：原九项加新增六项离线定义，继续通过原 test:prisma8:migration:preflight 入口纳入未来完整 ready。
+
+### 独立参考库历史重放门禁
+
+- `apps/server/prisma7-reference.config.ts`：独立参考库专用 Prisma 7 配置，只读取固定参考库 URL 和子进程显式确认，不回退业务数据库。
+- `scripts/replay-prisma8-migration-reference.mjs`：固定验收指纹和 Contract、空库/其他连接只读门禁、Prisma 7.10.1 固定 deploy/status、首次/二次目录与迁移登记比较。
+- `scripts/replay-prisma8-migration-reference.cases.mjs`：九项安全门禁及模拟重放控制流测试；`pnpm run test:prisma8:migration:replay` 纳入后续完整 ready。
+- `pnpm run db:prisma8:migration:replay --confirm-adui-scada-fresh-prisma8-ref`：人工确认、手工建立的专用空库才允许执行真实历史重放；不创建、重置、删除数据库，不授予签名许可。
