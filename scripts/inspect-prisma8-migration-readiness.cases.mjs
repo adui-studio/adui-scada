@@ -1,4 +1,5 @@
 import { strict as assert } from "node:assert";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   requirePrisma8ReadOnlyReferenceUrl,
@@ -9,9 +10,11 @@ import {
   inspectMigrationDatabase,
   loadMigrationBaseline,
   readNativeContractCatalog,
+  readSupplementalMigrationCatalog,
   validateMigrationCatalog,
   validateMigrationLedger,
 } from "./inspect-prisma8-migration-readiness.mjs";
+import { collectHistoricalComments } from "./prisma8-native-catalog-supplement.mjs";
 
 const baseline = loadMigrationBaseline();
 const lastEventKey = "scada_project_release_state_last_event_fkey";
@@ -101,6 +104,7 @@ function mockClient({
   boundaryRow = boundary,
   history = ledger(),
   metadata = catalog(),
+  primaryIndexes = [],
   failAt = "",
   closeFails = false,
 } = {}) {
@@ -129,6 +133,10 @@ function mockClient({
       if (query.includes("FROM pg_constraint")) {
         assert.deepEqual(values, [baseline.tableNames]);
         return Promise.resolve({ rows: metadata.constraints });
+      }
+      if (query.includes("FROM pg_index") && query.includes("con.conindid = i.indexrelid")) {
+        assert.deepEqual(values, [baseline.tableNames]);
+        return Promise.resolve({ rows: primaryIndexes });
       }
       if (query.includes("FROM pg_index")) {
         assert.deepEqual(values, [baseline.tableNames]);
@@ -517,5 +525,55 @@ void describe("Prisma 8 独立参考库只读目录对照", () => {
     );
     assert.deepEqual(actual.calls.slice(-2), ["ROLLBACK", "关闭"]);
     assert.equal(reference.calls.length, 0);
+  });
+
+  void it("仅补充入口在每库原快照中追加主键索引查询且保留旧目录指纹", async () => {
+    const rows = [{ index_name: "scada_tag_history_batches_pkey" }];
+    const actual = mockClient({ primaryIndexes: rows });
+    const reference = mockClient({ boundaryRow: referenceBoundary, primaryIndexes: rows });
+    const result = await readSupplementalMigrationCatalog(actual.client, reference.client, baseline);
+    assert.deepEqual(result.actual.primaryIndexes, rows);
+    assert.deepEqual(result.reference.primaryIndexes, rows);
+    assert.equal(result.actual.report.catalogFingerprint, validateMigrationCatalog(baseline, catalog()).catalogFingerprint);
+    assert.equal(result.actual.report.catalogFingerprint, result.reference.report.catalogFingerprint);
+    for (const calls of [actual.calls, reference.calls]) {
+      assert.equal(calls.length, 11);
+      assert.match(calls.at(-3), /con\.conindid = i\.indexrelid/);
+      assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
+      assert.equal(calls.slice(2, -2).every((query) => query.startsWith("SELECT")), true);
+    }
+  });
+
+  void it("补充主键索引查询失败时回滚关闭且不连接参考库", async () => {
+    const actual = mockClient({ failAt: "con.conindid = i.indexrelid" });
+    const reference = mockClient({ boundaryRow: referenceBoundary });
+    await assert.rejects(
+      () => readSupplementalMigrationCatalog(actual.client, reference.client, baseline),
+      /主键索引目录元数据失败/,
+    );
+    assert.deepEqual(actual.calls.slice(-2), ["ROLLBACK", "关闭"]);
+    assert.equal(reference.calls.length, 0);
+  });
+
+  void it("真实八项历史 SQL 注释覆盖全部固定对象并采用最终权限文案", () => {
+    const sources = baseline.migrations.map(({ name }) =>
+      readFileSync(new URL("../apps/server/prisma/migrations/" + name + "/migration.sql", import.meta.url), "utf8"),
+    );
+    const history = collectHistoricalComments(sources);
+    assert.equal(history.statements, 121);
+    assert.equal(history.entries.size, 119);
+    assert.equal(history.permissionUpdates, 3);
+    assert.equal(history.entries.get("COLUMN scada_project_grants.permission"), "明确授予的工程读取、版本读取、版本追加、正式发布、正式回滚或已发布快照读取权限。");
+    assert.equal(history.entries.get("INDEX scada_tag_history_batches_pkey"), "归档批次复合幂等键");
+    assert.equal(history.entries.get("INDEX scada_tag_history_records_pkey"), "归档批次内记录唯一键");
+    for (const [name, table] of Object.entries(baseline.tables)) {
+      assert.equal(history.entries.has("TABLE " + name), true);
+      for (const column of Object.keys(table.columns)) {
+        assert.equal(history.entries.has("COLUMN " + name + "." + column), true);
+      }
+      for (const index of table.indexes) {
+        assert.equal(history.entries.has("INDEX " + index.name), true);
+      }
+    }
   });
 });

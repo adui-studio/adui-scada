@@ -4845,3 +4845,36 @@ PR #216 官方容忍模式结构验证已实测通过。后续分为独立补充
 | 真实基线验收 | 另行批准的新建空隔离库 | 空库检查、全部约束及中文注释目录对照、负向测试、标记及二次部署证据 | 单独批准；不使用两个既有隔离库作为部署目标 |
 
 离线规划使用明确的空起点，不能把 greenfield CREATE 应用于已有历史的库。详细方案与失败条件见 [ADR-0072](adr/0072-prisma8-migration-adoption-review.md)。现阶段只需要对本次文档更新运行 docs:check 及 Vite+ 静态检查；保留已有候选及真实 verifier 证据，无需重新生成 Contract、重放历史迁移或重复执行官方验证。不得直接执行未开放的规划、签名或部署命令。
+
+### Prisma 8 主键索引及最终中文注释补充只读核验
+
+保留两座原隔离库及已验收原生候选；确保没有并发 DDL。先执行 `pnpm run test:prisma8:migration:preflight`（十九项）、`pnpm run test:prisma8:native:catalog`（七项）、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`，各命令须退出码 0，Vite+ 须零警告错误。
+
+随后仅对本机现有两个隔离库运行：
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+    $previousReferenceUrl = $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL
+    try {
+        $password = Read-Host '请输入两个隔离库共用的数据库密码' -MaskInput
+        if ([string]::IsNullOrEmpty($password)) { throw '数据库密码不能为空' }
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_TEST_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_test?schema=public"
+        $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_fresh_prisma8_ref?schema=public"
+        pnpm run db:prisma8:native:catalog
+        $auditExitCode = $LASTEXITCODE
+        Write-Host "目录补充核验退出码：$auditExitCode"
+        if ($auditExitCode -ne 0) { throw '补充核验失败，保留诊断，不自动修复或重试' }
+    } finally {
+        if ($null -eq $previousTestUrl) { Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue }
+        else { $env:SCADA_TEST_DATABASE_URL = $previousTestUrl }
+        if ($null -eq $previousReferenceUrl) { Remove-Item Env:SCADA_MIGRATION_REFERENCE_DATABASE_URL -ErrorAction SilentlyContinue }
+        else { $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL = $previousReferenceUrl }
+        Remove-Variable password, encodedPassword -ErrorAction SilentlyContinue
+    }
+}
+```
+
+预期原目录指纹仍为 `73079d85974ddc9cbabf59741f2a4a94dd7bfff3d70a23bab27a7283456e8c52`；补充范围 PRISMA8_PRIMARY_INDEX_AND_COMMENTS_V1，独立补充指纹为实际输出的 64 位十六进制 SHA-256（尚未实测）；主键索引 12、最终中文注释 119，对照状态 MATCHED_REVIEW_REQUIRED，签名许可否，退出码 0。两个快照均强制只读、可重复读，检查完成后回滚并关闭。不是跨库原子快照；不允许并发 DDL。未声明注释的其他十个主键索引仅比对实际注释和定义，不写入。失败时不重放历史、不重新生成原生候选、不自动修复数据库。基线生成、写入夹具、部署和签名仍需分别批准。
