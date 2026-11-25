@@ -265,7 +265,7 @@ async function lockState(tx: Tx, tenantId: string, projectId: string, write: boo
   return state;
 }
 
-async function lockedSnapshot(tx: Tx, tenantId: string, projectId: string, revision: number): Promise<ProjectSnapshot> {
+async function lockedSnapshot(tx: Tx, tenantId: string, projectId: string, revision: number, currentRelease = false): Promise<ProjectSnapshot> {
   const rows = await tx.query(
     tx.raw.sql`SELECT snapshot::text AS snapshot_data, content_hash::text AS content_hash, created_at::text AS created_at
       FROM public.scada_project_versions WHERE tenant_id = ${tenantId} AND project_id = ${projectId}
@@ -275,7 +275,14 @@ async function lockedSnapshot(tx: Tx, tenantId: string, projectId: string, revis
   const row = rows[0];
   if (rows.length !== 1 || !row) throw new ProjectVersionAccessDeniedError();
   const data: unknown = JSON.parse(row.snapshot_data);
-  return validatePrisma8ProjectSnapshot(projectId, revision, row.content_hash, row.created_at, data);
+  try {
+    return await validatePrisma8ProjectSnapshot(projectId, revision, row.content_hash, row.created_at, data);
+  } catch (error) {
+    if (currentRelease && error instanceof TypeError && error.message === "数据库工程版本元数据与快照不一致") {
+      throw new TypeError("数据库当前正式发布快照完整性校验失败");
+    }
+    throw error;
+  }
 }
 
 const EVENT_COLUMNS = {
@@ -353,7 +360,7 @@ export class Prisma8ProjectReleaseStore {
         throw new TypeError("数据库工程正式发布状态不符合生命周期约束");
       }
       const revision = Number(state.releasedRevision);
-      const snapshot = await lockedSnapshot(tx, tenantId, projectId, revision);
+      const snapshot = await lockedSnapshot(tx, tenantId, projectId, revision, true);
       if (snapshot.contentHash !== state.releasedContentHash) throw new TypeError("数据库当前正式发布快照完整性校验失败");
       const event = await readEvent(tx, tenantId, projectId, state.lastReleaseEventId);
       verifyCurrentEvent(state, event);
