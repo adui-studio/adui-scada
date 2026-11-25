@@ -4955,3 +4955,9 @@ E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回
 维护者 Windows HEAD `8252e1fc058b8f517f46efa5d93b7c71a4393633`：原生候选 9/9，Vite+ 515 个格式文件、356 个受检文件零警告/Lint/类型错误，E-142 关闭。中文检查在脚本第 62 行报告一处 JSDoc 缺少中文，增量退出码 1；后续 docs:check 未执行，日志最后工作区干净。E-143 仅补充同一行中文说明，修复提交 `a19457229be7c590850f329f8c0af36f3ef64a9e`，远端 Blob `f187b89caa8e952bbaa08bdd8db7d0b6ef6cc9a0` 回读确认仅一行注释变化。
 
 协作容器 Node.js 22.16.0：原中文检查器 Blob `00127f6ba4d622de026246be6fc0eca011099d5d` 与远端一致，在独立七文件最小夹具实测修复前退出码 1（单处 JSDoc 失败），修复后退出码 0、Node 语法检查通过；按原扫描器单行判定逻辑核对完整远端目标源码，前一处后零处。未执行修复后全仓 Vite+、九项测试、messages:check 或 docs:check，需 Windows 增量复验。仅注释修复，不改变物理 IR 或运行时关系阻塞，不重复真实生成、数据库重放或完整 ready，保持 Draft 和签名禁止。
+
+### 2026-11-25 · PR #213 关闭与原生候选离线运行时兼容评审
+
+维护者 Windows 原生候选 9/9、Vite+ 515/356 零警告错误、messages:check 383 文件、docs:check 96 份、增量退出码 0；E-143 关闭，PR #213 按授权 Squash 合入 `4bada62a85fd099eb7a24857f66e2b411eb6a2bf`，本机 HEAD 已确认。
+
+新批复用已保留的 .artifacts/prisma8-native 真实候选，不运行 emit 或数据库命令。远端静态检查十二个名称含 prisma8 的非测试服务端生产模块未发现两个关系名的直接引用；发布仓储显式读取 lastReleaseEventId 对应事件并验证完整性。新增六项离线测试，协作容器 Node.js 22.16.0 / TypeScript 5.8.3 使用最小独立编译夹具实测 6/6，验证两种关系差异白名单、哈希标识拒绝、虚拟声明和 JSON 实际装载、类型不匹配拒绝、磁盘原件不变及禁止写入。新脚本 Blob `f0c8dcb15b1012513b6fe70a9d72818bb200d46e` 和测试 Blob `2b828b98e8a97c225b9d518df05e9a94c2334a75` 与本地实测一致。CLI 新增原生配置 Skills 只读列表及模拟回归；真实固定版本 Skills 列表、真实候选与正式契约双轮服务端类型检查、全仓 vp check、messages:check、docs:check 尚待维护者 Windows 实测。局部编译器测试不代表实际仓库或固定 RC 类型兼容。仍保持 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED，禁止签名、迁移、重放、DDL 和正式 Provider 切换。
