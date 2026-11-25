@@ -38,3 +38,9 @@ D. 正式切换单独评审：备份恢复演练、迁移所有权唯一性、Ne
 根据仓库固定 `@prisma/orm-postgres` 8.0.0-rc.25 包内 [Contract 参考](../../.agents/skills/prisma-8/references/contract.md) 与 [迁移参考](../../.agents/skills/prisma-8/references/migrations.md)，现有 prisma7Schema 转换仍是过渡输入，不能将当前缺失的 CHECK 当成 Prisma 8 不支持。原生候选应优先评估独立 PSL Contract 的 ``@@check(expression: sql`…`, map: "原物理约束名")``（或固定版本 TS builder 等价表达），采用 PostgreSQL 自身重打印的谓词，而非自行改变括号、类型转换、逻辑或命名。map 模式按原名及表达式字节比较，官方包文档明确会提示 PN_EXACT_NAME_BODY_COMPARISON；保留并审核，不以忽略告警掩盖实际差异。候选 Contract 必须验证全部三十六项名称/谓词、六字段末次发布复合外键及关联可空性、目标唯一约束、RESTRICT/CASCADE、运行时根与关系类型兼容。若 PSL 或 builder 无法原生表达，须验证固定版本支持的扩展/DDL 操作与 verifier、后续 planner 保留机制；单次 rawSql 恢复约束不足以证明未来计划不会删除它。中文表/列/索引注释必须按精确目录定义保留。不得修改已生成 Contract JSON、伪造哈希或将临时单字段外键替代历史六字段约束。
 
 本批新增两个隔离库的只读目录对照，以已经独立重放八项 Prisma 7 迁移的 `adui_scada_fresh_prisma8_ref` 为参考候选，原 `adui_scada_test` 为实际验收库。每库独立读取同一预检 SQL；先验证历史、标记、物理结构及关键约束，再核对相同版本与查询上下文，逐项比较已采集表、列、CHECK/主外键、非主键索引及中文注释完整目录行，最后核对指纹。参考库必须有明确批准的创建与重放证据，且对照期间无并发 DDL；本工具不会自行创建、迁移或判定库是如何创建的。目录未覆盖的主键索引底层属性、触发器、RLS/权限、其他对象与未来规划/部署行为仍须另行审计；即使目录匹配也只返回 MATCHED_REVIEW_REQUIRED。当前不执行 contract infer、db verify、db sign、migration plan 或任何 DDL；候选 Contract 原生表达与新基线生成留待后续评审批准，ADR 状态仍为 Proposed。
+
+## 2026-11-25 · 阶段 B 只读对照工具验收与独立历史重放门禁
+
+PR #211 的十五项离线测试及原隔离验收库真实只读预检回归均已通过 Windows 增量验收；验收库目录指纹 `73079d85974ddc9cbabf59741f2a4a94dd7bfff3d70a23bab27a7283456e8c52` 与 PR #210 一致。PR #211 已按维护者授权 Squash 合入集成分支 `ce8c1fefe1a3a8bcd56fb42f30274cdd6109d97d`。此处不声称真实双库目录已完成对照。
+
+新批提供独立参考库重放候选：只接受明确确认的、本机 127.0.0.1:15432、由维护者手工建立的 adui_scada_fresh_prisma8_ref 空库；使用独立 Prisma 7 配置，不加载根 .env，不回退业务连接，固定 Prisma 7.10.1 和已验收指纹/契约。空库只读检查拒绝已有用户对象及其他连接；首次和二次仅允许固定 deploy/status，分别执行双库目录对照及迁移登记稳定性比较。所有写入仅限独立参考库历史 SQL 和 Prisma 7 自管理登记，现有验收库只读。空库检查并非全对象证明或跨 CLI 排他锁，维护者必须确认来源及无并发 DDL/连接；脚本不创建、重置或删除数据库，也不自动恢复或重试。真实重放尚待维护者执行；即使匹配也只为后续原生 Contract 候选提供参考证据，不批准 Prisma 8 签名、基线生成或接管。ADR 仍为 Proposed。

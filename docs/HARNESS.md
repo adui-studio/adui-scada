@@ -4671,3 +4671,43 @@ try {
 新增 `pnpm run db:prisma8:migration:compare` 仅在维护者确认已存在独立全新重放八项历史迁移的参考库后执行。它要求同时显式设置 `SCADA_TEST_DATABASE_URL`（本机 15432/adui_scada_test）和临时 `SCADA_MIGRATION_REFERENCE_DATABASE_URL`（本机 15432/adui_scada_fresh_prisma8_ref）；两者均不读取根 .env，不接受额外连接参数（除唯一 schema=public），不允许替换为业务库，也不将临时参考 URL 写入根 .env。两次连接均以 REPEATABLE READ READ ONLY 快照读取迁移登记与系统目录并回滚关闭，不读取业务行，不创建或重放数据库。
 
 对照前确认两个数据库来自同一 PostgreSQL 实例且本次无并发 DDL。比较双方完整版本、编码、collation/ctype、UTC、DateStyle、search_path、standard_conforming_strings，并逐项核对表、字段（含默认表达式）、约束（含原生 CHECK 和外键完整定义）、非主键索引（含完整定义）及已采集中文注释。参考库的全新重放需独立操作证据；仅凭历史登记与匹配不证明独立建立过程。输出双方目录指纹；MATCHED_REVIEW_REQUIRED 仍禁止签名。若尚无参考库，不执行该真实对照或任何创建/迁移命令，先等待隔离目标和写入范围明确批准。不自动重试或修复不一致，不重置数据库。
+
+### Prisma 8 独立参考库历史重放与幂等性验收
+
+先完成 `pnpm run db:prisma8:emit`、`pnpm run test:prisma8:cli`、`pnpm run test:prisma8:migration:preflight`（15 项）、`pnpm run test:prisma8:migration:replay`（9 项）、Vite+、服务端类型检查、中文文案和文档检查。新增离线测试进入完整 ready，但真实重放命令不进入 ready。
+
+真实重放前，维护者必须明确确认仅写入新建隔离参考库 `adui_scada_fresh_prisma8_ref`。在同一本机 PostgreSQL 实例（127.0.0.1:15432）用具备建库权限的管理连接手工建立空库，所有者为 `adui_scada`，使用空模板（如 template0）及与 adui_scada_test 一致的编码、排序规则、字符分类和 locale provider；严禁将 adui_scada_test 或业务库作为复制模板。若参考库已存在，先核查来源与状态，不执行删除、重置或再次重放。不要让管理工具、应用或其他进程在重放期间连接参考库，也不得对两库并发 DDL。脚本的空对象与会话检查不是跨进程锁，不能替代上述操作边界。
+
+使用以下 PowerShell 包装临时指定两个 URL 和固定确认参数；密码仅屏蔽输入，不写入根 .env 或日志。仅在全新空库及范围明确确认后执行：
+
+```powershell
+& {
+    $ErrorActionPreference = "Stop"
+    $previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+    $previousReferenceUrl = $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL
+    try {
+        $confirmation = Read-Host "确认仅重放全新空库，请输入 adui_scada_fresh_prisma8_ref"
+        if ($confirmation -cne "adui_scada_fresh_prisma8_ref") {
+            throw "未确认独立参考库重放"
+        }
+        $password = Read-Host "请输入隔离数据库密码" -MaskInput
+        if ([string]::IsNullOrEmpty($password)) { throw "数据库密码不能为空" }
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_TEST_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_test?schema=public"
+        $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_fresh_prisma8_ref?schema=public"
+        pnpm run db:prisma8:migration:replay --confirm-adui-scada-fresh-prisma8-ref
+        if ($LASTEXITCODE -ne 0) { throw "参考库重放失败，禁止自动修复或重试" }
+        Write-Host "独立参考库重放退出码：0"
+    } finally {
+        if ($null -eq $previousTestUrl) {
+            Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+        } else { $env:SCADA_TEST_DATABASE_URL = $previousTestUrl }
+        if ($null -eq $previousReferenceUrl) {
+            Remove-Item Env:SCADA_MIGRATION_REFERENCE_DATABASE_URL -ErrorAction SilentlyContinue
+        } else { $env:SCADA_MIGRATION_REFERENCE_DATABASE_URL = $previousReferenceUrl }
+        Remove-Variable password, encodedPassword, confirmation -ErrorAction SilentlyContinue
+    }
+}
+```
+
+脚本先核验已审查的验收库目录指纹与生成 Contract，再查参考库真实库名、public、只读事务、恢复状态、非系统 Schema、public 关系/函数/类型/操作符/排序规则/转换/操作符类及族/文本检索对象、额外扩展、事件触发器、publication、foreign server 及其他会话。确认空库后，仅以独立 `prisma7-reference.config.ts`（不读取业务 URL 或根 .env）调用 Prisma 7.10.1 的固定 migrate deploy/status；不透传第三方原始错误。首次及二次部署均执行 PR #211 双库只读对照，并核验两次迁移登记相等。仅 MATCHED_REVIEW_REQUIRED，不授予签名许可。若任一步失败，保留参考库现状和日志，由维护者检查；禁止自动重试、重置、清库、修改历史、签名或执行 Prisma 8 迁移。已成功重放的参考库再次对照应使用既有只读 compare 命令，而非重复执行 replay。
