@@ -20,15 +20,15 @@ function withFixture(manifest, run) {
     writeFileSync(
       join(packageRoot, "cli.mjs"),
       [
-        'const args = process.argv.slice(2);',
+        "const args = process.argv.slice(2);",
         'const commands = new Set(["skills sync", "skills list", "contract emit"]);',
         'if (!commands.has(args.slice(0, 2).join(" ")) || args.length !== 4 || args[2] !== "--config") {',
-        '  process.exitCode = 2;',
-        '} else {',
-        '  console.log(JSON.stringify({ cwd: process.cwd(), args }));',
-        '  process.exitCode = 7;',
-        '}',
-        '',
+        "  process.exitCode = 2;",
+        "} else {",
+        "  console.log(JSON.stringify({ cwd: process.cwd(), args }));",
+        "  process.exitCode = 7;",
+        "}",
+        "",
       ].join("\n"),
     );
     writeFileSync(join(packageRoot, "..", "outside.mjs"), "// 包外测试占位入口\n");
@@ -41,7 +41,11 @@ function withFixture(manifest, run) {
 void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
   void it("三种入口均以命令在前的顺序在根目录运行并保留配置及退出码", () => {
     withFixture(valid, (root, server, launcher) => {
-      for (const args of [["skills", "sync"], ["skills", "list"], ["contract", "emit"]]) {
+      for (const args of [
+        ["skills", "sync"],
+        ["skills", "list"],
+        ["contract", "emit"],
+      ]) {
         const result = spawnSync(process.execPath, [launcher, ...args], {
           cwd: server,
           encoding: "utf8",
@@ -57,7 +61,10 @@ void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
 
   void it("拒绝数据库写入命令和额外参数", () => {
     withFixture(valid, (_root, server, launcher) => {
-      for (const args of [["db", "sign"], ["skills", "sync", "--disable"]]) {
+      for (const args of [
+        ["db", "sign"],
+        ["skills", "sync", "--disable"],
+      ]) {
         const result = spawnSync(process.execPath, [launcher, ...args], {
           cwd: server,
           encoding: "utf8",

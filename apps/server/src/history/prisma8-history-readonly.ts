@@ -73,20 +73,10 @@ export async function verifyPrisma8HistoryReadOnly(
     throw new Error("Prisma 8 历史查询与原始有界查询不一致");
   }
   if (
-    (
-      await readPersistedTagHistoryPrisma8(
-        client,
-        { ...scope, tenantId: absentTenant },
-        query,
-      )
-    ).length !== 0 ||
-    (
-      await readPersistedTagHistoryPrisma8(
-        client,
-        { ...scope, projectId: absentProject },
-        query,
-      )
-    ).length !== 0
+    (await readPersistedTagHistoryPrisma8(client, { ...scope, tenantId: absentTenant }, query))
+      .length !== 0 ||
+    (await readPersistedTagHistoryPrisma8(client, { ...scope, projectId: absentProject }, query))
+      .length !== 0
   ) {
     throw new Error("历史查询未正确隔离租户与工程");
   }

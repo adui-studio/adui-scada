@@ -118,7 +118,11 @@ for (const directory of [
   ".cursor",
   ".devin",
 ]) {
-  for (const skill of ["prisma-8", "prisma-composer-core-concepts", "prisma-platform-core-concepts"]) {
+  for (const skill of [
+    "prisma-8",
+    "prisma-composer-core-concepts",
+    "prisma-platform-core-concepts",
+  ]) {
     const path = `${directory}/skills/${skill}`;
     assert.ok(!existsSync(resolve(root, path)), `${path} 是旧版重复副本，请先迁出工作区`);
   }

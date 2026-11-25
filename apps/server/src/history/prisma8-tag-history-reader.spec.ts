@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
 import { encodeHistoryPoint } from "./tag-history-record-codec.js";
-import { decodePrisma8HistoryRows, preparePrisma8HistoryQuery } from "./prisma8-tag-history-reader.js";
+import {
+  decodePrisma8HistoryRows,
+  preparePrisma8HistoryQuery,
+} from "./prisma8-tag-history-reader.js";
 
 const scope = { tenantId: "tenant-a", projectId: "project-a" };
 const timestamp = "2026-11-24T00:00:00.000Z";
