@@ -74,6 +74,20 @@ void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
     });
   });
 
+  void it("原生配置只允许查询根目录 Skills 列表", () => {
+    withFixture(valid, (root, server, launcher) => {
+      const result = spawnSync(process.execPath, [launcher, "skills", "native-list"], {
+        cwd: server,
+        encoding: "utf8",
+      });
+      assert.equal(result.status, 7);
+      assert.deepEqual(JSON.parse(result.stdout), {
+        cwd: root,
+        args: ["skills", "list", "--config", join(server, "prisma8-native.config.ts")],
+      });
+    });
+  });
+
   void it("拒绝数据库写入命令和额外参数", () => {
     withFixture(valid, (_root, server, launcher) => {
       for (const args of [
@@ -83,6 +97,8 @@ void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
         ["migration", "plan"],
         ["contract", "native-emit", "--config", "unsafe.ts"],
         ["skills", "sync", "--disable"],
+        ["skills", "native-list", "--config", "unsafe.ts"],
+        ["skills", "native-sync"],
       ]) {
         const result = spawnSync(process.execPath, [launcher, ...args], {
           cwd: server,
