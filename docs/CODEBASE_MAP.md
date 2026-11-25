@@ -1619,3 +1619,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 
 - `apps/server/test/prisma8-history-compare.db-spec.ts`：独立真实数据库非空三方对照；复用 Prisma 7 历史归档仓储写合成夹具、原生参数化 SQL 与 Prisma 7 / 8 各自查询，逐项对照独立预期；先校验隔离目标，结束仅按三个随机联合工程主键事务清理并核对零残留。
 - 根命令 `test:db:prisma8:history:compare`：只运行该真实数据库测试。其写入明确区别于原只读探针，不纳入 ready；默认 test:db 真实数据库套件包含该用例。
+
+### Prisma 8 历史写入事务候选入口
+
+- `apps/server/src/history/prisma8-tag-history-store.ts`：固定作用域、事务前规范编码及不可变快照、Prisma 8 回调事务、参数化批次冲突处理、类型化明细批量写入、完整重放比较与提交后回执。
+- `apps/server/src/history/prisma8-tag-history-store.spec.ts`：五项输入、边界及完整内容校验测试。
+- `apps/server/test/prisma8-history-write.db-spec.ts`：显式隔离库真实候选写入、双版本互相重放与并发、SQLSTATE 约束故障回滚、三方结果及精确清理。
+- 根命令 `test:db:prisma8:history:write`：仅该真实专项。保留原只读专项与历史非空三方对照；不切换 Prisma 7 正式实现。

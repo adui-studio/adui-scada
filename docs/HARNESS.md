@@ -4605,3 +4605,29 @@ try {
 ```
 
 测试先校验实际连接的数据库名、public Schema、读写/只读状态与两张历史表及查询索引。Prisma 7 创建三个随机专用工程（两个租户），使用正式归档仓储写入五批共十个合成点；Prisma 8 和原生 SQL 只使用受控只读 pg 池。十一组窗口/租户/工程/Tag 查询及超量门禁必须逐项满足独立预期；只有非空严格对照、精确联合主键事务清理、零残留与资源关闭都通过才返回 MATCHED。创建结果或清理未确认时返回固定脱敏诊断及本次随机测试标识，禁止自动删除不确定归属的工程或自动重试；异常终止可能留下专用夹具，需要单独只读审查。所有代码仍只用于隔离测试，不注册 HTTP 或生产模块，不进行真实设备采集。
+
+### Prisma 8 历史归档写入候选专项
+
+前置：已应用八项 Prisma 7 迁移的本机 127.0.0.1:15432/adui_scada_test；两版生成物及 Core Node 构建需与当前分支一致。新增 `pnpm run test:db:prisma8:history:write`，单独执行真实写入专项，默认 test:db 也包含该测试，ready 不运行数据库写入。先执行 db:validate、db:generate、db:prisma8:emit、build:core、vp check、messages:check、typecheck:server 和 docs:check，再执行五项候选单测与完整 ready。仅在已授权的隔离库运行，测试期间不得启动其他写入任务；不执行迁移、重置、签名或重建容器。
+
+```powershell
+$previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+try {
+    $password = Read-Host "请输入隔离数据库密码" -MaskInput
+    if ([string]::IsNullOrEmpty($password)) { throw "数据库密码不能为空" }
+    $encodedPassword = [Uri]::EscapeDataString($password)
+    $env:SCADA_TEST_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_test?schema=public"
+    pnpm run test:db:prisma8:history:write
+    if ($LASTEXITCODE -ne 0) { throw "历史写入事务专项失败，禁止自动重试" }
+    Write-Host "历史写入事务专项退出码：0"
+} finally {
+    if ($null -eq $previousTestUrl) {
+        Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue
+    } else {
+        $env:SCADA_TEST_DATABASE_URL = $previousTestUrl
+    }
+    Remove-Variable password, encodedPassword -ErrorAction SilentlyContinue
+}
+```
+
+测试先核对写入端与只读端实际数据库和 Schema、历史表/索引。仅创建本次三个随机联合工程键；首次写入、双版本重放、同内容跨版本并发、不同内容新版并发、复合外键 SQLSTATE 23503、只读池拒绝、同事务故意重复明细 SQLSTATE 23505、回滚后零批次/明细及再次正常提交、跨租户/工程隔离全部必须符合预期。回滚专项在真实候选事务步骤返回暂定状态后引入同一随机批次重复明细，不修改表、触发器或旧业务数据。所有竞争请求必须 settle 后才清理；清理事务仅针对确认创建的三个联合工程键，按明细、批次、工程顺序删除并核对零残留。创建/清理结果不明、进程异常终止或任何专项失败不得自动重试，先核查；诊断不输出第三方异常、凭据或业务数据。

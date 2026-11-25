@@ -1546,3 +1546,9 @@ React/Vue 运行页可显式导入当前或可迁移 Schema 的最大 2 MiB JSON
 ### 历史非空三方对照验收契约
 
 在已应用历史归档迁移的本机 adui_scada_test 隔离库，独立测试使用 Prisma 7 正式仓储提交随机工程的合成记录（明确测试授权）；Prisma 7 读取、Prisma 8 只读读取、参数化原生 SQL 均与独立构造的非空预期点比较。主查询为两毫秒左闭右开窗口，包含同毫秒跨流、批次及记录顺序；额外覆盖窗口左右、实际不同租户与工程、不同 Tag、缺失作用域、原始编码/负零、四种质量及点数超量拒绝。仅在真实结果一致、清理事务提交及资源关闭完成后返回 MATCHED；原只读探针仍允许 EMPTY 并明示非空未验收。测试写入限于本次随机联合主键，不接管 Schema、迁移、生产仓储或正式 API。
+
+### Prisma 8 历史归档写入事务候选
+
+候选 Prisma8TagHistoryStore 实现同一 TagHistoryPersistencePort，不注册模块或 HTTP 路由。固定租户、工程、流标识；开启事务前校验版本、正安全整数批次号、1 至 256 点及规范派生字段，按既有编码器冻结完整有序记录。每个 Prisma 8 事务显式使用 ReadCommitted、10 秒事务超时，进入后核对实际数据库 adui_scada_test、public Schema、事务可写且读已提交；仅由严格验证本机隔离 URL 的测试调用方构造客户端，不将数据库名检查作为通用生产授权。
+
+批次使用 Prisma 8 事务 raw.sql 的绑定参数及显式四列复合主键 ON CONFLICT DO NOTHING，明细通过同一事务强类型 SQL builder 批量插入，禁止覆盖旧记录。首次插入须恰好一批及全部明细；重复键不写明细。两条路径均重新读取完整批次元数据及按 ordinal 排序、上限加一的明细，并核对联合键、版本、数量、顺序、Tag、BigInt 时间索引、原始 payload。任意错配拒绝；事务内返回的仅是暂定状态，外层 transaction 成功返回后才生成 COMMITTED 或 ALREADY_COMMITTED 回执；失败及未知提交结果不得自动重试或确认缓冲。沿用 Prisma 7 的 Schema、CHECK、外键与迁移管理；不关闭 Prisma 8 默认标记核验、不签名。事务外部连接池由测试调用方持有及释放，隔离专项限制连接等待 2 秒、SQL 5 秒、锁 2 秒，非生产性能承诺。
