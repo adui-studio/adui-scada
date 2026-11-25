@@ -1697,4 +1697,4 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/inspect-prisma8-migration-readiness.mjs`：内部复用双库只读目录匹配流程供候选提取，原入口报告形状、指纹及查询序列不变。
 - `scripts/prisma8-native-contract-review.mjs`：普通 CHECK 谓词提取、PSL 模板填充、物理 IR 和运行时领域模型/映射/关系/生成器对照。
 - `scripts/prisma8-native-contract.mjs` / `pnpm run db:prisma8:native:review`：显式双库只读采集、锁定已验收指纹与 Prisma 8 版本、独立离线 emit 和评审；禁止覆盖旧产物或签名。
-- `scripts/prisma8-native-contract.cases.mjs` / `pnpm run test:prisma8:native`：八项离线模拟回归；CLI 四项、迁移预检十六项及重放门禁九项，均纳入未来完整 ready，真实候选生成保持人工独立执行。
+- `scripts/prisma8-native-contract.cases.mjs` / `pnpm run test:prisma8:native`：九项离线模拟回归（含表名 UTF-16 字典序）；CLI 四项、迁移预检十六项及重放门禁九项，均纳入未来完整 ready，真实候选生成保持人工独立执行。
