@@ -1719,7 +1719,7 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 ### 原生迁移基线与注释补充评审（规划）
 
 - 现有 `scripts/inspect-prisma8-migration-readiness.mjs` 的非主键索引目录查询不包含底层主键索引；历史 SQL 已确认两个归档主键索引有中文注释，需独立补充只读检查。
-- [ADR-0072](adr/0072-prisma8-migration-adoption-review.md) 定义最终 119 个注释对象、主键索引补充核验、独立空迁移图的离线候选生成及后续真实重放门禁；补充只读核验入口见下节；离线候选生成及真实重放尚无执行脚本。当前官方 schema-only 入口已通过维护者 Windows 真库验收，禁止签名及正式接管。
+- [ADR-0072](adr/0072-prisma8-migration-adoption-review.md) 定义最终 119 个注释对象、主键索引补充核验、独立空迁移图的离线候选生成及后续真实重放门禁；补充只读核验和独立离线候选门禁入口见下节；真实重放尚无执行脚本。当前官方 schema-only 入口已通过维护者 Windows 真库验收，禁止签名及正式接管。
 
 ### Prisma 8 主键索引与最终中文注释补充核验
 
@@ -1728,3 +1728,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/compare-prisma8-catalog-supplement.mjs` / `pnpm run db:prisma8:native:catalog`：真实双库只读专项，校验历史原文 SHA-256、明确隔离 URL、旧指纹及补充证据，不输出数据库行或凭据。
 - `scripts/prisma8-native-catalog-supplement.cases.mjs` / `pnpm run test:prisma8:native:catalog`：七项离线判定测试；原 `test:prisma8:migration:preflight` 扩至十九项，均纳入 ready，真实专项不纳入 ready。
 - 离线基线候选生成及重放入口尚未开放，须单独批准。
+
+### Prisma 8 原生迁移基线独立离线候选门禁
+
+- `apps/server/prisma8-native-baseline.config.ts`：独立无数据库连接、无 dotenv 配置，消费根忽略目录 .artifacts/prisma8-native-baseline 中的保留候选副本及全新 migrations 图。
+- `apps/server/prisma8-native-baseline-plan.mjs` / `pnpm run db:prisma8:native:baseline:plan --confirm-offline-baseline`：仅明确确认后进入真实离线规划。复核原生契约与正式契约物理及运行时评审、声明标识、历史迁移，保留两个原始生成目录。
+- `scripts/prisma8-native-baseline.mjs`：固定版本与包内 CLI 路径、安全目录及环境白名单、独立原文副本、固定空起点规划、生成物形状与目标快照内容门禁；只返回 BASELINE_ARTIFACT_REVIEW_REQUIRED、签名和部署许可均否。
+- `scripts/prisma8-native-baseline.cases.mjs` / `pnpm run test:prisma8:native:baseline`：九项模拟 CLI 与本地文件系统测试，纳入 ready；真实离线规划不纳入 ready。生成包 DDL、操作内容、注释、依赖解析及新空库重放仍须独立审查。

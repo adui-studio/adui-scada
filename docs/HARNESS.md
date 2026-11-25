@@ -4878,3 +4878,27 @@ PR #216 官方容忍模式结构验证已实测通过。后续分为独立补充
 ```
 
 预期原目录指纹仍为 `73079d85974ddc9cbabf59741f2a4a94dd7bfff3d70a23bab27a7283456e8c52`；补充范围 PRISMA8_PRIMARY_INDEX_AND_COMMENTS_V1，独立补充指纹为实际输出的 64 位十六进制 SHA-256（尚未实测）；主键索引 12、最终中文注释 119，对照状态 MATCHED_REVIEW_REQUIRED，签名许可否，退出码 0。两个快照均强制只读、可重复读，检查完成后回滚并关闭。不是跨库原子快照；不允许并发 DDL。未声明注释的其他十个主键索引仅比对实际注释和定义，不写入。失败时不重放历史、不重新生成原生候选、不自动修复数据库。基线生成、写入夹具、部署和签名仍需分别批准。
+
+### Prisma 8 原生基线独立离线规划候选
+
+PR #218 已获得两库主键索引 12 项、最终中文注释 119 项的真实补充证据，补充指纹为 `b7ce46a8e3a203dce7a63fc94bbf1a11d0244521b6efc697e64b1b1a34fd02ad`。保留现有两座隔离库、历史迁移、正式生成物和 .artifacts/prisma8-native 原生候选。无须重新 emit、重放、安装依赖或设置任何数据库 URL。先执行增量门禁：
+
+```powershell
+pnpm run test:prisma8:native:baseline &&
+pnpm run test:prisma8:native &&
+pnpm run test:prisma8:native:runtime &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check
+Write-Host "离线门禁验收退出码：$LASTEXITCODE"
+```
+
+目标九项新增门禁、九项原生评审、六项运行时评审均通过，Vite+ 零警告错误。只有维护者明确批准实际生成离线候选、确认没有并发文件修改且 .artifacts/prisma8-native-baseline 不存在时，才执行以下单独命令；确认参数只授权离线生成，不授权数据库访问、签名、部署或任何 DDL 执行：
+
+```powershell
+pnpm run db:prisma8:native:baseline:plan --confirm-offline-baseline
+Write-Host "离线基线候选生成退出码：$LASTEXITCODE"
+git status --short
+```
+
+包装器不使用通用 CLI 参数，不读取连接配置或加载 dotenv，只以固定空起点规划、独立配置和系统环境白名单启动本地已安装 CLI。不属于操作系统网络沙箱；禁止改变配置或并发修改输入/输出。生成目录 .artifacts/prisma8-native-baseline 保留三份原文副本、官方 plan.json、plan.stderr.txt、迁移包 migration.ts/migration.json/ops.json 与目标 snapshot。成功须出现目标存储哈希 `6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc`、实际原文 SHA-256、实际迁移标识、实际计划操作数量和 BASELINE_ARTIFACT_REVIEW_REQUIRED；签名许可否，部署许可否。若 JSON、目录、操作类别（当前只接受 additive）、占位符、目标快照或任何输入变化导致失败，保留全部文件和诊断，禁止自动删除、重试、改 JSON、改哈希、补写注释或执行迁移。真实固定 RC 结果可能与模拟的形状不同，须依据实际诊断进一步评审，不通过放宽门禁绕过。下一步单独审查操作和 DDL 以及全部 119 项中文注释，不视生成成功为等价证明。
