@@ -4663,3 +4663,11 @@ try {
 先执行 `pnpm run db:prisma8:emit` 确认固定生成契约，再执行 `pnpm run test:prisma8:cli` 与 `pnpm run test:prisma8:migration:preflight`、Vite+、中文文案、文档检查。新增离线测试纳入未来阶段完整 ready，但真实预检保持人工独立运行。
 
 使用前述屏蔽密码、显式 SCADA_TEST_DATABASE_URL 指向 127.0.0.1:15432/adui_scada_test 及 try/finally 环境恢复流程执行 `pnpm run db:prisma8:migration:preflight`。禁止使用业务库 URL 或根 .env；连接默认只读，REPEATABLE READ READ ONLY 快照内核对历史迁移、实际标记和系统目录，最终 ROLLBACK 并关闭。无需创建夹具，不读取业务行；输出固定统计、Contract 存储哈希及目录定义指纹。现有标记、迁移校验和不匹配、异常登记、缺失或弱化约束均停止，不自动修复或重试。即使退出码 0，REVIEW_REQUIRED 也不授予签名或迁移许可。下一批须按 ADR-0072 评审原生约束保留及独立参考库方案。
+
+### Prisma 8 原生约束保留与独立参考库目录对照
+
+先执行 `pnpm run db:prisma8:emit`、`pnpm run test:prisma8:cli`、`pnpm run test:prisma8:migration:preflight`（现有九项和新增六项，共十五项），然后执行 Vite+、中文文案和文档检查。原 `db:prisma8:migration:preflight` 仍只允许 `adui_scada_test`，返回结构和目录指纹算法不变；需对其真实入口复验，不重复完整 ready。
+
+新增 `pnpm run db:prisma8:migration:compare` 仅在维护者确认已存在独立全新重放八项历史迁移的参考库后执行。它要求同时显式设置 `SCADA_TEST_DATABASE_URL`（本机 15432/adui_scada_test）和临时 `SCADA_MIGRATION_REFERENCE_DATABASE_URL`（本机 15432/adui_scada_fresh_prisma8_ref）；两者均不读取根 .env，不接受额外连接参数（除唯一 schema=public），不允许替换为业务库，也不将临时参考 URL 写入根 .env。两次连接均以 REPEATABLE READ READ ONLY 快照读取迁移登记与系统目录并回滚关闭，不读取业务行，不创建或重放数据库。
+
+对照前确认两个数据库来自同一 PostgreSQL 实例且本次无并发 DDL。比较双方完整版本、编码、collation/ctype、UTC、DateStyle、search_path、standard_conforming_strings，并逐项核对表、字段（含默认表达式）、约束（含原生 CHECK 和外键完整定义）、非主键索引（含完整定义）及已采集中文注释。参考库的全新重放需独立操作证据；仅凭历史登记与匹配不证明独立建立过程。输出双方目录指纹；MATCHED_REVIEW_REQUIRED 仍禁止签名。若尚无参考库，不执行该真实对照或任何创建/迁移命令，先等待隔离目标和写入范围明确批准。不自动重试或修复不一致，不重置数据库。
