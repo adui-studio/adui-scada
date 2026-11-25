@@ -4798,16 +4798,16 @@ pnpm run docs:check
 
 先执行离线 CLI 回归与静态门禁：
 
-~~~powershell
+```powershell
 pnpm run test:prisma8:cli
 vp check
 pnpm run messages:check
 pnpm run docs:check
-~~~
+```
 
 再执行真实官方 verifier：
 
-~~~powershell
+```powershell
 & {
     $ErrorActionPreference = "Stop"
     $previousTestUrl = $env:SCADA_TEST_DATABASE_URL
@@ -4830,6 +4830,6 @@ pnpm run docs:check
         Remove-Variable password, encodedPassword -ErrorAction SilentlyContinue
     }
 }
-~~~
+```
 
 官方 db verify 预期退出码：0 表示符合候选 Contract；4 表示已执行但发现结构差异；2 表示无法执行。必须保留完整官方诊断，不能自动运行修复、签名或迁移。该命令只检查原生候选对现有测试库的 schema 满足关系，不证明发布非空关系样本、反向导航、迁移 DDL 等价或生产接管。真实验证期间禁止并发 DDL。

@@ -67,9 +67,8 @@ try {
   // CLI 按进程工作目录同步和检查 Skills；配置内路径仍相对于服务端配置文件。
   const env = { ...process.env };
   if (nativeSchemaVerify) {
-    const { requirePrisma8ReadOnlyTestUrl } = await import(
-      "../apps/server/src/database/prisma8-readonly-target.ts"
-    );
+    const { requirePrisma8ReadOnlyTestUrl } =
+      await import("../apps/server/src/database/prisma8-readonly-target.ts");
     const connection = new URL(requirePrisma8ReadOnlyTestUrl(env.SCADA_TEST_DATABASE_URL));
     connection.searchParams.set(
       "options",

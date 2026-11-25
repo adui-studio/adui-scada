@@ -183,8 +183,7 @@ void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
         encoding: "utf8",
         env: {
           ...process.env,
-          SCADA_TEST_DATABASE_URL:
-            "postgresql://adui_scada:secret@127.0.0.1:15432/adui_scada_test",
+          SCADA_TEST_DATABASE_URL: "postgresql://adui_scada:secret@127.0.0.1:15432/adui_scada_test",
         },
       });
       assert.equal(result.status, 7);
