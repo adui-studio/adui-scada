@@ -271,7 +271,9 @@ async function compareHistory(): Promise<"MATCHED"> {
     await compare("左闭右开首毫秒", scope, { ...query, endMs: startMs + 1 }, expected.slice(0, 4));
     await compare("左闭右开次毫秒", scope, { ...query, startMs: startMs + 1 }, [number]);
     await compare("窗口左侧", scope, { ...query, startMs: startMs - 1, endMs: startMs }, [before]);
-    await compare("窗口右侧", scope, { ...query, startMs: startMs + 2, endMs: startMs + 3 }, [after]);
+    await compare("窗口右侧", scope, { ...query, startMs: startMs + 2, endMs: startMs + 3 }, [
+      after,
+    ]);
     await compare("不同租户", otherTenant, query, [tenantPoint]);
     await compare("不同工程", otherProject, query, [projectPoint]);
     await compare("不同 Tag", scope, { ...query, tagId: otherTagId }, [otherTag]);
@@ -337,12 +339,8 @@ async function compareHistory(): Promise<"MATCHED"> {
 }
 
 describe("真实 PostgreSQL 历史归档三方非空对照", () => {
-  it(
-    "Prisma 7 写入后与 Prisma 8 和原生 SQL 严格一致并清理随机夹具",
-    async () => {
-      expect(await compareHistory()).toBe("MATCHED");
-      console.info("Prisma 7、Prisma 8 与 PostgreSQL 历史非空三方对照及专用夹具清理通过");
-    },
-    60_000,
-  );
+  it("Prisma 7 写入后与 Prisma 8 和原生 SQL 严格一致并清理随机夹具", async () => {
+    expect(await compareHistory()).toBe("MATCHED");
+    console.info("Prisma 7、Prisma 8 与 PostgreSQL 历史非空三方对照及专用夹具清理通过");
+  }, 60_000);
 });
