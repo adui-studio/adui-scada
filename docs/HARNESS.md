@@ -4765,3 +4765,29 @@ pnpm run docs:check
 ```
 
 各步必须退出码 0，CLI 预期五项、原生物理评审九项、新运行时离线回归六项，Vite+ 零警告错误。原生 Skills list 应使用与正式配置相同的根目录管理，不执行同步。真实运行时探针核对已验收哈希标识、领域模型/根/执行信息的限定差异及声明对应标识；通过已安装的服务端 TypeScript 先检查正式生成物，再以内存 Host 映射原生候选 JSON/d.ts 的原文、确认实际装载并按现有服务端配置检查，禁止编译输出或写回。两个阶段分别输出类型检查结果，失败停止并保留文件。成功仍输出 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED：类型检查不是实际关系查询验证或签名许可；禁止数据库写入、签名、迁移、重放或正式 Provider 切换。若候选文件缺失或标识/结构不符，停止并保留现状，另行评审，不自动重建或修改生成物。局部离线测试纳入 ready，依赖保留真实候选的专项不纳入 ready。
+
+### 原生候选发布关系只读查询评审
+
+保留 PR #213 原生候选、正式生成物、两隔离库及当前依赖；不再次 emit、同步、迁移、签名或重放。确保专项期间没有并发 DDL。先执行 `pnpm run test:prisma8:native:query`（七项）、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`，均须退出码 0 且零警告错误。随后执行：
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $previousTestUrl = $env:SCADA_TEST_DATABASE_URL
+    try {
+        $password = Read-Host '请输入隔离数据库密码' -MaskInput
+        if ([string]::IsNullOrEmpty($password)) { throw '数据库密码不能为空' }
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_TEST_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_test?schema=public"
+        pnpm run db:prisma8:native:query
+        if ($LASTEXITCODE -ne 0) { throw '只读查询评审失败，禁止自动重试' }
+        Write-Host "只读查询评审退出码：0"
+    } finally {
+        if ($null -eq $previousTestUrl) { Remove-Item Env:SCADA_TEST_DATABASE_URL -ErrorAction SilentlyContinue }
+        else { $env:SCADA_TEST_DATABASE_URL = $previousTestUrl }
+        Remove-Variable password, encodedPassword -ErrorAction SilentlyContinue
+    }
+}
+```
+
+真实查询要求两份契约哈希标识、声明标识和领域关系差异符合此前验收，且测试库目录指纹及 UTC 会话校验通过。目录预检是独立只读快照；随后 ORM 与原始 SQL 共用单一连接的可重复读只读事务，结束回滚。输出未发布样本与已发布样本各自 MATCHED 或 EMPTY；两者 MATCHED 才表明本次两类实际样本覆盖完成，EMPTY 不等于对应实际关系通过，也不自动创建数据。对存在样本比较正向关系、标量、六字段末次事件闭包及错误租户/工程过滤，不验证原生候选缺失的反向导航；不输出业务行或连接串。无论结果均不允许签名、迁移或切换正式 Provider，评审状态仍为 STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED。真实查询专项不纳入 ready。
