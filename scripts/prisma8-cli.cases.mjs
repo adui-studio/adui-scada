@@ -60,10 +60,28 @@ void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
     });
   });
 
+  void it("原生候选只映射到独立配置的离线契约生成", () => {
+    withFixture(valid, (root, server, launcher) => {
+      const result = spawnSync(process.execPath, [launcher, "contract", "native-emit"], {
+        cwd: server,
+        encoding: "utf8",
+      });
+      assert.equal(result.status, 7);
+      assert.deepEqual(JSON.parse(result.stdout), {
+        cwd: root,
+        args: ["contract", "emit", "--config", join(server, "prisma8-native.config.ts")],
+      });
+    });
+  });
+
   void it("拒绝数据库写入命令和额外参数", () => {
     withFixture(valid, (_root, server, launcher) => {
       for (const args of [
         ["db", "sign"],
+        ["db", "verify"],
+        ["contract", "infer"],
+        ["migration", "plan"],
+        ["contract", "native-emit", "--config", "unsafe.ts"],
         ["skills", "sync", "--disable"],
       ]) {
         const result = spawnSync(process.execPath, [launcher, ...args], {
