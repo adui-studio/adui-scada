@@ -5131,3 +5131,13 @@ E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回
 维护者 Windows 六组专项 8+12+7+5+7+12=51/51，Vite+ 559 格式/399 受检零警告错误，中文 426、Markdown 96，增量退出 0。五份文件经格式化后处于暂存状态，真实执行指令在工作区干净保护处停止，未启动复现入口、未执行迁移或消耗单次授权。JetBrains 提交时共享 staged 检查五份文件，独立迁移配置 process.env 报 TS2591，提交 Hook 退出 1，故 PR 尚未完成提交质量验收。
 
 仅在 apps/server/prisma8-native-repro.config.ts 顶部增加文件级 Node 类型引用。协作容器 Node.js 22.16.0 / TypeScript 5.8.3 在 types=[] 与模拟 Prisma 模块声明夹具中，原配置 Blob d2c867d9c56e7e91a3323309359ec9ba6c07cdf7 复现 TS2591 退出 2，修复配置 Blob 4f81c22c14a30e60f88def57f7671352dce096c2 检查退出 0；模拟配置工厂验证专用 URL 与七种非法/缺失输入 8/8。不是固定 Prisma RC、真实 Vite+ 或 Windows Git Hook 实测。须保留本地格式化改动、同步修复、复验定向及全仓检查并通过真实提交 Hook，核对最新远端 HEAD 后再执行已授权的第四座单次实验；前三库、候选原件、签名与正式接管继续冻结。
+
+## 2026-11-26 · 第四座真实迁移取证结案及离线 CHECK 修复候选
+
+维护者在实际执行中打印本机与远端 HEAD a25962d7f4eee6db5a7b5cd35080486ec205c0bd；六组专项 51/51、559 格式/399 受检零警告错误、中文 426、Markdown 96、增量退出 0、工作区干净。E-153 修复后的格式提交已推送，未单独提供 Hook 原始成功日志；PR #230 获授权后 Squash 合并 265c02a7fd679abf3771140c4196135b1cbdb40f。
+
+第四座真实实验：身份和 23 类空库、在线唯一空起点迁移边、一次性记录通过；官方退出 2、包装退出 1、MIGRATION.SCHEMA_VERIFY_FAILED，operationsExecuted=null、captureInterrupted=false、encryptedOutputSaved/evidencePreserved/identityPreserved/attemptConsumed=true。真实密文认证解密后的诊断及表达式专项均退出 0，两个 exact-named CHECK 节点差异仅 expression：scada_identities_status_check 长度 100→106，scada_project_release_event_action_check 长度 101→107，均 ARRAY_CAST→ELEMENT_CAST 且 exactHypothesisMatch=true、omittedChangedFieldCount=0。固定十四文件指纹不变，签名及部署均 false。未取得第四座回滚后目录，不据此证明事务已回滚或第三座失败相同。
+
+本次新增修复源和契约严格差异门禁，协作容器 Node.js 22.16.0 对两组实际运行 16/16（新专项 7/7、原独立复现及冻结 9/9），对应核心和测试 Blob 087b847253f7019549a48006ee8d0fc90d6d4ea2、70c02d06228be9858122f34bc8cc3267eb3f730b、cf9b42cf05c684e9679e34553a359ac0b707bc3b、4ad3d92d2015218c9fd03374ae35d7bb82592a02。新发射入口 node --check 通过，Blob c6e35c9283f1787657990d8a7c620212c61bd901；配置 1c4e07db9899fd4cb734879c3a0e496ef658f1f7，其原文 SHA-256 为 1ccda04b90a5f26e95a84c67ef8c1726689430955bd0ccecd6dc0baa7e2b250f。首次传输两份 PSL 模板代码字节不一致已修正，最终与实测 Blob 一致。没有固定 RC、Docker、PostgreSQL、pnpm、Vite+ 或完整 Windows 仓库，未执行真实契约发射、全仓质量链、冻结入口真实运行、任何数据库连接或迁移。模拟新契约不等于官方生成结果。
+
+验收须先运行新专项、原复现与候选门禁、Vite+ 全仓及暂存路径零警告、中文和文档检查。只在干净已审查提交执行独立 contract emit，报告 roundTripVerified、migrationPackageGenerated、signingAllowed、deploymentAllowed 均 false；原件与固定候选复核不变。若官方发射产生额外字段、目录或失败，保留诊断和独立目录，不修改门禁来通过。新迁移包及注释重发射、SQL 实际往返与历史接管策略另行评审。
