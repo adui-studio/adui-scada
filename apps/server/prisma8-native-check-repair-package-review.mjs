@@ -124,7 +124,8 @@ function main() {
       realpathSync(parent) === parent,
     "独立迁移包父目录不存在或包含链接",
   );
-  const lockBytes = readCandidateRegular(join(root, packageLockPath));
+  const lockPath = join(root, packageLockPath);
+  const lockBytes = readCandidateRegular(lockPath);
   const lock = validatePackageLock(JSON.parse(lockBytes.toString("utf8")));
   const fileNames = lock.evidence.files.map(({ path }) => path);
   const files = readExactCandidateTree(output, fileNames);
@@ -189,6 +190,7 @@ function main() {
   );
 
   const preserve = () => {
+    requireMatch(readCandidateRegular(lockPath).equals(lockBytes), "已提交迁移包锁文件发生变化");
     requirePreservedInputs(root, inputs);
     const current = reviewAuditedBaseline(
       root,
