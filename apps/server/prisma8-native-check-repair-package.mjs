@@ -57,6 +57,10 @@ import {
   buildCheckRoundTripPlan,
   CheckRoundTripError,
 } from "../../scripts/prisma8-native-check-roundtrip.mjs";
+import {
+  requireLockedRoundTripPlan,
+  RoundTripExecutionError,
+} from "../../scripts/prisma8-native-check-roundtrip-execution.mjs";
 
 const confirmation = "--confirm-offline-check-repair-package";
 const reviewConfirmation = "--review-existing-check-repair-package";
@@ -205,7 +209,7 @@ function main() {
     });
     if (roundTripPlanning) {
       stage = "固定 CHECK 往返计划";
-      const plan = buildCheckRoundTripPlan(oldContract, contract);
+      const plan = requireLockedRoundTripPlan(buildCheckRoundTripPlan(oldContract, contract));
       requireMatch(
         report.offlineReviewPassed === true &&
           report.evidencePreserved === true &&
@@ -413,7 +417,8 @@ try {
   console.error(
     error instanceof RepairPackageError ||
       error instanceof RepairPackageReviewError ||
-      error instanceof CheckRoundTripError
+      error instanceof CheckRoundTripError ||
+      error instanceof RoundTripExecutionError
       ? error.message
       : "离线修复迁移包失败：" + stage + "；保留证据",
   );
