@@ -5141,3 +5141,9 @@ E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回
 本次新增修复源和契约严格差异门禁，协作容器 Node.js 22.16.0 对两组实际运行 16/16（新专项 7/7、原独立复现及冻结 9/9），对应核心和测试 Blob 087b847253f7019549a48006ee8d0fc90d6d4ea2、70c02d06228be9858122f34bc8cc3267eb3f730b、cf9b42cf05c684e9679e34553a359ac0b707bc3b、4ad3d92d2015218c9fd03374ae35d7bb82592a02。新发射入口 node --check 通过，Blob c6e35c9283f1787657990d8a7c620212c61bd901；配置 1c4e07db9899fd4cb734879c3a0e496ef658f1f7，其原文 SHA-256 为 1ccda04b90a5f26e95a84c67ef8c1726689430955bd0ccecd6dc0baa7e2b250f。首次传输两份 PSL 模板代码字节不一致已修正，最终与实测 Blob 一致。没有固定 RC、Docker、PostgreSQL、pnpm、Vite+ 或完整 Windows 仓库，未执行真实契约发射、全仓质量链、冻结入口真实运行、任何数据库连接或迁移。模拟新契约不等于官方生成结果。
 
 验收须先运行新专项、原复现与候选门禁、Vite+ 全仓及暂存路径零警告、中文和文档检查。只在干净已审查提交执行独立 contract emit，报告 roundTripVerified、migrationPackageGenerated、signingAllowed、deploymentAllowed 均 false；原件与固定候选复核不变。若官方发射产生额外字段、目录或失败，保留诊断和独立目录，不修改门禁来通过。新迁移包及注释重发射、SQL 实际往返与历史接管策略另行评审。
+
+## 2026-11-26 · PR #231 中文文案生成物误报与 E-154 修复
+
+维护者 Windows 五组专项 43/43（CHECK 修复 7、独立复现及冻结 9、候选 7、DDL 8、恢复 12），Vite+ 563 格式/403 受检零警告错误；中文文案扫描第四座独立副本的根 contract.d.ts 及嵌套快照声明误报四处官方英文注释，增量退出 1，docs:check 因命令链停止未执行。未打印本机 HEAD、工作区状态，也没有真实离线修复契约发射结果。
+
+仅在中文扫描与共享 Format/Lint 增加第四座独立副本的精确目录排除，保留所有自有源码检查和原有排除范围；未修改任何实际证据、迁移候选或数据库。新增两个临时目录子进程测试，注册 test:messages 并纳入 ready。协作容器 Node.js 22.16.0 实际用原扫描器 Blob 3fa8fc77f683c931510d39855f6dee775252e42f 复现回归 0/2（退出 1），修复后 2/2（退出 0），根和快照声明未被写入，自有英文及相邻目录仍拒绝；局部自有文案 7 文件通过，语法检查通过。扫描器 Blob af4904e7fcb233d712da2b16bf3c5cafa9d914bb、测试 Blob 8b05d9dcb232ffb4a48536da9da581e9c51150ba 已核对一致。无真实 Windows Vite+ 或完整仓库执行环境，须复验 test:messages、messages:check、config:check、vp check、docs:check，并以既有十四文件指纹门禁核对实际第四座副本。若证据异常保留现场，禁止覆盖或重试；未获得新发射结果前不宣布 CHECK 修复成功。四座数据库继续冻结。
