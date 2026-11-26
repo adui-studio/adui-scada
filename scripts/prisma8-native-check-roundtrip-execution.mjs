@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
-export const acceptedPlanFingerprint = "17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a";
+export const acceptedPlanFingerprint =
+  "17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a";
 export const roundTripTarget = Object.freeze({
   container: "adui-scada-prisma8-check-roundtrip",
   volume: "adui-scada-prisma8-check-roundtrip-data",
@@ -25,12 +26,28 @@ export function requireLockedRoundTripPlan(input) {
   let plan;
   try {
     plan = structuredClone(input);
-    const { status, planFingerprint, databaseExecutionAllowed, roundTripVerified, historicalAdoptionVerified, signingAllowed, deploymentAllowed, ...payload } = plan;
+    const {
+      status,
+      planFingerprint,
+      databaseExecutionAllowed,
+      roundTripVerified,
+      historicalAdoptionVerified,
+      signingAllowed,
+      deploymentAllowed,
+      ...payload
+    } = plan;
     requireMatch(
       status === "NATIVE_CHECK_ROUNDTRIP_PLAN_REVIEW_REQUIRED" &&
         planFingerprint === acceptedPlanFingerprint &&
-        createHash("sha256").update(JSON.stringify(payload)).digest("hex") === acceptedPlanFingerprint &&
-        [databaseExecutionAllowed, roundTripVerified, historicalAdoptionVerified, signingAllowed, deploymentAllowed].every((value) => value === false),
+        createHash("sha256").update(JSON.stringify(payload)).digest("hex") ===
+          acceptedPlanFingerprint &&
+        [
+          databaseExecutionAllowed,
+          roundTripVerified,
+          historicalAdoptionVerified,
+          signingAllowed,
+          deploymentAllowed,
+        ].every((value) => value === false),
       "往返计划指纹或许可状态不符合已验收证据",
     );
   } catch {
@@ -44,9 +61,18 @@ function systemId(value) {
 }
 
 function validCollation(value) {
-  return value && value.encoding === "UTF8" && ["c", "i", "b"].includes(value.provider) &&
-    [value.collate, value.ctype].every((field) => typeof field === "string" && field.length > 0 && field.length <= 256) &&
-    [value.locale, value.version].every((field) => field === null || (typeof field === "string" && field.length > 0 && field.length <= 256));
+  return (
+    value &&
+    value.encoding === "UTF8" &&
+    ["c", "i", "b"].includes(value.provider) &&
+    [value.collate, value.ctype].every(
+      (field) => typeof field === "string" && field.length > 0 && field.length <= 256,
+    ) &&
+    [value.locale, value.version].every(
+      (field) =>
+        field === null || (typeof field === "string" && field.length > 0 && field.length <= 256),
+    )
+  );
 }
 
 /** 校验模拟采集的隔离事实；此函数不认证来源、不读取 Docker 或数据库。 */
@@ -58,16 +84,32 @@ export function requireRoundTripBoundary(input) {
     throw new RoundTripExecutionError("独立实例边界事实无效");
   }
   requireMatch(
-    facts && isDeepStrictEqual(facts.target, roundTripTarget) &&
-      ["npipe:////./pipe/dockerDesktopLinuxEngine", "npipe:////./pipe/docker_engine"].includes(facts.dockerEndpoint) && facts.dockerOs === "linux" &&
-      facts.running === true && facts.scope === "prisma8-check-roundtrip" && facts.mountCount === 1 && facts.networkCount === 1 && facts.publishedPortCount === 1 &&
-      facts.databaseOwner === true && facts.defaultReadOnly === true &&
-      typeof facts.containerId === "string" && /^[a-f0-9]{64}$/u.test(facts.containerId) &&
-      systemId(facts.containerSystemIdentifier) && facts.containerSystemIdentifier === facts.tcpSystemIdentifier &&
-      Array.isArray(facts.frozenSystemIdentifiers) && facts.frozenSystemIdentifiers.length === 4 &&
-      [...facts.frozenSystemIdentifiers].every(systemId) && !facts.frozenSystemIdentifiers.includes(facts.tcpSystemIdentifier) &&
-      validCollation(facts.referenceCollation) && isDeepStrictEqual(facts.referenceCollation, facts.targetCollation) &&
-      facts.checkedEmptyCategories === 23 && facts.empty === true && facts.otherSessions === 0,
+    facts &&
+      isDeepStrictEqual(facts.target, roundTripTarget) &&
+      ["npipe:////./pipe/dockerDesktopLinuxEngine", "npipe:////./pipe/docker_engine"].includes(
+        facts.dockerEndpoint,
+      ) &&
+      facts.dockerOs === "linux" &&
+      facts.running === true &&
+      facts.scope === "prisma8-check-roundtrip" &&
+      facts.mountCount === 1 &&
+      facts.networkCount === 1 &&
+      facts.publishedPortCount === 1 &&
+      facts.databaseOwner === true &&
+      facts.defaultReadOnly === true &&
+      typeof facts.containerId === "string" &&
+      /^[a-f0-9]{64}$/u.test(facts.containerId) &&
+      systemId(facts.containerSystemIdentifier) &&
+      facts.containerSystemIdentifier === facts.tcpSystemIdentifier &&
+      Array.isArray(facts.frozenSystemIdentifiers) &&
+      facts.frozenSystemIdentifiers.length === 4 &&
+      [...facts.frozenSystemIdentifiers].every(systemId) &&
+      !facts.frozenSystemIdentifiers.includes(facts.tcpSystemIdentifier) &&
+      validCollation(facts.referenceCollation) &&
+      isDeepStrictEqual(facts.referenceCollation, facts.targetCollation) &&
+      facts.checkedEmptyCategories === 23 &&
+      facts.empty === true &&
+      facts.otherSessions === 0,
     "独立实例身份、排序规则或空库边界不符合预期",
   );
   return facts;
@@ -92,10 +134,21 @@ function requireCommand(result, command) {
 
 function expectedCatalog(row) {
   return {
-    schema: row.schema, table: row.table, name: row.name, column: row.column,
-    expression: row.expectedExpression, columnType: row.columnType, notNull: row.notNull,
-    constraintType: row.constraintType, validated: row.validated, local: row.local,
-    noInherit: false, relationKind: "r", persistence: "p", columnMatches: true, columnCount: 1,
+    schema: row.schema,
+    table: row.table,
+    name: row.name,
+    column: row.column,
+    expression: row.expectedExpression,
+    columnType: row.columnType,
+    notNull: row.notNull,
+    constraintType: row.constraintType,
+    validated: row.validated,
+    local: row.local,
+    noInherit: false,
+    relationKind: "r",
+    persistence: "p",
+    columnMatches: true,
+    columnCount: 1,
   };
 }
 
@@ -139,18 +192,50 @@ export async function simulateRoundTripExecution(input, adapter) {
       attempted = true;
       requireCommand(await query("BEGIN ISOLATION LEVEL REPEATABLE READ READ WRITE"), "BEGIN");
       phase = "创建最小关系";
-      requireCommand(await query("CREATE TABLE " + table + " (" + column + " character varying(16) NOT NULL, CONSTRAINT \"" + row.name + "\" CHECK (" + expression + "))"), "CREATE TABLE");
+      requireCommand(
+        await query(
+          "CREATE TABLE " +
+            table +
+            " (" +
+            column +
+            ' character varying(16) NOT NULL, CONSTRAINT "' +
+            row.name +
+            '" CHECK (' +
+            expression +
+            "))",
+        ),
+        "CREATE TABLE",
+      );
       phase = "目录原文与约束元数据";
       const catalog = await query(catalogSql, [row.schema, row.table, row.column]);
-      requireMatch(catalog?.command === "SELECT" && catalog.rows?.length === 1 && isDeepStrictEqual(catalog.rows[0], expectedCatalog(row)), "目录反向提取与固定计划不一致");
+      requireMatch(
+        catalog?.command === "SELECT" &&
+          catalog.rows?.length === 1 &&
+          isDeepStrictEqual(catalog.rows[0], expectedCatalog(row)),
+        "目录反向提取与固定计划不一致",
+      );
       if (row.stage === "repair") repairExpression = catalog.rows[0].expression;
       phase = "参数化写入及保存点";
       for (const input of row.inputs) {
         requireCommand(await query("SAVEPOINT roundtrip_input"), "SAVEPOINT");
         let outcome;
         try {
-          const result = await query("INSERT INTO " + table + " (" + column + ") VALUES ($1) RETURNING " + column + ' AS "value"', [input.value]);
-          outcome = result?.command === "INSERT" && result.rowCount === 1 && isDeepStrictEqual(result.rows, [{ value: input.value }]) ? "accepted" : "other";
+          const result = await query(
+            "INSERT INTO " +
+              table +
+              " (" +
+              column +
+              ") VALUES ($1) RETURNING " +
+              column +
+              ' AS "value"',
+            [input.value],
+          );
+          outcome =
+            result?.command === "INSERT" &&
+            result.rowCount === 1 &&
+            isDeepStrictEqual(result.rows, [{ value: input.value }])
+              ? "accepted"
+              : "other";
         } catch (error) {
           outcome = classifyInsertError(error, row);
         }
@@ -174,8 +259,21 @@ export async function simulateRoundTripExecution(input, adapter) {
         boundaryFailed = true;
       }
     }
-    requireMatch(!failure && !rollbackFailed && !boundaryFailed, "模拟阶段失败：" + row.stage + "；" + (failure ?? "操作已完成") + (rollbackFailed ? "；事务回滚未确认" : "") + (boundaryFailed ? "；回滚后边界未确认" : ""));
-    results.push({ table: row.table, stage: row.stage, matchedInputs: outcomes.length, rollbackConfirmed: true });
+    requireMatch(
+      !failure && !rollbackFailed && !boundaryFailed,
+      "模拟阶段失败：" +
+        row.stage +
+        "；" +
+        (failure ?? "操作已完成") +
+        (rollbackFailed ? "；事务回滚未确认" : "") +
+        (boundaryFailed ? "；回滚后边界未确认" : ""),
+    );
+    results.push({
+      table: row.table,
+      stage: row.stage,
+      matchedInputs: outcomes.length,
+      rollbackConfirmed: true,
+    });
   }
   return {
     status: "NATIVE_CHECK_ROUNDTRIP_EXECUTION_SIMULATED",
