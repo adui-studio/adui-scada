@@ -54,8 +54,8 @@ function fixture() {
     "other-net",
     "[]",
     mainId,
-    mainId + "|true|" + roundTripTarget.image + "|adui-scada|postgres|/var/lib/postgresql;",
-    reproId + "|true|" + roundTripTarget.image + "|prisma8-native-repro|/var/lib/postgresql/data;",
+    mainId + "|true|" + roundTripTarget.image + "|adui-scada|postgres|[\"/var/lib/postgresql\"]",
+    reproId + "|true|" + roundTripTarget.image + "|prisma8-native-repro|[\"/var/lib/postgresql/data\"]",
     "",
     "",
     () => JSON.stringify(main),
@@ -90,7 +90,7 @@ void test("冻结库目录采集必须单独确认且不接受额外参数", () 
   assert.equal(calls.length, 0);
 });
 
-void test("四库两集群及 libc 运行环境匹配，缺失版本不得误报为匹配", () => {
+void test("四库两集群及固定镜像观察通过，缺失版本不得误报为匹配", () => {
   const f = fixture();
   const report = f.inspect();
   assert.equal(report.status, "NATIVE_CHECK_ROUNDTRIP_REFERENCE_REVIEW_REQUIRED");
@@ -103,8 +103,8 @@ void test("四库两集群及 libc 运行环境匹配，缺失版本不得误报
   assert.equal(report.allFrozenCollationsMatch, true);
   assert.equal(report.allFrozenCollationCatalogMetadataMatch, true);
   assert.equal(report.containerImageIdentityMatched, true);
-  assert.equal(report.localeRuntimeFilesUnchanged, true);
-  assert.equal(report.collationRuntimeIdentityVerified, true);
+  assert.equal(report.localeRuntimePathsObservedUnchanged, true);
+  assert.equal(report.collationRuntimeIdentityVerified, false);
   for (const value of [
     report.portReserved,
     report.resourceCreationAllowed,
@@ -183,12 +183,12 @@ void test("宿主机、历史容器身份或固定镜像失败时不连接冻结
     { index: 9, output: mainId + "\n" + reproId, expected: /唯一运行中/u },
     {
       index: 10,
-      output: mainId + "|true|sha256:other|adui-scada|postgres|/var/lib/postgresql;",
+      output: mainId + "|true|sha256:other|adui-scada|postgres|[\"/var/lib/postgresql\"]",
       expected: /历史验收容器身份或固定镜像不一致/u,
     },
     {
       index: 11,
-      output: reproId + "|true|sha256:other|prisma8-native-repro|/var/lib/postgresql/data;",
+      output: reproId + "|true|sha256:other|prisma8-native-repro|[\"/var/lib/postgresql/data\"]",
       expected: /第四座保留容器身份或固定镜像不一致/u,
     },
   ]) {
@@ -203,11 +203,11 @@ void test("挂载覆盖 libc 或 locale 路径时拒绝读取数据库", () => {
   for (const { index, output } of [
     {
       index: 10,
-      output: mainId + "|true|" + roundTripTarget.image + "|adui-scada|postgres|/usr/lib/locale;",
+      output: mainId + "|true|" + roundTripTarget.image + "|adui-scada|postgres|[\"/usr/lib/locale\"]",
     },
     {
       index: 11,
-      output: reproId + "|true|" + roundTripTarget.image + "|prisma8-native-repro|/etc/locale.conf;",
+      output: reproId + "|true|" + roundTripTarget.image + "|prisma8-native-repro|[\"/etc/locale.conf\"]",
     },
   ]) {
     const f = fixture();
@@ -217,10 +217,28 @@ void test("挂载覆盖 libc 或 locale 路径时拒绝读取数据库", () => {
   }
 });
 
+void test("挂载祖先路径及异常 JSON 均拒绝，不读取冻结库", () => {
+  const prefix = mainId + "|true|" + roundTripTarget.image + "|adui-scada|postgres|";
+  for (const path of ["/", "/usr", "/etc", "/usr/share", "/lib"]) {
+    const f = fixture();
+    f.outputs[10] = prefix + JSON.stringify([path]);
+    assert.throws(f.inspect, /容器挂载覆盖 libc 或 locale 环境/u);
+    assert.equal(f.calls.length, 11);
+  }
+  for (const output of ["invalid", "{}", JSON.stringify(["/var/../usr"]), "[null]"]) {
+    const f = fixture();
+    f.outputs[10] = prefix + output;
+    assert.throws(f.inspect, /容器挂载清单无效/u);
+    assert.equal(f.calls.length, 11);
+  }
+});
+
 void test("libc 或 locale 运行文件变化时拒绝，且不连接冻结库", () => {
   for (const { index, output } of [
     { index: 12, output: "C /usr/lib/locale/locale-archive" },
     { index: 13, output: "A /etc/ld.so.cache" },
+    { index: 12, output: "D /usr" },
+    { index: 13, output: "A /etc/ld.so.preload" },
   ]) {
     const f = fixture();
     f.outputs[index] = output;
@@ -232,11 +250,15 @@ void test("libc 或 locale 运行文件变化时拒绝，且不连接冻结库",
 void test("无关容器文件变化允许，异常 diff 输出拒绝", () => {
   const unrelated = fixture();
   unrelated.outputs[12] = "C /var/lib/postgresql/data\nA /var/log/postgresql";
-  assert.equal(unrelated.inspect().collationRuntimeIdentityVerified, true);
+  assert.equal(unrelated.inspect().localeRuntimePathsObservedUnchanged, true);
   const malformed = fixture();
   malformed.outputs[12] = "unexpected output";
   assert.throws(malformed.inspect, /容器文件变更清单格式异常/u);
   assert.equal(malformed.calls.length, 13);
+  const traversal = fixture();
+  traversal.outputs[12] = "C /var/../usr/lib/locale";
+  assert.throws(traversal.inspect, /容器文件变更清单格式异常/u);
+  assert.equal(traversal.calls.length, 13);
 });
 
 void test("系统目录 JSON、身份、版本、只读状态及数量异常均拒绝", () => {
@@ -283,8 +305,7 @@ void test("目录名称重复、无效排序规则元数据及版本漂移均拒
 void test("可用的排序规则版本必须真实相等，非 libc 缺失版本拒绝", () => {
   const matched = fixture();
   for (const row of [...matched.main.rows, ...matched.repro.rows]) {
-    row.version = "2.36";
-    row.actualVersion = "2.36";
+    Object.assign(row, { version: "2.36", actualVersion: "2.36" });
   }
   const report = matched.inspect();
   assert.equal(report.recordedCollationVersionAvailable, true);
@@ -294,6 +315,9 @@ void test("可用的排序规则版本必须真实相等，非 libc 缺失版本
   missing.main.rows[0].provider = "i";
   missing.main.rows[0].locale = "en-US";
   assert.throws(missing.inspect, /排序规则版本或自定义规则/u);
+  const absent = fixture();
+  Object.assign(absent.main.rows[0], { actualVersion: undefined });
+  assert.throws(absent.inspect, /排序规则版本或自定义规则/u);
 });
 
 void test("允许目录行顺序差异但拒绝重复集群标识和排序规则漂移", () => {
