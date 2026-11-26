@@ -11,6 +11,7 @@ const allowed = new Set([
   "contract emit",
   "contract native-emit",
   "db native-schema-verify",
+  "db native-schema-verify-strict",
 ]);
 
 /** 从已安装的服务端 Prisma 8 官方包解析入口，不下载依赖、不调用 Shell。 */
@@ -54,14 +55,15 @@ try {
   // 独立候选仅映射到固定的离线生成或 Skills 列表命令，不接受自定义配置。
   const nativeEmit = args.join(" ") === "contract native-emit";
   const nativeList = args.join(" ") === "skills native-list";
-  const nativeSchemaVerify = args.join(" ") === "db native-schema-verify";
+  const nativeSchemaStrict = args.join(" ") === "db native-schema-verify-strict";
+  const nativeSchemaVerify = args.join(" ") === "db native-schema-verify" || nativeSchemaStrict;
   const native = nativeEmit || nativeList || nativeSchemaVerify;
   const command = nativeEmit
     ? ["contract", "emit"]
     : nativeList
       ? ["skills", "list"]
       : nativeSchemaVerify
-        ? ["db", "verify", "--schema-only"]
+        ? ["db", "verify", "--schema-only", ...(nativeSchemaStrict ? ["--strict", "--json"] : [])]
         : args;
   const config = native ? "prisma8-native.config.ts" : "prisma.config.ts";
   // CLI 按进程工作目录同步和检查 Skills；配置内路径仍相对于服务端配置文件。

@@ -89,7 +89,7 @@ function mock({
   return { client, calls };
 }
 
-void test("事故恢复期间原迁移确认持续被拒绝", () => {
+void test("一次恢复尝试后所有迁移写入确认持续被拒绝", () => {
   requireRecoveryReview(false);
   assert.throws(() => requireRecoveryReview(true), /禁止再次执行迁移/u);
 });

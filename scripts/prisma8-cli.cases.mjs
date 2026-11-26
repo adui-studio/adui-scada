@@ -29,7 +29,9 @@ function withFixture(manifest, run) {
         "const args = process.argv.slice(2);",
         'const commands = new Set(["skills sync", "skills list", "contract emit"]);',
         'const normal = commands.has(args.slice(0, 2).join(" ")) && args.length === 4 && args[2] === "--config";',
-        'const verify = args.length === 5 && args.slice(0, 3).join(" ") === "db verify --schema-only" && args[3] === "--config";',
+        'const tolerant = args.length === 5 && args.slice(0, 3).join(" ") === "db verify --schema-only" && args[3] === "--config";',
+        'const strict = args.length === 7 && args.slice(0, 5).join(" ") === "db verify --schema-only --strict --json" && args[5] === "--config";',
+        "const verify = tolerant || strict;",
         "if (!normal && !verify) {",
         "  process.exitCode = 2;",
         "} else {",
@@ -105,6 +107,7 @@ void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
         ["db", "sign"],
         ["db", "verify"],
         ["db", "native-schema-verify", "--db", "unsafe"],
+        ["db", "native-schema-verify-strict", "--config", "unsafe.ts"],
         ["contract", "infer"],
         ["migration", "plan"],
         ["contract", "native-emit", "--config", "unsafe.ts"],
@@ -147,6 +150,51 @@ void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
         databaseUrlPresent: true,
       });
       assert.equal(result.stdout.includes("secret"), false);
+    });
+  });
+
+  void it("严格结构验证只在相同只读验收库运行固定机器输出命令", () => {
+    withFixture(valid, (root, server, launcher) => {
+      const connectionString =
+        "postgresql://adui_scada:secret%40pass@127.0.0.1:15432/adui_scada_test?schema=public";
+      const result = spawnSync(process.execPath, [launcher, "db", "native-schema-verify-strict"], {
+        cwd: server,
+        encoding: "utf8",
+        env: { ...process.env, SCADA_TEST_DATABASE_URL: connectionString },
+      });
+      assert.equal(result.status, 7);
+      assert.deepEqual(JSON.parse(result.stdout), {
+        cwd: root,
+        args: [
+          "db",
+          "verify",
+          "--schema-only",
+          "--strict",
+          "--json",
+          "--config",
+          join(server, "prisma8-native.config.ts"),
+        ],
+        options:
+          "-c default_transaction_read_only=on -c statement_timeout=5000 -c lock_timeout=2000 -c search_path=public",
+        databaseUrlPresent: true,
+      });
+      assert.equal(result.stdout.includes("secret"), false);
+      const rejected = spawnSync(
+        process.execPath,
+        [launcher, "db", "native-schema-verify-strict"],
+        {
+          cwd: server,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            SCADA_TEST_DATABASE_URL:
+              "postgresql://adui_scada:secret@127.0.0.1:15432/adui_scada_fresh_prisma8_native",
+          },
+        },
+      );
+      assert.equal(rejected.status, 1);
+      assert.equal(rejected.stdout, "");
+      assert.equal(rejected.stderr.includes("secret"), false);
     });
   });
 
