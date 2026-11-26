@@ -54,7 +54,7 @@ export function buildCheckRepairSource(source, original) {
   for (const repair of repairs) {
     targetCheck(original, repair);
     const attribute = (expression) =>
-      "  @@check(expression: sql`" + expression + "`", map: " + JSON.stringify(repair.name) + ")";
+      "  @@check(expression: sql`" + expression + "`, map: " + JSON.stringify(repair.name) + ")";
     const before = attribute(repair.expected);
     requireMatch(
       candidate.split("\n").filter((line) => line === before).length === 1 &&
