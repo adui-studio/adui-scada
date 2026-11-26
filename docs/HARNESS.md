@@ -5128,3 +5128,18 @@ node apps/server/prisma8-native-baseline-execution-review.mjs
 ```
 
 真实入口不需要密码或环境变量，不接受额外参数。成功 stdout 为 JSON，可在本机审查后另存候选目录之外的文件；若失败仅记录固定阶段和退出码，不重新生成或修改文件。分享前人工检查结构 SQL 和参数；不得分享环境变量、连接串、完整原始错误或业务数据。报告状态 EXECUTION_CHECK_REVIEW_REQUIRED，结构 46、注释 119、签名与部署均 false；空检查和相同检查只供分析，不表示故障或成功。
+
+### 固定迁移目标快照直接只读结构对照
+
+新增固定直接只读入口，锁定 CLI rc.35/Provider rc.25 及原包、十四文件，核对唯一迁移目标快照与候选根契约的文件哈希和 JSON 深度相等。仅复用 adui_scada_test URL 守卫并进一步限定 127.0.0.1:15432、非空凭据及固定只读启动参数，不接受额外命令行参数；以公开 createPostgresControlClient、connect、schemaVerify、close 顺序执行宽容及严格两种直接验证。结果仅返回严格标志、真假、问题与警告计数及契约声明范围内脱敏路径；目标存储哈希、strict 及结果形状不一致即失败。连接、验证或关闭异常不回显原文；关闭后再核对证据。该公开 API 不暴露连接内独立 SQL 查询，因此只读启动设置由 URL 和 sessionSettings 固定，不声称已在同一事务查询 read_only 或复现失败瞬间；禁止并发 Schema 变更。未连接第三座库，不调用迁移、签名、自定义 SQL 或写入，不修改原包、候选、历史、依赖或正式 Provider。
+
+```powershell
+pnpm run test:prisma8:native:baseline:direct-schema
+vp check
+pnpm run messages:check
+pnpm run docs:check
+```
+
+真实入口只接受临时 SCADA_TEST_DATABASE_URL，密码使用屏蔽输入并进行百分号编码，保持本机 127.0.0.1:15432/adui_scada_test?schema=public；使用 try/finally 恢复原变量。执行 `node apps/server/prisma8-native-direct-schema-review.mjs`，不附加参数。退出 0 为两种直接校验均通过，4 为取得合法报告但至少一种结构不匹配，1 为版本、证据、连接、结果形状或关闭失败；均不代表迁移结果。禁止连接第三座库或重新执行迁移；只分享已经脱敏的 JSON、退出码及已存在离线报告的 missingPrecheck/missingPostcheck/identicalChecks 三个标识数组。
+
+PR #228 的 E-152 修复新增三项模拟回归，专项预期 7/7；验证或关闭失败后仍复核证据，证据复核失败与原错误一起脱敏输出，退出 1。只有证据复核通过时才返回报告；真实历史库直接宽容与严格已在修复前通过，修复后仍需 Windows 质量检查及一次只读复验。不得再次执行迁移。
