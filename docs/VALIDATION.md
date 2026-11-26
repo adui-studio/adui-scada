@@ -5083,3 +5083,15 @@ E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回
 协作容器 Node.js 22.16.0 三份新增源码 node --check 通过，四项独立模拟测试 4/4；实际远端源码 Blob 与本地一致。未获得维护者本机固定候选原文，未执行真实离线入口、完整 Windows Vite+、中文和文档检查；不能宣称真实 165 项提取成功。
 
 后续须在 Windows 检查四项定向测试及 Vite+、中文、文档，并使用原候选运行只读入口；仍禁止重复迁移、签名或切换正式 Provider。
+
+### 2026-11-26 · PR #227 验收及固定迁移快照直接结构评审候选
+
+维护者 Windows 实测 PR #227：执行检查 4/4、DDL 8/8、候选完整性 7/7，共 19/19；Vite+ 549 格式/389 受检零警告错误，中文 416，Markdown 96，增量退出 0，工作区干净。真实固定离线报告退出 0，十四文件指纹 02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e 不变，46 项结构、119 项注释，缺前置 1、缺后置 1、相同前后 0，状态 EXECUTION_CHECK_REVIEW_REQUIRED。日志未打印具体操作标识或报告全文，不能断言两项为同一操作或判定实际发生错误跳过。日志未单独打印 HEAD；远端唯一 HEAD 8328529cd078bfb6ff37df206c426ca864c0dcd5，经明确授权 Squash 合入 46d9e0e757d1ad46c3b88f302f012612da4356f0。
+
+新增上游证据：v8.0.0-rc.25 标签的 CLI 共享源码 https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/1-framework/3-tooling/cli/src/control-api/operations/run-migration.ts 在 perSpaceOptions 显式传入 strictVerification: false，不能继续将 Runner 默认 true 当作实际迁移参数；此标签 CLI 源码不等同维护者已安装的 CLI rc.35，后者实际选项仍未核实。相同标签的 https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/1-framework/3-tooling/cli/src/control-api/operations/db-verify.ts 使用 collectAggregateNamespaces(aggregate) introspect，再按空间 verify；而 Runner 使用 destinationContract 直接 introspect/verifySchema。Provider 公开控制入口 https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/3-targets/postgres/9-facade/src/exports/control.ts 与 https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/1-framework/3-tooling/cli/src/control-api/client.ts 的 schemaVerify 使用完整反序列化契约直接 introspect/verifySchema。该差异值得对照，但不证明第三座库失败由聚合或非严格模式导致。
+
+新增固定直接只读入口，锁定 CLI rc.35/Provider rc.25 及原包、十四文件，核对唯一迁移目标快照与候选根契约的文件哈希和 JSON 深度相等。仅复用 adui_scada_test URL 守卫并进一步限定 127.0.0.1:15432、非空凭据及固定只读启动参数，不接受额外命令行参数；以公开 createPostgresControlClient、connect、schemaVerify、close 顺序执行宽容及严格两种直接验证。结果仅返回严格标志、真假、问题与警告计数及契约声明范围内脱敏路径；目标存储哈希、strict 及结果形状不一致即失败。连接、验证或关闭异常不回显原文；关闭后再核对证据。该公开 API 不暴露连接内独立 SQL 查询，因此只读启动设置由 URL 和 sessionSettings 固定，不声称已在同一事务查询 read_only 或复现失败瞬间；禁止并发 Schema 变更。未连接第三座库，不调用迁移、签名、自定义 SQL 或写入，不修改原包、候选、历史、依赖或正式 Provider。
+
+协作容器 Node.js 22.16.0（显式 --experimental-strip-types）三份新增源码语法检查通过，四项模拟测试 4/4；核心 Blob 27975369355abf757ea8df78a72988a9b7716fc3、测试 045165935ef3c738f4e2ec1238018b6852a850f7、入口 2b00d373fe1a5b39e80a95ecbc516f585ecf5d9a 与本地一致，既有 URL 守卫 Blob 3a84f36578e21973f9f1c4fe6a60e391e80fd32b 一致。协作容器无固定 RC、真实候选、数据库、Vite+ 或 pnpm；未执行实际直接入口、完整 Windows 格式/Lint/类型、中文及文档检查。首次实现的 finally 直接抛出关闭异常可能覆盖原失败，提交前改为保留两个固定阶段原因并再次通过同四项模拟；不得以模拟代替真实 RC。
+
+后续真实验收仍仅在历史库进行，原迁移冻结不变。
