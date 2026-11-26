@@ -91,3 +91,15 @@ export function requireRepairReviewProcess(result) {
   );
   return result.stdout;
 }
+
+/** 复验命令封闭为官方干跑与完整性检查，不接收任意附加参数。 */
+export function runRepairOfficialRechecks({
+  preserve, execute, verifyDryRun, verifyMigrationCheck, migrationPath, configPath, cliPath,
+}) {
+  runPreservedRepairReview(preserve, () => {
+    verifyDryRun(execute([migrationPath, "--config", configPath, "--dry-run"]));
+  }, "官方干跑");
+  runPreservedRepairReview(preserve, () => {
+    verifyMigrationCheck(execute([cliPath, "migration", "check", "--space", "app", "--json", "--config", configPath]));
+  }, "官方迁移完整性");
+}
