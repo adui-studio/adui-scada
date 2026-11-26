@@ -67,10 +67,19 @@ void test("直接错误封装限定命令严重度和白名单", () => {
   const allowed = new Set(["MIGRATION.EXECUTION_FAILED"]);
   const error = { ok: false, severity: "error", code: "MIGRATION.EXECUTION_FAILED" };
   assert.equal(isNativeDirectError(error, "db.migrate", allowed), true);
-  assert.equal(isNativeDirectError({ ...error, commandId: "db.verify" }, "db.verify", allowed), true);
-  assert.equal(isNativeDirectError({ ...error, commandId: "db.sign" }, "db.migrate", allowed), false);
+  assert.equal(
+    isNativeDirectError({ ...error, commandId: "db.verify" }, "db.verify", allowed),
+    true,
+  );
+  assert.equal(
+    isNativeDirectError({ ...error, commandId: "db.sign" }, "db.migrate", allowed),
+    false,
+  );
   assert.equal(isNativeDirectError({ ...error, severity: "warn" }, "db.migrate", allowed), false);
-  assert.equal(isNativeDirectError({ ...error, code: "SECRET.PRIVATE" }, "db.migrate", allowed), false);
+  assert.equal(
+    isNativeDirectError({ ...error, code: "SECRET.PRIVATE" }, "db.migrate", allowed),
+    false,
+  );
   assert.equal(isNativeDirectError(error, "", allowed), false);
   assert.equal(isNativeDirectError({ ...error, ok: true }, "db.migrate", allowed), false);
 });
