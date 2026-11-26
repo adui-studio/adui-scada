@@ -5199,3 +5199,33 @@ git status --short
 新增 `pnpm run test:prisma8:native:baseline:check-roundtrip-execution`（12 项纯模拟，纳入 ready）。原工作区同时复验 `pnpm run test:prisma8:native:baseline:check-roundtrip`、`pnpm run test:prisma8:native:baseline:check-repair-package-review`、共享配置、Vite+、中文文案、Markdown；格式化正常提交后工作区干净，再执行 `pnpm run db:prisma8:native:baseline:check-roundtrip:plan`。计划必须仍为已验收指纹，全部许可 false，退出 0。不要连接任何数据库，不提供新实例创建或执行命令；若不符停止保留现场。实际隔离实例准备和真实运行须分别明确授权。
 
 本批将真实验收指纹固定到既有离线计划入口和事务协议模拟器，复算完整 payload 并要求所有许可仍为 false；计划篡改后重算亦拒绝。拟议第五座仅为模拟配置：PostgreSQL 17.11（170011），沿用第四座的镜像 ID，独立容器 `adui-scada-prisma8-check-roundtrip`、同名前缀独立卷 `-data` 与网络 `-net`、仅回环 `127.0.0.1:15434`、数据库 `adui_scada_fresh_prisma8_roundtrip`、角色 `adui_scada_native_roundtrip`。端口可用性与实际镜像、卷、网络、排序规则及集群身份尚未核验。模拟边界要求本机 Linux Docker、独立资源、容器与 TCP 集群标识相等且不同于四座冻结库的标识（允许旧库共享集群）、参照与目标排序规则元数据完全相同、23 类空库及无其他会话、数据库所有权与默认只读。模拟事实不认证来源，真实采集和同一连接的事务内复核、独占一次性许可及真实证据留存仍未实现。
+
+### 第五座实例创建前宿主机只读预检
+
+在 Windows 原验收工作区，先执行增量质量链：
+
+```powershell
+node --check scripts/prisma8-native-check-roundtrip-host.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-host.cases.mjs &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-host &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-execution &&
+pnpm run test:prisma8:native:baseline:check-roundtrip &&
+pnpm run config:check &&
+vp check --fix && vp check &&
+pnpm run messages:check && pnpm run docs:check
+Write-Host "增量验收退出码：$LASTEXITCODE"
+```
+
+如有格式化改动，正常提交并推送。最终干净工作区执行以下只读入口；不要求数据库口令：
+
+```powershell
+pnpm run db:prisma8:native:baseline:check-roundtrip:plan &&
+pnpm run db:prisma8:native:baseline:check-roundtrip:host-preflight
+Write-Host "宿主机预检退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+本批只增加第五座创建前宿主机只读预检。拒绝非 Windows、附加参数和 Docker 环境覆盖；先从本机上下文取得端点，仅允许两种固定 Windows 命名管道，后续 Docker 查询显式固定 --host，并要求 Linux 引擎、第四座保留容器镜像 ID 与本机固定镜像完全相同、第五座容器/卷/网络均不存在（含停止容器），再用无 Profile 的固定 Windows PowerShell Get-NetTCPConnection 检查所有本地 TCP 记录中的 15434。任何子进程异常、非零、信号、标准错误、资源重名或端口异常均短路并仅返回固定中文诊断；子进程不继承数据库连接串或凭据。不执行 Docker exec、run、pull、create、删除或 PostgreSQL 操作。报告 NATIVE_CHECK_ROUNDTRIP_HOST_REVIEW_REQUIRED，仅表示当前宿主机观察通过，不认证真实数据库来源；portReserved、resourceCreationAllowed、observationSourceAuthenticated、databaseExecutionAllowed、roundTripVerified、historicalAdoptionVerified、signingAllowed、deploymentAllowed 均为 false。端口检查不是端口预留，不能证明排除端口范围、未来竞争或 Docker 发布成功。第五座仍未创建，后续身份、排序规则、23 类空库与实际执行许可需分别核实；四座数据库及正式 Prisma 7 保持冻结边界。
+
+若任何一步失败，保留资源，不切换远程端点、不清除现有容器/卷/网络、不更改端口、不重新拉取镜像。只分享脱敏报告或固定阶段。成功后仍须维护者单独批准第五座实例创建。
