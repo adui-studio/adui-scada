@@ -5160,3 +5160,30 @@ pnpm run docs:check
 仅当维护者已经拥有实际失败时的原始机器输出文件，才可在本机用 `Get-Content -LiteralPath $existingDiagnosticFile -Raw | node apps/server/prisma8-native-schema-failure-review.mjs` 解析；变量须指向已存在的真实文件，不得使用模拟内容冒充真实证据。仅分享脱敏 JSON 或固定失败阶段。没有原始输出时记为不可恢复，不重新执行迁移。
 
 下一阶段隔离复现方案（仅提议，尚未获得单独数据库操作授权）：保留第三座库、一次性尝试记录、历史验收库、参考库和固定原件。使用完全独立的本机临时 PostgreSQL 实例，选择未占用的专用回环端口、独立数据卷、专用库及一次性凭据，不继承现有容器卷、数据库连接串、根 .env 或其他服务网络。优先核对与既有 PostgreSQL 17.11 相同的实际镜像摘要及环境，不擅自升级。使用候选的独立只读来源副本，核对 CLI rc.35/Provider rc.25、十四文件证据和唯一空起点迁移边；任何执行入口须另行评审连接白名单、实际库/角色/版本、严格空库门禁及一次性授权。仅在明确批准的独立实例执行一次官方原生迁移，捕获官方机器输出，失败时在丢弃原文前提取脱敏 schemaIssues；成功也仅作隔离复现结果，保留现场并停止。若无法取得具体结构差异，再单独评审同一事务内逐项 DDL、目录读取与回滚的实验，而不是继续重复历史库验证。禁止自动创建、重置或清理数据库，禁止重试第三座库、改动正式 Provider、签名、发布或推进引用。本批未实现或执行任何新的在线复现入口。
+
+### 固定 CHECK 修复迁移包重复离线复验
+
+保留原验收工作区及独立 plan/complete 文件和全部历史原件；不得重新生成、搬移、覆盖或清理。新入口不需要数据库口令，固定配置没有数据库连接。先执行增量质量检查，失败即停止：
+
+```powershell
+pnpm run test:prisma8:native:baseline:check-repair-package-review &&
+pnpm run test:prisma8:native:baseline:check-repair-package &&
+pnpm run test:prisma8:native:baseline:candidate &&
+pnpm run config:check &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check
+```
+
+格式化修改须正常提交后，在干净工作区连续两次复验：
+
+```powershell
+pnpm run db:prisma8:native:baseline:check-repair-package:review &&
+pnpm run db:prisma8:native:baseline:check-repair-package:review &&
+vp check && pnpm run messages:check && pnpm run docs:check
+Write-Host "固定修复包复验退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+报告必须为 NATIVE_CHECK_REPAIR_PACKAGE_LOCKED_REVIEW_REQUIRED，165 项操作、24 文件、两份配置、固定证据指纹、offlineReviewPassed/evidencePreserved 为 true，regenerated/roundTripVerified/signingAllowed/deploymentAllowed 为 false。失败保留现场，仅分享固定阶段或脱敏报告。四座数据库均冻结，不执行在线命令。
