@@ -22,6 +22,11 @@ function requireMatch(condition, message) {
   if (!condition) throw new ReproError(message);
 }
 
+/** 真实单次尝试已消耗；无论本地实验记录是否存在，当前版本均禁止再次写入。 */
+export function requireReproWriteAvailable() {
+  throw new ReproError("第四座单次迁移许可已消耗，当前入口永久冻结");
+}
+
 /** 不接受通用数据库连接串、额外参数或 Docker 远程环境覆盖。 */
 export function requireReproRequest(args, source) {
   requireMatch(
