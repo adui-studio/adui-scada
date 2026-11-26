@@ -33,10 +33,7 @@ export function nativeEmptyClientOptions(input, args) {
   );
   const message = "仅允许显式连接本机 127.0.0.1:15432 的第三座专用空库";
   try {
-    requireCondition(
-      typeof input === "string" && !/[\x00-\x20\x7f\\]/u.test(input),
-      message,
-    );
+    requireCondition(typeof input === "string" && !/[\x00-\x20\x7f\\]/u.test(input), message);
     const url = new URL(input);
     const user = decodeURIComponent(url.username);
     const password = decodeURIComponent(url.password);
@@ -116,11 +113,29 @@ const emptySql = `SELECT
     EXISTS (SELECT 1 FROM pg_catalog.pg_stat_activity WHERE datname = pg_catalog.current_database() AND pid <> pg_catalog.pg_backend_pid()) AS other_sessions`;
 
 const emptyKeys = [
-  "extra_schema", "relations", "routines", "types", "operators", "collations", "conversions",
-  "operator_classes", "operator_families", "text_search_configs", "text_search_dictionaries",
-  "text_search_parsers", "text_search_templates", "extensions", "event_triggers", "publications",
-  "subscriptions", "foreign_servers", "foreign_wrappers", "large_objects", "default_acls",
-  "prepared_transactions", "other_sessions",
+  "extra_schema",
+  "relations",
+  "routines",
+  "types",
+  "operators",
+  "collations",
+  "conversions",
+  "operator_classes",
+  "operator_families",
+  "text_search_configs",
+  "text_search_dictionaries",
+  "text_search_parsers",
+  "text_search_templates",
+  "extensions",
+  "event_triggers",
+  "publications",
+  "subscriptions",
+  "foreign_servers",
+  "foreign_wrappers",
+  "large_objects",
+  "default_acls",
+  "prepared_transactions",
+  "other_sessions",
 ];
 
 /** 只读取目录元数据；失败时也回滚、关闭，并且不回显第三方连接异常。 */
@@ -170,7 +185,9 @@ export async function inspectNativeEmptyDatabase(client, expectedUser) {
       deploymentAllowed: false,
     };
   } catch (error) {
-    failures.push(error instanceof NativePreflightError ? error.message : "第三座专用库只读查询失败");
+    failures.push(
+      error instanceof NativePreflightError ? error.message : "第三座专用库只读查询失败",
+    );
   } finally {
     if (begun) {
       try {

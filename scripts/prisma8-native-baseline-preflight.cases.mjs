@@ -116,14 +116,23 @@ void test("拒绝旧库、外部地址、额外连接参数、无凭据及任意
     assert.throws(() => nativeEmptyClientOptions(url, args), /明确确认/u);
   }
   for (const invalid of [
-    undefined, "", url.replace(nativeEmptyDatabaseName, "adui_scada"),
+    undefined,
+    "",
+    url.replace(nativeEmptyDatabaseName, "adui_scada"),
     url.replace(nativeEmptyDatabaseName, "adui_scada_test"),
     url.replace(nativeEmptyDatabaseName, "adui_scada_fresh_prisma8_ref"),
-    url.replace("127.0.0.1", "localhost"), url.replace("127.0.0.1", "example.invalid"),
-    url.replace("15432", "5432"), url + "?options=-c", url + "?schema=public&schema=public",
-    url + "?schema=private", url + "#fragment", url.replace(":p%40ss%2Fword", ""),
-    url.replace("p%40ss%2Fword", "%00"), url.replace("p%40ss%2Fword", "%GG"),
-    url.replace("lab_owner", "bad%2Fuser"), url + "\n",
+    url.replace("127.0.0.1", "localhost"),
+    url.replace("127.0.0.1", "example.invalid"),
+    url.replace("15432", "5432"),
+    url + "?options=-c",
+    url + "?schema=public&schema=public",
+    url + "?schema=private",
+    url + "#fragment",
+    url.replace(":p%40ss%2Fword", ""),
+    url.replace("p%40ss%2Fword", "%00"),
+    url.replace("p%40ss%2Fword", "%GG"),
+    url.replace("lab_owner", "bad%2Fuser"),
+    url + "\n",
   ]) {
     assert.throws(() => nativeEmptyClientOptions(invalid, confirmation), /仅允许/u);
   }
@@ -139,7 +148,10 @@ void test("空库检查严格只读并在返回前回滚关闭", async () => {
   assert.equal(result.deploymentAllowed, false);
   assert.deepEqual(calls.slice(0, 2), ["连接", "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"]);
   assert.equal(calls.length, 6);
-  assert.equal(calls.slice(2, -2).every((sql) => sql.startsWith("SELECT")), true);
+  assert.equal(
+    calls.slice(2, -2).every((sql) => sql.startsWith("SELECT")),
+    true,
+  );
   assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
 });
 
@@ -155,7 +167,9 @@ void test("实际目标、事务、角色、权限或连接设置不符时停止
 
 void test("任一受检对象、会话、缺失字段或异常目录行均拒绝", async () => {
   const changedRows = [
-    [], [empty, empty], [{ ...empty, relations: undefined }],
+    [],
+    [empty, empty],
+    [{ ...empty, relations: undefined }],
     ...Object.keys(empty).map((key) => [{ ...empty, [key]: true }]),
   ];
   for (const emptyRows of changedRows) {
@@ -166,14 +180,22 @@ void test("任一受检对象、会话、缺失字段或异常目录行均拒绝
 });
 
 void test("连接、查询、回滚和关闭失败不泄漏内部异常或返回成功", async () => {
-  for (const failAt of ["连接", "BEGIN", "pg_is_in_recovery", "pg_stat_activity", "ROLLBACK", "关闭"]) {
+  for (const failAt of [
+    "连接",
+    "BEGIN",
+    "pg_is_in_recovery",
+    "pg_stat_activity",
+    "ROLLBACK",
+    "关闭",
+  ]) {
     const { client, calls } = mock({ failAt });
     await assert.rejects(() => inspectNativeEmptyDatabase(client, user), {
       message: /^第三座专用库.*失败/u,
     });
     assert.equal(calls.at(-1), "关闭");
     if (failAt === "连接") assert.deepEqual(calls, ["连接", "关闭"]);
-    else if (failAt === "BEGIN") assert.deepEqual(calls, ["连接", "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY", "关闭"]);
+    else if (failAt === "BEGIN")
+      assert.deepEqual(calls, ["连接", "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY", "关闭"]);
     else assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
   }
 });

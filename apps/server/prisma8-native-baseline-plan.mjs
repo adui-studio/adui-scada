@@ -51,7 +51,8 @@ async function main() {
   const reviewComments = args.length === 1 && args[0] === "--review-baseline-comments";
   const emitComments = args.length === 1 && args[0] === "--confirm-offline-comments";
   const preflight = args.length === 1 && args[0] === nativeEmptyConfirmation;
-  const reviewCandidate = preflight || (args.length === 1 && args[0] === "--review-comment-candidate");
+  const reviewCandidate =
+    preflight || (args.length === 1 && args[0] === "--review-comment-candidate");
   const dbOptions = preflight
     ? nativeEmptyClientOptions(process.env[nativeEmptyUrlVariable], args)
     : undefined;
@@ -209,7 +210,9 @@ async function main() {
         console.info("实际 PostgreSQL 版本号：" + empty.serverVersion);
         console.info("受检空库类别：" + empty.checkedEmptyCategories + " 项全部通过");
         console.info("只读事务已回滚并关闭连接，十四文件证据及原件保持不变");
-        console.info("预检状态：NATIVE_EMPTY_PREFLIGHT_REVIEW_REQUIRED；签名许可：否；部署许可：否");
+        console.info(
+          "预检状态：NATIVE_EMPTY_PREFLIGHT_REVIEW_REQUIRED；签名许可：否；部署许可：否",
+        );
       }
     }
   }
