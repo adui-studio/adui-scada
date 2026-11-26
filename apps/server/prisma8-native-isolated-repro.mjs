@@ -111,6 +111,8 @@ async function main() {
       "--format",
       "{{.Endpoints.docker.Host}}",
     ]);
+    // 在访问 Docker 引擎前先拒绝非本机上下文。
+    requireLocalDocker(endpoint, "linux");
     const run = (args) => docker(["--context", context, ...args]);
     requireLocalDocker(endpoint, run(["info", "--format", "{{.OSType}}"]));
     const fields = [
