@@ -31,6 +31,7 @@ import {
   requireRepairReviewProcess,
   RepairPackageReviewError,
   runPreservedRepairReview,
+  runRepairOfficialRechecks,
 } from "../../scripts/prisma8-native-check-repair-package-review.mjs";
 
 function requireMatch(condition, message) {
@@ -126,13 +127,17 @@ export function reviewExistingRepairPackage({
     timeout: 120000,
     maxBuffer: 16 * 1024 * 1024,
   }));
-  runPreservedRepairReview(preserveAll, () => {
-    const dryRun = parseDryRun(run([join(completeDir, sourceName), "--config", config, "--dry-run"]));
-    requireMatch(isDeepStrictEqual(dryRun, actual), "重新官方干跑与固定完整候选不一致");
-  }, "官方干跑");
-  runPreservedRepairReview(preserveAll, () => {
-    requireMigrationCheck(run([entry, "migration", "check", "--space", "app", "--json", "--config", config]));
-  }, "官方迁移完整性");
+  runRepairOfficialRechecks({
+    preserve: preserveAll,
+    execute: run,
+    verifyDryRun: (stdout) => {
+      requireMatch(isDeepStrictEqual(parseDryRun(stdout), actual), "重新官方干跑与固定完整候选不一致");
+    },
+    verifyMigrationCheck: requireMigrationCheck,
+    migrationPath: join(completeDir, sourceName),
+    configPath: config,
+    cliPath: entry,
+  });
   return {
     status: "NATIVE_CHECK_REPAIR_PACKAGE_LOCKED_REVIEW_REQUIRED",
     contractHash: repairHash,
