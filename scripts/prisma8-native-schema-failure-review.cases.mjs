@@ -128,25 +128,27 @@ void test("最终错误及诊断也拒绝错误命令、警告、成功或重复
     assert.throws(() => reviewNativeSchemaFailure(JSON.stringify(document), allowed), /唯一匹配/u);
     const onlyDiagnostic = result(undefined);
     assert.throws(
-      () => reviewNativeSchemaFailure(
-        JSON.stringify({
-          ...onlyDiagnostic,
-          envelope: { ...onlyDiagnostic.envelope, diagnostics: [diagnostic] },
-        }),
-        allowed,
-      ),
+      () =>
+        reviewNativeSchemaFailure(
+          JSON.stringify({
+            ...onlyDiagnostic,
+            envelope: { ...onlyDiagnostic.envelope, diagnostics: [diagnostic] },
+          }),
+          allowed,
+        ),
       /唯一匹配/u,
     );
   }
   const document = result(direct([issue]));
   assert.throws(
-    () => reviewNativeSchemaFailure(
-      JSON.stringify({
-        ...document,
-        envelope: { ...document.envelope, diagnostics: [direct([issue])] },
-      }),
-      allowed,
-    ),
+    () =>
+      reviewNativeSchemaFailure(
+        JSON.stringify({
+          ...document,
+          envelope: { ...document.envelope, diagnostics: [direct([issue])] },
+        }),
+        allowed,
+      ),
     /唯一匹配/u,
   );
 });
@@ -163,7 +165,10 @@ void test("拒绝畸形差异及超限输入，不泄露诊断文本", () => {
     [{ ...issue, path: Array(33).fill("public") }],
     Array(1001).fill(issue),
   ]) {
-    assert.throws(() => reviewNativeSchemaFailure(JSON.stringify(direct(issues)), allowed), /结构差异/u);
+    assert.throws(
+      () => reviewNativeSchemaFailure(JSON.stringify(direct(issues)), allowed),
+      /结构差异/u,
+    );
   }
   assert.throws(
     () => reviewNativeSchemaFailure("x".repeat(maxSchemaFailureBytes + 1), allowed),
