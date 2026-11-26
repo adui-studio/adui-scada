@@ -4939,3 +4939,33 @@ git status --short
 ```
 
 目标 8/8 与 12/12、Vite+ 零警告错误、增量退出码 0；原候选复验后须显示固定原件十项匹配、实际 DDL 46 项、历史最终中文注释 119 项而原包 0 项、独立注释审查文本指纹 06a47418f3477c263cb19c7a3550a6be3810a4ffd9c22afada7ecd28f6322fb7、DDL_TEXT_MATCHED_COMMENTS_BLOCKED、签名与部署许可均否。该指纹来自实际历史文件的独立文本提取，完整 Windows 集成入口尚待实测。若希望查看完整注释审查文本，可另行执行 pnpm run db:prisma8:native:baseline:comments；仅标准输出预览，禁止将其管道送入数据库或改写官方生成物。失败保留证据，不自动重试规划或放宽门禁。此检查不等于 PostgreSQL 约束负向、官方迁移哈希重算、依赖解析或自发射验收。
+
+### Prisma 8 原生基线独立中文注释自发射候选
+
+保留根目录 .artifacts/prisma8-native-baseline、原生候选、正式生成物与两个现有隔离库，不重跑原始 plan。先执行增量验收：
+
+```powershell
+pnpm run test:prisma8:native:baseline:comments &&
+pnpm run test:prisma8:native:baseline:ddl &&
+pnpm run test:prisma8:native:baseline &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check
+Write-Host "离线注释门禁退出码：$LASTEXITCODE"
+git status --short
+```
+
+只有维护者明确确认离线自发射、增量门禁通过、没有并发文件修改且 apps/server/.artifacts/prisma8-native-baseline-comments 不存在时，运行：
+
+```powershell
+pnpm run db:prisma8:native:baseline:comments:emit --confirm-offline-comments
+Write-Host "独立注释候选自发射退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期固定原件匹配、165 项操作、新官方迁移标识、COMMENTS_EMITTED_REVIEW_REQUIRED、签名许可否、部署许可否、退出码 0。命令先干跑并验证完整操作，再自发射独立副本、比较实际产物与干跑，最后离线执行官方 migration check。保留 emit-dry-run、emit、migration-check 各自 stdout/stderr 文本及生成包；若失败保留新目录和诊断，不删除、不覆盖、不重复运行，不手工改 ops.json 或 migration.json。此路径首次真实 RC 行为尚未验证，不保证一定通过；不设置数据库 URL，不执行 SQL 或数据库迁移。
+
+### E-146 脚手架门禁修复后的增量复验
+
+首次 Windows 增量 28 项通过，但真实自发射入口在构造源码阶段退出 1，未启动官方进程。拉取 PR #221 最新提交，复验同一增量链；注释专项由 8 项增至 10 项，总计 30 项。原包及其他候选不重新生成。先确认独立注释输出目录不存在，再使用原确认参数执行；若再次失败，保留新阶段中文诊断。若报脚手架相关错误，仅提供原包的 migration.ts 原文和 SHA-256 用于定位，不编辑原件。若已产生独立输出目录，不删除或自动重试；保存对应 stdout/stderr。

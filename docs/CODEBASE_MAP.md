@@ -1747,3 +1747,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - scripts/prisma8-native-baseline-ddl.mjs：固定实际原包十文件及历史八份 SQL 指纹；复用已验收物理 IR，独立生成受控类型、默认值、主键、CHECK、索引及外键的精确文本；按 ID、依赖阶段及全文核对 46 条实际 execute SQL，不执行 SQL。复用历史注释提取器生成 119 项 public 限定独立审查文本与指纹。
 - pnpm run db:prisma8:native:baseline:ddl：复用既有候选只读复验入口，输出固定原包与 DDL/注释审查状态；pnpm run db:prisma8:native:baseline:comments：同门禁后向标准输出附加注释审查文本，不写入迁移目录。两个入口不运行规划、自发射或数据库。
 - pnpm run test:prisma8:native:baseline:ddl：八项离线回归，纳入 ready；真实固定候选专项仍独立运行。原包仍缺 119 项注释，状态 DDL_TEXT_MATCHED_COMMENTS_BLOCKED，签名及部署许可否。
+
+### 原生基线独立中文注释自发射候选
+
+- scripts/prisma8-native-baseline-comments.mjs：受控注释文本转换、参数化预/后置检查、官方脚手架追加、干跑输出解析及完整迁移操作与元数据比较；不接触数据库。
+- scripts/prisma8-native-baseline-comment-emission.mjs：独立文件副本、固定 Node 子进程、原件回读、干跑/自发射及 migration check 完整性门禁，失败保留证据。
+- apps/server/prisma8-native-baseline-comments.config.ts：不加载环境或数据库连接，输出到服务端忽略目录，使用已安装固定依赖；原基线与正式生成物不变。
+- pnpm run test:prisma8:native:baseline:comments：十项纯离线逻辑测试（含 E-146 脚手架语法定位回归），纳入 ready。pnpm run db:prisma8:native:baseline:comments:emit --confirm-offline-comments：明确确认后才运行真实离线自发射，不纳入 ready；成功仍仅 COMMENTS_EMITTED_REVIEW_REQUIRED。

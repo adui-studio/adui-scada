@@ -127,3 +127,19 @@ PR #217 文档及 Vite+ 验收通过后按授权合入 `c228eff92d12f9b643128d60
 八项历史 SQL 中 121 条注释最终覆盖 119 项（12 表、85 列、22 索引，含两个已声明注释的主键索引）；permission 三次覆盖取最后，按对象键固定排序、public 显式限定、SQL 单引号倍写，生成仅供审查的 UTF-8 LF 文本，SHA-256 06a47418f3477c263cb19c7a3550a6be3810a4ffd9c22afada7ecd28f6322fb7。输出不写原始包或数据库；原包注释仍为 0，保持 DDL_TEXT_MATCHED_COMMENTS_BLOCKED。新增八项回归已在独立 Node 22.16.0 环境通过；真实 Windows 完整专项待复验。固定原包检查不替代 migrationHash 官方算法、precheck/postcheck 实库语义或运行时依赖检查。
 
 后续优先在另行批准的独立迁移图副本中研究固定 RC 支持的迁移 authoring API：非工厂支持的 rawSql DDL 必须有审查过的活体 schema precheck、postcheck；只经框架支持的 migration.ts 自发射更新 ops.json 与 migration.json，不手改官方哈希、原包或快照，先离线核对全部原有 46 项及 119 注释的目标、完整文案和拒绝条件。此处仅方案，尚未构造、运行 self-emit 或决定同边补充/独立不变量路径，须依据固定版本行为专项评审。真实空库重放、非空发布样本、签名及正式接管须分别授权。ADR 保持 Proposed，Prisma 7 唯一正式迁移执行者。
+
+## 2026-11-26 · PR #220 合入与中文注释独立自发射候选
+
+PR #220 经维护者明确授权 Squash 合入 66dd3bb6aff59ed158f9373d5e63041bda65d40c，最终 HEAD d82078733318d722a1fe5607784966e3c7854fde 为三个文件排版调整。原包继续 DDL_TEXT_MATCHED_COMMENTS_BLOCKED。
+
+选择在同一未部署空起点边的独立副本追加注释，而不是在已应用迁移上改写历史或创建无结构变化的自环。原包十文件、八份历史迁移及正式契约门禁保持，独立目录使用 apps/server/.artifacts/prisma8-native-baseline-comments，使官方迁移源码能按 Node 原生规则解析服务端固定依赖，禁止链接及覆盖。原计划 JSON 与日志保留在原目录，不复制为新图的官方计划。独立配置不加载 dotenv、无数据库连接、parent: false；子进程复用环境白名单，不属于网络沙箱。生成目录仅作为第三方生成物从现有 Format/Lint/中文文案扫描中精确排除，不排除项目自有代码。
+
+已核对上游 PostgreSQL rawSql 身份工厂、脚手架 operations getter、SQL 步骤参数及 runner 布尔检查接口。逐行解析已审查的 public 注释文本，按表、列、索引构造 additive 操作，precheck 必须目标存在且注释为空，postcheck 必须目标存在且 UTF-8 字节精确相等；列限定普通表、正属性号、未删除属性，索引限定普通索引，目录查询全限定 pg_catalog、参数绑定。已有正确注释由 runner 幂等检查跳过；不同注释不得被覆盖。该语义仍须以后在另行授权的真实隔离空库验证。
+
+只改独立副本 migration.ts 的官方导入与操作列表，先运行官方 self-emit --dry-run，要求原 46 项完整操作（含全部预/后置检查、目标及执行参数）与新增 119 项完整操作逐项相同，其他 manifest 元数据及空起点边不变、哈希改变；干跑不改任何候选文件。正式自发射结果须与干跑完全一致，再运行 migration check --space app --json，要求官方成功封装、无诊断及无 findings。原件、契约、快照及独立配置回读核对；失败保留证据，不自动重试。没有手工写入新 ops.json、manifest 或计算迁移哈希。
+
+固定 RC 实际自发射、迁移图完整性及 Windows 门禁尚未运行；八项纯逻辑回归及历史 119 项文本转换在协作容器通过。若真实 RC 输出或官方脚手架不同，停止并保存原始诊断，不放宽门禁。即使成功也仅 COMMENTS_EMITTED_REVIEW_REQUIRED，签名/部署许可均否。ADR 保持 Proposed，Prisma 7 仍是唯一正式迁移执行者。
+
+## 2026-11-26 · E-146 官方脚手架排版与语义分离
+
+首次 Windows 工程质量验收通过，真实脚手架文本匹配退出 1，原包十文件及 46/119 审查均通过。改用已有 TypeScript 语法解析定位唯一导入、空起点类、目标快照、操作数组及官方入口，只插入源码文本并对照原操作表达式；保留原件指纹、实际完整 165 项操作与官方哈希重算、干跑、自发射及 migration check 门禁。局部新增测试通过，未取得原 ZIP 具体脚手架文本、未执行固定 RC 自发射；需要真实复验。ADR 仍 Proposed，签名和部署许可仍否。
