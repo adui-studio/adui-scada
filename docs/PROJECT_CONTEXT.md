@@ -2958,3 +2958,11 @@ PR #229 经维护者授权 Squash 合入 68e9cf856d6f8d95b0cea84f69c8cd073c7fb29
 ### 2026-11-26 · PR #230 暂存检查阻塞（E-153）
 
 维护者 Windows 六组专项 51/51、Vite+ 559/399 零警告错误、中文 426、Markdown 96，增量退出 0；但五份格式化文件暂存，真实迁移指令在干净工作区门禁停止，随后 JetBrains 提交 Hook 对独立迁移配置报 TS2591，未提交、未执行迁移或消耗本轮单次许可。仅增加该配置的文件级 Node 类型引用，局部模拟 TypeScript 复现及修复退出 2→0、模拟配置白名单 8/8；Windows 实际暂存检查及提交 Hook 待复验。PR #230 继续 Draft，第三座及其余旧库仍冻结，第四座真实迁移、失败诊断及 Prisma 8 接管仍未验收。
+
+### 2026-11-26 · 第四座真实失败取证结案及 CHECK 修复专项
+
+维护者 Windows PR #230 六组专项 51/51、Vite+ 559 格式/399 受检零警告错误、中文 426、Markdown 96、增量退出 0，最终工作区干净。E-153 修复后的排版提交 a25962d7f4eee6db5a7b5cd35080486ec205c0bd 与真实实验中打印的本机及远端 HEAD 一致；未单独取得 Git Hook 成功原始日志。维护者授权后 Squash 合入 265c02a7fd679abf3771140c4196135b1cbdb40f。
+
+第四座真实 PostgreSQL 17.11 两次身份与 23 类空库检查、唯一空起点在线预览、一次性登记通过；官方原生迁移退出 2、包装退出 1，MIGRATION.SCHEMA_VERIFY_FAILED，捕获未中断，实际操作数量未知。加密原始输出保存、固定十四文件证据复核、容器身份复核均 true，单次授权已消耗。真实密文离线认证解密及两次诊断退出 0：仅 scada_identities_status_check 和 scada_project_release_event_action_check 的 expression 不同，预期 ARRAY_CAST、实际 ELEMENT_CAST，两个原文精确匹配均 true，其他变化字段 0。固定 rc.25 的 SqlCheckConstraintIR 对 exact-named CHECK 直接比较 expression 文本。已确认第四座失败的直接结构原因；第三座没有原始差异，第四座实际回滚目录未检查，不推断其根因或回滚结果。
+
+新专项仅准备独立离线修复 PSL 与官方 Contract：固定两条已观测的表达式文本，将 ARRAY_CAST 改成 ELEMENT_CAST，保持原约束名称和允许值，所有其他 JSON 字段严格相等，仅允许官方新 storageHash；原包、十四文件、八项历史迁移及 119 项历史注释复核不变。新输出仅在根 .artifacts/prisma8-native-check-repair 中生成，不读取数据库口令、不连接任何库、不生成迁移包。第四座原入口和专用配置明确冻结，不依赖本地记录存在。当前仅局部 Node 16/16 实测；固定 RC 发射及 Windows 质量链待验收。新候选往返稳定性及历史库接管均未确认，四库保持冻结，正式 Prisma 7 不变。
