@@ -152,6 +152,7 @@
     "test:prisma8:native:baseline:preflight": "node --test scripts/prisma8-native-baseline-preflight.cases.mjs",
     "db:prisma8:native:baseline:preflight": "node apps/server/prisma8-native-baseline-plan.mjs",
     "test:prisma8:native:baseline:migrate": "node --test scripts/prisma8-native-baseline-migrate.cases.mjs",
+    "test:prisma8:native:baseline:recovery": "node --test scripts/prisma8-native-baseline-recovery.cases.mjs",
     "db:prisma8:native:baseline:migrate": "node apps/server/prisma8-native-baseline-migrate.mjs",
     "test:prisma8:native": "node --test scripts/prisma8-native-contract.cases.mjs",
     "test:prisma8:migration:replay": "node --test scripts/replay-prisma8-migration-reference.cases.mjs",

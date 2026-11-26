@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { realpathSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { loadMigrationBaseline } from "../../scripts/inspect-prisma8-migration-readiness.mjs";
@@ -11,18 +12,28 @@ import {
 import { readCandidateRegular } from "../../scripts/prisma8-native-baseline-candidate.mjs";
 import { requireLockedCandidateEvidence } from "../../scripts/prisma8-native-baseline-comment-emission.mjs";
 import {
+  inspectNativeEmptyDatabase,
+  nativeEmptyClientOptions,
   nativeEmptyConfirmation,
   nativeEmptyUrlVariable,
   NativePreflightError,
 } from "../../scripts/prisma8-native-baseline-preflight.mjs";
 import {
   migrationArguments,
+  migrationPreviewConfirmation,
   migrationRequest,
   NativeMigrationError,
   requireMigrationResult,
   requireNativeAppliedResult,
   requireNativeMigrationPath,
 } from "../../scripts/prisma8-native-baseline-migrate.mjs";
+import {
+  describeNativeChildFailure,
+  inspectNativeMigrationState,
+  migrationStateConfirmation,
+  NativeRecoveryError,
+  requireRecoveryReview,
+} from "../../scripts/prisma8-native-baseline-recovery.mjs";
 
 let stage = "确认独立迁移授权";
 let writeStarted = false;
@@ -31,12 +42,15 @@ function requireMatch(condition, message) {
   if (!condition) throw new NativeMigrationError(message);
 }
 
-function main() {
+async function main() {
+  const args = process.argv.slice(2);
+  const inspect = isDeepStrictEqual(args, [migrationStateConfirmation]);
   const request = migrationRequest(
     process.env[nativeEmptyUrlVariable],
-    process.argv.slice(2),
+    inspect ? [migrationPreviewConfirmation] : args,
     process.env,
   );
+  requireRecoveryReview(request.apply);
   const root = realpathSync(resolve(import.meta.dirname, "../.."));
   stage = "固定依赖及证据检查";
   const entry = resolveBaselineCli(root);
@@ -56,7 +70,36 @@ function main() {
       "历史迁移、原件、独立候选或部署配置发生变化",
     );
   };
-  const run = (args) => {
+  if (inspect) {
+    stage = "迁移失败后的只读状态检查";
+    const options = nativeEmptyClientOptions(process.env[nativeEmptyUrlVariable], [
+      nativeEmptyConfirmation,
+    ]);
+    const { Client } = createRequire(import.meta.url)("pg");
+    requirePreserved();
+    try {
+      const report = await inspectNativeMigrationState(new Client(options), options.user);
+      requireMatch(report, "恢复检查未返回有效报告");
+      process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+      // 统计为零并不证明严格空库，仍需复用原有二十三类独立检查。
+      if (
+        report.catalog.tables === 0 &&
+        !report.catalog.marker_schema &&
+        !report.catalog.legacy_ledger
+      ) {
+        stage = "恢复后的严格空库门禁";
+        await inspectNativeEmptyDatabase(new Client(options), options.user);
+        console.info("严格空库二十三类只读检查通过");
+      }
+    } finally {
+      requirePreserved();
+    }
+    console.info("固定十四文件证据不变：" + fingerprint);
+    console.info("恢复状态：NATIVE_MIGRATION_RECOVERY_REVIEW_REQUIRED；再次迁移许可：否");
+    return;
+  }
+
+  const run = (args, commandId = "") => {
     requirePreserved();
     const child = spawnSync(process.execPath, args, {
       cwd: root,
@@ -66,8 +109,15 @@ function main() {
       timeout: 120000,
       maxBuffer: 16 * 1024 * 1024,
     });
-    requirePreserved();
-    requireMatch(!child.error && child.status === 0, "独立迁移子进程未确认成功；原始诊断不回显");
+    const failure =
+      child.error || child.status !== 0 ? describeNativeChildFailure(child, commandId) : null;
+    try {
+      requirePreserved();
+    } catch (error) {
+      if (failure) console.error(failure);
+      throw error;
+    }
+    if (failure) throw new NativeMigrationError(failure);
     return child.stdout;
   };
   const preflight = () => {
@@ -81,7 +131,7 @@ function main() {
   const preview = (applied) => {
     stage = applied ? "迁移后剩余路径检查" : "官方在线迁移路径预览";
     requireNativeMigrationPath(
-      requireMigrationResult(run(migrationArguments(entry, config, "预览")), "db.migrate"),
+      requireMigrationResult(run(migrationArguments(entry, config, "预览"), "db.migrate"), "db.migrate"),
       applied,
     );
   };
@@ -100,11 +150,11 @@ function main() {
   stage = "官方独立基线迁移";
   writeStarted = true;
   const operations = requireNativeAppliedResult(
-    requireMigrationResult(run(migrationArguments(entry, config, "迁移")), "db.migrate"),
+    requireMigrationResult(run(migrationArguments(entry, config, "迁移"), "db.migrate"), "db.migrate"),
   );
   console.info("官方报告已应用唯一基线，实际执行操作数量：" + operations);
   stage = "官方契约校验";
-  requireMigrationResult(run(migrationArguments(entry, config, "校验")), "db.verify");
+  requireMigrationResult(run(migrationArguments(entry, config, "校验"), "db.verify"), "db.verify");
   preview(true);
   requirePreserved();
   console.info("官方契约校验及剩余路径检查通过，原件及十四文件证据不变");
@@ -112,10 +162,12 @@ function main() {
 }
 
 try {
-  main();
+  await main();
 } catch (error) {
   const reason =
-    error instanceof NativeMigrationError || error instanceof NativePreflightError
+    error instanceof NativeMigrationError ||
+    error instanceof NativePreflightError ||
+    error instanceof NativeRecoveryError
       ? "；" + error.message
       : "；内部诊断已脱敏";
   console.error("第三座独立迁移阶段失败：" + stage + reason);

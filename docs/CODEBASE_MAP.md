@@ -1773,3 +1773,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/prisma8-native-baseline-migrate.config.ts`：第三座专用库固定配置，独立于原离线配置。
 - `apps/server/prisma8-native-baseline-migrate.mjs`：原件与空库复验、官方在线路径及独立应用包装。
 - `scripts/prisma8-native-baseline-migrate.mjs` / `.cases.mjs`：固定参数、机器响应、唯一迁移边和标记检查及离线回归。
+
+### 原生基线迁移失败恢复检查
+
+- `scripts/prisma8-native-baseline-recovery.mjs`：再次写入冻结门禁、固定进程/官方/SQLSTATE 诊断、第三座库只读目录及 marker/ledger 匹配统计。
+- `scripts/prisma8-native-baseline-recovery.cases.mjs` / `pnpm run test:prisma8:native:baseline:recovery`：六项模拟回归；真实 PostgreSQL 与固定 RC 元数据待验证。
+- `pnpm run db:prisma8:native:baseline:migrate --inspect-adui-scada-fresh-prisma8-native-state`：仅恢复只读入口，不启动官方迁移，不清理数据库，原有迁移确认暂时拒绝。
