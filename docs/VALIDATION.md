@@ -5071,3 +5071,15 @@ E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回
 本批冻结原确认和已消耗的单次恢复确认（无论本地记录是否存在），保留一次性记录和原件。只在既有 CLI 白名单新增 `db native-schema-verify-strict`，映射固定 `db verify --schema-only --strict --json`，复用原生配置、原 adui_scada_test URL 守卫与 PostgreSQL default_transaction_read_only、超时和 search_path 参数；不扩大允许库名，不运行任何写入，不改第三座库、候选、历史、正式 Provider 或依赖。严格 JSON 是官方机器输出，仅供维护者在本机提取诊断码、结构路径和差异类别，不分享原始输出、凭据、任意元数据或业务值。严格对照可能返回历史 Prisma 7 登记等未声明对象，不能据此推断第三座库实际失败点，也不应删除对象、放宽验证或签名。
 
 协作容器 Node.js 22.16.0 核对 CLI Blob `16308a36bfddaf90380afc42000c155b853f7aff` 及现有 URL 守卫 Blob `3a84f36578e21973f9f1c4fe6a60e391e80fd32b` 与本地一致，CLI 语法检查通过；独立模拟子进程 5/5（严格参数与根 cwd、只读选项、退出码，宽容行为保持，非法目标/选项、附加参数/写命令拒绝，离线环境隔离）。首次局部测试受 Node 22.16 默认未启用 TS 类型擦除影响为 3/5，使用 NODE_OPTIONS=--experimental-strip-types 后 5/5；不是 Windows Node 24 仓库九项回归，不是固定 RC 实际结构验收。Windows CLI 9 项、恢复 12 项、迁移 5 项、空库 10 项及 Vite+、中文、文档与真实严格对照尚待维护者执行。
+
+### 2026-11-26 · 严格控制库验收及执行检查条件离线评审候选
+
+维护者 Windows 实测 CLI 9/9、恢复 12/12、迁移 5/5、空库 10/10，共 36/36；Vite+ 546 格式/386 受检零警告错误、中文 413、Markdown 96、增量退出 0、工作区干净。固定 RC 与两份 Contract SHA-256 通过；历史验收库真实宽容及严格 schema-only 均退出 0，严格官方机器结果 True。日志未单独输出本机 HEAD，远端 PR #226 HEAD ac0b7abad8094b0ce38036f1fe5a2a234709cbd7，经明确授权 Squash 合入 5797d5388eac7b531ae13e51e0b336ef770bf460。仅确认控制库结构符合契约，不证明第三座库迁移后的实际目录或失败原因。
+
+固定 Provider rc.25 Runner 源码 https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/3-targets/postgres/1-target/src/core/migrations/runner.ts 的 applyPlan 在 postcheck 和幂等检查均启用时先执行 postcheck；非空且全部满足则跳过该操作，否则继续执行 precheck、execute、postcheck，随后 app 空间整体 schema 验证。已有 DDL 对照只验证 execute 文本，并未分析真实 precheck/postcheck 参数及是否可能提前满足。此为调查方向，不能断言实际发生过跳过，也不能把空检查或相同检查判定为故障。控制库严格验证已通过，不再把宽容/严格差异单独作为根因。CLI rc.35 实际参数、真实失败 schemaIssues 和失败瞬时结构仍缺证据。
+
+新增固定离线执行检查评审入口，仅校验已安装 CLI/Provider 版本及入口路径，不启动 CLI，不创建连接或子进程。复用固定原包十文件、独立候选十四文件、离线配置指纹门禁，读取候选 ops.json 后按已验收清单再次核对长度及 SHA-256；检查 46 项结构与 119 项注释顺序边界、唯一标识、additive/postgres/单 execute、precheck/postcheck 形状；导出结构操作的检查 SQL 和参数及缺失/相同检查标识，注释仅统计覆盖，不导出注释 SQL/参数、执行 SQL、任意元数据或连接凭据。输出前再核对原包和候选。不执行 SQL，不写任何候选或数据库，不授权签名、部署或再次迁移。报告是静态证据，不代表真实执行或 PostgreSQL 结构验证。
+
+协作容器 Node.js 22.16.0 三份新增源码 node --check 通过，四项独立模拟测试 4/4；实际远端源码 Blob 与本地一致。未获得维护者本机固定候选原文，未执行真实离线入口、完整 Windows Vite+、中文和文档检查；不能宣称真实 165 项提取成功。
+
+后续须在 Windows 检查四项定向测试及 Vite+、中文、文档，并使用原候选运行只读入口；仍禁止重复迁移、签名或切换正式 Provider。

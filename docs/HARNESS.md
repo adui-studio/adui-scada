@@ -5112,3 +5112,19 @@ git status --short
 PR #225 的真实执行返回 MIGRATION.SCHEMA_VERIFY_FAILED（官方退出 2），随后只读恢复 0、23 类严格空库检查通过，十四文件指纹不变。上一节一次性命令是历史验收记录，**不得再次执行**；新候选无条件冻结原写入确认与单次恢复确认，不能删除尝试记录或更换工作区绕过。第三座库保持现场，不重新连接执行迁移。
 
 先运行 CLI 九项、恢复十二项、迁移五项和空库十项及 Vite+、中文和文档检查。然后只在维护者已验收的 adui_scada_test 控制库进行对照，禁止并发 Schema 变更。先确认锁定的 Prisma CLI 8.0.0-rc.35、Provider 8.0.0-rc.25，以及既有原生候选 .artifacts/prisma8-native/contract.json SHA-256 为 850ef15fcfc0455491ba73f66419f42a394f963b1a99a02870bad5cae964cffa、contract.prisma 为 b8ed4ffa398d84ce4a1fd34863de95ca3a3ea83508358d428233b8a2e3d3ad83；若不一致停止，不重新生成。以屏蔽输入密码构造临时 SCADA_TEST_DATABASE_URL（本机 127.0.0.1:15432/adui_scada_test?schema=public），用 try/finally 恢复原变量。运行既有宽容 `pnpm run db:prisma8:native:schema:verify`；若退出 0 再运行 `node scripts/prisma8-cli.mjs db native-schema-verify-strict`，固定官方参数为 db verify --schema-only --strict --json。两种模式都不迁移、不签名，不连接第三座库。严格输出和 stderr 只在本机内存捕获，记录退出码及脱敏后的结构路径、诊断码、差异类别，禁止直接分享完整 JSON、原始错误或连接串；如不能解析机器封装，报告该情况而非猜测差异。严格退出 4 是结构发现，退出 2 是验证执行失败；都不是迁移结果。若仅有历史登记额外对象，不能归因第三座库；保持全部原件和尝试记录，不删除登记、不放宽严格验证。
+
+### 固定候选执行检查条件离线取证
+
+维护者 Windows 实测 CLI 9/9、恢复 12/12、迁移 5/5、空库 10/10，共 36/36；Vite+ 546 格式/386 受检零警告错误、中文 413、Markdown 96、增量退出 0、工作区干净。固定 RC 与两份 Contract SHA-256 通过；历史验收库真实宽容及严格 schema-only 均退出 0，严格官方机器结果 True。日志未单独输出本机 HEAD，远端 PR #226 HEAD ac0b7abad8094b0ce38036f1fe5a2a234709cbd7，经明确授权 Squash 合入 5797d5388eac7b531ae13e51e0b336ef770bf460。仅确认控制库结构符合契约，不证明第三座库迁移后的实际目录或失败原因。
+
+新增固定离线执行检查评审入口，仅校验已安装 CLI/Provider 版本及入口路径，不启动 CLI，不创建连接或子进程。复用固定原包十文件、独立候选十四文件、离线配置指纹门禁，读取候选 ops.json 后按已验收清单再次核对长度及 SHA-256；检查 46 项结构与 119 项注释顺序边界、唯一标识、additive/postgres/单 execute、precheck/postcheck 形状；导出结构操作的检查 SQL 和参数及缺失/相同检查标识，注释仅统计覆盖，不导出注释 SQL/参数、执行 SQL、任意元数据或连接凭据。输出前再核对原包和候选。不执行 SQL，不写任何候选或数据库，不授权签名、部署或再次迁移。报告是静态证据，不代表真实执行或 PostgreSQL 结构验证。
+
+```powershell
+pnpm run test:prisma8:native:baseline:execution
+vp check
+pnpm run messages:check
+pnpm run docs:check
+node apps/server/prisma8-native-baseline-execution-review.mjs
+```
+
+真实入口不需要密码或环境变量，不接受额外参数。成功 stdout 为 JSON，可在本机审查后另存候选目录之外的文件；若失败仅记录固定阶段和退出码，不重新生成或修改文件。分享前人工检查结构 SQL 和参数；不得分享环境变量、连接串、完整原始错误或业务数据。报告状态 EXECUTION_CHECK_REVIEW_REQUIRED，结构 46、注释 119、签名与部署均 false；空检查和相同检查只供分析，不表示故障或成功。
