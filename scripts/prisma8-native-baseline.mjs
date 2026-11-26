@@ -322,7 +322,13 @@ export function reviewExistingBaseline(root, inputs) {
 /** 仅验收生成物形状、空起点及目标内容；完整 DDL、注释及哈希算法另行评审。 */
 export function inspectBaselinePackage(root, nativeText) {
   const output = join(root, ".artifacts", "prisma8-native-baseline");
-  return inspectOfflinePackage(root, output, nativeText, nativeHash, /^\d{8}T\d{4}_scada_native_baseline$/);
+  return inspectOfflinePackage(
+    root,
+    output,
+    nativeText,
+    nativeHash,
+    /^\d{8}T\d{4}_scada_native_baseline$/,
+  );
 }
 
 /** 仅检查独立离线规划产物；调用者仍须核验固定契约和目录证据。 */

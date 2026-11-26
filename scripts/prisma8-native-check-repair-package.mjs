@@ -24,7 +24,10 @@ function digest(bytes) {
 /** 仅允许维护者已经实际发射并验收的三份契约原文。 */
 export function requireRepairInputs(files) {
   for (const [name, hash] of Object.entries(repairInputHashes)) {
-    requireMatch(Buffer.isBuffer(files[name]) && digest(files[name]) === hash, "修复契约文件指纹不一致：" + name);
+    requireMatch(
+      Buffer.isBuffer(files[name]) && digest(files[name]) === hash,
+      "修复契约文件指纹不一致：" + name,
+    );
   }
   const contract = JSON.parse(files["contract.json"].toString("utf8"));
   requireMatch(contract.storage?.storageHash === repairHash, "修复契约存储标识不一致");
@@ -36,18 +39,22 @@ export function reviewRepairStructure(originalContract, candidateContract, origi
   const review = reviewCheckRepairContract(originalContract, candidateContract);
   requireMatch(review.candidateHash === repairHash, "结构操作不是已验收修复契约");
   requireMatch(
-    Array.isArray(original) && Array.isArray(candidate) &&
-      original.length === 46 && candidate.length === 46 &&
+    Array.isArray(original) &&
+      Array.isArray(candidate) &&
+      original.length === 46 &&
+      candidate.length === 46 &&
       new Set(original.map(({ id }) => id)).size === 46,
     "修复前后结构操作数量或标识不一致",
   );
   const previousTables = originalContract.storage.namespaces.public.entries.table;
   const nextTables = candidateContract.storage.namespaces.public.entries.table;
-  const changed = new Map(review.changedChecks.map(({ table, name }) => {
-    const before = previousTables[table].checks.find((check) => check.name === name).expression;
-    const after = nextTables[table].checks.find((check) => check.name === name).expression;
-    return ["table." + table, { before, after }];
-  }));
+  const changed = new Map(
+    review.changedChecks.map(({ table, name }) => {
+      const before = previousTables[table].checks.find((check) => check.name === name).expression;
+      const after = nextTables[table].checks.find((check) => check.name === name).expression;
+      return ["table." + table, { before, after }];
+    }),
+  );
   const observed = [];
   for (const [index, operation] of original.entries()) {
     const replacement = changed.get(operation.id);
@@ -55,11 +62,17 @@ export function reviewRepairStructure(originalContract, candidateContract, origi
     if (replacement) {
       const { before, after } = replacement;
       const sql = operation.execute?.[0]?.sql;
-      requireMatch(typeof sql === "string" && sql.split(before).length === 2, "原结构操作目标谓词缺失或重复");
+      requireMatch(
+        typeof sql === "string" && sql.split(before).length === 2,
+        "原结构操作目标谓词缺失或重复",
+      );
       expected = JSON.parse(JSON.stringify(operation).replaceAll(before, () => after));
       observed.push(operation.id);
     }
-    requireMatch(isDeepStrictEqual(candidate[index], expected), "结构操作存在未批准的变化：" + operation.id);
+    requireMatch(
+      isDeepStrictEqual(candidate[index], expected),
+      "结构操作存在未批准的变化：" + operation.id,
+    );
   }
   requireMatch(observed.length === 2, "两项目标结构操作未完整覆盖");
   return observed;
@@ -67,10 +80,14 @@ export function reviewRepairStructure(originalContract, candidateContract, origi
 
 /** 生成独立文件证据指纹，不将本地指纹冒充 Prisma 官方迁移标识。 */
 export function fingerprintRepairPackage(files, configs, migrationHash) {
-  requireMatch(typeof migrationHash === "string" && /^(?:sha256:)?[a-f0-9]{64}$/u.test(migrationHash), "官方新迁移标识无效");
-  const entries = (values) => Object.entries(values)
-    .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
-    .map(([path, bytes]) => ({ path, bytes: bytes.length, sha256: digest(bytes) }));
+  requireMatch(
+    typeof migrationHash === "string" && /^(?:sha256:)?[a-f0-9]{64}$/u.test(migrationHash),
+    "官方新迁移标识无效",
+  );
+  const entries = (values) =>
+    Object.entries(values)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+      .map(([path, bytes]) => ({ path, bytes: bytes.length, sha256: digest(bytes) }));
   const evidence = {
     scope: "PRISMA8_NATIVE_CHECK_REPAIR_PACKAGE_V1",
     contractHash: repairHash,

@@ -60,7 +60,13 @@ void test("仅跳过固定生成候选及其快照，不改写保留证据", () 
     assert.equal(readFileSync(join(root, candidate, "contract.d.ts"), "utf8"), generated);
     assert.equal(readFileSync(join(root, snapshot), "utf8"), generated);
     assert.equal(readFileSync(join(root, repair, "plan/contract.d.ts"), "utf8"), generated);
-    assert.equal(readFileSync(join(root, repair, "complete/migrations/snapshots/example/contract.d.ts"), "utf8"), generated);
+    assert.equal(
+      readFileSync(
+        join(root, repair, "complete/migrations/snapshots/example/contract.d.ts"),
+        "utf8",
+      ),
+      generated,
+    );
   });
 });
 

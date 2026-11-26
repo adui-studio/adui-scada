@@ -15,16 +15,30 @@ import {
 function fixture() {
   const tables = {};
   const replacements = [
-    { table: "scada_identities", name: "scada_identities_status_check", column: "status", values: ["active", "disabled"] },
-    { table: "scada_project_release_events", name: "scada_project_release_event_action_check", column: "action", values: ["PUBLISH", "ROLLBACK"] },
+    {
+      table: "scada_identities",
+      name: "scada_identities_status_check",
+      column: "status",
+      values: ["active", "disabled"],
+    },
+    {
+      table: "scada_project_release_events",
+      name: "scada_project_release_event_action_check",
+      column: "action",
+      values: ["PUBLISH", "ROLLBACK"],
+    },
   ];
   const original = {
     storage: { storageHash: nativeHash, namespaces: { public: { entries: { table: tables } } } },
   };
   const ops = [];
   for (const { table, name, column, values } of replacements) {
-    const before = "((" + column + ")::text = ANY ((ARRAY[" +
-      values.map((value) => "'" + value + "'::character varying").join(", ") + "])::text[]))";
+    const before =
+      "((" +
+      column +
+      ")::text = ANY ((ARRAY[" +
+      values.map((value) => "'" + value + "'::character varying").join(", ") +
+      "])::text[]))";
     tables[table] = { checks: [{ name, expression: before }] };
     ops.push({
       id: "table." + table,
@@ -51,8 +65,12 @@ function fixture() {
   candidate.storage.storageHash = repairHash;
   const next = structuredClone(ops);
   for (const [index, { table, column, values }] of replacements.entries()) {
-    const after = "((" + column + ")::text = ANY (ARRAY[" +
-      values.map((value) => "('" + value + "'::character varying)::text").join(", ") + "]))";
+    const after =
+      "((" +
+      column +
+      ")::text = ANY (ARRAY[" +
+      values.map((value) => "('" + value + "'::character varying)::text").join(", ") +
+      "]))";
     candidate.storage.namespaces.public.entries.table[table].checks[0].expression = after;
     next[index].execute[0].sql = "CHECK (" + after + ")";
     next[index].postcheck[0].params = [after];
@@ -64,7 +82,8 @@ void test("仅允许两项目标谓词精确变化并保持其余结构操作原
   const { original, candidate, ops, next } = fixture();
   const before = structuredClone(ops);
   assert.deepEqual(reviewRepairStructure(original, candidate, ops, next), [
-    "table.scada_identities", "table.scada_project_release_events",
+    "table.scada_identities",
+    "table.scada_project_release_events",
   ]);
   assert.deepEqual(ops, before);
 });
@@ -72,11 +91,21 @@ void test("仅允许两项目标谓词精确变化并保持其余结构操作原
 void test("拒绝目标谓词之外的检查参数、SQL 或操作分类变化", () => {
   const { original, candidate, ops, next } = fixture();
   for (const mutate of [
-    (copy) => { copy[0].precheck[0].sql = "SELECT true"; },
-    (copy) => { copy[1].postcheck[0].params.push("额外参数"); },
-    (copy) => { copy[2].execute[0].sql += "; DROP TABLE example_2"; },
-    (copy) => { copy[2].operationClass = "destructive"; },
-    (copy) => { copy[0].label = "未批准描述"; },
+    (copy) => {
+      copy[0].precheck[0].sql = "SELECT true";
+    },
+    (copy) => {
+      copy[1].postcheck[0].params.push("额外参数");
+    },
+    (copy) => {
+      copy[2].execute[0].sql += "; DROP TABLE example_2";
+    },
+    (copy) => {
+      copy[2].operationClass = "destructive";
+    },
+    (copy) => {
+      copy[0].label = "未批准描述";
+    },
   ]) {
     const copy = structuredClone(next);
     mutate(copy);
@@ -108,11 +137,15 @@ void test("拒绝非固定目标契约及其他契约字段漂移", () => {
 void test("拒绝伪造或缺失的固定修复文件证据", () => {
   assert.equal(Object.keys(repairInputHashes).length, 3);
   assert.throws(() => requireRepairInputs({}), /文件指纹不一致/);
-  assert.throws(() => requireRepairInputs({
-    "contract.prisma": Buffer.from("// 测试修复源码"),
-    "contract.json": Buffer.from(JSON.stringify({ storage: { storageHash: repairHash } })),
-    "contract.d.ts": Buffer.from("// 测试修复声明"),
-  }), /文件指纹不一致/);
+  assert.throws(
+    () =>
+      requireRepairInputs({
+        "contract.prisma": Buffer.from("// 测试修复源码"),
+        "contract.json": Buffer.from(JSON.stringify({ storage: { storageHash: repairHash } })),
+        "contract.d.ts": Buffer.from("// 测试修复声明"),
+      }),
+    /文件指纹不一致/,
+  );
 });
 
 void test("文件证据排序稳定并覆盖诊断、配置和官方迁移标识", () => {
@@ -120,10 +153,23 @@ void test("文件证据排序稳定并覆盖诊断、配置和官方迁移标识
   const b = Buffer.from("测试诊断");
   const hash = "a".repeat(64);
   const report = fingerprintRepairPackage({ "b.txt": b, "a.txt": a }, { "plan.ts": a }, hash);
-  assert.equal(report.fingerprint, fingerprintRepairPackage({ "a.txt": a, "b.txt": b }, { "plan.ts": a }, hash).fingerprint);
-  assert.notEqual(report.fingerprint, fingerprintRepairPackage({ "a.txt": a, "b.txt": a }, { "plan.ts": a }, hash).fingerprint);
-  assert.notEqual(report.fingerprint, fingerprintRepairPackage({ "a.txt": a, "b.txt": b }, { "plan.ts": b }, hash).fingerprint);
-  assert.notEqual(report.fingerprint, fingerprintRepairPackage({ "a.txt": a, "b.txt": b }, { "plan.ts": a }, "b".repeat(64)).fingerprint);
+  assert.equal(
+    report.fingerprint,
+    fingerprintRepairPackage({ "a.txt": a, "b.txt": b }, { "plan.ts": a }, hash).fingerprint,
+  );
+  assert.notEqual(
+    report.fingerprint,
+    fingerprintRepairPackage({ "a.txt": a, "b.txt": a }, { "plan.ts": a }, hash).fingerprint,
+  );
+  assert.notEqual(
+    report.fingerprint,
+    fingerprintRepairPackage({ "a.txt": a, "b.txt": b }, { "plan.ts": b }, hash).fingerprint,
+  );
+  assert.notEqual(
+    report.fingerprint,
+    fingerprintRepairPackage({ "a.txt": a, "b.txt": b }, { "plan.ts": a }, "b".repeat(64))
+      .fingerprint,
+  );
   assert.throws(() => fingerprintRepairPackage({}, {}, "伪造标识"), /官方新迁移标识无效/);
 });
 
@@ -139,12 +185,26 @@ function withPlan(run) {
     const operation = { id: "table.example", label: "测试新增表", operationClass: "additive" };
     const sql = "CREATE TABLE example ()";
     const plan = {
-      kind: "result", commandId: "migration.plan",
-      envelope: { commandId: "migration.plan", ok: true, exitCode: 0, diagnostics: [], result: {
-        ok: true, noOp: false, from: null, to: repairHash, dir: migration,
-        appliedStatements: [], temporaryValues: [], emittedExtensionDirs: [],
-        operations: [operation], preview: { statements: [{ text: sql, language: "sql" }] },
-      } },
+      kind: "result",
+      commandId: "migration.plan",
+      envelope: {
+        commandId: "migration.plan",
+        ok: true,
+        exitCode: 0,
+        diagnostics: [],
+        result: {
+          ok: true,
+          noOp: false,
+          from: null,
+          to: repairHash,
+          dir: migration,
+          appliedStatements: [],
+          temporaryValues: [],
+          emittedExtensionDirs: [],
+          operations: [operation],
+          preview: { statements: [{ text: sql, language: "sql" }] },
+        },
+      },
     };
     for (const path of [output, snapshot]) {
       writeFileSync(join(path, "contract.json"), nativeText);
@@ -154,13 +214,35 @@ function withPlan(run) {
     writeFileSync(join(output, "plan.json"), JSON.stringify(plan));
     writeFileSync(join(output, "plan.stderr.txt"), "");
     writeFileSync(join(migration, "migration.ts"), "// 测试迁移源码\n");
-    writeFileSync(join(migration, "migration.json"), JSON.stringify({
-      from: null, to: repairHash, providedInvariants: [], migrationHash: "a".repeat(64),
-    }));
-    writeFileSync(join(migration, "ops.json"), JSON.stringify([{
-      ...operation, target: { id: "postgres" }, precheck: [], postcheck: [], execute: [{ sql }],
-    }]));
-    const inspect = () => inspectOfflinePackage(root, output, nativeText, repairHash, /^\d{8}T\d{4}_scada_native_check_repair$/u);
+    writeFileSync(
+      join(migration, "migration.json"),
+      JSON.stringify({
+        from: null,
+        to: repairHash,
+        providedInvariants: [],
+        migrationHash: "a".repeat(64),
+      }),
+    );
+    writeFileSync(
+      join(migration, "ops.json"),
+      JSON.stringify([
+        {
+          ...operation,
+          target: { id: "postgres" },
+          precheck: [],
+          postcheck: [],
+          execute: [{ sql }],
+        },
+      ]),
+    );
+    const inspect = () =>
+      inspectOfflinePackage(
+        root,
+        output,
+        nativeText,
+        repairHash,
+        /^\d{8}T\d{4}_scada_native_check_repair$/u,
+      );
     run({ output, snapshot, plan, inspect });
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -188,7 +270,10 @@ void test("共享离线检查拒绝旧目标、错误快照和非空起点", () 
     assert.throws(inspect, /起点、目标或结果不一致/);
     plan.envelope.result.to = repairHash;
     writeFileSync(join(output, "plan.json"), JSON.stringify(plan));
-    writeFileSync(join(snapshot, "contract.json"), JSON.stringify({ storage: { storageHash: nativeHash } }));
+    writeFileSync(
+      join(snapshot, "contract.json"),
+      JSON.stringify({ storage: { storageHash: nativeHash } }),
+    );
     assert.throws(inspect, /目标快照/);
   });
 });

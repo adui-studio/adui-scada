@@ -54,8 +54,10 @@ import {
 const confirmation = "--confirm-offline-check-repair-package";
 const originalFingerprint = "02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e";
 const configHashes = {
-  "prisma8-native-check-repair-plan.config.ts": "939fa70ad1c4738e805b02cc797baa4e0c54c1575cc872fa9f27557fbfe454f7",
-  "prisma8-native-check-repair-complete.config.ts": "e83ff5d3d0462f2365ba268421ab82f0beff244eb36a50cb4d6cd244c3e8d63b",
+  "prisma8-native-check-repair-plan.config.ts":
+    "939fa70ad1c4738e805b02cc797baa4e0c54c1575cc872fa9f27557fbfe454f7",
+  "prisma8-native-check-repair-complete.config.ts":
+    "e83ff5d3d0462f2365ba268421ab82f0beff244eb36a50cb4d6cd244c3e8d63b",
 };
 const contractNames = Object.keys(repairInputHashes);
 const planLogs = ["plan.json", "plan.stderr.txt"];
@@ -66,7 +68,10 @@ function requireMatch(condition, message) {
 }
 
 function requireDirectory(path) {
-  requireMatch(lstatSync(path).isDirectory() && realpathSync(path) === path, "离线目录包含链接或不是目录");
+  requireMatch(
+    lstatSync(path).isDirectory() && realpathSync(path) === path,
+    "离线目录包含链接或不是目录",
+  );
 }
 
 function parse(files, name) {
@@ -85,19 +90,28 @@ function runOffline(root, output, args, logs) {
   requireDirectory(output);
   writeFileSync(join(output, logs[0]), result.stdout ?? "", { flag: "wx" });
   writeFileSync(join(output, logs[1]), result.stderr ?? "", { flag: "wx" });
-  requireMatch(!result.error && result.status === 0, "官方离线阶段失败：" + stage + "；保留诊断，不自动重试");
+  requireMatch(
+    !result.error && result.status === 0,
+    "官方离线阶段失败：" + stage + "；保留诊断，不自动重试",
+  );
   return result.stdout;
 }
 
 function main() {
-  requireMatch(process.argv.length === 3 && process.argv[2] === confirmation, "必须明确确认仅离线生成修复迁移包，不接受其他参数");
+  requireMatch(
+    process.argv.length === 3 && process.argv[2] === confirmation,
+    "必须明确确认仅离线生成修复迁移包，不接受其他参数",
+  );
   stage = "固定原件、修复契约、第四座副本及配置核验";
   const root = realpathSync(resolve(import.meta.dirname, "../.."));
   const server = join(root, "apps", "server");
   const parent = join(server, ".artifacts");
   const output = join(parent, repairDirectory);
   requireDirectory(parent);
-  requireMatch(!lstatSync(output, { throwIfNoEntry: false }), "独立修复迁移包已存在，禁止覆盖或自动清理");
+  requireMatch(
+    !lstatSync(output, { throwIfNoEntry: false }),
+    "独立修复迁移包已存在，禁止覆盖或自动清理",
+  );
   const inputs = readBaselineInputs(root, true);
   const oldDir = join(root, ".artifacts", "prisma8-native-baseline");
   const oldFiles = readAuditedFiles(oldDir);
@@ -108,16 +122,22 @@ function main() {
   const contract = requireRepairInputs(repairFiles);
   reviewCheckRepairContract(oldContract, contract);
   requireMatch(
-    buildCheckRepairSource(oldFiles["contract.prisma"].toString("utf8"), oldContract) === repairFiles["contract.prisma"].toString("utf8"),
+    buildCheckRepairSource(oldFiles["contract.prisma"].toString("utf8"), oldContract) ===
+      repairFiles["contract.prisma"].toString("utf8"),
     "修复契约源码与已审查的两项谓词替换不一致",
   );
   requireDeclarationHashes(repairFiles["contract.d.ts"].toString("utf8"), contract);
   void contractFromJson(contract);
-  const configs = Object.fromEntries(Object.entries(configHashes).map(([name, hash]) => {
-    const bytes = readCandidateRegular(join(server, name));
-    requireMatch(createHash("sha256").update(bytes).digest("hex") === hash, "独立离线配置原文变化");
-    return [name, bytes];
-  }));
+  const configs = Object.fromEntries(
+    Object.entries(configHashes).map(([name, hash]) => {
+      const bytes = readCandidateRegular(join(server, name));
+      requireMatch(
+        createHash("sha256").update(bytes).digest("hex") === hash,
+        "独立离线配置原文变化",
+      );
+      return [name, bytes];
+    }),
+  );
   const baseline = loadMigrationBaseline();
   const audited = reviewAuditedBaseline(root, baseline, oldFiles["contract.json"].toString("utf8"));
   const oldOps = parse(oldFiles, packageDirectory + "/ops.json");
@@ -126,16 +146,29 @@ function main() {
   const previousConfig = join(server, "prisma8-native-baseline-comments.config.ts");
   const preserve = () => {
     requirePreservedInputs(root, inputs);
-    const current = reviewAuditedBaseline(root, loadMigrationBaseline(), oldFiles["contract.json"].toString("utf8"));
-    requireMatch(isDeepStrictEqual(current, audited) && requireLockedCandidateEvidence(root) === originalFingerprint, "历史原件或固定候选发生变化");
+    const current = reviewAuditedBaseline(
+      root,
+      loadMigrationBaseline(),
+      oldFiles["contract.json"].toString("utf8"),
+    );
     requireMatch(
-      requireAcceptedCandidateEvidence(fingerprintCandidateFiles(
-        readExactCandidateTree(fourth, fourthNames),
-        readCandidateRegular(previousConfig),
-      )) === originalFingerprint,
+      isDeepStrictEqual(current, audited) &&
+        requireLockedCandidateEvidence(root) === originalFingerprint,
+      "历史原件或固定候选发生变化",
+    );
+    requireMatch(
+      requireAcceptedCandidateEvidence(
+        fingerprintCandidateFiles(
+          readExactCandidateTree(fourth, fourthNames),
+          readCandidateRegular(previousConfig),
+        ),
+      ) === originalFingerprint,
       "第四座保留副本发生变化",
     );
-    requireMatch(isDeepStrictEqual(readExactCandidateTree(repairDir, repairNames), repairFiles), "已验收修复契约或诊断发生变化");
+    requireMatch(
+      isDeepStrictEqual(readExactCandidateTree(repairDir, repairNames), repairFiles),
+      "已验收修复契约或诊断发生变化",
+    );
     for (const [name, bytes] of Object.entries(configs)) {
       requireMatch(readCandidateRegular(join(server, name)).equals(bytes), "独立离线配置发生变化");
     }
@@ -155,35 +188,71 @@ function main() {
     for (const name of contractNames) {
       writeFileSync(join(planDir, name), repairFiles[name], { flag: "wx" });
     }
-    const planText = runOffline(root, planDir, [
-      entry, "migration", "plan", "--from", "@empty", "--name", repairSlug,
-      "--json", "--no-interactive", "--config", planConfig,
-    ], planLogs);
+    const planText = runOffline(
+      root,
+      planDir,
+      [
+        entry,
+        "migration",
+        "plan",
+        "--from",
+        "@empty",
+        "--name",
+        repairSlug,
+        "--json",
+        "--no-interactive",
+        "--config",
+        planConfig,
+      ],
+      planLogs,
+    );
     preserve();
-    const structural = inspectOfflinePackage(root, planDir, repairFiles["contract.json"].toString("utf8"), repairHash, /^\d{8}T\d{4}_scada_native_check_repair$/u);
+    const structural = inspectOfflinePackage(
+      root,
+      planDir,
+      repairFiles["contract.json"].toString("utf8"),
+      repairHash,
+      /^\d{8}T\d{4}_scada_native_check_repair$/u,
+    );
     const migrationDir = "migrations/app/" + basename(JSON.parse(planText).envelope.result.dir);
     const snapshotDir = "migrations/snapshots/" + repairHash;
     const manifestName = migrationDir + "/migration.json";
     const sourceName = migrationDir + "/migration.ts";
     const opsName = migrationDir + "/ops.json";
-    const planNames = [...contractNames, ...planLogs, manifestName, sourceName, opsName,
-      snapshotDir + "/contract.json", snapshotDir + "/contract.d.ts"];
+    const planNames = [
+      ...contractNames,
+      ...planLogs,
+      manifestName,
+      sourceName,
+      opsName,
+      snapshotDir + "/contract.json",
+      snapshotDir + "/contract.d.ts",
+    ];
     const planFiles = readExactCandidateTree(planDir, planNames);
     for (const name of contractNames) {
       requireMatch(planFiles[name].equals(repairFiles[name]), "规划改变了固定修复契约");
     }
     requireDeclarationHashes(planFiles[snapshotDir + "/contract.d.ts"].toString("utf8"), contract);
-    const original = { manifest: parse(planFiles, manifestName), operations: parse(planFiles, opsName) };
+    const original = {
+      manifest: parse(planFiles, manifestName),
+      operations: parse(planFiles, opsName),
+    };
     stage = "四十六项结构操作与原包逐项对照";
     const tables = contract.storage.namespaces.public.entries.table;
-    requireMatch(structural.operations === 46 && reviewStatements(tables, original.operations) === 46, "修复结构操作数量不一致");
+    requireMatch(
+      structural.operations === 46 && reviewStatements(tables, original.operations) === 46,
+      "修复结构操作数量不一致",
+    );
     const changed = reviewRepairStructure(oldContract, contract, oldOps, original.operations);
     const comments = buildCommentOperations(audited.preview);
     requireMatch(comments.length === 119 && audited.comments === 119, "历史中文注释数量不一致");
     const authoring = appendCommentOperations(planFiles[sourceName].toString("utf8"), comments);
     stage = "独立完整候选官方干跑";
     const copyNames = planNames.filter((name) => !planLogs.includes(name));
-    const expected = { ...Object.fromEntries(copyNames.map((name) => [name, planFiles[name]])), [sourceName]: Buffer.from(authoring) };
+    const expected = {
+      ...Object.fromEntries(copyNames.map((name) => [name, planFiles[name]])),
+      [sourceName]: Buffer.from(authoring),
+    };
     mkdirSync(completeDir);
     for (const name of copyNames) {
       const path = join(completeDir, name);
@@ -197,7 +266,10 @@ function main() {
       const stdout = runOffline(root, completeDir, args, logs);
       logNames.push(...logs);
       preserve();
-      requireMatch(isDeepStrictEqual(readExactCandidateTree(planDir, planNames), planFiles), "独立结构原包发生变化");
+      requireMatch(
+        isDeepStrictEqual(readExactCandidateTree(planDir, planNames), planFiles),
+        "独立结构原包发生变化",
+      );
       return stdout;
     };
     const readComplete = () => readExactCandidateTree(completeDir, [...copyNames, ...logNames]);
@@ -208,10 +280,15 @@ function main() {
       }
     };
     const migration = join(completeDir, sourceName);
-    const dryRun = parseDryRun(run("emit-dry-run", [migration, "--config", completeConfig, "--dry-run"]));
+    const dryRun = parseDryRun(
+      run("emit-dry-run", [migration, "--config", completeConfig, "--dry-run"]),
+    );
     requireCopy(readComplete());
     const dryReview = reviewCommentEmission(original, dryRun, comments);
-    requireMatch(dryReview.operations === 165 && dryReview.migrationHash !== acceptedMigrationHash, "完整操作数量或官方新迁移标识不一致");
+    requireMatch(
+      dryReview.operations === 165 && dryReview.migrationHash !== acceptedMigrationHash,
+      "完整操作数量或官方新迁移标识不一致",
+    );
     stage = "一百六十五项完整操作官方自发射";
     run("emit", [migration, "--config", completeConfig]);
     const emitted = readComplete();
@@ -227,12 +304,27 @@ function main() {
       "完整迁移前后置检查覆盖变化",
     );
     stage = "官方迁移完整性检查及证据固定";
-    requireMigrationCheck(run("migration-check", [
-      entry, "migration", "check", "--space", "app", "--json", "--config", completeConfig,
-    ]));
+    requireMigrationCheck(
+      run("migration-check", [
+        entry,
+        "migration",
+        "check",
+        "--space",
+        "app",
+        "--json",
+        "--config",
+        completeConfig,
+      ]),
+    );
     const final = readComplete();
-    requireMatch(Object.entries(emitted).every(([name, bytes]) => final[name].equals(bytes)), "官方完整性检查改变了已有证据");
-    const allNames = [...planNames.map((name) => "plan/" + name), ...Object.keys(final).map((name) => "complete/" + name)];
+    requireMatch(
+      Object.entries(emitted).every(([name, bytes]) => final[name].equals(bytes)),
+      "官方完整性检查改变了已有证据",
+    );
+    const allNames = [
+      ...planNames.map((name) => "plan/" + name),
+      ...Object.keys(final).map((name) => "complete/" + name),
+    ];
     const allFiles = readExactCandidateTree(output, allNames);
     requireMatch(
       planNames.every((name) => allFiles["plan/" + name].equals(planFiles[name])) &&
@@ -260,7 +352,10 @@ function main() {
       evidence: fingerprintRepairPackage(allFiles, configs, review.migrationHash),
     };
   } catch (error) {
-    failure = error instanceof RepairPackageError ? error.message : "离线阶段失败：" + stage + "；内部详情已脱敏";
+    failure =
+      error instanceof RepairPackageError
+        ? error.message
+        : "离线阶段失败：" + stage + "；内部详情已脱敏";
   }
   stage = "全部原件最终复核";
   preserve();
@@ -271,6 +366,10 @@ function main() {
 try {
   main();
 } catch (error) {
-  console.error(error instanceof RepairPackageError ? error.message : "离线修复迁移包失败：" + stage + "；保留证据");
+  console.error(
+    error instanceof RepairPackageError
+      ? error.message
+      : "离线修复迁移包失败：" + stage + "；保留证据",
+  );
   process.exitCode = 1;
 }
