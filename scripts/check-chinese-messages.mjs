@@ -9,6 +9,7 @@ const excludedPaths = new Set([
   "apps/server/src/generated/prisma8",
   // 独立离线候选包含官方迁移脚手架和快照声明，不属于自有文案。
   "apps/server/.artifacts/prisma8-native-baseline-comments",
+  "apps/server/.artifacts/prisma8-native-repro-candidate",
 ]);
 const paths = [".env.example", ".editorconfig", ".gitattributes", ".gitignore", ".dockerignore"];
 const extensions = /\.(?:ts|tsx|js|mjs|vue|css|rs|toml|yaml|yml|html)$/;
