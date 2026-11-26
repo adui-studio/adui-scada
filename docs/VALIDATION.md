@@ -5179,3 +5179,11 @@ Windows 验收：新专项 10 项、旧修复包专项 8 项、旧候选专项 7
 本批不包含数据库客户端、SQL 执行器、创建容器或新数据库命令。未来如另获授权，须在独立 PostgreSQL 17.11（170011）、同镜像及经核实的排序规则环境，以相同 public 表名分别创建最小关系并在阶段间回滚恢复空目录；通过 pg_catalog 核对约束元数据及精确表达式，用受控合成输入和独立保存点检查结果及错误码，核实回滚和退出，不访问业务数据。实际报告采集及来源认证、隔离目标身份、一次性执行门禁另批实现并评审。观察判定器严格要求固定计划指纹、版本、六个有序阶段、元数据、提交与提取原文、48 个结果，只输出匹配分类和计数，不回显任意输入；匹配仍不证明来源真实，始终 observationSourceAuthenticated/roundTripVerified/historicalAdoptionVerified/databaseExecutionAllowed/signingAllowed/deploymentAllowed=false。四座现存数据库及证据持续冻结，不创建第五座，不启用旧入口，不签名、部署、切换正式 Provider 或修改历史迁移。ADR 保持 Proposed。
 
 Windows 在原工作区先执行 `pnpm run test:prisma8:native:baseline:check-roundtrip`、既有固定复验专项与共享配置、Vite+、中文文案、文档门禁，再在干净提交执行 `pnpm run db:prisma8:native:baseline:check-roundtrip:plan`；预期 NATIVE_CHECK_ROUNDTRIP_PLAN_REVIEW_REQUIRED、六阶段及固定证据指纹，所有数据库执行及签名/部署许可为 false。失败保留现场。不得把计划输出当作真实观察。
+
+### 2026-11-26 · 固定 CHECK 往返事务模拟与隔离边界
+
+PR #234 已按维护者明确授权合入集成分支，Squash 提交 `1641e2277706c00903d6350b7aa803d3adb20d36`。维护者 Windows 实际 HEAD `92d32648ff23e7d1dd501fc5635a0691630d66d7` 的四组专项 33/33（8+10+8+7）、共享配置、Vite+ 575 格式文件/414 受检文件零警告错误、中文 441 文件、Markdown 96 份均通过；增量退出码 0，真实固定包离线计划退出码 0，工作区干净。远端相对交付 HEAD 仅三份源码排版调整，未返回额外 CI 记录。真实计划指纹 `17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a`，六阶段 48 个计划输入，所有执行、真实往返、接管、签名和部署许可均 false。
+
+协作容器 Node.js 22.16.0 实际运行新增纯模拟测试 12/12、两文件 node --check 通过，远端 Git Blob 与本地一致：核心 `3cbd314dddc3099db0d65783ca81639d25b96683`、测试 `07f4f8b43df0a7fcfc4f802bd4d17a4a056a0da9`。模拟覆盖固定指纹与篡改、身份及排序规则、六阶段 48 次参数化保存点、真实目录输出的模拟漂移、错误约束与列、错误 SQLSTATE、事务开始失败、保存点回滚异常、外层回滚失败、后置边界漂移及失败停止。没有完整仓库工具链、固定 RC 产物或 PostgreSQL 服务；Windows Vite+、文案、文档、原固定包真实离线计划复验尚待验收。48 项为模拟输入结果，不是数据库实际验证。
+
+新增 `pnpm run test:prisma8:native:baseline:check-roundtrip-execution`（12 项纯模拟，纳入 ready）。原工作区同时复验 `pnpm run test:prisma8:native:baseline:check-roundtrip`、`pnpm run test:prisma8:native:baseline:check-repair-package-review`、共享配置、Vite+、中文文案、Markdown；格式化正常提交后工作区干净，再执行 `pnpm run db:prisma8:native:baseline:check-roundtrip:plan`。计划必须仍为已验收指纹，全部许可 false，退出 0。不要连接任何数据库，不提供新实例创建或执行命令；若不符停止保留现场。实际隔离实例准备和真实运行须分别明确授权。

@@ -257,3 +257,13 @@ E-152 仅修复证据复核控制流，保持固定证据、只读及迁移冻�
 本批不包含数据库客户端、SQL 执行器、创建容器或新数据库命令。未来如另获授权，须在独立 PostgreSQL 17.11（170011）、同镜像及经核实的排序规则环境，以相同 public 表名分别创建最小关系并在阶段间回滚恢复空目录；通过 pg_catalog 核对约束元数据及精确表达式，用受控合成输入和独立保存点检查结果及错误码，核实回滚和退出，不访问业务数据。实际报告采集及来源认证、隔离目标身份、一次性执行门禁另批实现并评审。观察判定器严格要求固定计划指纹、版本、六个有序阶段、元数据、提交与提取原文、48 个结果，只输出匹配分类和计数，不回显任意输入；匹配仍不证明来源真实，始终 observationSourceAuthenticated/roundTripVerified/historicalAdoptionVerified/databaseExecutionAllowed/signingAllowed/deploymentAllowed=false。四座现存数据库及证据持续冻结，不创建第五座，不启用旧入口，不签名、部署、切换正式 Provider 或修改历史迁移。ADR 保持 Proposed。
 
 协作容器 Node.js 22.16.0 实际运行新增纯离线回归 8/8，通过源文件及测试 node --check（既有契约修复模块 Git Blob f1c0ce1e1b8c3df6cc4e7f4892b73387d16e4047 与远端一致）；本地新增核心 Blob 3b1eb946c0315b6e9e1184190072a7dbbbb386cd、测试 Blob 9cc21795c6c356becb38c935e9f18c98c5ef3b8a 与远端一致。未取得固定 RC 完整运行环境、真实候选和 Vite+，未执行服务端入口真实离线计划、全仓检查或任何 PostgreSQL 操作，48 项是待执行的真实实验输入而非已通过数据库用例。
+
+### 2026-11-26 · 固定 CHECK 往返事务模拟与隔离边界
+
+PR #234 已按维护者明确授权合入集成分支，Squash 提交 `1641e2277706c00903d6350b7aa803d3adb20d36`。维护者 Windows 实际 HEAD `92d32648ff23e7d1dd501fc5635a0691630d66d7` 的四组专项 33/33（8+10+8+7）、共享配置、Vite+ 575 格式文件/414 受检文件零警告错误、中文 441 文件、Markdown 96 份均通过；增量退出码 0，真实固定包离线计划退出码 0，工作区干净。远端相对交付 HEAD 仅三份源码排版调整，未返回额外 CI 记录。真实计划指纹 `17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a`，六阶段 48 个计划输入，所有执行、真实往返、接管、签名和部署许可均 false。
+
+本批将真实验收指纹固定到既有离线计划入口和事务协议模拟器，复算完整 payload 并要求所有许可仍为 false；计划篡改后重算亦拒绝。拟议第五座仅为模拟配置：PostgreSQL 17.11（170011），沿用第四座的镜像 ID，独立容器 `adui-scada-prisma8-check-roundtrip`、同名前缀独立卷 `-data` 与网络 `-net`、仅回环 `127.0.0.1:15434`、数据库 `adui_scada_fresh_prisma8_roundtrip`、角色 `adui_scada_native_roundtrip`。端口可用性与实际镜像、卷、网络、排序规则及集群身份尚未核验。模拟边界要求本机 Linux Docker、独立资源、容器与 TCP 集群标识相等且不同于四座冻结库的标识（允许旧库共享集群）、参照与目标排序规则元数据完全相同、23 类空库及无其他会话、数据库所有权与默认只读。模拟事实不认证来源，真实采集和同一连接的事务内复核、独占一次性许可及真实证据留存仍未实现。
+
+模拟器按两项目标各 legacy、repair、replay 六阶段发出固定 BEGIN / CREATE TABLE / 目录反向提取；核对真实计划预期的精确谓词、约束名、列、类型、非空、验证、本地、普通持久关系及唯一单列 CHECK 等元数据，replay 只接受上一 repair 目录返回且已精确核验的表达式。每个合成值单独 SAVEPOINT，参数化 INSERT RETURNING，接受必须返回一行精确值；23514 必须对应本表指定 CHECK，23502 必须对应本表指定列。每项均 ROLLBACK TO SAVEPOINT 再 RELEASE；每阶段外层仅 ROLLBACK，确认命令状态并重新检查空库和身份。失败停止并尽力回滚，独立保留回滚与后置核验失败分类，不回显任意异常原文。该协议仅由注入的模拟适配器运行，没有真实驱动、Docker 或数据库入口，报告为 NATIVE_CHECK_ROUNDTRIP_EXECUTION_SIMULATED，所有真实许可和来源认证均 false。没有运行任何 PostgreSQL SQL、创建第五座、访问或修改四座冻结库、删除证据、重试旧迁移、签名或部署；正式 Prisma 7 不变，ADR 保持 Proposed。
+
+协作容器 Node.js 22.16.0 实际运行新增纯模拟测试 12/12、两文件 node --check 通过，远端 Git Blob 与本地一致：核心 `3cbd314dddc3099db0d65783ca81639d25b96683`、测试 `07f4f8b43df0a7fcfc4f802bd4d17a4a056a0da9`。模拟覆盖固定指纹与篡改、身份及排序规则、六阶段 48 次参数化保存点、真实目录输出的模拟漂移、错误约束与列、错误 SQLSTATE、事务开始失败、保存点回滚异常、外层回滚失败、后置边界漂移及失败停止。没有完整仓库工具链、固定 RC 产物或 PostgreSQL 服务；Windows Vite+、文案、文档、原固定包真实离线计划复验尚待验收。48 项为模拟输入结果，不是数据库实际验证。
