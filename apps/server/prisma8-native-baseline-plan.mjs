@@ -1,4 +1,5 @@
 import { readFileSync, realpathSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { contractFromJson } from "@prisma/orm-postgres/static";
@@ -26,9 +27,17 @@ import {
 } from "../../scripts/prisma8-native-baseline-ddl.mjs";
 import { CommentEmissionError } from "../../scripts/prisma8-native-baseline-comments.mjs";
 import {
+  requireLockedCandidateEvidence,
   runCandidateReview,
   runCommentEmission,
 } from "../../scripts/prisma8-native-baseline-comment-emission.mjs";
+import {
+  inspectNativeEmptyDatabase,
+  nativeEmptyClientOptions,
+  nativeEmptyConfirmation,
+  nativeEmptyUrlVariable,
+  NativePreflightError,
+} from "../../scripts/prisma8-native-baseline-preflight.mjs";
 
 function requireCondition(condition, message) {
   if (!condition) throw new BaselineError(message);
@@ -36,12 +45,17 @@ function requireCondition(condition, message) {
 
 let stage = "确认离线授权";
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
   const reviewDdl = args.length === 1 && args[0] === "--review-baseline-ddl";
   const reviewComments = args.length === 1 && args[0] === "--review-baseline-comments";
   const emitComments = args.length === 1 && args[0] === "--confirm-offline-comments";
-  const reviewCandidate = args.length === 1 && args[0] === "--review-comment-candidate";
+  const preflight = args.length === 1 && args[0] === nativeEmptyConfirmation;
+  const reviewCandidate =
+    preflight || (args.length === 1 && args[0] === "--review-comment-candidate");
+  const dbOptions = preflight
+    ? nativeEmptyClientOptions(process.env[nativeEmptyUrlVariable], args)
+    : undefined;
   const reviewExisting =
     reviewDdl ||
     reviewComments ||
@@ -170,11 +184,19 @@ function main() {
     if (reviewCandidate) {
       stage = "已验收独立候选部署前离线复验";
       let candidate;
+      let empty;
       try {
         candidate = runCandidateReview(root, entry, audited);
+        if (dbOptions) {
+          stage = "第三座专用空库只读预检";
+          // 仅在固定候选复验成功之后解析数据库驱动并创建连接。
+          const { Client } = createRequire(import.meta.url)("pg");
+          empty = await inspectNativeEmptyDatabase(new Client(dbOptions), dbOptions.user);
+        }
       } finally {
         reviewExistingBaseline(root, inputs);
         reviewAuditedBaseline(root, loadMigrationBaseline(), nativeText);
+        if (dbOptions && candidate) requireLockedCandidateEvidence(root);
       }
       console.info("固定独立候选文件数量：" + candidate.evidence.files.length);
       console.info("完整迁移操作数量：" + candidate.operations);
@@ -183,19 +205,29 @@ function main() {
       console.info("独立候选证据指纹：" + candidate.evidence.fingerprint);
       console.info("离线状态：CANDIDATE_PREFLIGHT_REVIEW_REQUIRED；签名许可：否；部署许可：否");
       process.stdout.write(JSON.stringify(candidate.evidence, null, 2) + "\n");
+      if (empty) {
+        console.info("第三座专用库：" + empty.database);
+        console.info("实际 PostgreSQL 版本号：" + empty.serverVersion);
+        console.info("受检空库类别：" + empty.checkedEmptyCategories + " 项全部通过");
+        console.info("只读事务已回滚并关闭连接，十四文件证据及原件保持不变");
+        console.info(
+          "预检状态：NATIVE_EMPTY_PREFLIGHT_REVIEW_REQUIRED；签名许可：否；部署许可：否",
+        );
+      }
     }
   }
 }
 
 try {
-  main();
+  await main();
 } catch (error) {
   console.error(
     error instanceof BaselineError ||
       error instanceof DdlReviewError ||
-      error instanceof CommentEmissionError
+      error instanceof CommentEmissionError ||
+      error instanceof NativePreflightError
       ? error.message
-      : "离线原生基线阶段失败：" + stage + "；保留证据供人工检查",
+      : "原生基线阶段失败：" + stage + "；保留证据供人工检查",
   );
   process.exitCode = 1;
 }
