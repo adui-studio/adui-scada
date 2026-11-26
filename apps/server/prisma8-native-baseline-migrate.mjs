@@ -131,7 +131,10 @@ async function main() {
   const preview = (applied) => {
     stage = applied ? "迁移后剩余路径检查" : "官方在线迁移路径预览";
     requireNativeMigrationPath(
-      requireMigrationResult(run(migrationArguments(entry, config, "预览"), "db.migrate"), "db.migrate"),
+      requireMigrationResult(
+        run(migrationArguments(entry, config, "预览"), "db.migrate"),
+        "db.migrate",
+      ),
       applied,
     );
   };
@@ -150,7 +153,10 @@ async function main() {
   stage = "官方独立基线迁移";
   writeStarted = true;
   const operations = requireNativeAppliedResult(
-    requireMigrationResult(run(migrationArguments(entry, config, "迁移"), "db.migrate"), "db.migrate"),
+    requireMigrationResult(
+      run(migrationArguments(entry, config, "迁移"), "db.migrate"),
+      "db.migrate",
+    ),
   );
   console.info("官方报告已应用唯一基线，实际执行操作数量：" + operations);
   stage = "官方契约校验";

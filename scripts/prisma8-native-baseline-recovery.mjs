@@ -3,21 +3,68 @@ import { nativeEmptyDatabaseName } from "./prisma8-native-baseline-preflight.mjs
 
 export const migrationStateConfirmation = "--inspect-adui-scada-fresh-prisma8-native-state";
 const migrationHash = "e6b95ed88834dce3f6448445a5ba12a00ba34c8e5c68f4335751659b15a77f17";
-const systemCodes = new Set(["ETIMEDOUT", "ENOBUFS", "ENOENT", "EACCES", "EPERM", "ECONNRESET", "ECONNREFUSED", "EPIPE"]);
+const systemCodes = new Set([
+  "ETIMEDOUT",
+  "ENOBUFS",
+  "ENOENT",
+  "EACCES",
+  "EPERM",
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "EPIPE",
+]);
 const prismaCodes = new Set([
-  "MIGRATION.PRECHECK_FAILED", "MIGRATION.POSTCHECK_FAILED", "MIGRATION.EXECUTION_FAILED",
-  "MIGRATION.RUNNER_FAILED", "MIGRATION.SCHEMA_VERIFY_FAILED", "MIGRATION.HASH_MISMATCH",
-  "MIGRATION.MARKER_MISMATCH", "MIGRATION.MARKER_NOT_IN_HISTORY", "MIGRATION.PATH_UNREACHABLE",
-  "MIGRATION.CHANGE_POLICY_FORBIDS", "MIGRATION.DATA_PROTECTION_FORBIDS", "MIGRATION.POLICY_MISMATCH",
-  "MIGRATION.UNFILLED_PLACEHOLDER", "MIGRATION.FILE_MISSING", "MIGRATION.SNAPSHOT_MISSING",
-  "MIGRATION.PLANNING_FAILED", "MIGRATION.INVALID_DEFAULT_EXPORT",
-  "CONTRACT.MARKER_MISSING", "CONTRACT.MARKER_MISMATCH", "CONTRACT.SCHEMA_VERIFICATION_FAILED",
-  "CONTRACT.TARGET_MISMATCH", "CONFIG.DB_CONNECTION_REQUIRED", "CONFIG.VALIDATION_FAILED",
-  "CLI.INVALID_ARGUMENTS", "DRIVER.NOT_CONNECTED",
+  "MIGRATION.PRECHECK_FAILED",
+  "MIGRATION.POSTCHECK_FAILED",
+  "MIGRATION.EXECUTION_FAILED",
+  "MIGRATION.RUNNER_FAILED",
+  "MIGRATION.SCHEMA_VERIFY_FAILED",
+  "MIGRATION.HASH_MISMATCH",
+  "MIGRATION.MARKER_MISMATCH",
+  "MIGRATION.MARKER_NOT_IN_HISTORY",
+  "MIGRATION.PATH_UNREACHABLE",
+  "MIGRATION.CHANGE_POLICY_FORBIDS",
+  "MIGRATION.DATA_PROTECTION_FORBIDS",
+  "MIGRATION.POLICY_MISMATCH",
+  "MIGRATION.UNFILLED_PLACEHOLDER",
+  "MIGRATION.FILE_MISSING",
+  "MIGRATION.SNAPSHOT_MISSING",
+  "MIGRATION.PLANNING_FAILED",
+  "MIGRATION.INVALID_DEFAULT_EXPORT",
+  "CONTRACT.MARKER_MISSING",
+  "CONTRACT.MARKER_MISMATCH",
+  "CONTRACT.SCHEMA_VERIFICATION_FAILED",
+  "CONTRACT.TARGET_MISMATCH",
+  "CONFIG.DB_CONNECTION_REQUIRED",
+  "CONFIG.VALIDATION_FAILED",
+  "CLI.INVALID_ARGUMENTS",
+  "DRIVER.NOT_CONNECTED",
 ]);
 const sqlStates = new Set([
-  "3D000", "3F000", "28P01", "28000", "42501", "42P01", "42703", "42704", "42601", "42P07", "42710",
-  "23502", "23503", "23505", "23514", "25006", "25P02", "40001", "40P01", "55P03", "57014", "53300", "57P03", "0A000",
+  "3D000",
+  "3F000",
+  "28P01",
+  "28000",
+  "42501",
+  "42P01",
+  "42703",
+  "42704",
+  "42601",
+  "42P07",
+  "42710",
+  "23502",
+  "23503",
+  "23505",
+  "23514",
+  "25006",
+  "25P02",
+  "40001",
+  "40P01",
+  "55P03",
+  "57014",
+  "53300",
+  "57P03",
+  "0A000",
 ]);
 
 export class NativeRecoveryError extends Error {}
@@ -54,16 +101,23 @@ export function describeNativeChildFailure(child, commandId) {
     try {
       documents = [JSON.parse(stream)];
     } catch {
-      documents = stream.trim().split(/\r?\n/u).flatMap((line) => {
-        try {
-          return [JSON.parse(line)];
-        } catch {
-          return [];
-        }
-      });
+      documents = stream
+        .trim()
+        .split(/\r?\n/u)
+        .flatMap((line) => {
+          try {
+            return [JSON.parse(line)];
+          } catch {
+            return [];
+          }
+        });
     }
     for (const document of documents) {
-      if (document?.kind === "result" && document.commandId === commandId && document.envelope?.commandId === commandId) {
+      if (
+        document?.kind === "result" &&
+        document.commandId === commandId &&
+        document.envelope?.commandId === commandId
+      ) {
         collect(document.envelope, 0);
       }
     }
@@ -71,9 +125,15 @@ export function describeNativeChildFailure(child, commandId) {
   const code = child.error?.code;
   const processCode = systemCodes.has(code) ? code : child.error ? "未知进程错误" : "无";
   const status = Number.isSafeInteger(child.status) ? String(child.status) : "未知";
-  return "独立迁移子进程未确认成功；子进程退出码：" + status +
-    "；进程错误：" + processCode + "；官方诊断：" + ([...codes].join("、") || "未取得白名单错误码") +
-    "；原始诊断不回显";
+  return (
+    "独立迁移子进程未确认成功；子进程退出码：" +
+    status +
+    "；进程错误：" +
+    processCode +
+    "；官方诊断：" +
+    ([...codes].join("、") || "未取得白名单错误码") +
+    "；原始诊断不回显"
+  );
 }
 
 const boundarySql = `SELECT pg_catalog.current_database()::text AS database_name,
@@ -106,7 +166,17 @@ const catalogSql = `WITH tables AS (
     EXISTS (SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'prisma_contract' AND c.relname = 'marker' AND c.relkind = 'r') AS marker_table,
     EXISTS (SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'prisma_contract' AND c.relname = 'ledger' AND c.relkind = 'r') AS ledger_table,
     EXISTS (SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = '_prisma_migrations') AS legacy_ledger`;
-const countKeys = ["tables", "columns", "primary_keys", "foreign_keys", "checks", "non_primary_indexes", "table_comments", "column_comments", "index_comments"];
+const countKeys = [
+  "tables",
+  "columns",
+  "primary_keys",
+  "foreign_keys",
+  "checks",
+  "non_primary_indexes",
+  "table_comments",
+  "column_comments",
+  "index_comments",
+];
 const flagKeys = ["marker_schema", "marker_table", "ledger_table", "legacy_ledger"];
 
 /** 只读取目录及固定标记字段；不读取业务行，不执行迁移或签名。 */
@@ -123,18 +193,46 @@ export async function inspectNativeMigrationState(client, expectedUser) {
     stage = "连接边界";
     const boundary = await client.query(boundarySql);
     const row = boundary.rows[0];
-    requireMatch(boundary.rows.length === 1 && row?.database_name === nativeEmptyDatabaseName && row.role_name === expectedUser && row.session_role === expectedUser && row.read_only === "on" && row.default_read_only === "on" && row.isolation === "repeatable read" && /^\d{6}$/u.test(row.server_version) && row.in_recovery === false && row.database_owner === true && row.other_sessions === false, "恢复检查实际数据库、所有者、只读事务或其他会话不符合预期");
+    requireMatch(
+      boundary.rows.length === 1 &&
+        row?.database_name === nativeEmptyDatabaseName &&
+        row.role_name === expectedUser &&
+        row.session_role === expectedUser &&
+        row.read_only === "on" &&
+        row.default_read_only === "on" &&
+        row.isolation === "repeatable read" &&
+        /^\d{6}$/u.test(row.server_version) &&
+        row.in_recovery === false &&
+        row.database_owner === true &&
+        row.other_sessions === false,
+      "恢复检查实际数据库、所有者、只读事务或其他会话不符合预期",
+    );
     stage = "目录统计";
     const result = await client.query(catalogSql);
     const catalog = result.rows[0];
-    requireMatch(result.rows.length === 1 && countKeys.every((key) => Number.isSafeInteger(catalog?.[key]) && catalog[key] >= 0) && flagKeys.every((key) => typeof catalog?.[key] === "boolean"), "恢复检查目录统计形状无效");
+    requireMatch(
+      result.rows.length === 1 &&
+        countKeys.every((key) => Number.isSafeInteger(catalog?.[key]) && catalog[key] >= 0) &&
+        flagKeys.every((key) => typeof catalog?.[key] === "boolean"),
+      "恢复检查目录统计形状无效",
+    );
     stage = "迁移标记";
     const marker = catalog.marker_table
-      ? readCounts(await client.query("SELECT count(*)::int AS rows, count(*) FILTER (WHERE space = 'app' AND core_hash = $1)::int AS matched FROM prisma_contract.marker", [nativeHash]))
+      ? readCounts(
+          await client.query(
+            "SELECT count(*)::int AS rows, count(*) FILTER (WHERE space = 'app' AND core_hash = $1)::int AS matched FROM prisma_contract.marker",
+            [nativeHash],
+          ),
+        )
       : null;
     stage = "迁移账本";
     const ledger = catalog.ledger_table
-      ? readCounts(await client.query("SELECT count(*)::int AS rows, count(*) FILTER (WHERE space = 'app' AND migration_hash = $1 AND origin_core_hash IS NULL AND destination_core_hash = $2)::int AS matched FROM prisma_contract.ledger", [migrationHash, nativeHash]))
+      ? readCounts(
+          await client.query(
+            "SELECT count(*)::int AS rows, count(*) FILTER (WHERE space = 'app' AND migration_hash = $1 AND origin_core_hash IS NULL AND destination_core_hash = $2)::int AS matched FROM prisma_contract.ledger",
+            [migrationHash, nativeHash],
+          ),
+        )
       : null;
     report = {
       database: nativeEmptyDatabaseName,
@@ -144,8 +242,18 @@ export async function inspectNativeMigrationState(client, expectedUser) {
       status: "NATIVE_MIGRATION_RECOVERY_REVIEW_REQUIRED",
     };
   } catch (error) {
-    const code = error instanceof Error && "code" in error && typeof error.code === "string" && sqlStates.has(error.code) ? error.code : "未知错误类别";
-    failures.push(error instanceof NativeRecoveryError ? error.message : "恢复检查阶段失败：" + stage + "；" + code);
+    const code =
+      error instanceof Error &&
+      "code" in error &&
+      typeof error.code === "string" &&
+      sqlStates.has(error.code)
+        ? error.code
+        : "未知错误类别";
+    failures.push(
+      error instanceof NativeRecoveryError
+        ? error.message
+        : "恢复检查阶段失败：" + stage + "；" + code,
+    );
   } finally {
     if (begun) {
       try {
@@ -166,6 +274,14 @@ export async function inspectNativeMigrationState(client, expectedUser) {
 
 function readCounts(result) {
   const row = result.rows[0];
-  requireMatch(result.rows.length === 1 && Number.isSafeInteger(row?.rows) && row.rows >= 0 && Number.isSafeInteger(row?.matched) && row.matched >= 0 && row.matched <= row.rows, "迁移元数据统计形状无效");
+  requireMatch(
+    result.rows.length === 1 &&
+      Number.isSafeInteger(row?.rows) &&
+      row.rows >= 0 &&
+      Number.isSafeInteger(row?.matched) &&
+      row.matched >= 0 &&
+      row.matched <= row.rows,
+    "迁移元数据统计形状无效",
+  );
   return { rows: row.rows, matched: row.matched };
 }
