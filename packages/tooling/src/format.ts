@@ -7,6 +7,7 @@ export const sharedFormat = {
     "apps/server/src/generated/prisma8/**",
     "apps/server/.artifacts/prisma8-native-baseline-comments/**",
     "apps/server/.artifacts/prisma8-native-repro-candidate/**",
+    "apps/server/.artifacts/prisma8-native-check-repair-package/**",
   ],
   printWidth: 100,
   tabWidth: 2,

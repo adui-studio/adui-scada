@@ -231,3 +231,11 @@ E-152 仅修复证据复核控制流，保持固定证据、只读及迁移冻�
 固定 Provider rc.25 的 https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/2-sql-family/1-core/schema-ir/src/ir/sql-check-constraint-ir.ts 证明 exact-named 接收者按 expression 文本直接比较，wire-named 接收者按 id 比较。由实际密文证据与源码共同确认第四座失败直接原因；尚不能证明第三座的具体差异相同，也不认定上游新版本已经修复。
 
 本批选择仅准备新的独立 PSL，按两项真实证据将 ARRAY_CAST 形式精确替换为 ELEMENT_CAST，保留历史原约束名、两组允许值及其他约束。以固定 CLI rc.35/Provider rc.25 的 contract emit 重新发射；严禁改写已有生成 JSON 或哈希。比较完整新旧 JSON，仅允许两处表达式与官方返回的新 storageHash 变化，复核声明标识并调用官方静态装载；复核原包、固定十四文件及历史注释 119 项。独立输出目录禁止覆盖；不生成迁移包，不连接数据库。实际 DDL 再重打印是否稳定仍未确认；已有历史验收库原先通过 exact-named 比较，改变表达式的候选可能不再匹配旧库文本，故空起点重放修复不能自动等同于历史库接管方案。任何新迁移图、119 项注释操作重发射、在线语义验证、上游缺陷发布或正式接管需独立评审，不放宽约束及结构校验。第四座写入入口与配置均冻结，四座数据库及证据保留。ADR 保持 Proposed。
+
+### 2026-11-26 · 修复契约真实发射与新完整离线候选决策
+
+维护者 Windows 在 HEAD 15b533cf43cb37b4d378a41248381cc46f3f5b66 完成 PR #231 验收：累计专项 45/45，Vite+ 564 格式/404 受检零警告错误、中文 431、Markdown 96，增量退出 0；固定 RC 官方修复契约发射退出 0，第四座十四文件指纹 02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e 单独复核退出 0。维护者授权后 Squash 合入 3537b9b878a2e33da442c9a7ce16d4c41eb9df26。新 storageHash 为 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436；仅两项已定位的 CHECK expression 与新存储标识改变，正式 Prisma 7 和四座数据库均不变。尚未验证 PostgreSQL 往返。
+
+本批新增完整离线修复包入口：固定已验收三份修复契约 SHA-256、原包、正式生成物、八项历史迁移、119 项历史注释、原十四文件与第四座副本，使用固定 CLI rc.35/Provider rc.25 和两份固定无连接配置。仅在 apps/server/.artifacts/prisma8-native-check-repair-package 下新建 plan（十份证据）及 complete（十四份证据）；从 @empty 官方规划，核对完整快照及 46 项独立 DDL，并按原顺序深比较所有结构操作，只允许目标两张表的已知谓词原文替换，前后置检查及参数不可任意漂移。复用既有中文注释构造和 TS 语法节点插入、官方干跑、自发射及 migration check，要求完整 165 项操作与干跑一致，检查覆盖保持原有 schema.public 无前后置检查、其他无相同检查的事实。最终输出官方新迁移标识及本地独立证据指纹，后者不是官方迁移哈希；roundTripVerified、signingAllowed、deploymentAllowed 均 false。新输出目录禁止覆盖、失败保留诊断，精确排除生成目录而非全部 .artifacts；不读连接变量、不执行数据库命令、不改变旧迁移/正式 Provider/冻结策略、不推进引用。
+
+新空起点迁移与历史库接管仍为不同问题，未确认数据库实际反打印稳定性。真实新包报告与实际离线完整性验证待完成，不允许据此签名、部署或执行任何数据库迁移；四座数据库持续冻结，ADR 保持 Proposed。

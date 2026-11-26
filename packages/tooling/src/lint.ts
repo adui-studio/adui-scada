@@ -6,6 +6,7 @@ export const sharedLint = {
     "apps/server/src/generated/prisma8/**",
     "apps/server/.artifacts/prisma8-native-baseline-comments/**",
     "apps/server/.artifacts/prisma8-native-repro-candidate/**",
+    "apps/server/.artifacts/prisma8-native-check-repair-package/**",
   ],
   jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
   rules: { "vite-plus/prefer-vite-plus-imports": "error" as const },
