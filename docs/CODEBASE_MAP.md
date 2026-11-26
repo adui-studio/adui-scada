@@ -1846,3 +1846,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/prisma8-native-check-repair-package-review.mjs`：复用既有规划、DDL、注释、执行检查语义，重新官方干跑与完整性校验。
 - `apps/server/prisma8-native-check-repair-package.mjs`：新增明确的已有包复验模式，原生成确认与禁止覆盖保持不变。
 - `pnpm run db:prisma8:native:baseline:check-repair-package:review`：只在原验收工作区复验固定产物，不纳入 ready 的真实官方执行；无数据库访问。
+
+### 2026-11-26 · 固定 CHECK 往返离线计划
+
+- `scripts/prisma8-native-check-roundtrip.mjs`：固定两项谓词的三阶段计划、精确元数据及输入结果判定，未认证观察不得宣称真实往返。
+- `scripts/prisma8-native-check-roundtrip.cases.mjs`：八项纯离线回归，纳入 ready。
+- `apps/server/prisma8-native-check-repair-package.mjs`：新增独立 `--plan-check-roundtrip` 模式，复用完整官方离线复验与固定证据门禁，不改变原生成及复验分支，不连接数据库。
+- `pnpm run db:prisma8:native:baseline:check-roundtrip:plan`：原工作区已有包的只读计划输出，实际数据库执行与观察采集尚未实现或授权。
