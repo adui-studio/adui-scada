@@ -109,13 +109,45 @@ void test("拒绝非空起点、占位符、不同结尾和重复导入", () => 
   for (const invalid of [
     source.replace("never, End", "Start, End"),
     source.replace("this.createSchema({})", 'placeholder("待填充")'),
-    source + "\n",
+    source + "\nvoid 0;",
     source.replace("export default", source.split("\n")[0] + "\nexport default"),
   ]) {
     assert.throws(
       () => appendCommentOperations(invalid, buildCommentOperations(preview)),
       /脚手架/u,
     );
+  }
+});
+
+void test("不同换行、分行导入、尾逗号及类型注解不改变原操作", () => {
+  const comments = buildCommentOperations(preview);
+  const formatted = source
+    .replace("{ Migration, MigrationCLI }", "{\n  Migration,\n  MigrationCLI,\n}")
+    .replace("get operations() {", "get operations(): unknown[] {")
+    .replace("this.createSchema({})", 'this.createSchema({ text: "];" }),')
+    .replace("MigrationCLI.run(import.meta.url, M);", "MigrationCLI.run(\n  import.meta.url,\n  M,\n);")
+    .trimEnd()
+    .replaceAll("\n", "\r\n");
+  const result = appendCommentOperations(formatted, comments);
+  assert.match(result, /MigrationCLI, rawSql,\r\n/u);
+  assert.match(result, /this\.createSchema\(\{ text: "\];" \}\),\r\n      rawSql\(/u);
+  assert.equal((result.match(/rawSql\(/gu) ?? []).length, comments.length);
+  assert.equal(result.endsWith("  M,\r\n);"), true);
+  const insertion = comments
+    .map((operation) => "      rawSql(" + JSON.stringify(operation) + ")")
+    .join(",\r\n");
+  assert.equal(result.replace(", rawSql", "").replace(",\r\n" + insertion, ""), formatted);
+});
+
+void test("拒绝起点字段、非数组 getter、错误调用入口及语法错误", () => {
+  const comments = buildCommentOperations(preview);
+  for (const invalid of [
+    source.replace("override readonly endContractJson", "readonly startContractJson = endContract;\n  override readonly endContractJson"),
+    source.replace("return [", "return Array.of(").replace("    ];", "    );"),
+    source.replace("MigrationCLI.run(import.meta.url, M)", "MigrationCLI.run(import.meta.url, Other)"),
+    source.replace("this.createSchema({})", "this.createSchema({"),
+  ]) {
+    assert.throws(() => appendCommentOperations(invalid, comments), /脚手架/u);
   }
 });
 

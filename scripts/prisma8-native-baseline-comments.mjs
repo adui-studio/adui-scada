@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
+import ts from "typescript";
 
 export class CommentEmissionError extends Error {}
 
@@ -70,34 +71,125 @@ export function buildCommentOperations(preview) {
   });
 }
 
-/** 只扩展固定官方脚手架的现有导入及操作列表，不重写原操作或快照导入。 */
-export function appendCommentOperations(source, comments) {
-  const importPattern =
-    /^import \{ ([A-Za-z0-9_, ]+) \} from (["'])@prisma\/orm-postgres\/migration\2;$/gm;
-  const imports = [...source.matchAll(importPattern)];
-  const end = "\n    ];\n  }\n}\n\nMigrationCLI.run(import.meta.url, M);\n";
+/** 使用已安装的 TypeScript 解析官方脚手架，不执行源码或依赖其中的排版。 */
+function locateScaffold(source) {
+  const filename = "migration.ts";
+  const diagnostics = ts.transpileModule(source, {
+    fileName: filename,
+    reportDiagnostics: true,
+    compilerOptions: { target: ts.ScriptTarget.ESNext, module: ts.ModuleKind.ESNext },
+  }).diagnostics;
+  requireMatch(
+    !diagnostics?.some((item) => item.category === ts.DiagnosticCategory.Error),
+    "官方迁移脚手架语法无效",
+  );
+  const ast = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true);
+  const imports = ast.statements.filter(
+    (node) =>
+      ts.isImportDeclaration(node) &&
+      ts.isStringLiteral(node.moduleSpecifier) &&
+      node.moduleSpecifier.text === "@prisma/orm-postgres/migration",
+  );
+  const bindings = imports[0]?.importClause?.namedBindings;
   requireMatch(
     imports.length === 1 &&
-      source.endsWith(end) &&
-      source.includes("export default class M extends Migration<never, End> {") &&
-      source.includes("  override readonly endContractJson = endContract;") &&
-      source.includes("  override get operations() {\n    return [\n") &&
-      !/\bplaceholder\s*\(/u.test(source),
-    "官方空起点迁移脚手架形状变化",
+      !imports[0].importClause?.isTypeOnly &&
+      bindings &&
+      ts.isNamedImports(bindings) &&
+      bindings.elements.every((item) => !item.isTypeOnly && !item.propertyName),
+    "官方迁移脚手架导入不符合约束",
   );
-  const symbols = imports[0][1].split(",").map((name) => name.trim());
+  const symbols = bindings.elements.map((item) => item.name.text);
   requireMatch(
-    symbols.includes("Migration") && symbols.includes("MigrationCLI"),
-    "官方迁移导入缺失",
+    new Set(symbols).size === symbols.length &&
+      symbols.includes("Migration") &&
+      symbols.includes("MigrationCLI"),
+    "官方迁移脚手架导入缺失或重复",
   );
-  const body = source.slice(0, -end.length);
-  const prefix = symbols.includes("rawSql")
-    ? body
-    : body.replace(importPattern, (line) => line.replace(" }", ", rawSql }"));
+  const classes = ast.statements.filter(ts.isClassDeclaration);
+  const migration = classes[0];
+  const heritage = migration?.heritageClauses?.find(
+    (item) => item.token === ts.SyntaxKind.ExtendsKeyword,
+  );
+  const base = heritage?.types[0];
+  requireMatch(
+    classes.length === 1 &&
+      migration.name &&
+      ts.getModifiers(migration)?.some((item) => item.kind === ts.SyntaxKind.DefaultKeyword) &&
+      heritage?.types.length === 1 &&
+      base &&
+      ts.isIdentifier(base.expression) &&
+      base.expression.text === "Migration" &&
+      base.typeArguments?.length === 2 &&
+      base.typeArguments[0].kind === ts.SyntaxKind.NeverKeyword,
+    "官方迁移脚手架不是唯一空起点迁移类",
+  );
+  const target = migration.members.filter(
+    (item) => item.name?.getText(ast) === "endContractJson",
+  );
+  requireMatch(
+    target.length === 1 &&
+      ts.isPropertyDeclaration(target[0]) &&
+      target[0].initializer?.getText(ast) === "endContract" &&
+      !migration.members.some((item) => item.name?.getText(ast) === "startContractJson"),
+    "官方迁移脚手架目标快照或空起点声明变化",
+  );
+  const getters = migration.members.filter(
+    (item) => item.name?.getText(ast) === "operations",
+  );
+  const getter = getters[0];
+  const statement = getter && ts.isGetAccessorDeclaration(getter) ? getter.body?.statements[0] : undefined;
+  requireMatch(
+    getters.length === 1 &&
+      ts.isGetAccessorDeclaration(getter) &&
+      getter.body?.statements.length === 1 &&
+      statement &&
+      ts.isReturnStatement(statement) &&
+      statement.expression &&
+      ts.isArrayLiteralExpression(statement.expression) &&
+      statement.expression.elements.length > 0 &&
+      !/\bplaceholder\s*\(/u.test(source),
+    "官方迁移脚手架操作数组缺失或包含占位符",
+  );
+  const last = ast.statements.at(-1);
+  const run = last && ts.isExpressionStatement(last) ? last.expression : undefined;
+  requireMatch(
+    run &&
+      ts.isCallExpression(run) &&
+      ts.isPropertyAccessExpression(run.expression) &&
+      run.expression.expression.getText(ast) === "MigrationCLI" &&
+      run.expression.name.text === "run" &&
+      run.arguments.length === 2 &&
+      run.arguments[0].getText(ast).replace(/\s/gu, "") === "import.meta.url" &&
+      run.arguments[1].getText(ast) === migration.name.text,
+    "官方迁移脚手架自发射入口变化",
+  );
+  return { ast, bindings, symbols, operations: statement.expression.elements };
+}
+
+/** 仅按语法节点插入新操作，保留其余全部原始源码字节。 */
+export function appendCommentOperations(source, comments) {
+  const before = locateScaffold(source);
+  requireMatch(comments.length > 0, "缺少已审查的中文注释操作");
+  const last = before.operations.at(-1).getEnd();
+  const newline = source.includes("\r\n") ? "\r\n" : "\n";
   const suffix = comments
     .map((operation) => "      rawSql(" + JSON.stringify(operation) + ")")
-    .join(",\n");
-  return prefix + (prefix.endsWith(",") ? "" : ",") + "\n" + suffix + end;
+    .join("," + newline);
+  let result = source.slice(0, last) + "," + newline + suffix + source.slice(last);
+  if (!before.symbols.includes("rawSql")) {
+    const position = before.bindings.elements.at(-1).getEnd();
+    result = result.slice(0, position) + ", rawSql" + result.slice(position);
+  }
+  const after = locateScaffold(result);
+  requireMatch(
+    after.operations.length === before.operations.length + comments.length &&
+      before.operations.every(
+        (item, index) => item.getText(before.ast) === after.operations[index].getText(after.ast),
+      ),
+    "独立脚手架原操作源码发生变化",
+  );
+  return result;
 }
 
 /** 解析固定 RC 自发射干跑的两个 JSON 区段，不自行生成迁移哈希。 */
