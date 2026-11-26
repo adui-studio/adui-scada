@@ -25,7 +25,10 @@ import {
   reviewAuditedBaseline,
 } from "../../scripts/prisma8-native-baseline-ddl.mjs";
 import { CommentEmissionError } from "../../scripts/prisma8-native-baseline-comments.mjs";
-import { runCommentEmission } from "../../scripts/prisma8-native-baseline-comment-emission.mjs";
+import {
+  runCandidateReview,
+  runCommentEmission,
+} from "../../scripts/prisma8-native-baseline-comment-emission.mjs";
 
 function requireCondition(condition, message) {
   if (!condition) throw new BaselineError(message);
@@ -38,10 +41,12 @@ function main() {
   const reviewDdl = args.length === 1 && args[0] === "--review-baseline-ddl";
   const reviewComments = args.length === 1 && args[0] === "--review-baseline-comments";
   const emitComments = args.length === 1 && args[0] === "--confirm-offline-comments";
+  const reviewCandidate = args.length === 1 && args[0] === "--review-comment-candidate";
   const reviewExisting =
     reviewDdl ||
     reviewComments ||
     emitComments ||
+    reviewCandidate ||
     (args.length === 1 && args[0] === "--review-existing-baseline");
   if (!reviewExisting) requireBaselineApproval(args);
   const root = realpathSync(resolve(import.meta.dirname, "../.."));
@@ -136,7 +141,7 @@ function main() {
   console.info("计划操作数量：" + result.operations);
   console.info("基线状态：BASELINE_ARTIFACT_REVIEW_REQUIRED；签名许可：否；部署许可：否");
   console.info("物理 DDL、中文注释、操作及依赖解析仍须独立评审");
-  if (reviewDdl || reviewComments || emitComments) {
+  if (reviewDdl || reviewComments || emitComments || reviewCandidate) {
     stage = "固定候选 DDL 与历史中文注释审查";
     const audited = reviewAuditedBaseline(root, baseline, nativeText);
     console.info("固定候选原件指纹：10 项匹配");
@@ -161,6 +166,23 @@ function main() {
       console.info("独立注释候选操作数量：" + emitted.operations);
       console.info("独立注释候选官方迁移标识：" + emitted.migrationHash);
       console.info("离线状态：COMMENTS_EMITTED_REVIEW_REQUIRED；签名许可：否；部署许可：否");
+    }
+    if (reviewCandidate) {
+      stage = "已验收独立候选部署前离线复验";
+      let candidate;
+      try {
+        candidate = runCandidateReview(root, entry, audited);
+      } finally {
+        reviewExistingBaseline(root, inputs);
+        reviewAuditedBaseline(root, loadMigrationBaseline(), nativeText);
+      }
+      console.info("固定独立候选文件数量：" + candidate.evidence.files.length);
+      console.info("完整迁移操作数量：" + candidate.operations);
+      console.info("已验收官方迁移标识：" + candidate.migrationHash);
+      console.info("重新官方干跑与完整性检查通过，所有原件及证据不变");
+      console.info("独立候选证据指纹：" + candidate.evidence.fingerprint);
+      console.info("离线状态：CANDIDATE_PREFLIGHT_REVIEW_REQUIRED；签名许可：否；部署许可：否");
+      process.stdout.write(JSON.stringify(candidate.evidence, null, 2) + "\n");
     }
   }
 }

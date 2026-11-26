@@ -4969,3 +4969,29 @@ git status --short
 ### E-146 脚手架门禁修复后的增量复验
 
 首次 Windows 增量 28 项通过，但真实自发射入口在构造源码阶段退出 1，未启动官方进程。拉取 PR #221 最新提交，复验同一增量链；注释专项由 8 项增至 10 项，总计 30 项。原包及其他候选不重新生成。先确认独立注释输出目录不存在，再使用原确认参数执行；若再次失败，保留新阶段中文诊断。若报脚手架相关错误，仅提供原包的 migration.ts 原文和 SHA-256 用于定位，不编辑原件。若已产生独立输出目录，不删除或自动重试；保存对应 stdout/stderr。
+
+### 独立中文注释候选部署前离线复验
+
+PR #221 已完成真实 self-emit 和官方 migration check；保留根目录原包及 apps/server/.artifacts/prisma8-native-baseline-comments 的已有产物，不再次生成或清理。先进行增量门禁：
+
+```powershell
+pnpm run test:prisma8:native:baseline:candidate &&
+pnpm run test:prisma8:native:baseline:comments &&
+pnpm run test:prisma8:native:baseline:ddl &&
+pnpm run test:prisma8:native:baseline &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check
+Write-Host "独立候选增量验收退出码：$LASTEXITCODE"
+```
+
+预期新增七项及原三组 30 项全部通过。之后只读复验已有候选：
+
+```powershell
+pnpm run db:prisma8:native:baseline:comments:review
+Write-Host "独立候选离线复验退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期固定候选 14 个文件、165 项操作、已验收迁移标识 e6b95ed88834dce3f6448445a5ba12a00ba34c8e5c68f4335751659b15a77f17，重新官方干跑与完整性检查通过，CANDIDATE_PREFLIGHT_REVIEW_REQUIRED，签名/部署许可否。提交完整输出的证据清单和指纹供后续固定字节门禁；此次实际新候选文件指纹尚未取得，首轮采集不能冒充与历史指纹匹配。禁止并发改动、重生成、手改迁移元数据、设置数据库 URL、执行数据库写入或签名。如失败保留原目录及原始六份日志，不自动修复或重试；目录额外对象需先核实，不得删除证据。第三座空库的名称、连接与操作授权另行确认。

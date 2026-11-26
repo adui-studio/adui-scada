@@ -1754,3 +1754,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - scripts/prisma8-native-baseline-comment-emission.mjs：独立文件副本、固定 Node 子进程、原件回读、干跑/自发射及 migration check 完整性门禁，失败保留证据。
 - apps/server/prisma8-native-baseline-comments.config.ts：不加载环境或数据库连接，输出到服务端忽略目录，使用已安装固定依赖；原基线与正式生成物不变。
 - pnpm run test:prisma8:native:baseline:comments：十项纯离线逻辑测试（含 E-146 脚手架语法定位回归），纳入 ready。pnpm run db:prisma8:native:baseline:comments:emit --confirm-offline-comments：明确确认后才运行真实离线自发射，不纳入 ready；成功仍仅 COMMENTS_EMITTED_REVIEW_REQUIRED。
+
+### 独立原生中文注释候选部署前离线复验
+
+- scripts/prisma8-native-baseline-candidate.mjs：固定已验收迁移标识与独立配置字节指纹，十四文件精确树、完整源码/操作/快照及历史成功证据比较、确定性证据清单与指纹。
+- scripts/prisma8-native-baseline-comment-emission.mjs 的 runCandidateReview：仅复验已有候选，固定已安装 RC 的 dry-run 与 migration check，逐阶段复查原件和证据不变，不写新文件或执行数据库命令。
+- pnpm run test:prisma8:native:baseline:candidate：七项离线合成回归，纳入 ready；pnpm run db:prisma8:native:baseline:comments:review：真实独立只读入口，不纳入 ready。输出 CANDIDATE_PREFLIGHT_REVIEW_REQUIRED、签名/部署许可否，真实首次文件指纹待采集。

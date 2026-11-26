@@ -11,6 +11,15 @@ import {
   parseDryRun,
   reviewCommentEmission,
 } from "./prisma8-native-baseline-comments.mjs";
+import {
+  candidateFileNames,
+  fingerprintCandidateFiles,
+  readCandidateRegular,
+  readExactCandidateTree,
+  requireMigrationCheck,
+  requireOfflineCandidateConfig,
+  reviewCandidateFiles,
+} from "./prisma8-native-baseline-candidate.mjs";
 
 function requireMatch(condition, message) {
   if (!condition) throw new CommentEmissionError(message);
@@ -132,21 +141,80 @@ export function runCommentEmission(root, entry, audited) {
       "--config",
       config,
     ]);
-    const check = JSON.parse(checkText);
-    requireMatch(
-      check.kind === "result" &&
-        check.commandId === "migration.check" &&
-        check.envelope?.commandId === "migration.check" &&
-        check.envelope.ok === true &&
-        check.envelope.exitCode === 0 &&
-        isDeepStrictEqual(check.envelope.diagnostics, []) &&
-        check.envelope.result?.ok === true &&
-        isDeepStrictEqual(check.envelope.result.failures, []),
-      "官方迁移完整性检查结果未确认成功",
-    );
+    requireMigrationCheck(checkText);
     requireMatch(isDeepStrictEqual(readCopy(), emitted), "官方迁移检查改变了候选文件");
     return { ...review, status: "COMMENTS_EMITTED_REVIEW_REQUIRED" };
   } finally {
     requireMatch(isDeepStrictEqual(readAuditedFiles(originalDir), files), "固定原包发生变化");
+  }
+}
+
+/** 已有候选仅复验，不写入日志、重新自发射或执行任何数据库命令。 */
+export function runCandidateReview(root, entry, audited) {
+  const originalDir = join(root, ".artifacts", "prisma8-native-baseline");
+  const originalFiles = readAuditedFiles(originalDir);
+  const server = join(root, "apps", "server");
+  const output = join(server, ".artifacts", "prisma8-native-baseline-comments");
+  const config = join(server, "prisma8-native-baseline-comments.config.ts");
+  const configBytes = readCandidateRegular(config);
+  requireOfflineCandidateConfig(configBytes);
+  const names = candidateFileNames(originalFiles);
+  const files = readExactCandidateTree(output, names);
+  const review = reviewCandidateFiles(originalFiles, files, audited, packageDirectory);
+  const requirePreserved = () => {
+    requireMatch(
+      isDeepStrictEqual(readAuditedFiles(originalDir), originalFiles) &&
+        isDeepStrictEqual(readExactCandidateTree(output, names), files) &&
+        readCandidateRegular(config).equals(configBytes),
+      "离线复验期间原包、独立候选或配置发生变化",
+    );
+  };
+  const runReview = (stage, args) => {
+    requirePreserved();
+    const result = spawnSync(process.execPath, args, {
+      cwd: root,
+      env: offlineEnvironment(process.env),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 120000,
+      maxBuffer: 16 * 1024 * 1024,
+    });
+    requirePreserved();
+    requireMatch(
+      !result.error && result.status === 0,
+      "独立候选离线复验失败：" + stage + "；保留已有证据，不自动重试",
+    );
+    return result.stdout;
+  };
+  try {
+    const dryRun = parseDryRun(
+      runReview("官方干跑", [join(output, sourceName), "--config", config, "--dry-run"]),
+    );
+    requireMatch(
+      isDeepStrictEqual(dryRun, review.actual),
+      "重新干跑与已验收的实际迁移产物不一致",
+    );
+    requireMigrationCheck(
+      runReview("官方迁移完整性", [
+        entry,
+        "migration",
+        "check",
+        "--space",
+        "app",
+        "--json",
+        "--config",
+        config,
+      ]),
+    );
+    return {
+      operations: review.operations,
+      migrationHash: review.migrationHash,
+      status: "CANDIDATE_PREFLIGHT_REVIEW_REQUIRED",
+      signingAllowed: false,
+      deploymentAllowed: false,
+      evidence: fingerprintCandidateFiles(files, configBytes),
+    };
+  } finally {
+    requirePreserved();
   }
 }
