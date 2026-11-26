@@ -5147,3 +5147,13 @@ E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回
 维护者 Windows 五组专项 43/43（CHECK 修复 7、独立复现及冻结 9、候选 7、DDL 8、恢复 12），Vite+ 563 格式/403 受检零警告错误；中文文案扫描第四座独立副本的根 contract.d.ts 及嵌套快照声明误报四处官方英文注释，增量退出 1，docs:check 因命令链停止未执行。未打印本机 HEAD、工作区状态，也没有真实离线修复契约发射结果。
 
 仅在中文扫描与共享 Format/Lint 增加第四座独立副本的精确目录排除，保留所有自有源码检查和原有排除范围；未修改任何实际证据、迁移候选或数据库。新增两个临时目录子进程测试，注册 test:messages 并纳入 ready。协作容器 Node.js 22.16.0 实际用原扫描器 Blob 3fa8fc77f683c931510d39855f6dee775252e42f 复现回归 0/2（退出 1），修复后 2/2（退出 0），根和快照声明未被写入，自有英文及相邻目录仍拒绝；局部自有文案 7 文件通过，语法检查通过。扫描器 Blob af4904e7fcb233d712da2b16bf3c5cafa9d914bb、测试 Blob 8b05d9dcb232ffb4a48536da9da581e9c51150ba 已核对一致。无真实 Windows Vite+ 或完整仓库执行环境，须复验 test:messages、messages:check、config:check、vp check、docs:check，并以既有十四文件指纹门禁核对实际第四座副本。若证据异常保留现场，禁止覆盖或重试；未获得新发射结果前不宣布 CHECK 修复成功。四座数据库继续冻结。
+
+## 2026-11-26 · PR #231 结案与 CHECK 修复完整离线迁移包专项
+
+维护者 Windows 在 HEAD 15b533cf43cb37b4d378a41248381cc46f3f5b66 完成 PR #231 验收：累计专项 45/45，Vite+ 564 格式/404 受检零警告错误、中文 431、Markdown 96，增量退出 0；固定 RC 官方修复契约发射退出 0，第四座十四文件指纹 02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e 单独复核退出 0。维护者授权后 Squash 合入 3537b9b878a2e33da442c9a7ce16d4c41eb9df26。新 storageHash 为 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436；仅两项已定位的 CHECK expression 与新存储标识改变，正式 Prisma 7 和四座数据库均不变。尚未验证 PostgreSQL 往返。
+
+本批新增完整离线修复包入口：固定已验收三份修复契约 SHA-256、原包、正式生成物、八项历史迁移、119 项历史注释、原十四文件与第四座副本，使用固定 CLI rc.35/Provider rc.25 和两份固定无连接配置。仅在 apps/server/.artifacts/prisma8-native-check-repair-package 下新建 plan（十份证据）及 complete（十四份证据）；从 @empty 官方规划，核对完整快照及 46 项独立 DDL，并按原顺序深比较所有结构操作，只允许目标两张表的已知谓词原文替换，前后置检查及参数不可任意漂移。复用既有中文注释构造和 TS 语法节点插入、官方干跑、自发射及 migration check，要求完整 165 项操作与干跑一致，检查覆盖保持原有 schema.public 无前后置检查、其他无相同检查的事实。最终输出官方新迁移标识及本地独立证据指纹，后者不是官方迁移哈希；roundTripVerified、signingAllowed、deploymentAllowed 均 false。新输出目录禁止覆盖、失败保留诊断，精确排除生成目录而非全部 .artifacts；不读连接变量、不执行数据库命令、不改变旧迁移/正式 Provider/冻结策略、不推进引用。
+
+协作容器实际 Node.js 22.16.0 执行新增纯离线专项 8/8、中文扫描实际子进程回归 2/2，均退出 0。核对本机与远端 Blob：共享规划检查 bd6d87702881de12be81b66227965dc3b4b32784、修复包核心 ae67598198fef821af8d6d7f88a116249126cc3f、测试 0a63a04c27802b91cc7618b69537a2a6a35e99e5、既有修复契约核心 f1c0ce1e1b8c3df6cc4e7f4892b73387d16e4047、中文扫描 48564f4a5fda754f6ab2f9df9b24f4755be29019、中文回归 a1d93726f0d1d0ac2dc4d69e1323f78fe150215b。协作容器缺少完整仓库、固定 Prisma RC、pnpm、Vite+，未执行真实规划、自发射、完整性检查、全仓质量链或任何数据库命令。必须由 Windows 验收实际官方产物；若 RC 输出或检查条件与已固定证据不同，拒绝并保留，不能放宽门禁以通过。
+
+Windows 增量验收：新专项、原规划/DDL/注释/候选回归、test:messages、config:check、vp check、messages:check、docs:check；干净已审查提交执行 pnpm run db:prisma8:native:baseline:check-repair-package --confirm-offline-check-repair-package，提供报告、两个官方迁移标识、24 文件证据指纹及退出码。既有候选验收结果不得代替新包真实生成结果；不再次发射已验收契约，不删除已有证据。
