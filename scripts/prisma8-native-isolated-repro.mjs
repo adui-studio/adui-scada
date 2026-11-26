@@ -43,7 +43,7 @@ export function requireReproRequest(args, source) {
 /** 只消费创建实例时生成的独立随机口令，连接目标不可由调用者改变。 */
 export function reproConnection(password) {
   requireMatch(
-    typeof password === "string" && /^[a-f0-9]{64}$/u.test(password),
+    typeof password === "string" && password.length === 64 && /^[a-f0-9]{64}$/u.test(password),
     "第四座实例专用随机凭据无效",
   );
   return {
@@ -143,8 +143,12 @@ export function claimReproAttempt(directory, fingerprint, containerId, systemIde
   requireUnusedReproDirectory(directory);
   writeFileSync(
     join(directory, receiptName),
-    JSON.stringify({ scope: "PRISMA8_NATIVE_ISOLATED_REPRO_V1", fingerprint, containerId, systemIdentifier }) +
-      "\n",
+    JSON.stringify({
+      scope: "PRISMA8_NATIVE_ISOLATED_REPRO_V1",
+      fingerprint,
+      containerId,
+      systemIdentifier,
+    }) + "\n",
     { flag: "wx", mode: 0o600 },
   );
 }
@@ -153,8 +157,9 @@ export function claimReproAttempt(directory, fingerprint, containerId, systemIde
 export function extractReproSchemaFailure(stdout, stderr, allowedNames) {
   const streams = [stdout, stderr];
   if (streams.some((value) => typeof value !== "string")) return null;
-  if (streams.reduce((size, value) => size + Buffer.byteLength(value, "utf8"), 0) > 16 * 1024 * 1024)
+  if (streams.reduce((size, value) => size + Buffer.byteLength(value, "utf8"), 0) > 16 * 1024 * 1024) {
     return null;
+  }
   const documents = streams.flatMap((stream) => {
     try {
       return [JSON.parse(stream)];
@@ -169,7 +174,10 @@ export function extractReproSchemaFailure(stdout, stderr, allowedNames) {
     }
   });
   try {
-    return reviewNativeSchemaFailure(documents.map((document) => JSON.stringify(document)).join("\n"), allowedNames);
+    return reviewNativeSchemaFailure(
+      documents.map((document) => JSON.stringify(document)).join("\n"),
+      allowedNames,
+    );
   } catch {
     return null;
   }
@@ -187,7 +195,9 @@ export function encryptReproOutput(password, stdout, stderr) {
   );
   const salt = randomBytes(32);
   const iv = randomBytes(12);
-  const key = Buffer.from(hkdfSync("sha256", Buffer.from(password, "hex"), salt, "ADui SCADA Prisma8 repro output v1", 32));
+  const key = Buffer.from(
+    hkdfSync("sha256", Buffer.from(password, "hex"), salt, "ADui SCADA Prisma8 repro output v1", 32),
+  );
   const cipher = createCipheriv("aes-256-gcm", key, iv);
   const ciphertext = Buffer.concat([
     cipher.update(JSON.stringify({ stdout, stderr }), "utf8"),
