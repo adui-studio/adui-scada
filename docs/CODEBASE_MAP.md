@@ -1803,3 +1803,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/prisma8-native-direct-schema-review.mjs` / `.cases.mjs`：固定历史验收库连接、公开直接校验顺序、目标及结果验证、脱敏路径、关闭与证据复核保护和七项模拟回归。
 - `apps/server/prisma8-native-direct-schema-review.mjs`：复用固定证据门禁、核对快照与根契约，动态装载官方控制入口；只允许历史验收库两种只读验证。
 - `pnpm run test:prisma8:native:baseline:direct-schema`：纯模拟定向测试，加入 ready；`pnpm run db:prisma8:native:baseline:direct-schema:review`：单独执行的真实只读专项，不加入 ready。
+
+### 原生迁移结构失败离线诊断
+
+- `scripts/prisma8-native-schema-failure-review.mjs` / `.cases.mjs`：唯一错误封装、差异类别及路径脱敏的离线解析，七项模拟回归。
+- `scripts/prisma8-native-direct-schema-review.mjs`：导出既有 `allowedPaths`，复用契约路径白名单，不改变原有直接验证。
+- `apps/server/prisma8-native-schema-failure-review.mjs`：固定候选证据、标准输入限制及报告入口，不连接数据库。
+- `pnpm run test:prisma8:native:baseline:schema-failure`：纯离线测试，加入 ready；`pnpm run db:prisma8:native:baseline:schema-failure:review`：已有机器输出离线解析，不加入 ready。
