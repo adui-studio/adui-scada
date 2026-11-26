@@ -5187,3 +5187,11 @@ PR #234 已按维护者明确授权合入集成分支，Squash 提交 `1641e2277
 协作容器 Node.js 22.16.0 实际运行新增纯模拟测试 12/12、两文件 node --check 通过，远端 Git Blob 与本地一致：核心 `3cbd314dddc3099db0d65783ca81639d25b96683`、测试 `07f4f8b43df0a7fcfc4f802bd4d17a4a056a0da9`。模拟覆盖固定指纹与篡改、身份及排序规则、六阶段 48 次参数化保存点、真实目录输出的模拟漂移、错误约束与列、错误 SQLSTATE、事务开始失败、保存点回滚异常、外层回滚失败、后置边界漂移及失败停止。没有完整仓库工具链、固定 RC 产物或 PostgreSQL 服务；Windows Vite+、文案、文档、原固定包真实离线计划复验尚待验收。48 项为模拟输入结果，不是数据库实际验证。
 
 新增 `pnpm run test:prisma8:native:baseline:check-roundtrip-execution`（12 项纯模拟，纳入 ready）。原工作区同时复验 `pnpm run test:prisma8:native:baseline:check-roundtrip`、`pnpm run test:prisma8:native:baseline:check-repair-package-review`、共享配置、Vite+、中文文案、Markdown；格式化正常提交后工作区干净，再执行 `pnpm run db:prisma8:native:baseline:check-roundtrip:plan`。计划必须仍为已验收指纹，全部许可 false，退出 0。不要连接任何数据库，不提供新实例创建或执行命令；若不符停止保留现场。实际隔离实例准备和真实运行须分别明确授权。
+
+## 2026-11-26 · PR #235 验收结案与第五座宿主机只读预检
+
+PR #235 已按维护者明确授权 Squash 合入集成分支 `449a81b406de2a895639126e68327072f22c60e9`。Windows 验收 HEAD `091af5eaef1ae80ed19479d9b5b5edbc03e3b945`：三组专项 30/30（12+8+10），Vite+ 577 格式文件、416 受检文件零警告错误，443 个中文文案文件、96 份 Markdown，增量和真实离线计划退出码 0，工作区干净。固定计划指纹 `17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a`，全部数据库执行及签名部署许可仍为 false。
+
+本批只增加第五座创建前宿主机只读预检。拒绝非 Windows、附加参数和 Docker 环境覆盖；先从本机上下文取得端点，仅允许两种固定 Windows 命名管道，后续 Docker 查询显式固定 --host，并要求 Linux 引擎、第四座保留容器镜像 ID 与本机固定镜像完全相同、第五座容器/卷/网络均不存在（含停止容器），再用无 Profile 的固定 Windows PowerShell Get-NetTCPConnection 检查所有本地 TCP 记录中的 15434。任何子进程异常、非零、信号、标准错误、资源重名或端口异常均短路并仅返回固定中文诊断；子进程不继承数据库连接串或凭据。不执行 Docker exec、run、pull、create、删除或 PostgreSQL 操作。报告 NATIVE_CHECK_ROUNDTRIP_HOST_REVIEW_REQUIRED，仅表示当前宿主机观察通过，不认证真实数据库来源；portReserved、resourceCreationAllowed、observationSourceAuthenticated、databaseExecutionAllowed、roundTripVerified、historicalAdoptionVerified、signingAllowed、deploymentAllowed 均为 false。端口检查不是端口预留，不能证明排除端口范围、未来竞争或 Docker 发布成功。第五座仍未创建，后续身份、排序规则、23 类空库与实际执行许可需分别核实；四座数据库及正式 Prisma 7 保持冻结边界。
+
+协作容器 Node.js 22.16.0 运行新增核心与测试的 node --check 和 node --test 8/8，通过源码 Git Blob 比对（核心 `8dbd9191313017b067023106587902326684bef3`、测试 `1264935cfc29631d2f964fc6920a843d9b0384f1`）。局部夹具仅复用了原模块两个固定导出的原文，未安装完整仓库依赖；8 项为注入子进程模拟，不是 Windows Docker 或 PostgreSQL 实测。完整 Vite+、中文文案、Markdown、真实宿主机预检待维护者执行。
