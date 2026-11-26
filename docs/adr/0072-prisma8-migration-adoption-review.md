@@ -171,3 +171,11 @@ PR #220 经维护者明确授权 Squash 合入 66dd3bb6aff59ed158f9373d5e63041bd
 维护者 Windows 58/58、544/384 零警告、中文 411、Markdown 96，增量退出 0。第三座专用 PostgreSQL 170011 恢复退出 0，业务目录和注释统计均为零，无 marker schema、marker、ledger 或旧迁移表，严格空库 23 类检查通过，十四文件指纹不变。按明确授权 PR #224 Squash 合入 0ffb6672134c4676da31970d74b9bf7f7462bf89。Docker 实际日志没有可关联首次官方迁移失败的直接错误。不能据受检空库结果证明首次执行的具体失败点或完整回滚，也不认为此前目标库不存在是实际迁移失败的已确认根因。
 
 保留旧写入确认冻结。新增不同的人工确认参数，仅适用于恢复评审后的第三座专用库单次诊断性迁移。复用固定候选与版本、原件保护、URL 白名单、唯一在线迁移边及写入前重复空库检查；以独占创建本地尝试记录后才进入官方迁移调用，记录存在或无法保存立即拒绝，任何失败均不自动移除记录。记录位于已忽略的候选父目录，仅记录固定范围与指纹，不属于十四文件证据，不是数据库锁或跨工作区协调机制。新增直接官方错误封装白名单诊断，不降低成功结果验证或接受策略覆盖。新入口的 Windows 与实际 RC 验收待执行。不得自动重试、签名、重置、清理、推进 ref 或切换正式 Provider；仍需独立实测应用、物理目录及约束/注释等价、幂等与非空历史发布样本，ADR 保持 Proposed。
+
+## 2026-11-26 · PR #225 单次恢复结束与严格结构只读对照
+
+维护者在 HEAD `240d70a3a2fbb3efeb43257ac1bb874d594bd75c` 开始 Windows 验收，恢复 12/12、迁移 5/5、空库预检 10/10（合计 27/27），Vite+ 546 格式/386 受检零警告错误、中文 413、Markdown 96，增量退出 0，工作区干净。最终 HEAD `ef8782371e3aaa0f56d557d3772ccc88e6db6ac3` 相对验收起点仅一份测试排版；经维护者授权 PR #225 Squash 合入 `9a8bfe5bb630c0c2dbb8b2df1c505f33d0948664`。真实一次性执行两次空库预检、唯一在线路径及固定证据核对通过，独占尝试记录已登记；官方迁移退出 2、诊断 `MIGRATION.SCHEMA_VERIFY_FAILED`，包装退出 1。随后真实第三座库 PostgreSQL 170011 只读恢复退出 0，九类目录及注释计数均零，无 marker schema、marker、ledger 或旧迁移记录，严格空库 23 类通过，十四文件指纹 `02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e` 不变。该证据不证明实际迁移成功或全部回滚过程。
+
+已核对固定 PostgreSQL Provider v8.0.0-rc.25 上游源码 `packages/3-targets/postgres/1-target/src/core/migrations/runner.ts`（https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/3-targets/postgres/1-target/src/core/migrations/runner.ts）：app 空间在执行计划后、提交事务和更新 marker/ledger 之前，以同一 driver introspect 并调用 verifySchema，默认 strictVerification 为 true；失败携带 meta.schemaIssues。既有 #216 是宽容 schema-only 对照，不能代替迁移严格验证。尚未确认固定 CLI rc.35 是否覆盖默认选项，也未保留此次 schemaIssues 具体内容，严格模式只是待验证的差异假设，不得认定历史登记、中文注释或某一约束为根因。
+
+本批冻结原确认和已消耗的单次恢复确认（无论本地记录是否存在），保留一次性记录和原件。只在既有 CLI 白名单新增 `db native-schema-verify-strict`，映射固定 `db verify --schema-only --strict --json`，复用原生配置、原 adui_scada_test URL 守卫与 PostgreSQL default_transaction_read_only、超时和 search_path 参数；不扩大允许库名，不运行任何写入，不改第三座库、候选、历史、正式 Provider 或依赖。严格 JSON 是官方机器输出，仅供维护者在本机提取诊断码、结构路径和差异类别，不分享原始输出、凭据、任意元数据或业务值。严格对照可能返回历史 Prisma 7 登记等未声明对象，不能据此推断第三座库实际失败点，也不应删除对象、放宽验证或签名。 只有取得实际结构差异并独立评审后，才能另行提议修复；不允许再次执行第三座库写入。ADR 保持 Proposed，不改变 Prisma 7 正式迁移边界。

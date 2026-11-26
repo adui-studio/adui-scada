@@ -80,7 +80,7 @@ function requireMatch(condition, message) {
   if (!condition) throw new NativeRecoveryError(message);
 }
 
-/** 原写入确认持续冻结；单次恢复执行由独立确认和尝试记录门禁控制。 */
+/** 已消耗一次恢复尝试；原确认与单次恢复确认均冻结，直到独立评审。 */
 export function requireRecoveryReview(apply) {
   requireMatch(!apply, "上次原生迁移失败，恢复评审完成前禁止再次执行迁移");
 }

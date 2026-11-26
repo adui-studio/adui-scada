@@ -58,7 +58,7 @@ async function main() {
     inspect ? [migrationPreviewConfirmation] : requestArgs,
     process.env,
   );
-  requireRecoveryReview(request.apply && !retry);
+  requireRecoveryReview(request.apply);
   const root = realpathSync(resolve(import.meta.dirname, "../.."));
   stage = "固定依赖及证据检查";
   const entry = resolveBaselineCli(root);
