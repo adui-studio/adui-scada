@@ -222,7 +222,10 @@ void test("原始 ASCII 控制字符及编码口令控制字符保持严格拒�
     nativeEmptyClientOptions(url.replace("p%40ss%2Fword", "p%20word"), confirmation).password,
     "p word",
   );
-  assert.throws(() => nativeEmptyClientOptions(url + String.fromCharCode(92), confirmation), /仅允许/u);
+  assert.throws(
+    () => nativeEmptyClientOptions(url + String.fromCharCode(92), confirmation),
+    /仅允许/u,
+  );
 });
 
 void test("固定阶段与已知数据库错误码可定位且不泄漏内部详情", async () => {
@@ -238,10 +241,13 @@ void test("固定阶段与已知数据库错误码可定位且不泄漏内部详
     ["pg_stat_activity", "敏感未知错误码", /空库目录查询失败：未知错误类别/u],
   ]) {
     const { client } = mock({ failAt, failureCode });
-    await assert.rejects(() => inspectNativeEmptyDatabase(client, user), (error) => {
-      assert.match(error.message, expected);
-      assert.doesNotMatch(error.message, /敏感内部异常|敏感未知错误码/u);
-      return true;
-    });
+    await assert.rejects(
+      () => inspectNativeEmptyDatabase(client, user),
+      (error) => {
+        assert.match(error.message, expected);
+        assert.doesNotMatch(error.message, /敏感内部异常|敏感未知错误码/u);
+        return true;
+      },
+    );
   }
 });
