@@ -5229,3 +5229,35 @@ git status --short
 本批只增加第五座创建前宿主机只读预检。拒绝非 Windows、附加参数和 Docker 环境覆盖；先从本机上下文取得端点，仅允许两种固定 Windows 命名管道，后续 Docker 查询显式固定 --host，并要求 Linux 引擎、第四座保留容器镜像 ID 与本机固定镜像完全相同、第五座容器/卷/网络均不存在（含停止容器），再用无 Profile 的固定 Windows PowerShell Get-NetTCPConnection 检查所有本地 TCP 记录中的 15434。任何子进程异常、非零、信号、标准错误、资源重名或端口异常均短路并仅返回固定中文诊断；子进程不继承数据库连接串或凭据。不执行 Docker exec、run、pull、create、删除或 PostgreSQL 操作。报告 NATIVE_CHECK_ROUNDTRIP_HOST_REVIEW_REQUIRED，仅表示当前宿主机观察通过，不认证真实数据库来源；portReserved、resourceCreationAllowed、observationSourceAuthenticated、databaseExecutionAllowed、roundTripVerified、historicalAdoptionVerified、signingAllowed、deploymentAllowed 均为 false。端口检查不是端口预留，不能证明排除端口范围、未来竞争或 Docker 发布成功。第五座仍未创建，后续身份、排序规则、23 类空库与实际执行许可需分别核实；四座数据库及正式 Prisma 7 保持冻结边界。
 
 若任何一步失败，保留资源，不切换远程端点、不清除现有容器/卷/网络、不更改端口、不重新拉取镜像。只分享脱敏报告或固定阶段。成功后仍须维护者单独批准第五座实例创建。
+
+### 第五座创建前冻结库系统目录只读采集
+
+先在 Windows 原验收工作区运行增量链（全部为离线专项和静态门禁）：
+
+```powershell
+node --check scripts/prisma8-native-check-roundtrip-host.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-reference.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-reference-entry.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-reference.cases.mjs &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-reference &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-host &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-execution &&
+pnpm run test:prisma8:native:baseline:check-roundtrip &&
+pnpm run config:check && vp check --fix && vp check && pnpm run messages:check && pnpm run docs:check
+Write-Host "增量验收退出码：$LASTEXITCODE"
+git status --short
+```
+
+仅维护者另行明确同意冻结库系统目录只读访问后，才可以在最终干净工作区执行：
+
+```powershell
+pnpm run db:prisma8:native:baseline:check-roundtrip:plan &&
+pnpm run db:prisma8:native:baseline:check-roundtrip:reference-preflight --confirm-frozen-catalog-readonly
+Write-Host "冻结库目录只读验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+本批仅开发第五座创建前的冻结库系统目录只读采集入口，不提供创建或写入命令。单独确认参数 `--confirm-frozen-catalog-readonly` 之外的任何参数均拒绝；先复用既有宿主机预检，在同一个已核验 Windows 本机 Docker 端点内，以固定 Compose 项目/服务标签定位唯一历史 PostgreSQL 容器并核对运行状态和完整容器 ID；核对第四座容器运行状态、独立实验标签、固定镜像与不同容器 ID。仅两次固定 `docker exec`：通过容器内 `postgres` 系统用户、清空进程继承环境、固定 Unix socket、非交互 psql、不加载 psqlrc、不提示口令，分别访问 adui_scada_test 和第四座专用库。每次使用 `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`、固定超时及 default_transaction_read_only、只读 SELECT `pg_catalog.pg_database`/`pg_control_system()` 并 ROLLBACK；前三库通过同一共享系统目录精确核对三条目标元数据，不分别连接其业务数据库。真实连接身份、角色、170011 版本、当前和默认只读、重复读、目标数据库集合、两个集群标识不重复均须通过。仅比较四个冻结库的 UTF8、locale provider、LC_COLLATE、LC_CTYPE、locale、记录版本及实际排序规则版本；缺失、未知、自定义 ICU 规则或版本漂移一律停止另行评审。不读取业务表、配置凭据、根 .env 或完整容器环境，不修改数据库、容器、卷、网络、访问权限或既有证据，不自动降级认证或重试。此阶段保守地要求四个库的排序规则完全相同；实际存在不同合法设置也必须人工评审，不能为通过而刷新排序规则版本。报告只输出经白名单校验的参考排序规则及计数，不输出容器/集群原始标识。报告状态 NATIVE_CHECK_ROUNDTRIP_REFERENCE_REVIEW_REQUIRED，observedDatabaseCount=4、observedClusterCount=2、referenceCatalogObserved/allFrozenCollationsMatch/recordedCollationVersionMatches=true，沿用宿主机八个 false 许可字段；不认证后续目标 TCP 集群或保证下一次状态不变。第五座创建、独立凭据、目标同一连接内核验及真实 48 项实验仍须单独授权和实现。
+
+真实入口不要求数据库口令；如本地认证拒绝、容器停止、版本或排序规则不同，停止并只分享固定失败阶段，不修改任何现有库、权限、排序规则、容器或凭据。成功后仍需另行批准第五座创建。
