@@ -261,7 +261,11 @@ async function main() {
     saveReproEvidence(
       lab,
       "machine-output.encrypted.json",
-      encryptReproOutput(process.env[reproPasswordVariable], child.stdout ?? "", child.stderr ?? ""),
+      encryptReproOutput(
+        process.env[reproPasswordVariable],
+        child.stdout ?? "",
+        child.stderr ?? "",
+      ),
     );
     encryptedOutputSaved = true;
   } catch {

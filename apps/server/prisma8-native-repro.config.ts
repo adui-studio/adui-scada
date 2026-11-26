@@ -8,7 +8,9 @@ function requireConnection(): string {
   const input = process.env.SCADA_PRISMA8_NATIVE_REPRO_DATABASE_URL;
   if (
     typeof input !== "string" ||
-    !/^postgresql:\/\/adui_scada_native_repro:[a-f0-9]{64}@127\.0\.0\.1:15433\/adui_scada_fresh_prisma8_repro$/u.test(input) ||
+    !/^postgresql:\/\/adui_scada_native_repro:[a-f0-9]{64}@127\.0\.0\.1:15433\/adui_scada_fresh_prisma8_repro$/u.test(
+      input,
+    ) ||
     input.trim() !== input
   ) {
     throw new Error("第四座独立迁移配置连接地址无效");

@@ -9,10 +9,8 @@ export const reproVolume = reproContainer + "-data";
 export const reproNetwork = reproContainer + "-net";
 export const reproDatabase = "adui_scada_fresh_prisma8_repro";
 export const reproRole = "adui_scada_native_repro";
-export const reproImage =
-  "sha256:e5d2edd28b1f8d40a0a6c0c9cdc545b19b56a0d5d88f94bc11a97d970d4700d0";
-export const reproFingerprint =
-  "02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e";
+export const reproImage = "sha256:e5d2edd28b1f8d40a0a6c0c9cdc545b19b56a0d5d88f94bc11a97d970d4700d0";
+export const reproFingerprint = "02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e";
 export const reproConfirmation = "--confirm-adui-scada-fresh-prisma8-repro-once";
 export const reproPasswordVariable = "SCADA_PRISMA8_NATIVE_REPRO_PASSWORD";
 export const reproUrlVariable = "SCADA_PRISMA8_NATIVE_REPRO_DATABASE_URL";
@@ -157,7 +155,10 @@ export function claimReproAttempt(directory, fingerprint, containerId, systemIde
 export function extractReproSchemaFailure(stdout, stderr, allowedNames) {
   const streams = [stdout, stderr];
   if (streams.some((value) => typeof value !== "string")) return null;
-  if (streams.reduce((size, value) => size + Buffer.byteLength(value, "utf8"), 0) > 16 * 1024 * 1024) {
+  if (
+    streams.reduce((size, value) => size + Buffer.byteLength(value, "utf8"), 0) >
+    16 * 1024 * 1024
+  ) {
     return null;
   }
   const documents = streams.flatMap((stream) => {
@@ -196,7 +197,13 @@ export function encryptReproOutput(password, stdout, stderr) {
   const salt = randomBytes(32);
   const iv = randomBytes(12);
   const key = Buffer.from(
-    hkdfSync("sha256", Buffer.from(password, "hex"), salt, "ADui SCADA Prisma8 repro output v1", 32),
+    hkdfSync(
+      "sha256",
+      Buffer.from(password, "hex"),
+      salt,
+      "ADui SCADA Prisma8 repro output v1",
+      32,
+    ),
   );
   const cipher = createCipheriv("aes-256-gcm", key, iv);
   const ciphertext = Buffer.concat([

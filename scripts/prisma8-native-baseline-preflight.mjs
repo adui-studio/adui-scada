@@ -290,7 +290,9 @@ async function inspectEmptyDatabase(client, expectedUser, database, target, syst
     };
   } catch (error) {
     failures.push(
-      error instanceof NativePreflightError ? error.message : describeDatabaseFailure(stage, error, target),
+      error instanceof NativePreflightError
+        ? error.message
+        : describeDatabaseFailure(stage, error, target),
     );
   } finally {
     if (begun) {

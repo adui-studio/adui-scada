@@ -295,7 +295,10 @@ void test("第四座版本、集群和角色不一致时拒绝目录检查并回
       ...config,
     });
     await assert.rejects(() => inspectReproEmptyDatabase(client, systemIdentifier), /第四座/u);
-    assert.equal(calls.some((sql) => sql.includes("pg_stat_activity")), false);
+    assert.equal(
+      calls.some((sql) => sql.includes("pg_stat_activity")),
+      false,
+    );
     assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
   }
 });
