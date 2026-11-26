@@ -5187,3 +5187,9 @@ git status --short
 ```
 
 报告必须为 NATIVE_CHECK_REPAIR_PACKAGE_LOCKED_REVIEW_REQUIRED，165 项操作、24 文件、两份配置、固定证据指纹、offlineReviewPassed/evidencePreserved 为 true，regenerated/roundTripVerified/signingAllowed/deploymentAllowed 为 false。失败保留现场，仅分享固定阶段或脱敏报告。四座数据库均冻结，不执行在线命令。
+
+### 固定修复包最小 CHECK 往返离线计划
+
+原工作区内保留全部证据，执行 `pnpm run test:prisma8:native:baseline:check-roundtrip` 与 `pnpm run test:prisma8:native:baseline:check-repair-package-review`、`pnpm run config:check`、`vp check`、`pnpm run messages:check`、`pnpm run docs:check`。提交格式化后确认工作区干净，再执行 `pnpm run db:prisma8:native:baseline:check-roundtrip:plan`。该入口复用已存在固定修复包离线复验，只输出计划 JSON，不写文件、不连接数据库；预期两项约束各三阶段，每阶段八个合成输入，计划指纹及原证据指纹，databaseExecutionAllowed/roundTripVerified/signingAllowed/deploymentAllowed=false。没有真实采集入口，不执行任何数据库命令，失败停止并保留证据。
+
+本批不包含数据库客户端、SQL 执行器、创建容器或新数据库命令。未来如另获授权，须在独立 PostgreSQL 17.11（170011）、同镜像及经核实的排序规则环境，以相同 public 表名分别创建最小关系并在阶段间回滚恢复空目录；通过 pg_catalog 核对约束元数据及精确表达式，用受控合成输入和独立保存点检查结果及错误码，核实回滚和退出，不访问业务数据。实际报告采集及来源认证、隔离目标身份、一次性执行门禁另批实现并评审。观察判定器严格要求固定计划指纹、版本、六个有序阶段、元数据、提交与提取原文、48 个结果，只输出匹配分类和计数，不回显任意输入；匹配仍不证明来源真实，始终 observationSourceAuthenticated/roundTripVerified/historicalAdoptionVerified/databaseExecutionAllowed/signingAllowed/deploymentAllowed=false。四座现存数据库及证据持续冻结，不创建第五座，不启用旧入口，不签名、部署、切换正式 Provider 或修改历史迁移。ADR 保持 Proposed。
