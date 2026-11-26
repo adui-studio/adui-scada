@@ -57,12 +57,8 @@ const empty = {
   other_sessions: false,
 };
 
-function mock({
-  boundaryRows = [boundary],
-  emptyRows = [empty],
-  failAt = "",
-  failureCode = undefined,
-} = {}) {
+/** @param {{ boundaryRows?: object[], emptyRows?: object[], failAt?: string, failureCode?: string }} [options] 模拟客户端配置。 */
+function mock({ boundaryRows = [boundary], emptyRows = [empty], failAt = "", failureCode } = {}) {
   const failure = Object.assign(new Error("敏感内部异常"), { code: failureCode });
   const calls = [];
   const client = {
@@ -229,7 +225,8 @@ void test("原始 ASCII 控制字符及编码口令控制字符保持严格拒�
 });
 
 void test("固定阶段与已知数据库错误码可定位且不泄漏内部详情", async () => {
-  for (const [failAt, failureCode, expected] of [
+  /** @type {[string, string, RegExp][]} 固定阶段、错误码及预期诊断。 */
+  const cases = [
     ["连接", "3D000", /连接失败：3D000/u],
     ["连接", "28P01", /连接失败：28P01/u],
     ["连接", "ECONNREFUSED", /连接失败：ECONNREFUSED/u],
@@ -239,7 +236,8 @@ void test("固定阶段与已知数据库错误码可定位且不泄漏内部详
     ["ROLLBACK", "55P03", /只读事务回滚失败：55P03/u],
     ["关闭", "ECONNRESET", /连接关闭失败：ECONNRESET/u],
     ["pg_stat_activity", "敏感未知错误码", /空库目录查询失败：未知错误类别/u],
-  ]) {
+  ];
+  for (const [failAt, failureCode, expected] of cases) {
     const { client } = mock({ failAt, failureCode });
     await assert.rejects(
       () => inspectNativeEmptyDatabase(client, user),
