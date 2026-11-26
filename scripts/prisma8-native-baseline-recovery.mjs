@@ -1,5 +1,6 @@
 import { nativeHash } from "./prisma8-native-baseline.mjs";
 import { nativeEmptyDatabaseName } from "./prisma8-native-baseline-preflight.mjs";
+import { isNativeDirectError } from "./prisma8-native-baseline-retry.mjs";
 
 export const migrationStateConfirmation = "--inspect-adui-scada-fresh-prisma8-native-state";
 const migrationHash = "e6b95ed88834dce3f6448445a5ba12a00ba34c8e5c68f4335751659b15a77f17";
@@ -35,9 +36,15 @@ const prismaCodes = new Set([
   "CONTRACT.MARKER_MISMATCH",
   "CONTRACT.SCHEMA_VERIFICATION_FAILED",
   "CONTRACT.TARGET_MISMATCH",
+  "CONFIG.FILE_NOT_FOUND",
+  "CONFIG.CONTRACT_MISSING",
   "CONFIG.DB_CONNECTION_REQUIRED",
   "CONFIG.VALIDATION_FAILED",
   "CLI.INVALID_ARGUMENTS",
+  "CLI.UNKNOWN_COMMAND",
+  "CLI.CONSENT_REQUIRED",
+  "CLI.CONSENT_UNUSED",
+  "CONTRACT.UNREADABLE",
   "DRIVER.NOT_CONNECTED",
 ]);
 const sqlStates = new Set([
@@ -73,7 +80,7 @@ function requireMatch(condition, message) {
   if (!condition) throw new NativeRecoveryError(message);
 }
 
-/** 事故恢复期间冻结所有写入确认；不提供环境变量或附加参数绕过。 */
+/** 原写入确认持续冻结；单次恢复执行由独立确认和尝试记录门禁控制。 */
 export function requireRecoveryReview(apply) {
   requireMatch(!apply, "上次原生迁移失败，恢复评审完成前禁止再次执行迁移");
 }
@@ -119,6 +126,8 @@ export function describeNativeChildFailure(child, commandId) {
         document.envelope?.commandId === commandId
       ) {
         collect(document.envelope, 0);
+      } else if (isNativeDirectError(document, commandId, prismaCodes)) {
+        collect(document, 0);
       }
     }
   }

@@ -5074,3 +5074,33 @@ git status --short
 ```
 
 该入口只读取专用库系统目录、固定元数据统计，不执行官方迁移或签名；所有只读事务在返回前回滚并关闭。仅发现无业务表和标记 schema 等时，再单独执行原 23 类严格空库检查。预期恢复状态 NATIVE_MIGRATION_RECOVERY_REVIEW_REQUIRED、再次迁移许可否；如果退出非零同样保留现场。marker/ledger 字段依据上游源码核对，固定 RC.35 真实列形状仍需实测，若不符则停止并报告固定阶段及已知错误码。原失败错误已丢弃，不能由新的只读查询追溯，必要时只在本机检查 PostgreSQL 日志并仅分享脱敏的错误类别。目录统计或元数据匹配不等于已验证全结构、注释、约束或历史接管。禁止再次迁移、签名、重置、清理及并发数据库操作。
+
+### 第三座库恢复验收后的单次人工诊断执行
+
+PR #224 已合并，维护者真实恢复确认受检空库与固定证据未变；Docker 现有错误日志未取得首次官方迁移的直接原因。旧写入确认继续拒绝。本节新增的确认参数只在维护者明确同意本次诊断性迁移时运行，不属于自动测试或 ready。先完成恢复专项（原六项加新六项，预期十二项）、迁移与空库专项、Vite+、中文及文档检查。保持原件、独立候选、第三座库和其他库不变，关闭第三座库其他连接。
+
+```powershell
+& {
+    $previousUrl = $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL
+    try {
+        $password = Read-Host "请输入第三座专用库所有者密码" -MaskInput
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_fresh_prisma8_native?schema=public"
+        pnpm run db:prisma8:native:baseline:migrate --confirm-adui-scada-fresh-prisma8-native-retry-once
+        $migrationExitCode = $LASTEXITCODE
+        Write-Host "第三座库一次性恢复尝试退出码：$migrationExitCode"
+        if ($migrationExitCode -ne 0) {
+            pnpm run db:prisma8:native:baseline:migrate --inspect-adui-scada-fresh-prisma8-native-state
+            $recoveryExitCode = $LASTEXITCODE
+            Write-Host "第三座库只读恢复检查退出码：$recoveryExitCode"
+        }
+    } finally {
+        if ($null -eq $previousUrl) { Remove-Item Env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL -ErrorAction SilentlyContinue }
+        else { $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL = $previousUrl }
+        Remove-Variable password, encodedPassword, previousUrl -ErrorAction SilentlyContinue
+    }
+}
+git status --short
+```
+
+在原有两次空库预检及唯一官方路径预览通过后、官方迁移调用前，独占创建 apps/server/.artifacts/prisma8-native-baseline-retry-20261126.json；仅保存固定范围和候选指纹，不含凭据且不改动十四文件候选。该本地记录防止同工作区重复调用，不是数据库锁、跨主机锁或对抗恶意文件修改的边界。记录存在即拒绝，再次运行、删除或移动记录、重置数据库、修改迁移包以绕过门禁均禁止。若失败，仅执行只读恢复，分享已脱敏的退出码和诊断码；即使再次为空也不得重新执行。若成功，官方验证和剩余路径复验须通过，再进入实际目录、注释、约束和历史语义对照，不代表正式接管许可。
