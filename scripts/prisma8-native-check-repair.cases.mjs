@@ -17,7 +17,7 @@ const actionAfter =
   "((action)::text = ANY (ARRAY[('PUBLISH'::character varying)::text, ('ROLLBACK'::character varying)::text]))";
 
 function attribute(name, expression) {
-  return "  @@check(expression: sql`" + expression + "`", map: " + JSON.stringify(name) + ")";
+  return "  @@check(expression: sql`" + expression + "`, map: " + JSON.stringify(name) + ")";
 }
 
 const source = [
