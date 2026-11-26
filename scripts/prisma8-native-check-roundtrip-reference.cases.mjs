@@ -20,6 +20,7 @@ const collation = {
   ctype: "en_US.utf8",
   locale: null,
   version: null,
+  actualVersion: null,
 };
 
 function catalog(database, role, systemIdentifier, names) {
@@ -34,7 +35,6 @@ function catalog(database, role, systemIdentifier, names) {
     rows: names.map((name) => ({
       database: name,
       ...collation,
-      actualVersion: null,
       customIcuRules: false,
     })),
   };
@@ -54,8 +54,10 @@ function fixture() {
     "other-net",
     "[]",
     mainId,
-    mainId + "|true|adui-scada|postgres",
-    reproId + "|true|" + roundTripTarget.image + "|prisma8-native-repro",
+    mainId + "|true|" + roundTripTarget.image + "|adui-scada|postgres|/var/lib/postgresql;",
+    reproId + "|true|" + roundTripTarget.image + "|prisma8-native-repro|/var/lib/postgresql/data;",
+    "",
+    "",
     () => JSON.stringify(main),
     () => JSON.stringify(repro),
   ];
@@ -88,15 +90,21 @@ void test("冻结库目录采集必须单独确认且不接受额外参数", () 
   assert.equal(calls.length, 0);
 });
 
-void test("四库两集群目录匹配只输出受控元数据且不授予任何执行许可", () => {
+void test("四库两集群及 libc 运行环境匹配，缺失版本不得误报为匹配", () => {
   const f = fixture();
   const report = f.inspect();
   assert.equal(report.status, "NATIVE_CHECK_ROUNDTRIP_REFERENCE_REVIEW_REQUIRED");
   assert.equal(report.observedDatabaseCount, 4);
   assert.equal(report.observedClusterCount, 2);
   assert.deepEqual(report.referenceCollation, collation);
-  assert.equal(report.recordedCollationVersionMatches, true);
+  assert.equal(report.recordedCollationVersionAvailable, false);
+  assert.equal(report.recordedCollationVersionMatches, null);
+  assert.equal(report.recordedCollationVersionStatus, "UNAVAILABLE");
   assert.equal(report.allFrozenCollationsMatch, true);
+  assert.equal(report.allFrozenCollationCatalogMetadataMatch, true);
+  assert.equal(report.containerImageIdentityMatched, true);
+  assert.equal(report.localeRuntimeFilesUnchanged, true);
+  assert.equal(report.collationRuntimeIdentityVerified, true);
   for (const value of [
     report.portReserved,
     report.resourceCreationAllowed,
@@ -108,19 +116,25 @@ void test("四库两集群目录匹配只输出受控元数据且不授予任何
     report.deploymentAllowed,
   ])
     assert.equal(value, false);
-  assert.doesNotMatch(JSON.stringify(report), /1234567890123456789|2234567890123456789|secret/u);
-  assert.equal(f.calls.length, 14);
+  assert.doesNotMatch(JSON.stringify(report), /1234567890123456789|2234567890123456789|secret|postgresql\/data/u);
+  assert.equal(f.calls.length, 16);
   assert.deepEqual(
-    f.calls.slice(9, 12).map(({ args }) => args.slice(2, 4)),
+    f.calls.slice(9, 14).map(({ args }) => args.slice(2, 4)),
     [
       ["container", "ls"],
       ["container", "inspect"],
       ["container", "inspect"],
+      ["diff", mainId],
+      ["diff", reproId],
     ],
   );
+  assert.match(f.calls[10].args[4], /\.Image/u);
+  assert.match(f.calls[10].args[4], /\.Mounts/u);
+  assert.match(f.calls[11].args[4], /\.Image/u);
+  assert.match(f.calls[11].args[4], /\.Mounts/u);
   for (const { i, id, database, role } of [
-    { i: 12, id: mainId, database: mainNames[0], role: "adui_scada" },
-    { i: 13, id: reproId, database: reproName, role: "adui_scada_native_repro" },
+    { i: 14, id: mainId, database: mainNames[0], role: "adui_scada" },
+    { i: 15, id: reproId, database: reproName, role: "adui_scada_native_repro" },
   ]) {
     const { executable, args, options } = f.calls[i];
     assert.equal(executable, "docker");
@@ -158,28 +172,76 @@ void test("四库两集群目录匹配只输出受控元数据且不授予任何
     assert.deepEqual(options.env, { Path: "system" });
     assert.equal(options.shell, false);
   }
-  assert.match(f.calls[12].args[28], /adui_scada_fresh_prisma8_ref/u);
-  assert.match(f.calls[12].args[28], /adui_scada_fresh_prisma8_native/u);
-  assert.doesNotMatch(f.calls[12].args[28], /adui_scada_fresh_prisma8_repro/u);
+  assert.match(f.calls[14].args[28], /adui_scada_fresh_prisma8_ref/u);
+  assert.match(f.calls[14].args[28], /adui_scada_fresh_prisma8_native/u);
+  assert.doesNotMatch(f.calls[14].args[28], /adui_scada_fresh_prisma8_repro/u);
 });
 
-void test("宿主机预检或容器身份失败时不连接冻结库", () => {
-  for (const { index, output } of [
-    { index: 8, output: "[15434]" },
-    { index: 9, output: mainId + "\n" + reproId },
-    { index: 10, output: mainId + "|true|other|postgres" },
-    { index: 11, output: mainId + "|true|" + roundTripTarget.image + "|prisma8-native-repro" },
+void test("宿主机、历史容器身份或固定镜像失败时不连接冻结库", () => {
+  for (const { index, output, expected } of [
+    { index: 8, output: "[15434]", expected: /端口存在/u },
+    { index: 9, output: mainId + "\n" + reproId, expected: /唯一运行中/u },
+    {
+      index: 10,
+      output: mainId + "|true|sha256:other|adui-scada|postgres|/var/lib/postgresql;",
+      expected: /历史验收容器身份或固定镜像不一致/u,
+    },
+    {
+      index: 11,
+      output: reproId + "|true|sha256:other|prisma8-native-repro|/var/lib/postgresql/data;",
+      expected: /第四座保留容器身份或固定镜像不一致/u,
+    },
   ]) {
     const f = fixture();
     f.outputs[index] = output;
-    assert.throws(f.inspect, /端口存在|唯一运行中|容器身份不一致/u);
+    assert.throws(f.inspect, expected);
     assert.equal(f.calls.length, index + 1);
   }
 });
 
+void test("挂载覆盖 libc 或 locale 路径时拒绝读取数据库", () => {
+  for (const { index, output } of [
+    {
+      index: 10,
+      output: mainId + "|true|" + roundTripTarget.image + "|adui-scada|postgres|/usr/lib/locale;",
+    },
+    {
+      index: 11,
+      output: reproId + "|true|" + roundTripTarget.image + "|prisma8-native-repro|/etc/locale.conf;",
+    },
+  ]) {
+    const f = fixture();
+    f.outputs[index] = output;
+    assert.throws(f.inspect, /容器挂载覆盖 libc 或 locale 环境/u);
+    assert.equal(f.calls.length, index + 1);
+  }
+});
+
+void test("libc 或 locale 运行文件变化时拒绝，且不连接冻结库", () => {
+  for (const { index, output } of [
+    { index: 12, output: "C /usr/lib/locale/locale-archive" },
+    { index: 13, output: "A /etc/ld.so.cache" },
+  ]) {
+    const f = fixture();
+    f.outputs[index] = output;
+    assert.throws(f.inspect, /容器 libc 或 locale 文件发生变化/u);
+    assert.equal(f.calls.length, index + 1);
+  }
+});
+
+void test("无关容器文件变化允许，异常 diff 输出拒绝", () => {
+  const unrelated = fixture();
+  unrelated.outputs[12] = "C /var/lib/postgresql/data\nA /var/log/postgresql";
+  assert.equal(unrelated.inspect().collationRuntimeIdentityVerified, true);
+  const malformed = fixture();
+  malformed.outputs[12] = "unexpected output";
+  assert.throws(malformed.inspect, /容器文件变更清单格式异常/u);
+  assert.equal(malformed.calls.length, 13);
+});
+
 void test("系统目录 JSON、身份、版本、只读状态及数量异常均拒绝", () => {
   const bad = fixture();
-  bad.outputs[12] = "secret";
+  bad.outputs[14] = "secret";
   assert.throws(bad.inspect, { message: "冻结库系统目录不是唯一合法 JSON" });
   for (const changes of [
     { database: "other" },
@@ -194,11 +256,11 @@ void test("系统目录 JSON、身份、版本、只读状态及数量异常均�
     const f = fixture();
     Object.assign(f.main, changes);
     assert.throws(f.inspect, /身份、版本、只读事务或目录数量/u);
-    assert.equal(f.calls.length, 13);
+    assert.equal(f.calls.length, 15);
   }
 });
 
-void test("目录名称重复或缺失以及无效排序规则元数据均拒绝", () => {
+void test("目录名称重复、无效排序规则元数据及版本漂移均拒绝", () => {
   const duplicate = fixture();
   duplicate.main.rows[1].database = mainNames[0];
   assert.throws(duplicate.inspect, /名称缺失或重复/u);
@@ -214,11 +276,27 @@ void test("目录名称重复或缺失以及无效排序规则元数据均拒绝
     const f = fixture();
     Object.assign(f.main.rows[0], changes);
     assert.throws(f.inspect, /名称缺失或重复|排序规则版本或自定义规则/u);
-    assert.equal(f.calls.length, 13);
+    assert.equal(f.calls.length, 15);
   }
 });
 
-void test("允许目录行顺序差异但拒绝不同集群标识缺失和排序规则漂移", () => {
+void test("可用的排序规则版本必须真实相等，非 libc 缺失版本拒绝", () => {
+  const matched = fixture();
+  for (const row of [...matched.main.rows, ...matched.repro.rows]) {
+    row.version = "2.36";
+    row.actualVersion = "2.36";
+  }
+  const report = matched.inspect();
+  assert.equal(report.recordedCollationVersionAvailable, true);
+  assert.equal(report.recordedCollationVersionMatches, true);
+  assert.equal(report.recordedCollationVersionStatus, "MATCHED");
+  const missing = fixture();
+  missing.main.rows[0].provider = "i";
+  missing.main.rows[0].locale = "en-US";
+  assert.throws(missing.inspect, /排序规则版本或自定义规则/u);
+});
+
+void test("允许目录行顺序差异但拒绝重复集群标识和排序规则漂移", () => {
   const ordered = fixture();
   ordered.main.rows.reverse();
   assert.equal(ordered.inspect().allFrozenCollationsMatch, true);
@@ -227,17 +305,17 @@ void test("允许目录行顺序差异但拒绝不同集群标识缺失和排序
   assert.throws(same.inspect, /集群标识重复/u);
   const drift = fixture();
   drift.repro.rows[0].collate = "C";
-  assert.throws(drift.inspect, /排序规则不一致/u);
+  assert.throws(drift.inspect, /四个冻结库的排序规则不一致/u);
 });
 
 void test("冻结库子进程失败时保留固定脱敏诊断并立即停止", () => {
   const f = fixture();
   const run = (executable, args, options) =>
-    f.calls.length === 12
+    f.calls.length === 14
       ? { ...f.run(executable, args, options), status: 1, stderr: "secret" }
       : f.run(executable, args, options);
   assert.throws(() => inspectRoundTripReference("win32", [referenceConfirmation], {}, run), {
     message: "读取冻结库系统目录：未取得成功的只读结果",
   });
-  assert.equal(f.calls.length, 13);
+  assert.equal(f.calls.length, 15);
 });
