@@ -1866,3 +1866,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/prisma8-native-check-roundtrip-host.mjs`：固定本机 Docker 端点、镜像、资源及 Windows TCP 记录检查；失败停止，报告不授予创建许可。
 - `scripts/prisma8-native-check-roundtrip-host.cases.mjs`：八项模拟子进程回归，`pnpm run test:prisma8:native:baseline:check-roundtrip-host` 纳入 ready。
 - `pnpm run db:prisma8:native:baseline:check-roundtrip:host-preflight`：只读宿主机实际入口，不纳入 ready，不连接数据库、不创建实例或保留端口。
+
+### 2026-11-26 · 第五座创建前冻结库目录只读采集
+
+- `scripts/prisma8-native-check-roundtrip-host.mjs`：提取内部已核验宿主机调用上下文，原宿主机只读报告不变；单独确认后才调用固定目录采集核心。
+- `scripts/prisma8-native-check-roundtrip-reference.mjs`：受控容器身份、两个只读系统目录、四库排序规则及版本核验，不创建资源、不读取业务表、不输出原始标识。
+- `scripts/prisma8-native-check-roundtrip-reference-entry.mjs`：独立真实只读入口，要求单独确认参数；失败固定脱敏诊断。
+- `scripts/prisma8-native-check-roundtrip-reference.cases.mjs`：七项注入子进程回归，`pnpm run test:prisma8:native:baseline:check-roundtrip-reference` 纳入 ready；`pnpm run db:prisma8:native:baseline:check-roundtrip:reference-preflight --confirm-frozen-catalog-readonly` 真实入口不纳入 ready。
