@@ -21,6 +21,7 @@ import {
   requireReproContainer,
   requireReproIdentity,
   requireReproRequest,
+  requireReproWriteAvailable,
   saveReproEvidence,
 } from "./prisma8-native-isolated-repro.mjs";
 
@@ -206,4 +207,8 @@ void test("加密原始捕获文本可本机认证解密且不回显原始数据
   ]);
   assert.deepEqual(JSON.parse(decrypted.toString("utf8")), { stdout, stderr });
   assert.notEqual(encryptReproOutput(password, stdout, stderr).ciphertext, encrypted.ciphertext);
+});
+
+void test("真实单次迁移许可消耗后不依赖本地记录而拒绝入口", () => {
+  assert.throws(() => requireReproWriteAvailable(), /第四座单次迁移许可已消耗/u);
 });
