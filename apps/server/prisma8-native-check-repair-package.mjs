@@ -53,9 +53,11 @@ import {
 
 import { RepairPackageReviewError } from "../../scripts/prisma8-native-check-repair-package-review.mjs";
 import { reviewExistingRepairPackage } from "./prisma8-native-check-repair-package-review.mjs";
+import { buildCheckRoundTripPlan, CheckRoundTripError } from "../../scripts/prisma8-native-check-roundtrip.mjs";
 
 const confirmation = "--confirm-offline-check-repair-package";
 const reviewConfirmation = "--review-existing-check-repair-package";
+const roundTripConfirmation = "--plan-check-roundtrip";
 const originalFingerprint = "02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e";
 const configHashes = {
   "prisma8-native-check-repair-plan.config.ts":
@@ -102,10 +104,11 @@ function runOffline(root, output, args, logs) {
 }
 
 function main() {
-  const reviewing = process.argv[2] === reviewConfirmation;
+  const roundTripPlanning = process.argv[2] === roundTripConfirmation;
+  const reviewing = process.argv[2] === reviewConfirmation || roundTripPlanning;
   requireMatch(
     process.argv.length === 3 && (reviewing || process.argv[2] === confirmation),
-    "必须明确选择离线生成或固定修复迁移包复验，不接受其他参数",
+    "必须明确选择离线生成、固定修复迁移包复验或往返计划，不接受其他参数",
   );
   stage = "固定原件、修复契约、第四座副本及配置核验";
   const root = realpathSync(resolve(import.meta.dirname, "../.."));
@@ -197,7 +200,19 @@ function main() {
       repairFiles,
       preserve,
     });
-    process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+    if (roundTripPlanning) {
+      stage = "固定 CHECK 往返计划";
+      const plan = buildCheckRoundTripPlan(oldContract, contract);
+      requireMatch(
+        report.offlineReviewPassed === true && report.evidencePreserved === true &&
+          report.evidenceFingerprint === plan.evidenceFingerprint,
+        "往返计划未绑定已复验固定证据",
+      );
+      preserve();
+      process.stdout.write(JSON.stringify(plan, null, 2) + "\n");
+    } else {
+      process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+    }
     return;
   }
   const planDir = join(output, "plan");
@@ -392,7 +407,7 @@ try {
   main();
 } catch (error) {
   console.error(
-    error instanceof RepairPackageError || error instanceof RepairPackageReviewError
+    error instanceof RepairPackageError || error instanceof RepairPackageReviewError || error instanceof CheckRoundTripError
       ? error.message
       : "离线修复迁移包失败：" + stage + "；保留证据",
   );
