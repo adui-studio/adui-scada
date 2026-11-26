@@ -124,9 +124,7 @@ function locateScaffold(source) {
       base.typeArguments[0].kind === ts.SyntaxKind.NeverKeyword,
     "官方迁移脚手架不是唯一空起点迁移类",
   );
-  const target = migration.members.filter(
-    (item) => item.name?.getText(ast) === "endContractJson",
-  );
+  const target = migration.members.filter((item) => item.name?.getText(ast) === "endContractJson");
   requireMatch(
     target.length === 1 &&
       ts.isPropertyDeclaration(target[0]) &&
@@ -134,11 +132,10 @@ function locateScaffold(source) {
       !migration.members.some((item) => item.name?.getText(ast) === "startContractJson"),
     "官方迁移脚手架目标快照或空起点声明变化",
   );
-  const getters = migration.members.filter(
-    (item) => item.name?.getText(ast) === "operations",
-  );
+  const getters = migration.members.filter((item) => item.name?.getText(ast) === "operations");
   const getter = getters[0];
-  const statement = getter && ts.isGetAccessorDeclaration(getter) ? getter.body?.statements[0] : undefined;
+  const statement =
+    getter && ts.isGetAccessorDeclaration(getter) ? getter.body?.statements[0] : undefined;
   requireMatch(
     getters.length === 1 &&
       ts.isGetAccessorDeclaration(getter) &&

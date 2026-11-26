@@ -125,7 +125,10 @@ void test("不同换行、分行导入、尾逗号及类型注解不改变原操
     .replace("{ Migration, MigrationCLI }", "{\n  Migration,\n  MigrationCLI,\n}")
     .replace("get operations() {", "get operations(): unknown[] {")
     .replace("this.createSchema({})", 'this.createSchema({ text: "];" }),')
-    .replace("MigrationCLI.run(import.meta.url, M);", "MigrationCLI.run(\n  import.meta.url,\n  M,\n);")
+    .replace(
+      "MigrationCLI.run(import.meta.url, M);",
+      "MigrationCLI.run(\n  import.meta.url,\n  M,\n);",
+    )
     .trimEnd()
     .replaceAll("\n", "\r\n");
   const result = appendCommentOperations(formatted, comments);
@@ -142,9 +145,15 @@ void test("不同换行、分行导入、尾逗号及类型注解不改变原操
 void test("拒绝起点字段、非数组 getter、错误调用入口及语法错误", () => {
   const comments = buildCommentOperations(preview);
   for (const invalid of [
-    source.replace("override readonly endContractJson", "readonly startContractJson = endContract;\n  override readonly endContractJson"),
+    source.replace(
+      "override readonly endContractJson",
+      "readonly startContractJson = endContract;\n  override readonly endContractJson",
+    ),
     source.replace("return [", "return Array.of(").replace("    ];", "    );"),
-    source.replace("MigrationCLI.run(import.meta.url, M)", "MigrationCLI.run(import.meta.url, Other)"),
+    source.replace(
+      "MigrationCLI.run(import.meta.url, M)",
+      "MigrationCLI.run(import.meta.url, Other)",
+    ),
     source.replace("this.createSchema({})", "this.createSchema({"),
   ]) {
     assert.throws(() => appendCommentOperations(invalid, comments), /脚手架/u);
