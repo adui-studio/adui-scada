@@ -2954,3 +2954,7 @@ PR #229 经维护者授权 Squash 合入 68e9cf856d6f8d95b0cea84f69c8cd073c7fb29
 维护者 Windows 真实离线候选复验退出 0：原件 10、候选 14、结构 46、注释 119、操作 165，官方重新干跑与完整性检查通过，固定指纹 02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e。独立容器 adui-scada-prisma8-repro 已创建，镜像 sha256:e5d2edd28b1f8d40a0a6c0c9cdc545b19b56a0d5d88f94bc11a97d970d4700d0，独立卷 adui-scada-prisma8-repro-data、网络 adui-scada-prisma8-repro-net，绑定 127.0.0.1:15433，实际库 adui_scada_fresh_prisma8_repro、角色 adui_scada_native_repro、版本 170011。尚未执行迁移。
 
 本分支新增固定独立入口：拒绝通用连接、额外参数及远程 Docker 上下文，核对镜像、标签、卷、网络、端口、容器身份和真实 PostgreSQL 集群标识；复用二十三类只读预检，保留旧第三座连接守卫和全部写入冻结。固定 CLI rc.35/Provider rc.25、原件、十四文件及独立副本，离线复验、在线唯一边预览及再次只读检查后独占登记；仅执行一次官方 db migrate --to 固定存储哈希 --no-advance-ref。失败捕获两路机器文本，提取脱敏 schemaIssues 并以独立随机密码经 HKDF-SHA256 派生密钥、AES-256-GCM 加密保存原始捕获文本；未知封装不得重试。保留容器、卷、凭据、候选副本及尝试记录，不创建或清理其他资源。新增测试八项独立门禁、两项第四座空库回归；真实迁移、Windows 质量链及固定 RC 机器诊断仍待验收。ADR-0072 Proposed、正式 Prisma 7 Provider 不变。
+
+### 2026-11-26 · PR #230 暂存检查阻塞（E-153）
+
+维护者 Windows 六组专项 51/51、Vite+ 559/399 零警告错误、中文 426、Markdown 96，增量退出 0；但五份格式化文件暂存，真实迁移指令在干净工作区门禁停止，随后 JetBrains 提交 Hook 对独立迁移配置报 TS2591，未提交、未执行迁移或消耗本轮单次许可。仅增加该配置的文件级 Node 类型引用，局部模拟 TypeScript 复现及修复退出 2→0、模拟配置白名单 8/8；Windows 实际暂存检查及提交 Hook 待复验。PR #230 继续 Draft，第三座及其余旧库仍冻结，第四座真实迁移、失败诊断及 Prisma 8 接管仍未验收。
