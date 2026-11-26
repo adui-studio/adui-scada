@@ -1819,3 +1819,12 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/prisma8-native-isolated-repro.mjs`：官方离线复验、独立候选、容器和 TCP 集群身份核验、唯一在线预览、再次预检、一次性记录和固定迁移调用；结果仅为取证评审。
 - `pnpm run test:prisma8:native:baseline:repro`：八项离线测试，纳入 ready；原空库专项扩至十二项。
 - `pnpm run db:prisma8:native:baseline:repro --confirm-adui-scada-fresh-prisma8-repro-once`：已单独授权的第四座本机单次实验，专用环境变量 SCADA_PRISMA8_NATIVE_REPRO_PASSWORD，真实入口不纳入 ready，不创建/重置数据库，不重复运行。
+
+### 2026-11-26 · CHECK 表达式修复离线入口
+
+- `scripts/prisma8-native-check-repair.mjs`：两项真实失败谓词的精确 PSL 属性替换；严格比较新官方契约与原契约，除两项 expression 和新 storageHash 外拒绝任何差异。
+- `scripts/prisma8-native-check-repair.cases.mjs`：七项离线回归，纳入 ready。
+- `apps/server/prisma8-native-check-repair.config.ts`：不含数据库连接的固定离线配置，独立输出根目录 .artifacts/prisma8-native-check-repair。
+- `apps/server/prisma8-native-check-repair.mjs`：复核原包、十四文件指纹、正式生成物、历史八迁移及 119 项历史注释，固定 RC 的 contract emit，检查新契约声明哈希与官方静态装载；禁止覆盖、签名、部署或迁移。
+- `pnpm run test:prisma8:native:baseline:check-repair`：离线回归；`pnpm run db:prisma8:native:baseline:check-repair --confirm-offline-check-repair`：独立发射，不连接数据库，不纳入 ready 的实际发射。
+- 第四座原复现入口和专用 config 均已新增无条件写入冻结；原凭据校验、加密证据格式与诊断解析保留供历史审查。原八项测试外新增冻结回归一项。
