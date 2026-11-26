@@ -2966,3 +2966,7 @@ PR #229 经维护者授权 Squash 合入 68e9cf856d6f8d95b0cea84f69c8cd073c7fb29
 第四座真实 PostgreSQL 17.11 两次身份与 23 类空库检查、唯一空起点在线预览、一次性登记通过；官方原生迁移退出 2、包装退出 1，MIGRATION.SCHEMA_VERIFY_FAILED，捕获未中断，实际操作数量未知。加密原始输出保存、固定十四文件证据复核、容器身份复核均 true，单次授权已消耗。真实密文离线认证解密及两次诊断退出 0：仅 scada_identities_status_check 和 scada_project_release_event_action_check 的 expression 不同，预期 ARRAY_CAST、实际 ELEMENT_CAST，两个原文精确匹配均 true，其他变化字段 0。固定 rc.25 的 SqlCheckConstraintIR 对 exact-named CHECK 直接比较 expression 文本。已确认第四座失败的直接结构原因；第三座没有原始差异，第四座实际回滚目录未检查，不推断其根因或回滚结果。
 
 新专项仅准备独立离线修复 PSL 与官方 Contract：固定两条已观测的表达式文本，将 ARRAY_CAST 改成 ELEMENT_CAST，保持原约束名称和允许值，所有其他 JSON 字段严格相等，仅允许官方新 storageHash；原包、十四文件、八项历史迁移及 119 项历史注释复核不变。新输出仅在根 .artifacts/prisma8-native-check-repair 中生成，不读取数据库口令、不连接任何库、不生成迁移包。第四座原入口和专用配置明确冻结，不依赖本地记录存在。当前仅局部 Node 16/16 实测；固定 RC 发射及 Windows 质量链待验收。新候选往返稳定性及历史库接管均未确认，四库保持冻结，正式 Prisma 7 不变。
+
+### 2026-11-26 · PR #231 工程质量门禁修复（E-154）
+
+维护者 Windows 五组专项 43/43、Vite+ 563/403 零警告错误，中文扫描把第四座保留副本根契约及快照自动生成英文注释误报四处，增量退出 1，文档未执行。精确补齐中文扫描、共享 Format/Lint 对该独立副本的排除，不扩大自有文案豁免，新增两项实际子进程扫描回归并纳入 ready；局部 Node 实测修复前 0/2、修复后 2/2，局部文案检查 7 文件通过。Windows 实际质量复验及第四座副本十四文件指纹尚待核对；没有新修复契约发射结果，PR #231 仍 Draft，四库保持冻结。
