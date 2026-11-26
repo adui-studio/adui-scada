@@ -35,7 +35,6 @@ import {
   NativeRecoveryError,
   requireRecoveryReview,
 } from "../../scripts/prisma8-native-baseline-recovery.mjs";
-
 import {
   claimNativeRetry,
   isNativeRetryRequest,
@@ -53,9 +52,10 @@ async function main() {
   const args = process.argv.slice(2);
   const inspect = isDeepStrictEqual(args, [migrationStateConfirmation]);
   const retry = isNativeRetryRequest(args);
+  const requestArgs = retry ? [migrationApplyConfirmation] : args;
   const request = migrationRequest(
     process.env[nativeEmptyUrlVariable],
-    inspect ? [migrationPreviewConfirmation] : retry ? [migrationApplyConfirmation] : args,
+    inspect ? [migrationPreviewConfirmation] : requestArgs,
     process.env,
   );
   requireRecoveryReview(request.apply && !retry);

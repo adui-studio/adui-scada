@@ -1779,3 +1779,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/prisma8-native-baseline-recovery.mjs`：再次写入冻结门禁、固定进程/官方/SQLSTATE 诊断、第三座库只读目录及 marker/ledger 匹配统计。
 - `scripts/prisma8-native-baseline-recovery.cases.mjs` / `pnpm run test:prisma8:native:baseline:recovery`：六项模拟回归；真实 PostgreSQL 与固定 RC 元数据待验证。
 - `pnpm run db:prisma8:native:baseline:migrate --inspect-adui-scada-fresh-prisma8-native-state`：仅恢复只读入口，不启动官方迁移，不清理数据库，原有迁移确认暂时拒绝。
+
+### 原生基线恢复评审后的单次诊断执行
+
+- `scripts/prisma8-native-baseline-retry.mjs` / `.cases.mjs`：固定一次性确认、独占尝试记录及官方直接错误封装识别，五项独立回归。
+- `scripts/prisma8-native-baseline-recovery.mjs` / `.cases.mjs`：保留旧确认冻结与只读状态检查，补充直接错误封装回归；`test:prisma8:native:baseline:recovery` 合计十二项。
+- `pnpm run db:prisma8:native:baseline:migrate --confirm-adui-scada-fresh-prisma8-native-retry-once`：仅维护者人工确认后使用，原预检和候选保护不变，禁止重复调用及清理尝试记录。
