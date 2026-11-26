@@ -10,7 +10,8 @@ import {
   reviewCommentEmission,
 } from "./prisma8-native-baseline-comments.mjs";
 
-export const acceptedMigrationHash = "e6b95ed88834dce3f6448445a5ba12a00ba34c8e5c68f4335751659b15a77f17";
+export const acceptedMigrationHash =
+  "e6b95ed88834dce3f6448445a5ba12a00ba34c8e5c68f4335751659b15a77f17";
 const configHash = "1f48ac2fbcc601fff330b670a1b5def9ca6d6b3243e30db97b9bfb9f31c94941";
 const evidenceNames = [
   "emit-dry-run.stdout.txt",
@@ -45,7 +46,10 @@ export function candidateFileNames(original) {
 export function readCandidateRegular(path) {
   const stat = lstatSync(path, { throwIfNoEntry: false });
   requireMatch(
-    stat?.isFile() && stat.nlink === 1 && stat.size <= 16 * 1024 * 1024 && realpathSync(path) === path,
+    stat?.isFile() &&
+      stat.nlink === 1 &&
+      stat.size <= 16 * 1024 * 1024 &&
+      realpathSync(path) === path,
     "独立注释候选文件缺失、链接或超出大小限制",
   );
   const bytes = readFileSync(path);
@@ -81,7 +85,9 @@ export function readExactCandidateTree(directory, names) {
       "独立注释候选目录存在额外或缺失对象：" + (relative || "根目录"),
     );
   }
-  return Object.fromEntries(names.map((name) => [name, readCandidateRegular(join(directory, name))]));
+  return Object.fromEntries(
+    names.map((name) => [name, readCandidateRegular(join(directory, name))]),
+  );
 }
 
 /** 固定已验收的无数据库连接配置原文，不执行任意本地配置。 */
@@ -116,7 +122,8 @@ function parseArtifacts(files, packageDirectory) {
 export function reviewCandidateFiles(originalFiles, files, audited, packageDirectory) {
   const names = candidateFileNames(originalFiles);
   requireMatch(
-    Object.keys(files).length === names.length && names.every((name) => Buffer.isBuffer(files[name])),
+    Object.keys(files).length === names.length &&
+      names.every((name) => Buffer.isBuffer(files[name])),
     "独立注释候选证据文件清单不一致",
   );
   const sourceName = packageDirectory + "/migration.ts";

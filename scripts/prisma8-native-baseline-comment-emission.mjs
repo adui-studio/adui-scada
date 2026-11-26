@@ -190,10 +190,7 @@ export function runCandidateReview(root, entry, audited) {
     const dryRun = parseDryRun(
       runReview("官方干跑", [join(output, sourceName), "--config", config, "--dry-run"]),
     );
-    requireMatch(
-      isDeepStrictEqual(dryRun, review.actual),
-      "重新干跑与已验收的实际迁移产物不一致",
-    );
+    requireMatch(isDeepStrictEqual(dryRun, review.actual), "重新干跑与已验收的实际迁移产物不一致");
     requireMigrationCheck(
       runReview("官方迁移完整性", [
         entry,
