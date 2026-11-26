@@ -1,0 +1,22 @@
+{
+  "scope": "PRISMA8_NATIVE_COMMENT_CANDIDATE_V1",
+  "migrationHash": "e6b95ed88834dce3f6448445a5ba12a00ba34c8e5c68f4335751659b15a77f17",
+  "configSha256": "1f48ac2fbcc601fff330b670a1b5def9ca6d6b3243e30db97b9bfb9f31c94941",
+  "files": [
+    { "path": "contract.d.ts", "bytes": 131008, "sha256": "03d6276070136b97a906c500e044ac765d494ce1aaa56b9ac01fe52cc6b5c0d4" },
+    { "path": "contract.json", "bytes": 110373, "sha256": "850ef15fcfc0455491ba73f66419f42a394f963b1a99a02870bad5cae964cffa" },
+    { "path": "contract.prisma", "bytes": 26347, "sha256": "b8ed4ffa398d84ce4a1fd34863de95ca3a3ea83508358d428233b8a2e3d3ad83" },
+    { "path": "emit-dry-run.stderr.txt", "bytes": 0, "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" },
+    { "path": "emit-dry-run.stdout.txt", "bytes": 319423, "sha256": "c9af4c2af7943f4351b7abf275f1fd4af1ac0408f847dbdf3dd4534c6a0227f0" },
+    { "path": "emit.stderr.txt", "bytes": 0, "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" },
+    { "path": "emit.stdout.txt", "bytes": 178, "sha256": "a5a7593bc76400a8b5735285df0325041760c25408e8e6158a3cbb49f62cf144" },
+    { "path": "migration-check.stderr.txt", "bytes": 0, "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" },
+    { "path": "migration-check.stdout.txt", "bytes": 252, "sha256": "4f7239c8a4ec373744d4ee197dadd652dd5b9b7624a16d15c9575eb38d73afe4" },
+    { "path": "migrations/app/20261125T0918_scada_native_baseline/migration.json", "bytes": 252, "sha256": "11c5dfc27b7c270f2348f8738bad71c023f46cbaa9db7b7b4759e7a1494f2c1f" },
+    { "path": "migrations/app/20261125T0918_scada_native_baseline/migration.ts", "bytes": 203627, "sha256": "9786de95ba0ef2b352b9964107d0e0b26504bbc44e2fb1b89683b365d362430a" },
+    { "path": "migrations/app/20261125T0918_scada_native_baseline/ops.json", "bytes": 319129, "sha256": "6d9f970c1a336f5710293bf5e9226b43d6e77d24ad8946e5214a9d870a15652d" },
+    { "path": "migrations/snapshots/6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc/contract.d.ts", "bytes": 87880, "sha256": "20ecc6c55095c490f17bb88d60952980dfd30d1a430abb8e42865e6b6767749b" },
+    { "path": "migrations/snapshots/6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc/contract.json", "bytes": 47359, "sha256": "2bd3034a2509fc8fc88c4c7a2dba9feee78d347440c133628329f6d675ea57ef" }
+  ],
+  "fingerprint": "02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e"
+}

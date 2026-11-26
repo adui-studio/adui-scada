@@ -4995,3 +4995,44 @@ git status --short
 ```
 
 预期固定候选 14 个文件、165 项操作、已验收迁移标识 e6b95ed88834dce3f6448445a5ba12a00ba34c8e5c68f4335751659b15a77f17，重新官方干跑与完整性检查通过，CANDIDATE_PREFLIGHT_REVIEW_REQUIRED，签名/部署许可否。提交完整输出的证据清单和指纹供后续固定字节门禁；此次实际新候选文件指纹尚未取得，首轮采集不能冒充与历史指纹匹配。禁止并发改动、重生成、手改迁移元数据、设置数据库 URL、执行数据库写入或签名。如失败保留原目录及原始六份日志，不自动修复或重试；目录额外对象需先核实，不得删除证据。第三座空库的名称、连接与操作授权另行确认。
+
+### 固定十四文件证据与第三座专用空库只读预检
+
+PR #222 真实复验成功，证据指纹 02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e；本批固化完整清单，已有离线复验不接受任何字节漂移。保留原包及独立候选，不重生成。先执行增量门禁：
+
+```powershell
+pnpm run test:prisma8:native:baseline:preflight &&
+pnpm run test:prisma8:native:baseline:candidate &&
+pnpm run test:prisma8:native:baseline:comments &&
+pnpm run test:prisma8:native:baseline:ddl &&
+pnpm run test:prisma8:native:baseline &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check
+Write-Host "空库门禁增量验收退出码：$LASTEXITCODE"
+```
+
+预期 45 项测试通过。单独离线复验仍可执行 pnpm run db:prisma8:native:baseline:comments:review。真实空库预检仅在维护者确认本机隔离数据库 adui_scada_fresh_prisma8_native 已存在、由明确角色所有、未部署且无其他会话时运行；未创建的库另行确认，不由脚本创建、删除或清空。使用当前本机 Docker PostgreSQL 的专用连接及实际数据库所有者，示例采用既有本机角色 adui_scada，不将密码写入 .env、不覆盖任何其他数据库 URL。运行前关闭该专用库的 Navicat 查询窗口和其他会话。
+
+```powershell
+& {
+    $previousUrl = $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL
+    try {
+        $password = Read-Host "请输入第三座专用空库所有者密码" -MaskInput
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_fresh_prisma8_native?schema=public"
+        pnpm run db:prisma8:native:baseline:preflight --confirm-adui-scada-fresh-prisma8-native
+        $preflightExitCode = $LASTEXITCODE
+        Write-Host "第三座空库只读预检退出码：$preflightExitCode"
+        if ($preflightExitCode -ne 0) { throw "只读预检失败，保留现场，不自动重试" }
+    } finally {
+        if ($null -eq $previousUrl) { Remove-Item Env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL -ErrorAction SilentlyContinue }
+        else { $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL = $previousUrl }
+        Remove-Variable password, encodedPassword, previousUrl -ErrorAction SilentlyContinue
+    }
+}
+git status --short
+```
+
+如果专用库由其他本机角色所有，只能将示例中的用户名改为该实际所有者；不得改主机、端口、库名或使用旧库。检查先完成固定候选官方干跑/完整性复验，再建立仅第三座库的只读连接，使用 REPEATABLE READ READ ONLY 查询实际库名、角色、所有者、必要权限、UTF8、UTC、标准字符串及 23 类受检空目录与会话；回滚关闭后复核候选证据及原件。预期 NATIVE_EMPTY_PREFLIGHT_REVIEW_REQUIRED、23 项通过、签名/部署许可否、退出码 0。预检不是跨事务锁，不保证检查后仍为空；禁止并发 DDL 或其他连接，未来写入前必须重新预检并另行授权。失败只保留现有文件及中文诊断，不执行 CREATE DATABASE、ALTER、DROP、迁移、签名或清理。

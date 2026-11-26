@@ -1760,3 +1760,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - scripts/prisma8-native-baseline-candidate.mjs：固定已验收迁移标识与独立配置字节指纹，十四文件精确树、完整源码/操作/快照及历史成功证据比较、确定性证据清单与指纹。
 - scripts/prisma8-native-baseline-comment-emission.mjs 的 runCandidateReview：仅复验已有候选，固定已安装 RC 的 dry-run 与 migration check，逐阶段复查原件和证据不变，不写新文件或执行数据库命令。
 - pnpm run test:prisma8:native:baseline:candidate：七项离线合成回归，纳入 ready；pnpm run db:prisma8:native:baseline:comments:review：真实独立只读入口，不纳入 ready。输出 CANDIDATE_PREFLIGHT_REVIEW_REQUIRED、签名/部署许可否，真实首次文件指纹待采集。
+
+### 固定候选证据与第三座专用空库只读预检
+
+- scripts/prisma8-native-baseline-accepted-evidence.json：维护者 PR #222 实际十四文件证据清单及指纹，不含生成物正文或凭据。
+- scripts/prisma8-native-baseline-preflight.mjs：固定完整证据、第三座专用库显式 URL 与连接参数、只读事务及 23 类目录/会话检查，回滚关闭和脱敏诊断。
+- scripts/prisma8-native-baseline-comment-emission.mjs：候选复验前固定证据比较，requireLockedCandidateEvidence 用于数据库预检结束后的文件再核对。
+- pnpm run test:prisma8:native:baseline:preflight：八项离线合成测试，纳入 ready；pnpm run db:prisma8:native:baseline:preflight --confirm-adui-scada-fresh-prisma8-native：只读真实入口，不纳入 ready，须单独设置专用环境变量 SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL。输出 NATIVE_EMPTY_PREFLIGHT_REVIEW_REQUIRED；不创建库、不写数据库、不签名或部署。

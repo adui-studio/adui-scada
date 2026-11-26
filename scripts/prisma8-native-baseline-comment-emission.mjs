@@ -20,6 +20,7 @@ import {
   requireOfflineCandidateConfig,
   reviewCandidateFiles,
 } from "./prisma8-native-baseline-candidate.mjs";
+import { requireAcceptedCandidateEvidence } from "./prisma8-native-baseline-preflight.mjs";
 
 function requireMatch(condition, message) {
   if (!condition) throw new CommentEmissionError(message);
@@ -160,6 +161,8 @@ export function runCandidateReview(root, entry, audited) {
   requireOfflineCandidateConfig(configBytes);
   const names = candidateFileNames(originalFiles);
   const files = readExactCandidateTree(output, names);
+  const evidence = fingerprintCandidateFiles(files, configBytes);
+  requireAcceptedCandidateEvidence(evidence);
   const review = reviewCandidateFiles(originalFiles, files, audited, packageDirectory);
   const requirePreserved = () => {
     requireMatch(
@@ -209,9 +212,20 @@ export function runCandidateReview(root, entry, audited) {
       status: "CANDIDATE_PREFLIGHT_REVIEW_REQUIRED",
       signingAllowed: false,
       deploymentAllowed: false,
-      evidence: fingerprintCandidateFiles(files, configBytes),
+      evidence,
     };
   } finally {
     requirePreserved();
   }
+}
+
+/** 数据库预检结束后重新核对固定原包、配置及十四文件，不启动官方进程。 */
+export function requireLockedCandidateEvidence(root) {
+  const originalDir = join(root, ".artifacts", "prisma8-native-baseline");
+  const original = readAuditedFiles(originalDir);
+  const server = join(root, "apps", "server");
+  const output = join(server, ".artifacts", "prisma8-native-baseline-comments");
+  const config = readCandidateRegular(join(server, "prisma8-native-baseline-comments.config.ts"));
+  const files = readExactCandidateTree(output, candidateFileNames(original));
+  return requireAcceptedCandidateEvidence(fingerprintCandidateFiles(files, config));
 }
