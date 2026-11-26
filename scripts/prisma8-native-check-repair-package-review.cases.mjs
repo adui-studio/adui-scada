@@ -8,6 +8,7 @@ import {
   requireRepairFileEvidence,
   requireRepairReviewProcess,
   runPreservedRepairReview,
+  runRepairOfficialRechecks,
 } from "./prisma8-native-check-repair-package-review.mjs";
 
 void test("真实验收的二十四文件及两份配置清单指纹固定", () => {
@@ -79,4 +80,42 @@ void test("只接受无错误无信号且无标准错误的成功官方输出", 
   for (const patch of [{ status: 1 }, { signal: "SIGTERM" }, { error: new Error("敏感详情") }, { stderr: "敏感详情" }, { stdout: "" }]) {
     assert.throws(() => requireRepairReviewProcess({ ...result, ...patch }), { message: "官方修复包离线子进程未确认成功" });
   }
+});
+
+void test("官方复验仅按顺序执行两条固定离线命令", () => {
+  const calls = [];
+  const verified = [];
+  const options = {
+    preserve: () => {},
+    execute: (args) => { calls.push(args); return "固定官方输出"; },
+    verifyDryRun: (text) => { verified.push(text); },
+    verifyMigrationCheck: (text) => { verified.push(text); },
+    migrationPath: "migration.ts",
+    configPath: "offline.config.ts",
+    cliPath: "cli.mjs",
+  };
+  runRepairOfficialRechecks(options);
+  runRepairOfficialRechecks(options);
+  const expected = [
+    ["migration.ts", "--config", "offline.config.ts", "--dry-run"],
+    ["cli.mjs", "migration", "check", "--space", "app", "--json", "--config", "offline.config.ts"],
+  ];
+  assert.deepEqual(calls, [...expected, ...expected]);
+  assert.equal(verified.length, 4);
+});
+
+void test("官方干跑校验失败后不进入完整性命令", () => {
+  const calls = [];
+  let preserved = 0;
+  assert.throws(() => runRepairOfficialRechecks({
+    preserve: () => { preserved++; },
+    execute: (args) => { calls.push(args); return "固定官方输出"; },
+    verifyDryRun: () => { throw new Error("固定干跑不一致"); },
+    verifyMigrationCheck: () => { assert.fail("不得执行后续完整性验证"); },
+    migrationPath: "migration.ts",
+    configPath: "offline.config.ts",
+    cliPath: "cli.mjs",
+  }), /官方干跑；阶段未通过/u);
+  assert.equal(calls.length, 1);
+  assert.equal(preserved, 2);
 });
