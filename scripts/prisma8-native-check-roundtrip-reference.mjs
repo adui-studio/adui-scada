@@ -31,6 +31,7 @@ const localeRuntimeRoots = [
   "/etc/ld.so.conf",
   "/etc/ld.so.conf.d",
   "/etc/ld.so.cache",
+  "/etc/ld.so.preload",
   "/etc/os-release",
 ];
 
@@ -41,19 +42,39 @@ function requireMatch(condition, message) {
 }
 
 function isLocaleRuntimePath(path) {
-  return localeRuntimeRoots.some((root) => path === root || path.startsWith(root + "/"));
+  return localeRuntimeRoots.some(
+    (root) =>
+      path === root ||
+      path.startsWith(root + "/") ||
+      root.startsWith(path + "/") ||
+      path === "/",
+  );
 }
 
-/** 拒绝覆盖 libc 或 locale 文件的容器挂载，不回显宿主机路径。 */
+function isCanonicalPath(path) {
+  return (
+    typeof path === "string" &&
+    path.length <= 1024 &&
+    path.startsWith("/") &&
+    (path === "/" ||
+      path.slice(1).split("/").every((part) => part !== "" && part !== "." && part !== "..")) &&
+    !Array.from(path).some((character) => {
+      const code = character.charCodeAt(0);
+      return code < 32 || code === 127 || code === 92;
+    })
+  );
+}
+
+/** 仅核对容器挂载目标，不读取或回显宿主机路径。 */
 function requireUnmodifiedLocaleMounts(value, stage) {
-  const mounts = value === "" ? [] : value.split(";").filter(Boolean);
+  let mounts;
+  try {
+    mounts = JSON.parse(value);
+  } catch {
+    throw new RoundTripReferenceError(stage + "：容器挂载清单无效");
+  }
   requireMatch(
-    mounts.every(
-      (path) =>
-        path.startsWith("/") &&
-        path.length <= 256 &&
-        !/[\\\u0000-\u001f\u007f]/u.test(path),
-    ),
+    Array.isArray(mounts) && mounts.every(isCanonicalPath),
     stage + "：容器挂载清单无效",
   );
   requireMatch(
@@ -62,11 +83,13 @@ function requireUnmodifiedLocaleMounts(value, stage) {
   );
 }
 
-/** 只允许 Docker diff 的固定状态格式，并拒绝 libc/locale 相关文件变化。 */
+/** 仅检查固定路径及其祖先的可见变更，不证明实际进程加载的库相同。 */
 function requireUnchangedLocaleRuntime(output, stage) {
   const changes = output === "" ? [] : output.split(/\r?\n/u);
   requireMatch(
-    changes.every((line) => /^[ACD] \/.+$/u.test(line)),
+    changes.every(
+      (line) => /^[ACD] /u.test(line) && isCanonicalPath(line.slice(2)),
+    ),
     stage + "：容器文件变更清单格式异常",
   );
   requireMatch(
@@ -187,7 +210,7 @@ function readCatalog(local, container, role, database, names) {
   return { systemIdentifier: facts.systemIdentifier, observed };
 }
 
-/** 只读采集两座容器的共享系统目录和 libc/locale 文件身份。 */
+/** 只读采集两座容器的共享系统目录及受限运行环境观察。 */
 export function collectRoundTripReference(report, local) {
   const mainId = local(
     [
@@ -209,7 +232,7 @@ export function collectRoundTripReference(report, local) {
       "container",
       "inspect",
       "--format",
-      '{{.Id}}|{{.State.Running}}|{{.Image}}|{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.docker.compose.service"}}|{{range .Mounts}}{{.Destination}};{{end}}',
+      '{{.Id}}|{{.State.Running}}|{{.Image}}|{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.docker.compose.service"}}|[{{range $i, $mount := .Mounts}}{{if $i}},{{end}}{{json $mount.Destination}}{{end}}]',
       mainId,
     ],
     "核对历史验收容器身份",
@@ -232,7 +255,7 @@ export function collectRoundTripReference(report, local) {
       "container",
       "inspect",
       "--format",
-      '{{.Id}}|{{.State.Running}}|{{.Image}}|{{index .Config.Labels "org.adui.scope"}}|{{range .Mounts}}{{.Destination}};{{end}}',
+      '{{.Id}}|{{.State.Running}}|{{.Image}}|{{index .Config.Labels "org.adui.scope"}}|[{{range $i, $mount := .Mounts}}{{if $i}},{{end}}{{json $mount.Destination}}{{end}}]',
       "adui-scada-prisma8-repro",
     ],
     "核对第四座保留容器身份",
@@ -287,8 +310,8 @@ export function collectRoundTripReference(report, local) {
     allFrozenCollationsMatch: true,
     allFrozenCollationCatalogMetadataMatch: true,
     containerImageIdentityMatched: true,
-    localeRuntimeFilesUnchanged: true,
-    collationRuntimeIdentityVerified: true,
+    localeRuntimePathsObservedUnchanged: true,
+    collationRuntimeIdentityVerified: false,
     referenceCollation,
     recordedCollationVersionAvailable,
     recordedCollationVersionMatches,
