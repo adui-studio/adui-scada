@@ -4,6 +4,10 @@ import {
   acceptedPlanFingerprint,
   roundTripTarget,
 } from "./prisma8-native-check-roundtrip-execution.mjs";
+import {
+  collectRoundTripReference,
+  referenceConfirmation,
+} from "./prisma8-native-check-roundtrip-reference.mjs";
 
 const endpoints = ["npipe:////./pipe/dockerDesktopLinuxEngine", "npipe:////./pipe/docker_engine"];
 const blockedEnvironment = new Set([
@@ -28,7 +32,7 @@ const allowedEnvironment = new Set([
 ]);
 const namePattern = /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/u;
 
-class HostPreflightError extends Error {}
+export class HostPreflightError extends Error {}
 
 function requireMatch(condition, message) {
   if (!condition) throw new HostPreflightError(message);
@@ -82,7 +86,7 @@ function requireAbsent(output, expected, stage) {
 }
 
 /** 仅检查创建前宿主机状态，不连接数据库或授予创建许可。 */
-export function inspectRoundTripHost(platform, args, source, run = spawnSync) {
+function inspectRoundTripHostContext(platform, args, source, run = spawnSync) {
   requireMatch(platform === "win32" && args.length === 0, "仅允许 Windows 本机无参数宿主机预检");
   requireMatch(
     !Object.entries(source).some(
@@ -148,7 +152,7 @@ export function inspectRoundTripHost(platform, args, source, run = spawnSync) {
     "核对宿主机端口",
   );
   requireMatch(port === "[]", "宿主机端口存在 TCP 记录或检查结果异常，禁止继续");
-  return {
+  const report = {
     status: "NATIVE_CHECK_ROUNDTRIP_HOST_REVIEW_REQUIRED",
     planFingerprint: acceptedPlanFingerprint,
     target: roundTripTarget,
@@ -163,6 +167,22 @@ export function inspectRoundTripHost(platform, args, source, run = spawnSync) {
     signingAllowed: false,
     deploymentAllowed: false,
   };
+  return { report, local };
+}
+
+/** 保留原宿主机预检公开报告，不暴露 Docker 调用器。 */
+export function inspectRoundTripHost(platform, args, source, run = spawnSync) {
+  return inspectRoundTripHostContext(platform, args, source, run).report;
+}
+
+/** 只允许显式确认后，以同一已核验 Docker 端点读取固定系统目录。 */
+export function inspectRoundTripReference(platform, args, source, run = spawnSync) {
+  requireMatch(
+    args.length === 1 && args[0] === referenceConfirmation,
+    "必须单独确认冻结库系统目录只读采集，且不得附加参数",
+  );
+  const { report, local } = inspectRoundTripHostContext(platform, [], source, run);
+  return collectRoundTripReference(report, local);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
