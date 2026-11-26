@@ -5157,3 +5157,13 @@ E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回
 协作容器实际 Node.js 22.16.0 执行新增纯离线专项 8/8、中文扫描实际子进程回归 2/2，均退出 0。核对本机与远端 Blob：共享规划检查 bd6d87702881de12be81b66227965dc3b4b32784、修复包核心 ae67598198fef821af8d6d7f88a116249126cc3f、测试 0a63a04c27802b91cc7618b69537a2a6a35e99e5、既有修复契约核心 f1c0ce1e1b8c3df6cc4e7f4892b73387d16e4047、中文扫描 48564f4a5fda754f6ab2f9df9b24f4755be29019、中文回归 a1d93726f0d1d0ac2dc4d69e1323f78fe150215b。协作容器缺少完整仓库、固定 Prisma RC、pnpm、Vite+，未执行真实规划、自发射、完整性检查、全仓质量链或任何数据库命令。必须由 Windows 验收实际官方产物；若 RC 输出或检查条件与已固定证据不同，拒绝并保留，不能放宽门禁以通过。
 
 Windows 增量验收：新专项、原规划/DDL/注释/候选回归、test:messages、config:check、vp check、messages:check、docs:check；干净已审查提交执行 pnpm run db:prisma8:native:baseline:check-repair-package --confirm-offline-check-repair-package，提供报告、两个官方迁移标识、24 文件证据指纹及退出码。既有候选验收结果不得代替新包真实生成结果；不再次发射已验收契约，不删除已有证据。
+
+## 2026-11-26 · PR #232 结案与修复迁移包固定证据复验
+
+维护者 Windows 在 HEAD `31851343f513681db6eb063bcd4aee286f9fad96` 实测 PR #232：累计专项 54/54、Vite+ 569 格式/409 受检零警告错误、中文文案 436、Markdown 96；固定 RC 真实完整离线迁移包生成及生成后质量复验均退出 0，工作区干净。GitHub 确认合并提交 `f39176464e1805a4443cd4360b70891fa0093cb2`。固定结构迁移标识 `fce9c3dfdc0b5300cc1d128b07a6be03f618f89df7dd8d43ed2712881aee93c8`，完整迁移标识 `5cc4b025c41e1b5479cf29a86d6252806ff5bd517ef5c24b80fa6b89cf3c182e`，真实目录 `20261126T0620_scada_native_check_repair`，24 文件及两份配置的证据清单指纹 `13360ad35e8a1742f7d6a8eea99162fc11f33aea4d45d2075390ce4d2bef9a86`。
+
+新增固定证据清单与已有修复迁移包离线复验模式：先验证固定清单指纹，再逐个读取精确目录、拒绝链接或额外对象并核对实际文件长度及 SHA-256；复用历史原包、第四座保留副本、修复契约、固定 CLI rc.35/Provider rc.25、无连接配置门禁。逐项复核 46 项结构、两处允许谓词变化、119 项历史注释、完整 165 项操作、快照与保存的官方干跑，重新运行固定官方 --dry-run 与 migration check，动作前后及失败后重新核对原件，拒绝非零退出、信号、标准错误和证据漂移；失败短路，不覆盖文件、不写新日志、不重新规划或实际自发射、不读取数据库连接信息、不连接或改写数据库。只允许原验收工作区，因为已保存规划包含实际绝对路径。报告只证明离线复验，roundTripVerified、signingAllowed、deploymentAllowed 均 false，四座数据库继续冻结，正式 Prisma 7 不变。
+
+协作容器 Node.js 22.16.0 实际新增纯离线回归 10/10，核心、测试及新服务端模块 node --check 通过；本地与远端 Git Blob 一致：核心 `698f377a503d1f82800fdfac5571fbfef8ec6928`、测试 `45533fc2727e37828bbaf125f8b2c2f77aa5b481`、清单 `f1349416d5d365c3553720d58491d40f320c86c3`、服务端复验模块 `4704f7ff307d1429e6124acf01d6bff7d4173ffe`。清单从维护者上传的真实生成报告独立提取并重算指纹匹配；协作容器没有真实候选的 24 文件、完整仓库、固定 RC 或 Vite+，没有执行新入口真实官方复验及全仓检查，不能把清单一致或模拟命令测试视为真实复验通过。
+
+Windows 验收：新专项 10 项、旧修复包专项 8 项、旧候选专项 7 项、共享配置、Vite+、中文文案及文档；在最终已提交的干净原工作区连续两次执行 `pnpm run db:prisma8:native:baseline:check-repair-package:review`，均应退出 0，报告证据指纹一致、offlineReviewPassed 和 evidencePreserved 为 true，regenerated、roundTripVerified、signingAllowed、deploymentAllowed 为 false。任一步失败停止，不重新生成、不删除现场。
