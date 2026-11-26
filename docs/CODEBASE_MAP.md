@@ -1860,3 +1860,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/prisma8-native-check-roundtrip-execution.cases.mjs`：十二项离线模拟回归，纳入 ready。
 - `apps/server/prisma8-native-check-repair-package.mjs`：仅为既有往返计划分支新增固定指纹门禁，不改变官方修复包生成及完整复验入口。
 - `pnpm run test:prisma8:native:baseline:check-roundtrip-execution`：纯模拟，无数据库访问。
+
+### 2026-11-26 · 第五座创建前宿主机只读预检
+
+- `scripts/prisma8-native-check-roundtrip-host.mjs`：固定本机 Docker 端点、镜像、资源及 Windows TCP 记录检查；失败停止，报告不授予创建许可。
+- `scripts/prisma8-native-check-roundtrip-host.cases.mjs`：八项模拟子进程回归，`pnpm run test:prisma8:native:baseline:check-roundtrip-host` 纳入 ready。
+- `pnpm run db:prisma8:native:baseline:check-roundtrip:host-preflight`：只读宿主机实际入口，不纳入 ready，不连接数据库、不创建实例或保留端口。
