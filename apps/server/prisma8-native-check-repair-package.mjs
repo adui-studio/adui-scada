@@ -53,7 +53,10 @@ import {
 
 import { RepairPackageReviewError } from "../../scripts/prisma8-native-check-repair-package-review.mjs";
 import { reviewExistingRepairPackage } from "./prisma8-native-check-repair-package-review.mjs";
-import { buildCheckRoundTripPlan, CheckRoundTripError } from "../../scripts/prisma8-native-check-roundtrip.mjs";
+import {
+  buildCheckRoundTripPlan,
+  CheckRoundTripError,
+} from "../../scripts/prisma8-native-check-roundtrip.mjs";
 
 const confirmation = "--confirm-offline-check-repair-package";
 const reviewConfirmation = "--review-existing-check-repair-package";
@@ -204,7 +207,8 @@ function main() {
       stage = "固定 CHECK 往返计划";
       const plan = buildCheckRoundTripPlan(oldContract, contract);
       requireMatch(
-        report.offlineReviewPassed === true && report.evidencePreserved === true &&
+        report.offlineReviewPassed === true &&
+          report.evidencePreserved === true &&
           report.evidenceFingerprint === plan.evidenceFingerprint,
         "往返计划未绑定已复验固定证据",
       );
@@ -407,7 +411,9 @@ try {
   main();
 } catch (error) {
   console.error(
-    error instanceof RepairPackageError || error instanceof RepairPackageReviewError || error instanceof CheckRoundTripError
+    error instanceof RepairPackageError ||
+      error instanceof RepairPackageReviewError ||
+      error instanceof CheckRoundTripError
       ? error.message
       : "离线修复迁移包失败：" + stage + "；保留证据",
   );
