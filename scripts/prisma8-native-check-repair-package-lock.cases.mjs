@@ -155,6 +155,17 @@ void test("复验命令仅包含官方 dry-run 和 migration check", () => {
   );
 });
 
+void test("只读复验入口不包含文件写入或数据库迁移命令", () => {
+  const source = readFileSync(
+    join(import.meta.dirname, "../apps/server/prisma8-native-check-repair-package-review.mjs"),
+    "utf8",
+  );
+  assert.doesNotMatch(source, /\\b(?:writeFileSync|mkdirSync|rmSync|unlinkSync|renameSync|truncateSync)\\b/u);
+  assert.doesNotMatch(source, /["'](?:db migrate|db sign|db update|migration plan|contract emit)["']/u);
+  assert.match(source, /--dry-run/u);
+  assert.match(source, /"migration",\\s*"check"/u);
+});
+
 void test("离线子进程环境不继承数据库地址、令牌或 Node 注入配置", () => {
   const env = offlineEnvironment({
     PATH: "C:/node",
