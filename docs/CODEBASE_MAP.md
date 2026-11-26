@@ -1810,3 +1810,12 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/prisma8-native-direct-schema-review.mjs`：导出既有 `allowedPaths`，复用契约路径白名单，不改变原有直接验证。
 - `apps/server/prisma8-native-schema-failure-review.mjs`：固定候选证据、标准输入限制及报告入口，不连接数据库。
 - `pnpm run test:prisma8:native:baseline:schema-failure`：纯离线测试，加入 ready；`pnpm run db:prisma8:native:baseline:schema-failure:review`：已有机器输出离线解析，不加入 ready。
+
+## 2026-11-26 · 第四座独立实例复现入口
+
+- `scripts/prisma8-native-isolated-repro.mjs`：固定第四座专用连接、Docker 镜像及资源边界、集群身份、一次性记录、两路脱敏差异提取与原始捕获文本加密保存。
+- `scripts/prisma8-native-baseline-preflight.mjs`：内部共享二十三类只读检查，新增固定第四座角色/库名/170011/集群标识分支；第三座公开入口及连接白名单保持不变。
+- `apps/server/prisma8-native-repro.config.ts`：只接受第四座专用连接，消费独立十四文件副本。
+- `apps/server/prisma8-native-isolated-repro.mjs`：官方离线复验、独立候选、容器和 TCP 集群身份核验、唯一在线预览、再次预检、一次性记录和固定迁移调用；结果仅为取证评审。
+- `pnpm run test:prisma8:native:baseline:repro`：八项离线测试，纳入 ready；原空库专项扩至十二项。
+- `pnpm run db:prisma8:native:baseline:repro --confirm-adui-scada-fresh-prisma8-repro-once`：已单独授权的第四座本机单次实验，专用环境变量 SCADA_PRISMA8_NATIVE_REPRO_PASSWORD，真实入口不纳入 ready，不创建/重置数据库，不重复运行。

@@ -33,7 +33,7 @@ function hasForbiddenCodeUnit(value, max) {
 }
 
 /** 只输出固定阶段和已知错误码的中文分类，不返回第三方异常原文。 */
-function describeDatabaseFailure(stage, error) {
+function describeDatabaseFailure(stage, error, target) {
   const code = error instanceof Error && "code" in error ? error.code : undefined;
   let reason;
   switch (code) {
@@ -88,7 +88,7 @@ function describeDatabaseFailure(stage, error) {
     default:
       reason = "未知错误类别，内部详情已脱敏";
   }
-  return "第三座专用库" + stage + "失败：" + reason;
+  return target + stage + "失败：" + reason;
 }
 
 /** 仅接受第三座专用库的显式地址，不继承通用连接串或 URL 查询配置。 */
@@ -209,6 +209,25 @@ const emptyKeys = [
 
 /** 只读取目录元数据；失败时也回滚、关闭，并且不回显第三方连接异常。 */
 export async function inspectNativeEmptyDatabase(client, expectedUser) {
+  return inspectEmptyDatabase(client, expectedUser, nativeEmptyDatabaseName, "第三座专用库", null);
+}
+
+/** 第四座实例只复用目录检查，不扩大第三座连接入口或写入许可。 */
+export async function inspectReproEmptyDatabase(client, systemIdentifier) {
+  requireCondition(
+    typeof systemIdentifier === "string" && /^[1-9][0-9]{0,19}$/u.test(systemIdentifier),
+    "第四座实例的集群标识无效",
+  );
+  return inspectEmptyDatabase(
+    client,
+    "adui_scada_native_repro",
+    "adui_scada_fresh_prisma8_repro",
+    "第四座专用库",
+    systemIdentifier,
+  );
+}
+
+async function inspectEmptyDatabase(client, expectedUser, database, target, systemIdentifier) {
   let begun = false;
   let report;
   const failures = [];
@@ -223,7 +242,7 @@ export async function inspectNativeEmptyDatabase(client, expectedUser) {
     const row = boundary.rows[0];
     requireCondition(
       boundary.rows.length === 1 &&
-        row?.database_name === nativeEmptyDatabaseName &&
+        row?.database_name === database &&
         row.schema_name === "public" &&
         row.role_name === expectedUser &&
         row.session_role === expectedUser &&
@@ -240,17 +259,29 @@ export async function inspectNativeEmptyDatabase(client, expectedUser) {
         row.database_create === true &&
         row.public_usage === true &&
         row.public_create === true,
-      "第三座专用库实际连接、只读事务、所有者或必要权限不符合预期",
+      target + "实际连接、只读事务、所有者或必要权限不符合预期",
     );
+    if (systemIdentifier !== null) {
+      stage = "独立集群身份查询";
+      const identity = await client.query(
+        "SELECT system_identifier::text AS system_identifier FROM pg_catalog.pg_control_system()",
+      );
+      requireCondition(
+        row.server_version === "170011" &&
+          identity.rows.length === 1 &&
+          identity.rows[0]?.system_identifier === systemIdentifier,
+        "第四座实例实际 PostgreSQL 版本或集群标识不一致",
+      );
+    }
     stage = "空库目录查询";
     const empty = await client.query(emptySql);
     requireCondition(
       empty.rows.length === 1 &&
         isDeepStrictEqual(empty.rows[0], Object.fromEntries(emptyKeys.map((key) => [key, false]))),
-      "第三座专用库存在受检用户对象、其他会话或未确认的目录状态",
+      target + "存在受检用户对象、其他会话或未确认的目录状态",
     );
     report = {
-      database: nativeEmptyDatabaseName,
+      database,
       serverVersion: row.server_version,
       checkedEmptyCategories: emptyKeys.length,
       status: "NATIVE_EMPTY_PREFLIGHT_REVIEW_REQUIRED",
@@ -259,20 +290,22 @@ export async function inspectNativeEmptyDatabase(client, expectedUser) {
     };
   } catch (error) {
     failures.push(
-      error instanceof NativePreflightError ? error.message : describeDatabaseFailure(stage, error),
+      error instanceof NativePreflightError
+        ? error.message
+        : describeDatabaseFailure(stage, error, target),
     );
   } finally {
     if (begun) {
       try {
         await client.query("ROLLBACK");
       } catch (error) {
-        failures.push(describeDatabaseFailure("只读事务回滚", error));
+        failures.push(describeDatabaseFailure("只读事务回滚", error, target));
       }
     }
     try {
       await client.end();
     } catch (error) {
-      failures.push(describeDatabaseFailure("连接关闭", error));
+      failures.push(describeDatabaseFailure("连接关闭", error, target));
     }
   }
   requireCondition(failures.length === 0, failures.join("；"));
