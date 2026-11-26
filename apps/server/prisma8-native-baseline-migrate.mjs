@@ -19,6 +19,7 @@ import {
   NativePreflightError,
 } from "../../scripts/prisma8-native-baseline-preflight.mjs";
 import {
+  migrationApplyConfirmation,
   migrationArguments,
   migrationPreviewConfirmation,
   migrationRequest,
@@ -35,6 +36,12 @@ import {
   requireRecoveryReview,
 } from "../../scripts/prisma8-native-baseline-recovery.mjs";
 
+import {
+  claimNativeRetry,
+  isNativeRetryRequest,
+  NativeRetryError,
+} from "../../scripts/prisma8-native-baseline-retry.mjs";
+
 let stage = "确认独立迁移授权";
 let writeStarted = false;
 
@@ -45,12 +52,13 @@ function requireMatch(condition, message) {
 async function main() {
   const args = process.argv.slice(2);
   const inspect = isDeepStrictEqual(args, [migrationStateConfirmation]);
+  const retry = isNativeRetryRequest(args);
   const request = migrationRequest(
     process.env[nativeEmptyUrlVariable],
-    inspect ? [migrationPreviewConfirmation] : args,
+    inspect ? [migrationPreviewConfirmation] : retry ? [migrationApplyConfirmation] : args,
     process.env,
   );
-  requireRecoveryReview(request.apply);
+  requireRecoveryReview(request.apply && !retry);
   const root = realpathSync(resolve(import.meta.dirname, "../.."));
   stage = "固定依赖及证据检查";
   const entry = resolveBaselineCli(root);
@@ -150,6 +158,10 @@ async function main() {
 
   // 预览完成后再次核对候选和空库，不以之前的预检替代写入前检查。
   preflight();
+  stage = "登记一次性恢复尝试";
+  requirePreserved();
+  claimNativeRetry(root, fingerprint);
+  console.info("一次性恢复尝试已登记；失败时保留记录，禁止重复执行");
   stage = "官方独立基线迁移";
   writeStarted = true;
   const operations = requireNativeAppliedResult(
@@ -173,7 +185,8 @@ try {
   const reason =
     error instanceof NativeMigrationError ||
     error instanceof NativePreflightError ||
-    error instanceof NativeRecoveryError
+    error instanceof NativeRecoveryError ||
+    error instanceof NativeRetryError
       ? "；" + error.message
       : "；内部诊断已脱敏";
   console.error("第三座独立迁移阶段失败：" + stage + reason);

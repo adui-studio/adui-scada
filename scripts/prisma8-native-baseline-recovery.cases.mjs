@@ -208,3 +208,26 @@ void test("目录与元数据异常或清理失败必须停止且不回显原文
     /统计形状无效/u,
   );
 });
+
+void test("官方直接错误封装可定位且不回显摘要或敏感元数据", () => {
+  const document = {
+    ok: false,
+    severity: "error",
+    code: "MIGRATION.PRECHECK_FAILED",
+    summary: "敏感摘要",
+    meta: { cause: { sqlState: "42P01", message: "敏感连接串" } },
+  };
+  const report = describeNativeChildFailure(
+    { status: 2, stdout: "", stderr: JSON.stringify(document) },
+    "db.migrate",
+  );
+  assert.match(report, /MIGRATION\.PRECHECK_FAILED/u);
+  assert.match(report, /42P01/u);
+  assert.doesNotMatch(report, /敏感/u);
+  const mismatched = describeNativeChildFailure(
+    { status: 2, stdout: JSON.stringify({ ...document, commandId: "db.sign" }) },
+    "db.migrate",
+  );
+  assert.match(mismatched, /未取得白名单错误码/u);
+  assert.doesNotMatch(mismatched, /42P01/u);
+});
