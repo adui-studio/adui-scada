@@ -17,11 +17,15 @@ const repairs = [
   table,
   name,
   expected:
-    "((" + column + ")::text = ANY ((ARRAY[" +
+    "((" +
+    column +
+    ")::text = ANY ((ARRAY[" +
     values.map((value) => "'" + value + "'::character varying").join(", ") +
     "])::text[]))",
   candidate:
-    "((" + column + ")::text = ANY (ARRAY[" +
+    "((" +
+    column +
+    ")::text = ANY (ARRAY[" +
     values.map((value) => "('" + value + "'::character varying)::text").join(", ") +
     "]))",
 }));
@@ -37,7 +41,8 @@ function targetCheck(contract, repair) {
   requireMatch(Array.isArray(checks), "修复目标表缺少 CHECK 清单");
   const matches = checks.filter((check) => check.name === repair.name);
   requireMatch(
-    matches.length === 1 && matches[0].prefix === undefined &&
+    matches.length === 1 &&
+      matches[0].prefix === undefined &&
       matches[0].expression === repair.expected,
     "修复目标 CHECK 名称、命名方式或原始表达式与真实证据不一致",
   );
@@ -75,8 +80,10 @@ export function reviewCheckRepairContract(original, candidate) {
   const originalHash = original.storage?.storageHash;
   const candidateHash = candidate?.storage?.storageHash;
   requireMatch(
-    typeof originalHash === "string" && /^[a-f0-9]{64}$/u.test(originalHash) &&
-      typeof candidateHash === "string" && /^[a-f0-9]{64}$/u.test(candidateHash) &&
+    typeof originalHash === "string" &&
+      /^[a-f0-9]{64}$/u.test(originalHash) &&
+      typeof candidateHash === "string" &&
+      /^[a-f0-9]{64}$/u.test(candidateHash) &&
       candidateHash !== originalHash,
     "官方新存储标识无效或未变化",
   );

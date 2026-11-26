@@ -85,7 +85,10 @@ void test("真实两项表达式逐字替换且保留其他 PSL 原文", () => {
   assert.equal(statusAfter.length, 106);
   assert.equal(actionBefore.length, 101);
   assert.equal(actionAfter.length, 107);
-  assert.equal(result, source.replace(statusBefore, statusAfter).replace(actionBefore, actionAfter));
+  assert.equal(
+    result,
+    source.replace(statusBefore, statusAfter).replace(actionBefore, actionAfter),
+  );
   assert.deepEqual(original, before);
 });
 

@@ -10,7 +10,10 @@ import {
   requirePreservedInputs,
   resolveBaselineCli,
 } from "../../scripts/prisma8-native-baseline.mjs";
-import { readAuditedFiles, reviewAuditedBaseline } from "../../scripts/prisma8-native-baseline-ddl.mjs";
+import {
+  readAuditedFiles,
+  reviewAuditedBaseline,
+} from "../../scripts/prisma8-native-baseline-ddl.mjs";
 import { requireLockedCandidateEvidence } from "../../scripts/prisma8-native-baseline-comment-emission.mjs";
 import {
   readCandidateRegular,
@@ -48,7 +51,8 @@ function main() {
   const config = join(root, "apps", "server", "prisma8-native-check-repair.config.ts");
   stage = "固定原件、离线配置和依赖核验";
   requireMatch(
-    lstatSync(artifacts).isDirectory() && realpathSync(artifacts) === artifacts &&
+    lstatSync(artifacts).isDirectory() &&
+      realpathSync(artifacts) === artifacts &&
       !lstatSync(output, { throwIfNoEntry: false }),
     "修复输出目录已存在或父目录不安全，禁止覆盖和清理",
   );
@@ -61,7 +65,8 @@ function main() {
     requirePreservedInputs(root, inputs);
     const audit = reviewAuditedBaseline(root, loadMigrationBaseline(), originalText);
     requireMatch(
-      audit.operations === 46 && audit.comments === 119 &&
+      audit.operations === 46 &&
+        audit.comments === 119 &&
         requireLockedCandidateEvidence(root) === originalFingerprint &&
         digest(readCandidateRegular(config)) === configHash,
       "原件、历史注释、固定候选或离线配置发生变化",
@@ -80,18 +85,14 @@ function main() {
   let failure;
   let report;
   try {
-    const child = spawnSync(
-      process.execPath,
-      [entry, "contract", "emit", "--config", config],
-      {
-        cwd: root,
-        env: offlineEnvironment(process.env),
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "pipe"],
-        timeout: 120000,
-        maxBuffer: 16 * 1024 * 1024,
-      },
-    );
+    const child = spawnSync(process.execPath, [entry, "contract", "emit", "--config", config], {
+      cwd: root,
+      env: offlineEnvironment(process.env),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 120000,
+      maxBuffer: 16 * 1024 * 1024,
+    });
     requireMatch(realpathSync(output) === output, "独立输出目录发生变化");
     writeFileSync(join(output, "emit.stdout.txt"), child.stdout ?? "", { flag: "wx" });
     writeFileSync(join(output, "emit.stderr.txt"), child.stderr ?? "", { flag: "wx" });
