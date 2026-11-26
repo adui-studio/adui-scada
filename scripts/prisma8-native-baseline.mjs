@@ -208,6 +208,10 @@ function requireNames(path, expected) {
 
 /** 固定 RC 的机器输出必须是成功的规划封装，不接受旧模拟结构或失败诊断。 */
 export function parseBaselinePlan(document) {
+  return parseOfflinePlan(document, nativeHash);
+}
+
+function parseOfflinePlan(document, targetHash) {
   const envelope = document?.envelope;
   requireCondition(
     document?.kind === "result" &&
@@ -221,7 +225,7 @@ export function parseBaselinePlan(document) {
   );
   const plan = envelope.result;
   requireCondition(
-    plan?.ok === true && plan.noOp === false && plan.from === null && plan.to === nativeHash,
+    plan?.ok === true && plan.noOp === false && plan.from === null && plan.to === targetHash,
     "官方离线规划起点、目标或结果不一致",
   );
   requireCondition(
@@ -318,8 +322,13 @@ export function reviewExistingBaseline(root, inputs) {
 /** 仅验收生成物形状、空起点及目标内容；完整 DDL、注释及哈希算法另行评审。 */
 export function inspectBaselinePackage(root, nativeText) {
   const output = join(root, ".artifacts", "prisma8-native-baseline");
+  return inspectOfflinePackage(root, output, nativeText, nativeHash, /^\d{8}T\d{4}_scada_native_baseline$/);
+}
+
+/** 仅检查独立离线规划产物；调用者仍须核验固定契约和目录证据。 */
+export function inspectOfflinePackage(root, output, nativeText, targetHash, directoryPattern) {
   requireNames(output, [...files, "migrations", "plan.json", "plan.stderr.txt"]);
-  const plan = parseBaselinePlan(JSON.parse(readRegular(join(output, "plan.json"))));
+  const plan = parseOfflinePlan(JSON.parse(readRegular(join(output, "plan.json"))), targetHash);
   const graph = join(output, "migrations");
   requireNames(graph, ["app", "snapshots"]);
   const app = join(graph, "app");
@@ -327,7 +336,7 @@ export function inspectBaselinePackage(root, nativeText) {
   const packages = entries.filter((name) => name !== "refs");
   if (entries.includes("refs")) requireNames(join(app, "refs"), []);
   requireCondition(
-    packages.length === 1 && /^\d{8}T\d{4}_scada_native_baseline$/.test(packages[0]),
+    packages.length === 1 && directoryPattern.test(packages[0]),
     "离线迁移图必须只有一个独立空起点基线包",
   );
   const migration = join(app, packages[0]);
@@ -339,7 +348,7 @@ export function inspectBaselinePackage(root, nativeText) {
   const manifest = JSON.parse(readRegular(join(migration, "migration.json")));
   requireCondition(
     manifest.from === null &&
-      manifest.to === nativeHash &&
+      manifest.to === targetHash &&
       Array.isArray(manifest.providedInvariants) &&
       manifest.providedInvariants.length === 0 &&
       typeof manifest.migrationHash === "string" &&
@@ -351,8 +360,8 @@ export function inspectBaselinePackage(root, nativeText) {
   const ops = JSON.parse(readRegular(join(migration, "ops.json")));
   requireMatchingOperations(plan, ops);
   const snapshots = join(graph, "snapshots");
-  requireNames(snapshots, [nativeHash]);
-  const snapshot = join(snapshots, nativeHash);
+  requireNames(snapshots, [targetHash]);
+  const snapshot = join(snapshots, targetHash);
   requireNames(snapshot, ["contract.json", "contract.d.ts"]);
   requireCondition(
     isDeepStrictEqual(
@@ -365,7 +374,7 @@ export function inspectBaselinePackage(root, nativeText) {
   return {
     status: "BASELINE_ARTIFACT_REVIEW_REQUIRED",
     migrationHash: manifest.migrationHash,
-    contractHash: nativeHash,
+    contractHash: targetHash,
     contractContentHash: createHash("sha256").update(nativeText).digest("hex"),
     operations: plan.operations.length,
     signingAllowed: false,
