@@ -5141,3 +5141,5 @@ pnpm run docs:check
 ```
 
 真实入口只接受临时 SCADA_TEST_DATABASE_URL，密码使用屏蔽输入并进行百分号编码，保持本机 127.0.0.1:15432/adui_scada_test?schema=public；使用 try/finally 恢复原变量。执行 `node apps/server/prisma8-native-direct-schema-review.mjs`，不附加参数。退出 0 为两种直接校验均通过，4 为取得合法报告但至少一种结构不匹配，1 为版本、证据、连接、结果形状或关闭失败；均不代表迁移结果。禁止连接第三座库或重新执行迁移；只分享已经脱敏的 JSON、退出码及已存在离线报告的 missingPrecheck/missingPostcheck/identicalChecks 三个标识数组。
+
+PR #228 的 E-152 修复新增三项模拟回归，专项预期 7/7；验证或关闭失败后仍复核证据，证据复核失败与原错误一起脱敏输出，退出 1。只有证据复核通过时才返回报告；真实历史库直接宽容与严格已在修复前通过，修复后仍需 Windows 质量检查及一次只读复验。不得再次执行迁移。

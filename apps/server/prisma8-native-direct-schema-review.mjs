@@ -8,7 +8,7 @@ import { readCandidateRegular } from "../../scripts/prisma8-native-baseline-cand
 import { requireLockedCandidateEvidence } from "../../scripts/prisma8-native-baseline-comment-emission.mjs";
 import {
   DirectSchemaReviewError,
-  runDirectSchemaReview,
+  runLockedDirectSchemaReview,
 } from "../../scripts/prisma8-native-direct-schema-review.mjs";
 
 let stage = "固定参数、版本及证据";
@@ -39,18 +39,14 @@ try {
     throw new Error("固定快照与目标契约不一致");
   stage = "装载官方公开控制入口";
   const { createPostgresControlClient } = await import("@prisma/orm-postgres/control");
-  let report;
-  try {
-    stage = "历史库直接只读结构验证";
-    report = await runDirectSchemaReview(
-      createPostgresControlClient,
-      process.env.SCADA_TEST_DATABASE_URL,
-      contract,
-    );
-  } finally {
-    stage = "固定证据复核";
-    if (requireLockedCandidateEvidence(root) !== fingerprint) throw new Error("固定证据变化");
-  }
+  stage = "历史库直接只读结构验证与证据复核";
+  const report = await runLockedDirectSchemaReview(
+    createPostgresControlClient,
+    process.env.SCADA_TEST_DATABASE_URL,
+    contract,
+    fingerprint,
+    () => requireLockedCandidateEvidence(root),
+  );
   process.stdout.write(JSON.stringify({ fingerprint, ...report }, null, 2) + "\n");
   process.exitCode = report.results.every((item) => item.ok) ? 0 : 4;
 } catch (error) {

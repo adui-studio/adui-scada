@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   directSchemaConnection,
   runDirectSchemaReview,
+  runLockedDirectSchemaReview,
   summarizeDirectSchemaResult,
 } from "./prisma8-native-direct-schema-review.mjs";
 
@@ -151,5 +152,91 @@ void test("失败仍关闭客户端，拒绝异常回显和非法连接初始化
       contract,
     ),
     /关闭失败，内部详情已脱敏/u,
+  );
+});
+
+void test("直接验证完成并关闭连接后复核证据，保留结构不匹配结果", async () => {
+  const calls = [];
+  const report = await runLockedDirectSchemaReview(
+    () => ({
+      async connect() {
+        calls.push("connect");
+      },
+      async schemaVerify(options) {
+        calls.push(options.strict);
+        return result(options.strict, options.strict ? [{ path: ["public"] }] : []);
+      },
+      async close() {
+        calls.push("close");
+      },
+    }),
+    url,
+    contract,
+    "fixed",
+    () => {
+      calls.push("evidence");
+      return "fixed";
+    },
+  );
+  assert.deepEqual(calls, ["connect", false, true, "close", "evidence"]);
+  assert.deepEqual(
+    report.results.map((item) => item.ok),
+    [true, false],
+  );
+});
+
+void test("证据变化或读取异常均阻止已通过的结构报告返回", async () => {
+  const factory = () => ({
+    async connect() {},
+    async schemaVerify(options) {
+      return result(options.strict);
+    },
+    async close() {},
+  });
+  await assert.rejects(
+    runLockedDirectSchemaReview(factory, url, contract, "fixed", () => "other"),
+    { message: "固定证据变化" },
+  );
+  await assert.rejects(
+    runLockedDirectSchemaReview(factory, url, contract, "fixed", () => {
+      throw new Error("禁止回显的证据读取详情");
+    }),
+    { message: "固定证据复核失败，内部详情已脱敏" },
+  );
+});
+
+void test("验证和关闭失败后仍复核证据，保留全部脱敏阶段诊断", async () => {
+  const calls = [];
+  const factory = () => ({
+    async connect() {
+      calls.push("connect");
+    },
+    async schemaVerify() {
+      calls.push("verify");
+      throw new Error("禁止回显的验证详情");
+    },
+    async close() {
+      calls.push("close");
+      throw new Error("禁止回显的关闭详情");
+    },
+  });
+  const original = "直接宽容结构验证失败，内部详情已脱敏；官方控制客户端关闭失败，内部详情已脱敏";
+  await assert.rejects(
+    runLockedDirectSchemaReview(factory, url, contract, "fixed", () => {
+      calls.push("evidence");
+      return "fixed";
+    }),
+    { message: original },
+  );
+  assert.deepEqual(calls, ["connect", "verify", "close", "evidence"]);
+  await assert.rejects(
+    runLockedDirectSchemaReview(factory, url, contract, "fixed", () => "other"),
+    { message: original + "；固定证据变化" },
+  );
+  await assert.rejects(
+    runLockedDirectSchemaReview(factory, url, contract, "fixed", () => {
+      throw new Error("禁止回显的证据详情");
+    }),
+    { message: original + "；固定证据复核失败，内部详情已脱敏" },
   );
 });

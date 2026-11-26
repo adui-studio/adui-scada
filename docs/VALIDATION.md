@@ -5095,3 +5095,13 @@ E-142 最小修复提交 `06f427fc44f8e9ff8abb6a8d8a2aacf34c41adce` 及新增回
 协作容器 Node.js 22.16.0（显式 --experimental-strip-types）三份新增源码语法检查通过，四项模拟测试 4/4；核心 Blob 27975369355abf757ea8df78a72988a9b7716fc3、测试 045165935ef3c738f4e2ec1238018b6852a850f7、入口 2b00d373fe1a5b39e80a95ecbc516f585ecf5d9a 与本地一致，既有 URL 守卫 Blob 3a84f36578e21973f9f1c4fe6a60e391e80fd32b 一致。协作容器无固定 RC、真实候选、数据库、Vite+ 或 pnpm；未执行实际直接入口、完整 Windows 格式/Lint/类型、中文及文档检查。首次实现的 finally 直接抛出关闭异常可能覆盖原失败，提交前改为保留两个固定阶段原因并再次通过同四项模拟；不得以模拟代替真实 RC。
 
 后续真实验收仍仅在历史库进行，原迁移冻结不变。
+
+### 2026-11-26 · PR #228 真实直接结构验收及 E-152 修复候选
+
+维护者 Windows 实测 PR #228：直接结构 4/4、执行检查 4/4、候选完整性 7/7，共 15/15；Vite+ 552 格式/392 受检，0 错误、1 条 eslint(no-unsafe-finally) 警告，中文文案 419、Markdown 96、增量退出码 0，工作区干净。日志未单独打印本机 HEAD；远端 b7d5bcd0e607485e75d11fd880447ea0bc8b0105 相对交付 HEAD ea5cb8760751cf60078e46e291500dd9710f0303 为三份源码排版提交。真实历史验收库 adui_scada_test 的直接宽容与严格验证均 ok=true，issueCount=0、warningCount=0、issuePaths=[]，退出 0，十四文件证据指纹 02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e 不变，状态 DIRECT_SCHEMA_REVIEW_REQUIRED，签名与部署均 false。这里的数据库结构警告为零不等于 Vite+ 零警告。
+
+维护者从已存在的离线报告提取出 missingPrecheck 与 missingPostcheck 均仅为 schema.public，identicalChecks=[]。该项为已验收的 CREATE SCHEMA IF NOT EXISTS public（实际 SQL 使用双引号）；Runner 的空 postcheck 不会触发预满足跳过，其余 164 项均具备前后检查。不能据此确认实际执行情况，也没有证据将该项视为失败根因。历史库聚合、直接两种路径各自宽容与严格均通过；未复现失败事务内目录，仍无第三座库原始 schemaIssues，CLI rc.35 实际选项仍未核实。
+
+最小修复：E-107 同类复发。入口原 finally 中直接 throw 违反 no-unsafe-finally，且证据复核失败会覆盖先前验证或关闭失败。将成功与异常路径统一交给 runLockedDirectSchemaReview：先等待原只读验证及关闭，捕获既有脱敏诊断，再独立复核固定指纹；指纹不同或复核异常都记录固定中文原因，最后在普通控制流汇总抛出，不在 finally 内改变控制流。成功或失败均执行证据复核，双重失败不输出成功 JSON、不掩盖原始脱敏阶段，不回显第三方异常。保持原 CLI 参数、连接白名单、超时、只读设置、快照、候选、输出格式、退出码 0/4/1、签名及部署冻结。
+
+协作容器 Node.js 22.16.0 使用与远端当前三个源码及 URL 守卫 Blob 字节一致的文件进行修改；真实执行三份新增修改后源码 node --check 与 node --experimental-strip-types --test scripts/prisma8-native-direct-schema-review.cases.mjs，7/7 通过（保留原 4 项并新增 3 项：关闭后复核及保留不匹配报告、成功验证后指纹变化/读取异常阻断、验证与关闭失败同时证据异常的汇总脱敏）。修复后核心 Blob 5f46984ef13c58344eff20f018434d6301c2e96b、测试 13fd48c16052cddb7fb13ce01f5a11b185b42023、入口 9da69724fd8834e1d4a76008426ef49da93cc8b4 与本地相同。容器没有完整仓库、固定 RC、真实数据库、pnpm 或 Vite+，修复后的 Windows 格式、零警告、文案、文档及真实入口尚待复验；不冒称已经消除全仓警告或迁移成功。

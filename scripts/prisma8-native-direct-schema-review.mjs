@@ -154,3 +154,32 @@ export async function runDirectSchemaReview(createClient, input, contract) {
   if (failure || !report) throw new DirectSchemaReviewError(failure ?? "未取得直接结构验证结果");
   return report;
 }
+
+/** 成功或失败均复核证据，汇总固定阶段诊断后才允许返回报告。 */
+export async function runLockedDirectSchemaReview(
+  createClient,
+  input,
+  contract,
+  fingerprint,
+  readFingerprint,
+) {
+  let report;
+  const failures = [];
+  try {
+    report = await runDirectSchemaReview(createClient, input, contract);
+  } catch (error) {
+    failures.push(
+      error instanceof DirectSchemaReviewError
+        ? error.message
+        : "历史库直接只读结构验证失败，内部详情已脱敏",
+    );
+  }
+  try {
+    if (readFingerprint() !== fingerprint) failures.push("固定证据变化");
+  } catch {
+    failures.push("固定证据复核失败，内部详情已脱敏");
+  }
+  if (failures.length > 0 || !report)
+    throw new DirectSchemaReviewError(failures.join("；") || "未取得直接结构验证结果");
+  return report;
+}
