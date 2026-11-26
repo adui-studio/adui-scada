@@ -77,7 +77,7 @@ function requireUnchangedLocaleRuntime(output, stage) {
 
 /** 固定系统目录读取，不读取业务表或接收外部 SQL。 */
 function catalogQuery(databases) {
-  return \`BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
+  return `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
 SELECT pg_catalog.jsonb_build_object(
   'database', current_database(), 'role', current_user,
   'version', current_setting('server_version_num')::integer,
@@ -91,8 +91,8 @@ SELECT pg_catalog.jsonb_build_object(
     'locale', datlocale, 'version', datcollversion,
     'actualVersion', pg_catalog.pg_database_collation_actual_version(oid),
     'customIcuRules', daticurules IS NOT NULL))
-    FROM pg_catalog.pg_database WHERE datname IN (\${databases.map((name) => "'" + name + "'").join(", ")})));
-ROLLBACK;\`;
+    FROM pg_catalog.pg_database WHERE datname IN (${databases.map((name) => "'" + name + "'").join(", ")})));
+ROLLBACK;`;
 }
 
 function readCatalog(local, container, role, database, names) {
