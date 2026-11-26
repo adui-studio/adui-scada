@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "scope": "PRISMA8_NATIVE_CHECK_REPAIR_PACKAGE_LOCK_V1",
+  "source": {
+    "pr": 232,
+    "generatorHead": "31851343f513681db6eb063bcd4aee286f9fad96",
+    "mergeCommit": "f39176464e1805a4443cd4360b70891fa0093cb2",
+    "cliVersion": "8.0.0-rc.35",
+    "providerVersion": "8.0.0-rc.25",
+    "repairContractConfigSha256": "1ccda04b90a5f26e95a84c67ef8c1726689430955bd0ccecd6dc0baa7e2b250f"
+  },
+  "contractHash": "9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436",
+  "originalFingerprint": "02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e",
+  "structuralOperations": 46,
+  "commentOperations": 119,
+  "operations": 165,
+  "structuralMigrationHash": "fce9c3dfdc0b5300cc1d128b07a6be03f618f89df7dd8d43ed2712881aee93c8",
+  "migrationHash": "5cc4b025c41e1b5479cf29a86d6252806ff5bd517ef5c24b80fa6b89cf3c182e",
+  "migrationDirectory": "migrations/app/20261126T0620_scada_native_check_repair",
+  "executionChecks": {
+    "missingPrecheck": [
+      "schema.public"
+    ],
+    "missingPostcheck": [
+      "schema.public"
+    ],
+    "identicalChecks": []
+  },
+  "flags": {
+    "roundTripVerified": false,
+    "migrationPackageGenerated": true,
+    "signingAllowed": false,
+    "deploymentAllowed": false
+  },
+  "evidence": {
+    "scope": "PRISMA8_NATIVE_CHECK_REPAIR_PACKAGE_V1",
+    "contractHash": "9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436",
+    "migrationHash": "5cc4b025c41e1b5479cf29a86d6252806ff5bd517ef5c24b80fa6b89cf3c182e",
+    "configs": [
+      {
+        "path": "prisma8-native-check-repair-complete.config.ts",
+        "bytes": 605,
+        "sha256": "e83ff5d3d0462f2365ba268421ab82f0beff244eb36a50cb4d6cd244c3e8d63b"
+      },
+      {
+        "path": "prisma8-native-check-repair-plan.config.ts",
+        "bytes": 593,
+        "sha256": "939fa70ad1c4738e805b02cc797baa4e0c54c1575cc872fa9f27557fbfe454f7"
+      }
+    ],
+    "files": [
+      {
+        "path": "complete/contract.d.ts",
+        "bytes": 131008,
+        "sha256": "39a9013bff8229bcd20fec1cb9e02b52baea9be316248fcb4c8d79103a26b599"
+      },
+      {
+        "path": "complete/contract.json",
+        "bytes": 110385,
+        "sha256": "715e66ae145d69dbce57c56ddad7bf8cb4569b5ae047abc9bd9ffd73d8e0887d"
+      },
+      {
+        "path": "complete/contract.prisma",
+        "bytes": 26359,
+        "sha256": "777908921c4bb89f82a9f65785f4879d225fb644c9a731dc2b88345fc500812f"
+      },
+      {
+        "path": "complete/emit-dry-run.stderr.txt",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "complete/emit-dry-run.stdout.txt",
+        "bytes": 319435,
+        "sha256": "3b3fa08290e8919fb4e6e504a3cca410c730b2a97fb0cfcfffafcb309a0ee480"
+      },
+      {
+        "path": "complete/emit.stderr.txt",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "complete/emit.stdout.txt",
+        "bytes": 194,
+        "sha256": "c79298948c24093cfc312451517dfeedb2d9a52f88f71ce0f66d874955ec9cb7"
+      },
+      {
+        "path": "complete/migration-check.stderr.txt",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "complete/migration-check.stdout.txt",
+        "bytes": 252,
+        "sha256": "27d2b488b113ab4ea048e397ae4977513ab229720edeb18bc2fd9eec3a2e6dd2"
+      },
+      {
+        "path": "complete/migrations/app/20261126T0620_scada_native_check_repair/migration.json",
+        "bytes": 252,
+        "sha256": "3a27253e4d1519a21f32c6b6115f8c3369dad099960727c5ef5b341df676d7b7"
+      },
+      {
+        "path": "complete/migrations/app/20261126T0620_scada_native_check_repair/migration.ts",
+        "bytes": 203639,
+        "sha256": "561d7de41dc2a22d9240b002044e48fcdc3bfa5e00226df4106c08b3e46e3133"
+      },
+      {
+        "path": "complete/migrations/app/20261126T0620_scada_native_check_repair/ops.json",
+        "bytes": 319141,
+        "sha256": "a5103a7a59eb474fe0d37347e226def29e69e8cc05ae1b717d8e8ef7ecda0d69"
+      },
+      {
+        "path": "complete/migrations/snapshots/9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436/contract.d.ts",
+        "bytes": 87880,
+        "sha256": "247aab92f5abb36a4f691337991a0ed0b0962e9c19a1abf32b0273f55b83b1b6"
+      },
+      {
+        "path": "complete/migrations/snapshots/9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436/contract.json",
+        "bytes": 47371,
+        "sha256": "babd5a767a1ee0eaa8f850680693e66fbe5f290c3e726a77b241589c1e84f7a8"
+      },
+      {
+        "path": "plan/contract.d.ts",
+        "bytes": 131008,
+        "sha256": "39a9013bff8229bcd20fec1cb9e02b52baea9be316248fcb4c8d79103a26b599"
+      },
+      {
+        "path": "plan/contract.json",
+        "bytes": 110385,
+        "sha256": "715e66ae145d69dbce57c56ddad7bf8cb4569b5ae047abc9bd9ffd73d8e0887d"
+      },
+      {
+        "path": "plan/contract.prisma",
+        "bytes": 26359,
+        "sha256": "777908921c4bb89f82a9f65785f4879d225fb644c9a731dc2b88345fc500812f"
+      },
+      {
+        "path": "plan/migrations/app/20261126T0620_scada_native_check_repair/migration.json",
+        "bytes": 252,
+        "sha256": "8b076be6c2861ec95dd51b8b62c3fe98708b4c60d76faed13f97d9005d15b194"
+      },
+      {
+        "path": "plan/migrations/app/20261126T0620_scada_native_check_repair/migration.ts",
+        "bytes": 35601,
+        "sha256": "aefeb084b8620d1aa7fc5fd11ddc33d2b92fba1eb575e62ae3cf373e3b4f0284"
+      },
+      {
+        "path": "plan/migrations/app/20261126T0620_scada_native_check_repair/ops.json",
+        "bytes": 121395,
+        "sha256": "566cfa06f2e7051378483b6c26020cb196b961f5a1a0e1eca6bf58c74afa39c0"
+      },
+      {
+        "path": "plan/migrations/snapshots/9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436/contract.d.ts",
+        "bytes": 87880,
+        "sha256": "247aab92f5abb36a4f691337991a0ed0b0962e9c19a1abf32b0273f55b83b1b6"
+      },
+      {
+        "path": "plan/migrations/snapshots/9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436/contract.json",
+        "bytes": 47371,
+        "sha256": "babd5a767a1ee0eaa8f850680693e66fbe5f290c3e726a77b241589c1e84f7a8"
+      },
+      {
+        "path": "plan/plan.json",
+        "bytes": 30064,
+        "sha256": "aeba1f4bbd02403be9c4cc38c9d99b478ea2f55cc25b2c65cc611fcee9777d03"
+      },
+      {
+        "path": "plan/plan.stderr.txt",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "fingerprint": "13360ad35e8a1742f7d6a8eea99162fc11f33aea4d45d2075390ce4d2bef9a86"
+  },
+  "lockFingerprint": "bc6bf007eb514fd73e841aacd8d333ba4ac38a38933f1806fe56dba68ad440df"
+}
