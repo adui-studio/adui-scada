@@ -128,10 +128,10 @@ void test("四库两集群及 libc 运行环境匹配，缺失版本不得误报
       ["diff", reproId],
     ],
   );
-  assert.match(f.calls[10].args[4], /\.Image/u);
-  assert.match(f.calls[10].args[4], /\.Mounts/u);
-  assert.match(f.calls[11].args[4], /\.Image/u);
-  assert.match(f.calls[11].args[4], /\.Mounts/u);
+  assert.match(f.calls[10].args[5], /\.Image/u);
+  assert.match(f.calls[10].args[5], /\.Mounts/u);
+  assert.match(f.calls[11].args[5], /\.Image/u);
+  assert.match(f.calls[11].args[5], /\.Mounts/u);
   for (const { i, id, database, role } of [
     { i: 14, id: mainId, database: mainNames[0], role: "adui_scada" },
     { i: 15, id: reproId, database: reproName, role: "adui_scada_native_repro" },
