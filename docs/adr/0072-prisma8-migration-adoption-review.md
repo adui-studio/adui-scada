@@ -247,3 +247,13 @@ E-152 仅修复证据复核控制流，保持固定证据、只读及迁移冻�
 新增固定证据清单与已有修复迁移包离线复验模式：先验证固定清单指纹，再逐个读取精确目录、拒绝链接或额外对象并核对实际文件长度及 SHA-256；复用历史原包、第四座保留副本、修复契约、固定 CLI rc.35/Provider rc.25、无连接配置门禁。逐项复核 46 项结构、两处允许谓词变化、119 项历史注释、完整 165 项操作、快照与保存的官方干跑，重新运行固定官方 --dry-run 与 migration check，动作前后及失败后重新核对原件，拒绝非零退出、信号、标准错误和证据漂移；失败短路，不覆盖文件、不写新日志、不重新规划或实际自发射、不读取数据库连接信息、不连接或改写数据库。只允许原验收工作区，因为已保存规划包含实际绝对路径。报告只证明离线复验，roundTripVerified、signingAllowed、deploymentAllowed 均 false，四座数据库继续冻结，正式 Prisma 7 不变。
 
 实际固定 RC 的新入口复验尚待维护者验收。离线一致不证明 PostgreSQL 往返稳定或历史库接管；ADR 继续 Proposed。
+
+### 2026-11-26 · 固定离线复验验收与最小往返计划
+
+维护者 Windows 在 HEAD `687f17766b02f2d1e7a1b4747bd0545985e1bd64` 实测 PR #233 专项 25/25（10+8+7），Vite+ 573 格式/412 受检零警告错误，中文文案 439 文件、Markdown 96，增量及连续两次官方离线复验退出码均为 0，工作区干净。两份报告均为 NATIVE_CHECK_REPAIR_PACKAGE_LOCKED_REVIEW_REQUIRED、46 项结构、119 项注释、165 项完整操作、24 文件及两配置，证据指纹 `13360ad35e8a1742f7d6a8eea99162fc11f33aea4d45d2075390ce4d2bef9a86` 不变；offlineReviewPassed/evidencePreserved=true，regenerated/roundTripVerified/signingAllowed/deploymentAllowed=false。远端相对交付 HEAD 仅四份源码排版；按明确授权 Squash 合入 `713c638ecb3bb77b0fae85ce474e5b1298d0e407`。GitHub 未返回额外 CI 记录。该验收关闭固定离线复验阻塞，不等于 PostgreSQL 迁移成功。
+
+下一批仅准备两个 CHECK 谓词最小往返验证的离线计划与观察判定器。固定 PostgreSQL Provider rc.25 上游 `packages/3-targets/postgres/2-adapter/src/core/control-adapter.ts`（https://github.com/prisma/orm/blob/v8.0.0-rc.25/packages/3-targets/postgres/2-adapter/src/core/control-adapter.ts）确实以 pg_get_expr(c.conbin, c.conrelid) 取得裸谓词并保留原文，筛选本地表 CHECK；不能以 pg_get_constraintdef 或自行格式归一化替代。计划绑定原始及修复契约、已验收 24 文件两配置证据，复用完整官方离线复验。仅目标 public.scada_identities.status 和 public.scada_project_release_events.action，保留实际 varchar(16)、NOT NULL、exact-named 约束名。每项包含 legacy（已确认第四座的旧形式到修复形式差异）、repair（直接提交修复形式）、replay（未来将已核验相同的 repair 反向提取原文再次提交）三阶段；后两阶段预期 pg_get_expr 原文与修复形式逐字一致。共六个阶段，每阶段两个允许值、五个非法值及一个 NULL，预期分别为 accepted、23514、23502，共 48 项计划输入。NULL 拒绝来自 NOT NULL 而非 CHECK。本计划省略其他业务列及默认值，仅测试单列显式输入，不能证明完整表及迁移行为。
+
+本批不包含数据库客户端、SQL 执行器、创建容器或新数据库命令。未来如另获授权，须在独立 PostgreSQL 17.11（170011）、同镜像及经核实的排序规则环境，以相同 public 表名分别创建最小关系并在阶段间回滚恢复空目录；通过 pg_catalog 核对约束元数据及精确表达式，用受控合成输入和独立保存点检查结果及错误码，核实回滚和退出，不访问业务数据。实际报告采集及来源认证、隔离目标身份、一次性执行门禁另批实现并评审。观察判定器严格要求固定计划指纹、版本、六个有序阶段、元数据、提交与提取原文、48 个结果，只输出匹配分类和计数，不回显任意输入；匹配仍不证明来源真实，始终 observationSourceAuthenticated/roundTripVerified/historicalAdoptionVerified/databaseExecutionAllowed/signingAllowed/deploymentAllowed=false。四座现存数据库及证据持续冻结，不创建第五座，不启用旧入口，不签名、部署、切换正式 Provider 或修改历史迁移。ADR 保持 Proposed。
+
+协作容器 Node.js 22.16.0 实际运行新增纯离线回归 8/8，通过源文件及测试 node --check（既有契约修复模块 Git Blob f1c0ce1e1b8c3df6cc4e7f4892b73387d16e4047 与远端一致）；本地新增核心 Blob 3b1eb946c0315b6e9e1184190072a7dbbbb386cd、测试 Blob 9cc21795c6c356becb38c935e9f18c98c5ef3b8a 与远端一致。未取得固定 RC 完整运行环境、真实候选和 Vite+，未执行服务端入口真实离线计划、全仓检查或任何 PostgreSQL 操作，48 项是待执行的真实实验输入而非已通过数据库用例。
