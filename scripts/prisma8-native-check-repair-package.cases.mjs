@@ -15,14 +15,14 @@ import {
 function fixture() {
   const tables = {};
   const replacements = [
-    ["scada_identities", "scada_identities_status_check", "status", ["active", "disabled"]],
-    ["scada_project_release_events", "scada_project_release_event_action_check", "action", ["PUBLISH", "ROLLBACK"]],
+    { table: "scada_identities", name: "scada_identities_status_check", column: "status", values: ["active", "disabled"] },
+    { table: "scada_project_release_events", name: "scada_project_release_event_action_check", column: "action", values: ["PUBLISH", "ROLLBACK"] },
   ];
   const original = {
     storage: { storageHash: nativeHash, namespaces: { public: { entries: { table: tables } } } },
   };
   const ops = [];
-  for (const [table, name, column, values] of replacements) {
+  for (const { table, name, column, values } of replacements) {
     const before = "((" + column + ")::text = ANY ((ARRAY[" +
       values.map((value) => "'" + value + "'::character varying").join(", ") + "])::text[]))";
     tables[table] = { checks: [{ name, expression: before }] };
@@ -50,7 +50,7 @@ function fixture() {
   const candidate = structuredClone(original);
   candidate.storage.storageHash = repairHash;
   const next = structuredClone(ops);
-  for (const [index, [table, , column, values]] of replacements.entries()) {
+  for (const [index, { table, column, values }] of replacements.entries()) {
     const after = "((" + column + ")::text = ANY (ARRAY[" +
       values.map((value) => "('" + value + "'::character varying)::text").join(", ") + "]))";
     candidate.storage.namespaces.public.entries.table[table].checks[0].expression = after;
