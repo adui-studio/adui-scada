@@ -1,21 +1,9 @@
-/// <reference types="node" />
-
 import { definePrismaConfig } from "prisma/config";
 import { defineConfig as definePostgresConfig } from "@prisma/orm-postgres/config";
 
-// 第四座实例专用配置；不继承根环境文件、第三座连接或正式 Provider。
-function requireConnection(): string {
-  const input = process.env.SCADA_PRISMA8_NATIVE_REPRO_DATABASE_URL;
-  if (
-    typeof input !== "string" ||
-    !/^postgresql:\/\/adui_scada_native_repro:[a-f0-9]{64}@127\.0\.0\.1:15433\/adui_scada_fresh_prisma8_repro$/u.test(
-      input,
-    ) ||
-    input.trim() !== input
-  ) {
-    throw new Error("第四座独立迁移配置连接地址无效");
-  }
-  return input;
+// 保留历史配置路径；实际一次迁移已经消耗，直接加载此配置也必须拒绝。
+function requireConnection(): never {
+  throw new Error("第四座单次迁移许可已消耗，当前配置永久冻结");
 }
 
 export default definePrismaConfig({
