@@ -3,6 +3,7 @@ import { test } from "node:test";
 import evidence from "./prisma8-native-baseline-accepted-evidence.json" with { type: "json" };
 import {
   inspectNativeEmptyDatabase,
+  inspectReproEmptyDatabase,
   nativeEmptyClientOptions,
   nativeEmptyConfirmation,
   nativeEmptyDatabaseName,
@@ -57,8 +58,14 @@ const empty = {
   other_sessions: false,
 };
 
-/** @param {{ boundaryRows?: object[], emptyRows?: object[], failAt?: string, failureCode?: string }} [options] 模拟客户端配置。 */
-function mock({ boundaryRows = [boundary], emptyRows = [empty], failAt = "", failureCode } = {}) {
+/** @param {{ boundaryRows?: object[], emptyRows?: object[], failAt?: string, failureCode?: string, identityRows?: object[] }} [options] 模拟客户端配置。 */
+function mock({
+  boundaryRows = [boundary],
+  emptyRows = [empty],
+  failAt = "",
+  failureCode,
+  identityRows = [],
+} = {}) {
   const failure = Object.assign(new Error("敏感内部异常"), { code: failureCode });
   const calls = [];
   const client = {
@@ -71,6 +78,7 @@ function mock({ boundaryRows = [boundary], emptyRows = [empty], failAt = "", fai
       if (failAt && sql.includes(failAt)) throw failure;
       if (sql.includes("pg_is_in_recovery")) return { rows: boundaryRows };
       if (sql.includes("pg_stat_activity")) return { rows: emptyRows };
+      if (sql.includes("pg_control_system")) return { rows: identityRows };
       return { rows: [] };
     },
     async end() {
@@ -247,5 +255,47 @@ void test("固定阶段与已知数据库错误码可定位且不泄漏内部详
         return true;
       },
     );
+  }
+});
+
+const reproBoundary = {
+  ...boundary,
+  database_name: "adui_scada_fresh_prisma8_repro",
+  role_name: "adui_scada_native_repro",
+  session_role: "adui_scada_native_repro",
+  server_version: "170011",
+};
+const systemIdentifier = "1234567890123456789";
+
+void test("第四座在同一只读事务内核对实际集群身份和二十三类目录", async () => {
+  const { client, calls } = mock({
+    boundaryRows: [reproBoundary],
+    identityRows: [{ system_identifier: systemIdentifier }],
+  });
+  const result = await inspectReproEmptyDatabase(client, systemIdentifier);
+  assert.equal(result.database, reproBoundary.database_name);
+  assert.equal(result.serverVersion, "170011");
+  assert.equal(result.checkedEmptyCategories, 23);
+  assert.equal(result.deploymentAllowed, false);
+  assert.equal(calls.length, 7);
+  assert.match(calls[3], /pg_control_system/u);
+  assert.match(calls[4], /pg_stat_activity/u);
+  assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
+});
+
+void test("第四座版本、集群和角色不一致时拒绝目录检查并回滚关闭", async () => {
+  for (const config of [
+    { boundaryRows: [{ ...reproBoundary, server_version: "180000" }] },
+    { identityRows: [{ system_identifier: "987" }] },
+    { boundaryRows: [boundary] },
+  ]) {
+    const { client, calls } = mock({
+      boundaryRows: [reproBoundary],
+      identityRows: [{ system_identifier: systemIdentifier }],
+      ...config,
+    });
+    await assert.rejects(() => inspectReproEmptyDatabase(client, systemIdentifier), /第四座/u);
+    assert.equal(calls.some((sql) => sql.includes("pg_stat_activity")), false);
+    assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
   }
 });
