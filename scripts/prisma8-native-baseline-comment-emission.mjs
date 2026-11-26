@@ -17,11 +17,17 @@ function requireMatch(condition, message) {
 }
 
 function requireDirectory(path) {
-  requireMatch(lstatSync(path).isDirectory() && realpathSync(path) === path, "独立注释候选目录包含链接或不是目录");
+  requireMatch(
+    lstatSync(path).isDirectory() && realpathSync(path) === path,
+    "独立注释候选目录包含链接或不是目录",
+  );
 }
 
 function readRegular(path) {
-  requireMatch(lstatSync(path).isFile() && realpathSync(path) === path, "独立注释候选文件包含链接或不是文件");
+  requireMatch(
+    lstatSync(path).isFile() && realpathSync(path) === path,
+    "独立注释候选文件包含链接或不是文件",
+  );
   return readFileSync(path);
 }
 
@@ -49,7 +55,10 @@ function runOffline(root, output, stage, args) {
   requireDirectory(output);
   writeFileSync(join(output, stage + ".stdout.txt"), result.stdout ?? "", { flag: "wx" });
   writeFileSync(join(output, stage + ".stderr.txt"), result.stderr ?? "", { flag: "wx" });
-  requireMatch(!result.error && result.status === 0, "离线注释自发射阶段失败：" + stage + "；保留诊断，不自动重试");
+  requireMatch(
+    !result.error && result.status === 0,
+    "离线注释自发射阶段失败：" + stage + "；保留诊断，不自动重试",
+  );
   return result.stdout;
 }
 
@@ -59,7 +68,10 @@ export function runCommentEmission(root, entry, audited) {
   const files = readAuditedFiles(originalDir);
   const original = parseArtifacts(files);
   const comments = buildCommentOperations(audited.preview);
-  requireMatch(original.operations.length === 46 && comments.length === 119 && audited.comments === 119, "原始操作或注释数量变化");
+  requireMatch(
+    original.operations.length === 46 && comments.length === 119 && audited.comments === 119,
+    "原始操作或注释数量变化",
+  );
   const authoring = appendCommentOperations(files[sourceName].toString("utf8"), comments);
   const server = join(root, "apps", "server");
   requireDirectory(server);
@@ -67,10 +79,15 @@ export function runCommentEmission(root, entry, audited) {
   if (!lstatSync(parent, { throwIfNoEntry: false })) mkdirSync(parent);
   requireDirectory(parent);
   const output = join(parent, "prisma8-native-baseline-comments");
-  requireMatch(!lstatSync(output, { throwIfNoEntry: false }), "独立注释候选已存在，禁止覆盖或自动清理");
+  requireMatch(
+    !lstatSync(output, { throwIfNoEntry: false }),
+    "独立注释候选已存在，禁止覆盖或自动清理",
+  );
   const config = join(server, "prisma8-native-baseline-comments.config.ts");
   const configBytes = readRegular(config);
-  const copyNames = Object.keys(files).filter((name) => name !== "plan.json" && name !== "plan.stderr.txt");
+  const copyNames = Object.keys(files).filter(
+    (name) => name !== "plan.json" && name !== "plan.stderr.txt",
+  );
   mkdirSync(output);
   try {
     for (const name of copyNames) {
@@ -81,16 +98,22 @@ export function runCommentEmission(root, entry, audited) {
     }
     const readCopy = () => {
       requireMatch(readRegular(config).equals(configBytes), "独立注释配置发生变化");
-      return Object.fromEntries(copyNames.map((name) => {
-        const bytes = readRegular(join(output, name));
-        if (name === sourceName) requireMatch(bytes.equals(Buffer.from(authoring)), "独立注释源码发生变化");
-        else if (name !== manifestName && name !== operationsName) requireMatch(bytes.equals(files[name]), "独立注释候选契约或快照发生变化");
-        return [name, bytes];
-      }));
+      return Object.fromEntries(
+        copyNames.map((name) => {
+          const bytes = readRegular(join(output, name));
+          if (name === sourceName)
+            requireMatch(bytes.equals(Buffer.from(authoring)), "独立注释源码发生变化");
+          else if (name !== manifestName && name !== operationsName)
+            requireMatch(bytes.equals(files[name]), "独立注释候选契约或快照发生变化");
+          return [name, bytes];
+        }),
+      );
     };
     const before = readCopy();
     const migration = join(output, sourceName);
-    const dryRun = parseDryRun(runOffline(root, output, "emit-dry-run", [migration, "--config", config, "--dry-run"]));
+    const dryRun = parseDryRun(
+      runOffline(root, output, "emit-dry-run", [migration, "--config", config, "--dry-run"]),
+    );
     requireMatch(isDeepStrictEqual(readCopy(), before), "官方干跑改变了候选文件");
     const review = reviewCommentEmission(original, dryRun, comments);
     requireMatch(review.operations === 165, "独立注释候选必须包含一百六十五项操作");
@@ -99,13 +122,26 @@ export function runCommentEmission(root, entry, audited) {
     const actual = parseArtifacts(emitted);
     requireMatch(isDeepStrictEqual(actual, dryRun), "实际自发射结果与干跑不一致");
     reviewCommentEmission(original, actual, comments);
-    const checkText = runOffline(root, output, "migration-check", [entry, "migration", "check", "--space", "app", "--json", "--config", config]);
+    const checkText = runOffline(root, output, "migration-check", [
+      entry,
+      "migration",
+      "check",
+      "--space",
+      "app",
+      "--json",
+      "--config",
+      config,
+    ]);
     const check = JSON.parse(checkText);
     requireMatch(
-      check.kind === "result" && check.commandId === "migration.check" &&
-        check.envelope?.commandId === "migration.check" && check.envelope.ok === true &&
-        check.envelope.exitCode === 0 && isDeepStrictEqual(check.envelope.diagnostics, []) &&
-        check.envelope.result?.ok === true && isDeepStrictEqual(check.envelope.result.failures, []),
+      check.kind === "result" &&
+        check.commandId === "migration.check" &&
+        check.envelope?.commandId === "migration.check" &&
+        check.envelope.ok === true &&
+        check.envelope.exitCode === 0 &&
+        isDeepStrictEqual(check.envelope.diagnostics, []) &&
+        check.envelope.result?.ok === true &&
+        isDeepStrictEqual(check.envelope.result.failures, []),
       "官方迁移完整性检查结果未确认成功",
     );
     requireMatch(isDeepStrictEqual(readCopy(), emitted), "官方迁移检查改变了候选文件");

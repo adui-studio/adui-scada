@@ -170,8 +170,8 @@ try {
 } catch (error) {
   console.error(
     error instanceof BaselineError ||
-    error instanceof DdlReviewError ||
-    error instanceof CommentEmissionError
+      error instanceof DdlReviewError ||
+      error instanceof CommentEmissionError
       ? error.message
       : "离线原生基线阶段失败：" + stage + "；保留证据供人工检查",
   );
