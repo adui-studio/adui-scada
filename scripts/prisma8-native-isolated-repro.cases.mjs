@@ -30,12 +30,13 @@ const systemIdentifier = "1234567890123456789";
 const args = [reproConfirmation];
 const source = { [reproPasswordVariable]: password };
 const allowed = new Set(["public", "table"]);
+const labels = { "org.adui.scope": "prisma8-native-repro" };
 const facts = [
   containerId,
   "/" + reproContainer,
   reproImage,
   true,
-  { "org.adui.scope": "prisma8-native-repro" },
+  labels,
   [{ Type: "volume", Name: reproVolume, Destination: "/var/lib/postgresql/data", RW: true }],
   { "5432/tcp": [{ HostIp: "127.0.0.1", HostPort: "15433" }] },
   { [reproNetwork]: {} },
@@ -94,18 +95,21 @@ void test("仅接受实际创建的本机容器、镜像、单一卷、网络及
   assert.throws(() => requireLocalDocker("tcp://example.invalid:2375", "linux"), /本机/u);
   assert.throws(() => requireLocalDocker("npipe:////./pipe/docker_engine", "windows"), /本机/u);
   assert.equal(requireReproContainer(facts), containerId);
-  for (const [index, value] of [
+  /** @type {[number, unknown][]} 容器边界的独立反例。 */
+  const cases = [
     [0, "错误"],
     [1, "/adui-scada-postgres-1"],
     [2, "sha256:" + "c".repeat(64)],
     [3, false],
-    [4, { ...facts[4], "com.docker.compose.project": "adui-scada" }],
+    [4, { ...labels, "com.docker.compose.project": "adui-scada" }],
     [5, []],
     [6, { "5432/tcp": [{ HostIp: "0.0.0.0", HostPort: "15433" }] }],
     [7, { [reproNetwork]: {}, lab: {} }],
-  ]) {
+  ];
+  for (const [index, value] of cases) {
+    /** @type {unknown[]} 独立修改一个受检字段。 */
     const changed = [...facts];
-    changed[Number(index)] = value;
+    changed[index] = value;
     assert.throws(() => requireReproContainer(changed), /固定边界/u);
   }
 });
