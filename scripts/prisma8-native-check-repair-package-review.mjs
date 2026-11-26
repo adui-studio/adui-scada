@@ -85,8 +85,13 @@ export function runPreservedRepairReview(preserve, action, stage) {
 /** 仅接受官方成功退出且标准错误为空，不回显任意子进程诊断。 */
 export function requireRepairReviewProcess(result) {
   requireMatch(
-    result && !result.error && result.status === 0 && result.signal == null &&
-      result.stderr === "" && typeof result.stdout === "string" && result.stdout.length > 0,
+    result &&
+      !result.error &&
+      result.status === 0 &&
+      result.signal == null &&
+      result.stderr === "" &&
+      typeof result.stdout === "string" &&
+      result.stdout.length > 0,
     "官方修复包离线子进程未确认成功",
   );
   return result.stdout;
@@ -94,12 +99,37 @@ export function requireRepairReviewProcess(result) {
 
 /** 复验命令封闭为官方干跑与完整性检查，不接收任意附加参数。 */
 export function runRepairOfficialRechecks({
-  preserve, execute, verifyDryRun, verifyMigrationCheck, migrationPath, configPath, cliPath,
+  preserve,
+  execute,
+  verifyDryRun,
+  verifyMigrationCheck,
+  migrationPath,
+  configPath,
+  cliPath,
 }) {
-  runPreservedRepairReview(preserve, () => {
-    verifyDryRun(execute([migrationPath, "--config", configPath, "--dry-run"]));
-  }, "官方干跑");
-  runPreservedRepairReview(preserve, () => {
-    verifyMigrationCheck(execute([cliPath, "migration", "check", "--space", "app", "--json", "--config", configPath]));
-  }, "官方迁移完整性");
+  runPreservedRepairReview(
+    preserve,
+    () => {
+      verifyDryRun(execute([migrationPath, "--config", configPath, "--dry-run"]));
+    },
+    "官方干跑",
+  );
+  runPreservedRepairReview(
+    preserve,
+    () => {
+      verifyMigrationCheck(
+        execute([
+          cliPath,
+          "migration",
+          "check",
+          "--space",
+          "app",
+          "--json",
+          "--config",
+          configPath,
+        ]),
+      );
+    },
+    "官方迁移完整性",
+  );
 }

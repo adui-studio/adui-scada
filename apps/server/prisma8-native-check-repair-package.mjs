@@ -185,7 +185,17 @@ function main() {
   if (reviewing) {
     stage = "固定修复迁移包离线复验";
     const report = reviewExistingRepairPackage({
-      root, server, output, entry, configs, oldContract, contract, oldOps, audited, repairFiles, preserve,
+      root,
+      server,
+      output,
+      entry,
+      configs,
+      oldContract,
+      contract,
+      oldOps,
+      audited,
+      repairFiles,
+      preserve,
     });
     process.stdout.write(JSON.stringify(report, null, 2) + "\n");
     return;
