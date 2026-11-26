@@ -5048,3 +5048,29 @@ WHERE datname = 'adui_scada_fresh_prisma8_native';
 ```
 
 无记录表示该连接所在 PostgreSQL 实例没有专用库，不执行创建、改所有者、清理或迁移；需单独确认。若存在且为明确的独立空库、所有者符合预期、无其他会话，按上一节 PowerShell 临时专用 URL 与确认参数只读预检一次。新诊断只输出固定阶段及已知错误码，例如连接失败 3D000 / 28P01、目录查询失败 42501 / 42703；保留该中文诊断，不输出密码、连接串、原始数据库错误或堆栈，不自动重试。实际失败原因仍待实测；任何失败保持签名和部署许可否。
+
+### 第三座专用库原生迁移路径复核与独立执行（维护者已授权）
+
+先在本机最新候选通过 `pnpm run test:prisma8:native:baseline:migrate`、原五组专项、`vp check`、`messages:check` 与 `docs:check`。保留已有原包及独立候选，不生成或清理；关闭第三座库其他会话，整个执行期间不并发修改文件或数据库。以下包装器仍须先进行真实在线预览，确认唯一固定基线边，不使用真实业务库。
+
+```powershell
+& {
+    $previousUrl = $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL
+    try {
+        $password = Read-Host "请输入第三座专用空库所有者密码" -MaskInput
+        $encodedPassword = [Uri]::EscapeDataString($password)
+        $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL = "postgresql://adui_scada:${encodedPassword}@127.0.0.1:15432/adui_scada_fresh_prisma8_native?schema=public"
+        pnpm run db:prisma8:native:baseline:migrate --review-adui-scada-fresh-prisma8-native-path
+        if ($LASTEXITCODE -ne 0) { throw "独立迁移路径复核失败，停止" }
+        pnpm run db:prisma8:native:baseline:migrate --confirm-adui-scada-fresh-prisma8-native-migrate
+        if ($LASTEXITCODE -ne 0) { throw "独立迁移未确认成功，保留现场" }
+    } finally {
+        if ($null -eq $previousUrl) { Remove-Item Env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL -ErrorAction SilentlyContinue }
+        else { $env:SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL = $previousUrl }
+        Remove-Variable password, encodedPassword, previousUrl -ErrorAction SilentlyContinue
+    }
+}
+git status --short
+```
+
+预期先 NATIVE_MIGRATION_PATH_REVIEW_REQUIRED，再 NATIVE_BASELINE_APPLIED_REVIEW_REQUIRED。固定 RC.35 在线机器输出形状尚需真实核实，若预览不符不会写入；若进入迁移调用后出现非零退出或机器响应不符，不推断回滚、不再次执行空库入口，保留第三座数据库及全部候选；下一批独立只读诊断实际 marker、ledger、目录及注释。官方应用自动推进第三座库 marker；不得运行 db sign、db update 或迁移旧库。此阶段成功仍不是全部物理目录/中文注释和负向约束验收。

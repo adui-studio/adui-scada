@@ -1767,3 +1767,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - scripts/prisma8-native-baseline-preflight.mjs：固定完整证据、第三座专用库显式 URL 与连接参数、只读事务及 23 类目录/会话检查，回滚关闭和脱敏诊断。
 - scripts/prisma8-native-baseline-comment-emission.mjs：候选复验前固定证据比较，requireLockedCandidateEvidence 用于数据库预检结束后的文件再核对。
 - pnpm run test:prisma8:native:baseline:preflight：十项离线合成测试（含 E-147/E-148 字符码及脱敏诊断回归），纳入 ready；pnpm run db:prisma8:native:baseline:preflight --confirm-adui-scada-fresh-prisma8-native：只读真实入口，不纳入 ready，须单独设置专用环境变量 SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL。输出 NATIVE_EMPTY_PREFLIGHT_REVIEW_REQUIRED；不创建库、不写数据库、不签名或部署。
+
+### 原生基线独立迁移入口
+
+- `apps/server/prisma8-native-baseline-migrate.config.ts`：第三座专用库固定配置，独立于原离线配置。
+- `apps/server/prisma8-native-baseline-migrate.mjs`：原件与空库复验、官方在线路径及独立应用包装。
+- `scripts/prisma8-native-baseline-migrate.mjs` / `.cases.mjs`：固定参数、机器响应、唯一迁移边和标记检查及离线回归。
