@@ -67,15 +67,15 @@ function main() {
       maxBuffer: 16 * 1024 * 1024,
     });
     requirePreserved();
-    requireMatch(
-      !child.error && child.status === 0,
-      "独立迁移子进程未确认成功；原始诊断不回显",
-    );
+    requireMatch(!child.error && child.status === 0, "独立迁移子进程未确认成功；原始诊断不回显");
     return child.stdout;
   };
   const preflight = () => {
     stage = "重新执行固定候选及第三座空库只读预检";
-    run([join(root, "apps", "server", "prisma8-native-baseline-plan.mjs"), nativeEmptyConfirmation]);
+    run([
+      join(root, "apps", "server", "prisma8-native-baseline-plan.mjs"),
+      nativeEmptyConfirmation,
+    ]);
     console.info("第三座空库只读预检重新通过");
   };
   const preview = (applied) => {

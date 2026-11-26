@@ -50,7 +50,11 @@ void test("独立预览和迁移只接受专用连接及固定授权", () => {
   }
   assert.throws(
     () =>
-      migrationRequest(url.replace("fresh_prisma8_native", "test"), [migrationApplyConfirmation], {}),
+      migrationRequest(
+        url.replace("fresh_prisma8_native", "test"),
+        [migrationApplyConfirmation],
+        {},
+      ),
     /仅允许/u,
   );
 });
@@ -110,7 +114,8 @@ void test("机器响应严格确认唯一最终成功结果且不回显敏感错
   }
   assert.throws(() => requireMigrationResult("敏感非 JSON", "db.migrate"), /无法解析/u);
   assert.throws(
-    () => requireMigrationResult(JSON.stringify(valid) + "\n" + JSON.stringify(valid), "db.migrate"),
+    () =>
+      requireMigrationResult(JSON.stringify(valid) + "\n" + JSON.stringify(valid), "db.migrate"),
     /未确认成功/u,
   );
 });
