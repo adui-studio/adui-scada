@@ -1791,3 +1791,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/prisma8-native-baseline-migrate.mjs` / `scripts/prisma8-native-baseline-recovery.mjs`：原写入确认与单次恢复确认全部冻结，不依赖尝试记录是否存在，既有只读恢复入口保持可用。
 - `scripts/prisma8-cli.mjs` / `.cases.mjs`：新增固定严格结构只读映射；沿用本机 adui_scada_test URL 白名单，不允许第三座专用库或附加参数。
 - `pnpm run db:prisma8:native:schema:verify:strict`：官方 schema-only + strict + JSON，只用于本机控制组差异调查，真实 RC 结构校验结果待验收。原宽容入口不变。
+
+### 固定候选执行检查离线评审
+
+- `scripts/prisma8-native-baseline-execution-review.mjs` / `.cases.mjs`：结构检查条件提取及四项模拟回归；仅统计注释检查覆盖。
+- `apps/server/prisma8-native-baseline-execution-review.mjs`：固定 RC、原包及十四文件门禁，读取并复核 ops.json，不启动任何 CLI 或数据库连接。
+- `pnpm run test:prisma8:native:baseline:execution`：定向测试；`pnpm run db:prisma8:native:baseline:execution:review`：离线 JSON 证据入口，不加入自动迁移或自动部署流程。
