@@ -51,7 +51,11 @@ import {
   reviewRepairStructure,
 } from "../../scripts/prisma8-native-check-repair-package.mjs";
 
+import { RepairPackageReviewError } from "../../scripts/prisma8-native-check-repair-package-review.mjs";
+import { reviewExistingRepairPackage } from "./prisma8-native-check-repair-package-review.mjs";
+
 const confirmation = "--confirm-offline-check-repair-package";
+const reviewConfirmation = "--review-existing-check-repair-package";
 const originalFingerprint = "02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e";
 const configHashes = {
   "prisma8-native-check-repair-plan.config.ts":
@@ -98,9 +102,10 @@ function runOffline(root, output, args, logs) {
 }
 
 function main() {
+  const reviewing = process.argv[2] === reviewConfirmation;
   requireMatch(
-    process.argv.length === 3 && process.argv[2] === confirmation,
-    "必须明确确认仅离线生成修复迁移包，不接受其他参数",
+    process.argv.length === 3 && (reviewing || process.argv[2] === confirmation),
+    "必须明确选择离线生成或固定修复迁移包复验，不接受其他参数",
   );
   stage = "固定原件、修复契约、第四座副本及配置核验";
   const root = realpathSync(resolve(import.meta.dirname, "../.."));
@@ -108,10 +113,12 @@ function main() {
   const parent = join(server, ".artifacts");
   const output = join(parent, repairDirectory);
   requireDirectory(parent);
-  requireMatch(
-    !lstatSync(output, { throwIfNoEntry: false }),
-    "独立修复迁移包已存在，禁止覆盖或自动清理",
-  );
+  if (!reviewing) {
+    requireMatch(
+      !lstatSync(output, { throwIfNoEntry: false }),
+      "独立修复迁移包已存在，禁止覆盖或自动清理",
+    );
+  }
   const inputs = readBaselineInputs(root, true);
   const oldDir = join(root, ".artifacts", "prisma8-native-baseline");
   const oldFiles = readAuditedFiles(oldDir);
@@ -175,6 +182,14 @@ function main() {
   };
   preserve();
   const entry = resolveBaselineCli(root);
+  if (reviewing) {
+    stage = "固定修复迁移包离线复验";
+    const report = reviewExistingRepairPackage({
+      root, server, output, entry, configs, oldContract, contract, oldOps, audited, repairFiles, preserve,
+    });
+    process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+    return;
+  }
   const planDir = join(output, "plan");
   const completeDir = join(output, "complete");
   const planConfig = join(server, "prisma8-native-check-repair-plan.config.ts");
@@ -367,7 +382,7 @@ try {
   main();
 } catch (error) {
   console.error(
-    error instanceof RepairPackageError
+    error instanceof RepairPackageError || error instanceof RepairPackageReviewError
       ? error.message
       : "离线修复迁移包失败：" + stage + "；保留证据",
   );
