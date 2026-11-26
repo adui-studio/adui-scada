@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { definePrismaConfig } from "prisma/config";
 import { defineConfig as definePostgresConfig } from "@prisma/orm-postgres/config";
 
