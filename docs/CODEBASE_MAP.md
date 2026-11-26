@@ -1837,3 +1837,12 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/prisma8-native-check-repair-package.mjs`：原件和第四座副本复核、固定 RC 空起点规划、46 项 DDL、119 项注释、165 项操作官方干跑/自发射、迁移完整性检查，24 文件证据报告；不访问数据库，不改写旧候选。
 - `pnpm run test:prisma8:native:baseline:check-repair-package`：纯离线回归；`pnpm run db:prisma8:native:baseline:check-repair-package --confirm-offline-check-repair-package`：真实离线生成，独立授权，不加入 ready 实际发射。
 - `apps/server/.artifacts/prisma8-native-check-repair-package`：精确生成物排除，仍检查相邻目录和自有源码。四座数据库冻结、正式 Prisma 7 保持不变。
+
+### 2026-11-26 · 固定 CHECK 修复迁移包复验
+
+- `scripts/prisma8-native-check-repair-package-accepted-evidence.json`：维护者真实报告的 24 文件及两份配置固定证据。
+- `scripts/prisma8-native-check-repair-package-review.mjs`：固定清单和原始字节门禁、阶段复核与封闭官方命令序列。
+- `scripts/prisma8-native-check-repair-package-review.cases.mjs`：十项离线回归，纳入 ready。
+- `apps/server/prisma8-native-check-repair-package-review.mjs`：复用既有规划、DDL、注释、执行检查语义，重新官方干跑与完整性校验。
+- `apps/server/prisma8-native-check-repair-package.mjs`：新增明确的已有包复验模式，原生成确认与禁止覆盖保持不变。
+- `pnpm run db:prisma8:native:baseline:check-repair-package:review`：只在原验收工作区复验固定产物，不纳入 ready 的真实官方执行；无数据库访问。
