@@ -32,7 +32,9 @@ export function directSchemaConnection(input) {
     };
     url.searchParams.set(
       "options",
-      Object.entries(sessionSettings).map(([key, value]) => "-c " + key + "=" + value).join(" "),
+      Object.entries(sessionSettings)
+        .map(([key, value]) => "-c " + key + "=" + value)
+        .join(" "),
     );
     return { connection: url.toString(), options: { connectTimeoutMs: 5000, sessionSettings } };
   } catch {
@@ -43,14 +45,38 @@ export function directSchemaConnection(input) {
 function allowedPaths(contract) {
   const tables = contract.storage.namespaces.public.entries.table;
   const names = new Set([
-    "database", "public", "table", "tables", "column", "columns", "primaryKey", "index",
-    "indexes", "foreignKey", "foreignKeys", "check", "checks", "unique", "uniques",
-    "default", "nullable", "dataType", "typeParams", "length", "precision",
+    "database",
+    "public",
+    "table",
+    "tables",
+    "column",
+    "columns",
+    "primaryKey",
+    "index",
+    "indexes",
+    "foreignKey",
+    "foreignKeys",
+    "check",
+    "checks",
+    "unique",
+    "uniques",
+    "default",
+    "nullable",
+    "dataType",
+    "typeParams",
+    "length",
+    "precision",
   ]);
   for (const [name, table] of Object.entries(tables)) {
     names.add(name);
     for (const column of Object.keys(table.columns)) names.add(column);
-    for (const item of [table.primaryKey, ...table.indexes, ...table.foreignKeys, ...table.checks, ...table.uniques]) {
+    for (const item of [
+      table.primaryKey,
+      ...table.indexes,
+      ...table.foreignKeys,
+      ...table.checks,
+      ...table.uniques,
+    ]) {
       if (typeof item?.name === "string") names.add(item.name);
     }
   }
@@ -79,9 +105,11 @@ export function summarizeDirectSchemaResult(result, contract, strict) {
     issuePaths: issues.map((issue) => {
       const path = issue?.path;
       return Array.isArray(path)
-        ? path.slice(0, 32).map((segment) =>
-            typeof segment === "string" && names.has(segment) ? segment : "[已脱敏]",
-          )
+        ? path
+            .slice(0, 32)
+            .map((segment) =>
+              typeof segment === "string" && names.has(segment) ? segment : "[已脱敏]",
+            )
         : ["[未取得路径]"];
     }),
   };
