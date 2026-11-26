@@ -42,7 +42,7 @@ export function directSchemaConnection(input) {
   }
 }
 
-function allowedPaths(contract) {
+export function allowedPaths(contract) {
   const tables = contract.storage.namespaces.public.entries.table;
   const names = new Set([
     "database",

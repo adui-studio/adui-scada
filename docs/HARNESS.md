@@ -5143,3 +5143,20 @@ pnpm run docs:check
 真实入口只接受临时 SCADA_TEST_DATABASE_URL，密码使用屏蔽输入并进行百分号编码，保持本机 127.0.0.1:15432/adui_scada_test?schema=public；使用 try/finally 恢复原变量。执行 `node apps/server/prisma8-native-direct-schema-review.mjs`，不附加参数。退出 0 为两种直接校验均通过，4 为取得合法报告但至少一种结构不匹配，1 为版本、证据、连接、结果形状或关闭失败；均不代表迁移结果。禁止连接第三座库或重新执行迁移；只分享已经脱敏的 JSON、退出码及已存在离线报告的 missingPrecheck/missingPostcheck/identicalChecks 三个标识数组。
 
 PR #228 的 E-152 修复新增三项模拟回归，专项预期 7/7；验证或关闭失败后仍复核证据，证据复核失败与原错误一起脱敏输出，退出 1。只有证据复核通过时才返回报告；真实历史库直接宽容与严格已在修复前通过，修复后仍需 Windows 质量检查及一次只读复验。不得再次执行迁移。
+
+### 原生迁移结构失败离线诊断与授权边界
+
+新增只读离线诊断解析器：只接受已有机器诊断的标准输入，16 MiB 上限，匹配唯一 db.migrate 结构失败封装，兼容直接错误、逐行事件最终错误及最终诊断数组；命令、严重度和结果状态矛盾、重复或畸形结果拒绝。仅输出契约白名单结构路径、由 expected/actual 存在性派生的类别、两种已知解释类别和数量，未知路径脱敏，不输出节点原值、摘要、解释正文、凭据、连接串或任意元数据；缺失列表与空列表分别用 null 与 0 表达，均不代表零差异通过。入口复用原包/固定十四文件门禁，另核对候选 contract.json 长度及 SHA-256，复用已有路径白名单，输出前复核固定证据。离线入口不认证日志来源，不调用 Prisma CLI、数据库驱动、迁移、签名或任何写入；不能通过旧错误码重构丢失的具体结构差异。退出 0 仅表示取得非空合法脱敏差异，4 表示唯一失败但缺少具体差异，1 表示输入或证据拒绝。所有报告 signingAllowed 和 deploymentAllowed 均为 false；旧迁移入口及写入冻结门禁不变。
+
+```powershell
+pnpm run test:prisma8:native:baseline:schema-failure
+pnpm run test:prisma8:native:baseline:direct-schema
+pnpm run test:prisma8:native:baseline:candidate
+vp check
+pnpm run messages:check
+pnpm run docs:check
+```
+
+仅当维护者已经拥有实际失败时的原始机器输出文件，才可在本机用 `Get-Content -LiteralPath $existingDiagnosticFile -Raw | node apps/server/prisma8-native-schema-failure-review.mjs` 解析；变量须指向已存在的真实文件，不得使用模拟内容冒充真实证据。仅分享脱敏 JSON 或固定失败阶段。没有原始输出时记为不可恢复，不重新执行迁移。
+
+下一阶段隔离复现方案（仅提议，尚未获得单独数据库操作授权）：保留第三座库、一次性尝试记录、历史验收库、参考库和固定原件。使用完全独立的本机临时 PostgreSQL 实例，选择未占用的专用回环端口、独立数据卷、专用库及一次性凭据，不继承现有容器卷、数据库连接串、根 .env 或其他服务网络。优先核对与既有 PostgreSQL 17.11 相同的实际镜像摘要及环境，不擅自升级。使用候选的独立只读来源副本，核对 CLI rc.35/Provider rc.25、十四文件证据和唯一空起点迁移边；任何执行入口须另行评审连接白名单、实际库/角色/版本、严格空库门禁及一次性授权。仅在明确批准的独立实例执行一次官方原生迁移，捕获官方机器输出，失败时在丢弃原文前提取脱敏 schemaIssues；成功也仅作隔离复现结果，保留现场并停止。若无法取得具体结构差异，再单独评审同一事务内逐项 DDL、目录读取与回滚的实验，而不是继续重复历史库验证。禁止自动创建、重置或清理数据库，禁止重试第三座库、改动正式 Provider、签名、发布或推进引用。本批未实现或执行任何新的在线复现入口。
