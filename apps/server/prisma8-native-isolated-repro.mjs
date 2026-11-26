@@ -47,6 +47,7 @@ import {
   requireReproContainer,
   requireReproIdentity,
   requireReproRequest,
+  requireReproWriteAvailable,
   requireUnusedReproDirectory,
   saveReproEvidence,
 } from "../../scripts/prisma8-native-isolated-repro.mjs";
@@ -66,6 +67,7 @@ function requireDirectory(path) {
 }
 
 async function main() {
+  requireReproWriteAvailable();
   const request = requireReproRequest(process.argv.slice(2), process.env);
   const root = realpathSync(resolve(import.meta.dirname, "../.."));
   const server = join(root, "apps", "server");
