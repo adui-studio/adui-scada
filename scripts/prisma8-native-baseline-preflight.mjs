@@ -25,6 +25,72 @@ export function requireAcceptedCandidateEvidence(report) {
   return fingerprint;
 }
 
+function hasForbiddenCodeUnit(value, max) {
+  return Array.from(value).some((character) => {
+    const code = character.charCodeAt(0);
+    return code <= max || code === 127;
+  });
+}
+
+/** 只输出固定阶段和已知错误码的中文分类，不返回第三方异常原文。 */
+function describeDatabaseFailure(stage, error) {
+  const code = error instanceof Error && "code" in error ? error.code : undefined;
+  let reason;
+  switch (code) {
+    case "3D000":
+      reason = "3D000，目标数据库不存在或目录名无效";
+      break;
+    case "28P01":
+      reason = "28P01，身份验证未通过";
+      break;
+    case "28000":
+      reason = "28000，身份或连接授权无效";
+      break;
+    case "42501":
+      reason = "42501，权限不足";
+      break;
+    case "42P01":
+      reason = "42P01，受检目录关系不存在";
+      break;
+    case "42703":
+      reason = "42703，受检目录字段不存在";
+      break;
+    case "42704":
+      reason = "42704，受检对象或设置不存在";
+      break;
+    case "42601":
+      reason = "42601，查询语法错误";
+      break;
+    case "57014":
+      reason = "57014，查询取消或达到语句超时";
+      break;
+    case "55P03":
+      reason = "55P03，无法取得所需锁";
+      break;
+    case "53300":
+      reason = "53300，连接数达到限制";
+      break;
+    case "57P03":
+      reason = "57P03，数据库暂不能接受连接";
+      break;
+    case "ECONNREFUSED":
+      reason = "ECONNREFUSED，本机连接被拒绝";
+      break;
+    case "ECONNRESET":
+      reason = "ECONNRESET，连接被重置";
+      break;
+    case "ETIMEDOUT":
+      reason = "ETIMEDOUT，连接或查询超时";
+      break;
+    case "EPIPE":
+      reason = "EPIPE，连接已断开";
+      break;
+    default:
+      reason = "未知错误类别，内部详情已脱敏";
+  }
+  return "第三座专用库" + stage + "失败：" + reason;
+}
+
 /** 仅接受第三座专用库的显式地址，不继承通用连接串或 URL 查询配置。 */
 export function nativeEmptyClientOptions(input, args) {
   requireCondition(
@@ -33,7 +99,10 @@ export function nativeEmptyClientOptions(input, args) {
   );
   const message = "仅允许显式连接本机 127.0.0.1:15432 的第三座专用空库";
   try {
-    requireCondition(typeof input === "string" && !/[\x00-\x20\x7f\\]/u.test(input), message);
+    requireCondition(
+      typeof input === "string" && !hasForbiddenCodeUnit(input, 32) && !input.includes("\\"),
+      message,
+    );
     const url = new URL(input);
     const user = decodeURIComponent(url.username);
     const password = decodeURIComponent(url.password);
@@ -44,7 +113,7 @@ export function nativeEmptyClientOptions(input, args) {
         url.pathname === "/" + nativeEmptyDatabaseName &&
         /^[a-zA-Z_][a-zA-Z0-9_]*$/u.test(user) &&
         password.length > 0 &&
-        !/[\x00-\x1f\x7f]/u.test(password) &&
+        !hasForbiddenCodeUnit(password, 31) &&
         !url.hash &&
         (url.search === "" || url.search === "?schema=public"),
       message,
@@ -143,10 +212,13 @@ export async function inspectNativeEmptyDatabase(client, expectedUser) {
   let begun = false;
   let report;
   const failures = [];
+  let stage = "连接";
   try {
     await client.connect();
+    stage = "启动只读事务";
     await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
     begun = true;
+    stage = "连接及权限边界查询";
     const boundary = await client.query(boundarySql);
     const row = boundary.rows[0];
     requireCondition(
@@ -170,6 +242,7 @@ export async function inspectNativeEmptyDatabase(client, expectedUser) {
         row.public_create === true,
       "第三座专用库实际连接、只读事务、所有者或必要权限不符合预期",
     );
+    stage = "空库目录查询";
     const empty = await client.query(emptySql);
     requireCondition(
       empty.rows.length === 1 &&
@@ -186,20 +259,20 @@ export async function inspectNativeEmptyDatabase(client, expectedUser) {
     };
   } catch (error) {
     failures.push(
-      error instanceof NativePreflightError ? error.message : "第三座专用库只读查询失败",
+      error instanceof NativePreflightError ? error.message : describeDatabaseFailure(stage, error),
     );
   } finally {
     if (begun) {
       try {
         await client.query("ROLLBACK");
-      } catch {
-        failures.push("第三座专用库只读事务回滚失败");
+      } catch (error) {
+        failures.push(describeDatabaseFailure("只读事务回滚", error));
       }
     }
     try {
       await client.end();
-    } catch {
-      failures.push("第三座专用库连接关闭失败");
+    } catch (error) {
+      failures.push(describeDatabaseFailure("连接关闭", error));
     }
   }
   requireCondition(failures.length === 0, failures.join("；"));

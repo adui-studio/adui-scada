@@ -57,23 +57,29 @@ const empty = {
   other_sessions: false,
 };
 
-function mock({ boundaryRows = [boundary], emptyRows = [empty], failAt = "" } = {}) {
+function mock({
+  boundaryRows = [boundary],
+  emptyRows = [empty],
+  failAt = "",
+  failureCode = undefined,
+} = {}) {
+  const failure = Object.assign(new Error("敏感内部异常"), { code: failureCode });
   const calls = [];
   const client = {
     async connect() {
       calls.push("连接");
-      if (failAt === "连接") throw new Error("敏感内部异常");
+      if (failAt === "连接") throw failure;
     },
     async query(sql) {
       calls.push(sql);
-      if (failAt && sql.includes(failAt)) throw new Error("敏感内部异常");
+      if (failAt && sql.includes(failAt)) throw failure;
       if (sql.includes("pg_is_in_recovery")) return { rows: boundaryRows };
       if (sql.includes("pg_stat_activity")) return { rows: emptyRows };
       return { rows: [] };
     },
     async end() {
       calls.push("关闭");
-      if (failAt === "关闭") throw new Error("敏感内部异常");
+      if (failAt === "关闭") throw failure;
     },
   };
   return { calls, client };
@@ -197,5 +203,45 @@ void test("连接、查询、回滚和关闭失败不泄漏内部异常或返回
     else if (failAt === "BEGIN")
       assert.deepEqual(calls, ["连接", "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY", "关闭"]);
     else assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
+  }
+});
+
+void test("原始 ASCII 控制字符及编码口令控制字符保持严格拒绝", () => {
+  for (const code of [...Array.from({ length: 33 }, (_, index) => index), 127]) {
+    const character = String.fromCharCode(code);
+    assert.throws(() => nativeEmptyClientOptions(url + character, confirmation), /仅允许/u);
+    if (code !== 32) {
+      const encoded = "%" + code.toString(16).padStart(2, "0");
+      assert.throws(
+        () => nativeEmptyClientOptions(url.replace("p%40ss%2Fword", encoded), confirmation),
+        /仅允许/u,
+      );
+    }
+  }
+  assert.equal(
+    nativeEmptyClientOptions(url.replace("p%40ss%2Fword", "p%20word"), confirmation).password,
+    "p word",
+  );
+  assert.throws(() => nativeEmptyClientOptions(url + String.fromCharCode(92), confirmation), /仅允许/u);
+});
+
+void test("固定阶段与已知数据库错误码可定位且不泄漏内部详情", async () => {
+  for (const [failAt, failureCode, expected] of [
+    ["连接", "3D000", /连接失败：3D000/u],
+    ["连接", "28P01", /连接失败：28P01/u],
+    ["连接", "ECONNREFUSED", /连接失败：ECONNREFUSED/u],
+    ["BEGIN", "57014", /启动只读事务失败：57014/u],
+    ["pg_is_in_recovery", "42501", /连接及权限边界查询失败：42501/u],
+    ["pg_stat_activity", "42703", /空库目录查询失败：42703/u],
+    ["ROLLBACK", "55P03", /只读事务回滚失败：55P03/u],
+    ["关闭", "ECONNRESET", /连接关闭失败：ECONNRESET/u],
+    ["pg_stat_activity", "敏感未知错误码", /空库目录查询失败：未知错误类别/u],
+  ]) {
+    const { client } = mock({ failAt, failureCode });
+    await assert.rejects(() => inspectNativeEmptyDatabase(client, user), (error) => {
+      assert.match(error.message, expected);
+      assert.doesNotMatch(error.message, /敏感内部异常|敏感未知错误码/u);
+      return true;
+    });
   }
 });
