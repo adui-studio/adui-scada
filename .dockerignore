@@ -25,3 +25,5 @@ node_modules
 coverage
 *.msi
 *.exe
+# 构建阶段重新生成原生运行时契约，不复制宿主机生成物。
+apps/server/src/generated/prisma8-runtime/

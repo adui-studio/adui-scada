@@ -42,7 +42,7 @@ export function freshConnection(input, readOnly) {
   return url.toString();
 }
 
-/** 仅支持离线发射、只读预览、显式首次初始化、只读验证与运行时评审。 */
+/** 全新入口只接受明确的生成、只读验收或独立首次初始化动作。 */
 export function freshAction(args) {
   for (const [flag, mode] of [
     ["--emit", "emit"],
@@ -50,10 +50,14 @@ export function freshAction(args) {
     [freshConfirmation, "initialize"],
     ["--status", "status"],
     ["--runtime-review", "runtime-review"],
+    ["--runtime-emit", "runtime-emit"],
+    ["--provider-smoke", "provider-smoke"],
   ]) {
     if (isDeepStrictEqual(args, [flag])) return mode;
   }
-  throw new FreshInstallError("必须明确指定全新安装发射、只读预览、首次初始化、验证或运行时评审");
+  throw new FreshInstallError(
+    "必须明确指定全新安装发射、只读预览、首次初始化、验证、运行时评审或提供方验收",
+  );
 }
 
 /** 核验当前 Git 原生契约发射结果及全部中文注释目标，不执行历史 SQL。 */

@@ -31,10 +31,8 @@ import {
 } from "../../scripts/prisma8-fresh-runtime-probe.mjs";
 
 const root = realpathSync(resolve(import.meta.dirname, "../.."));
-const config = join(root, "apps", "server", "prisma8-fresh.config.ts");
 const source = join(root, "apps", "server", "prisma", "contract.prisma");
 const commentsPath = join(root, "apps", "server", "prisma", "initial-comments.sql");
-const output = join(root, ".artifacts", "prisma8-fresh");
 const identitySql =
   'SELECT current_database() AS database, current_user::text AS role, session_user::text AS "sessionRole", current_setting(\'server_version_num\') AS version, (SELECT system_identifier::text FROM pg_catalog.pg_control_system()) AS "systemIdentifier", (SELECT datdba = (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = current_user) FROM pg_catalog.pg_database WHERE datname = current_database()) AS owner, pg_catalog.pg_is_in_recovery() AS recovery';
 const commentSql =
@@ -66,8 +64,8 @@ function run(executable, args, env, description) {
   return child.stdout.trim();
 }
 
-function ensureOutput() {
-  for (const directory of [join(root, ".artifacts"), output]) {
+function ensureOutput(directories) {
+  for (const directory of directories) {
     mkdirSync(directory, { recursive: true });
     requireMatch(
       lstatSync(directory).isDirectory() && realpathSync(directory) === directory,
@@ -248,7 +246,28 @@ async function checkComments(connection, expectedIdentity, contract, commentText
 async function main() {
   const action = freshAction(process.argv.slice(2));
   stage = "原生契约发射与固定依赖检查";
-  ensureOutput();
+  const runtimeEmit = action === "runtime-emit";
+  const server = join(root, "apps", "server");
+  const config = join(
+    server,
+    runtimeEmit ? "prisma8-runtime.config.ts" : "prisma8-fresh.config.ts",
+  );
+  const output = runtimeEmit
+    ? join(server, "src", "generated", "prisma8-runtime")
+    : join(root, ".artifacts", "prisma8-fresh");
+  ensureOutput(
+    runtimeEmit
+      ? [join(root, "apps"), server, join(server, "src"), join(server, "src", "generated"), output]
+      : [join(root, ".artifacts"), output],
+  );
+  for (const file of ["contract.json", "contract.d.ts"]) {
+    const path = join(output, file);
+    const stat = lstatSync(path, { throwIfNoEntry: false });
+    requireMatch(
+      !stat || (stat.isFile() && realpathSync(path) === path),
+      "生成契约文件不能包含链接",
+    );
+  }
   const entry = resolveBaselineCli(root);
   const invoke = (args, connection) =>
     run(
@@ -277,6 +296,12 @@ async function main() {
   };
   if (action === "emit")
     return { status: "FRESH_CONTRACT_EMITTED", ...report, databaseInitialized: false };
+  if (runtimeEmit)
+    return {
+      status: "FRESH_RUNTIME_CONTRACT_EMITTED",
+      ...report,
+      databaseAccessed: false,
+    };
   if (action === "runtime-review") {
     stage = "正式候选原生契约离线类型检查";
     reviewFreshRuntimeTypes(root, emittedText, declaration);
@@ -305,11 +330,24 @@ async function main() {
       return results[0];
     }
   };
-  if (action === "status" || action === "runtime-review") {
+  if (action === "status" || action === "runtime-review" || action === "provider-smoke") {
     stage = "官方严格结构与标记验证";
     requireFreshVerification(parse(invoke(["db", "verify", "--strict", "--json"], readOnly)));
     stage = "真实中文注释核验";
     await checkComments(readOnly, identity, contract, commentText, false);
+    if (action === "provider-smoke") {
+      stage = "原生 NestJS 数据库提供方只读烟测";
+      const { verifyPrisma8Provider } = await import("./prisma8-provider-smoke.mjs");
+      const probe = await verifyPrisma8Provider(base, identity.systemIdentifier, freshStorageHash);
+      return {
+        status: "FRESH_PROVIDER_SMOKE_READY",
+        ...report,
+        serverVersion: identity.version,
+        databaseInitialized: true,
+        ...probe,
+        providerSwitched: false,
+      };
+    }
     if (action === "runtime-review") {
       stage = "已初始化业务库原生运行时只读核验";
       const { default: postgres } = await import("@prisma/orm-postgres/runtime");

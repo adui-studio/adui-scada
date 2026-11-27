@@ -5412,3 +5412,33 @@ git status --short
 ```
 
 预期 FRESH_RUNTIME_REVIEW_READY、serverVersion=190000、databaseInitialized=true、nativeRuntimeTypesVerified=true、missingScopeVerified=true、readOnlyBoundaryVerified=true、providerSwitched=false；存储标识和对象计数与已验收首次初始化一致，退出 0。此步骤仅读系统目录和随机不存在工程的联合键，不写数据库，若类型、实际契约、身份或运行时不符，保留现场并按阶段诊断；不启动正式业务应用、不自动调整数据库。
+
+### Prisma 8 原生 Provider 装配验收
+
+先同步本批分支，保持已初始化的 PostgreSQL 19 基础设施运行。以下生成仅发射原生契约及过渡期旧客户端，不连接数据库，不执行迁移：
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+pnpm run test:prisma8:native:runtime &&
+pnpm run test:messages &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "原生提供方增量退出码：$LASTEXITCODE"
+```
+
+原生生成预期 FRESH_RUNTIME_CONTRACT_EMITTED、databaseAccessed=false；专项预期 25/25、7/7、2/2，Vite+ 零警告错误，服务端构建成功。提交推送格式化改动后执行：
+
+```powershell
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "原生提供方只读烟测退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期 FRESH_PROVIDER_SMOKE_READY、providerReady=true、providerClosed=true、readOnlyBoundaryVerified=true、databaseInitialized=true、providerSwitched=false，原有存储指纹及对象计数保持一致，退出码 0。烟测不挂载 HTTP 业务模块、不写业务数据；若失败按固定阶段排查，禁止重复初始化或历史迁移。
