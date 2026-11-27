@@ -1910,3 +1910,13 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/prisma8-fresh-runtime-probe.mjs`、`scripts/prisma8-fresh-runtime-probe.cases.mjs`：同一调用方连接的只读 ORM 探针、前后身份复核及失败脱敏关闭回归。
 - `apps/server/prisma8-fresh-install.mjs`：新增独立只读 runtime-review 模式，复用严格结构及注释核验，不触发首次写入分支；正式 DatabaseModule 不变。
 - `pnpm run db:prisma8:fresh:runtime:review`：实际原生契约类型与已初始化本机业务库的只读运行时验收，不属于自动 ready。
+
+### 原生 NestJS 数据库提供方
+
+- `apps/server/prisma8-runtime.config.ts`：固定原生 PSL 离线生成路径，不接受连接。
+- `apps/server/src/database/prisma8-runtime-boundary.ts`：本机 URL、实际标记和生命周期硬门禁。
+- `apps/server/src/database/prisma8.service.ts` 与 `prisma8-database.module.ts`：原生类型客户端、共享连接池、Nest 生命周期，尚未挂载正式业务模块。
+- `apps/server/prisma8-provider-smoke.mjs`：使用编译后的独立模块完成真实只读装配烟测。
+- `scripts/prisma8-provider.cases.mjs`：八项边界与生命周期专项，纳入 test:prisma8:fresh。
+- `pnpm run db:prisma8:fresh:runtime:generate`：离线生成原生运行时契约，服务端 db:generate 同步生成两代客户端。
+- `pnpm run db:prisma8:fresh:provider:smoke`：构建后执行的真实本机只读烟测，不纳入自动 ready 的真实连接阶段。
