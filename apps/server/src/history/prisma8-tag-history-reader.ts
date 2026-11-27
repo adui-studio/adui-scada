@@ -74,7 +74,7 @@ export async function readPersistedTagHistoryPrisma8(
   query: TagHistoryQuery,
 ): Promise<readonly TagHistoryPoint[]> {
   const prepared = preparePrisma8HistoryQuery(scope, query);
-  const rows = await database.readTransaction((tx) => tx.orm.public.ScadaTagHistoryRecord.where({
+  const rows = await database.readTransaction(async (tx) => await tx.orm.public.ScadaTagHistoryRecord.where({
     tenantId: prepared.tenantId,
     projectId: prepared.projectId,
     tagId: prepared.tagId,

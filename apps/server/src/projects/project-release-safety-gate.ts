@@ -104,7 +104,7 @@ export class ProjectReleaseGateUnavailableError extends Error {
 export function requireProjectReleaseSafety(
   snapshot: ProjectSnapshot,
   context: ProjectReleaseSafetyContext,
-): never {
+): void {
   let blocks: readonly ProjectReleaseSafetyBlock[];
   try {
     blocks = assessProjectReleaseSafety(snapshot, context);

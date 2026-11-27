@@ -102,11 +102,11 @@ assert.equal(scripts["db:prisma8:skills"], "node scripts/prisma8-cli.mjs skills 
 assert.equal(scripts["db:prisma8:skills:list"], "node scripts/prisma8-cli.mjs skills list");
 assert.equal(
   json("apps/server/package.json").scripts?.["db:prisma8:emit"],
-  "node ../../scripts/prisma8-cli.mjs contract emit",
+  "pnpm run db:generate",
 );
 assert.match(
   text("apps/server/prisma.config.ts"),
-  /skills:\s*\{\s*agents:\s*\["agents"\]\s*,\s*check:\s*true\s*\}/,
+  /contract\.prisma/,
   "Prisma 8 Skills 必须仅同步到 .agents 并保留版本检查",
 );
 for (const directory of [

@@ -4,15 +4,7 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const args = process.argv.slice(2);
-const allowed = new Set([
-  "skills sync",
-  "skills list",
-  "skills native-list",
-  "contract emit",
-  "contract native-emit",
-  "db native-schema-verify",
-  "db native-schema-verify-strict",
-]);
+const allowed = new Set(["skills sync", "skills list", "contract emit"]);
 
 /** 从已安装的服务端 Prisma 8 官方包解析入口，不下载依赖、不调用 Shell。 */
 function resolveCli() {
@@ -49,46 +41,19 @@ function resolveCli() {
 
 try {
   if (args.length !== 2 || !allowed.has(args.join(" "))) {
-    throw new Error("Prisma 8 入口仅允许 Skills 同步、列表、离线契约生成和原生只读结构验证");
+    throw new Error("Prisma 8 入口仅允许 Skills 同步、列表及原生离线契约生成");
   }
-  const entry = resolveCli();
-  // 独立候选仅映射到固定的离线生成或 Skills 列表命令，不接受自定义配置。
-  const nativeEmit = args.join(" ") === "contract native-emit";
-  const nativeList = args.join(" ") === "skills native-list";
-  const nativeSchemaStrict = args.join(" ") === "db native-schema-verify-strict";
-  const nativeSchemaVerify = args.join(" ") === "db native-schema-verify" || nativeSchemaStrict;
-  const native = nativeEmit || nativeList || nativeSchemaVerify;
-  const command = nativeEmit
-    ? ["contract", "emit"]
-    : nativeList
-      ? ["skills", "list"]
-      : nativeSchemaVerify
-        ? ["db", "verify", "--schema-only", ...(nativeSchemaStrict ? ["--strict", "--json"] : [])]
-        : args;
-  const config = native ? "prisma8-native.config.ts" : "prisma.config.ts";
-  // CLI 按进程工作目录同步和检查 Skills；配置内路径仍相对于服务端配置文件。
-  const env = { ...process.env };
-  if (nativeSchemaVerify) {
-    const { requirePrisma8ReadOnlyTestUrl } =
-      await import("../apps/server/src/database/prisma8-readonly-target.ts");
-    const connection = new URL(requirePrisma8ReadOnlyTestUrl(env.SCADA_TEST_DATABASE_URL));
-    connection.searchParams.set(
-      "options",
-      "-c default_transaction_read_only=on -c statement_timeout=5000 -c lock_timeout=2000 -c search_path=public",
-    );
-    env.SCADA_TEST_DATABASE_URL = connection.toString();
-  } else {
-    // 离线 emit 和 Skills 命令不得继承任何测试数据库连接。
-    delete env.SCADA_TEST_DATABASE_URL;
-  }
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) =>
+      /^(PATH|SYSTEMROOT|WINDIR|TEMP|TMP|TMPDIR|HOME|USERPROFILE|LOCALAPPDATA|APPDATA)$/i.test(key),
+    ),
+  );
   const result = spawnSync(
     process.execPath,
-    [entry, ...command, "--config", join(root, "apps", "server", config)],
-    { cwd: root, env, stdio: "inherit" },
+    [resolveCli(), ...args, "--config", join(root, "apps", "server", "prisma.config.ts")],
+    { cwd: root, env, stdio: "inherit", shell: false },
   );
-  if (result.error || result.status === null) {
-    throw new Error("Prisma 8 CLI 进程未正常结束");
-  }
+  if (result.error || result.status === null) throw new Error("Prisma 8 CLI 进程未正常结束");
   process.exitCode = result.status;
 } catch (error) {
   console.error(error instanceof Error ? error.message : "Prisma 8 CLI 执行失败");

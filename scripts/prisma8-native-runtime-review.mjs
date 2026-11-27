@@ -133,14 +133,14 @@ function checkProgram(ts, config, replacements) {
 /** 使用实际全新契约对现有服务端及候选仓储作内存类型检查，不替换 Git 生成物。 */
 export function reviewFreshRuntimeTypes(root, nativeText, nativeDeclaration) {
   const server = join(root, "apps", "server");
-  const formalDir = join(server, "src", "generated", "prisma8");
+  const formalDir = join(server, "src", "generated", "prisma8-runtime");
   const declarationPath = join(formalDir, "contract.d.ts");
   const jsonPath = join(formalDir, "contract.json");
   const formalText = readFileSync(jsonPath, "utf8");
   const formalDeclaration = readFileSync(declarationPath, "utf8");
   const formal = JSON.parse(formalText);
   const native = JSON.parse(nativeText);
-  reviewFreshRuntimeRelations(formal, native);
+  requireCondition(formal.storage.storageHash === freshStorageHash && isDeepStrictEqual(formal, native), "当前生成契约与全新原生契约不一致");
   requireDeclarationHashes(formalDeclaration, formal);
   requireDeclarationHashes(nativeDeclaration, native);
   const ts = createRequire(join(server, "package.json"))("typescript");

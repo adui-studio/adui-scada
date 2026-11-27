@@ -23,6 +23,7 @@ async function snapshotOf(edit?: (document: ScadaDocument) => void) {
 function captureSafetyFailure(snapshot: ProjectSnapshot): unknown {
   try {
     requireProjectReleaseSafety(snapshot, CONTEXT);
+    return undefined;
   } catch (error) {
     return error;
   }

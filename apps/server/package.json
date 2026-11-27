@@ -12,13 +12,8 @@
     "test": "vp test run --config vitest.config.ts",
     "test:watch": "vp test --config vitest.config.ts",
     "test:e2e": "vp test run --config vitest.config.e2e.ts",
-    "db:validate": "prisma7 validate --config prisma7.config.ts",
-    "db:generate": "prisma7 generate --config prisma7.config.ts && node prisma8-fresh-install.mjs --runtime-emit",
-    "db:migrate:dev": "prisma7 migrate dev --config prisma7.config.ts",
-    "db:migrate:deploy": "prisma7 migrate deploy --config prisma7.config.ts",
-    "db:migrate:status": "prisma7 migrate status --config prisma7.config.ts",
-    "test:db": "pnpm --filter @adui/scada-core run build:node && pnpm run db:generate && vp test run --config vitest.config.db.ts",
-    "db:prisma8:emit": "node ../../scripts/prisma8-cli.mjs contract emit"
+    "db:generate": "node prisma8-fresh-install.mjs --runtime-emit",
+    "db:prisma8:emit": "pnpm run db:generate"
   },
   "dependencies": {
     "@adui/scada-core": "workspace:*",
@@ -28,8 +23,6 @@
     "@nestjs/platform-express": "catalog:",
     "@nestjs/swagger": "catalog:",
     "@nestjs/terminus": "catalog:",
-    "@prisma/adapter-pg": "catalog:",
-    "@prisma/client": "catalog:",
     "@prisma/orm-postgres": "catalog:",
     "helmet": "catalog:",
     "nestjs-pino": "catalog:",
@@ -46,7 +39,6 @@
     "@nestjs/cli": "catalog:",
     "@nestjs/schematics": "catalog:",
     "@nestjs/testing": "catalog:",
-    "@prisma/prisma7": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "@types/supertest": "catalog:",
