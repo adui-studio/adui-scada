@@ -1,5 +1,7 @@
 # ADui SCADA · 代码地图
 
+> 2026-11-27 最新决策：维护者已删除旧开发数据库环境，停止历史迁移接管及专用实例实验。后续以 [ADR-0073](adr/0073-prisma8-fresh-install.md) 为准；下文旧实验记录仅供追溯，不是当前验收前置条件。
+
 > **开始编码前**：按根目录 [AGENTS.md](../AGENTS.md) 的要求，先重读 [AI 编码错误复盘清单](AI_MISTAKES.md) 全文；本文件只用来定位代码与文档，不能替代复盘与仓库规范。
 
 > 2026-11-09，基于 V0.1 Web 整合开发分支；分支尚待完整本地依赖安装、类型检查及构建验收。
@@ -1891,3 +1893,13 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/prisma8-native-check-roundtrip-create-stopped.cases.mjs`：八项注入子进程及真实临时目录回归，`test:prisma8:native:baseline:check-roundtrip-create-stopped` 纳入 ready。
 - `scripts/prisma8-native-check-roundtrip-host.mjs`：新增只读上下文接口返回原已核验端点与报告，原宿主机和参考目录入口的公开报告不变。
 - `.artifacts/prisma8-native-check-roundtrip-creation/attempt.json` 与 `result.json`：真实创建时生成的本地保留记录，已由既有 `.artifacts/` 忽略规则覆盖，不含凭据。
+
+## 2026-11-27 · 原生全新安装
+
+- `apps/server/prisma/contract.prisma`：Git 原生 PSL 全新契约，保留已验收业务约束。
+- `apps/server/prisma/initial-comments.sql`：一百一十九条固定中文注释，不含历史迁移重放。
+- `apps/server/prisma8-fresh.config.ts`：独立配置，生成产物位于根目录 .artifacts/prisma8-fresh。
+- `apps/server/prisma8-fresh-install.mjs`：官方发射、固定本机空库身份核验、只读规划、显式首次初始化、注释与严格验证。
+- `scripts/prisma8-fresh-install.mjs`、`scripts/prisma8-fresh-install.cases.mjs`：连接、契约与计划边界、诊断脱敏及离线回归。
+- `scripts/prisma8-native-baseline-preflight.mjs`：复用二十三类目录只读检查，新增全新业务库集群标识与 PostgreSQL 19 实际版本核验。
+- `scripts/docker-stack.mjs`：新增仅基础设施启动模式，根 docker:up 使用该模式，正式应用 Provider 尚未切换。

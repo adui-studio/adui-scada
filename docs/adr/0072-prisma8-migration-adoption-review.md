@@ -1,9 +1,13 @@
 # ADR-0072：Prisma 8 迁移接管前的历史与原生约束保留评审
 
-- 状态：Proposed
+- 状态：Superseded
 - 日期：2026-11-25
 - 关联需求：FR-001、FR-008、FR-013、FR-014、NFR-004、NFR-006
 - 依赖：[ADR-0042](0042-postgresql-prisma-foundation.md)、[ADR-0043](0043-prisma-project-transaction-store.md)、[ADR-0069](0069-release-pointer-atomic-publication-design.md)
+
+## 后续决策
+
+2026-11-27：维护者取消历史数据库迁移接管及专用实例实验，旧本机环境已清理并重新创建基础设施；由 [ADR-0073](0073-prisma8-fresh-install.md) 取代。本文件后续段落保留为历史记录，不再要求执行旧迁移、旧验收数据库或第五座实例。
 
 ## 背景与当前事实
 
