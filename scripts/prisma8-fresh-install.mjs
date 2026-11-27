@@ -63,7 +63,7 @@ export function reviewFreshContract(contract, commentText) {
     contract?.targetFamily === "sql" &&
       contract.target === "postgres" &&
       contract.storage?.storageHash === freshStorageHash &&
-      isDeepStrictEqual(Object.keys(namespaces), ["public"]) &&
+      namespaces && isDeepStrictEqual(Object.keys(namespaces), ["public"]) &&
       tables && Object.keys(tables).length === 12,
     "全新原生契约存储标识或表清单不一致",
   );
