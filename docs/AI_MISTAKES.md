@@ -1528,3 +1528,11 @@
 - **真实现象**：协作环境 Node.js 22.16.0 与真实 Nginx 隔离夹具使用候选共享模板、临时可信 CA/回环 IP SAN 证书及模拟上游；原探针在上游也返回 Cache-Control: no-store 时抛「本机 HTTPS 代理响应异常」。既有模拟服务 headers() 本身就发送 no-store，Nginx 的 SSE location 也追加 no-store，因此不能只比较单条字符串。该问题未在维护者 Windows 实际发生。
 - **最小修复**：仅在探针将合并头按逗号拆分、去空白和忽略指令大小写，每个指令必须是 no-store，允许重复但拒绝缺失、public、max-age 或混合策略。不修改模拟服务、Nginx 缓存门禁、TLS、路由或业务数据。新增仓库回归定义覆盖单值、重复、大小写和四类拒绝。
 - **验证与防复发**：已实际复现旧探针失败，修复后 Node TLS 六项及真实 Nginx 三项通过，探针 Git Blob 471574addbead49c7c467b1616ce34e3b0548d3b 与本地一致；新增断言与启动相关共八项在 V8 隔离模拟中通过。代理链的响应头可能被合并，须按协议语义校验且保留冲突拒绝。Windows 完整 Docker 22 项、真实七服务 HTTPS 和 Vite+ 零警告仍待验收，不提前关闭本条。
+
+> **2026-11-27 · E-161 Windows 复验关闭**：维护者 Windows 在候选 HEAD 3e677cd2dca74b0d621cb8bed029018f8b5e62a0 实测 Docker 22/22、环境和 LF、中文文案 367 文件、Markdown 97 份、Vite+ 500 格式/341 受检零警告错误、git diff --check、四镜像构建、七服务运行、容器原生只读、双端 HTTP 及宿主 HTTPS 探针均通过，增量与真实验收退出码均 0。正常 Hook 格式化提交 56f48c2f81e9df95f9d97253098abef300ea665d 已推送，远端三文件差异仅 Markdown 围栏及 JavaScript 排版，无业务变化；无审查阻塞或额外远端 CI 记录。经维护者明确授权 PR #252 Squash 合入 feat/mvp-first-integration 的 b1218c0fd290344cf152500b4105e24ee9b29745。E-161 已关闭。日志未包含双端真实浏览器渲染证据，不将其视为浏览器或登录验收。
+
+### E-162 · 独立诊断码被中文文案门禁误识别为英文异常提示（局部复验通过）
+
+- **实际现象**：协作环境 Node.js 22.16.0 对与远端 Blob 3b0b0a862ca3b15018d8fbd04cbb8f1eceb99cd9 完全一致的中文检查器运行最小目录。初稿虽由 OidcProbeError 构造函数生成中文消息，但 19 处 throw new OidcProbeError 的首个字面参数是 INPUT、CA、JWKS_KEYS 等固定机器码，原单行扫描器将其判为缺少中文，退出 1。尚未发生维护者 Windows 失败。
+- **最小修复**：将错误类明确区分 message 与 code，由同一 oidcFailure 工厂构造真实中文提示和独立诊断码；所有失败分支的拒绝条件、阶段、代码、异常类型、进程退出值与父进程白名单保持不变。不修改扫描器、不禁用规则、不翻译机器码、不隐藏第三方异常以外的实际失败状态。
+- **实际复验与防复发**：修复后真实检查器在十文件最小目录退出 0，Node 语法、TypeScript 5.8.3 局部 JS 类型检查、十项离线门禁及七项真实 Node TLS 夹具全部通过，核心 Blob bcd4a4637a775ffcb213324d6b2a75220198d939 与远端一致。错误类必须明确区分用户可见文案与机器协议状态，新增异常分支应先执行中文检查再交付。局部复验不是全仓文案或 Windows Vite+，完整 35 项和真实 Docker Keycloak 联调仍待验收。
