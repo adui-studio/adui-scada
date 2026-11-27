@@ -1536,3 +1536,11 @@
 - **实际现象**：协作环境 Node.js 22.16.0 对与远端 Blob 3b0b0a862ca3b15018d8fbd04cbb8f1eceb99cd9 完全一致的中文检查器运行最小目录。初稿虽由 OidcProbeError 构造函数生成中文消息，但 19 处 throw new OidcProbeError 的首个字面参数是 INPUT、CA、JWKS_KEYS 等固定机器码，原单行扫描器将其判为缺少中文，退出 1。尚未发生维护者 Windows 失败。
 - **最小修复**：将错误类明确区分 message 与 code，由同一 oidcFailure 工厂构造真实中文提示和独立诊断码；所有失败分支的拒绝条件、阶段、代码、异常类型、进程退出值与父进程白名单保持不变。不修改扫描器、不禁用规则、不翻译机器码、不隐藏第三方异常以外的实际失败状态。
 - **实际复验与防复发**：修复后真实检查器在十文件最小目录退出 0，Node 语法、TypeScript 5.8.3 局部 JS 类型检查、十项离线门禁及七项真实 Node TLS 夹具全部通过，核心 Blob bcd4a4637a775ffcb213324d6b2a75220198d939 与远端一致。错误类必须明确区分用户可见文案与机器协议状态，新增异常分支应先执行中文检查再交付。局部复验不是全仓文案或 Windows Vite+，完整 35 项和真实 Docker Keycloak 联调仍待验收。
+
+> **2026-11-27 · E-162 Windows 复验关闭**：维护者 Windows 在候选 HEAD f75b7e6fd06f7031b475b62be7b30b0b8f0e8a05 实测 Docker 35/35（编排 25、Keycloak 探针 10），环境/LF、中文文案 370 文件、Markdown 97 份、Vite+ 503 格式/344 受检零警告错误、git diff --check、四镜像构建、七服务运行、容器原生只读、双端 HTTP/HTTPS 及真实宿主与容器 Keycloak Discovery/JWKS 一致性均通过，增量与真实验收退出码均 0。正常 Hook 格式化提交 b74a3fe6b8ac5e2d1b2d4da9dfb2524d4375799d 已核对五文件仅排版；经维护者授权 PR #253 Squash 合入 feat/mvp-first-integration 的 b5378e263962d25883894e3416038472f845f1cb。E-162 已关闭。尚无正式授权码兑换、ID Token 验签或登录会话实测证据。
+
+### E-163 · 正式 OIDC SDK 未显式开启应用层 JWS 签名验证（源码核实，候选待验收）
+
+- **源码核实**：当前锁定 openid-client 6.9.1 / oauth4webapi 3.8.9。上游固定标签 v6.9.1 的 src/index.ts 中 enableNonRepudiationChecks 明确注册 validateApplicationLevelSignature，授权码流程仅在启用时执行该签名检查；OIDC Core 允许直接 TLS Token 响应依赖传输层验证，但项目 ADR-0065 明确要求验签。原 Discovery 服务仅固定 RS256 算法，没有启用此扩展，不能将已通过的公钥探针或历史 Mock 当作签名已验证。此为静态契约缺口，不声称已观察到真实伪造 Token 登录。
+- **最小修复**：在既有正式配置完成元数据核验后调用 SDK enableNonRepudiationChecks，保留库的 State、Nonce、PKCE、Issuer、Audience、时间和算法验证，不另行手写 JWT 协议。新增真实 SDK 回归使用临时 RSA 密钥生成合法签名及错误私钥签名，分别断言成功和拒绝且都读取 JWKS；尚需 Windows 安装依赖执行。Docker 特定连接适配固定公开 Issuer、内部 keycloak:8443、可信 CA、TLS IP 身份及路径/方法/请求头门禁，无不安全回退。
+- **验证与防复发**：协作环境执行独立适配器六项离线测试及七项实际临时 TLS 测试 13/13，局部 TypeScript 5.8.3 使用固定 SDK 接口最小声明检查通过；未运行实际 SDK 测试、全仓 Vite+ 或真实 Keycloak 正式登录。以后升级 SDK 须同时核对固定版本协议行为和真实有效/无效签名回归，而非只检查签名算法元数据。
