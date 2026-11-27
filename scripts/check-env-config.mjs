@@ -243,8 +243,9 @@ for (const action of ["plan", "down", "ps", "logs"]) {
 }
 assert.ok(!packageScripts["docker:migrate"], "全新安装不得保留旧容器迁移入口");
 assert.ok(
-  packageScripts["docker:up"]?.endsWith("node scripts/docker-stack.mjs infra"),
-  "Docker 基础设施启动不得自动初始化数据库",
+  packageScripts["docker:up"]?.endsWith("node scripts/docker-stack.mjs up") &&
+    packageScripts["docker:infra"]?.endsWith("node scripts/docker-stack.mjs infra"),
+  "Docker 全应用与基础设施入口必须分别使用受控启动命令",
 );
 assert.ok(
   packageScripts["docker:db:init"] === "node apps/server/prisma8-fresh-install.mjs",
