@@ -1985,3 +1985,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-web-https-smoke.mjs`：宿主严格 TLS 只读探针、六条固定 GET 路径、SSE 缓存策略与连接清理、脱敏机器标志。
 - `scripts/docker-stack.mjs`、`scripts/docker-stack.cases.mjs`：端口冲突验证、宿主探针门禁及 22 项启动/部署安全回归定义。
 - `.env.example`、`scripts/check-env-config.mjs`：双端 HTTPS 端口配置与旧根环境文件的缺省值兼容。
+
+### Docker Keycloak 可信 Discovery/JWKS 只读候选
+
+- `apps/server/container-oidc-discovery.mjs`：两种固定网络视角、公开 Issuer 与严格 TLS/IP 身份、有限 JSON、元数据/RS256 公钥校验、固定脱敏机器结果；仅按显式入口执行。
+- `scripts/docker-oidc-probe.mjs`：复用本机公开 CA、标准输入、宿主/容器报告及公钥集合一致性；固定阶段错误诊断。
+- `scripts/docker-stack.mjs`：新增受控只读 oidc 模式，保持原有启动及数据库验证流程；`deploy/docker/Dockerfile.server` 仅复制独立探针。
+- `scripts/docker-oidc-discovery.cases.mjs` 10 项、原 `scripts/docker-stack.cases.mjs` 25 项，通过现有 test:docker 纳入 ready；真实 docker:oidc:probe 仅手工执行。
