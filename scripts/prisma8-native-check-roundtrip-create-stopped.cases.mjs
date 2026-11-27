@@ -1,28 +1,67 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { creationConfirmation, creationPasswordVariable } from "./prisma8-native-check-roundtrip-creation.mjs";
-import { acceptedCreationFingerprint, createStoppedRoundTrip } from "./prisma8-native-check-roundtrip-create-stopped.mjs";
+import {
+  creationConfirmation,
+  creationPasswordVariable,
+} from "./prisma8-native-check-roundtrip-creation.mjs";
+import {
+  acceptedCreationFingerprint,
+  createStoppedRoundTrip,
+} from "./prisma8-native-check-roundtrip-create-stopped.mjs";
 import { roundTripTarget as target } from "./prisma8-native-check-roundtrip-execution.mjs";
 
 const endpoint = "npipe:////./pipe/dockerDesktopLinuxEngine";
 const args = [creationConfirmation, acceptedCreationFingerprint];
 const password = "0123456789abcdef".repeat(4);
-const source = { Path: "system", [creationPasswordVariable]: password, SCADA_DATABASE_URL: "unrelated-secret", POSTGRES_PASSWORD: "other-secret" };
+const source = {
+  Path: "system",
+  [creationPasswordVariable]: password,
+  SCADA_DATABASE_URL: "unrelated-secret",
+  POSTGRES_PASSWORD: "other-secret",
+};
 const mainId = "a".repeat(64);
 const reproId = "b".repeat(64);
 const networkId = "c".repeat(64);
 const containerId = "d".repeat(64);
 const dataPath = "/var/lib/postgresql/data";
-const mainNames = ["adui_scada_test", "adui_scada_fresh_prisma8_ref", "adui_scada_fresh_prisma8_native"];
+const mainNames = [
+  "adui_scada_test",
+  "adui_scada_fresh_prisma8_ref",
+  "adui_scada_fresh_prisma8_native",
+];
 const reproName = "adui_scada_fresh_prisma8_repro";
 
 function catalog(database, role, systemIdentifier, names) {
   return JSON.stringify({
-    database, role, version: 170011, readOnly: true, defaultReadOnly: true, isolation: "repeatable read", systemIdentifier,
-    rows: names.map((name) => ({ database: name, encoding: "UTF8", provider: "c", collate: "en_US.utf8", ctype: "en_US.utf8", locale: null, version: null, actualVersion: null, customIcuRules: false })),
+    database,
+    role,
+    version: 170011,
+    readOnly: true,
+    defaultReadOnly: true,
+    isolation: "repeatable read",
+    systemIdentifier,
+    rows: names.map((name) => ({
+      database: name,
+      encoding: "UTF8",
+      provider: "c",
+      collate: "en_US.utf8",
+      ctype: "en_US.utf8",
+      locale: null,
+      version: null,
+      actualVersion: null,
+      customIcuRules: false,
+    })),
   });
 }
 
@@ -38,13 +77,26 @@ function fixture(t, overrides = {}, root = temporaryRoot(t)) {
   const resultPath = join(directory, "result.json");
   const calls = [];
   let attempt = "";
-  const labels = () => ({ "org.adui.scope": "prisma8-check-roundtrip", "org.adui.attempt": attempt });
+  const labels = () => ({
+    "org.adui.scope": "prisma8-check-roundtrip",
+    "org.adui.attempt": attempt,
+  });
   const outputs = [
-    "desktop-linux", endpoint, "linux", target.image, target.image,
-    "adui-scada-prisma8-repro\nother", "other-data", "other-net", "[]", mainId,
+    "desktop-linux",
+    endpoint,
+    "linux",
+    target.image,
+    target.image,
+    "adui-scada-prisma8-repro\nother",
+    "other-data",
+    "other-net",
+    "[]",
+    mainId,
     mainId + "|true|" + target.image + '|adui-scada|postgres|["/var/lib/postgresql"]',
     reproId + "|true|" + target.image + '|prisma8-native-repro|["/var/lib/postgresql/data"]',
-    "", "", catalog(mainNames[0], "adui_scada", "1234567890123456789", mainNames),
+    "",
+    "",
+    catalog(mainNames[0], "adui_scada", "1234567890123456789", mainNames),
     catalog(reproName, "adui_scada_native_repro", "2234567890123456789", [reproName]),
     JSON.stringify([target.image, { [dataPath]: {} }, ["docker-entrypoint.sh"], ["postgres"]]),
     target.volume,
@@ -54,7 +106,24 @@ function fixture(t, overrides = {}, root = temporaryRoot(t)) {
     () => JSON.stringify([networkId, target.network, "bridge", "local", labels(), {}]),
     networkId + "|" + target.network,
     containerId,
-    () => JSON.stringify([containerId, "/" + target.container, target.image, "created", false, labels(), [{ Type: "volume", Name: target.volume, Destination: dataPath, RW: true }], { "5432/tcp": [{ HostIp: "127.0.0.1", HostPort: "15444" }] }, networkId, "no", false, false, false, ["docker-entrypoint.sh"], ["postgres"]]),
+    () =>
+      JSON.stringify([
+        containerId,
+        "/" + target.container,
+        target.image,
+        "created",
+        false,
+        labels(),
+        [{ Type: "volume", Name: target.volume, Destination: dataPath, RW: true }],
+        { "5432/tcp": [{ HostIp: "127.0.0.1", HostPort: "15444" }] },
+        networkId,
+        "no",
+        false,
+        false,
+        false,
+        ["docker-entrypoint.sh"],
+        ["postgres"],
+      ]),
     () => JSON.stringify([target.volume, "local", "local", labels(), {}]),
     containerId,
     () => JSON.stringify([networkId, target.network, "bridge", "local", labels(), {}]),
@@ -69,7 +138,12 @@ function fixture(t, overrides = {}, root = temporaryRoot(t)) {
       assert.ok(argv.includes("org.adui.attempt=" + attempt));
     }
     const value = outputs[index];
-    const result = { status: 0, signal: null, stdout: typeof value === "function" ? value() : value, stderr: "" };
+    const result = {
+      status: 0,
+      signal: null,
+      stdout: typeof value === "function" ? value() : value,
+      stderr: "",
+    };
     return { ...result, ...overrides[index] };
   };
   const execute = () => createStoppedRoundTrip("win32", args, source, root, run);
@@ -78,25 +152,62 @@ function fixture(t, overrides = {}, root = temporaryRoot(t)) {
 
 void test("停止态创建必须明确确认固定指纹、Windows 环境及专用凭据", (t) => {
   const f = fixture(t);
-  for (const invalid of [[], [creationConfirmation], [...args, "--extra"], [creationConfirmation, "0".repeat(64)]]) {
-    assert.throws(() => createStoppedRoundTrip("win32", invalid, source, f.root, f.run), /必须明确确认/u);
+  for (const invalid of [
+    [],
+    [creationConfirmation],
+    [...args, "--extra"],
+    [creationConfirmation, "0".repeat(64)],
+  ]) {
+    assert.throws(
+      () => createStoppedRoundTrip("win32", invalid, source, f.root, f.run),
+      /必须明确确认/u,
+    );
   }
-  assert.throws(() => createStoppedRoundTrip("linux", args, source, f.root, f.run), /必须明确确认/u);
-  assert.throws(() => createStoppedRoundTrip("win32", args, {}, f.root, f.run), /专用随机凭据格式无效/u);
-  assert.throws(() => createStoppedRoundTrip("win32", args, { ...source, [creationPasswordVariable]: "bad" }, f.root, f.run), /专用随机凭据格式无效/u);
+  assert.throws(
+    () => createStoppedRoundTrip("linux", args, source, f.root, f.run),
+    /必须明确确认/u,
+  );
+  assert.throws(
+    () => createStoppedRoundTrip("win32", args, {}, f.root, f.run),
+    /专用随机凭据格式无效/u,
+  );
+  assert.throws(
+    () =>
+      createStoppedRoundTrip(
+        "win32",
+        args,
+        { ...source, [creationPasswordVariable]: "bad" },
+        f.root,
+        f.run,
+      ),
+    /专用随机凭据格式无效/u,
+  );
   assert.equal(f.calls.length, 0);
   assert.equal(existsSync(f.directory), false);
 });
 
 void test("创建前重新执行参考观察与镜像入口核验，失败不登记或创建资源", (t) => {
-  for (const overrides of [{ 8: { stdout: "[15444]" } }, { 16: { stdout: JSON.stringify([target.image, {}, ["docker-entrypoint.sh"], ["postgres"]]) } }]) {
+  for (const overrides of [
+    { 8: { stdout: "[15444]" } },
+    { 16: { stdout: JSON.stringify([target.image, {}, ["docker-entrypoint.sh"], ["postgres"]]) } },
+  ]) {
     const f = fixture(t, overrides);
     assert.throws(f.execute, /宿主机端口|固定镜像卷声明/u);
     assert.equal(existsSync(f.directory), false);
     assert.ok(f.calls.length <= 17);
   }
   const f = fixture(t);
-  assert.throws(() => createStoppedRoundTrip("win32", args, { ...source, DOCKER_HOST: "tcp://remote" }, f.root, f.run), /Docker 环境覆盖/u);
+  assert.throws(
+    () =>
+      createStoppedRoundTrip(
+        "win32",
+        args,
+        { ...source, DOCKER_HOST: "tcp://remote" },
+        f.root,
+        f.run,
+      ),
+    /Docker 环境覆盖/u,
+  );
   assert.equal(f.calls.length, 0);
 });
 
@@ -108,17 +219,85 @@ void test("固定资源按顺序创建且只传递专用凭据，容器保持停
   assert.equal(report.stoppedContainerObserved, true);
   assert.equal(report.containerStarted, false);
   assert.equal(report.databaseInitialized, false);
-  for (const key of ["portReserved", "resourceCreationAllowed", "observationSourceAuthenticated", "databaseExecutionAllowed", "roundTripVerified", "historicalAdoptionVerified", "signingAllowed", "deploymentAllowed", "collationRuntimeIdentityVerified"]) assert.equal(report[key], false);
+  for (const key of [
+    "portReserved",
+    "resourceCreationAllowed",
+    "observationSourceAuthenticated",
+    "databaseExecutionAllowed",
+    "roundTripVerified",
+    "historicalAdoptionVerified",
+    "signingAllowed",
+    "deploymentAllowed",
+    "collationRuntimeIdentityVerified",
+  ])
+    assert.equal(report[key], false);
   assert.equal(f.calls.length, 29);
   const receipt = JSON.parse(readFileSync(f.receipt, "utf8"));
   assert.equal(receipt.creationPlanFingerprint, acceptedCreationFingerprint);
-  const labelArgs = ["--label", "org.adui.scope=prisma8-check-roundtrip", "--label", "org.adui.attempt=" + receipt.attempt];
-  assert.deepEqual(f.calls[17].argv, ["--host", endpoint, "volume", "create", "--driver", "local", ...labelArgs, target.volume]);
-  assert.deepEqual(f.calls[20].argv, ["--host", endpoint, "network", "create", "--driver", "bridge", ...labelArgs, target.network]);
-  assert.deepEqual(f.calls[23].argv, ["--host", endpoint, "container", "create", "--name", target.container, ...labelArgs, "--pull", "never", "--restart", "no", "--network", networkId, "--publish", "127.0.0.1:15444:5432/tcp", "--mount", "type=volume,source=" + target.volume + ",target=" + dataPath + ",volume-nocopy", "--env", "POSTGRES_PASSWORD", "--env", "POSTGRES_USER=" + target.role, "--env", "POSTGRES_DB=" + target.database, "--env", "PGDATA=" + dataPath, "--env", "POSTGRES_HOST_AUTH_METHOD=scram-sha-256", "--env", "POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale-provider=libc --locale=en_US.utf8 --auth-local=scram-sha-256 --auth-host=scram-sha-256", target.image]);
+  const labelArgs = [
+    "--label",
+    "org.adui.scope=prisma8-check-roundtrip",
+    "--label",
+    "org.adui.attempt=" + receipt.attempt,
+  ];
+  assert.deepEqual(f.calls[17].argv, [
+    "--host",
+    endpoint,
+    "volume",
+    "create",
+    "--driver",
+    "local",
+    ...labelArgs,
+    target.volume,
+  ]);
+  assert.deepEqual(f.calls[20].argv, [
+    "--host",
+    endpoint,
+    "network",
+    "create",
+    "--driver",
+    "bridge",
+    ...labelArgs,
+    target.network,
+  ]);
+  assert.deepEqual(f.calls[23].argv, [
+    "--host",
+    endpoint,
+    "container",
+    "create",
+    "--name",
+    target.container,
+    ...labelArgs,
+    "--pull",
+    "never",
+    "--restart",
+    "no",
+    "--network",
+    networkId,
+    "--publish",
+    "127.0.0.1:15444:5432/tcp",
+    "--mount",
+    "type=volume,source=" + target.volume + ",target=" + dataPath + ",volume-nocopy",
+    "--env",
+    "POSTGRES_PASSWORD",
+    "--env",
+    "POSTGRES_USER=" + target.role,
+    "--env",
+    "POSTGRES_DB=" + target.database,
+    "--env",
+    "PGDATA=" + dataPath,
+    "--env",
+    "POSTGRES_HOST_AUTH_METHOD=scram-sha-256",
+    "--env",
+    "POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale-provider=libc --locale=en_US.utf8 --auth-local=scram-sha-256 --auth-host=scram-sha-256",
+    target.image,
+  ]);
   for (const [index, call] of f.calls.entries()) {
     assert.equal(call.options.shell, false);
-    assert.deepEqual(call.options.env, index === 23 ? { Path: "system", POSTGRES_PASSWORD: password } : { Path: "system" });
+    assert.deepEqual(
+      call.options.env,
+      index === 23 ? { Path: "system", POSTGRES_PASSWORD: password } : { Path: "system" },
+    );
     assert.ok(!call.argv.includes(password));
     if (index >= 2 && index !== 8) assert.deepEqual(call.argv.slice(0, 2), ["--host", endpoint]);
     assert.ok(!["start", "run", "rm", "prune", "pull"].includes(call.argv[3]));
@@ -171,7 +350,18 @@ void test("同名卷复用、卷驱动或占用异常阻止后续网络及容器
 void test("网络标识、归属或同名竞争异常时保留已创建资源并停止", (t) => {
   for (const overrides of [
     { 20: { stdout: "invalid" } },
-    { 21: { stdout: JSON.stringify([networkId, target.network, "bridge", "local", {}, { [mainId]: {} }]) } },
+    {
+      21: {
+        stdout: JSON.stringify([
+          networkId,
+          target.network,
+          "bridge",
+          "local",
+          {},
+          { [mainId]: {} },
+        ]),
+      },
+    },
     { 22: { stdout: networkId + "|" + target.network + "\n" + mainId + "|" + target.network } },
   ]) {
     const f = fixture(t, overrides);
@@ -186,11 +376,34 @@ void test("创建命令失败或容器不符合停止态边界时不启动、不
   for (const overrides of [
     { 23: { status: 1, stderr: password } },
     { 23: { stdout: "invalid" } },
-    { 24: { stdout: JSON.stringify([containerId, "/" + target.container, target.image, "running", true, {}, [], {}, networkId, "no", false, false, false, ["docker-entrypoint.sh"], ["postgres"]]) } },
+    {
+      24: {
+        stdout: JSON.stringify([
+          containerId,
+          "/" + target.container,
+          target.image,
+          "running",
+          true,
+          {},
+          [],
+          {},
+          networkId,
+          "no",
+          false,
+          false,
+          false,
+          ["docker-entrypoint.sh"],
+          ["postgres"],
+        ]),
+      },
+    },
     { 26: { stdout: containerId + "\n" + mainId } },
   ]) {
     const f = fixture(t, overrides);
-    assert.throws(f.execute, (error) => /第五座/u.test(error.message) && !error.message.includes(password));
+    assert.throws(
+      f.execute,
+      (error) => /第五座/u.test(error.message) && !error.message.includes(password),
+    );
     assert.ok(f.calls.length <= 27);
     assert.equal(existsSync(f.receipt), true);
     assert.equal(existsSync(f.resultPath), false);
