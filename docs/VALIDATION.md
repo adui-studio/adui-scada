@@ -5393,3 +5393,11 @@ E-164 为 E-012 同类问题。仅修正 app.e2e-spec.ts 默认根模块数据�
 ### 2026-11-27 · PR #256 E-165 最小修复候选
 
 维护者 Windows 类型检查与原生契约离线生成成功，存储指纹保持 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表、85 字段、36 CHECK、20 索引、13 外键、119 注释。Docker 实测 59/60，临时事务 8/8；宿主编排第三项错误断言失败，增量退出码 1，后续未执行。E-165 仅修正 Node 原生异常匹配方式，同一测试三个预期改为精确 name/message 对象。协作容器 Node.js 22.16.0 原生断言局部复现旧版失败退出 1，修复后三组诊断及额外负例两项测试全部通过退出 0。测试提交 ea109ccdead21c08bbd7b504873c388637a44113，远端 Blob a9136d9c7df17d9fec5ac3c9454aae2e221cf158，修复测试循环 FNV-1a bebd0a69 与实际本地片段一致。上轮自定义 V8 断言没有模拟 Error 字符串表示，是此次漏检原因。未执行全量 60 项、HTTP E2E、Vite+ 或真实 Docker；无生产源码、依赖及数据库变更。PR 保持 Draft，待维护者完整复验；临时表 DDL/DML 仍需独立确认。
+
+### 2026-11-27 · PR #256 增量复验与真实 Docker 常驻只读回归
+
+维护者 Windows 于 2026-11-27 在 HEAD 47b84f8e2ece8cffebe931013b1cca865dc3cc41 完成两轮增量验收，均退出 0；Core 编译、Prisma 8 原生契约离线生成（databaseAccessed=false）、NestJS 类型检查、Docker 五套件 60/60（独立临时事务模拟 8/8）、HTTP E2E 七文件 71/71、环境及 LF、中文文案 380 文件、Markdown 97 份、Vite+ 513 格式文件/354 受检文件零警告、Lint、类型错误及 git diff --check 均通过。首次增量后工作区干净。存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436，12 表、85 字段、36 CHECK、20 索引、13 外键、119 注释保持一致。
+
+同一候选的四个 Docker 应用镜像构建、七服务启动、容器独立原生只读及常驻连接、React/Vue HTTP 和宿主 HTTPS、宿主与容器正式 OIDC Discovery/JWKS 严格只读验证均通过，常驻只读回归退出 0。OIDC 登录尚未启用。没有真实临时表 DDL/DML、SDK 实际提交/回滚/清理、正式业务写入或浏览器登录证据。 维护者格式化提交 47b84f8e2ece8cffebe931013b1cca865dc3cc41 与此前候选 83ba2f3ba6585691f0f08696e230f2d1de637c73 的五文件差异已逐项核对，仅为排版，E-165 关闭。
+
+下一项仅为本机已运行的固定 server 容器独立临时事务验收。已有入口为 `pnpm run docker:db:transaction:probe --confirm-temp-transaction-probe`，须由维护者明确确认后在本机执行，严格复核当前数据库、集群、契约和常驻绑定后，仅操作 `pg_temp.adui_scada_native_tx_probe`。宿主成功必须同时校验内部状态 DOCKER_NATIVE_TRANSACTION_READY、提交、回滚、同一后端、临时表移除及 Provider 关闭均为 true，businessDataWritten 为 false。失败返回非零并保留现场，不自动重试、初始化、迁移、清理容器或卷。成功后再核对常驻只读回归、OIDC 未启用及服务状态。当前仅记录维护者提供的实测日志，协作环境未执行新的 Docker 或数据库操作；PR #256 保持 Draft，真实事务和合并仍待验收。
