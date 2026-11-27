@@ -15,6 +15,9 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
   const { Prisma8RuntimeProjectVersionStore } = await import(
     new URL("./dist/projects/prisma8-runtime-project-version-store.js", import.meta.url).href
   );
+  const { Prisma8RuntimeProjectReleaseStore } = await import(
+    new URL("./dist/projects/prisma8-runtime-project-release-store.js", import.meta.url).href
+  );
   const { AuthSessionService } = await import(
     new URL("./dist/auth/auth-session.service.js", import.meta.url).href
   );
@@ -207,6 +210,47 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
       }
       if (!writeRejected) throw new Error("原生只读提供方未拒绝工程写入");
     }
+    stage = "原生发布与回滚只读拒绝核验";
+    const releases = context.get(Prisma8RuntimeProjectReleaseStore);
+    const sessionId = randomUUID();
+    const releaseOperations = [
+      () => releases.readCurrent(principal, sessionId, scope),
+      () =>
+        releases.publish(
+          principal,
+          sessionId,
+          scope,
+          {
+            expectedHeadRevision: 1,
+            targetRevision: 1,
+            expectedReleaseGeneration: 0,
+          },
+          randomUUID(),
+        ),
+      () =>
+        releases.rollback(
+          principal,
+          sessionId,
+          scope,
+          {
+            targetRevision: 1,
+            expectedReleaseGeneration: 2,
+          },
+          randomUUID(),
+        ),
+    ];
+    for (const run of releaseOperations) {
+      let rejected = false;
+      try {
+        await run();
+      } catch (error) {
+        if (!(error instanceof Error) || error.message !== "Prisma 8 只读提供方禁止写入") {
+          throw error;
+        }
+        rejected = true;
+      }
+      if (!rejected) throw new Error("原生只读提供方未拒绝发布锁或写事务");
+    }
     stage = "原生工程 Guard 拒绝核验";
     const guard = context.get(ScadaProjectGuard);
     const handler = () => undefined;
@@ -262,6 +306,9 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     projectListReadVerified: true,
     projectLockedReadDenied: true,
     projectWriteDenied: true,
+    releaseLockedReadDenied: true,
+    releaseWriteDenied: true,
+    rollbackWriteDenied: true,
     missingProjectDenied: true,
   };
 }

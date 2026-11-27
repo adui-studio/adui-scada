@@ -22,6 +22,7 @@ import { ScadaSecurityAuditService } from "../security/scada-security-audit.js";
 import { ProjectPersistenceModule } from "../projects/project-persistence.module.js";
 import { Prisma8ProjectPersistenceModule } from "../projects/prisma8-project-persistence.module.js";
 import { Prisma8RuntimeProjectVersionStore } from "../projects/prisma8-runtime-project-version-store.js";
+import { Prisma8RuntimeProjectReleaseStore } from "../projects/prisma8-runtime-project-release-store.js";
 import { ProjectApiModule } from "../projects/project-api.module.js";
 import { ProjectApiController } from "../projects/project-api.controller.js";
 import { DatabaseModule } from "./database.module.js";
@@ -114,15 +115,17 @@ describe("共享 Prisma 数据库模块装配边界", () => {
     );
   });
 
-  it("原生工程读写模块仅共享原生数据库且尚未挂载正式控制器", () => {
+  it("原生工程读写和发布仓储共享唯一原生数据库且尚未挂载正式控制器", () => {
     expect(Reflect.getMetadata("imports", Prisma8ProjectPersistenceModule)).toEqual([
       Prisma8DatabaseModule,
     ]);
     expect(Reflect.getMetadata("providers", Prisma8ProjectPersistenceModule)).toEqual([
       Prisma8RuntimeProjectVersionStore,
+      Prisma8RuntimeProjectReleaseStore,
     ]);
     expect(Reflect.getMetadata("exports", Prisma8ProjectPersistenceModule)).toEqual([
       Prisma8RuntimeProjectVersionStore,
+      Prisma8RuntimeProjectReleaseStore,
     ]);
     expect(Reflect.getMetadata("controllers", Prisma8ProjectPersistenceModule)).toBeUndefined();
     for (const moduleType of [

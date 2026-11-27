@@ -1628,3 +1628,9 @@ React/Vue 运行页可显式导入当前或可迁移 Schema 的最大 2 MiB JSON
 ### 全新原生工程版本写事务
 
 关联 FR-001、FR-002、FR-014、NFR-006 和 ADR-0073。创建仅接受 document、复制可信主体、校验活动身份共享锁，原子插入工程、零代次发布初始状态、三项创建者授权、首个不可变快照、CAS 水位和成功审计。追加按租户工程联合键取得 FOR UPDATE，复核完整 ACL，核验十进制 BigInt 修订号及安全整数上限，追加快照、条件更新水位、成功审计并回读快照摘要与元数据。每条 DML 验证影响行数；读写统一使用原生提供方，写事务前后复核实际业务库、角色、原生标记、事务模式及其他边界；严格只读提前拒绝。无旧数据迁移、设备控制或 Schema 改动。
+
+### 全新原生发布、当前指针读取与回滚事务（FR-008 / FR-014）
+
+新增 Prisma8RuntimeProjectReleaseStore，统一由 Prisma8ProjectPersistenceModule 与工程读写仓储共用 Prisma8Service，直接采用原生 Contract 的 readTransaction/writeTransaction；严格只读时三个需行锁入口均提前拒绝。当前发布读取不读取编辑 head；发布按现有双 CAS 与幂等契约；内部回滚独立 release:rollback ACL、正发布代次、仅限同租户工程较早 PUBLISH 事件证明的目标快照，不依赖或更改编辑 head。锁内复核会话、活动主体、完整 ACL、指针、目标摘要和安全门禁；幂等按租户/工程/主体/动作/UUID v4 作用域，复核语义摘要、目标和原代次。同一目标的新请求拒绝；原同键同语义重放复用原事件。事件及指针 CAS 使用统一原生写事务并回读一致性，固定安全门禁始终拒绝新发布/回滚且不提供可注入放行参数。
+
+发布输入仍为 expectedHeadRevision、targetRevision、expectedReleaseGeneration 和独立幂等键；回滚内部输入仅为 targetRevision、expectedReleaseGeneration 及独立幂等键，预期代次必须为正安全整数。回滚内部回执保留动作、发布修订、摘要、代次、事件 ID 与时间，不虚构数据库事件未保存的编辑 head；同目标不同键的新请求按冲突处理，公开回滚 HTTP/客户端契约及审批仍待确认。不修改任何数据库结构或前端行为。

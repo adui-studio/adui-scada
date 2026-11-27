@@ -52,3 +52,9 @@ PR #244 Windows 修复后 Core 构建、双契约离线生成、Vite+ 607 格式
 ## 2026-11-27 · 维护者再次确认仅推进全新原生应用
 
 停止增加旧数据库迁移、兼容适配和对照验收；只以当前已初始化的 PostgreSQL 19 业务库及原生 Contract 开发，不再为旧隔离库增加功能。保留新系统自身的工程版本与审计，避免把版本管理误当作旧数据迁移。原生工程读写统一装配；完成原生发布事务与其他正式依赖后集中切换 HTTP 根模块并清理废弃入口。不得重新初始化已有新库或提前混合两代提供方。
+
+## 2026-11-27 · 全新原生发布仓储
+
+维护者 Windows E-159 复验 HEAD 8d18844f189afb726a27e95f66b84ffeda41e7b2：原生工程写入 11/11、619 格式文件、457 受检文件零警告/Lint/类型错误、中文文案 484、Markdown 97、git diff --check 均通过，退出码 0、工作区干净。此前 58/58 增量及 PostgreSQL 19 真实 FRESH_PROVIDER_SMOKE_READY（projectWriteDenied=true、providerSwitched=false、指纹和结构数量一致）通过，修复只修改测试及文档，未改变业务或烟测代码。维护者明确授权，PR #247 已 Squash 合入 feat/mvp-first-integration 的 6ef45e964c2b2bb87b4a01eed1e66cd3321fda9d。E-159 已关闭。
+
+新增 Prisma8RuntimeProjectReleaseStore，统一由 Prisma8ProjectPersistenceModule 与工程读写仓储共用 Prisma8Service，直接采用原生 Contract 的 readTransaction/writeTransaction；严格只读时三个需行锁入口均提前拒绝。当前发布读取不读取编辑 head；发布按现有双 CAS 与幂等契约；内部回滚独立 release:rollback ACL、正发布代次、仅限同租户工程较早 PUBLISH 事件证明的目标快照，不依赖或更改编辑 head。锁内复核会话、活动主体、完整 ACL、指针、目标摘要和安全门禁；幂等按租户/工程/主体/动作/UUID v4 作用域，复核语义摘要、目标和原代次。同一目标的新请求拒绝；原同键同语义重放复用原事件。事件及指针 CAS 使用统一原生写事务并回读一致性，固定安全门禁始终拒绝新发布/回滚且不提供可注入放行参数。 本批只面向当前原生业务库，旧库实验源码不再扩展，不增加旧数据库专项或迁移。真实正向写入及并发仍未验收，正式根模块暂不混合两代提供方。

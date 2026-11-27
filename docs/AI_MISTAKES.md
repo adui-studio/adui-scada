@@ -1510,3 +1510,5 @@
 - **根因与最小修复**：后置身份漂移夹具将 role 改为 wrong，实际由 requirePrisma8RuntimeIdentity 抛出“Prisma 8 运行时数据库身份、标记或连接边界不一致”。仅将无参数 toThrow 改为该确定文案，保留边界执行顺序、模拟拒绝及未提交断言，不改变业务 SQL、提供方或数据库。静态复核唯一替换及该文件无无参数 toThrow；Windows 原生写事务定向测试、Vite+ 零警告及中文/文档检查待复验。
 - **防复发**：编写所有新增异常测试时逐项核对真实抛出点及专属消息；提交前扫描无参数 toThrow，禁止禁用 Lint、放宽断言或以退出码 0 代替零警告验收。真实 PostgreSQL 写入和回滚仍未验收，不执行旧库专项。
 - **证据**：维护者 Windows 日志、PR #247、apps/server/src/projects/prisma8-runtime-project-version-store.spec.ts、docs/VALIDATION.md。
+
+> **2026-11-27 · E-159 Windows 复验关闭**：维护者 Windows E-159 复验 HEAD 8d18844f189afb726a27e95f66b84ffeda41e7b2：原生工程写入 11/11、619 格式文件、457 受检文件零警告/Lint/类型错误、中文文案 484、Markdown 97、git diff --check 均通过，退出码 0、工作区干净。此前 58/58 增量及 PostgreSQL 19 真实 FRESH_PROVIDER_SMOKE_READY（projectWriteDenied=true、providerSwitched=false、指纹和结构数量一致）通过，修复只修改测试及文档，未改变业务或烟测代码。维护者明确授权，PR #247 已 Squash 合入 feat/mvp-first-integration 的 6ef45e964c2b2bb87b4a01eed1e66cd3321fda9d。E-159 已关闭。 禁止用退出码替代零警告门禁，后续新增异常断言继续核对专属消息。
