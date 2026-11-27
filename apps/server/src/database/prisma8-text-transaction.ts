@@ -10,7 +10,10 @@ type SqlParameter = string | number | bigint;
 export interface Prisma8TextTransaction {
   readonly queryText: <Columns extends TextColumns>(
     columns: Columns,
-  ) => (strings: TemplateStringsArray, ...parameters: SqlParameter[]) => Promise<TextRow<Columns>[]>;
+  ) => (
+    strings: TemplateStringsArray,
+    ...parameters: SqlParameter[]
+  ) => Promise<TextRow<Columns>[]>;
   executeCount(
     strings: TemplateStringsArray,
     ...parameters: SqlParameter[]

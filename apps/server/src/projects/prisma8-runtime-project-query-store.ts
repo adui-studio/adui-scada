@@ -10,9 +10,7 @@ import {
 @Injectable()
 export class Prisma8RuntimeProjectQueryStore extends Prisma8ProjectQueryOperations {
   constructor(database: Prisma8Service) {
-    const read = <T>(
-      operation: (tx: Prisma8ProjectQueryTransaction) => Promise<T>,
-    ): Promise<T> =>
+    const read = <T>(operation: (tx: Prisma8ProjectQueryTransaction) => Promise<T>): Promise<T> =>
       database.readTransaction((tx) => {
         const text = nativeTextTransaction(tx, "工程事务查询结果缺少有效文本列");
         return operation({

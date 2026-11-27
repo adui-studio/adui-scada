@@ -125,7 +125,12 @@ describe("共享 Prisma 数据库模块装配边界", () => {
       Prisma8RuntimeProjectQueryStore,
     ]);
     expect(Reflect.getMetadata("controllers", Prisma8ProjectQueryModule)).toBeUndefined();
-    for (const moduleType of [AppModule, OidcEnabledAppModule, ProjectApiModule, ProjectPersistenceModule]) {
+    for (const moduleType of [
+      AppModule,
+      OidcEnabledAppModule,
+      ProjectApiModule,
+      ProjectPersistenceModule,
+    ]) {
       expect(Reflect.getMetadata("imports", moduleType)).not.toContain(Prisma8ProjectQueryModule);
     }
   });
