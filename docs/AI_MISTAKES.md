@@ -1522,3 +1522,9 @@
 - **证据**：PR #250、维护者 Windows 日志、apps/server/src/database/prisma-schema-comments.spec.ts、scripts/oidc-lab-identity.cases.mjs、docs/VALIDATION.md。
 
 > **2026-11-27 · E-160 Windows 复验关闭**：维护者 Windows 已完成 PR #250 最终复验：中文注释 2/2、OIDC 身份 14/14、全新安装 28/28、CLI 4/4、82 个文件 966/966 单测、6 个文件 65/65 HTTP E2E；498 格式文件、339 受检零警告/Lint/类型错误，中文 365 个自有文件、文档 97 份，React/Vue/NestJS 构建通过。React 单个 chunk 591.62 kB 的构建体积警告暂保留。锁文件刷新与冻结安装已通过，移除 Prisma 7 三项直接依赖及 98 个包。真实 PostgreSQL 19 只读 FRESH_PROVIDER_SMOKE_READY，存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致，所有原生根模块及只读标志为 true，最终退出码 0、工作区干净。远端验收提交 dbab7c2a7ca3737e23fd451811aef92981378801，维护者明确授权，PR #250 已 Squash 合并至 feat/mvp-first-integration 的 94106b29b328833d944f35361004411b5a3ddab2。E-160 已关闭。 两个测试文件修复及完整质量链已实测；防复发规则仍保留。
+
+### E-161 · HTTPS 探针误拒绝 SSE 重复 no-store 响应头（局部修复通过，待 Windows 复验）
+
+- **真实现象**：协作环境 Node.js 22.16.0 与真实 Nginx 隔离夹具使用候选共享模板、临时可信 CA/回环 IP SAN 证书及模拟上游；原探针在上游也返回 Cache-Control: no-store 时抛「本机 HTTPS 代理响应异常」。既有模拟服务 headers() 本身就发送 no-store，Nginx 的 SSE location 也追加 no-store，因此不能只比较单条字符串。该问题未在维护者 Windows 实际发生。
+- **最小修复**：仅在探针将合并头按逗号拆分、去空白和忽略指令大小写，每个指令必须是 no-store，允许重复但拒绝缺失、public、max-age 或混合策略。不修改模拟服务、Nginx 缓存门禁、TLS、路由或业务数据。新增仓库回归定义覆盖单值、重复、大小写和四类拒绝。
+- **验证与防复发**：已实际复现旧探针失败，修复后 Node TLS 六项及真实 Nginx 三项通过，探针 Git Blob 471574addbead49c7c467b1616ce34e3b0548d3b 与本地一致；新增断言与启动相关共八项在 V8 隔离模拟中通过。代理链的响应头可能被合并，须按协议语义校验且保留冲突拒绝。Windows 完整 Docker 22 项、真实七服务 HTTPS 和 Vite+ 零警告仍待验收，不提前关闭本条。
