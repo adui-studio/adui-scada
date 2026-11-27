@@ -5770,6 +5770,6 @@ pnpm run docker:ps
 Write-Host "常驻原生数据库真实验收退出码：$LASTEXITCODE"
 git rev-parse HEAD
 git status --short
-````
+```
 
 首次成功严格数据库验证后才创建 .local/docker-runtime/server-database.json；请勿查看、提交、粘贴或分享文件正文。重复启动核验相同绑定，不覆盖原文件；出现绑定不符或权限失败保留现场，不清卷、不重置、不放宽文件权限或 TLS、不手工改密码。预期七服务启动提示新增「常驻服务原生只读连接验证通过」，且旧容器烟测、双端 HTTP/HTTPS、正式 OIDC 只读探针仍通过；真实报告要求 runningDatabaseReadOnlyVerified=true。仅 server 运行进程回环访问 /health/database，其他容器拒绝，公开 Nginx /api/health/database 仍 404。若失败根据现有固定诊断排查。无实际业务写入、认证登录或生产权限扩展。

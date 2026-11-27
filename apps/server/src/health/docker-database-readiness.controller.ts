@@ -1,4 +1,12 @@
-import { Controller, Get, Header, Inject, NotFoundException, Req, ServiceUnavailableException } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  Header,
+  Inject,
+  NotFoundException,
+  Req,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { Prisma8Service } from "../database/prisma8.service.js";
 
 /** 仅常驻只读容器根模块注册；只允许容器自身回环请求，不暴露数据库身份。 */

@@ -26,7 +26,10 @@ import { DockerDatabaseReadinessController } from "./health/docker-database-read
 export class AppModule {}
 
 /** 仅固定 Docker 本机模式挂载常驻只读原生提供方，不导入身份、工程或模拟 API。 */
-@Module({ imports: [AppModule, Prisma8DatabaseModule], controllers: [DockerDatabaseReadinessController] })
+@Module({
+  imports: [AppModule, Prisma8DatabaseModule],
+  controllers: [DockerDatabaseReadinessController],
+})
 export class DockerReadOnlyDatabaseAppModule {}
 
 /** 只供满足本机非生产白名单的启动入口使用，不影响正式 AppModule 路由。 */

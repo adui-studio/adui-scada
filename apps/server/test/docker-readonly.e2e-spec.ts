@@ -63,7 +63,12 @@ describe("常驻容器原生只读数据库就绪（端到端）", () => {
   it("进程存活契约不变且不注册身份、工程或本机模拟接口", async () => {
     const live = await request(app.getHttpServer()).get("/health").expect(200);
     expect(live.body).toEqual({ status: "ok", service: "adui-scada-server" });
-    for (const route of ["/api/v1/auth/oidc/start", "/api/v1/auth/me", "/api/v1/projects", "/api/dev/demo/project"]) {
+    for (const route of [
+      "/api/v1/auth/oidc/start",
+      "/api/v1/auth/me",
+      "/api/v1/projects",
+      "/api/dev/demo/project",
+    ]) {
       await request(app.getHttpServer()).get(route).expect(404);
     }
     await request(app.getHttpServer()).post("/api/v1/auth/logout").expect(404);

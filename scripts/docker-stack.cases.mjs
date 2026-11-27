@@ -63,7 +63,12 @@ function mockDocker(options = {}) {
       inputs.push(input);
       return {
         status: options.probeFailed ? 1 : 0,
-        stdout: options.probeInvalid ? "{}" : JSON.stringify({ ...probeOutput, runningDatabaseReadOnlyVerified: !options.runningDatabaseMissing }),
+        stdout: options.probeInvalid
+          ? "{}"
+          : JSON.stringify({
+              ...probeOutput,
+              runningDatabaseReadOnlyVerified: !options.runningDatabaseMissing,
+            }),
       };
     }
     if (args.includes("config") && options.badConfig) return { status: 1, stdout: "" };
@@ -169,7 +174,8 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
   });
 
   void it("七服务一键启动先验证原生数据库再构建应用并执行容器烟测", () => {
-    const { run, calls, events, inputs, verifyDatabase, verifyHttps, httpsPorts, prepareBinding } = mockDocker();
+    const { run, calls, events, inputs, verifyDatabase, verifyHttps, httpsPorts, prepareBinding } =
+      mockDocker();
     assert.match(
       manageDockerStack("up", env, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
       /容器原生只读及双端 HTTP 验证通过/,
@@ -206,7 +212,8 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
       invalidDatabase: true,
     });
     assert.throws(
-      () => manageDockerStack("up", env, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
+      () =>
+        manageDockerStack("up", env, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
       /数据库严格验证失败/,
     );
     assert.deepEqual(events, ["基础设施启动", "严格数据库验证"]);
@@ -217,23 +224,47 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
   });
 
   void it("只读绑定不一致时拒绝构建或启动应用且不触碰原有资源", () => {
-    const { run, calls, events, verifyDatabase, verifyHttps, prepareBinding } = mockDocker({ bindingFailed: true });
+    const { run, calls, events, verifyDatabase, verifyHttps, prepareBinding } = mockDocker({
+      bindingFailed: true,
+    });
     assert.throws(
-      () => manageDockerStack("up", env, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
+      () =>
+        manageDockerStack("up", env, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
       /模拟只读绑定不一致/,
     );
     assert.deepEqual(events, ["基础设施启动", "严格数据库验证", "只读绑定准备"]);
-    assert.equal(calls.some((args) => args.includes("--build") || args.includes("exec") || args.includes("down") || args.includes("rm")), false);
+    assert.equal(
+      calls.some(
+        (args) =>
+          args.includes("--build") ||
+          args.includes("exec") ||
+          args.includes("down") ||
+          args.includes("rm"),
+      ),
+      false,
+    );
   });
 
   void it("容器烟测失败或标志不完整时不能报告启动验收通过", () => {
-    for (const options of [{ probeFailed: true }, { probeInvalid: true }, { runningDatabaseMissing: true }]) {
-      const { run, calls, events, verifyDatabase, verifyHttps, prepareBinding } = mockDocker(options);
+    for (const options of [
+      { probeFailed: true },
+      { probeInvalid: true },
+      { runningDatabaseMissing: true },
+    ]) {
+      const { run, calls, events, verifyDatabase, verifyHttps, prepareBinding } =
+        mockDocker(options);
       assert.throws(
-        () => manageDockerStack("up", env, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
+        () =>
+          manageDockerStack("up", env, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
         /Docker 执行失败|容器原生数据库或双端 HTTP 验证失败/,
       );
-      assert.deepEqual(events, ["基础设施启动", "严格数据库验证", "只读绑定准备", "应用启动", "容器烟测"]);
+      assert.deepEqual(events, [
+        "基础设施启动",
+        "严格数据库验证",
+        "只读绑定准备",
+        "应用启动",
+        "容器烟测",
+      ]);
       assert.equal(
         calls.some((args) => args.includes("down") || args.includes("rm")),
         false,
@@ -245,7 +276,15 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
     const configured = env + "SCADA_REACT_HTTPS_PORT=18482\nSCADA_VUE_HTTPS_PORT=18483\n";
     const { run, verifyDatabase, verifyHttps, httpsPorts, prepareBinding } = mockDocker();
     assert.match(
-      manageDockerStack("up", configured, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
+      manageDockerStack(
+        "up",
+        configured,
+        run,
+        verifyDatabase,
+        verifyHttps,
+        undefined,
+        prepareBinding,
+      ),
       /宿主 HTTPS 验证通过/,
     );
     assert.deepEqual(httpsPorts, ["18482", "18483"]);
@@ -264,9 +303,12 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
   });
 
   void it("宿主 HTTPS 探针失败时不报告成功且不自动清理现场", () => {
-    const { run, calls, events, verifyDatabase, verifyHttps, prepareBinding } = mockDocker({ httpsFailed: true });
+    const { run, calls, events, verifyDatabase, verifyHttps, prepareBinding } = mockDocker({
+      httpsFailed: true,
+    });
     assert.throws(
-      () => manageDockerStack("up", env, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
+      () =>
+        manageDockerStack("up", env, run, verifyDatabase, verifyHttps, undefined, prepareBinding),
       /双端 HTTPS 验证失败/,
     );
     assert.deepEqual(events, [

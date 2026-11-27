@@ -78,17 +78,26 @@ async function verifyRunningDatabase() {
     throw new Error("常驻服务端口配置无效");
   }
   const base = "http://127.0.0.1:" + port;
-  const get = (path) => fetch(base + path, {
-    redirect: "error",
-    signal: AbortSignal.timeout(12_000),
-  });
+  const get = (path) =>
+    fetch(base + path, {
+      redirect: "error",
+      signal: AbortSignal.timeout(12_000),
+    });
   const response = await get("/health/database");
-  if (response.status !== 200 || !(response.headers.get("content-type") ?? "").includes("application/json")) {
+  if (
+    response.status !== 200 ||
+    !(response.headers.get("content-type") ?? "").includes("application/json")
+  ) {
     await response.body?.cancel();
     throw new Error("常驻服务原生只读连接未就绪");
   }
   const state = await response.json();
-  if (state?.status !== "ok" || state.mode !== "docker-readonly" || Object.keys(state).length !== 2 || response.headers.get("cache-control") !== "no-store") {
+  if (
+    state?.status !== "ok" ||
+    state.mode !== "docker-readonly" ||
+    Object.keys(state).length !== 2 ||
+    response.headers.get("cache-control") !== "no-store"
+  ) {
     throw new Error("常驻服务原生只读连接报告异常");
   }
   for (const route of ["/api/v1/auth/oidc/start", "/api/v1/auth/me", "/api/v1/projects"]) {

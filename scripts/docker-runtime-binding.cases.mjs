@@ -3,7 +3,11 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import { parseDockerDatabaseBinding, resolveDockerReadOnlyConfig, resolveDockerReadOnlyMode } from "../apps/server/src/database/docker-readonly-config.ts";
+import {
+  parseDockerDatabaseBinding,
+  resolveDockerReadOnlyConfig,
+  resolveDockerReadOnlyMode,
+} from "../apps/server/src/database/docker-readonly-config.ts";
 import { resolvePrisma8RuntimeUrl } from "../apps/server/src/database/prisma8-runtime-boundary.ts";
 import { ensureDockerDatabaseBinding } from "./docker-runtime-binding.mjs";
 
@@ -35,7 +39,10 @@ void describe("Docker 常驻原生只读数据库绑定", () => {
       { SCADA_DATABASE_URL: "fixture" },
       { SCADA_OIDC_ENABLED: undefined },
     ]) {
-      assert.throws(() => resolveDockerReadOnlyMode({ ...mode, ...change }), /必须与认证、模拟接口及宿主连接配置隔离/);
+      assert.throws(
+        () => resolveDockerReadOnlyMode({ ...mode, ...change }),
+        /必须与认证、模拟接口及宿主连接配置隔离/,
+      );
     }
   });
 
@@ -53,7 +60,10 @@ void describe("Docker 常驻原生只读数据库绑定", () => {
     const options = url.searchParams.get("options");
     assert.ok(options);
     assert.match(options, /default_transaction_read_only=on/);
-    assert.throws(() => resolvePrisma8RuntimeUrl({ ...config, readOnly: false }), /仅允许已初始化的本机业务库/);
+    assert.throws(
+      () => resolvePrisma8RuntimeUrl({ ...config, readOnly: false }),
+      /仅允许已初始化的本机业务库/,
+    );
   });
 
   void it("拒绝其他存储指纹、非法秘密、集群及任意额外连接参数", () => {
@@ -64,7 +74,8 @@ void describe("Docker 常驻原生只读数据库绑定", () => {
       { ...binding, readOnly: false },
       { ...binding, host: "remote.example" },
       { password: binding.password, storageHash: hash },
-      [], null,
+      [],
+      null,
     ]) {
       assert.throws(() => parseDockerDatabaseBinding(JSON.stringify(input), hash), failure);
     }
@@ -94,7 +105,10 @@ void describe("Docker 常驻原生只读数据库绑定", () => {
       const file = join(root, ".local", "docker-runtime", "server-database.json");
       const original = readFileSync(file, "utf8");
       for (const change of [{ password: "b".repeat(43) }, { systemIdentifier: "987654321" }]) {
-        assert.throws(() => ensureDockerDatabaseBinding(root, { ...binding, ...change }, hash), failure);
+        assert.throws(
+          () => ensureDockerDatabaseBinding(root, { ...binding, ...change }, hash),
+          failure,
+        );
         assert.equal(readFileSync(file, "utf8"), original);
       }
       writeFileSync(file, "invalid");

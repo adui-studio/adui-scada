@@ -1,5 +1,9 @@
 import { Module } from "@nestjs/common";
-import { PRISMA8_RUNTIME_CONFIG, Prisma8Service, prisma8RuntimeStorageHash } from "./prisma8.service.js";
+import {
+  PRISMA8_RUNTIME_CONFIG,
+  Prisma8Service,
+  prisma8RuntimeStorageHash,
+} from "./prisma8.service.js";
 import { loadDockerReadOnlyConfig, resolveDockerReadOnlyMode } from "./docker-readonly-config.js";
 import type { Prisma8RuntimeConfig } from "./prisma8-runtime-boundary.js";
 
