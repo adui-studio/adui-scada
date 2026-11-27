@@ -168,9 +168,7 @@ describe("原生身份业务事务边界", () => {
     const write = (transaction: Prisma8AuthTransaction) =>
       transaction.executeCount`UPDATE public.scada_auth_sessions SET revoked_at = ${"2026-11-27T00:00:00Z"}::timestamptz WHERE session_id = ${"00000000-0000-4000-8000-000000000001"}::uuid`;
     await expect(read(native)).resolves.toEqual([{ status: "active" }]);
-    expect(h.queries.map((plan) => plan.parameters)).toEqual([
-      [actor.subjectId],
-    ]);
+    expect(h.queries.map((plan) => plan.parameters)).toEqual([[actor.subjectId]]);
     await expect(write(native)).resolves.toEqual({ affectedRows: 1 });
     expect(h.mutations[0]?.parameters).toEqual([
       "2026-11-27T00:00:00Z",

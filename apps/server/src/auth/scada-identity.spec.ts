@@ -80,41 +80,64 @@ function makeSessionService() {
     query(plan: Plan) {
       const parameters = plan.parameters.map(stringParameter);
       if (plan.text.includes("FROM public.scada_identities")) {
-        return { toArray: () => Promise.resolve(
-          parameters[0] === principal.tenantId && parameters[1] === principal.subjectId
-            ? [{ status }]
-            : [],
-        ) };
+        return {
+          toArray: () =>
+            Promise.resolve(
+              parameters[0] === principal.tenantId && parameters[1] === principal.subjectId
+                ? [{ status }]
+                : [],
+            ),
+        };
       }
       if (!plan.text.includes("FROM public.scada_auth_sessions")) {
         throw new Error("测试出现未预期会话查询");
       }
       const session = sessions.get(parameters[0] ?? "");
-      return { toArray: () => Promise.resolve(
-        session && session.revokedAt === null && status === "active"
-          ? [{
-              session_id: session.sessionId,
-              tenant_id: session.tenantId,
-              subject_id: session.subjectId,
-              csrf_hash: session.csrfTokenHash ?? "",
-              csrf_is_null: String(session.csrfTokenHash === null),
-              issued_at: session.issuedAt.toISOString(),
-              expires_at: session.expiresAt.toISOString(),
-            }]
-          : [],
-      ) };
+      return {
+        toArray: () =>
+          Promise.resolve(
+            session && session.revokedAt === null && status === "active"
+              ? [
+                  {
+                    session_id: session.sessionId,
+                    tenant_id: session.tenantId,
+                    subject_id: session.subjectId,
+                    csrf_hash: session.csrfTokenHash ?? "",
+                    csrf_is_null: String(session.csrfTokenHash === null),
+                    issued_at: session.issuedAt.toISOString(),
+                    expires_at: session.expiresAt.toISOString(),
+                  },
+                ]
+              : [],
+          ),
+      };
     },
     execute(plan: Plan) {
       const parameters = plan.parameters.map(stringParameter);
       if (plan.text.includes("INSERT INTO public.scada_auth_sessions")) {
-        const [sessionId, tenantId, subjectId, tokenHash, csrfTokenHash, issuedAt, expiresAt] = parameters;
-        if (!sessionId || !tenantId || !subjectId || !tokenHash || !csrfTokenHash || !issuedAt || !expiresAt) {
+        const [sessionId, tenantId, subjectId, tokenHash, csrfTokenHash, issuedAt, expiresAt] =
+          parameters;
+        if (
+          !sessionId ||
+          !tenantId ||
+          !subjectId ||
+          !tokenHash ||
+          !csrfTokenHash ||
+          !issuedAt ||
+          !expiresAt
+        ) {
           throw new Error("测试会话创建参数不完整");
         }
         sessions.set(tokenHash, {
-          sessionId, tenantId, subjectId, tokenHash, csrfTokenHash,
-          issuedAt: new Date(issuedAt), expiresAt: new Date(expiresAt),
-          revokedAt: null, identity: { status },
+          sessionId,
+          tenantId,
+          subjectId,
+          tokenHash,
+          csrfTokenHash,
+          issuedAt: new Date(issuedAt),
+          expiresAt: new Date(expiresAt),
+          revokedAt: null,
+          identity: { status },
         });
         return Promise.resolve({ affectedRows: 1 });
       }
@@ -122,8 +145,11 @@ function makeSessionService() {
         throw new Error("测试出现未预期会话写入");
       }
       const session = [...sessions.values()].find(
-        (row) => row.sessionId === parameters[1] && row.tenantId === parameters[2] &&
-          row.subjectId === parameters[3] && row.revokedAt === null,
+        (row) =>
+          row.sessionId === parameters[1] &&
+          row.tenantId === parameters[2] &&
+          row.subjectId === parameters[3] &&
+          row.revokedAt === null,
       );
       if (session) session.revokedAt = new Date(stringParameter(parameters[0]));
       return Promise.resolve({ affectedRows: session ? 1 : 0 });
@@ -139,21 +165,27 @@ function makeSessionService() {
   return {
     service: new Prisma8RuntimeAuthSessionService(database),
     sessions,
-    disable: () => { status = "disabled"; },
+    disable: () => {
+      status = "disabled";
+    },
   };
 }
 
 function makeGrantStore(
-  read: (scope: { tenantId: string; subjectId: string; projectId: string }) =>
-    Promise<readonly { readonly permission: string }[]>,
+  read: (scope: {
+    tenantId: string;
+    subjectId: string;
+    projectId: string;
+  }) => Promise<readonly { readonly permission: string }[]>,
 ): AuthorizationReadStore {
   return {
     findActiveExternalIdentity: () => Promise.resolve(null),
-    readProjectGrants: (actor, projectId) => read({
-      tenantId: actor.tenantId,
-      subjectId: actor.subjectId,
-      projectId,
-    }),
+    readProjectGrants: (actor, projectId) =>
+      read({
+        tenantId: actor.tenantId,
+        subjectId: actor.subjectId,
+        projectId,
+      }),
   };
 }
 

@@ -27,10 +27,7 @@ import {
   ApiResponse,
   ApiTags,
 } from "@nestjs/swagger";
-import {
-  ProjectVersionStore,
-  ProjectRequestValidationError,
-} from "./project-version-store.js";
+import { ProjectVersionStore, ProjectRequestValidationError } from "./project-version-store.js";
 import { ProjectApiExceptionFilter } from "./project-api.exception-filter.js";
 import { ProjectReleaseStore } from "./project-release-store.js";
 

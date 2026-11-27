@@ -4,7 +4,10 @@ import * as oidc from "openid-client";
 import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
-import { copyAuthorizationPrincipal, type AuthorizationReadStore } from "./authorization-read-store.js";
+import {
+  copyAuthorizationPrincipal,
+  type AuthorizationReadStore,
+} from "./authorization-read-store.js";
 import type { AuthSessionService, IssuedAuthSession } from "./auth-session.service.js";
 import type {
   ConsumedOidcLoginTransaction,

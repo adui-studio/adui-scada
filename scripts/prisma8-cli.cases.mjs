@@ -67,10 +67,6 @@ void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
     });
   });
 
-
-
-
-
   void it("拒绝数据库写入命令和额外参数", () => {
     withFixture(valid, (_root, server, launcher) => {
       for (const args of [
@@ -99,12 +95,6 @@ void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
       }
     });
   });
-
-
-
-
-
-
 
   void it("原生离线生成不得继承测试数据库连接", () => {
     withFixture(valid, (root, server, launcher) => {

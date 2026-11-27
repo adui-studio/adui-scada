@@ -107,8 +107,11 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     const modules = Array.from(context.get(ModulesContainer).values());
     if (
       modules.some(
-        (module) => module.metatype?.name === "DatabaseModule" ||
-          [...module.providers.keys()].some((token) => typeof token === "function" && token.name === "PrismaService"),
+        (module) =>
+          module.metatype?.name === "DatabaseModule" ||
+          [...module.providers.keys()].some(
+            (token) => typeof token === "function" && token.name === "PrismaService",
+          ),
       )
     ) {
       throw new Error("正式根模块仍注册旧数据库提供方");

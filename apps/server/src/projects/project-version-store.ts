@@ -1,4 +1,8 @@
-import type { ProjectReleasePreflightIssue, ProjectSnapshot, ProjectVersionSummary } from "@adui/scada-core";
+import type {
+  ProjectReleasePreflightIssue,
+  ProjectSnapshot,
+  ProjectVersionSummary,
+} from "@adui/scada-core";
 import type { AuthenticatedProjectPrincipal } from "./project-access-policy.js";
 
 export interface ProjectSummary {

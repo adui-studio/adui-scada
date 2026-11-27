@@ -74,22 +74,25 @@ export async function readPersistedTagHistoryPrisma8(
   query: TagHistoryQuery,
 ): Promise<readonly TagHistoryPoint[]> {
   const prepared = preparePrisma8HistoryQuery(scope, query);
-  const rows = await database.readTransaction(async (tx) => await tx.orm.public.ScadaTagHistoryRecord.where({
-    tenantId: prepared.tenantId,
-    projectId: prepared.projectId,
-    tagId: prepared.tagId,
-  })
-    .where((row) => row.timestampMs.gte(prepared.start))
-    .where((row) => row.timestampMs.lt(prepared.end))
-    .orderBy([
-      (row) => row.timestampMs.asc(),
-      (row) => row.streamId.asc(),
-      (row) => row.batchSequence.asc(),
-      (row) => row.ordinal.asc(),
-    ])
-    .limit(prepared.maxPoints + 1)
-    .select("tenantId", "projectId", "tagId", "timestampMs", "payload")
-    .all());
+  const rows = await database.readTransaction(
+    async (tx) =>
+      await tx.orm.public.ScadaTagHistoryRecord.where({
+        tenantId: prepared.tenantId,
+        projectId: prepared.projectId,
+        tagId: prepared.tagId,
+      })
+        .where((row) => row.timestampMs.gte(prepared.start))
+        .where((row) => row.timestampMs.lt(prepared.end))
+        .orderBy([
+          (row) => row.timestampMs.asc(),
+          (row) => row.streamId.asc(),
+          (row) => row.batchSequence.asc(),
+          (row) => row.ordinal.asc(),
+        ])
+        .limit(prepared.maxPoints + 1)
+        .select("tenantId", "projectId", "tagId", "timestampMs", "payload")
+        .all(),
+  );
 
   return decodePrisma8HistoryRows(rows, prepared);
 }

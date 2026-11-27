@@ -206,8 +206,11 @@ describe("OIDC 根模块与工程 API Guard 启动装配（端到端）", () => 
     const modules = Array.from(app.get(ModulesContainer).values());
     expect(
       modules.some(
-        (module) => module.metatype?.name === "DatabaseModule" ||
-          [...module.providers.keys()].some((token) => typeof token === "function" && token.name === "PrismaService"),
+        (module) =>
+          module.metatype?.name === "DatabaseModule" ||
+          [...module.providers.keys()].some(
+            (token) => typeof token === "function" && token.name === "PrismaService",
+          ),
       ),
     ).toBe(false);
     expect(app.get(Prisma8Service, { each: true })).toEqual([database]);

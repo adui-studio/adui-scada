@@ -66,7 +66,10 @@ export function reviewFreshRuntimeTypes(root, nativeText, nativeDeclaration) {
   const formalDeclaration = readFileSync(declarationPath, "utf8");
   const formal = JSON.parse(formalText);
   const native = JSON.parse(nativeText);
-  requireCondition(formal.storage.storageHash === freshStorageHash && isDeepStrictEqual(formal, native), "当前生成契约与全新原生契约不一致");
+  requireCondition(
+    formal.storage.storageHash === freshStorageHash && isDeepStrictEqual(formal, native),
+    "当前生成契约与全新原生契约不一致",
+  );
   requireDeclarationHashes(formalDeclaration, formal);
   requireDeclarationHashes(nativeDeclaration, native);
   const ts = createRequire(join(server, "package.json"))("typescript");
@@ -89,4 +92,3 @@ export function reviewFreshRuntimeTypes(root, nativeText, nativeDeclaration) {
     "离线运行时评审期间当前运行时生成物发生变化",
   );
 }
-

@@ -185,8 +185,8 @@ export class Prisma8TagHistoryStore implements TagHistoryPersistencePort {
 
   async persist(request: TagHistoryPersistenceRequest): Promise<TagHistoryPersistenceReceipt> {
     const prepared = preparePrisma8HistoryBatch(this.scope, request);
-    const status = await this.database.writeTransaction(
-      (tx) => writePrisma8HistoryBatchInTransaction(tx, prepared),
+    const status = await this.database.writeTransaction((tx) =>
+      writePrisma8HistoryBatchInTransaction(tx, prepared),
     );
     // 事务成功返回前绝不交付回执；失败及未知结果不自动重试。
     return {

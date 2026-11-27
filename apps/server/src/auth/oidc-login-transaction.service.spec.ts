@@ -70,9 +70,14 @@ function createFakeService(config = createConfig()) {
   function findActive(parameters: readonly unknown[]): StoredTransaction | undefined {
     const [stateHash, issuer, binding, expires, created] = parameters.map(textParameter);
     const record = records.get(stateHash ?? "");
-    return record && record.issuer === issuer && record.browserBindingHash === binding &&
-      record.consumedAt === null && record.expiresAt.getTime() > Date.parse(expires ?? "") &&
-      record.createdAt.getTime() <= Date.parse(created ?? "") ? record : undefined;
+    return record &&
+      record.issuer === issuer &&
+      record.browserBindingHash === binding &&
+      record.consumedAt === null &&
+      record.expiresAt.getTime() > Date.parse(expires ?? "") &&
+      record.createdAt.getTime() <= Date.parse(created ?? "")
+      ? record
+      : undefined;
   }
   const tx = {
     raw: {
@@ -86,23 +91,60 @@ function createFakeService(config = createConfig()) {
     },
     query(plan: Plan) {
       const record = findActive(plan.parameters);
-      return { toArray: () => Promise.resolve(record ? [{
-        issuer: record.issuer, nonce: record.nonce,
-        verifier_ciphertext: record.verifierCiphertext, return_path: record.returnPath,
-      }] : []) };
+      return {
+        toArray: () =>
+          Promise.resolve(
+            record
+              ? [
+                  {
+                    issuer: record.issuer,
+                    nonce: record.nonce,
+                    verifier_ciphertext: record.verifierCiphertext,
+                    return_path: record.returnPath,
+                  },
+                ]
+              : [],
+          ),
+      };
     },
     execute(plan: Plan) {
       if (plan.text.includes("INSERT INTO public.scada_oidc_transactions")) {
         createCalls += 1;
         if (failCreate) throw new Error("数据库错误不得泄漏");
-        const [stateHash, issuer, nonce, verifierCiphertext, browserBindingHash, returnPath, createdAt, expiresAt] =
-          plan.parameters.map(textParameter);
-        if (!stateHash || !issuer || !nonce || !verifierCiphertext || !browserBindingHash ||
-          returnPath === undefined || !createdAt || !expiresAt || records.has(stateHash)) {
+        const [
+          stateHash,
+          issuer,
+          nonce,
+          verifierCiphertext,
+          browserBindingHash,
+          returnPath,
+          createdAt,
+          expiresAt,
+        ] = plan.parameters.map(textParameter);
+        if (
+          !stateHash ||
+          !issuer ||
+          !nonce ||
+          !verifierCiphertext ||
+          !browserBindingHash ||
+          returnPath === undefined ||
+          !createdAt ||
+          !expiresAt ||
+          records.has(stateHash)
+        ) {
           throw new Error("测试登录事务参数无效或重复 State 摘要");
         }
-        records.set(stateHash, { stateHash, issuer, nonce, verifierCiphertext, browserBindingHash, returnPath,
-          createdAt: new Date(createdAt), expiresAt: new Date(expiresAt), consumedAt: null });
+        records.set(stateHash, {
+          stateHash,
+          issuer,
+          nonce,
+          verifierCiphertext,
+          browserBindingHash,
+          returnPath,
+          createdAt: new Date(createdAt),
+          expiresAt: new Date(expiresAt),
+          consumedAt: null,
+        });
         return Promise.resolve({ affectedRows: 1 });
       }
       if (plan.text.includes("UPDATE public.scada_oidc_transactions")) {
@@ -118,7 +160,11 @@ function createFakeService(config = createConfig()) {
       const issuer = textParameter(plan.parameters[0]);
       const cutoff = new Date(textParameter(plan.parameters[1]));
       const limit = plan.parameters[4];
-      if (typeof limit !== "number" || plan.parameters[2] !== issuer || plan.parameters[3] !== plan.parameters[1]) {
+      if (
+        typeof limit !== "number" ||
+        plan.parameters[2] !== issuer ||
+        plan.parameters[3] !== plan.parameters[1]
+      ) {
         throw new Error("测试登录事务清理边界无效");
       }
       const expired = [...records.values()]
@@ -136,7 +182,10 @@ function createFakeService(config = createConfig()) {
       if (failTransaction) throw new Error("数据库事务异常不得泄漏");
       return callback(tx as unknown as Prisma8Transaction);
     });
-    tail = result.then(() => undefined, () => undefined);
+    tail = result.then(
+      () => undefined,
+      () => undefined,
+    );
     return result;
   }
   const database = {

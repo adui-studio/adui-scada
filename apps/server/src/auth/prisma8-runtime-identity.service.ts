@@ -45,7 +45,8 @@ function nativePort(database: Prisma8Service, timeout: 5000 | 10000): Prisma8Aut
 @Injectable()
 export class Prisma8RuntimeAuthSessionService
   extends Prisma8SessionOperations
-  implements AuthSessionService {
+  implements AuthSessionService
+{
   constructor(database: Prisma8Service) {
     super(nativePort(database, 10000));
   }

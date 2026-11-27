@@ -235,7 +235,10 @@ async function appendPrepared(
 
 /** 全新业务库工程读写仓储，只通过原生提供方取得事务。 */
 @Injectable()
-export class Prisma8RuntimeProjectVersionStore extends Prisma8RuntimeProjectQueryStore implements ProjectVersionStore {
+export class Prisma8RuntimeProjectVersionStore
+  extends Prisma8RuntimeProjectQueryStore
+  implements ProjectVersionStore
+{
   constructor(private readonly database: Prisma8Service) {
     super(database);
   }

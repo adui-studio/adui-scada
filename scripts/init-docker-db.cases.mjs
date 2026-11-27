@@ -1,9 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
-import {
-  createDockerDatabaseUrl,
-  createDockerPrismaEnvironment,
-} from "./init-docker-db.mjs";
+import { createDockerDatabaseUrl, createDockerPrismaEnvironment } from "./init-docker-db.mjs";
 import { makeLabSecrets } from "./prepare-oidc-lab.mjs";
 
 const env =

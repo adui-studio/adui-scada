@@ -3,7 +3,10 @@ import { describe, expect, it } from "vite-plus/test";
 
 /** 全新原生数据库的模型注释与 SQL 注释必须共同保留。 */
 const schema = readFileSync(new URL("../../prisma/contract.prisma", import.meta.url), "utf8");
-const comments = readFileSync(new URL("../../prisma/initial-comments.sql", import.meta.url), "utf8");
+const comments = readFileSync(
+  new URL("../../prisma/initial-comments.sql", import.meta.url),
+  "utf8",
+);
 
 describe("全新原生契约中文注释", () => {
   it("模型和字段均有中文说明", () => {
