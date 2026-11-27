@@ -579,3 +579,7 @@ Prisma8ProjectPersistenceModule 取代独立查询模块，工程仓储 Prisma8R
 ### 本机 Docker 七服务与原生只读验收边界
 
 恢复唯一 adui-scada Compose 七服务一键启动，新增 docker:infra 保留三服务基础设施入口。docker:up 先准备本机随机凭据与证书、验证 Compose 和固定本机 Linux Docker Desktop 命名管道，等待基础设施，再执行已有 Prisma 8 --status 官方严格结构/标记及真实中文注释只读验证；只在成功后构建并启动 server、demo、web-react、web-vue，等待应用服务运行。容器内显式探针经 server 的 lab 网络访问固定 postgres:5432/adui_scada，必须严格只读且与宿主验证的 PostgreSQL 集群 systemIdentifier 一致；复用正式原生根模块全部只读核验与关闭流程。凭据从现有 Git 忽略的随机秘密文件读取，仅经 docker exec -T 标准输入传给一次性探针，不进入服务环境、命令行或报告。两端 Web 探针验证容器网络内静态入口、/api/health、/demo/project、/demo/events 的响应状态及 SSE 内容类型、受保护工程路由保持 404。宿主默认连接白名单和正式数据库生产禁令保持不变。Docker HTTP Server 仍显式关闭 OIDC，不开放身份、工程或设备写入接口；Keycloak 本轮仅验证容器启动，不验证真实登录、JWKS、HTTPS 回调、Cookie 或双端浏览器渲染。不存在数据库自动初始化、迁移、清卷、失败回退、旧库接管或自动授权。 宿主现有正式 OIDC 业务根模块不变；容器当前 HTTP 服务与一次性数据库探针生命周期独立。
+
+### Docker 双端 HTTPS 传输候选（ADR-0066）
+
+React/Vue 的 Nginx 共享单一配置，容器 8080 保留匿名 HTTP，8443 提供 TLS 1.2/1.3；宿主分别默认 18080/18081 和 18480/18481，全部仅绑定 127.0.0.1。复用既有 mkcert 叶证书与私钥的只读文件挂载，不共享凭据目录或根私钥。容器上游仍为固定 server/demo HTTP，所有 /api/ 除健康检查外均拒绝；不为 HTTPS 提前启用身份、工程 API 或业务数据库写入。原生严格只读与容器 HTTP 探针之后增加宿主可信 CA、IP SAN 与固定六路径响应检查，失败关闭并保留现场。真实认证部署仍需独立完成 Issuer、容器网络 TLS 信任、正式原生连接和双端回调/Cookie/CSRF 联调。
