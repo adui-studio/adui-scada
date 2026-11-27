@@ -9,6 +9,7 @@ const generated = "// GENERATED FILE - DO NOT EDIT\n";
 const candidate = "apps/server/.artifacts/prisma8-native-repro-candidate";
 const snapshot = candidate + "/migrations/snapshots/example/contract.d.ts";
 const repair = "apps/server/.artifacts/prisma8-native-check-repair-package";
+const runtime = "apps/server/src/generated/prisma8-runtime";
 
 function withFixture(run) {
   const root = mkdtempSync(join(tmpdir(), "adui-messages-"));
@@ -36,6 +37,7 @@ function withFixture(run) {
     write(repair + "/plan/contract.d.ts", generated);
     write(repair + "/complete/migrations/snapshots/example/contract.d.ts", generated);
     write("apps/server/.artifacts/prisma8-native-baseline-comments/contract.d.ts", generated);
+    write(runtime + "/contract.d.ts", generated);
     const check = () => {
       const child = spawnSync(process.execPath, [script], {
         cwd: root,
@@ -58,6 +60,7 @@ void test("仅跳过固定生成候选及其快照，不改写保留证据", () 
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /中文文案检查通过/u);
     assert.equal(readFileSync(join(root, candidate, "contract.d.ts"), "utf8"), generated);
+    assert.equal(readFileSync(join(root, runtime, "contract.d.ts"), "utf8"), generated);
     assert.equal(readFileSync(join(root, snapshot), "utf8"), generated);
     assert.equal(readFileSync(join(root, repair, "plan/contract.d.ts"), "utf8"), generated);
     assert.equal(
@@ -84,5 +87,11 @@ void test("仍检查自有源码和名称相近的其他目录，不扩大排除
     assert.ok(result.stderr.includes(sibling + ":1：注释缺少中文"));
     assert.ok(result.stderr.includes(repairSibling + ":1：注释缺少中文"));
     assert.match(result.stderr, /发现 3 处待处理内容/u);
+    const runtimeSibling = runtime + "-other/contract.d.ts";
+    write(runtimeSibling, generated);
+    const withRuntimeSibling = check();
+    assert.equal(withRuntimeSibling.status, 1);
+    assert.ok(withRuntimeSibling.stderr.includes(runtimeSibling + ":1：注释缺少中文"));
+    assert.match(withRuntimeSibling.stderr, /发现 4 处待处理内容/u);
   });
 });
