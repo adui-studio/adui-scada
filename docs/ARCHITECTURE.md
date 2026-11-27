@@ -587,3 +587,7 @@ React/Vue 的 Nginx 共享单一配置，容器 8080 保留匿名 HTTP，8443 �
 ### Docker Keycloak 双视角可信网络候选（ADR-0065 / ADR-0066）
 
 宿主与 server 容器访问同一公开 Issuer，但连接地址不同：前者为 127.0.0.1 的固定发布端口，后者为现有 lab 网络中的 keycloak:8443。两个一次性探针都用现有 mkcert 公开根证书做证书链验证，显式校验公开回环 IP 的证书身份，保留公开 Host，禁止重定向；仅访问固定 Realm 的 Discovery 与 JWKS，不发送秘密、不读写业务数据库。公开元数据必需能力及端点严格校验，RS256 公钥按 kid 与解析后的 SPKI 计算有序集合指纹，再比较两个视角结果。该诊断不改变正式 openid-client 传输、BFF Cookie、CSRF、ACL、原生数据库连接和默认关闭的容器 OIDC。仅执行独立 docker:oidc:probe；原 docker:up 不强制依赖 IdP Discovery。后续正式网络适配须单独验收，不能据公开密钥匹配推断实际 Token 已验证。
+
+### 正式 OIDC Docker 传输接入候选（ADR-0065）
+
+在现有 Discovery 服务内按受信装配显式提供的公开 CA 选择固定 Docker Fetch，否则沿用既有通用 Fetch；当前不从环境或 HTTP 输入选择此模式。公开 Issuer 固定回环 IP、发布端口及 /realms/adui-scada，容器连接固定 keycloak:8443，Host 及证书身份仍为公开地址。只允许 Discovery/JWKS GET 和固定 Token 端点 Authorization Code + client_secret_basic POST，禁止其他授权类型、任意端点、重定向、Cookie/代理请求头、TLS 降级，限制请求体 16 KiB、响应体 256 KiB、10 秒请求及调用方取消。SDK 处理协议并显式启用 JWS 签名校验，元数据在 Docker 模式精确匹配 auth/token/certs。现有容器只读探针复用正式编译服务与 Fetch，宿主独立验证公钥一致性，旧镜像缺少正式客户端标志不予通过。Docker 应用 OIDC 仍关闭，未挂载 CA 或真实客户端秘密，不打开登录/工程 API，不改变数据库、身份映射或 ACL。
