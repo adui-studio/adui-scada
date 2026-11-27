@@ -11,6 +11,8 @@ const FAILURE_MESSAGES = new Map([
   ["CA", "公开根证书无效"],
   ["DISCOVERY_METADATA", "Discovery 元数据不符合固定契约"],
   ["JWKS_KEYS", "JWKS 缺少有效 RS256 签名公钥或公钥集合异常"],
+  ["FORMAL_DISCOVERY", "正式 OIDC 客户端 Discovery 验证失败"],
+  ["FORMAL_JWKS", "正式 OIDC 客户端 JWKS 验证失败"],
 ]);
 for (const [phase, label] of [
   ["DISCOVERY", "Discovery"],
@@ -45,7 +47,7 @@ function runHostProbe(input) {
 }
 
 /** 只接受固定机器报告或已知失败类别，禁止回显任意子进程输出。 */
-function requireProbeReport(label, result, issuer) {
+function requireProbeReport(label, result, issuer, formal = false) {
   let report;
   try {
     report = JSON.parse(result.stdout);
@@ -61,7 +63,8 @@ function requireProbeReport(label, result, issuer) {
   }
   if (
     report?.status !== "DOCKER_OIDC_DISCOVERY_READY" ||
-    Object.keys(report).length !== 4 ||
+    Object.keys(report).length !== (formal ? 5 : 4) ||
+    (formal && report.formalClientVerified !== true) ||
     report.issuer !== issuer ||
     !Number.isSafeInteger(report.signingKeyCount) ||
     report.signingKeyCount < 1 ||
@@ -100,6 +103,7 @@ export function verifyDockerOidc(
       TIMEOUT_MS,
     ),
     probe.issuer,
+    true,
   );
   if (
     host.signingKeyCount !== container.signingKeyCount ||
@@ -107,5 +111,5 @@ export function verifyDockerOidc(
   ) {
     throw new DockerOidcProbeError("宿主与容器 Keycloak RS256 签名公钥集合不一致，保留现场");
   }
-  return "宿主与容器 Keycloak Discovery/JWKS 严格只读验证通过；OIDC 登录尚未启用";
+  return "宿主与容器正式 OIDC 客户端 Discovery/JWKS 严格只读验证通过；OIDC 登录尚未启用";
 }
