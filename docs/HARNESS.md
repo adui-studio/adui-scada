@@ -5442,3 +5442,35 @@ git status --short
 ```
 
 预期 FRESH_PROVIDER_SMOKE_READY、providerReady=true、providerClosed=true、readOnlyBoundaryVerified=true、databaseInitialized=true、providerSwitched=false，原有存储指纹及对象计数保持一致，退出码 0。烟测不挂载 HTTP 业务模块、不写业务数据；若失败按固定阶段排查，禁止重复初始化或历史迁移。
+
+### Prisma 8 身份与 ACL 查询接入验收
+
+先执行离线生成及质量检查，不运行历史迁移、首次初始化或写入测试：
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+pnpm run test:prisma8:native:runtime &&
+vp test run apps/server/src/auth/prisma8-authorization-read-store.spec.ts apps/server/src/auth/scada-identity.spec.ts apps/server/src/auth/oidc-callback.service.spec.ts apps/server/src/database/database.module.spec.ts &&
+pnpm run test:e2e:server &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "原生授权查询增量退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期全新专项 28/28（新增三项），原生运行时 7/7，新增仓储 Vitest 六项通过，旧身份、Guard、模块与 HTTP E2E 均通过；Vite+ 零警告错误、构建及增量退出 0。提交并推送格式化改动后保持原生业务库运行，执行既有只读烟测：
+
+```powershell
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "原生授权查询只读烟测退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期 FRESH_PROVIDER_SMOKE_READY、providerReady/providerClosed/readOnlyBoundaryVerified/authorizationReadVerified/missingProjectDenied/databaseInitialized=true、providerSwitched=false，存储指纹和对象计数不变、退出 0。原生查询在受控只读事务中读取随机不存在联合键，Guard 必须固定 404；不访问实际用户身份或授权业务值、不准备夹具、不写入数据库、不启动旧正式应用。历史隔离 DB 专项不连接当前新业务库。

@@ -1920,3 +1920,13 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/prisma8-provider.cases.mjs`：八项边界与生命周期专项，纳入 test:prisma8:fresh。
 - `pnpm run db:prisma8:fresh:runtime:generate`：离线生成原生运行时契约，服务端 db:generate 同步生成两代客户端。
 - `pnpm run db:prisma8:fresh:provider:smoke`：构建后执行的真实本机只读烟测，不纳入自动 ready 的真实连接阶段。
+
+### 原生身份与工程 ACL 查询仓储
+
+- `apps/server/src/auth/authorization-read-store.ts`：共同只读查询端口、输入与可信主体保护。
+- `apps/server/src/auth/prisma7-authorization-read-store.ts`：旧正式模块显式过渡实现。
+- `apps/server/src/auth/prisma8-authorization-read-store.ts`、`prisma8-authorization.module.ts`：新原生仓储和互斥装配，复用唯一原生 Provider。
+- `apps/server/src/database/prisma8-read-transaction.ts`：同一事务内前后复核身份、标记、隔离与只读模式。
+- `apps/server/src/auth/oidc-callback.service.ts`、`scada-project.guard.ts`：只依赖统一读仓储端口；身份模块显式导出跨模块注入令牌。
+- `scripts/prisma8-authorization-read.cases.mjs`、`apps/server/src/auth/prisma8-authorization-read-store.spec.ts`：边界及查询回归。
+- `apps/server/prisma8-provider-smoke.mjs`：真实 Nest 原生查询与 Guard 拒绝扩展烟测，不改变原有命令或初始化分支。
