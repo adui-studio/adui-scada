@@ -1556,3 +1556,5 @@
 - **最小修复**：保留 GET /health/database 与 Supertest .expect(404)，取得 response 后追加 expect(response.status).toBe(404)，不改变被测路由、期望状态、业务代码或 Lint 规则。
 - **验证边界**：修复测试提交 a2829cad1b38b611fcbe1439b1f4fc736744c467，远端 Blob 71eee900f3771ae3cea1d333c0f6a97973f0abbd；回读与预期唯一替换逐字一致，提取实际测试体并模拟 Supertest/Vitest 验证 404 通过、200 与 503 拒绝，3/3。协作环境没有完整项目依赖及 Vite+，真实 E2E 与全仓零警告待 Windows 复验；不宣称问题已关闭。
 - **防复发**：每个新增 HTTP 测试必须检查 Vitest 显式断言，并在真实 Vite+ 报告确认零警告，禁止以 Supertest 链式断言、退出码或禁用规则代替。
+
+> **2026-11-27 · E-164 Windows 复验关闭**：维护者 Windows 在 HEAD e7be1b522cf66e507ab7e2af5d83e61d51cb98b6 复验 HTTP E2E 7 文件/71 项、Vite+ 510 格式文件/351 受检零警告、Lint、类型错误、Markdown 97、git diff --check，退出码 0、工作区干净；前一轮 Docker 49/49 与真实七服务、常驻原生严格只读连接、双端 HTTP/HTTPS、正式 OIDC Discovery/JWKS 验收有效。维护者明确同意后 PR #255 Squash 合入 feat/mvp-first-integration 的 1870937aa0c2d77103c06a55f219491a1c87dd34，E-164 关闭。未取得额外远端 CI 运行记录。 本批候选新增测试均使用明确断言；仍需维护者对新提交复验完整 Vite+ 门禁，不得以退出码代替零警告。
