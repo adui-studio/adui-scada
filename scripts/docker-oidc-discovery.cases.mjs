@@ -1,7 +1,9 @@
 import { strict as assert } from "node:assert";
+import { spawnSync } from "node:child_process";
 import { generateKeyPairSync, X509Certificate } from "node:crypto";
 import { rootCertificates } from "node:tls";
 import { describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 import { fingerprintOidcKeys, parseOidcProbeInput, probeOidcDiscovery, verifyOidcMetadata } from "../apps/server/container-oidc-discovery.mjs";
 import { verifyDockerOidc } from "./docker-oidc-probe.mjs";
 
@@ -91,6 +93,8 @@ void describe("Docker Keycloak 公开 Discovery 与 JWKS 只读门禁", () => {
         assert.deepEqual(options.headers, { Host: "127.0.0.1:18443", Accept: "application/json" });
         assert.equal(options.rejectUnauthorized, true);
         assert.equal(options.agent, false);
+        assert.equal(options.checkServerIdentity(hostname, { subjectaltname: "IP Address:127.0.0.1" }), undefined);
+        assert.equal(options.checkServerIdentity(hostname, { subjectaltname: "DNS:keycloak" })?.code, "ERR_TLS_CERT_ALTNAME_INVALID");
         paths.push(options.path);
         return paths.length === 1 ? metadata : jwks;
       });
@@ -131,6 +135,19 @@ void describe("Docker Keycloak 公开 Discovery 与 JWKS 只读门禁", () => {
       return successful;
     });
     assert.match(result, /严格只读验证通过/);
+  });
+
+  void it("独立进程非法输入必须以非零退出码和固定机器诊断拒绝", () => {
+    const script = fileURLToPath(new URL("../apps/server/container-oidc-discovery.mjs", import.meta.url));
+    const result = spawnSync(process.execPath, [script, "host"], {
+      input: JSON.stringify({ port: "0", ca: "禁止输出的测试数据" }),
+      encoding: "utf8",
+      shell: false,
+      timeout: 5000,
+    });
+    assert.equal(result.status, 1);
+    assert.deepEqual(JSON.parse(result.stdout), { status: "DOCKER_OIDC_DISCOVERY_FAILED", code: "INPUT" });
+    assert.equal(result.stderr, "");
   });
 
   void it("报告不完整、公钥不一致或探针失败时拒绝成功且不泄露错误原文", () => {
