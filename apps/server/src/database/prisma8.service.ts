@@ -15,7 +15,12 @@ import {
   type Prisma8RuntimePort,
 } from "./prisma8-runtime-boundary.js";
 
-import { readPrisma8Transaction, type Prisma8Transaction } from "./prisma8-read-transaction.js";
+import {
+  assertPrisma8Writable,
+  readPrisma8Transaction,
+  writePrisma8Transaction,
+  type Prisma8Transaction,
+} from "./prisma8-read-transaction.js";
 
 export const PRISMA8_RUNTIME_CONFIG = Symbol("PRISMA8_RUNTIME_CONFIG");
 export const prisma8RuntimeStorageHash = contractJson.storage.storageHash;
@@ -101,6 +106,19 @@ export class Prisma8Service implements OnModuleInit, OnModuleDestroy {
   /** 业务只读仓储使用同一原生事务边界，禁止绕过启动生命周期。 */
   readTransaction<T>(operation: (tx: Prisma8Transaction) => Promise<T>): Promise<T> {
     return readPrisma8Transaction(this.client, this.config, prisma8RuntimeStorageHash, operation);
+  }
+
+  /** 供 OIDC 在网络发现及随机值持久化前确认写入模式。 */
+  assertWritable(): void {
+    assertPrisma8Writable(this.config);
+  }
+
+  writeTransaction<T>(
+    operation: (tx: Prisma8Transaction) => Promise<T>,
+    timeout: 5000 | 10000 = 10000,
+  ): Promise<T> {
+    this.assertWritable();
+    return writePrisma8Transaction(this.client, this.config, prisma8RuntimeStorageHash, operation, timeout);
   }
 
   async onModuleInit(): Promise<void> {
