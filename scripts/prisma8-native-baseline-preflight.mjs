@@ -224,10 +224,28 @@ export async function inspectReproEmptyDatabase(client, systemIdentifier) {
     "adui_scada_fresh_prisma8_repro",
     "第四座专用库",
     systemIdentifier,
+    "170011",
   );
 }
 
-async function inspectEmptyDatabase(client, expectedUser, database, target, systemIdentifier) {
+/** 全新安装复用空库目录检查，不依赖任何历史库或迁移产物。 */
+export async function inspectFreshDockerEmptyDatabase(client, systemIdentifier, version) {
+  requireCondition(
+    typeof systemIdentifier === "string" && /^[1-9][0-9]{0,19}$/u.test(systemIdentifier) &&
+      typeof version === "string" && /^19[0-9]{4}$/u.test(version),
+    "全新本机 PostgreSQL 19 实例标识或版本无效",
+  );
+  return inspectEmptyDatabase(
+    client,
+    "adui_scada",
+    "adui_scada",
+    "全新业务库",
+    systemIdentifier,
+    version,
+  );
+}
+
+async function inspectEmptyDatabase(client, expectedUser, database, target, systemIdentifier, version) {
   let begun = false;
   let report;
   const failures = [];
@@ -267,10 +285,10 @@ async function inspectEmptyDatabase(client, expectedUser, database, target, syst
         "SELECT system_identifier::text AS system_identifier FROM pg_catalog.pg_control_system()",
       );
       requireCondition(
-        row.server_version === "170011" &&
+        row.server_version === version &&
           identity.rows.length === 1 &&
           identity.rows[0]?.system_identifier === systemIdentifier,
-        "第四座实例实际 PostgreSQL 版本或集群标识不一致",
+        (target === "第四座专用库" ? "第四座实例" : target) + "实际 PostgreSQL 版本或集群标识不一致",
       );
     }
     stage = "空库目录查询";
