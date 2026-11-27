@@ -5742,3 +5742,34 @@ git status --short
 ```
 
 预期「宿主 Keycloak 与容器正式 OIDC 客户端 Discovery/JWKS 严格只读验证通过；OIDC 登录尚未启用」。容器报告必须含 formalClientVerified=true，旧镜像不得通过；正式客户端 Discovery 或 JWKS 阶段失败时保留现场，不关闭 TLS、不换证、不重置或改写库，不提前打开登录。独立 probe 使用合成客户端配置，只进行 GET；真实 SDK 签名回归使用本地合成 Token/JWKS，不代表真实 Keycloak 授权码兑换。未授权的正式业务数据库连接或写入仍禁止。
+
+### 2026-11-27 · 常驻 Docker 原生只读数据库验收
+
+保持原根 .env、本机随机凭据、证书及数据库卷不变。先生成并构建服务端，再执行增量质量链：
+
+```powershell
+pnpm run build:server &&
+pnpm run typecheck:server &&
+pnpm run test:docker &&
+pnpm run test:e2e:server &&
+pnpm run env:check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+vp check --fix &&
+vp check &&
+git diff --check
+Write-Host "常驻原生数据库增量验收退出码：$LASTEXITCODE"
+```
+
+预期 Docker 专项 49 项（26 编排、10 Discovery/JWKS、6 OIDC 传输、7 绑定）；全量服务端 E2E 含新增 5 项常驻模块及 1 项默认隔离测试，Vite+ 零警告错误。随后真实启动：
+
+```powershell
+pnpm run docker:up &&
+pnpm run docker:oidc:probe &&
+pnpm run docker:ps
+Write-Host "常驻原生数据库真实验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+````
+
+首次成功严格数据库验证后才创建 .local/docker-runtime/server-database.json；请勿查看、提交、粘贴或分享文件正文。重复启动核验相同绑定，不覆盖原文件；出现绑定不符或权限失败保留现场，不清卷、不重置、不放宽文件权限或 TLS、不手工改密码。预期七服务启动提示新增「常驻服务原生只读连接验证通过」，且旧容器烟测、双端 HTTP/HTTPS、正式 OIDC 只读探针仍通过；真实报告要求 runningDatabaseReadOnlyVerified=true。仅 server 运行进程回环访问 /health/database，其他容器拒绝，公开 Nginx /api/health/database 仍 404。若失败根据现有固定诊断排查。无实际业务写入、认证登录或生产权限扩展。
