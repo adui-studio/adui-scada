@@ -51,10 +51,13 @@ void test("全新入口仅接受明确七种操作，裸命令不能写入", () 
   assert.equal(freshAction(["--preview"]), "preview");
   assert.equal(freshAction([freshConfirmation]), "initialize");
   assert.equal(freshAction(["--status"]), "status");
+  assert.equal(freshAction(["--role-review"]), "role-review");
   assert.equal(freshAction(["--runtime-review"]), "runtime-review");
   assert.equal(freshAction(["--runtime-emit"]), "runtime-emit");
   assert.equal(freshAction(["--provider-smoke"]), "provider-smoke");
   assert.throws(() => freshAction(["--provider-smoke", freshConfirmation]), /必须明确指定/u);
+  assert.throws(() => freshAction(["--role-review", freshConfirmation]), /必须明确指定/u);
+  assert.throws(() => freshAction(["--role-review", "--status"]), /必须明确指定/u);
   assert.throws(() => freshAction(["--runtime-review", freshConfirmation]), /必须明确指定/u);
   for (const args of [[], ["migrate"], ["--reset"], [freshConfirmation, "--force"]]) {
     assert.throws(() => freshAction(args), /必须明确指定/u);
