@@ -58,12 +58,17 @@ async function verifyWeb(host) {
     throw new Error("双端模拟实时事件代理未就绪");
   }
   await events.body?.cancel();
-  const denied = await fetch(base + "/api/v1/projects", {
-    redirect: "error",
-    signal: AbortSignal.timeout(3000),
-  });
-  if (denied.status !== 404) throw new Error("HTTP 演示意外开放受保护工程路由");
-  await denied.body?.cancel();
+  for (const route of ["/api/v1/projects", "/api/v1/auth/me", "/api/health/database"]) {
+    const denied = await fetch(base + route, {
+      redirect: "error",
+      signal: AbortSignal.timeout(3000),
+    });
+    if (denied.status !== 404) {
+      await denied.body?.cancel();
+      throw new Error("HTTP 演示意外开放受保护接口或内部数据库探针");
+    }
+    await denied.body?.cancel();
+  }
 }
 
 /** 通过常驻 HTTP 进程自己的 Prisma8Service 复核真实数据库边界，不替换注入配置。 */
