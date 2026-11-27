@@ -1,5 +1,7 @@
 # ADui SCADA · 长期项目上下文
 
+> 2026-11-27 最新决策：维护者已删除旧开发数据库环境，停止历史迁移接管及专用实例实验。后续以 [ADR-0073](adr/0073-prisma8-fresh-install.md) 为准；下文旧实验记录仅供追溯，不是当前验收前置条件。
+
 - 日期：2026-11-09
 - 版本阶段：V0.1，**Web/Server 工具链、React/Vue MSI 构建及桌面安装启动/离线模拟展示已通过维护者本机验证；工业安全及生产能力仍未验收**。
 - 品牌：ADui Studio。
@@ -3040,3 +3042,7 @@ PR #237 已经维护者明确授权 Squash 合入 `fc459570f39708cc3746bc140d8d9
 维护者 Windows 在 HEAD `9fb7261f692b7d1b2756a18719a660c13f36b5d0` 完成 PR #239 验收：五组专项 48/48、共享配置、Vite+ 585 格式/424 受检文件零警告错误、中文 451 文件、Markdown 96、增量退出码 0；正常提交并推送两份源码格式化，远端核对无业务语义变化，真实离线往返计划及创建计划复验退出码 0，工作区干净。原往返计划指纹 `17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a`、创建计划指纹 `69cd50940b9e3ff9752aa45eea3ff60bc34214ca7127908259a54897c6013dd7` 均一致，所有许可及 creationAttemptClaimed=false。维护者明确授权后 Squash 合入 `8b8f5b569b375e11a0fb0c4d2bcd1caec302caa1`，无额外远端 CI 记录。
 
 本批新增受控停止态资源创建执行器：固定 Windows 本机、已验收的专用确认字符串及创建计划指纹，专用凭据只接受 64 位小写十六进制格式，不将格式检查视为随机性证明。重新执行已授权的四库系统目录只读采集，并保留同一预检取得的本机 Docker 端点（不改变原公开报告）；严格复算创建计划并检查固定镜像 ID、唯一卷声明 /var/lib/postgresql/data、入口 docker-entrypoint.sh 和命令 postgres。首次 Docker 写命令前，在同一工作区根目录 `.artifacts/prisma8-native-check-roundtrip-creation` 原子独占创建目录并以 wx 及 flush 写入 attempt.json，记录固定指纹与 128 位随机尝试标识，不含凭据；路径链接、任何已有目录或登记失败均拒绝。依次创建专用 local 数据卷、bridge 网络、停止态容器，仅回环 127.0.0.1:15444 映射 5432，镜像 pull=never、restart=no、volume-nocopy，所有资源带固定 scope 与本次尝试标签；检查卷驱动、标签、无额外选项、容器占用，网络完整 ID、唯一名称、标签及端点占用，随后检查容器完整 ID、created 状态、固定镜像、卷挂载、HostConfig 端口配置、网络模式、禁止特权/自动移除/全部端口发布、入口及命令，最后复验卷与网络归属并独占保存 result.json。Docker volume create 同名可能复用，不能仅凭返回名称判成功；任何异常均停止、保留记录和部分资源，不清理、不重试、不启动。专用环境变量 SCADA_PRISMA8_NATIVE_ROUNDTRIP_PASSWORD 仅通过创建容器子进程 POSTGRES_PASSWORD 传递，不进入命令参数、报告、记录或源码；其他子进程仅继承既有系统白名单。不读取完整容器环境，Docker 管理员仍可访问容器保存的环境值，后续必须保护该本机凭据。停止态成功报告只描述观察到的资源及已消费的尝试记录；containerStarted、databaseInitialized、portReserved、resourceCreationAllowed、databaseExecutionAllowed、roundTripVerified 等均 false。停止态端口映射配置不等于实际端口绑定，卷标签及本地登记不能防御具备 Docker/文件系统管理权限的并发操作者或跨工作区故意重置；实际启动前须重新核验归属、容器配置、端口及证据。本批未创建真实资源、未运行 Docker start/SQL/迁移，不改变四个冻结库、历史证据或正式 Prisma 7。真实停止态创建必须在验收、合并后取得维护者单独明确授权；启动与初始化仍为后续独立阶段。
+
+## 2026-11-27 · Prisma 8 全新安装路线
+
+维护者已完成旧项目八容器、六命名卷、三网络清理，重新启动基础设施 PostgreSQL 19.0、Redis 8.12.0、Keycloak 26.8.2。新业务库 public 表数量为零，Keycloak 独立逻辑库存在。PR #240 已合并的历史实验停止推进。新增 Git 原生契约、中文注释、独立首次初始化及只读预览入口，默认 Docker 启动仅启动基础设施。正式 NestJS Provider 仍为 Prisma 7，禁止旧迁移和旧应用启动路径接管新库；真实原生发射、只读规划、首次初始化及正式运行时切换待验证。第三方服务镜像 latest，Node 镜像、pnpm 与 Prisma 固定版本不变。
