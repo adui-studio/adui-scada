@@ -1978,3 +1978,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/prisma8-provider-smoke.mjs`：宿主/容器共享只读根模块验收，容器 transport 独立受限。
 - `apps/server/src/database/prisma8-runtime-boundary.ts`：容器只读 transport 必须绑定固定 postgres:5432 及已核验集群；默认宿主白名单不变。
 - `deploy/docker/README.md`：当前原生安装、启动、访问与验收说明。
+
+### 双端 Docker HTTPS 候选
+
+- `deploy/docker/compose.yaml`、`deploy/docker/nginx.conf`、`deploy/docker/Dockerfile.web`：共享 HTTP/HTTPS 双监听、回环发布和叶证书只读挂载。
+- `scripts/docker-web-https-smoke.mjs`：宿主严格 TLS 只读探针、六条固定 GET 路径、SSE 缓存策略与连接清理、脱敏机器标志。
+- `scripts/docker-stack.mjs`、`scripts/docker-stack.cases.mjs`：端口冲突验证、宿主探针门禁及 22 项启动/部署安全回归定义。
+- `.env.example`、`scripts/check-env-config.mjs`：双端 HTTPS 端口配置与旧根环境文件的缺省值兼容。

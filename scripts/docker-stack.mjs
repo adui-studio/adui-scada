@@ -132,8 +132,8 @@ function verifyDockerDatabase() {
   }
 }
 
-/** 全新栈只允许固定回环数据库，拒绝已废弃的旧项目和远程库。 */
-export function validateDockerEnv(text) {
+/** 解析唯一根环境文件，不读取终端覆盖变量。 */
+function parseDockerEnv(text) {
   const env = new Map();
   for (const line of text.split(/\r?\n/)) {
     const raw = line.trim();
@@ -142,6 +142,12 @@ export function validateDockerEnv(text) {
     if (!parsed || env.has(parsed[1])) throw new Error("本机 Docker 环境变量格式无效或重复");
     env.set(parsed[1], parsed[2]);
   }
+  return env;
+}
+
+/** 全新栈只允许固定回环数据库，拒绝已废弃的旧项目和远程库。 */
+export function validateDockerEnv(text) {
+  const env = parseDockerEnv(text);
   if (
     env.get("SCADA_WEB_HOST") !== "127.0.0.1" ||
     env.get("SCADA_SERVER_HOST") !== "127.0.0.1" ||
@@ -156,6 +162,8 @@ export function validateDockerEnv(text) {
   for (const [key, fallback] of [
     ["SCADA_REACT_PORT", "18080"],
     ["SCADA_VUE_PORT", "18081"],
+    ["SCADA_REACT_HTTPS_PORT", "18480"],
+    ["SCADA_VUE_HTTPS_PORT", "18481"],
     ["SCADA_LAB_POSTGRES_PORT", "15432"],
     ["SCADA_LAB_REDIS_PORT", "16379"],
     ["SCADA_LAB_KEYCLOAK_PORT", "18443"],
@@ -202,12 +210,29 @@ export function validateDockerEnv(text) {
   return true;
 }
 
+/** 通过独立宿主进程校验真实发布端口和本机可信根证书。 */
+function verifyDockerHttps(ports) {
+  const result = spawnSync(process.execPath, ["scripts/docker-web-https-smoke.mjs", ...ports], {
+    cwd: ROOT,
+    shell: false,
+    windowsHide: true,
+    encoding: "utf8",
+    timeout: 80_000,
+    stdio: ["ignore", "pipe", "pipe"],
+    maxBuffer: 1024 * 1024,
+  });
+  if (result.status !== 0 || result.stdout.trim() !== "DOCKER_WEB_HTTPS_READY") {
+    throw new Error("双端 Docker HTTPS 验证失败，请检查本机端口和 mkcert 可信证书，保留现场");
+  }
+}
+
 /** 已删除旧 Compose 项目并不代表旧卷消失；脚本绝不触碰旧容器和卷。 */
 export function manageDockerStack(
   mode,
   envText,
   run = docker,
   verifyDatabase = verifyDockerDatabase,
+  verifyHttps = verifyDockerHttps,
 ) {
   if (!MODES.has(mode)) throw new Error("不支持的 Docker 操作");
   if (mode === "plan" || mode === "up" || mode === "infra") {
@@ -306,7 +331,12 @@ export function manageDockerStack(
     } catch {
       throw new Error("容器原生数据库或双端 HTTP 验证失败，保留现场");
     }
-    return "ADui SCADA 七服务启动完成：一个 PostgreSQL，容器原生只读及双端 HTTP 验证通过；OIDC 登录尚未启用";
+    const env = parseDockerEnv(envText);
+    verifyHttps([
+      env.get("SCADA_REACT_HTTPS_PORT") ?? "18480",
+      env.get("SCADA_VUE_HTTPS_PORT") ?? "18481",
+    ]);
+    return "ADui SCADA 七服务启动完成：一个 PostgreSQL，容器原生只读及双端 HTTP 验证通过，宿主 HTTPS 验证通过；OIDC 登录尚未启用";
   }
   const action = { down: ["down"], ps: ["ps"], logs: ["logs", "-f"] }[mode];
   checked(run, [...COMPOSE_ARGS, ...action], true);
@@ -334,6 +364,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       "Docker 必须使用 Linux 容器引擎",
       "原生数据库严格验证失败，未执行本次应用启动；请单独核对数据库状态",
       "容器原生数据库或双端 HTTP 验证失败，保留现场",
+      "双端 Docker HTTPS 验证失败，请检查本机端口和 mkcert 可信证书，保留现场",
     ]);
     console.error(
       error instanceof Error && known.has(error.message)

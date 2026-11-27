@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { manageDockerStack, validateDockerEnv } from "./docker-stack.mjs";
+import { hasOnlyNoStore } from "./docker-web-https-smoke.mjs";
 
 const env =
   [
@@ -73,7 +74,13 @@ function mockDocker(options = {}) {
     if (options.invalidDatabase) throw new Error("模拟数据库严格验证失败");
     return probeInput;
   };
-  return { run, calls, events, inputs, verifyDatabase };
+  const httpsPorts = [];
+  const verifyHttps = (ports) => {
+    events.push("宿主 HTTPS 验证");
+    httpsPorts.push(...ports);
+    if (options.httpsFailed) throw new Error("模拟双端 HTTPS 验证失败");
+  };
+  return { run, calls, events, inputs, verifyDatabase, verifyHttps, httpsPorts };
 }
 
 void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
@@ -156,12 +163,19 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
   });
 
   void it("七服务一键启动先验证原生数据库再构建应用并执行容器烟测", () => {
-    const { run, calls, events, inputs, verifyDatabase } = mockDocker();
+    const { run, calls, events, inputs, verifyDatabase, verifyHttps, httpsPorts } = mockDocker();
     assert.match(
-      manageDockerStack("up", env, run, verifyDatabase),
+      manageDockerStack("up", env, run, verifyDatabase, verifyHttps),
       /容器原生只读及双端 HTTP 验证通过/,
     );
-    assert.deepEqual(events, ["基础设施启动", "严格数据库验证", "应用启动", "容器烟测"]);
+    assert.deepEqual(events, [
+      "基础设施启动",
+      "严格数据库验证",
+      "应用启动",
+      "容器烟测",
+      "宿主 HTTPS 验证",
+    ]);
+    assert.deepEqual(httpsPorts, ["18480", "18481"]);
     const applications = calls.find((args) => args.includes("--build"));
     assert.ok(applications);
     assert.deepEqual(applications.slice(-4), ["server", "demo", "web-react", "web-vue"]);
@@ -181,8 +195,13 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
   });
 
   void it("数据库严格验证失败时不构建或启动应用也不执行初始化", () => {
-    const { run, calls, events, verifyDatabase } = mockDocker({ invalidDatabase: true });
-    assert.throws(() => manageDockerStack("up", env, run, verifyDatabase), /数据库严格验证失败/);
+    const { run, calls, events, verifyDatabase, verifyHttps } = mockDocker({
+      invalidDatabase: true,
+    });
+    assert.throws(
+      () => manageDockerStack("up", env, run, verifyDatabase, verifyHttps),
+      /数据库严格验证失败/,
+    );
     assert.deepEqual(events, ["基础设施启动", "严格数据库验证"]);
     assert.equal(
       calls.some((args) => args.includes("--build") || args.includes("exec")),
@@ -192,9 +211,9 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
 
   void it("容器烟测失败或标志不完整时不能报告启动验收通过", () => {
     for (const options of [{ probeFailed: true }, { probeInvalid: true }]) {
-      const { run, calls, events, verifyDatabase } = mockDocker(options);
+      const { run, calls, events, verifyDatabase, verifyHttps } = mockDocker(options);
       assert.throws(
-        () => manageDockerStack("up", env, run, verifyDatabase),
+        () => manageDockerStack("up", env, run, verifyDatabase, verifyHttps),
         /Docker 执行失败|容器原生数据库或双端 HTTP 验证失败/,
       );
       assert.deepEqual(events, ["基础设施启动", "严格数据库验证", "应用启动", "容器烟测"]);
@@ -205,9 +224,50 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
     }
   });
 
+  void it("HTTPS 端口允许根环境显式配置，但拒绝与任何发布端口冲突", () => {
+    const configured = env + "SCADA_REACT_HTTPS_PORT=18482\nSCADA_VUE_HTTPS_PORT=18483\n";
+    const { run, verifyDatabase, verifyHttps, httpsPorts } = mockDocker();
+    assert.match(
+      manageDockerStack("up", configured, run, verifyDatabase, verifyHttps),
+      /宿主 HTTPS 验证通过/,
+    );
+    assert.deepEqual(httpsPorts, ["18482", "18483"]);
+    for (const port of ["18080", "18481", "18443", "15432", "0", "65536"]) {
+      assert.throws(() => validateDockerEnv(env + "SCADA_REACT_HTTPS_PORT=" + port + "\n"), /端口/);
+    }
+  });
+
+  void it("SSE 上游与代理重复禁止缓存指令仍合法，拒绝混入其他缓存策略", () => {
+    assert.equal(hasOnlyNoStore("no-store"), true);
+    assert.equal(hasOnlyNoStore("no-store, no-store"), true);
+    assert.equal(hasOnlyNoStore("No-Store, NO-STORE"), true);
+    for (const value of ["", "public", "no-store, public", "no-store, max-age=60"]) {
+      assert.equal(hasOnlyNoStore(value), false);
+    }
+  });
+
+  void it("宿主 HTTPS 探针失败时不报告成功且不自动清理现场", () => {
+    const { run, calls, events, verifyDatabase, verifyHttps } = mockDocker({ httpsFailed: true });
+    assert.throws(
+      () => manageDockerStack("up", env, run, verifyDatabase, verifyHttps),
+      /双端 HTTPS 验证失败/,
+    );
+    assert.deepEqual(events, [
+      "基础设施启动",
+      "严格数据库验证",
+      "应用启动",
+      "容器烟测",
+      "宿主 HTTPS 验证",
+    ]);
+    assert.equal(
+      calls.some((args) => args.includes("down") || args.includes("rm") || args.includes("-v")),
+      false,
+    );
+  });
+
   void it("基础设施入口仅启动三项基础设施，不验证或启动业务应用", () => {
-    const { run, calls, events, verifyDatabase } = mockDocker();
-    manageDockerStack("infra", env, run, verifyDatabase);
+    const { run, calls, events, verifyDatabase, verifyHttps } = mockDocker();
+    manageDockerStack("infra", env, run, verifyDatabase, verifyHttps);
     assert.deepEqual(events, ["基础设施启动"]);
     const args = calls.find((call) => call.includes("up"));
     assert.ok(args);
@@ -282,6 +342,27 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
     assert.match(dockerfile, /container-prisma8-smoke\.mjs/);
     assert.match(dockerfile, /prisma8-provider-smoke\.mjs/);
     assert.match(dockerfile, /prisma8-fresh-runtime-probe\.mjs/);
+  });
+
+  void it("双端 HTTPS 只发布回环端口及只读证书文件，不开放受保护接口", () => {
+    const compose = readFileSync(
+      fileURLToPath(new URL("../deploy/docker/compose.yaml", import.meta.url)),
+      "utf8",
+    );
+    assert.ok(compose.includes("127.0.0.1:${SCADA_REACT_HTTPS_PORT:-18480}:8443"));
+    assert.ok(compose.includes("127.0.0.1:${SCADA_VUE_HTTPS_PORT:-18481}:8443"));
+    const web = compose.slice(compose.indexOf("\n  web-react:"), compose.indexOf("\n  server:"));
+    assert.equal((web.match(/localhost\.pem:ro/g) ?? []).length, 2);
+    assert.equal((web.match(/localhost-key\.pem:ro/g) ?? []).length, 2);
+    assert.doesNotMatch(web, /secrets\.env|SCADA_LAB_DB_PASSWORD|SCADA_LAB_CLIENT_SECRET/);
+    const nginx = readFileSync(
+      fileURLToPath(new URL("../deploy/docker/nginx.conf", import.meta.url)),
+      "utf8",
+    );
+    assert.match(nginx, /listen 8080;/);
+    assert.match(nginx, /listen 8443 ssl;/);
+    assert.match(nginx, /ssl_protocols TLSv1\.2 TLSv1\.3;/);
+    assert.ok(nginx.includes("location ^~ /api/ { return 404; }"));
   });
 
   void it("新存储卷由项目自身创建，不引用旧物理卷", () => {

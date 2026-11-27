@@ -1,6 +1,6 @@
 # ADui SCADA 本机全新安装：单一 Compose 项目、七个容器、一个 PostgreSQL 实例。
 # 使用 adui-scada 新卷，不挂载、删除或重命名此前 Docker 项目的持久化数据。
-# Docker Demo 的 18080/18081 仍为 HTTP，不代表已实现生产 OIDC 部署。
+# 保留 HTTP 演示，新增本机 HTTPS 入口；两种协议均不开放 OIDC。
 name: adui-scada
 
 services:
@@ -15,6 +15,10 @@ services:
       SCADA_DEMO_PORT: "${SCADA_DEMO_PORT:-14178}"
     ports:
       - "127.0.0.1:${SCADA_REACT_PORT:-18080}:8080"
+      - "127.0.0.1:${SCADA_REACT_HTTPS_PORT:-18480}:8443"
+    volumes:
+      - "${SCADA_LAB_CERT_DIR:?必须先执行 Docker 本机准备脚本}/localhost.pem:/etc/nginx/lab-tls/localhost.pem:ro"
+      - "${SCADA_LAB_CERT_DIR:?必须先执行 Docker 本机准备脚本}/localhost-key.pem:/etc/nginx/lab-tls/localhost-key.pem:ro"
     depends_on:
       demo:
         condition: service_healthy
@@ -35,6 +39,10 @@ services:
       SCADA_DEMO_PORT: "${SCADA_DEMO_PORT:-14178}"
     ports:
       - "127.0.0.1:${SCADA_VUE_PORT:-18081}:8080"
+      - "127.0.0.1:${SCADA_VUE_HTTPS_PORT:-18481}:8443"
+    volumes:
+      - "${SCADA_LAB_CERT_DIR:?必须先执行 Docker 本机准备脚本}/localhost.pem:/etc/nginx/lab-tls/localhost.pem:ro"
+      - "${SCADA_LAB_CERT_DIR:?必须先执行 Docker 本机准备脚本}/localhost-key.pem:/etc/nginx/lab-tls/localhost-key.pem:ro"
     depends_on:
       demo:
         condition: service_healthy
