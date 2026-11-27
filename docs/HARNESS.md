@@ -5330,3 +5330,36 @@ git status --short
 预期 NATIVE_CHECK_ROUNDTRIP_CREATION_REVIEW_REQUIRED，创建计划指纹为 `69cd50940b9e3ff9752aa45eea3ff60bc34214ca7127908259a54897c6013dd7`，target.port=15444，所有许可及 creationAttemptClaimed 均为 false。报告中的创建确认字符串仅为未来契约，当前 CLI 不接受它作为执行参数。不需要数据库口令，不执行 Docker 创建命令。
 
 本批仅增加第五座待审批创建契约及请求匹配器。只读入口复用同一固定本机 Docker 端点的四库目录采集，要求整份参考报告与 PR #238 真实观察完全一致；拒绝缺失、额外、伪造许可、旧端口、资源或镜像变化、排序规则漂移。计划固定 127.0.0.1:15444 -> 5432、原镜像 ID、新独立容器/本地命名卷/专用 bridge 网络、禁止复用现存资源、禁止拉取镜像、禁止自动重启，部分创建失败应保留现场。卷目标拟定为 /var/lib/postgresql/data；实际固定镜像卷声明及入口行为尚待验证。初始化拟定 UTF8、libc、--locale=en_US.utf8（统一 locale 类别，不将其他类别视为已核验）、本地和 TCP 均 SCRAM-SHA-256；专用角色作为隔离实例 bootstrap superuser，禁止用于生产。凭据策略为专用环境变量 SCADA_PRISMA8_NATIVE_ROUNDTRIP_PASSWORD、32 字节随机数十六进制编码；本批不读取、生成、保存或输出任何真实凭据，不修改根 .env。实际初始化阶段不得提前开启阻止 bootstrap 的全局只读；初始化后未来受控连接必须验证默认只读设置。参数根据 PostgreSQL 17 initdb 文档 https://www.postgresql.org/docs/17/app-initdb.html 拟定，Docker 固定镜像实际初始化、SCRAM 本地认证及 locale 可用性仍需后续验证，失败不得降级、改变既有库或自动重试。创建计划 SHA-256 独立于原 CHECK 往返计划指纹。请求匹配器仅核对专用确认字符串与重新计算的创建计划指纹，不能认证操作者、消费一次性授权或发出 Docker 写命令；当前只读 CLI 不接受创建参数，没有实例创建入口。即使请求匹配，所有许可、creationAttemptClaimed 及完整运行时身份认证仍为 false。未来须在单独明确授权后实现并复验创建执行器、一次性记录、目标资源所有权与竞争检查、凭据传递、实际集群身份排除、排序规则、23 类空库及其他会话检查；不得将已匹配指纹当作真实写入授权。
+
+### 2026-11-27 · 停止态资源创建执行器增量验收
+
+以下仅执行离线测试及静态质量链（预计 56 项），不创建真实 Docker 资源。
+
+```powershell
+node --check scripts/prisma8-native-check-roundtrip-create-stopped.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-create-stopped.cases.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-host.mjs &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-create-stopped &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-creation &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-reference &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-host &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-execution &&
+pnpm run test:prisma8:native:baseline:check-roundtrip &&
+pnpm run config:check && vp check --fix && vp check && pnpm run messages:check && pnpm run docs:check
+Write-Host "增量验收退出码：$LASTEXITCODE"
+git status --short
+```
+
+正常提交和推送格式化变更后，在干净工作区复验原离线计划和已授权四库目录只读创建计划：
+
+```powershell
+pnpm run db:prisma8:native:baseline:check-roundtrip:plan &&
+pnpm run db:prisma8:native:baseline:check-roundtrip:creation-plan --confirm-frozen-catalog-readonly
+Write-Host "创建计划只读验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+创建计划指纹仍为 `69cd50940b9e3ff9752aa45eea3ff60bc34214ca7127908259a54897c6013dd7`，creationAttemptClaimed=false。以上验收不需要凭据。不执行新 create-stopped 写入口，等待验收、合并及维护者专项授权后再给出实际执行命令。若真实创建阶段已登记，无论后续成功失败均保留 `.artifacts/prisma8-native-check-roundtrip-creation` 和资源，不删除以绕过一次性门禁。
+
+本批新增受控停止态资源创建执行器：固定 Windows 本机、已验收的专用确认字符串及创建计划指纹，专用凭据只接受 64 位小写十六进制格式，不将格式检查视为随机性证明。重新执行已授权的四库系统目录只读采集，并保留同一预检取得的本机 Docker 端点（不改变原公开报告）；严格复算创建计划并检查固定镜像 ID、唯一卷声明 /var/lib/postgresql/data、入口 docker-entrypoint.sh 和命令 postgres。首次 Docker 写命令前，在同一工作区根目录 `.artifacts/prisma8-native-check-roundtrip-creation` 原子独占创建目录并以 wx 及 flush 写入 attempt.json，记录固定指纹与 128 位随机尝试标识，不含凭据；路径链接、任何已有目录或登记失败均拒绝。依次创建专用 local 数据卷、bridge 网络、停止态容器，仅回环 127.0.0.1:15444 映射 5432，镜像 pull=never、restart=no、volume-nocopy，所有资源带固定 scope 与本次尝试标签；检查卷驱动、标签、无额外选项、容器占用，网络完整 ID、唯一名称、标签及端点占用，随后检查容器完整 ID、created 状态、固定镜像、卷挂载、HostConfig 端口配置、网络模式、禁止特权/自动移除/全部端口发布、入口及命令，最后复验卷与网络归属并独占保存 result.json。Docker volume create 同名可能复用，不能仅凭返回名称判成功；任何异常均停止、保留记录和部分资源，不清理、不重试、不启动。专用环境变量 SCADA_PRISMA8_NATIVE_ROUNDTRIP_PASSWORD 仅通过创建容器子进程 POSTGRES_PASSWORD 传递，不进入命令参数、报告、记录或源码；其他子进程仅继承既有系统白名单。不读取完整容器环境，Docker 管理员仍可访问容器保存的环境值，后续必须保护该本机凭据。停止态成功报告只描述观察到的资源及已消费的尝试记录；containerStarted、databaseInitialized、portReserved、resourceCreationAllowed、databaseExecutionAllowed、roundTripVerified 等均 false。停止态端口映射配置不等于实际端口绑定，卷标签及本地登记不能防御具备 Docker/文件系统管理权限的并发操作者或跨工作区故意重置；实际启动前须重新核验归属、容器配置、端口及证据。本批未创建真实资源、未运行 Docker start/SQL/迁移，不改变四个冻结库、历史证据或正式 Prisma 7。真实停止态创建必须在验收、合并后取得维护者单独明确授权；启动与初始化仍为后续独立阶段。
