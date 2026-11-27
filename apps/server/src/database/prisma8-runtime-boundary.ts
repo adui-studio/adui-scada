@@ -2,7 +2,7 @@ export interface Prisma8RuntimeConfig {
   readonly connectionString: string | undefined;
   readonly readOnly: boolean;
   readonly expectedSystemIdentifier?: string;
-  /** 仅供受控容器烟测使用，不允许正式可写连接。 */
+  /** 仅供受控容器烟测和常驻只读服务使用，不允许正式可写连接。 */
   readonly transport?: "docker-readonly";
 }
 
