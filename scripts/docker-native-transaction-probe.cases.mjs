@@ -56,7 +56,10 @@ function fixture(options = {}) {
               ]),
           };
         }
-        assert.match(plan.text, /^SELECT value::text AS value FROM pg_temp\.adui_scada_native_tx_probe$/u);
+        assert.match(
+          plan.text,
+          /^SELECT value::text AS value FROM pg_temp\.adui_scada_native_tx_probe$/u,
+        );
         return { toArray: () => Promise.resolve(present ? [{ value }] : []) };
       },
       execute: (plan) => {
@@ -114,7 +117,9 @@ function fixture(options = {}) {
 
 void describe("容器原生临时事务探针", () => {
   void it("确认参数必须单独且精确匹配", () => {
-    assert.doesNotThrow(() => requireDockerTransactionConfirmation([DOCKER_TRANSACTION_CONFIRMATION]));
+    assert.doesNotThrow(() =>
+      requireDockerTransactionConfirmation([DOCKER_TRANSACTION_CONFIRMATION]),
+    );
     for (const args of [[], ["--yes"], [DOCKER_TRANSACTION_CONFIRMATION, "--yes"]]) {
       assert.throws(() => requireDockerTransactionConfirmation(args), /需要单独明确确认/);
     }
@@ -133,7 +138,10 @@ void describe("容器原生临时事务探针", () => {
     assert.equal(url.port, "5432");
     assert.equal(url.pathname, "/adui_scada");
     assert.match(url.searchParams.get("options") ?? "", /default_transaction_read_only=off/u);
-    assert.match(new URL(resolvePrisma8RuntimeUrl(readOnly)).searchParams.get("options") ?? "", /default_transaction_read_only=on/u);
+    assert.match(
+      new URL(resolvePrisma8RuntimeUrl(readOnly)).searchParams.get("options") ?? "",
+      /default_transaction_read_only=on/u,
+    );
   });
 
   void it("探针拒绝只读标志混用、缺失集群与其他库或连接地址", () => {
@@ -146,11 +154,17 @@ void describe("容器原生临时事务探针", () => {
       { ...config, expectedSystemIdentifier: undefined },
       { ...config, expectedSystemIdentifier: "0" },
       { ...config, connectionString: connectionString.replace("@postgres:", "@127.0.0.1:") },
-      { ...config, connectionString: connectionString.replace("/adui_scada?", "/adui_scada_keycloak?") },
+      {
+        ...config,
+        connectionString: connectionString.replace("/adui_scada?", "/adui_scada_keycloak?"),
+      },
     ]) {
       assert.throws(() => resolvePrisma8RuntimeUrl(invalid), /仅允许已初始化的本机业务库/);
     }
-    assert.throws(() => resolveDockerTransactionProbeConfig(binding, "f".repeat(64)), /数据库绑定无效/);
+    assert.throws(
+      () => resolveDockerTransactionProbeConfig(binding, "f".repeat(64)),
+      /数据库绑定无效/,
+    );
   });
 
   void it("提交后回读、主动回滚后保持原值并清理同一会话临时表", async () => {

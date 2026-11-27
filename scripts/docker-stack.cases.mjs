@@ -100,7 +100,16 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
     for (const args of [[], ["--yes"], ["--confirm-temp-transaction-probe", "--yes"]]) {
       assert.throws(
         () =>
-          manageDockerStack("transaction-probe", env, run, verifyDatabase, undefined, undefined, undefined, args),
+          manageDockerStack(
+            "transaction-probe",
+            env,
+            run,
+            verifyDatabase,
+            undefined,
+            undefined,
+            undefined,
+            args,
+          ),
         /需要单独明确确认/,
       );
     }
@@ -147,22 +156,43 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
     const command = calls.find((args) => args.includes("exec"));
     assert.ok(command);
     assert.deepEqual(command.slice(-6), [
-      "exec", "-T", "server", "node", "apps/server/container-native-transaction-probe.mjs",
+      "exec",
+      "-T",
+      "server",
+      "node",
+      "apps/server/container-native-transaction-probe.mjs",
       "--confirm-temp-transaction-probe",
     ]);
-    assert.equal(calls.some((args) => args.includes("up") || args.includes("down") || args.includes("rm")), false);
-    assert.equal(calls.some((args) => args.join(" ").includes(probeInput.password)), false);
+    assert.equal(
+      calls.some((args) => args.includes("up") || args.includes("down") || args.includes("rm")),
+      false,
+    );
+    assert.equal(
+      calls.some((args) => args.join(" ").includes(probeInput.password)),
+      false,
+    );
   });
 
   void it("临时事务严格数据库失败或机器报告不完整时停止并保留现场", () => {
     const { run, calls, verifyDatabase } = mockDocker({ invalidDatabase: true });
     assert.throws(
-      () => manageDockerStack("transaction-probe", env, run, verifyDatabase, undefined, undefined, undefined, [
-        "--confirm-temp-transaction-probe",
-      ]),
+      () =>
+        manageDockerStack(
+          "transaction-probe",
+          env,
+          run,
+          verifyDatabase,
+          undefined,
+          undefined,
+          undefined,
+          ["--confirm-temp-transaction-probe"],
+        ),
       /数据库严格验证失败/,
     );
-    assert.equal(calls.some((args) => args.includes("exec")), false);
+    assert.equal(
+      calls.some((args) => args.includes("exec")),
+      false,
+    );
     for (const { status, report, expected } of [
       {
         status: 0,
@@ -181,11 +211,21 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
       },
     ]) {
       const mockRun = (args) =>
-        args.includes("exec") ? { status, stdout: JSON.stringify(report) } : { status: 0, stdout: "" };
+        args.includes("exec")
+          ? { status, stdout: JSON.stringify(report) }
+          : { status: 0, stdout: "" };
       assert.throws(
-        () => manageDockerStack("transaction-probe", env, mockRun, () => probeInput, undefined, undefined, undefined, [
-          "--confirm-temp-transaction-probe",
-        ]),
+        () =>
+          manageDockerStack(
+            "transaction-probe",
+            env,
+            mockRun,
+            () => probeInput,
+            undefined,
+            undefined,
+            undefined,
+            ["--confirm-temp-transaction-probe"],
+          ),
         expected,
       );
     }

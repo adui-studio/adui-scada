@@ -247,7 +247,13 @@ export function manageDockerStack(
 ) {
   if (!MODES.has(mode)) throw new Error("不支持的 Docker 操作");
   if (mode === "transaction-probe") requireDockerTransactionConfirmation(confirmation);
-  if (mode === "plan" || mode === "up" || mode === "infra" || mode === "oidc" || mode === "transaction-probe") {
+  if (
+    mode === "plan" ||
+    mode === "up" ||
+    mode === "infra" ||
+    mode === "oidc" ||
+    mode === "transaction-probe"
+  ) {
     validateDockerEnv(envText);
     checked(run, [...COMPOSE_ARGS, "config", "--quiet"]);
     for (const name of OLD_PROJECTS) {
@@ -420,7 +426,16 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const confirmation = process.argv.slice(3);
     if (mode === "transaction-probe") requireDockerTransactionConfirmation(confirmation);
     console.log(
-      manageDockerStack(mode, text, localDocker(), undefined, undefined, undefined, undefined, confirmation),
+      manageDockerStack(
+        mode,
+        text,
+        localDocker(),
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        confirmation,
+      ),
     );
   } catch (error) {
     const known = new Set([

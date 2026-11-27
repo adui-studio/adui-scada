@@ -6,8 +6,11 @@ try {
   const { Prisma8Service, prisma8RuntimeStorageHash } = await import(
     new URL("./dist/database/prisma8.service.js", import.meta.url).href
   );
-  const { loadDockerReadOnlyConfig, resolveDockerReadOnlyMode, resolveDockerTransactionProbeConfig } =
-    await import(new URL("./dist/database/docker-readonly-config.js", import.meta.url).href);
+  const {
+    loadDockerReadOnlyConfig,
+    resolveDockerReadOnlyMode,
+    resolveDockerTransactionProbeConfig,
+  } = await import(new URL("./dist/database/docker-readonly-config.js", import.meta.url).href);
   const { requireDockerTransactionConfirmation, verifyDockerNativeTransactions } = await import(
     new URL("./dist/database/docker-native-transaction-probe.js", import.meta.url).href
   );
@@ -47,6 +50,8 @@ try {
   );
 } catch {
   // 机器报告仅含固定阶段码，不输出连接串、SQL、凭据或底层异常。
-  process.stdout.write(JSON.stringify({ status: "DOCKER_NATIVE_TRANSACTION_FAILED", stage }) + "\n");
+  process.stdout.write(
+    JSON.stringify({ status: "DOCKER_NATIVE_TRANSACTION_FAILED", stage }) + "\n",
+  );
   process.exitCode = 1;
 }
