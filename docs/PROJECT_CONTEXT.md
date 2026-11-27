@@ -3176,3 +3176,9 @@ E-159 为测试专属消息遗漏，已最小修复；不改变生产代码。�
 维护者 Windows 于 2026-11-27 在 HEAD 47b84f8e2ece8cffebe931013b1cca865dc3cc41 完成两轮增量验收，均退出 0；Core 编译、Prisma 8 原生契约离线生成（databaseAccessed=false）、NestJS 类型检查、Docker 五套件 60/60（独立临时事务模拟 8/8）、HTTP E2E 七文件 71/71、环境及 LF、中文文案 380 文件、Markdown 97 份、Vite+ 513 格式文件/354 受检文件零警告、Lint、类型错误及 git diff --check 均通过。首次增量后工作区干净。存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436，12 表、85 字段、36 CHECK、20 索引、13 外键、119 注释保持一致。
 
 同一候选的四个 Docker 应用镜像构建、七服务启动、容器独立原生只读及常驻连接、React/Vue HTTP 和宿主 HTTPS、宿主与容器正式 OIDC Discovery/JWKS 严格只读验证均通过，常驻只读回归退出 0。OIDC 登录尚未启用。没有真实临时表 DDL/DML、SDK 实际提交/回滚/清理、正式业务写入或浏览器登录证据。 E-165 已关闭；PR #256 保持 Draft。本轮不改生产代码、依赖、Compose、数据库配置或权限，仅同步实测记录。下一步为已有独立显式临时事务探针，实机验证同一会话的提交、主动回滚及清理；常驻服务继续严格只读，不开放正式身份、工程、发布或设备写入。不提前开始下一批或合并。
+
+### 2026-11-28 · PR #256 真实临时事务验收完成
+
+维护者于 2026-11-28 提供 Windows 本机真实执行记录：`pnpm run docker:db:transaction:probe --confirm-temp-transaction-probe` 成功，宿主按现有七字段严格机器报告核验实际提交、跨事务回读、主动回滚恢复原值、同一 PostgreSQL 后端会话、临时表移除和 Provider 关闭，且 businessDataWritten=false。随后 `docker:oidc:probe`、`docker:ps` 与 `git diff --check` 全部成功，七服务均运行，OIDC 登录尚未启用，最终退出码 0，`git status --short` 无输出。日志未独立打印本次 HEAD；上轮已验收生产源码 HEAD 为 47b84f8e2ece8cffebe931013b1cca865dc3cc41，当前远端 02f3e2c438a0de1cdda17da33fd0778f817cf34b 相对此仅三份验收文档追加，无生产代码或配置变更。此次真实事务仅涉及会话临时表，不证明正式业务表写入、角色最小权限、正式 OIDC 登录或发布安全门禁已验收。
+
+独立临时事务阶段结案条件满足，维护者同意合并至 feat/mvp-first-integration。下一阶段先评审受控本机 Docker 正式业务连接和认证启用边界，明确数据库身份与权限、默认关闭、网络和会话隔离及失败关闭策略；不得将临时表成功扩大为业务 DML 授权，不自动修改角色、清库、初始化、迁移、开放工程发布或工业设备写入。
