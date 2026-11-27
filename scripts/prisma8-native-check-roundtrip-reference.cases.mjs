@@ -54,8 +54,11 @@ function fixture() {
     "other-net",
     "[]",
     mainId,
-    mainId + "|true|" + roundTripTarget.image + "|adui-scada|postgres|[\"/var/lib/postgresql\"]",
-    reproId + "|true|" + roundTripTarget.image + "|prisma8-native-repro|[\"/var/lib/postgresql/data\"]",
+    mainId + "|true|" + roundTripTarget.image + '|adui-scada|postgres|["/var/lib/postgresql"]',
+    reproId +
+      "|true|" +
+      roundTripTarget.image +
+      '|prisma8-native-repro|["/var/lib/postgresql/data"]',
     "",
     "",
     () => JSON.stringify(main),
@@ -116,7 +119,10 @@ void test("四库两集群及固定镜像观察通过，缺失版本不得误报
     report.deploymentAllowed,
   ])
     assert.equal(value, false);
-  assert.doesNotMatch(JSON.stringify(report), /1234567890123456789|2234567890123456789|secret|postgresql\/data/u);
+  assert.doesNotMatch(
+    JSON.stringify(report),
+    /1234567890123456789|2234567890123456789|secret|postgresql\/data/u,
+  );
   assert.equal(f.calls.length, 16);
   assert.deepEqual(
     f.calls.slice(9, 14).map(({ args }) => args.slice(2, 4)),
@@ -183,12 +189,12 @@ void test("宿主机、历史容器身份或固定镜像失败时不连接冻结
     { index: 9, output: mainId + "\n" + reproId, expected: /唯一运行中/u },
     {
       index: 10,
-      output: mainId + "|true|sha256:other|adui-scada|postgres|[\"/var/lib/postgresql\"]",
+      output: mainId + '|true|sha256:other|adui-scada|postgres|["/var/lib/postgresql"]',
       expected: /历史验收容器身份或固定镜像不一致/u,
     },
     {
       index: 11,
-      output: reproId + "|true|sha256:other|prisma8-native-repro|[\"/var/lib/postgresql/data\"]",
+      output: reproId + '|true|sha256:other|prisma8-native-repro|["/var/lib/postgresql/data"]',
       expected: /第四座保留容器身份或固定镜像不一致/u,
     },
   ]) {
@@ -203,11 +209,13 @@ void test("挂载覆盖 libc 或 locale 路径时拒绝读取数据库", () => {
   for (const { index, output } of [
     {
       index: 10,
-      output: mainId + "|true|" + roundTripTarget.image + "|adui-scada|postgres|[\"/usr/lib/locale\"]",
+      output:
+        mainId + "|true|" + roundTripTarget.image + '|adui-scada|postgres|["/usr/lib/locale"]',
     },
     {
       index: 11,
-      output: reproId + "|true|" + roundTripTarget.image + "|prisma8-native-repro|[\"/etc/locale.conf\"]",
+      output:
+        reproId + "|true|" + roundTripTarget.image + '|prisma8-native-repro|["/etc/locale.conf"]',
     },
   ]) {
     const f = fixture();

@@ -44,10 +44,7 @@ function requireMatch(condition, message) {
 function isLocaleRuntimePath(path) {
   return localeRuntimeRoots.some(
     (root) =>
-      path === root ||
-      path.startsWith(root + "/") ||
-      root.startsWith(path + "/") ||
-      path === "/",
+      path === root || path.startsWith(root + "/") || root.startsWith(path + "/") || path === "/",
   );
 }
 
@@ -57,7 +54,10 @@ function isCanonicalPath(path) {
     path.length <= 1024 &&
     path.startsWith("/") &&
     (path === "/" ||
-      path.slice(1).split("/").every((part) => part !== "" && part !== "." && part !== "..")) &&
+      path
+        .slice(1)
+        .split("/")
+        .every((part) => part !== "" && part !== "." && part !== "..")) &&
     !Array.from(path).some((character) => {
       const code = character.charCodeAt(0);
       return code < 32 || code === 127 || code === 92;
@@ -77,19 +77,14 @@ function requireUnmodifiedLocaleMounts(value, stage) {
     Array.isArray(mounts) && mounts.every(isCanonicalPath),
     stage + "：容器挂载清单无效",
   );
-  requireMatch(
-    !mounts.some(isLocaleRuntimePath),
-    stage + "：容器挂载覆盖 libc 或 locale 环境",
-  );
+  requireMatch(!mounts.some(isLocaleRuntimePath), stage + "：容器挂载覆盖 libc 或 locale 环境");
 }
 
 /** 仅检查固定路径及其祖先的可见变更，不证明实际进程加载的库相同。 */
 function requireUnchangedLocaleRuntime(output, stage) {
   const changes = output === "" ? [] : output.split(/\r?\n/u);
   requireMatch(
-    changes.every(
-      (line) => /^[ACD] /u.test(line) && isCanonicalPath(line.slice(2)),
-    ),
+    changes.every((line) => /^[ACD] /u.test(line) && isCanonicalPath(line.slice(2))),
     stage + "：容器文件变更清单格式异常",
   );
   requireMatch(
@@ -237,8 +232,7 @@ export function collectRoundTripReference(report, local) {
     ],
     "核对历史验收容器身份",
   ).split("|");
-  const [mainIdFromInspect, mainRunning, mainImage, project, service, mainMounts] =
-    mainIdentity;
+  const [mainIdFromInspect, mainRunning, mainImage, project, service, mainMounts] = mainIdentity;
   requireMatch(
     mainIdentity.length === 6 &&
       mainIdFromInspect === mainId &&
@@ -315,8 +309,6 @@ export function collectRoundTripReference(report, local) {
     referenceCollation,
     recordedCollationVersionAvailable,
     recordedCollationVersionMatches,
-    recordedCollationVersionStatus: recordedCollationVersionAvailable
-      ? "MATCHED"
-      : "UNAVAILABLE",
+    recordedCollationVersionStatus: recordedCollationVersionAvailable ? "MATCHED" : "UNAVAILABLE",
   };
 }
