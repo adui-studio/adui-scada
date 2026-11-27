@@ -3186,3 +3186,7 @@ E-159 为测试专属消息遗漏，已最小修复；不改变生产代码。�
 ### 2026-11-28 · PR #256 合并与原生业务连接安全评审
 
 维护者同意合并后，PR #256 已 Squash 合入 feat/mvp-first-integration 的 2783cbc5d2376d1269387a8daa5d9fd20fdd8af3；真实原生临时事务及常驻只读回归通过。当前 Compose 业务库及 Keycloak 使用同一登录身份和数据库密码，实际角色属性、数据库所有权、有效权限及 PUBLIC 权限仍需只读目录核验。新增 [Docker 原生业务连接安全评审](plans/docker-native-business-connection-review.md)，提出管理、SCADA 与 Keycloak 独立身份，保持一个 PostgreSQL 实例及现有七服务。当前只提交评审文档，未实施角色分离、权限变更、正式连接或 OIDC 启用；先评审并实现只读角色预检，再根据真实目录结果单独授权角色配置与业务模式。禁止使用临时事务探针放行常驻业务连接或提前打开工程/发布/设备写入。
+
+### 2026-11-28 · PR #257 A 阶段只读角色核查候选
+
+维护者已同意继续实施 A 阶段。新增 `docker:db:role:review`，复用当前 Prisma 8 严格契约和 Windows 本机 Docker 固定集群边界，分别建立业务库及 Keycloak 库只读事务，报告共享角色属性、直接与递归成员能力、两库有效权限及 PUBLIC CONNECT、Schema、12 个业务表及序列权限。其他 Schema 仅计数；Keycloak 表与序列不回显对象名。目录核查完成不代表最小权限，正式准入固定 false。未修改数据库、角色、凭据、Compose、OIDC、生产根模块或业务接口。协作环境 Node.js 22.16.0 实际执行新增角色核查核心及测试的 node --check 和 node --test，8/8 通过。远端 Git Blob 分别为 ef9dc9d5810457d0d9e745fdf8ca5872bee34ffb、7115a369da54aacf7bb3324badc25c0d0a9215f5，与本地实际执行文件一致。已逐项核对入口、参数白名单、严格契约验证分支及 package.json 质量链；未运行完整 Docker 68 项、Prisma 8 全新专项、全仓 Vite+、env/messages/docs 或真实 PostgreSQL 19 目录查询。 待维护者真实执行只读核查，获得报告后再评审 B 阶段，保持 Draft。
