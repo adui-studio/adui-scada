@@ -1878,3 +1878,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 
 - `scripts/prisma8-native-check-roundtrip-reference.mjs`：明确区分版本 MATCHED 与 UNAVAILABLE；增加固定镜像 ID、挂载目标 JSON、指定运行环境路径的 docker diff 观察，完整运行时身份认证保持 false。
 - `scripts/prisma8-native-check-roundtrip-reference.cases.mjs`：现为十二项注入子进程回归，原测试入口与 ready 注册不变；真实入口及确认参数不变，不新增依赖。
+
+### 2026-11-27 · 第五座待审批创建契约
+
+- `scripts/prisma8-native-check-roundtrip-creation.mjs`：固定参考报告、待审批资源与初始化契约、独立创建计划指纹及纯请求匹配器，不授予实际许可。
+- `scripts/prisma8-native-check-roundtrip-creation-entry.mjs`：复用既有四库只读采集的真实入口，仅输出待审批计划；确认参数沿用冻结库只读确认。
+- `scripts/prisma8-native-check-roundtrip-creation.cases.mjs`：八项离线回归，`pnpm run test:prisma8:native:baseline:check-roundtrip-creation` 纳入 ready；`pnpm run db:prisma8:native:baseline:check-roundtrip:creation-plan --confirm-frozen-catalog-readonly` 不纳入 ready，不创建资源。
