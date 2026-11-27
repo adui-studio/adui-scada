@@ -2014,3 +2014,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/database/docker-readonly-config.ts`、`prisma8-runtime-boundary.ts`、`prisma8.service.ts`：新增仅独立探针使用的 docker-transaction-probe transport，复用固定库、角色、绑定及集群门禁，单连接池；原常驻模块装配不变。
 - `apps/server/container-native-transaction-probe.mjs`、`deploy/docker/Dockerfile.server`、`scripts/docker-stack.mjs`：显式一次执行，严格数据库前置验证，标准输入绑定复核，固定脱敏报告及关闭。
 - `scripts/docker-native-transaction-probe.cases.mjs`、`scripts/docker-stack.cases.mjs`：八项探针和三项宿主编排离线新增回归；真实执行不进入默认启动和 ready。
+
+### Docker 原生业务角色只读核查候选（PR #257）
+
+- `scripts/docker-db-role-review.mjs`：固定两库目录查询、只读事务、前后身份与集群复核、共享角色权限摘要、12 个业务表矩阵、脱敏及失败关闭。
+- `scripts/docker-db-role-review.cases.mjs`：8 项 Node 离线专项，覆盖共享身份拒绝准入、权限与标记缺失、连接/后置漂移/关闭失败及脱敏。
+- `apps/server/prisma8-fresh-install.mjs`、`scripts/prisma8-fresh-install.mjs`：新增独立 `--role-review`，复用现有严格核验及固定回环连接，前后核对 Docker 集群与旧容器拒绝；`package.json` 提供 `docker:db:role:review`，`test:docker` 只纳入离线用例。
