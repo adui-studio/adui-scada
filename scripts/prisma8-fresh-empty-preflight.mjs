@@ -1,11 +1,4 @@
-import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
-import acceptedEvidence from "./prisma8-native-baseline-accepted-evidence.json" with { type: "json" };
-
-export const nativeEmptyDatabaseName = "adui_scada_fresh_prisma8_native";
-export const nativeEmptyConfirmation = "--confirm-adui-scada-fresh-prisma8-native";
-export const nativeEmptyUrlVariable = "SCADA_PRISMA8_NATIVE_BASELINE_DATABASE_URL";
-const acceptedFingerprint = "02c5020befa825293d7e7dae68fd274f32c089aecb7e0d7929cdf06d2a79321e";
 
 export class NativePreflightError extends Error {}
 
@@ -14,25 +7,6 @@ function requireCondition(condition, message) {
 }
 
 /** 锁定维护者实际验收的十四文件证据，而不是信任当前候选自行报告的哈希。 */
-export function requireAcceptedCandidateEvidence(report) {
-  const { fingerprint, ...content } = acceptedEvidence;
-  requireCondition(
-    fingerprint === acceptedFingerprint &&
-      createHash("sha256").update(JSON.stringify(content)).digest("hex") === fingerprint &&
-      isDeepStrictEqual(report, acceptedEvidence),
-    "独立候选与已验收的十四文件证据指纹不一致",
-  );
-  return fingerprint;
-}
-
-function hasForbiddenCodeUnit(value, max) {
-  return Array.from(value).some((character) => {
-    const code = character.charCodeAt(0);
-    return code <= max || code === 127;
-  });
-}
-
-/** 只输出固定阶段和已知错误码的中文分类，不返回第三方异常原文。 */
 function describeDatabaseFailure(stage, error, target) {
   const code = error instanceof Error && "code" in error ? error.code : undefined;
   let reason;
@@ -89,53 +63,6 @@ function describeDatabaseFailure(stage, error, target) {
       reason = "未知错误类别，内部详情已脱敏";
   }
   return target + stage + "失败：" + reason;
-}
-
-/** 仅接受第三座专用库的显式地址，不继承通用连接串或 URL 查询配置。 */
-export function nativeEmptyClientOptions(input, args) {
-  requireCondition(
-    isDeepStrictEqual(args, [nativeEmptyConfirmation]),
-    "必须明确确认第三座专用空库只读预检，且不得附加参数",
-  );
-  const message = "仅允许显式连接本机 127.0.0.1:15432 的第三座专用空库";
-  try {
-    requireCondition(
-      typeof input === "string" && !hasForbiddenCodeUnit(input, 32) && !input.includes("\\"),
-      message,
-    );
-    const url = new URL(input);
-    const user = decodeURIComponent(url.username);
-    const password = decodeURIComponent(url.password);
-    requireCondition(
-      (url.protocol === "postgresql:" || url.protocol === "postgres:") &&
-        url.hostname === "127.0.0.1" &&
-        url.port === "15432" &&
-        url.pathname === "/" + nativeEmptyDatabaseName &&
-        /^[a-zA-Z_][a-zA-Z0-9_]*$/u.test(user) &&
-        password.length > 0 &&
-        !hasForbiddenCodeUnit(password, 31) &&
-        !url.hash &&
-        (url.search === "" || url.search === "?schema=public"),
-      message,
-    );
-    return {
-      host: "127.0.0.1",
-      port: 15432,
-      database: nativeEmptyDatabaseName,
-      user,
-      password,
-      ssl: false,
-      replication: "false",
-      client_encoding: "UTF8",
-      application_name: "adui_scada_native_empty_preflight",
-      connectionTimeoutMillis: 5000,
-      query_timeout: 8000,
-      options:
-        "-c default_transaction_read_only=on -c statement_timeout=5000 -c lock_timeout=2000 -c idle_in_transaction_session_timeout=10000 -c search_path=public -c timezone=UTC -c standard_conforming_strings=on",
-    };
-  } catch {
-    throw new NativePreflightError(message);
-  }
 }
 
 const boundarySql = `SELECT pg_catalog.current_database()::text AS database_name,
@@ -208,34 +135,7 @@ const emptyKeys = [
 ];
 
 /** 只读取目录元数据；失败时也回滚、关闭，并且不回显第三方连接异常。 */
-export async function inspectNativeEmptyDatabase(client, expectedUser) {
-  return inspectEmptyDatabase(
-    client,
-    expectedUser,
-    nativeEmptyDatabaseName,
-    "第三座专用库",
-    null,
-    null,
-  );
-}
 
-/** 第四座实例只复用目录检查，不扩大第三座连接入口或写入许可。 */
-export async function inspectReproEmptyDatabase(client, systemIdentifier) {
-  requireCondition(
-    typeof systemIdentifier === "string" && /^[1-9][0-9]{0,19}$/u.test(systemIdentifier),
-    "第四座实例的集群标识无效",
-  );
-  return inspectEmptyDatabase(
-    client,
-    "adui_scada_native_repro",
-    "adui_scada_fresh_prisma8_repro",
-    "第四座专用库",
-    systemIdentifier,
-    "170011",
-  );
-}
-
-/** 全新安装复用空库目录检查，不依赖任何历史库或迁移产物。 */
 export async function inspectFreshDockerEmptyDatabase(client, systemIdentifier, version) {
   requireCondition(
     typeof systemIdentifier === "string" &&

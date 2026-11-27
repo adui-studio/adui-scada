@@ -4,11 +4,11 @@ import { join, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { Client } from "pg";
 import { createDockerDatabaseUrl } from "../../scripts/init-docker-db.mjs";
-import { offlineEnvironment, resolveBaselineCli } from "../../scripts/prisma8-native-baseline.mjs";
+import { offlineEnvironment, resolveBaselineCli } from "../../scripts/prisma8-fresh-cli-support.mjs";
 import {
   inspectFreshDockerEmptyDatabase,
   NativePreflightError,
-} from "../../scripts/prisma8-native-baseline-preflight.mjs";
+} from "../../scripts/prisma8-fresh-empty-preflight.mjs";
 import {
   FreshInstallError,
   freshAction,
@@ -24,7 +24,7 @@ import {
 import {
   requireDeclarationHashes,
   reviewFreshRuntimeTypes,
-} from "../../scripts/prisma8-native-runtime-review.mjs";
+} from "../../scripts/prisma8-fresh-runtime-review.mjs";
 import {
   FreshRuntimeProbeError,
   probeFreshRuntime,
