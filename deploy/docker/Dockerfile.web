@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# 仅供 V0.1 演示的静态 Web 构建，Vue 和 React 共用此 Dockerfile。
+# 本机 HTTP/HTTPS 演示的静态 Web 构建，Vue 和 React 共用此 Dockerfile。
 FROM node:24.18.0-bookworm AS build
 WORKDIR /workspace
 RUN npm install --global pnpm@12.23.0
@@ -13,4 +13,4 @@ FROM nginx:latest
 ARG WEB_APP=web-react
 COPY --from=build /workspace/apps/${WEB_APP}/dist/ /usr/share/nginx/html/
 COPY deploy/docker/nginx.conf /etc/nginx/templates/default.conf.template
-EXPOSE 8080
+EXPOSE 8080 8443
