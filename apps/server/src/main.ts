@@ -7,6 +7,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Logger } from "nestjs-pino";
 import { resolveOidcStartupConfig } from "./config/oidc-startup.config.js";
 import { resolveServerStartupConfig } from "./config/server-startup.config.js";
+import { resolveDockerReadOnlyMode } from "./database/docker-readonly-config.js";
 import { allowLocalDemoTelemetry } from "./demo/local-demo-access.js";
 import { getLocalOpenApiUrl, setupLocalOpenApi } from "./openapi/scada-openapi.js";
 import { applyHttpSecurityHeaders } from "./security/http-security.js";
@@ -25,6 +26,7 @@ async function bootstrap(): Promise<void> {
   // AppModule 在模块求值时会创建 Pino 配置，必须在 .env 加载后再导入。
   const { port, host, localDocs } = resolveServerStartupConfig(process.env);
   const oidc = resolveOidcStartupConfig(process.env);
+  const dockerReadOnly = resolveDockerReadOnlyMode(process.env);
   const allowDemo = allowLocalDemoTelemetry({
     enabled: process.env.SCADA_LOCAL_DEMO_API_ENABLED,
     nodeEnv: process.env.NODE_ENV,
@@ -35,12 +37,15 @@ async function bootstrap(): Promise<void> {
   }
 
   // 仅在 OIDC 完整配置通过校验后装配原生数据库、身份模块及受保护的工程 API。
-  const { AppModule, LocalDemoAppModule, OidcEnabledAppModule } = await import("./app.module.js");
-  const rootModule = oidc.enabled
-    ? OidcEnabledAppModule
-    : allowDemo
-      ? LocalDemoAppModule
-      : AppModule;
+  const { AppModule, LocalDemoAppModule, OidcEnabledAppModule, DockerReadOnlyDatabaseAppModule } =
+    await import("./app.module.js");
+  const rootModule = dockerReadOnly
+    ? DockerReadOnlyDatabaseAppModule
+    : oidc.enabled
+      ? OidcEnabledAppModule
+      : allowDemo
+        ? LocalDemoAppModule
+        : AppModule;
   // 关闭默认 100 KiB 解析器，显式将 JSON 与表单请求体限制为 Core 的 2 MiB 上限。
   const app = await NestFactory.create<NestExpressApplication>(rootModule, {
     ...SCADA_NEST_HTTP_OPTIONS,
@@ -57,7 +62,18 @@ async function bootstrap(): Promise<void> {
   await setupLocalOpenApi(app, localDocs);
   // NestJS 完成关闭钩子后以退出码 0 结束，便于容器判断正常 SIGTERM 关闭。
   app.enableShutdownHooks([], { useProcessExit: true });
-  await app.listen(port, host);
+  try {
+    await app.listen(port, host);
+  } catch (error) {
+    if (dockerReadOnly) {
+      try {
+        await app.close();
+      } catch {
+        throw new Error("Docker 正式只读服务启动及资源关闭失败");
+      }
+    }
+    throw error;
+  }
   const swaggerUrl = getLocalOpenApiUrl(localDocs, port);
   if (swaggerUrl) {
     app.get(Logger).log(`Swagger 文档地址：${swaggerUrl}`);
