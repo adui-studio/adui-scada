@@ -48,3 +48,7 @@ PR #244 Windows 修复后 Core 构建、双契约离线生成、Vite+ 607 格式
 新增共享 Prisma8AuthTransactionPort、Prisma8SessionOperations 与 Prisma8OidcLoginOperations；共享层仅使用参数化 raw/query/execute，历史候选保持原构造签名、隔离库名、只读模式、隔离级别、专用随机测试 Issuer 及旧清理定时器门禁，独立原生实现通过 Prisma8Service.readTransaction/writeTransaction 接入新生成 Contract。原生写事务明确拒绝只读配置，在同一 ReadCommitted 事务业务执行前后复核真实业务库、角色、Schema、PG19、集群标识（配置时严格比对）、原生 marker core_hash、可写模式及非恢复状态，后置校验抛错依 SDK 事务约定回滚。保留会话十秒/OIDC 五秒事务超时、主体共享锁与独立摘要、租户主体会话精确撤销、State/浏览器绑定摘要、PKCE S256、AES-GCM、Nonce、一次性 FOR UPDATE 加条件更新和按 Issuer 的 128 条有界清理。原生身份模块仅绑定现有会话及 OIDC 服务令牌、共享授权模块与原生数据库，不挂 HTTP 路由，不导入旧数据库模块；旧正式根模块不变。只读烟测覆盖随机不存在会话、Bearer/Cookie 拒绝、会话签发撤销与 OIDC 创建消费清理的拒绝，使用内存合成 OIDC 配置和禁止网络访问的发现替身；原生模块暂不启动清理定时器，正式根模块切换后另行验收。
 
 协作容器无固定 Prisma SDK、NestJS 依赖、pnpm/vp 和维护者数据库，不能执行完整工程类型检查或真实烟测；TypeScript 5.8.3 --noCheck 转译与远端 Blob d9dfed983c91273f13cc6da2698ef8ed29e50327 一致的事务包装器及 Blob 14712538534a11746fa32507f4579581ab292f7a 一致的原有身份边界，Node.js 22.16.0 实际模拟回归 6/6（正常提交顺序、只读早拒绝、错误/缺失身份、后置漂移模拟回滚、业务异常、原只读查询）；不代表实际 PostgreSQL 提交回滚或 SDK 类型已验证。静态逐字比较原候选移入共享层的八条业务 SQL 完全一致，新增 9 项身份 Vitest 和 1 项模块装配断言待 Windows 实测；历史 4 项会话及 5 项 OIDC 单元测试亦须回归。未执行数据库写入、重复初始化、历史迁移或真实 IdP 调用。
+
+## 2026-11-27 · 维护者再次确认仅推进全新原生应用
+
+停止增加旧数据库迁移、兼容适配和对照验收；只以当前已初始化的 PostgreSQL 19 业务库及原生 Contract 开发，不再为旧隔离库增加功能。保留新系统自身的工程版本与审计，避免把版本管理误当作旧数据迁移。原生工程读写统一装配；完成原生发布事务与其他正式依赖后集中切换 HTTP 根模块并清理废弃入口。不得重新初始化已有新库或提前混合两代提供方。

@@ -5309,3 +5309,15 @@ PR #244 Windows 修复后 Core 构建、双契约离线生成、Vite+ 607 格式
 五条业务 SQL 模板逐字比较一致，保留租户/主体/工程联合条件、工程 ID 升序及稳定游标、历史修订号 BigInt 倒序分页、最多 100 条、轻量摘要与原 SHA-256/元数据完整性、发布预检 head 一致性。详情、历史列表、指定快照及发布预检必须先取得同一工程共享锁，再查询完整权限集合并使用既有纯策略复核，拒绝未知权限；不得把前置 Guard 当成锁内授权。原生列表允许严格只读，四项锁内查询要求非只读事务配置（PostgreSQL 不允许 READ ONLY 执行 FOR SHARE），在取得事务前调用现有 assertWritable 拒绝，不通过无锁替代、自动改变连接模式或 DML 绕过；正常非只读模式仅执行 SELECT/ORM 查询，统一由 readTransaction 在同一 ReadCommitted 事务前后核验真实身份与标记，超时十秒。
 
 协作容器 Node.js 22.16.0 使用与远端 Git Blob 18e7d905a9d1b3c70b5e0301bc728c01d43cb4a1 一致的 Prisma8TextTransaction 源码，执行 node --experimental-strip-types --test 的六项独立模拟测试，6/6 通过，覆盖两代参数化 BigInt 转发、影响行数、缺失/继承/非文本列及调用方错误消息。源码迁移的五条业务 SQL 模板已静态逐字比较一致。容器 DNS 无法访问 GitHub、未安装固定 Prisma SDK、NestJS、pnpm/vp 或维护者 PostgreSQL；新增十项仓库 Vitest、一个模块装配断言、历史/身份回归、完整 Windows 质量链与真实只读烟测均待执行，不声称真实锁并发、正向授权工程读取或写事务通过。真实烟测扩展为随机不存在主体的空工程列表与四项锁查询提前拒绝，新增 projectListReadVerified、projectLockedReadDenied；原全部字段保留，providerSwitched=false。未执行数据库写入、历史迁移、重复初始化或正式 HTTP 启动。后续工程创建/追加版本的 CAS、审计与发布初始状态事务单独迁移并验收。
+
+### 2026-11-27 · PR #246 验收关闭与全新原生工程写入
+
+PR #246 维护者 Windows 专项 175/175（全新 28、运行时 7、工程查询 16、身份与装配 61、HTTP E2E 63），Vite+ 617/455 零警告错误，中文 482、Markdown 97、构建及增量退出 0；实际 PostgreSQL 19 只读烟测 FRESH_PROVIDER_SMOKE_READY，projectListReadVerified/projectLockedReadDenied/missingProjectDenied=true、providerSwitched=false、指纹及 12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致。验收 HEAD 2a9e4c2b47611dde4764a7097a7c6af16a06a83d，合并 c4ebce33dc210e5e4b38492f37f726aede28ed22。
+
+本批只开发全新原生写事务：原有九条业务 SQL 模板静态逐字核对，新增十一项原生 Vitest 模拟回归，独立模块装配及真实只读烟测新增 projectWriteDenied 标志。协作环境无法安装固定 SDK、执行完整 Windows 工具链或连接维护者数据库，新增测试、完整编译与真实烟测待验收；模拟拒绝不等于真实 PostgreSQL 回滚。不得为本批运行历史数据库或迁移专项。
+
+### 2026-11-27 · PR #247 原生工程写入验收及 E-159 修复
+
+维护者 Windows 在 2cdbbd7441c7bb7bc7b74d5cfbba9b7ff3f1c781 完成全新专项 28/28、原生工程写入 11/11、查询 10/10、模块装配 9/9，共 58/58；Vite+ 619 格式文件/457 受检文件零错误但一条 vitest(require-to-throw-message) 警告，中文 484 文件、Markdown 97 份、NestJS 构建、git diff --check 及增量退出码 0。正常 Hook 格式化提交 bc8c9ecd03988c97c1349427be59f9aca7c374c4 已推送，三文件差异仅排版。真实 FRESH_PROVIDER_SMOKE_READY，PostgreSQL 190000、存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致，全部既有只读核验及 projectWriteDenied=true，providerSwitched=false，退出 0、工作区干净。
+
+后置身份漂移夹具将 role 改为 wrong，实际由 requirePrisma8RuntimeIdentity 抛出“Prisma 8 运行时数据库身份、标记或连接边界不一致”。仅将无参数 toThrow 改为该确定文案，保留边界执行顺序、模拟拒绝及未提交断言，不改变业务 SQL、提供方或数据库。静态复核唯一替换及该文件无无参数 toThrow；Windows 原生写事务定向测试、Vite+ 零警告及中文/文档检查待复验。 保持 Draft，维护者已同意继续，但零警告复验完成前不合并。无旧库迁移、初始化或真实业务写入。

@@ -9,11 +9,11 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
   const { Prisma8IdentityModule } = await import(
     new URL("./dist/auth/prisma8-identity.module.js", import.meta.url).href
   );
-  const { Prisma8ProjectQueryModule } = await import(
-    new URL("./dist/projects/prisma8-project-query.module.js", import.meta.url).href
+  const { Prisma8ProjectPersistenceModule } = await import(
+    new URL("./dist/projects/prisma8-project-persistence.module.js", import.meta.url).href
   );
-  const { Prisma8RuntimeProjectQueryStore } = await import(
-    new URL("./dist/projects/prisma8-runtime-project-query-store.js", import.meta.url).href
+  const { Prisma8RuntimeProjectVersionStore } = await import(
+    new URL("./dist/projects/prisma8-runtime-project-version-store.js", import.meta.url).href
   );
   const { AuthSessionService } = await import(
     new URL("./dist/auth/auth-session.service.js", import.meta.url).href
@@ -54,7 +54,7 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     transactionEncryptionKey: randomBytes(32),
   };
   const context = await Test.createTestingModule({
-    imports: [Prisma8IdentityModule, Prisma8ProjectQueryModule],
+    imports: [Prisma8IdentityModule, Prisma8ProjectPersistenceModule],
     providers: [
       ScadaProjectGuard,
       {
@@ -162,7 +162,7 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     }
     if (discoveryCalled) throw new Error("只读烟测不允许 OIDC 网络发现");
     stage = "原生工程列表与锁事务模式核验";
-    const projects = context.get(Prisma8RuntimeProjectQueryStore);
+    const projects = context.get(Prisma8RuntimeProjectVersionStore);
     const projectRows = await projects.list(principal, { limit: 1, afterProjectId: scope });
     if (!Array.isArray(projectRows) || projectRows.length !== 0) {
       throw new Error("不存在主体的工程列表未返回空结果");
@@ -184,6 +184,28 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
         lockDenied = true;
       }
       if (!lockDenied) throw new Error("原生只读提供方未拒绝需要共享锁的查询");
+    }
+    stage = "原生工程写入只读拒绝核验";
+    const { waterTreatmentDemoDocument } = await import("@adui/scada-core");
+    const projectWrites = [
+      () => projects.create(principal, { document: waterTreatmentDemoDocument }),
+      () =>
+        projects.append(principal, waterTreatmentDemoDocument.projectId, {
+          expectedRevision: 1,
+          document: waterTreatmentDemoDocument,
+        }),
+    ];
+    for (const run of projectWrites) {
+      let writeRejected = false;
+      try {
+        await run();
+      } catch (error) {
+        if (!(error instanceof Error) || error.message !== "Prisma 8 只读提供方禁止写入") {
+          throw error;
+        }
+        writeRejected = true;
+      }
+      if (!writeRejected) throw new Error("原生只读提供方未拒绝工程写入");
     }
     stage = "原生工程 Guard 拒绝核验";
     const guard = context.get(ScadaProjectGuard);
@@ -239,6 +261,7 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     oidcDiscoverySkipped: true,
     projectListReadVerified: true,
     projectLockedReadDenied: true,
+    projectWriteDenied: true,
     missingProjectDenied: true,
   };
 }
