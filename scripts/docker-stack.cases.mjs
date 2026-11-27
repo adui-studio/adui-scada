@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { manageDockerStack, validateDockerEnv } from "./docker-stack.mjs";
+import { hasOnlyNoStore } from "./docker-web-https-smoke.mjs";
 
 const env =
   [
@@ -228,6 +229,15 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
     assert.deepEqual(httpsPorts, ["18482", "18483"]);
     for (const port of ["18080", "18481", "18443", "15432", "0", "65536"]) {
       assert.throws(() => validateDockerEnv(env + "SCADA_REACT_HTTPS_PORT=" + port + "\n"), /端口/);
+    }
+  });
+
+  void it("SSE 上游与代理重复禁止缓存指令仍合法，拒绝混入其他缓存策略", () => {
+    assert.equal(hasOnlyNoStore("no-store"), true);
+    assert.equal(hasOnlyNoStore("no-store, no-store"), true);
+    assert.equal(hasOnlyNoStore("No-Store, NO-STORE"), true);
+    for (const value of ["", "public", "no-store, public", "no-store, max-age=60"]) {
+      assert.equal(hasOnlyNoStore(value), false);
     }
   });
 
