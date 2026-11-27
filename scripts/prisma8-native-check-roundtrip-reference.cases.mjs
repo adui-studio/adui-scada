@@ -97,6 +97,7 @@ void test("四库两集群及固定镜像观察通过，缺失版本不得误报
   const f = fixture();
   const report = f.inspect();
   assert.equal(report.status, "NATIVE_CHECK_ROUNDTRIP_REFERENCE_REVIEW_REQUIRED");
+  assert.equal(report.target.port, 15444);
   assert.equal(report.observedDatabaseCount, 4);
   assert.equal(report.observedClusterCount, 2);
   assert.deepEqual(report.referenceCollation, collation);
@@ -185,7 +186,7 @@ void test("四库两集群及固定镜像观察通过，缺失版本不得误报
 
 void test("宿主机、历史容器身份或固定镜像失败时不连接冻结库", () => {
   for (const { index, output, expected } of [
-    { index: 8, output: "[15434]", expected: /端口存在/u },
+    { index: 8, output: "[15444]", expected: /端口存在/u },
     { index: 9, output: mainId + "\n" + reproId, expected: /唯一运行中/u },
     {
       index: 10,
