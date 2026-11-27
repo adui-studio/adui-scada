@@ -405,8 +405,8 @@ void main()
   .catch((error) => {
     console.error(
       error instanceof FreshInstallError ||
-      error instanceof NativePreflightError ||
-      error instanceof FreshRuntimeProbeError
+        error instanceof NativePreflightError ||
+        error instanceof FreshRuntimeProbeError
         ? error.message
         : stage + "失败，内部诊断已脱敏；保留现场，不自动重试",
     );

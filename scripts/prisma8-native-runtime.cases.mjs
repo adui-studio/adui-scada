@@ -79,8 +79,7 @@ void describe("原生候选离线运行时兼容评审", () => {
   void it("全新存储标识独立核验且历史候选门禁保持不变", () => {
     const { formal, native } = fixture();
     assert.throws(() => reviewFreshRuntimeRelations(formal, native), /哈希标识/u);
-    native.storage.storageHash =
-      "9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436";
+    native.storage.storageHash = "9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436";
     assert.equal(reviewFreshRuntimeRelations(formal, native), "FRESH_RUNTIME_RELATIONS_REVIEWED");
     assert.throws(() => reviewRuntimeRelations(formal, native), /哈希标识/u);
     native.domain.namespaces.public.models.ScadaProjectReleaseState.relations.lastReleaseEvent.on.localFields.reverse();
