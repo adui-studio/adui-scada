@@ -111,5 +111,5 @@ export function verifyDockerOidc(
   ) {
     throw new DockerOidcProbeError("宿主与容器 Keycloak RS256 签名公钥集合不一致，保留现场");
   }
-  return "宿主与容器正式 OIDC 客户端 Discovery/JWKS 严格只读验证通过；OIDC 登录尚未启用";
+  return "宿主 Keycloak 与容器正式 OIDC 客户端 Discovery/JWKS 严格只读验证通过；OIDC 登录尚未启用";
 }
