@@ -4,6 +4,11 @@ import * as oidc from "openid-client";
 import type { PostgresClient, PostgresTransactionContext } from "@prisma/orm-postgres/runtime";
 import type { Contract as HistoricalContract } from "../generated/prisma8/contract.d.js";
 import { Prisma8AuthSessionService } from "./prisma8-auth-session.service.js";
+import {
+  historicalAuthTransaction,
+  nativeAuthTransaction,
+  type Prisma8AuthTransaction,
+} from "./prisma8-auth-transaction-port.js";
 import { Prisma8OidcLoginTransactionService } from "./prisma8-oidc-login-transaction.service.js";
 import { describe, expect, it } from "vite-plus/test";
 import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
@@ -105,7 +110,7 @@ function harness(readOnly = false) {
       readPrisma8Transaction(client, config, storageHash, operation),
     writeTransaction: <T>(
       operation: (tx: Prisma8Transaction) => Promise<T>,
-      timeout: 5000 | 10000 = 10000,
+      timeout: 5000 | 10000,
     ) => writePrisma8Transaction(client, config, storageHash, operation, timeout),
   } as Prisma8Service;
   const startupConfig = resolveOidcStartupConfig({
@@ -138,13 +143,48 @@ function harness(readOnly = false) {
     },
   } as unknown as OidcProviderDiscoveryService;
   return {
-    client, config, database, state, queries, mutations, options, outcomes, discoveryCalls, startupConfig, discovery,
+    client, config, database, tx, state, queries, mutations, options, outcomes, discoveryCalls, startupConfig, discovery,
     sessions: new Prisma8RuntimeAuthSessionService(database),
     transactions: new Prisma8RuntimeOidcLoginTransactionService(database, discovery, startupConfig),
   };
 }
 
 describe("原生身份业务事务边界", () => {
+  it("两代事务适配器分别构造参数化计划并拒绝缺少文本列的结果", async () => {
+    const h = harness();
+    const historical = historicalAuthTransaction(
+      h.tx as unknown as PostgresTransactionContext<HistoricalContract>,
+    );
+    const native = nativeAuthTransaction(h.tx as unknown as Prisma8Transaction);
+    const read = (transaction: Prisma8AuthTransaction) =>
+      transaction.queryText({ status: "pg/text@1" })`SELECT ${actor.subjectId}::text AS status`;
+    const write = (transaction: Prisma8AuthTransaction) =>
+      transaction.executeCount`UPDATE public.scada_auth_sessions SET revoked_at = ${"2026-11-27T00:00:00Z"}::timestamptz WHERE session_id = ${"00000000-0000-4000-8000-000000000001"}::uuid`;
+    await expect(read(historical)).resolves.toEqual([{ status: "active" }]);
+    await expect(read(native)).resolves.toEqual([{ status: "active" }]);
+    expect(h.queries.map((plan) => plan.parameters)).toEqual([[actor.subjectId], [actor.subjectId]]);
+    await expect(write(historical)).resolves.toEqual({ affectedRows: 1 });
+    await expect(write(native)).resolves.toEqual({ affectedRows: 1 });
+    expect(h.mutations[0]).toEqual(h.mutations[1]);
+    expect(h.mutations[0]?.parameters).toEqual([
+      "2026-11-27T00:00:00Z",
+      "00000000-0000-4000-8000-000000000001",
+    ]);
+    h.state.identityRows = [{}];
+    await expect(read(historical)).rejects.toThrow("身份事务查询结果缺少有效文本列");
+    await expect(read(native)).rejects.toThrow("身份事务查询结果缺少有效文本列");
+  });
+
+  it("原生身份查询缺少声明文本列时拒绝签发并模拟回滚", async () => {
+    const h = harness();
+    h.state.identityRows = [{}];
+    await expect(h.sessions.issueForVerifiedSubject(actor)).rejects.toThrow(
+      "本地身份事务暂时不可用，请稍后重试",
+    );
+    expect(h.mutations).toHaveLength(0);
+    expect(h.outcomes).toEqual(["回滚"]);
+  });
+
   it("历史会话和 OIDC 隔离候选拒绝连接新业务库", async () => {
     let checks = 0;
     const mutations: unknown[] = [];

@@ -1,7 +1,7 @@
 import type { PostgresClient, PostgresTransactionContext } from "@prisma/orm-postgres/runtime";
 import type { Contract } from "../generated/prisma8/contract.d.js";
 import type { AuthenticatedProjectPrincipal } from "../projects/project-access-policy.js";
-import type { Prisma8AuthTransaction } from "./prisma8-auth-transaction-port.js";
+import { historicalAuthTransaction, type Prisma8AuthTransaction } from "./prisma8-auth-transaction-port.js";
 import { Prisma8SessionOperations } from "./prisma8-session-operations.js";
 
 type Tx = PostgresTransactionContext<Contract>;
@@ -64,7 +64,7 @@ export class Prisma8AuthSessionService extends Prisma8SessionOperations {
     const run = <T>(operation: (tx: Prisma8AuthTransaction) => Promise<T>): Promise<T> =>
       client.transaction(async (tx) => {
         await requireBoundary(tx);
-        return operation(tx);
+        return operation(historicalAuthTransaction(tx));
       }, OPTIONS);
     super({ assertWritable: () => undefined, read: run, write: run });
   }

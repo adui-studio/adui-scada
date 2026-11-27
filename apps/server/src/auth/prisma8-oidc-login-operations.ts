@@ -204,17 +204,13 @@ export class Prisma8OidcLoginOperations implements OnModuleInit, OnModuleDestroy
       try {
         return await this.transactions.write(async (tx) => {
           const cutoff = now.toISOString();
-          const result = await tx.execute(
-            tx.raw.sql`DELETE FROM public.scada_oidc_transactions
+          const result = await tx.executeCount`DELETE FROM public.scada_oidc_transactions
               WHERE issuer = ${this.issuer} AND expires_at <= ${cutoff}::timestamptz
                 AND state_hash IN (
                   SELECT state_hash FROM public.scada_oidc_transactions
                   WHERE issuer = ${this.issuer} AND expires_at <= ${cutoff}::timestamptz
                   ORDER BY expires_at ASC, state_hash ASC LIMIT ${CLEANUP_BATCH_SIZE}::integer
-                )`
-              .affectedCount()
-              .build(),
-          );
+                )`;
           if (result.affectedRows < 0 || result.affectedRows > CLEANUP_BATCH_SIZE) {
             throw new Error("OIDC 登录事务清理影响行数异常");
           }
@@ -280,15 +276,11 @@ export class Prisma8OidcLoginOperations implements OnModuleInit, OnModuleDestroy
         });
 
         await this.transactions.write(async (tx) => {
-          const result = await tx.execute(
-            tx.raw.sql`INSERT INTO public.scada_oidc_transactions
+          const result = await tx.executeCount`INSERT INTO public.scada_oidc_transactions
               (state_hash, issuer, nonce, verifier_ciphertext, browser_binding_hash, return_path, created_at, expires_at)
               VALUES (${stateHash}, ${this.issuer}, ${nonce}, ${verifierCiphertext},
                 ${browserBindingHash}, ${safeReturnPath}, ${createdAt.toISOString()}::timestamptz,
-                ${expiresAt.toISOString()}::timestamptz)`
-              .affectedCount()
-              .build(),
-          );
+                ${expiresAt.toISOString()}::timestamptz)`;
           if (result.affectedRows !== 1) throw new Error(TRANSACTION_CREATE_FAILURE);
         });
 
@@ -338,35 +330,25 @@ export class Prisma8OidcLoginOperations implements OnModuleInit, OnModuleDestroy
       consumed = await this.transactions.write(async (tx) => {
         const cutoff = now.toISOString();
         // 锁定满足完整条件的同一行，兼容旧版条件更新；竞争者不能重新消费。
-        const rows = await tx
-          .query(
-            tx.raw.sql`SELECT issuer::text AS issuer, nonce::text AS nonce,
+        const rows = await tx.queryText({
+          issuer: "pg/text@1",
+          nonce: "pg/text@1",
+          verifier_ciphertext: "pg/text@1",
+          return_path: "pg/text@1",
+        })`SELECT issuer::text AS issuer, nonce::text AS nonce,
             verifier_ciphertext::text AS verifier_ciphertext, return_path::text AS return_path
             FROM public.scada_oidc_transactions
             WHERE state_hash = ${stateHash} AND issuer = ${this.issuer}
               AND browser_binding_hash = ${browserBindingHash} AND consumed_at IS NULL
               AND expires_at > ${cutoff}::timestamptz AND created_at <= ${cutoff}::timestamptz
-            FOR UPDATE`
-              .returnsRow({
-                issuer: "pg/text@1",
-                nonce: "pg/text@1",
-                verifier_ciphertext: "pg/text@1",
-                return_path: "pg/text@1",
-              })
-              .build(),
-          )
-          .toArray();
+            FOR UPDATE`;
         const record = rows[0];
         if (!record) return null;
         if (rows.length !== 1) throw new Error(TRANSACTION_CONSUME_FAILURE);
-        const result = await tx.execute(
-          tx.raw.sql`UPDATE public.scada_oidc_transactions SET consumed_at = ${cutoff}::timestamptz
+        const result = await tx.executeCount`UPDATE public.scada_oidc_transactions SET consumed_at = ${cutoff}::timestamptz
             WHERE state_hash = ${stateHash} AND issuer = ${this.issuer}
               AND browser_binding_hash = ${browserBindingHash} AND consumed_at IS NULL
-              AND expires_at > ${cutoff}::timestamptz AND created_at <= ${cutoff}::timestamptz`
-            .affectedCount()
-            .build(),
-        );
+              AND expires_at > ${cutoff}::timestamptz AND created_at <= ${cutoff}::timestamptz`;
         if (result.affectedRows !== 1) throw new Error(TRANSACTION_CONSUME_FAILURE);
         return {
           issuer: record.issuer,

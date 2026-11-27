@@ -4,7 +4,11 @@ import { Prisma8Service } from "../database/prisma8.service.js";
 import type { AuthSessionService } from "./auth-session.service.js";
 import type { OidcLoginTransactionService } from "./oidc-login-transaction.service.js";
 import { OidcProviderDiscoveryService, SCADA_OIDC_STARTUP_CONFIG } from "./oidc-provider-discovery.service.js";
-import type { Prisma8AuthTransaction, Prisma8AuthTransactionPort } from "./prisma8-auth-transaction-port.js";
+import {
+  nativeAuthTransaction,
+  type Prisma8AuthTransaction,
+  type Prisma8AuthTransactionPort,
+} from "./prisma8-auth-transaction-port.js";
 import { Prisma8OidcLoginOperations } from "./prisma8-oidc-login-operations.js";
 import { Prisma8SessionOperations } from "./prisma8-session-operations.js";
 
@@ -21,9 +25,9 @@ function nativePort(database: Prisma8Service, timeout: 5000 | 10000): Prisma8Aut
   return {
     assertWritable: () => database.assertWritable(),
     read: <T>(operation: (tx: Prisma8AuthTransaction) => Promise<T>) =>
-      sanitized(() => database.readTransaction((tx) => operation(tx))),
+      sanitized(() => database.readTransaction((tx) => operation(nativeAuthTransaction(tx)))),
     write: <T>(operation: (tx: Prisma8AuthTransaction) => Promise<T>) =>
-      sanitized(() => database.writeTransaction((tx) => operation(tx), timeout)),
+      sanitized(() => database.writeTransaction((tx) => operation(nativeAuthTransaction(tx)), timeout)),
   };
 }
 

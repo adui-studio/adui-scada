@@ -58,14 +58,8 @@ export class Prisma8SessionOperations {
     if (!validPrincipal(principal)) throw new ForbiddenException("无效的可信主体，禁止签发会话");
     const { tenantId, subjectId } = principal;
     return this.transactions.write(async (tx) => {
-      const identities = await tx
-        .query(
-          tx.raw.sql`SELECT status::text AS status FROM public.scada_identities
-          WHERE tenant_id = ${tenantId} AND subject_id = ${subjectId} FOR SHARE`
-            .returnsRow({ status: "pg/text@1" })
-            .build(),
-        )
-        .toArray();
+      const identities = await tx.queryText({ status: "pg/text@1" })`SELECT status::text AS status FROM public.scada_identities
+          WHERE tenant_id = ${tenantId} AND subject_id = ${subjectId} FOR SHARE`;
       if (identities.length !== 1 || identities[0]?.status !== "active") {
         throw new ForbiddenException("主体不存在或已停用，禁止签发会话");
       }
@@ -77,14 +71,10 @@ export class Prisma8SessionOperations {
       const expiresAt = new Date(issuedAt.getTime() + SESSION_DURATION_MS);
       const tokenHash = hashToken(token);
       const csrfTokenHash = hashToken(csrfToken);
-      const result = await tx.execute(
-        tx.raw.sql`INSERT INTO public.scada_auth_sessions
+      const result = await tx.executeCount`INSERT INTO public.scada_auth_sessions
           (session_id, tenant_id, subject_id, token_hash, csrf_token_hash, issued_at, expires_at)
           VALUES (${sessionId}::uuid, ${tenantId}, ${subjectId}, ${tokenHash}, ${csrfTokenHash},
-            ${issuedAt.toISOString()}::timestamptz, ${expiresAt.toISOString()}::timestamptz)`
-          .affectedCount()
-          .build(),
-      );
+            ${issuedAt.toISOString()}::timestamptz, ${expiresAt.toISOString()}::timestamptz)`;
       if (result.affectedRows !== 1) throw new Error("本地会话创建失败，请稍后重试");
       return { sessionId, token, csrfToken, expiresAt };
     });
@@ -166,14 +156,9 @@ export class Prisma8SessionOperations {
     }
     const { tenantId, subjectId } = principal;
     return this.transactions.write(async (tx) => {
-      const result = await tx.execute(
-        tx.raw
-          .sql`UPDATE public.scada_auth_sessions SET revoked_at = ${new Date().toISOString()}::timestamptz
+      const result = await tx.executeCount`UPDATE public.scada_auth_sessions SET revoked_at = ${new Date().toISOString()}::timestamptz
           WHERE session_id = ${sessionId}::uuid AND tenant_id = ${tenantId} AND subject_id = ${subjectId}
-            AND revoked_at IS NULL`
-          .affectedCount()
-          .build(),
-      );
+            AND revoked_at IS NULL`;
       if (result.affectedRows > 1) throw new Error("会话撤销影响行数异常");
       return result.affectedRows === 1;
     });
@@ -182,27 +167,21 @@ export class Prisma8SessionOperations {
   private async findActiveSession(token: string): Promise<ActiveSessionRecord | null> {
     const tokenHash = hashToken(token);
     return this.transactions.read(async (tx) => {
-      const rows = await tx
-        .query(
-          tx.raw.sql`SELECT s.session_id::text AS session_id, s.tenant_id::text AS tenant_id,
+      const rows = await tx.queryText({
+        session_id: "pg/text@1",
+        tenant_id: "pg/text@1",
+        subject_id: "pg/text@1",
+        csrf_hash: "pg/text@1",
+        csrf_is_null: "pg/text@1",
+        issued_at: "pg/text@1",
+        expires_at: "pg/text@1",
+      })`SELECT s.session_id::text AS session_id, s.tenant_id::text AS tenant_id,
           s.subject_id::text AS subject_id, COALESCE(s.csrf_token_hash, '')::text AS csrf_hash,
           (s.csrf_token_hash IS NULL)::text AS csrf_is_null,
           s.issued_at::text AS issued_at, s.expires_at::text AS expires_at
           FROM public.scada_auth_sessions s
           JOIN public.scada_identities i ON i.tenant_id = s.tenant_id AND i.subject_id = s.subject_id
-          WHERE s.token_hash = ${tokenHash} AND s.revoked_at IS NULL AND i.status = 'active'`
-            .returnsRow({
-              session_id: "pg/text@1",
-              tenant_id: "pg/text@1",
-              subject_id: "pg/text@1",
-              csrf_hash: "pg/text@1",
-              csrf_is_null: "pg/text@1",
-              issued_at: "pg/text@1",
-              expires_at: "pg/text@1",
-            })
-            .build(),
-        )
-        .toArray();
+          WHERE s.token_hash = ${tokenHash} AND s.revoked_at IS NULL AND i.status = 'active'`;
       const row = rows[0];
       if (rows.length !== 1 || !row) return null;
       const now = Date.now();
