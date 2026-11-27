@@ -3150,3 +3150,9 @@ E-159 为测试专属消息遗漏，已最小修复；不改变生产代码。�
 维护者 Windows 在候选 HEAD f75b7e6fd06f7031b475b62be7b30b0b8f0e8a05 实测 Docker 35/35（编排 25、Keycloak 探针 10），环境/LF、中文文案 370 文件、Markdown 97 份、Vite+ 503 格式/344 受检零警告错误、git diff --check、四镜像构建、七服务运行、容器原生只读、双端 HTTP/HTTPS 及真实宿主与容器 Keycloak Discovery/JWKS 一致性均通过，增量与真实验收退出码均 0。正常 Hook 格式化提交 b74a3fe6b8ac5e2d1b2d4da9dfb2524d4375799d 已核对五文件仅排版；经维护者授权 PR #253 Squash 合入 feat/mvp-first-integration 的 b5378e263962d25883894e3416038472f845f1cb。E-162 已关闭。尚无正式授权码兑换、ID Token 验签或登录会话实测证据。
 
 正式 OidcProviderDiscoveryService 增加受信装配显式注入公开 CA 的 Docker 固定传输选择；当前环境解析器不读取该字段，Docker HTTP 进程的 OIDC 开关仍关闭。仅允许固定公开 Realm 的 Discovery/JWKS GET、Token 授权码 POST，通过 Keycloak 内部 TLS 连接并保留公开 IP 证书身份与 Host；SDK 自身负责协议和显式 JWS 签名检查。已有 docker:oidc:probe 容器侧改用实际编译后的正式 Discovery 服务及其 Fetch，宿主仍独立探测并比较签名公钥集合，报告必须有 formalClientVerified=true。容器探针只读，不读取真实客户端秘密、不兑换 Token、不连接业务数据库。局部 13/13 通过，正式 SDK 测试和真实新镜像探针待验收。下一步为正式原生业务连接及受控 OIDC 启动、双端回调联调，不开展旧库实验。
+
+### 2026-11-27 · PR #254 已合并与常驻原生数据库连接候选
+
+维护者 Windows 实测 PR #254：Docker 编排/只读探针/传输 41/41，Discovery 9/9（含真实 SDK 合法及错误 RSA 签名），Callback 12/12，共 62/62；Vite+ 505 格式文件/346 受检零警告错误、中文文案 372、Markdown 97、NestJS 构建及 git diff --check 通过，增量退出码 0。四镜像构建、七服务、容器原生只读、双端 HTTP/HTTPS、宿主与容器正式 OIDC Discovery/JWKS 通过，真实验收退出码 0。验收起点 d4494ef95e7b8c2aa0af799cfe0b9f68cfdbb20c，Hook 格式化提交 8f517321f2f4d2b10f85e960438f9b6db18f0821 经远端逐文件核对仅排版，无语义变更；维护者明确授权 Squash 合入 feat/mvp-first-integration 的 88024689f43419a01f9008b047643181498b853c。E-163 SDK 验签回归关闭，不代表真实 Keycloak 授权码、登录或写事务已验收。
+
+下一批将只读验证从独立烟测推进至实际常驻 NestJS 进程。受控 docker:up 完成原严格只读数据库核验后，准备独立 Git/镜像忽略目录中的单一绑定文件，仅 server 只读挂载；若既有凭据、集群或契约不符，拒绝覆盖及本次应用启动。显式容器内部模式挂载 DockerReadOnlyDatabaseAppModule 和唯一 Prisma8Service，继续沿用 postgres:5432/adui_scada、集群/角色/标记与事务只读硬门禁。内部 GET /health/database 每次调用正式事务验证并仅返回固定状态；真实烟测同时验证常驻进程与既有独立烟测。默认无数据库根模块、OIDC 禁用、工程 API 隔离和 Nginx 公开代理边界不变。协作环境 7/7 Node 绑定专项、25/25 V8 模拟编排（另有一项未运行）通过；新镜像、完整 Windows 门禁及真实常驻连接待验收。后续受控认证业务连接及写事务另行评审。
