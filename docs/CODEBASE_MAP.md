@@ -1951,3 +1951,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/projects/prisma8-project-persistence.module.ts`：原生工程读写统一装配，取代独立查询模块。
 - `apps/server/src/projects/prisma8-runtime-project-version-store.spec.ts`：十一项原生写事务模拟回归。
 - `apps/server/prisma8-provider-smoke.mjs`：原生工程读写模块装配及严格只读写入拒绝。
+
+### 全新原生发布仓储
+
+- `apps/server/src/projects/prisma8-runtime-project-release-store.ts`：原生当前发布读取、发布及内部回滚，固定安全拒绝、参数化 SQL、独立 ACL、幂等及指针 CAS。
+- `apps/server/src/projects/prisma8-runtime-project-release-store.spec.ts`：15 项原生模拟事务回归。
+- `apps/server/src/projects/prisma8-project-persistence.module.ts`：共享原生版本与发布仓储装配。
+- `apps/server/prisma8-provider-smoke.mjs`：新增当前发布锁读取、发布及回滚严格只读拒绝核验。

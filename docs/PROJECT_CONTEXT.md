@@ -3108,3 +3108,9 @@ PR #244 Windows 修复后 Core 构建、双契约离线生成、Vite+ 607 格式
 维护者 Windows 在 2cdbbd7441c7bb7bc7b74d5cfbba9b7ff3f1c781 完成全新专项 28/28、原生工程写入 11/11、查询 10/10、模块装配 9/9，共 58/58；Vite+ 619 格式文件/457 受检文件零错误但一条 vitest(require-to-throw-message) 警告，中文 484 文件、Markdown 97 份、NestJS 构建、git diff --check 及增量退出码 0。正常 Hook 格式化提交 bc8c9ecd03988c97c1349427be59f9aca7c374c4 已推送，三文件差异仅排版。真实 FRESH_PROVIDER_SMOKE_READY，PostgreSQL 190000、存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致，全部既有只读核验及 projectWriteDenied=true，providerSwitched=false，退出 0、工作区干净。
 
 E-159 为测试专属消息遗漏，已最小修复；不改变生产代码。保持 Draft，零警告复验待完成。后续仅推进全新原生发布与回滚、正式应用装配及废弃入口清理，不增加旧库兼容工作。
+
+### 2026-11-27 · PR #247 合并与全新原生发布仓储
+
+维护者 Windows E-159 复验 HEAD 8d18844f189afb726a27e95f66b84ffeda41e7b2：原生工程写入 11/11、619 格式文件、457 受检文件零警告/Lint/类型错误、中文文案 484、Markdown 97、git diff --check 均通过，退出码 0、工作区干净。此前 58/58 增量及 PostgreSQL 19 真实 FRESH_PROVIDER_SMOKE_READY（projectWriteDenied=true、providerSwitched=false、指纹和结构数量一致）通过，修复只修改测试及文档，未改变业务或烟测代码。维护者明确授权，PR #247 已 Squash 合入 feat/mvp-first-integration 的 6ef45e964c2b2bb87b4a01eed1e66cd3321fda9d。E-159 已关闭。
+
+新增 Prisma8RuntimeProjectReleaseStore，统一由 Prisma8ProjectPersistenceModule 与工程读写仓储共用 Prisma8Service，直接采用原生 Contract 的 readTransaction/writeTransaction；严格只读时三个需行锁入口均提前拒绝。当前发布读取不读取编辑 head；发布按现有双 CAS 与幂等契约；内部回滚独立 release:rollback ACL、正发布代次、仅限同租户工程较早 PUBLISH 事件证明的目标快照，不依赖或更改编辑 head。锁内复核会话、活动主体、完整 ACL、指针、目标摘要和安全门禁；幂等按租户/工程/主体/动作/UUID v4 作用域，复核语义摘要、目标和原代次。同一目标的新请求拒绝；原同键同语义重放复用原事件。事件及指针 CAS 使用统一原生写事务并回读一致性，固定安全门禁始终拒绝新发布/回滚且不提供可注入放行参数。 本批仅新增原生仓储与独立装配，不开放回滚 HTTP 路由，不改变正式根模块、现有发布 HTTP 契约、工程 Schema、权限授予或工业设备能力。FR-008 仍为部分实现，正式切换及真实事务验证待后续。

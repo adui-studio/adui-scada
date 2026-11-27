@@ -5321,3 +5321,11 @@ PR #246 维护者 Windows 专项 175/175（全新 28、运行时 7、工程查�
 维护者 Windows 在 2cdbbd7441c7bb7bc7b74d5cfbba9b7ff3f1c781 完成全新专项 28/28、原生工程写入 11/11、查询 10/10、模块装配 9/9，共 58/58；Vite+ 619 格式文件/457 受检文件零错误但一条 vitest(require-to-throw-message) 警告，中文 484 文件、Markdown 97 份、NestJS 构建、git diff --check 及增量退出码 0。正常 Hook 格式化提交 bc8c9ecd03988c97c1349427be59f9aca7c374c4 已推送，三文件差异仅排版。真实 FRESH_PROVIDER_SMOKE_READY，PostgreSQL 190000、存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致，全部既有只读核验及 projectWriteDenied=true，providerSwitched=false，退出 0、工作区干净。
 
 后置身份漂移夹具将 role 改为 wrong，实际由 requirePrisma8RuntimeIdentity 抛出“Prisma 8 运行时数据库身份、标记或连接边界不一致”。仅将无参数 toThrow 改为该确定文案，保留边界执行顺序、模拟拒绝及未提交断言，不改变业务 SQL、提供方或数据库。静态复核唯一替换及该文件无无参数 toThrow；Windows 原生写事务定向测试、Vite+ 零警告及中文/文档检查待复验。 保持 Draft，维护者已同意继续，但零警告复验完成前不合并。无旧库迁移、初始化或真实业务写入。
+
+### 2026-11-27 · E-159 复验关闭与全新原生发布仓储验收边界
+
+维护者 Windows E-159 复验 HEAD 8d18844f189afb726a27e95f66b84ffeda41e7b2：原生工程写入 11/11、619 格式文件、457 受检文件零警告/Lint/类型错误、中文文案 484、Markdown 97、git diff --check 均通过，退出码 0、工作区干净。此前 58/58 增量及 PostgreSQL 19 真实 FRESH_PROVIDER_SMOKE_READY（projectWriteDenied=true、providerSwitched=false、指纹和结构数量一致）通过，修复只修改测试及文档，未改变业务或烟测代码。维护者明确授权，PR #247 已 Squash 合入 feat/mvp-first-integration 的 6ef45e964c2b2bb87b4a01eed1e66cd3321fda9d。E-159 已关闭。
+
+协作容器 Node.js 22.16.0 对从远端源码摘取的请求解析、语义哈希和十进制安全整数校验逻辑（Unicode 等价转义、最小领域错误类）运行 node --experimental-strip-types --test，6/6 通过；验证发布/回滚白名单、代次、UUID、摘要字段顺序与作用域、非规范整数和溢出。远端静态核对 13 条参数化 SQL、2 条 DML 仅位于固定门禁之后、15 项新增 Vitest 无无参数 toThrow。协作容器 GitHub Git 网络 DNS 不可达，未安装固定 Prisma SDK、pnpm/vp 和完整 NestJS 依赖，新增仓库 Vitest、类型检查、构建、真实 PostgreSQL 烟测待 Windows 实测；未执行真实业务写入、发布、回滚、旧迁移、重新初始化或正式根模块切换。模拟拒绝或幂等重放不等于真实成功发布事务通过。
+
+新增原生只读烟测标志 releaseLockedReadDenied、releaseWriteDenied、rollbackWriteDenied；此前全部标志及存储指纹/结构保持不变。通过只读拒绝并不证明具有真实授权的当前发布正向读取或写入回滚已经验收。

@@ -5569,3 +5569,34 @@ git status --short
 ```
 
 预期 FRESH_PROVIDER_SMOKE_READY、projectListReadVerified=true、projectLockedReadDenied=true、projectWriteDenied=true、providerSwitched=false，原指纹和结构不变。真实正向写入、并发及回滚须在明确授权的全新原生测试边界内验收；本命令不写业务数据。
+
+### 全新原生发布仓储增量验收
+
+只验证当前原生业务路径，禁止旧数据库迁移、接管对照、重复初始化或清库。Windows 在候选分支执行：
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+pnpm run test:prisma8:native:runtime &&
+vp test run apps/server/src/projects/prisma8-runtime-project-release-store.spec.ts apps/server/src/projects/prisma8-runtime-project-version-store.spec.ts apps/server/src/projects/prisma8-runtime-project-query-store.spec.ts apps/server/src/database/database.module.spec.ts &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "全新原生发布仓储增量退出码：$LASTEXITCODE"
+```
+
+预期全新专项 28/28、原生运行时 7/7、原生发布与回滚 15/15、工程写入 11/11、查询 10/10、装配 9/9，共 80/80，Vite+ 零警告、零错误。过渡期 db:generate 仍为全仓编译离线生成旧客户端，不访问旧数据库。格式化改动正常提交推送并核对工作区，再执行：
+
+```powershell
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "原生发布只读烟测退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+预期 FRESH_PROVIDER_SMOKE_READY；releaseLockedReadDenied、releaseWriteDenied、rollbackWriteDenied=true，既有只读核验和指纹/结构不变、providerSwitched=false。严禁替换生产安全门禁以写入真实发布事件；本批不执行真实发布或回滚。

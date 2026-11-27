@@ -563,3 +563,7 @@ PR #241 已完成真实 PostgreSQL 19 首次初始化及独立严格校验（详
 ### 全新原生工程读写仓储
 
 Prisma8ProjectPersistenceModule 取代独立查询模块，工程仓储 Prisma8RuntimeProjectVersionStore 继承已验收的原生五项查询并通过 Prisma8Service.writeTransaction 实现创建和 CAS 追加。只面向全新原生 Contract，不新增旧数据适配器。正式 HTTP 根模块仍待原生发布事务及其他依赖齐备后统一切换，禁止混合两代连接。
+
+### 全新原生工程发布与回滚仓储
+
+新增 Prisma8RuntimeProjectReleaseStore，统一由 Prisma8ProjectPersistenceModule 与工程读写仓储共用 Prisma8Service，直接采用原生 Contract 的 readTransaction/writeTransaction；严格只读时三个需行锁入口均提前拒绝。当前发布读取不读取编辑 head；发布按现有双 CAS 与幂等契约；内部回滚独立 release:rollback ACL、正发布代次、仅限同租户工程较早 PUBLISH 事件证明的目标快照，不依赖或更改编辑 head。锁内复核会话、活动主体、完整 ACL、指针、目标摘要和安全门禁；幂等按租户/工程/主体/动作/UUID v4 作用域，复核语义摘要、目标和原代次。同一目标的新请求拒绝；原同键同语义重放复用原事件。事件及指针 CAS 使用统一原生写事务并回读一致性，固定安全门禁始终拒绝新发布/回滚且不提供可注入放行参数。 依 ADR-0069 和 ADR-0073，不创建新连接池、不为旧数据接管增加适配。正式 HTTP 根模块暂未切换；回滚仅为内部仓储能力，双框架 API 契约和生产准入另行验收。
