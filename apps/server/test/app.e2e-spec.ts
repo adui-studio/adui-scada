@@ -29,6 +29,10 @@ describe("应用控制器（端到端）", () => {
     });
   });
 
+  it("默认根模块仍未注册常驻数据库就绪接口", async () => {
+    await request(app.getHttpServer()).get("/health/database").expect(404);
+  });
+
   it("未实现的工业设备写入接口返回 404", async () => {
     const response = await request(app.getHttpServer())
       .post("/api/devices/write")
