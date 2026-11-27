@@ -167,7 +167,7 @@ function inspectRoundTripHostContext(platform, args, source, run = spawnSync) {
     signingAllowed: false,
     deploymentAllowed: false,
   };
-  return { report, local };
+  return { report, local, endpoint };
 }
 
 /** 保留原宿主机预检公开报告，不暴露 Docker 调用器。 */
@@ -176,13 +176,18 @@ export function inspectRoundTripHost(platform, args, source, run = spawnSync) {
 }
 
 /** 只允许显式确认后，以同一已核验 Docker 端点读取固定系统目录。 */
-export function inspectRoundTripReference(platform, args, source, run = spawnSync) {
+export function inspectRoundTripReferenceContext(platform, args, source, run = spawnSync) {
   requireMatch(
     args.length === 1 && args[0] === referenceConfirmation,
     "必须单独确认冻结库系统目录只读采集，且不得附加参数",
   );
-  const { report, local } = inspectRoundTripHostContext(platform, [], source, run);
-  return collectRoundTripReference(report, local);
+  const { report, local, endpoint } = inspectRoundTripHostContext(platform, [], source, run);
+  return { report: collectRoundTripReference(report, local), endpoint };
+}
+
+/** 保持已验收的公开只读报告结构不变。 */
+export function inspectRoundTripReference(platform, args, source, run = spawnSync) {
+  return inspectRoundTripReferenceContext(platform, args, source, run).report;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
