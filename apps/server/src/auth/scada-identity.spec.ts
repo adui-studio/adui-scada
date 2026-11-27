@@ -355,6 +355,28 @@ describe("可信会话与工程 Guard", () => {
     });
   });
 
+  it("工程 Guard 查询故障返回固定服务不可用提示且不记录授权成功", async () => {
+    const { audit, records } = makeAuditRecorder();
+    const db = {
+      client: {
+        scadaProjectGrant: {
+          findMany: () => Promise.reject(new Error("不得泄漏的数据库异常")),
+        },
+      },
+    };
+    const guard = new ScadaProjectGuard(
+      new Prisma7AuthorizationReadStore(db as unknown as PrismaService),
+      new Reflector(),
+      audit,
+    );
+    await expect(
+      guard.canActivate(
+        context({ headers: {}, params: { projectId: "project-a" }, scadaPrincipal: principal }, "version:read"),
+      ),
+    ).rejects.toThrow("工程权限查询暂不可用，请稍后重试");
+    expect(records).toEqual([]);
+  });
+
   it("会话 Guard 只发送固定审计原因码，不记录伪造凭据和有效令牌", async () => {
     const fake = makeSessionService();
     const { audit, records } = makeAuditRecorder();
