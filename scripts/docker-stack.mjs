@@ -298,19 +298,18 @@ export function manageDockerStack(
         report.providerClosed !== true ||
         Object.keys(report).length !== 7
       ) {
-        const stages = {
-          CONFIG: "容器临时事务配置验证失败，保留现场",
-          START: "容器临时事务原生连接启动失败，保留现场",
-          TRANSACTION: "容器临时事务提交或回滚验证失败，保留现场",
-          CLOSE: "容器临时事务连接关闭失败，保留现场",
-        };
+        const stages = new Map([
+          ["CONFIG", "容器临时事务配置验证失败，保留现场"],
+          ["START", "容器临时事务原生连接启动失败，保留现场"],
+          ["TRANSACTION", "容器临时事务提交或回滚验证失败，保留现场"],
+          ["CLOSE", "容器临时事务连接关闭失败，保留现场"],
+        ]);
         if (
           result.status !== 0 &&
           report?.status === "DOCKER_NATIVE_TRANSACTION_FAILED" &&
-          typeof report.stage === "string" &&
-          Object.hasOwn(stages, report.stage)
+          typeof report.stage === "string"
         ) {
-          throw new Error(stages[report.stage]);
+          throw new Error(stages.get(report.stage) ?? failure);
         }
         throw new Error(failure);
       }
