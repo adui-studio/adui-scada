@@ -236,6 +236,12 @@ describe("原生工程查询仓储及事务边界", () => {
 
   it("历史隔离候选拒绝新业务库且不执行工程查询", async () => {
     const h = harness();
+    h.state.boundaryRows[0] = [{
+      database_name: "adui_scada",
+      schema_name: "public",
+      read_only: "off",
+      isolation: "read committed",
+    }];
     const historical = new Prisma8ProjectQueryStore(h.client as unknown as PostgresClient<HistoricalContract>);
     await expect(historical.list(actor)).rejects.toThrow("Prisma 8 工程查询候选仅允许隔离库读已提交事务");
     expect(h.steps).toEqual(["边界"]);

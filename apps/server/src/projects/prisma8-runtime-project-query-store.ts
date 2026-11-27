@@ -13,7 +13,7 @@ export class Prisma8RuntimeProjectQueryStore extends Prisma8ProjectQueryOperatio
     const read = <T>(
       operation: (tx: Prisma8ProjectQueryTransaction) => Promise<T>,
     ): Promise<T> =>
-      database.readTransaction(async (tx) => {
+      database.readTransaction((tx) => {
         const text = nativeTextTransaction(tx, "工程事务查询结果缺少有效文本列");
         return operation({
           queryText: text.queryText,
