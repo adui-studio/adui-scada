@@ -87,14 +87,15 @@ function inspectDocker() {
       isDeepStrictEqual(ports, { "5432/tcp": [{ HostIp: "127.0.0.1", HostPort: "15432" }] }),
     "全新 PostgreSQL 容器、镜像、数据卷或端口不符合本机 Compose",
   );
-  const [systemIdentifier, version] = local([
+  const identityParts = local([
     "exec", "--user", "postgres", id, "env", "-i", "PATH=/usr/local/bin:/usr/bin:/bin",
     "PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=5000",
     "psql", "-X", "-w", "-q", "-A", "-t", "-h", "/var/run/postgresql", "-p", "5432",
     "-U", "adui_scada", "-d", "adui_scada", "-v", "ON_ERROR_STOP=1",
     "-c", "SELECT system_identifier::text || '|' || current_setting('server_version_num') FROM pg_catalog.pg_control_system()",
   ]).split("|");
-  requireMatch(/^[1-9][0-9]{0,19}$/u.test(systemIdentifier) && /^19[0-9]{4}$/u.test(version), "容器 PostgreSQL 19 实际集群标识或版本无效");
+  const [systemIdentifier, version] = identityParts;
+  requireMatch(identityParts.length === 2 && /^[1-9][0-9]{0,19}$/u.test(systemIdentifier) && /^19[0-9]{4}$/u.test(version), "容器 PostgreSQL 19 实际集群标识或版本无效");
   return { systemIdentifier, version };
 }
 
@@ -114,6 +115,7 @@ function databaseClient(connectionString) {
 async function checkComments(connection, expectedIdentity, contract, commentText, write) {
   const client = databaseClient(connection);
   let begun = false;
+  let failure;
   try {
     await client.connect();
     await client.query(write ? "BEGIN" : "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
@@ -135,10 +137,15 @@ async function checkComments(connection, expectedIdentity, contract, commentText
         // 保留原错误，不重试数据库写入。
       }
     }
-    throw error;
+    failure = error;
   } finally {
-    await client.end();
+    try {
+      await client.end();
+    } catch {
+      failure ??= new FreshInstallError("关闭业务库连接失败，保留现场");
+    }
   }
+  if (failure) throw failure;
 }
 
 async function main() {
