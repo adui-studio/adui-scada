@@ -1,6 +1,6 @@
 # Docker 原生业务连接安全评审
 
-- 状态：待维护者评审，未实施
+- 状态：A 阶段代码候选已提交，真实目录待验收；B、C、D 未实施
 - 日期：2026-11-28
 - 前置：[ADR-0073](../adr/0073-prisma8-fresh-install.md)、[ADR-0066](../adr/0066-single-local-compose-project.md)、[ADR-0065](../adr/0065-oidc-bff-and-project-api.md)
 - 关联：FR-001、FR-008、FR-013、FR-014、NFR-006
@@ -40,7 +40,7 @@
 
 ## 3. 分阶段实施与验收
 
-### A. 当前新库角色只读预检（下一批代码候选）
+### A. 当前新库角色只读预检（代码候选待真实验收）
 
 - 拟新增独立宿主只读预检入口，复用已有本机 Docker Desktop、固定业务库、严格原生契约及集群核验，不进入 docker:up 或 ready 的真实数据库步骤。
 - 只执行固定目录查询，核对业务库及 Keycloak 库的所有者、既有登录角色属性、直接/间接成员关系与有效 CONNECT 权限、业务 Schema CREATE/USAGE、现有自有业务表/序列所有权与操作权限、标记和集群身份函数访问条件。对 Keycloak Schema 的实际权限核对使用严格只读的独立连接，不从业务库查询冒充已验证其对象。
@@ -62,6 +62,14 @@
 
 ## 4. 本次交付及待决策
 
-本次 PR 仅提交安全评审文档，不修改源码、Compose、环境变量、数据库、角色、凭据、依赖、接口或运行容器。维护者评审后先实施 A 阶段只读核查，只有确认真实权限矩阵并单独授权 B 阶段后，才能执行任何角色和权限变更。C、D 继续按独立小批次验收。
+维护者已同意继续实施 A 阶段。PR #257 在同一功能分支增加独立只读核查入口和离线测试，不修改 Compose、环境变量、数据库、角色、凭据、依赖、接口或运行容器。B 阶段必须依据真实权限矩阵另行审批，C、D 保持独立小批次验收。
 
-拟请维护者确认：保持现有七服务及一个 PostgreSQL 实例，采用管理、SCADA、Keycloak 三类身份隔离方向；允许下一批实现只读角色核查，暂不授权角色变更、数据库写入、OIDC 或工程接口启用。
+## 5. A 阶段候选实现及报告边界
+
+执行入口为 `pnpm run docker:db:role:review`，复用 `apps/server/prisma8-fresh-install.mjs --role-review` 的固定本机 Docker Desktop、回环 15432、随机秘密、原生存储指纹、官方严格结构及真实中文注释核验，拒绝旧项目容器，并在双库核查结束后再次核对 Docker 集群。实际连接仅将同一已验证只读 URL 的数据库路径切换到两个固定库名。新入口不进入 `docker:up` 或 `ready`，只有离线用例进入 `test:docker`。
+
+每库独立 REPEATABLE READ READ ONLY 事务，前后核验真实库名、角色与会话角色、Schema、PG19、集群标识、只读设置及非恢复状态；成功回滚并关闭连接后才返回结果。读取当前角色属性和递归成员计数、继承/SET ROLE 能力、拟议角色是否已存在、两库直接所有权/所有者角色有效权限、CONNECT/CREATE/TEMP 和 PUBLIC CONNECT；分别核对业务库 public/prisma_contract 和 Keycloak public Schema、PUBLIC CREATE、public 表及序列权限，统计其他非系统 Schema 数量。业务表逐一匹配当前 12 个固定表名，Keycloak 表和两库序列仅输出聚合计数，不回显其任意对象名。anyColumn 字段是至少一个列或整个表的有效权限，并非逐列授权清单。owner 是当前登录角色的直接所有权，ownerPrivileges 是所有者角色有效 USAGE 能力（含超级用户及隐式角色语义），不是具体所有者名字。业务库单独核验原生 marker 和集群函数权限；两库共享目录摘要必须一致。
+
+`DOCKER_DB_ROLE_REVIEW_READY`、`directoryReviewPassed=true` 只表示当前共享角色目录核查完成；`admissionPassed=false` 固定表示尚未批准正式运行身份，`databaseWritten=false` 表示本命令未执行数据库写入。此报告不是对候选运行身份的实际登录/最小权限验收，也不覆盖额外 Schema 内全部对象、逐列 ACL、所有者角色名称或并发角色变更的全局一致快照；其他 Schema 非零须先另行审查，B 阶段继续核对精确仓储 SQL、对象所有权和 Keycloak 实际 Schema 管理要求。失败不输出原始异常、连接串、凭据、任意角色名或业务行，不执行任何角色及数据库变更。
+
+协作环境 Node.js 22.16.0 实际执行新增角色核查核心及测试的 node --check 和 node --test，8/8 通过。远端 Git Blob 分别为 ef9dc9d5810457d0d9e745fdf8ca5872bee34ffb、7115a369da54aacf7bb3324badc25c0d0a9215f5，与本地实际执行文件一致。已逐项核对入口、参数白名单、严格契约验证分支及 package.json 质量链；未运行完整 Docker 68 项、Prisma 8 全新专项、全仓 Vite+、env/messages/docs 或真实 PostgreSQL 19 目录查询。
