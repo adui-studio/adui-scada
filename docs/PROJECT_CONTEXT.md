@@ -3102,3 +3102,9 @@ PR #244 Windows 修复后 Core 构建、双契约离线生成、Vite+ 607 格式
 维护者 Windows 完成 PR #246 专项与 HTTP E2E 175/175、617 格式文件/455 受检文件零警告错误、482 中文文案、97 Markdown、NestJS 构建及增量退出 0。格式提交 2a9e4c2b47611dde4764a7097a7c6af16a06a83d 推送且五文件差异为排版。真实 FRESH_PROVIDER_SMOKE_READY，projectListReadVerified、projectLockedReadDenied、missingProjectDenied=true，providerSwitched=false，存储指纹与结构数量一致，退出 0、工作区干净。按维护者授权 Squash 合入 c4ebce33dc210e5e4b38492f37f726aede28ed22。
 
 维护者再次明确从零建设，不继续旧数据工作。本批直接新增原生工程创建及版本追加 CAS，统一工程持久化模块；不新增旧 Contract 适配、旧库对照或迁移。下一步实现原生发布/回滚及剩余正式依赖，集中切换根模块和清理废弃入口。真实写入、并发及原生正式 HTTP 运行仍待验收。
+
+### 2026-11-27 · PR #247 原生工程写入复验
+
+维护者 Windows 在 2cdbbd7441c7bb7bc7b74d5cfbba9b7ff3f1c781 完成全新专项 28/28、原生工程写入 11/11、查询 10/10、模块装配 9/9，共 58/58；Vite+ 619 格式文件/457 受检文件零错误但一条 vitest(require-to-throw-message) 警告，中文 484 文件、Markdown 97 份、NestJS 构建、git diff --check 及增量退出码 0。正常 Hook 格式化提交 bc8c9ecd03988c97c1349427be59f9aca7c374c4 已推送，三文件差异仅排版。真实 FRESH_PROVIDER_SMOKE_READY，PostgreSQL 190000、存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致，全部既有只读核验及 projectWriteDenied=true，providerSwitched=false，退出 0、工作区干净。
+
+E-159 为测试专属消息遗漏，已最小修复；不改变生产代码。保持 Draft，零警告复验待完成。后续仅推进全新原生发布与回滚、正式应用装配及废弃入口清理，不增加旧库兼容工作。

@@ -370,7 +370,9 @@ describe("全新原生工程版本持久化", () => {
   it("业务写入之后数据库身份漂移仍拒绝提交结果", async () => {
     const h = harness();
     h.state.drift = true;
-    await expect(h.store.append(actor, projectId, input)).rejects.toThrow();
+    await expect(h.store.append(actor, projectId, input)).rejects.toThrow(
+      "Prisma 8 运行时数据库身份、标记或连接边界不一致",
+    );
     expect(h.steps.at(-1)).toBe("边界");
     expect(h.state.rejected).toBe(1);
     expect(h.state.committed).toBe(0);

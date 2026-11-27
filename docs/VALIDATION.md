@@ -5315,3 +5315,9 @@ PR #244 Windows 修复后 Core 构建、双契约离线生成、Vite+ 607 格式
 PR #246 维护者 Windows 专项 175/175（全新 28、运行时 7、工程查询 16、身份与装配 61、HTTP E2E 63），Vite+ 617/455 零警告错误，中文 482、Markdown 97、构建及增量退出 0；实际 PostgreSQL 19 只读烟测 FRESH_PROVIDER_SMOKE_READY，projectListReadVerified/projectLockedReadDenied/missingProjectDenied=true、providerSwitched=false、指纹及 12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致。验收 HEAD 2a9e4c2b47611dde4764a7097a7c6af16a06a83d，合并 c4ebce33dc210e5e4b38492f37f726aede28ed22。
 
 本批只开发全新原生写事务：原有九条业务 SQL 模板静态逐字核对，新增十一项原生 Vitest 模拟回归，独立模块装配及真实只读烟测新增 projectWriteDenied 标志。协作环境无法安装固定 SDK、执行完整 Windows 工具链或连接维护者数据库，新增测试、完整编译与真实烟测待验收；模拟拒绝不等于真实 PostgreSQL 回滚。不得为本批运行历史数据库或迁移专项。
+
+### 2026-11-27 · PR #247 原生工程写入验收及 E-159 修复
+
+维护者 Windows 在 2cdbbd7441c7bb7bc7b74d5cfbba9b7ff3f1c781 完成全新专项 28/28、原生工程写入 11/11、查询 10/10、模块装配 9/9，共 58/58；Vite+ 619 格式文件/457 受检文件零错误但一条 vitest(require-to-throw-message) 警告，中文 484 文件、Markdown 97 份、NestJS 构建、git diff --check 及增量退出码 0。正常 Hook 格式化提交 bc8c9ecd03988c97c1349427be59f9aca7c374c4 已推送，三文件差异仅排版。真实 FRESH_PROVIDER_SMOKE_READY，PostgreSQL 190000、存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致，全部既有只读核验及 projectWriteDenied=true，providerSwitched=false，退出 0、工作区干净。
+
+后置身份漂移夹具将 role 改为 wrong，实际由 requirePrisma8RuntimeIdentity 抛出“Prisma 8 运行时数据库身份、标记或连接边界不一致”。仅将无参数 toThrow 改为该确定文案，保留边界执行顺序、模拟拒绝及未提交断言，不改变业务 SQL、提供方或数据库。静态复核唯一替换及该文件无无参数 toThrow；Windows 原生写事务定向测试、Vite+ 零警告及中文/文档检查待复验。 保持 Draft，维护者已同意继续，但零警告复验完成前不合并。无旧库迁移、初始化或真实业务写入。
