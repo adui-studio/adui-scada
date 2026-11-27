@@ -3156,3 +3156,7 @@ E-159 为测试专属消息遗漏，已最小修复；不改变生产代码。�
 维护者 Windows 实测 PR #254：Docker 编排/只读探针/传输 41/41，Discovery 9/9（含真实 SDK 合法及错误 RSA 签名），Callback 12/12，共 62/62；Vite+ 505 格式文件/346 受检零警告错误、中文文案 372、Markdown 97、NestJS 构建及 git diff --check 通过，增量退出码 0。四镜像构建、七服务、容器原生只读、双端 HTTP/HTTPS、宿主与容器正式 OIDC Discovery/JWKS 通过，真实验收退出码 0。验收起点 d4494ef95e7b8c2aa0af799cfe0b9f68cfdbb20c，Hook 格式化提交 8f517321f2f4d2b10f85e960438f9b6db18f0821 经远端逐文件核对仅排版，无语义变更；维护者明确授权 Squash 合入 feat/mvp-first-integration 的 88024689f43419a01f9008b047643181498b853c。E-163 SDK 验签回归关闭，不代表真实 Keycloak 授权码、登录或写事务已验收。
 
 下一批将只读验证从独立烟测推进至实际常驻 NestJS 进程。受控 docker:up 完成原严格只读数据库核验后，准备独立 Git/镜像忽略目录中的单一绑定文件，仅 server 只读挂载；若既有凭据、集群或契约不符，拒绝覆盖及本次应用启动。显式容器内部模式挂载 DockerReadOnlyDatabaseAppModule 和唯一 Prisma8Service，继续沿用 postgres:5432/adui_scada、集群/角色/标记与事务只读硬门禁。内部 GET /health/database 每次调用正式事务验证并仅返回固定状态；真实烟测同时验证常驻进程与既有独立烟测。默认无数据库根模块、OIDC 禁用、工程 API 隔离和 Nginx 公开代理边界不变。协作环境 7/7 Node 绑定专项、25/25 V8 模拟编排（另有一项未运行）通过；新镜像、完整 Windows 门禁及真实常驻连接待验收。后续受控认证业务连接及写事务另行评审。
+
+### 2026-11-27 · PR #255 常驻原生连接实机通过，零警告门禁待复验
+
+维护者 Windows 已验证七服务启动、常驻 NestJS 原生数据库严格只读连接、独立原生烟测、双端 HTTP/HTTPS 和正式 OIDC Discovery/JWKS，真实验收退出码 0；Docker 49/49、HTTP E2E 71/71、服务端构建与类型检查、环境/LF、中文文案 377、Markdown 97 均通过。Vite+ 510 格式文件/351 受检文件仍有 1 条 vitest(expect-expect) 警告，零错误。格式化提交 bf7b408883d6a427dac4e3e7d986edef827b6c79 已核对。E-164 候选仅补全默认根模块 404 测试的显式断言，待真实 E2E 和零警告复验；PR #255 保持 Draft，不提前合并，不改变已验收的只读部署。真实 OIDC 登录、授权码兑换及正式业务写事务仍待后续联调。
