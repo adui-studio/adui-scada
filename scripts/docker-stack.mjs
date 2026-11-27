@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { validateLabSecrets } from "./prepare-oidc-lab.mjs";
 import { freshStorageHash } from "./prisma8-fresh-install.mjs";
 import { DockerOidcProbeError, verifyDockerOidc } from "./docker-oidc-probe.mjs";
+import { ensureDockerDatabaseBinding } from "./docker-runtime-binding.mjs";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const COMPOSE_ARGS = Object.freeze([
@@ -237,6 +238,7 @@ export function manageDockerStack(
   verifyDatabase = verifyDockerDatabase,
   verifyHttps = verifyDockerHttps,
   verifyOidc = verifyDockerOidc,
+  prepareBinding = (input) => ensureDockerDatabaseBinding(ROOT, input, freshStorageHash),
 ) {
   if (!MODES.has(mode)) throw new Error("不支持的 Docker 操作");
   if (mode === "plan" || mode === "up" || mode === "infra" || mode === "oidc") {
@@ -283,6 +285,7 @@ export function manageDockerStack(
       }
     }
     const probeInput = verifyDatabase();
+    prepareBinding(probeInput);
     checked(
       run,
       [
@@ -303,7 +306,7 @@ export function manageDockerStack(
       ],
       true,
     );
-    // 凭据仅经子进程标准输入传递，不进入命令参数、日志或容器服务环境。
+    // 独立烟测仍只经标准输入接收凭据；常驻服务只读取独立只读文件挂载。
     const output = checked(
       run,
       [...COMPOSE_ARGS, "exec", "-T", "server", "node", "apps/server/container-prisma8-smoke.mjs"],
@@ -332,6 +335,7 @@ export function manageDockerStack(
         result.singleNativeProviderVerified !== true ||
         result.legacyProviderAbsent !== true ||
         result.providerSwitched !== true ||
+        result.runningDatabaseReadOnlyVerified !== true ||
         result.reactHttpVerified !== true ||
         result.vueHttpVerified !== true
       )
@@ -344,7 +348,7 @@ export function manageDockerStack(
       env.get("SCADA_REACT_HTTPS_PORT") ?? "18480",
       env.get("SCADA_VUE_HTTPS_PORT") ?? "18481",
     ]);
-    return "ADui SCADA 七服务启动完成：一个 PostgreSQL，容器原生只读及双端 HTTP 验证通过，宿主 HTTPS 验证通过；OIDC 登录尚未启用";
+    return "ADui SCADA 七服务启动完成：一个 PostgreSQL，容器原生只读及双端 HTTP 验证通过，常驻服务原生只读连接验证通过，宿主 HTTPS 验证通过；OIDC 登录尚未启用";
   }
   const action = { down: ["down"], ps: ["ps"], logs: ["logs", "-f"] }[mode];
   checked(run, [...COMPOSE_ARGS, ...action], true);
@@ -372,6 +376,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       "Docker 必须使用 Linux 容器引擎",
       "原生数据库严格验证失败，未执行本次应用启动；请单独核对数据库状态",
       "容器原生数据库或双端 HTTP 验证失败，保留现场",
+      "Docker 正式只读数据库绑定无效",
+      "Docker 正式只读数据库绑定文件不一致或无法读取，保留现场",
       "双端 Docker HTTPS 验证失败，请检查本机端口和 mkcert 可信证书，保留现场",
     ]);
     console.error(
