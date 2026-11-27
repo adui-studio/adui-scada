@@ -138,13 +138,15 @@ void describe("容器原生临时事务探针", () => {
 
   void it("探针拒绝只读标志混用、缺失集群与其他库或连接地址", () => {
     const config = resolveDockerTransactionProbeConfig(binding, hash);
+    const connectionString = config.connectionString;
+    assert.ok(typeof connectionString === "string");
     for (const invalid of [
       { ...config, readOnly: true },
       { ...config, transport: "docker-readonly" },
       { ...config, expectedSystemIdentifier: undefined },
       { ...config, expectedSystemIdentifier: "0" },
-      { ...config, connectionString: config.connectionString.replace("@postgres:", "@127.0.0.1:") },
-      { ...config, connectionString: config.connectionString.replace("/adui_scada?", "/adui_scada_keycloak?") },
+      { ...config, connectionString: connectionString.replace("@postgres:", "@127.0.0.1:") },
+      { ...config, connectionString: connectionString.replace("/adui_scada?", "/adui_scada_keycloak?") },
     ]) {
       assert.throws(() => resolvePrisma8RuntimeUrl(invalid), /仅允许已初始化的本机业务库/);
     }
