@@ -1884,3 +1884,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/prisma8-native-check-roundtrip-creation.mjs`：固定参考报告、待审批资源与初始化契约、独立创建计划指纹及纯请求匹配器，不授予实际许可。
 - `scripts/prisma8-native-check-roundtrip-creation-entry.mjs`：复用既有四库只读采集的真实入口，仅输出待审批计划；确认参数沿用冻结库只读确认。
 - `scripts/prisma8-native-check-roundtrip-creation.cases.mjs`：八项离线回归，`pnpm run test:prisma8:native:baseline:check-roundtrip-creation` 纳入 ready；`pnpm run db:prisma8:native:baseline:check-roundtrip:creation-plan --confirm-frozen-catalog-readonly` 不纳入 ready，不创建资源。
+
+### 2026-11-27 · 第五座停止态资源创建执行器
+
+- `scripts/prisma8-native-check-roundtrip-create-stopped.mjs`：固定已验收创建指纹、专用凭据白名单、同一端点重新只读预检、工作区独占尝试登记、专用卷/网络/停止态容器创建及归属复验；不启动、不清理、不重试。真实 `db:prisma8:native:baseline:check-roundtrip:create-stopped` 不纳入 ready，须单独授权。
+- `scripts/prisma8-native-check-roundtrip-create-stopped.cases.mjs`：八项注入子进程及真实临时目录回归，`test:prisma8:native:baseline:check-roundtrip-create-stopped` 纳入 ready。
+- `scripts/prisma8-native-check-roundtrip-host.mjs`：新增只读上下文接口返回原已核验端点与报告，原宿主机和参考目录入口的公开报告不变。
+- `.artifacts/prisma8-native-check-roundtrip-creation/attempt.json` 与 `result.json`：真实创建时生成的本地保留记录，已由既有 `.artifacts/` 忽略规则覆盖，不含凭据。
