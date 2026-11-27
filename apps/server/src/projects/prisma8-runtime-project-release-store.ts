@@ -181,7 +181,7 @@ function createRollbackSemanticHash(projectId: string, request: ProjectRollbackR
 function databaseInteger(value: string, message: string): bigint {
   if (!/^(0|[1-9][0-9]{0,15})$/.test(value)) throw new TypeError(message);
   const parsed = BigInt(value);
-  if (parsed > MAX_SAFE_BIGINT) throw new TypeError(message);
+  if (parsed > MAX_SAFE_BIGINT || parsed.toString() !== value) throw new TypeError(message);
   return parsed;
 }
 

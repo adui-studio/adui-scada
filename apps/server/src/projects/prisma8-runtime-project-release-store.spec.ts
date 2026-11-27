@@ -17,6 +17,7 @@ const sessionId = "9b0d8c2d-6d45-4f0f-8d5c-12e4a0d3a7a1";
 const key = "b2f8a51c-03c6-4e6c-a4d0-4d7f6ef4a4e8";
 const eventId = "d47c7556-674b-4fba-9848-9a3f1edcc635";
 const earlierEventId = "9bd5c867-588d-449e-8aef-d7691b3b8fa1";
+const rollbackEventId = "7129a613-3f07-4107-8f89-c13a787a8e5c";
 const createdAt = "2026-11-27T00:00:00.000Z";
 const storageHash = "9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436";
 const publish = { expectedHeadRevision: 1, targetRevision: 1, expectedReleaseGeneration: 0 };
@@ -434,8 +435,10 @@ describe("全新原生工程发布与回滚仓储", () => {
     h.released();
     h.state.permissions = ["release:rollback"];
     h.state.release.generation = "4";
+    h.state.currentEvent = { ...h.state.currentEvent!, generation: "4" };
     h.state.replay = {
       ...h.targetEvent,
+      event_id: rollbackEventId,
       generation: "3",
       action: "ROLLBACK",
       semantic_hash: semanticHash("ROLLBACK"),
@@ -443,13 +446,15 @@ describe("全新原生工程发布与回滚仓储", () => {
     await expect(h.store.rollback(actor, sessionId, projectId, rollback, key)).resolves.toEqual({
       projectId, action: "ROLLBACK", releasedRevision: 1,
       releasedContentHash: h.snapshot.contentHash, releaseGeneration: 3,
-      eventId: earlierEventId, createdAt,
+      eventId: rollbackEventId, createdAt,
     });
     expect(h.steps).not.toContain("曾发布证明");
     expect(h.writes).toHaveLength(0);
     const invalid = await harness();
     invalid.released();
     invalid.state.permissions = ["release:rollback"];
+    invalid.state.release.generation = "4";
+    invalid.state.currentEvent = { ...invalid.state.currentEvent!, generation: "4" };
     invalid.state.replay = { ...h.state.replay, generation: "2" };
     await expect(invalid.store.rollback(actor, sessionId, projectId, rollback, key)).rejects.toThrow(conflict);
     expect(invalid.writes).toHaveLength(0);
