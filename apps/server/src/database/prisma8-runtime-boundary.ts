@@ -106,6 +106,7 @@ export class Prisma8RuntimeLifecycle<Client> {
   private shutdown: Promise<void> | undefined;
   private ready = false;
   private stopped = false;
+  private releaseFailed = false;
 
   get client(): Client {
     if (!this.ready || this.stopped || !this.port) {
@@ -131,7 +132,11 @@ export class Prisma8RuntimeLifecycle<Client> {
     } catch {
       this.ready = false;
       this.stopped = true;
-      await this.release();
+      try {
+        await this.release();
+      } catch {
+        throw new Error("Prisma 8 数据库启动校验及关闭失败");
+      }
       throw new Error("Prisma 8 数据库启动校验失败");
     }
   }
@@ -150,6 +155,7 @@ export class Prisma8RuntimeLifecycle<Client> {
       // 启动路径已负责释放并报告失败，不重新启动或关闭同一资源。
     }
     await this.release();
+    if (this.releaseFailed) throw new Error("Prisma 8 数据库提供方关闭失败");
   }
 
   private async release(): Promise<void> {
@@ -159,6 +165,7 @@ export class Prisma8RuntimeLifecycle<Client> {
     try {
       await port.close();
     } catch {
+      this.releaseFailed = true;
       throw new Error("Prisma 8 数据库提供方关闭失败");
     }
   }

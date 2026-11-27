@@ -91,8 +91,14 @@ void test("校验成功后才提供同一客户端且关闭只执行一次", asy
   assert.throws(() => lifecycle.client, /尚未就绪/u);
   await lifecycle.start(() => ({
     client,
-    verify: async () => { events.push("校验"); },
-    close: async () => { events.push("关闭"); },
+    verify: () => {
+      events.push("校验");
+      return Promise.resolve();
+    },
+    close: () => {
+      events.push("关闭");
+      return Promise.resolve();
+    },
   }));
   assert.equal(lifecycle.client, client);
   await assert.rejects(lifecycle.start(() => { throw new Error("禁止调用"); }), /重复启动/u);
@@ -106,8 +112,11 @@ void test("启动失败释放资源并隐藏第三方异常", async () => {
   let closed = 0;
   await assert.rejects(lifecycle.start(() => ({
     client: {},
-    verify: async () => { throw new Error("模拟秘密"); },
-    close: async () => { closed++; },
+    verify: () => Promise.reject(new Error("模拟秘密")),
+    close: () => {
+      closed++;
+      return Promise.resolve();
+    },
   })), { message: "Prisma 8 数据库启动校验失败" });
   await lifecycle.stop();
   assert.equal(closed, 1);
@@ -117,12 +126,19 @@ void test("启动失败释放资源并隐藏第三方异常", async () => {
 void test("启动过程中关闭不暴露客户端也不重复释放", async () => {
   const lifecycle = new Prisma8RuntimeLifecycle();
   let closed = 0;
-  let complete = () => {};
-  const verified = new Promise((resolve) => { complete = () => resolve(undefined); });
+  let complete = () => {
+    throw new Error("校验夹具尚未初始化");
+  };
+  const verified = new Promise((resolve) => {
+    complete = () => resolve(undefined);
+  });
   const start = lifecycle.start(() => ({
     client: {},
     verify: () => verified,
-    close: async () => { closed++; },
+    close: () => {
+      closed++;
+      return Promise.resolve();
+    },
   }));
   const rejected = assert.rejects(start, /启动校验失败/u);
   const stop = lifecycle.stop();
@@ -137,10 +153,24 @@ void test("关闭失败不返回成功且保持终止状态", async () => {
   const lifecycle = new Prisma8RuntimeLifecycle();
   await lifecycle.start(() => ({
     client: {},
-    verify: async () => {},
-    close: async () => { throw new Error("模拟秘密"); },
+    verify: () => Promise.resolve(),
+    close: () => Promise.reject(new Error("模拟秘密")),
   }));
   await assert.rejects(lifecycle.stop(), { message: "Prisma 8 数据库提供方关闭失败" });
+  await assert.rejects(lifecycle.stop(), /关闭失败/u);
+  assert.throws(() => lifecycle.client, /已关闭/u);
+});
+
+void test("启动与关闭同时失败保留两类脱敏原因", async () => {
+  const lifecycle = new Prisma8RuntimeLifecycle();
+  await assert.rejects(
+    lifecycle.start(() => ({
+      client: {},
+      verify: () => Promise.reject(new Error("模拟启动异常")),
+      close: () => Promise.reject(new Error("模拟关闭异常")),
+    })),
+    { message: "Prisma 8 数据库启动校验及关闭失败" },
+  );
   await assert.rejects(lifecycle.stop(), /关闭失败/u);
   assert.throws(() => lifecycle.client, /已关闭/u);
 });
