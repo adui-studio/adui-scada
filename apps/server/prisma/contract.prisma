@@ -1,0 +1,364 @@
+// use prisma-8
+// ADui SCADA 全新安装使用的原生 PSL 契约。
+// 保留业务模型、约束和中文注释，不依赖历史数据库或迁移包。
+
+/// 服务端工程与其最新版本水位；0 表示该工程尚无版本。
+model ScadaProject {
+  /// 所属租户标识，与工程标识共同构成联合主键。
+  tenantId String(storage: varchar, length: 128) @map("tenant_id")
+  /// 工程标识，在同一租户内唯一。
+  projectId String(storage: varchar, length: 128) @map("project_id")
+  /// 最新历史版本修订号；0 表示尚无已保存版本。
+  headRevision BigInt @default(0) @map("head_revision")
+  /// 工程创建时间，采用带时区时间戳。
+  createdAt DateTime(precision: 6) @default(now()) @onCreate(now()) @map("created_at")
+  /// 工程最近修改时间，版本更新时由 Prisma 维护。
+  updatedAt DateTime(precision: 6) @onCreate(now()) @onUpdate(now()) @map("updated_at")
+  /// 该工程的主体级操作授权列表。
+  grants ScadaProjectGrant[]
+  /// 该工程只追加的历史版本集合。
+  versions ScadaProjectVersion[]
+  /// 该工程的独立正式发布状态；未发布时目标修订为空且代次为 0。
+  releaseState ScadaProjectReleaseState?
+  /// 该工程只追加的正式发布与回滚事件。
+  releaseEvents ScadaProjectReleaseEvent[]
+  /// 该工程内部采集流已提交的历史批次。
+  tagHistoryBatches ScadaTagHistoryBatch[]
+
+  @@id([tenantId, projectId], map: "scada_projects_pkey")
+  @@check(expression: sql`((head_revision >= 0) AND (head_revision <= '9007199254740991'::bigint))`, map: "scada_projects_head_revision_check")
+  @@map("scada_projects")
+}
+
+/// 逐主体逐操作授权，权限不从客户端请求体读取。
+model ScadaProjectGrant {
+  /// 授权记录所属租户标识。
+  tenantId String(storage: varchar, length: 128) @map("tenant_id")
+  /// 授权记录所属工程标识。
+  projectId String(storage: varchar, length: 128) @map("project_id")
+  /// 被授权的可信身份主体标识。
+  subjectId String(storage: varchar, length: 128) @map("subject_id")
+  /// 明确授予的工程读取、版本读取、版本追加、正式发布、正式回滚或已发布快照读取权限。
+  permission String
+  /// 该授权记录所属的工程主表记录。
+  project ScadaProject @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict, onUpdate: Cascade, map: "scada_project_grants_tenant_id_project_id_fkey", index: false)
+
+  @@id([tenantId, projectId, subjectId, permission], map: "scada_project_grants_pkey")
+  @@index([tenantId, subjectId, projectId], map: "scada_project_grants_subject_idx")
+  @@check(expression: sql`(permission = ANY (ARRAY['project:read'::text, 'version:read'::text, 'version:append'::text, 'release:publish'::text, 'release:rollback'::text, 'release:read'::text]))`, map: "scada_project_grants_permission_check")
+  @@map("scada_project_grants")
+}
+
+/// 只追加 SHA-256 工程版本快照，正式发布另有独立流程。
+model ScadaProjectVersion {
+  /// 历史版本所属租户标识。
+  tenantId String(storage: varchar, length: 128) @map("tenant_id")
+  /// 历史版本所属工程标识。
+  projectId String(storage: varchar, length: 128) @map("project_id")
+  /// 服务端分配的递增修订号，范围为正安全整数。
+  revision BigInt
+  /// 完整工程快照，包含格式、文档、修订号和内容摘要。
+  snapshot Json(storage: jsonb)
+  /// 快照 SHA-256 小写十六进制摘要，用于校验完整性。
+  contentHash String(storage: varchar, length: 64) @map("content_hash")
+  /// 本次版本保存的可信操作主体标识。
+  createdBy String(storage: varchar, length: 128) @map("created_by")
+  /// 工程版本创建时间，采用带时区时间戳。
+  createdAt DateTime(precision: 6) @map("created_at")
+  /// 此历史版本所属的工程。
+  project ScadaProject @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict, onUpdate: Cascade, map: "scada_project_versions_tenant_id_project_id_fkey", index: "scada_project_versions_snapshot_reference_key")
+  /// 该成功保存版本对应的审计事件。
+  audit ScadaProjectAudit?
+  /// 该版本作为正式发布事件来源版本的历史引用。
+  releaseFromEvents ScadaProjectReleaseEvent[] @relation("ScadaProjectReleaseEventFromVersion")
+  /// 该版本作为正式发布事件目标版本的历史引用。
+  releaseTargetEvents ScadaProjectReleaseEvent[] @relation("ScadaProjectReleaseEventToVersion")
+  /// 该版本作为当前正式发布指针的历史引用。
+  releaseStates ScadaProjectReleaseState[] @relation("ScadaProjectReleaseStateVersion")
+
+  @@id([tenantId, projectId, revision], map: "scada_project_versions_pkey")
+  @@index([tenantId, projectId, createdAt], map: "scada_project_versions_created_idx")
+  @@index([tenantId, projectId, revision, contentHash], unique: true, map: "scada_project_versions_snapshot_reference_key")
+  @@check(expression: sql`((revision > 0) AND (revision <= '9007199254740991'::bigint))`, map: "scada_project_versions_revision_check")
+  @@check(expression: sql`((content_hash)::text ~ '^[0-9a-f]{64}$'::text)`, map: "scada_project_versions_hash_check")
+  @@map("scada_project_versions")
+}
+
+/// 成功保存审计与版本一对一；失败尝试的独立安全审计暂未实现。
+model ScadaProjectAudit {
+  /// 审计事件全局唯一 UUID 标识。
+  eventId Uuid @onCreate(uuid(4)) @map("event_id")
+  /// 成功保存事件所属租户标识。
+  tenantId String(storage: varchar, length: 128) @map("tenant_id")
+  /// 成功保存事件所属工程标识。
+  projectId String(storage: varchar, length: 128) @map("project_id")
+  /// 本次成功保存的工程修订号。
+  revision BigInt
+  /// 执行版本追加操作的可信主体标识。
+  actorId String(storage: varchar, length: 128) @map("actor_id")
+  /// 审计操作类型，当前仅允许版本追加。
+  action String
+  /// 成功提交审计事件创建时间。
+  createdAt DateTime(precision: 6) @default(now()) @onCreate(now()) @map("created_at")
+  /// 该审计事件对应的不可变工程版本。
+  version ScadaProjectVersion @relation(fields: [tenantId, projectId, revision], references: [tenantId, projectId, revision], onDelete: Restrict, onUpdate: Cascade, map: "scada_project_audit_tenant_id_project_id_revision_fkey", index: "scada_project_audit_version_key")
+
+  @@id([eventId], map: "scada_project_audit_pkey")
+  @@index([tenantId, actorId, createdAt], map: "scada_project_audit_actor_idx")
+  @@index([tenantId, projectId, revision], unique: true, map: "scada_project_audit_version_key")
+  @@check(expression: sql`(action = 'version:append'::text)`, map: "scada_project_audit_action_check")
+  @@map("scada_project_audit")
+}
+
+/// 每工程唯一的正式发布指针；未发布时不引用任何历史版本。
+model ScadaProjectReleaseState {
+  /// 发布状态所属租户标识。
+  tenantId String(storage: varchar, length: 128) @map("tenant_id")
+  /// 发布状态所属工程标识。
+  projectId String(storage: varchar, length: 128) @map("project_id")
+  /// 当前正式发布的不可变历史修订号；空值表示尚未发布，数据库增量迁移维护其复合外键。
+  releasedRevision BigInt? @map("released_revision")
+  /// 当前正式发布快照的 SHA-256 摘要；必须与发布修订号同时存在或同时为空。
+  releasedContentHash String(storage: varchar, length: 64)? @map("released_content_hash")
+  /// 正式发布代次；初始为 0，每次成功发布或回滚严格递增。
+  releaseGeneration BigInt @default(0) @map("release_generation")
+  /// 当前发布指针对应的最后成功发布事件；未发布时为空。
+  lastReleaseEventId Uuid? @map("last_release_event_id")
+  /// 发布状态最近更新时间；仅用于诊断展示，不参与版本 CAS。
+  updatedAt DateTime(precision: 6) @onCreate(now()) @onUpdate(now()) @map("updated_at")
+  /// 该发布状态所属的工程主表记录。
+  project ScadaProject @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict, onUpdate: Cascade, map: "scada_project_release_state_project_fkey", index: "scada_project_release_state_pkey")
+  /// 当前发布指针引用的不可变工程版本；复合外键同时校验修订号与 SHA-256 摘要。
+  releasedVersion ScadaProjectVersion? @relation("ScadaProjectReleaseStateVersion", fields: [tenantId, projectId, releasedRevision, releasedContentHash], references: [tenantId, projectId, revision, contentHash], onDelete: Restrict, onUpdate: Cascade, map: "scada_project_release_state_version_fkey", index: "scada_project_release_state_version_idx")
+  /// 独立原生候选恢复六字段物理外键；反向单值关系兼容性仍待审查。
+  lastReleaseEvent ScadaProjectReleaseEvent? @relation("ScadaProjectReleaseStateLastEvent", fields: [tenantId, projectId, releaseGeneration, releasedRevision, releasedContentHash, lastReleaseEventId], references: [tenantId, projectId, generation, toRevision, toContentHash, eventId], onDelete: Restrict, onUpdate: Cascade, map: "scada_project_release_state_last_event_fkey", index: false)
+
+  @@id([tenantId, projectId], map: "scada_project_release_state_pkey")
+  @@index([lastReleaseEventId], unique: true, map: "scada_project_release_state_last_event_key")
+  @@index([tenantId, projectId, releasedRevision, releasedContentHash], map: "scada_project_release_state_version_idx")
+  @@check(expression: sql`(release_generation >= 0)`, map: "scada_project_release_state_generation_check")
+  @@check(expression: sql`((released_revision IS NULL) OR (released_revision > 0))`, map: "scada_project_release_state_revision_check")
+  @@check(expression: sql`(((released_revision IS NULL) AND (released_content_hash IS NULL)) OR ((released_revision IS NOT NULL) AND (released_content_hash IS NOT NULL)))`, map: "scada_project_release_state_hash_pair_check")
+  @@check(expression: sql`((released_content_hash IS NULL) OR ((released_content_hash)::text ~ '^[0-9a-f]{64}$'::text))`, map: "scada_project_release_state_hash_check")
+  @@check(expression: sql`(((release_generation = 0) AND (released_revision IS NULL) AND (released_content_hash IS NULL) AND (last_release_event_id IS NULL)) OR ((release_generation > 0) AND (released_revision IS NOT NULL) AND (released_content_hash IS NOT NULL) AND (last_release_event_id IS NOT NULL)))`, map: "scada_project_release_state_lifecycle_check")
+  @@map("scada_project_release_state")
+}
+
+/// 只追加正式发布与回滚事件；不复用版本保存审计。
+model ScadaProjectReleaseEvent {
+  /// 发布事件全局唯一 UUID 标识。
+  eventId Uuid @onCreate(uuid(4)) @map("event_id")
+  /// 发布事件所属租户标识。
+  tenantId String(storage: varchar, length: 128) @map("tenant_id")
+  /// 发布事件所属工程标识。
+  projectId String(storage: varchar, length: 128) @map("project_id")
+  /// 本次成功发布或回滚后的发布代次；从 1 开始严格递增。
+  generation BigInt
+  /// 发布事件动作，仅允许 PUBLISH 或 ROLLBACK。
+  action String(storage: varchar, length: 16)
+  /// 事务提交前的正式发布修订号；首次发布时为空，数据库增量迁移维护其复合外键。
+  fromRevision BigInt? @map("from_revision")
+  /// 事务提交前正式发布快照的 SHA-256 摘要；必须与原发布修订号同时存在或同时为空。
+  fromContentHash String(storage: varchar, length: 64)? @map("from_content_hash")
+  /// 事务提交后的正式发布修订号。
+  toRevision BigInt @map("to_revision")
+  /// 事务提交后的正式发布快照 SHA-256 摘要。
+  toContentHash String(storage: varchar, length: 64) @map("to_content_hash")
+  /// 执行发布或回滚操作的可信主体标识。
+  actorId String(storage: varchar, length: 128) @map("actor_id")
+  /// 受控客户端幂等标识；不得写入令牌、Cookie、工程正文或设备地址。
+  idempotencyKey String(storage: varchar, length: 128) @map("idempotency_key")
+  /// 服务端计算的请求语义 SHA-256 摘要，用于区分同幂等标识的不同语义。
+  requestSemanticHash String(storage: varchar, length: 64) @map("request_semantic_hash")
+  /// 发布事件成功提交时间。
+  createdAt DateTime(precision: 6) @default(now()) @onCreate(now()) @map("created_at")
+  /// 该事件所属的工程主表记录。
+  project ScadaProject @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict, onUpdate: Cascade, map: "scada_project_release_event_project_fkey", index: "scada_project_release_event_generation_key")
+  /// 该事件提交前的正式发布版本；首次发布时为空。
+  fromVersion ScadaProjectVersion? @relation("ScadaProjectReleaseEventFromVersion", fields: [tenantId, projectId, fromRevision, fromContentHash], references: [tenantId, projectId, revision, contentHash], onDelete: Restrict, onUpdate: Cascade, map: "scada_project_release_event_from_version_fkey", index: "scada_project_release_event_from_version_idx")
+  /// 该事件提交后的正式发布版本；复合外键同时校验快照摘要。
+  toVersion ScadaProjectVersion @relation("ScadaProjectReleaseEventToVersion", fields: [tenantId, projectId, toRevision, toContentHash], references: [tenantId, projectId, revision, contentHash], onDelete: Restrict, onUpdate: Cascade, map: "scada_project_release_event_to_version_fkey", index: "scada_project_release_event_to_version_idx")
+  // 六列外键的反向单值导航待固定版本能力评审；正式 Contract 仍保留原关系。
+
+  @@id([eventId], map: "scada_project_release_events_pkey")
+  @@index([tenantId, actorId, createdAt], map: "scada_project_release_event_actor_created_idx")
+  @@index([tenantId, projectId, fromRevision, fromContentHash], map: "scada_project_release_event_from_version_idx")
+  @@index([tenantId, projectId, generation], unique: true, map: "scada_project_release_event_generation_key")
+  @@index([tenantId, projectId, actorId, action, idempotencyKey], unique: true, map: "scada_project_release_event_idempotency_key")
+  @@index([tenantId, projectId, createdAt], map: "scada_project_release_event_project_created_idx")
+  @@index([tenantId, projectId, generation, toRevision, toContentHash, eventId], unique: true, map: "scada_project_release_event_state_reference_key")
+  @@index([tenantId, projectId, toRevision, toContentHash], map: "scada_project_release_event_to_version_idx")
+  @@check(expression: sql`(generation > 0)`, map: "scada_project_release_event_generation_check")
+  @@check(expression: sql`((action)::text = ANY (ARRAY[('PUBLISH'::character varying)::text, ('ROLLBACK'::character varying)::text]))`, map: "scada_project_release_event_action_check")
+  @@check(expression: sql`((from_revision IS NULL) OR (from_revision > 0))`, map: "scada_project_release_event_from_revision_check")
+  @@check(expression: sql`(((from_revision IS NULL) AND (from_content_hash IS NULL)) OR ((from_revision IS NOT NULL) AND (from_content_hash IS NOT NULL)))`, map: "scada_project_release_event_hash_pair_check")
+  @@check(expression: sql`((from_content_hash IS NULL) OR ((from_content_hash)::text ~ '^[0-9a-f]{64}$'::text))`, map: "scada_project_release_event_from_hash_check")
+  @@check(expression: sql`(to_revision > 0)`, map: "scada_project_release_event_to_revision_check")
+  @@check(expression: sql`((to_content_hash)::text ~ '^[0-9a-f]{64}$'::text)`, map: "scada_project_release_event_to_hash_check")
+  @@check(expression: sql`((length((idempotency_key)::text) >= 1) AND (length((idempotency_key)::text) <= 128))`, map: "scada_project_release_event_idempotency_key_check")
+  @@check(expression: sql`((request_semantic_hash)::text ~ '^[0-9a-f]{64}$'::text)`, map: "scada_project_release_event_semantic_hash_check")
+  @@check(expression: sql`((length((actor_id)::text) >= 1) AND (length((actor_id)::text) <= 128))`, map: "scada_project_release_event_actor_check")
+  @@check(expression: sql`(((action)::text <> 'ROLLBACK'::text) OR (from_revision IS NOT NULL))`, map: "scada_project_release_event_rollback_source_check")
+  @@map("scada_project_release_events")
+}
+
+/// 已验证的租户内主体；不保存前端提供的角色、令牌明文或本地密码。
+model ScadaIdentity {
+  /// 主体所属租户的服务端标识。
+  tenantId String(storage: varchar, length: 128) @map("tenant_id")
+  /// 主体唯一标识，由后续可信身份提供方关联。
+  subjectId String(storage: varchar, length: 128) @map("subject_id")
+  /// 主体状态，仅 active 可获得访问授权。
+  status String(storage: varchar, length: 16) @default("active")
+  /// 主体创建时间。
+  createdAt DateTime(precision: 6) @default(now()) @onCreate(now()) @map("created_at")
+  /// 主体记录最后更新时间。
+  updatedAt DateTime(precision: 6) @onCreate(now()) @onUpdate(now()) @map("updated_at")
+  /// 该主体的短期服务端会话集合。
+  sessions ScadaAuthSession[]
+  /// 该主体预绑定的 OIDC 外部身份集合。
+  externalIdentities ScadaExternalIdentity[]
+
+  @@id([tenantId, subjectId], map: "scada_identities_pkey")
+  @@check(expression: sql`((status)::text = ANY (ARRAY[('active'::character varying)::text, ('disabled'::character varying)::text]))`, map: "scada_identities_status_check")
+  @@map("scada_identities")
+}
+
+/// 短期服务端令牌会话，只存储高熵令牌 SHA-256 摘要，支持即时撤销。
+model ScadaAuthSession {
+  /// 会话主键，保留 PostgreSQL 原生 UUID 类型。
+  sessionId Uuid @onCreate(uuid(4)) @map("session_id")
+  /// 会话归属租户标识，必须与主体所属租户一致。
+  tenantId String(storage: varchar, length: 128) @map("tenant_id")
+  /// 会话归属的可信主体标识。
+  subjectId String(storage: varchar, length: 128) @map("subject_id")
+  /// 不透明高熵令牌的 SHA-256 摘要，绝不存储令牌明文。
+  tokenHash String(storage: varchar, length: 64) @map("token_hash")
+  /// 会话创建时间。
+  issuedAt DateTime(precision: 6) @default(now()) @onCreate(now()) @map("issued_at")
+  /// 会话严格过期时间，不允许无限续期。
+  expiresAt DateTime(precision: 6) @map("expires_at")
+  /// 会话显式撤销时间；为空表示尚未撤销。
+  revokedAt DateTime(precision: 6)? @map("revoked_at")
+  /// 浏览器 Cookie 会话的 CSRF 令牌摘要；旧 Bearer 会话允许为空。
+  csrfTokenHash String(storage: varchar, length: 64)? @map("csrf_token_hash")
+  /// 该会话关联的租户内可信主体。
+  identity ScadaIdentity @relation(fields: [tenantId, subjectId], references: [tenantId, subjectId], onDelete: Restrict, onUpdate: Cascade, map: "scada_auth_sessions_identity_fkey", index: "scada_auth_sessions_subject_expiry_idx")
+
+  @@id([sessionId], map: "scada_auth_sessions_pkey")
+  @@index([tenantId, subjectId, expiresAt], map: "scada_auth_sessions_subject_expiry_idx")
+  @@index([tokenHash], unique: true, map: "scada_auth_sessions_token_hash_key")
+  @@check(expression: sql`((token_hash)::text ~ '^[0-9a-f]{64}$'::text)`, map: "scada_auth_sessions_token_hash_check")
+  @@check(expression: sql`(expires_at > issued_at)`, map: "scada_auth_sessions_expiry_check")
+  @@check(expression: sql`((csrf_token_hash IS NULL) OR ((csrf_token_hash)::text ~ '^[0-9a-f]{64}$'::text))`, map: "scada_auth_sessions_csrf_token_hash_check")
+  @@map("scada_auth_sessions")
+}
+
+/// 经过受信运维流程预绑定的外部 OIDC 身份；邮箱与角色声明不作为主体主键。
+model ScadaExternalIdentity {
+  /// 经过服务端配置和 Discovery 校验的固定 OIDC Issuer。
+  issuer String(storage: varchar, length: 512)
+  /// OIDC Issuer 内唯一的 subject，不允许通过邮箱或用户名替代。
+  subject String(storage: varchar, length: 256)
+  /// 该外部身份映射到的本地租户标识。
+  tenantId String(storage: varchar, length: 128) @map("tenant_id")
+  /// 该外部身份映射到的租户内可信主体标识。
+  subjectId String(storage: varchar, length: 128) @map("subject_id")
+  /// 预绑定记录创建时间。
+  createdAt DateTime(precision: 6) @default(now()) @onCreate(now()) @map("created_at")
+  /// 只能映射到已经建立的本地可信主体。
+  identity ScadaIdentity @relation(fields: [tenantId, subjectId], references: [tenantId, subjectId], onDelete: Restrict, onUpdate: Cascade, map: "scada_external_identities_identity_fkey", index: "scada_external_identities_identity_idx")
+
+  @@id([issuer, subject], map: "scada_external_identities_pkey")
+  @@index([tenantId, subjectId], map: "scada_external_identities_identity_idx")
+  @@check(expression: sql`(length((issuer)::text) > 0)`, map: "scada_external_identities_issuer_check")
+  @@check(expression: sql`(length((subject)::text) > 0)`, map: "scada_external_identities_subject_check")
+  @@map("scada_external_identities")
+}
+
+/// 一次性 OIDC 登录事务：不存储 PKCE verifier 明文、授权码或任何 IdP Token。
+model ScadaOidcTransaction {
+  /// 高熵 state 的 SHA-256 小写十六进制摘要，用作一次性主键。
+  stateHash String(storage: varchar, length: 64) @map("state_hash")
+  /// 创建登录事务时固定的 OIDC Issuer。
+  issuer String(storage: varchar, length: 512)
+  /// 仅用于验证回调 ID Token 的 nonce，不是账号身份。
+  nonce String(storage: varchar, length: 128)
+  /// AES-256-GCM 加密后的 PKCE verifier 密文及所需解密参数。
+  verifierCiphertext String @map("verifier_ciphertext")
+  /// 绑定发起登录浏览器的随机 Cookie SHA-256 摘要。
+  browserBindingHash String(storage: varchar, length: 64) @map("browser_binding_hash")
+  /// 校验过的站内相对跳转路径，禁止外部重定向。
+  returnPath String(storage: varchar, length: 1024) @map("return_path")
+  /// 登录事务创建时间。
+  createdAt DateTime(precision: 6) @default(now()) @onCreate(now()) @map("created_at")
+  /// 登录事务绝对过期时间，默认应用层设为五分钟。
+  expiresAt DateTime(precision: 6) @map("expires_at")
+  /// 原子消费时间；为空表示尚未消费。
+  consumedAt DateTime(precision: 6)? @map("consumed_at")
+
+  @@id([stateHash], map: "scada_oidc_transactions_pkey")
+  @@index([browserBindingHash, expiresAt], map: "scada_oidc_transactions_browser_idx")
+  @@index([expiresAt, consumedAt], map: "scada_oidc_transactions_expiry_idx")
+  @@check(expression: sql`((state_hash)::text ~ '^[0-9a-f]{64}$'::text)`, map: "scada_oidc_transactions_state_hash_check")
+  @@check(expression: sql`((browser_binding_hash)::text ~ '^[0-9a-f]{64}$'::text)`, map: "scada_oidc_transactions_binding_hash_check")
+  @@check(expression: sql`(expires_at > created_at)`, map: "scada_oidc_transactions_expiry_check")
+  @@check(expression: sql`(("left"((return_path)::text, 1) = '/'::text) AND ("left"((return_path)::text, 2) <> '//'::text))`, map: "scada_oidc_transactions_return_path_check")
+  @@map("scada_oidc_transactions")
+}
+
+/// 已原子提交的工程历史归档批次，租户和工程共同限定幂等键。
+model ScadaTagHistoryBatch {
+  /// 可信服务端绑定的租户标识。
+  tenantId String(storage: varchar, length: 128) @map("tenant_id")
+  /// 工程标识。
+  projectId String(storage: varchar, length: 128) @map("project_id")
+  /// 每个写入者生命周期唯一的采集流标识。
+  streamId String(storage: varchar, length: 128) @map("stream_id")
+  /// 采集流内正安全整数批次序号。
+  batchSequence BigInt @map("batch_sequence")
+  /// 规范历史记录编码版本。
+  formatVersion Int @map("format_version")
+  /// 已提交的完整批次记录数。
+  recordCount Int @map("record_count")
+  /// 服务端批次提交时间。
+  createdAt DateTime(precision: 6) @default(now()) @onCreate(now()) @map("created_at")
+  /// 所属工程，不允许跨工程归档。
+  project ScadaProject @relation(fields: [tenantId, projectId], references: [tenantId, projectId], onDelete: Restrict, onUpdate: Cascade, map: "scada_tag_history_batches_project_fkey", index: false)
+  /// 按原始批次顺序保存的历史记录。
+  records ScadaTagHistoryRecord[]
+
+  @@id([tenantId, projectId, streamId, batchSequence], map: "scada_tag_history_batches_pkey")
+  @@check(expression: sql`((batch_sequence >= 1) AND (batch_sequence <= '9007199254740991'::bigint))`, map: "scada_tag_history_batches_sequence_check")
+  @@check(expression: sql`(format_version = 1)`, map: "scada_tag_history_batches_format_check")
+  @@check(expression: sql`((record_count >= 1) AND (record_count <= 256))`, map: "scada_tag_history_batches_count_check")
+  @@map("scada_tag_history_batches")
+}
+
+/// 历史归档点，保留原始标量、质量与时间，不按实时序号去重。
+model ScadaTagHistoryRecord {
+  /// 历史点所属租户标识。
+  tenantId String(storage: varchar, length: 128) @map("tenant_id")
+  /// 历史点所属工程标识。
+  projectId String(storage: varchar, length: 128) @map("project_id")
+  /// 原始采集流标识。
+  streamId String(storage: varchar, length: 128) @map("stream_id")
+  /// 原始批次序号。
+  batchSequence BigInt @map("batch_sequence")
+  /// 批次内从零开始的原始顺序。
+  ordinal Int
+  /// 工程内稳定的 Tag 标识。
+  tagId String(storage: varchar, length: 128) @map("tag_id")
+  /// 原始服务器时间对应的 UTC 毫秒，用于范围查询。
+  timestampMs BigInt @map("timestamp_ms")
+  /// 版本化规范记录文本，保留完整原始数据及负零。
+  payload String
+  /// 历史点所属已提交批次。
+  batch ScadaTagHistoryBatch @relation(fields: [tenantId, projectId, streamId, batchSequence], references: [tenantId, projectId, streamId, batchSequence], onDelete: Restrict, onUpdate: Cascade, map: "scada_tag_history_records_batch_fkey", index: false)
+
+  @@id([tenantId, projectId, streamId, batchSequence, ordinal], map: "scada_tag_history_records_pkey")
+  @@index([tenantId, projectId, tagId, timestampMs, streamId, batchSequence, ordinal], map: "scada_tag_history_records_lookup_idx")
+  @@check(expression: sql`((ordinal >= 0) AND (ordinal <= 255))`, map: "scada_tag_history_records_ordinal_check")
+  @@check(expression: sql`((timestamp_ms >= '-8640000000000000'::bigint) AND (timestamp_ms <= '8640000000000000'::bigint))`, map: "scada_tag_history_records_timestamp_check")
+  @@map("scada_tag_history_records")
+}
