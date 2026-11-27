@@ -14,7 +14,9 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
   try {
     process.env.NODE_ENV = "test";
     process.env.SCADA_LOG_LEVEL = "silent";
-    ({ OidcEnabledAppModule } = await import(new URL("./dist/app.module.js", import.meta.url).href));
+    ({ OidcEnabledAppModule } = await import(
+      new URL("./dist/app.module.js", import.meta.url).href
+    ));
   } finally {
     if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
     else process.env.NODE_ENV = previousNodeEnv;

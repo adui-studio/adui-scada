@@ -56,33 +56,35 @@ describe("OIDC 根模块与工程 API Guard 启动装配（端到端）", () => 
           toArray: () =>
             Promise.resolve(
               plan.parameters[0] === tokenHash
-                ? [{
-                    session_id: "2e9453fa-b5ed-4fc8-83d8-e042735dcdba",
-                    tenant_id: actor.tenantId,
-                    subject_id: actor.subjectId,
-                    csrf_hash: "",
-                    csrf_is_null: "true",
-                    issued_at: new Date(Date.now() - 1000).toISOString(),
-                    expires_at: new Date(Date.now() + 60_000).toISOString(),
-                  }]
+                ? [
+                    {
+                      session_id: "2e9453fa-b5ed-4fc8-83d8-e042735dcdba",
+                      tenant_id: actor.tenantId,
+                      subject_id: actor.subjectId,
+                      csrf_hash: "",
+                      csrf_is_null: "true",
+                      issued_at: new Date(Date.now() - 1000).toISOString(),
+                      expires_at: new Date(Date.now() + 60_000).toISOString(),
+                    },
+                  ]
                 : [],
             ),
         };
       }
       if (plan.text.includes("FROM public.scada_projects p")) {
-        if (
-          plan.parameters[0] !== actor.tenantId ||
-          plan.parameters[3] !== actor.subjectId
-        ) {
+        if (plan.parameters[0] !== actor.tenantId || plan.parameters[3] !== actor.subjectId) {
           throw new Error("根模块工程查询未使用可信主体");
         }
         return {
-          toArray: () => Promise.resolve([{
-            project_id: project.projectId,
-            head_revision: String(project.headRevision),
-            created_at: project.createdAt,
-            updated_at: project.updatedAt,
-          }]),
+          toArray: () =>
+            Promise.resolve([
+              {
+                project_id: project.projectId,
+                head_revision: String(project.headRevision),
+                created_at: project.createdAt,
+                updated_at: project.updatedAt,
+              },
+            ]),
         };
       }
       throw new Error("根模块测试出现未预期查询");
@@ -206,9 +208,11 @@ describe("OIDC 根模块与工程 API Guard 启动装配（端到端）", () => 
 
   it("真实根模块只有一个原生数据库并将控制器令牌绑定同一原生仓储", () => {
     const modules = Array.from(app.get(ModulesContainer).values());
-    expect(modules.some(
-      (module) => module.metatype === DatabaseModule || module.providers.has(PrismaService),
-    )).toBe(false);
+    expect(
+      modules.some(
+        (module) => module.metatype === DatabaseModule || module.providers.has(PrismaService),
+      ),
+    ).toBe(false);
     expect(app.get(Prisma8Service, { each: true })).toEqual([database]);
     expect(app.get(AuthSessionService)).toBeInstanceOf(Prisma8RuntimeAuthSessionService);
     expect(app.get(PrismaProjectVersionStore)).toBe(app.get(Prisma8RuntimeProjectVersionStore));

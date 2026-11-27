@@ -12,10 +12,6 @@ import { Prisma8RuntimeProjectReleaseStore } from "./prisma8-runtime-project-rel
     { provide: PrismaProjectVersionStore, useExisting: Prisma8RuntimeProjectVersionStore },
     { provide: PrismaProjectReleaseStore, useExisting: Prisma8RuntimeProjectReleaseStore },
   ],
-  exports: [
-    Prisma8ProjectPersistenceModule,
-    PrismaProjectVersionStore,
-    PrismaProjectReleaseStore,
-  ],
+  exports: [Prisma8ProjectPersistenceModule, PrismaProjectVersionStore, PrismaProjectReleaseStore],
 })
 export class ProjectPersistenceModule {}

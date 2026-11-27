@@ -198,8 +198,8 @@ describe("工程 API HTTP 接口（端到端）", () => {
     }),
   };
 
-  const grantLookup = vi.fn<AuthorizationReadStore["readProjectGrants"]>(
-    async () => permissions.map((permission) => ({ permission })),
+  const grantLookup = vi.fn<AuthorizationReadStore["readProjectGrants"]>(async () =>
+    permissions.map((permission) => ({ permission })),
   );
   const auditRecords: SecurityAuditDecision[] = [];
   const audit = {
