@@ -38,8 +38,14 @@ void describe("正式 Docker OIDC 固定传输", () => {
       assert.equal(options.method, "GET");
       assert.equal(options.path, new URL(calls === 1 ? discovery : base + "/certs").pathname);
       assert.equal(body, undefined);
-      assert.equal(options.checkServerIdentity("keycloak", { subjectaltname: "IP Address:127.0.0.1" }), undefined);
-      assert.equal(options.checkServerIdentity("keycloak", { subjectaltname: "DNS:keycloak" })?.code, "ERR_TLS_CERT_ALTNAME_INVALID");
+      assert.equal(
+        options.checkServerIdentity("keycloak", { subjectaltname: "IP Address:127.0.0.1" }),
+        undefined,
+      );
+      assert.equal(
+        options.checkServerIdentity("keycloak", { subjectaltname: "DNS:keycloak" })?.code,
+        "ERR_TLS_CERT_ALTNAME_INVALID",
+      );
       assert.equal(options.ca, new X509Certificate(ca).toString());
       return new Response("{}", { status: 200 });
     });
@@ -53,7 +59,10 @@ void describe("正式 Docker OIDC 固定传输", () => {
       assert.equal(options.path, new URL(base + "/token").pathname);
       assert.equal(options.method, "POST");
       assert.equal(options.headers.authorization, post.headers.authorization);
-      assert.equal(options.headers["content-length"], String(Buffer.byteLength(post.body.toString())));
+      assert.equal(
+        options.headers["content-length"],
+        String(Buffer.byteLength(post.body.toString())),
+      );
       assert.equal(body, post.body.toString());
       return new Response('{"error":"invalid_grant"}', { status: 400 });
     });
@@ -63,7 +72,14 @@ void describe("正式 Docker OIDC 固定传输", () => {
   });
 
   void it("拒绝非固定 Issuer 与无效公开根证书", () => {
-    for (const value of [issuer + "/", issuer + "?x=1", issuer + "#x", issuer.replace("127.0.0.1", "keycloak"), issuer.replace("https:", "http:"), "https://user:pass@127.0.0.1:18443/realms/adui-scada"]) {
+    for (const value of [
+      issuer + "/",
+      issuer + "?x=1",
+      issuer + "#x",
+      issuer.replace("127.0.0.1", "keycloak"),
+      issuer.replace("https:", "http:"),
+      "https://user:pass@127.0.0.1:18443/realms/adui-scada",
+    ]) {
       assert.throws(() => createDockerOidcFetch(new URL(value), ca), failure);
     }
     assert.throws(() => createDockerOidcFetch(new URL(issuer), "invalid"), failure);
@@ -75,10 +91,23 @@ void describe("正式 Docker OIDC 固定传输", () => {
       calls += 1;
       return new Response("{}");
     });
-    for (const url of [discovery + "?x=1", discovery + "#x", base + "/auth", "https://example.invalid/token", issuer.replace("127.0.0.1", "keycloak") + "/.well-known/openid-configuration"]) {
+    for (const url of [
+      discovery + "?x=1",
+      discovery + "#x",
+      base + "/auth",
+      "https://example.invalid/token",
+      issuer.replace("127.0.0.1", "keycloak") + "/.well-known/openid-configuration",
+    ]) {
       await assert.rejects(() => transport(url, read), failure);
     }
-    for (const options of [{ ...read, method: "POST" }, { ...read, redirect: "follow" }, { ...read, headers: { cookie: "fixture" } }, { ...read, headers: { authorization: "Basic fixture" } }, { ...read, headers: { host: "example.invalid" } }, { ...read, body: "fixture" }]) {
+    for (const options of [
+      { ...read, method: "POST" },
+      { ...read, redirect: "follow" },
+      { ...read, headers: { cookie: "fixture" } },
+      { ...read, headers: { authorization: "Basic fixture" } },
+      { ...read, headers: { host: "example.invalid" } },
+      { ...read, body: "fixture" },
+    ]) {
       await assert.rejects(() => transport(discovery, options), failure);
     }
     assert.equal(calls, 0);
@@ -90,7 +119,22 @@ void describe("正式 Docker OIDC 固定传输", () => {
       calls += 1;
       return new Response("{}");
     });
-    for (const options of [{ ...post, body: new URLSearchParams({ grant_type: "client_credentials" }) }, { ...post, body: new URLSearchParams("grant_type=authorization_code&grant_type=refresh_token") }, { ...post, body: "grant_type=authorization_code" }, { ...post, headers: { "content-type": "application/x-www-form-urlencoded" } }, { ...post, body: new URLSearchParams({ grant_type: "authorization_code", code: "x".repeat(17 * 1024) }) }]) {
+    for (const options of [
+      { ...post, body: new URLSearchParams({ grant_type: "client_credentials" }) },
+      {
+        ...post,
+        body: new URLSearchParams("grant_type=authorization_code&grant_type=refresh_token"),
+      },
+      { ...post, body: "grant_type=authorization_code" },
+      { ...post, headers: { "content-type": "application/x-www-form-urlencoded" } },
+      {
+        ...post,
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code: "x".repeat(17 * 1024),
+        }),
+      },
+    ]) {
       await assert.rejects(() => transport(base + "/token", options), failure);
     }
     assert.equal(calls, 0);
@@ -104,9 +148,14 @@ void describe("正式 Docker OIDC 固定传输", () => {
       if (calls === 1) throw new Error("禁止回显的测试异常");
       return new Response("{}", { status: 400 });
     });
-    await assert.rejects(() => transport(discovery, { ...read, signal: AbortSignal.abort() }), failure);
+    await assert.rejects(
+      () => transport(discovery, { ...read, signal: AbortSignal.abort() }),
+      failure,
+    );
     assert.equal(calls, 0);
-    await assert.rejects(() => transport(discovery, read), { message: "Docker OIDC 固定 HTTPS 传输失败" });
+    await assert.rejects(() => transport(discovery, read), {
+      message: "Docker OIDC 固定 HTTPS 传输失败",
+    });
     await assert.rejects(() => transport(discovery, read), failure);
     assert.equal(calls, 2);
   });

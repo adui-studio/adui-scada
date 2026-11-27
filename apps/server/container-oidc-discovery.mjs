@@ -290,9 +290,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     }
     const mode = process.argv[2];
     const input = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-    const result = mode === "container"
-      ? await verifyFormalContainerOidc(input)
-      : await probeOidcDiscovery(mode, input);
+    const result =
+      mode === "container"
+        ? await verifyFormalContainerOidc(input)
+        : await probeOidcDiscovery(mode, input);
     process.stdout.write(JSON.stringify(result) + "\n");
   } catch (error) {
     const code = error instanceof OidcProbeError ? error.code : "UNEXPECTED";

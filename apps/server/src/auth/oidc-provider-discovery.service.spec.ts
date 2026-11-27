@@ -198,29 +198,49 @@ describe("OIDC 固定 Issuer Discovery", () => {
     const trusted = generateKeyPairSync("rsa", { modulusLength: 2048 });
     const untrusted = generateKeyPairSync("rsa", { modulusLength: 2048 });
     const jwks = {
-      keys: [{ ...trusted.publicKey.export({ format: "jwk" }), kid: "fixture", use: "sig", alg: "RS256" }],
+      keys: [
+        {
+          ...trusted.publicKey.export({ format: "jwk" }),
+          kid: "fixture",
+          use: "sig",
+          alg: "RS256",
+        },
+      ],
     };
     const state = randomBytes(32).toString("base64url");
     const nonce = randomBytes(32).toString("base64url");
     const codeVerifier = randomBytes(32).toString("base64url");
     const now = Math.floor(Date.now() / 1000);
     const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
-    const unsigned = encode({ alg: "RS256", kid: "fixture" }) + "." + encode({
-      iss: startupConfig.issuer.href,
-      aud: startupConfig.clientId,
-      sub: "fixture-subject",
-      nonce,
-      iat: now,
-      exp: now + 300,
-    });
-    const signed = unsigned + "." + sign("RSA-SHA256", Buffer.from(unsigned), trusted.privateKey).toString("base64url");
-    const tampered = unsigned + "." + sign("RSA-SHA256", Buffer.from(unsigned), untrusted.privateKey).toString("base64url");
+    const unsigned =
+      encode({ alg: "RS256", kid: "fixture" }) +
+      "." +
+      encode({
+        iss: startupConfig.issuer.href,
+        aud: startupConfig.clientId,
+        sub: "fixture-subject",
+        nonce,
+        iat: now,
+        exp: now + 300,
+      });
+    const signed =
+      unsigned +
+      "." +
+      sign("RSA-SHA256", Buffer.from(unsigned), trusted.privateKey).toString("base64url");
+    const tampered =
+      unsigned +
+      "." +
+      sign("RSA-SHA256", Buffer.from(unsigned), untrusted.privateKey).toString("base64url");
     const discoveryUrl = startupConfig.issuer.href + "/.well-known/openid-configuration";
     const fetchFixture = (idToken: string) => {
       const fetchMock = vi.fn<CustomFetch>(async (url) => {
         if (url === discoveryUrl) return createResponse(metadata);
         if (url === metadata.token_endpoint) {
-          return createResponse({ access_token: "fixture-access-token", token_type: "Bearer", id_token: idToken });
+          return createResponse({
+            access_token: "fixture-access-token",
+            token_type: "Bearer",
+            id_token: idToken,
+          });
         }
         if (url === metadata.jwks_uri) return createResponse(jwks);
         throw new Error("测试收到非预期 OIDC 地址");
@@ -245,11 +265,19 @@ describe("OIDC 固定 Issuer Discovery", () => {
     const validFetch = fetchFixture(signed);
     const tokens = await grant();
     expect(tokens.claims()?.sub).toBe("fixture-subject");
-    expect(validFetch.mock.calls.map(([url]) => url)).toEqual([discoveryUrl, metadata.token_endpoint, metadata.jwks_uri]);
+    expect(validFetch.mock.calls.map(([url]) => url)).toEqual([
+      discoveryUrl,
+      metadata.token_endpoint,
+      metadata.jwks_uri,
+    ]);
 
     const invalidFetch = fetchFixture(tampered);
     await expect(grant()).rejects.toThrow("invalid response encountered");
-    expect(invalidFetch.mock.calls.map(([url]) => url)).toEqual([discoveryUrl, metadata.token_endpoint, metadata.jwks_uri]);
+    expect(invalidFetch.mock.calls.map(([url]) => url)).toEqual([
+      discoveryUrl,
+      metadata.token_endpoint,
+      metadata.jwks_uri,
+    ]);
   });
 
   it("发现失败不泄漏底层错误并允许后续重试", async () => {

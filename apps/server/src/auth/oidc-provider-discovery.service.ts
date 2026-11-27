@@ -109,14 +109,15 @@ export class OidcProviderDiscoveryService {
     try {
       const allowInsecureLoopback = this.startupConfig.issuer.protocol === "http:";
       const dockerCa = this.startupConfig.dockerKeycloakCa;
-      const secureFetch: oidc.CustomFetch = dockerCa !== undefined
-        ? createDockerOidcFetch(this.startupConfig.issuer, dockerCa)
-        : async (url, options) => {
-            assertAllowedOidcUrl(url, allowInsecureLoopback);
-            if (options.redirect !== "manual") throw new Error(DISCOVERY_FAILURE_MESSAGE);
-            // openid-client 使用 redirect: manual；不允许 Fetch 自动跟随端点重定向。
-            return globalThis.fetch(url, options as RequestInit);
-          };
+      const secureFetch: oidc.CustomFetch =
+        dockerCa !== undefined
+          ? createDockerOidcFetch(this.startupConfig.issuer, dockerCa)
+          : async (url, options) => {
+              assertAllowedOidcUrl(url, allowInsecureLoopback);
+              if (options.redirect !== "manual") throw new Error(DISCOVERY_FAILURE_MESSAGE);
+              // openid-client 使用 redirect: manual；不允许 Fetch 自动跟随端点重定向。
+              return globalThis.fetch(url, options as RequestInit);
+            };
 
       const configuration = await oidc.discovery(
         this.startupConfig.issuer,

@@ -245,7 +245,14 @@ void describe("Docker Keycloak 公开 Discovery 与 JWKS 只读门禁", () => {
     assert.equal(containerCalls, 0);
     // 旧镜像只返回原始探针结果时必须拒绝，不得冒充正式客户端已执行。
     assert.throws(
-      () => verifyDockerOidc("18443", () => successful, [], readCa, () => successful),
+      () =>
+        verifyDockerOidc(
+          "18443",
+          () => successful,
+          [],
+          readCa,
+          () => successful,
+        ),
       /容器 Keycloak 探针报告不符合固定契约/,
     );
     assert.throws(
