@@ -209,7 +209,14 @@ const emptyKeys = [
 
 /** 只读取目录元数据；失败时也回滚、关闭，并且不回显第三方连接异常。 */
 export async function inspectNativeEmptyDatabase(client, expectedUser) {
-  return inspectEmptyDatabase(client, expectedUser, nativeEmptyDatabaseName, "第三座专用库", null, null);
+  return inspectEmptyDatabase(
+    client,
+    expectedUser,
+    nativeEmptyDatabaseName,
+    "第三座专用库",
+    null,
+    null,
+  );
 }
 
 /** 第四座实例只复用目录检查，不扩大第三座连接入口或写入许可。 */
@@ -231,8 +238,10 @@ export async function inspectReproEmptyDatabase(client, systemIdentifier) {
 /** 全新安装复用空库目录检查，不依赖任何历史库或迁移产物。 */
 export async function inspectFreshDockerEmptyDatabase(client, systemIdentifier, version) {
   requireCondition(
-    typeof systemIdentifier === "string" && /^[1-9][0-9]{0,19}$/u.test(systemIdentifier) &&
-      typeof version === "string" && /^19[0-9]{4}$/u.test(version),
+    typeof systemIdentifier === "string" &&
+      /^[1-9][0-9]{0,19}$/u.test(systemIdentifier) &&
+      typeof version === "string" &&
+      /^19[0-9]{4}$/u.test(version),
     "全新本机 PostgreSQL 19 实例标识或版本无效",
   );
   return inspectEmptyDatabase(
@@ -245,7 +254,14 @@ export async function inspectFreshDockerEmptyDatabase(client, systemIdentifier, 
   );
 }
 
-async function inspectEmptyDatabase(client, expectedUser, database, target, systemIdentifier, version) {
+async function inspectEmptyDatabase(
+  client,
+  expectedUser,
+  database,
+  target,
+  systemIdentifier,
+  version,
+) {
   let begun = false;
   let report;
   const failures = [];
@@ -288,7 +304,8 @@ async function inspectEmptyDatabase(client, expectedUser, database, target, syst
         row.server_version === version &&
           identity.rows.length === 1 &&
           identity.rows[0]?.system_identifier === systemIdentifier,
-        (target === "第四座专用库" ? "第四座实例" : target) + "实际 PostgreSQL 版本或集群标识不一致",
+        (target === "第四座专用库" ? "第四座实例" : target) +
+          "实际 PostgreSQL 版本或集群标识不一致",
       );
     }
     stage = "空库目录查询";

@@ -21,7 +21,13 @@ function envelope(commandId, result) {
   return {
     kind: "result",
     commandId,
-    envelope: { commandId, ok: true, exitCode: 0, diagnostics: [], result: { ok: true, ...result } },
+    envelope: {
+      commandId,
+      ok: true,
+      exitCode: 0,
+      diagnostics: [],
+      result: { ok: true, ...result },
+    },
   };
 }
 function plan(extra = {}) {
@@ -76,18 +82,38 @@ void test("拒绝其他项目、Keycloak、历史库、旧端口与不安全参�
 });
 
 void test("全新原生源保留十二模型三十六约束与原始中文注释", () => {
-  const source = readFileSync(new URL("../apps/server/prisma/contract.prisma", import.meta.url), "utf8");
-  const comments = readFileSync(new URL("../apps/server/prisma/initial-comments.sql", import.meta.url), "utf8");
+  const source = readFileSync(
+    new URL("../apps/server/prisma/contract.prisma", import.meta.url),
+    "utf8",
+  );
+  const comments = readFileSync(
+    new URL("../apps/server/prisma/initial-comments.sql", import.meta.url),
+    "utf8",
+  );
   assert.ok(source.startsWith("// use prisma-8\n"));
   assert.equal((source.match(/^model /gm) ?? []).length, 12);
   assert.equal((source.match(/^  @@check\(/gm) ?? []).length, 36);
-  assert.equal(createHash("sha256").update(source).digest("hex"), "e35bc6e946220df310ce39bdc61e3072ac00630c76efdbb449770e6606e8d61b");
+  assert.equal(
+    createHash("sha256").update(source).digest("hex"),
+    "e35bc6e946220df310ce39bdc61e3072ac00630c76efdbb449770e6606e8d61b",
+  );
   assert.equal((comments.match(/^COMMENT ON /gm) ?? []).length, 119);
-  assert.equal(createHash("sha256").update(comments).digest("hex"), "06a47418f3477c263cb19c7a3550a6be3810a4ffd9c22afada7ecd28f6322fb7");
+  assert.equal(
+    createHash("sha256").update(comments).digest("hex"),
+    "06a47418f3477c263cb19c7a3550a6be3810a4ffd9c22afada7ecd28f6322fb7",
+  );
 });
 
 void test("拒绝缺失原生契约、错误存储标识和非当前表清单", () => {
-  for (const contract of [{}, { targetFamily: "sql", target: "postgres" }, { targetFamily: "sql", target: "postgres", storage: { storageHash: freshStorageHash, namespaces: {} } }]) {
+  for (const contract of [
+    {},
+    { targetFamily: "sql", target: "postgres" },
+    {
+      targetFamily: "sql",
+      target: "postgres",
+      storage: { storageHash: freshStorageHash, namespaces: {} },
+    },
+  ]) {
     assert.throws(() => reviewFreshContract(contract, ""), /原生契约存储标识或表清单/u);
   }
 });
@@ -95,7 +121,10 @@ void test("拒绝缺失原生契约、错误存储标识和非当前表清单", 
 void test("只读官方预览仅接受完整新增操作和可选 public 命名空间", () => {
   assert.deepEqual(reviewFreshUpdate(plan(), ids, "plan"), ids);
   const document = plan();
-  document.envelope.result.plan.operations.push({ id: "schema.public", operationClass: "additive" });
+  document.envelope.result.plan.operations.push({
+    id: "schema.public",
+    operationClass: "additive",
+  });
   assert.deepEqual(reviewFreshUpdate(document, ids, "plan"), [
     "foreignKey.scada_a.fk",
     "index.scada_a.idx",
@@ -112,7 +141,8 @@ void test("拒绝数据丢失、访问变化、未知命令、缺失或重复对
     { temporaryValues: [{}] },
     { execution: {} },
     { marker: {} },
-  ]) assert.throws(() => reviewFreshUpdate(plan(extra), ids, "plan"));
+  ])
+    assert.throws(() => reviewFreshUpdate(plan(extra), ids, "plan"));
   for (const changed of [
     [{ id: ids[0], operationClass: "destructive" }],
     [{ id: ids[0], operationClass: "additive" }],
@@ -149,7 +179,14 @@ void test("只接受官方严格验证成功且拒绝错误诊断", () => {
 
 void test("容器与 TCP 必须是同一 PostgreSQL 19 业务库及所有者", () => {
   const identity = { version: "190000", systemIdentifier: "1234567890123456789" };
-  const row = { ...identity, database: "adui_scada", role: "adui_scada", sessionRole: "adui_scada", owner: true, recovery: false };
+  const row = {
+    ...identity,
+    database: "adui_scada",
+    role: "adui_scada",
+    sessionRole: "adui_scada",
+    owner: true,
+    recovery: false,
+  };
   requireFreshIdentity(row, identity);
   for (const changes of [
     { database: "adui_scada_keycloak" },
@@ -159,13 +196,25 @@ void test("容器与 TCP 必须是同一 PostgreSQL 19 业务库及所有者", (
     { systemIdentifier: "2234567890123456789" },
     { owner: false },
     { recovery: true },
-  ]) assert.throws(() => requireFreshIdentity({ ...row, ...changes }, identity), /实际身份/u);
+  ])
+    assert.throws(() => requireFreshIdentity({ ...row, ...changes }, identity), /实际身份/u);
 });
 
 void test("官方诊断仅保留白名单格式错误码，不回显凭据或原始正文", () => {
-  const pretty = JSON.stringify({ envelope: { error: { code: "MIGRATION.SCHEMA_VERIFY_FAILED", message: base } } }, null, 2);
-  const lines = JSON.stringify({ code: "CLI.INVALID_ARGUMENTS", message: base }) + "\n" + JSON.stringify({ code: base }) + "\ninvalid";
-  assert.deepEqual(freshDiagnosticCodes(pretty, lines), ["CLI.INVALID_ARGUMENTS", "MIGRATION.SCHEMA_VERIFY_FAILED"]);
+  const pretty = JSON.stringify(
+    { envelope: { error: { code: "MIGRATION.SCHEMA_VERIFY_FAILED", message: base } } },
+    null,
+    2,
+  );
+  const lines =
+    JSON.stringify({ code: "CLI.INVALID_ARGUMENTS", message: base }) +
+    "\n" +
+    JSON.stringify({ code: base }) +
+    "\ninvalid";
+  assert.deepEqual(freshDiagnosticCodes(pretty, lines), [
+    "CLI.INVALID_ARGUMENTS",
+    "MIGRATION.SCHEMA_VERIFY_FAILED",
+  ]);
 });
 
 void test("原生规划按固定码元顺序比较数字与下划线且不修改输入", () => {
@@ -188,14 +237,19 @@ void test("原生规划按固定码元顺序比较数字与下划线且不修改
     "schema.public",
     "table.scada_a",
   ]);
-  assert.deepEqual(document.envelope.result.plan.operations.map((operation) => operation.id), shuffled);
+  assert.deepEqual(
+    document.envelope.result.plan.operations.map((operation) => operation.id),
+    shuffled,
+  );
   assert.equal(expected.length, 6);
 });
 
 void test("官方诊断码保持固定码元顺序并去重", () => {
   const input = ["CLI.A_2", "CLI.A_10", "CLI.A0", "CLI.A_2", "CLI.A_A"];
-  assert.deepEqual(
-    freshDiagnosticCodes(input.map((code) => JSON.stringify({ code })).join("\n")),
-    ["CLI.A0", "CLI.A_10", "CLI.A_2", "CLI.A_A"],
-  );
+  assert.deepEqual(freshDiagnosticCodes(input.map((code) => JSON.stringify({ code })).join("\n")), [
+    "CLI.A0",
+    "CLI.A_10",
+    "CLI.A_2",
+    "CLI.A_A",
+  ]);
 });

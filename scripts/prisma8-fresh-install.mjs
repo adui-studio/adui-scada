@@ -63,8 +63,10 @@ export function reviewFreshContract(contract, commentText) {
     contract?.targetFamily === "sql" &&
       contract.target === "postgres" &&
       contract.storage?.storageHash === freshStorageHash &&
-      namespaces && isDeepStrictEqual(Object.keys(namespaces), ["public"]) &&
-      tables && Object.keys(tables).length === 12,
+      namespaces &&
+      isDeepStrictEqual(Object.keys(namespaces), ["public"]) &&
+      tables &&
+      Object.keys(tables).length === 12,
     "全新原生契约存储标识或表清单不一致",
   );
   /** @type {Set<string>} 原生新增对象标识集合 */
@@ -100,34 +102,53 @@ export function reviewFreshContract(contract, commentText) {
     }
   }
   requireMatch(
-    columns === 85 && checks === 36 && indexes === 20 && foreignKeys === 13 &&
-      ids.size === 45 && keys.size === 119 &&
+    columns === 85 &&
+      checks === 36 &&
+      indexes === 20 &&
+      foreignKeys === 13 &&
+      ids.size === 45 &&
+      keys.size === 119 &&
       createHash("sha256").update(commentText).digest("hex") === commentHash,
     "全新契约结构或初始中文注释指纹不一致",
   );
   const comments = [];
   for (const line of commentText.trimEnd().split("\n")) {
-    const match = line.match(/^COMMENT ON (TABLE|COLUMN|INDEX) "public"\."(scada_[a-z0-9_]+)"(?:\."([a-z_][a-z0-9_]*)")? IS '((?:''|[^'])*)';$/u);
+    const match = line.match(
+      /^COMMENT ON (TABLE|COLUMN|INDEX) "public"\."(scada_[a-z0-9_]+)"(?:\."([a-z_][a-z0-9_]*)")? IS '((?:''|[^'])*)';$/u,
+    );
     requireMatch(match !== null, "初始中文注释不是固定单行语句");
     const [, kind, relation, column, literal] = match;
     const key = kind + " " + relation + (column ? "." + column : "");
     const comment = literal.replaceAll("''", "'");
     requireMatch(
-      (kind === "COLUMN") === Boolean(column) && keys.delete(key) &&
-        /[\u3400-\u9fff]/u.test(comment) && !comment.includes("\\"),
+      (kind === "COLUMN") === Boolean(column) &&
+        keys.delete(key) &&
+        /[\u3400-\u9fff]/u.test(comment) &&
+        !comment.includes("\\"),
       "初始中文注释对象重复或不符合契约",
     );
     comments.push({ key, kind, relation, column: column ?? null, comment });
   }
   requireMatch(keys.size === 0 && comments.length === 119, "初始中文注释覆盖范围不完整");
-  return { ids: [...ids].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)), comments, tables: 12, columns, checks, indexes, foreignKeys };
+  return {
+    ids: [...ids].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)),
+    comments,
+    tables: 12,
+    columns,
+    checks,
+    indexes,
+    foreignKeys,
+  };
 }
 
 function resultOf(document, command) {
   const envelope = document?.envelope;
   requireMatch(
-    document?.kind === "result" && document.commandId === command &&
-      envelope?.commandId === command && envelope.ok === true && envelope.exitCode === 0 &&
+    document?.kind === "result" &&
+      document.commandId === command &&
+      envelope?.commandId === command &&
+      envelope.ok === true &&
+      envelope.exitCode === 0 &&
       Array.isArray(envelope.diagnostics) &&
       envelope.diagnostics.every((item) => item?.severity === "info") &&
       envelope.result?.ok === true,
@@ -141,21 +162,32 @@ export function reviewFreshUpdate(document, ids, mode, previousIds = []) {
   const result = resultOf(document, "db.update");
   const plan = result.plan;
   requireMatch(
-    result.mode === mode && plan?.targetId === "postgres" &&
+    result.mode === mode &&
+      plan?.targetId === "postgres" &&
       plan.destination?.storageHash === freshStorageHash &&
       Array.isArray(plan.operations) &&
-      plan.operations.every((operation) => operation?.operationClass === "additive" &&
-        typeof operation.id === "string") &&
-      [result.appliedStatements, result.temporaryValues].every((items) => Array.isArray(items) && items.length === 0),
+      plan.operations.every(
+        (operation) => operation?.operationClass === "additive" && typeof operation.id === "string",
+      ) &&
+      [result.appliedStatements, result.temporaryValues].every(
+        (items) => Array.isArray(items) && items.length === 0,
+      ),
     "官方全新初始化计划包含未知目标或非新增操作",
   );
-  const actual = plan.operations.map((operation) => operation.id).sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
-  const expected = actual.includes("schema.public") ? [...ids, "schema.public"].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)) : ids;
+  const actual = plan.operations
+    .map((operation) => operation.id)
+    .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+  const expected = actual.includes("schema.public")
+    ? [...ids, "schema.public"].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))
+    : ids;
   requireMatch(isDeepStrictEqual(actual, expected), "官方新增对象清单与原生契约不一致");
   if (mode === "plan") {
     requireMatch(
-      [result.dataLoss, result.accessChanges].every((items) => Array.isArray(items) && items.length === 0) &&
-        result.execution === undefined && result.marker === undefined,
+      [result.dataLoss, result.accessChanges].every(
+        (items) => Array.isArray(items) && items.length === 0,
+      ) &&
+        result.execution === undefined &&
+        result.marker === undefined,
       "只读规划包含数据损失、访问变化或实际执行结果",
     );
   } else {
@@ -185,7 +217,8 @@ export function requireFreshIdentity(row, expected) {
       versionPattern.test(row.version) &&
       row.systemIdentifier === expected.systemIdentifier &&
       systemPattern.test(row.systemIdentifier) &&
-      row.owner === true && row.recovery === false,
+      row.owner === true &&
+      row.recovery === false,
     "本机业务库实际身份、所有者或 PostgreSQL 19 版本不一致",
   );
 }
@@ -210,8 +243,16 @@ export function freshDiagnosticCodes(...outputs) {
     }
     for (const document of documents) {
       const envelope = document?.envelope;
-      for (const item of [document, envelope?.error, ...(Array.isArray(envelope?.diagnostics) ? envelope.diagnostics : [])]) {
-        if (typeof item?.code === "string" && /^[A-Z][A-Z0-9_]{0,40}\.[A-Z][A-Z0-9_]{0,80}$/u.test(item.code)) codes.add(item.code);
+      for (const item of [
+        document,
+        envelope?.error,
+        ...(Array.isArray(envelope?.diagnostics) ? envelope.diagnostics : []),
+      ]) {
+        if (
+          typeof item?.code === "string" &&
+          /^[A-Z][A-Z0-9_]{0,40}\.[A-Z][A-Z0-9_]{0,80}$/u.test(item.code)
+        )
+          codes.add(item.code);
       }
     }
   }

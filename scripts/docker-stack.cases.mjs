@@ -126,7 +126,18 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
     manageDockerStack("infra", env, run);
     const args = calls.find((call) => call.includes("up"));
     assert.ok(args);
-    assert.deepEqual(args.slice(-10), ["up", "-d", "--pull", "never", "--wait", "--wait-timeout", "180", "postgres", "redis", "keycloak"]);
+    assert.deepEqual(args.slice(-10), [
+      "up",
+      "-d",
+      "--pull",
+      "never",
+      "--wait",
+      "--wait-timeout",
+      "180",
+      "postgres",
+      "redis",
+      "keycloak",
+    ]);
     assert.equal(args.includes("--build"), false);
   });
 

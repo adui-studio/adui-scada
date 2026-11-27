@@ -5,7 +5,10 @@ import { isDeepStrictEqual } from "node:util";
 import { Client } from "pg";
 import { createDockerDatabaseUrl } from "../../scripts/init-docker-db.mjs";
 import { offlineEnvironment, resolveBaselineCli } from "../../scripts/prisma8-native-baseline.mjs";
-import { inspectFreshDockerEmptyDatabase, NativePreflightError } from "../../scripts/prisma8-native-baseline-preflight.mjs";
+import {
+  inspectFreshDockerEmptyDatabase,
+  NativePreflightError,
+} from "../../scripts/prisma8-native-baseline-preflight.mjs";
 import {
   FreshInstallError,
   freshAction,
@@ -25,8 +28,10 @@ const config = join(root, "apps", "server", "prisma8-fresh.config.ts");
 const source = join(root, "apps", "server", "prisma", "contract.prisma");
 const commentsPath = join(root, "apps", "server", "prisma", "initial-comments.sql");
 const output = join(root, ".artifacts", "prisma8-fresh");
-const identitySql = "SELECT current_database() AS database, current_user::text AS role, session_user::text AS \"sessionRole\", current_setting('server_version_num') AS version, (SELECT system_identifier::text FROM pg_catalog.pg_control_system()) AS \"systemIdentifier\", (SELECT datdba = (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = current_user) FROM pg_catalog.pg_database WHERE datname = current_database()) AS owner, pg_catalog.pg_is_in_recovery() AS recovery";
-const commentSql = "SELECT input.key, CASE WHEN input.kind = 'COLUMN' THEN pg_catalog.col_description(c.oid, a.attnum) ELSE pg_catalog.obj_description(c.oid, 'pg_class') END AS comment FROM pg_catalog.jsonb_to_recordset($1::jsonb) AS input(key text, kind text, relation text, \"column\" text) LEFT JOIN pg_catalog.pg_namespace n ON n.nspname = 'public' LEFT JOIN pg_catalog.pg_class c ON c.relnamespace = n.oid AND c.relname = input.relation AND ((input.kind = 'INDEX' AND c.relkind IN ('i', 'I')) OR (input.kind IN ('TABLE', 'COLUMN') AND c.relkind IN ('r', 'p'))) LEFT JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid AND a.attname = input.\"column\" AND a.attnum > 0 AND NOT a.attisdropped";
+const identitySql =
+  'SELECT current_database() AS database, current_user::text AS role, session_user::text AS "sessionRole", current_setting(\'server_version_num\') AS version, (SELECT system_identifier::text FROM pg_catalog.pg_control_system()) AS "systemIdentifier", (SELECT datdba = (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = current_user) FROM pg_catalog.pg_database WHERE datname = current_database()) AS owner, pg_catalog.pg_is_in_recovery() AS recovery';
+const commentSql =
+  "SELECT input.key, CASE WHEN input.kind = 'COLUMN' THEN pg_catalog.col_description(c.oid, a.attnum) ELSE pg_catalog.obj_description(c.oid, 'pg_class') END AS comment FROM pg_catalog.jsonb_to_recordset($1::jsonb) AS input(key text, kind text, relation text, \"column\" text) LEFT JOIN pg_catalog.pg_namespace n ON n.nspname = 'public' LEFT JOIN pg_catalog.pg_class c ON c.relnamespace = n.oid AND c.relname = input.relation AND ((input.kind = 'INDEX' AND c.relkind IN ('i', 'I')) OR (input.kind IN ('TABLE', 'COLUMN') AND c.relkind IN ('r', 'p'))) LEFT JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid AND a.attname = input.\"column\" AND a.attnum > 0 AND NOT a.attisdropped";
 const environment = offlineEnvironment(process.env);
 let stage = "全新安装参数检查";
 
@@ -47,7 +52,9 @@ function run(executable, args, env, description) {
   });
   if (child.error || child.status !== 0 || child.signal !== null) {
     const codes = freshDiagnosticCodes(child.stdout, child.stderr);
-    throw new FreshInstallError(description + "失败，官方诊断码：" + (codes.join("、") || "未取得"));
+    throw new FreshInstallError(
+      description + "失败，官方诊断码：" + (codes.join("、") || "未取得"),
+    );
   }
   return child.stdout.trim();
 }
@@ -55,7 +62,10 @@ function run(executable, args, env, description) {
 function ensureOutput() {
   for (const directory of [join(root, ".artifacts"), output]) {
     mkdirSync(directory, { recursive: true });
-    requireMatch(lstatSync(directory).isDirectory() && realpathSync(directory) === directory, "全新生成目录不能包含链接");
+    requireMatch(
+      lstatSync(directory).isDirectory() && realpathSync(directory) === directory,
+      "全新生成目录不能包含链接",
+    );
   }
 }
 
@@ -63,39 +73,111 @@ function ensureOutput() {
 function inspectDocker() {
   requireMatch(process.platform === "win32", "当前全新安装只允许 Windows 本机 Docker Desktop");
   requireMatch(
-    !Object.entries(process.env).some(([key, value]) =>
-      ["DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG", "DOCKER_TLS", "DOCKER_TLS_VERIFY", "DOCKER_CERT_PATH"].includes(key.toUpperCase()) && value),
+    !Object.entries(process.env).some(
+      ([key, value]) =>
+        [
+          "DOCKER_HOST",
+          "DOCKER_CONTEXT",
+          "DOCKER_CONFIG",
+          "DOCKER_TLS",
+          "DOCKER_TLS_VERIFY",
+          "DOCKER_CERT_PATH",
+        ].includes(key.toUpperCase()) && value,
+    ),
     "存在 Docker 环境覆盖，禁止全新安装",
   );
   const docker = (args) => run("docker", args, environment, "本机 Docker 核验");
   const context = docker(["context", "show"]);
   requireMatch(/^[a-zA-Z0-9_.-]+$/u.test(context), "Docker 上下文名称无效");
-  const endpoint = docker(["context", "inspect", context, "--format", "{{.Endpoints.docker.Host}}"]);
-  requireMatch(["npipe:////./pipe/dockerDesktopLinuxEngine", "npipe:////./pipe/docker_engine"].includes(endpoint), "Docker 不是本机命名管道");
-  const local = (args) => docker(["--host", endpoint, ...args]);
-  requireMatch(local(["info", "--format", "{{.OSType}}"]) === "linux", "Docker 不是 Linux 容器引擎");
-  const fields = [".Id", ".State.Running", ".Config.Image", ".Config.Labels", ".Mounts", ".NetworkSettings.Ports"];
-  const format = "[" + fields.map((field) => "{{json " + field + "}}").join(",") + "]";
-  const [id, running, image, labels, mounts, ports] = JSON.parse(local(["container", "inspect", "--format", format, "adui-scada-postgres-1"]));
+  const endpoint = docker([
+    "context",
+    "inspect",
+    context,
+    "--format",
+    "{{.Endpoints.docker.Host}}",
+  ]);
   requireMatch(
-    /^[a-f0-9]{64}$/u.test(id) && running === true && image === "postgres:latest" &&
+    ["npipe:////./pipe/dockerDesktopLinuxEngine", "npipe:////./pipe/docker_engine"].includes(
+      endpoint,
+    ),
+    "Docker 不是本机命名管道",
+  );
+  const local = (args) => docker(["--host", endpoint, ...args]);
+  requireMatch(
+    local(["info", "--format", "{{.OSType}}"]) === "linux",
+    "Docker 不是 Linux 容器引擎",
+  );
+  const fields = [
+    ".Id",
+    ".State.Running",
+    ".Config.Image",
+    ".Config.Labels",
+    ".Mounts",
+    ".NetworkSettings.Ports",
+  ];
+  const format = "[" + fields.map((field) => "{{json " + field + "}}").join(",") + "]";
+  const [id, running, image, labels, mounts, ports] = JSON.parse(
+    local(["container", "inspect", "--format", format, "adui-scada-postgres-1"]),
+  );
+  requireMatch(
+    /^[a-f0-9]{64}$/u.test(id) &&
+      running === true &&
+      image === "postgres:latest" &&
       labels?.["com.docker.compose.project"] === "adui-scada" &&
       labels?.["com.docker.compose.service"] === "postgres" &&
-      Array.isArray(mounts) && mounts.length === 2 &&
-      mounts.some((mount) => mount.Type === "volume" && mount.Name === "adui-scada_postgres-data" && mount.Destination === "/var/lib/postgresql" && mount.RW === true) &&
-      mounts.some((mount) => mount.Type === "bind" && mount.Destination === "/docker-entrypoint-initdb.d/01-keycloak.sql" && mount.RW === false) &&
+      Array.isArray(mounts) &&
+      mounts.length === 2 &&
+      mounts.some(
+        (mount) =>
+          mount.Type === "volume" &&
+          mount.Name === "adui-scada_postgres-data" &&
+          mount.Destination === "/var/lib/postgresql" &&
+          mount.RW === true,
+      ) &&
+      mounts.some(
+        (mount) =>
+          mount.Type === "bind" &&
+          mount.Destination === "/docker-entrypoint-initdb.d/01-keycloak.sql" &&
+          mount.RW === false,
+      ) &&
       isDeepStrictEqual(ports, { "5432/tcp": [{ HostIp: "127.0.0.1", HostPort: "15432" }] }),
     "全新 PostgreSQL 容器、镜像、数据卷或端口不符合本机 Compose",
   );
   const identityParts = local([
-    "exec", "--user", "postgres", id, "env", "-i", "PATH=/usr/local/bin:/usr/bin:/bin",
+    "exec",
+    "--user",
+    "postgres",
+    id,
+    "env",
+    "-i",
+    "PATH=/usr/local/bin:/usr/bin:/bin",
     "PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=5000",
-    "psql", "-X", "-w", "-q", "-A", "-t", "-h", "/var/run/postgresql", "-p", "5432",
-    "-U", "adui_scada", "-d", "adui_scada", "-v", "ON_ERROR_STOP=1",
-    "-c", "SELECT system_identifier::text || '|' || current_setting('server_version_num') FROM pg_catalog.pg_control_system()",
+    "psql",
+    "-X",
+    "-w",
+    "-q",
+    "-A",
+    "-t",
+    "-h",
+    "/var/run/postgresql",
+    "-p",
+    "5432",
+    "-U",
+    "adui_scada",
+    "-d",
+    "adui_scada",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-c",
+    "SELECT system_identifier::text || '|' || current_setting('server_version_num') FROM pg_catalog.pg_control_system()",
   ]).split("|");
   const [systemIdentifier, version] = identityParts;
-  requireMatch(identityParts.length === 2 && /^[1-9][0-9]{0,19}$/u.test(systemIdentifier) && /^19[0-9]{4}$/u.test(version), "容器 PostgreSQL 19 实际集群标识或版本无效");
+  requireMatch(
+    identityParts.length === 2 &&
+      /^[1-9][0-9]{0,19}$/u.test(systemIdentifier) &&
+      /^19[0-9]{4}$/u.test(version),
+    "容器 PostgreSQL 19 实际集群标识或版本无效",
+  );
   return { systemIdentifier, version };
 }
 
@@ -126,7 +208,15 @@ async function checkComments(connection, expectedIdentity, contract, commentText
     if (write) await client.query(commentText);
     const actual = (await client.query(commentSql, [JSON.stringify(contract.comments)])).rows;
     const expected = new Map(contract.comments.map(({ key, comment }) => [key, comment]));
-    requireMatch(actual.length === expected.size && actual.every(({ key, comment }) => expected.has(key) && expected.get(key) === comment && expected.delete(key)) && expected.size === 0, "业务表、字段或索引中文注释实际核验失败");
+    requireMatch(
+      actual.length === expected.size &&
+        actual.every(
+          ({ key, comment }) =>
+            expected.has(key) && expected.get(key) === comment && expected.delete(key),
+        ) &&
+        expected.size === 0,
+      "业务表、字段或索引中文注释实际核验失败",
+    );
     await client.query(write ? "COMMIT" : "ROLLBACK");
     begun = false;
   } catch (error) {
@@ -153,7 +243,13 @@ async function main() {
   stage = "原生契约发射与固定依赖检查";
   ensureOutput();
   const entry = resolveBaselineCli(root);
-  const invoke = (args, connection) => run(process.execPath, [entry, ...args, "--config", config], connection ? { ...environment, [freshConnectionVariable]: connection } : environment, stage);
+  const invoke = (args, connection) =>
+    run(
+      process.execPath,
+      [entry, ...args, "--config", config],
+      connection ? { ...environment, [freshConnectionVariable]: connection } : environment,
+      stage,
+    );
   const sourceText = readFileSync(source, "utf8");
   invoke(["contract", "emit"]);
   requireMatch(readFileSync(source, "utf8") === sourceText, "官方发射改写了受 Git 管理的契约源");
@@ -170,9 +266,13 @@ async function main() {
     foreignKeys: contract.foreignKeys,
     comments: contract.comments.length,
   };
-  if (action === "emit") return { status: "FRESH_CONTRACT_EMITTED", ...report, databaseInitialized: false };
+  if (action === "emit")
+    return { status: "FRESH_CONTRACT_EMITTED", ...report, databaseInitialized: false };
   stage = "全新业务库 Docker 身份与连接检查";
-  const base = createDockerDatabaseUrl(readFileSync(join(root, ".env"), "utf8"), readFileSync(join(root, ".local", "docker", "secrets.env"), "utf8"));
+  const base = createDockerDatabaseUrl(
+    readFileSync(join(root, ".env"), "utf8"),
+    readFileSync(join(root, ".local", "docker", "secrets.env"), "utf8"),
+  );
   const readOnly = freshConnection(base, true);
   const writable = freshConnection(base, false);
   const identity = inspectDocker();
@@ -197,29 +297,70 @@ async function main() {
     requireFreshVerification(parse(invoke(["db", "verify", "--strict", "--json"], readOnly)));
     stage = "真实中文注释核验";
     await checkComments(readOnly, identity, contract, commentText, false);
-    return { status: "FRESH_DATABASE_VERIFIED", ...report, serverVersion: identity.version, databaseInitialized: true };
+    return {
+      status: "FRESH_DATABASE_VERIFIED",
+      ...report,
+      serverVersion: identity.version,
+      databaseInitialized: true,
+    };
   }
   stage = "二十三类空库只读核验";
-  const empty = await inspectFreshDockerEmptyDatabase(databaseClient(readOnly), identity.systemIdentifier, identity.version);
+  const empty = await inspectFreshDockerEmptyDatabase(
+    databaseClient(readOnly),
+    identity.systemIdentifier,
+    identity.version,
+  );
   stage = "官方只读全新初始化预览";
-  const ids = reviewFreshUpdate(parse(invoke(["db", "update", "--dry-run", "--json"], readOnly)), contract.ids, "plan");
+  const ids = reviewFreshUpdate(
+    parse(invoke(["db", "update", "--dry-run", "--json"], readOnly)),
+    contract.ids,
+    "plan",
+  );
   if (action === "preview") {
-    return { status: "FRESH_DATABASE_PREVIEW_READY", ...report, serverVersion: empty.serverVersion, checkedEmptyCategories: empty.checkedEmptyCategories, additiveOperations: ids.length, databaseInitialized: false };
+    return {
+      status: "FRESH_DATABASE_PREVIEW_READY",
+      ...report,
+      serverVersion: empty.serverVersion,
+      checkedEmptyCategories: empty.checkedEmptyCategories,
+      additiveOperations: ids.length,
+      databaseInitialized: false,
+    };
   }
   stage = "首次初始化前再次确认空库";
   const latest = inspectDocker();
   requireMatch(isDeepStrictEqual(latest, identity), "首次初始化前 Docker 集群发生变化");
-  await inspectFreshDockerEmptyDatabase(databaseClient(readOnly), identity.systemIdentifier, identity.version);
+  await inspectFreshDockerEmptyDatabase(
+    databaseClient(readOnly),
+    identity.systemIdentifier,
+    identity.version,
+  );
   stage = "官方首次原生结构初始化";
-  reviewFreshUpdate(parse(invoke(["db", "update", "--json"], writable)), contract.ids, "apply", ids);
+  reviewFreshUpdate(
+    parse(invoke(["db", "update", "--json"], writable)),
+    contract.ids,
+    "apply",
+    ids,
+  );
   stage = "首次中文注释写入及核验";
   await checkComments(writable, identity, contract, commentText, true);
   stage = "官方最终严格结构与标记验证";
   requireFreshVerification(parse(invoke(["db", "verify", "--strict", "--json"], readOnly)));
-  return { status: "FRESH_DATABASE_INITIALIZED", ...report, serverVersion: identity.version, additiveOperations: ids.length, databaseInitialized: true };
+  return {
+    status: "FRESH_DATABASE_INITIALIZED",
+    ...report,
+    serverVersion: identity.version,
+    additiveOperations: ids.length,
+    databaseInitialized: true,
+  };
 }
 
-void main().then((report) => process.stdout.write(JSON.stringify(report, null, 2) + "\n")).catch((error) => {
-  console.error(error instanceof FreshInstallError || error instanceof NativePreflightError ? error.message : stage + "失败，内部诊断已脱敏；保留现场，不自动重试");
-  process.exitCode = 1;
-});
+void main()
+  .then((report) => process.stdout.write(JSON.stringify(report, null, 2) + "\n"))
+  .catch((error) => {
+    console.error(
+      error instanceof FreshInstallError || error instanceof NativePreflightError
+        ? error.message
+        : stage + "失败，内部诊断已脱敏；保留现场，不自动重试",
+    );
+    process.exitCode = 1;
+  });

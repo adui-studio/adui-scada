@@ -131,7 +131,23 @@ export function manageDockerStack(mode, envText, run = docker) {
       return "全新安装预检通过：旧持久化卷不参与挂载，新的 adui-scada 卷将由 Docker 创建";
     }
     if (mode === "infra") {
-      checked(run, [...COMPOSE_ARGS, "up", "-d", "--pull", "never", "--wait", "--wait-timeout", "180", "postgres", "redis", "keycloak"], true);
+      checked(
+        run,
+        [
+          ...COMPOSE_ARGS,
+          "up",
+          "-d",
+          "--pull",
+          "never",
+          "--wait",
+          "--wait-timeout",
+          "180",
+          "postgres",
+          "redis",
+          "keycloak",
+        ],
+        true,
+      );
       return "ADui SCADA 基础设施已启动，原生数据库初始化需显式确认";
     }
     checked(run, [...COMPOSE_ARGS, "up", "--build", "-d"], true);
