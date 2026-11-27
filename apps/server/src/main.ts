@@ -36,7 +36,7 @@ async function bootstrap(): Promise<void> {
     throw new Error("OIDC 身份接入与本机模拟 API 不能同时启用");
   }
 
-  // 仅在 OIDC 完整配置通过校验后装配原生数据库、身份模块及受保护的工程 API。
+  // 常驻容器只读模式仅装配原生数据库；身份与工程 API 仍须独立启用 OIDC。
   const { AppModule, LocalDemoAppModule, OidcEnabledAppModule, DockerReadOnlyDatabaseAppModule } =
     await import("./app.module.js");
   const rootModule = dockerReadOnly
