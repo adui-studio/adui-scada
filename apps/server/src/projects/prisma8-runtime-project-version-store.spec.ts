@@ -206,9 +206,15 @@ describe("全新原生工程版本持久化", () => {
     ]);
     expect(h.reads[1]?.parameters).toEqual([actor.tenantId, actor.subjectId]);
     expect(h.writes[2]?.parameters).toEqual([
-      actor.tenantId, projectId, actor.subjectId,
-      actor.tenantId, projectId, actor.subjectId,
-      actor.tenantId, projectId, actor.subjectId,
+      actor.tenantId,
+      projectId,
+      actor.subjectId,
+      actor.tenantId,
+      projectId,
+      actor.subjectId,
+      actor.tenantId,
+      projectId,
+      actor.subjectId,
     ]);
     expect(h.writes[2]?.text).toContain("'version:append'");
     expect(h.writes[2]?.text).not.toContain("'release:publish'");
@@ -232,7 +238,13 @@ describe("全新原生工程版本持久化", () => {
     ]);
     expect(h.scopes).toEqual([{ ...actor, projectId }]);
     expect(h.reads[1]?.parameters).toEqual([actor.tenantId, projectId]);
-    expect(h.writes[1]?.parameters).toEqual([2n, snapshot.createdAt, actor.tenantId, projectId, 1n]);
+    expect(h.writes[1]?.parameters).toEqual([
+      2n,
+      snapshot.createdAt,
+      actor.tenantId,
+      projectId,
+      1n,
+    ]);
     expect(h.state.committed).toBe(1);
   });
 
@@ -245,16 +257,20 @@ describe("全新原生工程版本持久化", () => {
     await expect(h.store.append(actor, "different-project", input)).rejects.toThrow(
       "请求工程 ID 与路由工程 ID 不一致",
     );
-    await expect(h.store.append(actor, projectId, { ...input, expectedRevision: 0 })).rejects.toThrow(
-      "工程预期修订号必须为 null 或大于零的安全整数",
-    );
+    await expect(
+      h.store.append(actor, projectId, { ...input, expectedRevision: 0 }),
+    ).rejects.toThrow("工程预期修订号必须为 null 或大于零的安全整数");
     expect(h.options).toHaveLength(0);
   });
 
   it("严格只读配置在工程创建与追加取得事务前拒绝", async () => {
     const h = harness(true);
-    await expect(h.store.create(actor, { document })).rejects.toThrow("Prisma 8 只读提供方禁止写入");
-    await expect(h.store.append(actor, projectId, input)).rejects.toThrow("Prisma 8 只读提供方禁止写入");
+    await expect(h.store.create(actor, { document })).rejects.toThrow(
+      "Prisma 8 只读提供方禁止写入",
+    );
+    await expect(h.store.append(actor, projectId, input)).rejects.toThrow(
+      "Prisma 8 只读提供方禁止写入",
+    );
     expect(h.options).toHaveLength(0);
     expect(h.writes).toHaveLength(0);
   });
@@ -311,7 +327,9 @@ describe("全新原生工程版本持久化", () => {
     expect(stale.writes).toHaveLength(0);
     const invalid = harness();
     invalid.state.lockRows = [{ head_revision: "0x1" }];
-    await expect(invalid.store.append(actor, projectId, input)).rejects.toThrow("数据库工程修订号异常");
+    await expect(invalid.store.append(actor, projectId, input)).rejects.toThrow(
+      "数据库工程修订号异常",
+    );
     expect(invalid.writes).toHaveLength(0);
     const full = harness();
     full.state.lockRows = [{ head_revision: String(Number.MAX_SAFE_INTEGER) }];
@@ -324,7 +342,9 @@ describe("全新原生工程版本持久化", () => {
   it("影响行数不符时事务拒绝且不继续写审计", async () => {
     const h = harness();
     h.state.affected = [1, 0];
-    await expect(h.store.append(actor, projectId, input)).rejects.toThrow("工程版本事务影响行数异常");
+    await expect(h.store.append(actor, projectId, input)).rejects.toThrow(
+      "工程版本事务影响行数异常",
+    );
     expect(h.writes).toHaveLength(2);
     expect(h.state.rejected).toBe(1);
     expect(h.state.committed).toBe(0);
@@ -333,7 +353,9 @@ describe("全新原生工程版本持久化", () => {
   it("审计写入异常或版本回读不一致不得返回成功", async () => {
     const audit = harness();
     audit.state.failAt = 3;
-    await expect(audit.store.append(actor, projectId, input)).rejects.toThrow("模拟工程事务写入失败");
+    await expect(audit.store.append(actor, projectId, input)).rejects.toThrow(
+      "模拟工程事务写入失败",
+    );
     expect(audit.state.rejected).toBe(1);
     expect(audit.state.committed).toBe(0);
     const mismatch = harness();

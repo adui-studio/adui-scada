@@ -52,10 +52,7 @@ function parseSave(input: unknown, projectId: string) {
 }
 
 /** 事务开始前复用共享请求校验，不从文档或请求体读取主体。 */
-function prepareProjectCreation(
-  principal: AuthenticatedProjectPrincipal | null,
-  input: unknown,
-) {
+function prepareProjectCreation(principal: AuthenticatedProjectPrincipal | null, input: unknown) {
   const actor = bindPrincipal(principal);
   if (!isPlainRecord(input)) throw new ProjectRequestValidationError("工程创建请求必须为普通对象");
   if (Object.keys(input).length !== 1 || !Object.hasOwn(input, "document")) {

@@ -131,7 +131,9 @@ describe("共享 Prisma 数据库模块装配边界", () => {
       ProjectApiModule,
       ProjectPersistenceModule,
     ]) {
-      expect(Reflect.getMetadata("imports", moduleType)).not.toContain(Prisma8ProjectPersistenceModule);
+      expect(Reflect.getMetadata("imports", moduleType)).not.toContain(
+        Prisma8ProjectPersistenceModule,
+      );
     }
   });
 
