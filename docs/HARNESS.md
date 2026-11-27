@@ -5600,3 +5600,35 @@ git status --short
 ```
 
 预期 FRESH_PROVIDER_SMOKE_READY；releaseLockedReadDenied、releaseWriteDenied、rollbackWriteDenied=true，既有只读核验和指纹/结构不变、providerSwitched=false。严禁替换生产安全门禁以写入真实发布事件；本批不执行真实发布或回滚。
+
+### 正式原生根模块增量及 HTTP 验收
+
+在当前候选分支执行以下原生专项、HTTP E2E、质量检查及构建，不执行历史数据库专项、迁移实验或重复初始化。过渡期 db:generate 仍离线生成现有旧客户端以完成全仓编译，不连接旧数据库；清理后移除。旧 ready 含废弃实验门禁，本批不执行旧 ready，待清理后恢复完整正式质量链。
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+vp test run apps/server/src/auth/prisma8-runtime-identity.service.spec.ts apps/server/src/auth/prisma8-authorization-read-store.spec.ts apps/server/src/projects/prisma8-runtime-project-query-store.spec.ts apps/server/src/projects/prisma8-runtime-project-version-store.spec.ts apps/server/src/projects/prisma8-runtime-project-release-store.spec.ts apps/server/src/database/database.module.spec.ts &&
+pnpm run test:e2e:server &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "正式原生根模块增量退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期 28+64+65=157 项；64 项原生 Vitest 包含身份 13、授权 6、查询 10、写入 11、发布/回滚 15、装配 9。要求零警告、零错误，增量退出 0。格式化正常提交并推送、工作区干净后执行：
+
+```powershell
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "正式原生根模块只读烟测退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+预期 FRESH_PROVIDER_SMOKE_READY，原有只读字段和结构指纹不变，nativeRootAssemblyVerified=true、singleNativeProviderVerified=true、legacyProviderAbsent=true、providerSwitched=true。此为正式根模块真实只读装配验证而非生产应用启动、真实业务写入或真实 Keycloak 登录；禁用自动清理调度，不开放回滚路由。

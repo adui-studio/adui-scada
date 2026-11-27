@@ -1634,3 +1634,9 @@ React/Vue 运行页可显式导入当前或可迁移 Schema 的最大 2 MiB JSON
 新增 Prisma8RuntimeProjectReleaseStore，统一由 Prisma8ProjectPersistenceModule 与工程读写仓储共用 Prisma8Service，直接采用原生 Contract 的 readTransaction/writeTransaction；严格只读时三个需行锁入口均提前拒绝。当前发布读取不读取编辑 head；发布按现有双 CAS 与幂等契约；内部回滚独立 release:rollback ACL、正发布代次、仅限同租户工程较早 PUBLISH 事件证明的目标快照，不依赖或更改编辑 head。锁内复核会话、活动主体、完整 ACL、指针、目标摘要和安全门禁；幂等按租户/工程/主体/动作/UUID v4 作用域，复核语义摘要、目标和原代次。同一目标的新请求拒绝；原同键同语义重放复用原事件。事件及指针 CAS 使用统一原生写事务并回读一致性，固定安全门禁始终拒绝新发布/回滚且不提供可注入放行参数。
 
 发布输入仍为 expectedHeadRevision、targetRevision、expectedReleaseGeneration 和独立幂等键；回滚内部输入仅为 targetRevision、expectedReleaseGeneration 及独立幂等键，预期代次必须为正安全整数。回滚内部回执保留动作、发布修订、摘要、代次、事件 ID 与时间，不虚构数据库事件未保存的编辑 head；同目标不同键的新请求按冲突处理，公开回滚 HTTP/客户端契约及审批仍待确认。不修改任何数据库结构或前端行为。
+
+### 正式原生身份与工程 HTTP 装配（FR-001 / FR-008 / FR-013 / FR-014 / NFR-006）
+
+正式 OidcEnabledAppModule 仍经 ProjectApiModule 导入 ScadaIdentityModule 与 ProjectPersistenceModule，二者直接复用已验收的 Prisma8IdentityModule、Prisma8AuthorizationModule、Prisma8ProjectPersistenceModule，共用唯一 Prisma8DatabaseModule/Prisma8Service。身份模块通过重新导出原生模块提供会话、授权及可信 OIDC 配置，保留现有 Controller、Guard、CSRF、审计和授权码兑换；工程控制器既有两个类令牌暂以 useExisting 指向同一原生版本/发布仓储实例，不实例化旧 Prisma 7 仓储，不增加旧库兼容适配。默认 AppModule 仍无数据库、身份或工程 API；OIDC 启用的正式应用代码已切换，保持本机非生产连接白名单，实际新根模块验收待完成。正式可写模式恢复当前 Issuer 每 30 秒、最多 128 条过期 OIDC 登录事务清理，启动幂等、关闭清理定时器并等待正在执行的任务；严格只读模式禁用调度。发布/回滚生产安全门禁不变，回滚仍无公开 HTTP 路由，不增加工业设备操作。
+
+不改变现有 HTTP 输入输出、权限动作、工程快照、CAS 或数据库结构；当前已验收的原生仓储直接承担业务调用。过渡类令牌只是同实例依赖注入引用，待删除旧代码时统一改为无旧依赖的原生业务端口。

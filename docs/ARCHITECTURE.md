@@ -567,3 +567,9 @@ Prisma8ProjectPersistenceModule 取代独立查询模块，工程仓储 Prisma8R
 ### 全新原生工程发布与回滚仓储
 
 新增 Prisma8RuntimeProjectReleaseStore，统一由 Prisma8ProjectPersistenceModule 与工程读写仓储共用 Prisma8Service，直接采用原生 Contract 的 readTransaction/writeTransaction；严格只读时三个需行锁入口均提前拒绝。当前发布读取不读取编辑 head；发布按现有双 CAS 与幂等契约；内部回滚独立 release:rollback ACL、正发布代次、仅限同租户工程较早 PUBLISH 事件证明的目标快照，不依赖或更改编辑 head。锁内复核会话、活动主体、完整 ACL、指针、目标摘要和安全门禁；幂等按租户/工程/主体/动作/UUID v4 作用域，复核语义摘要、目标和原代次。同一目标的新请求拒绝；原同键同语义重放复用原事件。事件及指针 CAS 使用统一原生写事务并回读一致性，固定安全门禁始终拒绝新发布/回滚且不提供可注入放行参数。 依 ADR-0069 和 ADR-0073，不创建新连接池、不为旧数据接管增加适配。正式 HTTP 根模块暂未切换；回滚仅为内部仓储能力，双框架 API 契约和生产准入另行验收。
+
+### 正式 NestJS 根模块使用唯一原生提供方
+
+正式 OidcEnabledAppModule 仍经 ProjectApiModule 导入 ScadaIdentityModule 与 ProjectPersistenceModule，二者直接复用已验收的 Prisma8IdentityModule、Prisma8AuthorizationModule、Prisma8ProjectPersistenceModule，共用唯一 Prisma8DatabaseModule/Prisma8Service。身份模块通过重新导出原生模块提供会话、授权及可信 OIDC 配置，保留现有 Controller、Guard、CSRF、审计和授权码兑换；工程控制器既有两个类令牌暂以 useExisting 指向同一原生版本/发布仓储实例，不实例化旧 Prisma 7 仓储，不增加旧库兼容适配。默认 AppModule 仍无数据库、身份或工程 API；OIDC 启用的正式应用代码已切换，保持本机非生产连接白名单，实际新根模块验收待完成。正式可写模式恢复当前 Issuer 每 30 秒、最多 128 条过期 OIDC 登录事务清理，启动幂等、关闭清理定时器并等待正在执行的任务；严格只读模式禁用调度。发布/回滚生产安全门禁不变，回滚仍无公开 HTTP 路由，不增加工业设备操作。
+
+新增两项原生 OIDC 清理生命周期测试及两项正式根模块 HTTP E2E，现有九项模块装配断言更新为实际原生路径；HTTP 工程 Mock 改为直接授权读取端口，不再借用旧 Prisma 7 Mock ORM。真实 Provider 烟测编译实际 OidcEnabledAppModule，覆盖两个正式 Controller、唯一原生服务、旧 DatabaseModule/PrismaService 未注册、两个工程令牌与原生实例相同及原生授权/会话绑定。烟测仅对进程模块导入临时设置同步静默日志并恢复原环境值，强制真实业务库严格只读且禁止 IdP 网络发现，不监听 HTTP 端口，不启动过期清理。成功后由探针本身返回 nativeRootAssemblyVerified、singleNativeProviderVerified、legacyProviderAbsent、providerSwitched=true；独立 runtime-review 不验证根模块，不能代替本烟测。 连接白名单和固定安全门禁属于正式约束，不因装配切换而放宽；Docker 容器网络、生产连接及真实写入仍待独立验收。

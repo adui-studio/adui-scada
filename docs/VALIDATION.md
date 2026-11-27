@@ -5329,3 +5329,11 @@ PR #246 维护者 Windows 专项 175/175（全新 28、运行时 7、工程查�
 协作容器 Node.js 22.16.0 对从远端源码摘取的请求解析、语义哈希和十进制安全整数校验逻辑（Unicode 等价转义、最小领域错误类）运行 node --experimental-strip-types --test，6/6 通过；验证发布/回滚白名单、代次、UUID、摘要字段顺序与作用域、非规范整数和溢出。远端静态核对 13 条参数化 SQL、2 条 DML 仅位于固定门禁之后、15 项新增 Vitest 无无参数 toThrow。协作容器 GitHub Git 网络 DNS 不可达，未安装固定 Prisma SDK、pnpm/vp 和完整 NestJS 依赖，新增仓库 Vitest、类型检查、构建、真实 PostgreSQL 烟测待 Windows 实测；未执行真实业务写入、发布、回滚、旧迁移、重新初始化或正式根模块切换。模拟拒绝或幂等重放不等于真实成功发布事务通过。
 
 新增原生只读烟测标志 releaseLockedReadDenied、releaseWriteDenied、rollbackWriteDenied；此前全部标志及存储指纹/结构保持不变。通过只读拒绝并不证明具有真实授权的当前发布正向读取或写入回滚已经验收。
+
+### 2026-11-27 · PR #248 已验收与正式原生根模块待验收
+
+维护者 Windows 完成 PR #248 全新专项 28/28、原生运行时 7/7、发布/回滚 15/15、工程写入 11/11、工程查询 10/10、装配 9/9，共 80/80；Vite+ 621 文件格式正确、459 受检文件零警告/Lint/类型错误、中文 486、Markdown 97、NestJS 构建及 git diff --check 均通过，增量退出码 0。格式化提交 ef817ad58bb2eae05322d674c8b3353cc5494ad8 已推送，三文件差异为排版与尾逗号。真实 PostgreSQL 190000 FRESH_PROVIDER_SMOKE_READY，原存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致，releaseLockedReadDenied/releaseWriteDenied/rollbackWriteDenied 及既有只读标志均 true，providerSwitched=false，退出码 0，工作区干净。维护者明确授权，PR #248 已 Squash 合入 feat/mvp-first-integration 的 a6b388334addb25b39e3a06a9f4b2da77339b09c。
+
+新增两项原生 OIDC 清理生命周期测试及两项正式根模块 HTTP E2E，现有九项模块装配断言更新为实际原生路径；HTTP 工程 Mock 改为直接授权读取端口，不再借用旧 Prisma 7 Mock ORM。真实 Provider 烟测编译实际 OidcEnabledAppModule，覆盖两个正式 Controller、唯一原生服务、旧 DatabaseModule/PrismaService 未注册、两个工程令牌与原生实例相同及原生授权/会话绑定。烟测仅对进程模块导入临时设置同步静默日志并恢复原环境值，强制真实业务库严格只读且禁止 IdP 网络发现，不监听 HTTP 端口，不启动过期清理。成功后由探针本身返回 nativeRootAssemblyVerified、singleNativeProviderVerified、legacyProviderAbsent、providerSwitched=true；独立 runtime-review 不验证根模块，不能代替本烟测。
+
+协作容器 Node.js 22.16.0、TypeScript 5.8.3，实际执行正式身份及工程持久化模块两个精确 Git Blob（dc6c9db63cb1b79f14a0d0ba1b475bd50410040e、d945547c8c30b3fb4f79388a26bd31b531891cd6）的 SHA-1 核对、语法解析及转译，均通过；未执行完整仓库类型检查、Vitest、NestJS 装配、真实 PostgreSQL 烟测。协作容器 GitHub Git 网络 DNS 不可达且无固定仓库依赖、pnpm/vp；本次没有真实数据库写入、重新初始化、历史库迁移/验收、正式应用监听或生产发布。 预计全新专项 28 项、原生业务与装配 Vitest 64 项、HTTP E2E 65 项，共 157 项。完整质量门禁和新根模块真实烟测均须维护者 Windows 实测，不得沿用旧候选烟测成功状态宣称正式根模块已验收。

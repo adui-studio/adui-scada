@@ -1958,3 +1958,12 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/projects/prisma8-runtime-project-release-store.spec.ts`：15 项原生模拟事务回归。
 - `apps/server/src/projects/prisma8-project-persistence.module.ts`：共享原生版本与发布仓储装配。
 - `apps/server/prisma8-provider-smoke.mjs`：新增当前发布锁读取、发布及回滚严格只读拒绝核验。
+
+### 正式原生 HTTP 应用装配
+
+- `apps/server/src/app.module.ts`：OIDC 启用根模块经现有 ProjectApiModule 统一使用原生业务仓储；默认应用不注册数据库。
+- `apps/server/src/auth/scada-identity.module.ts`：正式身份 Controller、Guard、审计与原生身份模块重新导出。
+- `apps/server/src/projects/project-persistence.module.ts`：正式工程令牌引用原生版本及发布仓储的同一实例。
+- `apps/server/src/auth/prisma8-runtime-identity.service.ts`：正式可写模式恢复定时清理，严格只读模式禁用调度。
+- `apps/server/test/oidc-module-bootstrap.e2e-spec.ts`：实际根模块的内存事务 HTTP 验收及唯一提供方检查。
+- `apps/server/prisma8-provider-smoke.mjs`：正式根模块的真实 PostgreSQL 严格只读装配及关闭验证。
