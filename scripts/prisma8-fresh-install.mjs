@@ -62,7 +62,7 @@ export function reviewFreshContract(contract, commentText) {
   requireMatch(
     contract?.targetFamily === "sql" &&
       contract.target === "postgres" &&
-      contract.storage.storageHash === freshStorageHash &&
+      contract.storage?.storageHash === freshStorageHash &&
       isDeepStrictEqual(Object.keys(namespaces), ["public"]) &&
       tables && Object.keys(tables).length === 12,
     "全新原生契约存储标识或表清单不一致",
@@ -194,13 +194,19 @@ export function freshDiagnosticCodes(...outputs) {
   const codes = new Set();
   for (const output of outputs) {
     if (typeof output !== "string") continue;
-    for (const line of output.split(/\r?\n/u)) {
-      let document;
-      try {
-        document = JSON.parse(line);
-      } catch {
-        continue;
-      }
+    let documents;
+    try {
+      documents = [JSON.parse(output)];
+    } catch {
+      documents = output.split(/\r?\n/u).flatMap((line) => {
+        try {
+          return [JSON.parse(line)];
+        } catch {
+          return [];
+        }
+      });
+    }
+    for (const document of documents) {
       const envelope = document?.envelope;
       for (const item of [document, envelope?.error, ...(Array.isArray(envelope?.diagnostics) ? envelope.diagnostics : [])]) {
         if (typeof item?.code === "string" && /^[A-Z][A-Z0-9_]{0,40}\.[A-Z][A-Z0-9_]{0,80}$/u.test(item.code)) codes.add(item.code);
