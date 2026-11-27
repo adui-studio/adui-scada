@@ -4,16 +4,13 @@ import {
   validateProjectReleasePreflight,
   waterTreatmentDemoDocument,
 } from "@adui/scada-core";
-import type { PostgresClient } from "@prisma/orm-postgres/runtime";
 import { describe, expect, it } from "vite-plus/test";
-import type { Contract as HistoricalContract } from "../generated/prisma8/contract.d.js";
 import {
   assertPrisma8Writable,
   readPrisma8Transaction,
   type Prisma8Transaction,
 } from "../database/prisma8-read-transaction.js";
 import type { Prisma8Client, Prisma8Service } from "../database/prisma8.service.js";
-import { Prisma8ProjectQueryStore } from "./prisma8-project-query-store.js";
 import { Prisma8RuntimeProjectQueryStore } from "./prisma8-runtime-project-query-store.js";
 
 const storageHash = "9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436";
@@ -305,25 +302,5 @@ describe("原生工程查询仓储及事务边界", () => {
     after.state.boundaryRows[1] = [{ ...after.boundary, storageHash: "" }];
     await expect(after.store.getProject(actor, projectId)).rejects.toThrow("边界不一致");
     expect(after.steps).toEqual(["边界", "共享锁", "授权", "工程摘要", "边界"]);
-  });
-
-  it("历史隔离候选拒绝新业务库且不执行工程查询", async () => {
-    const h = harness();
-    h.state.boundaryRows[0] = [
-      {
-        database_name: "adui_scada",
-        schema_name: "public",
-        read_only: "off",
-        isolation: "read committed",
-      },
-    ];
-    const historical = new Prisma8ProjectQueryStore(
-      h.client as unknown as PostgresClient<HistoricalContract>,
-    );
-    await expect(historical.list(actor)).rejects.toThrow(
-      "Prisma 8 工程查询候选仅允许隔离库读已提交事务",
-    );
-    expect(h.steps).toEqual(["边界"]);
-    expect(h.scopes).toHaveLength(0);
   });
 });

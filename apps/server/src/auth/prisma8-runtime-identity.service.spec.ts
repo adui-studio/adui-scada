@@ -1,15 +1,10 @@
 import "reflect-metadata";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import * as oidc from "openid-client";
-import type { PostgresClient, PostgresTransactionContext } from "@prisma/orm-postgres/runtime";
-import type { Contract as HistoricalContract } from "../generated/prisma8/contract.d.js";
-import { Prisma8AuthSessionService } from "./prisma8-auth-session.service.js";
 import {
-  historicalAuthTransaction,
   nativeAuthTransaction,
   type Prisma8AuthTransaction,
 } from "./prisma8-auth-transaction-port.js";
-import { Prisma8OidcLoginTransactionService } from "./prisma8-oidc-login-transaction.service.js";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
 import {
@@ -165,31 +160,23 @@ function harness(readOnly = false) {
 }
 
 describe("原生身份业务事务边界", () => {
-  it("两代事务适配器分别构造参数化计划并拒绝缺少文本列的结果", async () => {
+  it("原生事务适配器构造参数化计划并拒绝缺少文本列的结果", async () => {
     const h = harness();
-    const historical = historicalAuthTransaction(
-      h.tx as unknown as PostgresTransactionContext<HistoricalContract>,
-    );
     const native = nativeAuthTransaction(h.tx as unknown as Prisma8Transaction);
     const read = (transaction: Prisma8AuthTransaction) =>
       transaction.queryText({ status: "pg/text@1" })`SELECT ${actor.subjectId}::text AS status`;
     const write = (transaction: Prisma8AuthTransaction) =>
       transaction.executeCount`UPDATE public.scada_auth_sessions SET revoked_at = ${"2026-11-27T00:00:00Z"}::timestamptz WHERE session_id = ${"00000000-0000-4000-8000-000000000001"}::uuid`;
-    await expect(read(historical)).resolves.toEqual([{ status: "active" }]);
     await expect(read(native)).resolves.toEqual([{ status: "active" }]);
     expect(h.queries.map((plan) => plan.parameters)).toEqual([
       [actor.subjectId],
-      [actor.subjectId],
     ]);
-    await expect(write(historical)).resolves.toEqual({ affectedRows: 1 });
     await expect(write(native)).resolves.toEqual({ affectedRows: 1 });
-    expect(h.mutations[0]).toEqual(h.mutations[1]);
     expect(h.mutations[0]?.parameters).toEqual([
       "2026-11-27T00:00:00Z",
       "00000000-0000-4000-8000-000000000001",
     ]);
     h.state.identityRows = [{}];
-    await expect(read(historical)).rejects.toThrow("身份事务查询结果缺少有效文本列");
     await expect(read(native)).rejects.toThrow("身份事务查询结果缺少有效文本列");
   });
 
@@ -201,57 +188,6 @@ describe("原生身份业务事务边界", () => {
     );
     expect(h.mutations).toHaveLength(0);
     expect(h.outcomes).toEqual(["回滚"]);
-  });
-
-  it("历史会话和 OIDC 隔离候选拒绝连接新业务库", async () => {
-    let checks = 0;
-    const mutations: unknown[] = [];
-    const tx = {
-      raw: {
-        sql: () => ({ returnsRow: () => ({ build: () => ({}) }) }),
-      },
-      query: () => ({
-        toArray: () => {
-          checks += 1;
-          return Promise.resolve([
-            {
-              database_name: "adui_scada",
-              schema_name: "public",
-              read_only: "off",
-              isolation: "read committed",
-            },
-          ]);
-        },
-      }),
-      execute: (plan: unknown) => {
-        mutations.push(plan);
-        return Promise.resolve({ affectedRows: 1 });
-      },
-    };
-    const client = {
-      transaction: (
-        operation: (
-          transaction: PostgresTransactionContext<HistoricalContract>,
-        ) => Promise<unknown>,
-      ) => operation(tx as unknown as PostgresTransactionContext<HistoricalContract>),
-    } as unknown as PostgresClient<HistoricalContract>;
-    const h = harness();
-    const sessions = new Prisma8AuthSessionService(client);
-    const transactions = new Prisma8OidcLoginTransactionService(client, h.discovery, {
-      ...h.startupConfig,
-      issuer: new URL("https://id.example.org/realms/prisma8-oidc-" + randomUUID()),
-    });
-    await expect(sessions.issueForVerifiedSubject(actor)).rejects.toThrow(
-      "Prisma 8 身份候选仅允许隔离库读已提交事务",
-    );
-    await expect(
-      transactions.consume(
-        randomBytes(32).toString("base64url"),
-        "scada_oidc_b_" + randomBytes(32).toString("base64url"),
-      ),
-    ).rejects.toThrow("OIDC 登录事务验证失败，请稍后重试");
-    expect(checks).toBe(2);
-    expect(mutations).toHaveLength(0);
   });
 
   it("只读配置在获得事务前拒绝写入且不启动 OIDC 发现", async () => {

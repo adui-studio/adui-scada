@@ -4,9 +4,10 @@ import * as oidc from "openid-client";
 import { BadRequestException } from "@nestjs/common";
 import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
-import type { PrismaService } from "../database/prisma.service.js";
+import type { Prisma8Transaction } from "../database/prisma8-read-transaction.js";
+import type { Prisma8Service } from "../database/prisma8.service.js";
 import type { OidcProviderDiscoveryService } from "./oidc-provider-discovery.service.js";
-import { OidcLoginTransactionService } from "./oidc-login-transaction.service.js";
+import { Prisma8RuntimeOidcLoginTransactionService } from "./prisma8-runtime-identity.service.js";
 
 interface StoredTransaction {
   stateHash: string;
@@ -20,50 +21,11 @@ interface StoredTransaction {
   consumedAt: Date | null;
 }
 
-interface TransactionWhere {
-  readonly stateHash: string;
-  readonly issuer: string;
-  readonly browserBindingHash: string;
-  readonly consumedAt: null;
-  readonly expiresAt: { readonly gt: Date };
-  readonly createdAt: { readonly lte: Date };
-}
+type Plan = { text: string; parameters: unknown[] };
 
-interface FakeTransactionClient {
-  readonly scadaOidcTransaction: {
-    create(args: {
-      readonly data: Omit<StoredTransaction, "consumedAt">;
-    }): Promise<StoredTransaction>;
-    findFirst(args: {
-      readonly where: TransactionWhere;
-    }): Promise<Pick<
-      StoredTransaction,
-      "issuer" | "nonce" | "verifierCiphertext" | "returnPath"
-    > | null>;
-    updateMany(args: {
-      readonly where: TransactionWhere;
-      readonly data: { readonly consumedAt: Date };
-    }): Promise<{ readonly count: number }>;
-    findMany(args: {
-      readonly where: { readonly expiresAt: { readonly lte: Date } };
-      readonly orderBy: { readonly expiresAt: "asc" };
-      readonly take: number;
-      readonly select: { readonly stateHash: true };
-    }): Promise<Array<{ readonly stateHash: string }>>;
-    deleteMany(args: {
-      readonly where: {
-        readonly stateHash: { readonly in: readonly string[] };
-        readonly expiresAt: { readonly lte: Date };
-      };
-    }): Promise<{ readonly count: number }>;
-  };
-}
-
-interface FakePrismaClient extends FakeTransactionClient {
-  $transaction<T>(
-    callback: (transaction: FakeTransactionClient) => Promise<T>,
-    options?: { readonly maxWait: number; readonly timeout: number },
-  ): Promise<T>;
+function textParameter(value: unknown): string {
+  if (typeof value !== "string") throw new Error("测试登录事务参数必须为字符串");
+  return value;
 }
 
 function createConfig(): EnabledOidcConfig {
@@ -105,87 +67,88 @@ function createFakeService(config = createConfig()) {
   let consumeCalls = 0;
   let failCreate = false;
   let failTransaction = false;
-  const transactionClient: FakeTransactionClient = {
-    scadaOidcTransaction: {
-      create: async (args: { readonly data: Omit<StoredTransaction, "consumedAt"> }) => {
-        createCalls += 1;
-        if (failCreate) throw new Error("数据库错误不得泄漏");
-        if (records.has(args.data.stateHash)) throw new Error("重复 State 摘要");
-        const record: StoredTransaction = { ...args.data, consumedAt: null };
-        records.set(record.stateHash, record);
-        return record;
-      },
-      findFirst: async (args: { readonly where: TransactionWhere }) => {
-        const record = records.get(args.where.stateHash);
-        if (
-          !record ||
-          record.issuer !== args.where.issuer ||
-          record.browserBindingHash !== args.where.browserBindingHash ||
-          record.consumedAt !== null ||
-          record.expiresAt.getTime() <= args.where.expiresAt.gt.getTime() ||
-          record.createdAt.getTime() > args.where.createdAt.lte.getTime()
-        ) {
-          return null;
-        }
+  function findActive(parameters: readonly unknown[]): StoredTransaction | undefined {
+    const [stateHash, issuer, binding, expires, created] = parameters.map(textParameter);
+    const record = records.get(stateHash ?? "");
+    return record && record.issuer === issuer && record.browserBindingHash === binding &&
+      record.consumedAt === null && record.expiresAt.getTime() > Date.parse(expires ?? "") &&
+      record.createdAt.getTime() <= Date.parse(created ?? "") ? record : undefined;
+  }
+  const tx = {
+    raw: {
+      sql: (strings: TemplateStringsArray, ...parameters: unknown[]) => {
+        const plan = { text: strings.join("?"), parameters };
         return {
-          issuer: record.issuer,
-          nonce: record.nonce,
-          verifierCiphertext: record.verifierCiphertext,
-          returnPath: record.returnPath,
+          returnsRow: () => ({ build: () => plan }),
+          affectedCount: () => ({ build: () => plan }),
         };
       },
-      updateMany: async (args: {
-        readonly where: TransactionWhere;
-        readonly data: { readonly consumedAt: Date };
-      }) => {
-        const record = records.get(args.where.stateHash);
-        if (
-          !record ||
-          record.issuer !== args.where.issuer ||
-          record.browserBindingHash !== args.where.browserBindingHash ||
-          record.consumedAt !== null ||
-          record.expiresAt.getTime() <= args.where.expiresAt.gt.getTime() ||
-          record.createdAt.getTime() > args.where.createdAt.lte.getTime()
-        ) {
-          return { count: 0 };
+    },
+    query(plan: Plan) {
+      const record = findActive(plan.parameters);
+      return { toArray: () => Promise.resolve(record ? [{
+        issuer: record.issuer, nonce: record.nonce,
+        verifier_ciphertext: record.verifierCiphertext, return_path: record.returnPath,
+      }] : []) };
+    },
+    execute(plan: Plan) {
+      if (plan.text.includes("INSERT INTO public.scada_oidc_transactions")) {
+        createCalls += 1;
+        if (failCreate) throw new Error("数据库错误不得泄漏");
+        const [stateHash, issuer, nonce, verifierCiphertext, browserBindingHash, returnPath, createdAt, expiresAt] =
+          plan.parameters.map(textParameter);
+        if (!stateHash || !issuer || !nonce || !verifierCiphertext || !browserBindingHash ||
+          returnPath === undefined || !createdAt || !expiresAt || records.has(stateHash)) {
+          throw new Error("测试登录事务参数无效或重复 State 摘要");
         }
-        record.consumedAt = args.data.consumedAt;
+        records.set(stateHash, { stateHash, issuer, nonce, verifierCiphertext, browserBindingHash, returnPath,
+          createdAt: new Date(createdAt), expiresAt: new Date(expiresAt), consumedAt: null });
+        return Promise.resolve({ affectedRows: 1 });
+      }
+      if (plan.text.includes("UPDATE public.scada_oidc_transactions")) {
+        const record = findActive(plan.parameters.slice(1));
+        if (!record) return Promise.resolve({ affectedRows: 0 });
+        record.consumedAt = new Date(textParameter(plan.parameters[0]));
         consumeCalls += 1;
-        return { count: 1 };
-      },
-      findMany: async (args) =>
-        [...records.values()]
-          .filter((item) => item.expiresAt <= args.where.expiresAt.lte)
-          .sort((left, right) => left.expiresAt.getTime() - right.expiresAt.getTime())
-          .slice(0, args.take)
-          .map((item) => ({ stateHash: item.stateHash })),
-      deleteMany: async (args) => {
-        let count = 0;
-        for (const stateHash of args.where.stateHash.in) {
-          const record = records.get(stateHash);
-          if (record && record.expiresAt <= args.where.expiresAt.lte) {
-            records.delete(stateHash);
-            count += 1;
-          }
-        }
-        return { count };
-      },
+        return Promise.resolve({ affectedRows: 1 });
+      }
+      if (!plan.text.includes("DELETE FROM public.scada_oidc_transactions")) {
+        throw new Error("测试出现未预期登录事务写入");
+      }
+      const issuer = textParameter(plan.parameters[0]);
+      const cutoff = new Date(textParameter(plan.parameters[1]));
+      const limit = plan.parameters[4];
+      if (typeof limit !== "number" || plan.parameters[2] !== issuer || plan.parameters[3] !== plan.parameters[1]) {
+        throw new Error("测试登录事务清理边界无效");
+      }
+      const expired = [...records.values()]
+        .filter((item) => item.issuer === issuer && item.expiresAt <= cutoff)
+        .sort((left, right) => left.expiresAt.getTime() - right.expiresAt.getTime())
+        .slice(0, limit);
+      for (const item of expired) records.delete(item.stateHash);
+      return Promise.resolve({ affectedRows: expired.length });
     },
   };
-  const client: FakePrismaClient = {
-    ...transactionClient,
-    $transaction: async <T>(
-      callback: (transaction: FakeTransactionClient) => Promise<T>,
-    ): Promise<T> => {
+  // 顺序事务替身模拟同一行的排他锁；不代表真实 PostgreSQL 并发验收。
+  let tail = Promise.resolve();
+  function transaction<T>(callback: (value: Prisma8Transaction) => Promise<T>): Promise<T> {
+    const result = tail.then(() => {
       if (failTransaction) throw new Error("数据库事务异常不得泄漏");
-      return callback(transactionClient);
-    },
-  };
+      return callback(tx as unknown as Prisma8Transaction);
+    });
+    tail = result.then(() => undefined, () => undefined);
+    return result;
+  }
+  const database = {
+    writable: true,
+    assertWritable: () => undefined,
+    writeTransaction: transaction,
+  } as unknown as Prisma8Service;
   const discovery = {
     getConfiguration: async () => createProviderConfiguration(config),
   };
-  const service = new OidcLoginTransactionService(
-    { client } as unknown as PrismaService,
+  const service = new Prisma8RuntimeOidcLoginTransactionService(
+    database,
     discovery as unknown as OidcProviderDiscoveryService,
     config,
   );

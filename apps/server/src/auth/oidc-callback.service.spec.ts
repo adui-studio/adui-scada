@@ -4,8 +4,7 @@ import * as oidc from "openid-client";
 import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
-import type { PrismaService } from "../database/prisma.service.js";
-import { Prisma7AuthorizationReadStore } from "./prisma7-authorization-read-store.js";
+import { copyAuthorizationPrincipal, type AuthorizationReadStore } from "./authorization-read-store.js";
 import type { AuthSessionService, IssuedAuthSession } from "./auth-session.service.js";
 import type {
   ConsumedOidcLoginTransaction,
@@ -29,17 +28,8 @@ interface ExternalIdentityResult {
 }
 
 interface ExternalIdentityQuery {
-  readonly where: {
-    readonly issuer_subject: {
-      readonly issuer: string;
-      readonly subject: string;
-    };
-  };
-  readonly select: {
-    readonly tenantId: true;
-    readonly subjectId: true;
-    readonly identity: { readonly select: { readonly status: true } };
-  };
+  readonly issuer: string;
+  readonly subject: string;
 }
 
 type OidcExpectedState = NonNullable<Parameters<OidcAuthorizationCodeGrant>[2]>["expectedState"];
@@ -158,16 +148,15 @@ function createHarness() {
     },
   };
 
-  const database = {
-    client: {
-      scadaExternalIdentity: {
-        findUnique: async (query: ExternalIdentityQuery) => {
-          identityQueries.push(query);
-          if (identityQueryFailure) throw new Error("不得泄漏的数据库异常");
-          return identity;
-        },
-      },
+  const authorization: AuthorizationReadStore = {
+    findActiveExternalIdentity: async (issuer, subject) => {
+      identityQueries.push({ issuer, subject });
+      if (identityQueryFailure) throw new Error("不得泄漏的数据库异常");
+      return identity?.identity.status === "active"
+        ? copyAuthorizationPrincipal(identity.tenantId, identity.subjectId)
+        : null;
     },
+    readProjectGrants: () => Promise.resolve([]),
   };
 
   const sessions = {
@@ -205,7 +194,7 @@ function createHarness() {
   };
 
   const service = new OidcCallbackService(
-    new Prisma7AuthorizationReadStore(database as unknown as PrismaService),
+    authorization,
     discovery as unknown as OidcProviderDiscoveryService,
     transactions as unknown as OidcLoginTransactionService,
     sessions as unknown as AuthSessionService,
@@ -278,19 +267,7 @@ describe("OIDC 授权码回调与预绑定身份验证", () => {
       idTokenExpected: true,
     });
     expect(harness.identityQueries).toEqual([
-      {
-        where: {
-          issuer_subject: {
-            issuer: harness.config.issuer.href,
-            subject: "external-engineer-1",
-          },
-        },
-        select: {
-          tenantId: true,
-          subjectId: true,
-          identity: { select: { status: true } },
-        },
-      },
+      { issuer: harness.config.issuer.href, subject: "external-engineer-1" },
     ]);
     expect(harness.issuedPrincipals).toEqual([{ tenantId: "tenant-a", subjectId: "engineer-1" }]);
     const output = JSON.stringify(result);
