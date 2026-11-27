@@ -56,7 +56,7 @@ export async function verifyDockerWebHttps(port, ca) {
 }
 
 /** 从 mkcert 读取公开根证书，不读取根私钥，也不修改证书信任设置。 */
-function readLocalCa() {
+export function readLocalCa() {
   const result = spawnSync(process.platform === "win32" ? "mkcert.exe" : "mkcert", ["-CAROOT"], {
     shell: false,
     encoding: "utf8",
