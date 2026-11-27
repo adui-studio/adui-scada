@@ -5383,3 +5383,9 @@ PR #251 维护者 Windows：Docker 18/18、数据库配置 8/8、全新原生 29
 维护者 Windows 在 de8dc9e07e2fe265658984b7cf6c662830b89db9 实测 NestJS 构建与类型检查、Docker 49/49（四套件）、HTTP E2E 7 文件/71 项（常驻模块 5/5、默认根模块 13/13）、环境与 LF、中文文案 377 文件、Markdown 97 份、git diff --check 均通过。Vite+ 510 文件格式正确、351 受检文件 1 条 vitest(expect-expect) 警告、0 错误，增量退出码 0，但零警告门禁未通过。四镜像构建、七服务启动、常驻 NestJS Prisma8Service 原生严格只读连接、独立容器原生只读、双端 HTTP/HTTPS 以及宿主与容器正式 OIDC Discovery/JWKS 全部通过，真实验收退出码 0。维护者格式化提交 bf7b408883d6a427dac4e3e7d986edef827b6c79 的十文件差异核实仅排版及 Markdown 围栏修复。
 
 E-164 为 E-012 同类问题。仅修正 app.e2e-spec.ts 默认根模块数据库接口隔离回归，保留原 Supertest 404 校验并增加 Vitest 显式状态断言；修复提交 a2829cad1b38b611fcbe1439b1f4fc736744c467，Blob 71eee900f3771ae3cea1d333c0f6a97973f0abbd。远端回读仅预期修改，隔离模拟实际测试体的 404/200/503 状态行为 3/3，通过不等于真实 E2E 或 Lint。完整 Vite+ 与 HTTP E2E 未在协作环境运行，待维护者增量复验零警告并通过后按授权合并。此次只修改测试与文档，无业务代码、容器配置、数据库、认证或依赖变化，已通过的真实 Docker 验收证据保留，无需重新构建镜像。
+
+### 2026-11-27 · PR #255 结案与容器原生临时事务候选
+
+维护者 Windows 在 HEAD e7be1b522cf66e507ab7e2af5d83e61d51cb98b6 复验 HTTP E2E 7 文件/71 项、Vite+ 510 格式文件/351 受检零警告、Lint、类型错误、Markdown 97、git diff --check，退出码 0、工作区干净；前一轮 Docker 49/49 与真实七服务、常驻原生严格只读连接、双端 HTTP/HTTPS、正式 OIDC Discovery/JWKS 验收有效。维护者明确同意后 PR #255 Squash 合入 feat/mvp-first-integration 的 1870937aa0c2d77103c06a55f219491a1c87dd34，E-164 关闭。未取得额外远端 CI 运行记录。
+
+本批 Node.js 22.16.0 使用实际 node --experimental-strip-types --test 执行新增脚本 8/8，通过。四份本地文件与远端 Git Blob 一致：探针核心 63f238364b3be7cf4cfc55de720b6556e6207d03、测试 2d1c5e994582ec58ac20f9bd8e81e143ad6e5477、绑定配置 365e5a13c2d034e1fdbfbc9c870f7acf800829ea、运行时边界 7f25a15bbaad4ac7599a94119e221a72d2aa0b77。覆盖精确确认、固定地址和集群、模式隔离、提交与回滚模拟回读、不同后端会话、影响行数和清理失败。使用远端宿主编排 a86b1dfc5686c154cd841342d6b656c604d59085、测试 5e5175e5197c64829098d842faf5e5d93e7353ce 的实际相关函数和三个新增测试在隔离 V8 执行，注入断言、空进程环境、模拟 Docker 和数据库验证，3/3 通过；初次摘取未移除 export、随后缺少 process，修正夹具后通过，非项目源码故障。未运行完整 60 项 Docker 专项、真实 SDK、NestJS 构建、Vite+ 或 Docker Desktop，协作环境没有完整依赖或 Docker，GitHub DNS 不可达。真实临时表执行单独授权，尚未执行任何数据库 DDL/DML。常驻只读服务及 OIDC 开关不变。
