@@ -9,6 +9,10 @@ import {
 import type { PostgresClient, PostgresTransactionContext } from "@prisma/orm-postgres/runtime";
 import type { Contract } from "../generated/prisma8/contract.d.js";
 import {
+  historicalTextTransaction,
+  type Prisma8TextTransaction,
+} from "../database/prisma8-text-transaction.js";
+import {
   hasProjectPermission,
   type AuthenticatedProjectPrincipal,
   type ProjectAccessAction,
@@ -24,7 +28,21 @@ import {
   type ProjectReleasePreflightSummary,
 } from "./prisma-project-version-store.js";
 
-type Tx = PostgresTransactionContext<Contract>;
+type HistoricalTx = PostgresTransactionContext<Contract>;
+
+export interface Prisma8ProjectQueryTransaction {
+  readonly queryText: Prisma8TextTransaction["queryText"];
+  readGrants(
+    tenantId: string,
+    projectId: string,
+    subjectId: string,
+  ): Promise<readonly { readonly permission: string }[]>;
+}
+
+export interface Prisma8ProjectQueryTransactions {
+  read<T>(operation: (tx: Prisma8ProjectQueryTransaction) => Promise<T>): Promise<T>;
+  locked<T>(operation: (tx: Prisma8ProjectQueryTransaction) => Promise<T>): Promise<T>;
+}
 const ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const OPTIONS = { isolationLevel: "ReadCommitted", timeout: 10000 } as const;
 
@@ -187,7 +205,7 @@ export async function validatePrisma8ProjectSnapshot(
 }
 
 /** PostgreSQL 只读事务不能取得 FOR SHARE；此候选需要隔离库普通事务，但仅执行查询。 */
-async function requireBoundary(tx: Tx): Promise<void> {
+async function requireBoundary(tx: HistoricalTx): Promise<void> {
   const rows = await tx
     .query(
       tx.raw.sql`SELECT current_database()::text AS database_name,
@@ -215,27 +233,21 @@ async function requireBoundary(tx: Tx): Promise<void> {
 }
 
 async function lockAndAuthorize(
-  tx: Tx,
+  tx: Prisma8ProjectQueryTransaction,
   actor: AuthenticatedProjectPrincipal,
   projectId: string,
   action: "project:read" | "version:read",
 ): Promise<bigint> {
   const { tenantId, subjectId } = actor;
-  const rows = await tx
-    .query(
-      tx.raw.sql`SELECT head_revision::text AS head_revision FROM public.scada_projects
-      WHERE tenant_id = ${tenantId} AND project_id = ${projectId} FOR SHARE`
-        .returnsRow({ head_revision: "pg/text@1" })
-        .build(),
-    )
-    .toArray();
+  const rows = await tx.queryText({
+    head_revision: "pg/text@1",
+  })`SELECT head_revision::text AS head_revision FROM public.scada_projects
+      WHERE tenant_id = ${tenantId} AND project_id = ${projectId} FOR SHARE`;
   if (rows.length !== 1 || !rows[0]) throw new ProjectVersionAccessDeniedError();
   const head = BigInt(rows[0].head_revision);
   if (head < 0n) throw new TypeError("数据库工程修订号异常");
   // 不按单项权限预过滤，完整核对当前可信主体的权限集合。
-  const grants = await tx.orm.public.ScadaProjectGrant.where({ tenantId, projectId, subjectId })
-    .select("permission")
-    .all();
+  const grants = await tx.readGrants(tenantId, projectId, subjectId);
   if (
     !hasProjectPermission(
       actor,
@@ -254,24 +266,18 @@ async function lockAndAuthorize(
 }
 
 async function readSnapshot(
-  tx: Tx,
+  tx: Prisma8ProjectQueryTransaction,
   tenantId: string,
   projectId: string,
   revision: number,
 ): Promise<ProjectSnapshot> {
-  const rows = await tx
-    .query(
-      tx.raw.sql`SELECT snapshot::text AS snapshot_data, content_hash::text AS content_hash,
+  const rows = await tx.queryText({
+    snapshot_data: "pg/text@1",
+    content_hash: "pg/text@1",
+    created_at: "pg/text@1",
+  })`SELECT snapshot::text AS snapshot_data, content_hash::text AS content_hash,
       created_at::text AS created_at FROM public.scada_project_versions
-      WHERE tenant_id = ${tenantId} AND project_id = ${projectId} AND revision = ${BigInt(revision)}`
-        .returnsRow({
-          snapshot_data: "pg/text@1",
-          content_hash: "pg/text@1",
-          created_at: "pg/text@1",
-        })
-        .build(),
-    )
-    .toArray();
+      WHERE tenant_id = ${tenantId} AND project_id = ${projectId} AND revision = ${BigInt(revision)}`;
   if (rows.length !== 1 || !rows[0]) throw new ProjectRevisionNotFoundError();
   const row = rows[0];
   const data: unknown = JSON.parse(row.snapshot_data);
@@ -284,9 +290,9 @@ async function readSnapshot(
   );
 }
 
-/** 独立查询候选，不接入正式路由，不执行 DML、发布或数据库迁移。 */
-export class Prisma8ProjectQueryStore {
-  constructor(private readonly client: PostgresClient<Contract>) {}
+/** 两代查询候选共用五项业务操作，连接、锁事务模式及边界由各自端口保证。 */
+export class Prisma8ProjectQueryOperations {
+  constructor(private readonly transactions: Prisma8ProjectQueryTransactions) {}
 
   async list(
     principal: AuthenticatedProjectPrincipal | null,
@@ -295,12 +301,10 @@ export class Prisma8ProjectQueryStore {
     const actor = bindPrincipal(principal);
     const query = parsePrisma8ProjectListQuery(input);
     const cursor = query.afterProjectId ?? "";
-    return this.client.transaction(async (tx) => {
-      await requireBoundary(tx);
-      const rows = await tx
-        .query(
-          tx.raw
-            .sql`SELECT p.project_id::text AS project_id, p.head_revision::text AS head_revision,
+    return this.transactions.read(async (tx) => {
+      const rows = await tx.queryText(
+        PROJECT_COLUMNS,
+      )`SELECT p.project_id::text AS project_id, p.head_revision::text AS head_revision,
           p.created_at::text AS created_at, p.updated_at::text AS updated_at
           FROM public.scada_projects p
           WHERE p.tenant_id = ${actor.tenantId}
@@ -308,13 +312,9 @@ export class Prisma8ProjectQueryStore {
             AND EXISTS (SELECT 1 FROM public.scada_project_grants g
               WHERE g.tenant_id = p.tenant_id AND g.project_id = p.project_id
                 AND g.subject_id = ${actor.subjectId} AND g.permission = 'project:read')
-          ORDER BY p.project_id ASC LIMIT ${query.limit}::integer`
-            .returnsRow(PROJECT_COLUMNS)
-            .build(),
-        )
-        .toArray();
+          ORDER BY p.project_id ASC LIMIT ${query.limit}::integer`;
       return rows.map(projectSummary);
-    }, OPTIONS);
+    });
   }
 
   async getProject(
@@ -323,22 +323,17 @@ export class Prisma8ProjectQueryStore {
   ): Promise<ProjectSummary> {
     const actor = bindPrincipal(principal);
     requireProjectId(projectId);
-    return this.client.transaction(async (tx) => {
-      await requireBoundary(tx);
+    return this.transactions.locked(async (tx) => {
       await lockAndAuthorize(tx, actor, projectId, "project:read");
-      const rows = await tx
-        .query(
-          tx.raw.sql`SELECT project_id::text AS project_id, head_revision::text AS head_revision,
+      const rows = await tx.queryText(
+        PROJECT_COLUMNS,
+      )`SELECT project_id::text AS project_id, head_revision::text AS head_revision,
           created_at::text AS created_at, updated_at::text AS updated_at
           FROM public.scada_projects
-          WHERE tenant_id = ${actor.tenantId} AND project_id = ${projectId}`
-            .returnsRow(PROJECT_COLUMNS)
-            .build(),
-        )
-        .toArray();
+          WHERE tenant_id = ${actor.tenantId} AND project_id = ${projectId}`;
       if (rows.length !== 1 || !rows[0]) throw new ProjectVersionAccessDeniedError();
       return projectSummary(rows[0]);
-    }, OPTIONS);
+    });
   }
 
   async listVersions(
@@ -350,23 +345,18 @@ export class Prisma8ProjectQueryStore {
     requireProjectId(projectId);
     const query = parsePrisma8VersionQuery(input);
     const cursor = BigInt(query.beforeRevision ?? 0);
-    return this.client.transaction(async (tx) => {
-      await requireBoundary(tx);
+    return this.transactions.locked(async (tx) => {
       await lockAndAuthorize(tx, actor, projectId, "version:read");
-      const rows = await tx
-        .query(
-          tx.raw.sql`SELECT project_id::text AS project_id, revision::text AS revision,
+      const rows = await tx.queryText(
+        VERSION_COLUMNS,
+      )`SELECT project_id::text AS project_id, revision::text AS revision,
           created_at::text AS created_at, content_hash::text AS content_hash
           FROM public.scada_project_versions
           WHERE tenant_id = ${actor.tenantId} AND project_id = ${projectId}
             AND (${cursor}::bigint = 0 OR revision < ${cursor})
-          ORDER BY scada_project_versions.revision DESC LIMIT ${query.limit}::integer`
-            .returnsRow(VERSION_COLUMNS)
-            .build(),
-        )
-        .toArray();
+          ORDER BY scada_project_versions.revision DESC LIMIT ${query.limit}::integer`;
       return rows.map(versionSummary);
-    }, OPTIONS);
+    });
   }
 
   async read(
@@ -377,11 +367,10 @@ export class Prisma8ProjectQueryStore {
     const actor = bindPrincipal(principal);
     requireProjectId(projectId);
     requireRevision(revision, "查询修订号");
-    return this.client.transaction(async (tx) => {
-      await requireBoundary(tx);
+    return this.transactions.locked(async (tx) => {
       await lockAndAuthorize(tx, actor, projectId, "version:read");
       return readSnapshot(tx, actor.tenantId, projectId, revision);
-    }, OPTIONS);
+    });
   }
 
   async preflightRelease(
@@ -392,8 +381,7 @@ export class Prisma8ProjectQueryStore {
     const actor = bindPrincipal(principal);
     requireProjectId(projectId);
     requireRevision(revision, "发布预检修订号");
-    return this.client.transaction(async (tx) => {
-      await requireBoundary(tx);
+    return this.transactions.locked(async (tx) => {
       const head = await lockAndAuthorize(tx, actor, projectId, "version:read");
       if (head !== BigInt(revision)) throw new ProjectRevisionConflictError();
       const snapshot = await readSnapshot(tx, actor.tenantId, projectId, revision);
@@ -406,6 +394,25 @@ export class Prisma8ProjectQueryStore {
         passed: report.passed,
         issues: report.issues,
       };
-    }, OPTIONS);
+    });
+  }
+}
+
+/** 历史隔离候选继续只使用旧 Contract 及固定隔离库门禁。 */
+export class Prisma8ProjectQueryStore extends Prisma8ProjectQueryOperations {
+  constructor(client: PostgresClient<Contract>) {
+    const run = <T>(operation: (tx: Prisma8ProjectQueryTransaction) => Promise<T>): Promise<T> =>
+      client.transaction(async (tx) => {
+        await requireBoundary(tx);
+        const text = historicalTextTransaction(tx, "工程事务查询结果缺少有效文本列");
+        return operation({
+          queryText: text.queryText,
+          readGrants: async (tenantId, projectId, subjectId) =>
+            await tx.orm.public.ScadaProjectGrant.where({ tenantId, projectId, subjectId })
+              .select("permission")
+              .all(),
+        });
+      }, OPTIONS);
+    super({ read: run, locked: run });
   }
 }

@@ -9,6 +9,12 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
   const { Prisma8IdentityModule } = await import(
     new URL("./dist/auth/prisma8-identity.module.js", import.meta.url).href
   );
+  const { Prisma8ProjectQueryModule } = await import(
+    new URL("./dist/projects/prisma8-project-query.module.js", import.meta.url).href
+  );
+  const { Prisma8RuntimeProjectQueryStore } = await import(
+    new URL("./dist/projects/prisma8-runtime-project-query-store.js", import.meta.url).href
+  );
   const { AuthSessionService } = await import(
     new URL("./dist/auth/auth-session.service.js", import.meta.url).href
   );
@@ -48,7 +54,7 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     transactionEncryptionKey: randomBytes(32),
   };
   const context = await Test.createTestingModule({
-    imports: [Prisma8IdentityModule],
+    imports: [Prisma8IdentityModule, Prisma8ProjectQueryModule],
     providers: [
       ScadaProjectGuard,
       {
@@ -155,6 +161,30 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
       if (!rejected) throw new Error("原生身份写入未被只读门禁拒绝");
     }
     if (discoveryCalled) throw new Error("只读烟测不允许 OIDC 网络发现");
+    stage = "原生工程列表与锁事务模式核验";
+    const projects = context.get(Prisma8RuntimeProjectQueryStore);
+    const projectRows = await projects.list(principal, { limit: 1, afterProjectId: scope });
+    if (!Array.isArray(projectRows) || projectRows.length !== 0) {
+      throw new Error("不存在主体的工程列表未返回空结果");
+    }
+    const lockedQueries = [
+      () => projects.getProject(principal, scope),
+      () => projects.listVersions(principal, scope),
+      () => projects.read(principal, scope, 1),
+      () => projects.preflightRelease(principal, scope, 1),
+    ];
+    for (const run of lockedQueries) {
+      let lockDenied = false;
+      try {
+        await run();
+      } catch (error) {
+        if (!(error instanceof Error) || error.message !== "Prisma 8 只读提供方禁止写入") {
+          throw error;
+        }
+        lockDenied = true;
+      }
+      if (!lockDenied) throw new Error("原生只读提供方未拒绝需要共享锁的查询");
+    }
     stage = "原生工程 Guard 拒绝核验";
     const guard = context.get(ScadaProjectGuard);
     const handler = () => undefined;
@@ -207,6 +237,8 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     sessionReadVerified: true,
     identityWriteDenied: true,
     oidcDiscoverySkipped: true,
+    projectListReadVerified: true,
+    projectLockedReadDenied: true,
     missingProjectDenied: true,
   };
 }

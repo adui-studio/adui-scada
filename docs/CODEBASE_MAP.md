@@ -1937,3 +1937,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/auth/prisma8-runtime-identity.service.ts`、`prisma8-identity.module.ts`：新原生身份服务及独立 Nest 装配，不挂正式 HTTP 路由。
 - `apps/server/src/database/prisma8-read-transaction.ts`：原生读事务与显式可写事务边界；`prisma8.service.ts` 提供共享运行时入口。
 - `apps/server/prisma8-provider-smoke.mjs`、`apps/server/src/auth/prisma8-runtime-identity.service.spec.ts`：原生身份只读烟测与事务模拟回归。
+
+### 原生工程查询候选
+
+- `apps/server/src/database/prisma8-text-transaction.ts`：两代契约独立适配的参数化文本查询与影响行数，支持 BigInt；原身份端口转发并保持原异常语义。
+- `apps/server/src/projects/prisma8-project-query-store.ts`：共享五项查询业务操作，历史候选原隔离门禁和构造签名保持。
+- `apps/server/src/projects/prisma8-runtime-project-query-store.ts`、`prisma8-project-query.module.ts`：原生业务库查询及独立 Nest 装配；四项共享锁查询在严格只读配置提前拒绝。
+- `apps/server/src/projects/prisma8-runtime-project-query-store.spec.ts`、`apps/server/src/database/database.module.spec.ts`：十项查询回归及一项原生模块隔离断言；既有只读烟测新增列表与锁模式拒绝。
