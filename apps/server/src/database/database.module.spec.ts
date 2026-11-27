@@ -8,6 +8,9 @@ import { AuthorizationReadStore } from "../auth/authorization-read-store.js";
 import { Prisma7AuthorizationReadStore } from "../auth/prisma7-authorization-read-store.js";
 import { Prisma8AuthorizationModule } from "../auth/prisma8-authorization.module.js";
 import { Prisma8AuthorizationReadStore } from "../auth/prisma8-authorization-read-store.js";
+import { Prisma8IdentityModule } from "../auth/prisma8-identity.module.js";
+import { OidcLoginTransactionService } from "../auth/oidc-login-transaction.service.js";
+import { Prisma8RuntimeAuthSessionService, Prisma8RuntimeOidcLoginTransactionService } from "../auth/prisma8-runtime-identity.service.js";
 import { Prisma8DatabaseModule } from "./prisma8-database.module.js";
 import { ScadaSessionGuard } from "../auth/scada-session.guard.js";
 import { ScadaProjectGuard } from "../auth/scada-project.guard.js";
@@ -78,6 +81,26 @@ describe("共享 Prisma 数据库模块装配边界", () => {
     expect(Reflect.getMetadata("imports", OidcEnabledAppModule)).not.toContain(
       Prisma8AuthorizationModule,
     );
+  });
+
+  it("原生身份模块独立绑定会话和 OIDC，不挂载正式路由或旧数据库模块", () => {
+    expect(Reflect.getMetadata("imports", Prisma8IdentityModule)).toEqual([
+      Prisma8DatabaseModule,
+      Prisma8AuthorizationModule,
+    ]);
+    expect(Reflect.getMetadata("controllers", Prisma8IdentityModule)).toBeUndefined();
+    expect(Reflect.getMetadata("providers", Prisma8IdentityModule)).toContainEqual({
+      provide: AuthSessionService,
+      useClass: Prisma8RuntimeAuthSessionService,
+    });
+    expect(Reflect.getMetadata("providers", Prisma8IdentityModule)).toContainEqual({
+      provide: OidcLoginTransactionService,
+      useClass: Prisma8RuntimeOidcLoginTransactionService,
+    });
+    expect(Reflect.getMetadata("exports", Prisma8IdentityModule)).toContain(AuthSessionService);
+    expect(Reflect.getMetadata("exports", Prisma8IdentityModule)).toContain(OidcLoginTransactionService);
+    expect(Reflect.getMetadata("imports", OidcEnabledAppModule)).not.toContain(Prisma8IdentityModule);
+    expect(Reflect.getMetadata("imports", ScadaIdentityModule)).not.toContain(Prisma8IdentityModule);
   });
 
   it("默认应用模块不挂载数据库与工程身份能力", () => {

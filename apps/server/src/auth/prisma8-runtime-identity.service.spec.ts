@@ -1,6 +1,10 @@
 import "reflect-metadata";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import * as oidc from "openid-client";
+import type { PostgresClient, PostgresTransactionContext } from "@prisma/orm-postgres/runtime";
+import type { Contract as HistoricalContract } from "../generated/prisma8/contract.d.js";
+import { Prisma8AuthSessionService } from "./prisma8-auth-session.service.js";
+import { Prisma8OidcLoginTransactionService } from "./prisma8-oidc-login-transaction.service.js";
 import { describe, expect, it } from "vite-plus/test";
 import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
 import {
@@ -134,13 +138,50 @@ function harness(readOnly = false) {
     },
   } as unknown as OidcProviderDiscoveryService;
   return {
-    client, config, database, state, queries, mutations, options, outcomes, discoveryCalls,
+    client, config, database, state, queries, mutations, options, outcomes, discoveryCalls, startupConfig, discovery,
     sessions: new Prisma8RuntimeAuthSessionService(database),
     transactions: new Prisma8RuntimeOidcLoginTransactionService(database, discovery, startupConfig),
   };
 }
 
 describe("原生身份业务事务边界", () => {
+  it("历史会话和 OIDC 隔离候选拒绝连接新业务库", async () => {
+    let checks = 0;
+    const mutations: unknown[] = [];
+    const tx = {
+      raw: {
+        sql: () => ({ returnsRow: () => ({ build: () => ({}) }) }),
+      },
+      query: () => ({
+        toArray: () => {
+          checks += 1;
+          return Promise.resolve([{ database_name: "adui_scada", schema_name: "public", read_only: "off", isolation: "read committed" }]);
+        },
+      }),
+      execute: (plan: unknown) => {
+        mutations.push(plan);
+        return Promise.resolve({ affectedRows: 1 });
+      },
+    };
+    const client = {
+      transaction: (operation: (transaction: PostgresTransactionContext<HistoricalContract>) => Promise<unknown>) =>
+        operation(tx as unknown as PostgresTransactionContext<HistoricalContract>),
+    } as unknown as PostgresClient<HistoricalContract>;
+    const h = harness();
+    const sessions = new Prisma8AuthSessionService(client);
+    const transactions = new Prisma8OidcLoginTransactionService(client, h.discovery, {
+      ...h.startupConfig,
+      issuer: new URL("https://id.example.org/realms/prisma8-oidc-" + randomUUID()),
+    });
+    await expect(sessions.issueForVerifiedSubject(actor)).rejects.toThrow("Prisma 8 身份候选仅允许隔离库读已提交事务");
+    await expect(transactions.consume(
+      randomBytes(32).toString("base64url"),
+      "scada_oidc_b_" + randomBytes(32).toString("base64url"),
+    )).rejects.toThrow("OIDC 登录事务验证失败，请稍后重试");
+    expect(checks).toBe(2);
+    expect(mutations).toHaveLength(0);
+  });
+
   it("只读配置在获得事务前拒绝写入且不启动 OIDC 发现", async () => {
     const h = harness(true);
     const state = randomBytes(32).toString("base64url");
@@ -186,7 +227,9 @@ describe("原生身份业务事务边界", () => {
     expect(insert?.parameters).not.toContain(session.token);
     expect(insert?.parameters).not.toContain(session.csrfToken);
     expect(session.token).not.toBe(session.csrfToken);
-    expect(session.expiresAt.getTime() - Date.parse(String(insert?.parameters[5]))).toBe(900000);
+    const issuedAt = insert?.parameters[5];
+    if (typeof issuedAt !== "string") throw new Error("测试缺少签发时间");
+    expect(session.expiresAt.getTime() - Date.parse(issuedAt)).toBe(900000);
     expect(h.outcomes).toEqual(["提交"]);
   });
 
