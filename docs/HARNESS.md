@@ -1,5 +1,7 @@
 # ADui SCADA · Harness
 
+> 2026-11-27 最新决策：维护者已删除旧开发数据库环境，停止历史迁移接管及专用实例实验。后续以 [ADR-0073](adr/0073-prisma8-fresh-install.md) 为准；下文旧实验记录仅供追溯，不是当前验收前置条件。
+
 > **AI 编码前必读门禁**：每次修改任何代码前，先阅读根目录 [AGENTS.md](../AGENTS.md) 与 [AI 编码错误复盘清单](AI_MISTAKES.md) 全文，再检查目标代码、适用 Skills 与测试。发现重复错误应先对照错误编号排查，复验后再将新案例写入清单；命令未实际执行不能登记为通过。
 
 V0.1 使用 Vite+ 1.5.0、pnpm workspace Catalog、TypeScript 6.0.3、Vite+ 内置 Vitest。编辑规范来自根 `.editorconfig`，`@adui/tooling` 导出 Format / Lint 供根 Vite+ 使用；应用 TypeScript 统一引用 `@adui/tsconfig/*`。
@@ -5363,3 +5365,22 @@ git status --short
 创建计划指纹仍为 `69cd50940b9e3ff9752aa45eea3ff60bc34214ca7127908259a54897c6013dd7`，creationAttemptClaimed=false。以上验收不需要凭据。不执行新 create-stopped 写入口，等待验收、合并及维护者专项授权后再给出实际执行命令。若真实创建阶段已登记，无论后续成功失败均保留 `.artifacts/prisma8-native-check-roundtrip-creation` 和资源，不删除以绕过一次性门禁。
 
 本批新增受控停止态资源创建执行器：固定 Windows 本机、已验收的专用确认字符串及创建计划指纹，专用凭据只接受 64 位小写十六进制格式，不将格式检查视为随机性证明。重新执行已授权的四库系统目录只读采集，并保留同一预检取得的本机 Docker 端点（不改变原公开报告）；严格复算创建计划并检查固定镜像 ID、唯一卷声明 /var/lib/postgresql/data、入口 docker-entrypoint.sh 和命令 postgres。首次 Docker 写命令前，在同一工作区根目录 `.artifacts/prisma8-native-check-roundtrip-creation` 原子独占创建目录并以 wx 及 flush 写入 attempt.json，记录固定指纹与 128 位随机尝试标识，不含凭据；路径链接、任何已有目录或登记失败均拒绝。依次创建专用 local 数据卷、bridge 网络、停止态容器，仅回环 127.0.0.1:15444 映射 5432，镜像 pull=never、restart=no、volume-nocopy，所有资源带固定 scope 与本次尝试标签；检查卷驱动、标签、无额外选项、容器占用，网络完整 ID、唯一名称、标签及端点占用，随后检查容器完整 ID、created 状态、固定镜像、卷挂载、HostConfig 端口配置、网络模式、禁止特权/自动移除/全部端口发布、入口及命令，最后复验卷与网络归属并独占保存 result.json。Docker volume create 同名可能复用，不能仅凭返回名称判成功；任何异常均停止、保留记录和部分资源，不清理、不重试、不启动。专用环境变量 SCADA_PRISMA8_NATIVE_ROUNDTRIP_PASSWORD 仅通过创建容器子进程 POSTGRES_PASSWORD 传递，不进入命令参数、报告、记录或源码；其他子进程仅继承既有系统白名单。不读取完整容器环境，Docker 管理员仍可访问容器保存的环境值，后续必须保护该本机凭据。停止态成功报告只描述观察到的资源及已消费的尝试记录；containerStarted、databaseInitialized、portReserved、resourceCreationAllowed、databaseExecutionAllowed、roundTripVerified 等均 false。停止态端口映射配置不等于实际端口绑定，卷标签及本地登记不能防御具备 Docker/文件系统管理权限的并发操作者或跨工作区故意重置；实际启动前须重新核验归属、容器配置、端口及证据。本批未创建真实资源、未运行 Docker start/SQL/迁移，不改变四个冻结库、历史证据或正式 Prisma 7。真实停止态创建必须在验收、合并后取得维护者单独明确授权；启动与初始化仍为后续独立阶段。
+
+## Prisma 8 全新安装验收（2026-11-27）
+
+维护者已启动 PostgreSQL 19.0、Redis 8.12.0、Keycloak 26.8.2，固定本机业务库 127.0.0.1:15432/adui_scada 初始为空。当前入口不要求旧迁移产物或历史验收数据库。
+
+```powershell
+pnpm run test:prisma8:fresh
+pnpm run test:prisma8:native:baseline:preflight
+pnpm run test:docker
+pnpm run test:docker:db
+pnpm run config:check
+vp check
+pnpm run messages:check
+pnpm run docs:check
+pnpm run db:prisma8:fresh:emit
+pnpm run db:prisma8:fresh:preview
+```
+
+预期官方发射及预览状态分别为 FRESH_CONTRACT_EMITTED、FRESH_DATABASE_PREVIEW_READY，业务对象十二表、八十五字段、三十六 CHECK、一百一十九注释，二十三类空库核验通过，新增操作四十五项或包含 public 命名空间的四十六项，databaseInitialized=false。具体官方 RC 输出须实际确认，不放宽门禁。新入口 `pnpm run docker:up` 过渡期仅启动基础设施；`pnpm run docker:db:init --confirm-initialize-empty-adui-scada` 是真实写入命令，不属于只读验收或 ready，须在预览通过、PR 合并且另行取得维护者明确授权后才执行。初始化后 `pnpm run docker:db:status` 严格核验结构、标记与中文注释。旧实验及历史迁移命令不再用于新库。
