@@ -6,7 +6,8 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import * as oidc from "openid-client";
-import { PrismaService } from "../database/prisma.service.js";
+import { AuthorizationReadStore } from "./authorization-read-store.js";
+import type { AuthenticatedProjectPrincipal } from "../projects/project-access-policy.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import { AuthSessionService } from "./auth-session.service.js";
 import type { IssuedAuthSession } from "./auth-session.service.js";
@@ -113,7 +114,7 @@ function createAuthorizationResponseUrl(
 @Injectable()
 export class OidcCallbackService {
   constructor(
-    private readonly database: PrismaService,
+    @Inject(AuthorizationReadStore) private readonly authorization: AuthorizationReadStore,
     private readonly discovery: OidcProviderDiscoveryService,
     private readonly transactions: OidcLoginTransactionService,
     private readonly sessions: AuthSessionService,
@@ -214,30 +215,14 @@ export class OidcCallbackService {
       throw new UnauthorizedException(CALLBACK_FAILURE_MESSAGE);
     }
 
-    let externalIdentity: {
-      readonly tenantId: string;
-      readonly subjectId: string;
-      readonly identity: { readonly status: string };
-    } | null;
+    let externalIdentity: AuthenticatedProjectPrincipal | null;
     try {
-      externalIdentity = await this.database.client.scadaExternalIdentity.findUnique({
-        where: {
-          issuer_subject: {
-            issuer: claims.iss,
-            subject: claims.sub,
-          },
-        },
-        select: {
-          tenantId: true,
-          subjectId: true,
-          identity: { select: { status: true } },
-        },
-      });
+      externalIdentity = await this.authorization.findActiveExternalIdentity(claims.iss, claims.sub);
     } catch {
       throw new ServiceUnavailableException(IDENTITY_LOOKUP_FAILURE_MESSAGE);
     }
 
-    if (!externalIdentity || externalIdentity.identity.status !== "active") {
+    if (!externalIdentity) {
       throw new UnauthorizedException(CALLBACK_FAILURE_MESSAGE);
     }
 

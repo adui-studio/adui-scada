@@ -5,6 +5,7 @@ import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import type { PrismaService } from "../database/prisma.service.js";
+import { Prisma7AuthorizationReadStore } from "./prisma7-authorization-read-store.js";
 import type { AuthSessionService, IssuedAuthSession } from "./auth-session.service.js";
 import type {
   ConsumedOidcLoginTransaction,
@@ -204,7 +205,7 @@ function createHarness() {
   };
 
   const service = new OidcCallbackService(
-    database as unknown as PrismaService,
+    new Prisma7AuthorizationReadStore(database as unknown as PrismaService),
     discovery as unknown as OidcProviderDiscoveryService,
     transactions as unknown as OidcLoginTransactionService,
     sessions as unknown as AuthSessionService,

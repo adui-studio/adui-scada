@@ -4,6 +4,11 @@ import { AppModule, OidcEnabledAppModule } from "../app.module.js";
 import { ScadaAuthController } from "../auth/scada-auth.controller.js";
 import { ScadaIdentityModule } from "../auth/scada-identity.module.js";
 import { AuthSessionService } from "../auth/auth-session.service.js";
+import { AuthorizationReadStore } from "../auth/authorization-read-store.js";
+import { Prisma7AuthorizationReadStore } from "../auth/prisma7-authorization-read-store.js";
+import { Prisma8AuthorizationModule } from "../auth/prisma8-authorization.module.js";
+import { Prisma8AuthorizationReadStore } from "../auth/prisma8-authorization-read-store.js";
+import { Prisma8DatabaseModule } from "./prisma8-database.module.js";
 import { ScadaSessionGuard } from "../auth/scada-session.guard.js";
 import { ScadaProjectGuard } from "../auth/scada-project.guard.js";
 import { SCADA_OIDC_STARTUP_CONFIG } from "../auth/oidc-provider-discovery.service.js";
@@ -29,6 +34,7 @@ describe("共享 Prisma 数据库模块装配边界", () => {
     const exports = Reflect.getMetadata("exports", ScadaIdentityModule) as unknown[];
     for (const provider of [
       DatabaseModule,
+      AuthorizationReadStore,
       SCADA_OIDC_STARTUP_CONFIG,
       ScadaSecurityAuditService,
       AuthSessionService,
@@ -53,6 +59,25 @@ describe("共享 Prisma 数据库模块装配边界", () => {
     expect(projectImports).toEqual([ScadaIdentityModule, ProjectPersistenceModule]);
     const controllers = Reflect.getMetadata("controllers", ProjectApiModule) as unknown[];
     expect(controllers).toEqual([ProjectApiController]);
+  });
+
+  it("身份读取端口的两代实现互斥装配，原生模块仅依赖原生数据库", () => {
+    expect(Reflect.getMetadata("providers", ScadaIdentityModule)).toContainEqual({
+      provide: AuthorizationReadStore,
+      useClass: Prisma7AuthorizationReadStore,
+    });
+    expect(Reflect.getMetadata("imports", Prisma8AuthorizationModule)).toEqual([
+      Prisma8DatabaseModule,
+    ]);
+    expect(Reflect.getMetadata("providers", Prisma8AuthorizationModule)).toEqual([
+      { provide: AuthorizationReadStore, useClass: Prisma8AuthorizationReadStore },
+    ]);
+    expect(Reflect.getMetadata("exports", Prisma8AuthorizationModule)).toEqual([
+      AuthorizationReadStore,
+    ]);
+    expect(Reflect.getMetadata("imports", OidcEnabledAppModule)).not.toContain(
+      Prisma8AuthorizationModule,
+    );
   });
 
   it("默认应用模块不挂载数据库与工程身份能力", () => {

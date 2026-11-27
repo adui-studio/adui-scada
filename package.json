@@ -131,7 +131,7 @@
     "db:prisma8:fresh:runtime:review": "node apps/server/prisma8-fresh-install.mjs --runtime-review",
     "db:prisma8:fresh:runtime:generate": "node apps/server/prisma8-fresh-install.mjs --runtime-emit",
     "db:prisma8:fresh:provider:smoke": "node apps/server/prisma8-fresh-install.mjs --provider-smoke",
-    "test:prisma8:fresh": "node --test scripts/prisma8-fresh-install.cases.mjs scripts/prisma8-fresh-runtime-probe.cases.mjs scripts/prisma8-provider.cases.mjs",
+    "test:prisma8:fresh": "node --test scripts/prisma8-fresh-install.cases.mjs scripts/prisma8-fresh-runtime-probe.cases.mjs scripts/prisma8-provider.cases.mjs scripts/prisma8-authorization-read.cases.mjs",
     "db:prisma8:skills": "node scripts/prisma8-cli.mjs skills sync",
     "db:prisma8:skills:list": "node scripts/prisma8-cli.mjs skills list",
     "test:prisma8:cli": "node --test scripts/prisma8-cli.cases.mjs",
