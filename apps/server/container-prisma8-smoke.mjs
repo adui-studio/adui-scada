@@ -34,6 +34,11 @@ async function verifyWeb(host) {
   if (typeof document.projectId !== "string" || !Array.isArray(document.pages)) {
     throw new Error("双端模拟工程返回异常");
   }
+  const events = await fetch(base + "/demo/events", { redirect: "error", signal: AbortSignal.timeout(3000) });
+  if (events.status !== 200 || !(events.headers.get("content-type") ?? "").includes("text/event-stream")) {
+    throw new Error("双端模拟实时事件代理未就绪");
+  }
+  await events.body?.cancel();
   const denied = await fetch(base + "/api/v1/projects", { redirect: "error", signal: AbortSignal.timeout(3000) });
   if (denied.status !== 404) throw new Error("HTTP 演示意外开放受保护工程路由");
   await denied.body?.cancel();
