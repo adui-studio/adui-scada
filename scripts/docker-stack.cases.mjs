@@ -167,17 +167,17 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
       {
         status: 0,
         report: { status: "DOCKER_NATIVE_TRANSACTION_READY", rollbackVerified: true },
-        expected: /原生临时事务探针失败/,
+        expected: { name: "Error", message: "容器原生临时事务探针失败，保留现场" },
       },
       {
         status: 1,
         report: { status: "DOCKER_NATIVE_TRANSACTION_FAILED", stage: "TRANSACTION" },
-        expected: /提交或回滚验证失败/,
+        expected: { name: "Error", message: "容器临时事务提交或回滚验证失败，保留现场" },
       },
       {
         status: 1,
         report: { status: "DOCKER_NATIVE_TRANSACTION_FAILED", stage: "未知凭据" },
-        expected: /^容器原生临时事务探针失败，保留现场$/u,
+        expected: { name: "Error", message: "容器原生临时事务探针失败，保留现场" },
       },
     ]) {
       const mockRun = (args) =>
