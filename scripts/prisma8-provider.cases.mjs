@@ -101,7 +101,12 @@ void test("校验成功后才提供同一客户端且关闭只执行一次", asy
     },
   }));
   assert.equal(lifecycle.client, client);
-  await assert.rejects(lifecycle.start(() => { throw new Error("禁止调用"); }), /重复启动/u);
+  await assert.rejects(
+    lifecycle.start(() => {
+      throw new Error("禁止调用");
+    }),
+    /重复启动/u,
+  );
   await Promise.all([lifecycle.stop(), lifecycle.stop()]);
   assert.throws(() => lifecycle.client, /已关闭/u);
   assert.deepEqual(events, ["校验", "关闭"]);
@@ -110,14 +115,17 @@ void test("校验成功后才提供同一客户端且关闭只执行一次", asy
 void test("启动失败释放资源并隐藏第三方异常", async () => {
   const lifecycle = new Prisma8RuntimeLifecycle();
   let closed = 0;
-  await assert.rejects(lifecycle.start(() => ({
-    client: {},
-    verify: () => Promise.reject(new Error("模拟秘密")),
-    close: () => {
-      closed++;
-      return Promise.resolve();
-    },
-  })), { message: "Prisma 8 数据库启动校验失败" });
+  await assert.rejects(
+    lifecycle.start(() => ({
+      client: {},
+      verify: () => Promise.reject(new Error("模拟秘密")),
+      close: () => {
+        closed++;
+        return Promise.resolve();
+      },
+    })),
+    { message: "Prisma 8 数据库启动校验失败" },
+  );
   await lifecycle.stop();
   assert.equal(closed, 1);
   assert.throws(() => lifecycle.client, /已关闭/u);

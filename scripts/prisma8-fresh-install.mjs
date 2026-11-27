@@ -55,7 +55,9 @@ export function freshAction(args) {
   ]) {
     if (isDeepStrictEqual(args, [flag])) return mode;
   }
-  throw new FreshInstallError("必须明确指定全新安装发射、只读预览、首次初始化、验证、运行时评审或提供方验收");
+  throw new FreshInstallError(
+    "必须明确指定全新安装发射、只读预览、首次初始化、验证、运行时评审或提供方验收",
+  );
 }
 
 /** 核验当前 Git 原生契约发射结果及全部中文注释目标，不执行历史 SQL。 */

@@ -248,7 +248,10 @@ async function main() {
   stage = "原生契约发射与固定依赖检查";
   const runtimeEmit = action === "runtime-emit";
   const server = join(root, "apps", "server");
-  const config = join(server, runtimeEmit ? "prisma8-runtime.config.ts" : "prisma8-fresh.config.ts");
+  const config = join(
+    server,
+    runtimeEmit ? "prisma8-runtime.config.ts" : "prisma8-fresh.config.ts",
+  );
   const output = runtimeEmit
     ? join(server, "src", "generated", "prisma8-runtime")
     : join(root, ".artifacts", "prisma8-fresh");
@@ -260,7 +263,10 @@ async function main() {
   for (const file of ["contract.json", "contract.d.ts"]) {
     const path = join(output, file);
     const stat = lstatSync(path, { throwIfNoEntry: false });
-    requireMatch(!stat || (stat.isFile() && realpathSync(path) === path), "生成契约文件不能包含链接");
+    requireMatch(
+      !stat || (stat.isFile() && realpathSync(path) === path),
+      "生成契约文件不能包含链接",
+    );
   }
   const entry = resolveBaselineCli(root);
   const invoke = (args, connection) =>
