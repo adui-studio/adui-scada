@@ -5261,3 +5261,40 @@ git status --short
 本批仅开发第五座创建前的冻结库系统目录只读采集入口，不提供创建或写入命令。单独确认参数 `--confirm-frozen-catalog-readonly` 之外的任何参数均拒绝；先复用既有宿主机预检，在同一个已核验 Windows 本机 Docker 端点内，以固定 Compose 项目/服务标签定位唯一历史 PostgreSQL 容器并核对运行状态和完整容器 ID；核对第四座容器运行状态、独立实验标签、固定镜像与不同容器 ID。仅两次固定 `docker exec`：通过容器内 `postgres` 系统用户、清空进程继承环境、固定 Unix socket、非交互 psql、不加载 psqlrc、不提示口令，分别访问 adui_scada_test 和第四座专用库。每次使用 `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`、固定超时及 default_transaction_read_only、只读 SELECT `pg_catalog.pg_database`/`pg_control_system()` 并 ROLLBACK；前三库通过同一共享系统目录精确核对三条目标元数据，不分别连接其业务数据库。真实连接身份、角色、170011 版本、当前和默认只读、重复读、目标数据库集合、两个集群标识不重复均须通过。仅比较四个冻结库的 UTF8、locale provider、LC_COLLATE、LC_CTYPE、locale、记录版本及实际排序规则版本；缺失、未知、自定义 ICU 规则或版本漂移一律停止另行评审。不读取业务表、配置凭据、根 .env 或完整容器环境，不修改数据库、容器、卷、网络、访问权限或既有证据，不自动降级认证或重试。此阶段保守地要求四个库的排序规则完全相同；实际存在不同合法设置也必须人工评审，不能为通过而刷新排序规则版本。报告只输出经白名单校验的参考排序规则及计数，不输出容器/集群原始标识。报告状态 NATIVE_CHECK_ROUNDTRIP_REFERENCE_REVIEW_REQUIRED，observedDatabaseCount=4、observedClusterCount=2、referenceCatalogObserved/allFrozenCollationsMatch/recordedCollationVersionMatches=true，沿用宿主机八个 false 许可字段；不认证后续目标 TCP 集群或保证下一次状态不变。第五座创建、独立凭据、目标同一连接内核验及真实 48 项实验仍须单独授权和实现。
 
 真实入口不要求数据库口令；如本地认证拒绝、容器停止、版本或排序规则不同，停止并只分享固定失败阶段，不修改任何现有库、权限、排序规则、容器或凭据。成功后仍需另行批准第五座创建。
+
+### 2026-11-27 · 排序规则版本报告及只读观察复验
+
+本节更新上节目录报告的验收语义；原报告历史记录保持不变。
+
+```powershell
+node --check scripts/prisma8-native-check-roundtrip-reference.mjs &&
+node --check scripts/prisma8-native-check-roundtrip-reference.cases.mjs &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-reference &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-host &&
+pnpm run test:prisma8:native:baseline:check-roundtrip-execution &&
+pnpm run test:prisma8:native:baseline:check-roundtrip &&
+pnpm run config:check && vp check --fix && vp check &&
+pnpm run messages:check && pnpm run docs:check
+Write-Host "增量验收退出码：$LASTEXITCODE"
+git status --short
+```
+
+预计四组专项 40 项（12+8+12+8），无警告或失败。格式化改动正常提交并推送，最终干净工作区再复验已授权的系统目录只读范围：
+
+```powershell
+pnpm run db:prisma8:native:baseline:check-roundtrip:plan &&
+pnpm run db:prisma8:native:baseline:check-roundtrip:reference-preflight --confirm-frozen-catalog-readonly
+Write-Host "冻结库目录只读验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+本批修正 PR #237 的目录报告语义，保留已记录的历史原始结果，不改 SQL 查询、只读事务、角色、库名、端口、固定证据及正式 Prisma 7。新增 actualVersion 字段；仅两版本均存在且相等才报告 recordedCollationVersionAvailable=true、recordedCollationVersionMatches=true、recordedCollationVersionStatus=MATCHED；libc 两版本均为 null 时报告 false/null/UNAVAILABLE，缺失字段、单侧 null、版本不一致、非 libc 双 null、自定义规则均拒绝。保留 allFrozenCollationsMatch 兼容字段，其含义仅为目录元数据一致，并以 allFrozenCollationCatalogMetadataMatch 明确说明。两座容器必须与已固定镜像 ID 相同；仅通过 Docker inspect 的固定模板读取挂载目标 JSON（不读取源路径或环境），并以两次 docker diff 检查指定 libc/locale 路径及其祖先和子树的可见变更。路径不规范、挂载覆盖、可见文件变更、异常输出均先于数据库连接拒绝，保留固定中文诊断。本次保守规则也可能因 Docker 报告的祖先目录变更而拒绝正常容器，须评审实际观察，不删除、重建、清理或修改冻结容器以通过。成功仅报告 containerImageIdentityMatched=true、localeRuntimePathsObservedUnchanged=true，collationRuntimeIdentityVerified 始终为 false；Docker inspect/diff 不是实际进程加载库的内容哈希或 locale 行为认证，亦不排除未列路径、环境覆盖、并发变化。第五座尚未创建，后续创建与真实执行仍须分别授权；所有许可及来源认证继续为 false。
+
+若环境仍与原真实目录一致且新增路径检查通过，预计版本状态 UNAVAILABLE、匹配值 null；不是要求将实际版本强制改为 null。失败时仅分享脱敏阶段并保持现场。
+
+### 2026-11-27 · 第五座实验端口调整复验
+
+维护者明确要求将尚未创建的第五座 CHECK 往返实验宿主机端口由 15434 改为 15444。当前唯一固定目标为 `127.0.0.1:15444`，容器内 PostgreSQL 端口仍为 5432；其他目标身份、镜像、库名、角色、卷、网络和四个冻结库均保持原状。此决定取代前文的第五座 15434 拟议配置，不修改前文历史验收证据。`roundTripTarget.port` 是运行时单一配置源；宿主机预检继续要求所有目标端口 TCP 记录为空数组，旧 15434 及其他目标端口的模拟身份拒绝。不接受环境或参数覆盖，不自动选择端口，不清理进程，不改变创建或执行许可。固定离线往返计划不包含宿主机端口，计划指纹 `17c106877fe8e3177d405ac31fb335ce76c714511ce1eef537d3cf139e723d3a` 不变。15444 实际可用性、排除端口范围及未来发布绑定尚未核实。
+
+沿用上一节四组专项及静态增量链（预计 40 项），格式化后保持干净工作区。维护者已授权的系统目录只读入口及确认参数不变，执行上一节真实离线计划与目录采集命令；成功报告 target.port 必须为 15444，原计划指纹不变，全部创建与执行许可仍为 false。若新端口亦被拒绝，保留现场，不自动更换、不放宽门禁。

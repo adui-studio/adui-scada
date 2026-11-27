@@ -14,11 +14,83 @@ const containerIdPattern = /^[a-f0-9]{64}$/u;
 const systemIdPattern = /^[1-9][0-9]{0,19}$/u;
 const localePattern = /^[a-zA-Z0-9_.@+-]{1,128}$/u;
 const versionPattern = /^[a-zA-Z0-9_.+-]{1,128}$/u;
+const localeRuntimeRoots = [
+  "/lib",
+  "/lib64",
+  "/usr/lib",
+  "/usr/local/lib",
+  "/usr/share/i18n",
+  "/usr/share/locale",
+  "/usr/local/share/i18n",
+  "/usr/local/share/locale",
+  "/etc/locale.conf",
+  "/etc/locale.gen",
+  "/etc/locale.alias",
+  "/etc/default/locale",
+  "/etc/environment",
+  "/etc/ld.so.conf",
+  "/etc/ld.so.conf.d",
+  "/etc/ld.so.cache",
+  "/etc/ld.so.preload",
+  "/etc/os-release",
+];
 
 export class RoundTripReferenceError extends Error {}
 
 function requireMatch(condition, message) {
   if (!condition) throw new RoundTripReferenceError(message);
+}
+
+function isLocaleRuntimePath(path) {
+  return localeRuntimeRoots.some(
+    (root) =>
+      path === root || path.startsWith(root + "/") || root.startsWith(path + "/") || path === "/",
+  );
+}
+
+function isCanonicalPath(path) {
+  return (
+    typeof path === "string" &&
+    path.length <= 1024 &&
+    path.startsWith("/") &&
+    (path === "/" ||
+      path
+        .slice(1)
+        .split("/")
+        .every((part) => part !== "" && part !== "." && part !== "..")) &&
+    !Array.from(path).some((character) => {
+      const code = character.charCodeAt(0);
+      return code < 32 || code === 127 || code === 92;
+    })
+  );
+}
+
+/** 仅核对容器挂载目标，不读取或回显宿主机路径。 */
+function requireUnmodifiedLocaleMounts(value, stage) {
+  let mounts;
+  try {
+    mounts = JSON.parse(value);
+  } catch {
+    throw new RoundTripReferenceError(stage + "：容器挂载清单无效");
+  }
+  requireMatch(
+    Array.isArray(mounts) && mounts.every(isCanonicalPath),
+    stage + "：容器挂载清单无效",
+  );
+  requireMatch(!mounts.some(isLocaleRuntimePath), stage + "：容器挂载覆盖 libc 或 locale 环境");
+}
+
+/** 仅检查固定路径及其祖先的可见变更，不证明实际进程加载的库相同。 */
+function requireUnchangedLocaleRuntime(output, stage) {
+  const changes = output === "" ? [] : output.split(/\r?\n/u);
+  requireMatch(
+    changes.every((line) => /^[ACD] /u.test(line) && isCanonicalPath(line.slice(2))),
+    stage + "：容器文件变更清单格式异常",
+  );
+  requireMatch(
+    !changes.some((line) => isLocaleRuntimePath(line.slice(2))),
+    stage + "：容器 libc 或 locale 文件发生变化",
+  );
 }
 
 /** 固定系统目录读取，不读取业务表或接收外部 SQL。 */
@@ -100,6 +172,8 @@ function readCatalog(local, container, role, database, names) {
       row && names.includes(row.database) && !observed.has(row.database),
       "冻结库目录名称缺失或重复",
     );
+    const versionValuesMatch = row.version === row.actualVersion;
+    const versionValuesAvailable = row.version !== null && row.actualVersion !== null;
     requireMatch(
       row.encoding === "UTF8" &&
         ["c", "i", "b"].includes(row.provider) &&
@@ -111,7 +185,10 @@ function readCatalog(local, container, role, database, names) {
           : typeof row.locale === "string" && localePattern.test(row.locale)) &&
         (row.version === null ||
           (typeof row.version === "string" && versionPattern.test(row.version))) &&
-        row.version === row.actualVersion &&
+        (row.actualVersion === null ||
+          (typeof row.actualVersion === "string" && versionPattern.test(row.actualVersion))) &&
+        versionValuesMatch &&
+        (versionValuesAvailable || row.provider === "c") &&
         row.customIcuRules === false,
       "冻结库编码、排序规则版本或自定义规则需另行评审",
     );
@@ -122,12 +199,13 @@ function readCatalog(local, container, role, database, names) {
       ctype: row.ctype,
       locale: row.locale,
       version: row.version,
+      actualVersion: row.actualVersion,
     });
   }
   return { systemIdentifier: facts.systemIdentifier, observed };
 }
 
-/** 只读采集两座容器的共享系统目录，四个冻结库均不执行写入。 */
+/** 只读采集两座容器的共享系统目录及受限运行环境观察。 */
 export function collectRoundTripReference(report, local) {
   const mainId = local(
     [
@@ -149,32 +227,54 @@ export function collectRoundTripReference(report, local) {
       "container",
       "inspect",
       "--format",
-      '{{.Id}}|{{.State.Running}}|{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.docker.compose.service"}}',
+      '{{.Id}}|{{.State.Running}}|{{.Image}}|{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.docker.compose.service"}}|[{{range $i, $mount := .Mounts}}{{if $i}},{{end}}{{json $mount.Destination}}{{end}}]',
       mainId,
     ],
     "核对历史验收容器身份",
+  ).split("|");
+  const [mainIdFromInspect, mainRunning, mainImage, project, service, mainMounts] = mainIdentity;
+  requireMatch(
+    mainIdentity.length === 6 &&
+      mainIdFromInspect === mainId &&
+      mainRunning === "true" &&
+      mainImage === roundTripTarget.image &&
+      project === "adui-scada" &&
+      service === "postgres",
+    "历史验收容器身份或固定镜像不一致",
   );
-  requireMatch(mainIdentity === mainId + "|true|adui-scada|postgres", "历史验收容器身份不一致");
+  requireUnmodifiedLocaleMounts(mainMounts, "历史验收容器");
+
   const reproIdentity = local(
     [
       "container",
       "inspect",
       "--format",
-      '{{.Id}}|{{.State.Running}}|{{.Image}}|{{index .Config.Labels "org.adui.scope"}}',
+      '{{.Id}}|{{.State.Running}}|{{.Image}}|{{index .Config.Labels "org.adui.scope"}}|[{{range $i, $mount := .Mounts}}{{if $i}},{{end}}{{json $mount.Destination}}{{end}}]',
       "adui-scada-prisma8-repro",
     ],
     "核对第四座保留容器身份",
   ).split("|");
-  const [reproId, running, image, scope] = reproIdentity;
+  const [reproId, running, image, scope, reproMounts] = reproIdentity;
   requireMatch(
-    reproIdentity.length === 4 &&
+    reproIdentity.length === 5 &&
       containerIdPattern.test(reproId) &&
       reproId !== mainId &&
       running === "true" &&
       image === roundTripTarget.image &&
       scope === "prisma8-native-repro",
-    "第四座保留容器身份不一致",
+    "第四座保留容器身份或固定镜像不一致",
   );
+  requireUnmodifiedLocaleMounts(reproMounts, "第四座保留容器");
+
+  requireUnchangedLocaleRuntime(
+    local(["diff", mainId], "检查历史验收容器 libc 与 locale 文件"),
+    "历史验收容器",
+  );
+  requireUnchangedLocaleRuntime(
+    local(["diff", reproId], "检查第四座容器 libc 与 locale 文件"),
+    "第四座保留容器",
+  );
+
   const historical = readCatalog(local, mainId, mainRole, mainDatabases[0], mainDatabases);
   const repro = readCatalog(local, reproId, reproRole, reproDatabase, [reproDatabase]);
   requireMatch(
@@ -182,13 +282,19 @@ export function collectRoundTripReference(report, local) {
     "两座容器的 PostgreSQL 集群标识重复",
   );
   const referenceCollation = historical.observed.get(mainDatabases[0]);
-  requireMatch(
+  const allCollationsMatch =
     referenceCollation &&
-      [...historical.observed.values(), ...repro.observed.values()].every((value) =>
-        isDeepStrictEqual(value, referenceCollation),
-      ),
-    "四个冻结库的排序规则不一致，需独立评审",
+    [...historical.observed.values(), ...repro.observed.values()].every((value) =>
+      isDeepStrictEqual(value, referenceCollation),
+    );
+  requireMatch(allCollationsMatch, "四个冻结库的排序规则不一致，需独立评审");
+
+  const versionObservations = [...historical.observed.values(), ...repro.observed.values()];
+  const recordedCollationVersionAvailable = versionObservations.every(
+    (value) => value.version !== null && value.actualVersion !== null,
   );
+  const recordedCollationVersionMatches = recordedCollationVersionAvailable ? true : null;
+
   return {
     ...report,
     status: "NATIVE_CHECK_ROUNDTRIP_REFERENCE_REVIEW_REQUIRED",
@@ -196,7 +302,13 @@ export function collectRoundTripReference(report, local) {
     observedDatabaseCount: 4,
     observedClusterCount: 2,
     allFrozenCollationsMatch: true,
+    allFrozenCollationCatalogMetadataMatch: true,
+    containerImageIdentityMatched: true,
+    localeRuntimePathsObservedUnchanged: true,
+    collationRuntimeIdentityVerified: false,
     referenceCollation,
-    recordedCollationVersionMatches: true,
+    recordedCollationVersionAvailable,
+    recordedCollationVersionMatches,
+    recordedCollationVersionStatus: recordedCollationVersionAvailable ? "MATCHED" : "UNAVAILABLE",
   };
 }

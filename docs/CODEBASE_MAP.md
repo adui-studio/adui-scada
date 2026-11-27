@@ -1873,3 +1873,8 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/prisma8-native-check-roundtrip-reference.mjs`：受控容器身份、两个只读系统目录、四库排序规则及版本核验，不创建资源、不读取业务表、不输出原始标识。
 - `scripts/prisma8-native-check-roundtrip-reference-entry.mjs`：独立真实只读入口，要求单独确认参数；失败固定脱敏诊断。
 - `scripts/prisma8-native-check-roundtrip-reference.cases.mjs`：七项注入子进程回归，`pnpm run test:prisma8:native:baseline:check-roundtrip-reference` 纳入 ready；`pnpm run db:prisma8:native:baseline:check-roundtrip:reference-preflight --confirm-frozen-catalog-readonly` 真实入口不纳入 ready。
+
+### 2026-11-27 · 冻结库排序规则报告修正
+
+- `scripts/prisma8-native-check-roundtrip-reference.mjs`：明确区分版本 MATCHED 与 UNAVAILABLE；增加固定镜像 ID、挂载目标 JSON、指定运行环境路径的 docker diff 观察，完整运行时身份认证保持 false。
+- `scripts/prisma8-native-check-roundtrip-reference.cases.mjs`：现为十二项注入子进程回归，原测试入口与 ready 注册不变；真实入口及确认参数不变，不新增依赖。

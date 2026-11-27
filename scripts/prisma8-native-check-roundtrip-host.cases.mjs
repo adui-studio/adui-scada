@@ -43,6 +43,7 @@ void test("只读成功报告不得授予创建、执行、签名或部署许可
   assert.equal(report.status, "NATIVE_CHECK_ROUNDTRIP_HOST_REVIEW_REQUIRED");
   assert.equal(report.planFingerprint, acceptedPlanFingerprint);
   assert.deepEqual(report.target, roundTripTarget);
+  assert.equal(report.target.port, 15444);
   assert.equal(report.hostPreflightPassed, true);
   assert.equal(report.portObservedUnused, true);
   assert.deepEqual(
@@ -81,7 +82,7 @@ void test("只读成功报告不得授予创建、执行、签名或部署许可
     ],
   );
   assert.deepEqual(calls[8].args.slice(0, 3), ["-NoProfile", "-NonInteractive", "-Command"]);
-  assert.match(calls[8].args[3], /LocalPort -eq 15434/u);
+  assert.match(calls[8].args[3], /LocalPort -eq 15444/u);
   for (const { options } of calls) {
     assert.equal(options.shell, false);
     assert.equal(options.timeout, 15000);
@@ -160,7 +161,7 @@ void test("相似名称不误判，异常资源清单拒绝", () => {
 });
 
 void test("任何 TCP 记录或非空数组之外的端口输出均拒绝", () => {
-  for (const stdout of ["[15434]", "15434", "null", "", "unexpected"]) {
+  for (const stdout of ["[15444]", "15444", "null", "", "unexpected"]) {
     const { run } = fixture({ 8: { stdout } });
     assert.throws(
       () => inspectRoundTripHost("win32", [], {}, run),

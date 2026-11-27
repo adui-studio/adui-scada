@@ -255,9 +255,11 @@ void test("真实验收计划指纹完整复算并拒绝重算后的篡改及许
 });
 
 void test("仅接受模拟独立目标与四座冻结库不同的实际集群标识", () => {
+  assert.equal(roundTripTarget.port, 15444);
   assert.deepEqual(requireRoundTripBoundary(boundary()), boundary());
   for (const changes of [
     { target: { ...roundTripTarget, port: 15433 } },
+    { target: { ...roundTripTarget, port: 15434 } },
     { target: { ...roundTripTarget, host: "localhost" } },
     { tcpSystemIdentifier: "301" },
     { frozenSystemIdentifiers: ["100", "100", "200", "300"] },
