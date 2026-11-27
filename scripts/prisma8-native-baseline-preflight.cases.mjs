@@ -3,6 +3,7 @@ import { test } from "node:test";
 import evidence from "./prisma8-native-baseline-accepted-evidence.json" with { type: "json" };
 import {
   inspectNativeEmptyDatabase,
+  inspectFreshDockerEmptyDatabase,
   inspectReproEmptyDatabase,
   nativeEmptyClientOptions,
   nativeEmptyConfirmation,
@@ -301,4 +302,24 @@ void test("第四座版本、集群和角色不一致时拒绝目录检查并回
     );
     assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
   }
+});
+
+void test("全新业务库只读预检验证 PostgreSQL 19 与独立集群身份", async () => {
+  const systemIdentifier = "1234567890123456789";
+  const freshBoundary = { ...boundary, database_name: "adui_scada", role_name: "adui_scada", session_role: "adui_scada", server_version: "190000" };
+  const { client, calls } = mock({ boundaryRows: [freshBoundary], identityRows: [{ system_identifier: systemIdentifier }] });
+  const report = await inspectFreshDockerEmptyDatabase(client, systemIdentifier, "190000");
+  assert.equal(report.database, "adui_scada");
+  assert.equal(report.checkedEmptyCategories, 23);
+  assert.equal(report.deploymentAllowed, false);
+  assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
+  for (const changed of [{ database_name: "adui_scada_keycloak" }, { role_name: "postgres" }, { server_version: "180000" }]) {
+    const bad = mock({ boundaryRows: [{ ...freshBoundary, ...changed }], identityRows: [{ system_identifier: systemIdentifier }] });
+    await assert.rejects(inspectFreshDockerEmptyDatabase(bad.client, systemIdentifier, "190000"), /全新业务库/u);
+    assert.deepEqual(bad.calls.slice(-2), ["ROLLBACK", "关闭"]);
+  }
+  const wrongCluster = mock({ boundaryRows: [freshBoundary], identityRows: [{ system_identifier: "2234567890123456789" }] });
+  await assert.rejects(inspectFreshDockerEmptyDatabase(wrongCluster.client, systemIdentifier, "190000"), /集群标识不一致/u);
+  const nonempty = mock({ boundaryRows: [freshBoundary], identityRows: [{ system_identifier: systemIdentifier }], emptyRows: [{ ...empty, relations: true }] });
+  await assert.rejects(inspectFreshDockerEmptyDatabase(nonempty.client, systemIdentifier, "190000"), /存在受检用户对象/u);
 });
