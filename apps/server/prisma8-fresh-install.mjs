@@ -384,6 +384,7 @@ async function main() {
       status: "FRESH_DATABASE_VERIFIED",
       ...report,
       serverVersion: identity.version,
+      systemIdentifier: identity.systemIdentifier,
       databaseInitialized: true,
     };
   }

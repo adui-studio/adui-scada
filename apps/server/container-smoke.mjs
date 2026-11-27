@@ -1,6 +1,6 @@
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./dist/app.module.js";
-import { PrismaProjectVersionStore } from "./dist/projects/prisma-project-version-store.js";
+import { ProjectVersionStore } from "./dist/projects/project-version-store.js";
 import { AuthSessionService } from "./dist/auth/auth-session.service.js";
 import { ScadaSessionGuard } from "./dist/auth/scada-session.guard.js";
 import { ScadaProjectGuard } from "./dist/auth/scada-project.guard.js";
@@ -20,7 +20,7 @@ if (
   throw new Error("服务端容器无法加载新的可信身份与工程 Guard 模块");
 }
 
-if (typeof PrismaProjectVersionStore !== "function") {
+if (typeof ProjectVersionStore !== "function") {
   throw new Error("服务端容器未能加载事务仓储及其共享 Core 依赖");
 }
 

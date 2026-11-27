@@ -2,7 +2,12 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { FreshRuntimeProbeError } from "../../scripts/prisma8-fresh-runtime-probe.mjs";
 
 /** 加载正式 OIDC 根模块的真实 Nest 测试上下文，强制只读且不监听 HTTP 端口。 */
-export async function verifyPrisma8Provider(connectionString, systemIdentifier, storageHash) {
+export async function verifyPrisma8Provider(
+  connectionString,
+  systemIdentifier,
+  storageHash,
+  transport,
+) {
   await import("reflect-metadata");
   const { Test } = await import("@nestjs/testing");
   const { NotFoundException, ServiceUnavailableException } = await import("@nestjs/common");
@@ -88,7 +93,12 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     .overrideProvider(ScadaSecurityAuditService)
     .useValue({ record: (decision) => decisions.push(decision) })
     .overrideProvider(PRISMA8_RUNTIME_CONFIG)
-    .useValue({ connectionString, readOnly: true, expectedSystemIdentifier: systemIdentifier })
+    .useValue({
+      connectionString,
+      readOnly: true,
+      expectedSystemIdentifier: systemIdentifier,
+      transport,
+    })
     .overrideProvider(SCADA_OIDC_STARTUP_CONFIG)
     .useValue(startupConfig)
     .overrideProvider(OidcProviderDiscoveryService)
