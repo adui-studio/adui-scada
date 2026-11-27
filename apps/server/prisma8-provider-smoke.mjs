@@ -1,13 +1,25 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { FreshRuntimeProbeError } from "../../scripts/prisma8-fresh-runtime-probe.mjs";
 
 /** 使用真实 Nest 测试应用上下文执行新提供方与原生授权仓储，不挂载 HTTP 路由。 */
 export async function verifyPrisma8Provider(connectionString, systemIdentifier, storageHash) {
   await import("reflect-metadata");
   const { Test } = await import("@nestjs/testing");
-  const { NotFoundException } = await import("@nestjs/common");
-  const { Prisma8AuthorizationModule } = await import(
-    new URL("./dist/auth/prisma8-authorization.module.js", import.meta.url).href
+  const { NotFoundException, ServiceUnavailableException } = await import("@nestjs/common");
+  const { Prisma8IdentityModule } = await import(
+    new URL("./dist/auth/prisma8-identity.module.js", import.meta.url).href
+  );
+  const { AuthSessionService } = await import(
+    new URL("./dist/auth/auth-session.service.js", import.meta.url).href
+  );
+  const { OidcLoginTransactionService } = await import(
+    new URL("./dist/auth/oidc-login-transaction.service.js", import.meta.url).href
+  );
+  const { OidcProviderDiscoveryService, SCADA_OIDC_STARTUP_CONFIG } = await import(
+    new URL("./dist/auth/oidc-provider-discovery.service.js", import.meta.url).href
+  );
+  const { Prisma8RuntimeAuthSessionService, Prisma8RuntimeOidcLoginTransactionService } = await import(
+    new URL("./dist/auth/prisma8-runtime-identity.service.js", import.meta.url).href
   );
   const { AuthorizationReadStore } = await import(
     new URL("./dist/auth/authorization-read-store.js", import.meta.url).href
@@ -25,8 +37,19 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     throw new FreshRuntimeProbeError("构建后的原生运行时契约与已验证数据库不一致");
   }
   const decisions = [];
+  let discoveryCalled = false;
+  // 随机内存配置不读取真实 OIDC 凭据，专用发现替身禁止任何外部网络访问。
+  const startupConfig = {
+    enabled: true,
+    issuer: new URL("https://prisma8-smoke.invalid/realm"),
+    clientId: "prisma8-smoke",
+    clientSecret: randomBytes(32).toString("base64url"),
+    redirectUri: new URL("https://prisma8-smoke.invalid/api/v1/auth/oidc/callback"),
+    webOrigins: ["https://prisma8-smoke.invalid"],
+    transactionEncryptionKey: randomBytes(32),
+  };
   const context = await Test.createTestingModule({
-    imports: [Prisma8AuthorizationModule],
+    imports: [Prisma8IdentityModule],
     providers: [
       ScadaProjectGuard,
       {
@@ -37,6 +60,15 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
   })
     .overrideProvider(PRISMA8_RUNTIME_CONFIG)
     .useValue({ connectionString, readOnly: true, expectedSystemIdentifier: systemIdentifier })
+    .overrideProvider(SCADA_OIDC_STARTUP_CONFIG)
+    .useValue(startupConfig)
+    .overrideProvider(OidcProviderDiscoveryService)
+    .useValue({
+      getConfiguration() {
+        discoveryCalled = true;
+        throw new Error("原生只读烟测禁止身份提供方网络发现");
+      },
+    })
     .compile();
   let failure;
   let service;
@@ -60,6 +92,57 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     if (identity !== null || !Array.isArray(grants) || grants.length !== 0) {
       throw new Error("不存在的身份或工程授权查询结果异常");
     }
+    stage = "原生会话只读查询及身份写入拒绝核验";
+    const sessions = context.get(AuthSessionService);
+    const transactions = context.get(OidcLoginTransactionService);
+    if (
+      !(sessions instanceof Prisma8RuntimeAuthSessionService) ||
+      !(transactions instanceof Prisma8RuntimeOidcLoginTransactionService)
+    ) {
+      throw new Error("原生身份服务未绑定到预期实现");
+    }
+    const token = "scada_s_" + randomBytes(32).toString("base64url");
+    const csrf = "scada_csrf_" + randomBytes(32).toString("base64url");
+    const authenticated = await sessions.authenticateCookieSession(token, csrf);
+    if (
+      (await sessions.authenticateWithSession(token)) !== null ||
+      authenticated.authenticated ||
+      authenticated.reason !== "invalid_session"
+    ) {
+      throw new Error("不存在的会话未按预期安全拒绝");
+    }
+    let writeEntered = false;
+    let writeDenied = false;
+    try {
+      await service.writeTransaction(() => {
+        writeEntered = true;
+        return Promise.resolve(undefined);
+      });
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== "Prisma 8 只读提供方禁止写入") throw error;
+      writeDenied = true;
+    }
+    if (!writeDenied || writeEntered) throw new Error("只读提供方未在写事务前拒绝");
+    const state = randomBytes(32).toString("base64url");
+    const binding = "scada_oidc_b_" + randomBytes(32).toString("base64url");
+    const deniedOperations = [
+      { run: () => sessions.issueForVerifiedSubject(principal), message: "本地身份事务暂时不可用，请稍后重试" },
+      { run: () => sessions.revokeForVerifiedSubject(principal, randomUUID()), message: "本地身份事务暂时不可用，请稍后重试" },
+      { run: () => transactions.start("/"), message: "OIDC 登录事务创建失败，请稍后重试" },
+      { run: () => transactions.consume(state, binding), message: "OIDC 登录事务验证失败，请稍后重试" },
+      { run: () => transactions.cleanupExpiredTransactions(), message: "OIDC 登录事务清理失败，请稍后重试" },
+    ];
+    for (const { run, message } of deniedOperations) {
+      let rejected = false;
+      try {
+        await run();
+      } catch (error) {
+        if (!(error instanceof ServiceUnavailableException) || error.message !== message) throw error;
+        rejected = true;
+      }
+      if (!rejected) throw new Error("原生身份写入未被只读门禁拒绝");
+    }
+    if (discoveryCalled) throw new Error("只读烟测不允许 OIDC 网络发现");
     stage = "原生工程 Guard 拒绝核验";
     const guard = context.get(ScadaProjectGuard);
     const handler = () => undefined;
@@ -109,6 +192,9 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     providerClosed: true,
     readOnlyBoundaryVerified: true,
     authorizationReadVerified: true,
+    sessionReadVerified: true,
+    identityWriteDenied: true,
+    oidcDiscoverySkipped: true,
     missingProjectDenied: true,
   };
 }
