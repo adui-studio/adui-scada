@@ -92,3 +92,15 @@ export function loadDockerReadOnlyConfig(expectedHash: string): Prisma8RuntimeCo
     throw new Error(FAILURE);
   }
 }
+
+/** 仅独立显式临时事务探针使用；常驻模块仍只调用原只读装配。 */
+export function resolveDockerTransactionProbeConfig(
+  text: string,
+  expectedHash: string,
+): Prisma8RuntimeConfig {
+  return {
+    ...resolveDockerReadOnlyConfig(text, expectedHash),
+    readOnly: false,
+    transport: "docker-transaction-probe",
+  };
+}
