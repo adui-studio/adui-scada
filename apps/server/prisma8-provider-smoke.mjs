@@ -216,16 +216,28 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     const releaseOperations = [
       () => releases.readCurrent(principal, sessionId, scope),
       () =>
-        releases.publish(principal, sessionId, scope, {
-          expectedHeadRevision: 1,
-          targetRevision: 1,
-          expectedReleaseGeneration: 0,
-        }, randomUUID()),
+        releases.publish(
+          principal,
+          sessionId,
+          scope,
+          {
+            expectedHeadRevision: 1,
+            targetRevision: 1,
+            expectedReleaseGeneration: 0,
+          },
+          randomUUID(),
+        ),
       () =>
-        releases.rollback(principal, sessionId, scope, {
-          targetRevision: 1,
-          expectedReleaseGeneration: 2,
-        }, randomUUID()),
+        releases.rollback(
+          principal,
+          sessionId,
+          scope,
+          {
+            targetRevision: 1,
+            expectedReleaseGeneration: 2,
+          },
+          randomUUID(),
+        ),
     ];
     for (const run of releaseOperations) {
       let rejected = false;

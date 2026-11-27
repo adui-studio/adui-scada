@@ -88,10 +88,7 @@ function parseSafeNonNegativeInteger(value: unknown, label: string): number {
 }
 
 /** 请求体与幂等头均使用精确白名单，禁止客户端指定快照或可信身份字段。 */
-function parsePublishRequest(
-  input: unknown,
-  idempotencyKey: unknown,
-): ProjectPublishRequest {
+function parsePublishRequest(input: unknown, idempotencyKey: unknown): ProjectPublishRequest {
   if (!isPlainRecord(input)) {
     throw new ProjectRequestValidationError("正式发布请求必须为普通对象");
   }
@@ -155,26 +152,34 @@ function parseRollbackRequest(input: unknown, idempotencyKey: unknown): ProjectR
     !Object.hasOwn(input, "targetRevision") ||
     !Object.hasOwn(input, "expectedReleaseGeneration")
   ) {
-    throw new ProjectRequestValidationError("正式回滚请求只允许 targetRevision 和 expectedReleaseGeneration");
+    throw new ProjectRequestValidationError(
+      "正式回滚请求只允许 targetRevision 和 expectedReleaseGeneration",
+    );
   }
   if (typeof idempotencyKey !== "string" || !IDEMPOTENCY_KEY_PATTERN.test(idempotencyKey)) {
     throw new ProjectRequestValidationError("Idempotency-Key 必须为服务端生成的 UUID v4");
   }
   return {
     targetRevision: parseSafePositiveInteger(input.targetRevision, "目标回滚修订号"),
-    expectedReleaseGeneration: parseSafePositiveInteger(input.expectedReleaseGeneration, "预期发布代次"),
+    expectedReleaseGeneration: parseSafePositiveInteger(
+      input.expectedReleaseGeneration,
+      "预期发布代次",
+    ),
     idempotencyKey,
   };
 }
 
 function createRollbackSemanticHash(projectId: string, request: ProjectRollbackRequest): string {
   return createHash("sha256")
-    .update(JSON.stringify({
-      action: "ROLLBACK",
-      projectId,
-      targetRevision: request.targetRevision,
-      expectedReleaseGeneration: request.expectedReleaseGeneration,
-    }), "utf8")
+    .update(
+      JSON.stringify({
+        action: "ROLLBACK",
+        projectId,
+        targetRevision: request.targetRevision,
+        expectedReleaseGeneration: request.expectedReleaseGeneration,
+      }),
+      "utf8",
+    )
     .digest("hex");
 }
 
@@ -467,7 +472,10 @@ function verifyCurrentEvent(state: ReleaseState, event: ReleaseEventResultRow): 
 }
 
 /** 发布和回滚共用固定拒绝的生产安全门禁，不提供可替换的放行参数。 */
-function requireReleaseSafety(snapshot: ProjectSnapshot, context: ProjectReleaseSafetyContext): void {
+function requireReleaseSafety(
+  snapshot: ProjectSnapshot,
+  context: ProjectReleaseSafetyContext,
+): void {
   let blocks: readonly ProjectReleaseSafetyBlock[];
   try {
     blocks = assessProjectReleaseSafety(snapshot, context);
@@ -711,12 +719,29 @@ export class Prisma8RuntimeProjectReleaseStore {
       await lockSessionAndPermission(tx, actor, projectId, sessionId, "release:publish");
       const head = databaseInteger(projects[0].head_revision, "数据库工程修订号异常");
       const state = await lockState(tx, tenantId, projectId, true);
-      const replay = await findReplay(tx, actor, projectId, "PUBLISH", request, semanticHash, state);
+      const replay = await findReplay(
+        tx,
+        actor,
+        projectId,
+        "PUBLISH",
+        request,
+        semanticHash,
+        state,
+      );
       if (replay) return toReleaseResult(projectId, replay);
       if (head !== BigInt(request.expectedHeadRevision)) throw new ProjectRevisionConflictError();
       requireGeneration(state, request);
       const snapshot = await lockedSnapshot(tx, tenantId, projectId, request.targetRevision);
-      const event = await switchRelease(tx, actor, projectId, "PUBLISH", request, semanticHash, state, snapshot);
+      const event = await switchRelease(
+        tx,
+        actor,
+        projectId,
+        "PUBLISH",
+        request,
+        semanticHash,
+        state,
+        snapshot,
+      );
       return toReleaseResult(projectId, event);
     });
   }
@@ -747,14 +772,31 @@ export class Prisma8RuntimeProjectReleaseStore {
         throw new ProjectVersionAccessDeniedError();
       await lockSessionAndPermission(tx, actor, projectId, sessionId, "release:rollback");
       const state = await lockState(tx, tenantId, projectId, true);
-      const replay = await findReplay(tx, actor, projectId, "ROLLBACK", request, semanticHash, state);
+      const replay = await findReplay(
+        tx,
+        actor,
+        projectId,
+        "ROLLBACK",
+        request,
+        semanticHash,
+        state,
+      );
       if (replay) return toRollbackResult(projectId, replay);
       requireGeneration(state, request);
       if (state.lastReleaseEventId === null) throw new ProjectReleaseConflictError();
       const current = await readEvent(tx, tenantId, projectId, state.lastReleaseEventId);
       verifyCurrentEvent(state, current);
       const snapshot = await findRollbackTarget(tx, tenantId, projectId, request, state);
-      const event = await switchRelease(tx, actor, projectId, "ROLLBACK", request, semanticHash, state, snapshot);
+      const event = await switchRelease(
+        tx,
+        actor,
+        projectId,
+        "ROLLBACK",
+        request,
+        semanticHash,
+        state,
+        snapshot,
+      );
       return toRollbackResult(projectId, event);
     });
   }

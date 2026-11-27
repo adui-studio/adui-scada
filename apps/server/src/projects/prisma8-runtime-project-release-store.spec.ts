@@ -31,9 +31,8 @@ type Row = Record<string, string>;
 type Plan = { text: string; parameters: unknown[] };
 
 function semanticHash(action: "PUBLISH" | "ROLLBACK"): string {
-  const request = action === "PUBLISH"
-    ? { action, projectId, ...publish }
-    : { action, projectId, ...rollback };
+  const request =
+    action === "PUBLISH" ? { action, projectId, ...publish } : { action, projectId, ...rollback };
   return createHash("sha256").update(JSON.stringify(request), "utf8").digest("hex");
 }
 
@@ -53,7 +52,10 @@ async function harness(readOnly = false) {
     recovery: "false",
     isolation: "read committed",
   };
-  const snapshot = await createProjectSnapshot(waterTreatmentDemoDocument, { revision: 1, createdAt });
+  const snapshot = await createProjectSnapshot(waterTreatmentDemoDocument, {
+    revision: 1,
+    createdAt,
+  });
   const currentSnapshot = await createProjectSnapshot(waterTreatmentDemoDocument, {
     revision: 2,
     createdAt,
@@ -73,16 +75,22 @@ async function harness(readOnly = false) {
     activeSession: true,
     permissions: ["release:publish"],
     release: {
-      generation: "0", revision: "", hash: "", event_id: "", hash_is_null: "true",
+      generation: "0",
+      revision: "",
+      hash: "",
+      event_id: "",
+      hash_is_null: "true",
     },
     currentEvent: null as Row | null,
     priorEvent: null as Row | null,
     replay: null as Row | null,
-    snapshotRows: [{
-      snapshot_data: JSON.stringify(snapshot),
-      content_hash: snapshot.contentHash,
-      created_at: createdAt,
-    }] as Row[],
+    snapshotRows: [
+      {
+        snapshot_data: JSON.stringify(snapshot),
+        content_hash: snapshot.contentHash,
+        created_at: createdAt,
+      },
+    ] as Row[],
     boundaryChecks: 0,
     drift: false,
     committed: 0,
@@ -210,16 +218,26 @@ async function harness(readOnly = false) {
 describe("全新原生工程发布与回滚仓储", () => {
   it("发布与回滚只接受各自白名单和有效幂等标识", async () => {
     const h = await harness();
-    await expect(h.store.publish(actor, sessionId, projectId, { ...publish, actorId: "伪造" }, key))
-      .rejects.toThrow(
-        "正式发布请求只允许 expectedHeadRevision、targetRevision 和 expectedReleaseGeneration",
-      );
-    await expect(h.store.rollback(actor, sessionId, projectId, { ...rollback, expectedHeadRevision: 1 }, key))
-      .rejects.toThrow("正式回滚请求只允许 targetRevision 和 expectedReleaseGeneration");
-    await expect(h.store.rollback(actor, sessionId, projectId, { ...rollback, expectedReleaseGeneration: 0 }, key))
-      .rejects.toThrow("预期发布代次必须是大于零的安全整数");
-    await expect(h.store.publish(actor, sessionId, projectId, publish, "invalid"))
-      .rejects.toThrow("Idempotency-Key 必须为服务端生成的 UUID v4");
+    await expect(
+      h.store.publish(actor, sessionId, projectId, { ...publish, actorId: "伪造" }, key),
+    ).rejects.toThrow(
+      "正式发布请求只允许 expectedHeadRevision、targetRevision 和 expectedReleaseGeneration",
+    );
+    await expect(
+      h.store.rollback(actor, sessionId, projectId, { ...rollback, expectedHeadRevision: 1 }, key),
+    ).rejects.toThrow("正式回滚请求只允许 targetRevision 和 expectedReleaseGeneration");
+    await expect(
+      h.store.rollback(
+        actor,
+        sessionId,
+        projectId,
+        { ...rollback, expectedReleaseGeneration: 0 },
+        key,
+      ),
+    ).rejects.toThrow("预期发布代次必须是大于零的安全整数");
+    await expect(h.store.publish(actor, sessionId, projectId, publish, "invalid")).rejects.toThrow(
+      "Idempotency-Key 必须为服务端生成的 UUID v4",
+    );
     await expect(h.store.readCurrent(null, sessionId, projectId)).rejects.toThrow(denied);
     expect(h.options).toHaveLength(0);
   });
@@ -227,8 +245,12 @@ describe("全新原生工程发布与回滚仓储", () => {
   it("严格只读配置拒绝三个需要行锁的入口且不获取事务", async () => {
     const h = await harness(true);
     await expect(h.store.readCurrent(actor, sessionId, projectId)).rejects.toThrow(readOnlyDenied);
-    await expect(h.store.publish(actor, sessionId, projectId, publish, key)).rejects.toThrow(readOnlyDenied);
-    await expect(h.store.rollback(actor, sessionId, projectId, rollback, key)).rejects.toThrow(readOnlyDenied);
+    await expect(h.store.publish(actor, sessionId, projectId, publish, key)).rejects.toThrow(
+      readOnlyDenied,
+    );
+    await expect(h.store.rollback(actor, sessionId, projectId, rollback, key)).rejects.toThrow(
+      readOnlyDenied,
+    );
     expect(h.options).toHaveLength(0);
     expect(h.reads).toHaveLength(0);
     expect(h.writes).toHaveLength(0);
@@ -238,7 +260,9 @@ describe("全新原生工程发布与回滚仓储", () => {
     const h = await harness();
     h.state.permissions = ["release:read"];
     await expect(h.store.readCurrent(actor, sessionId, projectId)).resolves.toEqual({
-      status: "UNRELEASED", projectId, releaseGeneration: 0,
+      status: "UNRELEASED",
+      projectId,
+      releaseGeneration: 0,
     });
     expect(h.steps).toEqual(["边界", "工程锁", "会话锁", "授权锁", "发布状态", "边界"]);
     expect(h.options).toEqual([{ isolationLevel: "ReadCommitted", timeout: 10000 }]);
@@ -255,11 +279,13 @@ describe("全新原生工程发布与回滚仓储", () => {
     h.released();
     h.state.permissions = ["release:read"];
     h.state.currentEvent = { ...h.state.currentEvent!, action: "ROLLBACK" };
-    h.state.snapshotRows = [{
-      snapshot_data: JSON.stringify(h.currentSnapshot),
-      content_hash: h.currentSnapshot.contentHash,
-      created_at: createdAt,
-    }];
+    h.state.snapshotRows = [
+      {
+        snapshot_data: JSON.stringify(h.currentSnapshot),
+        content_hash: h.currentSnapshot.contentHash,
+        created_at: createdAt,
+      },
+    ];
     await expect(h.store.readCurrent(actor, sessionId, projectId)).resolves.toEqual({
       status: "RELEASED",
       projectId,
@@ -272,7 +298,14 @@ describe("全新原生工程发布与回滚仓储", () => {
       snapshot: h.currentSnapshot,
     });
     expect(h.steps).toEqual([
-      "边界", "工程锁", "会话锁", "授权锁", "发布状态", "不可变快照", "当前事件", "边界",
+      "边界",
+      "工程锁",
+      "会话锁",
+      "授权锁",
+      "发布状态",
+      "不可变快照",
+      "当前事件",
+      "边界",
     ]);
     expect(h.writes).toHaveLength(0);
   });
@@ -306,11 +339,13 @@ describe("全新原生工程发布与回滚仓储", () => {
     const h = await harness();
     h.released();
     h.state.permissions = ["release:read"];
-    h.state.snapshotRows = [{
-      snapshot_data: JSON.stringify(h.currentSnapshot),
-      content_hash: h.currentSnapshot.contentHash,
-      created_at: createdAt,
-    }];
+    h.state.snapshotRows = [
+      {
+        snapshot_data: JSON.stringify(h.currentSnapshot),
+        content_hash: h.currentSnapshot.contentHash,
+        created_at: createdAt,
+      },
+    ];
     h.state.currentEvent = { ...h.state.currentEvent!, generation: "1" };
     await expect(h.store.readCurrent(actor, sessionId, projectId)).rejects.toThrow(
       "数据库当前正式发布事件与指针不一致",
@@ -329,10 +364,22 @@ describe("全新原生工程发布与回滚仓储", () => {
       ]),
     });
     expect(h.steps).toEqual([
-      "边界", "工程锁", "会话锁", "授权锁", "发布状态", "幂等事件", "不可变快照",
+      "边界",
+      "工程锁",
+      "会话锁",
+      "授权锁",
+      "发布状态",
+      "幂等事件",
+      "不可变快照",
     ]);
     expect(h.reads[1]?.text).toContain("FOR UPDATE");
-    expect(h.reads[5]?.parameters).toEqual([actor.tenantId, projectId, actor.subjectId, "PUBLISH", key]);
+    expect(h.reads[5]?.parameters).toEqual([
+      actor.tenantId,
+      projectId,
+      actor.subjectId,
+      "PUBLISH",
+      key,
+    ]);
     expect(h.state.rejected).toBe(1);
     expect(h.writes).toHaveLength(0);
   });
@@ -346,7 +393,9 @@ describe("全新原生工程发布与回滚仓储", () => {
     expect(stale.steps).not.toContain("不可变快照");
     const h = await harness();
     h.released();
-    await expect(h.store.publish(actor, sessionId, projectId, publish, key)).rejects.toThrow(conflict);
+    await expect(h.store.publish(actor, sessionId, projectId, publish, key)).rejects.toThrow(
+      conflict,
+    );
     expect(h.steps).not.toContain("不可变快照");
     expect(h.writes).toHaveLength(0);
   });
@@ -357,35 +406,52 @@ describe("全新原生工程发布与回滚仓储", () => {
     h.state.head = "3";
     h.state.replay = h.targetEvent;
     await expect(h.store.publish(actor, sessionId, projectId, publish, key)).resolves.toEqual({
-      projectId, action: "PUBLISH", headRevision: 1, releasedRevision: 1,
-      releasedContentHash: h.snapshot.contentHash, releaseGeneration: 1,
-      eventId: earlierEventId, createdAt,
+      projectId,
+      action: "PUBLISH",
+      headRevision: 1,
+      releasedRevision: 1,
+      releasedContentHash: h.snapshot.contentHash,
+      releaseGeneration: 1,
+      eventId: earlierEventId,
+      createdAt,
     });
     expect(h.steps).not.toContain("不可变快照");
     expect(h.writes).toHaveLength(0);
     const invalid = await harness();
     invalid.released();
     invalid.state.replay = { ...invalid.targetEvent, semantic_hash: "c".repeat(64) };
-    await expect(invalid.store.publish(actor, sessionId, projectId, publish, key)).rejects.toThrow(conflict);
+    await expect(invalid.store.publish(actor, sessionId, projectId, publish, key)).rejects.toThrow(
+      conflict,
+    );
     expect(invalid.writes).toHaveLength(0);
   });
 
   it("回滚必须独立授权且拒绝过期代次和当前版本", async () => {
     const unauthorized = await harness();
     unauthorized.released();
-    await expect(unauthorized.store.rollback(actor, sessionId, projectId, rollback, key)).rejects.toThrow(denied);
+    await expect(
+      unauthorized.store.rollback(actor, sessionId, projectId, rollback, key),
+    ).rejects.toThrow(denied);
     expect(unauthorized.steps).not.toContain("发布状态");
     const stale = await harness();
     stale.released();
     stale.state.permissions = ["release:rollback"];
-    await expect(stale.store.rollback(actor, sessionId, projectId, { ...rollback, expectedReleaseGeneration: 1 }, key))
-      .rejects.toThrow(conflict);
+    await expect(
+      stale.store.rollback(
+        actor,
+        sessionId,
+        projectId,
+        { ...rollback, expectedReleaseGeneration: 1 },
+        key,
+      ),
+    ).rejects.toThrow(conflict);
     expect(stale.steps).not.toContain("曾发布证明");
     const same = await harness();
     same.released();
     same.state.permissions = ["release:rollback"];
-    await expect(same.store.rollback(actor, sessionId, projectId, { ...rollback, targetRevision: 2 }, key))
-      .rejects.toThrow(conflict);
+    await expect(
+      same.store.rollback(actor, sessionId, projectId, { ...rollback, targetRevision: 2 }, key),
+    ).rejects.toThrow(conflict);
     expect(same.writes).toHaveLength(0);
   });
 
@@ -394,7 +460,9 @@ describe("全新原生工程发布与回滚仓储", () => {
     h.released();
     h.state.permissions = ["release:rollback"];
     h.state.priorEvent = null;
-    await expect(h.store.rollback(actor, sessionId, projectId, rollback, key)).rejects.toThrow(conflict);
+    await expect(h.store.rollback(actor, sessionId, projectId, rollback, key)).rejects.toThrow(
+      conflict,
+    );
     const proof = h.reads.find((plan) => plan.text.includes("action = 'PUBLISH'"));
     expect(proof?.parameters).toEqual([actor.tenantId, projectId, 1n, 2n]);
     expect(proof?.text).toContain("ORDER BY generation DESC LIMIT 1 FOR SHARE");
@@ -406,14 +474,29 @@ describe("全新原生工程发布与回滚仓储", () => {
     const h = await harness();
     h.released();
     h.state.permissions = ["release:rollback"];
-    await expect(h.store.rollback(actor, sessionId, projectId, rollback, key)).rejects.toThrow(gateDenied);
+    await expect(h.store.rollback(actor, sessionId, projectId, rollback, key)).rejects.toThrow(
+      gateDenied,
+    );
     expect(h.steps).toEqual([
-      "边界", "工程锁", "会话锁", "授权锁", "发布状态", "幂等事件",
-      "当前事件", "曾发布证明", "不可变快照",
+      "边界",
+      "工程锁",
+      "会话锁",
+      "授权锁",
+      "发布状态",
+      "幂等事件",
+      "当前事件",
+      "曾发布证明",
+      "不可变快照",
     ]);
     expect(h.reads[1]?.text).toContain("FOR UPDATE");
     expect(h.reads.every((plan) => !plan.text.includes("head_revision"))).toBe(true);
-    expect(h.reads[5]?.parameters).toEqual([actor.tenantId, projectId, actor.subjectId, "ROLLBACK", key]);
+    expect(h.reads[5]?.parameters).toEqual([
+      actor.tenantId,
+      projectId,
+      actor.subjectId,
+      "ROLLBACK",
+      key,
+    ]);
     expect(h.state.rejected).toBe(1);
     expect(h.writes).toHaveLength(0);
   });
@@ -444,9 +527,13 @@ describe("全新原生工程发布与回滚仓储", () => {
       semantic_hash: semanticHash("ROLLBACK"),
     };
     await expect(h.store.rollback(actor, sessionId, projectId, rollback, key)).resolves.toEqual({
-      projectId, action: "ROLLBACK", releasedRevision: 1,
-      releasedContentHash: h.snapshot.contentHash, releaseGeneration: 3,
-      eventId: rollbackEventId, createdAt,
+      projectId,
+      action: "ROLLBACK",
+      releasedRevision: 1,
+      releasedContentHash: h.snapshot.contentHash,
+      releaseGeneration: 3,
+      eventId: rollbackEventId,
+      createdAt,
     });
     expect(h.steps).not.toContain("曾发布证明");
     expect(h.writes).toHaveLength(0);
@@ -456,7 +543,9 @@ describe("全新原生工程发布与回滚仓储", () => {
     invalid.state.release.generation = "4";
     invalid.state.currentEvent = { ...invalid.state.currentEvent!, generation: "4" };
     invalid.state.replay = { ...h.state.replay, generation: "2" };
-    await expect(invalid.store.rollback(actor, sessionId, projectId, rollback, key)).rejects.toThrow(conflict);
+    await expect(
+      invalid.store.rollback(actor, sessionId, projectId, rollback, key),
+    ).rejects.toThrow(conflict);
     expect(invalid.writes).toHaveLength(0);
   });
 
