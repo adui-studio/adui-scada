@@ -591,3 +591,7 @@ React/Vue 的 Nginx 共享单一配置，容器 8080 保留匿名 HTTP，8443 �
 ### 正式 OIDC Docker 传输接入候选（ADR-0065）
 
 在现有 Discovery 服务内按受信装配显式提供的公开 CA 选择固定 Docker Fetch，否则沿用既有通用 Fetch；当前不从环境或 HTTP 输入选择此模式。公开 Issuer 固定回环 IP、发布端口及 /realms/adui-scada，容器连接固定 keycloak:8443，Host 及证书身份仍为公开地址。只允许 Discovery/JWKS GET 和固定 Token 端点 Authorization Code + client_secret_basic POST，禁止其他授权类型、任意端点、重定向、Cookie/代理请求头、TLS 降级，限制请求体 16 KiB、响应体 256 KiB、10 秒请求及调用方取消。SDK 处理协议并显式启用 JWS 签名校验，元数据在 Docker 模式精确匹配 auth/token/certs。现有容器只读探针复用正式编译服务与 Fetch，宿主独立验证公钥一致性，旧镜像缺少正式客户端标志不予通过。Docker 应用 OIDC 仍关闭，未挂载 CA 或真实客户端秘密，不打开登录/工程 API，不改变数据库、身份映射或 ACL。
+
+### Docker 常驻 NestJS 原生只读连接候选（ADR-0073）
+
+现有 docker:up 严格验证宿主 PostgreSQL 19 库及完整契约后，才以现有随机凭据、systemIdentifier 和 storageHash 建立 .local/docker-runtime/server-database.json，目录独立于 Keycloak 证书挂载，文件仅 server 只读挂载，不进入镜像、服务环境或 Git。既有绑定必须匹配，拒绝自动更新或复位。Compose 明确 SCADA_DOCKER_DB_READONLY=true，要求 OIDC 和本机模拟 API 均关闭且禁止宿主连接 URL。DockerReadOnlyDatabaseAppModule 复用 AppModule 与唯一 Prisma8DatabaseModule；连接地址固定 postgres:5432/adui_scada，使用已验收只读事务、角色、集群、契约与关闭生命周期。GET /health/database 仅容器自身回环访问，实际调用常驻 Prisma8Service 的 readTransaction，成功仅返回 status=ok、mode=docker-readonly；异常返回固定 503，非回环 404。Compose 健康检查和独立烟测必须验证该接口，旧无数据库镜像不得通过。原 /health 与 Nginx 代理不变，公开认证及工程 API 继续 404。本地已有数据库角色与隔离网络保持不变，严格只读连接模式不等于 PostgreSQL 角色最小权限或生产 TLS 部署资格；业务写入、认证及生产部署均未开启。

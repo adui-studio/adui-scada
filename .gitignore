@@ -16,6 +16,7 @@ dist-ssr
 # 最新 Docker 凭据与 TLS 私钥
 .local/oidc-lab/
 .local/docker/
+.local/docker-runtime/
 
 # 环境变量文件
 .env

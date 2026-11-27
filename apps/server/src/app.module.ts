@@ -10,6 +10,8 @@ import { LocalDemoTelemetryModule } from "./demo/local-demo-telemetry.module.js"
 import { HttpReadinessController } from "./health/http-readiness.controller.js";
 import { HttpReadinessIndicator } from "./health/http-readiness.indicator.js";
 import { ProjectApiModule } from "./projects/project-api.module.js";
+import { Prisma8DatabaseModule } from "./database/prisma8-database.module.js";
+import { DockerDatabaseReadinessController } from "./health/docker-database-readiness.controller.js";
 
 @Module({
   imports: [
@@ -22,6 +24,13 @@ import { ProjectApiModule } from "./projects/project-api.module.js";
   providers: [AppService, HttpReadinessIndicator],
 })
 export class AppModule {}
+
+/** 仅固定 Docker 本机模式挂载常驻只读原生提供方，不导入身份、工程或模拟 API。 */
+@Module({
+  imports: [AppModule, Prisma8DatabaseModule],
+  controllers: [DockerDatabaseReadinessController],
+})
+export class DockerReadOnlyDatabaseAppModule {}
 
 /** 只供满足本机非生产白名单的启动入口使用，不影响正式 AppModule 路由。 */
 @Module({ imports: [AppModule, LocalDemoTelemetryModule] })

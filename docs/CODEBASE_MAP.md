@@ -1999,3 +1999,11 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/config/oidc-startup.config.ts` / `apps/server/src/auth/oidc-provider-discovery.service.ts`：可选受信 CA 注入、固定元数据端点、SDK 显式 JWS 签名验证；环境解析及 Docker 启用开关保持原状。
 - `apps/server/container-oidc-discovery.mjs` / `scripts/docker-oidc-probe.mjs`：容器显式验收复用编译后正式 Discovery 服务，要求 formalClientVerified，宿主独立比较公钥集合。
 - `scripts/docker-oidc-transport.cases.mjs`：六项离线传输测试进入 test:docker；`apps/server/src/auth/oidc-provider-discovery.service.spec.ts` 增加两项正式配置/签名测试。
+
+### Docker 常驻原生只读数据库候选
+
+- `apps/server/src/database/docker-readonly-config.ts`：固定显式容器模式、三字段绑定解析与固定容器只读 URL。
+- `scripts/docker-runtime-binding.mjs`：宿主严格预检后建立独立本地文件，既有文件只核对不覆盖；`scripts/docker-runtime-binding.cases.mjs` 七项离线测试。
+- `apps/server/src/app.module.ts`、`apps/server/src/main.ts`、`apps/server/src/database/prisma8-database.module.ts`：专用常驻只读根模块，正式 Prisma8Service 唯一装配，原默认与 OIDC 根模块不变。
+- `apps/server/src/health/docker-database-readiness.controller.ts`：容器自身回环 GET /health/database，固定只读响应或 503；`apps/server/test/docker-readonly.e2e-spec.ts` 五项 HTTP 回归。
+- `deploy/docker/compose.yaml`、`scripts/docker-stack.mjs`、`apps/server/container-prisma8-smoke.mjs`：单文件只读挂载、常驻数据库健康探针、报告硬门禁和双端公开接口拒绝。既有独立烟测保留。

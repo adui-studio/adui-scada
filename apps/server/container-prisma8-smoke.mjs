@@ -58,12 +58,56 @@ async function verifyWeb(host) {
     throw new Error("双端模拟实时事件代理未就绪");
   }
   await events.body?.cancel();
-  const denied = await fetch(base + "/api/v1/projects", {
-    redirect: "error",
-    signal: AbortSignal.timeout(3000),
-  });
-  if (denied.status !== 404) throw new Error("HTTP 演示意外开放受保护工程路由");
-  await denied.body?.cancel();
+  for (const route of ["/api/v1/projects", "/api/v1/auth/me", "/api/health/database"]) {
+    const denied = await fetch(base + route, {
+      redirect: "error",
+      signal: AbortSignal.timeout(3000),
+    });
+    if (denied.status !== 404) {
+      await denied.body?.cancel();
+      throw new Error("HTTP 演示意外开放受保护接口或内部数据库探针");
+    }
+    await denied.body?.cancel();
+  }
+}
+
+/** 通过常驻 HTTP 进程自己的 Prisma8Service 复核真实数据库边界，不替换注入配置。 */
+async function verifyRunningDatabase() {
+  const port = process.env.SCADA_SERVER_PORT;
+  if (typeof port !== "string" || !/^[1-9][0-9]{0,4}$/u.test(port) || Number(port) > 65535) {
+    throw new Error("常驻服务端口配置无效");
+  }
+  const base = "http://127.0.0.1:" + port;
+  const get = (path) =>
+    fetch(base + path, {
+      redirect: "error",
+      signal: AbortSignal.timeout(12_000),
+    });
+  const response = await get("/health/database");
+  if (
+    response.status !== 200 ||
+    !(response.headers.get("content-type") ?? "").includes("application/json")
+  ) {
+    await response.body?.cancel();
+    throw new Error("常驻服务原生只读连接未就绪");
+  }
+  const state = await response.json();
+  if (
+    state?.status !== "ok" ||
+    state.mode !== "docker-readonly" ||
+    Object.keys(state).length !== 2 ||
+    response.headers.get("cache-control") !== "no-store"
+  ) {
+    throw new Error("常驻服务原生只读连接报告异常");
+  }
+  for (const route of ["/api/v1/auth/oidc/start", "/api/v1/auth/me", "/api/v1/projects"]) {
+    const denied = await get(route);
+    if (denied.status !== 404) {
+      await denied.body?.cancel();
+      throw new Error("常驻只读服务意外开放认证或工程接口");
+    }
+    await denied.body?.cancel();
+  }
 }
 
 /** 仅从父进程标准输入接收一次性探针参数，不读取服务进程凭据或开放 HTTP 写入。 */
@@ -89,12 +133,14 @@ try {
     storageHash,
     "docker-readonly",
   );
+  await verifyRunningDatabase();
   await verifyWeb("web-react");
   await verifyWeb("web-vue");
   process.stdout.write(
     JSON.stringify({
       status: "DOCKER_NATIVE_PROVIDER_READY",
       ...result,
+      runningDatabaseReadOnlyVerified: true,
       reactHttpVerified: true,
       vueHttpVerified: true,
     }) + "\n",

@@ -1544,3 +1544,15 @@
 - **源码核实**：当前锁定 openid-client 6.9.1 / oauth4webapi 3.8.9。上游固定标签 v6.9.1 的 src/index.ts 中 enableNonRepudiationChecks 明确注册 validateApplicationLevelSignature，授权码流程仅在启用时执行该签名检查；OIDC Core 允许直接 TLS Token 响应依赖传输层验证，但项目 ADR-0065 明确要求验签。原 Discovery 服务仅固定 RS256 算法，没有启用此扩展，不能将已通过的公钥探针或历史 Mock 当作签名已验证。此为静态契约缺口，不声称已观察到真实伪造 Token 登录。
 - **最小修复**：在既有正式配置完成元数据核验后调用 SDK enableNonRepudiationChecks，保留库的 State、Nonce、PKCE、Issuer、Audience、时间和算法验证，不另行手写 JWT 协议。新增真实 SDK 回归使用临时 RSA 密钥生成合法签名及错误私钥签名，分别断言成功和拒绝且都读取 JWKS；尚需 Windows 安装依赖执行。Docker 特定连接适配固定公开 Issuer、内部 keycloak:8443、可信 CA、TLS IP 身份及路径/方法/请求头门禁，无不安全回退。
 - **验证与防复发**：协作环境执行独立适配器六项离线测试及七项实际临时 TLS 测试 13/13，局部 TypeScript 5.8.3 使用固定 SDK 接口最小声明检查通过；未运行实际 SDK 测试、全仓 Vite+ 或真实 Keycloak 正式登录。以后升级 SDK 须同时核对固定版本协议行为和真实有效/无效签名回归，而非只检查签名算法元数据。
+
+> **2026-11-27 · E-163 Windows 复验关闭**：维护者 Windows 实测 PR #254：Docker 编排/只读探针/传输 41/41，Discovery 9/9（含真实 SDK 合法及错误 RSA 签名），Callback 12/12，共 62/62；Vite+ 505 格式文件/346 受检零警告错误、中文文案 372、Markdown 97、NestJS 构建及 git diff --check 通过，增量退出码 0。四镜像构建、七服务、容器原生只读、双端 HTTP/HTTPS、宿主与容器正式 OIDC Discovery/JWKS 通过，真实验收退出码 0。验收起点 d4494ef95e7b8c2aa0af799cfe0b9f68cfdbb20c，Hook 格式化提交 8f517321f2f4d2b10f85e960438f9b6db18f0821 经远端逐文件核对仅排版，无语义变更；维护者明确授权 Squash 合入 feat/mvp-first-integration 的 88024689f43419a01f9008b047643181498b853c。E-163 SDK 验签回归关闭，不代表真实 Keycloak 授权码、登录或写事务已验收。
+
+本次常驻数据库连接候选防复发：E-021 继续区分宿主根环境与 Docker 随机凭据；E-139/E-148 先严格复核新库目录、标记及集群，失败不生成绑定、不启动应用；E-157/E-158 复用正式唯一原生提供方和事务端口；E-107 不在 finally 改写控制流；E-017 固定错误提示不输出凭据。协作环境局部类型检查首次因 Node 类型声明路径未定位而失败，改用已安装声明目录后通过；不是项目源码诊断。V8 编排夹具没有真实 WHATWG URL，明确跳过原 URL 专项，不能记为完整 Docker Node 测试。尚无 Windows 新代码故障证据。
+
+### E-164 · PR #255 默认根模块 HTTP 回归缺少 Vitest 显式断言（E-012 复发）
+
+- **现象**：维护者 Windows 在 de8dc9e07e2fe265658984b7cf6c662830b89db9 执行完整增量验收，Docker 49/49、HTTP E2E 71/71 均通过，vp check 仍报告 apps/server/test/app.e2e-spec.ts:32 的 vitest(expect-expect)，510 个格式文件、351 个受检文件，1 警告 0 错误；退出码 0 不能代替零警告。真实七服务、常驻 Prisma 8 原生只读、双端 HTTP/HTTPS 和正式 OIDC Discovery/JWKS 均已通过。
+- **原因**：新增默认根模块隔离回归仅调用 Supertest .expect(404)，没有仓库 Vitest 规则识别的显式 expect，未落实 E-012 已记载的预防措施。
+- **最小修复**：保留 GET /health/database 与 Supertest .expect(404)，取得 response 后追加 expect(response.status).toBe(404)，不改变被测路由、期望状态、业务代码或 Lint 规则。
+- **验证边界**：修复测试提交 a2829cad1b38b611fcbe1439b1f4fc736744c467，远端 Blob 71eee900f3771ae3cea1d333c0f6a97973f0abbd；回读与预期唯一替换逐字一致，提取实际测试体并模拟 Supertest/Vitest 验证 404 通过、200 与 503 拒绝，3/3。协作环境没有完整项目依赖及 Vite+，真实 E2E 与全仓零警告待 Windows 复验；不宣称问题已关闭。
+- **防复发**：每个新增 HTTP 测试必须检查 Vitest 显式断言，并在真实 Vite+ 报告确认零警告，禁止以 Supertest 链式断言、退出码或禁用规则代替。

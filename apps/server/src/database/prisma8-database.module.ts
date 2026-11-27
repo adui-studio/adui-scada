@@ -1,5 +1,10 @@
 import { Module } from "@nestjs/common";
-import { PRISMA8_RUNTIME_CONFIG, Prisma8Service } from "./prisma8.service.js";
+import {
+  PRISMA8_RUNTIME_CONFIG,
+  Prisma8Service,
+  prisma8RuntimeStorageHash,
+} from "./prisma8.service.js";
+import { loadDockerReadOnlyConfig, resolveDockerReadOnlyMode } from "./docker-readonly-config.js";
 import type { Prisma8RuntimeConfig } from "./prisma8-runtime-boundary.js";
 
 /** 正式业务仓储统一导入此原生模块，禁止逐请求创建连接池。 */
@@ -8,6 +13,9 @@ import type { Prisma8RuntimeConfig } from "./prisma8-runtime-boundary.js";
     {
       provide: PRISMA8_RUNTIME_CONFIG,
       useFactory: (): Prisma8RuntimeConfig => {
+        if (resolveDockerReadOnlyMode(process.env)) {
+          return loadDockerReadOnlyConfig(prisma8RuntimeStorageHash);
+        }
         if (process.env.NODE_ENV === "production") {
           throw new Error("Prisma 8 正式部署连接边界尚未验收");
         }
