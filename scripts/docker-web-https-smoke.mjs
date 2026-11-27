@@ -13,6 +13,11 @@ const routes = [
   { path: "/api/v1/auth/oidc/callback", status: 404, type: "" },
 ];
 
+/** 上游与 Nginx 可能同时发送 no-store，只允许重复的相同禁止缓存指令。 */
+export function hasOnlyNoStore(value) {
+  return value.split(",").every((directive) => directive.trim().toLowerCase() === "no-store");
+}
+
 /** 仅使用已验证的本机端口及可信根证书，验证 HTTPS 响应头后关闭连接。 */
 export async function verifyDockerWebHttps(port, ca) {
   if (!/^[1-9][0-9]{0,4}$/u.test(port) || Number(port) > 65535 || !ca.length) {
@@ -36,7 +41,8 @@ export async function verifyDockerWebHttps(port, ca) {
           const valid =
             response.statusCode === route.status &&
             (!route.type || type.split(";")[0]?.trim() === route.type) &&
-            (route.path !== "/demo/events" || response.headers["cache-control"] === "no-store");
+            (route.path !== "/demo/events" ||
+              hasOnlyNoStore(response.headers["cache-control"] ?? ""));
           // 包括 SSE 在内，探测只观察响应头，不等待流结束或输出业务正文。
           response.destroy();
           if (valid) resolveProbe(undefined);
