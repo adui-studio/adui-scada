@@ -54,8 +54,8 @@ void test("本机业务库连接移除旧 schema 参数并强制预览只读", (
   const read = new URL(freshConnection(base, true));
   const write = new URL(freshConnection(base, false));
   assert.deepEqual([...read.searchParams.keys()], ["options"]);
-  assert.match(read.searchParams.get("options"), /default_transaction_read_only=on/u);
-  assert.doesNotMatch(write.searchParams.get("options"), /default_transaction_read_only/u);
+  assert.match(read.searchParams.get("options") ?? "", /default_transaction_read_only=on/u);
+  assert.doesNotMatch(write.searchParams.get("options") ?? "", /default_transaction_read_only/u);
   assert.equal(read.password, password);
   assert.equal(read.pathname, "/adui_scada");
 });
