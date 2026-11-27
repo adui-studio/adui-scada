@@ -12,6 +12,8 @@ export interface DisabledOidcConfig {
 
 export interface EnabledOidcConfig {
   readonly enabled: true;
+  /** 仅由受信容器装配或显式只读验收提供；当前不从环境变量自动启用。 */
+  readonly dockerKeycloakCa?: string;
   readonly issuer: URL;
   readonly clientId: string;
   readonly clientSecret: string;
