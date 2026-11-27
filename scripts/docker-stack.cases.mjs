@@ -286,6 +286,72 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
     assert.equal(args.includes("--build"), false);
   });
 
+  void it("Keycloak 探针只验证已启动的七服务，不触发应用启动、数据库或 Web 探针", () => {
+    const { run, calls, events, verifyDatabase, verifyHttps } = mockDocker();
+    const configured = env.replace("SCADA_LAB_KEYCLOAK_PORT=18443", "SCADA_LAB_KEYCLOAK_PORT=18444");
+    let probeCalls = 0;
+    const result = manageDockerStack(
+      "oidc",
+      configured,
+      run,
+      verifyDatabase,
+      verifyHttps,
+      (port, dockerRun, composeArgs) => {
+        probeCalls += 1;
+        assert.equal(port, "18444");
+        assert.equal(dockerRun, run);
+        assert.equal(composeArgs[2], "adui-scada");
+        assert.ok(composeArgs.includes("deploy/docker/compose.yaml"));
+        return "模拟 Keycloak 只读验证通过";
+      },
+    );
+    assert.equal(result, "模拟 Keycloak 只读验证通过");
+    assert.equal(probeCalls, 1);
+    assert.deepEqual(events, []);
+    assert.equal(calls.length, 4);
+    assert.ok(calls[0]?.includes("config"));
+    assert.equal(calls.slice(1).every((args) => args[0] === "ps"), true);
+  });
+
+  void it("Keycloak 独立探针在配置不安全、旧容器或验证失败时不清理现场", () => {
+    for (const options of [{ badConfig: true }, { legacy: true }]) {
+      const { run, calls, events, verifyDatabase, verifyHttps } = mockDocker(options);
+      assert.throws(
+        () => manageDockerStack("oidc", env, run, verifyDatabase, verifyHttps, () => {
+          throw new Error("不应调用 Keycloak 探针");
+        }),
+        /Docker 执行失败|禁止自动清理/,
+      );
+      assert.deepEqual(events, []);
+      assert.equal(calls.some((args) => args.includes("up") || args.includes("down") || args.includes("rm")), false);
+    }
+    const { run, calls, events, verifyDatabase, verifyHttps } = mockDocker();
+    assert.throws(
+      () => manageDockerStack("oidc", env, run, verifyDatabase, verifyHttps, () => {
+        throw new Error("模拟 Keycloak 验证失败");
+      }),
+      /模拟 Keycloak 验证失败/,
+    );
+    assert.deepEqual(events, []);
+    assert.equal(calls.some((args) => args.includes("up") || args.includes("down") || args.includes("rm")), false);
+  });
+
+  void it("Keycloak 只读探针进入运行镜像但不启用正式认证、秘密环境或数据库连接", () => {
+    const dockerfile = readFileSync(
+      fileURLToPath(new URL("../deploy/docker/Dockerfile.server", import.meta.url)),
+      "utf8",
+    );
+    assert.ok(dockerfile.includes("container-oidc-discovery.mjs /workspace/apps/server/container-oidc-discovery.mjs"));
+    assert.ok(dockerfile.includes('CMD ["node", "apps/server/dist/main.js"]'));
+    const compose = readFileSync(
+      fileURLToPath(new URL("../deploy/docker/compose.yaml", import.meta.url)),
+      "utf8",
+    );
+    const server = compose.slice(compose.indexOf("\n  server:"), compose.indexOf("\n  demo:"));
+    assert.match(server, /SCADA_OIDC_ENABLED: "false"/);
+    assert.doesNotMatch(server, /NODE_TLS_REJECT_UNAUTHORIZED|SCADA_OIDC_CLIENT_SECRET|SCADA_DATABASE_URL/);
+  });
+
   void it("日常停止、状态及日志只管理 adui-scada", () => {
     for (const mode of ["down", "ps", "logs"]) {
       const { run, calls } = mockDocker();
