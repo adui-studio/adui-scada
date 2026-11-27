@@ -67,6 +67,7 @@ export function reviewFreshContract(contract, commentText) {
       tables && Object.keys(tables).length === 12,
     "全新原生契约存储标识或表清单不一致",
   );
+  /** @type {Set<string>} 原生新增对象标识集合 */
   const ids = new Set();
   const keys = new Set();
   let columns = 0;
@@ -119,7 +120,7 @@ export function reviewFreshContract(contract, commentText) {
     comments.push({ key, kind, relation, column: column ?? null, comment });
   }
   requireMatch(keys.size === 0 && comments.length === 119, "初始中文注释覆盖范围不完整");
-  return { ids: [...ids].sort(), comments, tables: 12, columns, checks, indexes, foreignKeys };
+  return { ids: [...ids].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)), comments, tables: 12, columns, checks, indexes, foreignKeys };
 }
 
 function resultOf(document, command) {
@@ -148,8 +149,8 @@ export function reviewFreshUpdate(document, ids, mode, previousIds = []) {
       [result.appliedStatements, result.temporaryValues].every((items) => Array.isArray(items) && items.length === 0),
     "官方全新初始化计划包含未知目标或非新增操作",
   );
-  const actual = plan.operations.map((operation) => operation.id).sort();
-  const expected = actual.includes("schema.public") ? [...ids, "schema.public"].sort() : ids;
+  const actual = plan.operations.map((operation) => operation.id).sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+  const expected = actual.includes("schema.public") ? [...ids, "schema.public"].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)) : ids;
   requireMatch(isDeepStrictEqual(actual, expected), "官方新增对象清单与原生契约不一致");
   if (mode === "plan") {
     requireMatch(
@@ -191,6 +192,7 @@ export function requireFreshIdentity(row, expected) {
 
 /** 只输出官方诊断码，不转发可能含凭据的原始机器输出。 */
 export function freshDiagnosticCodes(...outputs) {
+  /** @type {Set<string>} 已脱敏的官方诊断码集合 */
   const codes = new Set();
   for (const output of outputs) {
     if (typeof output !== "string") continue;
@@ -213,5 +215,5 @@ export function freshDiagnosticCodes(...outputs) {
       }
     }
   }
-  return [...codes].sort();
+  return [...codes].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
 }
