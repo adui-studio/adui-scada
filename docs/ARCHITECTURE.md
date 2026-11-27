@@ -1,5 +1,7 @@
 # ADui SCADA · 系统架构（目标设计）
 
+> 2026-11-27 最新决策：维护者已删除旧开发数据库环境，停止历史迁移接管及专用实例实验。后续以 [ADR-0073](adr/0073-prisma8-fresh-install.md) 为准；下文旧实验记录仅供追溯，不是当前验收前置条件。
+
 > **大部分为目标设计。** V0.1 已有共享 Core/Runtime、Vue/React 最小 Web、NestJS 本地进程探针和 Tauri 2 桌面壳；工业 Gateway 尚未创建。实际目录见 [CODEBASE_MAP](CODEBASE_MAP.md)，实现边界见 [V0.1 实施记录](V0.1_IMPLEMENTATION.md)，范围见 [REQUIREMENTS](REQUIREMENTS.md)。
 
 ## 1. 架构原则
@@ -525,3 +527,7 @@ PR #202 已在真实隔离库完成 Prisma 7 写入后的 Prisma 7/8/原生 SQL 
 ### Prisma 8 迁移接管前只读预检（隔离候选）
 
 现有 Prisma 7 迁移仍是唯一数据库变更来源。新增 [ADR-0072](adr/0072-prisma8-migration-adoption-review.md)（Proposed），明确原生 SQL 的三十六个 CHECK 与发布状态到最后事件的六字段外键不能由当前生成 Contract 完整表达；签名和迁移基线的生成、原生约束保留以及新库重放需要另行专项。新增独立只读预检按隔离连接、历史迁移校验和、标记、物理表列、命名约束、主外键、实际 ACL 白名单、非主键索引和中文注释核验目录，输出定义指纹及 REVIEW_REQUIRED，不改变任何数据库或运行时配置。
+
+## 2026-11-27 · 数据库全新安装路线
+
+[ADR-0073](adr/0073-prisma8-fresh-install.md) 取代旧迁移接管路线。实际本机基础设施为 PostgreSQL 19.0、Redis 8.12.0 与 Keycloak 26.8.2；Prisma 8 CLI 与 Provider 固定 RC，原生 PSL 与完整中文注释直接建立新库。Keycloak 与业务库为同一 PostgreSQL 实例中的独立逻辑库。过渡期一键启动不启动正式应用、不执行旧迁移；先完成原生首次安装及验证，再将正式 NestJS 数据访问 Provider 与运行链切换。新开发库初始化不代表正式部署迁移策略完成。
