@@ -3096,3 +3096,9 @@ PR #244 Windows 修复后 Core 构建、双契约离线生成、Vite+ 607 格式
 五条业务 SQL 模板逐字比较一致，保留租户/主体/工程联合条件、工程 ID 升序及稳定游标、历史修订号 BigInt 倒序分页、最多 100 条、轻量摘要与原 SHA-256/元数据完整性、发布预检 head 一致性。详情、历史列表、指定快照及发布预检必须先取得同一工程共享锁，再查询完整权限集合并使用既有纯策略复核，拒绝未知权限；不得把前置 Guard 当成锁内授权。原生列表允许严格只读，四项锁内查询要求非只读事务配置（PostgreSQL 不允许 READ ONLY 执行 FOR SHARE），在取得事务前调用现有 assertWritable 拒绝，不通过无锁替代、自动改变连接模式或 DML 绕过；正常非只读模式仅执行 SELECT/ORM 查询，统一由 readTransaction 在同一 ReadCommitted 事务前后核验真实身份与标记，超时十秒。
 
 协作容器 Node.js 22.16.0 使用与远端 Git Blob 18e7d905a9d1b3c70b5e0301bc728c01d43cb4a1 一致的 Prisma8TextTransaction 源码，执行 node --experimental-strip-types --test 的六项独立模拟测试，6/6 通过，覆盖两代参数化 BigInt 转发、影响行数、缺失/继承/非文本列及调用方错误消息。源码迁移的五条业务 SQL 模板已静态逐字比较一致。容器 DNS 无法访问 GitHub、未安装固定 Prisma SDK、NestJS、pnpm/vp 或维护者 PostgreSQL；新增十项仓库 Vitest、一个模块装配断言、历史/身份回归、完整 Windows 质量链与真实只读烟测均待执行，不声称真实锁并发、正向授权工程读取或写事务通过。真实烟测扩展为随机不存在主体的空工程列表与四项锁查询提前拒绝，新增 projectListReadVerified、projectLockedReadDenied；原全部字段保留，providerSwitched=false。未执行数据库写入、历史迁移、重复初始化或正式 HTTP 启动。后续工程创建/追加版本的 CAS、审计与发布初始状态事务单独迁移并验收。
+
+### 2026-11-27 · PR #246 合并与全新原生工程版本持久化
+
+维护者 Windows 完成 PR #246 专项与 HTTP E2E 175/175、617 格式文件/455 受检文件零警告错误、482 中文文案、97 Markdown、NestJS 构建及增量退出 0。格式提交 2a9e4c2b47611dde4764a7097a7c6af16a06a83d 推送且五文件差异为排版。真实 FRESH_PROVIDER_SMOKE_READY，projectListReadVerified、projectLockedReadDenied、missingProjectDenied=true，providerSwitched=false，存储指纹与结构数量一致，退出 0、工作区干净。按维护者授权 Squash 合入 c4ebce33dc210e5e4b38492f37f726aede28ed22。
+
+维护者再次明确从零建设，不继续旧数据工作。本批直接新增原生工程创建及版本追加 CAS，统一工程持久化模块；不新增旧 Contract 适配、旧库对照或迁移。下一步实现原生发布/回滚及剩余正式依赖，集中切换根模块和清理废弃入口。真实写入、并发及原生正式 HTTP 运行仍待验收。
