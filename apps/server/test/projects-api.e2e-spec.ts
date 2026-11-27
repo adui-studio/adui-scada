@@ -43,6 +43,8 @@ import type {
 import { ProjectReleaseGateUnavailableError } from "../src/projects/project-release-safety-gate.js";
 import { ProjectApiExceptionFilter } from "../src/projects/project-api.exception-filter.js";
 import { PrismaService } from "../src/database/prisma.service.js";
+import { AuthorizationReadStore } from "../src/auth/authorization-read-store.js";
+import { Prisma7AuthorizationReadStore } from "../src/auth/prisma7-authorization-read-store.js";
 import { ScadaSecurityAuditService } from "../src/security/scada-security-audit.js";
 import type { SecurityAuditDecision } from "../src/security/scada-security-audit.js";
 
@@ -225,6 +227,7 @@ describe("工程 API HTTP 接口（端到端）", () => {
         { provide: PrismaProjectReleaseStore, useValue: releases },
         { provide: AuthSessionService, useValue: sessions },
         { provide: PrismaService, useValue: database },
+        { provide: AuthorizationReadStore, useClass: Prisma7AuthorizationReadStore },
         { provide: ScadaSecurityAuditService, useValue: audit },
         { provide: SCADA_OIDC_STARTUP_CONFIG, useValue: createConfig() },
         ScadaSessionGuard,

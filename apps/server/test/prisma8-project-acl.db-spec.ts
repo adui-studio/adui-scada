@@ -10,6 +10,7 @@ import postgres, { type PostgresClient } from "@prisma/orm-postgres/runtime";
 import { contractFromJson } from "@prisma/orm-postgres/static";
 import { Pool } from "pg";
 import { describe, expect, it } from "vite-plus/test";
+import { Prisma7AuthorizationReadStore } from "../src/auth/prisma7-authorization-read-store.js";
 import { Prisma8AuthSessionService } from "../src/auth/prisma8-auth-session.service.js";
 import { Prisma8ScadaProjectGuard } from "../src/auth/prisma8-scada-project.guard.js";
 import { SCADA_PROJECT_PERMISSION, ScadaProjectGuard } from "../src/auth/scada-project.guard.js";
@@ -172,7 +173,7 @@ async function verifyAcl(): Promise<"MATCHED"> {
       },
     };
     const guards = [
-      new ScadaProjectGuard(database, new Reflector(), audit),
+      new ScadaProjectGuard(new Prisma7AuthorizationReadStore(database), new Reflector(), audit),
       new Prisma8ScadaProjectGuard(next, new Reflector(), audit),
     ];
 

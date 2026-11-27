@@ -1602,3 +1602,9 @@ React/Vue 运行页可显式导入当前或可迁移 Schema 的最大 2 MiB JSON
 - 对照生成 Contract 的十二表、八十五字段和二十非主键索引；核对类型、长度/精度、可空性、默认值存在性、索引列序及唯一性/有效性、中文注释。对照历史 SQL 的十二主键、十三外键及三十六 CHECK 名称、所属表、验证状态，校验主外键字段、顺序、引用及动作，并核对实际 ACL 六项白名单表达式。
 - 历史六字段末次事件外键与生成 Contract 单字段关联存在已确认差异，全部 CHECK 在当前生成 Contract 中缺少对应表达。指纹包含数据库原生定义与注释；普通 CHECK 完整语义、默认表达式及索引细节仍待独立参考库对照。返回 REVIEW_REQUIRED、signingAllowed=false，不等同于官方 db verify 或接管审批。
 - 不改 Schema、生成 Contract、迁移 SQL、Prisma 8 CLI 白名单、正式 Provider、工业只读或发布安全门禁。
+
+### 原生身份映射与工程 ACL 只读接入候选
+
+关联 FR-014、NFR-006 与 ADR-0073。将正式 OIDC 回调的已验签外部身份预绑定查询与工程 Guard 的前置 ACL 查询从具体 Prisma 客户端抽离为 AuthorizationReadStore，保留旧模块显式 Prisma 7 过渡绑定及已有联合键、权限投影、会话签发、HTTP 与锁内授权语义。新增 Prisma8AuthorizationModule，仅导入已验收 Prisma8DatabaseModule，使用新原生生成 Contract 实现相同端口，不复制连接池，不使用旧隔离候选或将隔离库写入门禁改为业务库。身份只查询既有活跃映射，不自动注册；完整权限集合仍由 hasProjectPermission 按可信租户、主体、工程及操作判定，非法标识查询前拒绝，固定主体副本，数据库异常固定 503，不记录授权成功。原生仓储使用 Prisma8Service.readTransaction 及新 readPrisma8Transaction，在同一 ReadCommitted 事务前后核验实际数据库、角色、Schema、PG19、集群标识、原生 marker core_hash、配置与实际只读状态及非恢复模式；只有查询及边界复核均成功才返回结果。读仓储只包含 SELECT/ORM 查询；真实烟测强制 PostgreSQL 默认及事务只读，正常可写配置只核验模式一致，不宣称所有未来业务事务都强制只读。扩展原有真实 Provider 烟测：实际 Nest 装配原生端口及正式 ScadaProjectGuard，以随机不存在的身份及租户/工程联合键核验空映射、空授权、固定 404 与 permission_denied 审计，不打印凭据或业务行，不写业务数据、不挂载 HTTP 根模块。当前正式 HTTP 根模块仍明确使用旧过渡绑定，providerSwitched=false；会话及 OIDC 事务、工程版本和发布写事务统一切换后再启动原生正式应用，禁止混合两代数据库运行。
+
+当前未完成正式根模块的身份与工程写事务接管、真实 IdP 及生产部署验收，不新增 PLC/DCS 写入权限。

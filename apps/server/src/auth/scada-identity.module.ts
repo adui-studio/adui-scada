@@ -5,6 +5,8 @@ import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import { DatabaseModule } from "../database/database.module.js";
 import { ScadaSecurityAuditService } from "../security/scada-security-audit.js";
 import { AuthSessionService } from "./auth-session.service.js";
+import { AuthorizationReadStore } from "./authorization-read-store.js";
+import { Prisma7AuthorizationReadStore } from "./prisma7-authorization-read-store.js";
 import { OidcLoginTransactionService } from "./oidc-login-transaction.service.js";
 import {
   OidcCallbackService,
@@ -36,6 +38,7 @@ import {
         return config;
       },
     },
+    { provide: AuthorizationReadStore, useClass: Prisma7AuthorizationReadStore },
     AuthSessionService,
     OidcProviderDiscoveryService,
     OidcLoginTransactionService,
@@ -52,6 +55,7 @@ import {
     // 工程控制器声明 @UseGuards 后，Nest 会在 ProjectApiModule 上下文解析 Guard 的依赖。
     // 除 Guard 类本身，还必须显式导出共享数据库、审计服务与可信 OIDC 配置。
     DatabaseModule,
+    AuthorizationReadStore,
     SCADA_OIDC_STARTUP_CONFIG,
     ScadaSecurityAuditService,
     AuthSessionService,

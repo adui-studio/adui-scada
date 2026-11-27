@@ -5,6 +5,7 @@ import { ForbiddenException, NotFoundException, UnauthorizedException } from "@n
 import type { ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { PrismaService } from "../database/prisma.service.js";
+import { Prisma7AuthorizationReadStore } from "./prisma7-authorization-read-store.js";
 import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import type {
@@ -267,7 +268,7 @@ describe("可信会话与工程 Guard", () => {
   it("工程 Guard 缺少权限元数据时默认拒绝", async () => {
     const db = { client: { scadaProjectGrant: { findMany: async () => [] } } };
     const guard = new ScadaProjectGuard(
-      db as unknown as PrismaService,
+      new Prisma7AuthorizationReadStore(db as unknown as PrismaService),
       new Reflector(),
       makeAuditRecorder().audit,
     );
@@ -291,7 +292,7 @@ describe("可信会话与工程 Guard", () => {
       },
     };
     const guard = new ScadaProjectGuard(
-      db as unknown as PrismaService,
+      new Prisma7AuthorizationReadStore(db as unknown as PrismaService),
       new Reflector(),
       makeAuditRecorder().audit,
     );
@@ -331,7 +332,7 @@ describe("可信会话与工程 Guard", () => {
       },
     };
     const guard = new ScadaProjectGuard(
-      db as unknown as PrismaService,
+      new Prisma7AuthorizationReadStore(db as unknown as PrismaService),
       new Reflector(),
       makeAuditRecorder().audit,
     );
@@ -352,6 +353,31 @@ describe("可信会话与工程 Guard", () => {
       },
       select: { permission: true },
     });
+  });
+
+  it("工程 Guard 查询故障返回固定服务不可用提示且不记录授权成功", async () => {
+    const { audit, records } = makeAuditRecorder();
+    const db = {
+      client: {
+        scadaProjectGrant: {
+          findMany: () => Promise.reject(new Error("不得泄漏的数据库异常")),
+        },
+      },
+    };
+    const guard = new ScadaProjectGuard(
+      new Prisma7AuthorizationReadStore(db as unknown as PrismaService),
+      new Reflector(),
+      audit,
+    );
+    await expect(
+      guard.canActivate(
+        context(
+          { headers: {}, params: { projectId: "project-a" }, scadaPrincipal: principal },
+          "version:read",
+        ),
+      ),
+    ).rejects.toThrow("工程权限查询暂不可用，请稍后重试");
+    expect(records).toEqual([]);
   });
 
   it("会话 Guard 只发送固定审计原因码，不记录伪造凭据和有效令牌", async () => {
@@ -398,7 +424,11 @@ describe("可信会话与工程 Guard", () => {
         },
       },
     };
-    const guard = new ScadaProjectGuard(db as unknown as PrismaService, new Reflector(), audit);
+    const guard = new ScadaProjectGuard(
+      new Prisma7AuthorizationReadStore(db as unknown as PrismaService),
+      new Reflector(),
+      audit,
+    );
     const request: ScadaAuthenticatedRequest = {
       headers: { authorization: "Bearer 不应写入日志" },
       params: { projectId: "project-private" },

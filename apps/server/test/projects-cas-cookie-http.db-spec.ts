@@ -20,6 +20,8 @@ import { ScadaSessionGuard } from "../src/auth/scada-session.guard.js";
 import { SCADA_OIDC_STARTUP_CONFIG } from "../src/auth/oidc-provider-discovery.service.js";
 import { resolveOidcStartupConfig } from "../src/config/oidc-startup.config.js";
 import { PrismaService } from "../src/database/prisma.service.js";
+import { AuthorizationReadStore } from "../src/auth/authorization-read-store.js";
+import { Prisma7AuthorizationReadStore } from "../src/auth/prisma7-authorization-read-store.js";
 import { ProjectApiController } from "../src/projects/project-api.controller.js";
 import { ProjectApiExceptionFilter } from "../src/projects/project-api.exception-filter.js";
 import { PrismaProjectVersionStore } from "../src/projects/prisma-project-version-store.js";
@@ -155,6 +157,7 @@ beforeAll(async () => {
     controllers: [ProjectApiController, ScadaAuthController],
     providers: [
       { provide: PrismaService, useValue: database },
+      { provide: AuthorizationReadStore, useClass: Prisma7AuthorizationReadStore },
       { provide: SCADA_OIDC_STARTUP_CONFIG, useValue: config },
       // 本专项不发起 IdP 授权码流程，只复用真实 Cookie 认证和注销入口。
       { provide: OidcLoginTransactionService, useValue: {} },

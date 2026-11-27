@@ -15,6 +15,8 @@ import {
   type Prisma8RuntimePort,
 } from "./prisma8-runtime-boundary.js";
 
+import { readPrisma8Transaction, type Prisma8Transaction } from "./prisma8-read-transaction.js";
+
 export const PRISMA8_RUNTIME_CONFIG = Symbol("PRISMA8_RUNTIME_CONFIG");
 export const prisma8RuntimeStorageHash = contractJson.storage.storageHash;
 const contract = contractFromJson<Contract>(contractJson);
@@ -94,6 +96,11 @@ export class Prisma8Service implements OnModuleInit, OnModuleDestroy {
 
   get client(): Prisma8Client {
     return this.lifecycle.client;
+  }
+
+  /** 业务只读仓储使用同一原生事务边界，禁止绕过启动生命周期。 */
+  readTransaction<T>(operation: (tx: Prisma8Transaction) => Promise<T>): Promise<T> {
+    return readPrisma8Transaction(this.client, this.config, prisma8RuntimeStorageHash, operation);
   }
 
   async onModuleInit(): Promise<void> {
