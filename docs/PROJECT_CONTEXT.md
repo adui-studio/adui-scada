@@ -3046,3 +3046,9 @@ PR #237 已经维护者明确授权 Squash 合入 `fc459570f39708cc3746bc140d8d9
 ## 2026-11-27 · Prisma 8 全新安装路线
 
 维护者已完成旧项目八容器、六命名卷、三网络清理，重新启动基础设施 PostgreSQL 19.0、Redis 8.12.0、Keycloak 26.8.2。新业务库 public 表数量为零，Keycloak 独立逻辑库存在。PR #240 已合并的历史实验停止推进。新增 Git 原生契约、中文注释、独立首次初始化及只读预览入口，默认 Docker 启动仅启动基础设施。正式 NestJS Provider 仍为 Prisma 7，禁止旧迁移和旧应用启动路径接管新库；真实原生发射、只读规划、首次初始化及正式运行时切换待验证。第三方服务镜像 latest，Node 镜像、pnpm 与 Prisma 固定版本不变。
+
+### 2026-11-27 · PR #241 已合并，原生业务库初始化完成
+
+维护者在 Windows 已验收 PR #241 四组专项 54/54、Vite+ 592 格式/430 受检零警告错误、中文 457、Markdown 97、增量退出码 0；格式化提交 09385336fa9a7880965c89597b85dea7b1742a99 正常 Hook 通过并推送，实际原生发射及 PostgreSQL 19 空库只读预览退出 0（23 类、45 项新增）。明确授权后 Squash 合入 4a06766da5d9ec99bed96104dc26c17d21112d43。合并后再次空库预览成功；维护者另行授权并在检查分支、提交和干净工作区后真实首次初始化，返回 FRESH_DATABASE_INITIALIZED；独立 docker:db:status 返回 FRESH_DATABASE_VERIFIED，退出码 0、工作区干净。两次报告均为 serverVersion=190000、databaseInitialized=true、存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表、85 字段、36 CHECK、20 非主键索引、13 外键、119 注释。此后禁止重复首次初始化或运行旧迁移。
+
+当前工作为全新原生契约运行时切换前评审，尚未替换正式 Provider，待维护者实际原生类型与 PostgreSQL 只读运行时验收。

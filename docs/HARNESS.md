@@ -5384,3 +5384,31 @@ pnpm run db:prisma8:fresh:preview
 ```
 
 预期官方发射及预览状态分别为 FRESH_CONTRACT_EMITTED、FRESH_DATABASE_PREVIEW_READY，业务对象十二表、八十五字段、三十六 CHECK、一百一十九注释，二十三类空库核验通过，新增操作四十五项或包含 public 命名空间的四十六项，databaseInitialized=false。具体官方 RC 输出须实际确认，不放宽门禁。新入口 `pnpm run docker:up` 过渡期仅启动基础设施；`pnpm run docker:db:init --confirm-initialize-empty-adui-scada` 是真实写入命令，不属于只读验收或 ready，须在预览通过、PR 合并且另行取得维护者明确授权后才执行。初始化后 `pnpm run docker:db:status` 严格核验结构、标记与中文注释。旧实验及历史迁移命令不再用于新库。
+
+### 初始化完成后的原生运行时评审
+
+PR #241 已实际完成全新数据库初始化和独立严格验证。不得重复 docker:db:init 或执行旧迁移。现阶段保持基础设施运行，先执行以下增量（db:generate 只生成旧客户端，不执行迁移，供过渡期现有服务端类型检查使用）：
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+pnpm run test:prisma8:native:runtime &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+git diff --check
+Write-Host "运行时评审增量退出码：$LASTEXITCODE"
+```
+
+预期专项 17/17、7/7，Vite+ 零警告错误。提交推送格式化改动并确认工作区干净后，在已初始化的新本机业务库执行：
+
+```powershell
+pnpm run db:prisma8:fresh:runtime:review
+Write-Host "原生运行时只读评审退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期 FRESH_RUNTIME_REVIEW_READY、serverVersion=190000、databaseInitialized=true、nativeRuntimeTypesVerified=true、missingScopeVerified=true、readOnlyBoundaryVerified=true、providerSwitched=false；存储标识和对象计数与已验收首次初始化一致，退出 0。此步骤仅读系统目录和随机不存在工程的联合键，不写数据库，若类型、实际契约、身份或运行时不符，保留现场并按阶段诊断；不启动正式业务应用、不自动调整数据库。
