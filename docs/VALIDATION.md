@@ -5401,3 +5401,9 @@ E-164 为 E-012 同类问题。仅修正 app.e2e-spec.ts 默认根模块数据�
 同一候选的四个 Docker 应用镜像构建、七服务启动、容器独立原生只读及常驻连接、React/Vue HTTP 和宿主 HTTPS、宿主与容器正式 OIDC Discovery/JWKS 严格只读验证均通过，常驻只读回归退出 0。OIDC 登录尚未启用。没有真实临时表 DDL/DML、SDK 实际提交/回滚/清理、正式业务写入或浏览器登录证据。 维护者格式化提交 47b84f8e2ece8cffebe931013b1cca865dc3cc41 与此前候选 83ba2f3ba6585691f0f08696e230f2d1de637c73 的五文件差异已逐项核对，仅为排版，E-165 关闭。
 
 下一项仅为本机已运行的固定 server 容器独立临时事务验收。已有入口为 `pnpm run docker:db:transaction:probe --confirm-temp-transaction-probe`，须由维护者明确确认后在本机执行，严格复核当前数据库、集群、契约和常驻绑定后，仅操作 `pg_temp.adui_scada_native_tx_probe`。宿主成功必须同时校验内部状态 DOCKER_NATIVE_TRANSACTION_READY、提交、回滚、同一后端、临时表移除及 Provider 关闭均为 true，businessDataWritten 为 false。失败返回非零并保留现场，不自动重试、初始化、迁移、清理容器或卷。成功后再核对常驻只读回归、OIDC 未启用及服务状态。当前仅记录维护者提供的实测日志，协作环境未执行新的 Docker 或数据库操作；PR #256 保持 Draft，真实事务和合并仍待验收。
+
+### 2026-11-28 · PR #256 容器原生临时事务真实验收
+
+维护者于 2026-11-28 提供 Windows 本机真实执行记录：`pnpm run docker:db:transaction:probe --confirm-temp-transaction-probe` 成功，宿主按现有七字段严格机器报告核验实际提交、跨事务回读、主动回滚恢复原值、同一 PostgreSQL 后端会话、临时表移除和 Provider 关闭，且 businessDataWritten=false。随后 `docker:oidc:probe`、`docker:ps` 与 `git diff --check` 全部成功，七服务均运行，OIDC 登录尚未启用，最终退出码 0，`git status --short` 无输出。日志未独立打印本次 HEAD；上轮已验收生产源码 HEAD 为 47b84f8e2ece8cffebe931013b1cca865dc3cc41，当前远端 02f3e2c438a0de1cdda17da33fd0778f817cf34b 相对此仅三份验收文档追加，无生产代码或配置变更。此次真实事务仅涉及会话临时表，不证明正式业务表写入、角色最小权限、正式 OIDC 登录或发布安全门禁已验收。
+
+结合前一轮 60/60 Docker 专项、71/71 HTTP E2E、Vite+ 零警告及真实镜像构建和常驻只读回归，独立原生临时事务专项已通过。维护者明确同意继续合并；新增记录仅为文档，未在协作环境重新执行全仓文档检查。真实正式业务连接及登录、工程读写仍须单独评审和验收。
