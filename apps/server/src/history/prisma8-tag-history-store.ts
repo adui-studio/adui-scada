@@ -3,8 +3,8 @@ import type {
   TagHistoryPersistenceReceipt,
   TagHistoryPersistenceRequest,
 } from "@adui/scada-core";
-import type { PostgresClient, PostgresTransactionContext } from "@prisma/orm-postgres/runtime";
-import type { Contract } from "../generated/prisma8/contract.d.js";
+import type { Prisma8Transaction } from "../database/prisma8-read-transaction.js";
+import type { Prisma8Service } from "../database/prisma8.service.js";
 import { encodeHistoryPoint, normalizeHistoryPoints } from "./tag-history-record-codec.js";
 
 const ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
@@ -112,35 +112,11 @@ export function assertPrisma8HistoryBatch(
   }
 }
 
-/** 内部事务步骤只返回暂定状态，不构成提交回执；不允许正式数据库写入。 */
-export async function writePrisma8HistoryBatchInTransaction(
-  tx: PostgresTransactionContext<Contract>,
+/** 内部事务仅由已校验的原生提供方执行，提交前不交付回执。 */
+async function writePrisma8HistoryBatchInTransaction(
+  tx: Prisma8Transaction,
   prepared: PreparedBatch,
 ): Promise<TagHistoryPersistenceReceipt["status"]> {
-  const boundary = await tx
-    .query(
-      tx.raw.sql`SELECT current_database()::text AS database_name,
-                        current_schema()::text AS schema_name,
-                        current_setting('transaction_read_only') AS read_only,
-                        current_setting('transaction_isolation') AS isolation`
-        .returnsRow({
-          database_name: "pg/text@1",
-          schema_name: "pg/text@1",
-          read_only: "pg/text@1",
-          isolation: "pg/text@1",
-        })
-        .build(),
-    )
-    .toArray();
-  if (
-    boundary.length !== 1 ||
-    boundary[0]?.database_name !== "adui_scada_test" ||
-    boundary[0].schema_name !== "public" ||
-    boundary[0].read_only !== "off" ||
-    boundary[0].isolation !== "read committed"
-  ) {
-    throw new Error("Prisma 8 历史写入候选仅允许隔离库读已提交事务");
-  }
   const { key, records } = prepared;
   // 显式冲突目标由复合主键裁决；禁止以更新方式抢占已提交批次。
   const claim = await tx.execute(
@@ -196,12 +172,12 @@ export async function writePrisma8HistoryBatchInTransaction(
   return claim.affectedRows === 1 ? "COMMITTED" : "ALREADY_COMMITTED";
 }
 
-/** 隔离验收专用候选，不挂载 NestJS，不替换 Prisma 7，不开放设备写入。 */
+/** 原生历史归档适配器，由可信采集作用域构造，不开放 HTTP 或设备写入。 */
 export class Prisma8TagHistoryStore implements TagHistoryPersistencePort {
   private readonly scope: Prisma8HistoryWriterScope;
 
   constructor(
-    private readonly client: PostgresClient<Contract>,
+    private readonly database: Prisma8Service,
     scope: Prisma8HistoryWriterScope,
   ) {
     this.scope = checkedScope(scope);
@@ -209,9 +185,8 @@ export class Prisma8TagHistoryStore implements TagHistoryPersistencePort {
 
   async persist(request: TagHistoryPersistenceRequest): Promise<TagHistoryPersistenceReceipt> {
     const prepared = preparePrisma8HistoryBatch(this.scope, request);
-    const status = await this.client.transaction(
+    const status = await this.database.writeTransaction(
       (tx) => writePrisma8HistoryBatchInTransaction(tx, prepared),
-      { isolationLevel: "ReadCommitted", timeout: 10000 },
     );
     // 事务成功返回前绝不交付回执；失败及未知结果不自动重试。
     return {

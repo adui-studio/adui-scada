@@ -1,7 +1,5 @@
-import { Injectable } from "@nestjs/common";
 import { validateProjectReleasePreflight } from "@adui/scada-core";
 import type { ProjectSnapshot } from "@adui/scada-core";
-import type { Prisma } from "../generated/prisma/client.js";
 
 /** 发布安全门禁执行上下文；所有身份字段均来自服务端可信会话。 */
 export interface ProjectReleaseSafetyContext {
@@ -102,25 +100,16 @@ export class ProjectReleaseGateUnavailableError extends Error {
   }
 }
 
-/**
- * 正式发布安全门禁默认拒绝。
- * 本阶段已接入只读安全能力清单，但完整 Runtime/Tag/工业评审未交付，
- * 因此任何请求仍必须抛错。不得通过环境变量或请求参数绕过。
- */
-@Injectable()
-export class ProjectReleaseSafetyGate {
-  async assertReady(
-    _transaction: Prisma.TransactionClient,
-    snapshot: ProjectSnapshot,
-    context: ProjectReleaseSafetyContext,
-  ): Promise<void> {
-    let blocks: readonly ProjectReleaseSafetyBlock[];
-    try {
-      blocks = assessProjectReleaseSafety(snapshot, context);
-    } catch {
-      // 评估器遇到异常数据时不得透传原始错误、工程内容或设备信息。
-      blocks = [{ code: "SAFETY_ASSESSMENT_UNAVAILABLE", path: "assessment" }];
-    }
-    throw new ProjectReleaseGateUnavailableError(blocks);
+/** 固定拒绝的正式安全门禁；不接受事务或可注入的放行参数。 */
+export function requireProjectReleaseSafety(
+  snapshot: ProjectSnapshot,
+  context: ProjectReleaseSafetyContext,
+): never {
+  let blocks: readonly ProjectReleaseSafetyBlock[];
+  try {
+    blocks = assessProjectReleaseSafety(snapshot, context);
+  } catch {
+    blocks = [{ code: "SAFETY_ASSESSMENT_UNAVAILABLE", path: "assessment" }];
   }
+  throw new ProjectReleaseGateUnavailableError(blocks);
 }

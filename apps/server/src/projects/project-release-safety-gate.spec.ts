@@ -1,11 +1,10 @@
-import { describe, expect, it, vi } from "vite-plus/test";
+import { describe, expect, it } from "vite-plus/test";
 import { createProjectSnapshot, waterTreatmentDemoDocument } from "@adui/scada-core";
 import type { ProjectSnapshot, ScadaDocument } from "@adui/scada-core";
-import type { Prisma } from "../generated/prisma/client.js";
 import {
   assessProjectReleaseSafety,
   ProjectReleaseGateUnavailableError,
-  ProjectReleaseSafetyGate,
+  requireProjectReleaseSafety,
 } from "./project-release-safety-gate.js";
 
 const CONTEXT = {
@@ -19,6 +18,14 @@ async function snapshotOf(edit?: (document: ScadaDocument) => void) {
   const document = JSON.parse(JSON.stringify(waterTreatmentDemoDocument)) as ScadaDocument;
   edit?.(document);
   return createProjectSnapshot(document, { revision: 1, createdAt: CREATED_AT });
+}
+
+function captureSafetyFailure(snapshot: ProjectSnapshot): unknown {
+  try {
+    requireProjectReleaseSafety(snapshot, CONTEXT);
+  } catch (error) {
+    return error;
+  }
 }
 
 describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力", () => {
@@ -229,16 +236,13 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
       ...snapshot,
       document: { ...snapshot.document, tags: null },
     } as unknown as ProjectSnapshot;
-    const query = vi.fn<() => Promise<unknown[]>>();
-    const transaction = { $queryRaw: query } as unknown as Prisma.TransactionClient;
-    const gate = new ProjectReleaseSafetyGate();
 
-    await expect(gate.assertReady(transaction, invalid, CONTEXT)).rejects.toMatchObject({
+    const failure = captureSafetyFailure(invalid);
+    expect(failure).toMatchObject({
       name: "ProjectReleaseGateUnavailableError",
       message: "正式发布安全门禁尚未完成，当前请求已被安全拒绝",
       blocks: [{ code: "SAFETY_ASSESSMENT_UNAVAILABLE", path: "assessment" }],
     });
-    expect(query).not.toHaveBeenCalled();
   });
 
   it("评估抛出的原始敏感错误不得进入正式发布诊断", async () => {
@@ -252,11 +256,8 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
       },
     });
     const invalid = { ...snapshot, document } as unknown as ProjectSnapshot;
-    const gate = new ProjectReleaseSafetyGate();
-    const transaction = {} as Prisma.TransactionClient;
 
-    const pending = gate.assertReady(transaction, invalid, CONTEXT);
-    const failure = await pending.catch((cause: unknown) => cause);
+    const failure = captureSafetyFailure(invalid);
     expect(failure).toBeInstanceOf(ProjectReleaseGateUnavailableError);
     expect(failure).toMatchObject({
       name: "ProjectReleaseGateUnavailableError",
@@ -268,10 +269,8 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
 
   it("生产门禁对所有工程抛出原有安全拒绝，且不触发任何数据库操作", async () => {
     const snapshot = await snapshotOf();
-    const query = vi.fn<() => Promise<unknown[]>>();
-    const transaction = { $queryRaw: query } as unknown as Prisma.TransactionClient;
-    const gate = new ProjectReleaseSafetyGate();
-    await expect(gate.assertReady(transaction, snapshot, CONTEXT)).rejects.toMatchObject({
+    const failure = captureSafetyFailure(snapshot);
+    expect(failure).toMatchObject({
       name: "ProjectReleaseGateUnavailableError",
       message: "正式发布安全门禁尚未完成，当前请求已被安全拒绝",
       blocks: [
@@ -282,7 +281,6 @@ describe("D5b8a 正式发布安全门禁的真实调用路径与未交付能力"
         { code: "INDUSTRIAL_READ_POLICY_UNAVAILABLE" },
       ],
     });
-    expect(query).not.toHaveBeenCalled();
   });
 
   it("错误仅包含固定阻塞代码和路径，不透露主体或工程敏感内容", async () => {

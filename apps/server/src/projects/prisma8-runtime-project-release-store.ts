@@ -23,12 +23,7 @@ import {
   type ProjectReleaseResult,
   type ProjectCurrentReleaseResult,
 } from "./project-release-store.js";
-import {
-  assessProjectReleaseSafety,
-  ProjectReleaseGateUnavailableError,
-  type ProjectReleaseSafetyContext,
-  type ProjectReleaseSafetyBlock,
-} from "./project-release-safety-gate.js";
+import { requireProjectReleaseSafety } from "./project-release-safety-gate.js";
 import { validatePrisma8ProjectSnapshot } from "./prisma8-project-query-store.js";
 
 type Tx = Prisma8Transaction;
@@ -472,20 +467,6 @@ function verifyCurrentEvent(state: ReleaseState, event: ReleaseEventResultRow): 
   }
 }
 
-/** 发布和回滚共用固定拒绝的生产安全门禁，不提供可替换的放行参数。 */
-function requireReleaseSafety(
-  snapshot: ProjectSnapshot,
-  context: ProjectReleaseSafetyContext,
-): void {
-  let blocks: readonly ProjectReleaseSafetyBlock[];
-  try {
-    blocks = assessProjectReleaseSafety(snapshot, context);
-  } catch {
-    blocks = [{ code: "SAFETY_ASSESSMENT_UNAVAILABLE", path: "assessment" }];
-  }
-  throw new ProjectReleaseGateUnavailableError(blocks);
-}
-
 async function findReplay(
   tx: Tx,
   actor: AuthenticatedProjectPrincipal,
@@ -586,7 +567,7 @@ async function switchRelease(
   const { tenantId, subjectId } = actor;
   const report = validateProjectReleasePreflight(snapshot.document);
   if (!report.passed) throw new ProjectReleasePreflightRejectedError(report.issues);
-  requireReleaseSafety(snapshot, { tenantId, projectId, actorId: subjectId });
+  requireProjectReleaseSafety(snapshot, { tenantId, projectId, actorId: subjectId });
   const generation = state.releaseGeneration + 1n;
   const eventId = randomUUID();
   const fromRevision = state.releasedRevision?.toString() ?? "";

@@ -27,8 +27,6 @@ import { Prisma8RuntimeProjectVersionStore } from "../projects/prisma8-runtime-p
 import { Prisma8RuntimeProjectReleaseStore } from "../projects/prisma8-runtime-project-release-store.js";
 import { ProjectApiModule } from "../projects/project-api.module.js";
 import { ProjectApiController } from "../projects/project-api.controller.js";
-import { DatabaseModule } from "./database.module.js";
-import { PrismaService } from "./prisma.service.js";
 
 describe("正式 Prisma 8 原生数据库模块装配边界", () => {
   it("原生数据库模块只声明一个原生服务与一个受控配置提供方", () => {
@@ -39,14 +37,12 @@ describe("正式 Prisma 8 原生数据库模块装配边界", () => {
       provide: PRISMA8_RUNTIME_CONFIG,
       useFactory: expect.any(Function),
     });
-    expect(providers).not.toContain(PrismaService);
     expect(Reflect.getMetadata("exports", Prisma8DatabaseModule)).toEqual([Prisma8Service]);
   });
 
   it("正式身份模块仅注册认证控制器并复用原生身份模块", () => {
     expect(Reflect.getMetadata("controllers", ScadaIdentityModule)).toEqual([ScadaAuthController]);
     expect(Reflect.getMetadata("imports", ScadaIdentityModule)).toEqual([Prisma8IdentityModule]);
-    expect(Reflect.getMetadata("providers", ScadaIdentityModule)).not.toContain(PrismaService);
   });
 
   it("正式身份模块显式导出完整跨模块 Guard 依赖", () => {
@@ -75,8 +71,6 @@ describe("正式 Prisma 8 原生数据库模块装配边界", () => {
       Prisma8ProjectPersistenceModule,
     ]) {
       expect(Reflect.getMetadata("imports", moduleType)).toContain(Prisma8DatabaseModule);
-      expect(Reflect.getMetadata("imports", moduleType)).not.toContain(DatabaseModule);
-      expect(Reflect.getMetadata("providers", moduleType)).not.toContain(PrismaService);
     }
   });
 
@@ -150,7 +144,6 @@ describe("正式 Prisma 8 原生数据库模块装配边界", () => {
   it("默认应用模块不挂载数据库与工程身份能力", () => {
     const imports = Reflect.getMetadata("imports", AppModule) as unknown[];
     for (const moduleType of [
-      DatabaseModule,
       Prisma8DatabaseModule,
       Prisma8IdentityModule,
       Prisma8ProjectPersistenceModule,
