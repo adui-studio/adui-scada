@@ -179,24 +179,30 @@ void describe("OIDC Lab 手动身份预绑定安全门禁", () => {
   });
 
   void it("本机业务库缺少原生标记时拒绝预览和写入", async () => {
-    const fake = fakeDatabase({ noMarker: true });
-    await assert.rejects(
-      () =>
-        reconcileLabIdentity(
-          fake.client,
-          resolveLabIdentityTarget(env()),
-          parseLabIdentityArgs(applyArguments),
-        ),
-      /缺少已完成/,
-    );
-    assert.equal(
-      fake.calls.some((call) => call.query === "ROLLBACK"),
-      true,
-    );
-    assert.equal(
-      fake.calls.some((call) => call.query.includes("INSERT")),
-      false,
-    );
+    for (const args of [baseArguments, applyArguments]) {
+      const fake = fakeDatabase({ noMarker: true });
+      await assert.rejects(
+        () =>
+          reconcileLabIdentity(
+            fake.client,
+            resolveLabIdentityTarget(env()),
+            parseLabIdentityArgs(args),
+          ),
+        { message: "本机业务库未通过 Prisma 8 原生存储标记验证" },
+      );
+      assert.equal(
+        fake.calls.some((call) => call.query === "ROLLBACK"),
+        true,
+      );
+      assert.equal(
+        fake.calls.some((call) => call.query.includes("INSERT")),
+        false,
+      );
+      assert.equal(
+        fake.calls.some((call) => call.query === "COMMIT"),
+        false,
+      );
+    }
   });
 
   void it("默认预览只读核对且总是回滚", async () => {

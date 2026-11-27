@@ -13,20 +13,24 @@ describe("全新原生契约中文注释", () => {
     let previous = "";
     let model = false;
     let count = 0;
+    const declarations: Array<{ declaration: string; description: string }> = [];
     for (const line of schema.split(/\r?\n/)) {
       const trimmed = line.trim();
       if (/^model \w+ \{/.test(line)) {
-        expect(previous).toMatch(/^\/\/\/.*[一-龥]/);
+        declarations.push({ declaration: trimmed, description: previous });
         count += 1;
         model = true;
       } else if (trimmed === "}") {
         model = false;
       } else if (model && /^\w+\s+\S/.test(trimmed)) {
-        expect(previous).toMatch(/^\/\/\/.*[一-龥]/);
+        declarations.push({ declaration: trimmed, description: previous });
       }
       if (trimmed) previous = trimmed;
     }
     expect(count).toBe(12);
+    expect(declarations.filter(({ description }) => !/^\/\/\/.*[一-龥]/.test(description))).toEqual(
+      [],
+    );
   });
   it("表、字段及约束中文注释和约束总数保持完整", () => {
     const statements = comments.split(/\r?\n/).filter((line) => line.startsWith("COMMENT ON "));

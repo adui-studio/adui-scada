@@ -5339,3 +5339,9 @@ PR #246 维护者 Windows 专项 175/175（全新 28、运行时 7、工程查�
 新增两项原生 OIDC 清理生命周期测试及两项正式根模块 HTTP E2E，现有九项模块装配断言更新为实际原生路径；HTTP 工程 Mock 改为直接授权读取端口，不再借用旧 Prisma 7 Mock ORM。真实 Provider 烟测编译实际 OidcEnabledAppModule，覆盖两个正式 Controller、唯一原生服务、旧 DatabaseModule/PrismaService 未注册、两个工程令牌与原生实例相同及原生授权/会话绑定。烟测仅对进程模块导入临时设置同步静默日志并恢复原环境值，强制真实业务库严格只读且禁止 IdP 网络发现，不监听 HTTP 端口，不启动过期清理。成功后由探针本身返回 nativeRootAssemblyVerified、singleNativeProviderVerified、legacyProviderAbsent、providerSwitched=true；独立 runtime-review 不验证根模块，不能代替本烟测。
 
 协作容器 Node.js 22.16.0、TypeScript 5.8.3，实际执行正式身份及工程持久化模块两个精确 Git Blob（dc6c9db63cb1b79f14a0d0ba1b475bd50410040e、d945547c8c30b3fb4f79388a26bd31b531891cd6）的 SHA-1 核对、语法解析及转译，均通过；未执行完整仓库类型检查、Vitest、NestJS 装配、真实 PostgreSQL 烟测。协作容器 GitHub Git 网络 DNS 不可达且无固定仓库依赖、pnpm/vp；本次没有真实数据库写入、重新初始化、历史库迁移/验收、正式应用监听或生产发布。 预计全新专项 28 项、原生业务与装配 Vitest 64 项、HTTP E2E 65 项，共 157 项。完整质量门禁和新根模块真实烟测均须维护者 Windows 实测，不得沿用旧候选烟测成功状态宣称正式根模块已验收。
+
+## 2026-11-27 · PR #250 原生清理首次 Windows 验收及 E-160
+
+维护者在 PR #250 完成锁文件刷新及冻结安装（pnpm 12.23.0，退出码 0，移除 98 个包及三项 Prisma 7 直接依赖），离线原生契约生成指纹及结构数量不变；依赖目录 13 清单/54 Catalog、共享配置、环境、中文文案 365 文件、全新专项 28/28、CLI 4/4、双框架及服务端类型检查、82 文件 966/966 单测均通过。Vite+ 498 格式文件/339 受检零错误、两条条件断言警告；OIDC 身份预绑定 13/14，旧错误正则导致 ready 退出码 1，之后的阶段未运行。维护者已推送锁文件及排版提交 `fb46b1d6710deea055fa90a92b4df97c3a2c73db`。
+
+E-160 修复仅调整中文注释测试和身份标记拒绝测试：统一主流程断言、精确异常文案、预览与写入均拒绝且回滚，无插入或提交。原生模型与属性注释收集逻辑及两项缺注释反例已静态复核，未执行 Windows Vitest/Vite+ 或完整 ready，不视为已验收。后续须复验两个定向测试、零警告 vp check、完整 ready 和已初始化数据库的只读 Provider 烟测；不重新初始化数据库，不执行真实身份写入。
