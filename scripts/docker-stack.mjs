@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateLabSecrets } from "./prepare-oidc-lab.mjs";
 import { freshStorageHash } from "./prisma8-fresh-install.mjs";
+import { DockerOidcProbeError, verifyDockerOidc } from "./docker-oidc-probe.mjs";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const COMPOSE_ARGS = Object.freeze([
@@ -22,14 +23,15 @@ const OLD_PROJECTS = Object.freeze([
   "adui-scada-postgres-dev",
   "adui-scada-oidc-lab",
 ]);
-const MODES = new Set(["plan", "infra", "up", "down", "ps", "logs"]);
+const MODES = new Set(["plan", "infra", "up", "down", "ps", "logs", "oidc"]);
 
-function docker(args, showOutput = false, input) {
+function docker(args, showOutput = false, input, timeout) {
   const result = spawnSync("docker", args, {
     cwd: ROOT,
     shell: false,
     windowsHide: true,
     encoding: "utf8",
+    timeout,
     // Compose 只使用已验证的两个环境文件，终端残留同名变量不得覆盖端口和凭据。
     env: Object.fromEntries(
       Object.entries(process.env).filter(([key]) => !/^(SCADA_|COMPOSE_)/iu.test(key)),
@@ -80,7 +82,8 @@ function localDocker() {
   ) {
     throw new Error("仅允许 Windows 本机 Docker Desktop，禁止连接环境覆盖");
   }
-  const run = (args, showOutput, input) => docker(["--host", endpoint, ...args], showOutput, input);
+  const run = (args, showOutput, input, timeout) =>
+    docker(["--host", endpoint, ...args], showOutput, input, timeout);
   if (checked(run, ["info", "--format", "{{.OSType}}"]) !== "linux") {
     throw new Error("Docker 必须使用 Linux 容器引擎");
   }
@@ -233,9 +236,10 @@ export function manageDockerStack(
   run = docker,
   verifyDatabase = verifyDockerDatabase,
   verifyHttps = verifyDockerHttps,
+  verifyOidc = verifyDockerOidc,
 ) {
   if (!MODES.has(mode)) throw new Error("不支持的 Docker 操作");
-  if (mode === "plan" || mode === "up" || mode === "infra") {
+  if (mode === "plan" || mode === "up" || mode === "infra" || mode === "oidc") {
     validateDockerEnv(envText);
     checked(run, [...COMPOSE_ARGS, "config", "--quiet"]);
     for (const name of OLD_PROJECTS) {
@@ -251,6 +255,10 @@ export function manageDockerStack(
     }
     if (mode === "plan") {
       return "全新安装预检通过：旧持久化卷不参与挂载，新的 adui-scada 卷将由 Docker 创建";
+    }
+    if (mode === "oidc") {
+      const port = parseDockerEnv(envText).get("SCADA_LAB_KEYCLOAK_PORT") ?? "18443";
+      return verifyOidc(port, run, COMPOSE_ARGS);
     }
     if (mode === "infra" || mode === "up") {
       checked(
@@ -367,7 +375,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       "双端 Docker HTTPS 验证失败，请检查本机端口和 mkcert 可信证书，保留现场",
     ]);
     console.error(
-      error instanceof Error && known.has(error.message)
+      error instanceof DockerOidcProbeError || (error instanceof Error && known.has(error.message))
         ? error.message
         : "Docker 操作失败，已隐藏内部错误及敏感配置",
     );

@@ -5684,3 +5684,31 @@ git status --short
 ```
 
 预计 Docker 专项 22/22；启动成功须包含「容器原生只读及双端 HTTP 验证通过，宿主 HTTPS 验证通过；OIDC 登录尚未启用」。手工打开 https://127.0.0.1:18480 与 https://127.0.0.1:18481，确认无证书错误、页面渲染和模拟运行；原 HTTP 入口仍可使用。若 mkcert 不可执行、CA 不匹配、端口冲突或响应异常，停止验收并保留现场；禁止关闭 TLS 校验、重置数据库或覆盖证书。宿主探针仅验证六路径响应头，不替代浏览器渲染、完整 SSE 消息序列、真实登录或写事务。
+
+### 2026-11-27 · Docker Keycloak Discovery/JWKS 独立候选验收
+
+集成基线为 PR #252 合并提交 b1218c0fd290344cf152500b4105e24ee9b29745。保留现有 .env、证书、随机凭据、数据库及持久卷，不执行初始化；当前候选的新探针需要进入 server 镜像，沿用既有一键启动。
+
+```powershell
+pnpm run test:docker &&
+pnpm run env:check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+vp check --fix &&
+vp check &&
+git diff --check
+Write-Host "Keycloak 只读增量验收退出码：$LASTEXITCODE"
+```
+
+预期原 Docker 编排 25 项加新探针 10 项，共 35/35，Vite+ 零警告错误。随后真实本机验收：
+
+```powershell
+pnpm run docker:up &&
+pnpm run docker:oidc:probe &&
+pnpm run docker:ps
+Write-Host "Keycloak 只读真实验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+期望原七服务及双端 HTTP/HTTPS 成功提示保持不变；新增「宿主与容器 Keycloak Discovery/JWKS 严格只读验证通过；OIDC 登录尚未启用」。若探针失败，根据宿主/容器、Discovery/JWKS 与固定诊断分类核查，不修改证书信任、Realm 或库以通过，不自动重试或清理现场。真实探针不进入 ready，仅离线回归纳入既有 test:docker。成功不能代替真实授权码、签名、Cookie、CSRF、身份映射或业务事务验收。

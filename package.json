@@ -52,7 +52,7 @@
     "test:oidc:proxy": "node --test scripts/oidc-https-dev-proxy.cases.mjs",
     "test:oidc:lab": "node --test scripts/prepare-oidc-lab.cases.mjs",
     "test:oidc:identity": "node --test scripts/oidc-lab-identity.cases.mjs",
-    "test:docker": "node --test scripts/docker-stack.cases.mjs",
+    "test:docker": "node --test scripts/docker-stack.cases.mjs scripts/docker-oidc-discovery.cases.mjs",
     "oidc:lab:identity": "node scripts/oidc-lab-identity.mjs",
     "test:oidc:https:readonly": "node --test scripts/verify-oidc-https-readonly.cases.mjs",
     "test:projects:oidc:config": "node --test scripts/test-project-browser-oidc.cases.mjs",
@@ -124,7 +124,8 @@
     "test:docker:db": "node --test scripts/init-docker-db.cases.mjs",
     "docker:db:init": "node apps/server/prisma8-fresh-install.mjs",
     "docker:db:status": "node apps/server/prisma8-fresh-install.mjs --status",
-    "docker:infra": "pnpm run docker:plan && node scripts/docker-stack.mjs infra"
+    "docker:infra": "pnpm run docker:plan && node scripts/docker-stack.mjs infra",
+    "docker:oidc:probe": "node scripts/docker-stack.mjs oidc"
   },
   "devDependencies": {
     "@adui/tooling": "workspace:*",

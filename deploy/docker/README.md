@@ -61,3 +61,16 @@ docker:down 不删除卷，禁止为排错执行 down -v、删除持久化卷或
 原容器数据库及 HTTP 探针通过之后，docker:up 运行宿主 HTTPS 探针，以 mkcert -CAROOT 获取公开 rootCA.pem，明确验证证书链及回环 IP；不关闭 TLS 校验，不导入信任设置，不跟随重定向，不记录业务正文。每端检查六个固定 GET 路径及状态/内容类型，SSE 仅接受 no-store（允许重复），读取响应头后主动关闭连接；工程与 OIDC 回调必须 404。两端均通过才报告启动完成；失败不清理现场。本机需保持 mkcert 可执行及现有签发 CA 可读取；本批不修改 Keycloak Realm、会话、权限或数据库写入。真实浏览器、OIDC Discovery、回调和跨端登录另行验收。
 
 PR #251 已由维护者完成 Windows 55/55 增量专项、零警告 Vite+、真实 Linux 容器隔离及 SIGTERM、七服务启动和原生只读烟测，Squash 合并提交 71585ee998f6f6e72bf8042e231165128d7a9a76。本批局部 Node TLS 与 Nginx 实测通过；新增 4 项安全断言后完整 test:docker 预计 22 项，真实 Windows 双端 HTTPS Docker 仍待复验。
+
+## 2026-11-27 · Keycloak Discovery/JWKS 独立只读候选
+
+维护者 Windows 在候选 HEAD 3e677cd2dca74b0d621cb8bed029018f8b5e62a0 实测 Docker 22/22、环境和 LF、中文文案 367 文件、Markdown 97 份、Vite+ 500 格式/341 受检零警告错误、git diff --check、四镜像构建、七服务运行、容器原生只读、双端 HTTP 及宿主 HTTPS 探针均通过，增量与真实验收退出码均 0。正常 Hook 格式化提交 56f48c2f81e9df95f9d97253098abef300ea665d 已推送，远端三文件差异仅 Markdown 围栏及 JavaScript 排版，无业务变化；无审查阻塞或额外远端 CI 记录。经维护者明确授权 PR #252 Squash 合入 feat/mvp-first-integration 的 b1218c0fd290344cf152500b4105e24ee9b29745。E-161 已关闭。日志未包含双端真实浏览器渲染证据，不将其视为浏览器或登录验收。
+
+原 docker:up 成功契约、七服务拓扑、Realm 与数据库不变。新增独立命令，仅在应用镜像包含新探针且现有栈已经启动后人工执行：
+
+```powershell
+pnpm run docker:oidc:probe
+if ($LASTEXITCODE -ne 0) { throw "Keycloak 只读验收失败，保留现场" }
+```
+
+宿主访问 https://127.0.0.1:18443/realms/adui-scada，端口复用根 SCADA_LAB_KEYCLOAK_PORT；服务端容器固定连接 keycloak:8443，HTTP Host 与 TLS 证书身份仍匹配公开 Issuer（127.0.0.1）。仅以 mkcert 公开根证书为受控信任锚，规范化证书后经标准输入传递给两个一次性探针，不安装或修改系统 CA、不读取任何私钥、Client Secret、Cookie 或数据库凭据。两个视角各 GET 固定 Discovery 和 JWKS 路径，禁止重定向、固定 8 秒请求期限、256 KiB 响应上限；必须匹配公开 Issuer、授权/Token/JWKS 端点及 Authorization Code、PKCE S256、RS256、client_secret_basic 等能力。真实 RSA 公钥解析、至少 2048 位、重复 kid 和私钥字段拒绝，排序无关的签名公钥集合摘要必须一致。诊断按宿主/容器及 Discovery/JWKS 阶段脱敏，不输出原文。该命令不启动或清理任何容器，不启动 OIDC 模块，不连接业务数据库；不属于默认 ready 的真实联调链。当前同一叶证书在本机服务间复用，不能把本机 TLS/公钥一致性探针视为生产服务独立身份认证或 ID Token 验签。新镜像的真实 Windows 联调待验收。
