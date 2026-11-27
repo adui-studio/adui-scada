@@ -42,17 +42,18 @@ export function freshConnection(input, readOnly) {
   return url.toString();
 }
 
-/** 仅支持离线发射、只读预览、显式首次初始化和只读验证。 */
+/** 仅支持离线发射、只读预览、显式首次初始化、只读验证与运行时评审。 */
 export function freshAction(args) {
   for (const [flag, mode] of [
     ["--emit", "emit"],
     ["--preview", "preview"],
     [freshConfirmation, "initialize"],
     ["--status", "status"],
+    ["--runtime-review", "runtime-review"],
   ]) {
     if (isDeepStrictEqual(args, [flag])) return mode;
   }
-  throw new FreshInstallError("必须明确指定全新安装发射、只读预览、首次初始化或验证");
+  throw new FreshInstallError("必须明确指定全新安装发射、只读预览、首次初始化、验证或运行时评审");
 }
 
 /** 核验当前 Git 原生契约发射结果及全部中文注释目标，不执行历史 SQL。 */

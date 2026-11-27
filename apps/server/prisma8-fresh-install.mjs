@@ -21,7 +21,14 @@ import {
   reviewFreshContract,
   reviewFreshUpdate,
 } from "../../scripts/prisma8-fresh-install.mjs";
-import { requireDeclarationHashes } from "../../scripts/prisma8-native-runtime-review.mjs";
+import {
+  requireDeclarationHashes,
+  reviewFreshRuntimeTypes,
+} from "../../scripts/prisma8-native-runtime-review.mjs";
+import {
+  FreshRuntimeProbeError,
+  probeFreshRuntime,
+} from "../../scripts/prisma8-fresh-runtime-probe.mjs";
 
 const root = realpathSync(resolve(import.meta.dirname, "../.."));
 const config = join(root, "apps", "server", "prisma8-fresh.config.ts");
@@ -253,10 +260,12 @@ async function main() {
   const sourceText = readFileSync(source, "utf8");
   invoke(["contract", "emit"]);
   requireMatch(readFileSync(source, "utf8") === sourceText, "官方发射改写了受 Git 管理的契约源");
-  const emitted = JSON.parse(readFileSync(join(output, "contract.json"), "utf8"));
+  const emittedText = readFileSync(join(output, "contract.json"), "utf8");
+  const emitted = JSON.parse(emittedText);
   const commentText = readFileSync(commentsPath, "utf8");
   const contract = reviewFreshContract(emitted, commentText);
-  requireDeclarationHashes(readFileSync(join(output, "contract.d.ts"), "utf8"), emitted);
+  const declaration = readFileSync(join(output, "contract.d.ts"), "utf8");
+  requireDeclarationHashes(declaration, emitted);
   const report = {
     storageHash: freshStorageHash,
     tables: contract.tables,
@@ -268,6 +277,10 @@ async function main() {
   };
   if (action === "emit")
     return { status: "FRESH_CONTRACT_EMITTED", ...report, databaseInitialized: false };
+  if (action === "runtime-review") {
+    stage = "正式候选原生契约离线类型检查";
+    reviewFreshRuntimeTypes(root, emittedText, declaration);
+  }
   stage = "全新业务库 Docker 身份与连接检查";
   const base = createDockerDatabaseUrl(
     readFileSync(join(root, ".env"), "utf8"),
@@ -292,11 +305,44 @@ async function main() {
       return results[0];
     }
   };
-  if (action === "status") {
+  if (action === "status" || action === "runtime-review") {
     stage = "官方严格结构与标记验证";
     requireFreshVerification(parse(invoke(["db", "verify", "--strict", "--json"], readOnly)));
     stage = "真实中文注释核验";
     await checkComments(readOnly, identity, contract, commentText, false);
+    if (action === "runtime-review") {
+      stage = "已初始化业务库原生运行时只读核验";
+      const { default: postgres } = await import("@prisma/orm-postgres/runtime");
+      const { contractFromJson } = await import("@prisma/orm-postgres/static");
+      const runtimeContract = contractFromJson(emitted);
+      const probe = await probeFreshRuntime(
+        databaseClient(readOnly),
+        (client) => postgres({ contract: runtimeContract, pg: client }),
+        async (client) => {
+          const actual = await client.query(identitySql);
+          requireMatch(actual.rows.length === 1, "运行时业务库身份查询数量异常");
+          requireFreshIdentity(actual.rows[0], identity);
+          const boundary = await client.query(
+            "SELECT current_setting('transaction_read_only') AS read_only, current_setting('default_transaction_read_only') AS default_read_only, current_schema()::text AS schema_name",
+          );
+          requireMatch(
+            isDeepStrictEqual(boundary.rows, [
+              { read_only: "on", default_read_only: "on", schema_name: "public" },
+            ]),
+            "运行时连接不是受控只读业务库",
+          );
+        },
+      );
+      return {
+        status: "FRESH_RUNTIME_REVIEW_READY",
+        ...report,
+        serverVersion: identity.version,
+        databaseInitialized: true,
+        nativeRuntimeTypesVerified: true,
+        ...probe,
+        providerSwitched: false,
+      };
+    }
     return {
       status: "FRESH_DATABASE_VERIFIED",
       ...report,
@@ -358,7 +404,9 @@ void main()
   .then((report) => process.stdout.write(JSON.stringify(report, null, 2) + "\n"))
   .catch((error) => {
     console.error(
-      error instanceof FreshInstallError || error instanceof NativePreflightError
+      error instanceof FreshInstallError ||
+      error instanceof NativePreflightError ||
+      error instanceof FreshRuntimeProbeError
         ? error.message
         : stage + "失败，内部诊断已脱敏；保留现场，不自动重试",
     );
