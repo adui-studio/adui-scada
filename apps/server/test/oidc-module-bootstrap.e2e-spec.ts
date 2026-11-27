@@ -18,8 +18,8 @@ import { PRISMA8_RUNTIME_CONFIG, Prisma8Service } from "../src/database/prisma8.
 import type { Prisma8Transaction } from "../src/database/prisma8-read-transaction.js";
 import { AuthSessionService } from "../src/auth/auth-session.service.js";
 import { Prisma8RuntimeAuthSessionService } from "../src/auth/prisma8-runtime-identity.service.js";
-import { PrismaProjectVersionStore } from "../src/projects/prisma-project-version-store.js";
-import { PrismaProjectReleaseStore } from "../src/projects/prisma-project-release-store.js";
+import { ProjectVersionStore } from "../src/projects/project-version-store.js";
+import { ProjectReleaseStore } from "../src/projects/project-release-store.js";
 import { Prisma8RuntimeProjectVersionStore } from "../src/projects/prisma8-runtime-project-version-store.js";
 import { Prisma8RuntimeProjectReleaseStore } from "../src/projects/prisma8-runtime-project-release-store.js";
 
@@ -215,8 +215,8 @@ describe("OIDC 根模块与工程 API Guard 启动装配（端到端）", () => 
     ).toBe(false);
     expect(app.get(Prisma8Service, { each: true })).toEqual([database]);
     expect(app.get(AuthSessionService)).toBeInstanceOf(Prisma8RuntimeAuthSessionService);
-    expect(app.get(PrismaProjectVersionStore)).toBe(app.get(Prisma8RuntimeProjectVersionStore));
-    expect(app.get(PrismaProjectReleaseStore)).toBe(app.get(Prisma8RuntimeProjectReleaseStore));
+    expect(app.get(ProjectVersionStore)).toBe(app.get(Prisma8RuntimeProjectVersionStore));
+    expect(app.get(ProjectReleaseStore)).toBe(app.get(Prisma8RuntimeProjectReleaseStore));
   });
 
   it("已验证会话通过正式原生身份与工程仓储返回授权列表", async () => {

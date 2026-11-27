@@ -21,8 +21,8 @@ import { SCADA_OIDC_STARTUP_CONFIG } from "../auth/oidc-provider-discovery.servi
 import { ScadaSecurityAuditService } from "../security/scada-security-audit.js";
 import { ProjectPersistenceModule } from "../projects/project-persistence.module.js";
 import { Prisma8ProjectPersistenceModule } from "../projects/prisma8-project-persistence.module.js";
-import { PrismaProjectVersionStore } from "../projects/prisma-project-version-store.js";
-import { PrismaProjectReleaseStore } from "../projects/prisma-project-release-store.js";
+import { ProjectVersionStore } from "../projects/project-version-store.js";
+import { ProjectReleaseStore } from "../projects/project-release-store.js";
 import { Prisma8RuntimeProjectVersionStore } from "../projects/prisma8-runtime-project-version-store.js";
 import { Prisma8RuntimeProjectReleaseStore } from "../projects/prisma8-runtime-project-release-store.js";
 import { ProjectApiModule } from "../projects/project-api.module.js";
@@ -128,13 +128,13 @@ describe("正式 Prisma 8 原生数据库模块装配边界", () => {
       Prisma8ProjectPersistenceModule,
     ]);
     expect(Reflect.getMetadata("providers", ProjectPersistenceModule)).toEqual([
-      { provide: PrismaProjectVersionStore, useExisting: Prisma8RuntimeProjectVersionStore },
-      { provide: PrismaProjectReleaseStore, useExisting: Prisma8RuntimeProjectReleaseStore },
+      { provide: ProjectVersionStore, useExisting: Prisma8RuntimeProjectVersionStore },
+      { provide: ProjectReleaseStore, useExisting: Prisma8RuntimeProjectReleaseStore },
     ]);
     expect(Reflect.getMetadata("exports", ProjectPersistenceModule)).toEqual([
       Prisma8ProjectPersistenceModule,
-      PrismaProjectVersionStore,
-      PrismaProjectReleaseStore,
+      ProjectVersionStore,
+      ProjectReleaseStore,
     ]);
     expect(Reflect.getMetadata("providers", Prisma8ProjectPersistenceModule)).toEqual([
       Prisma8RuntimeProjectVersionStore,

@@ -14,14 +14,15 @@ import {
   ProjectVersionAccessDeniedError,
   requirePrincipal,
   requireProjectId,
-} from "./prisma-project-version-store.js";
+} from "./project-version-store.js";
 import {
+  type ProjectReleaseStore,
   ProjectReleaseSessionInvalidError,
   ProjectReleaseConflictError,
   ProjectReleasePreflightRejectedError,
   type ProjectReleaseResult,
   type ProjectCurrentReleaseResult,
-} from "./prisma-project-release-store.js";
+} from "./project-release-store.js";
 import {
   assessProjectReleaseSafety,
   ProjectReleaseGateUnavailableError,
@@ -636,7 +637,7 @@ async function switchRelease(
 
 /** 仅使用当前原生业务数据库事务，暂不挂载正式 HTTP 控制器。 */
 @Injectable()
-export class Prisma8RuntimeProjectReleaseStore {
+export class Prisma8RuntimeProjectReleaseStore implements ProjectReleaseStore {
   constructor(private readonly database: Prisma8Service) {}
 
   async readCurrent(

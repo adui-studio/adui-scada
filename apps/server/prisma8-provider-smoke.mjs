@@ -29,11 +29,11 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
   const { PrismaService } = await import(
     new URL("./dist/database/prisma.service.js", import.meta.url).href
   );
-  const { PrismaProjectVersionStore } = await import(
-    new URL("./dist/projects/prisma-project-version-store.js", import.meta.url).href
+  const { ProjectVersionStore } = await import(
+    new URL("./dist/projects/project-version-store.js", import.meta.url).href
   );
-  const { PrismaProjectReleaseStore } = await import(
-    new URL("./dist/projects/prisma-project-release-store.js", import.meta.url).href
+  const { ProjectReleaseStore } = await import(
+    new URL("./dist/projects/project-release-store.js", import.meta.url).href
   );
   const { Prisma8AuthorizationReadStore } = await import(
     new URL("./dist/auth/prisma8-authorization-read-store.js", import.meta.url).href
@@ -129,8 +129,8 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     if (
       !(context.get(ScadaAuthController) instanceof ScadaAuthController) ||
       !(context.get(ProjectApiController) instanceof ProjectApiController) ||
-      context.get(PrismaProjectVersionStore) !== context.get(Prisma8RuntimeProjectVersionStore) ||
-      context.get(PrismaProjectReleaseStore) !== context.get(Prisma8RuntimeProjectReleaseStore)
+      context.get(ProjectVersionStore) !== context.get(Prisma8RuntimeProjectVersionStore) ||
+      context.get(ProjectReleaseStore) !== context.get(Prisma8RuntimeProjectReleaseStore)
     ) {
       throw new Error("正式根模块控制器或仓储绑定异常");
     }
