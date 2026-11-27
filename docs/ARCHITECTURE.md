@@ -1,5 +1,7 @@
 # ADui SCADA · 系统架构（目标设计）
 
+> 2026-11-27 原生收敛： 正式 NestJS 根模块原生 Provider 已验收。后续只保留 Prisma 8 原生存储路径，不使用旧客户端或旧迁移执行器。保持发布和回滚安全门禁，真实工业写入仍未开放。当前清理分支尚待完整验证。
+
 > 2026-11-27 最新决策：维护者已删除旧开发数据库环境，停止历史迁移接管及专用实例实验。后续以 [ADR-0073](adr/0073-prisma8-fresh-install.md) 为准；下文旧实验记录仅供追溯，不是当前验收前置条件。
 
 > **大部分为目标设计。** V0.1 已有共享 Core/Runtime、Vue/React 最小 Web、NestJS 本地进程探针和 Tauri 2 桌面壳；工业 Gateway 尚未创建。实际目录见 [CODEBASE_MAP](CODEBASE_MAP.md)，实现边界见 [V0.1 实施记录](V0.1_IMPLEMENTATION.md)，范围见 [REQUIREMENTS](REQUIREMENTS.md)。

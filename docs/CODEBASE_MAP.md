@@ -1,5 +1,7 @@
 # ADui SCADA · 代码地图
 
+> 2026-11-27 原生收敛： 正式服务只使用 `apps/server/src/database/prisma8.service.ts` 及 `prisma8-database.module.ts`；认证端口位于 `auth/auth-session.service.ts`、`auth/oidc-login-transaction.service.ts`，工程端口位于 `projects/project-version-store.ts`、`projects/project-release-store.ts`。历史归档读写均走原生事务。全新源为 `apps/server/prisma/contract.prisma` 与 `initial-comments.sql`；旧迁移文件及实验源码从当前分支移除，历史可追溯至合并提交 `0c27ffa6ddd7348652af6e353da8e5648af645b1`。
+
 > 2026-11-27 最新决策：维护者已删除旧开发数据库环境，停止历史迁移接管及专用实例实验。后续以 [ADR-0073](adr/0073-prisma8-fresh-install.md) 为准；下文旧实验记录仅供追溯，不是当前验收前置条件。
 
 > **开始编码前**：按根目录 [AGENTS.md](../AGENTS.md) 的要求，先重读 [AI 编码错误复盘清单](AI_MISTAKES.md) 全文；本文件只用来定位代码与文档，不能替代复盘与仓库规范。

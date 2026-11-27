@@ -106,9 +106,15 @@ assert.equal(
 );
 assert.match(
   text("apps/server/prisma.config.ts"),
-  /contract\.prisma/,
+  /skills:\s*\{\s*agents:\s*\["agents"\]\s*,\s*check:\s*true\s*\}/,
   "Prisma 8 Skills 必须仅同步到 .agents 并保留版本检查",
 );
+assert.match(text("apps/server/prisma.config.ts"), /contract\.prisma/, "仅使用原生 PSL 契约");
+const serverManifest = json("apps/server/package.json");
+for (const name of ["@prisma/client", "@prisma/adapter-pg", "@prisma/prisma7"]) {
+  assert.ok(!serverManifest.dependencies?.[name] && !serverManifest.devDependencies?.[name], "禁止重新引入旧数据库依赖：" + name);
+}
+assert.equal(serverManifest.scripts?.["db:generate"], "node prisma8-fresh-install.mjs --runtime-emit");
 for (const directory of [
   "apps/server/.agents",
   "apps/server/.claude",

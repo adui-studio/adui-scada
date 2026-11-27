@@ -57,8 +57,8 @@ function fakeDatabase(options = {}) {
       if (options.failOn && query.includes(options.failOn)) {
         throw new Error("模拟数据库异常，不能原样输出敏感参数");
       }
-      if (query.includes('public."_prisma_migrations"')) {
-        return { rows: options.noMigration ? [] : [{ "?column?": 1 }] };
+      if (query.includes("prisma_contract.marker")) {
+        return { rows: options.noMarker ? [] : [{ "?column?": 1 }] };
       }
       if (query.includes("FROM public.scada_external_identities WHERE issuer")) {
         return {
@@ -178,8 +178,8 @@ void describe("OIDC Lab 手动身份预绑定安全门禁", () => {
     );
   });
 
-  void it("隔离数据库未完成 OIDC 迁移时拒绝预览和写入", async () => {
-    const fake = fakeDatabase({ noMigration: true });
+  void it("本机业务库缺少原生标记时拒绝预览和写入", async () => {
+    const fake = fakeDatabase({ noMarker: true });
     await assert.rejects(
       () =>
         reconcileLabIdentity(

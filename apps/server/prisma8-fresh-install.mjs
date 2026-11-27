@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { Client } from "pg";
 import { createDockerDatabaseUrl } from "../../scripts/init-docker-db.mjs";
-import { offlineEnvironment, resolveBaselineCli } from "../../scripts/prisma8-fresh-cli-support.mjs";
+import { offlineEnvironment, resolveFreshCli } from "../../scripts/prisma8-fresh-cli-support.mjs";
 import {
   inspectFreshDockerEmptyDatabase,
   NativePreflightError,
@@ -268,7 +268,7 @@ async function main() {
       "生成契约文件不能包含链接",
     );
   }
-  const entry = resolveBaselineCli(root);
+  const entry = resolveFreshCli(root);
   const invoke = (args, connection) =>
     run(
       process.execPath,

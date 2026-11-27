@@ -14,10 +14,10 @@ const allowedEnvironment = new Set([
   "APPDATA",
 ]);
 
-class BaselineError extends Error {}
+class FreshCliError extends Error {}
 
 function requireCondition(condition, message) {
-  if (!condition) throw new BaselineError(message);
+  if (!condition) throw new FreshCliError(message);
 }
 
 /** 子进程只继承必要系统路径，不继承数据库、令牌或 Node 注入配置。 */
@@ -34,19 +34,19 @@ export function offlineEnvironment(source) {
 function readRegular(path) {
   requireCondition(
     lstatSync(path, { throwIfNoEntry: false })?.isFile() && realpathSync(path) === path,
-    "离线基线文件不存在或包含链接",
+    "原生工具链文件不存在或包含链接",
   );
   const bytes = readFileSync(path);
   const text = bytes.toString("utf8");
   requireCondition(
     text.length > 0 && Buffer.from(text, "utf8").equals(bytes),
-    "离线基线文件必须为非空 UTF-8 原文",
+    "原生工具链文件必须为非空 UTF-8 原文",
   );
   return text;
 }
 
 /** 从已安装固定版本的包解析 CLI，不调用 Shell 或下载依赖。 */
-export function resolveBaselineCli(root) {
+export function resolveFreshCli(root) {
   const server = join(root, "apps", "server", "node_modules");
   const cli = realpathSync(join(server, "prisma"));
   const manifest = JSON.parse(readRegular(join(cli, "package.json")));
@@ -76,4 +76,3 @@ export function resolveBaselineCli(root) {
   );
   return entry;
 }
-

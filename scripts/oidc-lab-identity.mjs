@@ -9,7 +9,7 @@ const ROOT_ENV = fileURLToPath(new URL("../.env", import.meta.url));
 const SERVER_PACKAGE = fileURLToPath(new URL("../apps/server/package.json", import.meta.url));
 const LAB_DATABASE = "adui_scada";
 const LAB_DATABASE_USER = "adui_scada";
-const REQUIRED_MIGRATION = "20261114000000_oidc_identity_transactions";
+import { freshStorageHash } from "./prisma8-fresh-install.mjs";
 const ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 const KEYCLOAK_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SAFE_ERRORS = new Set([
@@ -22,7 +22,7 @@ const SAFE_ERRORS = new Set([
   "身份绑定工具仅允许可信非生产回环 OIDC Lab",
   "本机 SCADA 数据库连接配置与实际隔离目标不一致",
   "Keycloak Issuer 与本机受控 Realm 不一致",
-  "隔离数据库缺少已完成的 OIDC 身份迁移",
+  "本机业务库未通过 Prisma 8 原生存储标记验证",
   "外部 Keycloak 主体已绑定其他本地身份，拒绝覆盖",
   "本地主体已停用，拒绝重新激活",
   "本地主体已有其他外部身份，拒绝追加绑定",
@@ -137,12 +137,15 @@ export function resolveLabIdentityTarget(env) {
 export async function reconcileLabIdentity(client, target, binding) {
   await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
   try {
-    const migration = await client.query(
-      'SELECT 1 FROM public."_prisma_migrations" WHERE migration_name = $1 AND finished_at IS NOT NULL AND rolled_back_at IS NULL LIMIT 1',
-      [REQUIRED_MIGRATION],
+    const marker = await client.query(
+      "SELECT 1 FROM prisma_contract.marker WHERE space = 'app' AND core_hash::text = $1 " +
+        "AND current_database() = 'adui_scada' AND current_user = 'adui_scada' " +
+        "AND session_user = 'adui_scada' AND current_setting('server_version_num')::integer BETWEEN 190000 AND 199999 " +
+        "AND NOT pg_is_in_recovery()",
+      [freshStorageHash],
     );
-    if (migration.rows.length !== 1) {
-      throw new Error("隔离数据库缺少已完成的 OIDC 身份迁移");
+    if (marker.rows.length !== 1) {
+      throw new Error("本机业务库未通过 Prisma 8 原生存储标记验证");
     }
 
     const external = await client.query(
