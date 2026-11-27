@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
+import { freshStorageHash } from "./prisma8-fresh-install.mjs";
 
 const formalHash = "054113c40b1e6f3b7609641e09868e45c0e969d8035e6e1376d10ac3e5148424";
 const nativeHash = "6eec3e7459bdfa2646dc156bd6eaf22ffe60b0a0eac309622262b9742a0c68cc";
@@ -12,11 +13,11 @@ function requireCondition(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-/** 核对已验收候选的标识和关系差异，不替代物理结构复验或签名授权。 */
-export function reviewRuntimeRelations(formal, native) {
+/** 保持历史与全新契约各自固定的存储标识及已评审的关系差异。 */
+function reviewRelations(formal, native, expectedNativeHash) {
   for (const [contract, hash] of [
     [formal, formalHash],
-    [native, nativeHash],
+    [native, expectedNativeHash],
   ]) {
     requireCondition(
       contract?.storage?.storageHash === hash &&
@@ -67,7 +68,18 @@ export function reviewRuntimeRelations(formal, native) {
       isDeepStrictEqual(native.execution, formal.execution),
     "原生候选存在未评审的运行时差异",
   );
+}
+
+/** 历史候选保持原有标识及阻塞状态，不用于新业务库。 */
+export function reviewRuntimeRelations(formal, native) {
+  reviewRelations(formal, native, nativeHash);
   return "STORAGE_REVIEW_REQUIRED_RUNTIME_BLOCKED";
+}
+
+/** 全新候选必须匹配已初始化的独立原生存储标识。 */
+export function reviewFreshRuntimeRelations(formal, native) {
+  reviewRelations(formal, native, freshStorageHash);
+  return "FRESH_RUNTIME_RELATIONS_REVIEWED";
 }
 
 /** 检查声明中的契约标识，避免误用另一轮生成物。 */
@@ -116,6 +128,40 @@ function checkProgram(ts, config, replacements) {
     process.stderr.write(ts.formatDiagnosticsWithColorAndContext(diagnostics, host));
     throw new Error("服务端离线类型检查失败");
   }
+}
+
+/** 使用实际全新契约对现有服务端及候选仓储作内存类型检查，不替换 Git 生成物。 */
+export function reviewFreshRuntimeTypes(root, nativeText, nativeDeclaration) {
+  const server = join(root, "apps", "server");
+  const formalDir = join(server, "src", "generated", "prisma8");
+  const declarationPath = join(formalDir, "contract.d.ts");
+  const jsonPath = join(formalDir, "contract.json");
+  const formalText = readFileSync(jsonPath, "utf8");
+  const formalDeclaration = readFileSync(declarationPath, "utf8");
+  const formal = JSON.parse(formalText);
+  const native = JSON.parse(nativeText);
+  reviewFreshRuntimeRelations(formal, native);
+  requireDeclarationHashes(formalDeclaration, formal);
+  requireDeclarationHashes(nativeDeclaration, native);
+  const ts = createRequire(join(server, "package.json"))("typescript");
+  const configPath = join(server, "tsconfig.json");
+  const raw = ts.readConfigFile(configPath, ts.sys.readFile);
+  requireCondition(!raw.error, "无法读取服务端 TypeScript 配置");
+  const config = ts.parseJsonConfigFileContent(raw.config, ts.sys, server);
+  requireCondition(config.errors.length === 0, "服务端 TypeScript 配置存在错误");
+  checkProgram(ts, config, [
+    [declarationPath, formalDeclaration],
+    [jsonPath, formalText],
+  ]);
+  checkProgram(ts, config, [
+    [declarationPath, nativeDeclaration],
+    [jsonPath, nativeText],
+  ]);
+  requireCondition(
+    readFileSync(declarationPath, "utf8") === formalDeclaration &&
+      readFileSync(jsonPath, "utf8") === formalText,
+    "离线运行时评审期间旧生成物发生变化",
+  );
 }
 
 function main() {

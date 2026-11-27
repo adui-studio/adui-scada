@@ -1903,3 +1903,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/prisma8-fresh-install.mjs`、`scripts/prisma8-fresh-install.cases.mjs`：连接、契约与计划边界、诊断脱敏及离线回归。
 - `scripts/prisma8-native-baseline-preflight.mjs`：复用二十三类目录只读检查，新增全新业务库集群标识与 PostgreSQL 19 实际版本核验。
 - `scripts/docker-stack.mjs`：新增仅基础设施启动模式，根 docker:up 使用该模式，正式应用 Provider 尚未切换。
+
+### 全新原生运行时评审
+
+- `scripts/prisma8-native-runtime-review.mjs`：保留历史候选门禁，新增全新存储标识及原生生成物的服务端内存类型评审。
+- `scripts/prisma8-fresh-runtime-probe.mjs`、`scripts/prisma8-fresh-runtime-probe.cases.mjs`：同一调用方连接的只读 ORM 探针、前后身份复核及失败脱敏关闭回归。
+- `apps/server/prisma8-fresh-install.mjs`：新增独立只读 runtime-review 模式，复用严格结构及注释核验，不触发首次写入分支；正式 DatabaseModule 不变。
+- `pnpm run db:prisma8:fresh:runtime:review`：实际原生契约类型与已初始化本机业务库的只读运行时验收，不属于自动 ready。

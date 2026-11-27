@@ -46,11 +46,13 @@ function plan(extra = {}) {
   });
 }
 
-void test("全新入口仅接受明确四种操作，裸命令不能写入", () => {
+void test("全新入口仅接受明确五种操作，裸命令不能写入", () => {
   assert.equal(freshAction(["--emit"]), "emit");
   assert.equal(freshAction(["--preview"]), "preview");
   assert.equal(freshAction([freshConfirmation]), "initialize");
   assert.equal(freshAction(["--status"]), "status");
+  assert.equal(freshAction(["--runtime-review"]), "runtime-review");
+  assert.throws(() => freshAction(["--runtime-review", freshConfirmation]), /必须明确指定/u);
   for (const args of [[], ["migrate"], ["--reset"], [freshConfirmation, "--force"]]) {
     assert.throws(() => freshAction(args), /必须明确指定/u);
   }
