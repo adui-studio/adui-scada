@@ -157,7 +157,7 @@ beforeAll(async () => {
     controllers: [ProjectApiController, ScadaAuthController],
     providers: [
       { provide: PrismaService, useValue: database },
-        { provide: AuthorizationReadStore, useClass: Prisma7AuthorizationReadStore },
+      { provide: AuthorizationReadStore, useClass: Prisma7AuthorizationReadStore },
       { provide: SCADA_OIDC_STARTUP_CONFIG, useValue: config },
       // 本专项不发起 IdP 授权码流程，只复用真实 Cookie 认证和注销入口。
       { provide: OidcLoginTransactionService, useValue: {} },

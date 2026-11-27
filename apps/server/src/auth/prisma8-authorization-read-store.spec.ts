@@ -5,7 +5,10 @@ import {
   readPrisma8Transaction,
   type Prisma8Transaction,
 } from "../database/prisma8-read-transaction.js";
-import { hasProjectPermission, type ProjectAccessAction } from "../projects/project-access-policy.js";
+import {
+  hasProjectPermission,
+  type ProjectAccessAction,
+} from "../projects/project-access-policy.js";
 import { Prisma8AuthorizationReadStore } from "./prisma8-authorization-read-store.js";
 
 const storageHash = "9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436";
@@ -74,7 +77,10 @@ function harness() {
     },
   };
   const client = {
-    transaction: (operation: (transaction: Prisma8Transaction) => Promise<unknown>, option: unknown) => {
+    transaction: (
+      operation: (transaction: Prisma8Transaction) => Promise<unknown>,
+      option: unknown,
+    ) => {
       options.push(option);
       return operation(tx as unknown as Prisma8Transaction);
     },
@@ -110,7 +116,9 @@ describe("原生身份及工程授权仓储", () => {
     expect(h.queries[0]?.text).toContain("prisma_contract.marker");
     expect(h.queries[1]?.parameters).toEqual([issuer, subject]);
     expect(h.queries[1]?.text).toContain("i.status = 'active'");
-    expect(h.queries[1]?.text).toContain("i.tenant_id = e.tenant_id AND i.subject_id = e.subject_id");
+    expect(h.queries[1]?.text).toContain(
+      "i.tenant_id = e.tenant_id AND i.subject_id = e.subject_id",
+    );
     expect(h.queries[2]).toEqual(h.queries[0]);
   });
 
@@ -144,7 +152,11 @@ describe("原生身份及工程授权仓储", () => {
       hasProjectPermission(
         actor,
         { tenantId: actor.tenantId, projectId },
-        { ...actor, projectId, permissions: grants.map((grant) => grant.permission as ProjectAccessAction) },
+        {
+          ...actor,
+          projectId,
+          permissions: grants.map((grant) => grant.permission as ProjectAccessAction),
+        },
         "version:read",
       ),
     ).toBe(false);
@@ -153,7 +165,9 @@ describe("原生身份及工程授权仓储", () => {
   it("非法标识不启动事务或查询业务数据", async () => {
     const h = harness();
     await expect(h.store.findActiveExternalIdentity(issuer, "")).resolves.toBeNull();
-    await expect(h.store.readProjectGrants({ ...actor, subjectId: "../bad" }, projectId)).resolves.toEqual([]);
+    await expect(
+      h.store.readProjectGrants({ ...actor, subjectId: "../bad" }, projectId),
+    ).resolves.toEqual([]);
     await expect(h.store.readProjectGrants(actor, "../bad")).resolves.toEqual([]);
     expect(h.options).toHaveLength(0);
     expect(h.queries).toHaveLength(0);

@@ -29,7 +29,10 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     imports: [Prisma8AuthorizationModule],
     providers: [
       ScadaProjectGuard,
-      { provide: ScadaSecurityAuditService, useValue: { record: (decision) => decisions.push(decision) } },
+      {
+        provide: ScadaSecurityAuditService,
+        useValue: { record: (decision) => decisions.push(decision) },
+      },
     ],
   })
     .overrideProvider(PRISMA8_RUNTIME_CONFIG)
@@ -49,7 +52,10 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     const scope = "prisma8-auth-smoke-" + randomUUID();
     const principal = Object.freeze({ tenantId: scope, subjectId: scope });
     stage = "原生身份映射与工程 ACL 只读查询";
-    const identity = await authorization.findActiveExternalIdentity("https://" + scope + ".invalid/", scope);
+    const identity = await authorization.findActiveExternalIdentity(
+      "https://" + scope + ".invalid/",
+      scope,
+    );
     const grants = await authorization.readProjectGrants(principal, scope);
     if (identity !== null || !Array.isArray(grants) || grants.length !== 0) {
       throw new Error("不存在的身份或工程授权查询结果异常");

@@ -217,7 +217,10 @@ export class OidcCallbackService {
 
     let externalIdentity: AuthenticatedProjectPrincipal | null;
     try {
-      externalIdentity = await this.authorization.findActiveExternalIdentity(claims.iss, claims.sub);
+      externalIdentity = await this.authorization.findActiveExternalIdentity(
+        claims.iss,
+        claims.sub,
+      );
     } catch {
       throw new ServiceUnavailableException(IDENTITY_LOOKUP_FAILURE_MESSAGE);
     }

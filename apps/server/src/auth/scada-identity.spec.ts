@@ -371,7 +371,10 @@ describe("可信会话与工程 Guard", () => {
     );
     await expect(
       guard.canActivate(
-        context({ headers: {}, params: { projectId: "project-a" }, scadaPrincipal: principal }, "version:read"),
+        context(
+          { headers: {}, params: { projectId: "project-a" }, scadaPrincipal: principal },
+          "version:read",
+        ),
       ),
     ).rejects.toThrow("工程权限查询暂不可用，请稍后重试");
     expect(records).toEqual([]);
@@ -421,7 +424,11 @@ describe("可信会话与工程 Guard", () => {
         },
       },
     };
-    const guard = new ScadaProjectGuard(new Prisma7AuthorizationReadStore(db as unknown as PrismaService), new Reflector(), audit);
+    const guard = new ScadaProjectGuard(
+      new Prisma7AuthorizationReadStore(db as unknown as PrismaService),
+      new Reflector(),
+      audit,
+    );
     const request: ScadaAuthenticatedRequest = {
       headers: { authorization: "Bearer 不应写入日志" },
       params: { projectId: "project-private" },
