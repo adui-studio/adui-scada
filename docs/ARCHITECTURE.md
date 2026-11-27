@@ -595,3 +595,7 @@ React/Vue 的 Nginx 共享单一配置，容器 8080 保留匿名 HTTP，8443 �
 ### Docker 常驻 NestJS 原生只读连接候选（ADR-0073）
 
 现有 docker:up 严格验证宿主 PostgreSQL 19 库及完整契约后，才以现有随机凭据、systemIdentifier 和 storageHash 建立 .local/docker-runtime/server-database.json，目录独立于 Keycloak 证书挂载，文件仅 server 只读挂载，不进入镜像、服务环境或 Git。既有绑定必须匹配，拒绝自动更新或复位。Compose 明确 SCADA_DOCKER_DB_READONLY=true，要求 OIDC 和本机模拟 API 均关闭且禁止宿主连接 URL。DockerReadOnlyDatabaseAppModule 复用 AppModule 与唯一 Prisma8DatabaseModule；连接地址固定 postgres:5432/adui_scada，使用已验收只读事务、角色、集群、契约与关闭生命周期。GET /health/database 仅容器自身回环访问，实际调用常驻 Prisma8Service 的 readTransaction，成功仅返回 status=ok、mode=docker-readonly；异常返回固定 503，非回环 404。Compose 健康检查和独立烟测必须验证该接口，旧无数据库镜像不得通过。原 /health 与 Nginx 代理不变，公开认证及工程 API 继续 404。本地已有数据库角色与隔离网络保持不变，严格只读连接模式不等于 PostgreSQL 角色最小权限或生产 TLS 部署资格；业务写入、认证及生产部署均未开启。
+
+### 2026-11-27 · 容器临时事务验收边界
+
+当前常驻服务仍为 DockerReadOnlyDatabaseAppModule，生产 OIDC、工程路由和工业写入未开启。独立临时事务进程通过固定容器网络连接同一个已核验 adui_scada 业务库，使用仅用于该显式探针的可写配置和单连接池；启动、业务事务前后及连接关闭复用正式 Prisma8Service 边界。仅对本会话 pg_temp 固定临时关系执行创建、插入、更新和删除关系，跨事务验证提交后的夹具值和主动回滚后的原值；相同后端 PID、明确回滚异常、行数和清理均是成功条件。正式业务表、身份、ACL、工程、发布记录和原生契约不写入，未增加数据库、服务或权限。临时 DDL/DML 仍须维护者明确确认；本地开发角色本身并非生产最小权限角色，命令行确认是操作门禁而非身份认证。正式可写业务及真实认证必须独立验收，不能从临时表结果推断。
