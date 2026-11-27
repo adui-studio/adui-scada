@@ -1,5 +1,6 @@
-import { randomBytes } from "node:crypto";
+import { generateKeyPairSync, randomBytes, sign } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import * as oidc from "openid-client";
 import type { CustomFetch } from "openid-client";
 import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
@@ -180,6 +181,75 @@ describe("OIDC 固定 Issuer Discovery", () => {
     const service = new OidcProviderDiscoveryService(startupConfig);
 
     await expect(service.getConfiguration()).rejects.toThrow(DISCOVERY_FAILURE_MESSAGE);
+  });
+
+  it("显式 Docker 模式不允许非法 CA 或非固定 Issuer 回退到全局 Fetch", async () => {
+    const startupConfig = { ...createConfig(), dockerKeycloakCa: "invalid" };
+    const { fetchMock } = stubDiscoveryFetch(createMetadata(startupConfig.issuer.href));
+    const service = new OidcProviderDiscoveryService(startupConfig);
+
+    await expect(service.getConfiguration()).rejects.toThrow(DISCOVERY_FAILURE_MESSAGE);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("正式 SDK 对授权码响应执行 RS256 验签并拒绝错误签名", async () => {
+    const startupConfig = createConfig();
+    const metadata = createMetadata(startupConfig.issuer.href);
+    const trusted = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const untrusted = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const jwks = {
+      keys: [{ ...trusted.publicKey.export({ format: "jwk" }), kid: "fixture", use: "sig", alg: "RS256" }],
+    };
+    const state = randomBytes(32).toString("base64url");
+    const nonce = randomBytes(32).toString("base64url");
+    const codeVerifier = randomBytes(32).toString("base64url");
+    const now = Math.floor(Date.now() / 1000);
+    const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
+    const unsigned = encode({ alg: "RS256", kid: "fixture" }) + "." + encode({
+      iss: startupConfig.issuer.href,
+      aud: startupConfig.clientId,
+      sub: "fixture-subject",
+      nonce,
+      iat: now,
+      exp: now + 300,
+    });
+    const signed = unsigned + "." + sign("RSA-SHA256", Buffer.from(unsigned), trusted.privateKey).toString("base64url");
+    const tampered = unsigned + "." + sign("RSA-SHA256", Buffer.from(unsigned), untrusted.privateKey).toString("base64url");
+    const discoveryUrl = startupConfig.issuer.href + "/.well-known/openid-configuration";
+    const fetchFixture = (idToken: string) => {
+      const fetchMock = vi.fn<CustomFetch>(async (url) => {
+        if (url === discoveryUrl) return createResponse(metadata);
+        if (url === metadata.token_endpoint) {
+          return createResponse({ access_token: "fixture-access-token", token_type: "Bearer", id_token: idToken });
+        }
+        if (url === metadata.jwks_uri) return createResponse(jwks);
+        throw new Error("测试收到非预期 OIDC 地址");
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      return fetchMock;
+    };
+    const grant = async () => {
+      const service = new OidcProviderDiscoveryService(startupConfig);
+      const configuration = await service.getConfiguration();
+      const callback = new URL(startupConfig.redirectUri.href);
+      callback.searchParams.set("code", "fixture-code");
+      callback.searchParams.set("state", state);
+      return oidc.authorizationCodeGrant(configuration, callback, {
+        expectedState: state,
+        expectedNonce: nonce,
+        pkceCodeVerifier: codeVerifier,
+        idTokenExpected: true,
+      });
+    };
+
+    const validFetch = fetchFixture(signed);
+    const tokens = await grant();
+    expect(tokens.claims()?.sub).toBe("fixture-subject");
+    expect(validFetch.mock.calls.map(([url]) => url)).toEqual([discoveryUrl, metadata.token_endpoint, metadata.jwks_uri]);
+
+    const invalidFetch = fetchFixture(tampered);
+    await expect(grant()).rejects.toThrow("invalid response encountered");
+    expect(invalidFetch.mock.calls.map(([url]) => url)).toEqual([discoveryUrl, metadata.token_endpoint, metadata.jwks_uri]);
   });
 
   it("发现失败不泄漏底层错误并允许后续重试", async () => {
