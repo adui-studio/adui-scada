@@ -96,7 +96,12 @@ void test("只读官方预览仅接受完整新增操作和可选 public 命名�
   assert.deepEqual(reviewFreshUpdate(plan(), ids, "plan"), ids);
   const document = plan();
   document.envelope.result.plan.operations.push({ id: "schema.public", operationClass: "additive" });
-  assert.deepEqual(reviewFreshUpdate(document, ids, "plan"), [...ids, "schema.public"].sort());
+  assert.deepEqual(reviewFreshUpdate(document, ids, "plan"), [
+    "foreignKey.scada_a.fk",
+    "index.scada_a.idx",
+    "schema.public",
+    "table.scada_a",
+  ]);
 });
 
 void test("拒绝数据丢失、访问变化、未知命令、缺失或重复对象", () => {
@@ -161,4 +166,36 @@ void test("官方诊断仅保留白名单格式错误码，不回显凭据或原
   const pretty = JSON.stringify({ envelope: { error: { code: "MIGRATION.SCHEMA_VERIFY_FAILED", message: base } } }, null, 2);
   const lines = JSON.stringify({ code: "CLI.INVALID_ARGUMENTS", message: base }) + "\n" + JSON.stringify({ code: base }) + "\ninvalid";
   assert.deepEqual(freshDiagnosticCodes(pretty, lines), ["CLI.INVALID_ARGUMENTS", "MIGRATION.SCHEMA_VERIFY_FAILED"]);
+});
+
+void test("原生规划按固定码元顺序比较数字与下划线且不修改输入", () => {
+  const expected = [
+    "foreignKey.scada_a.fk",
+    "index.scada_a.idx0",
+    "index.scada_a.idx_10",
+    "index.scada_a.idx_2",
+    "index.scada_a.idx_a",
+    "table.scada_a",
+  ];
+  const shuffled = [...expected, "schema.public"].reverse();
+  const document = plan();
+  document.envelope.result.plan.operations = shuffled.map((id) => ({
+    id,
+    operationClass: "additive",
+  }));
+  assert.deepEqual(reviewFreshUpdate(document, expected, "plan"), [
+    ...expected.slice(0, -1),
+    "schema.public",
+    "table.scada_a",
+  ]);
+  assert.deepEqual(document.envelope.result.plan.operations.map((operation) => operation.id), shuffled);
+  assert.equal(expected.length, 6);
+});
+
+void test("官方诊断码保持固定码元顺序并去重", () => {
+  const input = ["CLI.A_2", "CLI.A_10", "CLI.A0", "CLI.A_2", "CLI.A_A"];
+  assert.deepEqual(
+    freshDiagnosticCodes(input.map((code) => JSON.stringify({ code })).join("\n")),
+    ["CLI.A0", "CLI.A_10", "CLI.A_2", "CLI.A_A"],
+  );
 });
