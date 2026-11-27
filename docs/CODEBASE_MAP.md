@@ -1944,3 +1944,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/projects/prisma8-project-query-store.ts`：共享五项查询业务操作，历史候选原隔离门禁和构造签名保持。
 - `apps/server/src/projects/prisma8-runtime-project-query-store.ts`、`prisma8-project-query.module.ts`：原生业务库查询及独立 Nest 装配；四项共享锁查询在严格只读配置提前拒绝。
 - `apps/server/src/projects/prisma8-runtime-project-query-store.spec.ts`、`apps/server/src/database/database.module.spec.ts`：十项查询回归及一项原生模块隔离断言；既有只读烟测新增列表与锁模式拒绝。
+
+### 全新原生工程持久化
+
+- `apps/server/src/projects/prisma8-runtime-project-version-store.ts`：当前原生工程读写仓储；继承五项原生查询，新增创建和 CAS 追加。
+- `apps/server/src/projects/prisma8-project-persistence.module.ts`：原生工程读写统一装配，取代独立查询模块。
+- `apps/server/src/projects/prisma8-runtime-project-version-store.spec.ts`：十一项原生写事务模拟回归。
+- `apps/server/prisma8-provider-smoke.mjs`：原生工程读写模块装配及严格只读写入拒绝。
