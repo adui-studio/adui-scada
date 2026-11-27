@@ -20,7 +20,7 @@ const OLD_PROJECTS = Object.freeze([
   "adui-scada-postgres-dev",
   "adui-scada-oidc-lab",
 ]);
-const MODES = new Set(["plan", "up", "down", "ps", "logs"]);
+const MODES = new Set(["plan", "infra", "up", "down", "ps", "logs"]);
 
 function docker(args, showOutput = false) {
   const result = spawnSync("docker", args, {
@@ -113,7 +113,7 @@ export function validateDockerEnv(text) {
 /** 已删除旧 Compose 项目并不代表旧卷消失；脚本绝不触碰旧容器和卷。 */
 export function manageDockerStack(mode, envText, run = docker) {
   if (!MODES.has(mode)) throw new Error("不支持的 Docker 操作");
-  if (mode === "plan" || mode === "up") {
+  if (mode === "plan" || mode === "up" || mode === "infra") {
     validateDockerEnv(envText);
     checked(run, [...COMPOSE_ARGS, "config", "--quiet"]);
     for (const name of OLD_PROJECTS) {
@@ -129,6 +129,10 @@ export function manageDockerStack(mode, envText, run = docker) {
     }
     if (mode === "plan") {
       return "全新安装预检通过：旧持久化卷不参与挂载，新的 adui-scada 卷将由 Docker 创建";
+    }
+    if (mode === "infra") {
+      checked(run, [...COMPOSE_ARGS, "up", "-d", "--pull", "never", "--wait", "--wait-timeout", "180", "postgres", "redis", "keycloak"], true);
+      return "ADui SCADA 基础设施已启动，原生数据库初始化需显式确认";
     }
     checked(run, [...COMPOSE_ARGS, "up", "--build", "-d"], true);
     return "ADui SCADA 已启动：一个项目、一个 PostgreSQL，已有历史数据卷未被修改";
