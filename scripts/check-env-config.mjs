@@ -270,6 +270,13 @@ assert.ok(
 );
 assert.ok(packageScripts.ready.includes("pnpm run test:docker"), "Docker 安全测试必须进入 ready");
 assert.ok(packageScripts["test:docker"].includes("scripts/docker-stack.cases.mjs"));
+assert.ok(packageScripts["test:docker"].includes("scripts/docker-oidc-discovery.cases.mjs"));
+assert.equal(
+  packageScripts["docker:oidc:probe"],
+  "node scripts/docker-stack.mjs oidc",
+  "Keycloak 真实只读探针必须使用受控本机 Docker 入口",
+);
+assert.ok(!packageScripts.ready.includes("docker:oidc:probe"), "真实 Keycloak 探针不得进入离线质量链");
 for (const key of Object.keys(packageScripts)) {
   assert.ok(
     !/^docker:(demo|lab|all):/.test(key) && !key.startsWith("db:dev:"),
