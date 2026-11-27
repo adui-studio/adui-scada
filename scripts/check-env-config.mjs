@@ -272,6 +272,10 @@ assert.ok(packageScripts.ready.includes("pnpm run test:docker"), "Docker 安全�
 assert.ok(packageScripts["test:docker"].includes("scripts/docker-stack.cases.mjs"));
 assert.ok(packageScripts["test:docker"].includes("scripts/docker-oidc-discovery.cases.mjs"));
 assert.ok(packageScripts["test:docker"].includes("scripts/docker-oidc-transport.cases.mjs"));
+assert.ok(packageScripts["test:docker"].includes("scripts/docker-runtime-binding.cases.mjs"));
+assert.ok(compose.includes('SCADA_DOCKER_DB_READONLY: "true"'));
+assert.ok(compose.includes("source: ../../.local/docker-runtime/server-database.json"));
+assert.ok(nest.includes("DockerReadOnlyDatabaseAppModule"));
 assert.equal(
   packageScripts["docker:oidc:probe"],
   "node scripts/docker-stack.mjs oidc",
@@ -301,6 +305,8 @@ const ignore = read(".gitignore");
 assert.match(ignore, /^\.env$/m);
 assert.match(ignore, /^\.env\.\*$/m);
 assert.ok(ignore.includes(".local/docker/"), "本机随机凭据必须被 Git 忽略");
+assert.ok(ignore.includes(".local/docker-runtime/"), "常驻数据库绑定必须被 Git 忽略");
+assert.ok(read(".dockerignore").includes(".local/docker-runtime/"), "常驻数据库绑定不得进入镜像");
 assert.match(ignore, /^!\.env\.example$/m);
 assert.match(read(".dockerignore"), /^\.env$/m);
 assert.ok(
