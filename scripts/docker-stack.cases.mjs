@@ -121,6 +121,15 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
     assert.equal(args.includes("-v"), false);
   });
 
+  void it("过渡期启动仅启动三项基础设施，不构建或启动业务应用", () => {
+    const { run, calls } = mockDocker();
+    manageDockerStack("infra", env, run);
+    const args = calls.find((call) => call.includes("up"));
+    assert.ok(args);
+    assert.deepEqual(args.slice(-10), ["up", "-d", "--pull", "never", "--wait", "--wait-timeout", "180", "postgres", "redis", "keycloak"]);
+    assert.equal(args.includes("--build"), false);
+  });
+
   void it("日常停止、状态及日志只管理 adui-scada", () => {
     for (const mode of ["down", "ps", "logs"]) {
       const { run, calls } = mockDocker();
