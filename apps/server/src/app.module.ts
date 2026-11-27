@@ -29,7 +29,7 @@ export class LocalDemoAppModule {}
 
 /**
  * 仅在 OIDC 配置完整且显式启用时使用。
- * 同时挂载可信身份、工程 ACL 与工程持久化 API；默认 AppModule 仍保持数据库隔离。
+ * 统一挂载 Prisma 8 原生身份、工程 ACL 与工程持久化 API；默认 AppModule 仍保持数据库隔离。
  */
 @Module({ imports: [AppModule, ProjectApiModule] })
 export class OidcEnabledAppModule {}

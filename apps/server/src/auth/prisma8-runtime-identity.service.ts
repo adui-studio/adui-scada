@@ -60,7 +60,7 @@ export class Prisma8RuntimeAuthSessionService
   }
 }
 
-/** 迁移期间不自动启动过期清理定时器，待正式根模块接管后单独启用。 */
+/** 正式可写模式恢复有界过期清理，严格只读烟测不会启动定时器。 */
 @Injectable()
 export class Prisma8RuntimeOidcLoginTransactionService
   extends Prisma8OidcLoginOperations
@@ -71,6 +71,6 @@ export class Prisma8RuntimeOidcLoginTransactionService
     discovery: OidcProviderDiscoveryService,
     @Inject(SCADA_OIDC_STARTUP_CONFIG) startupConfig: EnabledOidcConfig,
   ) {
-    super(nativePort(database, 5000), discovery, startupConfig, false);
+    super(nativePort(database, 5000), discovery, startupConfig, database.writable);
   }
 }

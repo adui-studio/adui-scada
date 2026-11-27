@@ -14,7 +14,7 @@ import {
   Prisma8RuntimeOidcLoginTransactionService,
 } from "./prisma8-runtime-identity.service.js";
 
-/** 新身份 Provider 的独立装配，不挂载正式 HTTP 路由或旧数据库模块。 */
+/** 正式身份 HTTP 模块共享的原生业务提供方，不重复注册控制器或数据库。 */
 @Module({
   imports: [Prisma8DatabaseModule, Prisma8AuthorizationModule],
   providers: [

@@ -345,7 +345,6 @@ async function main() {
         serverVersion: identity.version,
         databaseInitialized: true,
         ...probe,
-        providerSwitched: false,
       };
     }
     if (action === "runtime-review") {

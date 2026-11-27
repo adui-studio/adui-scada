@@ -1,16 +1,48 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { FreshRuntimeProbeError } from "../../scripts/prisma8-fresh-runtime-probe.mjs";
 
-/** 使用真实 Nest 测试应用上下文执行新提供方与原生授权仓储，不挂载 HTTP 路由。 */
+/** 加载正式 OIDC 根模块的真实 Nest 测试上下文，强制只读且不监听 HTTP 端口。 */
 export async function verifyPrisma8Provider(connectionString, systemIdentifier, storageHash) {
   await import("reflect-metadata");
   const { Test } = await import("@nestjs/testing");
   const { NotFoundException, ServiceUnavailableException } = await import("@nestjs/common");
-  const { Prisma8IdentityModule } = await import(
-    new URL("./dist/auth/prisma8-identity.module.js", import.meta.url).href
+  const { ModulesContainer } = await import("@nestjs/core");
+  // 仅在此探针导入根模块时使用同步静默日志，避免 Pretty 工作线程及机器 JSON 污染。
+  const previousNodeEnv = process.env.NODE_ENV;
+  const previousLogLevel = process.env.SCADA_LOG_LEVEL;
+  let OidcEnabledAppModule;
+  try {
+    process.env.NODE_ENV = "test";
+    process.env.SCADA_LOG_LEVEL = "silent";
+    ({ OidcEnabledAppModule } = await import(
+      new URL("./dist/app.module.js", import.meta.url).href
+    ));
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
+    if (previousLogLevel === undefined) delete process.env.SCADA_LOG_LEVEL;
+    else process.env.SCADA_LOG_LEVEL = previousLogLevel;
+  }
+  const { DatabaseModule } = await import(
+    new URL("./dist/database/database.module.js", import.meta.url).href
   );
-  const { Prisma8ProjectPersistenceModule } = await import(
-    new URL("./dist/projects/prisma8-project-persistence.module.js", import.meta.url).href
+  const { PrismaService } = await import(
+    new URL("./dist/database/prisma.service.js", import.meta.url).href
+  );
+  const { PrismaProjectVersionStore } = await import(
+    new URL("./dist/projects/prisma-project-version-store.js", import.meta.url).href
+  );
+  const { PrismaProjectReleaseStore } = await import(
+    new URL("./dist/projects/prisma-project-release-store.js", import.meta.url).href
+  );
+  const { Prisma8AuthorizationReadStore } = await import(
+    new URL("./dist/auth/prisma8-authorization-read-store.js", import.meta.url).href
+  );
+  const { ScadaAuthController } = await import(
+    new URL("./dist/auth/scada-auth.controller.js", import.meta.url).href
+  );
+  const { ProjectApiController } = await import(
+    new URL("./dist/projects/project-api.controller.js", import.meta.url).href
   );
   const { Prisma8RuntimeProjectVersionStore } = await import(
     new URL("./dist/projects/prisma8-runtime-project-version-store.js", import.meta.url).href
@@ -57,15 +89,13 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     transactionEncryptionKey: randomBytes(32),
   };
   const context = await Test.createTestingModule({
-    imports: [Prisma8IdentityModule, Prisma8ProjectPersistenceModule],
-    providers: [
-      ScadaProjectGuard,
-      {
-        provide: ScadaSecurityAuditService,
-        useValue: { record: (decision) => decisions.push(decision) },
-      },
-    ],
+    imports: [OidcEnabledAppModule],
   })
+    // 即使未来误注册旧服务，烟测也不允许其创建连接或执行生命周期。
+    .overrideProvider(PrismaService)
+    .useValue(Object.freeze({}))
+    .overrideProvider(ScadaSecurityAuditService)
+    .useValue({ record: (decision) => decisions.push(decision) })
     .overrideProvider(PRISMA8_RUNTIME_CONFIG)
     .useValue({ connectionString, readOnly: true, expectedSystemIdentifier: systemIdentifier })
     .overrideProvider(SCADA_OIDC_STARTUP_CONFIG)
@@ -82,13 +112,38 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
   let service;
   let stage = "原生模块启动";
   try {
-    service = context.get(Prisma8Service);
+    stage = "正式根模块原生提供方唯一性核验";
+    const modules = Array.from(context.get(ModulesContainer).values());
+    if (
+      modules.some(
+        (module) => module.metatype === DatabaseModule || module.providers.has(PrismaService),
+      )
+    ) {
+      throw new Error("正式根模块仍注册旧数据库提供方");
+    }
+    const services = context.get(Prisma8Service, { each: true });
+    if (services.length !== 1 || !services[0] || services[0].writable !== false) {
+      throw new Error("正式根模块没有唯一严格只读原生提供方");
+    }
+    service = services[0];
+    if (
+      !(context.get(ScadaAuthController) instanceof ScadaAuthController) ||
+      !(context.get(ProjectApiController) instanceof ProjectApiController) ||
+      context.get(PrismaProjectVersionStore) !== context.get(Prisma8RuntimeProjectVersionStore) ||
+      context.get(PrismaProjectReleaseStore) !== context.get(Prisma8RuntimeProjectReleaseStore)
+    ) {
+      throw new Error("正式根模块控制器或仓储绑定异常");
+    }
+    stage = "正式原生根模块启动";
     await context.init();
     const client = service.client;
     if (context.get(Prisma8Service).client !== client) {
       throw new Error("原生数据库模块没有复用提供方");
     }
     const authorization = context.get(AuthorizationReadStore);
+    if (!(authorization instanceof Prisma8AuthorizationReadStore)) {
+      throw new Error("正式身份授权端口未绑定原生实现");
+    }
     const scope = "prisma8-auth-smoke-" + randomUUID();
     const principal = Object.freeze({ tenantId: scope, subjectId: scope });
     stage = "原生身份映射与工程 ACL 只读查询";
@@ -310,5 +365,9 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     releaseWriteDenied: true,
     rollbackWriteDenied: true,
     missingProjectDenied: true,
+    nativeRootAssemblyVerified: true,
+    singleNativeProviderVerified: true,
+    legacyProviderAbsent: true,
+    providerSwitched: true,
   };
 }

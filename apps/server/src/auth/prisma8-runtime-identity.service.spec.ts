@@ -10,7 +10,7 @@ import {
   type Prisma8AuthTransaction,
 } from "./prisma8-auth-transaction-port.js";
 import { Prisma8OidcLoginTransactionService } from "./prisma8-oidc-login-transaction.service.js";
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
 import {
   assertPrisma8Writable,
@@ -108,6 +108,7 @@ function harness(readOnly = false) {
     },
   } as unknown as Prisma8Client;
   const database = {
+    writable: !readOnly,
     assertWritable: () => assertPrisma8Writable(config),
     readTransaction: <T>(operation: (tx: Prisma8Transaction) => Promise<T>) =>
       readPrisma8Transaction(client, config, storageHash, operation),
@@ -442,5 +443,40 @@ describe("原生身份业务事务边界", () => {
       "OIDC 登录事务清理失败，请稍后重试",
     );
     expect(h.outcomes).toEqual(["提交", "回滚"]);
+  });
+
+  it("可写提供方只启动一个过期清理定时器，关闭后不再访问数据库", async () => {
+    const h = harness();
+    vi.useFakeTimers();
+    try {
+      h.transactions.onModuleInit();
+      h.transactions.onModuleInit();
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(h.mutations).toHaveLength(1);
+      expect(h.mutations[0]?.text).toContain("DELETE FROM public.scada_oidc_transactions");
+      expect(h.mutations[0]?.parameters[0]).toBe(issuer);
+      expect(h.mutations[0]?.parameters[4]).toBe(128);
+      await h.transactions.onModuleDestroy();
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(h.mutations).toHaveLength(1);
+    } finally {
+      await h.transactions.onModuleDestroy();
+      vi.useRealTimers();
+    }
+  });
+
+  it("严格只读提供方不启动过期清理定时器", async () => {
+    const h = harness(true);
+    vi.useFakeTimers();
+    try {
+      h.transactions.onModuleInit();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(h.options).toHaveLength(0);
+      expect(h.queries).toHaveLength(0);
+      expect(h.mutations).toHaveLength(0);
+    } finally {
+      await h.transactions.onModuleDestroy();
+      vi.useRealTimers();
+    }
   });
 });
