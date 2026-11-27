@@ -271,6 +271,7 @@ assert.ok(
 assert.ok(packageScripts.ready.includes("pnpm run test:docker"), "Docker 安全测试必须进入 ready");
 assert.ok(packageScripts["test:docker"].includes("scripts/docker-stack.cases.mjs"));
 assert.ok(packageScripts["test:docker"].includes("scripts/docker-oidc-discovery.cases.mjs"));
+assert.ok(packageScripts["test:docker"].includes("scripts/docker-oidc-transport.cases.mjs"));
 assert.equal(
   packageScripts["docker:oidc:probe"],
   "node scripts/docker-stack.mjs oidc",

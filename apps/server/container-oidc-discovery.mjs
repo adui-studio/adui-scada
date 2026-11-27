@@ -1,4 +1,4 @@
-import { createHash, createPublicKey, X509Certificate } from "node:crypto";
+import { createHash, createPublicKey, randomBytes, X509Certificate } from "node:crypto";
 import { request } from "node:https";
 import { resolve } from "node:path";
 import { checkServerIdentity } from "node:tls";
@@ -229,6 +229,55 @@ export async function probeOidcDiscovery(mode, input, transport = requestOidcJso
   return { status: "DOCKER_OIDC_DISCOVERY_READY", issuer, ...fingerprintOidcKeys(jwks) };
 }
 
+/** 容器验收直接复用正式编译后的 Discovery 服务及其配置中的 Fetch；不装配数据库。 */
+export async function verifyFormalContainerOidc(input) {
+  const { issuer, ca } = parseOidcProbeInput(input);
+  let configuration;
+  let transport;
+  try {
+    await import("reflect-metadata");
+    const { customFetch } = await import("openid-client");
+    const { OidcProviderDiscoveryService } = await import(
+      new URL("./dist/auth/oidc-provider-discovery.service.js", import.meta.url).href
+    );
+    // 此处只构造 Discovery 客户端，不读取真实客户端凭据，不进行授权码兑换。
+    const service = new OidcProviderDiscoveryService({
+      enabled: true,
+      dockerKeycloakCa: ca,
+      issuer: new URL(issuer),
+      clientId: "adui-scada-readonly-probe",
+      clientSecret: randomBytes(32).toString("base64url"),
+      redirectUri: new URL("https://127.0.0.1/api/v1/auth/oidc/callback"),
+      webOrigins: [],
+      transactionEncryptionKey: randomBytes(32),
+    });
+    configuration = await service.getConfiguration();
+    verifyOidcMetadata(configuration.serverMetadata(), issuer);
+    transport = configuration[customFetch];
+    if (typeof transport !== "function") throw oidcFailure("FORMAL_DISCOVERY");
+  } catch {
+    throw oidcFailure("FORMAL_DISCOVERY");
+  }
+  try {
+    const response = await transport(configuration.serverMetadata().jwks_uri, {
+      body: undefined,
+      headers: { accept: "application/json" },
+      method: "GET",
+      redirect: "manual",
+      signal: AbortSignal.timeout(10_000),
+    });
+    const jwks = await response.json();
+    return {
+      status: "DOCKER_OIDC_DISCOVERY_READY",
+      issuer,
+      ...fingerprintOidcKeys(jwks),
+      formalClientVerified: true,
+    };
+  } catch {
+    throw oidcFailure("FORMAL_JWKS");
+  }
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     if (process.argv.length !== 3) throw oidcFailure("INPUT");
@@ -239,10 +288,12 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       if (bytes > MAX_INPUT_BYTES) throw oidcFailure("INPUT");
       chunks.push(chunk);
     }
-    const result = await probeOidcDiscovery(
-      process.argv[2],
-      JSON.parse(Buffer.concat(chunks).toString("utf8")),
-    );
+    const mode = process.argv[2];
+    const input = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    const result =
+      mode === "container"
+        ? await verifyFormalContainerOidc(input)
+        : await probeOidcDiscovery(mode, input);
     process.stdout.write(JSON.stringify(result) + "\n");
   } catch (error) {
     const code = error instanceof OidcProbeError ? error.code : "UNEXPECTED";

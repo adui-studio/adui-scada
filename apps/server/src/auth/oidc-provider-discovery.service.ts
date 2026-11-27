@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import * as oidc from "openid-client";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
+import { createDockerOidcFetch } from "./docker-oidc-transport.js";
 
 export const SCADA_OIDC_STARTUP_CONFIG = Symbol("SCADA_OIDC_STARTUP_CONFIG");
 
@@ -107,11 +108,16 @@ export class OidcProviderDiscoveryService {
   private async discover(): Promise<oidc.Configuration> {
     try {
       const allowInsecureLoopback = this.startupConfig.issuer.protocol === "http:";
-      const secureFetch: oidc.CustomFetch = async (url, options) => {
-        assertAllowedOidcUrl(url, allowInsecureLoopback);
-        // openid-client 使用 redirect: manual；不允许 Fetch 自动跟随端点重定向。
-        return globalThis.fetch(url, options as RequestInit);
-      };
+      const dockerCa = this.startupConfig.dockerKeycloakCa;
+      const secureFetch: oidc.CustomFetch =
+        dockerCa !== undefined
+          ? createDockerOidcFetch(this.startupConfig.issuer, dockerCa)
+          : async (url, options) => {
+              assertAllowedOidcUrl(url, allowInsecureLoopback);
+              if (options.redirect !== "manual") throw new Error(DISCOVERY_FAILURE_MESSAGE);
+              // openid-client 使用 redirect: manual；不允许 Fetch 自动跟随端点重定向。
+              return globalThis.fetch(url, options as RequestInit);
+            };
 
       const configuration = await oidc.discovery(
         this.startupConfig.issuer,
@@ -130,6 +136,19 @@ export class OidcProviderDiscoveryService {
         this.startupConfig.issuer,
         allowInsecureLoopback,
       );
+      if (dockerCa !== undefined) {
+        const metadata = configuration.serverMetadata();
+        const base = this.startupConfig.issuer.href + "/protocol/openid-connect";
+        if (
+          metadata.authorization_endpoint !== base + "/auth" ||
+          metadata.token_endpoint !== base + "/token" ||
+          metadata.jwks_uri !== base + "/certs"
+        ) {
+          throw new Error(DISCOVERY_FAILURE_MESSAGE);
+        }
+      }
+      // 直接 TLS Token 响应默认不要求应用层 JWS 验签；显式启用 SDK 的签名验证。
+      oidc.enableNonRepudiationChecks(configuration);
       return configuration;
     } catch {
       // 不向启动日志或 HTTP 响应传播 Issuer、端点、响应体或底层异常。

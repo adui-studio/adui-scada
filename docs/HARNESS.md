@@ -5712,3 +5712,33 @@ git status --short
 ```
 
 期望原七服务及双端 HTTP/HTTPS 成功提示保持不变；新增「宿主与容器 Keycloak Discovery/JWKS 严格只读验证通过；OIDC 登录尚未启用」。若探针失败，根据宿主/容器、Discovery/JWKS 与固定诊断分类核查，不修改证书信任、Realm 或库以通过，不自动重试或清理现场。真实探针不进入 ready，仅离线回归纳入既有 test:docker。成功不能代替真实授权码、签名、Cookie、CSRF、身份映射或业务事务验收。
+
+### 2026-11-27 · 正式 OIDC Docker 传输验收
+
+保持现有 .env、公开 CA、随机凭据、七服务及原生数据库。先运行离线与构建质量链：
+
+```powershell
+pnpm run test:docker &&
+vp test run apps/server/src/auth/oidc-provider-discovery.service.spec.ts apps/server/src/auth/oidc-callback.service.spec.ts &&
+pnpm run env:check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+vp check --fix &&
+vp check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "正式 OIDC 增量验收退出码：$LASTEXITCODE"
+```
+
+预期 Docker 41 项通过（25 编排、10 探针、6 传输）；Discovery 9 项及回调 12 项预期全部通过；Vite+ 零警告错误。之后重建镜像并执行已存在的只读命令：
+
+```powershell
+pnpm run docker:up &&
+pnpm run docker:oidc:probe &&
+pnpm run docker:ps
+Write-Host "正式 OIDC 只读真实验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+预期「宿主 Keycloak 与容器正式 OIDC 客户端 Discovery/JWKS 严格只读验证通过；OIDC 登录尚未启用」。容器报告必须含 formalClientVerified=true，旧镜像不得通过；正式客户端 Discovery 或 JWKS 阶段失败时保留现场，不关闭 TLS、不换证、不重置或改写库，不提前打开登录。独立 probe 使用合成客户端配置，只进行 GET；真实 SDK 签名回归使用本地合成 Token/JWKS，不代表真实 Keycloak 授权码兑换。未授权的正式业务数据库连接或写入仍禁止。

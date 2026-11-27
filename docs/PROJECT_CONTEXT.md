@@ -3144,3 +3144,9 @@ E-159 为测试专属消息遗漏，已最小修复；不改变生产代码。�
 维护者 Windows 在候选 HEAD 3e677cd2dca74b0d621cb8bed029018f8b5e62a0 实测 Docker 22/22、环境和 LF、中文文案 367 文件、Markdown 97 份、Vite+ 500 格式/341 受检零警告错误、git diff --check、四镜像构建、七服务运行、容器原生只读、双端 HTTP 及宿主 HTTPS 探针均通过，增量与真实验收退出码均 0。正常 Hook 格式化提交 56f48c2f81e9df95f9d97253098abef300ea665d 已推送，远端三文件差异仅 Markdown 围栏及 JavaScript 排版，无业务变化；无审查阻塞或额外远端 CI 记录。经维护者明确授权 PR #252 Squash 合入 feat/mvp-first-integration 的 b1218c0fd290344cf152500b4105e24ee9b29745。E-161 已关闭。日志未包含双端真实浏览器渲染证据，不将其视为浏览器或登录验收。
 
 下一批复用原单项目七服务、现有证书和公开 Issuer，增加独立宿主/容器 Discovery/JWKS 只读探针，严格 TLS、固定端点、RSA 签名公钥集合匹配、白名单阶段诊断。原生产及容器 OIDC 开关不变，不修改 Realm、ACL、身份映射、数据库连接或任何写入规则；不新增依赖或旧库实验。局部 Node 10 项、真实临时 TLS 七项、远端编排提取三项通过；完整 test:docker 预计 35 项，Windows 全仓质量、新镜像和真正 Keycloak 联调仍待验收。下一步在真实网络验证后设计正式 openid-client 容器传输适配及原生业务连接，不提前开放登录。
+
+### 2026-11-27 · PR #253 已验收与正式 OIDC 容器传输候选
+
+维护者 Windows 在候选 HEAD f75b7e6fd06f7031b475b62be7b30b0b8f0e8a05 实测 Docker 35/35（编排 25、Keycloak 探针 10），环境/LF、中文文案 370 文件、Markdown 97 份、Vite+ 503 格式/344 受检零警告错误、git diff --check、四镜像构建、七服务运行、容器原生只读、双端 HTTP/HTTPS 及真实宿主与容器 Keycloak Discovery/JWKS 一致性均通过，增量与真实验收退出码均 0。正常 Hook 格式化提交 b74a3fe6b8ac5e2d1b2d4da9dfb2524d4375799d 已核对五文件仅排版；经维护者授权 PR #253 Squash 合入 feat/mvp-first-integration 的 b5378e263962d25883894e3416038472f845f1cb。E-162 已关闭。尚无正式授权码兑换、ID Token 验签或登录会话实测证据。
+
+正式 OidcProviderDiscoveryService 增加受信装配显式注入公开 CA 的 Docker 固定传输选择；当前环境解析器不读取该字段，Docker HTTP 进程的 OIDC 开关仍关闭。仅允许固定公开 Realm 的 Discovery/JWKS GET、Token 授权码 POST，通过 Keycloak 内部 TLS 连接并保留公开 IP 证书身份与 Host；SDK 自身负责协议和显式 JWS 签名检查。已有 docker:oidc:probe 容器侧改用实际编译后的正式 Discovery 服务及其 Fetch，宿主仍独立探测并比较签名公钥集合，报告必须有 formalClientVerified=true。容器探针只读，不读取真实客户端秘密、不兑换 Token、不连接业务数据库。局部 13/13 通过，正式 SDK 测试和真实新镜像探针待验收。下一步为正式原生业务连接及受控 OIDC 启动、双端回调联调，不开展旧库实验。

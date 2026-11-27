@@ -202,3 +202,7 @@ Vue 与 React 是两个正式 Web 端，必须共用同源 API 契约、工程�
 - OIDC 模块启用后每 30 秒清理最多 128 条 `expiresAt <= now` 的过期 State 事务；删除时二次验证过期条件，单次有界且保留正常未消费的有效事务；失败告警固定中文、不记录秘密，下一轮重试。
 - 服务端工程请求仍保留 2 MiB 的共享 Core 白名单；最终 `ProjectSnapshot` 附加版本号、时间和哈希后超限时改返回 HTTP 400，并保持事务原子失败，不把正常容量错误伪装成数据库 500。其他非容量错误依旧传播。
 - 上述修复为代码候选，**须经过真实 Windows 工程质量链、受控 PostgreSQL 与 HTTP 验证后才可登记通过**；不改变任何已应用 Prisma 迁移或 SCADA 工业只读安全边界。
+
+### 2026-11-27 · 固定 Docker Keycloak 正式传输候选
+
+当前锁定 openid-client 6.9.1 / oauth4webapi 3.8.9（保持原 Catalog 与锁文件）。以既有 CustomFetch 扩展实现受信 Docker 路由适配；公开 Issuer 与浏览器授权地址不改写，内部仅连接 keycloak:8443，独立公开 CA 验证 TLS 证书链和 127.0.0.1 证书身份。严格允许固定 Realm Discovery/JWKS GET 与 Authorization Code + client_secret_basic Token POST，禁止跳转、任意网络地址、额外请求头与其他授权类型；有限请求体/JSON 响应、取消和固定脱敏错误。显式启用 SDK enableNonRepudiationChecks，以落实本 ADR 签名验证要求，不手写 Token 验签。仅受信启动装配可提供可选公开 CA，环境解析器暂不选择 Docker 模式；实际正式容器 OIDC 仍关闭。现有只读探针容器侧直接调用编译后的正式 Discovery 服务和其 Fetch，宿主独立比较公钥，必须报告正式客户端标志；成功不代表实际授权码兑换或登录已验证。真实 SDK 有效与错误签名测试、真实新镜像及后续业务连接需维护者验收。

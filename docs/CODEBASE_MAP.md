@@ -1992,3 +1992,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-oidc-probe.mjs`：复用本机公开 CA、标准输入、宿主/容器报告及公钥集合一致性；固定阶段错误诊断。
 - `scripts/docker-stack.mjs`：新增受控只读 oidc 模式，保持原有启动及数据库验证流程；`deploy/docker/Dockerfile.server` 仅复制独立探针。
 - `scripts/docker-oidc-discovery.cases.mjs` 10 项、原 `scripts/docker-stack.cases.mjs` 25 项，通过现有 test:docker 纳入 ready；真实 docker:oidc:probe 仅手工执行。
+
+### 正式 OIDC Docker 传输候选
+
+- `apps/server/src/auth/docker-oidc-transport.ts`：固定 Keycloak 内部 HTTPS 请求、公开 Host 与 IP 证书身份、仅授权码 Basic POST、有限 JSON、取消和错误脱敏；不实现 OIDC 协议本身。
+- `apps/server/src/config/oidc-startup.config.ts` / `apps/server/src/auth/oidc-provider-discovery.service.ts`：可选受信 CA 注入、固定元数据端点、SDK 显式 JWS 签名验证；环境解析及 Docker 启用开关保持原状。
+- `apps/server/container-oidc-discovery.mjs` / `scripts/docker-oidc-probe.mjs`：容器显式验收复用编译后正式 Discovery 服务，要求 formalClientVerified，宿主独立比较公钥集合。
+- `scripts/docker-oidc-transport.cases.mjs`：六项离线传输测试进入 test:docker；`apps/server/src/auth/oidc-provider-discovery.service.spec.ts` 增加两项正式配置/签名测试。
