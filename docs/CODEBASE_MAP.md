@@ -1930,3 +1930,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/auth/oidc-callback.service.ts`、`scada-project.guard.ts`：只依赖统一读仓储端口；身份模块显式导出跨模块注入令牌。
 - `scripts/prisma8-authorization-read.cases.mjs`、`apps/server/src/auth/prisma8-authorization-read-store.spec.ts`：边界及查询回归。
 - `apps/server/prisma8-provider-smoke.mjs`：真实 Nest 原生查询与 Guard 拒绝扩展烟测，不改变原有命令或初始化分支。
+
+### 原生身份事务接入候选
+
+- `apps/server/src/auth/prisma8-auth-transaction-port.ts`、`prisma8-session-operations.ts`、`prisma8-oidc-login-operations.ts`：共享原生会话和 OIDC 操作逻辑，历史隔离候选仍独立校验目标。
+- `apps/server/src/auth/prisma8-runtime-identity.service.ts`、`prisma8-identity.module.ts`：新原生身份服务及独立 Nest 装配，不挂正式 HTTP 路由。
+- `apps/server/src/database/prisma8-read-transaction.ts`：原生读事务与显式可写事务边界；`prisma8.service.ts` 提供共享运行时入口。
+- `apps/server/prisma8-provider-smoke.mjs`、`apps/server/src/auth/prisma8-runtime-identity.service.spec.ts`：原生身份只读烟测与事务模拟回归。

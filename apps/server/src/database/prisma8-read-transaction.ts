@@ -65,3 +65,28 @@ export async function readPrisma8Transaction<T>(
     return result;
   }, OPTIONS);
 }
+
+/** 明确拒绝只读配置，不获取连接、不进入业务操作。 */
+export function assertPrisma8Writable(config: Prisma8RuntimeConfig): void {
+  if (config.readOnly !== false) throw new Error("Prisma 8 只读提供方禁止写入");
+}
+
+/** 写事务在业务操作前后复核同一连接边界；后置校验失败由事务回滚。 */
+export async function writePrisma8Transaction<T>(
+  client: PostgresClient<Contract>,
+  config: Prisma8RuntimeConfig,
+  storageHash: string,
+  operation: (tx: Prisma8Transaction) => Promise<T>,
+  timeout: 5000 | 10000 = 10000,
+): Promise<T> {
+  assertPrisma8Writable(config);
+  return client.transaction(
+    async (tx) => {
+      await verifyReadBoundary(tx, config, storageHash);
+      const result = await operation(tx);
+      await verifyReadBoundary(tx, config, storageHash);
+      return result;
+    },
+    { ...OPTIONS, timeout },
+  );
+}

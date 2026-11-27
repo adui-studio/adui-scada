@@ -5474,3 +5474,35 @@ git status --short
 ```
 
 预期 FRESH_PROVIDER_SMOKE_READY、providerReady/providerClosed/readOnlyBoundaryVerified/authorizationReadVerified/missingProjectDenied/databaseInitialized=true、providerSwitched=false，存储指纹和对象计数不变、退出 0。原生查询在受控只读事务中读取随机不存在联合键，Guard 必须固定 404；不访问实际用户身份或授权业务值、不准备夹具、不写入数据库、不启动旧正式应用。历史隔离 DB 专项不连接当前新业务库。
+
+### Prisma 8 原生身份会话与 OIDC 事务候选验收
+
+保持已初始化业务库运行，不执行历史迁移、首次初始化或任何隔离库写入测试。先生成两代契约并执行如下增量：
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+pnpm run test:prisma8:native:runtime &&
+vp test run apps/server/src/auth/prisma8-runtime-identity.service.spec.ts apps/server/src/auth/prisma8-auth-session.service.spec.ts apps/server/src/auth/prisma8-oidc-login-transaction.service.spec.ts apps/server/src/auth/prisma8-authorization-read-store.spec.ts apps/server/src/auth/scada-identity.spec.ts apps/server/src/auth/oidc-callback.service.spec.ts apps/server/src/database/database.module.spec.ts &&
+pnpm run test:e2e:server &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "原生身份事务增量退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期原生全新专项 28/28、运行时 7/7、新增身份 9 项、历史会话 4 项、历史 OIDC 5 项、原有身份与模块回归及 HTTP E2E 全部通过。完整 Vite+ 零警告错误，服务端构建通过，增量退出 0。提交并推送纯格式改动，确认工作区干净后执行：
+
+```powershell
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "原生身份事务只读烟测退出码：$LASTEXITCODE"
+git status --short
+```
+
+预期保留原 FRESH_PROVIDER_SMOKE_READY 全部成功标志，新增 sessionReadVerified=true、identityWriteDenied=true、oidcDiscoverySkipped=true；providerSwitched=false，存储指纹及对象数量不变，退出 0。该烟测不会写入实际身份、会话或 OIDC 行，不调用真实 IdP，不启动正式 HTTP 路由及清理定时器；真实并发消费、提交回滚及签发撤销需另行设计隔离数据验收并获明确授权。
