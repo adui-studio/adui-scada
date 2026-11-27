@@ -34,7 +34,7 @@ async function bootstrap(): Promise<void> {
     throw new Error("OIDC 身份接入与本机模拟 API 不能同时启用");
   }
 
-  // 仅在 OIDC 完整配置通过校验后加载数据库、身份模块和受保护的工程 API。
+  // 仅在 OIDC 完整配置通过校验后装配原生数据库、身份模块及受保护的工程 API。
   const { AppModule, LocalDemoAppModule, OidcEnabledAppModule } = await import("./app.module.js");
   const rootModule = oidc.enabled
     ? OidcEnabledAppModule

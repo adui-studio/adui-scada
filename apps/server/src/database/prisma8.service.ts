@@ -92,7 +92,7 @@ function createRuntime(config: Prisma8RuntimeConfig): Prisma8RuntimePort<Prisma8
   };
 }
 
-/** 原生 Prisma 8 提供方；正式业务模块尚未导入此独立模块。 */
+/** 正式业务模块共享的唯一原生 Prisma 8 数据库提供方。 */
 @Injectable()
 export class Prisma8Service implements OnModuleInit, OnModuleDestroy {
   private readonly lifecycle = new Prisma8RuntimeLifecycle<Prisma8Client>();
@@ -106,6 +106,11 @@ export class Prisma8Service implements OnModuleInit, OnModuleDestroy {
   /** 业务只读仓储使用同一原生事务边界，禁止绕过启动生命周期。 */
   readTransaction<T>(operation: (tx: Prisma8Transaction) => Promise<T>): Promise<T> {
     return readPrisma8Transaction(this.client, this.config, prisma8RuntimeStorageHash, operation);
+  }
+
+  /** 严格只读探针不得调度任何后台清理写事务。 */
+  get writable(): boolean {
+    return this.config.readOnly === false;
   }
 
   /** 供 OIDC 在网络发现及随机值持久化前确认写入模式。 */
