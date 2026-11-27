@@ -1556,3 +1556,15 @@
 - **最小修复**：保留 GET /health/database 与 Supertest .expect(404)，取得 response 后追加 expect(response.status).toBe(404)，不改变被测路由、期望状态、业务代码或 Lint 规则。
 - **验证边界**：修复测试提交 a2829cad1b38b611fcbe1439b1f4fc736744c467，远端 Blob 71eee900f3771ae3cea1d333c0f6a97973f0abbd；回读与预期唯一替换逐字一致，提取实际测试体并模拟 Supertest/Vitest 验证 404 通过、200 与 503 拒绝，3/3。协作环境没有完整项目依赖及 Vite+，真实 E2E 与全仓零警告待 Windows 复验；不宣称问题已关闭。
 - **防复发**：每个新增 HTTP 测试必须检查 Vitest 显式断言，并在真实 Vite+ 报告确认零警告，禁止以 Supertest 链式断言、退出码或禁用规则代替。
+
+> **2026-11-27 · E-164 Windows 复验关闭**：维护者 Windows 在 HEAD e7be1b522cf66e507ab7e2af5d83e61d51cb98b6 复验 HTTP E2E 7 文件/71 项、Vite+ 510 格式文件/351 受检零警告、Lint、类型错误、Markdown 97、git diff --check，退出码 0、工作区干净；前一轮 Docker 49/49 与真实七服务、常驻原生严格只读连接、双端 HTTP/HTTPS、正式 OIDC Discovery/JWKS 验收有效。维护者明确同意后 PR #255 Squash 合入 feat/mvp-first-integration 的 1870937aa0c2d77103c06a55f219491a1c87dd34，E-164 关闭。未取得额外远端 CI 运行记录。 本批候选新增测试均使用明确断言；仍需维护者对新提交复验完整 Vite+ 门禁，不得以退出码代替零警告。
+
+### E-165 · Node 原生 assert.throws 正则匹配包含异常名称（PR #256，待 Windows 复验）
+
+- **Windows 实测**：维护者 Core Node 构建、Prisma 8 原生契约离线生成及 NestJS 类型检查通过；Docker 五套件 59/60（新增临时事务 8/8，宿主编排 28/29）。唯一失败位于 scripts/docker-stack.cases.mjs 第 185 行，带首尾锚点的异常正则预期未包含 Error: 前缀，增量退出码 1；HTTP E2E、环境、中文、文档、Vite+ 和真实容器验收未执行。日志未独立打印本地 HEAD，远端原交付 HEAD dbea8ac0f84c5c3066922e0648bc4c35f4d993d2 的对应源码一致。
+- **根因**：Node 内置 assert.throws 在直接传入 RegExp 时匹配异常的字符串表示而非仅 message。上轮隔离 V8 自定义断言只匹配 error.message，导致错误未被发现。真实宿主返回的固定脱敏异常文案正确，不是数据库或探针业务故障。
+- **最小修复**：仅将该测试的三个机器诊断 expected 改为 name 与 message 的精确对象断言，保持严格数据库失败、执行中止、报告不完整、已知阶段和未知敏感阶段脱敏等原断言及测试总数，拒绝多余文本；不修改生产代码、数据库、容器、依赖或权限。测试修复提交 ea109ccdead21c08bbd7b504873c388637a44113，Git Blob a9136d9c7df17d9fec5ac3c9454aae2e221cf158，提交后全文回读与预期一致。
+- **局部实测**：协作环境 Node.js 22.16.0 使用原生 node:assert/strict 和 node:test，对远端实际事务诊断分支（1580 个字符，FNV-1a 1a4c7578）及实际参数化测试循环（891 个字符，FNV-1a 1588db86）提取复现。旧断言失败，错误与维护者日志一致，退出 1；修复后三组诊断通过，附加测试验证文案附加模拟敏感值、错误异常名称、不抛异常均被拒绝，共两项局部测试通过，退出 0。修复循环 990 个字符、FNV-1a bebd0a69，与远端回读一致。使用最小外围夹具，不等于全量 Docker 测试；完整 Windows 60 项、71 项 HTTP E2E、Vite+ 零警告及真实临时事务仍待验收。
+- **防复发**：不得使用自定义断言替代原生 Node/Vitest 断言验证实际异常语义；精确异常契约优先使用 name/message 对象；环境受限时直接使用真实运行时的断言进行最小复现。保留错误脱敏负例，不通过移除锚点放宽安全检查。
+
+> **2026-11-27 · E-165 Windows 复验关闭**：维护者 Windows 于 2026-11-27 在 HEAD 47b84f8e2ece8cffebe931013b1cca865dc3cc41 完成两轮增量验收，均退出 0；Core 编译、Prisma 8 原生契约离线生成（databaseAccessed=false）、NestJS 类型检查、Docker 五套件 60/60（独立临时事务模拟 8/8）、HTTP E2E 七文件 71/71、环境及 LF、中文文案 380 文件、Markdown 97 份、Vite+ 513 格式文件/354 受检文件零警告、Lint、类型错误及 git diff --check 均通过。首次增量后工作区干净。存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436，12 表、85 字段、36 CHECK、20 索引、13 外键、119 注释保持一致。 同一候选的四个 Docker 应用镜像构建、七服务启动、容器独立原生只读及常驻连接、React/Vue HTTP 和宿主 HTTPS、宿主与容器正式 OIDC Discovery/JWKS 严格只读验证均通过，常驻只读回归退出 0。OIDC 登录尚未启用。没有真实临时表 DDL/DML、SDK 实际提交/回滚/清理、正式业务写入或浏览器登录证据。 远端 47b84f8e2ece8cffebe931013b1cca865dc3cc41 相较 83ba2f3ba6585691f0f08696e230f2d1de637c73 的五文件差异已核对仅为排版。E-165 已关闭；PR #256 仍保持 Draft，真实临时事务门禁未关闭，不将模拟或常驻只读回归视为写事务验收。

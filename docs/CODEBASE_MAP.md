@@ -2007,3 +2007,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/app.module.ts`、`apps/server/src/main.ts`、`apps/server/src/database/prisma8-database.module.ts`：专用常驻只读根模块，正式 Prisma8Service 唯一装配，原默认与 OIDC 根模块不变。
 - `apps/server/src/health/docker-database-readiness.controller.ts`：容器自身回环 GET /health/database，固定只读响应或 503；`apps/server/test/docker-readonly.e2e-spec.ts` 五项 HTTP 回归。
 - `deploy/docker/compose.yaml`、`scripts/docker-stack.mjs`、`apps/server/container-prisma8-smoke.mjs`：单文件只读挂载、常驻数据库健康探针、报告硬门禁和双端公开接口拒绝。既有独立烟测保留。
+
+### 容器原生临时事务探针候选
+
+- `apps/server/src/database/docker-native-transaction-probe.ts`：单独确认参数、同一后端临时表提交/回滚回读及清理，禁止只读连接、后端漂移、影响行数异常和伪回滚成功。
+- `apps/server/src/database/docker-readonly-config.ts`、`prisma8-runtime-boundary.ts`、`prisma8.service.ts`：新增仅独立探针使用的 docker-transaction-probe transport，复用固定库、角色、绑定及集群门禁，单连接池；原常驻模块装配不变。
+- `apps/server/container-native-transaction-probe.mjs`、`deploy/docker/Dockerfile.server`、`scripts/docker-stack.mjs`：显式一次执行，严格数据库前置验证，标准输入绑定复核，固定脱敏报告及关闭。
+- `scripts/docker-native-transaction-probe.cases.mjs`、`scripts/docker-stack.cases.mjs`：八项探针和三项宿主编排离线新增回归；真实执行不进入默认启动和 ready。

@@ -6,6 +6,10 @@ import { validateLabSecrets } from "./prepare-oidc-lab.mjs";
 import { freshStorageHash } from "./prisma8-fresh-install.mjs";
 import { DockerOidcProbeError, verifyDockerOidc } from "./docker-oidc-probe.mjs";
 import { ensureDockerDatabaseBinding } from "./docker-runtime-binding.mjs";
+import {
+  DOCKER_TRANSACTION_CONFIRMATION,
+  requireDockerTransactionConfirmation,
+} from "../apps/server/src/database/docker-native-transaction-probe.ts";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const COMPOSE_ARGS = Object.freeze([
@@ -24,7 +28,7 @@ const OLD_PROJECTS = Object.freeze([
   "adui-scada-postgres-dev",
   "adui-scada-oidc-lab",
 ]);
-const MODES = new Set(["plan", "infra", "up", "down", "ps", "logs", "oidc"]);
+const MODES = new Set(["plan", "infra", "up", "down", "ps", "logs", "oidc", "transaction-probe"]);
 
 function docker(args, showOutput = false, input, timeout) {
   const result = spawnSync("docker", args, {
@@ -239,9 +243,17 @@ export function manageDockerStack(
   verifyHttps = verifyDockerHttps,
   verifyOidc = verifyDockerOidc,
   prepareBinding = (input) => ensureDockerDatabaseBinding(ROOT, input, freshStorageHash),
+  confirmation = [],
 ) {
   if (!MODES.has(mode)) throw new Error("不支持的 Docker 操作");
-  if (mode === "plan" || mode === "up" || mode === "infra" || mode === "oidc") {
+  if (mode === "transaction-probe") requireDockerTransactionConfirmation(confirmation);
+  if (
+    mode === "plan" ||
+    mode === "up" ||
+    mode === "infra" ||
+    mode === "oidc" ||
+    mode === "transaction-probe"
+  ) {
     validateDockerEnv(envText);
     checked(run, [...COMPOSE_ARGS, "config", "--quiet"]);
     for (const name of OLD_PROJECTS) {
@@ -257,6 +269,57 @@ export function manageDockerStack(
     }
     if (mode === "plan") {
       return "全新安装预检通过：旧持久化卷不参与挂载，新的 adui-scada 卷将由 Docker 创建";
+    }
+    if (mode === "transaction-probe") {
+      const input = verifyDatabase();
+      const result = run(
+        [
+          ...COMPOSE_ARGS,
+          "exec",
+          "-T",
+          "server",
+          "node",
+          "apps/server/container-native-transaction-probe.mjs",
+          DOCKER_TRANSACTION_CONFIRMATION,
+        ],
+        false,
+        JSON.stringify(input),
+        80_000,
+      );
+      const failure = "容器原生临时事务探针失败，保留现场";
+      let report;
+      try {
+        report = JSON.parse(result.stdout.trim());
+      } catch {
+        throw new Error(failure);
+      }
+      if (
+        result.status !== 0 ||
+        report?.status !== "DOCKER_NATIVE_TRANSACTION_READY" ||
+        report.commitVerified !== true ||
+        report.rollbackVerified !== true ||
+        report.sameBackendVerified !== true ||
+        report.temporaryTableRemoved !== true ||
+        report.businessDataWritten !== false ||
+        report.providerClosed !== true ||
+        Object.keys(report).length !== 7
+      ) {
+        const stages = new Map([
+          ["CONFIG", "容器临时事务配置验证失败，保留现场"],
+          ["START", "容器临时事务原生连接启动失败，保留现场"],
+          ["TRANSACTION", "容器临时事务提交或回滚验证失败，保留现场"],
+          ["CLOSE", "容器临时事务连接关闭失败，保留现场"],
+        ]);
+        if (
+          result.status !== 0 &&
+          report?.status === "DOCKER_NATIVE_TRANSACTION_FAILED" &&
+          typeof report.stage === "string"
+        ) {
+          throw new Error(stages.get(report.stage) ?? failure);
+        }
+        throw new Error(failure);
+      }
+      return "原生临时表提交、回滚及清理验证通过；未写入正式业务表，常驻服务仍为只读";
     }
     if (mode === "oidc") {
       const port = parseDockerEnv(envText).get("SCADA_LAB_KEYCLOAK_PORT") ?? "18443";
@@ -359,7 +422,21 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   try {
     const text = readFileSync(resolve(ROOT, ".env"), "utf8");
     if (!MODES.has(process.argv[2])) throw new Error("不支持的 Docker 操作");
-    console.log(manageDockerStack(process.argv[2], text, localDocker()));
+    const mode = process.argv[2];
+    const confirmation = process.argv.slice(3);
+    if (mode === "transaction-probe") requireDockerTransactionConfirmation(confirmation);
+    console.log(
+      manageDockerStack(
+        mode,
+        text,
+        localDocker(),
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        confirmation,
+      ),
+    );
   } catch (error) {
     const known = new Set([
       "Docker 执行失败，请检查配置与 Docker Desktop",
@@ -376,6 +453,12 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       "Docker 必须使用 Linux 容器引擎",
       "原生数据库严格验证失败，未执行本次应用启动；请单独核对数据库状态",
       "容器原生数据库或双端 HTTP 验证失败，保留现场",
+      "临时事务探针需要单独明确确认",
+      "容器原生临时事务探针失败，保留现场",
+      "容器临时事务配置验证失败，保留现场",
+      "容器临时事务原生连接启动失败，保留现场",
+      "容器临时事务提交或回滚验证失败，保留现场",
+      "容器临时事务连接关闭失败，保留现场",
       "Docker 正式只读数据库绑定无效",
       "Docker 正式只读数据库绑定文件不一致或无法读取，保留现场",
       "双端 Docker HTTPS 验证失败，请检查本机端口和 mkcert 可信证书，保留现场",

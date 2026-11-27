@@ -5773,3 +5773,38 @@ git status --short
 ```
 
 首次成功严格数据库验证后才创建 .local/docker-runtime/server-database.json；请勿查看、提交、粘贴或分享文件正文。重复启动核验相同绑定，不覆盖原文件；出现绑定不符或权限失败保留现场，不清卷、不重置、不放宽文件权限或 TLS、不手工改密码。预期七服务启动提示新增「常驻服务原生只读连接验证通过」，且旧容器烟测、双端 HTTP/HTTPS、正式 OIDC 只读探针仍通过；真实报告要求 runningDatabaseReadOnlyVerified=true。仅 server 运行进程回环访问 /health/database，其他容器拒绝，公开 Nginx /api/health/database 仍 404。若失败根据现有固定诊断排查。无实际业务写入、认证登录或生产权限扩展。
+
+### 2026-11-27 · 容器原生临时事务候选验收
+
+离线和常驻只读回归（新 Docker 专项预计 60 项，原 49 项加 8 项探针及 3 项编排；HTTP E2E 仍 71 项）：
+
+```powershell
+pnpm run typecheck:server &&
+pnpm run test:docker &&
+pnpm run test:e2e:server &&
+pnpm run env:check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+vp check --fix &&
+vp check &&
+git diff --check
+Write-Host "原生临时事务增量验收退出码：$LASTEXITCODE"
+```
+
+要求 Vite+ 零警告/零错误，格式化改动按正常 Hook 提交并推送。新独立脚本需要构建镜像，保持现有 .env、绑定文件、数据库和卷，不运行初始化：
+
+```powershell
+pnpm run docker:up &&
+pnpm run docker:oidc:probe &&
+pnpm run docker:ps
+Write-Host "常驻只读回归退出码：$LASTEXITCODE"
+```
+
+真实临时表事务必须在维护者明确确认允许当前本机业务库会话级 TEMP DDL/DML 后单独运行，不属于上述命令：
+
+```powershell
+pnpm run docker:db:transaction:probe --confirm-temp-transaction-probe
+Write-Host "原生临时事务实机验收退出码：$LASTEXITCODE"
+```
+
+预期固定提示「原生临时表提交、回滚及清理验证通过；未写入正式业务表，常驻服务仍为只读」，退出码 0。缺少或额外确认参数在 Docker 调用前拒绝。前置核验失败、真实 SDK 不支持临时语句、提交/回滚或连接关闭异常必须停止并保留现场，不自动重试、改密码、重置、迁移或清卷。此命令会执行临时表 DDL/DML，非严格只读，不得用它替代真实身份、会话、工程业务表写入、ACL 或发布验收。

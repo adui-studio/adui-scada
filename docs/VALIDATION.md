@@ -5383,3 +5383,27 @@ PR #251 维护者 Windows：Docker 18/18、数据库配置 8/8、全新原生 29
 维护者 Windows 在 de8dc9e07e2fe265658984b7cf6c662830b89db9 实测 NestJS 构建与类型检查、Docker 49/49（四套件）、HTTP E2E 7 文件/71 项（常驻模块 5/5、默认根模块 13/13）、环境与 LF、中文文案 377 文件、Markdown 97 份、git diff --check 均通过。Vite+ 510 文件格式正确、351 受检文件 1 条 vitest(expect-expect) 警告、0 错误，增量退出码 0，但零警告门禁未通过。四镜像构建、七服务启动、常驻 NestJS Prisma8Service 原生严格只读连接、独立容器原生只读、双端 HTTP/HTTPS 以及宿主与容器正式 OIDC Discovery/JWKS 全部通过，真实验收退出码 0。维护者格式化提交 bf7b408883d6a427dac4e3e7d986edef827b6c79 的十文件差异核实仅排版及 Markdown 围栏修复。
 
 E-164 为 E-012 同类问题。仅修正 app.e2e-spec.ts 默认根模块数据库接口隔离回归，保留原 Supertest 404 校验并增加 Vitest 显式状态断言；修复提交 a2829cad1b38b611fcbe1439b1f4fc736744c467，Blob 71eee900f3771ae3cea1d333c0f6a97973f0abbd。远端回读仅预期修改，隔离模拟实际测试体的 404/200/503 状态行为 3/3，通过不等于真实 E2E 或 Lint。完整 Vite+ 与 HTTP E2E 未在协作环境运行，待维护者增量复验零警告并通过后按授权合并。此次只修改测试与文档，无业务代码、容器配置、数据库、认证或依赖变化，已通过的真实 Docker 验收证据保留，无需重新构建镜像。
+
+### 2026-11-27 · PR #255 结案与容器原生临时事务候选
+
+维护者 Windows 在 HEAD e7be1b522cf66e507ab7e2af5d83e61d51cb98b6 复验 HTTP E2E 7 文件/71 项、Vite+ 510 格式文件/351 受检零警告、Lint、类型错误、Markdown 97、git diff --check，退出码 0、工作区干净；前一轮 Docker 49/49 与真实七服务、常驻原生严格只读连接、双端 HTTP/HTTPS、正式 OIDC Discovery/JWKS 验收有效。维护者明确同意后 PR #255 Squash 合入 feat/mvp-first-integration 的 1870937aa0c2d77103c06a55f219491a1c87dd34，E-164 关闭。未取得额外远端 CI 运行记录。
+
+本批 Node.js 22.16.0 使用实际 node --experimental-strip-types --test 执行新增脚本 8/8，通过。四份本地文件与远端 Git Blob 一致：探针核心 63f238364b3be7cf4cfc55de720b6556e6207d03、测试 2d1c5e994582ec58ac20f9bd8e81e143ad6e5477、绑定配置 365e5a13c2d034e1fdbfbc9c870f7acf800829ea、运行时边界 7f25a15bbaad4ac7599a94119e221a72d2aa0b77。覆盖精确确认、固定地址和集群、模式隔离、提交与回滚模拟回读、不同后端会话、影响行数和清理失败。使用远端宿主编排 a86b1dfc5686c154cd841342d6b656c604d59085、测试 5e5175e5197c64829098d842faf5e5d93e7353ce 的实际相关函数和三个新增测试在隔离 V8 执行，注入断言、空进程环境、模拟 Docker 和数据库验证，3/3 通过；初次摘取未移除 export、随后缺少 process，修正夹具后通过，非项目源码故障。未运行完整 60 项 Docker 专项、真实 SDK、NestJS 构建、Vite+ 或 Docker Desktop，协作环境没有完整依赖或 Docker，GitHub DNS 不可达。真实临时表执行单独授权，尚未执行任何数据库 DDL/DML。常驻只读服务及 OIDC 开关不变。
+
+### 2026-11-27 · PR #256 E-165 最小修复候选
+
+维护者 Windows 类型检查与原生契约离线生成成功，存储指纹保持 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表、85 字段、36 CHECK、20 索引、13 外键、119 注释。Docker 实测 59/60，临时事务 8/8；宿主编排第三项错误断言失败，增量退出码 1，后续未执行。E-165 仅修正 Node 原生异常匹配方式，同一测试三个预期改为精确 name/message 对象。协作容器 Node.js 22.16.0 原生断言局部复现旧版失败退出 1，修复后三组诊断及额外负例两项测试全部通过退出 0。测试提交 ea109ccdead21c08bbd7b504873c388637a44113，远端 Blob a9136d9c7df17d9fec5ac3c9454aae2e221cf158，修复测试循环 FNV-1a bebd0a69 与实际本地片段一致。上轮自定义 V8 断言没有模拟 Error 字符串表示，是此次漏检原因。未执行全量 60 项、HTTP E2E、Vite+ 或真实 Docker；无生产源码、依赖及数据库变更。PR 保持 Draft，待维护者完整复验；临时表 DDL/DML 仍需独立确认。
+
+### 2026-11-27 · PR #256 增量复验与真实 Docker 常驻只读回归
+
+维护者 Windows 于 2026-11-27 在 HEAD 47b84f8e2ece8cffebe931013b1cca865dc3cc41 完成两轮增量验收，均退出 0；Core 编译、Prisma 8 原生契约离线生成（databaseAccessed=false）、NestJS 类型检查、Docker 五套件 60/60（独立临时事务模拟 8/8）、HTTP E2E 七文件 71/71、环境及 LF、中文文案 380 文件、Markdown 97 份、Vite+ 513 格式文件/354 受检文件零警告、Lint、类型错误及 git diff --check 均通过。首次增量后工作区干净。存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436，12 表、85 字段、36 CHECK、20 索引、13 外键、119 注释保持一致。
+
+同一候选的四个 Docker 应用镜像构建、七服务启动、容器独立原生只读及常驻连接、React/Vue HTTP 和宿主 HTTPS、宿主与容器正式 OIDC Discovery/JWKS 严格只读验证均通过，常驻只读回归退出 0。OIDC 登录尚未启用。没有真实临时表 DDL/DML、SDK 实际提交/回滚/清理、正式业务写入或浏览器登录证据。 维护者格式化提交 47b84f8e2ece8cffebe931013b1cca865dc3cc41 与此前候选 83ba2f3ba6585691f0f08696e230f2d1de637c73 的五文件差异已逐项核对，仅为排版，E-165 关闭。
+
+下一项仅为本机已运行的固定 server 容器独立临时事务验收。已有入口为 `pnpm run docker:db:transaction:probe --confirm-temp-transaction-probe`，须由维护者明确确认后在本机执行，严格复核当前数据库、集群、契约和常驻绑定后，仅操作 `pg_temp.adui_scada_native_tx_probe`。宿主成功必须同时校验内部状态 DOCKER_NATIVE_TRANSACTION_READY、提交、回滚、同一后端、临时表移除及 Provider 关闭均为 true，businessDataWritten 为 false。失败返回非零并保留现场，不自动重试、初始化、迁移、清理容器或卷。成功后再核对常驻只读回归、OIDC 未启用及服务状态。当前仅记录维护者提供的实测日志，协作环境未执行新的 Docker 或数据库操作；PR #256 保持 Draft，真实事务和合并仍待验收。
+
+### 2026-11-28 · PR #256 容器原生临时事务真实验收
+
+维护者于 2026-11-28 提供 Windows 本机真实执行记录：`pnpm run docker:db:transaction:probe --confirm-temp-transaction-probe` 成功，宿主按现有七字段严格机器报告核验实际提交、跨事务回读、主动回滚恢复原值、同一 PostgreSQL 后端会话、临时表移除和 Provider 关闭，且 businessDataWritten=false。随后 `docker:oidc:probe`、`docker:ps` 与 `git diff --check` 全部成功，七服务均运行，OIDC 登录尚未启用，最终退出码 0，`git status --short` 无输出。日志未独立打印本次 HEAD；上轮已验收生产源码 HEAD 为 47b84f8e2ece8cffebe931013b1cca865dc3cc41，当前远端 02f3e2c438a0de1cdda17da33fd0778f817cf34b 相对此仅三份验收文档追加，无生产代码或配置变更。此次真实事务仅涉及会话临时表，不证明正式业务表写入、角色最小权限、正式 OIDC 登录或发布安全门禁已验收。
+
+结合前一轮 60/60 Docker 专项、71/71 HTTP E2E、Vite+ 零警告及真实镜像构建和常驻只读回归，独立原生临时事务专项已通过。维护者明确同意继续合并；新增记录仅为文档，未在协作环境重新执行全仓文档检查。真实正式业务连接及登录、工程读写仍须单独评审和验收。

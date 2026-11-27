@@ -2,8 +2,8 @@ export interface Prisma8RuntimeConfig {
   readonly connectionString: string | undefined;
   readonly readOnly: boolean;
   readonly expectedSystemIdentifier?: string;
-  /** 仅供受控容器烟测和常驻只读服务使用，不允许正式可写连接。 */
-  readonly transport?: "docker-readonly";
+  /** 容器只读服务或显式临时事务探针；不用于常驻业务可写装配。 */
+  readonly transport?: "docker-readonly" | "docker-transaction-probe";
 }
 
 export interface Prisma8RuntimeIdentity {
@@ -40,13 +40,16 @@ export function resolvePrisma8RuntimeUrl(config: Prisma8RuntimeConfig): string {
   }
   const parameters = [...url.searchParams.entries()];
   const dockerReadOnly = config.transport === "docker-readonly";
+  const dockerProbe = config.transport === "docker-transaction-probe";
+  const docker = dockerReadOnly || dockerProbe;
   if (
     url.protocol !== "postgresql:" ||
-    (config.transport !== undefined && !dockerReadOnly) ||
-    (dockerReadOnly &&
-      (config.readOnly !== true || config.expectedSystemIdentifier === undefined)) ||
-    url.hostname !== (dockerReadOnly ? "postgres" : "127.0.0.1") ||
-    url.port !== (dockerReadOnly ? "5432" : "15432") ||
+    (config.transport !== undefined && !docker) ||
+    (docker && config.expectedSystemIdentifier === undefined) ||
+    (dockerReadOnly && config.readOnly !== true) ||
+    (dockerProbe && config.readOnly !== false) ||
+    url.hostname !== (docker ? "postgres" : "127.0.0.1") ||
+    url.port !== (docker ? "5432" : "15432") ||
     url.username !== "adui_scada" ||
     url.pathname !== "/adui_scada" ||
     !/^[A-Za-z0-9_-]{43}$/u.test(url.password) ||
