@@ -276,7 +276,10 @@ assert.equal(
   "node scripts/docker-stack.mjs oidc",
   "Keycloak 真实只读探针必须使用受控本机 Docker 入口",
 );
-assert.ok(!packageScripts.ready.includes("docker:oidc:probe"), "真实 Keycloak 探针不得进入离线质量链");
+assert.ok(
+  !packageScripts.ready.includes("docker:oidc:probe"),
+  "真实 Keycloak 探针不得进入离线质量链",
+);
 for (const key of Object.keys(packageScripts)) {
   assert.ok(
     !/^docker:(demo|lab|all):/.test(key) && !key.startsWith("db:dev:"),

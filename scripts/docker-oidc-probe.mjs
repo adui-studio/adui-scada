@@ -12,7 +12,10 @@ const FAILURE_MESSAGES = new Map([
   ["DISCOVERY_METADATA", "Discovery 元数据不符合固定契约"],
   ["JWKS_KEYS", "JWKS 缺少有效 RS256 签名公钥或公钥集合异常"],
 ]);
-for (const [phase, label] of [["DISCOVERY", "Discovery"], ["JWKS", "JWKS"]]) {
+for (const [phase, label] of [
+  ["DISCOVERY", "Discovery"],
+  ["JWKS", "JWKS"],
+]) {
   for (const [category, message] of [
     ["TLS", "证书链或公开 Issuer IP 校验失败"],
     ["TIMEOUT", "请求超时"],
@@ -50,8 +53,11 @@ function requireProbeReport(label, result, issuer) {
     throw new DockerOidcProbeError(label + " Keycloak 探针未返回有效报告，保留现场");
   }
   if (result.status !== 0) {
-    const message = report?.status === "DOCKER_OIDC_DISCOVERY_FAILED" && FAILURE_MESSAGES.get(report.code);
-    throw new DockerOidcProbeError(label + " Keycloak 验证失败：" + (message || "未取得有效诊断") + "，保留现场");
+    const message =
+      report?.status === "DOCKER_OIDC_DISCOVERY_FAILED" && FAILURE_MESSAGES.get(report.code);
+    throw new DockerOidcProbeError(
+      label + " Keycloak 验证失败：" + (message || "未取得有效诊断") + "，保留现场",
+    );
   }
   if (
     report?.status !== "DOCKER_OIDC_DISCOVERY_READY" ||
@@ -69,7 +75,13 @@ function requireProbeReport(label, result, issuer) {
 }
 
 /** 同一公开 Issuer 的两种固定传输视角必须得到一致的 RS256 签名公钥集合。 */
-export function verifyDockerOidc(port, run, composeArgs, readCa = readLocalCa, runHost = runHostProbe) {
+export function verifyDockerOidc(
+  port,
+  run,
+  composeArgs,
+  readCa = readLocalCa,
+  runHost = runHostProbe,
+) {
   let probe;
   try {
     probe = parseOidcProbeInput({ port, ca: readCa().toString("utf8") });
@@ -81,7 +93,12 @@ export function verifyDockerOidc(port, run, composeArgs, readCa = readLocalCa, r
   const host = requireProbeReport("宿主", runHost(input), probe.issuer);
   const container = requireProbeReport(
     "容器",
-    run([...composeArgs, "exec", "-T", "server", "node", SCRIPT, "container"], false, input, TIMEOUT_MS),
+    run(
+      [...composeArgs, "exec", "-T", "server", "node", SCRIPT, "container"],
+      false,
+      input,
+      TIMEOUT_MS,
+    ),
     probe.issuer,
   );
   if (

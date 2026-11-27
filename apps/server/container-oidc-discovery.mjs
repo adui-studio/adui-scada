@@ -102,7 +102,8 @@ export function fingerprintOidcKeys(jwks) {
       !/^[A-Za-z0-9_-]+$/u.test(key.n) ||
       !/^[A-Za-z0-9_-]+$/u.test(key.e) ||
       ["d", "p", "q", "dp", "dq", "qi", "oth"].some((field) => Object.hasOwn(key, field)) ||
-      (key.key_ops !== undefined && (!Array.isArray(key.key_ops) || !key.key_ops.includes("verify")))
+      (key.key_ops !== undefined &&
+        (!Array.isArray(key.key_ops) || !key.key_ops.includes("verify")))
     ) {
       throw oidcFailure("JWKS_KEYS");
     }
@@ -118,7 +119,10 @@ export function fingerprintOidcKeys(jwks) {
         throw oidcFailure("JWKS_KEYS");
       }
       seen.add(key.kid);
-      keys.push({ kid: key.kid, spki: publicKey.export({ type: "spki", format: "der" }).toString("base64") });
+      keys.push({
+        kid: key.kid,
+        spki: publicKey.export({ type: "spki", format: "der" }).toString("base64"),
+      });
     } catch {
       throw oidcFailure("JWKS_KEYS");
     }
@@ -142,7 +146,8 @@ async function requestOidcJson(options) {
   if (
     response.statusCode !== 200 ||
     response.headers.location !== undefined ||
-    (response.headers["content-type"] ?? "").split(";")[0]?.trim().toLowerCase() !== "application/json"
+    (response.headers["content-type"] ?? "").split(";")[0]?.trim().toLowerCase() !==
+      "application/json"
   ) {
     response.destroy();
     throw oidcFailure("HTTP");
@@ -210,9 +215,17 @@ export async function probeOidcDiscovery(mode, input, transport = requestOidcJso
     agent: false,
     signal: AbortSignal.timeout(8000),
   });
-  const metadata = await readStage("DISCOVERY", options(REALM + "/.well-known/openid-configuration"), transport);
+  const metadata = await readStage(
+    "DISCOVERY",
+    options(REALM + "/.well-known/openid-configuration"),
+    transport,
+  );
   verifyOidcMetadata(metadata, issuer);
-  const jwks = await readStage("JWKS", options(REALM + "/protocol/openid-connect/certs"), transport);
+  const jwks = await readStage(
+    "JWKS",
+    options(REALM + "/protocol/openid-connect/certs"),
+    transport,
+  );
   return { status: "DOCKER_OIDC_DISCOVERY_READY", issuer, ...fingerprintOidcKeys(jwks) };
 }
 
@@ -226,7 +239,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       if (bytes > MAX_INPUT_BYTES) throw oidcFailure("INPUT");
       chunks.push(chunk);
     }
-    const result = await probeOidcDiscovery(process.argv[2], JSON.parse(Buffer.concat(chunks).toString("utf8")));
+    const result = await probeOidcDiscovery(
+      process.argv[2],
+      JSON.parse(Buffer.concat(chunks).toString("utf8")),
+    );
     process.stdout.write(JSON.stringify(result) + "\n");
   } catch (error) {
     const code = error instanceof OidcProbeError ? error.code : "UNEXPECTED";
