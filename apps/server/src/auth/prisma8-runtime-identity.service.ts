@@ -1,9 +1,17 @@
-import { ForbiddenException, Inject, Injectable, ServiceUnavailableException } from "@nestjs/common";
+import {
+  ForbiddenException,
+  Inject,
+  Injectable,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import { Prisma8Service } from "../database/prisma8.service.js";
 import type { AuthSessionService } from "./auth-session.service.js";
 import type { OidcLoginTransactionService } from "./oidc-login-transaction.service.js";
-import { OidcProviderDiscoveryService, SCADA_OIDC_STARTUP_CONFIG } from "./oidc-provider-discovery.service.js";
+import {
+  OidcProviderDiscoveryService,
+  SCADA_OIDC_STARTUP_CONFIG,
+} from "./oidc-provider-discovery.service.js";
 import {
   nativeAuthTransaction,
   type Prisma8AuthTransaction,
@@ -27,16 +35,26 @@ function nativePort(database: Prisma8Service, timeout: 5000 | 10000): Prisma8Aut
     read: <T>(operation: (tx: Prisma8AuthTransaction) => Promise<T>) =>
       sanitized(() => database.readTransaction((tx) => operation(nativeAuthTransaction(tx)))),
     write: <T>(operation: (tx: Prisma8AuthTransaction) => Promise<T>) =>
-      sanitized(() => database.writeTransaction((tx) => operation(nativeAuthTransaction(tx)), timeout)),
+      sanitized(() =>
+        database.writeTransaction((tx) => operation(nativeAuthTransaction(tx)), timeout),
+      ),
   };
 }
 
 /** 保留既有会话公开接口，不依赖旧 PrismaService。 */
 @Injectable()
-export class Prisma8RuntimeAuthSessionService extends Prisma8SessionOperations implements Pick<
-  AuthSessionService,
-  "issueForVerifiedSubject" | "authenticate" | "authenticateWithSession" | "authenticateCookieSession" | "revokeForVerifiedSubject"
-> {
+export class Prisma8RuntimeAuthSessionService
+  extends Prisma8SessionOperations
+  implements
+    Pick<
+      AuthSessionService,
+      | "issueForVerifiedSubject"
+      | "authenticate"
+      | "authenticateWithSession"
+      | "authenticateCookieSession"
+      | "revokeForVerifiedSubject"
+    >
+{
   constructor(database: Prisma8Service) {
     super(nativePort(database, 10000));
   }
@@ -44,10 +62,10 @@ export class Prisma8RuntimeAuthSessionService extends Prisma8SessionOperations i
 
 /** 迁移期间不自动启动过期清理定时器，待正式根模块接管后单独启用。 */
 @Injectable()
-export class Prisma8RuntimeOidcLoginTransactionService extends Prisma8OidcLoginOperations implements Pick<
-  OidcLoginTransactionService,
-  "start" | "consume" | "cleanupExpiredTransactions"
-> {
+export class Prisma8RuntimeOidcLoginTransactionService
+  extends Prisma8OidcLoginOperations
+  implements Pick<OidcLoginTransactionService, "start" | "consume" | "cleanupExpiredTransactions">
+{
   constructor(
     database: Prisma8Service,
     discovery: OidcProviderDiscoveryService,

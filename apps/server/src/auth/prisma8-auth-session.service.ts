@@ -1,7 +1,10 @@
 import type { PostgresClient, PostgresTransactionContext } from "@prisma/orm-postgres/runtime";
 import type { Contract } from "../generated/prisma8/contract.d.js";
 import type { AuthenticatedProjectPrincipal } from "../projects/project-access-policy.js";
-import { historicalAuthTransaction, type Prisma8AuthTransaction } from "./prisma8-auth-transaction-port.js";
+import {
+  historicalAuthTransaction,
+  type Prisma8AuthTransaction,
+} from "./prisma8-auth-transaction-port.js";
 import { Prisma8SessionOperations } from "./prisma8-session-operations.js";
 
 type Tx = PostgresTransactionContext<Contract>;

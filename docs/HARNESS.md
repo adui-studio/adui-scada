@@ -5495,7 +5495,7 @@ pnpm run build:server &&
 git diff --check
 Write-Host "原生身份事务增量退出码：$LASTEXITCODE"
 git status --short
-````
+```
 
 预期原生全新专项 28/28、运行时 7/7、新增身份 9 项、历史会话 4 项、历史 OIDC 5 项、原有身份与模块回归及 HTTP E2E 全部通过。完整 Vite+ 零警告错误，服务端构建通过，增量退出 0。提交并推送纯格式改动，确认工作区干净后执行：
 

@@ -20,7 +20,10 @@ import {
 } from "../database/prisma8-read-transaction.js";
 import type { Prisma8Client, Prisma8Service } from "../database/prisma8.service.js";
 import type { OidcProviderDiscoveryService } from "./oidc-provider-discovery.service.js";
-import { Prisma8RuntimeAuthSessionService, Prisma8RuntimeOidcLoginTransactionService } from "./prisma8-runtime-identity.service.js";
+import {
+  Prisma8RuntimeAuthSessionService,
+  Prisma8RuntimeOidcLoginTransactionService,
+} from "./prisma8-runtime-identity.service.js";
 
 const storageHash = "9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436";
 const actor = { tenantId: "tenant-a", subjectId: "operator-a" };
@@ -143,7 +146,18 @@ function harness(readOnly = false) {
     },
   } as unknown as OidcProviderDiscoveryService;
   return {
-    client, config, database, tx, state, queries, mutations, options, outcomes, discoveryCalls, startupConfig, discovery,
+    client,
+    config,
+    database,
+    tx,
+    state,
+    queries,
+    mutations,
+    options,
+    outcomes,
+    discoveryCalls,
+    startupConfig,
+    discovery,
     sessions: new Prisma8RuntimeAuthSessionService(database),
     transactions: new Prisma8RuntimeOidcLoginTransactionService(database, discovery, startupConfig),
   };
@@ -162,7 +176,10 @@ describe("原生身份业务事务边界", () => {
       transaction.executeCount`UPDATE public.scada_auth_sessions SET revoked_at = ${"2026-11-27T00:00:00Z"}::timestamptz WHERE session_id = ${"00000000-0000-4000-8000-000000000001"}::uuid`;
     await expect(read(historical)).resolves.toEqual([{ status: "active" }]);
     await expect(read(native)).resolves.toEqual([{ status: "active" }]);
-    expect(h.queries.map((plan) => plan.parameters)).toEqual([[actor.subjectId], [actor.subjectId]]);
+    expect(h.queries.map((plan) => plan.parameters)).toEqual([
+      [actor.subjectId],
+      [actor.subjectId],
+    ]);
     await expect(write(historical)).resolves.toEqual({ affectedRows: 1 });
     await expect(write(native)).resolves.toEqual({ affectedRows: 1 });
     expect(h.mutations[0]).toEqual(h.mutations[1]);
@@ -195,7 +212,14 @@ describe("原生身份业务事务边界", () => {
       query: () => ({
         toArray: () => {
           checks += 1;
-          return Promise.resolve([{ database_name: "adui_scada", schema_name: "public", read_only: "off", isolation: "read committed" }]);
+          return Promise.resolve([
+            {
+              database_name: "adui_scada",
+              schema_name: "public",
+              read_only: "off",
+              isolation: "read committed",
+            },
+          ]);
         },
       }),
       execute: (plan: unknown) => {
@@ -204,8 +228,11 @@ describe("原生身份业务事务边界", () => {
       },
     };
     const client = {
-      transaction: (operation: (transaction: PostgresTransactionContext<HistoricalContract>) => Promise<unknown>) =>
-        operation(tx as unknown as PostgresTransactionContext<HistoricalContract>),
+      transaction: (
+        operation: (
+          transaction: PostgresTransactionContext<HistoricalContract>,
+        ) => Promise<unknown>,
+      ) => operation(tx as unknown as PostgresTransactionContext<HistoricalContract>),
     } as unknown as PostgresClient<HistoricalContract>;
     const h = harness();
     const sessions = new Prisma8AuthSessionService(client);
@@ -213,11 +240,15 @@ describe("原生身份业务事务边界", () => {
       ...h.startupConfig,
       issuer: new URL("https://id.example.org/realms/prisma8-oidc-" + randomUUID()),
     });
-    await expect(sessions.issueForVerifiedSubject(actor)).rejects.toThrow("Prisma 8 身份候选仅允许隔离库读已提交事务");
-    await expect(transactions.consume(
-      randomBytes(32).toString("base64url"),
-      "scada_oidc_b_" + randomBytes(32).toString("base64url"),
-    )).rejects.toThrow("OIDC 登录事务验证失败，请稍后重试");
+    await expect(sessions.issueForVerifiedSubject(actor)).rejects.toThrow(
+      "Prisma 8 身份候选仅允许隔离库读已提交事务",
+    );
+    await expect(
+      transactions.consume(
+        randomBytes(32).toString("base64url"),
+        "scada_oidc_b_" + randomBytes(32).toString("base64url"),
+      ),
+    ).rejects.toThrow("OIDC 登录事务验证失败，请稍后重试");
     expect(checks).toBe(2);
     expect(mutations).toHaveLength(0);
   });
@@ -226,11 +257,19 @@ describe("原生身份业务事务边界", () => {
     const h = harness(true);
     const state = randomBytes(32).toString("base64url");
     const binding = "scada_oidc_b_" + randomBytes(32).toString("base64url");
-    await expect(h.sessions.issueForVerifiedSubject(actor)).rejects.toThrow("本地身份事务暂时不可用，请稍后重试");
-    await expect(h.sessions.revokeForVerifiedSubject(actor, randomUUID())).rejects.toThrow("本地身份事务暂时不可用，请稍后重试");
+    await expect(h.sessions.issueForVerifiedSubject(actor)).rejects.toThrow(
+      "本地身份事务暂时不可用，请稍后重试",
+    );
+    await expect(h.sessions.revokeForVerifiedSubject(actor, randomUUID())).rejects.toThrow(
+      "本地身份事务暂时不可用，请稍后重试",
+    );
     await expect(h.transactions.start("/")).rejects.toThrow("OIDC 登录事务创建失败，请稍后重试");
-    await expect(h.transactions.consume(state, binding)).rejects.toThrow("OIDC 登录事务验证失败，请稍后重试");
-    await expect(h.transactions.cleanupExpiredTransactions()).rejects.toThrow("OIDC 登录事务清理失败，请稍后重试");
+    await expect(h.transactions.consume(state, binding)).rejects.toThrow(
+      "OIDC 登录事务验证失败，请稍后重试",
+    );
+    await expect(h.transactions.cleanupExpiredTransactions()).rejects.toThrow(
+      "OIDC 登录事务清理失败，请稍后重试",
+    );
     expect(h.options).toHaveLength(0);
     expect(h.queries).toHaveLength(0);
     expect(h.mutations).toHaveLength(0);
@@ -240,14 +279,18 @@ describe("原生身份业务事务边界", () => {
   it("事务前边界漂移拒绝业务操作，事务后漂移模拟回滚并脱敏", async () => {
     const before = harness();
     before.state.denyAt = 1;
-    await expect(before.sessions.issueForVerifiedSubject(actor)).rejects.toThrow("本地身份事务暂时不可用，请稍后重试");
+    await expect(before.sessions.issueForVerifiedSubject(actor)).rejects.toThrow(
+      "本地身份事务暂时不可用，请稍后重试",
+    );
     expect(before.queries).toHaveLength(1);
     expect(before.mutations).toHaveLength(0);
     expect(before.outcomes).toEqual(["回滚"]);
 
     const after = harness();
     after.state.denyAt = 2;
-    await expect(after.sessions.issueForVerifiedSubject(actor)).rejects.toThrow("本地身份事务暂时不可用，请稍后重试");
+    await expect(after.sessions.issueForVerifiedSubject(actor)).rejects.toThrow(
+      "本地身份事务暂时不可用，请稍后重试",
+    );
     expect(after.mutations).toHaveLength(1);
     expect(after.outcomes).toEqual(["回滚"]);
   });
@@ -262,7 +305,11 @@ describe("原生身份业务事务边界", () => {
     expect(h.queries[1]?.parameters).toEqual([actor.tenantId, actor.subjectId]);
     expect(insert?.text).toContain("INSERT INTO public.scada_auth_sessions");
     expect(insert?.parameters.slice(0, 5)).toEqual([
-      session.sessionId, actor.tenantId, actor.subjectId, hash(session.token), hash(session.csrfToken),
+      session.sessionId,
+      actor.tenantId,
+      actor.subjectId,
+      hash(session.token),
+      hash(session.csrfToken),
     ]);
     expect(insert?.parameters).not.toContain(session.token);
     expect(insert?.parameters).not.toContain(session.csrfToken);
@@ -275,16 +322,24 @@ describe("原生身份业务事务边界", () => {
 
   it("拒绝不存在停用或非法主体，异常影响行数不签发会话", async () => {
     const h = harness();
-    await expect(h.sessions.issueForVerifiedSubject({ ...actor, tenantId: "../bad" })).rejects.toThrow("无效的可信主体，禁止签发会话");
+    await expect(
+      h.sessions.issueForVerifiedSubject({ ...actor, tenantId: "../bad" }),
+    ).rejects.toThrow("无效的可信主体，禁止签发会话");
     expect(h.options).toHaveLength(0);
     h.state.identityRows = [{ status: "disabled" }];
-    await expect(h.sessions.issueForVerifiedSubject(actor)).rejects.toThrow("主体不存在或已停用，禁止签发会话");
+    await expect(h.sessions.issueForVerifiedSubject(actor)).rejects.toThrow(
+      "主体不存在或已停用，禁止签发会话",
+    );
     h.state.identityRows = [];
-    await expect(h.sessions.issueForVerifiedSubject(actor)).rejects.toThrow("主体不存在或已停用，禁止签发会话");
+    await expect(h.sessions.issueForVerifiedSubject(actor)).rejects.toThrow(
+      "主体不存在或已停用，禁止签发会话",
+    );
     expect(h.mutations).toHaveLength(0);
     h.state.identityRows = [{ status: "active" }];
     h.state.affectedRows = 0;
-    await expect(h.sessions.issueForVerifiedSubject(actor)).rejects.toThrow("本地身份事务暂时不可用，请稍后重试");
+    await expect(h.sessions.issueForVerifiedSubject(actor)).rejects.toThrow(
+      "本地身份事务暂时不可用，请稍后重试",
+    );
     expect(h.outcomes).toEqual(["回滚", "回滚", "回滚"]);
   });
 
@@ -297,21 +352,28 @@ describe("原生身份业务事务边界", () => {
     expect(h.options).toHaveLength(0);
     expect(await h.sessions.authenticateWithSession(token)).toBeNull();
     const row = {
-      session_id: id, tenant_id: actor.tenantId, subject_id: actor.subjectId,
-      csrf_hash: hash(csrf), csrf_is_null: "false",
+      session_id: id,
+      tenant_id: actor.tenantId,
+      subject_id: actor.subjectId,
+      csrf_hash: hash(csrf),
+      csrf_is_null: "false",
       issued_at: new Date(Date.now() - 1000).toISOString(),
       expires_at: new Date(Date.now() + 60000).toISOString(),
     };
     h.state.sessionRows = [row];
     expect(await h.sessions.authenticateCookieSession(token, csrf)).toEqual({
-      authenticated: true, sessionId: id, principal: actor,
+      authenticated: true,
+      sessionId: id,
+      principal: actor,
     });
     expect(await h.sessions.authenticateCookieSession(token, "invalid")).toEqual({
-      authenticated: false, reason: "csrf_rejected",
+      authenticated: false,
+      reason: "csrf_rejected",
     });
     h.state.sessionRows = [{ ...row, csrf_is_null: "true", csrf_hash: "" }];
     expect(await h.sessions.authenticateCookieSession(token)).toEqual({
-      authenticated: false, reason: "invalid_session",
+      authenticated: false,
+      reason: "invalid_session",
     });
     h.state.sessionRows = [{ ...row, expires_at: new Date(0).toISOString() }];
     expect(await h.sessions.authenticateWithSession(token)).toBeNull();
@@ -330,7 +392,9 @@ describe("原生身份业务事务边界", () => {
     expect(h.mutations[0]?.parameters.slice(1)).toEqual([id, actor.tenantId, actor.subjectId]);
     expect(h.mutations[0]?.text).toContain("AND revoked_at IS NULL");
     h.state.affectedRows = 2;
-    await expect(h.sessions.revokeForVerifiedSubject(actor, id)).rejects.toThrow("本地身份事务暂时不可用，请稍后重试");
+    await expect(h.sessions.revokeForVerifiedSubject(actor, id)).rejects.toThrow(
+      "本地身份事务暂时不可用，请稍后重试",
+    );
   });
 
   it("OIDC 创建使用独立摘要和加密 verifier，模拟一次性消费及重放拒绝", async () => {
@@ -353,10 +417,12 @@ describe("原生身份业务事务边界", () => {
     if (!consumed) throw new Error("测试首次消费未返回结果");
     expect(consumed.returnPath).toBe("/studio");
     expect(consumed.nonce).toBe(nonce);
-    expect(await oidc.calculatePKCECodeChallenge(consumed.codeVerifier)).toBe(url.searchParams.get("code_challenge"));
-    expect(h.queries.find((plan) => plan.text.includes("FOR UPDATE"))?.parameters.slice(0, 3)).toEqual([
-      hash(state), issuer, hash(start.browserBindingCookie),
-    ]);
+    expect(await oidc.calculatePKCECodeChallenge(consumed.codeVerifier)).toBe(
+      url.searchParams.get("code_challenge"),
+    );
+    expect(
+      h.queries.find((plan) => plan.text.includes("FOR UPDATE"))?.parameters.slice(0, 3),
+    ).toEqual([hash(state), issuer, hash(start.browserBindingCookie)]);
     expect(h.mutations[1]?.text).toContain("AND consumed_at IS NULL");
     expect(await h.transactions.consume(state, start.browserBindingCookie)).toBeNull();
     expect(h.mutations).toHaveLength(2);
@@ -372,7 +438,9 @@ describe("原生身份业务事务边界", () => {
     expect(h.mutations[0]?.parameters[4]).toBe(128);
     expect(h.mutations[0]?.text).toContain("expires_at <=");
     h.state.affectedRows = 129;
-    await expect(h.transactions.cleanupExpiredTransactions()).rejects.toThrow("OIDC 登录事务清理失败，请稍后重试");
+    await expect(h.transactions.cleanupExpiredTransactions()).rejects.toThrow(
+      "OIDC 登录事务清理失败，请稍后重试",
+    );
     expect(h.outcomes).toEqual(["提交", "回滚"]);
   });
 });

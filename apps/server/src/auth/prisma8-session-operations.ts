@@ -58,7 +58,9 @@ export class Prisma8SessionOperations {
     if (!validPrincipal(principal)) throw new ForbiddenException("无效的可信主体，禁止签发会话");
     const { tenantId, subjectId } = principal;
     return this.transactions.write(async (tx) => {
-      const identities = await tx.queryText({ status: "pg/text@1" })`SELECT status::text AS status FROM public.scada_identities
+      const identities = await tx.queryText({
+        status: "pg/text@1",
+      })`SELECT status::text AS status FROM public.scada_identities
           WHERE tenant_id = ${tenantId} AND subject_id = ${subjectId} FOR SHARE`;
       if (identities.length !== 1 || identities[0]?.status !== "active") {
         throw new ForbiddenException("主体不存在或已停用，禁止签发会话");
@@ -156,7 +158,8 @@ export class Prisma8SessionOperations {
     }
     const { tenantId, subjectId } = principal;
     return this.transactions.write(async (tx) => {
-      const result = await tx.executeCount`UPDATE public.scada_auth_sessions SET revoked_at = ${new Date().toISOString()}::timestamptz
+      const result =
+        await tx.executeCount`UPDATE public.scada_auth_sessions SET revoked_at = ${new Date().toISOString()}::timestamptz
           WHERE session_id = ${sessionId}::uuid AND tenant_id = ${tenantId} AND subject_id = ${subjectId}
             AND revoked_at IS NULL`;
       if (result.affectedRows > 1) throw new Error("会话撤销影响行数异常");

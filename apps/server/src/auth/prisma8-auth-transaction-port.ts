@@ -45,26 +45,54 @@ export function historicalAuthTransaction(
   tx: PostgresTransactionContext<HistoricalContract>,
 ): Prisma8AuthTransaction {
   return {
-    queryText: (columns) => async (strings, ...parameters) =>
-      requireTextRows(
-        await tx.query(tx.raw.sql(strings, ...parameters).returnsRow(columns).build()).toArray(),
-        columns,
-      ),
+    queryText:
+      (columns) =>
+      async (strings, ...parameters) =>
+        requireTextRows(
+          await tx
+            .query(
+              tx.raw
+                .sql(strings, ...parameters)
+                .returnsRow(columns)
+                .build(),
+            )
+            .toArray(),
+          columns,
+        ),
     executeCount: (strings, ...parameters) =>
-      tx.execute(tx.raw.sql(strings, ...parameters).affectedCount().build()),
+      tx.execute(
+        tx.raw
+          .sql(strings, ...parameters)
+          .affectedCount()
+          .build(),
+      ),
   };
 }
 
 /** 原生候选使用原生契约构造计划，不转换为历史契约或获得独立连接。 */
 export function nativeAuthTransaction(tx: Prisma8Transaction): Prisma8AuthTransaction {
   return {
-    queryText: (columns) => async (strings, ...parameters) =>
-      requireTextRows(
-        await tx.query(tx.raw.sql(strings, ...parameters).returnsRow(columns).build()).toArray(),
-        columns,
-      ),
+    queryText:
+      (columns) =>
+      async (strings, ...parameters) =>
+        requireTextRows(
+          await tx
+            .query(
+              tx.raw
+                .sql(strings, ...parameters)
+                .returnsRow(columns)
+                .build(),
+            )
+            .toArray(),
+          columns,
+        ),
     executeCount: (strings, ...parameters) =>
-      tx.execute(tx.raw.sql(strings, ...parameters).affectedCount().build()),
+      tx.execute(
+        tx.raw
+          .sql(strings, ...parameters)
+          .affectedCount()
+          .build(),
+      ),
   };
 }
 

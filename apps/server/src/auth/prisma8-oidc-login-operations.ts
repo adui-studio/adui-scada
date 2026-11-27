@@ -345,7 +345,8 @@ export class Prisma8OidcLoginOperations implements OnModuleInit, OnModuleDestroy
         const record = rows[0];
         if (!record) return null;
         if (rows.length !== 1) throw new Error(TRANSACTION_CONSUME_FAILURE);
-        const result = await tx.executeCount`UPDATE public.scada_oidc_transactions SET consumed_at = ${cutoff}::timestamptz
+        const result =
+          await tx.executeCount`UPDATE public.scada_oidc_transactions SET consumed_at = ${cutoff}::timestamptz
             WHERE state_hash = ${stateHash} AND issuer = ${this.issuer}
               AND browser_binding_hash = ${browserBindingHash} AND consumed_at IS NULL
               AND expires_at > ${cutoff}::timestamptz AND created_at <= ${cutoff}::timestamptz`;

@@ -2,7 +2,10 @@ import type { PostgresClient, PostgresTransactionContext } from "@prisma/orm-pos
 import type { Contract } from "../generated/prisma8/contract.d.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import type { OidcProviderDiscoveryService } from "./oidc-provider-discovery.service.js";
-import { historicalAuthTransaction, type Prisma8AuthTransaction } from "./prisma8-auth-transaction-port.js";
+import {
+  historicalAuthTransaction,
+  type Prisma8AuthTransaction,
+} from "./prisma8-auth-transaction-port.js";
 import { Prisma8OidcLoginOperations } from "./prisma8-oidc-login-operations.js";
 
 const TRANSACTION_DATABASE_TIMEOUT_MS = 5_000;
@@ -57,6 +60,11 @@ export class Prisma8OidcLoginTransactionService extends Prisma8OidcLoginOperatio
         await requireBoundary(tx);
         return operation(historicalAuthTransaction(tx));
       }, OPTIONS);
-    super({ assertWritable: () => undefined, read: run, write: run }, discovery, startupConfig, true);
+    super(
+      { assertWritable: () => undefined, read: run, write: run },
+      discovery,
+      startupConfig,
+      true,
+    );
   }
 }

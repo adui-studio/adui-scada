@@ -118,7 +118,13 @@ export class Prisma8Service implements OnModuleInit, OnModuleDestroy {
     timeout: 5000 | 10000 = 10000,
   ): Promise<T> {
     this.assertWritable();
-    return writePrisma8Transaction(this.client, this.config, prisma8RuntimeStorageHash, operation, timeout);
+    return writePrisma8Transaction(
+      this.client,
+      this.config,
+      prisma8RuntimeStorageHash,
+      operation,
+      timeout,
+    );
   }
 
   async onModuleInit(): Promise<void> {

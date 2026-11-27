@@ -18,9 +18,8 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
   const { OidcProviderDiscoveryService, SCADA_OIDC_STARTUP_CONFIG } = await import(
     new URL("./dist/auth/oidc-provider-discovery.service.js", import.meta.url).href
   );
-  const { Prisma8RuntimeAuthSessionService, Prisma8RuntimeOidcLoginTransactionService } = await import(
-    new URL("./dist/auth/prisma8-runtime-identity.service.js", import.meta.url).href
-  );
+  const { Prisma8RuntimeAuthSessionService, Prisma8RuntimeOidcLoginTransactionService } =
+    await import(new URL("./dist/auth/prisma8-runtime-identity.service.js", import.meta.url).href);
   const { AuthorizationReadStore } = await import(
     new URL("./dist/auth/authorization-read-store.js", import.meta.url).href
   );
@@ -126,18 +125,31 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     const state = randomBytes(32).toString("base64url");
     const binding = "scada_oidc_b_" + randomBytes(32).toString("base64url");
     const deniedOperations = [
-      { run: () => sessions.issueForVerifiedSubject(principal), message: "本地身份事务暂时不可用，请稍后重试" },
-      { run: () => sessions.revokeForVerifiedSubject(principal, randomUUID()), message: "本地身份事务暂时不可用，请稍后重试" },
+      {
+        run: () => sessions.issueForVerifiedSubject(principal),
+        message: "本地身份事务暂时不可用，请稍后重试",
+      },
+      {
+        run: () => sessions.revokeForVerifiedSubject(principal, randomUUID()),
+        message: "本地身份事务暂时不可用，请稍后重试",
+      },
       { run: () => transactions.start("/"), message: "OIDC 登录事务创建失败，请稍后重试" },
-      { run: () => transactions.consume(state, binding), message: "OIDC 登录事务验证失败，请稍后重试" },
-      { run: () => transactions.cleanupExpiredTransactions(), message: "OIDC 登录事务清理失败，请稍后重试" },
+      {
+        run: () => transactions.consume(state, binding),
+        message: "OIDC 登录事务验证失败，请稍后重试",
+      },
+      {
+        run: () => transactions.cleanupExpiredTransactions(),
+        message: "OIDC 登录事务清理失败，请稍后重试",
+      },
     ];
     for (const { run, message } of deniedOperations) {
       let rejected = false;
       try {
         await run();
       } catch (error) {
-        if (!(error instanceof ServiceUnavailableException) || error.message !== message) throw error;
+        if (!(error instanceof ServiceUnavailableException) || error.message !== message)
+          throw error;
         rejected = true;
       }
       if (!rejected) throw new Error("原生身份写入未被只读门禁拒绝");

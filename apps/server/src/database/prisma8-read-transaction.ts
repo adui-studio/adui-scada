@@ -80,10 +80,13 @@ export async function writePrisma8Transaction<T>(
   timeout: 5000 | 10000 = 10000,
 ): Promise<T> {
   assertPrisma8Writable(config);
-  return client.transaction(async (tx) => {
-    await verifyReadBoundary(tx, config, storageHash);
-    const result = await operation(tx);
-    await verifyReadBoundary(tx, config, storageHash);
-    return result;
-  }, { ...OPTIONS, timeout });
+  return client.transaction(
+    async (tx) => {
+      await verifyReadBoundary(tx, config, storageHash);
+      const result = await operation(tx);
+      await verifyReadBoundary(tx, config, storageHash);
+      return result;
+    },
+    { ...OPTIONS, timeout },
+  );
 }
