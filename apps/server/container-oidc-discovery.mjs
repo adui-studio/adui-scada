@@ -9,10 +9,15 @@ const MAX_INPUT_BYTES = 32 * 1024;
 const REALM = "/realms/adui-scada";
 
 class OidcProbeError extends Error {
-  constructor(code) {
-    super("Keycloak 只读探针未通过：" + code);
+  constructor(message, code) {
+    super(message);
     this.code = code;
   }
+}
+
+/** 统一中文异常文案和独立机器诊断码，避免把协议码当作提示语。 */
+function oidcFailure(code) {
+  return new OidcProbeError("Keycloak 只读探针未通过：" + code, code);
 }
 
 /** 仅接受固定回环 Issuer 的发布端口与一张公开的自签根证书。 */
@@ -28,16 +33,16 @@ export function parseOidcProbeInput(input) {
     typeof input.ca !== "string" ||
     input.ca.length > MAX_INPUT_BYTES
   ) {
-    throw new OidcProbeError("INPUT");
+    throw oidcFailure("INPUT");
   }
   let root;
   try {
     root = new X509Certificate(input.ca);
     if (!root.ca || !root.checkIssued(root) || !root.verify(root.publicKey)) {
-      throw new OidcProbeError("CA");
+      throw oidcFailure("CA");
     }
   } catch {
-    throw new OidcProbeError("CA");
+    throw oidcFailure("CA");
   }
   const issuer = new URL("https://127.0.0.1:" + input.port).origin + REALM;
   return { port: input.port, ca: root.toString(), issuer };
@@ -46,7 +51,7 @@ export function parseOidcProbeInput(input) {
 /** 两个网络视角必须声明相同的公开 Issuer、固定端点及所需协议能力。 */
 export function verifyOidcMetadata(metadata, issuer) {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
-    throw new OidcProbeError("DISCOVERY_METADATA");
+    throw oidcFailure("DISCOVERY_METADATA");
   }
   const base = issuer + "/protocol/openid-connect";
   if (
@@ -55,7 +60,7 @@ export function verifyOidcMetadata(metadata, issuer) {
     metadata.token_endpoint !== base + "/token" ||
     metadata.jwks_uri !== base + "/certs"
   ) {
-    throw new OidcProbeError("DISCOVERY_METADATA");
+    throw oidcFailure("DISCOVERY_METADATA");
   }
   for (const [field, required] of [
     ["response_types_supported", "code"],
@@ -66,21 +71,21 @@ export function verifyOidcMetadata(metadata, issuer) {
     ["token_endpoint_auth_methods_supported", "client_secret_basic"],
   ]) {
     if (!Array.isArray(metadata[field]) || !metadata[field].includes(required)) {
-      throw new OidcProbeError("DISCOVERY_METADATA");
+      throw oidcFailure("DISCOVERY_METADATA");
     }
   }
   if (
     !Array.isArray(metadata.subject_types_supported) ||
     !metadata.subject_types_supported.some((value) => value === "public" || value === "pairwise")
   ) {
-    throw new OidcProbeError("DISCOVERY_METADATA");
+    throw oidcFailure("DISCOVERY_METADATA");
   }
 }
 
 /** 只比较有效 RS256 签名公钥集合，不输出 kid、公钥正文或任何令牌。 */
 export function fingerprintOidcKeys(jwks) {
   if (!Array.isArray(jwks?.keys) || jwks.keys.length > 128) {
-    throw new OidcProbeError("JWKS_KEYS");
+    throw oidcFailure("JWKS_KEYS");
   }
   const keys = [];
   const seen = new Set();
@@ -99,7 +104,7 @@ export function fingerprintOidcKeys(jwks) {
       ["d", "p", "q", "dp", "dq", "qi", "oth"].some((field) => Object.hasOwn(key, field)) ||
       (key.key_ops !== undefined && (!Array.isArray(key.key_ops) || !key.key_ops.includes("verify")))
     ) {
-      throw new OidcProbeError("JWKS_KEYS");
+      throw oidcFailure("JWKS_KEYS");
     }
     try {
       const publicKey = createPublicKey({ key: { kty: "RSA", n: key.n, e: key.e }, format: "jwk" });
@@ -110,15 +115,15 @@ export function fingerprintOidcKeys(jwks) {
         (details?.publicExponent ?? 0n) < 3n ||
         (details?.publicExponent ?? 0n) % 2n === 0n
       ) {
-        throw new OidcProbeError("JWKS_KEYS");
+        throw oidcFailure("JWKS_KEYS");
       }
       seen.add(key.kid);
       keys.push({ kid: key.kid, spki: publicKey.export({ type: "spki", format: "der" }).toString("base64") });
     } catch {
-      throw new OidcProbeError("JWKS_KEYS");
+      throw oidcFailure("JWKS_KEYS");
     }
   }
-  if (!keys.length) throw new OidcProbeError("JWKS_KEYS");
+  if (!keys.length) throw oidcFailure("JWKS_KEYS");
   keys.sort((left, right) => (left.kid < right.kid ? -1 : left.kid > right.kid ? 1 : 0));
   return {
     signingKeyCount: keys.length,
@@ -140,7 +145,7 @@ async function requestOidcJson(options) {
     (response.headers["content-type"] ?? "").split(";")[0]?.trim().toLowerCase() !== "application/json"
   ) {
     response.destroy();
-    throw new OidcProbeError("HTTP");
+    throw oidcFailure("HTTP");
   }
   const chunks = [];
   let bytes = 0;
@@ -148,14 +153,14 @@ async function requestOidcJson(options) {
     bytes += chunk.length;
     if (bytes > MAX_RESPONSE_BYTES) {
       response.destroy();
-      throw new OidcProbeError("SIZE");
+      throw oidcFailure("SIZE");
     }
     chunks.push(chunk);
   }
   try {
     return JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
-    throw new OidcProbeError("JSON");
+    throw oidcFailure("JSON");
   }
 }
 
@@ -184,15 +189,15 @@ async function readStage(stage, options, transport) {
     ) {
       category = "TLS";
     }
-    throw new OidcProbeError(stage + "_" + category);
+    throw oidcFailure(stage + "_" + category);
   }
 }
 
 /** 内部路由固定为 keycloak:8443；证书身份始终按公开 Issuer 的回环 IP 校验。 */
 export async function probeOidcDiscovery(mode, input, transport = requestOidcJson) {
-  if (mode !== "host" && mode !== "container") throw new OidcProbeError("INPUT");
+  if (mode !== "host" && mode !== "container") throw oidcFailure("INPUT");
   const { port, ca, issuer } = parseOidcProbeInput(input);
-  if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") throw new OidcProbeError("INPUT");
+  if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") throw oidcFailure("INPUT");
   const options = (path) => ({
     hostname: mode === "host" ? "127.0.0.1" : "keycloak",
     port: mode === "host" ? Number(port) : 8443,
@@ -213,12 +218,12 @@ export async function probeOidcDiscovery(mode, input, transport = requestOidcJso
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    if (process.argv.length !== 3) throw new OidcProbeError("INPUT");
+    if (process.argv.length !== 3) throw oidcFailure("INPUT");
     const chunks = [];
     let bytes = 0;
     for await (const chunk of process.stdin) {
       bytes += chunk.length;
-      if (bytes > MAX_INPUT_BYTES) throw new OidcProbeError("INPUT");
+      if (bytes > MAX_INPUT_BYTES) throw oidcFailure("INPUT");
       chunks.push(chunk);
     }
     const result = await probeOidcDiscovery(process.argv[2], JSON.parse(Buffer.concat(chunks).toString("utf8")));
