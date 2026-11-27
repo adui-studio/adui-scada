@@ -3182,3 +3182,7 @@ E-159 为测试专属消息遗漏，已最小修复；不改变生产代码。�
 维护者于 2026-11-28 提供 Windows 本机真实执行记录：`pnpm run docker:db:transaction:probe --confirm-temp-transaction-probe` 成功，宿主按现有七字段严格机器报告核验实际提交、跨事务回读、主动回滚恢复原值、同一 PostgreSQL 后端会话、临时表移除和 Provider 关闭，且 businessDataWritten=false。随后 `docker:oidc:probe`、`docker:ps` 与 `git diff --check` 全部成功，七服务均运行，OIDC 登录尚未启用，最终退出码 0，`git status --short` 无输出。日志未独立打印本次 HEAD；上轮已验收生产源码 HEAD 为 47b84f8e2ece8cffebe931013b1cca865dc3cc41，当前远端 02f3e2c438a0de1cdda17da33fd0778f817cf34b 相对此仅三份验收文档追加，无生产代码或配置变更。此次真实事务仅涉及会话临时表，不证明正式业务表写入、角色最小权限、正式 OIDC 登录或发布安全门禁已验收。
 
 独立临时事务阶段结案条件满足，维护者同意合并至 feat/mvp-first-integration。下一阶段先评审受控本机 Docker 正式业务连接和认证启用边界，明确数据库身份与权限、默认关闭、网络和会话隔离及失败关闭策略；不得将临时表成功扩大为业务 DML 授权，不自动修改角色、清库、初始化、迁移、开放工程发布或工业设备写入。
+
+### 2026-11-28 · PR #256 合并与原生业务连接安全评审
+
+维护者同意合并后，PR #256 已 Squash 合入 feat/mvp-first-integration 的 2783cbc5d2376d1269387a8daa5d9fd20fdd8af3；真实原生临时事务及常驻只读回归通过。当前 Compose 业务库及 Keycloak 使用同一登录身份和数据库密码，实际角色属性、数据库所有权、有效权限及 PUBLIC 权限仍需只读目录核验。新增 [Docker 原生业务连接安全评审](plans/docker-native-business-connection-review.md)，提出管理、SCADA 与 Keycloak 独立身份，保持一个 PostgreSQL 实例及现有七服务。当前只提交评审文档，未实施角色分离、权限变更、正式连接或 OIDC 启用；先评审并实现只读角色预检，再根据真实目录结果单独授权角色配置与业务模式。禁止使用临时事务探针放行常驻业务连接或提前打开工程/发布/设备写入。
