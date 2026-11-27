@@ -209,7 +209,7 @@ const emptyKeys = [
 
 /** 只读取目录元数据；失败时也回滚、关闭，并且不回显第三方连接异常。 */
 export async function inspectNativeEmptyDatabase(client, expectedUser) {
-  return inspectEmptyDatabase(client, expectedUser, nativeEmptyDatabaseName, "第三座专用库", null);
+  return inspectEmptyDatabase(client, expectedUser, nativeEmptyDatabaseName, "第三座专用库", null, null);
 }
 
 /** 第四座实例只复用目录检查，不扩大第三座连接入口或写入许可。 */
