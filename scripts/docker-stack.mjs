@@ -212,19 +212,15 @@ export function validateDockerEnv(text) {
 
 /** 通过独立宿主进程校验真实发布端口和本机可信根证书。 */
 function verifyDockerHttps(ports) {
-  const result = spawnSync(
-    process.execPath,
-    ["scripts/docker-web-https-smoke.mjs", ...ports],
-    {
-      cwd: ROOT,
-      shell: false,
-      windowsHide: true,
-      encoding: "utf8",
-      timeout: 80_000,
-      stdio: ["ignore", "pipe", "pipe"],
-      maxBuffer: 1024 * 1024,
-    },
-  );
+  const result = spawnSync(process.execPath, ["scripts/docker-web-https-smoke.mjs", ...ports], {
+    cwd: ROOT,
+    shell: false,
+    windowsHide: true,
+    encoding: "utf8",
+    timeout: 80_000,
+    stdio: ["ignore", "pipe", "pipe"],
+    maxBuffer: 1024 * 1024,
+  });
   if (result.status !== 0 || result.stdout.trim() !== "DOCKER_WEB_HTTPS_READY") {
     throw new Error("双端 Docker HTTPS 验证失败，请检查本机端口和 mkcert 可信证书，保留现场");
   }

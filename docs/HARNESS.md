@@ -5681,6 +5681,6 @@ if ($LASTEXITCODE -ne 0) { throw "Docker HTTPS 验收失败，保留现场" }
 pnpm run docker:ps
 git rev-parse HEAD
 git status --short
-````
+```
 
 预计 Docker 专项 22/22；启动成功须包含「容器原生只读及双端 HTTP 验证通过，宿主 HTTPS 验证通过；OIDC 登录尚未启用」。手工打开 https://127.0.0.1:18480 与 https://127.0.0.1:18481，确认无证书错误、页面渲染和模拟运行；原 HTTP 入口仍可使用。若 mkcert 不可执行、CA 不匹配、端口冲突或响应异常，停止验收并保留现场；禁止关闭 TLS 校验、重置数据库或覆盖证书。宿主探针仅验证六路径响应头，不替代浏览器渲染、完整 SSE 消息序列、真实登录或写事务。

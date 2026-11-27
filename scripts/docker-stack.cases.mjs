@@ -195,8 +195,13 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
   });
 
   void it("数据库严格验证失败时不构建或启动应用也不执行初始化", () => {
-    const { run, calls, events, verifyDatabase, verifyHttps } = mockDocker({ invalidDatabase: true });
-    assert.throws(() => manageDockerStack("up", env, run, verifyDatabase, verifyHttps), /数据库严格验证失败/);
+    const { run, calls, events, verifyDatabase, verifyHttps } = mockDocker({
+      invalidDatabase: true,
+    });
+    assert.throws(
+      () => manageDockerStack("up", env, run, verifyDatabase, verifyHttps),
+      /数据库严格验证失败/,
+    );
     assert.deepEqual(events, ["基础设施启动", "严格数据库验证"]);
     assert.equal(
       calls.some((args) => args.includes("--build") || args.includes("exec")),
@@ -344,8 +349,8 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
       fileURLToPath(new URL("../deploy/docker/compose.yaml", import.meta.url)),
       "utf8",
     );
-    assert.ok(compose.includes('127.0.0.1:${SCADA_REACT_HTTPS_PORT:-18480}:8443'));
-    assert.ok(compose.includes('127.0.0.1:${SCADA_VUE_HTTPS_PORT:-18481}:8443'));
+    assert.ok(compose.includes("127.0.0.1:${SCADA_REACT_HTTPS_PORT:-18480}:8443"));
+    assert.ok(compose.includes("127.0.0.1:${SCADA_VUE_HTTPS_PORT:-18481}:8443"));
     const web = compose.slice(compose.indexOf("\n  web-react:"), compose.indexOf("\n  server:"));
     assert.equal((web.match(/localhost\.pem:ro/g) ?? []).length, 2);
     assert.equal((web.match(/localhost-key\.pem:ro/g) ?? []).length, 2);
