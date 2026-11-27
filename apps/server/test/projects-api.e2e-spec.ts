@@ -25,21 +25,21 @@ import type {
   ProjectAccessAction,
 } from "../src/projects/project-access-policy.js";
 import {
-  PrismaProjectVersionStore,
+  ProjectVersionStore,
   ProjectRevisionConflictError,
   ProjectAlreadyExistsError,
   ProjectRequestValidationError,
-} from "../src/projects/prisma-project-version-store.js";
+} from "../src/projects/project-version-store.js";
 import type {
   ProjectSummary,
   ProjectReleasePreflightSummary,
-} from "../src/projects/prisma-project-version-store.js";
+} from "../src/projects/project-version-store.js";
 import { ProjectApiController } from "../src/projects/project-api.controller.js";
-import { PrismaProjectReleaseStore } from "../src/projects/prisma-project-release-store.js";
+import { ProjectReleaseStore } from "../src/projects/project-release-store.js";
 import type {
   ProjectCurrentReleaseResult,
   ProjectReleaseResult,
-} from "../src/projects/prisma-project-release-store.js";
+} from "../src/projects/project-release-store.js";
 import { ProjectReleaseGateUnavailableError } from "../src/projects/project-release-safety-gate.js";
 import { ProjectApiExceptionFilter } from "../src/projects/project-api.exception-filter.js";
 import { AuthorizationReadStore } from "../src/auth/authorization-read-store.js";
@@ -220,8 +220,8 @@ describe("工程 API HTTP 接口（端到端）", () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [ProjectApiController],
       providers: [
-        { provide: PrismaProjectVersionStore, useValue: store },
-        { provide: PrismaProjectReleaseStore, useValue: releases },
+        { provide: ProjectVersionStore, useValue: store },
+        { provide: ProjectReleaseStore, useValue: releases },
         { provide: AuthSessionService, useValue: sessions },
         { provide: AuthorizationReadStore, useValue: authorization },
         { provide: ScadaSecurityAuditService, useValue: audit },

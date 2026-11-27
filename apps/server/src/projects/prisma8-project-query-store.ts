@@ -6,12 +6,7 @@ import {
   type ProjectVersionQuery,
   type ProjectVersionSummary,
 } from "@adui/scada-core";
-import type { PostgresClient, PostgresTransactionContext } from "@prisma/orm-postgres/runtime";
-import type { Contract } from "../generated/prisma8/contract.d.js";
-import {
-  historicalTextTransaction,
-  type Prisma8TextTransaction,
-} from "../database/prisma8-text-transaction.js";
+import type { Prisma8TextTransaction } from "../database/prisma8-text-transaction.js";
 import {
   hasProjectPermission,
   type AuthenticatedProjectPrincipal,
@@ -26,9 +21,7 @@ import {
   requireProjectId,
   type ProjectSummary,
   type ProjectReleasePreflightSummary,
-} from "./prisma-project-version-store.js";
-
-type HistoricalTx = PostgresTransactionContext<Contract>;
+} from "./project-version-store.js";
 
 export interface Prisma8ProjectQueryTransaction {
   readonly queryText: Prisma8TextTransaction["queryText"];
@@ -44,7 +37,6 @@ export interface Prisma8ProjectQueryTransactions {
   locked<T>(operation: (tx: Prisma8ProjectQueryTransaction) => Promise<T>): Promise<T>;
 }
 const ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
-const OPTIONS = { isolationLevel: "ReadCommitted", timeout: 10000 } as const;
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
@@ -204,34 +196,6 @@ export async function validatePrisma8ProjectSnapshot(
   return snapshot;
 }
 
-/** PostgreSQL 只读事务不能取得 FOR SHARE；此候选需要隔离库普通事务，但仅执行查询。 */
-async function requireBoundary(tx: HistoricalTx): Promise<void> {
-  const rows = await tx
-    .query(
-      tx.raw.sql`SELECT current_database()::text AS database_name,
-      current_schema()::text AS schema_name,
-      current_setting('transaction_read_only') AS read_only,
-      current_setting('transaction_isolation') AS isolation`
-        .returnsRow({
-          database_name: "pg/text@1",
-          schema_name: "pg/text@1",
-          read_only: "pg/text@1",
-          isolation: "pg/text@1",
-        })
-        .build(),
-    )
-    .toArray();
-  const row = rows[0];
-  if (
-    rows.length !== 1 ||
-    row?.database_name !== "adui_scada_test" ||
-    row.schema_name !== "public" ||
-    row.read_only !== "off" ||
-    row.isolation !== "read committed"
-  )
-    throw new Error("Prisma 8 工程查询候选仅允许隔离库读已提交事务");
-}
-
 async function lockAndAuthorize(
   tx: Prisma8ProjectQueryTransaction,
   actor: AuthenticatedProjectPrincipal,
@@ -290,7 +254,7 @@ async function readSnapshot(
   );
 }
 
-/** 两代查询候选共用五项业务操作，连接、锁事务模式及边界由各自端口保证。 */
+/** 原生查询共用五项业务操作，事务模式与安全边界由原生提供方保证。 */
 export class Prisma8ProjectQueryOperations {
   constructor(private readonly transactions: Prisma8ProjectQueryTransactions) {}
 
@@ -395,24 +359,5 @@ export class Prisma8ProjectQueryOperations {
         issues: report.issues,
       };
     });
-  }
-}
-
-/** 历史隔离候选继续只使用旧 Contract 及固定隔离库门禁。 */
-export class Prisma8ProjectQueryStore extends Prisma8ProjectQueryOperations {
-  constructor(client: PostgresClient<Contract>) {
-    const run = <T>(operation: (tx: Prisma8ProjectQueryTransaction) => Promise<T>): Promise<T> =>
-      client.transaction(async (tx) => {
-        await requireBoundary(tx);
-        const text = historicalTextTransaction(tx, "工程事务查询结果缺少有效文本列");
-        return operation({
-          queryText: text.queryText,
-          readGrants: async (tenantId, projectId, subjectId) =>
-            await tx.orm.public.ScadaProjectGrant.where({ tenantId, projectId, subjectId })
-              .select("permission")
-              .all(),
-        });
-      }, OPTIONS);
-    super({ read: run, locked: run });
   }
 }

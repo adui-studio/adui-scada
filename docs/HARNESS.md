@@ -1,5 +1,7 @@
 # ADui SCADA · Harness
 
+> 2026-11-27 原生收敛： 旧 Prisma 7 迁移、旧库 `test:db` 与 Prisma 8 历史候选实验命令不再执行。Windows 先 `pnpm install --lockfile-only`，再 `pnpm install --frozen-lockfile`；运行 `pnpm run db:generate`、`pnpm run test:prisma8:fresh`、`pnpm run test:prisma8:cli`、`pnpm run test:docker:db`、`pnpm run test:oidc:identity`、`pnpm run test:unit`、`pnpm run test:e2e:server`、`vp check --fix`、`pnpm run ready`，最后 `pnpm run db:prisma8:fresh:provider:smoke`。已有业务库不得重复初始化、清理或迁移。依赖旧迁移表的发布夹具准备命令已停用，后续用原生契约和明确授权重建。
+
 > 2026-11-27 最新决策：维护者已删除旧开发数据库环境，停止历史迁移接管及专用实例实验。后续以 [ADR-0073](adr/0073-prisma8-fresh-install.md) 为准；下文旧实验记录仅供追溯，不是当前验收前置条件。
 
 > **AI 编码前必读门禁**：每次修改任何代码前，先阅读根目录 [AGENTS.md](../AGENTS.md) 与 [AI 编码错误复盘清单](AI_MISTAKES.md) 全文，再检查目标代码、适用 Skills 与测试。发现重复错误应先对照错误编号排查，复验后再将新案例写入清单；命令未实际执行不能登记为通过。

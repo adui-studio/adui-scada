@@ -14,12 +14,6 @@ function withFixture(manifest, run) {
     const packageRoot = join(server, "node_modules", "prisma");
     mkdirSync(packageRoot, { recursive: true });
     mkdirSync(join(root, "scripts"));
-    const readonlyTarget = join(server, "src", "database");
-    mkdirSync(readonlyTarget, { recursive: true });
-    copyFileSync(
-      join(import.meta.dirname, "../apps/server/src/database/prisma8-readonly-target.ts"),
-      join(readonlyTarget, "prisma8-readonly-target.ts"),
-    );
     const launcher = join(root, "scripts", "prisma8-cli.mjs");
     copyFileSync(join(import.meta.dirname, "prisma8-cli.mjs"), launcher);
     writeFileSync(join(packageRoot, "package.json"), JSON.stringify(manifest));
@@ -73,44 +67,20 @@ void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
     });
   });
 
-  void it("原生候选只映射到独立配置的离线契约生成", () => {
-    withFixture(valid, (root, server, launcher) => {
-      const result = spawnSync(process.execPath, [launcher, "contract", "native-emit"], {
-        cwd: server,
-        encoding: "utf8",
-      });
-      assert.equal(result.status, 7);
-      assert.deepEqual(JSON.parse(result.stdout), {
-        cwd: root,
-        args: ["contract", "emit", "--config", join(server, "prisma8-native.config.ts")],
-      });
-    });
-  });
-
-  void it("原生配置只允许查询根目录 Skills 列表", () => {
-    withFixture(valid, (root, server, launcher) => {
-      const result = spawnSync(process.execPath, [launcher, "skills", "native-list"], {
-        cwd: server,
-        encoding: "utf8",
-      });
-      assert.equal(result.status, 7);
-      assert.deepEqual(JSON.parse(result.stdout), {
-        cwd: root,
-        args: ["skills", "list", "--config", join(server, "prisma8-native.config.ts")],
-      });
-    });
-  });
-
   void it("拒绝数据库写入命令和额外参数", () => {
     withFixture(valid, (_root, server, launcher) => {
       for (const args of [
         ["db", "sign"],
+        ["db", "native-schema-verify"],
+        ["db", "native-schema-verify-strict"],
+        ["contract", "native-emit"],
+        ["skills", "native-list"],
         ["db", "verify"],
         ["db", "native-schema-verify", "--db", "unsafe"],
         ["db", "native-schema-verify-strict", "--config", "unsafe.ts"],
         ["contract", "infer"],
         ["migration", "plan"],
-        ["contract", "native-emit", "--config", "unsafe.ts"],
+        ["contract", "emit", "--config", "unsafe.ts"],
         ["skills", "sync", "--disable"],
         ["skills", "native-list", "--config", "unsafe.ts"],
         ["skills", "native-sync"],
@@ -121,112 +91,14 @@ void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
         });
         assert.equal(result.status, 1);
         assert.equal(result.stdout, "");
-        assert.match(result.stderr, /仅允许 Skills 同步、列表、离线契约生成和原生只读结构验证/);
-      }
-    });
-  });
-
-  void it("原生结构验证只允许受限隔离库并强制只读会话", () => {
-    withFixture(valid, (root, server, launcher) => {
-      const connectionString =
-        "postgresql://adui_scada:secret%40pass@127.0.0.1:15432/adui_scada_test?schema=public";
-      const result = spawnSync(process.execPath, [launcher, "db", "native-schema-verify"], {
-        cwd: server,
-        encoding: "utf8",
-        env: { ...process.env, SCADA_TEST_DATABASE_URL: connectionString },
-      });
-      assert.equal(result.status, 7);
-      assert.deepEqual(JSON.parse(result.stdout), {
-        cwd: root,
-        args: [
-          "db",
-          "verify",
-          "--schema-only",
-          "--config",
-          join(server, "prisma8-native.config.ts"),
-        ],
-        options:
-          "-c default_transaction_read_only=on -c statement_timeout=5000 -c lock_timeout=2000 -c search_path=public",
-        databaseUrlPresent: true,
-      });
-      assert.equal(result.stdout.includes("secret"), false);
-    });
-  });
-
-  void it("严格结构验证只在相同只读验收库运行固定机器输出命令", () => {
-    withFixture(valid, (root, server, launcher) => {
-      const connectionString =
-        "postgresql://adui_scada:secret%40pass@127.0.0.1:15432/adui_scada_test?schema=public";
-      const result = spawnSync(process.execPath, [launcher, "db", "native-schema-verify-strict"], {
-        cwd: server,
-        encoding: "utf8",
-        env: { ...process.env, SCADA_TEST_DATABASE_URL: connectionString },
-      });
-      assert.equal(result.status, 7);
-      assert.deepEqual(JSON.parse(result.stdout), {
-        cwd: root,
-        args: [
-          "db",
-          "verify",
-          "--schema-only",
-          "--strict",
-          "--json",
-          "--config",
-          join(server, "prisma8-native.config.ts"),
-        ],
-        options:
-          "-c default_transaction_read_only=on -c statement_timeout=5000 -c lock_timeout=2000 -c search_path=public",
-        databaseUrlPresent: true,
-      });
-      assert.equal(result.stdout.includes("secret"), false);
-      const rejected = spawnSync(
-        process.execPath,
-        [launcher, "db", "native-schema-verify-strict"],
-        {
-          cwd: server,
-          encoding: "utf8",
-          env: {
-            ...process.env,
-            SCADA_TEST_DATABASE_URL:
-              "postgresql://adui_scada:secret@127.0.0.1:15432/adui_scada_fresh_prisma8_native",
-          },
-        },
-      );
-      assert.equal(rejected.status, 1);
-      assert.equal(rejected.stdout, "");
-      assert.equal(rejected.stderr.includes("secret"), false);
-    });
-  });
-
-  void it("拒绝非本机、错误库名、错误端口及额外数据库参数", () => {
-    withFixture(valid, (_root, server, launcher) => {
-      const invalidUrls = [
-        undefined,
-        "postgresql://adui_scada:secret@example.com:15432/adui_scada_test",
-        "postgresql://adui_scada:secret@127.0.0.1:5432/adui_scada_test",
-        "postgresql://adui_scada:secret@127.0.0.1:15432/production",
-        "postgresql://adui_scada:secret@127.0.0.1:15432/adui_scada_test?schema=private",
-        "postgresql://adui_scada:secret@127.0.0.1:15432/adui_scada_test?schema=public&sslmode=require",
-      ];
-      for (const connectionString of invalidUrls) {
-        const env = { ...process.env };
-        if (connectionString === undefined) delete env.SCADA_TEST_DATABASE_URL;
-        else env.SCADA_TEST_DATABASE_URL = connectionString;
-        const result = spawnSync(process.execPath, [launcher, "db", "native-schema-verify"], {
-          cwd: server,
-          encoding: "utf8",
-          env,
-        });
-        assert.equal(result.status, 1);
-        assert.equal(result.stdout, "");
-        assert.equal(result.stderr.includes("secret"), false);
+        assert.match(result.stderr, /仅允许 Skills 同步、列表及原生离线契约生成/);
       }
     });
   });
 
   void it("原生离线生成不得继承测试数据库连接", () => {
     withFixture(valid, (root, server, launcher) => {
-      const result = spawnSync(process.execPath, [launcher, "contract", "native-emit"], {
+      const result = spawnSync(process.execPath, [launcher, "contract", "emit"], {
         cwd: server,
         encoding: "utf8",
         env: {
@@ -237,7 +109,7 @@ void describe("Prisma 8 根目录 CLI 与 Skills 统一管理", () => {
       assert.equal(result.status, 7);
       assert.deepEqual(JSON.parse(result.stdout), {
         cwd: root,
-        args: ["contract", "emit", "--config", join(server, "prisma8-native.config.ts")],
+        args: ["contract", "emit", "--config", join(server, "prisma.config.ts")],
       });
     });
   });

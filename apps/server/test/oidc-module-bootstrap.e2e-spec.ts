@@ -12,14 +12,12 @@ import {
 } from "../src/auth/scada-auth-cookie.js";
 import { SCADA_OIDC_STARTUP_CONFIG } from "../src/auth/oidc-provider-discovery.service.js";
 import { resolveOidcStartupConfig } from "../src/config/oidc-startup.config.js";
-import { PrismaService } from "../src/database/prisma.service.js";
-import { DatabaseModule } from "../src/database/database.module.js";
 import { PRISMA8_RUNTIME_CONFIG, Prisma8Service } from "../src/database/prisma8.service.js";
 import type { Prisma8Transaction } from "../src/database/prisma8-read-transaction.js";
 import { AuthSessionService } from "../src/auth/auth-session.service.js";
 import { Prisma8RuntimeAuthSessionService } from "../src/auth/prisma8-runtime-identity.service.js";
-import { PrismaProjectVersionStore } from "../src/projects/prisma-project-version-store.js";
-import { PrismaProjectReleaseStore } from "../src/projects/prisma-project-release-store.js";
+import { ProjectVersionStore } from "../src/projects/project-version-store.js";
+import { ProjectReleaseStore } from "../src/projects/project-release-store.js";
 import { Prisma8RuntimeProjectVersionStore } from "../src/projects/prisma8-runtime-project-version-store.js";
 import { Prisma8RuntimeProjectReleaseStore } from "../src/projects/prisma8-runtime-project-release-store.js";
 
@@ -118,9 +116,7 @@ describe("OIDC 根模块与工程 API Guard 启动装配（端到端）", () => 
     const moduleRef = await Test.createTestingModule({
       imports: [OidcEnabledAppModule],
     })
-      // 外部数据库全部使用内存事务，误注册旧提供方也不会建立连接。
-      .overrideProvider(PrismaService)
-      .useValue(Object.freeze({}))
+      // 外部数据库全部使用内存事务。
       .overrideProvider(PRISMA8_RUNTIME_CONFIG)
       .useValue({ connectionString: undefined, readOnly: true })
       .overrideProvider(Prisma8Service)
@@ -210,13 +206,17 @@ describe("OIDC 根模块与工程 API Guard 启动装配（端到端）", () => 
     const modules = Array.from(app.get(ModulesContainer).values());
     expect(
       modules.some(
-        (module) => module.metatype === DatabaseModule || module.providers.has(PrismaService),
+        (module) =>
+          module.metatype?.name === "DatabaseModule" ||
+          [...module.providers.keys()].some(
+            (token) => typeof token === "function" && token.name === "PrismaService",
+          ),
       ),
     ).toBe(false);
     expect(app.get(Prisma8Service, { each: true })).toEqual([database]);
     expect(app.get(AuthSessionService)).toBeInstanceOf(Prisma8RuntimeAuthSessionService);
-    expect(app.get(PrismaProjectVersionStore)).toBe(app.get(Prisma8RuntimeProjectVersionStore));
-    expect(app.get(PrismaProjectReleaseStore)).toBe(app.get(Prisma8RuntimeProjectReleaseStore));
+    expect(app.get(ProjectVersionStore)).toBe(app.get(Prisma8RuntimeProjectVersionStore));
+    expect(app.get(ProjectReleaseStore)).toBe(app.get(Prisma8RuntimeProjectReleaseStore));
   });
 
   it("已验证会话通过正式原生身份与工程仓储返回授权列表", async () => {

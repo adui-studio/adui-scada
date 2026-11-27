@@ -235,7 +235,7 @@ for (const old of [
 ]) {
   assert.ok(!existsSync(resolve(root, old)), "请移除旧版 Docker 入口：" + old);
 }
-for (const action of ["plan", "up", "down", "ps", "logs"]) {
+for (const action of ["plan", "down", "ps", "logs"]) {
   assert.ok(
     packageScripts["docker:" + action]?.includes("docker-stack.mjs " + action),
     "缺少最新 Docker 命令：" + action,
@@ -243,16 +243,16 @@ for (const action of ["plan", "up", "down", "ps", "logs"]) {
 }
 assert.ok(!packageScripts["docker:migrate"], "全新安装不得保留旧容器迁移入口");
 assert.ok(
-  packageScripts["docker:up"]?.includes("node scripts/init-docker-db.mjs"),
-  "首次 Docker 启动必须执行 Prisma migrate deploy",
+  packageScripts["docker:up"]?.endsWith("node scripts/docker-stack.mjs infra"),
+  "Docker 基础设施启动不得自动初始化数据库",
 );
 assert.ok(
-  packageScripts["docker:db:init"] === "node scripts/init-docker-db.mjs",
-  "缺少安全的数据库迁移重试命令",
+  packageScripts["docker:db:init"] === "node apps/server/prisma8-fresh-install.mjs",
+  "缺少受控的全新数据库初始化入口",
 );
 assert.equal(
   packageScripts["docker:db:status"],
-  "node scripts/init-docker-db.mjs --status",
+  "node apps/server/prisma8-fresh-install.mjs --status",
   "Docker 数据库状态查询必须复用本机随机凭据及只读 Prisma 命令",
 );
 assert.ok(

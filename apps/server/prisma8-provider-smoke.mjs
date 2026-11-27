@@ -23,17 +23,11 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     if (previousLogLevel === undefined) delete process.env.SCADA_LOG_LEVEL;
     else process.env.SCADA_LOG_LEVEL = previousLogLevel;
   }
-  const { DatabaseModule } = await import(
-    new URL("./dist/database/database.module.js", import.meta.url).href
+  const { ProjectVersionStore } = await import(
+    new URL("./dist/projects/project-version-store.js", import.meta.url).href
   );
-  const { PrismaService } = await import(
-    new URL("./dist/database/prisma.service.js", import.meta.url).href
-  );
-  const { PrismaProjectVersionStore } = await import(
-    new URL("./dist/projects/prisma-project-version-store.js", import.meta.url).href
-  );
-  const { PrismaProjectReleaseStore } = await import(
-    new URL("./dist/projects/prisma-project-release-store.js", import.meta.url).href
+  const { ProjectReleaseStore } = await import(
+    new URL("./dist/projects/project-release-store.js", import.meta.url).href
   );
   const { Prisma8AuthorizationReadStore } = await import(
     new URL("./dist/auth/prisma8-authorization-read-store.js", import.meta.url).href
@@ -91,9 +85,6 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
   const context = await Test.createTestingModule({
     imports: [OidcEnabledAppModule],
   })
-    // 即使未来误注册旧服务，烟测也不允许其创建连接或执行生命周期。
-    .overrideProvider(PrismaService)
-    .useValue(Object.freeze({}))
     .overrideProvider(ScadaSecurityAuditService)
     .useValue({ record: (decision) => decisions.push(decision) })
     .overrideProvider(PRISMA8_RUNTIME_CONFIG)
@@ -116,7 +107,11 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     const modules = Array.from(context.get(ModulesContainer).values());
     if (
       modules.some(
-        (module) => module.metatype === DatabaseModule || module.providers.has(PrismaService),
+        (module) =>
+          module.metatype?.name === "DatabaseModule" ||
+          [...module.providers.keys()].some(
+            (token) => typeof token === "function" && token.name === "PrismaService",
+          ),
       )
     ) {
       throw new Error("正式根模块仍注册旧数据库提供方");
@@ -129,8 +124,8 @@ export async function verifyPrisma8Provider(connectionString, systemIdentifier, 
     if (
       !(context.get(ScadaAuthController) instanceof ScadaAuthController) ||
       !(context.get(ProjectApiController) instanceof ProjectApiController) ||
-      context.get(PrismaProjectVersionStore) !== context.get(Prisma8RuntimeProjectVersionStore) ||
-      context.get(PrismaProjectReleaseStore) !== context.get(Prisma8RuntimeProjectReleaseStore)
+      context.get(ProjectVersionStore) !== context.get(Prisma8RuntimeProjectVersionStore) ||
+      context.get(ProjectReleaseStore) !== context.get(Prisma8RuntimeProjectReleaseStore)
     ) {
       throw new Error("正式根模块控制器或仓储绑定异常");
     }

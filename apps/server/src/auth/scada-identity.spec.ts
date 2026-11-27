@@ -1,18 +1,19 @@
 import "reflect-metadata";
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { describe, expect, it } from "vite-plus/test";
 import { ForbiddenException, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import type { ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import type { PrismaService } from "../database/prisma.service.js";
-import { Prisma7AuthorizationReadStore } from "./prisma7-authorization-read-store.js";
+import type { AuthorizationReadStore } from "./authorization-read-store.js";
+import type { Prisma8Transaction } from "../database/prisma8-read-transaction.js";
+import type { Prisma8Service } from "../database/prisma8.service.js";
 import { resolveOidcStartupConfig } from "../config/oidc-startup.config.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import type {
   SecurityAuditDecision,
   SecurityAuditReporter,
 } from "../security/scada-security-audit.js";
-import { AuthSessionService } from "./auth-session.service.js";
+import { Prisma8RuntimeAuthSessionService } from "./prisma8-runtime-identity.service.js";
 import { SCADA_PROJECT_PERMISSION, ScadaProjectGuard } from "./scada-project.guard.js";
 import type { ScadaAuthenticatedRequest } from "./scada-session.guard.js";
 import { ScadaSessionGuard } from "./scada-session.guard.js";
@@ -56,66 +57,135 @@ function makeOidcConfig(): EnabledOidcConfig {
   return result;
 }
 
+function stringParameter(value: unknown): string {
+  if (typeof value !== "string") throw new Error("测试事务参数必须为字符串");
+  return value;
+}
+
+type Plan = { text: string; parameters: unknown[] };
+
 function makeSessionService() {
   let status = "active";
   const sessions = new Map<string, StoredSession>();
-  const client = {
-    scadaIdentity: {
-      findUnique: async (args: {
-        where: { tenantId_subjectId: { tenantId: string; subjectId: string } };
-      }) => {
-        const { tenantId, subjectId } = args.where.tenantId_subjectId;
-        return tenantId === principal.tenantId && subjectId === principal.subjectId
-          ? { status }
-          : null;
+  const tx = {
+    raw: {
+      sql: (strings: TemplateStringsArray, ...parameters: unknown[]) => {
+        const plan = { text: strings.join("?"), parameters };
+        return {
+          returnsRow: () => ({ build: () => plan }),
+          affectedCount: () => ({ build: () => plan }),
+        };
       },
     },
-    scadaAuthSession: {
-      create: async (args: {
-        data: {
-          tenantId: string;
-          subjectId: string;
-          tokenHash: string;
-          csrfTokenHash: string;
-          expiresAt: Date;
+    query(plan: Plan) {
+      const parameters = plan.parameters.map(stringParameter);
+      if (plan.text.includes("FROM public.scada_identities")) {
+        return {
+          toArray: () =>
+            Promise.resolve(
+              parameters[0] === principal.tenantId && parameters[1] === principal.subjectId
+                ? [{ status }]
+                : [],
+            ),
         };
-      }) => {
-        const session: StoredSession = {
-          ...args.data,
-          sessionId: randomUUID(),
-          issuedAt: new Date(),
+      }
+      if (!plan.text.includes("FROM public.scada_auth_sessions")) {
+        throw new Error("测试出现未预期会话查询");
+      }
+      const session = sessions.get(parameters[0] ?? "");
+      return {
+        toArray: () =>
+          Promise.resolve(
+            session && session.revokedAt === null && status === "active"
+              ? [
+                  {
+                    session_id: session.sessionId,
+                    tenant_id: session.tenantId,
+                    subject_id: session.subjectId,
+                    csrf_hash: session.csrfTokenHash ?? "",
+                    csrf_is_null: String(session.csrfTokenHash === null),
+                    issued_at: session.issuedAt.toISOString(),
+                    expires_at: session.expiresAt.toISOString(),
+                  },
+                ]
+              : [],
+          ),
+      };
+    },
+    execute(plan: Plan) {
+      const parameters = plan.parameters.map(stringParameter);
+      if (plan.text.includes("INSERT INTO public.scada_auth_sessions")) {
+        const [sessionId, tenantId, subjectId, tokenHash, csrfTokenHash, issuedAt, expiresAt] =
+          parameters;
+        if (
+          !sessionId ||
+          !tenantId ||
+          !subjectId ||
+          !tokenHash ||
+          !csrfTokenHash ||
+          !issuedAt ||
+          !expiresAt
+        ) {
+          throw new Error("测试会话创建参数不完整");
+        }
+        sessions.set(tokenHash, {
+          sessionId,
+          tenantId,
+          subjectId,
+          tokenHash,
+          csrfTokenHash,
+          issuedAt: new Date(issuedAt),
+          expiresAt: new Date(expiresAt),
           revokedAt: null,
           identity: { status },
-        };
-        sessions.set(session.tokenHash, session);
-        return { sessionId: session.sessionId, expiresAt: session.expiresAt };
-      },
-      findUnique: async (args: { where: { tokenHash: string } }) => {
-        const session = sessions.get(args.where.tokenHash);
-        return session ? { ...session, identity: { status } } : null;
-      },
-      updateMany: async (args: {
-        where: { sessionId: string; tenantId: string; subjectId: string; revokedAt: null };
-        data: { revokedAt: Date };
-      }) => {
-        const session = [...sessions.values()].find(
-          (row) =>
-            row.sessionId === args.where.sessionId &&
-            row.tenantId === args.where.tenantId &&
-            row.subjectId === args.where.subjectId &&
-            row.revokedAt === null,
-        );
-        if (session) session.revokedAt = args.data.revokedAt;
-        return { count: session ? 1 : 0 };
-      },
+        });
+        return Promise.resolve({ affectedRows: 1 });
+      }
+      if (!plan.text.includes("UPDATE public.scada_auth_sessions")) {
+        throw new Error("测试出现未预期会话写入");
+      }
+      const session = [...sessions.values()].find(
+        (row) =>
+          row.sessionId === parameters[1] &&
+          row.tenantId === parameters[2] &&
+          row.subjectId === parameters[3] &&
+          row.revokedAt === null,
+      );
+      if (session) session.revokedAt = new Date(stringParameter(parameters[0]));
+      return Promise.resolve({ affectedRows: session ? 1 : 0 });
     },
   };
+  const transaction = <T>(operation: (value: Prisma8Transaction) => Promise<T>) =>
+    operation(tx as unknown as Prisma8Transaction);
+  const database = {
+    readTransaction: transaction,
+    writeTransaction: transaction,
+    assertWritable: () => undefined,
+  } as unknown as Prisma8Service;
   return {
-    service: new AuthSessionService({ client } as unknown as PrismaService),
+    service: new Prisma8RuntimeAuthSessionService(database),
     sessions,
     disable: () => {
       status = "disabled";
     },
+  };
+}
+
+function makeGrantStore(
+  read: (scope: {
+    tenantId: string;
+    subjectId: string;
+    projectId: string;
+  }) => Promise<readonly { readonly permission: string }[]>,
+): AuthorizationReadStore {
+  return {
+    findActiveExternalIdentity: () => Promise.resolve(null),
+    readProjectGrants: (actor, projectId) =>
+      read({
+        tenantId: actor.tenantId,
+        subjectId: actor.subjectId,
+        projectId,
+      }),
   };
 }
 
@@ -268,7 +338,7 @@ describe("可信会话与工程 Guard", () => {
   it("工程 Guard 缺少权限元数据时默认拒绝", async () => {
     const db = { client: { scadaProjectGrant: { findMany: async () => [] } } };
     const guard = new ScadaProjectGuard(
-      new Prisma7AuthorizationReadStore(db as unknown as PrismaService),
+      makeGrantStore(db.client.scadaProjectGrant.findMany),
       new Reflector(),
       makeAuditRecorder().audit,
     );
@@ -292,7 +362,7 @@ describe("可信会话与工程 Guard", () => {
       },
     };
     const guard = new ScadaProjectGuard(
-      new Prisma7AuthorizationReadStore(db as unknown as PrismaService),
+      makeGrantStore(db.client.scadaProjectGrant.findMany),
       new Reflector(),
       makeAuditRecorder().audit,
     );
@@ -332,7 +402,7 @@ describe("可信会话与工程 Guard", () => {
       },
     };
     const guard = new ScadaProjectGuard(
-      new Prisma7AuthorizationReadStore(db as unknown as PrismaService),
+      makeGrantStore(db.client.scadaProjectGrant.findMany),
       new Reflector(),
       makeAuditRecorder().audit,
     );
@@ -346,12 +416,9 @@ describe("可信会话与工程 Guard", () => {
       NotFoundException,
     );
     expect(seen[0]).toEqual({
-      where: {
-        tenantId: principal.tenantId,
-        projectId: "project-a",
-        subjectId: principal.subjectId,
-      },
-      select: { permission: true },
+      tenantId: principal.tenantId,
+      projectId: "project-a",
+      subjectId: principal.subjectId,
     });
   });
 
@@ -365,7 +432,7 @@ describe("可信会话与工程 Guard", () => {
       },
     };
     const guard = new ScadaProjectGuard(
-      new Prisma7AuthorizationReadStore(db as unknown as PrismaService),
+      makeGrantStore(db.client.scadaProjectGrant.findMany),
       new Reflector(),
       audit,
     );
@@ -425,7 +492,7 @@ describe("可信会话与工程 Guard", () => {
       },
     };
     const guard = new ScadaProjectGuard(
-      new Prisma7AuthorizationReadStore(db as unknown as PrismaService),
+      makeGrantStore(db.client.scadaProjectGrant.findMany),
       new Reflector(),
       audit,
     );

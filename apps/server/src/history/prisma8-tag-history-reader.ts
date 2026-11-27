@@ -1,6 +1,6 @@
 import { selectTagHistory } from "@adui/scada-core";
 import type { TagHistoryPoint, TagHistoryQuery } from "@adui/scada-core";
-import type { Prisma8ReadOnlyClient } from "../database/prisma8-readonly-client.js";
+import type { Prisma8Service } from "../database/prisma8.service.js";
 import { decodeHistoryPoint } from "./tag-history-record-codec.js";
 
 const ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
@@ -44,7 +44,7 @@ export function preparePrisma8HistoryQuery(scope: Prisma8HistoryScope, query: Ta
   };
 }
 
-/** 对照读取仍检查作用域、窗口和规范编码，不接受越界或被截断的结果。 */
+/** 原生读取检查作用域、窗口和规范编码，不接受越界或被截断的结果。 */
 export function decodePrisma8HistoryRows(
   rows: readonly HistoryRow[],
   prepared: ReturnType<typeof preparePrisma8HistoryQuery>,
@@ -67,29 +67,32 @@ export function decodePrisma8HistoryRows(
   });
 }
 
-/** 新版只读查询候选；仅由隔离验收调用，不挂载正式历史 API 或替换旧仓储。 */
+/** 原生历史查询端口，仅供可信内部调用，尚未开放 HTTP 历史 API。 */
 export async function readPersistedTagHistoryPrisma8(
-  client: Prisma8ReadOnlyClient,
+  database: Prisma8Service,
   scope: Prisma8HistoryScope,
   query: TagHistoryQuery,
 ): Promise<readonly TagHistoryPoint[]> {
   const prepared = preparePrisma8HistoryQuery(scope, query);
-  const rows = await client.orm.public.ScadaTagHistoryRecord.where({
-    tenantId: prepared.tenantId,
-    projectId: prepared.projectId,
-    tagId: prepared.tagId,
-  })
-    .where((row) => row.timestampMs.gte(prepared.start))
-    .where((row) => row.timestampMs.lt(prepared.end))
-    .orderBy([
-      (row) => row.timestampMs.asc(),
-      (row) => row.streamId.asc(),
-      (row) => row.batchSequence.asc(),
-      (row) => row.ordinal.asc(),
-    ])
-    .limit(prepared.maxPoints + 1)
-    .select("tenantId", "projectId", "tagId", "timestampMs", "payload")
-    .all();
+  const rows = await database.readTransaction(
+    async (tx) =>
+      await tx.orm.public.ScadaTagHistoryRecord.where({
+        tenantId: prepared.tenantId,
+        projectId: prepared.projectId,
+        tagId: prepared.tagId,
+      })
+        .where((row) => row.timestampMs.gte(prepared.start))
+        .where((row) => row.timestampMs.lt(prepared.end))
+        .orderBy([
+          (row) => row.timestampMs.asc(),
+          (row) => row.streamId.asc(),
+          (row) => row.batchSequence.asc(),
+          (row) => row.ordinal.asc(),
+        ])
+        .limit(prepared.maxPoints + 1)
+        .select("tenantId", "projectId", "tagId", "timestampMs", "payload")
+        .all(),
+  );
 
   return decodePrisma8HistoryRows(rows, prepared);
 }

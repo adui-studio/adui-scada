@@ -1512,3 +1512,11 @@
 - **证据**：维护者 Windows 日志、PR #247、apps/server/src/projects/prisma8-runtime-project-version-store.spec.ts、docs/VALIDATION.md。
 
 > **2026-11-27 · E-159 Windows 复验关闭**：维护者 Windows E-159 复验 HEAD 8d18844f189afb726a27e95f66b84ffeda41e7b2：原生工程写入 11/11、619 格式文件、457 受检文件零警告/Lint/类型错误、中文文案 484、Markdown 97、git diff --check 均通过，退出码 0、工作区干净。此前 58/58 增量及 PostgreSQL 19 真实 FRESH_PROVIDER_SMOKE_READY（projectWriteDenied=true、providerSwitched=false、指纹和结构数量一致）通过，修复只修改测试及文档，未改变业务或烟测代码。维护者明确授权，PR #247 已 Squash 合入 feat/mvp-first-integration 的 6ef45e964c2b2bb87b4a01eed1e66cd3321fda9d。E-159 已关闭。 禁止用退出码替代零警告门禁，后续新增异常断言继续核对专属消息。
+
+### E-160 · 原生清理后注释测试条件断言与身份标记错误文案未同步（PR #250，E-003 / E-023 / E-086 同类复发）
+
+- **Windows 实测**：维护者完成 pnpm 12.23.0 锁文件刷新及 frozen 安装，退出码 0，移除 Prisma 7 三项直接依赖及 98 个包。原生契约离线生成通过，12 表、85 字段、36 CHECK、20 索引、13 外键、119 注释及存储指纹保持一致。全新专项 28/28、CLI 4/4、React/Vue/NestJS 类型检查、全量 82 文件 966/966 单测均通过。Vite+ 498 格式文件、339 受检文件零错误但存在两条 vitest(no-conditional-expect) 警告。身份绑定专项 13/14，原断言 /缺少已完成/ 与实际“本机业务库未通过 Prisma 8 原生存储标记验证”不一致，ready 退出码 1。维护者已推送锁文件和格式化提交 fb46b1d6710deea055fa90a92b4df97c3a2c73db。
+- **根因与修复候选**：原生模型中文注释测试在两个条件分支内直接调用 expect；改为收集声明与前置注释，再在测试主流程断言模型数量及所有不合格声明为空。身份测试未同步旧迁移错误文案；改为精确匹配实际原生标记异常，同时覆盖预览和显式写入的拒绝、回滚、无插入及无提交。仅修改两个测试文件，不更改安全门禁、数据库、依赖或运行时代码。
+- **防复发**：每次替换校验机制及中文异常文案必须同步搜索旧文案断言，按当前实际抛出点验证所有调用模式；条件分支只收集数据，测试主流程统一断言，禁止禁用规则或放宽安全断言。检查警告数量，不能把退出码 0 视为零警告。
+- **验证边界**：协作环境对当前 PSL 复核 12 模型、122 项模型与属性声明均有中文注释；分别移除模型文档注释和字段文档注释的反例均被收集逻辑识别，实际身份错误文案与拒绝回滚路径已静态核对。Windows 定向测试、Vite+ 零警告、完整 ready 及真实只读原生 Provider 烟测尚待复验，不登记为通过。
+- **证据**：PR #250、维护者 Windows 日志、apps/server/src/database/prisma-schema-comments.spec.ts、scripts/oidc-lab-identity.cases.mjs、docs/VALIDATION.md。

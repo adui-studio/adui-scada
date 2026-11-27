@@ -45,15 +45,7 @@ function nativePort(database: Prisma8Service, timeout: 5000 | 10000): Prisma8Aut
 @Injectable()
 export class Prisma8RuntimeAuthSessionService
   extends Prisma8SessionOperations
-  implements
-    Pick<
-      AuthSessionService,
-      | "issueForVerifiedSubject"
-      | "authenticate"
-      | "authenticateWithSession"
-      | "authenticateCookieSession"
-      | "revokeForVerifiedSubject"
-    >
+  implements AuthSessionService
 {
   constructor(database: Prisma8Service) {
     super(nativePort(database, 10000));
@@ -64,7 +56,7 @@ export class Prisma8RuntimeAuthSessionService
 @Injectable()
 export class Prisma8RuntimeOidcLoginTransactionService
   extends Prisma8OidcLoginOperations
-  implements Pick<OidcLoginTransactionService, "start" | "consume" | "cleanupExpiredTransactions">
+  implements OidcLoginTransactionService
 {
   constructor(
     database: Prisma8Service,
