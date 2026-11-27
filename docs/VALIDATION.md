@@ -5273,3 +5273,13 @@ PR #243 维护者 Windows 实测 Core 构建、Prisma 7 客户端及 Prisma 8 �
 将正式 OIDC 回调的已验签外部身份预绑定查询与工程 Guard 的前置 ACL 查询从具体 Prisma 客户端抽离为 AuthorizationReadStore，保留旧模块显式 Prisma 7 过渡绑定及已有联合键、权限投影、会话签发、HTTP 与锁内授权语义。新增 Prisma8AuthorizationModule，仅导入已验收 Prisma8DatabaseModule，使用新原生生成 Contract 实现相同端口，不复制连接池，不使用旧隔离候选或将隔离库写入门禁改为业务库。身份只查询既有活跃映射，不自动注册；完整权限集合仍由 hasProjectPermission 按可信租户、主体、工程及操作判定，非法标识查询前拒绝，固定主体副本，数据库异常固定 503，不记录授权成功。原生仓储使用 Prisma8Service.readTransaction 及新 readPrisma8Transaction，在同一 ReadCommitted 事务前后核验实际数据库、角色、Schema、PG19、集群标识、原生 marker core_hash、配置与实际只读状态及非恢复模式；只有查询及边界复核均成功才返回结果。读仓储只包含 SELECT/ORM 查询；真实烟测强制 PostgreSQL 默认及事务只读，正常可写配置只核验模式一致，不宣称所有未来业务事务都强制只读。扩展原有真实 Provider 烟测：实际 Nest 装配原生端口及正式 ScadaProjectGuard，以随机不存在的身份及租户/工程联合键核验空映射、空授权、固定 404 与 permission_denied 审计，不打印凭据或业务行，不写业务数据、不挂载 HTTP 根模块。当前正式 HTTP 根模块仍明确使用旧过渡绑定，providerSwitched=false；会话及 OIDC 事务、工程版本和发布写事务统一切换后再启动原生正式应用，禁止混合两代数据库运行。
 
 协作容器 Node.js 22.16.0 实测新增纯端口查询键和不可变主体测试 3/3；源码 Git Blob d911e761803f1f267000e62298bb9e2ba1468b2b、测试 Blob 272d9afe2f0969e996999e3da703c88ab6704823 与远端一致。对原生事务包装器 Blob e9518cc0c923508bd059bd67e869c9f399ee63a1 使用 TypeScript 5.8.3 noCheck 转译并在模拟事务上验证正常前后核验、错误库/只读状态/隔离级别及查询后标记漂移，5/5 通过；这不是 SDK 类型检查或真实 PostgreSQL 验收。新增六项原生仓储 Vitest、Guard 脱敏错误及模块装配断言尚待维护者 Windows 执行；协作容器无完整仓库、固定 Prisma RC、pnpm/vp 或本机 PostgreSQL。未执行实际业务写入、完整工程测试或真实烟测。
+
+### 2026-11-27 · PR #244 E-157 历史 ACL 构造调用修复
+
+维护者 Windows 修复前全新原生专项 28/28、原生运行时 7/7、四份身份及装配专项 39/39、HTTP E2E 63/63，共 137/137；Core 构建、双版本客户端/契约生成及共享配置通过。vp check --fix 在 445 个受检文件中报告 TS2739 一项错误、零警告，格式化完成但增量退出码 1；后续独立 vp check、中文、文档、服务端构建和真实原生授权只读烟测未执行。日志未给本机 HEAD。
+
+仅为 apps/server/test/prisma8-project-acl.db-spec.ts 中的历史 Prisma 7 Guard 构造调用补充 Prisma7AuthorizationReadStore 导入并包装原 database；复用现有适配器，不新建客户端、不改变 Prisma 8 对照 Guard、隔离库 URL、授权断言、撤权及清理逻辑。不改生产代码、数据库或配置。
+
+已逐一读取当前 PR HEAD 的 59 份服务端 spec、db-spec、e2e-spec，核对两个改造构造函数的直接调用及显式 provider 匹配，并复核正式身份模块及原生烟测；仅发现上述直接构造调用仍传原数据库对象。协作容器 Node.js 22.16.0 / TypeScript 5.8.3 用最小依赖类型声明及对应真实端口签名复现旧调用 TS2345（缺少同样两个方法，退出 2），包装后 strict noEmit 退出 0。此为最小类型复现，不是仓库 TypeScript 6 或真实 SDK 编译；完整 Windows Vite+、中文、文档、服务端构建、原生只读烟测仍待复验，未执行历史数据库专项或数据库写入。
+
+保持 Draft；验收通过并经维护者授权后才可合并。

@@ -1482,3 +1482,12 @@
 - **防复发**：所有新增字符串排序须检查元素类型并显式保留原码元顺序；新增类型注释同步核对中文门禁，提交前实测完整质量链。真实初始化仍须先完成只读预览、合并并取得维护者独立授权。
 
 > **2026-11-27 · E-156 Windows 复验关闭**：维护者 Windows 四组专项 54/54（13+13+15+13），Vite+ 592 格式文件/430 受检文件零警告错误，中文 457 文件、Markdown 97 份、增量退出码 0。八份源码格式化经正常提交 Hook 后推送 HEAD 09385336fa9a7880965c89597b85dea7b1742a99，官方发射及真实 PostgreSQL 19 只读规划通过，45 项新增操作、23 类空库检查、databaseInitialized=false。PR #241 按维护者授权 Squash 合入 4a06766da5d9ec99bed96104dc26c17d21112d43。合并后再次预览通过；维护者另行授权并实际在已核验的合并提交运行首次初始化和独立严格校验，分别返回 FRESH_DATABASE_INITIALIZED、FRESH_DATABASE_VERIFIED，databaseInitialized=true，严格校验退出码 0，工作区干净。仅数据库结构及中文注释已验收，不代表正式 NestJS Provider 已切换。
+
+### E-157 · 授权仓储注入改造遗漏历史 ACL 对照测试构造调用（PR #244，待 Windows 复验）
+
+- **现象**：维护者 Windows 修复前全新原生专项 28/28、原生运行时 7/7、四份身份及装配专项 39/39、HTTP E2E 63/63，共 137/137；Core 构建、双版本客户端/契约生成及共享配置通过。vp check --fix 在 445 个受检文件中报告 TS2739 一项错误、零警告，格式化完成但增量退出码 1；后续独立 vp check、中文、文档、服务端构建和真实原生授权只读烟测未执行。日志未给本机 HEAD。
+- **根因**：ScadaProjectGuard 首个参数已由具体 PrismaService 改为 AuthorizationReadStore，历史 ACL 对照测试仍传入 { client, onModuleInit, onModuleDestroy }，缺少 findActiveExternalIdentity 与 readProjectGrants；属于 E-047/E-069 同类测试依赖同步遗漏。
+- **最小修复**：仅为 apps/server/test/prisma8-project-acl.db-spec.ts 中的历史 Prisma 7 Guard 构造调用补充 Prisma7AuthorizationReadStore 导入并包装原 database；复用现有适配器，不新建客户端、不改变 Prisma 8 对照 Guard、隔离库 URL、授权断言、撤权及清理逻辑。不改生产代码、数据库或配置。
+- **验证边界**：已逐一读取当前 PR HEAD 的 59 份服务端 spec、db-spec、e2e-spec，核对两个改造构造函数的直接调用及显式 provider 匹配，并复核正式身份模块及原生烟测；仅发现上述直接构造调用仍传原数据库对象。协作容器 Node.js 22.16.0 / TypeScript 5.8.3 用最小依赖类型声明及对应真实端口签名复现旧调用 TS2345（缺少同样两个方法，退出 2），包装后 strict noEmit 退出 0。此为最小类型复现，不是仓库 TypeScript 6 或真实 SDK 编译；完整 Windows Vite+、中文、文档、服务端构建、原生只读烟测仍待复验，未执行历史数据库专项或数据库写入。
+- **防复发**：改变注入端口或构造函数签名时，按当前功能分支全树逐一核对正式模块、所有直接 new 调用、测试 provider 与全部历史 db-spec/e2e-spec；不能以定向 Vitest/E2E 全绿替代全仓类型检查。先生成依赖产物再执行 Vite+，保持历史隔离测试不连接新业务库，不用 any 或类型断言掩盖类型不兼容。
+- **证据**：维护者 Windows TS2739 原始日志、PR #244、apps/server/test/prisma8-project-acl.db-spec.ts、docs/VALIDATION.md。
