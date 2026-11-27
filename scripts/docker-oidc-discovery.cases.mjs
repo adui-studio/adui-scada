@@ -49,6 +49,8 @@ const report = {
   ...fingerprintOidcKeys(jwks),
 };
 const successful = { status: 0, stdout: JSON.stringify(report) };
+const formalReport = { ...report, formalClientVerified: true };
+const formalSuccessful = { status: 0, stdout: JSON.stringify(formalReport) };
 const readCa = () => Buffer.from(ca);
 
 void describe("Docker Keycloak 公开 Discovery 与 JWKS 只读门禁", () => {
@@ -188,7 +190,7 @@ void describe("Docker Keycloak 公开 Discovery 与 JWKS 只读门禁", () => {
         assert.equal(showOutput, false);
         assert.equal(timeout, 25_000);
         assert.equal(value, hostInput);
-        return successful;
+        return formalSuccessful;
       },
       ["compose"],
       readCa,
@@ -226,7 +228,7 @@ void describe("Docker Keycloak 公开 Discovery 与 JWKS 只读门禁", () => {
     let containerCalls = 0;
     const run = () => {
       containerCalls += 1;
-      return successful;
+      return formalSuccessful;
     };
     for (const failure of [
       { status: 0, stdout: "{}" },
@@ -241,13 +243,18 @@ void describe("Docker Keycloak 公开 Discovery 与 JWKS 只读门禁", () => {
       );
     }
     assert.equal(containerCalls, 0);
+    // 旧镜像只返回原始探针结果时必须拒绝，不得冒充正式客户端已执行。
+    assert.throws(
+      () => verifyDockerOidc("18443", () => successful, [], readCa, () => successful),
+      /容器 Keycloak 探针报告不符合固定契约/,
+    );
     assert.throws(
       () =>
         verifyDockerOidc(
           "18443",
           () => ({
             status: 0,
-            stdout: JSON.stringify({ ...report, signingKeyFingerprint: "f".repeat(64) }),
+            stdout: JSON.stringify({ ...formalReport, signingKeyFingerprint: "f".repeat(64) }),
           }),
           [],
           readCa,
