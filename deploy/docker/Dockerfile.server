@@ -19,6 +19,8 @@ COPY --from=build --chown=node:node /workspace/apps/server/package.json /workspa
 COPY --from=build --chown=node:node /workspace/apps/server/container-smoke.mjs /workspace/apps/server/container-smoke.mjs
 # 容器原生只读烟测与宿主烟测共用同一个正式根模块验证实现。
 COPY --from=build --chown=node:node /workspace/apps/server/container-prisma8-smoke.mjs /workspace/apps/server/container-prisma8-smoke.mjs
+# 仅供显式 Keycloak Discovery/JWKS 只读验收，不在 HTTP 服务启动时执行。
+COPY --from=build --chown=node:node /workspace/apps/server/container-oidc-discovery.mjs /workspace/apps/server/container-oidc-discovery.mjs
 COPY --from=build --chown=node:node /workspace/apps/server/prisma8-provider-smoke.mjs /workspace/apps/server/prisma8-provider-smoke.mjs
 COPY --from=build --chown=node:node /workspace/scripts/prisma8-fresh-runtime-probe.mjs /workspace/scripts/prisma8-fresh-runtime-probe.mjs
 # Linux SIGTERM 回归专用回环探针，仅在 test:docker:server 中执行。
