@@ -583,3 +583,7 @@ Prisma8ProjectPersistenceModule 取代独立查询模块，工程仓储 Prisma8R
 ### Docker 双端 HTTPS 传输候选（ADR-0066）
 
 React/Vue 的 Nginx 共享单一配置，容器 8080 保留匿名 HTTP，8443 提供 TLS 1.2/1.3；宿主分别默认 18080/18081 和 18480/18481，全部仅绑定 127.0.0.1。复用既有 mkcert 叶证书与私钥的只读文件挂载，不共享凭据目录或根私钥。容器上游仍为固定 server/demo HTTP，所有 /api/ 除健康检查外均拒绝；不为 HTTPS 提前启用身份、工程 API 或业务数据库写入。原生严格只读与容器 HTTP 探针之后增加宿主可信 CA、IP SAN 与固定六路径响应检查，失败关闭并保留现场。真实认证部署仍需独立完成 Issuer、容器网络 TLS 信任、正式原生连接和双端回调/Cookie/CSRF 联调。
+
+### Docker Keycloak 双视角可信网络候选（ADR-0065 / ADR-0066）
+
+宿主与 server 容器访问同一公开 Issuer，但连接地址不同：前者为 127.0.0.1 的固定发布端口，后者为现有 lab 网络中的 keycloak:8443。两个一次性探针都用现有 mkcert 公开根证书做证书链验证，显式校验公开回环 IP 的证书身份，保留公开 Host，禁止重定向；仅访问固定 Realm 的 Discovery 与 JWKS，不发送秘密、不读写业务数据库。公开元数据必需能力及端点严格校验，RS256 公钥按 kid 与解析后的 SPKI 计算有序集合指纹，再比较两个视角结果。该诊断不改变正式 openid-client 传输、BFF Cookie、CSRF、ACL、原生数据库连接和默认关闭的容器 OIDC。仅执行独立 docker:oidc:probe；原 docker:up 不强制依赖 IdP Discovery。后续正式网络适配须单独验收，不能据公开密钥匹配推断实际 Token 已验证。
