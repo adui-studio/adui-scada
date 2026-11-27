@@ -5539,3 +5539,33 @@ git status --short
 ```
 
 预期 FRESH_PROVIDER_SMOKE_READY，原有成功字段全部保留，新增 projectListReadVerified=true、projectLockedReadDenied=true，providerSwitched=false，存储指纹与对象数量不变，退出 0。随机不存在主体的工程列表为空；四项需要 FOR SHARE 的查询必须在严格只读配置提前拒绝，禁止自动改为可写模式或去掉锁。真实有权限工程的正向读取、锁并发、工程写入与正式 HTTP 装配另行验收。
+
+### 全新原生工程读写仓储验收（停止旧库专项）
+
+本批只验证当前原生业务路径；不要执行旧数据库迁移、历史接管对照或重置数据库。Windows 在当前候选工作区执行：
+
+```powershell
+pnpm run build:core &&
+pnpm run db:generate &&
+pnpm run test:prisma8:fresh &&
+vp test run apps/server/src/projects/prisma8-runtime-project-version-store.spec.ts apps/server/src/projects/prisma8-runtime-project-query-store.spec.ts apps/server/src/database/database.module.spec.ts &&
+pnpm run config:check &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "全新原生工程读写增量退出码：$LASTEXITCODE"
+```
+
+预计全新专项 28/28、原生写入 11/11、原生查询 10/10、模块装配 9/9，共 58/58。过渡期 db:generate 仍为当前全仓编译生成旧客户端，并非执行旧库迁移。格式化后正常提交推送并核对工作区，再运行：
+
+```powershell
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "原生工程读写只读烟测退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+预期 FRESH_PROVIDER_SMOKE_READY、projectListReadVerified=true、projectLockedReadDenied=true、projectWriteDenied=true、providerSwitched=false，原指纹和结构不变。真实正向写入、并发及回滚须在明确授权的全新原生测试边界内验收；本命令不写业务数据。
