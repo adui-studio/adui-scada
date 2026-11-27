@@ -31,11 +31,13 @@ pnpm run db:prisma8:fresh:preview
 | ------------------------ | ----------------------- |
 | React Docker HTTP        | http://127.0.0.1:18080  |
 | Vue Docker HTTP          | http://127.0.0.1:18081  |
+| React Docker HTTPS       | https://127.0.0.1:18480 |
+| Vue Docker HTTPS         | https://127.0.0.1:18481 |
 | PostgreSQL（两个逻辑库） | 127.0.0.1:15432         |
 | Redis                    | 127.0.0.1:16379         |
 | Keycloak HTTPS           | https://127.0.0.1:18443 |
 
-HTTP Web 入口不能替代 OIDC HTTPS 受保护工程 API。真实 Keycloak 登录、双端回调、Secure Cookie、CSRF、ACL 和真实写事务后续独立验收，不自动创建用户或授予工程权限。HTTP 就绪探针只代表 HTTP 子系统；数据库就绪由独立原生探针验证。
+HTTP 与 HTTPS Web 入口当前都只提供匿名演示，不代表 OIDC 已启用。真实 Keycloak 登录、双端回调、Secure Cookie、CSRF、ACL 和真实写事务后续独立验收，不自动创建用户或授予工程权限。HTTP 就绪探针只代表 HTTP 子系统；数据库就绪由独立原生探针验证。
 
 ```powershell
 pnpm run docker:db:status
@@ -51,3 +53,11 @@ docker:down 不删除卷，禁止为排错执行 down -v、删除持久化卷或
 维护者 Windows 已完成 PR #250 最终复验：中文注释 2/2、OIDC 身份 14/14、全新安装 28/28、CLI 4/4、82 个文件 966/966 单测、6 个文件 65/65 HTTP E2E；498 格式文件、339 受检零警告/Lint/类型错误，中文 365 个自有文件、文档 97 份，React/Vue/NestJS 构建通过。React 单个 chunk 591.62 kB 的构建体积警告暂保留。锁文件刷新与冻结安装已通过，移除 Prisma 7 三项直接依赖及 98 个包。真实 PostgreSQL 19 只读 FRESH_PROVIDER_SMOKE_READY，存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致，所有原生根模块及只读标志为 true，最终退出码 0、工作区干净。远端验收提交 dbab7c2a7ca3737e23fd451811aef92981378801，维护者明确授权，PR #250 已 Squash 合并至 feat/mvp-first-integration 的 94106b29b328833d944f35361004411b5a3ddab2。E-160 已关闭。
 
 协作环境 Node.js 22.16.0 对从当前远端原生 URL 解析函数提取的类型擦除片段及同等参数断言运行 node --test，2/2 通过（宿主两模式不变；容器允许路径及九种非法配置拒绝）。从远端启动编排和测试文件提取新增/调整的四个模拟编排用例，在 V8 隔离环境以基础等价断言执行，4/4 通过（启动顺序及秘密仅标准输入、数据库失败不启动本次应用、烟测失败不报告成功、基础设施入口独立）。这不是完整仓库 Node/Vitest 测试或真实 Docker 验收。Docker、pnpm、Vite+ 及固定依赖在协作容器不可用，Git 网络 DNS 不可达；Windows 增量测试、完整构建和实际七容器启动待验收。
+
+## 2026-11-27 · 本机双端 HTTPS 候选
+
+保留既有 HTTP 18080/18081，新增 React 18480 和 Vue 18481 的 HTTPS 回环发布端口，分别可由根环境变量 SCADA_REACT_HTTPS_PORT、SCADA_VUE_HTTPS_PORT 配置；旧 .env 缺少两项时使用默认值，不必重新复制。两个 Web 容器各自仅只读挂载既有 localhost.pem 和 localhost-key.pem，不挂载凭据目录或根 CA 私钥。共用 Nginx 模板启用 TLS 1.2/1.3，并保留原同源静态资源、健康、模拟工程、SSE 代理与受保护路由拒绝规则。
+
+原容器数据库及 HTTP 探针通过之后，docker:up 运行宿主 HTTPS 探针，以 mkcert -CAROOT 获取公开 rootCA.pem，明确验证证书链及回环 IP；不关闭 TLS 校验，不导入信任设置，不跟随重定向，不记录业务正文。每端检查六个固定 GET 路径及状态/内容类型，SSE 仅接受 no-store（允许重复），读取响应头后主动关闭连接；工程与 OIDC 回调必须 404。两端均通过才报告启动完成；失败不清理现场。本机需保持 mkcert 可执行及现有签发 CA 可读取；本批不修改 Keycloak Realm、会话、权限或数据库写入。真实浏览器、OIDC Discovery、回调和跨端登录另行验收。
+
+PR #251 已由维护者完成 Windows 55/55 增量专项、零警告 Vite+、真实 Linux 容器隔离及 SIGTERM、七服务启动和原生只读烟测，Squash 合并提交 71585ee998f6f6e72bf8042e231165128d7a9a76。本批局部 Node TLS 与 Nginx 实测通过；新增 4 项安全断言后完整 test:docker 预计 22 项，真实 Windows 双端 HTTPS Docker 仍待复验。
