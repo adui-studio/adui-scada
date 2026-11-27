@@ -42,10 +42,14 @@ function createRuntime(config: Prisma8RuntimeConfig): Prisma8RuntimePort<Prisma8
   const pool = new Pool({
     connectionString,
     ssl: false,
-    max: 5,
+    // 临时关系只属于一个后端会话；独立探针池限制为一条连接，业务连接池保持原样。
+    max: config.transport === "docker-transaction-probe" ? 1 : 5,
     connectionTimeoutMillis: 5000,
     idleTimeoutMillis: 30000,
-    application_name: "adui_scada_prisma8_runtime",
+    application_name:
+      config.transport === "docker-transaction-probe"
+        ? "adui_scada_prisma8_transaction_probe"
+        : "adui_scada_prisma8_runtime",
   });
   let runtime: Prisma8Client | undefined;
   let poolFailed = false;
