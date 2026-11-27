@@ -65,9 +65,18 @@ void test("容器探针只允许固定服务名、端口、严格只读及已核
     { ...dockerConfig, readOnly: false },
     { ...dockerConfig, expectedSystemIdentifier: undefined },
     { ...dockerConfig, connectionString: base },
-    { ...dockerConfig, connectionString: connectionString.replace("postgres:5432", "postgres:15432") },
-    { ...dockerConfig, connectionString: connectionString.replace("postgres:5432", "external.example:5432") },
-    { ...dockerConfig, connectionString: connectionString.replace("/adui_scada?", "/adui_scada_keycloak?") },
+    {
+      ...dockerConfig,
+      connectionString: connectionString.replace("postgres:5432", "postgres:15432"),
+    },
+    {
+      ...dockerConfig,
+      connectionString: connectionString.replace("postgres:5432", "external.example:5432"),
+    },
+    {
+      ...dockerConfig,
+      connectionString: connectionString.replace("/adui_scada?", "/adui_scada_keycloak?"),
+    },
     { ...dockerConfig, connectionString: connectionString + "&options=bad" },
   ]) {
     assert.throws(() => resolvePrisma8RuntimeUrl(invalid), /仅允许/u);

@@ -27,13 +27,13 @@ pnpm run db:prisma8:fresh:preview
 
 ## 访问与验收
 
-| 服务 | 默认本机入口 |
-| --- | --- |
-| React Docker HTTP | http://127.0.0.1:18080 |
-| Vue Docker HTTP | http://127.0.0.1:18081 |
-| PostgreSQL（两个逻辑库） | 127.0.0.1:15432 |
-| Redis | 127.0.0.1:16379 |
-| Keycloak HTTPS | https://127.0.0.1:18443 |
+| 服务                     | 默认本机入口            |
+| ------------------------ | ----------------------- |
+| React Docker HTTP        | http://127.0.0.1:18080  |
+| Vue Docker HTTP          | http://127.0.0.1:18081  |
+| PostgreSQL（两个逻辑库） | 127.0.0.1:15432         |
+| Redis                    | 127.0.0.1:16379         |
+| Keycloak HTTPS           | https://127.0.0.1:18443 |
 
 HTTP Web 入口不能替代 OIDC HTTPS 受保护工程 API。真实 Keycloak 登录、双端回调、Secure Cookie、CSRF、ACL 和真实写事务后续独立验收，不自动创建用户或授予工程权限。HTTP 就绪探针只代表 HTTP 子系统；数据库就绪由独立原生探针验证。
 

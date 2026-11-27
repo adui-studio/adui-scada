@@ -43,7 +43,8 @@ export function resolvePrisma8RuntimeUrl(config: Prisma8RuntimeConfig): string {
   if (
     url.protocol !== "postgresql:" ||
     (config.transport !== undefined && !dockerReadOnly) ||
-    (dockerReadOnly && (config.readOnly !== true || config.expectedSystemIdentifier === undefined)) ||
+    (dockerReadOnly &&
+      (config.readOnly !== true || config.expectedSystemIdentifier === undefined)) ||
     url.hostname !== (dockerReadOnly ? "postgres" : "127.0.0.1") ||
     url.port !== (dockerReadOnly ? "5432" : "15432") ||
     url.username !== "adui_scada" ||

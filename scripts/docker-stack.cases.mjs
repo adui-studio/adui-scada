@@ -157,7 +157,10 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
 
   void it("七服务一键启动先验证原生数据库再构建应用并执行容器烟测", () => {
     const { run, calls, events, inputs, verifyDatabase } = mockDocker();
-    assert.match(manageDockerStack("up", env, run, verifyDatabase), /容器原生只读及双端 HTTP 验证通过/);
+    assert.match(
+      manageDockerStack("up", env, run, verifyDatabase),
+      /容器原生只读及双端 HTTP 验证通过/,
+    );
     assert.deepEqual(events, ["基础设施启动", "严格数据库验证", "应用启动", "容器烟测"]);
     const applications = calls.find((args) => args.includes("--build"));
     assert.ok(applications);
@@ -166,16 +169,25 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
     assert.ok(applications.includes("deploy/docker/compose.yaml"));
     assert.ok(applications.includes("--wait"));
     assert.ok(applications.includes("--no-deps"));
-    assert.equal(calls.some((args) => args.includes("--remove-orphans") || args.includes("-v")), false);
+    assert.equal(
+      calls.some((args) => args.includes("--remove-orphans") || args.includes("-v")),
+      false,
+    );
     assert.deepEqual(inputs, [JSON.stringify(probeInput)]);
-    assert.equal(calls.some((args) => args.join(" ").includes(probeInput.password)), false);
+    assert.equal(
+      calls.some((args) => args.join(" ").includes(probeInput.password)),
+      false,
+    );
   });
 
   void it("数据库严格验证失败时不构建或启动应用也不执行初始化", () => {
     const { run, calls, events, verifyDatabase } = mockDocker({ invalidDatabase: true });
     assert.throws(() => manageDockerStack("up", env, run, verifyDatabase), /数据库严格验证失败/);
     assert.deepEqual(events, ["基础设施启动", "严格数据库验证"]);
-    assert.equal(calls.some((args) => args.includes("--build") || args.includes("exec")), false);
+    assert.equal(
+      calls.some((args) => args.includes("--build") || args.includes("exec")),
+      false,
+    );
   });
 
   void it("容器烟测失败或标志不完整时不能报告启动验收通过", () => {
@@ -186,7 +198,10 @@ void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
         /Docker 执行失败|容器原生数据库或双端 HTTP 验证失败/,
       );
       assert.deepEqual(events, ["基础设施启动", "严格数据库验证", "应用启动", "容器烟测"]);
-      assert.equal(calls.some((args) => args.includes("down") || args.includes("rm")), false);
+      assert.equal(
+        calls.some((args) => args.includes("down") || args.includes("rm")),
+        false,
+      );
     }
   });
 

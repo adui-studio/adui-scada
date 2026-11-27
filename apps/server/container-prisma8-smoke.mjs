@@ -8,13 +8,20 @@ async function verifyWeb(host) {
   let health;
   for (let attempt = 0; attempt < 10; attempt += 1) {
     try {
-      health = await fetch(base + "/api/health", { redirect: "error", signal: AbortSignal.timeout(3000) });
+      health = await fetch(base + "/api/health", {
+        redirect: "error",
+        signal: AbortSignal.timeout(3000),
+      });
       break;
     } catch {
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
   }
-  if (!health || health.status !== 200 || !(health.headers.get("content-type") ?? "").includes("application/json")) {
+  if (
+    !health ||
+    health.status !== 200 ||
+    !(health.headers.get("content-type") ?? "").includes("application/json")
+  ) {
     throw new Error("双端 HTTP 健康代理未就绪");
   }
   const state = await health.json();
@@ -26,20 +33,35 @@ async function verifyWeb(host) {
     throw new Error("双端 Web 入口未就绪");
   }
   await index.body?.cancel();
-  const demo = await fetch(base + "/demo/project", { redirect: "error", signal: AbortSignal.timeout(3000) });
-  if (demo.status !== 200 || !(demo.headers.get("content-type") ?? "").includes("application/json")) {
+  const demo = await fetch(base + "/demo/project", {
+    redirect: "error",
+    signal: AbortSignal.timeout(3000),
+  });
+  if (
+    demo.status !== 200 ||
+    !(demo.headers.get("content-type") ?? "").includes("application/json")
+  ) {
     throw new Error("双端模拟工程代理未就绪");
   }
   const document = await demo.json();
   if (typeof document.projectId !== "string" || !Array.isArray(document.pages)) {
     throw new Error("双端模拟工程返回异常");
   }
-  const events = await fetch(base + "/demo/events", { redirect: "error", signal: AbortSignal.timeout(3000) });
-  if (events.status !== 200 || !(events.headers.get("content-type") ?? "").includes("text/event-stream")) {
+  const events = await fetch(base + "/demo/events", {
+    redirect: "error",
+    signal: AbortSignal.timeout(3000),
+  });
+  if (
+    events.status !== 200 ||
+    !(events.headers.get("content-type") ?? "").includes("text/event-stream")
+  ) {
     throw new Error("双端模拟实时事件代理未就绪");
   }
   await events.body?.cancel();
-  const denied = await fetch(base + "/api/v1/projects", { redirect: "error", signal: AbortSignal.timeout(3000) });
+  const denied = await fetch(base + "/api/v1/projects", {
+    redirect: "error",
+    signal: AbortSignal.timeout(3000),
+  });
   if (denied.status !== 404) throw new Error("HTTP 演示意外开放受保护工程路由");
   await denied.body?.cancel();
 }
@@ -50,9 +72,12 @@ try {
   if (input.length > 1024) throw new Error("容器原生烟测输入过长");
   const { password, systemIdentifier, storageHash } = JSON.parse(input);
   if (
-    typeof password !== "string" || !/^[A-Za-z0-9_-]{43}$/u.test(password) ||
-    typeof systemIdentifier !== "string" || !/^[1-9][0-9]{0,19}$/u.test(systemIdentifier) ||
-    typeof storageHash !== "string" || !/^[a-f0-9]{64}$/u.test(storageHash)
+    typeof password !== "string" ||
+    !/^[A-Za-z0-9_-]{43}$/u.test(password) ||
+    typeof systemIdentifier !== "string" ||
+    !/^[1-9][0-9]{0,19}$/u.test(systemIdentifier) ||
+    typeof storageHash !== "string" ||
+    !/^[a-f0-9]{64}$/u.test(storageHash)
   ) {
     throw new Error("容器原生烟测输入无效");
   }
@@ -66,12 +91,14 @@ try {
   );
   await verifyWeb("web-react");
   await verifyWeb("web-vue");
-  process.stdout.write(JSON.stringify({
-    status: "DOCKER_NATIVE_PROVIDER_READY",
-    ...result,
-    reactHttpVerified: true,
-    vueHttpVerified: true,
-  }) + "\n");
+  process.stdout.write(
+    JSON.stringify({
+      status: "DOCKER_NATIVE_PROVIDER_READY",
+      ...result,
+      reactHttpVerified: true,
+      vueHttpVerified: true,
+    }) + "\n",
+  );
 } catch {
   console.error("容器原生数据库只读烟测失败，内部诊断已脱敏");
   process.exitCode = 1;

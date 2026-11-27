@@ -35,7 +35,11 @@ function docker(args, showOutput = false, input) {
       Object.entries(process.env).filter(([key]) => !/^(SCADA_|COMPOSE_)/iu.test(key)),
     ),
     input,
-    stdio: [input === undefined ? "ignore" : "pipe", showOutput ? "inherit" : "pipe", showOutput ? "inherit" : "pipe"],
+    stdio: [
+      input === undefined ? "ignore" : "pipe",
+      showOutput ? "inherit" : "pipe",
+      showOutput ? "inherit" : "pipe",
+    ],
     maxBuffer: 1024 * 1024,
   });
   return { status: result.status ?? 1, stdout: result.stdout ?? "" };
@@ -51,16 +55,29 @@ function checked(run, args, showOutput = false, input) {
 function localDocker() {
   if (
     process.platform !== "win32" ||
-    Object.entries(process.env).some(([key, value]) =>
-      /^(DOCKER_HOST|DOCKER_CONTEXT|DOCKER_CONFIG|DOCKER_TLS|DOCKER_TLS_VERIFY|DOCKER_CERT_PATH)$/iu.test(key) && value
+    Object.entries(process.env).some(
+      ([key, value]) =>
+        /^(DOCKER_HOST|DOCKER_CONTEXT|DOCKER_CONFIG|DOCKER_TLS|DOCKER_TLS_VERIFY|DOCKER_CERT_PATH)$/iu.test(
+          key,
+        ) && value,
     )
   ) {
     throw new Error("仅允许 Windows 本机 Docker Desktop，禁止连接环境覆盖");
   }
   const context = checked(docker, ["context", "show"]);
   if (!/^[a-zA-Z0-9_.-]+$/u.test(context)) throw new Error("Docker 上下文名称无效");
-  const endpoint = checked(docker, ["context", "inspect", context, "--format", "{{.Endpoints.docker.Host}}"]);
-  if (!["npipe:////./pipe/dockerDesktopLinuxEngine", "npipe:////./pipe/docker_engine"].includes(endpoint)) {
+  const endpoint = checked(docker, [
+    "context",
+    "inspect",
+    context,
+    "--format",
+    "{{.Endpoints.docker.Host}}",
+  ]);
+  if (
+    !["npipe:////./pipe/dockerDesktopLinuxEngine", "npipe:////./pipe/docker_engine"].includes(
+      endpoint,
+    )
+  ) {
     throw new Error("仅允许 Windows 本机 Docker Desktop，禁止连接环境覆盖");
   }
   const run = (args, showOutput, input) => docker(["--host", endpoint, ...args], showOutput, input);
@@ -75,12 +92,21 @@ function verifyDockerDatabase() {
   const result = spawnSync(
     process.execPath,
     ["apps/server/prisma8-fresh-install.mjs", "--status"],
-    { cwd: ROOT, shell: false, windowsHide: true, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 1024 * 1024 },
+    {
+      cwd: ROOT,
+      shell: false,
+      windowsHide: true,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 1024 * 1024,
+    },
   );
   try {
     if (result.status !== 0) throw new Error("原生数据库严格验证失败");
     const report = JSON.parse(result.stdout);
-    const secrets = validateLabSecrets(readFileSync(resolve(ROOT, ".local/docker/secrets.env"), "utf8"));
+    const secrets = validateLabSecrets(
+      readFileSync(resolve(ROOT, ".local/docker/secrets.env"), "utf8"),
+    );
     if (
       report.status !== "FRESH_DATABASE_VERIFIED" ||
       report.databaseInitialized !== true ||
@@ -88,10 +114,19 @@ function verifyDockerDatabase() {
       typeof report.systemIdentifier !== "string" ||
       !/^[1-9][0-9]{0,19}$/u.test(report.systemIdentifier) ||
       !/^19[0-9]{4}$/u.test(report.serverVersion) ||
-      report.tables !== 12 || report.columns !== 85 || report.checks !== 36 ||
-      report.indexes !== 20 || report.foreignKeys !== 13 || report.comments !== 119
-    ) throw new Error("原生数据库严格验证失败");
-    return { password: secrets.SCADA_LAB_DB_PASSWORD, systemIdentifier: report.systemIdentifier, storageHash: report.storageHash };
+      report.tables !== 12 ||
+      report.columns !== 85 ||
+      report.checks !== 36 ||
+      report.indexes !== 20 ||
+      report.foreignKeys !== 13 ||
+      report.comments !== 119
+    )
+      throw new Error("原生数据库严格验证失败");
+    return {
+      password: secrets.SCADA_LAB_DB_PASSWORD,
+      systemIdentifier: report.systemIdentifier,
+      storageHash: report.storageHash,
+    };
   } catch {
     throw new Error("原生数据库严格验证失败，未执行本次应用启动；请单独核对数据库状态");
   }
@@ -168,7 +203,12 @@ export function validateDockerEnv(text) {
 }
 
 /** 已删除旧 Compose 项目并不代表旧卷消失；脚本绝不触碰旧容器和卷。 */
-export function manageDockerStack(mode, envText, run = docker, verifyDatabase = verifyDockerDatabase) {
+export function manageDockerStack(
+  mode,
+  envText,
+  run = docker,
+  verifyDatabase = verifyDockerDatabase,
+) {
   if (!MODES.has(mode)) throw new Error("不支持的 Docker 操作");
   if (mode === "plan" || mode === "up" || mode === "infra") {
     validateDockerEnv(envText);
@@ -212,7 +252,22 @@ export function manageDockerStack(mode, envText, run = docker, verifyDatabase = 
     const probeInput = verifyDatabase();
     checked(
       run,
-      [...COMPOSE_ARGS, "up", "--build", "--pull", "never", "-d", "--no-deps", "--wait", "--wait-timeout", "180", "server", "demo", "web-react", "web-vue"],
+      [
+        ...COMPOSE_ARGS,
+        "up",
+        "--build",
+        "--pull",
+        "never",
+        "-d",
+        "--no-deps",
+        "--wait",
+        "--wait-timeout",
+        "180",
+        "server",
+        "demo",
+        "web-react",
+        "web-vue",
+      ],
       true,
     );
     // 凭据仅经子进程标准输入传递，不进入命令参数、日志或容器服务环境。
@@ -226,18 +281,28 @@ export function manageDockerStack(mode, envText, run = docker, verifyDatabase = 
       const result = JSON.parse(output);
       if (
         result.status !== "DOCKER_NATIVE_PROVIDER_READY" ||
-        result.providerReady !== true || result.providerClosed !== true ||
+        result.providerReady !== true ||
+        result.providerClosed !== true ||
         result.readOnlyBoundaryVerified !== true ||
-        result.authorizationReadVerified !== true || result.sessionReadVerified !== true ||
-        result.identityWriteDenied !== true || result.oidcDiscoverySkipped !== true ||
-        result.projectListReadVerified !== true || result.projectLockedReadDenied !== true ||
-        result.projectWriteDenied !== true || result.releaseLockedReadDenied !== true ||
-        result.releaseWriteDenied !== true || result.rollbackWriteDenied !== true ||
+        result.authorizationReadVerified !== true ||
+        result.sessionReadVerified !== true ||
+        result.identityWriteDenied !== true ||
+        result.oidcDiscoverySkipped !== true ||
+        result.projectListReadVerified !== true ||
+        result.projectLockedReadDenied !== true ||
+        result.projectWriteDenied !== true ||
+        result.releaseLockedReadDenied !== true ||
+        result.releaseWriteDenied !== true ||
+        result.rollbackWriteDenied !== true ||
         result.missingProjectDenied !== true ||
-        result.nativeRootAssemblyVerified !== true || result.singleNativeProviderVerified !== true ||
-        result.legacyProviderAbsent !== true || result.providerSwitched !== true ||
-        result.reactHttpVerified !== true || result.vueHttpVerified !== true
-      ) throw new Error("容器验证结果不完整");
+        result.nativeRootAssemblyVerified !== true ||
+        result.singleNativeProviderVerified !== true ||
+        result.legacyProviderAbsent !== true ||
+        result.providerSwitched !== true ||
+        result.reactHttpVerified !== true ||
+        result.vueHttpVerified !== true
+      )
+        throw new Error("容器验证结果不完整");
     } catch {
       throw new Error("容器原生数据库或双端 HTTP 验证失败，保留现场");
     }
