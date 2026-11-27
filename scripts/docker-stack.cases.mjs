@@ -95,6 +95,102 @@ function mockDocker(options = {}) {
 }
 
 void describe("ADui SCADA 全新单项目 Docker 安全测试", () => {
+  void it("临时事务探针未单独确认时不调用 Docker 或数据库", () => {
+    const { run, calls, events, verifyDatabase } = mockDocker();
+    for (const args of [[], ["--yes"], ["--confirm-temp-transaction-probe", "--yes"]]) {
+      assert.throws(
+        () =>
+          manageDockerStack("transaction-probe", env, run, verifyDatabase, undefined, undefined, undefined, args),
+        /需要单独明确确认/,
+      );
+    }
+    assert.deepEqual(calls, []);
+    assert.deepEqual(events, []);
+  });
+
+  void it("临时事务探针仅在严格数据库复核后通过固定容器独立执行", () => {
+    const calls = [];
+    const inputs = [];
+    const events = [];
+    const run = (args, showOutput, input, timeout) => {
+      calls.push(args);
+      if (!args.includes("exec")) return { status: 0, stdout: "" };
+      events.push("临时事务探针");
+      assert.equal(showOutput, false);
+      assert.equal(timeout, 80_000);
+      inputs.push(input);
+      return {
+        status: 0,
+        stdout: JSON.stringify({
+          status: "DOCKER_NATIVE_TRANSACTION_READY",
+          commitVerified: true,
+          rollbackVerified: true,
+          sameBackendVerified: true,
+          temporaryTableRemoved: true,
+          businessDataWritten: false,
+          providerClosed: true,
+        }),
+      };
+    };
+    const verify = () => {
+      events.push("严格数据库验证");
+      return probeInput;
+    };
+    assert.match(
+      manageDockerStack("transaction-probe", env, run, verify, undefined, undefined, undefined, [
+        "--confirm-temp-transaction-probe",
+      ]),
+      /未写入正式业务表，常驻服务仍为只读/,
+    );
+    assert.deepEqual(events, ["严格数据库验证", "临时事务探针"]);
+    assert.deepEqual(inputs, [JSON.stringify(probeInput)]);
+    const command = calls.find((args) => args.includes("exec"));
+    assert.ok(command);
+    assert.deepEqual(command.slice(-6), [
+      "exec", "-T", "server", "node", "apps/server/container-native-transaction-probe.mjs",
+      "--confirm-temp-transaction-probe",
+    ]);
+    assert.equal(calls.some((args) => args.includes("up") || args.includes("down") || args.includes("rm")), false);
+    assert.equal(calls.some((args) => args.join(" ").includes(probeInput.password)), false);
+  });
+
+  void it("临时事务严格数据库失败或机器报告不完整时停止并保留现场", () => {
+    const { run, calls, verifyDatabase } = mockDocker({ invalidDatabase: true });
+    assert.throws(
+      () => manageDockerStack("transaction-probe", env, run, verifyDatabase, undefined, undefined, undefined, [
+        "--confirm-temp-transaction-probe",
+      ]),
+      /数据库严格验证失败/,
+    );
+    assert.equal(calls.some((args) => args.includes("exec")), false);
+    for (const { status, report, expected } of [
+      {
+        status: 0,
+        report: { status: "DOCKER_NATIVE_TRANSACTION_READY", rollbackVerified: true },
+        expected: /原生临时事务探针失败/,
+      },
+      {
+        status: 1,
+        report: { status: "DOCKER_NATIVE_TRANSACTION_FAILED", stage: "TRANSACTION" },
+        expected: /提交或回滚验证失败/,
+      },
+      {
+        status: 1,
+        report: { status: "DOCKER_NATIVE_TRANSACTION_FAILED", stage: "未知凭据" },
+        expected: /^容器原生临时事务探针失败，保留现场$/u,
+      },
+    ]) {
+      const mockRun = (args) =>
+        args.includes("exec") ? { status, stdout: JSON.stringify(report) } : { status: 0, stdout: "" };
+      assert.throws(
+        () => manageDockerStack("transaction-probe", env, mockRun, () => probeInput, undefined, undefined, undefined, [
+          "--confirm-temp-transaction-probe",
+        ]),
+        expected,
+      );
+    }
+  });
+
   void it("允许受控本机业务数据库 adui_scada", () => {
     assert.equal(validateDockerEnv(env), true);
   });
