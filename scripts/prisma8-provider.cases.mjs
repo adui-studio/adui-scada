@@ -52,6 +52,28 @@ void test("拒绝旧库、外部连接、额外选项和无效集群标识", () 
   );
 });
 
+void test("容器探针只允许固定服务名、端口、严格只读及已核验集群", () => {
+  const connectionString = base.replace("127.0.0.1:15432", "postgres:5432");
+  const dockerConfig = { ...config, connectionString, transport: "docker-readonly" };
+  const url = new URL(resolvePrisma8RuntimeUrl(dockerConfig));
+  assert.equal(url.hostname, "postgres");
+  assert.equal(url.port, "5432");
+  assert.match(url.searchParams.get("options") ?? "", /default_transaction_read_only=on/u);
+  for (const invalid of [
+    { ...dockerConfig, transport: undefined },
+    { ...dockerConfig, transport: "other" },
+    { ...dockerConfig, readOnly: false },
+    { ...dockerConfig, expectedSystemIdentifier: undefined },
+    { ...dockerConfig, connectionString: base },
+    { ...dockerConfig, connectionString: connectionString.replace("postgres:5432", "postgres:15432") },
+    { ...dockerConfig, connectionString: connectionString.replace("postgres:5432", "external.example:5432") },
+    { ...dockerConfig, connectionString: connectionString.replace("/adui_scada?", "/adui_scada_keycloak?") },
+    { ...dockerConfig, connectionString: connectionString + "&options=bad" },
+  ]) {
+    assert.throws(() => resolvePrisma8RuntimeUrl(invalid), /仅允许/u);
+  }
+});
+
 void test("真实标记、角色、数据库、只读和版本必须全部一致", () => {
   requirePrisma8RuntimeIdentity([identity], config, storageHash);
   requirePrisma8RuntimeIdentity(

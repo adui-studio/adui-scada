@@ -50,6 +50,8 @@ services:
       dockerfile: deploy/docker/Dockerfile.server
     environment:
       NODE_ENV: production
+      SCADA_OIDC_ENABLED: "false"
+      SCADA_LOCAL_DEMO_API_ENABLED: "false"
       SCADA_SERVER_HOST: 0.0.0.0
       SCADA_SERVER_PORT: "${SCADA_SERVER_PORT:-13001}"
     expose:
@@ -67,6 +69,8 @@ services:
     restart: unless-stopped
     networks:
       - app
+      # 仅用于显式原生只读烟测；默认 HTTP 服务不注册数据库。
+      - lab
 
   demo:
     build:
