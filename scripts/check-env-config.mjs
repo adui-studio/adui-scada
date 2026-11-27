@@ -273,6 +273,10 @@ assert.ok(packageScripts["test:docker"].includes("scripts/docker-stack.cases.mjs
 assert.ok(packageScripts["test:docker"].includes("scripts/docker-oidc-discovery.cases.mjs"));
 assert.ok(packageScripts["test:docker"].includes("scripts/docker-oidc-transport.cases.mjs"));
 assert.ok(packageScripts["test:docker"].includes("scripts/docker-runtime-binding.cases.mjs"));
+assert.ok(packageScripts["test:docker"].includes("scripts/docker-native-transaction-probe.cases.mjs"));
+assert.equal(packageScripts["docker:db:transaction:probe"], "node scripts/docker-stack.mjs transaction-probe");
+assert.ok(!packageScripts.ready.includes("docker:db:transaction:probe"), "真实临时事务探针必须单独确认");
+assert.ok(!packageScripts["docker:up"].includes("transaction-probe"), "常驻启动不得自动执行临时事务");
 assert.ok(compose.includes('SCADA_DOCKER_DB_READONLY: "true"'));
 assert.ok(compose.includes("source: ../../.local/docker-runtime/server-database.json"));
 assert.ok(nest.includes("DockerReadOnlyDatabaseAppModule"));
