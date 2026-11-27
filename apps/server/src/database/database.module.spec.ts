@@ -20,6 +20,8 @@ import { ScadaProjectGuard } from "../auth/scada-project.guard.js";
 import { SCADA_OIDC_STARTUP_CONFIG } from "../auth/oidc-provider-discovery.service.js";
 import { ScadaSecurityAuditService } from "../security/scada-security-audit.js";
 import { ProjectPersistenceModule } from "../projects/project-persistence.module.js";
+import { Prisma8ProjectQueryModule } from "../projects/prisma8-project-query.module.js";
+import { Prisma8RuntimeProjectQueryStore } from "../projects/prisma8-runtime-project-query-store.js";
 import { ProjectApiModule } from "../projects/project-api.module.js";
 import { ProjectApiController } from "../projects/project-api.controller.js";
 import { DatabaseModule } from "./database.module.js";
@@ -110,6 +112,22 @@ describe("共享 Prisma 数据库模块装配边界", () => {
     expect(Reflect.getMetadata("imports", ScadaIdentityModule)).not.toContain(
       Prisma8IdentityModule,
     );
+  });
+
+  it("原生工程查询模块仅共享原生数据库且尚未挂载正式控制器", () => {
+    expect(Reflect.getMetadata("imports", Prisma8ProjectQueryModule)).toEqual([
+      Prisma8DatabaseModule,
+    ]);
+    expect(Reflect.getMetadata("providers", Prisma8ProjectQueryModule)).toEqual([
+      Prisma8RuntimeProjectQueryStore,
+    ]);
+    expect(Reflect.getMetadata("exports", Prisma8ProjectQueryModule)).toEqual([
+      Prisma8RuntimeProjectQueryStore,
+    ]);
+    expect(Reflect.getMetadata("controllers", Prisma8ProjectQueryModule)).toBeUndefined();
+    for (const moduleType of [AppModule, OidcEnabledAppModule, ProjectApiModule, ProjectPersistenceModule]) {
+      expect(Reflect.getMetadata("imports", moduleType)).not.toContain(Prisma8ProjectQueryModule);
+    }
   });
 
   it("默认应用模块不挂载数据库与工程身份能力", () => {
