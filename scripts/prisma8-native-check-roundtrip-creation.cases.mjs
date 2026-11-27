@@ -115,12 +115,21 @@ void test("创建计划指纹独立于原往返计划且可确定性复算", () 
   const plan = buildRoundTripCreationPlan(fixture());
   const { status, creationPlanFingerprint, ...payload } = plan;
   assert.equal(status, "NATIVE_CHECK_ROUNDTRIP_CREATION_REVIEW_REQUIRED");
-  assert.equal(creationPlanFingerprint, createHash("sha256").update(JSON.stringify(payload)).digest("hex"));
-  assert.equal(creationPlanFingerprint, "69cd50940b9e3ff9752aa45eea3ff60bc34214ca7127908259a54897c6013dd7");
+  assert.equal(
+    creationPlanFingerprint,
+    createHash("sha256").update(JSON.stringify(payload)).digest("hex"),
+  );
+  assert.equal(
+    creationPlanFingerprint,
+    "69cd50940b9e3ff9752aa45eea3ff60bc34214ca7127908259a54897c6013dd7",
+  );
   assert.notEqual(creationPlanFingerprint, acceptedPlanFingerprint);
   plan.target.port = 15434;
   assert.equal(buildRoundTripCreationPlan(fixture()).target.port, 15444);
-  assert.equal(buildRoundTripCreationPlan(fixture()).creationPlanFingerprint, creationPlanFingerprint);
+  assert.equal(
+    buildRoundTripCreationPlan(fixture()).creationPlanFingerprint,
+    creationPlanFingerprint,
+  );
 });
 
 void test("拒绝旧端口、外部主机、资源名、角色和镜像变化", () => {
@@ -177,7 +186,10 @@ void test("版本缺失不得冒充已核验，拒绝排序规则和版本漂移
     { referenceCollation: { ...fixture().referenceCollation, actualVersion: "2.36" } },
     { referenceCollation: { ...fixture().referenceCollation, provider: "i", locale: "en-US" } },
   ]) {
-    assert.throws(() => buildRoundTripCreationPlan({ ...fixture(), ...changes }), /参考观察与已验收边界不一致/u);
+    assert.throws(
+      () => buildRoundTripCreationPlan({ ...fixture(), ...changes }),
+      /参考观察与已验收边界不一致/u,
+    );
   }
 });
 
@@ -188,8 +200,18 @@ void test("创建请求必须同时匹配专用确认参数与新计划指纹，
   const reviewed = reviewRoundTripCreationRequest(args, reference);
   assert.deepEqual(reviewed, { ...plan, creationRequestMatched: true });
   assertDenied(reviewed);
-  for (const invalid of [[], [creationConfirmation], [creationConfirmation, acceptedPlanFingerprint], [plan.creationPlanFingerprint, creationConfirmation], [...args, "--extra"], ["--confirm-frozen-catalog-readonly", plan.creationPlanFingerprint]]) {
-    assert.throws(() => reviewRoundTripCreationRequest(invalid, reference), /创建请求缺少明确确认或固定创建计划指纹/u);
+  for (const invalid of [
+    [],
+    [creationConfirmation],
+    [creationConfirmation, acceptedPlanFingerprint],
+    [plan.creationPlanFingerprint, creationConfirmation],
+    [...args, "--extra"],
+    ["--confirm-frozen-catalog-readonly", plan.creationPlanFingerprint],
+  ]) {
+    assert.throws(
+      () => reviewRoundTripCreationRequest(invalid, reference),
+      /创建请求缺少明确确认或固定创建计划指纹/u,
+    );
   }
 });
 

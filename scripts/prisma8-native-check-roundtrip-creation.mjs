@@ -70,7 +70,11 @@ export function buildRoundTripCreationPlan(reference) {
       scopeLabel: "org.adui.scope=prisma8-check-roundtrip",
       volume: { driver: "local", destination: "/var/lib/postgresql/data" },
       network: { driver: "bridge", exclusive: true },
-      publishedPort: { host: roundTripTarget.host, port: roundTripTarget.port, containerPort: 5432 },
+      publishedPort: {
+        host: roundTripTarget.host,
+        port: roundTripTarget.port,
+        containerPort: 5432,
+      },
       pullPolicy: "never",
       restartPolicy: "no",
       reuseExistingResources: false,
@@ -106,7 +110,9 @@ export function buildRoundTripCreationPlan(reference) {
     ...deniedPermissions,
     creationAttemptClaimed: false,
   };
-  const creationPlanFingerprint = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+  const creationPlanFingerprint = createHash("sha256")
+    .update(JSON.stringify(payload))
+    .digest("hex");
   return {
     status: "NATIVE_CHECK_ROUNDTRIP_CREATION_REVIEW_REQUIRED",
     ...payload,
