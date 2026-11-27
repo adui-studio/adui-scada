@@ -5634,3 +5634,35 @@ git status --short
 ```
 
 预期 FRESH_PROVIDER_SMOKE_READY，原有只读字段和结构指纹不变，nativeRootAssemblyVerified=true、singleNativeProviderVerified=true、legacyProviderAbsent=true、providerSwitched=true。此为正式根模块真实只读装配验证而非生产应用启动、真实业务写入或真实 Keycloak 登录；禁用自动清理调度，不开放回滚路由。
+
+### 原生 Docker 七服务增量验收
+
+已初始化库继续使用当前 .env 与已有凭据、卷及镜像。本次禁止重新初始化数据库。
+
+```powershell
+pnpm run env:check &&
+pnpm run test:docker &&
+pnpm run test:docker:db &&
+pnpm run test:prisma8:fresh &&
+vp check --fix &&
+vp check &&
+pnpm run messages:check &&
+pnpm run docs:check &&
+pnpm run build:server &&
+git diff --check
+Write-Host "原生 Docker 增量验收退出码：$LASTEXITCODE"
+```
+
+预期 Docker 18 项、数据库配置保护 8 项、全新专项 29 项均通过且 Vite+ 零警告错误。完成本机格式化提交后运行：
+
+```powershell
+pnpm run test:docker:server &&
+pnpm run docker:up &&
+pnpm run docker:ps &&
+pnpm run db:prisma8:fresh:provider:smoke
+Write-Host "原生 Docker 真实验收退出码：$LASTEXITCODE"
+git rev-parse HEAD
+git status --short
+```
+
+期望七服务运行、容器原生只读及双端 HTTP 验证通过，真实宿主只读烟测结构指纹及全部标志不变。Docker HTTP 入口不启用 OIDC；SSE 核验为响应状态与类型，不代替真实浏览器渲染或消息序列验收。

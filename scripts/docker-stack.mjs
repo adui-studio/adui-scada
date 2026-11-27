@@ -93,7 +93,7 @@ function verifyDockerDatabase() {
     ) throw new Error("原生数据库严格验证失败");
     return { password: secrets.SCADA_LAB_DB_PASSWORD, systemIdentifier: report.systemIdentifier, storageHash: report.storageHash };
   } catch {
-    throw new Error("原生数据库严格验证失败，应用未启动；请单独核对数据库状态");
+    throw new Error("原生数据库严格验证失败，未执行本次应用启动；请单独核对数据库状态");
   }
 }
 
@@ -267,7 +267,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       "仅允许 Windows 本机 Docker Desktop，禁止连接环境覆盖",
       "Docker 上下文名称无效",
       "Docker 必须使用 Linux 容器引擎",
-      "原生数据库严格验证失败，应用未启动；请单独核对数据库状态",
+      "原生数据库严格验证失败，未执行本次应用启动；请单独核对数据库状态",
       "容器原生数据库或双端 HTTP 验证失败，保留现场",
     ]);
     console.error(

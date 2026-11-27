@@ -1520,3 +1520,5 @@
 - **防复发**：每次替换校验机制及中文异常文案必须同步搜索旧文案断言，按当前实际抛出点验证所有调用模式；条件分支只收集数据，测试主流程统一断言，禁止禁用规则或放宽安全断言。检查警告数量，不能把退出码 0 视为零警告。
 - **验证边界**：协作环境对当前 PSL 复核 12 模型、122 项模型与属性声明均有中文注释；分别移除模型文档注释和字段文档注释的反例均被收集逻辑识别，实际身份错误文案与拒绝回滚路径已静态核对。Windows 定向测试、Vite+ 零警告、完整 ready 及真实只读原生 Provider 烟测尚待复验，不登记为通过。
 - **证据**：PR #250、维护者 Windows 日志、apps/server/src/database/prisma-schema-comments.spec.ts、scripts/oidc-lab-identity.cases.mjs、docs/VALIDATION.md。
+
+> **2026-11-27 · E-160 Windows 复验关闭**：维护者 Windows 已完成 PR #250 最终复验：中文注释 2/2、OIDC 身份 14/14、全新安装 28/28、CLI 4/4、82 个文件 966/966 单测、6 个文件 65/65 HTTP E2E；498 格式文件、339 受检零警告/Lint/类型错误，中文 365 个自有文件、文档 97 份，React/Vue/NestJS 构建通过。React 单个 chunk 591.62 kB 的构建体积警告暂保留。锁文件刷新与冻结安装已通过，移除 Prisma 7 三项直接依赖及 98 个包。真实 PostgreSQL 19 只读 FRESH_PROVIDER_SMOKE_READY，存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、12 表/85 字段/36 CHECK/20 索引/13 外键/119 注释一致，所有原生根模块及只读标志为 true，最终退出码 0、工作区干净。远端验收提交 dbab7c2a7ca3737e23fd451811aef92981378801，维护者明确授权，PR #250 已 Squash 合并至 feat/mvp-first-integration 的 94106b29b328833d944f35361004411b5a3ddab2。E-160 已关闭。 两个测试文件修复及完整质量链已实测；防复发规则仍保留。

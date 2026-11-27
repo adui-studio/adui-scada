@@ -22,3 +22,7 @@ ADui SCADA 曾分别运行 Demo、独立开发 PostgreSQL、OIDC Lab 三个 Comp
 维护者明确表示旧项目及卷已经删除且无备份。因此旧 Keycloak 用户、可信身份映射、SCADA 工程版本记录和会话视为不可依赖，新数据库必须重新进行真实 OIDC 用户创建、身份绑定及安全测试。新配置不会执行数据恢复，也不得声称历史数据已迁回。
 
 代码候选已更新；实际 Windows `pnpm run test:docker`、`test:docker:db`、`vp check`、`pnpm run ready`、`docker:plan/up`、七容器状态、Prisma 实际迁移与 OIDC 登录均待维护者执行验收。
+
+## 2026-11-27 · 当前原生安装启动规则
+
+ADR-0073 已替代早期 Prisma 7 初始化步骤。恢复唯一 adui-scada Compose 七服务一键启动，新增 docker:infra 保留三服务基础设施入口。docker:up 先准备本机随机凭据与证书、验证 Compose 和固定本机 Linux Docker Desktop 命名管道，等待基础设施，再执行已有 Prisma 8 --status 官方严格结构/标记及真实中文注释只读验证；只在成功后构建并启动 server、demo、web-react、web-vue，等待应用服务运行。容器内显式探针经 server 的 lab 网络访问固定 postgres:5432/adui_scada，必须严格只读且与宿主验证的 PostgreSQL 集群 systemIdentifier 一致；复用正式原生根模块全部只读核验与关闭流程。凭据从现有 Git 忽略的随机秘密文件读取，仅经 docker exec -T 标准输入传给一次性探针，不进入服务环境、命令行或报告。两端 Web 探针验证容器网络内静态入口、/api/health、/demo/project、/demo/events 的响应状态及 SSE 内容类型、受保护工程路由保持 404。宿主默认连接白名单和正式数据库生产禁令保持不变。Docker HTTP Server 仍显式关闭 OIDC，不开放身份、工程或设备写入接口；Keycloak 本轮仅验证容器启动，不验证真实登录、JWKS、HTTPS 回调、Cookie 或双端浏览器渲染。不存在数据库自动初始化、迁移、清卷、失败回退、旧库接管或自动授权。 本节取代本文旧的 migrate deploy 初始化说明，早期内容保留为决策历史；实际七服务验证仍待维护者 Windows 执行。

@@ -1969,3 +1969,12 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/auth/prisma8-runtime-identity.service.ts`：正式可写模式恢复定时清理，严格只读模式禁用调度。
 - `apps/server/test/oidc-module-bootstrap.e2e-spec.ts`：实际根模块的内存事务 HTTP 验收及唯一提供方检查。
 - `apps/server/prisma8-provider-smoke.mjs`：正式根模块的真实 PostgreSQL 严格只读装配及关闭验证。
+
+### 原生 Docker 启动与容器探针
+
+- `scripts/docker-stack.mjs`：Windows 本机 Docker 上下文保护、固定启动顺序、严格库验证、标准输入烟测。
+- `scripts/docker-stack.cases.mjs`：18 项 Docker 启动与部署安全配置回归。
+- `apps/server/container-prisma8-smoke.mjs`：容器内部复用正式原生只读探针及双端 HTTP/SSE 代理核验。
+- `apps/server/prisma8-provider-smoke.mjs`：宿主/容器共享只读根模块验收，容器 transport 独立受限。
+- `apps/server/src/database/prisma8-runtime-boundary.ts`：容器只读 transport 必须绑定固定 postgres:5432 及已核验集群；默认宿主白名单不变。
+- `deploy/docker/README.md`：当前原生安装、启动、访问与验收说明。
