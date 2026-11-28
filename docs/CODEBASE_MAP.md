@@ -2160,3 +2160,8 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - scripts/docker-db-role-b4-lock-fixture.mjs：固定十二表空基线与九行精确夹具、预检/创建/清理编排、Core 快照端口、本机恢复清单、提交/回滚及独立复验；不新增生产授权。
 - scripts/docker-db-role-b4-lock-fixture.cases.mjs：12 项模拟事务及本机临时文件专项，纳入 test:docker。
 - scripts/docker-db-role-b4-arguments.mjs、apps/server/prisma8-fresh-install.mjs：新增三种严格确认动作，复用双库安装状态与原生宿主边界；真实 Core 从服务端既有工作区依赖加载。真实写入与清理尚待维护者单独验收，不改变原并发探针或安装入口。
+
+### B4.5b-1 独立恢复宿主预检
+
+- `scripts/docker-db-role-b4-restore-host.mjs`：固定恢复令牌、完整容器 ID、本机 Docker 引擎、停机状态、镜像、网络及独立卷只读目录检查；两次一致性复核，有限脱敏报告，无 SQL 或容器启停。
+- `scripts/docker-db-role-b4-restore-host.cases.mjs`：7 项离线正反向回归，加入根 `test:docker`；根命令 `docker:db:role:b4:restore:host` 单独执行宿主预检，不是数据库准入。

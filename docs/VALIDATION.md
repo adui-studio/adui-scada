@@ -5714,3 +5714,11 @@ B4.5 下一步使用既有 --role-b4-lock-probe，先只读确认 dual-installed
 - 当前候选仅修改查询仓储端口、原生适配、既有仓储测试及文档。列表同一参数化 SELECT 增加活动身份联合过滤；四项锁内读按工程、身份、授权顺序取得共享锁，身份缺失、非 active 或重复立即拒绝；权限集合仍完整交由原纯策略判断。复用 lockB4Identity 与 lockB4ProjectGrants，不新增 ACL 或数据库例程。已有列权限候选明确允许读取 scada_identities 的 tenant_id、subject_id、status。新增两个 Vitest 用例后目标 11 项，原九项同步核对新查询顺序与参数，不弱化其他断言。
 - 协作容器 Node.js 22.16.0、TypeScript 5.8.3 实际对候选 lockAndAuthorize 与 list 两个提取片段校验 UTF-16 FNV-1a 分别为 5d3972ae、e3090ac7，转译无语法诊断；Node 原生测试 7/7、零失败零跳过，验证锁顺序、身份缺失/禁用/重复/未知拒绝、去除新身份复核的对照片段、跨租户与主体联合参数、工程缺失、未知权限及列表 SQL 形状。测试使用最小模拟事务、权限策略和辅助函数替身，不是完整 Vitest 或真实 SQL；不能据此声称旧系统实际泄漏或新仓储实机安全通过。
 - 候选完整代码/测试 Blob 为 b02450c57b9be1313cd4987e899e36cbc55bf0d7、07061a4653bff6d2626acfbef0713c20e45dbd26、9dcdeb42852af29db57ff3fd0767309bdecfb89f。协作容器无 pnpm/vp，GitHub 域名解析失败，不能获取完整工作树和依赖，未执行全仓格式、类型、Vitest、真实 PostgreSQL 或原库复验。Windows 先生成离线契约与 Core、运行定向仓储测试、中文/文档/Vite+ 与全量单测。独立恢复实例的逻辑契约/ACL、测试事务适配及多租户夹具尚待实现与独立批准。保持 rowAuthorizationVerified=false、admissionPassed=false；不执行数据库 DML/DDL、权限变更或服务切换。
+
+### 2026-11-28 · B4.5b-1 原生仓储回归与恢复宿主只读预检
+
+维护者 Windows 在 HEAD 7577793bf9e9242887e6e6afea0c3042fd4633a6 实测三组原生仓储 29/29（查询 11、版本 12、授权 6），全量 82 文件 971/971，中文 430、Markdown 100、Vite+ 566 格式文件/404 受检零警告错误、Core 构建及离线原生契约通过（12 表/85 列/36 CHECK/20 索引/13 外键/119 注释，databaseAccessed=false），原 NestJS 和 Keycloak 停止，工作区干净。该证据只关闭 E-183 的代码质量回归，不代表实际 PostgreSQL 授权验收。
+
+当前新增 `scripts/docker-db-role-b4-restore-host.mjs` 和对应 Node 测试，实际协作容器 Node 22.16.0 对最终两个文件执行 node --check 及 node --test，7/7 通过、零失败零跳过；模块 Blob 865e48506534e80f9ba8d0faf395b28beba0303b，测试 Blob 8dbe3e2c3bdb667329d7f6feede4a47b9ef8dc87。最初两次语法检查分别因生成文件残留字面换行转义、Unicode 正则未转义模板大括号而停止，已修复后执行全部七项。模拟 Docker 返回目录，验证确认参数、目标 ID、镜像、停机、网络/端口、挂载、两次目录一致性及本机端点拒绝边界；不是真实 Docker 输出或数据库验收。当前无 Docker/pnpm/vp，未执行全仓格式、Lint、中文、文档及实机预检。
+
+Windows 先运行 `node --test scripts/docker-db-role-b4-restore-host.cases.mjs`、`pnpm run test:docker`、Vite+、中文与文档检查；再通过 `docker:db:role:b4:restore:host` 传入固定确认参数 `--confirm-readonly-restore-host`、此前真实恢复令牌 `--restore-token=...` 与完整容器 ID `--restore-id=...`（省略号不是有效参数），不得重新创建容器或改为可变名称。成功状态 B4_RESTORE_HOST_PREFLIGHT_VERIFIED 只代表两次宿主元数据符合限制，不是原子快照或卷内容真实性证明；restoreCatalogVerified、rowAuthorizationVerified、databaseAccessed、databaseWritten、admissionPassed、serviceSwitched 仍为 false。真实恢复目录、角色/ACL 等价性、原生低权限事务适配及多租户夹具待后续开发，任何写入另行审批。
