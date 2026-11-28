@@ -5621,3 +5621,11 @@ E-174 最小修复只调整两条 Keycloak 异常文案为等价模板字符串�
 实际返回 DOCKER_DB_ROLE_ISOLATION_APPLIED，catalogStatementsExecuted=true、catalogIsolationVerified=true、catalogIsolationPersisted=true、publicConnectRetained=false、committed=true、rolledBack=false、databaseWritten=true、businessDataWritten=false、serviceSwitched=false、admissionPassed=false、isolationPassed=false、postVerificationPassed=true。独立只读状态 DOCKER_DB_ROLE_ISOLATION_STATUS_READY 确认相同计划/存储指纹、PG 版本及已持久化隔离，catalogStatementsExecuted=false、catalogIsolationVerified=true、catalogIsolationPersisted=true、publicConnectRetained=false、databaseWritten=false、committed=false、rolledBack=true；此回滚仅属于独立只读核验事务。后置 FRESH_DATABASE_VERIFIED 为 12 表、85 列、36 检查、20 索引、13 外键、119 注释，同存储指纹，OIDC 只读及七服务回归通过，最终 HEAD 一致、工作区无变更。B3.3 实际数据库级隔离验收完成，不再重复执行 apply。
 
 下一步仅进入 B4 双库原始只读计划：SCADA 固定 3 专用角色、92 条目录语句、36 正向及 15 拒绝探针候选；Keycloak 双库对象评审及 101 张表所有权候选。以上是代码预期，不是 B4 实测值。须保留实际计划指纹、独立核对对象身份及维护窗口后另行批准各自回滚演练；本轮不授权安装、所有权转移、LOGIN、服务切换或合并。B4 两库真实演练与持久化、行级授权与并发及 Schema 兼容性仍待验收，C/D/E/F 未放行。完整 ready 仍绑定 df3737688f49c6ad9102b6d6c13df29dc7eb6c61；本次仅追加验收文档，未执行新提交后的本机文档检查。
+
+### 2026-11-28 · PR #262 B4 真实双库只读计划部分通过及 Keycloak 目录阻塞
+
+维护者 Windows 同步 29225762d5b2da872a6d354d1a8ecb58d184aa2e，Markdown 100 份与 Git 差异检查通过；Docker 七服务、严格结构契约（12 表、85 列、36 检查、20 索引、13 外键、119 注释）、OIDC 严格只读和 B3.3 已持久化基线通过，原隔离指纹不变。SCADA 真实 SCADA_B4_REHEARSAL_PLAN_ONLY 指纹 aac93ff83a3baaa8b97781bd32e35afb049209e38a40c63c8487d3511b65ade0，3 专用角色、92 条固定目录语句、36 正向/15 拒绝探针预期、planOnly=true、rolledBack=true、hostBoundaryVerified=true、databaseWritten=false、installationAllowed=false、issuerBindingVerified=false、admissionPassed=false。
+
+Keycloak 逐对象所有权候选在真实目录失败，错误为 Keycloak 对象类型、名称、所有者或 ACL 不一致；脚本按设计停止，未生成 K 指纹，未执行本轮后置独立状态及 OIDC/Docker 复验，未进入两库回滚演练或权限安装。源码定位 scripts/docker-db-role-keycloak-plan.mjs 的 normalizeInventory 单条复合断言：对象结构、允许种类、OID、名称、父标识、所有者和 clean 标志均可能触发。真实失败维度尚未确定，不将大写名称、额外对象、ACL 或 PostgreSQL 目录差异的推测记作已确认根因，不移除权限校验或更改白名单。
+
+下一步在相同固定集群及只读事务中复用原 inventorySql，仅按固定种类聚合每项断言失败数量并核验原始目录，必要时继续细分 clean 失败来源；不输出未知对象名、业务行或凭据。确证根因后才决定最小代码修复或独立审阅环境差异，并按影响范围验证。当前只追加验收阻塞文档，不修改生产/测试代码，不执行 B4 演练、权限持久化、服务停启或合并。新提交文档检查待复验。

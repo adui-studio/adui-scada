@@ -81,3 +81,9 @@ pnpm run docker:db:role:keycloak:plan
 每条命令须显式检查退出码；SCADA 预期 SCADA_B4_REHEARSAL_PLAN_ONLY、isolationFingerprint=I、roleCount=3、statementCount=92、expectedPositiveCount=36、expectedDeniedCount=15、planOnly=true、installationAllowed=false、issuerBindingVerified=false、admissionPassed=false、databaseWritten=false。保存其 planFingerprint 为 S。Keycloak 外层预期 DOCKER_DB_ROLE_OBJECT_REVIEW_READY、planFingerprint=I、catalogIsolationPersisted=true、directoryReviewPassed=true、ownershipTransferAllowed=false、businessAclApproved=false、databaseWritten=false、serviceSwitched=false、admissionPassed=false；内层 keycloak.ownershipPreview 预期 KEYCLOAK_OWNERSHIP_PLAN_READY、planOnly=true、tableCount=101、statementCount=101、objectIdentityReviewed=false、ownershipTransferAllowed=false、runtimeLoginAllowed=false、databaseWritten=false、serviceSwitched=false、admissionPassed=false，保存其 planFingerprint 为 K。实际报告必须核验，不以预期代替实测；两份指纹须为实际 64 位小写十六进制值。再次独立核验 B3 原指纹及已持久化状态，确认双库计划未写入。
 
 本轮只允许生成只读计划和审阅实际目录；不自动停止 Keycloak，不执行 SCADA 或 Keycloak 回滚演练，不提交 B4 ACL，不转移所有权。聚合计划不能证明实际 Keycloak 对象身份，须另行核对完整目标表及依赖、当前镜像和 Schema 策略后分别批准演练。B4 完整验收、C/D/E/F 尚未完成，PR 保持 Draft。本次仅文档更新，新提交文档检查待 Windows 复验。
+
+## 十二、SCADA 真实计划通过，Keycloak 目录诊断阻塞（2026-11-28）
+
+维护者实测 29225762d5b2da872a6d354d1a8ecb58d184aa2e 的文档 100 份、Git 差异、B3.3 已持久化状态、严格结构契约、OIDC 只读及 Docker 七服务通过。SCADA 计划指纹 S 为 `aac93ff83a3baaa8b97781bd32e35afb049209e38a40c63c8487d3511b65ade0`，3 角色、92 条固定语句、36/15 探针预期、hostBoundaryVerified=true、rolledBack=true、databaseWritten=false。Keycloak 返回对象类型、名称、所有者或 ACL 不一致，未取得 K 指纹，脚本中止且本轮后置独立核验未执行。不得使用旧指纹、模拟目录或只通过 SCADA 计划跳过 Keycloak 阻塞。
+
+先独立确认 B3.3 状态及固定集群，使用同一代码版本的 inventorySql 在 REPEATABLE READ READ ONLY 事务中聚合对象校验失败数，分别统计种类、名称正则、大小写差异、父对象标识、所有者、clean；不输出未知对象名、实际 ACL 内容、业务数据、凭据。若 clean 失败再细分目录属性，若存在不符合命名规则的对象，先核对实际 Keycloak 创建来源及安全标识规则。诊断必须确认回滚与连接结束；错误停止，不自动修改对象或 ACL。不预设失败原因，不改变白名单、权限限制、指纹算法或计划执行边界。根因确认后按实际影响决定最小修复及实测验证，再重新运行完整双库只读计划及后置独立核验。当前不得进入 B4 两库回滚演练、持久化或 C/D/E/F。PR 继续保持 Draft。

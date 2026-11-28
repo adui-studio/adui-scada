@@ -3372,3 +3372,7 @@ PR #262 在 ac056982 实测身份 49/49、全量 969/969、Vite+ 564 格式/402 
 ### 2026-11-28 · PR #262 B3.3 正式隔离验收完成，进入 B4 只读计划
 
 维护者在 00c1e65315edb41451f15221a4d94320d5227c9c 实测文档与 Git 差异检查、三组消费者复核声明及独立 APPLY 批准、固定五库八项 PUBLIC 权限撤销持久化、独立状态、原生结构契约、OIDC 只读和 Docker 七服务回归均通过。原计划指纹 0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37 不变；DOCKER_DB_ROLE_ISOLATION_APPLIED、committed=true、catalogIsolationPersisted=true、publicConnectRetained=false、postVerificationPassed=true，独立状态确认相同隔离结果。仅数据库目录写入，业务数据无写入、服务身份未切换、准入与真实登录仍未开启。B3.3 实际隔离完成，不重复提交；下一步 B4 双库只读计划及独立对象身份评审，未批准实际业务权限、所有权转移、LOGIN 或服务切换。B4 真实演练、独立批准持久化、行级授权/并发、Keycloak Schema 兼容性及 C/D/E/F 仍待验收。保持 PR #262 Draft，不合并。
+
+### 2026-11-28 · PR #262 B4 SCADA 只读计划通过，Keycloak 目录阻塞
+
+维护者在 29225762d5b2da872a6d354d1a8ecb58d184aa2e 实测文档、B3.3 已持久化状态、严格原生契约、OIDC 只读、Docker 七服务及 SCADA B4 只读计划通过。实际 S 指纹 aac93ff83a3baaa8b97781bd32e35afb049209e38a40c63c8487d3511b65ade0，3 专用角色、92 条候选语句、36/15 探针预期。Keycloak 对象所有权候选被复合目录断言拒绝，尚无 K 指纹，本轮后置检查及两库演练未执行。根因待同集群只读目录聚合诊断，不将猜测作为实际故障，不放宽安全门禁。保持 B3.3 已持久化结果、原服务身份、NOLOGIN 和 Draft；不执行 B4 权限安装、转移或合并。
