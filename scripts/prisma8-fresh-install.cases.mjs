@@ -310,33 +310,129 @@ void test("隔离事务必须精确确认三组消费者、指纹及独立持久
   ]) assert.throws(() => freshAction(args), /必须明确指定/u);
 });
 
-void test("B4 只接受只读计划与明确确认指纹的回滚演练，拒绝正式安装", () => {
+void test("B4 只读计划与回滚演练必须独立确认，禁止混用持久化参数", () => {
   const fingerprint = "--plan-fingerprint=" + "a".repeat(64);
   const confirm = "--confirm-rehearse-scada-b4";
-  assert.equal(freshAction(["--role-b4-plan"]), "role-b4-plan");
   const confirmFixtures = "--confirm-rollback-business-fixtures";
-  assert.equal(freshAction(["--role-b4-rehearse", confirm, confirmFixtures, fingerprint]), "role-b4-rehearse");
+  assert.equal(freshAction(["--role-b4-plan"]), "role-b4-plan");
+  assert.equal(
+    freshAction(["--role-b4-rehearse", confirm, confirmFixtures, fingerprint]),
+    "role-b4-rehearse",
+  );
   for (const args of [
-    ["--role-b4-rehearse"], ["--role-b4-rehearse", confirm],
-    ["--role-b4-rehearse", confirm, fingerprint], ["--role-b4-rehearse", confirm, "--apply", fingerprint],
-    ["--role-b4-rehearse", fingerprint, confirm], ["--role-b4-rehearse", confirm, "--plan-fingerprint=bad"],
-    ["--role-b4-plan", confirm], ["--role-b4-apply", confirm, fingerprint],
-    ["--role-b4-rehearse", "--apply", fingerprint], ["--role-b4-rehearse", confirm, confirmFixtures, fingerprint, "--commit"],
-  ]) assert.throws(() => freshAction(args), /必须明确指定/u);
+    ["--role-b4-rehearse"],
+    ["--role-b4-rehearse", confirm],
+    ["--role-b4-rehearse", confirm, fingerprint],
+    ["--role-b4-rehearse", confirm, "--apply", fingerprint],
+    ["--role-b4-rehearse", fingerprint, confirm],
+    ["--role-b4-rehearse", confirm, "--plan-fingerprint=bad"],
+    ["--role-b4-plan", confirm],
+    ["--role-b4-rehearse", "--apply", fingerprint],
+    ["--role-b4-rehearse", confirm, confirmFixtures, fingerprint, "--commit"],
+  ]) {
+    assert.throws(() => freshAction(args), /必须明确指定/u);
+  }
+  assert.throws(() => freshAction(["--role-b4-apply", confirm, fingerprint]), {
+    message: "B4 持久化或状态命令必须完整明确指定确认参数",
+  });
 });
 
-void test("Keycloak 只接受所有权预览及独立确认的回滚演练", () => {
+void test("Keycloak 所有权预览与回滚演练必须独立确认，禁止混用持久化参数", () => {
   const fingerprint = "--plan-fingerprint=" + "a".repeat(64);
-  const approval = ["--confirm-rehearse-keycloak-ownership", "--reviewed-keycloak-objects", "--confirm-keycloak-maintenance"];
+  const approval = [
+    "--confirm-rehearse-keycloak-ownership",
+    "--reviewed-keycloak-objects",
+    "--confirm-keycloak-maintenance",
+  ];
   assert.equal(freshAction(["--role-keycloak-plan"]), "role-keycloak-plan");
-  assert.equal(freshAction(["--role-keycloak-rehearse", ...approval, fingerprint]), "role-keycloak-rehearse");
+  assert.equal(
+    freshAction(["--role-keycloak-rehearse", ...approval, fingerprint]),
+    "role-keycloak-rehearse",
+  );
   for (const args of [
-    ["--role-keycloak-plan", "--apply"], ["--role-keycloak-rehearse"],
-    ["--role-keycloak-apply"], ["--role-keycloak-plan", fingerprint],
+    ["--role-keycloak-plan", "--apply"],
+    ["--role-keycloak-rehearse"],
+    ["--role-keycloak-plan", fingerprint],
     ["--role-keycloak-rehearse", ...approval.slice(0, 2), fingerprint],
     ["--role-keycloak-rehearse", ...approval, "--plan-fingerprint=bad"],
     ["--role-keycloak-rehearse", ...approval, fingerprint, "--commit"],
-  ]) assert.throws(() => freshAction(args), /必须明确指定/u);
+  ]) {
+    assert.throws(() => freshAction(args), /必须明确指定/u);
+  }
+  assert.throws(() => freshAction(["--role-keycloak-apply"]), {
+    message: "B4 持久化或状态命令必须完整明确指定确认参数",
+  });
+});
+
+void test("全新入口仅分派独立确认的 B4 持久化、阶段状态及并发探针", () => {
+  const isolation = "--isolation-fingerprint=" + "a".repeat(64);
+  const scada = "--scada-catalog-fingerprint=" + "b".repeat(64);
+  const keycloak = "--keycloak-plan-fingerprint=" + "c".repeat(64);
+  const projection = "--projection-fingerprint=" + "d".repeat(64);
+  const shared = [isolation, scada, keycloak];
+  const cases = [
+    {
+      action: "role-b4-apply",
+      args: [
+        "--role-b4-apply",
+        "--confirm-apply-scada-b4",
+        "--confirm-rehearsal-verified",
+        "--confirm-rollback-business-fixtures",
+        "--plan-fingerprint=" + "e".repeat(64),
+        "--catalog-fingerprint=" + "b".repeat(64),
+        keycloak,
+      ],
+    },
+    {
+      action: "role-keycloak-apply",
+      args: [
+        "--role-keycloak-apply",
+        "--confirm-apply-keycloak-ownership",
+        "--confirm-rehearsal-verified",
+        "--reviewed-keycloak-objects",
+        "--confirm-keycloak-maintenance",
+        ...shared,
+        projection,
+      ],
+    },
+    {
+      action: "role-b4-status",
+      args: ["--role-b4-status", "--phase=scada-installed", ...shared],
+    },
+    {
+      action: "role-b4-status",
+      args: ["--role-b4-status", "--phase=dual-installed", ...shared, projection],
+    },
+    {
+      action: "role-b4-lock-probe",
+      args: ["--role-b4-lock-probe", "--confirm-reviewed-existing-fixture", ...shared, projection],
+    },
+  ];
+  for (const { args, action } of cases) {
+    assert.equal(freshAction(args), action);
+    for (let index = 1; index < args.length; index++) {
+      assert.throws(() => freshAction(args.filter((_, offset) => offset !== index)), {
+        name: "Error",
+        message: index === 1 && action === "role-b4-status"
+          ? "B4 状态命令必须指定明确安装阶段"
+          : "B4 持久化或状态命令必须完整明确指定确认参数",
+      });
+    }
+    assert.throws(() => freshAction([...args, "--commit"]), {
+      message: "B4 持久化或状态命令必须完整明确指定确认参数",
+    });
+  }
+  assert.throws(() => freshAction(["--role-b4-status", "--phase=auto", ...shared]), {
+    message: "B4 状态命令必须指定明确安装阶段",
+  });
+  assert.throws(() => freshAction([
+    "--role-b4-status",
+    "--phase=dual-installed",
+    ...shared,
+    "--projection-fingerprint=bad",
+  ]), {
+    message: "B4 参数缺少独立确认指纹：projection-fingerprint",
+  });
 });
 
 void test("Keycloak 维护窗口要求唯一固定容器已明确退出且不自动重启", () => {

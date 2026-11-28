@@ -5587,3 +5587,7 @@ Node.js 22.16.0 实测新增隔离预览核心、测试文件 node --check 均�
 维护者同步 HEAD fc658f8336de1def3169746e151c8139a1c7d7e8，Node 24.18.0、pnpm 12.23.0，冻结安装 13 workspace 成功；依赖 13 清单/54 Catalog、共享配置 10 TSConfig、根 .env 和 LF 检查通过。完整 ready 在中文异常检查两处失败，退出码 1；后续质量链未运行。Docker 七服务运行；真实严格数据库契约 FRESH_DATABASE_VERIFIED、PG 190000、12 表、85 列、36 检查、20 索引、13 外键、119 注释；正式 Discovery/JWKS 只读通过，OIDC 登录未启用。B3.3 状态 rolesPrepared=true、catalogIsolationPersisted=false、publicConnectRetained=true、databaseWritten=false；两库 B4 计划被正常拒绝，空指纹的回滚演练请求被解析器拒绝，无实际 B4 演练证据。交互式粘贴的成功文字不计为验收结果。
 
 E-174 最小修复只调整两条 Keycloak 异常文案为等价模板字符串。协作容器原检查器七文件夹具实测前 2 处失败退出 1、后 0 处退出 0，完整目标文件原异常匹配规则前两处后零处。全仓中文、完整 ready 及真实 B3.3 演练、持久化仍待验证；实际授权须独立批准，不执行 B4 或 C 阶段。
+
+### 2026-11-28 · PR #262 中文复验通过及 CLI 回归失败
+
+维护者 HEAD 8e00b77d61b2a9cbe3e10b4f343e92398ae2f0fa 实测中文文案 428 个文件、中文专项 2/2、依赖 13 清单/54 Catalog、共享配置 10 TSConfig、环境/LF、原生契约发射（12 表/85 列/36 检查/20 索引/13 外键/119 注释，databaseAccessed=false）通过；test:prisma8:fresh 实际 31/33，两项失败为 B4/Keycloak 非法 apply 的错误文本断言。完整 ready 退出 1，未运行后续 Docker、隔离计划和 B4 阶段。E-175 只修测试：保留所有拒绝用例，新增顶层 CLI 确认参数与状态分派用例。协作环境 Node 22.16.0 使用远端 freshAction 真实片段及完整专用参数模块实际复现原两项失败（0/2，退出 1），修复后片段三项及专用五项合计 8/8（退出 0）。完整专用模块/测试 Blob 已核对，完整 CLI 文件/其余原生契约测试未本地运行；正式 test:prisma8:fresh 目标 34 项，Windows 完整 ready 待复验。B3.3 仍待真实隔离，不执行任何持久化或合并。
