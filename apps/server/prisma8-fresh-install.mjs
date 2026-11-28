@@ -5,6 +5,10 @@ import { isDeepStrictEqual } from "node:util";
 import { Client } from "pg";
 import { createDockerDatabaseUrl } from "../../scripts/init-docker-db.mjs";
 import {
+  buildDockerRoleBootstrapPlan,
+  DockerRolePlanError,
+} from "../../scripts/docker-db-role-bootstrap-plan.mjs";
+import {
   DockerRoleReviewError,
   reviewDockerDatabaseRoles,
 } from "../../scripts/docker-db-role-review.mjs";
@@ -336,7 +340,8 @@ async function main() {
   );
   const readOnly = freshConnection(base, true);
   const writable = freshConnection(base, false);
-  const identity = inspectDocker(action === "role-review");
+  const reviewRoles = action === "role-review" || action === "role-plan";
+  const identity = inspectDocker(reviewRoles);
   const parse = (text) => {
     try {
       return JSON.parse(text);
@@ -357,13 +362,13 @@ async function main() {
     action === "status" ||
     action === "runtime-review" ||
     action === "provider-smoke" ||
-    action === "role-review"
+    reviewRoles
   ) {
     stage = "官方严格结构与标记验证";
     requireFreshVerification(parse(invoke(["db", "verify", "--strict", "--json"], readOnly)));
     stage = "真实中文注释核验";
     await checkComments(readOnly, identity, contract, commentText, false);
-    if (action === "role-review") {
+    if (reviewRoles) {
       stage = "双库角色及有效权限只读核查";
       const roleReport = await reviewDockerDatabaseRoles(
         (database) => {
@@ -378,7 +383,12 @@ async function main() {
         isDeepStrictEqual(inspectDocker(true), identity),
         "角色核查后本机 Docker 集群发生变化",
       );
-      return { ...roleReport, ...report, serverVersion: identity.version };
+      const directoryReport = { ...roleReport, ...report, serverVersion: identity.version };
+      if (action === "role-plan") {
+        stage = "固定角色准备预览";
+        return buildDockerRoleBootstrapPlan(directoryReport, freshStorageHash);
+      }
+      return directoryReport;
     }
     if (action === "provider-smoke") {
       stage = "原生 NestJS 数据库提供方只读烟测";
@@ -490,6 +500,7 @@ void main()
       error instanceof FreshInstallError ||
         error instanceof NativePreflightError ||
         error instanceof DockerRoleReviewError ||
+        error instanceof DockerRolePlanError ||
         error instanceof FreshRuntimeProbeError
         ? error.message
         : stage + "失败，内部诊断已脱敏；保留现场，不自动重试",

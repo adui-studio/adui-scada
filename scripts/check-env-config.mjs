@@ -298,6 +298,18 @@ assert.ok(
     !packageScripts["docker:up"].includes("role-review"),
   "真实数据库角色核查必须独立执行",
 );
+assert.ok(
+  packageScripts["test:docker"].includes("scripts/docker-db-role-bootstrap-plan.cases.mjs"),
+);
+assert.equal(
+  packageScripts["docker:db:role:plan"],
+  "node apps/server/prisma8-fresh-install.mjs --role-plan",
+);
+assert.ok(
+  !packageScripts.ready.includes("docker:db:role:plan") &&
+    !packageScripts["docker:up"].includes("role-plan"),
+  "真实角色准备预览必须独立执行",
+);
 assert.ok(compose.includes('SCADA_DOCKER_DB_READONLY: "true"'));
 assert.ok(compose.includes("source: ../../.local/docker-runtime/server-database.json"));
 assert.ok(nest.includes("DockerReadOnlyDatabaseAppModule"));

@@ -2020,3 +2020,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-db-role-review.mjs`：固定两库目录查询、只读事务、前后身份与集群复核、共享角色权限摘要、12 个业务表矩阵、脱敏及失败关闭。
 - `scripts/docker-db-role-review.cases.mjs`：8 项 Node 离线专项，覆盖共享身份拒绝准入、权限与标记缺失、连接/后置漂移/关闭失败及脱敏。
 - `apps/server/prisma8-fresh-install.mjs`、`scripts/prisma8-fresh-install.mjs`：新增独立 `--role-review`，复用现有严格核验及固定回环连接，前后核对 Docker 集群与旧容器拒绝；`package.json` 提供 `docker:db:role:review`，`test:docker` 只纳入离线用例。
+
+### Docker 独立运行角色准备预览候选（B1）
+
+- `scripts/docker-db-role-bootstrap-plan.mjs`：固定真实目录基线及 8 条 SQL 预览纯函数，不执行 SQL；`scripts/docker-db-role-bootstrap-plan.cases.mjs`：5 项离线测试。
+- `apps/server/prisma8-fresh-install.mjs`、`scripts/prisma8-fresh-install.mjs`：新增 `--role-plan`，复用已验收的双库只读核查；`package.json` 提供 `docker:db:role:plan`，只将离线测试纳入 `test:docker`。实际入口不进入默认启动或 ready。
+- [角色准备预览与权限矩阵](plans/docker-native-role-bootstrap-plan.md)：B1 边界、当前原生仓储权限、锁与 Keycloak 所有权阻塞。
