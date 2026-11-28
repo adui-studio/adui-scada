@@ -4,6 +4,10 @@ import { join, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { Client } from "pg";
 import { createDockerDatabaseUrl } from "../../scripts/init-docker-db.mjs";
+import {
+  DockerRoleReviewError,
+  reviewDockerDatabaseRoles,
+} from "../../scripts/docker-db-role-review.mjs";
 import { offlineEnvironment, resolveFreshCli } from "../../scripts/prisma8-fresh-cli-support.mjs";
 import {
   inspectFreshDockerEmptyDatabase,
@@ -75,7 +79,7 @@ function ensureOutput(directories) {
 }
 
 /** 固定本机 Docker 端点，核对全新 Compose 容器、持久卷及回环端口。 */
-function inspectDocker() {
+function inspectDocker(requireNoOldProjects = false) {
   requireMatch(process.platform === "win32", "当前全新安装只允许 Windows 本机 Docker Desktop");
   requireMatch(
     !Object.entries(process.env).some(
@@ -112,6 +116,25 @@ function inspectDocker() {
     local(["info", "--format", "{{.OSType}}"]) === "linux",
     "Docker 不是 Linux 容器引擎",
   );
+  if (requireNoOldProjects) {
+    for (const project of [
+      "adui-scada-v01-demo",
+      "adui-scada-postgres-dev",
+      "adui-scada-oidc-lab",
+    ]) {
+      requireMatch(
+        local([
+          "ps",
+          "-a",
+          "--filter",
+          "label=com.docker.compose.project=" + project,
+          "--format",
+          "{{.ID}}",
+        ]) === "",
+        "仍检测到旧项目容器，禁止角色核查或自动清理",
+      );
+    }
+  }
   const fields = [
     ".Id",
     ".State.Running",
@@ -313,7 +336,7 @@ async function main() {
   );
   const readOnly = freshConnection(base, true);
   const writable = freshConnection(base, false);
-  const identity = inspectDocker();
+  const identity = inspectDocker(action === "role-review");
   const parse = (text) => {
     try {
       return JSON.parse(text);
@@ -330,11 +353,33 @@ async function main() {
       return results[0];
     }
   };
-  if (action === "status" || action === "runtime-review" || action === "provider-smoke") {
+  if (
+    action === "status" ||
+    action === "runtime-review" ||
+    action === "provider-smoke" ||
+    action === "role-review"
+  ) {
     stage = "官方严格结构与标记验证";
     requireFreshVerification(parse(invoke(["db", "verify", "--strict", "--json"], readOnly)));
     stage = "真实中文注释核验";
     await checkComments(readOnly, identity, contract, commentText, false);
+    if (action === "role-review") {
+      stage = "双库角色及有效权限只读核查";
+      const roleReport = await reviewDockerDatabaseRoles(
+        (database) => {
+          const target = new URL(readOnly);
+          target.pathname = database === "adui_scada" ? "/adui_scada" : "/adui_scada_keycloak";
+          return databaseClient(target.toString());
+        },
+        identity,
+        freshStorageHash,
+      );
+      requireMatch(
+        isDeepStrictEqual(inspectDocker(true), identity),
+        "角色核查后本机 Docker 集群发生变化",
+      );
+      return { ...roleReport, ...report, serverVersion: identity.version };
+    }
     if (action === "provider-smoke") {
       stage = "原生 NestJS 数据库提供方只读烟测";
       const { verifyPrisma8Provider } = await import("./prisma8-provider-smoke.mjs");
@@ -444,6 +489,7 @@ void main()
     console.error(
       error instanceof FreshInstallError ||
         error instanceof NativePreflightError ||
+        error instanceof DockerRoleReviewError ||
         error instanceof FreshRuntimeProbeError
         ? error.message
         : stage + "失败，内部诊断已脱敏；保留现场，不自动重试",

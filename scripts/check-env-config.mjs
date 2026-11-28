@@ -288,6 +288,16 @@ assert.ok(
   !packageScripts["docker:up"].includes("transaction-probe"),
   "常驻启动不得自动执行临时事务",
 );
+assert.ok(packageScripts["test:docker"].includes("scripts/docker-db-role-review.cases.mjs"));
+assert.equal(
+  packageScripts["docker:db:role:review"],
+  "node apps/server/prisma8-fresh-install.mjs --role-review",
+);
+assert.ok(
+  !packageScripts.ready.includes("docker:db:role:review") &&
+    !packageScripts["docker:up"].includes("role-review"),
+  "真实数据库角色核查必须独立执行",
+);
 assert.ok(compose.includes('SCADA_DOCKER_DB_READONLY: "true"'));
 assert.ok(compose.includes("source: ../../.local/docker-runtime/server-database.json"));
 assert.ok(nest.includes("DockerReadOnlyDatabaseAppModule"));

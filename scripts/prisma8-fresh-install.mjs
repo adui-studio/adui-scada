@@ -49,6 +49,7 @@ export function freshAction(args) {
     ["--preview", "preview"],
     [freshConfirmation, "initialize"],
     ["--status", "status"],
+    ["--role-review", "role-review"],
     ["--runtime-review", "runtime-review"],
     ["--runtime-emit", "runtime-emit"],
     ["--provider-smoke", "provider-smoke"],
@@ -56,7 +57,7 @@ export function freshAction(args) {
     if (isDeepStrictEqual(args, [flag])) return mode;
   }
   throw new FreshInstallError(
-    "必须明确指定全新安装发射、只读预览、首次初始化、验证、运行时评审或提供方验收",
+    "必须明确指定全新安装发射、只读预览、首次初始化、验证、运行时评审、提供方验收或角色核查",
   );
 }
 

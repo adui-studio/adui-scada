@@ -3182,3 +3182,23 @@ E-159 为测试专属消息遗漏，已最小修复；不改变生产代码。�
 维护者于 2026-11-28 提供 Windows 本机真实执行记录：`pnpm run docker:db:transaction:probe --confirm-temp-transaction-probe` 成功，宿主按现有七字段严格机器报告核验实际提交、跨事务回读、主动回滚恢复原值、同一 PostgreSQL 后端会话、临时表移除和 Provider 关闭，且 businessDataWritten=false。随后 `docker:oidc:probe`、`docker:ps` 与 `git diff --check` 全部成功，七服务均运行，OIDC 登录尚未启用，最终退出码 0，`git status --short` 无输出。日志未独立打印本次 HEAD；上轮已验收生产源码 HEAD 为 47b84f8e2ece8cffebe931013b1cca865dc3cc41，当前远端 02f3e2c438a0de1cdda17da33fd0778f817cf34b 相对此仅三份验收文档追加，无生产代码或配置变更。此次真实事务仅涉及会话临时表，不证明正式业务表写入、角色最小权限、正式 OIDC 登录或发布安全门禁已验收。
 
 独立临时事务阶段结案条件满足，维护者同意合并至 feat/mvp-first-integration。下一阶段先评审受控本机 Docker 正式业务连接和认证启用边界，明确数据库身份与权限、默认关闭、网络和会话隔离及失败关闭策略；不得将临时表成功扩大为业务 DML 授权，不自动修改角色、清库、初始化、迁移、开放工程发布或工业设备写入。
+
+### 2026-11-28 · PR #256 合并与原生业务连接安全评审
+
+维护者同意合并后，PR #256 已 Squash 合入 feat/mvp-first-integration 的 2783cbc5d2376d1269387a8daa5d9fd20fdd8af3；真实原生临时事务及常驻只读回归通过。当前 Compose 业务库及 Keycloak 使用同一登录身份和数据库密码，实际角色属性、数据库所有权、有效权限及 PUBLIC 权限仍需只读目录核验。新增 [Docker 原生业务连接安全评审](plans/docker-native-business-connection-review.md)，提出管理、SCADA 与 Keycloak 独立身份，保持一个 PostgreSQL 实例及现有七服务。当前只提交评审文档，未实施角色分离、权限变更、正式连接或 OIDC 启用；先评审并实现只读角色预检，再根据真实目录结果单独授权角色配置与业务模式。禁止使用临时事务探针放行常驻业务连接或提前打开工程/发布/设备写入。
+
+### 2026-11-28 · PR #257 A 阶段只读角色核查候选
+
+维护者已同意继续实施 A 阶段。新增 `docker:db:role:review`，复用当前 Prisma 8 严格契约和 Windows 本机 Docker 固定集群边界，分别建立业务库及 Keycloak 库只读事务，报告共享角色属性、直接与递归成员能力、两库有效权限及 PUBLIC CONNECT、Schema、12 个业务表及序列权限。其他 Schema 仅计数；Keycloak 表与序列不回显对象名。目录核查完成不代表最小权限，正式准入固定 false。未修改数据库、角色、凭据、Compose、OIDC、生产根模块或业务接口。协作环境 Node.js 22.16.0 实际执行新增角色核查核心及测试的 node --check 和 node --test，8/8 通过。远端 Git Blob 分别为 ef9dc9d5810457d0d9e745fdf8ca5872bee34ffb、7115a369da54aacf7bb3324badc25c0d0a9215f5，与本地实际执行文件一致。已逐项核对入口、参数白名单、严格契约验证分支及 package.json 质量链；未运行完整 Docker 68 项、Prisma 8 全新专项、全仓 Vite+、env/messages/docs 或真实 PostgreSQL 19 目录查询。 待维护者真实执行只读核查，获得报告后再评审 B 阶段，保持 Draft。
+
+### 2026-11-28 · PR #257 增量质量门禁通过
+
+维护者 Windows 实测 Docker 六套件 68/68（新增角色核查 8/8）、Prisma 8 全新专项 29/29，合计 97/97；环境及 LF、中文文案 382 文件、Markdown 98 份、Vite+ 516 格式文件与 356 受检文件零警告、Lint 错误及类型错误、git diff --check 均通过，增量验收退出码 0。格式化提交 8777837592c5bc0e81dae102608616f8d9922e17 已推送；相较候选 e821d861754106c378b000e4715a3d761762ea7c 的四文件差异已逐项核对，只有排版及测试对象展开中等价的冗余空对象回退清理，不改变数据库核查语义。
+
+真实双库角色权限目录报告尚未提供，A 阶段仅完成自动化质量验收。待维护者执行 `docker:db:role:review`，核实 DOCKER_DB_ROLE_REVIEW_READY、directoryReviewPassed=true、admissionPassed=false、databaseWritten=false 及退出码 0，再根据实际权限报告评审 B 阶段。保持 Draft，不提前合并或修改角色、授权、凭据、数据库、Compose、OIDC 或业务接口。
+
+### 2026-11-28 · PR #257 真实角色核查结案
+
+维护者 2026-11-28 Windows 日志显示从 8777837592c5bc0e81dae102608616f8d9922e17 快进至 21f574036cf02178ae48d3e6664ad983b0b32b6b；docs:check 98 份 Markdown 通过；docker:db:role:review 返回 DOCKER_DB_ROLE_REVIEW_READY、directoryReviewPassed=true、admissionPassed=false、databaseWritten=false，退出码 0，git status --short 无输出。真实 PostgreSQL 19.0（190000），存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436，12 表、85 字段、36 CHECK、20 索引、13 外键、119 注释均一致。共享 adui_scada 角色为登录超级用户，CREATEDB、CREATEROLE、REPLICATION、BYPASSRLS、INHERIT 均 true，四类成员计数均 0，两个拟议独立运行角色不存在。两库当前角色直接拥有数据库且 CONNECT/CREATE/TEMP、PUBLIC CONNECT 均 true。两库 public Schema 的 owner=false、ownerPrivileges/USAGE/CREATE=true、PUBLIC CREATE=false；业务库 prisma_contract 直接拥有且可 USAGE/CREATE。两库额外非系统 Schema 均为 0、public 序列均为 0；SCADA 12/12、Keycloak 101/101 public 表均直接拥有且报告所列有效表与列权限全部存在；业务 marker SELECT 与 pg_control_system EXECUTE 均 true。
+
+共享超级用户风险已获得真实目录证据，A 阶段完成，维护者同意合并。下一阶段依据当前原生仓储、固定标记/集群核验及 Keycloak 对象管理需求建立最小权限矩阵和可审查变更方案，先提交候选，不在现有库自动执行角色变更、业务 DML、DDL、权限回收、服务切换、OIDC 启用或数据卷操作。
