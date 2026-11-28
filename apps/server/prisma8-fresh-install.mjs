@@ -475,7 +475,7 @@ async function main() {
         stage = "B4 强制回滚演练";
         return runScadaB4RollbackRehearsal({
           ...options, isolationFingerprint: plan.isolationFingerprint, expectedPlanFingerprint,
-          confirm: process.argv[3],
+          confirm: process.argv[3], confirmFixtures: process.argv[4],
         });
       }
       if (action === "role-keycloak-rehearse") {

@@ -64,7 +64,7 @@ export function freshAction(args) {
     return "role-keycloak-rehearse";
   }
   if (typeof fingerprint === "string" && /^--plan-fingerprint=[a-f0-9]{64}$/u.test(fingerprint) &&
-    isDeepStrictEqual(args, ["--role-b4-rehearse", "--confirm-rehearse-scada-b4", fingerprint])) {
+    isDeepStrictEqual(args, ["--role-b4-rehearse", "--confirm-rehearse-scada-b4", "--confirm-rollback-business-fixtures", fingerprint])) {
     return "role-b4-rehearse";
   }
   if (typeof fingerprint === "string" && /^--plan-fingerprint=[a-f0-9]{64}$/u.test(fingerprint)) {

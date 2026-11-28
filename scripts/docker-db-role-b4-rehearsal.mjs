@@ -15,6 +15,7 @@ import {
 } from "./docker-db-role-restricted-writes.mjs";
 import { DockerB4PermissionReviewError, verifyScadaB4InstalledCatalog } from "./docker-db-role-b4-permission-review.mjs";
 import { DockerB4RoutineReviewError } from "./docker-db-role-b4-routine-review.mjs";
+import { DockerB4RuntimeProbeError, verifyScadaB4RuntimeProbe } from "./docker-db-role-b4-runtime-probe.mjs";
 
 export class DockerB4RehearsalError extends Error {}
 
@@ -22,6 +23,7 @@ const lockedSql =
   "SELECT pg_catalog.pg_try_advisory_xact_lock(839572941652::bigint) AS locked, current_setting('transaction_isolation') AS isolation";
 const hashPattern = /^[a-f0-9]{64}$/u;
 const confirmation = "--confirm-rehearse-scada-b4";
+const fixtureConfirmation = "--confirm-rollback-business-fixtures";
 
 function requireMatch(condition, message) {
   if (!condition) throw new DockerB4RehearsalError(message);
@@ -79,7 +81,7 @@ export function buildScadaB4RehearsalPlan({ identity, storageHash, isolationFing
   requireIdentity(identity, storageHash, isolationFingerprint);
   const statements = fixedStatements(preparation, port);
   const planFingerprint = createHash("sha256").update(JSON.stringify({
-    version: 1, serverVersion: identity.version, systemIdentifier: identity.systemIdentifier,
+    version: 2, runtimeProbeVersion: 1, serverVersion: identity.version, systemIdentifier: identity.systemIdentifier,
     storageHash, isolationFingerprint, port,
     preflightFingerprint: preparation.ownerInstallPreflight.planFingerprint,
     businessFingerprint: preparation.businessAclPreview.planFingerprint,
@@ -89,6 +91,7 @@ export function buildScadaB4RehearsalPlan({ identity, storageHash, isolationFing
     status: "SCADA_B4_REHEARSAL_PLAN_ONLY", planFingerprint,
     roleCount: statements.roles.length,
     statementCount: statements.roles.length + statements.grantsAndRoutines.length,
+    businessFixtureRehearsalRequired: true, expectedPositiveCount: 36, expectedDeniedCount: 15,
     planOnly: true, installationAllowed: false, issuerBindingVerified: false,
     admissionPassed: false, databaseWritten: false,
   };
@@ -101,11 +104,11 @@ export function buildScadaB4RehearsalPlan({ identity, storageHash, isolationFing
  * 本模块没有 CLI、正式安装或提交路径，也不将回滚演练当作业务准入。
  */
 export async function runScadaB4RollbackRehearsal({
-  confirm, identity, storageHash, isolationFingerprint, port, expectedPlanFingerprint,
+  confirm, confirmFixtures, identity, storageHash, isolationFingerprint, port, expectedPlanFingerprint,
   createClient, readIsolatedBaseline, readHostBoundary,
 }) {
   requireIdentity(identity, storageHash, isolationFingerprint);
-  requireMatch(confirm === confirmation && validHash(expectedPlanFingerprint) &&
+  requireMatch(confirm === confirmation && confirmFixtures === fixtureConfirmation && validHash(expectedPlanFingerprint) &&
     typeof createClient === "function" && typeof readIsolatedBaseline === "function" && typeof readHostBoundary === "function", "B4 演练缺少独立确认或受控宿主边界");
   buildScadaOidcCleanupRoutinePreview(port);
   const expectedHost = {
@@ -129,6 +132,7 @@ export async function runScadaB4RollbackRehearsal({
   let failure;
   let plan;
   let catalog;
+  let runtimeProbe;
   let statementsExecuted = 0;
   const checkBaseline = async (connection, readOnly) => {
     const baseline = await readIsolatedBaseline(connection, readOnly);
@@ -178,11 +182,15 @@ export async function runScadaB4RollbackRehearsal({
     stage = "安装后组合目录核验";
     catalog = await verifyScadaB4InstalledCatalog(query(client), port);
     requireMatch(catalog.installedCatalogMatched === true && statementsExecuted === plan.statementCount, "B4 演练后置目录证据不一致");
+    stage = "运行角色正反向业务夹具";
+    runtimeProbe = await verifyScadaB4RuntimeProbe(client, port);
+    requireMatch(runtimeProbe.runtimeStatementsVerified === true && runtimeProbe.fixturesRolledBack === true &&
+      runtimeProbe.positiveCount === plan.expectedPositiveCount && runtimeProbe.deniedCount === plan.expectedDeniedCount, "B4 运行角色演练证据不一致");
   } catch (error) {
     failure = "B4 演练" + stage + "失败，内部诊断已脱敏";
     if (error instanceof DockerB4RehearsalError || error instanceof DockerB4PreflightError ||
       error instanceof DockerBusinessAclPreviewError || error instanceof DockerB4PermissionReviewError ||
-      error instanceof DockerB4RoutineReviewError) failure += "；" + error.message;
+      error instanceof DockerB4RoutineReviewError || error instanceof DockerB4RuntimeProbeError) failure += "；" + error.message;
   }
   if (beginAttempted) {
     try {
@@ -227,10 +235,10 @@ export async function runScadaB4RollbackRehearsal({
     catch { failure = (failure ?? "B4 演练已回滚") + "；独立宿主核验失败，禁止重试"; }
   }
   if (failure) throw new DockerB4RehearsalError(failure + (rolledBack ? "；目录事务已收到回滚标签" : ""));
-  requireMatch(rolledBack && plan && catalog, "B4 演练未取得完整证据");
+  requireMatch(rolledBack && plan && catalog && runtimeProbe, "B4 演练未取得完整证据");
   return {
     status: "SCADA_B4_ROLLBACK_REHEARSED", planFingerprint: plan.planFingerprint,
-    catalogFingerprint: catalog.catalogFingerprint, statementsExecuted,
+    catalogFingerprint: catalog.catalogFingerprint, statementsExecuted, runtimeProbe,
     transactionCatalogMatched: true, independentBaselineMatched: true,
     rolledBack: true, committed: false, databaseWritten: false, businessDataWritten: false,
     ownerRolesPersisted: false, installationAllowed: false, issuerBindingVerified: false,

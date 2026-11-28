@@ -7,6 +7,7 @@ import { buildScadaRestrictedWritePreview, buildScadaOidcCleanupRoutinePreview }
 import { buildScadaB4PermissionExpectations } from "./docker-db-role-b4-permission-review.mjs";
 import { buildScadaB4RoutineExpectations } from "./docker-db-role-b4-routine-review.mjs";
 import { buildScadaB4RehearsalPlan, DockerB4RehearsalError, runScadaB4RollbackRehearsal } from "./docker-db-role-b4-rehearsal.mjs";
+import { createScadaB4RuntimeProbeFixture } from "./docker-db-role-b4-runtime-probe.fixture.mjs";
 
 const identity = { version: "190000", systemIdentifier: "123456789" };
 const storageHash = "a".repeat(64);
@@ -36,6 +37,7 @@ const fixedDdl = /^(CREATE ROLE |CREATE FUNCTION |ALTER FUNCTION |GRANT |REVOKE 
 
 function fixture(fault = "") {
   const calls = [];
+  const runtimeFixture = createScadaB4RuntimeProbeFixture(fault === "probe" ? "cleanup" : "");
   const permission = buildScadaB4PermissionExpectations(port);
   const groups = [permission.roles, permission.databases, permission.acl, permission.relations, permission.columns, buildScadaB4RoutineExpectations(port)];
   let ddl = 0;
@@ -48,13 +50,14 @@ function fixture(fault = "") {
     const label = readOnly ? "只读" : "演练";
     const client = {
       async connect() { calls.push([label, "连接"]); if (fault === "connect" && !readOnly) throw new Error("模拟敏感错误"); },
-      async query(sql) {
+      async query(sql, values = []) {
         calls.push([label, sql]);
         if (sql.startsWith("BEGIN")) return { command: fault === "begin" && !readOnly ? "SELECT" : "BEGIN" };
         if (sql === "ROLLBACK") {
           if (fault === "rollback" && !readOnly || fault === "read-rollback" && readOnly) throw new Error("模拟敏感错误");
           return { command: fault === "rollback-tag" && !readOnly ? "SELECT" : "ROLLBACK" };
         }
+        if (!readOnly && post === groups.length && ddl === 92) return runtimeFixture.client.query(sql, values);
         if (sql.includes("pg_try_advisory_xact_lock")) return { rows: [{ locked: fault !== "lock", isolation: "serializable" }] };
         if (sql.includes('AS "candidateOwnerCount"')) {
           assert.ok(sql.includes("current_setting('transaction_read_only') = '" + (readOnly ? "on" : "off") + "'"));
@@ -93,7 +96,7 @@ function fixture(fault = "") {
     if (!readOnly) first = client;
     return fault === "reuse" && readOnly ? first : client;
   };
-  const options = { identity, storageHash, isolationFingerprint, port, confirm,
+  const options = { identity, storageHash, isolationFingerprint, port, confirm, confirmFixtures: "--confirm-rollback-business-fixtures",
     expectedPlanFingerprint: buildScadaB4RehearsalPlan(planInput()).planFingerprint,
     createClient: makeClient,
     readHostBoundary: async () => {
@@ -119,6 +122,9 @@ void test("固定计划绑定集群、存储、隔离、端口和真实候选，
   const plan = buildScadaB4RehearsalPlan(input);
   assert.equal(plan.roleCount, 3);
   assert.equal(plan.statementCount, 92);
+  assert.equal(plan.businessFixtureRehearsalRequired, true);
+  assert.equal(plan.expectedPositiveCount, 36);
+  assert.equal(plan.expectedDeniedCount, 15);
   assert.equal(plan.planOnly, true);
   assert.equal(plan.installationAllowed, false);
   assert.equal(plan.issuerBindingVerified, false);
@@ -159,6 +165,10 @@ void test("完整演练严格按候选顺序执行九十二条语句并独立只
   assert.deepEqual(calls.slice(independentStart - 2, independentStart + 2), [["演练", "ROLLBACK"], ["演练", "关闭"], ["只读", "连接"], ["只读", "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"]]);
   assert.deepEqual(calls.slice(-2), [["只读", "ROLLBACK"], ["只读", "关闭"]]);
   assert.equal(result.statementsExecuted, 92);
+  assert.equal(result.runtimeProbe.positiveCount, 36);
+  assert.equal(result.runtimeProbe.deniedCount, 15);
+  assert.equal(result.runtimeProbe.fixturesRolledBack, true);
+  assert.equal(result.runtimeProbe.rowLockConcurrencyVerified, false);
   assert.equal(result.transactionCatalogMatched, true);
   assert.equal(result.independentBaselineMatched, true);
   assert.equal(result.rolledBack, true);
@@ -166,7 +176,7 @@ void test("完整演练严格按候选顺序执行九十二条语句并独立只
 });
 
 void test("缺少独立确认、无效指纹或端口时不创建连接", async () => {
-  for (const change of [{ confirm: undefined }, { confirm: "--apply" }, { expectedPlanFingerprint: "bad" }, { port: "18443;" }, { identity: { ...identity, version: "190001" } }, { readIsolatedBaseline: undefined }, { readHostBoundary: undefined }]) {
+  for (const change of [{ confirm: undefined }, { confirm: "--apply" }, { confirmFixtures: undefined }, { confirmFixtures: "--apply" }, { expectedPlanFingerprint: "bad" }, { port: "18443;" }, { identity: { ...identity, version: "190001" } }, { readIsolatedBaseline: undefined }, { readHostBoundary: undefined }]) {
     const { options, calls } = fixture();
     await assert.rejects(() => runScadaB4RollbackRehearsal({ ...options, ...change }));
     assert.deepEqual(calls, []);
@@ -184,7 +194,7 @@ void test("锁、未隔离基线、计划指纹、可写前置或函数校验设
 });
 
 void test("新角色越权、目录语句异常及后置漂移立即停止并独立回滚核验", async () => {
-  for (const [fault, count] of [["owner", 3], ["ddl-error", 5], ["ddl-tag", 5], ["post", 92]]) {
+  for (const [fault, count] of [["owner", 3], ["ddl-error", 5], ["ddl-tag", 5], ["post", 92], ["probe", 92]]) {
     const { options, calls } = fixture(fault);
     await assert.rejects(() => runScadaB4RollbackRehearsal(options), (error) => {
       assert.match(error.message, /已收到回滚标签/u);
