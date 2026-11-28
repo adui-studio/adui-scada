@@ -298,7 +298,9 @@ assert.ok(
     !packageScripts["docker:up"].includes("role-review"),
   "真实数据库角色核查必须独立执行",
 );
-assert.ok(packageScripts["test:docker"].includes("scripts/docker-db-role-bootstrap-plan.cases.mjs"));
+assert.ok(
+  packageScripts["test:docker"].includes("scripts/docker-db-role-bootstrap-plan.cases.mjs"),
+);
 assert.equal(
   packageScripts["docker:db:role:plan"],
   "node apps/server/prisma8-fresh-install.mjs --role-plan",

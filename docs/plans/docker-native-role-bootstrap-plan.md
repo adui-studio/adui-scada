@@ -16,15 +16,15 @@ A 阶段维护者实测 PostgreSQL 19.0，当前 adui_scada 是两个逻辑库�
 
 ## 2. 固定准备预览（不是执行许可）
 
-| 对象 | 本批 SQL 预览 | 不授予 |
-| --- | --- | --- |
-| adui_scada_runtime | NOLOGIN、无密码、NOSUPERUSER、NOCREATEDB、NOCREATEROLE、NOREPLICATION、NOBYPASSRLS、NOINHERIT | 登录、成员关系、管理权限、所有权 |
-| adui_scada_keycloak_runtime | 同样的 NOLOGIN 属性及本库 CONNECT | 登录、业务库权限、Schema 创建、对象所有权、Keycloak DML |
-| SCADA 数据库 | 显式 CONNECT | CREATE、直接新增 TEMP 权限 |
-| public、prisma_contract | SCADA 运行角色 USAGE | CREATE |
-| public.scada_projects | SELECT (tenant_id, project_id, head_revision)，仅覆盖当前 Provider 启动缺失工程查询 | 整表读写、正式工程 API 权限 |
-| prisma_contract.marker | SELECT (space, core_hash)，仅覆盖当前契约标记查询 | UPDATE、DELETE、DDL |
-| pg_catalog.pg_control_system() | SCADA 运行角色精确 EXECUTE | 广泛监控角色或超级用户权限 |
+| 对象                           | 本批 SQL 预览                                                                                 | 不授予                                                  |
+| ------------------------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| adui_scada_runtime             | NOLOGIN、无密码、NOSUPERUSER、NOCREATEDB、NOCREATEROLE、NOREPLICATION、NOBYPASSRLS、NOINHERIT | 登录、成员关系、管理权限、所有权                        |
+| adui_scada_keycloak_runtime    | 同样的 NOLOGIN 属性及本库 CONNECT                                                             | 登录、业务库权限、Schema 创建、对象所有权、Keycloak DML |
+| SCADA 数据库                   | 显式 CONNECT                                                                                  | CREATE、直接新增 TEMP 权限                              |
+| public、prisma_contract        | SCADA 运行角色 USAGE                                                                          | CREATE                                                  |
+| public.scada_projects          | SELECT (tenant_id, project_id, head_revision)，仅覆盖当前 Provider 启动缺失工程查询           | 整表读写、正式工程 API 权限                             |
+| prisma_contract.marker         | SELECT (space, core_hash)，仅覆盖当前契约标记查询                                             | UPDATE、DELETE、DDL                                     |
+| pg_catalog.pg_control_system() | SCADA 运行角色精确 EXECUTE                                                                    | 广泛监控角色或超级用户权限                              |
 
 预览包含两条固定 CREATE ROLE 和六条固定 GRANT，均以 adui_scada 为执行数据库预案；CREATE ROLE 是集群范围操作。命令仅输出这些固定文本与状态，不连接新角色，不执行任何 CREATE、GRANT、REVOKE 或 ALTER。NOLOGIN 并非完整的有效权限隔离，其他角色成员关系和 PUBLIC 仍须核查；当前 PUBLIC CONNECT 允许连接，不得把上述显式 CONNECT 解释为对其他库的拒绝。实际创建和授权仍需维护者单独明确授权及下一批受控执行器，禁止直接复制预览 SQL 执行。
 
@@ -32,20 +32,20 @@ A 阶段维护者实测 PostgreSQL 19.0，当前 adui_scada 是两个逻辑库�
 
 已核对 [原生会话](../../apps/server/src/auth/prisma8-session-operations.ts)、[OIDC 登录事务](../../apps/server/src/auth/prisma8-oidc-login-operations.ts)、[授权读取](../../apps/server/src/auth/prisma8-authorization-read-store.ts)、[工程版本](../../apps/server/src/projects/prisma8-runtime-project-version-store.ts)、[工程查询](../../apps/server/src/projects/prisma8-project-query-store.ts)、[发布仓储](../../apps/server/src/projects/prisma8-runtime-project-release-store.ts)、[历史归档](../../apps/server/src/history/prisma8-tag-history-store.ts)、[原生 Provider](../../apps/server/src/database/prisma8.service.ts) 的当前真实语句。下表描述业务实际访问，不是本批 GRANT 白名单，也不替代逐列 SQL 检查和实际角色测试。
 
-| 业务表 | 当前代码的必要读取/修改范围 | 不得据此放开 |
-| --- | --- | --- |
-| scada_identities | 可信主体查询及 FOR SHARE 锁 | 直接修改主体状态、租户或主体标识 |
-| scada_external_identities | 预绑定映射读取 | 自动创建映射或改租户 |
-| scada_auth_sessions | 查询、签发 INSERT、仅 revoked_at 更新；发布读取锁会话 | 任意会话字段修改或删除 |
-| scada_oidc_transactions | 创建、条件消费 consumed_at、按 Issuer 和过期条件有界 DELETE | 任意清表或复用登录事务 |
-| scada_projects | 列表及详情、创建 INSERT、head_revision/updated_at CAS 更新及行锁 | 删除工程、任意修改租户或主键 |
-| scada_project_grants | 完整 ACL 读取；创建工程时固定三项权限 INSERT；发布读取行锁 | 任意授权、提升为发布权限 |
-| scada_project_versions | 不可变版本 INSERT 与读取；发布读取 FOR SHARE | 更新或删除历史快照 |
-| scada_project_audit | 版本成功审计 INSERT 与回读 | 修改或删除审计 |
-| scada_project_release_state | 创建工程时初始化代次 0；当前发布读取锁 | 发布指针 UPDATE、代次推进 |
-| scada_project_release_events | 当前发布事件读取与锁；发布写路径受固定安全门禁拒绝 | INSERT/UPDATE/DELETE 正式发布事件 |
-| scada_tag_history_batches | 内部归档批次 INSERT、冲突读取 | 更新或删除已提交批次 |
-| scada_tag_history_records | 内部明细批量 INSERT 与有界读取 | 更新或删除历史记录 |
+| 业务表                       | 当前代码的必要读取/修改范围                                      | 不得据此放开                      |
+| ---------------------------- | ---------------------------------------------------------------- | --------------------------------- |
+| scada_identities             | 可信主体查询及 FOR SHARE 锁                                      | 直接修改主体状态、租户或主体标识  |
+| scada_external_identities    | 预绑定映射读取                                                   | 自动创建映射或改租户              |
+| scada_auth_sessions          | 查询、签发 INSERT、仅 revoked_at 更新；发布读取锁会话            | 任意会话字段修改或删除            |
+| scada_oidc_transactions      | 创建、条件消费 consumed_at、按 Issuer 和过期条件有界 DELETE      | 任意清表或复用登录事务            |
+| scada_projects               | 列表及详情、创建 INSERT、head_revision/updated_at CAS 更新及行锁 | 删除工程、任意修改租户或主键      |
+| scada_project_grants         | 完整 ACL 读取；创建工程时固定三项权限 INSERT；发布读取行锁       | 任意授权、提升为发布权限          |
+| scada_project_versions       | 不可变版本 INSERT 与读取；发布读取 FOR SHARE                     | 更新或删除历史快照                |
+| scada_project_audit          | 版本成功审计 INSERT 与回读                                       | 修改或删除审计                    |
+| scada_project_release_state  | 创建工程时初始化代次 0；当前发布读取锁                           | 发布指针 UPDATE、代次推进         |
+| scada_project_release_events | 当前发布事件读取与锁；发布写路径受固定安全门禁拒绝               | INSERT/UPDATE/DELETE 正式发布事件 |
+| scada_tag_history_batches    | 内部归档批次 INSERT、冲突读取                                    | 更新或删除已提交批次              |
+| scada_tag_history_records    | 内部明细批量 INSERT 与有界读取                                   | 更新或删除历史记录                |
 
 当前工程读取、身份签发及发布读取存在 PostgreSQL FOR SHARE / FOR UPDATE 行锁。PostgreSQL 19 [权限文档](https://www.postgresql.org/docs/19/ddl-priv.html) 明确此类查询除 SELECT 外还要求至少一列 UPDATE 权限；严格只读事务亦不能使用这些行锁。因此不能只给 SELECT 后声称既有根模块全部能运行，也不能为通过测试给身份状态、ACL、不可变版本或发布事件任意 UPDATE。项目现有 [发布安全门禁](../../apps/server/src/projects/project-release-safety-gate.ts) 固定拒绝，保持不变。实际角色只提供数据库对象权限边界，不代替应用租户/ACL/CAS；后续须评审能保持现有锁内授权、不可变性和并发语义的最小方案（包括是否需要专用锁入口）。不得直接取消行锁，不将整个表 UPDATE 当作锁权限捷径；涉及 SQL 函数、额外 Schema 或对象变动须专项评审其安全、search_path、权限与严格原生契约影响。
 
