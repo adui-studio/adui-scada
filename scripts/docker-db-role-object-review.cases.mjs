@@ -21,7 +21,7 @@ function fixture() {
 async function inspect(data) {
   let index = 0;
   const calls = [];
-  const result = await readDockerRoleObjectInventory(async (step, sql) => {
+  const result = await readDockerRoleObjectInventory(async (_step, sql) => {
     calls.push(sql);
     return { rows: data[index++] };
   });
@@ -64,4 +64,13 @@ void test("未知对象类型、重复标识、缺少固定角色及不完整证
     change(data);
     await assert.rejects(() => inspect(data), /目录证据缺失或形状不一致/u);
   }
+});
+
+void test("空共享角色依赖清单可正常报告，但不构成权限审批", async () => {
+  const data = fixture();
+  data[2] = [];
+  const report = await inspect(data);
+  assert.equal(report.dependencyCount, 0);
+  assert.equal(report.ownershipTransferAllowed, false);
+  assert.equal(report.businessAclApproved, false);
 });

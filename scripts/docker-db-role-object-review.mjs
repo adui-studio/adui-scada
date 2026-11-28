@@ -84,7 +84,7 @@ export async function readDockerRoleObjectInventory(query) {
     new Set(rows.map((row) => row.kind + ":" + row.id)).size === rows.length);
   requireMatch(rows.some((row) => row.kind === "schema") && rows.some((row) => row.kind === "relation"));
   const dependencies = (await query("共享角色依赖", dependenciesSql)).rows;
-  requireMatch(Array.isArray(dependencies) && dependencies.length > 0 && dependencies.length <= 100000 &&
+  requireMatch(Array.isArray(dependencies) && dependencies.length <= 100000 &&
     dependencies.every((row) => exactKeys(row, ["classOid", "objectOid", "subId", "roleOid", "kind"]) &&
       oid(row.classOid) && oid(row.objectOid) && oid(row.roleOid) && Number.isSafeInteger(row.subId) &&
       row.subId >= 0 && typeof row.kind === "string" && /^[a-z]$/u.test(row.kind)) &&

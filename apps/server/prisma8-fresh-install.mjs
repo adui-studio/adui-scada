@@ -442,7 +442,7 @@ async function main() {
           readDirectory: readDockerBusinessRoleDirectory,
         });
         stage = "独立隔离事务";
-        const result = await execute(isolationMode, directoryReport, isolationMode === "status" ? "" : process.argv.at(-1).slice("--plan-fingerprint=".length));
+        const result = await execute(isolationMode, directoryReport, isolationMode === "status" ? "" : (process.argv.at(-1) ?? "").slice("--plan-fingerprint=".length));
         if (isolationMode === "status") {
           requireMatch(isDeepStrictEqual(inspectDocker(true), identity), "隔离状态核查后集群发生变化");
           return result;
