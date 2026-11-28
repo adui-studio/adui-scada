@@ -2133,3 +2133,12 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-db-role-b4-permission-review.mjs`：新增 `verifyScadaB4CompletedCatalog`，双库只读投影组合及精确共享依赖；原六查询安装后核验保持严格基线。当前为内部校验器，未接实际宿主或 CLI。
 - `scripts/docker-db-role-b4-rehearsal.mjs`：原连接未确认关闭时不启动独立复核；专项测试扩展。
 - `scripts/docker-db-role-b4-phase.cases.mjs`：三项 Node 独立回归，纳入 test:docker；Keycloak 增三项及 SCADA 回滚增一项组合回归，后两组待真实 Node 复跑。
+
+### B4 原生业务仓储例程接入
+
+- `apps/server/src/database/prisma8-b4-routines.ts`：九条固定行锁例程及原子工程首版查询适配，严格绑定参数、文本列和首版状态，不回退直接表操作。
+- `apps/server/src/auth/prisma8-session-operations.ts`：签发会话改用活动身份共享锁例程。
+- `apps/server/src/projects/prisma8-runtime-project-version-store.ts`：首版例程及同事务快照/审计/初始状态/ACL 回读，追加锁内身份与授权复核。
+- `apps/server/src/projects/prisma8-runtime-project-release-store.ts`：发布读、发布与内部回滚的受保护行锁接入固定例程；安全门禁保持。
+- `scripts/docker-db-role-b4-native-routines.cases.mjs`：五项 Node 模拟事务专项，纳入 test:docker；三组现有原生仓储 Vitest 测试同步更新。
+- OIDC 固定 Issuer 清理、真实宿主及持久化、实际并发与权限验收仍待完成；当前未切换部署身份。

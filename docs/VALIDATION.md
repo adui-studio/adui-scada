@@ -5571,3 +5571,9 @@ Node.js 22.16.0 实测新增隔离预览核心、测试文件 node --check 均�
 - 代码提交 cd4bbc47c5ab452d48fe20b3fc0bb9cda5805174。Node.js 22.16.0 实际 `node --check` 两个跨阶段文件通过；`node --test scripts/docker-db-role-b4-phase.cases.mjs` 3/3，零失败、零跳过。首次三项通过后将测试稀疏数组字面量替换为设置数组长度构造相同稀疏输入，再次三项通过。最终模块/测试 Git Blob 71ab57b847329554245659126910c5ccf860962c / 67f1511221caf858701f584a3cd69b710fcc59a7 与本地实测完全一致。
 - 另外对六个候选源码/测试进行 V8 去除导入/导出声明后的语法解析（不是 node --check）；利用实际远端模块与夹具运行双库目录编排成功链、旧门禁及错误指纹、Keycloak 所有权、Keycloak ACL、SCADA 依赖和角色五类负例。V8 环境首次缺 URL 全局而失败，补充仅供探索的固定 URL 替身后通过；摘要、深比较和克隆均为外围替身，不能当作原生 Node、真实 SHA-256 指纹或完整集成测试证据。新增加的三项 Keycloak、一项 SCADA 回滚 Node 用例尚未实际运行。
 - 协作环境 git 远程 DNS 失败，无 pnpm/vp/Docker/psql；未运行完整 test:docker、messages/docs、ready、真实 PostgreSQL、真实 SQL、Docker 或服务切换。真实 B4 集中验收未到条件。
+
+### 2026-11-28 · PR #262 B4 原生例程适配局部验证
+
+- 源码提交 f8930a8c597ea2b117b23fadc2c05c2c81825eac。协作容器 Node.js 22.16.0 实际运行 `node --experimental-strip-types --test scripts/docker-db-role-b4-native-routines.cases.mjs`，五项全部通过、零失败零跳过、退出 0；该版本 Node 输出类型剥离实验性提示。测试通过既有 `nativeTextTransaction` 使用模拟 Prisma 原生事务驱动，验证九例程固定签名、列映射、参数顺序、原子首版三种状态、无效结果、无回退和绑定参数；不是实际 PostgreSQL 例程或事务执行。
+- 本地测试源文件与远端 Git Blob 逐字节核验一致：例程适配 f0530f54d044060e8d6347585048fffc18d6733e，既有文本事务适配 a85164e465f0a1fed66ea2494c42034b4744c638，测试 7e498e9521b442c952dcb3ba444c79dcf3c59c1c。重新运行上批跨阶段独立 Node 专项 3/3，未重跑其余组合测试。
+- 三组原生仓储 Vitest 测试已按新调用计划更新，尚无运行证据；完整 test:docker、Vite+、中文文案/文档、ready 及真实 PostgreSQL、Docker 未执行。当前协作容器 GitHub DNS 无法解析、没有完整克隆和 pnpm/vp/Docker/psql，不将局部验证扩展为全仓通过。固定例程未安装时上述业务操作按设计失败，B4 真实集中验收尚未具备条件。
