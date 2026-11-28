@@ -5521,3 +5521,7 @@ Node.js 22.16.0 实测新增隔离预览核心、测试文件 node --check 均�
 ### B4 业务列权限候选（累计开发）
 
 新增业务列权限清单、固定目录 SELECT、B2 三项启动读权矩阵、待评审 GRANT 文本及五项行锁/三项受限写入阻塞。修正例程配置数组及锁专用角色报告，新增契约对照、权限漂移、保护表写入拒绝与例程设置测试。完整项目 Vite+、PostgreSQL、Docker、实际授权及 MVP 端到端均尚未验收；本批无真实数据库变更。局部测试结果将在实际执行后独立登记。
+
+### 2026-11-28 · B4 业务列权限及对象评审局部复验
+
+协作容器 Node.js 22.16.0 实际执行四个变更模块/测试文件的 node --check（退出 0）。`node --test scripts/docker-db-role-business-acl.cases.mjs` 5/5，通过真实 Git 原生契约文件的 12 表/85 列对照；`node --test scripts/docker-db-role-object-review.cases.mjs` 7/7，使用模拟目录及未被用例调用、调用即抛错的两个外围连接依赖替身。两组共 12/12、零失败、零跳过；不是完整 test:docker。模块/测试 Git Blob 分别为 8fc36c801048255151ac624bbebd8a1bf82c01f0、bd3b2b93bcff3e7e7f5918784e9e39494b23ef5e、71e1e6d2c7ce3edbb73d605057752fe3f8e4016b、87502ea5630446595be0a7e34db7f87c91b43973，原生契约 b325d67b3e212c94bbbe51da9dada79cdf343294，逐个复算与远端一致。纯函数固定夹具输出 22 条待评审列级 GRANT、72 个新增 SELECT 列权限、47 个 INSERT 列权限、4 个 UPDATE 列权限、8 项阻塞；候选指纹 21c5df043b16f96e848aafe73435776969532fbd05f7acc0f13ffe5ce05b732c，admissionPassed=false。实际 Git 网络访问失败（无法解析 github.com），无 pnpm、Vite+、Docker、psql；未克隆完整仓库，未执行全仓质量链、实际 PostgreSQL 权限查询、真实双库事务、任何授权语句或服务切换。真实目录及权限语义仍待累计验收。
