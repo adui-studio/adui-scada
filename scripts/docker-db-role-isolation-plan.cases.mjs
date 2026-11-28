@@ -1,0 +1,145 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { buildDockerRoleIsolationPlan } from "./docker-db-role-isolation-plan.mjs";
+
+const hash = "a".repeat(64);
+const identity = { version: "190000", systemIdentifier: "123456789" };
+const names = ["adui_scada", "adui_scada_runtime", "adui_scada_keycloak_runtime", "pg_database_owner"];
+const ids = ["10", "24592", "24593", "6171", "3373", "3374", "3375", "3377", "4200", "4544",
+  "4550", "4569", "4570", "4571", "6181", "6182", "6304", "6337", "6392"];
+const expectedSql = [
+  "REVOKE CONNECT, TEMPORARY ON DATABASE adui_scada FROM PUBLIC RESTRICT",
+  "REVOKE CONNECT, TEMPORARY ON DATABASE adui_scada_keycloak FROM PUBLIC RESTRICT",
+  "REVOKE CONNECT, TEMPORARY ON DATABASE postgres FROM PUBLIC RESTRICT",
+  "REVOKE CONNECT ON DATABASE template0 FROM PUBLIC RESTRICT",
+  "REVOKE CONNECT ON DATABASE template1 FROM PUBLIC RESTRICT",
+];
+
+function fixture() {
+  const roles = ids.map((id, i) => ({
+    oid: id, name: names[i] ?? null, login: i === 0, superuser: i === 0, inherit: i !== 1 && i !== 2,
+  }));
+  const databases = [
+    { oid: "16384", name: "adui_scada", ownerOid: "10", allowConnections: true, template: false,
+      connectionLimit: -1, defaultAcl: false, aclEntryCount: 6, publicConnect: true, publicTemporary: true, publicCreate: false },
+    { oid: "16385", name: "adui_scada_keycloak", ownerOid: "10", allowConnections: true, template: false,
+      connectionLimit: -1, defaultAcl: false, aclEntryCount: 6, publicConnect: true, publicTemporary: true, publicCreate: false },
+    { oid: "5", name: "postgres", ownerOid: "10", allowConnections: true, template: false,
+      connectionLimit: -1, defaultAcl: true, aclEntryCount: 5, publicConnect: true, publicTemporary: true, publicCreate: false },
+    { oid: "4", name: "template0", ownerOid: "10", allowConnections: false, template: true,
+      connectionLimit: -1, defaultAcl: false, aclEntryCount: 4, publicConnect: true, publicTemporary: false, publicCreate: false },
+    { oid: "1", name: "template1", ownerOid: "10", allowConnections: true, template: true,
+      connectionLimit: -1, defaultAcl: false, aclEntryCount: 4, publicConnect: true, publicTemporary: false, publicCreate: false },
+  ];
+  const acl = [];
+  for (const database of databases) {
+    const row = (granteeOid, privilege) => ({ databaseOid: database.oid, grantorOid: "10", granteeOid, privilege, grantable: false });
+    acl.push(row("10", "CONNECT"), row("10", "TEMPORARY"), row("10", "CREATE"), row("0", "CONNECT"));
+    if (database.publicTemporary) acl.push(row("0", "TEMPORARY"));
+    if (database.name === "adui_scada") acl.push(row("24592", "CONNECT"));
+    if (database.name === "adui_scada_keycloak") acl.push(row("24593", "CONNECT"));
+  }
+  return {
+    status: "DOCKER_DB_ROLE_ISOLATION_INSPECT_READY", serverVersion: "190000", storageHash: hash,
+    directoryReviewPassed: true, rolesPrepared: true, committed: false, rolledBack: true,
+    catalogStatementsExecuted: false, databaseWritten: false, businessDataWritten: false, admissionPassed: false,
+    serviceSwitched: false, publicConnectRetained: true,
+    inventory: {
+      databases, roles, acl,
+      effective: databases.flatMap((db) => ids.map((id) => ({
+        databaseOid: db.oid, roleOid: id, connect: true, temporary: id === "10" || db.publicTemporary, create: id === "10",
+      }))),
+      memberships: ["3374", "3375", "3377"].map((roleOid) => ({
+        roleOid, memberOid: "3373", grantorOid: "10", admin: false, inherit: true, setRole: true,
+      })),
+      sessions: [{ databaseOid: "16384", roleOid: "10", total: 2 }, { databaseOid: "16385", roleOid: "10", total: 2 }],
+      unknownLoginRoleCount: 0, unknownDatabaseCount: 0, unresolvedSessionCount: 0,
+      consumerReviewRequired: true, changeAllowed: false, isolationPassed: false,
+    },
+  };
+}
+
+void test("完整基线只生成分组预览，精确移除八项公共授权且保留十七项直接授权", () => {
+  const input = fixture();
+  const before = structuredClone(input);
+  const result = buildDockerRoleIsolationPlan(input, identity, hash);
+  assert.deepEqual(input, before);
+  assert.equal(result.status, "DOCKER_DB_ROLE_ISOLATION_PLAN_READY");
+  assert.equal(result.databaseCount, 5);
+  assert.equal(result.roleCount, 19);
+  assert.equal(result.aclEntryCount, 25);
+  assert.equal(result.publicAclRemovalCount, 8);
+  assert.equal(result.projectedAclEntryCount, 17);
+  assert.equal(result.effectiveEntryCount, 95);
+  assert.deepEqual(result.sqlPreview, expectedSql);
+  assert.deepEqual(result.groups.map((group) => [group.scope, group.separateApprovalRequired, group.sqlPreview.length]),
+    [["BUSINESS", true, 2], ["MAINTENANCE", true, 1], ["TEMPLATE", true, 2]]);
+  assert.equal(result.planOnly, true);
+  assert.equal(result.consumerReviewRequired, true);
+  assert.equal(result.publicConnectRetained, true);
+  assert.equal(result.rolledBack, true);
+  assert.ok([result.committed, result.catalogStatementsExecuted, result.databaseWritten, result.businessDataWritten,
+    result.serviceSwitched, result.admissionPassed, result.isolationPassed, result.changeAllowed].every((flag) => flag === false));
+});
+
+void test("预测两个运行角色只能连接各自数据库，管理身份及模板连接标志保持不变", () => {
+  const result = buildDockerRoleIsolationPlan(fixture(), identity, hash);
+  assert.deepEqual(result.projected.map((row) => row.namedRoles.map((role) => role.connect)),
+    [[true, true, false], [true, false, true], [true, false, false], [true, false, false], [true, false, false]]);
+  assert.ok(result.projected.every((row) => row.namedRoles.every((role, i) => role.temporary === (i === 0) && role.create === (i === 0))));
+  assert.deepEqual(result.projected.map((row) => [row.connectLostRoleCount, row.temporaryLostRoleCount]),
+    [[17, 18], [17, 18], [18, 18], [18, 0], [18, 0]]);
+  assert.equal(result.projected[2].currentAclSource, "DEFAULT");
+  assert.equal(result.projected[2].projectedAclSource, "EXPLICIT");
+  assert.equal(result.projected[3].allowConnections, false);
+});
+
+void test("目录顺序和瞬时连接数量不改变指纹，集群及候选角色标识改变则改变指纹", () => {
+  const input = fixture();
+  const first = buildDockerRoleIsolationPlan(input, identity, hash);
+  for (const rows of [input.inventory.databases, input.inventory.roles, input.inventory.acl, input.inventory.effective, input.inventory.memberships, input.inventory.sessions]) rows.reverse();
+  input.inventory.sessions[0].total = 7;
+  const second = buildDockerRoleIsolationPlan(input, identity, hash);
+  assert.match(first.planFingerprint, /^[a-f0-9]{64}$/u);
+  assert.equal(first.planFingerprint, second.planFingerprint);
+  assert.notEqual(first.planFingerprint, buildDockerRoleIsolationPlan(input, { ...identity, systemIdentifier: "123456790" }, hash).planFingerprint);
+  const next = JSON.parse(JSON.stringify(input).replaceAll('"24592"', '"24594"'));
+  assert.notEqual(first.planFingerprint, buildDockerRoleIsolationPlan(next, identity, hash).planFingerprint);
+});
+
+void test("未知消费者、权限漂移、额外角色和数据库及目录引用异常一律拒绝", () => {
+  for (const change of [
+    (report) => { report.rolledBack = false; },
+    (report) => { report.inventory.unknownLoginRoleCount = 1; },
+    (report) => { report.inventory.unknownDatabaseCount = 1; },
+    (report) => { report.inventory.unresolvedSessionCount = 1; },
+    (report) => { report.inventory.roles[1].login = true; },
+    (report) => { report.inventory.roles.push({ ...report.inventory.roles[4], oid: "90000" }); },
+    (report) => { report.inventory.databases.push({ ...report.inventory.databases[0], oid: "90000", name: null }); },
+    (report) => { report.inventory.databases[2].defaultAcl = false; },
+    (report) => { report.inventory.databases[3].allowConnections = true; },
+    (report) => { report.inventory.acl[0].grantable = true; },
+    (report) => { report.inventory.acl.pop(); },
+    (report) => { report.inventory.effective[1].create = true; },
+    (report) => { report.inventory.effective[0] = report.inventory.effective[1]; },
+    (report) => { report.inventory.memberships[0].memberOid = "24592"; },
+    (report) => { report.inventory.sessions[0].roleOid = "24592"; },
+    (report) => { report.inventory.sessions[0].databaseOid = "4"; },
+    (report) => { report.inventory.sessions[0].total = 0; },
+    (report) => { report.inventory.sessions[0].query = "模拟敏感正文"; },
+  ]) {
+    const input = fixture();
+    change(input);
+    assert.throws(() => buildDockerRoleIsolationPlan(input, identity, hash), (error) => {
+      assert.match(error.message, /基线不一致，禁止生成隔离预览/u);
+      assert.doesNotMatch(error.message, /模拟敏感正文/u);
+      return true;
+    });
+  }
+});
+
+void test("拒绝非固定服务器版本、错误存储标记及无效集群标识", () => {
+  assert.throws(() => buildDockerRoleIsolationPlan(fixture(), { ...identity, version: "190001" }, hash), /只读报告及集群基线不一致/u);
+  assert.throws(() => buildDockerRoleIsolationPlan(fixture(), { ...identity, systemIdentifier: "模拟敏感标识" }, hash), /只读报告及集群基线不一致/u);
+  assert.throws(() => buildDockerRoleIsolationPlan(fixture(), identity, "b".repeat(64)), /只读报告及集群基线不一致/u);
+});

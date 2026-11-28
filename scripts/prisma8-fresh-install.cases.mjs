@@ -46,7 +46,7 @@ function plan(extra = {}) {
   });
 }
 
-void test("全新入口仅接受明确十三种操作，裸命令不能写入", () => {
+void test("全新入口仅接受明确十四种操作，裸命令不能写入", () => {
   assert.equal(freshAction(["--emit"]), "emit");
   assert.equal(freshAction(["--preview"]), "preview");
   assert.equal(freshAction([freshConfirmation]), "initialize");
@@ -55,6 +55,9 @@ void test("全新入口仅接受明确十三种操作，裸命令不能写入", 
   assert.equal(freshAction(["--role-plan"]), "role-plan");
   assert.equal(freshAction(["--role-bootstrap-status"]), "role-bootstrap-status");
   assert.equal(freshAction(["--role-isolation-inspect"]), "role-isolation-inspect");
+  assert.equal(freshAction(["--role-isolation-plan"]), "role-isolation-plan");
+  assert.throws(() => freshAction(["--role-isolation-plan", "--apply"]), /必须明确指定/u);
+  assert.throws(() => freshAction(["--role-isolation-plan", freshConfirmation]), /必须明确指定/u);
   assert.throws(() => freshAction(["--role-isolation-inspect", "--apply"]), /必须明确指定/u);
   assert.throws(
     () => freshAction(["--role-isolation-inspect", freshConfirmation]),
