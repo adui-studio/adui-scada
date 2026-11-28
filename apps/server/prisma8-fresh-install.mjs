@@ -5,11 +5,16 @@ import { isDeepStrictEqual } from "node:util";
 import { Client } from "pg";
 import { createDockerDatabaseUrl } from "../../scripts/init-docker-db.mjs";
 import {
+  DockerRoleBootstrapError,
+  runDockerRoleBootstrap,
+} from "../../scripts/docker-db-role-bootstrap.mjs";
+import {
   buildDockerRoleBootstrapPlan,
   DockerRolePlanError,
 } from "../../scripts/docker-db-role-bootstrap-plan.mjs";
 import {
   DockerRoleReviewError,
+  readDockerBusinessRoleDirectory,
   reviewDockerDatabaseRoles,
 } from "../../scripts/docker-db-role-review.mjs";
 import { offlineEnvironment, resolveFreshCli } from "../../scripts/prisma8-fresh-cli-support.mjs";
@@ -340,7 +345,11 @@ async function main() {
   );
   const readOnly = freshConnection(base, true);
   const writable = freshConnection(base, false);
-  const reviewRoles = action === "role-review" || action === "role-plan";
+  const bootstrapMode =
+    action === "role-rehearse" ? "rehearse" :
+    action === "role-create" ? "create" :
+    action === "role-bootstrap-status" ? "status" : null;
+  const reviewRoles = action === "role-review" || action === "role-plan" || bootstrapMode !== null;
   const identity = inspectDocker(reviewRoles);
   const parse = (text) => {
     try {
@@ -369,24 +378,72 @@ async function main() {
     stage = "真实中文注释核验";
     await checkComments(readOnly, identity, contract, commentText, false);
     if (reviewRoles) {
-      stage = "双库角色及有效权限只读核查";
-      const roleReport = await reviewDockerDatabaseRoles(
-        (database) => {
-          const target = new URL(readOnly);
-          target.pathname = database === "adui_scada" ? "/adui_scada" : "/adui_scada_keycloak";
-          return databaseClient(target.toString());
-        },
-        identity,
-        freshStorageHash,
-      );
-      requireMatch(
-        isDeepStrictEqual(inspectDocker(true), identity),
-        "角色核查后本机 Docker 集群发生变化",
-      );
-      const directoryReport = { ...roleReport, ...report, serverVersion: identity.version };
+      const loadDirectoryReport = async () => {
+        stage = "双库角色及有效权限只读核查";
+        const roleReport = await reviewDockerDatabaseRoles(
+          (database) => {
+            const target = new URL(readOnly);
+            target.pathname = database === "adui_scada" ? "/adui_scada" : "/adui_scada_keycloak";
+            return databaseClient(target.toString());
+          },
+          identity,
+          freshStorageHash,
+        );
+        requireMatch(
+          isDeepStrictEqual(inspectDocker(true), identity),
+          "角色核查后本机 Docker 集群发生变化",
+        );
+        return { ...roleReport, ...report, serverVersion: identity.version };
+      };
+      const directoryReport = await loadDirectoryReport();
       if (action === "role-plan") {
         stage = "固定角色准备预览";
         return buildDockerRoleBootstrapPlan(directoryReport, freshStorageHash);
+      }
+      if (bootstrapMode !== null) {
+        stage = "独立角色准备事务";
+        const execute = (mode, currentReport) =>
+          runDockerRoleBootstrap({
+            mode,
+            report: currentReport,
+            identity,
+            storageHash: freshStorageHash,
+            createClient: () => databaseClient(mode === "status" ? readOnly : writable),
+            readDirectory: readDockerBusinessRoleDirectory,
+          });
+        const result = await execute(bootstrapMode, directoryReport);
+        if (bootstrapMode === "status") {
+          return { ...result, directoryReviewPassed: true, serverVersion: identity.version };
+        }
+        try {
+          stage = "角色事务后置严格结构与注释核验";
+          requireFreshVerification(parse(invoke(["db", "verify", "--strict", "--json"], readOnly)));
+          await checkComments(readOnly, identity, contract, commentText, false);
+          const current = await loadDirectoryReport();
+          const expected = {
+            ...directoryReport,
+            role: {
+              ...directoryReport.role,
+              scadaRuntimeExists: result.committed,
+              keycloakRuntimeExists: result.committed,
+            },
+          };
+          requireMatch(isDeepStrictEqual(current, expected), "角色事务后置双库目录发生漂移");
+          const status = await execute("status", current);
+          requireMatch(status.rolesPrepared === result.committed, "角色事务后置状态不一致");
+        } catch {
+          throw new DockerRoleBootstrapError(
+            result.committed
+              ? "角色事务已提交，但后置严格核查失败，保留现场，禁止重试"
+              : "角色演练已回滚，但后置严格核查失败，保留现场，禁止重试",
+          );
+        }
+        return {
+          ...result,
+          directoryReviewPassed: true,
+          postVerificationPassed: true,
+          serverVersion: identity.version,
+        };
       }
       return directoryReport;
     }
@@ -501,6 +558,7 @@ void main()
         error instanceof NativePreflightError ||
         error instanceof DockerRoleReviewError ||
         error instanceof DockerRolePlanError ||
+        error instanceof DockerRoleBootstrapError ||
         error instanceof FreshRuntimeProbeError
         ? error.message
         : stage + "失败，内部诊断已脱敏；保留现场，不自动重试",
