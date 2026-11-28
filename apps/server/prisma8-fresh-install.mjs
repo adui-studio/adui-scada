@@ -22,6 +22,7 @@ import {
   reviewDockerDatabaseRoles,
 } from "../../scripts/docker-db-role-review.mjs";
 import { DockerRoleIsolationTransactionError, runDockerRoleIsolationTransaction } from "../../scripts/docker-db-role-isolation-transaction.mjs";
+import { DockerRoleObjectReviewError, reviewDockerRoleObjects } from "../../scripts/docker-db-role-object-review.mjs";
 import { offlineEnvironment, resolveFreshCli } from "../../scripts/prisma8-fresh-cli-support.mjs";
 import {
   inspectFreshDockerEmptyDatabase,
@@ -361,7 +362,7 @@ async function main() {
             ? "isolation-inspect"
             : null;
   const isolationMode = action === "role-isolation-status" ? "status" : action === "role-isolation-rehearse" ? "rehearse" : action === "role-isolation-apply" ? "apply" : null;
-  const reviewRoles = action === "role-review" || action === "role-plan" || bootstrapMode !== null || isolationMode !== null;
+  const reviewRoles = action === "role-review" || action === "role-plan" || action === "role-object-review" || bootstrapMode !== null || isolationMode !== null;
   const identity = inspectDocker(reviewRoles);
   const parse = (text) => {
     try {
@@ -408,6 +409,28 @@ async function main() {
         return { ...roleReport, ...report, serverVersion: identity.version };
       };
       const directoryReport = await loadDirectoryReport();
+      if (action === "role-object-review") {
+        stage = "独立角色隔离状态核验";
+        const verifyStatus = (currentReport, expectedFingerprint = "") => runDockerRoleIsolationTransaction({
+          mode: "status", report: currentReport, identity, storageHash: freshStorageHash,
+          expectedFingerprint, createClient: () => databaseClient(readOnly),
+          readDirectory: readDockerBusinessRoleDirectory,
+        });
+        const before = await verifyStatus(directoryReport);
+        stage = "双库对象所有权与授权只读评审";
+        const reviewed = await reviewDockerRoleObjects((database) => {
+          const target = new URL(readOnly);
+          target.pathname = database === "adui_scada" ? "/adui_scada" : "/adui_scada_keycloak";
+          return databaseClient(target.toString());
+        }, identity);
+        const current = await loadDirectoryReport();
+        requireMatch(isDeepStrictEqual(directoryReport, current), "对象评审前后双库目录发生漂移");
+        const after = await verifyStatus(current, before.planFingerprint);
+        requireMatch(after.catalogIsolationPersisted === before.catalogIsolationPersisted &&
+          isDeepStrictEqual(inspectDocker(true), identity), "对象评审前后隔离状态或集群发生变化");
+        return { ...reviewed, storageHash: freshStorageHash, serverVersion: identity.version,
+          planFingerprint: before.planFingerprint, catalogIsolationPersisted: before.catalogIsolationPersisted };
+      }
       if (isolationMode !== null) {
         const execute = (mode, currentReport, expectedFingerprint) => runDockerRoleIsolationTransaction({
           mode,
@@ -621,6 +644,7 @@ void main()
         error instanceof DockerRoleBootstrapError ||
         error instanceof DockerRoleIsolationPlanError ||
         error instanceof DockerRoleIsolationTransactionError ||
+        error instanceof DockerRoleObjectReviewError ||
         error instanceof FreshRuntimeProbeError
         ? error.message
         : stage + "失败，内部诊断已脱敏；保留现场，不自动重试",

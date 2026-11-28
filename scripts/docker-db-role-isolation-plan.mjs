@@ -163,7 +163,7 @@ export function reviewDockerRoleIsolationInventory(inventory, identity, expected
   requirePlan(
     typeof isolated === "boolean" &&
       typeof expectedHash === "string" && /^[a-f0-9]{64}$/u.test(expectedHash) &&
-      identity?.version === "190000" && /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier),
+      identity?.version === "190000" && typeof identity.systemIdentifier === "string" && /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier),
     "集群及状态",
   );
   requirePlan(

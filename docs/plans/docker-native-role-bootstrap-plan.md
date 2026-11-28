@@ -151,3 +151,10 @@ SQLSTATE 42809 是 wrong_object_type。当前有效对象权限 SQL 从含表、
 - `pnpm run docker:db:role:isolation:status`：只读核查完整未隔离或完整隔离状态；混合状态、未知对象及其他漂移拒绝。仍不代表网络连接隔离或登录许可。
 - `pnpm run docker:db:role:isolation:execute --confirm-rehearse-isolation --reviewed-business-consumers --reviewed-maintenance-consumers --reviewed-template-consumers --plan-fingerprint=<当前真实指纹>`：仅在维护者逐组实际复核消费者并明确授权后执行回滚演练，之后单独执行 status。三个确认参数只表达操作者声明，不能认证消费者身份。
 - 独立持久化模式代码使用 `--confirm-apply-isolation --confirm-rehearsal-verified` 替代演练确认，保留其他参数；只有实机演练、独立状态及质量门禁通过且维护者另行明确授权后才可执行。当前不安排实际提交。禁止并发权限维护、未知结果重试或手工回收/恢复权限。状态核查仅适用于 B2 原角色权限与 B3 数据库级隔离，不覆盖后续 B4 权限变化。
+
+
+### B4 双库对象清单只读候选
+
+新增 `pnpm run docker:db:role:object-review`。首先通过原生严格契约、注释、双库与 B3 完整状态核查，再分别以固定管理角色及 REPEATABLE READ READ ONLY 事务读取两库对象目录。核对 Schema、关系、显式列 ACL、例程、类型、默认 ACL、扩展、策略、事件触发器、外部服务/包装器、发布定义以及当前数据库共享角色依赖。对象名称与 ACL 仅在本地用于稳定 SHA-256 证据；报告输出分类数量、所有者类别、未知所有者及角色依赖数量，不返回原始对象名、函数正文、订阅连接信息、外部服务选项、业务行或凭据。该目录不等于所有可执行权限、完整所有权转移方案或行锁最小权限评审；仍需要核对实际 Keycloak 版本全部对象类型及 Schema 管理需求。缺失、重复或未知目录形状失败，角色或集群漂移拒绝结果。前后 B3 计划指纹和隔离状态必须一致。B4 正式授权、所有权转移、C 正式模式和 D/E 真联调仍未实现，不自动授予 UPDATE、GRANT ALL 或切换服务。
+
+集中基线命令 `pnpm run mvp:verify:baseline` 串联现有完整 ready、严格数据库状态、上述双库对象评审、现有 OIDC 只读探针及七服务状态；只用于集中质量链和真实只读基线，不执行隔离、所有权变更、LOGIN 或业务写入。新增隔离前后投影/事务/故障测试、参数确认测试及对象目录离线回归尚未运行完整项目工具链；不登记为通过。

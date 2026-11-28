@@ -296,6 +296,8 @@ void test("隔离事务必须精确确认三组消费者、指纹及独立持久
   const fingerprint = "--plan-fingerprint=" + "a".repeat(64);
   const approvals = ["--reviewed-business-consumers", "--reviewed-maintenance-consumers", "--reviewed-template-consumers"];
   assert.equal(freshAction(["--role-isolation-status"]), "role-isolation-status");
+  assert.equal(freshAction(["--role-object-review"]), "role-object-review");
+  assert.throws(() => freshAction(["--role-object-review", "--apply"]), /必须明确指定/u);
   assert.equal(freshAction(["--role-isolation-execute", "--confirm-rehearse-isolation", ...approvals, fingerprint]), "role-isolation-rehearse");
   assert.equal(freshAction(["--role-isolation-execute", "--confirm-apply-isolation", "--confirm-rehearsal-verified", ...approvals, fingerprint]), "role-isolation-apply");
   for (const args of [
