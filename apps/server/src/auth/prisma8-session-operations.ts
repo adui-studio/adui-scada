@@ -2,6 +2,7 @@ import { Buffer } from "node:buffer";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { ForbiddenException } from "@nestjs/common";
 import type { Prisma8AuthTransactionPort } from "./prisma8-auth-transaction-port.js";
+import { lockB4Identity } from "../database/prisma8-b4-routines.js";
 import type { AuthenticatedProjectPrincipal } from "../projects/project-access-policy.js";
 import type {
   AuthenticatedSession,
@@ -58,10 +59,7 @@ export class Prisma8SessionOperations {
     if (!validPrincipal(principal)) throw new ForbiddenException("无效的可信主体，禁止签发会话");
     const { tenantId, subjectId } = principal;
     return this.transactions.write(async (tx) => {
-      const identities = await tx.queryText({
-        status: "pg/text@1",
-      })`SELECT status::text AS status FROM public.scada_identities
-          WHERE tenant_id = ${tenantId} AND subject_id = ${subjectId} FOR SHARE`;
+      const identities = await lockB4Identity(tx, tenantId, subjectId);
       if (identities.length !== 1 || identities[0]?.status !== "active") {
         throw new ForbiddenException("主体不存在或已停用，禁止签发会话");
       }

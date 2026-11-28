@@ -43,6 +43,11 @@ function harness(readOnly = false) {
     identityRows: [{ status: "active" }] as Row[],
     lockRows: [{ head_revision: "1" }] as Row[],
     grants: [{ permission: "version:append" }],
+    createRows: [{ result: "CREATED" }] as Row[],
+    createFault: false,
+    initialStateRows: [{ generation: "0", revision: "", hash: "", event_id: "", hash_is_null: "true" }] as Row[],
+    initialGrants: [{ permission: "project:read" }, { permission: "version:read" }, { permission: "version:append" }],
+    created: false,
     affected: [] as number[],
     failAt: 0,
     corrupt: false,
@@ -71,9 +76,34 @@ function harness(readOnly = false) {
         rows = [
           state.drift && state.boundaryChecks === 2 ? { ...boundary, role: "wrong" } : boundary,
         ];
-      } else if (plan.text.includes("FOR SHARE")) {
+      } else if (plan.text.includes("public.scada_create_project(")) {
+        steps.push("工程首版例程");
+        if (state.createFault) throw new Error("模拟工程首版例程失败");
+        rows = state.createRows;
+        if (rows.length === 1 && rows[0]?.result === "CREATED") {
+          const [, , subject, snapshot, hash, time, eventId] = plan.parameters;
+          if (
+            typeof subject !== "string" || typeof snapshot !== "string" ||
+            typeof hash !== "string" || typeof time !== "string" || typeof eventId !== "string"
+          ) throw new Error("首版例程参数异常");
+          state.created = true;
+          state.row = {
+            snapshot_data: snapshot, content_hash: hash, created_by: subject,
+            created_at: time, head_revision: "1", actor_id: subject,
+            action: "version:append", event_id: eventId,
+          };
+        }
+      } else if (plan.text.includes("public.scada_lock_identity(")) {
         steps.push("身份锁");
         rows = state.identityRows;
+      } else if (plan.text.includes("public.scada_lock_release_state_share(")) {
+        steps.push("发布状态回读");
+        rows = state.initialStateRows;
+      } else if (plan.text.includes("public.scada_lock_project_grants(")) {
+        steps.push(state.created ? "创建者授权回读" : "锁内授权");
+        const [tenantId, projectId, subjectId] = plan.parameters;
+        scopes.push({ tenantId, projectId, subjectId });
+        rows = state.created ? state.initialGrants : state.grants;
       } else if (plan.text.includes("FOR UPDATE")) {
         steps.push("工程锁");
         rows = state.lockRows;
@@ -90,8 +120,7 @@ function harness(readOnly = false) {
     execute: (plan: Plan) => {
       writes.push(plan);
       if (state.failAt === writes.length) throw new Error("模拟工程事务写入失败");
-      const isGrants = plan.text.includes("INSERT INTO public.scada_project_grants");
-      const count = state.affected.shift() ?? (isGrants ? 3 : 1);
+      const count = state.affected.shift() ?? 1;
       if (plan.text.includes("INSERT INTO public.scada_project_versions")) {
         steps.push("不可变版本");
         const [, , revision, snapshot, hash, subject, time] = plan.parameters;
@@ -121,32 +150,10 @@ function harness(readOnly = false) {
         const eventId = plan.parameters[0];
         if (!state.row || typeof eventId !== "string") throw new Error("审计参数异常");
         state.row.event_id = eventId;
-      } else if (plan.text.includes("INSERT INTO public.scada_projects")) {
-        steps.push("工程创建");
-      } else if (plan.text.includes("INSERT INTO public.scada_project_release_state")) {
-        steps.push("发布初始状态");
-      } else if (isGrants) {
-        steps.push("创建者授权");
       } else {
         throw new Error("工程事务出现未预期写入");
       }
       return Promise.resolve({ affectedRows: count });
-    },
-    orm: {
-      public: {
-        ScadaProjectGrant: {
-          where: (scope: unknown) => {
-            steps.push("锁内授权");
-            scopes.push(scope);
-            return {
-              select: (column: string) => {
-                if (column !== "permission") throw new Error("工程授权投影异常");
-                return { all: () => Promise.resolve(state.grants) };
-              },
-            };
-          },
-        },
-      },
     },
   };
   const client = {
@@ -194,31 +201,22 @@ describe("全新原生工程版本持久化", () => {
     expect(h.options).toEqual([{ isolationLevel: "ReadCommitted", timeout: 10000 }]);
     expect(h.steps).toEqual([
       "边界",
-      "身份锁",
-      "工程创建",
-      "发布初始状态",
-      "创建者授权",
-      "不可变版本",
-      "修订号比较更新",
-      "成功审计",
+      "工程首版例程",
       "版本回读",
+      "发布状态回读",
+      "创建者授权回读",
       "边界",
     ]);
-    expect(h.reads[1]?.parameters).toEqual([actor.tenantId, actor.subjectId]);
-    expect(h.writes[2]?.parameters).toEqual([
-      actor.tenantId,
-      projectId,
-      actor.subjectId,
-      actor.tenantId,
-      projectId,
-      actor.subjectId,
-      actor.tenantId,
-      projectId,
-      actor.subjectId,
-    ]);
-    expect(h.writes[2]?.text).toContain("'version:append'");
-    expect(h.writes[2]?.text).not.toContain("'release:publish'");
-    expect(h.writes[4]?.parameters).toEqual([1n, result.createdAt, actor.tenantId, projectId, 0n]);
+    const create = h.reads[1];
+    expect(create?.text).toContain("public.scada_create_project(");
+    expect(create?.parameters.slice(0, 3)).toEqual([actor.tenantId, projectId, actor.subjectId]);
+    expect(create?.parameters[3]).toBe(h.state.row?.snapshot_data);
+    expect(create?.parameters.slice(4, 6)).toEqual([h.state.row?.content_hash, result.createdAt]);
+    expect(create?.parameters[6]).toBe(h.state.row?.event_id);
+    expect(h.reads[2]?.parameters).toEqual([actor.tenantId, projectId, 1n]);
+    expect(h.reads[3]?.parameters).toEqual([actor.tenantId, projectId]);
+    expect(h.reads[4]?.parameters).toEqual([actor.tenantId, projectId, actor.subjectId]);
+    expect(h.writes).toHaveLength(0);
     expect(h.state.committed).toBe(1);
   });
 
@@ -229,6 +227,7 @@ describe("全新原生工程版本持久化", () => {
     expect(h.steps).toEqual([
       "边界",
       "工程锁",
+      "身份锁",
       "锁内授权",
       "不可变版本",
       "修订号比较更新",
@@ -238,6 +237,9 @@ describe("全新原生工程版本持久化", () => {
     ]);
     expect(h.scopes).toEqual([{ ...actor, projectId }]);
     expect(h.reads[1]?.parameters).toEqual([actor.tenantId, projectId]);
+    expect(h.reads[2]?.parameters).toEqual([actor.tenantId, actor.subjectId]);
+    expect(h.reads[3]?.parameters).toEqual([actor.tenantId, projectId, actor.subjectId]);
+    expect(h.reads[3]?.text).toContain("public.scada_lock_project_grants(");
     expect(h.writes[1]?.parameters).toEqual([
       2n,
       snapshot.createdAt,
@@ -276,11 +278,17 @@ describe("全新原生工程版本持久化", () => {
   });
 
   it("不存在或停用的身份不能创建工程", async () => {
+    const denied = harness();
+    denied.state.createRows = [{ result: "DENIED" }];
+    await expect(denied.store.create(actor, { document })).rejects.toThrow("工程资源不存在或无权访问");
+    expect(denied.steps).toEqual(["边界", "工程首版例程"]);
+    expect(denied.writes).toHaveLength(0);
+    expect(denied.state.rejected).toBe(1);
     for (const rows of [[], [{ status: "disabled" }]]) {
       const h = harness();
       h.state.identityRows = rows;
-      await expect(h.store.create(actor, { document })).rejects.toThrow("工程资源不存在或无权访问");
-      expect(h.steps).toEqual(["边界", "身份锁"]);
+      await expect(h.store.append(actor, projectId, input)).rejects.toThrow("工程资源不存在或无权访问");
+      expect(h.steps).toEqual(["边界", "工程锁", "身份锁"]);
       expect(h.writes).toHaveLength(0);
       expect(h.state.rejected).toBe(1);
     }
@@ -288,11 +296,12 @@ describe("全新原生工程版本持久化", () => {
 
   it("同租户重复工程拒绝并且不初始化任何附属数据", async () => {
     const h = harness();
-    h.state.affected = [0];
+    h.state.createRows = [{ result: "EXISTS" }];
     await expect(h.store.create(actor, { document })).rejects.toThrow(
       "当前租户下已存在相同工程标识的工程",
     );
-    expect(h.writes).toHaveLength(1);
+    expect(h.steps).toEqual(["边界", "工程首版例程"]);
+    expect(h.writes).toHaveLength(0);
     expect(h.state.committed).toBe(0);
   });
 
@@ -313,7 +322,7 @@ describe("全新原生工程版本持久化", () => {
       await expect(h.store.append(actor, projectId, input)).rejects.toThrow(
         "工程资源不存在或无权访问",
       );
-      expect(h.steps).toEqual(["边界", "工程锁", "锁内授权"]);
+      expect(h.steps).toEqual(["边界", "工程锁", "身份锁", "锁内授权"]);
       expect(h.writes).toHaveLength(0);
     }
   });
@@ -365,6 +374,36 @@ describe("全新原生工程版本持久化", () => {
     );
     expect(mismatch.state.rejected).toBe(1);
     expect(mismatch.state.committed).toBe(0);
+  });
+
+  it("首版例程缺失、返回异常及回读漂移不得回退直接写入", async () => {
+    const unavailable = harness();
+    unavailable.state.createFault = true;
+    await expect(unavailable.store.create(actor, { document })).rejects.toThrow("模拟工程首版例程失败");
+    expect(unavailable.steps).toEqual(["边界", "工程首版例程"]);
+    expect(unavailable.writes).toHaveLength(0);
+    for (const rows of [[], [{ result: "UNKNOWN" }], [{ result: "CREATED" }, { result: "CREATED" }]]) {
+      const h = harness();
+      h.state.createRows = rows;
+      await expect(h.store.create(actor, { document })).rejects.toThrow("工程首版例程返回结果无效");
+      expect(h.state.committed).toBe(0);
+      expect(h.writes).toHaveLength(0);
+    }
+    const stateDrift = harness();
+    stateDrift.state.initialStateRows = [{ generation: "1", revision: "1", hash: "", event_id: "", hash_is_null: "true" }];
+    await expect(stateDrift.store.create(actor, { document })).rejects.toThrow("工程首版发布状态回读不一致");
+    expect(stateDrift.state.rejected).toBe(1);
+    expect(stateDrift.writes).toHaveLength(0);
+    const grantsDrift = harness();
+    grantsDrift.state.initialGrants = [{ permission: "project:read" }, { permission: "version:append" }, { permission: "release:publish" }];
+    await expect(grantsDrift.store.create(actor, { document })).rejects.toThrow("工程首版创建者授权回读不一致");
+    expect(grantsDrift.state.rejected).toBe(1);
+    expect(grantsDrift.writes).toHaveLength(0);
+    const versionDrift = harness();
+    versionDrift.state.corrupt = true;
+    await expect(versionDrift.store.create(actor, { document })).rejects.toThrow("工程版本事务回读元数据不一致");
+    expect(versionDrift.state.rejected).toBe(1);
+    expect(versionDrift.writes).toHaveLength(0);
   });
 
   it("业务写入之后数据库身份漂移仍拒绝提交结果", async () => {

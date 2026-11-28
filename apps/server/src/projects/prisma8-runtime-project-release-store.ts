@@ -3,6 +3,17 @@ import { Injectable } from "@nestjs/common";
 import { validateProjectReleasePreflight, type ProjectSnapshot } from "@adui/scada-core";
 import type { Prisma8Transaction } from "../database/prisma8-read-transaction.js";
 import { Prisma8Service } from "../database/prisma8.service.js";
+import { nativeTextTransaction } from "../database/prisma8-text-transaction.js";
+import {
+  lockB4SessionIdentity,
+  lockB4ProjectGrants,
+  lockB4ReleaseState,
+  lockB4ProjectVersion,
+  lockB4ReleaseEvent,
+  lockB4ReleaseRequest,
+  lockB4PriorPublish,
+  type B4ReleaseEventRow,
+} from "../database/prisma8-b4-routines.js";
 import {
   hasProjectPermission,
   type AuthenticatedProjectPrincipal,
@@ -27,6 +38,11 @@ import { requireProjectReleaseSafety } from "./project-release-safety-gate.js";
 import { validatePrisma8ProjectSnapshot } from "./prisma8-project-query-store.js";
 
 type Tx = Prisma8Transaction;
+
+function routineTransaction(tx: Tx) {
+  return nativeTextTransaction(tx, "工程发布事务查询结果缺少有效文本列");
+}
+
 type ReleaseAction = "PUBLISH" | "ROLLBACK";
 const SESSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const IDEMPOTENCY_KEY_PATTERN =
@@ -267,30 +283,12 @@ async function lockSessionAndPermission(
     throw new ProjectReleaseSessionInvalidError();
   }
   const { tenantId, subjectId } = actor;
-  const sessions = await tx
-    .query(
-      tx.raw.sql`SELECT s.session_id::text AS session_id FROM public.scada_auth_sessions s
-      JOIN public.scada_identities i ON i.tenant_id = s.tenant_id AND i.subject_id = s.subject_id
-      WHERE s.session_id = ${sessionId}::uuid AND s.tenant_id = ${tenantId} AND s.subject_id = ${subjectId}
-        AND s.revoked_at IS NULL AND s.issued_at <= CURRENT_TIMESTAMP
-        AND s.expires_at > CURRENT_TIMESTAMP AND i.status = 'active'
-      FOR SHARE OF s, i`
-        .returnsRow({ session_id: "pg/text@1" })
-        .build(),
-    )
-    .toArray();
+  const routineTx = routineTransaction(tx);
+  const sessions = await lockB4SessionIdentity(routineTx, tenantId, subjectId, sessionId);
   if (sessions.length !== 1 || sessions[0]?.session_id !== sessionId.toLowerCase()) {
     throw new ProjectReleaseSessionInvalidError();
   }
-  const grants = await tx
-    .query(
-      tx.raw.sql`SELECT permission::text AS permission FROM public.scada_project_grants
-      WHERE tenant_id = ${tenantId} AND project_id = ${projectId} AND subject_id = ${subjectId}
-      FOR SHARE`
-        .returnsRow({ permission: "pg/text@1" })
-        .build(),
-    )
-    .toArray();
+  const grants = await lockB4ProjectGrants(routineTx, tenantId, projectId, subjectId);
   if (
     !hasProjectPermission(
       actor,
@@ -307,43 +305,13 @@ async function lockSessionAndPermission(
     throw new ProjectVersionAccessDeniedError();
 }
 
-const STATE_COLUMNS = {
-  generation: "pg/text@1",
-  revision: "pg/text@1",
-  hash: "pg/text@1",
-  event_id: "pg/text@1",
-  hash_is_null: "pg/text@1",
-} as const;
-
 async function lockState(
   tx: Tx,
   tenantId: string,
   projectId: string,
   write: boolean,
 ): Promise<ReleaseState> {
-  const rows = write
-    ? await tx
-        .query(
-          tx.raw.sql`SELECT release_generation::text AS generation,
-          COALESCE(released_revision::text, '') AS revision, COALESCE(released_content_hash::text, '') AS hash,
-          COALESCE(last_release_event_id::text, '') AS event_id, (released_content_hash IS NULL)::text AS hash_is_null
-          FROM public.scada_project_release_state WHERE tenant_id = ${tenantId} AND project_id = ${projectId}
-          FOR UPDATE`
-            .returnsRow(STATE_COLUMNS)
-            .build(),
-        )
-        .toArray()
-    : await tx
-        .query(
-          tx.raw.sql`SELECT release_generation::text AS generation,
-          COALESCE(released_revision::text, '') AS revision, COALESCE(released_content_hash::text, '') AS hash,
-          COALESCE(last_release_event_id::text, '') AS event_id, (released_content_hash IS NULL)::text AS hash_is_null
-          FROM public.scada_project_release_state WHERE tenant_id = ${tenantId} AND project_id = ${projectId}
-          FOR SHARE`
-            .returnsRow(STATE_COLUMNS)
-            .build(),
-        )
-        .toArray();
+  const rows = await lockB4ReleaseState(routineTransaction(tx), tenantId, projectId, write);
   const row = rows[0];
   if (rows.length !== 1 || !row) throw new TypeError("数据库工程正式发布状态记录缺失");
   const message = "数据库工程正式发布状态不符合生命周期约束";
@@ -370,20 +338,9 @@ async function lockedSnapshot(
   revision: number,
   currentRelease = false,
 ): Promise<ProjectSnapshot> {
-  const rows = await tx
-    .query(
-      tx.raw
-        .sql`SELECT snapshot::text AS snapshot_data, content_hash::text AS content_hash, created_at::text AS created_at
-      FROM public.scada_project_versions WHERE tenant_id = ${tenantId} AND project_id = ${projectId}
-      AND revision = ${BigInt(revision)} FOR SHARE`
-        .returnsRow({
-          snapshot_data: "pg/text@1",
-          content_hash: "pg/text@1",
-          created_at: "pg/text@1",
-        })
-        .build(),
-    )
-    .toArray();
+  const rows = await lockB4ProjectVersion(
+    routineTransaction(tx), tenantId, projectId, BigInt(revision),
+  );
   const row = rows[0];
   if (rows.length !== 1 || !row) throw new ProjectVersionAccessDeniedError();
   const data: unknown = JSON.parse(row.snapshot_data);
@@ -407,19 +364,7 @@ async function lockedSnapshot(
   }
 }
 
-const EVENT_COLUMNS = {
-  event_id: "pg/text@1",
-  generation: "pg/text@1",
-  action: "pg/text@1",
-  revision: "pg/text@1",
-  hash: "pg/text@1",
-  created_at: "pg/text@1",
-  semantic_hash: "pg/text@1",
-} as const;
-
-type EventRow = { [Key in keyof typeof EVENT_COLUMNS]: string };
-
-function eventResult(row: EventRow): ReleaseEventResultRow {
+function eventResult(row: B4ReleaseEventRow): ReleaseEventResultRow {
   return {
     eventId: row.event_id,
     generation: databaseInteger(row.generation, "数据库正式发布事件记录无效"),
@@ -437,18 +382,7 @@ async function readEvent(
   projectId: string,
   eventId: string,
 ): Promise<ReleaseEventResultRow> {
-  const rows = await tx
-    .query(
-      tx.raw
-        .sql`SELECT event_id::text AS event_id, generation::text AS generation, action::text AS action,
-      to_revision::text AS revision, to_content_hash::text AS hash, created_at::text AS created_at,
-      request_semantic_hash::text AS semantic_hash
-      FROM public.scada_project_release_events
-      WHERE tenant_id = ${tenantId} AND project_id = ${projectId} AND event_id = ${eventId}::uuid FOR SHARE`
-        .returnsRow(EVENT_COLUMNS)
-        .build(),
-    )
-    .toArray();
+  const rows = await lockB4ReleaseEvent(routineTransaction(tx), tenantId, projectId, eventId);
   if (rows.length !== 1 || !rows[0]) throw new TypeError("数据库当前正式发布事件记录缺失");
   return eventResult(rows[0]);
 }
@@ -477,18 +411,9 @@ async function findReplay(
   state: ReleaseState,
 ): Promise<ReleaseEventResultRow | null> {
   const { tenantId, subjectId } = actor;
-  const rows = await tx
-    .query(
-      tx.raw
-        .sql`SELECT event_id::text AS event_id, generation::text AS generation, action::text AS action,
-        to_revision::text AS revision, to_content_hash::text AS hash, created_at::text AS created_at,
-        request_semantic_hash::text AS semantic_hash FROM public.scada_project_release_events
-        WHERE tenant_id = ${tenantId} AND project_id = ${projectId} AND actor_id = ${subjectId}
-          AND action = ${action} AND idempotency_key = ${request.idempotencyKey} FOR SHARE`
-        .returnsRow(EVENT_COLUMNS)
-        .build(),
-    )
-    .toArray();
+  const rows = await lockB4ReleaseRequest(
+    routineTransaction(tx), tenantId, projectId, subjectId, action, request.idempotencyKey,
+  );
   if (rows.length > 1) throw new ProjectReleaseConflictError();
   const row = rows[0];
   if (!row) return null;
@@ -523,20 +448,9 @@ async function findRollbackTarget(
   request: ProjectRollbackRequest,
   state: ReleaseState,
 ): Promise<ProjectSnapshot> {
-  const rows = await tx
-    .query(
-      tx.raw
-        .sql`SELECT event_id::text AS event_id, generation::text AS generation, action::text AS action,
-        to_revision::text AS revision, to_content_hash::text AS hash, created_at::text AS created_at,
-        request_semantic_hash::text AS semantic_hash FROM public.scada_project_release_events
-        WHERE tenant_id = ${tenantId} AND project_id = ${projectId}
-          AND action = 'PUBLISH' AND to_revision = ${BigInt(request.targetRevision)}
-          AND generation < ${state.releaseGeneration}
-        ORDER BY generation DESC LIMIT 1 FOR SHARE`
-        .returnsRow(EVENT_COLUMNS)
-        .build(),
-    )
-    .toArray();
+  const rows = await lockB4PriorPublish(
+    routineTransaction(tx), tenantId, projectId, BigInt(request.targetRevision), state.releaseGeneration,
+  );
   if (rows.length !== 1 || !rows[0]) throw new ProjectReleaseConflictError();
   const event = eventResult(rows[0]);
   releaseReceipt(projectId, event, "PUBLISH");

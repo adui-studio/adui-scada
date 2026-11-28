@@ -236,7 +236,7 @@ describe("原生身份业务事务边界", () => {
     const insert = h.mutations[0];
     expect(h.options).toEqual([{ isolationLevel: "ReadCommitted", timeout: 10000 }]);
     expect(h.state.boundaryChecks).toBe(2);
-    expect(h.queries[1]?.text).toContain("FOR SHARE");
+    expect(h.queries[1]?.text).toContain("public.scada_lock_identity(?::text, ?::text)");
     expect(h.queries[1]?.parameters).toEqual([actor.tenantId, actor.subjectId]);
     expect(insert?.text).toContain("INSERT INTO public.scada_auth_sessions");
     expect(insert?.parameters.slice(0, 5)).toEqual([
