@@ -180,3 +180,9 @@ SQLSTATE 42809 是 wrong_object_type。当前有效对象权限 SQL 从含表、
 新增离线候选测试纳入 test:docker 及既有 ready；原生契约对照、严格负向矩阵及固定查询结构均需后续累计验收。B3.3 的真实执行、B4 专用行锁/受限写入及 Keycloak 所有权、C/D/E/F 尚未完成；本批不提出中间验收命令或实际授权。
 
 协作容器 Node.js 22.16.0 实际执行四个变更模块/测试文件的 node --check（退出 0）。`node --test scripts/docker-db-role-business-acl.cases.mjs` 5/5，通过真实 Git 原生契约文件的 12 表/85 列对照；`node --test scripts/docker-db-role-object-review.cases.mjs` 7/7，使用模拟目录及未被用例调用、调用即抛错的两个外围连接依赖替身。两组共 12/12、零失败、零跳过；不是完整 test:docker。模块/测试 Git Blob 分别为 8fc36c801048255151ac624bbebd8a1bf82c01f0、bd3b2b93bcff3e7e7f5918784e9e39494b23ef5e、71e1e6d2c7ce3edbb73d605057752fe3f8e4016b、87502ea5630446595be0a7e34db7f87c91b43973，原生契约 b325d67b3e212c94bbbe51da9dada79cdf343294，逐个复算与远端一致。纯函数固定夹具输出 22 条待评审列级 GRANT、72 个新增 SELECT 列权限、47 个 INSERT 列权限、4 个 UPDATE 列权限、8 项阻塞；候选指纹 21c5df043b16f96e848aafe73435776969532fbd05f7acc0f13ffe5ce05b732c，admissionPassed=false。实际 Git 网络访问失败（无法解析 github.com），无 pnpm、Vite+、Docker、psql；未克隆完整仓库，未执行全仓质量链、实际 PostgreSQL 权限查询、真实双库事务、任何授权语句或服务切换。真实目录及权限语义仍待累计验收。
+
+### B4 固定行锁例程候选（2026-11-28）
+
+新增 `scripts/docker-db-role-lock-routines.mjs`，在既有 SCADA 业务列权限只读报告中返回 `lockRoutinePreview`，独立 SHA-256 指纹，不改变 B3.3、原 22 条直接列授权候选及其指纹。根据现有原生身份会话、工程版本和发布仓储 SQL，生成五张保护表及会话联合锁所需九条固定例程候选：身份状态、会话与身份联合共享锁、工程授权、目标版本、发布状态读/写锁、末次发布事件、幂等事件和较早 PUBLISH 事件。限定参数、返回列及锁强度，不生成通用动态 SQL。例程候选采用专用 NOLOGIN 所有者 `adui_scada_lock_owner`，预览 13 条所有者授权（Schema USAGE、六表限定 SELECT 与各一列 UPDATE）；运行角色仅候选 EXECUTE，不直接获得保护表 UPDATE。所有者 UPDATE 本身仍是高风险能力，不得赋予登录、成员或表/Schema 所有权；每个例程生成独立 CREATE、撤销 PUBLIC、所有者变更、运行角色 EXECUTE 文本。必须在同一事务内部署和核查，确认可信 Schema、实际例程签名/正文/ACL、所有者成员关系、角色配置及没有意外授权。当前例程尚未安装，原生仓储尚未改用它们，五张表 ROW_LOCK 仍列为阻塞，不能把文本预览当作行锁或行级授权验证。参数由可信服务传递，不是数据库租户身份认证；严格只读事务仍禁止行锁。B3 原基线不接受新增角色及对象变化，后续 B4 需要独立后置目录投影，禁止直接复用原基线或放宽严格原生契约。
+
+工程初始化必须通过真正插入新工程的同一事务控制初始 ACL 和发布状态，不能独立对已有工程补授权；OIDC 清理仍需绑定可信 Issuer 及过期、批量和并发条件。正式发布/回滚安全门禁保持拒绝，Keycloak 对象所有权、受限写操作、角色实际创建、原生仓储适配及真实双库测试待完成。所有候选均只读生成，不执行 SQL、不切换服务或 LOGIN。

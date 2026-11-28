@@ -5525,3 +5525,7 @@ Node.js 22.16.0 实测新增隔离预览核心、测试文件 node --check 均�
 ### 2026-11-28 · B4 业务列权限及对象评审局部复验
 
 协作容器 Node.js 22.16.0 实际执行四个变更模块/测试文件的 node --check（退出 0）。`node --test scripts/docker-db-role-business-acl.cases.mjs` 5/5，通过真实 Git 原生契约文件的 12 表/85 列对照；`node --test scripts/docker-db-role-object-review.cases.mjs` 7/7，使用模拟目录及未被用例调用、调用即抛错的两个外围连接依赖替身。两组共 12/12、零失败、零跳过；不是完整 test:docker。模块/测试 Git Blob 分别为 8fc36c801048255151ac624bbebd8a1bf82c01f0、bd3b2b93bcff3e7e7f5918784e9e39494b23ef5e、71e1e6d2c7ce3edbb73d605057752fe3f8e4016b、87502ea5630446595be0a7e34db7f87c91b43973，原生契约 b325d67b3e212c94bbbe51da9dada79cdf343294，逐个复算与远端一致。纯函数固定夹具输出 22 条待评审列级 GRANT、72 个新增 SELECT 列权限、47 个 INSERT 列权限、4 个 UPDATE 列权限、8 项阻塞；候选指纹 21c5df043b16f96e848aafe73435776969532fbd05f7acc0f13ffe5ce05b732c，admissionPassed=false。实际 Git 网络访问失败（无法解析 github.com），无 pnpm、Vite+、Docker、psql；未克隆完整仓库，未执行全仓质量链、实际 PostgreSQL 权限查询、真实双库事务、任何授权语句或服务切换。真实目录及权限语义仍待累计验收。
+
+### 2026-11-28 · B4 固定锁例程预览局部验证（PR #262）
+
+协作容器 Node.js 22.16.0 对锁例程模块和测试执行 `node --check`（退出 0），`node --test scripts/docker-db-role-lock-routines.cases.mjs` 5/5、零失败、零跳过。实际测试文件 Git Blob 8cb34e74c2ad3b8b7dd970a70cd7dfbaaef92be2，模块 8da25f8e87df69061c12a0d9e697908d857997b2；测试覆盖独立指纹、九例程、六表最小候选、锁强度、联合会话、幂等、历史 PUBLISH、权限否定和隔离输出。预览指纹 0d9fd86514c68df8a642f8ffc25e9065cef0603a3f6db34188865eabf79f25c3，13 条所有者授权候选，admissionPassed=false。`test:docker` 新增入口及业务 ACL 集成断言尚未在全仓执行；当前无 pnpm/vp/psql/Docker，未连接实际数据库，未部署例程、创建角色、修改 ACL 或进行并发锁测试。B4 及 MVP 未验收。

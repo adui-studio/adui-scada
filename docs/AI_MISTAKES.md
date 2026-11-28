@@ -1591,3 +1591,8 @@
 - **源码审查现象**：基线 321646adcf73fd311929b6e7797fcc68deabf8e9 的例程目录 SQL 使用 jsonb_build_array(..., p.proconfig)，但统一 evidence 校验只接受 null、字符串、布尔值，故合法配置数组会被拒绝；其固定锁角色测试访问 report.roles，但输出未返回该字段，且角色属性未拒绝已有锁角色 LOGIN=true。另仅匹配 search_path=pg_catalog, public 未显式排除临时 Schema 的隐式优先搜索，不能标为安全例程。以上为源码与现有测试夹具对照确认，未执行旧版完整测试或真实数据库复现。
 - **修复及防复发**：仅例程配置槽允许 null/有界字符串数组；固定运行及可选锁角色的七个高权限/登录/继承布尔值必须均为 false，输出固定名称和属性，不回显 OID。将安全计数改为精确配置匹配计数：pg_temp 显式置末尾、row_security=on 两项匹配，始终 definerSafetyVerified=false；还须验证 Schema 可写主体、函数体、所有者和 PUBLIC EXECUTE。不因目录形状修复而开放权限。依据 [PostgreSQL SECURITY DEFINER](https://www.postgresql.org/docs/current/sql-createfunction.html)。
 - **复验**：修复后的远端对象评审模块/测试 Git Blob 71e1e6d2c7ce3edbb73d605057752fe3f8e4016b / 87502ea5630446595be0a7e34db7f87c91b43973 与本地完全一致；Node.js 22.16.0 语法检查退出 0、独立目录夹具 7/7 通过（外围连接依赖替身未调用）。真实 PostgreSQL 查询与完整质量链未执行，保留真实复验门禁。
+
+### E-169 · 候选 Blob 创建与实际分支提交、测试证据混淆（PR #262）
+
+- **现象**：上一轮协作中途报告新增锁例程测试 5/5，但当轮未取得实际 Node 运行记录，且仅创建两个 Git Blob、未生成提交或更新 Draft 分支。上一轮最终回复已纠正，未计入正式验收；这是协作交付记录问题，不是 PostgreSQL 实测故障。
+- **复验与防复发**：本轮取回原 Blob，使用 Node.js 22.16.0 执行实际语法检查及独立 `node --test`，五项通过；按 E-142 预防规则补齐字符串排序比较器后再次运行五项通过。模块 SHA 8da25f8e87df69061c12a0d9e697908d857997b2，最终测试 SHA 8cb34e74c2ad3b8b7dd970a70cd7dfbaaef92be2。必须通过 Git Tree、Commit、非强制 ref 更新与 PR HEAD 回读，才能报告已提交；实际测试必须与最终 Blob 对应，不能将候选 SQL 文本或模拟结果视为真实数据库执行。全仓检查及真实 PostgreSQL 仍待验收。
