@@ -31,7 +31,12 @@ const sessionsSql = `SELECT a.datid::text AS "databaseOid", a.usesysid::text AS 
   count(*)::int AS total FROM pg_catalog.pg_stat_activity a
 WHERE a.backend_type = 'client backend' GROUP BY a.datid, a.usesysid ORDER BY a.datid, a.usesysid`;
 const databases = ["adui_scada", "adui_scada_keycloak", "postgres", "template0", "template1"];
-const roles = ["adui_scada", "adui_scada_runtime", "adui_scada_keycloak_runtime", "pg_database_owner"];
+const roles = [
+  "adui_scada",
+  "adui_scada_runtime",
+  "adui_scada_keycloak_runtime",
+  "pg_database_owner",
+];
 const privileges = ["CONNECT", "TEMPORARY", "CREATE"];
 const oid = (value) =>
   typeof value === "string" && /^[1-9][0-9]{0,9}$/u.test(value) && Number(value) <= 4294967295;
@@ -54,66 +59,139 @@ export async function readDockerIsolationDirectory(query) {
     const result = await query(step, sql);
     const rows = result?.rows;
     requireInventory(
-      Array.isArray(rows) && rows.every((row) => row &&
-        Object.keys(row).length === Object.keys(fields).length &&
-        Object.entries(fields).every(([key, check]) => Object.hasOwn(row, key) && check(row[key]))),
+      Array.isArray(rows) &&
+        rows.every(
+          (row) =>
+            row &&
+            Object.keys(row).length === Object.keys(fields).length &&
+            Object.entries(fields).every(
+              ([key, check]) => Object.hasOwn(row, key) && check(row[key]),
+            ),
+        ),
       step,
     );
     return rows;
   };
   const db = await read("全集群数据库", databaseSql, {
-    oid, name: label(databases), ownerOid: oid, allowConnections: bool, template: bool,
+    oid,
+    name: label(databases),
+    ownerOid: oid,
+    allowConnections: bool,
+    template: bool,
     connectionLimit: (value) => Number.isSafeInteger(value) && value >= -2,
     defaultAcl: bool,
     aclEntryCount: (value) => Number.isSafeInteger(value) && value >= 0,
   });
   const role = await read("全集群角色", roleSql, {
-    oid, name: label(roles), login: bool, superuser: bool, inherit: bool,
+    oid,
+    name: label(roles),
+    login: bool,
+    superuser: bool,
+    inherit: bool,
   });
   const dbIds = unique(db, (row) => row.oid, "数据库标识");
   const roleIds = unique(role, (row) => row.oid, "角色标识");
-  requireInventory(databases.every((name) => db.filter((row) => row.name === name).length === 1), "固定数据库");
-  requireInventory(roles.every((name) => role.filter((row) => row.name === name).length === 1), "固定角色");
-  requireInventory(db.every((row) => roleIds.has(row.ownerOid)), "数据库所有者");
+  requireInventory(
+    databases.every((name) => db.filter((row) => row.name === name).length === 1),
+    "固定数据库",
+  );
+  requireInventory(
+    roles.every((name) => role.filter((row) => row.name === name).length === 1),
+    "固定角色",
+  );
+  requireInventory(
+    db.every((row) => roleIds.has(row.ownerOid)),
+    "数据库所有者",
+  );
   const dbRef = (value) => dbIds.has(value);
   const roleRef = (value) => roleIds.has(value);
   const acl = await read("数据库 ACL", aclSql, {
-    databaseOid: dbRef, grantorOid: roleRef, granteeOid: (value) => value === "0" || roleRef(value),
-    privilege: (value) => privileges.includes(value), grantable: bool,
+    databaseOid: dbRef,
+    grantorOid: roleRef,
+    granteeOid: (value) => value === "0" || roleRef(value),
+    privilege: (value) => privileges.includes(value),
+    grantable: bool,
   });
-  unique(acl, (row) => JSON.stringify([row.databaseOid, row.grantorOid, row.granteeOid, row.privilege]), "数据库 ACL");
+  unique(
+    acl,
+    (row) => JSON.stringify([row.databaseOid, row.grantorOid, row.granteeOid, row.privilege]),
+    "数据库 ACL",
+  );
   requireInventory(
-    db.every((row) => acl.filter((entry) => entry.databaseOid === row.oid).length === row.aclEntryCount),
+    db.every(
+      (row) => acl.filter((entry) => entry.databaseOid === row.oid).length === row.aclEntryCount,
+    ),
     "数据库 ACL 行数",
   );
   const effective = await read("数据库有效权限", effectiveSql, {
-    databaseOid: dbRef, roleOid: roleRef, connect: bool, temporary: bool, create: bool,
+    databaseOid: dbRef,
+    roleOid: roleRef,
+    connect: bool,
+    temporary: bool,
+    create: bool,
   });
   unique(effective, (row) => JSON.stringify([row.databaseOid, row.roleOid]), "数据库有效权限");
   requireInventory(effective.length === db.length * role.length, "全集群权限矩阵");
   const memberships = await read("角色成员关系", membershipSql, {
-    roleOid: roleRef, memberOid: roleRef, grantorOid: roleRef, admin: bool, inherit: bool, setRole: bool,
+    roleOid: roleRef,
+    memberOid: roleRef,
+    grantorOid: roleRef,
+    admin: bool,
+    inherit: bool,
+    setRole: bool,
   });
-  unique(memberships, (row) => JSON.stringify([row.roleOid, row.memberOid, row.grantorOid]), "角色成员关系");
+  unique(
+    memberships,
+    (row) => JSON.stringify([row.roleOid, row.memberOid, row.grantorOid]),
+    "角色成员关系",
+  );
   const sessions = await read("当前客户端连接", sessionsSql, {
-    databaseOid: (value) => value === null || oid(value), roleOid: (value) => value === null || oid(value),
+    databaseOid: (value) => value === null || oid(value),
+    roleOid: (value) => value === null || oid(value),
     total: (value) => Number.isSafeInteger(value) && value > 0,
   });
   unique(sessions, (row) => JSON.stringify([row.databaseOid, row.roleOid]), "当前客户端连接");
   const unknownLoginRoleCount = role.filter((row) => row.name === null && row.login).length;
   const unknownDatabaseCount = db.filter((row) => row.name === null).length;
-  const unresolvedSessionCount = sessions.filter((row) => !dbRef(row.databaseOid) || !roleRef(row.roleOid) ||
-    role.some((item) => item.oid === row.roleOid && item.name !== "adui_scada") ||
-    db.some((item) => item.oid === row.databaseOid && item.name === null))
+  const unresolvedSessionCount = sessions
+    .filter(
+      (row) =>
+        !dbRef(row.databaseOid) ||
+        !roleRef(row.roleOid) ||
+        role.some((item) => item.oid === row.roleOid && item.name !== "adui_scada") ||
+        db.some((item) => item.oid === row.databaseOid && item.name === null),
+    )
     .reduce((total, row) => total + row.total, 0);
   return {
-    databases: db.map((row) => ({ ...row,
-      publicConnect: acl.some((entry) => entry.databaseOid === row.oid && entry.granteeOid === "0" && entry.privilege === "CONNECT"),
-      publicTemporary: acl.some((entry) => entry.databaseOid === row.oid && entry.granteeOid === "0" && entry.privilege === "TEMPORARY"),
-      publicCreate: acl.some((entry) => entry.databaseOid === row.oid && entry.granteeOid === "0" && entry.privilege === "CREATE"),
+    databases: db.map((row) => ({
+      ...row,
+      publicConnect: acl.some(
+        (entry) =>
+          entry.databaseOid === row.oid &&
+          entry.granteeOid === "0" &&
+          entry.privilege === "CONNECT",
+      ),
+      publicTemporary: acl.some(
+        (entry) =>
+          entry.databaseOid === row.oid &&
+          entry.granteeOid === "0" &&
+          entry.privilege === "TEMPORARY",
+      ),
+      publicCreate: acl.some(
+        (entry) =>
+          entry.databaseOid === row.oid && entry.granteeOid === "0" && entry.privilege === "CREATE",
+      ),
     })),
-    roles: role, acl, effective, memberships, sessions,
-    unknownLoginRoleCount, unknownDatabaseCount, unresolvedSessionCount,
-    consumerReviewRequired: true, changeAllowed: false, isolationPassed: false,
+    roles: role,
+    acl,
+    effective,
+    memberships,
+    sessions,
+    unknownLoginRoleCount,
+    unknownDatabaseCount,
+    unresolvedSessionCount,
+    consumerReviewRequired: true,
+    changeAllowed: false,
+    isolationPassed: false,
   };
 }

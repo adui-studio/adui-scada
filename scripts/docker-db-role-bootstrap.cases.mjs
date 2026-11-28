@@ -272,8 +272,20 @@ void describe("Docker 角色准备事务", () => {
       })),
     );
     acl.push(
-      { databaseOid: "1", grantorOid: "10", granteeOid: "11", privilege: "CONNECT", grantable: false },
-      { databaseOid: "2", grantorOid: "10", granteeOid: "12", privilege: "CONNECT", grantable: false },
+      {
+        databaseOid: "1",
+        grantorOid: "10",
+        granteeOid: "11",
+        privilege: "CONNECT",
+        grantable: false,
+      },
+      {
+        databaseOid: "2",
+        grantorOid: "10",
+        granteeOid: "12",
+        privilege: "CONNECT",
+        grantable: false,
+      },
     );
     const effective = db.flatMap((row) =>
       roles.map((role) => ({
@@ -284,7 +296,14 @@ void describe("Docker 角色准备事务", () => {
         create: role.superuser,
       })),
     );
-    const inventoryRows = [db, roles, acl, effective, [], [{ databaseOid: "1", roleOid: "10", total: 1 }]];
+    const inventoryRows = [
+      db,
+      roles,
+      acl,
+      effective,
+      [],
+      [{ databaseOid: "1", roleOid: "10", total: 1 }],
+    ];
     let index = 0;
     client.query = async (sql, values) => {
       if (
@@ -313,14 +332,23 @@ void describe("Docker 角色准备事务", () => {
     assert.equal(result.inventory.effective.length, 20);
     assert.equal(result.inventory.changeAllowed, false);
     assert.equal(index, 6);
-    assert.ok(calls.indexOf("SET LOCAL ROLE NONE") < calls.findIndex((sql) => sql.startsWith("SELECT d.oid::text")));
-    assert.equal(calls.some((sql) => statements.includes(sql)), false);
+    assert.ok(
+      calls.indexOf("SET LOCAL ROLE NONE") <
+        calls.findIndex((sql) => sql.startsWith("SELECT d.oid::text")),
+    );
+    assert.equal(
+      calls.some((sql) => statements.includes(sql)),
+      false,
+    );
     assert.equal(calls.includes("COMMIT"), false);
     assert.deepEqual(calls.slice(-3), ["目录核验", "ROLLBACK", "关闭"]);
   });
   void it("全集群核查缺少持久化角色时不构造连接", async () => {
     const { options, calls } = mock("rehearse");
-    await assert.rejects(runDockerRoleBootstrap({ ...options, mode: "isolation-inspect" }), /证据不一致/u);
+    await assert.rejects(
+      runDockerRoleBootstrap({ ...options, mode: "isolation-inspect" }),
+      /证据不一致/u,
+    );
     assert.deepEqual(calls, []);
   });
   void it("全集群目录查询失败时只读事务确认回滚并关闭连接", async () => {
@@ -330,7 +358,10 @@ void describe("Docker 角色准备事务", () => {
       /全集群数据库查询失败（SQLSTATE=UNKNOWN）.*事务已确认回滚/u,
     );
     assert.ok(calls.includes("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"));
-    assert.equal(calls.some((sql) => statements.includes(sql)), false);
+    assert.equal(
+      calls.some((sql) => statements.includes(sql)),
+      false,
+    );
     assert.equal(calls.includes("COMMIT"), false);
     assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
   });

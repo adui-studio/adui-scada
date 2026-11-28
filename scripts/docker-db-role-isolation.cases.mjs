@@ -3,21 +3,63 @@ import { test } from "node:test";
 import { readDockerIsolationDirectory } from "./docker-db-role-isolation.mjs";
 
 function fixture() {
-  const db = ["adui_scada", "adui_scada_keycloak", "postgres", "template0", "template1", null].map((name, index) => ({
-    oid: String(index + 1), name, ownerOid: "10", allowConnections: index !== 3,
-    template: index === 3 || index === 4, connectionLimit: -1, defaultAcl: index > 1, aclEntryCount: 2,
+  const db = ["adui_scada", "adui_scada_keycloak", "postgres", "template0", "template1", null].map(
+    (name, index) => ({
+      oid: String(index + 1),
+      name,
+      ownerOid: "10",
+      allowConnections: index !== 3,
+      template: index === 3 || index === 4,
+      connectionLimit: -1,
+      defaultAcl: index > 1,
+      aclEntryCount: 2,
+    }),
+  );
+  const roles = [
+    "adui_scada",
+    "adui_scada_runtime",
+    "adui_scada_keycloak_runtime",
+    "pg_database_owner",
+    null,
+  ].map((name, index) => ({
+    oid: String(index + 10),
+    name,
+    login: index === 0 || index === 4,
+    superuser: index === 0,
+    inherit: index === 0,
   }));
-  const roles = ["adui_scada", "adui_scada_runtime", "adui_scada_keycloak_runtime", "pg_database_owner", null].map((name, index) => ({
-    oid: String(index + 10), name, login: index === 0 || index === 4, superuser: index === 0, inherit: index === 0,
-  }));
-  const acl = db.flatMap((row) => ["CONNECT", "TEMPORARY"].map((privilege) => ({
-    databaseOid: row.oid, grantorOid: "10", granteeOid: "0", privilege, grantable: false,
-  })));
-  const effective = db.flatMap((row) => roles.map((role) => ({
-    databaseOid: row.oid, roleOid: role.oid, connect: true, temporary: true, create: role.superuser,
-  })));
-  const memberships = [{ roleOid: "14", memberOid: "10", grantorOid: "10", admin: false, inherit: true, setRole: false }];
-  const sessions = [{ databaseOid: "1", roleOid: "10", total: 2 }, { databaseOid: "6", roleOid: "14", total: 1 }];
+  const acl = db.flatMap((row) =>
+    ["CONNECT", "TEMPORARY"].map((privilege) => ({
+      databaseOid: row.oid,
+      grantorOid: "10",
+      granteeOid: "0",
+      privilege,
+      grantable: false,
+    })),
+  );
+  const effective = db.flatMap((row) =>
+    roles.map((role) => ({
+      databaseOid: row.oid,
+      roleOid: role.oid,
+      connect: true,
+      temporary: true,
+      create: role.superuser,
+    })),
+  );
+  const memberships = [
+    {
+      roleOid: "14",
+      memberOid: "10",
+      grantorOid: "10",
+      admin: false,
+      inherit: true,
+      setRole: false,
+    },
+  ];
+  const sessions = [
+    { databaseOid: "1", roleOid: "10", total: 2 },
+    { databaseOid: "6", roleOid: "14", total: 1 },
+  ];
   return [db, roles, acl, effective, memberships, sessions];
 }
 
@@ -39,7 +81,9 @@ void test("全集群核查保留模板库、禁止连接库、未知库和所有
   assert.equal(report.databases.find((row) => row.name === "template0").allowConnections, false);
   assert.equal(report.databases.find((row) => row.name === "postgres").defaultAcl, true);
   assert.equal(report.databases[0].defaultAcl, false);
-  assert.ok(report.databases.every((row) => row.publicConnect && row.publicTemporary && !row.publicCreate));
+  assert.ok(
+    report.databases.every((row) => row.publicConnect && row.publicTemporary && !row.publicCreate),
+  );
   assert.equal(report.effective.length, 30);
   assert.equal(report.unknownLoginRoleCount, 1);
   assert.equal(report.unknownDatabaseCount, 1);
@@ -49,7 +93,10 @@ void test("全集群核查保留模板库、禁止连接库、未知库和所有
   assert.equal(report.isolationPassed, false);
   assert.equal(calls.length, 6);
   assert.ok(calls.every(({ sql }) => sql.startsWith("SELECT ")));
-  assert.match(calls[2].sql, /aclexplode\(coalesce\(d\.datacl, pg_catalog\.acldefault\('d', d\.datdba\)\)\)/u);
+  assert.match(
+    calls[2].sql,
+    /aclexplode\(coalesce\(d\.datacl, pg_catalog\.acldefault\('d', d\.datdba\)\)\)/u,
+  );
   assert.match(calls[3].sql, /CROSS JOIN pg_catalog\.pg_roles/u);
   assert.doesNotMatch(calls[5].sql, /client_addr|application_name|a\.query/u);
 });
@@ -58,12 +105,20 @@ void test("缺失固定对象、重复标识、外部所有者和不完整矩阵
   for (const change of [
     (rows) => rows[0].shift(),
     (rows) => rows[1].push(rows[1][0]),
-    (rows) => { rows[0][0].ownerOid = "999"; },
+    (rows) => {
+      rows[0][0].ownerOid = "999";
+    },
     (rows) => rows[2].pop(),
     (rows) => rows[3].pop(),
-    (rows) => { rows[3][0] = rows[3][1]; },
-    (rows) => { rows[2][0].granteeOid = "999"; },
-    (rows) => { rows[4][0].memberOid = "999"; },
+    (rows) => {
+      rows[3][0] = rows[3][1];
+    },
+    (rows) => {
+      rows[2][0].granteeOid = "999";
+    },
+    (rows) => {
+      rows[4][0].memberOid = "999";
+    },
   ]) {
     const rows = fixture();
     change(rows);
@@ -73,10 +128,18 @@ void test("缺失固定对象、重复标识、外部所有者和不完整矩阵
 
 void test("未知名称、额外字段和非布尔权限不得进入报告或异常正文", async () => {
   for (const change of [
-    (rows) => { rows[0][5].name = "模拟敏感名称"; },
-    (rows) => { rows[1][4].name = "模拟敏感名称"; },
-    (rows) => { rows[5][0].query = "模拟敏感正文"; },
-    (rows) => { rows[3][0].connect = "true"; },
+    (rows) => {
+      rows[0][5].name = "模拟敏感名称";
+    },
+    (rows) => {
+      rows[1][4].name = "模拟敏感名称";
+    },
+    (rows) => {
+      rows[5][0].query = "模拟敏感正文";
+    },
+    (rows) => {
+      rows[3][0].connect = "true";
+    },
   ]) {
     const rows = fixture();
     change(rows);

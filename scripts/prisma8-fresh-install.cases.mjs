@@ -56,7 +56,10 @@ void test("全新入口仅接受明确十三种操作，裸命令不能写入", 
   assert.equal(freshAction(["--role-bootstrap-status"]), "role-bootstrap-status");
   assert.equal(freshAction(["--role-isolation-inspect"]), "role-isolation-inspect");
   assert.throws(() => freshAction(["--role-isolation-inspect", "--apply"]), /必须明确指定/u);
-  assert.throws(() => freshAction(["--role-isolation-inspect", freshConfirmation]), /必须明确指定/u);
+  assert.throws(
+    () => freshAction(["--role-isolation-inspect", freshConfirmation]),
+    /必须明确指定/u,
+  );
   assert.equal(
     freshAction(["--role-bootstrap", "--confirm-rehearse-docker-roles"]),
     "role-rehearse",
