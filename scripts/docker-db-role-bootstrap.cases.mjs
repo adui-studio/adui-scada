@@ -165,7 +165,7 @@ function mock(mode, fault = "") {
             noDatabaseCreate: true,
             noSchemaCreate: true,
             noTableOrColumnWrites: fault !== "effective",
-            noSequencePrivileges: true,
+            noSequencePrivileges: fault !== "sequence",
             businessConnect: true,
             keycloakConnect: true,
           })),
@@ -259,6 +259,35 @@ void describe("Docker 角色准备事务", () => {
     assert.equal(calls.includes("SET LOCAL ROLE adui_scada_runtime"), true);
     assert.equal(calls.includes("SET LOCAL ROLE NONE"), true);
   });
+  void it("混合对象目录按对象类型保护表、序列和列权限函数", async () => {
+    const { options, calls } = mock("rehearse");
+    await runDockerRoleBootstrap(options);
+    const objects = calls.find((sql) => sql.includes("relations AS"));
+    const columns = calls.find((sql) => sql.includes("has_column_privilege"));
+    assert.ok(objects);
+    assert.ok(columns);
+    const objectSql = objects.replace(/\s+/gu, " ");
+    const columnSql = columns.replace(/\s+/gu, " ");
+    assert.ok(
+      objectSql.includes(
+        "WHERE CASE WHEN c.relkind IN ('r','p','v','m','f') THEN ( " +
+          "pg_catalog.has_table_privilege(r.oid, c.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER,MAINTAIN') OR " +
+          "pg_catalog.has_any_column_privilege(r.oid, c.oid, 'INSERT,UPDATE,REFERENCES')) ELSE false END) AS \"noTableOrColumnWrites\"",
+      ),
+    );
+    assert.ok(
+      objectSql.includes(
+        "WHERE CASE WHEN c.relkind = 'S' THEN " +
+          "pg_catalog.has_sequence_privilege(r.oid, c.oid, 'USAGE,SELECT,UPDATE') ELSE false END) AS \"noSequencePrivileges\"",
+      ),
+    );
+    assert.ok(
+      columnSql.includes(
+        "CASE WHEN c.relkind IN ('r','p','v','m','f') THEN " +
+          "pg_catalog.has_column_privilege(r.oid, c.oid, a.attnum, 'SELECT') ELSE false END",
+      ),
+    );
+  });
   void it("正式提交只在全部核验完成后发生，明确区分目录写入和业务写入", async () => {
     const { options, calls } = mock("create");
     const result = await runDockerRoleBootstrap(options);
@@ -320,6 +349,7 @@ void describe("Docker 角色准备事务", () => {
       { fault: "acl", expected: /直接 ACL证据不匹配.*1:grantable/u },
       { fault: "extra-acl", expected: /直接 ACL证据不匹配.*实际行数=11/u },
       { fault: "effective", expected: /有效对象权限证据不匹配.*noTableOrColumnWrites/u },
+      { fault: "sequence", expected: /有效对象权限证据不匹配.*noSequencePrivileges/u },
       { fault: "column", expected: /有效列权限证据不匹配.*未匹配预期项=1/u },
       { fault: "probe", expected: /运行角色身份及标记证据不匹配.*systemIdentifier/u },
       { fault: "unexpected-row", expected: /启动工程读取证据不匹配.*实际行数=1/u },
