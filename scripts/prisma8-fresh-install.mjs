@@ -42,8 +42,14 @@ export function freshConnection(input, readOnly) {
   return url.toString();
 }
 
-/** 全新入口只接受明确的生成、只读验收或独立首次初始化动作。 */
+/** 全新入口仅接受固定动作；角色演练与创建必须分别明确确认。 */
 export function freshAction(args) {
+  if (isDeepStrictEqual(args, ["--role-bootstrap", "--confirm-rehearse-docker-roles"])) {
+    return "role-rehearse";
+  }
+  if (isDeepStrictEqual(args, ["--role-bootstrap", "--confirm-create-docker-roles"])) {
+    return "role-create";
+  }
   for (const [flag, mode] of [
     ["--emit", "emit"],
     ["--preview", "preview"],
@@ -51,6 +57,7 @@ export function freshAction(args) {
     ["--status", "status"],
     ["--role-review", "role-review"],
     ["--role-plan", "role-plan"],
+    ["--role-bootstrap-status", "role-bootstrap-status"],
     ["--runtime-review", "runtime-review"],
     ["--runtime-emit", "runtime-emit"],
     ["--provider-smoke", "provider-smoke"],
@@ -58,7 +65,7 @@ export function freshAction(args) {
     if (isDeepStrictEqual(args, [flag])) return mode;
   }
   throw new FreshInstallError(
-    "必须明确指定全新安装发射、只读预览、首次初始化、验证、运行时评审、提供方验收、角色核查或角色准备预览",
+    "必须明确指定全新安装发射、只读预览、首次初始化、验证、运行时评审、提供方验收、角色核查、角色准备预览、状态核查或独立确认的角色事务",
   );
 }
 
