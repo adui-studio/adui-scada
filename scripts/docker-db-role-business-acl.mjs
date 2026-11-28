@@ -111,6 +111,25 @@ export function scadaBusinessColumnInventory() {
   return tables.map((entry) => ({ table: entry.name, columns: [...entry.columns] }));
 }
 
+/** 固定业务列授权候选，不读取或推断数据库实际权限。 */
+export function scadaBusinessGrantCandidates() {
+  return tables.flatMap((entry) =>
+    [
+      { privilege: "SELECT", columns: entry.read.filter((column) =>
+        entry.name !== "scada_projects" || !startupColumns.includes(column)) },
+      { privilege: "INSERT", columns: entry.insert },
+      { privilege: "UPDATE", columns: entry.update },
+    ].filter((grant) => grant.columns.length > 0)
+      .map((grant) => ({
+        table: entry.name,
+        privilege: grant.privilege,
+        columns: [...grant.columns],
+        sql: "GRANT " + grant.privilege + " (" + grant.columns.join(", ") +
+          ") ON TABLE public." + entry.name + " TO adui_scada_runtime",
+      })),
+  );
+}
+
 /** 仅接受 B2 启动列权限基线；任何缺失、重复、多余或扩大权限均拒绝。 */
 export function buildScadaBusinessAclPreview(rows) {
   const expected = new Map();
@@ -136,21 +155,7 @@ export function buildScadaBusinessAclPreview(rows) {
   }
   requireMatch(expected.size === 0);
 
-  const grants = tables.flatMap((entry) =>
-    [
-      { privilege: "SELECT", columns: entry.read.filter((column) =>
-        entry.name !== "scada_projects" || !startupColumns.includes(column)) },
-      { privilege: "INSERT", columns: entry.insert },
-      { privilege: "UPDATE", columns: entry.update },
-    ].filter((grant) => grant.columns.length > 0)
-      .map((grant) => ({
-        table: entry.name,
-        privilege: grant.privilege,
-        columns: [...grant.columns],
-        sql: "GRANT " + grant.privilege + " (" + grant.columns.join(", ") +
-          ") ON TABLE public." + entry.name + " TO adui_scada_runtime",
-      })),
-  );
+  const grants = scadaBusinessGrantCandidates();
   const blockedOperations = [
     ...allowedLockTables.map((relation) => ({ table: relation, operation: "ROW_LOCK", reason: "DEDICATED_LOCK_BOUNDARY_REQUIRED" })),
     { table: "scada_project_grants", operation: "INSERT", reason: "INITIAL_GRANT_SCOPE_REQUIRED" },
