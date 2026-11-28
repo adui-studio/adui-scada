@@ -1,6 +1,6 @@
 # Docker 原生业务连接安全评审
 
-- 状态：A 阶段代码候选已提交，真实目录待验收；B、C、D 未实施
+- 状态：A 阶段真实验收通过并合并；B1 角色准备预览候选，B2 实际角色变更及 C、D 未实施
 - 日期：2026-11-28
 - 前置：[ADR-0073](../adr/0073-prisma8-fresh-install.md)、[ADR-0066](../adr/0066-single-local-compose-project.md)、[ADR-0065](../adr/0065-oidc-bff-and-project-api.md)
 - 关联：FR-001、FR-008、FR-013、FR-014、NFR-006
@@ -73,3 +73,7 @@
 `DOCKER_DB_ROLE_REVIEW_READY`、`directoryReviewPassed=true` 只表示当前共享角色目录核查完成；`admissionPassed=false` 固定表示尚未批准正式运行身份，`databaseWritten=false` 表示本命令未执行数据库写入。此报告不是对候选运行身份的实际登录/最小权限验收，也不覆盖额外 Schema 内全部对象、逐列 ACL、所有者角色名称或并发角色变更的全局一致快照；其他 Schema 非零须先另行审查，B 阶段继续核对精确仓储 SQL、对象所有权和 Keycloak 实际 Schema 管理要求。失败不输出原始异常、连接串、凭据、任意角色名或业务行，不执行任何角色及数据库变更。
 
 协作环境 Node.js 22.16.0 实际执行新增角色核查核心及测试的 node --check 和 node --test，8/8 通过。远端 Git Blob 分别为 ef9dc9d5810457d0d9e745fdf8ca5872bee34ffb、7115a369da54aacf7bb3324badc25c0d0a9215f5，与本地实际执行文件一致。已逐项核对入口、参数白名单、严格契约验证分支及 package.json 质量链；未运行完整 Docker 68 项、Prisma 8 全新专项、全仓 Vite+、env/messages/docs 或真实 PostgreSQL 19 目录查询。
+
+## 6. A 阶段完成及 B1 候选
+
+维护者已在 Windows 完成 PR #257 真实双库角色目录核查，退出 0，PR #257 已合并至 8d94a418021376d6803b16bb793eefcf4a79b280。B1 新增独立 docker:db:role:plan，复用真实双库只读核查与固定原生契约、集群和当前权限基线，仅生成两条 NOLOGIN 角色创建和六条精确授权 SQL 文本，不执行 SQL，不改实际角色、ACL、所有权、数据库、容器或 OIDC。当前方案仅准备 SCADA Provider 启动查询所需列、Schema 与集群函数权限及两库显式 CONNECT；PUBLIC 权限、行锁、正式业务 ACL、Keycloak 对象所有权及实际 LOGIN 均尚待单独评审。 详见 [角色准备预览与权限矩阵](docker-native-role-bootstrap-plan.md)。
