@@ -46,6 +46,10 @@ export function freshConnection(input, readOnly) {
 export function freshAction(args) {
   const approvals = ["--reviewed-business-consumers", "--reviewed-maintenance-consumers", "--reviewed-template-consumers"];
   const fingerprint = args.at(-1);
+  if (typeof fingerprint === "string" && /^--plan-fingerprint=[a-f0-9]{64}$/u.test(fingerprint) &&
+    isDeepStrictEqual(args, ["--role-b4-rehearse", "--confirm-rehearse-scada-b4", fingerprint])) {
+    return "role-b4-rehearse";
+  }
   if (typeof fingerprint === "string" && /^--plan-fingerprint=[a-f0-9]{64}$/u.test(fingerprint)) {
     if (isDeepStrictEqual(args, ["--role-isolation-execute", "--confirm-rehearse-isolation", ...approvals, fingerprint])) return "role-isolation-rehearse";
     if (isDeepStrictEqual(args, ["--role-isolation-execute", "--confirm-apply-isolation", "--confirm-rehearsal-verified", ...approvals, fingerprint])) return "role-isolation-apply";
@@ -68,6 +72,7 @@ export function freshAction(args) {
     ["--role-isolation-plan", "role-isolation-plan"],
     ["--role-isolation-status", "role-isolation-status"],
     ["--role-object-review", "role-object-review"],
+    ["--role-b4-plan", "role-b4-plan"],
     ["--runtime-review", "runtime-review"],
     ["--runtime-emit", "runtime-emit"],
     ["--provider-smoke", "provider-smoke"],

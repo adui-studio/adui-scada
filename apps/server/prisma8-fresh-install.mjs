@@ -7,10 +7,12 @@ import { createDockerDatabaseUrl } from "../../scripts/init-docker-db.mjs";
 import {
   DockerRoleBootstrapError,
   runDockerRoleBootstrap,
+  verifyPrepared,
 } from "../../scripts/docker-db-role-bootstrap.mjs";
 import {
   buildDockerRoleIsolationPlan,
   DockerRoleIsolationPlanError,
+  reviewDockerRoleIsolationInventory,
 } from "../../scripts/docker-db-role-isolation-plan.mjs";
 import {
   buildDockerRoleBootstrapPlan,
@@ -23,6 +25,9 @@ import {
 } from "../../scripts/docker-db-role-review.mjs";
 import { DockerRoleIsolationTransactionError, runDockerRoleIsolationTransaction } from "../../scripts/docker-db-role-isolation-transaction.mjs";
 import { DockerRoleObjectReviewError, reviewDockerRoleObjects } from "../../scripts/docker-db-role-object-review.mjs";
+import { readDockerIsolationDirectory } from "../../scripts/docker-db-role-isolation.mjs";
+import { createScadaB4HostReader, createScadaB4IsolationReader, readScadaB4HostPlan } from "../../scripts/docker-db-role-b4-host.mjs";
+import { DockerB4RehearsalError, runScadaB4RollbackRehearsal } from "../../scripts/docker-db-role-b4-rehearsal.mjs";
 import { offlineEnvironment, resolveFreshCli } from "../../scripts/prisma8-fresh-cli-support.mjs";
 import {
   inspectFreshDockerEmptyDatabase,
@@ -345,10 +350,9 @@ async function main() {
     reviewFreshRuntimeTypes(root, emittedText, declaration);
   }
   stage = "全新业务库 Docker 身份与连接检查";
-  const base = createDockerDatabaseUrl(
-    readFileSync(join(root, ".env"), "utf8"),
-    readFileSync(join(root, ".local", "docker", "secrets.env"), "utf8"),
-  );
+  const envText = readFileSync(join(root, ".env"), "utf8");
+  const secretsText = readFileSync(join(root, ".local", "docker", "secrets.env"), "utf8");
+  const base = createDockerDatabaseUrl(envText, secretsText);
   const readOnly = freshConnection(base, true);
   const writable = freshConnection(base, false);
   const bootstrapMode =
@@ -362,7 +366,8 @@ async function main() {
             ? "isolation-inspect"
             : null;
   const isolationMode = action === "role-isolation-status" ? "status" : action === "role-isolation-rehearse" ? "rehearse" : action === "role-isolation-apply" ? "apply" : null;
-  const reviewRoles = action === "role-review" || action === "role-plan" || action === "role-object-review" || bootstrapMode !== null || isolationMode !== null;
+  const b4Mode = action === "role-b4-plan" ? "plan" : action === "role-b4-rehearse" ? "rehearse" : null;
+  const reviewRoles = action === "role-review" || action === "role-plan" || action === "role-object-review" || bootstrapMode !== null || isolationMode !== null || b4Mode !== null;
   const identity = inspectDocker(reviewRoles);
   const parse = (text) => {
     try {
@@ -409,6 +414,56 @@ async function main() {
         return { ...roleReport, ...report, serverVersion: identity.version };
       };
       const directoryReport = await loadDirectoryReport();
+      if (b4Mode !== null) {
+        stage = "B4 可信宿主与同事务隔离适配";
+        const { readDockerOidcPort, verifyLocalDockerOidcBoundary } = await import("../../scripts/docker-stack.mjs");
+        const port = readDockerOidcPort(envText);
+        const composeEnvPath = join(root, ".local", "docker", "compose.env");
+        const composeEnvText = readFileSync(composeEnvPath, "utf8");
+        const checkConfiguration = () => {
+          requireMatch(
+            readFileSync(join(root, ".env"), "utf8") === envText &&
+              readFileSync(join(root, ".local", "docker", "secrets.env"), "utf8") === secretsText &&
+              readFileSync(composeEnvPath, "utf8") === composeEnvText,
+            "B4 核验期间本机环境或凭据配置发生变化",
+          );
+        };
+        const readHostBoundary = createScadaB4HostReader({
+          identity, storageHash: freshStorageHash, port,
+          inspectIdentity: () => { checkConfiguration(); return inspectDocker(true); },
+          verifyContract: () => {
+            requireFreshVerification(parse(invoke(["db", "verify", "--strict", "--json"], readOnly)));
+            return true;
+          },
+          verifyComments: async () => {
+            await checkComments(readOnly, identity, contract, commentText, false);
+            requireMatch(isDeepStrictEqual(await loadDirectoryReport(), directoryReport), "B4 核验期间双库目录发生变化");
+            return true;
+          },
+          verifyOidc: () => verifyLocalDockerOidcBoundary(envText),
+        });
+        const readIsolatedBaseline = createScadaB4IsolationReader({
+          report: directoryReport, identity, storageHash: freshStorageHash,
+          validateBootstrap: buildDockerRoleBootstrapPlan,
+          readDirectory: readDockerBusinessRoleDirectory, verifyPrepared,
+          readIsolationDirectory: readDockerIsolationDirectory,
+          reviewIsolationInventory: reviewDockerRoleIsolationInventory,
+        });
+        const options = {
+          identity, storageHash: freshStorageHash, port, readIsolatedBaseline, readHostBoundary,
+          createClient: (readOnlyMode) => databaseClient(readOnlyMode ? readOnly : writable),
+        };
+        stage = "B4 独立只读计划";
+        const plan = await readScadaB4HostPlan(options);
+        if (b4Mode === "plan") return plan;
+        const expectedPlanFingerprint = (process.argv.at(-1) ?? "").slice("--plan-fingerprint=".length);
+        requireMatch(plan.planFingerprint === expectedPlanFingerprint, "B4 演练与已确认计划指纹不一致");
+        stage = "B4 强制回滚演练";
+        return runScadaB4RollbackRehearsal({
+          ...options, isolationFingerprint: plan.isolationFingerprint, expectedPlanFingerprint,
+          confirm: process.argv[3],
+        });
+      }
       if (action === "role-object-review") {
         stage = "独立角色隔离状态核验";
         const verifyStatus = (currentReport, expectedFingerprint = "") => runDockerRoleIsolationTransaction({
@@ -645,6 +700,7 @@ void main()
         error instanceof DockerRoleIsolationPlanError ||
         error instanceof DockerRoleIsolationTransactionError ||
         error instanceof DockerRoleObjectReviewError ||
+        error instanceof DockerB4RehearsalError ||
         error instanceof FreshRuntimeProbeError
         ? error.message
         : stage + "失败，内部诊断已脱敏；保留现场，不自动重试",

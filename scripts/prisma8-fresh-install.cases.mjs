@@ -308,3 +308,16 @@ void test("隔离事务必须精确确认三组消费者、指纹及独立持久
     ["--role-isolation-status", "--confirm-apply-isolation"],
   ]) assert.throws(() => freshAction(args), /必须明确指定/u);
 });
+
+void test("B4 只接受只读计划与明确确认指纹的回滚演练，拒绝正式安装", () => {
+  const fingerprint = "--plan-fingerprint=" + "a".repeat(64);
+  const confirm = "--confirm-rehearse-scada-b4";
+  assert.equal(freshAction(["--role-b4-plan"]), "role-b4-plan");
+  assert.equal(freshAction(["--role-b4-rehearse", confirm, fingerprint]), "role-b4-rehearse");
+  for (const args of [
+    ["--role-b4-rehearse"], ["--role-b4-rehearse", confirm],
+    ["--role-b4-rehearse", fingerprint, confirm], ["--role-b4-rehearse", confirm, "--plan-fingerprint=bad"],
+    ["--role-b4-plan", confirm], ["--role-b4-apply", confirm, fingerprint],
+    ["--role-b4-rehearse", "--apply", fingerprint], ["--role-b4-rehearse", confirm, fingerprint, "--commit"],
+  ]) assert.throws(() => freshAction(args), /必须明确指定/u);
+});
