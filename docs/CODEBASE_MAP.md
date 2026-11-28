@@ -2125,3 +2125,11 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-db-role-b4-runtime-probe.mjs`：`verifyScadaB4RuntimeProbe`，使用合成夹具、角色切换、受限业务操作、精确拒绝及回滚/无残留核验；`docker-db-role-b4-runtime-probe.fixture.mjs` 为测试专用模拟驱动，`docker-db-role-b4-runtime-probe.cases.mjs` 新增四项 Node 测试并注册 `test:docker`。
 - `scripts/docker-db-role-b4-rehearsal.mjs`：组合目录后强制调用业务探针；计划版本 2 与独立 `--confirm-rollback-business-fixtures`，保留 92 条安装目录候选及完整外层回滚。
 - `scripts/prisma8-fresh-install.mjs` / `apps/server/prisma8-fresh-install.mjs`：增加 `docker:db:role:keycloak:rehearse` 严格参数及停止容器核验，SCADA 回滚入口增加独立确认。不执行服务停启或正式安装。
+
+### B4 双库跨阶段目录投影
+
+- `scripts/docker-db-role-b4-phase.mjs`：`buildB4KeycloakDependencyScope`、`verifyB4KeycloakDependencyScope`，严格限定 101 个普通表 OID、固定目标库/角色、共享依赖类型及集群标识。
+- `scripts/docker-db-role-keycloak-plan.mjs`：新增内部只读 `readKeycloakInstalledOwnership`，从已转移的六类对象恢复原候选和确认指纹，沿用原目录与有效权限核验；不输出内部表 OID。
+- `scripts/docker-db-role-b4-permission-review.mjs`：新增 `verifyScadaB4CompletedCatalog`，双库只读投影组合及精确共享依赖；原六查询安装后核验保持严格基线。当前为内部校验器，未接实际宿主或 CLI。
+- `scripts/docker-db-role-b4-rehearsal.mjs`：原连接未确认关闭时不启动独立复核；专项测试扩展。
+- `scripts/docker-db-role-b4-phase.cases.mjs`：三项 Node 独立回归，纳入 test:docker；Keycloak 增三项及 SCADA 回滚增一项组合回归，后两组待真实 Node 复跑。

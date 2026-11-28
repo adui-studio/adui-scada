@@ -5565,3 +5565,9 @@ Node.js 22.16.0 实测新增隔离预览核心、测试文件 node --check 均�
 ### 2026-11-28 · B4 双库回滚与合成业务探针局部验证（PR #262）
 
 协作容器 Node.js 22.16.0 实际运行 `node --test` 的 Keycloak 所有权计划/回滚演练和 SCADA 运行角色探针两套件共 24/24（20+4），失败、取消、跳过均为零；六份源码及测试 `node --check` 通过。六个 Git Blob 与远端代码提交精确一致：Keycloak plan `8e0221d626405082166dc86429ed478cb8e146d6`、cases `8e352e320e55166bf176c0beb8c584e9df812779`、rehearsal `a0c8b582cd170341272277de6449d7df088046bb`；SCADA probe `b4fe176319ceb824062177d9fb2c131f6ac22114`、fixture `2e2946881207a525598f4493b03fcca4f02afbaf`、cases `a81510ed4484eab8da3bfa71383f2e7245f269a0`。另提取实际 freshAction 函数（2399 字符，UTF-8 FNV-1a 8bb1d50e 与远端相同）及 Keycloak 维护容器断言进行 CLI 白名单局部测试，实际 3/3。Keycloak 新代码提交 `755c1cec3ecff52955e8fce79ba469bc753584fc`，SCADA 探针接入提交 `c6b9c8a47449458eb69db8deecbf4b21372d0ff7`。新增模拟用例覆盖逐表所有权锁与变更、失败停止、独立原始目录复核，以及 SCADA 36 正向/15 精确拒绝、保存点、CAS/历史、固定 Issuer 清理隔离与残留拒绝。上述次数仅为模拟执行路径，不是数据库实测。原 55 项 SCADA 专项及修改后的组合编排套件未在本轮重新运行，完整 `test:docker`、`test:prisma8:fresh`、Vite+、中文与文档校验、真实 PostgreSQL/Docker/OIDC 未执行；协作环境缺完整工具链与真实数据库。未执行实际角色变更、授权、所有权转移、业务 DML 或服务停启。B4 尚未完成，不要求维护者中间验收；须完成正式持久化与跨阶段核验、仓储及并发/行级授权适配和 Keycloak Schema 演进评审后集中验收。
+
+### 2026-11-28 · PR #262 B4 跨阶段目录局部验证
+
+- 代码提交 cd4bbc47c5ab452d48fe20b3fc0bb9cda5805174。Node.js 22.16.0 实际 `node --check` 两个跨阶段文件通过；`node --test scripts/docker-db-role-b4-phase.cases.mjs` 3/3，零失败、零跳过。首次三项通过后将测试稀疏数组字面量替换为设置数组长度构造相同稀疏输入，再次三项通过。最终模块/测试 Git Blob 71ab57b847329554245659126910c5ccf860962c / 67f1511221caf858701f584a3cd69b710fcc59a7 与本地实测完全一致。
+- 另外对六个候选源码/测试进行 V8 去除导入/导出声明后的语法解析（不是 node --check）；利用实际远端模块与夹具运行双库目录编排成功链、旧门禁及错误指纹、Keycloak 所有权、Keycloak ACL、SCADA 依赖和角色五类负例。V8 环境首次缺 URL 全局而失败，补充仅供探索的固定 URL 替身后通过；摘要、深比较和克隆均为外围替身，不能当作原生 Node、真实 SHA-256 指纹或完整集成测试证据。新增加的三项 Keycloak、一项 SCADA 回滚 Node 用例尚未实际运行。
+- 协作环境 git 远程 DNS 失败，无 pnpm/vp/Docker/psql；未运行完整 test:docker、messages/docs、ready、真实 PostgreSQL、真实 SQL、Docker 或服务切换。真实 B4 集中验收未到条件。
