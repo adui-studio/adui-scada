@@ -615,7 +615,12 @@ function transactionFixture(mode, fault = "") {
       if (sql.startsWith("SELECT d.oid::text AS oid"))
         return {
           rows: current.databases.map(
-            ({ publicConnect, publicTemporary, publicCreate, ...row }) => row,
+            ({
+              publicConnect: _publicConnect,
+              publicTemporary: _publicTemporary,
+              publicCreate: _publicCreate,
+              ...row
+            }) => row,
           ),
         };
       if (sql.startsWith("SELECT r.oid::text AS oid")) return { rows: current.roles };

@@ -366,13 +366,38 @@ async function verifyInstalledPermissions(query, port, scope) {
     verifyB4KeycloakDependencyScope(rows, scope);
   }
   const checks = [
-    ["专用角色属性及依赖", rolesSql(scope), expected.roles, keyOf("role")],
-    ["全集群有效数据库权限", databaseSql, expected.databases, keyOf("role", "database")],
-    ["精确直接授权", aclSql, expected.acl, keyOf("role", "kind", "object", "privilege")],
-    ["有效关系权限", relationSql, expected.relations, keyOf("role", "schema", "table")],
-    ["有效列权限", columnSql, expected.columns, keyOf("role", "schema", "table", "column")],
+    {
+      step: "专用角色属性及依赖",
+      sql: rolesSql(scope),
+      rows: expected.roles,
+      key: keyOf("role"),
+    },
+    {
+      step: "全集群有效数据库权限",
+      sql: databaseSql,
+      rows: expected.databases,
+      key: keyOf("role", "database"),
+    },
+    {
+      step: "精确直接授权",
+      sql: aclSql,
+      rows: expected.acl,
+      key: keyOf("role", "kind", "object", "privilege"),
+    },
+    {
+      step: "有效关系权限",
+      sql: relationSql,
+      rows: expected.relations,
+      key: keyOf("role", "schema", "table"),
+    },
+    {
+      step: "有效列权限",
+      sql: columnSql,
+      rows: expected.columns,
+      key: keyOf("role", "schema", "table", "column"),
+    },
   ];
-  for (const [step, sql, rows, key] of checks) {
+  for (const { step, sql, rows, key } of checks) {
     let result;
     try {
       result = await query("B4 安装后" + step, sql);

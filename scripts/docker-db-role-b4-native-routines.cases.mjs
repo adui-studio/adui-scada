@@ -61,71 +61,71 @@ function harness(rows = [], fault = false) {
 
 void test("九条行锁例程使用固定签名、准确参数顺序和声明列", async () => {
   const cases = [
-    [
-      "scada_lock_identity",
-      ["text", "text"],
-      [tenant, subject],
-      { status: "active" },
-      (tx) => lockB4Identity(tx, tenant, subject),
-    ],
-    [
-      "scada_lock_session_identity",
-      ["text", "text", "uuid"],
-      [tenant, subject, id],
-      { session_id: id },
-      (tx) => lockB4SessionIdentity(tx, tenant, subject, id),
-    ],
-    [
-      "scada_lock_project_grants",
-      ["text", "text", "text"],
-      [tenant, project, subject],
-      { permission: "version:append" },
-      (tx) => lockB4ProjectGrants(tx, tenant, project, subject),
-    ],
-    [
-      "scada_lock_project_version",
-      ["text", "text", "bigint"],
-      [tenant, project, 1n],
-      { snapshot_data: "{}", content_hash: snapshot.contentHash, created_at: snapshot.createdAt },
-      (tx) => lockB4ProjectVersion(tx, tenant, project, 1n),
-    ],
-    [
-      "scada_lock_release_state_share",
-      ["text", "text"],
-      [tenant, project],
-      state,
-      (tx) => lockB4ReleaseState(tx, tenant, project, false),
-    ],
-    [
-      "scada_lock_release_state_update",
-      ["text", "text"],
-      [tenant, project],
-      state,
-      (tx) => lockB4ReleaseState(tx, tenant, project, true),
-    ],
-    [
-      "scada_lock_release_event",
-      ["text", "text", "uuid"],
-      [tenant, project, id],
-      event,
-      (tx) => lockB4ReleaseEvent(tx, tenant, project, id),
-    ],
-    [
-      "scada_lock_release_request",
-      ["text", "text", "text", "text", "text"],
-      [tenant, project, subject, "PUBLISH", id],
-      event,
-      (tx) => lockB4ReleaseRequest(tx, tenant, project, subject, "PUBLISH", id),
-    ],
-    [
-      "scada_lock_prior_publish",
-      ["text", "text", "bigint", "bigint"],
-      [tenant, project, 1n, 2n],
-      event,
-      (tx) => lockB4PriorPublish(tx, tenant, project, 1n, 2n),
-    ],
+    {
+      name: "scada_lock_identity",
+      types: ["text", "text"],
+      parameters: [tenant, subject],
+      row: { status: "active" },
+      invoke: (tx) => lockB4Identity(tx, tenant, subject),
+    },
+    {
+      name: "scada_lock_session_identity",
+      types: ["text", "text", "uuid"],
+      parameters: [tenant, subject, id],
+      row: { session_id: id },
+      invoke: (tx) => lockB4SessionIdentity(tx, tenant, subject, id),
+    },
+    {
+      name: "scada_lock_project_grants",
+      types: ["text", "text", "text"],
+      parameters: [tenant, project, subject],
+      row: { permission: "version:append" },
+      invoke: (tx) => lockB4ProjectGrants(tx, tenant, project, subject),
+    },
+    {
+      name: "scada_lock_project_version",
+      types: ["text", "text", "bigint"],
+      parameters: [tenant, project, 1n],
+      row: { snapshot_data: "{}", content_hash: snapshot.contentHash, created_at: snapshot.createdAt },
+      invoke: (tx) => lockB4ProjectVersion(tx, tenant, project, 1n),
+    },
+    {
+      name: "scada_lock_release_state_share",
+      types: ["text", "text"],
+      parameters: [tenant, project],
+      row: state,
+      invoke: (tx) => lockB4ReleaseState(tx, tenant, project, false),
+    },
+    {
+      name: "scada_lock_release_state_update",
+      types: ["text", "text"],
+      parameters: [tenant, project],
+      row: state,
+      invoke: (tx) => lockB4ReleaseState(tx, tenant, project, true),
+    },
+    {
+      name: "scada_lock_release_event",
+      types: ["text", "text", "uuid"],
+      parameters: [tenant, project, id],
+      row: event,
+      invoke: (tx) => lockB4ReleaseEvent(tx, tenant, project, id),
+    },
+    {
+      name: "scada_lock_release_request",
+      types: ["text", "text", "text", "text", "text"],
+      parameters: [tenant, project, subject, "PUBLISH", id],
+      row: event,
+      invoke: (tx) => lockB4ReleaseRequest(tx, tenant, project, subject, "PUBLISH", id),
+    },
+    {
+      name: "scada_lock_prior_publish",
+      types: ["text", "text", "bigint", "bigint"],
+      parameters: [tenant, project, 1n, 2n],
+      row: event,
+      invoke: (tx) => lockB4PriorPublish(tx, tenant, project, 1n, 2n),
+    },
   ];
-  for (const [name, types, parameters, row, invoke] of cases) {
+  for (const { name, types, parameters, row, invoke } of cases) {
     const h = harness([row]);
     assert.deepEqual(await invoke(h.port), [row]);
     assert.equal(h.plans.length, 1);
