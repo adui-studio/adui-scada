@@ -3206,3 +3206,9 @@ E-159 为测试专属消息遗漏，已最小修复；不改变生产代码。�
 ### 2026-11-28 · PR #257 合并与 B1 角色准备预览候选
 
 维护者已在 Windows 完成 PR #257 真实双库角色目录核查，退出 0，PR #257 已合并至 8d94a418021376d6803b16bb793eefcf4a79b280。B1 新增独立 docker:db:role:plan，复用真实双库只读核查与固定原生契约、集群和当前权限基线，仅生成两条 NOLOGIN 角色创建和六条精确授权 SQL 文本，不执行 SQL，不改实际角色、ACL、所有权、数据库、容器或 OIDC。当前方案仅准备 SCADA Provider 启动查询所需列、Schema 与集群函数权限及两库显式 CONNECT；PUBLIC 权限、行锁、正式业务 ACL、Keycloak 对象所有权及实际 LOGIN 均尚待单独评审。 参见 [角色准备预览](plans/docker-native-role-bootstrap-plan.md)。新增 Node 实测 5/5 通过，维护者真实报告离线复现预览成功；全仓及实际只读命令待 Windows 复验。新 PR 保持 Draft，禁止提前执行预览 SQL。
+
+### 2026-11-28 · PR #258 B1 真实角色准备预览结案
+
+维护者 2026-11-28 Windows 增量：Docker 七套件 73/73、Prisma 8 全新专项 29/29，合计 102/102；环境及 LF、中文文案 384 文件、Markdown 99 份、Vite+ 519 格式文件/358 受检文件零警告、Lint/类型错误、git diff --check 全部通过，退出码 0。维护者格式化提交 76bfcb156d82d151ab56e667dbd9f13628c753ba 已推送；相较 b15e400d68d4a9428f2a1fc12f512f42b41cd856 的两文件差异已核对仅为排版。随后实际 docker:db:role:plan 返回 DOCKER_DB_ROLE_BOOTSTRAP_PLAN_READY、directoryReviewPassed=true、planOnly=true、admissionPassed=false、databaseWritten=false、serviceSwitched=false，PG19.0、目标 adui_scada、固定指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、八条 SQL 及五个待审批门禁完全符合预期，退出 0。未执行 SQL 预览；真实预览日志未再次打印 HEAD 或工作区状态。
+
+B1 完成，维护者同意继续。B2 开发独立确认的受控事务执行器，不能把预览文本当作任意 SQL 执行入口；实际角色变更另行授权。继续保留共享管理身份、现有服务绑定、只读常驻服务、原生结构及 OIDC/发布安全门禁，不提前启用独立 LOGIN 或回收 PUBLIC 权限。
