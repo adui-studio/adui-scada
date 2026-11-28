@@ -218,3 +218,9 @@ SQLSTATE 42809 是 wrong_object_type。当前有效对象权限 SQL 从含表、
 新增 `buildScadaB4RehearsalPlan` 与 `runScadaB4RollbackRehearsal`。计划指纹绑定固定集群身份、存储标识、B3.3 隔离指纹、部署端口、前置与业务候选指纹及固定目录语句序列；不接受调用方替换候选 SQL。执行必须同时具备独立确认参数 `--confirm-rehearse-scada-b4`、精确计划指纹与可信宿主、事务内 B3.3 隔离核验适配器。前置适配器须验证实际严格原生契约、中文注释、集群和正式 OIDC Discovery 及规范化 Issuer。核心在 SERIALIZABLE READ WRITE 事务内获取既有执行锁，重新核对 B3.3 已隔离基线及固定候选，打开 check_function_bodies，创建三个专用角色并先核验未授权状态，再按固定依赖顺序执行 92 条目录语句（包含 11 例程及 21 条业务授权），逐条核对 pg.Result.command，并调用组合安装后目录门禁。核心没有 COMMIT 路径；仅在收到 ROLLBACK 标签、关闭原连接且新独立只读事务复核 B3.3 和 B4 原始基线、宿主证据复核均匹配后，才返回演练结果。失败不自动重试；事务开始、回滚或连接关闭结果未知时禁止重试，不输出原始异常。
 
 本次只交付编排核心和模拟驱动回归，不注册实际 CLI，不接入真实宿主或 B3.3 同事务适配器，不允许实际安装，不切换角色和服务。后续仍需完成可信宿主接入、真实 PostgreSQL 目录/锁及 DML 正负向测试、独立回滚确认、Keycloak 对象所有权及剩余准入门禁。所有正式授权及发布准入标志继续为 false。
+
+### B4 真实宿主适配与受控 CLI（2026-11-28）
+
+新增 `scripts/docker-db-role-b4-host.mjs`，将已有回滚演练核心接入实际宿主入口。`createScadaB4IsolationReader` 固定双运行角色已创建且两业务库 PUBLIC CONNECT 已隔离的基线，复用 B2 的角色与启动授权核验以及 B3.3 的全集群精确目录核验，前后比较管理身份与业务目录，并在调用者提供的同一连接/事务中获取真实隔离指纹；不自行建立第二个事务替代当前事务证据。`createScadaB4HostReader` 依次核对本机 Docker PostgreSQL 集群身份、官方严格原生契约、真实中文注释及宿主/容器正式 OIDC Discovery/JWKS，最后再次核对集群身份；只有全部证据匹配才生成固定宿主报告。宿主入口在前后复核 `.env`、现有随机凭据文件、Compose 环境文件及双库目录报告是否变化，不回显文件内容。`readScadaB4HostPlan` 在独立 REPEATABLE READ READ ONLY 事务中前后核验 B3.3，读取原固定 B4 准备报告并生成计划指纹，必须收到 ROLLBACK、关闭连接并再次核对宿主证据。原 92 条目录语句、21 条业务授权候选及其他安全门禁保持不变。
+
+新增 `docker:db:role:b4:plan` 与 `docker:db:role:b4:rehearse` 两个固定 CLI：只读计划不接受其他参数；回滚演练严格要求 `--confirm-rehearse-scada-b4` 及 `--plan-fingerprint=<64 位小写十六进制>`，先独立生成真实计划并与确认指纹比较，再进入原强制回滚核心。复用已有本机 Windows Docker Desktop、固定业务库连接和正式 OIDC 探针；不接受任意 URL、SQL、外部验证报告或任意端口覆盖，不提供 B4 apply/commit 模式。此处是 CLI 实现候选，不代表在真实宿主执行成功；B3.3 必须实际隔离完成，服务和固定 OIDC Discovery/JWKS 必须具备，真实 PostgreSQL 例程安装/回滚及锁和业务 DML 测试仍需独立授权验收。保留 Keycloak 对象所有权与运行角色 LOGIN、业务连接切换和发布准入的独立边界。

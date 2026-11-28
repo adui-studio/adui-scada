@@ -2099,3 +2099,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-db-role-b4-rehearsal.mjs`：`buildScadaB4RehearsalPlan`、`runScadaB4RollbackRehearsal`，固定计划、受控依赖、同事务执行和组合目录门禁、回滚及独立基线复核；尚无真实 CLI/宿主适配器。
 - `scripts/docker-db-role-b4-preflight.mjs`：新增 `readScadaB4RehearsalPreparation`，固定可写 SERIALIZABLE 演练前置查询，不改变原只读入口。
 - `scripts/docker-db-role-b4-rehearsal.cases.mjs`：九项 Node 回归，纳入 `test:docker`。
+
+### B4 宿主及同事务适配与 CLI
+
+- `scripts/docker-db-role-b4-host.mjs`：`createScadaB4IsolationReader`、`createScadaB4HostReader` 与 `readScadaB4HostPlan`，复用既有核验器，生成严格只读计划并为原回滚核心提供固定证据。
+- `scripts/docker-db-role-b4-host.cases.mjs`：七项 Node 模拟连接与宿主证据回归，纳入 `test:docker`。
+- `scripts/docker-stack.mjs`：`readDockerOidcPort`、`verifyLocalDockerOidcBoundary`，复用已有本机 Docker OIDC Discovery/JWKS 核验，不启动或修改服务。
+- `scripts/prisma8-fresh-install.mjs`、`apps/server/prisma8-fresh-install.mjs`：新增 B4 白名单与真实宿主适配，根脚本 `docker:db:role:b4:plan`、`docker:db:role:b4:rehearse`；后者必须有独立确认和真实计划指纹，只允许回滚。
