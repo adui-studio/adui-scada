@@ -925,7 +925,11 @@ void test("双库只读投影仅接受经 Keycloak 完整目录恢复的精确�
     "serviceSwitched",
   ])
     assert.equal(result[flag], false);
-  assert.doesNotMatch(JSON.stringify(result), /kc_fixture|databasechangelog|objectId|ALTER TABLE/u);
+  assert.equal(result.keycloak.objectIdentityReviewed, false);
+  assert.doesNotMatch(
+    JSON.stringify(result),
+    /kc_fixture|databasechangelog|\bobjectId\b|ALTER TABLE/u,
+  );
   const originalCalls = [];
   await verifyScadaB4InstalledCatalog(
     async (_step, sql) => ({ rows: h.rows[originalCalls.push(sql)] }),

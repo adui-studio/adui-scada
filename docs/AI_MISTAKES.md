@@ -1651,3 +1651,12 @@
 - **根因和最小修复**：正式 Prisma8SessionOperations 已使用 lockB4Identity 的固定参数化 SELECT status FROM public.scada_lock_identity 例程；旧 makeSessionService 模拟仅识别 FROM public.scada_identities，触发未预期查询错误并由正式事务端口脱敏。仅修改该测试夹具，精确匹配新例程 SQL 及两项类型转换，原租户、主体、状态联合筛选不变；原拒绝用例追加未知主体与零会话写入断言。不修改生产仓储、SQL、异常语义、权限或其他测试。检查现有 auth spec 与 server test 共 15 个文件，未发现另一处同样的直接身份表查询匹配；正式 E2E 尚未实际执行。
 - **实际局部验证**：协作容器 Node.js 22.16.0 使用真实签发逻辑、nativePort、模拟 query/execute 源码片段（FNV-1a 分别为 99b34979、6db4b27a、57e780fe、db75177d，与远端提取逐字校验一致），完整原生例程和文本事务端口本地 Blob 3f0f00be7394ba6f1ad3c4fc9a1285eef78098b0、a85164e465f0a1fed66ea2494c42034b4744c638 与远端一致；NestJS 异常采用最小替身，另组装模拟事务与 Node 测试。旧条件 1/5（退出 1），修复后 5/5（退出 0），覆盖签发仅保存摘要、跨租户/未知/非法/禁用主体拒绝且零写入。不是原完整 Vitest 文件实测。候选测试 Blob 88e4045442f5b83bc9ae23c870b297977df55399，经反向还原仅目标三处变更。完整身份 14 项、全量 969 项及后续 ready 仍待维护者复验。
 - **防复发**：SQL 表访问替换为固定例程时，同步检索所有模拟查询路由、HTTP 装配及旧字符串断言；保留原拒绝和不写入断言。不能将新版专项通过替代所有复用旧夹具的全量测试；不得把 Mock 失败当作真实 PostgreSQL 或权限失效证据。保持 Draft，不实际授权或合并。
+
+> **2026-11-28 · E-177 Windows 复验关闭**：维护者在 HEAD ac056982cf5a3d4221a25fdea8997bcd00086aa9 实测身份四组 49/49（其中原失败文件 14/14）、Vite+ 564 格式/402 受检零警告错误，完整单测 82/82 文件、969/969 用例通过。ready 继续至 Docker 专项 221/222 后退出 1，见 E-178。E-177 关闭；未执行后续真实数据库阶段。
+
+### E-178 · 双库报告脱敏断言误匹配合法对象审阅标志（PR #262，E-172 同类）
+
+- **维护者实测**：HEAD ac056982cf5a3d4221a25fdea8997bcd00086aa9，身份专项 49/49、Vite+ 564 格式/402 受检零警告错误、中文 428 文件、Prisma 8 34/34、CLI 4/4、Core 构建与双端/共享包/服务端类型检查、全量单测 82/82 文件及 969/969 用例通过；报警 5/5、SSE 客户端 8/8、故障代理 5/5、OIDC 代理 10/10、Lab 准备 6/6、身份预绑定 14/14 通过。Docker 专项 221/222，唯一失败为 scripts/docker-db-role-keycloak-plan.cases.mjs 第 928 行双库投影脱敏断言，ready 退出 1；其后 Docker DB、HTTP E2E、文档、构建与 B3.3/B4 实际数据库阶段未执行。
+- **根因和最小修复**：原 doesNotMatch 对 JSON 整体查找 objectId 子串，合法安全状态键 objectIdentityReviewed 也被命中。报告实际返回该标志 false。只修改该断言，将 objectId 限定为完整单词边界，保持 kc_fixture、databasechangelog、ALTER TABLE 检查，增加 objectIdentityReviewed 必须为 false 的独立断言。保留双库独立查询、依赖数量、指纹、其他未准入标志、原 SQL 检查及所有负向用例，不修改生产报告、权限、数据库或审批门禁。
+- **实际局部复验**：协作容器 Node.js 22.16.0 使用维护者日志中完整真实 JSON 与 node:assert/strict、node:test 复现原断言 0/1（退出 1）；修复后 7/7（退出 0）：原报告接受，注入嵌套 objectId 键、独立 objectId 文本、夹具名、内部表名、ALTER TABLE 语句，以及将审阅标志改为 true 的六个反例均拒绝。GitHub 目标文件反向还原与原文完全一致；这是实际报告样本的断言级复验，不是完整 Keycloak 专项或真实数据库实测。协作容器无法解析 GitHub 域名，缺少 pnpm/vp；完整 Docker 目标 222/222、Windows Vite+ 与 ready 仍待执行。
+- **防复发**：脱敏断言必须区分完整敏感标识与合法报告状态字段；对禁止泄漏的实际键、文本与 SQL 分别保留负向验证，不删除安全标志或通过改生产报告绕过测试。不得将模拟目录成功视为实际权限或 Schema 演进验收。保持 Draft，未实际隔离、授权、切换服务或合并。
