@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
@@ -130,6 +131,15 @@ function requireMatch(condition, message) {
   if (!condition) throw new DockerKeycloakOwnershipError(message);
 }
 
+// 普通索引名仅作为目录证据，不参与表锁或所有权 SQL 的标识符拼接。
+function validObjectName(kind, name) {
+  if (typeof name !== "string") return false;
+  if (kind !== "index") return /^[a-z_][a-z0-9_]{0,62}$/u.test(name);
+  if (name.length === 0 || name.includes("\0")) return false;
+  const bytes = Buffer.from(name, "utf8");
+  return bytes.length <= 63 && bytes.toString("utf8") === name;
+}
+
 function normalizeInventory(rows, expectedOwner) {
   requireMatch(Array.isArray(rows) && rows.length <= 10000, "Keycloak 对象证据数量无效");
   const keys = ["kind", "oid", "name", "parent", "owner", "clean"];
@@ -141,8 +151,7 @@ function normalizeInventory(rows, expectedOwner) {
         keys.every((key) => Object.hasOwn(row, key)) &&
         kinds.includes(row.kind) &&
         oid(row.oid) &&
-        typeof row.name === "string" &&
-        /^[a-z_][a-z0-9_]{0,62}$/u.test(row.name) &&
+        validObjectName(row.kind, row.name) &&
         (row.kind === "table" ? row.parent === null : oid(row.parent)) &&
         row.owner === expectedOwner &&
         row.clean === true,

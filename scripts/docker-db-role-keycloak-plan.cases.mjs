@@ -118,6 +118,70 @@ void test("Keycloak 仅生成一百零一条精确表所有权候选", () => {
   );
 });
 
+void test("普通索引原始名称只作为目录证据且不进入所有权语句和公开报告", () => {
+  const data = fixture();
+  const original = buildKeycloakOwnershipPlan(data);
+  const indexes = data.objects.filter((row) => row.kind === "index");
+  const names = [
+    "IDX_REALM",
+    "Idx_Client",
+    "IDX_USER",
+    "idx-legacy",
+    'idx"; DROP TABLE realm;--',
+    "索".repeat(21),
+  ];
+  for (const [index, name] of names.entries()) indexes[index].name = name;
+  const candidate = buildKeycloakOwnershipPlan(data);
+  assert.deepEqual(candidate.sqlPreview, original.sqlPreview);
+  assert.notEqual(candidate.report.planFingerprint, original.report.planFingerprint);
+  assert.deepEqual(candidate.report.objectCounts, original.report.objectCounts);
+  for (const name of names) {
+    assert.ok(candidate.inventory.some((row) => row.kind === "index" && row.name === name));
+    assert.ok(!JSON.stringify(candidate.report).includes(name));
+  }
+  assert.equal(candidate.report.objectIdentityReviewed, false);
+  assert.equal(candidate.report.ownershipTransferAllowed, false);
+});
+
+void test("索引名称必须是非空合法 UTF-8 目录标识且普通表仍使用严格命名规则", () => {
+  for (const name of ["", "\0", "x".repeat(64), "索".repeat(22), "\ud800"]) {
+    const data = fixture();
+    data.objects.find((row) => row.kind === "index").name = name;
+    assert.throws(() => buildKeycloakOwnershipPlan(data), DockerKeycloakOwnershipError);
+  }
+  for (const kind of ["table", "toast", "toastIndex", "rowType", "arrayType"]) {
+    const data = fixture();
+    data.objects.find((row) => row.kind === kind).name = "Mixed-Name";
+    assert.throws(() => buildKeycloakOwnershipPlan(data), DockerKeycloakOwnershipError);
+  }
+});
+
+void test("索引名称保留大小写且所有者权限与父对象漂移仍被拒绝", () => {
+  const data = fixture();
+  const index = data.objects.find((row) => row.kind === "index");
+  index.name = "Idx-Realm";
+  const before = buildKeycloakOwnershipPlan(data);
+  const after = data.objects.map((row) => ({ ...row, owner: runtime }));
+  assert.equal(verifyKeycloakOwnershipProjection(data.objects, after).ownerProjectionMatched, true);
+  const changed = structuredClone(after);
+  changed.find((row) => row.kind === "index").name = "idx-realm";
+  assert.throws(
+    () => verifyKeycloakOwnershipProjection(data.objects, changed),
+    DockerKeycloakOwnershipError,
+  );
+  const renamed = structuredClone(data);
+  renamed.objects.find((row) => row.kind === "index").name = "idx-realm";
+  assert.notEqual(
+    buildKeycloakOwnershipPlan(renamed).report.planFingerprint,
+    before.report.planFingerprint,
+  );
+  for (const patch of [{ owner: runtime }, { clean: false }, { parent: "999999" }]) {
+    const invalid = structuredClone(data);
+    Object.assign(invalid.objects.find((row) => row.kind === "index"), patch);
+    assert.throws(() => buildKeycloakOwnershipPlan(invalid), DockerKeycloakOwnershipError);
+  }
+});
+
 void test("指纹绑定集群、存储、隔离及对象标识，不受读取顺序影响", () => {
   const input = fixture();
   const original = buildKeycloakOwnershipPlan(input);

@@ -5629,3 +5629,11 @@ E-174 最小修复只调整两条 Keycloak 异常文案为等价模板字符串�
 Keycloak 逐对象所有权候选在真实目录失败，错误为 Keycloak 对象类型、名称、所有者或 ACL 不一致；脚本按设计停止，未生成 K 指纹，未执行本轮后置独立状态及 OIDC/Docker 复验，未进入两库回滚演练或权限安装。源码定位 scripts/docker-db-role-keycloak-plan.mjs 的 normalizeInventory 单条复合断言：对象结构、允许种类、OID、名称、父标识、所有者和 clean 标志均可能触发。真实失败维度尚未确定，不将大写名称、额外对象、ACL 或 PostgreSQL 目录差异的推测记作已确认根因，不移除权限校验或更改白名单。
 
 下一步在相同固定集群及只读事务中复用原 inventorySql，仅按固定种类聚合每项断言失败数量并核验原始目录，必要时继续细分 clean 失败来源；不输出未知对象名、业务行或凭据。确证根因后才决定最小代码修复或独立审阅环境差异，并按影响范围验证。当前只追加验收阻塞文档，不修改生产/测试代码，不执行 B4 演练、权限持久化、服务停启或合并。新提交文档检查待复验。
+
+### 2026-11-28 · PR #262 E-179 真实 Keycloak 索引名称误拒绝定位及局部修复
+
+维护者 Windows 在 d02c834fc37426942a59773497da19af662fd5d8 实际通过 Markdown 100 份及 B3.3 独立持久化状态复验，固定 PG 190000、原隔离及存储指纹不变。复用同版本 inventorySql 在固定 Keycloak 库和管理身份的 REPEATABLE READ READ ONLY 事务内核对真实集群并聚合六类对象：101 表、252 普通索引、101 行类型、101 数组类型、66 TOAST、66 TOAST 索引，共 687 项。仅普通索引 bad_name=4，ascii_case_only=3；所有 bad_kind、bad_oid、bad_parent、bad_owner、bad_clean 为 0。第四个索引名称具体字符未披露，不能推定。诊断 ROLLBACK 成功，工作区干净，无数据库写入。
+
+最小修复 scripts/docker-db-role-keycloak-plan.mjs：仅普通索引名称改按非空、无 NUL、UTF-8 无损往返及最多 63 字节校验；原始名称仍参与完整指纹和投影，普通表及其余五类中的非索引对象保持原严格命名规则（普通表、TOAST、TOAST 索引、行类型、数组类型）。现有表锁和 ALTER TABLE 仅从严格白名单普通表构造，索引名不进入 SQL 或公开报告。保持对象范围、OID/依赖、所有者、clean/ACL、基线、指纹算法及正式审批门禁不变。新增三项回归，覆盖特殊索引名、编码/长度及注入隔离、非索引严格规则、名称与权限漂移拒绝。
+
+实际协作容器 Node.js 22.16.0：与远端候选源码和测试片段逐字校验一致的纯计划/投影局部套件，原逻辑 2/4 退出 1，修复后 4/4、零失败零跳过退出 0；局部 node --check 两文件通过。候选前缀、纯函数和测试片段 UTF-16 FNV-1a 为 0c3027a5、aba47955、a1ce9aa3；逆向还原旧前缀与纯函数为 ef1705cb、fca363e7，均与远端对应片段一致。候选完整模块/测试 Blob 为 9ec1af5eef6c1bbcc42f1b56987bccf35bb4212e / 68d1bafa1f3e3894684f3f61cf8d849af7f56ecd。真实四个索引名称不在合成夹具中。没有完整仓库依赖及 Vite+/pnpm，GitHub DNS 不可达，未执行完整文件套件、中文、Vite+、docs、真实 PostgreSQL 或完整 ready。E-179 待维护者 Windows 执行 Keycloak 完整专项及全 Docker 专项（相较此前 222 项增加三项）、代码/中文/文档检查，并重新运行 B4 双库只读计划与后置 B3.3、OIDC、Docker 复验。没有 K 指纹，不批准 B4 演练、持久化、服务切换或合并。
