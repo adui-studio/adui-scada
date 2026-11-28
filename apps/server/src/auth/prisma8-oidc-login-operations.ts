@@ -10,6 +10,7 @@ import {
 import * as oidc from "openid-client";
 import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import type { Prisma8AuthTransactionPort } from "./prisma8-auth-transaction-port.js";
+import { cleanupB4ExpiredOidc } from "../database/prisma8-b4-oidc-cleanup.js";
 import type { EnabledOidcConfig } from "../config/oidc-startup.config.js";
 import type { OidcProviderDiscoveryService } from "./oidc-provider-discovery.service.js";
 import type {
@@ -23,7 +24,6 @@ const START_WINDOW_MS = 60_000;
 const START_LIMIT = 60;
 const START_CONCURRENCY_LIMIT = 8;
 const CLEANUP_INTERVAL_MS = 30_000;
-const CLEANUP_BATCH_SIZE = 128;
 const STATE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const BROWSER_BINDING_PREFIX = "scada_oidc_b_";
 const BROWSER_BINDING_PATTERN = /^scada_oidc_b_[A-Za-z0-9_-]{43}$/;
@@ -200,22 +200,8 @@ export class Prisma8OidcLoginOperations implements OnModuleInit, OnModuleDestroy
   async cleanupExpiredTransactions(): Promise<number> {
     if (this.cleanupPending) return this.cleanupPending;
     const pending = (async () => {
-      const now = new Date();
       try {
-        return await this.transactions.write(async (tx) => {
-          const cutoff = now.toISOString();
-          const result = await tx.executeCount`DELETE FROM public.scada_oidc_transactions
-              WHERE issuer = ${this.issuer} AND expires_at <= ${cutoff}::timestamptz
-                AND state_hash IN (
-                  SELECT state_hash FROM public.scada_oidc_transactions
-                  WHERE issuer = ${this.issuer} AND expires_at <= ${cutoff}::timestamptz
-                  ORDER BY expires_at ASC, state_hash ASC LIMIT ${CLEANUP_BATCH_SIZE}::integer
-                )`;
-          if (result.affectedRows < 0 || result.affectedRows > CLEANUP_BATCH_SIZE) {
-            throw new Error("OIDC 登录事务清理影响行数异常");
-          }
-          return result.affectedRows;
-        });
+        return await this.transactions.write((tx) => cleanupB4ExpiredOidc(tx, this.issuer));
       } catch {
         throw new ServiceUnavailableException("OIDC 登录事务清理失败，请稍后重试");
       }

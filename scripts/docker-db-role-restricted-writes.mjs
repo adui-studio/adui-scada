@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
+import { buildB4OidcCleanupBody, B4_OIDC_CLEANUP_BATCH_SIZE } from "../apps/server/src/database/prisma8-b4-oidc-cleanup.ts";
 
 const runtime = "adui_scada_runtime";
 const projectOwner = "adui_scada_project_create_owner";
 const cleanupOwner = "adui_scada_oidc_cleanup_owner";
-const cleanupBatchSize = 128;
+const cleanupBatchSize = B4_OIDC_CLEANUP_BATCH_SIZE;
 
 function routine(signature, owner, createSql, ownerGrants) {
   return {
@@ -101,18 +102,7 @@ export function buildScadaOidcCleanupRoutinePreview(port) {
   const sql = `CREATE FUNCTION public.scada_cleanup_expired_oidc() RETURNS bigint
 LANGUAGE sql VOLATILE PARALLEL UNSAFE SECURITY DEFINER
 SET search_path = pg_catalog, public, pg_temp SET row_security = on
-AS $scada_cleanup$
-WITH deleted AS (
-  DELETE FROM public.scada_oidc_transactions t
-  WHERE t.issuer = '${issuer}' AND t.expires_at <= CURRENT_TIMESTAMP
-    AND t.state_hash IN (
-      SELECT s.state_hash FROM public.scada_oidc_transactions s
-      WHERE s.issuer = '${issuer}' AND s.expires_at <= CURRENT_TIMESTAMP
-      ORDER BY s.expires_at ASC, s.state_hash ASC LIMIT ${cleanupBatchSize}
-    ) RETURNING 1
-)
-SELECT count(*) FROM deleted
-$scada_cleanup$`;
+AS $scada_cleanup$${buildB4OidcCleanupBody(issuer)}$scada_cleanup$`;
   const grants = [
     "GRANT USAGE ON SCHEMA public TO " + cleanupOwner,
     "GRANT SELECT (state_hash, issuer, expires_at) ON TABLE public.scada_oidc_transactions TO " + cleanupOwner,

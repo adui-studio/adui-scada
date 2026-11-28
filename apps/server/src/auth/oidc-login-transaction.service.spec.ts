@@ -8,6 +8,7 @@ import type { Prisma8Transaction } from "../database/prisma8-read-transaction.js
 import type { Prisma8Service } from "../database/prisma8.service.js";
 import type { OidcProviderDiscoveryService } from "./oidc-provider-discovery.service.js";
 import { Prisma8RuntimeOidcLoginTransactionService } from "./prisma8-runtime-identity.service.js";
+import { buildB4OidcCleanupBody } from "../database/prisma8-b4-oidc-cleanup.js";
 
 interface StoredTransaction {
   stateHash: string;
@@ -28,11 +29,11 @@ function textParameter(value: unknown): string {
   return value;
 }
 
-function createConfig(): EnabledOidcConfig {
+function createConfig(issuer = "https://id.example.org/realms/scada"): EnabledOidcConfig {
   const result = resolveOidcStartupConfig({
     NODE_ENV: "test",
     SCADA_OIDC_ENABLED: "true",
-    SCADA_OIDC_ISSUER: "https://id.example.org/realms/scada",
+    SCADA_OIDC_ISSUER: issuer,
     SCADA_OIDC_CLIENT_ID: "adui-scada",
     SCADA_OIDC_CLIENT_SECRET: "oidc-transaction-test-secret",
     SCADA_OIDC_REDIRECT_URI: "https://scada.example.org/api/v1/auth/oidc/callback",
@@ -90,6 +91,19 @@ function createFakeService(config = createConfig()) {
       },
     },
     query(plan: Plan) {
+      if (plan.text.includes("public.scada_cleanup_expired_oidc()")) {
+        const issuer = config.issuer.href;
+        if (plan.parameters.length !== 1 || plan.parameters[0] !== buildB4OidcCleanupBody(issuer)) {
+          throw new Error("测试登录事务清理绑定无效");
+        }
+        const cutoff = new Date();
+        const expired = [...records.values()]
+          .filter((item) => item.issuer === issuer && item.expiresAt <= cutoff)
+          .sort((left, right) => left.expiresAt.getTime() - right.expiresAt.getTime())
+          .slice(0, 128);
+        for (const item of expired) records.delete(item.stateHash);
+        return { toArray: () => Promise.resolve([{ deleted: String(expired.length) }]) };
+      }
       const record = findActive(plan.parameters);
       return {
         toArray: () =>
@@ -154,25 +168,7 @@ function createFakeService(config = createConfig()) {
         consumeCalls += 1;
         return Promise.resolve({ affectedRows: 1 });
       }
-      if (!plan.text.includes("DELETE FROM public.scada_oidc_transactions")) {
-        throw new Error("测试出现未预期登录事务写入");
-      }
-      const issuer = textParameter(plan.parameters[0]);
-      const cutoff = new Date(textParameter(plan.parameters[1]));
-      const limit = plan.parameters[4];
-      if (
-        typeof limit !== "number" ||
-        plan.parameters[2] !== issuer ||
-        plan.parameters[3] !== plan.parameters[1]
-      ) {
-        throw new Error("测试登录事务清理边界无效");
-      }
-      const expired = [...records.values()]
-        .filter((item) => item.issuer === issuer && item.expiresAt <= cutoff)
-        .sort((left, right) => left.expiresAt.getTime() - right.expiresAt.getTime())
-        .slice(0, limit);
-      for (const item of expired) records.delete(item.stateHash);
-      return Promise.resolve({ affectedRows: expired.length });
+      throw new Error("测试出现未预期登录事务写入");
     },
   };
   // 顺序事务替身模拟同一行的排他锁；不代表真实 PostgreSQL 并发验收。
@@ -434,7 +430,7 @@ describe("OIDC 一次性登录事务", () => {
   });
 
   it("过期事务按每批 128 条回收且保留未过期记录", async () => {
-    const fake = createFakeService();
+    const fake = createFakeService(createConfig("https://127.0.0.1:18443/realms/adui-scada"));
     await fake.service.start("/");
     const record = [...fake.records.values()][0];
     if (!record) throw new Error("测试登录事务不存在");
@@ -447,11 +443,14 @@ describe("OIDC 一次性登录事务", () => {
         expiresAt: new Date(Date.now() - 1_000),
       });
     }
+    const other = { ...record, stateHash: "other-issuer", issuer: "https://id.example.org/realms/other", expiresAt: new Date(Date.now() - 1_000) };
+    fake.records.set(other.stateHash, other);
     expect(await fake.service.cleanupExpiredTransactions()).toBe(128);
-    expect(fake.records.size).toBe(10);
+    expect(fake.records.size).toBe(11);
     expect(await fake.service.cleanupExpiredTransactions()).toBe(9);
-    expect(fake.records.size).toBe(1);
-    expect([...fake.records.values()][0]?.expiresAt.getTime()).toBeGreaterThan(Date.now());
+    expect(fake.records.size).toBe(2);
+    expect(fake.records.get(record.stateHash)?.expiresAt.getTime()).toBeGreaterThan(Date.now());
+    expect(fake.records.get(other.stateHash)).toEqual(other);
   });
 
   it("数据库写入或事务异常只返回固定中文错误", async () => {
