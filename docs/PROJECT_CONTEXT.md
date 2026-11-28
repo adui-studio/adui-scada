@@ -3202,3 +3202,7 @@ E-159 为测试专属消息遗漏，已最小修复；不改变生产代码。�
 维护者 2026-11-28 Windows 日志显示从 8777837592c5bc0e81dae102608616f8d9922e17 快进至 21f574036cf02178ae48d3e6664ad983b0b32b6b；docs:check 98 份 Markdown 通过；docker:db:role:review 返回 DOCKER_DB_ROLE_REVIEW_READY、directoryReviewPassed=true、admissionPassed=false、databaseWritten=false，退出码 0，git status --short 无输出。真实 PostgreSQL 19.0（190000），存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436，12 表、85 字段、36 CHECK、20 索引、13 外键、119 注释均一致。共享 adui_scada 角色为登录超级用户，CREATEDB、CREATEROLE、REPLICATION、BYPASSRLS、INHERIT 均 true，四类成员计数均 0，两个拟议独立运行角色不存在。两库当前角色直接拥有数据库且 CONNECT/CREATE/TEMP、PUBLIC CONNECT 均 true。两库 public Schema 的 owner=false、ownerPrivileges/USAGE/CREATE=true、PUBLIC CREATE=false；业务库 prisma_contract 直接拥有且可 USAGE/CREATE。两库额外非系统 Schema 均为 0、public 序列均为 0；SCADA 12/12、Keycloak 101/101 public 表均直接拥有且报告所列有效表与列权限全部存在；业务 marker SELECT 与 pg_control_system EXECUTE 均 true。
 
 共享超级用户风险已获得真实目录证据，A 阶段完成，维护者同意合并。下一阶段依据当前原生仓储、固定标记/集群核验及 Keycloak 对象管理需求建立最小权限矩阵和可审查变更方案，先提交候选，不在现有库自动执行角色变更、业务 DML、DDL、权限回收、服务切换、OIDC 启用或数据卷操作。
+
+### 2026-11-28 · PR #257 合并与 B1 角色准备预览候选
+
+维护者已在 Windows 完成 PR #257 真实双库角色目录核查，退出 0，PR #257 已合并至 8d94a418021376d6803b16bb793eefcf4a79b280。B1 新增独立 docker:db:role:plan，复用真实双库只读核查与固定原生契约、集群和当前权限基线，仅生成两条 NOLOGIN 角色创建和六条精确授权 SQL 文本，不执行 SQL，不改实际角色、ACL、所有权、数据库、容器或 OIDC。当前方案仅准备 SCADA Provider 启动查询所需列、Schema 与集群函数权限及两库显式 CONNECT；PUBLIC 权限、行锁、正式业务 ACL、Keycloak 对象所有权及实际 LOGIN 均尚待单独评审。 参见 [角色准备预览](plans/docker-native-role-bootstrap-plan.md)。新增 Node 实测 5/5 通过，维护者真实报告离线复现预览成功；全仓及实际只读命令待 Windows 复验。新 PR 保持 Draft，禁止提前执行预览 SQL。
