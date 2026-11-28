@@ -100,56 +100,73 @@ function businessView(report, prepared) {
   };
 }
 
+class RoleVerificationError extends Error {}
+
+const knownSqlStates = new Set([
+  "42501", "42601", "42703", "42883", "42804", "42809", "42P01", "42704", "42710",
+  "40001", "40P01", "55P03", "57014", "25006", "22P02", "08003", "08006", "57P01",
+]);
+
+function safeSqlState(error) {
+  return error !== null && typeof error === "object" && "code" in error &&
+    typeof error.code === "string" && knownSqlStates.has(error.code)
+    ? error.code
+    : "UNKNOWN";
+}
+
+/** 只公开固定检查阶段和已知错误码，不输出第三方异常文本或查询结果。 */
+/** @param {unknown[]} [parameters] 可选固定查询参数。 */
+async function queryPrepared(client, step, sql, parameters) {
+  try {
+    return await client.query(sql, parameters);
+  } catch (error) {
+    throw new RoleVerificationError(step + "查询失败（SQLSTATE=" + safeSqlState(error) + "）");
+  }
+}
+
+/** 精确匹配条件不变；失败仅报告固定预期项序号和字段名，不返回实际目录值。 */
+/** @param {unknown[]} [parameters] 可选固定查询参数。 */
+async function requirePreparedRows(client, step, sql, expected, parameters) {
+  const result = await queryPrepared(client, step, sql, parameters);
+  const rows = result?.rows;
+  if (exactRows(rows, expected)) return;
+  if (!Array.isArray(rows)) throw new RoleVerificationError(step + "证据缺少结果行");
+  const missing = expected.flatMap((item, index) => {
+    if (rows.some((row) => isDeepStrictEqual(row, item))) return [];
+    const candidates = rows.filter((row) =>
+      row && ["role", "kind", "object", "privilege"].every(
+        (key) => !Object.hasOwn(item, key) || row[key] === item[key],
+      ),
+    );
+    const fields = candidates.length === 1
+      ? Object.keys(item).filter((key) => !isDeepStrictEqual(candidates[0][key], item[key]))
+      : [];
+    return [String(index + 1) + (fields.length ? ":" + fields.join(",") : "")];
+  });
+  throw new RoleVerificationError(
+    step + "证据不匹配（预期行数=" + expected.length + "，实际行数=" + rows.length +
+      "，未匹配预期项=" + (missing.join(";") || "无") + "）",
+  );
+}
+
 /** 在当前事务验证不可登录属性、精确 ACL、有效权限及真实角色读取，不启用登录。 */
 async function verifyPrepared(client, identity, storageHash) {
-  requireMatch(
-    exactRows(
-      (await client.query(attributesSql)).rows,
-      names.map((role) => ({
-        role,
-        hardened: true,
-        noMemberships: true,
-        noSettings: true,
-        noUnexpectedDependencies: true,
-      })),
-    ),
-  );
-  requireMatch(exactRows((await client.query(aclSql)).rows, expectedAcl));
-  requireMatch(
-    exactRows(
-      (await client.query(effectiveSql)).rows,
-      names.map((role) => ({
-        role,
-        noDatabaseCreate: true,
-        noSchemaCreate: true,
-        noTableOrColumnWrites: true,
-        noSequencePrivileges: true,
-        businessConnect: true,
-        keycloakConnect: true,
-      })),
-    ),
-  );
-  requireMatch(
-    exactRows(
-      (await client.query(effectiveColumnsSql)).rows,
-      allowedColumns.map((object) => ({ role: scada, object })),
-    ),
-  );
-  await client.query("SET LOCAL ROLE adui_scada_runtime");
-  requireMatch(
-    exactRows((await client.query(probeSql)).rows, [
-      {
-        role: scada,
-        sessionRole: "adui_scada",
-        database: "adui_scada",
-        systemIdentifier: identity.systemIdentifier,
-        storageHash,
-      },
-    ]),
-  );
+  await requirePreparedRows(client, "角色属性", attributesSql, names.map((role) => ({
+    role, hardened: true, noMemberships: true, noSettings: true, noUnexpectedDependencies: true,
+  })));
+  await requirePreparedRows(client, "直接 ACL", aclSql, expectedAcl);
+  await requirePreparedRows(client, "有效对象权限", effectiveSql, names.map((role) => ({
+    role, noDatabaseCreate: true, noSchemaCreate: true, noTableOrColumnWrites: true,
+    noSequencePrivileges: true, businessConnect: true, keycloakConnect: true,
+  })));
+  await requirePreparedRows(client, "有效列权限", effectiveColumnsSql, allowedColumns.map((object) => ({ role: scada, object })));
+  await queryPrepared(client, "切换运行角色", "SET LOCAL ROLE adui_scada_runtime");
+  await requirePreparedRows(client, "运行角色身份及标记", probeSql, [{
+    role: scada, sessionRole: "adui_scada", database: "adui_scada", systemIdentifier: identity.systemIdentifier, storageHash,
+  }]);
   const scope = "prisma8-role-bootstrap-" + randomUUID();
-  requireMatch(exactRows((await client.query(probeProjectSql, [scope])).rows, []));
-  await client.query("SET LOCAL ROLE NONE");
+  await requirePreparedRows(client, "启动工程读取", probeProjectSql, [], [scope]);
+  await queryPrepared(client, "恢复管理身份", "SET LOCAL ROLE NONE");
 }
 
 /** 只接受已复核的双库报告，固定 SQL 从共享预览生成；状态查询绝不执行写入。 */
@@ -246,14 +263,18 @@ export async function runDockerRoleBootstrap({
       requireMatch((await client.query("ROLLBACK")).command === "ROLLBACK");
     }
     begun = false;
-  } catch {
+  } catch (error) {
     failure = commitAttempted
       ? "角色事务提交结果未知，禁止重试，请先执行只读状态核查"
       : "角色准备" + stage + "失败，内部诊断已脱敏，保留现场";
+    if (!commitAttempted && error instanceof RoleVerificationError) {
+      failure += "；" + error.message;
+    }
   }
   if (begun && !commitAttempted) {
     try {
       requireMatch((await client.query("ROLLBACK")).command === "ROLLBACK");
+      failure = (failure ?? "角色准备失败") + "；事务已确认回滚";
     } catch {
       failure = (failure ?? "角色准备失败") + "；回滚未确认，禁止重试";
     }
