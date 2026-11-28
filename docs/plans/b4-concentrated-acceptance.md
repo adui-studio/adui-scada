@@ -93,3 +93,15 @@ pnpm run docker:db:role:keycloak:plan
 同集群真实目录只读诊断通过固定身份、B3.3 已持久化基线及回滚；六类共 687 项：101 表、252 普通索引、101 行类型、101 数组类型、66 TOAST、66 TOAST 索引。仅普通索引 bad_name=4、ascii_case_only=3，其他聚合断言均为零失败，第四个具体名称未取得。根因为普通索引复用了表 SQL 标识符白名单；仅改普通索引名称为非空、无 NUL、UTF-8 无损且不超过 63 字节的目录证据，原名完整参与指纹和投影，不进入表锁、所有权 SQL 或公开报告。其余五类名称、对象种类、OID、父依赖、所有者、ACL、安全属性、普通表固定数量及所有审批门禁不变。
 
 同步修复提交后，先实际通过 Keycloak 完整定向测试、全 Docker 专项、Vite+、中文文案、文档及 Git 差异检查；协作容器已实测纯计划和投影源码片段局部 4/4（修复前 2/4），非完整测试链。再重新执行第二节及第十一节所述双库只读计划与独立后置核验。SCADA 指纹预期保持 aac93ff83a3baaa8b97781bd32e35afb049209e38a40c63c8487d3511b65ade0，Keycloak 预期取得真实 K 指纹、101 条表候选及六类对象完整计数；若实际对象或指纹变化，先停止并审阅，不自动接受。真实对象身份及第四个索引名称仍需本机审阅；当前不批准回滚演练、持久化、LOGIN、服务切换或合并。完整真实复验通过后才关闭 E-179。
+
+## 十四、E-179/E-180 已关闭，进入 SCADA 真实回滚演练（2026-11-28）
+
+维护者在 d9f05cb411377eec639e24f467333b88035128f2 完成格式修复后的完整集中复验：28/28、225/225、Vite+ 564 格式/402 受检零警告错误、中文 428 文件、Markdown 100 份及 Git 差异检查通过。B3.3 前后已持久化基线、原生严格契约、OIDC 只读与 Docker 七服务通过。真实计划 I=`0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37`，S=`aac93ff83a3baaa8b97781bd32e35afb049209e38a40c63c8487d3511b65ade0`，K=`60ae2f485107105ee98172cd69fc79cface21a40878b3f1f5e50bccc8011bbeb`。SCADA 3 角色、92 固定目录语句、36/15 探针预期；Keycloak 101 表、101 语句、六类 687 项目录对象，原所有者和依赖目录核验通过。实际 K 已生成，未实际安装任何 B4 权限；人工对象身份审阅仍待完成。
+
+本轮同步仅文档提交并复验 docs:check、git diff --check；重新只读确认 B3.3 及 I/S/K、原存储指纹和 PG 版本，保持既有 Keycloak 运行及 OIDC 探针可用。维护者须确认固定本机隔离环境、无并发管理员权限维护、接受短时锁及合成业务夹具的事务内临时写入和强制回滚，再单独运行第三节 SCADA 演练入口：
+
+```powershell
+pnpm run docker:db:role:b4:rehearse --confirm-rehearse-scada-b4 --confirm-rollback-business-fixtures --plan-fingerprint=aac93ff83a3baaa8b97781bd32e35afb049209e38a40c63c8487d3511b65ade0
+```
+
+要求 SCADA_B4_ROLLBACK_REHEARSED、原 S、有效 64 位 catalogFingerprint（SC）、statementsExecuted=92、transactionCatalogMatched=true、independentBaselineMatched=true、rolledBack=true、committed=false、databaseWritten=false、businessDataWritten=false、ownerRolesPersisted=false、installationAllowed=false、issuerBindingVerified=false、definerSafetyVerified=false、rowLockVerified=false、rowAuthorizationVerified=false、businessAclApproved=false、admissionPassed=false、serviceSwitched=false。内层 runtimeProbe 要求 SCADA_B4_RUNTIME_STATEMENTS_MATCHED、positiveCount=36、deniedCount=15、fixturesRolledBack=true、runtimeStatementsVerified=true、rowLockConcurrencyVerified=false、rowAuthorizationVerified=false、businessDataWritten=false、admissionPassed=false。再次独立确认原 I/S/K、结构契约、OIDC 只读与服务状态，记录真实 SC，不使用模拟指纹。存在真实过期 OIDC 记录或锁失败时停止，不清除既有记录、不重试。新提交文档检查待复验，本记录不构成执行授权；Keycloak 对象审阅、停止窗口及演练独立批准，两库 apply、LOGIN、服务切换及合并均未批准。

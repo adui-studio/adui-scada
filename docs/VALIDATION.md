@@ -5637,3 +5637,11 @@ Keycloak 逐对象所有权候选在真实目录失败，错误为 Keycloak 对�
 最小修复 scripts/docker-db-role-keycloak-plan.mjs：仅普通索引名称改按非空、无 NUL、UTF-8 无损往返及最多 63 字节校验；原始名称仍参与完整指纹和投影，普通表及其余五类中的非索引对象保持原严格命名规则（普通表、TOAST、TOAST 索引、行类型、数组类型）。现有表锁和 ALTER TABLE 仅从严格白名单普通表构造，索引名不进入 SQL 或公开报告。保持对象范围、OID/依赖、所有者、clean/ACL、基线、指纹算法及正式审批门禁不变。新增三项回归，覆盖特殊索引名、编码/长度及注入隔离、非索引严格规则、名称与权限漂移拒绝。
 
 实际协作容器 Node.js 22.16.0：与远端候选源码和测试片段逐字校验一致的纯计划/投影局部套件，原逻辑 2/4 退出 1，修复后 4/4、零失败零跳过退出 0；局部 node --check 两文件通过。候选前缀、纯函数和测试片段 UTF-16 FNV-1a 为 0c3027a5、aba47955、a1ce9aa3；逆向还原旧前缀与纯函数为 ef1705cb、fca363e7，均与远端对应片段一致。候选完整模块/测试 Blob 为 9ec1af5eef6c1bbcc42f1b56987bccf35bb4212e / 68d1bafa1f3e3894684f3f61cf8d849af7f56ecd。真实四个索引名称不在合成夹具中。没有完整仓库依赖及 Vite+/pnpm，GitHub DNS 不可达，未执行完整文件套件、中文、Vite+、docs、真实 PostgreSQL 或完整 ready。E-179 待维护者 Windows 执行 Keycloak 完整专项及全 Docker 专项（相较此前 222 项增加三项）、代码/中文/文档检查，并重新运行 B4 双库只读计划与后置 B3.3、OIDC、Docker 复验。没有 K 指纹，不批准 B4 演练、持久化、服务切换或合并。
+
+### 2026-11-28 · PR #262 E-179/E-180 关闭，B4 双库真实只读计划验收通过
+
+维护者 Windows 首次在 1fd5231ca40ca28c8a1c7323eeea79a0a830c4ad 通过定向 28/28、Docker 225/225 后因一处测试格式失败停止。维护者运行 vp check --fix 并提交 d9f05cb411377eec639e24f467333b88035128f2；远端比较确认仅 Object.assign 参数换行、缩进和尾逗号（+4/-1）。固定新 HEAD 完整重跑：Keycloak 28/28、Docker 225/225 均零失败零跳过，Vite+ 564 格式/402 受检零警告错误、中文 428 文件、Markdown 100 份、Git 差异检查通过，最终工作区无修改。
+
+PG19.0 原生结构契约 12 表、85 列、36 检查、20 索引、13 外键、119 注释，前后 B3.3 已持久化基线、OIDC Discovery/JWKS 只读、Docker 七服务均通过。I=0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37；SCADA S=aac93ff83a3baaa8b97781bd32e35afb049209e38a40c63c8487d3511b65ade0（3 专用角色、92 语句、36/15 探针候选、hostBoundaryVerified=true、rolledBack=true）；Keycloak K=60ae2f485107105ee98172cd69fc79cface21a40878b3f1f5e50bccc8011bbeb，KEYCLOAK_OWNERSHIP_PLAN_READY、101 表及 101 候选语句，完整六类 687 对象（101 表、252 索引、66 TOAST、66 TOAST 索引、101 行类型、101 数组类型）。外层双库对象报告目录审查通过，未知所有者及未知依赖角色计数均为零；计划和后置核验无数据库写入、无所有权转移、无服务切换。E-179、E-180 关闭。第四个特殊索引名及 Keycloak 完整目标对象身份尚待本机人工审阅，不能把目录聚合核验视为人工审阅。
+
+下一步仅在同一固定隔离集群、既有 OIDC 可用、禁止并发管理员权限维护、维护者独立批准合成业务夹具回滚时执行 SCADA B4 真实回滚演练；重新确认 I/S/K，取得实际 SCADA catalogFingerprint（SC），核验 92 目录语句、36 正向、15 精确拒绝、夹具及目录事务回滚、原始独立基线和宿主复验。若真实过期 OIDC 记录或锁阻塞，停止、不清除既有记录、不自动重试。未授权 Keycloak 停止/演练、两库持久化、LOGIN、服务切换或合并。此前完整 ready 证据仍绑定 df3737688f49c6ad9102b6d6c13df29dc7eb6c61；此轮仅追加验收文档，新 HEAD 文档检查待复验。
