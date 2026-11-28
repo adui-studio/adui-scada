@@ -59,6 +59,7 @@ export function freshAction(args) {
     ["--role-plan", "role-plan"],
     ["--role-bootstrap-status", "role-bootstrap-status"],
     ["--role-isolation-inspect", "role-isolation-inspect"],
+    ["--role-isolation-plan", "role-isolation-plan"],
     ["--runtime-review", "runtime-review"],
     ["--runtime-emit", "runtime-emit"],
     ["--provider-smoke", "provider-smoke"],
@@ -66,7 +67,7 @@ export function freshAction(args) {
     if (isDeepStrictEqual(args, [flag])) return mode;
   }
   throw new FreshInstallError(
-    "必须明确指定全新安装发射、只读预览、首次初始化、验证、运行时评审、提供方验收、角色核查、角色准备预览、状态核查、全集群权限核查或独立确认的角色事务",
+    "必须明确指定全新安装发射、只读预览、首次初始化、验证、运行时评审、提供方验收、角色核查、角色准备预览、状态核查、全集群权限核查、隔离预览或独立确认的角色事务",
   );
 }
 

@@ -2033,3 +2033,8 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-db-role-bootstrap.cases.mjs`：8 项 Node 离线事务测试；`scripts/docker-db-role-review.mjs` 抽取同一业务事务目录核验，并在既有用例增加两项事务边界测试。
 - `apps/server/prisma8-fresh-install.mjs`、`scripts/prisma8-fresh-install.mjs`：独立确认和只读状态入口，复用严格原生契约及双库目录，后置独立复验；`package.json` 与 `scripts/check-env-config.mjs` 约束不得进入常驻启动及 ready。
 - [角色准备预览与事务门禁](plans/docker-native-role-bootstrap-plan.md)：执行边界、回滚演练及正式提交审批。
+
+### B3 全集群权限与跨库隔离
+
+- `scripts/docker-db-role-isolation.mjs` 与 `scripts/docker-db-role-isolation.cases.mjs`：六类固定只读目录、完整矩阵与四项独立回归，B2 事务集成另三项；`docker:db:role:isolation:inspect` 仅独立执行。
+- `scripts/docker-db-role-isolation-plan.mjs` 与 `scripts/docker-db-role-isolation-plan.cases.mjs`：固定已验收 PG19.0 全目录基线、分组只读变更预览和五项离线测试，`docker:db:role:isolation:plan` 复用原只读入口，所有写入许可保持 false。

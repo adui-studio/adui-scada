@@ -5481,3 +5481,11 @@ B3 当前仅进入只读核查与预览设计，实际查询、测试和权限�
 ### 2026-11-28 · B3.1 全集群目录只读候选验证
 
 协作环境 Node.js 22.16.0 对 `scripts/docker-db-role-isolation.mjs` 和 `scripts/docker-db-role-isolation.cases.mjs` 运行 node --check，均退出 0；实际 node --test 专项 4/4，退出 0，覆盖六条固定 SELECT、未知及模板数据库、默认与显式空 ACL、遗漏 ACL 行、完整权限矩阵、角色引用、敏感名称/额外字段拒绝、未解析连接数量。最终本地 Git Blob 模块 d9ed5183ce8fcb51427b2eaaeb1c87c38f678b3d、测试 3fddcb2fad9fae0aa8bdd38ca6400a89f25fea69。协作环境无 pnpm、Vite+、PostgreSQL，GitHub 域名解析失败，无法克隆全仓；B2 三项新增集成测试与 CLI/环境门禁、全仓质量链和真实 PG19 未执行，不将模拟当成实际数据库结果。Windows 待验收 Docker 预计 93 项、Prisma 8 全新专项 29 项、env/messages/docs、Vite+ 零警告零错误、git diff --check；再独立运行 B2 状态及 B3.1 只读核查，要求角色准备完成、目录/事务回滚确认及所有变更许可为 false，消费者仍待人工评审。无数据库写入、服务切换、权限回收或 LOGIN 变更。
+
+### 2026-11-28 · B3.1 真实验收完成
+
+维护者 Windows 在 `4ba641356db84b4286fa58350efd98138b88af66` 实测 Docker 93/93、Prisma 8 全新专项 29/29、Vite+ 523 个格式文件/362 个受检文件零警告错误、中文 388、Markdown 99、环境及 LF 和 git diff --check，增量退出 0。正常 Hook 格式化提交 `b3c6e5c433d63025456765aa0c310796cd604f09` 已推送，五文件仅排版。真实 B2 状态及 B3.1 目录核查均退出 0，5 库、19 角色、25 ACL、95 有效权限、3 显式成员关系、两组共享管理身份连接各 2，未知数据库/登录角色/未解析会话均 0；确认回滚、存储指纹不变、七服务及 OIDC Discovery/JWKS 只读回归退出 0。PR #260 经明确授权 Squash 合入 `0c25d7477693e15abeea6bb094b880c3f0943ec6`；无额外远端 CI 状态记录。未执行 PUBLIC 权限回收或登录切换。
+
+### 2026-11-28 · B3.2 只读预览候选验证
+
+Node.js 22.16.0 实测新增隔离预览核心、测试文件 node --check 均退出 0，node --test 5/5、零跳过；覆盖精确权限基线、三组五条语句、8 条 PUBLIC 授权与 17 条直接 ACL、两个 NOLOGIN 运行角色预测、模板/默认 ACL、稳定指纹、十八种漂移/敏感字段拒绝及版本/存储/集群异常。维护者真实 B3.1 JSON 使用合成集群标识独立离线调用实际核心退出 0，输出 25/8/17、95 项和连接预测，非数据库执行或实际集群指纹。模块 Git Blob c3ea305c6472b91a740747c00c13d5818ea6aeea，测试 614258ff458215bd1680be1e56cb28050d759382。协作环境无 pnpm/vp/真实 PostgreSQL；Windows 完整 Docker 98、全新专项 29、环境、中文、文档、Vite+、真实 B3.2 预览及服务回归均待执行。预览成功不是权限撤销、登录、消费者识别或正式准入。

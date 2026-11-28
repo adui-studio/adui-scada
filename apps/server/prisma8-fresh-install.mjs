@@ -9,6 +9,10 @@ import {
   runDockerRoleBootstrap,
 } from "../../scripts/docker-db-role-bootstrap.mjs";
 import {
+  buildDockerRoleIsolationPlan,
+  DockerRoleIsolationPlanError,
+} from "../../scripts/docker-db-role-isolation-plan.mjs";
+import {
   buildDockerRoleBootstrapPlan,
   DockerRolePlanError,
 } from "../../scripts/docker-db-role-bootstrap-plan.mjs";
@@ -352,7 +356,7 @@ async function main() {
         ? "create"
         : action === "role-bootstrap-status"
           ? "status"
-          : action === "role-isolation-inspect"
+          : action === "role-isolation-inspect" || action === "role-isolation-plan"
             ? "isolation-inspect"
             : null;
   const reviewRoles = action === "role-review" || action === "role-plan" || bootstrapMode !== null;
@@ -424,7 +428,16 @@ async function main() {
             isDeepStrictEqual(inspectDocker(true), identity),
             "全集群核查后本机 Docker 集群发生变化",
           );
-          return { ...result, directoryReviewPassed: true, serverVersion: identity.version };
+          const inspected = {
+            ...result,
+            directoryReviewPassed: true,
+            serverVersion: identity.version,
+          };
+          if (action === "role-isolation-plan") {
+            stage = "全集群隔离变更预览";
+            return buildDockerRoleIsolationPlan(inspected, identity, freshStorageHash);
+          }
+          return inspected;
         }
         if (bootstrapMode === "status") {
           return { ...result, directoryReviewPassed: true, serverVersion: identity.version };
@@ -573,6 +586,7 @@ void main()
         error instanceof DockerRoleReviewError ||
         error instanceof DockerRolePlanError ||
         error instanceof DockerRoleBootstrapError ||
+        error instanceof DockerRoleIsolationPlanError ||
         error instanceof FreshRuntimeProbeError
         ? error.message
         : stage + "失败，内部诊断已脱敏；保留现场，不自动重试",
