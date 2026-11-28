@@ -48,3 +48,9 @@ B4 完整行级验收还需在真实隔离环境对原生仓储的可信主体�
 ## 八、首轮 Windows 失败记录与重新进入条件（2026-11-28）
 
 首轮 HEAD fc658f8336de1def3169746e151c8139a1c7d7e8 的 ready 在两条 Keycloak 中文异常检查处退出 1，已按 E-174 调整为等价模板字符串；完整质量链必须重新执行。Docker 七服务、数据库严格契约及只读 OIDC 通过，但 B3.3 实际报告 catalogIsolationPersisted=false、publicConnectRetained=true；不能继续 B4。重新验证每个阶段时在一个 PowerShell 脚本块中执行，显式检查原生命令退出码和报告字段，失败后整个脚本块停止，不执行末尾成功提示；禁止使用失败后遗留或空的指纹。先通过完整 ready，再只读生成当前 B3.3 计划，按原 [Docker 原生角色初始化方案](docker-native-role-bootstrap-plan.md) 的消费者审阅、独立回滚演练和另行明确持久化审批完成 B3.3 后，才重新生成 B4 双库计划。不得修改安全门禁或使用历史指纹跳过隔离；不自动持久化、不切换服务。
+
+## 九、Windows 完整质量门禁已通过，B3.3 只读计划已复验（2026-11-28）
+
+维护者实测 df3737688f49c6ad9102b6d6c13df29dc7eb6c61：完整 ready 成功、Docker 222/222、单测 969/969、HTTP E2E 71/71、Vite+ 564 格式/402 受检零警告错误、Markdown 100 份及 React/Vue/NestJS 构建通过，git diff --check 通过且工作区干净。React 构建存在非阻塞分块大小提示（591.62 kB）。E-178 已复验关闭。
+
+真实 B3.3 只读状态与计划的指纹一致，五库、19 角色、25 项原 ACL、8 项待移除 PUBLIC ACL、17 项预计保留 ACL、95 项有效权限和 5 条固定 REVOKE；尚未实际隔离。下一步按原隔离方案实际审阅三组消费者（含现有连接、维护/备份/监控工具、模板及未连接任务），维护窗口内禁止并发权限维护，重新确认当前计划指纹与已审阅证据一致，再独立批准回滚演练。演练只允许 DOCKER_DB_ROLE_ISOLATION_REHEARSED、catalogIsolationVerified=true、catalogIsolationPersisted=false、catalogStatementsExecuted=true、publicConnectRetained=true、rolledBack=true、committed=false、databaseWritten=false、businessDataWritten=false、serviceSwitched=false、admissionPassed=false、postVerificationPassed=true；再独立读取原状态和既有 Docker/OIDC 回归。消费者确认参数不是自动认证。实际持久化须另行明确批准，不因质量门禁通过而提前执行。不进入 B4 持久化或 C/D/E/F，不合并 PR。本记录只更新文档，新的文档检查仍待运行。

@@ -5599,3 +5599,9 @@ E-174 最小修复只调整两条 Keycloak 异常文案为等价模板字符串�
 ### 2026-11-28 · PR #262 第五轮 Windows 质量验收
 
 维护者 HEAD ac056982cf5a3d4221a25fdea8997bcd00086aa9 实测身份专项 49/49、Vite+ 564 格式/402 受检零警告错误、中文 428、Prisma 8 34/34、CLI 4/4、Core 构建、双端/共享包/NestJS 类型检查及全量单测 82/82 文件、969/969 用例通过，E-177 关闭。报警 5/5、SSE 客户端 8/8、故障代理 5/5、OIDC 代理 10/10、Lab 准备 6/6、身份预绑定 14/14 通过；Docker 专项 221/222，唯一失败为双库投影脱敏断言误匹配 objectIdentityReviewed（E-178），ready 退出 1，未进入后续阶段。仅修测试断言完整标识边界并核对审阅标志 false。协作环境 Node 22.16.0 真实日志 JSON 原断言 0/1、修复后样本及六反例 7/7，非完整专项；Docker 222/222、完整 ready 和实际数据库验收仍待 Windows 复验。未实际授权或切换服务。
+
+### 2026-11-28 · PR #262 第六轮 Windows 完整质量验收及 B3.3 真实只读计划
+
+维护者在 HEAD df3737688f49c6ad9102b6d6c13df29dc7eb6c61 实测 Docker 专项 222/222（独立及 ready 内各一次）、Vite+ 564 格式文件/402 受检零警告错误、中文 428、Prisma 8 34/34、CLI 4/4、全量单测 82/82 文件及 969/969 用例、Docker DB 配置专项 8/8、后续 OIDC 与浏览器配置专项、NestJS HTTP E2E 7/7 文件及 71/71 用例、Markdown 100 份、React/Vue/NestJS 构建全部通过。完整 ready 成功（整块脚本继续执行 git diff --check、B3.3 状态/计划并输出最终成功文字，最终打印上述 HEAD 且工作区无变更）；E-178 关闭。React 构建 591.62 kB 分块体积提示保留为后续性能观察项，不是 Vite+ Lint/类型错误，不修改阈值或额外重构。
+
+真实 PG19.0 状态 DOCKER_DB_ROLE_ISOLATION_STATUS_READY、计划 DOCKER_DB_ROLE_ISOLATION_PLAN_READY 同一指纹 0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37；5 库、19 角色、25 原始 ACL、8 项 PUBLIC 权限待撤销、17 项预计保留 ACL、95 项有效权限及 5 条固定语句。rolesPrepared=true、directoryReviewPassed=true、catalogIsolationPersisted=false、publicConnectRetained=true、databaseWritten=false、admissionPassed=false，两业务库各观察到 2 个共享身份会话，其他三个库观察为 0；瞬时统计不能认证消费者。三组消费者须实际审阅，禁止并发权限维护，先独立授权回滚演练；只有真实后置独立核验通过后另行批准持久化。当前未执行实际目录变更、B4 双库回滚、LOGIN 或服务切换。此更新仅为文档记录，不改验收过的生产/测试源码；更新后的文档检查尚未执行，不把旧 HEAD 的质量结果绑定到新提交。

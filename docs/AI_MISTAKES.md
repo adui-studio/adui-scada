@@ -1660,3 +1660,5 @@
 - **根因和最小修复**：原 doesNotMatch 对 JSON 整体查找 objectId 子串，合法安全状态键 objectIdentityReviewed 也被命中。报告实际返回该标志 false。只修改该断言，将 objectId 限定为完整单词边界，保持 kc_fixture、databasechangelog、ALTER TABLE 检查，增加 objectIdentityReviewed 必须为 false 的独立断言。保留双库独立查询、依赖数量、指纹、其他未准入标志、原 SQL 检查及所有负向用例，不修改生产报告、权限、数据库或审批门禁。
 - **实际局部复验**：协作容器 Node.js 22.16.0 使用维护者日志中完整真实 JSON 与 node:assert/strict、node:test 复现原断言 0/1（退出 1）；修复后 7/7（退出 0）：原报告接受，注入嵌套 objectId 键、独立 objectId 文本、夹具名、内部表名、ALTER TABLE 语句，以及将审阅标志改为 true 的六个反例均拒绝。GitHub 目标文件反向还原与原文完全一致；这是实际报告样本的断言级复验，不是完整 Keycloak 专项或真实数据库实测。协作容器无法解析 GitHub 域名，缺少 pnpm/vp；完整 Docker 目标 222/222、Windows Vite+ 与 ready 仍待执行。
 - **防复发**：脱敏断言必须区分完整敏感标识与合法报告状态字段；对禁止泄漏的实际键、文本与 SQL 分别保留负向验证，不删除安全标志或通过改生产报告绕过测试。不得将模拟目录成功视为实际权限或 Schema 演进验收。保持 Draft，未实际隔离、授权、切换服务或合并。
+
+> **2026-11-28 · E-178 Windows 复验关闭**：维护者在 HEAD df3737688f49c6ad9102b6d6c13df29dc7eb6c61 两次实际通过 Docker 专项 222/222（零失败零跳过），Vite+ 564 个格式文件、402 个受检文件零警告错误，全量单测 82/82 文件、969/969 用例，HTTP E2E 7/7 文件、71/71 用例，Markdown 100 份及 React/Vue/NestJS 构建。完整 ready 通过：维护者的整块脚本继续完成 git diff --check、B3.3 状态与计划并打印结束标志，工作区无变更。React 构建存在 591.62 kB 分块体积提示，不等于 Lint 警告，不阻塞本轮构建。E-178 关闭。真实只读隔离计划通过不代表实际隔离，消费者审阅、真实回滚演练及独立持久化仍待执行。
