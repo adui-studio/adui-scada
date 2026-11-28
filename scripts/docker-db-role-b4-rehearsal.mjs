@@ -101,15 +101,25 @@ export function buildScadaB4RehearsalPlan({ identity, storageHash, isolationFing
  * 仅供未来受控宿主入口调用。宿主必须提供固定本机连接、真实 Issuer 与严格契约核验，
  * readHostBoundary 必须执行真实宿主严格契约、中文注释、集群及 OIDC 证据检查；
  * readIsolatedBaseline 必须在传入的同一事务内复核 B2/B3.3 并返回真实隔离指纹。
- * 本模块没有 CLI、正式安装或提交路径，也不将回滚演练当作业务准入。
+ * 回滚演练与持久化入口分别确认，任何目录证据均不等于正式业务准入。
  */
-export async function runScadaB4RollbackRehearsal({
-  confirm, confirmFixtures, identity, storageHash, isolationFingerprint, port, expectedPlanFingerprint,
-  createClient, readIsolatedBaseline, readHostBoundary,
-}) {
+export async function runScadaB4RollbackRehearsal(options) {
+  return runScadaB4Transaction(options, false);
+}
+
+/** 仅独立批准持久化且确认实际回滚演练指纹时允许提交固定目录事务。 */
+export async function runScadaB4Persistence(options) {
+  return runScadaB4Transaction(options, true);
+}
+
+async function runScadaB4Transaction({
+  confirm, confirmFixtures, confirmRehearsalVerified, identity, storageHash, isolationFingerprint, port, expectedPlanFingerprint,
+  expectedCatalogFingerprint, createClient, readIsolatedBaseline, readHostBoundary, readInstalledState,
+}, apply) {
   requireIdentity(identity, storageHash, isolationFingerprint);
-  requireMatch(confirm === confirmation && confirmFixtures === fixtureConfirmation && validHash(expectedPlanFingerprint) &&
-    typeof createClient === "function" && typeof readIsolatedBaseline === "function" && typeof readHostBoundary === "function", "B4 演练缺少独立确认或受控宿主边界");
+  requireMatch(confirm === (apply ? "--confirm-apply-scada-b4" : confirmation) && confirmFixtures === fixtureConfirmation && validHash(expectedPlanFingerprint) &&
+    (!apply || (confirmRehearsalVerified === "--confirm-rehearsal-verified" && validHash(expectedCatalogFingerprint) && typeof readInstalledState === "function")) &&
+    typeof createClient === "function" && typeof readIsolatedBaseline === "function" && typeof readHostBoundary === "function", "B4 演练或持久化缺少独立确认或受控宿主边界");
   buildScadaOidcCleanupRoutinePreview(port);
   const expectedHost = {
     serverVersion: identity.version, systemIdentifier: identity.systemIdentifier, storageHash,
@@ -129,6 +139,8 @@ export async function runScadaB4RollbackRehearsal({
   let begun = false;
   let rolledBack = false;
   let closed = false;
+  let commitAttempted = false;
+  let committed = false;
   let stage = "连接";
   let failure;
   let plan;
@@ -187,13 +199,22 @@ export async function runScadaB4RollbackRehearsal({
     runtimeProbe = await verifyScadaB4RuntimeProbe(client, port);
     requireMatch(runtimeProbe.runtimeStatementsVerified === true && runtimeProbe.fixturesRolledBack === true &&
       runtimeProbe.positiveCount === plan.expectedPositiveCount && runtimeProbe.deniedCount === plan.expectedDeniedCount, "B4 运行角色演练证据不一致");
+    if (apply) {
+      stage = "持久化前演练目录指纹";
+      requireMatch(catalog.catalogFingerprint === expectedCatalogFingerprint, "B4 已核验演练目录指纹不一致");
+      stage = "目录事务提交";
+      commitAttempted = true;
+      requireMatch((await client.query("COMMIT")).command === "COMMIT", "B4 持久化提交标签异常");
+      committed = true;
+    }
   } catch (error) {
     failure = "B4 演练" + stage + "失败，内部诊断已脱敏";
     if (error instanceof DockerB4RehearsalError || error instanceof DockerB4PreflightError ||
       error instanceof DockerBusinessAclPreviewError || error instanceof DockerB4PermissionReviewError ||
       error instanceof DockerB4RoutineReviewError || error instanceof DockerB4RuntimeProbeError) failure += "；" + error.message;
   }
-  if (beginAttempted) {
+  if (commitAttempted && !committed) failure = "B4 持久化提交结果未知，禁止重试；必须先独立核查实际目录";
+  if (beginAttempted && !commitAttempted) {
     try {
       requireMatch((await client.query("ROLLBACK")).command === "ROLLBACK", "B4 演练未收到回滚标签");
       rolledBack = begun;
@@ -235,8 +256,27 @@ export async function runScadaB4RollbackRehearsal({
     try { await checkHost(); }
     catch { failure = (failure ?? "B4 演练已回滚") + "；独立宿主核验失败，禁止重试"; }
   }
-  if (failure) throw new DockerB4RehearsalError(failure + (rolledBack ? "；目录事务已收到回滚标签" : ""));
-  requireMatch(rolledBack && closed && plan && catalog && runtimeProbe, "B4 演练未取得完整证据");
+  if (committed && closed && !failure) {
+    try {
+      const installed = await readInstalledState();
+      requireMatch(installed?.phase === "scada-installed" && installed.isolationFingerprint === isolationFingerprint &&
+        installed.scadaCatalogFingerprint === expectedCatalogFingerprint && installed.scadaCatalogMatched === true &&
+        installed.keycloakBaselineMatched === true && installed.independentConnectionsClosed === true &&
+        installed.admissionPassed === false, "B4 持久化独立状态证据不一致");
+      return {
+        status: "SCADA_B4_PERSISTED_STATE_VERIFIED", planFingerprint: plan.planFingerprint,
+        catalogFingerprint: catalog.catalogFingerprint, statementsExecuted, runtimeProbe, installed,
+        transactionCatalogMatched: true, independentInstalledStateMatched: true,
+        rolledBack: false, committed: true, databaseWritten: true, businessDataWritten: false,
+        ownerRolesPersisted: true, runtimeLoginAllowed: false, businessAclApproved: false,
+        admissionPassed: false, serviceSwitched: false,
+      };
+    } catch {
+      failure = "B4 目录事务已收到提交标签，但独立安装状态核验失败，禁止重试";
+    }
+  }
+  if (failure) throw new DockerB4RehearsalError(failure + (committed ? "；目录事务已收到提交标签" : rolledBack ? "；目录事务已收到回滚标签" : ""));
+  requireMatch(!apply && rolledBack && closed && plan && catalog && runtimeProbe, "B4 演练未取得完整证据");
   return {
     status: "SCADA_B4_ROLLBACK_REHEARSED", planFingerprint: plan.planFingerprint,
     catalogFingerprint: catalog.catalogFingerprint, statementsExecuted, runtimeProbe,

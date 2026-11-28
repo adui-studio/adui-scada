@@ -42,14 +42,25 @@ function tableLockSql(candidate) {
 }
 
 /** 只允许经独立确认的所有权回滚演练；不启动、停止服务或提交事务。 */
-export async function runKeycloakOwnershipRollbackRehearsal({
-  context, confirm, reviewedObjects, confirmMaintenance, expectedPlanFingerprint,
-  createClient, readHostBoundary,
-}) {
+export async function runKeycloakOwnershipRollbackRehearsal(options) {
+  return runKeycloakOwnershipTransaction(options, false);
+}
+
+/** 在独立维护窗口，仅凭已核验回滚投影及单独持久化确认执行固定所有权变更。 */
+export async function runKeycloakOwnershipPersistence(options) {
+  return runKeycloakOwnershipTransaction(options, true);
+}
+
+async function runKeycloakOwnershipTransaction({
+  context, confirm, reviewedObjects, confirmMaintenance, confirmRehearsalVerified, expectedPlanFingerprint,
+  expectedProjectionFingerprint, createClient, readHostBoundary, readInstalledState,
+}, apply) {
   checkContext(context);
-  requireMatch(confirm === confirmation && reviewedObjects === reviewed && confirmMaintenance === maintenance &&
-    hash(expectedPlanFingerprint) && typeof createClient === "function" && typeof readHostBoundary === "function",
-  "Keycloak 演练缺少对象审阅、维护窗口或计划指纹确认");
+  requireMatch(confirm === (apply ? "--confirm-apply-keycloak-ownership" : confirmation) && reviewedObjects === reviewed && confirmMaintenance === maintenance &&
+    hash(expectedPlanFingerprint) && (!apply || (confirmRehearsalVerified === "--confirm-rehearsal-verified" &&
+      hash(expectedProjectionFingerprint) && typeof readInstalledState === "function")) &&
+    typeof createClient === "function" && typeof readHostBoundary === "function",
+  "Keycloak 演练或持久化缺少对象审阅、维护窗口或计划指纹确认");
   const checkHost = async () => {
     try {
       requireMatch(isDeepStrictEqual(await readHostBoundary(), hostEvidence(context)), "Keycloak 宿主证据不一致");
@@ -75,6 +86,8 @@ export async function runKeycloakOwnershipRollbackRehearsal({
   let begun = false;
   let rolledBack = false;
   let closed = false;
+  let commitAttempted = false;
+  let committed = false;
   let stage = "连接";
   let failure;
   let baseline;
@@ -112,11 +125,20 @@ export async function runKeycloakOwnershipRollbackRehearsal({
     requireMatch(statementsExecuted === candidate.report.statementCount && projected.ownerProjectionMatched === true &&
       projected.dependencyProjectionMatched === true && projected.rolePrivilegesMatched === true, "Keycloak 演练投影证据不一致");
     await checkQuiet(client);
+    if (apply) {
+      stage = "持久化前演练投影指纹";
+      requireMatch(projected.catalogFingerprint === expectedProjectionFingerprint, "Keycloak 已核验演练投影指纹不一致");
+      stage = "目录事务提交";
+      commitAttempted = true;
+      requireMatch((await client.query("COMMIT")).command === "COMMIT", "Keycloak 持久化提交标签异常");
+      committed = true;
+    }
   } catch (error) {
     failure = "Keycloak 演练" + stage + "失败，内部诊断已脱敏";
     if (error instanceof DockerKeycloakOwnershipError) failure += "；" + error.message;
   } finally {
-    if (attempted) {
+    if (commitAttempted && !committed) failure = "Keycloak 持久化提交结果未知，禁止重试；必须先独立核查实际目录";
+    if (attempted && !commitAttempted) {
       try {
         requireMatch((await client.query("ROLLBACK")).command === "ROLLBACK", "Keycloak 回滚标签异常");
         rolledBack = begun;
@@ -159,8 +181,28 @@ export async function runKeycloakOwnershipRollbackRehearsal({
     try { await checkHost(); }
     catch { failure = (failure ?? "Keycloak 演练") + "；独立宿主核验失败，禁止重试"; }
   }
-  if (failure) throw new DockerKeycloakOwnershipError(failure + (rolledBack ? "；已收到目录事务回滚标签" : ""));
-  requireMatch(rolledBack && closed && baseline && projected && independentBaseline, "Keycloak 演练缺少完整证据");
+  if (committed && closed && !failure) {
+    try {
+      const installed = await readInstalledState();
+      requireMatch(installed?.phase === "dual-installed" && installed.isolationFingerprint === context.isolationFingerprint &&
+        installed.keycloakPlanFingerprint === expectedPlanFingerprint && installed.keycloakCatalogFingerprint === expectedProjectionFingerprint &&
+        installed.scadaCatalogMatched === true && installed.keycloakOwnerProjectionMatched === true &&
+        installed.independentConnectionsClosed === true && installed.admissionPassed === false, "Keycloak 持久化独立状态证据不一致");
+      return {
+        status: "KEYCLOAK_OWNERSHIP_PERSISTED_STATE_VERIFIED", planFingerprint: expectedPlanFingerprint,
+        baselineFingerprint: baseline.catalogFingerprint, projectionFingerprint: projected.catalogFingerprint,
+        statementsExecuted, installed, transactionCatalogMatched: true, independentInstalledStateMatched: true,
+        operatorObjectReviewConfirmed: true, operatorMaintenanceConfirmed: true, rolledBack: false,
+        committed: true, databaseWritten: true, businessDataWritten: false, ownershipPersisted: true,
+        runtimeLoginAllowed: false, schemaEvolutionVerified: false, businessAclApproved: false,
+        admissionPassed: false, serviceSwitched: false,
+      };
+    } catch {
+      failure = "Keycloak 目录事务已收到提交标签，但独立安装状态核验失败，禁止重试";
+    }
+  }
+  if (failure) throw new DockerKeycloakOwnershipError(failure + (committed ? "；已收到目录事务提交标签" : rolledBack ? "；已收到目录事务回滚标签" : ""));
+  requireMatch(!apply && rolledBack && closed && baseline && projected && independentBaseline, "Keycloak 演练缺少完整证据");
   return {
     status: "KEYCLOAK_OWNERSHIP_ROLLBACK_REHEARSED", planFingerprint: expectedPlanFingerprint,
     baselineFingerprint: baseline.catalogFingerprint, projectionFingerprint: projected.catalogFingerprint,

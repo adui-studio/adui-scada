@@ -27,9 +27,11 @@ import { DockerRoleIsolationTransactionError, runDockerRoleIsolationTransaction 
 import { DockerRoleObjectReviewError, reviewDockerRoleObjects } from "../../scripts/docker-db-role-object-review.mjs";
 import { readDockerIsolationDirectory } from "../../scripts/docker-db-role-isolation.mjs";
 import { createScadaB4HostReader, createScadaB4IsolationReader, readScadaB4HostPlan } from "../../scripts/docker-db-role-b4-host.mjs";
-import { DockerB4RehearsalError, runScadaB4RollbackRehearsal } from "../../scripts/docker-db-role-b4-rehearsal.mjs";
+import { DockerB4RehearsalError, runScadaB4RollbackRehearsal, runScadaB4Persistence } from "../../scripts/docker-db-role-b4-rehearsal.mjs";
+import { parseB4PersistenceAction } from "../../scripts/docker-db-role-b4-arguments.mjs";
+import { DockerB4InstalledStateError, readB4InstalledState } from "../../scripts/docker-db-role-b4-installed-state.mjs";
 import { DockerKeycloakOwnershipError } from "../../scripts/docker-db-role-keycloak-plan.mjs";
-import { runKeycloakOwnershipRollbackRehearsal } from "../../scripts/docker-db-role-keycloak-rehearsal.mjs";
+import { runKeycloakOwnershipRollbackRehearsal, runKeycloakOwnershipPersistence } from "../../scripts/docker-db-role-keycloak-rehearsal.mjs";
 import { offlineEnvironment, resolveFreshCli } from "../../scripts/prisma8-fresh-cli-support.mjs";
 import {
   inspectFreshDockerEmptyDatabase,
@@ -302,6 +304,7 @@ async function checkComments(connection, expectedIdentity, contract, commentText
 
 async function main() {
   const action = freshAction(process.argv.slice(2));
+  const b4Arguments = parseB4PersistenceAction(process.argv.slice(2));
   stage = "原生契约发射与固定依赖检查";
   const runtimeEmit = action === "runtime-emit";
   const server = join(root, "apps", "server");
@@ -380,8 +383,8 @@ async function main() {
             ? "isolation-inspect"
             : null;
   const isolationMode = action === "role-isolation-status" ? "status" : action === "role-isolation-rehearse" ? "rehearse" : action === "role-isolation-apply" ? "apply" : null;
-  const b4Mode = action === "role-b4-plan" ? "plan" : action === "role-b4-rehearse" ? "rehearse" : null;
-  const reviewRoles = action === "role-review" || action === "role-plan" || action === "role-object-review" || action === "role-keycloak-plan" || action === "role-keycloak-rehearse" || bootstrapMode !== null || isolationMode !== null || b4Mode !== null;
+  const b4Mode = action === "role-b4-plan" ? "plan" : action === "role-b4-rehearse" ? "rehearse" : action === "role-b4-apply" ? "apply" : null;
+  const reviewRoles = action === "role-review" || action === "role-plan" || action === "role-object-review" || action === "role-keycloak-plan" || action === "role-keycloak-rehearse" || bootstrapMode !== null || isolationMode !== null || b4Mode !== null || b4Arguments !== null;
   const identity = inspectDocker(reviewRoles);
   const parse = (text) => {
     try {
@@ -410,6 +413,66 @@ async function main() {
     stage = "真实中文注释核验";
     await checkComments(readOnly, identity, contract, commentText, false);
     if (reviewRoles) {
+      // 持久化后不再调用仅适用于原始 B3.3 的角色准备门禁。
+      const makeB4StateReader = async (options, requireMaintenance) => {
+        const { readDockerOidcPort } = await import("../../scripts/docker-stack.mjs");
+        const composePath = join(root, ".local", "docker", "compose.env");
+        const composeText = readFileSync(composePath, "utf8");
+        const maintenance = inspectDocker(true, requireMaintenance);
+        requireMatch(maintenance.systemIdentifier === identity.systemIdentifier && maintenance.version === identity.version,
+          "B4 安装状态宿主集群不一致");
+        const checkConfiguration = () => {
+          requireMatch(readFileSync(join(root, ".env"), "utf8") === envText &&
+            readFileSync(join(root, ".local", "docker", "secrets.env"), "utf8") === secretsText &&
+            readFileSync(composePath, "utf8") === composeText &&
+            isDeepStrictEqual(inspectDocker(true, requireMaintenance), maintenance), "B4 安装状态宿主或本机配置发生变化");
+        };
+        const readHostBoundary = async () => {
+          checkConfiguration();
+          requireFreshVerification(parse(invoke(["db", "verify", "--strict", "--json"], readOnly)));
+          await checkComments(readOnly, identity, contract, commentText, false);
+          checkConfiguration();
+          return { serverVersion: identity.version, systemIdentifier: identity.systemIdentifier,
+            storageHash: freshStorageHash, strictContractVerified: true, commentsVerified: true,
+            keycloakMaintenanceVerified: requireMaintenance };
+        };
+        const createClient = (database, readOnlyMode = true) => {
+          const target = new URL(readOnlyMode ? readOnly : writable);
+          target.pathname = database === "adui_scada" ? "/adui_scada" : "/adui_scada_keycloak";
+          return databaseClient(target.toString());
+        };
+        return { readHostBoundary, createClient,
+          read: (phase) => readB4InstalledState({ ...options, phase,
+            context: { identity, storageHash: freshStorageHash, isolationFingerprint: options.isolationFingerprint },
+            port: readDockerOidcPort(envText), requireMaintenance,
+            expectedKeycloakProjectionFingerprint: phase === "dual-installed" ? options.expectedKeycloakProjectionFingerprint : undefined,
+            createClient, readHostBoundary }),
+        };
+      };
+      if (action === "role-b4-status") {
+        stage = "B4 已安装阶段独立只读核验";
+        const reader = await makeB4StateReader(b4Arguments, b4Arguments.phase === "dual-installed");
+        return reader.read(b4Arguments.phase);
+      }
+      if (action === "role-keycloak-apply") {
+        stage = "Keycloak 持久化前 SCADA 独立安装状态";
+        const reader = await makeB4StateReader(b4Arguments, true);
+        const context = { identity, storageHash: freshStorageHash, isolationFingerprint: b4Arguments.isolationFingerprint };
+        const readHostBoundary = async () => {
+          await reader.read("scada-installed");
+          return { serverVersion: identity.version, systemIdentifier: identity.systemIdentifier,
+            storageHash: freshStorageHash, isolationFingerprint: context.isolationFingerprint,
+            strictContractVerified: true, commentsVerified: true, catalogIsolationPersisted: true, keycloakStopped: true };
+        };
+        return runKeycloakOwnershipPersistence({ context,
+          confirm: process.argv[3], confirmRehearsalVerified: process.argv[4],
+          reviewedObjects: process.argv[5], confirmMaintenance: process.argv[6],
+          expectedPlanFingerprint: b4Arguments.expectedKeycloakPlanFingerprint,
+          expectedProjectionFingerprint: b4Arguments.expectedKeycloakProjectionFingerprint,
+          createClient: (mode) => reader.createClient("adui_scada_keycloak", mode), readHostBoundary,
+          readInstalledState: () => reader.read("dual-installed"),
+        });
+      }
       const loadDirectoryReport = async () => {
         stage = "双库角色及有效权限只读核查";
         const roleReport = await reviewDockerDatabaseRoles(
@@ -470,6 +533,24 @@ async function main() {
         stage = "B4 独立只读计划";
         const plan = await readScadaB4HostPlan(options);
         if (b4Mode === "plan") return plan;
+        if (b4Mode === "apply") {
+          stage = "SCADA B4 持久化前确认双库原始计划";
+          requireMatch(plan.planFingerprint === b4Arguments.expectedPlanFingerprint, "B4 持久化与已确认计划指纹不一致");
+          const reviewed = await reviewDockerRoleObjects((database) => {
+            const target = new URL(readOnly);
+            target.pathname = database === "adui_scada" ? "/adui_scada" : "/adui_scada_keycloak";
+            return databaseClient(target.toString());
+          }, identity, { storageHash: freshStorageHash, isolationFingerprint: plan.isolationFingerprint });
+          requireMatch(reviewed.keycloak.ownershipPreview.planFingerprint === b4Arguments.expectedKeycloakPlanFingerprint,
+            "B4 持久化前 Keycloak 原始候选指纹不一致");
+          const state = await makeB4StateReader({ ...b4Arguments, isolationFingerprint: plan.isolationFingerprint }, false);
+          return runScadaB4Persistence({ ...options, isolationFingerprint: plan.isolationFingerprint,
+            expectedPlanFingerprint: b4Arguments.expectedPlanFingerprint,
+            expectedCatalogFingerprint: b4Arguments.expectedScadaCatalogFingerprint,
+            confirm: process.argv[3], confirmRehearsalVerified: process.argv[4], confirmFixtures: process.argv[5],
+            readInstalledState: () => state.read("scada-installed"),
+          });
+        }
         const expectedPlanFingerprint = (process.argv.at(-1) ?? "").slice("--plan-fingerprint=".length);
         requireMatch(plan.planFingerprint === expectedPlanFingerprint, "B4 演练与已确认计划指纹不一致");
         stage = "B4 强制回滚演练";
@@ -765,6 +846,7 @@ void main()
         error instanceof DockerRoleIsolationTransactionError ||
         error instanceof DockerRoleObjectReviewError ||
         error instanceof DockerB4RehearsalError ||
+        error instanceof DockerB4InstalledStateError ||
         error instanceof DockerKeycloakOwnershipError ||
         error instanceof FreshRuntimeProbeError
         ? error.message

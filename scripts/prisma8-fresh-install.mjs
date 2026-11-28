@@ -1,3 +1,4 @@
+import { parseB4PersistenceAction } from "./docker-db-role-b4-arguments.mjs";
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
@@ -56,6 +57,12 @@ export function requireKeycloakMaintenanceContainer(ids, details) {
 
 /** 全新入口仅接受固定动作；角色演练与创建必须分别明确确认。 */
 export function freshAction(args) {
+  try {
+    const b4 = parseB4PersistenceAction(args);
+    if (b4) return b4.action;
+  } catch (error) {
+    throw new FreshInstallError(error.message);
+  }
   const approvals = ["--reviewed-business-consumers", "--reviewed-maintenance-consumers", "--reviewed-template-consumers"];
   const fingerprint = args.at(-1);
   if (typeof fingerprint === "string" && /^--plan-fingerprint=[a-f0-9]{64}$/u.test(fingerprint) &&

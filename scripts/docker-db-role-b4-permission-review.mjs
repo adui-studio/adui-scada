@@ -245,7 +245,8 @@ async function verifyInstalledPermissions(query, port, scope) {
     status: "SCADA_B4_PERMISSION_CATALOG_MATCHED", roleCount: expected.roles.length,
     databasePermissionCount: expected.databases.length, directAclCount: expected.acl.length,
     relationPermissionCount: expected.relations.length, columnPermissionCount: expected.columns.length,
-    catalogFingerprint, permissionCatalogMatched: true, businessAclApproved: false,
+    catalogFingerprint, baseCatalogFingerprint: createHash("sha256").update(JSON.stringify(expected)).digest("hex"),
+    permissionCatalogMatched: true, businessAclApproved: false,
     definerSafetyVerified: false, rowAuthorizationVerified: false, admissionPassed: false, databaseWritten: false,
   };
 }
@@ -263,6 +264,7 @@ async function verifyInstalledCatalog(query, port, scope) {
     status: "SCADA_B4_INSTALLED_CATALOG_MATCHED",
     permissions, routines,
     catalogFingerprint: createHash("sha256").update(JSON.stringify([permissions.catalogFingerprint, routines.catalogFingerprint])).digest("hex"),
+    baseCatalogFingerprint: createHash("sha256").update(JSON.stringify([permissions.baseCatalogFingerprint, routines.catalogFingerprint])).digest("hex"),
     installedCatalogMatched: true, businessAclApproved: false, definerSafetyVerified: false,
     rowLockVerified: false, rowAuthorizationVerified: false, issuerBindingVerified: false,
     admissionPassed: false, databaseWritten: false,

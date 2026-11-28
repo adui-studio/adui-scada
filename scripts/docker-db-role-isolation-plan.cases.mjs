@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { runDockerRoleIsolationTransaction } from "./docker-db-role-isolation-transaction.mjs";
-import { buildDockerRoleIsolationPlan, reviewDockerRoleIsolationInventory } from "./docker-db-role-isolation-plan.mjs";
+import { buildDockerRoleIsolationPlan, reviewDockerRoleIsolationInventory, reviewDockerB4IsolationInventory } from "./docker-db-role-isolation-plan.mjs";
+import { b4OwnerRoles } from "./docker-db-role-isolation.mjs";
 
 const hash = "a".repeat(64);
 const identity = { version: "190000", systemIdentifier: "123456789" };
@@ -555,5 +556,58 @@ void test("提交结果未知、回滚或关闭未确认禁止报告成功和自
     });
     if (fault === "commit") assert.equal(calls.includes("ROLLBACK"), false);
     assert.equal(calls.filter((sql) => sql === "COMMIT").length, fault === "commit" ? 1 : 0);
+  }
+});
+
+function installedFixture() {
+  const original = fixture().inventory;
+  original.databases = original.databases.map((db) => ({
+    ...db, defaultAcl: false, aclEntryCount: db.name === "adui_scada" || db.name === "adui_scada_keycloak" ? 4 : 3,
+    publicConnect: false, publicTemporary: false,
+  }));
+  original.acl = original.acl.filter((entry) => entry.granteeOid !== "0");
+  original.effective = original.effective.map((row) => ({
+    ...row,
+    connect: row.roleOid === "10" || row.roleOid === "24592" && row.databaseOid === "16384" || row.roleOid === "24593" && row.databaseOid === "16385",
+    temporary: row.roleOid === "10",
+  }));
+  const expected = reviewDockerRoleIsolationInventory(original, identity, hash, true);
+  const inventory = structuredClone(original);
+  const added = b4OwnerRoles.map((name, index) => ({ oid: String(90000 + index), name, login: false, superuser: false, inherit: false }));
+  inventory.roles.push(...added);
+  inventory.effective.push(...inventory.databases.flatMap((db) => added.map((role) => ({
+    databaseOid: db.oid, roleOid: role.oid, connect: false, temporary: false, create: false,
+  }))));
+  return { inventory, expected };
+}
+
+void test("B4 三个精确所有者无连接权时保持原 B3.3 指纹，原入口仍拒绝安装后目录", () => {
+  const { inventory, expected } = installedFixture();
+  const result = reviewDockerB4IsolationInventory(inventory, identity, hash);
+  assert.equal(result.planFingerprint, expected.planFingerprint);
+  assert.equal(result.b4OwnerRoleCount, 3);
+  assert.equal(result.b4OwnerDatabasePermissionsDenied, true);
+  assert.throws(() => reviewDockerRoleIsolationInventory(inventory, identity, hash, true), /全集群角色基线不一致/u);
+});
+
+void test("B4 隔离恢复拒绝额外所有者、缺失角色、重复标识、登录、授权、会话及矩阵漂移", () => {
+  for (const change of [
+    (h) => h.roles.pop(),
+    (h) => { h.roles.at(-1).login = true; },
+    (h) => { h.roles.at(-1).oid = "10"; },
+    (h) => { h.roles.at(-1).inherit = true; },
+    (h) => h.roles.push({ oid: "90003", name: null, login: false, superuser: false, inherit: false }),
+    (h) => { h.effective.at(-1).connect = true; },
+    (h) => h.effective.pop(),
+    (h) => { h.effective[h.effective.length - 1] = h.effective.at(-2); },
+    (h) => h.acl.push({ ...h.acl[0], granteeOid: "90000" }),
+    (h) => h.memberships.push({ ...h.memberships[0], memberOid: "90000" }),
+    (h) => h.sessions.push({ databaseOid: "16384", roleOid: "90000", total: 1 }),
+    (h) => { h.databases[0].ownerOid = "90000"; },
+    (h) => { h.effective[0].connect = false; },
+  ]) {
+    const { inventory } = installedFixture();
+    change(inventory);
+    assert.throws(() => reviewDockerB4IsolationInventory(inventory, identity, hash), /基线不一致/u);
   }
 });

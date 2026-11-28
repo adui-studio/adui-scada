@@ -8,8 +8,8 @@ const databaseSql = `SELECT d.oid::text AS oid,
   d.datacl IS NULL AS "defaultAcl",
   (SELECT count(*)::int FROM pg_catalog.aclexplode(coalesce(d.datacl, pg_catalog.acldefault('d', d.datdba)))) AS "aclEntryCount"
 FROM pg_catalog.pg_database d ORDER BY d.oid`;
-const roleSql = `SELECT r.oid::text AS oid,
-  CASE WHEN r.rolname IN ('adui_scada', 'adui_scada_runtime', 'adui_scada_keycloak_runtime', 'pg_database_owner')
+const roleSql = (names) => `SELECT r.oid::text AS oid,
+  CASE WHEN r.rolname IN (${names.map((name) => "'" + name + "'").join(", ")})
     THEN r.rolname::text ELSE NULL END AS name,
   r.rolcanlogin AS login, r.rolsuper AS superuser, r.rolinherit AS inherit
 FROM pg_catalog.pg_roles r ORDER BY r.oid`;
@@ -37,6 +37,12 @@ const roles = [
   "adui_scada_keycloak_runtime",
   "pg_database_owner",
 ];
+export const b4OwnerRoles = [
+  "adui_scada_lock_owner",
+  "adui_scada_project_create_owner",
+  "adui_scada_oidc_cleanup_owner",
+];
+
 const privileges = ["CONNECT", "TEMPORARY", "CREATE"];
 const oid = (value) =>
   typeof value === "string" && /^[1-9][0-9]{0,9}$/u.test(value) && Number(value) <= 4294967295;
@@ -54,7 +60,9 @@ function unique(rows, key, step) {
 }
 
 /** 仅从既有已验证的只读事务调用固定查询；未知名称不进入报告。 */
-export async function readDockerIsolationDirectory(query) {
+export async function readDockerIsolationDirectory(query, phase = "baseline") {
+  requireInventory(phase === "baseline" || phase === "b4-installed", "目录阶段");
+  const knownRoles = phase === "baseline" ? roles : [...roles, ...b4OwnerRoles];
   const read = async (step, sql, fields) => {
     const result = await query(step, sql);
     const rows = result?.rows;
@@ -82,9 +90,9 @@ export async function readDockerIsolationDirectory(query) {
     defaultAcl: bool,
     aclEntryCount: (value) => Number.isSafeInteger(value) && value >= 0,
   });
-  const role = await read("全集群角色", roleSql, {
+  const role = await read("全集群角色", roleSql(knownRoles), {
     oid,
-    name: label(roles),
+    name: label(knownRoles),
     login: bool,
     superuser: bool,
     inherit: bool,
@@ -96,7 +104,7 @@ export async function readDockerIsolationDirectory(query) {
     "固定数据库",
   );
   requireInventory(
-    roles.every((name) => role.filter((row) => row.name === name).length === 1),
+    knownRoles.every((name) => role.filter((row) => row.name === name).length === 1),
     "固定角色",
   );
   requireInventory(

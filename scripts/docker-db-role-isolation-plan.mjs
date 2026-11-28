@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
+import { b4OwnerRoles } from "./docker-db-role-isolation.mjs";
 
 export class DockerRoleIsolationPlanError extends Error {}
 
@@ -344,4 +345,31 @@ export function reviewDockerRoleIsolationInventory(inventory, identity, expected
     sqlPreview,
     projected,
   };
+}
+
+/** 安装后的三个固定所有者先逐项核验，再恢复原 B3.3 隔离指纹；未知角色不得被过滤。 */
+export function reviewDockerB4IsolationInventory(inventory, identity, expectedHash) {
+  requirePlan(inventory && [inventory.roles, inventory.databases, inventory.acl, inventory.memberships, inventory.effective, inventory.sessions].every(Array.isArray), "B4 全集群目录");
+  const added = inventory.roles.filter((row) => b4OwnerRoles.includes(row?.name));
+  const ids = new Set(added.map((row) => row.oid));
+  requirePlan(added.length === b4OwnerRoles.length && ids.size === added.length &&
+    new Set(inventory.roles.map((row) => row.oid)).size === inventory.roles.length &&
+    b4OwnerRoles.every((name) => added.filter((row) => row.name === name).length === 1) &&
+    added.every((row) => oid(row.oid) && isDeepStrictEqual(row, {
+      oid: row.oid, name: row.name, login: false, superuser: false, inherit: false,
+    })), "B4 专用所有者");
+  requirePlan(inventory.acl.every((row) => !ids.has(row.grantorOid) && !ids.has(row.granteeOid)) &&
+    inventory.databases.every((row) => !ids.has(row.ownerOid)) &&
+    inventory.memberships.every((row) => !ids.has(row.roleOid) && !ids.has(row.memberOid) && !ids.has(row.grantorOid)) &&
+    inventory.sessions.every((row) => !ids.has(row.roleOid)), "B4 专用所有者隔离");
+  const expected = inventory.databases.flatMap((db) => added.map((role) => ({
+    databaseOid: db.oid, roleOid: role.oid, connect: false, temporary: false, create: false,
+  })));
+  requirePlan(exactRows(inventory.effective.filter((row) => ids.has(row.roleOid)), expected), "B4 专用所有者数据库权限");
+  const original = reviewDockerRoleIsolationInventory({
+    ...inventory,
+    roles: inventory.roles.filter((row) => !ids.has(row.oid)),
+    effective: inventory.effective.filter((row) => !ids.has(row.roleOid)),
+  }, identity, expectedHash, true);
+  return { ...original, b4OwnerRoleCount: added.length, b4OwnerDatabasePermissionsDenied: true };
 }
