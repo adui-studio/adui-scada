@@ -105,3 +105,16 @@ void test("跨数据库及集群共享依赖均纳入同一指纹与角色汇总
   assert.equal(admin?.otherDatabases, 1);
   assert.doesNotMatch(JSON.stringify(report), /16384|16385|1259|1260/);
 });
+
+void test("已有锁角色必须以固定 NOLOGIN 属性显式呈现，异常属性不能隐藏", async () => {
+  const data = fixture();
+  data[0].push({
+    oid: "14", name: "adui_scada_lock_owner", login: false, superuser: false,
+    createDatabase: false, createRole: false, replication: false, bypassRls: false, inherit: false,
+  });
+  const report = await inspect(data);
+  assert.equal(report.roles.find((row) => row.name === "adui_scada_lock_owner")?.login, false);
+  const bad = fixture();
+  bad[0].push({ ...data[0].at(-1), login: true });
+  await assert.rejects(() => inspect(bad), /目录证据缺失或形状不一致/u);
+});

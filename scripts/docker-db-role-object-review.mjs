@@ -55,7 +55,7 @@ FROM pg_catalog.pg_shdepend d
 WHERE d.refclassid = 'pg_catalog.pg_authid'::regclass
   AND d.refobjid IN (
     SELECT oid FROM pg_catalog.pg_roles
-    WHERE rolname IN ('adui_scada', 'adui_scada_runtime', 'adui_scada_keycloak_runtime', 'pg_database_owner')
+    WHERE rolname IN ('adui_scada', 'adui_scada_runtime', 'adui_scada_keycloak_runtime', 'pg_database_owner', 'adui_scada_lock_owner')
   )
 ORDER BY d.dbid, d.classid, d.objid, d.objsubid, d.refobjid, d.deptype`;
 const databaseNames = ["adui_scada", "adui_scada_keycloak"];
