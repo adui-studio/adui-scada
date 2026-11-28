@@ -138,3 +138,16 @@ SQLSTATE 42809 是 wrong_object_type。当前有效对象权限 SQL 从含表、
 报告绑定实际集群 systemIdentifier、存储指纹、固定顺序目录、有效权限、成员及语句为 SHA-256 planFingerprint，不包含凭据或瞬时连接数量；指纹不是签名或授权。仍保持 consumerReviewRequired=true、changeAllowed=false、isolationPassed=false、admissionPassed=false、databaseWritten=false、publicConnectRetained=true。B3.3 另行设计：必须区分 B2 的 PUBLIC 保留基线和后置预期，复核各组消费者及精确授权，独立回滚演练和单独持久化授权；不得直接执行本次预览文本。
 
 验证：协作环境 Node.js 22.16.0 对两个新增文件 node --check 与 5 项 node:test，5/5 通过。真实日志离线提取 B3.1 JSON，以合成集群标识调用同一函数，返回 25/8/17、5 条语句、95 项矩阵及每库预测，退出 0；原始报告没有系统标识，不能把合成指纹冒充真实指纹。模块 Git Blob c3ea305c6472b91a740747c00c13d5818ea6aeea、测试 614258ff458215bd1680be1e56cb28050d759382。全仓及入口集成待 Windows 复验：Docker 预计 98、Prisma 8 全新专项 29、env/messages/docs、Vite+ 零警告及 git diff --check；再独立执行 B2 状态、B3.2 只读预览及 OIDC 只读和七服务回归。无需重建、停机、创建角色或权限写入。
+
+
+### 2026-11-28 · B3.2 实机验收及剩余 MVP 累计开发
+
+维护者于 d3a7429779c5735e64c645e764017ffa7fc047b2 验收：Docker 98/98、Prisma 8 全新专项 29/29（合计 127/127），Vite+ 525 格式/364 受检零警告错误，中文 390、Markdown 99、环境及 LF 和 git diff --check 通过；格式化提交 e04775bcfa559b7d51001c9bb19c6ce319aa4690 已推送。真实 PG19.0 隔离预览 5 库/19 角色/25 ACL/95 有效权限，拟移除 8 项 PUBLIC ACL 并保留 17 项直接 ACL，指纹 0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37，rolesPrepared=true、rolledBack=true、databaseWritten=false、changeAllowed=false、isolationPassed=false；OIDC 只读和七服务回归退出 0。PR #261 经明确授权 Squash 合入 d8363fb476ee08521e1c9fb107ecd1088914ae2b。
+
+维护者要求剩余 B3.3/B4/C/D/E/F 在累计分支开发并集中验收，不取消真实目录、授权、登录及服务切换的独立安全门禁。当前累计分支先实现 B3.3 候选：复用同一固定事务锁与原计划指纹，完整前后状态分别严格验证，五条固定 REVOKE，回滚演练及独立提交参数，提交后官方严格结构、注释、双库目录与独立只读状态复核。不改变角色 LOGIN、业务行、服务身份或发布门禁；未连接数据库，未实测 Windows 全链。B4 正式业务最小权限/行锁及 Keycloak 全对象所有权、C 正式运行连接、D 真登录、E 双端业务互通、F 完整验收仍待实现或实际验证。新增 mvp:verify:baseline 仅集中既有质量链与真实只读基线，不得作为 MVP 完成证据。
+
+## B3.3 候选执行入口
+
+- `pnpm run docker:db:role:isolation:status`：只读核查完整未隔离或完整隔离状态；混合状态、未知对象及其他漂移拒绝。仍不代表网络连接隔离或登录许可。
+- `pnpm run docker:db:role:isolation:execute --confirm-rehearse-isolation --reviewed-business-consumers --reviewed-maintenance-consumers --reviewed-template-consumers --plan-fingerprint=<当前真实指纹>`：仅在维护者逐组实际复核消费者并明确授权后执行回滚演练，之后单独执行 status。三个确认参数只表达操作者声明，不能认证消费者身份。
+- 独立持久化模式代码使用 `--confirm-apply-isolation --confirm-rehearsal-verified` 替代演练确认，保留其他参数；只有实机演练、独立状态及质量门禁通过且维护者另行明确授权后才可执行。当前不安排实际提交。禁止并发权限维护、未知结果重试或手工回收/恢复权限。状态核查仅适用于 B2 原角色权限与 B3 数据库级隔离，不覆盖后续 B4 权限变化。

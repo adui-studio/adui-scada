@@ -346,6 +346,11 @@ assert.ok(
     !packageScripts["docker:up"].includes("role-isolation-plan"),
   "真实隔离变更预览必须独立执行",
 );
+assert.equal(packageScripts["docker:db:role:isolation:status"], "node apps/server/prisma8-fresh-install.mjs --role-isolation-status");
+assert.equal(packageScripts["docker:db:role:isolation:execute"], "node apps/server/prisma8-fresh-install.mjs --role-isolation-execute");
+for (const name of ["ready", "docker:up", "mvp:verify:baseline"]) {
+  assert.ok(!packageScripts[name].includes("role:isolation:execute"), "隔离写入事务必须独立确认");
+}
 assert.ok(compose.includes('SCADA_DOCKER_DB_READONLY: "true"'));
 assert.ok(compose.includes("source: ../../.local/docker-runtime/server-database.json"));
 assert.ok(nest.includes("DockerReadOnlyDatabaseAppModule"));

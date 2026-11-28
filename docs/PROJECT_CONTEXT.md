@@ -3260,3 +3260,10 @@ B2 已真实持久化验收并合入 MVP 集成分支。PR #260 新增 `docker:d
 ### B3.2 只读隔离变更预览候选
 
 固定真实 B3.1 目录基线，新增 `docker:db:role:isolation:plan`，仅在严格只读事务成功、确认回滚和集群复核后生成分组权限预测。建议完整候选 5 条 SQL 文本、8 条 PUBLIC 授权移除及 17 条直接 ACL 保留，消费者、维护库和模板库各自评审，所有变更许可仍为 false。协作环境 Node.js 22.16.0 新增专项 5/5，实际日志离线复验成功；Windows 127 项增量及真实预览待执行。详见 [角色准备与跨库隔离计划](plans/docker-native-role-bootstrap-plan.md)。
+
+
+### 2026-11-28 · B3.2 实机验收及剩余 MVP 累计开发
+
+维护者于 d3a7429779c5735e64c645e764017ffa7fc047b2 验收：Docker 98/98、Prisma 8 全新专项 29/29（合计 127/127），Vite+ 525 格式/364 受检零警告错误，中文 390、Markdown 99、环境及 LF 和 git diff --check 通过；格式化提交 e04775bcfa559b7d51001c9bb19c6ce319aa4690 已推送。真实 PG19.0 隔离预览 5 库/19 角色/25 ACL/95 有效权限，拟移除 8 项 PUBLIC ACL 并保留 17 项直接 ACL，指纹 0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37，rolesPrepared=true、rolledBack=true、databaseWritten=false、changeAllowed=false、isolationPassed=false；OIDC 只读和七服务回归退出 0。PR #261 经明确授权 Squash 合入 d8363fb476ee08521e1c9fb107ecd1088914ae2b。
+
+维护者要求剩余 B3.3/B4/C/D/E/F 在累计分支开发并集中验收，不取消真实目录、授权、登录及服务切换的独立安全门禁。当前累计分支先实现 B3.3 候选：复用同一固定事务锁与原计划指纹，完整前后状态分别严格验证，五条固定 REVOKE，回滚演练及独立提交参数，提交后官方严格结构、注释、双库目录与独立只读状态复核。不改变角色 LOGIN、业务行、服务身份或发布门禁；未连接数据库，未实测 Windows 全链。B4 正式业务最小权限/行锁及 Keycloak 全对象所有权、C 正式运行连接、D 真登录、E 双端业务互通、F 完整验收仍待实现或实际验证。新增 mvp:verify:baseline 仅集中既有质量链与真实只读基线，不得作为 MVP 完成证据。

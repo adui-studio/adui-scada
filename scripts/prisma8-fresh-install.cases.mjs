@@ -46,7 +46,7 @@ function plan(extra = {}) {
   });
 }
 
-void test("全新入口仅接受明确十四种操作，裸命令不能写入", () => {
+void test("全新入口仅接受明确白名单操作，裸命令不能写入", () => {
   assert.equal(freshAction(["--emit"]), "emit");
   assert.equal(freshAction(["--preview"]), "preview");
   assert.equal(freshAction([freshConfirmation]), "initialize");
@@ -290,4 +290,19 @@ void test("官方诊断码保持固定码元顺序并去重", () => {
     "CLI.A_2",
     "CLI.A_A",
   ]);
+});
+
+void test("隔离事务必须精确确认三组消费者、指纹及独立持久化许可", () => {
+  const fingerprint = "--plan-fingerprint=" + "a".repeat(64);
+  const approvals = ["--reviewed-business-consumers", "--reviewed-maintenance-consumers", "--reviewed-template-consumers"];
+  assert.equal(freshAction(["--role-isolation-status"]), "role-isolation-status");
+  assert.equal(freshAction(["--role-isolation-execute", "--confirm-rehearse-isolation", ...approvals, fingerprint]), "role-isolation-rehearse");
+  assert.equal(freshAction(["--role-isolation-execute", "--confirm-apply-isolation", "--confirm-rehearsal-verified", ...approvals, fingerprint]), "role-isolation-apply");
+  for (const args of [
+    ["--role-isolation-execute"],
+    ["--role-isolation-execute", "--confirm-apply-isolation", ...approvals, fingerprint],
+    ["--role-isolation-execute", "--confirm-rehearse-isolation", ...approvals.slice(0, 2), fingerprint],
+    ["--role-isolation-execute", "--confirm-rehearse-isolation", ...approvals, "--plan-fingerprint=bad"],
+    ["--role-isolation-status", "--confirm-apply-isolation"],
+  ]) assert.throws(() => freshAction(args), /必须明确指定/u);
 });

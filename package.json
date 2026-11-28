@@ -132,7 +132,10 @@
     "docker:db:role:isolation:plan": "node apps/server/prisma8-fresh-install.mjs --role-isolation-plan",
     "docker:infra": "pnpm run docker:plan && node scripts/docker-stack.mjs infra",
     "docker:db:transaction:probe": "node scripts/docker-stack.mjs transaction-probe",
-    "docker:oidc:probe": "node scripts/docker-stack.mjs oidc"
+    "docker:oidc:probe": "node scripts/docker-stack.mjs oidc",
+    "docker:db:role:isolation:status": "node apps/server/prisma8-fresh-install.mjs --role-isolation-status",
+    "docker:db:role:isolation:execute": "node apps/server/prisma8-fresh-install.mjs --role-isolation-execute",
+    "mvp:verify:baseline": "pnpm run ready && pnpm run docker:db:status && pnpm run docker:db:role:isolation:status && pnpm run docker:oidc:probe && pnpm run docker:ps"
   },
   "devDependencies": {
     "@adui/tooling": "workspace:*",

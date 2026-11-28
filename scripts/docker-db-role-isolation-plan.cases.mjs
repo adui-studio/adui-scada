@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildDockerRoleIsolationPlan } from "./docker-db-role-isolation-plan.mjs";
+import { buildDockerRoleIsolationPlan, reviewDockerRoleIsolationInventory } from "./docker-db-role-isolation-plan.mjs";
 
 const hash = "a".repeat(64);
 const identity = { version: "190000", systemIdentifier: "123456789" };
@@ -377,4 +377,35 @@ void test("拒绝非固定服务器版本、错误存储标记及无效集群标
     () => buildDockerRoleIsolationPlan(fixture(), identity, "b".repeat(64)),
     /只读报告及集群基线不一致/u,
   );
+});
+
+void test("完整隔离后精确复核十七项授权与九十五项有效权限，保留原指纹", () => {
+  const input = fixture();
+  const original = buildDockerRoleIsolationPlan(input, identity, hash);
+  const inventory = input.inventory;
+  inventory.acl = inventory.acl.filter((row) => row.granteeOid !== "0");
+  for (const database of inventory.databases) {
+    database.publicConnect = false;
+    database.publicTemporary = false;
+    database.defaultAcl = false;
+    database.aclEntryCount = inventory.acl.filter((row) => row.databaseOid === database.oid).length;
+  }
+  for (const row of inventory.effective) {
+    row.connect = row.roleOid === "10" || (row.roleOid === "24592" && row.databaseOid === "16384") || (row.roleOid === "24593" && row.databaseOid === "16385");
+    row.temporary = row.roleOid === "10";
+  }
+  const result = reviewDockerRoleIsolationInventory(inventory, identity, hash, true);
+  assert.equal(result.planFingerprint, original.planFingerprint);
+  assert.throws(() => reviewDockerRoleIsolationInventory(inventory, identity, hash, false), /基线不一致/u);
+  for (const change of [
+    (value) => { value.databases[2].defaultAcl = true; },
+    (value) => { value.effective[1].connect = false; },
+    (value) => { value.effective[2].connect = true; },
+    (value) => { value.roles[1].login = true; },
+    (value) => { value.acl.pop(); },
+  ]) {
+    const drift = structuredClone(inventory);
+    change(drift);
+    assert.throws(() => reviewDockerRoleIsolationInventory(drift, identity, hash, true), /基线不一致/u);
+  }
 });

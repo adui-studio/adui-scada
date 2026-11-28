@@ -21,6 +21,7 @@ import {
   readDockerBusinessRoleDirectory,
   reviewDockerDatabaseRoles,
 } from "../../scripts/docker-db-role-review.mjs";
+import { DockerRoleIsolationTransactionError, runDockerRoleIsolationTransaction } from "../../scripts/docker-db-role-isolation-transaction.mjs";
 import { offlineEnvironment, resolveFreshCli } from "../../scripts/prisma8-fresh-cli-support.mjs";
 import {
   inspectFreshDockerEmptyDatabase,
@@ -359,7 +360,8 @@ async function main() {
           : action === "role-isolation-inspect" || action === "role-isolation-plan"
             ? "isolation-inspect"
             : null;
-  const reviewRoles = action === "role-review" || action === "role-plan" || bootstrapMode !== null;
+  const isolationMode = action === "role-isolation-status" ? "status" : action === "role-isolation-rehearse" ? "rehearse" : action === "role-isolation-apply" ? "apply" : null;
+  const reviewRoles = action === "role-review" || action === "role-plan" || bootstrapMode !== null || isolationMode !== null;
   const identity = inspectDocker(reviewRoles);
   const parse = (text) => {
     try {
@@ -406,6 +408,37 @@ async function main() {
         return { ...roleReport, ...report, serverVersion: identity.version };
       };
       const directoryReport = await loadDirectoryReport();
+      if (isolationMode !== null) {
+        const execute = (mode, currentReport, expectedFingerprint) => runDockerRoleIsolationTransaction({
+          mode,
+          report: currentReport,
+          identity,
+          storageHash: freshStorageHash,
+          expectedFingerprint,
+          createClient: () => databaseClient(mode === "status" ? readOnly : writable),
+          readDirectory: readDockerBusinessRoleDirectory,
+        });
+        stage = "独立隔离事务";
+        const result = await execute(isolationMode, directoryReport, isolationMode === "status" ? "" : process.argv.at(-1).slice("--plan-fingerprint=".length));
+        if (isolationMode === "status") {
+          requireMatch(isDeepStrictEqual(inspectDocker(true), identity), "隔离状态核查后集群发生变化");
+          return result;
+        }
+        try {
+          stage = "隔离事务后置独立核验";
+          requireFreshVerification(parse(invoke(["db", "verify", "--strict", "--json"], readOnly)));
+          await checkComments(readOnly, identity, contract, commentText, false);
+          const current = await loadDirectoryReport();
+          const expected = structuredClone(directoryReport);
+          for (const database of Object.values(expected.databases)) database.publicConnect = !result.committed;
+          requireMatch(isDeepStrictEqual(current, expected), "隔离事务后置双库目录发生漂移");
+          const status = await execute("status", current, result.planFingerprint);
+          requireMatch(status.catalogIsolationPersisted === result.committed && isDeepStrictEqual(inspectDocker(true), identity), "隔离事务后置状态不一致");
+        } catch {
+          throw new DockerRoleIsolationTransactionError(result.committed ? "隔离事务已提交，但独立后置核查失败，禁止重试" : "隔离演练已回滚，但独立后置核查失败，禁止重试");
+        }
+        return { ...result, postVerificationPassed: true };
+      }
       if (action === "role-plan") {
         stage = "固定角色准备预览";
         return buildDockerRoleBootstrapPlan(directoryReport, freshStorageHash);
@@ -587,6 +620,7 @@ void main()
         error instanceof DockerRolePlanError ||
         error instanceof DockerRoleBootstrapError ||
         error instanceof DockerRoleIsolationPlanError ||
+        error instanceof DockerRoleIsolationTransactionError ||
         error instanceof FreshRuntimeProbeError
         ? error.message
         : stage + "失败，内部诊断已脱敏；保留现场，不自动重试",

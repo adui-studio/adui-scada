@@ -131,7 +131,41 @@ export function buildDockerRoleIsolationPlan(report, identity, expectedHash) {
       }),
     "只读报告及集群",
   );
-  const inventory = report.inventory;
+  return {
+    status: "DOCKER_DB_ROLE_ISOLATION_PLAN_READY",
+    planOnly: true,
+    directoryReviewPassed: true,
+    rolesPrepared: true,
+    rolledBack: true,
+    committed: false,
+    catalogStatementsExecuted: false,
+    databaseWritten: false,
+    businessDataWritten: false,
+    serviceSwitched: false,
+    admissionPassed: false,
+    publicConnectRetained: true,
+    isolationPassed: false,
+    changeAllowed: false,
+    consumerReviewRequired: true,
+    ...reviewDockerRoleIsolationInventory(report.inventory, identity, expectedHash, false),
+    pendingGates: [
+      "CONSUMER_REVIEW",
+      "MAINTENANCE_AND_TEMPLATE_REVIEW",
+      "ROLLBACK_REHEARSAL_APPROVAL",
+      "PERSISTENT_CHANGE_APPROVAL",
+      "LOGIN_AND_SERVICE_SWITCH_APPROVAL",
+    ],
+  };
+}
+
+/** 仅核对原基线或完整隔离投影，指纹始终绑定原方案，不伪造只读报告。 */
+export function reviewDockerRoleIsolationInventory(inventory, identity, expectedHash, isolated) {
+  requirePlan(
+    typeof isolated === "boolean" &&
+      typeof expectedHash === "string" && /^[a-f0-9]{64}$/u.test(expectedHash) &&
+      identity?.version === "190000" && /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier),
+    "集群及状态",
+  );
   requirePlan(
     matches(inventory, {
       unknownLoginRoleCount: 0,
@@ -184,7 +218,13 @@ export function buildDockerRoleIsolationPlan(report, identity, expectedHash) {
   });
   requirePlan(
     new Set(databases.map((row) => row.oid)).size === databases.length &&
-      exactRows(inventory.databases, databases),
+      exactRows(inventory.databases, isolated ? databases.map((row, index) => ({
+        ...row,
+        defaultAcl: false,
+        aclEntryCount: targets[index].runtime === null ? 3 : 4,
+        publicConnect: false,
+        publicTemporary: false,
+      })) : databases),
     "全集群数据库",
   );
   const memberships = ["3374", "3375", "3377"].map((id) => ({
@@ -214,7 +254,7 @@ export function buildDockerRoleIsolationPlan(report, identity, expectedHash) {
       ...(runtime === null ? [] : [grant(database.oid, roleId(runtime), "CONNECT")]),
     ];
   });
-  requirePlan(exactRows(inventory.acl, acl), "精确数据库 ACL");
+  requirePlan(exactRows(inventory.acl, isolated ? acl.filter((row) => row.granteeOid !== "0") : acl), "精确数据库 ACL");
   const effective = databases.flatMap((database) =>
     roles.map((role) => ({
       databaseOid: database.oid,
@@ -224,7 +264,16 @@ export function buildDockerRoleIsolationPlan(report, identity, expectedHash) {
       create: role.superuser,
     })),
   );
-  requirePlan(exactRows(inventory.effective, effective), "有效权限矩阵");
+  const expectedEffective = isolated ? databases.flatMap((database, index) =>
+    roles.map((role) => ({
+      databaseOid: database.oid,
+      roleOid: role.oid,
+      connect: role.superuser || role.name === targets[index].runtime && targets[index].runtime !== null,
+      temporary: role.superuser,
+      create: role.superuser,
+    })),
+  ) : effective;
+  requirePlan(exactRows(inventory.effective, expectedEffective), "有效权限矩阵");
   requirePlan(
     Array.isArray(inventory.sessions) &&
       inventory.sessions.every(
@@ -282,21 +331,6 @@ export function buildDockerRoleIsolationPlan(report, identity, expectedHash) {
       inventory.sessions.find((row) => row.databaseOid === databases[index].oid)?.total ?? 0,
   }));
   return {
-    status: "DOCKER_DB_ROLE_ISOLATION_PLAN_READY",
-    planOnly: true,
-    directoryReviewPassed: true,
-    rolesPrepared: true,
-    rolledBack: true,
-    committed: false,
-    catalogStatementsExecuted: false,
-    databaseWritten: false,
-    businessDataWritten: false,
-    serviceSwitched: false,
-    admissionPassed: false,
-    publicConnectRetained: true,
-    isolationPassed: false,
-    changeAllowed: false,
-    consumerReviewRequired: true,
     storageHash: expectedHash,
     serverVersion: identity.version,
     planFingerprint,
@@ -309,12 +343,5 @@ export function buildDockerRoleIsolationPlan(report, identity, expectedHash) {
     groups,
     sqlPreview,
     projected,
-    pendingGates: [
-      "CONSUMER_REVIEW",
-      "MAINTENANCE_AND_TEMPLATE_REVIEW",
-      "ROLLBACK_REHEARSAL_APPROVAL",
-      "PERSISTENT_CHANGE_APPROVAL",
-      "LOGIN_AND_SERVICE_SWITCH_APPROVAL",
-    ],
   };
 }
