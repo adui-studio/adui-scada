@@ -157,3 +157,23 @@ node apps/server/prisma8-fresh-install.mjs --role-b4-status --phase=scada-instal
 预期 B4_SCADA_INSTALLED_STATE_VERIFIED、phase=scada-installed、I/SC/K 精确匹配、keycloakCatalogFingerprint 为本节原始目录指纹、b4OwnerRoleCount=3、b4OwnerDatabasePermissionsDenied=true、catalogIsolationPersisted=true、scadaCatalogMatched=true、keycloakBaselineMatched=true、keycloakOwnerProjectionMatched=false、independentConnectionsClosed=true、databaseWritten=false、businessDataWritten=false、runtimeLoginAllowed=false、admissionPassed=false、serviceSwitched=false。此后严格契约、OIDC 只读、七服务复验。安装后原始 B3.3 与原始计划入口不再是安装态检查依据，不能尝试重新执行旧计划；任何提交结果未知、关闭或独立核验失败不得自动重试/逆向变更，先独立只读核查明确阶段并保留现场。
 
 B4.4b Keycloak 持久化必须在 B4.4a 实测完成后另行独立批准，重新进入固定维护窗口；本阶段不提交 Keycloak 所有权，不开启 LOGIN，不切换服务身份，不进入 C/D/E/F 或合并。此次文档提交不代表真实持久化已完成。
+
+## 二十、B4.4a 已正式持久化，进入 B4.4b Keycloak 所有权持久化（2026-11-28）
+
+维护者在 1fb8b8e042fa927014b75cc8270968f177c6149c 实测文档 100 份、Git 差异、严格契约、OIDC 只读、七服务、原 I/S/K 前置通过，明确输入 APPLY-SCADA；真实 SCADA_B4_PERSISTED_STATE_VERIFIED、93 条、36/15 探针、夹具回滚、事务目录及独立安装态匹配，committed=true、databaseWritten=true、businessDataWritten=false、ownerRolesPersisted=true。内嵌与外部 B4_SCADA_INSTALLED_STATE_VERIFIED 均确认 I/SC/K 及 Keycloak 原始目录 ad6a85a866cffc738b0b1e1c8d7b467382685a786b5150c2ba43386ff40d8879、3 专用所有者数据库权限拒绝、SCADA 目录匹配、原 Keycloak 基线匹配、独立连接关闭，无 LOGIN、准入或服务切换。后置严格契约、OIDC 只读及七服务通过，工作区干净。B4.4a 已关闭，现只用 scada-installed 状态核验，不再执行 SCADA apply 或原始计划/隔离状态作为安装态依据。
+
+B4.4b 先在原服务运行状态以 scada-installed 独立复验 I/SC/K、原 Keycloak 目录及严格契约、OIDC 只读，复核此前已审阅的 101 表/687 对象、实际 Keycloak 26.8.2 及固定 image ID sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3，明确备份/恢复安排和独立维护窗口。维护者手动只停止唯一原 Keycloak 容器，不自动停启、不重建、不变镜像；核对 exited、running/paused/restarting=false、restart=no，无其他数据库客户端、连接池或管理员并发访问目标库。停止后重新核验 scada-installed，再单独批准实际 Keycloak 目录提交（不是回滚）。执行既有固定入口：
+
+```powershell
+node apps/server/prisma8-fresh-install.mjs --role-keycloak-apply --confirm-apply-keycloak-ownership --confirm-rehearsal-verified --reviewed-keycloak-objects --confirm-keycloak-maintenance --isolation-fingerprint=0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37 --scada-catalog-fingerprint=2d6b202e637bc16685557603b2aab496546bc1db6ac16b6c15530340abfcb360 --keycloak-plan-fingerprint=60ae2f485107105ee98172cd69fc79cface21a40878b3f1f5e50bccc8011bbeb --projection-fingerprint=877ba8254960856e364edd816281f74ab24c4f6fa3a815d9a52fea4fe8192ab9
+```
+
+预期 KEYCLOAK_OWNERSHIP_PERSISTED_STATE_VERIFIED、planFingerprint=K、baselineFingerprint=ad6a85a866cffc738b0b1e1c8d7b467382685a786b5150c2ba43386ff40d8879、projectionFingerprint=KC、statementsExecuted=101、transactionCatalogMatched=true、independentInstalledStateMatched=true、operatorObjectReviewConfirmed=true、operatorMaintenanceConfirmed=true、rolledBack=false、committed=true、databaseWritten=true（仅所有权目录）、businessDataWritten=false、ownershipPersisted=true、runtimeLoginAllowed=false、schemaEvolutionVerified=false、businessAclApproved=false、admissionPassed=false、serviceSwitched=false。保持维护窗口及 Keycloak 停止，独立执行：
+
+```powershell
+node apps/server/prisma8-fresh-install.mjs --role-b4-status --phase=dual-installed --isolation-fingerprint=0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37 --scada-catalog-fingerprint=2d6b202e637bc16685557603b2aab496546bc1db6ac16b6c15530340abfcb360 --keycloak-plan-fingerprint=60ae2f485107105ee98172cd69fc79cface21a40878b3f1f5e50bccc8011bbeb --projection-fingerprint=877ba8254960856e364edd816281f74ab24c4f6fa3a815d9a52fea4fe8192ab9
+```
+
+预期 B4_DUAL_INSTALLED_STATE_VERIFIED、phase=dual-installed、I/SC/K/KC 精确匹配、b4OwnerRoleCount=3、b4OwnerDatabasePermissionsDenied=true、catalogIsolationPersisted=true、scadaCatalogMatched=true、keycloakOwnerProjectionMatched=true、keycloakBaselineMatched=false、keycloakMaintenanceVerified=true、crossDatabaseAtomicSnapshotVerified=false、independentConnectionsClosed=true、databaseWritten=false、businessDataWritten=false、runtimeLoginAllowed=false、schemaEvolutionVerified=false、rowLockConcurrencyVerified=false、rowAuthorizationVerified=false、admissionPassed=false、serviceSwitched=false。取得实际 dualCatalogFingerprint 及内嵌 KEYCLOAK_SCHEMA_POLICY_REVIEW_ONLY 的 planFingerprint；必须绑定原实际 image ID、正常 validate 候选和维护 manual 候选及两者 initialize-empty=false、auto-create-missing-indexes=false。候选明确禁止自动迁移及 Schema CREATE、保留表所有者 ALTER/DROP 能力，要求独立备份恢复审阅、固定部署镜像及隔离启动验证。不得将候选等同实际 Schema 验证，不声称跨库原子快照。
+
+成功后在停机窗口只读严格契约、固定容器状态及独立目录再次核对；本阶段不执行 OIDC 连通探针作为停机态通过条件，不直接启动旧管理身份 Keycloak。B4.5 真实并发及行级权限和 Schema 演进实际验证仍待完成。任何执行失败、提交未知、独立核验失败或容器身份变化必须保留现场，禁止自动重试 apply、逆向转移所有权、删除角色或恢复旧服务。此文档提交不等于 B4.4b 通过；不开放 LOGIN、服务切换、C/D/E/F 或合并。

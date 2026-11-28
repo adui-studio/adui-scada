@@ -3404,3 +3404,7 @@ PR #262 在 ac056982 实测身份 49/49、全量 969/969、Vite+ 564 格式/402 
 ### 2026-11-28 · PR #262 B4.3 Keycloak 实机回滚及恢复通过
 
 维护者在 77b32f67a163525dc18b2f826691e7f8b2a4ee29 实测文档 100 份、Git 差异、严格契约及 OIDC 只读通过；实际 Keycloak 26.8.2、image ID sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3，固定只读目录 687 对象全部为原所有者且 clean=true，父对象引用完整。独立批准停止窗口及 REHEARSE 后，101 条真实所有权语句、事务投影和独立基线匹配，强制回滚，无持久化、LOGIN 或准入。KC=877ba8254960856e364edd816281f74ab24c4f6fa3a815d9a52fea4fe8192ab9，原始目录指纹 ad6a85a866cffc738b0b1e1c8d7b467382685a786b5150c2ba43386ff40d8879；手动恢复原容器，前两次只读 Discovery 连接失败，第三次完整 I/S/K、契约、OIDC 和七服务复验通过，未确认启动失败具体原因。B4.3 关闭。B4.4 先独立批准 SCADA 持久化，保持 Keycloak 原服务及 NOLOGIN；仅使用现有 apply 及 scada-installed 状态入口，禁止在同一审批或脚本中提交 Keycloak。未验证备份恢复可用性、实际持久化、并发及应用层行级权限、Schema 兼容和正式准入，保持 Draft。
+
+### 2026-11-28 · PR #262 B4.4a SCADA 正式持久化通过
+
+维护者在 1fb8b8e042fa927014b75cc8270968f177c6149c 实测文档 100 份、Git 差异、固定集群、原 I/S/K 及 OIDC 只读前置通过，明确输入 APPLY-SCADA 后真实 SCADA_B4_PERSISTED_STATE_VERIFIED、93 条目录变更、36 正向/15 拒绝探针、夹具回滚、目录 COMMIT 与独立安装状态匹配。SC=2d6b202e637bc16685557603b2aab496546bc1db6ac16b6c15530340abfcb360 不变，三个专用所有者已持久化且无数据库连接/临时/创建权限，Keycloak 原目录 ad6a85a866cffc738b0b1e1c8d7b467382685a786b5150c2ba43386ff40d8879 不变；外部 scada-installed 独立只读、严格契约、OIDC 与七服务复验通过，工作区干净。B4.4a 关闭；现为 scada-installed，禁止再次 SCADA apply 或以原始角色计划充当安装态检查。下一步仅独立批准 B4.4b：复核已安装 SCADA、原 Keycloak 101 表/687 对象及实际镜像，手动停同一既有 Keycloak、无其他目标库会话后使用固定 apply，以 I/SC/K/KC 核验目录提交；随后独立 dual-installed 及 Schema 策略候选复验。保持 Keycloak 停止、NOLOGIN，未验证真实并发、应用层行级权限或 Schema 启动兼容性，不提前切换身份、恢复旧管理身份服务、开放准入或合并。
