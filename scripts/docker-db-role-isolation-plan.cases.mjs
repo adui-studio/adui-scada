@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { runDockerRoleIsolationTransaction } from "./docker-db-role-isolation-transaction.mjs";
 import { buildDockerRoleIsolationPlan, reviewDockerRoleIsolationInventory } from "./docker-db-role-isolation-plan.mjs";
 
 const hash = "a".repeat(64);
@@ -407,5 +408,152 @@ void test("完整隔离后精确复核十七项授权与九十五项有效权限
     const drift = structuredClone(inventory);
     change(drift);
     assert.throws(() => reviewDockerRoleIsolationInventory(drift, identity, hash, true), /基线不一致/u);
+  }
+});
+
+function transactionFixture(mode, fault = "") {
+  const input = fixture();
+  const original = input.inventory;
+  const isolated = structuredClone(original);
+  isolated.acl = isolated.acl.filter((row) => row.granteeOid !== "0");
+  for (const database of isolated.databases) {
+    database.defaultAcl = false;
+    database.publicConnect = false;
+    database.publicTemporary = false;
+    database.aclEntryCount = isolated.acl.filter((row) => row.databaseOid === database.oid).length;
+  }
+  for (const row of isolated.effective) {
+    row.connect = row.roleOid === "10" || (row.roleOid === "24592" && row.databaseOid === "16384") || (row.roleOid === "24593" && row.databaseOid === "16385");
+    row.temporary = row.roleOid === "10";
+  }
+  const fingerprint = buildDockerRoleIsolationPlan(input, identity, hash).planFingerprint;
+  let revoked = fault === "isolated" ? 5 : 0;
+  const calls = [];
+  const db = { owner: true, ownerPrivileges: true, connect: true, create: true, temporary: true, publicConnect: revoked === 0 };
+  const schema = { owner: false, ownerPrivileges: true, usage: true, create: true, publicCreate: false };
+  const tables = (total) => Object.fromEntries(["total", "owner", "ownerPrivileges", "select", "insert", "update", "delete", "truncate", "references", "trigger", "maintain", "anyColumnSelect", "anyColumnInsert", "anyColumnUpdate", "anyColumnReferences"].map((key) => [key, total]));
+  const sequences = { total: 0, owner: 0, ownerPrivileges: 0, usage: 0, select: 0, update: 0 };
+  const report = {
+    ...input, status: "DOCKER_DB_ROLE_REVIEW_READY",
+    tables: 12, columns: 85, checks: 36, indexes: 20, foreignKeys: 13, comments: 119,
+    role: { superuser: true, createDatabase: true, createRole: true, replication: true, bypassRls: true, login: true, inherit: true,
+      scadaRuntimeExists: true, keycloakRuntimeExists: true, directMemberships: 0, reachableMemberships: 0, inheritedMemberships: 0, setRoleMemberships: 0 },
+    databases: { adui_scada: { ...db }, adui_scada_keycloak: { ...db } },
+    scada: { schemas: { public: schema, prisma_contract: { ...schema, owner: true } }, otherSchemas: 0, tables: tables(12), sequences, marker: { markerSelect: true, clusterFunctionExecute: true } },
+    keycloak: { schemas: { public: schema }, otherSchemas: 0, tables: tables(101), sequences },
+  };
+  const allowedColumns = ["public.scada_projects.tenant_id", "public.scada_projects.project_id", "public.scada_projects.head_revision", "prisma_contract.marker.space", "prisma_contract.marker.core_hash"];
+  const grant = (role, kind, object, privilege) => ({ role, kind, object, privilege, grantable: false });
+  const candidateNames = names.slice(1, 3);
+  const directAcl = [
+    grant(candidateNames[0], "database", "adui_scada", "CONNECT"),
+    grant(candidateNames[1], "database", "adui_scada_keycloak", "CONNECT"),
+    grant(candidateNames[0], "schema", "public", "USAGE"),
+    grant(candidateNames[0], "schema", "prisma_contract", "USAGE"),
+    ...allowedColumns.map((column) => grant(candidateNames[0], "column", column, "SELECT")),
+    grant(candidateNames[0], "function", "pg_catalog.pg_control_system()", "EXECUTE"),
+  ];
+  const client = {
+    async connect() { calls.push("连接"); },
+    async query(sql) {
+      calls.push(sql);
+      if (sql.startsWith("BEGIN")) return { command: "BEGIN" };
+      if (sql === "COMMIT") {
+        if (fault === "commit") throw new Error("模拟敏感异常");
+        return { command: "COMMIT" };
+      }
+      if (sql === "ROLLBACK") {
+        if (fault === "rollback") throw new Error("模拟敏感异常");
+        return { command: "ROLLBACK" };
+      }
+      if (sql.includes("pg_try_advisory_xact_lock")) return { rows: [{ locked: fault !== "lock", isolation: "serializable" }] };
+      if (expectedSql.includes(sql)) {
+        if (fault === "statement" && revoked === 2) throw Object.assign(new Error("模拟敏感异常"), { code: "42501" });
+        revoked++;
+        return { command: "REVOKE" };
+      }
+      if (sql.includes("pg_catalog.pg_authid r")) return { rows: candidateNames.map((role) => ({ role, hardened: true, noMemberships: true, noSettings: true, noUnexpectedDependencies: true })) };
+      if (sql.includes("entries AS")) return { rows: directAcl };
+      if (sql.includes("relations AS")) return { rows: candidateNames.map((role, index) => ({ role, noDatabaseCreate: true, noSchemaCreate: true, noTableOrColumnWrites: true, noSequencePrivileges: true, businessConnect: revoked !== 5 || index === 0, keycloakConnect: revoked !== 5 || index === 1 })) };
+      if (sql.includes("has_column_privilege")) return { rows: allowedColumns.map((object) => ({ role: candidateNames[0], object })) };
+      if (sql.startsWith("SET LOCAL ROLE")) return { command: "SET" };
+      if (sql.includes("session_user::text")) return { rows: [{ role: candidateNames[0], sessionRole: names[0], database: "adui_scada", systemIdentifier: identity.systemIdentifier, storageHash: hash }] };
+      if (sql.startsWith("SELECT tenant_id")) return { rows: [] };
+      const current = revoked === 5 ? isolated : original;
+      if (sql.startsWith("SELECT d.oid::text AS oid")) return { rows: current.databases.map(({ publicConnect, publicTemporary, publicCreate, ...row }) => row) };
+      if (sql.startsWith("SELECT r.oid::text AS oid")) return { rows: current.roles };
+      if (sql.includes("a.grantor::text AS")) return { rows: current.acl };
+      if (sql.includes("CROSS JOIN pg_catalog.pg_roles")) return { rows: fault === "projection" && revoked === 5 ? current.effective.slice(1) : current.effective };
+      if (sql.startsWith("SELECT m.roleid::text")) return { rows: current.memberships };
+      if (sql.startsWith("SELECT a.datid::text")) return { rows: current.sessions };
+      throw new Error("模拟未知查询");
+    },
+    async end() { calls.push("关闭"); if (fault === "close") throw new Error("模拟敏感异常"); },
+  };
+  const options = {
+    mode, report, identity, storageHash: hash,
+    expectedFingerprint: fault === "fingerprint" ? "b".repeat(64) : fingerprint,
+    createClient: () => client,
+    readDirectory: async () => ({
+      role: report.role,
+      databases: { adui_scada: { ...db, publicConnect: revoked !== 5 }, adui_scada_keycloak: { ...db, publicConnect: revoked !== 5 } },
+      scada: report.scada,
+    }),
+  };
+  return { options, calls };
+}
+
+void test("隔离演练和正式提交仅执行五条固定语句，并完整核验投影", async () => {
+  for (const mode of ["rehearse", "apply"]) {
+    const { options, calls } = transactionFixture(mode);
+    const result = await runDockerRoleIsolationTransaction(options);
+    assert.deepEqual(calls.filter((sql) => expectedSql.includes(sql)), expectedSql);
+    assert.equal(result.catalogIsolationVerified, true);
+    assert.equal(result.catalogIsolationPersisted, mode === "apply");
+    assert.equal(result.committed, mode === "apply");
+    assert.equal(result.rolledBack, mode === "rehearse");
+    assert.equal(result.businessDataWritten, false);
+    assert.equal(result.isolationPassed, false);
+    assert.equal(result.admissionPassed, false);
+    assert.deepEqual(calls.slice(-2), [mode === "apply" ? "COMMIT" : "ROLLBACK", "关闭"]);
+  }
+});
+
+void test("独立状态查询只读识别完整隔离前后，绝不执行写入", async () => {
+  for (const fault of ["", "isolated"]) {
+    const { options, calls } = transactionFixture("status", fault);
+    const result = await runDockerRoleIsolationTransaction(options);
+    assert.equal(result.catalogIsolationPersisted, fault === "isolated");
+    assert.equal(result.publicConnectRetained, fault !== "isolated");
+    assert.equal(result.catalogStatementsExecuted, false);
+    assert.equal(calls.some((sql) => expectedSql.includes(sql)), false);
+    assert.ok(calls.includes("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"));
+  }
+});
+
+void test("锁、指纹、语句与投影失败均回滚且不提交", async () => {
+  for (const fault of ["lock", "fingerprint", "statement", "projection"]) {
+    const { options, calls } = transactionFixture("apply", fault);
+    await assert.rejects(() => runDockerRoleIsolationTransaction(options), (error) => {
+      assert.match(error.message, /事务已确认回滚/u);
+      assert.doesNotMatch(error.message, /模拟敏感/u);
+      return true;
+    });
+    assert.equal(calls.includes("COMMIT"), false);
+    assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
+    if (fault === "lock" || fault === "fingerprint") assert.equal(calls.some((sql) => expectedSql.includes(sql)), false);
+  }
+});
+
+void test("提交结果未知、回滚或关闭未确认禁止报告成功和自动重试", async () => {
+  for (const fault of ["commit", "rollback", "close"]) {
+    const { options, calls } = transactionFixture(fault === "commit" ? "apply" : "rehearse", fault);
+    await assert.rejects(() => runDockerRoleIsolationTransaction(options), (error) => {
+      assert.match(error.message, fault === "commit" ? /提交结果未知，禁止重试/u : fault === "rollback" ? /回滚未确认/u : /连接关闭失败/u);
+      assert.doesNotMatch(error.message, /模拟敏感/u);
+      return true;
+    });
+    if (fault === "commit") assert.equal(calls.includes("ROLLBACK"), false);
+    assert.equal(calls.filter((sql) => sql === "COMMIT").length, fault === "commit" ? 1 : 0);
   }
 });
