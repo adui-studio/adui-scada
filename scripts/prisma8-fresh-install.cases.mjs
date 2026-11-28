@@ -321,3 +321,11 @@ void test("B4 只接受只读计划与明确确认指纹的回滚演练，拒绝
     ["--role-b4-rehearse", "--apply", fingerprint], ["--role-b4-rehearse", confirm, fingerprint, "--commit"],
   ]) assert.throws(() => freshAction(args), /必须明确指定/u);
 });
+
+void test("Keycloak 仅开放独立只读所有权预览，不接受执行或额外参数", () => {
+  assert.equal(freshAction(["--role-keycloak-plan"]), "role-keycloak-plan");
+  for (const args of [
+    ["--role-keycloak-plan", "--apply"], ["--role-keycloak-rehearse"],
+    ["--role-keycloak-apply"], ["--role-keycloak-plan", "--plan-fingerprint=" + "a".repeat(64)],
+  ]) assert.throws(() => freshAction(args), /必须明确指定/u);
+});

@@ -367,7 +367,7 @@ async function main() {
             : null;
   const isolationMode = action === "role-isolation-status" ? "status" : action === "role-isolation-rehearse" ? "rehearse" : action === "role-isolation-apply" ? "apply" : null;
   const b4Mode = action === "role-b4-plan" ? "plan" : action === "role-b4-rehearse" ? "rehearse" : null;
-  const reviewRoles = action === "role-review" || action === "role-plan" || action === "role-object-review" || bootstrapMode !== null || isolationMode !== null || b4Mode !== null;
+  const reviewRoles = action === "role-review" || action === "role-plan" || action === "role-object-review" || action === "role-keycloak-plan" || bootstrapMode !== null || isolationMode !== null || b4Mode !== null;
   const identity = inspectDocker(reviewRoles);
   const parse = (text) => {
     try {
@@ -464,7 +464,7 @@ async function main() {
           confirm: process.argv[3],
         });
       }
-      if (action === "role-object-review") {
+      if (action === "role-object-review" || action === "role-keycloak-plan") {
         stage = "独立角色隔离状态核验";
         const verifyStatus = (currentReport, expectedFingerprint = "") => runDockerRoleIsolationTransaction({
           mode: "status", report: currentReport, identity, storageHash: freshStorageHash,
@@ -472,12 +472,16 @@ async function main() {
           readDirectory: readDockerBusinessRoleDirectory,
         });
         const before = await verifyStatus(directoryReport);
+        const keycloakPlan = action === "role-keycloak-plan";
+        if (keycloakPlan) requireMatch(before.catalogIsolationPersisted === true, "Keycloak 所有权预览要求 B3.3 已实际隔离");
         stage = "双库对象所有权与授权只读评审";
         const reviewed = await reviewDockerRoleObjects((database) => {
           const target = new URL(readOnly);
           target.pathname = database === "adui_scada" ? "/adui_scada" : "/adui_scada_keycloak";
           return databaseClient(target.toString());
-        }, identity);
+        }, identity, keycloakPlan ? {
+          storageHash: freshStorageHash, isolationFingerprint: before.planFingerprint,
+        } : undefined);
         const current = await loadDirectoryReport();
         requireMatch(isDeepStrictEqual(directoryReport, current), "对象评审前后双库目录发生漂移");
         const after = await verifyStatus(current, before.planFingerprint);

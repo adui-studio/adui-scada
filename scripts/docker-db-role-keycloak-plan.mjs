@@ -1,0 +1,180 @@
+import { createHash } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
+
+export class DockerKeycloakOwnershipError extends Error {}
+
+const manager = "adui_scada";
+const runtime = "adui_scada_keycloak_runtime";
+const oid = (value) => typeof value === "string" && /^[1-9][0-9]{0,9}$/u.test(value) && Number(value) <= 4294967295;
+const hash = (value) => typeof value === "string" && /^[a-f0-9]{64}$/u.test(value);
+const compare = (left, right) => left < right ? -1 : left > right ? 1 : 0;
+const kinds = ["table", "index", "toast", "toastIndex", "rowType", "arrayType"];
+const tableCount = 101;
+const requiredTables = ["realm", "client", "user_entity", "databasechangelog", "databasechangeloglock"];
+const baseline = {
+  managerVerified: true, rolesHardened: true, isolatedRuntime: true,
+  schemaTrusted: true, noOtherSchemas: true, noUnexpectedObjects: true,
+  keycloakDependencyMatched: true,
+};
+
+const baselineSql = `WITH roles AS (
+  SELECT * FROM pg_catalog.pg_authid WHERE rolname IN ('adui_scada_runtime', 'adui_scada_keycloak_runtime')
+), keycloak AS (SELECT oid FROM roles WHERE rolname = 'adui_scada_keycloak_runtime'),
+  db AS (SELECT oid, datdba FROM pg_catalog.pg_database WHERE datname = current_database()),
+  ns AS (SELECT oid, nspowner, nspacl FROM pg_catalog.pg_namespace WHERE nspname = 'public')
+SELECT (current_database() = 'adui_scada_keycloak' AND current_user = 'adui_scada' AND session_user = 'adui_scada'
+  AND current_setting('transaction_read_only') = 'on' AND current_setting('transaction_isolation') = 'repeatable read'
+  AND current_setting('server_version_num') = '190000' AND NOT pg_catalog.pg_is_in_recovery()
+  AND EXISTS (SELECT 1 FROM db JOIN pg_catalog.pg_roles r ON r.oid = db.datdba WHERE r.rolname = current_user AND r.rolsuper)) AS "managerVerified",
+  ((SELECT count(*) FROM roles) = 2 AND NOT EXISTS (SELECT 1 FROM roles r WHERE r.rolcanlogin OR r.rolsuper
+    OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolbypassrls OR r.rolinherit OR r.rolpassword IS NOT NULL)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members m JOIN roles r ON r.oid IN (m.roleid, m.member, m.grantor))
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_db_role_setting s JOIN roles r ON r.oid = s.setrole)) AS "rolesHardened",
+  (NOT EXISTS (SELECT 1 FROM roles r CROSS JOIN pg_catalog.pg_database d WHERE
+    pg_catalog.has_database_privilege(r.oid, d.oid, 'CONNECT') IS DISTINCT FROM
+      ((r.rolname = 'adui_scada_runtime' AND d.datname = 'adui_scada') OR
+       (r.rolname = 'adui_scada_keycloak_runtime' AND d.datname = 'adui_scada_keycloak'))
+    OR pg_catalog.has_database_privilege(r.oid, d.oid, 'CREATE,TEMPORARY,CONNECT WITH GRANT OPTION'))) AS "isolatedRuntime",
+  EXISTS (SELECT 1 FROM ns n JOIN pg_catalog.pg_roles r ON r.oid = n.nspowner
+    WHERE r.rolname = 'pg_database_owner' AND n.nspacl IS NOT NULL
+    AND (SELECT count(*) FROM pg_catalog.aclexplode(n.nspacl)) = 3
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.aclexplode(n.nspacl) a WHERE a.grantor <> n.nspowner OR a.is_grantable
+      OR NOT ((a.grantee = n.nspowner AND a.privilege_type IN ('USAGE','CREATE')) OR (a.grantee = 0 AND a.privilege_type = 'USAGE')))
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members m WHERE n.nspowner IN (m.roleid, m.member, m.grantor))
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles actor WHERE NOT actor.rolsuper AND actor.oid <> n.nspowner
+      AND pg_catalog.has_schema_privilege(actor.oid, n.oid, 'CREATE'))) AS "schemaTrusted",
+  NOT EXISTS (SELECT 1 FROM pg_catalog.pg_namespace n WHERE n.nspname NOT IN ('public','information_schema') AND left(n.nspname,3) <> 'pg_') AS "noOtherSchemas",
+  (NOT EXISTS (SELECT 1 FROM pg_catalog.pg_proc p JOIN ns n ON p.pronamespace = n.oid)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_operator p JOIN ns n ON p.oprnamespace = n.oid)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_collation p JOIN ns n ON p.collnamespace = n.oid)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_conversion p JOIN ns n ON p.connamespace = n.oid)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_ts_config p JOIN ns n ON p.cfgnamespace = n.oid)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_ts_dict p JOIN ns n ON p.dictnamespace = n.oid)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_ts_parser p JOIN ns n ON p.prsnamespace = n.oid)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_ts_template p JOIN ns n ON p.tmplnamespace = n.oid)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_opclass p JOIN ns n ON p.opcnamespace = n.oid)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_opfamily p JOIN ns n ON p.opfnamespace = n.oid)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_statistic_ext p JOIN ns n ON p.stxnamespace = n.oid)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_extension WHERE extname <> 'plpgsql')
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_default_acl)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_event_trigger)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_foreign_server)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_foreign_data_wrapper)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_publication)
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_subscription WHERE subdbid = (SELECT oid FROM db))
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_largeobject_metadata)) AS "noUnexpectedObjects",
+  ((SELECT count(*) FROM pg_catalog.pg_shdepend d JOIN keycloak k ON k.oid = d.refobjid
+    WHERE d.refclassid = 'pg_catalog.pg_authid'::regclass) = 1
+    AND EXISTS (SELECT 1 FROM pg_catalog.pg_shdepend d JOIN keycloak k ON k.oid = d.refobjid
+      WHERE d.refclassid = 'pg_catalog.pg_authid'::regclass AND d.dbid = 0
+        AND d.classid = 'pg_catalog.pg_database'::regclass AND d.objid = (SELECT oid FROM db)
+        AND d.objsubid = 0 AND d.deptype = 'a')) AS "keycloakDependencyMatched"`;
+
+const inventorySql = `WITH public_relations AS (
+  SELECT c.* FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid WHERE n.nspname = 'public'
+), toast_relations AS (
+  SELECT c.*, p.oid AS parent FROM pg_catalog.pg_class c JOIN public_relations p ON c.oid = p.reltoastrelid
+), relations AS (
+  SELECT CASE c.relkind WHEN 'r' THEN 'table' WHEN 'i' THEN 'index' ELSE 'unsupported' END AS kind,
+    c.oid, c.relname AS name, i.indrelid AS parent, c.relowner AS owner,
+    (c.relacl IS NULL AND c.relpersistence = 'p' AND NOT c.relispartition AND c.reloftype = 0
+      AND NOT c.relrowsecurity AND NOT c.relforcerowsecurity
+      AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_inherits h WHERE c.oid IN (h.inhrelid, h.inhparent))
+      AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a WHERE a.attrelid = c.oid AND a.attacl IS NOT NULL)
+      AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_trigger t WHERE t.tgrelid = c.oid AND NOT t.tgisinternal)
+      AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_rewrite r WHERE r.ev_class = c.oid)
+      AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_policy p WHERE p.polrelid = c.oid)
+      AND (c.relkind <> 'i' OR (i.indisvalid AND i.indisready AND i.indislive))) AS clean
+    FROM public_relations c LEFT JOIN pg_catalog.pg_index i ON i.indexrelid = c.oid
+  UNION ALL SELECT 'toast', c.oid, c.relname, c.parent, c.relowner,
+    c.relkind = 't' AND c.relacl IS NULL AND c.relpersistence = 'p' AND n.nspname = 'pg_toast'
+    FROM toast_relations c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+  UNION ALL SELECT 'toastIndex', c.oid, c.relname, t.oid, c.relowner,
+    c.relkind = 'i' AND c.relacl IS NULL AND c.relpersistence = 'p' AND n.nspname = 'pg_toast'
+      AND i.indisvalid AND i.indisready AND i.indislive
+    FROM toast_relations t JOIN pg_catalog.pg_index i ON i.indrelid = t.oid
+      JOIN pg_catalog.pg_class c ON c.oid = i.indexrelid JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+), types AS (
+  SELECT CASE WHEN t.typtype = 'c' AND c.relkind = 'r' AND c.reltype = t.oid THEN 'rowType'
+      WHEN t.typcategory = 'A' AND elem.typarray = t.oid AND elem.typtype = 'c' THEN 'arrayType' ELSE 'unsupported' END AS kind,
+    t.oid, t.typname AS name, CASE WHEN t.typtype = 'c' THEN t.typrelid ELSE t.typelem END AS parent, t.typowner AS owner,
+    t.typacl IS NULL AND t.typisdefined AS clean
+    FROM pg_catalog.pg_type t JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+      LEFT JOIN public_relations c ON c.oid = t.typrelid LEFT JOIN pg_catalog.pg_type elem ON elem.oid = t.typelem
+    WHERE n.nspname = 'public'
+), objects AS (
+  SELECT *, 'pg_catalog.pg_class'::regclass AS classid FROM relations
+  UNION ALL SELECT *, 'pg_catalog.pg_type'::regclass AS classid FROM types
+)
+SELECT kind, oid::text AS oid, name::text AS name, parent::text AS parent,
+  pg_catalog.pg_get_userbyid(owner)::text AS owner,
+  clean AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_depend d WHERE d.classid = objects.classid AND d.objid = objects.oid AND d.deptype = 'e') AS clean
+FROM objects`;
+
+function requireMatch(condition, message) {
+  if (!condition) throw new DockerKeycloakOwnershipError(message);
+}
+
+function normalizeInventory(rows, expectedOwner) {
+  requireMatch(Array.isArray(rows) && rows.length <= 10000, "Keycloak 对象证据数量无效");
+  const keys = ["kind", "oid", "name", "parent", "owner", "clean"];
+  requireMatch(rows.every((row) => row && Object.keys(row).length === keys.length && keys.every((key) => Object.hasOwn(row, key)) &&
+    kinds.includes(row.kind) && oid(row.oid) && typeof row.name === "string" && /^[a-z_][a-z0-9_]{0,62}$/u.test(row.name) &&
+    (row.kind === "table" ? row.parent === null : oid(row.parent)) && row.owner === expectedOwner && row.clean === true),
+    "Keycloak 对象类型、名称、所有者或 ACL 不一致");
+  const objectKey = (row) => (row.kind === "rowType" || row.kind === "arrayType" ? "type:" : "relation:") + row.oid;
+  requireMatch(new Set(rows.map(objectKey)).size === rows.length, "Keycloak 对象标识重复");
+  const groups = Object.fromEntries(kinds.map((kind) => [kind, rows.filter((row) => row.kind === kind)]));
+  const tables = groups.table;
+  const names = new Set(tables.map((row) => row.name));
+  requireMatch(tables.length === tableCount && names.size === tableCount && requiredTables.every((name) => names.has(name)) &&
+    tables.every((row) => !/^(scada_|prisma_)/u.test(row.name)), "Keycloak 已评审表范围不一致");
+  for (const [child, parent] of [["index", "table"], ["toast", "table"], ["toastIndex", "toast"], ["rowType", "table"], ["arrayType", "rowType"]]) {
+    requireMatch(groups[child].every((row) => groups[parent].some((item) => item.oid === row.parent)), "Keycloak 从属对象依赖不一致");
+  }
+  for (const [parent, child] of [["table", "rowType"], ["rowType", "arrayType"], ["toast", "toastIndex"]]) {
+    requireMatch(groups[parent].every((row) => groups[child].filter((item) => item.parent === row.oid).length === 1), "Keycloak 从属对象缺失或重复");
+  }
+  requireMatch(tables.every((row) => groups.toast.filter((item) => item.parent === row.oid).length <= 1), "Keycloak TOAST 依赖重复");
+  return rows.map((row) => Object.fromEntries(keys.map((key) => [key, row[key]]))).sort((left, right) => compare(objectKey(left), objectKey(right)));
+}
+
+// 只预览已核验的普通表，不生成全库所有权转移或运行角色授权语句。
+export function buildKeycloakOwnershipPlan({ identity, storageHash, isolationFingerprint, baselineRows, objects }) {
+  requireMatch(identity?.version === "190000" && typeof identity.systemIdentifier === "string" && /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier) &&
+    hash(storageHash) && hash(isolationFingerprint) && isDeepStrictEqual(baselineRows, [baseline]), "Keycloak 所有权前置证据不一致");
+  const inventory = normalizeInventory(objects, manager);
+  const tables = inventory.filter((row) => row.kind === "table").sort((left, right) => compare(left.name, right.name));
+  const sqlPreview = tables.map((row) => 'ALTER TABLE ONLY public."' + row.name + '" OWNER TO adui_scada_keycloak_runtime');
+  const planFingerprint = createHash("sha256").update(JSON.stringify({ identity: [identity.version, identity.systemIdentifier], storageHash, isolationFingerprint, inventory, sqlPreview })).digest("hex");
+  return { inventory, sqlPreview, report: {
+    status: "KEYCLOAK_OWNERSHIP_PLAN_READY", planOnly: true, planFingerprint,
+    targetDatabase: "adui_scada_keycloak", targetRole: runtime, tableCount: tables.length,
+    objectCounts: Object.fromEntries(kinds.map((kind) => [kind, inventory.filter((row) => row.kind === kind).length])),
+    statementCount: sqlPreview.length, schemaCreateReviewRequired: true, objectIdentityReviewed: false, ownershipTransferAllowed: false,
+    ownerProjectionVerified: false, runtimeLoginAllowed: false, businessAclApproved: false,
+    admissionPassed: false, databaseWritten: false, serviceSwitched: false,
+  } };
+}
+
+// 仅比较将来事务内的目录投影，不代表已经执行所有权转移。
+export function verifyKeycloakOwnershipProjection(before, after) {
+  const expected = normalizeInventory(before, manager).map((row) => ({ ...row, owner: runtime }));
+  requireMatch(isDeepStrictEqual(normalizeInventory(after, runtime), expected), "Keycloak 所有权投影不一致");
+  return { ownerProjectionMatched: true, ownershipTransferAllowed: false, admissionPassed: false };
+}
+
+// 公开报告不回显实际对象名称、OID 或 SQL。
+export async function readKeycloakOwnershipPreview(query, context) {
+  let stage = "安全基线";
+  try {
+    const baselineRows = (await query("Keycloak 所有权前置", baselineSql))?.rows;
+    requireMatch(isDeepStrictEqual(baselineRows, [baseline]), "Keycloak 所有权前置证据不一致");
+    stage = "对象与依赖";
+    const objects = (await query("Keycloak 对象所有权", inventorySql))?.rows;
+    return buildKeycloakOwnershipPlan({ ...context, baselineRows, objects }).report;
+  } catch (error) {
+    if (error instanceof DockerKeycloakOwnershipError) throw error;
+    throw new DockerKeycloakOwnershipError("Keycloak " + stage + "查询失败，内部诊断已脱敏");
+  }
+}

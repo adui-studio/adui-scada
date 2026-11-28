@@ -72,6 +72,7 @@ export function freshAction(args) {
     ["--role-isolation-plan", "role-isolation-plan"],
     ["--role-isolation-status", "role-isolation-status"],
     ["--role-object-review", "role-object-review"],
+    ["--role-keycloak-plan", "role-keycloak-plan"],
     ["--role-b4-plan", "role-b4-plan"],
     ["--runtime-review", "runtime-review"],
     ["--runtime-emit", "runtime-emit"],

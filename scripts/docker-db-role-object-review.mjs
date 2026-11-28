@@ -3,6 +3,7 @@ import { verifyDockerRoleObjectIdentity } from "./docker-db-role-review.mjs";
 import { safeSqlState } from "./docker-db-role-bootstrap.mjs";
 import { DockerBusinessAclPreviewError } from "./docker-db-role-business-acl.mjs";
 import { DockerB4PreflightError, readScadaB4BusinessPreparation } from "./docker-db-role-b4-preflight.mjs";
+import { DockerKeycloakOwnershipError, readKeycloakOwnershipPreview } from "./docker-db-role-keycloak-plan.mjs";
 
 export class DockerRoleObjectReviewError extends Error {}
 
@@ -176,7 +177,7 @@ export async function readDockerRoleObjectInventory(query) {
   };
 }
 
-async function inspectDatabase(createClient, database, identity) {
+async function inspectDatabase(createClient, database, identity, keycloakPlanContext) {
   let client;
   let begun = false;
   let stage = "连接";
@@ -202,6 +203,14 @@ async function inspectDatabase(createClient, database, identity) {
           ...(await readScadaB4BusinessPreparation(query)),
         }
       : objects;
+    if (database === databaseNames[1] && keycloakPlanContext !== undefined) {
+      stage = "Keycloak 逐对象所有权候选";
+      inventory.ownershipPreview = await readKeycloakOwnershipPreview(query, {
+        identity,
+        storageHash: keycloakPlanContext.storageHash,
+        isolationFingerprint: keycloakPlanContext.isolationFingerprint,
+      });
+    }
     stage = "后置身份";
     await verifyDockerRoleObjectIdentity(client, database, identity);
     stage = "事务回滚";
@@ -209,7 +218,7 @@ async function inspectDatabase(createClient, database, identity) {
     begun = false;
   } catch (error) {
     failure = database + "对象评审" + stage + "失败，内部诊断已脱敏";
-    if (error instanceof DockerRoleObjectReviewError || error instanceof DockerBusinessAclPreviewError || error instanceof DockerB4PreflightError) failure += "；" + error.message;
+    if (error instanceof DockerRoleObjectReviewError || error instanceof DockerBusinessAclPreviewError || error instanceof DockerB4PreflightError || error instanceof DockerKeycloakOwnershipError) failure += "；" + error.message;
   }
   if (begun) {
     try { requireMatch((await client.query("ROLLBACK")).command === "ROLLBACK"); }
@@ -224,11 +233,11 @@ async function inspectDatabase(createClient, database, identity) {
 }
 
 /** 分别读取两个固定库；不批准所有权转移、业务 ACL 或运行身份。 */
-export async function reviewDockerRoleObjects(createClient, identity) {
+export async function reviewDockerRoleObjects(createClient, identity, keycloakPlanContext) {
   requireMatch(identity?.version === "190000" && typeof identity.systemIdentifier === "string" &&
     /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier));
   const scada = await inspectDatabase(createClient, databaseNames[0], identity);
-  const keycloak = await inspectDatabase(createClient, databaseNames[1], identity);
+  const keycloak = await inspectDatabase(createClient, databaseNames[1], identity, keycloakPlanContext);
   return {
     status: "DOCKER_DB_ROLE_OBJECT_REVIEW_READY",
     scada, keycloak,
