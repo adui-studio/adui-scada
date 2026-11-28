@@ -1,6 +1,6 @@
 # Docker 原生业务连接安全评审
 
-- 状态：A 阶段真实验收通过并合并；B1 角色准备预览候选，B2 实际角色变更及 C、D 未实施
+- 状态：A 与 B1 真实验收通过并合并；B2 角色事务代码候选，实际创建及 C、D 未实施
 - 日期：2026-11-28
 - 前置：[ADR-0073](../adr/0073-prisma8-fresh-install.md)、[ADR-0066](../adr/0066-single-local-compose-project.md)、[ADR-0065](../adr/0065-oidc-bff-and-project-api.md)
 - 关联：FR-001、FR-008、FR-013、FR-014、NFR-006
@@ -77,3 +77,9 @@
 ## 6. A 阶段完成及 B1 候选
 
 维护者已在 Windows 完成 PR #257 真实双库角色目录核查，退出 0，PR #257 已合并至 8d94a418021376d6803b16bb793eefcf4a79b280。B1 新增独立 docker:db:role:plan，复用真实双库只读核查与固定原生契约、集群和当前权限基线，仅生成两条 NOLOGIN 角色创建和六条精确授权 SQL 文本，不执行 SQL，不改实际角色、ACL、所有权、数据库、容器或 OIDC。当前方案仅准备 SCADA Provider 启动查询所需列、Schema 与集群函数权限及两库显式 CONNECT；PUBLIC 权限、行锁、正式业务 ACL、Keycloak 对象所有权及实际 LOGIN 均尚待单独评审。 详见 [角色准备预览与权限矩阵](docker-native-role-bootstrap-plan.md)。
+
+## 7. B1 结案与 B2 受控事务候选
+
+PR #258 已合入集成分支 `569bc45c2162eda28d8161011455d5810e6804fc`。B2 候选实现复用 B1 八条固定 SQL，在独立 SERIALIZABLE READ WRITE 事务中获取固定事务级 advisory lock，前后重验同一业务库目录、集群、会话身份及读写模式。仅允许两个既定 NOLOGIN/NOSUPERUSER/无密码角色及原预览启动读权；验证角色属性、成员和配置不存在、无非预期所有权/跨库依赖、十项直接 ACL（包含五个列权限）、有效表/列/序列/Schema/数据库 CREATE 边界，并以 SET LOCAL ROLE 执行固定启动读取探针，再恢复管理身份。明确保留 PUBLIC CONNECT，两个候选角色仍可获得跨库有效 CONNECT，尚未完成隔离或正式 LOGIN 准入；Keycloak 对象所有权、完整权限及业务写入授权仍待专项。事务演练执行真实目录 DDL 和 GRANT 但 ROLLBACK，随后重新严格结构、注释与双库只读核查确认两角色不存在；独立创建模式只有精确确认参数才可 COMMIT，提交后重验相同基线和实际角色属性/ACL。提交结果未知、关闭失败、后置失败均拒绝成功，不自动重试、删除角色、清理容器或卷。没有业务 DML、现有角色密码或服务绑定修改；不启用 OIDC、发布或正式运行身份。事务级锁仅协调同一执行器，不替代对外部并发管理员变更的控制；实际操作前禁止并发权限维护。
+
+详见 [角色准备预览与事务门禁](docker-native-role-bootstrap-plan.md)。当前仅安排回滚演练和只读状态核查，正式提交另行授权。

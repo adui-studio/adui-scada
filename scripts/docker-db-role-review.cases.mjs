@@ -1,6 +1,9 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
-import { reviewDockerDatabaseRoles } from "./docker-db-role-review.mjs";
+import {
+  readDockerBusinessRoleDirectory,
+  reviewDockerDatabaseRoles,
+} from "./docker-db-role-review.mjs";
 
 const expected = { version: "190000", systemIdentifier: "123456789" };
 const hash = "a".repeat(64);
@@ -95,7 +98,7 @@ function fixture(options = {}) {
               schema: "public",
               ...expected,
               readOnly: options.writable ? "off" : "on",
-              defaultReadOnly: "on",
+              defaultReadOnly: options.defaultWritable ? "off" : "on",
               recovery: false,
             },
           ];
@@ -249,5 +252,45 @@ void describe("Docker 数据库角色只读核查", () => {
       name: "Error",
       message: "业务库连接关闭失败，保留现场",
     });
+  });
+});
+
+void describe("业务事务内角色目录核查", () => {
+  void it("读写事务必须同时核对两种只读标志且不管理外部事务", async () => {
+    const { create, calls } = fixture({ writable: true, defaultWritable: true });
+    const report = await readDockerBusinessRoleDirectory(
+      create("adui_scada"),
+      expected,
+      hash,
+      false,
+    );
+    assert.equal(report.scada.tables.total, 12);
+    assert.equal(report.role.scadaRuntimeExists, false);
+    assert.equal(report.scada.marker.clusterFunctionExecute, true);
+    const sql = calls.map(([, step]) => step);
+    assert.equal(sql.filter((step) => step.includes("current_database()")).length, 2);
+    assert.equal(
+      sql.some((step) => /^(BEGIN|COMMIT|ROLLBACK)/u.test(step)),
+      false,
+    );
+    assert.equal(sql.includes("关闭"), false);
+  });
+  void it("拒绝事务模式不匹配、默认只读及后置身份漂移", async () => {
+    for (const options of [
+      {},
+      { writable: true },
+      { writable: true, defaultWritable: true, drift: true },
+    ]) {
+      const { create } = fixture(options);
+      await assert.rejects(
+        readDockerBusinessRoleDirectory(create("adui_scada"), expected, hash, false),
+        /身份不一致/u,
+      );
+    }
+    const { create } = fixture({ writable: true, defaultWritable: true });
+    await assert.rejects(
+      readDockerBusinessRoleDirectory(create("adui_scada"), expected, hash, true),
+      /身份不一致/u,
+    );
   });
 });
