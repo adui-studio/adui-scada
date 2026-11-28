@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { verifyDockerRoleObjectIdentity } from "./docker-db-role-review.mjs";
 import { safeSqlState } from "./docker-db-role-bootstrap.mjs";
 import { DockerBusinessAclPreviewError, readScadaBusinessAclPreview } from "./docker-db-role-business-acl.mjs";
+import { DockerB4PreflightError, readScadaB4InstallPreflight } from "./docker-db-role-b4-preflight.mjs";
 
 export class DockerRoleObjectReviewError extends Error {}
 
@@ -196,7 +197,11 @@ async function inspectDatabase(createClient, database, identity) {
     };
     const objects = await readDockerRoleObjectInventory(query);
     inventory = database === databaseNames[0]
-      ? { ...objects, businessAclPreview: await readScadaBusinessAclPreview(query) }
+      ? {
+          ...objects,
+          ownerInstallPreflight: await readScadaB4InstallPreflight(query),
+          businessAclPreview: await readScadaBusinessAclPreview(query),
+        }
       : objects;
     stage = "后置身份";
     await verifyDockerRoleObjectIdentity(client, database, identity);
@@ -205,7 +210,7 @@ async function inspectDatabase(createClient, database, identity) {
     begun = false;
   } catch (error) {
     failure = database + "对象评审" + stage + "失败，内部诊断已脱敏";
-    if (error instanceof DockerRoleObjectReviewError || error instanceof DockerBusinessAclPreviewError) failure += "；" + error.message;
+    if (error instanceof DockerRoleObjectReviewError || error instanceof DockerBusinessAclPreviewError || error instanceof DockerB4PreflightError) failure += "；" + error.message;
   }
   if (begun) {
     try { requireMatch((await client.query("ROLLBACK")).command === "ROLLBACK"); }
