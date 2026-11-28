@@ -1620,3 +1620,9 @@
 - **源码审查现象**：原 runScadaB4RollbackRehearsal 只依据 rolledBack 开启独立连接；即使 client.end() 抛错也继续读取目录及宿主，虽然最终会失败，却违反原连接关闭明确后才允许独立核验的约束。未取得真实 PostgreSQL 故障记录。
 - **最小修复**：记录 closed 仅在 end 成功后为 true；独立复核及成功返回均要求 rolledBack && closed，保留原回滚标签、禁止重试及脱敏诊断。新增 Node 回归要求关闭失败时只创建一条连接、仅一次宿主核验、无独立连接及 COMMIT；代码提交 cd4bbc47c5ab452d48fe20b3fc0bb9cda5805174，尚未实际执行该组合 Node 用例。
 - **防复发**：独立连接前逐项核验原事务完成标签和原连接关闭证据，失败不得继续尝试或误报独立核验；模拟回归与真实数据库证据分开。全质量链及真实复验仍待集中验收。
+
+### E-174 · 拼接英文首段触发中文异常检查，交互式验收未整体停止（PR #262）
+
+- **维护者实测**：HEAD fc658f8336de1def3169746e151c8139a1c7d7e8，Windows Node 24.18.0、pnpm 12.23.0；冻结安装、依赖/配置/环境/LF 检查通过，ready 在 scripts/docker-db-role-keycloak-plan.mjs 第 183、306 行中文检查失败（2 处，退出码 1）。PowerShell 逐条粘贴在 throw 后仍执行后续 Write-Host，不能将其视为成功证据。Docker 七服务运行、PG 19.0 严格契约（12 表/85 列/36 检查/20 索引/13 外键/119 注释）及正式 Discovery/JWKS 只读检查通过；B3.3 状态 catalogIsolationPersisted=false、publicConnectRetained=true，两库计划按设计拒绝，SCADA 演练因无指纹未执行。
+- **最小修复**：仅将两个 DockerKeycloakOwnershipError 的拼接字面量改为单个模板字符串，实际异常文案、固定阶段、脱敏及权限逻辑不变，不改扫描器或测试期望。使用一个完整 PowerShell 脚本块执行阶段，失败抛错后不得继续下一个阶段或打印成功。B3.3 未持久化是独立审批门禁，不放宽、不自动执行。
+- **复验边界**：协作容器 Node 22.16.0 使用原检查器 Git Blob 3b0b0a862ca3b15018d8fbd04cbb8f1eceb99cd9 在七文件最小夹具复现两处失败（退出码 1），替换两行后退出码 0，夹具语法检查退出码 0。对完整远端目标源码应用原异常匹配规则，前两处、后零处，确认仅 183/306 行变化。修复后完整 messages:check、ready、组合 Node 和原生仓储 Vitest 未执行；不宣称已通过。不写数据库，不切换角色或服务，不合并。

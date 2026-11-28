@@ -180,7 +180,7 @@ export async function readKeycloakOwnershipCandidate(query, context, phase = "re
     return buildKeycloakOwnershipPlan({ ...context, baselineRows, objects });
   } catch (error) {
     if (error instanceof DockerKeycloakOwnershipError) throw error;
-    throw new DockerKeycloakOwnershipError("Keycloak " + stage + "查询失败，内部诊断已脱敏");
+    throw new DockerKeycloakOwnershipError(`Keycloak ${stage}查询失败，内部诊断已脱敏`);
   }
 }
 
@@ -303,7 +303,7 @@ async function verifyOwnershipCatalog(query, context, candidate, expectedPlanFin
     return persisted ? { report, tableOids: tables.map((table) => table.oid) } : report;
   } catch (error) {
     if (error instanceof DockerKeycloakOwnershipError) throw error;
-    throw new DockerKeycloakOwnershipError("Keycloak " + stage + "核验失败，内部诊断已脱敏");
+    throw new DockerKeycloakOwnershipError(`Keycloak ${stage}核验失败，内部诊断已脱敏`);
   }
 }
 

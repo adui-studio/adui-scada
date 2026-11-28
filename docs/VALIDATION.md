@@ -5581,3 +5581,9 @@ Node.js 22.16.0 实测新增隔离预览核心、测试文件 node --check 均�
 ### 2026-11-28 · PR #262 B4 集中候选局部实测
 
 本轮实际在协作容器 Node.js 22.16.0 使用 --experimental-strip-types 运行六组独立测试：原跨阶段投影 3/3、原生例程适配 5/5、固定 Issuer 清理 4/4、持久化/状态/锁探针 CLI 参数 5/5、双连接模拟驱动 3/3、Keycloak Schema 策略 2/2，合计 22/22、0 失败、0 跳过。模块/测试的本地 Git Blob 与远端相应源码一致；测试为固定 SQL 形状、参数、策略及模拟驱动证据，不是真实 SQL、真实两库提交或真实并发。协作容器缺少完整依赖、pnpm/vp/Docker/psql，无法完整克隆 GitHub。新增组合隔离、持久化提交/故障和原生仓储 Vitest 已编写但尚未真实执行；完整 ready、类型、中文、文档及真实宿主均待验证。未获实际授权，不执行真实持久化、LOGIN 或服务切换。完整关闭条件见 [B4 集中验收清单](plans/b4-concentrated-acceptance.md)。
+
+### 2026-11-28 · PR #262 B4 首轮 Windows 集中验收阻塞
+
+维护者同步 HEAD fc658f8336de1def3169746e151c8139a1c7d7e8，Node 24.18.0、pnpm 12.23.0，冻结安装 13 workspace 成功；依赖 13 清单/54 Catalog、共享配置 10 TSConfig、根 .env 和 LF 检查通过。完整 ready 在中文异常检查两处失败，退出码 1；后续质量链未运行。Docker 七服务运行；真实严格数据库契约 FRESH_DATABASE_VERIFIED、PG 190000、12 表、85 列、36 检查、20 索引、13 外键、119 注释；正式 Discovery/JWKS 只读通过，OIDC 登录未启用。B3.3 状态 rolesPrepared=true、catalogIsolationPersisted=false、publicConnectRetained=true、databaseWritten=false；两库 B4 计划被正常拒绝，空指纹的回滚演练请求被解析器拒绝，无实际 B4 演练证据。交互式粘贴的成功文字不计为验收结果。
+
+E-174 最小修复只调整两条 Keycloak 异常文案为等价模板字符串。协作容器原检查器七文件夹具实测前 2 处失败退出 1、后 0 处退出 0，完整目标文件原异常匹配规则前两处后零处。全仓中文、完整 ready 及真实 B3.3 演练、持久化仍待验证；实际授权须独立批准，不执行 B4 或 C 阶段。
