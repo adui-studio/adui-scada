@@ -43,12 +43,19 @@ const objectsSql = `WITH schemas AS (
     jsonb_build_array(p.pubname) FROM pg_catalog.pg_publication p
 )
 SELECT kind, id, owner, evidence FROM objects ORDER BY kind, id`;
-const dependenciesSql = `SELECT d.classid::text AS "classOid", d.objid::text AS "objectOid",
+const dependenciesSql = `SELECT d.dbid::text AS "databaseOid",
+  CASE WHEN d.dbid = 0 THEN 'SHARED'
+    WHEN d.dbid = (SELECT oid FROM pg_catalog.pg_database WHERE datname = current_database()) THEN 'CURRENT_DATABASE'
+    ELSE 'OTHER_DATABASE' END AS "databaseScope",
+  d.classid::text AS "classOid", d.objid::text AS "objectOid",
   d.objsubid AS "subId", d.refobjid::text AS "roleOid", d.deptype::text AS kind
 FROM pg_catalog.pg_shdepend d
-WHERE d.dbid = (SELECT oid FROM pg_catalog.pg_database WHERE datname = current_database())
-  AND d.refclassid = 'pg_catalog.pg_authid'::regclass
-ORDER BY d.classid, d.objid, d.objsubid, d.refobjid, d.deptype`;
+WHERE d.refclassid = 'pg_catalog.pg_authid'::regclass
+  AND d.refobjid IN (
+    SELECT oid FROM pg_catalog.pg_roles
+    WHERE rolname IN ('adui_scada', 'adui_scada_runtime', 'adui_scada_keycloak_runtime', 'pg_database_owner')
+  )
+ORDER BY d.dbid, d.classid, d.objid, d.objsubid, d.refobjid, d.deptype`;
 const databaseNames = ["adui_scada", "adui_scada_keycloak"];
 const roleNames = ["adui_scada", "adui_scada_runtime", "adui_scada_keycloak_runtime", "pg_database_owner"];
 const categories = {
@@ -83,12 +90,20 @@ export async function readDockerRoleObjectInventory(query) {
       row.evidence.every((item) => item === null || typeof item === "string" || typeof item === "boolean")) &&
     new Set(rows.map((row) => row.kind + ":" + row.id)).size === rows.length);
   requireMatch(rows.some((row) => row.kind === "schema") && rows.some((row) => row.kind === "relation"));
-  const dependencies = (await query("共享角色依赖", dependenciesSql)).rows;
+  const dependencies = (await query("全集群共享角色依赖", dependenciesSql)).rows;
   requireMatch(Array.isArray(dependencies) && dependencies.length <= 100000 &&
-    dependencies.every((row) => exactKeys(row, ["classOid", "objectOid", "subId", "roleOid", "kind"]) &&
-      oid(row.classOid) && oid(row.objectOid) && oid(row.roleOid) && Number.isSafeInteger(row.subId) &&
-      row.subId >= 0 && typeof row.kind === "string" && /^[a-z]$/u.test(row.kind)) &&
-    new Set(dependencies.map((row) => JSON.stringify([row.classOid, row.objectOid, row.subId, row.roleOid, row.kind]))).size === dependencies.length);
+    dependencies.every((row) =>
+      exactKeys(row, ["databaseOid", "databaseScope", "classOid", "objectOid", "subId", "roleOid", "kind"]) &&
+      (row.databaseOid === "0" || oid(row.databaseOid)) &&
+      ["SHARED", "CURRENT_DATABASE", "OTHER_DATABASE"].includes(row.databaseScope) &&
+      ((row.databaseOid === "0") === (row.databaseScope === "SHARED")) &&
+      oid(row.classOid) && oid(row.objectOid) && oid(row.roleOid) &&
+      roleNames.includes(roles.find((role) => role.oid === row.roleOid)?.name) &&
+      Number.isSafeInteger(row.subId) && row.subId >= 0 &&
+      typeof row.kind === "string" && /^[a-z]$/u.test(row.kind)) &&
+    new Set(dependencies.map((row) => JSON.stringify([
+      row.databaseOid, row.classOid, row.objectOid, row.subId, row.roleOid, row.kind,
+    ]))).size === dependencies.length);
   const classify = (owner) => roles.find((role) => role.oid === owner)?.name ?? "OTHER";
   const objects = Object.keys(categories).map((kind) => ({
     kind,
@@ -100,7 +115,14 @@ export async function readDockerRoleObjectInventory(query) {
   }));
   const dependencyOwners = [...roleNames, "OTHER"].map((name) => ({
     role: name,
-    total: dependencies.filter((row) => classify(row.roleOid) === name).length,
+    ownership: dependencies.filter((row) => classify(row.roleOid) === name && row.kind === "o").length,
+    acl: dependencies.filter((row) => classify(row.roleOid) === name && row.kind === "a").length,
+    initialAcl: dependencies.filter((row) => classify(row.roleOid) === name && row.kind === "i").length,
+    policy: dependencies.filter((row) => classify(row.roleOid) === name && row.kind === "r").length,
+    other: dependencies.filter((row) => classify(row.roleOid) === name && !["o", "a", "i", "r"].includes(row.kind)).length,
+    shared: dependencies.filter((row) => classify(row.roleOid) === name && row.databaseScope === "SHARED").length,
+    currentDatabase: dependencies.filter((row) => classify(row.roleOid) === name && row.databaseScope === "CURRENT_DATABASE").length,
+    otherDatabases: dependencies.filter((row) => classify(row.roleOid) === name && row.databaseScope === "OTHER_DATABASE").length,
   }));
   const catalogFingerprint = createHash("sha256").update(JSON.stringify({
     roles: [...roles].sort((a, b) => compare(a.oid, b.oid)),
