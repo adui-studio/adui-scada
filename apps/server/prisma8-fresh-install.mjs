@@ -428,7 +428,11 @@ async function main() {
             isDeepStrictEqual(inspectDocker(true), identity),
             "全集群核查后本机 Docker 集群发生变化",
           );
-          const inspected = { ...result, directoryReviewPassed: true, serverVersion: identity.version };
+          const inspected = {
+            ...result,
+            directoryReviewPassed: true,
+            serverVersion: identity.version,
+          };
           if (action === "role-isolation-plan") {
             stage = "全集群隔离变更预览";
             return buildDockerRoleIsolationPlan(inspected, identity, freshStorageHash);

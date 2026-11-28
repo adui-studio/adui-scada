@@ -9,33 +9,71 @@ const keycloak = "adui_scada_keycloak_runtime";
 
 // 固定 PG19.0 实机核查中已观察到的脱敏角色标识；不凭标识推断其用途。
 const reviewedMaskedOids = [
-  "3373", "3374", "3375", "3377", "4200", "4544", "4550", "4569",
-  "4570", "4571", "6181", "6182", "6304", "6337", "6392",
+  "3373",
+  "3374",
+  "3375",
+  "3377",
+  "4200",
+  "4544",
+  "4550",
+  "4569",
+  "4570",
+  "4571",
+  "6181",
+  "6182",
+  "6304",
+  "6337",
+  "6392",
 ];
 const targets = [
   {
-    name: "adui_scada", scope: "BUSINESS", runtime: scada, template: false,
-    allowConnections: true, defaultAcl: false, publicTemporary: true,
+    name: "adui_scada",
+    scope: "BUSINESS",
+    runtime: scada,
+    template: false,
+    allowConnections: true,
+    defaultAcl: false,
+    publicTemporary: true,
     sql: "REVOKE CONNECT, TEMPORARY ON DATABASE adui_scada FROM PUBLIC RESTRICT",
   },
   {
-    name: "adui_scada_keycloak", scope: "BUSINESS", runtime: keycloak, template: false,
-    allowConnections: true, defaultAcl: false, publicTemporary: true,
+    name: "adui_scada_keycloak",
+    scope: "BUSINESS",
+    runtime: keycloak,
+    template: false,
+    allowConnections: true,
+    defaultAcl: false,
+    publicTemporary: true,
     sql: "REVOKE CONNECT, TEMPORARY ON DATABASE adui_scada_keycloak FROM PUBLIC RESTRICT",
   },
   {
-    name: "postgres", scope: "MAINTENANCE", runtime: null, template: false,
-    allowConnections: true, defaultAcl: true, publicTemporary: true,
+    name: "postgres",
+    scope: "MAINTENANCE",
+    runtime: null,
+    template: false,
+    allowConnections: true,
+    defaultAcl: true,
+    publicTemporary: true,
     sql: "REVOKE CONNECT, TEMPORARY ON DATABASE postgres FROM PUBLIC RESTRICT",
   },
   {
-    name: "template0", scope: "TEMPLATE", runtime: null, template: true,
-    allowConnections: false, defaultAcl: false, publicTemporary: false,
+    name: "template0",
+    scope: "TEMPLATE",
+    runtime: null,
+    template: true,
+    allowConnections: false,
+    defaultAcl: false,
+    publicTemporary: false,
     sql: "REVOKE CONNECT ON DATABASE template0 FROM PUBLIC RESTRICT",
   },
   {
-    name: "template1", scope: "TEMPLATE", runtime: null, template: true,
-    allowConnections: true, defaultAcl: false, publicTemporary: false,
+    name: "template1",
+    scope: "TEMPLATE",
+    runtime: null,
+    template: true,
+    allowConnections: true,
+    defaultAcl: false,
+    publicTemporary: false,
     sql: "REVOKE CONNECT ON DATABASE template1 FROM PUBLIC RESTRICT",
   },
 ];
@@ -45,40 +83,66 @@ function requirePlan(condition, step) {
 }
 
 function exactRows(actual, expected) {
-  return Array.isArray(actual) && actual.length === expected.length &&
-    expected.every((item) => actual.some((row) => isDeepStrictEqual(row, item)));
+  return (
+    Array.isArray(actual) &&
+    actual.length === expected.length &&
+    expected.every((item) => actual.some((row) => isDeepStrictEqual(row, item)))
+  );
 }
 
 function oid(value) {
-  return typeof value === "string" && /^[1-9][0-9]{0,9}$/u.test(value) && Number(value) <= 4294967295;
+  return (
+    typeof value === "string" && /^[1-9][0-9]{0,9}$/u.test(value) && Number(value) <= 4294967295
+  );
 }
 
 function matches(value, expected) {
-  return value !== null && typeof value === "object" &&
-    Object.entries(expected).every(([key, item]) => Object.hasOwn(value, key) && value[key] === item);
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    Object.entries(expected).every(
+      ([key, item]) => Object.hasOwn(value, key) && value[key] === item,
+    )
+  );
 }
 
 /** 从当前已确认回滚的只读报告生成固定候选；不调用数据库、不授权执行。 */
 export function buildDockerRoleIsolationPlan(report, identity, expectedHash) {
   requirePlan(
-    typeof expectedHash === "string" && /^[a-f0-9]{64}$/u.test(expectedHash) &&
+    typeof expectedHash === "string" &&
+      /^[a-f0-9]{64}$/u.test(expectedHash) &&
       identity?.version === "190000" &&
-      typeof identity.systemIdentifier === "string" && /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier) &&
+      typeof identity.systemIdentifier === "string" &&
+      /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier) &&
       matches(report, {
-        status: "DOCKER_DB_ROLE_ISOLATION_INSPECT_READY", serverVersion: identity.version,
-        storageHash: expectedHash, directoryReviewPassed: true, rolesPrepared: true,
-        committed: false, rolledBack: true, catalogStatementsExecuted: false,
-        databaseWritten: false, businessDataWritten: false, admissionPassed: false,
-        serviceSwitched: false, publicConnectRetained: true,
+        status: "DOCKER_DB_ROLE_ISOLATION_INSPECT_READY",
+        serverVersion: identity.version,
+        storageHash: expectedHash,
+        directoryReviewPassed: true,
+        rolesPrepared: true,
+        committed: false,
+        rolledBack: true,
+        catalogStatementsExecuted: false,
+        databaseWritten: false,
+        businessDataWritten: false,
+        admissionPassed: false,
+        serviceSwitched: false,
+        publicConnectRetained: true,
       }),
     "只读报告及集群",
   );
   const inventory = report.inventory;
   requirePlan(
     matches(inventory, {
-      unknownLoginRoleCount: 0, unknownDatabaseCount: 0, unresolvedSessionCount: 0,
-      consumerReviewRequired: true, changeAllowed: false, isolationPassed: false,
-    }) && Array.isArray(inventory.roles) && Array.isArray(inventory.databases),
+      unknownLoginRoleCount: 0,
+      unknownDatabaseCount: 0,
+      unresolvedSessionCount: 0,
+      consumerReviewRequired: true,
+      changeAllowed: false,
+      isolationPassed: false,
+    }) &&
+      Array.isArray(inventory.roles) &&
+      Array.isArray(inventory.databases),
     "消费者及目录",
   );
   const roleId = (name) => inventory.roles.find((row) => row?.name === name)?.oid;
@@ -90,68 +154,118 @@ export function buildDockerRoleIsolationPlan(report, identity, expectedHash) {
     { oid: runtimeIds[1], name: keycloak, login: false, superuser: false, inherit: false },
     { oid: "6171", name: "pg_database_owner", login: false, superuser: false, inherit: true },
     ...reviewedMaskedOids.map((id) => ({
-      oid: id, name: null, login: false, superuser: false, inherit: true,
+      oid: id,
+      name: null,
+      login: false,
+      superuser: false,
+      inherit: true,
     })),
   ];
-  requirePlan(new Set(roles.map((row) => row.oid)).size === roles.length &&
-    exactRows(inventory.roles, roles), "全集群角色");
+  requirePlan(
+    new Set(roles.map((row) => row.oid)).size === roles.length && exactRows(inventory.roles, roles),
+    "全集群角色",
+  );
   const databases = targets.map((target) => {
     const id = inventory.databases.find((row) => row?.name === target.name)?.oid;
     requirePlan(oid(id), "固定数据库标识");
     return {
-      oid: id, name: target.name, ownerOid: "10", allowConnections: target.allowConnections,
-      template: target.template, connectionLimit: -1, defaultAcl: target.defaultAcl,
+      oid: id,
+      name: target.name,
+      ownerOid: "10",
+      allowConnections: target.allowConnections,
+      template: target.template,
+      connectionLimit: -1,
+      defaultAcl: target.defaultAcl,
       aclEntryCount: 4 + Number(target.publicTemporary) + Number(target.runtime !== null),
-      publicConnect: true, publicTemporary: target.publicTemporary, publicCreate: false,
+      publicConnect: true,
+      publicTemporary: target.publicTemporary,
+      publicCreate: false,
     };
   });
-  requirePlan(new Set(databases.map((row) => row.oid)).size === databases.length &&
-    exactRows(inventory.databases, databases), "全集群数据库");
+  requirePlan(
+    new Set(databases.map((row) => row.oid)).size === databases.length &&
+      exactRows(inventory.databases, databases),
+    "全集群数据库",
+  );
   const memberships = ["3374", "3375", "3377"].map((id) => ({
-    roleOid: id, memberOid: "3373", grantorOid: "10", admin: false, inherit: true, setRole: true,
+    roleOid: id,
+    memberOid: "3373",
+    grantorOid: "10",
+    admin: false,
+    inherit: true,
+    setRole: true,
   }));
   requirePlan(exactRows(inventory.memberships, memberships), "角色成员关系");
   const grant = (databaseOid, granteeOid, privilege) => ({
-    databaseOid, grantorOid: "10", granteeOid, privilege, grantable: false,
+    databaseOid,
+    grantorOid: "10",
+    granteeOid,
+    privilege,
+    grantable: false,
   });
   const acl = databases.flatMap((database, index) => {
     const runtime = targets[index].runtime;
     return [
       grant(database.oid, "0", "CONNECT"),
       ...(database.publicTemporary ? [grant(database.oid, "0", "TEMPORARY")] : []),
-      ...["CONNECT", "CREATE", "TEMPORARY"].map((privilege) => grant(database.oid, "10", privilege)),
+      ...["CONNECT", "CREATE", "TEMPORARY"].map((privilege) =>
+        grant(database.oid, "10", privilege),
+      ),
       ...(runtime === null ? [] : [grant(database.oid, roleId(runtime), "CONNECT")]),
     ];
   });
   requirePlan(exactRows(inventory.acl, acl), "精确数据库 ACL");
   const effective = databases.flatMap((database) =>
     roles.map((role) => ({
-      databaseOid: database.oid, roleOid: role.oid, connect: true,
-      temporary: role.superuser || database.publicTemporary, create: role.superuser,
+      databaseOid: database.oid,
+      roleOid: role.oid,
+      connect: true,
+      temporary: role.superuser || database.publicTemporary,
+      create: role.superuser,
     })),
   );
   requirePlan(exactRows(inventory.effective, effective), "有效权限矩阵");
   requirePlan(
     Array.isArray(inventory.sessions) &&
-      inventory.sessions.every((row) => row?.roleOid === "10" &&
-        databases.some((database) => database.oid === row.databaseOid && database.allowConnections) &&
-        Number.isSafeInteger(row.total) && row.total > 0 &&
-        isDeepStrictEqual(row, { databaseOid: row.databaseOid, roleOid: "10", total: row.total })) &&
-      new Set(inventory.sessions.map((row) => row.databaseOid)).size === inventory.sessions.length &&
+      inventory.sessions.every(
+        (row) =>
+          row?.roleOid === "10" &&
+          databases.some(
+            (database) => database.oid === row.databaseOid && database.allowConnections,
+          ) &&
+          Number.isSafeInteger(row.total) &&
+          row.total > 0 &&
+          isDeepStrictEqual(row, { databaseOid: row.databaseOid, roleOid: "10", total: row.total }),
+      ) &&
+      new Set(inventory.sessions.map((row) => row.databaseOid)).size ===
+        inventory.sessions.length &&
       inventory.sessions.some((row) => row.databaseOid === databases[0].oid),
     "当前客户端连接",
   );
   const groups = ["BUSINESS", "MAINTENANCE", "TEMPLATE"].map((scope) => ({
-    scope, separateApprovalRequired: true, sqlPreview: targets.filter((target) => target.scope === scope)
-      .map((target) => target.sql),
+    scope,
+    separateApprovalRequired: true,
+    sqlPreview: targets.filter((target) => target.scope === scope).map((target) => target.sql),
   }));
   const sqlPreview = groups.flatMap((group) => group.sqlPreview);
-  const planFingerprint = createHash("sha256").update(JSON.stringify({
-    formatVersion: 1, systemIdentifier: identity.systemIdentifier, storageHash: expectedHash,
-    databases, roles, acl, memberships, effective, groups,
-  })).digest("hex");
+  const planFingerprint = createHash("sha256")
+    .update(
+      JSON.stringify({
+        formatVersion: 1,
+        systemIdentifier: identity.systemIdentifier,
+        storageHash: expectedHash,
+        databases,
+        roles,
+        acl,
+        memberships,
+        effective,
+        groups,
+      }),
+    )
+    .digest("hex");
   const projected = targets.map((target, index) => ({
-    database: target.name, allowConnections: target.allowConnections,
+    database: target.name,
+    allowConnections: target.allowConnections,
     currentAclSource: target.defaultAcl ? "DEFAULT" : "EXPLICIT",
     projectedAclSource: "EXPLICIT",
     publicPrivilegesRemoved: target.publicTemporary ? ["CONNECT", "TEMPORARY"] : ["CONNECT"],
@@ -159,25 +273,48 @@ export function buildDockerRoleIsolationPlan(report, identity, expectedHash) {
     connectLostRoleCount: roles.length - 1 - Number(target.runtime !== null),
     temporaryLostRoleCount: target.publicTemporary ? roles.length - 1 : 0,
     namedRoles: [admin, scada, keycloak].map((name) => ({
-      role: name, connect: name === admin || name === target.runtime,
-      temporary: name === admin, create: name === admin,
+      role: name,
+      connect: name === admin || name === target.runtime,
+      temporary: name === admin,
+      create: name === admin,
     })),
-    observedSharedSessions: inventory.sessions.find((row) => row.databaseOid === databases[index].oid)?.total ?? 0,
+    observedSharedSessions:
+      inventory.sessions.find((row) => row.databaseOid === databases[index].oid)?.total ?? 0,
   }));
   return {
     status: "DOCKER_DB_ROLE_ISOLATION_PLAN_READY",
-    planOnly: true, directoryReviewPassed: true, rolesPrepared: true, rolledBack: true,
-    committed: false, catalogStatementsExecuted: false, databaseWritten: false,
-    businessDataWritten: false, serviceSwitched: false, admissionPassed: false,
-    publicConnectRetained: true, isolationPassed: false, changeAllowed: false,
-    consumerReviewRequired: true, storageHash: expectedHash, serverVersion: identity.version,
-    planFingerprint, databaseCount: databases.length, roleCount: roles.length,
-    aclEntryCount: acl.length, publicAclRemovalCount: acl.filter((row) => row.granteeOid === "0").length,
+    planOnly: true,
+    directoryReviewPassed: true,
+    rolesPrepared: true,
+    rolledBack: true,
+    committed: false,
+    catalogStatementsExecuted: false,
+    databaseWritten: false,
+    businessDataWritten: false,
+    serviceSwitched: false,
+    admissionPassed: false,
+    publicConnectRetained: true,
+    isolationPassed: false,
+    changeAllowed: false,
+    consumerReviewRequired: true,
+    storageHash: expectedHash,
+    serverVersion: identity.version,
+    planFingerprint,
+    databaseCount: databases.length,
+    roleCount: roles.length,
+    aclEntryCount: acl.length,
+    publicAclRemovalCount: acl.filter((row) => row.granteeOid === "0").length,
     projectedAclEntryCount: acl.filter((row) => row.granteeOid !== "0").length,
-    effectiveEntryCount: effective.length, groups, sqlPreview, projected,
+    effectiveEntryCount: effective.length,
+    groups,
+    sqlPreview,
+    projected,
     pendingGates: [
-      "CONSUMER_REVIEW", "MAINTENANCE_AND_TEMPLATE_REVIEW", "ROLLBACK_REHEARSAL_APPROVAL",
-      "PERSISTENT_CHANGE_APPROVAL", "LOGIN_AND_SERVICE_SWITCH_APPROVAL",
+      "CONSUMER_REVIEW",
+      "MAINTENANCE_AND_TEMPLATE_REVIEW",
+      "ROLLBACK_REHEARSAL_APPROVAL",
+      "PERSISTENT_CHANGE_APPROVAL",
+      "LOGIN_AND_SERVICE_SWITCH_APPROVAL",
     ],
   };
 }

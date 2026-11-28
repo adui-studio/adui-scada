@@ -334,7 +334,9 @@ assert.ok(
     !packageScripts["docker:up"].includes("role-isolation-inspect"),
   "真实全集群权限核查必须独立执行",
 );
-assert.ok(packageScripts["test:docker"].includes("scripts/docker-db-role-isolation-plan.cases.mjs"));
+assert.ok(
+  packageScripts["test:docker"].includes("scripts/docker-db-role-isolation-plan.cases.mjs"),
+);
 assert.equal(
   packageScripts["docker:db:role:isolation:plan"],
   "node apps/server/prisma8-fresh-install.mjs --role-isolation-plan",
