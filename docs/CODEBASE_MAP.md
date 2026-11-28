@@ -2070,3 +2070,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-db-role-lock-routines.mjs`：固定九条锁例程与最小所有者授权文本、独立指纹；不执行任何 SQL。
 - `scripts/docker-db-role-lock-routines.cases.mjs`：五项 Node 离线回归，纳入 `test:docker`。
 - `scripts/docker-db-role-business-acl.mjs`：现有只读预览增加 `lockRoutinePreview`，保留原列权限指纹与未通过的真实准入标志。
+
+### B4 受限写入候选
+
+- `scripts/docker-db-role-restricted-writes.mjs`：原子首版工程初始化及绑定固定本机 Issuer 的零参数有界清理候选、独立指纹；不安装函数或执行写入。
+- `scripts/docker-db-role-restricted-writes.cases.mjs`：五项 Node 离线回归，纳入 `test:docker`。
+- `scripts/docker-db-role-business-acl.mjs`：`restrictedWritePreview`，收敛工程主表直接 INSERT 候选，八项实际权限阻塞保持。
