@@ -262,3 +262,12 @@ void test("可信宿主证据缺失或 Issuer 漂移时不连接数据库", asyn
     assert.deepEqual(calls, []);
   }
 });
+
+void test("原连接关闭失败不得创建独立连接或继续宿主复核", async () => {
+  const { options, calls, clientCount, hostCount } = fixture("close");
+  await assert.rejects(() => runScadaB4RollbackRehearsal(options), /连接关闭失败，禁止重试/u);
+  assert.equal(clientCount(), 1);
+  assert.equal(hostCount(), 1);
+  assert.equal(calls.some(([label]) => label === "只读"), false);
+  assert.equal(calls.some(([, sql]) => sql === "COMMIT"), false);
+});

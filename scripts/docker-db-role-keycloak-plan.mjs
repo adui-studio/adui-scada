@@ -17,14 +17,17 @@ const baseline = {
   keycloakDependencyMatched: true,
 };
 
+const readOnlyPhase = (phase) => phase === "read-only" || phase === "projected-read-only";
+const projectedPhase = (phase) => phase === "projected" || phase === "projected-read-only";
+
 const baselineSql = (phase) => `WITH roles AS (
   SELECT * FROM pg_catalog.pg_authid WHERE rolname IN ('adui_scada_runtime', 'adui_scada_keycloak_runtime')
 ), keycloak AS (SELECT oid FROM roles WHERE rolname = 'adui_scada_keycloak_runtime'),
   db AS (SELECT oid, datdba FROM pg_catalog.pg_database WHERE datname = current_database()),
   ns AS (SELECT oid, nspowner, nspacl FROM pg_catalog.pg_namespace WHERE nspname = 'public')
 SELECT (current_database() = 'adui_scada_keycloak' AND current_user = 'adui_scada' AND session_user = 'adui_scada'
-  AND current_setting('transaction_read_only') = '${phase === "read-only" ? "on" : "off"}'
-  AND current_setting('transaction_isolation') = '${phase === "read-only" ? "repeatable read" : "serializable"}'
+  AND current_setting('transaction_read_only') = '${readOnlyPhase(phase) ? "on" : "off"}'
+  AND current_setting('transaction_isolation') = '${readOnlyPhase(phase) ? "repeatable read" : "serializable"}'
   AND current_setting('server_version_num') = '190000' AND NOT pg_catalog.pg_is_in_recovery()
   AND EXISTS (SELECT 1 FROM db JOIN pg_catalog.pg_roles r ON r.oid = db.datdba WHERE r.rolname = current_user AND r.rolsuper)) AS "managerVerified",
   ((SELECT count(*) FROM roles) = 2 AND NOT EXISTS (SELECT 1 FROM roles r WHERE r.rolcanlogin OR r.rolsuper
@@ -65,7 +68,7 @@ SELECT (current_database() = 'adui_scada_keycloak' AND current_user = 'adui_scad
     AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_subscription WHERE subdbid = (SELECT oid FROM db))
     AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_largeobject_metadata)) AS "noUnexpectedObjects",
   ((SELECT count(*) FROM pg_catalog.pg_shdepend d JOIN keycloak k ON k.oid = d.refobjid
-    WHERE d.refclassid = 'pg_catalog.pg_authid'::regclass) = ${phase === "projected" ? tableCount + 1 : 1}
+    WHERE d.refclassid = 'pg_catalog.pg_authid'::regclass) = ${projectedPhase(phase) ? tableCount + 1 : 1}
     AND EXISTS (SELECT 1 FROM pg_catalog.pg_shdepend d JOIN keycloak k ON k.oid = d.refobjid
       WHERE d.refclassid = 'pg_catalog.pg_authid'::regclass AND d.dbid = 0
         AND d.classid = 'pg_catalog.pg_database'::regclass AND d.objid = (SELECT oid FROM db)
@@ -257,16 +260,27 @@ function expectedPrivileges(tables, projected) {
 
 /** 仅核验当前事务内的目录证据，不执行所有权转移或提交。 */
 async function verifyOwnershipCatalog(query, context, candidate, expectedPlanFingerprint, phase) {
-  const projected = phase === "projected";
+  const projected = projectedPhase(phase);
+  const persisted = phase === "projected-read-only";
   let stage = "候选指纹";
   try {
-    const original = buildKeycloakOwnershipPlan({ ...context, baselineRows: [baseline], objects: candidate?.inventory });
-    requireMatch(hash(expectedPlanFingerprint) && original.report.planFingerprint === expectedPlanFingerprint &&
-      isDeepStrictEqual(candidate, original), "Keycloak 目录候选指纹不一致");
+    requireMatch(hash(expectedPlanFingerprint), "Keycloak 目录候选指纹无效");
+    let original;
+    if (!persisted) {
+      original = buildKeycloakOwnershipPlan({ ...context, baselineRows: [baseline], objects: candidate?.inventory });
+      requireMatch(original.report.planFingerprint === expectedPlanFingerprint &&
+        isDeepStrictEqual(candidate, original), "Keycloak 目录候选指纹不一致");
+    }
     stage = projected ? "后置安全基线" : "原始安全基线";
     requireMatch(isDeepStrictEqual((await query(stage, baselineSql(phase)))?.rows, [baseline]), "Keycloak 目录安全基线不一致");
     stage = "对象所有权投影";
     const objects = (await query(stage, inventorySql))?.rows;
+    if (persisted) {
+      // 必须从实际已转移的完整对象图恢复原始候选，并与独立确认的旧指纹匹配。
+      const inventory = normalizeInventory(objects, runtime).map((row) => ({ ...row, owner: manager }));
+      original = buildKeycloakOwnershipPlan({ ...context, baselineRows: [baseline], objects: inventory });
+      requireMatch(original.report.planFingerprint === expectedPlanFingerprint, "Keycloak 持久化所有权候选指纹不一致");
+    }
     if (projected) verifyKeycloakOwnershipProjection(original.inventory, objects);
     else requireMatch(isDeepStrictEqual(normalizeInventory(objects, manager), original.inventory), "Keycloak 原始所有权基线不一致");
     const tables = original.inventory.filter((row) => row.kind === "table");
@@ -277,7 +291,7 @@ async function verifyOwnershipCatalog(query, context, candidate, expectedPlanFin
     const privileges = expectedPrivileges(tables, projected);
     requireMatch(exactRows((await query(stage, privilegeSql))?.rows, privileges), "Keycloak 有效表列或 Schema 权限不一致");
     const catalogFingerprint = createHash("sha256").update(JSON.stringify({ expectedPlanFingerprint, projected, dependencies, privileges })).digest("hex");
-    return {
+    const report = {
       status: projected ? "KEYCLOAK_OWNERSHIP_CATALOG_MATCHED" : "KEYCLOAK_OWNERSHIP_BASELINE_MATCHED", catalogFingerprint, tableCount: tables.length,
       dependencyCount: dependencies.length, permissionCount: privileges.length,
       ownerProjectionMatched: projected, dependencyProjectionMatched: projected, baselineCatalogMatched: !projected, rolePrivilegesMatched: true,
@@ -285,6 +299,8 @@ async function verifyOwnershipCatalog(query, context, candidate, expectedPlanFin
       ownershipTransferAllowed: false, runtimeLoginAllowed: false, admissionPassed: false,
       businessAclApproved: false, databaseWritten: false, serviceSwitched: false,
     };
+    // 表标识只供同一跨阶段核验内部使用，不进入公开报告。
+    return persisted ? { report, tableOids: tables.map((table) => table.oid) } : report;
   } catch (error) {
     if (error instanceof DockerKeycloakOwnershipError) throw error;
     throw new DockerKeycloakOwnershipError("Keycloak " + stage + "核验失败，内部诊断已脱敏");
@@ -300,4 +316,9 @@ export async function verifyKeycloakOwnershipBaseline(query, context, candidate,
 /** 仅供后续受控可写事务的所有权后置门禁。 */
 export async function verifyKeycloakOwnershipCatalog(query, context, candidate, expectedPlanFingerprint) {
   return verifyOwnershipCatalog(query, context, candidate, expectedPlanFingerprint, "projected");
+}
+
+/** 独立只读核验已转移目录，不接受外部对象列表，不批准所有权转移或服务切换。 */
+export async function readKeycloakInstalledOwnership(query, context, expectedPlanFingerprint) {
+  return verifyOwnershipCatalog(query, context, undefined, expectedPlanFingerprint, "projected-read-only");
 }

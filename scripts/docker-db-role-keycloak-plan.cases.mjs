@@ -5,11 +5,14 @@ import {
   DockerKeycloakOwnershipError,
   readKeycloakOwnershipPreview,
   readKeycloakOwnershipCandidate,
+  readKeycloakInstalledOwnership,
   verifyKeycloakOwnershipCatalog,
   verifyKeycloakOwnershipBaseline,
   verifyKeycloakOwnershipProjection,
 } from "./docker-db-role-keycloak-plan.mjs";
 import { runKeycloakOwnershipRollbackRehearsal } from "./docker-db-role-keycloak-rehearsal.mjs";
+import { buildScadaB4PermissionExpectations, verifyScadaB4CompletedCatalog, verifyScadaB4InstalledCatalog } from "./docker-db-role-b4-permission-review.mjs";
+import { buildScadaB4RoutineExpectations } from "./docker-db-role-b4-routine-review.mjs";
 
 const context = { identity: { version: "190000", systemIdentifier: "123456789" }, storageHash: "a".repeat(64), isolationFingerprint: "b".repeat(64) };
 const runtime = "adui_scada_keycloak_runtime";
@@ -417,4 +420,66 @@ void test("回滚或连接状态未知以及独立基线漂移均拒绝成功", 
     if (["begin", "rollback", "close"].includes(fault)) assert.equal(clientCount(), 1);
     assert.equal(calls.some(([, sql]) => sql === "COMMIT"), false);
   }
+});
+
+void test("已转移 Keycloak 目录只能在独立只读事务中恢复原始确认指纹", async () => {
+  const data = projectedFixture();
+  const query = async (_step, sql) => ({ rows: data.rows[data.calls.push(sql) - 1] });
+  const result = await readKeycloakInstalledOwnership(query, context, data.candidate.report.planFingerprint);
+  assert.deepEqual(result.report, await verifyProjected(projectedFixture()));
+  assert.deepEqual(result.tableOids, data.candidate.inventory.filter((row) => row.kind === "table").map((row) => row.oid));
+  assert.equal(data.calls.length, 4);
+  assert.match(data.calls[0], /current_setting\('transaction_read_only'\) = 'on'/u);
+  assert.match(data.calls[0], /current_setting\('transaction_isolation'\) = 'repeatable read'/u);
+  assert.match(data.calls[0], /pg_authid'::regclass\) = 102\s+AND EXISTS/u);
+});
+
+function dualCatalogFixture() {
+  const data = projectedFixture();
+  const port = "18443";
+  const permissions = buildScadaB4PermissionExpectations(port);
+  const dependencies = data.candidate.inventory.filter((row) => row.kind === "table")
+    .map((row) => ({ objectId: row.oid, systemIdentifier: context.identity.systemIdentifier }));
+  const rows = [dependencies, permissions.roles, permissions.databases, permissions.acl, permissions.relations, permissions.columns, buildScadaB4RoutineExpectations(port)];
+  const scadaCalls = [];
+  return { data, rows, scadaCalls, options: {
+    scadaQuery: async (_step, sql) => ({ rows: rows[scadaCalls.push(sql) - 1] }),
+    keycloakQuery: async (_step, sql) => ({ rows: data.rows[data.calls.push(sql) - 1] }),
+    context, port, expectedKeycloakPlanFingerprint: data.candidate.report.planFingerprint,
+  } };
+}
+
+void test("双库只读投影仅接受经 Keycloak 完整目录恢复的精确共享依赖", async () => {
+  const h = dualCatalogFixture();
+  const result = await verifyScadaB4CompletedCatalog(h.options);
+  assert.equal(result.catalogProjectionMatched, true);
+  assert.equal(result.keycloakSharedDependencyCount, 101);
+  assert.equal(h.data.calls.length, 4);
+  assert.equal(h.scadaCalls.length, 7);
+  assert.match(h.scadaCalls[0], /current_setting\('transaction_read_only'\) = 'on'/u);
+  assert.match(h.scadaCalls[1], /OR \(r\.rolname = 'adui_scada_keycloak_runtime' AND d\.dbid = \(SELECT oid FROM pg_catalog\.pg_database WHERE datname = 'adui_scada_keycloak'\)/u);
+  assert.match(h.scadaCalls[1], /d\.objsubid = 0 AND d\.deptype = 'o'/u);
+  assert.equal([...h.scadaCalls[1].matchAll(/\d+::oid/gu)].length, 101);
+  for (const flag of ["crossDatabaseAtomicSnapshotVerified", "installationAllowed", "ownershipTransferAllowed", "schemaEvolutionVerified", "runtimeLoginAllowed", "businessAclApproved", "admissionPassed", "databaseWritten", "serviceSwitched"]) assert.equal(result[flag], false);
+  assert.doesNotMatch(JSON.stringify(result), /kc_fixture|databasechangelog|objectId|ALTER TABLE/u);
+  const originalCalls = [];
+  await verifyScadaB4InstalledCatalog(async (_step, sql) => ({ rows: h.rows[originalCalls.push(sql)] }), h.options.port);
+  assert.equal(originalCalls.length, 6);
+  assert.doesNotMatch(originalCalls[0], /d\.objid IN \(\d+::oid/u);
+});
+
+void test("指纹错误、半完成状态、共享依赖或其他角色漂移均不通过双库投影", async () => {
+  for (const fault of ["fingerprint", "keycloak-owner", "keycloak-acl", "scada-dependency", "scada-role"]) {
+    const h = dualCatalogFixture();
+    if (fault === "fingerprint") h.options.expectedKeycloakPlanFingerprint = "c".repeat(64);
+    if (fault === "keycloak-owner") h.data.rows[1][0].owner = "adui_scada";
+    if (fault === "keycloak-acl") h.data.rows[3][0].schemaElevated = true;
+    if (fault === "scada-dependency") h.rows[0][0].systemIdentifier = "987";
+    if (fault === "scada-role") h.rows[1][0].hardened = false;
+    await assert.rejects(() => verifyScadaB4CompletedCatalog(h.options));
+    assert.equal(h.scadaCalls.length, fault === "scada-dependency" ? 1 : fault === "scada-role" ? 2 : 0);
+  }
+  const h = dualCatalogFixture();
+  await assert.rejects(() => verifyScadaB4CompletedCatalog({ ...h.options, scadaQuery: h.options.keycloakQuery }), /双库独立查询/u);
+  assert.equal(h.data.calls.length, 0);
 });

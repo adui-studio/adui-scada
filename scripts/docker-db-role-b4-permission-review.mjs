@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
+import { buildB4KeycloakDependencyScope, verifyB4KeycloakDependencyScope } from "./docker-db-role-b4-phase.mjs";
+import { readKeycloakInstalledOwnership } from "./docker-db-role-keycloak-plan.mjs";
 import {
   scadaBusinessColumnInventory,
   scadaBusinessGrantCandidates,
@@ -108,7 +110,7 @@ export function buildScadaB4PermissionExpectations(port) {
 }
 
 // 仅允许已经核验的本机管理身份；三个专用所有者不得登录、继承或持有跨库依赖。
-const rolesSql = `SELECT r.rolname::text AS role,
+const rolesSql = (scope) => `SELECT r.rolname::text AS role,
   (current_user = 'adui_scada' AND session_user = 'adui_scada' AND current_database() = 'adui_scada'
     AND current_setting('server_version_num') = '190000'
     AND EXISTS (SELECT 1 FROM pg_catalog.pg_roles a JOIN pg_catalog.pg_database d ON d.datdba = a.oid
@@ -125,7 +127,7 @@ const rolesSql = `SELECT r.rolname::text AS role,
       (d.deptype = 'a' AND d.classid IN ('pg_catalog.pg_namespace'::regclass, 'pg_catalog.pg_class'::regclass, 'pg_catalog.pg_proc'::regclass)) OR
       (d.deptype = 'o' AND d.classid = 'pg_catalog.pg_proc'::regclass AND r.rolname IN (${ownerList}) AND EXISTS (
         SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
-        WHERE p.oid = d.objid AND p.proowner = r.oid AND n.nspname = 'public')))))) AS "noUnexpectedDependencies",
+        WHERE p.oid = d.objid AND p.proowner = r.oid AND n.nspname = 'public'))))${scope?.allowedDependency ?? ""})) AS "noUnexpectedDependencies",
   (SELECT count(*) = 2 FROM pg_catalog.pg_namespace n JOIN pg_catalog.pg_roles a ON a.oid = n.nspowner
     WHERE (n.nspname = 'public' AND a.rolname IN ('adui_scada', 'pg_database_owner'))
       OR (n.nspname = 'pg_catalog' AND a.rolname = 'adui_scada')) AS "trustedSchemas",
@@ -217,10 +219,16 @@ function exactRows(rows, expected, key) {
 const keyOf = (...fields) => (row) => JSON.stringify(fields.map((field) => row[field]));
 
 /** 仅核验安装后目录；不创建角色、修改 ACL 或切换运行身份。 */
-export async function verifyScadaB4InstalledPermissions(query, port) {
+async function verifyInstalledPermissions(query, port, scope) {
   const expected = buildScadaB4PermissionExpectations(port);
+  if (scope) {
+    let rows;
+    try { rows = (await query("B4 跨阶段共享所有权依赖", scope.sql))?.rows; }
+    catch { throw new DockerB4PermissionReviewError("B4 跨阶段共享所有权依赖查询失败，内部诊断已脱敏"); }
+    verifyB4KeycloakDependencyScope(rows, scope);
+  }
   const checks = [
-    ["专用角色属性及依赖", rolesSql, expected.roles, keyOf("role")],
+    ["专用角色属性及依赖", rolesSql(scope), expected.roles, keyOf("role")],
     ["全集群有效数据库权限", databaseSql, expected.databases, keyOf("role", "database")],
     ["精确直接授权", aclSql, expected.acl, keyOf("role", "kind", "object", "privilege")],
     ["有效关系权限", relationSql, expected.relations, keyOf("role", "schema", "table")],
@@ -232,7 +240,7 @@ export async function verifyScadaB4InstalledPermissions(query, port) {
     catch { throw new DockerB4PermissionReviewError("B4 安装后" + step + "查询失败，内部诊断已脱敏"); }
     requireMatch(exactRows(result?.rows, rows, key), "B4 安装后" + step + "不一致");
   }
-  const catalogFingerprint = createHash("sha256").update(JSON.stringify(expected)).digest("hex");
+  const catalogFingerprint = createHash("sha256").update(JSON.stringify(scope ? { expected, keycloakDependencies: scope.expected } : expected)).digest("hex");
   return {
     status: "SCADA_B4_PERMISSION_CATALOG_MATCHED", roleCount: expected.roles.length,
     databasePermissionCount: expected.databases.length, directAclCount: expected.acl.length,
@@ -242,9 +250,14 @@ export async function verifyScadaB4InstalledPermissions(query, port) {
   };
 }
 
+/** 原安装后门禁仅允许 Keycloak 未转移状态。 */
+export async function verifyScadaB4InstalledPermissions(query, port) {
+  return verifyInstalledPermissions(query, port);
+}
+
 /** 合并目录核验必须在调用者同一已核验事务内完成；不代表实际业务准入。 */
-export async function verifyScadaB4InstalledCatalog(query, port) {
-  const permissions = await verifyScadaB4InstalledPermissions(query, port);
+async function verifyInstalledCatalog(query, port, scope) {
+  const permissions = await verifyInstalledPermissions(query, port, scope);
   const routines = await verifyScadaB4InstalledRoutines(query, port);
   return {
     status: "SCADA_B4_INSTALLED_CATALOG_MATCHED",
@@ -253,5 +266,30 @@ export async function verifyScadaB4InstalledCatalog(query, port) {
     installedCatalogMatched: true, businessAclApproved: false, definerSafetyVerified: false,
     rowLockVerified: false, rowAuthorizationVerified: false, issuerBindingVerified: false,
     admissionPassed: false, databaseWritten: false,
+  };
+}
+
+/** 原 SCADA 演练门禁不接受任何 Keycloak 所有权依赖。 */
+export async function verifyScadaB4InstalledCatalog(query, port) {
+  return verifyInstalledCatalog(query, port);
+}
+
+/** 两库安装后的只读目录投影；调用方须持有各自的固定只读事务及独立维护窗口。 */
+export async function verifyScadaB4CompletedCatalog({ scadaQuery, keycloakQuery, context, port, expectedKeycloakPlanFingerprint }) {
+  requireMatch(typeof scadaQuery === "function" && typeof keycloakQuery === "function" && scadaQuery !== keycloakQuery,
+    "B4 跨阶段要求双库独立查询");
+  buildScadaB4PermissionExpectations(port);
+  const keycloakOwnership = await readKeycloakInstalledOwnership(keycloakQuery, context, expectedKeycloakPlanFingerprint);
+  const scope = buildB4KeycloakDependencyScope(keycloakOwnership.tableOids, context.identity.systemIdentifier);
+  const scada = await verifyInstalledCatalog(scadaQuery, port, scope);
+  const keycloak = keycloakOwnership.report;
+  return {
+    status: "B4_DUAL_CATALOG_PROJECTION_MATCHED", scada, keycloak,
+    keycloakSharedDependencyCount: scope.expected.length,
+    catalogFingerprint: createHash("sha256").update(JSON.stringify([expectedKeycloakPlanFingerprint, scada.catalogFingerprint, keycloak.catalogFingerprint])).digest("hex"),
+    catalogProjectionMatched: true, crossDatabaseAtomicSnapshotVerified: false,
+    installationAllowed: false, ownershipTransferAllowed: false, schemaEvolutionVerified: false,
+    runtimeLoginAllowed: false, businessAclApproved: false, admissionPassed: false,
+    databaseWritten: false, serviceSwitched: false,
   };
 }

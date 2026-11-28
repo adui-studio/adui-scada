@@ -128,6 +128,7 @@ export async function runScadaB4RollbackRehearsal({
   let beginAttempted = false;
   let begun = false;
   let rolledBack = false;
+  let closed = false;
   let stage = "连接";
   let failure;
   let plan;
@@ -202,11 +203,11 @@ export async function runScadaB4RollbackRehearsal({
     }
   }
   if (client) {
-    try { await client.end(); }
+    try { await client.end(); closed = true; }
     catch { failure = (failure ?? "B4 演练") + "；连接关闭失败，禁止重试"; }
   }
-  // 即使演练中途失败，收到回滚标签后也通过独立只读连接核对原始基线。
-  if (rolledBack) {
+  // 回滚标签及原连接关闭均已确认，才允许使用独立只读连接核对原始基线。
+  if (rolledBack && closed) {
     let independent;
     let readAttempted = false;
     let checked = false;
@@ -235,7 +236,7 @@ export async function runScadaB4RollbackRehearsal({
     catch { failure = (failure ?? "B4 演练已回滚") + "；独立宿主核验失败，禁止重试"; }
   }
   if (failure) throw new DockerB4RehearsalError(failure + (rolledBack ? "；目录事务已收到回滚标签" : ""));
-  requireMatch(rolledBack && plan && catalog && runtimeProbe, "B4 演练未取得完整证据");
+  requireMatch(rolledBack && closed && plan && catalog && runtimeProbe, "B4 演练未取得完整证据");
   return {
     status: "SCADA_B4_ROLLBACK_REHEARSED", planFingerprint: plan.planFingerprint,
     catalogFingerprint: catalog.catalogFingerprint, statementsExecuted, runtimeProbe,
