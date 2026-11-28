@@ -2093,3 +2093,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-db-role-b4-permission-review.mjs`：`buildScadaB4PermissionExpectations` 复用固定业务/专用所有者候选；`verifyScadaB4InstalledPermissions` 五条 SELECT 核验角色、数据库、直接 ACL 和有效表列权限；`verifyScadaB4InstalledCatalog` 联合现有例程核验，供未来同一受控事务调用。
 - `scripts/docker-db-role-b4-permission-review.cases.mjs`：九项 Node 回归（包含组合门禁），纳入 `test:docker`。
 - `scripts/docker-db-role-business-acl.mjs`：共享 `scadaBusinessGrantCandidates`，保持原 21 条候选与指纹。
+
+### B4 受控安装回滚演练
+
+- `scripts/docker-db-role-b4-rehearsal.mjs`：`buildScadaB4RehearsalPlan`、`runScadaB4RollbackRehearsal`，固定计划、受控依赖、同事务执行和组合目录门禁、回滚及独立基线复核；尚无真实 CLI/宿主适配器。
+- `scripts/docker-db-role-b4-preflight.mjs`：新增 `readScadaB4RehearsalPreparation`，固定可写 SERIALIZABLE 演练前置查询，不改变原只读入口。
+- `scripts/docker-db-role-b4-rehearsal.cases.mjs`：九项 Node 回归，纳入 `test:docker`。
