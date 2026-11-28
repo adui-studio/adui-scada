@@ -5577,3 +5577,7 @@ Node.js 22.16.0 实测新增隔离预览核心、测试文件 node --check 均�
 - 源码提交 f8930a8c597ea2b117b23fadc2c05c2c81825eac。协作容器 Node.js 22.16.0 实际运行 `node --experimental-strip-types --test scripts/docker-db-role-b4-native-routines.cases.mjs`，五项全部通过、零失败零跳过、退出 0；该版本 Node 输出类型剥离实验性提示。测试通过既有 `nativeTextTransaction` 使用模拟 Prisma 原生事务驱动，验证九例程固定签名、列映射、参数顺序、原子首版三种状态、无效结果、无回退和绑定参数；不是实际 PostgreSQL 例程或事务执行。
 - 本地测试源文件与远端 Git Blob 逐字节核验一致：例程适配 f0530f54d044060e8d6347585048fffc18d6733e，既有文本事务适配 a85164e465f0a1fed66ea2494c42034b4744c638，测试 7e498e9521b442c952dcb3ba444c79dcf3c59c1c。重新运行上批跨阶段独立 Node 专项 3/3，未重跑其余组合测试。
 - 三组原生仓储 Vitest 测试已按新调用计划更新，尚无运行证据；完整 test:docker、Vite+、中文文案/文档、ready 及真实 PostgreSQL、Docker 未执行。当前协作容器 GitHub DNS 无法解析、没有完整克隆和 pnpm/vp/Docker/psql，不将局部验证扩展为全仓通过。固定例程未安装时上述业务操作按设计失败，B4 真实集中验收尚未具备条件。
+
+### 2026-11-28 · PR #262 B4 集中候选局部实测
+
+本轮实际在协作容器 Node.js 22.16.0 使用 --experimental-strip-types 运行六组独立测试：原跨阶段投影 3/3、原生例程适配 5/5、固定 Issuer 清理 4/4、持久化/状态/锁探针 CLI 参数 5/5、双连接模拟驱动 3/3、Keycloak Schema 策略 2/2，合计 22/22、0 失败、0 跳过。模块/测试的本地 Git Blob 与远端相应源码一致；测试为固定 SQL 形状、参数、策略及模拟驱动证据，不是真实 SQL、真实两库提交或真实并发。协作容器缺少完整依赖、pnpm/vp/Docker/psql，无法完整克隆 GitHub。新增组合隔离、持久化提交/故障和原生仓储 Vitest 已编写但尚未真实执行；完整 ready、类型、中文、文档及真实宿主均待验证。未获实际授权，不执行真实持久化、LOGIN 或服务切换。完整关闭条件见 [B4 集中验收清单](plans/b4-concentrated-acceptance.md)。

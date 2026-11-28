@@ -2142,3 +2142,13 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `apps/server/src/projects/prisma8-runtime-project-release-store.ts`：发布读、发布与内部回滚的受保护行锁接入固定例程；安全门禁保持。
 - `scripts/docker-db-role-b4-native-routines.cases.mjs`：五项 Node 模拟事务专项，纳入 test:docker；三组现有原生仓储 Vitest 测试同步更新。
 - OIDC 固定 Issuer 清理、真实宿主及持久化、实际并发与权限验收仍待完成；当前未切换部署身份。
+
+### B4 持久化及集中验收候选
+
+- `apps/server/src/database/prisma8-b4-oidc-cleanup.ts`：固定本机 Issuer 函数体、同语句绑定与零参数清理；`scripts/docker-db-role-restricted-writes.mjs` 共用定义。
+- `scripts/docker-db-role-b4-arguments.mjs`：独立持久化、阶段状态及双连接夹具参数门禁。
+- `scripts/docker-db-role-b4-installed-state.mjs`：双库独立事务、原 B3 隔离指纹恢复、阶段精确目录。
+- `scripts/docker-db-role-b4-rehearsal.mjs` / `scripts/docker-db-role-keycloak-rehearsal.mjs`：保持回滚入口，独立持久化模式与提交后核验。
+- `scripts/docker-db-role-b4-concurrency.mjs`：现有已审阅夹具的身份/授权共享锁与独立排他锁冲突探针，不提交业务数据。
+- `scripts/docker-db-role-keycloak-schema-policy.mjs`：绑定实际维护镜像的 validate/manual 策略候选，不执行迁移。
+- `apps/server/prisma8-fresh-install.mjs`：上述本机宿主入口；`docs/plans/b4-concentrated-acceptance.md` 为集中验收清单和独立审批顺序。当前完整真实验收未完成。
