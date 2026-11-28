@@ -266,3 +266,9 @@ SCADA 回滚演练与 Keycloak 保持一致：仅在收到外层 ROLLBACK 命令
 新增三个固定所有者的全集群隔离投影（先验证无登录/继承/数据库访问、成员、数据库 ACL 及会话，恢复原 B3 指纹），安装后精确角色/例程目录仍单独验证完整安全属性。两个明确阶段的独立状态入口不复用原 B3.3 原始目录，也不接受未知状态。SCADA 持久化与 Keycloak 所有权持久化分开确认；同事务重跑已审阅计划、运行探针/投影后比较演练目录指纹才允许 COMMIT，关闭原连接后再次独立核验。未知提交、关闭或后置失败禁止重试。新增双连接现有夹具锁探针及 Keycloak 固定镜像 Schema 策略候选。完整集中步骤和未完成证据见 [B4 集中验收清单](b4-concentrated-acceptance.md)。
 
 当前未执行任何真实授权、目录提交、服务切换或 LOGIN。真实全质量链、双库 SQL 及完整并发/原生应用权限和 Keycloak 实际启动兼容性仍未验证，不能宣布 B4 完成。PR #262 保持 Draft。
+
+### 2026-11-28 · B3.3 实机回滚演练验收与持久化前置
+
+维护者 Windows 在 5eac0a25bdf15443a1f058a955b3bc2174ee5e0d 实际完成消费者审阅确认、固定五库隔离回滚、独立只读原始状态核验及严格原生契约、OIDC 只读和 Docker 七服务复验；指纹 0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37。演练返回 DOCKER_DB_ROLE_ISOLATION_REHEARSED、catalogStatementsExecuted=true、catalogIsolationVerified=true、postVerificationPassed=true、rolledBack=true、committed=false、databaseWritten=false，独立状态确认 catalogIsolationPersisted=false、publicConnectRetained=true。真实回滚通过不代表权限已持久化、运行角色已连接或正式准入。消费者审阅确认属于操作者声明，不能代替对现有与未连接消费者的实际审阅。
+
+原独立持久化模式保持不变：在同一固定集群、原计划指纹匹配、三组消费者复核、禁止并发维护且维护者另行明确授权后，使用现有确认参数（--confirm-apply-isolation、--confirm-rehearsal-verified、三个 reviewed 参数及末尾 plan-fingerprint）。实际成功须 DOCKER_DB_ROLE_ISOLATION_APPLIED、catalogIsolationPersisted=true、publicConnectRetained=false、committed=true、databaseWritten=true、businessDataWritten=false、postVerificationPassed=true，再独立 status 确认同指纹与隔离持久化结果，并复验结构、OIDC 只读及服务状态。任何未知提交或后置失败禁止重试。具体验收见 [B4 集中验收清单](b4-concentrated-acceptance.md)。当前尚未实际提交 ACL；不执行 B4、LOGIN 或服务切换，不合并 PR。

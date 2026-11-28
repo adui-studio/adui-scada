@@ -54,3 +54,15 @@ B4 完整行级验收还需在真实隔离环境对原生仓储的可信主体�
 维护者实测 df3737688f49c6ad9102b6d6c13df29dc7eb6c61：完整 ready 成功、Docker 222/222、单测 969/969、HTTP E2E 71/71、Vite+ 564 格式/402 受检零警告错误、Markdown 100 份及 React/Vue/NestJS 构建通过，git diff --check 通过且工作区干净。React 构建存在非阻塞分块大小提示（591.62 kB）。E-178 已复验关闭。
 
 真实 B3.3 只读状态与计划的指纹一致，五库、19 角色、25 项原 ACL、8 项待移除 PUBLIC ACL、17 项预计保留 ACL、95 项有效权限和 5 条固定 REVOKE；尚未实际隔离。下一步按原隔离方案实际审阅三组消费者（含现有连接、维护/备份/监控工具、模板及未连接任务），维护窗口内禁止并发权限维护，重新确认当前计划指纹与已审阅证据一致，再独立批准回滚演练。演练只允许 DOCKER_DB_ROLE_ISOLATION_REHEARSED、catalogIsolationVerified=true、catalogIsolationPersisted=false、catalogStatementsExecuted=true、publicConnectRetained=true、rolledBack=true、committed=false、databaseWritten=false、businessDataWritten=false、serviceSwitched=false、admissionPassed=false、postVerificationPassed=true；再独立读取原状态和既有 Docker/OIDC 回归。消费者确认参数不是自动认证。实际持久化须另行明确批准，不因质量门禁通过而提前执行。不进入 B4 持久化或 C/D/E/F，不合并 PR。本记录只更新文档，新的文档检查仍待运行。
+
+## 十、B3.3 真实回滚演练已通过，待独立持久化（2026-11-28）
+
+维护者在 5eac0a25bdf15443a1f058a955b3bc2174ee5e0d 通过文档检查（100 份）及 Git 差异检查。三组消费者审阅声明已确认（REHEARSE），真实固定五库计划及回滚演练指纹为 `0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37`；演练实际执行目录语句、验证隔离、确认回滚且 postVerificationPassed=true，独立只读状态确认原 PUBLIC CONNECT 保留、无持久化，回滚后严格结构契约、OIDC 只读检查及七服务状态通过。未执行真实持久化、业务写入、LOGIN 或服务切换。
+
+下一步仅在本机固定隔离 Docker 环境、工作区干净、三组消费者和无并发权限维护再次确认、原始状态及新生成计划指纹与该次实机证据完全相符、维护者独立明确批准持久化时，使用原有入口：
+
+```powershell
+pnpm run docker:db:role:isolation:execute --confirm-apply-isolation --confirm-rehearsal-verified --reviewed-business-consumers --reviewed-maintenance-consumers --reviewed-template-consumers --plan-fingerprint=0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37
+```
+
+预期退出 0 且 DOCKER_DB_ROLE_ISOLATION_APPLIED，原指纹不变，catalogStatementsExecuted=true、catalogIsolationVerified=true、catalogIsolationPersisted=true、publicConnectRetained=false、committed=true、rolledBack=false、databaseWritten=true、businessDataWritten=false、serviceSwitched=false、admissionPassed=false、isolationPassed=false、postVerificationPassed=true。单独执行 `pnpm run docker:db:role:isolation:status`，要求 DOCKER_DB_ROLE_ISOLATION_STATUS_READY、同指纹、catalogIsolationVerified=true、catalogIsolationPersisted=true、publicConnectRetained=false、catalogStatementsExecuted=false、databaseWritten=false、committed=false、rolledBack=true（只读核验事务本身回滚，不代表撤销已提交 ACL），再复验数据库严格契约、OIDC 只读与 Docker 服务。提交结果未知或后置/关闭失败时停止，不重试、不恢复 ACL、不继续 B4，先独立核查状态。只有以上均通过才依第二节重新生成 B4 双库只读计划；仍不自动执行 B4 安装或所有权变更，不提前放行 C/D/E/F。此追加记录不是持久化授权，新提交文档检查待复验。
