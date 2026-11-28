@@ -2118,3 +2118,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 
 - `scripts/docker-db-role-keycloak-plan.mjs`：新增 `readKeycloakOwnershipCandidate`、`verifyKeycloakOwnershipBaseline` 与 `verifyKeycloakOwnershipCatalog`，复用原始对象图、固定指纹及两种前置事务模式；四条固定目录查询核对原始/投影状态的共享依赖、直接数据库 ACL 和有效权限，仍无写事务入口。
 - `scripts/docker-db-role-keycloak-plan.cases.mjs`：新增八项 Node 回归，共十五项；原 `test:docker` 注册入口保持不变。
+
+### B4 双库回滚演练及运行角色业务探针
+
+- `scripts/docker-db-role-keycloak-rehearsal.mjs`：`runKeycloakOwnershipRollbackRehearsal`，固定候选、隔离维护证据、事务锁与会话排除、逐表所有权投影、强制回滚与独立复核；`docker-db-role-keycloak-plan.cases.mjs` 扩展至 20 项。
+- `scripts/docker-db-role-b4-runtime-probe.mjs`：`verifyScadaB4RuntimeProbe`，使用合成夹具、角色切换、受限业务操作、精确拒绝及回滚/无残留核验；`docker-db-role-b4-runtime-probe.fixture.mjs` 为测试专用模拟驱动，`docker-db-role-b4-runtime-probe.cases.mjs` 新增四项 Node 测试并注册 `test:docker`。
+- `scripts/docker-db-role-b4-rehearsal.mjs`：组合目录后强制调用业务探针；计划版本 2 与独立 `--confirm-rollback-business-fixtures`，保留 92 条安装目录候选及完整外层回滚。
+- `scripts/prisma8-fresh-install.mjs` / `apps/server/prisma8-fresh-install.mjs`：增加 `docker:db:role:keycloak:rehearse` 严格参数及停止容器核验，SCADA 回滚入口增加独立确认。不执行服务停启或正式安装。
