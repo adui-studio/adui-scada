@@ -200,15 +200,15 @@ node apps/server/prisma8-fresh-install.mjs --role-b4-lock-probe --confirm-review
 
 真实两个独立连接无法读取另一未提交事务内的新行，因此需要单独批准临时合成业务行的提交及后续精确清理；不能把已有回滚探针的合成快照直接持久化。候选须复用现有固定 Docker、严格契约、双库状态读取器和维护窗口校验；读取全部原生业务表的空基线，不能仅凭本次三个业务表的计数推断其他表为空。以随机专用租户标识隔离两个不同活动主体与一个测试工程，不绑定真实 OIDC 身份、不创建会话，不读取或选择已有业务工程。使用共享 Core 的真实快照创建及读取校验，复用已安装的 scada_create_project 例程（仅在管理连接事务内 SET LOCAL ROLE 切换为现有 NOLOGIN 运行角色），不新增生产 ACL 或绕过正式发布安全门禁。需要先验证全部有关表的外键、CHECK 及精确列契约，事务内固定参数化语句、锁超时、语句超时及无其他业务/权限维护；加锁后重新核对空基线，不能用旧报告代替。创建前先保存仅本机的随机标识和独立清理证据，任何文件不覆盖已有夹具、不含凭据且不得提交 Git。
 
-| 业务表 | 唯一允许的夹具增量 |
-| --- | ---: |
-| scada_identities | 2（active） |
-| scada_projects | 1 |
-| scada_project_versions | 1（首版及真实摘要） |
-| scada_project_grants | 3（授权主体恰有 project:read、version:read、version:append） |
-| scada_project_audit | 1（version:append） |
-| scada_project_release_state | 1（未发布，generation=0） |
-| 其余业务表 | 0 |
+| 业务表                      |                                           唯一允许的夹具增量 |
+| --------------------------- | -----------------------------------------------------------: |
+| scada_identities            |                                                  2（active） |
+| scada_projects              |                                                            1 |
+| scada_project_versions      |                                          1（首版及真实摘要） |
+| scada_project_grants        | 3（授权主体恰有 project:read、version:read、version:append） |
+| scada_project_audit         |                                          1（version:append） |
+| scada_project_release_state |                                    1（未发布，generation=0） |
+| 其余业务表                  |                                                            0 |
 
 创建与清理须各有独立明确审批、事务内精确回读、独立连接复核、真实提交/回滚标签及关闭证据；维护窗口内先验证原双库指纹。创建完成后独立核对六张表共 9 行及其余表零增量，实际审阅本机四字段 JSON（tenantId、projectId、subjectId、otherSubjectId）与清理清单，才可单独批准既有锁探针，禁止把准备成功当作锁测试成功。探针后不自动清理；保留证据，校验夹具未变化、无任何外部或额外依赖，独立批准后按引用依赖顺序仅删除本次精确行（发布状态、审计、授权、版本、工程、身份；若存在发布事件、会话、外部身份、历史或其他非预期依赖则停止），核对每条语句的预期影响行数，禁止 TRUNCATE、CASCADE、通用租户删除或删除现有业务记录。事务内再次确认所有业务表回到原空基线，提交后独立复验空基线、DC/KP、严格契约、原容器与连接关闭；最后只在清理成功后按本机审阅流程处置夹具文件。
 

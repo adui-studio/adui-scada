@@ -160,6 +160,8 @@ void test("专用夹具三种动作分别要求确认、六项双库指纹与清
     }
     assert.throws(() => parseB4PersistenceAction([...args, "--commit"]));
     assert.throws(() => parseB4PersistenceAction([args[0], ...args.slice(1).reverse()]));
-    assert.throws(() => parseB4PersistenceAction([...args.slice(0, -1), "--manifest-fingerprint=bad"]));
+    assert.throws(() =>
+      parseB4PersistenceAction([...args.slice(0, -1), "--manifest-fingerprint=bad"]),
+    );
   }
 });
