@@ -439,6 +439,25 @@ void test("全新入口仅分派独立确认的 B4 持久化、阶段状态及�
       action: "role-b4-lock-probe",
       args: ["--role-b4-lock-probe", "--confirm-reviewed-existing-fixture", ...shared, projection],
     },
+    ...[
+      { mode: "preflight", confirm: "--confirm-readonly-fixture-preflight" },
+      { mode: "create", confirm: "--confirm-create-isolated-fixture" },
+      { mode: "cleanup", confirm: "--confirm-cleanup-isolated-fixture" },
+    ].map(({ mode, confirm }) => ({
+      action: "role-b4-fixture-" + mode,
+      args: [
+        "--role-b4-fixture-" + mode,
+        confirm,
+        ...(mode === "preflight"
+          ? []
+          : ["--confirm-exclusive-maintenance", "--confirm-backup-restore-reviewed"]),
+        ...shared,
+        projection,
+        "--dual-catalog-fingerprint=" + "e".repeat(64),
+        "--schema-policy-fingerprint=" + "f".repeat(64),
+        ...(mode === "cleanup" ? ["--manifest-fingerprint=" + "a".repeat(64)] : []),
+      ],
+    })),
   ];
   for (const { args, action } of cases) {
     assert.equal(freshAction(args), action);

@@ -48,6 +48,11 @@ import {
   readB4InstalledState,
 } from "../../scripts/docker-db-role-b4-installed-state.mjs";
 import { runB4LockConcurrency } from "../../scripts/docker-db-role-b4-concurrency.mjs";
+import {
+  DockerB4LockFixtureError,
+  openB4FixtureEvidence,
+  runB4LockFixture,
+} from "../../scripts/docker-db-role-b4-lock-fixture.mjs";
 import { buildKeycloakSchemaPolicy } from "../../scripts/docker-db-role-keycloak-schema-policy.mjs";
 import { DockerKeycloakOwnershipError } from "../../scripts/docker-db-role-keycloak-plan.mjs";
 import {
@@ -560,6 +565,42 @@ async function main() {
         stage = "B4 已安装阶段独立只读核验";
         const reader = await makeB4StateReader(b4Arguments, b4Arguments.phase === "dual-installed");
         return reader.read(b4Arguments.phase);
+      }
+      if (
+        action === "role-b4-fixture-preflight" ||
+        action === "role-b4-fixture-create" ||
+        action === "role-b4-fixture-cleanup"
+      ) {
+        stage = "B4 专用夹具生命周期";
+        for (const path of [
+          ".local/docker/b4-lock-fixture.json",
+          ".local/docker/b4-lock-fixture-manifest.json",
+        ]) {
+          requireMatch(
+            spawnSync("git", ["check-ignore", "--", path], {
+              cwd: root,
+              stdio: "ignore",
+              windowsHide: true,
+            }).status === 0,
+            "B4 夹具证据必须为 Git 忽略且未跟踪的本机文件",
+          );
+        }
+        const reader = await makeB4StateReader(b4Arguments, true);
+        const core = await import("@adui/scada-core");
+        const mode = b4Arguments.fixtureMode;
+        return runB4LockFixture({
+          mode,
+          confirm: process.argv[3],
+          confirmMaintenance: mode === "preflight" ? undefined : process.argv[4],
+          confirmBackup: mode === "preflight" ? undefined : process.argv[5],
+          identity,
+          fingerprints: b4Arguments,
+          manifestFingerprint: b4Arguments.manifestFingerprint,
+          core,
+          evidence: openB4FixtureEvidence(root),
+          createClient: (readOnlyMode) => reader.createClient("adui_scada", readOnlyMode),
+          readInstalledState: () => reader.read("dual-installed"),
+        });
       }
       if (action === "role-b4-lock-probe") {
         stage = "B4 已审阅现有测试夹具双连接锁探针";
@@ -1118,6 +1159,7 @@ void main()
         error instanceof DockerRoleObjectReviewError ||
         error instanceof DockerB4RehearsalError ||
         error instanceof DockerB4InstalledStateError ||
+        error instanceof DockerB4LockFixtureError ||
         error instanceof DockerKeycloakOwnershipError ||
         error instanceof FreshRuntimeProbeError
         ? error.message

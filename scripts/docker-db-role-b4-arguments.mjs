@@ -65,6 +65,41 @@ export function parseB4PersistenceAction(args) {
       ),
     };
   }
+  const fixtureModes = {
+    "--role-b4-fixture-preflight": {
+      mode: "preflight",
+      confirm: "--confirm-readonly-fixture-preflight",
+    },
+    "--role-b4-fixture-create": {
+      mode: "create",
+      confirm: "--confirm-create-isolated-fixture",
+    },
+    "--role-b4-fixture-cleanup": {
+      mode: "cleanup",
+      confirm: "--confirm-cleanup-isolated-fixture",
+    },
+  };
+  if (Object.hasOwn(fixtureModes, args[0])) {
+    const { mode, confirm } = fixtureModes[args[0]];
+    const prefix = [args[0], confirm];
+    if (mode !== "preflight") {
+      prefix.push("--confirm-exclusive-maintenance", "--confirm-backup-restore-reviewed");
+    }
+    const names = [
+      isolation,
+      scada,
+      keycloak,
+      projection,
+      ["dual-catalog-fingerprint", "expectedDualCatalogFingerprint"],
+      ["schema-policy-fingerprint", "expectedSchemaPolicyFingerprint"],
+    ];
+    if (mode === "cleanup") names.push(["manifest-fingerprint", "manifestFingerprint"]);
+    return {
+      action: args[0].slice(2),
+      fixtureMode: mode,
+      ...requireArgs(args, prefix, names),
+    };
+  }
   if (args[0] === "--role-b4-lock-probe") {
     return {
       action: "role-b4-lock-probe",

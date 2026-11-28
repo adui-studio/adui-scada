@@ -2154,3 +2154,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-db-role-b4-preflight.mjs`：固定控制函数 ACL 查询表达式，安装前精确三项（OWNER/PUBLIC/SCADA_RUNTIME），原所有者及授权属性绑定前置证据和指纹。
 - `scripts/docker-db-role-b4-rehearsal.mjs`：计划版本 3，共 93 条固定目录语句；在未授权专用角色核验后首条新增本库固定 PUBLIC EXECUTE 撤销（RESTRICT），旧 S 作废。
 - `scripts/docker-db-role-b4-permission-review.mjs`：安装后精确两项 ACL（OWNER/SCADA_RUNTIME）和原五角色有效权限矩阵；回滚独立原始前置与持久化独立后置保留。真实复验待执行。
+
+### 2026-11-28 · B4.5 专用夹具生命周期
+
+- scripts/docker-db-role-b4-lock-fixture.mjs：固定十二表空基线与九行精确夹具、预检/创建/清理编排、Core 快照端口、本机恢复清单、提交/回滚及独立复验；不新增生产授权。
+- scripts/docker-db-role-b4-lock-fixture.cases.mjs：12 项模拟事务及本机临时文件专项，纳入 test:docker。
+- scripts/docker-db-role-b4-arguments.mjs、apps/server/prisma8-fresh-install.mjs：新增三种严格确认动作，复用双库安装状态与原生宿主边界；真实 Core 从服务端既有工作区依赖加载。真实写入与清理尚待维护者单独验收，不改变原并发探针或安装入口。
