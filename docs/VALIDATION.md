@@ -5415,3 +5415,9 @@ E-164 为 E-012 同类问题。仅修正 app.e2e-spec.ts 默认根模块数据�
 局部 8 项使用原生 node:test 与 node:assert/strict，验证共享超级用户及模拟权限收窄均不能获得正式准入、固定双库前后只读身份、缺失表/权限/标记、身份漂移、两库角色摘要不一致、独立连接及关闭失败、异常脱敏和 Keycloak 对象名不输出。PostgreSQL 19 的访问权限查询函数（has_*_privilege、pg_has_role 的 USAGE/SET、acldefault/aclexplode）已核对[官方文档](https://www.postgresql.org/docs/19/functions-info.html)，但未在真实数据库执行新增 SQL，不声称 SQL 或角色权限实机验收通过。
 
 Windows 增量：`pnpm run test:docker`（预计 68 项）、`pnpm run test:prisma8:fresh`、`pnpm run env:check`、`pnpm run messages:check`、`pnpm run docs:check`、`vp check --fix`、`vp check` 和 `git diff --check`；然后单独执行 `pnpm run docker:db:role:review`。预期固定状态 DOCKER_DB_ROLE_REVIEW_READY、directoryReviewPassed=true、admissionPassed=false、databaseWritten=false，退出 0；真实角色属性、权限数值和 Keycloak 对象数以输出为准。失败保留现场，不自动更改权限或重试。真实核查无需重建镜像，不改变常驻只读模式；B 阶段尚未授权，不执行任何角色创建、GRANT、REVOKE 或数据库写入。
+
+### 2026-11-28 · PR #257 Windows 增量验收通过，真实双库目录待验收
+
+维护者 Windows 实测 Docker 六套件 68/68（新增角色核查 8/8）、Prisma 8 全新专项 29/29，合计 97/97；环境及 LF、中文文案 382 文件、Markdown 98 份、Vite+ 516 格式文件与 356 受检文件零警告、Lint 错误及类型错误、git diff --check 均通过，增量验收退出码 0。格式化提交 8777837592c5bc0e81dae102608616f8d9922e17 已推送；相较候选 e821d861754106c378b000e4715a3d761762ea7c 的四文件差异已逐项核对，只有排版及测试对象展开中等价的冗余空对象回退清理，不改变数据库核查语义。
+
+日志尚未包含 `pnpm run docker:db:role:review` 的实际 JSON 报告或退出码，因此不得将模拟测试成功认定为 PostgreSQL 19 目录、共享角色权限或正式运行身份验收。新增记录仅为文档，未重新运行本次文档检查。下一步单独执行现有只读核查命令并提供完整脱敏报告及退出码；无需重建镜像或重复已经通过的 97 项测试。真实核查通过前保留 PR #257 Draft，不合并、不推进角色或权限变更。
