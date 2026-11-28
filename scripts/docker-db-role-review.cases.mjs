@@ -258,13 +258,21 @@ void describe("Docker 数据库角色只读核查", () => {
 void describe("业务事务内角色目录核查", () => {
   void it("读写事务必须同时核对两种只读标志且不管理外部事务", async () => {
     const { create, calls } = fixture({ writable: true, defaultWritable: true });
-    const report = await readDockerBusinessRoleDirectory(create("adui_scada"), expected, hash, false);
+    const report = await readDockerBusinessRoleDirectory(
+      create("adui_scada"),
+      expected,
+      hash,
+      false,
+    );
     assert.equal(report.scada.tables.total, 12);
     assert.equal(report.role.scadaRuntimeExists, false);
     assert.equal(report.scada.marker.clusterFunctionExecute, true);
     const sql = calls.map(([, step]) => step);
     assert.equal(sql.filter((step) => step.includes("current_database()")).length, 2);
-    assert.equal(sql.some((step) => /^(BEGIN|COMMIT|ROLLBACK)/u.test(step)), false);
+    assert.equal(
+      sql.some((step) => /^(BEGIN|COMMIT|ROLLBACK)/u.test(step)),
+      false,
+    );
     assert.equal(sql.includes("关闭"), false);
   });
   void it("拒绝事务模式不匹配、默认只读及后置身份漂移", async () => {

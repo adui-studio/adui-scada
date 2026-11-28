@@ -7,7 +7,8 @@ export class DockerRoleBootstrapError extends Error {}
 const scada = "adui_scada_runtime";
 const keycloak = "adui_scada_keycloak_runtime";
 const names = [scada, keycloak];
-const candidateSql = "SELECT oid, rolname FROM pg_catalog.pg_roles WHERE rolname IN ('adui_scada_runtime', 'adui_scada_keycloak_runtime')";
+const candidateSql =
+  "SELECT oid, rolname FROM pg_catalog.pg_roles WHERE rolname IN ('adui_scada_runtime', 'adui_scada_keycloak_runtime')";
 const attributesSql = `SELECT r.rolname::text AS role,
   NOT (r.rolcanlogin OR r.rolsuper OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolbypassrls OR r.rolinherit)
     AND r.rolpassword IS NULL AS hardened,
@@ -49,11 +50,13 @@ FROM candidates r CROSS JOIN pg_catalog.pg_class c JOIN pg_catalog.pg_namespace 
 JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
 WHERE n.nspname IN ('public', 'prisma_contract') AND c.relkind IN ('r','p','v','m','f')
   AND pg_catalog.has_column_privilege(r.oid, c.oid, a.attnum, 'SELECT')`;
-const lockedSql = "SELECT pg_catalog.pg_try_advisory_xact_lock(839572941652::bigint) AS locked, current_setting('transaction_isolation') AS isolation";
+const lockedSql =
+  "SELECT pg_catalog.pg_try_advisory_xact_lock(839572941652::bigint) AS locked, current_setting('transaction_isolation') AS isolation";
 const probeSql = `SELECT current_user::text AS role, session_user::text AS "sessionRole", current_database() AS database,
   (SELECT system_identifier::text FROM pg_catalog.pg_control_system()) AS "systemIdentifier",
   (SELECT core_hash::text FROM prisma_contract.marker WHERE space = 'app') AS "storageHash"`;
-const probeProjectSql = "SELECT tenant_id, project_id, head_revision FROM public.scada_projects WHERE tenant_id = $1 AND project_id = $1 LIMIT 1";
+const probeProjectSql =
+  "SELECT tenant_id, project_id, head_revision FROM public.scada_projects WHERE tenant_id = $1 AND project_id = $1 LIMIT 1";
 const allowedColumns = [
   "public.scada_projects.tenant_id",
   "public.scada_projects.project_id",
@@ -61,7 +64,13 @@ const allowedColumns = [
   "prisma_contract.marker.space",
   "prisma_contract.marker.core_hash",
 ];
-const acl = (role, kind, object, privilege) => ({ role, kind, object, privilege, grantable: false });
+const acl = (role, kind, object, privilege) => ({
+  role,
+  kind,
+  object,
+  privilege,
+  grantable: false,
+});
 const expectedAcl = [
   acl(scada, "database", "adui_scada", "CONNECT"),
   acl(keycloak, "database", "adui_scada_keycloak", "CONNECT"),
@@ -93,31 +102,82 @@ function businessView(report, prepared) {
 
 /** 在当前事务验证不可登录属性、精确 ACL、有效权限及真实角色读取，不启用登录。 */
 async function verifyPrepared(client, identity, storageHash) {
-  requireMatch(exactRows((await client.query(attributesSql)).rows, names.map((role) => ({
-    role, hardened: true, noMemberships: true, noSettings: true, noUnexpectedDependencies: true,
-  }))));
+  requireMatch(
+    exactRows(
+      (await client.query(attributesSql)).rows,
+      names.map((role) => ({
+        role,
+        hardened: true,
+        noMemberships: true,
+        noSettings: true,
+        noUnexpectedDependencies: true,
+      })),
+    ),
+  );
   requireMatch(exactRows((await client.query(aclSql)).rows, expectedAcl));
-  requireMatch(exactRows((await client.query(effectiveSql)).rows, names.map((role) => ({
-    role, noDatabaseCreate: true, noSchemaCreate: true, noTableOrColumnWrites: true,
-    noSequencePrivileges: true, businessConnect: true, keycloakConnect: true,
-  }))));
-  requireMatch(exactRows((await client.query(effectiveColumnsSql)).rows, allowedColumns.map((object) => ({ role: scada, object }))));
+  requireMatch(
+    exactRows(
+      (await client.query(effectiveSql)).rows,
+      names.map((role) => ({
+        role,
+        noDatabaseCreate: true,
+        noSchemaCreate: true,
+        noTableOrColumnWrites: true,
+        noSequencePrivileges: true,
+        businessConnect: true,
+        keycloakConnect: true,
+      })),
+    ),
+  );
+  requireMatch(
+    exactRows(
+      (await client.query(effectiveColumnsSql)).rows,
+      allowedColumns.map((object) => ({ role: scada, object })),
+    ),
+  );
   await client.query("SET LOCAL ROLE adui_scada_runtime");
-  requireMatch(exactRows((await client.query(probeSql)).rows, [{
-    role: scada, sessionRole: "adui_scada", database: "adui_scada", systemIdentifier: identity.systemIdentifier, storageHash,
-  }]));
+  requireMatch(
+    exactRows((await client.query(probeSql)).rows, [
+      {
+        role: scada,
+        sessionRole: "adui_scada",
+        database: "adui_scada",
+        systemIdentifier: identity.systemIdentifier,
+        storageHash,
+      },
+    ]),
+  );
   const scope = "prisma8-role-bootstrap-" + randomUUID();
   requireMatch(exactRows((await client.query(probeProjectSql, [scope])).rows, []));
   await client.query("SET LOCAL ROLE NONE");
 }
 
 /** 只接受已复核的双库报告，固定 SQL 从共享预览生成；状态查询绝不执行写入。 */
-export async function runDockerRoleBootstrap({ mode, createClient, readDirectory, report, identity, storageHash }) {
+export async function runDockerRoleBootstrap({
+  mode,
+  createClient,
+  readDirectory,
+  report,
+  identity,
+  storageHash,
+}) {
   requireMatch(["rehearse", "create", "status"].includes(mode));
-  requireMatch(identity?.version === "190000" && typeof identity.systemIdentifier === "string" && /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier));
+  requireMatch(
+    identity?.version === "190000" &&
+      typeof identity.systemIdentifier === "string" &&
+      /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier),
+  );
   const statusOnly = mode === "status";
-  const prepared = statusOnly && report?.role?.scadaRuntimeExists === true && report.role.keycloakRuntimeExists === true;
-  const baseline = prepared ? { ...report, role: { ...report.role, scadaRuntimeExists: false, keycloakRuntimeExists: false } } : report;
+  const prepared =
+    statusOnly &&
+    report?.role?.scadaRuntimeExists === true &&
+    report.role.keycloakRuntimeExists === true;
+  const baseline = prepared
+    ? {
+        ...report,
+        role: { ...report.role, scadaRuntimeExists: false, keycloakRuntimeExists: false },
+      }
+    : report;
   const plan = buildDockerRoleBootstrapPlan(baseline, storageHash);
   const result = {
     status: "DOCKER_DB_ROLE_BOOTSTRAP_STATUS_READY",
@@ -143,14 +203,27 @@ export async function runDockerRoleBootstrap({ mode, createClient, readDirectory
     client = createClient();
     await client.connect();
     stage = "事务启动";
-    await client.query(statusOnly ? "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY" : "BEGIN ISOLATION LEVEL SERIALIZABLE READ WRITE");
+    await client.query(
+      statusOnly
+        ? "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"
+        : "BEGIN ISOLATION LEVEL SERIALIZABLE READ WRITE",
+    );
     begun = true;
     if (!statusOnly) {
       stage = "独立执行锁";
-      requireMatch(exactRows((await client.query(lockedSql)).rows, [{ locked: true, isolation: "serializable" }]));
+      requireMatch(
+        exactRows((await client.query(lockedSql)).rows, [
+          { locked: true, isolation: "serializable" },
+        ]),
+      );
     }
     stage = "事务内基线核验";
-    requireMatch(isDeepStrictEqual(await readDirectory(client, identity, storageHash, statusOnly), businessView(report, prepared)));
+    requireMatch(
+      isDeepStrictEqual(
+        await readDirectory(client, identity, storageHash, statusOnly),
+        businessView(report, prepared),
+      ),
+    );
     if (!statusOnly) {
       stage = "固定角色及授权语句";
       for (const sql of plan.sqlPreview) await client.query(sql);
@@ -158,7 +231,12 @@ export async function runDockerRoleBootstrap({ mode, createClient, readDirectory
     stage = "角色属性、精确授权及有效权限核验";
     await verifyPrepared(client, identity, storageHash);
     stage = "后置事务身份及目录核验";
-    requireMatch(isDeepStrictEqual(await readDirectory(client, identity, storageHash, statusOnly), businessView(report, true)));
+    requireMatch(
+      isDeepStrictEqual(
+        await readDirectory(client, identity, storageHash, statusOnly),
+        businessView(report, true),
+      ),
+    );
     if (mode === "create") {
       commitAttempted = true;
       requireMatch((await client.query("COMMIT")).command === "COMMIT");
@@ -184,13 +262,18 @@ export async function runDockerRoleBootstrap({ mode, createClient, readDirectory
     try {
       await client.end();
     } catch {
-      failure = (failure ?? (committed ? "角色事务已提交" : "角色准备")) + "；连接关闭失败，保留现场";
+      failure =
+        (failure ?? (committed ? "角色事务已提交" : "角色准备")) + "；连接关闭失败，保留现场";
     }
   }
   if (failure) throw new DockerRoleBootstrapError(failure);
   return {
     ...result,
-    status: statusOnly ? result.status : committed ? "DOCKER_DB_ROLE_BOOTSTRAP_CREATED" : "DOCKER_DB_ROLE_BOOTSTRAP_REHEARSED",
+    status: statusOnly
+      ? result.status
+      : committed
+        ? "DOCKER_DB_ROLE_BOOTSTRAP_CREATED"
+        : "DOCKER_DB_ROLE_BOOTSTRAP_REHEARSED",
     rolesPrepared: statusOnly || committed,
     committed,
     rolledBack: !committed,

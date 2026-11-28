@@ -346,9 +346,13 @@ async function main() {
   const readOnly = freshConnection(base, true);
   const writable = freshConnection(base, false);
   const bootstrapMode =
-    action === "role-rehearse" ? "rehearse" :
-    action === "role-create" ? "create" :
-    action === "role-bootstrap-status" ? "status" : null;
+    action === "role-rehearse"
+      ? "rehearse"
+      : action === "role-create"
+        ? "create"
+        : action === "role-bootstrap-status"
+          ? "status"
+          : null;
   const reviewRoles = action === "role-review" || action === "role-plan" || bootstrapMode !== null;
   const identity = inspectDocker(reviewRoles);
   const parse = (text) => {

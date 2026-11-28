@@ -13,8 +13,21 @@ const columns = [
   "prisma_contract.marker.space",
   "prisma_contract.marker.core_hash",
 ];
-const database = { owner: true, ownerPrivileges: true, connect: true, create: true, temporary: true, publicConnect: true };
-const schema = { owner: false, ownerPrivileges: true, usage: true, create: true, publicCreate: false };
+const database = {
+  owner: true,
+  ownerPrivileges: true,
+  connect: true,
+  create: true,
+  temporary: true,
+  publicConnect: true,
+};
+const schema = {
+  owner: false,
+  ownerPrivileges: true,
+  usage: true,
+  create: true,
+  publicCreate: false,
+};
 
 function fixture() {
   const inventory = (total) => ({
@@ -22,25 +35,57 @@ function fixture() {
     schemas: { public: { ...schema } },
     sequences: { total: 0, owner: 0, ownerPrivileges: 0, usage: 0, select: 0, update: 0 },
     tables: {
-      total, owner: total, ownerPrivileges: total, select: total, insert: total,
-      update: total, delete: total, truncate: total, references: total, trigger: total,
-      maintain: total, anyColumnSelect: total, anyColumnInsert: total,
-      anyColumnUpdate: total, anyColumnReferences: total,
+      total,
+      owner: total,
+      ownerPrivileges: total,
+      select: total,
+      insert: total,
+      update: total,
+      delete: total,
+      truncate: total,
+      references: total,
+      trigger: total,
+      maintain: total,
+      anyColumnSelect: total,
+      anyColumnInsert: total,
+      anyColumnUpdate: total,
+      anyColumnReferences: total,
     },
   });
   return {
-    status: "DOCKER_DB_ROLE_REVIEW_READY", directoryReviewPassed: true,
-    admissionPassed: false, databaseWritten: false, storageHash,
-    tables: 12, columns: 85, checks: 36, indexes: 20, foreignKeys: 13, comments: 119,
+    status: "DOCKER_DB_ROLE_REVIEW_READY",
+    directoryReviewPassed: true,
+    admissionPassed: false,
+    databaseWritten: false,
+    storageHash,
+    tables: 12,
+    columns: 85,
+    checks: 36,
+    indexes: 20,
+    foreignKeys: 13,
+    comments: 119,
     serverVersion: "190000",
     role: {
-      superuser: true, createDatabase: true, createRole: true, replication: true,
-      bypassRls: true, login: true, inherit: true, scadaRuntimeExists: false,
-      keycloakRuntimeExists: false, directMemberships: 0, reachableMemberships: 0,
-      inheritedMemberships: 0, setRoleMemberships: 0,
+      superuser: true,
+      createDatabase: true,
+      createRole: true,
+      replication: true,
+      bypassRls: true,
+      login: true,
+      inherit: true,
+      scadaRuntimeExists: false,
+      keycloakRuntimeExists: false,
+      directMemberships: 0,
+      reachableMemberships: 0,
+      inheritedMemberships: 0,
+      setRoleMemberships: 0,
     },
     databases: { adui_scada: { ...database }, adui_scada_keycloak: { ...database } },
-    scada: { ...inventory(12), schemas: { public: { ...schema }, prisma_contract: { ...schema, owner: true } }, marker: { markerSelect: true, clusterFunctionExecute: true } },
+    scada: {
+      ...inventory(12),
+      schemas: { public: { ...schema }, prisma_contract: { ...schema, owner: true } },
+      marker: { markerSelect: true, clusterFunctionExecute: true },
+    },
     keycloak: inventory(101),
   };
 }
@@ -53,10 +98,18 @@ function mock(mode, fault = "") {
     report.role.keycloakRuntimeExists = true;
   }
   const calls = [];
-  const acl = (role, kind, object, privilege) => ({ role, kind, object, privilege, grantable: false });
+  const acl = (role, kind, object, privilege) => ({
+    role,
+    kind,
+    object,
+    privilege,
+    grantable: false,
+  });
   let created = mode === "status";
   const client = {
-    async connect() { calls.push("连接"); },
+    async connect() {
+      calls.push("连接");
+    },
     async query(sql, values) {
       calls.push(sql);
       if (sql.startsWith("BEGIN")) return { command: "BEGIN" };
@@ -68,13 +121,23 @@ function mock(mode, fault = "") {
         if (fault === "commit") throw new Error("模拟敏感提交异常");
         return { command: "COMMIT" };
       }
-      if (sql.includes("pg_try_advisory_xact_lock")) return { rows: [{ locked: fault !== "lock", isolation: "serializable" }] };
+      if (sql.includes("pg_try_advisory_xact_lock"))
+        return { rows: [{ locked: fault !== "lock", isolation: "serializable" }] };
       if (statements.includes(sql)) {
         if (fault === "sql" && sql === statements[3]) throw new Error("模拟敏感语句异常");
         if (sql === statements.at(-1)) created = true;
         return { command: sql.startsWith("CREATE ROLE") ? "CREATE ROLE" : "GRANT" };
       }
-      if (sql.includes("pg_catalog.pg_authid r")) return { rows: names.map((role) => ({ role, hardened: fault !== "attributes", noMemberships: true, noSettings: true, noUnexpectedDependencies: true })) };
+      if (sql.includes("pg_catalog.pg_authid r"))
+        return {
+          rows: names.map((role) => ({
+            role,
+            hardened: fault !== "attributes",
+            noMemberships: true,
+            noSettings: true,
+            noUnexpectedDependencies: true,
+          })),
+        };
       if (sql.includes("entries AS")) {
         const rows = [
           acl(names[0], "database", "adui_scada", "CONNECT"),
@@ -88,10 +151,39 @@ function mock(mode, fault = "") {
         if (fault === "extra-acl") rows.push(acl(names[1], "column", columns[0], "SELECT"));
         return { rows };
       }
-      if (sql.includes("relations AS")) return { rows: names.map((role) => ({ role, noDatabaseCreate: true, noSchemaCreate: true, noTableOrColumnWrites: fault !== "effective", noSequencePrivileges: true, businessConnect: true, keycloakConnect: true })) };
-      if (sql.includes("has_column_privilege")) return { rows: (fault === "column" ? columns.slice(1) : columns).map((object) => ({ role: names[0], object })) };
-      if (sql === "SET LOCAL ROLE adui_scada_runtime" || sql === "SET LOCAL ROLE NONE") return { command: "SET" };
-      if (sql.includes("session_user::text")) return { rows: [{ role: names[0], sessionRole: "adui_scada", database: "adui_scada", systemIdentifier: fault === "probe" ? "999" : identity.systemIdentifier, storageHash }] };
+      if (sql.includes("relations AS"))
+        return {
+          rows: names.map((role) => ({
+            role,
+            noDatabaseCreate: true,
+            noSchemaCreate: true,
+            noTableOrColumnWrites: fault !== "effective",
+            noSequencePrivileges: true,
+            businessConnect: true,
+            keycloakConnect: true,
+          })),
+        };
+      if (sql.includes("has_column_privilege"))
+        return {
+          rows: (fault === "column" ? columns.slice(1) : columns).map((object) => ({
+            role: names[0],
+            object,
+          })),
+        };
+      if (sql === "SET LOCAL ROLE adui_scada_runtime" || sql === "SET LOCAL ROLE NONE")
+        return { command: "SET" };
+      if (sql.includes("session_user::text"))
+        return {
+          rows: [
+            {
+              role: names[0],
+              sessionRole: "adui_scada",
+              database: "adui_scada",
+              systemIdentifier: fault === "probe" ? "999" : identity.systemIdentifier,
+              storageHash,
+            },
+          ],
+        };
       if (sql.startsWith("SELECT tenant_id, project_id, head_revision")) {
         assert.equal(values.length, 1);
         assert.match(values[0], /^prisma8-role-bootstrap-/u);
@@ -105,8 +197,14 @@ function mock(mode, fault = "") {
     },
   };
   const options = {
-    mode, report, identity, storageHash,
-    createClient: () => { calls.push("构造"); return client; },
+    mode,
+    report,
+    identity,
+    storageHash,
+    createClient: () => {
+      calls.push("构造");
+      return client;
+    },
     readDirectory: async (_client, expected, hash, readOnly) => {
       assert.equal(_client, client);
       assert.equal(expected, identity);
@@ -114,7 +212,11 @@ function mock(mode, fault = "") {
       assert.equal(readOnly, mode === "status");
       calls.push("目录核验");
       return {
-        role: { ...report.role, scadaRuntimeExists: created || fault === "baseline", keycloakRuntimeExists: created },
+        role: {
+          ...report.role,
+          scadaRuntimeExists: created || fault === "baseline",
+          keycloakRuntimeExists: created,
+        },
         databases: report.databases,
         scada: report.scada,
       };
@@ -135,7 +237,10 @@ void describe("Docker 角色准备事务", () => {
     assert.equal(result.businessDataWritten, false);
     assert.equal(result.admissionPassed, false);
     assert.equal(result.serviceSwitched, false);
-    assert.deepEqual(calls.filter((sql) => statements.includes(sql)), statements);
+    assert.deepEqual(
+      calls.filter((sql) => statements.includes(sql)),
+      statements,
+    );
     assert.deepEqual(calls.slice(-3), ["目录核验", "ROLLBACK", "关闭"]);
     assert.equal(calls.includes("COMMIT"), false);
     assert.equal(calls.includes("SET LOCAL ROLE adui_scada_runtime"), true);
@@ -168,12 +273,24 @@ void describe("Docker 角色准备事务", () => {
     for (const fault of ["lock", "baseline"]) {
       const { options, calls, statements } = mock("create", fault);
       await assert.rejects(runDockerRoleBootstrap(options), /保留现场/u);
-      assert.equal(calls.some((sql) => statements.includes(sql)), false);
+      assert.equal(
+        calls.some((sql) => statements.includes(sql)),
+        false,
+      );
       assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
     }
   });
   void it("语句、角色属性、精确授权、实际权限及角色读取异常均回滚并脱敏", async () => {
-    for (const fault of ["sql", "attributes", "acl", "extra-acl", "effective", "column", "probe", "unexpected-row"]) {
+    for (const fault of [
+      "sql",
+      "attributes",
+      "acl",
+      "extra-acl",
+      "effective",
+      "column",
+      "probe",
+      "unexpected-row",
+    ]) {
       const { options, calls } = mock("create", fault);
       await assert.rejects(runDockerRoleBootstrap(options), (error) => {
         assert.match(error.message, /保留现场/u);
@@ -186,7 +303,10 @@ void describe("Docker 角色准备事务", () => {
   });
   void it("提交结果未知时不自动回滚、重试或冒充成功", async () => {
     const { options, calls } = mock("create", "commit");
-    await assert.rejects(runDockerRoleBootstrap(options), { name: "Error", message: "角色事务提交结果未知，禁止重试，请先执行只读状态核查" });
+    await assert.rejects(runDockerRoleBootstrap(options), {
+      name: "Error",
+      message: "角色事务提交结果未知，禁止重试，请先执行只读状态核查",
+    });
     assert.deepEqual(calls.slice(-2), ["COMMIT", "关闭"]);
     assert.equal(calls.includes("ROLLBACK"), false);
   });
@@ -208,7 +328,10 @@ void describe("Docker 角色准备事务", () => {
     assert.equal(result.databaseWritten, false);
     assert.equal(result.catalogStatementsExecuted, false);
     assert.equal(calls.includes("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"), true);
-    assert.equal(calls.some((sql) => statements.includes(sql) || sql === "COMMIT"), false);
+    assert.equal(
+      calls.some((sql) => statements.includes(sql) || sql === "COMMIT"),
+      false,
+    );
     assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
     const absent = mock("rehearse");
     const empty = await runDockerRoleBootstrap({ ...absent.options, mode: "status" });
