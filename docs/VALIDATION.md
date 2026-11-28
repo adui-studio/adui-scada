@@ -5421,3 +5421,9 @@ Windows 增量：`pnpm run test:docker`（预计 68 项）、`pnpm run test:pris
 维护者 Windows 实测 Docker 六套件 68/68（新增角色核查 8/8）、Prisma 8 全新专项 29/29，合计 97/97；环境及 LF、中文文案 382 文件、Markdown 98 份、Vite+ 516 格式文件与 356 受检文件零警告、Lint 错误及类型错误、git diff --check 均通过，增量验收退出码 0。格式化提交 8777837592c5bc0e81dae102608616f8d9922e17 已推送；相较候选 e821d861754106c378b000e4715a3d761762ea7c 的四文件差异已逐项核对，只有排版及测试对象展开中等价的冗余空对象回退清理，不改变数据库核查语义。
 
 日志尚未包含 `pnpm run docker:db:role:review` 的实际 JSON 报告或退出码，因此不得将模拟测试成功认定为 PostgreSQL 19 目录、共享角色权限或正式运行身份验收。新增记录仅为文档，未重新运行本次文档检查。下一步单独执行现有只读核查命令并提供完整脱敏报告及退出码；无需重建镜像或重复已经通过的 97 项测试。真实核查通过前保留 PR #257 Draft，不合并、不推进角色或权限变更。
+
+### 2026-11-28 · PR #257 真实双库角色目录核查通过
+
+维护者 2026-11-28 Windows 日志显示从 8777837592c5bc0e81dae102608616f8d9922e17 快进至 21f574036cf02178ae48d3e6664ad983b0b32b6b；docs:check 98 份 Markdown 通过；docker:db:role:review 返回 DOCKER_DB_ROLE_REVIEW_READY、directoryReviewPassed=true、admissionPassed=false、databaseWritten=false，退出码 0，git status --short 无输出。真实 PostgreSQL 19.0（190000），存储指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436，12 表、85 字段、36 CHECK、20 索引、13 外键、119 注释均一致。共享 adui_scada 角色为登录超级用户，CREATEDB、CREATEROLE、REPLICATION、BYPASSRLS、INHERIT 均 true，四类成员计数均 0，两个拟议独立运行角色不存在。两库当前角色直接拥有数据库且 CONNECT/CREATE/TEMP、PUBLIC CONNECT 均 true。两库 public Schema 的 owner=false、ownerPrivileges/USAGE/CREATE=true、PUBLIC CREATE=false；业务库 prisma_contract 直接拥有且可 USAGE/CREATE。两库额外非系统 Schema 均为 0、public 序列均为 0；SCADA 12/12、Keycloak 101/101 public 表均直接拥有且报告所列有效表与列权限全部存在；业务 marker SELECT 与 pg_control_system EXECUTE 均 true。
+
+结合此前 Windows 97/97 自动化测试、环境/LF/中文文案/Markdown、Vite+ 零警告零错误和差异检查通过，A 阶段验收完成。维护者已同意继续合并。目录摘要不证明实际运行角色的精确授权、逐列 ACL、全部对象所有权或跨库拒绝；B 阶段按当前原生仓储真实需求和 Keycloak 对象管理需要另行评审，不直接修改角色、密码、所有权或 PUBLIC 权限。此次追加文档未重新执行全仓检查。
