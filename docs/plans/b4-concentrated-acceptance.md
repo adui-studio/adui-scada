@@ -105,3 +105,9 @@ pnpm run docker:db:role:b4:rehearse --confirm-rehearse-scada-b4 --confirm-rollba
 ```
 
 要求 SCADA_B4_ROLLBACK_REHEARSED、原 S、有效 64 位 catalogFingerprint（SC）、statementsExecuted=92、transactionCatalogMatched=true、independentBaselineMatched=true、rolledBack=true、committed=false、databaseWritten=false、businessDataWritten=false、ownerRolesPersisted=false、installationAllowed=false、issuerBindingVerified=false、definerSafetyVerified=false、rowLockVerified=false、rowAuthorizationVerified=false、businessAclApproved=false、admissionPassed=false、serviceSwitched=false。内层 runtimeProbe 要求 SCADA_B4_RUNTIME_STATEMENTS_MATCHED、positiveCount=36、deniedCount=15、fixturesRolledBack=true、runtimeStatementsVerified=true、rowLockConcurrencyVerified=false、rowAuthorizationVerified=false、businessDataWritten=false、admissionPassed=false。再次独立确认原 I/S/K、结构契约、OIDC 只读与服务状态，记录真实 SC，不使用模拟指纹。存在真实过期 OIDC 记录或锁失败时停止，不清除既有记录、不重试。新提交文档检查待复验，本记录不构成执行授权；Keycloak 对象审阅、停止窗口及演练独立批准，两库 apply、LOGIN、服务切换及合并均未批准。
+
+## 十五、B4.2 真实角色目录阻塞，先独立只读恢复核验（2026-11-28）
+
+维护者在 af5d57732284df753a9e62d6fd81cd67fc51c03b 实测文档 100 份、Git 差异、原 I/S/K、严格原生契约、OIDC 只读及七服务前置通过。实际 REHEARSE 后在安装后组合目录核验首组拒绝，报告专用角色属性及依赖不一致和已收到目录事务回滚标签；外部独立后置未执行、未进入 36/15 探针、未取得 SC 指纹。E-181 保留全部 SQL、期望矩阵、精确比较和审批，只追加固定预期角色及字段诊断，不输出实际目录名和值。局部 5/5 不是完整测试或真实权限通过。
+
+同步诊断补丁后先执行 B3.3 独立状态、两库原始只读计划、严格契约、OIDC 只读和 Docker 状态，要求原 I=0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37、S=aac93ff83a3baaa8b97781bd32e35afb049209e38a40c63c8487d3511b65ade0、K=60ae2f485107105ee98172cd69fc79cface21a40878b3f1f5e50bccc8011bbeb 完全一致并保持 catalogIsolationPersisted=true、databaseWritten=false、admissionPassed=false、B4 planOnly=true；SCADA 原计划前置须证明三个专用角色未残留。失败保留现场，禁止删除角色、调整 ACL 或重试。完整权限目录定向（预计 10 项）、Docker（预计 226 项）、Vite+、中文、文档及 Git 差异复验后，维护者另行明确批准一次第十四节固定回滚演练，若失败仅收集新的脱敏角色字段诊断并独立只读复验，不自动重试。所有真实成功证据仍按第十四节验证。根因未确认，SCADA B4.2 未通过；不执行 Keycloak 停止、演练、两库 apply、LOGIN、服务切换或合并。

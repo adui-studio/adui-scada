@@ -170,7 +170,7 @@ void test("角色属性、成员、对象依赖及模式信任任一漂移立即
     const calls = [];
     await assert.rejects(() => inspect(evidence, calls), {
       name: "Error",
-      message: "B4 安装后专用角色属性及依赖不一致",
+      message: "B4 安装后专用角色属性及依赖不一致；" + runtime + "：" + flag,
     });
     assert.equal(calls.length, 1);
   }
@@ -192,6 +192,38 @@ void test("角色属性、成员、对象依赖及模式信任任一漂移立即
     const evidence = fixture();
     mutate(evidence.roles);
     await assert.rejects(() => inspect(evidence), DockerB4PermissionReviewError);
+  }
+});
+
+void test("角色差异诊断仅输出固定角色和字段，未知目录值始终脱敏", async () => {
+  const evidence = fixture();
+  evidence.roles[0].noUnexpectedDependencies = false;
+  evidence.roles[0].markerUsage = "模拟敏感值";
+  delete evidence.roles[2].hardened;
+  evidence.roles[2]["模拟敏感字段"] = "模拟敏感值";
+  evidence.roles[3].role = "模拟敏感角色";
+  evidence.roles.push(evidence.roles[4]);
+  const calls = [];
+  await assert.rejects(() => inspect(evidence, calls), {
+    message:
+      "B4 安装后专用角色属性及依赖不一致；" +
+      runtime +
+      "：noUnexpectedDependencies、markerUsage；" +
+      lockOwner +
+      "：hardened、额外字段；" +
+      projectOwner +
+      "：角色行缺失或重复；" +
+      cleanupOwner +
+      "：角色行缺失或重复；存在未知或无效角色行",
+  });
+  assert.equal(calls.length, 1);
+  for (const rows of [null, {}, [null, ...fixture().roles]]) {
+    const invalid = fixture();
+    invalid.roles = rows;
+    await assert.rejects(
+      () => inspect(invalid),
+      /B4 安装后专用角色属性及依赖不一致；(?:目录行结构无效|存在未知或无效角色行)/u,
+    );
   }
 });
 

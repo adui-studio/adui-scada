@@ -353,6 +353,30 @@ const keyOf =
   (row) =>
     JSON.stringify(fields.map((field) => row[field]));
 
+// 只报告固定预期角色及字段，不回显实际目录名称、字段值或底层异常。
+function describeRoleMismatch(rows, expected) {
+  if (!Array.isArray(rows)) return "目录行结构无效";
+  const details = [];
+  const validRow = (row) => row && typeof row === "object" && !Array.isArray(row);
+  for (const item of expected) {
+    const matches = rows.filter((row) => validRow(row) && row.role === item.role);
+    if (matches.length !== 1) {
+      details.push(item.role + "：角色行缺失或重复");
+      continue;
+    }
+    const actual = matches[0];
+    const fields = Object.keys(item).filter(
+      (field) => !Object.hasOwn(actual, field) || !isDeepStrictEqual(actual[field], item[field]),
+    );
+    if (Object.keys(actual).some((field) => !Object.hasOwn(item, field))) fields.push("额外字段");
+    if (fields.length > 0) details.push(item.role + "：" + fields.join("、"));
+  }
+  if (rows.some((row) => !validRow(row) || !expected.some((item) => item.role === row.role))) {
+    details.push("存在未知或无效角色行");
+  }
+  return details.join("；") || "目录行结构不一致";
+}
+
 /** 仅核验安装后目录；不创建角色、修改 ACL 或切换运行身份。 */
 async function verifyInstalledPermissions(query, port, scope) {
   const expected = buildScadaB4PermissionExpectations(port);
@@ -404,7 +428,13 @@ async function verifyInstalledPermissions(query, port, scope) {
     } catch {
       throw new DockerB4PermissionReviewError("B4 安装后" + step + "查询失败，内部诊断已脱敏");
     }
-    requireMatch(exactRows(result?.rows, rows, key), "B4 安装后" + step + "不一致");
+    if (!exactRows(result?.rows, rows, key)) {
+      const detail =
+        step === "专用角色属性及依赖"
+          ? "；" + describeRoleMismatch(result?.rows, expected.roles)
+          : "";
+      throw new DockerB4PermissionReviewError("B4 安装后" + step + "不一致" + detail);
+    }
   }
   const catalogFingerprint = createHash("sha256")
     .update(JSON.stringify(scope ? { expected, keycloakDependencies: scope.expected } : expected))
