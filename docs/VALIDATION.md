@@ -5445,3 +5445,13 @@ PR #258 已合并至 `569bc45c2162eda28d8161011455d5810e6804fc`。B2 候选实�
 本次协作环境 Node.js 22.16.0 对新增执行核心及测试文件执行 node --check 和 node --test，8/8 通过；实际执行文件 Git Blob 核心 6435e52a8a998070921ca3ce16f8f35eee45276e、测试 b91cf3685dd6085e469b3f96e49b24a9a9520aad 与远端回读一致。新增两项事务内目录核查测试及扩展 CLI 参数断言、完整 Docker 专项预计 83 项、Prisma 8 全新专项预计 29 项、env/messages/docs、Vite+、真实 PG19 SQL 与演练均待维护者 Windows 复验；未连接数据库或执行 SQL。
 
 Windows 先完成增量质量链；再单独执行 `pnpm run docker:db:role:bootstrap --confirm-rehearse-docker-roles` 和 `pnpm run docker:db:role:bootstrap:status`。演练预期事务回滚、目录未提交、两角色不存在、后置严格核查通过；状态报告应确认两角色均不存在。以上是验收预期而非实测结果。禁止在本轮执行正式角色创建确认参数。
+
+### 2026-11-28 · PR #259 Windows 增量通过，真实演练失败及 E-166 诊断修复
+
+维护者 Windows 实测 PR #259：Docker 83/83（角色事务 8/8、事务内目录 2/2），Prisma 8 全新专项 29/29，共 112/112；环境/LF、中文 386 文件、Markdown 99 份、Vite+ 521 格式文件及 360 受检文件零警告/Lint/类型错误、git diff --check 均通过，增量退出码 0。维护者已推送格式化提交 6426a35570f6fd71d5b3baedc5eef44004da2b67，相较 1f009bd683dc28263a6501837e9a02b1e2a5d4f3 的四文件差异已核对为排版。真实 `docker:db:role:bootstrap --confirm-rehearse-docker-roles` 进入角色属性、精确授权及有效权限核验阶段后失败，退出码 1；&& 短路导致独立状态核查未执行。未获得具体 SQLSTATE、断言差异及独立角色状态；不据此宣称数据库层根因已定位或真实演练通过。
+
+最小诊断修复：仅修改 `scripts/docker-db-role-bootstrap.mjs` 及对应 Node 测试。对角色属性、直接 ACL、有效对象权限、有效列权限、切换运行角色、运行角色身份及标记、启动工程读取、恢复管理身份八个固定步骤分别脱敏；仅允许 PostgreSQL 官方白名单 SQLSTATE（未知为 UNKNOWN），精确匹配失败仅报告预期/实际行数、未匹配的固定预期项序号和预期字段名，不回显实际目录名、值、连接串、凭据、SQL 原文或第三方错误正文。失败路径只有收到 ROLLBACK 命令标签才补充回滚确认，回滚未知及提交未知仍拒绝成功、禁止自动重试。原八条 SQL、所有权限白名单、精确匹配条件、确认参数、Compose、业务数据和正式准入均不变；真实根因尚待新诊断证据。
+
+协作环境 Node.js 22.16.0 从格式化前已有 Git Blob 精确本地副本应用同一诊断修复，真实 `node --check` 两文件及 `node --test` 10/10 通过（原八项加两项参数化诊断回归，涵盖 12 类故障）。远端使用相同修改保留维护者的既有格式化，新增诊断核心块 3107 个字符/FNV-1a 202e8a23、两个新增测试块 1927 个字符/FNV-1a c8a5594f 与本地实测逐字校验一致；远端两个文件全文回读一致，但本地测试文件整体 Blob 仍与远端存在既有排版差别，不冒称完整最新远端字节实测。核心修复提交 adb3d4d70fe0164e26bb76a2f46be6fde358f4f8、测试提交 edbc67493bef64b7438d6bb3838d7a2ed87b72af。完整 Windows Vite+、中文/文档、Docker 预计 85 项与真实 PostgreSQL 演练未执行。
+
+先单独执行 `pnpm run docker:db:role:bootstrap:status` 并检查退出码 0、`rolesPrepared=false`；若已存在角色、状态不一致或失败，停止并保留现场，不删除、不回收权限、不执行创建。再完成定向测试与全仓增量质量复验，只有只读状态明确确认两个角色不存在且质量门禁通过后，才单独重新执行已明确确认的回滚演练；如仍失败，只提供新脱敏诊断，不执行正式创建或反复重试。PR #259 保持 Draft。
