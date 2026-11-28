@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { lockB4Identity, lockB4ProjectGrants } from "../database/prisma8-b4-routines.js";
 import { Prisma8Service } from "../database/prisma8.service.js";
 import { nativeTextTransaction } from "../database/prisma8-text-transaction.js";
 import {
@@ -15,10 +16,9 @@ export class Prisma8RuntimeProjectQueryStore extends Prisma8ProjectQueryOperatio
         const text = nativeTextTransaction(tx, "工程事务查询结果缺少有效文本列");
         return operation({
           queryText: text.queryText,
-          readGrants: async (tenantId, projectId, subjectId) =>
-            await tx.orm.public.ScadaProjectGrant.where({ tenantId, projectId, subjectId })
-              .select("permission")
-              .all(),
+          lockIdentity: (tenantId, subjectId) => lockB4Identity(text, tenantId, subjectId),
+          lockGrants: (tenantId, projectId, subjectId) =>
+            lockB4ProjectGrants(text, tenantId, projectId, subjectId),
         });
       });
     super({

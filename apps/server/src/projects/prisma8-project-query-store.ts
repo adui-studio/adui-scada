@@ -25,7 +25,11 @@ import {
 
 export interface Prisma8ProjectQueryTransaction {
   readonly queryText: Prisma8TextTransaction["queryText"];
-  readGrants(
+  lockIdentity(
+    tenantId: string,
+    subjectId: string,
+  ): Promise<readonly { readonly status: string }[]>;
+  lockGrants(
     tenantId: string,
     projectId: string,
     subjectId: string,
@@ -210,8 +214,12 @@ async function lockAndAuthorize(
   if (rows.length !== 1 || !rows[0]) throw new ProjectVersionAccessDeniedError();
   const head = BigInt(rows[0].head_revision);
   if (head < 0n) throw new TypeError("数据库工程修订号异常");
+  // 与版本追加使用一致的工程、身份、授权锁顺序，在同一事务重新核对活动身份。
+  const identities = await tx.lockIdentity(tenantId, subjectId);
+  if (identities.length !== 1 || identities[0]?.status !== "active")
+    throw new ProjectVersionAccessDeniedError();
   // 不按单项权限预过滤，完整核对当前可信主体的权限集合。
-  const grants = await tx.readGrants(tenantId, projectId, subjectId);
+  const grants = await tx.lockGrants(tenantId, projectId, subjectId);
   if (
     !hasProjectPermission(
       actor,
@@ -274,6 +282,8 @@ export class Prisma8ProjectQueryOperations {
           WHERE p.tenant_id = ${actor.tenantId}
             AND (${cursor}::text = '' OR p.project_id > ${cursor})
             AND EXISTS (SELECT 1 FROM public.scada_project_grants g
+              JOIN public.scada_identities i ON i.tenant_id = g.tenant_id
+                AND i.subject_id = g.subject_id AND i.status = 'active'
               WHERE g.tenant_id = p.tenant_id AND g.project_id = p.project_id
                 AND g.subject_id = ${actor.subjectId} AND g.permission = 'project:read')
           ORDER BY p.project_id ASC LIMIT ${query.limit}::integer`;
