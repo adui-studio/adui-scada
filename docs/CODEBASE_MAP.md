@@ -2082,3 +2082,8 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-db-role-b4-preflight.mjs`：16 项固定安装前目录核验、三个角色创建候选、先前置后业务列权限编排、未来可写安装事务授权前三角色九项布尔核验；只读查询，不执行安装。
 - `scripts/docker-db-role-b4-preflight.cases.mjs`：8 项 Node 离线测试，含候选清单精确对照、前置失败阻止业务列授权读取，纳入 `test:docker`。
 - `scripts/docker-db-role-object-review.mjs`：SCADA 只读目录事务调用 `readScadaB4BusinessPreparation`；保留原双库边界、回滚和连接清理。
+
+### B4 安装后例程目录核验
+
+- `scripts/docker-db-role-b4-routine-review.mjs`：基于固定 11 例程构造预期签名、正文、属性与执行权限；仅执行目录 SELECT，后续安装事务调用。
+- `scripts/docker-db-role-b4-routine-review.cases.mjs`：七项 Node 离线回归，纳入 `test:docker`，覆盖真实候选对照、目录漂移及执行 ACL 拒绝。
