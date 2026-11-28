@@ -3190,3 +3190,9 @@ E-159 为测试专属消息遗漏，已最小修复；不改变生产代码。�
 ### 2026-11-28 · PR #257 A 阶段只读角色核查候选
 
 维护者已同意继续实施 A 阶段。新增 `docker:db:role:review`，复用当前 Prisma 8 严格契约和 Windows 本机 Docker 固定集群边界，分别建立业务库及 Keycloak 库只读事务，报告共享角色属性、直接与递归成员能力、两库有效权限及 PUBLIC CONNECT、Schema、12 个业务表及序列权限。其他 Schema 仅计数；Keycloak 表与序列不回显对象名。目录核查完成不代表最小权限，正式准入固定 false。未修改数据库、角色、凭据、Compose、OIDC、生产根模块或业务接口。协作环境 Node.js 22.16.0 实际执行新增角色核查核心及测试的 node --check 和 node --test，8/8 通过。远端 Git Blob 分别为 ef9dc9d5810457d0d9e745fdf8ca5872bee34ffb、7115a369da54aacf7bb3324badc25c0d0a9215f5，与本地实际执行文件一致。已逐项核对入口、参数白名单、严格契约验证分支及 package.json 质量链；未运行完整 Docker 68 项、Prisma 8 全新专项、全仓 Vite+、env/messages/docs 或真实 PostgreSQL 19 目录查询。 待维护者真实执行只读核查，获得报告后再评审 B 阶段，保持 Draft。
+
+### 2026-11-28 · PR #257 增量质量门禁通过
+
+维护者 Windows 实测 Docker 六套件 68/68（新增角色核查 8/8）、Prisma 8 全新专项 29/29，合计 97/97；环境及 LF、中文文案 382 文件、Markdown 98 份、Vite+ 516 格式文件与 356 受检文件零警告、Lint 错误及类型错误、git diff --check 均通过，增量验收退出码 0。格式化提交 8777837592c5bc0e81dae102608616f8d9922e17 已推送；相较候选 e821d861754106c378b000e4715a3d761762ea7c 的四文件差异已逐项核对，只有排版及测试对象展开中等价的冗余空对象回退清理，不改变数据库核查语义。
+
+真实双库角色权限目录报告尚未提供，A 阶段仅完成自动化质量验收。待维护者执行 `docker:db:role:review`，核实 DOCKER_DB_ROLE_REVIEW_READY、directoryReviewPassed=true、admissionPassed=false、databaseWritten=false 及退出码 0，再根据实际权限报告评审 B 阶段。保持 Draft，不提前合并或修改角色、授权、凭据、数据库、Compose、OIDC 或业务接口。
