@@ -3281,3 +3281,8 @@ B2 已真实持久化验收并合入 MVP 集成分支。PR #260 新增 `docker:d
 ### B4 共享依赖范围修正
 
 依据 PostgreSQL 19 官方 `pg_shdepend` 定义，该目录是全集群共享目录，`dbid=0` 表示共享对象，非零 `dbid` 指向对象所属数据库；依赖类型至少区分 OWNER、ACL、INITACL 和 POLICY。此前候选只筛选当前数据库 `dbid`，会漏掉同一集群其他数据库及共享对象的依赖。现改为按固定四个角色 OID 汇总全集群所有依赖，记录数据库范围分类、对象目录 OID、子对象号和依赖类型，原始 OID 仅用于指纹，不回显。新增当前库、其他库、集群共享及 INITACL 回归，并拒绝数据库 OID 与范围标签矛盾。该修正仍是只读审计，不执行任何角色变更或 ACL 授权。
+
+
+### B4 全集群共享依赖复核补充
+
+已将 `pg_shdepend` 读取从当前数据库改为全集群共享目录：按固定四个角色过滤，包含 `dbid=0` 的共享对象及其他数据库中的依赖，并按 OWNER、ACL、INITACL、POLICY 等依赖类别与共享/当前库/其他库范围汇总。原始对象 OID 仅进入指纹，不在报告中输出。该目录在 PostgreSQL 19 官方文档中明确为全集群共享目录，且 `dbid` 为零表示共享对象；依赖类型区分所有权、ACL、初始 ACL 和策略引用。参考：[PostgreSQL 19 pg_shdepend](https://www.postgresql.org/docs/19/catalog-pg-shdepend.html)。

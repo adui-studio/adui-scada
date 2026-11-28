@@ -44,6 +44,7 @@ export function freshConnection(input, readOnly) {
 
 /** 全新入口仅接受固定动作；角色演练与创建必须分别明确确认。 */
 export function freshAction(args) {
+  const approvals = ["--reviewed-business-consumers", "--reviewed-maintenance-consumers", "--reviewed-template-consumers"];
   const fingerprint = args.at(-1);
   if (typeof fingerprint === "string" && /^--plan-fingerprint=[a-f0-9]{64}$/u.test(fingerprint)) {
     if (isDeepStrictEqual(args, ["--role-isolation-execute", "--confirm-rehearse-isolation", ...approvals, fingerprint])) return "role-isolation-rehearse";
