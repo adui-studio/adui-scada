@@ -46,13 +46,30 @@ function plan(extra = {}) {
   });
 }
 
-void test("全新入口仅接受明确九种操作，裸命令不能写入", () => {
+void test("全新入口仅接受明确十二种操作，裸命令不能写入", () => {
   assert.equal(freshAction(["--emit"]), "emit");
   assert.equal(freshAction(["--preview"]), "preview");
   assert.equal(freshAction([freshConfirmation]), "initialize");
   assert.equal(freshAction(["--status"]), "status");
   assert.equal(freshAction(["--role-review"]), "role-review");
   assert.equal(freshAction(["--role-plan"]), "role-plan");
+  assert.equal(freshAction(["--role-bootstrap-status"]), "role-bootstrap-status");
+  assert.equal(
+    freshAction(["--role-bootstrap", "--confirm-rehearse-docker-roles"]),
+    "role-rehearse",
+  );
+  assert.equal(freshAction(["--role-bootstrap", "--confirm-create-docker-roles"]), "role-create");
+  for (const args of [
+    ["--role-bootstrap"],
+    ["--confirm-rehearse-docker-roles"],
+    ["--confirm-create-docker-roles"],
+    ["--role-bootstrap", "--apply"],
+    ["--role-bootstrap", "--confirm-rehearse-docker-roles", "--confirm-create-docker-roles"],
+    ["--role-bootstrap", "--confirm-create-docker-roles", freshConfirmation],
+    ["--role-bootstrap-status", "--confirm-create-docker-roles"],
+  ]) {
+    assert.throws(() => freshAction(args), /必须明确指定/u);
+  }
   assert.equal(freshAction(["--runtime-review"]), "runtime-review");
   assert.equal(freshAction(["--runtime-emit"]), "runtime-emit");
   assert.equal(freshAction(["--provider-smoke"]), "provider-smoke");
