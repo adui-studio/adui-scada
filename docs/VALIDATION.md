@@ -5431,3 +5431,9 @@ Windows 增量：`pnpm run test:docker`（预计 68 项）、`pnpm run test:pris
 ### 2026-11-28 · B1 固定角色准备预览候选
 
 维护者已在 Windows 完成 PR #257 真实双库角色目录核查，退出 0，PR #257 已合并至 8d94a418021376d6803b16bb793eefcf4a79b280。B1 新增独立 docker:db:role:plan，复用真实双库只读核查与固定原生契约、集群和当前权限基线，仅生成两条 NOLOGIN 角色创建和六条精确授权 SQL 文本，不执行 SQL，不改实际角色、ACL、所有权、数据库、容器或 OIDC。当前方案仅准备 SCADA Provider 启动查询所需列、Schema 与集群函数权限及两库显式 CONNECT；PUBLIC 权限、行锁、正式业务 ACL、Keycloak 对象所有权及实际 LOGIN 均尚待单独评审。 协作环境 Node.js 22.16.0 实际 `node --check` 两文件及 `node --test` 5/5 通过，远端 Git Blob 与实测文件一致（核心 937c3594940f0d18513bb39453f4ba4a724bffef、测试 96bf64fc0ebb58387b7329af3fecdac4ffa2943b）。使用维护者真实 A 阶段完整 JSON 离线调用纯函数通过，8 条 SQL、planOnly=true、admissionPassed=false、databaseWritten=false；未连接数据库或执行 SQL。全仓 Docker 预计 73 项、原生专项预计 29 项、env/messages/docs、Vite+ 零警告错误、git diff --check 及实际 `pnpm run docker:db:role:plan` 待 Windows 复验，不声称真实预览已运行。详见 [角色准备预览](plans/docker-native-role-bootstrap-plan.md)。
+
+### 2026-11-28 · PR #258 Windows 增量及真实角色准备预览通过
+
+维护者 2026-11-28 Windows 增量：Docker 七套件 73/73、Prisma 8 全新专项 29/29，合计 102/102；环境及 LF、中文文案 384 文件、Markdown 99 份、Vite+ 519 格式文件/358 受检文件零警告、Lint/类型错误、git diff --check 全部通过，退出码 0。维护者格式化提交 76bfcb156d82d151ab56e667dbd9f13628c753ba 已推送；相较 b15e400d68d4a9428f2a1fc12f512f42b41cd856 的两文件差异已核对仅为排版。随后实际 docker:db:role:plan 返回 DOCKER_DB_ROLE_BOOTSTRAP_PLAN_READY、directoryReviewPassed=true、planOnly=true、admissionPassed=false、databaseWritten=false、serviceSwitched=false，PG19.0、目标 adui_scada、固定指纹 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436、八条 SQL 及五个待审批门禁完全符合预期，退出 0。未执行 SQL 预览；真实预览日志未再次打印 HEAD 或工作区状态。
+
+B1 验收通过，维护者同意继续合并与 B2 受控执行器开发；本次授权不自动执行实际角色变更。新增验收文档尚未重新执行全仓检查。下一批仅候选创建两个不可登录、无密码、无管理权限的角色及固定启动读权；必须独立显式确认、事务内重验基线、有效权限和精确 ACL，禁止变更 PUBLIC、服务身份、业务数据或发布安全门禁。
