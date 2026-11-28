@@ -223,3 +223,19 @@ node apps/server/prisma8-fresh-install.mjs --role-b4-lock-probe --confirm-review
 清理在原锁探针完成且夹具未变时独立批准；核对清单 SHA-256、真实 Core 快照、四字段证据、全部十二表精确行数与联合字段、锁和连接身份，在同一锁内按发布状态、审计、授权、版本、工程、身份顺序删除 1/1/3/1/1/2 行，拒绝任何额外会话、授权、发布、历史或其他业务记录；确认空基线后才提交并独立复验。预计 B4_LOCK_FIXTURE_CLEANUP_VERIFIED、businessRowCount=0、fixturePrepared=false、fixtureFilesRetained=true、businessDataWritten=true、databaseWritten=true。两个本机证据文件在清理后保留供维护者审阅，不自动删除；未知提交、失败回滚、连接关闭、证据发布或后置复验失败时保留现场，尤其只有清单没有四字段文件时禁止通过创建重试或手工拼凑后盲目清理。当前清理契约仅覆盖原九行不变夹具；B4.5b 如果需要修改版本、身份或授权，必须在 B4.5a 夹具清理后另行设计可回收隔离用例，不得绕过此精确清理门禁。
 
 真实 PostgreSQL 19.0、实际 Core/CLI、备份恢复、原容器与 Windows Vite+ 尚待实测；禁止开启 LOGIN、启动 Keycloak、执行权限 apply、恢复旧管理身份、切换服务或合并 Draft。
+
+## 二十四、B4.5a 完整实机生命周期关闭与 B4.5b 分批设计（2026-11-28）
+
+维护者 Windows 在 86d9ed21b781bdc1e05fb8e700d00b5cec473168 实测 B4.5a 完整生命周期：Docker 专项 239/239、Prisma 8 专项 34/34（均零失败、零跳过），Vite+ 566 个格式文件、404 个受检文件零警告错误，中文文案 430 个文件、Markdown 100 份通过。首次真实只读预检由常驻 NestJS 连接拦截，五次只读采样均为维护锁可得、其他业务库会话 1、quiet=false；维护者独立确认停止原 NestJS 后会话为零，预检成功（12 表零行、真实 Core 快照、六指纹一致、无 DML）。原 Keycloak 继续 exited/no。三份逻辑备份 SHA-256 经复验，使用原 PostgreSQL 实际镜像的独立无网络实例与新卷恢复全局角色、SCADA 12 表、Keycloak 101 表及 2 个 NOLOGIN 运行角色，恢复实例已停止并保留；仅为逻辑恢复烟测，不证明完整灾难恢复、角色密码、物理备份或恢复目录指纹等价。维护者分别批准创建、锁探针、清理。创建 B4_LOCK_FIXTURE_CREATED_VERIFIED 确认九行合成记录与真实快照、恢复清单及独立回读；真实 B4_IDENTITY_GRANT_LOCK_CONCURRENCY_VERIFIED 确认身份和工程授权两次 SQLSTATE 55P03、回滚释放、授权主体三项授权及其他主体无授权，无 DML/COMMIT；清理 B4_LOCK_FIXTURE_CLEANUP_VERIFIED 精确删除九行并提交，独立只读连接确认全部十二表零行、维护锁可得、其他会话为零。创建与清理各自 databaseWritten=true，锁探针与状态复验 databaseWritten=false，不能混用。I/SC/K/KC/DC/KP 前后保持一致，独立连接关闭，两个本机夹具证据及备份完整性保持，原 NestJS/Keycloak 停止，工作区干净。
+
+前述未实测说明作为历史记录保留，以本节实测证据为准。B4.5a 已关闭，无须重复九行生命周期或双库 apply。保留本机两个已完成清理的证据文件与独立备份恢复实例，不覆盖或删除；未来测试不得重用旧夹具标识及清理清单。
+
+### B4.5b 首批：真实原生查询仓储主体与租户隔离（设计，未实现）
+
+现有 Prisma8RuntimeProjectQueryStore 的 list 使用 readTransaction，getProject/listVersions/read/preflightRelease 由 locked 端口执行并要求 assertWritable；Prisma8ProjectQueryOperations 负责主体、授权及快照检查。Prisma8AuthorizationReadStore 使用真实原生查询联合租户、工程、主体。Prisma8Service 和 readPrisma8Transaction/writePrisma8Transaction 前后边界目前要求 current_user/session_user 都为 adui_scada，不能直接把生产 Provider 置于 adui_scada_runtime 后声称通过完整边界；旧只读 Provider 烟测和 B4.5a 例程锁探针也不能代替真正的仓储调用。列 ACL 与应用主体策略不是 PostgreSQL RLS。
+
+首批候选应复用真实编译后的查询及授权仓储、实际 Prisma 8 Contract、共享 Core 快照和现有参数化例程，而不是新写一份业务查询 SQL 代替待测仓储。先核对独立恢复实例的身份、实际镜像、无网络/端口、独立卷、存储标记、逻辑契约、角色及权限等价性（不能直接比较含集群或对象 OID 的原库指纹）。仅在另行批准的独立测试环境使用受控测试连接/事务适配，明确是否覆盖生产 Provider；不改变原库 NOLOGIN、正式连接 URL/角色白名单、HTTP 装配或 Keycloak。测试实例内的角色切换必须在固定事务边界内并复核 current_user/session_user；如果适配或身份核验无法满足，失败关闭，不通过 Mock 或关闭边界掩盖问题。设计和实现前须按 AGENTS.md 完整阅读错误复盘、相关需求与规范。
+
+首批测试矩阵：同一租户授权活动主体列表/工程详情/版本列表/首版读取成功；同租户无授权主体、跨租户同工程 ID、禁用主体、缺失或非法可信主体及越权版本请求拒绝；非法主体不得产生业务查询，未授权对象不返回元数据或快照。列表过滤与锁内再次授权分别验证，并核对错误类型、实际仓储返回及真实快照摘要。发布预检仅验证读侧权限及拒绝，不执行正式发布。先构造独立可回收的多租户夹具，不使用 B4.5a 已关闭证据；实测前后核查数据范围、事务、独立连接及原库零行和六指纹。若需持久化合成数据，须先给出精确生命周期、清理及未知提交恢复方案并另行批准。首批尚未实现，不能标记授权通过。
+
+后续按风险分批：身份禁用及授权撤销的真实双会话竞争；OIDC 登录事务和会话单次消费；工程 CAS 追加、冲突与失败原子回滚、不可变快照；发布及回滚权限和安全预检（不绕过工业安全）。每批需真实原生仓储、正反向与独立回读证据。完整 B4.5b、Keycloak Schema 实际兼容性、正式低权限连接、真实 OIDC、React/Vue 互通及 MVP 准入仍未完成。原服务继续维护停机，禁止自动重启或合并 Draft。
