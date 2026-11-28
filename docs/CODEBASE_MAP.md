@@ -2076,3 +2076,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-db-role-restricted-writes.mjs`：原子首版工程初始化及绑定固定本机 Issuer 的零参数有界清理候选、独立指纹；不安装函数或执行写入。
 - `scripts/docker-db-role-restricted-writes.cases.mjs`：五项 Node 离线回归，纳入 `test:docker`。
 - `scripts/docker-db-role-business-acl.mjs`：`restrictedWritePreview`，收敛工程主表直接 INSERT 候选，八项实际权限阻塞保持。
+
+### B4 例程安装前置与未授权角色证据
+
+- `scripts/docker-db-role-b4-preflight.mjs`：16 项固定安装前目录核验、三个角色创建候选、先前置后业务列权限编排、未来可写安装事务授权前三角色九项布尔核验；只读查询，不执行安装。
+- `scripts/docker-db-role-b4-preflight.cases.mjs`：8 项 Node 离线测试，含候选清单精确对照、前置失败阻止业务列授权读取，纳入 `test:docker`。
+- `scripts/docker-db-role-object-review.mjs`：SCADA 只读目录事务调用 `readScadaB4BusinessPreparation`；保留原双库边界、回滚和连接清理。
