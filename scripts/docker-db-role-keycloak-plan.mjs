@@ -17,13 +17,14 @@ const baseline = {
   keycloakDependencyMatched: true,
 };
 
-const baselineSql = `WITH roles AS (
+const baselineSql = (phase) => `WITH roles AS (
   SELECT * FROM pg_catalog.pg_authid WHERE rolname IN ('adui_scada_runtime', 'adui_scada_keycloak_runtime')
 ), keycloak AS (SELECT oid FROM roles WHERE rolname = 'adui_scada_keycloak_runtime'),
   db AS (SELECT oid, datdba FROM pg_catalog.pg_database WHERE datname = current_database()),
   ns AS (SELECT oid, nspowner, nspacl FROM pg_catalog.pg_namespace WHERE nspname = 'public')
 SELECT (current_database() = 'adui_scada_keycloak' AND current_user = 'adui_scada' AND session_user = 'adui_scada'
-  AND current_setting('transaction_read_only') = 'on' AND current_setting('transaction_isolation') = 'repeatable read'
+  AND current_setting('transaction_read_only') = '${phase === "read-only" ? "on" : "off"}'
+  AND current_setting('transaction_isolation') = '${phase === "read-only" ? "repeatable read" : "serializable"}'
   AND current_setting('server_version_num') = '190000' AND NOT pg_catalog.pg_is_in_recovery()
   AND EXISTS (SELECT 1 FROM db JOIN pg_catalog.pg_roles r ON r.oid = db.datdba WHERE r.rolname = current_user AND r.rolsuper)) AS "managerVerified",
   ((SELECT count(*) FROM roles) = 2 AND NOT EXISTS (SELECT 1 FROM roles r WHERE r.rolcanlogin OR r.rolsuper
@@ -64,7 +65,7 @@ SELECT (current_database() = 'adui_scada_keycloak' AND current_user = 'adui_scad
     AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_subscription WHERE subdbid = (SELECT oid FROM db))
     AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_largeobject_metadata)) AS "noUnexpectedObjects",
   ((SELECT count(*) FROM pg_catalog.pg_shdepend d JOIN keycloak k ON k.oid = d.refobjid
-    WHERE d.refclassid = 'pg_catalog.pg_authid'::regclass) = 1
+    WHERE d.refclassid = 'pg_catalog.pg_authid'::regclass) = ${phase === "projected" ? tableCount + 1 : 1}
     AND EXISTS (SELECT 1 FROM pg_catalog.pg_shdepend d JOIN keycloak k ON k.oid = d.refobjid
       WHERE d.refclassid = 'pg_catalog.pg_authid'::regclass AND d.dbid = 0
         AND d.classid = 'pg_catalog.pg_database'::regclass AND d.objid = (SELECT oid FROM db)
@@ -164,17 +165,139 @@ export function verifyKeycloakOwnershipProjection(before, after) {
   return { ownerProjectionMatched: true, ownershipTransferAllowed: false, admissionPassed: false };
 }
 
-// 公开报告不回显实际对象名称、OID 或 SQL。
-export async function readKeycloakOwnershipPreview(query, context) {
+// 内部候选仅供受控事务使用，不得直接输出。
+export async function readKeycloakOwnershipCandidate(query, context, phase = "read-only") {
+  requireMatch(phase === "read-only" || phase === "rehearsal", "Keycloak 所有权候选事务模式无效");
   let stage = "安全基线";
   try {
-    const baselineRows = (await query("Keycloak 所有权前置", baselineSql))?.rows;
+    const baselineRows = (await query("Keycloak 所有权前置", baselineSql(phase)))?.rows;
     requireMatch(isDeepStrictEqual(baselineRows, [baseline]), "Keycloak 所有权前置证据不一致");
     stage = "对象与依赖";
     const objects = (await query("Keycloak 对象所有权", inventorySql))?.rows;
-    return buildKeycloakOwnershipPlan({ ...context, baselineRows, objects }).report;
+    return buildKeycloakOwnershipPlan({ ...context, baselineRows, objects });
   } catch (error) {
     if (error instanceof DockerKeycloakOwnershipError) throw error;
     throw new DockerKeycloakOwnershipError("Keycloak " + stage + "查询失败，内部诊断已脱敏");
   }
+}
+
+/** 只读入口仅返回脱敏报告，不暴露内部候选。 */
+export async function readKeycloakOwnershipPreview(query, context) {
+  return (await readKeycloakOwnershipCandidate(query, context)).report;
+}
+
+const dependencySql = `WITH target AS (
+  SELECT oid FROM pg_catalog.pg_roles WHERE rolname = 'adui_scada_keycloak_runtime'
+), db AS (
+  SELECT oid, datname, datdba, datacl FROM pg_catalog.pg_database WHERE datname = current_database()
+), deps AS (
+  SELECT d.*, (d.dbid = 0 AND d.classid = 'pg_catalog.pg_database'::regclass
+    AND d.objid = db.oid AND d.objsubid = 0 AND d.deptype = 'a') AS connect,
+    (d.dbid = db.oid AND d.classid = 'pg_catalog.pg_class'::regclass
+    AND d.objsubid = 0 AND d.deptype = 'o') AS table_owner, db.datname
+  FROM pg_catalog.pg_shdepend d CROSS JOIN db JOIN target t ON d.refobjid = t.oid
+  WHERE d.refclassid = 'pg_catalog.pg_authid'::regclass
+), direct_acl AS (
+  SELECT a.* FROM pg_catalog.pg_database d
+    CROSS JOIN LATERAL pg_catalog.aclexplode(coalesce(d.datacl, pg_catalog.acldefault('d', d.datdba))) a
+    JOIN target t ON t.oid IN (a.grantee, a.grantor)
+  WHERE d.datname = 'adui_scada_keycloak' AND a.grantor = d.datdba
+    AND a.grantee = t.oid AND a.privilege_type = 'CONNECT' AND NOT a.is_grantable
+), all_acl AS (
+  SELECT a.* FROM pg_catalog.pg_database d
+    CROSS JOIN LATERAL pg_catalog.aclexplode(coalesce(d.datacl, pg_catalog.acldefault('d', d.datdba))) a
+    JOIN target t ON t.oid IN (a.grantee, a.grantor)
+)
+SELECT CASE WHEN connect THEN 'databaseConnect' WHEN table_owner THEN 'tableOwner' ELSE 'unexpected' END AS kind,
+  CASE WHEN connect THEN datname::text ELSE objid::text END AS "objectId",
+  (SELECT count(*) FROM direct_acl) = 1 AND (SELECT count(*) FROM all_acl) = 1 AS "directConnectMatched",
+  (SELECT system_identifier::text FROM pg_catalog.pg_control_system()) AS "systemIdentifier"
+FROM deps`;
+
+const tablePrivileges = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER", "MAINTAIN"];
+const columnPrivileges = ["SELECT", "INSERT", "UPDATE", "REFERENCES"];
+const privilegeSql = `WITH roles AS (
+  SELECT oid, rolname FROM pg_catalog.pg_roles WHERE rolname IN ('adui_scada_runtime', 'adui_scada_keycloak_runtime')
+), relations AS (
+  SELECT c.oid, c.relkind, n.oid AS schema_oid FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind = 'r'
+), privileges AS (SELECT unnest(ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER','MAINTAIN']) AS name),
+  column_privileges AS (SELECT unnest(ARRAY['SELECT','INSERT','UPDATE','REFERENCES']) AS name)
+SELECT r.rolname::text AS role, c.oid::text AS "objectId",
+  ARRAY(SELECT p.name FROM privileges p WHERE CASE WHEN c.relkind = 'r'
+    THEN pg_catalog.has_table_privilege(r.oid, c.oid, p.name) ELSE false END ORDER BY p.name COLLATE "C") AS "tablePrivileges",
+  ARRAY(SELECT p.name FROM privileges p WHERE CASE WHEN c.relkind = 'r'
+    THEN pg_catalog.has_table_privilege(r.oid, c.oid, p.name || ' WITH GRANT OPTION') ELSE false END ORDER BY p.name COLLATE "C") AS "tableGrantOptions",
+  ARRAY(SELECT p.name FROM column_privileges p WHERE CASE WHEN c.relkind = 'r'
+    THEN pg_catalog.has_any_column_privilege(r.oid, c.oid, p.name) ELSE false END ORDER BY p.name COLLATE "C") AS "columnPrivileges",
+  pg_catalog.has_schema_privilege(r.oid, c.schema_oid, 'USAGE') AS "schemaUsage",
+  pg_catalog.has_schema_privilege(r.oid, c.schema_oid, 'CREATE,USAGE WITH GRANT OPTION') AS "schemaElevated"
+FROM roles r CROSS JOIN relations c`;
+
+function exactRows(rows, expected) {
+  return Array.isArray(rows) && rows.length === expected.length &&
+    expected.every((entry) => rows.some((row) => isDeepStrictEqual(row, entry)));
+}
+
+// 仅普通表有独立所有权依赖；索引、TOAST 及自动类型由前一步对象图校验。
+function expectedDependencies(tables, identity, projected) {
+  return [{ kind: "databaseConnect", objectId: "adui_scada_keycloak", directConnectMatched: true, systemIdentifier: identity.systemIdentifier },
+    ...(projected ? tables.map((table) => ({ kind: "tableOwner", objectId: table.oid, directConnectMatched: true, systemIdentifier: identity.systemIdentifier })) : [])];
+}
+
+function expectedPrivileges(tables, projected) {
+  return ["adui_scada_runtime", runtime].flatMap((role) => tables.map((table) => ({
+    role, objectId: table.oid,
+    tablePrivileges: projected && role === runtime ? [...tablePrivileges].sort(compare) : [],
+    tableGrantOptions: projected && role === runtime ? [...tablePrivileges].sort(compare) : [],
+    columnPrivileges: projected && role === runtime ? [...columnPrivileges].sort(compare) : [],
+    schemaUsage: true, schemaElevated: false,
+  })));
+}
+
+/** 仅核验当前事务内的目录证据，不执行所有权转移或提交。 */
+async function verifyOwnershipCatalog(query, context, candidate, expectedPlanFingerprint, phase) {
+  const projected = phase === "projected";
+  let stage = "候选指纹";
+  try {
+    const original = buildKeycloakOwnershipPlan({ ...context, baselineRows: [baseline], objects: candidate?.inventory });
+    requireMatch(hash(expectedPlanFingerprint) && original.report.planFingerprint === expectedPlanFingerprint &&
+      isDeepStrictEqual(candidate, original), "Keycloak 目录候选指纹不一致");
+    stage = projected ? "后置安全基线" : "原始安全基线";
+    requireMatch(isDeepStrictEqual((await query(stage, baselineSql(phase)))?.rows, [baseline]), "Keycloak 目录安全基线不一致");
+    stage = "对象所有权投影";
+    const objects = (await query(stage, inventorySql))?.rows;
+    if (projected) verifyKeycloakOwnershipProjection(original.inventory, objects);
+    else requireMatch(isDeepStrictEqual(normalizeInventory(objects, manager), original.inventory), "Keycloak 原始所有权基线不一致");
+    const tables = original.inventory.filter((row) => row.kind === "table");
+    stage = "共享所有权依赖";
+    const dependencies = expectedDependencies(tables, context.identity, projected);
+    requireMatch(exactRows((await query(stage, dependencySql))?.rows, dependencies), "Keycloak 共享所有权依赖投影不一致");
+    stage = "有效表列及 Schema 权限";
+    const privileges = expectedPrivileges(tables, projected);
+    requireMatch(exactRows((await query(stage, privilegeSql))?.rows, privileges), "Keycloak 有效表列或 Schema 权限不一致");
+    const catalogFingerprint = createHash("sha256").update(JSON.stringify({ expectedPlanFingerprint, projected, dependencies, privileges })).digest("hex");
+    return {
+      status: projected ? "KEYCLOAK_OWNERSHIP_CATALOG_MATCHED" : "KEYCLOAK_OWNERSHIP_BASELINE_MATCHED", catalogFingerprint, tableCount: tables.length,
+      dependencyCount: dependencies.length, permissionCount: privileges.length,
+      ownerProjectionMatched: projected, dependencyProjectionMatched: projected, baselineCatalogMatched: !projected, rolePrivilegesMatched: true,
+      schemaCreateAllowed: false, schemaEvolutionVerified: false, objectIdentityReviewed: false,
+      ownershipTransferAllowed: false, runtimeLoginAllowed: false, admissionPassed: false,
+      businessAclApproved: false, databaseWritten: false, serviceSwitched: false,
+    };
+  } catch (error) {
+    if (error instanceof DockerKeycloakOwnershipError) throw error;
+    throw new DockerKeycloakOwnershipError("Keycloak " + stage + "核验失败，内部诊断已脱敏");
+  }
+}
+
+/** 对应未安装状态：演练前或回滚后独立只读核验。 */
+export async function verifyKeycloakOwnershipBaseline(query, context, candidate, expectedPlanFingerprint, phase = "read-only") {
+  requireMatch(phase === "read-only" || phase === "rehearsal", "Keycloak 原始目录事务模式无效");
+  return verifyOwnershipCatalog(query, context, candidate, expectedPlanFingerprint, phase);
+}
+
+/** 仅供后续受控可写事务的所有权后置门禁。 */
+export async function verifyKeycloakOwnershipCatalog(query, context, candidate, expectedPlanFingerprint) {
+  return verifyOwnershipCatalog(query, context, candidate, expectedPlanFingerprint, "projected");
 }

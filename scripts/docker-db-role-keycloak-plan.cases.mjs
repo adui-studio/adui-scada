@@ -4,6 +4,9 @@ import {
   buildKeycloakOwnershipPlan,
   DockerKeycloakOwnershipError,
   readKeycloakOwnershipPreview,
+  readKeycloakOwnershipCandidate,
+  verifyKeycloakOwnershipCatalog,
+  verifyKeycloakOwnershipBaseline,
   verifyKeycloakOwnershipProjection,
 } from "./docker-db-role-keycloak-plan.mjs";
 
@@ -108,4 +111,172 @@ void test("前置失败不查询对象，未知查询异常不回显原始信息
   await assert.rejects(() => readKeycloakOwnershipPreview(async () => { throw new Error("SENSITIVE"); }, context), (error) => {
     assert.ok(error instanceof DockerKeycloakOwnershipError); assert.doesNotMatch(error.message, /SENSITIVE/u); return true;
   });
+});
+
+function projectedFixture() {
+  const input = fixture();
+  const candidate = buildKeycloakOwnershipPlan(input);
+  const tables = candidate.inventory.filter((row) => row.kind === "table");
+  const dependency = (kind, objectId) => ({ kind, objectId, directConnectMatched: true, systemIdentifier: context.identity.systemIdentifier });
+  const table = ["DELETE", "INSERT", "MAINTAIN", "REFERENCES", "SELECT", "TRIGGER", "TRUNCATE", "UPDATE"];
+  const column = ["INSERT", "REFERENCES", "SELECT", "UPDATE"];
+  return { candidate, rows: [baselineRows(), candidate.inventory.map((row) => ({ ...row, owner: runtime })),
+    [dependency("databaseConnect", "adui_scada_keycloak"), ...tables.map((row) => dependency("tableOwner", row.oid))],
+    ["adui_scada_runtime", runtime].flatMap((role) => tables.map((row) => ({ role, objectId: row.oid,
+      tablePrivileges: role === runtime ? [...table] : [], tableGrantOptions: role === runtime ? [...table] : [],
+      columnPrivileges: role === runtime ? [...column] : [], schemaUsage: true, schemaElevated: false,
+    })))], calls: [] };
+}
+
+function verifyProjected(data, fingerprint = data.candidate.report.planFingerprint) {
+  return verifyKeycloakOwnershipCatalog(async (_step, sql) => {
+    data.calls.push(sql);
+    return { rows: data.rows[data.calls.length - 1] };
+  }, context, data.candidate, fingerprint);
+}
+
+void test("可写演练前置仅允许固定事务模式，不改变只读计划指纹", async () => {
+  const input = fixture();
+  const calls = [];
+  const plan = await readKeycloakOwnershipCandidate(async (_step, sql) => {
+    calls.push(sql);
+    return { rows: calls.length === 1 ? input.baselineRows : input.objects };
+  }, context, "rehearsal");
+  assert.deepEqual(plan, buildKeycloakOwnershipPlan(input));
+  assert.match(calls[0], /current_setting\('transaction_read_only'\) = 'off'/u);
+  assert.match(calls[0], /current_setting\('transaction_isolation'\) = 'serializable'/u);
+  assert.match(calls[0], /pg_authid'::regclass\) = 1\s+AND EXISTS/u);
+  await assert.rejects(() => readKeycloakOwnershipCandidate(async () => { throw new Error("不得查询"); }, context, "projected"), DockerKeycloakOwnershipError);
+});
+
+void test("后置目录核对一百零一张表、一百零二项依赖及两百零二项权限", async () => {
+  const data = projectedFixture();
+  const report = await verifyProjected(data);
+  assert.equal(report.tableCount, 101);
+  assert.equal(report.dependencyCount, 102);
+  assert.equal(report.permissionCount, 202);
+  assert.equal(report.ownerProjectionMatched, true);
+  assert.equal(report.dependencyProjectionMatched, true);
+  assert.equal(report.rolePrivilegesMatched, true);
+  assert.match(report.catalogFingerprint, /^[a-f0-9]{64}$/u);
+  for (const key of ["schemaCreateAllowed", "schemaEvolutionVerified", "objectIdentityReviewed", "ownershipTransferAllowed", "runtimeLoginAllowed", "admissionPassed", "businessAclApproved", "databaseWritten", "serviceSwitched"]) assert.equal(report[key], false);
+  assert.equal(data.calls.length, 4);
+  assert.match(data.calls[0], /current_setting\('transaction_read_only'\) = 'off'/u);
+  assert.match(data.calls[0], /pg_authid'::regclass\) = 102\s+AND EXISTS/u);
+  assert.match(data.calls[2], /d\.refclassid = 'pg_catalog\.pg_authid'::regclass/u);
+  assert.match(data.calls[2], /d\.objsubid = 0 AND d\.deptype = 'o'/u);
+  assert.match(data.calls[2], /ELSE 'unexpected'/u);
+  assert.match(data.calls[2], /t\.oid IN \(a\.grantee, a\.grantor\)/u);
+  assert.match(data.calls[2], /a\.privilege_type = 'CONNECT' AND NOT a\.is_grantable/u);
+  assert.match(data.calls[3], /CASE WHEN c\.relkind = 'r'\s+THEN pg_catalog\.has_table_privilege/u);
+  assert.match(data.calls[3], /pg_catalog\.has_any_column_privilege/u);
+  assert.match(data.calls[3], /p\.name \|\| ' WITH GRANT OPTION'/u);
+  assert.match(data.calls[3], /CREATE,USAGE WITH GRANT OPTION/u);
+  assert.ok(data.calls.every((sql) => /^WITH /u.test(sql) && !/(?:^|[;\n])\s*(?:ALTER TABLE|GRANT|REVOKE|COMMIT)\s/u.test(sql)));
+  assert.doesNotMatch(JSON.stringify(report), /kc_fixture|databasechangelog|123456789|ALTER TABLE/u);
+  const reordered = projectedFixture();
+  for (const rows of reordered.rows) rows.reverse();
+  assert.deepEqual(await verifyProjected(reordered), report);
+});
+
+void test("候选指纹、SQL 或报告被替换时禁止查询后置目录", async () => {
+  const changed = projectedFixture();
+  await assert.rejects(() => verifyProjected(changed, "c".repeat(64)), DockerKeycloakOwnershipError);
+  assert.deepEqual(changed.calls, []);
+  for (const mutate of [(candidate) => { candidate.sqlPreview[0] = "模拟其他语句"; }, (candidate) => { candidate.report.objectIdentityReviewed = true; }, (candidate) => { candidate.inventory[0].owner = runtime; }]) {
+    const data = projectedFixture(); mutate(data.candidate);
+    await assert.rejects(() => verifyProjected(data), DockerKeycloakOwnershipError);
+    assert.deepEqual(data.calls, []);
+  }
+});
+
+void test("后置角色属性、Schema 或从属对象漂移立即拒绝", async () => {
+  for (const key of Object.keys(baselineRows()[0])) {
+    const data = projectedFixture(); data.rows[0][0][key] = false;
+    await assert.rejects(() => verifyProjected(data), DockerKeycloakOwnershipError);
+    assert.equal(data.calls.length, 1);
+  }
+  for (const kind of ["table", "index", "toast", "toastIndex", "rowType", "arrayType"]) {
+    const data = projectedFixture(); data.rows[1].find((row) => row.kind === kind).owner = "adui_scada";
+    await assert.rejects(() => verifyProjected(data), DockerKeycloakOwnershipError);
+    assert.equal(data.calls.length, 2);
+  }
+});
+
+void test("共享依赖及跨库直接 ACL 缺失重复或越权一律拒绝", async () => {
+  for (const mutate of [
+    (rows) => rows.pop(), (rows) => rows.push(rows[0]), (rows) => { rows[1] = rows[0]; },
+    (rows) => { rows[1].kind = "unexpected"; }, (rows) => { rows[1].objectId = "999999"; },
+    (rows) => { rows[0].directConnectMatched = false; }, (rows) => { rows[0].systemIdentifier = "987654321"; },
+  ]) {
+    const data = projectedFixture(); mutate(data.rows[2]);
+    await assert.rejects(() => verifyProjected(data), DockerKeycloakOwnershipError);
+    assert.equal(data.calls.length, 3);
+  }
+});
+
+void test("任何有效表权限、列权限或 Schema 权限漂移不能通过后置门禁", async () => {
+  for (const mutate of [
+    (rows) => rows.pop(), (rows) => rows.push(rows[0]), (rows) => { rows[1] = rows[0]; },
+    (rows) => { rows[0].tablePrivileges.push("SELECT"); }, (rows) => { rows[0].columnPrivileges.push("SELECT"); },
+    (rows) => { rows[0].schemaElevated = true; }, (rows) => { rows[0].schemaUsage = false; },
+    (rows) => { rows.find((row) => row.role === runtime).tableGrantOptions.pop(); },
+    (rows) => { rows.find((row) => row.role === runtime).tablePrivileges.pop(); },
+    (rows) => { rows.find((row) => row.role === runtime).columnPrivileges.pop(); },
+  ]) {
+    const data = projectedFixture(); mutate(data.rows[3]);
+    await assert.rejects(() => verifyProjected(data), DockerKeycloakOwnershipError);
+    assert.equal(data.calls.length, 4);
+  }
+  const data = projectedFixture();
+  await assert.rejects(() => verifyKeycloakOwnershipCatalog(async () => { throw new Error("SENSITIVE"); }, context, data.candidate, data.candidate.report.planFingerprint), {
+    name: "Error", message: "Keycloak 后置安全基线核验失败，内部诊断已脱敏",
+  });
+});
+
+function baselineFixture() {
+  const data = projectedFixture();
+  data.rows[1] = structuredClone(data.candidate.inventory);
+  data.rows[2] = data.rows[2].filter((row) => row.kind === "databaseConnect");
+  data.rows[3] = data.rows[3].map((row) => ({ ...row, tablePrivileges: [], tableGrantOptions: [], columnPrivileges: [] }));
+  return data;
+}
+
+function verifyBaseline(data, phase) {
+  return verifyKeycloakOwnershipBaseline(async (_step, sql) => {
+    data.calls.push(sql);
+    return { rows: data.rows[data.calls.length - 1] };
+  }, context, data.candidate, data.candidate.report.planFingerprint, phase);
+}
+
+void test("原始基线前后使用同一目录权限矩阵与指纹", async () => {
+  const before = baselineFixture();
+  const after = baselineFixture();
+  const first = await verifyBaseline(before, "rehearsal");
+  const second = await verifyBaseline(after, "read-only");
+  assert.deepEqual(first, second);
+  assert.equal(first.status, "KEYCLOAK_OWNERSHIP_BASELINE_MATCHED");
+  assert.equal(first.baselineCatalogMatched, true);
+  assert.equal(first.ownerProjectionMatched, false);
+  assert.equal(first.dependencyProjectionMatched, false);
+  assert.equal(first.dependencyCount, 1);
+  assert.equal(first.permissionCount, 202);
+  assert.match(before.calls[0], /current_setting\('transaction_read_only'\) = 'off'/u);
+  assert.match(after.calls[0], /current_setting\('transaction_read_only'\) = 'on'/u);
+  assert.notEqual(first.catalogFingerprint, (await verifyProjected(projectedFixture())).catalogFingerprint);
+  const invalid = baselineFixture();
+  await assert.rejects(() => verifyBaseline(invalid, "projected"), DockerKeycloakOwnershipError);
+  assert.deepEqual(invalid.calls, []);
+});
+
+void test("回滚后剩余所有权、额外依赖或权限不得通过原始基线", async () => {
+  for (const [index, mutate] of [
+    [1, (rows) => { rows[0].owner = runtime; }],
+    [2, (rows) => rows.push({ ...rows[0], kind: "tableOwner", objectId: "1000" })],
+    [3, (rows) => { rows.find((row) => row.role === runtime).tablePrivileges.push("SELECT"); }],
+  ]) {
+    const data = baselineFixture(); mutate(data.rows[index]);
+    await assert.rejects(() => verifyBaseline(data, "read-only"), DockerKeycloakOwnershipError);
+    assert.equal(data.calls.length, index + 1);
+  }
 });

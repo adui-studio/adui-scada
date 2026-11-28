@@ -2113,3 +2113,8 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-db-role-keycloak-plan.cases.mjs`：七项 Node 局部回归，纳入 `test:docker`。
 - `scripts/docker-db-role-object-review.mjs`：可选 Keycloak 所有权预览在原 Keycloak 库只读事务中完成；原默认对象评审不变。
 - `scripts/prisma8-fresh-install.mjs`、`apps/server/prisma8-fresh-install.mjs`：新增独立只读参数 `--role-keycloak-plan`，根脚本 `docker:db:role:keycloak:plan`；B3.3 未实际隔离时拒绝，前后仍核对原双库与集群；无演练或正式执行入口。
+
+### B4 Keycloak 所有权前后目录门禁
+
+- `scripts/docker-db-role-keycloak-plan.mjs`：新增 `readKeycloakOwnershipCandidate`、`verifyKeycloakOwnershipBaseline` 与 `verifyKeycloakOwnershipCatalog`，复用原始对象图、固定指纹及两种前置事务模式；四条固定目录查询核对原始/投影状态的共享依赖、直接数据库 ACL 和有效权限，仍无写事务入口。
+- `scripts/docker-db-role-keycloak-plan.cases.mjs`：新增八项 Node 回归，共十五项；原 `test:docker` 注册入口保持不变。
