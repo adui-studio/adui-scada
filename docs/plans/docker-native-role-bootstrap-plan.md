@@ -1,6 +1,6 @@
 # Docker 原生运行角色准备预览（B1）
 
-- 状态：B1 真实预览验收通过并合并；B2 角色事务候选待实机演练，角色尚未创建
+- 状态：B1 已合并；B2 真实回滚演练通过，待维护者独立正式创建验收
 - 日期：2026-11-28
 - 前置：[原生业务连接安全评审](docker-native-business-connection-review.md)、[ADR-0073](../adr/0073-prisma8-fresh-install.md)、[ADR-0065](../adr/0065-oidc-bff-and-project-api.md)
 - 关联：FR-001、FR-008、FR-013、FR-014、NFR-006
@@ -96,3 +96,9 @@ SQLSTATE 42809 是 wrong_object_type。当前有效对象权限 SQL 从含表、
 协作环境 Node.js 22.16.0 对包含相同修复的已有本地副本执行两文件 node --check 及真实 node:test，11/11 通过；新增用例检查实际传入查询函数的三个 CASE 保护结构，既有参数化负例新增 noSequencePrivileges=false，仍拒绝并确认回滚。将新增测试与未修复查询组合执行，定向旧 SQL 回归按预期 ERR_ASSERTION、退出 1；修复后退出 0。两处 SQL 替换及新增测试块 FNV-1a 分别为 a562a4a6、4a8f5f71、2b7bcccf，与远端新增块逐字节校验摘要一致；本地副本未包含此前全部排版调整，不声称最新远端整体 Blob 已在 Node 实测。远端修复核心提交 324881c3cb36eefdb35345551fb169dc224a872f、测试提交 e28f9fcdaeeac7e7dd053e8a3ef22db6b0cdf8fd，两个文件回读一致。协作环境没有 PostgreSQL/Docker，网络也无法安装依赖，未执行实际 PG 查询；新增离线测试只验证 SQL 结构和模拟负例，不代替真实执行计划或权限语义。
 
 先同步代码并单独运行 docker:db:role:bootstrap:status，确认退出 0、rolesPrepared=false；再运行 test:docker（预计 86 项）、test:prisma8:fresh（29 项）、env/messages/docs、Vite+ 零警告、git diff --check。仅在质量检查及只读状态通过后，独立执行 docker:db:role:bootstrap --confirm-rehearse-docker-roles，确认真实混合目录查询和完整角色演练通过；无论结果如何，再独立运行 docker:db:role:bootstrap:status，确认角色仍不存在。失败保留现场，提供固定脱敏诊断；不执行正式创建，不自动重试、清理或调整权限。PR #259 保持 Draft。
+
+## 9. B2 正式角色创建验收门禁
+
+维护者 2026-11-28 Windows 于 HEAD b67c230a140d79664620962805fecffd2e18c1be 实测：演练前独立角色状态核查退出 0、rolesPrepared=false；Docker 九套件 86/86（角色事务 11/11）、Prisma 8 全新专项 29/29，合计 115/115；环境及 LF、中文文案 386 文件、Markdown 99 份、Vite+ 521 格式文件及 360 受检文件零警告、Lint 和类型错误、git diff --check 均通过，退出 0，工作区干净。随后真实 PostgreSQL 19.0 回滚演练返回 DOCKER_DB_ROLE_BOOTSTRAP_REHEARSED、catalogStatementsExecuted=true、rolledBack=true、committed=false、rolesPrepared=false、directoryReviewPassed=true、postVerificationPassed=true、admissionPassed=false、databaseWritten=false、businessDataWritten=false、serviceSwitched=false、publicConnectRetained=true，退出 0；演练后独立状态核查返回 DOCKER_DB_ROLE_BOOTSTRAP_STATUS_READY、rolesPrepared=false，退出 0。存储指纹始终为 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436。E-167 对象类型保护修复通过真实完整演练，关闭；无需再次改动已验收 SQL。
+
+下一步为维护者独立执行正式创建验收，先同步仅追加文档的候选、检查工作区干净、文档检查及只读状态，确认 rolesPrepared=false、退出 0；确认本机固定 Docker 集群及无并发数据库权限维护后，使用已存在的精确确认命令 `pnpm run docker:db:role:bootstrap --confirm-create-docker-roles`。该命令会持久化两个 NOLOGIN、无密码、无管理权限角色及原八条固定语句对应的十项直接 ACL，不修改现有角色、业务行、PUBLIC CONNECT、Compose、服务凭据、OIDC 或发布门禁。只有返回 DOCKER_DB_ROLE_BOOTSTRAP_CREATED、rolesPrepared=true、committed=true、rolledBack=false、catalogStatementsExecuted=true、directoryReviewPassed=true、postVerificationPassed=true、databaseWritten=true、businessDataWritten=false、admissionPassed=false、serviceSwitched=false、publicConnectRetained=true、退出 0，并独立状态核查 rolesPrepared=true、原生指纹不变及既有 OIDC 只读和七服务状态回归通过，才完成 B2 持久化验收。无论创建结果如何都独立核查状态；失败或提交结果未知时禁止重试、手动删除或调整授权，保留现场。当前协作环境仅同步文档，不操作维护者数据库；未重新执行新增文档后的全仓检查。PR #259 保持 Draft 至真实持久化验收及维护者明确合并授权。B3 全集群 PUBLIC/跨库隔离及 B4 正式业务 ACL、Keycloak 所有权均不提前实施。
