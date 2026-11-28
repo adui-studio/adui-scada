@@ -123,7 +123,14 @@ function inspectDocker(requireNoOldProjects = false) {
       "adui-scada-oidc-lab",
     ]) {
       requireMatch(
-        local(["ps", "-a", "--filter", "label=com.docker.compose.project=" + project, "--format", "{{.ID}}"]) === "",
+        local([
+          "ps",
+          "-a",
+          "--filter",
+          "label=com.docker.compose.project=" + project,
+          "--format",
+          "{{.ID}}",
+        ]) === "",
         "仍检测到旧项目容器，禁止角色核查或自动清理",
       );
     }

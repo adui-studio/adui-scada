@@ -33,9 +33,37 @@ const role = {
   inheritedMemberships: 2,
   setRoleMemberships: 2,
 };
-const db = { owner: true, ownerPrivileges: true, connect: true, create: true, temporary: true, publicConnect: true };
-const schema = { owner: false, ownerPrivileges: true, usage: true, create: true, publicCreate: false };
-const table = { owner: true, ownerPrivileges: true, select: true, insert: true, update: true, delete: true, truncate: true, references: true, trigger: true, maintain: true, anyColumnSelect: true, anyColumnInsert: true, anyColumnUpdate: true, anyColumnReferences: true };
+const db = {
+  owner: true,
+  ownerPrivileges: true,
+  connect: true,
+  create: true,
+  temporary: true,
+  publicConnect: true,
+};
+const schema = {
+  owner: false,
+  ownerPrivileges: true,
+  usage: true,
+  create: true,
+  publicCreate: false,
+};
+const table = {
+  owner: true,
+  ownerPrivileges: true,
+  select: true,
+  insert: true,
+  update: true,
+  delete: true,
+  truncate: true,
+  references: true,
+  trigger: true,
+  maintain: true,
+  anyColumnSelect: true,
+  anyColumnInsert: true,
+  anyColumnUpdate: true,
+  anyColumnReferences: true,
+};
 
 /** 仅模拟固定目录响应，不连接数据库，不替代真实 PostgreSQL 语义。 */
 function fixture(options = {}) {
@@ -59,12 +87,32 @@ function fixture(options = {}) {
         let rows;
         if (sql.includes("current_database()")) {
           checks += 1;
-          rows = [{ database, role: "adui_scada", sessionRole: "adui_scada", schema: "public", ...expected, readOnly: options.writable ? "off" : "on", defaultReadOnly: "on", recovery: false }];
+          rows = [
+            {
+              database,
+              role: "adui_scada",
+              sessionRole: "adui_scada",
+              schema: "public",
+              ...expected,
+              readOnly: options.writable ? "off" : "on",
+              defaultReadOnly: "on",
+              recovery: false,
+            },
+          ];
           if (options.drift && checks === 2) rows[0].systemIdentifier = "999";
         } else if (sql.includes("WITH RECURSIVE memberships")) {
-          rows = [{ ...role, ...(options.role ?? {}), ...(!business && options.roleDrift ? { createRole: false } : {}) }];
+          rows = [
+            {
+              ...role,
+              ...options.role,
+              ...(!business && options.roleDrift ? { createRole: false } : {}),
+            },
+          ];
         } else if (sql.includes("FROM pg_catalog.pg_database d")) {
-          rows = [{ name: "adui_scada", ...db }, { name: "adui_scada_keycloak", ...db }];
+          rows = [
+            { name: "adui_scada", ...db },
+            { name: "adui_scada_keycloak", ...db },
+          ];
         } else if (sql.includes("has_schema_privilege")) {
           assert.deepEqual(parameters, [business ? ["public", "prisma_contract"] : ["public"]]);
           rows = parameters[0].map((name) => ({ name, ...schema }));
@@ -75,10 +123,25 @@ function fixture(options = {}) {
           if (options.missingTable && business) rows.pop();
           if (options.unknownPrivilege) delete rows[0].select;
         } else if (sql.includes("has_sequence_privilege")) {
-          rows = [{ name: "模拟敏感序列名", owner: true, ownerPrivileges: true, usage: true, select: true, update: true }];
+          rows = [
+            {
+              name: "模拟敏感序列名",
+              owner: true,
+              ownerPrivileges: true,
+              usage: true,
+              select: true,
+              update: true,
+            },
+          ];
         } else if (sql.includes("FROM prisma_contract.marker")) {
           assert.equal(business, true);
-          rows = [{ storageHash: options.wrongHash ? "b".repeat(64) : hash, markerSelect: true, clusterFunctionExecute: true }];
+          rows = [
+            {
+              storageHash: options.wrongHash ? "b".repeat(64) : hash,
+              markerSelect: true,
+              clusterFunctionExecute: true,
+            },
+          ];
         } else {
           throw new Error("模拟未授权 SQL");
         }
@@ -111,18 +174,33 @@ void describe("Docker 数据库角色只读核查", () => {
     assert.doesNotMatch(JSON.stringify(report), /模拟敏感/u);
     for (const database of ["adui_scada", "adui_scada_keycloak"]) {
       const steps = calls.filter(([name]) => name === database).map(([, step]) => step);
-      assert.deepEqual(steps.slice(0, 3), ["创建", "连接", "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"]);
+      assert.deepEqual(steps.slice(0, 3), [
+        "创建",
+        "连接",
+        "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY",
+      ]);
       assert.deepEqual(steps.slice(-2), ["ROLLBACK", "关闭"]);
       assert.equal(steps.filter((step) => step.includes("current_database()")).length, 2);
     }
   });
   void it("即使当前权限标志收窄也不能将共享身份认定为正式角色", async () => {
-    const { create } = fixture({ role: { superuser: false, createDatabase: false, createRole: false, replication: false, bypassRls: false } });
+    const { create } = fixture({
+      role: {
+        superuser: false,
+        createDatabase: false,
+        createRole: false,
+        replication: false,
+        bypassRls: false,
+      },
+    });
     assert.equal((await reviewDockerDatabaseRoles(create, expected, hash)).admissionPassed, false);
   });
   void it("拒绝非法集群或指纹且不构造连接", async () => {
     const { create, calls } = fixture();
-    await assert.rejects(reviewDockerDatabaseRoles(create, { ...expected, systemIdentifier: "0" }, hash), /身份不一致/u);
+    await assert.rejects(
+      reviewDockerDatabaseRoles(create, { ...expected, systemIdentifier: "0" }, hash),
+      /身份不一致/u,
+    );
     await assert.rejects(reviewDockerDatabaseRoles(create, expected, "invalid"), /身份不一致/u);
     assert.deepEqual(calls, []);
   });
@@ -130,14 +208,27 @@ void describe("Docker 数据库角色只读核查", () => {
     for (const options of [{ writable: true }, { drift: true }]) {
       const { create, calls } = fixture(options);
       await assert.rejects(reviewDockerDatabaseRoles(create, expected, hash), /身份核验失败/u);
-      assert.deepEqual(calls.slice(-2).map(([, step]) => step), ["ROLLBACK", "关闭"]);
-      assert.equal(calls.some(([name]) => name === "adui_scada_keycloak"), false);
+      assert.deepEqual(
+        calls.slice(-2).map(([, step]) => step),
+        ["ROLLBACK", "关闭"],
+      );
+      assert.equal(
+        calls.some(([name]) => name === "adui_scada_keycloak"),
+        false,
+      );
     }
   });
   void it("缺少业务表、权限字段或标记漂移均不能返回成功", async () => {
-    for (const options of [{ missingTable: true }, { unknownPrivilege: true }, { wrongHash: true }]) {
+    for (const options of [
+      { missingTable: true },
+      { unknownPrivilege: true },
+      { wrongHash: true },
+    ]) {
       const { create } = fixture(options);
-      await assert.rejects(reviewDockerDatabaseRoles(create, expected, hash), /角色及目录核验失败/u);
+      await assert.rejects(
+        reviewDockerDatabaseRoles(create, expected, hash),
+        /角色及目录核验失败/u,
+      );
     }
   });
   void it("拒绝两库角色权限结果不一致", async () => {
@@ -146,11 +237,17 @@ void describe("Docker 数据库角色只读核查", () => {
   });
   void it("Keycloak 独立连接失败须脱敏且不返回部分报告", async () => {
     const { create, calls } = fixture({ connectionFailed: true });
-    await assert.rejects(reviewDockerDatabaseRoles(create, expected, hash), { name: "Error", message: "Keycloak 库连接失败，内部诊断已脱敏，保留现场" });
+    await assert.rejects(reviewDockerDatabaseRoles(create, expected, hash), {
+      name: "Error",
+      message: "Keycloak 库连接失败，内部诊断已脱敏，保留现场",
+    });
     assert.deepEqual(calls.at(-1), ["adui_scada_keycloak", "关闭"]);
   });
   void it("连接关闭失败不能冒充目录核查成功", async () => {
     const { create } = fixture({ closeFailed: true });
-    await assert.rejects(reviewDockerDatabaseRoles(create, expected, hash), { name: "Error", message: "业务库连接关闭失败，保留现场" });
+    await assert.rejects(reviewDockerDatabaseRoles(create, expected, hash), {
+      name: "Error",
+      message: "业务库连接关闭失败，保留现场",
+    });
   });
 });

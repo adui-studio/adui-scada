@@ -105,7 +105,14 @@ const membershipCounts = [
   "inheritedMemberships",
   "setRoleMemberships",
 ];
-const databaseFlags = ["owner", "ownerPrivileges", "connect", "create", "temporary", "publicConnect"];
+const databaseFlags = [
+  "owner",
+  "ownerPrivileges",
+  "connect",
+  "create",
+  "temporary",
+  "publicConnect",
+];
 const schemaFlags = ["owner", "ownerPrivileges", "usage", "create", "publicCreate"];
 const tableFlags = [
   "owner",

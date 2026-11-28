@@ -12,11 +12,11 @@
 
 当前代码有三条连接边界：
 
-| 连接 | 目标 | 当前限制 |
-| --- | --- | --- |
-| 宿主原生连接 | 127.0.0.1:15432/adui_scada | 固定非生产连接入口 |
-| 容器常驻连接 | postgres:5432/adui_scada | docker-readonly、严格只读、无 OIDC/工程 API |
-| 容器独立临时事务 | postgres:5432/adui_scada | docker-transaction-probe、显式确认、单连接池 |
+| 连接             | 目标                       | 当前限制                                     |
+| ---------------- | -------------------------- | -------------------------------------------- |
+| 宿主原生连接     | 127.0.0.1:15432/adui_scada | 固定非生产连接入口                           |
+| 容器常驻连接     | postgres:5432/adui_scada   | docker-readonly、严格只读、无 OIDC/工程 API  |
+| 容器独立临时事务 | postgres:5432/adui_scada   | docker-transaction-probe、显式确认、单连接池 |
 
 [Compose](../../deploy/docker/compose.yaml) 将 PostgreSQL POSTGRES_USER 与 Keycloak KC_DB_USERNAME 都设置为 adui_scada，并使用同一随机数据库密码。Keycloak 独立逻辑库的初始 SQL 仅创建数据库。固定原生运行时边界同样要求当前角色、会话角色均为 adui_scada。当前角色及两个数据库的实际所有权、角色属性、有效权限和 PUBLIC 权限尚未通过本次真实目录核验；配置中的共享身份不是数据库级最小权限证据。default_transaction_read_only 是连接模式，不等于角色无写权限。
 
@@ -26,10 +26,10 @@
 
 保持单一 adui-scada Compose 项目、七服务、一个 PostgreSQL 实例、现有两个逻辑库及现有数据卷。角色拆分是当前新库自身的安全建设，不是旧库接管或历史数据迁移。
 
-| 角色职责 | 建议边界 |
-| --- | --- |
-| 安装与管理身份 | 保留受控管理用途；不作为正式常驻应用或 Keycloak 的连接凭据 |
-| SCADA 运行身份 | 建议独立登录角色 adui_scada_runtime，仅访问 adui_scada；按实际仓储 SQL 授予必要表/列/序列权限，不具备任意 DDL、角色管理、跨库访问或发布写入特权 |
+| 角色职责          | 建议边界                                                                                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 安装与管理身份    | 保留受控管理用途；不作为正式常驻应用或 Keycloak 的连接凭据                                                                                           |
+| SCADA 运行身份    | 建议独立登录角色 adui_scada_runtime，仅访问 adui_scada；按实际仓储 SQL 授予必要表/列/序列权限，不具备任意 DDL、角色管理、跨库访问或发布写入特权      |
 | Keycloak 运行身份 | 建议独立登录角色 adui_scada_keycloak_runtime，仅访问 adui_scada_keycloak；其当前版本实际启动与自身 Schema 演进所需权限必须独立确认，不授予业务库权限 |
 
 角色名称、权限矩阵和身份切换方案为建议，需核对当前真实目录后评审。运行身份不得拥有 SUPERUSER、CREATEDB、CREATEROLE、REPLICATION、BYPASSRLS 或可继承/切换到管理角色的成员关系；禁止拥有业务表、业务 Schema 或数据库而获得隐含管理能力。跨库拒绝必须核验有效 CONNECT 权限、PUBLIC 及成员关系，而非仅检查显式 GRANT。Keycloak 既有对象所有权与 Schema 管理要求单独评审，不自动迁移所有权或回收 PUBLIC 权限。
