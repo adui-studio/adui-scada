@@ -5517,3 +5517,7 @@ Node.js 22.16.0 实测新增隔离预览核心、测试文件 node --check 均�
 ### B4 全集群共享依赖复核补充
 
 已将 `pg_shdepend` 读取从当前数据库改为全集群共享目录：按固定四个角色过滤，包含 `dbid=0` 的共享对象及其他数据库中的依赖，并按 OWNER、ACL、INITACL、POLICY 等依赖类别与共享/当前库/其他库范围汇总。原始对象 OID 仅进入指纹，不在报告中输出。该目录在 PostgreSQL 19 官方文档中明确为全集群共享目录，且 `dbid` 为零表示共享对象；依赖类型区分所有权、ACL、初始 ACL 和策略引用。参考：[PostgreSQL 19 pg_shdepend](https://www.postgresql.org/docs/19/catalog-pg-shdepend.html)。
+
+### B4 业务列权限候选（累计开发）
+
+新增业务列权限清单、固定目录 SELECT、B2 三项启动读权矩阵、待评审 GRANT 文本及五项行锁/三项受限写入阻塞。修正例程配置数组及锁专用角色报告，新增契约对照、权限漂移、保护表写入拒绝与例程设置测试。完整项目 Vite+、PostgreSQL、Docker、实际授权及 MVP 端到端均尚未验收；本批无真实数据库变更。局部测试结果将在实际执行后独立登记。

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { verifyDockerRoleObjectIdentity } from "./docker-db-role-review.mjs";
 import { safeSqlState } from "./docker-db-role-bootstrap.mjs";
+import { DockerBusinessAclPreviewError, readScadaBusinessAclPreview } from "./docker-db-role-business-acl.mjs";
 
 export class DockerRoleObjectReviewError extends Error {}
 
@@ -88,13 +89,20 @@ export async function readDockerRoleObjectInventory(query) {
     roles.filter((row) => row.name === "adui_scada_lock_owner").length <= 1 &&
     new Set(roles.map((row) => row.name)).size === roles.length &&
     new Set(roles.map((row) => row.oid)).size === roles.length);
+  // 两个运行角色和可选锁专用角色必须保持不可登录且无高权限；此处不代替成员关系检查。
+  const restrictedRoles = ["adui_scada_runtime", "adui_scada_keycloak_runtime", "adui_scada_lock_owner"];
+  requireMatch(roles.filter((role) => restrictedRoles.includes(role.name)).every((role) =>
+    ["login", "superuser", "createDatabase", "createRole", "replication", "bypassRls", "inherit"].every((flag) => role[flag] === false)));
   const rows = (await query("对象所有权与直接授权", objectsSql)).rows;
   requireMatch(Array.isArray(rows) && rows.length > 0 && rows.length <= 100000 &&
     rows.every((row) => exactKeys(row, ["kind", "id", "owner", "evidence"]) &&
       Object.hasOwn(categories, row.kind) && oid(row.owner) &&
       (row.kind === "columnAcl" ? typeof row.id === "string" && /^[1-9][0-9]{0,9}:[1-9][0-9]{0,4}$/u.test(row.id) : oid(row.id)) &&
       Array.isArray(row.evidence) && row.evidence.length === categories[row.kind] &&
-      row.evidence.every((item) => item === null || typeof item === "string" || typeof item === "boolean")) &&
+      row.evidence.every((item, index) => row.kind === "routine" && index === 5
+        ? item === null || (Array.isArray(item) && item.length <= 100 && item.every((setting) =>
+          typeof setting === "string" && setting.length <= 4096))
+        : item === null || typeof item === "string" || typeof item === "boolean")) &&
     new Set(rows.map((row) => row.kind + ":" + row.id)).size === rows.length);
   requireMatch(rows.some((row) => row.kind === "schema") && rows.some((row) => row.kind === "relation"));
   const dependencies = (await query("全集群共享角色依赖", dependenciesSql)).rows;
@@ -123,10 +131,11 @@ export async function readDockerRoleObjectInventory(query) {
   const routineRows = rows.filter((row) => row.kind === "routine");
   const lockOwnerId = roles.find((role) => role.name === "adui_scada_lock_owner")?.oid;
   const securityDefinerRoutineCount = routineRows.filter((row) => row.evidence[4] === true).length;
-  const safeDefinerRoutineCount = routineRows.filter((row) =>
+  // 配置匹配只是必要条件；函数体、执行 ACL、Schema 写权及所有者仍需另行证明。
+  const definerConfigMatchedCount = routineRows.filter((row) =>
     row.evidence[4] === true &&
-    Array.isArray(row.evidence[5]) &&
-    row.evidence[5].includes("search_path=pg_catalog, public") &&
+    Array.isArray(row.evidence[5]) && row.evidence[5].length === 2 &&
+    row.evidence[5].includes("search_path=pg_catalog, public, pg_temp") &&
     row.evidence[5].includes("row_security=on"),
   ).length;
   const lockOwnerOwnedRoutineCount = lockOwnerId
@@ -156,7 +165,9 @@ export async function readDockerRoleObjectInventory(query) {
     unknownOwnerCount: rows.filter((row) => classify(row.owner) === "OTHER").length,
     unknownDependencyRoleCount: dependencies.filter((row) => classify(row.roleOid) === "OTHER").length,
     securityDefinerRoutineCount,
-    safeDefinerRoutineCount,
+    definerConfigMatchedCount,
+    definerSafetyVerified: false,
+    roles: roleNames.flatMap((name) => roles.filter((role) => role.name === name).map(({ oid: _oid, ...flags }) => flags)),
     lockOwnerOwnedRoutineCount,
     catalogFingerprint,
     ownershipTransferAllowed: false,
@@ -179,10 +190,14 @@ async function inspectDatabase(createClient, database, identity) {
     stage = "前置身份";
     await verifyDockerRoleObjectIdentity(client, database, identity);
     stage = "目录查询";
-    inventory = await readDockerRoleObjectInventory(async (step, sql) => {
+    const query = async (step, sql) => {
       try { return await client.query(sql); }
       catch (error) { throw new DockerRoleObjectReviewError(step + "查询失败（SQLSTATE=" + safeSqlState(error) + "）"); }
-    });
+    };
+    const objects = await readDockerRoleObjectInventory(query);
+    inventory = database === databaseNames[0]
+      ? { ...objects, businessAclPreview: await readScadaBusinessAclPreview(query) }
+      : objects;
     stage = "后置身份";
     await verifyDockerRoleObjectIdentity(client, database, identity);
     stage = "事务回滚";
@@ -190,7 +205,7 @@ async function inspectDatabase(createClient, database, identity) {
     begun = false;
   } catch (error) {
     failure = database + "对象评审" + stage + "失败，内部诊断已脱敏";
-    if (error instanceof DockerRoleObjectReviewError) failure += "；" + error.message;
+    if (error instanceof DockerRoleObjectReviewError || error instanceof DockerBusinessAclPreviewError) failure += "；" + error.message;
   }
   if (begun) {
     try { requireMatch((await client.query("ROLLBACK")).command === "ROLLBACK"); }

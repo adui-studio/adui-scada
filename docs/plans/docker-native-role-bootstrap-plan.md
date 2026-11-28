@@ -168,3 +168,14 @@ SQLSTATE 42809 是 wrong_object_type。当前有效对象权限 SQL 从含表、
 ### B4 全集群共享依赖复核补充
 
 已将 `pg_shdepend` 读取从当前数据库改为全集群共享目录：按固定四个角色过滤，包含 `dbid=0` 的共享对象及其他数据库中的依赖，并按 OWNER、ACL、INITACL、POLICY 等依赖类别与共享/当前库/其他库范围汇总。原始对象 OID 仅进入指纹，不在报告中输出。该目录在 PostgreSQL 19 官方文档中明确为全集群共享目录，且 `dbid` 为零表示共享对象；依赖类型区分所有权、ACL、初始 ACL 和策略引用。参考：[PostgreSQL 19 pg_shdepend](https://www.postgresql.org/docs/19/catalog-pg-shdepend.html)。
+
+### B4 业务列权限候选与例程配置防护
+
+在既有 `docker:db:role:object-review` 的 SCADA 固定只读事务内，新增 `scripts/docker-db-role-business-acl.mjs`。依据原生 `apps/server/prisma/contract.prisma` 的 12 表、85 物理列及实际认证、工程版本/查询、发布读取、历史归档 SQL，逐项检查两个运行角色的 170 个有效列权限组合。只接受 B2 已验收的三个启动 SELECT，其余列读写、表级授权、所有者能力、REFERENCES 与 grant option 必须均为 false。缺失、重复、未知字段、额外角色/表/列、权限漂移拒绝生成候选。SQL 对混合目录使用 CASE 保证类型保护；报告不输出目录中的未知名称或业务值。
+
+仅生成固定列名的 SELECT/INSERT/UPDATE 文本和 SHA-256 候选指纹，排除已有三个启动列授权；直接 UPDATE 仅允许工程 head_revision/updated_at、会话 revoked_at、OIDC consumed_at 作为待评审候选。身份/外部身份/授权/发布状态/发布事件只生成读取候选；快照、审计、历史已写入记录不生成 UPDATE/DELETE。列级 ACL 不能替代租户/行级/状态机约束：会话撤销与 OIDC 消费仍需验证条件更新、不可复用及并发语义。五张仅为行锁而需要 UPDATE 的保护表（身份、工程授权、版本、发布状态、发布事件）明确阻塞；工程初始 ACL INSERT、初始发布状态 INSERT、OIDC 过期清理 DELETE 也必须经过固定范围的专用操作边界评审，不能自动授予。列权限预览既不执行 SQL，也不等于运行角色准入或实际最小权限验收。
+
+同时修正 B4 对 pg_proc.proconfig 的形状校验（可为 NULL 或文本数组）及角色属性报告；两个运行角色和可选锁专用角色不允许 LOGIN、SUPERUSER、CREATEDB、CREATEROLE、REPLICATION、BYPASSRLS、INHERIT。锁专用角色是否存在、成员关系、所有权和实际 ACL 仍须独立核查。SECURITY DEFINER 配置仅在固定 search_path=pg_catalog, public, pg_temp 及 row_security=on 两项精确匹配时计数，始终报告 definerSafetyVerified=false；显式 pg_temp 最后，函数体、PUBLIC EXECUTE、实际 Schema 写权与所有者均尚未验收。参考 [PostgreSQL 19 权限](https://www.postgresql.org/docs/19/ddl-priv.html) 与 [SECURITY DEFINER 安全要求](https://www.postgresql.org/docs/current/sql-createfunction.html)。不创建角色、例程或 Schema；不改变既有业务 SQL、Prisma 契约、连接模式及 Compose。
+
+新增离线候选测试纳入 test:docker 及既有 ready；原生契约对照、严格负向矩阵及固定查询结构均需后续累计验收。B3.3 的真实执行、B4 专用行锁/受限写入及 Keycloak 所有权、C/D/E/F 尚未完成；本批不提出中间验收命令或实际授权。
+

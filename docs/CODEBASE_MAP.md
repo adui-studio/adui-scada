@@ -2062,3 +2062,5 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 ### B4 全集群共享依赖复核补充
 
 已将 `pg_shdepend` 读取从当前数据库改为全集群共享目录：按固定四个角色过滤，包含 `dbid=0` 的共享对象及其他数据库中的依赖，并按 OWNER、ACL、INITACL、POLICY 等依赖类别与共享/当前库/其他库范围汇总。原始对象 OID 仅进入指纹，不在报告中输出。该目录在 PostgreSQL 19 官方文档中明确为全集群共享目录，且 `dbid` 为零表示共享对象；依赖类型区分所有权、ACL、初始 ACL 和策略引用。参考：[PostgreSQL 19 pg_shdepend](https://www.postgresql.org/docs/19/catalog-pg-shdepend.html)。
+
+- `scripts/docker-db-role-business-acl.mjs`：B4 固定业务列权限矩阵及只读候选，复用 `docker:db:role:object-review` 的 SCADA 事务；`scripts/docker-db-role-business-acl.cases.mjs` 对照原生契约并覆盖最小授权/漂移拒绝。候选不执行 SQL。

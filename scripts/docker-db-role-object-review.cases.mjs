@@ -14,7 +14,7 @@ function fixture() {
     { kind: "schema", id: "100", owner: "13", evidence: ["public", null] },
     { kind: "relation", id: "101", owner: "10", evidence: ["public", "模拟内部对象", "r", null, false, false] },
     { kind: "columnAcl", id: "101:1", owner: "10", evidence: ["public", "模拟内部对象", "id", "模拟内部授权"] },
-    { kind: "routine", id: "102", owner: "900", evidence: ["public", "模拟内部函数", "f", null, true, ["search_path=pg_catalog, public", "row_security=on"]] },
+    { kind: "routine", id: "102", owner: "900", evidence: ["public", "模拟内部函数", "f", null, true, ["search_path=pg_catalog, public, pg_temp", "row_security=on"]] },
   ];
   const dependencies = [
     { databaseOid: "16384", databaseScope: "CURRENT_DATABASE", classOid: "1259", objectOid: "101", subId: 0, roleOid: "10", kind: "o" },
@@ -43,7 +43,8 @@ void test("双库对象清单仅报告聚合所有权、依赖数量及指纹，
   assert.equal(report.unknownOwnerCount, 1);
   assert.equal(report.unknownDependencyRoleCount, 0);
   assert.equal(report.securityDefinerRoutineCount, 1);
-  assert.equal(report.safeDefinerRoutineCount, 1);
+  assert.equal(report.definerConfigMatchedCount, 1);
+  assert.equal(report.definerSafetyVerified, false);
   assert.equal(report.lockOwnerOwnedRoutineCount, 0);
   assert.equal(report.dependencyOwners.find((row) => row.role === "adui_scada")?.ownership, 1);
   assert.equal(report.dependencyOwners.find((row) => row.role === "adui_scada")?.shared, 1);
@@ -117,4 +118,17 @@ void test("已有锁角色必须以固定 NOLOGIN 属性显式呈现，异常属
   const bad = fixture();
   bad[0].push({ ...data[0].at(-1), login: true });
   await assert.rejects(() => inspect(bad), /目录证据缺失或形状不一致/u);
+});
+
+void test("例程设置接受合法数组或空值，临时 Schema 未置末尾不能匹配安全配置", async () => {
+  for (const setting of [null, ["search_path=pg_catalog, public", "row_security=on"], ["search_path=pg_catalog, public, pg_temp", "row_security=on", "statement_timeout=0"]]) {
+    const data = fixture();
+    data[1][3].evidence[5] = setting;
+    const report = await inspect(data);
+    assert.equal(report.definerConfigMatchedCount, 0);
+    assert.equal(report.definerSafetyVerified, false);
+  }
+  const invalid = fixture();
+  invalid[1][3].evidence[5] = [false];
+  await assert.rejects(() => inspect(invalid), /目录证据缺失或形状不一致/u);
 });

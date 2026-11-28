@@ -3286,3 +3286,7 @@ B2 已真实持久化验收并合入 MVP 集成分支。PR #260 新增 `docker:d
 ### B4 全集群共享依赖复核补充
 
 已将 `pg_shdepend` 读取从当前数据库改为全集群共享目录：按固定四个角色过滤，包含 `dbid=0` 的共享对象及其他数据库中的依赖，并按 OWNER、ACL、INITACL、POLICY 等依赖类别与共享/当前库/其他库范围汇总。原始对象 OID 仅进入指纹，不在报告中输出。该目录在 PostgreSQL 19 官方文档中明确为全集群共享目录，且 `dbid` 为零表示共享对象；依赖类型区分所有权、ACL、初始 ACL 和策略引用。参考：[PostgreSQL 19 pg_shdepend](https://www.postgresql.org/docs/19/catalog-pg-shdepend.html)。
+
+### B4 业务列权限只读候选（PR #262）
+
+在累计分支增加原生 12 表/85 列、两个运行角色 170 组合的有效列权限固定基线及待评审列级授权文本。仅允许既有 B2 三个启动读权；五项保护表行锁和三项受限写操作明确阻塞。修正例程 proconfig 文本数组及角色属性报告，配置匹配不代表 SECURITY DEFINER 安全。无数据库写入、登录或服务切换；B4/C/D/E/F 未完成，保持 Draft。
