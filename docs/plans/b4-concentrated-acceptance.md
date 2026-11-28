@@ -123,3 +123,17 @@ pnpm run docker:db:role:b4:rehearse --confirm-rehearse-scada-b4 --confirm-rollba
 维护者在 daa1eb9bc0b237663fc4523fd7480e481d1f7517 通过文档 100 份、Git 差异和真实固定 SCADA 库只读 ACL 诊断。管理者是函数所有者、显式 OWNER/PUBLIC/SCADA_RUNTIME 各一条 EXECUTE、均由所有者授权且无显式 grant option；PUBLIC/SCADA/Keycloak 有效 EXECUTE 均 true，SCADA 无 grant option，其他显式授权为零、残留专用角色为零；ROLLBACK 成功。根因确认。候选修复仅增加本库固定 REVOKE EXECUTE ON FUNCTION pg_catalog.pg_control_system() FROM PUBLIC RESTRICT；前置精确原三项 ACL、安装后精确两项 ACL 及原有效权限矩阵；保留原业务权限、事务和独立回滚基线，原 B3.3 与 Keycloak 不改。
 
 本节覆盖此前关于 92 条和旧 SCADA S 的执行指令：计划版本 3、93 条语句，旧 S aac93ff83a3baaa8b97781bd32e35afb049209e38a40c63c8487d3511b65ade0 禁止执行。第十四至十六节旧指纹和数量仅为历史证据。同步修复后，先完成四组完整 Node 定向（前置、权限目录、演练、宿主）、Docker 预期 226 项、Vite+、中文、文档和 Git 差异，重新验证 B3.3 I、Keycloak K 及真实新 S（93 条、3 角色、36/15，未写入）。只有维护者实际审阅 SCADA 库监控/备份/维护及其他依赖该函数的消费者、确认固定隔离环境、无并发权限维护，并独立批准新 S 的回滚演练时，才使用原回滚入口及新真实 S。验收第十四节所有真实条件不变，但 statementsExecuted=93；成功或失败后均独立核对新 S 原始计划（含原三项 ACL）、I/K、严格契约、OIDC 只读及 Docker 状态。不得自动接受旧 S、自动重试、手工撤销 ACL、实际持久化或切换服务。新 SC 仅从真实成功演练取得，E-182 仍待关闭；局部 Node 4/4 非完整专项或实机证据。
+
+## 十八、E-182 关闭及 B4.3 Keycloak 独立回滚演练（2026-11-28）
+
+维护者 Windows 在 273d34b4715a4272b9c842e4917ca2d2966e9683 实际通过四组定向 37/37（8/10/12/7）、Docker 226/226、Vite+ 564 格式/402 受检零警告错误、中文 428 文件、Markdown 100 份、Git 差异。明确输入 REHEARSE 后返回 SCADA_B4_ROLLBACK_REHEARSED、93 条目录语句、36/15 业务探针、夹具回滚及事务/独立基线匹配，rolledBack=true、committed=false、databaseWritten=false、businessDataWritten=false、ownerRolesPersisted=false、admissionPassed=false、serviceSwitched=false。外部 finally 再次独立确认 I/S/K、原三项控制函数 ACL、零残留所有者、严格契约、OIDC 只读与七服务，工作区干净。E-182 关闭、B4.2 通过，不重复原演练。
+
+实际指纹：I=`0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37`，S=`cbfc3852bc860a6e576c933b5247e028d5b8056d408b42bc426cc038324f3314`，K=`60ae2f485107105ee98172cd69fc79cface21a40878b3f1f5e50bccc8011bbeb`，SC=`2d6b202e637bc16685557603b2aab496546bc1db6ac16b6c15530340abfcb360`。KC 尚未取得。旧版本 2 的 S 失效。
+
+B4.3 使用既有入口，不新增 SQL。先在七服务正常状态复核原 I/S/K、严格契约、OIDC，维护者实际检查唯一固定 Keycloak 容器、实际 image ID 和版本，以及固定 Keycloak 库原目录的 101 普通表、252 普通索引、66 TOAST、66 TOAST 索引、101 行类型和 101 数组类型（共 687），核对名称、OID/父关系、原所有者和 clean/ACL 证据，不仅审阅聚合数量；不查询业务数据或提交对象清单。明确维护窗口及备份/恢复安排，禁止其他管理员与连接池并发访问。手动停止同一 Keycloak 容器，不拉取、重建、删除或自动停启。现有宿主要求唯一固定容器、状态 exited、running/paused/restarting=false、restart=no、原镜像标记和实际 image ID；目标库事务内多次验证没有其他会话，全目标表 NOWAIT 排他锁。仅在实际对象审阅及独立批准后运行：
+
+```powershell
+node apps/server/prisma8-fresh-install.mjs --role-keycloak-rehearse --confirm-rehearse-keycloak-ownership --reviewed-keycloak-objects --confirm-keycloak-maintenance --plan-fingerprint=60ae2f485107105ee98172cd69fc79cface21a40878b3f1f5e50bccc8011bbeb
+```
+
+预期 KEYCLOAK_OWNERSHIP_ROLLBACK_REHEARSED、planFingerprint=K、两个真实 64 位 baselineFingerprint/projectionFingerprint、statementsExecuted=101、transactionCatalogMatched=true、independentBaselineMatched=true、operatorObjectReviewConfirmed=true、operatorMaintenanceConfirmed=true、rolledBack=true、committed=false、databaseWritten=false、ownershipTransferAllowed=false、ownerProjectionVerified=false、schemaEvolutionVerified=false、runtimeLoginAllowed=false、businessAclApproved=false、admissionPassed=false、serviceSwitched=false。记录 projectionFingerprint 为 KC（不预填）。成功或失败均在停机窗口内独立只读核验 I/K、两库原目录及 SCADA 原始控制函数 ACL、严格契约；异常保留现场，不自动重试、回收权限或启动。仅在回滚及独立核验明确成功后，维护者另行确认手动启动原容器，不变更镜像或身份；待服务就绪再复核原 I/S/K、OIDC 只读及七服务。此阶段不执行 apply、LOGIN、正式 Schema 迁移或服务切换；B4.3 待实机验收，不进入 C，不合并。
