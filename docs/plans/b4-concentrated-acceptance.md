@@ -111,3 +111,9 @@ pnpm run docker:db:role:b4:rehearse --confirm-rehearse-scada-b4 --confirm-rollba
 维护者在 af5d57732284df753a9e62d6fd81cd67fc51c03b 实测文档 100 份、Git 差异、原 I/S/K、严格原生契约、OIDC 只读及七服务前置通过。实际 REHEARSE 后在安装后组合目录核验首组拒绝，报告专用角色属性及依赖不一致和已收到目录事务回滚标签；外部独立后置未执行、未进入 36/15 探针、未取得 SC 指纹。E-181 保留全部 SQL、期望矩阵、精确比较和审批，只追加固定预期角色及字段诊断，不输出实际目录名和值。局部 5/5 不是完整测试或真实权限通过。
 
 同步诊断补丁后先执行 B3.3 独立状态、两库原始只读计划、严格契约、OIDC 只读和 Docker 状态，要求原 I=0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37、S=aac93ff83a3baaa8b97781bd32e35afb049209e38a40c63c8487d3511b65ade0、K=60ae2f485107105ee98172cd69fc79cface21a40878b3f1f5e50bccc8011bbeb 完全一致并保持 catalogIsolationPersisted=true、databaseWritten=false、admissionPassed=false、B4 planOnly=true；SCADA 原计划前置须证明三个专用角色未残留。失败保留现场，禁止删除角色、调整 ACL 或重试。完整权限目录定向（预计 10 项）、Docker（预计 226 项）、Vite+、中文、文档及 Git 差异复验后，维护者另行明确批准一次第十四节固定回滚演练，若失败仅收集新的脱敏角色字段诊断并独立只读复验，不自动重试。所有真实成功证据仍按第十四节验证。根因未确认，SCADA B4.2 未通过；不执行 Keycloak 停止、演练、两库 apply、LOGIN、服务切换或合并。
+
+## 十六、E-181 已关闭，E-182 控制函数 ACL 溯源（2026-11-28）
+
+维护者在 1dcb9234e33234983eb4ccc55b9977c4921beee8 实测权限目录 10/10、Docker 226/226、Vite+ 564 格式/402 受检零警告错误、中文 428 文件、Markdown 100 份及 Git 差异通过。真实演练失败字段仅为 Keycloak 运行角色和三个专用所有者的 clusterFunctionExecute，收到目录事务回滚标签；finally 独立原 I/S/K、严格契约、OIDC 只读和 Docker 七服务均通过。没有 SC 指纹、没有真实业务探针结果，原 92 条计划不得再执行。
+
+已核实 B2 显式授予 SCADA 运行角色 pg_catalog.pg_control_system() EXECUTE，B4 固定候选未撤销该函数的 PUBLIC EXECUTE，预期矩阵仍要求仅 SCADA 运行角色有有效执行权。先仅在固定 SCADA 库的已核验管理身份、REPEATABLE READ READ ONLY 事务中通过 has_function_privilege 与 aclexplode/COALESCE(acldefault) 确认该函数的真实公共、直接与未知授权类别、所有者和授权选项，明确回滚并退出连接。只输出固定类别及布尔/计数，不输出未知名称、原始 ACL 或凭据。维护者同时审阅本库依赖该函数的监控、备份、维护及其他消费者。若确认 PUBLIC 来源，再独立评估增加唯一固定本库公共执行撤销候选；不手工执行 REVOKE，不放宽有效权限预期，不扩至其他库/函数。新增候选必须更新 92 条预期、重新生成 S（旧 S 禁用）、回归测试、文档和独立演练审批；I/K 仍需核验。本轮仅记录文档，实际 ACL 及修复待确认，E-182 和 B4.2 未关闭。

@@ -1684,3 +1684,11 @@
 - **最小诊断修复**：scripts/docker-db-role-b4-permission-review.mjs 保留全部 SQL、期望矩阵、exactRows 精确比较、查询顺序、指纹算法、事务及审批边界；仅首组精确匹配失败时追加固定预期角色与失败预期字段名，缺失/重复、额外字段、未知/非法行和非数组结果仅报告固定中文类别。不输出实际角色名、目录值、未知字段名、原始异常或凭据，不改变其他四组失败文案。既有逐属性负例同步检查精确新提示，新增组合脱敏与非法结构回归。数据库目录拒绝的真实根因仍未知。
 - **局部实测**：协作容器 Node.js 22.16.0 执行两局部文件 node --check 及五项 node:test，5/5、零失败零跳过；覆盖正常/逆序、全部 17 个属性逐项漂移、多角色混合异常、非数组/无效行、其他目录组原文案。原 exactRows/keyOf、新诊断函数及拒绝分支 FNV-1a 分别 766b1975、ca3f5ad8、dc68c0a7，与远端候选片段逐字校验一致；仅模拟片段，并非完整模块或真实 PostgreSQL。候选完整 Blob 53bb0dfc4f064334929a3a34565df57db9e04fb0 / 555eb57914c334810cee27dc92616e2e5c9d4808；Vite+、中文、文档、权限专项及全 Docker 专项未在协作容器运行。
 - **防复发及恢复**：先独立只读确认 B3.3 原状态及原 I/S/K（包含三专用角色未持久化的原计划前置）、严格契约与 OIDC；失败保留现场，不删除角色或改 ACL。同步诊断修复并通过定向/全 Docker、Vite+、中文、文档及 Git 差异后，维护者重新明确批准一次回滚诊断演练，不自动重试；若仍失败提供新固定字段诊断并独立只读复核，不持久化、不执行 Keycloak 演练。E-181 诊断待实机确认，B4.2 未通过。
+
+> **2026-11-28 · E-181 Windows 实机诊断复验关闭**：维护者在 1dcb9234e33234983eb4ccc55b9977c4921beee8 实测权限目录 10/10、Docker 226/226（零失败零跳过）、Vite+ 564 格式/402 受检零警告错误、中文 428 文件、Markdown 100 份及 Git 差异通过。第二次真实 SCADA 回滚演练准确报告四个固定角色的 clusterFunctionExecute 差异并收到目录回滚标签；finally 独立复核原 I/S/K、严格契约、OIDC 只读和 Docker 七服务均通过。E-181 诊断缺陷关闭，不代表 B4.2 通过。
+
+### E-182 · SCADA B4 集群控制函数有效权限与固定安装候选不一致（PR #262，待实际 ACL 溯源）
+
+- **维护者实测**：1dcb9234e33234983eb4ccc55b9977c4921beee8 的第二次真实 B4 回滚演练只报告 adui_scada_keycloak_runtime、adui_scada_lock_owner、adui_scada_project_create_owner、adui_scada_oidc_cleanup_owner 四个角色的 clusterFunctionExecute 字段不一致；运行角色及其他属性没有报告差异。事务收到回滚标签，未进入 36/15 业务探针、未生成 SC。finally 独立 B3.3、两库原始计划、严格契约、OIDC 只读及七服务通过。
+- **已核实代码事实与待证根因**：B2 固定候选仅显式授予 adui_scada_runtime 对 pg_catalog.pg_control_system() 的 EXECUTE；B4 92 条目录候选没有撤销该函数的 PUBLIC EXECUTE，但角色矩阵要求五角色中仅 SCADA 运行角色具有有效执行权限。PostgreSQL 19 [权限文档](https://www.postgresql.org/docs/19/ddl-priv.html) 与 [访问权限查询及控制数据函数](https://www.postgresql.org/docs/19/functions-info.html) 说明有效权限及函数公共授权语义；当前实测强烈指向 PUBLIC，但尚未直接读取此集群此库此函数的 ACL 来源，不能将通用默认权限等同于本机实测。
+- **下一步与防复发**：仅在已确认的固定 SCADA 库、管理身份及 REPEATABLE READ READ ONLY 事务中核对该函数所有者、实际 ACL 的固定类别、PUBLIC/两个运行角色的有效 EXECUTE、授权选项及未知授权数量。不输出实际未知角色名称、ACL 原文、业务数据或凭据。若确认公共授权来源，再审阅该库监控/备份/维护及其他调用方，按原最小权限意图评估增加唯一固定的本库函数 PUBLIC EXECUTE 撤销候选；保持原 SCADA 显式授权、所有其他权限矩阵与失败关闭规则，不扩大至其他数据库或函数。若新增语句则旧 S 及 92 条验收预期失效，必须同步计划、定向和集成测试、文档、新指纹和独立批准，不能手工改 ACL 或复用旧批准。当前只记录证据，未修改代码、SQL 或数据库，不再执行旧演练，不持久化、不切换服务、不合并。E-182 未关闭。
