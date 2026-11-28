@@ -139,6 +139,13 @@ function mock(mode, fault = "") {
           })),
         };
       if (sql.includes("entries AS")) {
+        if (fault === "known-sqlstate" || fault === "unknown-sqlstate") {
+          throw Object.assign(new Error("模拟敏感 SQL 正文"), {
+            code: fault === "known-sqlstate" ? "42501" : "模拟敏感错误码",
+          });
+        }
+        if (fault === "missing-rows") return {};
+
         const rows = [
           acl(names[0], "database", "adui_scada", "CONNECT"),
           acl(names[1], "database", "adui_scada_keycloak", "CONNECT"),
@@ -148,7 +155,7 @@ function mock(mode, fault = "") {
           acl(names[0], "function", "pg_catalog.pg_control_system()", "EXECUTE"),
         ];
         if (fault === "acl") rows[0].grantable = true;
-        if (fault === "extra-acl") rows.push(acl(names[1], "column", columns[0], "SELECT"));
+        if (fault === "extra-acl") rows.push(acl(names[1], "column", "模拟敏感目录名称", "SELECT"));
         return { rows };
       }
       if (sql.includes("relations AS"))
@@ -170,6 +177,10 @@ function mock(mode, fault = "") {
             object,
           })),
         };
+      if ((fault === "switch" && sql === "SET LOCAL ROLE adui_scada_runtime") ||
+          (fault === "restore" && sql === "SET LOCAL ROLE NONE")) {
+        throw Object.assign(new Error("模拟敏感角色异常"), { code: "42501" });
+      }
       if (sql === "SET LOCAL ROLE adui_scada_runtime" || sql === "SET LOCAL ROLE NONE")
         return { command: "SET" };
       if (sql.includes("session_user::text"))
@@ -299,6 +310,46 @@ void describe("Docker 角色准备事务", () => {
       });
       assert.equal(calls.includes("COMMIT"), false);
       assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
+    }
+  });
+  void it("核验失败区分固定检查阶段、预期项及字段且确认回滚", async () => {
+    for (const { fault, expected } of [
+      { fault: "attributes", expected: /角色属性证据不匹配.*1:hardened/u },
+      { fault: "acl", expected: /直接 ACL证据不匹配.*1:grantable/u },
+      { fault: "extra-acl", expected: /直接 ACL证据不匹配.*实际行数=11/u },
+      { fault: "effective", expected: /有效对象权限证据不匹配.*noTableOrColumnWrites/u },
+      { fault: "column", expected: /有效列权限证据不匹配.*未匹配预期项=1/u },
+      { fault: "probe", expected: /运行角色身份及标记证据不匹配.*systemIdentifier/u },
+      { fault: "unexpected-row", expected: /启动工程读取证据不匹配.*实际行数=1/u },
+      { fault: "missing-rows", expected: /直接 ACL证据缺少结果行/u },
+    ]) {
+      const { options, calls } = mock("rehearse", fault);
+      await assert.rejects(runDockerRoleBootstrap(options), (error) => {
+        assert.match(error.message, expected);
+        assert.match(error.message, /事务已确认回滚/u);
+        assert.doesNotMatch(error.message, /模拟敏感|999|123456789/u);
+        return true;
+      });
+      assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
+      assert.equal(calls.includes("COMMIT"), false);
+    }
+  });
+  void it("只回显白名单 SQLSTATE，角色切换和恢复错误分别脱敏", async () => {
+    for (const { fault, expected } of [
+      { fault: "known-sqlstate", expected: /直接 ACL查询失败（SQLSTATE=42501）/u },
+      { fault: "unknown-sqlstate", expected: /直接 ACL查询失败（SQLSTATE=UNKNOWN）/u },
+      { fault: "switch", expected: /切换运行角色查询失败（SQLSTATE=42501）/u },
+      { fault: "restore", expected: /恢复管理身份查询失败（SQLSTATE=42501）/u },
+    ]) {
+      const { options, calls } = mock("rehearse", fault);
+      await assert.rejects(runDockerRoleBootstrap(options), (error) => {
+        assert.match(error.message, expected);
+        assert.match(error.message, /事务已确认回滚/u);
+        assert.doesNotMatch(error.message, /模拟敏感/u);
+        return true;
+      });
+      assert.deepEqual(calls.slice(-2), ["ROLLBACK", "关闭"]);
+      assert.equal(calls.includes("COMMIT"), false);
     }
   });
   void it("提交结果未知时不自动回滚、重试或冒充成功", async () => {
