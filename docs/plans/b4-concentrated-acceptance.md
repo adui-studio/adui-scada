@@ -66,3 +66,18 @@ pnpm run docker:db:role:isolation:execute --confirm-apply-isolation --confirm-re
 ```
 
 预期退出 0 且 DOCKER_DB_ROLE_ISOLATION_APPLIED，原指纹不变，catalogStatementsExecuted=true、catalogIsolationVerified=true、catalogIsolationPersisted=true、publicConnectRetained=false、committed=true、rolledBack=false、databaseWritten=true、businessDataWritten=false、serviceSwitched=false、admissionPassed=false、isolationPassed=false、postVerificationPassed=true。单独执行 `pnpm run docker:db:role:isolation:status`，要求 DOCKER_DB_ROLE_ISOLATION_STATUS_READY、同指纹、catalogIsolationVerified=true、catalogIsolationPersisted=true、publicConnectRetained=false、catalogStatementsExecuted=false、databaseWritten=false、committed=false、rolledBack=true（只读核验事务本身回滚，不代表撤销已提交 ACL），再复验数据库严格契约、OIDC 只读与 Docker 服务。提交结果未知或后置/关闭失败时停止，不重试、不恢复 ACL、不继续 B4，先独立核查状态。只有以上均通过才依第二节重新生成 B4 双库只读计划；仍不自动执行 B4 安装或所有权变更，不提前放行 C/D/E/F。此追加记录不是持久化授权，新提交文档检查待复验。
+
+## 十一、B3.3 持久化通过，进入双库只读计划（2026-11-28）
+
+维护者在 00c1e65315edb41451f15221a4d94320d5227c9c 实际完成独立 APPLY 审批、正式隔离事务及独立后置核验。原计划指纹 I 为 `0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37`，存储指纹与 PG 19.0 保持一致。DOCKER_DB_ROLE_ISOLATION_APPLIED、catalogStatementsExecuted=true、catalogIsolationVerified=true、catalogIsolationPersisted=true、committed=true、publicConnectRetained=false、postVerificationPassed=true；独立状态确认已持久化，原生结构契约、OIDC 只读、Docker 七服务及文档检查通过。业务数据未写入，服务未切换，admissionPassed=false、isolationPassed=false。不得重复执行 B3.3 apply。
+
+第二节前置条件在本次实机验收已满足。同步最新仅文档提交并复验 docs:check、git diff --check 后，重新只读确认 B3 状态及原指纹，正常运行既有 Keycloak，无并发权限维护，分别执行：
+
+```powershell
+pnpm run docker:db:role:b4:plan
+pnpm run docker:db:role:keycloak:plan
+```
+
+每条命令须显式检查退出码；SCADA 预期 SCADA_B4_REHEARSAL_PLAN_ONLY、isolationFingerprint=I、roleCount=3、statementCount=92、expectedPositiveCount=36、expectedDeniedCount=15、planOnly=true、installationAllowed=false、issuerBindingVerified=false、admissionPassed=false、databaseWritten=false。保存其 planFingerprint 为 S。Keycloak 外层预期 DOCKER_DB_ROLE_OBJECT_REVIEW_READY、planFingerprint=I、catalogIsolationPersisted=true、directoryReviewPassed=true、ownershipTransferAllowed=false、businessAclApproved=false、databaseWritten=false、serviceSwitched=false、admissionPassed=false；内层 keycloak.ownershipPreview 预期 KEYCLOAK_OWNERSHIP_PLAN_READY、planOnly=true、tableCount=101、statementCount=101、objectIdentityReviewed=false、ownershipTransferAllowed=false、runtimeLoginAllowed=false、databaseWritten=false、serviceSwitched=false、admissionPassed=false，保存其 planFingerprint 为 K。实际报告必须核验，不以预期代替实测；两份指纹须为实际 64 位小写十六进制值。再次独立核验 B3 原指纹及已持久化状态，确认双库计划未写入。
+
+本轮只允许生成只读计划和审阅实际目录；不自动停止 Keycloak，不执行 SCADA 或 Keycloak 回滚演练，不提交 B4 ACL，不转移所有权。聚合计划不能证明实际 Keycloak 对象身份，须另行核对完整目标表及依赖、当前镜像和 Schema 策略后分别批准演练。B4 完整验收、C/D/E/F 尚未完成，PR 保持 Draft。本次仅文档更新，新提交文档检查待 Windows 复验。

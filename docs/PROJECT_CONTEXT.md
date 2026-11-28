@@ -3368,3 +3368,7 @@ PR #262 在 ac056982 实测身份 49/49、全量 969/969、Vite+ 564 格式/402 
 ### 2026-11-28 · PR #262 B3.3 真实回滚演练完成
 
 维护者在 5eac0a25bdf15443a1f058a955b3bc2174ee5e0d 通过 Markdown 100 份、Git 差异、真实 PG19.0 固定五库隔离事务、独立回滚后状态、原生数据库结构契约及 OIDC 只读/Docker 七服务复验。实际计划指纹 0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37 与此前一致；DOCKER_DB_ROLE_ISOLATION_REHEARSED、postVerificationPassed=true、rolledBack=true，实际权限仍未持久化，PUBLIC CONNECT 保留，业务数据无写入、服务未切换、准入关闭。消费者确认已输入 REHEARSE，仅表示维护者的审阅声明。现有独立持久化入口无需修改；下一步同一隔离环境重新检查消费者、计划及原始状态，在独立明确批准后执行一次持久化并核对真实独立状态，再进入 B4 双库只读计划。保持 PR #262 Draft、NOLOGIN、既有服务身份，不合并、不提前进入 C/D/E/F。
+
+### 2026-11-28 · PR #262 B3.3 正式隔离验收完成，进入 B4 只读计划
+
+维护者在 00c1e65315edb41451f15221a4d94320d5227c9c 实测文档与 Git 差异检查、三组消费者复核声明及独立 APPLY 批准、固定五库八项 PUBLIC 权限撤销持久化、独立状态、原生结构契约、OIDC 只读和 Docker 七服务回归均通过。原计划指纹 0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37 不变；DOCKER_DB_ROLE_ISOLATION_APPLIED、committed=true、catalogIsolationPersisted=true、publicConnectRetained=false、postVerificationPassed=true，独立状态确认相同隔离结果。仅数据库目录写入，业务数据无写入、服务身份未切换、准入与真实登录仍未开启。B3.3 实际隔离完成，不重复提交；下一步 B4 双库只读计划及独立对象身份评审，未批准实际业务权限、所有权转移、LOGIN 或服务切换。B4 真实演练、独立批准持久化、行级授权/并发、Keycloak Schema 兼容性及 C/D/E/F 仍待验收。保持 PR #262 Draft，不合并。
