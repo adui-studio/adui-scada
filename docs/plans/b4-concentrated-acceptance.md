@@ -137,3 +137,23 @@ node apps/server/prisma8-fresh-install.mjs --role-keycloak-rehearse --confirm-re
 ```
 
 预期 KEYCLOAK_OWNERSHIP_ROLLBACK_REHEARSED、planFingerprint=K、两个真实 64 位 baselineFingerprint/projectionFingerprint、statementsExecuted=101、transactionCatalogMatched=true、independentBaselineMatched=true、operatorObjectReviewConfirmed=true、operatorMaintenanceConfirmed=true、rolledBack=true、committed=false、databaseWritten=false、ownershipTransferAllowed=false、ownerProjectionVerified=false、schemaEvolutionVerified=false、runtimeLoginAllowed=false、businessAclApproved=false、admissionPassed=false、serviceSwitched=false。记录 projectionFingerprint 为 KC（不预填）。成功或失败均在停机窗口内独立只读核验 I/K、两库原目录及 SCADA 原始控制函数 ACL、严格契约；异常保留现场，不自动重试、回收权限或启动。仅在回滚及独立核验明确成功后，维护者另行确认手动启动原容器，不变更镜像或身份；待服务就绪再复核原 I/S/K、OIDC 只读及七服务。此阶段不执行 apply、LOGIN、正式 Schema 迁移或服务切换；B4.3 待实机验收，不进入 C，不合并。
+
+## 十九、B4.3 实测通过，进入 B4.4a SCADA 独立持久化（2026-11-28）
+
+维护者在 77b32f67a163525dc18b2f826691e7f8b2a4ee29 实测文档 100 份、Git 差异、原生严格契约、OIDC 只读通过。实际 Keycloak 26.8.2、image ID sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3、restart=no；固定只读身份确认及 687 项真实对象审阅完成（逐行核对所有者、clean、OID 和父关系）。独立确认 REHEARSE 后，101 条真实所有权语句、事务投影、独立原基线及回滚通过，未提交、未持久化或切换服务。KC=`877ba8254960856e364edd816281f74ab24c4f6fa3a815d9a52fea4fe8192ab9`，原始 Keycloak 目录指纹=`ad6a85a866cffc738b0b1e1c8d7b467382685a786b5150c2ba43386ff40d8879`。外部停机窗口原 I/K、原 SCADA ACL/零专用角色和严格契约复核通过；恢复同一既有容器后前两次 Discovery 连接失败、第三次完整 OIDC、契约、I/S/K 和七服务通过。未取得启动失败根因的独立证据，不修改安全门禁。第十八节 I/S/SC/K 与本节 KC 合为五个真实指纹，双库回滚阶段关闭，不重复执行。
+
+仅 B4.4a：保持既有 Keycloak 运行且 OIDC 只读可用，确认本机隔离集群、备份恢复安排（日志未证明备份可恢复）、无并发权限维护和业务夹具冲突，重新核对原 I/S/K 与已审阅证据一致。维护者独立明确批准 SCADA 目录持久化，而非再次回滚演练；使用既有固定入口：
+
+```powershell
+node apps/server/prisma8-fresh-install.mjs --role-b4-apply --confirm-apply-scada-b4 --confirm-rehearsal-verified --confirm-rollback-business-fixtures --plan-fingerprint=cbfc3852bc860a6e576c933b5247e028d5b8056d408b42bc426cc038324f3314 --catalog-fingerprint=2d6b202e637bc16685557603b2aab496546bc1db6ac16b6c15530340abfcb360 --keycloak-plan-fingerprint=60ae2f485107105ee98172cd69fc79cface21a40878b3f1f5e50bccc8011bbeb
+```
+
+预期 SCADA_B4_PERSISTED_STATE_VERIFIED、planFingerprint=S、catalogFingerprint=SC、statementsExecuted=93、runtimeProbe 正向 36/拒绝 15/fixturesRolledBack=true、transactionCatalogMatched=true、independentInstalledStateMatched=true、rolledBack=false、committed=true、databaseWritten=true（仅角色及目录 ACL/例程）、businessDataWritten=false、ownerRolesPersisted=true、runtimeLoginAllowed=false、businessAclApproved=false、admissionPassed=false、serviceSwitched=false。确认后独立执行：
+
+```powershell
+node apps/server/prisma8-fresh-install.mjs --role-b4-status --phase=scada-installed --isolation-fingerprint=0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37 --scada-catalog-fingerprint=2d6b202e637bc16685557603b2aab496546bc1db6ac16b6c15530340abfcb360 --keycloak-plan-fingerprint=60ae2f485107105ee98172cd69fc79cface21a40878b3f1f5e50bccc8011bbeb
+```
+
+预期 B4_SCADA_INSTALLED_STATE_VERIFIED、phase=scada-installed、I/SC/K 精确匹配、keycloakCatalogFingerprint 为本节原始目录指纹、b4OwnerRoleCount=3、b4OwnerDatabasePermissionsDenied=true、catalogIsolationPersisted=true、scadaCatalogMatched=true、keycloakBaselineMatched=true、keycloakOwnerProjectionMatched=false、independentConnectionsClosed=true、databaseWritten=false、businessDataWritten=false、runtimeLoginAllowed=false、admissionPassed=false、serviceSwitched=false。此后严格契约、OIDC 只读、七服务复验。安装后原始 B3.3 与原始计划入口不再是安装态检查依据，不能尝试重新执行旧计划；任何提交结果未知、关闭或独立核验失败不得自动重试/逆向变更，先独立只读核查明确阶段并保留现场。
+
+B4.4b Keycloak 持久化必须在 B4.4a 实测完成后另行独立批准，重新进入固定维护窗口；本阶段不提交 Keycloak 所有权，不开启 LOGIN，不切换服务身份，不进入 C/D/E/F 或合并。此次文档提交不代表真实持久化已完成。
