@@ -86,7 +86,11 @@ void test("九条行锁例程使用固定签名、准确参数顺序和声明列
       name: "scada_lock_project_version",
       types: ["text", "text", "bigint"],
       parameters: [tenant, project, 1n],
-      row: { snapshot_data: "{}", content_hash: snapshot.contentHash, created_at: snapshot.createdAt },
+      row: {
+        snapshot_data: "{}",
+        content_hash: snapshot.contentHash,
+        created_at: snapshot.createdAt,
+      },
       invoke: (tx) => lockB4ProjectVersion(tx, tenant, project, 1n),
     },
     {
