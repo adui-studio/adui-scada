@@ -103,13 +103,32 @@ function businessView(report, prepared) {
 class RoleVerificationError extends Error {}
 
 const knownSqlStates = new Set([
-  "42501", "42601", "42703", "42883", "42804", "42809", "42P01", "42704", "42710",
-  "40001", "40P01", "55P03", "57014", "25006", "22P02", "08003", "08006", "57P01",
+  "42501",
+  "42601",
+  "42703",
+  "42883",
+  "42804",
+  "42809",
+  "42P01",
+  "42704",
+  "42710",
+  "40001",
+  "40P01",
+  "55P03",
+  "57014",
+  "25006",
+  "22P02",
+  "08003",
+  "08006",
+  "57P01",
 ]);
 
 function safeSqlState(error) {
-  return error !== null && typeof error === "object" && "code" in error &&
-    typeof error.code === "string" && knownSqlStates.has(error.code)
+  return error !== null &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    knownSqlStates.has(error.code)
     ? error.code
     : "UNKNOWN";
 }
@@ -133,37 +152,76 @@ async function requirePreparedRows(client, step, sql, expected, parameters) {
   if (!Array.isArray(rows)) throw new RoleVerificationError(step + "证据缺少结果行");
   const missing = expected.flatMap((item, index) => {
     if (rows.some((row) => isDeepStrictEqual(row, item))) return [];
-    const candidates = rows.filter((row) =>
-      row && ["role", "kind", "object", "privilege"].every(
-        (key) => !Object.hasOwn(item, key) || row[key] === item[key],
-      ),
+    const candidates = rows.filter(
+      (row) =>
+        row &&
+        ["role", "kind", "object", "privilege"].every(
+          (key) => !Object.hasOwn(item, key) || row[key] === item[key],
+        ),
     );
-    const fields = candidates.length === 1
-      ? Object.keys(item).filter((key) => !isDeepStrictEqual(candidates[0][key], item[key]))
-      : [];
+    const fields =
+      candidates.length === 1
+        ? Object.keys(item).filter((key) => !isDeepStrictEqual(candidates[0][key], item[key]))
+        : [];
     return [String(index + 1) + (fields.length ? ":" + fields.join(",") : "")];
   });
   throw new RoleVerificationError(
-    step + "证据不匹配（预期行数=" + expected.length + "，实际行数=" + rows.length +
-      "，未匹配预期项=" + (missing.join(";") || "无") + "）",
+    step +
+      "证据不匹配（预期行数=" +
+      expected.length +
+      "，实际行数=" +
+      rows.length +
+      "，未匹配预期项=" +
+      (missing.join(";") || "无") +
+      "）",
   );
 }
 
 /** 在当前事务验证不可登录属性、精确 ACL、有效权限及真实角色读取，不启用登录。 */
 async function verifyPrepared(client, identity, storageHash) {
-  await requirePreparedRows(client, "角色属性", attributesSql, names.map((role) => ({
-    role, hardened: true, noMemberships: true, noSettings: true, noUnexpectedDependencies: true,
-  })));
+  await requirePreparedRows(
+    client,
+    "角色属性",
+    attributesSql,
+    names.map((role) => ({
+      role,
+      hardened: true,
+      noMemberships: true,
+      noSettings: true,
+      noUnexpectedDependencies: true,
+    })),
+  );
   await requirePreparedRows(client, "直接 ACL", aclSql, expectedAcl);
-  await requirePreparedRows(client, "有效对象权限", effectiveSql, names.map((role) => ({
-    role, noDatabaseCreate: true, noSchemaCreate: true, noTableOrColumnWrites: true,
-    noSequencePrivileges: true, businessConnect: true, keycloakConnect: true,
-  })));
-  await requirePreparedRows(client, "有效列权限", effectiveColumnsSql, allowedColumns.map((object) => ({ role: scada, object })));
+  await requirePreparedRows(
+    client,
+    "有效对象权限",
+    effectiveSql,
+    names.map((role) => ({
+      role,
+      noDatabaseCreate: true,
+      noSchemaCreate: true,
+      noTableOrColumnWrites: true,
+      noSequencePrivileges: true,
+      businessConnect: true,
+      keycloakConnect: true,
+    })),
+  );
+  await requirePreparedRows(
+    client,
+    "有效列权限",
+    effectiveColumnsSql,
+    allowedColumns.map((object) => ({ role: scada, object })),
+  );
   await queryPrepared(client, "切换运行角色", "SET LOCAL ROLE adui_scada_runtime");
-  await requirePreparedRows(client, "运行角色身份及标记", probeSql, [{
-    role: scada, sessionRole: "adui_scada", database: "adui_scada", systemIdentifier: identity.systemIdentifier, storageHash,
-  }]);
+  await requirePreparedRows(client, "运行角色身份及标记", probeSql, [
+    {
+      role: scada,
+      sessionRole: "adui_scada",
+      database: "adui_scada",
+      systemIdentifier: identity.systemIdentifier,
+      storageHash,
+    },
+  ]);
   const scope = "prisma8-role-bootstrap-" + randomUUID();
   await requirePreparedRows(client, "启动工程读取", probeProjectSql, [], [scope]);
   await queryPrepared(client, "恢复管理身份", "SET LOCAL ROLE NONE");

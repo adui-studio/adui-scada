@@ -177,8 +177,10 @@ function mock(mode, fault = "") {
             object,
           })),
         };
-      if ((fault === "switch" && sql === "SET LOCAL ROLE adui_scada_runtime") ||
-          (fault === "restore" && sql === "SET LOCAL ROLE NONE")) {
+      if (
+        (fault === "switch" && sql === "SET LOCAL ROLE adui_scada_runtime") ||
+        (fault === "restore" && sql === "SET LOCAL ROLE NONE")
+      ) {
         throw Object.assign(new Error("模拟敏感角色异常"), { code: "42501" });
       }
       if (sql === "SET LOCAL ROLE adui_scada_runtime" || sql === "SET LOCAL ROLE NONE")
