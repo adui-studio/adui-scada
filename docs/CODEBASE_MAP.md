@@ -2106,3 +2106,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-db-role-b4-host.cases.mjs`：七项 Node 模拟连接与宿主证据回归，纳入 `test:docker`。
 - `scripts/docker-stack.mjs`：`readDockerOidcPort`、`verifyLocalDockerOidcBoundary`，复用已有本机 Docker OIDC Discovery/JWKS 核验，不启动或修改服务。
 - `scripts/prisma8-fresh-install.mjs`、`apps/server/prisma8-fresh-install.mjs`：新增 B4 白名单与真实宿主适配，根脚本 `docker:db:role:b4:plan`、`docker:db:role:b4:rehearse`；后者必须有独立确认和真实计划指纹，只允许回滚。
+
+### B4 Keycloak 逐对象所有权候选
+
+- `scripts/docker-db-role-keycloak-plan.mjs`：`buildKeycloakOwnershipPlan`、`verifyKeycloakOwnershipProjection`、`readKeycloakOwnershipPreview`，七项强化前置、六类对象图、固定表所有权候选与脱敏指纹；投影比较不连接数据库写事务。
+- `scripts/docker-db-role-keycloak-plan.cases.mjs`：七项 Node 局部回归，纳入 `test:docker`。
+- `scripts/docker-db-role-object-review.mjs`：可选 Keycloak 所有权预览在原 Keycloak 库只读事务中完成；原默认对象评审不变。
+- `scripts/prisma8-fresh-install.mjs`、`apps/server/prisma8-fresh-install.mjs`：新增独立只读参数 `--role-keycloak-plan`，根脚本 `docker:db:role:keycloak:plan`；B3.3 未实际隔离时拒绝，前后仍核对原双库与集群；无演练或正式执行入口。
