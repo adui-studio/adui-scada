@@ -88,7 +88,7 @@ const expected = {
 };
 
 const diagnostics = {
-  managerVerified: "安装前管理身份或只读事务不一致",
+  managerVerified: "安装前管理身份或事务模式不一致",
   hardenedRuntimeCount: "两个运行角色属性不一致",
   candidateOwnerCount: "候选所有者已存在，禁止重复安装",
   membershipCount: "受控角色存在额外成员关系",
@@ -154,6 +154,18 @@ export async function readScadaB4InstallPreflight(query) {
 /** 仅在前置核验成功后读取业务列权限候选。 */
 export async function readScadaB4BusinessPreparation(query) {
   const ownerInstallPreflight = await readScadaB4InstallPreflight(query);
+  const businessAclPreview = await readScadaBusinessAclPreview(query);
+  return { ownerInstallPreflight, businessAclPreview };
+}
+
+/** 仅供持有独立执行锁的可写演练事务使用，不改变原只读查询。 */
+export async function readScadaB4RehearsalPreparation(query) {
+  const sql = preflightSql.replace(
+    "current_setting('transaction_read_only') = 'on'",
+    "current_setting('transaction_read_only') = 'off' AND current_setting('transaction_isolation') = 'serializable'",
+  );
+  const result = await query("B4 可写演练前置检查", sql);
+  const ownerInstallPreflight = buildScadaB4InstallPreflight(result?.rows);
   const businessAclPreview = await readScadaBusinessAclPreview(query);
   return { ownerInstallPreflight, businessAclPreview };
 }
