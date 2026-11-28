@@ -13,7 +13,8 @@ const stateSelect = `SELECT t.release_generation::text AS generation,
   COALESCE(t.last_release_event_id::text, '') AS event_id,
   (t.released_content_hash IS NULL)::text AS hash_is_null
 FROM public.scada_project_release_state t WHERE ${projectKey}`;
-const eventColumns = "event_id text, generation text, action text, revision text, hash text, created_at text, semantic_hash text";
+const eventColumns =
+  "event_id text, generation text, action text, revision text, hash text, created_at text, semantic_hash text";
 const eventSelect = `SELECT t.event_id::text AS event_id, t.generation::text AS generation,
   t.action::text AS action, t.to_revision::text AS revision,
   t.to_content_hash::text AS hash, t.created_at::text AS created_at,
@@ -78,7 +79,9 @@ WHERE ${projectKey} AND t.revision = p_revision FOR SHARE`,
     args: projectArgs + ", p_subject_id text, p_action text, p_idempotency_key text",
     returns: eventColumns,
     tables: ["scada_project_release_events"],
-    body: eventSelect + ` AND t.actor_id = p_subject_id
+    body:
+      eventSelect +
+      ` AND t.actor_id = p_subject_id
   AND t.action = p_action AND t.idempotency_key = p_idempotency_key FOR SHARE`,
   },
   {
@@ -86,7 +89,9 @@ WHERE ${projectKey} AND t.revision = p_revision FOR SHARE`,
     args: projectArgs + ", p_revision bigint, p_generation bigint",
     returns: eventColumns,
     tables: ["scada_project_release_events"],
-    body: eventSelect + ` AND t.action = 'PUBLISH' AND t.to_revision = p_revision
+    body:
+      eventSelect +
+      ` AND t.action = 'PUBLISH' AND t.to_revision = p_revision
   AND t.generation < p_generation ORDER BY t.generation DESC LIMIT 1 FOR SHARE`,
   },
 ];
@@ -94,11 +99,27 @@ WHERE ${projectKey} AND t.revision = p_revision FOR SHARE`,
 // PostgreSQL 行锁要求每张锁定表至少一列 UPDATE。此权限仅为不可登录例程所有者候选。
 const permissions = [
   ["scada_identities", "tenant_id subject_id status", "tenant_id"],
-  ["scada_auth_sessions", "session_id tenant_id subject_id revoked_at issued_at expires_at", "revoked_at"],
+  [
+    "scada_auth_sessions",
+    "session_id tenant_id subject_id revoked_at issued_at expires_at",
+    "revoked_at",
+  ],
   ["scada_project_grants", "tenant_id project_id subject_id permission", "tenant_id"],
-  ["scada_project_versions", "tenant_id project_id revision snapshot content_hash created_at", "tenant_id"],
-  ["scada_project_release_state", "tenant_id project_id release_generation released_revision released_content_hash last_release_event_id", "tenant_id"],
-  ["scada_project_release_events", "tenant_id project_id event_id generation action to_revision to_content_hash created_at request_semantic_hash actor_id idempotency_key", "tenant_id"],
+  [
+    "scada_project_versions",
+    "tenant_id project_id revision snapshot content_hash created_at",
+    "tenant_id",
+  ],
+  [
+    "scada_project_release_state",
+    "tenant_id project_id release_generation released_revision released_content_hash last_release_event_id",
+    "tenant_id",
+  ],
+  [
+    "scada_project_release_events",
+    "tenant_id project_id event_id generation action to_revision to_content_hash created_at request_semantic_hash actor_id idempotency_key",
+    "tenant_id",
+  ],
 ];
 
 /** 固定锁例程候选；任何调用均只返回新的预览对象，不连接数据库或执行 DDL。 */
@@ -106,13 +127,26 @@ export function buildScadaLockRoutinePreview() {
   const ownerGrants = [
     "GRANT USAGE ON SCHEMA public TO " + owner,
     ...permissions.flatMap(([table, read, update]) => [
-      "GRANT SELECT (" + read.split(" ").join(", ") + ") ON TABLE " + scope + table + " TO " + owner,
+      "GRANT SELECT (" +
+        read.split(" ").join(", ") +
+        ") ON TABLE " +
+        scope +
+        table +
+        " TO " +
+        owner,
       "GRANT UPDATE (" + update + ") ON TABLE " + scope + table + " TO " + owner,
     ]),
   ];
   const definitions = routines.map((routine) => {
     const qualified = scope + routine.name;
-    const signature = qualified + "(" + routine.args.split(", ").map((arg) => arg.split(" ")[1]).join(", ") + ")";
+    const signature =
+      qualified +
+      "(" +
+      routine.args
+        .split(", ")
+        .map((arg) => arg.split(" ")[1])
+        .join(", ") +
+      ")";
     return {
       name: routine.name,
       tables: [...routine.tables],

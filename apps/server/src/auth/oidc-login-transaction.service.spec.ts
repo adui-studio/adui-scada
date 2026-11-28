@@ -443,7 +443,12 @@ describe("OIDC 一次性登录事务", () => {
         expiresAt: new Date(Date.now() - 1_000),
       });
     }
-    const other = { ...record, stateHash: "other-issuer", issuer: "https://id.example.org/realms/other", expiresAt: new Date(Date.now() - 1_000) };
+    const other = {
+      ...record,
+      stateHash: "other-issuer",
+      issuer: "https://id.example.org/realms/other",
+      expiresAt: new Date(Date.now() - 1_000),
+    };
     fake.records.set(other.stateHash, other);
     expect(await fake.service.cleanupExpiredTransactions()).toBe(128);
     expect(fake.records.size).toBe(11);

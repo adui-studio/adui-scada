@@ -24,52 +24,76 @@ function table(name, physical, read, insert = "", update = "") {
 
 // 固定原生契约的物理列与已审阅业务 SQL 对照；不得从目录中的任意标识符生成授权。
 const tables = [
-  table("scada_projects",
+  table(
+    "scada_projects",
     "tenant_id project_id head_revision created_at updated_at",
     "tenant_id project_id head_revision created_at updated_at",
     "",
-    "head_revision updated_at"),
-  table("scada_project_grants",
+    "head_revision updated_at",
+  ),
+  table(
+    "scada_project_grants",
     "tenant_id project_id subject_id permission",
-    "tenant_id project_id subject_id permission"),
-  table("scada_project_versions",
+    "tenant_id project_id subject_id permission",
+  ),
+  table(
+    "scada_project_versions",
     "tenant_id project_id revision snapshot content_hash created_by created_at",
     "tenant_id project_id revision snapshot content_hash created_by created_at",
-    "tenant_id project_id revision snapshot content_hash created_by created_at"),
-  table("scada_project_audit",
+    "tenant_id project_id revision snapshot content_hash created_by created_at",
+  ),
+  table(
+    "scada_project_audit",
     "event_id tenant_id project_id revision actor_id action created_at",
     "event_id tenant_id project_id revision actor_id action",
-    "event_id tenant_id project_id revision actor_id action"),
-  table("scada_project_release_state",
+    "event_id tenant_id project_id revision actor_id action",
+  ),
+  table(
+    "scada_project_release_state",
     "tenant_id project_id released_revision released_content_hash release_generation last_release_event_id updated_at",
-    "tenant_id project_id released_revision released_content_hash release_generation last_release_event_id"),
-  table("scada_project_release_events",
+    "tenant_id project_id released_revision released_content_hash release_generation last_release_event_id",
+  ),
+  table(
+    "scada_project_release_events",
     "event_id tenant_id project_id generation action from_revision from_content_hash to_revision to_content_hash actor_id idempotency_key request_semantic_hash created_at",
-    "event_id tenant_id project_id generation action to_revision to_content_hash request_semantic_hash created_at"),
-  table("scada_identities",
+    "event_id tenant_id project_id generation action to_revision to_content_hash request_semantic_hash created_at",
+  ),
+  table(
+    "scada_identities",
     "tenant_id subject_id status created_at updated_at",
-    "tenant_id subject_id status"),
-  table("scada_auth_sessions",
+    "tenant_id subject_id status",
+  ),
+  table(
+    "scada_auth_sessions",
     "session_id tenant_id subject_id token_hash issued_at expires_at revoked_at csrf_token_hash",
     "session_id tenant_id subject_id token_hash issued_at expires_at revoked_at csrf_token_hash",
     "session_id tenant_id subject_id token_hash issued_at expires_at csrf_token_hash",
-    "revoked_at"),
-  table("scada_external_identities",
+    "revoked_at",
+  ),
+  table(
+    "scada_external_identities",
     "issuer subject tenant_id subject_id created_at",
-    "issuer subject tenant_id subject_id"),
-  table("scada_oidc_transactions",
+    "issuer subject tenant_id subject_id",
+  ),
+  table(
+    "scada_oidc_transactions",
     "state_hash issuer nonce verifier_ciphertext browser_binding_hash return_path created_at expires_at consumed_at",
     "state_hash issuer nonce verifier_ciphertext browser_binding_hash return_path created_at expires_at consumed_at",
     "state_hash issuer nonce verifier_ciphertext browser_binding_hash return_path created_at expires_at",
-    "consumed_at"),
-  table("scada_tag_history_batches",
+    "consumed_at",
+  ),
+  table(
+    "scada_tag_history_batches",
     "tenant_id project_id stream_id batch_sequence format_version record_count created_at",
     "tenant_id project_id stream_id batch_sequence format_version record_count",
-    "tenant_id project_id stream_id batch_sequence format_version record_count"),
-  table("scada_tag_history_records",
+    "tenant_id project_id stream_id batch_sequence format_version record_count",
+  ),
+  table(
+    "scada_tag_history_records",
     "tenant_id project_id stream_id batch_sequence ordinal tag_id timestamp_ms payload",
     "tenant_id project_id stream_id batch_sequence ordinal tag_id timestamp_ms payload",
-    "tenant_id project_id stream_id batch_sequence ordinal tag_id timestamp_ms payload"),
+    "tenant_id project_id stream_id batch_sequence ordinal tag_id timestamp_ms payload",
+  ),
 ];
 
 const startupColumns = ["tenant_id", "project_id", "head_revision"];
@@ -86,9 +110,14 @@ const privilegeSql = [
   'SELECT r.rolname::text AS role, c.relname::text AS "table", a.attname::text AS "column", c.relkind::text AS kind,',
   "  pg_catalog.pg_has_role(r.oid, c.relowner, 'USAGE') AS owner,",
   "  CASE WHEN c.relkind IN ('r','p') THEN pg_catalog.has_table_privilege(r.oid, c.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER,MAINTAIN') ELSE false END AS \"tableAccess\",",
-  ...["SELECT", "INSERT", "UPDATE", "REFERENCES"].map((privilege) =>
-    "  CASE WHEN c.relkind IN ('r','p') THEN pg_catalog.has_column_privilege(r.oid, c.oid, a.attnum, '" +
-      privilege + "') ELSE false END AS \"" + privilege.toLowerCase() + "\","),
+  ...["SELECT", "INSERT", "UPDATE", "REFERENCES"].map(
+    (privilege) =>
+      "  CASE WHEN c.relkind IN ('r','p') THEN pg_catalog.has_column_privilege(r.oid, c.oid, a.attnum, '" +
+      privilege +
+      "') ELSE false END AS \"" +
+      privilege.toLowerCase() +
+      '",',
+  ),
   "  CASE WHEN c.relkind IN ('r','p') THEN pg_catalog.has_column_privilege(r.oid, c.oid, a.attnum, 'SELECT WITH GRANT OPTION,INSERT WITH GRANT OPTION,UPDATE WITH GRANT OPTION,REFERENCES WITH GRANT OPTION') ELSE false END AS grantable",
   "FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace",
   "JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid",
@@ -115,17 +144,28 @@ export function scadaBusinessColumnInventory() {
 export function scadaBusinessGrantCandidates() {
   return tables.flatMap((entry) =>
     [
-      { privilege: "SELECT", columns: entry.read.filter((column) =>
-        entry.name !== "scada_projects" || !startupColumns.includes(column)) },
+      {
+        privilege: "SELECT",
+        columns: entry.read.filter(
+          (column) => entry.name !== "scada_projects" || !startupColumns.includes(column),
+        ),
+      },
       { privilege: "INSERT", columns: entry.insert },
       { privilege: "UPDATE", columns: entry.update },
-    ].filter((grant) => grant.columns.length > 0)
+    ]
+      .filter((grant) => grant.columns.length > 0)
       .map((grant) => ({
         table: entry.name,
         privilege: grant.privilege,
         columns: [...grant.columns],
-        sql: "GRANT " + grant.privilege + " (" + grant.columns.join(", ") +
-          ") ON TABLE public." + entry.name + " TO adui_scada_runtime",
+        sql:
+          "GRANT " +
+          grant.privilege +
+          " (" +
+          grant.columns.join(", ") +
+          ") ON TABLE public." +
+          entry.name +
+          " TO adui_scada_runtime",
       })),
   );
 }
@@ -136,31 +176,70 @@ export function buildScadaBusinessAclPreview(rows) {
   for (const entry of tables) {
     for (const role of roles) {
       for (const column of entry.columns) {
-        expected.set(key(role, entry.name, column),
-          role === runtime && entry.name === "scada_projects" && startupColumns.includes(column));
+        expected.set(
+          key(role, entry.name, column),
+          role === runtime && entry.name === "scada_projects" && startupColumns.includes(column),
+        );
       }
     }
   }
-  const fields = ["role", "table", "column", "kind", "owner", "tableAccess", "select", "insert", "update", "references", "grantable"];
+  const fields = [
+    "role",
+    "table",
+    "column",
+    "kind",
+    "owner",
+    "tableAccess",
+    "select",
+    "insert",
+    "update",
+    "references",
+    "grantable",
+  ];
   requireMatch(expected.size === 170 && Array.isArray(rows) && rows.length === expected.size);
   for (const row of rows) {
-    requireMatch(row && Object.keys(row).length === fields.length &&
-      fields.every((field) => Object.hasOwn(row, field)) &&
-      typeof row.role === "string" && typeof row.table === "string" && typeof row.column === "string");
+    requireMatch(
+      row &&
+        Object.keys(row).length === fields.length &&
+        fields.every((field) => Object.hasOwn(row, field)) &&
+        typeof row.role === "string" &&
+        typeof row.table === "string" &&
+        typeof row.column === "string",
+    );
     const id = key(row.role, row.table, row.column);
-    requireMatch(expected.has(id) && row.kind === "r" && row.select === expected.get(id) &&
-      row.owner === false && row.tableAccess === false && row.insert === false &&
-      row.update === false && row.references === false && row.grantable === false);
+    requireMatch(
+      expected.has(id) &&
+        row.kind === "r" &&
+        row.select === expected.get(id) &&
+        row.owner === false &&
+        row.tableAccess === false &&
+        row.insert === false &&
+        row.update === false &&
+        row.references === false &&
+        row.grantable === false,
+    );
     expected.delete(id);
   }
   requireMatch(expected.size === 0);
 
   const grants = scadaBusinessGrantCandidates();
   const blockedOperations = [
-    ...allowedLockTables.map((relation) => ({ table: relation, operation: "ROW_LOCK", reason: "DEDICATED_LOCK_BOUNDARY_REQUIRED" })),
+    ...allowedLockTables.map((relation) => ({
+      table: relation,
+      operation: "ROW_LOCK",
+      reason: "DEDICATED_LOCK_BOUNDARY_REQUIRED",
+    })),
     { table: "scada_project_grants", operation: "INSERT", reason: "INITIAL_GRANT_SCOPE_REQUIRED" },
-    { table: "scada_project_release_state", operation: "INSERT", reason: "INITIAL_STATE_SCOPE_REQUIRED" },
-    { table: "scada_oidc_transactions", operation: "DELETE", reason: "EXPIRY_CLEANUP_SCOPE_REQUIRED" },
+    {
+      table: "scada_project_release_state",
+      operation: "INSERT",
+      reason: "INITIAL_STATE_SCOPE_REQUIRED",
+    },
+    {
+      table: "scada_oidc_transactions",
+      operation: "DELETE",
+      reason: "EXPIRY_CLEANUP_SCOPE_REQUIRED",
+    },
   ];
   const planFingerprint = createHash("sha256")
     .update(JSON.stringify({ grants, blockedOperations }))

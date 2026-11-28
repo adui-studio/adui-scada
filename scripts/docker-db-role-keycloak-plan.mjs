@@ -5,15 +5,26 @@ export class DockerKeycloakOwnershipError extends Error {}
 
 const manager = "adui_scada";
 const runtime = "adui_scada_keycloak_runtime";
-const oid = (value) => typeof value === "string" && /^[1-9][0-9]{0,9}$/u.test(value) && Number(value) <= 4294967295;
+const oid = (value) =>
+  typeof value === "string" && /^[1-9][0-9]{0,9}$/u.test(value) && Number(value) <= 4294967295;
 const hash = (value) => typeof value === "string" && /^[a-f0-9]{64}$/u.test(value);
-const compare = (left, right) => left < right ? -1 : left > right ? 1 : 0;
+const compare = (left, right) => (left < right ? -1 : left > right ? 1 : 0);
 const kinds = ["table", "index", "toast", "toastIndex", "rowType", "arrayType"];
 const tableCount = 101;
-const requiredTables = ["realm", "client", "user_entity", "databasechangelog", "databasechangeloglock"];
+const requiredTables = [
+  "realm",
+  "client",
+  "user_entity",
+  "databasechangelog",
+  "databasechangeloglock",
+];
 const baseline = {
-  managerVerified: true, rolesHardened: true, isolatedRuntime: true,
-  schemaTrusted: true, noOtherSchemas: true, noUnexpectedObjects: true,
+  managerVerified: true,
+  rolesHardened: true,
+  isolatedRuntime: true,
+  schemaTrusted: true,
+  noOtherSchemas: true,
+  noUnexpectedObjects: true,
   keycloakDependencyMatched: true,
 };
 
@@ -122,49 +133,139 @@ function requireMatch(condition, message) {
 function normalizeInventory(rows, expectedOwner) {
   requireMatch(Array.isArray(rows) && rows.length <= 10000, "Keycloak 对象证据数量无效");
   const keys = ["kind", "oid", "name", "parent", "owner", "clean"];
-  requireMatch(rows.every((row) => row && Object.keys(row).length === keys.length && keys.every((key) => Object.hasOwn(row, key)) &&
-    kinds.includes(row.kind) && oid(row.oid) && typeof row.name === "string" && /^[a-z_][a-z0-9_]{0,62}$/u.test(row.name) &&
-    (row.kind === "table" ? row.parent === null : oid(row.parent)) && row.owner === expectedOwner && row.clean === true),
-    "Keycloak 对象类型、名称、所有者或 ACL 不一致");
-  const objectKey = (row) => (row.kind === "rowType" || row.kind === "arrayType" ? "type:" : "relation:") + row.oid;
+  requireMatch(
+    rows.every(
+      (row) =>
+        row &&
+        Object.keys(row).length === keys.length &&
+        keys.every((key) => Object.hasOwn(row, key)) &&
+        kinds.includes(row.kind) &&
+        oid(row.oid) &&
+        typeof row.name === "string" &&
+        /^[a-z_][a-z0-9_]{0,62}$/u.test(row.name) &&
+        (row.kind === "table" ? row.parent === null : oid(row.parent)) &&
+        row.owner === expectedOwner &&
+        row.clean === true,
+    ),
+    "Keycloak 对象类型、名称、所有者或 ACL 不一致",
+  );
+  const objectKey = (row) =>
+    (row.kind === "rowType" || row.kind === "arrayType" ? "type:" : "relation:") + row.oid;
   requireMatch(new Set(rows.map(objectKey)).size === rows.length, "Keycloak 对象标识重复");
-  const groups = Object.fromEntries(kinds.map((kind) => [kind, rows.filter((row) => row.kind === kind)]));
+  const groups = Object.fromEntries(
+    kinds.map((kind) => [kind, rows.filter((row) => row.kind === kind)]),
+  );
   const tables = groups.table;
   const names = new Set(tables.map((row) => row.name));
-  requireMatch(tables.length === tableCount && names.size === tableCount && requiredTables.every((name) => names.has(name)) &&
-    tables.every((row) => !/^(scada_|prisma_)/u.test(row.name)), "Keycloak 已评审表范围不一致");
-  for (const [child, parent] of [["index", "table"], ["toast", "table"], ["toastIndex", "toast"], ["rowType", "table"], ["arrayType", "rowType"]]) {
-    requireMatch(groups[child].every((row) => groups[parent].some((item) => item.oid === row.parent)), "Keycloak 从属对象依赖不一致");
+  requireMatch(
+    tables.length === tableCount &&
+      names.size === tableCount &&
+      requiredTables.every((name) => names.has(name)) &&
+      tables.every((row) => !/^(scada_|prisma_)/u.test(row.name)),
+    "Keycloak 已评审表范围不一致",
+  );
+  for (const [child, parent] of [
+    ["index", "table"],
+    ["toast", "table"],
+    ["toastIndex", "toast"],
+    ["rowType", "table"],
+    ["arrayType", "rowType"],
+  ]) {
+    requireMatch(
+      groups[child].every((row) => groups[parent].some((item) => item.oid === row.parent)),
+      "Keycloak 从属对象依赖不一致",
+    );
   }
-  for (const [parent, child] of [["table", "rowType"], ["rowType", "arrayType"], ["toast", "toastIndex"]]) {
-    requireMatch(groups[parent].every((row) => groups[child].filter((item) => item.parent === row.oid).length === 1), "Keycloak 从属对象缺失或重复");
+  for (const [parent, child] of [
+    ["table", "rowType"],
+    ["rowType", "arrayType"],
+    ["toast", "toastIndex"],
+  ]) {
+    requireMatch(
+      groups[parent].every(
+        (row) => groups[child].filter((item) => item.parent === row.oid).length === 1,
+      ),
+      "Keycloak 从属对象缺失或重复",
+    );
   }
-  requireMatch(tables.every((row) => groups.toast.filter((item) => item.parent === row.oid).length <= 1), "Keycloak TOAST 依赖重复");
-  return rows.map((row) => Object.fromEntries(keys.map((key) => [key, row[key]]))).sort((left, right) => compare(objectKey(left), objectKey(right)));
+  requireMatch(
+    tables.every((row) => groups.toast.filter((item) => item.parent === row.oid).length <= 1),
+    "Keycloak TOAST 依赖重复",
+  );
+  return rows
+    .map((row) => Object.fromEntries(keys.map((key) => [key, row[key]])))
+    .sort((left, right) => compare(objectKey(left), objectKey(right)));
 }
 
 // 只预览已核验的普通表，不生成全库所有权转移或运行角色授权语句。
-export function buildKeycloakOwnershipPlan({ identity, storageHash, isolationFingerprint, baselineRows, objects }) {
-  requireMatch(identity?.version === "190000" && typeof identity.systemIdentifier === "string" && /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier) &&
-    hash(storageHash) && hash(isolationFingerprint) && isDeepStrictEqual(baselineRows, [baseline]), "Keycloak 所有权前置证据不一致");
+export function buildKeycloakOwnershipPlan({
+  identity,
+  storageHash,
+  isolationFingerprint,
+  baselineRows,
+  objects,
+}) {
+  requireMatch(
+    identity?.version === "190000" &&
+      typeof identity.systemIdentifier === "string" &&
+      /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier) &&
+      hash(storageHash) &&
+      hash(isolationFingerprint) &&
+      isDeepStrictEqual(baselineRows, [baseline]),
+    "Keycloak 所有权前置证据不一致",
+  );
   const inventory = normalizeInventory(objects, manager);
-  const tables = inventory.filter((row) => row.kind === "table").sort((left, right) => compare(left.name, right.name));
-  const sqlPreview = tables.map((row) => 'ALTER TABLE ONLY public."' + row.name + '" OWNER TO adui_scada_keycloak_runtime');
-  const planFingerprint = createHash("sha256").update(JSON.stringify({ identity: [identity.version, identity.systemIdentifier], storageHash, isolationFingerprint, inventory, sqlPreview })).digest("hex");
-  return { inventory, sqlPreview, report: {
-    status: "KEYCLOAK_OWNERSHIP_PLAN_READY", planOnly: true, planFingerprint,
-    targetDatabase: "adui_scada_keycloak", targetRole: runtime, tableCount: tables.length,
-    objectCounts: Object.fromEntries(kinds.map((kind) => [kind, inventory.filter((row) => row.kind === kind).length])),
-    statementCount: sqlPreview.length, schemaCreateReviewRequired: true, objectIdentityReviewed: false, ownershipTransferAllowed: false,
-    ownerProjectionVerified: false, runtimeLoginAllowed: false, businessAclApproved: false,
-    admissionPassed: false, databaseWritten: false, serviceSwitched: false,
-  } };
+  const tables = inventory
+    .filter((row) => row.kind === "table")
+    .sort((left, right) => compare(left.name, right.name));
+  const sqlPreview = tables.map(
+    (row) => 'ALTER TABLE ONLY public."' + row.name + '" OWNER TO adui_scada_keycloak_runtime',
+  );
+  const planFingerprint = createHash("sha256")
+    .update(
+      JSON.stringify({
+        identity: [identity.version, identity.systemIdentifier],
+        storageHash,
+        isolationFingerprint,
+        inventory,
+        sqlPreview,
+      }),
+    )
+    .digest("hex");
+  return {
+    inventory,
+    sqlPreview,
+    report: {
+      status: "KEYCLOAK_OWNERSHIP_PLAN_READY",
+      planOnly: true,
+      planFingerprint,
+      targetDatabase: "adui_scada_keycloak",
+      targetRole: runtime,
+      tableCount: tables.length,
+      objectCounts: Object.fromEntries(
+        kinds.map((kind) => [kind, inventory.filter((row) => row.kind === kind).length]),
+      ),
+      statementCount: sqlPreview.length,
+      schemaCreateReviewRequired: true,
+      objectIdentityReviewed: false,
+      ownershipTransferAllowed: false,
+      ownerProjectionVerified: false,
+      runtimeLoginAllowed: false,
+      businessAclApproved: false,
+      admissionPassed: false,
+      databaseWritten: false,
+      serviceSwitched: false,
+    },
+  };
 }
 
 // 仅比较将来事务内的目录投影，不代表已经执行所有权转移。
 export function verifyKeycloakOwnershipProjection(before, after) {
   const expected = normalizeInventory(before, manager).map((row) => ({ ...row, owner: runtime }));
-  requireMatch(isDeepStrictEqual(normalizeInventory(after, runtime), expected), "Keycloak 所有权投影不一致");
+  requireMatch(
+    isDeepStrictEqual(normalizeInventory(after, runtime), expected),
+    "Keycloak 所有权投影不一致",
+  );
   return { ownerProjectionMatched: true, ownershipTransferAllowed: false, admissionPassed: false };
 }
 
@@ -217,7 +318,16 @@ SELECT CASE WHEN connect THEN 'databaseConnect' WHEN table_owner THEN 'tableOwne
   (SELECT system_identifier::text FROM pg_catalog.pg_control_system()) AS "systemIdentifier"
 FROM deps`;
 
-const tablePrivileges = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER", "MAINTAIN"];
+const tablePrivileges = [
+  "SELECT",
+  "INSERT",
+  "UPDATE",
+  "DELETE",
+  "TRUNCATE",
+  "REFERENCES",
+  "TRIGGER",
+  "MAINTAIN",
+];
 const columnPrivileges = ["SELECT", "INSERT", "UPDATE", "REFERENCES"];
 const privilegeSql = `WITH roles AS (
   SELECT oid, rolname FROM pg_catalog.pg_roles WHERE rolname IN ('adui_scada_runtime', 'adui_scada_keycloak_runtime')
@@ -238,24 +348,45 @@ SELECT r.rolname::text AS role, c.oid::text AS "objectId",
 FROM roles r CROSS JOIN relations c`;
 
 function exactRows(rows, expected) {
-  return Array.isArray(rows) && rows.length === expected.length &&
-    expected.every((entry) => rows.some((row) => isDeepStrictEqual(row, entry)));
+  return (
+    Array.isArray(rows) &&
+    rows.length === expected.length &&
+    expected.every((entry) => rows.some((row) => isDeepStrictEqual(row, entry)))
+  );
 }
 
 // 仅普通表有独立所有权依赖；索引、TOAST 及自动类型由前一步对象图校验。
 function expectedDependencies(tables, identity, projected) {
-  return [{ kind: "databaseConnect", objectId: "adui_scada_keycloak", directConnectMatched: true, systemIdentifier: identity.systemIdentifier },
-    ...(projected ? tables.map((table) => ({ kind: "tableOwner", objectId: table.oid, directConnectMatched: true, systemIdentifier: identity.systemIdentifier })) : [])];
+  return [
+    {
+      kind: "databaseConnect",
+      objectId: "adui_scada_keycloak",
+      directConnectMatched: true,
+      systemIdentifier: identity.systemIdentifier,
+    },
+    ...(projected
+      ? tables.map((table) => ({
+          kind: "tableOwner",
+          objectId: table.oid,
+          directConnectMatched: true,
+          systemIdentifier: identity.systemIdentifier,
+        }))
+      : []),
+  ];
 }
 
 function expectedPrivileges(tables, projected) {
-  return ["adui_scada_runtime", runtime].flatMap((role) => tables.map((table) => ({
-    role, objectId: table.oid,
-    tablePrivileges: projected && role === runtime ? [...tablePrivileges].sort(compare) : [],
-    tableGrantOptions: projected && role === runtime ? [...tablePrivileges].sort(compare) : [],
-    columnPrivileges: projected && role === runtime ? [...columnPrivileges].sort(compare) : [],
-    schemaUsage: true, schemaElevated: false,
-  })));
+  return ["adui_scada_runtime", runtime].flatMap((role) =>
+    tables.map((table) => ({
+      role,
+      objectId: table.oid,
+      tablePrivileges: projected && role === runtime ? [...tablePrivileges].sort(compare) : [],
+      tableGrantOptions: projected && role === runtime ? [...tablePrivileges].sort(compare) : [],
+      columnPrivileges: projected && role === runtime ? [...columnPrivileges].sort(compare) : [],
+      schemaUsage: true,
+      schemaElevated: false,
+    })),
+  );
 }
 
 /** 仅核验当前事务内的目录证据，不执行所有权转移或提交。 */
@@ -267,37 +398,83 @@ async function verifyOwnershipCatalog(query, context, candidate, expectedPlanFin
     requireMatch(hash(expectedPlanFingerprint), "Keycloak 目录候选指纹无效");
     let original;
     if (!persisted) {
-      original = buildKeycloakOwnershipPlan({ ...context, baselineRows: [baseline], objects: candidate?.inventory });
-      requireMatch(original.report.planFingerprint === expectedPlanFingerprint &&
-        isDeepStrictEqual(candidate, original), "Keycloak 目录候选指纹不一致");
+      original = buildKeycloakOwnershipPlan({
+        ...context,
+        baselineRows: [baseline],
+        objects: candidate?.inventory,
+      });
+      requireMatch(
+        original.report.planFingerprint === expectedPlanFingerprint &&
+          isDeepStrictEqual(candidate, original),
+        "Keycloak 目录候选指纹不一致",
+      );
     }
     stage = projected ? "后置安全基线" : "原始安全基线";
-    requireMatch(isDeepStrictEqual((await query(stage, baselineSql(phase)))?.rows, [baseline]), "Keycloak 目录安全基线不一致");
+    requireMatch(
+      isDeepStrictEqual((await query(stage, baselineSql(phase)))?.rows, [baseline]),
+      "Keycloak 目录安全基线不一致",
+    );
     stage = "对象所有权投影";
     const objects = (await query(stage, inventorySql))?.rows;
     if (persisted) {
       // 必须从实际已转移的完整对象图恢复原始候选，并与独立确认的旧指纹匹配。
-      const inventory = normalizeInventory(objects, runtime).map((row) => ({ ...row, owner: manager }));
-      original = buildKeycloakOwnershipPlan({ ...context, baselineRows: [baseline], objects: inventory });
-      requireMatch(original.report.planFingerprint === expectedPlanFingerprint, "Keycloak 持久化所有权候选指纹不一致");
+      const inventory = normalizeInventory(objects, runtime).map((row) => ({
+        ...row,
+        owner: manager,
+      }));
+      original = buildKeycloakOwnershipPlan({
+        ...context,
+        baselineRows: [baseline],
+        objects: inventory,
+      });
+      requireMatch(
+        original.report.planFingerprint === expectedPlanFingerprint,
+        "Keycloak 持久化所有权候选指纹不一致",
+      );
     }
     if (projected) verifyKeycloakOwnershipProjection(original.inventory, objects);
-    else requireMatch(isDeepStrictEqual(normalizeInventory(objects, manager), original.inventory), "Keycloak 原始所有权基线不一致");
+    else
+      requireMatch(
+        isDeepStrictEqual(normalizeInventory(objects, manager), original.inventory),
+        "Keycloak 原始所有权基线不一致",
+      );
     const tables = original.inventory.filter((row) => row.kind === "table");
     stage = "共享所有权依赖";
     const dependencies = expectedDependencies(tables, context.identity, projected);
-    requireMatch(exactRows((await query(stage, dependencySql))?.rows, dependencies), "Keycloak 共享所有权依赖投影不一致");
+    requireMatch(
+      exactRows((await query(stage, dependencySql))?.rows, dependencies),
+      "Keycloak 共享所有权依赖投影不一致",
+    );
     stage = "有效表列及 Schema 权限";
     const privileges = expectedPrivileges(tables, projected);
-    requireMatch(exactRows((await query(stage, privilegeSql))?.rows, privileges), "Keycloak 有效表列或 Schema 权限不一致");
-    const catalogFingerprint = createHash("sha256").update(JSON.stringify({ expectedPlanFingerprint, projected, dependencies, privileges })).digest("hex");
+    requireMatch(
+      exactRows((await query(stage, privilegeSql))?.rows, privileges),
+      "Keycloak 有效表列或 Schema 权限不一致",
+    );
+    const catalogFingerprint = createHash("sha256")
+      .update(JSON.stringify({ expectedPlanFingerprint, projected, dependencies, privileges }))
+      .digest("hex");
     const report = {
-      status: projected ? "KEYCLOAK_OWNERSHIP_CATALOG_MATCHED" : "KEYCLOAK_OWNERSHIP_BASELINE_MATCHED", catalogFingerprint, tableCount: tables.length,
-      dependencyCount: dependencies.length, permissionCount: privileges.length,
-      ownerProjectionMatched: projected, dependencyProjectionMatched: projected, baselineCatalogMatched: !projected, rolePrivilegesMatched: true,
-      schemaCreateAllowed: false, schemaEvolutionVerified: false, objectIdentityReviewed: false,
-      ownershipTransferAllowed: false, runtimeLoginAllowed: false, admissionPassed: false,
-      businessAclApproved: false, databaseWritten: false, serviceSwitched: false,
+      status: projected
+        ? "KEYCLOAK_OWNERSHIP_CATALOG_MATCHED"
+        : "KEYCLOAK_OWNERSHIP_BASELINE_MATCHED",
+      catalogFingerprint,
+      tableCount: tables.length,
+      dependencyCount: dependencies.length,
+      permissionCount: privileges.length,
+      ownerProjectionMatched: projected,
+      dependencyProjectionMatched: projected,
+      baselineCatalogMatched: !projected,
+      rolePrivilegesMatched: true,
+      schemaCreateAllowed: false,
+      schemaEvolutionVerified: false,
+      objectIdentityReviewed: false,
+      ownershipTransferAllowed: false,
+      runtimeLoginAllowed: false,
+      admissionPassed: false,
+      businessAclApproved: false,
+      databaseWritten: false,
+      serviceSwitched: false,
     };
     // 表标识只供同一跨阶段核验内部使用，不进入公开报告。
     return persisted ? { report, tableOids: tables.map((table) => table.oid) } : report;
@@ -308,17 +485,34 @@ async function verifyOwnershipCatalog(query, context, candidate, expectedPlanFin
 }
 
 /** 对应未安装状态：演练前或回滚后独立只读核验。 */
-export async function verifyKeycloakOwnershipBaseline(query, context, candidate, expectedPlanFingerprint, phase = "read-only") {
+export async function verifyKeycloakOwnershipBaseline(
+  query,
+  context,
+  candidate,
+  expectedPlanFingerprint,
+  phase = "read-only",
+) {
   requireMatch(phase === "read-only" || phase === "rehearsal", "Keycloak 原始目录事务模式无效");
   return verifyOwnershipCatalog(query, context, candidate, expectedPlanFingerprint, phase);
 }
 
 /** 仅供后续受控可写事务的所有权后置门禁。 */
-export async function verifyKeycloakOwnershipCatalog(query, context, candidate, expectedPlanFingerprint) {
+export async function verifyKeycloakOwnershipCatalog(
+  query,
+  context,
+  candidate,
+  expectedPlanFingerprint,
+) {
   return verifyOwnershipCatalog(query, context, candidate, expectedPlanFingerprint, "projected");
 }
 
 /** 独立只读核验已转移目录，不接受外部对象列表，不批准所有权转移或服务切换。 */
 export async function readKeycloakInstalledOwnership(query, context, expectedPlanFingerprint) {
-  return verifyOwnershipCatalog(query, context, undefined, expectedPlanFingerprint, "projected-read-only");
+  return verifyOwnershipCatalog(
+    query,
+    context,
+    undefined,
+    expectedPlanFingerprint,
+    "projected-read-only",
+  );
 }

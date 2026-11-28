@@ -45,13 +45,26 @@ export function freshConnection(input, readOnly) {
 
 /** 只接受唯一固定 Compose Keycloak 容器的明确退出状态，不回显其他容器数据。 */
 export function requireKeycloakMaintenanceContainer(ids, details) {
-  requireMatch(typeof ids === "string" && /^[a-f0-9]{64}$/u.test(ids) &&
-    Array.isArray(details) && details.length === 8, "Keycloak 维护窗口容器标识不一致");
+  requireMatch(
+    typeof ids === "string" &&
+      /^[a-f0-9]{64}$/u.test(ids) &&
+      Array.isArray(details) &&
+      details.length === 8,
+    "Keycloak 维护窗口容器标识不一致",
+  );
   const [id, status, running, paused, restarting, image, labels, restart] = details;
-  requireMatch(id === ids && status === "exited" && running === false && paused === false &&
-    restarting === false && image === "quay.io/keycloak/keycloak:latest" && restart === "no" &&
-    labels?.["com.docker.compose.project"] === "adui-scada" &&
-    labels?.["com.docker.compose.service"] === "keycloak", "Keycloak 未处于明确停止的固定维护窗口");
+  requireMatch(
+    id === ids &&
+      status === "exited" &&
+      running === false &&
+      paused === false &&
+      restarting === false &&
+      image === "quay.io/keycloak/keycloak:latest" &&
+      restart === "no" &&
+      labels?.["com.docker.compose.project"] === "adui-scada" &&
+      labels?.["com.docker.compose.service"] === "keycloak",
+    "Keycloak 未处于明确停止的固定维护窗口",
+  );
   return id;
 }
 
@@ -63,20 +76,57 @@ export function freshAction(args) {
   } catch (error) {
     throw new FreshInstallError(error.message);
   }
-  const approvals = ["--reviewed-business-consumers", "--reviewed-maintenance-consumers", "--reviewed-template-consumers"];
+  const approvals = [
+    "--reviewed-business-consumers",
+    "--reviewed-maintenance-consumers",
+    "--reviewed-template-consumers",
+  ];
   const fingerprint = args.at(-1);
-  if (typeof fingerprint === "string" && /^--plan-fingerprint=[a-f0-9]{64}$/u.test(fingerprint) &&
-    isDeepStrictEqual(args, ["--role-keycloak-rehearse", "--confirm-rehearse-keycloak-ownership",
-      "--reviewed-keycloak-objects", "--confirm-keycloak-maintenance", fingerprint])) {
+  if (
+    typeof fingerprint === "string" &&
+    /^--plan-fingerprint=[a-f0-9]{64}$/u.test(fingerprint) &&
+    isDeepStrictEqual(args, [
+      "--role-keycloak-rehearse",
+      "--confirm-rehearse-keycloak-ownership",
+      "--reviewed-keycloak-objects",
+      "--confirm-keycloak-maintenance",
+      fingerprint,
+    ])
+  ) {
     return "role-keycloak-rehearse";
   }
-  if (typeof fingerprint === "string" && /^--plan-fingerprint=[a-f0-9]{64}$/u.test(fingerprint) &&
-    isDeepStrictEqual(args, ["--role-b4-rehearse", "--confirm-rehearse-scada-b4", "--confirm-rollback-business-fixtures", fingerprint])) {
+  if (
+    typeof fingerprint === "string" &&
+    /^--plan-fingerprint=[a-f0-9]{64}$/u.test(fingerprint) &&
+    isDeepStrictEqual(args, [
+      "--role-b4-rehearse",
+      "--confirm-rehearse-scada-b4",
+      "--confirm-rollback-business-fixtures",
+      fingerprint,
+    ])
+  ) {
     return "role-b4-rehearse";
   }
   if (typeof fingerprint === "string" && /^--plan-fingerprint=[a-f0-9]{64}$/u.test(fingerprint)) {
-    if (isDeepStrictEqual(args, ["--role-isolation-execute", "--confirm-rehearse-isolation", ...approvals, fingerprint])) return "role-isolation-rehearse";
-    if (isDeepStrictEqual(args, ["--role-isolation-execute", "--confirm-apply-isolation", "--confirm-rehearsal-verified", ...approvals, fingerprint])) return "role-isolation-apply";
+    if (
+      isDeepStrictEqual(args, [
+        "--role-isolation-execute",
+        "--confirm-rehearse-isolation",
+        ...approvals,
+        fingerprint,
+      ])
+    )
+      return "role-isolation-rehearse";
+    if (
+      isDeepStrictEqual(args, [
+        "--role-isolation-execute",
+        "--confirm-apply-isolation",
+        "--confirm-rehearsal-verified",
+        ...approvals,
+        fingerprint,
+      ])
+    )
+      return "role-isolation-apply";
   }
   if (isDeepStrictEqual(args, ["--role-bootstrap", "--confirm-rehearse-docker-roles"])) {
     return "role-rehearse";

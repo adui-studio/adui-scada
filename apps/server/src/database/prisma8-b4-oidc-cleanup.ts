@@ -47,7 +47,9 @@ export async function cleanupB4ExpiredOidc(
   ) THEN public.scada_cleanup_expired_oidc()::text ELSE 'BINDING_MISMATCH' END AS deleted`;
   const count = rows[0]?.deleted;
   if (
-    rows.length !== 1 || typeof count !== "string" || !/^(0|[1-9][0-9]{0,2})$/u.test(count) ||
+    rows.length !== 1 ||
+    typeof count !== "string" ||
+    !/^(0|[1-9][0-9]{0,2})$/u.test(count) ||
     Number(count) > B4_OIDC_CLEANUP_BATCH_SIZE
   ) {
     throw new Error("OIDC 清理例程绑定或返回行数异常");

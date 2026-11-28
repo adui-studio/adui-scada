@@ -163,8 +163,11 @@ export function buildDockerRoleIsolationPlan(report, identity, expectedHash) {
 export function reviewDockerRoleIsolationInventory(inventory, identity, expectedHash, isolated) {
   requirePlan(
     typeof isolated === "boolean" &&
-      typeof expectedHash === "string" && /^[a-f0-9]{64}$/u.test(expectedHash) &&
-      identity?.version === "190000" && typeof identity.systemIdentifier === "string" && /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier),
+      typeof expectedHash === "string" &&
+      /^[a-f0-9]{64}$/u.test(expectedHash) &&
+      identity?.version === "190000" &&
+      typeof identity.systemIdentifier === "string" &&
+      /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier),
     "集群及状态",
   );
   requirePlan(
@@ -219,13 +222,18 @@ export function reviewDockerRoleIsolationInventory(inventory, identity, expected
   });
   requirePlan(
     new Set(databases.map((row) => row.oid)).size === databases.length &&
-      exactRows(inventory.databases, isolated ? databases.map((row, index) => ({
-        ...row,
-        defaultAcl: false,
-        aclEntryCount: targets[index].runtime === null ? 3 : 4,
-        publicConnect: false,
-        publicTemporary: false,
-      })) : databases),
+      exactRows(
+        inventory.databases,
+        isolated
+          ? databases.map((row, index) => ({
+              ...row,
+              defaultAcl: false,
+              aclEntryCount: targets[index].runtime === null ? 3 : 4,
+              publicConnect: false,
+              publicTemporary: false,
+            }))
+          : databases,
+      ),
     "全集群数据库",
   );
   const memberships = ["3374", "3375", "3377"].map((id) => ({
@@ -255,7 +263,10 @@ export function reviewDockerRoleIsolationInventory(inventory, identity, expected
       ...(runtime === null ? [] : [grant(database.oid, roleId(runtime), "CONNECT")]),
     ];
   });
-  requirePlan(exactRows(inventory.acl, isolated ? acl.filter((row) => row.granteeOid !== "0") : acl), "精确数据库 ACL");
+  requirePlan(
+    exactRows(inventory.acl, isolated ? acl.filter((row) => row.granteeOid !== "0") : acl),
+    "精确数据库 ACL",
+  );
   const effective = databases.flatMap((database) =>
     roles.map((role) => ({
       databaseOid: database.oid,
@@ -265,15 +276,19 @@ export function reviewDockerRoleIsolationInventory(inventory, identity, expected
       create: role.superuser,
     })),
   );
-  const expectedEffective = isolated ? databases.flatMap((database, index) =>
-    roles.map((role) => ({
-      databaseOid: database.oid,
-      roleOid: role.oid,
-      connect: role.superuser || role.name === targets[index].runtime && targets[index].runtime !== null,
-      temporary: role.superuser,
-      create: role.superuser,
-    })),
-  ) : effective;
+  const expectedEffective = isolated
+    ? databases.flatMap((database, index) =>
+        roles.map((role) => ({
+          databaseOid: database.oid,
+          roleOid: role.oid,
+          connect:
+            role.superuser ||
+            (role.name === targets[index].runtime && targets[index].runtime !== null),
+          temporary: role.superuser,
+          create: role.superuser,
+        })),
+      )
+    : effective;
   requirePlan(exactRows(inventory.effective, expectedEffective), "有效权限矩阵");
   requirePlan(
     Array.isArray(inventory.sessions) &&
@@ -349,27 +364,72 @@ export function reviewDockerRoleIsolationInventory(inventory, identity, expected
 
 /** 安装后的三个固定所有者先逐项核验，再恢复原 B3.3 隔离指纹；未知角色不得被过滤。 */
 export function reviewDockerB4IsolationInventory(inventory, identity, expectedHash) {
-  requirePlan(inventory && [inventory.roles, inventory.databases, inventory.acl, inventory.memberships, inventory.effective, inventory.sessions].every(Array.isArray), "B4 全集群目录");
+  requirePlan(
+    inventory &&
+      [
+        inventory.roles,
+        inventory.databases,
+        inventory.acl,
+        inventory.memberships,
+        inventory.effective,
+        inventory.sessions,
+      ].every(Array.isArray),
+    "B4 全集群目录",
+  );
   const added = inventory.roles.filter((row) => b4OwnerRoles.includes(row?.name));
   const ids = new Set(added.map((row) => row.oid));
-  requirePlan(added.length === b4OwnerRoles.length && ids.size === added.length &&
-    new Set(inventory.roles.map((row) => row.oid)).size === inventory.roles.length &&
-    b4OwnerRoles.every((name) => added.filter((row) => row.name === name).length === 1) &&
-    added.every((row) => oid(row.oid) && isDeepStrictEqual(row, {
-      oid: row.oid, name: row.name, login: false, superuser: false, inherit: false,
-    })), "B4 专用所有者");
-  requirePlan(inventory.acl.every((row) => !ids.has(row.grantorOid) && !ids.has(row.granteeOid)) &&
-    inventory.databases.every((row) => !ids.has(row.ownerOid)) &&
-    inventory.memberships.every((row) => !ids.has(row.roleOid) && !ids.has(row.memberOid) && !ids.has(row.grantorOid)) &&
-    inventory.sessions.every((row) => !ids.has(row.roleOid)), "B4 专用所有者隔离");
-  const expected = inventory.databases.flatMap((db) => added.map((role) => ({
-    databaseOid: db.oid, roleOid: role.oid, connect: false, temporary: false, create: false,
-  })));
-  requirePlan(exactRows(inventory.effective.filter((row) => ids.has(row.roleOid)), expected), "B4 专用所有者数据库权限");
-  const original = reviewDockerRoleIsolationInventory({
-    ...inventory,
-    roles: inventory.roles.filter((row) => !ids.has(row.oid)),
-    effective: inventory.effective.filter((row) => !ids.has(row.roleOid)),
-  }, identity, expectedHash, true);
+  requirePlan(
+    added.length === b4OwnerRoles.length &&
+      ids.size === added.length &&
+      new Set(inventory.roles.map((row) => row.oid)).size === inventory.roles.length &&
+      b4OwnerRoles.every((name) => added.filter((row) => row.name === name).length === 1) &&
+      added.every(
+        (row) =>
+          oid(row.oid) &&
+          isDeepStrictEqual(row, {
+            oid: row.oid,
+            name: row.name,
+            login: false,
+            superuser: false,
+            inherit: false,
+          }),
+      ),
+    "B4 专用所有者",
+  );
+  requirePlan(
+    inventory.acl.every((row) => !ids.has(row.grantorOid) && !ids.has(row.granteeOid)) &&
+      inventory.databases.every((row) => !ids.has(row.ownerOid)) &&
+      inventory.memberships.every(
+        (row) => !ids.has(row.roleOid) && !ids.has(row.memberOid) && !ids.has(row.grantorOid),
+      ) &&
+      inventory.sessions.every((row) => !ids.has(row.roleOid)),
+    "B4 专用所有者隔离",
+  );
+  const expected = inventory.databases.flatMap((db) =>
+    added.map((role) => ({
+      databaseOid: db.oid,
+      roleOid: role.oid,
+      connect: false,
+      temporary: false,
+      create: false,
+    })),
+  );
+  requirePlan(
+    exactRows(
+      inventory.effective.filter((row) => ids.has(row.roleOid)),
+      expected,
+    ),
+    "B4 专用所有者数据库权限",
+  );
+  const original = reviewDockerRoleIsolationInventory(
+    {
+      ...inventory,
+      roles: inventory.roles.filter((row) => !ids.has(row.oid)),
+      effective: inventory.effective.filter((row) => !ids.has(row.roleOid)),
+    },
+    identity,
+    expectedHash,
+    true,
+  );
   return { ...original, b4OwnerRoleCount: added.length, b4OwnerDatabasePermissionsDenied: true };
 }

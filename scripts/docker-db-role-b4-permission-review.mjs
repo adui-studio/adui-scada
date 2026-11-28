@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
-import { buildB4KeycloakDependencyScope, verifyB4KeycloakDependencyScope } from "./docker-db-role-b4-phase.mjs";
+import {
+  buildB4KeycloakDependencyScope,
+  verifyB4KeycloakDependencyScope,
+} from "./docker-db-role-b4-phase.mjs";
 import { readKeycloakInstalledOwnership } from "./docker-db-role-keycloak-plan.mjs";
 import {
   scadaBusinessColumnInventory,
@@ -23,21 +26,39 @@ const cleanupOwner = "adui_scada_oidc_cleanup_owner";
 const owners = [lockOwner, projectOwner, cleanupOwner];
 const roles = [runtime, keycloak, ...owners];
 const databases = ["adui_scada", "adui_scada_keycloak", "postgres", "template0", "template1"];
-const tablePrivileges = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER", "MAINTAIN"];
+const tablePrivileges = [
+  "SELECT",
+  "INSERT",
+  "UPDATE",
+  "DELETE",
+  "TRUNCATE",
+  "REFERENCES",
+  "TRIGGER",
+  "MAINTAIN",
+];
 const columnPrivileges = ["SELECT", "INSERT", "UPDATE", "REFERENCES"];
 const literals = (values) => values.map((value) => "'" + value + "'").join(", ");
 const roleList = literals(roles);
 const ownerList = literals(owners);
 const candidates = `SELECT oid, rolname FROM pg_catalog.pg_roles WHERE rolname IN (${roleList})`;
-const grant = (role, kind, object, privilege) => ({ role, kind, object, privilege, ownerGrant: true, grantable: false });
+const grant = (role, kind, object, privilege) => ({
+  role,
+  kind,
+  object,
+  privilege,
+  ownerGrant: true,
+  grantable: false,
+});
 
 function requireMatch(condition, message) {
   if (!condition) throw new DockerB4PermissionReviewError(message);
 }
 
 function expectedConnect(role, database) {
-  return (role === runtime && database === "adui_scada") ||
-    (role === keycloak && database === "adui_scada_keycloak");
+  return (
+    (role === runtime && database === "adui_scada") ||
+    (role === keycloak && database === "adui_scada_keycloak")
+  );
 }
 
 /** 从已审阅候选生成预期权限，不将合成目录当作实际读取证据。 */
@@ -46,35 +67,59 @@ export function buildScadaB4PermissionExpectations(port) {
   const project = buildScadaRestrictedWritePreview().projectCreate;
   const cleanup = buildScadaOidcCleanupRoutinePreview(port);
   const inventory = scadaBusinessColumnInventory();
-  const physical = new Set(inventory.flatMap(({ table, columns }) => columns.map((column) => "public." + table + "." + column)));
+  const physical = new Set(
+    inventory.flatMap(({ table, columns }) =>
+      columns.map((column) => "public." + table + "." + column),
+    ),
+  );
   const acl = [
     grant(runtime, "database", "adui_scada", "CONNECT"),
     grant(keycloak, "database", "adui_scada_keycloak", "CONNECT"),
     grant(runtime, "schema", "public", "USAGE"),
     grant(runtime, "schema", "prisma_contract", "USAGE"),
     grant(runtime, "function", "pg_catalog.pg_control_system()", "EXECUTE"),
-    ...["public.scada_projects.tenant_id", "public.scada_projects.project_id", "public.scada_projects.head_revision",
-      "prisma_contract.marker.space", "prisma_contract.marker.core_hash"].map((object) => grant(runtime, "column", object, "SELECT")),
+    ...[
+      "public.scada_projects.tenant_id",
+      "public.scada_projects.project_id",
+      "public.scada_projects.head_revision",
+      "prisma_contract.marker.space",
+      "prisma_contract.marker.core_hash",
+    ].map((object) => grant(runtime, "column", object, "SELECT")),
   ];
   for (const item of scadaBusinessGrantCandidates()) {
     for (const column of item.columns) {
       const object = "public." + item.table + "." + column;
-      requireMatch(physical.has(object) && columnPrivileges.includes(item.privilege), "B4 固定业务授权候选不一致");
+      requireMatch(
+        physical.has(object) && columnPrivileges.includes(item.privilege),
+        "B4 固定业务授权候选不一致",
+      );
       acl.push(grant(runtime, "column", object, item.privilege));
     }
   }
   // 仅解释模块内部的固定授权候选；不解析目录输入或执行 SQL。
-  for (const [owner, statements] of [[lockOwner, locks.ownerGrants], [projectOwner, project.ownerGrants], [cleanupOwner, cleanup.ownerGrants]]) {
+  for (const [owner, statements] of [
+    [lockOwner, locks.ownerGrants],
+    [projectOwner, project.ownerGrants],
+    [cleanupOwner, cleanup.ownerGrants],
+  ]) {
     requireMatch(owners.includes(owner), "B4 固定所有者候选不一致");
     for (const statement of statements) {
       if (statement === "GRANT USAGE ON SCHEMA public TO " + owner) {
         acl.push(grant(owner, "schema", "public", "USAGE"));
-      } else if (owner === projectOwner && statement === "GRANT EXECUTE ON FUNCTION public.scada_lock_identity(text, text) TO " + owner) {
+      } else if (
+        owner === projectOwner &&
+        statement === "GRANT EXECUTE ON FUNCTION public.scada_lock_identity(text, text) TO " + owner
+      ) {
         // public 例程 ACL 由独立例程目录核验覆盖。
-      } else if (owner === cleanupOwner && statement === "GRANT DELETE ON TABLE public.scada_oidc_transactions TO " + owner) {
+      } else if (
+        owner === cleanupOwner &&
+        statement === "GRANT DELETE ON TABLE public.scada_oidc_transactions TO " + owner
+      ) {
         acl.push(grant(owner, "relation", "public.scada_oidc_transactions", "DELETE"));
       } else {
-        const match = statement.match(/^GRANT (SELECT|INSERT|UPDATE) \(([a-z_, ]+)\) ON TABLE public\.(scada_[a-z_]+) TO (adui_scada_[a-z_]+)$/u);
+        const match = statement.match(
+          /^GRANT (SELECT|INSERT|UPDATE) \(([a-z_, ]+)\) ON TABLE public\.(scada_[a-z_]+) TO (adui_scada_[a-z_]+)$/u,
+        );
         requireMatch(match && match[4] === owner, "B4 固定所有者授权候选不一致");
         for (const column of match[2].split(", ")) {
           const object = "public." + match[3] + "." + column;
@@ -84,27 +129,86 @@ export function buildScadaB4PermissionExpectations(port) {
       }
     }
   }
-  requireMatch(new Set(acl.map((row) => JSON.stringify(row))).size === acl.length, "B4 固定授权候选存在重复项");
-  const allowed = (role, kind, object, privileges) => privileges.filter((privilege) =>
-    acl.some((entry) => entry.role === role && entry.kind === kind && entry.object === object && entry.privilege === privilege));
+  requireMatch(
+    new Set(acl.map((row) => JSON.stringify(row))).size === acl.length,
+    "B4 固定授权候选存在重复项",
+  );
+  const allowed = (role, kind, object, privileges) =>
+    privileges.filter((privilege) =>
+      acl.some(
+        (entry) =>
+          entry.role === role &&
+          entry.kind === kind &&
+          entry.object === object &&
+          entry.privilege === privilege,
+      ),
+    );
   return {
-    roles: roles.map((role) => ({ role, managerVerified: true, hardened: true, noMemberships: true,
-      noSettings: true, noUnexpectedDependencies: true, trustedSchemas: true, noUnexpectedSchemaCreators: true,
-      noPublicSchemaCreate: true, noDatabaseOwnerMemberships: true, noSchemaCreate: true, requiredPublicUsage: true,
-      markerUsage: role === runtime, noSchemaGrantOption: true, noUnexpectedSchemaUsage: true,
-      noSequenceAccess: true, noDefaultAcl: true, clusterFunctionExecute: role === runtime })),
-    databases: roles.flatMap((role) => databases.map((database) => ({ role, database,
-      connect: expectedConnect(role, database), create: false, temporary: false, grantable: false }))),
+    roles: roles.map((role) => ({
+      role,
+      managerVerified: true,
+      hardened: true,
+      noMemberships: true,
+      noSettings: true,
+      noUnexpectedDependencies: true,
+      trustedSchemas: true,
+      noUnexpectedSchemaCreators: true,
+      noPublicSchemaCreate: true,
+      noDatabaseOwnerMemberships: true,
+      noSchemaCreate: true,
+      requiredPublicUsage: true,
+      markerUsage: role === runtime,
+      noSchemaGrantOption: true,
+      noUnexpectedSchemaUsage: true,
+      noSequenceAccess: true,
+      noDefaultAcl: true,
+      clusterFunctionExecute: role === runtime,
+    })),
+    databases: roles.flatMap((role) =>
+      databases.map((database) => ({
+        role,
+        database,
+        connect: expectedConnect(role, database),
+        create: false,
+        temporary: false,
+        grantable: false,
+      })),
+    ),
     acl,
-    relations: roles.flatMap((role) => inventory.map(({ table }) => ({ role, schema: "public", table, kind: "r", owner: false,
-      privileges: allowed(role, "relation", "public." + table, tablePrivileges), grantable: false }))),
+    relations: roles.flatMap((role) =>
+      inventory.map(({ table }) => ({
+        role,
+        schema: "public",
+        table,
+        kind: "r",
+        owner: false,
+        privileges: allowed(role, "relation", "public." + table, tablePrivileges),
+        grantable: false,
+      })),
+    ),
     columns: [
-      ...roles.flatMap((role) => inventory.flatMap(({ table, columns }) => columns.map((column) => ({
-        role, schema: "public", table, column, kind: "r",
-        privileges: allowed(role, "column", "public." + table + "." + column, columnPrivileges), grantable: false,
-      })))),
-      ...["space", "core_hash"].map((column) => ({ role: runtime, schema: "prisma_contract", table: "marker", column,
-        kind: "r", privileges: ["SELECT"], grantable: false })),
+      ...roles.flatMap((role) =>
+        inventory.flatMap(({ table, columns }) =>
+          columns.map((column) => ({
+            role,
+            schema: "public",
+            table,
+            column,
+            kind: "r",
+            privileges: allowed(role, "column", "public." + table + "." + column, columnPrivileges),
+            grantable: false,
+          })),
+        ),
+      ),
+      ...["space", "core_hash"].map((column) => ({
+        role: runtime,
+        schema: "prisma_contract",
+        table: "marker",
+        column,
+        kind: "r",
+        privileges: ["SELECT"],
+        grantable: false,
+      })),
     ],
   };
 }
@@ -181,11 +285,39 @@ WHERE e.grantee IN (SELECT oid FROM candidates) OR e.grantor IN (SELECT oid FROM
 const relationKinds = "c.relkind IN ('r','p','v','m','f')";
 const relationScope = "left(n.nspname, 3) <> 'pg_' AND n.nspname <> 'information_schema'";
 function privilegeArray(kind, args, privileges) {
-  return "pg_catalog.array_remove(ARRAY[" + privileges.map((privilege) =>
-    "CASE WHEN " + relationKinds + " THEN CASE WHEN pg_catalog.has_" + kind + "_privilege(" + args + ", '" + privilege + "') THEN '" + privilege + "'::text END END").join(", ") + "], NULL)";
+  return (
+    "pg_catalog.array_remove(ARRAY[" +
+    privileges
+      .map(
+        (privilege) =>
+          "CASE WHEN " +
+          relationKinds +
+          " THEN CASE WHEN pg_catalog.has_" +
+          kind +
+          "_privilege(" +
+          args +
+          ", '" +
+          privilege +
+          "') THEN '" +
+          privilege +
+          "'::text END END",
+      )
+      .join(", ") +
+    "], NULL)"
+  );
 }
 function grantOption(kind, args, privileges) {
-  return "CASE WHEN " + relationKinds + " THEN pg_catalog.has_" + kind + "_privilege(" + args + ", '" + privileges.map((privilege) => privilege + " WITH GRANT OPTION").join(",") + "') ELSE false END";
+  return (
+    "CASE WHEN " +
+    relationKinds +
+    " THEN pg_catalog.has_" +
+    kind +
+    "_privilege(" +
+    args +
+    ", '" +
+    privileges.map((privilege) => privilege + " WITH GRANT OPTION").join(",") +
+    "') ELSE false END"
+  );
 }
 const relationSql = `WITH candidates AS (${candidates}), matrix AS (
   SELECT r.rolname::text AS role, n.nspname::text AS schema, c.relname::text AS "table", c.relkind::text AS kind,
@@ -216,15 +348,21 @@ function exactRows(rows, expected, key) {
   }
   return pending.size === 0;
 }
-const keyOf = (...fields) => (row) => JSON.stringify(fields.map((field) => row[field]));
+const keyOf =
+  (...fields) =>
+  (row) =>
+    JSON.stringify(fields.map((field) => row[field]));
 
 /** 仅核验安装后目录；不创建角色、修改 ACL 或切换运行身份。 */
 async function verifyInstalledPermissions(query, port, scope) {
   const expected = buildScadaB4PermissionExpectations(port);
   if (scope) {
     let rows;
-    try { rows = (await query("B4 跨阶段共享所有权依赖", scope.sql))?.rows; }
-    catch { throw new DockerB4PermissionReviewError("B4 跨阶段共享所有权依赖查询失败，内部诊断已脱敏"); }
+    try {
+      rows = (await query("B4 跨阶段共享所有权依赖", scope.sql))?.rows;
+    } catch {
+      throw new DockerB4PermissionReviewError("B4 跨阶段共享所有权依赖查询失败，内部诊断已脱敏");
+    }
     verifyB4KeycloakDependencyScope(rows, scope);
   }
   const checks = [
@@ -236,18 +374,31 @@ async function verifyInstalledPermissions(query, port, scope) {
   ];
   for (const [step, sql, rows, key] of checks) {
     let result;
-    try { result = await query("B4 安装后" + step, sql); }
-    catch { throw new DockerB4PermissionReviewError("B4 安装后" + step + "查询失败，内部诊断已脱敏"); }
+    try {
+      result = await query("B4 安装后" + step, sql);
+    } catch {
+      throw new DockerB4PermissionReviewError("B4 安装后" + step + "查询失败，内部诊断已脱敏");
+    }
     requireMatch(exactRows(result?.rows, rows, key), "B4 安装后" + step + "不一致");
   }
-  const catalogFingerprint = createHash("sha256").update(JSON.stringify(scope ? { expected, keycloakDependencies: scope.expected } : expected)).digest("hex");
+  const catalogFingerprint = createHash("sha256")
+    .update(JSON.stringify(scope ? { expected, keycloakDependencies: scope.expected } : expected))
+    .digest("hex");
   return {
-    status: "SCADA_B4_PERMISSION_CATALOG_MATCHED", roleCount: expected.roles.length,
-    databasePermissionCount: expected.databases.length, directAclCount: expected.acl.length,
-    relationPermissionCount: expected.relations.length, columnPermissionCount: expected.columns.length,
-    catalogFingerprint, baseCatalogFingerprint: createHash("sha256").update(JSON.stringify(expected)).digest("hex"),
-    permissionCatalogMatched: true, businessAclApproved: false,
-    definerSafetyVerified: false, rowAuthorizationVerified: false, admissionPassed: false, databaseWritten: false,
+    status: "SCADA_B4_PERMISSION_CATALOG_MATCHED",
+    roleCount: expected.roles.length,
+    databasePermissionCount: expected.databases.length,
+    directAclCount: expected.acl.length,
+    relationPermissionCount: expected.relations.length,
+    columnPermissionCount: expected.columns.length,
+    catalogFingerprint,
+    baseCatalogFingerprint: createHash("sha256").update(JSON.stringify(expected)).digest("hex"),
+    permissionCatalogMatched: true,
+    businessAclApproved: false,
+    definerSafetyVerified: false,
+    rowAuthorizationVerified: false,
+    admissionPassed: false,
+    databaseWritten: false,
   };
 }
 
@@ -262,12 +413,22 @@ async function verifyInstalledCatalog(query, port, scope) {
   const routines = await verifyScadaB4InstalledRoutines(query, port);
   return {
     status: "SCADA_B4_INSTALLED_CATALOG_MATCHED",
-    permissions, routines,
-    catalogFingerprint: createHash("sha256").update(JSON.stringify([permissions.catalogFingerprint, routines.catalogFingerprint])).digest("hex"),
-    baseCatalogFingerprint: createHash("sha256").update(JSON.stringify([permissions.baseCatalogFingerprint, routines.catalogFingerprint])).digest("hex"),
-    installedCatalogMatched: true, businessAclApproved: false, definerSafetyVerified: false,
-    rowLockVerified: false, rowAuthorizationVerified: false, issuerBindingVerified: false,
-    admissionPassed: false, databaseWritten: false,
+    permissions,
+    routines,
+    catalogFingerprint: createHash("sha256")
+      .update(JSON.stringify([permissions.catalogFingerprint, routines.catalogFingerprint]))
+      .digest("hex"),
+    baseCatalogFingerprint: createHash("sha256")
+      .update(JSON.stringify([permissions.baseCatalogFingerprint, routines.catalogFingerprint]))
+      .digest("hex"),
+    installedCatalogMatched: true,
+    businessAclApproved: false,
+    definerSafetyVerified: false,
+    rowLockVerified: false,
+    rowAuthorizationVerified: false,
+    issuerBindingVerified: false,
+    admissionPassed: false,
+    databaseWritten: false,
   };
 }
 
@@ -277,21 +438,54 @@ export async function verifyScadaB4InstalledCatalog(query, port) {
 }
 
 /** 两库安装后的只读目录投影；调用方须持有各自的固定只读事务及独立维护窗口。 */
-export async function verifyScadaB4CompletedCatalog({ scadaQuery, keycloakQuery, context, port, expectedKeycloakPlanFingerprint }) {
-  requireMatch(typeof scadaQuery === "function" && typeof keycloakQuery === "function" && scadaQuery !== keycloakQuery,
-    "B4 跨阶段要求双库独立查询");
+export async function verifyScadaB4CompletedCatalog({
+  scadaQuery,
+  keycloakQuery,
+  context,
+  port,
+  expectedKeycloakPlanFingerprint,
+}) {
+  requireMatch(
+    typeof scadaQuery === "function" &&
+      typeof keycloakQuery === "function" &&
+      scadaQuery !== keycloakQuery,
+    "B4 跨阶段要求双库独立查询",
+  );
   buildScadaB4PermissionExpectations(port);
-  const keycloakOwnership = await readKeycloakInstalledOwnership(keycloakQuery, context, expectedKeycloakPlanFingerprint);
-  const scope = buildB4KeycloakDependencyScope(keycloakOwnership.tableOids, context.identity.systemIdentifier);
+  const keycloakOwnership = await readKeycloakInstalledOwnership(
+    keycloakQuery,
+    context,
+    expectedKeycloakPlanFingerprint,
+  );
+  const scope = buildB4KeycloakDependencyScope(
+    keycloakOwnership.tableOids,
+    context.identity.systemIdentifier,
+  );
   const scada = await verifyInstalledCatalog(scadaQuery, port, scope);
   const keycloak = keycloakOwnership.report;
   return {
-    status: "B4_DUAL_CATALOG_PROJECTION_MATCHED", scada, keycloak,
+    status: "B4_DUAL_CATALOG_PROJECTION_MATCHED",
+    scada,
+    keycloak,
     keycloakSharedDependencyCount: scope.expected.length,
-    catalogFingerprint: createHash("sha256").update(JSON.stringify([expectedKeycloakPlanFingerprint, scada.catalogFingerprint, keycloak.catalogFingerprint])).digest("hex"),
-    catalogProjectionMatched: true, crossDatabaseAtomicSnapshotVerified: false,
-    installationAllowed: false, ownershipTransferAllowed: false, schemaEvolutionVerified: false,
-    runtimeLoginAllowed: false, businessAclApproved: false, admissionPassed: false,
-    databaseWritten: false, serviceSwitched: false,
+    catalogFingerprint: createHash("sha256")
+      .update(
+        JSON.stringify([
+          expectedKeycloakPlanFingerprint,
+          scada.catalogFingerprint,
+          keycloak.catalogFingerprint,
+        ]),
+      )
+      .digest("hex"),
+    catalogProjectionMatched: true,
+    crossDatabaseAtomicSnapshotVerified: false,
+    installationAllowed: false,
+    ownershipTransferAllowed: false,
+    schemaEvolutionVerified: false,
+    runtimeLoginAllowed: false,
+    businessAclApproved: false,
+    admissionPassed: false,
+    databaseWritten: false,
+    serviceSwitched: false,
   };
 }

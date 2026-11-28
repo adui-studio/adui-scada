@@ -2,13 +2,25 @@ import { createHash } from "node:crypto";
 import { verifyDockerRoleObjectIdentity } from "./docker-db-role-review.mjs";
 import { safeSqlState } from "./docker-db-role-bootstrap.mjs";
 import { DockerBusinessAclPreviewError } from "./docker-db-role-business-acl.mjs";
-import { DockerB4PreflightError, readScadaB4BusinessPreparation } from "./docker-db-role-b4-preflight.mjs";
-import { DockerKeycloakOwnershipError, readKeycloakOwnershipPreview } from "./docker-db-role-keycloak-plan.mjs";
+import {
+  DockerB4PreflightError,
+  readScadaB4BusinessPreparation,
+} from "./docker-db-role-b4-preflight.mjs";
+import {
+  DockerKeycloakOwnershipError,
+  readKeycloakOwnershipPreview,
+} from "./docker-db-role-keycloak-plan.mjs";
 
 export class DockerRoleObjectReviewError extends Error {}
 
-const rolesSql = "SELECT oid::text AS oid, rolname::text AS name, rolcanlogin AS login, rolsuper AS superuser, rolcreatedb AS \"createDatabase\", rolcreaterole AS \"createRole\", rolreplication AS replication, rolbypassrls AS \"bypassRls\", rolinherit AS inherit FROM pg_catalog.pg_roles WHERE rolname IN ('adui_scada', 'adui_scada_runtime', 'adui_scada_keycloak_runtime', 'pg_database_owner', 'adui_scada_lock_owner')";
-const requiredRoles = ["adui_scada", "adui_scada_runtime", "adui_scada_keycloak_runtime", "pg_database_owner"];
+const rolesSql =
+  "SELECT oid::text AS oid, rolname::text AS name, rolcanlogin AS login, rolsuper AS superuser, rolcreatedb AS \"createDatabase\", rolcreaterole AS \"createRole\", rolreplication AS replication, rolbypassrls AS \"bypassRls\", rolinherit AS inherit FROM pg_catalog.pg_roles WHERE rolname IN ('adui_scada', 'adui_scada_runtime', 'adui_scada_keycloak_runtime', 'pg_database_owner', 'adui_scada_lock_owner')";
+const requiredRoles = [
+  "adui_scada",
+  "adui_scada_runtime",
+  "adui_scada_keycloak_runtime",
+  "pg_database_owner",
+];
 const roleNames = [...requiredRoles, "adui_scada_lock_owner"];
 const objectsSql = `WITH schemas AS (
   SELECT * FROM pg_catalog.pg_namespace WHERE nspname <> 'information_schema' AND left(nspname, 3) <> 'pg_'
@@ -64,63 +76,163 @@ ORDER BY d.dbid, d.classid, d.objid, d.objsubid, d.refobjid, d.deptype`;
 const databaseNames = ["adui_scada", "adui_scada_keycloak"];
 
 const categories = {
-  schema: 2, relation: 6, columnAcl: 4, routine: 6, type: 4, defaultAcl: 3,
-  extension: 3, policy: 6, eventTrigger: 3, foreignServer: 2, foreignWrapper: 2, publication: 1,
+  schema: 2,
+  relation: 6,
+  columnAcl: 4,
+  routine: 6,
+  type: 4,
+  defaultAcl: 3,
+  extension: 3,
+  policy: 6,
+  eventTrigger: 3,
+  foreignServer: 2,
+  foreignWrapper: 2,
+  publication: 1,
 };
-const oid = (value) => typeof value === "string" && /^[1-9][0-9]{0,9}$/u.test(value) && Number(value) <= 4294967295;
-const compare = (left, right) => left < right ? -1 : left > right ? 1 : 0;
+const oid = (value) =>
+  typeof value === "string" && /^[1-9][0-9]{0,9}$/u.test(value) && Number(value) <= 4294967295;
+const compare = (left, right) => (left < right ? -1 : left > right ? 1 : 0);
 
 function requireMatch(condition) {
   if (!condition) throw new DockerRoleObjectReviewError("业务对象目录证据缺失或形状不一致");
 }
 
 function exactKeys(row, keys) {
-  return row && typeof row === "object" && Object.keys(row).length === keys.length &&
-    keys.every((key) => Object.hasOwn(row, key));
+  return (
+    row &&
+    typeof row === "object" &&
+    Object.keys(row).length === keys.length &&
+    keys.every((key) => Object.hasOwn(row, key))
+  );
 }
 
 /** 原始名称与 ACL 仅在本地计算指纹；公开报告不包含对象名、凭据或实际业务行。 */
 export async function readDockerRoleObjectInventory(query) {
   const roles = (await query("固定角色标识", rolesSql)).rows;
-  requireMatch(Array.isArray(roles) && roles.length >= requiredRoles.length && roles.length <= roleNames.length &&
-    roles.every((row) =>
-      exactKeys(row, ["oid", "name", "login", "superuser", "createDatabase", "createRole", "replication", "bypassRls", "inherit"]) &&
-      oid(row.oid) && roleNames.includes(row.name) &&
-      ["login", "superuser", "createDatabase", "createRole", "replication", "bypassRls", "inherit"].every((key) => typeof row[key] === "boolean")) &&
-    requiredRoles.every((name) => roles.filter((row) => row.name === name).length === 1) &&
-    roles.filter((row) => row.name === "adui_scada_lock_owner").length <= 1 &&
-    new Set(roles.map((row) => row.name)).size === roles.length &&
-    new Set(roles.map((row) => row.oid)).size === roles.length);
+  requireMatch(
+    Array.isArray(roles) &&
+      roles.length >= requiredRoles.length &&
+      roles.length <= roleNames.length &&
+      roles.every(
+        (row) =>
+          exactKeys(row, [
+            "oid",
+            "name",
+            "login",
+            "superuser",
+            "createDatabase",
+            "createRole",
+            "replication",
+            "bypassRls",
+            "inherit",
+          ]) &&
+          oid(row.oid) &&
+          roleNames.includes(row.name) &&
+          [
+            "login",
+            "superuser",
+            "createDatabase",
+            "createRole",
+            "replication",
+            "bypassRls",
+            "inherit",
+          ].every((key) => typeof row[key] === "boolean"),
+      ) &&
+      requiredRoles.every((name) => roles.filter((row) => row.name === name).length === 1) &&
+      roles.filter((row) => row.name === "adui_scada_lock_owner").length <= 1 &&
+      new Set(roles.map((row) => row.name)).size === roles.length &&
+      new Set(roles.map((row) => row.oid)).size === roles.length,
+  );
   // 两个运行角色和可选锁专用角色必须保持不可登录且无高权限；此处不代替成员关系检查。
-  const restrictedRoles = ["adui_scada_runtime", "adui_scada_keycloak_runtime", "adui_scada_lock_owner"];
-  requireMatch(roles.filter((role) => restrictedRoles.includes(role.name)).every((role) =>
-    ["login", "superuser", "createDatabase", "createRole", "replication", "bypassRls", "inherit"].every((flag) => role[flag] === false)));
+  const restrictedRoles = [
+    "adui_scada_runtime",
+    "adui_scada_keycloak_runtime",
+    "adui_scada_lock_owner",
+  ];
+  requireMatch(
+    roles
+      .filter((role) => restrictedRoles.includes(role.name))
+      .every((role) =>
+        [
+          "login",
+          "superuser",
+          "createDatabase",
+          "createRole",
+          "replication",
+          "bypassRls",
+          "inherit",
+        ].every((flag) => role[flag] === false),
+      ),
+  );
   const rows = (await query("对象所有权与直接授权", objectsSql)).rows;
-  requireMatch(Array.isArray(rows) && rows.length > 0 && rows.length <= 100000 &&
-    rows.every((row) => exactKeys(row, ["kind", "id", "owner", "evidence"]) &&
-      Object.hasOwn(categories, row.kind) && oid(row.owner) &&
-      (row.kind === "columnAcl" ? typeof row.id === "string" && /^[1-9][0-9]{0,9}:[1-9][0-9]{0,4}$/u.test(row.id) : oid(row.id)) &&
-      Array.isArray(row.evidence) && row.evidence.length === categories[row.kind] &&
-      row.evidence.every((item, index) => row.kind === "routine" && index === 5
-        ? item === null || (Array.isArray(item) && item.length <= 100 && item.every((setting) =>
-          typeof setting === "string" && setting.length <= 4096))
-        : item === null || typeof item === "string" || typeof item === "boolean")) &&
-    new Set(rows.map((row) => row.kind + ":" + row.id)).size === rows.length);
-  requireMatch(rows.some((row) => row.kind === "schema") && rows.some((row) => row.kind === "relation"));
+  requireMatch(
+    Array.isArray(rows) &&
+      rows.length > 0 &&
+      rows.length <= 100000 &&
+      rows.every(
+        (row) =>
+          exactKeys(row, ["kind", "id", "owner", "evidence"]) &&
+          Object.hasOwn(categories, row.kind) &&
+          oid(row.owner) &&
+          (row.kind === "columnAcl"
+            ? typeof row.id === "string" && /^[1-9][0-9]{0,9}:[1-9][0-9]{0,4}$/u.test(row.id)
+            : oid(row.id)) &&
+          Array.isArray(row.evidence) &&
+          row.evidence.length === categories[row.kind] &&
+          row.evidence.every((item, index) =>
+            row.kind === "routine" && index === 5
+              ? item === null ||
+                (Array.isArray(item) &&
+                  item.length <= 100 &&
+                  item.every((setting) => typeof setting === "string" && setting.length <= 4096))
+              : item === null || typeof item === "string" || typeof item === "boolean",
+          ),
+      ) &&
+      new Set(rows.map((row) => row.kind + ":" + row.id)).size === rows.length,
+  );
+  requireMatch(
+    rows.some((row) => row.kind === "schema") && rows.some((row) => row.kind === "relation"),
+  );
   const dependencies = (await query("全集群共享角色依赖", dependenciesSql)).rows;
-  requireMatch(Array.isArray(dependencies) && dependencies.length <= 100000 &&
-    dependencies.every((row) =>
-      exactKeys(row, ["databaseOid", "databaseScope", "classOid", "objectOid", "subId", "roleOid", "kind"]) &&
-      (row.databaseOid === "0" || oid(row.databaseOid)) &&
-      ["SHARED", "CURRENT_DATABASE", "OTHER_DATABASE"].includes(row.databaseScope) &&
-      ((row.databaseOid === "0") === (row.databaseScope === "SHARED")) &&
-      oid(row.classOid) && oid(row.objectOid) && oid(row.roleOid) &&
-      roleNames.includes(roles.find((role) => role.oid === row.roleOid)?.name) &&
-      Number.isSafeInteger(row.subId) && row.subId >= 0 &&
-      typeof row.kind === "string" && /^[a-z]$/u.test(row.kind)) &&
-    new Set(dependencies.map((row) => JSON.stringify([
-      row.databaseOid, row.classOid, row.objectOid, row.subId, row.roleOid, row.kind,
-    ]))).size === dependencies.length);
+  requireMatch(
+    Array.isArray(dependencies) &&
+      dependencies.length <= 100000 &&
+      dependencies.every(
+        (row) =>
+          exactKeys(row, [
+            "databaseOid",
+            "databaseScope",
+            "classOid",
+            "objectOid",
+            "subId",
+            "roleOid",
+            "kind",
+          ]) &&
+          (row.databaseOid === "0" || oid(row.databaseOid)) &&
+          ["SHARED", "CURRENT_DATABASE", "OTHER_DATABASE"].includes(row.databaseScope) &&
+          (row.databaseOid === "0") === (row.databaseScope === "SHARED") &&
+          oid(row.classOid) &&
+          oid(row.objectOid) &&
+          oid(row.roleOid) &&
+          roleNames.includes(roles.find((role) => role.oid === row.roleOid)?.name) &&
+          Number.isSafeInteger(row.subId) &&
+          row.subId >= 0 &&
+          typeof row.kind === "string" &&
+          /^[a-z]$/u.test(row.kind),
+      ) &&
+      new Set(
+        dependencies.map((row) =>
+          JSON.stringify([
+            row.databaseOid,
+            row.classOid,
+            row.objectOid,
+            row.subId,
+            row.roleOid,
+            row.kind,
+          ]),
+        ),
+      ).size === dependencies.length,
+  );
   const classify = (owner) => roles.find((role) => role.oid === owner)?.name ?? "OTHER";
   const objects = Object.keys(categories).map((kind) => ({
     kind,
@@ -134,42 +246,63 @@ export async function readDockerRoleObjectInventory(query) {
   const lockOwnerId = roles.find((role) => role.name === "adui_scada_lock_owner")?.oid;
   const securityDefinerRoutineCount = routineRows.filter((row) => row.evidence[4] === true).length;
   // 配置匹配只是必要条件；函数体、执行 ACL、Schema 写权及所有者仍需另行证明。
-  const definerConfigMatchedCount = routineRows.filter((row) =>
-    row.evidence[4] === true &&
-    Array.isArray(row.evidence[5]) && row.evidence[5].length === 2 &&
-    row.evidence[5].includes("search_path=pg_catalog, public, pg_temp") &&
-    row.evidence[5].includes("row_security=on"),
+  const definerConfigMatchedCount = routineRows.filter(
+    (row) =>
+      row.evidence[4] === true &&
+      Array.isArray(row.evidence[5]) &&
+      row.evidence[5].length === 2 &&
+      row.evidence[5].includes("search_path=pg_catalog, public, pg_temp") &&
+      row.evidence[5].includes("row_security=on"),
   ).length;
   const lockOwnerOwnedRoutineCount = lockOwnerId
     ? routineRows.filter((row) => row.owner === lockOwnerId).length
     : 0;
   const dependencyOwners = [...roleNames, "OTHER"].map((name) => ({
     role: name,
-    ownership: dependencies.filter((row) => classify(row.roleOid) === name && row.kind === "o").length,
+    ownership: dependencies.filter((row) => classify(row.roleOid) === name && row.kind === "o")
+      .length,
     acl: dependencies.filter((row) => classify(row.roleOid) === name && row.kind === "a").length,
-    initialAcl: dependencies.filter((row) => classify(row.roleOid) === name && row.kind === "i").length,
+    initialAcl: dependencies.filter((row) => classify(row.roleOid) === name && row.kind === "i")
+      .length,
     policy: dependencies.filter((row) => classify(row.roleOid) === name && row.kind === "r").length,
-    other: dependencies.filter((row) => classify(row.roleOid) === name && !["o", "a", "i", "r"].includes(row.kind)).length,
-    shared: dependencies.filter((row) => classify(row.roleOid) === name && row.databaseScope === "SHARED").length,
-    currentDatabase: dependencies.filter((row) => classify(row.roleOid) === name && row.databaseScope === "CURRENT_DATABASE").length,
-    otherDatabases: dependencies.filter((row) => classify(row.roleOid) === name && row.databaseScope === "OTHER_DATABASE").length,
+    other: dependencies.filter(
+      (row) => classify(row.roleOid) === name && !["o", "a", "i", "r"].includes(row.kind),
+    ).length,
+    shared: dependencies.filter(
+      (row) => classify(row.roleOid) === name && row.databaseScope === "SHARED",
+    ).length,
+    currentDatabase: dependencies.filter(
+      (row) => classify(row.roleOid) === name && row.databaseScope === "CURRENT_DATABASE",
+    ).length,
+    otherDatabases: dependencies.filter(
+      (row) => classify(row.roleOid) === name && row.databaseScope === "OTHER_DATABASE",
+    ).length,
   }));
-  const catalogFingerprint = createHash("sha256").update(JSON.stringify({
-    roles: [...roles].sort((a, b) => compare(a.oid, b.oid)),
-    objects: [...rows].sort((a, b) => compare(a.kind + ":" + a.id, b.kind + ":" + b.id)),
-    dependencies: [...dependencies].sort((a, b) => compare(JSON.stringify(a), JSON.stringify(b))),
-  })).digest("hex");
+  const catalogFingerprint = createHash("sha256")
+    .update(
+      JSON.stringify({
+        roles: [...roles].sort((a, b) => compare(a.oid, b.oid)),
+        objects: [...rows].sort((a, b) => compare(a.kind + ":" + a.id, b.kind + ":" + b.id)),
+        dependencies: [...dependencies].sort((a, b) =>
+          compare(JSON.stringify(a), JSON.stringify(b)),
+        ),
+      }),
+    )
+    .digest("hex");
   return {
     objects,
     objectCount: rows.length,
     dependencyOwners,
     dependencyCount: dependencies.length,
     unknownOwnerCount: rows.filter((row) => classify(row.owner) === "OTHER").length,
-    unknownDependencyRoleCount: dependencies.filter((row) => classify(row.roleOid) === "OTHER").length,
+    unknownDependencyRoleCount: dependencies.filter((row) => classify(row.roleOid) === "OTHER")
+      .length,
     securityDefinerRoutineCount,
     definerConfigMatchedCount,
     definerSafetyVerified: false,
-    roles: roleNames.flatMap((name) => roles.filter((role) => role.name === name).map(({ oid: _oid, ...flags }) => flags)),
+    roles: roleNames.flatMap((name) =>
+      roles.filter((role) => role.name === name).map(({ oid: _oid, ...flags }) => flags),
+    ),
     lockOwnerOwnedRoutineCount,
     catalogFingerprint,
     ownershipTransferAllowed: false,
@@ -187,22 +320,30 @@ async function inspectDatabase(createClient, database, identity, keycloakPlanCon
     client = createClient(database);
     await client.connect();
     stage = "只读事务";
-    requireMatch((await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")).command === "BEGIN");
+    requireMatch(
+      (await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")).command === "BEGIN",
+    );
     begun = true;
     stage = "前置身份";
     await verifyDockerRoleObjectIdentity(client, database, identity);
     stage = "目录查询";
     const query = async (step, sql) => {
-      try { return await client.query(sql); }
-      catch (error) { throw new DockerRoleObjectReviewError(step + "查询失败（SQLSTATE=" + safeSqlState(error) + "）"); }
+      try {
+        return await client.query(sql);
+      } catch (error) {
+        throw new DockerRoleObjectReviewError(
+          step + "查询失败（SQLSTATE=" + safeSqlState(error) + "）",
+        );
+      }
     };
     const objects = await readDockerRoleObjectInventory(query);
-    inventory = database === databaseNames[0]
-      ? {
-          ...objects,
-          ...(await readScadaB4BusinessPreparation(query)),
-        }
-      : objects;
+    inventory =
+      database === databaseNames[0]
+        ? {
+            ...objects,
+            ...(await readScadaB4BusinessPreparation(query)),
+          }
+        : objects;
     if (database === databaseNames[1] && keycloakPlanContext !== undefined) {
       stage = "Keycloak 逐对象所有权候选";
       inventory.ownershipPreview = await readKeycloakOwnershipPreview(query, {
@@ -218,15 +359,27 @@ async function inspectDatabase(createClient, database, identity, keycloakPlanCon
     begun = false;
   } catch (error) {
     failure = database + "对象评审" + stage + "失败，内部诊断已脱敏";
-    if (error instanceof DockerRoleObjectReviewError || error instanceof DockerBusinessAclPreviewError || error instanceof DockerB4PreflightError || error instanceof DockerKeycloakOwnershipError) failure += "；" + error.message;
+    if (
+      error instanceof DockerRoleObjectReviewError ||
+      error instanceof DockerBusinessAclPreviewError ||
+      error instanceof DockerB4PreflightError ||
+      error instanceof DockerKeycloakOwnershipError
+    )
+      failure += "；" + error.message;
   }
   if (begun) {
-    try { requireMatch((await client.query("ROLLBACK")).command === "ROLLBACK"); }
-    catch { failure += "；回滚未确认"; }
+    try {
+      requireMatch((await client.query("ROLLBACK")).command === "ROLLBACK");
+    } catch {
+      failure += "；回滚未确认";
+    }
   }
   if (client) {
-    try { await client.end(); }
-    catch { failure = (failure ?? "对象评审") + "；连接关闭失败"; }
+    try {
+      await client.end();
+    } catch {
+      failure = (failure ?? "对象评审") + "；连接关闭失败";
+    }
   }
   if (failure) throw new DockerRoleObjectReviewError(failure);
   return inventory;
@@ -234,13 +387,22 @@ async function inspectDatabase(createClient, database, identity, keycloakPlanCon
 
 /** 分别读取两个固定库；不批准所有权转移、业务 ACL 或运行身份。 */
 export async function reviewDockerRoleObjects(createClient, identity, keycloakPlanContext) {
-  requireMatch(identity?.version === "190000" && typeof identity.systemIdentifier === "string" &&
-    /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier));
+  requireMatch(
+    identity?.version === "190000" &&
+      typeof identity.systemIdentifier === "string" &&
+      /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier),
+  );
   const scada = await inspectDatabase(createClient, databaseNames[0], identity);
-  const keycloak = await inspectDatabase(createClient, databaseNames[1], identity, keycloakPlanContext);
+  const keycloak = await inspectDatabase(
+    createClient,
+    databaseNames[1],
+    identity,
+    keycloakPlanContext,
+  );
   return {
     status: "DOCKER_DB_ROLE_OBJECT_REVIEW_READY",
-    scada, keycloak,
+    scada,
+    keycloak,
     directoryReviewPassed: true,
     ownershipTransferAllowed: false,
     businessAclApproved: false,

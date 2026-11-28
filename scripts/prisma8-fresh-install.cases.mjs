@@ -295,19 +295,51 @@ void test("官方诊断码保持固定码元顺序并去重", () => {
 
 void test("隔离事务必须精确确认三组消费者、指纹及独立持久化许可", () => {
   const fingerprint = "--plan-fingerprint=" + "a".repeat(64);
-  const approvals = ["--reviewed-business-consumers", "--reviewed-maintenance-consumers", "--reviewed-template-consumers"];
+  const approvals = [
+    "--reviewed-business-consumers",
+    "--reviewed-maintenance-consumers",
+    "--reviewed-template-consumers",
+  ];
   assert.equal(freshAction(["--role-isolation-status"]), "role-isolation-status");
   assert.equal(freshAction(["--role-object-review"]), "role-object-review");
   assert.throws(() => freshAction(["--role-object-review", "--apply"]), /必须明确指定/u);
-  assert.equal(freshAction(["--role-isolation-execute", "--confirm-rehearse-isolation", ...approvals, fingerprint]), "role-isolation-rehearse");
-  assert.equal(freshAction(["--role-isolation-execute", "--confirm-apply-isolation", "--confirm-rehearsal-verified", ...approvals, fingerprint]), "role-isolation-apply");
+  assert.equal(
+    freshAction([
+      "--role-isolation-execute",
+      "--confirm-rehearse-isolation",
+      ...approvals,
+      fingerprint,
+    ]),
+    "role-isolation-rehearse",
+  );
+  assert.equal(
+    freshAction([
+      "--role-isolation-execute",
+      "--confirm-apply-isolation",
+      "--confirm-rehearsal-verified",
+      ...approvals,
+      fingerprint,
+    ]),
+    "role-isolation-apply",
+  );
   for (const args of [
     ["--role-isolation-execute"],
     ["--role-isolation-execute", "--confirm-apply-isolation", ...approvals, fingerprint],
-    ["--role-isolation-execute", "--confirm-rehearse-isolation", ...approvals.slice(0, 2), fingerprint],
-    ["--role-isolation-execute", "--confirm-rehearse-isolation", ...approvals, "--plan-fingerprint=bad"],
+    [
+      "--role-isolation-execute",
+      "--confirm-rehearse-isolation",
+      ...approvals.slice(0, 2),
+      fingerprint,
+    ],
+    [
+      "--role-isolation-execute",
+      "--confirm-rehearse-isolation",
+      ...approvals,
+      "--plan-fingerprint=bad",
+    ],
     ["--role-isolation-status", "--confirm-apply-isolation"],
-  ]) assert.throws(() => freshAction(args), /必须明确指定/u);
+  ])
+    assert.throws(() => freshAction(args), /必须明确指定/u);
 });
 
 void test("B4 只读计划与回滚演练必须独立确认，禁止混用持久化参数", () => {
@@ -413,9 +445,10 @@ void test("全新入口仅分派独立确认的 B4 持久化、阶段状态及�
     for (let index = 1; index < args.length; index++) {
       assert.throws(() => freshAction(args.filter((_, offset) => offset !== index)), {
         name: "Error",
-        message: index === 1 && action === "role-b4-status"
-          ? "B4 状态命令必须指定明确安装阶段"
-          : "B4 持久化或状态命令必须完整明确指定确认参数",
+        message:
+          index === 1 && action === "role-b4-status"
+            ? "B4 状态命令必须指定明确安装阶段"
+            : "B4 持久化或状态命令必须完整明确指定确认参数",
       });
     }
     assert.throws(() => freshAction([...args, "--commit"]), {
@@ -425,27 +458,48 @@ void test("全新入口仅分派独立确认的 B4 持久化、阶段状态及�
   assert.throws(() => freshAction(["--role-b4-status", "--phase=auto", ...shared]), {
     message: "B4 状态命令必须指定明确安装阶段",
   });
-  assert.throws(() => freshAction([
-    "--role-b4-status",
-    "--phase=dual-installed",
-    ...shared,
-    "--projection-fingerprint=bad",
-  ]), {
-    message: "B4 参数缺少独立确认指纹：projection-fingerprint",
-  });
+  assert.throws(
+    () =>
+      freshAction([
+        "--role-b4-status",
+        "--phase=dual-installed",
+        ...shared,
+        "--projection-fingerprint=bad",
+      ]),
+    {
+      message: "B4 参数缺少独立确认指纹：projection-fingerprint",
+    },
+  );
 });
 
 void test("Keycloak 维护窗口要求唯一固定容器已明确退出且不自动重启", () => {
   const id = "a".repeat(64);
-  const details = [id, "exited", false, false, false, "quay.io/keycloak/keycloak:latest",
-    { "com.docker.compose.project": "adui-scada", "com.docker.compose.service": "keycloak" }, "no"];
+  const details = [
+    id,
+    "exited",
+    false,
+    false,
+    false,
+    "quay.io/keycloak/keycloak:latest",
+    { "com.docker.compose.project": "adui-scada", "com.docker.compose.service": "keycloak" },
+    "no",
+  ];
   assert.equal(requireKeycloakMaintenanceContainer(id, details), id);
   for (const ids of ["", id + "\n" + "b".repeat(64), "short"]) {
     assert.throws(() => requireKeycloakMaintenanceContainer(ids, details), /容器标识不一致/u);
   }
-  for (const [index, value] of [[0, "b".repeat(64)], [1, "running"], [2, true], [3, true], [4, true],
-    [5, "other"], [6, {}], [7, "always"]]) {
-    const changed = [...details]; changed[index] = value;
+  for (const [index, value] of [
+    [0, "b".repeat(64)],
+    [1, "running"],
+    [2, true],
+    [3, true],
+    [4, true],
+    [5, "other"],
+    [6, {}],
+    [7, "always"],
+  ]) {
+    const changed = [...details];
+    changed[index] = value;
     assert.throws(() => requireKeycloakMaintenanceContainer(id, changed), /明确停止/u);
   }
 });

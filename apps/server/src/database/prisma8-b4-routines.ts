@@ -3,7 +3,9 @@ import type { Prisma8TextTransaction } from "./prisma8-text-transaction.js";
 
 /** 固定 B4 例程，仅通过当前原生事务执行，不回退到受保护表直接行锁。 */
 export function lockB4Identity(tx: Prisma8TextTransaction, tenantId: string, subjectId: string) {
-  return tx.queryText({ status: "pg/text@1" })`SELECT status FROM public.scada_lock_identity(${tenantId}::text, ${subjectId}::text)`;
+  return tx.queryText({
+    status: "pg/text@1",
+  })`SELECT status FROM public.scada_lock_identity(${tenantId}::text, ${subjectId}::text)`;
 }
 
 export function lockB4SessionIdentity(
@@ -12,7 +14,9 @@ export function lockB4SessionIdentity(
   subjectId: string,
   sessionId: string,
 ) {
-  return tx.queryText({ session_id: "pg/text@1" })`SELECT session_id FROM public.scada_lock_session_identity(${tenantId}::text, ${subjectId}::text, ${sessionId}::uuid)`;
+  return tx.queryText({
+    session_id: "pg/text@1",
+  })`SELECT session_id FROM public.scada_lock_session_identity(${tenantId}::text, ${subjectId}::text, ${sessionId}::uuid)`;
 }
 
 export function lockB4ProjectGrants(
@@ -21,7 +25,9 @@ export function lockB4ProjectGrants(
   projectId: string,
   subjectId: string,
 ) {
-  return tx.queryText({ permission: "pg/text@1" })`SELECT permission FROM public.scada_lock_project_grants(${tenantId}::text, ${projectId}::text, ${subjectId}::text)`;
+  return tx.queryText({
+    permission: "pg/text@1",
+  })`SELECT permission FROM public.scada_lock_project_grants(${tenantId}::text, ${projectId}::text, ${subjectId}::text)`;
 }
 
 export function lockB4ProjectVersion(
@@ -75,7 +81,9 @@ export function lockB4ReleaseEvent(
   projectId: string,
   eventId: string,
 ) {
-  return tx.queryText(EVENT_COLUMNS)`SELECT event_id, generation, action, revision, hash, created_at, semantic_hash FROM public.scada_lock_release_event(${tenantId}::text, ${projectId}::text, ${eventId}::uuid)`;
+  return tx.queryText(
+    EVENT_COLUMNS,
+  )`SELECT event_id, generation, action, revision, hash, created_at, semantic_hash FROM public.scada_lock_release_event(${tenantId}::text, ${projectId}::text, ${eventId}::uuid)`;
 }
 
 export function lockB4ReleaseRequest(
@@ -86,7 +94,9 @@ export function lockB4ReleaseRequest(
   action: "PUBLISH" | "ROLLBACK",
   idempotencyKey: string,
 ) {
-  return tx.queryText(EVENT_COLUMNS)`SELECT event_id, generation, action, revision, hash, created_at, semantic_hash FROM public.scada_lock_release_request(${tenantId}::text, ${projectId}::text, ${subjectId}::text, ${action}::text, ${idempotencyKey}::text)`;
+  return tx.queryText(
+    EVENT_COLUMNS,
+  )`SELECT event_id, generation, action, revision, hash, created_at, semantic_hash FROM public.scada_lock_release_request(${tenantId}::text, ${projectId}::text, ${subjectId}::text, ${action}::text, ${idempotencyKey}::text)`;
 }
 
 export function lockB4PriorPublish(
@@ -96,7 +106,9 @@ export function lockB4PriorPublish(
   revision: bigint,
   generation: bigint,
 ) {
-  return tx.queryText(EVENT_COLUMNS)`SELECT event_id, generation, action, revision, hash, created_at, semantic_hash FROM public.scada_lock_prior_publish(${tenantId}::text, ${projectId}::text, ${revision}::bigint, ${generation}::bigint)`;
+  return tx.queryText(
+    EVENT_COLUMNS,
+  )`SELECT event_id, generation, action, revision, hash, created_at, semantic_hash FROM public.scada_lock_prior_publish(${tenantId}::text, ${projectId}::text, ${revision}::bigint, ${generation}::bigint)`;
 }
 
 /** 仅接受共享核心生成的首版快照；例程负责同事务内的工程、授权、版本及审计写入。 */

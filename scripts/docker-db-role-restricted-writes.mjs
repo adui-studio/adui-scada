@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
-import { buildB4OidcCleanupBody, B4_OIDC_CLEANUP_BATCH_SIZE } from "../apps/server/src/database/prisma8-b4-oidc-cleanup.ts";
+import {
+  buildB4OidcCleanupBody,
+  B4_OIDC_CLEANUP_BATCH_SIZE,
+} from "../apps/server/src/database/prisma8-b4-oidc-cleanup.ts";
 
 const runtime = "adui_scada_runtime";
 const projectOwner = "adui_scada_project_create_owner";
@@ -82,11 +85,16 @@ $scada_create$`;
     "GRANT USAGE ON SCHEMA public TO " + projectOwner,
     "GRANT EXECUTE ON FUNCTION public.scada_lock_identity(text, text) TO " + projectOwner,
     "GRANT SELECT (tenant_id, project_id) ON TABLE public.scada_projects TO " + projectOwner,
-    "GRANT INSERT (tenant_id, project_id, head_revision, created_at, updated_at) ON TABLE public.scada_projects TO " + projectOwner,
-    "GRANT INSERT (tenant_id, project_id, revision, snapshot, content_hash, created_by, created_at) ON TABLE public.scada_project_versions TO " + projectOwner,
-    "GRANT INSERT (tenant_id, project_id, release_generation, updated_at) ON TABLE public.scada_project_release_state TO " + projectOwner,
-    "GRANT INSERT (tenant_id, project_id, subject_id, permission) ON TABLE public.scada_project_grants TO " + projectOwner,
-    "GRANT INSERT (event_id, tenant_id, project_id, revision, actor_id, action) ON TABLE public.scada_project_audit TO " + projectOwner,
+    "GRANT INSERT (tenant_id, project_id, head_revision, created_at, updated_at) ON TABLE public.scada_projects TO " +
+      projectOwner,
+    "GRANT INSERT (tenant_id, project_id, revision, snapshot, content_hash, created_by, created_at) ON TABLE public.scada_project_versions TO " +
+      projectOwner,
+    "GRANT INSERT (tenant_id, project_id, release_generation, updated_at) ON TABLE public.scada_project_release_state TO " +
+      projectOwner,
+    "GRANT INSERT (tenant_id, project_id, subject_id, permission) ON TABLE public.scada_project_grants TO " +
+      projectOwner,
+    "GRANT INSERT (event_id, tenant_id, project_id, revision, actor_id, action) ON TABLE public.scada_project_audit TO " +
+      projectOwner,
   ];
   return routine(signature, projectOwner, sql, grants);
 }
@@ -105,18 +113,31 @@ SET search_path = pg_catalog, public, pg_temp SET row_security = on
 AS $scada_cleanup$${buildB4OidcCleanupBody(issuer)}$scada_cleanup$`;
   const grants = [
     "GRANT USAGE ON SCHEMA public TO " + cleanupOwner,
-    "GRANT SELECT (state_hash, issuer, expires_at) ON TABLE public.scada_oidc_transactions TO " + cleanupOwner,
+    "GRANT SELECT (state_hash, issuer, expires_at) ON TABLE public.scada_oidc_transactions TO " +
+      cleanupOwner,
     "GRANT DELETE ON TABLE public.scada_oidc_transactions TO " + cleanupOwner,
   ];
-  const plan = { ...routine(signature, cleanupOwner, sql, grants), cleanupBatchSize, issuerBindingVerified: false };
-  return { ...plan, planFingerprint: createHash("sha256").update(JSON.stringify(plan)).digest("hex") };
+  const plan = {
+    ...routine(signature, cleanupOwner, sql, grants),
+    cleanupBatchSize,
+    issuerBindingVerified: false,
+  };
+  return {
+    ...plan,
+    planFingerprint: createHash("sha256").update(JSON.stringify(plan)).digest("hex"),
+  };
 }
 
 /** 默认评审不猜测真实端口；工程创建和清理采用两个独立的不可登录所有者候选。 */
 export function buildScadaRestrictedWritePreview() {
   const plan = {
     projectCreate: projectCreatePreview(),
-    oidcCleanup: { ownerRole: cleanupOwner, cleanupBatchSize, issuerBindingRequired: true, issuerBindingVerified: false },
+    oidcCleanup: {
+      ownerRole: cleanupOwner,
+      cleanupBatchSize,
+      issuerBindingRequired: true,
+      issuerBindingVerified: false,
+    },
     coveredOperations: ["INITIAL_PROJECT_GRANT", "INITIAL_RELEASE_STATE", "EXPIRED_OIDC_CLEANUP"],
     requiredDirectGrantExclusions: [{ table: "scada_projects", privilege: "INSERT" }],
     planOnly: true,

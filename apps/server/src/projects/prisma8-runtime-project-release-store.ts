@@ -339,7 +339,10 @@ async function lockedSnapshot(
   currentRelease = false,
 ): Promise<ProjectSnapshot> {
   const rows = await lockB4ProjectVersion(
-    routineTransaction(tx), tenantId, projectId, BigInt(revision),
+    routineTransaction(tx),
+    tenantId,
+    projectId,
+    BigInt(revision),
   );
   const row = rows[0];
   if (rows.length !== 1 || !row) throw new ProjectVersionAccessDeniedError();
@@ -412,7 +415,12 @@ async function findReplay(
 ): Promise<ReleaseEventResultRow | null> {
   const { tenantId, subjectId } = actor;
   const rows = await lockB4ReleaseRequest(
-    routineTransaction(tx), tenantId, projectId, subjectId, action, request.idempotencyKey,
+    routineTransaction(tx),
+    tenantId,
+    projectId,
+    subjectId,
+    action,
+    request.idempotencyKey,
   );
   if (rows.length > 1) throw new ProjectReleaseConflictError();
   const row = rows[0];
@@ -449,7 +457,11 @@ async function findRollbackTarget(
   state: ReleaseState,
 ): Promise<ProjectSnapshot> {
   const rows = await lockB4PriorPublish(
-    routineTransaction(tx), tenantId, projectId, BigInt(request.targetRevision), state.releaseGeneration,
+    routineTransaction(tx),
+    tenantId,
+    projectId,
+    BigInt(request.targetRevision),
+    state.releaseGeneration,
   );
   if (rows.length !== 1 || !rows[0]) throw new ProjectReleaseConflictError();
   const event = eventResult(rows[0]);

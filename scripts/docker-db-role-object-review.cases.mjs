@@ -3,22 +3,69 @@ import { test } from "node:test";
 import { readDockerRoleObjectInventory } from "./docker-db-role-object-review.mjs";
 
 function fixture() {
-  const roles = ["adui_scada", "adui_scada_runtime", "adui_scada_keycloak_runtime", "pg_database_owner"]
-    .map((name, index) => ({
-      name, oid: String(index + 10),
-      login: index === 0, superuser: index === 0,
-      createDatabase: index === 0, createRole: index === 0,
-      replication: index === 0, bypassRls: index === 0, inherit: index !== 1 && index !== 2,
-    }));
+  const roles = [
+    "adui_scada",
+    "adui_scada_runtime",
+    "adui_scada_keycloak_runtime",
+    "pg_database_owner",
+  ].map((name, index) => ({
+    name,
+    oid: String(index + 10),
+    login: index === 0,
+    superuser: index === 0,
+    createDatabase: index === 0,
+    createRole: index === 0,
+    replication: index === 0,
+    bypassRls: index === 0,
+    inherit: index !== 1 && index !== 2,
+  }));
   const objects = [
     { kind: "schema", id: "100", owner: "13", evidence: ["public", null] },
-    { kind: "relation", id: "101", owner: "10", evidence: ["public", "模拟内部对象", "r", null, false, false] },
-    { kind: "columnAcl", id: "101:1", owner: "10", evidence: ["public", "模拟内部对象", "id", "模拟内部授权"] },
-    { kind: "routine", id: "102", owner: "900", evidence: ["public", "模拟内部函数", "f", null, true, ["search_path=pg_catalog, public, pg_temp", "row_security=on"]] },
+    {
+      kind: "relation",
+      id: "101",
+      owner: "10",
+      evidence: ["public", "模拟内部对象", "r", null, false, false],
+    },
+    {
+      kind: "columnAcl",
+      id: "101:1",
+      owner: "10",
+      evidence: ["public", "模拟内部对象", "id", "模拟内部授权"],
+    },
+    {
+      kind: "routine",
+      id: "102",
+      owner: "900",
+      evidence: [
+        "public",
+        "模拟内部函数",
+        "f",
+        null,
+        true,
+        ["search_path=pg_catalog, public, pg_temp", "row_security=on"],
+      ],
+    },
   ];
   const dependencies = [
-    { databaseOid: "16384", databaseScope: "CURRENT_DATABASE", classOid: "1259", objectOid: "101", subId: 0, roleOid: "10", kind: "o" },
-    { databaseOid: "0", databaseScope: "SHARED", classOid: "1260", objectOid: "10", subId: 0, roleOid: "10", kind: "a" },
+    {
+      databaseOid: "16384",
+      databaseScope: "CURRENT_DATABASE",
+      classOid: "1259",
+      objectOid: "101",
+      subId: 0,
+      roleOid: "10",
+      kind: "o",
+    },
+    {
+      databaseOid: "0",
+      databaseScope: "SHARED",
+      classOid: "1260",
+      objectOid: "10",
+      subId: 0,
+      roleOid: "10",
+      kind: "a",
+    },
   ];
   return [roles, objects, dependencies];
 }
@@ -65,13 +112,27 @@ void test("对象或授权漂移改变指纹，目录行顺序不改变指纹", 
 
 void test("未知对象类型、重复标识、缺少固定角色及不完整证据均拒绝", async () => {
   for (const change of [
-    (rows) => { rows[0].pop(); },
-    (rows) => { rows[1].push(rows[1][0]); },
-    (rows) => { rows[1][1].kind = "unknown"; },
-    (rows) => { rows[1][1].evidence.pop(); },
-    (rows) => { rows[2].push(rows[2][0]); },
-    (rows) => { rows[2][0].databaseOid = "0"; },
-    (rows) => { rows[2][0].databaseScope = "SHARED"; },
+    (rows) => {
+      rows[0].pop();
+    },
+    (rows) => {
+      rows[1].push(rows[1][0]);
+    },
+    (rows) => {
+      rows[1][1].kind = "unknown";
+    },
+    (rows) => {
+      rows[1][1].evidence.pop();
+    },
+    (rows) => {
+      rows[2].push(rows[2][0]);
+    },
+    (rows) => {
+      rows[2][0].databaseOid = "0";
+    },
+    (rows) => {
+      rows[2][0].databaseScope = "SHARED";
+    },
   ]) {
     const data = fixture();
     change(data);
@@ -91,9 +152,33 @@ void test("空共享角色依赖清单可正常报告，但不构成权限审批
 void test("跨数据库及集群共享依赖均纳入同一指纹与角色汇总", async () => {
   const data = fixture();
   data[2] = [
-    { databaseOid: "0", databaseScope: "SHARED", classOid: "1260", objectOid: "10", subId: 0, roleOid: "10", kind: "o" },
-    { databaseOid: "16384", databaseScope: "CURRENT_DATABASE", classOid: "1259", objectOid: "101", subId: 0, roleOid: "10", kind: "a" },
-    { databaseOid: "16385", databaseScope: "OTHER_DATABASE", classOid: "1259", objectOid: "201", subId: 0, roleOid: "10", kind: "i" },
+    {
+      databaseOid: "0",
+      databaseScope: "SHARED",
+      classOid: "1260",
+      objectOid: "10",
+      subId: 0,
+      roleOid: "10",
+      kind: "o",
+    },
+    {
+      databaseOid: "16384",
+      databaseScope: "CURRENT_DATABASE",
+      classOid: "1259",
+      objectOid: "101",
+      subId: 0,
+      roleOid: "10",
+      kind: "a",
+    },
+    {
+      databaseOid: "16385",
+      databaseScope: "OTHER_DATABASE",
+      classOid: "1259",
+      objectOid: "201",
+      subId: 0,
+      roleOid: "10",
+      kind: "i",
+    },
   ];
   const report = await inspect(data);
   const admin = report.dependencyOwners.find((row) => row.role === "adui_scada");
@@ -110,8 +195,15 @@ void test("跨数据库及集群共享依赖均纳入同一指纹与角色汇总
 void test("已有锁角色必须以固定 NOLOGIN 属性显式呈现，异常属性不能隐藏", async () => {
   const data = fixture();
   data[0].push({
-    oid: "14", name: "adui_scada_lock_owner", login: false, superuser: false,
-    createDatabase: false, createRole: false, replication: false, bypassRls: false, inherit: false,
+    oid: "14",
+    name: "adui_scada_lock_owner",
+    login: false,
+    superuser: false,
+    createDatabase: false,
+    createRole: false,
+    replication: false,
+    bypassRls: false,
+    inherit: false,
   });
   const report = await inspect(data);
   assert.equal(report.roles.find((row) => row.name === "adui_scada_lock_owner")?.login, false);
@@ -121,7 +213,11 @@ void test("已有锁角色必须以固定 NOLOGIN 属性显式呈现，异常属
 });
 
 void test("例程设置接受合法数组或空值，临时 Schema 未置末尾不能匹配安全配置", async () => {
-  for (const setting of [null, ["search_path=pg_catalog, public", "row_security=on"], ["search_path=pg_catalog, public, pg_temp", "row_security=on", "statement_timeout=0"]]) {
+  for (const setting of [
+    null,
+    ["search_path=pg_catalog, public", "row_security=on"],
+    ["search_path=pg_catalog, public, pg_temp", "row_security=on", "statement_timeout=0"],
+  ]) {
     const data = fixture();
     data[1][3].evidence[5] = setting;
     const report = await inspect(data);

@@ -23,17 +23,37 @@ import {
   readDockerBusinessRoleDirectory,
   reviewDockerDatabaseRoles,
 } from "../../scripts/docker-db-role-review.mjs";
-import { DockerRoleIsolationTransactionError, runDockerRoleIsolationTransaction } from "../../scripts/docker-db-role-isolation-transaction.mjs";
-import { DockerRoleObjectReviewError, reviewDockerRoleObjects } from "../../scripts/docker-db-role-object-review.mjs";
+import {
+  DockerRoleIsolationTransactionError,
+  runDockerRoleIsolationTransaction,
+} from "../../scripts/docker-db-role-isolation-transaction.mjs";
+import {
+  DockerRoleObjectReviewError,
+  reviewDockerRoleObjects,
+} from "../../scripts/docker-db-role-object-review.mjs";
 import { readDockerIsolationDirectory } from "../../scripts/docker-db-role-isolation.mjs";
-import { createScadaB4HostReader, createScadaB4IsolationReader, readScadaB4HostPlan } from "../../scripts/docker-db-role-b4-host.mjs";
-import { DockerB4RehearsalError, runScadaB4RollbackRehearsal, runScadaB4Persistence } from "../../scripts/docker-db-role-b4-rehearsal.mjs";
+import {
+  createScadaB4HostReader,
+  createScadaB4IsolationReader,
+  readScadaB4HostPlan,
+} from "../../scripts/docker-db-role-b4-host.mjs";
+import {
+  DockerB4RehearsalError,
+  runScadaB4RollbackRehearsal,
+  runScadaB4Persistence,
+} from "../../scripts/docker-db-role-b4-rehearsal.mjs";
 import { parseB4PersistenceAction } from "../../scripts/docker-db-role-b4-arguments.mjs";
-import { DockerB4InstalledStateError, readB4InstalledState } from "../../scripts/docker-db-role-b4-installed-state.mjs";
+import {
+  DockerB4InstalledStateError,
+  readB4InstalledState,
+} from "../../scripts/docker-db-role-b4-installed-state.mjs";
 import { runB4LockConcurrency } from "../../scripts/docker-db-role-b4-concurrency.mjs";
 import { buildKeycloakSchemaPolicy } from "../../scripts/docker-db-role-keycloak-schema-policy.mjs";
 import { DockerKeycloakOwnershipError } from "../../scripts/docker-db-role-keycloak-plan.mjs";
-import { runKeycloakOwnershipRollbackRehearsal, runKeycloakOwnershipPersistence } from "../../scripts/docker-db-role-keycloak-rehearsal.mjs";
+import {
+  runKeycloakOwnershipRollbackRehearsal,
+  runKeycloakOwnershipPersistence,
+} from "../../scripts/docker-db-role-keycloak-rehearsal.mjs";
 import { offlineEnvironment, resolveFreshCli } from "../../scripts/prisma8-fresh-cli-support.mjs";
 import {
   inspectFreshDockerEmptyDatabase,
@@ -234,16 +254,39 @@ function inspectDocker(requireNoOldProjects = false, requireKeycloakStopped = fa
     "容器 PostgreSQL 19 实际集群标识或版本无效",
   );
   if (requireKeycloakStopped) {
-    const ids = local(["ps", "-a", "--no-trunc",
-      "--filter", "label=com.docker.compose.project=adui-scada",
-      "--filter", "label=com.docker.compose.service=keycloak", "--format", "{{.ID}}"]);
+    const ids = local([
+      "ps",
+      "-a",
+      "--no-trunc",
+      "--filter",
+      "label=com.docker.compose.project=adui-scada",
+      "--filter",
+      "label=com.docker.compose.service=keycloak",
+      "--format",
+      "{{.ID}}",
+    ]);
     requireMatch(/^[a-f0-9]{64}$/u.test(ids), "Keycloak 维护窗口必须具有唯一固定容器");
-    const keycloakFields = [".Id", ".State.Status", ".State.Running", ".State.Paused",
-      ".State.Restarting", ".Config.Image", ".Config.Labels", ".HostConfig.RestartPolicy.Name"];
-    const keycloakFormat = "[" + keycloakFields.map((field) => "{{json " + field + "}}").join(",") + "]";
+    const keycloakFields = [
+      ".Id",
+      ".State.Status",
+      ".State.Running",
+      ".State.Paused",
+      ".State.Restarting",
+      ".Config.Image",
+      ".Config.Labels",
+      ".HostConfig.RestartPolicy.Name",
+    ];
+    const keycloakFormat =
+      "[" + keycloakFields.map((field) => "{{json " + field + "}}").join(",") + "]";
     const details = JSON.parse(local(["container", "inspect", "--format", keycloakFormat, ids]));
     const keycloakContainerId = requireKeycloakMaintenanceContainer(ids, details);
-    const keycloakImageId = local(["container", "inspect", "--format", "{{.Image}}", keycloakContainerId]);
+    const keycloakImageId = local([
+      "container",
+      "inspect",
+      "--format",
+      "{{.Image}}",
+      keycloakContainerId,
+    ]);
     requireMatch(/^sha256:[a-f0-9]{64}$/u.test(keycloakImageId), "Keycloak 实际镜像标识无效");
     return { systemIdentifier, version, keycloakContainerId, keycloakImageId };
   }
@@ -387,9 +430,32 @@ async function main() {
           : action === "role-isolation-inspect" || action === "role-isolation-plan"
             ? "isolation-inspect"
             : null;
-  const isolationMode = action === "role-isolation-status" ? "status" : action === "role-isolation-rehearse" ? "rehearse" : action === "role-isolation-apply" ? "apply" : null;
-  const b4Mode = action === "role-b4-plan" ? "plan" : action === "role-b4-rehearse" ? "rehearse" : action === "role-b4-apply" ? "apply" : null;
-  const reviewRoles = action === "role-review" || action === "role-plan" || action === "role-object-review" || action === "role-keycloak-plan" || action === "role-keycloak-rehearse" || bootstrapMode !== null || isolationMode !== null || b4Mode !== null || b4Arguments !== null;
+  const isolationMode =
+    action === "role-isolation-status"
+      ? "status"
+      : action === "role-isolation-rehearse"
+        ? "rehearse"
+        : action === "role-isolation-apply"
+          ? "apply"
+          : null;
+  const b4Mode =
+    action === "role-b4-plan"
+      ? "plan"
+      : action === "role-b4-rehearse"
+        ? "rehearse"
+        : action === "role-b4-apply"
+          ? "apply"
+          : null;
+  const reviewRoles =
+    action === "role-review" ||
+    action === "role-plan" ||
+    action === "role-object-review" ||
+    action === "role-keycloak-plan" ||
+    action === "role-keycloak-rehearse" ||
+    bootstrapMode !== null ||
+    isolationMode !== null ||
+    b4Mode !== null ||
+    b4Arguments !== null;
   const identity = inspectDocker(reviewRoles);
   const parse = (text) => {
     try {
@@ -424,36 +490,69 @@ async function main() {
         const composePath = join(root, ".local", "docker", "compose.env");
         const composeText = readFileSync(composePath, "utf8");
         const maintenance = inspectDocker(true, requireMaintenance);
-        requireMatch(maintenance.systemIdentifier === identity.systemIdentifier && maintenance.version === identity.version,
-          "B4 安装状态宿主集群不一致");
+        requireMatch(
+          maintenance.systemIdentifier === identity.systemIdentifier &&
+            maintenance.version === identity.version,
+          "B4 安装状态宿主集群不一致",
+        );
         const checkConfiguration = () => {
-          requireMatch(readFileSync(join(root, ".env"), "utf8") === envText &&
-            readFileSync(join(root, ".local", "docker", "secrets.env"), "utf8") === secretsText &&
-            readFileSync(composePath, "utf8") === composeText &&
-            isDeepStrictEqual(inspectDocker(true, requireMaintenance), maintenance), "B4 安装状态宿主或本机配置发生变化");
+          requireMatch(
+            readFileSync(join(root, ".env"), "utf8") === envText &&
+              readFileSync(join(root, ".local", "docker", "secrets.env"), "utf8") === secretsText &&
+              readFileSync(composePath, "utf8") === composeText &&
+              isDeepStrictEqual(inspectDocker(true, requireMaintenance), maintenance),
+            "B4 安装状态宿主或本机配置发生变化",
+          );
         };
         const readHostBoundary = async () => {
           checkConfiguration();
           requireFreshVerification(parse(invoke(["db", "verify", "--strict", "--json"], readOnly)));
           await checkComments(readOnly, identity, contract, commentText, false);
           checkConfiguration();
-          return { serverVersion: identity.version, systemIdentifier: identity.systemIdentifier,
-            storageHash: freshStorageHash, strictContractVerified: true, commentsVerified: true,
-            keycloakMaintenanceVerified: requireMaintenance };
+          return {
+            serverVersion: identity.version,
+            systemIdentifier: identity.systemIdentifier,
+            storageHash: freshStorageHash,
+            strictContractVerified: true,
+            commentsVerified: true,
+            keycloakMaintenanceVerified: requireMaintenance,
+          };
         };
         const createClient = (database, readOnlyMode = true) => {
           const target = new URL(readOnlyMode ? readOnly : writable);
           target.pathname = database === "adui_scada" ? "/adui_scada" : "/adui_scada_keycloak";
           return databaseClient(target.toString());
         };
-        return { readHostBoundary, createClient,
+        return {
+          readHostBoundary,
+          createClient,
           read: async (phase) => {
-            const installed = await readB4InstalledState({ ...options, phase,
-              context: { identity, storageHash: freshStorageHash, isolationFingerprint: options.isolationFingerprint },
-              port: readDockerOidcPort(envText), requireMaintenance,
-              expectedKeycloakProjectionFingerprint: phase === "dual-installed" ? options.expectedKeycloakProjectionFingerprint : undefined,
-              createClient, readHostBoundary });
-            return phase === "dual-installed" ? { ...installed, keycloakSchemaPolicy: buildKeycloakSchemaPolicy(maintenance.keycloakImageId, installed) } : installed;
+            const installed = await readB4InstalledState({
+              ...options,
+              phase,
+              context: {
+                identity,
+                storageHash: freshStorageHash,
+                isolationFingerprint: options.isolationFingerprint,
+              },
+              port: readDockerOidcPort(envText),
+              requireMaintenance,
+              expectedKeycloakProjectionFingerprint:
+                phase === "dual-installed"
+                  ? options.expectedKeycloakProjectionFingerprint
+                  : undefined,
+              createClient,
+              readHostBoundary,
+            });
+            return phase === "dual-installed"
+              ? {
+                  ...installed,
+                  keycloakSchemaPolicy: buildKeycloakSchemaPolicy(
+                    maintenance.keycloakImageId,
+                    installed,
+                  ),
+                }
+              : installed;
           },
         };
       };
@@ -466,15 +565,26 @@ async function main() {
         stage = "B4 已审阅现有测试夹具双连接锁探针";
         const fixturePath = join(root, ".local", "docker", "b4-lock-fixture.json");
         const stat = lstatSync(fixturePath);
-        requireMatch(stat.isFile() && stat.size > 0 && stat.size <= 4096 && realpathSync(fixturePath) === fixturePath,
-          "B4 并发锁夹具必须是固定本机文件且不能包含链接");
+        requireMatch(
+          stat.isFile() &&
+            stat.size > 0 &&
+            stat.size <= 4096 &&
+            realpathSync(fixturePath) === fixturePath,
+          "B4 并发锁夹具必须是固定本机文件且不能包含链接",
+        );
         const fixtureText = readFileSync(fixturePath, "utf8");
         const fixture = JSON.parse(fixtureText);
         const reader = await makeB4StateReader(b4Arguments, true);
-        return runB4LockConcurrency({ confirm: process.argv[3], fixture, identity,
+        return runB4LockConcurrency({
+          confirm: process.argv[3],
+          fixture,
+          identity,
           createClient: () => reader.createClient("adui_scada", false),
           readInstalledState: async () => {
-            requireMatch(readFileSync(fixturePath, "utf8") === fixtureText, "B4 并发锁夹具在核验期间发生变化");
+            requireMatch(
+              readFileSync(fixturePath, "utf8") === fixtureText,
+              "B4 并发锁夹具在核验期间发生变化",
+            );
             return reader.read("dual-installed");
           },
         });
@@ -482,19 +592,34 @@ async function main() {
       if (action === "role-keycloak-apply") {
         stage = "Keycloak 持久化前 SCADA 独立安装状态";
         const reader = await makeB4StateReader(b4Arguments, true);
-        const context = { identity, storageHash: freshStorageHash, isolationFingerprint: b4Arguments.isolationFingerprint };
+        const context = {
+          identity,
+          storageHash: freshStorageHash,
+          isolationFingerprint: b4Arguments.isolationFingerprint,
+        };
         const readHostBoundary = async () => {
           await reader.read("scada-installed");
-          return { serverVersion: identity.version, systemIdentifier: identity.systemIdentifier,
-            storageHash: freshStorageHash, isolationFingerprint: context.isolationFingerprint,
-            strictContractVerified: true, commentsVerified: true, catalogIsolationPersisted: true, keycloakStopped: true };
+          return {
+            serverVersion: identity.version,
+            systemIdentifier: identity.systemIdentifier,
+            storageHash: freshStorageHash,
+            isolationFingerprint: context.isolationFingerprint,
+            strictContractVerified: true,
+            commentsVerified: true,
+            catalogIsolationPersisted: true,
+            keycloakStopped: true,
+          };
         };
-        return runKeycloakOwnershipPersistence({ context,
-          confirm: process.argv[3], confirmRehearsalVerified: process.argv[4],
-          reviewedObjects: process.argv[5], confirmMaintenance: process.argv[6],
+        return runKeycloakOwnershipPersistence({
+          context,
+          confirm: process.argv[3],
+          confirmRehearsalVerified: process.argv[4],
+          reviewedObjects: process.argv[5],
+          confirmMaintenance: process.argv[6],
           expectedPlanFingerprint: b4Arguments.expectedKeycloakPlanFingerprint,
           expectedProjectionFingerprint: b4Arguments.expectedKeycloakProjectionFingerprint,
-          createClient: (mode) => reader.createClient("adui_scada_keycloak", mode), readHostBoundary,
+          createClient: (mode) => reader.createClient("adui_scada_keycloak", mode),
+          readHostBoundary,
           readInstalledState: () => reader.read("dual-installed"),
         });
       }
@@ -518,7 +643,8 @@ async function main() {
       const directoryReport = await loadDirectoryReport();
       if (b4Mode !== null) {
         stage = "B4 可信宿主与同事务隔离适配";
-        const { readDockerOidcPort, verifyLocalDockerOidcBoundary } = await import("../../scripts/docker-stack.mjs");
+        const { readDockerOidcPort, verifyLocalDockerOidcBoundary } =
+          await import("../../scripts/docker-stack.mjs");
         const port = readDockerOidcPort(envText);
         const composeEnvPath = join(root, ".local", "docker", "compose.env");
         const composeEnvText = readFileSync(composeEnvPath, "utf8");
@@ -531,28 +657,45 @@ async function main() {
           );
         };
         const readHostBoundary = createScadaB4HostReader({
-          identity, storageHash: freshStorageHash, port,
-          inspectIdentity: () => { checkConfiguration(); return inspectDocker(true); },
+          identity,
+          storageHash: freshStorageHash,
+          port,
+          inspectIdentity: () => {
+            checkConfiguration();
+            return inspectDocker(true);
+          },
           verifyContract: () => {
-            requireFreshVerification(parse(invoke(["db", "verify", "--strict", "--json"], readOnly)));
+            requireFreshVerification(
+              parse(invoke(["db", "verify", "--strict", "--json"], readOnly)),
+            );
             return true;
           },
           verifyComments: async () => {
             await checkComments(readOnly, identity, contract, commentText, false);
-            requireMatch(isDeepStrictEqual(await loadDirectoryReport(), directoryReport), "B4 核验期间双库目录发生变化");
+            requireMatch(
+              isDeepStrictEqual(await loadDirectoryReport(), directoryReport),
+              "B4 核验期间双库目录发生变化",
+            );
             return true;
           },
           verifyOidc: () => verifyLocalDockerOidcBoundary(envText),
         });
         const readIsolatedBaseline = createScadaB4IsolationReader({
-          report: directoryReport, identity, storageHash: freshStorageHash,
+          report: directoryReport,
+          identity,
+          storageHash: freshStorageHash,
           validateBootstrap: buildDockerRoleBootstrapPlan,
-          readDirectory: readDockerBusinessRoleDirectory, verifyPrepared,
+          readDirectory: readDockerBusinessRoleDirectory,
+          verifyPrepared,
           readIsolationDirectory: readDockerIsolationDirectory,
           reviewIsolationInventory: reviewDockerRoleIsolationInventory,
         });
         const options = {
-          identity, storageHash: freshStorageHash, port, readIsolatedBaseline, readHostBoundary,
+          identity,
+          storageHash: freshStorageHash,
+          port,
+          readIsolatedBaseline,
+          readHostBoundary,
           createClient: (readOnlyMode) => databaseClient(readOnlyMode ? readOnly : writable),
         };
         stage = "B4 独立只读计划";
@@ -560,67 +703,127 @@ async function main() {
         if (b4Mode === "plan") return plan;
         if (b4Mode === "apply") {
           stage = "SCADA B4 持久化前确认双库原始计划";
-          requireMatch(plan.planFingerprint === b4Arguments.expectedPlanFingerprint, "B4 持久化与已确认计划指纹不一致");
-          const reviewed = await reviewDockerRoleObjects((database) => {
-            const target = new URL(readOnly);
-            target.pathname = database === "adui_scada" ? "/adui_scada" : "/adui_scada_keycloak";
-            return databaseClient(target.toString());
-          }, identity, { storageHash: freshStorageHash, isolationFingerprint: plan.isolationFingerprint });
-          requireMatch(reviewed.keycloak.ownershipPreview.planFingerprint === b4Arguments.expectedKeycloakPlanFingerprint,
-            "B4 持久化前 Keycloak 原始候选指纹不一致");
-          const state = await makeB4StateReader({ ...b4Arguments, isolationFingerprint: plan.isolationFingerprint }, false);
-          return runScadaB4Persistence({ ...options, isolationFingerprint: plan.isolationFingerprint,
+          requireMatch(
+            plan.planFingerprint === b4Arguments.expectedPlanFingerprint,
+            "B4 持久化与已确认计划指纹不一致",
+          );
+          const reviewed = await reviewDockerRoleObjects(
+            (database) => {
+              const target = new URL(readOnly);
+              target.pathname = database === "adui_scada" ? "/adui_scada" : "/adui_scada_keycloak";
+              return databaseClient(target.toString());
+            },
+            identity,
+            { storageHash: freshStorageHash, isolationFingerprint: plan.isolationFingerprint },
+          );
+          requireMatch(
+            reviewed.keycloak.ownershipPreview.planFingerprint ===
+              b4Arguments.expectedKeycloakPlanFingerprint,
+            "B4 持久化前 Keycloak 原始候选指纹不一致",
+          );
+          const state = await makeB4StateReader(
+            { ...b4Arguments, isolationFingerprint: plan.isolationFingerprint },
+            false,
+          );
+          return runScadaB4Persistence({
+            ...options,
+            isolationFingerprint: plan.isolationFingerprint,
             expectedPlanFingerprint: b4Arguments.expectedPlanFingerprint,
             expectedCatalogFingerprint: b4Arguments.expectedScadaCatalogFingerprint,
-            confirm: process.argv[3], confirmRehearsalVerified: process.argv[4], confirmFixtures: process.argv[5],
+            confirm: process.argv[3],
+            confirmRehearsalVerified: process.argv[4],
+            confirmFixtures: process.argv[5],
             readInstalledState: () => state.read("scada-installed"),
           });
         }
-        const expectedPlanFingerprint = (process.argv.at(-1) ?? "").slice("--plan-fingerprint=".length);
-        requireMatch(plan.planFingerprint === expectedPlanFingerprint, "B4 演练与已确认计划指纹不一致");
+        const expectedPlanFingerprint = (process.argv.at(-1) ?? "").slice(
+          "--plan-fingerprint=".length,
+        );
+        requireMatch(
+          plan.planFingerprint === expectedPlanFingerprint,
+          "B4 演练与已确认计划指纹不一致",
+        );
         stage = "B4 强制回滚演练";
         return runScadaB4RollbackRehearsal({
-          ...options, isolationFingerprint: plan.isolationFingerprint, expectedPlanFingerprint,
-          confirm: process.argv[3], confirmFixtures: process.argv[4],
+          ...options,
+          isolationFingerprint: plan.isolationFingerprint,
+          expectedPlanFingerprint,
+          confirm: process.argv[3],
+          confirmFixtures: process.argv[4],
         });
       }
       if (action === "role-keycloak-rehearse") {
         stage = "Keycloak 维护窗口及隔离基线";
         const maintenance = inspectDocker(true, true);
-        const { keycloakContainerId: _containerId, keycloakImageId: _imageId, ...maintenanceIdentity } = maintenance;
-        requireMatch(isDeepStrictEqual(maintenanceIdentity, identity), "Keycloak 维护窗口集群不一致");
+        const {
+          keycloakContainerId: _containerId,
+          keycloakImageId: _imageId,
+          ...maintenanceIdentity
+        } = maintenance;
+        requireMatch(
+          isDeepStrictEqual(maintenanceIdentity, identity),
+          "Keycloak 维护窗口集群不一致",
+        );
         const composeEnvPath = join(root, ".local", "docker", "compose.env");
         const composeEnvText = readFileSync(composeEnvPath, "utf8");
-        const verifyStatus = (currentReport, expectedFingerprint = "") => runDockerRoleIsolationTransaction({
-          mode: "status", report: currentReport, identity, storageHash: freshStorageHash,
-          expectedFingerprint, createClient: () => databaseClient(readOnly),
-          readDirectory: readDockerBusinessRoleDirectory,
-        });
+        const verifyStatus = (currentReport, expectedFingerprint = "") =>
+          runDockerRoleIsolationTransaction({
+            mode: "status",
+            report: currentReport,
+            identity,
+            storageHash: freshStorageHash,
+            expectedFingerprint,
+            createClient: () => databaseClient(readOnly),
+            readDirectory: readDockerBusinessRoleDirectory,
+          });
         const baseline = await verifyStatus(directoryReport);
-        requireMatch(baseline.catalogIsolationPersisted === true, "Keycloak 所有权演练要求 B3.3 已实际隔离");
-        const context = { identity, storageHash: freshStorageHash, isolationFingerprint: baseline.planFingerprint };
+        requireMatch(
+          baseline.catalogIsolationPersisted === true,
+          "Keycloak 所有权演练要求 B3.3 已实际隔离",
+        );
+        const context = {
+          identity,
+          storageHash: freshStorageHash,
+          isolationFingerprint: baseline.planFingerprint,
+        };
         const checkMaintenance = () => {
-          requireMatch(readFileSync(join(root, ".env"), "utf8") === envText &&
-            readFileSync(join(root, ".local", "docker", "secrets.env"), "utf8") === secretsText &&
-            readFileSync(composeEnvPath, "utf8") === composeEnvText &&
-            isDeepStrictEqual(inspectDocker(true, true), maintenance), "Keycloak 维护窗口、集群或本机配置发生变化");
+          requireMatch(
+            readFileSync(join(root, ".env"), "utf8") === envText &&
+              readFileSync(join(root, ".local", "docker", "secrets.env"), "utf8") === secretsText &&
+              readFileSync(composeEnvPath, "utf8") === composeEnvText &&
+              isDeepStrictEqual(inspectDocker(true, true), maintenance),
+            "Keycloak 维护窗口、集群或本机配置发生变化",
+          );
         };
         const readHostBoundary = async () => {
           checkMaintenance();
           requireFreshVerification(parse(invoke(["db", "verify", "--strict", "--json"], readOnly)));
           await checkComments(readOnly, identity, contract, commentText, false);
           const current = await loadDirectoryReport();
-          requireMatch(isDeepStrictEqual(current, directoryReport), "Keycloak 演练双库原始目录发生变化");
+          requireMatch(
+            isDeepStrictEqual(current, directoryReport),
+            "Keycloak 演练双库原始目录发生变化",
+          );
           const isolated = await verifyStatus(current, context.isolationFingerprint);
           requireMatch(isolated.catalogIsolationPersisted === true, "Keycloak 演练隔离状态不一致");
           checkMaintenance();
-          return { serverVersion: identity.version, systemIdentifier: identity.systemIdentifier,
-            storageHash: freshStorageHash, isolationFingerprint: context.isolationFingerprint,
-            strictContractVerified: true, commentsVerified: true, catalogIsolationPersisted: true, keycloakStopped: true };
+          return {
+            serverVersion: identity.version,
+            systemIdentifier: identity.systemIdentifier,
+            storageHash: freshStorageHash,
+            isolationFingerprint: context.isolationFingerprint,
+            strictContractVerified: true,
+            commentsVerified: true,
+            catalogIsolationPersisted: true,
+            keycloakStopped: true,
+          };
         };
         stage = "Keycloak 独立所有权回滚演练";
         return runKeycloakOwnershipRollbackRehearsal({
-          context, confirm: process.argv[3], reviewedObjects: process.argv[4], confirmMaintenance: process.argv[5],
+          context,
+          confirm: process.argv[3],
+          reviewedObjects: process.argv[4],
+          confirmMaintenance: process.argv[5],
           expectedPlanFingerprint: (process.argv.at(-1) ?? "").slice("--plan-fingerprint=".length),
           readHostBoundary,
           createClient: (readOnlyMode) => {
@@ -632,44 +835,78 @@ async function main() {
       }
       if (action === "role-object-review" || action === "role-keycloak-plan") {
         stage = "独立角色隔离状态核验";
-        const verifyStatus = (currentReport, expectedFingerprint = "") => runDockerRoleIsolationTransaction({
-          mode: "status", report: currentReport, identity, storageHash: freshStorageHash,
-          expectedFingerprint, createClient: () => databaseClient(readOnly),
-          readDirectory: readDockerBusinessRoleDirectory,
-        });
+        const verifyStatus = (currentReport, expectedFingerprint = "") =>
+          runDockerRoleIsolationTransaction({
+            mode: "status",
+            report: currentReport,
+            identity,
+            storageHash: freshStorageHash,
+            expectedFingerprint,
+            createClient: () => databaseClient(readOnly),
+            readDirectory: readDockerBusinessRoleDirectory,
+          });
         const before = await verifyStatus(directoryReport);
         const keycloakPlan = action === "role-keycloak-plan";
-        if (keycloakPlan) requireMatch(before.catalogIsolationPersisted === true, "Keycloak 所有权预览要求 B3.3 已实际隔离");
+        if (keycloakPlan)
+          requireMatch(
+            before.catalogIsolationPersisted === true,
+            "Keycloak 所有权预览要求 B3.3 已实际隔离",
+          );
         stage = "双库对象所有权与授权只读评审";
-        const reviewed = await reviewDockerRoleObjects((database) => {
-          const target = new URL(readOnly);
-          target.pathname = database === "adui_scada" ? "/adui_scada" : "/adui_scada_keycloak";
-          return databaseClient(target.toString());
-        }, identity, keycloakPlan ? {
-          storageHash: freshStorageHash, isolationFingerprint: before.planFingerprint,
-        } : undefined);
+        const reviewed = await reviewDockerRoleObjects(
+          (database) => {
+            const target = new URL(readOnly);
+            target.pathname = database === "adui_scada" ? "/adui_scada" : "/adui_scada_keycloak";
+            return databaseClient(target.toString());
+          },
+          identity,
+          keycloakPlan
+            ? {
+                storageHash: freshStorageHash,
+                isolationFingerprint: before.planFingerprint,
+              }
+            : undefined,
+        );
         const current = await loadDirectoryReport();
         requireMatch(isDeepStrictEqual(directoryReport, current), "对象评审前后双库目录发生漂移");
         const after = await verifyStatus(current, before.planFingerprint);
-        requireMatch(after.catalogIsolationPersisted === before.catalogIsolationPersisted &&
-          isDeepStrictEqual(inspectDocker(true), identity), "对象评审前后隔离状态或集群发生变化");
-        return { ...reviewed, storageHash: freshStorageHash, serverVersion: identity.version,
-          planFingerprint: before.planFingerprint, catalogIsolationPersisted: before.catalogIsolationPersisted };
+        requireMatch(
+          after.catalogIsolationPersisted === before.catalogIsolationPersisted &&
+            isDeepStrictEqual(inspectDocker(true), identity),
+          "对象评审前后隔离状态或集群发生变化",
+        );
+        return {
+          ...reviewed,
+          storageHash: freshStorageHash,
+          serverVersion: identity.version,
+          planFingerprint: before.planFingerprint,
+          catalogIsolationPersisted: before.catalogIsolationPersisted,
+        };
       }
       if (isolationMode !== null) {
-        const execute = (mode, currentReport, expectedFingerprint) => runDockerRoleIsolationTransaction({
-          mode,
-          report: currentReport,
-          identity,
-          storageHash: freshStorageHash,
-          expectedFingerprint,
-          createClient: () => databaseClient(mode === "status" ? readOnly : writable),
-          readDirectory: readDockerBusinessRoleDirectory,
-        });
+        const execute = (mode, currentReport, expectedFingerprint) =>
+          runDockerRoleIsolationTransaction({
+            mode,
+            report: currentReport,
+            identity,
+            storageHash: freshStorageHash,
+            expectedFingerprint,
+            createClient: () => databaseClient(mode === "status" ? readOnly : writable),
+            readDirectory: readDockerBusinessRoleDirectory,
+          });
         stage = "独立隔离事务";
-        const result = await execute(isolationMode, directoryReport, isolationMode === "status" ? "" : (process.argv.at(-1) ?? "").slice("--plan-fingerprint=".length));
+        const result = await execute(
+          isolationMode,
+          directoryReport,
+          isolationMode === "status"
+            ? ""
+            : (process.argv.at(-1) ?? "").slice("--plan-fingerprint=".length),
+        );
         if (isolationMode === "status") {
-          requireMatch(isDeepStrictEqual(inspectDocker(true), identity), "隔离状态核查后集群发生变化");
+          requireMatch(
+            isDeepStrictEqual(inspectDocker(true), identity),
+            "隔离状态核查后集群发生变化",
+          );
           return result;
         }
         try {
@@ -678,12 +915,21 @@ async function main() {
           await checkComments(readOnly, identity, contract, commentText, false);
           const current = await loadDirectoryReport();
           const expected = structuredClone(directoryReport);
-          for (const database of Object.values(expected.databases)) database.publicConnect = !result.committed;
+          for (const database of Object.values(expected.databases))
+            database.publicConnect = !result.committed;
           requireMatch(isDeepStrictEqual(current, expected), "隔离事务后置双库目录发生漂移");
           const status = await execute("status", current, result.planFingerprint);
-          requireMatch(status.catalogIsolationPersisted === result.committed && isDeepStrictEqual(inspectDocker(true), identity), "隔离事务后置状态不一致");
+          requireMatch(
+            status.catalogIsolationPersisted === result.committed &&
+              isDeepStrictEqual(inspectDocker(true), identity),
+            "隔离事务后置状态不一致",
+          );
         } catch {
-          throw new DockerRoleIsolationTransactionError(result.committed ? "隔离事务已提交，但独立后置核查失败，禁止重试" : "隔离演练已回滚，但独立后置核查失败，禁止重试");
+          throw new DockerRoleIsolationTransactionError(
+            result.committed
+              ? "隔离事务已提交，但独立后置核查失败，禁止重试"
+              : "隔离演练已回滚，但独立后置核查失败，禁止重试",
+          );
         }
         return { ...result, postVerificationPassed: true };
       }

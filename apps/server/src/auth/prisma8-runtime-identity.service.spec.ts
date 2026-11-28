@@ -375,7 +375,12 @@ describe("原生身份业务事务边界", () => {
     expect(h.queries[1]?.text).toContain("AND p.prosrc = ?::text");
     expect(h.queries[1]?.text).toContain("THEN public.scada_cleanup_expired_oidc()");
     expect(h.mutations).toHaveLength(0);
-    for (const rows of [[{ deleted: "129" }], [{ deleted: "BINDING_MISMATCH" }], [], [{ deleted: "01" }]]) {
+    for (const rows of [
+      [{ deleted: "129" }],
+      [{ deleted: "BINDING_MISMATCH" }],
+      [],
+      [{ deleted: "01" }],
+    ]) {
       h.state.cleanupRows = rows;
       await expect(h.transactions.cleanupExpiredTransactions()).rejects.toThrow(
         "OIDC 登录事务清理失败，请稍后重试",
@@ -392,7 +397,8 @@ describe("原生身份业务事务边界", () => {
       h.transactions.onModuleInit();
       h.transactions.onModuleInit();
       await vi.advanceTimersByTimeAsync(30_000);
-      const cleanups = () => h.queries.filter((plan) => plan.text.includes("public.scada_cleanup_expired_oidc()"));
+      const cleanups = () =>
+        h.queries.filter((plan) => plan.text.includes("public.scada_cleanup_expired_oidc()"));
       expect(cleanups()).toHaveLength(1);
       expect(cleanups()[0]?.parameters).toEqual([buildB4OidcCleanupBody(issuer)]);
       expect(h.mutations).toHaveLength(0);

@@ -107,8 +107,13 @@ const diagnostics = {
 };
 
 function exactKeys(row, keys) {
-  return row && typeof row === "object" && !Array.isArray(row) &&
-    Object.keys(row).length === keys.length && keys.every((key) => Object.hasOwn(row, key));
+  return (
+    row &&
+    typeof row === "object" &&
+    !Array.isArray(row) &&
+    Object.keys(row).length === keys.length &&
+    keys.every((key) => Object.hasOwn(row, key))
+  );
 }
 
 /** 仅接受固定基线并生成角色创建候选，不执行任何变更。 */
@@ -121,12 +126,21 @@ export function buildScadaB4InstallPreflight(rows) {
     if (row[key] !== value) throw new DockerB4PreflightError(diagnostics[key]);
   }
   const evidence = { ...expected };
-  const roleCreationPreview = ownerRoles.map((role) =>
-    "CREATE ROLE " + role + " NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT PASSWORD NULL",
+  const roleCreationPreview = ownerRoles.map(
+    (role) =>
+      "CREATE ROLE " +
+      role +
+      " NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT PASSWORD NULL",
   );
-  const planFingerprint = createHash("sha256").update(JSON.stringify({
-    evidence, roleCreationPreview, reservedRoutineNames: routineNames,
-  })).digest("hex");
+  const planFingerprint = createHash("sha256")
+    .update(
+      JSON.stringify({
+        evidence,
+        roleCreationPreview,
+        reservedRoutineNames: routineNames,
+      }),
+    )
+    .digest("hex");
   return {
     status: "SCADA_B4_INSTALL_PREFLIGHT_READY",
     evidence,
@@ -191,16 +205,39 @@ const newOwnerSql = `SELECT r.rolname::text AS role,
       pg_catalog.has_sequence_privilege(r.oid, c.oid, 'USAGE,SELECT,UPDATE') ELSE false END) AS "noSequenceAccess"
 FROM pg_catalog.pg_authid r WHERE r.rolname IN (${owners})`;
 
-const ownerFlags = ["managerVerified", "hardened", "noMemberships", "noSettings", "noDependencies", "noDatabaseAccess", "noSchemaCreate", "noTableOrColumnAccess", "noSequenceAccess"];
+const ownerFlags = [
+  "managerVerified",
+  "hardened",
+  "noMemberships",
+  "noSettings",
+  "noDependencies",
+  "noDatabaseAccess",
+  "noSchemaCreate",
+  "noTableOrColumnAccess",
+  "noSequenceAccess",
+];
 
 /** 仅供后续事务在创建三个角色后、授权前核验，不调用写入。 */
 export async function verifyScadaB4NewOwnerRoles(query) {
   const rows = (await query("B4 新所有者未授权核验", newOwnerSql))?.rows;
-  if (!Array.isArray(rows) || rows.length !== ownerRoles.length ||
-    !rows.every((row) => exactKeys(row, ["role", ...ownerFlags]) && ownerRoles.includes(row.role) &&
-      ownerFlags.every((flag) => row[flag] === true)) ||
-    new Set(rows.map((row) => row.role)).size !== ownerRoles.length) {
+  if (
+    !Array.isArray(rows) ||
+    rows.length !== ownerRoles.length ||
+    !rows.every(
+      (row) =>
+        exactKeys(row, ["role", ...ownerFlags]) &&
+        ownerRoles.includes(row.role) &&
+        ownerFlags.every((flag) => row[flag] === true),
+    ) ||
+    new Set(rows.map((row) => row.role)).size !== ownerRoles.length
+  ) {
     throw new DockerB4PreflightError("B4 新所有者未授权基线不一致");
   }
-  return { ownerRoleCount: ownerRoles.length, ungrantedOwnerRolesVerified: true, installationAllowed: false, admissionPassed: false, databaseWritten: false };
+  return {
+    ownerRoleCount: ownerRoles.length,
+    ungrantedOwnerRolesVerified: true,
+    installationAllowed: false,
+    admissionPassed: false,
+    databaseWritten: false,
+  };
 }

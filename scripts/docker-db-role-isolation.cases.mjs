@@ -166,11 +166,25 @@ void test("显式空 ACL 不按默认授权处理，无法归属的会话计入�
 
 void test("安装后读取仅新增三个固定所有者的标签，原读取仍拒绝额外已命名角色", async () => {
   const rows = fixture();
-  const added = b4OwnerRoles.map((name, index) => ({ oid: String(90000 + index), name, login: false, superuser: false, inherit: false }));
+  const added = b4OwnerRoles.map((name, index) => ({
+    oid: String(90000 + index),
+    name,
+    login: false,
+    superuser: false,
+    inherit: false,
+  }));
   rows[1].push(...added);
-  rows[3].push(...rows[0].flatMap((db) => added.map((role) => ({
-    databaseOid: db.oid, roleOid: role.oid, connect: false, temporary: false, create: false,
-  }))));
+  rows[3].push(
+    ...rows[0].flatMap((db) =>
+      added.map((role) => ({
+        databaseOid: db.oid,
+        roleOid: role.oid,
+        connect: false,
+        temporary: false,
+        create: false,
+      })),
+    ),
+  );
   const h = mock(rows);
   const report = await readDockerIsolationDirectory(h.query, "b4-installed");
   assert.equal(report.roles.length, 8);

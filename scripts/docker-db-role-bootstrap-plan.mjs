@@ -98,7 +98,10 @@ export function buildDockerRoleBootstrapPlan(report, expectedHash, isolated = fa
     !matches(report.role, roleBaseline) ||
     typeof isolated !== "boolean" ||
     !matches(report.databases?.adui_scada, { ...databaseBaseline, publicConnect: !isolated }) ||
-    !matches(report.databases?.adui_scada_keycloak, { ...databaseBaseline, publicConnect: !isolated }) ||
+    !matches(report.databases?.adui_scada_keycloak, {
+      ...databaseBaseline,
+      publicConnect: !isolated,
+    }) ||
     !matchesDatabase(report.scada, 12) ||
     !matchesDatabase(report.keycloak, 101) ||
     !matches(report.scada.schemas.prisma_contract, { ...publicSchemaBaseline, owner: true }) ||

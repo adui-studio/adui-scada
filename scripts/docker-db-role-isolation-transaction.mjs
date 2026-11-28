@@ -1,8 +1,18 @@
 import { isDeepStrictEqual } from "node:util";
 import { buildDockerRoleBootstrapPlan } from "./docker-db-role-bootstrap-plan.mjs";
-import { RoleVerificationError, safeSqlState, verifyPrepared } from "./docker-db-role-bootstrap.mjs";
-import { DockerRoleIsolationError, readDockerIsolationDirectory } from "./docker-db-role-isolation.mjs";
-import { DockerRoleIsolationPlanError, reviewDockerRoleIsolationInventory } from "./docker-db-role-isolation-plan.mjs";
+import {
+  RoleVerificationError,
+  safeSqlState,
+  verifyPrepared,
+} from "./docker-db-role-bootstrap.mjs";
+import {
+  DockerRoleIsolationError,
+  readDockerIsolationDirectory,
+} from "./docker-db-role-isolation.mjs";
+import {
+  DockerRoleIsolationPlanError,
+  reviewDockerRoleIsolationInventory,
+} from "./docker-db-role-isolation-plan.mjs";
 
 export class DockerRoleIsolationTransactionError extends Error {}
 
@@ -42,13 +52,19 @@ export async function runDockerRoleIsolationTransaction({
       /^[1-9][0-9]{0,19}$/u.test(identity.systemIdentifier) &&
       report?.role?.scadaRuntimeExists === true &&
       report.role.keycloakRuntimeExists === true &&
-      (statusOnly ? expectedFingerprint === "" || /^[a-f0-9]{64}$/u.test(expectedFingerprint) : /^[a-f0-9]{64}$/u.test(expectedFingerprint)),
+      (statusOnly
+        ? expectedFingerprint === "" || /^[a-f0-9]{64}$/u.test(expectedFingerprint)
+        : /^[a-f0-9]{64}$/u.test(expectedFingerprint)),
   );
   const isolatedBefore = statusOnly && report.databases?.adui_scada?.publicConnect === false;
-  buildDockerRoleBootstrapPlan({
-    ...report,
-    role: { ...report.role, scadaRuntimeExists: false, keycloakRuntimeExists: false },
-  }, storageHash, isolatedBefore);
+  buildDockerRoleBootstrapPlan(
+    {
+      ...report,
+      role: { ...report.role, scadaRuntimeExists: false, keycloakRuntimeExists: false },
+    },
+    storageHash,
+    isolatedBefore,
+  );
 
   let client;
   let begun = false;
@@ -57,19 +73,24 @@ export async function runDockerRoleIsolationTransaction({
   let stage = "连接";
   let fingerprint = "";
   let failure;
-  const checkFingerprint = (actual) => requireMatch(expectedFingerprint === "" || actual === expectedFingerprint);
+  const checkFingerprint = (actual) =>
+    requireMatch(expectedFingerprint === "" || actual === expectedFingerprint);
   const checkDirectory = async (isolated) => {
-    requireMatch(isDeepStrictEqual(
-      await readDirectory(client, identity, storageHash, statusOnly),
-      businessView(report, isolated),
-    ));
+    requireMatch(
+      isDeepStrictEqual(
+        await readDirectory(client, identity, storageHash, statusOnly),
+        businessView(report, isolated),
+      ),
+    );
   };
   const inspect = async (isolated) => {
     const inventory = await readDockerIsolationDirectory(async (step, sql) => {
       try {
         return await client.query(sql);
       } catch (error) {
-        throw new DockerRoleIsolationTransactionError(step + "查询失败（SQLSTATE=" + safeSqlState(error) + "）");
+        throw new DockerRoleIsolationTransactionError(
+          step + "查询失败（SQLSTATE=" + safeSqlState(error) + "）",
+        );
       }
     });
     return reviewDockerRoleIsolationInventory(inventory, identity, storageHash, isolated);
@@ -78,13 +99,23 @@ export async function runDockerRoleIsolationTransaction({
     client = createClient();
     await client.connect();
     stage = "事务启动";
-    requireMatch((await client.query(statusOnly
-      ? "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"
-      : "BEGIN ISOLATION LEVEL SERIALIZABLE READ WRITE")).command === "BEGIN");
+    requireMatch(
+      (
+        await client.query(
+          statusOnly
+            ? "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"
+            : "BEGIN ISOLATION LEVEL SERIALIZABLE READ WRITE",
+        )
+      ).command === "BEGIN",
+    );
     begun = true;
     if (!statusOnly) {
       stage = "独立执行锁";
-      requireMatch(isDeepStrictEqual((await client.query(lockedSql)).rows, [{ locked: true, isolation: "serializable" }]));
+      requireMatch(
+        isDeepStrictEqual((await client.query(lockedSql)).rows, [
+          { locked: true, isolation: "serializable" },
+        ]),
+      );
     }
     stage = "前置业务目录与角色核验";
     await checkDirectory(isolatedBefore);
@@ -119,12 +150,14 @@ export async function runDockerRoleIsolationTransaction({
     failure = commitAttempted
       ? "隔离事务提交结果未知，禁止重试，请先独立核查状态"
       : "隔离事务" + stage + "失败，SQLSTATE=" + safeSqlState(error) + "，保留现场";
-    if (!commitAttempted && (
-      error instanceof RoleVerificationError ||
-      error instanceof DockerRoleIsolationError ||
-      error instanceof DockerRoleIsolationPlanError ||
-      error instanceof DockerRoleIsolationTransactionError
-    )) failure += "；" + error.message;
+    if (
+      !commitAttempted &&
+      (error instanceof RoleVerificationError ||
+        error instanceof DockerRoleIsolationError ||
+        error instanceof DockerRoleIsolationPlanError ||
+        error instanceof DockerRoleIsolationTransactionError)
+    )
+      failure += "；" + error.message;
   }
   if (begun && !commitAttempted) {
     try {
@@ -138,13 +171,17 @@ export async function runDockerRoleIsolationTransaction({
     try {
       await client.end();
     } catch {
-      failure = (failure ?? (committed ? "隔离事务已提交" : "隔离事务")) + "；连接关闭失败，保留现场";
+      failure =
+        (failure ?? (committed ? "隔离事务已提交" : "隔离事务")) + "；连接关闭失败，保留现场";
     }
   }
   if (failure) throw new DockerRoleIsolationTransactionError(failure);
   return {
-    status: statusOnly ? "DOCKER_DB_ROLE_ISOLATION_STATUS_READY" :
-      committed ? "DOCKER_DB_ROLE_ISOLATION_APPLIED" : "DOCKER_DB_ROLE_ISOLATION_REHEARSED",
+    status: statusOnly
+      ? "DOCKER_DB_ROLE_ISOLATION_STATUS_READY"
+      : committed
+        ? "DOCKER_DB_ROLE_ISOLATION_APPLIED"
+        : "DOCKER_DB_ROLE_ISOLATION_REHEARSED",
     planFingerprint: fingerprint,
     storageHash,
     serverVersion: identity.version,

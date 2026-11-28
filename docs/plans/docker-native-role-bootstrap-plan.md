@@ -139,7 +139,6 @@ SQLSTATE 42809 是 wrong_object_type。当前有效对象权限 SQL 从含表、
 
 验证：协作环境 Node.js 22.16.0 对两个新增文件 node --check 与 5 项 node:test，5/5 通过。真实日志离线提取 B3.1 JSON，以合成集群标识调用同一函数，返回 25/8/17、5 条语句、95 项矩阵及每库预测，退出 0；原始报告没有系统标识，不能把合成指纹冒充真实指纹。模块 Git Blob c3ea305c6472b91a740747c00c13d5818ea6aeea、测试 614258ff458215bd1680be1e56cb28050d759382。全仓及入口集成待 Windows 复验：Docker 预计 98、Prisma 8 全新专项 29、env/messages/docs、Vite+ 零警告及 git diff --check；再独立执行 B2 状态、B3.2 只读预览及 OIDC 只读和七服务回归。无需重建、停机、创建角色或权限写入。
 
-
 ### 2026-11-28 · B3.2 实机验收及剩余 MVP 累计开发
 
 维护者于 d3a7429779c5735e64c645e764017ffa7fc047b2 验收：Docker 98/98、Prisma 8 全新专项 29/29（合计 127/127），Vite+ 525 格式/364 受检零警告错误，中文 390、Markdown 99、环境及 LF 和 git diff --check 通过；格式化提交 e04775bcfa559b7d51001c9bb19c6ce319aa4690 已推送。真实 PG19.0 隔离预览 5 库/19 角色/25 ACL/95 有效权限，拟移除 8 项 PUBLIC ACL 并保留 17 项直接 ACL，指纹 0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37，rolesPrepared=true、rolledBack=true、databaseWritten=false、changeAllowed=false、isolationPassed=false；OIDC 只读和七服务回归退出 0。PR #261 经明确授权 Squash 合入 d8363fb476ee08521e1c9fb107ecd1088914ae2b。
@@ -152,18 +151,15 @@ SQLSTATE 42809 是 wrong_object_type。当前有效对象权限 SQL 从含表、
 - `pnpm run docker:db:role:isolation:execute --confirm-rehearse-isolation --reviewed-business-consumers --reviewed-maintenance-consumers --reviewed-template-consumers --plan-fingerprint=<当前真实指纹>`：仅在维护者逐组实际复核消费者并明确授权后执行回滚演练，之后单独执行 status。三个确认参数只表达操作者声明，不能认证消费者身份。
 - 独立持久化模式代码使用 `--confirm-apply-isolation --confirm-rehearsal-verified` 替代演练确认，保留其他参数；只有实机演练、独立状态及质量门禁通过且维护者另行明确授权后才可执行。当前不安排实际提交。禁止并发权限维护、未知结果重试或手工回收/恢复权限。状态核查仅适用于 B2 原角色权限与 B3 数据库级隔离，不覆盖后续 B4 权限变化。
 
-
 ### B4 双库对象清单只读候选
 
 新增 `pnpm run docker:db:role:object-review`。首先通过原生严格契约、注释、双库与 B3 完整状态核查，再分别以固定管理角色及 REPEATABLE READ READ ONLY 事务读取两库对象目录。核对 Schema、关系、显式列 ACL、例程、类型、默认 ACL、扩展、策略、事件触发器、外部服务/包装器、发布定义以及当前数据库共享角色依赖。对象名称与 ACL 仅在本地用于稳定 SHA-256 证据；报告输出分类数量、所有者类别、未知所有者及角色依赖数量，不返回原始对象名、函数正文、订阅连接信息、外部服务选项、业务行或凭据。该目录不等于所有可执行权限、完整所有权转移方案或行锁最小权限评审；仍需要核对实际 Keycloak 版本全部对象类型及 Schema 管理需求。缺失、重复或未知目录形状失败，角色或集群漂移拒绝结果。前后 B3 计划指纹和隔离状态必须一致。B4 正式授权、所有权转移、C 正式模式和 D/E 真联调仍未实现，不自动授予 UPDATE、GRANT ALL 或切换服务。
 
 集中基线命令 `pnpm run mvp:verify:baseline` 串联现有完整 ready、严格数据库状态、上述双库对象评审、现有 OIDC 只读探针及七服务状态；只用于集中质量链和真实只读基线，不执行隔离、所有权变更、LOGIN 或业务写入。新增隔离前后投影/事务/故障测试、参数确认测试及对象目录离线回归尚未运行完整项目工具链；不登记为通过。
 
-
 ### B4 共享依赖范围修正
 
 依据 PostgreSQL 19 官方 `pg_shdepend` 定义，该目录是全集群共享目录，`dbid=0` 表示共享对象，非零 `dbid` 指向对象所属数据库；依赖类型至少区分 OWNER、ACL、INITACL 和 POLICY。此前候选只筛选当前数据库 `dbid`，会漏掉同一集群其他数据库及共享对象的依赖。现改为按固定四个角色 OID 汇总全集群所有依赖，记录数据库范围分类、对象目录 OID、子对象号和依赖类型，原始 OID 仅用于指纹，不回显。新增当前库、其他库、集群共享及 INITACL 回归，并拒绝数据库 OID 与范围标签矛盾。该修正仍是只读审计，不执行任何角色变更或 ACL 授权。
-
 
 ### B4 全集群共享依赖复核补充
 

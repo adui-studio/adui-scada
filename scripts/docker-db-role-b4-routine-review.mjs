@@ -9,9 +9,10 @@ import {
 export class DockerB4RoutineReviewError extends Error {}
 
 const runtime = "adui_scada_runtime";
-const compare = (left, right) => left < right ? -1 : left > right ? 1 : 0;
+const compare = (left, right) => (left < right ? -1 : left > right ? 1 : 0);
 const config = ["row_security=on", "search_path=pg_catalog, public, pg_temp"];
-const header = /^CREATE FUNCTION public\.(scada_[a-z_]+)\(([\s\S]*?)\) RETURNS (TABLE \([^\n]+\)|text|bigint)\nLANGUAGE (sql|plpgsql) VOLATILE( STRICT)? PARALLEL UNSAFE SECURITY DEFINER\nSET search_path = pg_catalog, public, pg_temp SET row_security = on\nAS \$(scada_(?:lock|create|cleanup))\$([\s\S]+)\$\6\$$/u;
+const header =
+  /^CREATE FUNCTION public\.(scada_[a-z_]+)\(([\s\S]*?)\) RETURNS (TABLE \([^\n]+\)|text|bigint)\nLANGUAGE (sql|plpgsql) VOLATILE( STRICT)? PARALLEL UNSAFE SECURITY DEFINER\nSET search_path = pg_catalog, public, pg_temp SET row_security = on\nAS \$(scada_(?:lock|create|cleanup))\$([\s\S]+)\$\6\$$/u;
 
 function requireMatch(condition, message) {
   if (!condition) throw new DockerB4RoutineReviewError(message);
@@ -23,11 +24,14 @@ function catalogType(value) {
 
 function argumentList(value) {
   if (!value.trim()) return [];
-  return value.trim().split(/,\s*/u).map((arg) => {
-    const match = arg.match(/^([a-z_]+) (text|bigint|uuid|jsonb|timestamptz)$/u);
-    requireMatch(match, "B4 固定例程参数形状异常");
-    return match[1] + " " + catalogType(match[2]);
-  });
+  return value
+    .trim()
+    .split(/,\s*/u)
+    .map((arg) => {
+      const match = arg.match(/^([a-z_]+) (text|bigint|uuid|jsonb|timestamptz)$/u);
+      requireMatch(match, "B4 固定例程参数形状异常");
+      return match[1] + " " + catalogType(match[2]);
+    });
 }
 
 function expectedRoutine(definition, owner, projectOwner) {
@@ -36,17 +40,46 @@ function expectedRoutine(definition, owner, projectOwner) {
   const [, name, args, result, language, strict, , body] = match;
   const argumentsList = argumentList(args);
   const argumentsText = argumentsList.join(", ");
-  const identity = "public." + name + "(" + argumentsList.map((arg) => arg.slice(arg.indexOf(" ") + 1)).join(", ") + ")";
-  const grantees = [owner, runtime, ...(name === "scada_lock_identity" ? [projectOwner] : [])].sort(compare);
+  const identity =
+    "public." +
+    name +
+    "(" +
+    argumentsList.map((arg) => arg.slice(arg.indexOf(" ") + 1)).join(", ") +
+    ")";
+  const grantees = [owner, runtime, ...(name === "scada_lock_identity" ? [projectOwner] : [])].sort(
+    compare,
+  );
   return {
-    managerVerified: true, schema: "public", name, identity, argumentsText,
-    result: result.replace("TABLE (", "TABLE("), owner, language,
-    kind: "f", strict: Boolean(strict), securityDefiner: true,
-    returnsSet: result.startsWith("TABLE "), volatility: "v", parallel: "u", leakproof: false,
-    noVariadic: true, noDefaults: true, noSupport: true, noParsedBody: true,
-    noBinary: true, noTransforms: true,
-    config: [...config], body, explicitAcl: true,
-    acl: grantees.map((grantee) => ({ grantee, grantor: owner, privilege: "EXECUTE", grantable: false })),
+    managerVerified: true,
+    schema: "public",
+    name,
+    identity,
+    argumentsText,
+    result: result.replace("TABLE (", "TABLE("),
+    owner,
+    language,
+    kind: "f",
+    strict: Boolean(strict),
+    securityDefiner: true,
+    returnsSet: result.startsWith("TABLE "),
+    volatility: "v",
+    parallel: "u",
+    leakproof: false,
+    noVariadic: true,
+    noDefaults: true,
+    noSupport: true,
+    noParsedBody: true,
+    noBinary: true,
+    noTransforms: true,
+    config: [...config],
+    body,
+    explicitAcl: true,
+    acl: grantees.map((grantee) => ({
+      grantee,
+      grantor: owner,
+      privilege: "EXECUTE",
+      grantable: false,
+    })),
     effectiveExecute: grantees,
   };
 }
@@ -57,7 +90,9 @@ export function buildScadaB4RoutineExpectations(port) {
   const project = buildScadaRestrictedWritePreview().projectCreate;
   const cleanup = buildScadaOidcCleanupRoutinePreview(port);
   return [
-    ...locks.definitions.map((definition) => expectedRoutine(definition, locks.ownerRole, project.ownerRole)),
+    ...locks.definitions.map((definition) =>
+      expectedRoutine(definition, locks.ownerRole, project.ownerRole),
+    ),
     expectedRoutine(project, project.ownerRole, project.ownerRole),
     expectedRoutine(cleanup, cleanup.ownerRole, project.ownerRole),
   ];
@@ -95,13 +130,23 @@ WHERE n.nspname = 'public' OR p.proname IN (${names})`;
 }
 
 function normalized(row) {
-  if (!row || typeof row !== "object" || Array.isArray(row) ||
-    !Array.isArray(row.config) || !Array.isArray(row.acl) || !Array.isArray(row.effectiveExecute) ||
+  if (
+    !row ||
+    typeof row !== "object" ||
+    Array.isArray(row) ||
+    !Array.isArray(row.config) ||
+    !Array.isArray(row.acl) ||
+    !Array.isArray(row.effectiveExecute) ||
     !row.config.every((value) => typeof value === "string") ||
     !row.effectiveExecute.every((value) => typeof value === "string") ||
-    !row.acl.every((value) => value && typeof value === "object" && typeof value.grantee === "string")) return null;
+    !row.acl.every(
+      (value) => value && typeof value === "object" && typeof value.grantee === "string",
+    )
+  )
+    return null;
   return {
-    ...row, config: [...row.config].sort(compare),
+    ...row,
+    config: [...row.config].sort(compare),
     acl: [...row.acl].sort((left, right) => compare(left.grantee, right.grantee)),
     effectiveExecute: [...row.effectiveExecute].sort(compare),
   };
@@ -119,15 +164,24 @@ export async function verifyScadaB4InstalledRoutines(query, port) {
   requireMatch(Array.isArray(rows) && rows.length === expected.length, "B4 例程数量不一致");
   for (const entry of expected) {
     const matches = rows.filter((row) => row?.identity === entry.identity);
-    requireMatch(matches.length === 1 && isDeepStrictEqual(normalized(matches[0]), entry),
-      "B4 例程签名、正文或授权不一致：" + entry.name);
+    requireMatch(
+      matches.length === 1 && isDeepStrictEqual(normalized(matches[0]), entry),
+      "B4 例程签名、正文或授权不一致：" + entry.name,
+    );
   }
   const catalogFingerprint = createHash("sha256").update(JSON.stringify(expected)).digest("hex");
   return {
-    status: "SCADA_B4_ROUTINE_CATALOG_MATCHED", routineCount: expected.length,
+    status: "SCADA_B4_ROUTINE_CATALOG_MATCHED",
+    routineCount: expected.length,
     directExecuteAclCount: expected.reduce((total, entry) => total + entry.acl.length, 0),
-    catalogFingerprint, routineCatalogMatched: true, definerSafetyVerified: false,
-    rowLockVerified: false, rowAuthorizationVerified: false, issuerBindingVerified: false,
-    businessAclApproved: false, admissionPassed: false, databaseWritten: false,
+    catalogFingerprint,
+    routineCatalogMatched: true,
+    definerSafetyVerified: false,
+    rowLockVerified: false,
+    rowAuthorizationVerified: false,
+    issuerBindingVerified: false,
+    businessAclApproved: false,
+    admissionPassed: false,
+    databaseWritten: false,
   };
 }

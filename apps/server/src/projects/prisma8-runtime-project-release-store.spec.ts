@@ -467,7 +467,9 @@ describe("全新原生工程发布与回滚仓储", () => {
     );
     const proof = h.reads.find((plan) => plan.text.includes("public.scada_lock_prior_publish("));
     expect(proof?.parameters).toEqual([actor.tenantId, projectId, 1n, 2n]);
-    expect(proof?.text).toContain("public.scada_lock_prior_publish(?::text, ?::text, ?::bigint, ?::bigint)");
+    expect(proof?.text).toContain(
+      "public.scada_lock_prior_publish(?::text, ?::text, ?::bigint, ?::bigint)",
+    );
     expect(h.steps).not.toContain("不可变快照");
     expect(h.writes).toHaveLength(0);
   });

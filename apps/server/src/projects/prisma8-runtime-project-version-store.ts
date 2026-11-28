@@ -283,16 +283,23 @@ export class Prisma8RuntimeProjectVersionStore
       const states = await lockB4ReleaseState(routineTx, tenantId, projectId, false);
       const state = states[0];
       if (
-        states.length !== 1 || !state || state.generation !== "0" || state.revision !== "" ||
-        state.hash !== "" || state.event_id !== "" || state.hash_is_null !== "true"
+        states.length !== 1 ||
+        !state ||
+        state.generation !== "0" ||
+        state.revision !== "" ||
+        state.hash !== "" ||
+        state.event_id !== "" ||
+        state.hash_is_null !== "true"
       ) {
         throw new Error("工程首版发布状态回读不一致");
       }
       const grants = await lockB4ProjectGrants(routineTx, tenantId, projectId, subjectId);
       const permissions = new Set(grants.map((grant) => grant.permission));
       if (
-        grants.length !== 3 || permissions.size !== 3 ||
-        !permissions.has("project:read") || !permissions.has("version:read") ||
+        grants.length !== 3 ||
+        permissions.size !== 3 ||
+        !permissions.has("project:read") ||
+        !permissions.has("version:read") ||
         !permissions.has("version:append")
       ) {
         throw new Error("工程首版创建者授权回读不一致");

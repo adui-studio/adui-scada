@@ -45,8 +45,14 @@ function harness(readOnly = false) {
     grants: [{ permission: "version:append" }],
     createRows: [{ result: "CREATED" }] as Row[],
     createFault: false,
-    initialStateRows: [{ generation: "0", revision: "", hash: "", event_id: "", hash_is_null: "true" }] as Row[],
-    initialGrants: [{ permission: "project:read" }, { permission: "version:read" }, { permission: "version:append" }],
+    initialStateRows: [
+      { generation: "0", revision: "", hash: "", event_id: "", hash_is_null: "true" },
+    ] as Row[],
+    initialGrants: [
+      { permission: "project:read" },
+      { permission: "version:read" },
+      { permission: "version:append" },
+    ],
     created: false,
     affected: [] as number[],
     failAt: 0,
@@ -83,14 +89,23 @@ function harness(readOnly = false) {
         if (rows.length === 1 && rows[0]?.result === "CREATED") {
           const [, , subject, snapshot, hash, time, eventId] = plan.parameters;
           if (
-            typeof subject !== "string" || typeof snapshot !== "string" ||
-            typeof hash !== "string" || typeof time !== "string" || typeof eventId !== "string"
-          ) throw new Error("首版例程参数异常");
+            typeof subject !== "string" ||
+            typeof snapshot !== "string" ||
+            typeof hash !== "string" ||
+            typeof time !== "string" ||
+            typeof eventId !== "string"
+          )
+            throw new Error("首版例程参数异常");
           state.created = true;
           state.row = {
-            snapshot_data: snapshot, content_hash: hash, created_by: subject,
-            created_at: time, head_revision: "1", actor_id: subject,
-            action: "version:append", event_id: eventId,
+            snapshot_data: snapshot,
+            content_hash: hash,
+            created_by: subject,
+            created_at: time,
+            head_revision: "1",
+            actor_id: subject,
+            action: "version:append",
+            event_id: eventId,
           };
         }
       } else if (plan.text.includes("public.scada_lock_identity(")) {
@@ -280,14 +295,18 @@ describe("全新原生工程版本持久化", () => {
   it("不存在或停用的身份不能创建工程", async () => {
     const denied = harness();
     denied.state.createRows = [{ result: "DENIED" }];
-    await expect(denied.store.create(actor, { document })).rejects.toThrow("工程资源不存在或无权访问");
+    await expect(denied.store.create(actor, { document })).rejects.toThrow(
+      "工程资源不存在或无权访问",
+    );
     expect(denied.steps).toEqual(["边界", "工程首版例程"]);
     expect(denied.writes).toHaveLength(0);
     expect(denied.state.rejected).toBe(1);
     for (const rows of [[], [{ status: "disabled" }]]) {
       const h = harness();
       h.state.identityRows = rows;
-      await expect(h.store.append(actor, projectId, input)).rejects.toThrow("工程资源不存在或无权访问");
+      await expect(h.store.append(actor, projectId, input)).rejects.toThrow(
+        "工程资源不存在或无权访问",
+      );
       expect(h.steps).toEqual(["边界", "工程锁", "身份锁"]);
       expect(h.writes).toHaveLength(0);
       expect(h.state.rejected).toBe(1);
@@ -379,10 +398,16 @@ describe("全新原生工程版本持久化", () => {
   it("首版例程缺失、返回异常及回读漂移不得回退直接写入", async () => {
     const unavailable = harness();
     unavailable.state.createFault = true;
-    await expect(unavailable.store.create(actor, { document })).rejects.toThrow("模拟工程首版例程失败");
+    await expect(unavailable.store.create(actor, { document })).rejects.toThrow(
+      "模拟工程首版例程失败",
+    );
     expect(unavailable.steps).toEqual(["边界", "工程首版例程"]);
     expect(unavailable.writes).toHaveLength(0);
-    for (const rows of [[], [{ result: "UNKNOWN" }], [{ result: "CREATED" }, { result: "CREATED" }]]) {
+    for (const rows of [
+      [],
+      [{ result: "UNKNOWN" }],
+      [{ result: "CREATED" }, { result: "CREATED" }],
+    ]) {
       const h = harness();
       h.state.createRows = rows;
       await expect(h.store.create(actor, { document })).rejects.toThrow("工程首版例程返回结果无效");
@@ -390,18 +415,30 @@ describe("全新原生工程版本持久化", () => {
       expect(h.writes).toHaveLength(0);
     }
     const stateDrift = harness();
-    stateDrift.state.initialStateRows = [{ generation: "1", revision: "1", hash: "", event_id: "", hash_is_null: "true" }];
-    await expect(stateDrift.store.create(actor, { document })).rejects.toThrow("工程首版发布状态回读不一致");
+    stateDrift.state.initialStateRows = [
+      { generation: "1", revision: "1", hash: "", event_id: "", hash_is_null: "true" },
+    ];
+    await expect(stateDrift.store.create(actor, { document })).rejects.toThrow(
+      "工程首版发布状态回读不一致",
+    );
     expect(stateDrift.state.rejected).toBe(1);
     expect(stateDrift.writes).toHaveLength(0);
     const grantsDrift = harness();
-    grantsDrift.state.initialGrants = [{ permission: "project:read" }, { permission: "version:append" }, { permission: "release:publish" }];
-    await expect(grantsDrift.store.create(actor, { document })).rejects.toThrow("工程首版创建者授权回读不一致");
+    grantsDrift.state.initialGrants = [
+      { permission: "project:read" },
+      { permission: "version:append" },
+      { permission: "release:publish" },
+    ];
+    await expect(grantsDrift.store.create(actor, { document })).rejects.toThrow(
+      "工程首版创建者授权回读不一致",
+    );
     expect(grantsDrift.state.rejected).toBe(1);
     expect(grantsDrift.writes).toHaveLength(0);
     const versionDrift = harness();
     versionDrift.state.corrupt = true;
-    await expect(versionDrift.store.create(actor, { document })).rejects.toThrow("工程版本事务回读元数据不一致");
+    await expect(versionDrift.store.create(actor, { document })).rejects.toThrow(
+      "工程版本事务回读元数据不一致",
+    );
     expect(versionDrift.state.rejected).toBe(1);
     expect(versionDrift.writes).toHaveLength(0);
   });
