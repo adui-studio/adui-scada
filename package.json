@@ -139,7 +139,8 @@
     "docker:db:role:object-review": "node apps/server/prisma8-fresh-install.mjs --role-object-review",
     "docker:db:role:b4:plan": "node apps/server/prisma8-fresh-install.mjs --role-b4-plan",
     "docker:db:role:b4:rehearse": "node apps/server/prisma8-fresh-install.mjs --role-b4-rehearse",
-    "docker:db:role:keycloak:plan": "node apps/server/prisma8-fresh-install.mjs --role-keycloak-plan"
+    "docker:db:role:keycloak:plan": "node apps/server/prisma8-fresh-install.mjs --role-keycloak-plan",
+    "docker:db:role:keycloak:rehearse": "node apps/server/prisma8-fresh-install.mjs --role-keycloak-rehearse"
   },
   "devDependencies": {
     "@adui/tooling": "workspace:*",

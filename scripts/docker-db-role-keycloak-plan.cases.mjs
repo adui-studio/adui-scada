@@ -9,6 +9,7 @@ import {
   verifyKeycloakOwnershipBaseline,
   verifyKeycloakOwnershipProjection,
 } from "./docker-db-role-keycloak-plan.mjs";
+import { runKeycloakOwnershipRollbackRehearsal } from "./docker-db-role-keycloak-rehearsal.mjs";
 
 const context = { identity: { version: "190000", systemIdentifier: "123456789" }, storageHash: "a".repeat(64), isolationFingerprint: "b".repeat(64) };
 const runtime = "adui_scada_keycloak_runtime";
@@ -278,5 +279,142 @@ void test("回滚后剩余所有权、额外依赖或权限不得通过原始基
     const data = baselineFixture(); mutate(data.rows[index]);
     await assert.rejects(() => verifyBaseline(data, "read-only"), DockerKeycloakOwnershipError);
     assert.equal(data.calls.length, index + 1);
+  }
+});
+
+function rehearsalFixture(fault = "") {
+  const before = baselineFixture();
+  const after = projectedFixture();
+  const calls = [];
+  let alters = 0;
+  let hosts = 0;
+  let clients = 0;
+  let first;
+  const makeClient = (readOnly) => {
+    clients++;
+    const label = readOnly ? "read" : "write";
+    const client = {
+      async connect() { calls.push([label, "connect"]); },
+      async query(sql) {
+        calls.push([label, sql]);
+        if (sql.startsWith("BEGIN")) return { command: fault === "begin" && !readOnly ? "SELECT" : "BEGIN" };
+        if (sql === "ROLLBACK") {
+          if (fault === "rollback" && !readOnly) throw new Error("SENSITIVE");
+          return { command: fault === "read-rollback" && readOnly ? "SELECT" : "ROLLBACK" };
+        }
+        if (sql.includes("pg_try_advisory_xact_lock")) return { rows: [{ locked: fault !== "lock", isolation: "serializable" }] };
+        if (sql.includes("pg_stat_clear_snapshot")) return { command: "SELECT" };
+        if (sql.includes("pg_stat_activity")) return { rows: [{ quiet: fault !== "busy" && !(fault === "late-busy" && alters === 101 && !readOnly) }] };
+        if (sql.startsWith("LOCK TABLE")) {
+          assert.equal(readOnly, false);
+          assert.equal((sql.match(/ONLY public\."/gu) ?? []).length, 101);
+          assert.match(sql, / IN ACCESS EXCLUSIVE MODE NOWAIT$/u);
+          return { command: fault === "table-lock" ? "SELECT" : "LOCK" };
+        }
+        if (sql.startsWith("ALTER TABLE")) {
+          assert.equal(readOnly, false);
+          alters++;
+          if (fault === "ddl" && alters === 3) throw new Error("SENSITIVE");
+          return { command: fault === "ddl-tag" && alters === 3 ? "SELECT" : "ALTER" };
+        }
+        const rows = !readOnly && alters === 101 ? after.rows : before.rows;
+        let index;
+        if (sql.includes('AS "managerVerified"')) index = 0;
+        else if (sql.includes("FROM objects")) index = 1;
+        else if (sql.includes('AS "directConnectMatched"')) index = 2;
+        else if (sql.includes('AS "tablePrivileges"')) index = 3;
+        else throw new Error("SENSITIVE");
+        const result = structuredClone(rows[index]);
+        if (fault === "post" && !readOnly && alters === 101 && index === 2 || fault === "independent" && readOnly && index === 3) result.pop();
+        return { rows: result };
+      },
+      async end() {
+        calls.push([label, "end"]);
+        if (fault === "close" && !readOnly || fault === "read-close" && readOnly) throw new Error("SENSITIVE");
+      },
+    };
+    if (!readOnly) first = client;
+    return fault === "reuse" && readOnly ? first : client;
+  };
+  return { calls, clientCount: () => clients, hostCount: () => hosts, options: {
+    context, confirm: "--confirm-rehearse-keycloak-ownership", reviewedObjects: "--reviewed-keycloak-objects",
+    confirmMaintenance: "--confirm-keycloak-maintenance", expectedPlanFingerprint: before.candidate.report.planFingerprint,
+    createClient: makeClient,
+    async readHostBoundary() {
+      hosts++;
+      return { serverVersion: context.identity.version, systemIdentifier: context.identity.systemIdentifier,
+        storageHash: context.storageHash, isolationFingerprint: context.isolationFingerprint,
+        strictContractVerified: true, commentsVerified: true, catalogIsolationPersisted: true,
+        keycloakStopped: fault !== "host" && !(fault === "host-after" && hosts === 2) };
+    },
+  } };
+}
+
+void test("所有权演练锁定全部表并强制回滚独立复核", async () => {
+  const { calls, clientCount, hostCount, options } = rehearsalFixture();
+  const result = await runKeycloakOwnershipRollbackRehearsal(options);
+  assert.equal(result.statementsExecuted, 101);
+  assert.deepEqual(calls.filter(([, sql]) => sql.startsWith("ALTER TABLE")).map(([, sql]) => sql), buildKeycloakOwnershipPlan(fixture()).sqlPreview);
+  assert.equal(clientCount(), 2);
+  assert.equal(hostCount(), 2);
+  assert.equal(calls.filter(([, sql]) => sql === "ROLLBACK").length, 2);
+  assert.equal(calls.filter(([, sql]) => sql.includes("pg_stat_activity")).length, 4);
+  assert.equal(calls.some(([, sql]) => sql.startsWith("COMMIT")), false);
+  const independent = calls.findIndex(([label]) => label === "read");
+  assert.deepEqual(calls.slice(independent - 2, independent + 2), [["write", "ROLLBACK"], ["write", "end"], ["read", "connect"], ["read", "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"]]);
+  assert.equal(result.rolledBack, true);
+  assert.equal(result.independentBaselineMatched, true);
+  assert.notEqual(result.baselineFingerprint, result.projectionFingerprint);
+  for (const flag of ["committed", "databaseWritten", "ownershipTransferAllowed", "ownerProjectionVerified", "schemaEvolutionVerified", "runtimeLoginAllowed", "businessAclApproved", "admissionPassed", "serviceSwitched"]) assert.equal(result[flag], false);
+});
+
+void test("缺少独立确认或宿主证据时不创建连接", async () => {
+  for (const change of [{ confirm: "--apply" }, { reviewedObjects: undefined }, { confirmMaintenance: undefined }, { expectedPlanFingerprint: "bad" }, { context: { ...context, storageHash: "bad" } }]) {
+    const { options, calls, hostCount } = rehearsalFixture();
+    await assert.rejects(() => runKeycloakOwnershipRollbackRehearsal({ ...options, ...change }), DockerKeycloakOwnershipError);
+    assert.deepEqual(calls, []);
+    assert.equal(hostCount(), 0);
+  }
+  const { options, calls } = rehearsalFixture("host");
+  await assert.rejects(() => runKeycloakOwnershipRollbackRehearsal(options), DockerKeycloakOwnershipError);
+  assert.deepEqual(calls, []);
+});
+
+void test("任何前置锁会话或指纹错误禁止所有权变更", async () => {
+  for (const fault of ["lock", "busy", "table-lock", "fingerprint"]) {
+    const { options, calls } = rehearsalFixture(fault);
+    if (fault === "fingerprint") options.expectedPlanFingerprint = "c".repeat(64);
+    await assert.rejects(() => runKeycloakOwnershipRollbackRehearsal(options), DockerKeycloakOwnershipError);
+    assert.equal(calls.filter(([, sql]) => sql.startsWith("ALTER TABLE")).length, 0);
+    assert.equal(calls.some(([, sql]) => sql === "COMMIT"), false);
+    assert.equal(calls.some(([label, sql]) => label === "write" && sql === "ROLLBACK"), true);
+  }
+});
+
+void test("变更失败或投影漂移后回滚并独立复核", async () => {
+  for (const [fault, count] of [["ddl", 3], ["ddl-tag", 3], ["post", 101], ["late-busy", 101]]) {
+    const { options, calls, clientCount } = rehearsalFixture(fault);
+    await assert.rejects(() => runKeycloakOwnershipRollbackRehearsal(options), (error) => {
+      assert.ok(error instanceof DockerKeycloakOwnershipError);
+      assert.doesNotMatch(error.message, /SENSITIVE/u);
+      return true;
+    });
+    assert.equal(calls.filter(([, sql]) => sql.startsWith("ALTER TABLE")).length, count);
+    assert.equal(clientCount(), 2);
+    assert.equal(calls.some(([, sql]) => sql === "COMMIT"), false);
+  }
+});
+
+void test("回滚或连接状态未知以及独立基线漂移均拒绝成功", async () => {
+  for (const fault of ["begin", "rollback", "close", "reuse", "independent", "read-rollback", "read-close", "host-after"]) {
+    const { options, calls, clientCount } = rehearsalFixture(fault);
+    await assert.rejects(() => runKeycloakOwnershipRollbackRehearsal(options), (error) => {
+      assert.ok(error instanceof DockerKeycloakOwnershipError);
+      assert.doesNotMatch(error.message, /SENSITIVE/u);
+      assert.match(error.message, /禁止重试/u);
+      return true;
+    });
+    if (["begin", "rollback", "close"].includes(fault)) assert.equal(clientCount(), 1);
+    assert.equal(calls.some(([, sql]) => sql === "COMMIT"), false);
   }
 });

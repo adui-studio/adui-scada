@@ -28,6 +28,8 @@ import { DockerRoleObjectReviewError, reviewDockerRoleObjects } from "../../scri
 import { readDockerIsolationDirectory } from "../../scripts/docker-db-role-isolation.mjs";
 import { createScadaB4HostReader, createScadaB4IsolationReader, readScadaB4HostPlan } from "../../scripts/docker-db-role-b4-host.mjs";
 import { DockerB4RehearsalError, runScadaB4RollbackRehearsal } from "../../scripts/docker-db-role-b4-rehearsal.mjs";
+import { DockerKeycloakOwnershipError } from "../../scripts/docker-db-role-keycloak-plan.mjs";
+import { runKeycloakOwnershipRollbackRehearsal } from "../../scripts/docker-db-role-keycloak-rehearsal.mjs";
 import { offlineEnvironment, resolveFreshCli } from "../../scripts/prisma8-fresh-cli-support.mjs";
 import {
   inspectFreshDockerEmptyDatabase,
@@ -42,6 +44,7 @@ import {
   freshStorageHash,
   requireFreshIdentity,
   requireFreshVerification,
+  requireKeycloakMaintenanceContainer,
   reviewFreshContract,
   reviewFreshUpdate,
 } from "../../scripts/prisma8-fresh-install.mjs";
@@ -99,7 +102,7 @@ function ensureOutput(directories) {
 }
 
 /** 固定本机 Docker 端点，核对全新 Compose 容器、持久卷及回环端口。 */
-function inspectDocker(requireNoOldProjects = false) {
+function inspectDocker(requireNoOldProjects = false, requireKeycloakStopped = false) {
   requireMatch(process.platform === "win32", "当前全新安装只允许 Windows 本机 Docker Desktop");
   requireMatch(
     !Object.entries(process.env).some(
@@ -226,6 +229,17 @@ function inspectDocker(requireNoOldProjects = false) {
       /^19[0-9]{4}$/u.test(version),
     "容器 PostgreSQL 19 实际集群标识或版本无效",
   );
+  if (requireKeycloakStopped) {
+    const ids = local(["ps", "-a", "--no-trunc",
+      "--filter", "label=com.docker.compose.project=adui-scada",
+      "--filter", "label=com.docker.compose.service=keycloak", "--format", "{{.ID}}"]);
+    requireMatch(/^[a-f0-9]{64}$/u.test(ids), "Keycloak 维护窗口必须具有唯一固定容器");
+    const keycloakFields = [".Id", ".State.Status", ".State.Running", ".State.Paused",
+      ".State.Restarting", ".Config.Image", ".Config.Labels", ".HostConfig.RestartPolicy.Name"];
+    const keycloakFormat = "[" + keycloakFields.map((field) => "{{json " + field + "}}").join(",") + "]";
+    const details = JSON.parse(local(["container", "inspect", "--format", keycloakFormat, ids]));
+    return { systemIdentifier, version, keycloakContainerId: requireKeycloakMaintenanceContainer(ids, details) };
+  }
   return { systemIdentifier, version };
 }
 
@@ -367,7 +381,7 @@ async function main() {
             : null;
   const isolationMode = action === "role-isolation-status" ? "status" : action === "role-isolation-rehearse" ? "rehearse" : action === "role-isolation-apply" ? "apply" : null;
   const b4Mode = action === "role-b4-plan" ? "plan" : action === "role-b4-rehearse" ? "rehearse" : null;
-  const reviewRoles = action === "role-review" || action === "role-plan" || action === "role-object-review" || action === "role-keycloak-plan" || bootstrapMode !== null || isolationMode !== null || b4Mode !== null;
+  const reviewRoles = action === "role-review" || action === "role-plan" || action === "role-object-review" || action === "role-keycloak-plan" || action === "role-keycloak-rehearse" || bootstrapMode !== null || isolationMode !== null || b4Mode !== null;
   const identity = inspectDocker(reviewRoles);
   const parse = (text) => {
     try {
@@ -462,6 +476,52 @@ async function main() {
         return runScadaB4RollbackRehearsal({
           ...options, isolationFingerprint: plan.isolationFingerprint, expectedPlanFingerprint,
           confirm: process.argv[3],
+        });
+      }
+      if (action === "role-keycloak-rehearse") {
+        stage = "Keycloak 维护窗口及隔离基线";
+        const maintenance = inspectDocker(true, true);
+        const { keycloakContainerId: _containerId, ...maintenanceIdentity } = maintenance;
+        requireMatch(isDeepStrictEqual(maintenanceIdentity, identity), "Keycloak 维护窗口集群不一致");
+        const composeEnvPath = join(root, ".local", "docker", "compose.env");
+        const composeEnvText = readFileSync(composeEnvPath, "utf8");
+        const verifyStatus = (currentReport, expectedFingerprint = "") => runDockerRoleIsolationTransaction({
+          mode: "status", report: currentReport, identity, storageHash: freshStorageHash,
+          expectedFingerprint, createClient: () => databaseClient(readOnly),
+          readDirectory: readDockerBusinessRoleDirectory,
+        });
+        const baseline = await verifyStatus(directoryReport);
+        requireMatch(baseline.catalogIsolationPersisted === true, "Keycloak 所有权演练要求 B3.3 已实际隔离");
+        const context = { identity, storageHash: freshStorageHash, isolationFingerprint: baseline.planFingerprint };
+        const checkMaintenance = () => {
+          requireMatch(readFileSync(join(root, ".env"), "utf8") === envText &&
+            readFileSync(join(root, ".local", "docker", "secrets.env"), "utf8") === secretsText &&
+            readFileSync(composeEnvPath, "utf8") === composeEnvText &&
+            isDeepStrictEqual(inspectDocker(true, true), maintenance), "Keycloak 维护窗口、集群或本机配置发生变化");
+        };
+        const readHostBoundary = async () => {
+          checkMaintenance();
+          requireFreshVerification(parse(invoke(["db", "verify", "--strict", "--json"], readOnly)));
+          await checkComments(readOnly, identity, contract, commentText, false);
+          const current = await loadDirectoryReport();
+          requireMatch(isDeepStrictEqual(current, directoryReport), "Keycloak 演练双库原始目录发生变化");
+          const isolated = await verifyStatus(current, context.isolationFingerprint);
+          requireMatch(isolated.catalogIsolationPersisted === true, "Keycloak 演练隔离状态不一致");
+          checkMaintenance();
+          return { serverVersion: identity.version, systemIdentifier: identity.systemIdentifier,
+            storageHash: freshStorageHash, isolationFingerprint: context.isolationFingerprint,
+            strictContractVerified: true, commentsVerified: true, catalogIsolationPersisted: true, keycloakStopped: true };
+        };
+        stage = "Keycloak 独立所有权回滚演练";
+        return runKeycloakOwnershipRollbackRehearsal({
+          context, confirm: process.argv[3], reviewedObjects: process.argv[4], confirmMaintenance: process.argv[5],
+          expectedPlanFingerprint: (process.argv.at(-1) ?? "").slice("--plan-fingerprint=".length),
+          readHostBoundary,
+          createClient: (readOnlyMode) => {
+            const target = new URL(readOnlyMode ? readOnly : writable);
+            target.pathname = "/adui_scada_keycloak";
+            return databaseClient(target.toString());
+          },
         });
       }
       if (action === "role-object-review" || action === "role-keycloak-plan") {
@@ -705,6 +765,7 @@ void main()
         error instanceof DockerRoleIsolationTransactionError ||
         error instanceof DockerRoleObjectReviewError ||
         error instanceof DockerB4RehearsalError ||
+        error instanceof DockerKeycloakOwnershipError ||
         error instanceof FreshRuntimeProbeError
         ? error.message
         : stage + "失败，内部诊断已脱敏；保留现场，不自动重试",

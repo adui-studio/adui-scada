@@ -10,6 +10,7 @@ import {
   freshStorageHash,
   requireFreshIdentity,
   requireFreshVerification,
+  requireKeycloakMaintenanceContainer,
   reviewFreshContract,
   reviewFreshUpdate,
 } from "./prisma8-fresh-install.mjs";
@@ -322,10 +323,31 @@ void test("B4 只接受只读计划与明确确认指纹的回滚演练，拒绝
   ]) assert.throws(() => freshAction(args), /必须明确指定/u);
 });
 
-void test("Keycloak 仅开放独立只读所有权预览，不接受执行或额外参数", () => {
+void test("Keycloak 只接受所有权预览及独立确认的回滚演练", () => {
+  const fingerprint = "--plan-fingerprint=" + "a".repeat(64);
+  const approval = ["--confirm-rehearse-keycloak-ownership", "--reviewed-keycloak-objects", "--confirm-keycloak-maintenance"];
   assert.equal(freshAction(["--role-keycloak-plan"]), "role-keycloak-plan");
+  assert.equal(freshAction(["--role-keycloak-rehearse", ...approval, fingerprint]), "role-keycloak-rehearse");
   for (const args of [
     ["--role-keycloak-plan", "--apply"], ["--role-keycloak-rehearse"],
-    ["--role-keycloak-apply"], ["--role-keycloak-plan", "--plan-fingerprint=" + "a".repeat(64)],
+    ["--role-keycloak-apply"], ["--role-keycloak-plan", fingerprint],
+    ["--role-keycloak-rehearse", ...approval.slice(0, 2), fingerprint],
+    ["--role-keycloak-rehearse", ...approval, "--plan-fingerprint=bad"],
+    ["--role-keycloak-rehearse", ...approval, fingerprint, "--commit"],
   ]) assert.throws(() => freshAction(args), /必须明确指定/u);
+});
+
+void test("Keycloak 维护窗口要求唯一固定容器已明确退出且不自动重启", () => {
+  const id = "a".repeat(64);
+  const details = [id, "exited", false, false, false, "quay.io/keycloak/keycloak:latest",
+    { "com.docker.compose.project": "adui-scada", "com.docker.compose.service": "keycloak" }, "no"];
+  assert.equal(requireKeycloakMaintenanceContainer(id, details), id);
+  for (const ids of ["", id + "\n" + "b".repeat(64), "short"]) {
+    assert.throws(() => requireKeycloakMaintenanceContainer(ids, details), /容器标识不一致/u);
+  }
+  for (const [index, value] of [[0, "b".repeat(64)], [1, "running"], [2, true], [3, true], [4, true],
+    [5, "other"], [6, {}], [7, "always"]]) {
+    const changed = [...details]; changed[index] = value;
+    assert.throws(() => requireKeycloakMaintenanceContainer(id, changed), /明确停止/u);
+  }
 });
