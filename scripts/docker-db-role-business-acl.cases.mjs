@@ -68,6 +68,8 @@ void test("直接更新仅限四个业务列，禁止身份、权限、快照、
   const protectedTables = ["scada_identities", "scada_external_identities", "scada_project_grants", "scada_project_release_state", "scada_project_release_events"];
   assert.ok(grants.filter((grant) => protectedTables.includes(grant.table)).every((grant) => grant.privilege === "SELECT"));
   assert.ok(grants.every((grant) => /^GRANT (SELECT|INSERT|UPDATE) \([a-z_, ]+\) ON TABLE public\.scada_[a-z_]+ TO adui_scada_runtime$/u.test(grant.sql)));
+  assert.equal(grants.some((grant) => grant.table === "scada_projects" && grant.privilege === "INSERT"), false);
+  assert.equal(grants.length, 21);
   assert.equal(blockedOperations.filter((operation) => operation.operation === "ROW_LOCK").length, 5);
   assert.equal(blockedOperations.filter((operation) => operation.operation !== "ROW_LOCK").length, 3);
 });
@@ -90,6 +92,9 @@ void test("实际读取仅发送固定目录 SELECT，并保护类型专用权�
   assert.equal(report.lockRoutinePreview.planOnly, true);
   assert.equal(report.lockRoutinePreview.admissionPassed, false);
   assert.match(report.lockRoutinePreview.planFingerprint, /^[a-f0-9]{64}$/u);
+  assert.equal(report.restrictedWritePreview.coveredOperations.length, 3);
+  assert.equal(report.restrictedWritePreview.oidcCleanup.issuerBindingRequired, true);
+  assert.equal(report.restrictedWritePreview.businessAclApproved, false);
 });
 
 void test("缺行、重复、额外列、未知角色及任一权限漂移均拒绝且不回显目录值", () => {

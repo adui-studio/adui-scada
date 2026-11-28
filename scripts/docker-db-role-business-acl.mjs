@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { buildScadaLockRoutinePreview } from "./docker-db-role-lock-routines.mjs";
+import { buildScadaRestrictedWritePreview } from "./docker-db-role-restricted-writes.mjs";
 
 export class DockerBusinessAclPreviewError extends Error {}
 
@@ -26,7 +27,7 @@ const tables = [
   table("scada_projects",
     "tenant_id project_id head_revision created_at updated_at",
     "tenant_id project_id head_revision created_at updated_at",
-    "tenant_id project_id head_revision created_at updated_at",
+    "",
     "head_revision updated_at"),
   table("scada_project_grants",
     "tenant_id project_id subject_id permission",
@@ -168,6 +169,7 @@ export function buildScadaBusinessAclPreview(rows) {
     grants,
     blockedOperations,
     lockRoutinePreview: buildScadaLockRoutinePreview(),
+    restrictedWritePreview: buildScadaRestrictedWritePreview(),
     planFingerprint,
     planOnly: true,
     rowAuthorizationVerified: false,
