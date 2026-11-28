@@ -143,29 +143,27 @@ async function harness(readOnly = false) {
       } else if (plan.text.includes("FROM public.scada_projects")) {
         steps.push("工程锁");
         rows = state.missingProject ? [] : [{ project_id: projectId, head_revision: state.head }];
-      } else if (plan.text.includes("FROM public.scada_auth_sessions")) {
+      } else if (plan.text.includes("public.scada_lock_session_identity(")) {
         steps.push("会话锁");
         rows = state.activeSession ? [{ session_id: sessionId }] : [];
-      } else if (plan.text.includes("FROM public.scada_project_grants")) {
+      } else if (plan.text.includes("public.scada_lock_project_grants(")) {
         steps.push("授权锁");
         rows = state.permissions.map((permission) => ({ permission }));
-      } else if (plan.text.includes("FROM public.scada_project_release_state")) {
+      } else if (plan.text.includes("public.scada_lock_release_state_")) {
         steps.push("发布状态");
         rows = [state.release];
-      } else if (plan.text.includes("FROM public.scada_project_versions")) {
+      } else if (plan.text.includes("public.scada_lock_project_version(")) {
         steps.push("不可变快照");
         rows = state.snapshotRows;
-      } else if (plan.text.includes("FROM public.scada_project_release_events")) {
-        if (plan.text.includes("idempotency_key")) {
-          steps.push("幂等事件");
-          rows = state.replay ? [state.replay] : [];
-        } else if (plan.text.includes("action = 'PUBLISH'")) {
-          steps.push("曾发布证明");
-          rows = state.priorEvent ? [state.priorEvent] : [];
-        } else {
-          steps.push("当前事件");
-          rows = state.currentEvent ? [state.currentEvent] : [];
-        }
+      } else if (plan.text.includes("public.scada_lock_release_request(")) {
+        steps.push("幂等事件");
+        rows = state.replay ? [state.replay] : [];
+      } else if (plan.text.includes("public.scada_lock_prior_publish(")) {
+        steps.push("曾发布证明");
+        rows = state.priorEvent ? [state.priorEvent] : [];
+      } else if (plan.text.includes("public.scada_lock_release_event(")) {
+        steps.push("当前事件");
+        rows = state.currentEvent ? [state.currentEvent] : [];
       } else {
         throw new Error("原生发布事务出现未预期查询");
       }
@@ -267,9 +265,11 @@ describe("全新原生工程发布与回滚仓储", () => {
     expect(h.steps).toEqual(["边界", "工程锁", "会话锁", "授权锁", "发布状态", "边界"]);
     expect(h.options).toEqual([{ isolationLevel: "ReadCommitted", timeout: 10000 }]);
     expect(h.reads[1]?.parameters).toEqual([actor.tenantId, projectId]);
-    expect(h.reads[2]?.parameters).toEqual([sessionId, actor.tenantId, actor.subjectId]);
-    expect(h.reads[2]?.text).toContain("FOR SHARE OF s, i");
+    expect(h.reads[2]?.parameters).toEqual([actor.tenantId, actor.subjectId, sessionId]);
+    expect(h.reads[2]?.text).toContain("public.scada_lock_session_identity(");
     expect(h.reads[3]?.parameters).toEqual([actor.tenantId, projectId, actor.subjectId]);
+    expect(h.reads[3]?.text).toContain("public.scada_lock_project_grants(");
+    expect(h.reads[4]?.text).toContain("public.scada_lock_release_state_share(");
     expect(h.reads.every((plan) => !plan.text.includes("head_revision"))).toBe(true);
     expect(h.writes).toHaveLength(0);
   });
@@ -373,6 +373,8 @@ describe("全新原生工程发布与回滚仓储", () => {
       "不可变快照",
     ]);
     expect(h.reads[1]?.text).toContain("FOR UPDATE");
+    expect(h.reads[4]?.text).toContain("public.scada_lock_release_state_update(");
+    expect(h.reads[5]?.text).toContain("public.scada_lock_release_request(");
     expect(h.reads[5]?.parameters).toEqual([
       actor.tenantId,
       projectId,
@@ -463,9 +465,11 @@ describe("全新原生工程发布与回滚仓储", () => {
     await expect(h.store.rollback(actor, sessionId, projectId, rollback, key)).rejects.toThrow(
       conflict,
     );
-    const proof = h.reads.find((plan) => plan.text.includes("action = 'PUBLISH'"));
+    const proof = h.reads.find((plan) => plan.text.includes("public.scada_lock_prior_publish("));
     expect(proof?.parameters).toEqual([actor.tenantId, projectId, 1n, 2n]);
-    expect(proof?.text).toContain("ORDER BY generation DESC LIMIT 1 FOR SHARE");
+    expect(proof?.text).toContain(
+      "public.scada_lock_prior_publish(?::text, ?::text, ?::bigint, ?::bigint)",
+    );
     expect(h.steps).not.toContain("不可变快照");
     expect(h.writes).toHaveLength(0);
   });

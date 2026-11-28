@@ -14,6 +14,7 @@ import {
   type Prisma8Transaction,
 } from "../database/prisma8-read-transaction.js";
 import type { Prisma8Client, Prisma8Service } from "../database/prisma8.service.js";
+import { buildB4OidcCleanupBody } from "../database/prisma8-b4-oidc-cleanup.js";
 import type { OidcProviderDiscoveryService } from "./oidc-provider-discovery.service.js";
 import {
   Prisma8RuntimeAuthSessionService,
@@ -22,7 +23,7 @@ import {
 
 const storageHash = "9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436";
 const actor = { tenantId: "tenant-a", subjectId: "operator-a" };
-const issuer = "https://id.example.org/realms/scada";
+const issuer = "https://127.0.0.1:18443/realms/adui-scada";
 const hash = (value: string) => createHash("sha256").update(value, "utf8").digest("hex");
 
 type Plan = { text: string; parameters: unknown[] };
@@ -53,6 +54,7 @@ function harness(readOnly = false) {
     sessionRows: [] as Row[],
     oidcRows: [] as Row[],
     affectedRows: 1,
+    cleanupRows: [{ deleted: "2" }] as Row[],
     denyAt: 0,
     boundaryChecks: 0,
   };
@@ -71,6 +73,8 @@ function harness(readOnly = false) {
         rows = [
           state.boundaryChecks === state.denyAt ? { ...identity, storageHash: "" } : identity,
         ];
+      } else if (plan.text.includes("public.scada_cleanup_expired_oidc()")) {
+        rows = state.cleanupRows;
       } else if (plan.text.includes("scada_oidc_transactions")) {
         rows = state.oidcRows;
       } else if (plan.text.includes("scada_auth_sessions")) {
@@ -236,7 +240,7 @@ describe("原生身份业务事务边界", () => {
     const insert = h.mutations[0];
     expect(h.options).toEqual([{ isolationLevel: "ReadCommitted", timeout: 10000 }]);
     expect(h.state.boundaryChecks).toBe(2);
-    expect(h.queries[1]?.text).toContain("FOR SHARE");
+    expect(h.queries[1]?.text).toContain("public.scada_lock_identity(?::text, ?::text)");
     expect(h.queries[1]?.parameters).toEqual([actor.tenantId, actor.subjectId]);
     expect(insert?.text).toContain("INSERT INTO public.scada_auth_sessions");
     expect(insert?.parameters.slice(0, 5)).toEqual([
@@ -366,17 +370,24 @@ describe("原生身份业务事务边界", () => {
 
   it("OIDC 过期清理仅限当前 Issuer 与固定批次，异常影响行数回滚", async () => {
     const h = harness();
-    h.state.affectedRows = 2;
     expect(await h.transactions.cleanupExpiredTransactions()).toBe(2);
-    expect(h.mutations[0]?.parameters[0]).toBe(issuer);
-    expect(h.mutations[0]?.parameters[2]).toBe(issuer);
-    expect(h.mutations[0]?.parameters[4]).toBe(128);
-    expect(h.mutations[0]?.text).toContain("expires_at <=");
-    h.state.affectedRows = 129;
-    await expect(h.transactions.cleanupExpiredTransactions()).rejects.toThrow(
-      "OIDC 登录事务清理失败，请稍后重试",
-    );
-    expect(h.outcomes).toEqual(["提交", "回滚"]);
+    expect(h.queries[1]?.parameters).toEqual([buildB4OidcCleanupBody(issuer)]);
+    expect(h.queries[1]?.text).toContain("AND p.prosrc = ?::text");
+    expect(h.queries[1]?.text).toContain("THEN public.scada_cleanup_expired_oidc()");
+    expect(h.mutations).toHaveLength(0);
+    for (const rows of [
+      [{ deleted: "129" }],
+      [{ deleted: "BINDING_MISMATCH" }],
+      [],
+      [{ deleted: "01" }],
+    ]) {
+      h.state.cleanupRows = rows;
+      await expect(h.transactions.cleanupExpiredTransactions()).rejects.toThrow(
+        "OIDC 登录事务清理失败，请稍后重试",
+      );
+    }
+    expect(h.outcomes).toEqual(["提交", "回滚", "回滚", "回滚", "回滚"]);
+    expect(h.mutations).toHaveLength(0);
   });
 
   it("可写提供方只启动一个过期清理定时器，关闭后不再访问数据库", async () => {
@@ -386,13 +397,14 @@ describe("原生身份业务事务边界", () => {
       h.transactions.onModuleInit();
       h.transactions.onModuleInit();
       await vi.advanceTimersByTimeAsync(30_000);
-      expect(h.mutations).toHaveLength(1);
-      expect(h.mutations[0]?.text).toContain("DELETE FROM public.scada_oidc_transactions");
-      expect(h.mutations[0]?.parameters[0]).toBe(issuer);
-      expect(h.mutations[0]?.parameters[4]).toBe(128);
+      const cleanups = () =>
+        h.queries.filter((plan) => plan.text.includes("public.scada_cleanup_expired_oidc()"));
+      expect(cleanups()).toHaveLength(1);
+      expect(cleanups()[0]?.parameters).toEqual([buildB4OidcCleanupBody(issuer)]);
+      expect(h.mutations).toHaveLength(0);
       await h.transactions.onModuleDestroy();
       await vi.advanceTimersByTimeAsync(30_000);
-      expect(h.mutations).toHaveLength(1);
+      expect(cleanups()).toHaveLength(1);
     } finally {
       await h.transactions.onModuleDestroy();
       vi.useRealTimers();

@@ -106,7 +106,7 @@ function businessView(report, prepared) {
   };
 }
 
-class RoleVerificationError extends Error {}
+export class RoleVerificationError extends Error {}
 
 const knownSqlStates = new Set([
   "42501",
@@ -129,7 +129,7 @@ const knownSqlStates = new Set([
   "57P01",
 ]);
 
-function safeSqlState(error) {
+export function safeSqlState(error) {
   return error !== null &&
     typeof error === "object" &&
     "code" in error &&
@@ -184,7 +184,7 @@ async function requirePreparedRows(client, step, sql, expected, parameters) {
 }
 
 /** 在当前事务验证不可登录属性、精确 ACL、有效权限及真实角色读取，不启用登录。 */
-async function verifyPrepared(client, identity, storageHash) {
+export async function verifyPrepared(client, identity, storageHash, isolated = false) {
   await requirePreparedRows(
     client,
     "角色属性",
@@ -208,8 +208,8 @@ async function verifyPrepared(client, identity, storageHash) {
       noSchemaCreate: true,
       noTableOrColumnWrites: true,
       noSequencePrivileges: true,
-      businessConnect: true,
-      keycloakConnect: true,
+      businessConnect: !isolated || role === scada,
+      keycloakConnect: !isolated || role === keycloak,
     })),
   );
   await requirePreparedRows(

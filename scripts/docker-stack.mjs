@@ -218,6 +218,22 @@ export function validateDockerEnv(text) {
   return true;
 }
 
+/** 仅从通过既有安全校验的根环境文件读取固定公开 Issuer 端口。 */
+export function readDockerOidcPort(envText) {
+  validateDockerEnv(envText);
+  return parseDockerEnv(envText).get("SCADA_LAB_KEYCLOAK_PORT") ?? "18443";
+}
+
+/** 复用已有宿主与容器 Discovery/JWKS 核验，不启动或修改服务。 */
+export function verifyLocalDockerOidcBoundary(envText) {
+  const port = readDockerOidcPort(envText);
+  manageDockerStack("oidc", envText, localDocker());
+  return {
+    issuer: new URL("https://127.0.0.1:" + port).origin + "/realms/adui-scada",
+    formalDiscoveryVerified: true,
+  };
+}
+
 /** 通过独立宿主进程校验真实发布端口和本机可信根证书。 */
 function verifyDockerHttps(ports) {
   const result = spawnSync(process.execPath, ["scripts/docker-web-https-smoke.mjs", ...ports], {

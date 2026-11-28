@@ -77,7 +77,7 @@ function matchesDatabase(value, count) {
 }
 
 /** 仅生成固定角色准备预览，不执行任何 SQL。 */
-export function buildDockerRoleBootstrapPlan(report, expectedHash) {
+export function buildDockerRoleBootstrapPlan(report, expectedHash, isolated = false) {
   if (
     typeof expectedHash !== "string" ||
     !/^[a-f0-9]{64}$/u.test(expectedHash) ||
@@ -96,8 +96,12 @@ export function buildDockerRoleBootstrapPlan(report, expectedHash) {
       serverVersion: "190000",
     }) ||
     !matches(report.role, roleBaseline) ||
-    !matches(report.databases?.adui_scada, databaseBaseline) ||
-    !matches(report.databases?.adui_scada_keycloak, databaseBaseline) ||
+    typeof isolated !== "boolean" ||
+    !matches(report.databases?.adui_scada, { ...databaseBaseline, publicConnect: !isolated }) ||
+    !matches(report.databases?.adui_scada_keycloak, {
+      ...databaseBaseline,
+      publicConnect: !isolated,
+    }) ||
     !matchesDatabase(report.scada, 12) ||
     !matchesDatabase(report.keycloak, 101) ||
     !matches(report.scada.schemas.prisma_contract, { ...publicSchemaBaseline, owner: true }) ||

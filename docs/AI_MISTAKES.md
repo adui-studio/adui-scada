@@ -1585,3 +1585,132 @@
 - **防复发**：对 pg_class 等混合目录中的类型专用函数，必须显式 CASE 或使用具有求值边界的关系集合，不能用 AND 的书写顺序假设短路。权限查询负例应保持原范围和拒绝条件；须在真实 PostgreSQL 上执行原生查询。先同步代码并单独运行 docker:db:role:bootstrap:status，确认退出 0、rolesPrepared=false；再运行 test:docker（预计 86 项）、test:prisma8:fresh（29 项）、env/messages/docs、Vite+ 零警告、git diff --check。仅在质量检查及只读状态通过后，独立执行 docker:db:role:bootstrap --confirm-rehearse-docker-roles，确认真实混合目录查询和完整角色演练通过；无论结果如何，再独立运行 docker:db:role:bootstrap:status，确认角色仍不存在。失败保留现场，提供固定脱敏诊断；不执行正式创建，不自动重试、清理或调整权限。PR #259 保持 Draft。
 
 > **2026-11-28 · E-167 真实复验关闭**：维护者 2026-11-28 Windows 于 HEAD b67c230a140d79664620962805fecffd2e18c1be 实测：演练前独立角色状态核查退出 0、rolesPrepared=false；Docker 九套件 86/86（角色事务 11/11）、Prisma 8 全新专项 29/29，合计 115/115；环境及 LF、中文文案 386 文件、Markdown 99 份、Vite+ 521 格式文件及 360 受检文件零警告、Lint 和类型错误、git diff --check 均通过，退出 0，工作区干净。随后真实 PostgreSQL 19.0 回滚演练返回 DOCKER_DB_ROLE_BOOTSTRAP_REHEARSED、catalogStatementsExecuted=true、rolledBack=true、committed=false、rolesPrepared=false、directoryReviewPassed=true、postVerificationPassed=true、admissionPassed=false、databaseWritten=false、businessDataWritten=false、serviceSwitched=false、publicConnectRetained=true，退出 0；演练后独立状态核查返回 DOCKER_DB_ROLE_BOOTSTRAP_STATUS_READY、rolesPrepared=false，退出 0。存储指纹始终为 9ab29293ba3d8ce61b05d057a1bfe85acd0b730793971d16dfaa199d4a514436。E-167 对象类型保护修复通过真实完整演练，关闭；无需再次改动已验收 SQL。 原始失败时具体先被求值的函数未从数据库错误正文或执行计划单独取证；关闭依据为修复后的真实完整演练，不把离线 SQL 结构测试当作真实数据库测试。正式持久化提交尚未执行。
+
+### E-168 · 例程配置数组与角色报告形状不一致（PR #262，局部修复待真实复验）
+
+- **源码审查现象**：基线 321646adcf73fd311929b6e7797fcc68deabf8e9 的例程目录 SQL 使用 jsonb_build_array(..., p.proconfig)，但统一 evidence 校验只接受 null、字符串、布尔值，故合法配置数组会被拒绝；其固定锁角色测试访问 report.roles，但输出未返回该字段，且角色属性未拒绝已有锁角色 LOGIN=true。另仅匹配 search_path=pg_catalog, public 未显式排除临时 Schema 的隐式优先搜索，不能标为安全例程。以上为源码与现有测试夹具对照确认，未执行旧版完整测试或真实数据库复现。
+- **修复及防复发**：仅例程配置槽允许 null/有界字符串数组；固定运行及可选锁角色的七个高权限/登录/继承布尔值必须均为 false，输出固定名称和属性，不回显 OID。将安全计数改为精确配置匹配计数：pg_temp 显式置末尾、row_security=on 两项匹配，始终 definerSafetyVerified=false；还须验证 Schema 可写主体、函数体、所有者和 PUBLIC EXECUTE。不因目录形状修复而开放权限。依据 [PostgreSQL SECURITY DEFINER](https://www.postgresql.org/docs/current/sql-createfunction.html)。
+- **复验**：修复后的远端对象评审模块/测试 Git Blob 71e1e6d2c7ce3edbb73d605057752fe3f8e4016b / 87502ea5630446595be0a7e34db7f87c91b43973 与本地完全一致；Node.js 22.16.0 语法检查退出 0、独立目录夹具 7/7 通过（外围连接依赖替身未调用）。真实 PostgreSQL 查询与完整质量链未执行，保留真实复验门禁。
+
+### E-169 · 候选 Blob 创建与实际分支提交、测试证据混淆（PR #262）
+
+- **现象**：上一轮协作中途报告新增锁例程测试 5/5，但当轮未取得实际 Node 运行记录，且仅创建两个 Git Blob、未生成提交或更新 Draft 分支。上一轮最终回复已纠正，未计入正式验收；这是协作交付记录问题，不是 PostgreSQL 实测故障。
+- **复验与防复发**：本轮取回原 Blob，使用 Node.js 22.16.0 执行实际语法检查及独立 `node --test`，五项通过；按 E-142 预防规则补齐字符串排序比较器后再次运行五项通过。模块 SHA 8da25f8e87df69061c12a0d9e697908d857997b2，最终测试 SHA 8cb34e74c2ad3b8b7dd970a70cd7dfbaaef92be2。必须通过 Git Tree、Commit、非强制 ref 更新与 PR HEAD 回读，才能报告已提交；实际测试必须与最终 Blob 对应，不能将候选 SQL 文本或模拟结果视为真实数据库执行。全仓检查及真实 PostgreSQL 仍待验收。
+
+### E-170 · 局部测试文件中文占位符替换误扫历史 PSL 对照测试（PR #262）
+
+- **现象**：协作容器编写 B4 前置模块/测试时，临时生成脚本对局部目录所有 `.mjs` 用 `@@` 检查未替换占位符；已有真实 PSL 对照测试本来包含 `@@map`，导致转换中途 AssertionError。初次 Node 新专项 4/6，两项错误文案断言仍为占位符。并非 PostgreSQL、正式业务或真实授权故障。
+- **修复与防复发**：将替换严格限定为本次新增测试文件及具体占位符，不扫描、替换既有协议标识，不删减错误文案精确断言。核对原三组代码、测试和 PSL 的 Git Blob 均未改变。临时文件生成脚本应使用固定目标路径并在失败时停止后续测试，不能以生成步骤失败后的部分测试结果声称全绿。
+- **复验**：修复后新专项 6/6，补强检查及集成测试后的实际 Node 22.16.0 四组专项 23/23、零失败零跳过；最终新增模块/测试 SHA 7f17038c8c7107cd6b5a7a2b9805345afbb9ed99 / 3fb963c721c2bc3b752d4a25d4008ed99d07e597，与远端实际 Blob 一致。未执行全仓质量链或真实 PostgreSQL，B4 安装未验收。
+
+### E-171 · 回滚演练测试文件压缩传输完整性失败
+
+- **现象**：2026-11-28，本地七组 B4 Node 测试 48/48 后，上传新增测试文件时压缩传输解码报 `invalid match`；没有生成错误 Blob，也没有修改远端分支。
+- **修复与防复发**：改用原始源码直接传输，核对远端 Blob SHA 与本地已实测文件完全一致（`1a885a31670c27d47fc90f0b5d6282628e287ad1`）。以后任何传输/解码失败必须先停止提交，复核原始字节与 Git Blob，不能用手工推测的内容替代已验证文件。
+- **复验边界**：本次为协作交付链异常，不是 PostgreSQL 或业务故障；原 48 项本地回归证据不变，真实数据库与完整质量链仍未验收。
+
+### E-172 · 只读 SQL 断言误把 GRANT OPTION 查询当成授权语句
+
+- **现象**：2026-11-28，新 Keycloak 目录预览专项首次实际 Node 22.16.0 运行 6/7，唯一失败为只读 SQL 形状断言。查询含 `has_database_privilege` 的合法权限参数 `CONNECT WITH GRANT OPTION`，旧正则只查找 `GRANT ` 子串而误判存在写入授权。
+- **修复与防复发**：测试按语句起始边界拒绝 ALTER TABLE、GRANT、REVOKE、REASSIGN OWNED 和 DROP OWNED，保留两条固定 WITH 目录查询、权限参数与所有安全断言；不删除权限查询或改写 SQL 以迁就测试。增加真实对象身份尚未审核的报告断言，复验 7/7，零失败零跳过；最终模块和测试 Blob 分别为 `9cd850423014786a6a4a39b63c6fce50c9e57299` / `83a8086204cddf44a9e61862b2b16488f44acabf`，与远端代码提交一致。测试 SQL 读写边界应检查语句命令及完整参数，不把权限名称或字符串常量当作 DDL。静态正则断言不是实际数据库语法或权限执行证明。
+- **边界**：此为离线测试匹配缺陷，未在真实 PostgreSQL 执行任何语句；完整质量链、真实对象身份、权限和回滚仍待验收。
+
+### E-173 · SCADA 回滚后原连接关闭失败仍尝试独立复核（PR #262，待组合实测）
+
+- **源码审查现象**：原 runScadaB4RollbackRehearsal 只依据 rolledBack 开启独立连接；即使 client.end() 抛错也继续读取目录及宿主，虽然最终会失败，却违反原连接关闭明确后才允许独立核验的约束。未取得真实 PostgreSQL 故障记录。
+- **最小修复**：记录 closed 仅在 end 成功后为 true；独立复核及成功返回均要求 rolledBack && closed，保留原回滚标签、禁止重试及脱敏诊断。新增 Node 回归要求关闭失败时只创建一条连接、仅一次宿主核验、无独立连接及 COMMIT；代码提交 cd4bbc47c5ab452d48fe20b3fc0bb9cda5805174，尚未实际执行该组合 Node 用例。
+- **防复发**：独立连接前逐项核验原事务完成标签和原连接关闭证据，失败不得继续尝试或误报独立核验；模拟回归与真实数据库证据分开。全质量链及真实复验仍待集中验收。
+
+### E-174 · 拼接英文首段触发中文异常检查，交互式验收未整体停止（PR #262）
+
+- **维护者实测**：HEAD fc658f8336de1def3169746e151c8139a1c7d7e8，Windows Node 24.18.0、pnpm 12.23.0；冻结安装、依赖/配置/环境/LF 检查通过，ready 在 scripts/docker-db-role-keycloak-plan.mjs 第 183、306 行中文检查失败（2 处，退出码 1）。PowerShell 逐条粘贴在 throw 后仍执行后续 Write-Host，不能将其视为成功证据。Docker 七服务运行、PG 19.0 严格契约（12 表/85 列/36 检查/20 索引/13 外键/119 注释）及正式 Discovery/JWKS 只读检查通过；B3.3 状态 catalogIsolationPersisted=false、publicConnectRetained=true，两库计划按设计拒绝，SCADA 演练因无指纹未执行。
+- **最小修复**：仅将两个 DockerKeycloakOwnershipError 的拼接字面量改为单个模板字符串，实际异常文案、固定阶段、脱敏及权限逻辑不变，不改扫描器或测试期望。使用一个完整 PowerShell 脚本块执行阶段，失败抛错后不得继续下一个阶段或打印成功。B3.3 未持久化是独立审批门禁，不放宽、不自动执行。
+- **复验边界**：协作容器 Node 22.16.0 使用原检查器 Git Blob 3b0b0a862ca3b15018d8fbd04cbb8f1eceb99cd9 在七文件最小夹具复现两处失败（退出码 1），替换两行后退出码 0，夹具语法检查退出码 0。对完整远端目标源码应用原异常匹配规则，前两处、后零处，确认仅 183/306 行变化。修复后完整 messages:check、ready、组合 Node 和原生仓储 Vitest 未执行；不宣称已通过。不写数据库，不切换角色或服务，不合并。
+
+> **2026-11-28 · E-174 Windows 复验**：维护者在 HEAD 8e00b77d61b2a9cbe3e10b4f343e92398ae2f0fa 实测中文文案 428 文件、专项 2/2 通过；完整 ready 继续到 Prisma 8 专项 31/33 后退出 1（见 E-175）。本轮 PowerShell 整块在失败后停止，未进入数据库操作。E-174 的中文文案及脚本停止边界已有实测证据，完整质量链仍未通过。
+
+### E-175 · B4 持久化入口新增后原 CLI 拒绝断言未同步（PR #262）
+
+- **维护者实测**：HEAD 8e00b77d61b2a9cbe3e10b4f343e92398ae2f0fa，中文文案 428 文件、专项 2/2、原生契约生成通过（databaseAccessed=false）；test:prisma8:fresh 33 项中 31 通过、2 失败，ready 退出 1。scripts/prisma8-fresh-install.cases.mjs 第 325、339 行对不完整的 SCADA/Keycloak apply 仍要求旧通用诊断 /必须明确指定/u，新专用解析器正确拒绝并返回“B4 持久化或状态命令必须完整明确指定确认参数”。本轮未进入 Docker 与 B3.3 核验，无新增数据库写入证据。
+- **最小修复**：仅修改该 CLI 测试文件，保留所有原非法参数拒绝用例；对两条不完整 apply 单独精确断言专用诊断，改正旧测试名称；新增顶层 freshAction 分派回归，覆盖两个独立持久化动作、两种明确安装阶段及双连接探针，逐项删除确认参数/指纹、附加 commit、非法阶段和无效指纹均拒绝。不修改生产解析器、数据库逻辑、门禁及测试脚本配置。
+- **实际局部复验**：协作容器 Node.js 22.16.0 从当前仓库提取真实 freshAction 函数及其依赖的固定定义、原两项测试和最终三项测试；完整专用参数模块及五项测试 Git Blob 分别为 762e8ec97e9b3a77cf75242f6c558f25f4e486d1、45be64355f6b56bd30438c9a977a862b55cbf053，与远端一致。原两项真实 Node 复现 0/2、退出 1；修复后的三项片段与五项专用参数测试 8/8、零失败零跳过，退出 0；片段语法检查通过。该验证未运行完整原生契约测试文件或全仓；正式 test:prisma8:fresh 目标 34 项，完整 ready、Vite+、文档和实机仍待验收。最终完整测试候选 Blob a0ce694eec42ac832dd9841a4ac5da543f8d1b29；远端差异仅原两项及新增一项测试范围。增加 CLI 动作时同步审查所有顶层分派及旧拒绝断言，不能仅通过新专用解析器测试就宣称集成通过。保持 Draft，不实际授权或切换服务。
+
+> **2026-11-28 · E-175 Windows 复验关闭**：维护者在 HEAD b67101a482df729ceb68f479178135bc3fb4dd75 实测 Prisma 8 34/34、B4 参数 5/5、Prisma CLI 4/4、中文文案 428 文件，Core Node 构建通过。完整 ready 在格式化门禁失败，随后正常 Hook 格式化提交 5b8ca25c7d76090f4f3e5d3080f4882eaf81d519 已推送；仍有七项 Lint 警告，见 E-176。E-175 两项原 CLI 回归关闭，不代表完整质量链通过。
+
+### E-176 · B4 异构数组推断与夹具未使用绑定触发类型感知 Lint（PR #262）
+
+- **维护者实测**：HEAD b67101a482df729ceb68f479178135bc3fb4dd75 的 ready 到 Vite+ 格式检查时失败，56 文件格式问题；vp check --fix 完成格式化后 402 个受检文件零错误、7 警告：隔离夹具三个故意丢弃的字段未使用、原生例程测试异构数组的 name 字符串化、权限目录检查异构数组的 step 三处字符串化。维护者推送格式化提交 5b8ca25c7d76090f4f3e5d3080f4882eaf81d519；再次运行旧 HEAD 验收脚本在版本门禁停止，未执行数据库阶段。
+- **最小修复**：隔离夹具三个故意丢弃字段绑定为下划线开头的局部变量；原生例程九个测试项及安装后五个目录检查项分别由异构数组改为具名对象，明确字符串字段，保留顺序、SQL、参数、预期行、断言和诊断。不关闭规则、不调整权限范围。对三个完整候选文件逐一反向还原后与父提交原文完全相同，核实变更范围。
+- **实际复验及防复发**：协作容器 Node.js 22.16.0 实际执行完整原生例程测试 5/5、零失败零跳过；测试、原生例程及文本事务端口本地 Git Blob 分别为 02cc205944b68213ec935c19d12df0e6beef6b07、3f0f00be7394ba6f1ad3c4fc9a1285eef78098b0、a85164e465f0a1fed66ea2494c42034b4744c638，与远端候选一致。容器无法解析 GitHub 域名，缺少 pnpm/vp，未执行完整隔离/目录测试或 Vite+。异构 JS 用例优先具名对象，故意丢弃的解构字段遵循 Lint 命名；格式化提交后验收固定实际远端 SHA，不能复用旧 SHA，也不删除版本门禁。维护者自动修复提交含排版及部分测试字符串判断改写，未完成全文件语义等价证明。全仓质量及 B3.3/B4 实机仍待验收，不实际授权、切换身份或合并。
+
+> **2026-11-28 · E-176 Windows 复验关闭**：维护者在 HEAD c1b48b6ee80d109ab18945e0edb66db9736aa110 实测三组 B4 专项 26/26，Vite+ 564 格式文件、402 个受检文件零警告、Lint 或类型错误；完整 ready 继续通过中文、Prisma 8、Core 构建及双端与服务端类型检查，单测 962/969 后退出 1（见 E-177）。E-176 已关闭，完整质量链仍未通过。
+
+### E-177 · B4 身份行锁替换遗漏既有会话 Guard 模拟查询（PR #262，E-047 同类复发）
+
+- **维护者实测**：HEAD c1b48b6ee80d109ab18945e0edb66db9736aa110，B4 定向 26/26、Vite+ 564 格式/402 受检零警告错误、中文 428 文件、Prisma 8 34/34、CLI 4/4、Core 构建、双端/共享包/服务端类型检查通过。完整 ready 在全量单测 81/82 文件、962/969 用例处退出 1。七项失败集中于 apps/server/src/auth/scada-identity.spec.ts，依赖会话签发的测试报告脱敏 ServiceUnavailableException，未知租户测试期望 ForbiddenException。后续 Docker 专项、HTTP E2E、B3.3 与 B4 真实数据库阶段未执行。
+- **根因和最小修复**：正式 Prisma8SessionOperations 已使用 lockB4Identity 的固定参数化 SELECT status FROM public.scada_lock_identity 例程；旧 makeSessionService 模拟仅识别 FROM public.scada_identities，触发未预期查询错误并由正式事务端口脱敏。仅修改该测试夹具，精确匹配新例程 SQL 及两项类型转换，原租户、主体、状态联合筛选不变；原拒绝用例追加未知主体与零会话写入断言。不修改生产仓储、SQL、异常语义、权限或其他测试。检查现有 auth spec 与 server test 共 15 个文件，未发现另一处同样的直接身份表查询匹配；正式 E2E 尚未实际执行。
+- **实际局部验证**：协作容器 Node.js 22.16.0 使用真实签发逻辑、nativePort、模拟 query/execute 源码片段（FNV-1a 分别为 99b34979、6db4b27a、57e780fe、db75177d，与远端提取逐字校验一致），完整原生例程和文本事务端口本地 Blob 3f0f00be7394ba6f1ad3c4fc9a1285eef78098b0、a85164e465f0a1fed66ea2494c42034b4744c638 与远端一致；NestJS 异常采用最小替身，另组装模拟事务与 Node 测试。旧条件 1/5（退出 1），修复后 5/5（退出 0），覆盖签发仅保存摘要、跨租户/未知/非法/禁用主体拒绝且零写入。不是原完整 Vitest 文件实测。候选测试 Blob 88e4045442f5b83bc9ae23c870b297977df55399，经反向还原仅目标三处变更。完整身份 14 项、全量 969 项及后续 ready 仍待维护者复验。
+- **防复发**：SQL 表访问替换为固定例程时，同步检索所有模拟查询路由、HTTP 装配及旧字符串断言；保留原拒绝和不写入断言。不能将新版专项通过替代所有复用旧夹具的全量测试；不得把 Mock 失败当作真实 PostgreSQL 或权限失效证据。保持 Draft，不实际授权或合并。
+
+> **2026-11-28 · E-177 Windows 复验关闭**：维护者在 HEAD ac056982cf5a3d4221a25fdea8997bcd00086aa9 实测身份四组 49/49（其中原失败文件 14/14）、Vite+ 564 格式/402 受检零警告错误，完整单测 82/82 文件、969/969 用例通过。ready 继续至 Docker 专项 221/222 后退出 1，见 E-178。E-177 关闭；未执行后续真实数据库阶段。
+
+### E-178 · 双库报告脱敏断言误匹配合法对象审阅标志（PR #262，E-172 同类）
+
+- **维护者实测**：HEAD ac056982cf5a3d4221a25fdea8997bcd00086aa9，身份专项 49/49、Vite+ 564 格式/402 受检零警告错误、中文 428 文件、Prisma 8 34/34、CLI 4/4、Core 构建与双端/共享包/服务端类型检查、全量单测 82/82 文件及 969/969 用例通过；报警 5/5、SSE 客户端 8/8、故障代理 5/5、OIDC 代理 10/10、Lab 准备 6/6、身份预绑定 14/14 通过。Docker 专项 221/222，唯一失败为 scripts/docker-db-role-keycloak-plan.cases.mjs 第 928 行双库投影脱敏断言，ready 退出 1；其后 Docker DB、HTTP E2E、文档、构建与 B3.3/B4 实际数据库阶段未执行。
+- **根因和最小修复**：原 doesNotMatch 对 JSON 整体查找 objectId 子串，合法安全状态键 objectIdentityReviewed 也被命中。报告实际返回该标志 false。只修改该断言，将 objectId 限定为完整单词边界，保持 kc_fixture、databasechangelog、ALTER TABLE 检查，增加 objectIdentityReviewed 必须为 false 的独立断言。保留双库独立查询、依赖数量、指纹、其他未准入标志、原 SQL 检查及所有负向用例，不修改生产报告、权限、数据库或审批门禁。
+- **实际局部复验**：协作容器 Node.js 22.16.0 使用维护者日志中完整真实 JSON 与 node:assert/strict、node:test 复现原断言 0/1（退出 1）；修复后 7/7（退出 0）：原报告接受，注入嵌套 objectId 键、独立 objectId 文本、夹具名、内部表名、ALTER TABLE 语句，以及将审阅标志改为 true 的六个反例均拒绝。GitHub 目标文件反向还原与原文完全一致；这是实际报告样本的断言级复验，不是完整 Keycloak 专项或真实数据库实测。协作容器无法解析 GitHub 域名，缺少 pnpm/vp；完整 Docker 目标 222/222、Windows Vite+ 与 ready 仍待执行。
+- **防复发**：脱敏断言必须区分完整敏感标识与合法报告状态字段；对禁止泄漏的实际键、文本与 SQL 分别保留负向验证，不删除安全标志或通过改生产报告绕过测试。不得将模拟目录成功视为实际权限或 Schema 演进验收。保持 Draft，未实际隔离、授权、切换服务或合并。
+
+> **2026-11-28 · E-178 Windows 复验关闭**：维护者在 HEAD df3737688f49c6ad9102b6d6c13df29dc7eb6c61 两次实际通过 Docker 专项 222/222（零失败零跳过），Vite+ 564 个格式文件、402 个受检文件零警告错误，全量单测 82/82 文件、969/969 用例，HTTP E2E 7/7 文件、71/71 用例，Markdown 100 份及 React/Vue/NestJS 构建。完整 ready 通过：维护者的整块脚本继续完成 git diff --check、B3.3 状态与计划并打印结束标志，工作区无变更。React 构建存在 591.62 kB 分块体积提示，不等于 Lint 警告，不阻塞本轮构建。E-178 关闭。真实只读隔离计划通过不代表实际隔离，消费者审阅、真实回滚演练及独立持久化仍待执行。
+
+### E-179 · Keycloak 对所有目录对象复用表名正则，误拒绝真实普通索引名称（PR #262）
+
+- **维护者实测**：HEAD 29225762d5b2da872a6d354d1a8ecb58d184aa2e 的 SCADA B4 只读计划通过，Keycloak 逐对象候选失败。随后在 d02c834fc37426942a59773497da19af662fd5d8 实际通过文档检查 100 份及 B3.3 已持久化状态复验；在同一 PG19 集群、固定 Keycloak 库及管理角色的 REPEATABLE READ READ ONLY 事务复用原 inventorySql，六类共 687 个对象（101 表、252 索引、101 行类型、101 数组类型、66 TOAST、66 TOAST 索引）。仅普通索引 bad_name=4，其中 ascii_case_only=3；所有 bad_kind、bad_oid、bad_parent、bad_owner、bad_clean 均为 0。第四个具体名称未取得，不猜测字符；诊断 ROLLBACK 成功，未写入数据。
+- **根因与修复**：normalizeInventory 将用于拼接普通表 SQL 的小写标识符白名单套用至只作为目录证据的普通索引名称。核对 buildKeycloakOwnershipPlan 和 tableLockSql 均只从 kind=table 生成 SQL；仅 kind=index 改用非空、无 NUL、UTF-8 可无损往返及最多 63 字节校验，原名不归一化、不截断，不插入 SQL、不输出至公开报告。其余五类名称白名单、101 表、完整对象图、OID、所有者、clean、ACL、计划 SHA-256 输入/算法、前后投影及所有独立批准和准入条件不变。不是扩大可执行 SQL 或可授权对象范围。
+- **实际局部回归**：协作容器 Node.js 22.16.0 使用与候选源码一致的常量前缀/纯计划和投影函数片段（UTF-16 FNV-1a 分别 0c3027a5/aba47955）及真实测试文件夹具和四项测试片段（a1ce9aa3）；逆向还原原两源码片段核对 ef1705cb/fca363e7。修复前 2/4、退出 1，修复后 4/4、零失败零跳过、退出 0，局部两个文件 node --check 退出 0。新三项覆盖合成大小写、标点、注入样式目录名称及多字节长度边界、无损原名、指纹和投影、公开报告脱敏、非法名称与其他种类/所有者/clean/父依赖漂移拒绝。合成名称不是实际四个索引名。完整候选模块/测试 Blob 分别为 9ec1af5eef6c1bbcc42f1b56987bccf35bb4212e / 68d1bafa1f3e3894684f3f61cf8d849af7f56ecd；实际执行仅为已校验源码片段，不是全文件或真实 PostgreSQL。协作容器无法解析 GitHub 域名、无 pnpm/vp，完整 Keycloak/Docker 专项、中文、Vite+、文档及真实双库计划尚未复验。
+- **防复发**：目录证据与可拼接 SQL 标识符必须区分；目录名原值保留在完整指纹和投影，不做通用大小写归一化。以真实第三方目录聚合诊断定位失败维度，再用正反例保护所有安全条件。不要把名称误拒绝当作权限错误，也不要以通过模拟用例代替实际对象身份审阅。B4 尚未安装，待 Windows 复验关闭 E-179；不执行 DDL、ACL、服务切换或合并。
+
+> **2026-11-28 · E-179 Windows 真实复验关闭**：维护者在 d9f05cb411377eec639e24f467333b88035128f2 实测 Keycloak 28/28、Docker 225/225（零失败零跳过）、Vite+ 564 格式/402 受检零警告错误、中文 428 文件、Markdown 100 份及 Git 差异通过。真实 SCADA 计划 S=aac93ff83a3baaa8b97781bd32e35afb049209e38a40c63c8487d3511b65ade0 不变，Keycloak 计划 K=60ae2f485107105ee98172cd69fc79cface21a40878b3f1f5e50bccc8011bbeb 首次生成，101 普通表、252 普通索引、66 TOAST、66 TOAST 索引、101 行类型、101 数组类型（687 对象），101 条表候选；B3.3 原隔离指纹 0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37 及严格契约、OIDC 只读和 Docker 七服务前后复验均通过。实际计划通过，不代表对象身份人工审阅或真实所有权转移。E-179 关闭。第四个索引具体名称仍待本机对象审阅，不执行 B4 安装。
+
+### E-180 · E-179 新增测试的多参数调用未符合 Vite+ 格式（PR #262，已关闭）
+
+- **维护者实测**：HEAD 1fd5231ca40ca28c8a1c7323eeea79a0a830c4ad 的 Keycloak 28/28、Docker 225/225 均通过，但 vp check 报 scripts/docker-db-role-keycloak-plan.cases.mjs 一处格式问题，整块脚本按设计停止。
+- **修复与复验**：维护者运行 vp check --fix 并提交 d9f05cb411377eec639e24f467333b88035128f2；远端逐字比较确认唯一变更为新增 Object.assign 调用的参数换行、缩进及尾逗号（+4/-1），调用参数、断言及生产代码不变。固定新 HEAD 重新执行整块脚本，28/28、225/225、Vite+、中文、文档、Git 差异及实际双库计划和后置核验全部通过，E-180 关闭。
+- **防复发**：生成测试代码应遵循仓库格式工具，无法运行 vp 时明确标记待格式复验，不能以 node --check 或逻辑测试代替格式门禁；自动格式化后核对实际差异、更新固定 SHA 并重新执行验收。既有完整 ready 仍绑定原验收版本，本次未重复完整 ready。
+
+### E-181 · SCADA B4 安装后角色证据拒绝缺少字段级诊断（PR #262，E-166 同类复发）
+
+- **维护者实测**：HEAD af5d57732284df753a9e62d6fd81cd67fc51c03b 的文档 100 份、Git 差异、Docker 七服务、严格原生契约、OIDC 只读、B3.3 持久化状态及原 I/S/K 计划通过；维护者输入 REHEARSE 后真实 SCADA 演练在安装后组合目录核验阶段报“B4 安装后专用角色属性及依赖不一致；目录事务已收到回滚标签”，退出非零。未取得 SC 指纹，未进入运行角色合成夹具探针，外部独立后置脚本未执行。实际哪一个角色及字段漂移未知，不能据此修改角色、ACL 或权限预期。
+- **最小诊断修复**：scripts/docker-db-role-b4-permission-review.mjs 保留全部 SQL、期望矩阵、exactRows 精确比较、查询顺序、指纹算法、事务及审批边界；仅首组精确匹配失败时追加固定预期角色与失败预期字段名，缺失/重复、额外字段、未知/非法行和非数组结果仅报告固定中文类别。不输出实际角色名、目录值、未知字段名、原始异常或凭据，不改变其他四组失败文案。既有逐属性负例同步检查精确新提示，新增组合脱敏与非法结构回归。数据库目录拒绝的真实根因仍未知。
+- **局部实测**：协作容器 Node.js 22.16.0 执行两局部文件 node --check 及五项 node:test，5/5、零失败零跳过；覆盖正常/逆序、全部 17 个属性逐项漂移、多角色混合异常、非数组/无效行、其他目录组原文案。原 exactRows/keyOf、新诊断函数及拒绝分支 FNV-1a 分别 766b1975、ca3f5ad8、dc68c0a7，与远端候选片段逐字校验一致；仅模拟片段，并非完整模块或真实 PostgreSQL。候选完整 Blob 53bb0dfc4f064334929a3a34565df57db9e04fb0 / 555eb57914c334810cee27dc92616e2e5c9d4808；Vite+、中文、文档、权限专项及全 Docker 专项未在协作容器运行。
+- **防复发及恢复**：先独立只读确认 B3.3 原状态及原 I/S/K（包含三专用角色未持久化的原计划前置）、严格契约与 OIDC；失败保留现场，不删除角色或改 ACL。同步诊断修复并通过定向/全 Docker、Vite+、中文、文档及 Git 差异后，维护者重新明确批准一次回滚诊断演练，不自动重试；若仍失败提供新固定字段诊断并独立只读复核，不持久化、不执行 Keycloak 演练。E-181 诊断待实机确认，B4.2 未通过。
+
+> **2026-11-28 · E-181 Windows 实机诊断复验关闭**：维护者在 1dcb9234e33234983eb4ccc55b9977c4921beee8 实测权限目录 10/10、Docker 226/226（零失败零跳过）、Vite+ 564 格式/402 受检零警告错误、中文 428 文件、Markdown 100 份及 Git 差异通过。第二次真实 SCADA 回滚演练准确报告四个固定角色的 clusterFunctionExecute 差异并收到目录回滚标签；finally 独立复核原 I/S/K、严格契约、OIDC 只读和 Docker 七服务均通过。E-181 诊断缺陷关闭，不代表 B4.2 通过。
+
+### E-182 · SCADA B4 集群控制函数有效权限与固定安装候选不一致（PR #262，待实际 ACL 溯源）
+
+- **维护者实测**：1dcb9234e33234983eb4ccc55b9977c4921beee8 的第二次真实 B4 回滚演练只报告 adui_scada_keycloak_runtime、adui_scada_lock_owner、adui_scada_project_create_owner、adui_scada_oidc_cleanup_owner 四个角色的 clusterFunctionExecute 字段不一致；运行角色及其他属性没有报告差异。事务收到回滚标签，未进入 36/15 业务探针、未生成 SC。finally 独立 B3.3、两库原始计划、严格契约、OIDC 只读及七服务通过。
+- **已核实代码事实与待证根因**：B2 固定候选仅显式授予 adui_scada_runtime 对 pg_catalog.pg_control_system() 的 EXECUTE；B4 92 条目录候选没有撤销该函数的 PUBLIC EXECUTE，但角色矩阵要求五角色中仅 SCADA 运行角色具有有效执行权限。PostgreSQL 19 [权限文档](https://www.postgresql.org/docs/19/ddl-priv.html) 与 [访问权限查询及控制数据函数](https://www.postgresql.org/docs/19/functions-info.html) 说明有效权限及函数公共授权语义；当前实测强烈指向 PUBLIC，但尚未直接读取此集群此库此函数的 ACL 来源，不能将通用默认权限等同于本机实测。
+- **下一步与防复发**：仅在已确认的固定 SCADA 库、管理身份及 REPEATABLE READ READ ONLY 事务中核对该函数所有者、实际 ACL 的固定类别、PUBLIC/两个运行角色的有效 EXECUTE、授权选项及未知授权数量。不输出实际未知角色名称、ACL 原文、业务数据或凭据。若确认公共授权来源，再审阅该库监控/备份/维护及其他调用方，按原最小权限意图评估增加唯一固定的本库函数 PUBLIC EXECUTE 撤销候选；保持原 SCADA 显式授权、所有其他权限矩阵与失败关闭规则，不扩大至其他数据库或函数。若新增语句则旧 S 及 92 条验收预期失效，必须同步计划、定向和集成测试、文档、新指纹和独立批准，不能手工改 ACL 或复用旧批准。当前只记录证据，未修改代码、SQL 或数据库，不再执行旧演练，不持久化、不切换服务、不合并。E-182 未关闭。
+
+> **2026-11-28 · E-182 实机根因确认与候选修复**：维护者在 daa1eb9bc0b237663fc4523fd7480e481d1f7517 实测 Markdown 100 份、Git 差异及固定集群 SCADA 库 REPEATABLE READ READ ONLY 查询通过。pg_control_system() 的所有者为 adui_scada、显式 ACL 非空，OWNER/PUBLIC/SCADA_RUNTIME 各一条所有者 EXECUTE 授权，均无显式 grant option；PUBLIC、SCADA 和 Keycloak 运行角色有效 EXECUTE 均为 true，SCADA 无 grant option，残留专用所有者为 0，ROLLBACK 成功。确证 PUBLIC 是四个角色有效执行权差异的来源。
+>
+> 修复仅在同库原固定事务的角色创建和未授权核验之后、业务授权之前加入一条 REVOKE EXECUTE ON FUNCTION pg_catalog.pg_control_system() FROM PUBLIC RESTRICT。前置用同一固定目录表达式核验精确三条显式 ACL（OWNER/PUBLIC/SCADA_RUNTIME），安装后核验精确两条（OWNER/SCADA_RUNTIME），均限定原管理所有者、授权来源、EXECUTE、无显式 grant option、无缺失重复或额外授权，保留五角色有效权限及其余矩阵。前置新字段参与前置指纹，计划版本 3、93 条目录语句，旧 S 无效，回滚后独立前置重新验证原三条 ACL；已安装态使用同一安装后门禁。不得手工执行撤销，不扩大至其他库或函数。真实消费者审阅及独立新计划演练批准仍由维护者完成。
+>
+> 实际协作容器 Node.js 22.16.0：远端候选 SQL helper 和固定计划函数片段与本地字符长度/FNV-1a 771/322f0589、3109/83c59dfa 一致；局部语法检查及 4/4 Node 测试通过，使用模拟候选依赖验证两阶段查询形状、仅增加一条 REVOKE、计划版本和指纹变化及候选漂移拒绝。该测试未执行真实 SQL 或完整文件套件，缺 pnpm/vp/PostgreSQL/Docker。七个代码/测试文件的完整 Windows 定向、Docker 226 项、Vite+、中文、文档、真实新计划及回滚演练待验收。E-182 尚未关闭，不执行正式持久化、服务切换或合并。
+
+> **2026-11-28 · E-182 Windows 真实复验关闭**：维护者在 273d34b4715a4272b9c842e4917ca2d2966e9683 实测四组完整定向 37/37（8/10/12/7）、Docker 226/226（零失败零跳过）、Vite+ 564 格式/402 受检零警告错误、中文 428 文件、Markdown 100 份及 Git 差异均通过。新 S=cbfc3852bc860a6e576c933b5247e028d5b8056d408b42bc426cc038324f3314，维护者明确输入 REHEARSE；真实 93 条目录语句及安装后组合目录、36 正向/15 拒绝业务探针全部通过，SC=2d6b202e637bc16685557603b2aab496546bc1db6ac16b6c15530340abfcb360，夹具及目录事务均回滚，无持久化、业务数据写入、服务切换或正式准入。外部独立复验 I/S/K、原始控制函数 ACL、三个专用角色无残留、严格契约、OIDC 只读及七服务全部通过，工作区干净。E-182 与 B4.2 回滚验收关闭，原版本 2 的 S 禁用。下一步 B4.3 Keycloak 所有权回滚需实际对象身份及镜像审阅和独立维护窗口确认；不执行双库持久化、LOGIN 或合并。
+
+### E-183 · 工程查询未在事务内复核活动身份及锁定授权（源码审查，待 Windows 与真实数据库验收）
+
+- 现象：B4.5b-1 审查确认旧原生列表仅检查授权行，四项锁内读取只锁工程后直接查询授权；如果上层可信主体已过期且原授权仍保留，仓储自身没有检查禁用身份。协作容器的去除新增身份复核对照片段在最小模拟下可返回修订号。未观察到真实 HTTP 越权或生产数据泄漏。
+- 最小修复：列表同语句连接活动身份的租户和主体联合键；四项锁内读取复用已有 B4 身份与授权锁例程，锁顺序与版本追加一致；活动身份缺失、重复或非 active 拒绝，保留完整授权策略、快照及分页检查。仅使用已审阅列 ACL 和例程，不增加权限、不切换 Provider。
+- 验证与防复发：仓储定向测试由 9 项增至 11 项，核对真实适配生成的固定例程调用、联合参数、读取顺序、活动身份拒绝且不查询授权/正文。协作容器真实 Node 7/7 片段模拟、转译语法诊断零项（校验值与候选一致，详见 VALIDATION）；完整 Windows Vitest、Vite+、真实低权限仓储及双会话撤权仍未执行。不得将可信主体的语法有效或外层 Guard 通过视为事务内活动身份仍有效；列表过滤与锁内授权复核分别验证。不以模拟结果关闭 B4.5b-1 或 B4.5b-2。
+
+> **2026-11-28 · E-183 Windows 代码回归关闭**：维护者在 7577793bf9e9242887e6e6afea0c3042fd4633a6 实测查询 11/11、版本 12/12、授权 6/6，合计 29/29；全量 82 文件 971/971，Vite+ 566 格式/404 受检零警告错误，中文 430、文档 100、Core 构建及离线原生契约通过，原 NestJS/Keycloak 停止、工作区干净。实际低权限 PostgreSQL 仓储及双会话撤权仍未执行，不关闭 B4.5b-1 或 B4.5b-2。
+
+### E-184 · 恢复宿主预检候选两处语法转义错误（协作环境修复并局部复验）
+
+- 实际现象：本地 Node 22.16.0 首次 node --check 在模块中因文件生成替换残留字面换行转义失败；第二次在测试 Unicode 正则中未转义模板大括号失败。两次均停止后续测试，不是 Docker 或 PostgreSQL 故障。
+- 修复及防复发：改为真实换行；模板固定字符串断言采用 includes，保持禁止读取完整配置及环境字段的原要求。逐文件语法检查后才运行测试；不以生成候选或语法检查代替真实 Node 测试。
+- 实际局部复验：两文件 node --check 和 Node 测试 7/7 通过、零失败零跳过，最终 Blob 分别为 865e48506534e80f9ba8d0faf395b28beba0303b、8dbe3e2c3bdb667329d7f6feede4a47b9ef8dc87；Windows Vite+、中文、文档和真实 Docker 目录尚未验证。无数据库连接、DML、DDL、启停或权限改变。

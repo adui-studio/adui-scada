@@ -2038,3 +2038,130 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 
 - `scripts/docker-db-role-isolation.mjs` 与 `scripts/docker-db-role-isolation.cases.mjs`：六类固定只读目录、完整矩阵与四项独立回归，B2 事务集成另三项；`docker:db:role:isolation:inspect` 仅独立执行。
 - `scripts/docker-db-role-isolation-plan.mjs` 与 `scripts/docker-db-role-isolation-plan.cases.mjs`：固定已验收 PG19.0 全目录基线、分组只读变更预览和五项离线测试，`docker:db:role:isolation:plan` 复用原只读入口，所有写入许可保持 false。
+
+### 2026-11-28 · B3.2 实机验收及剩余 MVP 累计开发
+
+维护者于 d3a7429779c5735e64c645e764017ffa7fc047b2 验收：Docker 98/98、Prisma 8 全新专项 29/29（合计 127/127），Vite+ 525 格式/364 受检零警告错误，中文 390、Markdown 99、环境及 LF 和 git diff --check 通过；格式化提交 e04775bcfa559b7d51001c9bb19c6ce319aa4690 已推送。真实 PG19.0 隔离预览 5 库/19 角色/25 ACL/95 有效权限，拟移除 8 项 PUBLIC ACL 并保留 17 项直接 ACL，指纹 0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37，rolesPrepared=true、rolledBack=true、databaseWritten=false、changeAllowed=false、isolationPassed=false；OIDC 只读和七服务回归退出 0。PR #261 经明确授权 Squash 合入 d8363fb476ee08521e1c9fb107ecd1088914ae2b。
+
+维护者要求剩余 B3.3/B4/C/D/E/F 在累计分支开发并集中验收，不取消真实目录、授权、登录及服务切换的独立安全门禁。当前累计分支先实现 B3.3 候选：复用同一固定事务锁与原计划指纹，完整前后状态分别严格验证，五条固定 REVOKE，回滚演练及独立提交参数，提交后官方严格结构、注释、双库目录与独立只读状态复核。不改变角色 LOGIN、业务行、服务身份或发布门禁；未连接数据库，未实测 Windows 全链。B4 正式业务最小权限/行锁及 Keycloak 全对象所有权、C 正式运行连接、D 真登录、E 双端业务互通、F 完整验收仍待实现或实际验证。新增 mvp:verify:baseline 仅集中既有质量链与真实只读基线，不得作为 MVP 完成证据。
+
+### B4 双库对象清单只读候选
+
+新增 `pnpm run docker:db:role:object-review`。首先通过原生严格契约、注释、双库与 B3 完整状态核查，再分别以固定管理角色及 REPEATABLE READ READ ONLY 事务读取两库对象目录。核对 Schema、关系、显式列 ACL、例程、类型、默认 ACL、扩展、策略、事件触发器、外部服务/包装器、发布定义以及当前数据库共享角色依赖。对象名称与 ACL 仅在本地用于稳定 SHA-256 证据；报告输出分类数量、所有者类别、未知所有者及角色依赖数量，不返回原始对象名、函数正文、订阅连接信息、外部服务选项、业务行或凭据。该目录不等于所有可执行权限、完整所有权转移方案或行锁最小权限评审；仍需要核对实际 Keycloak 版本全部对象类型及 Schema 管理需求。缺失、重复或未知目录形状失败，角色或集群漂移拒绝结果。前后 B3 计划指纹和隔离状态必须一致。B4 正式授权、所有权转移、C 正式模式和 D/E 真联调仍未实现，不自动授予 UPDATE、GRANT ALL 或切换服务。
+
+集中基线命令 `pnpm run mvp:verify:baseline` 串联现有完整 ready、严格数据库状态、上述双库对象评审、现有 OIDC 只读探针及七服务状态；只用于集中质量链和真实只读基线，不执行隔离、所有权变更、LOGIN 或业务写入。新增隔离前后投影/事务/故障测试、参数确认测试及对象目录离线回归尚未运行完整项目工具链；不登记为通过。
+
+### B4 共享依赖范围修正
+
+依据 PostgreSQL 19 官方 `pg_shdepend` 定义，该目录是全集群共享目录，`dbid=0` 表示共享对象，非零 `dbid` 指向对象所属数据库；依赖类型至少区分 OWNER、ACL、INITACL 和 POLICY。此前候选只筛选当前数据库 `dbid`，会漏掉同一集群其他数据库及共享对象的依赖。现改为按固定四个角色 OID 汇总全集群所有依赖，记录数据库范围分类、对象目录 OID、子对象号和依赖类型，原始 OID 仅用于指纹，不回显。新增当前库、其他库、集群共享及 INITACL 回归，并拒绝数据库 OID 与范围标签矛盾。该修正仍是只读审计，不执行任何角色变更或 ACL 授权。
+
+### B4 全集群共享依赖复核补充
+
+已将 `pg_shdepend` 读取从当前数据库改为全集群共享目录：按固定四个角色过滤，包含 `dbid=0` 的共享对象及其他数据库中的依赖，并按 OWNER、ACL、INITACL、POLICY 等依赖类别与共享/当前库/其他库范围汇总。原始对象 OID 仅进入指纹，不在报告中输出。该目录在 PostgreSQL 19 官方文档中明确为全集群共享目录，且 `dbid` 为零表示共享对象；依赖类型区分所有权、ACL、初始 ACL 和策略引用。参考：[PostgreSQL 19 pg_shdepend](https://www.postgresql.org/docs/19/catalog-pg-shdepend.html)。
+
+- `scripts/docker-db-role-business-acl.mjs`：B4 固定业务列权限矩阵及只读候选，复用 `docker:db:role:object-review` 的 SCADA 事务；`scripts/docker-db-role-business-acl.cases.mjs` 对照原生契约并覆盖最小授权/漂移拒绝。候选不执行 SQL。
+
+### B4 固定行锁例程候选
+
+- `scripts/docker-db-role-lock-routines.mjs`：固定九条锁例程与最小所有者授权文本、独立指纹；不执行任何 SQL。
+- `scripts/docker-db-role-lock-routines.cases.mjs`：五项 Node 离线回归，纳入 `test:docker`。
+- `scripts/docker-db-role-business-acl.mjs`：现有只读预览增加 `lockRoutinePreview`，保留原列权限指纹与未通过的真实准入标志。
+
+### B4 受限写入候选
+
+- `scripts/docker-db-role-restricted-writes.mjs`：原子首版工程初始化及绑定固定本机 Issuer 的零参数有界清理候选、独立指纹；不安装函数或执行写入。
+- `scripts/docker-db-role-restricted-writes.cases.mjs`：五项 Node 离线回归，纳入 `test:docker`。
+- `scripts/docker-db-role-business-acl.mjs`：`restrictedWritePreview`，收敛工程主表直接 INSERT 候选，八项实际权限阻塞保持。
+
+### B4 例程安装前置与未授权角色证据
+
+- `scripts/docker-db-role-b4-preflight.mjs`：16 项固定安装前目录核验、三个角色创建候选、先前置后业务列权限编排、未来可写安装事务授权前三角色九项布尔核验；只读查询，不执行安装。
+- `scripts/docker-db-role-b4-preflight.cases.mjs`：8 项 Node 离线测试，含候选清单精确对照、前置失败阻止业务列授权读取，纳入 `test:docker`。
+- `scripts/docker-db-role-object-review.mjs`：SCADA 只读目录事务调用 `readScadaB4BusinessPreparation`；保留原双库边界、回滚和连接清理。
+
+### B4 安装后例程目录核验
+
+- `scripts/docker-db-role-b4-routine-review.mjs`：基于固定 11 例程构造预期签名、正文、属性与执行权限；仅执行目录 SELECT，后续安装事务调用。
+- `scripts/docker-db-role-b4-routine-review.cases.mjs`：七项 Node 离线回归，纳入 `test:docker`，覆盖真实候选对照、目录漂移及执行 ACL 拒绝。
+
+### B4 安装后角色与表列权限核验
+
+- `scripts/docker-db-role-b4-permission-review.mjs`：`buildScadaB4PermissionExpectations` 复用固定业务/专用所有者候选；`verifyScadaB4InstalledPermissions` 五条 SELECT 核验角色、数据库、直接 ACL 和有效表列权限；`verifyScadaB4InstalledCatalog` 联合现有例程核验，供未来同一受控事务调用。
+- `scripts/docker-db-role-b4-permission-review.cases.mjs`：九项 Node 回归（包含组合门禁），纳入 `test:docker`。
+- `scripts/docker-db-role-business-acl.mjs`：共享 `scadaBusinessGrantCandidates`，保持原 21 条候选与指纹。
+
+### B4 受控安装回滚演练
+
+- `scripts/docker-db-role-b4-rehearsal.mjs`：`buildScadaB4RehearsalPlan`、`runScadaB4RollbackRehearsal`，固定计划、受控依赖、同事务执行和组合目录门禁、回滚及独立基线复核；尚无真实 CLI/宿主适配器。
+- `scripts/docker-db-role-b4-preflight.mjs`：新增 `readScadaB4RehearsalPreparation`，固定可写 SERIALIZABLE 演练前置查询，不改变原只读入口。
+- `scripts/docker-db-role-b4-rehearsal.cases.mjs`：九项 Node 回归，纳入 `test:docker`。
+
+### B4 宿主及同事务适配与 CLI
+
+- `scripts/docker-db-role-b4-host.mjs`：`createScadaB4IsolationReader`、`createScadaB4HostReader` 与 `readScadaB4HostPlan`，复用既有核验器，生成严格只读计划并为原回滚核心提供固定证据。
+- `scripts/docker-db-role-b4-host.cases.mjs`：七项 Node 模拟连接与宿主证据回归，纳入 `test:docker`。
+- `scripts/docker-stack.mjs`：`readDockerOidcPort`、`verifyLocalDockerOidcBoundary`，复用已有本机 Docker OIDC Discovery/JWKS 核验，不启动或修改服务。
+- `scripts/prisma8-fresh-install.mjs`、`apps/server/prisma8-fresh-install.mjs`：新增 B4 白名单与真实宿主适配，根脚本 `docker:db:role:b4:plan`、`docker:db:role:b4:rehearse`；后者必须有独立确认和真实计划指纹，只允许回滚。
+
+### B4 Keycloak 逐对象所有权候选
+
+- `scripts/docker-db-role-keycloak-plan.mjs`：`buildKeycloakOwnershipPlan`、`verifyKeycloakOwnershipProjection`、`readKeycloakOwnershipPreview`，七项强化前置、六类对象图、固定表所有权候选与脱敏指纹；投影比较不连接数据库写事务。
+- `scripts/docker-db-role-keycloak-plan.cases.mjs`：七项 Node 局部回归，纳入 `test:docker`。
+- `scripts/docker-db-role-object-review.mjs`：可选 Keycloak 所有权预览在原 Keycloak 库只读事务中完成；原默认对象评审不变。
+- `scripts/prisma8-fresh-install.mjs`、`apps/server/prisma8-fresh-install.mjs`：新增独立只读参数 `--role-keycloak-plan`，根脚本 `docker:db:role:keycloak:plan`；B3.3 未实际隔离时拒绝，前后仍核对原双库与集群；无演练或正式执行入口。
+
+### B4 Keycloak 所有权前后目录门禁
+
+- `scripts/docker-db-role-keycloak-plan.mjs`：新增 `readKeycloakOwnershipCandidate`、`verifyKeycloakOwnershipBaseline` 与 `verifyKeycloakOwnershipCatalog`，复用原始对象图、固定指纹及两种前置事务模式；四条固定目录查询核对原始/投影状态的共享依赖、直接数据库 ACL 和有效权限，仍无写事务入口。
+- `scripts/docker-db-role-keycloak-plan.cases.mjs`：新增八项 Node 回归，共十五项；原 `test:docker` 注册入口保持不变。
+
+### B4 双库回滚演练及运行角色业务探针
+
+- `scripts/docker-db-role-keycloak-rehearsal.mjs`：`runKeycloakOwnershipRollbackRehearsal`，固定候选、隔离维护证据、事务锁与会话排除、逐表所有权投影、强制回滚与独立复核；`docker-db-role-keycloak-plan.cases.mjs` 扩展至 20 项。
+- `scripts/docker-db-role-b4-runtime-probe.mjs`：`verifyScadaB4RuntimeProbe`，使用合成夹具、角色切换、受限业务操作、精确拒绝及回滚/无残留核验；`docker-db-role-b4-runtime-probe.fixture.mjs` 为测试专用模拟驱动，`docker-db-role-b4-runtime-probe.cases.mjs` 新增四项 Node 测试并注册 `test:docker`。
+- `scripts/docker-db-role-b4-rehearsal.mjs`：组合目录后强制调用业务探针；计划版本 2 与独立 `--confirm-rollback-business-fixtures`，保留 92 条安装目录候选及完整外层回滚。
+- `scripts/prisma8-fresh-install.mjs` / `apps/server/prisma8-fresh-install.mjs`：增加 `docker:db:role:keycloak:rehearse` 严格参数及停止容器核验，SCADA 回滚入口增加独立确认。不执行服务停启或正式安装。
+
+### B4 双库跨阶段目录投影
+
+- `scripts/docker-db-role-b4-phase.mjs`：`buildB4KeycloakDependencyScope`、`verifyB4KeycloakDependencyScope`，严格限定 101 个普通表 OID、固定目标库/角色、共享依赖类型及集群标识。
+- `scripts/docker-db-role-keycloak-plan.mjs`：新增内部只读 `readKeycloakInstalledOwnership`，从已转移的六类对象恢复原候选和确认指纹，沿用原目录与有效权限核验；不输出内部表 OID。
+- `scripts/docker-db-role-b4-permission-review.mjs`：新增 `verifyScadaB4CompletedCatalog`，双库只读投影组合及精确共享依赖；原六查询安装后核验保持严格基线。当前为内部校验器，未接实际宿主或 CLI。
+- `scripts/docker-db-role-b4-rehearsal.mjs`：原连接未确认关闭时不启动独立复核；专项测试扩展。
+- `scripts/docker-db-role-b4-phase.cases.mjs`：三项 Node 独立回归，纳入 test:docker；Keycloak 增三项及 SCADA 回滚增一项组合回归，后两组待真实 Node 复跑。
+
+### B4 原生业务仓储例程接入
+
+- `apps/server/src/database/prisma8-b4-routines.ts`：九条固定行锁例程及原子工程首版查询适配，严格绑定参数、文本列和首版状态，不回退直接表操作。
+- `apps/server/src/auth/prisma8-session-operations.ts`：签发会话改用活动身份共享锁例程。
+- `apps/server/src/projects/prisma8-runtime-project-version-store.ts`：首版例程及同事务快照/审计/初始状态/ACL 回读，追加锁内身份与授权复核。
+- `apps/server/src/projects/prisma8-runtime-project-release-store.ts`：发布读、发布与内部回滚的受保护行锁接入固定例程；安全门禁保持。
+- `scripts/docker-db-role-b4-native-routines.cases.mjs`：五项 Node 模拟事务专项，纳入 test:docker；三组现有原生仓储 Vitest 测试同步更新。
+- OIDC 固定 Issuer 清理、真实宿主及持久化、实际并发与权限验收仍待完成；当前未切换部署身份。
+
+### B4 持久化及集中验收候选
+
+- `apps/server/src/database/prisma8-b4-oidc-cleanup.ts`：固定本机 Issuer 函数体、同语句绑定与零参数清理；`scripts/docker-db-role-restricted-writes.mjs` 共用定义。
+- `scripts/docker-db-role-b4-arguments.mjs`：独立持久化、阶段状态及双连接夹具参数门禁。
+- `scripts/docker-db-role-b4-installed-state.mjs`：双库独立事务、原 B3 隔离指纹恢复、阶段精确目录。
+- `scripts/docker-db-role-b4-rehearsal.mjs` / `scripts/docker-db-role-keycloak-rehearsal.mjs`：保持回滚入口，独立持久化模式与提交后核验。
+- `scripts/docker-db-role-b4-concurrency.mjs`：现有已审阅夹具的身份/授权共享锁与独立排他锁冲突探针，不提交业务数据。
+- `scripts/docker-db-role-keycloak-schema-policy.mjs`：绑定实际维护镜像的 validate/manual 策略候选，不执行迁移。
+- `apps/server/prisma8-fresh-install.mjs`：上述本机宿主入口；`docs/plans/b4-concentrated-acceptance.md` 为集中验收清单和独立审批顺序。当前完整真实验收未完成。
+
+### 2026-11-28 · E-182 控制函数 ACL 候选修复
+
+- `scripts/docker-db-role-b4-preflight.mjs`：固定控制函数 ACL 查询表达式，安装前精确三项（OWNER/PUBLIC/SCADA_RUNTIME），原所有者及授权属性绑定前置证据和指纹。
+- `scripts/docker-db-role-b4-rehearsal.mjs`：计划版本 3，共 93 条固定目录语句；在未授权专用角色核验后首条新增本库固定 PUBLIC EXECUTE 撤销（RESTRICT），旧 S 作废。
+- `scripts/docker-db-role-b4-permission-review.mjs`：安装后精确两项 ACL（OWNER/SCADA_RUNTIME）和原五角色有效权限矩阵；回滚独立原始前置与持久化独立后置保留。真实复验待执行。
+
+### 2026-11-28 · B4.5 专用夹具生命周期
+
+- scripts/docker-db-role-b4-lock-fixture.mjs：固定十二表空基线与九行精确夹具、预检/创建/清理编排、Core 快照端口、本机恢复清单、提交/回滚及独立复验；不新增生产授权。
+- scripts/docker-db-role-b4-lock-fixture.cases.mjs：12 项模拟事务及本机临时文件专项，纳入 test:docker。
+- scripts/docker-db-role-b4-arguments.mjs、apps/server/prisma8-fresh-install.mjs：新增三种严格确认动作，复用双库安装状态与原生宿主边界；真实 Core 从服务端既有工作区依赖加载。真实写入与清理尚待维护者单独验收，不改变原并发探针或安装入口。
+
+### B4.5b-1 独立恢复宿主预检
+
+- `scripts/docker-db-role-b4-restore-host.mjs`：固定恢复令牌、完整容器 ID、本机 Docker 引擎、停机状态、镜像、网络及独立卷只读目录检查；两次一致性复核，有限脱敏报告，无 SQL 或容器启停。
+- `scripts/docker-db-role-b4-restore-host.cases.mjs`：7 项离线正反向回归，加入根 `test:docker`；根命令 `docker:db:role:b4:restore:host` 单独执行宿主预检，不是数据库准入。

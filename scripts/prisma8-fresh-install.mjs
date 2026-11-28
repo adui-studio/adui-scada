@@ -1,3 +1,4 @@
+import { parseB4PersistenceAction } from "./docker-db-role-b4-arguments.mjs";
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
@@ -42,8 +43,91 @@ export function freshConnection(input, readOnly) {
   return url.toString();
 }
 
+/** 只接受唯一固定 Compose Keycloak 容器的明确退出状态，不回显其他容器数据。 */
+export function requireKeycloakMaintenanceContainer(ids, details) {
+  requireMatch(
+    typeof ids === "string" &&
+      /^[a-f0-9]{64}$/u.test(ids) &&
+      Array.isArray(details) &&
+      details.length === 8,
+    "Keycloak 维护窗口容器标识不一致",
+  );
+  const [id, status, running, paused, restarting, image, labels, restart] = details;
+  requireMatch(
+    id === ids &&
+      status === "exited" &&
+      running === false &&
+      paused === false &&
+      restarting === false &&
+      image === "quay.io/keycloak/keycloak:latest" &&
+      restart === "no" &&
+      labels?.["com.docker.compose.project"] === "adui-scada" &&
+      labels?.["com.docker.compose.service"] === "keycloak",
+    "Keycloak 未处于明确停止的固定维护窗口",
+  );
+  return id;
+}
+
 /** 全新入口仅接受固定动作；角色演练与创建必须分别明确确认。 */
 export function freshAction(args) {
+  try {
+    const b4 = parseB4PersistenceAction(args);
+    if (b4) return b4.action;
+  } catch (error) {
+    throw new FreshInstallError(error.message);
+  }
+  const approvals = [
+    "--reviewed-business-consumers",
+    "--reviewed-maintenance-consumers",
+    "--reviewed-template-consumers",
+  ];
+  const fingerprint = args.at(-1);
+  if (
+    typeof fingerprint === "string" &&
+    /^--plan-fingerprint=[a-f0-9]{64}$/u.test(fingerprint) &&
+    isDeepStrictEqual(args, [
+      "--role-keycloak-rehearse",
+      "--confirm-rehearse-keycloak-ownership",
+      "--reviewed-keycloak-objects",
+      "--confirm-keycloak-maintenance",
+      fingerprint,
+    ])
+  ) {
+    return "role-keycloak-rehearse";
+  }
+  if (
+    typeof fingerprint === "string" &&
+    /^--plan-fingerprint=[a-f0-9]{64}$/u.test(fingerprint) &&
+    isDeepStrictEqual(args, [
+      "--role-b4-rehearse",
+      "--confirm-rehearse-scada-b4",
+      "--confirm-rollback-business-fixtures",
+      fingerprint,
+    ])
+  ) {
+    return "role-b4-rehearse";
+  }
+  if (typeof fingerprint === "string" && /^--plan-fingerprint=[a-f0-9]{64}$/u.test(fingerprint)) {
+    if (
+      isDeepStrictEqual(args, [
+        "--role-isolation-execute",
+        "--confirm-rehearse-isolation",
+        ...approvals,
+        fingerprint,
+      ])
+    )
+      return "role-isolation-rehearse";
+    if (
+      isDeepStrictEqual(args, [
+        "--role-isolation-execute",
+        "--confirm-apply-isolation",
+        "--confirm-rehearsal-verified",
+        ...approvals,
+        fingerprint,
+      ])
+    )
+      return "role-isolation-apply";
+  }
   if (isDeepStrictEqual(args, ["--role-bootstrap", "--confirm-rehearse-docker-roles"])) {
     return "role-rehearse";
   }
@@ -60,6 +144,10 @@ export function freshAction(args) {
     ["--role-bootstrap-status", "role-bootstrap-status"],
     ["--role-isolation-inspect", "role-isolation-inspect"],
     ["--role-isolation-plan", "role-isolation-plan"],
+    ["--role-isolation-status", "role-isolation-status"],
+    ["--role-object-review", "role-object-review"],
+    ["--role-keycloak-plan", "role-keycloak-plan"],
+    ["--role-b4-plan", "role-b4-plan"],
     ["--runtime-review", "runtime-review"],
     ["--runtime-emit", "runtime-emit"],
     ["--provider-smoke", "provider-smoke"],
@@ -67,7 +155,7 @@ export function freshAction(args) {
     if (isDeepStrictEqual(args, [flag])) return mode;
   }
   throw new FreshInstallError(
-    "必须明确指定全新安装发射、只读预览、首次初始化、验证、运行时评审、提供方验收、角色核查、角色准备预览、状态核查、全集群权限核查、隔离预览或独立确认的角色事务",
+    "必须明确指定全新安装发射、只读预览、首次初始化、验证、运行时评审、提供方验收、角色核查、角色准备预览、状态核查、全集群权限核查、隔离预览、隔离状态、对象评审或独立确认的角色事务",
   );
 }
 

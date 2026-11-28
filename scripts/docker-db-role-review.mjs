@@ -188,6 +188,12 @@ function verifyIdentity(rows, database, expected, readOnly = true) {
   );
 }
 
+/** 复用双库身份边界；对象评审不得连接其他库或使用非只读事务。 */
+export async function verifyDockerRoleObjectIdentity(client, database, expected) {
+  requireReview(databases.includes(database));
+  verifyIdentity((await client.query(identitySql)).rows, database, expected, true);
+}
+
 function reviewRole(rows) {
   const row = single(rows);
   const role = booleanFields(row, roleFlags);

@@ -44,12 +44,12 @@ function harness(readOnly = false) {
   };
   const queries: Plan[] = [];
   const steps: string[] = [];
-  const scopes: unknown[] = [];
   const options: unknown[] = [];
   const state = {
     boundaryRows: [[boundary], [boundary]] as Row[][],
     projectRows: [projectRow] as Row[],
     lockRows: [{ head_revision: "2" }] as Row[],
+    identities: [{ status: "active" }] as Row[],
     grants: [{ permission: "project:read" }, { permission: "version:read" }],
     versions: [
       { project_id: projectId, revision: "2", created_at: createdAt, content_hash: "a".repeat(64) },
@@ -73,6 +73,12 @@ function harness(readOnly = false) {
       } else if (plan.text.includes("FOR SHARE")) {
         steps.push("共享锁");
         rows = state.lockRows;
+      } else if (plan.text.includes("public.scada_lock_identity(")) {
+        steps.push("身份锁");
+        rows = state.identities;
+      } else if (plan.text.includes("public.scada_lock_project_grants(")) {
+        steps.push("授权锁");
+        rows = state.grants;
       } else if (plan.text.includes("snapshot::text")) {
         steps.push("快照");
         rows = state.snapshots;
@@ -87,22 +93,6 @@ function harness(readOnly = false) {
     },
     execute: () => {
       throw new Error("工程查询不得执行写入");
-    },
-    orm: {
-      public: {
-        ScadaProjectGrant: {
-          where: (scope: unknown) => {
-            scopes.push(scope);
-            steps.push("授权");
-            return {
-              select: (column: string) => {
-                if (column !== "permission") throw new Error("工程授权投影异常");
-                return { all: () => Promise.resolve(state.grants) };
-              },
-            };
-          },
-        },
-      },
     },
   };
   const client = {
@@ -125,7 +115,6 @@ function harness(readOnly = false) {
     boundary,
     queries,
     steps,
-    scopes,
     options,
     client,
   };
@@ -153,6 +142,10 @@ describe("原生工程查询仓储及事务边界", () => {
       "g.tenant_id = p.tenant_id AND g.project_id = p.project_id",
     );
     expect(h.queries[1]?.text).toContain("g.permission = 'project:read'");
+    expect(h.queries[1]?.text).toContain(
+      "JOIN public.scada_identities i ON i.tenant_id = g.tenant_id",
+    );
+    expect(h.queries[1]?.text).toContain("i.subject_id = g.subject_id AND i.status = 'active'");
     expect(h.queries[1]?.text).not.toContain("snapshot");
   });
 
@@ -195,10 +188,13 @@ describe("原生工程查询仓储及事务边界", () => {
       createdAt,
       updatedAt: createdAt,
     });
-    expect(h.steps).toEqual(["边界", "共享锁", "授权", "工程摘要", "边界"]);
-    expect(h.scopes).toEqual([{ ...actor, projectId }]);
+    expect(h.steps).toEqual(["边界", "共享锁", "身份锁", "授权锁", "工程摘要", "边界"]);
     expect(h.queries[1]?.parameters).toEqual([actor.tenantId, projectId]);
-    expect(h.queries[2]?.parameters).toEqual([actor.tenantId, projectId]);
+    expect(h.queries[2]?.text).toContain("public.scada_lock_identity(");
+    expect(h.queries[2]?.parameters).toEqual([actor.tenantId, actor.subjectId]);
+    expect(h.queries[3]?.text).toContain("public.scada_lock_project_grants(");
+    expect(h.queries[3]?.parameters).toEqual([actor.tenantId, projectId, actor.subjectId]);
+    expect(h.queries[4]?.parameters).toEqual([actor.tenantId, projectId]);
   });
 
   it("缺失工程、缺失权限与未知权限不读取工程正文或摘要", async () => {
@@ -218,7 +214,51 @@ describe("原生工程查询仓储及事务边界", () => {
       await expect(h.store.getProject(actor, projectId)).rejects.toThrow(
         "工程资源不存在或无权访问",
       );
-      expect(h.steps).toEqual(["边界", "共享锁", "授权"]);
+      expect(h.steps).toEqual(["边界", "共享锁", "身份锁", "授权锁"]);
+    }
+  });
+
+  it("身份缺失、禁用或重复时四项锁内读取均先拒绝而不查询授权或正文", async () => {
+    const operations = [
+      (store: Prisma8RuntimeProjectQueryStore) => store.getProject(actor, projectId),
+      (store: Prisma8RuntimeProjectQueryStore) => store.listVersions(actor, projectId),
+      (store: Prisma8RuntimeProjectQueryStore) => store.read(actor, projectId, 1),
+      (store: Prisma8RuntimeProjectQueryStore) => store.preflightRelease(actor, projectId, 2),
+    ];
+    const identityRows: Row[][] = [
+      [],
+      [{ status: "disabled" }],
+      [{ status: "active" }, { status: "active" }],
+    ];
+    for (const identities of identityRows) {
+      for (const operation of operations) {
+        const h = harness();
+        h.state.identities = identities;
+        await expect(operation(h.store)).rejects.toThrow("工程资源不存在或无权访问");
+        expect(h.steps).toEqual(["边界", "共享锁", "身份锁"]);
+        expect(h.queries[2]?.parameters).toEqual([actor.tenantId, actor.subjectId]);
+      }
+    }
+  });
+
+  it("同工程标识的其他租户或同租户其他主体缺少授权时拒绝读取版本", async () => {
+    for (const principal of [
+      { tenantId: "tenant-b", subjectId: actor.subjectId },
+      { tenantId: actor.tenantId, subjectId: "operator-b" },
+    ]) {
+      const h = harness();
+      h.state.grants = [];
+      await expect(h.store.read(principal, projectId, 1)).rejects.toThrow(
+        "工程资源不存在或无权访问",
+      );
+      expect(h.steps).toEqual(["边界", "共享锁", "身份锁", "授权锁"]);
+      expect(h.queries[1]?.parameters).toEqual([principal.tenantId, projectId]);
+      expect(h.queries[2]?.parameters).toEqual([principal.tenantId, principal.subjectId]);
+      expect(h.queries[3]?.parameters).toEqual([
+        principal.tenantId,
+        projectId,
+        principal.subjectId,
+      ]);
     }
   });
 
@@ -227,10 +267,10 @@ describe("原生工程查询仓储及事务边界", () => {
     await expect(
       h.store.listVersions(actor, projectId, { limit: 2, beforeRevision: 12 }),
     ).resolves.toEqual([{ projectId, revision: 2, createdAt, contentHash: "a".repeat(64) }]);
-    expect(h.steps).toEqual(["边界", "共享锁", "授权", "版本列表", "边界"]);
-    expect(h.queries[2]?.parameters).toEqual([actor.tenantId, projectId, 12n, 12n, 2]);
-    expect(h.queries[2]?.text).toContain("ORDER BY scada_project_versions.revision DESC");
-    expect(h.queries[2]?.text).not.toContain("snapshot");
+    expect(h.steps).toEqual(["边界", "共享锁", "身份锁", "授权锁", "版本列表", "边界"]);
+    expect(h.queries[4]?.parameters).toEqual([actor.tenantId, projectId, 12n, 12n, 2]);
+    expect(h.queries[4]?.text).toContain("ORDER BY scada_project_versions.revision DESC");
+    expect(h.queries[4]?.text).not.toContain("snapshot");
   });
 
   it("历史快照读取和发布预检复用原摘要与元数据校验", async () => {
@@ -246,8 +286,8 @@ describe("原生工程查询仓储及事务边界", () => {
     const h = harness();
     h.state.snapshots = [row];
     await expect(h.store.read(actor, projectId, 2)).resolves.toEqual(snapshot);
-    expect(h.steps).toEqual(["边界", "共享锁", "授权", "快照", "边界"]);
-    expect(h.queries[2]?.parameters).toEqual([actor.tenantId, projectId, 2n]);
+    expect(h.steps).toEqual(["边界", "共享锁", "身份锁", "授权锁", "快照", "边界"]);
+    expect(h.queries[4]?.parameters).toEqual([actor.tenantId, projectId, 2n]);
     const preflight = harness();
     preflight.state.snapshots = [row];
     const report = validateProjectReleasePreflight(snapshot.document);
@@ -259,7 +299,7 @@ describe("原生工程查询仓储及事务边界", () => {
       passed: report.passed,
       issues: report.issues,
     });
-    expect(preflight.steps).toEqual(["边界", "共享锁", "授权", "快照", "边界"]);
+    expect(preflight.steps).toEqual(["边界", "共享锁", "身份锁", "授权锁", "快照", "边界"]);
   });
 
   it("不存在版本、错配快照与过期发布预检均安全拒绝", async () => {
@@ -284,7 +324,7 @@ describe("原生工程查询仓储及事务边界", () => {
     await expect(stale.store.preflightRelease(actor, projectId, 1)).rejects.toThrow(
       "工程版本已变化，请重新获取最新修订号",
     );
-    expect(stale.steps).toEqual(["边界", "共享锁", "授权"]);
+    expect(stale.steps).toEqual(["边界", "共享锁", "身份锁", "授权锁"]);
   });
 
   it("缺失文本列、超界修订号及事务前后标记漂移均不返回业务结果", async () => {
@@ -301,6 +341,6 @@ describe("原生工程查询仓储及事务边界", () => {
     const after = harness();
     after.state.boundaryRows[1] = [{ ...after.boundary, storageHash: "" }];
     await expect(after.store.getProject(actor, projectId)).rejects.toThrow("边界不一致");
-    expect(after.steps).toEqual(["边界", "共享锁", "授权", "工程摘要", "边界"]);
+    expect(after.steps).toEqual(["边界", "共享锁", "身份锁", "授权锁", "工程摘要", "边界"]);
   });
 });

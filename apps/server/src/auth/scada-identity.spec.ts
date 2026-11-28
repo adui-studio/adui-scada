@@ -79,7 +79,7 @@ function makeSessionService() {
     },
     query(plan: Plan) {
       const parameters = plan.parameters.map(stringParameter);
-      if (plan.text.includes("FROM public.scada_identities")) {
+      if (plan.text === "SELECT status FROM public.scada_lock_identity(?::text, ?::text)") {
         return {
           toArray: () =>
             Promise.resolve(
@@ -264,10 +264,14 @@ describe("可信会话与工程 Guard", () => {
     await expect(
       fake.service.issueForVerifiedSubject({ tenantId: "../x", subjectId: "engineer-1" }),
     ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      fake.service.issueForVerifiedSubject({ ...principal, subjectId: "engineer-2" }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     fake.disable();
     await expect(fake.service.issueForVerifiedSubject(principal)).rejects.toBeInstanceOf(
       ForbiddenException,
     );
+    expect(fake.sessions.size).toBe(0);
   });
 
   it("被撤销的会话即时失效且不能被别的租户撤销", async () => {

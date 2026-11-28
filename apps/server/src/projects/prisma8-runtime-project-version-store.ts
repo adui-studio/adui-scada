@@ -9,6 +9,13 @@ import {
 } from "@adui/scada-core";
 import type { Prisma8Transaction } from "../database/prisma8-read-transaction.js";
 import { Prisma8Service } from "../database/prisma8.service.js";
+import { nativeTextTransaction } from "../database/prisma8-text-transaction.js";
+import {
+  createB4Project,
+  lockB4Identity,
+  lockB4ProjectGrants,
+  lockB4ReleaseState,
+} from "../database/prisma8-b4-routines.js";
 import { Prisma8RuntimeProjectQueryStore } from "./prisma8-runtime-project-query-store.js";
 import {
   hasProjectPermission,
@@ -141,6 +148,18 @@ async function persistVersion(
     ).affectedRows,
   );
 
+  await verifyPersistedVersion(tx, actor, snapshot, eventId);
+}
+
+/** 首版和追加共用真实快照、工程水位、审计回读，不信任单独的写入返回值。 */
+async function verifyPersistedVersion(
+  tx: Tx,
+  actor: AuthenticatedProjectPrincipal,
+  snapshot: ProjectSnapshot,
+  eventId: string,
+): Promise<void> {
+  const { tenantId, subjectId } = actor;
+  const { projectId, revision, contentHash, createdAt } = snapshot;
   const rows = await tx
     .query(
       tx.raw.sql`SELECT v.snapshot::text AS snapshot_data, v.content_hash::text AS content_hash,
@@ -206,9 +225,11 @@ async function appendPrepared(
     )
     .toArray();
   if (rows.length !== 1 || !rows[0]) throw new ProjectVersionAccessDeniedError();
-  const grants = await tx.orm.public.ScadaProjectGrant.where({ tenantId, projectId, subjectId })
-    .select("permission")
-    .all();
+  const routineTx = nativeTextTransaction(tx, "工程事务查询结果缺少有效文本列");
+  const identities = await lockB4Identity(routineTx, tenantId, subjectId);
+  if (identities.length !== 1 || identities[0]?.status !== "active")
+    throw new ProjectVersionAccessDeniedError();
+  const grants = await lockB4ProjectGrants(routineTx, tenantId, projectId, subjectId);
   if (
     !hasProjectPermission(
       actor,
@@ -253,52 +274,36 @@ export class Prisma8RuntimeProjectVersionStore
     const snapshot = await checkedSnapshot(document, 1);
     const { projectId, createdAt } = snapshot;
     return this.database.writeTransaction(async (tx) => {
-      const identities = await tx
-        .query(
-          tx.raw.sql`SELECT status::text AS status FROM public.scada_identities
-          WHERE tenant_id = ${tenantId} AND subject_id = ${subjectId} FOR SHARE`
-            .returnsRow({ status: "pg/text@1" })
-            .build(),
-        )
-        .toArray();
-      if (identities.length !== 1 || identities[0]?.status !== "active")
-        throw new ProjectVersionAccessDeniedError();
-      const inserted = await tx.execute(
-        tx.raw
-          .sql`INSERT INTO public.scada_projects (tenant_id, project_id, head_revision, created_at, updated_at)
-          VALUES (${tenantId}, ${projectId}, 0, ${createdAt}::timestamptz, ${createdAt}::timestamptz)
-          ON CONFLICT (tenant_id, project_id) DO NOTHING`
-          .affectedCount()
-          .build(),
-      );
-      if (inserted.affectedRows === 0) throw new ProjectAlreadyExistsError();
-      requireAffected(inserted.affectedRows);
-      requireAffected(
-        (
-          await tx.execute(
-            tx.raw.sql`INSERT INTO public.scada_project_release_state
-          (tenant_id, project_id, release_generation, updated_at)
-          VALUES (${tenantId}, ${projectId}, 0, ${createdAt}::timestamptz)`
-              .affectedCount()
-              .build(),
-          )
-        ).affectedRows,
-      );
-      requireAffected(
-        (
-          await tx.execute(
-            tx.raw
-              .sql`INSERT INTO public.scada_project_grants (tenant_id, project_id, subject_id, permission)
-          VALUES (${tenantId}, ${projectId}, ${subjectId}, 'project:read'),
-                 (${tenantId}, ${projectId}, ${subjectId}, 'version:read'),
-                 (${tenantId}, ${projectId}, ${subjectId}, 'version:append')`
-              .affectedCount()
-              .build(),
-          )
-        ).affectedRows,
-        3,
-      );
-      await persistVersion(tx, actor, snapshot, 0n);
+      const routineTx = nativeTextTransaction(tx, "工程事务查询结果缺少有效文本列");
+      const eventId = randomUUID();
+      const result = await createB4Project(routineTx, tenantId, subjectId, snapshot, eventId);
+      if (result === "DENIED") throw new ProjectVersionAccessDeniedError();
+      if (result === "EXISTS") throw new ProjectAlreadyExistsError();
+      await verifyPersistedVersion(tx, actor, snapshot, eventId);
+      const states = await lockB4ReleaseState(routineTx, tenantId, projectId, false);
+      const state = states[0];
+      if (
+        states.length !== 1 ||
+        !state ||
+        state.generation !== "0" ||
+        state.revision !== "" ||
+        state.hash !== "" ||
+        state.event_id !== "" ||
+        state.hash_is_null !== "true"
+      ) {
+        throw new Error("工程首版发布状态回读不一致");
+      }
+      const grants = await lockB4ProjectGrants(routineTx, tenantId, projectId, subjectId);
+      const permissions = new Set(grants.map((grant) => grant.permission));
+      if (
+        grants.length !== 3 ||
+        permissions.size !== 3 ||
+        !permissions.has("project:read") ||
+        !permissions.has("version:read") ||
+        !permissions.has("version:append")
+      ) {
+        throw new Error("工程首版创建者授权回读不一致");
+      }
       return { projectId, headRevision: 1, createdAt, updatedAt: createdAt };
     });
   }
