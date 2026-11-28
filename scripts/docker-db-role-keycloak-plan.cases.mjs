@@ -177,7 +177,10 @@ void test("索引名称保留大小写且所有者权限与父对象漂移仍被
   );
   for (const patch of [{ owner: runtime }, { clean: false }, { parent: "999999" }]) {
     const invalid = structuredClone(data);
-    Object.assign(invalid.objects.find((row) => row.kind === "index"), patch);
+    Object.assign(
+      invalid.objects.find((row) => row.kind === "index"),
+      patch,
+    );
     assert.throws(() => buildKeycloakOwnershipPlan(invalid), DockerKeycloakOwnershipError);
   }
 });
