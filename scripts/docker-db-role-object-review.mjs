@@ -4,7 +4,9 @@ import { safeSqlState } from "./docker-db-role-bootstrap.mjs";
 
 export class DockerRoleObjectReviewError extends Error {}
 
-const rolesSql = "SELECT oid::text AS oid, rolname::text AS name FROM pg_catalog.pg_roles WHERE rolname IN ('adui_scada', 'adui_scada_runtime', 'adui_scada_keycloak_runtime', 'pg_database_owner')";
+const rolesSql = "SELECT oid::text AS oid, rolname::text AS name, rolcanlogin AS login, rolsuper AS superuser, rolcreatedb AS \"createDatabase\", rolcreaterole AS \"createRole\", rolreplication AS replication, rolbypassrls AS \"bypassRls\", rolinherit AS inherit FROM pg_catalog.pg_roles WHERE rolname IN ('adui_scada', 'adui_scada_runtime', 'adui_scada_keycloak_runtime', 'pg_database_owner', 'adui_scada_lock_owner')";
+const requiredRoles = ["adui_scada", "adui_scada_runtime", "adui_scada_keycloak_runtime", "pg_database_owner"];
+const roleNames = [...requiredRoles, "adui_scada_lock_owner"];
 const objectsSql = `WITH schemas AS (
   SELECT * FROM pg_catalog.pg_namespace WHERE nspname <> 'information_schema' AND left(nspname, 3) <> 'pg_'
 ), objects AS (
@@ -18,7 +20,7 @@ const objectsSql = `WITH schemas AS (
     FROM pg_catalog.pg_attribute a JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
     JOIN schemas n ON c.relnamespace = n.oid WHERE a.attnum > 0 AND NOT a.attisdropped AND a.attacl IS NOT NULL
   UNION ALL SELECT 'routine', p.oid::text, p.proowner::text,
-    jsonb_build_array(n.nspname, p.proname, p.prokind::text, p.proacl::text, p.prosecdef)
+    jsonb_build_array(n.nspname, p.proname, p.prokind::text, p.proacl::text, p.prosecdef, p.proconfig)
     FROM pg_catalog.pg_proc p JOIN schemas n ON p.pronamespace = n.oid
   UNION ALL SELECT 'type', t.oid::text, t.typowner::text,
     jsonb_build_array(n.nspname, t.typname, t.typtype::text, t.typacl::text)
@@ -57,9 +59,9 @@ WHERE d.refclassid = 'pg_catalog.pg_authid'::regclass
   )
 ORDER BY d.dbid, d.classid, d.objid, d.objsubid, d.refobjid, d.deptype`;
 const databaseNames = ["adui_scada", "adui_scada_keycloak"];
-const roleNames = ["adui_scada", "adui_scada_runtime", "adui_scada_keycloak_runtime", "pg_database_owner"];
+
 const categories = {
-  schema: 2, relation: 6, columnAcl: 4, routine: 5, type: 4, defaultAcl: 3,
+  schema: 2, relation: 6, columnAcl: 4, routine: 6, type: 4, defaultAcl: 3,
   extension: 3, policy: 6, eventTrigger: 3, foreignServer: 2, foreignWrapper: 2, publication: 1,
 };
 const oid = (value) => typeof value === "string" && /^[1-9][0-9]{0,9}$/u.test(value) && Number(value) <= 4294967295;
@@ -77,10 +79,15 @@ function exactKeys(row, keys) {
 /** 原始名称与 ACL 仅在本地计算指纹；公开报告不包含对象名、凭据或实际业务行。 */
 export async function readDockerRoleObjectInventory(query) {
   const roles = (await query("固定角色标识", rolesSql)).rows;
-  requireMatch(Array.isArray(roles) && roles.length === roleNames.length &&
-    roles.every((row) => exactKeys(row, ["oid", "name"]) && oid(row.oid) && roleNames.includes(row.name)) &&
-    new Set(roles.map((row) => row.name)).size === roleNames.length &&
-    new Set(roles.map((row) => row.oid)).size === roleNames.length);
+  requireMatch(Array.isArray(roles) && roles.length >= requiredRoles.length && roles.length <= roleNames.length &&
+    roles.every((row) =>
+      exactKeys(row, ["oid", "name", "login", "superuser", "createDatabase", "createRole", "replication", "bypassRls", "inherit"]) &&
+      oid(row.oid) && roleNames.includes(row.name) &&
+      ["login", "superuser", "createDatabase", "createRole", "replication", "bypassRls", "inherit"].every((key) => typeof row[key] === "boolean")) &&
+    requiredRoles.every((name) => roles.filter((row) => row.name === name).length === 1) &&
+    roles.filter((row) => row.name === "adui_scada_lock_owner").length <= 1 &&
+    new Set(roles.map((row) => row.name)).size === roles.length &&
+    new Set(roles.map((row) => row.oid)).size === roles.length);
   const rows = (await query("对象所有权与直接授权", objectsSql)).rows;
   requireMatch(Array.isArray(rows) && rows.length > 0 && rows.length <= 100000 &&
     rows.every((row) => exactKeys(row, ["kind", "id", "owner", "evidence"]) &&
@@ -113,6 +120,18 @@ export async function readDockerRoleObjectInventory(query) {
       total: rows.filter((row) => row.kind === kind && classify(row.owner) === name).length,
     })),
   }));
+  const routineRows = rows.filter((row) => row.kind === "routine");
+  const lockOwnerId = roles.find((role) => role.name === "adui_scada_lock_owner")?.oid;
+  const securityDefinerRoutineCount = routineRows.filter((row) => row.evidence[4] === true).length;
+  const safeDefinerRoutineCount = routineRows.filter((row) =>
+    row.evidence[4] === true &&
+    Array.isArray(row.evidence[5]) &&
+    row.evidence[5].includes("search_path=pg_catalog, public") &&
+    row.evidence[5].includes("row_security=on"),
+  ).length;
+  const lockOwnerOwnedRoutineCount = lockOwnerId
+    ? routineRows.filter((row) => row.owner === lockOwnerId).length
+    : 0;
   const dependencyOwners = [...roleNames, "OTHER"].map((name) => ({
     role: name,
     ownership: dependencies.filter((row) => classify(row.roleOid) === name && row.kind === "o").length,
@@ -136,6 +155,9 @@ export async function readDockerRoleObjectInventory(query) {
     dependencyCount: dependencies.length,
     unknownOwnerCount: rows.filter((row) => classify(row.owner) === "OTHER").length,
     unknownDependencyRoleCount: dependencies.filter((row) => classify(row.roleOid) === "OTHER").length,
+    securityDefinerRoutineCount,
+    safeDefinerRoutineCount,
+    lockOwnerOwnedRoutineCount,
     catalogFingerprint,
     ownershipTransferAllowed: false,
     businessAclApproved: false,

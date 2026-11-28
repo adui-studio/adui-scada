@@ -4,12 +4,17 @@ import { readDockerRoleObjectInventory } from "./docker-db-role-object-review.mj
 
 function fixture() {
   const roles = ["adui_scada", "adui_scada_runtime", "adui_scada_keycloak_runtime", "pg_database_owner"]
-    .map((name, index) => ({ name, oid: String(index + 10) }));
+    .map((name, index) => ({
+      name, oid: String(index + 10),
+      login: index === 0, superuser: index === 0,
+      createDatabase: index === 0, createRole: index === 0,
+      replication: index === 0, bypassRls: index === 0, inherit: index !== 1 && index !== 2,
+    }));
   const objects = [
     { kind: "schema", id: "100", owner: "13", evidence: ["public", null] },
     { kind: "relation", id: "101", owner: "10", evidence: ["public", "模拟内部对象", "r", null, false, false] },
     { kind: "columnAcl", id: "101:1", owner: "10", evidence: ["public", "模拟内部对象", "id", "模拟内部授权"] },
-    { kind: "routine", id: "102", owner: "900", evidence: ["public", "模拟内部函数", "f", null, true] },
+    { kind: "routine", id: "102", owner: "900", evidence: ["public", "模拟内部函数", "f", null, true, ["search_path=pg_catalog, public", "row_security=on"]] },
   ];
   const dependencies = [
     { databaseOid: "16384", databaseScope: "CURRENT_DATABASE", classOid: "1259", objectOid: "101", subId: 0, roleOid: "10", kind: "o" },
@@ -37,6 +42,9 @@ void test("双库对象清单仅报告聚合所有权、依赖数量及指纹，
   assert.equal(report.dependencyCount, 2);
   assert.equal(report.unknownOwnerCount, 1);
   assert.equal(report.unknownDependencyRoleCount, 0);
+  assert.equal(report.securityDefinerRoutineCount, 1);
+  assert.equal(report.safeDefinerRoutineCount, 1);
+  assert.equal(report.lockOwnerOwnedRoutineCount, 0);
   assert.equal(report.dependencyOwners.find((row) => row.role === "adui_scada")?.ownership, 1);
   assert.equal(report.dependencyOwners.find((row) => row.role === "adui_scada")?.shared, 1);
   assert.equal(report.ownershipTransferAllowed, false);
