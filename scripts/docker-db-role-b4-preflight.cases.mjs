@@ -4,8 +4,11 @@ import {
   buildScadaB4InstallPreflight,
   DockerB4PreflightError,
   readScadaB4InstallPreflight,
+  readScadaB4BusinessPreparation,
   verifyScadaB4NewOwnerRoles,
 } from "./docker-db-role-b4-preflight.mjs";
+import { scadaBusinessColumnInventory } from "./docker-db-role-business-acl.mjs";
+import { buildScadaOidcCleanupRoutinePreview } from "./docker-db-role-restricted-writes.mjs";
 
 function fixture() {
   return {
@@ -125,4 +128,47 @@ void test("新所有者缺失重复及任一权限漂移均拒绝", async () => 
       name: "Error", message: "B4 新所有者未授权基线不一致",
     });
   }
+});
+
+function businessFixture() {
+  return scadaBusinessColumnInventory().flatMap(({ table, columns }) =>
+    ["adui_scada_runtime", "adui_scada_keycloak_runtime"].flatMap((role) => columns.map((column) => ({
+      role, table, column, kind: "r", owner: false, tableAccess: false,
+      select: role === "adui_scada_runtime" && table === "scada_projects" &&
+        ["tenant_id", "project_id", "head_revision"].includes(column),
+      insert: false, update: false, references: false, grantable: false,
+    }))),
+  );
+}
+
+void test("业务准备按前置后权限顺序并精确对照真实候选名称", async () => {
+  const calls = [];
+  const report = await readScadaB4BusinessPreparation(async (_step, sql) => {
+    calls.push(sql);
+    return { rows: calls.length === 1 ? [fixture()] : businessFixture() };
+  });
+  assert.equal(calls.length, 2);
+  assert.match(calls[0], /"candidateOwnerCount"/u);
+  assert.match(calls[1], /pg_catalog\.pg_attribute/u);
+  assert.equal(report.businessAclPreview.grants.length, 21);
+  assert.equal(report.businessAclPreview.admissionPassed, false);
+  const locks = report.businessAclPreview.lockRoutinePreview;
+  const writes = report.businessAclPreview.restrictedWritePreview;
+  const routines = [...locks.definitions.map((item) => item.name),
+    writes.projectCreate.signature.split("(")[0].slice("public.".length),
+    buildScadaOidcCleanupRoutinePreview("18443").signature.split("(")[0].slice("public.".length)];
+  assert.equal(report.ownerInstallPreflight.reservedRoutineCount, routines.length);
+  const routineFilter = calls[0].match(/p\.proname IN \(([^)]+)\)/u)?.[1];
+  assert.equal(routineFilter, routines.map((name) => "'" + name + "'").join(", "));
+  const owners = [locks.ownerRole, writes.projectCreate.ownerRole, writes.oidcCleanup.ownerRole];
+  assert.deepEqual(report.ownerInstallPreflight.roleCreationPreview.map((sql) => sql.split(" ")[2]), owners);
+});
+
+void test("前置拒绝时不再读取业务列权限", async () => {
+  let calls = 0;
+  await assert.rejects(() => readScadaB4BusinessPreparation(async () => {
+    calls += 1;
+    return { rows: [{ ...fixture(), candidateOwnerCount: 1 }] };
+  }), { name: "Error", message: "候选所有者已存在，禁止重复安装" });
+  assert.equal(calls, 1);
 });

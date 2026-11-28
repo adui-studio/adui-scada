@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readScadaBusinessAclPreview } from "./docker-db-role-business-acl.mjs";
 
 export class DockerB4PreflightError extends Error {}
 
@@ -148,6 +149,13 @@ export function buildScadaB4InstallPreflight(rows) {
 export async function readScadaB4InstallPreflight(query) {
   const result = await query("B4 例程安装前置检查", preflightSql);
   return buildScadaB4InstallPreflight(result?.rows);
+}
+
+/** 仅在前置核验成功后读取业务列权限候选。 */
+export async function readScadaB4BusinessPreparation(query) {
+  const ownerInstallPreflight = await readScadaB4InstallPreflight(query);
+  const businessAclPreview = await readScadaBusinessAclPreview(query);
+  return { ownerInstallPreflight, businessAclPreview };
 }
 
 // 未授权的新所有者必须没有数据库及业务对象权限；不依赖混合关系目录过滤顺序。

@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { verifyDockerRoleObjectIdentity } from "./docker-db-role-review.mjs";
 import { safeSqlState } from "./docker-db-role-bootstrap.mjs";
-import { DockerBusinessAclPreviewError, readScadaBusinessAclPreview } from "./docker-db-role-business-acl.mjs";
-import { DockerB4PreflightError, readScadaB4InstallPreflight } from "./docker-db-role-b4-preflight.mjs";
+import { DockerBusinessAclPreviewError } from "./docker-db-role-business-acl.mjs";
+import { DockerB4PreflightError, readScadaB4BusinessPreparation } from "./docker-db-role-b4-preflight.mjs";
 
 export class DockerRoleObjectReviewError extends Error {}
 
@@ -199,8 +199,7 @@ async function inspectDatabase(createClient, database, identity) {
     inventory = database === databaseNames[0]
       ? {
           ...objects,
-          ownerInstallPreflight: await readScadaB4InstallPreflight(query),
-          businessAclPreview: await readScadaBusinessAclPreview(query),
+          ...(await readScadaB4BusinessPreparation(query)),
         }
       : objects;
     stage = "后置身份";
