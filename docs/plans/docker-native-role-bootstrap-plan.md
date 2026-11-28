@@ -276,3 +276,7 @@ SCADA 回滚演练与 Keycloak 保持一致：仅在收到外层 ROLLBACK 命令
 ### 2026-11-28 · B3.3 正式隔离已持久化并独立验收
 
 维护者在 00c1e65315edb41451f15221a4d94320d5227c9c 实际重新核对三组消费者、原始状态及指纹并输入 APPLY。五条固定 REVOKE 实际提交、八项 PUBLIC 权限撤销；DOCKER_DB_ROLE_ISOLATION_APPLIED、committed=true、catalogIsolationVerified=true、catalogIsolationPersisted=true、publicConnectRetained=false、postVerificationPassed=true。独立只读状态复核原计划指纹 0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37 和持久化结果一致，原生结构、中文注释、OIDC 只读及 Docker 七服务回归通过。此项数据库目录变更已完成，不重复执行隔离持久化；不代表运行身份登录、实际连接拒绝或正式准入完成，业务数据未写入、服务未切换。接下来按 [B4 集中验收清单](b4-concentrated-acceptance.md) 先执行双库只读计划，再分别审批回滚演练及持久化。B4 未实际安装或转移所有权，保持原 Draft 和 NOLOGIN，不提前进入 C/D/E/F。
+
+### 2026-11-28 · E-182 本库控制函数 ACL 收紧候选
+
+真实只读查询确认 SCADA 库 pg_catalog.pg_control_system() 由 adui_scada 所有，三项显式 OWNER/PUBLIC/SCADA_RUNTIME EXECUTE，均为所有者授权且无显式 grant option，PUBLIC 导致 Keycloak 和三个新所有者具备非预期有效 EXECUTE；零残留角色、查询回滚通过。仅 SCADA B4 固定事务新增一条针对该函数的 PUBLIC EXECUTE REVOKE RESTRICT，不修改 B2 显式运行角色授权或其他数据库函数。安装前精确三项 ACL、安装后精确两项并保留原有效权限矩阵，独立回滚状态重新核对前置三项。当前计划版本 3、93 条，历史版本 2 与 92 条及旧 S 不再执行；36/15 不变。消费者实际审阅、全专项和真实新 S、独立批准及真实回滚均待维护者验收；没有持久化或服务切换。详见 [B4 集中验收清单](b4-concentrated-acceptance.md) 第十七节。

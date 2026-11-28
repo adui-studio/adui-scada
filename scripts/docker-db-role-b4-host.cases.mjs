@@ -240,6 +240,7 @@ void test("集群漂移、契约注释或 Discovery 失败不得生成宿主证�
 const preflightRows = () => [
   {
     managerVerified: true,
+    clusterFunctionAclReady: true,
     hardenedRuntimeCount: 2,
     candidateOwnerCount: 0,
     membershipCount: 0,
@@ -335,7 +336,7 @@ function planFixture(fault = "") {
 void test("真实候选计划只读生成并在回滚关闭后再次检查宿主", async () => {
   const { calls, options } = planFixture();
   const plan = await readScadaB4HostPlan(options);
-  assert.equal(plan.statementCount, 92);
+  assert.equal(plan.statementCount, 93);
   assert.equal(plan.isolationFingerprint, isolationFingerprint);
   assert.match(plan.planFingerprint, /^[a-f0-9]{64}$/u);
   assert.equal(plan.rolledBack, true);

@@ -3392,3 +3392,7 @@ PR #262 在 ac056982 实测身份 49/49、全量 969/969、Vite+ 564 格式/402 
 ### 2026-11-28 · PR #262 E-181 关闭，B4.2 控制函数 ACL 待溯源
 
 维护者在 1dcb9234e33234983eb4ccc55b9977c4921beee8 实测权限目录 10/10、Docker 226/226、Vite+ 564 格式/402 受检零警告错误、中文 428 文件、Markdown 100 份及 Git 差异通过。第二次真实演练明确定位 Keycloak 运行角色与三个专用所有者的 clusterFunctionExecute 差异，收到回滚标签；finally 独立原 I/S/K、严格契约、OIDC 只读和七服务恢复复验通过。E-181 关闭；无 SC 指纹、无业务探针证据，E-182 待实际函数 ACL 溯源及消费者审阅。原 92 条候选不重复执行。只有确认本库 PUBLIC EXECUTE 来源及维护影响后才评估固定收紧候选、新计划指纹与审批，不改权限预期或手工修改 ACL。保持原服务、NOLOGIN、Draft，B4.2 未通过，不进入后续阶段。
+
+### 2026-11-28 · PR #262 E-182 控制函数 ACL 根因确认与候选修复
+
+维护者在 daa1eb9bc0b237663fc4523fd7480e481d1f7517 完成固定 SCADA 库只读 ACL 溯源、文档 100 份及 Git 差异：pg_control_system() 显式三项 ACL 为 OWNER/PUBLIC/SCADA_RUNTIME，PUBLIC、SCADA、Keycloak 有效 EXECUTE 均 true，SCADA 无 grant option、残留专用角色零，ROLLBACK 成功。候选仅增加一条固定本库 PUBLIC EXECUTE REVOKE RESTRICT，原 SCADA 直接授权保留；前置精确三项 ACL、安装后精确两项 ACL 及原有效权限矩阵，独立回滚前置复验原 ACL。计划版本 3、93 语句，旧 S 失效，36/15 探针不变。局部 Node 4/4（与远端候选校验一致的片段及模拟依赖），完整 Windows 定向、Docker 226、Vite+、中文、文档及真实新 S、消费者审阅和独立批准回滚待完成。E-182 未关闭，无 SC、不执行持久化、Keycloak 停止/演练、LOGIN 或服务切换，保持 Draft。

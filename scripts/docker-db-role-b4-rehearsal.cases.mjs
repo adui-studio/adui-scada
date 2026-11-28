@@ -32,6 +32,7 @@ const confirm = "--confirm-rehearse-scada-b4";
 const preflightRows = () => [
   {
     managerVerified: true,
+    clusterFunctionAclReady: true,
     hardenedRuntimeCount: 2,
     candidateOwnerCount: 0,
     membershipCount: 0,
@@ -136,7 +137,7 @@ function fixture(fault = "") {
             throw new Error("模拟敏感错误");
           return { command: fault === "rollback-tag" && !readOnly ? "SELECT" : "ROLLBACK" };
         }
-        if (!readOnly && post === groups.length && ddl === 92)
+        if (!readOnly && post === groups.length && ddl === 93)
           return runtimeFixture.client.query(sql, values);
         if (sql.includes("pg_try_advisory_xact_lock"))
           return { rows: [{ locked: fault !== "lock", isolation: "serializable" }] };
@@ -149,6 +150,7 @@ function fixture(fault = "") {
           if (!readOnly)
             assert.ok(sql.includes("current_setting('transaction_isolation') = 'serializable'"));
           const rows = preflightRows();
+          if (fault === "cluster-acl" && !readOnly) rows[0].clusterFunctionAclReady = false;
           if ((fault === "preflight" && !readOnly) || (fault === "independent-drift" && readOnly))
             rows[0].candidateOwnerCount = 1;
           return { rows };
@@ -170,10 +172,19 @@ function fixture(fault = "") {
           return { command: fault === "ddl-tag" && ddl === 5 ? "SELECT" : sql.split(" ")[0] };
         }
         assert.equal(readOnly, false);
-        assert.equal(ddl, 92);
+        assert.equal(ddl, 93);
         assert.match(sql, /^(SELECT|WITH) /u);
         const rows = groups[post++];
         if (!rows) throw new Error("模拟未知目录查询");
+        if (fault === "cluster-public-retained" && post === 1) {
+          return {
+            rows: permission.roles.map((row) => ({
+              ...row,
+              clusterFunctionAclMatched: false,
+              clusterFunctionExecute: true,
+            })),
+          };
+        }
         return { rows: fault === "post" && post === 6 ? rows.slice(1) : rows };
       },
       async end() {
@@ -227,7 +238,7 @@ void test("固定计划绑定集群、存储、隔离、端口和真实候选，
   const input = planInput();
   const plan = buildScadaB4RehearsalPlan(input);
   assert.equal(plan.roleCount, 3);
-  assert.equal(plan.statementCount, 92);
+  assert.equal(plan.statementCount, 93);
   assert.equal(plan.businessFixtureRehearsalRequired, true);
   assert.equal(plan.expectedPositiveCount, 36);
   assert.equal(plan.expectedDeniedCount, 15);
@@ -264,7 +275,7 @@ void test("固定计划绑定集群、存储、隔离、端口和真实候选，
   }
 });
 
-void test("完整演练严格按候选顺序执行九十二条语句并独立只读核验", async () => {
+void test("完整演练严格按候选顺序执行九十三条语句并独立只读核验", async () => {
   const { options, calls, clientCount, hostCount } = fixture();
   const result = await runScadaB4RollbackRehearsal(options);
   const locks = buildScadaLockRoutinePreview();
@@ -273,6 +284,7 @@ void test("完整演练严格按候选顺序执行九十二条语句并独立只
   const routine = (item) => [item.createSql, item.revokePublicSql, item.ownerSql, item.executeSql];
   const expected = [
     ...preparation().ownerInstallPreflight.roleCreationPreview,
+    "REVOKE EXECUTE ON FUNCTION pg_catalog.pg_control_system() FROM PUBLIC RESTRICT",
     ...locks.ownerGrants,
     ...locks.definitions.flatMap(routine),
     ...writes.projectCreate.ownerGrants,
@@ -315,7 +327,7 @@ void test("完整演练严格按候选顺序执行九十二条语句并独立只
     ["只读", "ROLLBACK"],
     ["只读", "关闭"],
   ]);
-  assert.equal(result.statementsExecuted, 92);
+  assert.equal(result.statementsExecuted, 93);
   assert.equal(result.runtimeProbe.positiveCount, 36);
   assert.equal(result.runtimeProbe.deniedCount, 15);
   assert.equal(result.runtimeProbe.fixturesRolledBack, true);
@@ -364,6 +376,7 @@ void test("锁、未隔离基线、计划指纹、可写前置或函数校验设
     "not-isolated",
     "baseline-fingerprint",
     "preflight",
+    "cluster-acl",
     "setting",
     "fingerprint",
   ]) {
@@ -383,8 +396,9 @@ void test("新角色越权、目录语句异常及后置漂移立即停止并独
     ["owner", 3],
     ["ddl-error", 5],
     ["ddl-tag", 5],
-    ["post", 92],
-    ["probe", 92],
+    ["cluster-public-retained", 93],
+    ["post", 93],
+    ["probe", 93],
   ]) {
     const { options, calls } = fixture(fault);
     await assert.rejects(

@@ -30,12 +30,26 @@ const restricted = literalList([...ownerRoles, ...runtimeRoles, "pg_database_own
 const hardened = `NOT (r.rolcanlogin OR r.rolsuper OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolbypassrls OR r.rolinherit)
     AND r.rolpassword IS NULL`;
 
+/** 固定控制函数的原始及安装后 ACL 必须精确匹配，不回显实际授权。 */
+export function scadaClusterFunctionAclSql(includePublic) {
+  const count = includePublic ? 3 : 2;
+  const publicGrantee = includePublic ? ", 0" : "";
+  return `(SELECT count(*) = ${count} AND count(DISTINCT a.grantee) = ${count}
+    AND bool_and(a.grantee IN (p.proowner, (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = 'adui_scada_runtime')${publicGrantee})
+      AND a.grantor = p.proowner AND a.privilege_type = 'EXECUTE' AND NOT a.is_grantable)
+    FROM pg_catalog.pg_proc p CROSS JOIN LATERAL pg_catalog.aclexplode(p.proacl) a
+    WHERE p.oid = 'pg_catalog.pg_control_system()'::regprocedure
+      AND p.proowner = (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = 'adui_scada')
+      AND p.proacl IS NOT NULL)`;
+}
+
 // 仅查询目录聚合证据，不返回密码、对象名或原始授权。
 const preflightSql = `SELECT
   (current_user = 'adui_scada' AND session_user = 'adui_scada'
     AND current_database() = 'adui_scada' AND current_setting('transaction_read_only') = 'on'
     AND EXISTS (SELECT 1 FROM pg_catalog.pg_roles r JOIN pg_catalog.pg_database d ON d.datdba = r.oid
       WHERE r.rolname = 'adui_scada' AND r.rolsuper AND d.datname = current_database())) AS "managerVerified",
+  ${scadaClusterFunctionAclSql(true)} AS "clusterFunctionAclReady",
   (SELECT count(*)::int FROM pg_catalog.pg_authid r WHERE r.rolname IN (${runtimes}) AND ${hardened}) AS "hardenedRuntimeCount",
   (SELECT count(*)::int FROM pg_catalog.pg_roles r WHERE r.rolname IN (${owners})) AS "candidateOwnerCount",
   (SELECT count(*)::int FROM pg_catalog.pg_auth_members m WHERE EXISTS (
@@ -70,6 +84,7 @@ const preflightSql = `SELECT
 
 const expected = {
   managerVerified: true,
+  clusterFunctionAclReady: true,
   hardenedRuntimeCount: 2,
   candidateOwnerCount: 0,
   membershipCount: 0,
@@ -89,6 +104,7 @@ const expected = {
 
 const diagnostics = {
   managerVerified: "安装前管理身份或事务模式不一致",
+  clusterFunctionAclReady: "安装前控制函数原始授权不一致",
   hardenedRuntimeCount: "两个运行角色属性不一致",
   candidateOwnerCount: "候选所有者已存在，禁止重复安装",
   membershipCount: "受控角色存在额外成员关系",

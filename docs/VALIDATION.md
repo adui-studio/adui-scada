@@ -5657,3 +5657,11 @@ PG19.0 原生结构契约 12 表、85 列、36 检查、20 索引、13 外键、
 维护者 Windows 在 1dcb9234e33234983eb4ccc55b9977c4921beee8 实际通过前置独立原始状态、Keycloak 与 SCADA 计划、原生严格契约、OIDC 只读、Docker 七服务、权限目录 10/10、Docker 226/226、Vite+ 564 格式/402 受检零警告错误、中文 428 文件、Markdown 100 份及 Git 差异。维护者再次明确输入 REHEARSE，真实事务在安装后组合目录首组精确定位四个角色 adui_scada_keycloak_runtime、adui_scada_lock_owner、adui_scada_project_create_owner、adui_scada_oidc_cleanup_owner 的 clusterFunctionExecute 差异；未报告其他角色或字段，收到目录事务回滚标签，非零退出。未执行真实 36/15 探针，未生成 SC。finally 独立复核 I=0d0ead9db7e280d0d6e66464f36d392212206d71f3bdf5f57f05dbea55b45e37、S=aac93ff83a3baaa8b97781bd32e35afb049209e38a40c63c8487d3511b65ade0、K=60ae2f485107105ee98172cd69fc79cface21a40878b3f1f5e50bccc8011bbeb 及原存储指纹不变，catalogIsolationPersisted=true，原始 SCADA 计划仍满足三个专用角色不存在的前置，严格契约、OIDC 只读及七服务复验通过，最终 HEAD 不变、工作区无修改。E-181 真实诊断已复验关闭，B4.2 仍失败。
 
 现有 B2 直接 EXECUTE 授权与 B4 有效权限矩阵已核实，92 条候选没有该内置函数公共授权撤销。PUBLIC 来源是待本机只读 ACL 证实的解释；先核对固定 SCADA 库实际函数 ACL 及有效权限，并审阅本库相关维护消费者。若确证该来源并明确收紧范围，才修改固定计划（新增一条局部撤销候选将改变 S 与语句数），补充负向测试和新审批；不改为允许其他四角色执行，不手工调整数据库，不重试旧演练。此提交仅文档，未运行新 HEAD 文档检查或新的数据库查询；没有授权 Keycloak 停止/演练、实际持久化、LOGIN、服务切换或合并。E-182 待确认实际 ACL 及修复。
+
+### 2026-11-28 · PR #262 E-182 实际 ACL 根因确认与最小修复
+
+维护者 Windows 同步 daa1eb9bc0b237663fc4523fd7480e481d1f7517，Markdown 100 份及 Git 差异通过。真实固定集群 SCADA 库 REPEATABLE READ READ ONLY 核对 pg_control_system()：管理者所有权 true、显式 ACL 非默认、PUBLIC/SCADA/Keycloak 有效 EXECUTE 均 true、SCADA grant option=false；OWNER、PUBLIC、SCADA_RUNTIME 各一条所有者授权的非 grantable EXECUTE，其他授权零，残留三个专用角色数量零；ROLLBACK 成功，工作区干净。E-182 根因为实际公共函数授权未纳入 B4 固定安装语句，非角色创建错误。
+
+新增唯一固定本库 REVOKE EXECUTE ON FUNCTION pg_catalog.pg_control_system() FROM PUBLIC RESTRICT，保留 SCADA 直接 EXECUTE。安装前核验三条精确原 ACL，安装后核验两条精确 ACL 和原有效权限矩阵；回滚后独立前置核对原 ACL，安装态沿用后置校验。计划版本 3，93 条固定目录语句，36 正向/15 拒绝探针不变；旧 S=aac93ff83a3baaa8b97781bd32e35afb049209e38a40c63c8487d3511b65ade0 作废。I/K 仍需保持一致，不预填新 S 或 SC。原事务、所有角色、业务授权、审批、禁止重试及失败关闭边界保留。
+
+实际 Node.js 22.16.0 局部源码片段语法检查和 4/4 模拟回归通过，SQL helper/固定计划片段长度和 FNV-1a 与远端候选分别为 771/322f0589、3109/83c59dfa，未执行真实 SQL、完整定向文件、全 Docker、Vite+、中文或文档检查。更新七代码/测试文件，现有测试注册数不变（Docker 预期 226）。下一步维护者审阅 SCADA 库监控/备份/维护及其他控制函数消费者，完成完整定向及 Docker、Vite+、中文、文档与差异检查，再生成新真实 S，单独批准一次 93 条回滚演练。任何失败独立只读复验并保留现场，不自动重试或手改 ACL。E-182 待真实复验，不执行 Keycloak 演练、双库持久化、LOGIN、服务切换或合并。

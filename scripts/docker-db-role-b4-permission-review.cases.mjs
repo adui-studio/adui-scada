@@ -376,6 +376,10 @@ void test("只读查询覆盖全集群、直接授权与类型保护，不输出
   assert.match(roles, /pg_catalog\.pg_shdepend/u);
   assert.match(roles, /d\.dbid = 0/u);
   assert.match(roles, /noUnexpectedSchemaCreators/u);
+  assert.match(roles, /count\(\*\) = 2 AND count\(DISTINCT a\.grantee\) = 2/u);
+  assert.match(roles, /rolname = 'adui_scada_runtime'\)\)/u);
+  assert.match(roles, /p\.proacl IS NOT NULL\) AS "clusterFunctionAclMatched"/u);
+  assert.doesNotMatch(roles, /rolname = 'adui_scada_runtime'\), 0\)/u);
   assert.match(roles, /a\.grantee = 0 AND a\.privilege_type = 'CREATE'/u);
   assert.match(roles, /CASE WHEN c\.relkind = 'S' THEN\s+pg_catalog\.has_sequence_privilege/u);
   assert.match(databases, /CROSS JOIN pg_catalog\.pg_database d$/u);

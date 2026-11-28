@@ -86,6 +86,10 @@ function fixedStatements(preparation, port) {
   return {
     roles: preflight.roleCreationPreview.map((sql) => ({ sql, command: "CREATE" })),
     grantsAndRoutines: [
+      {
+        sql: "REVOKE EXECUTE ON FUNCTION pg_catalog.pg_control_system() FROM PUBLIC RESTRICT",
+        command: "REVOKE",
+      },
       ...locks.ownerGrants.map(grant),
       ...locks.definitions.flatMap(routine),
       ...writes.projectCreate.ownerGrants.map(grant),
@@ -110,7 +114,7 @@ export function buildScadaB4RehearsalPlan({
   const planFingerprint = createHash("sha256")
     .update(
       JSON.stringify({
-        version: 2,
+        version: 3,
         runtimeProbeVersion: 1,
         serverVersion: identity.version,
         systemIdentifier: identity.systemIdentifier,

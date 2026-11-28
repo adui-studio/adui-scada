@@ -2148,3 +2148,9 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-db-role-b4-concurrency.mjs`：现有已审阅夹具的身份/授权共享锁与独立排他锁冲突探针，不提交业务数据。
 - `scripts/docker-db-role-keycloak-schema-policy.mjs`：绑定实际维护镜像的 validate/manual 策略候选，不执行迁移。
 - `apps/server/prisma8-fresh-install.mjs`：上述本机宿主入口；`docs/plans/b4-concentrated-acceptance.md` 为集中验收清单和独立审批顺序。当前完整真实验收未完成。
+
+### 2026-11-28 · E-182 控制函数 ACL 候选修复
+
+- `scripts/docker-db-role-b4-preflight.mjs`：固定控制函数 ACL 查询表达式，安装前精确三项（OWNER/PUBLIC/SCADA_RUNTIME），原所有者及授权属性绑定前置证据和指纹。
+- `scripts/docker-db-role-b4-rehearsal.mjs`：计划版本 3，共 93 条固定目录语句；在未授权专用角色核验后首条新增本库固定 PUBLIC EXECUTE 撤销（RESTRICT），旧 S 作废。
+- `scripts/docker-db-role-b4-permission-review.mjs`：安装后精确两项 ACL（OWNER/SCADA_RUNTIME）和原五角色有效权限矩阵；回滚独立原始前置与持久化独立后置保留。真实复验待执行。

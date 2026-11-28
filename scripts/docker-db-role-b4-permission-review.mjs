@@ -11,6 +11,7 @@ import {
 } from "./docker-db-role-business-acl.mjs";
 import { buildScadaLockRoutinePreview } from "./docker-db-role-lock-routines.mjs";
 import { verifyScadaB4InstalledRoutines } from "./docker-db-role-b4-routine-review.mjs";
+import { scadaClusterFunctionAclSql } from "./docker-db-role-b4-preflight.mjs";
 import {
   buildScadaOidcCleanupRoutinePreview,
   buildScadaRestrictedWritePreview,
@@ -163,6 +164,7 @@ export function buildScadaB4PermissionExpectations(port) {
       noSequenceAccess: true,
       noDefaultAcl: true,
       clusterFunctionExecute: role === runtime,
+      clusterFunctionAclMatched: true,
     })),
     databases: roles.flatMap((role) =>
       databases.map((database) => ({
@@ -254,7 +256,8 @@ const rolesSql = (scope) => `SELECT r.rolname::text AS role,
     WHERE left(n.nspname, 3) <> 'pg_' AND n.nspname <> 'information_schema' AND CASE WHEN c.relkind = 'S' THEN
       pg_catalog.has_sequence_privilege(r.oid, c.oid, 'USAGE,SELECT,UPDATE') ELSE false END) AS "noSequenceAccess",
   NOT EXISTS (SELECT 1 FROM pg_catalog.pg_default_acl d WHERE d.defaclrole = r.oid) AS "noDefaultAcl",
-  pg_catalog.has_function_privilege(r.oid, 'pg_catalog.pg_control_system()', 'EXECUTE') AS "clusterFunctionExecute"
+  pg_catalog.has_function_privilege(r.oid, 'pg_catalog.pg_control_system()', 'EXECUTE') AS "clusterFunctionExecute",
+  ${scadaClusterFunctionAclSql(false)} AS "clusterFunctionAclMatched"
 FROM pg_catalog.pg_authid r WHERE r.rolname IN (${roleList})`;
 
 const databaseSql = `WITH candidates AS (${candidates})

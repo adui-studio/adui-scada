@@ -13,6 +13,7 @@ import { buildScadaOidcCleanupRoutinePreview } from "./docker-db-role-restricted
 function fixture() {
   return {
     managerVerified: true,
+    clusterFunctionAclReady: true,
     hardenedRuntimeCount: 2,
     candidateOwnerCount: 0,
     membershipCount: 0,
@@ -148,6 +149,14 @@ void test("安装前置只发送一条固定目录查询", async () => {
     assert.match(sql, /pg_catalog\.pg_event_trigger/u);
     assert.match(sql, /c\.relrowsecurity OR c\.relforcerowsecurity/u);
     assert.match(sql, /pg_catalog\.pg_policy/u);
+    assert.match(sql, /count\(\*\) = 3 AND count\(DISTINCT a\.grantee\) = 3/u);
+    assert.match(sql, /rolname = 'adui_scada_runtime'\), 0\)/u);
+    assert.match(
+      sql,
+      /a\.grantor = p\.proowner AND a\.privilege_type = 'EXECUTE' AND NOT a\.is_grantable/u,
+    );
+    assert.match(sql, /p\.oid = 'pg_catalog\.pg_control_system\(\)'::regprocedure/u);
+    assert.match(sql, /p\.proacl IS NOT NULL\) AS "clusterFunctionAclReady"/u);
     assert.doesNotMatch(
       sql,
       /SELECT[^\n]*rolpassword\b|\b(?:GRANT|REVOKE|ALTER ROLE|CREATE ROLE|DELETE FROM)\b/u,

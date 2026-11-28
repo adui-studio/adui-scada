@@ -9,14 +9,14 @@
 ## 二、B3.3 实际隔离及 B4 双库原始计划
 
 1. 只读运行 `pnpm run docker:db:status`、`pnpm run docker:db:role:isolation:status`，检查固定 PG 19.0 集群、契约、中文注释以及 `catalogIsolationPersisted=true`，保留实际 B3 计划指纹 I。B3 未实际隔离时停止，按原 B3.3 流程另行批准回滚及持久化，不跳过。
-2. 正常既有本机 Keycloak 与 OIDC Discovery/JWKS 可用时运行 `pnpm run docker:db:role:b4:plan`，保存实际计划指纹 S、确认 isolationFingerprint=I，预期 3 专用角色、92 条固定目录语句。
+2. 正常既有本机 Keycloak 与 OIDC Discovery/JWKS 可用时运行 `pnpm run docker:db:role:b4:plan`，保存实际计划指纹 S、确认 isolationFingerprint=I，预期 3 专用角色、93 条固定目录语句（E-182 修复后的版本 3，详见第十七节）。
 3. 运行 `pnpm run docker:db:role:keycloak:plan`，保存 `keycloak.ownershipPreview.planFingerprint` 为 K。维护者独立核对完整本机实际对象身份、依赖、ACL、实际镜像版本及 101 张目标表；聚合报告与计数不能代替审阅。两库计划、系统标识、部署端口和 B3 指纹必须来自同一固定环境。
 
 ## 三、两库回滚演练
 
 以下 S、K、I、SC、KC 是上一步实际报告的 64 位小写十六进制指纹，不是字面参数。演练须由维护者分别确认、禁止并发管理员权限维护。
 
-- SCADA：`pnpm run docker:db:role:b4:rehearse --confirm-rehearse-scada-b4 --confirm-rollback-business-fixtures --plan-fingerprint=S`。仅允许返回 SCADA_B4_ROLLBACK_REHEARSED、92 条目录语句、36 正向、15 精确权限拒绝、夹具回滚、原始独立基线匹配、rolledBack=true、committed=false、admissionPassed=false；记录 catalogFingerprint 为 SC。若真实过期 OIDC 记录存在，探针应停止而不是清除旧记录。
+- SCADA：`pnpm run docker:db:role:b4:rehearse --confirm-rehearse-scada-b4 --confirm-rollback-business-fixtures --plan-fingerprint=S`。仅允许返回 SCADA_B4_ROLLBACK_REHEARSED、93 条目录语句、36 正向、15 精确权限拒绝、夹具回滚、原始独立基线匹配、rolledBack=true、committed=false、admissionPassed=false；记录 catalogFingerprint 为 SC。若真实过期 OIDC 记录存在，探针应停止而不是清除旧记录。
 - Keycloak：维护者另行确认并手动进入停止窗口，不自动停止、启动或重启服务。无其他目标库会话、实际对象身份已审阅才执行 `pnpm run docker:db:role:keycloak:rehearse --confirm-rehearse-keycloak-ownership --reviewed-keycloak-objects --confirm-keycloak-maintenance --plan-fingerprint=K`。仅允许返回 KEYCLOAK_OWNERSHIP_ROLLBACK_REHEARSED、101 条变更、投影匹配、独立原基线、rolledBack=true、committed=false、admissionPassed=false；保存 projectionFingerprint 为 KC。
 - 任何真实目录、锁、SQLSTATE、回滚、连接关闭或宿主核验异常停止。保留现场，不自动修复权限或重新执行。
 
@@ -117,3 +117,9 @@ pnpm run docker:db:role:b4:rehearse --confirm-rehearse-scada-b4 --confirm-rollba
 维护者在 1dcb9234e33234983eb4ccc55b9977c4921beee8 实测权限目录 10/10、Docker 226/226、Vite+ 564 格式/402 受检零警告错误、中文 428 文件、Markdown 100 份及 Git 差异通过。真实演练失败字段仅为 Keycloak 运行角色和三个专用所有者的 clusterFunctionExecute，收到目录事务回滚标签；finally 独立原 I/S/K、严格契约、OIDC 只读和 Docker 七服务均通过。没有 SC 指纹、没有真实业务探针结果，原 92 条计划不得再执行。
 
 已核实 B2 显式授予 SCADA 运行角色 pg_catalog.pg_control_system() EXECUTE，B4 固定候选未撤销该函数的 PUBLIC EXECUTE，预期矩阵仍要求仅 SCADA 运行角色有有效执行权。先仅在固定 SCADA 库的已核验管理身份、REPEATABLE READ READ ONLY 事务中通过 has_function_privilege 与 aclexplode/COALESCE(acldefault) 确认该函数的真实公共、直接与未知授权类别、所有者和授权选项，明确回滚并退出连接。只输出固定类别及布尔/计数，不输出未知名称、原始 ACL 或凭据。维护者同时审阅本库依赖该函数的监控、备份、维护及其他消费者。若确认 PUBLIC 来源，再独立评估增加唯一固定本库公共执行撤销候选；不手工执行 REVOKE，不放宽有效权限预期，不扩至其他库/函数。新增候选必须更新 92 条预期、重新生成 S（旧 S 禁用）、回归测试、文档和独立演练审批；I/K 仍需核验。本轮仅记录文档，实际 ACL 及修复待确认，E-182 和 B4.2 未关闭。
+
+## 十七、E-182 已确证，计划版本 3 与 93 条目录语句（2026-11-28）
+
+维护者在 daa1eb9bc0b237663fc4523fd7480e481d1f7517 通过文档 100 份、Git 差异和真实固定 SCADA 库只读 ACL 诊断。管理者是函数所有者、显式 OWNER/PUBLIC/SCADA_RUNTIME 各一条 EXECUTE、均由所有者授权且无显式 grant option；PUBLIC/SCADA/Keycloak 有效 EXECUTE 均 true，SCADA 无 grant option，其他显式授权为零、残留专用角色为零；ROLLBACK 成功。根因确认。候选修复仅增加本库固定 REVOKE EXECUTE ON FUNCTION pg_catalog.pg_control_system() FROM PUBLIC RESTRICT；前置精确原三项 ACL、安装后精确两项 ACL 及原有效权限矩阵；保留原业务权限、事务和独立回滚基线，原 B3.3 与 Keycloak 不改。
+
+本节覆盖此前关于 92 条和旧 SCADA S 的执行指令：计划版本 3、93 条语句，旧 S aac93ff83a3baaa8b97781bd32e35afb049209e38a40c63c8487d3511b65ade0 禁止执行。第十四至十六节旧指纹和数量仅为历史证据。同步修复后，先完成四组完整 Node 定向（前置、权限目录、演练、宿主）、Docker 预期 226 项、Vite+、中文、文档和 Git 差异，重新验证 B3.3 I、Keycloak K 及真实新 S（93 条、3 角色、36/15，未写入）。只有维护者实际审阅 SCADA 库监控/备份/维护及其他依赖该函数的消费者、确认固定隔离环境、无并发权限维护，并独立批准新 S 的回滚演练时，才使用原回滚入口及新真实 S。验收第十四节所有真实条件不变，但 statementsExecuted=93；成功或失败后均独立核对新 S 原始计划（含原三项 ACL）、I/K、严格契约、OIDC 只读及 Docker 状态。不得自动接受旧 S、自动重试、手工撤销 ACL、实际持久化或切换服务。新 SC 仅从真实成功演练取得，E-182 仍待关闭；局部 Node 4/4 非完整专项或实机证据。
