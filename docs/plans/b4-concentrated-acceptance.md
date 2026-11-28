@@ -191,3 +191,25 @@ node apps/server/prisma8-fresh-install.mjs --role-b4-lock-probe --confirm-review
 ```
 
 预期 B4_IDENTITY_GRANT_LOCK_CONCURRENCY_VERIFIED、sharedLockConflictCount=2、lockReleaseVerified=true、authorizedGrantRowsMatched=true、otherSubjectGrantRowsEmpty=true、identityGrantLockConcurrencyVerified=true、rowLockConcurrencyVerified=false、rowAuthorizationVerified=false、businessDataWritten=false、databaseWritten=false、admissionPassed=false、serviceSwitched=false。实际两个独立会话先验证无冲突排他锁，再验证运行角色共享锁及管理连接两次精确 SQLSTATE 55P03，回滚共享锁后重新取得排他锁；全部事务回滚及连接关闭、内部双库证据一致。成功或失败后均外部只读复验 dual-installed、DC/KP、严格契约及固定维护窗口，不自动重试。仅此两项行锁冲突不构成全部行锁/应用层行级授权或 RLS 证明。仍需真实原生仓储主体绑定、跨租户、禁用撤权并发、会话/OIDC 单次消费、CAS/失败原子回滚、不可变历史、发布门禁和 Keycloak Schema 实际启动兼容性；不得开启 LOGIN、恢复旧管理身份 Keycloak、服务切换、业务准入或合并。本提交只更新文档，B4.5 尚未实机执行。
+
+## 二十二、B4.5 前置实测通过，专用空库合成夹具生命周期设计（2026-11-28）
+
+维护者在 7a0c1454b0aa6a30fc8893aebfa32e43cf505fc7 实测文档 100 份、Git 差异、dual-installed 前后两次独立复验及 I/SC/K/KC/DC/KP、固定维护窗口、严格契约和现有并发锁模拟专项 3/3 均通过。REPEATABLE READ READ ONLY 固定 SCADA 库身份核验为 1，工程/身份/活动身份/授权/合格授权组均为 0，ROLLBACK 成功；固定本机夹具文件不存在。按第二十一节门禁停止，未创建或清理任何业务行、未执行真实双连接锁探针。前置通过，B4.5a 尚未完成；不是权限故障，也不重复任何 apply。
+
+### 专用夹具候选约束（尚未实现）
+
+真实两个独立连接无法读取另一未提交事务内的新行，因此需要单独批准临时合成业务行的提交及后续精确清理；不能把已有回滚探针的合成快照直接持久化。候选须复用现有固定 Docker、严格契约、双库状态读取器和维护窗口校验；读取全部原生业务表的空基线，不能仅凭本次三个业务表的计数推断其他表为空。以随机专用租户标识隔离两个不同活动主体与一个测试工程，不绑定真实 OIDC 身份、不创建会话，不读取或选择已有业务工程。使用共享 Core 的真实快照创建及读取校验，复用已安装的 scada_create_project 例程（仅在管理连接事务内 SET LOCAL ROLE 切换为现有 NOLOGIN 运行角色），不新增生产 ACL 或绕过正式发布安全门禁。需要先验证全部有关表的外键、CHECK 及精确列契约，事务内固定参数化语句、锁超时、语句超时及无其他业务/权限维护；加锁后重新核对空基线，不能用旧报告代替。创建前先保存仅本机的随机标识和独立清理证据，任何文件不覆盖已有夹具、不含凭据且不得提交 Git。
+
+| 业务表 | 唯一允许的夹具增量 |
+| --- | ---: |
+| scada_identities | 2（active） |
+| scada_projects | 1 |
+| scada_project_versions | 1（首版及真实摘要） |
+| scada_project_grants | 3（授权主体恰有 project:read、version:read、version:append） |
+| scada_project_audit | 1（version:append） |
+| scada_project_release_state | 1（未发布，generation=0） |
+| 其余业务表 | 0 |
+
+创建与清理须各有独立明确审批、事务内精确回读、独立连接复核、真实提交/回滚标签及关闭证据；维护窗口内先验证原双库指纹。创建完成后独立核对六张表共 9 行及其余表零增量，实际审阅本机四字段 JSON（tenantId、projectId、subjectId、otherSubjectId）与清理清单，才可单独批准既有锁探针，禁止把准备成功当作锁测试成功。探针后不自动清理；保留证据，校验夹具未变化、无任何外部或额外依赖，独立批准后按引用依赖顺序仅删除本次精确行（发布状态、审计、授权、版本、工程、身份；若存在发布事件、会话、外部身份、历史或其他非预期依赖则停止），核对每条语句的预期影响行数，禁止 TRUNCATE、CASCADE、通用租户删除或删除现有业务记录。事务内再次确认所有业务表回到原空基线，提交后独立复验空基线、DC/KP、严格契约、原容器与连接关闭；最后只在清理成功后按本机审阅流程处置夹具文件。
+
+新增工具必须覆盖错误指纹、非空库、非法或重复主体、文件已存在或被链接/替换、额外授权/依赖、真实快照校验失败、影响行数异常、锁冲突、事务失败、未知 COMMIT、回滚及资源关闭失败等离线正反用例，并纳入适用的 Node Docker 测试门禁；另做真实 Windows 验收。未知提交结果或独立核验失败不得自动重试或逆向删除，先保留标识和现场证据，再独立只读确认。备份恢复可用性仍未获实测证据；在真实写入前须另行核对。整个生命周期的创建/清理确实有临时业务写入，不能报告为始终 databaseWritten=false；仅既有锁探针本身无 DML/COMMIT。当前仅为设计与验收记录，无可执行创建或删除入口，不批准任何真实 DML。B4.5a、B4.5b、Keycloak Schema 实际兼容性及 C/D/E/F 仍未完成，NOLOGIN、原 Keycloak 维护停机、正式发布门禁及 Draft 不变。
