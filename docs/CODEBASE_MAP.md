@@ -2026,3 +2026,10 @@ D5b8a 的静态代码检视不等于生产门禁安全评审完成；Issue #126 
 - `scripts/docker-db-role-bootstrap-plan.mjs`：固定真实目录基线及 8 条 SQL 预览纯函数，不执行 SQL；`scripts/docker-db-role-bootstrap-plan.cases.mjs`：5 项离线测试。
 - `apps/server/prisma8-fresh-install.mjs`、`scripts/prisma8-fresh-install.mjs`：新增 `--role-plan`，复用已验收的双库只读核查；`package.json` 提供 `docker:db:role:plan`，只将离线测试纳入 `test:docker`。实际入口不进入默认启动或 ready。
 - [角色准备预览与权限矩阵](plans/docker-native-role-bootstrap-plan.md)：B1 边界、当前原生仓储权限、锁与 Keycloak 所有权阻塞。
+
+### Docker 独立运行角色事务候选（B2）
+
+- `scripts/docker-db-role-bootstrap.mjs`：固定 SQL 事务演练、独立确认提交及只读状态核查，事务内角色属性/精确 ACL/有效权限/启动读取校验、失败保护。
+- `scripts/docker-db-role-bootstrap.cases.mjs`：8 项 Node 离线事务测试；`scripts/docker-db-role-review.mjs` 抽取同一业务事务目录核验，并在既有用例增加两项事务边界测试。
+- `apps/server/prisma8-fresh-install.mjs`、`scripts/prisma8-fresh-install.mjs`：独立确认和只读状态入口，复用严格原生契约及双库目录，后置独立复验；`package.json` 与 `scripts/check-env-config.mjs` 约束不得进入常驻启动及 ready。
+- [角色准备预览与事务门禁](plans/docker-native-role-bootstrap-plan.md)：执行边界、回滚演练及正式提交审批。
