@@ -30,6 +30,8 @@ import { createScadaB4HostReader, createScadaB4IsolationReader, readScadaB4HostP
 import { DockerB4RehearsalError, runScadaB4RollbackRehearsal, runScadaB4Persistence } from "../../scripts/docker-db-role-b4-rehearsal.mjs";
 import { parseB4PersistenceAction } from "../../scripts/docker-db-role-b4-arguments.mjs";
 import { DockerB4InstalledStateError, readB4InstalledState } from "../../scripts/docker-db-role-b4-installed-state.mjs";
+import { runB4LockConcurrency } from "../../scripts/docker-db-role-b4-concurrency.mjs";
+import { buildKeycloakSchemaPolicy } from "../../scripts/docker-db-role-keycloak-schema-policy.mjs";
 import { DockerKeycloakOwnershipError } from "../../scripts/docker-db-role-keycloak-plan.mjs";
 import { runKeycloakOwnershipRollbackRehearsal, runKeycloakOwnershipPersistence } from "../../scripts/docker-db-role-keycloak-rehearsal.mjs";
 import { offlineEnvironment, resolveFreshCli } from "../../scripts/prisma8-fresh-cli-support.mjs";
@@ -240,7 +242,10 @@ function inspectDocker(requireNoOldProjects = false, requireKeycloakStopped = fa
       ".State.Restarting", ".Config.Image", ".Config.Labels", ".HostConfig.RestartPolicy.Name"];
     const keycloakFormat = "[" + keycloakFields.map((field) => "{{json " + field + "}}").join(",") + "]";
     const details = JSON.parse(local(["container", "inspect", "--format", keycloakFormat, ids]));
-    return { systemIdentifier, version, keycloakContainerId: requireKeycloakMaintenanceContainer(ids, details) };
+    const keycloakContainerId = requireKeycloakMaintenanceContainer(ids, details);
+    const keycloakImageId = local(["container", "inspect", "--format", "{{.Image}}", keycloakContainerId]);
+    requireMatch(/^sha256:[a-f0-9]{64}$/u.test(keycloakImageId), "Keycloak 实际镜像标识无效");
+    return { systemIdentifier, version, keycloakContainerId, keycloakImageId };
   }
   return { systemIdentifier, version };
 }
@@ -442,17 +447,37 @@ async function main() {
           return databaseClient(target.toString());
         };
         return { readHostBoundary, createClient,
-          read: (phase) => readB4InstalledState({ ...options, phase,
-            context: { identity, storageHash: freshStorageHash, isolationFingerprint: options.isolationFingerprint },
-            port: readDockerOidcPort(envText), requireMaintenance,
-            expectedKeycloakProjectionFingerprint: phase === "dual-installed" ? options.expectedKeycloakProjectionFingerprint : undefined,
-            createClient, readHostBoundary }),
+          read: async (phase) => {
+            const installed = await readB4InstalledState({ ...options, phase,
+              context: { identity, storageHash: freshStorageHash, isolationFingerprint: options.isolationFingerprint },
+              port: readDockerOidcPort(envText), requireMaintenance,
+              expectedKeycloakProjectionFingerprint: phase === "dual-installed" ? options.expectedKeycloakProjectionFingerprint : undefined,
+              createClient, readHostBoundary });
+            return phase === "dual-installed" ? { ...installed, keycloakSchemaPolicy: buildKeycloakSchemaPolicy(maintenance.keycloakImageId, installed) } : installed;
+          },
         };
       };
       if (action === "role-b4-status") {
         stage = "B4 已安装阶段独立只读核验";
         const reader = await makeB4StateReader(b4Arguments, b4Arguments.phase === "dual-installed");
         return reader.read(b4Arguments.phase);
+      }
+      if (action === "role-b4-lock-probe") {
+        stage = "B4 已审阅现有测试夹具双连接锁探针";
+        const fixturePath = join(root, ".local", "docker", "b4-lock-fixture.json");
+        const stat = lstatSync(fixturePath);
+        requireMatch(stat.isFile() && stat.size > 0 && stat.size <= 4096 && realpathSync(fixturePath) === fixturePath,
+          "B4 并发锁夹具必须是固定本机文件且不能包含链接");
+        const fixtureText = readFileSync(fixturePath, "utf8");
+        const fixture = JSON.parse(fixtureText);
+        const reader = await makeB4StateReader(b4Arguments, true);
+        return runB4LockConcurrency({ confirm: process.argv[3], fixture, identity,
+          createClient: () => reader.createClient("adui_scada", false),
+          readInstalledState: async () => {
+            requireMatch(readFileSync(fixturePath, "utf8") === fixtureText, "B4 并发锁夹具在核验期间发生变化");
+            return reader.read("dual-installed");
+          },
+        });
       }
       if (action === "role-keycloak-apply") {
         stage = "Keycloak 持久化前 SCADA 独立安装状态";
@@ -562,7 +587,7 @@ async function main() {
       if (action === "role-keycloak-rehearse") {
         stage = "Keycloak 维护窗口及隔离基线";
         const maintenance = inspectDocker(true, true);
-        const { keycloakContainerId: _containerId, ...maintenanceIdentity } = maintenance;
+        const { keycloakContainerId: _containerId, keycloakImageId: _imageId, ...maintenanceIdentity } = maintenance;
         requireMatch(isDeepStrictEqual(maintenanceIdentity, identity), "Keycloak 维护窗口集群不一致");
         const composeEnvPath = join(root, ".local", "docker", "compose.env");
         const composeEnvText = readFileSync(composeEnvPath, "utf8");

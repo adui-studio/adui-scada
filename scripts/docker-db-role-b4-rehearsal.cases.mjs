@@ -6,7 +6,7 @@ import { buildScadaLockRoutinePreview } from "./docker-db-role-lock-routines.mjs
 import { buildScadaRestrictedWritePreview, buildScadaOidcCleanupRoutinePreview } from "./docker-db-role-restricted-writes.mjs";
 import { buildScadaB4PermissionExpectations } from "./docker-db-role-b4-permission-review.mjs";
 import { buildScadaB4RoutineExpectations } from "./docker-db-role-b4-routine-review.mjs";
-import { buildScadaB4RehearsalPlan, DockerB4RehearsalError, runScadaB4RollbackRehearsal } from "./docker-db-role-b4-rehearsal.mjs";
+import { buildScadaB4RehearsalPlan, DockerB4RehearsalError, runScadaB4RollbackRehearsal, runScadaB4Persistence } from "./docker-db-role-b4-rehearsal.mjs";
 import { createScadaB4RuntimeProbeFixture } from "./docker-db-role-b4-runtime-probe.fixture.mjs";
 
 const identity = { version: "190000", systemIdentifier: "123456789" };
@@ -53,6 +53,10 @@ function fixture(fault = "") {
       async query(sql, values = []) {
         calls.push([label, sql]);
         if (sql.startsWith("BEGIN")) return { command: fault === "begin" && !readOnly ? "SELECT" : "BEGIN" };
+        if (sql === "COMMIT") {
+          if (fault === "commit") throw new Error("模拟敏感错误");
+          return { command: "COMMIT" };
+        }
         if (sql === "ROLLBACK") {
           if (fault === "rollback" && !readOnly || fault === "read-rollback" && readOnly) throw new Error("模拟敏感错误");
           return { command: fault === "rollback-tag" && !readOnly ? "SELECT" : "ROLLBACK" };
@@ -270,4 +274,37 @@ void test("原连接关闭失败不得创建独立连接或继续宿主复核", 
   assert.equal(hostCount(), 1);
   assert.equal(calls.some(([label]) => label === "只读"), false);
   assert.equal(calls.some(([, sql]) => sql === "COMMIT"), false);
+});
+
+void test("SCADA 持久化只能凭已核验演练指纹提交，关闭后独立复核", async () => {
+  const rehearsal = await runScadaB4RollbackRehearsal(fixture().options);
+  const h = fixture();
+  const options = { ...h.options, confirm: "--confirm-apply-scada-b4", confirmRehearsalVerified: "--confirm-rehearsal-verified",
+    expectedCatalogFingerprint: rehearsal.catalogFingerprint, async readInstalledState() {
+      assert.deepEqual(h.calls.at(-1), ["演练", "关闭"]);
+      return { phase: "scada-installed", isolationFingerprint, scadaCatalogFingerprint: rehearsal.catalogFingerprint,
+        scadaCatalogMatched: true, keycloakBaselineMatched: true, independentConnectionsClosed: true, admissionPassed: false };
+    } };
+  const result = await runScadaB4Persistence(options);
+  assert.equal(result.committed, true);
+  assert.equal(result.businessDataWritten, false);
+  assert.equal(result.admissionPassed, false);
+  assert.equal(h.calls.filter(([, sql]) => sql === "COMMIT").length, 1);
+  assert.equal(h.calls.some(([, sql]) => sql === "ROLLBACK"), false);
+  assert.equal(h.clientCount(), 1);
+  await assert.rejects(() => runScadaB4RollbackRehearsal(options), DockerB4RehearsalError);
+});
+
+void test("SCADA 持久化拒绝错误指纹，提交未知或独立复核失败不重试", async () => {
+  const rehearsal = await runScadaB4RollbackRehearsal(fixture().options);
+  for (const fault of ["fingerprint", "commit", "close", "independent"]) {
+    const h = fixture(fault === "fingerprint" || fault === "independent" ? "" : fault);
+    let checks = 0;
+    await assert.rejects(() => runScadaB4Persistence({ ...h.options, confirm: "--confirm-apply-scada-b4",
+      confirmRehearsalVerified: "--confirm-rehearsal-verified", expectedCatalogFingerprint: fault === "fingerprint" ? "f".repeat(64) : rehearsal.catalogFingerprint,
+      async readInstalledState() { checks++; throw new Error("模拟敏感信息"); } }), (error) => !error.message.includes("模拟敏感信息"));
+    assert.equal(h.calls.filter(([, sql]) => sql === "COMMIT").length, fault === "fingerprint" ? 0 : 1);
+    assert.equal(h.calls.some(([, sql]) => sql === "ROLLBACK"), fault === "fingerprint");
+    assert.equal(checks, fault === "independent" ? 1 : 0);
+  }
 });

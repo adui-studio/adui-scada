@@ -34,3 +34,9 @@ void test("缺少任一确认、重复额外参数、错误顺序或非法指纹
 void test("原有回滚演练和普通命令不进入持久化解析路径", () => {
   for (const args of [[], ["--role-b4-plan"], ["--role-b4-rehearse", "--confirm-rehearse-scada-b4"], ["--role-keycloak-rehearse"], ["--status"]]) assert.equal(parseB4PersistenceAction(args), null);
 });
+
+void test("并发探针需要独立现有夹具确认及全部双库指纹", () => {
+  const args = ["--role-b4-lock-probe", "--confirm-reviewed-existing-fixture", ...shared, "--projection-fingerprint=" + d];
+  assert.deepEqual(parseB4PersistenceAction(args), { action: "role-b4-lock-probe", isolationFingerprint: a, expectedScadaCatalogFingerprint: b, expectedKeycloakPlanFingerprint: c, expectedKeycloakProjectionFingerprint: d });
+  assert.throws(() => parseB4PersistenceAction(args.filter((_, index) => index !== 1)));
+});

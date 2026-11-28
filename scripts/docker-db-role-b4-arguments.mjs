@@ -31,6 +31,10 @@ export function parseB4PersistenceAction(args) {
       ["--role-keycloak-apply", "--confirm-apply-keycloak-ownership", "--confirm-rehearsal-verified", "--reviewed-keycloak-objects", "--confirm-keycloak-maintenance"],
       [isolation, scada, keycloak, projection]) };
   }
+  if (args[0] === "--role-b4-lock-probe") {
+    return { action: "role-b4-lock-probe", ...requireArgs(args,
+      ["--role-b4-lock-probe", "--confirm-reviewed-existing-fixture"], [isolation, scada, keycloak, projection]) };
+  }
   if (args[0] === "--role-b4-status") {
     const phase = args[1] === "--phase=dual-installed" ? "dual-installed" : args[1] === "--phase=scada-installed" ? "scada-installed" : null;
     if (!phase) throw new Error("B4 状态命令必须指定明确安装阶段");

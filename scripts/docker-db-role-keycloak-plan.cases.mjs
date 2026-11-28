@@ -10,7 +10,7 @@ import {
   verifyKeycloakOwnershipBaseline,
   verifyKeycloakOwnershipProjection,
 } from "./docker-db-role-keycloak-plan.mjs";
-import { runKeycloakOwnershipRollbackRehearsal } from "./docker-db-role-keycloak-rehearsal.mjs";
+import { runKeycloakOwnershipRollbackRehearsal, runKeycloakOwnershipPersistence } from "./docker-db-role-keycloak-rehearsal.mjs";
 import { buildScadaB4PermissionExpectations, verifyScadaB4CompletedCatalog, verifyScadaB4InstalledCatalog } from "./docker-db-role-b4-permission-review.mjs";
 import { buildScadaB4RoutineExpectations } from "./docker-db-role-b4-routine-review.mjs";
 
@@ -301,6 +301,10 @@ function rehearsalFixture(fault = "") {
       async query(sql) {
         calls.push([label, sql]);
         if (sql.startsWith("BEGIN")) return { command: fault === "begin" && !readOnly ? "SELECT" : "BEGIN" };
+        if (sql === "COMMIT") {
+          if (fault === "commit") throw new Error("SENSITIVE");
+          return { command: "COMMIT" };
+        }
         if (sql === "ROLLBACK") {
           if (fault === "rollback" && !readOnly) throw new Error("SENSITIVE");
           return { command: fault === "read-rollback" && readOnly ? "SELECT" : "ROLLBACK" };
@@ -482,4 +486,38 @@ void test("指纹错误、半完成状态、共享依赖或其他角色漂移均
   const h = dualCatalogFixture();
   await assert.rejects(() => verifyScadaB4CompletedCatalog({ ...h.options, scadaQuery: h.options.keycloakQuery }), /双库独立查询/u);
   assert.equal(h.data.calls.length, 0);
+});
+
+void test("Keycloak 持久化凭演练投影指纹提交且独立复核双库完成态", async () => {
+  const rehearsal = await runKeycloakOwnershipRollbackRehearsal(rehearsalFixture().options);
+  const h = rehearsalFixture();
+  const options = { ...h.options, confirm: "--confirm-apply-keycloak-ownership", confirmRehearsalVerified: "--confirm-rehearsal-verified",
+    expectedProjectionFingerprint: rehearsal.projectionFingerprint, async readInstalledState() {
+      assert.deepEqual(h.calls.at(-1), ["write", "end"]);
+      return { phase: "dual-installed", isolationFingerprint: context.isolationFingerprint,
+        keycloakPlanFingerprint: rehearsal.planFingerprint, keycloakCatalogFingerprint: rehearsal.projectionFingerprint,
+        scadaCatalogMatched: true, keycloakOwnerProjectionMatched: true, independentConnectionsClosed: true, admissionPassed: false };
+    } };
+  const result = await runKeycloakOwnershipPersistence(options);
+  assert.equal(result.committed, true);
+  assert.equal(result.runtimeLoginAllowed, false);
+  assert.equal(result.schemaEvolutionVerified, false);
+  assert.equal(h.calls.filter(([, sql]) => sql === "COMMIT").length, 1);
+  assert.equal(h.calls.some(([, sql]) => sql === "ROLLBACK"), false);
+  assert.equal(h.clientCount(), 1);
+  await assert.rejects(() => runKeycloakOwnershipRollbackRehearsal(options), DockerKeycloakOwnershipError);
+});
+
+void test("Keycloak 错误投影、未知提交、连接关闭或独立核验失败均禁止重试", async () => {
+  const rehearsal = await runKeycloakOwnershipRollbackRehearsal(rehearsalFixture().options);
+  for (const fault of ["fingerprint", "commit", "close", "independent"]) {
+    const h = rehearsalFixture(fault === "fingerprint" || fault === "independent" ? "" : fault);
+    let checks = 0;
+    await assert.rejects(() => runKeycloakOwnershipPersistence({ ...h.options, confirm: "--confirm-apply-keycloak-ownership",
+      confirmRehearsalVerified: "--confirm-rehearsal-verified", expectedProjectionFingerprint: fault === "fingerprint" ? "f".repeat(64) : rehearsal.projectionFingerprint,
+      async readInstalledState() { checks++; throw new Error("SENSITIVE"); } }), (error) => !error.message.includes("SENSITIVE"));
+    assert.equal(h.calls.filter(([, sql]) => sql === "COMMIT").length, fault === "fingerprint" ? 0 : 1);
+    assert.equal(h.calls.some(([, sql]) => sql === "ROLLBACK"), fault === "fingerprint");
+    assert.equal(checks, fault === "independent" ? 1 : 0);
+  }
 });
