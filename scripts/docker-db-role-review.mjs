@@ -173,7 +173,7 @@ function relationCounts(rows, fields) {
   return { total: rows.length, ...counts };
 }
 
-function verifyIdentity(rows, database, expected) {
+function verifyIdentity(rows, database, expected, readOnly = true) {
   const row = single(rows);
   requireReview(
     row.database === database &&
@@ -182,8 +182,8 @@ function verifyIdentity(rows, database, expected) {
       row.schema === "public" &&
       row.version === expected.version &&
       row.systemIdentifier === expected.systemIdentifier &&
-      row.readOnly === "on" &&
-      row.defaultReadOnly === "on" &&
+      row.readOnly === (readOnly ? "on" : "off") &&
+      row.defaultReadOnly === (readOnly ? "on" : "off") &&
       row.recovery === false,
   );
 }
@@ -205,6 +205,61 @@ function reviewRole(rows) {
   return role;
 }
 
+async function readRoleDirectory(client, database, storageHash) {
+  const role = reviewRole((await client.query(roleSql)).rows);
+  const access = namedRows(
+    (await client.query(databaseSql)).rows,
+    new Set(databases),
+    databaseFlags,
+  );
+  const business = database === databases[0];
+  const schemaNames = business ? ["public", "prisma_contract"] : ["public"];
+  const schemas = namedRows(
+    (await client.query(schemaSql, [schemaNames])).rows,
+    new Set(schemaNames),
+    schemaFlags,
+  );
+  const otherSchemas = single((await client.query(otherSchemasSql, [schemaNames])).rows).total;
+  requireReview(Number.isSafeInteger(otherSchemas) && otherSchemas >= 0);
+  const tables = (await client.query(relationSql)).rows;
+  const tableAccess = relationCounts(tables, tableFlags);
+  requireReview(business ? tableAccess.total === businessTables.size : tableAccess.total > 0);
+  const tableMatrix = business ? namedRows(tables, businessTables, tableFlags) : null;
+  const sequences = relationCounts((await client.query(sequenceSql)).rows, sequenceFlags);
+  let marker = null;
+  if (business) {
+    const row = single((await client.query(markerSql)).rows);
+    requireReview(row.storageHash === storageHash);
+    marker = booleanFields(row, ["markerSelect", "clusterFunctionExecute"]);
+    requireReview(marker.markerSelect && marker.clusterFunctionExecute);
+  }
+  return { role, access, schemas, otherSchemas, tableAccess, tableMatrix, sequences, marker };
+}
+
+function businessSummary(business) {
+  return {
+    role: business.role,
+    databases: business.access,
+    scada: {
+      schemas: business.schemas,
+      otherSchemas: business.otherSchemas,
+      tables: business.tableAccess,
+      tableMatrix: business.tableMatrix,
+      sequences: business.sequences,
+      marker: business.marker,
+    },
+  };
+}
+
+/** 在已启动的业务事务中复用真实目录读取；调用者负责事务及资源生命周期。 */
+export async function readDockerBusinessRoleDirectory(client, expected, storageHash, readOnly) {
+  requireReview(typeof readOnly === "boolean");
+  verifyIdentity((await client.query(identitySql)).rows, databases[0], expected, readOnly);
+  const business = await readRoleDirectory(client, databases[0], storageHash);
+  verifyIdentity((await client.query(identitySql)).rows, databases[0], expected, readOnly);
+  return businessSummary(business);
+}
+
 /** 每个库独立只读事务，固定查询目录并核对前后身份；所有原始异常均脱敏。 */
 async function inspectDatabase(createClient, database, expected, storageHash) {
   const label = database === databases[0] ? "业务库" : "Keycloak 库";
@@ -222,39 +277,12 @@ async function inspectDatabase(createClient, database, expected, storageHash) {
     stage = "身份核验";
     verifyIdentity((await client.query(identitySql)).rows, database, expected);
     stage = "角色及目录核验";
-    const role = reviewRole((await client.query(roleSql)).rows);
-    const access = namedRows(
-      (await client.query(databaseSql)).rows,
-      new Set(databases),
-      databaseFlags,
-    );
-    const business = database === databases[0];
-    const schemaNames = business ? ["public", "prisma_contract"] : ["public"];
-    const schemas = namedRows(
-      (await client.query(schemaSql, [schemaNames])).rows,
-      new Set(schemaNames),
-      schemaFlags,
-    );
-    const otherSchemas = single((await client.query(otherSchemasSql, [schemaNames])).rows).total;
-    requireReview(Number.isSafeInteger(otherSchemas) && otherSchemas >= 0);
-    const tables = (await client.query(relationSql)).rows;
-    const tableAccess = relationCounts(tables, tableFlags);
-    requireReview(business ? tableAccess.total === businessTables.size : tableAccess.total > 0);
-    const tableMatrix = business ? namedRows(tables, businessTables, tableFlags) : null;
-    const sequences = relationCounts((await client.query(sequenceSql)).rows, sequenceFlags);
-    let marker = null;
-    if (business) {
-      const row = single((await client.query(markerSql)).rows);
-      requireReview(row.storageHash === storageHash);
-      marker = booleanFields(row, ["markerSelect", "clusterFunctionExecute"]);
-      requireReview(marker.markerSelect && marker.clusterFunctionExecute);
-    }
+    report = await readRoleDirectory(client, database, storageHash);
     stage = "后置身份核验";
     verifyIdentity((await client.query(identitySql)).rows, database, expected);
     stage = "事务结束";
     await client.query("ROLLBACK");
     begun = false;
-    report = { role, access, schemas, otherSchemas, tableAccess, tableMatrix, sequences, marker };
   } catch {
     failure = new DockerRoleReviewError(label + stage + "失败，内部诊断已脱敏，保留现场");
   }
@@ -299,16 +327,7 @@ export async function reviewDockerDatabaseRoles(createClient, expected, storageH
     status: "DOCKER_DB_ROLE_REVIEW_READY",
     directoryReviewPassed: true,
     admissionPassed: false,
-    role: business.role,
-    databases: business.access,
-    scada: {
-      schemas: business.schemas,
-      otherSchemas: business.otherSchemas,
-      tables: business.tableAccess,
-      tableMatrix: business.tableMatrix,
-      sequences: business.sequences,
-      marker: business.marker,
-    },
+    ...businessSummary(business),
     keycloak: {
       schemas: keycloak.schemas,
       otherSchemas: keycloak.otherSchemas,
